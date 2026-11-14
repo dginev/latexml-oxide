@@ -137,8 +137,8 @@ pub(super) fn ctor_arg_to_dynamic(a: &Option<Digested>) -> Dynamic {
 }
 
 /// The imperative-body replacement closure: publishes the active context, calls
-/// the body as `|document, arg1, …|`, pops the context. Shared by every
-/// constructor form that uses a closure body.
+/// the body as Perl's `($document, @args, %props)` — `|document, arg1, …, props|`, the properties one map —
+/// pops the context. Shared by every constructor form that uses a closure body.
 pub(super) fn closure_replacement(
   body: FnPtr,
   engine: Rc<Engine>,
@@ -152,10 +152,16 @@ pub(super) fn closure_replacement(
       // a script-body panic can't leave a stale CTOR_CTX entry. Review M1.
       let _ctx_guard = CtorCtxGuard::new(CtorCtx { document, props });
       // `document` first (Perl's `$_[0]`), then each argument as its Rhai value.
-      let mut call_args: Vec<Dynamic> = Vec::with_capacity(args.len() + 1);
+      let mut call_args: Vec<Dynamic> = Vec::with_capacity(args.len() + 2);
       call_args.push(Dynamic::from(DocProxy));
       for a in args {
         call_args.push(ctor_arg_to_dynamic(a));
+      }
+      // The map is built only for a body that takes it.
+      if closure_arity(&ast, body.fn_name())
+        .is_none_or(|p| p.saturating_sub(body.curry().len()) > args.len() + 1)
+      {
+        call_args.push(Dynamic::from_map(props_to_map(props.clone())));
       }
       match call_deferred_body(&engine, &ast, &body, call_args) {
         Ok(_) => Ok(()),
@@ -424,9 +430,8 @@ pub(super) fn apply_opts<B: BindingBuilder>(
   Ok(builder)
 }
 
-/// Build a `before/afterConstruct` trampoline: the body runs with the live
-/// document published as active context (so `document.*` proxy calls work);
-/// the whatsit itself is not yet exposed there (read-only marshaling TBD).
+/// Build a `before/afterConstruct` trampoline: the body is Perl's `($document, $whatsit)` (Constructor.pm:136-139),
+/// the document published as active context and the whatsit read-only.
 pub(super) fn construction_trampoline(
   fp: FnPtr,
   engine: Rc<Engine>,
@@ -439,15 +444,17 @@ pub(super) fn construction_trampoline(
         document,
         props: whatsit.get_properties(),
       });
-      let _: Dynamic = call_deferred_body(&engine, &ast, &fp, (Dynamic::from(DocProxy),))
+      let _whatsit_guard = WhatsitCtxGuard::new((whatsit as *const Whatsit as *mut Whatsit, false));
+      let args = (Dynamic::from(DocProxy), Dynamic::from(WhatsitProxy));
+      let _: Dynamic = call_deferred_body(&engine, &ast, &fp, args)
         .or_else(|e| contain("afterConstruct", e, Dynamic::UNIT))?;
       Ok(())
     },
   )
 }
 
-/// Build an `afterDigest` trampoline: publish the whatsit so a parameterless body
-/// can reach it via `whatsit()`, call the Rhai closure, pop.
+/// Build an `afterDigest` trampoline: the body receives the whatsit (Perl's `($stomach, $whatsit)`, without the
+/// stomach), published mutable.
 pub(super) fn after_digest_trampoline(
   fp: FnPtr,
   engine: Rc<Engine>,
@@ -456,7 +463,7 @@ pub(super) fn after_digest_trampoline(
   Rc::new(move |w: &mut Whatsit| -> Result<Vec<Digested>> {
     // RAII pop on every exit incl. panic (review M1).
     let _whatsit_guard = WhatsitCtxGuard::new((w as *mut Whatsit, true));
-    let _: Dynamic = call_deferred_body(&engine, &ast, &fp, ())
+    let _: Dynamic = call_deferred_body(&engine, &ast, &fp, (Dynamic::from(WhatsitProxy),))
       .or_else(|e| contain("afterDigest", e, Dynamic::UNIT))?;
     Ok(Vec::new())
   })
@@ -700,7 +707,7 @@ pub(super) fn dynamic_to_option_value(v: &Dynamic) -> Option<OptionValue> {
 /// (`bounded: 1`) or string (`protected: "yes"`) option to `false`, diverging
 /// from the `OptionValue`/`set_option` path that the same bindings reach via
 /// scalar options.
-fn dynamic_to_bool(v: &Dynamic) -> bool {
+pub(super) fn dynamic_to_bool(v: &Dynamic) -> bool {
   dynamic_to_option_value(v)
     .and_then(|ov| ov.into_bool().ok())
     .unwrap_or(false)
@@ -1131,9 +1138,8 @@ pub(super) fn wire_constructor_template(proto: &str, template: String) -> Result
     .install()
 }
 
-/// Build a closure-form `reversion` trampoline: the body runs with the whatsit
-/// published READ-ONLY (argString/propertyString available) and each digested
-/// arg as its TeX-source string; its returned string is the reversion TeX.
+/// Build a closure-form `reversion` trampoline: the body is Perl's `($whatsit, @args)` (Whatsit.pm:121), the whatsit
+/// read-only and each arg its TeX-source string; it returns the reversion (TeX source, a `Token` or `Tokens`).
 pub(super) fn reversion_trampoline(
   fp: FnPtr,
   engine: Rc<Engine>,
@@ -1143,12 +1149,11 @@ pub(super) fn reversion_trampoline(
     move |w: &Whatsit, args: &Vec<Option<Digested>>| -> Result<Tokens> {
       // RAII pop on every exit incl. panic (review M1). Whatsit is READ-ONLY here.
       let _whatsit_guard = WhatsitCtxGuard::new((w as *const Whatsit as *mut Whatsit, false));
-      let dyn_args: Vec<Dynamic> = args
-        .iter()
-        .map(|a| match a {
+      let dyn_args: Vec<Dynamic> = std::iter::once(Dynamic::from(WhatsitProxy))
+        .chain(args.iter().map(|a| match a {
           Some(d) => Dynamic::from(d.untex().unwrap_or_default()),
           None => Dynamic::UNIT,
-        })
+        }))
         .collect();
       let ret = call_deferred_body(&engine, &ast, &fp, dyn_args)
         .or_else(|e| contain("reversion", e, Dynamic::UNIT))?;
@@ -1157,8 +1162,8 @@ pub(super) fn reversion_trampoline(
   )
 }
 
-/// Build a `sizer` trampoline: the body sees the read-only whatsit and returns
-/// "w;h;d" dimension specs (e.g. "10pt;8pt;2pt").
+/// Build a `sizer` trampoline: the body receives the read-only whatsit (Perl's `&$sizer($whatsit)`, Whatsit.pm:249)
+/// and returns "w;h;d" dimension specs (e.g. "10pt;8pt;2pt").
 pub(super) fn sizer_trampoline(
   fp: FnPtr,
   engine: Rc<Engine>,
@@ -1168,7 +1173,7 @@ pub(super) fn sizer_trampoline(
     move |w: &Whatsit| -> Result<(Dimension, Dimension, Dimension)> {
       // RAII pop on every exit incl. panic (review M1). Whatsit is READ-ONLY here.
       let _whatsit_guard = WhatsitCtxGuard::new((w as *const Whatsit as *mut Whatsit, false));
-      let ret = call_deferred_body(&engine, &ast, &fp, ())
+      let ret = call_deferred_body(&engine, &ast, &fp, (Dynamic::from(WhatsitProxy),))
         .or_else(|e| contain("sizer", e, Dynamic::UNIT))?;
       let spec = dynamic_to_string(ret);
       let mut parts = spec.split(';');

@@ -47,11 +47,11 @@ DefConstructor("\\endreferences", |document| {
   document.maybeCloseElement("ltx:bibliography");
 });
 
-// Imperative constructor with an attribute and literal text:
+// Imperative constructor with an attribute and literal text; `openElement`
+// takes Perl's attributes and returns the new node, as Document.pm's does:
 //   \note{N} -> <ltx:text class="note">[N]</ltx:text>
 DefConstructor("\\note{}", |document, x| {
-  document.openElement("ltx:text");
-  document.setAttribute("class", "note");
+  document.openElement("ltx:text", #{ class: "note" });
   document.absorbString("[");
   document.absorb(x);
   document.absorbString("]");
@@ -68,9 +68,9 @@ DeclareOption("eqsecnum", || {
 });
 
 // ── Primitives (DefPrimitive) — digestion-time side-effects ──
-// State is shared with assign_value (group-local) / assign_global / lookup_value.
-DefPrimitive("\\setx{}", |v| { assign_global("script:x", v); });
-DefMacro("\\getx", || lookup_value("script:x"));
+// State is shared through Perl's AssignValue(key, value[, scope]) / LookupValue(key).
+DefPrimitive("\\setx{}", |v| { AssignValue("script:x", v, "global"); });
+DefMacro("\\getx", || LookupValue("script:x"));
 
 // ── Environments (DefEnvironment) — template (#body) and imperative forms ──
 DefEnvironment("{rquote}", "<ltx:quote class=\"rhai\">#body</ltx:quote>", #{
@@ -84,17 +84,19 @@ DefEnvironment("{biop}{}",
 });
 
 // ── Option bags: hooks, fonts, reversion, sizer ──
-// All Def* forms accept a trailing #{...} of Perl's key => value options.
+// All Def* forms accept a trailing #{...} of Perl's key => value options. A hook
+// receives the whatsit as Perl passes it: `afterDigest: |whatsit|`, a
+// reversion `|whatsit, arg1, …|`, a sizer `|whatsit|`.
 DefConstructor("\\fnote{}{}",
   "^<ltx:note role=\"footnote\" ?#mark(mark=\"#mark\")()>#2</ltx:note>", #{
   mode: "internal_vertical",
   beforeDigest: || neutralize_font(),
-  afterDigest: || {
-    let m = whatsit().argString(1);
-    if m != "" { whatsit().setProperty("mark", m); }
+  afterDigest: |whatsit| {
+    let m = ToString(whatsit.getArg(1));
+    if m != "" { whatsit.setProperty("mark", m); }
   },
-  reversion: |mark, body| "\\fnote{" + mark + "}{" + body + "}",
-  sizer: || "10pt;8pt;2pt"
+  reversion: |whatsit, mark, body| "\\fnote{" + mark + "}{" + body + "}",
+  sizer: |whatsit| "10pt;8pt;2pt"
 });
 
 // ── Counters & cross-references ──

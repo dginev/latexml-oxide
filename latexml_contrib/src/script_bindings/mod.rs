@@ -22,7 +22,7 @@
 //!   a control-sequence token.
 //! * **`DefConstructor`** (construction) — two forms. A string XML template, or an imperative body
 //!   that reads like the Perl original: it receives a `Document` **proxy** as its first argument
-//!   (Perl's `$_[0]`) and each digested argument as an opaque handle, e.g. `|document, x| {
+//!   (Perl's `$_[0]`), each digested argument as an opaque handle, then Perl's `%props` as one map, e.g. `|document, x| {
 //!   document.openElement("ltx:emph"); document.absorb(x); document.closeElement("ltx:emph"); }`.
 //!   The proxy's methods resolve a thread-local **active context** (the live `&mut Document` +
 //!   props, published for the duration of the call; never borrowed across a re-entrant call).
@@ -122,14 +122,17 @@ thread_local! {
   /// (Digested args are passed to the body directly as handles, not via here.)
   static CTOR_CTX: RefCell<Vec<CtorCtx>> = const { RefCell::new(Vec::new()) };
 
-  /// Active-context stack for whatsit-receiving hook closures (`afterDigest`, …).
-  /// Lets a parameterless hook body reach the in-flight whatsit via `whatsit()` —
-  /// referenced only when needed (the "omit as implied" model).
+  /// Active-context stack for whatsit-receiving hook closures (`afterDigest`, …): the in-flight whatsit their
+  /// `whatsit` argument (and the deprecated `whatsit()`) resolves.
   /// Entries are (whatsit pointer, mutable?). Digestion hooks (`afterDigest`,
   /// `properties`-adjacent) publish mutable whatsits; construction hooks
   /// (`before/afterConstruct`, `reversion`, `sizer`) publish READ-ONLY ones —
   /// `setProperty` errors there instead of mutating through a shared ref.
   static WHATSIT_CTX: RefCell<Vec<(*mut Whatsit, bool)>> = const { RefCell::new(Vec::new()) };
+
+  /// The deprecated aliases already Warned, by script (its AST) — once per binding load; `load_script` clears its own.
+  static DEPRECATED_WARNED: RefCell<Vec<(usize, &'static str)>> =
+    const { RefCell::new(Vec::new()) };
 
   /// The already-logged Fatal a registered function returned into Rhai, which can only carry its text (kept
   /// beside it): the script's caller returns it as raised, so it prints once (#792).
@@ -146,6 +149,57 @@ pub(super) fn take_raised_fatal(e: &EvalAltResult) -> Option<Error> {
     _ => false,
   };
   (raised && fatal.is_logged_fatal()).then_some(fatal)
+}
+
+/// The names #716 replaces with Perl's forms, kept one release as aliases: the name a script writes and its
+/// replacement. [`warn_deprecated`] names both; `api_doc` marks each row.
+pub(super) const DEPRECATED_ALIASES: &[(&str, &str)] = &[
+  ("whatsit", "the hook's whatsit argument"),
+  ("whatsit.argString", "whatsit.getArg(n)"),
+  ("whatsit.propertyString", "whatsit.getProperty(key)"),
+  (
+    "document.getProperty",
+    "the constructor body's trailing properties map",
+  ),
+  (
+    "document.getProperties",
+    "the constructor body's trailing properties map",
+  ),
+  ("assign_value", "AssignValue(key, value, \"local\")"),
+  ("assign_global", "AssignValue(key, value, \"global\")"),
+  ("lookup_value", "LookupValue(key)"),
+  ("AssignString", "AssignValue(key, value[, scope])"),
+  ("AssignNumber", "AssignValue(key, value[, scope])"),
+  ("AssignBool", "AssignValue(key, value[, scope])"),
+  ("AssignMeaning", "Let(cs, other[, scope])"),
+  (
+    "DefAccent",
+    "DefAccent(accent, combining, standalone, #{below: true})",
+  ),
+];
+
+/// One `Warning:deprecated:<old>` per binding load for a deprecated alias, naming its replacement.
+pub(super) fn warn_deprecated(old: &'static str) {
+  let script = CURRENT_SCRIPT.with(|c| {
+    c.borrow()
+      .last()
+      .map_or(0, |(_, ast)| Rc::as_ptr(ast) as usize)
+  });
+  let first = DEPRECATED_WARNED.with(|w| {
+    let mut warned = w.borrow_mut();
+    let first = !warned.contains(&(script, old));
+    if first {
+      warned.push((script, old));
+    }
+    first
+  });
+  if first {
+    let new = DEPRECATED_ALIASES
+      .iter()
+      .find(|(name, _)| *name == old)
+      .map_or("", |(_, new)| *new);
+    latexml_core::Warn!("deprecated", old, format!("{old} is deprecated; use {new}"));
+  }
 }
 
 #[derive(Clone, Copy)]
@@ -488,9 +542,8 @@ pub(super) struct RhaiCommand {
   cwd:     Option<String>,
 }
 
-/// Rhai proxy for the in-flight whatsit, obtained inside a hook body via
-/// `whatsit()`. Like `DocProxy`, it carries no pointer; methods resolve the
-/// active whatsit context.
+/// Rhai proxy for the in-flight whatsit, passed to a hook body positionally as Perl passes `$whatsit` (#716). Like
+/// `DocProxy`, it carries no pointer; methods resolve the active whatsit context.
 #[derive(Clone)]
 struct WhatsitProxy;
 
@@ -509,13 +562,21 @@ fn current_whatsit() -> std::result::Result<*mut Whatsit, Box<EvalAltResult>> {
   current_whatsit_entry().map(|(w, _)| w)
 }
 
+/// Run `f` on the in-flight whatsit, read-only — the single site that re-mints it for the readers.
+fn with_whatsit<R>(f: impl FnOnce(&Whatsit) -> R) -> std::result::Result<R, Box<EvalAltResult>> {
+  // SAFETY: `current_whatsit()` returns the in-flight whatsit pointer the core published onto WHATSIT_CTX for the
+  // duration of THIS hook body (an error, not UB, outside one); read only, so no aliasing `&mut` exists.
+  let w = unsafe { &*current_whatsit()? };
+  Ok(f(w))
+}
+
 /// The top whatsit entry incl. its mutability flag.
 fn current_whatsit_entry() -> std::result::Result<(*mut Whatsit, bool), Box<EvalAltResult>> {
   WHATSIT_CTX.with(|c| {
     c.borrow()
       .last()
       .copied()
-      .ok_or_else(|| Box::<EvalAltResult>::from("whatsit() called outside a hook body"))
+      .ok_or_else(|| Box::<EvalAltResult>::from("a whatsit method called outside a hook body"))
   })
 }
 
@@ -566,6 +627,8 @@ pub fn load_script(src: &str) -> Result<usize> {
   // (a stack, so a script loading another script nests correctly). RAII pop on
   // every exit incl. a panic out of `run_ast` (review M1).
   let before = WIRED_COUNT.with(|c| *c.borrow());
+  let script = Rc::as_ptr(&cached.ast) as usize;
+  DEPRECATED_WARNED.with(|w| w.borrow_mut().retain(|(s, _)| *s != script));
   let run = {
     let _script_guard = ScriptCtxGuard::new((cached.engine.clone(), cached.ast.clone()));
     cached.engine.run_ast(&cached.ast).map_err(|e| {

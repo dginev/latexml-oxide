@@ -35,24 +35,24 @@ closure-registered functions; only the accepted types are.
 
 Called at the top level of a binding file, or from inside any body.
 
-174 functions, 257 calls.
+174 functions, 258 calls.
 
 | call | documentation |
 |---|---|
 | `AddToCounter(string, int)` | Add a number to a counter. ([`add_to_counter`](latexml_core::binding::counter::dialect::add_to_counter)) |
 | `AddToMacro(string\|Token, string\|Token)` | Append tokens (or TeX source) to a macro's expansion, as Perl's `AddToMacro`. ([`add_to_macro`](latexml_core::binding::content::add_to_macro)) |
 | `AppendSearchPath(string)` | Append a directory to the input search path (searched after existing paths). ([`add_search_path`](latexml_core::state::add_search_path)) |
-| `AssignBool(string, bool)`<br>`AssignBool(string, bool, string)` | Bind a key to a boolean value, with a scope. ([`assign_value`](latexml_core::state::assign_value)) |
+| `AssignBool(string, ?)`<br>`AssignBool(string, ?, string)` | **Deprecated** (Warns once per binding load): use `AssignValue(key, value[, scope])`. Bind a key to a value, as `AssignValue`. ([`assign_value`](latexml_core::state::assign_value)) |
 | `AssignCatcode(string, int)`<br>`AssignCatcode(string, int, string)` | Set a character's category code, with an optional scope. ([`assign_catcode`](latexml_core::state::assign_catcode)) |
 | `AssignDelcode(string, int)`<br>`AssignDelcode(string, int, string)` | Set a character's delimiter code, with an optional scope. ([`assign_delcode`](latexml_core::state::assign_delcode)) |
 | `AssignFloat(string, float)`<br>`AssignFloat(string, float, string)` | Bind a key to a fractional (float) value, with a scope. ([`assign_value`](latexml_core::state::assign_value)) |
 | `AssignLCcode(string, int)`<br>`AssignLCcode(string, int, string)` | Set a character's lowercase code, with an optional scope. ([`assign_lccode`](latexml_core::state::assign_lccode)) |
 | `AssignMapping(string, string, ?)` | Bind one key inside a named mapping to any value, as `AssignValue`; `()` removes the key. ([`assign_mapping`](latexml_core::state::assign_mapping)) |
 | `AssignMathcode(string, int)`<br>`AssignMathcode(string, int, string)` | Set a character's math code, with an optional scope. ([`assign_mathcode`](latexml_core::state::assign_mathcode)) |
-| `AssignMeaning(string\|Token, string\|Token)` | Give a token (CS name or `Token`) the current meaning of another. ([`assign_meaning`](latexml_core::state::assign_meaning)) |
-| `AssignNumber(string, int)`<br>`AssignNumber(string, int, string)` | Bind a key to an integer (Number) value, with a scope. ([`assign_value`](latexml_core::state::assign_value)) |
+| `AssignMeaning(string\|Token, string\|Token)` | **Deprecated** (Warns once per binding load): use `Let(cs, other[, scope])`. Give a token (CS name or `Token`) the current meaning of another, as `Let`. ([`let_definition`](latexml_core::state::let_definition)) |
+| `AssignNumber(string, ?)`<br>`AssignNumber(string, ?, string)` | **Deprecated** (Warns once per binding load): use `AssignValue(key, value[, scope])`. Bind a key to a value, as `AssignValue`. ([`assign_value`](latexml_core::state::assign_value)) |
 | `AssignSFcode(string, int)`<br>`AssignSFcode(string, int, string)` | Set a character's space-factor code, with an optional scope. ([`assign_sfcode`](latexml_core::state::assign_sfcode)) |
-| `AssignString(string, string)`<br>`AssignString(string, string, string)` | Bind a key to a string value, with a scope (the typed twin of `AssignValue`). ([`assign_value`](latexml_core::state::assign_value)) |
+| `AssignString(string, ?)`<br>`AssignString(string, ?, string)` | **Deprecated** (Warns once per binding load): use `AssignValue(key, value[, scope])`. Bind a key to a value, as `AssignValue`. ([`assign_value`](latexml_core::state::assign_value)) |
 | `AssignUCcode(string, int)`<br>`AssignUCcode(string, int, string)` | Set a character's uppercase code, with an optional scope. ([`assign_uccode`](latexml_core::state::assign_uccode)) |
 | `AssignValue(string, ?)`<br>`AssignValue(string, ?, string)` | Bind a key in the value table to any value (string, number, bool, `Token`, `Tokens`, handle), with a scope; `()` stores undef. ([`assign_value`](latexml_core::state::assign_value)) |
 | `AtBeginDocument(Fn)`<br>`AtBeginDocument(Token)`<br>`AtBeginDocument(Tokens)`<br>`AtBeginDocument(string)` | Queue TeX source, a `Tokens`/`Token` value, or a closure (installed as a macro) to run at `\begin{document}`. ([`push_value`](latexml_core::state::push_value)) |
@@ -84,7 +84,7 @@ Called at the top level of a binding file, or from inside any body.
 | `DeclareFontMap(string, array)`<br>`DeclareFontMap(string, array, map)` | Declare an encoding's font map: an array of 1-char strings or `()`, with Perl's `family` and `*_mathstyle` options. |
 | `DeclareFontMapMultichar(string, map)`<br>`DeclareFontMapMultichar(string, string, map)` | Declare the multi-character glyphs of a font map (optionally a family's): position (decimal string) to its text. |
 | `DeclareOption(Fn)`<br>`DeclareOption(string, Fn)`<br>`DeclareOption(string, string)` | Declare a class/package option: named with a body, or the bare-closure form for the default handler (Perl `DeclareOption(undef, sub {...})`). |
-| `DefAccent(string, string, string)`<br>`DefAccent(string, string, string, bool)` | Define an accent command in both its combining and standalone forms. |
+| `DefAccent(string, string, string)`<br>`DefAccent(string, string, string, bool)`<br>`DefAccent(string, string, string, map)` | Define an accent command in both its combining and standalone forms; Perl's options map `#{below: true}`. **Deprecated:** its older form (Warns once per binding load); use `DefAccent(accent, combining, standalone, #{below: true})`. |
 | `DefColumnType(string, Fn)` | Define a tabular column type, as its rewrite expansion. ([`def_macro`](latexml_core::binding::def::dialect::def_macro)) |
 | `DefConditional(string)`<br>`DefConditional(string, (), map)`<br>`DefConditional(string, Fn)`<br>`DefConditional(string, Fn, map)` | Define a conditional control sequence. ([`def_conditional`](latexml_core::binding::def::dialect::def_conditional)) |
 | `DefConstructor(string, Fn)`<br>`DefConstructor(string, Fn, map)`<br>`DefConstructor(string, string)`<br>`DefConstructor(string, string, map)` | Define a control sequence that constructs XML. ([`def_constructor`](latexml_core::binding::def::dialect::def_constructor)) |
@@ -207,18 +207,18 @@ Called at the top level of a binding file, or from inside any body.
 | `UnshiftValue(string, ?)` | Prepend a value (string/int/float/bool/Tokens/Token) to a value-table list, creating it (global) if absent. ([`unshift_value`](latexml_core::state::unshift_value)) |
 | `Warn(string, string, string)`<br>`Warn(string, string, string, ?)` | Log a `Warning:` with the given category and object, plus optional details. |
 | `XEquals(string\|Token, string\|Token) -> bool` | Whether two tokens (CS name strings or `Token`s) have the same meaning. ([`x_equals`](latexml_core::state::x_equals)) |
-| `assign_global(string, string)` | [`assign_value`](latexml_core::state::assign_value) with [`Scope::Global`](latexml_core::state::Scope::Global): the binding survives the enclosing TeX group. |
-| `assign_value(string, string)` | [`assign_value`](latexml_core::state::assign_value) with [`Scope::Local`](latexml_core::state::Scope::Local), TeX's default: the binding expires with the enclosing group. |
-| `lookup_value(string) -> string` | [`lookup_value`](latexml_core::state::lookup_value) coerced to a string; empty when unset, so an unbound key and an empty one are indistinguishable here. |
+| `assign_global(string, string)` | **Deprecated** (Warns once per binding load): use `AssignValue(key, value, "global")`. [`assign_value`](latexml_core::state::assign_value) with [`Scope::Global`](latexml_core::state::Scope::Global): the binding survives the enclosing TeX group. |
+| `assign_value(string, string)` | **Deprecated** (Warns once per binding load): use `AssignValue(key, value, "local")`. [`assign_value`](latexml_core::state::assign_value) with [`Scope::Local`](latexml_core::state::Scope::Local), TeX's default: the binding expires with the enclosing group. |
+| `lookup_value(string) -> string` | **Deprecated** (Warns once per binding load): use `LookupValue(key)`. [`lookup_value`](latexml_core::state::lookup_value) coerced to a string; empty when unset, so an unbound key and an empty one are indistinguishable here. |
 | `neutralize_font()` | Reset the text and math fonts to their defaults, group-locally. ([`neutralize_font`](latexml_engine::base_utilities::neutralize_font)) |
 | `roman(int) -> Tokens` | Lower-case roman numerals of a number, as `Tokens`. |
-| `whatsit() -> Whatsit` | A handle on the whatsit under construction. Meaningful only inside a digest hook — the handle itself is always returned, but USING it outside one is a clean script error, not a crash. |
+| `whatsit() -> Whatsit` | **Deprecated** (Warns once per binding load): use the hook's whatsit argument. A handle on the whatsit under construction, inside a hook. USING it outside one is a clean script error, not a crash. |
 
 ## `document` methods
 
 Reached through the `document` handle a constructor body receives as its first argument — Perl's `$document->method`.
 
-29 functions, 43 calls.
+29 functions, 44 calls.
 
 | call | documentation |
 |---|---|
@@ -228,7 +228,7 @@ Reached through the `document` handle a constructor body receives as its first a
 | `addClass(Node, string)` | Add CSS classes to a node, keeping those it already has. ([`Document::add_class`](latexml_core::document::Document::add_class)) |
 | `appendClone(Node, array)` | Append COPIES of nodes, with fresh ids. ([`Document::append_clone`](latexml_core::document::Document::append_clone)) |
 | `canContain(Node, string) -> bool`<br>`canContain(string, string) -> bool` | May an element (a node or a qname) contain a child qname? — the schema query before opening an element. ([`can_contain`](latexml_core::document::can_contain)) |
-| `closeElement(string)` | Close the deepest open element of that name. ([`Document::close_element`](latexml_core::document::Document::close_element)) |
+| `closeElement(string) -> Node?` | Close the deepest open element of that name and return it (`()` when it is not open). ([`Document::close_element`](latexml_core::document::Document::close_element)) |
 | `closeElementAt(Node)` | Close an element that was opened with `openElementAt`. ([`Document::close_element_at`](latexml_core::document::Document::close_element_at)) |
 | `findnode(string) -> Node?`<br>`findnode(string, Node) -> Node?` | The first node matching an XPath. ([`Document::findnode`](latexml_core::document::Document::findnode)) |
 | `findnodes(string) -> array`<br>`findnodes(string, Node) -> array` | Every node matching an XPath. ([`Document::findnodes`](latexml_core::document::Document::findnodes)) |
@@ -236,13 +236,13 @@ Reached through the `document` handle a constructor body receives as its first a
 | `generateID(Node, string)` | Give a node an `xml:id`, if it has none. ([`Document::generate_id`](latexml_core::document::Document::generate_id)) |
 | `getElement() -> Node?` | The element at, or containing, the insertion point. ([`Document::get_element`](latexml_core::document::Document::get_element)) |
 | `getNode() -> Node` | The current insertion point. ([`Document::get_node`](latexml_core::document::Document::get_node)) |
-| `getProperties() -> map` | The whatsit's whole property map (a Rhai object map), inside a constructor body. |
-| `getProperty(string) -> ?` | One whatsit property by name, inside a constructor body — its typed value (string / int / bool / `Tokens` / `Digested` handle / …), or `()` when absent. The read-sibling of `absorbProperty`. |
+| `getProperties() -> map` | **Deprecated** (Warns once per binding load): use the constructor body's trailing properties map. The whatsit's whole property map (a Rhai object map), inside a constructor body. |
+| `getProperty(string) -> ?` | **Deprecated** (Warns once per binding load): use the constructor body's trailing properties map. One whatsit property by name, inside a constructor body; `()` when absent. |
 | `insertElement(string) -> Node`<br>`insertElement(string, Digested) -> Node`<br>`insertElement(string, Digested, map) -> Node`<br>`insertElement(string, map) -> Node` | Open, absorb and close in one step; returns the new element. ([`Document::insert_element`](latexml_core::document::Document::insert_element)) |
 | `insertPI(string)`<br>`insertPI(string, map)` | Insert a processing instruction: a target, with optional attributes. ([`Document::insert_pi`](latexml_core::document::Document::insert_pi)) |
 | `insertXML(Node)`<br>`insertXML(array)`<br>`insertXML(string)` | Splice ALREADY-PARSED nodes in at the insertion point. ([`Document::insert_nodes`](latexml_core::document::Document::insert_nodes)) |
-| `maybeCloseElement(string)` | Close an element if it is open and closeable; otherwise do nothing. ([`Document::maybe_close_element`](latexml_core::document::Document::maybe_close_element)) |
-| `openElement(string)` | Open an element and make it the insertion point. ([`Document::open_element`](latexml_core::document::Document::open_element)) |
+| `maybeCloseElement(string) -> Node?` | Close an element if it is open and closeable and return it; otherwise `()`. ([`Document::maybe_close_element`](latexml_core::document::Document::maybe_close_element)) |
+| `openElement(string) -> Node`<br>`openElement(string, map) -> Node` | Open an element (with an optional attribute map), make it the insertion point and return it. ([`Document::open_element`](latexml_core::document::Document::open_element)) |
 | `openElementAt(Node, string) -> Node`<br>`openElementAt(Node, string, map) -> Node` | Open an element at a given node rather than the insertion point. ([`Document::open_element_at`](latexml_core::document::Document::open_element_at)) |
 | `removeNode(Node)` | Remove a node, releasing the ids under it. ([`Document::remove_node`](latexml_core::document::Document::remove_node)) |
 | `renameNode(Node, string) -> Node`<br>`renameNode(Node, string, bool) -> Node` | Rename an element, rebuilding it through the model. ([`Document::rename_node`](latexml_core::document::Document::rename_node)) |
@@ -276,17 +276,20 @@ An XML node: one returned by `ParseXML`, or one handed to a rewrite / ligature-m
 | `toString() -> string` | The node and its subtree serialized back to markup — the inverse of `ParseXML`. |
 | `unlink()` | Detach the node from its tree. ([`Node::unlink`](libxml::tree::Node::unlink)) |
 
-## `whatsit()` methods
+## `whatsit` methods
 
-The whatsit under construction, inside a digest hook.
+The whatsit a hook receives positionally, as Perl passes `$whatsit` (Whatsit.pm).
 
-3 functions, 3 calls.
+6 functions, 6 calls.
 
 | call | documentation |
 |---|---|
-| `argString(int) -> string` | The nth digested argument of the current whatsit, reverted to source text. |
-| `propertyString(string) -> string` | One property of the current whatsit, as a string. |
-| `setProperty(string, string)` | Set a property on the current whatsit. Only a DIGEST hook may: in a construction hook the whatsit is already read-only, and this is a clean script error. |
+| `argString(int) -> string` | **Deprecated** (Warns once per binding load): use `whatsit.getArg(n)`. The whatsit's nth argument, reverted to source text. |
+| `getArg(int) -> ?` | The nth argument (from 1), as a constructor body receives it: a `Digested` handle, `Tokens` for an undigested one, `()` when absent. ([`Whatsit::get_arg`](latexml_core::whatsit::Whatsit::get_arg)) |
+| `getProperties() -> map` | The whole property map (a Rhai object map), each value typed. ([`BoxOps::get_properties`](latexml_core::BoxOps::get_properties)) |
+| `getProperty(string) -> ?` | One property by name, its typed value (string / int / bool / `Tokens` / `Digested` handle / …); `()` when absent. ([`BoxOps::get_property`](latexml_core::BoxOps::get_property)) |
+| `propertyString(string) -> string` | **Deprecated** (Warns once per binding load): use `whatsit.getProperty(key)`. One property of the whatsit, as a string. |
+| `setProperty(string, ?)` | Set a property (any value) on the whatsit. Only a DIGEST hook may: in a construction hook the whatsit is already read-only, and this is a clean script error. |
 
 ## `LookupDefinition()` methods
 

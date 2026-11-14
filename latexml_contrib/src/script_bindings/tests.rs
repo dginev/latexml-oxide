@@ -23,39 +23,39 @@ fn pool_surface_state_counters_tokens() {
   load_script(
     r##"
       AssignValue("ws:k", "v1");
-      assign_global("ws:str", LookupString("ws:k"));
+      AssignValue("ws:str", LookupString("ws:k"), "global");
 
       RawTeX("\\def\\wsfoo{FOO}");
       Let("\\wsalias", "\\wsfoo");
-      assign_global("ws:def", if IsDefined("\\wsfoo") { "yes" } else { "no" });
-      assign_global("ws:alias", if IsDefined("\\wsalias") { "yes" } else { "no" });
-      assign_global("ws:xeq", if XEquals("\\wsalias", "\\wsfoo") { "eq" } else { "ne" });
-      assign_global("ws:expand", UnTeX(Expand(TokenizeInternal("\\wsfoo"))));
+      AssignValue("ws:def", if IsDefined("\\wsfoo") { "yes" } else { "no" }, "global");
+      AssignValue("ws:alias", if IsDefined("\\wsalias") { "yes" } else { "no" }, "global");
+      AssignValue("ws:xeq", if XEquals("\\wsalias", "\\wsfoo") { "eq" } else { "ne" }, "global");
+      AssignValue("ws:expand", UnTeX(Expand(TokenizeInternal("\\wsfoo"))), "global");
 
       NewCounter("wsctr");
       StepCounter("wsctr");
       StepCounter("wsctr");
       AddToCounter("wsctr", 3);
-      assign_global("ws:cv", CounterValue("wsctr").to_string());
+      AssignValue("ws:cv", CounterValue("wsctr").to_string(), "global");
       let refmap = RefStepCounter("wsctr");
-      assign_global("ws:ref", if ("tags" in refmap) && ("id" in refmap) { "has" } else { "none" });
+      AssignValue("ws:ref", if ("tags" in refmap) && ("id" in refmap) { "has" } else { "none" }, "global");
       ResetCounter("wsctr");
-      assign_global("ws:cv0", CounterValue("wsctr").to_string());
+      AssignValue("ws:cv0", CounterValue("wsctr").to_string(), "global");
 
-      assign_global("ws:digest", ToString(DigestText("ab")));
+      AssignValue("ws:digest", ToString(DigestText("ab")), "global");
 
-      assign_global("ws:cat", LookupCatcode("a").to_string());
+      AssignValue("ws:cat", LookupCatcode("a").to_string(), "global");
       AssignCatcode("~", 12);
-      assign_global("ws:cat2", LookupCatcode("~").to_string());
-      assign_global("ws:meaning", if LookupMeaning("\\wsfoo") == "" { "none" } else { "some" });
+      AssignValue("ws:cat2", LookupCatcode("~").to_string(), "global");
+      AssignValue("ws:meaning", if LookupMeaning("\\wsfoo") == "" { "none" } else { "some" }, "global");
       let idmap = RefStepID("wsctr");
-      assign_global("ws:refid", if "id" in idmap { "has" } else { "none" });
+      AssignValue("ws:refid", if "id" in idmap { "has" } else { "none" }, "global");
 
       AssignMapping("wsmap", "alpha", "A1");
-      assign_global("ws:map", LookupMapping("wsmap", "alpha"));
-      assign_global("ws:kv1", GetKeyVal("lang=rust, size={1, 2}", "size"));
+      AssignValue("ws:map", LookupMapping("wsmap", "alpha"), "global");
+      AssignValue("ws:kv1", GetKeyVal("lang=rust, size={1, 2}", "size"), "global");
       let kvm = GetKeyVals("lang=rust, size={1, 2}");
-      assign_global("ws:kv2", kvm.lang);
+      AssignValue("ws:kv2", kvm.lang, "global");
     "##,
   )
   .expect("wave-A surface script should load cleanly");
@@ -102,38 +102,50 @@ fn typed_assign_roundtrip() {
   fresh_state();
   load_script(
     r##"
-      AssignNumber("ta:n", 7);
+      AssignValue("ta:n", 7);
       AssignFloat("ta:f", 10.95);
-      AssignBool("ta:b", true);
-      AssignString("ta:s", "hi");
+      AssignValue("ta:b", true);
+      AssignValue("ta:s", "hi");
       // 3-arg scoped forms: global so they survive the script's own group.
-      AssignNumber("ta:ng", 42, "global");
+      AssignValue("ta:ng", 42, "global");
       AssignFloat("ta:fg", 3.5, "global");
 
       // Round-trip each value back THROUGH the bindings (not just the Rust
       // side). Range/equality witnesses dodge float-formatting fragility.
-      assign_global("ta:n_ok", if LookupNumber("ta:n") == 7 { "ok" } else { "bad" });
-      assign_global("ta:f_ok", if LookupFloat("ta:f") > 10.9 && LookupFloat("ta:f") < 11.0 { "ok" } else { "bad" });
-      assign_global("ta:b_ok", if LookupBool("ta:b") { "ok" } else { "bad" });
-      assign_global("ta:s_ok", if LookupString("ta:s") == "hi" { "ok" } else { "bad" });
+      AssignValue("ta:n_ok", if LookupNumber("ta:n") == 7 { "ok" } else { "bad" }, "global");
+      AssignValue("ta:f_ok", if LookupFloat("ta:f") > 10.9 && LookupFloat("ta:f") < 11.0 { "ok" } else { "bad" }, "global");
+      AssignValue("ta:b_ok", if LookupBool("ta:b") { "ok" } else { "bad" }, "global");
+      AssignValue("ta:s_ok", if LookupString("ta:s") == "hi" { "ok" } else { "bad" }, "global");
     "##,
   )
   .expect("typed-assign surface script should load cleanly");
   // Through-the-binding round-trips.
-  assert_eq!(lookup_str("ta:n_ok"), "ok", "AssignNumber -> LookupNumber");
+  assert_eq!(
+    lookup_str("ta:n_ok"),
+    "ok",
+    "AssignValue(int) -> LookupNumber"
+  );
   assert_eq!(
     lookup_str("ta:f_ok"),
     "ok",
     "AssignFloat -> LookupFloat keeps the fraction"
   );
-  assert_eq!(lookup_str("ta:b_ok"), "ok", "AssignBool -> LookupBool");
-  assert_eq!(lookup_str("ta:s_ok"), "ok", "AssignString -> LookupString");
+  assert_eq!(
+    lookup_str("ta:b_ok"),
+    "ok",
+    "AssignValue(bool) -> LookupBool"
+  );
+  assert_eq!(
+    lookup_str("ta:s_ok"),
+    "ok",
+    "AssignValue(string) -> LookupString"
+  );
   // Native-side witnesses: the typed variant really landed, and 10.95 kept its
   // fraction (a bare `f64 -> Stored` would floor it to 10 — issue #542).
   assert_eq!(
     state::lookup_number("ta:n").map(|n| n.0),
     Some(7),
-    "ta:n is a Number(7)"
+    "ta:n reads as Number(7)"
   );
   let f = state::lookup_float("ta:f").expect("ta:f is a Float");
   assert!(
@@ -160,7 +172,7 @@ fn let_takes_a_scope() {
       Let("\\lsglobal", "\\lsfoo", "global");
       Let("\\lslocal", "\\lsfoo", "local");
       Let("\\lsdefault", "\\lsfoo");
-      assign_global("ls:inside", if IsDefined("\\lslocal") && IsDefined("\\lsdefault") { "both" } else { "missing" });
+      AssignValue("ls:inside", if IsDefined("\\lslocal") && IsDefined("\\lsdefault") { "both" } else { "missing" }, "global");
     "##,
   )
   .expect("scoped Let script should load cleanly");
@@ -197,19 +209,19 @@ fn let_takes_any_token() {
   load_script(
     r##"
       Let(T_ACTIVE("~"), "\\ltfoo");
-      assign_global("lt:tilde", UnTeX(Expand(T_ACTIVE("~"))));
+      AssignValue("lt:tilde", UnTeX(Expand(T_ACTIVE("~"))), "global");
       Let(T_MATH(), "\\ltfoo");
       Let("\\ltx", T_OTHER("a"));
-      assign_global("lt:xeq", if XEquals("\\ltx", T_OTHER("a")) && IsDefined("\\ltx") { "eq" } else { "ne" });
+      AssignValue("lt:xeq", if XEquals("\\ltx", T_OTHER("a")) && IsDefined("\\ltx") { "eq" } else { "ne" }, "global");
       Let(Token("+", CC_ACTIVE()), T_OTHER("b"));
-      assign_global("lt:plus", if XEquals(T_ACTIVE("+"), Token("b", CC_OTHER())) { "eq" } else { "ne" });
+      AssignValue("lt:plus", if XEquals(T_ACTIVE("+"), Token("b", CC_OTHER())) { "eq" } else { "ne" }, "global");
       Let(T_ACTIVE("?"), "\\ltfoo", "global");
-      AssignMeaning(T_ACTIVE("="), T_ACTIVE("~"));
-      assign_global("lt:assign", UnTeX(Expand(Tokens([T_ACTIVE("="), T_OTHER("x"), T_CS("\\ltfoo")]))));
-      assign_global("lt:tokens1", UnTeX(Expand(Tokens(T_CS("\\ltfoo")))));
-      assign_global("lt:meaning", LookupMeaning(T_OTHER("a")));
-      assign_global("lt:def", if LookupDefinition(T_ACTIVE("~")) == () { "none" } else { "some" });
-      assign_global("lt:digest", ToString(Digest(T_CS("\\ltfoo"))));
+      Let(T_ACTIVE("="), T_ACTIVE("~"));
+      AssignValue("lt:assign", UnTeX(Expand(Tokens([T_ACTIVE("="), T_OTHER("x"), T_CS("\\ltfoo")]))), "global");
+      AssignValue("lt:tokens1", UnTeX(Expand(Tokens(T_CS("\\ltfoo")))), "global");
+      AssignValue("lt:meaning", LookupMeaning(T_OTHER("a")), "global");
+      AssignValue("lt:def", if LookupDefinition(T_ACTIVE("~")) == () { "none" } else { "some" }, "global");
+      AssignValue("lt:digest", ToString(Digest(T_CS("\\ltfoo"))), "global");
     "##,
   )
   .expect("token-taking Let script should load cleanly");
@@ -236,7 +248,7 @@ fn let_takes_any_token() {
   assert_eq!(
     lookup_str("lt:assign"),
     "FOOxFOO",
-    "AssignMeaning takes tokens; Tokens([...]) builds a list"
+    "Let takes tokens; Tokens([...]) builds a list"
   );
   // revW3c: Perl's `Tokens(@tokens)` with one Token (was "Function not found").
   assert_eq!(lookup_str("lt:tokens1"), "FOO");
@@ -316,10 +328,10 @@ fn pushvalue_family_and_search_paths() {
       PushValue("l540", "b");
       PushValue("l540", "c");            // ["a","b","c"]
       let p = PopValue("l540");          // "c"  -> ["a","b"]
-      assign_global("l540:pop_ok", if p == "c" { "ok" } else { "bad" });
+      AssignValue("l540:pop_ok", if p == "c" { "ok" } else { "bad" }, "global");
       UnshiftValue("l540", "z");         // ["z","a","b"]
       let s = ShiftValue("l540");        // "z"  -> ["a","b"]
-      assign_global("l540:shift_ok", if s == "z" { "ok" } else { "bad" });
+      AssignValue("l540:shift_ok", if s == "z" { "ok" } else { "bad" }, "global");
 
       // Dedicated search-path bindings. As of #561 SEARCHPATHS is a group-scoped
       // value-table list (like GRAPHICSPATHS), so these write that list globally.
@@ -397,18 +409,18 @@ fn pushvalue_preserves_types() {
       let b = PopValue("tv");
       let f = PopValue("tv");
       let i = PopValue("tv");
-      assign_global("tv:tok", if UnTeX(t).contains("alpha") { "ok" } else { "bad" });
-      assign_global("tv:bool", if b { "ok" } else { "bad" });
-      assign_global("tv:float", if f == 2.5 { "ok" } else { "bad" });
-      assign_global("tv:int", if i == 7 { "ok" } else { "bad" });
+      AssignValue("tv:tok", if UnTeX(t).contains("alpha") { "ok" } else { "bad" }, "global");
+      AssignValue("tv:bool", if b { "ok" } else { "bad" }, "global");
+      AssignValue("tv:float", if f == 2.5 { "ok" } else { "bad" }, "global");
+      AssignValue("tv:int", if i == 7 { "ok" } else { "bad" }, "global");
       // The point of the generalization: a popped int is an i64, NOT a string.
-      assign_global("tv:int_type", type_of(i));
+      AssignValue("tv:int_type", type_of(i), "global");
 
       // A digested handle survives the round-trip too (separate key, to keep the
       // LIFO ordering above intact).
       PushValue("tvd", DigestText("qq"));
       let d = PopValue("tvd");
-      assign_global("tvd:ok", if ToString(d) == "qq" { "ok" } else { "bad" });
+      AssignValue("tvd:ok", if ToString(d) == "qq" { "ok" } else { "bad" }, "global");
     "##,
   )
   .expect("typed-push script should load cleanly");
@@ -592,11 +604,11 @@ fn builder_conformance_macro_style_vs_rhai_afterdigest() {
   latexml_core::stomach::digest(mouth::tokenize_internal(r"\mfoo{ZED}")).expect("digest mfoo");
 
   // (2) Rhai: the equivalent \rfoo — same builder under the hood; afterDigest
-  // reads the whatsit via whatsit().
+  // receives the whatsit (#716).
   load_script(
     r#"DefConstructor("\\rfoo{}", "<ltx:text>#1</ltx:text>", #{
            mode: "text",
-           afterDigest: || { assign_global("conf:r", whatsit().argString(1)); }
+           afterDigest: |whatsit| { AssignValue("conf:r", ToString(whatsit.getArg(1)), "global"); }
          });"#,
   )
   .expect("load");
@@ -676,7 +688,7 @@ fn declare_option_registers_and_runs() {
   load_script(
     r#"DeclareOption("opt", || {
            Digest(Tokenize("\\relax"));
-           assign_global("script:opt_ran", "yes");
+           AssignValue("script:opt_ran", "yes", "global");
          });"#,
   )
   .expect("load");
@@ -699,12 +711,11 @@ fn declare_option_registers_and_runs() {
 #[test]
 fn constructor_options_map_runs_afterdigest() {
   fresh_state();
-  // The parameterless afterDigest body reaches the in-flight whatsit via
-  // whatsit() — referencing context only when needed ("omit as implied").
+  // The afterDigest body receives the in-flight whatsit (Perl's `$whatsit`, #716).
   load_script(
     r#"DefConstructor("\\opt{}", "<ltx:text>#1</ltx:text>", #{
            mode: "text",
-           afterDigest: || { assign_global("script:cad", whatsit().argString(1)); }
+           afterDigest: |whatsit| { AssignValue("script:cad", ToString(whatsit.getArg(1)), "global"); }
          });"#,
   )
   .expect("load");
@@ -715,7 +726,7 @@ fn constructor_options_map_runs_afterdigest() {
   };
   assert_eq!(
     ran, "HELLO",
-    "afterDigest body did not read the whatsit arg via whatsit()"
+    "afterDigest body did not read the whatsit arg via its whatsit argument"
   );
   latexml_core::reset_thread_engine();
 }
@@ -730,9 +741,9 @@ fn primitive_option_bag_runs_before_and_after_digest() {
   fresh_state();
   load_script(
     r#"
-      DefPrimitive("\\optbagprim", || { assign_global("optbag:primlog", LookupString("optbag:primlog") + "X"); }, #{
-        beforeDigest: || { assign_global("optbag:primlog", LookupString("optbag:primlog") + "B"); },
-        afterDigest:  || { assign_global("optbag:primlog", LookupString("optbag:primlog") + "A"); }
+      DefPrimitive("\\optbagprim", || { AssignValue("optbag:primlog", LookupString("optbag:primlog") + "X", "global"); }, #{
+        beforeDigest: || { AssignValue("optbag:primlog", LookupString("optbag:primlog") + "B", "global"); },
+        afterDigest:  || { AssignValue("optbag:primlog", LookupString("optbag:primlog") + "A", "global"); }
       });
     "#,
   )
@@ -757,8 +768,8 @@ fn math_option_bag_runs_digest_hooks() {
     r#"
       DefMath("\\optbagmath", "∑", #{
         role: "SUMOP",
-        beforeDigest: || { assign_global("optbag:mathlog", LookupString("optbag:mathlog") + "B"); },
-        afterDigest:  || { assign_global("optbag:mathlog", LookupString("optbag:mathlog") + "A"); }
+        beforeDigest: || { AssignValue("optbag:mathlog", LookupString("optbag:mathlog") + "B", "global"); },
+        afterDigest:  || { AssignValue("optbag:mathlog", LookupString("optbag:mathlog") + "A", "global"); }
       });
     "#,
   )
@@ -786,7 +797,7 @@ fn lookup_tokens_on_vecdeque_value_does_not_panic() {
   // option strings (Stored::VecDequeStored of Stored::String).
   latexml_core::state::push_value("class_options", "a4paper").expect("push a4paper");
   latexml_core::state::push_value("class_options", "12pt").expect("push 12pt");
-  load_script(r#"assign_global("ct:opts", UnTeX(LookupTokens("class_options")));"#)
+  load_script(r#"AssignValue("ct:opts", UnTeX(LookupTokens("class_options")), "global");"#)
     .expect("LookupTokens on a VecDequeStored value must not panic");
   assert_eq!(
     lookup_str("ct:opts"),
@@ -805,7 +816,7 @@ fn lookup_string_on_list_value_is_empty_not_leaked() {
   fresh_state();
   latexml_core::state::push_value("class_options", "a4paper").expect("push a4paper");
   latexml_core::state::push_value("class_options", "12pt").expect("push 12pt");
-  load_script(r#"assign_global("ct:s", LookupString("class_options"));"#)
+  load_script(r#"AssignValue("ct:s", LookupString("class_options"), "global");"#)
     .expect("LookupString on a list value must not panic or leak");
   let got = lookup_str("ct:s");
   assert!(
@@ -831,11 +842,11 @@ fn lookup_value_on_list_returns_rhai_array() {
   load_script(
     r#"
     let opts = LookupValue("class_options");
-    assign_global("ct:0", opts[0]);
-    assign_global("ct:1", opts[1]);
+    AssignValue("ct:0", opts[0], "global");
+    AssignValue("ct:1", opts[1], "global");
     let joined = "";
     for o in opts { if joined != "" { joined += "|"; } joined += o; }
-    assign_global("ct:joined", joined);
+    AssignValue("ct:joined", joined, "global");
     "#,
   )
   .expect("LookupValue on a list value must return an indexable Rhai array");
@@ -938,7 +949,7 @@ fn def_primitive_nested_inside_a_primitive_body() {
   load_script(
     r#"
     DefPrimitive("\\outer", || {
-      DefPrimitive("\\inner", || { assign_global("nested:inner", "ran"); });
+      DefPrimitive("\\inner", || { AssignValue("nested:inner", "ran", "global"); });
     });
     "#,
   )
@@ -987,13 +998,13 @@ fn command_output_runs_by_default_and_is_blockable_via_env() {
     r#"
     {ok_cmd}
     let out = cmd.output();
-    assign_global("cmd:out", out.stdout);
-    assign_global("cmd:ok", if out.success {{ "yes" }} else {{ "no" }});
-    assign_global("cmd:status", out.status.to_string());
+    AssignValue("cmd:out", out.stdout, "global");
+    AssignValue("cmd:ok", if out.success {{ "yes" }} else {{ "no" }}, "global");
+    AssignValue("cmd:status", out.status.to_string(), "global");
 
     {bad_cmd}
     let bout = bad.output();
-    assign_global("cmd:bad", if bout.success {{ "ok" }} else {{ "fail" }});
+    AssignValue("cmd:bad", if bout.success {{ "ok" }} else {{ "fail" }}, "global");
     "#
   ))
   .expect("Command(...).output() must run and capture by default");
@@ -1048,11 +1059,11 @@ fn lookup_definition_pushes_and_accumulates_digest_hooks() {
   load_script(
     r#"
       DefConstructor("\\dh{}", "<ltx:text>#1</ltx:text>", #{ mode: "text" });
-      assign_global("dh:undef", if LookupDefinition("\\nope") == () { "unit" } else { "proxy" });
+      AssignValue("dh:undef", if LookupDefinition("\\nope") == () { "unit" } else { "proxy" }, "global");
       let d = LookupDefinition("\\dh");
-      d.pushAfterDigest(|| { assign_global("dh:log", LookupString("dh:log") + "B"); });
-      d.unshiftAfterDigest(|| { assign_global("dh:log", LookupString("dh:log") + "A"); });
-      d.pushAfterDigest(|| { assign_global("dh:log", LookupString("dh:log") + "C"); });
+      d.pushAfterDigest(|| { AssignValue("dh:log", LookupString("dh:log") + "B", "global"); });
+      d.unshiftAfterDigest(|| { AssignValue("dh:log", LookupString("dh:log") + "A", "global"); });
+      d.pushAfterDigest(|| { AssignValue("dh:log", LookupString("dh:log") + "C", "global"); });
     "#,
   )
   .expect("LookupDefinition + push/unshift AfterDigest must load");
@@ -1098,7 +1109,8 @@ fn lookup_definition_construct_hook_on_primitive_errors() {
 fn latexml_version_binding_reads_published_version() {
   fresh_state();
   latexml_core::state::assign_value("LATEXML_VERSION", "0.7.5", Some(Scope::Global));
-  load_script(r#"assign_global("v:out", LaTeXMLVersion());"#).expect("LaTeXMLVersion() must load");
+  load_script(r#"AssignValue("v:out", LaTeXMLVersion(), "global");"#)
+    .expect("LaTeXMLVersion() must load");
   assert_eq!(
     lookup_str("v:out"),
     "0.7.5",

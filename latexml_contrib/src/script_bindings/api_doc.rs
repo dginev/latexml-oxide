@@ -39,8 +39,8 @@ const GROUPS: &[(Option<&str>, &str, &str)] = &[
   ),
   (
     Some("Whatsit"),
-    "`whatsit()` methods",
-    "The whatsit under construction, inside a digest hook.",
+    "`whatsit` methods",
+    "The whatsit a hook receives positionally, as Perl passes `$whatsit` (Whatsit.pm).",
   ),
   (
     Some("Definition"),
@@ -98,6 +98,9 @@ const RETURN_OVERRIDES: &[(&str, &str)] = &[
   ("getNode", "Node"),
   ("insertElement", "Node"),
   ("nextSibling", "Node?"),
+  ("closeElement", "Node?"),
+  ("maybeCloseElement", "Node?"),
+  ("openElement", "Node"),
   ("openElementAt", "Node"),
   ("parent", "Node?"),
   ("prevSibling", "Node?"),
@@ -168,7 +171,7 @@ const DOCS: &[(&str, Doc)] = &[
   (
     "AssignBool",
     Doc::Rust(
-      "Bind a key to a boolean value, with a scope.",
+      "Bind a key to a value, as `AssignValue`.",
       "latexml_core::state::assign_value",
     ),
   ),
@@ -217,14 +220,14 @@ const DOCS: &[(&str, Doc)] = &[
   (
     "AssignMeaning",
     Doc::Rust(
-      "Give a token (CS name or `Token`) the current meaning of another.",
-      "latexml_core::state::assign_meaning",
+      "Give a token (CS name or `Token`) the current meaning of another, as `Let`.",
+      "latexml_core::state::let_definition",
     ),
   ),
   (
     "AssignNumber",
     Doc::Rust(
-      "Bind a key to an integer (Number) value, with a scope.",
+      "Bind a key to a value, as `AssignValue`.",
       "latexml_core::state::assign_value",
     ),
   ),
@@ -238,7 +241,7 @@ const DOCS: &[(&str, Doc)] = &[
   (
     "AssignString",
     Doc::Rust(
-      "Bind a key to a string value, with a scope (the typed twin of `AssignValue`).",
+      "Bind a key to a value, as `AssignValue`.",
       "latexml_core::state::assign_value",
     ),
   ),
@@ -367,7 +370,9 @@ const DOCS: &[(&str, Doc)] = &[
   ),
   (
     "DefAccent",
-    Doc::Note("Define an accent command in both its combining and standalone forms."),
+    Doc::Note(
+      "Define an accent command in both its combining and standalone forms; Perl's options map `#{below: true}`.",
+    ),
   ),
   (
     "DefColumnType",
@@ -1093,7 +1098,7 @@ const DOCS: &[(&str, Doc)] = &[
   ("arg", Doc::Note("Append one argument to the command.")),
   (
     "argString",
-    Doc::Note("The nth digested argument of the current whatsit, reverted to source text."),
+    Doc::Note("The whatsit's nth argument, reverted to source text."),
   ),
   (
     "args",
@@ -1129,7 +1134,7 @@ const DOCS: &[(&str, Doc)] = &[
   (
     "closeElement",
     Doc::Rust(
-      "Close the deepest open element of that name.",
+      "Close the deepest open element of that name and return it (`()` when it is not open).",
       "latexml_core::document::Document::close_element",
     ),
   ),
@@ -1213,13 +1218,10 @@ const DOCS: &[(&str, Doc)] = &[
     ),
   ),
   (
-    "getProperties",
-    Doc::Note("The whatsit's whole property map (a Rhai object map), inside a constructor body."),
-  ),
-  (
-    "getProperty",
-    Doc::Note(
-      "One whatsit property by name, inside a constructor body — its typed value (string / int / bool / `Tokens` / `Digested` handle / …), or `()` when absent. The read-sibling of `absorbProperty`.",
+    "getArg",
+    Doc::Rust(
+      "The nth argument (from 1), as a constructor body receives it: a `Digested` handle, `Tokens` for an undigested one, `()` when absent.",
+      "latexml_core::whatsit::Whatsit::get_arg",
     ),
   ),
   (
@@ -1259,7 +1261,7 @@ const DOCS: &[(&str, Doc)] = &[
   (
     "maybeCloseElement",
     Doc::Rust(
-      "Close an element if it is open and closeable; otherwise do nothing.",
+      "Close an element if it is open and closeable and return it; otherwise `()`.",
       "latexml_core::document::Document::maybe_close_element",
     ),
   ),
@@ -1284,7 +1286,7 @@ const DOCS: &[(&str, Doc)] = &[
   (
     "openElement",
     Doc::Rust(
-      "Open an element and make it the insertion point.",
+      "Open an element (with an optional attribute map), make it the insertion point and return it.",
       "latexml_core::document::Document::open_element",
     ),
   ),
@@ -1316,7 +1318,7 @@ const DOCS: &[(&str, Doc)] = &[
   ),
   (
     "propertyString",
-    Doc::Note("One property of the current whatsit, as a string."),
+    Doc::Note("One property of the whatsit, as a string."),
   ),
   (
     "pushAfterConstruct",
@@ -1420,7 +1422,7 @@ const DOCS: &[(&str, Doc)] = &[
   (
     "setProperty",
     Doc::Note(
-      "Set a property on the current whatsit. Only a DIGEST hook may: in a construction hook the whatsit is already read-only, and this is a clean script error.",
+      "Set a property (any value) on the whatsit. Only a DIGEST hook may: in a construction hook the whatsit is already read-only, and this is a clean script error.",
     ),
   ),
   (
@@ -1471,7 +1473,7 @@ const DOCS: &[(&str, Doc)] = &[
   (
     "whatsit",
     Doc::Note(
-      "A handle on the whatsit under construction. Meaningful only inside a digest hook — the handle itself is always returned, but USING it outside one is a clean script error, not a crash.",
+      "A handle on the whatsit under construction, inside a hook. USING it outside one is a clean script error, not a crash.",
     ),
   ),
   (
@@ -1627,6 +1629,32 @@ const DOCS: &[(&str, Doc)] = &[
 /// one handle must have an entry here for EACH of them.
 const HANDLE_DOCS: &[(&str, &str, Doc)] = &[
   (
+    "Document",
+    "getProperties",
+    Doc::Note("The whatsit's whole property map (a Rhai object map), inside a constructor body."),
+  ),
+  (
+    "Document",
+    "getProperty",
+    Doc::Note("One whatsit property by name, inside a constructor body; `()` when absent."),
+  ),
+  (
+    "Whatsit",
+    "getProperties",
+    Doc::Rust(
+      "The whole property map (a Rhai object map), each value typed.",
+      "latexml_core::BoxOps::get_properties",
+    ),
+  ),
+  (
+    "Whatsit",
+    "getProperty",
+    Doc::Rust(
+      "One property by name, its typed value (string / int / bool / `Tokens` / `Digested` handle / …); `()` when absent.",
+      "latexml_core::BoxOps::get_property",
+    ),
+  ),
+  (
     "Token",
     "to_string",
     Doc::Rust(
@@ -1747,14 +1775,35 @@ fn lookup(receiver: Option<&str>, name: &str) -> Option<&'static Doc> {
     .or_else(|| DOCS.iter().find(|(n, _)| *n == name).map(|(_, doc)| doc))
 }
 
-/// The documentation cell for one call: a rustdoc intra-doc link, or the note.
+/// The documentation cell for one call: a rustdoc intra-doc link, or the note; a deprecated alias says so first.
 fn doc_cell(receiver: Option<&str>, name: &str) -> String {
-  match lookup(receiver, name) {
+  let doc = match lookup(receiver, name) {
     Some(Doc::Rust(summary, path)) => {
       format!("{summary} ([`{}`]({path}))", short_path(path))
     },
     Some(Doc::Note(note)) => (*note).to_string(),
     None => String::new(),
+  };
+  let alias = match receiver {
+    Some(handle) => format!("{}.{name}", handle.to_lowercase()),
+    None => name.to_string(),
+  };
+  let Some((_, new)) = super::DEPRECATED_ALIASES
+    .iter()
+    .find(|(old, _)| *old == alias)
+  else {
+    return doc;
+  };
+  let new = if new.contains('(') {
+    format!("`{new}`")
+  } else {
+    new.to_string()
+  };
+  // A replacement spelled as the same call deprecates only one of its forms.
+  if new.starts_with(&format!("`{name}(")) {
+    format!("{doc} **Deprecated:** its older form (Warns once per binding load); use {new}.")
+  } else {
+    format!("**Deprecated** (Warns once per binding load): use {new}. {doc}")
   }
 }
 

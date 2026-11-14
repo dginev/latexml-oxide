@@ -358,12 +358,17 @@ cached by source (`SCRIPT_CACHE`).
   (`reversion`, `sizer`, `before/afterConstruct`, …) are one-line additions of
   the same two shapes.
 
-**`whatsit` proxy (inside `afterDigest`-style hook bodies):**
-- `whatsit().argString(n)` — the n-th (1-based) digested argument's TeX source.
-- `whatsit().setProperty(key, val)` — set a string property (Perl
-  `$whatsit->setProperty`); read by the template's `#key` holes, e.g. the
+**`whatsit` handle** — a hook receives it positionally, as Perl passes `$whatsit` (#716): `afterDigest: |whatsit|`
+(Perl's `($stomach, $whatsit)`, no stomach handle), `before/afterConstruct: |document, whatsit|`, a reversion
+`|whatsit, arg1, …|`, a sizer `|whatsit|`; a constructor body gets Perl's `%props` as one trailing map
+(`|document, arg1, …, props|`). Whatsit.pm's accessors:
+- `whatsit.getArg(n)` — the n-th (1-based) argument as a constructor body receives it (`()` when absent).
+- `whatsit.getProperty(key)` / `whatsit.getProperties()` — typed, `()` when absent.
+- `whatsit.setProperty(key, val)` — any value, in a digest hook only; read by the template's `#key` holes, e.g. the
   plain-`\footnote` port's afterDigest routing its mark arg to `mark`.
-- `whatsit().propertyString(key)` — read a property back ("" when absent).
+
+The old spellings (`whatsit()`, `argString`, `propertyString`, `document.getProperty`/`getProperties`) are deprecated
+aliases for one release, each Warning `deprecated` once per binding load (`DEPRECATED_ALIASES`, `mod.rs`).
 
 - `DefEnvironment("{name}{}…", replacement[, #{ options }])` — environments,
   same four shapes as `DefConstructor`; the template typically references
@@ -573,8 +578,9 @@ serde_json — so it is enabled on a **dev-dependency only**. Under
 verified with `cargo tree -e normal`, the shipped graph has
 `rhai … no_module,no_time,std` and no serde at all.
 
-**State API:** `assign_value(key, val)` (group-local), `assign_global(key, val)`,
-`lookup_value(key) -> string`.
+**State API:** Perl's `AssignValue(key, val[, scope])` and `LookupValue(key)`; the snake_case shims
+`assign_value`/`assign_global`/`lookup_value` and the typed `AssignString`/`AssignNumber`/`AssignBool` are deprecated
+aliases (#716 §3).
 
 **Sandbox:** `max_operations`, `max_call_levels`, `max_string_size` are bounded;
 no file/network/process access is exposed. Errors (compile, `throw`, limit
@@ -597,8 +603,8 @@ The Rhai surface now covers the working majority of
 `setup_binding_language.rs` + `content.rs` under the **same names** (each
 registration lowers to the same native function its macro does):
 
-- **State**: `AssignValue(k,v[,scope])`, `LookupString/Number/Bool`,
-  `lookup_value`, `assign_value`/`assign_global` (legacy snake_case kept).
+- **State**: `AssignValue(k,v[,scope])`, `LookupString/Number/Bool`
+  (`lookup_value`, `assign_value`/`assign_global`: deprecated aliases, #716).
 - **Definitions**: `Let`, `XEquals`, `IsDefined`, `RawTeX`, `TeX`,
   `DefRegister` (int → count, "5pt" → dimen), `DefKeyVal` (3/4-arg),
   `DefLigature(regex, replacement)`, `DefMath(proto, presentation[, #{opts}])`
@@ -656,8 +662,7 @@ locally-bound def to global — harmless for BookML, which only patches
 already-global defs, but a real divergence flagged in PR #333 r3623947537
 by @xworld21; the `state::reentrancy_tests::inplace_scope_keeps_the_bindings_level`
 test pins the same-level semantics.) Hook arities match
-the option-bag form (digest = parameterless via `whatsit()`; construct =
-`|document|`). Guards: `script_bindings::tests::lookup_definition_*` and the
+the option-bag form (digest = `|whatsit|`; construct = `|document, whatsit|`). Guards: `script_bindings::tests::lookup_definition_*` and the
 end-to-end `30_script_bindings::lookup_definition_pushes_construct_hooks_end_to_end`.
 
 **Challenging-specimen e2e corpus** (all green through real conversions,

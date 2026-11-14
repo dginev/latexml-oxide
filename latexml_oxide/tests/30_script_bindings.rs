@@ -91,7 +91,7 @@ const SAMPLE: &str = r##"
 
   // Primitive: digestion-time side-effect into State (global, so it survives the
   // document group for the post-conversion assertion).
-  DefPrimitive("\\setx{}", |v| { assign_global("script:x", v); });
+  DefPrimitive("\\setx{}", |v| { AssignValue("script:x", v, "global"); });
 
   // Corpus-shaped template constructor exercising a top-level CONDITIONAL with
   // `#n` rendering through the real Document pipeline (the #171 template AST):
@@ -107,9 +107,9 @@ const SAMPLE: &str = r##"
     "^<ltx:note role=\"footnote\" ?#mark(mark=\"#mark\")()>?#prenote(#prenote )()#2</ltx:note>", #{
     mode: "internal_vertical",
     beforeDigest: || neutralize_font(),
-    afterDigest: || {
-      let m = whatsit().argString(1);
-      if m != "" { whatsit().setProperty("mark", m); }
+    afterDigest: |whatsit| {
+      let m = ToString(whatsit.getArg(1));
+      if m != "" { whatsit.setProperty("mark", m); }
     }
   });
 
@@ -126,16 +126,12 @@ const SAMPLE: &str = r##"
   });
 
   // #635: READ a whatsit property inside an imperative constructor body. Perl
-  // passes `$whatsit->getProperties` to the CODE replacement (Constructor.pm:137),
-  // so the body can branch on / compose from them; the Rhai body reaches them
-  // through `document.getProperty(name)` (typed, `()` when absent) and
-  // `document.getProperties()` (the whole map) — read-siblings of
-  // `absorbProperty`, off the same construction-time property map. \gp{Z} sets
-  // `tag`/`n` via its properties closure, then the body reads them back:
-  // \gp{Z} -> <ltx:text class="gp">T-Z/2</ltx:text>.
-  DefConstructor("\\gp{}", |document, x| {
-    let t = document.getProperty("tag");
-    let all = document.getProperties();
+  // passes `$whatsit->getProperties` to the CODE replacement after the arguments
+  // (Constructor.pm:137); the Rhai body receives them as one trailing map (#716).
+  // \gp{Z} sets `tag`/`n` via its properties closure, then the body reads them
+  // back: \gp{Z} -> <ltx:text class="gp">T-Z/2</ltx:text>.
+  DefConstructor("\\gp{}", |document, x, all| {
+    let t = all.tag;
     document.openElement("ltx:text");
     document.setAttribute("class", "gp");
     document.absorbString(t + "/" + all.n);
@@ -205,7 +201,7 @@ const SAMPLE: &str = r##"
 
   // ── Wave C/E: package-option machinery through a real \usepackage[draft] ──
   // (ieeetran/article classes' DeclareOption + ProcessOptions shape.)
-  DeclareOption("draft", || assign_global("rh:opt", "draft-on"));
+  DeclareOption("draft", || AssignValue("rh:opt", "draft-on", "global"));
   ProcessOptions();
 
   // ieeetran {IEEEproof}-style: the `properties` closure DIGESTS content
@@ -254,10 +250,10 @@ const SAMPLE: &str = r##"
     "(" + kv + ")" + body
   });
 
-  // sizer + closure-form reversion (read-only whatsit context in both).
+  // sizer + closure-form reversion, each receiving the read-only whatsit first (Perl's `($whatsit, @args)`).
   DefConstructor("\\sized{}", "<ltx:text class=\"sz\">#1</ltx:text>", #{
-    sizer: || "10pt;8pt;2pt",
-    reversion: |x| "\\sized{" + x + "}"
+    sizer: |whatsit| "10pt;8pt;2pt",
+    reversion: |whatsit, x| "\\sized{" + x + "}"
   });
 
   // DefAccent: \racc{o} routes through \lx@applyaccent (combining acute).
@@ -489,10 +485,10 @@ fn script_binding_macro_and_constructor_convert() {
     "static properties map (\\snote) did not populate #cls; xml=\n{xml}"
   );
   // #635: reading whatsit properties inside an imperative constructor body via
-  // document.getProperty(name) (typed "T-Z") + document.getProperties() (map, .n).
+  // its trailing properties map (.tag "T-Z", .n).
   assert!(
     xml.contains("class=\"gp\"") && xml.contains("T-Z/2"),
-    "getProperty/getProperties did not read the whatsit properties (\\gp); xml=\n{xml}"
+    "the trailing properties map did not carry the whatsit properties (\\gp); xml=\n{xml}"
   );
   // PI template through the runtime interpreter.
   assert!(
@@ -838,23 +834,23 @@ const XMLAPI_SAMPLE: &str = r##"
     let n = document.insertElement("ltx:text", #{ class: "ins-elem" });
     document.addClass(n, "ins-extra");
     document.generateID(n, "xq");
-    assign_global("xq:insqname", n.qname());
-    assign_global("xq:insid", n.getAttribute("xml:id"));
-    assign_global("xq:cur", document.getNode().qname());
-    assign_global("xq:elem", document.getElement().qname());
+    AssignValue("xq:insqname", n.qname(), "global");
+    AssignValue("xq:insid", n.getAttribute("xml:id"), "global");
+    AssignValue("xq:cur", document.getNode().qname(), "global");
+    AssignValue("xq:elem", document.getElement().qname(), "global");
   });
 
   // findnodes / findnode (Perl `findnodes`/`findnode`), whole-document and
   // scoped to a node — the query half a script had no way to reach before.
   DefConstructor("\\xqfind", |document| {
     let hits = document.findnodes("//ltx:text[@class]");
-    assign_global("xq:count", "" + hits.len());
+    AssignValue("xq:count", "" + hits.len(), "global");
     let one = document.findnode("//ltx:text[contains(@class,'ins-elem')]");
-    assign_global("xq:one", one.getAttribute("class"));
+    AssignValue("xq:one", one.getAttribute("class"), "global");
     let keep = document.findnode("//ltx:text[@class='keep']");
-    assign_global("xq:scoped", "" + document.findnodes(".//ltx:emph", keep).len());
-    assign_global("xq:missing",
-      if type_of(document.findnode("//ltx:nosuch")) == "()" { "unit" } else { "BAD" });
+    AssignValue("xq:scoped", "" + document.findnodes(".//ltx:emph", keep).len(), "global");
+    AssignValue("xq:missing",
+      if type_of(document.findnode("//ltx:nosuch")) == "()" { "unit" } else { "BAD" }, "global");
   });
 
   // Structural manipulation: rename / remove / unwrap / wrap / appendClone /
@@ -889,10 +885,10 @@ const XMLAPI_SAMPLE: &str = r##"
     let target = document.findnode("//ltx:text[@class='keep']");
     try {
       document.replaceNode(target, parsed);
-      assign_global("xq:foreign", "ACCEPTED-A-PARSED-NODE");
+      AssignValue("xq:foreign", "ACCEPTED-A-PARSED-NODE", "global");
     } catch (e) {
-      assign_global("xq:foreign", "rejected");
-      assign_global("xq:foreignmsg", "" + e);
+      AssignValue("xq:foreign", "rejected", "global");
+      AssignValue("xq:foreignmsg", "" + e, "global");
     }
   });
 
@@ -904,10 +900,10 @@ const XMLAPI_SAMPLE: &str = r##"
     document.removeNode(orphan);
     try {
       document.renameNode(orphan, "ltx:emph");
-      assign_global("xq:orphan", "RENAMED-AN-ORPHAN");
+      AssignValue("xq:orphan", "RENAMED-AN-ORPHAN", "global");
     } catch (e) {
-      assign_global("xq:orphan", "rejected");
-      assign_global("xq:orphanmsg", "" + e);
+      AssignValue("xq:orphan", "rejected", "global");
+      AssignValue("xq:orphanmsg", "" + e, "global");
     }
   });
 
@@ -916,21 +912,21 @@ const XMLAPI_SAMPLE: &str = r##"
   // where the model allows (the motivating case: patching \hrule/\vrule).
   DefConstructor("\\xqmodel", |document| {
     // qname/qname form — stable schema facts.
-    assign_global("xq:cc_p_text", if document.canContain("ltx:p", "#PCDATA") {"yes"} else {"no"});
-    assign_global("xq:cc_p_sec",  if document.canContain("ltx:p", "ltx:section") {"yes"} else {"no"});
+    AssignValue("xq:cc_p_text", if document.canContain("ltx:p", "#PCDATA") {"yes"} else {"no"}, "global");
+    AssignValue("xq:cc_p_sec",  if document.canContain("ltx:p", "ltx:section") {"yes"} else {"no"}, "global");
     // node form (the documented `canContain(node, "#PCDATA")` use) must agree
     // with the qname form for that same node's tag.
     let here = document.getNode();
     let qn = here.qname();
-    assign_global("xq:cc_node_agrees",
-      if document.canContain(here, "#PCDATA") == document.canContain(qn, "#PCDATA") {"yes"} else {"no"});
+    AssignValue("xq:cc_node_agrees",
+      if document.canContain(here, "#PCDATA") == document.canContain(qn, "#PCDATA") {"yes"} else {"no"}, "global");
     // floatToElement returns the PREVIOUS insertion point to setNode back to.
     let before = document.getNode().qname();
     let saved = document.floatToElement("ltx:para");
-    assign_global("xq:float_kind", type_of(saved));
+    AssignValue("xq:float_kind", type_of(saved), "global");
     if type_of(saved) != "()" { document.setNode(saved); }
-    assign_global("xq:float_restored",
-      if document.getNode().qname() == before {"yes"} else {"no"});
+    AssignValue("xq:float_restored",
+      if document.getNode().qname() == before {"yes"} else {"no"}, "global");
   });
 "##;
 

@@ -6,24 +6,6 @@
 
 use super::*;
 
-/// Mini-DSL to expose a `document.<rhai>(qname)` → `Document::<rust>(qname)`
-/// method whose result is discarded — the common side-effect-on-element shape.
-/// Adding a new such method is then one line; see the registrations in
-/// `make_engine`.
-macro_rules! doc_qname_method {
-  ($engine:ident, $rhai:literal, $rust:ident) => {
-    $engine.register_fn(
-      $rhai,
-      |_d: &mut DocProxy, qname: &str| -> std::result::Result<(), Box<EvalAltResult>> {
-        with_doc(|doc, _props| {
-          doc.$rust(qname).map_err(rhai_err)?;
-          Ok(())
-        })
-      },
-    );
-  };
-}
-
 /// Build a sandboxed Rhai engine with the binding API registered.
 pub(super) fn make_engine() -> Engine {
   let mut engine = Engine::new();
@@ -252,14 +234,13 @@ pub(super) fn make_engine() -> Engine {
     engine.register_fn(name, move || -> i64 { cc as i64 });
   }
 
-  // ── state API (for primitive side-effects / value-reading macros) ──
-  // `assign_value` is group-local (TeX default); `assign_global` persists past
-  // the enclosing group. (Untrusted-script key-namespacing is a documented
-  // follow-up — see the plan's critical re-eval §5.)
+  // ── deprecated state shims (#716 §3; Perl writes `AssignValue(k, v, 'global')`): one release, then removed ──
   engine.register_fn("assign_value", |key: &str, val: &str| {
+    warn_deprecated("assign_value");
     latexml_core::state::assign_value(key, val.to_string(), Some(Scope::Local));
   });
   engine.register_fn("assign_global", |key: &str, val: &str| {
+    warn_deprecated("assign_global");
     latexml_core::state::assign_value(key, val.to_string(), Some(Scope::Global));
   });
   // Curated pool helpers, registered 1:1 under their Perl/Rust names so binding
@@ -269,6 +250,7 @@ pub(super) fn make_engine() -> Engine {
     latexml_engine::base_utilities::neutralize_font,
   );
   engine.register_fn("lookup_value", |key: &str| -> String {
+    warn_deprecated("lookup_value");
     match latexml_core::state::lookup_value(key) {
       Some(Stored::String(s)) => arena::to_string(s),
       Some(other) => other.to_string(),
@@ -287,39 +269,24 @@ pub(super) fn make_engine() -> Engine {
   engine.register_fn("AssignValue", |k: &str, v: Dynamic, scope: &str| {
     latexml_core::state::assign_value(k, dynamic_to_stored(v), scope_of(scope));
   });
-  // Typed `Assign*` counterparts to the typed `Lookup*` readers below (#543).
-  // Before these, a binding could only ever assign a *string*, so a value
-  // written from a script was invisible to `LookupNumber`/`LookupBool`/
-  // `LookupFloat`. Each stores the matching `Stored` variant explicitly — in
-  // particular `AssignFloat` builds a `Float` (keeping the fraction) rather than
-  // an integer `Number`, which a bare `f64 -> Stored` would floor. 2-arg = TeX
-  // default scope (as `AssignValue`), 3-arg takes "local"/"global".
-  engine.register_fn("AssignNumber", |k: &str, v: i64| {
-    latexml_core::state::assign_value(k, Number(v), None);
-  });
-  engine.register_fn("AssignNumber", |k: &str, v: i64, scope: &str| {
-    latexml_core::state::assign_value(k, Number(v), scope_of(scope));
-  });
+  // The float setter `LookupFloat` pairs with (#542/#543), kept beside `AssignValue` (audit §3).
   engine.register_fn("AssignFloat", |k: &str, v: f64| {
     latexml_core::state::assign_value(k, Float(v), None);
   });
   engine.register_fn("AssignFloat", |k: &str, v: f64, scope: &str| {
     latexml_core::state::assign_value(k, Float(v), scope_of(scope));
   });
-  engine.register_fn("AssignBool", |k: &str, v: bool| {
-    latexml_core::state::assign_value(k, v, None);
-  });
-  engine.register_fn("AssignBool", |k: &str, v: bool, scope: &str| {
-    latexml_core::state::assign_value(k, v, scope_of(scope));
-  });
-  // Explicit string counterpart to `LookupString` (equivalent to `AssignValue`,
-  // named for a symmetric typed family).
-  engine.register_fn("AssignString", |k: &str, v: &str| {
-    latexml_core::state::assign_value(k, v.to_string(), None);
-  });
-  engine.register_fn("AssignString", |k: &str, v: &str, scope: &str| {
-    latexml_core::state::assign_value(k, v.to_string(), scope_of(scope));
-  });
+  // Deprecated typed twins of `AssignValue` (#716 §3), which stores each with its type.
+  for old in ["AssignString", "AssignNumber", "AssignBool"] {
+    engine.register_fn(old, move |k: &str, v: Dynamic| {
+      warn_deprecated(old);
+      latexml_core::state::assign_value(k, dynamic_to_stored(v), None);
+    });
+    engine.register_fn(old, move |k: &str, v: Dynamic, scope: &str| {
+      warn_deprecated(old);
+      latexml_core::state::assign_value(k, dynamic_to_stored(v), scope_of(scope));
+    });
+  }
   // The Perl `@values` list-value family (Package.pm L265-279 -> State.pm L218):
   // a value-table key holds a queue that these push/pop/unshift/shift. Always
   // GLOBAL scope, auto-vivifying the list if absent — matching Perl, which takes
@@ -909,16 +876,16 @@ pub(super) fn make_engine() -> Engine {
     },
   );
 
-  // AssignMeaning: bind a token's meaning to another token's current meaning
-  // (each a CS name or a `Token`, as `Let`).
+  // Deprecated alias of `Let` (not a Perl export; audit §3).
   engine.register_fn(
     "AssignMeaning",
     |cs: Dynamic, other: Dynamic| -> std::result::Result<(), Box<EvalAltResult>> {
-      let cs = token_arg("AssignMeaning", cs)?;
-      // An undefined `other` makes `cs` undefined, as Perl's assignMeaning($token, undef).
-      let meaning = latexml_core::state::lookup_meaning(&token_arg("AssignMeaning", other)?)
-        .unwrap_or(Stored::None);
-      latexml_core::state::assign_meaning(&cs, meaning, None);
+      warn_deprecated("AssignMeaning");
+      latexml_core::state::let_definition(
+        &token_arg("AssignMeaning", cs)?,
+        &token_arg("AssignMeaning", other)?,
+        None,
+      );
       Ok(())
     },
   );
@@ -1358,6 +1325,24 @@ pub(super) fn make_engine() -> Engine {
       def_accent_impl(accent, combining, standalone, false).map_err(rhai_err)
     },
   );
+  // Perl's option form `DefAccent($accent, $comb, $standalone, below => 1)` (TeX_Character.pool.ltxml:92).
+  engine.register_fn(
+    "DefAccent",
+    |accent: &str,
+     combining: &str,
+     standalone: &str,
+     opts: Map|
+     -> std::result::Result<(), Box<EvalAltResult>> {
+      check_options(
+        &format!("DefAccent ({accent})"),
+        &["below"],
+        opts.keys().map(|k| k.as_str()),
+      )
+      .map_err(rhai_err)?;
+      let below = opts.get("below").is_some_and(dynamic_to_bool);
+      def_accent_impl(accent, combining, standalone, below).map_err(rhai_err)
+    },
+  );
   engine.register_fn(
     "DefAccent",
     |accent: &str,
@@ -1365,6 +1350,7 @@ pub(super) fn make_engine() -> Engine {
      standalone: &str,
      below: bool|
      -> std::result::Result<(), Box<EvalAltResult>> {
+      warn_deprecated("DefAccent");
       def_accent_impl(accent, combining, standalone, below).map_err(rhai_err)
     },
   );
@@ -1923,15 +1909,47 @@ pub(super) fn make_engine() -> Engine {
   engine.register_type_with_name::<DocProxy>("Document");
   engine.register_type_with_name::<Digested>("Digested");
 
-  doc_qname_method!(engine, "closeElement", close_element);
-  doc_qname_method!(engine, "maybeCloseElement", maybe_close_element);
-
+  // Perl's `openElement($qname, %attributes)` returns the new node, `closeElement`/`maybeCloseElement` the node
+  // closed or undef (Document.pm:787-866; #716 §2).
   engine.register_fn(
     "openElement",
-    |_d: &mut DocProxy, tag: &str| -> std::result::Result<(), Box<EvalAltResult>> {
+    |_d: &mut DocProxy, tag: &str| -> std::result::Result<NodeProxy, Box<EvalAltResult>> {
       with_doc(|doc, _props| {
-        doc.open_element(tag, None, None).map_err(rhai_err)?;
-        Ok(())
+        Ok(NodeProxy::borrowed(
+          doc.open_element(tag, None, None).map_err(rhai_err)?,
+        ))
+      })
+    },
+  );
+  engine.register_fn(
+    "openElement",
+    |_d: &mut DocProxy,
+     tag: &str,
+     attrib: Map|
+     -> std::result::Result<NodeProxy, Box<EvalAltResult>> {
+      let attrib = attribute_map(attrib);
+      with_doc(|doc, _props| {
+        Ok(NodeProxy::borrowed(
+          doc
+            .open_element(tag, Some(attrib), None)
+            .map_err(rhai_err)?,
+        ))
+      })
+    },
+  );
+  engine.register_fn(
+    "closeElement",
+    |_d: &mut DocProxy, tag: &str| -> std::result::Result<Dynamic, Box<EvalAltResult>> {
+      with_doc(|doc, _props| Ok(node_or_unit(doc.close_element(tag).map_err(rhai_err)?)))
+    },
+  );
+  engine.register_fn(
+    "maybeCloseElement",
+    |_d: &mut DocProxy, tag: &str| -> std::result::Result<Dynamic, Box<EvalAltResult>> {
+      with_doc(|doc, _props| {
+        Ok(node_or_unit(
+          doc.maybe_close_element(tag).map_err(rhai_err)?,
+        ))
       })
     },
   );
@@ -2436,17 +2454,12 @@ pub(super) fn make_engine() -> Engine {
       })
     },
   );
-  // Read a whatsit property BY VALUE inside a constructor body — the read-sibling
-  // of `absorbProperty`. Perl hands `$whatsit->getProperties` to the CODE
-  // replacement (Constructor.pm:137), so the body can branch on / compose from a
-  // property; `absorbProperty` alone (which only splices a property into the tree)
-  // could not (#635). Returns the typed value (string / `Digested` handle / int /
-  // bool …), `()` when the property is absent. Reads the same construction-time
-  // property map `absorbProperty` does; errors (like every `document.*` op) when
-  // called outside an active constructor body.
+  // Deprecated (#716 §1): a constructor body reads its trailing properties map (Perl's `%props`, Constructor.pm:137),
+  // a construction hook its whatsit argument (#635 added these).
   engine.register_fn(
     "getProperty",
     |_d: &mut DocProxy, name: &str| -> std::result::Result<Dynamic, Box<EvalAltResult>> {
+      warn_deprecated("document.getProperty");
       with_doc(|_doc, props| {
         Ok(match props.get(name) {
           Some(stored) => stored_to_dynamic(stored.clone()),
@@ -2455,40 +2468,47 @@ pub(super) fn make_engine() -> Engine {
       })
     },
   );
-  // The whole property map as a Rhai object map (Perl `$whatsit->getProperties`) —
-  // for a body that iterates keys or reads several at once (#635).
   engine.register_fn(
     "getProperties",
     |_d: &mut DocProxy| -> std::result::Result<Map, Box<EvalAltResult>> {
+      warn_deprecated("document.getProperties");
       with_doc(|_doc, props| Ok(props_to_map(props.clone())))
     },
   );
 
-  // ── whatsit proxy: reached from a hook body via `whatsit()` ──
+  // ── whatsit proxy: a hook's `whatsit` argument (#716 §1), with Whatsit.pm's accessors ──
   engine.register_type_with_name::<WhatsitProxy>("Whatsit");
-  engine.register_fn("whatsit", || WhatsitProxy);
-  // The n-th (1-based) argument as its TeX-source string.
+  // Perl `getArg($n)` (Whatsit.pm:59): the argument as a constructor body receives it, `()` when absent.
   engine.register_fn(
-    "argString",
-    |_w: &mut WhatsitProxy, n: i64| -> std::result::Result<String, Box<EvalAltResult>> {
-      // SAFETY: `current_whatsit()` returns the in-flight whatsit pointer the
-      // core published onto WHATSIT_CTX for the duration of THIS hook body (it
-      // errors out, not UB, when called outside one). The pointer is live for
-      // the call and read-only here (`&*`), so no aliasing `&mut` exists.
-      let w = unsafe { &*current_whatsit()? };
-      match w.get_arg(n as usize) {
-        Some(d) => d.untex().map_err(rhai_err),
-        None => Ok(String::new()),
-      }
+    "getArg",
+    |_w: &mut WhatsitProxy, n: i64| -> std::result::Result<Dynamic, Box<EvalAltResult>> {
+      let n = usize::try_from(n).ok().filter(|n| *n > 0);
+      with_whatsit(|w| ctor_arg_to_dynamic(&n.and_then(|n| w.get_arg(n)).cloned()))
     },
   );
-  // Set a whatsit property from a hook body (Perl `$whatsit->setProperty(k, v)`,
-  // e.g. plain `\footnote`'s afterDigest routing its mark arg to `mark`/`prenote`).
-  // The value lands as a string `Stored`, which the template interpreter renders
-  // at attribute (`to_attribute`), content (absorb), and truth-test positions.
+  // Perl `getProperty($key)` (Whatsit.pm:55): the typed value, `()` when absent.
+  engine.register_fn(
+    "getProperty",
+    |_w: &mut WhatsitProxy, key: &str| -> std::result::Result<Dynamic, Box<EvalAltResult>> {
+      with_whatsit(|w| {
+        w.get_property(key)
+          .map_or(Dynamic::UNIT, |v| stored_to_dynamic(v.into_owned()))
+      })
+    },
+  );
+  engine.register_fn(
+    "getProperties",
+    |_w: &mut WhatsitProxy| -> std::result::Result<Map, Box<EvalAltResult>> {
+      with_whatsit(|w| props_to_map(w.get_properties().clone()))
+    },
+  );
+  // Perl `setProperty($key, $value)`, any value (e.g. plain `\footnote`'s afterDigest routing its mark to `mark`).
   engine.register_fn(
     "setProperty",
-    |_w: &mut WhatsitProxy, key: &str, val: &str| -> std::result::Result<(), Box<EvalAltResult>> {
+    |_w: &mut WhatsitProxy,
+     key: &str,
+     val: Dynamic|
+     -> std::result::Result<(), Box<EvalAltResult>> {
       let (ptr, mutable) = current_whatsit_entry()?;
       if !mutable {
         return Err(Box::<EvalAltResult>::from(
@@ -2508,23 +2528,33 @@ pub(super) fn make_engine() -> Engine {
       // the Miri model `latexml_core::runtime_bindings_reentrancy_model`
       // (`reentrancy_model_single_body_sound`). (A hook that digests other
       // content builds DIFFERENT whatsits → different `WHATSIT_CTX` entries, not
-      // an alias of this one.) The read-only ops above (`&*`) need no such
+      // an alias of this one.) The read-only ops (`with_whatsit`) need no such
       // argument — shared refs may alias freely.
       let w = unsafe { &mut *ptr };
-      w.set_property(key, val.to_string());
+      w.set_property(key, dynamic_to_stored(val));
       Ok(())
     },
   );
-  // Read a whatsit property as a string ("" when absent) — Perl `getProperty`.
+  // Deprecated (#716): the nullary accessor and the string readers, one release.
+  engine.register_fn("whatsit", || {
+    warn_deprecated("whatsit");
+    WhatsitProxy
+  });
+  engine.register_fn(
+    "argString",
+    |_w: &mut WhatsitProxy, n: i64| -> std::result::Result<String, Box<EvalAltResult>> {
+      warn_deprecated("whatsit.argString");
+      with_whatsit(|w| w.get_arg(n as usize).map(Digested::untex))?
+        .transpose()
+        .map(Option::unwrap_or_default)
+        .map_err(rhai_err)
+    },
+  );
   engine.register_fn(
     "propertyString",
     |_w: &mut WhatsitProxy, key: &str| -> std::result::Result<String, Box<EvalAltResult>> {
-      // SAFETY: `current_whatsit()` returns the in-flight whatsit pointer the
-      // core published onto WHATSIT_CTX for the duration of THIS hook body (it
-      // errors out, not UB, when called outside one). The pointer is live for
-      // the call and read-only here (`&*`), so no aliasing `&mut` exists.
-      let w = unsafe { &*current_whatsit()? };
-      Ok(w.get_property_string(key))
+      warn_deprecated("whatsit.propertyString");
+      with_whatsit(|w| w.get_property_string(key))
     },
   );
 

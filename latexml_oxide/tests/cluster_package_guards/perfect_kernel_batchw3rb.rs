@@ -10,8 +10,8 @@ use latexml::util::test::{assert_element, convert_files_with};
 
 use crate::perfect_kernel_batch46::{error_count, warning_count};
 
-const LXRB: &str = r#"AssignBool("lxrb:f", false);
-AssignNumber("lxrb:n", 7);
+const LXRB: &str = r#"AssignValue("lxrb:f", false);
+AssignValue("lxrb:n", 7);
 AssignValue("lxrb:t", Tokenize("\\textbf{T}"));
 AssignMapping("lxrb:m", "k", T_CS("\\relax"));
 AssignMapping("lxrb:m", "j", true);

@@ -166,6 +166,31 @@
     `IsEmpty`, `DigestIf`, `ProcessKeyOptions`, `LookupRegisterOrDefault`, `FindFile`, `Input`,
     `CleanLabel`/`CleanID`, `SetCounter`, `roman`/`Roman`, `UTF`, `Explode`/`ExplodeText`,
     `BeginItemize`, `Equals`, with Perl's argument forms.
+  - **BREAKING: Rhai hooks take Perl's arguments, and the #716 renames** (PR #829 round D2a). A hook
+    receives the whatsit as Perl passes it: `afterDigest: |whatsit|`, `beforeConstruct`/`afterConstruct:
+    |document, whatsit|`, a sizer `|whatsit|`, and a reversion closure `|whatsit, arg1, …|` — **a reversion
+    written `|arg1, …|` must add the leading `whatsit`**. The whatsit has Whatsit.pm's `getArg(n)` (the
+    argument as a constructor body receives it), `getProperty(key)`, `getProperties()` and `setProperty(key,
+    any value)`. A constructor body receives Perl's `%props` as a trailing map (`|document, x, props|`).
+    `openElement` takes an attribute map and returns the new node; `closeElement` and `maybeCloseElement`
+    return the node closed, or `()`. `DefAccent` takes Perl's options map (`#{below: true}`; another key is
+    an `Error:misdefined`). `AssignValue(k, 7)` reads back through `LookupNumber`. These old names stay
+    for one release as aliases, each logging `Warning:deprecated:<name>` once per binding load:
+
+    | old | use |
+    |---|---|
+    | `whatsit()` | the hook's `whatsit` argument |
+    | `whatsit.argString(n)` | `whatsit.getArg(n)` |
+    | `whatsit.propertyString(key)` | `whatsit.getProperty(key)` |
+    | `document.getProperty(key)`, `document.getProperties()` | the constructor body's trailing properties map |
+    | `assign_value(k, v)`, `assign_global(k, v)` | `AssignValue(k, v, "local")`, `AssignValue(k, v, "global")` |
+    | `lookup_value(k)` | `LookupValue(k)` |
+    | `AssignString`, `AssignNumber`, `AssignBool` | `AssignValue(k, v[, scope])` |
+    | `AssignMeaning(cs, other)` | `Let(cs, other[, scope])` |
+    | `DefAccent(a, c, s, below)` | `DefAccent(a, c, s, #{below: true})` |
+
+    Guards `cluster_package_guards::perfect_kernel_batchw3rd::{rhai_perl_forms_716,
+    rhai_deprecated_aliases_warn_once}`.
 
   - **`post::PostOptions::nodefaultresources` is now `default_resources`, with the
     meaning inverted.** The double negative (`nodefaultresources: false`) is gone.

@@ -14,7 +14,7 @@ NewCounter("lxrdd", "", #{idprefix: "X"});
 DefPrimitive("\\rsc", || { RefStepCounter("lxrdc"); });
 DefMacro("\\cv", || `${CounterValue("lxrdc")}`);
 DefMacro("\\rid", || RefStepCounter("lxrdd").id);
-DefPrimitive("\\unmean", || AssignMeaning("\\lxa", "\\lxundefined"));
+DefPrimitive("\\unmean", || Let("\\lxa", "\\lxundefined"));
 DefPrimitive("\\named", || Let("\\lxn", "\\relax", "lxscope"));
 DefConditional("\\iflxtwo{}{}", || true);
 AtBeginDocument(|| "\\gdef\\lxabd{ABD}");
@@ -48,7 +48,7 @@ const LXRD_TEX: &str = r"\documentclass{article}
 /// p2: `RefStepCounter` steps through `\refstepcounter`'s meaning, as `RefStepCounter!` (2; was 1, the kernel step);
 /// the `2` follows TeX and KNOWN_PERL_ERRORS #412, not Perl (Perl 0.8.8 prints 1, Package.pm:756-760);
 /// `NewCounter`'s `idprefix` (`X1`; was "Function not found").
-/// p3: `AssignMeaning` to an undefined token undefines (U; was a no-op, D); a named scope is not the current one (U;
+/// p3: `Let` (was `AssignMeaning`, now its deprecated alias) to an undefined token undefines (U; was a no-op, D); a named scope is not the current one (U;
 /// was dropped to local, D); a test closure declaring no parameters takes the conditional's two (T; was an Error).
 /// p4: `AtBeginDocument` of a closure (ABD), an array of `afterDigest` closures (both run, 12), `RequirePackage`'s
 /// `options` and `ProcessOptions`' `inorder` (OA) — each "Function not found" or dropped before.
@@ -213,5 +213,138 @@ fn rhai_thin_wrappers() {
     &["xml:id=\"S0.I1.i2\""],
     "<item xml:id=\"S0.I1.i2\"><tags><tag>\u{2022}</tag><tag role=\"typerefnum\">2nd item</tag></tags><para \
      xml:id=\"S0.I1.i2.p1\"><p>two</p></para></item>",
+  );
+}
+
+const LXRD2: &str = r#"DefConstructor("\\lxw{}", "<ltx:text class='#c'>#1</ltx:text>", #{
+  afterDigest: |whatsit| whatsit.setProperty("c", "w" + ToString(whatsit.getArg(1)) + (whatsit.getArg(2) == ())),
+  afterConstruct: |document, whatsit| document.absorbString("/" + whatsit.getProperty("c") + whatsit.getProperties().c)});
+DefMath("\\lxm{}", "M", #{reversion: |whatsit, x| "\\lxm{" + x + ToString(whatsit.getArg(1)) + "}"});
+DefConstructor("\\lxo{}", |document, x, props| {
+  let n = document.openElement("ltx:text", #{class: props.c});
+  n.setAttribute("title", type_of(n));
+  document.absorb(x);
+  let c = document.closeElement("ltx:text");
+  document.absorbString(c.getAttribute("class") + " " + type_of(document.maybeCloseElement("ltx:emph")));
+}, #{properties: #{c: "pc"}});
+DefPrimitive("\\lxs", || { AssignValue("lx:n", 3); AssignValue("lx:t", true, "global"); Let("\\lxr", "\\relax"); });
+DefMacro("\\lxv", || `${LookupNumber("lx:n")} ${LookupBool("lx:t")} ${LookupValue("lx:n") + 1}`);
+DefAccent("\\lxacc", "́", "´", #{below: false});
+"#;
+
+const LXRD2_TEX: &str = r"\documentclass{article}
+\usepackage{lxrdtwo}
+\begin{document}
+\lxw{a}
+
+$\lxm{b}$
+
+\lxo{X}
+
+\lxs\lxv{} \ifx\lxr\relax R\fi{} \lxacc{e}
+\end{document}
+";
+
+/// W3RD2a (#716): Perl's forms, each "Function not found" or a wrong arity on a1b6c0b827d (the binding stopped at the
+/// first). p1: a hook receives the whatsit positionally — `afterDigest` as `|whatsit|` (Perl `($stomach, $whatsit)`,
+/// no stomach handle), `afterConstruct` as `|document, whatsit|` (Constructor.pm:139) — with Whatsit.pm's `getArg`
+/// (the digested argument; a missing one `()`), `getProperty`, `getProperties`. p2: a reversion closure is Perl's
+/// `($whatsit, @args)` (Whatsit.pm:121). p3: `openElement` takes attributes and returns the node, `closeElement` the
+/// node closed, `maybeCloseElement` `()` when nothing closes (Document.pm:787-866); a constructor body's trailing
+/// argument is the properties map (Perl's `%props`, Constructor.pm:137). p4: `AssignValue` stores a number and a bool
+/// (`LookupNumber`/`LookupBool` read them), `Let`, `DefAccent`'s option form (TeX_Character.pool.ltxml:92).
+#[test]
+fn rhai_perl_forms_716() {
+  let (log, xml) = convert_files_with(LXRD2_TEX, &[("lxrdtwo.sty.rhai", LXRD2)], None);
+  assert_eq!(error_count(&log), 0, "{log}");
+  assert_eq!(warning_count(&log), 0, "{log}");
+  for (id, para) in [
+    (
+      "p1",
+      r#"<para xml:id="p1"><p><text class="watrue">a</text>/watruewatrue</p></para>"#,
+    ),
+    (
+      "p3",
+      r#"<para xml:id="p3"><p><text class="pc" title="Node">X</text>pc ()</p></para>"#,
+    ),
+    ("p4", "<para xml:id=\"p4\"><p>3 true 4 R \u{e9}</p></para>"),
+  ] {
+    assert_element(&xml, "para", &[&format!("xml:id=\"{id}\"")], para);
+  }
+  assert!(xml.contains(r#"tex="\lxm{bb}""#), "{xml}");
+}
+
+const LXRD2_OLD: &str = r#"DefConstructor("\\lxa{}", "<ltx:text class='#c'>#1</ltx:text>", #{
+  afterDigest: || { whatsit().setProperty("c", whatsit().argString(1) + whatsit().propertyString("none"));
+    whatsit().setProperty("d", whatsit().argString(1)); }});
+DefConstructor("\\lxb{}", |document, x| {
+  document.openElement("ltx:text"); document.setAttribute("class", document.getProperty("c") + document.getProperties().c);
+  document.absorb(x); document.closeElement("ltx:text"); }, #{properties: #{c: "q"}});
+DefPrimitive("\\lxs", || { assign_value("lx:a", "A"); assign_global("lx:b", "B"); AssignString("lx:s", "S");
+  AssignNumber("lx:n", 3); AssignBool("lx:t", true); AssignMeaning("\\lxm", "\\relax"); });
+DefMacro("\\lxv", || lookup_value("lx:a") + lookup_value("lx:b") + LookupValue("lx:s") + LookupNumber("lx:n")
+  + LookupBool("lx:t"));
+DefAccent("\\lxacc", "́", "´", false);
+DefAccent("\\lxbad", "́", "´", #{bogus: true});
+"#;
+
+const LXRD2_OLD_TEX: &str = r"\documentclass{article}
+\usepackage{lxrdold}
+\begin{document}
+\lxa{a}\lxa{b} \lxb{c}\lxb{d}
+
+\lxs\lxs\lxv{} \ifx\lxm\relax R\fi{} \lxacc{e}
+\end{document}
+";
+
+/// W3RD2a: the names #716 replaces stay one release as aliases; each Warns `deprecated` once per binding load, naming
+/// its replacement, however often it runs (here twice), and keeps its old result. A `DefAccent` option outside Perl's
+/// table is an Error (as round A's definers). Red on a1b6c0b827d: no Warning (W=0), and `#{bogus: true}` "Function not
+/// found". The space before `\lxb` is dropped as Perl drops it before an imperative constructor's `openElement`.
+#[test]
+fn rhai_deprecated_aliases_warn_once() {
+  let (log, xml) = convert_files_with(LXRD2_OLD_TEX, &[("lxrdold.sty.rhai", LXRD2_OLD)], None);
+  assert_eq!(error_count(&log), 1, "{log}");
+  assert!(log.contains("Error:misdefined:DefAccent"), "{log}");
+  let deprecated = [
+    ("whatsit", "the hook's whatsit argument"),
+    ("whatsit.argString", "whatsit.getArg(n)"),
+    ("whatsit.propertyString", "whatsit.getProperty(key)"),
+    (
+      "document.getProperty",
+      "the constructor body's trailing properties map",
+    ),
+    (
+      "document.getProperties",
+      "the constructor body's trailing properties map",
+    ),
+    ("assign_value", "AssignValue(key, value, \"local\")"),
+    ("assign_global", "AssignValue(key, value, \"global\")"),
+    ("lookup_value", "LookupValue(key)"),
+    ("AssignString", "AssignValue(key, value[, scope])"),
+    ("AssignNumber", "AssignValue(key, value[, scope])"),
+    ("AssignBool", "AssignValue(key, value[, scope])"),
+    ("AssignMeaning", "Let(cs, other[, scope])"),
+    (
+      "DefAccent",
+      "DefAccent(accent, combining, standalone, #{below: true})",
+    ),
+  ];
+  assert_eq!(warning_count(&log), deprecated.len(), "{log}");
+  for (old, new) in deprecated {
+    let line = format!("Warning:deprecated:{old} {old} is deprecated; use {new}");
+    assert_eq!(log.matches(&line).count(), 1, "{line}\n{log}");
+  }
+  assert_element(
+    &xml,
+    "para",
+    &["xml:id=\"p1\""],
+    r#"<para xml:id="p1"><p><text class="a">a</text><text class="b">b</text><text class="qq">c</text><text class="qq">d</text></p></para>"#,
+  );
+  assert_element(
+    &xml,
+    "para",
+    &["xml:id=\"p2\""],
+    "<para xml:id=\"p2\"><p>ABS3true R \u{e9}</p></para>",
   );
 }
