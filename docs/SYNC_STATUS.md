@@ -387,6 +387,7 @@ measured the program; the cortex reruns of sandboxes 2605/2606 (runs 325-328, 20
 ### CSS themes — `ar5iv.css` vs `LaTeXML.css`
 - `ar5iv.css` is actively developed (`~/git/ar5iv-css`). Base `LaTeXML.css` starts from upstream Perl LaTeXML's default theme (synced with upstream master in #844).
 - **A measured defect against the PDF is fixed in `LaTeXML.css` (DG 2026-11-14)**, mirrored into ar5iv-css, recorded in OD and offered upstream to `brucemiller/LaTeXML`.
+- `ar5iv.css` is actively developed (`~/git/ar5iv-css`). Base `LaTeXML.css` follows upstream Perl LaTeXML's default theme; a defect measured against the PDF is fixed locally as a commented `latexml-oxide local delta` (recorded in OD, guarded by `witnessed_css_delta`), mirrored into ar5iv.css where ar5iv shows it, and offered upstream to `brucemiller/LaTeXML` (DG 2026-11-14).
 - Sizing intent gap (witness #721, ar5iv#83): Preserve absolute (`7in`) vs relative (`\textwidth`) intent in `image.rs:186` instead of flattening both to `pt`.
 
 ### Algorithm Markup + CSS Unification (0.7.7 Target)
