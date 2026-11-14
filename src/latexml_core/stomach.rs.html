@@ -4162,7 +4162,7 @@
 <a href=#4162 id=4162 data-nosnippet>4162</a>  <span class="prelude-val">Ok</span>(expire_local_box_list())
 <a href=#4163 id=4163 data-nosnippet>4163</a>}
 <a href=#4164 id=4164 data-nosnippet>4164</a>
-<a href=#4165 id=4165 data-nosnippet>4165</a><span class="doccomment">/// a convenience function for including chunks of raw TeX (or LaTeX) code
+<a href=#4165 id=4165 data-nosnippet>4165</a><span class="doccomment">/// Perl `RawTeX` (Package.pm:981-997): a convenience function for including chunks of raw TeX (or LaTeX) code
 <a href=#4166 id=4166 data-nosnippet>4166</a>/// It is useful for copying portions of the normal
 <a href=#4167 id=4167 data-nosnippet>4167</a>/// implementation that can be handled simply using macros and primitives.
 <a href=#4168 id=4168 data-nosnippet>4168</a></span><span class="kw">pub fn </span>raw_tex(text: <span class="kw-2">&amp;</span>str) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
@@ -4189,823 +4189,826 @@
 <a href=#4189 id=4189 data-nosnippet>4189</a>    }
 <a href=#4190 id=4190 data-nosnippet>4190</a>    <span class="prelude-val">Ok</span>(())
 <a href=#4191 id=4191 data-nosnippet>4191</a>  })<span class="question-mark">?</span>;
-<a href=#4192 id=4192 data-nosnippet>4192</a>  <span class="prelude-val">Ok</span>(())
-<a href=#4193 id=4193 data-nosnippet>4193</a>}
-<a href=#4194 id=4194 data-nosnippet>4194</a>
-<a href=#4195 id=4195 data-nosnippet>4195</a><span class="doccomment">/// The token that takes the place of an expansion made here, in the stomach (Perl Stomach.pm:204-209 `invokeToken`
-<a href=#4196 id=4196 data-nosnippet>4196</a>/// re-reads with `readXToken` and invokes what it finds), unless that token ends the alignment cell being read.
-<a href=#4197 id=4197 data-nosnippet>4197</a>///
-<a href=#4198 id=4198 data-nosnippet>4198</a>/// A tab or `\cr` that an expansion yields at `align_state` 0 ends the cell (tex.web §789 `insert_v_part`): the gullet
-<a href=#4199 id=4199 data-nosnippet>4199</a>/// takes it as the column's end, raises the count to 1000000, and puts it back behind the column's v-part
-<a href=#4200 id=4200 data-nosnippet>4200</a>/// (`handle_template`). The cell's own reader then meets the v-part and, after it, the end. When the column has no
-<a href=#4201 id=4201 data-nosnippet>4201</a>/// v-part (`\omit`, so every `\multicolumn` cell), the end itself is the next token, and it comes back to this
-<a href=#4202 id=4202 data-nosnippet>4202</a>/// re-read instead: it goes back to the cell's reader, which ends the column on it, rather than being digested as a
-<a href=#4203 id=4203 data-nosnippet>4203</a>/// stray `&amp;`. A cell reader hands a protected macro to the stomach unexpanded (it reads as Perl's `readXToken(0)`
-<a href=#4204 id=4204 data-nosnippet>4204</a>/// does), so `\protected\def\cellx#1{&amp; #1}` after a `\multicolumn` (sgamex.sty:56-58) reaches this path; pdflatex
-<a href=#4205 id=4205 data-nosnippet>4205</a>/// gives three cells (witness 2410.16600), and Perl too only because its `\multicolumn` keeps a v-part
-<a href=#4206 id=4206 data-nosnippet>4206</a>/// (OXIDIZED_DESIGN_DIVERGENCES #474). Guard:
-<a href=#4207 id=4207 data-nosnippet>4207</a>/// `perfect_kernel_batch63::protected_tab_after_multicolumn_ends_the_cell`.
-<a href=#4208 id=4208 data-nosnippet>4208</a></span><span class="kw">fn </span>read_x_token_after_expansion() -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;Token&gt;&gt; {
-<a href=#4209 id=4209 data-nosnippet>4209</a>  <span class="kw">let </span>next = gullet::read_x_token(<span class="prelude-val">None</span>, <span class="bool-val">false</span>, <span class="prelude-val">None</span>)<span class="question-mark">?</span>;
-<a href=#4210 id=4210 data-nosnippet>4210</a>  <span class="kw">if let </span><span class="prelude-val">Some</span>(token) = next
-<a href=#4211 id=4211 data-nosnippet>4211</a>    &amp;&amp; align_group_count() == <span class="number">1_000_000
-<a href=#4212 id=4212 data-nosnippet>4212</a>    </span>&amp;&amp; has_reading_alignment()
-<a href=#4213 id=4213 data-nosnippet>4213</a>    &amp;&amp; gullet::is_column_end(<span class="kw-2">&amp;</span>token).is_some()
-<a href=#4214 id=4214 data-nosnippet>4214</a>  {
-<a href=#4215 id=4215 data-nosnippet>4215</a>    gullet::unread_one(token);
-<a href=#4216 id=4216 data-nosnippet>4216</a>    <span class="kw">return </span><span class="prelude-val">Ok</span>(<span class="prelude-val">None</span>);
-<a href=#4217 id=4217 data-nosnippet>4217</a>  }
-<a href=#4218 id=4218 data-nosnippet>4218</a>  <span class="prelude-val">Ok</span>(next)
-<a href=#4219 id=4219 data-nosnippet>4219</a>}
-<a href=#4220 id=4220 data-nosnippet>4220</a>
-<a href=#4221 id=4221 data-nosnippet>4221</a><span class="doccomment">/// tex.web §1127 `align_error`: a tab, `\cr` or `\span` that reaches the stomach while the alignment count is not 0
-<a href=#4222 id=4222 data-nosnippet>4222</a>/// — the cell left a brace unbalanced, so the gullet did not take it for the cell's end (§342) — gets the brace TeX
-<a href=#4223 id=4223 data-nosnippet>4223</a>/// supposes was omitted: count −1 or −2 (the cell's `}` closed one more group than it opened, `a} &amp;=&amp; b`) inserts a
-<a href=#4224 id=4224 data-nosnippet>4224</a>/// `{` ("Missing { inserted"), count +1 or +2 (`{a &amp; b}`, `\textbf{a &amp; b}`) a `}` ("Missing } inserted"), and the
-<a href=#4225 id=4225 data-nosnippet>4225</a>/// column end is read again behind it, now at count 0, so the v-part runs and the cell ends as the template says
-<a href=#4226 id=4226 data-nosnippet>4226</a>/// (§789). The ledger moves as TeX's does: `align_error` steps the count towards 0 and `ins_error`'s `back_input`
-<a href=#4227 id=4227 data-nosnippet>4227</a>/// (§325) retracts the inserted brace, which counts again when it is read. A larger count (`abs(align_state)&gt;2`,
-<a href=#4228 id=4228 data-nosnippet>4228</a>/// "Misplaced &amp;") is left to the cell's reader, as is a count past the v-part's 1000000 (the column's own end).
-<a href=#4229 id=4229 data-nosnippet>4229</a>/// Before, the column end was taken for the cell's end with no v-part: an eqnarray/amsmath cell left its template's
-<a href=#4230 id=4230 data-nosnippet>4230</a>/// math open (pdflatex 1 error, ours 17: "Attempt to close a group that switched to mode math"), and a tabular cell's
-<a href=#4231 id=4231 data-nosnippet>4231</a>/// `{a &amp; b}` lost `a` without a word. Perl has no `align_error` (KNOWN_PERL_ERRORS #923). Whether it fired. Guards
-<a href=#4232 id=4232 data-nosnippet>4232</a>/// `perfect_kernel_batch70b::{eqnarray_stray_close_brace_inserts_a_left_brace,
-<a href=#4233 id=4233 data-nosnippet>4233</a>/// tabular_open_brace_at_a_cell_end_inserts_a_right_brace}`.
-<a href=#4234 id=4234 data-nosnippet>4234</a></span><span class="kw">pub fn </span>align_error(token: <span class="kw-2">&amp;</span>Token) -&gt; <span class="prelude-ty">Result</span>&lt;bool&gt; {
-<a href=#4235 id=4235 data-nosnippet>4235</a>  <span class="kw">let </span>count = align_group_count();
-<a href=#4236 id=4236 data-nosnippet>4236</a>  <span class="kw">if </span>count == <span class="number">0
-<a href=#4237 id=4237 data-nosnippet>4237</a>    </span>|| count.abs() &gt; <span class="number">2
-<a href=#4238 id=4238 data-nosnippet>4238</a>    </span>|| !has_reading_alignment()
-<a href=#4239 id=4239 data-nosnippet>4239</a>    || gullet::is_column_end(token).is_none()
-<a href=#4240 id=4240 data-nosnippet>4240</a>    || !is_tab_mark_command(token)
-<a href=#4241 id=4241 data-nosnippet>4241</a>  {
-<a href=#4242 id=4242 data-nosnippet>4242</a>    <span class="kw">return </span><span class="prelude-val">Ok</span>(<span class="bool-val">false</span>);
-<a href=#4243 id=4243 data-nosnippet>4243</a>  }
-<a href=#4244 id=4244 data-nosnippet>4244</a>  <span class="kw">if </span>count &lt; <span class="number">0 </span>{
-<a href=#4245 id=4245 data-nosnippet>4245</a>    <span class="macro">Error!</span>(
-<a href=#4246 id=4246 data-nosnippet>4246</a>      <span class="string">"expected"</span>,
-<a href=#4247 id=4247 data-nosnippet>4247</a>      <span class="string">"{"</span>,
-<a href=#4248 id=4248 data-nosnippet>4248</a>      <span class="string">"Missing { inserted"</span>,
-<a href=#4249 id=4249 data-nosnippet>4249</a>      <span class="string">"I've put in what seems to be necessary to fix the current column of the current alignment."
-<a href=#4250 id=4250 data-nosnippet>4250</a>    </span>);
-<a href=#4251 id=4251 data-nosnippet>4251</a>    set_align_group_count(count + <span class="number">1</span>);
-<a href=#4252 id=4252 data-nosnippet>4252</a>    gullet::unread_one(<span class="kw-2">*</span>token);
-<a href=#4253 id=4253 data-nosnippet>4253</a>    gullet::unread_one(<span class="macro">T_BEGIN!</span>());
-<a href=#4254 id=4254 data-nosnippet>4254</a>  } <span class="kw">else </span>{
-<a href=#4255 id=4255 data-nosnippet>4255</a>    <span class="macro">Error!</span>(
-<a href=#4256 id=4256 data-nosnippet>4256</a>      <span class="string">"expected"</span>,
-<a href=#4257 id=4257 data-nosnippet>4257</a>      <span class="string">"}"</span>,
-<a href=#4258 id=4258 data-nosnippet>4258</a>      <span class="string">"Missing } inserted"</span>,
-<a href=#4259 id=4259 data-nosnippet>4259</a>      <span class="string">"I've put in what seems to be necessary to fix the current column of the current alignment."
-<a href=#4260 id=4260 data-nosnippet>4260</a>    </span>);
-<a href=#4261 id=4261 data-nosnippet>4261</a>    set_align_group_count(count - <span class="number">1</span>);
-<a href=#4262 id=4262 data-nosnippet>4262</a>    gullet::unread_one(<span class="kw-2">*</span>token);
-<a href=#4263 id=4263 data-nosnippet>4263</a>    gullet::unread_one(<span class="macro">T_END!</span>());
-<a href=#4264 id=4264 data-nosnippet>4264</a>  }
-<a href=#4265 id=4265 data-nosnippet>4265</a>  <span class="prelude-val">Ok</span>(<span class="bool-val">true</span>)
-<a href=#4266 id=4266 data-nosnippet>4266</a>}
-<a href=#4267 id=4267 data-nosnippet>4267</a>
-<a href=#4268 id=4268 data-nosnippet>4268</a><span class="doccomment">/// Whether a column-end token reaches the stomach as the tab-mark command (tex.web's `cur_cmd=tab_mark`): an `&amp;`
-<a href=#4269 id=4269 data-nosnippet>4269</a>/// character means one unless a binding gave the character another meaning (LaTeXML lets non-active characters have
-<a href=#4270 id=4270 data-nosnippet>4270</a>/// one): `\@index`'s entry, read as `\@wrindex` writes it under `\@sanitize`, lets `&amp;` to `\&amp;` (sect11.rs; TeX's
-<a href=#4271 id=4271 data-nosnippet>4271</a>/// `&amp;` is catcode 12 there), and a stray `&amp;` deactivates itself to `\relax`. A control sequence is a column end only
-<a href=#4272 id=4272 data-nosnippet>4272</a>/// by its meaning already (`gullet::is_column_end`).
-<a href=#4273 id=4273 data-nosnippet>4273</a></span><span class="kw">fn </span>is_tab_mark_command(token: <span class="kw-2">&amp;</span>Token) -&gt; bool {
-<a href=#4274 id=4274 data-nosnippet>4274</a>  token.get_catcode() != Catcode::ALIGN
-<a href=#4275 id=4275 data-nosnippet>4275</a>    || <span class="kw">match </span>lookup_digestable_definition(token) {
-<a href=#4276 id=4276 data-nosnippet>4276</a>      <span class="prelude-val">None </span>| <span class="prelude-val">Some</span>(Stored::None) =&gt; <span class="bool-val">true</span>,
-<a href=#4277 id=4277 data-nosnippet>4277</a>      <span class="prelude-val">Some</span>(Stored::Constructor(defn)) =&gt; defn.cs == <span class="kw-2">*</span>token,
-<a href=#4278 id=4278 data-nosnippet>4278</a>      <span class="prelude-val">Some</span>(Stored::Token(meaning)) =&gt; meaning.get_catcode() == Catcode::ALIGN,
-<a href=#4279 id=4279 data-nosnippet>4279</a>      <span class="prelude-val">Some</span>(<span class="kw">_</span>) =&gt; <span class="bool-val">false</span>,
-<a href=#4280 id=4280 data-nosnippet>4280</a>    }
-<a href=#4281 id=4281 data-nosnippet>4281</a>}
-<a href=#4282 id=4282 data-nosnippet>4282</a>
-<a href=#4283 id=4283 data-nosnippet>4283</a><span class="doccomment">/// A token of a frontmatter field's stored value (its out-of-band provenance, `Token::prov`) was invoked: what it digests to
-<a href=#4284 id=4284 data-nosnippet>4284</a>/// is that field's ink (`Document::absorb`'s field runs, OXIDIZED_DESIGN #715). What it consumed of the value is covered by
-<a href=#4285 id=4285 data-nosnippet>4285</a>/// them (its arguments; a font switch or `\relax` before it that made no box), recorded in digestion order
-<a href=#4286 id=4286 data-nosnippet>4286</a>/// (`token::field_ledger_push`, the box's `fieldSerial`), so a whole print is told from a fragment by every position of the
-<a href=#4287 id=4287 data-nosnippet>4287</a>/// value (`gullet::field_cover_of`). Only while the field ledger is live: nothing is marked once the frontmatter placement
-<a href=#4288 id=4288 data-nosnippet>4288</a>/// settled the field ink (`token::field_ledger_live`). Out of line: no token of a paper's body is a field's, so
-<a href=#4289 id=4289 data-nosnippet>4289</a>/// [`invoke_token`] pays one test for it.
-<a href=#4290 id=4290 data-nosnippet>4290</a></span><span class="attr">#[cold]
-<a href=#4291 id=4291 data-nosnippet>4291</a>#[inline(never)]
-<a href=#4292 id=4292 data-nosnippet>4292</a></span><span class="kw">fn </span>note_field_token(token: <span class="kw-2">&amp;</span>Token, result: <span class="kw-2">&amp;</span>[Digested]) {
-<a href=#4293 id=4293 data-nosnippet>4293</a>  <span class="kw">let </span>cover = <span class="kw">if </span><span class="macro">matches!</span>(
-<a href=#4294 id=4294 data-nosnippet>4294</a>    token.get_catcode(),
-<a href=#4295 id=4295 data-nosnippet>4295</a>    Catcode::LETTER | Catcode::OTHER | Catcode::SPACE
-<a href=#4296 id=4296 data-nosnippet>4296</a>  ) {
-<a href=#4297 id=4297 data-nosnippet>4297</a>    <span class="kw">let </span>pos = <span class="kw">crate</span>::token::field_prov_pos(token.prov);
-<a href=#4298 id=4298 data-nosnippet>4298</a>    <span class="kw">crate</span>::token::FieldCover {
-<a href=#4299 id=4299 data-nosnippet>4299</a>      field: <span class="kw">crate</span>::token::field_prov_field(token.prov),
-<a href=#4300 id=4300 data-nosnippet>4300</a>      start: pos,
-<a href=#4301 id=4301 data-nosnippet>4301</a>      end:   pos + <span class="number">1</span>,
-<a href=#4302 id=4302 data-nosnippet>4302</a>    }
-<a href=#4303 id=4303 data-nosnippet>4303</a>  } <span class="kw">else </span>{
-<a href=#4304 id=4304 data-nosnippet>4304</a>    gullet::field_cover_of(token.prov)
-<a href=#4305 id=4305 data-nosnippet>4305</a>  };
-<a href=#4306 id=4306 data-nosnippet>4306</a>  <span class="comment">// (a rehearsal's notes on what its boxes do not hold: `token::FieldNotesHook`)
-<a href=#4307 id=4307 data-nosnippet>4307</a>  </span><span class="kw">if let </span><span class="prelude-val">Some</span>(notes) = <span class="kw">crate</span>::token::field_notes_hook() {
-<a href=#4308 id=4308 data-nosnippet>4308</a>    notes(
-<a href=#4309 id=4309 data-nosnippet>4309</a>      token,
-<a href=#4310 id=4310 data-nosnippet>4310</a>      cover,
-<a href=#4311 id=4311 data-nosnippet>4311</a>      <span class="kw">crate</span>::token::FieldInvocation::Digested(result),
-<a href=#4312 id=4312 data-nosnippet>4312</a>    );
-<a href=#4313 id=4313 data-nosnippet>4313</a>  }
-<a href=#4314 id=4314 data-nosnippet>4314</a>  <span class="kw">if </span>result.is_empty() {
-<a href=#4315 id=4315 data-nosnippet>4315</a>    <span class="kw">crate</span>::token::field_cover_set_pending(cover);
-<a href=#4316 id=4316 data-nosnippet>4316</a>  } <span class="kw">else </span>{
-<a href=#4317 id=4317 data-nosnippet>4317</a>    <span class="kw">let </span>serial = <span class="kw">crate</span>::token::field_ledger_push(<span class="kw">crate</span>::token::field_cover_pending_merge(cover));
-<a href=#4318 id=4318 data-nosnippet>4318</a>    <span class="kw">for </span>digested <span class="kw">in </span>result {
-<a href=#4319 id=4319 data-nosnippet>4319</a>      <span class="kw">if </span>!digested.has_property(<span class="kw">crate</span>::document::FIELD_PROV_PROPERTY) {
-<a href=#4320 id=4320 data-nosnippet>4320</a>        digested.try_set_property(<span class="kw">crate</span>::document::FIELD_PROV_PROPERTY, i64::from(token.prov));
-<a href=#4321 id=4321 data-nosnippet>4321</a>        <span class="kw">if let </span><span class="prelude-val">Some</span>(serial) = serial {
-<a href=#4322 id=4322 data-nosnippet>4322</a>          digested.try_set_property(<span class="kw">crate</span>::document::FIELD_SERIAL_PROPERTY, i64::from(serial));
-<a href=#4323 id=4323 data-nosnippet>4323</a>        }
-<a href=#4324 id=4324 data-nosnippet>4324</a>        <span class="kw">crate</span>::token::field_stamp_noted(digested);
-<a href=#4325 id=4325 data-nosnippet>4325</a>      }
-<a href=#4326 id=4326 data-nosnippet>4326</a>    }
-<a href=#4327 id=4327 data-nosnippet>4327</a>  }
-<a href=#4328 id=4328 data-nosnippet>4328</a>}
-<a href=#4329 id=4329 data-nosnippet>4329</a>
-<a href=#4330 id=4330 data-nosnippet>4330</a><span class="doccomment">/// Invoke a token
-<a href=#4331 id=4331 data-nosnippet>4331</a>///
-<a href=#4332 id=4332 data-nosnippet>4332</a>/// If it is a primitive or constructor, the definition will be invoked,
-<a href=#4333 id=4333 data-nosnippet>4333</a>/// possibly arguments will be parsed from the Gullet.
-<a href=#4334 id=4334 data-nosnippet>4334</a>/// Otherwise, the token is simply digested: turned into an appropriate box.
-<a href=#4335 id=4335 data-nosnippet>4335</a>/// Returns a list of boxes/whatsits.
-<a href=#4336 id=4336 data-nosnippet>4336</a></span><span class="kw">pub fn </span>invoke_token(input_token: <span class="kw-2">&amp;</span>Token) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;Digested&gt;&gt; {
-<a href=#4337 id=4337 data-nosnippet>4337</a>  <span class="comment">// The choke point: a cell's `}` and any `}` inside a `\noalign` body pass it, clearing the live put-back mark, and a
-<a href=#4338 id=4338 data-nosnippet>4338</a>  // put-back `}` is deleted here at the formula's own math shift ([`PUT_BACK_BRACE`]). A loop's own closing `}` (the
-<a href=#4339 id=4339 data-nosnippet>4339</a>  // `\noalign` loop, tex_tables.rs:1291; the box-body loop, base_utilities.rs:7083) does not pass it and leaves the
-<a href=#4340 id=4340 data-nosnippet>4340</a>  // live serial set, which is harmless: the frame holding the mark closes with that `}` (probe B1).
-<a href=#4341 id=4341 data-nosnippet>4341</a>  </span><span class="kw">if </span>take_put_back_mark(input_token) &amp;&amp; delete_put_back_brace()<span class="question-mark">? </span>{
-<a href=#4342 id=4342 data-nosnippet>4342</a>    <span class="kw">return </span><span class="prelude-val">Ok</span>(Vec::new());
-<a href=#4343 id=4343 data-nosnippet>4343</a>  }
-<a href=#4344 id=4344 data-nosnippet>4344</a>  <span class="comment">// Perf: Token is Copy (SymStr + Catcode, ~5 bytes), so we pass by value
-<a href=#4345 id=4345 data-nosnippet>4345</a>  // directly instead of wrapping in Cow&lt;Token&gt;.
-<a href=#4346 id=4346 data-nosnippet>4346</a>  </span><span class="kw">let </span><span class="kw-2">mut </span>maybe_token: <span class="prelude-ty">Option</span>&lt;Token&gt; = <span class="prelude-val">Some</span>(<span class="kw-2">*</span>input_token);
-<a href=#4347 id=4347 data-nosnippet>4347</a>  <span class="kw">let </span><span class="kw-2">mut </span>result: Vec&lt;Digested&gt; = Vec::new();
-<a href=#4348 id=4348 data-nosnippet>4348</a>  <span class="comment">// INVOKE:
-<a href=#4349 id=4349 data-nosnippet>4349</a>  </span><span class="kw">while let </span><span class="prelude-val">Some</span>(token) = maybe_token.take() {
-<a href=#4350 id=4350 data-nosnippet>4350</a>    <span class="kw">if </span>align_error(<span class="kw-2">&amp;</span>token)<span class="question-mark">? </span>{
-<a href=#4351 id=4351 data-nosnippet>4351</a>      <span class="kw">return </span><span class="prelude-val">Ok</span>(Vec::new());
-<a href=#4352 id=4352 data-nosnippet>4352</a>    }
-<a href=#4353 id=4353 data-nosnippet>4353</a>    <span class="comment">// RAII guard: auto-pops current_token on scope exit (even on early return/panic)
-<a href=#4354 id=4354 data-nosnippet>4354</a>    </span><span class="kw">let </span>_token_guard = local_current_token_guard(token);
-<a href=#4355 id=4355 data-nosnippet>4355</a>    {
-<a href=#4356 id=4356 data-nosnippet>4356</a>      <span class="macro">stomach_mut!</span>().token_stack.push(token);
-<a href=#4357 id=4357 data-nosnippet>4357</a>    }
-<a href=#4358 id=4358 data-nosnippet>4358</a>    <span class="kw">if </span>{ <span class="macro">stomach!</span>().token_stack.len() } &gt; MAXSTACK {
-<a href=#4359 id=4359 data-nosnippet>4359</a>      <span class="macro">fatal!</span>(
-<a href=#4360 id=4360 data-nosnippet>4360</a>        Stomach,
-<a href=#4361 id=4361 data-nosnippet>4361</a>        Recursion,
-<a href=#4362 id=4362 data-nosnippet>4362</a>        <span class="macro">s!</span>(
-<a href=#4363 id=4363 data-nosnippet>4363</a>          <span class="string">"Excessive recursion(?): Tokens on stack: {:?}"</span>,
-<a href=#4364 id=4364 data-nosnippet>4364</a>          <span class="macro">stomach!</span>().token_stack
-<a href=#4365 id=4365 data-nosnippet>4365</a>        )
-<a href=#4366 id=4366 data-nosnippet>4366</a>      );
-<a href=#4367 id=4367 data-nosnippet>4367</a>    }
-<a href=#4368 id=4368 data-nosnippet>4368</a>    result.clear();
-<a href=#4369 id=4369 data-nosnippet>4369</a>
-<a href=#4370 id=4370 data-nosnippet>4370</a>    <span class="comment">// Rust notes: It would be ideal if we could unify the cases for (Primtive, Constructor,
-<a href=#4371 id=4371 data-nosnippet>4371</a>    // MathPrimitive), as well as (Expandable, Conditional) since the
-<a href=#4372 id=4372 data-nosnippet>4372</a>    // API is identical. However, as the types are different, Rust
-<a href=#4373 id=4373 data-nosnippet>4373</a>    // constrains us here, we need separate match arms for each
-<a href=#4374 id=4374 data-nosnippet>4374</a>    // distinctly typed enum case.
-<a href=#4375 id=4375 data-nosnippet>4375</a>    </span><span class="kw">let </span>digestable_def = lookup_digestable_definition(<span class="kw-2">&amp;</span>token);
-<a href=#4376 id=4376 data-nosnippet>4376</a>    <span class="kw">match </span>digestable_def {
-<a href=#4377 id=4377 data-nosnippet>4377</a>      <span class="prelude-val">None </span>| <span class="prelude-val">Some</span>(Stored::None) =&gt; {
-<a href=#4378 id=4378 data-nosnippet>4378</a>        result = invoke_token_undefined(<span class="kw-2">&amp;</span>token)<span class="question-mark">?</span>;
-<a href=#4379 id=4379 data-nosnippet>4379</a>      },
-<a href=#4380 id=4380 data-nosnippet>4380</a>      <span class="prelude-val">Some</span>(Stored::Token(meaning)) =&gt; {
-<a href=#4381 id=4381 data-nosnippet>4381</a>        <span class="comment">// Common case
-<a href=#4382 id=4382 data-nosnippet>4382</a>        </span><span class="kw">let </span>cc = meaning.get_catcode();
-<a href=#4383 id=4383 data-nosnippet>4383</a>        <span class="kw">if </span>cc == Catcode::CS {
-<a href=#4384 id=4384 data-nosnippet>4384</a>          result = invoke_token_undefined(<span class="kw-2">&amp;</span>token)<span class="question-mark">?</span>;
-<a href=#4385 id=4385 data-nosnippet>4385</a>        } <span class="kw">else if </span>cc.is_absorbable() {
-<a href=#4386 id=4386 data-nosnippet>4386</a>          <span class="kw">let </span>starts_paragraph = <span class="macro">matches!</span>(cc, Catcode::LETTER | Catcode::OTHER)
-<a href=#4387 id=4387 data-nosnippet>4387</a>            &amp;&amp; !lookup_bool_sym(<span class="macro">crate::pin!</span>(<span class="string">"IN_MATH"</span>));
-<a href=#4388 id=4388 data-nosnippet>4388</a>          <span class="kw">if </span>starts_paragraph &amp;&amp; back_input_for_new_graf(token) {
-<a href=#4389 id=4389 data-nosnippet>4389</a>            <span class="comment">// `\everypar`, then this token again, in horizontal mode.
-<a href=#4390 id=4390 data-nosnippet>4390</a>          </span>} <span class="kw">else if let </span><span class="prelude-val">Some</span>(digested) = invoke_token_simple(meaning)<span class="question-mark">? </span>{
-<a href=#4391 id=4391 data-nosnippet>4391</a>            result.push(digested);
-<a href=#4392 id=4392 data-nosnippet>4392</a>          }
-<a href=#4393 id=4393 data-nosnippet>4393</a>        } <span class="kw">else </span>{
-<a href=#4394 id=4394 data-nosnippet>4394</a>          <span class="comment">// Perl L187-189: deactivate T_ALIGN to prevent error flood in tables
-<a href=#4395 id=4395 data-nosnippet>4395</a>          </span><span class="kw">if </span>token.get_catcode() == Catcode::ALIGN
-<a href=#4396 id=4396 data-nosnippet>4396</a>            &amp;&amp; <span class="kw">let </span><span class="prelude-val">Some</span>(relax_meaning) = lookup_meaning(<span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="string">"\\relax"</span>))
-<a href=#4397 id=4397 data-nosnippet>4397</a>          {
-<a href=#4398 id=4398 data-nosnippet>4398</a>            assign_meaning(<span class="kw-2">&amp;</span>token, relax_meaning, <span class="prelude-val">Some</span>(Scope::Local));
-<a href=#4399 id=4399 data-nosnippet>4399</a>          }
-<a href=#4400 id=4400 data-nosnippet>4400</a>          <span class="kw">let </span>message = <span class="macro">s!</span>(
-<a href=#4401 id=4401 data-nosnippet>4401</a>            <span class="string">"The token {:?} (catcode {:?}) should never reach Stomach!"</span>,
-<a href=#4402 id=4402 data-nosnippet>4402</a>            token,
-<a href=#4403 id=4403 data-nosnippet>4403</a>            cc
-<a href=#4404 id=4404 data-nosnippet>4404</a>          );
-<a href=#4405 id=4405 data-nosnippet>4405</a>          <span class="macro">Error!</span>(<span class="string">"misdefined"</span>, token, <span class="kw-2">&amp;</span>message);
-<a href=#4406 id=4406 data-nosnippet>4406</a>          <span class="kw">if let </span><span class="prelude-val">Some</span>(digested) = invoke_token_simple(meaning)<span class="question-mark">? </span>{
-<a href=#4407 id=4407 data-nosnippet>4407</a>            result.push(digested);
-<a href=#4408 id=4408 data-nosnippet>4408</a>          }
-<a href=#4409 id=4409 data-nosnippet>4409</a>        }
-<a href=#4410 id=4410 data-nosnippet>4410</a>      },
-<a href=#4411 id=4411 data-nosnippet>4411</a>      <span class="prelude-val">Some</span>(Stored::Expandable(meaning)) =&gt; {
-<a href=#4412 id=4412 data-nosnippet>4412</a>        <span class="comment">// A math-active character will (typically) be a macro,
-<a href=#4413 id=4413 data-nosnippet>4413</a>        // but it isn't expanded in the gullet, but later when digesting, in math mode
-<a href=#4414 id=4414 data-nosnippet>4414</a>        // (? I think)
-<a href=#4415 id=4415 data-nosnippet>4415</a>        </span><span class="kw">let </span><span class="kw-2">mut </span>invoked_meaning = meaning.invoke(<span class="bool-val">false</span>)<span class="question-mark">?</span>;
-<a href=#4416 id=4416 data-nosnippet>4416</a>        <span class="kw">crate</span>::token::inherit_field_prov(token.prov, <span class="kw-2">&amp;mut </span>invoked_meaning);
-<a href=#4417 id=4417 data-nosnippet>4417</a>        <span class="kw">if </span>!invoked_meaning.is_empty() {
-<a href=#4418 id=4418 data-nosnippet>4418</a>          {
-<a href=#4419 id=4419 data-nosnippet>4419</a>            gullet::unread(invoked_meaning);
-<a href=#4420 id=4420 data-nosnippet>4420</a>          }
-<a href=#4421 id=4421 data-nosnippet>4421</a>        }
-<a href=#4422 id=4422 data-nosnippet>4422</a>        <span class="comment">// replace the token by it's expansion!!!
-<a href=#4423 id=4423 data-nosnippet>4423</a>        </span>maybe_token = read_x_token_after_expansion()<span class="question-mark">?</span>;
-<a href=#4424 id=4424 data-nosnippet>4424</a>        {
-<a href=#4425 id=4425 data-nosnippet>4425</a>          <span class="macro">stomach_mut!</span>().token_stack.pop();
-<a href=#4426 id=4426 data-nosnippet>4426</a>        }
-<a href=#4427 id=4427 data-nosnippet>4427</a>        drop(_token_guard); <span class="comment">// expire current token via RAII
-<a href=#4428 id=4428 data-nosnippet>4428</a>        </span><span class="kw">continue</span>;
-<a href=#4429 id=4429 data-nosnippet>4429</a>      },
-<a href=#4430 id=4430 data-nosnippet>4430</a>      <span class="prelude-val">Some</span>(Stored::Conditional(meaning)) =&gt; {
-<a href=#4431 id=4431 data-nosnippet>4431</a>        <span class="comment">// Conditionals are "expandable", use the regular invoke.
-<a href=#4432 id=4432 data-nosnippet>4432</a>        </span><span class="kw">let </span>invoked_meaning = meaning.invoke(<span class="bool-val">false</span>)<span class="question-mark">?</span>;
-<a href=#4433 id=4433 data-nosnippet>4433</a>        gullet::unread(invoked_meaning);
-<a href=#4434 id=4434 data-nosnippet>4434</a>        maybe_token = read_x_token_after_expansion()<span class="question-mark">?</span>;
-<a href=#4435 id=4435 data-nosnippet>4435</a>        {
-<a href=#4436 id=4436 data-nosnippet>4436</a>          <span class="macro">stomach_mut!</span>().token_stack.pop();
-<a href=#4437 id=4437 data-nosnippet>4437</a>        }
-<a href=#4438 id=4438 data-nosnippet>4438</a>        drop(_token_guard); <span class="comment">// expire current token via RAII
-<a href=#4439 id=4439 data-nosnippet>4439</a>        </span><span class="kw">continue</span>;
-<a href=#4440 id=4440 data-nosnippet>4440</a>      },
-<a href=#4441 id=4441 data-nosnippet>4441</a>      <span class="prelude-val">Some</span>(Stored::Constructor(meaning))
-<a href=#4442 id=4442 data-nosnippet>4442</a>        <span class="kw">if </span>starts_new_graf(<span class="kw-2">&amp;</span>meaning.get_cs()) &amp;&amp; back_input_for_new_graf(token) =&gt;
-<a href=#4443 id=4443 data-nosnippet>4443</a>      {
-<a href=#4444 id=4444 data-nosnippet>4444</a>        <span class="comment">// `\hskip`, `\vrule`, `\valign`: `\everypar`, then this token again, in horizontal mode (tex.web §1090).
-<a href=#4445 id=4445 data-nosnippet>4445</a>      </span>},
-<a href=#4446 id=4446 data-nosnippet>4446</a>      <span class="prelude-val">Some</span>(Stored::Constructor(meaning)) =&gt; {
-<a href=#4447 id=4447 data-nosnippet>4447</a>        <span class="comment">// Perl Stomach.pm L187-189: deactivate T_ALIGN to `\relax` LOCAL
-<a href=#4448 id=4448 data-nosnippet>4448</a>        // on first non-table encounter, to prevent error flood. The
-<a href=#4449 id=4449 data-nosnippet>4449</a>        // existing guard at the Stored::Token branch (above) only fires
-<a href=#4450 id=4450 data-nosnippet>4450</a>        // when `&amp;` has been Let'd to another token, but the `&amp;`
-<a href=#4451 id=4451 data-nosnippet>4451</a>        // CC_ALIGN char-token is bound to a Constructor (TeX_Tables.pool
-<a href=#4452 id=4452 data-nosnippet>4452</a>        // L49: `DefConstructorI('&amp;', undef, sub { Error('unexpected', '&amp;',
-<a href=#4453 id=4453 data-nosnippet>4453</a>        // $_[0], "Stray alignment \"&amp;\"") })`), so it falls into THIS
-<a href=#4454 id=4454 data-nosnippet>4454</a>        // branch instead. Without this guard, papers with multiple stray
-<a href=#4455 id=4455 data-nosnippet>4455</a>        // `&amp;` (e.g. astro-ph0107583's bibitem with unescaped `Hirose &amp;
-<a href=#4456 id=4456 data-nosnippet>4456</a>        // Osaki`) emit one Error per occurrence; Perl emits ONE total
-<a href=#4457 id=4457 data-nosnippet>4457</a>        // because of the LOCAL `\relax` rebinding. Self-deactivate here
-<a href=#4458 id=4458 data-nosnippet>4458</a>        // too so subsequent `&amp;` invocations no-op.
-<a href=#4459 id=4459 data-nosnippet>4459</a>        </span><span class="kw">if </span>token.get_catcode() == Catcode::ALIGN
-<a href=#4460 id=4460 data-nosnippet>4460</a>          &amp;&amp; <span class="kw">let </span><span class="prelude-val">Some</span>(relax_meaning) = lookup_meaning(<span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="string">"\\relax"</span>))
-<a href=#4461 id=4461 data-nosnippet>4461</a>        {
-<a href=#4462 id=4462 data-nosnippet>4462</a>          assign_meaning(<span class="kw-2">&amp;</span>token, relax_meaning, <span class="prelude-val">Some</span>(Scope::Local));
-<a href=#4463 id=4463 data-nosnippet>4463</a>        }
-<a href=#4464 id=4464 data-nosnippet>4464</a>        <span class="comment">// `meaning` IS the state table's `Rc&lt;Constructor&gt;`, so hand it to the
-<a href=#4465 id=4465 data-nosnippet>4465</a>        // Whatsit rather than letting `invoke_primitive` deep-clone the
-<a href=#4466 id=4466 data-nosnippet>4466</a>        // definition once per invocation (see `Constructor::invoke_primitive_shared`).
-<a href=#4467 id=4467 data-nosnippet>4467</a>        </span>result = Constructor::invoke_primitive_shared(<span class="kw-2">&amp;</span>meaning)<span class="question-mark">?</span>;
-<a href=#4468 id=4468 data-nosnippet>4468</a>        <span class="kw">if </span>!meaning.is_prefix() {
-<a href=#4469 id=4469 data-nosnippet>4469</a>          clear_prefixes(); <span class="comment">// Clear prefixes unless we just set one.
-<a href=#4470 id=4470 data-nosnippet>4470</a>        </span>}
-<a href=#4471 id=4471 data-nosnippet>4471</a>      },
-<a href=#4472 id=4472 data-nosnippet>4472</a>      <span class="prelude-val">Some</span>(Stored::Primitive(meaning))
-<a href=#4473 id=4473 data-nosnippet>4473</a>        <span class="kw">if </span>starts_new_graf(<span class="kw-2">&amp;</span>meaning.get_cs()) &amp;&amp; back_input_for_new_graf(token) =&gt;
-<a href=#4474 id=4474 data-nosnippet>4474</a>      {
-<a href=#4475 id=4475 data-nosnippet>4475</a>        <span class="comment">// `\everypar`, then this token again, in horizontal mode (tex.web §1090).
-<a href=#4476 id=4476 data-nosnippet>4476</a>      </span>},
-<a href=#4477 id=4477 data-nosnippet>4477</a>      <span class="prelude-val">Some</span>(Stored::Primitive(meaning)) =&gt; {
-<a href=#4478 id=4478 data-nosnippet>4478</a>        <span class="comment">// Otherwise, a normal primitive or constructor
-<a href=#4479 id=4479 data-nosnippet>4479</a>        </span>result = meaning.invoke_primitive()<span class="question-mark">?</span>;
-<a href=#4480 id=4480 data-nosnippet>4480</a>        <span class="comment">// After a prefix TeX reads on to the next non-blank non-relax token
-<a href=#4481 id=4481 data-nosnippet>4481</a>        // (tex.web §1211, §404), so a `\relax` there keeps the prefixes:
-<a href=#4482 id=4482 data-nosnippet>4482</a>        // catoptions' `\protected\relax\def` (its `\robust@def*`, :375-381)
-<a href=#4483 id=4483 data-nosnippet>4483</a>        // defines a protected macro. Perl clears them (Stomach.pm:212), and the
-<a href=#4484 id=4484 data-nosnippet>4484</a>        // unprotected `\cpt@newv@riables` ran inside an `\edef`: 70 errors per
-<a href=#4485 id=4485 data-nosnippet>4485</a>        // `\usepackage{catoptions}` (keyval2e, concepts, ltxkeys). KPE #223.
-<a href=#4486 id=4486 data-nosnippet>4486</a>        </span><span class="kw">if </span>!meaning.is_prefix() &amp;&amp; !(has_tex_prefixes() &amp;&amp; <span class="kw-2">*</span>meaning.get_cs() == <span class="macro">T_CS!</span>(<span class="string">"\\relax"</span>)) {
-<a href=#4487 id=4487 data-nosnippet>4487</a>          clear_prefixes(); <span class="comment">// Clear prefixes unless we just set one.
-<a href=#4488 id=4488 data-nosnippet>4488</a>        </span>}
-<a href=#4489 id=4489 data-nosnippet>4489</a>      },
-<a href=#4490 id=4490 data-nosnippet>4490</a>      <span class="prelude-val">Some</span>(Stored::MathPrimitive(meaning)) =&gt; {
-<a href=#4491 id=4491 data-nosnippet>4491</a>        <span class="comment">// Copy of regular Primitive
-<a href=#4492 id=4492 data-nosnippet>4492</a>        // Otherwise, a normal primitive or constructor
-<a href=#4493 id=4493 data-nosnippet>4493</a>        </span>result = meaning.invoke_primitive()<span class="question-mark">?</span>;
-<a href=#4494 id=4494 data-nosnippet>4494</a>        <span class="kw">if </span>!meaning.is_prefix() {
-<a href=#4495 id=4495 data-nosnippet>4495</a>          clear_prefixes(); <span class="comment">// Clear prefixes unless we just set one.
-<a href=#4496 id=4496 data-nosnippet>4496</a>        </span>}
-<a href=#4497 id=4497 data-nosnippet>4497</a>      },
-<a href=#4498 id=4498 data-nosnippet>4498</a>      <span class="prelude-val">Some</span>(Stored::Register(meaning)) =&gt; {
-<a href=#4499 id=4499 data-nosnippet>4499</a>        <span class="comment">// Registers are special primitives
-<a href=#4500 id=4500 data-nosnippet>4500</a>        </span>result = meaning.invoke_primitive()<span class="question-mark">?</span>;
-<a href=#4501 id=4501 data-nosnippet>4501</a>        <span class="kw">if </span>!meaning.is_prefix() {
-<a href=#4502 id=4502 data-nosnippet>4502</a>          clear_prefixes(); <span class="comment">// Clear prefixes unless we just set one.
-<a href=#4503 id=4503 data-nosnippet>4503</a>        </span>}
-<a href=#4504 id=4504 data-nosnippet>4504</a>      },
-<a href=#4505 id=4505 data-nosnippet>4505</a>      meaning =&gt; {
-<a href=#4506 id=4506 data-nosnippet>4506</a>        <span class="comment">// Perl: Error + makeMisdefinedError (non-fatal). Don't crash.
-<a href=#4507 id=4507 data-nosnippet>4507</a>        </span><span class="macro">Error!</span>(
-<a href=#4508 id=4508 data-nosnippet>4508</a>          <span class="string">"misdefined"</span>,
-<a href=#4509 id=4509 data-nosnippet>4509</a>          token,
-<a href=#4510 id=4510 data-nosnippet>4510</a>          <span class="macro">s!</span>(<span class="string">"Unexpected object in Stomach: {:?}"</span>, meaning)
-<a href=#4511 id=4511 data-nosnippet>4511</a>        );
-<a href=#4512 id=4512 data-nosnippet>4512</a>      },
-<a href=#4513 id=4513 data-nosnippet>4513</a>    }
-<a href=#4514 id=4514 data-nosnippet>4514</a>    <span class="kw">if </span>token.prov != <span class="number">0 </span>&amp;&amp; <span class="kw">crate</span>::token::field_ledger_live() {
-<a href=#4515 id=4515 data-nosnippet>4515</a>      note_field_token(<span class="kw-2">&amp;</span>token, <span class="kw-2">&amp;</span>result);
+<a href=#4192 id=4192 data-nosnippet>4192</a>  <span class="comment">// Perl Package.pm:996: RawTeX ends in vertical mode, whatever mode it began in (mid-paragraph too); a caller that
+<a href=#4193 id=4193 data-nosnippet>4193</a>  // runs inside a paragraph digests through `Digest` instead, which leaves only a horizontal mode it entered.
+<a href=#4194 id=4194 data-nosnippet>4194</a>  </span>leave_horizontal_internal();
+<a href=#4195 id=4195 data-nosnippet>4195</a>  <span class="prelude-val">Ok</span>(())
+<a href=#4196 id=4196 data-nosnippet>4196</a>}
+<a href=#4197 id=4197 data-nosnippet>4197</a>
+<a href=#4198 id=4198 data-nosnippet>4198</a><span class="doccomment">/// The token that takes the place of an expansion made here, in the stomach (Perl Stomach.pm:204-209 `invokeToken`
+<a href=#4199 id=4199 data-nosnippet>4199</a>/// re-reads with `readXToken` and invokes what it finds), unless that token ends the alignment cell being read.
+<a href=#4200 id=4200 data-nosnippet>4200</a>///
+<a href=#4201 id=4201 data-nosnippet>4201</a>/// A tab or `\cr` that an expansion yields at `align_state` 0 ends the cell (tex.web §789 `insert_v_part`): the gullet
+<a href=#4202 id=4202 data-nosnippet>4202</a>/// takes it as the column's end, raises the count to 1000000, and puts it back behind the column's v-part
+<a href=#4203 id=4203 data-nosnippet>4203</a>/// (`handle_template`). The cell's own reader then meets the v-part and, after it, the end. When the column has no
+<a href=#4204 id=4204 data-nosnippet>4204</a>/// v-part (`\omit`, so every `\multicolumn` cell), the end itself is the next token, and it comes back to this
+<a href=#4205 id=4205 data-nosnippet>4205</a>/// re-read instead: it goes back to the cell's reader, which ends the column on it, rather than being digested as a
+<a href=#4206 id=4206 data-nosnippet>4206</a>/// stray `&amp;`. A cell reader hands a protected macro to the stomach unexpanded (it reads as Perl's `readXToken(0)`
+<a href=#4207 id=4207 data-nosnippet>4207</a>/// does), so `\protected\def\cellx#1{&amp; #1}` after a `\multicolumn` (sgamex.sty:56-58) reaches this path; pdflatex
+<a href=#4208 id=4208 data-nosnippet>4208</a>/// gives three cells (witness 2410.16600), and Perl too only because its `\multicolumn` keeps a v-part
+<a href=#4209 id=4209 data-nosnippet>4209</a>/// (OXIDIZED_DESIGN_DIVERGENCES #474). Guard:
+<a href=#4210 id=4210 data-nosnippet>4210</a>/// `perfect_kernel_batch63::protected_tab_after_multicolumn_ends_the_cell`.
+<a href=#4211 id=4211 data-nosnippet>4211</a></span><span class="kw">fn </span>read_x_token_after_expansion() -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;Token&gt;&gt; {
+<a href=#4212 id=4212 data-nosnippet>4212</a>  <span class="kw">let </span>next = gullet::read_x_token(<span class="prelude-val">None</span>, <span class="bool-val">false</span>, <span class="prelude-val">None</span>)<span class="question-mark">?</span>;
+<a href=#4213 id=4213 data-nosnippet>4213</a>  <span class="kw">if let </span><span class="prelude-val">Some</span>(token) = next
+<a href=#4214 id=4214 data-nosnippet>4214</a>    &amp;&amp; align_group_count() == <span class="number">1_000_000
+<a href=#4215 id=4215 data-nosnippet>4215</a>    </span>&amp;&amp; has_reading_alignment()
+<a href=#4216 id=4216 data-nosnippet>4216</a>    &amp;&amp; gullet::is_column_end(<span class="kw-2">&amp;</span>token).is_some()
+<a href=#4217 id=4217 data-nosnippet>4217</a>  {
+<a href=#4218 id=4218 data-nosnippet>4218</a>    gullet::unread_one(token);
+<a href=#4219 id=4219 data-nosnippet>4219</a>    <span class="kw">return </span><span class="prelude-val">Ok</span>(<span class="prelude-val">None</span>);
+<a href=#4220 id=4220 data-nosnippet>4220</a>  }
+<a href=#4221 id=4221 data-nosnippet>4221</a>  <span class="prelude-val">Ok</span>(next)
+<a href=#4222 id=4222 data-nosnippet>4222</a>}
+<a href=#4223 id=4223 data-nosnippet>4223</a>
+<a href=#4224 id=4224 data-nosnippet>4224</a><span class="doccomment">/// tex.web §1127 `align_error`: a tab, `\cr` or `\span` that reaches the stomach while the alignment count is not 0
+<a href=#4225 id=4225 data-nosnippet>4225</a>/// — the cell left a brace unbalanced, so the gullet did not take it for the cell's end (§342) — gets the brace TeX
+<a href=#4226 id=4226 data-nosnippet>4226</a>/// supposes was omitted: count −1 or −2 (the cell's `}` closed one more group than it opened, `a} &amp;=&amp; b`) inserts a
+<a href=#4227 id=4227 data-nosnippet>4227</a>/// `{` ("Missing { inserted"), count +1 or +2 (`{a &amp; b}`, `\textbf{a &amp; b}`) a `}` ("Missing } inserted"), and the
+<a href=#4228 id=4228 data-nosnippet>4228</a>/// column end is read again behind it, now at count 0, so the v-part runs and the cell ends as the template says
+<a href=#4229 id=4229 data-nosnippet>4229</a>/// (§789). The ledger moves as TeX's does: `align_error` steps the count towards 0 and `ins_error`'s `back_input`
+<a href=#4230 id=4230 data-nosnippet>4230</a>/// (§325) retracts the inserted brace, which counts again when it is read. A larger count (`abs(align_state)&gt;2`,
+<a href=#4231 id=4231 data-nosnippet>4231</a>/// "Misplaced &amp;") is left to the cell's reader, as is a count past the v-part's 1000000 (the column's own end).
+<a href=#4232 id=4232 data-nosnippet>4232</a>/// Before, the column end was taken for the cell's end with no v-part: an eqnarray/amsmath cell left its template's
+<a href=#4233 id=4233 data-nosnippet>4233</a>/// math open (pdflatex 1 error, ours 17: "Attempt to close a group that switched to mode math"), and a tabular cell's
+<a href=#4234 id=4234 data-nosnippet>4234</a>/// `{a &amp; b}` lost `a` without a word. Perl has no `align_error` (KNOWN_PERL_ERRORS #923). Whether it fired. Guards
+<a href=#4235 id=4235 data-nosnippet>4235</a>/// `perfect_kernel_batch70b::{eqnarray_stray_close_brace_inserts_a_left_brace,
+<a href=#4236 id=4236 data-nosnippet>4236</a>/// tabular_open_brace_at_a_cell_end_inserts_a_right_brace}`.
+<a href=#4237 id=4237 data-nosnippet>4237</a></span><span class="kw">pub fn </span>align_error(token: <span class="kw-2">&amp;</span>Token) -&gt; <span class="prelude-ty">Result</span>&lt;bool&gt; {
+<a href=#4238 id=4238 data-nosnippet>4238</a>  <span class="kw">let </span>count = align_group_count();
+<a href=#4239 id=4239 data-nosnippet>4239</a>  <span class="kw">if </span>count == <span class="number">0
+<a href=#4240 id=4240 data-nosnippet>4240</a>    </span>|| count.abs() &gt; <span class="number">2
+<a href=#4241 id=4241 data-nosnippet>4241</a>    </span>|| !has_reading_alignment()
+<a href=#4242 id=4242 data-nosnippet>4242</a>    || gullet::is_column_end(token).is_none()
+<a href=#4243 id=4243 data-nosnippet>4243</a>    || !is_tab_mark_command(token)
+<a href=#4244 id=4244 data-nosnippet>4244</a>  {
+<a href=#4245 id=4245 data-nosnippet>4245</a>    <span class="kw">return </span><span class="prelude-val">Ok</span>(<span class="bool-val">false</span>);
+<a href=#4246 id=4246 data-nosnippet>4246</a>  }
+<a href=#4247 id=4247 data-nosnippet>4247</a>  <span class="kw">if </span>count &lt; <span class="number">0 </span>{
+<a href=#4248 id=4248 data-nosnippet>4248</a>    <span class="macro">Error!</span>(
+<a href=#4249 id=4249 data-nosnippet>4249</a>      <span class="string">"expected"</span>,
+<a href=#4250 id=4250 data-nosnippet>4250</a>      <span class="string">"{"</span>,
+<a href=#4251 id=4251 data-nosnippet>4251</a>      <span class="string">"Missing { inserted"</span>,
+<a href=#4252 id=4252 data-nosnippet>4252</a>      <span class="string">"I've put in what seems to be necessary to fix the current column of the current alignment."
+<a href=#4253 id=4253 data-nosnippet>4253</a>    </span>);
+<a href=#4254 id=4254 data-nosnippet>4254</a>    set_align_group_count(count + <span class="number">1</span>);
+<a href=#4255 id=4255 data-nosnippet>4255</a>    gullet::unread_one(<span class="kw-2">*</span>token);
+<a href=#4256 id=4256 data-nosnippet>4256</a>    gullet::unread_one(<span class="macro">T_BEGIN!</span>());
+<a href=#4257 id=4257 data-nosnippet>4257</a>  } <span class="kw">else </span>{
+<a href=#4258 id=4258 data-nosnippet>4258</a>    <span class="macro">Error!</span>(
+<a href=#4259 id=4259 data-nosnippet>4259</a>      <span class="string">"expected"</span>,
+<a href=#4260 id=4260 data-nosnippet>4260</a>      <span class="string">"}"</span>,
+<a href=#4261 id=4261 data-nosnippet>4261</a>      <span class="string">"Missing } inserted"</span>,
+<a href=#4262 id=4262 data-nosnippet>4262</a>      <span class="string">"I've put in what seems to be necessary to fix the current column of the current alignment."
+<a href=#4263 id=4263 data-nosnippet>4263</a>    </span>);
+<a href=#4264 id=4264 data-nosnippet>4264</a>    set_align_group_count(count - <span class="number">1</span>);
+<a href=#4265 id=4265 data-nosnippet>4265</a>    gullet::unread_one(<span class="kw-2">*</span>token);
+<a href=#4266 id=4266 data-nosnippet>4266</a>    gullet::unread_one(<span class="macro">T_END!</span>());
+<a href=#4267 id=4267 data-nosnippet>4267</a>  }
+<a href=#4268 id=4268 data-nosnippet>4268</a>  <span class="prelude-val">Ok</span>(<span class="bool-val">true</span>)
+<a href=#4269 id=4269 data-nosnippet>4269</a>}
+<a href=#4270 id=4270 data-nosnippet>4270</a>
+<a href=#4271 id=4271 data-nosnippet>4271</a><span class="doccomment">/// Whether a column-end token reaches the stomach as the tab-mark command (tex.web's `cur_cmd=tab_mark`): an `&amp;`
+<a href=#4272 id=4272 data-nosnippet>4272</a>/// character means one unless a binding gave the character another meaning (LaTeXML lets non-active characters have
+<a href=#4273 id=4273 data-nosnippet>4273</a>/// one): `\@index`'s entry, read as `\@wrindex` writes it under `\@sanitize`, lets `&amp;` to `\&amp;` (sect11.rs; TeX's
+<a href=#4274 id=4274 data-nosnippet>4274</a>/// `&amp;` is catcode 12 there), and a stray `&amp;` deactivates itself to `\relax`. A control sequence is a column end only
+<a href=#4275 id=4275 data-nosnippet>4275</a>/// by its meaning already (`gullet::is_column_end`).
+<a href=#4276 id=4276 data-nosnippet>4276</a></span><span class="kw">fn </span>is_tab_mark_command(token: <span class="kw-2">&amp;</span>Token) -&gt; bool {
+<a href=#4277 id=4277 data-nosnippet>4277</a>  token.get_catcode() != Catcode::ALIGN
+<a href=#4278 id=4278 data-nosnippet>4278</a>    || <span class="kw">match </span>lookup_digestable_definition(token) {
+<a href=#4279 id=4279 data-nosnippet>4279</a>      <span class="prelude-val">None </span>| <span class="prelude-val">Some</span>(Stored::None) =&gt; <span class="bool-val">true</span>,
+<a href=#4280 id=4280 data-nosnippet>4280</a>      <span class="prelude-val">Some</span>(Stored::Constructor(defn)) =&gt; defn.cs == <span class="kw-2">*</span>token,
+<a href=#4281 id=4281 data-nosnippet>4281</a>      <span class="prelude-val">Some</span>(Stored::Token(meaning)) =&gt; meaning.get_catcode() == Catcode::ALIGN,
+<a href=#4282 id=4282 data-nosnippet>4282</a>      <span class="prelude-val">Some</span>(<span class="kw">_</span>) =&gt; <span class="bool-val">false</span>,
+<a href=#4283 id=4283 data-nosnippet>4283</a>    }
+<a href=#4284 id=4284 data-nosnippet>4284</a>}
+<a href=#4285 id=4285 data-nosnippet>4285</a>
+<a href=#4286 id=4286 data-nosnippet>4286</a><span class="doccomment">/// A token of a frontmatter field's stored value (its out-of-band provenance, `Token::prov`) was invoked: what it digests to
+<a href=#4287 id=4287 data-nosnippet>4287</a>/// is that field's ink (`Document::absorb`'s field runs, OXIDIZED_DESIGN #715). What it consumed of the value is covered by
+<a href=#4288 id=4288 data-nosnippet>4288</a>/// them (its arguments; a font switch or `\relax` before it that made no box), recorded in digestion order
+<a href=#4289 id=4289 data-nosnippet>4289</a>/// (`token::field_ledger_push`, the box's `fieldSerial`), so a whole print is told from a fragment by every position of the
+<a href=#4290 id=4290 data-nosnippet>4290</a>/// value (`gullet::field_cover_of`). Only while the field ledger is live: nothing is marked once the frontmatter placement
+<a href=#4291 id=4291 data-nosnippet>4291</a>/// settled the field ink (`token::field_ledger_live`). Out of line: no token of a paper's body is a field's, so
+<a href=#4292 id=4292 data-nosnippet>4292</a>/// [`invoke_token`] pays one test for it.
+<a href=#4293 id=4293 data-nosnippet>4293</a></span><span class="attr">#[cold]
+<a href=#4294 id=4294 data-nosnippet>4294</a>#[inline(never)]
+<a href=#4295 id=4295 data-nosnippet>4295</a></span><span class="kw">fn </span>note_field_token(token: <span class="kw-2">&amp;</span>Token, result: <span class="kw-2">&amp;</span>[Digested]) {
+<a href=#4296 id=4296 data-nosnippet>4296</a>  <span class="kw">let </span>cover = <span class="kw">if </span><span class="macro">matches!</span>(
+<a href=#4297 id=4297 data-nosnippet>4297</a>    token.get_catcode(),
+<a href=#4298 id=4298 data-nosnippet>4298</a>    Catcode::LETTER | Catcode::OTHER | Catcode::SPACE
+<a href=#4299 id=4299 data-nosnippet>4299</a>  ) {
+<a href=#4300 id=4300 data-nosnippet>4300</a>    <span class="kw">let </span>pos = <span class="kw">crate</span>::token::field_prov_pos(token.prov);
+<a href=#4301 id=4301 data-nosnippet>4301</a>    <span class="kw">crate</span>::token::FieldCover {
+<a href=#4302 id=4302 data-nosnippet>4302</a>      field: <span class="kw">crate</span>::token::field_prov_field(token.prov),
+<a href=#4303 id=4303 data-nosnippet>4303</a>      start: pos,
+<a href=#4304 id=4304 data-nosnippet>4304</a>      end:   pos + <span class="number">1</span>,
+<a href=#4305 id=4305 data-nosnippet>4305</a>    }
+<a href=#4306 id=4306 data-nosnippet>4306</a>  } <span class="kw">else </span>{
+<a href=#4307 id=4307 data-nosnippet>4307</a>    gullet::field_cover_of(token.prov)
+<a href=#4308 id=4308 data-nosnippet>4308</a>  };
+<a href=#4309 id=4309 data-nosnippet>4309</a>  <span class="comment">// (a rehearsal's notes on what its boxes do not hold: `token::FieldNotesHook`)
+<a href=#4310 id=4310 data-nosnippet>4310</a>  </span><span class="kw">if let </span><span class="prelude-val">Some</span>(notes) = <span class="kw">crate</span>::token::field_notes_hook() {
+<a href=#4311 id=4311 data-nosnippet>4311</a>    notes(
+<a href=#4312 id=4312 data-nosnippet>4312</a>      token,
+<a href=#4313 id=4313 data-nosnippet>4313</a>      cover,
+<a href=#4314 id=4314 data-nosnippet>4314</a>      <span class="kw">crate</span>::token::FieldInvocation::Digested(result),
+<a href=#4315 id=4315 data-nosnippet>4315</a>    );
+<a href=#4316 id=4316 data-nosnippet>4316</a>  }
+<a href=#4317 id=4317 data-nosnippet>4317</a>  <span class="kw">if </span>result.is_empty() {
+<a href=#4318 id=4318 data-nosnippet>4318</a>    <span class="kw">crate</span>::token::field_cover_set_pending(cover);
+<a href=#4319 id=4319 data-nosnippet>4319</a>  } <span class="kw">else </span>{
+<a href=#4320 id=4320 data-nosnippet>4320</a>    <span class="kw">let </span>serial = <span class="kw">crate</span>::token::field_ledger_push(<span class="kw">crate</span>::token::field_cover_pending_merge(cover));
+<a href=#4321 id=4321 data-nosnippet>4321</a>    <span class="kw">for </span>digested <span class="kw">in </span>result {
+<a href=#4322 id=4322 data-nosnippet>4322</a>      <span class="kw">if </span>!digested.has_property(<span class="kw">crate</span>::document::FIELD_PROV_PROPERTY) {
+<a href=#4323 id=4323 data-nosnippet>4323</a>        digested.try_set_property(<span class="kw">crate</span>::document::FIELD_PROV_PROPERTY, i64::from(token.prov));
+<a href=#4324 id=4324 data-nosnippet>4324</a>        <span class="kw">if let </span><span class="prelude-val">Some</span>(serial) = serial {
+<a href=#4325 id=4325 data-nosnippet>4325</a>          digested.try_set_property(<span class="kw">crate</span>::document::FIELD_SERIAL_PROPERTY, i64::from(serial));
+<a href=#4326 id=4326 data-nosnippet>4326</a>        }
+<a href=#4327 id=4327 data-nosnippet>4327</a>        <span class="kw">crate</span>::token::field_stamp_noted(digested);
+<a href=#4328 id=4328 data-nosnippet>4328</a>      }
+<a href=#4329 id=4329 data-nosnippet>4329</a>    }
+<a href=#4330 id=4330 data-nosnippet>4330</a>  }
+<a href=#4331 id=4331 data-nosnippet>4331</a>}
+<a href=#4332 id=4332 data-nosnippet>4332</a>
+<a href=#4333 id=4333 data-nosnippet>4333</a><span class="doccomment">/// Invoke a token
+<a href=#4334 id=4334 data-nosnippet>4334</a>///
+<a href=#4335 id=4335 data-nosnippet>4335</a>/// If it is a primitive or constructor, the definition will be invoked,
+<a href=#4336 id=4336 data-nosnippet>4336</a>/// possibly arguments will be parsed from the Gullet.
+<a href=#4337 id=4337 data-nosnippet>4337</a>/// Otherwise, the token is simply digested: turned into an appropriate box.
+<a href=#4338 id=4338 data-nosnippet>4338</a>/// Returns a list of boxes/whatsits.
+<a href=#4339 id=4339 data-nosnippet>4339</a></span><span class="kw">pub fn </span>invoke_token(input_token: <span class="kw-2">&amp;</span>Token) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;Digested&gt;&gt; {
+<a href=#4340 id=4340 data-nosnippet>4340</a>  <span class="comment">// The choke point: a cell's `}` and any `}` inside a `\noalign` body pass it, clearing the live put-back mark, and a
+<a href=#4341 id=4341 data-nosnippet>4341</a>  // put-back `}` is deleted here at the formula's own math shift ([`PUT_BACK_BRACE`]). A loop's own closing `}` (the
+<a href=#4342 id=4342 data-nosnippet>4342</a>  // `\noalign` loop, tex_tables.rs:1291; the box-body loop, base_utilities.rs:7083) does not pass it and leaves the
+<a href=#4343 id=4343 data-nosnippet>4343</a>  // live serial set, which is harmless: the frame holding the mark closes with that `}` (probe B1).
+<a href=#4344 id=4344 data-nosnippet>4344</a>  </span><span class="kw">if </span>take_put_back_mark(input_token) &amp;&amp; delete_put_back_brace()<span class="question-mark">? </span>{
+<a href=#4345 id=4345 data-nosnippet>4345</a>    <span class="kw">return </span><span class="prelude-val">Ok</span>(Vec::new());
+<a href=#4346 id=4346 data-nosnippet>4346</a>  }
+<a href=#4347 id=4347 data-nosnippet>4347</a>  <span class="comment">// Perf: Token is Copy (SymStr + Catcode, ~5 bytes), so we pass by value
+<a href=#4348 id=4348 data-nosnippet>4348</a>  // directly instead of wrapping in Cow&lt;Token&gt;.
+<a href=#4349 id=4349 data-nosnippet>4349</a>  </span><span class="kw">let </span><span class="kw-2">mut </span>maybe_token: <span class="prelude-ty">Option</span>&lt;Token&gt; = <span class="prelude-val">Some</span>(<span class="kw-2">*</span>input_token);
+<a href=#4350 id=4350 data-nosnippet>4350</a>  <span class="kw">let </span><span class="kw-2">mut </span>result: Vec&lt;Digested&gt; = Vec::new();
+<a href=#4351 id=4351 data-nosnippet>4351</a>  <span class="comment">// INVOKE:
+<a href=#4352 id=4352 data-nosnippet>4352</a>  </span><span class="kw">while let </span><span class="prelude-val">Some</span>(token) = maybe_token.take() {
+<a href=#4353 id=4353 data-nosnippet>4353</a>    <span class="kw">if </span>align_error(<span class="kw-2">&amp;</span>token)<span class="question-mark">? </span>{
+<a href=#4354 id=4354 data-nosnippet>4354</a>      <span class="kw">return </span><span class="prelude-val">Ok</span>(Vec::new());
+<a href=#4355 id=4355 data-nosnippet>4355</a>    }
+<a href=#4356 id=4356 data-nosnippet>4356</a>    <span class="comment">// RAII guard: auto-pops current_token on scope exit (even on early return/panic)
+<a href=#4357 id=4357 data-nosnippet>4357</a>    </span><span class="kw">let </span>_token_guard = local_current_token_guard(token);
+<a href=#4358 id=4358 data-nosnippet>4358</a>    {
+<a href=#4359 id=4359 data-nosnippet>4359</a>      <span class="macro">stomach_mut!</span>().token_stack.push(token);
+<a href=#4360 id=4360 data-nosnippet>4360</a>    }
+<a href=#4361 id=4361 data-nosnippet>4361</a>    <span class="kw">if </span>{ <span class="macro">stomach!</span>().token_stack.len() } &gt; MAXSTACK {
+<a href=#4362 id=4362 data-nosnippet>4362</a>      <span class="macro">fatal!</span>(
+<a href=#4363 id=4363 data-nosnippet>4363</a>        Stomach,
+<a href=#4364 id=4364 data-nosnippet>4364</a>        Recursion,
+<a href=#4365 id=4365 data-nosnippet>4365</a>        <span class="macro">s!</span>(
+<a href=#4366 id=4366 data-nosnippet>4366</a>          <span class="string">"Excessive recursion(?): Tokens on stack: {:?}"</span>,
+<a href=#4367 id=4367 data-nosnippet>4367</a>          <span class="macro">stomach!</span>().token_stack
+<a href=#4368 id=4368 data-nosnippet>4368</a>        )
+<a href=#4369 id=4369 data-nosnippet>4369</a>      );
+<a href=#4370 id=4370 data-nosnippet>4370</a>    }
+<a href=#4371 id=4371 data-nosnippet>4371</a>    result.clear();
+<a href=#4372 id=4372 data-nosnippet>4372</a>
+<a href=#4373 id=4373 data-nosnippet>4373</a>    <span class="comment">// Rust notes: It would be ideal if we could unify the cases for (Primtive, Constructor,
+<a href=#4374 id=4374 data-nosnippet>4374</a>    // MathPrimitive), as well as (Expandable, Conditional) since the
+<a href=#4375 id=4375 data-nosnippet>4375</a>    // API is identical. However, as the types are different, Rust
+<a href=#4376 id=4376 data-nosnippet>4376</a>    // constrains us here, we need separate match arms for each
+<a href=#4377 id=4377 data-nosnippet>4377</a>    // distinctly typed enum case.
+<a href=#4378 id=4378 data-nosnippet>4378</a>    </span><span class="kw">let </span>digestable_def = lookup_digestable_definition(<span class="kw-2">&amp;</span>token);
+<a href=#4379 id=4379 data-nosnippet>4379</a>    <span class="kw">match </span>digestable_def {
+<a href=#4380 id=4380 data-nosnippet>4380</a>      <span class="prelude-val">None </span>| <span class="prelude-val">Some</span>(Stored::None) =&gt; {
+<a href=#4381 id=4381 data-nosnippet>4381</a>        result = invoke_token_undefined(<span class="kw-2">&amp;</span>token)<span class="question-mark">?</span>;
+<a href=#4382 id=4382 data-nosnippet>4382</a>      },
+<a href=#4383 id=4383 data-nosnippet>4383</a>      <span class="prelude-val">Some</span>(Stored::Token(meaning)) =&gt; {
+<a href=#4384 id=4384 data-nosnippet>4384</a>        <span class="comment">// Common case
+<a href=#4385 id=4385 data-nosnippet>4385</a>        </span><span class="kw">let </span>cc = meaning.get_catcode();
+<a href=#4386 id=4386 data-nosnippet>4386</a>        <span class="kw">if </span>cc == Catcode::CS {
+<a href=#4387 id=4387 data-nosnippet>4387</a>          result = invoke_token_undefined(<span class="kw-2">&amp;</span>token)<span class="question-mark">?</span>;
+<a href=#4388 id=4388 data-nosnippet>4388</a>        } <span class="kw">else if </span>cc.is_absorbable() {
+<a href=#4389 id=4389 data-nosnippet>4389</a>          <span class="kw">let </span>starts_paragraph = <span class="macro">matches!</span>(cc, Catcode::LETTER | Catcode::OTHER)
+<a href=#4390 id=4390 data-nosnippet>4390</a>            &amp;&amp; !lookup_bool_sym(<span class="macro">crate::pin!</span>(<span class="string">"IN_MATH"</span>));
+<a href=#4391 id=4391 data-nosnippet>4391</a>          <span class="kw">if </span>starts_paragraph &amp;&amp; back_input_for_new_graf(token) {
+<a href=#4392 id=4392 data-nosnippet>4392</a>            <span class="comment">// `\everypar`, then this token again, in horizontal mode.
+<a href=#4393 id=4393 data-nosnippet>4393</a>          </span>} <span class="kw">else if let </span><span class="prelude-val">Some</span>(digested) = invoke_token_simple(meaning)<span class="question-mark">? </span>{
+<a href=#4394 id=4394 data-nosnippet>4394</a>            result.push(digested);
+<a href=#4395 id=4395 data-nosnippet>4395</a>          }
+<a href=#4396 id=4396 data-nosnippet>4396</a>        } <span class="kw">else </span>{
+<a href=#4397 id=4397 data-nosnippet>4397</a>          <span class="comment">// Perl L187-189: deactivate T_ALIGN to prevent error flood in tables
+<a href=#4398 id=4398 data-nosnippet>4398</a>          </span><span class="kw">if </span>token.get_catcode() == Catcode::ALIGN
+<a href=#4399 id=4399 data-nosnippet>4399</a>            &amp;&amp; <span class="kw">let </span><span class="prelude-val">Some</span>(relax_meaning) = lookup_meaning(<span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="string">"\\relax"</span>))
+<a href=#4400 id=4400 data-nosnippet>4400</a>          {
+<a href=#4401 id=4401 data-nosnippet>4401</a>            assign_meaning(<span class="kw-2">&amp;</span>token, relax_meaning, <span class="prelude-val">Some</span>(Scope::Local));
+<a href=#4402 id=4402 data-nosnippet>4402</a>          }
+<a href=#4403 id=4403 data-nosnippet>4403</a>          <span class="kw">let </span>message = <span class="macro">s!</span>(
+<a href=#4404 id=4404 data-nosnippet>4404</a>            <span class="string">"The token {:?} (catcode {:?}) should never reach Stomach!"</span>,
+<a href=#4405 id=4405 data-nosnippet>4405</a>            token,
+<a href=#4406 id=4406 data-nosnippet>4406</a>            cc
+<a href=#4407 id=4407 data-nosnippet>4407</a>          );
+<a href=#4408 id=4408 data-nosnippet>4408</a>          <span class="macro">Error!</span>(<span class="string">"misdefined"</span>, token, <span class="kw-2">&amp;</span>message);
+<a href=#4409 id=4409 data-nosnippet>4409</a>          <span class="kw">if let </span><span class="prelude-val">Some</span>(digested) = invoke_token_simple(meaning)<span class="question-mark">? </span>{
+<a href=#4410 id=4410 data-nosnippet>4410</a>            result.push(digested);
+<a href=#4411 id=4411 data-nosnippet>4411</a>          }
+<a href=#4412 id=4412 data-nosnippet>4412</a>        }
+<a href=#4413 id=4413 data-nosnippet>4413</a>      },
+<a href=#4414 id=4414 data-nosnippet>4414</a>      <span class="prelude-val">Some</span>(Stored::Expandable(meaning)) =&gt; {
+<a href=#4415 id=4415 data-nosnippet>4415</a>        <span class="comment">// A math-active character will (typically) be a macro,
+<a href=#4416 id=4416 data-nosnippet>4416</a>        // but it isn't expanded in the gullet, but later when digesting, in math mode
+<a href=#4417 id=4417 data-nosnippet>4417</a>        // (? I think)
+<a href=#4418 id=4418 data-nosnippet>4418</a>        </span><span class="kw">let </span><span class="kw-2">mut </span>invoked_meaning = meaning.invoke(<span class="bool-val">false</span>)<span class="question-mark">?</span>;
+<a href=#4419 id=4419 data-nosnippet>4419</a>        <span class="kw">crate</span>::token::inherit_field_prov(token.prov, <span class="kw-2">&amp;mut </span>invoked_meaning);
+<a href=#4420 id=4420 data-nosnippet>4420</a>        <span class="kw">if </span>!invoked_meaning.is_empty() {
+<a href=#4421 id=4421 data-nosnippet>4421</a>          {
+<a href=#4422 id=4422 data-nosnippet>4422</a>            gullet::unread(invoked_meaning);
+<a href=#4423 id=4423 data-nosnippet>4423</a>          }
+<a href=#4424 id=4424 data-nosnippet>4424</a>        }
+<a href=#4425 id=4425 data-nosnippet>4425</a>        <span class="comment">// replace the token by it's expansion!!!
+<a href=#4426 id=4426 data-nosnippet>4426</a>        </span>maybe_token = read_x_token_after_expansion()<span class="question-mark">?</span>;
+<a href=#4427 id=4427 data-nosnippet>4427</a>        {
+<a href=#4428 id=4428 data-nosnippet>4428</a>          <span class="macro">stomach_mut!</span>().token_stack.pop();
+<a href=#4429 id=4429 data-nosnippet>4429</a>        }
+<a href=#4430 id=4430 data-nosnippet>4430</a>        drop(_token_guard); <span class="comment">// expire current token via RAII
+<a href=#4431 id=4431 data-nosnippet>4431</a>        </span><span class="kw">continue</span>;
+<a href=#4432 id=4432 data-nosnippet>4432</a>      },
+<a href=#4433 id=4433 data-nosnippet>4433</a>      <span class="prelude-val">Some</span>(Stored::Conditional(meaning)) =&gt; {
+<a href=#4434 id=4434 data-nosnippet>4434</a>        <span class="comment">// Conditionals are "expandable", use the regular invoke.
+<a href=#4435 id=4435 data-nosnippet>4435</a>        </span><span class="kw">let </span>invoked_meaning = meaning.invoke(<span class="bool-val">false</span>)<span class="question-mark">?</span>;
+<a href=#4436 id=4436 data-nosnippet>4436</a>        gullet::unread(invoked_meaning);
+<a href=#4437 id=4437 data-nosnippet>4437</a>        maybe_token = read_x_token_after_expansion()<span class="question-mark">?</span>;
+<a href=#4438 id=4438 data-nosnippet>4438</a>        {
+<a href=#4439 id=4439 data-nosnippet>4439</a>          <span class="macro">stomach_mut!</span>().token_stack.pop();
+<a href=#4440 id=4440 data-nosnippet>4440</a>        }
+<a href=#4441 id=4441 data-nosnippet>4441</a>        drop(_token_guard); <span class="comment">// expire current token via RAII
+<a href=#4442 id=4442 data-nosnippet>4442</a>        </span><span class="kw">continue</span>;
+<a href=#4443 id=4443 data-nosnippet>4443</a>      },
+<a href=#4444 id=4444 data-nosnippet>4444</a>      <span class="prelude-val">Some</span>(Stored::Constructor(meaning))
+<a href=#4445 id=4445 data-nosnippet>4445</a>        <span class="kw">if </span>starts_new_graf(<span class="kw-2">&amp;</span>meaning.get_cs()) &amp;&amp; back_input_for_new_graf(token) =&gt;
+<a href=#4446 id=4446 data-nosnippet>4446</a>      {
+<a href=#4447 id=4447 data-nosnippet>4447</a>        <span class="comment">// `\hskip`, `\vrule`, `\valign`: `\everypar`, then this token again, in horizontal mode (tex.web §1090).
+<a href=#4448 id=4448 data-nosnippet>4448</a>      </span>},
+<a href=#4449 id=4449 data-nosnippet>4449</a>      <span class="prelude-val">Some</span>(Stored::Constructor(meaning)) =&gt; {
+<a href=#4450 id=4450 data-nosnippet>4450</a>        <span class="comment">// Perl Stomach.pm L187-189: deactivate T_ALIGN to `\relax` LOCAL
+<a href=#4451 id=4451 data-nosnippet>4451</a>        // on first non-table encounter, to prevent error flood. The
+<a href=#4452 id=4452 data-nosnippet>4452</a>        // existing guard at the Stored::Token branch (above) only fires
+<a href=#4453 id=4453 data-nosnippet>4453</a>        // when `&amp;` has been Let'd to another token, but the `&amp;`
+<a href=#4454 id=4454 data-nosnippet>4454</a>        // CC_ALIGN char-token is bound to a Constructor (TeX_Tables.pool
+<a href=#4455 id=4455 data-nosnippet>4455</a>        // L49: `DefConstructorI('&amp;', undef, sub { Error('unexpected', '&amp;',
+<a href=#4456 id=4456 data-nosnippet>4456</a>        // $_[0], "Stray alignment \"&amp;\"") })`), so it falls into THIS
+<a href=#4457 id=4457 data-nosnippet>4457</a>        // branch instead. Without this guard, papers with multiple stray
+<a href=#4458 id=4458 data-nosnippet>4458</a>        // `&amp;` (e.g. astro-ph0107583's bibitem with unescaped `Hirose &amp;
+<a href=#4459 id=4459 data-nosnippet>4459</a>        // Osaki`) emit one Error per occurrence; Perl emits ONE total
+<a href=#4460 id=4460 data-nosnippet>4460</a>        // because of the LOCAL `\relax` rebinding. Self-deactivate here
+<a href=#4461 id=4461 data-nosnippet>4461</a>        // too so subsequent `&amp;` invocations no-op.
+<a href=#4462 id=4462 data-nosnippet>4462</a>        </span><span class="kw">if </span>token.get_catcode() == Catcode::ALIGN
+<a href=#4463 id=4463 data-nosnippet>4463</a>          &amp;&amp; <span class="kw">let </span><span class="prelude-val">Some</span>(relax_meaning) = lookup_meaning(<span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="string">"\\relax"</span>))
+<a href=#4464 id=4464 data-nosnippet>4464</a>        {
+<a href=#4465 id=4465 data-nosnippet>4465</a>          assign_meaning(<span class="kw-2">&amp;</span>token, relax_meaning, <span class="prelude-val">Some</span>(Scope::Local));
+<a href=#4466 id=4466 data-nosnippet>4466</a>        }
+<a href=#4467 id=4467 data-nosnippet>4467</a>        <span class="comment">// `meaning` IS the state table's `Rc&lt;Constructor&gt;`, so hand it to the
+<a href=#4468 id=4468 data-nosnippet>4468</a>        // Whatsit rather than letting `invoke_primitive` deep-clone the
+<a href=#4469 id=4469 data-nosnippet>4469</a>        // definition once per invocation (see `Constructor::invoke_primitive_shared`).
+<a href=#4470 id=4470 data-nosnippet>4470</a>        </span>result = Constructor::invoke_primitive_shared(<span class="kw-2">&amp;</span>meaning)<span class="question-mark">?</span>;
+<a href=#4471 id=4471 data-nosnippet>4471</a>        <span class="kw">if </span>!meaning.is_prefix() {
+<a href=#4472 id=4472 data-nosnippet>4472</a>          clear_prefixes(); <span class="comment">// Clear prefixes unless we just set one.
+<a href=#4473 id=4473 data-nosnippet>4473</a>        </span>}
+<a href=#4474 id=4474 data-nosnippet>4474</a>      },
+<a href=#4475 id=4475 data-nosnippet>4475</a>      <span class="prelude-val">Some</span>(Stored::Primitive(meaning))
+<a href=#4476 id=4476 data-nosnippet>4476</a>        <span class="kw">if </span>starts_new_graf(<span class="kw-2">&amp;</span>meaning.get_cs()) &amp;&amp; back_input_for_new_graf(token) =&gt;
+<a href=#4477 id=4477 data-nosnippet>4477</a>      {
+<a href=#4478 id=4478 data-nosnippet>4478</a>        <span class="comment">// `\everypar`, then this token again, in horizontal mode (tex.web §1090).
+<a href=#4479 id=4479 data-nosnippet>4479</a>      </span>},
+<a href=#4480 id=4480 data-nosnippet>4480</a>      <span class="prelude-val">Some</span>(Stored::Primitive(meaning)) =&gt; {
+<a href=#4481 id=4481 data-nosnippet>4481</a>        <span class="comment">// Otherwise, a normal primitive or constructor
+<a href=#4482 id=4482 data-nosnippet>4482</a>        </span>result = meaning.invoke_primitive()<span class="question-mark">?</span>;
+<a href=#4483 id=4483 data-nosnippet>4483</a>        <span class="comment">// After a prefix TeX reads on to the next non-blank non-relax token
+<a href=#4484 id=4484 data-nosnippet>4484</a>        // (tex.web §1211, §404), so a `\relax` there keeps the prefixes:
+<a href=#4485 id=4485 data-nosnippet>4485</a>        // catoptions' `\protected\relax\def` (its `\robust@def*`, :375-381)
+<a href=#4486 id=4486 data-nosnippet>4486</a>        // defines a protected macro. Perl clears them (Stomach.pm:212), and the
+<a href=#4487 id=4487 data-nosnippet>4487</a>        // unprotected `\cpt@newv@riables` ran inside an `\edef`: 70 errors per
+<a href=#4488 id=4488 data-nosnippet>4488</a>        // `\usepackage{catoptions}` (keyval2e, concepts, ltxkeys). KPE #223.
+<a href=#4489 id=4489 data-nosnippet>4489</a>        </span><span class="kw">if </span>!meaning.is_prefix() &amp;&amp; !(has_tex_prefixes() &amp;&amp; <span class="kw-2">*</span>meaning.get_cs() == <span class="macro">T_CS!</span>(<span class="string">"\\relax"</span>)) {
+<a href=#4490 id=4490 data-nosnippet>4490</a>          clear_prefixes(); <span class="comment">// Clear prefixes unless we just set one.
+<a href=#4491 id=4491 data-nosnippet>4491</a>        </span>}
+<a href=#4492 id=4492 data-nosnippet>4492</a>      },
+<a href=#4493 id=4493 data-nosnippet>4493</a>      <span class="prelude-val">Some</span>(Stored::MathPrimitive(meaning)) =&gt; {
+<a href=#4494 id=4494 data-nosnippet>4494</a>        <span class="comment">// Copy of regular Primitive
+<a href=#4495 id=4495 data-nosnippet>4495</a>        // Otherwise, a normal primitive or constructor
+<a href=#4496 id=4496 data-nosnippet>4496</a>        </span>result = meaning.invoke_primitive()<span class="question-mark">?</span>;
+<a href=#4497 id=4497 data-nosnippet>4497</a>        <span class="kw">if </span>!meaning.is_prefix() {
+<a href=#4498 id=4498 data-nosnippet>4498</a>          clear_prefixes(); <span class="comment">// Clear prefixes unless we just set one.
+<a href=#4499 id=4499 data-nosnippet>4499</a>        </span>}
+<a href=#4500 id=4500 data-nosnippet>4500</a>      },
+<a href=#4501 id=4501 data-nosnippet>4501</a>      <span class="prelude-val">Some</span>(Stored::Register(meaning)) =&gt; {
+<a href=#4502 id=4502 data-nosnippet>4502</a>        <span class="comment">// Registers are special primitives
+<a href=#4503 id=4503 data-nosnippet>4503</a>        </span>result = meaning.invoke_primitive()<span class="question-mark">?</span>;
+<a href=#4504 id=4504 data-nosnippet>4504</a>        <span class="kw">if </span>!meaning.is_prefix() {
+<a href=#4505 id=4505 data-nosnippet>4505</a>          clear_prefixes(); <span class="comment">// Clear prefixes unless we just set one.
+<a href=#4506 id=4506 data-nosnippet>4506</a>        </span>}
+<a href=#4507 id=4507 data-nosnippet>4507</a>      },
+<a href=#4508 id=4508 data-nosnippet>4508</a>      meaning =&gt; {
+<a href=#4509 id=4509 data-nosnippet>4509</a>        <span class="comment">// Perl: Error + makeMisdefinedError (non-fatal). Don't crash.
+<a href=#4510 id=4510 data-nosnippet>4510</a>        </span><span class="macro">Error!</span>(
+<a href=#4511 id=4511 data-nosnippet>4511</a>          <span class="string">"misdefined"</span>,
+<a href=#4512 id=4512 data-nosnippet>4512</a>          token,
+<a href=#4513 id=4513 data-nosnippet>4513</a>          <span class="macro">s!</span>(<span class="string">"Unexpected object in Stomach: {:?}"</span>, meaning)
+<a href=#4514 id=4514 data-nosnippet>4514</a>        );
+<a href=#4515 id=4515 data-nosnippet>4515</a>      },
 <a href=#4516 id=4516 data-nosnippet>4516</a>    }
-<a href=#4517 id=4517 data-nosnippet>4517</a>    <span class="comment">// _token_guard drops here, auto-expiring current token
-<a href=#4518 id=4518 data-nosnippet>4518</a>    </span><span class="kw">break</span>;
-<a href=#4519 id=4519 data-nosnippet>4519</a>  }
-<a href=#4520 id=4520 data-nosnippet>4520</a>  <span class="macro">stomach_mut!</span>().token_stack.pop();
-<a href=#4521 id=4521 data-nosnippet>4521</a>  <span class="prelude-val">Ok</span>(result)
-<a href=#4522 id=4522 data-nosnippet>4522</a>}
-<a href=#4523 id=4523 data-nosnippet>4523</a>
-<a href=#4524 id=4524 data-nosnippet>4524</a><span class="kw">fn </span>invoke_token_undefined(token: <span class="kw-2">&amp;</span>Token) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;Digested&gt;&gt; {
-<a href=#4525 id=4525 data-nosnippet>4525</a>  <span class="comment">// The LaTeX format may not be loaded yet (a document may use a kernel CS
-<a href=#4526 id=4526 data-nosnippet>4526</a>  // before `\documentclass` — real LaTeX has no "before the kernel"). If this
-<a href=#4527 id=4527 data-nosnippet>4527</a>  // is a kernel CS, pull the format in and re-digest instead of stubbing it as
-<a href=#4528 id=4528 data-nosnippet>4528</a>  // `&lt;ltx:ERROR/&gt;`. Fires at most once per session; see
-<a href=#4529 id=4529 data-nosnippet>4529</a>  // `binding::kernel_autoload`. Same retry shape as the `\ifsomething` arm below.
-<a href=#4530 id=4530 data-nosnippet>4530</a>  </span><span class="kw">if </span><span class="kw">crate</span>::binding::kernel_autoload::try_autoload(token) {
-<a href=#4531 id=4531 data-nosnippet>4531</a>    gullet::unread_one(<span class="kw-2">*</span>token); <span class="comment">// Retry, now that the kernel is in state.
-<a href=#4532 id=4532 data-nosnippet>4532</a>    </span><span class="kw">return </span><span class="prelude-val">Ok</span>(Vec::new());
-<a href=#4533 id=4533 data-nosnippet>4533</a>  }
-<a href=#4534 id=4534 data-nosnippet>4534</a>  <span class="comment">// An environment the class redefined, whose begin defines this command for its body, but whose definition the
-<a href=#4535 id=4535 data-nosnippet>4535</a>  // kernel's lock refused (`kernel_autoload::try_refused_environment_definition`).
-<a href=#4536 id=4536 data-nosnippet>4536</a>  </span><span class="kw">if </span><span class="kw">crate</span>::binding::kernel_autoload::try_refused_environment_definition(token) {
-<a href=#4537 id=4537 data-nosnippet>4537</a>    gullet::unread_one(<span class="kw-2">*</span>token);
-<a href=#4538 id=4538 data-nosnippet>4538</a>    <span class="kw">return </span><span class="prelude-val">Ok</span>(Vec::new());
-<a href=#4539 id=4539 data-nosnippet>4539</a>  }
-<a href=#4540 id=4540 data-nosnippet>4540</a>  <span class="comment">// a stand-in named for the undefined name (`kernel_autoload::undefined_fallback`, OXIDIZED_DESIGN #734)
-<a href=#4541 id=4541 data-nosnippet>4541</a>  </span><span class="kw">if let </span><span class="prelude-val">Some</span>(stand_in) = <span class="kw">crate</span>::binding::kernel_autoload::undefined_fallback(token) {
-<a href=#4542 id=4542 data-nosnippet>4542</a>    gullet::unread_one(stand_in);
-<a href=#4543 id=4543 data-nosnippet>4543</a>    <span class="kw">return </span><span class="prelude-val">Ok</span>(Vec::new());
-<a href=#4544 id=4544 data-nosnippet>4544</a>  }
-<a href=#4545 id=4545 data-nosnippet>4545</a>  <span class="kw">let </span>cs = token.with_cs_name(|cs| String::from(cs));
-<a href=#4546 id=4546 data-nosnippet>4546</a>  <span class="comment">// Gate the undefined-CS summary tally and the Error! emission by
-<a href=#4547 id=4547 data-nosnippet>4547</a>  // SUPPRESS_UNDEFINED_ERRORS. During expl3-code.tex raw load we install
-<a href=#4548 id=4548 data-nosnippet>4548</a>  // the ERROR stub silently — forward references resolve when subsequent
-<a href=#4549 id=4549 data-nosnippet>4549</a>  // post-load fixups rebind the canonical CS (see expl3_sty.rs L161-167
-<a href=#4550 id=4550 data-nosnippet>4550</a>  // for \iow_wrap stubs that overwrite ERROR after the raw load). Mirrors
-<a href=#4551 id=4551 data-nosnippet>4551</a>  // the existing gate at state.rs::generate_error_stub L1018-L1030.
-<a href=#4552 id=4552 data-nosnippet>4552</a>  </span><span class="kw">let </span>suppressed = lookup_bool_sym(<span class="macro">crate::pin!</span>(<span class="string">"SUPPRESS_UNDEFINED_ERRORS"</span>));
-<a href=#4553 id=4553 data-nosnippet>4553</a>  <span class="kw">if </span>!suppressed {
-<a href=#4554 id=4554 data-nosnippet>4554</a>    note_status(LogStatus::Undefined, <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>cs));
-<a href=#4555 id=4555 data-nosnippet>4555</a>  }
-<a href=#4556 id=4556 data-nosnippet>4556</a>
-<a href=#4557 id=4557 data-nosnippet>4557</a>  <span class="comment">// To minimize chatter, go ahead and define it...
-<a href=#4558 id=4558 data-nosnippet>4558</a>  </span><span class="kw">if </span>cs.starts_with(<span class="string">"\\if"</span>) {
-<a href=#4559 id=4559 data-nosnippet>4559</a>    <span class="comment">// Apparently an \ifsomething ???
-<a href=#4560 id=4560 data-nosnippet>4560</a>    </span><span class="kw">let </span>name = cs.replace(<span class="string">"\\if"</span>, <span class="string">""</span>);
-<a href=#4561 id=4561 data-nosnippet>4561</a>    <span class="kw">if </span>!suppressed {
-<a href=#4562 id=4562 data-nosnippet>4562</a>      <span class="kw">let </span>message = <span class="macro">s!</span>(<span class="string">"The token {} is not defined."</span>, token.stringify());
-<a href=#4563 id=4563 data-nosnippet>4563</a>      <span class="macro">Error!</span>(
-<a href=#4564 id=4564 data-nosnippet>4564</a>        <span class="string">"undefined"</span>,
-<a href=#4565 id=4565 data-nosnippet>4565</a>        token,
-<a href=#4566 id=4566 data-nosnippet>4566</a>        <span class="kw-2">&amp;</span>message,
-<a href=#4567 id=4567 data-nosnippet>4567</a>        <span class="string">"Defining it now as with \\newif"
-<a href=#4568 id=4568 data-nosnippet>4568</a>      </span>);
-<a href=#4569 id=4569 data-nosnippet>4569</a>    }
-<a href=#4570 id=4570 data-nosnippet>4570</a>    <span class="comment">// install stub definitions for new conditional
-<a href=#4571 id=4571 data-nosnippet>4571</a>    </span>install_definition(
-<a href=#4572 id=4572 data-nosnippet>4572</a>      Expandable::new(
-<a href=#4573 id=4573 data-nosnippet>4573</a>        <span class="macro">T_CS!</span>(<span class="macro">s!</span>(<span class="string">"\\{}true"</span>, name)),
-<a href=#4574 id=4574 data-nosnippet>4574</a>        <span class="prelude-val">None</span>,
-<a href=#4575 id=4575 data-nosnippet>4575</a>        <span class="macro">Tokens!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\let"</span>), <span class="macro">T_CS!</span>(<span class="kw-2">&amp;</span>cs), <span class="macro">T_CS!</span>(<span class="string">"\\iftrue"</span>)).into(),
-<a href=#4576 id=4576 data-nosnippet>4576</a>        <span class="prelude-val">None</span>,
-<a href=#4577 id=4577 data-nosnippet>4577</a>      )<span class="question-mark">?</span>,
-<a href=#4578 id=4578 data-nosnippet>4578</a>      <span class="prelude-val">None</span>,
-<a href=#4579 id=4579 data-nosnippet>4579</a>    );
-<a href=#4580 id=4580 data-nosnippet>4580</a>    install_definition(
-<a href=#4581 id=4581 data-nosnippet>4581</a>      Expandable::new(
-<a href=#4582 id=4582 data-nosnippet>4582</a>        <span class="macro">T_CS!</span>(<span class="macro">s!</span>(<span class="string">"\\{}false"</span>, name)),
-<a href=#4583 id=4583 data-nosnippet>4583</a>        <span class="prelude-val">None</span>,
-<a href=#4584 id=4584 data-nosnippet>4584</a>        <span class="macro">Tokens!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\let"</span>), <span class="macro">T_CS!</span>(cs), <span class="macro">T_CS!</span>(<span class="string">"\\iffalse"</span>)).into(),
-<a href=#4585 id=4585 data-nosnippet>4585</a>        <span class="prelude-val">None</span>,
-<a href=#4586 id=4586 data-nosnippet>4586</a>      )<span class="question-mark">?</span>,
-<a href=#4587 id=4587 data-nosnippet>4587</a>      <span class="prelude-val">None</span>,
-<a href=#4588 id=4588 data-nosnippet>4588</a>    );
-<a href=#4589 id=4589 data-nosnippet>4589</a>
-<a href=#4590 id=4590 data-nosnippet>4590</a>    let_i(token, <span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="string">"\\iffalse"</span>), <span class="prelude-val">None</span>);
-<a href=#4591 id=4591 data-nosnippet>4591</a>    gullet::unread_one(<span class="kw-2">*</span>token); <span class="comment">// Retry
-<a href=#4592 id=4592 data-nosnippet>4592</a>    </span><span class="prelude-val">Ok</span>(Vec::new())
-<a href=#4593 id=4593 data-nosnippet>4593</a>  } <span class="kw">else </span>{
-<a href=#4594 id=4594 data-nosnippet>4594</a>    <span class="kw">if </span>!suppressed {
-<a href=#4595 id=4595 data-nosnippet>4595</a>      <span class="kw">let </span>message = <span class="macro">s!</span>(<span class="string">"The token {} is not defined."</span>, token.stringify());
-<a href=#4596 id=4596 data-nosnippet>4596</a>      <span class="macro">Error!</span>(
-<a href=#4597 id=4597 data-nosnippet>4597</a>        <span class="string">"undefined"</span>,
-<a href=#4598 id=4598 data-nosnippet>4598</a>        token,
-<a href=#4599 id=4599 data-nosnippet>4599</a>        <span class="kw-2">&amp;</span>message,
-<a href=#4600 id=4600 data-nosnippet>4600</a>        <span class="string">"Defining it now as &lt;ltx:ERROR/&gt;"
-<a href=#4601 id=4601 data-nosnippet>4601</a>      </span>);
-<a href=#4602 id=4602 data-nosnippet>4602</a>    }
-<a href=#4603 id=4603 data-nosnippet>4603</a>    install_definition(
-<a href=#4604 id=4604 data-nosnippet>4604</a>      Constructor {
-<a href=#4605 id=4605 data-nosnippet>4605</a>        cs: <span class="kw-2">*</span>token,
-<a href=#4606 id=4606 data-nosnippet>4606</a>        paramlist: <span class="prelude-val">None</span>,
-<a href=#4607 id=4607 data-nosnippet>4607</a>        replacement: <span class="prelude-val">Some</span>(Rc::new(<span class="kw">move </span>|document, _args, _props| {
-<a href=#4608 id=4608 data-nosnippet>4608</a>          document.make_error(<span class="string">"undefined"</span>, <span class="kw-2">&amp;</span>cs)
-<a href=#4609 id=4609 data-nosnippet>4609</a>        })),
-<a href=#4610 id=4610 data-nosnippet>4610</a>        ..Constructor::default()
-<a href=#4611 id=4611 data-nosnippet>4611</a>      },
-<a href=#4612 id=4612 data-nosnippet>4612</a>      <span class="prelude-val">Some</span>(Scope::Global),
-<a href=#4613 id=4613 data-nosnippet>4613</a>    );
-<a href=#4614 id=4614 data-nosnippet>4614</a>    <span class="comment">// Perl: unread the token and return empty, so the outer loop re-reads
-<a href=#4615 id=4615 data-nosnippet>4615</a>    // and dispatches through the normal path (with the newly installed stub).
-<a href=#4616 id=4616 data-nosnippet>4616</a>    // This ensures gullet-level side effects (filtering, expansion) are applied.
-<a href=#4617 id=4617 data-nosnippet>4617</a>    </span>gullet::unread_one(<span class="kw-2">*</span>token);
-<a href=#4618 id=4618 data-nosnippet>4618</a>    <span class="prelude-val">Ok</span>(Vec::new())
-<a href=#4619 id=4619 data-nosnippet>4619</a>  }
-<a href=#4620 id=4620 data-nosnippet>4620</a>}
-<a href=#4621 id=4621 data-nosnippet>4621</a>
-<a href=#4622 id=4622 data-nosnippet>4622</a><span class="kw">fn </span>invoke_token_simple(meaning: Token) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;Digested&gt;&gt; {
-<a href=#4623 id=4623 data-nosnippet>4623</a>  <span class="kw">let </span>cc = meaning.get_catcode();
-<a href=#4624 id=4624 data-nosnippet>4624</a>  <span class="kw">let </span>font = lookup_font();
-<a href=#4625 id=4625 data-nosnippet>4625</a>  <span class="comment">// token-locators: the leaf char box's exact source position comes from the
-<a href=#4626 id=4626 data-nosnippet>4626</a>  // token's origin handle — the position that survived expansion to digestion
-<a href=#4627 id=4627 data-nosnippet>4627</a>  // (Experiments 1–3 showed it cannot be re-derived from the mouth here, which
-<a href=#4628 id=4628 data-nosnippet>4628</a>  // is past the construct). `None` → `Tbox::new` falls back to the gullet's
-<a href=#4629 id=4629 data-nosnippet>4629</a>  // current locator (the eating-disorder heuristic). See SOURCE_PROVENANCE §3.1.1.
-<a href=#4630 id=4630 data-nosnippet>4630</a>  // Stamp a leaf box only from a *genuine* (read-from-source) origin. An
-<a href=#4631 id=4631 data-nosnippet>4631</a>  // inherited origin — a macro's expansion attributed to its call site, e.g.
-<a href=#4632 id=4632 data-nosnippet>4632</a>  // `\section`'s structural body literals at the `\section` column — must not
-<a href=#4633 id=4633 data-nosnippet>4633</a>  // become a located leaf, or box-level `get_locator()` aggregation would widen
-<a href=#4634 id=4634 data-nosnippet>4634</a>  // a construct past its content (the `\section{Intro}` title would start at the
-<a href=#4635 id=4635 data-nosnippet>4635</a>  // command, not at "Intro"). The inherited origin still rides the token, so
-<a href=#4636 id=4636 data-nosnippet>4636</a>  // `constructor::child_span`'s genuine-first scan can recover it as the
-<a href=#4637 id=4637 data-nosnippet>4637</a>  // fallback for the origin-less case (`\today`). See SOURCE_PROVENANCE §3.1.3.
-<a href=#4638 id=4638 data-nosnippet>4638</a>  </span><span class="attr">#[cfg(feature = <span class="string">"token-locators"</span>)]
-<a href=#4639 id=4639 data-nosnippet>4639</a>  </span><span class="kw">let </span>origin_loc: <span class="prelude-ty">Option</span>&lt;<span class="kw">crate</span>::common::locator::Locator&gt; =
-<a href=#4640 id=4640 data-nosnippet>4640</a>    <span class="kw">crate</span>::token::get_token_origin(meaning.loc)
-<a href=#4641 id=4641 data-nosnippet>4641</a>      .filter(|o| !o.inherited)
-<a href=#4642 id=4642 data-nosnippet>4642</a>      .map(|o| {
-<a href=#4643 id=4643 data-nosnippet>4643</a>        <span class="kw">crate</span>::common::arena::with(o.source, |s| {
-<a href=#4644 id=4644 data-nosnippet>4644</a>          <span class="kw">crate</span>::common::locator::Locator::new(s, o.line, o.col, o.line, o.col)
-<a href=#4645 id=4645 data-nosnippet>4645</a>        })
-<a href=#4646 id=4646 data-nosnippet>4646</a>      });
-<a href=#4647 id=4647 data-nosnippet>4647</a>  <span class="attr">#[cfg(not(feature = <span class="string">"token-locators"</span>))]
-<a href=#4648 id=4648 data-nosnippet>4648</a>  </span><span class="kw">let </span>origin_loc: <span class="prelude-ty">Option</span>&lt;<span class="kw">crate</span>::common::locator::Locator&gt; = <span class="prelude-val">None</span>;
-<a href=#4649 id=4649 data-nosnippet>4649</a>  <span class="kw">match </span>cc {
-<a href=#4650 id=4650 data-nosnippet>4650</a>    Catcode::SPACE =&gt; {
-<a href=#4651 id=4651 data-nosnippet>4651</a>      <span class="comment">// A space after a prefix is skipped, not typeset (tex.web §1211, §404).
-<a href=#4652 id=4652 data-nosnippet>4652</a>      </span><span class="kw">if </span>has_tex_prefixes() {
-<a href=#4653 id=4653 data-nosnippet>4653</a>        <span class="kw">return </span><span class="prelude-val">Ok</span>(<span class="prelude-val">None</span>);
-<a href=#4654 id=4654 data-nosnippet>4654</a>      }
-<a href=#4655 id=4655 data-nosnippet>4655</a>      clear_prefixes(); <span class="comment">// Perl Stomach.pm line 234: prefixes shouldn't apply here.
-<a href=#4656 id=4656 data-nosnippet>4656</a>      // Perl: if($STATE-&gt;lookupValue('MODE') =~ /(?:math|vertical)$/) { return (); }
-<a href=#4657 id=4657 data-nosnippet>4657</a>      </span><span class="kw">let </span>mode = lookup_string_from_sym(<span class="macro">crate::pin!</span>(<span class="string">"MODE"</span>));
-<a href=#4658 id=4658 data-nosnippet>4658</a>      <span class="kw">if </span>mode.ends_with(<span class="string">"math"</span>) || mode.ends_with(<span class="string">"vertical"</span>) {
-<a href=#4659 id=4659 data-nosnippet>4659</a>        <span class="prelude-val">Ok</span>(<span class="prelude-val">None</span>)
-<a href=#4660 id=4660 data-nosnippet>4660</a>      } <span class="kw">else </span>{
-<a href=#4661 id=4661 data-nosnippet>4661</a>        enter_horizontal();
-<a href=#4662 id=4662 data-nosnippet>4662</a>        <span class="comment">// An interword space is glue (tex.web §1041 `app_space`): `\unskip` removes it, `\lastskip` reads it
-<a href=#4663 id=4663 data-nosnippet>4663</a>        // (KNOWN_PERL_ERRORS #436). Perl's space box carries no `isSkip` (Stomach.pm:244-250), so `a \unskip,`
-<a href=#4664 id=4664 data-nosnippet>4664</a>        // kept the space before the comma (witness 2605.02925, its `\and` author list).
-<a href=#4665 id=4665 data-nosnippet>4665</a>        </span><span class="kw">let </span><span class="kw-2">mut </span>properties = HashMap::default();
-<a href=#4666 id=4666 data-nosnippet>4666</a>        properties.insert(<span class="string">"isSkip"</span>, Stored::Bool(<span class="bool-val">true</span>));
-<a href=#4667 id=4667 data-nosnippet>4667</a>        <span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(Digested::from(Tbox::new(
-<a href=#4668 id=4668 data-nosnippet>4668</a>          meaning.get_sym(),
-<a href=#4669 id=4669 data-nosnippet>4669</a>          font,
-<a href=#4670 id=4670 data-nosnippet>4670</a>          origin_loc,
-<a href=#4671 id=4671 data-nosnippet>4671</a>          <span class="macro">Tokens!</span>(meaning),
-<a href=#4672 id=4672 data-nosnippet>4672</a>          properties,
-<a href=#4673 id=4673 data-nosnippet>4673</a>        ))))
-<a href=#4674 id=4674 data-nosnippet>4674</a>      }
-<a href=#4675 id=4675 data-nosnippet>4675</a>    },
-<a href=#4676 id=4676 data-nosnippet>4676</a>    Catcode::COMMENT =&gt; {
-<a href=#4677 id=4677 data-nosnippet>4677</a>      <span class="comment">// Perl Stomach.pm lines 241-244: decode comment via font encoding
-<a href=#4678 id=4678 data-nosnippet>4678</a>      </span><span class="kw">let </span>decoded = font::decode_string(meaning.get_sym(), <span class="prelude-val">None</span>, <span class="bool-val">true</span>);
-<a href=#4679 id=4679 data-nosnippet>4679</a>      <span class="kw">let </span>comment = arena::with(decoded, |s| {
-<a href=#4680 id=4680 data-nosnippet>4680</a>        <span class="comment">// However, spaces normally would have be digested away as positioning...
-<a href=#4681 id=4681 data-nosnippet>4681</a>        // Replace NBSP + combining strikethrough (OT1 space position) with actual space
-<a href=#4682 id=4682 data-nosnippet>4682</a>        </span>s.replace(<span class="string">"\u{00A0}\u{0335}"</span>, <span class="string">" "</span>)
-<a href=#4683 id=4683 data-nosnippet>4683</a>      });
-<a href=#4684 id=4684 data-nosnippet>4684</a>      <span class="comment">// Perl: returns LaTeXML::Core::Comment-&gt;new($comment)
-<a href=#4685 id=4685 data-nosnippet>4685</a>      // which gets absorbed as an XML comment node via Document::insertComment
-<a href=#4686 id=4686 data-nosnippet>4686</a>      </span><span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(Digested::from(Comment(comment))))
-<a href=#4687 id=4687 data-nosnippet>4687</a>    },
-<a href=#4688 id=4688 data-nosnippet>4688</a>    <span class="kw">_ </span>=&gt; {
-<a href=#4689 id=4689 data-nosnippet>4689</a>      clear_prefixes(); <span class="comment">// Perl Stomach.pm line 247: prefixes shouldn't apply here.
-<a href=#4690 id=4690 data-nosnippet>4690</a>      // Perl: check mathcode for IN_MATH characters (Stomach.pm lines 248-251)
-<a href=#4691 id=4691 data-nosnippet>4691</a>      // In Perl, all math chars go through decodeMathChar which decodes via
-<a href=#4692 id=4692 data-nosnippet>4692</a>      // the font encoding. In Rust, Tbox::new already handles IN_MATH:
-<a href=#4693 id=4693 data-nosnippet>4693</a>      // it sets mode="math", looks up math_token_attributes for role/meaning/name,
-<a href=#4694 id=4694 data-nosnippet>4694</a>      // and specializes the font. This produces the correct LaTeXML-level properties.
-<a href=#4695 id=4695 data-nosnippet>4695</a>      // The mathchar parsing handles non-ASCII chars needing font map lookup.
-<a href=#4696 id=4696 data-nosnippet>4696</a>      // TODO: Use for chars where font-encoding glyph differs from input.
-<a href=#4697 id=4697 data-nosnippet>4697</a>      // Perl L248-257: if IN_MATH &amp;&amp; mathcode → decodeMathChar (math box)
-<a href=#4698 id=4698 data-nosnippet>4698</a>      // else → enterHorizontal + text box (covers non-math AND math-but-no-mathcode)
-<a href=#4699 id=4699 data-nosnippet>4699</a>      // A math-active character ("8000) digested as itself has no math character to decode; it is the plain character:
-<a href=#4700 id=4700 data-nosnippet>4700</a>      // a delimiter (`digest_as_delimiter`), or one whose active meaning is undefined and self-inserts
-<a href=#4701 id=4701 data-nosnippet>4701</a>      // (`lookup_digestable_definition`, braket's `\Pr{A|B}`, 1602.01342). `decode_math_char` of "8000 is class 8, which
-<a href=#4702 id=4702 data-nosnippet>4702</a>      // dropped the character here before, and is Γ in Perl (KNOWN_PERL_ERRORS #495).
-<a href=#4703 id=4703 data-nosnippet>4703</a>      </span><span class="kw">if </span>lookup_bool_sym(<span class="macro">crate::pin!</span>(<span class="string">"IN_MATH"</span>))
-<a href=#4704 id=4704 data-nosnippet>4704</a>        &amp;&amp; <span class="kw">let </span><span class="prelude-val">Some</span>(mathcode) = lookup_mathcode_sym(meaning.get_sym())
-<a href=#4705 id=4705 data-nosnippet>4705</a>        &amp;&amp; mathcode != <span class="number">0x8000
-<a href=#4706 id=4706 data-nosnippet>4706</a>      </span>{
-<a href=#4707 id=4707 data-nosnippet>4707</a>        <span class="kw">return </span><span class="kw">crate</span>::common::mathchar::decode_math_char_for_stomach(mathcode, meaning);
-<a href=#4708 id=4708 data-nosnippet>4708</a>      }
-<a href=#4709 id=4709 data-nosnippet>4709</a>      <span class="comment">// Fallthrough: either not in math, or in math but no mathcode
-<a href=#4710 id=4710 data-nosnippet>4710</a>      </span>enter_horizontal();
-<a href=#4711 id=4711 data-nosnippet>4711</a>      <span class="kw">let </span>text = font::decode_string(meaning.get_sym(), <span class="prelude-val">None</span>, <span class="bool-val">true</span>);
-<a href=#4712 id=4712 data-nosnippet>4712</a>      <span class="comment">// A raw `\font`'s slot is measured from its TFM (`Tbox::with_tfm_slot`).
-<a href=#4713 id=4713 data-nosnippet>4713</a>      </span><span class="kw">let </span>slot = meaning.with_str(|s| {
-<a href=#4714 id=4714 data-nosnippet>4714</a>        <span class="kw">let </span><span class="kw-2">mut </span>chars = s.chars();
-<a href=#4715 id=4715 data-nosnippet>4715</a>        <span class="kw">match </span>(chars.next(), chars.next()) {
-<a href=#4716 id=4716 data-nosnippet>4716</a>          (<span class="prelude-val">Some</span>(c), <span class="prelude-val">None</span>) =&gt; u32::from(c),
-<a href=#4717 id=4717 data-nosnippet>4717</a>          <span class="kw">_ </span>=&gt; u32::MAX,
-<a href=#4718 id=4718 data-nosnippet>4718</a>        }
-<a href=#4719 id=4719 data-nosnippet>4719</a>      });
-<a href=#4720 id=4720 data-nosnippet>4720</a>      <span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(Digested::from(
-<a href=#4721 id=4721 data-nosnippet>4721</a>        Tbox::new(
-<a href=#4722 id=4722 data-nosnippet>4722</a>          text,
-<a href=#4723 id=4723 data-nosnippet>4723</a>          <span class="prelude-val">None</span>,
-<a href=#4724 id=4724 data-nosnippet>4724</a>          origin_loc,
-<a href=#4725 id=4725 data-nosnippet>4725</a>          <span class="macro">Tokens!</span>(meaning),   <span class="comment">// tokens
-<a href=#4726 id=4726 data-nosnippet>4726</a>          </span>HashMap::default(), <span class="comment">// properties
-<a href=#4727 id=4727 data-nosnippet>4727</a>        </span>)
-<a href=#4728 id=4728 data-nosnippet>4728</a>        .with_tfm_slot(slot),
-<a href=#4729 id=4729 data-nosnippet>4729</a>      )))
-<a href=#4730 id=4730 data-nosnippet>4730</a>    },
-<a href=#4731 id=4731 data-nosnippet>4731</a>  }
-<a href=#4732 id=4732 data-nosnippet>4732</a>}
-<a href=#4733 id=4733 data-nosnippet>4733</a>
-<a href=#4734 id=4734 data-nosnippet>4734</a><span class="kw">pub fn </span>set_stomach(new_stomach: Stomach) {
-<a href=#4735 id=4735 data-nosnippet>4735</a>  <span class="kw">let </span><span class="kw-2">mut </span>singleton = <span class="macro">stomach_mut!</span>();
-<a href=#4736 id=4736 data-nosnippet>4736</a>  <span class="kw-2">*</span>singleton = new_stomach;
-<a href=#4737 id=4737 data-nosnippet>4737</a>}
-<a href=#4738 id=4738 data-nosnippet>4738</a><span class="kw">pub fn </span>clone_box_list() -&gt; Vec&lt;Digested&gt; { <span class="macro">stomach!</span>().box_list.clone() }
-<a href=#4739 id=4739 data-nosnippet>4739</a>
-<a href=#4740 id=4740 data-nosnippet>4740</a><span class="doccomment">/// get the current boxing level
-<a href=#4741 id=4741 data-nosnippet>4741</a></span><span class="kw">pub fn </span>get_boxing_level() -&gt; usize { <span class="macro">stomach!</span>().boxing.len() }
+<a href=#4517 id=4517 data-nosnippet>4517</a>    <span class="kw">if </span>token.prov != <span class="number">0 </span>&amp;&amp; <span class="kw">crate</span>::token::field_ledger_live() {
+<a href=#4518 id=4518 data-nosnippet>4518</a>      note_field_token(<span class="kw-2">&amp;</span>token, <span class="kw-2">&amp;</span>result);
+<a href=#4519 id=4519 data-nosnippet>4519</a>    }
+<a href=#4520 id=4520 data-nosnippet>4520</a>    <span class="comment">// _token_guard drops here, auto-expiring current token
+<a href=#4521 id=4521 data-nosnippet>4521</a>    </span><span class="kw">break</span>;
+<a href=#4522 id=4522 data-nosnippet>4522</a>  }
+<a href=#4523 id=4523 data-nosnippet>4523</a>  <span class="macro">stomach_mut!</span>().token_stack.pop();
+<a href=#4524 id=4524 data-nosnippet>4524</a>  <span class="prelude-val">Ok</span>(result)
+<a href=#4525 id=4525 data-nosnippet>4525</a>}
+<a href=#4526 id=4526 data-nosnippet>4526</a>
+<a href=#4527 id=4527 data-nosnippet>4527</a><span class="kw">fn </span>invoke_token_undefined(token: <span class="kw-2">&amp;</span>Token) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;Digested&gt;&gt; {
+<a href=#4528 id=4528 data-nosnippet>4528</a>  <span class="comment">// The LaTeX format may not be loaded yet (a document may use a kernel CS
+<a href=#4529 id=4529 data-nosnippet>4529</a>  // before `\documentclass` — real LaTeX has no "before the kernel"). If this
+<a href=#4530 id=4530 data-nosnippet>4530</a>  // is a kernel CS, pull the format in and re-digest instead of stubbing it as
+<a href=#4531 id=4531 data-nosnippet>4531</a>  // `&lt;ltx:ERROR/&gt;`. Fires at most once per session; see
+<a href=#4532 id=4532 data-nosnippet>4532</a>  // `binding::kernel_autoload`. Same retry shape as the `\ifsomething` arm below.
+<a href=#4533 id=4533 data-nosnippet>4533</a>  </span><span class="kw">if </span><span class="kw">crate</span>::binding::kernel_autoload::try_autoload(token) {
+<a href=#4534 id=4534 data-nosnippet>4534</a>    gullet::unread_one(<span class="kw-2">*</span>token); <span class="comment">// Retry, now that the kernel is in state.
+<a href=#4535 id=4535 data-nosnippet>4535</a>    </span><span class="kw">return </span><span class="prelude-val">Ok</span>(Vec::new());
+<a href=#4536 id=4536 data-nosnippet>4536</a>  }
+<a href=#4537 id=4537 data-nosnippet>4537</a>  <span class="comment">// An environment the class redefined, whose begin defines this command for its body, but whose definition the
+<a href=#4538 id=4538 data-nosnippet>4538</a>  // kernel's lock refused (`kernel_autoload::try_refused_environment_definition`).
+<a href=#4539 id=4539 data-nosnippet>4539</a>  </span><span class="kw">if </span><span class="kw">crate</span>::binding::kernel_autoload::try_refused_environment_definition(token) {
+<a href=#4540 id=4540 data-nosnippet>4540</a>    gullet::unread_one(<span class="kw-2">*</span>token);
+<a href=#4541 id=4541 data-nosnippet>4541</a>    <span class="kw">return </span><span class="prelude-val">Ok</span>(Vec::new());
+<a href=#4542 id=4542 data-nosnippet>4542</a>  }
+<a href=#4543 id=4543 data-nosnippet>4543</a>  <span class="comment">// a stand-in named for the undefined name (`kernel_autoload::undefined_fallback`, OXIDIZED_DESIGN #734)
+<a href=#4544 id=4544 data-nosnippet>4544</a>  </span><span class="kw">if let </span><span class="prelude-val">Some</span>(stand_in) = <span class="kw">crate</span>::binding::kernel_autoload::undefined_fallback(token) {
+<a href=#4545 id=4545 data-nosnippet>4545</a>    gullet::unread_one(stand_in);
+<a href=#4546 id=4546 data-nosnippet>4546</a>    <span class="kw">return </span><span class="prelude-val">Ok</span>(Vec::new());
+<a href=#4547 id=4547 data-nosnippet>4547</a>  }
+<a href=#4548 id=4548 data-nosnippet>4548</a>  <span class="kw">let </span>cs = token.with_cs_name(|cs| String::from(cs));
+<a href=#4549 id=4549 data-nosnippet>4549</a>  <span class="comment">// Gate the undefined-CS summary tally and the Error! emission by
+<a href=#4550 id=4550 data-nosnippet>4550</a>  // SUPPRESS_UNDEFINED_ERRORS. During expl3-code.tex raw load we install
+<a href=#4551 id=4551 data-nosnippet>4551</a>  // the ERROR stub silently — forward references resolve when subsequent
+<a href=#4552 id=4552 data-nosnippet>4552</a>  // post-load fixups rebind the canonical CS (see expl3_sty.rs L161-167
+<a href=#4553 id=4553 data-nosnippet>4553</a>  // for \iow_wrap stubs that overwrite ERROR after the raw load). Mirrors
+<a href=#4554 id=4554 data-nosnippet>4554</a>  // the existing gate at state.rs::generate_error_stub L1018-L1030.
+<a href=#4555 id=4555 data-nosnippet>4555</a>  </span><span class="kw">let </span>suppressed = lookup_bool_sym(<span class="macro">crate::pin!</span>(<span class="string">"SUPPRESS_UNDEFINED_ERRORS"</span>));
+<a href=#4556 id=4556 data-nosnippet>4556</a>  <span class="kw">if </span>!suppressed {
+<a href=#4557 id=4557 data-nosnippet>4557</a>    note_status(LogStatus::Undefined, <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>cs));
+<a href=#4558 id=4558 data-nosnippet>4558</a>  }
+<a href=#4559 id=4559 data-nosnippet>4559</a>
+<a href=#4560 id=4560 data-nosnippet>4560</a>  <span class="comment">// To minimize chatter, go ahead and define it...
+<a href=#4561 id=4561 data-nosnippet>4561</a>  </span><span class="kw">if </span>cs.starts_with(<span class="string">"\\if"</span>) {
+<a href=#4562 id=4562 data-nosnippet>4562</a>    <span class="comment">// Apparently an \ifsomething ???
+<a href=#4563 id=4563 data-nosnippet>4563</a>    </span><span class="kw">let </span>name = cs.replace(<span class="string">"\\if"</span>, <span class="string">""</span>);
+<a href=#4564 id=4564 data-nosnippet>4564</a>    <span class="kw">if </span>!suppressed {
+<a href=#4565 id=4565 data-nosnippet>4565</a>      <span class="kw">let </span>message = <span class="macro">s!</span>(<span class="string">"The token {} is not defined."</span>, token.stringify());
+<a href=#4566 id=4566 data-nosnippet>4566</a>      <span class="macro">Error!</span>(
+<a href=#4567 id=4567 data-nosnippet>4567</a>        <span class="string">"undefined"</span>,
+<a href=#4568 id=4568 data-nosnippet>4568</a>        token,
+<a href=#4569 id=4569 data-nosnippet>4569</a>        <span class="kw-2">&amp;</span>message,
+<a href=#4570 id=4570 data-nosnippet>4570</a>        <span class="string">"Defining it now as with \\newif"
+<a href=#4571 id=4571 data-nosnippet>4571</a>      </span>);
+<a href=#4572 id=4572 data-nosnippet>4572</a>    }
+<a href=#4573 id=4573 data-nosnippet>4573</a>    <span class="comment">// install stub definitions for new conditional
+<a href=#4574 id=4574 data-nosnippet>4574</a>    </span>install_definition(
+<a href=#4575 id=4575 data-nosnippet>4575</a>      Expandable::new(
+<a href=#4576 id=4576 data-nosnippet>4576</a>        <span class="macro">T_CS!</span>(<span class="macro">s!</span>(<span class="string">"\\{}true"</span>, name)),
+<a href=#4577 id=4577 data-nosnippet>4577</a>        <span class="prelude-val">None</span>,
+<a href=#4578 id=4578 data-nosnippet>4578</a>        <span class="macro">Tokens!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\let"</span>), <span class="macro">T_CS!</span>(<span class="kw-2">&amp;</span>cs), <span class="macro">T_CS!</span>(<span class="string">"\\iftrue"</span>)).into(),
+<a href=#4579 id=4579 data-nosnippet>4579</a>        <span class="prelude-val">None</span>,
+<a href=#4580 id=4580 data-nosnippet>4580</a>      )<span class="question-mark">?</span>,
+<a href=#4581 id=4581 data-nosnippet>4581</a>      <span class="prelude-val">None</span>,
+<a href=#4582 id=4582 data-nosnippet>4582</a>    );
+<a href=#4583 id=4583 data-nosnippet>4583</a>    install_definition(
+<a href=#4584 id=4584 data-nosnippet>4584</a>      Expandable::new(
+<a href=#4585 id=4585 data-nosnippet>4585</a>        <span class="macro">T_CS!</span>(<span class="macro">s!</span>(<span class="string">"\\{}false"</span>, name)),
+<a href=#4586 id=4586 data-nosnippet>4586</a>        <span class="prelude-val">None</span>,
+<a href=#4587 id=4587 data-nosnippet>4587</a>        <span class="macro">Tokens!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\let"</span>), <span class="macro">T_CS!</span>(cs), <span class="macro">T_CS!</span>(<span class="string">"\\iffalse"</span>)).into(),
+<a href=#4588 id=4588 data-nosnippet>4588</a>        <span class="prelude-val">None</span>,
+<a href=#4589 id=4589 data-nosnippet>4589</a>      )<span class="question-mark">?</span>,
+<a href=#4590 id=4590 data-nosnippet>4590</a>      <span class="prelude-val">None</span>,
+<a href=#4591 id=4591 data-nosnippet>4591</a>    );
+<a href=#4592 id=4592 data-nosnippet>4592</a>
+<a href=#4593 id=4593 data-nosnippet>4593</a>    let_i(token, <span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="string">"\\iffalse"</span>), <span class="prelude-val">None</span>);
+<a href=#4594 id=4594 data-nosnippet>4594</a>    gullet::unread_one(<span class="kw-2">*</span>token); <span class="comment">// Retry
+<a href=#4595 id=4595 data-nosnippet>4595</a>    </span><span class="prelude-val">Ok</span>(Vec::new())
+<a href=#4596 id=4596 data-nosnippet>4596</a>  } <span class="kw">else </span>{
+<a href=#4597 id=4597 data-nosnippet>4597</a>    <span class="kw">if </span>!suppressed {
+<a href=#4598 id=4598 data-nosnippet>4598</a>      <span class="kw">let </span>message = <span class="macro">s!</span>(<span class="string">"The token {} is not defined."</span>, token.stringify());
+<a href=#4599 id=4599 data-nosnippet>4599</a>      <span class="macro">Error!</span>(
+<a href=#4600 id=4600 data-nosnippet>4600</a>        <span class="string">"undefined"</span>,
+<a href=#4601 id=4601 data-nosnippet>4601</a>        token,
+<a href=#4602 id=4602 data-nosnippet>4602</a>        <span class="kw-2">&amp;</span>message,
+<a href=#4603 id=4603 data-nosnippet>4603</a>        <span class="string">"Defining it now as &lt;ltx:ERROR/&gt;"
+<a href=#4604 id=4604 data-nosnippet>4604</a>      </span>);
+<a href=#4605 id=4605 data-nosnippet>4605</a>    }
+<a href=#4606 id=4606 data-nosnippet>4606</a>    install_definition(
+<a href=#4607 id=4607 data-nosnippet>4607</a>      Constructor {
+<a href=#4608 id=4608 data-nosnippet>4608</a>        cs: <span class="kw-2">*</span>token,
+<a href=#4609 id=4609 data-nosnippet>4609</a>        paramlist: <span class="prelude-val">None</span>,
+<a href=#4610 id=4610 data-nosnippet>4610</a>        replacement: <span class="prelude-val">Some</span>(Rc::new(<span class="kw">move </span>|document, _args, _props| {
+<a href=#4611 id=4611 data-nosnippet>4611</a>          document.make_error(<span class="string">"undefined"</span>, <span class="kw-2">&amp;</span>cs)
+<a href=#4612 id=4612 data-nosnippet>4612</a>        })),
+<a href=#4613 id=4613 data-nosnippet>4613</a>        ..Constructor::default()
+<a href=#4614 id=4614 data-nosnippet>4614</a>      },
+<a href=#4615 id=4615 data-nosnippet>4615</a>      <span class="prelude-val">Some</span>(Scope::Global),
+<a href=#4616 id=4616 data-nosnippet>4616</a>    );
+<a href=#4617 id=4617 data-nosnippet>4617</a>    <span class="comment">// Perl: unread the token and return empty, so the outer loop re-reads
+<a href=#4618 id=4618 data-nosnippet>4618</a>    // and dispatches through the normal path (with the newly installed stub).
+<a href=#4619 id=4619 data-nosnippet>4619</a>    // This ensures gullet-level side effects (filtering, expansion) are applied.
+<a href=#4620 id=4620 data-nosnippet>4620</a>    </span>gullet::unread_one(<span class="kw-2">*</span>token);
+<a href=#4621 id=4621 data-nosnippet>4621</a>    <span class="prelude-val">Ok</span>(Vec::new())
+<a href=#4622 id=4622 data-nosnippet>4622</a>  }
+<a href=#4623 id=4623 data-nosnippet>4623</a>}
+<a href=#4624 id=4624 data-nosnippet>4624</a>
+<a href=#4625 id=4625 data-nosnippet>4625</a><span class="kw">fn </span>invoke_token_simple(meaning: Token) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;Digested&gt;&gt; {
+<a href=#4626 id=4626 data-nosnippet>4626</a>  <span class="kw">let </span>cc = meaning.get_catcode();
+<a href=#4627 id=4627 data-nosnippet>4627</a>  <span class="kw">let </span>font = lookup_font();
+<a href=#4628 id=4628 data-nosnippet>4628</a>  <span class="comment">// token-locators: the leaf char box's exact source position comes from the
+<a href=#4629 id=4629 data-nosnippet>4629</a>  // token's origin handle — the position that survived expansion to digestion
+<a href=#4630 id=4630 data-nosnippet>4630</a>  // (Experiments 1–3 showed it cannot be re-derived from the mouth here, which
+<a href=#4631 id=4631 data-nosnippet>4631</a>  // is past the construct). `None` → `Tbox::new` falls back to the gullet's
+<a href=#4632 id=4632 data-nosnippet>4632</a>  // current locator (the eating-disorder heuristic). See SOURCE_PROVENANCE §3.1.1.
+<a href=#4633 id=4633 data-nosnippet>4633</a>  // Stamp a leaf box only from a *genuine* (read-from-source) origin. An
+<a href=#4634 id=4634 data-nosnippet>4634</a>  // inherited origin — a macro's expansion attributed to its call site, e.g.
+<a href=#4635 id=4635 data-nosnippet>4635</a>  // `\section`'s structural body literals at the `\section` column — must not
+<a href=#4636 id=4636 data-nosnippet>4636</a>  // become a located leaf, or box-level `get_locator()` aggregation would widen
+<a href=#4637 id=4637 data-nosnippet>4637</a>  // a construct past its content (the `\section{Intro}` title would start at the
+<a href=#4638 id=4638 data-nosnippet>4638</a>  // command, not at "Intro"). The inherited origin still rides the token, so
+<a href=#4639 id=4639 data-nosnippet>4639</a>  // `constructor::child_span`'s genuine-first scan can recover it as the
+<a href=#4640 id=4640 data-nosnippet>4640</a>  // fallback for the origin-less case (`\today`). See SOURCE_PROVENANCE §3.1.3.
+<a href=#4641 id=4641 data-nosnippet>4641</a>  </span><span class="attr">#[cfg(feature = <span class="string">"token-locators"</span>)]
+<a href=#4642 id=4642 data-nosnippet>4642</a>  </span><span class="kw">let </span>origin_loc: <span class="prelude-ty">Option</span>&lt;<span class="kw">crate</span>::common::locator::Locator&gt; =
+<a href=#4643 id=4643 data-nosnippet>4643</a>    <span class="kw">crate</span>::token::get_token_origin(meaning.loc)
+<a href=#4644 id=4644 data-nosnippet>4644</a>      .filter(|o| !o.inherited)
+<a href=#4645 id=4645 data-nosnippet>4645</a>      .map(|o| {
+<a href=#4646 id=4646 data-nosnippet>4646</a>        <span class="kw">crate</span>::common::arena::with(o.source, |s| {
+<a href=#4647 id=4647 data-nosnippet>4647</a>          <span class="kw">crate</span>::common::locator::Locator::new(s, o.line, o.col, o.line, o.col)
+<a href=#4648 id=4648 data-nosnippet>4648</a>        })
+<a href=#4649 id=4649 data-nosnippet>4649</a>      });
+<a href=#4650 id=4650 data-nosnippet>4650</a>  <span class="attr">#[cfg(not(feature = <span class="string">"token-locators"</span>))]
+<a href=#4651 id=4651 data-nosnippet>4651</a>  </span><span class="kw">let </span>origin_loc: <span class="prelude-ty">Option</span>&lt;<span class="kw">crate</span>::common::locator::Locator&gt; = <span class="prelude-val">None</span>;
+<a href=#4652 id=4652 data-nosnippet>4652</a>  <span class="kw">match </span>cc {
+<a href=#4653 id=4653 data-nosnippet>4653</a>    Catcode::SPACE =&gt; {
+<a href=#4654 id=4654 data-nosnippet>4654</a>      <span class="comment">// A space after a prefix is skipped, not typeset (tex.web §1211, §404).
+<a href=#4655 id=4655 data-nosnippet>4655</a>      </span><span class="kw">if </span>has_tex_prefixes() {
+<a href=#4656 id=4656 data-nosnippet>4656</a>        <span class="kw">return </span><span class="prelude-val">Ok</span>(<span class="prelude-val">None</span>);
+<a href=#4657 id=4657 data-nosnippet>4657</a>      }
+<a href=#4658 id=4658 data-nosnippet>4658</a>      clear_prefixes(); <span class="comment">// Perl Stomach.pm line 234: prefixes shouldn't apply here.
+<a href=#4659 id=4659 data-nosnippet>4659</a>      // Perl: if($STATE-&gt;lookupValue('MODE') =~ /(?:math|vertical)$/) { return (); }
+<a href=#4660 id=4660 data-nosnippet>4660</a>      </span><span class="kw">let </span>mode = lookup_string_from_sym(<span class="macro">crate::pin!</span>(<span class="string">"MODE"</span>));
+<a href=#4661 id=4661 data-nosnippet>4661</a>      <span class="kw">if </span>mode.ends_with(<span class="string">"math"</span>) || mode.ends_with(<span class="string">"vertical"</span>) {
+<a href=#4662 id=4662 data-nosnippet>4662</a>        <span class="prelude-val">Ok</span>(<span class="prelude-val">None</span>)
+<a href=#4663 id=4663 data-nosnippet>4663</a>      } <span class="kw">else </span>{
+<a href=#4664 id=4664 data-nosnippet>4664</a>        enter_horizontal();
+<a href=#4665 id=4665 data-nosnippet>4665</a>        <span class="comment">// An interword space is glue (tex.web §1041 `app_space`): `\unskip` removes it, `\lastskip` reads it
+<a href=#4666 id=4666 data-nosnippet>4666</a>        // (KNOWN_PERL_ERRORS #436). Perl's space box carries no `isSkip` (Stomach.pm:244-250), so `a \unskip,`
+<a href=#4667 id=4667 data-nosnippet>4667</a>        // kept the space before the comma (witness 2605.02925, its `\and` author list).
+<a href=#4668 id=4668 data-nosnippet>4668</a>        </span><span class="kw">let </span><span class="kw-2">mut </span>properties = HashMap::default();
+<a href=#4669 id=4669 data-nosnippet>4669</a>        properties.insert(<span class="string">"isSkip"</span>, Stored::Bool(<span class="bool-val">true</span>));
+<a href=#4670 id=4670 data-nosnippet>4670</a>        <span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(Digested::from(Tbox::new(
+<a href=#4671 id=4671 data-nosnippet>4671</a>          meaning.get_sym(),
+<a href=#4672 id=4672 data-nosnippet>4672</a>          font,
+<a href=#4673 id=4673 data-nosnippet>4673</a>          origin_loc,
+<a href=#4674 id=4674 data-nosnippet>4674</a>          <span class="macro">Tokens!</span>(meaning),
+<a href=#4675 id=4675 data-nosnippet>4675</a>          properties,
+<a href=#4676 id=4676 data-nosnippet>4676</a>        ))))
+<a href=#4677 id=4677 data-nosnippet>4677</a>      }
+<a href=#4678 id=4678 data-nosnippet>4678</a>    },
+<a href=#4679 id=4679 data-nosnippet>4679</a>    Catcode::COMMENT =&gt; {
+<a href=#4680 id=4680 data-nosnippet>4680</a>      <span class="comment">// Perl Stomach.pm lines 241-244: decode comment via font encoding
+<a href=#4681 id=4681 data-nosnippet>4681</a>      </span><span class="kw">let </span>decoded = font::decode_string(meaning.get_sym(), <span class="prelude-val">None</span>, <span class="bool-val">true</span>);
+<a href=#4682 id=4682 data-nosnippet>4682</a>      <span class="kw">let </span>comment = arena::with(decoded, |s| {
+<a href=#4683 id=4683 data-nosnippet>4683</a>        <span class="comment">// However, spaces normally would have be digested away as positioning...
+<a href=#4684 id=4684 data-nosnippet>4684</a>        // Replace NBSP + combining strikethrough (OT1 space position) with actual space
+<a href=#4685 id=4685 data-nosnippet>4685</a>        </span>s.replace(<span class="string">"\u{00A0}\u{0335}"</span>, <span class="string">" "</span>)
+<a href=#4686 id=4686 data-nosnippet>4686</a>      });
+<a href=#4687 id=4687 data-nosnippet>4687</a>      <span class="comment">// Perl: returns LaTeXML::Core::Comment-&gt;new($comment)
+<a href=#4688 id=4688 data-nosnippet>4688</a>      // which gets absorbed as an XML comment node via Document::insertComment
+<a href=#4689 id=4689 data-nosnippet>4689</a>      </span><span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(Digested::from(Comment(comment))))
+<a href=#4690 id=4690 data-nosnippet>4690</a>    },
+<a href=#4691 id=4691 data-nosnippet>4691</a>    <span class="kw">_ </span>=&gt; {
+<a href=#4692 id=4692 data-nosnippet>4692</a>      clear_prefixes(); <span class="comment">// Perl Stomach.pm line 247: prefixes shouldn't apply here.
+<a href=#4693 id=4693 data-nosnippet>4693</a>      // Perl: check mathcode for IN_MATH characters (Stomach.pm lines 248-251)
+<a href=#4694 id=4694 data-nosnippet>4694</a>      // In Perl, all math chars go through decodeMathChar which decodes via
+<a href=#4695 id=4695 data-nosnippet>4695</a>      // the font encoding. In Rust, Tbox::new already handles IN_MATH:
+<a href=#4696 id=4696 data-nosnippet>4696</a>      // it sets mode="math", looks up math_token_attributes for role/meaning/name,
+<a href=#4697 id=4697 data-nosnippet>4697</a>      // and specializes the font. This produces the correct LaTeXML-level properties.
+<a href=#4698 id=4698 data-nosnippet>4698</a>      // The mathchar parsing handles non-ASCII chars needing font map lookup.
+<a href=#4699 id=4699 data-nosnippet>4699</a>      // TODO: Use for chars where font-encoding glyph differs from input.
+<a href=#4700 id=4700 data-nosnippet>4700</a>      // Perl L248-257: if IN_MATH &amp;&amp; mathcode → decodeMathChar (math box)
+<a href=#4701 id=4701 data-nosnippet>4701</a>      // else → enterHorizontal + text box (covers non-math AND math-but-no-mathcode)
+<a href=#4702 id=4702 data-nosnippet>4702</a>      // A math-active character ("8000) digested as itself has no math character to decode; it is the plain character:
+<a href=#4703 id=4703 data-nosnippet>4703</a>      // a delimiter (`digest_as_delimiter`), or one whose active meaning is undefined and self-inserts
+<a href=#4704 id=4704 data-nosnippet>4704</a>      // (`lookup_digestable_definition`, braket's `\Pr{A|B}`, 1602.01342). `decode_math_char` of "8000 is class 8, which
+<a href=#4705 id=4705 data-nosnippet>4705</a>      // dropped the character here before, and is Γ in Perl (KNOWN_PERL_ERRORS #495).
+<a href=#4706 id=4706 data-nosnippet>4706</a>      </span><span class="kw">if </span>lookup_bool_sym(<span class="macro">crate::pin!</span>(<span class="string">"IN_MATH"</span>))
+<a href=#4707 id=4707 data-nosnippet>4707</a>        &amp;&amp; <span class="kw">let </span><span class="prelude-val">Some</span>(mathcode) = lookup_mathcode_sym(meaning.get_sym())
+<a href=#4708 id=4708 data-nosnippet>4708</a>        &amp;&amp; mathcode != <span class="number">0x8000
+<a href=#4709 id=4709 data-nosnippet>4709</a>      </span>{
+<a href=#4710 id=4710 data-nosnippet>4710</a>        <span class="kw">return </span><span class="kw">crate</span>::common::mathchar::decode_math_char_for_stomach(mathcode, meaning);
+<a href=#4711 id=4711 data-nosnippet>4711</a>      }
+<a href=#4712 id=4712 data-nosnippet>4712</a>      <span class="comment">// Fallthrough: either not in math, or in math but no mathcode
+<a href=#4713 id=4713 data-nosnippet>4713</a>      </span>enter_horizontal();
+<a href=#4714 id=4714 data-nosnippet>4714</a>      <span class="kw">let </span>text = font::decode_string(meaning.get_sym(), <span class="prelude-val">None</span>, <span class="bool-val">true</span>);
+<a href=#4715 id=4715 data-nosnippet>4715</a>      <span class="comment">// A raw `\font`'s slot is measured from its TFM (`Tbox::with_tfm_slot`).
+<a href=#4716 id=4716 data-nosnippet>4716</a>      </span><span class="kw">let </span>slot = meaning.with_str(|s| {
+<a href=#4717 id=4717 data-nosnippet>4717</a>        <span class="kw">let </span><span class="kw-2">mut </span>chars = s.chars();
+<a href=#4718 id=4718 data-nosnippet>4718</a>        <span class="kw">match </span>(chars.next(), chars.next()) {
+<a href=#4719 id=4719 data-nosnippet>4719</a>          (<span class="prelude-val">Some</span>(c), <span class="prelude-val">None</span>) =&gt; u32::from(c),
+<a href=#4720 id=4720 data-nosnippet>4720</a>          <span class="kw">_ </span>=&gt; u32::MAX,
+<a href=#4721 id=4721 data-nosnippet>4721</a>        }
+<a href=#4722 id=4722 data-nosnippet>4722</a>      });
+<a href=#4723 id=4723 data-nosnippet>4723</a>      <span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(Digested::from(
+<a href=#4724 id=4724 data-nosnippet>4724</a>        Tbox::new(
+<a href=#4725 id=4725 data-nosnippet>4725</a>          text,
+<a href=#4726 id=4726 data-nosnippet>4726</a>          <span class="prelude-val">None</span>,
+<a href=#4727 id=4727 data-nosnippet>4727</a>          origin_loc,
+<a href=#4728 id=4728 data-nosnippet>4728</a>          <span class="macro">Tokens!</span>(meaning),   <span class="comment">// tokens
+<a href=#4729 id=4729 data-nosnippet>4729</a>          </span>HashMap::default(), <span class="comment">// properties
+<a href=#4730 id=4730 data-nosnippet>4730</a>        </span>)
+<a href=#4731 id=4731 data-nosnippet>4731</a>        .with_tfm_slot(slot),
+<a href=#4732 id=4732 data-nosnippet>4732</a>      )))
+<a href=#4733 id=4733 data-nosnippet>4733</a>    },
+<a href=#4734 id=4734 data-nosnippet>4734</a>  }
+<a href=#4735 id=4735 data-nosnippet>4735</a>}
+<a href=#4736 id=4736 data-nosnippet>4736</a>
+<a href=#4737 id=4737 data-nosnippet>4737</a><span class="kw">pub fn </span>set_stomach(new_stomach: Stomach) {
+<a href=#4738 id=4738 data-nosnippet>4738</a>  <span class="kw">let </span><span class="kw-2">mut </span>singleton = <span class="macro">stomach_mut!</span>();
+<a href=#4739 id=4739 data-nosnippet>4739</a>  <span class="kw-2">*</span>singleton = new_stomach;
+<a href=#4740 id=4740 data-nosnippet>4740</a>}
+<a href=#4741 id=4741 data-nosnippet>4741</a><span class="kw">pub fn </span>clone_box_list() -&gt; Vec&lt;Digested&gt; { <span class="macro">stomach!</span>().box_list.clone() }
 <a href=#4742 id=4742 data-nosnippet>4742</a>
-<a href=#4743 id=4743 data-nosnippet>4743</a><span class="doccomment">/// ScriptLevel is similar to boxing level, but relative to current Math mode's level
-<a href=#4744 id=4744 data-nosnippet>4744</a>///
-<a href=#4745 id=4745 data-nosnippet>4745</a>/// This is used for the scriptpos attribute to recognize overlapping sccripts.
-<a href=#4746 id=4746 data-nosnippet>4746</a>/// Making it relative to the math's level avoids unnecessary changes
-<a href=#4747 id=4747 data-nosnippet>4747</a></span><span class="kw">pub fn </span>get_script_level() -&gt; usize {
-<a href=#4748 id=4748 data-nosnippet>4748</a>  <span class="kw">let </span>boxlevel = get_boxing_level();
-<a href=#4749 id=4749 data-nosnippet>4749</a>  with_value(<span class="string">"script_base_level"</span>, |val_opt| {
-<a href=#4750 id=4750 data-nosnippet>4750</a>    <span class="kw">if let </span><span class="prelude-val">Some</span>(Stored::Int(prevlevel)) = val_opt {
-<a href=#4751 id=4751 data-nosnippet>4751</a>      boxlevel - (<span class="kw-2">*</span>prevlevel <span class="kw">as </span>usize) + <span class="number">1
-<a href=#4752 id=4752 data-nosnippet>4752</a>    </span>} <span class="kw">else </span>{
-<a href=#4753 id=4753 data-nosnippet>4753</a>      boxlevel
-<a href=#4754 id=4754 data-nosnippet>4754</a>    }
-<a href=#4755 id=4755 data-nosnippet>4755</a>  })
-<a href=#4756 id=4756 data-nosnippet>4756</a>}
-<a href=#4757 id=4757 data-nosnippet>4757</a>
-<a href=#4758 id=4758 data-nosnippet>4758</a><span class="attr">#[cfg(test)]
-<a href=#4759 id=4759 data-nosnippet>4759</a></span><span class="kw">mod </span>resource_fatal_teardown_tests {
-<a href=#4760 id=4760 data-nosnippet>4760</a>  <span class="kw">use super</span>::{egroup, endgroup};
-<a href=#4761 id=4761 data-nosnippet>4761</a>  <span class="kw">use crate</span>::{
-<a href=#4762 id=4762 data-nosnippet>4762</a>    common::error::{LogStatus, <span class="prelude-ty">Result</span>, get_status, initialize_report, resource_fatal_latched},
-<a href=#4763 id=4763 data-nosnippet>4763</a>    state::{Scope, assign_value, push_frame},
-<a href=#4764 id=4764 data-nosnippet>4764</a>  };
-<a href=#4765 id=4765 data-nosnippet>4765</a>
-<a href=#4766 id=4766 data-nosnippet>4766</a>  <span class="doccomment">/// Once a resource Fatal is latched the document is aborted and the
-<a href=#4767 id=4767 data-nosnippet>4767</a>  /// recovery pass only drains what is pending; the group closers it meets
-<a href=#4768 id=4768 data-nosnippet>4768</a>  /// on a mode-switch frame (a box body the fuse interrupted) must not be
-<a href=#4769 id=4769 data-nosnippet>4769</a>  /// reported — 11-13 non-deterministic `Attempt to close a group that
-<a href=#4770 id=4770 data-nosnippet>4770</a>  /// switched to mode` lines after glossaries-user's MemoryBudget Fatal
-<a href=#4771 id=4771 data-nosnippet>4771</a>  /// (sweep 82) made a phantom regression. Before the latch the same closer
-<a href=#4772 id=4772 data-nosnippet>4772</a>  /// IS an error (Perl Stomach.pm:347-349).
-<a href=#4773 id=4773 data-nosnippet>4773</a>  </span><span class="attr">#[test]
-<a href=#4774 id=4774 data-nosnippet>4774</a>  </span><span class="kw">fn </span>group_closers_are_silent_once_a_resource_fatal_is_latched() {
-<a href=#4775 id=4775 data-nosnippet>4775</a>    initialize_report();
-<a href=#4776 id=4776 data-nosnippet>4776</a>    <span class="comment">// The shape the fuse leaves behind: a mode-switch frame on top.
-<a href=#4777 id=4777 data-nosnippet>4777</a>    </span>push_frame();
-<a href=#4778 id=4778 data-nosnippet>4778</a>    assign_value(<span class="string">"BOUND_MODE"</span>, <span class="string">"restricted_horizontal"</span>, <span class="prelude-val">Some</span>(Scope::Local));
-<a href=#4779 id=4779 data-nosnippet>4779</a>    <span class="kw">let </span>before = get_status(LogStatus::Error);
-<a href=#4780 id=4780 data-nosnippet>4780</a>    <span class="kw">let _ </span>= egroup();
-<a href=#4781 id=4781 data-nosnippet>4781</a>    <span class="macro">assert_eq!</span>(
-<a href=#4782 id=4782 data-nosnippet>4782</a>      get_status(LogStatus::Error),
-<a href=#4783 id=4783 data-nosnippet>4783</a>      before + <span class="number">1</span>,
-<a href=#4784 id=4784 data-nosnippet>4784</a>      <span class="string">"a closer on a mode-switch frame is an error before any Fatal"
-<a href=#4785 id=4785 data-nosnippet>4785</a>    </span>);
-<a href=#4786 id=4786 data-nosnippet>4786</a>    <span class="kw">fn </span>raise() -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
-<a href=#4787 id=4787 data-nosnippet>4787</a>      <span class="macro">Fatal!</span>(Timeout, MemoryBudget, <span class="string">"Memory budget exceeded (synthetic)"</span>);
-<a href=#4788 id=4788 data-nosnippet>4788</a>    }
-<a href=#4789 id=4789 data-nosnippet>4789</a>    <span class="kw">let _ </span>= raise();
-<a href=#4790 id=4790 data-nosnippet>4790</a>    <span class="macro">assert_eq!</span>(
-<a href=#4791 id=4791 data-nosnippet>4791</a>      get_status(LogStatus::Fatal),
-<a href=#4792 id=4792 data-nosnippet>4792</a>      <span class="number">1</span>,
-<a href=#4793 id=4793 data-nosnippet>4793</a>      <span class="string">"the Fatal itself is reported"
-<a href=#4794 id=4794 data-nosnippet>4794</a>    </span>);
-<a href=#4795 id=4795 data-nosnippet>4795</a>    <span class="kw">let </span>after_fatal = get_status(LogStatus::Error);
-<a href=#4796 id=4796 data-nosnippet>4796</a>    <span class="kw">let _ </span>= egroup();
-<a href=#4797 id=4797 data-nosnippet>4797</a>    <span class="kw">let _ </span>= endgroup();
-<a href=#4798 id=4798 data-nosnippet>4798</a>    <span class="macro">assert_eq!</span>(
-<a href=#4799 id=4799 data-nosnippet>4799</a>      get_status(LogStatus::Error),
-<a href=#4800 id=4800 data-nosnippet>4800</a>      after_fatal,
-<a href=#4801 id=4801 data-nosnippet>4801</a>      <span class="string">"post-Fatal draining of the closers reports nothing"
-<a href=#4802 id=4802 data-nosnippet>4802</a>    </span>);
-<a href=#4803 id=4803 data-nosnippet>4803</a>    initialize_report();
-<a href=#4804 id=4804 data-nosnippet>4804</a>  }
-<a href=#4805 id=4805 data-nosnippet>4805</a>
-<a href=#4806 id=4806 data-nosnippet>4806</a>  <span class="doccomment">/// A non-resource Fatal (a Stomach-target box ceiling, recovered by
-<a href=#4807 id=4807 data-nosnippet>4807</a>  /// `digest_step_guarded`) does not set the latch: digestion goes on and a
-<a href=#4808 id=4808 data-nosnippet>4808</a>  /// closer on a mode-switch frame is still an error.
-<a href=#4809 id=4809 data-nosnippet>4809</a>  </span><span class="attr">#[test]
-<a href=#4810 id=4810 data-nosnippet>4810</a>  </span><span class="kw">fn </span>non_resource_fatals_keep_reporting_closers() {
-<a href=#4811 id=4811 data-nosnippet>4811</a>    initialize_report();
-<a href=#4812 id=4812 data-nosnippet>4812</a>    push_frame();
-<a href=#4813 id=4813 data-nosnippet>4813</a>    assign_value(<span class="string">"BOUND_MODE"</span>, <span class="string">"restricted_horizontal"</span>, <span class="prelude-val">Some</span>(Scope::Local));
-<a href=#4814 id=4814 data-nosnippet>4814</a>    <span class="kw">fn </span>raise() -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
-<a href=#4815 id=4815 data-nosnippet>4815</a>      <span class="macro">Fatal!</span>(Stomach, Recursion, <span class="string">"Infinite digestion loop (synthetic)"</span>);
-<a href=#4816 id=4816 data-nosnippet>4816</a>    }
-<a href=#4817 id=4817 data-nosnippet>4817</a>    <span class="kw">let _ </span>= raise();
-<a href=#4818 id=4818 data-nosnippet>4818</a>    <span class="macro">assert!</span>(
-<a href=#4819 id=4819 data-nosnippet>4819</a>      !resource_fatal_latched(),
-<a href=#4820 id=4820 data-nosnippet>4820</a>      <span class="string">"a Stomach-target Fatal is not a resource Fatal"
-<a href=#4821 id=4821 data-nosnippet>4821</a>    </span>);
-<a href=#4822 id=4822 data-nosnippet>4822</a>    <span class="kw">let </span>before = get_status(LogStatus::Error);
-<a href=#4823 id=4823 data-nosnippet>4823</a>    <span class="kw">let _ </span>= egroup();
-<a href=#4824 id=4824 data-nosnippet>4824</a>    <span class="macro">assert_eq!</span>(
-<a href=#4825 id=4825 data-nosnippet>4825</a>      get_status(LogStatus::Error),
-<a href=#4826 id=4826 data-nosnippet>4826</a>      before + <span class="number">1</span>,
-<a href=#4827 id=4827 data-nosnippet>4827</a>      <span class="string">"closers still report"
-<a href=#4828 id=4828 data-nosnippet>4828</a>    </span>);
-<a href=#4829 id=4829 data-nosnippet>4829</a>    initialize_report();
-<a href=#4830 id=4830 data-nosnippet>4830</a>  }
-<a href=#4831 id=4831 data-nosnippet>4831</a>}
-<a href=#4832 id=4832 data-nosnippet>4832</a>
-<a href=#4833 id=4833 data-nosnippet>4833</a><span class="attr">#[cfg(test)]
-<a href=#4834 id=4834 data-nosnippet>4834</a></span><span class="kw">mod </span>memory_cap_tests {
-<a href=#4835 id=4835 data-nosnippet>4835</a>  <span class="kw">use super</span>::{
-<a href=#4836 id=4836 data-nosnippet>4836</a>    apply_memory_ceiling, box_bytes_budget, box_count_cap, resolve_rss_cap, set_memory_cap,
-<a href=#4837 id=4837 data-nosnippet>4837</a>    soft_cap_from_ceiling, soft_yield_urgency, spill_mark,
-<a href=#4838 id=4838 data-nosnippet>4838</a>  };
-<a href=#4839 id=4839 data-nosnippet>4839</a>
-<a href=#4840 id=4840 data-nosnippet>4840</a>  <span class="comment">// The box-list ceilings are memory ceilings, so they must ride the SAME
-<a href=#4841 id=4841 data-nosnippet>4841</a>  // `--max-memory` knob as the RSS fuse — including its "0 = no limit" meaning.
-<a href=#4842 id=4842 data-nosnippet>4842</a>  // They were hardcoded `const`s (2 M boxes / 3.2 GB estimate) read
-<a href=#4843 id=4843 data-nosnippet>4843</a>  // unconditionally, which made `--max-memory=0` a documented lie: the binary
-<a href=#4844 id=4844 data-nosnippet>4844</a>  // prints "memory limiting disabled entirely" and then Fatal'd on a memory
-<a href=#4845 id=4845 data-nosnippet>4845</a>  // ceiling no flag could raise. Witness: a ~10 000-page notes document
-<a href=#4846 id=4846 data-nosnippet>4846</a>  // (Nasser Abbasi, rc4 report 2026-07-28) died on the byte budget after 8 h at
-<a href=#4847 id=4847 data-nosnippet>4847</a>  // ~58 GB RSS having explicitly passed `--max-memory=0`.
-<a href=#4848 id=4848 data-nosnippet>4848</a>  </span><span class="attr">#[test]
-<a href=#4849 id=4849 data-nosnippet>4849</a>  </span><span class="kw">fn </span>box_ceilings_follow_the_memory_knob() {
-<a href=#4850 id=4850 data-nosnippet>4850</a>    <span class="comment">// Stock ceiling reproduces the historical fixed values.
-<a href=#4851 id=4851 data-nosnippet>4851</a>    </span>apply_memory_ceiling(<span class="number">6144</span>);
-<a href=#4852 id=4852 data-nosnippet>4852</a>    <span class="macro">assert_eq!</span>(
-<a href=#4853 id=4853 data-nosnippet>4853</a>      box_count_cap(),
-<a href=#4854 id=4854 data-nosnippet>4854</a>      <span class="prelude-val">Some</span>(<span class="number">1_999_933</span>),
-<a href=#4855 id=4855 data-nosnippet>4855</a>      <span class="string">"≈ the validated 2 M boxes"
-<a href=#4856 id=4856 data-nosnippet>4856</a>    </span>);
-<a href=#4857 id=4857 data-nosnippet>4857</a>    <span class="kw">let </span>budget = box_bytes_budget().expect(<span class="string">"stock ceiling has a byte budget"</span>);
-<a href=#4858 id=4858 data-nosnippet>4858</a>    <span class="macro">assert_eq!</span>(budget, <span class="number">3_221_225_472</span>, <span class="string">"≈ the historical 3.2 GB"</span>);
-<a href=#4859 id=4859 data-nosnippet>4859</a>
-<a href=#4860 id=4860 data-nosnippet>4860</a>    <span class="comment">// `--max-memory=0` lifts BOTH — that is the whole point of the flag.
-<a href=#4861 id=4861 data-nosnippet>4861</a>    </span>apply_memory_ceiling(<span class="number">0</span>);
-<a href=#4862 id=4862 data-nosnippet>4862</a>    <span class="macro">assert_eq!</span>(box_count_cap(), <span class="prelude-val">None</span>, <span class="string">"--max-memory=0 lifts the count cap"</span>);
-<a href=#4863 id=4863 data-nosnippet>4863</a>    <span class="macro">assert_eq!</span>(
-<a href=#4864 id=4864 data-nosnippet>4864</a>      box_bytes_budget(),
-<a href=#4865 id=4865 data-nosnippet>4865</a>      <span class="prelude-val">None</span>,
-<a href=#4866 id=4866 data-nosnippet>4866</a>      <span class="string">"--max-memory=0 lifts the byte budget"
-<a href=#4867 id=4867 data-nosnippet>4867</a>    </span>);
-<a href=#4868 id=4868 data-nosnippet>4868</a>
-<a href=#4869 id=4869 data-nosnippet>4869</a>    <span class="comment">// A tighter ceiling scales them down rather than leaving them at the
-<a href=#4870 id=4870 data-nosnippet>4870</a>    // stock value (which would sit far ABOVE the requested ceiling).
-<a href=#4871 id=4871 data-nosnippet>4871</a>    </span>apply_memory_ceiling(<span class="number">2000</span>);
-<a href=#4872 id=4872 data-nosnippet>4872</a>    <span class="macro">assert!</span>(box_count_cap().unwrap() &lt; <span class="number">1_999_933</span>);
-<a href=#4873 id=4873 data-nosnippet>4873</a>    <span class="macro">assert!</span>(box_bytes_budget().unwrap() &lt; budget);
-<a href=#4874 id=4874 data-nosnippet>4874</a>
-<a href=#4875 id=4875 data-nosnippet>4875</a>    <span class="comment">// The byte budget stays UNDER the RSS fuse, so on Linux the portable
-<a href=#4876 id=4876 data-nosnippet>4876</a>    // estimate still fires first for an accurately-estimated runaway.
-<a href=#4877 id=4877 data-nosnippet>4877</a>    </span><span class="macro">assert!</span>(box_bytes_budget().unwrap() &lt; resolve_rss_cap().unwrap() <span class="kw">as </span>usize);
-<a href=#4878 id=4878 data-nosnippet>4878</a>
-<a href=#4879 id=4879 data-nosnippet>4879</a>    set_memory_cap(<span class="prelude-val">None</span>);
-<a href=#4880 id=4880 data-nosnippet>4880</a>  }
+<a href=#4743 id=4743 data-nosnippet>4743</a><span class="doccomment">/// get the current boxing level
+<a href=#4744 id=4744 data-nosnippet>4744</a></span><span class="kw">pub fn </span>get_boxing_level() -&gt; usize { <span class="macro">stomach!</span>().boxing.len() }
+<a href=#4745 id=4745 data-nosnippet>4745</a>
+<a href=#4746 id=4746 data-nosnippet>4746</a><span class="doccomment">/// ScriptLevel is similar to boxing level, but relative to current Math mode's level
+<a href=#4747 id=4747 data-nosnippet>4747</a>///
+<a href=#4748 id=4748 data-nosnippet>4748</a>/// This is used for the scriptpos attribute to recognize overlapping sccripts.
+<a href=#4749 id=4749 data-nosnippet>4749</a>/// Making it relative to the math's level avoids unnecessary changes
+<a href=#4750 id=4750 data-nosnippet>4750</a></span><span class="kw">pub fn </span>get_script_level() -&gt; usize {
+<a href=#4751 id=4751 data-nosnippet>4751</a>  <span class="kw">let </span>boxlevel = get_boxing_level();
+<a href=#4752 id=4752 data-nosnippet>4752</a>  with_value(<span class="string">"script_base_level"</span>, |val_opt| {
+<a href=#4753 id=4753 data-nosnippet>4753</a>    <span class="kw">if let </span><span class="prelude-val">Some</span>(Stored::Int(prevlevel)) = val_opt {
+<a href=#4754 id=4754 data-nosnippet>4754</a>      boxlevel - (<span class="kw-2">*</span>prevlevel <span class="kw">as </span>usize) + <span class="number">1
+<a href=#4755 id=4755 data-nosnippet>4755</a>    </span>} <span class="kw">else </span>{
+<a href=#4756 id=4756 data-nosnippet>4756</a>      boxlevel
+<a href=#4757 id=4757 data-nosnippet>4757</a>    }
+<a href=#4758 id=4758 data-nosnippet>4758</a>  })
+<a href=#4759 id=4759 data-nosnippet>4759</a>}
+<a href=#4760 id=4760 data-nosnippet>4760</a>
+<a href=#4761 id=4761 data-nosnippet>4761</a><span class="attr">#[cfg(test)]
+<a href=#4762 id=4762 data-nosnippet>4762</a></span><span class="kw">mod </span>resource_fatal_teardown_tests {
+<a href=#4763 id=4763 data-nosnippet>4763</a>  <span class="kw">use super</span>::{egroup, endgroup};
+<a href=#4764 id=4764 data-nosnippet>4764</a>  <span class="kw">use crate</span>::{
+<a href=#4765 id=4765 data-nosnippet>4765</a>    common::error::{LogStatus, <span class="prelude-ty">Result</span>, get_status, initialize_report, resource_fatal_latched},
+<a href=#4766 id=4766 data-nosnippet>4766</a>    state::{Scope, assign_value, push_frame},
+<a href=#4767 id=4767 data-nosnippet>4767</a>  };
+<a href=#4768 id=4768 data-nosnippet>4768</a>
+<a href=#4769 id=4769 data-nosnippet>4769</a>  <span class="doccomment">/// Once a resource Fatal is latched the document is aborted and the
+<a href=#4770 id=4770 data-nosnippet>4770</a>  /// recovery pass only drains what is pending; the group closers it meets
+<a href=#4771 id=4771 data-nosnippet>4771</a>  /// on a mode-switch frame (a box body the fuse interrupted) must not be
+<a href=#4772 id=4772 data-nosnippet>4772</a>  /// reported — 11-13 non-deterministic `Attempt to close a group that
+<a href=#4773 id=4773 data-nosnippet>4773</a>  /// switched to mode` lines after glossaries-user's MemoryBudget Fatal
+<a href=#4774 id=4774 data-nosnippet>4774</a>  /// (sweep 82) made a phantom regression. Before the latch the same closer
+<a href=#4775 id=4775 data-nosnippet>4775</a>  /// IS an error (Perl Stomach.pm:347-349).
+<a href=#4776 id=4776 data-nosnippet>4776</a>  </span><span class="attr">#[test]
+<a href=#4777 id=4777 data-nosnippet>4777</a>  </span><span class="kw">fn </span>group_closers_are_silent_once_a_resource_fatal_is_latched() {
+<a href=#4778 id=4778 data-nosnippet>4778</a>    initialize_report();
+<a href=#4779 id=4779 data-nosnippet>4779</a>    <span class="comment">// The shape the fuse leaves behind: a mode-switch frame on top.
+<a href=#4780 id=4780 data-nosnippet>4780</a>    </span>push_frame();
+<a href=#4781 id=4781 data-nosnippet>4781</a>    assign_value(<span class="string">"BOUND_MODE"</span>, <span class="string">"restricted_horizontal"</span>, <span class="prelude-val">Some</span>(Scope::Local));
+<a href=#4782 id=4782 data-nosnippet>4782</a>    <span class="kw">let </span>before = get_status(LogStatus::Error);
+<a href=#4783 id=4783 data-nosnippet>4783</a>    <span class="kw">let _ </span>= egroup();
+<a href=#4784 id=4784 data-nosnippet>4784</a>    <span class="macro">assert_eq!</span>(
+<a href=#4785 id=4785 data-nosnippet>4785</a>      get_status(LogStatus::Error),
+<a href=#4786 id=4786 data-nosnippet>4786</a>      before + <span class="number">1</span>,
+<a href=#4787 id=4787 data-nosnippet>4787</a>      <span class="string">"a closer on a mode-switch frame is an error before any Fatal"
+<a href=#4788 id=4788 data-nosnippet>4788</a>    </span>);
+<a href=#4789 id=4789 data-nosnippet>4789</a>    <span class="kw">fn </span>raise() -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
+<a href=#4790 id=4790 data-nosnippet>4790</a>      <span class="macro">Fatal!</span>(Timeout, MemoryBudget, <span class="string">"Memory budget exceeded (synthetic)"</span>);
+<a href=#4791 id=4791 data-nosnippet>4791</a>    }
+<a href=#4792 id=4792 data-nosnippet>4792</a>    <span class="kw">let _ </span>= raise();
+<a href=#4793 id=4793 data-nosnippet>4793</a>    <span class="macro">assert_eq!</span>(
+<a href=#4794 id=4794 data-nosnippet>4794</a>      get_status(LogStatus::Fatal),
+<a href=#4795 id=4795 data-nosnippet>4795</a>      <span class="number">1</span>,
+<a href=#4796 id=4796 data-nosnippet>4796</a>      <span class="string">"the Fatal itself is reported"
+<a href=#4797 id=4797 data-nosnippet>4797</a>    </span>);
+<a href=#4798 id=4798 data-nosnippet>4798</a>    <span class="kw">let </span>after_fatal = get_status(LogStatus::Error);
+<a href=#4799 id=4799 data-nosnippet>4799</a>    <span class="kw">let _ </span>= egroup();
+<a href=#4800 id=4800 data-nosnippet>4800</a>    <span class="kw">let _ </span>= endgroup();
+<a href=#4801 id=4801 data-nosnippet>4801</a>    <span class="macro">assert_eq!</span>(
+<a href=#4802 id=4802 data-nosnippet>4802</a>      get_status(LogStatus::Error),
+<a href=#4803 id=4803 data-nosnippet>4803</a>      after_fatal,
+<a href=#4804 id=4804 data-nosnippet>4804</a>      <span class="string">"post-Fatal draining of the closers reports nothing"
+<a href=#4805 id=4805 data-nosnippet>4805</a>    </span>);
+<a href=#4806 id=4806 data-nosnippet>4806</a>    initialize_report();
+<a href=#4807 id=4807 data-nosnippet>4807</a>  }
+<a href=#4808 id=4808 data-nosnippet>4808</a>
+<a href=#4809 id=4809 data-nosnippet>4809</a>  <span class="doccomment">/// A non-resource Fatal (a Stomach-target box ceiling, recovered by
+<a href=#4810 id=4810 data-nosnippet>4810</a>  /// `digest_step_guarded`) does not set the latch: digestion goes on and a
+<a href=#4811 id=4811 data-nosnippet>4811</a>  /// closer on a mode-switch frame is still an error.
+<a href=#4812 id=4812 data-nosnippet>4812</a>  </span><span class="attr">#[test]
+<a href=#4813 id=4813 data-nosnippet>4813</a>  </span><span class="kw">fn </span>non_resource_fatals_keep_reporting_closers() {
+<a href=#4814 id=4814 data-nosnippet>4814</a>    initialize_report();
+<a href=#4815 id=4815 data-nosnippet>4815</a>    push_frame();
+<a href=#4816 id=4816 data-nosnippet>4816</a>    assign_value(<span class="string">"BOUND_MODE"</span>, <span class="string">"restricted_horizontal"</span>, <span class="prelude-val">Some</span>(Scope::Local));
+<a href=#4817 id=4817 data-nosnippet>4817</a>    <span class="kw">fn </span>raise() -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
+<a href=#4818 id=4818 data-nosnippet>4818</a>      <span class="macro">Fatal!</span>(Stomach, Recursion, <span class="string">"Infinite digestion loop (synthetic)"</span>);
+<a href=#4819 id=4819 data-nosnippet>4819</a>    }
+<a href=#4820 id=4820 data-nosnippet>4820</a>    <span class="kw">let _ </span>= raise();
+<a href=#4821 id=4821 data-nosnippet>4821</a>    <span class="macro">assert!</span>(
+<a href=#4822 id=4822 data-nosnippet>4822</a>      !resource_fatal_latched(),
+<a href=#4823 id=4823 data-nosnippet>4823</a>      <span class="string">"a Stomach-target Fatal is not a resource Fatal"
+<a href=#4824 id=4824 data-nosnippet>4824</a>    </span>);
+<a href=#4825 id=4825 data-nosnippet>4825</a>    <span class="kw">let </span>before = get_status(LogStatus::Error);
+<a href=#4826 id=4826 data-nosnippet>4826</a>    <span class="kw">let _ </span>= egroup();
+<a href=#4827 id=4827 data-nosnippet>4827</a>    <span class="macro">assert_eq!</span>(
+<a href=#4828 id=4828 data-nosnippet>4828</a>      get_status(LogStatus::Error),
+<a href=#4829 id=4829 data-nosnippet>4829</a>      before + <span class="number">1</span>,
+<a href=#4830 id=4830 data-nosnippet>4830</a>      <span class="string">"closers still report"
+<a href=#4831 id=4831 data-nosnippet>4831</a>    </span>);
+<a href=#4832 id=4832 data-nosnippet>4832</a>    initialize_report();
+<a href=#4833 id=4833 data-nosnippet>4833</a>  }
+<a href=#4834 id=4834 data-nosnippet>4834</a>}
+<a href=#4835 id=4835 data-nosnippet>4835</a>
+<a href=#4836 id=4836 data-nosnippet>4836</a><span class="attr">#[cfg(test)]
+<a href=#4837 id=4837 data-nosnippet>4837</a></span><span class="kw">mod </span>memory_cap_tests {
+<a href=#4838 id=4838 data-nosnippet>4838</a>  <span class="kw">use super</span>::{
+<a href=#4839 id=4839 data-nosnippet>4839</a>    apply_memory_ceiling, box_bytes_budget, box_count_cap, resolve_rss_cap, set_memory_cap,
+<a href=#4840 id=4840 data-nosnippet>4840</a>    soft_cap_from_ceiling, soft_yield_urgency, spill_mark,
+<a href=#4841 id=4841 data-nosnippet>4841</a>  };
+<a href=#4842 id=4842 data-nosnippet>4842</a>
+<a href=#4843 id=4843 data-nosnippet>4843</a>  <span class="comment">// The box-list ceilings are memory ceilings, so they must ride the SAME
+<a href=#4844 id=4844 data-nosnippet>4844</a>  // `--max-memory` knob as the RSS fuse — including its "0 = no limit" meaning.
+<a href=#4845 id=4845 data-nosnippet>4845</a>  // They were hardcoded `const`s (2 M boxes / 3.2 GB estimate) read
+<a href=#4846 id=4846 data-nosnippet>4846</a>  // unconditionally, which made `--max-memory=0` a documented lie: the binary
+<a href=#4847 id=4847 data-nosnippet>4847</a>  // prints "memory limiting disabled entirely" and then Fatal'd on a memory
+<a href=#4848 id=4848 data-nosnippet>4848</a>  // ceiling no flag could raise. Witness: a ~10 000-page notes document
+<a href=#4849 id=4849 data-nosnippet>4849</a>  // (Nasser Abbasi, rc4 report 2026-07-28) died on the byte budget after 8 h at
+<a href=#4850 id=4850 data-nosnippet>4850</a>  // ~58 GB RSS having explicitly passed `--max-memory=0`.
+<a href=#4851 id=4851 data-nosnippet>4851</a>  </span><span class="attr">#[test]
+<a href=#4852 id=4852 data-nosnippet>4852</a>  </span><span class="kw">fn </span>box_ceilings_follow_the_memory_knob() {
+<a href=#4853 id=4853 data-nosnippet>4853</a>    <span class="comment">// Stock ceiling reproduces the historical fixed values.
+<a href=#4854 id=4854 data-nosnippet>4854</a>    </span>apply_memory_ceiling(<span class="number">6144</span>);
+<a href=#4855 id=4855 data-nosnippet>4855</a>    <span class="macro">assert_eq!</span>(
+<a href=#4856 id=4856 data-nosnippet>4856</a>      box_count_cap(),
+<a href=#4857 id=4857 data-nosnippet>4857</a>      <span class="prelude-val">Some</span>(<span class="number">1_999_933</span>),
+<a href=#4858 id=4858 data-nosnippet>4858</a>      <span class="string">"≈ the validated 2 M boxes"
+<a href=#4859 id=4859 data-nosnippet>4859</a>    </span>);
+<a href=#4860 id=4860 data-nosnippet>4860</a>    <span class="kw">let </span>budget = box_bytes_budget().expect(<span class="string">"stock ceiling has a byte budget"</span>);
+<a href=#4861 id=4861 data-nosnippet>4861</a>    <span class="macro">assert_eq!</span>(budget, <span class="number">3_221_225_472</span>, <span class="string">"≈ the historical 3.2 GB"</span>);
+<a href=#4862 id=4862 data-nosnippet>4862</a>
+<a href=#4863 id=4863 data-nosnippet>4863</a>    <span class="comment">// `--max-memory=0` lifts BOTH — that is the whole point of the flag.
+<a href=#4864 id=4864 data-nosnippet>4864</a>    </span>apply_memory_ceiling(<span class="number">0</span>);
+<a href=#4865 id=4865 data-nosnippet>4865</a>    <span class="macro">assert_eq!</span>(box_count_cap(), <span class="prelude-val">None</span>, <span class="string">"--max-memory=0 lifts the count cap"</span>);
+<a href=#4866 id=4866 data-nosnippet>4866</a>    <span class="macro">assert_eq!</span>(
+<a href=#4867 id=4867 data-nosnippet>4867</a>      box_bytes_budget(),
+<a href=#4868 id=4868 data-nosnippet>4868</a>      <span class="prelude-val">None</span>,
+<a href=#4869 id=4869 data-nosnippet>4869</a>      <span class="string">"--max-memory=0 lifts the byte budget"
+<a href=#4870 id=4870 data-nosnippet>4870</a>    </span>);
+<a href=#4871 id=4871 data-nosnippet>4871</a>
+<a href=#4872 id=4872 data-nosnippet>4872</a>    <span class="comment">// A tighter ceiling scales them down rather than leaving them at the
+<a href=#4873 id=4873 data-nosnippet>4873</a>    // stock value (which would sit far ABOVE the requested ceiling).
+<a href=#4874 id=4874 data-nosnippet>4874</a>    </span>apply_memory_ceiling(<span class="number">2000</span>);
+<a href=#4875 id=4875 data-nosnippet>4875</a>    <span class="macro">assert!</span>(box_count_cap().unwrap() &lt; <span class="number">1_999_933</span>);
+<a href=#4876 id=4876 data-nosnippet>4876</a>    <span class="macro">assert!</span>(box_bytes_budget().unwrap() &lt; budget);
+<a href=#4877 id=4877 data-nosnippet>4877</a>
+<a href=#4878 id=4878 data-nosnippet>4878</a>    <span class="comment">// The byte budget stays UNDER the RSS fuse, so on Linux the portable
+<a href=#4879 id=4879 data-nosnippet>4879</a>    // estimate still fires first for an accurately-estimated runaway.
+<a href=#4880 id=4880 data-nosnippet>4880</a>    </span><span class="macro">assert!</span>(box_bytes_budget().unwrap() &lt; resolve_rss_cap().unwrap() <span class="kw">as </span>usize);
 <a href=#4881 id=4881 data-nosnippet>4881</a>
-<a href=#4882 id=4882 data-nosnippet>4882</a>  <span class="comment">// The single knob must reach the fuse through `apply_memory_ceiling`, which is
-<a href=#4883 id=4883 data-nosnippet>4883</a>  // what every conversion path calls. `--max-memory=0` has to leave NO ceiling:
-<a href=#4884 id=4884 data-nosnippet>4884</a>  // the plain path, the `--server` forked body child and the in-process fallback
-<a href=#4885 id=4885 data-nosnippet>4885</a>  // all rely on this one function, and the LSP pair used to skip it entirely.
-<a href=#4886 id=4886 data-nosnippet>4886</a>  //
-<a href=#4887 id=4887 data-nosnippet>4887</a>  // The env-precedence half is deliberately NOT asserted here: proving it needs
-<a href=#4888 id=4888 data-nosnippet>4888</a>  // `set_var`, and this workspace has a standing rule against touching the
-<a href=#4889 id=4889 data-nosnippet>4889</a>  // process env from tests (a concurrent read races glibc's getenv). It holds by
-<a href=#4890 id=4890 data-nosnippet>4890</a>  // construction instead — `apply_memory_ceiling` sets the override
-<a href=#4891 id=4891 data-nosnippet>4891</a>  // unconditionally, and `resolve_rss_cap` only consults the env when no
-<a href=#4892 id=4892 data-nosnippet>4892</a>  // override is present.
-<a href=#4893 id=4893 data-nosnippet>4893</a>  </span><span class="attr">#[test]
-<a href=#4894 id=4894 data-nosnippet>4894</a>  </span><span class="kw">fn </span>apply_memory_ceiling_drives_the_fuse() {
-<a href=#4895 id=4895 data-nosnippet>4895</a>    apply_memory_ceiling(<span class="number">6144</span>);
-<a href=#4896 id=4896 data-nosnippet>4896</a>    <span class="macro">assert_eq!</span>(resolve_rss_cap(), <span class="prelude-val">Some</span>(<span class="number">4608 </span>* <span class="number">1024 </span>* <span class="number">1024</span>));
-<a href=#4897 id=4897 data-nosnippet>4897</a>
-<a href=#4898 id=4898 data-nosnippet>4898</a>    <span class="comment">// 0 means "no limit", not "abort immediately".
-<a href=#4899 id=4899 data-nosnippet>4899</a>    </span>apply_memory_ceiling(<span class="number">0</span>);
-<a href=#4900 id=4900 data-nosnippet>4900</a>    <span class="macro">assert_eq!</span>(resolve_rss_cap(), <span class="prelude-val">None</span>, <span class="string">"--max-memory=0 leaves no ceiling"</span>);
-<a href=#4901 id=4901 data-nosnippet>4901</a>
-<a href=#4902 id=4902 data-nosnippet>4902</a>    <span class="comment">// A tight ceiling is honored rather than ignored in favour of the old
-<a href=#4903 id=4903 data-nosnippet>4903</a>    // built-in 4.5 GB default, which sat far ABOVE such a ceiling.
-<a href=#4904 id=4904 data-nosnippet>4904</a>    </span>apply_memory_ceiling(<span class="number">2000</span>);
-<a href=#4905 id=4905 data-nosnippet>4905</a>    <span class="macro">assert_eq!</span>(resolve_rss_cap(), <span class="prelude-val">Some</span>(<span class="number">1500 </span>* <span class="number">1024 </span>* <span class="number">1024</span>));
-<a href=#4906 id=4906 data-nosnippet>4906</a>
-<a href=#4907 id=4907 data-nosnippet>4907</a>    set_memory_cap(<span class="prelude-val">None</span>);
-<a href=#4908 id=4908 data-nosnippet>4908</a>  }
+<a href=#4882 id=4882 data-nosnippet>4882</a>    set_memory_cap(<span class="prelude-val">None</span>);
+<a href=#4883 id=4883 data-nosnippet>4883</a>  }
+<a href=#4884 id=4884 data-nosnippet>4884</a>
+<a href=#4885 id=4885 data-nosnippet>4885</a>  <span class="comment">// The single knob must reach the fuse through `apply_memory_ceiling`, which is
+<a href=#4886 id=4886 data-nosnippet>4886</a>  // what every conversion path calls. `--max-memory=0` has to leave NO ceiling:
+<a href=#4887 id=4887 data-nosnippet>4887</a>  // the plain path, the `--server` forked body child and the in-process fallback
+<a href=#4888 id=4888 data-nosnippet>4888</a>  // all rely on this one function, and the LSP pair used to skip it entirely.
+<a href=#4889 id=4889 data-nosnippet>4889</a>  //
+<a href=#4890 id=4890 data-nosnippet>4890</a>  // The env-precedence half is deliberately NOT asserted here: proving it needs
+<a href=#4891 id=4891 data-nosnippet>4891</a>  // `set_var`, and this workspace has a standing rule against touching the
+<a href=#4892 id=4892 data-nosnippet>4892</a>  // process env from tests (a concurrent read races glibc's getenv). It holds by
+<a href=#4893 id=4893 data-nosnippet>4893</a>  // construction instead — `apply_memory_ceiling` sets the override
+<a href=#4894 id=4894 data-nosnippet>4894</a>  // unconditionally, and `resolve_rss_cap` only consults the env when no
+<a href=#4895 id=4895 data-nosnippet>4895</a>  // override is present.
+<a href=#4896 id=4896 data-nosnippet>4896</a>  </span><span class="attr">#[test]
+<a href=#4897 id=4897 data-nosnippet>4897</a>  </span><span class="kw">fn </span>apply_memory_ceiling_drives_the_fuse() {
+<a href=#4898 id=4898 data-nosnippet>4898</a>    apply_memory_ceiling(<span class="number">6144</span>);
+<a href=#4899 id=4899 data-nosnippet>4899</a>    <span class="macro">assert_eq!</span>(resolve_rss_cap(), <span class="prelude-val">Some</span>(<span class="number">4608 </span>* <span class="number">1024 </span>* <span class="number">1024</span>));
+<a href=#4900 id=4900 data-nosnippet>4900</a>
+<a href=#4901 id=4901 data-nosnippet>4901</a>    <span class="comment">// 0 means "no limit", not "abort immediately".
+<a href=#4902 id=4902 data-nosnippet>4902</a>    </span>apply_memory_ceiling(<span class="number">0</span>);
+<a href=#4903 id=4903 data-nosnippet>4903</a>    <span class="macro">assert_eq!</span>(resolve_rss_cap(), <span class="prelude-val">None</span>, <span class="string">"--max-memory=0 leaves no ceiling"</span>);
+<a href=#4904 id=4904 data-nosnippet>4904</a>
+<a href=#4905 id=4905 data-nosnippet>4905</a>    <span class="comment">// A tight ceiling is honored rather than ignored in favour of the old
+<a href=#4906 id=4906 data-nosnippet>4906</a>    // built-in 4.5 GB default, which sat far ABOVE such a ceiling.
+<a href=#4907 id=4907 data-nosnippet>4907</a>    </span>apply_memory_ceiling(<span class="number">2000</span>);
+<a href=#4908 id=4908 data-nosnippet>4908</a>    <span class="macro">assert_eq!</span>(resolve_rss_cap(), <span class="prelude-val">Some</span>(<span class="number">1500 </span>* <span class="number">1024 </span>* <span class="number">1024</span>));
 <a href=#4909 id=4909 data-nosnippet>4909</a>
-<a href=#4910 id=4910 data-nosnippet>4910</a>  <span class="comment">// The override path is thread-local (race-free across libtest threads) and
-<a href=#4911 id=4911 data-nosnippet>4911</a>  // never reads the process-global env, so these assertions are deterministic.
-<a href=#4912 id=4912 data-nosnippet>4912</a>  </span><span class="attr">#[test]
-<a href=#4913 id=4913 data-nosnippet>4913</a>  </span><span class="kw">fn </span>override_zero_disables_budget() {
-<a href=#4914 id=4914 data-nosnippet>4914</a>    <span class="comment">// `--max-memory=0` maps to `set_memory_cap(Some(0))`, which must resolve
-<a href=#4915 id=4915 data-nosnippet>4915</a>    // to "no ceiling" — NOT a 0-byte cap that fatals every conversion.
-<a href=#4916 id=4916 data-nosnippet>4916</a>    </span>set_memory_cap(<span class="prelude-val">Some</span>(<span class="number">0</span>));
-<a href=#4917 id=4917 data-nosnippet>4917</a>    <span class="macro">assert_eq!</span>(resolve_rss_cap(), <span class="prelude-val">None</span>, <span class="string">"cap 0 disables the soft budget"</span>);
-<a href=#4918 id=4918 data-nosnippet>4918</a>    <span class="comment">// A positive override is honored verbatim.
-<a href=#4919 id=4919 data-nosnippet>4919</a>    </span>set_memory_cap(<span class="prelude-val">Some</span>(<span class="number">1_000</span>));
-<a href=#4920 id=4920 data-nosnippet>4920</a>    <span class="macro">assert_eq!</span>(resolve_rss_cap(), <span class="prelude-val">Some</span>(<span class="number">1_000</span>));
-<a href=#4921 id=4921 data-nosnippet>4921</a>    <span class="comment">// Restore the default so we don't leak state onto other tests sharing
-<a href=#4922 id=4922 data-nosnippet>4922</a>    // this thread.
-<a href=#4923 id=4923 data-nosnippet>4923</a>    </span>set_memory_cap(<span class="prelude-val">None</span>);
-<a href=#4924 id=4924 data-nosnippet>4924</a>  }
-<a href=#4925 id=4925 data-nosnippet>4925</a>
-<a href=#4926 id=4926 data-nosnippet>4926</a>  <span class="attr">#[test]
-<a href=#4927 id=4927 data-nosnippet>4927</a>  </span><span class="kw">fn </span>soft_cap_tracks_the_single_knob() {
-<a href=#4928 id=4928 data-nosnippet>4928</a>    <span class="comment">// 0 in → 0 out: `--max-memory=0` disables the soft fuse (and, via
-<a href=#4929 id=4929 data-nosnippet>4929</a>    // resolve_rss_cap, the whole memory limit).
-<a href=#4930 id=4930 data-nosnippet>4930</a>    </span><span class="macro">assert_eq!</span>(soft_cap_from_ceiling(<span class="number">0</span>), <span class="number">0</span>);
-<a href=#4931 id=4931 data-nosnippet>4931</a>    <span class="comment">// The soft fuse always sits strictly below the hard ceiling (graceful
-<a href=#4932 id=4932 data-nosnippet>4932</a>    // cooperative failure fires first), and reproduces the historical
-<a href=#4933 id=4933 data-nosnippet>4933</a>    // ~4.5 GB-under-6 GiB relationship at the 6144 MiB default.
-<a href=#4934 id=4934 data-nosnippet>4934</a>    </span><span class="kw">let </span>hard = <span class="number">6144u64 </span>* <span class="number">1024 </span>* <span class="number">1024</span>;
-<a href=#4935 id=4935 data-nosnippet>4935</a>    <span class="kw">let </span>soft = soft_cap_from_ceiling(<span class="number">6144</span>);
-<a href=#4936 id=4936 data-nosnippet>4936</a>    <span class="macro">assert_eq!</span>(soft, <span class="number">4608u64 </span>* <span class="number">1024 </span>* <span class="number">1024</span>);
-<a href=#4937 id=4937 data-nosnippet>4937</a>    <span class="macro">assert!</span>(soft &lt; hard, <span class="string">"soft fuse must be below the hard ceiling"</span>);
-<a href=#4938 id=4938 data-nosnippet>4938</a>    <span class="comment">// It scales with the knob, so a tight ceiling still gets a cooperative
-<a href=#4939 id=4939 data-nosnippet>4939</a>    // guard below it (fixing the old fixed-4.5 GB decoupling).
-<a href=#4940 id=4940 data-nosnippet>4940</a>    </span><span class="macro">assert!</span>(soft_cap_from_ceiling(<span class="number">2000</span>) &lt; <span class="number">2000 </span>* <span class="number">1024 </span>* <span class="number">1024</span>);
-<a href=#4941 id=4941 data-nosnippet>4941</a>    <span class="macro">assert!</span>(soft_cap_from_ceiling(<span class="number">20000</span>) &gt; <span class="number">6144 </span>* <span class="number">1024 </span>* <span class="number">1024</span>);
-<a href=#4942 id=4942 data-nosnippet>4942</a>  }
-<a href=#4943 id=4943 data-nosnippet>4943</a>
-<a href=#4944 id=4944 data-nosnippet>4944</a>  <span class="doccomment">/// The soft-yield floor waiver: waived at/above the watermark→fuse midpoint,
-<a href=#4945 id=4945 data-nosnippet>4945</a>  /// applied below it, and never waived when either bound is absent or
-<a href=#4946 id=4946 data-nosnippet>4946</a>  /// degenerate. Guards the safety valve `soft_yield_min_boxes` sits on — a
-<a href=#4947 id=4947 data-nosnippet>4947</a>  /// pathological per-box footprint must regain per-seam yielding before the
-<a href=#4948 id=4948 data-nosnippet>4948</a>  /// fuse fires inside one un-yielded window.
-<a href=#4949 id=4949 data-nosnippet>4949</a>  </span><span class="attr">#[test]
-<a href=#4950 id=4950 data-nosnippet>4950</a>  </span><span class="kw">fn </span>soft_yield_floor_waiver_boundaries() {
-<a href=#4951 id=4951 data-nosnippet>4951</a>    <span class="kw">const </span>MB: u64 = <span class="number">1024 </span>* <span class="number">1024</span>;
-<a href=#4952 id=4952 data-nosnippet>4952</a>    <span class="kw">let </span>wm = <span class="prelude-val">Some</span>(<span class="number">12_000 </span>* MB); <span class="comment">// the witness's watermark at --max-memory 48000
-<a href=#4953 id=4953 data-nosnippet>4953</a>    </span><span class="kw">let </span>fuse = <span class="prelude-val">Some</span>(<span class="number">36_000 </span>* MB); <span class="comment">// and its fuse; midpoint = 24_000 MB
-<a href=#4954 id=4954 data-nosnippet>4954</a>    </span><span class="kw">let </span>mark_kb = <span class="number">24_000 </span>* <span class="number">1024</span>;
-<a href=#4955 id=4955 data-nosnippet>4955</a>    <span class="macro">assert!</span>(
-<a href=#4956 id=4956 data-nosnippet>4956</a>      !soft_yield_urgency(mark_kb - <span class="number">1</span>, wm, fuse),
-<a href=#4957 id=4957 data-nosnippet>4957</a>      <span class="string">"below the midpoint the floor applies"
-<a href=#4958 id=4958 data-nosnippet>4958</a>    </span>);
-<a href=#4959 id=4959 data-nosnippet>4959</a>    <span class="macro">assert!</span>(
-<a href=#4960 id=4960 data-nosnippet>4960</a>      soft_yield_urgency(mark_kb, wm, fuse),
-<a href=#4961 id=4961 data-nosnippet>4961</a>      <span class="string">"at the midpoint the floor is waived"
-<a href=#4962 id=4962 data-nosnippet>4962</a>    </span>);
-<a href=#4963 id=4963 data-nosnippet>4963</a>    <span class="macro">assert!</span>(soft_yield_urgency(mark_kb + <span class="number">1</span>, wm, fuse), <span class="string">"above it too"</span>);
-<a href=#4964 id=4964 data-nosnippet>4964</a>    <span class="comment">// --max-memory=0 shapes: no fuse, no watermark, or fuse &lt;= watermark
-<a href=#4965 id=4965 data-nosnippet>4965</a>    // (a calibration LATEXML_SPILL_AT_MIB above the fuse) — never urgent.
-<a href=#4966 id=4966 data-nosnippet>4966</a>    </span><span class="macro">assert!</span>(!soft_yield_urgency(u64::MAX / <span class="number">1024</span>, wm, <span class="prelude-val">None</span>));
-<a href=#4967 id=4967 data-nosnippet>4967</a>    <span class="macro">assert!</span>(!soft_yield_urgency(u64::MAX / <span class="number">1024</span>, <span class="prelude-val">None</span>, fuse));
-<a href=#4968 id=4968 data-nosnippet>4968</a>    <span class="macro">assert!</span>(
-<a href=#4969 id=4969 data-nosnippet>4969</a>      !soft_yield_urgency(u64::MAX / <span class="number">1024</span>, fuse, wm),
-<a href=#4970 id=4970 data-nosnippet>4970</a>      <span class="string">"fuse below watermark is degenerate"
-<a href=#4971 id=4971 data-nosnippet>4971</a>    </span>);
-<a href=#4972 id=4972 data-nosnippet>4972</a>    <span class="comment">// saturating_mul: an absurd rss_kb must not overflow into false.
-<a href=#4973 id=4973 data-nosnippet>4973</a>    </span><span class="macro">assert!</span>(soft_yield_urgency(u64::MAX, wm, fuse));
-<a href=#4974 id=4974 data-nosnippet>4974</a>  }
-<a href=#4975 id=4975 data-nosnippet>4975</a>
-<a href=#4976 id=4976 data-nosnippet>4976</a>  <span class="doccomment">/// STRM: the spill mark is the watermark above the conversion's starting RSS, so a paper switches where it would
-<a href=#4977 id=4977 data-nosnippet>4977</a>  /// alone; a grown process keeps a watermark below the fuse; a zero watermark marks every seam.
-<a href=#4978 id=4978 data-nosnippet>4978</a>  </span><span class="attr">#[test]
-<a href=#4979 id=4979 data-nosnippet>4979</a>  </span><span class="kw">fn </span>spill_mark_is_the_watermark_above_the_conversions_start() {
-<a href=#4980 id=4980 data-nosnippet>4980</a>    <span class="kw">const </span>GB: u64 = <span class="number">1024 </span>* <span class="number">1024</span>; <span class="comment">// in KB
-<a href=#4981 id=4981 data-nosnippet>4981</a>    </span><span class="kw">let </span>fuse = <span class="prelude-val">Some</span>(<span class="number">36 </span>* GB * <span class="number">1024</span>); <span class="comment">// bytes; watermark a third, 12 GB
-<a href=#4982 id=4982 data-nosnippet>4982</a>    </span><span class="macro">assert_eq!</span>(
-<a href=#4983 id=4983 data-nosnippet>4983</a>      spill_mark(<span class="number">200 </span>* <span class="number">1024</span>, <span class="number">12 </span>* GB, fuse),
-<a href=#4984 id=4984 data-nosnippet>4984</a>      <span class="number">12 </span>* GB,
-<a href=#4985 id=4985 data-nosnippet>4985</a>      <span class="string">"under a fuse, the default watermark is the cap: two watermarks of headroom"
-<a href=#4986 id=4986 data-nosnippet>4986</a>    </span>);
-<a href=#4987 id=4987 data-nosnippet>4987</a>    <span class="macro">assert_eq!</span>(spill_mark(<span class="number">0</span>, <span class="number">12 </span>* GB, fuse), <span class="number">12 </span>* GB);
-<a href=#4988 id=4988 data-nosnippet>4988</a>    <span class="macro">assert_eq!</span>(
-<a href=#4989 id=4989 data-nosnippet>4989</a>      spill_mark(<span class="number">20 </span>* GB, <span class="number">12 </span>* GB, fuse),
-<a href=#4990 id=4990 data-nosnippet>4990</a>      <span class="number">12 </span>* GB,
-<a href=#4991 id=4991 data-nosnippet>4991</a>      <span class="string">"two watermarks below the fuse"
-<a href=#4992 id=4992 data-nosnippet>4992</a>    </span>);
-<a href=#4993 id=4993 data-nosnippet>4993</a>    <span class="macro">assert_eq!</span>(
-<a href=#4994 id=4994 data-nosnippet>4994</a>      spill_mark(<span class="number">200 </span>* <span class="number">1024</span>, <span class="number">4 </span>* GB, fuse),
-<a href=#4995 id=4995 data-nosnippet>4995</a>      <span class="number">4 </span>* GB + <span class="number">200 </span>* <span class="number">1024</span>,
-<a href=#4996 id=4996 data-nosnippet>4996</a>      <span class="string">"a smaller watermark moves with the conversion's start"
-<a href=#4997 id=4997 data-nosnippet>4997</a>    </span>);
-<a href=#4998 id=4998 data-nosnippet>4998</a>    <span class="macro">assert_eq!</span>(
-<a href=#4999 id=4999 data-nosnippet>4999</a>      spill_mark(<span class="number">20 </span>* GB, <span class="number">12 </span>* GB, <span class="prelude-val">None</span>),
-<a href=#5000 id=5000 data-nosnippet>5000</a>      <span class="number">32 </span>* GB,
-<a href=#5001 id=5001 data-nosnippet>5001</a>      <span class="string">"no fuse, no cap"
-<a href=#5002 id=5002 data-nosnippet>5002</a>    </span>);
-<a href=#5003 id=5003 data-nosnippet>5003</a>    <span class="macro">assert_eq!</span>(
-<a href=#5004 id=5004 data-nosnippet>5004</a>      spill_mark(<span class="number">1024</span>, <span class="number">30 </span>* GB, fuse),
-<a href=#5005 id=5005 data-nosnippet>5005</a>      <span class="number">30 </span>* GB,
-<a href=#5006 id=5006 data-nosnippet>5006</a>      <span class="string">"a watermark past half the fuse stays itself"
-<a href=#5007 id=5007 data-nosnippet>5007</a>    </span>);
-<a href=#5008 id=5008 data-nosnippet>5008</a>    <span class="macro">assert_eq!</span>(spill_mark(<span class="number">5 </span>* GB, <span class="number">0</span>, fuse), <span class="number">0</span>);
-<a href=#5009 id=5009 data-nosnippet>5009</a>  }
-<a href=#5010 id=5010 data-nosnippet>5010</a>}
+<a href=#4910 id=4910 data-nosnippet>4910</a>    set_memory_cap(<span class="prelude-val">None</span>);
+<a href=#4911 id=4911 data-nosnippet>4911</a>  }
+<a href=#4912 id=4912 data-nosnippet>4912</a>
+<a href=#4913 id=4913 data-nosnippet>4913</a>  <span class="comment">// The override path is thread-local (race-free across libtest threads) and
+<a href=#4914 id=4914 data-nosnippet>4914</a>  // never reads the process-global env, so these assertions are deterministic.
+<a href=#4915 id=4915 data-nosnippet>4915</a>  </span><span class="attr">#[test]
+<a href=#4916 id=4916 data-nosnippet>4916</a>  </span><span class="kw">fn </span>override_zero_disables_budget() {
+<a href=#4917 id=4917 data-nosnippet>4917</a>    <span class="comment">// `--max-memory=0` maps to `set_memory_cap(Some(0))`, which must resolve
+<a href=#4918 id=4918 data-nosnippet>4918</a>    // to "no ceiling" — NOT a 0-byte cap that fatals every conversion.
+<a href=#4919 id=4919 data-nosnippet>4919</a>    </span>set_memory_cap(<span class="prelude-val">Some</span>(<span class="number">0</span>));
+<a href=#4920 id=4920 data-nosnippet>4920</a>    <span class="macro">assert_eq!</span>(resolve_rss_cap(), <span class="prelude-val">None</span>, <span class="string">"cap 0 disables the soft budget"</span>);
+<a href=#4921 id=4921 data-nosnippet>4921</a>    <span class="comment">// A positive override is honored verbatim.
+<a href=#4922 id=4922 data-nosnippet>4922</a>    </span>set_memory_cap(<span class="prelude-val">Some</span>(<span class="number">1_000</span>));
+<a href=#4923 id=4923 data-nosnippet>4923</a>    <span class="macro">assert_eq!</span>(resolve_rss_cap(), <span class="prelude-val">Some</span>(<span class="number">1_000</span>));
+<a href=#4924 id=4924 data-nosnippet>4924</a>    <span class="comment">// Restore the default so we don't leak state onto other tests sharing
+<a href=#4925 id=4925 data-nosnippet>4925</a>    // this thread.
+<a href=#4926 id=4926 data-nosnippet>4926</a>    </span>set_memory_cap(<span class="prelude-val">None</span>);
+<a href=#4927 id=4927 data-nosnippet>4927</a>  }
+<a href=#4928 id=4928 data-nosnippet>4928</a>
+<a href=#4929 id=4929 data-nosnippet>4929</a>  <span class="attr">#[test]
+<a href=#4930 id=4930 data-nosnippet>4930</a>  </span><span class="kw">fn </span>soft_cap_tracks_the_single_knob() {
+<a href=#4931 id=4931 data-nosnippet>4931</a>    <span class="comment">// 0 in → 0 out: `--max-memory=0` disables the soft fuse (and, via
+<a href=#4932 id=4932 data-nosnippet>4932</a>    // resolve_rss_cap, the whole memory limit).
+<a href=#4933 id=4933 data-nosnippet>4933</a>    </span><span class="macro">assert_eq!</span>(soft_cap_from_ceiling(<span class="number">0</span>), <span class="number">0</span>);
+<a href=#4934 id=4934 data-nosnippet>4934</a>    <span class="comment">// The soft fuse always sits strictly below the hard ceiling (graceful
+<a href=#4935 id=4935 data-nosnippet>4935</a>    // cooperative failure fires first), and reproduces the historical
+<a href=#4936 id=4936 data-nosnippet>4936</a>    // ~4.5 GB-under-6 GiB relationship at the 6144 MiB default.
+<a href=#4937 id=4937 data-nosnippet>4937</a>    </span><span class="kw">let </span>hard = <span class="number">6144u64 </span>* <span class="number">1024 </span>* <span class="number">1024</span>;
+<a href=#4938 id=4938 data-nosnippet>4938</a>    <span class="kw">let </span>soft = soft_cap_from_ceiling(<span class="number">6144</span>);
+<a href=#4939 id=4939 data-nosnippet>4939</a>    <span class="macro">assert_eq!</span>(soft, <span class="number">4608u64 </span>* <span class="number">1024 </span>* <span class="number">1024</span>);
+<a href=#4940 id=4940 data-nosnippet>4940</a>    <span class="macro">assert!</span>(soft &lt; hard, <span class="string">"soft fuse must be below the hard ceiling"</span>);
+<a href=#4941 id=4941 data-nosnippet>4941</a>    <span class="comment">// It scales with the knob, so a tight ceiling still gets a cooperative
+<a href=#4942 id=4942 data-nosnippet>4942</a>    // guard below it (fixing the old fixed-4.5 GB decoupling).
+<a href=#4943 id=4943 data-nosnippet>4943</a>    </span><span class="macro">assert!</span>(soft_cap_from_ceiling(<span class="number">2000</span>) &lt; <span class="number">2000 </span>* <span class="number">1024 </span>* <span class="number">1024</span>);
+<a href=#4944 id=4944 data-nosnippet>4944</a>    <span class="macro">assert!</span>(soft_cap_from_ceiling(<span class="number">20000</span>) &gt; <span class="number">6144 </span>* <span class="number">1024 </span>* <span class="number">1024</span>);
+<a href=#4945 id=4945 data-nosnippet>4945</a>  }
+<a href=#4946 id=4946 data-nosnippet>4946</a>
+<a href=#4947 id=4947 data-nosnippet>4947</a>  <span class="doccomment">/// The soft-yield floor waiver: waived at/above the watermark→fuse midpoint,
+<a href=#4948 id=4948 data-nosnippet>4948</a>  /// applied below it, and never waived when either bound is absent or
+<a href=#4949 id=4949 data-nosnippet>4949</a>  /// degenerate. Guards the safety valve `soft_yield_min_boxes` sits on — a
+<a href=#4950 id=4950 data-nosnippet>4950</a>  /// pathological per-box footprint must regain per-seam yielding before the
+<a href=#4951 id=4951 data-nosnippet>4951</a>  /// fuse fires inside one un-yielded window.
+<a href=#4952 id=4952 data-nosnippet>4952</a>  </span><span class="attr">#[test]
+<a href=#4953 id=4953 data-nosnippet>4953</a>  </span><span class="kw">fn </span>soft_yield_floor_waiver_boundaries() {
+<a href=#4954 id=4954 data-nosnippet>4954</a>    <span class="kw">const </span>MB: u64 = <span class="number">1024 </span>* <span class="number">1024</span>;
+<a href=#4955 id=4955 data-nosnippet>4955</a>    <span class="kw">let </span>wm = <span class="prelude-val">Some</span>(<span class="number">12_000 </span>* MB); <span class="comment">// the witness's watermark at --max-memory 48000
+<a href=#4956 id=4956 data-nosnippet>4956</a>    </span><span class="kw">let </span>fuse = <span class="prelude-val">Some</span>(<span class="number">36_000 </span>* MB); <span class="comment">// and its fuse; midpoint = 24_000 MB
+<a href=#4957 id=4957 data-nosnippet>4957</a>    </span><span class="kw">let </span>mark_kb = <span class="number">24_000 </span>* <span class="number">1024</span>;
+<a href=#4958 id=4958 data-nosnippet>4958</a>    <span class="macro">assert!</span>(
+<a href=#4959 id=4959 data-nosnippet>4959</a>      !soft_yield_urgency(mark_kb - <span class="number">1</span>, wm, fuse),
+<a href=#4960 id=4960 data-nosnippet>4960</a>      <span class="string">"below the midpoint the floor applies"
+<a href=#4961 id=4961 data-nosnippet>4961</a>    </span>);
+<a href=#4962 id=4962 data-nosnippet>4962</a>    <span class="macro">assert!</span>(
+<a href=#4963 id=4963 data-nosnippet>4963</a>      soft_yield_urgency(mark_kb, wm, fuse),
+<a href=#4964 id=4964 data-nosnippet>4964</a>      <span class="string">"at the midpoint the floor is waived"
+<a href=#4965 id=4965 data-nosnippet>4965</a>    </span>);
+<a href=#4966 id=4966 data-nosnippet>4966</a>    <span class="macro">assert!</span>(soft_yield_urgency(mark_kb + <span class="number">1</span>, wm, fuse), <span class="string">"above it too"</span>);
+<a href=#4967 id=4967 data-nosnippet>4967</a>    <span class="comment">// --max-memory=0 shapes: no fuse, no watermark, or fuse &lt;= watermark
+<a href=#4968 id=4968 data-nosnippet>4968</a>    // (a calibration LATEXML_SPILL_AT_MIB above the fuse) — never urgent.
+<a href=#4969 id=4969 data-nosnippet>4969</a>    </span><span class="macro">assert!</span>(!soft_yield_urgency(u64::MAX / <span class="number">1024</span>, wm, <span class="prelude-val">None</span>));
+<a href=#4970 id=4970 data-nosnippet>4970</a>    <span class="macro">assert!</span>(!soft_yield_urgency(u64::MAX / <span class="number">1024</span>, <span class="prelude-val">None</span>, fuse));
+<a href=#4971 id=4971 data-nosnippet>4971</a>    <span class="macro">assert!</span>(
+<a href=#4972 id=4972 data-nosnippet>4972</a>      !soft_yield_urgency(u64::MAX / <span class="number">1024</span>, fuse, wm),
+<a href=#4973 id=4973 data-nosnippet>4973</a>      <span class="string">"fuse below watermark is degenerate"
+<a href=#4974 id=4974 data-nosnippet>4974</a>    </span>);
+<a href=#4975 id=4975 data-nosnippet>4975</a>    <span class="comment">// saturating_mul: an absurd rss_kb must not overflow into false.
+<a href=#4976 id=4976 data-nosnippet>4976</a>    </span><span class="macro">assert!</span>(soft_yield_urgency(u64::MAX, wm, fuse));
+<a href=#4977 id=4977 data-nosnippet>4977</a>  }
+<a href=#4978 id=4978 data-nosnippet>4978</a>
+<a href=#4979 id=4979 data-nosnippet>4979</a>  <span class="doccomment">/// STRM: the spill mark is the watermark above the conversion's starting RSS, so a paper switches where it would
+<a href=#4980 id=4980 data-nosnippet>4980</a>  /// alone; a grown process keeps a watermark below the fuse; a zero watermark marks every seam.
+<a href=#4981 id=4981 data-nosnippet>4981</a>  </span><span class="attr">#[test]
+<a href=#4982 id=4982 data-nosnippet>4982</a>  </span><span class="kw">fn </span>spill_mark_is_the_watermark_above_the_conversions_start() {
+<a href=#4983 id=4983 data-nosnippet>4983</a>    <span class="kw">const </span>GB: u64 = <span class="number">1024 </span>* <span class="number">1024</span>; <span class="comment">// in KB
+<a href=#4984 id=4984 data-nosnippet>4984</a>    </span><span class="kw">let </span>fuse = <span class="prelude-val">Some</span>(<span class="number">36 </span>* GB * <span class="number">1024</span>); <span class="comment">// bytes; watermark a third, 12 GB
+<a href=#4985 id=4985 data-nosnippet>4985</a>    </span><span class="macro">assert_eq!</span>(
+<a href=#4986 id=4986 data-nosnippet>4986</a>      spill_mark(<span class="number">200 </span>* <span class="number">1024</span>, <span class="number">12 </span>* GB, fuse),
+<a href=#4987 id=4987 data-nosnippet>4987</a>      <span class="number">12 </span>* GB,
+<a href=#4988 id=4988 data-nosnippet>4988</a>      <span class="string">"under a fuse, the default watermark is the cap: two watermarks of headroom"
+<a href=#4989 id=4989 data-nosnippet>4989</a>    </span>);
+<a href=#4990 id=4990 data-nosnippet>4990</a>    <span class="macro">assert_eq!</span>(spill_mark(<span class="number">0</span>, <span class="number">12 </span>* GB, fuse), <span class="number">12 </span>* GB);
+<a href=#4991 id=4991 data-nosnippet>4991</a>    <span class="macro">assert_eq!</span>(
+<a href=#4992 id=4992 data-nosnippet>4992</a>      spill_mark(<span class="number">20 </span>* GB, <span class="number">12 </span>* GB, fuse),
+<a href=#4993 id=4993 data-nosnippet>4993</a>      <span class="number">12 </span>* GB,
+<a href=#4994 id=4994 data-nosnippet>4994</a>      <span class="string">"two watermarks below the fuse"
+<a href=#4995 id=4995 data-nosnippet>4995</a>    </span>);
+<a href=#4996 id=4996 data-nosnippet>4996</a>    <span class="macro">assert_eq!</span>(
+<a href=#4997 id=4997 data-nosnippet>4997</a>      spill_mark(<span class="number">200 </span>* <span class="number">1024</span>, <span class="number">4 </span>* GB, fuse),
+<a href=#4998 id=4998 data-nosnippet>4998</a>      <span class="number">4 </span>* GB + <span class="number">200 </span>* <span class="number">1024</span>,
+<a href=#4999 id=4999 data-nosnippet>4999</a>      <span class="string">"a smaller watermark moves with the conversion's start"
+<a href=#5000 id=5000 data-nosnippet>5000</a>    </span>);
+<a href=#5001 id=5001 data-nosnippet>5001</a>    <span class="macro">assert_eq!</span>(
+<a href=#5002 id=5002 data-nosnippet>5002</a>      spill_mark(<span class="number">20 </span>* GB, <span class="number">12 </span>* GB, <span class="prelude-val">None</span>),
+<a href=#5003 id=5003 data-nosnippet>5003</a>      <span class="number">32 </span>* GB,
+<a href=#5004 id=5004 data-nosnippet>5004</a>      <span class="string">"no fuse, no cap"
+<a href=#5005 id=5005 data-nosnippet>5005</a>    </span>);
+<a href=#5006 id=5006 data-nosnippet>5006</a>    <span class="macro">assert_eq!</span>(
+<a href=#5007 id=5007 data-nosnippet>5007</a>      spill_mark(<span class="number">1024</span>, <span class="number">30 </span>* GB, fuse),
+<a href=#5008 id=5008 data-nosnippet>5008</a>      <span class="number">30 </span>* GB,
+<a href=#5009 id=5009 data-nosnippet>5009</a>      <span class="string">"a watermark past half the fuse stays itself"
+<a href=#5010 id=5010 data-nosnippet>5010</a>    </span>);
+<a href=#5011 id=5011 data-nosnippet>5011</a>    <span class="macro">assert_eq!</span>(spill_mark(<span class="number">5 </span>* GB, <span class="number">0</span>, fuse), <span class="number">0</span>);
+<a href=#5012 id=5012 data-nosnippet>5012</a>  }
+<a href=#5013 id=5013 data-nosnippet>5013</a>}
 </code></pre></div></section></main></body></html>
