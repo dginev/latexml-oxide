@@ -457,8 +457,39 @@ fn register_number_int_transition(engine: &mut Engine) {
   engine.register_fn("-", |a: Number, b: f64| float(a) - b);
   engine.register_fn("-", |a: f64, b: Number| a - float(b));
   engine.register_fn("*", |a: f64, b: Number| a * float(b));
+  // Replaces register_numeric's `Number * f64` (Perl's truncating `multiply`, kept as the method): an int gave 4.5.
+  engine.register_fn("*", |a: Number, b: f64| float(a) * b);
   engine.register_fn("/", |a: Number, b: f64| float(a) / b);
   engine.register_fn("/", |a: f64, b: Number| a / float(b));
+  engine.register_fn("%", |a: Number, b: f64| float(a) % b);
+  engine.register_fn("%", |a: f64, b: Number| a % float(b));
+  engine.register_fn("**", |a: Number, b: f64| float(a).powf(b));
+  engine.register_fn("**", |a: f64, b: Number| a.powf(float(b)));
+  // The int-only operators, failing as Rhai's own (`/` or `%` by zero, a negative or overflowing power).
+  fn checked(op: &str, a: i64, b: i64, v: Option<i64>) -> RhaiResult<i64> {
+    v.ok_or_else(|| {
+      EvalAltResult::ErrorArithmetic(format!("{a} {op} {b}"), rhai::Position::NONE).into()
+    })
+  }
+  macro_rules! int_op {
+    ($($op:literal => $f:expr),*) => {$(
+      engine.register_fn($op, |a: Number, b: i64| { let a = int(a); checked($op, a, b, $f(a, b)) });
+      engine.register_fn($op, |a: i64, b: Number| { let b = int(b); checked($op, a, b, $f(a, b)) });
+    )*};
+  }
+  int_op!(
+    "%" => i64::checked_rem,
+    "**" => |a: i64, b: i64| u32::try_from(b).ok().and_then(|b| a.checked_pow(b)),
+    "&" => |a: i64, b: i64| Some(a & b),
+    "|" => |a: i64, b: i64| Some(a | b),
+    "^" => |a: i64, b: i64| Some(a ^ b),
+    "<<" => |a: i64, b: i64| u32::try_from(b).ok().and_then(|b| a.checked_shl(b)),
+    ">>" => |a: i64, b: i64| u32::try_from(b).ok().and_then(|b| a.checked_shr(b))
+  );
+  engine.register_fn("/", |a: i64, b: Number| {
+    let b = int(b);
+    checked("/", a, b, a.checked_div(b))
+  });
   macro_rules! compare {
     ($($op:tt)*) => {$(
       engine.register_fn(stringify!($op), |a: Number, b: i64| int(a) $op b);
@@ -504,9 +535,11 @@ where T:
   engine.register_fn("multiply", |v: T, f: f64| v.multiply(Float(f)));
   engine.register_fn("*", |v: T, f: f64| v.multiply(Float(f)));
   engine.register_fn("multiply", |v: T, n: Number| v.multiply(n));
+  engine.register_fn("*", |v: T, n: Number| v.multiply(n));
   engine.register_fn("divide", |v: T, n: i64| v.divide(Number(n)));
   engine.register_fn("/", |v: T, n: i64| v.divide(Number(n)));
   engine.register_fn("divide", |v: T, n: Number| v.divide(n));
+  engine.register_fn("/", |v: T, n: Number| v.divide(n));
   engine.register_fn("divideround", |v: T, n: i64| v.divideround(Number(n)));
   engine.register_fn("==", |a: T, b: T| a == b);
   engine.register_fn("!=", |a: T, b: T| a != b);

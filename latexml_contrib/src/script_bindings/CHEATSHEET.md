@@ -15,15 +15,20 @@ newcomer guide is [`docs/parity/RHAI_BINDINGS_GUIDE.md`](../../../docs/parity/RH
 |---|---|---|
 | `!$v` |  | `!` |
 | `$a ne $b` |  | `!=` |
+| `$n->valueOf % $m` |  | `%` |
+| `$n->valueOf & $m` |  | `&` |
 | `$v->multiply($n)` |  | `*` |
+| `$n->valueOf ** $m` |  | `**` |
 | `$v->add($w)` |  | `+` |
 | `$v->subtract($w)` |  | `-` |
 | `$v->divide($n)` |  | `/` |
 | `$v->valueOf < $w->valueOf` |  | `<` |
+| `$n->valueOf << $m` |  | `<<` |
 | `$v->valueOf <= $w->valueOf` |  | `<=` |
 | `$a eq $b` |  | `==` |
 | `$v->valueOf > $w->valueOf` |  | `>` |
 | `$v->valueOf >= $w->valueOf` |  | `>=` |
+| `$n->valueOf >> $m` |  | `>>` |
 | `AddToCounter` | `AddToCounter!` | `AddToCounter` |
 | `AddToMacro` | `AddToMacro!` | `AddToMacro` |
 |  |  | `AppendSearchPath` |
@@ -203,6 +208,7 @@ newcomer guide is [`docs/parity/RHAI_BINDINGS_GUIDE.md`](../../../docs/parity/RH
 | `UnshiftValue` |  | `UnshiftValue` |
 | `Warn` | `Warn!` | `Warn` |
 | `XEquals` | `XEquals!` | `XEquals` |
+| `$n->valueOf ^ $m` |  | `^` |
 | `$v->absolute` |  | `absolute` |
 | `$v->add` |  | `add` |
 | `defined $v` |  | `defined` |
@@ -226,6 +232,7 @@ newcomer guide is [`docs/parity/RHAI_BINDINGS_GUIDE.md`](../../../docs/parity/RH
 | `$v->toAttribute` |  | `toAttribute` |
 | `$v->valueOf` |  | `valueOf` |
 | `$whatsit` |  | `whatsit` (deprecated: the hook's whatsit argument) |
+| `$n->valueOf \| $m` |  | `\|` |
 | `$document->absorb` |  | `document.absorb` |
 |  |  | `document.absorbProperty` |
 | `$document->absorb` |  | `document.absorbString` |

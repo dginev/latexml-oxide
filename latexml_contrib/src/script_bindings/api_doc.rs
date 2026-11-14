@@ -242,6 +242,9 @@ const PERL_GAPS: &[(&str, &str)] = &[
 /// `register_fn` has no entry (so a new helper cannot ship undocumented),
 /// [`stale_names`] fails when an entry names a call that no longer exists, and
 /// [`ambiguous_names`] fails when one entry would be shared by two handles.
+/// The int operators `CounterValue`'s int answered, kept one release on a Number (ruling 4 of PR #829).
+const NUMBER_AS_INT: &str = "**Deprecated** (Warns once per binding load): a Number with an int (or, for `%` and `**`, a float), either way round, as the int it was before `CounterValue` returned a Number (use `n.valueOf()`); Perl's Number has no such operator.";
+
 const DOCS: &[(&str, Mirror, Doc)] = &[
   (
     "!",
@@ -272,11 +275,28 @@ const DOCS: &[(&str, Mirror, Doc)] = &[
     ),
   ),
   (
+    "%",
+    Mirror("$n->valueOf % $m", ""),
+    Doc::Note(NUMBER_AS_INT),
+  ),
+  (
+    "&",
+    Mirror("$n->valueOf & $m", ""),
+    Doc::Note(NUMBER_AS_INT),
+  ),
+  (
     "*",
     Mirror("$v->multiply($n)", ""),
     Doc::Note(
-      "A Number, Dimension, Glue or MuGlue times an int or float (Number.pm `multiply`, truncated; Glue scales its stretch and shrink).",
+      "A Number, Dimension, Glue or MuGlue times an int, a float or a Number (Number.pm `multiply`, truncated; Glue scales \
+       its stretch and shrink). **Deprecated** (Warns once per binding load): a Number times a float, or an int or float \
+       times a Number, is the int it was before `CounterValue` returned a Number (`n * 1.5` is `4.5`; `n.multiply(1.5)` is `4`).",
     ),
+  ),
+  (
+    "**",
+    Mirror("$n->valueOf ** $m", ""),
+    Doc::Note(NUMBER_AS_INT),
   ),
   (
     "+",
@@ -299,12 +319,20 @@ const DOCS: &[(&str, Mirror, Doc)] = &[
   (
     "/",
     Mirror("$v->divide($n)", ""),
-    Doc::Note("A value handle divided by an int, truncated (Number.pm `divide`)."),
+    Doc::Note(
+      "A value handle divided by an int or a Number, truncated (Number.pm `divide`). **Deprecated** (Warns once per \
+       binding load): an int or float by a Number, or a Number by a float, divides as the int it was.",
+    ),
   ),
   (
     "<",
     Mirror("$v->valueOf < $w->valueOf", ""),
     Doc::Note("Compares two value handles of one type by `valueOf`."),
+  ),
+  (
+    "<<",
+    Mirror("$n->valueOf << $m", ""),
+    Doc::Note(NUMBER_AS_INT),
   ),
   (
     "<=",
@@ -320,6 +348,21 @@ const DOCS: &[(&str, Mirror, Doc)] = &[
     ">=",
     Mirror("$v->valueOf >= $w->valueOf", ""),
     Doc::Note("Compares two value handles of one type by `valueOf`."),
+  ),
+  (
+    ">>",
+    Mirror("$n->valueOf >> $m", ""),
+    Doc::Note(NUMBER_AS_INT),
+  ),
+  (
+    "^",
+    Mirror("$n->valueOf ^ $m", ""),
+    Doc::Note(NUMBER_AS_INT),
+  ),
+  (
+    "|",
+    Mirror("$n->valueOf | $m", ""),
+    Doc::Note(NUMBER_AS_INT),
   ),
   (
     "AddToCounter",
@@ -1014,7 +1057,7 @@ const DOCS: &[(&str, Mirror, Doc)] = &[
     "MergeFont",
     Mirror("MergeFont", "MergeFont!"),
     Doc::Rust(
-      "Merge font attributes into the current font, group-locally: Font.pm `merge`'s keys (a color by name as `LookupColor`, a size name or points, `scale`, `forcebold`, …); an unknown key Warns.",
+      "Merge font attributes into the current font, group-locally: Font.pm `merge`'s keys (a color by name as `LookupColor`, except that a base name (`red`, …) resolves without a colour package, as color.sty defines it; a size name or points, `scale`, `forcebold`, …); an unknown key Warns.",
       "latexml_core::binding::content::merge_font",
     ),
   ),
@@ -2583,7 +2626,7 @@ pub(super) fn generate_cheatsheet(engine: &Engine) -> String {
     if s.is_empty() {
       String::new()
     } else {
-      format!("`{s}`")
+      format!("`{}`", s.replace('|', "\\|"))
     }
   };
   let mut out = String::from(CHEATSHEET_HEADER);
@@ -2811,9 +2854,11 @@ impl Signature {
 
   fn render(&self) -> String {
     let args = self.params.join(", ");
+    // `\|`: the `|` operator's name would split the Markdown table cell.
+    let name = self.name.replace('|', "\\|");
     match &self.ret {
-      Some(r) => format!("{}({args}) -> {r}", self.name),
-      None => format!("{}({args})", self.name),
+      Some(r) => format!("{name}({args}) -> {r}"),
+      None => format!("{name}({args})"),
     }
   }
 }

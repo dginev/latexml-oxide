@@ -93,7 +93,8 @@ fn rhai_perl_names_behave_as_perl() {
 /// W3RH, no colour package loaded: rows red on 02ce42ad5dc (revW3RFG). p1: a `LookupDefinition` handle keeps the
 /// definition it found, also stored as a value (`A:NEW:NEW`, `B:` an undefined `\baz`, before; Perl `A:OLD:NEW`). p2: a base colour name in `MergeFont` and a `font:` option
 /// without color.sty (dvipsnam.def read first: 4 Errors, Black; Perl 0 E; the `font:` colour outlives `\fC`, as Perl's). p3: `int ⊕ Number` and float pairs compare
-/// as ints (`0 < n` was `false` silently), `roman(Number)` (Function not found), Perl's `int()` of a string (OD #1035).
+/// as ints (`0 < n` was `false` silently), `roman(Number)` (Function not found), Perl's `int()` of a string (OD #1035);
+/// W3RI (revW3RH B1, red on 914dc00e41f): `n * 1.5` gave 4 silently (Perl's truncating `multiply`), `%`/`**`/bitwise/`i / n`/`N * n` Function not found.
 const LXRH: &str = r#"DefMacro("\\foo", "OLD");
 DefMacro("\\swap", || { let d = LookupDefinition(T_CS("\\foo")); DefMacro("\\foo", "NEW"); AssignMeaning(T_CS("\\bar"), d); });
 DefMacro("\\saveit", || { AssignValue("saved", LookupDefinition(T_CS("\\foo"))); });
@@ -102,7 +103,8 @@ DefPrimitive("\\fR", || MergeFont(#{color: "red", background: "yellow"}));
 DefConstructor("\\fC{}", "<ltx:text class='c'>#1</ltx:text>", #{font: #{color: "blue"}});
 DefMacro("\\rows", || {
   let n = CounterValue("cc");
-  let r = [0 < n, 3 <= n, 4 > n, 3 >= n, 3 == n, 4 != n, n < 3.5, 3.5 > n, n == 3.0, 3.0 == n, n + 0.5, 1.5 * n];
+  let r = [0 < n, 3 <= n, 4 > n, 3 >= n, 3 == n, 4 != n, n < 3.5, 3.5 > n, n == 3.0, 3.0 == n, n + 0.5, 1.5 * n,
+    n * 1.5, n * 1.5 == 4.5, 7 / n, n % 2, 7 % n, n ** 2, 2 ** n, n % 2.0, n & 1, 1 << n, Number(2) * n];
   r.push(ToString(roman(n)) + ToString(Roman(n)));
   for spec in ["1e3", ".5", "1.5", " -7 ", "abc"] { r.push(Number(spec).valueOf()); }
   r.reduce(|s, v| if s == "" { `${v}` } else { s + " " + v }, "")
@@ -143,7 +145,7 @@ fn rhai_perl_names_review_rows() {
     ),
     (
       "p3",
-      r##"<para xml:id="p3"><p><text color="#0000FF">true true true true true true true true true true 3.5 4.5 iiiIII 1000 0 1 -7 0</text></p></para>"##,
+      r##"<para xml:id="p3"><p><text color="#0000FF">true true true true true true true true true true 3.5 4.5 4.5 true 2 1 1 9 8 1.0 1 8 6 iiiIII 1000 0 1 -7 0</text></p></para>"##,
     ),
   ] {
     assert_element(&xml, "para", &[&format!("xml:id=\"{id}\"")], para);
