@@ -101,6 +101,7 @@ const TOKEN_ARG_FNS: &[&str] = &[
   "AddToMacro",
   "AssignMeaning",
   "DigestIf",
+  "IfCondition",
   "IsDefined",
   "Let",
   "LookupDefinition",
@@ -115,7 +116,9 @@ const TOKEN_ARG_FNS: &[&str] = &[
 /// [`overrides_all_exist`] fails if a name here is no longer registered, and any
 /// function NOT listed keeps its honest `?`.
 const RETURN_OVERRIDES: &[(&str, &str)] = &[
+  ("IfCondition", "bool?"),
   ("LookupDefinition", "Definition?"),
+  ("LookupMeaning", "Definition\\|Token?"),
   ("children", "array"),
   ("findnode", "Node?"),
   ("floatToElement", "Node?"),
@@ -180,7 +183,6 @@ struct Mirror(&'static str, &'static str);
 /// register yet, with their macro: the cheat sheet's empty Rhai cells. [`stale_gaps`] fails when one gets registered.
 const PERL_GAPS: &[(&str, &str)] = &[
   ("AfterAssignment", ""),
-  ("Box", ""),
   ("CheckOptions", ""),
   ("CleanBibKey", ""),
   ("CleanClassName", ""),
@@ -193,12 +195,9 @@ const PERL_GAPS: &[(&str, &str)] = &[
   ("DefColor", ""),
   ("DefColorModel", ""),
   ("DefConditionalI", ""),
-  ("DefConstructorI", ""),
   ("DefEnvironmentI", ""),
   ("DefExpandable", ""),
-  ("DefMacroI", ""),
   ("DefMathI", ""),
-  ("DefPrimitiveI", ""),
   ("DefRegisterI", ""),
   ("Deprecated", ""),
   ("DigestLiteral", ""),
@@ -209,10 +208,8 @@ const PERL_GAPS: &[(&str, &str)] = &[
   ("FontDecodeString", ""),
   ("GenerateID", ""),
   ("HasKeyVal", ""),
-  ("IfCondition", ""),
   ("InputContent", ""),
   ("InstallDefinition", "InstallDefinition!"),
-  ("List", ""),
   ("LoadFontMap", ""),
   ("LoadFormat", ""),
   ("LookupColor", "LookupColor!"),
@@ -641,6 +638,62 @@ const DOCS: &[(&str, Mirror, Doc)] = &[
     ),
   ),
   (
+    "Box",
+    Mirror("Box", ""),
+    Doc::Rust(
+      "A text box: `Box(string)`, `Box(string, font)`, `Box(string, font, (), tokens)` and a trailing properties map \
+       (Perl's `Box($string, $font, $locator, $tokens, %properties)`; a script has no locator, so `()`). The current \
+       font for `()`, its tokens `T_OTHER(string)` for `()`.",
+      "latexml_core::tbox::Tbox::new",
+    ),
+  ),
+  (
+    "IfCondition",
+    Mirror("IfCondition", ""),
+    Doc::Rust(
+      "The truth of a conditional (`\\iffoo` after `\\newif`, `\\iftrue`) on the arguments given as an array \
+       (`IfCondition(\"\\\\ifnum\", [1, T_OTHER(\"<\"), 2])`; Perl's `IfCondition($if, @args)`), never read from the \
+       input, one not given being `()`; `()` with an Error for a control sequence that is not one.",
+      "latexml_core::binding::content::if_condition_args",
+    ),
+  ),
+  (
+    "List",
+    Mirror("List", ""),
+    Doc::Note(
+      "Perl's `List(@boxes, mode => $mode)` (List.pm:31) as `List([boxes])` or `List([boxes], #{mode: m})`: `()`s \
+       dropped, one box (of the asked mode) is itself, else a list in the mode (the current one by default).",
+    ),
+  ),
+  (
+    "DefConstructorI",
+    Mirror("DefConstructorI", ""),
+    Doc::Rust(
+      "`DefConstructor` for a control sequence in hand: a `Token` or a name (`coerceCS`), a parameter-spec string or \
+       `()`, a template string, a closure or `()`, then the option bag.",
+      "latexml_core::binding::def::dialect::def_constructor",
+    ),
+  ),
+  (
+    "DefMacroI",
+    Mirror("DefMacroI", ""),
+    Doc::Rust(
+      "`DefMacro` for a control sequence in hand: a `Token` or a name (`coerceCS`: `\\csname x\\endcsname`, a single \
+       character is active), a parameter-spec string or `()`, the expansion (a closure, TeX source, `Tokens`, a \
+       `Token`, `()` for none), then the option bag.",
+      "latexml_core::binding::def::dialect::def_macro",
+    ),
+  ),
+  (
+    "DefPrimitiveI",
+    Mirror("DefPrimitiveI", ""),
+    Doc::Rust(
+      "`DefPrimitive` for a control sequence in hand: a `Token` or a name (`coerceCS`), a parameter-spec string or \
+       `()`, a closure or `()` (digests to nothing), then the option bag.",
+      "latexml_core::binding::def::dialect::def_primitive",
+    ),
+  ),
+  (
     "DefParameterType",
     Mirror("DefParameterType", "DefParameterType!"),
     Doc::Rust(
@@ -1001,7 +1054,9 @@ const DOCS: &[(&str, Mirror, Doc)] = &[
     "LookupMeaning",
     Mirror("LookupMeaning", "LookupMeaning!"),
     Doc::Rust(
-      "What a token means right now: its definition, or itself.",
+      "What a token means right now: its definition (a `Definition` handle, for `AssignMeaning`) or a Token, `()` \
+       when undefined; in a string, Perl's `ToString` (the CS and its parameters). **Deprecated** (Warns once per \
+       binding load): compared with a string, or its `is_empty`/`len`, as the string it returned before.",
       "latexml_core::state::lookup_meaning",
     ),
   ),
@@ -1711,6 +1766,23 @@ const DOCS: &[(&str, Mirror, Doc)] = &[
     ),
   ),
   (
+    "getCSName",
+    Mirror("$token->getCSName", ""),
+    Doc::Rust(
+      "The name a `Token`'s definition is stored under: a control sequence's or active character's text, a \
+       catcode's primitive name otherwise (`T_BEGIN().getCSName()` is `Begin`).",
+      "latexml_core::token::Token::get_cs_name",
+    ),
+  ),
+  (
+    "getCatcode",
+    Mirror("$token->getCatcode", ""),
+    Doc::Rust(
+      "A `Token`'s catcode, as the int the `CC_*` constants give.",
+      "latexml_core::token::Token::get_catcode",
+    ),
+  ),
+  (
     "getArg",
     Mirror("$whatsit->getArg", ""),
     Doc::Rust(
@@ -1727,6 +1799,11 @@ const DOCS: &[(&str, Mirror, Doc)] = &[
     "getShrinkOrder",
     Mirror("$v->getShrinkOrder", ""),
     Doc::Note("A Glue's shrink fill order as a Number, 0 (finite) to 3 (filll)."),
+  ),
+  (
+    "getString",
+    Mirror("$token->getString", ""),
+    Doc::Note("A `Token`'s text (`\\foo` for a control sequence)."),
   ),
   (
     "getStretch",
@@ -2279,6 +2356,12 @@ const DOCS: &[(&str, Mirror, Doc)] = &[
   ),
 ];
 
+/// `LookupMeaning`'s value read as the string it returned before (ruling 9), deprecated on each handle it returns.
+const MEANING_IS_EMPTY: &str = "**Deprecated** (Warns once per binding load): `LookupMeaning`'s value as the string it \
+                                returned before; use `!defined(value)`, or `ToString(value).is_empty()`.";
+const MEANING_LEN: &str = "**Deprecated** (Warns once per binding load): the length of the string `LookupMeaning` \
+                           returned before; use `ToString(value).len()`.";
+
 /// Calls whose meaning depends on the HANDLE they are called on. One name
 /// registered on two receivers is two different functions, and a single
 /// name-keyed [`DOCS`] entry would document one of them wrongly:
@@ -2289,6 +2372,60 @@ const DOCS: &[(&str, Mirror, Doc)] = &[
 /// [`ambiguous_names`] enforces the rule: a name that appears under more than
 /// one handle must have an entry here for EACH of them.
 const HANDLE_DOCS: &[(&str, &str, Mirror, Doc)] = &[
+  (
+    "()",
+    "is_empty",
+    Mirror("", ""),
+    Doc::Note(MEANING_IS_EMPTY),
+  ),
+  ("()", "len", Mirror("", ""), Doc::Note(MEANING_LEN)),
+  (
+    "Definition",
+    "is_empty",
+    Mirror("", ""),
+    Doc::Note(MEANING_IS_EMPTY),
+  ),
+  ("Definition", "len", Mirror("", ""), Doc::Note(MEANING_LEN)),
+  (
+    "Token",
+    "is_empty",
+    Mirror("", ""),
+    Doc::Note(MEANING_IS_EMPTY),
+  ),
+  ("Token", "len", Mirror("", ""), Doc::Note(MEANING_LEN)),
+  (
+    "Digested",
+    "getFont",
+    Mirror("$box->getFont", ""),
+    Doc::Rust(
+      "The box's `Font` handle, `()` for a box without one.",
+      "latexml_core::BoxOps::get_font",
+    ),
+  ),
+  (
+    "Token",
+    "unlist",
+    Mirror("$token->unlist", ""),
+    Doc::Note("An array of the one `Token`, so a Token and Tokens unlist alike (Token.pm)."),
+  ),
+  (
+    "Tokens",
+    "unlist",
+    Mirror("$tokens->unlist", ""),
+    Doc::Rust(
+      "The tokens, as an array of `Token`s.",
+      "latexml_core::tokens::Tokens::unlist",
+    ),
+  ),
+  (
+    "Whatsit",
+    "getFont",
+    Mirror("$whatsit->getFont", ""),
+    Doc::Rust(
+      "The whatsit's `Font` handle, inside a hook.",
+      "latexml_core::BoxOps::get_font",
+    ),
+  ),
   (
     "Document",
     "getProperties",
@@ -2390,6 +2527,62 @@ const HANDLE_DOCS: &[(&str, &str, Mirror, Doc)] = &[
       "The box's `ToString` (what a string context shows).",
       "latexml_core::digested::Digested",
     ),
+  ),
+  (
+    "Definition",
+    "to_string",
+    Mirror("ToString($definition)", ""),
+    Doc::Note(
+      "Perl's `ToString` of a definition (Definition.pm:116): the CS, then its parameters after a space.",
+    ),
+  ),
+  (
+    "Definition",
+    "to_debug",
+    Mirror("", ""),
+    Doc::Note("As `to_string`: how an array shows the value (`ToString([…])`, `${[…]}`)."),
+  ),
+  (
+    "Digested",
+    "to_debug",
+    Mirror("", ""),
+    Doc::Note("As `to_string`: how an array shows the value (`ToString([…])`, `${[…]}`)."),
+  ),
+  (
+    "Dimension",
+    "to_debug",
+    Mirror("", ""),
+    Doc::Note("As `to_string`: how an array shows the value (`ToString([…])`, `${[…]}`)."),
+  ),
+  (
+    "Glue",
+    "to_debug",
+    Mirror("", ""),
+    Doc::Note("As `to_string`: how an array shows the value (`ToString([…])`, `${[…]}`)."),
+  ),
+  (
+    "MuGlue",
+    "to_debug",
+    Mirror("", ""),
+    Doc::Note("As `to_string`: how an array shows the value (`ToString([…])`, `${[…]}`)."),
+  ),
+  (
+    "Number",
+    "to_debug",
+    Mirror("", ""),
+    Doc::Note("As `to_string`: how an array shows the value (`ToString([…])`, `${[…]}`)."),
+  ),
+  (
+    "Token",
+    "to_debug",
+    Mirror("", ""),
+    Doc::Note("As `to_string`: how an array shows the value (`ToString([…])`, `${[…]}`)."),
+  ),
+  (
+    "Tokens",
+    "to_debug",
+    Mirror("", ""),
+    Doc::Note("As `to_string`: how an array shows the value (`ToString([…])`, `${[…]}`)."),
   ),
   (
     "KeyVals",
@@ -2542,11 +2735,16 @@ fn lookup_entry(receiver: Option<&str>, name: &str) -> Option<(&'static Mirror, 
 
 /// The documentation cell for one call: a rustdoc intra-doc link, or the note; a deprecated alias says so first.
 fn doc_cell(receiver: Option<&str>, name: &str) -> String {
+  // `\|`: a closure's `|args|` in the text would split the Markdown table cell, code span or not (GFM tables).
   let doc = match lookup(receiver, name) {
     Some(Doc::Rust(summary, path)) => {
-      format!("{summary} ([`{}`]({path}))", short_path(path))
+      format!(
+        "{} ([`{}`]({path}))",
+        summary.replace('|', "\\|"),
+        short_path(path)
+      )
     },
-    Some(Doc::Note(note)) => (*note).to_string(),
+    Some(Doc::Note(note)) => note.replace('|', "\\|"),
     None => String::new(),
   };
   let alias = match receiver {
