@@ -248,6 +248,9 @@ pub(super) fn make_engine() -> Engine {
   // A token value in a string context (`"(" + ReadArg() + ")"`, `${…}`) is its TeX source, as `UnTeX` gives it.
   engine.register_fn("to_string", |t: &mut Token| Tokens::new(vec![*t]).untex());
   engine.register_fn("to_string", |t: &mut Tokens| t.clone().untex());
+  // In an array (Rhai's display takes each element's `to_debug`), as `to_string`.
+  engine.register_fn("to_debug", |t: &mut Token| Tokens::new(vec![*t]).untex());
+  engine.register_fn("to_debug", |t: &mut Tokens| t.clone().untex());
   // Token.pm's and Tokens.pm's accessors: `unlist` the list's tokens (a Token's is itself), `getString` the text,
   // `getCSName` the name a definition is stored under (`{` of any spelling is `{`), `getCatcode` the catcode's int.
   engine.register_fn("unlist", |t: &mut Tokens| -> rhai::Array {
@@ -552,17 +555,13 @@ pub(super) fn make_engine() -> Engine {
   );
   // A token argument is a string naming a control sequence, or a `Token` as is (Perl `Let`, Package.pm:383-390;
   // `IsDefined`, :330-336), through the core calls the `Let!`/`XEquals!`/`IsDefined!` macros make (#796).
-  engine.register_fn(
-    "LookupMeaning",
-    |cs: Dynamic| -> std::result::Result<String, Box<EvalAltResult>> {
-      Ok(
-        match latexml_core::state::lookup_meaning(&token_arg("LookupMeaning", cs)?) {
-          Some(m) => m.to_string(),
-          None => String::new(),
-        },
-      )
-    },
-  );
+  // Perl's `LookupMeaning` (State.pm:370): the definition (a `Definition` handle) or the Token, `()` when undefined.
+  engine.register_fn("LookupMeaning", |cs: Dynamic| -> RhaiResult<Dynamic> {
+    Ok(
+      latexml_core::state::lookup_meaning(&token_arg("LookupMeaning", cs)?)
+        .map_or(Dynamic::UNIT, stored_to_dynamic),
+    )
+  });
   engine.register_fn(
     "Let",
     |a: Dynamic, b: Dynamic| -> std::result::Result<(), Box<EvalAltResult>> {
@@ -758,6 +757,7 @@ pub(super) fn make_engine() -> Engine {
   register_string_tests::<Tokens>(&mut engine, "value == string");
   register_string_tests::<Token>(&mut engine, "value == string");
   register_string_tests::<Digested>(&mut engine, "value == string");
+  register_string_tests::<DefinitionProxy>(&mut engine, "value == string");
   // `()` against a string either way round reads as "", as Perl's `undef eq ''` (which Warns `uninitialized`).
   let unit_test = |s: &str| {
     warn_deprecated("() == string");
@@ -2081,6 +2081,7 @@ pub(super) fn make_engine() -> Engine {
   engine.register_type_with_name::<Digested>("Digested");
   // A box in a string context is its `ToString` (Perl's), as `absorbString` reads it.
   engine.register_fn("to_string", |d: &mut Digested| d.to_string());
+  engine.register_fn("to_debug", |d: &mut Digested| d.to_string());
 
   // Perl's `openElement($qname, %attributes)` returns the new node, `closeElement`/`maybeCloseElement` the node
   // closed or undef (Document.pm:787-866; #716 §2).
@@ -2763,6 +2764,9 @@ pub(super) fn make_engine() -> Engine {
   // before/after lists. Returns `()` for an undefined CS (Perl undef). Each
   // `push*` appends (Perl `push`), each `unshift*` prepends (Perl `unshift`).
   engine.register_type_with_name::<DefinitionProxy>("Definition");
+  // In a string, Perl's `ToString($definition)`: the CS and its parameters.
+  engine.register_fn("to_string", |d: &mut DefinitionProxy| definition_string(d));
+  engine.register_fn("to_debug", |d: &mut DefinitionProxy| definition_string(d));
   // `()` also for a token `\let` to a character, as `LookupDefinition!` and Perl `lookupDefinition` (State.pm:399-416).
   engine.register_fn(
     "LookupDefinition",

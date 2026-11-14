@@ -118,6 +118,7 @@ const TOKEN_ARG_FNS: &[&str] = &[
 const RETURN_OVERRIDES: &[(&str, &str)] = &[
   ("IfCondition", "bool?"),
   ("LookupDefinition", "Definition?"),
+  ("LookupMeaning", "Definition\\|Token?"),
   ("children", "array"),
   ("findnode", "Node?"),
   ("floatToElement", "Node?"),
@@ -1052,7 +1053,9 @@ const DOCS: &[(&str, Mirror, Doc)] = &[
     "LookupMeaning",
     Mirror("LookupMeaning", "LookupMeaning!"),
     Doc::Rust(
-      "What a token means right now: its definition, or itself.",
+      "What a token means right now: its definition (a `Definition` handle, for `AssignMeaning`) or a Token, `()` \
+       when undefined; in a string, Perl's `ToString` (the CS and its parameters). **Deprecated** (Warns once per \
+       binding load): compared with a string, as the string it returned before.",
       "latexml_core::state::lookup_meaning",
     ),
   ),
@@ -2496,6 +2499,62 @@ const HANDLE_DOCS: &[(&str, &str, Mirror, Doc)] = &[
       "The box's `ToString` (what a string context shows).",
       "latexml_core::digested::Digested",
     ),
+  ),
+  (
+    "Definition",
+    "to_string",
+    Mirror("ToString($definition)", ""),
+    Doc::Note(
+      "Perl's `ToString` of a definition (Definition.pm:116): the CS, then its parameters after a space.",
+    ),
+  ),
+  (
+    "Definition",
+    "to_debug",
+    Mirror("", ""),
+    Doc::Note("As `to_string`: how an array shows the value (`ToString([…])`, `${[…]}`)."),
+  ),
+  (
+    "Digested",
+    "to_debug",
+    Mirror("", ""),
+    Doc::Note("As `to_string`: how an array shows the value (`ToString([…])`, `${[…]}`)."),
+  ),
+  (
+    "Dimension",
+    "to_debug",
+    Mirror("", ""),
+    Doc::Note("As `to_string`: how an array shows the value (`ToString([…])`, `${[…]}`)."),
+  ),
+  (
+    "Glue",
+    "to_debug",
+    Mirror("", ""),
+    Doc::Note("As `to_string`: how an array shows the value (`ToString([…])`, `${[…]}`)."),
+  ),
+  (
+    "MuGlue",
+    "to_debug",
+    Mirror("", ""),
+    Doc::Note("As `to_string`: how an array shows the value (`ToString([…])`, `${[…]}`)."),
+  ),
+  (
+    "Number",
+    "to_debug",
+    Mirror("", ""),
+    Doc::Note("As `to_string`: how an array shows the value (`ToString([…])`, `${[…]}`)."),
+  ),
+  (
+    "Token",
+    "to_debug",
+    Mirror("", ""),
+    Doc::Note("As `to_string`: how an array shows the value (`ToString([…])`, `${[…]}`)."),
+  ),
+  (
+    "Tokens",
+    "to_debug",
+    Mirror("", ""),
+    Doc::Note("As `to_string`: how an array shows the value (`ToString([…])`, `${[…]}`)."),
   ),
   (
     "KeyVals",

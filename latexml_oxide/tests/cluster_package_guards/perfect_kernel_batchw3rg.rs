@@ -221,3 +221,52 @@ fn rhai_perl_i_forms_and_accessors() {
     assert_element(&xml, "para", &[&format!("xml:id=\"{id}\"")], para);
   }
 }
+
+/// W3RH part 2, the REDs `rhai-bindings/lookupmeaning_is_a_string`, `tostring_array_of_handles` and
+/// `lookupstring_of_tokens` (red on 17a64c0415a: `N`, Rust type paths with 3 Errors, `Stored::Tokens[…]`).
+/// `LookupMeaning` is the definition or Token (`()` undefined, `== ""` Warned, ruling 9); a `Definition` prints as
+/// Perl's `ToString` (`\foo []` here, as Perl; `\` as `!` to keep the row literal); an array prints each handle as TeX.
+const LXV: &str = r#"fn bang(s) { s.replace("\\", "!"); s }
+DefMacro("\\foo{}[]", "F");
+DefPrimitive("\\lxlm", || AssignMeaning(T_CS("\\lxr"), LookupMeaning("\\relax")));
+DefPrimitive("\\keep{}", |stomach, v| { AssignValue("lx:k", v, "global"); AssignValue("lx:t", T_LETTER("t"), "global"); });
+DefMacro("\\rows", || {
+  let r = [];
+  r.push(bang(ToString(LookupDefinition("\\foo"))));
+  r.push(bang(ToString(LookupMeaning("\\foo"))));
+  r.push(if defined(LookupMeaning("\\nosuch")) { "D" } else { "U" });
+  r.push(ToString(LookupMeaning(T_LETTER("q"))));
+  r.push(type_of(LookupMeaning("\\foo")));
+  r.push(if LookupMeaning("\\nosuch") == "" { "E" } else { "N" });
+  r.push(LookupString("lx:k") + LookupString("lx:t"));
+  r.push(ToString([Number(3), Dimension("1pt"), T_LETTER("a"), Tokenize("bc"), Glue("1pt plus 1fil")]));
+  r.push(`${[T_LETTER("z"), Dimension("2pt")]}`);
+  r.reduce(|s, v| if s == "" { `${v}` } else { s + " ; " + v }, "")
+});
+"#;
+
+const LXV_TEX: &str = r"\documentclass{article}
+\usepackage{lxv}
+\begin{document}
+\lxlm\ifx\lxr\relax R\else N\fi
+
+\keep{k}\rows
+\end{document}
+";
+
+#[test]
+fn rhai_values_print_as_perl() {
+  let (log, xml) = convert_files_with(LXV_TEX, &[("lxv.sty.rhai", LXV)], None);
+  assert_eq!(error_count(&log), 0, "{log}");
+  assert_eq!(warning_count(&log), 1, "{log}");
+  assert!(log.contains("Warning:deprecated:() == string"), "{log}");
+  for (id, para) in [
+    ("p1", r#"<para xml:id="p1"><p>R</p></para>"#),
+    (
+      "p2",
+      r#"<para xml:id="p2"><p>!foo [] ; !foo [] ; U ; q ; Definition ; E ; kt ; [3, 1.0pt, a, bc, 1.0pt plus 1.0fil] ; [z, 2.0pt]</p></para>"#,
+    ),
+  ] {
+    assert_element(&xml, "para", &[&format!("xml:id=\"{id}\"")], para);
+  }
+}

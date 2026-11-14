@@ -5,10 +5,10 @@
 %   binding lxts.sty.rhai, lxts.sty for pdflatex)
 % oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "[3, 1.0pt, a]"
 % engines: W3 (fix/rhai-batch1 round H): [latexml_core::common::number::Number, latexml_core::common::dimension::Dimension, latexml_core::token::Token] with 3 Errors
-%   (unexpected:_ Script _ can only appear in math mode); Perl: ToString of an arrayref is "ARRAY(0x…)", no analogue
+%   (unexpected:_ Script _ can only appear in math mode); Perl: ToString of an arrayref is "ARRAY(0x…)", no analogue;
+%   RHAIH (Rhai round H): "[3, 1.0pt, a]", 0 errors
 % expect:  each handle printed as its TeX string (a to_debug per handle type): "[3, 1.0pt, a]", 0 errors
-% status:  RED (W3 fix/rhai-batch1 round H)
-% moves:   post-merge
+% status:  GREEN (RHAIH; guard perfect_kernel_batchw3rg::rhai_values_print_as_perl)
 \documentclass{article}
 \usepackage{lxts}
 \begin{document}

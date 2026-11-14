@@ -39,12 +39,12 @@ sets each call beside its Perl spelling and its compile-time macro.
 
 Called at the top level of a binding file, or from inside any body.
 
-226 functions, 546 calls.
+226 functions, 550 calls.
 
 | call | documentation |
 |---|---|
 | `!(?) -> bool` | Perl's truthiness, for `!!v` (`if ($v)`) and `!v` (`unless ($v)`): `()`, `""`, `"0"`, `0` and `0.0` are false, a bool is itself, every Token, Tokens (even empty), box, whatsit, array and map is true (Perl's objects overload no bool). |
-| `!=((), string) -> bool`<br>`!=(Digested, string) -> bool`<br>`!=(Dimension, Dimension) -> bool`<br>`!=(Dimension, string) -> bool`<br>`!=(Glue, Glue) -> bool`<br>`!=(Glue, string) -> bool`<br>`!=(MuGlue, MuGlue) -> bool`<br>`!=(MuGlue, string) -> bool`<br>`!=(Number, Number) -> bool`<br>`!=(Number, float) -> bool`<br>`!=(Number, int) -> bool`<br>`!=(Number, string) -> bool`<br>`!=(Token, string) -> bool`<br>`!=(Tokens, string) -> bool`<br>`!=(float, Number) -> bool`<br>`!=(int, Number) -> bool`<br>`!=(string, ()) -> bool`<br>`!=(string, Digested) -> bool`<br>`!=(string, Dimension) -> bool`<br>`!=(string, Glue) -> bool`<br>`!=(string, MuGlue) -> bool`<br>`!=(string, Number) -> bool`<br>`!=(string, Token) -> bool`<br>`!=(string, Tokens) -> bool` | **Deprecated** (Warns once per binding load): a Tokens, Token, box or value handle against a string compares its string form (use `ToString(v) != s`); `()` against a string, either way round, is `""`, as Perl's `undef ne ''` (use `defined(v)` or `!!v`). |
+| `!=((), string) -> bool`<br>`!=(Definition, string) -> bool`<br>`!=(Digested, string) -> bool`<br>`!=(Dimension, Dimension) -> bool`<br>`!=(Dimension, string) -> bool`<br>`!=(Glue, Glue) -> bool`<br>`!=(Glue, string) -> bool`<br>`!=(MuGlue, MuGlue) -> bool`<br>`!=(MuGlue, string) -> bool`<br>`!=(Number, Number) -> bool`<br>`!=(Number, float) -> bool`<br>`!=(Number, int) -> bool`<br>`!=(Number, string) -> bool`<br>`!=(Token, string) -> bool`<br>`!=(Tokens, string) -> bool`<br>`!=(float, Number) -> bool`<br>`!=(int, Number) -> bool`<br>`!=(string, ()) -> bool`<br>`!=(string, Definition) -> bool`<br>`!=(string, Digested) -> bool`<br>`!=(string, Dimension) -> bool`<br>`!=(string, Glue) -> bool`<br>`!=(string, MuGlue) -> bool`<br>`!=(string, Number) -> bool`<br>`!=(string, Token) -> bool`<br>`!=(string, Tokens) -> bool` | **Deprecated** (Warns once per binding load): a Tokens, Token, box or value handle against a string compares its string form (use `ToString(v) != s`); `()` against a string, either way round, is `""`, as Perl's `undef ne ''` (use `defined(v)` or `!!v`). |
 | `%(Number, float) -> float`<br>`%(Number, int) -> int`<br>`%(float, Number) -> float`<br>`%(int, Number) -> int` | **Deprecated** (Warns once per binding load): a Number with an int (or, for `%` and `**`, a float), either way round, as the int it was before `CounterValue` returned a Number (use `n.valueOf()`); Perl's Number has no such operator. |
 | `&(Number, int) -> int`<br>`&(int, Number) -> int` | **Deprecated** (Warns once per binding load): a Number with an int (or, for `%` and `**`, a float), either way round, as the int it was before `CounterValue` returned a Number (use `n.valueOf()`); Perl's Number has no such operator. |
 | `*(Dimension, Number) -> Dimension`<br>`*(Dimension, float) -> Dimension`<br>`*(Dimension, int) -> Dimension`<br>`*(Glue, Number) -> Glue`<br>`*(Glue, float) -> Glue`<br>`*(Glue, int) -> Glue`<br>`*(MuGlue, Number) -> MuGlue`<br>`*(MuGlue, float) -> MuGlue`<br>`*(MuGlue, int) -> MuGlue`<br>`*(Number, Number) -> Number`<br>`*(Number, float) -> float`<br>`*(Number, int) -> Number`<br>`*(float, Number) -> float`<br>`*(int, Number) -> int` | A Number, Dimension, Glue or MuGlue times an int, a float or a Number (Number.pm `multiply`, truncated; Glue scales its stretch and shrink). **Deprecated** (Warns once per binding load): a Number times a float, or an int or float times a Number, is the int it was before `CounterValue` returned a Number (`n * 1.5` is `4.5`; `n.multiply(1.5)` is `4`). |
@@ -55,7 +55,7 @@ Called at the top level of a binding file, or from inside any body.
 | `<(Dimension, Dimension) -> bool`<br>`<(Glue, Glue) -> bool`<br>`<(MuGlue, MuGlue) -> bool`<br>`<(Number, Number) -> bool`<br>`<(Number, float) -> bool`<br>`<(Number, int) -> bool`<br>`<(float, Number) -> bool`<br>`<(int, Number) -> bool` | Compares two value handles of one type by `valueOf`. |
 | `<<(Number, int) -> int`<br>`<<(int, Number) -> int` | **Deprecated** (Warns once per binding load): a Number with an int (or, for `%` and `**`, a float), either way round, as the int it was before `CounterValue` returned a Number (use `n.valueOf()`); Perl's Number has no such operator. |
 | `<=(Dimension, Dimension) -> bool`<br>`<=(Glue, Glue) -> bool`<br>`<=(MuGlue, MuGlue) -> bool`<br>`<=(Number, Number) -> bool`<br>`<=(Number, float) -> bool`<br>`<=(Number, int) -> bool`<br>`<=(float, Number) -> bool`<br>`<=(int, Number) -> bool` | Compares two value handles of one type by `valueOf`. |
-| `==((), string) -> bool`<br>`==(Digested, string) -> bool`<br>`==(Dimension, Dimension) -> bool`<br>`==(Dimension, string) -> bool`<br>`==(Glue, Glue) -> bool`<br>`==(Glue, string) -> bool`<br>`==(MuGlue, MuGlue) -> bool`<br>`==(MuGlue, string) -> bool`<br>`==(Number, Number) -> bool`<br>`==(Number, float) -> bool`<br>`==(Number, int) -> bool`<br>`==(Number, string) -> bool`<br>`==(Token, string) -> bool`<br>`==(Tokens, string) -> bool`<br>`==(float, Number) -> bool`<br>`==(int, Number) -> bool`<br>`==(string, ()) -> bool`<br>`==(string, Digested) -> bool`<br>`==(string, Dimension) -> bool`<br>`==(string, Glue) -> bool`<br>`==(string, MuGlue) -> bool`<br>`==(string, Number) -> bool`<br>`==(string, Token) -> bool`<br>`==(string, Tokens) -> bool` | **Deprecated** (Warns once per binding load): a Tokens, Token, box or value handle against a string compares its string form (use `ToString(v) == s`); `()` against a string, either way round, is `""`, as Perl's `undef eq ''` (use `defined(v)` or `!v`). Rhai's `switch` does not use this rule: it matches by value and type, so a `"" =>` case never matches `()` — test `if defined(v)` or `!v` instead. |
+| `==((), string) -> bool`<br>`==(Definition, string) -> bool`<br>`==(Digested, string) -> bool`<br>`==(Dimension, Dimension) -> bool`<br>`==(Dimension, string) -> bool`<br>`==(Glue, Glue) -> bool`<br>`==(Glue, string) -> bool`<br>`==(MuGlue, MuGlue) -> bool`<br>`==(MuGlue, string) -> bool`<br>`==(Number, Number) -> bool`<br>`==(Number, float) -> bool`<br>`==(Number, int) -> bool`<br>`==(Number, string) -> bool`<br>`==(Token, string) -> bool`<br>`==(Tokens, string) -> bool`<br>`==(float, Number) -> bool`<br>`==(int, Number) -> bool`<br>`==(string, ()) -> bool`<br>`==(string, Definition) -> bool`<br>`==(string, Digested) -> bool`<br>`==(string, Dimension) -> bool`<br>`==(string, Glue) -> bool`<br>`==(string, MuGlue) -> bool`<br>`==(string, Number) -> bool`<br>`==(string, Token) -> bool`<br>`==(string, Tokens) -> bool` | **Deprecated** (Warns once per binding load): a Tokens, Token, box or value handle against a string compares its string form (use `ToString(v) == s`); `()` against a string, either way round, is `""`, as Perl's `undef eq ''` (use `defined(v)` or `!v`). Rhai's `switch` does not use this rule: it matches by value and type, so a `"" =>` case never matches `()` — test `if defined(v)` or `!v` instead. |
 | `>(Dimension, Dimension) -> bool`<br>`>(Glue, Glue) -> bool`<br>`>(MuGlue, MuGlue) -> bool`<br>`>(Number, Number) -> bool`<br>`>(Number, float) -> bool`<br>`>(Number, int) -> bool`<br>`>(float, Number) -> bool`<br>`>(int, Number) -> bool` | Compares two value handles of one type by `valueOf`. |
 | `>=(Dimension, Dimension) -> bool`<br>`>=(Glue, Glue) -> bool`<br>`>=(MuGlue, MuGlue) -> bool`<br>`>=(Number, Number) -> bool`<br>`>=(Number, float) -> bool`<br>`>=(Number, int) -> bool`<br>`>=(float, Number) -> bool`<br>`>=(int, Number) -> bool` | Compares two value handles of one type by `valueOf`. |
 | `>>(Number, int) -> int`<br>`>>(int, Number) -> int` | **Deprecated** (Warns once per binding load): a Number with an int (or, for `%` and `**`, a float), either way round, as the int it was before `CounterValue` returned a Number (use `n.valueOf()`); Perl's Number has no such operator. |
@@ -163,7 +163,7 @@ Called at the top level of a binding file, or from inside any body.
 | `LookupMapping(string, string) -> ?` | Read one key out of a named mapping, with the type it was stored as; `()` when absent. ([`lookup_mapping`](latexml_core::state::lookup_mapping)) |
 | `LookupMappingKeys(string) -> array` | The keys of a named mapping, sorted. ([`with_mapping_keys`](latexml_core::state::with_mapping_keys)) |
 | `LookupMathcode(string) -> ?` | A character's math code; `()` when the table holds none. ([`lookup_mathcode`](latexml_core::state::lookup_mathcode)) |
-| `LookupMeaning(string\|Token) -> string` | What a token means right now: its definition, or itself. ([`lookup_meaning`](latexml_core::state::lookup_meaning)) |
+| `LookupMeaning(string\|Token) -> Definition\|Token?` | What a token means right now: its definition (a `Definition` handle, for `AssignMeaning`) or a Token, `()` when undefined; in a string, Perl's `ToString` (the CS and its parameters). **Deprecated** (Warns once per binding load): compared with a string, as the string it returned before. ([`lookup_meaning`](latexml_core::state::lookup_meaning)) |
 | `LookupNumber(string) -> int` | Read a value as a number. ([`lookup_number`](latexml_core::state::lookup_number)) |
 | `LookupRegister(string\|Token) -> ?`<br>`LookupRegister(string\|Token, array) -> ?` | Perl's `LookupRegister(cs[, params])`: the register's typed value (Number, Dimension, Glue, MuGlue, Tokens); `()` with a Warning when `cs` is no register, undefined included. ([`lookup_register_definition`](latexml_core::state::lookup_register_definition)) |
 | `LookupRegisterOrDefault(string\|Token) -> ?` | A register's typed value (as `LookupRegister`), a Number 0 when `cs` is no register, without a Warning. |
@@ -353,7 +353,7 @@ The whatsit a hook receives positionally, as Perl passes `$whatsit` (Whatsit.pm)
 
 An already-installed definition, for pushing hooks onto it.
 
-10 functions, 10 calls.
+12 functions, 12 calls.
 
 | call | documentation |
 |---|---|
@@ -362,6 +362,8 @@ An already-installed definition, for pushing hooks onto it.
 | `pushAfterDigestBody(Fn)` | Append a hook to that definition's `afterDigestBody` list. |
 | `pushBeforeConstruct(Fn)` | Append a hook to that definition's `beforeConstruct` list. |
 | `pushBeforeDigest(Fn)` | Append a hook to that definition's `beforeDigest` list. |
+| `to_debug() -> string` | As `to_string`: how an array shows the value (`ToString([…])`, `${[…]}`). |
+| `to_string() -> string` | Perl's `ToString` of a definition (Definition.pm:116): the CS, then its parameters after a space. |
 | `unshiftAfterConstruct(Fn)` | Prepend a hook to that definition's `afterConstruct` list. |
 | `unshiftAfterDigest(Fn)` | Prepend a hook to that definition's `afterDigest` list. |
 | `unshiftAfterDigestBody(Fn)` | Prepend a hook to that definition's `afterDigestBody` list. |
@@ -411,44 +413,48 @@ Perl's Common/Font.pm getters, on the font a `DefLigature` `fontTest` closure re
 
 A Number value handle (Common/Number.pm); its shared arithmetic is under Global functions.
 
-2 functions, 2 calls.
+3 functions, 3 calls.
 
 | call | documentation |
 |---|---|
 | `toString() -> string` | Perl's `toString`: the value as TeX prints it (`\the`), `1.0pt plus 2.0pt`. |
+| `to_debug() -> string` | As `to_string`: how an array shows the value (`ToString([…])`, `${[…]}`). |
 | `to_string() -> string` | The value as TeX prints it (`toString`, `\the`): `1.0pt plus 2.0pt`. |
 
 ## `Dimension` methods
 
 A Dimension value handle (Common/Dimension.pm); its shared arithmetic is under Global functions.
 
-2 functions, 2 calls.
+3 functions, 3 calls.
 
 | call | documentation |
 |---|---|
 | `toString() -> string` | Perl's `toString`: the value as TeX prints it (`\the`), `1.0pt plus 2.0pt`. |
+| `to_debug() -> string` | As `to_string`: how an array shows the value (`ToString([…])`, `${[…]}`). |
 | `to_string() -> string` | The value as TeX prints it (`toString`, `\the`): `1.0pt plus 2.0pt`. |
 
 ## `Glue` methods
 
 A Glue value handle (Common/Glue.pm); its shared arithmetic is under Global functions.
 
-2 functions, 2 calls.
+3 functions, 3 calls.
 
 | call | documentation |
 |---|---|
 | `toString() -> string` | Perl's `toString`: the value as TeX prints it (`\the`), `1.0pt plus 2.0pt`. |
+| `to_debug() -> string` | As `to_string`: how an array shows the value (`ToString([…])`, `${[…]}`). |
 | `to_string() -> string` | The value as TeX prints it (`toString`, `\the`): `1.0pt plus 2.0pt`. |
 
 ## `MuGlue` methods
 
 A MuGlue value handle (Core/MuGlue.pm); its shared arithmetic is under Global functions.
 
-2 functions, 2 calls.
+3 functions, 3 calls.
 
 | call | documentation |
 |---|---|
 | `toString() -> string` | Perl's `toString`: the value as TeX prints it (`\the`), `1.0pt plus 2.0pt`. |
+| `to_debug() -> string` | As `to_string`: how an array shows the value (`ToString([…])`, `${[…]}`). |
 | `to_string() -> string` | The value as TeX prints it (`toString`, `\the`): `1.0pt plus 2.0pt`. |
 
 ## `Command` methods

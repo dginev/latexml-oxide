@@ -249,6 +249,16 @@
     provide-only binding load declines it. Guards `script_bindings::tests::let_takes_a_scope`,
     `script_bindings::tests::let_takes_any_token`.
 
+  - **Rhai values print as their TeX** (Rhai round H). **BREAKING:** `LookupMeaning` returns the meaning, as Perl's
+    and `LookupMeaning!` — a `Definition` handle (which `AssignMeaning` installs) or a Token, `()` when undefined —
+    where it returned the printed string `Stored[??]`; a string comparison keeps working this release with a
+    deprecation Warning. `ToString` of a `Definition` is Perl's (the CS and its parameters, was `DefinitionProxy`),
+    `ToString` of an array, and an array in a string, print each Token, Tokens, box and value handle as its TeX (were
+    Rust type paths, with math Errors), and `LookupString` (the core `lookup_string` behind `LookupString!`) of a
+    stored Token or Tokens is its text (was the Rust Debug form). Guard
+    `perfect_kernel_batchw3rg::rhai_values_print_as_perl`; repros `rhai-bindings/lookupmeaning_is_a_string`,
+    `tostring_array_of_handles`, `lookupstring_of_tokens` turn green.
+
   - **The Perl binding names Rhai lacked** (Rhai round H, AUDNAME). `DefMacroI`, `DefPrimitiveI` and
     `DefConstructorI` take Perl's I-form arguments (a `Token` or a name read as `coerceCS`, a parameter spec or `()`,
     each body kind, the option map) and lower to the core calls their prototype forms make; `IfCondition`, `Box`,

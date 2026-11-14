@@ -296,6 +296,8 @@ newcomer guide is [`docs/parity/RHAI_BINDINGS_GUIDE.md`](../../../docs/parity/RH
 | `push(@{$$defn{afterDigestBody}}, …)` |  | `definition.pushAfterDigestBody` |
 | `push(@{$$defn{beforeConstruct}}, …)` |  | `definition.pushBeforeConstruct` |
 | `push(@{$$defn{beforeDigest}}, …)` |  | `definition.pushBeforeDigest` |
+|  |  | `definition.to_debug` |
+| `ToString($definition)` |  | `definition.to_string` |
 | `unshift(@{$$defn{afterConstruct}}, …)` |  | `definition.unshiftAfterConstruct` |
 | `unshift(@{$$defn{afterDigest}}, …)` |  | `definition.unshiftAfterDigest` |
 | `unshift(@{$$defn{afterDigestBody}}, …)` |  | `definition.unshiftAfterDigestBody` |
@@ -314,12 +316,16 @@ newcomer guide is [`docs/parity/RHAI_BINDINGS_GUIDE.md`](../../../docs/parity/RH
 | `$font->getShape` |  | `font.getShape` |
 | `$font->getSize` |  | `font.getSize` |
 | `$v->toString` |  | `number.toString` |
+|  |  | `number.to_debug` |
 | `$v->toString` |  | `number.to_string` |
 | `$v->toString` |  | `dimension.toString` |
+|  |  | `dimension.to_debug` |
 | `$v->toString` |  | `dimension.to_string` |
 | `$v->toString` |  | `glue.toString` |
+|  |  | `glue.to_debug` |
 | `$v->toString` |  | `glue.to_string` |
 | `$v->toString` |  | `muglue.toString` |
+|  |  | `muglue.to_debug` |
 | `$v->toString` |  | `muglue.to_string` |
 |  |  | `command.arg` |
 |  |  | `command.args` |
@@ -380,7 +386,7 @@ newcomer guide is [`docs/parity/RHAI_BINDINGS_GUIDE.md`](../../../docs/parity/RH
 
 ## Rhai calls with no Perl counterpart (an empty Perl cell)
 
-18 calls: `AppendSearchPath`, `Command`, `DeclareFontMapMultichar`, `LookupRegisterOrDefault`, `ParseXML`, `PrependSearchPath`, `ProcessKeyOptions`, `Today`, `neutralize_font`, `document.absorbProperty`, `document.generateID`, `document.insertXML`, `node.setContent`, `command.arg`, `command.args`, `command.current_dir`, `command.env`, `command.output`.
+23 calls: `AppendSearchPath`, `Command`, `DeclareFontMapMultichar`, `LookupRegisterOrDefault`, `ParseXML`, `PrependSearchPath`, `ProcessKeyOptions`, `Today`, `neutralize_font`, `document.absorbProperty`, `document.generateID`, `document.insertXML`, `node.setContent`, `definition.to_debug`, `number.to_debug`, `dimension.to_debug`, `glue.to_debug`, `muglue.to_debug`, `command.arg`, `command.args`, `command.current_dir`, `command.env`, `command.output`.
 
 ## Perl functions with no macro (compiled bindings call the Rust function named)
 

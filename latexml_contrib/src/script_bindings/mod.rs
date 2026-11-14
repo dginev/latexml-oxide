@@ -872,6 +872,35 @@ fn definition_cs(v: &Stored) -> Option<Token> {
   })
 }
 
+/// Perl's `ToString($definition)` (Definition.pm:116): the CS, then its parameters after a space.
+fn definition_string(d: &DefinitionProxy) -> String {
+  use latexml_core::{common::object::Object, definition::Definition};
+  let params = match &d.meaning {
+    Stored::Expandable(x) => x.get_parameters().map(Object::stringify),
+    Stored::Conditional(x) => x.get_parameters().map(Object::stringify),
+    Stored::Primitive(x) => x.get_parameters().map(Object::stringify),
+    Stored::MathPrimitive(x) => x.get_parameters().map(Object::stringify),
+    Stored::Constructor(x) => x.get_parameters().map(Object::stringify),
+    Stored::Register(x) => x.get_parameters().map(Object::stringify),
+    _ => None,
+  };
+  match params {
+    Some(p) => format!("{} {p}", d.cs),
+    None => d.cs.to_string(),
+  }
+}
+
+/// An array element as Rhai's array display gives it (`to_debug`): a string quoted, a handle its TeX string.
+fn element_string(d: Dynamic) -> String {
+  if d.is_string() {
+    format!("{:?}", d.into_string().unwrap_or_default())
+  } else if d.is_unit() {
+    "()".to_string()
+  } else {
+    dynamic_to_string(d)
+  }
+}
+
 /// Marshal a Rhai value INTO a `Stored` (Perl's value table is untyped, Package.pm AssignValue :261,
 /// AssignMapping :287, PushValue): string, int, float, bool, `Token`, `Tokens`, a value handle (Number, Dimension,
 /// Glue, MuGlue) and a digested handle keep their type, an array is a list and a map a hash of such (Perl's arrayref/hashref), `()` is `None` (undef); anything
@@ -955,6 +984,15 @@ fn dynamic_to_string(d: Dynamic) -> String {
   } else if d.is::<WhatsitProxy>() {
     // (`to_string`, `ToString` and `absorbString` raise its error; see `whatsit_string`)
     whatsit_string().unwrap_or_default()
+  } else if let Some(def) = d.clone().try_cast::<DefinitionProxy>() {
+    definition_string(&def)
+  } else if d.is_array() {
+    let items: Vec<String> = d
+      .cast::<rhai::Array>()
+      .into_iter()
+      .map(element_string)
+      .collect();
+    format!("[{}]", items.join(", "))
   } else {
     d.to_string()
   }

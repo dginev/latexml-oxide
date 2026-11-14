@@ -219,7 +219,7 @@ fn let_takes_any_token() {
       Let(T_ACTIVE("="), T_ACTIVE("~"));
       AssignValue("lt:assign", UnTeX(Expand(Tokens([T_ACTIVE("="), T_OTHER("x"), T_CS("\\ltfoo")]))), "global");
       AssignValue("lt:tokens1", UnTeX(Expand(Tokens(T_CS("\\ltfoo")))), "global");
-      AssignValue("lt:meaning", LookupMeaning(T_OTHER("a")), "global");
+      AssignValue("lt:meaning", ToString(LookupMeaning(T_OTHER("a"))), "global");
       AssignValue("lt:def", if LookupDefinition(T_ACTIVE("~")) == () { "none" } else { "some" }, "global");
       AssignValue("lt:digest", ToString(Digest(T_CS("\\ltfoo"))), "global");
     "##,

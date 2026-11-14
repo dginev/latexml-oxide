@@ -526,6 +526,7 @@ where T:
   engine.register_fn("valueOf", |v: T| v.value_of());
   engine.register_fn("toString", |v: &mut T| v.to_string());
   engine.register_fn("to_string", |v: &mut T| v.to_string());
+  engine.register_fn("to_debug", |v: &mut T| v.to_string());
   engine.register_fn("toAttribute", |v: T| v.to_attribute());
   engine.register_fn("negate", |v: T| v.negate());
   engine.register_fn("-", |v: T| v.negate());
