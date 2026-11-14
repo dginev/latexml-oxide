@@ -356,7 +356,7 @@ Rules that keep this file honest and mergeable:
     `Requirements::golden_variant` picks `unit_tests_by_silviu.pgf-r79866.xml` and `ac-drive-components.circuitikz-1.8.6.xml` by the installed file.
   - WIN1i (found on the way): the latex-lab block binding reads the installed `latex-lab-testphase-block.sty` (TL 2025 and the November block
     code, keytheorems' `thmstyle`); amsthm's `\theoremstyle` expands its argument (KNOWN_PERL_ERRORS #1243).
-  - Review fix (WIN1F): a file read as a token list (`\everyeof` set, `\file_get:nnN`) is never answered by a binding (OD #1020); the
+  - Review fix (WIN1F): a file read as a token list (`\everyeof` set, `\file_get:nnN`) is never answered by a binding (OD #1029); the
     glyphtounicode binding is back for ordinary `\input`.
 - **Post-merge rows found on the way (each with a `_red.tex` where named):** `\pdftexrevision` is Perl's 19 (pdfTeX 1.40.19) where TL 2025 runs
   1.40.28, so latex.ltx takes the `\everyjob` glyphtounicode branch (needs a full A/B); an undefined `\if…` recovery swallows the rest
