@@ -24,6 +24,11 @@ fn macro_rows() -> Result<Vec<String>> {
   vertical();
   latexml_engine::Digest!(Tokens::new(vec![T_LETTER!("A")]))?;
   rows.push(format!("Digest! mode={}", mode()));
+  // ... and only that: digestion that starts in a paragraph stays in it (`$mode ne $nmode`, Package.pm:400).
+  vertical();
+  assign_value("MODE", Stored::String(pin("horizontal")), None);
+  latexml_engine::Digest!(Tokens::new(vec![T_LETTER!("A")]))?;
+  rows.push(format!("Digest! from horizontal mode={}", mode()));
   // Row 8, Package.pm:996: `RawTeX` ends with `leaveHorizontal_internal`.
   vertical();
   raw_tex("A")?;
@@ -86,6 +91,7 @@ fn binding_macros_mean_what_perls_names_mean() {
   assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
   assert_eq!(rows, [
     "Digest! mode=vertical",
+    "Digest! from horizontal mode=horizontal",
     "RawTeX! mode=vertical",
     "AssignRegister! local reverted=true global=2",
     "LookupRegister! Number(0)",
@@ -106,19 +112,36 @@ fn binding_macros_mean_what_perls_names_mean() {
   ]);
 }
 
-/// Row 3, Package.pm:2534-2549: `\g@addto@macro` on an undefined cs defines it with the addition, as latex.ltx does
-/// after TeX's error (pdflatex 1 `!`, "AXYB"), with a Warning (OXIDIZED_DESIGN #1036); the preamble `\AtEndOfPackage`,
-/// whose hook `\csname` makes, raises nothing.
+/// Row 3, Package.pm:2534-2549: `\g@addto@macro` on an undefined cs is TeX's Error (pdflatex 1 `!`) and defines it with
+/// the addition, as latex.ltx does after it ("AXYB"; OXIDIZED_DESIGN #1036); the preamble `\AtEndOfPackage`, whose hook
+/// `\csname` makes, raises nothing.
 #[test]
-fn add_to_macro_on_an_undefined_cs_warns() {
+fn add_to_macro_on_an_undefined_cs_errs() {
   let tex = include_str!(
     "../../../tools/perfect_kernel/repros/macro-state/g_addto_macro_undefined_defines.tex"
   );
   let (log, xml) = convert_files(tex, &[]);
-  assert_eq!((error_count(&log), warning_count(&log)), (0, 1), "{log}");
+  assert_eq!((error_count(&log), warning_count(&log)), (1, 0), "{log}");
   assert!(
-    log.contains("Warning:undefined:\\nohook \\nohook is not defined"),
+    log.contains("Error:undefined:\\nohook \\nohook is not defined"),
     "{log}"
   );
   assert!(xml.contains("<p>AXYB</p>"), "{xml}");
+}
+
+/// Perl's `\xyoption` (xy.tex.ltxml:32-49) is a macro: an option loaded mid-paragraph leaves the paragraph whole, both
+/// spaces around it kept (pdflatex one paragraph); its feature marks went through `RawTeX`, which ends horizontal mode.
+#[test]
+fn xyoption_mid_paragraph_keeps_the_paragraph() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/package-bindings/xyoption_mid_paragraph_keeps_the_paragraph.tex"
+  );
+  let (log, xml) = convert_files(tex, &[]);
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  assert!(xml.contains(">Middle  end of paragraph.</p>"), "{xml}");
+  assert_eq!(
+    xml.matches("<p ").count() + xml.matches("<p>").count(),
+    1,
+    "{xml}"
+  );
 }

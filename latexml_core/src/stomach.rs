@@ -4189,7 +4189,8 @@ pub fn raw_tex(text: &str) -> Result<()> {
     }
     Ok(())
   })?;
-  // Perl Package.pm:996: material the text started in horizontal mode ends there.
+  // Perl Package.pm:996: RawTeX ends in vertical mode, whatever mode it began in (mid-paragraph too); a caller that
+  // runs inside a paragraph digests through `Digest` instead, which leaves only a horizontal mode it entered.
   leave_horizontal_internal();
   Ok(())
 }

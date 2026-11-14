@@ -3,9 +3,9 @@
 %          \xdef defines \nohook: "AXYB"; Perl: Warning "not an expandable control sequence", the addition dropped,
 %          then Error undefined \nohook: "A<ERROR>B"
 % engines: rust (base fc5211bb491) = "AXYB", 0 E 0 W (the undefined cs defined silently)
-% expect:  "AXYB", 0 E, 1 W (undefined:\nohook, OXIDIZED_DESIGN #1036); the preamble \AtEndOfPackage, whose hook
-%          \csname makes, 0 W
-% status:  RED (fc5211bb491) -> GREEN (MACSYNC)
+% expect:  "AXYB", 1 E (undefined:\nohook, TeX's error, OXIDIZED_DESIGN #1036), 0 W; the preamble \AtEndOfPackage,
+%          whose hook \csname makes, 0 E 0 W
+% status:  RED (fc5211bb491) -> GREEN (MACSYNC; the Error from MACSYNCb, a Warning before)
 \documentclass{article}
 \makeatletter
 \AtEndOfPackage{\def\unused{}}

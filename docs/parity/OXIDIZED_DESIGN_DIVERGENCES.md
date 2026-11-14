@@ -36147,13 +36147,14 @@ current colour. Residual (post-merge): `\hhline`'s `>{…}` colour codes stay sk
 (repros `alignment-bindings/arrayrulecolor_*`), `perfect_kernel_batch69a::arrayrulecolor_reads_to_the_brace`,
 `perfect_kernel_batch60::colortbl_noalign_idiom`, the `alignment/colortbls` golden.
 
-### 1036. `AddToMacro!` on an undefined cs defines it with the addition, with a Warning (MACSYNC)
+### 1036. `AddToMacro!` on an undefined cs is an Error and defines it with the addition (MACSYNC)
 
 **Perl.** `AddToMacro` (Package.pm:2534-2549) Warns ("not an expandable control sequence") and drops the addition when
 the cs is undefined; a later use of the cs is then an undefined-cs Error. **TeX.** latex.ltx:1832 `\g@addto@macro`'s
 `\expandafter` raises "Undefined control sequence", then its `\xdef` defines the cs with the addition (pdflatex
-`\g@addto@macro\nohook{XY}A\nohook B` → 1 `!`, "AXYB"). **Ours.** TeX's outcome, the content kept, with a Warning
-(`undefined:\nohook`) counting TeX's error; before, the cs was defined silently. `\AtEndOfPackage` names its hook with
+`\g@addto@macro\nohook{XY}A\nohook B` → 1 `!`, "AXYB"). **Ours.** TeX's Error (`undefined:\nohook`, as TeX and Perl
+both err) and TeX's outcome, the content kept; before, the cs was defined silently. `\AtEndOfPackage` names its hook with
 `\csname` (latex.ltx:18896), so it makes an empty hook first and raises nothing. A non-expandable cs keeps Perl's Warning and
-is left alone. **Guard**: `perfect_kernel_batchmacsync::add_to_macro_on_an_undefined_cs_warns` (repro
+is left alone (TeX's `\expandafter` leaves a `\relax` cs unexpanded, so its `\xdef` makes a self-referencing macro).
+**Guard**: `perfect_kernel_batchmacsync::add_to_macro_on_an_undefined_cs_errs` (repro
 `macro-state/g_addto_macro_undefined_defines.tex`).
