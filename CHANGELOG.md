@@ -9,6 +9,15 @@
     `\@arrayparboxrestore` do (a `\multicolumn` over such a column and longtable's `p`
     columns alike); Perl sets `\hsize` alone. Guard
     `perfect_kernel_batch60::paragraph_cell_linewidth_is_the_column_width`.
+  - **A prescript wraps its base's post-scripts** (issue 824). `${}^{95}\mathrm{MoO}_4$`
+    and mhchem's `\ce{^{95}MoO4^{2-}}` read the 4 as a pre-subscript (`_ 4 ^ 95 MoO`,
+    `scriptpos="pre2"`): the grammar applied the prescript first and the post-script over
+    it. The post-scripts now bind first and the prescript wraps them, `^ 95 (MoO _ 4)`, as
+    Perl's `preScripted` (MathGrammar:430-439); a prescripted, post-scripted `\log` or
+    `\sin` is applied, `(^ a log _ 2)@(x)` (was `_ 2 ^ a log * x`, or unparsed). The isotope's 6 `\lx@end@inline@math`
+    errors the issue reports no longer occur since batch 50's calc `\widthof` fix. Guards
+    `perfect_kernel_batch50::calc_widthof_in_math_measures_own_box` and
+    `rust_parse_additions_test`; `sampler_test` and `mathtools_test` now match Perl's goldens.
   - **amsmath's arrow fills keep their heads** (issue 824's sibling). `\arrowfill@` and
     `\ext@arrow`'s fill were a plain `\to`, so mhchem's `\ce{A <=> B}` read "→→" and every
     chemarr, extarrows and extpfeil arrow was →. The relation is now the heads amsmath.sty draws
@@ -95,6 +104,13 @@
     that reads it (`\href{\import@path index.tex}{…}`) no longer gets an
     undefined-macro error; a nested `\import` empties it, as import.sty does. Also
     drops a stray space the import commands typeset before the imported file.
+  - **caption's `justification=` and `skip=` reach the caption (#787).** A
+    `\captionsetup{justification=raggedright}` (or `centering`, `raggedleft`,
+    `justified`, and ragged2e's `RaggedRight` &c.) is the `<caption>`'s `text-align`
+    (`cssstyle`), in place of the class a `\centering` in its float gives it, and
+    `skip=`, `aboveskip=`, `belowskip=` its margins on the sides caption puts them,
+    `position=auto` read as caption reads it; `\captionsetup[longtable]{…}`
+    applies to longtable captions. Perl ignores both.
   - **`post::PostOptions::nodefaultresources` is now `default_resources`, with the
     meaning inverted.** The double negative (`nodefaultresources: false`) is gone.
     The positive name is Perl's option name (`Config.pm:120` `defaultresources!`),
