@@ -249,11 +249,31 @@ fn select_kpaths() -> Option<Kpaths> {
       None => true,
       Some(root) => kpse
         .find_file("latex.ltx")
-        .is_none_or(|p| p.starts_with(root)),
+        .is_none_or(|p| path_is_under(&p, root)),
     },
   );
   let _ = BACKEND.set((backend, why));
   kpse
+}
+
+/// Whether `path` lies under the directory `root`, as the file system compares names: on Windows without regard to
+/// letter case or `\` vs `/`. kpsewhich there names the root `C:/texlive/2026` (SELFAUTOPARENT) while the linked
+/// library resolves `c:/texlive/2026/texmf-dist/…/latex.ltx`, so a plain prefix test called the one tree two, and every
+/// conversion fell back to the subprocess backend (~270 ms a lookup, `docs/performance/WINDOWS_PERFORMANCE.md`).
+#[cfg(feature = "kpathsea")]
+fn path_is_under(path: &str, root: &str) -> bool {
+  let fold = |s: &str| {
+    if cfg!(windows) {
+      s.replace('\\', "/").to_ascii_lowercase()
+    } else {
+      s.to_string()
+    }
+  };
+  let (path, root) = (fold(path), fold(root));
+  let root = root.trim_end_matches('/');
+  path
+    .strip_prefix(root)
+    .is_some_and(|rest| rest.is_empty() || rest.starts_with('/'))
 }
 
 /// The ambient `kpsewhich -var-value=SELFAUTOPARENT`, memoized, validated to
@@ -526,6 +546,37 @@ pub fn url_split(url: &str) -> (&str, &str) {
   } else {
     (url, "index.tex") // Well, what other default makes sense?
   }
+}
+
+/// The verbatim prefix Windows' `canonicalize` puts before a path (`\\?\C:\…`), and its forward-slash spelling once the
+/// separators are normalised (`//?/C:/…`). A path prefix, not a TeX token: the kernel token-spelling pin counts it here, once.
+pub const WINDOWS_VERBATIM_PREFIXES: [&str; 2] = [r"\\?\", "//?/"];
+
+/// `path` without a leading Windows verbatim prefix (either spelling), for display.
+pub fn strip_windows_verbatim_prefix(path: &str) -> &str {
+  WINDOWS_VERBATIM_PREFIXES
+    .iter()
+    .find_map(|prefix| path.strip_prefix(prefix))
+    .unwrap_or(path)
+}
+
+/// `std::fs::canonicalize` as a path the rest of the system can read: on Windows std returns the verbatim form
+/// (`\\?\C:\dir\f.tex`), which is dropped back to `C:\dir\f.tex` when that names the same file (a drive path; a
+/// `\\?\UNC\…` share or an over-long path keeps it). Kept verbatim, the prefix reached the source directory and every
+/// path built from it — `\graphicspath` entries `\\?\C:\…\tmp/figs/` that matched no file, EPS candidates listed twice,
+/// locators printed as `//?/C:/…`.
+pub fn canonicalize(path: impl AsRef<Path>) -> std::io::Result<PathBuf> {
+  let canonical = std::fs::canonicalize(path)?;
+  if cfg!(windows)
+    && let Some(s) = canonical.to_str()
+    && let Some(rest) = s.strip_prefix(WINDOWS_VERBATIM_PREFIXES[0])
+    && rest.as_bytes().get(1) == Some(&b':')
+    && rest.as_bytes().first().is_some_and(u8::is_ascii_alphabetic)
+    && rest.len() < 260
+  {
+    return Ok(PathBuf::from(rest));
+  }
+  Ok(canonical)
 }
 
 /// Canonicalize a pathname by simplifying redundant separators, `.` and `..` components.
@@ -1154,6 +1205,23 @@ pub fn cwd() -> String { env::current_dir().unwrap().to_string_lossy().to_string
 #[cfg(test)]
 mod tests {
   use super::*;
+
+  /// The dual-TL agreement probe compares paths as the file system does: on Windows kpsewhich's SELFAUTOPARENT
+  /// (`C:/texlive/2026`) and the linked library's `c:/texlive/2026/…` name one tree.
+  #[cfg(feature = "kpathsea")]
+  #[test]
+  fn path_is_under_compares_as_the_file_system_does() {
+    let file = "c:/texlive/2026/texmf-dist/tex/latex/base/latex.ltx";
+    assert!(path_is_under(file, "c:/texlive/2026"));
+    assert!(path_is_under(file, "c:/texlive/2026/"));
+    assert!(
+      !path_is_under(file, "c:/texlive/202"),
+      "a name prefix is not a directory"
+    );
+    assert!(!path_is_under(file, "c:/texlive/2025"));
+    assert_eq!(path_is_under(file, "C:/texlive/2026"), cfg!(windows));
+    assert_eq!(path_is_under(file, r"C:\texlive\2026"), cfg!(windows));
+  }
 
   /// `relative` is Perl's `pathname_relative` (→ `File::Spec->abs2rel`): a
   /// path that is NOT a descendant of `base` must come back as a `../…` path,

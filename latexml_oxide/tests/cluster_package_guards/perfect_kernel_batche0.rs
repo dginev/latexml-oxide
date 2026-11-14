@@ -2884,6 +2884,8 @@ const KERNEL_TOKEN_SPELLINGS: &[(&str, usize)] = &[
   ("latexml_core/src/token.rs", 77),
   ("latexml_core/src/tokens.rs", 49),
   ("latexml_core/src/util/image.rs", 2),
+  // the Windows verbatim path prefix `\\?\` (pathname.rs `WINDOWS_VERBATIM_PREFIXES`): a path, not a TeX token
+  ("latexml_core/src/util/pathname.rs", 1),
   ("latexml_core/src/whatsit.rs", 4),
   ("latexml_engine/src/amstex.rs", 30),
   ("latexml_engine/src/base_parameter_types.rs", 56),

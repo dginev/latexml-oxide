@@ -1696,7 +1696,8 @@ After
   );
 }
 
-/// tcolorbox.sty:2339 `\tcb@proc@options@init` processes a listing env's
+/// tcolorbox's init processor (tcolorbox.sty:2339 `\tcb@proc@options@init`, 6.10 `\__tcobox_proc_options_init:nn`
+/// :2472) processes a listing env's
 /// `[init]` (`auto counter`, `number within`), so a later
 /// `\newtcolorbox[use counter from=<env>]` finds `\tcb@cnt@<env>`
 /// (tcolorbox manual preamble D: `texexptitledspec` from `texexptitled`).
