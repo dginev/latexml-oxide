@@ -139,6 +139,8 @@ mod kernel_fallbacks_never_block_newcommand;
 mod latex_via_exemplos_residue;
 mod listings_virtual_file;
 mod mbox_argument_is_bounded;
+/// Issue #824: mhchem formulas as chemistry math.
+mod mhchem_formula;
 mod noexpand_marker_texweb;
 mod nomencl_inline;
 mod nomencl_nomentbl;
@@ -596,6 +598,8 @@ mod perfect_kernel_batchpsf1;
 /// a binding's hook is a counted Warning (BM Q3.3).
 mod perfect_kernel_batchqa47a;
 mod perfect_kernel_batchqab57;
+/// QAB8 (QA26): the glue between two paragraphs is `--ltx-skip-before` on the second; OD #1050.
+mod perfect_kernel_batchqab8;
 mod perfect_kernel_batchr1;
 /// RA0: a title-code definee declared with no parameters (`\newcommand`'s `[0]`) is taken by the name it follows;
 /// OD #983.

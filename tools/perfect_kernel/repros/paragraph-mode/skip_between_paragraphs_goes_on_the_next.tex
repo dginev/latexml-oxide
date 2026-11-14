@@ -1,0 +1,23 @@
+% witness: 2503.04888, 2001.10915, 2408.07944, 1606.03039 (QA26: a topic break by `\bigskip`/`\medskip`/`\vspace`)
+% oracle:  pdflatex 0 errors; a visible gap before paragraphs 3, 4 and 5 (12pt, 6pt, 1cm of glue on the vertical list)
+% engines: rust QAB8base: no trace of the skips (S1.p3-p5 plain `<para>`); perl: the same (TeX_Glue.pool.ltxml:89-90
+%          "add appropriate class/css for spacing to preceding element", not done)
+% expect:  0 errors; `<para xml:id="S1.p3" cssstyle="--ltx-skip-before:12.0pt">`, S1.p4 `--ltx-skip-before:6.0pt` (class
+%          ltx_noindent), S1.p5 `--ltx-skip-before:28.5pt` (1cm); S1.p1, S1.p2 no cssstyle
+% status:  RED (QAB8base) -> GREEN (QAB8: tex_glue.rs `note_skip_after_para`, tex_paragraph.rs `apply_skip_before`;
+%          guard perfect_kernel_batchqab8::paragraph_skips_go_on_the_next_paragraph)
+\documentclass{article}
+\begin{document}
+\section{Results}
+The first topic ends here, after a paragraph of ordinary running text that fills the line.
+
+The same topic continues in a second, indented paragraph with no extra space.
+
+\bigskip
+A new topic starts after a \verb|\bigskip|: in the PDF a visible gap separates it.
+
+\medskip\noindent\textbf{Remark.} A run-in pseudo-heading after \verb|\medskip\noindent|.
+
+\vspace{1cm}
+After \verb|\vspace{1cm}|, a large separation before the closing note.
+\end{document}

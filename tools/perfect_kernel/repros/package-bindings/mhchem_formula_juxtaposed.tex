@@ -1,0 +1,19 @@
+% witness: issue 824 (DG's ruling 2026-11-14: a formula's elements are juxtaposed, not multiplied); 2405.01836, 2307.12991;
+%          2407.15836 (`\ce{\textit{R}2Ir2Al20}`: the raw `\textit{R}` with its count is an atom of the run)
+% oracle:  pdflatex 0 errors: CuSO4 · 5H2O; [Fe(CN)6] 3- (3- tight, after the bracket); R2Ir2Al20 (R italic)
+% engines: rust c50482b6d47 = 0 errors, `<mo>U+2062</mo>` between every two element atoms (Firefox spaces it ~0.17em, copy
+%          gives "H2<U+2062>O"), the charge `<mo>−</mo>` with Core's infix fallback spacing ("3 −"); Perl hangs on raw mhchem
+% expect:  one `<math>` each: the element atoms and brackets of a formula side by side in one `<mrow>` (no U+2062), the
+%          amount 5 still apart from its H2O by a thin space, the charge sign `<mo lspace="0em" rspace="0em">`
+% status:  RED (c50482b6d47) -> GREEN (MHCHEM2, OXIDIZED_DESIGN_DIVERGENCES #1040); R2Ir2Al20 RED (67f4e2564d3: a
+%          U+2062 `<mo>` after R_2, a raw item parted the run) -> GREEN (MHCHEM4)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage[version=4]{mhchem}
+\begin{document}
+\ce{CuSO4*5H2O}
+
+\ce{[Fe(CN)6]^{3-}}
+
+\ce{\textit{R}2Ir2Al20}
+\end{document}
