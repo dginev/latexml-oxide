@@ -1,0 +1,19 @@
+% issue #787, review revCAP2 finding 1 (sibling): a `\caption` outside a float, caption's error, formats no caption (the
+% inline `\@@generic@caption`), so its `position=auto` mark is dropped there and the listing's caption reads its own
+% `captionpos=t`.
+% witness: synthetic
+% oracle:  pdflatex 1 `!` ("Package caption Error: \caption outside float"); the listing caption above its code
+% engines: perl=1 error (no spacing); rust df5149f093=1 error, the listing caption `margin-top:9.0pt` (the stray
+%          caption's horizontal-mode mark read as bottom)
+% expect:  1 error, 0 warnings; the listing caption margin-bottom 9pt (a top caption)
+% status:  GREEN (guard bindings_batch2::caption_justification_and_skip)
+\documentclass{article}
+\usepackage{caption}
+\usepackage{listings}
+\captionsetup[lstlisting]{skip=9pt}
+\begin{document}
+Text \caption{Stray caption.} more.
+\begin{lstlisting}[caption={Listing cap.}]
+x = 1
+\end{lstlisting}
+\end{document}
