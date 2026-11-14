@@ -1292,10 +1292,13 @@ fn assert_fixtures_not_shadowed(fixtures: &[String], log: &str) {
 }
 
 /// Count of lines carrying a `Warning:<category>:` diagnostic anywhere in the line (WISDOM 85: a diagnostic can
-/// follow other output on the same line), whatever its category spells.
+/// follow other output on the same line), whatever its category spells. A package's own notice that it is obsolete
+/// (aliascnt v1.7 on a 2026-06+ kernel, as pdflatex prints it) follows the installed TeX Live, not the document, so it
+/// is not counted: a guard's count then holds on every TeX Live (portable tests, DG 2026-11-13).
 pub fn warning_count(log: &str) -> usize {
   log
     .lines()
+    .filter(|line| !line.contains("Warning: The package is obsolete."))
     .filter(|line| {
       line.match_indices("Warning:").any(|(i, _)| {
         let tail = &line.as_bytes()[i + 8..];
