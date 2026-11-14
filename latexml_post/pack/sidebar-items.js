@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"fn":["pack_archive"],"struct":["PackOptions"]};
+window.SIDEBAR_ITEMS = {"fn":["pack_archive","pack_directory"],"struct":["PackOptions"]};

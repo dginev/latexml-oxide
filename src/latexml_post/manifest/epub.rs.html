@@ -7,538 +7,754 @@
 <a href=#7 id=7 data-nosnippet>7</a>//! - `OPS/content.opf` (spine + manifest)
 <a href=#8 id=8 data-nosnippet>8</a>//! - Indexes all content files with correct media types
 <a href=#9 id=9 data-nosnippet>9</a>
-<a href=#10 id=10 data-nosnippet>10</a></span><span class="kw">use </span>std::{fs, path::Path};
-<a href=#11 id=11 data-nosnippet>11</a>
-<a href=#12 id=12 data-nosnippet>12</a><span class="doccomment">/// The OPF package namespace (EPUB 3).
-<a href=#13 id=13 data-nosnippet>13</a></span><span class="kw">const </span>OPF_NS: <span class="kw-2">&amp;</span>str = <span class="string">"http://www.idpf.org/2007/opf"</span>;
-<a href=#14 id=14 data-nosnippet>14</a><span class="doccomment">/// Dublin Core, the metadata vocabulary an OPF's `&lt;metadata&gt;` carries.
-<a href=#15 id=15 data-nosnippet>15</a></span><span class="kw">const </span>DC_NS: <span class="kw-2">&amp;</span>str = <span class="string">"http://purl.org/dc/elements/1.1/"</span>;
-<a href=#16 id=16 data-nosnippet>16</a>
-<a href=#17 id=17 data-nosnippet>17</a><span class="doccomment">/// EPUB 3.2 container.xml content.
-<a href=#18 id=18 data-nosnippet>18</a></span><span class="kw">const </span>CONTAINER_XML: <span class="kw-2">&amp;</span>str = <span class="string">r#"&lt;?xml version="1.0"?&gt;
-<a href=#19 id=19 data-nosnippet>19</a>&lt;container version="1.0" xmlns="urn:oasis:names:tc:opendocument:xmlns:container"&gt;
-<a href=#20 id=20 data-nosnippet>20</a>    &lt;rootfiles&gt;
-<a href=#21 id=21 data-nosnippet>21</a>        &lt;rootfile full-path="OPS/content.opf" media-type="application/oebps-package+xml"/&gt;
-<a href=#22 id=22 data-nosnippet>22</a>   &lt;/rootfiles&gt;
-<a href=#23 id=23 data-nosnippet>23</a>&lt;/container&gt;"#</span>;
-<a href=#24 id=24 data-nosnippet>24</a>
-<a href=#25 id=25 data-nosnippet>25</a><span class="doccomment">/// Error context for a libxml call.
-<a href=#26 id=26 data-nosnippet>26</a>///
-<a href=#27 id=27 data-nosnippet>27</a>/// Generic over the error type on purpose: `rust-libxml` returns
-<a href=#28 id=28 data-nosnippet>28</a>/// `Box&lt;dyn Error&gt;` from some constructors and `String` from others, so one
-<a href=#29 id=29 data-nosnippet>29</a>/// fixed-argument closure cannot serve both.
-<a href=#30 id=30 data-nosnippet>30</a></span><span class="kw">fn </span>ctx&lt;E&gt;(what: <span class="kw">impl </span>Into&lt;String&gt;) -&gt; <span class="kw">impl </span>Fn(E) -&gt; String {
-<a href=#31 id=31 data-nosnippet>31</a>  <span class="kw">let </span>what = what.into();
-<a href=#32 id=32 data-nosnippet>32</a>  <span class="kw">move </span>|<span class="kw">_</span>| <span class="macro">format!</span>(<span class="string">"couldn't create {what}"</span>)
-<a href=#33 id=33 data-nosnippet>33</a>}
-<a href=#34 id=34 data-nosnippet>34</a>
-<a href=#35 id=35 data-nosnippet>35</a><span class="doccomment">/// Core Media Types as per EPUB 3.2 spec.
-<a href=#36 id=36 data-nosnippet>36</a></span><span class="kw">fn </span>core_media_type(ext: <span class="kw-2">&amp;</span>str) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str {
-<a href=#37 id=37 data-nosnippet>37</a>  <span class="kw">match </span>ext.to_lowercase().as_str() {
-<a href=#38 id=38 data-nosnippet>38</a>    <span class="string">"gif" </span>=&gt; <span class="string">"image/gif"</span>,
-<a href=#39 id=39 data-nosnippet>39</a>    <span class="string">"jpg" </span>| <span class="string">"jpeg" </span>=&gt; <span class="string">"image/jpeg"</span>,
-<a href=#40 id=40 data-nosnippet>40</a>    <span class="string">"png" </span>=&gt; <span class="string">"image/png"</span>,
-<a href=#41 id=41 data-nosnippet>41</a>    <span class="string">"svg" </span>=&gt; <span class="string">"image/svg+xml"</span>,
-<a href=#42 id=42 data-nosnippet>42</a>    <span class="string">"mp3" </span>=&gt; <span class="string">"audio/mpeg"</span>,
-<a href=#43 id=43 data-nosnippet>43</a>    <span class="string">"mp4" </span>| <span class="string">"mpg4" </span>=&gt; <span class="string">"audio/mp4"</span>,
-<a href=#44 id=44 data-nosnippet>44</a>    <span class="string">"css" </span>=&gt; <span class="string">"text/css"</span>,
-<a href=#45 id=45 data-nosnippet>45</a>    <span class="string">"ttf" </span>=&gt; <span class="string">"font/ttf"</span>,
-<a href=#46 id=46 data-nosnippet>46</a>    <span class="string">"otf" </span>=&gt; <span class="string">"font/otf"</span>,
-<a href=#47 id=47 data-nosnippet>47</a>    <span class="string">"woff" </span>=&gt; <span class="string">"font/woff"</span>,
-<a href=#48 id=48 data-nosnippet>48</a>    <span class="string">"woff2" </span>=&gt; <span class="string">"font/woff2"</span>,
-<a href=#49 id=49 data-nosnippet>49</a>    <span class="string">"xhtml" </span>=&gt; <span class="string">"application/xhtml+xml"</span>,
-<a href=#50 id=50 data-nosnippet>50</a>    <span class="string">"js" </span>=&gt; <span class="string">"text/javascript"</span>,
-<a href=#51 id=51 data-nosnippet>51</a>    <span class="string">"ncx" </span>=&gt; <span class="string">"application/x-dtbncx+xml"</span>,
-<a href=#52 id=52 data-nosnippet>52</a>    <span class="string">"smi" </span>| <span class="string">"smil" </span>=&gt; <span class="string">"application/smil+xml"</span>,
-<a href=#53 id=53 data-nosnippet>53</a>    <span class="string">"pls" </span>=&gt; <span class="string">"application/pls+xml"</span>,
-<a href=#54 id=54 data-nosnippet>54</a>    <span class="kw">_ </span>=&gt; <span class="string">"application/octet-stream"</span>,
-<a href=#55 id=55 data-nosnippet>55</a>  }
-<a href=#56 id=56 data-nosnippet>56</a>}
-<a href=#57 id=57 data-nosnippet>57</a>
-<a href=#58 id=58 data-nosnippet>58</a><span class="doccomment">/// EPUB manifest builder.
-<a href=#59 id=59 data-nosnippet>59</a>///
-<a href=#60 id=60 data-nosnippet>60</a>/// Port of `LaTeXML::Post::Manifest::Epub`.
-<a href=#61 id=61 data-nosnippet>61</a></span><span class="kw">pub struct </span>EpubManifest {
-<a href=#62 id=62 data-nosnippet>62</a>  site_directory:    String,
-<a href=#63 id=63 data-nosnippet>63</a>  unique_identifier: <span class="prelude-ty">Option</span>&lt;String&gt;,
-<a href=#64 id=64 data-nosnippet>64</a>}
-<a href=#65 id=65 data-nosnippet>65</a>
-<a href=#66 id=66 data-nosnippet>66</a><span class="kw">impl </span>EpubManifest {
-<a href=#67 id=67 data-nosnippet>67</a>  <span class="kw">pub fn </span>new(site_directory: <span class="kw-2">&amp;</span>str) -&gt; <span class="self">Self </span>{
-<a href=#68 id=68 data-nosnippet>68</a>    EpubManifest {
-<a href=#69 id=69 data-nosnippet>69</a>      site_directory:    site_directory.to_string(),
-<a href=#70 id=70 data-nosnippet>70</a>      unique_identifier: <span class="prelude-val">None</span>,
-<a href=#71 id=71 data-nosnippet>71</a>    }
-<a href=#72 id=72 data-nosnippet>72</a>  }
-<a href=#73 id=73 data-nosnippet>73</a>
-<a href=#74 id=74 data-nosnippet>74</a>  <span class="doccomment">/// Initialize the EPUB directory structure.
-<a href=#75 id=75 data-nosnippet>75</a>  ///
-<a href=#76 id=76 data-nosnippet>76</a>  /// Port of `Epub::initialize`.
-<a href=#77 id=77 data-nosnippet>77</a>  </span><span class="kw">pub fn </span>initialize(
-<a href=#78 id=78 data-nosnippet>78</a>    <span class="kw-2">&amp;mut </span><span class="self">self</span>,
-<a href=#79 id=79 data-nosnippet>79</a>    _title: <span class="kw-2">&amp;</span>str,
-<a href=#80 id=80 data-nosnippet>80</a>    _authors: <span class="kw-2">&amp;</span>[String],
-<a href=#81 id=81 data-nosnippet>81</a>    _language: <span class="kw-2">&amp;</span>str,
-<a href=#82 id=82 data-nosnippet>82</a>  ) -&gt; <span class="prelude-ty">Result</span>&lt;(), String&gt; {
-<a href=#83 id=83 data-nosnippet>83</a>    <span class="kw">let </span>dir = <span class="kw-2">&amp;</span><span class="self">self</span>.site_directory;
-<a href=#84 id=84 data-nosnippet>84</a>
-<a href=#85 id=85 data-nosnippet>85</a>    <span class="comment">// 1. Create mimetype file
-<a href=#86 id=86 data-nosnippet>86</a>    </span><span class="kw">let </span>mime_path = <span class="macro">format!</span>(<span class="string">"{}/mimetype"</span>, dir);
-<a href=#87 id=87 data-nosnippet>87</a>    fs::write(<span class="kw-2">&amp;</span>mime_path, <span class="string">"application/epub+zip"</span>)
-<a href=#88 id=88 data-nosnippet>88</a>      .map_err(|e| <span class="macro">format!</span>(<span class="string">"Couldn't write mimetype: {}"</span>, e))<span class="question-mark">?</span>;
-<a href=#89 id=89 data-nosnippet>89</a>
-<a href=#90 id=90 data-nosnippet>90</a>    <span class="comment">// 2. Create META-INF/container.xml
-<a href=#91 id=91 data-nosnippet>91</a>    </span><span class="kw">let </span>meta_inf = <span class="macro">format!</span>(<span class="string">"{}/META-INF"</span>, dir);
-<a href=#92 id=92 data-nosnippet>92</a>    fs::create_dir_all(<span class="kw-2">&amp;</span>meta_inf).map_err(|e| <span class="macro">format!</span>(<span class="string">"Couldn't create META-INF: {}"</span>, e))<span class="question-mark">?</span>;
-<a href=#93 id=93 data-nosnippet>93</a>    fs::write(<span class="macro">format!</span>(<span class="string">"{}/container.xml"</span>, meta_inf), CONTAINER_XML)
-<a href=#94 id=94 data-nosnippet>94</a>      .map_err(|e| <span class="macro">format!</span>(<span class="string">"Couldn't write container.xml: {}"</span>, e))<span class="question-mark">?</span>;
-<a href=#95 id=95 data-nosnippet>95</a>
-<a href=#96 id=96 data-nosnippet>96</a>    <span class="comment">// 3. Create OPS directory
-<a href=#97 id=97 data-nosnippet>97</a>    </span><span class="kw">let </span>ops_dir = <span class="macro">format!</span>(<span class="string">"{}/OPS"</span>, dir);
-<a href=#98 id=98 data-nosnippet>98</a>    fs::create_dir_all(<span class="kw-2">&amp;</span>ops_dir).map_err(|e| <span class="macro">format!</span>(<span class="string">"Couldn't create OPS: {}"</span>, e))<span class="question-mark">?</span>;
-<a href=#99 id=99 data-nosnippet>99</a>
-<a href=#100 id=100 data-nosnippet>100</a>    <span class="comment">// Generate a UUID for the publication
-<a href=#101 id=101 data-nosnippet>101</a>    </span><span class="self">self</span>.unique_identifier = <span class="prelude-val">Some</span>(<span class="macro">format!</span>(<span class="string">"urn:uuid:{}"</span>, generate_uuid()));
-<a href=#102 id=102 data-nosnippet>102</a>
-<a href=#103 id=103 data-nosnippet>103</a>    <span class="prelude-val">Ok</span>(())
-<a href=#104 id=104 data-nosnippet>104</a>  }
-<a href=#105 id=105 data-nosnippet>105</a>
-<a href=#106 id=106 data-nosnippet>106</a>  <span class="doccomment">/// Add a document to the EPUB spine.
-<a href=#107 id=107 data-nosnippet>107</a>  ///
-<a href=#108 id=108 data-nosnippet>108</a>  /// Port of `Epub::process` per-document loop.
-<a href=#109 id=109 data-nosnippet>109</a>  </span><span class="kw">pub fn </span>add_document(
-<a href=#110 id=110 data-nosnippet>110</a>    <span class="kw-2">&amp;</span><span class="self">self</span>,
-<a href=#111 id=111 data-nosnippet>111</a>    destination: <span class="kw-2">&amp;</span>str,
-<a href=#112 id=112 data-nosnippet>112</a>    has_math: bool,
-<a href=#113 id=113 data-nosnippet>113</a>    has_svg: bool,
-<a href=#114 id=114 data-nosnippet>114</a>    has_nav: bool,
-<a href=#115 id=115 data-nosnippet>115</a>  ) -&gt; SpineEntry {
-<a href=#116 id=116 data-nosnippet>116</a>    <span class="kw">let </span>path = Path::new(destination);
-<a href=#117 id=117 data-nosnippet>117</a>    <span class="kw">let </span>name = path.file_stem().and_then(|s| s.to_str()).unwrap_or(<span class="string">"doc"</span>);
-<a href=#118 id=118 data-nosnippet>118</a>    <span class="kw">let </span>ext = path.extension().and_then(|e| e.to_str()).unwrap_or(<span class="string">"xhtml"</span>);
-<a href=#119 id=119 data-nosnippet>119</a>    <span class="kw">let </span>item_id = url_to_id(<span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">"{}.{}"</span>, name, ext));
-<a href=#120 id=120 data-nosnippet>120</a>
-<a href=#121 id=121 data-nosnippet>121</a>    <span class="kw">let </span><span class="kw-2">mut </span>properties = Vec::new();
-<a href=#122 id=122 data-nosnippet>122</a>    <span class="kw">if </span>has_math {
-<a href=#123 id=123 data-nosnippet>123</a>      properties.push(<span class="string">"mathml"</span>);
-<a href=#124 id=124 data-nosnippet>124</a>    }
-<a href=#125 id=125 data-nosnippet>125</a>    <span class="kw">if </span>has_svg {
-<a href=#126 id=126 data-nosnippet>126</a>      properties.push(<span class="string">"svg"</span>);
-<a href=#127 id=127 data-nosnippet>127</a>    }
-<a href=#128 id=128 data-nosnippet>128</a>    <span class="kw">if </span>has_nav {
-<a href=#129 id=129 data-nosnippet>129</a>      properties.push(<span class="string">"nav"</span>);
-<a href=#130 id=130 data-nosnippet>130</a>    }
-<a href=#131 id=131 data-nosnippet>131</a>
-<a href=#132 id=132 data-nosnippet>132</a>    SpineEntry {
-<a href=#133 id=133 data-nosnippet>133</a>      id:         item_id,
-<a href=#134 id=134 data-nosnippet>134</a>      href:       <span class="macro">format!</span>(<span class="string">"{}.{}"</span>, name, ext),
-<a href=#135 id=135 data-nosnippet>135</a>      media_type: <span class="string">"application/xhtml+xml"</span>.to_string(),
-<a href=#136 id=136 data-nosnippet>136</a>      properties: <span class="kw">if </span>properties.is_empty() {
-<a href=#137 id=137 data-nosnippet>137</a>        <span class="prelude-val">None
-<a href=#138 id=138 data-nosnippet>138</a>      </span>} <span class="kw">else </span>{
-<a href=#139 id=139 data-nosnippet>139</a>        <span class="prelude-val">Some</span>(properties.join(<span class="string">" "</span>))
-<a href=#140 id=140 data-nosnippet>140</a>      },
-<a href=#141 id=141 data-nosnippet>141</a>    }
-<a href=#142 id=142 data-nosnippet>142</a>  }
-<a href=#143 id=143 data-nosnippet>143</a>
-<a href=#144 id=144 data-nosnippet>144</a>  <span class="doccomment">/// Generate the content.opf package document.
-<a href=#145 id=145 data-nosnippet>145</a>  ///
-<a href=#146 id=146 data-nosnippet>146</a>  /// Port of `Epub::finalize`. Built through the libxml DOM rather than by
-<a href=#147 id=147 data-nosnippet>147</a>  /// `push_str`, because an OPF is parsed by strict readers: one unescaped `&amp;`
-<a href=#148 id=148 data-nosnippet>148</a>  /// in a single `href` invalidates the whole package, not one entry.
-<a href=#149 id=149 data-nosnippet>149</a>  ///
-<a href=#150 id=150 data-nosnippet>150</a>  /// That was reachable. `href` is `format!("{}.{}", name, ext)` over a split
-<a href=#151 id=151 data-nosnippet>151</a>  /// document's file stem, and `--splitnaming=label` takes that stem from the
-<a href=#152 id=152 data-nosnippet>152</a>  /// author's `\label{...}` — `\label{Fisher&amp;Yates}` really does produce a file
-<a href=#153 id=153 data-nosnippet>153</a>  /// named `Fisher&amp;Yates.xhtml`. The old builder escaped 2 of 12 interpolated
-<a href=#154 id=154 data-nosnippet>154</a>  /// values and `href` was not one of them. libxml escapes on set, so the
-<a href=#155 id=155 data-nosnippet>155</a>  /// question no longer arises for any of them. (Issue 386 item 2.)
-<a href=#156 id=156 data-nosnippet>156</a>  </span><span class="kw">pub fn </span>generate_opf(
-<a href=#157 id=157 data-nosnippet>157</a>    <span class="kw-2">&amp;</span><span class="self">self</span>,
-<a href=#158 id=158 data-nosnippet>158</a>    title: <span class="kw-2">&amp;</span>str,
-<a href=#159 id=159 data-nosnippet>159</a>    authors: <span class="kw-2">&amp;</span>[String],
-<a href=#160 id=160 data-nosnippet>160</a>    language: <span class="kw-2">&amp;</span>str,
-<a href=#161 id=161 data-nosnippet>161</a>    spine: <span class="kw-2">&amp;</span>[SpineEntry],
-<a href=#162 id=162 data-nosnippet>162</a>    resources: <span class="kw-2">&amp;</span>[ResourceEntry],
-<a href=#163 id=163 data-nosnippet>163</a>  ) -&gt; String {
-<a href=#164 id=164 data-nosnippet>164</a>    <span class="kw">let </span>uid = <span class="self">self
-<a href=#165 id=165 data-nosnippet>165</a>      </span>.unique_identifier
-<a href=#166 id=166 data-nosnippet>166</a>      .as_deref()
-<a href=#167 id=167 data-nosnippet>167</a>      .unwrap_or(<span class="string">"urn:uuid:00000000-0000-0000-0000-000000000000"</span>);
-<a href=#168 id=168 data-nosnippet>168</a>
-<a href=#169 id=169 data-nosnippet>169</a>    <span class="kw">match </span><span class="self">self</span>.build_opf_dom(title, authors, language, uid, spine, resources) {
-<a href=#170 id=170 data-nosnippet>170</a>      <span class="prelude-val">Ok</span>(xml) =&gt; xml,
-<a href=#171 id=171 data-nosnippet>171</a>      <span class="comment">// A DOM allocation failure is not something a caller can act on, and an
-<a href=#172 id=172 data-nosnippet>172</a>      // empty package is a clearer failure than a half-built one.
-<a href=#173 id=173 data-nosnippet>173</a>      </span><span class="prelude-val">Err</span>(e) =&gt; {
-<a href=#174 id=174 data-nosnippet>174</a>        <span class="macro">crate::Error!</span>(
-<a href=#175 id=175 data-nosnippet>175</a>          <span class="string">"epub"</span>,
-<a href=#176 id=176 data-nosnippet>176</a>          <span class="string">"opf"</span>,
-<a href=#177 id=177 data-nosnippet>177</a>          <span class="string">"Couldn't build the EPUB package document: {}"</span>,
-<a href=#178 id=178 data-nosnippet>178</a>          e
-<a href=#179 id=179 data-nosnippet>179</a>        );
-<a href=#180 id=180 data-nosnippet>180</a>        String::new()
-<a href=#181 id=181 data-nosnippet>181</a>      },
-<a href=#182 id=182 data-nosnippet>182</a>    }
-<a href=#183 id=183 data-nosnippet>183</a>  }
-<a href=#184 id=184 data-nosnippet>184</a>
-<a href=#185 id=185 data-nosnippet>185</a>  <span class="kw">fn </span>build_opf_dom(
-<a href=#186 id=186 data-nosnippet>186</a>    <span class="kw-2">&amp;</span><span class="self">self</span>,
-<a href=#187 id=187 data-nosnippet>187</a>    title: <span class="kw-2">&amp;</span>str,
-<a href=#188 id=188 data-nosnippet>188</a>    authors: <span class="kw-2">&amp;</span>[String],
-<a href=#189 id=189 data-nosnippet>189</a>    language: <span class="kw-2">&amp;</span>str,
-<a href=#190 id=190 data-nosnippet>190</a>    uid: <span class="kw-2">&amp;</span>str,
-<a href=#191 id=191 data-nosnippet>191</a>    spine: <span class="kw-2">&amp;</span>[SpineEntry],
-<a href=#192 id=192 data-nosnippet>192</a>    resources: <span class="kw-2">&amp;</span>[ResourceEntry],
-<a href=#193 id=193 data-nosnippet>193</a>  ) -&gt; <span class="prelude-ty">Result</span>&lt;String, String&gt; {
-<a href=#194 id=194 data-nosnippet>194</a>    <span class="kw">use </span>libxml::tree::{Document <span class="kw">as </span>XmlDoc, Namespace, Node};
-<a href=#195 id=195 data-nosnippet>195</a>
-<a href=#196 id=196 data-nosnippet>196</a>    <span class="kw">let </span><span class="kw-2">mut </span>doc = XmlDoc::new().map_err(|<span class="kw">_</span>| <span class="string">"couldn't create the OPF document"</span>.to_string())<span class="question-mark">?</span>;
-<a href=#197 id=197 data-nosnippet>197</a>
-<a href=#198 id=198 data-nosnippet>198</a>    <span class="kw">let </span><span class="kw-2">mut </span>package = Node::new(<span class="string">"package"</span>, <span class="prelude-val">None</span>, <span class="kw-2">&amp;</span>doc).map_err(ctx(<span class="string">"&lt;package&gt;"</span>))<span class="question-mark">?</span>;
-<a href=#199 id=199 data-nosnippet>199</a>    <span class="kw">let </span>opf_ns = Namespace::new(<span class="string">""</span>, OPF_NS, <span class="kw-2">&amp;mut </span>package).map_err(ctx(<span class="string">"the OPF namespace"</span>))<span class="question-mark">?</span>;
-<a href=#200 id=200 data-nosnippet>200</a>    package
-<a href=#201 id=201 data-nosnippet>201</a>      .set_namespace(<span class="kw-2">&amp;</span>opf_ns)
-<a href=#202 id=202 data-nosnippet>202</a>      .map_err(ctx(<span class="string">"the OPF namespace"</span>))<span class="question-mark">?</span>;
-<a href=#203 id=203 data-nosnippet>203</a>    package
-<a href=#204 id=204 data-nosnippet>204</a>      .set_attribute(<span class="string">"unique-identifier"</span>, <span class="string">"pub-id"</span>)
-<a href=#205 id=205 data-nosnippet>205</a>      .map_err(ctx(<span class="string">"@unique-identifier"</span>))<span class="question-mark">?</span>;
-<a href=#206 id=206 data-nosnippet>206</a>    package
-<a href=#207 id=207 data-nosnippet>207</a>      .set_attribute(<span class="string">"version"</span>, <span class="string">"3.0"</span>)
-<a href=#208 id=208 data-nosnippet>208</a>      .map_err(ctx(<span class="string">"@version"</span>))<span class="question-mark">?</span>;
-<a href=#209 id=209 data-nosnippet>209</a>    doc.set_root_element(<span class="kw-2">&amp;</span>package);
-<a href=#210 id=210 data-nosnippet>210</a>
-<a href=#211 id=211 data-nosnippet>211</a>    <span class="comment">// ---- metadata ----
-<a href=#212 id=212 data-nosnippet>212</a>    </span><span class="kw">let </span><span class="kw-2">mut </span>metadata = Node::new(<span class="string">"metadata"</span>, <span class="prelude-val">None</span>, <span class="kw-2">&amp;</span>doc).map_err(ctx(<span class="string">"&lt;metadata&gt;"</span>))<span class="question-mark">?</span>;
-<a href=#213 id=213 data-nosnippet>213</a>    <span class="comment">// `dc:` is declared HERE, matching the shape readers expect, and the
-<a href=#214 id=214 data-nosnippet>214</a>    // Dublin Core children below are created in it.
-<a href=#215 id=215 data-nosnippet>215</a>    </span><span class="kw">let </span>dc_ns = Namespace::new(<span class="string">"dc"</span>, DC_NS, <span class="kw-2">&amp;mut </span>metadata).map_err(ctx(<span class="string">"the dc namespace"</span>))<span class="question-mark">?</span>;
-<a href=#216 id=216 data-nosnippet>216</a>    package
-<a href=#217 id=217 data-nosnippet>217</a>      .add_child(<span class="kw-2">&amp;mut </span>metadata)
-<a href=#218 id=218 data-nosnippet>218</a>      .map_err(ctx(<span class="string">"&lt;metadata&gt;"</span>))<span class="question-mark">?</span>;
-<a href=#219 id=219 data-nosnippet>219</a>
-<a href=#220 id=220 data-nosnippet>220</a>    <span class="comment">// A closure would hold `metadata` borrowed across every call, so the
-<a href=#221 id=221 data-nosnippet>221</a>    // Dublin Core children are appended inline through one small helper.
-<a href=#222 id=222 data-nosnippet>222</a>    </span><span class="kw">fn </span>dc_child(
-<a href=#223 id=223 data-nosnippet>223</a>      doc: <span class="kw-2">&amp;</span>XmlDoc,
-<a href=#224 id=224 data-nosnippet>224</a>      dc_ns: <span class="kw-2">&amp;</span>Namespace,
-<a href=#225 id=225 data-nosnippet>225</a>      metadata: <span class="kw-2">&amp;mut </span>Node,
-<a href=#226 id=226 data-nosnippet>226</a>      name: <span class="kw-2">&amp;</span>str,
-<a href=#227 id=227 data-nosnippet>227</a>      text: <span class="kw-2">&amp;</span>str,
-<a href=#228 id=228 data-nosnippet>228</a>    ) -&gt; <span class="prelude-ty">Result</span>&lt;Node, String&gt; {
-<a href=#229 id=229 data-nosnippet>229</a>      <span class="kw">let </span><span class="kw-2">mut </span>n = Node::new(name, <span class="prelude-val">Some</span>(dc_ns.clone()), doc).map_err(ctx(name))<span class="question-mark">?</span>;
-<a href=#230 id=230 data-nosnippet>230</a>      n.set_content(text).map_err(ctx(name))<span class="question-mark">?</span>;
-<a href=#231 id=231 data-nosnippet>231</a>      metadata.add_child(<span class="kw-2">&amp;mut </span>n).map_err(ctx(name))<span class="question-mark">?</span>;
-<a href=#232 id=232 data-nosnippet>232</a>      <span class="prelude-val">Ok</span>(n)
-<a href=#233 id=233 data-nosnippet>233</a>    }
-<a href=#234 id=234 data-nosnippet>234</a>    dc_child(<span class="kw-2">&amp;</span>doc, <span class="kw-2">&amp;</span>dc_ns, <span class="kw-2">&amp;mut </span>metadata, <span class="string">"title"</span>, title)<span class="question-mark">?</span>;
-<a href=#235 id=235 data-nosnippet>235</a>    <span class="kw">for </span>author <span class="kw">in </span>authors {
-<a href=#236 id=236 data-nosnippet>236</a>      dc_child(<span class="kw-2">&amp;</span>doc, <span class="kw-2">&amp;</span>dc_ns, <span class="kw-2">&amp;mut </span>metadata, <span class="string">"creator"</span>, author)<span class="question-mark">?</span>;
-<a href=#237 id=237 data-nosnippet>237</a>    }
-<a href=#238 id=238 data-nosnippet>238</a>    dc_child(<span class="kw-2">&amp;</span>doc, <span class="kw-2">&amp;</span>dc_ns, <span class="kw-2">&amp;mut </span>metadata, <span class="string">"language"</span>, language)<span class="question-mark">?</span>;
-<a href=#239 id=239 data-nosnippet>239</a>
-<a href=#240 id=240 data-nosnippet>240</a>    <span class="kw">let </span><span class="kw-2">mut </span>modified = Node::new(<span class="string">"meta"</span>, <span class="prelude-val">None</span>, <span class="kw-2">&amp;</span>doc).map_err(ctx(<span class="string">"&lt;meta&gt;"</span>))<span class="question-mark">?</span>;
-<a href=#241 id=241 data-nosnippet>241</a>    modified
-<a href=#242 id=242 data-nosnippet>242</a>      .set_attribute(<span class="string">"property"</span>, <span class="string">"dcterms:modified"</span>)
-<a href=#243 id=243 data-nosnippet>243</a>      .map_err(ctx(<span class="string">"@property"</span>))<span class="question-mark">?</span>;
-<a href=#244 id=244 data-nosnippet>244</a>    modified
-<a href=#245 id=245 data-nosnippet>245</a>      .set_content(<span class="kw-2">&amp;</span>chrono_like_now())
-<a href=#246 id=246 data-nosnippet>246</a>      .map_err(ctx(<span class="string">"&lt;meta&gt;"</span>))<span class="question-mark">?</span>;
-<a href=#247 id=247 data-nosnippet>247</a>    metadata.add_child(<span class="kw-2">&amp;mut </span>modified).map_err(ctx(<span class="string">"&lt;meta&gt;"</span>))<span class="question-mark">?</span>;
-<a href=#248 id=248 data-nosnippet>248</a>
-<a href=#249 id=249 data-nosnippet>249</a>    <span class="kw">let </span><span class="kw-2">mut </span>identifier = dc_child(<span class="kw-2">&amp;</span>doc, <span class="kw-2">&amp;</span>dc_ns, <span class="kw-2">&amp;mut </span>metadata, <span class="string">"identifier"</span>, uid)<span class="question-mark">?</span>;
-<a href=#250 id=250 data-nosnippet>250</a>    identifier
-<a href=#251 id=251 data-nosnippet>251</a>      .set_attribute(<span class="string">"id"</span>, <span class="string">"pub-id"</span>)
-<a href=#252 id=252 data-nosnippet>252</a>      .map_err(ctx(<span class="string">"@id"</span>))<span class="question-mark">?</span>;
-<a href=#253 id=253 data-nosnippet>253</a>
-<a href=#254 id=254 data-nosnippet>254</a>    <span class="comment">// ---- manifest ----
-<a href=#255 id=255 data-nosnippet>255</a>    </span><span class="kw">let </span><span class="kw-2">mut </span>manifest = Node::new(<span class="string">"manifest"</span>, <span class="prelude-val">None</span>, <span class="kw-2">&amp;</span>doc).map_err(ctx(<span class="string">"&lt;manifest&gt;"</span>))<span class="question-mark">?</span>;
-<a href=#256 id=256 data-nosnippet>256</a>    package
-<a href=#257 id=257 data-nosnippet>257</a>      .add_child(<span class="kw-2">&amp;mut </span>manifest)
-<a href=#258 id=258 data-nosnippet>258</a>      .map_err(ctx(<span class="string">"&lt;manifest&gt;"</span>))<span class="question-mark">?</span>;
-<a href=#259 id=259 data-nosnippet>259</a>    <span class="kw">let </span><span class="kw-2">mut </span>item =
-<a href=#260 id=260 data-nosnippet>260</a>      |id: <span class="kw-2">&amp;</span>str, href: <span class="kw-2">&amp;</span>str, media_type: <span class="kw-2">&amp;</span>str, properties: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>str&gt;| -&gt; <span class="prelude-ty">Result</span>&lt;(), String&gt; {
-<a href=#261 id=261 data-nosnippet>261</a>        <span class="kw">let </span><span class="kw-2">mut </span>n = Node::new(<span class="string">"item"</span>, <span class="prelude-val">None</span>, <span class="kw-2">&amp;</span>doc).map_err(ctx(<span class="string">"&lt;item&gt;"</span>))<span class="question-mark">?</span>;
-<a href=#262 id=262 data-nosnippet>262</a>        n.set_attribute(<span class="string">"id"</span>, id).map_err(ctx(<span class="string">"@id"</span>))<span class="question-mark">?</span>;
-<a href=#263 id=263 data-nosnippet>263</a>        n.set_attribute(<span class="string">"href"</span>, href).map_err(ctx(<span class="string">"@href"</span>))<span class="question-mark">?</span>;
-<a href=#264 id=264 data-nosnippet>264</a>        n.set_attribute(<span class="string">"media-type"</span>, media_type)
-<a href=#265 id=265 data-nosnippet>265</a>          .map_err(ctx(<span class="string">"@media-type"</span>))<span class="question-mark">?</span>;
-<a href=#266 id=266 data-nosnippet>266</a>        <span class="kw">if let </span><span class="prelude-val">Some</span>(props) = properties {
-<a href=#267 id=267 data-nosnippet>267</a>          n.set_attribute(<span class="string">"properties"</span>, props)
-<a href=#268 id=268 data-nosnippet>268</a>            .map_err(ctx(<span class="string">"@properties"</span>))<span class="question-mark">?</span>;
-<a href=#269 id=269 data-nosnippet>269</a>        }
-<a href=#270 id=270 data-nosnippet>270</a>        manifest.add_child(<span class="kw-2">&amp;mut </span>n).map_err(ctx(<span class="string">"&lt;item&gt;"</span>))
-<a href=#271 id=271 data-nosnippet>271</a>      };
-<a href=#272 id=272 data-nosnippet>272</a>    <span class="kw">for </span>entry <span class="kw">in </span>spine {
-<a href=#273 id=273 data-nosnippet>273</a>      item(
-<a href=#274 id=274 data-nosnippet>274</a>        <span class="kw-2">&amp;</span>entry.id,
-<a href=#275 id=275 data-nosnippet>275</a>        <span class="kw-2">&amp;</span>entry.href,
-<a href=#276 id=276 data-nosnippet>276</a>        <span class="kw-2">&amp;</span>entry.media_type,
-<a href=#277 id=277 data-nosnippet>277</a>        entry.properties.as_deref(),
-<a href=#278 id=278 data-nosnippet>278</a>      )<span class="question-mark">?</span>;
-<a href=#279 id=279 data-nosnippet>279</a>    }
-<a href=#280 id=280 data-nosnippet>280</a>    <span class="kw">for </span>res <span class="kw">in </span>resources {
-<a href=#281 id=281 data-nosnippet>281</a>      item(<span class="kw-2">&amp;</span>res.id, <span class="kw-2">&amp;</span>res.href, <span class="kw-2">&amp;</span>res.media_type, <span class="prelude-val">None</span>)<span class="question-mark">?</span>;
+<a href=#10 id=10 data-nosnippet>10</a></span><span class="kw">use </span>std::{
+<a href=#11 id=11 data-nosnippet>11</a>  fs,
+<a href=#12 id=12 data-nosnippet>12</a>  path::{Path, PathBuf},
+<a href=#13 id=13 data-nosnippet>13</a>};
+<a href=#14 id=14 data-nosnippet>14</a>
+<a href=#15 id=15 data-nosnippet>15</a><span class="doccomment">/// The OPF package namespace (EPUB 3).
+<a href=#16 id=16 data-nosnippet>16</a></span><span class="kw">const </span>OPF_NS: <span class="kw-2">&amp;</span>str = <span class="string">"http://www.idpf.org/2007/opf"</span>;
+<a href=#17 id=17 data-nosnippet>17</a><span class="doccomment">/// Dublin Core, the metadata vocabulary an OPF's `&lt;metadata&gt;` carries.
+<a href=#18 id=18 data-nosnippet>18</a></span><span class="kw">const </span>DC_NS: <span class="kw-2">&amp;</span>str = <span class="string">"http://purl.org/dc/elements/1.1/"</span>;
+<a href=#19 id=19 data-nosnippet>19</a>
+<a href=#20 id=20 data-nosnippet>20</a><span class="doccomment">/// EPUB 3.2 container.xml content.
+<a href=#21 id=21 data-nosnippet>21</a></span><span class="kw">const </span>CONTAINER_XML: <span class="kw-2">&amp;</span>str = <span class="string">r#"&lt;?xml version="1.0"?&gt;
+<a href=#22 id=22 data-nosnippet>22</a>&lt;container version="1.0" xmlns="urn:oasis:names:tc:opendocument:xmlns:container"&gt;
+<a href=#23 id=23 data-nosnippet>23</a>    &lt;rootfiles&gt;
+<a href=#24 id=24 data-nosnippet>24</a>        &lt;rootfile full-path="OPS/content.opf" media-type="application/oebps-package+xml"/&gt;
+<a href=#25 id=25 data-nosnippet>25</a>   &lt;/rootfiles&gt;
+<a href=#26 id=26 data-nosnippet>26</a>&lt;/container&gt;"#</span>;
+<a href=#27 id=27 data-nosnippet>27</a>
+<a href=#28 id=28 data-nosnippet>28</a><span class="doccomment">/// Error context for a libxml call.
+<a href=#29 id=29 data-nosnippet>29</a>///
+<a href=#30 id=30 data-nosnippet>30</a>/// Generic over the error type on purpose: `rust-libxml` returns
+<a href=#31 id=31 data-nosnippet>31</a>/// `Box&lt;dyn Error&gt;` from some constructors and `String` from others, so one
+<a href=#32 id=32 data-nosnippet>32</a>/// fixed-argument closure cannot serve both.
+<a href=#33 id=33 data-nosnippet>33</a></span><span class="kw">fn </span>ctx&lt;E&gt;(what: <span class="kw">impl </span>Into&lt;String&gt;) -&gt; <span class="kw">impl </span>Fn(E) -&gt; String {
+<a href=#34 id=34 data-nosnippet>34</a>  <span class="kw">let </span>what = what.into();
+<a href=#35 id=35 data-nosnippet>35</a>  <span class="kw">move </span>|<span class="kw">_</span>| <span class="macro">format!</span>(<span class="string">"couldn't create {what}"</span>)
+<a href=#36 id=36 data-nosnippet>36</a>}
+<a href=#37 id=37 data-nosnippet>37</a>
+<a href=#38 id=38 data-nosnippet>38</a><span class="doccomment">/// Core Media Types as per EPUB 3.2 spec.
+<a href=#39 id=39 data-nosnippet>39</a></span><span class="kw">fn </span>core_media_type(ext: <span class="kw-2">&amp;</span>str) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str {
+<a href=#40 id=40 data-nosnippet>40</a>  <span class="kw">match </span>ext.to_lowercase().as_str() {
+<a href=#41 id=41 data-nosnippet>41</a>    <span class="string">"gif" </span>=&gt; <span class="string">"image/gif"</span>,
+<a href=#42 id=42 data-nosnippet>42</a>    <span class="string">"jpg" </span>| <span class="string">"jpeg" </span>=&gt; <span class="string">"image/jpeg"</span>,
+<a href=#43 id=43 data-nosnippet>43</a>    <span class="string">"png" </span>=&gt; <span class="string">"image/png"</span>,
+<a href=#44 id=44 data-nosnippet>44</a>    <span class="string">"svg" </span>=&gt; <span class="string">"image/svg+xml"</span>,
+<a href=#45 id=45 data-nosnippet>45</a>    <span class="string">"mp3" </span>=&gt; <span class="string">"audio/mpeg"</span>,
+<a href=#46 id=46 data-nosnippet>46</a>    <span class="string">"mp4" </span>| <span class="string">"mpg4" </span>=&gt; <span class="string">"audio/mp4"</span>,
+<a href=#47 id=47 data-nosnippet>47</a>    <span class="string">"css" </span>=&gt; <span class="string">"text/css"</span>,
+<a href=#48 id=48 data-nosnippet>48</a>    <span class="string">"ttf" </span>=&gt; <span class="string">"font/ttf"</span>,
+<a href=#49 id=49 data-nosnippet>49</a>    <span class="string">"otf" </span>=&gt; <span class="string">"font/otf"</span>,
+<a href=#50 id=50 data-nosnippet>50</a>    <span class="string">"woff" </span>=&gt; <span class="string">"font/woff"</span>,
+<a href=#51 id=51 data-nosnippet>51</a>    <span class="string">"woff2" </span>=&gt; <span class="string">"font/woff2"</span>,
+<a href=#52 id=52 data-nosnippet>52</a>    <span class="string">"xhtml" </span>=&gt; <span class="string">"application/xhtml+xml"</span>,
+<a href=#53 id=53 data-nosnippet>53</a>    <span class="string">"js" </span>=&gt; <span class="string">"text/javascript"</span>,
+<a href=#54 id=54 data-nosnippet>54</a>    <span class="string">"ncx" </span>=&gt; <span class="string">"application/x-dtbncx+xml"</span>,
+<a href=#55 id=55 data-nosnippet>55</a>    <span class="string">"smi" </span>| <span class="string">"smil" </span>=&gt; <span class="string">"application/smil+xml"</span>,
+<a href=#56 id=56 data-nosnippet>56</a>    <span class="string">"pls" </span>=&gt; <span class="string">"application/pls+xml"</span>,
+<a href=#57 id=57 data-nosnippet>57</a>    <span class="kw">_ </span>=&gt; <span class="string">"application/octet-stream"</span>,
+<a href=#58 id=58 data-nosnippet>58</a>  }
+<a href=#59 id=59 data-nosnippet>59</a>}
+<a href=#60 id=60 data-nosnippet>60</a>
+<a href=#61 id=61 data-nosnippet>61</a><span class="doccomment">/// EPUB manifest builder.
+<a href=#62 id=62 data-nosnippet>62</a>///
+<a href=#63 id=63 data-nosnippet>63</a>/// Port of `LaTeXML::Post::Manifest::Epub`.
+<a href=#64 id=64 data-nosnippet>64</a></span><span class="kw">pub struct </span>EpubManifest {
+<a href=#65 id=65 data-nosnippet>65</a>  site_directory:    String,
+<a href=#66 id=66 data-nosnippet>66</a>  unique_identifier: <span class="prelude-ty">Option</span>&lt;String&gt;,
+<a href=#67 id=67 data-nosnippet>67</a>}
+<a href=#68 id=68 data-nosnippet>68</a>
+<a href=#69 id=69 data-nosnippet>69</a><span class="kw">impl </span>EpubManifest {
+<a href=#70 id=70 data-nosnippet>70</a>  <span class="kw">pub fn </span>new(site_directory: <span class="kw-2">&amp;</span>str) -&gt; <span class="self">Self </span>{
+<a href=#71 id=71 data-nosnippet>71</a>    EpubManifest {
+<a href=#72 id=72 data-nosnippet>72</a>      site_directory:    site_directory.to_string(),
+<a href=#73 id=73 data-nosnippet>73</a>      unique_identifier: <span class="prelude-val">None</span>,
+<a href=#74 id=74 data-nosnippet>74</a>    }
+<a href=#75 id=75 data-nosnippet>75</a>  }
+<a href=#76 id=76 data-nosnippet>76</a>
+<a href=#77 id=77 data-nosnippet>77</a>  <span class="doccomment">/// Initialize the EPUB directory structure.
+<a href=#78 id=78 data-nosnippet>78</a>  ///
+<a href=#79 id=79 data-nosnippet>79</a>  /// Port of `Epub::initialize`.
+<a href=#80 id=80 data-nosnippet>80</a>  </span><span class="kw">pub fn </span>initialize(<span class="kw-2">&amp;mut </span><span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;(), String&gt; {
+<a href=#81 id=81 data-nosnippet>81</a>    <span class="kw">let </span>dir = <span class="kw-2">&amp;</span><span class="self">self</span>.site_directory;
+<a href=#82 id=82 data-nosnippet>82</a>
+<a href=#83 id=83 data-nosnippet>83</a>    <span class="comment">// 1. Create mimetype file
+<a href=#84 id=84 data-nosnippet>84</a>    </span><span class="kw">let </span>mime_path = <span class="macro">format!</span>(<span class="string">"{}/mimetype"</span>, dir);
+<a href=#85 id=85 data-nosnippet>85</a>    fs::write(<span class="kw-2">&amp;</span>mime_path, <span class="string">"application/epub+zip"</span>)
+<a href=#86 id=86 data-nosnippet>86</a>      .map_err(|e| <span class="macro">format!</span>(<span class="string">"Couldn't write mimetype: {}"</span>, e))<span class="question-mark">?</span>;
+<a href=#87 id=87 data-nosnippet>87</a>
+<a href=#88 id=88 data-nosnippet>88</a>    <span class="comment">// 2. Create META-INF/container.xml
+<a href=#89 id=89 data-nosnippet>89</a>    </span><span class="kw">let </span>meta_inf = <span class="macro">format!</span>(<span class="string">"{}/META-INF"</span>, dir);
+<a href=#90 id=90 data-nosnippet>90</a>    fs::create_dir_all(<span class="kw-2">&amp;</span>meta_inf).map_err(|e| <span class="macro">format!</span>(<span class="string">"Couldn't create META-INF: {}"</span>, e))<span class="question-mark">?</span>;
+<a href=#91 id=91 data-nosnippet>91</a>    fs::write(<span class="macro">format!</span>(<span class="string">"{}/container.xml"</span>, meta_inf), CONTAINER_XML)
+<a href=#92 id=92 data-nosnippet>92</a>      .map_err(|e| <span class="macro">format!</span>(<span class="string">"Couldn't write container.xml: {}"</span>, e))<span class="question-mark">?</span>;
+<a href=#93 id=93 data-nosnippet>93</a>
+<a href=#94 id=94 data-nosnippet>94</a>    <span class="comment">// 3. Create OPS directory
+<a href=#95 id=95 data-nosnippet>95</a>    </span><span class="kw">let </span>ops_dir = <span class="macro">format!</span>(<span class="string">"{}/OPS"</span>, dir);
+<a href=#96 id=96 data-nosnippet>96</a>    fs::create_dir_all(<span class="kw-2">&amp;</span>ops_dir).map_err(|e| <span class="macro">format!</span>(<span class="string">"Couldn't create OPS: {}"</span>, e))<span class="question-mark">?</span>;
+<a href=#97 id=97 data-nosnippet>97</a>
+<a href=#98 id=98 data-nosnippet>98</a>    <span class="comment">// Generate a UUID for the publication
+<a href=#99 id=99 data-nosnippet>99</a>    </span><span class="self">self</span>.unique_identifier = <span class="prelude-val">Some</span>(<span class="macro">format!</span>(<span class="string">"urn:uuid:{}"</span>, generate_uuid()));
+<a href=#100 id=100 data-nosnippet>100</a>
+<a href=#101 id=101 data-nosnippet>101</a>    <span class="prelude-val">Ok</span>(())
+<a href=#102 id=102 data-nosnippet>102</a>  }
+<a href=#103 id=103 data-nosnippet>103</a>
+<a href=#104 id=104 data-nosnippet>104</a>  <span class="doccomment">/// Port of `Epub::process`: the package for the content documents `documents` (their destinations, in reading
+<a href=#105 id=105 data-nosnippet>105</a>  /// order) under `OPS/`, every other file there a resource, `content.opf` written unless the user supplied one.
+<a href=#106 id=106 data-nosnippet>106</a>  </span><span class="kw">pub fn </span>process(<span class="kw-2">&amp;mut </span><span class="self">self</span>, documents: <span class="kw-2">&amp;</span>[PathBuf], title: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>str&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;(), String&gt; {
+<a href=#107 id=107 data-nosnippet>107</a>    <span class="self">self</span>.initialize()<span class="question-mark">?</span>;
+<a href=#108 id=108 data-nosnippet>108</a>    <span class="kw">let </span>ops = Path::new(<span class="kw-2">&amp;</span><span class="self">self</span>.site_directory).join(<span class="string">"OPS"</span>);
+<a href=#109 id=109 data-nosnippet>109</a>    <span class="kw">let </span>spine: Vec&lt;SpineEntry&gt; = documents
+<a href=#110 id=110 data-nosnippet>110</a>      .iter()
+<a href=#111 id=111 data-nosnippet>111</a>      .map(|doc| {
+<a href=#112 id=112 data-nosnippet>112</a>        <span class="kw">let </span>(has_math, has_svg, has_nav) = content_properties(doc);
+<a href=#113 id=113 data-nosnippet>113</a>        <span class="kw">let </span>relative = doc.strip_prefix(<span class="kw-2">&amp;</span>ops).unwrap_or(doc);
+<a href=#114 id=114 data-nosnippet>114</a>        <span class="self">self</span>.add_document(<span class="kw-2">&amp;</span>relative.to_string_lossy(), has_math, has_svg, has_nav)
+<a href=#115 id=115 data-nosnippet>115</a>      })
+<a href=#116 id=116 data-nosnippet>116</a>      .collect();
+<a href=#117 id=117 data-nosnippet>117</a>    <span class="comment">// Epub::finalize: every non-XHTML file under OPS/, in name order.
+<a href=#118 id=118 data-nosnippet>118</a>    </span><span class="kw">let </span><span class="kw-2">mut </span>files = Vec::new();
+<a href=#119 id=119 data-nosnippet>119</a>    collect_files(<span class="kw-2">&amp;</span>ops, <span class="kw-2">&amp;mut </span>files);
+<a href=#120 id=120 data-nosnippet>120</a>    files.sort();
+<a href=#121 id=121 data-nosnippet>121</a>    <span class="kw">let </span>resources: Vec&lt;ResourceEntry&gt; = files
+<a href=#122 id=122 data-nosnippet>122</a>      .iter()
+<a href=#123 id=123 data-nosnippet>123</a>      .filter_map(|path| {
+<a href=#124 id=124 data-nosnippet>124</a>        <span class="kw">let </span>href = path.strip_prefix(<span class="kw-2">&amp;</span>ops).ok()<span class="question-mark">?</span>.to_string_lossy().into_owned();
+<a href=#125 id=125 data-nosnippet>125</a>        <span class="kw">let </span>ext = path.extension().and_then(|e| e.to_str()).unwrap_or(<span class="string">""</span>);
+<a href=#126 id=126 data-nosnippet>126</a>        <span class="kw">if </span>ext == <span class="string">"xhtml" </span>|| href == <span class="string">"content.opf" </span>|| path.ends_with(<span class="string">"LaTeXML.cache"</span>) {
+<a href=#127 id=127 data-nosnippet>127</a>          <span class="kw">return </span><span class="prelude-val">None</span>;
+<a href=#128 id=128 data-nosnippet>128</a>        }
+<a href=#129 id=129 data-nosnippet>129</a>        <span class="kw">let </span>media_type = core_media_type(ext);
+<a href=#130 id=130 data-nosnippet>130</a>        <span class="kw">if </span>media_type == <span class="string">"application/octet-stream" </span>{
+<a href=#131 id=131 data-nosnippet>131</a>          <span class="macro">crate::Info!</span>(
+<a href=#132 id=132 data-nosnippet>132</a>            <span class="string">"unexpected"</span>,
+<a href=#133 id=133 data-nosnippet>133</a>            ext.to_lowercase(),
+<a href=#134 id=134 data-nosnippet>134</a>            <span class="string">"resource '{}' is not of a core media type, assigning type application/octet-stream"</span>,
+<a href=#135 id=135 data-nosnippet>135</a>            href
+<a href=#136 id=136 data-nosnippet>136</a>          );
+<a href=#137 id=137 data-nosnippet>137</a>        }
+<a href=#138 id=138 data-nosnippet>138</a>        <span class="prelude-val">Some</span>(ResourceEntry {
+<a href=#139 id=139 data-nosnippet>139</a>          id: url_to_id(<span class="kw-2">&amp;</span>href),
+<a href=#140 id=140 data-nosnippet>140</a>          href,
+<a href=#141 id=141 data-nosnippet>141</a>          media_type: media_type.to_string(),
+<a href=#142 id=142 data-nosnippet>142</a>        })
+<a href=#143 id=143 data-nosnippet>143</a>      })
+<a href=#144 id=144 data-nosnippet>144</a>      .collect();
+<a href=#145 id=145 data-nosnippet>145</a>    <span class="kw">let </span>content_path = ops.join(<span class="string">"content.opf"</span>);
+<a href=#146 id=146 data-nosnippet>146</a>    <span class="kw">if </span>content_path.is_file() {
+<a href=#147 id=147 data-nosnippet>147</a>      <span class="macro">crate::Info!</span>(
+<a href=#148 id=148 data-nosnippet>148</a>        <span class="string">"note"</span>,
+<a href=#149 id=149 data-nosnippet>149</a>        <span class="string">"content.opf"</span>,
+<a href=#150 id=150 data-nosnippet>150</a>        <span class="string">"using the manifest supplied by the user"
+<a href=#151 id=151 data-nosnippet>151</a>      </span>);
+<a href=#152 id=152 data-nosnippet>152</a>      <span class="kw">return </span><span class="prelude-val">Ok</span>(());
+<a href=#153 id=153 data-nosnippet>153</a>    }
+<a href=#154 id=154 data-nosnippet>154</a>    <span class="comment">// Perl reads the title from the ObjectDB's SITE_ROOT entry, which carries no authors or language.
+<a href=#155 id=155 data-nosnippet>155</a>    </span><span class="kw">let </span>opf = <span class="self">self</span>.generate_opf(title.unwrap_or(<span class="string">"No Title"</span>), <span class="kw-2">&amp;</span>[], <span class="string">"en"</span>, <span class="kw-2">&amp;</span>spine, <span class="kw-2">&amp;</span>resources);
+<a href=#156 id=156 data-nosnippet>156</a>    fs::write(<span class="kw-2">&amp;</span>content_path, opf).map_err(|e| <span class="macro">format!</span>(<span class="string">"Couldn't write content.opf: {e}"</span>))
+<a href=#157 id=157 data-nosnippet>157</a>  }
+<a href=#158 id=158 data-nosnippet>158</a>
+<a href=#159 id=159 data-nosnippet>159</a>  <span class="doccomment">/// Add a document to the EPUB spine; `href` is its path relative to `OPS/`.
+<a href=#160 id=160 data-nosnippet>160</a>  ///
+<a href=#161 id=161 data-nosnippet>161</a>  /// Port of `Epub::process` per-document loop.
+<a href=#162 id=162 data-nosnippet>162</a>  </span><span class="kw">pub fn </span>add_document(
+<a href=#163 id=163 data-nosnippet>163</a>    <span class="kw-2">&amp;</span><span class="self">self</span>,
+<a href=#164 id=164 data-nosnippet>164</a>    href: <span class="kw-2">&amp;</span>str,
+<a href=#165 id=165 data-nosnippet>165</a>    has_math: bool,
+<a href=#166 id=166 data-nosnippet>166</a>    has_svg: bool,
+<a href=#167 id=167 data-nosnippet>167</a>    has_nav: bool,
+<a href=#168 id=168 data-nosnippet>168</a>  ) -&gt; SpineEntry {
+<a href=#169 id=169 data-nosnippet>169</a>    <span class="kw">let </span>href = href.replace(std::path::MAIN_SEPARATOR, <span class="string">"/"</span>);
+<a href=#170 id=170 data-nosnippet>170</a>    <span class="kw">let </span><span class="kw-2">mut </span>properties = Vec::new();
+<a href=#171 id=171 data-nosnippet>171</a>    <span class="kw">if </span>has_math {
+<a href=#172 id=172 data-nosnippet>172</a>      properties.push(<span class="string">"mathml"</span>);
+<a href=#173 id=173 data-nosnippet>173</a>    }
+<a href=#174 id=174 data-nosnippet>174</a>    <span class="kw">if </span>has_svg {
+<a href=#175 id=175 data-nosnippet>175</a>      properties.push(<span class="string">"svg"</span>);
+<a href=#176 id=176 data-nosnippet>176</a>    }
+<a href=#177 id=177 data-nosnippet>177</a>    <span class="kw">if </span>has_nav {
+<a href=#178 id=178 data-nosnippet>178</a>      properties.push(<span class="string">"nav"</span>);
+<a href=#179 id=179 data-nosnippet>179</a>    }
+<a href=#180 id=180 data-nosnippet>180</a>
+<a href=#181 id=181 data-nosnippet>181</a>    SpineEntry {
+<a href=#182 id=182 data-nosnippet>182</a>      id: url_to_id(<span class="kw-2">&amp;</span>href),
+<a href=#183 id=183 data-nosnippet>183</a>      href,
+<a href=#184 id=184 data-nosnippet>184</a>      media_type: <span class="string">"application/xhtml+xml"</span>.to_string(),
+<a href=#185 id=185 data-nosnippet>185</a>      properties: <span class="kw">if </span>properties.is_empty() {
+<a href=#186 id=186 data-nosnippet>186</a>        <span class="prelude-val">None
+<a href=#187 id=187 data-nosnippet>187</a>      </span>} <span class="kw">else </span>{
+<a href=#188 id=188 data-nosnippet>188</a>        <span class="prelude-val">Some</span>(properties.join(<span class="string">" "</span>))
+<a href=#189 id=189 data-nosnippet>189</a>      },
+<a href=#190 id=190 data-nosnippet>190</a>    }
+<a href=#191 id=191 data-nosnippet>191</a>  }
+<a href=#192 id=192 data-nosnippet>192</a>
+<a href=#193 id=193 data-nosnippet>193</a>  <span class="doccomment">/// Generate the content.opf package document.
+<a href=#194 id=194 data-nosnippet>194</a>  ///
+<a href=#195 id=195 data-nosnippet>195</a>  /// Port of `Epub::finalize`. Built through the libxml DOM rather than by
+<a href=#196 id=196 data-nosnippet>196</a>  /// `push_str`, because an OPF is parsed by strict readers: one unescaped `&amp;`
+<a href=#197 id=197 data-nosnippet>197</a>  /// in a single `href` invalidates the whole package, not one entry.
+<a href=#198 id=198 data-nosnippet>198</a>  ///
+<a href=#199 id=199 data-nosnippet>199</a>  /// That was reachable. `href` is `format!("{}.{}", name, ext)` over a split
+<a href=#200 id=200 data-nosnippet>200</a>  /// document's file stem, and `--splitnaming=label` takes that stem from the
+<a href=#201 id=201 data-nosnippet>201</a>  /// author's `\label{...}` — `\label{Fisher&amp;Yates}` really does produce a file
+<a href=#202 id=202 data-nosnippet>202</a>  /// named `Fisher&amp;Yates.xhtml`. The old builder escaped 2 of 12 interpolated
+<a href=#203 id=203 data-nosnippet>203</a>  /// values and `href` was not one of them. libxml escapes on set, so the
+<a href=#204 id=204 data-nosnippet>204</a>  /// question no longer arises for any of them. (Issue 386 item 2.)
+<a href=#205 id=205 data-nosnippet>205</a>  </span><span class="kw">pub fn </span>generate_opf(
+<a href=#206 id=206 data-nosnippet>206</a>    <span class="kw-2">&amp;</span><span class="self">self</span>,
+<a href=#207 id=207 data-nosnippet>207</a>    title: <span class="kw-2">&amp;</span>str,
+<a href=#208 id=208 data-nosnippet>208</a>    authors: <span class="kw-2">&amp;</span>[String],
+<a href=#209 id=209 data-nosnippet>209</a>    language: <span class="kw-2">&amp;</span>str,
+<a href=#210 id=210 data-nosnippet>210</a>    spine: <span class="kw-2">&amp;</span>[SpineEntry],
+<a href=#211 id=211 data-nosnippet>211</a>    resources: <span class="kw-2">&amp;</span>[ResourceEntry],
+<a href=#212 id=212 data-nosnippet>212</a>  ) -&gt; String {
+<a href=#213 id=213 data-nosnippet>213</a>    <span class="kw">let </span>uid = <span class="self">self
+<a href=#214 id=214 data-nosnippet>214</a>      </span>.unique_identifier
+<a href=#215 id=215 data-nosnippet>215</a>      .as_deref()
+<a href=#216 id=216 data-nosnippet>216</a>      .unwrap_or(<span class="string">"urn:uuid:00000000-0000-0000-0000-000000000000"</span>);
+<a href=#217 id=217 data-nosnippet>217</a>
+<a href=#218 id=218 data-nosnippet>218</a>    <span class="kw">match </span><span class="self">self</span>.build_opf_dom(title, authors, language, uid, spine, resources) {
+<a href=#219 id=219 data-nosnippet>219</a>      <span class="prelude-val">Ok</span>(xml) =&gt; xml,
+<a href=#220 id=220 data-nosnippet>220</a>      <span class="comment">// A DOM allocation failure is not something a caller can act on, and an
+<a href=#221 id=221 data-nosnippet>221</a>      // empty package is a clearer failure than a half-built one.
+<a href=#222 id=222 data-nosnippet>222</a>      </span><span class="prelude-val">Err</span>(e) =&gt; {
+<a href=#223 id=223 data-nosnippet>223</a>        <span class="macro">crate::Error!</span>(
+<a href=#224 id=224 data-nosnippet>224</a>          <span class="string">"epub"</span>,
+<a href=#225 id=225 data-nosnippet>225</a>          <span class="string">"opf"</span>,
+<a href=#226 id=226 data-nosnippet>226</a>          <span class="string">"Couldn't build the EPUB package document: {}"</span>,
+<a href=#227 id=227 data-nosnippet>227</a>          e
+<a href=#228 id=228 data-nosnippet>228</a>        );
+<a href=#229 id=229 data-nosnippet>229</a>        String::new()
+<a href=#230 id=230 data-nosnippet>230</a>      },
+<a href=#231 id=231 data-nosnippet>231</a>    }
+<a href=#232 id=232 data-nosnippet>232</a>  }
+<a href=#233 id=233 data-nosnippet>233</a>
+<a href=#234 id=234 data-nosnippet>234</a>  <span class="kw">fn </span>build_opf_dom(
+<a href=#235 id=235 data-nosnippet>235</a>    <span class="kw-2">&amp;</span><span class="self">self</span>,
+<a href=#236 id=236 data-nosnippet>236</a>    title: <span class="kw-2">&amp;</span>str,
+<a href=#237 id=237 data-nosnippet>237</a>    authors: <span class="kw-2">&amp;</span>[String],
+<a href=#238 id=238 data-nosnippet>238</a>    language: <span class="kw-2">&amp;</span>str,
+<a href=#239 id=239 data-nosnippet>239</a>    uid: <span class="kw-2">&amp;</span>str,
+<a href=#240 id=240 data-nosnippet>240</a>    spine: <span class="kw-2">&amp;</span>[SpineEntry],
+<a href=#241 id=241 data-nosnippet>241</a>    resources: <span class="kw-2">&amp;</span>[ResourceEntry],
+<a href=#242 id=242 data-nosnippet>242</a>  ) -&gt; <span class="prelude-ty">Result</span>&lt;String, String&gt; {
+<a href=#243 id=243 data-nosnippet>243</a>    <span class="kw">use </span>libxml::tree::{Document <span class="kw">as </span>XmlDoc, Namespace, Node};
+<a href=#244 id=244 data-nosnippet>244</a>
+<a href=#245 id=245 data-nosnippet>245</a>    <span class="kw">let </span><span class="kw-2">mut </span>doc = XmlDoc::new().map_err(|<span class="kw">_</span>| <span class="string">"couldn't create the OPF document"</span>.to_string())<span class="question-mark">?</span>;
+<a href=#246 id=246 data-nosnippet>246</a>
+<a href=#247 id=247 data-nosnippet>247</a>    <span class="kw">let </span><span class="kw-2">mut </span>package = Node::new(<span class="string">"package"</span>, <span class="prelude-val">None</span>, <span class="kw-2">&amp;</span>doc).map_err(ctx(<span class="string">"&lt;package&gt;"</span>))<span class="question-mark">?</span>;
+<a href=#248 id=248 data-nosnippet>248</a>    <span class="kw">let </span>opf_ns = Namespace::new(<span class="string">""</span>, OPF_NS, <span class="kw-2">&amp;mut </span>package).map_err(ctx(<span class="string">"the OPF namespace"</span>))<span class="question-mark">?</span>;
+<a href=#249 id=249 data-nosnippet>249</a>    package
+<a href=#250 id=250 data-nosnippet>250</a>      .set_namespace(<span class="kw-2">&amp;</span>opf_ns)
+<a href=#251 id=251 data-nosnippet>251</a>      .map_err(ctx(<span class="string">"the OPF namespace"</span>))<span class="question-mark">?</span>;
+<a href=#252 id=252 data-nosnippet>252</a>    package
+<a href=#253 id=253 data-nosnippet>253</a>      .set_attribute(<span class="string">"unique-identifier"</span>, <span class="string">"pub-id"</span>)
+<a href=#254 id=254 data-nosnippet>254</a>      .map_err(ctx(<span class="string">"@unique-identifier"</span>))<span class="question-mark">?</span>;
+<a href=#255 id=255 data-nosnippet>255</a>    package
+<a href=#256 id=256 data-nosnippet>256</a>      .set_attribute(<span class="string">"version"</span>, <span class="string">"3.0"</span>)
+<a href=#257 id=257 data-nosnippet>257</a>      .map_err(ctx(<span class="string">"@version"</span>))<span class="question-mark">?</span>;
+<a href=#258 id=258 data-nosnippet>258</a>    doc.set_root_element(<span class="kw-2">&amp;</span>package);
+<a href=#259 id=259 data-nosnippet>259</a>
+<a href=#260 id=260 data-nosnippet>260</a>    <span class="comment">// ---- metadata ----
+<a href=#261 id=261 data-nosnippet>261</a>    </span><span class="kw">let </span><span class="kw-2">mut </span>metadata = Node::new(<span class="string">"metadata"</span>, <span class="prelude-val">None</span>, <span class="kw-2">&amp;</span>doc).map_err(ctx(<span class="string">"&lt;metadata&gt;"</span>))<span class="question-mark">?</span>;
+<a href=#262 id=262 data-nosnippet>262</a>    <span class="comment">// `dc:` is declared HERE, matching the shape readers expect, and the
+<a href=#263 id=263 data-nosnippet>263</a>    // Dublin Core children below are created in it.
+<a href=#264 id=264 data-nosnippet>264</a>    </span><span class="kw">let </span>dc_ns = Namespace::new(<span class="string">"dc"</span>, DC_NS, <span class="kw-2">&amp;mut </span>metadata).map_err(ctx(<span class="string">"the dc namespace"</span>))<span class="question-mark">?</span>;
+<a href=#265 id=265 data-nosnippet>265</a>    package
+<a href=#266 id=266 data-nosnippet>266</a>      .add_child(<span class="kw-2">&amp;mut </span>metadata)
+<a href=#267 id=267 data-nosnippet>267</a>      .map_err(ctx(<span class="string">"&lt;metadata&gt;"</span>))<span class="question-mark">?</span>;
+<a href=#268 id=268 data-nosnippet>268</a>
+<a href=#269 id=269 data-nosnippet>269</a>    <span class="comment">// A closure would hold `metadata` borrowed across every call, so the
+<a href=#270 id=270 data-nosnippet>270</a>    // Dublin Core children are appended inline through one small helper.
+<a href=#271 id=271 data-nosnippet>271</a>    </span><span class="kw">fn </span>dc_child(
+<a href=#272 id=272 data-nosnippet>272</a>      doc: <span class="kw-2">&amp;</span>XmlDoc,
+<a href=#273 id=273 data-nosnippet>273</a>      dc_ns: <span class="kw-2">&amp;</span>Namespace,
+<a href=#274 id=274 data-nosnippet>274</a>      metadata: <span class="kw-2">&amp;mut </span>Node,
+<a href=#275 id=275 data-nosnippet>275</a>      name: <span class="kw-2">&amp;</span>str,
+<a href=#276 id=276 data-nosnippet>276</a>      text: <span class="kw-2">&amp;</span>str,
+<a href=#277 id=277 data-nosnippet>277</a>    ) -&gt; <span class="prelude-ty">Result</span>&lt;Node, String&gt; {
+<a href=#278 id=278 data-nosnippet>278</a>      <span class="kw">let </span><span class="kw-2">mut </span>n = Node::new(name, <span class="prelude-val">Some</span>(dc_ns.clone()), doc).map_err(ctx(name))<span class="question-mark">?</span>;
+<a href=#279 id=279 data-nosnippet>279</a>      n.set_content(text).map_err(ctx(name))<span class="question-mark">?</span>;
+<a href=#280 id=280 data-nosnippet>280</a>      metadata.add_child(<span class="kw-2">&amp;mut </span>n).map_err(ctx(name))<span class="question-mark">?</span>;
+<a href=#281 id=281 data-nosnippet>281</a>      <span class="prelude-val">Ok</span>(n)
 <a href=#282 id=282 data-nosnippet>282</a>    }
-<a href=#283 id=283 data-nosnippet>283</a>
-<a href=#284 id=284 data-nosnippet>284</a>    <span class="comment">// ---- spine ----
-<a href=#285 id=285 data-nosnippet>285</a>    </span><span class="kw">let </span><span class="kw-2">mut </span>spine_el = Node::new(<span class="string">"spine"</span>, <span class="prelude-val">None</span>, <span class="kw-2">&amp;</span>doc).map_err(ctx(<span class="string">"&lt;spine&gt;"</span>))<span class="question-mark">?</span>;
-<a href=#286 id=286 data-nosnippet>286</a>    package.add_child(<span class="kw-2">&amp;mut </span>spine_el).map_err(ctx(<span class="string">"&lt;spine&gt;"</span>))<span class="question-mark">?</span>;
-<a href=#287 id=287 data-nosnippet>287</a>    <span class="kw">for </span>entry <span class="kw">in </span>spine {
-<a href=#288 id=288 data-nosnippet>288</a>      <span class="kw">let </span><span class="kw-2">mut </span>itemref = Node::new(<span class="string">"itemref"</span>, <span class="prelude-val">None</span>, <span class="kw-2">&amp;</span>doc).map_err(ctx(<span class="string">"&lt;itemref&gt;"</span>))<span class="question-mark">?</span>;
-<a href=#289 id=289 data-nosnippet>289</a>      itemref
-<a href=#290 id=290 data-nosnippet>290</a>        .set_attribute(<span class="string">"idref"</span>, <span class="kw-2">&amp;</span>entry.id)
-<a href=#291 id=291 data-nosnippet>291</a>        .map_err(ctx(<span class="string">"@idref"</span>))<span class="question-mark">?</span>;
-<a href=#292 id=292 data-nosnippet>292</a>      spine_el.add_child(<span class="kw-2">&amp;mut </span>itemref).map_err(ctx(<span class="string">"&lt;itemref&gt;"</span>))<span class="question-mark">?</span>;
-<a href=#293 id=293 data-nosnippet>293</a>    }
-<a href=#294 id=294 data-nosnippet>294</a>
-<a href=#295 id=295 data-nosnippet>295</a>    <span class="prelude-val">Ok</span>(doc.to_string())
-<a href=#296 id=296 data-nosnippet>296</a>  }
-<a href=#297 id=297 data-nosnippet>297</a>}
-<a href=#298 id=298 data-nosnippet>298</a>
-<a href=#299 id=299 data-nosnippet>299</a><span class="doccomment">/// An entry in the EPUB spine (content document).
-<a href=#300 id=300 data-nosnippet>300</a></span><span class="attr">#[derive(Debug)]
-<a href=#301 id=301 data-nosnippet>301</a></span><span class="kw">pub struct </span>SpineEntry {
-<a href=#302 id=302 data-nosnippet>302</a>  <span class="kw">pub </span>id:         String,
-<a href=#303 id=303 data-nosnippet>303</a>  <span class="kw">pub </span>href:       String,
-<a href=#304 id=304 data-nosnippet>304</a>  <span class="kw">pub </span>media_type: String,
-<a href=#305 id=305 data-nosnippet>305</a>  <span class="kw">pub </span>properties: <span class="prelude-ty">Option</span>&lt;String&gt;,
-<a href=#306 id=306 data-nosnippet>306</a>}
-<a href=#307 id=307 data-nosnippet>307</a>
-<a href=#308 id=308 data-nosnippet>308</a><span class="doccomment">/// A resource entry (CSS, images, fonts).
-<a href=#309 id=309 data-nosnippet>309</a></span><span class="attr">#[derive(Debug)]
-<a href=#310 id=310 data-nosnippet>310</a></span><span class="kw">pub struct </span>ResourceEntry {
-<a href=#311 id=311 data-nosnippet>311</a>  <span class="kw">pub </span>id:         String,
-<a href=#312 id=312 data-nosnippet>312</a>  <span class="kw">pub </span>href:       String,
-<a href=#313 id=313 data-nosnippet>313</a>  <span class="kw">pub </span>media_type: String,
-<a href=#314 id=314 data-nosnippet>314</a>}
-<a href=#315 id=315 data-nosnippet>315</a>
-<a href=#316 id=316 data-nosnippet>316</a><span class="doccomment">/// Convert a URL/filename to a valid NCName for use as an XML id.
-<a href=#317 id=317 data-nosnippet>317</a>///
-<a href=#318 id=318 data-nosnippet>318</a>/// Port of `url_id`.
-<a href=#319 id=319 data-nosnippet>319</a></span><span class="kw">fn </span>url_to_id(name: <span class="kw-2">&amp;</span>str) -&gt; String {
-<a href=#320 id=320 data-nosnippet>320</a>  <span class="kw">let </span><span class="kw-2">mut </span>result = String::from(<span class="string">"_"</span>);
-<a href=#321 id=321 data-nosnippet>321</a>  <span class="kw">for </span>ch <span class="kw">in </span>name.chars() {
-<a href=#322 id=322 data-nosnippet>322</a>    <span class="kw">if </span>ch.is_ascii_alphanumeric() || ch == <span class="string">'_' </span>|| ch == <span class="string">'-' </span>|| ch == <span class="string">'.' </span>{
-<a href=#323 id=323 data-nosnippet>323</a>      result.push(ch);
-<a href=#324 id=324 data-nosnippet>324</a>    } <span class="kw">else </span>{
-<a href=#325 id=325 data-nosnippet>325</a>      result.push_str(<span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">"_x{:X}_"</span>, ch <span class="kw">as </span>u32));
-<a href=#326 id=326 data-nosnippet>326</a>    }
-<a href=#327 id=327 data-nosnippet>327</a>  }
-<a href=#328 id=328 data-nosnippet>328</a>  result
-<a href=#329 id=329 data-nosnippet>329</a>}
-<a href=#330 id=330 data-nosnippet>330</a>
-<a href=#331 id=331 data-nosnippet>331</a><span class="doccomment">/// Generate a UUID v4 string.
-<a href=#332 id=332 data-nosnippet>332</a></span><span class="kw">fn </span>generate_uuid() -&gt; String {
-<a href=#333 id=333 data-nosnippet>333</a>  <span class="comment">// Simple random UUID v4 (no external dependency)
-<a href=#334 id=334 data-nosnippet>334</a>  </span><span class="kw">use </span>std::time::{SystemTime, UNIX_EPOCH};
-<a href=#335 id=335 data-nosnippet>335</a>  <span class="kw">let </span>seed = SystemTime::now()
-<a href=#336 id=336 data-nosnippet>336</a>    .duration_since(UNIX_EPOCH)
-<a href=#337 id=337 data-nosnippet>337</a>    .unwrap_or_default()
-<a href=#338 id=338 data-nosnippet>338</a>    .as_nanos();
-<a href=#339 id=339 data-nosnippet>339</a>  <span class="comment">// LCG-based pseudo-random for simplicity
-<a href=#340 id=340 data-nosnippet>340</a>  </span><span class="kw">let </span><span class="kw-2">mut </span>state = seed <span class="kw">as </span>u64;
-<a href=#341 id=341 data-nosnippet>341</a>  <span class="kw">let </span><span class="kw-2">mut </span>bytes = [<span class="number">0u8</span>; <span class="number">16</span>];
-<a href=#342 id=342 data-nosnippet>342</a>  <span class="kw">for </span>b <span class="kw">in </span><span class="kw-2">&amp;mut </span>bytes {
-<a href=#343 id=343 data-nosnippet>343</a>    state = state
-<a href=#344 id=344 data-nosnippet>344</a>      .wrapping_mul(<span class="number">6364136223846793005</span>)
-<a href=#345 id=345 data-nosnippet>345</a>      .wrapping_add(<span class="number">1442695040888963407</span>);
-<a href=#346 id=346 data-nosnippet>346</a>    <span class="kw-2">*</span>b = (state &gt;&gt; <span class="number">33</span>) <span class="kw">as </span>u8;
-<a href=#347 id=347 data-nosnippet>347</a>  }
-<a href=#348 id=348 data-nosnippet>348</a>  bytes[<span class="number">6</span>] = (bytes[<span class="number">6</span>] &amp; <span class="number">0x0F</span>) | <span class="number">0x40</span>; <span class="comment">// version 4
-<a href=#349 id=349 data-nosnippet>349</a>  </span>bytes[<span class="number">8</span>] = (bytes[<span class="number">8</span>] &amp; <span class="number">0x3F</span>) | <span class="number">0x80</span>; <span class="comment">// variant 1
-<a href=#350 id=350 data-nosnippet>350</a>  </span><span class="macro">format!</span>(
-<a href=#351 id=351 data-nosnippet>351</a>    <span class="string">"{:02x}{:02x}{:02x}{:02x}-{:02x}{:02x}-{:02x}{:02x}-{:02x}{:02x}-{:02x}{:02x}{:02x}{:02x}{:02x}{:02x}"</span>,
-<a href=#352 id=352 data-nosnippet>352</a>    bytes[<span class="number">0</span>],
-<a href=#353 id=353 data-nosnippet>353</a>    bytes[<span class="number">1</span>],
-<a href=#354 id=354 data-nosnippet>354</a>    bytes[<span class="number">2</span>],
-<a href=#355 id=355 data-nosnippet>355</a>    bytes[<span class="number">3</span>],
-<a href=#356 id=356 data-nosnippet>356</a>    bytes[<span class="number">4</span>],
-<a href=#357 id=357 data-nosnippet>357</a>    bytes[<span class="number">5</span>],
-<a href=#358 id=358 data-nosnippet>358</a>    bytes[<span class="number">6</span>],
-<a href=#359 id=359 data-nosnippet>359</a>    bytes[<span class="number">7</span>],
-<a href=#360 id=360 data-nosnippet>360</a>    bytes[<span class="number">8</span>],
-<a href=#361 id=361 data-nosnippet>361</a>    bytes[<span class="number">9</span>],
-<a href=#362 id=362 data-nosnippet>362</a>    bytes[<span class="number">10</span>],
-<a href=#363 id=363 data-nosnippet>363</a>    bytes[<span class="number">11</span>],
-<a href=#364 id=364 data-nosnippet>364</a>    bytes[<span class="number">12</span>],
-<a href=#365 id=365 data-nosnippet>365</a>    bytes[<span class="number">13</span>],
-<a href=#366 id=366 data-nosnippet>366</a>    bytes[<span class="number">14</span>],
-<a href=#367 id=367 data-nosnippet>367</a>    bytes[<span class="number">15</span>]
-<a href=#368 id=368 data-nosnippet>368</a>  )
-<a href=#369 id=369 data-nosnippet>369</a>}
-<a href=#370 id=370 data-nosnippet>370</a>
-<a href=#371 id=371 data-nosnippet>371</a><span class="doccomment">/// Generate an ISO 8601 timestamp (CCYY-MM-DDThh:mm:ssZ).
-<a href=#372 id=372 data-nosnippet>372</a></span><span class="kw">fn </span>chrono_like_now() -&gt; String {
-<a href=#373 id=373 data-nosnippet>373</a>  <span class="kw">use </span>std::time::{SystemTime, UNIX_EPOCH};
-<a href=#374 id=374 data-nosnippet>374</a>  <span class="kw">let </span>secs = SystemTime::now()
-<a href=#375 id=375 data-nosnippet>375</a>    .duration_since(UNIX_EPOCH)
-<a href=#376 id=376 data-nosnippet>376</a>    .unwrap_or_default()
-<a href=#377 id=377 data-nosnippet>377</a>    .as_secs();
-<a href=#378 id=378 data-nosnippet>378</a>  <span class="comment">// Simple UTC timestamp computation (no chrono dependency)
-<a href=#379 id=379 data-nosnippet>379</a>  </span><span class="kw">let </span>days = secs / <span class="number">86400</span>;
-<a href=#380 id=380 data-nosnippet>380</a>  <span class="kw">let </span>time_of_day = secs % <span class="number">86400</span>;
-<a href=#381 id=381 data-nosnippet>381</a>  <span class="kw">let </span>hours = time_of_day / <span class="number">3600</span>;
-<a href=#382 id=382 data-nosnippet>382</a>  <span class="kw">let </span>minutes = (time_of_day % <span class="number">3600</span>) / <span class="number">60</span>;
-<a href=#383 id=383 data-nosnippet>383</a>  <span class="kw">let </span>seconds = time_of_day % <span class="number">60</span>;
-<a href=#384 id=384 data-nosnippet>384</a>  <span class="comment">// Rough date from epoch days (good enough for timestamps)
-<a href=#385 id=385 data-nosnippet>385</a>  </span><span class="kw">let </span>(year, month, day) = days_to_ymd(days <span class="kw">as </span>i64);
-<a href=#386 id=386 data-nosnippet>386</a>  <span class="macro">format!</span>(
-<a href=#387 id=387 data-nosnippet>387</a>    <span class="string">"{:04}-{:02}-{:02}T{:02}:{:02}:{:02}Z"</span>,
-<a href=#388 id=388 data-nosnippet>388</a>    year, month, day, hours, minutes, seconds
-<a href=#389 id=389 data-nosnippet>389</a>  )
-<a href=#390 id=390 data-nosnippet>390</a>}
-<a href=#391 id=391 data-nosnippet>391</a>
-<a href=#392 id=392 data-nosnippet>392</a><span class="doccomment">/// Convert days since Unix epoch to (year, month, day).
-<a href=#393 id=393 data-nosnippet>393</a></span><span class="kw">fn </span>days_to_ymd(days: i64) -&gt; (i64, u32, u32) {
-<a href=#394 id=394 data-nosnippet>394</a>  <span class="comment">// Algorithm from https://howardhinnant.github.io/date_algorithms.html
-<a href=#395 id=395 data-nosnippet>395</a>  </span><span class="kw">let </span>z = days + <span class="number">719468</span>;
-<a href=#396 id=396 data-nosnippet>396</a>  <span class="kw">let </span>era = <span class="kw">if </span>z &gt;= <span class="number">0 </span>{ z } <span class="kw">else </span>{ z - <span class="number">146096 </span>} / <span class="number">146097</span>;
-<a href=#397 id=397 data-nosnippet>397</a>  <span class="kw">let </span>doe = (z - era * <span class="number">146097</span>) <span class="kw">as </span>u32;
-<a href=#398 id=398 data-nosnippet>398</a>  <span class="kw">let </span>yoe = (doe - doe / <span class="number">1460 </span>+ doe / <span class="number">36524 </span>- doe / <span class="number">146096</span>) / <span class="number">365</span>;
-<a href=#399 id=399 data-nosnippet>399</a>  <span class="kw">let </span>y = yoe <span class="kw">as </span>i64 + era * <span class="number">400</span>;
-<a href=#400 id=400 data-nosnippet>400</a>  <span class="kw">let </span>doy = doe - (<span class="number">365 </span>* yoe + yoe / <span class="number">4 </span>- yoe / <span class="number">100</span>);
-<a href=#401 id=401 data-nosnippet>401</a>  <span class="kw">let </span>mp = (<span class="number">5 </span>* doy + <span class="number">2</span>) / <span class="number">153</span>;
-<a href=#402 id=402 data-nosnippet>402</a>  <span class="kw">let </span>d = doy - (<span class="number">153 </span>* mp + <span class="number">2</span>) / <span class="number">5 </span>+ <span class="number">1</span>;
-<a href=#403 id=403 data-nosnippet>403</a>  <span class="kw">let </span>m = <span class="kw">if </span>mp &lt; <span class="number">10 </span>{ mp + <span class="number">3 </span>} <span class="kw">else </span>{ mp - <span class="number">9 </span>};
-<a href=#404 id=404 data-nosnippet>404</a>  (y + <span class="kw">if </span>m &lt;= <span class="number">2 </span>{ <span class="number">1 </span>} <span class="kw">else </span>{ <span class="number">0 </span>}, m, d)
-<a href=#405 id=405 data-nosnippet>405</a>}
-<a href=#406 id=406 data-nosnippet>406</a>
-<a href=#407 id=407 data-nosnippet>407</a><span class="attr">#[cfg(test)]
-<a href=#408 id=408 data-nosnippet>408</a></span><span class="kw">mod </span>tests {
-<a href=#409 id=409 data-nosnippet>409</a>  <span class="kw">use super</span>::<span class="kw-2">*</span>;
-<a href=#410 id=410 data-nosnippet>410</a>
-<a href=#411 id=411 data-nosnippet>411</a>  <span class="kw">fn </span>spine_entry(id: <span class="kw-2">&amp;</span>str, href: <span class="kw-2">&amp;</span>str, properties: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>str&gt;) -&gt; SpineEntry {
-<a href=#412 id=412 data-nosnippet>412</a>    SpineEntry {
-<a href=#413 id=413 data-nosnippet>413</a>      id:         id.to_string(),
-<a href=#414 id=414 data-nosnippet>414</a>      href:       href.to_string(),
-<a href=#415 id=415 data-nosnippet>415</a>      media_type: <span class="string">"application/xhtml+xml"</span>.to_string(),
-<a href=#416 id=416 data-nosnippet>416</a>      properties: properties.map(str::to_string),
-<a href=#417 id=417 data-nosnippet>417</a>    }
-<a href=#418 id=418 data-nosnippet>418</a>  }
-<a href=#419 id=419 data-nosnippet>419</a>
-<a href=#420 id=420 data-nosnippet>420</a>  <span class="doccomment">/// The package document must be well-formed for **author-controlled** input.
-<a href=#421 id=421 data-nosnippet>421</a>  ///
-<a href=#422 id=422 data-nosnippet>422</a>  /// Issue 386 item 2. An OPF is read by strict parsers, so one unescaped `&amp;`
-<a href=#423 id=423 data-nosnippet>423</a>  /// invalidates the whole book rather than one entry — and `&amp;` is reachable:
-<a href=#424 id=424 data-nosnippet>424</a>  /// `href` is built from a split document's file stem, and `--splitnaming=label`
-<a href=#425 id=425 data-nosnippet>425</a>  /// takes that stem from the author's `\label{...}`, so `\label{Fisher&amp;Yates}`
-<a href=#426 id=426 data-nosnippet>426</a>  /// yields a file named `Fisher&amp;Yates.xhtml`. The old `push_str` builder escaped
-<a href=#427 id=427 data-nosnippet>427</a>  /// 2 of 12 interpolated values and `href` was not among them.
-<a href=#428 id=428 data-nosnippet>428</a>  ///
-<a href=#429 id=429 data-nosnippet>429</a>  /// The assertion is deliberately "it parses", not "it contains `&amp;amp;`":
-<a href=#430 id=430 data-nosnippet>430</a>  /// well-formedness is the property that matters, and it cannot be satisfied by
-<a href=#431 id=431 data-nosnippet>431</a>  /// accident.
-<a href=#432 id=432 data-nosnippet>432</a>  </span><span class="attr">#[test]
-<a href=#433 id=433 data-nosnippet>433</a>  </span><span class="kw">fn </span>opf_stays_well_formed_when_author_input_carries_xml_specials() {
-<a href=#434 id=434 data-nosnippet>434</a>    <span class="kw">let </span><span class="kw-2">mut </span>manifest = EpubManifest::new(<span class="string">"/tmp/does-not-need-to-exist"</span>);
-<a href=#435 id=435 data-nosnippet>435</a>    manifest.unique_identifier = <span class="prelude-val">Some</span>(<span class="string">"urn:uuid:test"</span>.to_string());
-<a href=#436 id=436 data-nosnippet>436</a>
-<a href=#437 id=437 data-nosnippet>437</a>    <span class="kw">let </span>spine = <span class="macro">vec!</span>[
-<a href=#438 id=438 data-nosnippet>438</a>      spine_entry(
-<a href=#439 id=439 data-nosnippet>439</a>        <span class="string">"_Fisher_x26_Yates.xhtml"</span>,
-<a href=#440 id=440 data-nosnippet>440</a>        <span class="string">"Fisher&amp;Yates.xhtml"</span>,
-<a href=#441 id=441 data-nosnippet>441</a>        <span class="prelude-val">Some</span>(<span class="string">"mathml"</span>),
-<a href=#442 id=442 data-nosnippet>442</a>      ),
-<a href=#443 id=443 data-nosnippet>443</a>      spine_entry(<span class="string">"_quote_x22_.xhtml"</span>, <span class="string">"a\"quote\".xhtml"</span>, <span class="prelude-val">None</span>),
-<a href=#444 id=444 data-nosnippet>444</a>      spine_entry(<span class="string">"_lt_x3C_.xhtml"</span>, <span class="string">"a&lt;less&gt;.xhtml"</span>, <span class="prelude-val">None</span>),
-<a href=#445 id=445 data-nosnippet>445</a>    ];
-<a href=#446 id=446 data-nosnippet>446</a>    <span class="kw">let </span>resources = <span class="macro">vec!</span>[ResourceEntry {
-<a href=#447 id=447 data-nosnippet>447</a>      id:         <span class="string">"_css"</span>.to_string(),
-<a href=#448 id=448 data-nosnippet>448</a>      href:       <span class="string">"LaTeXML&amp;core.css"</span>.to_string(),
-<a href=#449 id=449 data-nosnippet>449</a>      media_type: <span class="string">"text/css"</span>.to_string(),
-<a href=#450 id=450 data-nosnippet>450</a>    }];
-<a href=#451 id=451 data-nosnippet>451</a>
-<a href=#452 id=452 data-nosnippet>452</a>    <span class="kw">let </span>opf = manifest.generate_opf(
-<a href=#453 id=453 data-nosnippet>453</a>      <span class="string">"Tom &amp; Jerry: a &lt;study&gt; of \"conflict\""</span>,
-<a href=#454 id=454 data-nosnippet>454</a>      <span class="kw-2">&amp;</span>[<span class="string">"Ampersand &amp; Co."</span>.to_string()],
-<a href=#455 id=455 data-nosnippet>455</a>      <span class="string">"en"</span>,
-<a href=#456 id=456 data-nosnippet>456</a>      <span class="kw-2">&amp;</span>spine,
-<a href=#457 id=457 data-nosnippet>457</a>      <span class="kw-2">&amp;</span>resources,
-<a href=#458 id=458 data-nosnippet>458</a>    );
-<a href=#459 id=459 data-nosnippet>459</a>
-<a href=#460 id=460 data-nosnippet>460</a>    <span class="kw">let </span>parser = libxml::parser::Parser::default();
-<a href=#461 id=461 data-nosnippet>461</a>    <span class="kw">let </span>doc = parser.parse_string(<span class="kw-2">&amp;</span>opf).unwrap_or_else(|e| {
-<a href=#462 id=462 data-nosnippet>462</a>      <span class="macro">panic!</span>(<span class="string">"the OPF is not well-formed XML ({e:?}) — an unescaped special reached it:\n{opf}"</span>)
-<a href=#463 id=463 data-nosnippet>463</a>    });
-<a href=#464 id=464 data-nosnippet>464</a>    <span class="kw">let </span>root = doc.get_root_element().expect(<span class="string">"a root element"</span>);
-<a href=#465 id=465 data-nosnippet>465</a>    <span class="macro">assert_eq!</span>(root.get_name(), <span class="string">"package"</span>);
-<a href=#466 id=466 data-nosnippet>466</a>
-<a href=#467 id=467 data-nosnippet>467</a>    <span class="comment">// The values must round-trip to their ORIGINAL text, not to an escaped or
-<a href=#468 id=468 data-nosnippet>468</a>    // truncated form — well-formedness alone would also be satisfied by dropping
-<a href=#469 id=469 data-nosnippet>469</a>    // the offending characters.
-<a href=#470 id=470 data-nosnippet>470</a>    </span><span class="kw">let </span>hrefs: Vec&lt;String&gt; = <span class="kw">crate</span>::document::element_children(
-<a href=#471 id=471 data-nosnippet>471</a>      <span class="kw-2">&amp;</span><span class="kw">crate</span>::document::element_children(<span class="kw-2">&amp;</span>root)
-<a href=#472 id=472 data-nosnippet>472</a>        .into_iter()
-<a href=#473 id=473 data-nosnippet>473</a>        .find(|n| n.get_name() == <span class="string">"manifest"</span>)
-<a href=#474 id=474 data-nosnippet>474</a>        .expect(<span class="string">"a &lt;manifest&gt;"</span>),
-<a href=#475 id=475 data-nosnippet>475</a>    )
-<a href=#476 id=476 data-nosnippet>476</a>    .iter()
-<a href=#477 id=477 data-nosnippet>477</a>    .filter_map(|n| n.get_attribute(<span class="string">"href"</span>))
-<a href=#478 id=478 data-nosnippet>478</a>    .collect();
-<a href=#479 id=479 data-nosnippet>479</a>    <span class="macro">assert!</span>(
-<a href=#480 id=480 data-nosnippet>480</a>      hrefs.iter().any(|h| h == <span class="string">"Fisher&amp;Yates.xhtml"</span>),
-<a href=#481 id=481 data-nosnippet>481</a>      <span class="string">"the ampersand href did not survive the round-trip: {hrefs:?}"
-<a href=#482 id=482 data-nosnippet>482</a>    </span>);
-<a href=#483 id=483 data-nosnippet>483</a>    <span class="macro">assert!</span>(
-<a href=#484 id=484 data-nosnippet>484</a>      hrefs.iter().any(|h| h == <span class="string">"a\"quote\".xhtml"</span>) &amp;&amp; hrefs.iter().any(|h| h == <span class="string">"a&lt;less&gt;.xhtml"</span>),
-<a href=#485 id=485 data-nosnippet>485</a>      <span class="string">"a quote/less-than href did not survive the round-trip: {hrefs:?}"
-<a href=#486 id=486 data-nosnippet>486</a>    </span>);
-<a href=#487 id=487 data-nosnippet>487</a>    <span class="macro">assert!</span>(
-<a href=#488 id=488 data-nosnippet>488</a>      hrefs.iter().any(|i| i == <span class="string">"LaTeXML&amp;core.css"</span>),
-<a href=#489 id=489 data-nosnippet>489</a>      <span class="string">"a RESOURCE href is interpolated by the same code path and must be escaped too: {hrefs:?}"
-<a href=#490 id=490 data-nosnippet>490</a>    </span>);
-<a href=#491 id=491 data-nosnippet>491</a>  }
-<a href=#492 id=492 data-nosnippet>492</a>
-<a href=#493 id=493 data-nosnippet>493</a>  <span class="doccomment">/// Structure the readers rely on, so the DOM rewrite cannot quietly drop a
-<a href=#494 id=494 data-nosnippet>494</a>  /// required element or attribute.
-<a href=#495 id=495 data-nosnippet>495</a>  </span><span class="attr">#[test]
-<a href=#496 id=496 data-nosnippet>496</a>  </span><span class="kw">fn </span>opf_carries_the_structure_epub_readers_require() {
-<a href=#497 id=497 data-nosnippet>497</a>    <span class="kw">let </span><span class="kw-2">mut </span>manifest = EpubManifest::new(<span class="string">"/tmp/does-not-need-to-exist"</span>);
-<a href=#498 id=498 data-nosnippet>498</a>    manifest.unique_identifier = <span class="prelude-val">Some</span>(<span class="string">"urn:uuid:abc"</span>.to_string());
-<a href=#499 id=499 data-nosnippet>499</a>    <span class="kw">let </span>spine = <span class="macro">vec!</span>[spine_entry(<span class="string">"_a.xhtml"</span>, <span class="string">"a.xhtml"</span>, <span class="prelude-val">Some</span>(<span class="string">"nav"</span>))];
-<a href=#500 id=500 data-nosnippet>500</a>
-<a href=#501 id=501 data-nosnippet>501</a>    <span class="kw">let </span>opf = manifest.generate_opf(<span class="string">"T"</span>, <span class="kw-2">&amp;</span>[<span class="string">"A"</span>.to_string()], <span class="string">"en"</span>, <span class="kw-2">&amp;</span>spine, <span class="kw-2">&amp;</span>[]);
-<a href=#502 id=502 data-nosnippet>502</a>    <span class="kw">let </span>parser = libxml::parser::Parser::default();
-<a href=#503 id=503 data-nosnippet>503</a>    <span class="kw">let </span>doc = parser.parse_string(<span class="kw-2">&amp;</span>opf).expect(<span class="string">"well-formed"</span>);
-<a href=#504 id=504 data-nosnippet>504</a>    <span class="kw">let </span>root = doc.get_root_element().expect(<span class="string">"root"</span>);
-<a href=#505 id=505 data-nosnippet>505</a>
-<a href=#506 id=506 data-nosnippet>506</a>    <span class="macro">assert_eq!</span>(root.get_attribute(<span class="string">"version"</span>).as_deref(), <span class="prelude-val">Some</span>(<span class="string">"3.0"</span>));
-<a href=#507 id=507 data-nosnippet>507</a>    <span class="macro">assert_eq!</span>(
-<a href=#508 id=508 data-nosnippet>508</a>      root.get_attribute(<span class="string">"unique-identifier"</span>).as_deref(),
-<a href=#509 id=509 data-nosnippet>509</a>      <span class="prelude-val">Some</span>(<span class="string">"pub-id"</span>)
-<a href=#510 id=510 data-nosnippet>510</a>    );
-<a href=#511 id=511 data-nosnippet>511</a>
-<a href=#512 id=512 data-nosnippet>512</a>    <span class="kw">let </span>kids = <span class="kw">crate</span>::document::element_children(<span class="kw-2">&amp;</span>root);
-<a href=#513 id=513 data-nosnippet>513</a>    <span class="kw">let </span>names: Vec&lt;String&gt; = kids.iter().map(|n| n.get_name()).collect();
-<a href=#514 id=514 data-nosnippet>514</a>    <span class="macro">assert_eq!</span>(
-<a href=#515 id=515 data-nosnippet>515</a>      names,
-<a href=#516 id=516 data-nosnippet>516</a>      <span class="macro">vec!</span>[<span class="string">"metadata"</span>, <span class="string">"manifest"</span>, <span class="string">"spine"</span>],
-<a href=#517 id=517 data-nosnippet>517</a>      <span class="string">"OPF child order"
-<a href=#518 id=518 data-nosnippet>518</a>    </span>);
-<a href=#519 id=519 data-nosnippet>519</a>
-<a href=#520 id=520 data-nosnippet>520</a>    <span class="comment">// The identifier the package points at must actually carry that id.
-<a href=#521 id=521 data-nosnippet>521</a>    </span><span class="kw">let </span>meta = kids.iter().find(|n| n.get_name() == <span class="string">"metadata"</span>).unwrap();
-<a href=#522 id=522 data-nosnippet>522</a>    <span class="kw">let </span>ident = <span class="kw">crate</span>::document::element_children(meta)
-<a href=#523 id=523 data-nosnippet>523</a>      .into_iter()
-<a href=#524 id=524 data-nosnippet>524</a>      .find(|n| n.get_attribute(<span class="string">"id"</span>).as_deref() == <span class="prelude-val">Some</span>(<span class="string">"pub-id"</span>))
-<a href=#525 id=525 data-nosnippet>525</a>      .expect(<span class="string">"a &lt;dc:identifier id='pub-id'&gt;"</span>);
-<a href=#526 id=526 data-nosnippet>526</a>    <span class="macro">assert_eq!</span>(ident.get_content(), <span class="string">"urn:uuid:abc"</span>);
-<a href=#527 id=527 data-nosnippet>527</a>
-<a href=#528 id=528 data-nosnippet>528</a>    <span class="comment">// `properties` is optional and must be emitted only when present.
-<a href=#529 id=529 data-nosnippet>529</a>    </span><span class="kw">let </span>item =
-<a href=#530 id=530 data-nosnippet>530</a>      <span class="kw">crate</span>::document::element_children(kids.iter().find(|n| n.get_name() == <span class="string">"manifest"</span>).unwrap())
-<a href=#531 id=531 data-nosnippet>531</a>        .into_iter()
-<a href=#532 id=532 data-nosnippet>532</a>        .next()
-<a href=#533 id=533 data-nosnippet>533</a>        .expect(<span class="string">"an &lt;item&gt;"</span>);
-<a href=#534 id=534 data-nosnippet>534</a>    <span class="macro">assert_eq!</span>(item.get_attribute(<span class="string">"properties"</span>).as_deref(), <span class="prelude-val">Some</span>(<span class="string">"nav"</span>));
-<a href=#535 id=535 data-nosnippet>535</a>
-<a href=#536 id=536 data-nosnippet>536</a>    <span class="kw">let </span>itemref =
-<a href=#537 id=537 data-nosnippet>537</a>      <span class="kw">crate</span>::document::element_children(kids.iter().find(|n| n.get_name() == <span class="string">"spine"</span>).unwrap())
-<a href=#538 id=538 data-nosnippet>538</a>        .into_iter()
-<a href=#539 id=539 data-nosnippet>539</a>        .next()
-<a href=#540 id=540 data-nosnippet>540</a>        .expect(<span class="string">"an &lt;itemref&gt;"</span>);
-<a href=#541 id=541 data-nosnippet>541</a>    <span class="macro">assert_eq!</span>(itemref.get_attribute(<span class="string">"idref"</span>).as_deref(), <span class="prelude-val">Some</span>(<span class="string">"_a.xhtml"</span>));
-<a href=#542 id=542 data-nosnippet>542</a>  }
-<a href=#543 id=543 data-nosnippet>543</a>}
+<a href=#283 id=283 data-nosnippet>283</a>    dc_child(<span class="kw-2">&amp;</span>doc, <span class="kw-2">&amp;</span>dc_ns, <span class="kw-2">&amp;mut </span>metadata, <span class="string">"title"</span>, title)<span class="question-mark">?</span>;
+<a href=#284 id=284 data-nosnippet>284</a>    <span class="kw">for </span>author <span class="kw">in </span>authors {
+<a href=#285 id=285 data-nosnippet>285</a>      dc_child(<span class="kw-2">&amp;</span>doc, <span class="kw-2">&amp;</span>dc_ns, <span class="kw-2">&amp;mut </span>metadata, <span class="string">"creator"</span>, author)<span class="question-mark">?</span>;
+<a href=#286 id=286 data-nosnippet>286</a>    }
+<a href=#287 id=287 data-nosnippet>287</a>    dc_child(<span class="kw-2">&amp;</span>doc, <span class="kw-2">&amp;</span>dc_ns, <span class="kw-2">&amp;mut </span>metadata, <span class="string">"language"</span>, language)<span class="question-mark">?</span>;
+<a href=#288 id=288 data-nosnippet>288</a>
+<a href=#289 id=289 data-nosnippet>289</a>    <span class="kw">let </span><span class="kw-2">mut </span>modified = Node::new(<span class="string">"meta"</span>, <span class="prelude-val">None</span>, <span class="kw-2">&amp;</span>doc).map_err(ctx(<span class="string">"&lt;meta&gt;"</span>))<span class="question-mark">?</span>;
+<a href=#290 id=290 data-nosnippet>290</a>    modified
+<a href=#291 id=291 data-nosnippet>291</a>      .set_attribute(<span class="string">"property"</span>, <span class="string">"dcterms:modified"</span>)
+<a href=#292 id=292 data-nosnippet>292</a>      .map_err(ctx(<span class="string">"@property"</span>))<span class="question-mark">?</span>;
+<a href=#293 id=293 data-nosnippet>293</a>    modified
+<a href=#294 id=294 data-nosnippet>294</a>      .set_content(<span class="kw-2">&amp;</span>chrono_like_now())
+<a href=#295 id=295 data-nosnippet>295</a>      .map_err(ctx(<span class="string">"&lt;meta&gt;"</span>))<span class="question-mark">?</span>;
+<a href=#296 id=296 data-nosnippet>296</a>    metadata.add_child(<span class="kw-2">&amp;mut </span>modified).map_err(ctx(<span class="string">"&lt;meta&gt;"</span>))<span class="question-mark">?</span>;
+<a href=#297 id=297 data-nosnippet>297</a>
+<a href=#298 id=298 data-nosnippet>298</a>    <span class="kw">let </span><span class="kw-2">mut </span>identifier = dc_child(<span class="kw-2">&amp;</span>doc, <span class="kw-2">&amp;</span>dc_ns, <span class="kw-2">&amp;mut </span>metadata, <span class="string">"identifier"</span>, uid)<span class="question-mark">?</span>;
+<a href=#299 id=299 data-nosnippet>299</a>    identifier
+<a href=#300 id=300 data-nosnippet>300</a>      .set_attribute(<span class="string">"id"</span>, <span class="string">"pub-id"</span>)
+<a href=#301 id=301 data-nosnippet>301</a>      .map_err(ctx(<span class="string">"@id"</span>))<span class="question-mark">?</span>;
+<a href=#302 id=302 data-nosnippet>302</a>
+<a href=#303 id=303 data-nosnippet>303</a>    <span class="comment">// ---- manifest ----
+<a href=#304 id=304 data-nosnippet>304</a>    </span><span class="kw">let </span><span class="kw-2">mut </span>manifest = Node::new(<span class="string">"manifest"</span>, <span class="prelude-val">None</span>, <span class="kw-2">&amp;</span>doc).map_err(ctx(<span class="string">"&lt;manifest&gt;"</span>))<span class="question-mark">?</span>;
+<a href=#305 id=305 data-nosnippet>305</a>    package
+<a href=#306 id=306 data-nosnippet>306</a>      .add_child(<span class="kw-2">&amp;mut </span>manifest)
+<a href=#307 id=307 data-nosnippet>307</a>      .map_err(ctx(<span class="string">"&lt;manifest&gt;"</span>))<span class="question-mark">?</span>;
+<a href=#308 id=308 data-nosnippet>308</a>    <span class="kw">let </span><span class="kw-2">mut </span>item =
+<a href=#309 id=309 data-nosnippet>309</a>      |id: <span class="kw-2">&amp;</span>str, href: <span class="kw-2">&amp;</span>str, media_type: <span class="kw-2">&amp;</span>str, properties: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>str&gt;| -&gt; <span class="prelude-ty">Result</span>&lt;(), String&gt; {
+<a href=#310 id=310 data-nosnippet>310</a>        <span class="kw">let </span><span class="kw-2">mut </span>n = Node::new(<span class="string">"item"</span>, <span class="prelude-val">None</span>, <span class="kw-2">&amp;</span>doc).map_err(ctx(<span class="string">"&lt;item&gt;"</span>))<span class="question-mark">?</span>;
+<a href=#311 id=311 data-nosnippet>311</a>        n.set_attribute(<span class="string">"id"</span>, id).map_err(ctx(<span class="string">"@id"</span>))<span class="question-mark">?</span>;
+<a href=#312 id=312 data-nosnippet>312</a>        n.set_attribute(<span class="string">"href"</span>, href).map_err(ctx(<span class="string">"@href"</span>))<span class="question-mark">?</span>;
+<a href=#313 id=313 data-nosnippet>313</a>        n.set_attribute(<span class="string">"media-type"</span>, media_type)
+<a href=#314 id=314 data-nosnippet>314</a>          .map_err(ctx(<span class="string">"@media-type"</span>))<span class="question-mark">?</span>;
+<a href=#315 id=315 data-nosnippet>315</a>        <span class="kw">if let </span><span class="prelude-val">Some</span>(props) = properties {
+<a href=#316 id=316 data-nosnippet>316</a>          n.set_attribute(<span class="string">"properties"</span>, props)
+<a href=#317 id=317 data-nosnippet>317</a>            .map_err(ctx(<span class="string">"@properties"</span>))<span class="question-mark">?</span>;
+<a href=#318 id=318 data-nosnippet>318</a>        }
+<a href=#319 id=319 data-nosnippet>319</a>        manifest.add_child(<span class="kw-2">&amp;mut </span>n).map_err(ctx(<span class="string">"&lt;item&gt;"</span>))
+<a href=#320 id=320 data-nosnippet>320</a>      };
+<a href=#321 id=321 data-nosnippet>321</a>    <span class="kw">for </span>entry <span class="kw">in </span>spine {
+<a href=#322 id=322 data-nosnippet>322</a>      item(
+<a href=#323 id=323 data-nosnippet>323</a>        <span class="kw-2">&amp;</span>entry.id,
+<a href=#324 id=324 data-nosnippet>324</a>        <span class="kw-2">&amp;</span>entry.href,
+<a href=#325 id=325 data-nosnippet>325</a>        <span class="kw-2">&amp;</span>entry.media_type,
+<a href=#326 id=326 data-nosnippet>326</a>        entry.properties.as_deref(),
+<a href=#327 id=327 data-nosnippet>327</a>      )<span class="question-mark">?</span>;
+<a href=#328 id=328 data-nosnippet>328</a>    }
+<a href=#329 id=329 data-nosnippet>329</a>    <span class="kw">for </span>res <span class="kw">in </span>resources {
+<a href=#330 id=330 data-nosnippet>330</a>      item(<span class="kw-2">&amp;</span>res.id, <span class="kw-2">&amp;</span>res.href, <span class="kw-2">&amp;</span>res.media_type, <span class="prelude-val">None</span>)<span class="question-mark">?</span>;
+<a href=#331 id=331 data-nosnippet>331</a>    }
+<a href=#332 id=332 data-nosnippet>332</a>
+<a href=#333 id=333 data-nosnippet>333</a>    <span class="comment">// ---- spine ----
+<a href=#334 id=334 data-nosnippet>334</a>    </span><span class="kw">let </span><span class="kw-2">mut </span>spine_el = Node::new(<span class="string">"spine"</span>, <span class="prelude-val">None</span>, <span class="kw-2">&amp;</span>doc).map_err(ctx(<span class="string">"&lt;spine&gt;"</span>))<span class="question-mark">?</span>;
+<a href=#335 id=335 data-nosnippet>335</a>    package.add_child(<span class="kw-2">&amp;mut </span>spine_el).map_err(ctx(<span class="string">"&lt;spine&gt;"</span>))<span class="question-mark">?</span>;
+<a href=#336 id=336 data-nosnippet>336</a>    <span class="kw">for </span>entry <span class="kw">in </span>spine {
+<a href=#337 id=337 data-nosnippet>337</a>      <span class="kw">let </span><span class="kw-2">mut </span>itemref = Node::new(<span class="string">"itemref"</span>, <span class="prelude-val">None</span>, <span class="kw-2">&amp;</span>doc).map_err(ctx(<span class="string">"&lt;itemref&gt;"</span>))<span class="question-mark">?</span>;
+<a href=#338 id=338 data-nosnippet>338</a>      itemref
+<a href=#339 id=339 data-nosnippet>339</a>        .set_attribute(<span class="string">"idref"</span>, <span class="kw-2">&amp;</span>entry.id)
+<a href=#340 id=340 data-nosnippet>340</a>        .map_err(ctx(<span class="string">"@idref"</span>))<span class="question-mark">?</span>;
+<a href=#341 id=341 data-nosnippet>341</a>      spine_el.add_child(<span class="kw-2">&amp;mut </span>itemref).map_err(ctx(<span class="string">"&lt;itemref&gt;"</span>))<span class="question-mark">?</span>;
+<a href=#342 id=342 data-nosnippet>342</a>    }
+<a href=#343 id=343 data-nosnippet>343</a>
+<a href=#344 id=344 data-nosnippet>344</a>    <span class="prelude-val">Ok</span>(doc.to_string())
+<a href=#345 id=345 data-nosnippet>345</a>  }
+<a href=#346 id=346 data-nosnippet>346</a>}
+<a href=#347 id=347 data-nosnippet>347</a>
+<a href=#348 id=348 data-nosnippet>348</a><span class="doccomment">/// An entry in the EPUB spine (content document).
+<a href=#349 id=349 data-nosnippet>349</a></span><span class="attr">#[derive(Debug)]
+<a href=#350 id=350 data-nosnippet>350</a></span><span class="kw">pub struct </span>SpineEntry {
+<a href=#351 id=351 data-nosnippet>351</a>  <span class="kw">pub </span>id:         String,
+<a href=#352 id=352 data-nosnippet>352</a>  <span class="kw">pub </span>href:       String,
+<a href=#353 id=353 data-nosnippet>353</a>  <span class="kw">pub </span>media_type: String,
+<a href=#354 id=354 data-nosnippet>354</a>  <span class="kw">pub </span>properties: <span class="prelude-ty">Option</span>&lt;String&gt;,
+<a href=#355 id=355 data-nosnippet>355</a>}
+<a href=#356 id=356 data-nosnippet>356</a>
+<a href=#357 id=357 data-nosnippet>357</a><span class="doccomment">/// A resource entry (CSS, images, fonts).
+<a href=#358 id=358 data-nosnippet>358</a></span><span class="attr">#[derive(Debug)]
+<a href=#359 id=359 data-nosnippet>359</a></span><span class="kw">pub struct </span>ResourceEntry {
+<a href=#360 id=360 data-nosnippet>360</a>  <span class="kw">pub </span>id:         String,
+<a href=#361 id=361 data-nosnippet>361</a>  <span class="kw">pub </span>href:       String,
+<a href=#362 id=362 data-nosnippet>362</a>  <span class="kw">pub </span>media_type: String,
+<a href=#363 id=363 data-nosnippet>363</a>}
+<a href=#364 id=364 data-nosnippet>364</a>
+<a href=#365 id=365 data-nosnippet>365</a><span class="doccomment">/// Convert a URL/filename to a valid NCName for use as an XML id.
+<a href=#366 id=366 data-nosnippet>366</a>///
+<a href=#367 id=367 data-nosnippet>367</a>/// Port of `url_id`: a character outside NCName becomes `_xN_` (N its uppercase hex codepoint), and an `_` that
+<a href=#368 id=368 data-nosnippet>368</a>/// opens such a sequence is itself escaped first.
+<a href=#369 id=369 data-nosnippet>369</a></span><span class="kw">fn </span>url_to_id(name: <span class="kw-2">&amp;</span>str) -&gt; String {
+<a href=#370 id=370 data-nosnippet>370</a>  <span class="kw">let </span>chars: Vec&lt;char&gt; = name.chars().collect();
+<a href=#371 id=371 data-nosnippet>371</a>  <span class="kw">let </span><span class="kw-2">mut </span>result = String::from(<span class="string">"_"</span>);
+<a href=#372 id=372 data-nosnippet>372</a>  <span class="kw">for </span>(i, <span class="kw-2">&amp;</span>ch) <span class="kw">in </span>chars.iter().enumerate() {
+<a href=#373 id=373 data-nosnippet>373</a>    <span class="kw">if </span>ch == <span class="string">'_' </span>&amp;&amp; opens_escape(<span class="kw-2">&amp;</span>chars[i + <span class="number">1</span>..]) {
+<a href=#374 id=374 data-nosnippet>374</a>      result.push_str(<span class="string">"_x5F_"</span>);
+<a href=#375 id=375 data-nosnippet>375</a>    } <span class="kw">else if </span>is_ncname_char(ch) {
+<a href=#376 id=376 data-nosnippet>376</a>      result.push(ch);
+<a href=#377 id=377 data-nosnippet>377</a>    } <span class="kw">else </span>{
+<a href=#378 id=378 data-nosnippet>378</a>      result.push_str(<span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">"_x{:X}_"</span>, ch <span class="kw">as </span>u32));
+<a href=#379 id=379 data-nosnippet>379</a>    }
+<a href=#380 id=380 data-nosnippet>380</a>  }
+<a href=#381 id=381 data-nosnippet>381</a>  result
+<a href=#382 id=382 data-nosnippet>382</a>}
+<a href=#383 id=383 data-nosnippet>383</a>
+<a href=#384 id=384 data-nosnippet>384</a><span class="doccomment">/// Whether `rest` (the text after an `_`) reads `x&lt;HEX&gt;+_`, Perl's `_(x[0-9A-F]+)(?=_)`.
+<a href=#385 id=385 data-nosnippet>385</a></span><span class="kw">fn </span>opens_escape(rest: <span class="kw-2">&amp;</span>[char]) -&gt; bool {
+<a href=#386 id=386 data-nosnippet>386</a>  <span class="kw">let </span>hex = rest
+<a href=#387 id=387 data-nosnippet>387</a>    .iter()
+<a href=#388 id=388 data-nosnippet>388</a>    .skip(<span class="number">1</span>)
+<a href=#389 id=389 data-nosnippet>389</a>    .take_while(|c| <span class="macro">matches!</span>(c, <span class="string">'0'</span>..=<span class="string">'9' </span>| <span class="string">'A'</span>..=<span class="string">'F'</span>))
+<a href=#390 id=390 data-nosnippet>390</a>    .count();
+<a href=#391 id=391 data-nosnippet>391</a>  rest.first() == <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span><span class="string">'x'</span>) &amp;&amp; hex &gt; <span class="number">0 </span>&amp;&amp; rest.get(<span class="number">1 </span>+ hex) == <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span><span class="string">'_'</span>)
+<a href=#392 id=392 data-nosnippet>392</a>}
+<a href=#393 id=393 data-nosnippet>393</a>
+<a href=#394 id=394 data-nosnippet>394</a><span class="doccomment">/// The NCName character class of Perl's `url_id`.
+<a href=#395 id=395 data-nosnippet>395</a></span><span class="kw">fn </span>is_ncname_char(ch: char) -&gt; bool {
+<a href=#396 id=396 data-nosnippet>396</a>  <span class="macro">matches!</span>(ch,
+<a href=#397 id=397 data-nosnippet>397</a>    <span class="string">'A'</span>..=<span class="string">'Z' </span>| <span class="string">'_' </span>| <span class="string">'a'</span>..=<span class="string">'z' </span>| <span class="string">'-' </span>| <span class="string">'.' </span>| <span class="string">'0'</span>..=<span class="string">'9' </span>| <span class="string">'\u{B7}'
+<a href=#398 id=398 data-nosnippet>398</a>    </span>| <span class="string">'\u{C0}'</span>..=<span class="string">'\u{D6}' </span>| <span class="string">'\u{D8}'</span>..=<span class="string">'\u{F6}' </span>| <span class="string">'\u{F8}'</span>..=<span class="string">'\u{2FF}' </span>| <span class="string">'\u{300}'</span>..=<span class="string">'\u{36F}'
+<a href=#399 id=399 data-nosnippet>399</a>    </span>| <span class="string">'\u{370}'</span>..=<span class="string">'\u{37D}' </span>| <span class="string">'\u{37F}'</span>..=<span class="string">'\u{1FFF}' </span>| <span class="string">'\u{200C}'</span>..=<span class="string">'\u{200D}' </span>| <span class="string">'\u{203F}'</span>..=<span class="string">'\u{2040}'
+<a href=#400 id=400 data-nosnippet>400</a>    </span>| <span class="string">'\u{2070}'</span>..=<span class="string">'\u{218F}' </span>| <span class="string">'\u{2C00}'</span>..=<span class="string">'\u{2FEF}' </span>| <span class="string">'\u{3001}'</span>..=<span class="string">'\u{D7FF}' </span>| <span class="string">'\u{F900}'</span>..=<span class="string">'\u{FDCF}'
+<a href=#401 id=401 data-nosnippet>401</a>    </span>| <span class="string">'\u{FDF0}'</span>..=<span class="string">'\u{FFFD}' </span>| <span class="string">'\u{10000}'</span>..=<span class="string">'\u{EFFFF}'</span>)
+<a href=#402 id=402 data-nosnippet>402</a>}
+<a href=#403 id=403 data-nosnippet>403</a>
+<a href=#404 id=404 data-nosnippet>404</a><span class="doccomment">/// The OPF item properties of a content document: (MathML, SVG, the navigation TOC), Perl `Epub::process`.
+<a href=#405 id=405 data-nosnippet>405</a></span><span class="kw">fn </span>content_properties(path: <span class="kw-2">&amp;</span>Path) -&gt; (bool, bool, bool) {
+<a href=#406 id=406 data-nosnippet>406</a>  <span class="kw">let </span><span class="prelude-val">Ok</span>(doc) = libxml::parser::Parser::default().parse_file(<span class="kw-2">&amp;</span>path.to_string_lossy()) <span class="kw">else </span>{
+<a href=#407 id=407 data-nosnippet>407</a>    <span class="kw">return </span>(<span class="bool-val">false</span>, <span class="bool-val">false</span>, <span class="bool-val">false</span>);
+<a href=#408 id=408 data-nosnippet>408</a>  };
+<a href=#409 id=409 data-nosnippet>409</a>  <span class="kw">let </span><span class="prelude-val">Ok</span>(<span class="kw-2">mut </span>xpath) = libxml::xpath::Context::new(<span class="kw-2">&amp;</span>doc) <span class="kw">else </span>{
+<a href=#410 id=410 data-nosnippet>410</a>    <span class="kw">return </span>(<span class="bool-val">false</span>, <span class="bool-val">false</span>, <span class="bool-val">false</span>);
+<a href=#411 id=411 data-nosnippet>411</a>  };
+<a href=#412 id=412 data-nosnippet>412</a>  <span class="kw">let </span><span class="kw-2">mut </span>has = |query: <span class="kw-2">&amp;</span>str| {
+<a href=#413 id=413 data-nosnippet>413</a>    xpath
+<a href=#414 id=414 data-nosnippet>414</a>      .findnodes(query, <span class="prelude-val">None</span>)
+<a href=#415 id=415 data-nosnippet>415</a>      .is_ok_and(|nodes| !nodes.is_empty())
+<a href=#416 id=416 data-nosnippet>416</a>  };
+<a href=#417 id=417 data-nosnippet>417</a>  (
+<a href=#418 id=418 data-nosnippet>418</a>    has(<span class="string">r#"//*[local-name() = "math"]"#</span>),
+<a href=#419 id=419 data-nosnippet>419</a>    has(<span class="string">r#"//*[local-name() = "svg"]"#</span>),
+<a href=#420 id=420 data-nosnippet>420</a>    has(<span class="string">r#"//*[@class="ltx_toclist"]"#</span>),
+<a href=#421 id=421 data-nosnippet>421</a>  )
+<a href=#422 id=422 data-nosnippet>422</a>}
+<a href=#423 id=423 data-nosnippet>423</a>
+<a href=#424 id=424 data-nosnippet>424</a><span class="doccomment">/// Every file under `dir`, recursively.
+<a href=#425 id=425 data-nosnippet>425</a></span><span class="kw">fn </span>collect_files(dir: <span class="kw-2">&amp;</span>Path, files: <span class="kw-2">&amp;mut </span>Vec&lt;PathBuf&gt;) {
+<a href=#426 id=426 data-nosnippet>426</a>  <span class="kw">let </span><span class="prelude-val">Ok</span>(entries) = fs::read_dir(dir) <span class="kw">else </span>{
+<a href=#427 id=427 data-nosnippet>427</a>    <span class="kw">return</span>;
+<a href=#428 id=428 data-nosnippet>428</a>  };
+<a href=#429 id=429 data-nosnippet>429</a>  <span class="kw">for </span>entry <span class="kw">in </span>entries.flatten() {
+<a href=#430 id=430 data-nosnippet>430</a>    <span class="kw">let </span>path = entry.path();
+<a href=#431 id=431 data-nosnippet>431</a>    <span class="kw">if </span>path.is_dir() {
+<a href=#432 id=432 data-nosnippet>432</a>      collect_files(<span class="kw-2">&amp;</span>path, files);
+<a href=#433 id=433 data-nosnippet>433</a>    } <span class="kw">else if </span>path.is_file() {
+<a href=#434 id=434 data-nosnippet>434</a>      files.push(path);
+<a href=#435 id=435 data-nosnippet>435</a>    }
+<a href=#436 id=436 data-nosnippet>436</a>  }
+<a href=#437 id=437 data-nosnippet>437</a>}
+<a href=#438 id=438 data-nosnippet>438</a>
+<a href=#439 id=439 data-nosnippet>439</a><span class="doccomment">/// The text content of `node` without its `ltx:indexmark`s (Perl Scan.pm `cleanNode`, then `textContent`); the
+<a href=#440 id=440 data-nosnippet>440</a>/// serializer's indentation (blank text in element-only content) is not text.
+<a href=#441 id=441 data-nosnippet>441</a></span><span class="kw">fn </span>text_without_indexmarks(node: <span class="kw-2">&amp;</span>libxml::tree::Node) -&gt; String {
+<a href=#442 id=442 data-nosnippet>442</a>  <span class="kw">use </span>libxml::tree::NodeType;
+<a href=#443 id=443 data-nosnippet>443</a>  <span class="kw">let </span>is_text = |n: <span class="kw-2">&amp;</span>libxml::tree::Node| {
+<a href=#444 id=444 data-nosnippet>444</a>    <span class="macro">matches!</span>(
+<a href=#445 id=445 data-nosnippet>445</a>      n.get_type(),
+<a href=#446 id=446 data-nosnippet>446</a>      <span class="prelude-val">Some</span>(NodeType::TextNode | NodeType::CDataSectionNode)
+<a href=#447 id=447 data-nosnippet>447</a>    )
+<a href=#448 id=448 data-nosnippet>448</a>  };
+<a href=#449 id=449 data-nosnippet>449</a>  <span class="kw">let </span>mixed = node
+<a href=#450 id=450 data-nosnippet>450</a>    .get_child_nodes()
+<a href=#451 id=451 data-nosnippet>451</a>    .iter()
+<a href=#452 id=452 data-nosnippet>452</a>    .any(|n| is_text(n) &amp;&amp; !n.get_content().trim().is_empty());
+<a href=#453 id=453 data-nosnippet>453</a>  <span class="kw">let </span><span class="kw-2">mut </span>text = String::new();
+<a href=#454 id=454 data-nosnippet>454</a>  <span class="kw">let </span><span class="kw-2">mut </span>child = node.get_first_child();
+<a href=#455 id=455 data-nosnippet>455</a>  <span class="kw">while let </span><span class="prelude-val">Some</span>(current) = child {
+<a href=#456 id=456 data-nosnippet>456</a>    <span class="kw">if </span>is_text(<span class="kw-2">&amp;</span>current) &amp;&amp; !mixed {
+<a href=#457 id=457 data-nosnippet>457</a>      child = current.get_next_sibling();
+<a href=#458 id=458 data-nosnippet>458</a>      <span class="kw">continue</span>;
+<a href=#459 id=459 data-nosnippet>459</a>    }
+<a href=#460 id=460 data-nosnippet>460</a>    <span class="kw">match </span>current.get_type() {
+<a href=#461 id=461 data-nosnippet>461</a>      <span class="prelude-val">Some</span>(NodeType::ElementNode) <span class="kw">if </span>current.get_name() != <span class="string">"indexmark" </span>=&gt; {
+<a href=#462 id=462 data-nosnippet>462</a>        text.push_str(<span class="kw-2">&amp;</span>text_without_indexmarks(<span class="kw-2">&amp;</span>current));
+<a href=#463 id=463 data-nosnippet>463</a>      },
+<a href=#464 id=464 data-nosnippet>464</a>      <span class="prelude-val">Some</span>(NodeType::TextNode | NodeType::CDataSectionNode) =&gt; {
+<a href=#465 id=465 data-nosnippet>465</a>        text.push_str(<span class="kw-2">&amp;</span>current.get_content());
+<a href=#466 id=466 data-nosnippet>466</a>      },
+<a href=#467 id=467 data-nosnippet>467</a>      <span class="kw">_ </span>=&gt; {},
+<a href=#468 id=468 data-nosnippet>468</a>    }
+<a href=#469 id=469 data-nosnippet>469</a>    child = current.get_next_sibling();
+<a href=#470 id=470 data-nosnippet>470</a>  }
+<a href=#471 id=471 data-nosnippet>471</a>  text
+<a href=#472 id=472 data-nosnippet>472</a>}
+<a href=#473 id=473 data-nosnippet>473</a>
+<a href=#474 id=474 data-nosnippet>474</a><span class="doccomment">/// The parts of the core XML an EPUB needs before post-processing.
+<a href=#475 id=475 data-nosnippet>475</a></span><span class="kw">pub struct </span>EpubSource {
+<a href=#476 id=476 data-nosnippet>476</a>  <span class="doccomment">/// The core XML with a navigation TOC, when `check_toc` had to add one.
+<a href=#477 id=477 data-nosnippet>477</a>  </span><span class="kw">pub </span>xml:   <span class="prelude-ty">Option</span>&lt;String&gt;,
+<a href=#478 id=478 data-nosnippet>478</a>  <span class="doccomment">/// The document's title text (Scan's `cleanNode`: its index marks removed).
+<a href=#479 id=479 data-nosnippet>479</a>  </span><span class="kw">pub </span>title: <span class="prelude-ty">Option</span>&lt;String&gt;,
+<a href=#480 id=480 data-nosnippet>480</a>}
+<a href=#481 id=481 data-nosnippet>481</a>
+<a href=#482 id=482 data-nosnippet>482</a><span class="doccomment">/// Port of `LaTeXML.pm` `check_TOC` (an EPUB requires a TOC: add a full, undisplayed one unless the document has
+<a href=#483 id=483 data-nosnippet>483</a>/// one) together with the title the manifest reads from the document.
+<a href=#484 id=484 data-nosnippet>484</a></span><span class="kw">pub fn </span>prepare_source(core_xml: <span class="kw-2">&amp;</span>str) -&gt; <span class="prelude-ty">Result</span>&lt;EpubSource, String&gt; {
+<a href=#485 id=485 data-nosnippet>485</a>  <span class="kw">const </span>LTX_NS: <span class="kw-2">&amp;</span>str = <span class="string">"http://dlmf.nist.gov/LaTeXML"</span>;
+<a href=#486 id=486 data-nosnippet>486</a>  <span class="kw">let </span>doc = libxml::parser::Parser::default()
+<a href=#487 id=487 data-nosnippet>487</a>    .parse_string(core_xml)
+<a href=#488 id=488 data-nosnippet>488</a>    .map_err(|e| <span class="macro">format!</span>(<span class="string">"couldn't parse the document: {e:?}"</span>))<span class="question-mark">?</span>;
+<a href=#489 id=489 data-nosnippet>489</a>  <span class="kw">let </span><span class="kw-2">mut </span>root = doc
+<a href=#490 id=490 data-nosnippet>490</a>    .get_root_element()
+<a href=#491 id=491 data-nosnippet>491</a>    .ok_or(<span class="string">"the document has no root element"</span>)<span class="question-mark">?</span>;
+<a href=#492 id=492 data-nosnippet>492</a>  <span class="kw">let </span><span class="kw-2">mut </span>xpath =
+<a href=#493 id=493 data-nosnippet>493</a>    libxml::xpath::Context::new(<span class="kw-2">&amp;</span>doc).map_err(|<span class="kw">_</span>| <span class="string">"couldn't create an XPath context"</span>)<span class="question-mark">?</span>;
+<a href=#494 id=494 data-nosnippet>494</a>  xpath
+<a href=#495 id=495 data-nosnippet>495</a>    .register_namespace(<span class="string">"ltx"</span>, LTX_NS)
+<a href=#496 id=496 data-nosnippet>496</a>    .map_err(|<span class="kw">_</span>| <span class="string">"couldn't register the ltx namespace"</span>)<span class="question-mark">?</span>;
+<a href=#497 id=497 data-nosnippet>497</a>  <span class="kw">let </span>title = xpath
+<a href=#498 id=498 data-nosnippet>498</a>    .findnodes(<span class="string">"/*/ltx:title"</span>, <span class="prelude-val">None</span>)
+<a href=#499 id=499 data-nosnippet>499</a>    .ok()
+<a href=#500 id=500 data-nosnippet>500</a>    .and_then(|nodes| nodes.into_iter().next())
+<a href=#501 id=501 data-nosnippet>501</a>    .map(|title| text_without_indexmarks(<span class="kw-2">&amp;</span>title));
+<a href=#502 id=502 data-nosnippet>502</a>  <span class="kw">let </span>has_toc = xpath
+<a href=#503 id=503 data-nosnippet>503</a>    .findnodes(<span class="string">r#"//ltx:TOC[@lists="toc"]"#</span>, <span class="prelude-val">None</span>)
+<a href=#504 id=504 data-nosnippet>504</a>    .is_ok_and(|nodes| !nodes.is_empty());
+<a href=#505 id=505 data-nosnippet>505</a>  <span class="kw">let </span>xml = <span class="kw">if </span>has_toc {
+<a href=#506 id=506 data-nosnippet>506</a>    <span class="prelude-val">None
+<a href=#507 id=507 data-nosnippet>507</a>  </span>} <span class="kw">else </span>{
+<a href=#508 id=508 data-nosnippet>508</a>    <span class="kw">let </span>ns = root.get_namespace();
+<a href=#509 id=509 data-nosnippet>509</a>    <span class="kw">let </span><span class="kw-2">mut </span>toc = libxml::tree::Node::new(<span class="string">"TOC"</span>, ns, <span class="kw-2">&amp;</span>doc).map_err(ctx(<span class="string">"&lt;TOC&gt;"</span>))<span class="question-mark">?</span>;
+<a href=#510 id=510 data-nosnippet>510</a>    <span class="kw">for </span>(name, value) <span class="kw">in </span>[
+<a href=#511 id=511 data-nosnippet>511</a>      (<span class="string">"lists"</span>, <span class="string">"toc"</span>),
+<a href=#512 id=512 data-nosnippet>512</a>      (<span class="string">"scope"</span>, <span class="string">"global"</span>),
+<a href=#513 id=513 data-nosnippet>513</a>      (
+<a href=#514 id=514 data-nosnippet>514</a>        <span class="string">"select"</span>,
+<a href=#515 id=515 data-nosnippet>515</a>        <span class="string">"ltx:part | ltx:chapter | ltx:section | ltx:subsection | ltx:subsubsection | ltx:paragraph | \
+<a href=#516 id=516 data-nosnippet>516</a>         ltx:subparagraph | ltx:appendix | ltx:index | ltx:bibliography"</span>,
+<a href=#517 id=517 data-nosnippet>517</a>      ),
+<a href=#518 id=518 data-nosnippet>518</a>      (<span class="string">"class"</span>, <span class="string">"ltx_nodisplay"</span>),
+<a href=#519 id=519 data-nosnippet>519</a>    ] {
+<a href=#520 id=520 data-nosnippet>520</a>      toc
+<a href=#521 id=521 data-nosnippet>521</a>        .set_attribute(name, value)
+<a href=#522 id=522 data-nosnippet>522</a>        .map_err(ctx(<span class="string">"a TOC attribute"</span>))<span class="question-mark">?</span>;
+<a href=#523 id=523 data-nosnippet>523</a>    }
+<a href=#524 id=524 data-nosnippet>524</a>    <span class="kw">match </span>root.get_first_child() {
+<a href=#525 id=525 data-nosnippet>525</a>      <span class="prelude-val">Some</span>(<span class="kw-2">mut </span>first) =&gt; first.add_prev_sibling(<span class="kw-2">&amp;mut </span>toc).map_err(ctx(<span class="string">"&lt;TOC&gt;"</span>))<span class="question-mark">?</span>,
+<a href=#526 id=526 data-nosnippet>526</a>      <span class="prelude-val">None </span>=&gt; root.add_child(<span class="kw-2">&amp;mut </span>toc).map(|<span class="kw">_</span>| ()).map_err(ctx(<span class="string">"&lt;TOC&gt;"</span>))<span class="question-mark">?</span>,
+<a href=#527 id=527 data-nosnippet>527</a>    };
+<a href=#528 id=528 data-nosnippet>528</a>    <span class="prelude-val">Some</span>(doc.to_string())
+<a href=#529 id=529 data-nosnippet>529</a>  };
+<a href=#530 id=530 data-nosnippet>530</a>  <span class="prelude-val">Ok</span>(EpubSource { xml, title })
+<a href=#531 id=531 data-nosnippet>531</a>}
+<a href=#532 id=532 data-nosnippet>532</a>
+<a href=#533 id=533 data-nosnippet>533</a><span class="doccomment">/// Generate a UUID v4 string.
+<a href=#534 id=534 data-nosnippet>534</a></span><span class="kw">fn </span>generate_uuid() -&gt; String {
+<a href=#535 id=535 data-nosnippet>535</a>  <span class="comment">// Simple random UUID v4 (no external dependency)
+<a href=#536 id=536 data-nosnippet>536</a>  </span><span class="kw">use </span>std::time::{SystemTime, UNIX_EPOCH};
+<a href=#537 id=537 data-nosnippet>537</a>  <span class="kw">let </span>seed = SystemTime::now()
+<a href=#538 id=538 data-nosnippet>538</a>    .duration_since(UNIX_EPOCH)
+<a href=#539 id=539 data-nosnippet>539</a>    .unwrap_or_default()
+<a href=#540 id=540 data-nosnippet>540</a>    .as_nanos();
+<a href=#541 id=541 data-nosnippet>541</a>  <span class="comment">// LCG-based pseudo-random for simplicity
+<a href=#542 id=542 data-nosnippet>542</a>  </span><span class="kw">let </span><span class="kw-2">mut </span>state = seed <span class="kw">as </span>u64;
+<a href=#543 id=543 data-nosnippet>543</a>  <span class="kw">let </span><span class="kw-2">mut </span>bytes = [<span class="number">0u8</span>; <span class="number">16</span>];
+<a href=#544 id=544 data-nosnippet>544</a>  <span class="kw">for </span>b <span class="kw">in </span><span class="kw-2">&amp;mut </span>bytes {
+<a href=#545 id=545 data-nosnippet>545</a>    state = state
+<a href=#546 id=546 data-nosnippet>546</a>      .wrapping_mul(<span class="number">6364136223846793005</span>)
+<a href=#547 id=547 data-nosnippet>547</a>      .wrapping_add(<span class="number">1442695040888963407</span>);
+<a href=#548 id=548 data-nosnippet>548</a>    <span class="kw-2">*</span>b = (state &gt;&gt; <span class="number">33</span>) <span class="kw">as </span>u8;
+<a href=#549 id=549 data-nosnippet>549</a>  }
+<a href=#550 id=550 data-nosnippet>550</a>  bytes[<span class="number">6</span>] = (bytes[<span class="number">6</span>] &amp; <span class="number">0x0F</span>) | <span class="number">0x40</span>; <span class="comment">// version 4
+<a href=#551 id=551 data-nosnippet>551</a>  </span>bytes[<span class="number">8</span>] = (bytes[<span class="number">8</span>] &amp; <span class="number">0x3F</span>) | <span class="number">0x80</span>; <span class="comment">// variant 1
+<a href=#552 id=552 data-nosnippet>552</a>  </span><span class="macro">format!</span>(
+<a href=#553 id=553 data-nosnippet>553</a>    <span class="string">"{:02x}{:02x}{:02x}{:02x}-{:02x}{:02x}-{:02x}{:02x}-{:02x}{:02x}-{:02x}{:02x}{:02x}{:02x}{:02x}{:02x}"</span>,
+<a href=#554 id=554 data-nosnippet>554</a>    bytes[<span class="number">0</span>],
+<a href=#555 id=555 data-nosnippet>555</a>    bytes[<span class="number">1</span>],
+<a href=#556 id=556 data-nosnippet>556</a>    bytes[<span class="number">2</span>],
+<a href=#557 id=557 data-nosnippet>557</a>    bytes[<span class="number">3</span>],
+<a href=#558 id=558 data-nosnippet>558</a>    bytes[<span class="number">4</span>],
+<a href=#559 id=559 data-nosnippet>559</a>    bytes[<span class="number">5</span>],
+<a href=#560 id=560 data-nosnippet>560</a>    bytes[<span class="number">6</span>],
+<a href=#561 id=561 data-nosnippet>561</a>    bytes[<span class="number">7</span>],
+<a href=#562 id=562 data-nosnippet>562</a>    bytes[<span class="number">8</span>],
+<a href=#563 id=563 data-nosnippet>563</a>    bytes[<span class="number">9</span>],
+<a href=#564 id=564 data-nosnippet>564</a>    bytes[<span class="number">10</span>],
+<a href=#565 id=565 data-nosnippet>565</a>    bytes[<span class="number">11</span>],
+<a href=#566 id=566 data-nosnippet>566</a>    bytes[<span class="number">12</span>],
+<a href=#567 id=567 data-nosnippet>567</a>    bytes[<span class="number">13</span>],
+<a href=#568 id=568 data-nosnippet>568</a>    bytes[<span class="number">14</span>],
+<a href=#569 id=569 data-nosnippet>569</a>    bytes[<span class="number">15</span>]
+<a href=#570 id=570 data-nosnippet>570</a>  )
+<a href=#571 id=571 data-nosnippet>571</a>}
+<a href=#572 id=572 data-nosnippet>572</a>
+<a href=#573 id=573 data-nosnippet>573</a><span class="doccomment">/// Generate an ISO 8601 timestamp (CCYY-MM-DDThh:mm:ssZ), at `SOURCE_DATE_EPOCH` when set (Perl Epub.pm).
+<a href=#574 id=574 data-nosnippet>574</a></span><span class="kw">fn </span>chrono_like_now() -&gt; String {
+<a href=#575 id=575 data-nosnippet>575</a>  <span class="kw">use </span>std::time::{SystemTime, UNIX_EPOCH};
+<a href=#576 id=576 data-nosnippet>576</a>  <span class="kw">let </span>secs = std::env::var(<span class="string">"SOURCE_DATE_EPOCH"</span>)
+<a href=#577 id=577 data-nosnippet>577</a>    .ok()
+<a href=#578 id=578 data-nosnippet>578</a>    .and_then(|s| s.trim().parse::&lt;u64&gt;().ok())
+<a href=#579 id=579 data-nosnippet>579</a>    .unwrap_or_else(|| {
+<a href=#580 id=580 data-nosnippet>580</a>      SystemTime::now()
+<a href=#581 id=581 data-nosnippet>581</a>        .duration_since(UNIX_EPOCH)
+<a href=#582 id=582 data-nosnippet>582</a>        .unwrap_or_default()
+<a href=#583 id=583 data-nosnippet>583</a>        .as_secs()
+<a href=#584 id=584 data-nosnippet>584</a>    });
+<a href=#585 id=585 data-nosnippet>585</a>  <span class="comment">// Simple UTC timestamp computation (no chrono dependency)
+<a href=#586 id=586 data-nosnippet>586</a>  </span><span class="kw">let </span>days = secs / <span class="number">86400</span>;
+<a href=#587 id=587 data-nosnippet>587</a>  <span class="kw">let </span>time_of_day = secs % <span class="number">86400</span>;
+<a href=#588 id=588 data-nosnippet>588</a>  <span class="kw">let </span>hours = time_of_day / <span class="number">3600</span>;
+<a href=#589 id=589 data-nosnippet>589</a>  <span class="kw">let </span>minutes = (time_of_day % <span class="number">3600</span>) / <span class="number">60</span>;
+<a href=#590 id=590 data-nosnippet>590</a>  <span class="kw">let </span>seconds = time_of_day % <span class="number">60</span>;
+<a href=#591 id=591 data-nosnippet>591</a>  <span class="comment">// Rough date from epoch days (good enough for timestamps)
+<a href=#592 id=592 data-nosnippet>592</a>  </span><span class="kw">let </span>(year, month, day) = days_to_ymd(days <span class="kw">as </span>i64);
+<a href=#593 id=593 data-nosnippet>593</a>  <span class="macro">format!</span>(
+<a href=#594 id=594 data-nosnippet>594</a>    <span class="string">"{:04}-{:02}-{:02}T{:02}:{:02}:{:02}Z"</span>,
+<a href=#595 id=595 data-nosnippet>595</a>    year, month, day, hours, minutes, seconds
+<a href=#596 id=596 data-nosnippet>596</a>  )
+<a href=#597 id=597 data-nosnippet>597</a>}
+<a href=#598 id=598 data-nosnippet>598</a>
+<a href=#599 id=599 data-nosnippet>599</a><span class="doccomment">/// Convert days since Unix epoch to (year, month, day).
+<a href=#600 id=600 data-nosnippet>600</a></span><span class="kw">fn </span>days_to_ymd(days: i64) -&gt; (i64, u32, u32) {
+<a href=#601 id=601 data-nosnippet>601</a>  <span class="comment">// Algorithm from https://howardhinnant.github.io/date_algorithms.html
+<a href=#602 id=602 data-nosnippet>602</a>  </span><span class="kw">let </span>z = days + <span class="number">719468</span>;
+<a href=#603 id=603 data-nosnippet>603</a>  <span class="kw">let </span>era = <span class="kw">if </span>z &gt;= <span class="number">0 </span>{ z } <span class="kw">else </span>{ z - <span class="number">146096 </span>} / <span class="number">146097</span>;
+<a href=#604 id=604 data-nosnippet>604</a>  <span class="kw">let </span>doe = (z - era * <span class="number">146097</span>) <span class="kw">as </span>u32;
+<a href=#605 id=605 data-nosnippet>605</a>  <span class="kw">let </span>yoe = (doe - doe / <span class="number">1460 </span>+ doe / <span class="number">36524 </span>- doe / <span class="number">146096</span>) / <span class="number">365</span>;
+<a href=#606 id=606 data-nosnippet>606</a>  <span class="kw">let </span>y = yoe <span class="kw">as </span>i64 + era * <span class="number">400</span>;
+<a href=#607 id=607 data-nosnippet>607</a>  <span class="kw">let </span>doy = doe - (<span class="number">365 </span>* yoe + yoe / <span class="number">4 </span>- yoe / <span class="number">100</span>);
+<a href=#608 id=608 data-nosnippet>608</a>  <span class="kw">let </span>mp = (<span class="number">5 </span>* doy + <span class="number">2</span>) / <span class="number">153</span>;
+<a href=#609 id=609 data-nosnippet>609</a>  <span class="kw">let </span>d = doy - (<span class="number">153 </span>* mp + <span class="number">2</span>) / <span class="number">5 </span>+ <span class="number">1</span>;
+<a href=#610 id=610 data-nosnippet>610</a>  <span class="kw">let </span>m = <span class="kw">if </span>mp &lt; <span class="number">10 </span>{ mp + <span class="number">3 </span>} <span class="kw">else </span>{ mp - <span class="number">9 </span>};
+<a href=#611 id=611 data-nosnippet>611</a>  (y + <span class="kw">if </span>m &lt;= <span class="number">2 </span>{ <span class="number">1 </span>} <span class="kw">else </span>{ <span class="number">0 </span>}, m, d)
+<a href=#612 id=612 data-nosnippet>612</a>}
+<a href=#613 id=613 data-nosnippet>613</a>
+<a href=#614 id=614 data-nosnippet>614</a><span class="attr">#[cfg(test)]
+<a href=#615 id=615 data-nosnippet>615</a></span><span class="kw">mod </span>tests {
+<a href=#616 id=616 data-nosnippet>616</a>  <span class="kw">use super</span>::<span class="kw-2">*</span>;
+<a href=#617 id=617 data-nosnippet>617</a>
+<a href=#618 id=618 data-nosnippet>618</a>  <span class="kw">fn </span>spine_entry(id: <span class="kw-2">&amp;</span>str, href: <span class="kw-2">&amp;</span>str, properties: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>str&gt;) -&gt; SpineEntry {
+<a href=#619 id=619 data-nosnippet>619</a>    SpineEntry {
+<a href=#620 id=620 data-nosnippet>620</a>      id:         id.to_string(),
+<a href=#621 id=621 data-nosnippet>621</a>      href:       href.to_string(),
+<a href=#622 id=622 data-nosnippet>622</a>      media_type: <span class="string">"application/xhtml+xml"</span>.to_string(),
+<a href=#623 id=623 data-nosnippet>623</a>      properties: properties.map(str::to_string),
+<a href=#624 id=624 data-nosnippet>624</a>    }
+<a href=#625 id=625 data-nosnippet>625</a>  }
+<a href=#626 id=626 data-nosnippet>626</a>
+<a href=#627 id=627 data-nosnippet>627</a>  <span class="doccomment">/// The package document must be well-formed for **author-controlled** input.
+<a href=#628 id=628 data-nosnippet>628</a>  ///
+<a href=#629 id=629 data-nosnippet>629</a>  /// Issue 386 item 2. An OPF is read by strict parsers, so one unescaped `&amp;`
+<a href=#630 id=630 data-nosnippet>630</a>  /// invalidates the whole book rather than one entry — and `&amp;` is reachable:
+<a href=#631 id=631 data-nosnippet>631</a>  /// `href` is built from a split document's file stem, and `--splitnaming=label`
+<a href=#632 id=632 data-nosnippet>632</a>  /// takes that stem from the author's `\label{...}`, so `\label{Fisher&amp;Yates}`
+<a href=#633 id=633 data-nosnippet>633</a>  /// yields a file named `Fisher&amp;Yates.xhtml`. The old `push_str` builder escaped
+<a href=#634 id=634 data-nosnippet>634</a>  /// 2 of 12 interpolated values and `href` was not among them.
+<a href=#635 id=635 data-nosnippet>635</a>  ///
+<a href=#636 id=636 data-nosnippet>636</a>  /// The assertion is deliberately "it parses", not "it contains `&amp;amp;`":
+<a href=#637 id=637 data-nosnippet>637</a>  /// well-formedness is the property that matters, and it cannot be satisfied by
+<a href=#638 id=638 data-nosnippet>638</a>  /// accident.
+<a href=#639 id=639 data-nosnippet>639</a>  </span><span class="attr">#[test]
+<a href=#640 id=640 data-nosnippet>640</a>  </span><span class="kw">fn </span>opf_stays_well_formed_when_author_input_carries_xml_specials() {
+<a href=#641 id=641 data-nosnippet>641</a>    <span class="kw">let </span><span class="kw-2">mut </span>manifest = EpubManifest::new(<span class="string">"/tmp/does-not-need-to-exist"</span>);
+<a href=#642 id=642 data-nosnippet>642</a>    manifest.unique_identifier = <span class="prelude-val">Some</span>(<span class="string">"urn:uuid:test"</span>.to_string());
+<a href=#643 id=643 data-nosnippet>643</a>
+<a href=#644 id=644 data-nosnippet>644</a>    <span class="kw">let </span>spine = <span class="macro">vec!</span>[
+<a href=#645 id=645 data-nosnippet>645</a>      spine_entry(
+<a href=#646 id=646 data-nosnippet>646</a>        <span class="string">"_Fisher_x26_Yates.xhtml"</span>,
+<a href=#647 id=647 data-nosnippet>647</a>        <span class="string">"Fisher&amp;Yates.xhtml"</span>,
+<a href=#648 id=648 data-nosnippet>648</a>        <span class="prelude-val">Some</span>(<span class="string">"mathml"</span>),
+<a href=#649 id=649 data-nosnippet>649</a>      ),
+<a href=#650 id=650 data-nosnippet>650</a>      spine_entry(<span class="string">"_quote_x22_.xhtml"</span>, <span class="string">"a\"quote\".xhtml"</span>, <span class="prelude-val">None</span>),
+<a href=#651 id=651 data-nosnippet>651</a>      spine_entry(<span class="string">"_lt_x3C_.xhtml"</span>, <span class="string">"a&lt;less&gt;.xhtml"</span>, <span class="prelude-val">None</span>),
+<a href=#652 id=652 data-nosnippet>652</a>    ];
+<a href=#653 id=653 data-nosnippet>653</a>    <span class="kw">let </span>resources = <span class="macro">vec!</span>[ResourceEntry {
+<a href=#654 id=654 data-nosnippet>654</a>      id:         <span class="string">"_css"</span>.to_string(),
+<a href=#655 id=655 data-nosnippet>655</a>      href:       <span class="string">"LaTeXML&amp;core.css"</span>.to_string(),
+<a href=#656 id=656 data-nosnippet>656</a>      media_type: <span class="string">"text/css"</span>.to_string(),
+<a href=#657 id=657 data-nosnippet>657</a>    }];
+<a href=#658 id=658 data-nosnippet>658</a>
+<a href=#659 id=659 data-nosnippet>659</a>    <span class="kw">let </span>opf = manifest.generate_opf(
+<a href=#660 id=660 data-nosnippet>660</a>      <span class="string">"Tom &amp; Jerry: a &lt;study&gt; of \"conflict\""</span>,
+<a href=#661 id=661 data-nosnippet>661</a>      <span class="kw-2">&amp;</span>[<span class="string">"Ampersand &amp; Co."</span>.to_string()],
+<a href=#662 id=662 data-nosnippet>662</a>      <span class="string">"en"</span>,
+<a href=#663 id=663 data-nosnippet>663</a>      <span class="kw-2">&amp;</span>spine,
+<a href=#664 id=664 data-nosnippet>664</a>      <span class="kw-2">&amp;</span>resources,
+<a href=#665 id=665 data-nosnippet>665</a>    );
+<a href=#666 id=666 data-nosnippet>666</a>
+<a href=#667 id=667 data-nosnippet>667</a>    <span class="kw">let </span>parser = libxml::parser::Parser::default();
+<a href=#668 id=668 data-nosnippet>668</a>    <span class="kw">let </span>doc = parser.parse_string(<span class="kw-2">&amp;</span>opf).unwrap_or_else(|e| {
+<a href=#669 id=669 data-nosnippet>669</a>      <span class="macro">panic!</span>(<span class="string">"the OPF is not well-formed XML ({e:?}) — an unescaped special reached it:\n{opf}"</span>)
+<a href=#670 id=670 data-nosnippet>670</a>    });
+<a href=#671 id=671 data-nosnippet>671</a>    <span class="kw">let </span>root = doc.get_root_element().expect(<span class="string">"a root element"</span>);
+<a href=#672 id=672 data-nosnippet>672</a>    <span class="macro">assert_eq!</span>(root.get_name(), <span class="string">"package"</span>);
+<a href=#673 id=673 data-nosnippet>673</a>
+<a href=#674 id=674 data-nosnippet>674</a>    <span class="comment">// The values must round-trip to their ORIGINAL text, not to an escaped or
+<a href=#675 id=675 data-nosnippet>675</a>    // truncated form — well-formedness alone would also be satisfied by dropping
+<a href=#676 id=676 data-nosnippet>676</a>    // the offending characters.
+<a href=#677 id=677 data-nosnippet>677</a>    </span><span class="kw">let </span>hrefs: Vec&lt;String&gt; = <span class="kw">crate</span>::document::element_children(
+<a href=#678 id=678 data-nosnippet>678</a>      <span class="kw-2">&amp;</span><span class="kw">crate</span>::document::element_children(<span class="kw-2">&amp;</span>root)
+<a href=#679 id=679 data-nosnippet>679</a>        .into_iter()
+<a href=#680 id=680 data-nosnippet>680</a>        .find(|n| n.get_name() == <span class="string">"manifest"</span>)
+<a href=#681 id=681 data-nosnippet>681</a>        .expect(<span class="string">"a &lt;manifest&gt;"</span>),
+<a href=#682 id=682 data-nosnippet>682</a>    )
+<a href=#683 id=683 data-nosnippet>683</a>    .iter()
+<a href=#684 id=684 data-nosnippet>684</a>    .filter_map(|n| n.get_attribute(<span class="string">"href"</span>))
+<a href=#685 id=685 data-nosnippet>685</a>    .collect();
+<a href=#686 id=686 data-nosnippet>686</a>    <span class="macro">assert!</span>(
+<a href=#687 id=687 data-nosnippet>687</a>      hrefs.iter().any(|h| h == <span class="string">"Fisher&amp;Yates.xhtml"</span>),
+<a href=#688 id=688 data-nosnippet>688</a>      <span class="string">"the ampersand href did not survive the round-trip: {hrefs:?}"
+<a href=#689 id=689 data-nosnippet>689</a>    </span>);
+<a href=#690 id=690 data-nosnippet>690</a>    <span class="macro">assert!</span>(
+<a href=#691 id=691 data-nosnippet>691</a>      hrefs.iter().any(|h| h == <span class="string">"a\"quote\".xhtml"</span>) &amp;&amp; hrefs.iter().any(|h| h == <span class="string">"a&lt;less&gt;.xhtml"</span>),
+<a href=#692 id=692 data-nosnippet>692</a>      <span class="string">"a quote/less-than href did not survive the round-trip: {hrefs:?}"
+<a href=#693 id=693 data-nosnippet>693</a>    </span>);
+<a href=#694 id=694 data-nosnippet>694</a>    <span class="macro">assert!</span>(
+<a href=#695 id=695 data-nosnippet>695</a>      hrefs.iter().any(|i| i == <span class="string">"LaTeXML&amp;core.css"</span>),
+<a href=#696 id=696 data-nosnippet>696</a>      <span class="string">"a RESOURCE href is interpolated by the same code path and must be escaped too: {hrefs:?}"
+<a href=#697 id=697 data-nosnippet>697</a>    </span>);
+<a href=#698 id=698 data-nosnippet>698</a>  }
+<a href=#699 id=699 data-nosnippet>699</a>
+<a href=#700 id=700 data-nosnippet>700</a>  <span class="doccomment">/// Perl `url_id`: NCName letters beyond ASCII stay, an `_` opening an `_xN_` is escaped.
+<a href=#701 id=701 data-nosnippet>701</a>  </span><span class="attr">#[test]
+<a href=#702 id=702 data-nosnippet>702</a>  </span><span class="kw">fn </span>url_id_follows_perl() {
+<a href=#703 id=703 data-nosnippet>703</a>    <span class="macro">assert_eq!</span>(
+<a href=#704 id=704 data-nosnippet>704</a>      url_to_id(<span class="string">"Gödel_x41_ a.xhtml"</span>),
+<a href=#705 id=705 data-nosnippet>705</a>      <span class="string">"_Gödel_x5F_x41__x20_a.xhtml"
+<a href=#706 id=706 data-nosnippet>706</a>    </span>);
+<a href=#707 id=707 data-nosnippet>707</a>  }
+<a href=#708 id=708 data-nosnippet>708</a>
+<a href=#709 id=709 data-nosnippet>709</a>  <span class="doccomment">/// Structure the readers rely on, so the DOM rewrite cannot quietly drop a
+<a href=#710 id=710 data-nosnippet>710</a>  /// required element or attribute.
+<a href=#711 id=711 data-nosnippet>711</a>  </span><span class="attr">#[test]
+<a href=#712 id=712 data-nosnippet>712</a>  </span><span class="kw">fn </span>opf_carries_the_structure_epub_readers_require() {
+<a href=#713 id=713 data-nosnippet>713</a>    <span class="kw">let </span><span class="kw-2">mut </span>manifest = EpubManifest::new(<span class="string">"/tmp/does-not-need-to-exist"</span>);
+<a href=#714 id=714 data-nosnippet>714</a>    manifest.unique_identifier = <span class="prelude-val">Some</span>(<span class="string">"urn:uuid:abc"</span>.to_string());
+<a href=#715 id=715 data-nosnippet>715</a>    <span class="kw">let </span>spine = <span class="macro">vec!</span>[spine_entry(<span class="string">"_a.xhtml"</span>, <span class="string">"a.xhtml"</span>, <span class="prelude-val">Some</span>(<span class="string">"nav"</span>))];
+<a href=#716 id=716 data-nosnippet>716</a>
+<a href=#717 id=717 data-nosnippet>717</a>    <span class="kw">let </span>opf = manifest.generate_opf(<span class="string">"T"</span>, <span class="kw-2">&amp;</span>[<span class="string">"A"</span>.to_string()], <span class="string">"en"</span>, <span class="kw-2">&amp;</span>spine, <span class="kw-2">&amp;</span>[]);
+<a href=#718 id=718 data-nosnippet>718</a>    <span class="kw">let </span>parser = libxml::parser::Parser::default();
+<a href=#719 id=719 data-nosnippet>719</a>    <span class="kw">let </span>doc = parser.parse_string(<span class="kw-2">&amp;</span>opf).expect(<span class="string">"well-formed"</span>);
+<a href=#720 id=720 data-nosnippet>720</a>    <span class="kw">let </span>root = doc.get_root_element().expect(<span class="string">"root"</span>);
+<a href=#721 id=721 data-nosnippet>721</a>
+<a href=#722 id=722 data-nosnippet>722</a>    <span class="macro">assert_eq!</span>(root.get_attribute(<span class="string">"version"</span>).as_deref(), <span class="prelude-val">Some</span>(<span class="string">"3.0"</span>));
+<a href=#723 id=723 data-nosnippet>723</a>    <span class="macro">assert_eq!</span>(
+<a href=#724 id=724 data-nosnippet>724</a>      root.get_attribute(<span class="string">"unique-identifier"</span>).as_deref(),
+<a href=#725 id=725 data-nosnippet>725</a>      <span class="prelude-val">Some</span>(<span class="string">"pub-id"</span>)
+<a href=#726 id=726 data-nosnippet>726</a>    );
+<a href=#727 id=727 data-nosnippet>727</a>
+<a href=#728 id=728 data-nosnippet>728</a>    <span class="kw">let </span>kids = <span class="kw">crate</span>::document::element_children(<span class="kw-2">&amp;</span>root);
+<a href=#729 id=729 data-nosnippet>729</a>    <span class="kw">let </span>names: Vec&lt;String&gt; = kids.iter().map(|n| n.get_name()).collect();
+<a href=#730 id=730 data-nosnippet>730</a>    <span class="macro">assert_eq!</span>(
+<a href=#731 id=731 data-nosnippet>731</a>      names,
+<a href=#732 id=732 data-nosnippet>732</a>      <span class="macro">vec!</span>[<span class="string">"metadata"</span>, <span class="string">"manifest"</span>, <span class="string">"spine"</span>],
+<a href=#733 id=733 data-nosnippet>733</a>      <span class="string">"OPF child order"
+<a href=#734 id=734 data-nosnippet>734</a>    </span>);
+<a href=#735 id=735 data-nosnippet>735</a>
+<a href=#736 id=736 data-nosnippet>736</a>    <span class="comment">// The identifier the package points at must actually carry that id.
+<a href=#737 id=737 data-nosnippet>737</a>    </span><span class="kw">let </span>meta = kids.iter().find(|n| n.get_name() == <span class="string">"metadata"</span>).unwrap();
+<a href=#738 id=738 data-nosnippet>738</a>    <span class="kw">let </span>ident = <span class="kw">crate</span>::document::element_children(meta)
+<a href=#739 id=739 data-nosnippet>739</a>      .into_iter()
+<a href=#740 id=740 data-nosnippet>740</a>      .find(|n| n.get_attribute(<span class="string">"id"</span>).as_deref() == <span class="prelude-val">Some</span>(<span class="string">"pub-id"</span>))
+<a href=#741 id=741 data-nosnippet>741</a>      .expect(<span class="string">"a &lt;dc:identifier id='pub-id'&gt;"</span>);
+<a href=#742 id=742 data-nosnippet>742</a>    <span class="macro">assert_eq!</span>(ident.get_content(), <span class="string">"urn:uuid:abc"</span>);
+<a href=#743 id=743 data-nosnippet>743</a>
+<a href=#744 id=744 data-nosnippet>744</a>    <span class="comment">// `properties` is optional and must be emitted only when present.
+<a href=#745 id=745 data-nosnippet>745</a>    </span><span class="kw">let </span>item =
+<a href=#746 id=746 data-nosnippet>746</a>      <span class="kw">crate</span>::document::element_children(kids.iter().find(|n| n.get_name() == <span class="string">"manifest"</span>).unwrap())
+<a href=#747 id=747 data-nosnippet>747</a>        .into_iter()
+<a href=#748 id=748 data-nosnippet>748</a>        .next()
+<a href=#749 id=749 data-nosnippet>749</a>        .expect(<span class="string">"an &lt;item&gt;"</span>);
+<a href=#750 id=750 data-nosnippet>750</a>    <span class="macro">assert_eq!</span>(item.get_attribute(<span class="string">"properties"</span>).as_deref(), <span class="prelude-val">Some</span>(<span class="string">"nav"</span>));
+<a href=#751 id=751 data-nosnippet>751</a>
+<a href=#752 id=752 data-nosnippet>752</a>    <span class="kw">let </span>itemref =
+<a href=#753 id=753 data-nosnippet>753</a>      <span class="kw">crate</span>::document::element_children(kids.iter().find(|n| n.get_name() == <span class="string">"spine"</span>).unwrap())
+<a href=#754 id=754 data-nosnippet>754</a>        .into_iter()
+<a href=#755 id=755 data-nosnippet>755</a>        .next()
+<a href=#756 id=756 data-nosnippet>756</a>        .expect(<span class="string">"an &lt;itemref&gt;"</span>);
+<a href=#757 id=757 data-nosnippet>757</a>    <span class="macro">assert_eq!</span>(itemref.get_attribute(<span class="string">"idref"</span>).as_deref(), <span class="prelude-val">Some</span>(<span class="string">"_a.xhtml"</span>));
+<a href=#758 id=758 data-nosnippet>758</a>  }
+<a href=#759 id=759 data-nosnippet>759</a>}
 </code></pre></div></section></main></body></html>

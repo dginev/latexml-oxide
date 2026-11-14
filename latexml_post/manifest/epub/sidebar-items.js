@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"struct":["EpubManifest","ResourceEntry","SpineEntry"]};
+window.SIDEBAR_ITEMS = {"fn":["prepare_source"],"struct":["EpubManifest","EpubSource","ResourceEntry","SpineEntry"]};
