@@ -11399,7 +11399,7 @@ LaTeXML has no pages, puts the box where `\box` would put it in the current mode
 unchanged. LaTeXML never runs an output routine (`\clearpage` is `\lx@newpage`, `\output` never
 fires) and its `\end{document}` (sect02.rs) never reaches
 `\@kernel@after@enddocument@afterlastpage` (latex.ltx:20226-20269, in the dump), which ships a "Temporary
-page!" box (the document's own `enddocument/afterlastpage` code runs, #1044) — so only an explicit `\shipout` reaches the primitive, and a document without one is
+page!" box (the document's own `enddocument/afterlastpage` code runs, #1048) — so only an explicit `\shipout` reaches the primitive, and a document without one is
 unchanged. A void box gives LaTeX's "Ignoring void shipout box" warning (latex.ltx:19944).
 
 **Perl** defines no `\shipout` (TeX_FileIO.pool.ltxml:257 is a placeholder). With a braced operand
@@ -36379,7 +36379,7 @@ LaTeXML.css keys `justify-items` on it (#809). The other non-Core attributes sti
 four whole `<mtable>` elements: two default, two with the author's `rowspacing`); repro
 `tools/perfect_kernel/repros/alignment/mtable_no_rowspacing.tex`.
 
-### 1044. The kernel hooks LaTeX runs where LaTeXML's bindings stand in for its macros (QA47B)
+### 1048. The kernel hooks LaTeX runs where LaTeXML's bindings stand in for its macros (QA47B)
 
 **Perl.** `\AddToHook` is a no-op (latex_base.pool.ltxml), etoolbox's `\AfterEndDocument` queues code nothing reads and
 atveryend's commands are no-ops: every hook's code is dropped. **Rust.** With the kernel's hooks loaded, the bindings
