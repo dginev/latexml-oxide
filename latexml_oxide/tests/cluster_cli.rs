@@ -2635,11 +2635,11 @@ mod browser_render_aligned_math_spacing {
 
     let v: serde_json::Value = serde_json::from_str(stdout.trim()).expect("parse JSON");
     let cells = v["cells"].as_array().expect("cells array");
-    // The `aligned` has 2 rows x 2 columns → 4 native alignment cells.
+    // Two `aligned`s (the reporter's, and #848's `\jot` one), each 2 rows x 2 columns → 8 native alignment cells.
     assert_eq!(
       cells.len(),
-      4,
-      "expected 4 aligned <mtd> cells, got {}: {stdout}",
+      8,
+      "expected 8 aligned <mtd> cells, got {}: {stdout}",
       cells.len()
     );
     // The FIX: the browser's default 0.4em (6.4px) mtd padding is reset to 0 on
@@ -2703,8 +2703,10 @@ mod browser_render_verbatim_narrow {
   //! 2605.01024) reflows instead of scrolling, and neither it, an unframed one, a
   //! numbered indented one (ids keep an `ltx_text` around its parbox) nor a long
   //! inline `\verb` widens the page; a breaklines line keeps its spaces; a `\verb`
-  //! in a table cell stays one row, as the cell is nowrap. Opt-in and LOCAL like the
-  //! guards above; the CI half is
+  //! in a table cell stays one row, as the cell is nowrap; an `xleftmargin` line is
+  //! as tall as a plain one, its text right of it by the margin (issue 853). Opt-in
+  //! and LOCAL like the guards above (`LATEXML_BROWSER_ENGINE=firefox` renders it in
+  //! Firefox); the CI half is
   //! `witnessed_css_delta::verbatim_whitespace_delta_stays_present`.
 
   const DOC: &str = "\\documentclass{article}\n\\usepackage[ids]{latexml}\n\
@@ -2719,6 +2721,8 @@ mod browser_render_verbatim_narrow {
      \\begin{Verbatim}[breaklines=true,numbers=left]\n\
      \x20   print(i, \"a long string that must certainly break somewhere along the way ok\")\n\
      \\end{Verbatim}\n\
+     \\begin{Verbatim}\nplain line\n\\end{Verbatim}\n\
+     \\begin{Verbatim}[xleftmargin=2em]\nmargin line\n\\end{Verbatim}\n\
      A long inline \\verb|f(argument_one, argument_two, argument_three, argument_four)| ends here.\n\n\
      \\begin{tabular}{ll}\n\
      \\verb|alpha beta gamma delta| & \\verb|epsilon zeta eta theta|\n\
@@ -2776,6 +2780,27 @@ mod browser_render_verbatim_narrow {
       v["returnLine"].as_str().map(str::trim_end),
       Some("        return   x"),
       "a breaklines line lost its spaces: {stdout}"
+    );
+    // Issue 853, on main 4477bd14361: the margin line 30 px against 15 px (its em
+    // spaces a line box of their own), its text at the plain line's x.
+    let (plain, margin) = (&v["plainLine"], &v["marginLine"]);
+    let (hp, hm) = (
+      plain["height"].as_f64().unwrap(),
+      margin["height"].as_f64().unwrap(),
+    );
+    assert!(
+      (hm - hp).abs() <= 1.0,
+      "an xleftmargin line is {hm}px tall, a plain one {hp}px: {stdout}"
+    );
+    let (lp, lm, mw) = (
+      plain["left"].as_f64().unwrap(),
+      margin["left"].as_f64().unwrap(),
+      margin["marginWidth"].as_f64().unwrap(),
+    );
+    assert!(
+      mw > 0.0 && lm - lp >= mw - 0.5,
+      "an xleftmargin line starts {}px right of a plain one, its margin is {mw}px: {stdout}",
+      lm - lp
     );
   }
 }

@@ -87,6 +87,13 @@
     (`warn_not_register`; the core `lookup_register` stays quiet on an undefined cs, which kernel code probes). `Dimension!` Warns on a spec that is neither a dimension nor a number (the value is
     unchanged, 0). `InstallDefinition!` takes `(definition[, scope])` (it did not compile). `AddToMacro!` on an
     undefined cs is TeX's Error and defines it with the addition, as latex.ltx does (OXIDIZED_DESIGN #1036). Guards `perfect_kernel_batchmacsync::*`.
+  - **An `xleftmargin` Verbatim is indented again, one row per line** (issue 853, a
+    regression of PR #844). The margin, em-space text before each line, took a row of its
+    own above the line: a blank row under every source line (30 px against 15) and no
+    indent. The box around the line is now a flex row, so the margin sits beside it (text
+    40 → 56 px at 1280 px) and an fvextra `breaklines` line still shrinks to the rest.
+    Chrome and Firefox alike; other verbatim renders pixel-identical. The rule is
+    ar5iv-css PR 57's. Guard `browser_render_verbatim_narrow` (opt-in).
   - **The bundled CSS follows upstream LaTeXML master (`0db6f47e`).** A listings line
     number is `user-select: none` (upstream `95a77fc0`, #2850), so copying a numbered
     `lstlisting` copies the code without its numbers; dark mode colours `body`, not

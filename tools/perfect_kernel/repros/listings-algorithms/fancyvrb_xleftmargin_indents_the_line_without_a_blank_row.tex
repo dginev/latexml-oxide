@@ -1,0 +1,25 @@
+% mechanism: fancyvrb sets each line as \hbox to\hsize{\kern\leftmargin\hbox to\linewidth{<line>}}, `xleftmargin`
+%   added to \leftmargin (fancyvrb.sty \FV@SetLineWidth, \FV@ListProcessLine); our HTML carries the skip as U+2003 text before the line's ltx_inline-block, inside a
+%   wrapping ltx_inline-block. LaTeXML.css made both boxes blocks (#844), so the em spaces took a line box of their
+%   own: a blank row under every source line and no margin. The wrapper is now a flex row (issue 853)
+% witness: synthetic (issue 853); xleftmargin in the wild: arXiv 2605.01024
+% oracle:  pdflatex (TL 2025, -no-shell-escape): 0 `!`; the second block's lines indented 2em, single-spaced
+% engines: rust main 4477bd14361: 0 errors; Chrome 1280 px: a 30 px row pitch against the plain block's 15, the text at
+%          the plain line's x (40 px); fix/issue-853: 15 px, the text at 56 px (Firefox: 30 -> 15, 40 -> 54; 375 px
+%          alike); Perl: not run (a CSS layout)
+% expect:  0 errors; each xleftmargin line as tall as a plain Verbatim line, its text right of the plain line's by
+%          the margin
+% guard:   cluster_cli browser_render_verbatim_narrow::breaklines_verbatim_reflows_at_phone_width (marginLine)
+% status:  GREEN (fix/issue-853)
+\documentclass{article}
+\usepackage{fancyvrb}
+\begin{document}
+\begin{Verbatim}
+def f():
+    return 1
+\end{Verbatim}
+\begin{Verbatim}[xleftmargin=2em]
+def f():
+    return 1
+\end{Verbatim}
+\end{document}
