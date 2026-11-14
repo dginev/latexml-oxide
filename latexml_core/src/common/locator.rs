@@ -349,8 +349,8 @@ mod tests {
     assert!(s.contains("Anonymous String"), "got {s:?}");
   }
 
-  /// Perl Locator.pm:55: a drive letter is no protocol, so a Windows path shortens to its name like any path,
-  /// with or without the verbatim prefix.
+  /// Perl Locator.pm:55-60: a drive letter is no protocol, so a Windows path shortens to its file name with its extension
+  /// like any path (#794), with or without the verbatim prefix.
   #[test]
   fn a_windows_path_is_no_url() {
     for source in [
@@ -359,7 +359,7 @@ mod tests {
       "c:/texlive/2026/texmf-dist/tex/latex/base/latex.ltx",
     ] {
       let short = Locator::new(source, 1, 1, 0, 0).get_short_source("");
-      assert!(short == "t" || short == "latex", "{source} → {short}");
+      assert!(short == "t.tex" || short == "latex.ltx", "{source} → {short}");
     }
   }
 
