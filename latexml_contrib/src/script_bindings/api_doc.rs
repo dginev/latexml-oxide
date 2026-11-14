@@ -160,6 +160,28 @@ enum Doc {
 /// [`ambiguous_names`] fails when one entry would be shared by two handles.
 const DOCS: &[(&str, Doc)] = &[
   (
+    "!",
+    Doc::Note(
+      "Perl's truthiness, for `!!v` (`if ($v)`) and `!v` (`unless ($v)`): `()`, `\"\"`, `\"0\"`, `0` and `0.0` are \
+       false, a bool is itself, every Token, Tokens (even empty), box, whatsit, array and map is true \
+       (Perl's objects overload no bool).",
+    ),
+  ),
+  (
+    "!=",
+    Doc::Note(
+      "**Deprecated** (Warns once per binding load): a Tokens, Token or box against a string compares its string \
+       form (use `ToString(v) != s`); `() != s` takes `()` as `\"\"` (use `!!v` or `v != ()`).",
+    ),
+  ),
+  (
+    "==",
+    Doc::Note(
+      "**Deprecated** (Warns once per binding load): a Tokens, Token or box against a string compares its string \
+       form (use `ToString(v) == s`); `() == s` takes `()` as `\"\"` (use `!v` or `v == ()`).",
+    ),
+  ),
+  (
     "AddToCounter",
     Doc::Rust(
       "Add a number to a counter.",
@@ -391,7 +413,7 @@ const DOCS: &[(&str, Doc)] = &[
     Doc::Rust(
       "Define a parameter type: the reader `|gullet, extra…|` returns its value (Tokens, a Token, `()` for none), \
        with Perl's options `optional`, `novalue`, `semiverbatim`, `undigested`, `reversion`, `beforeDigest`, \
-       `afterDigest` (`nargs` Warns unsupported).",
+       `afterDigest`, and `nargs` accepted unread, as Perl's.",
       "latexml_core::parameter::Parameter",
     ),
   ),
@@ -525,7 +547,7 @@ const DOCS: &[(&str, Doc)] = &[
     "GetKeyVal",
     Doc::Note(
       "One value of a keyval set, as Perl's: Tokens as read, a box once digested, `()` when missing; a repeated \
-       key's last value.",
+       key's last value. Test it as Perl's `if ($v)` with `!!v`, or `v == ()` for `defined`.",
     ),
   ),
   (
@@ -1016,7 +1038,9 @@ const DOCS: &[(&str, Doc)] = &[
   ),
   (
     "ToString",
-    Doc::Note("The digested value as plain text (its `Display`)."),
+    Doc::Note(
+      "Perl's `ToString`: a box, Tokens or Token as plain text, a whatsit as its reversion, `()` as `\"\"`.",
+    ),
   ),
   (
     "Today",
@@ -1704,8 +1728,7 @@ const HANDLE_DOCS: &[(&str, &str, Doc)] = &[
     "Whatsit",
     "to_string",
     Doc::Note(
-      "**Deprecated** (Warns once per binding load): an old-form reversion `|x|` holds the whatsit; it prints as the \
-       first argument's TeX. Use `|whatsit, args|`.",
+      "The whatsit in a string: Perl's `ToString($whatsit)`, its reversion (an error inside its own reversion).",
     ),
   ),
   (

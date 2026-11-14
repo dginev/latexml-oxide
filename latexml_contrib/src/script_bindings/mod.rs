@@ -129,6 +129,9 @@ thread_local! {
   /// `setProperty` errors there instead of mutating through a shared ref.
   static WHATSIT_CTX: RefCell<Vec<(*mut Whatsit, bool)>> = const { RefCell::new(Vec::new()) };
 
+  /// The whatsits a script reversion is reverting (by address): its own string form would revert it again.
+  static REVERTING: RefCell<Vec<usize>> = const { RefCell::new(Vec::new()) };
+
   /// The deprecated aliases already Warned, by script (its AST) — once per binding load; `load_script` clears its own.
   static DEPRECATED_WARNED: RefCell<Vec<(usize, &'static str)>> =
     const { RefCell::new(Vec::new()) };
@@ -175,16 +178,24 @@ pub(super) const DEPRECATED_ALIASES: &[(&str, &str)] = &[
     "DefAccent",
     "DefAccent(accent, combining, standalone, #{below: true})",
   ),
-  ("DefMacro |args|", "|gullet, args|, the arguments as Tokens"),
+  (
+    "DefMacro |args|",
+    "|gullet, args|, the arguments as Tokens (name each: |gullet, _x|)",
+  ),
   (
     "DefPrimitive |args|",
-    "|stomach, args|, the arguments as Tokens",
+    "|stomach, args|, the arguments as Tokens (name each: |stomach, _x|)",
   ),
   (
     "DefColumnType |args|",
-    "|gullet, args|, the arguments as Tokens",
+    "|gullet, args|, the arguments as Tokens (name each: |gullet, _x|)",
   ),
-  ("reversion |args|", "|whatsit, args|"),
+  (
+    "reversion |args|",
+    "|whatsit, args| (name each: |whatsit, _x|)",
+  ),
+  ("value == string", "ToString(value) == string"),
+  ("() == string", "!!value or value == ()"),
 ];
 
 /// One `Warning:deprecated:<old>` per binding load for a deprecated alias, naming its replacement.
@@ -248,6 +259,7 @@ macro_rules! ctx_stack_guard {
 
 ctx_stack_guard!(CtorCtxGuard, CTOR_CTX, CtorCtx);
 ctx_stack_guard!(WhatsitCtxGuard, WHATSIT_CTX, (*mut Whatsit, bool));
+ctx_stack_guard!(RevertingGuard, REVERTING, usize);
 ctx_stack_guard!(ScriptCtxGuard, CURRENT_SCRIPT, (Rc<Engine>, Rc<AST>));
 
 /// The engine/AST of the innermost running script (for immediate wiring).
@@ -866,8 +878,51 @@ fn dynamic_to_string(d: Dynamic) -> String {
     token.to_string()
   } else if let Some(digested) = d.clone().try_cast::<Digested>() {
     digested.to_string()
+  } else if d.is::<WhatsitProxy>() {
+    // (`to_string`, `ToString` and `absorbString` raise its error; see `whatsit_string`)
+    whatsit_string().unwrap_or_default()
   } else {
     d.to_string()
+  }
+}
+
+/// The hook's whatsit as Perl's `ToString($whatsit)`: its reversion (Whatsit.pm:163). Inside that whatsit's own
+/// script reversion, where Perl recurses without end, an Error and `""` (Rhai's `+` would swallow a raised one).
+fn whatsit_string() -> std::result::Result<String, Box<EvalAltResult>> {
+  let (ptr, _) = current_whatsit_entry()?;
+  if REVERTING.with(|r| r.borrow().contains(&(ptr as usize))) {
+    report_self_reversion().map_err(rhai_err)?;
+    return Ok(String::new());
+  }
+  with_whatsit(|w| w.revert().map(|t| t.to_string()).map_err(rhai_err))?
+}
+
+fn report_self_reversion() -> Result<()> {
+  latexml_core::Error!(
+    "script",
+    "reversion",
+    "a reversion's own whatsit in a string reverts it again; use whatsit.getArg(n)"
+  );
+  Ok(())
+}
+
+/// Perl's truthiness (`if ($v)`): undef, "", "0" and 0 are false, a bool is itself, and every object (Token, Tokens,
+/// a box, a whatsit, an array, a map) is true, as Perl LaTeXML's objects overload no bool (Common/Object.pm:120).
+fn perl_truthy(v: &Dynamic) -> bool {
+  if v.is_unit() {
+    false
+  } else if let Ok(b) = v.as_bool() {
+    b
+  } else if let Ok(i) = v.as_int() {
+    i != 0
+  } else if let Ok(f) = v.as_float() {
+    f != 0.0
+  } else if let Ok(s) = v.as_immutable_string_ref() {
+    !(s.is_empty() || s.as_str() == "0")
+  } else if let Ok(c) = v.as_char() {
+    c != '0'
+  } else {
+    true
   }
 }
 

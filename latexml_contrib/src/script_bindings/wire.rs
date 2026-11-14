@@ -915,12 +915,15 @@ pub(super) fn arg_value(arg: ArgWrap) -> Dynamic {
   }
 }
 
-/// Whether `body` declares a leading handle before the definition's `nargs` arguments (Perl's `$_[0]`): it declares
-/// more parameters than there are arguments, or there are none.
-fn declares_lead(ast: &Rc<AST>, body: &FnPtr, nargs: usize) -> bool {
+/// Whether `body` takes Perl's arguments, a leading handle (`$_[0]`) then the `nargs` arguments: it declares none
+/// (Perl's plain `sub {…}`) or more than `nargs`. One declaring 1..=nargs is the old form, read as the arguments
+/// alone; a Perl-form body names every argument (`|gullet, _x|`), as the old form cannot be told apart statically.
+pub(super) fn declares_lead(ast: &Rc<AST>, body: &FnPtr, nargs: usize) -> bool {
   nargs == 0
-    || closure_arity(ast, body.fn_name())
-      .is_none_or(|params| params.saturating_sub(body.curry().len()) > nargs)
+    || closure_arity(ast, body.fn_name()).is_none_or(|params| {
+      let params = params.saturating_sub(body.curry().len());
+      params == 0 || params > nargs
+    })
 }
 
 /// A macro or primitive body's arguments as Perl passes them (Expandable.pm:74, Primitive.pm:78): `lead` (the gullet
@@ -1203,7 +1206,8 @@ pub(super) fn wire_constructor_template(proto: &str, template: String) -> Result
 }
 
 /// Build a closure-form `reversion` trampoline: the body is Perl's `($whatsit, @args)` (Whatsit.pm:121), the whatsit
-/// read-only and each arg its TeX-source string; it returns the reversion (TeX source, a `Token` or `Tokens`).
+/// read-only and each arg its TeX-source string; it returns the reversion (TeX source, a `Token` or `Tokens`). A body
+/// declaring no whatsit ([`declares_lead`]) is the old form, given the arguments alone, Warned `deprecated`.
 pub(super) fn reversion_trampoline(
   fp: FnPtr,
   engine: Rc<Engine>,
@@ -1213,7 +1217,15 @@ pub(super) fn reversion_trampoline(
     move |w: &Whatsit, args: &Vec<Option<Digested>>| -> Result<Tokens> {
       // RAII pop on every exit incl. panic (review M1). Whatsit is READ-ONLY here.
       let _whatsit_guard = WhatsitCtxGuard::new((w as *const Whatsit as *mut Whatsit, false));
-      let dyn_args: Vec<Dynamic> = std::iter::once(Dynamic::from(WhatsitProxy))
+      let _reverting_guard = RevertingGuard::new(w as *const Whatsit as usize);
+      let lead = if declares_lead(&ast, &fp, args.len()) {
+        Some(Dynamic::from(WhatsitProxy))
+      } else {
+        warn_deprecated("reversion |args|");
+        None
+      };
+      let dyn_args: Vec<Dynamic> = lead
+        .into_iter()
         .chain(args.iter().map(|a| match a {
           Some(d) => Dynamic::from(d.untex().unwrap_or_default()),
           None => Dynamic::UNIT,
@@ -1541,7 +1553,7 @@ pub(super) fn tag_trampoline(
 
 /// Install a `DefParameterType(name, reader, options)` (Package.pm:586-590): the reader is called as Perl's
 /// `&$reader($gullet, @extra)` (Parameter.pm:88) and returns the value (Tokens, a Token, `()` for none); the options
-/// are Perl's `$parameter_options` (`nargs` has no Rust reading yet: Warned unsupported).
+/// are Perl's `$parameter_options` (`nargs` accepted and unread, as Parameter.pm never reads it).
 pub(super) fn wire_parameter_type(
   engine: &Rc<Engine>,
   ast: &Rc<AST>,
@@ -1553,7 +1565,7 @@ pub(super) fn wire_parameter_type(
   let opts = checked_opts(
     &operation,
     latexml_core::binding::def::options::PARAMETER_OPTIONS,
-    &["nargs"],
+    &[],
     opts,
   )?;
   let (engine, ast) = (engine.clone(), ast.clone());

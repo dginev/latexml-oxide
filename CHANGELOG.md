@@ -194,17 +194,22 @@
   - **BREAKING: Rhai bodies receive Perl's arguments; `GetKeyVal` returns the value** (PR #829 round D2b). A
     `DefMacro` (and `DefColumnType`, `DefConditional` test) closure is Perl's `|gullet, args|`, a `DefPrimitive`
     closure `|stomach, args|` (`stomach.getGullet()`), each argument `Tokens`, a `Token`, a `KeyVals` or `()` for an
-    omitted optional. A closure declaring no leading handle — no more parameters than the definition's arguments —
-    keeps receiving TeX strings for one release, with `Warning:deprecated:DefMacro |args|` (`DefPrimitive |args|`,
-    `DefColumnType |args|`) once per binding load; a body that only concatenates its arguments (`"\\x{" + a + "}"`)
-    migrates by adding the handle, one that calls string methods (`a.len()`) by `UnTeX(a)`. An old-form reversion
-    `|x|` printing `x` gets the first argument's TeX with `Warning:deprecated:reversion |args|`, where it printed
-    `Whatsit`. `GetKeyVal(kv, key)` returns the value as Perl's (KeyVals.pm:31) — Tokens as read, a box once digested,
-    `()` when missing — where it returned a string (`""` when missing): replace `GetKeyVal(kv, k) != ""` by `!= ()`
-    and wrap a string use in `ToString(…)`; `GetKeyVals` gives those values (a repeated key's as an array).
+    omitted optional. A closure declaring no parameter is Perl's plain `sub {…}`. One declaring no leading handle —
+    1 to as many parameters as the definition's arguments — keeps receiving TeX strings for one release, with
+    `Warning:deprecated:DefMacro |args|` (`DefPrimitive |args|`, `DefColumnType |args|`, `reversion |args|`) once per
+    binding load; the two forms cannot be told apart by arity, so a Perl-form body names the handle and every
+    argument (`|gullet, _x|`, where Perl writes `my ($gullet) = @_`). A body that only concatenates its arguments
+    (`"\\x{" + a + "}"`) migrates by adding the handle, one that calls string methods (`a.len()`) by `UnTeX(a)`. A
+    whatsit in a string is its reversion, as Perl's `ToString($whatsit)`. `GetKeyVal(kv, key)` returns the value as
+    Perl's (KeyVals.pm:31) — Tokens as read, a box once digested, `()` when missing — where it returned a string
+    (`""` when missing): test it as Perl's `if ($v)` with `!!v` (`!v` for `unless`; Perl's truthiness: `()`, `""`,
+    `"0"`, `0` false, every Token, Tokens, box, array and map true) or `v == ()` for `defined`, and wrap a string use
+    in `ToString(…)`; an old test against a string (`v != ""`) compares the string forms, `()` as `""`, with
+    `Warning:deprecated:value == string` / `() == string` once per load. `GetKeyVals` gives those values (a repeated
+    key's as an array).
     `ToString` takes any value; `document.absorbString` takes any value (its string; `()` adds nothing). New
-    `DefParameterType(name, |gullet, extra…| …, #{…})` with Perl's `$parameter_options`. `FindFile`'s `raw`
-    Warns deprecated and is dropped (Package.pm:2079); `AddToMacro` keeps the macro's lock (Package.pm:2547);
+    `DefParameterType(name, |gullet, extra…| …, #{…})` with Perl's `$parameter_options` (`nargs` accepted unread).
+    `FindFile`'s `raw` Warns deprecated and is dropped (Package.pm:2079); `AddToMacro` keeps the macro's lock (Package.pm:2547);
     `DeclareFontMap`'s `*_mathstyle` is a font map, stored as the `Font` (another value Warns unsupported). Guards
     `cluster_package_guards::perfect_kernel_batchw3rd::{rhai_closure_args_and_parameter_types,
     rhai_deprecated_aliases_warn_once}`.

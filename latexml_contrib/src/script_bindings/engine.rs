@@ -12,6 +12,8 @@ pub(super) fn make_engine() -> Engine {
   engine.set_max_operations(MAX_OPERATIONS);
   engine.set_max_call_levels(MAX_CALL_LEVELS);
   engine.set_max_string_size(MAX_STRING_SIZE);
+  // Registered operators must win over the built-ins for `()` vs a string (the deprecated string tests below).
+  engine.set_fast_operators(false);
 
   // ── registration API (wired to native defs IMMEDIATELY, in script order) ──
   engine.register_fn(
@@ -640,6 +642,21 @@ pub(super) fn make_engine() -> Engine {
       dynamic_to_string(d)
     }
   });
+  // Perl's `if ($v)` / `unless ($v)` as `!!v` / `!v` (perl_truthy): every value type, Rhai's `!` taking only a bool.
+  engine.register_fn("!", |v: Dynamic| !perl_truthy(&v));
+  // A value tested against a string (`w != ""`), which Rhai would answer by type alone: their string forms (`()` as
+  // ""), Warned once per load with the Perl-form test; Perl compares an object's address, so tests `ToString`.
+  register_string_tests::<Tokens>(&mut engine, "value == string");
+  register_string_tests::<Token>(&mut engine, "value == string");
+  register_string_tests::<Digested>(&mut engine, "value == string");
+  // `()` on the left only: `s == ()` is Perl's `defined` test, kept as Rhai's.
+  let unit_test = |s: &str| {
+    warn_deprecated("() == string");
+    s.is_empty()
+  };
+  engine.register_fn("==", move |_: (), s: &str| unit_test(s));
+  engine.register_fn("!=", move |_: (), s: &str| !unit_test(s));
+  engine.register_fn("ToString", |_w: WhatsitProxy| whatsit_string());
   engine.register_fn("ToAttribute", |d: Digested| -> String { d.to_attribute() });
   engine.register_fn(
     "Revert",
@@ -1966,7 +1983,11 @@ pub(super) fn make_engine() -> Engine {
       if s.is_unit() {
         return Ok(());
       }
-      let s = dynamic_to_string(s);
+      let s = if s.is::<WhatsitProxy>() {
+        whatsit_string()?
+      } else {
+        dynamic_to_string(s)
+      };
       with_doc(|doc, props| {
         doc.absorb_string(&s, props).map_err(rhai_err)?;
         Ok(())
@@ -2487,18 +2508,10 @@ pub(super) fn make_engine() -> Engine {
       with_whatsit(|w| ctor_arg_to_dynamic(&n.and_then(|n| w.get_arg(n)).cloned()))
     },
   );
-  // An old-form reversion `|x| "\\foo{" + x + "}"` holds the whatsit in `x`: Warned, it prints the first
-  // argument's TeX, as `x` did (Perl's `ToString($whatsit)` is `ToString`, not this).
+  // In a string the whatsit is Perl's `ToString($whatsit)`, its reversion (Whatsit.pm:163).
   engine.register_fn(
     "to_string",
-    |_w: &mut WhatsitProxy| -> std::result::Result<String, Box<EvalAltResult>> {
-      warn_deprecated("reversion |args|");
-      with_whatsit(|w| {
-        w.get_arg(1)
-          .and_then(|d| d.untex().ok())
-          .unwrap_or_default()
-      })
-    },
+    |_w: &mut WhatsitProxy| -> std::result::Result<String, Box<EvalAltResult>> { whatsit_string() },
   );
   // Perl `getProperty($key)` (Whatsit.pm:55): the typed value, `()` when absent.
   engine.register_fn(
@@ -3089,4 +3102,17 @@ fn explode(s: &str, text: bool) -> Tokens {
   } else {
     latexml_core::Explode!(s)
   })
+}
+
+/// `==`/`!=` between a `T` and a string either way round, on its string form ([`dynamic_to_string`]), Warning
+/// `deprecated` (`old`) once per binding load.
+fn register_string_tests<T: Clone + 'static>(engine: &mut Engine, old: &'static str) {
+  let same = move |v: T, s: &str| {
+    warn_deprecated(old);
+    dynamic_to_string(Dynamic::from(v)) == s
+  };
+  engine.register_fn("==", same);
+  engine.register_fn("!=", move |v: T, s: &str| !same(v, s));
+  engine.register_fn("==", move |s: &str, v: T| same(v, s));
+  engine.register_fn("!=", move |s: &str, v: T| !same(v, s));
 }

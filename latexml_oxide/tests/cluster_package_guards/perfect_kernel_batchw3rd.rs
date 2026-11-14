@@ -307,8 +307,8 @@ const LXRD2_OLD_TEX: &str = r"\documentclass{article}
 /// its replacement, however often it runs (here twice), and keeps its old result. `DefAccent` reads no option, as Perl's (TeX_Character.pool.ltxml:92-100). Red on a1b6c0b827d: no
 /// Warning (W=0), and `#{bogus: true}` "Function not found". The space before `\lxb` is dropped as Perl drops it before
 /// an imperative constructor's `openElement` (RED `rhai-bindings/imperative_constructor_drops_space_red.tex`). W3RD2b: a macro
-/// or primitive body declaring no leading gullet/stomach gets its arguments as strings, Warned; an old-form
-/// reversion `|x|` holds the whatsit, which prints as the first argument's TeX, Warned (red on 8ee92a55a49: W=13, the
+/// or primitive body declaring 1..=nargs parameters, no leading gullet/stomach, gets its arguments as strings, Warned
+/// with the fix; so does an old-form reversion `|x|` (red on 8ee92a55a49: W=13, the
 /// reversion `tex="\lxor{Whatsit}"`-garbage; on a1b6c0b827d E=1 for `#{bogus: true}`).
 #[test]
 fn rhai_deprecated_aliases_warn_once() {
@@ -337,12 +337,18 @@ fn rhai_deprecated_aliases_warn_once() {
       "DefAccent",
       "DefAccent(accent, combining, standalone, #{below: true})",
     ),
-    ("DefMacro |args|", "|gullet, args|, the arguments as Tokens"),
+    (
+      "DefMacro |args|",
+      "|gullet, args|, the arguments as Tokens (name each: |gullet, _x|)",
+    ),
     (
       "DefPrimitive |args|",
-      "|stomach, args|, the arguments as Tokens",
+      "|stomach, args|, the arguments as Tokens (name each: |stomach, _x|)",
     ),
-    ("reversion |args|", "|whatsit, args|"),
+    (
+      "reversion |args|",
+      "|whatsit, args| (name each: |whatsit, _x|)",
+    ),
   ];
   assert_eq!(warning_count(&log), deprecated.len(), "{log}");
   for (old, new) in deprecated {
@@ -363,6 +369,27 @@ fn rhai_deprecated_aliases_warn_once() {
   );
   assert!(xml.contains("<p>(ab2)(c1) v! <Math"), "{xml}");
   assert!(xml.contains(r#"tex="\lxor{q}""#), "{xml}");
+  // W3RD2bF (revW3i B1): the old test of a GetKeyVal value against a string (`w != ""`, the base's mykeyval.sty.rhai)
+  // compares string forms, `()` as "", each Warned; red on 34740a129a8: a stray "Width: " for the omitted key, W=0.
+  let kv = include_str!("../keyval_rhai/mykeyval.sty.rhai");
+  let old = kv
+    .replace("if w != () {", "if w != \"\" && w != \"false\" {")
+    .replace("if h != () {", "if h != \"\" && h != \"false\" {");
+  assert_eq!(old.matches("!= \"false\"").count(), 2);
+  let (log, xml) = convert_files_with(
+    "\\documentclass{article}\\usepackage{mykeyval}\\begin{document}\\begin{KVstruct}[height=2]X\\end{KVstruct}\\end{document}",
+    &[("mykeyval.sty.rhai", &old)],
+    None,
+  );
+  assert_eq!(error_count(&log), 0, "{log}");
+  assert_eq!(warning_count(&log), 2, "{log}");
+  for line in [
+    "Warning:deprecated:() == string () == string is deprecated; use !!value or value == ()",
+    "Warning:deprecated:value == string value == string is deprecated; use ToString(value) == string",
+  ] {
+    assert!(log.contains(line), "{line}\n{log}");
+  }
+  assert!(xml.contains("<p>&amp;Height: 2X</p>"), "{xml}");
 }
 
 const LXRD3: &str = r#"DefMacro("\\lxpt{}", |gullet, a| type_of(a) + "/" + type_of(gullet));
@@ -384,6 +411,17 @@ DefParameterType("LxSemi", |gullet| gullet.readArg(), #{semiverbatim: true});
 DefMacro("\\lxps LxSemi", |gullet, a| Tokens(T_CS("\\texttt"), T_BEGIN(), a, T_END()));
 DefParameterType("LxUnd", |gullet| gullet.readArg(), #{undigested: true});
 DefConstructor("\\lxpc LxUnd", |document, a| document.absorbString(type_of(a)));
+DefMacro("\\lxt OptionalKeyVals:LXK", |gullet, kv| if !!GetKeyVal(kv, "k") { "T" } else { "F" });
+DefMacro("\\lxtv", || { let s = ""; for v in ["", "0", 0, 0.0, "a", Tokenize(""), T_OTHER("0"), [], #{}, ()] {
+  s += if !v { "F" } else { "T" }; } s });
+DefMacro("\\lxz{}", || "Z");
+DefPrimitive("\\lxzp{}", || AssignValue("lx:z", "P", "global"));
+DefMacro("\\lxzv", || LookupValue("lx:z"));
+DefColumnType("Q{}", || "c");
+DefConstructor("\\lxws{}", "<ltx:text class='#c'>#1</ltx:text>", #{afterDigest: |whatsit| whatsit.setProperty("c", "s" + whatsit),
+  afterConstruct: |document, whatsit| document.absorbString("/" + whatsit + ToString(whatsit))});
+DefParameterType("LxN", |gullet| gullet.readArg(), #{nargs: 1});
+DefMacro("\\lxpq LxN", |gullet, a| a);
 "#;
 
 const LXRD3_TEX: &str = r"\documentclass{article}
@@ -394,12 +432,17 @@ const LXRD3_TEX: &str = r"\documentclass{article}
 \lxkv[k=v1,k=v2]{b} \lxkc{k=w}
 
 \lxpu ab!c \lxpn{} \lxps{a_b} \lxpc{u}
+
+\lxt{} \lxt[k=] \lxt[k=0] \lxt[k=v] \lxtv
+
+\lxz{a} \lxzp{b}\lxzv{} \begin{tabular}{Q{x}}t\end{tabular} \lxws{w} \lxpq{N}
 \end{document}
 ";
 
 const LXRD3_ERR: &str = r#"DefParameterType("LxReq", |gullet| ());
 DefMacro("\\lxpr LxReq", |gullet, a| "R");
 DefParameterType("LxBad", |gullet| gullet.readArg(), #{bogus: 1});
+DefMath("\\lxself{}", "S", #{reversion: |whatsit, x| "\\lxself{" + whatsit + "}"});
 "#;
 
 /// W3RD2b: a body gets Perl's arguments — a macro `($gullet, @args)` (Expandable.pm:74), a primitive `($stomach,
@@ -408,6 +451,12 @@ DefParameterType("LxBad", |gullet| gullet.readArg(), #{bogus: 1});
 /// extra (Parameter.pm:88) with Perl's options. Red on 8ee92a55a49: arguments were strings, `Stomach`/`getGullet`,
 /// `DefParameterType` "Function not found". Error side: a required type whose reader returns `()` (Perl
 /// Parameter.pm:94 `Error:expected`) and an option outside `$parameter_options` (`Error:misdefined`), 1 each in Perl.
+/// W3RD2bF (revW3i): p4 `!!v`/`!v` are Perl's `if ($v)` — undef, "", "0", 0 false, every object true, so a set key
+/// even empty or `0` (Perl `latexml`: the same F T T T, FFFFTTTTTF; on 34740a129a8 "Function not found: !"). p5: a
+/// body declaring no parameter on a definition with arguments is Perl's `sub {…}`, unwarned (macro, primitive, column
+/// type); a whatsit in a string is its reversion, as `ToString($whatsit)` (was the first argument, Warned
+/// `deprecated:reversion`, and `ToString` the type name); `DefParameterType`'s `nargs` is accepted unread (was
+/// Warned unsupported) — W=5 on 34740a129a8.
 #[test]
 fn rhai_closure_args_and_parameter_types() {
   let (log, xml) = convert_files_with(LXRD3_TEX, &[("lxrdthree.sty.rhai", LXRD3)], None);
@@ -426,20 +475,38 @@ fn rhai_closure_args_and_parameter_types() {
       "p3",
       r#"<para xml:id="p3"><p>[ab]c N <text font="typewriter">a_b</text> Tokens</p></para>"#,
     ),
+    (
+      "p4",
+      r#"<para xml:id="p4"><p>F T T T FFFFTTTTTF</p></para>"#,
+    ),
+    (
+      "p5",
+      r#"<para xml:id="p5"><p>Z P <tabular vattach="middle"><tbody><tr><td align="center">t</td></tr></tbody></tabular> <text class="slxwsw">w</text>/\lxws{w}\lxws{w} N</p></para>"#,
+    ),
   ] {
     assert_element(&xml, "para", &[&format!("xml:id=\"{id}\"")], para);
   }
   let (log, xml) = convert_files_with(
-    "\\documentclass{article}\\usepackage{lxrderr}\\begin{document}\\lxpr\\end{document}",
+    "\\documentclass{article}\\usepackage{lxrderr}\\begin{document}\\lxpr $\\lxself{c}$\\end{document}",
     &[("lxrderr.sty.rhai", LXRD3_ERR)],
     None,
   );
-  assert_eq!(error_count(&log), 2, "{log}");
+  // W3RD2bF: a reversion printing its own whatsit, which Perl reverts without end, is an Error per reversion (the
+  // math's `tex` and its parse), the whatsit printing "" (p5 is the safe side: a whatsit in any other hook).
+  assert_eq!(error_count(&log), 4, "{log}");
   assert_eq!(warning_count(&log), 0, "{log}");
+  assert_eq!(
+    log
+      .matches("Error:script:reversion a reversion's own whatsit in a string reverts it again")
+      .count(),
+    2,
+    "{log}"
+  );
+  assert!(xml.contains(r#"tex="\lxself{}""#), "{xml}");
   assert!(log.contains("Error:expected:LxReq"), "{log}");
   assert!(
     log.contains("Error:misdefined:DefParameterType LxBad"),
     "{log}"
   );
-  assert!(xml.contains("<p>R</p>"), "{xml}");
+  assert!(xml.contains("<p>R<Math"), "{xml}");
 }

@@ -35,10 +35,13 @@ closure-registered functions; only the accepted types are.
 
 Called at the top level of a binding file, or from inside any body.
 
-175 functions, 260 calls.
+178 functions, 276 calls.
 
 | call | documentation |
 |---|---|
+| `!(?) -> bool` | Perl's truthiness, for `!!v` (`if ($v)`) and `!v` (`unless ($v)`): `()`, `""`, `"0"`, `0` and `0.0` are false, a bool is itself, every Token, Tokens (even empty), box, whatsit, array and map is true (Perl's objects overload no bool). |
+| `!=((), string) -> bool`<br>`!=(Digested, string) -> bool`<br>`!=(Token, string) -> bool`<br>`!=(Tokens, string) -> bool`<br>`!=(string, Digested) -> bool`<br>`!=(string, Token) -> bool`<br>`!=(string, Tokens) -> bool` | **Deprecated** (Warns once per binding load): a Tokens, Token or box against a string compares its string form (use `ToString(v) != s`); `() != s` takes `()` as `""` (use `!!v` or `v != ()`). |
+| `==((), string) -> bool`<br>`==(Digested, string) -> bool`<br>`==(Token, string) -> bool`<br>`==(Tokens, string) -> bool`<br>`==(string, Digested) -> bool`<br>`==(string, Token) -> bool`<br>`==(string, Tokens) -> bool` | **Deprecated** (Warns once per binding load): a Tokens, Token or box against a string compares its string form (use `ToString(v) == s`); `() == s` takes `()` as `""` (use `!v` or `v == ()`). |
 | `AddToCounter(string, int)` | Add a number to a counter. ([`add_to_counter`](latexml_core::binding::counter::dialect::add_to_counter)) |
 | `AddToMacro(string\|Token, string\|Token)` | Append tokens (or TeX source) to a macro's expansion, keeping its lock, as Perl's `AddToMacro`; a non-expandable `cs` Warns and is ignored, an undefined one is defined with the tokens. ([`add_to_macro`](latexml_core::binding::content::add_to_macro)) |
 | `AppendSearchPath(string)` | Append a directory to the input search path (searched after existing paths). ([`add_search_path`](latexml_core::state::add_search_path)) |
@@ -95,7 +98,7 @@ Called at the top level of a binding file, or from inside any body.
 | `DefMath(string, string)`<br>`DefMath(string, string, map)` | Define a mathematical symbol or function. ([`def_math`](latexml_core::binding::def::dialect::def_math)) |
 | `DefMathLigature(Fn)`<br>`DefMathLigature(string, string, map)` | Register a math ligature, as a pattern or a matcher closure. |
 | `DefMathRewrite(map)`<br>`DefMathRewrite(map, Fn)` | As `DefRewrite`, scoped to math. |
-| `DefParameterType(string, Fn)`<br>`DefParameterType(string, Fn, map)` | Define a parameter type: the reader `|gullet, extra…|` returns its value (Tokens, a Token, `()` for none), with Perl's options `optional`, `novalue`, `semiverbatim`, `undigested`, `reversion`, `beforeDigest`, `afterDigest` (`nargs` Warns unsupported). ([`Parameter`](latexml_core::parameter::Parameter)) |
+| `DefParameterType(string, Fn)`<br>`DefParameterType(string, Fn, map)` | Define a parameter type: the reader `|gullet, extra…|` returns its value (Tokens, a Token, `()` for none), with Perl's options `optional`, `novalue`, `semiverbatim`, `undigested`, `reversion`, `beforeDigest`, `afterDigest`, and `nargs` accepted unread, as Perl's. ([`Parameter`](latexml_core::parameter::Parameter)) |
 | `DefPrimitive(string, Fn)`<br>`DefPrimitive(string, Fn, map)` | Define a primitive: it runs at digestion, after expansion; a closure body is Perl's `|stomach, args|`. ([`def_primitive`](latexml_core::binding::def::dialect::def_primitive)) |
 | `DefRegister(string, int)`<br>`DefRegister(string, string)` | Define a register with an initial value. ([`def_register`](latexml_core::binding::def::dialect::def_register)) |
 | `DefRewrite(map)`<br>`DefRewrite(map, Fn)` | Register a document rewrite rule (data form, or a replace closure). |
@@ -112,7 +115,7 @@ Called at the top level of a binding file, or from inside any body.
 | `ExplodeText(string) -> Tokens` | A string's characters as `Tokens`, letters LETTER and the rest OTHER. |
 | `Fatal(string, string, string)`<br>`Fatal(string, string, string, ?)` | End the conversion with `Fatal:<cat>:<obj>`, plus optional details. |
 | `FindFile(string) -> ?`<br>`FindFile(string, map) -> ?` | The path of a file on the search paths (Perl's `type`/`notex`/`noltxml`/`searchpaths_only`), or `()`. ([`find_file`](latexml_core::binding::content::find_file)) |
-| `GetKeyVal(?, string) -> ?` | One value of a keyval set, as Perl's: Tokens as read, a box once digested, `()` when missing; a repeated key's last value. |
+| `GetKeyVal(?, string) -> ?` | One value of a keyval set, as Perl's: Tokens as read, a box once digested, `()` when missing; a repeated key's last value. Test it as Perl's `if ($v)` with `!!v`, or `v == ()` for `defined`. |
 | `GetKeyVals(?) -> map` | A whole keyval set as a map of `GetKeyVal`'s values, a repeated key's as an array. Accepts a `KeyVals` argument (read, or digested in a constructor) or its `k=v,…` source string. |
 | `Info(string, string, string)`<br>`Info(string, string, string, ?)` | Log an `Info:` line, plus optional details. |
 | `Input(string)` | Input a TeX file (`\input`'s core). ([`input`](latexml_core::binding::content::input)) |
@@ -197,7 +200,7 @@ Called at the top level of a binding file, or from inside any body.
 | `Tag(string, map)` | Declare document-model properties for one element tag: `autoOpen`, `autoClose`, the `afterOpen`/`afterClose` hooks. ([`install_tag`](latexml_core::binding::content::install_tag)) |
 | `TeX(string)` | Tokenize a TeX source string (style catcodes) and digest it. ([`digest`](latexml_core::stomach::digest)) |
 | `ToAttribute(Digested) -> string` | The digested value as a string fit for an XML attribute. ([`Digested::to_attribute`](latexml_core::digested::Digested::to_attribute)) |
-| `ToString(?) -> string` | The digested value as plain text (its `Display`). |
+| `ToString(?) -> string`<br>`ToString(Whatsit) -> string` | Perl's `ToString`: a box, Tokens or Token as plain text, a whatsit as its reversion, `()` as `""`. |
 | `Today() -> string` | Today's date, as `\today` renders it. ([`today`](latexml_engine::base_utilities::today)) |
 | `Token(string) -> Token`<br>`Token(string, int) -> Token` | Perl's `Token(string, catcode)`: one `Token`; the catcode is a `CC_*` value, `CC_OTHER()` if omitted. |
 | `Tokenize(string) -> Tokens` | Tokenize a string under the standard catcode table. ([`tokenize`](latexml_core::mouth::tokenize)) |
@@ -291,7 +294,7 @@ The whatsit a hook receives positionally, as Perl passes `$whatsit` (Whatsit.pm)
 | `getProperty(string) -> ?` | One property by name, its typed value (string / int / bool / `Tokens` / `Digested` handle / …); `()` when absent. ([`BoxOps::get_property`](latexml_core::BoxOps::get_property)) |
 | `propertyString(string) -> string` | **Deprecated** (Warns once per binding load): use `whatsit.getProperty(key)`. One property of the whatsit, as a string. |
 | `setProperty(string, ?)` | Set a property (any value) on the whatsit. Only a DIGEST hook may: in a construction hook the whatsit is already read-only, and this is a clean script error. |
-| `to_string() -> string` | **Deprecated** (Warns once per binding load): an old-form reversion `|x|` holds the whatsit; it prints as the first argument's TeX. Use `|whatsit, args|`. |
+| `to_string() -> string` | The whatsit in a string: Perl's `ToString($whatsit)`, its reversion (an error inside its own reversion). |
 
 ## `LookupDefinition()` methods
 
