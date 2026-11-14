@@ -649,13 +649,17 @@ pub(super) fn make_engine() -> Engine {
   register_string_tests::<Tokens>(&mut engine, "value == string");
   register_string_tests::<Token>(&mut engine, "value == string");
   register_string_tests::<Digested>(&mut engine, "value == string");
-  // `()` on the left only: `s == ()` is Perl's `defined` test, kept as Rhai's.
+  // `()` against a string either way round reads as "", as Perl's `undef eq ''` (which Warns `uninitialized`).
   let unit_test = |s: &str| {
     warn_deprecated("() == string");
     s.is_empty()
   };
   engine.register_fn("==", move |_: (), s: &str| unit_test(s));
   engine.register_fn("!=", move |_: (), s: &str| !unit_test(s));
+  engine.register_fn("==", move |s: &str, _: ()| unit_test(s));
+  engine.register_fn("!=", move |s: &str, _: ()| !unit_test(s));
+  // Perl's `defined($v)`: every value but `()`.
+  engine.register_fn("defined", |v: Dynamic| !v.is_unit());
   engine.register_fn("ToString", |_w: WhatsitProxy| whatsit_string());
   engine.register_fn("ToAttribute", |d: Digested| -> String { d.to_attribute() });
   engine.register_fn(

@@ -195,7 +195,7 @@ pub(super) const DEPRECATED_ALIASES: &[(&str, &str)] = &[
     "|whatsit, args| (name each: |whatsit, _x|)",
   ),
   ("value == string", "ToString(value) == string"),
-  ("() == string", "!!value or value == ()"),
+  ("() == string", "defined(value) or !!value"),
 ];
 
 /// One `Warning:deprecated:<old>` per binding load for a deprecated alias, naming its replacement.

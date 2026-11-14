@@ -17,7 +17,7 @@ AssignMapping("lxrb:m", "k", T_CS("\\relax"));
 AssignMapping("lxrb:m", "j", true);
 DefMacro("\\vtypes", || [type_of(LookupValue("lxrb:f")), type_of(LookupValue("lxrb:n")),
   type_of(LookupValue("lxrb:t")), type_of(LookupMapping("lxrb:m", "k")),
-  type_of(LookupMapping("lxrb:m", "j"))].reduce(|s, x| if s == () { x } else { s + "," + x }));
+  type_of(LookupMapping("lxrb:m", "j"))].reduce(|s, x| if !defined(s) { x } else { s + "," + x }));
 DefMacro("\\vtok", || LookupValue("lxrb:t"));
 DefMacro("\\vif", || if LookupValue("lxrb:f") { "Y" } else { "N" });
 DefMacro("\\mkeys", || { let s = ""; for k in LookupMappingKeys("lxrb:m") { s += k; } s });
@@ -35,7 +35,7 @@ DefMacro("\\rdo", || { let o = ReadOptional(); if o == () { "none" } else { o } 
 DefMacro("\\codes", || { AssignSFcode("Q", 1001); AssignMathcode("Q", 0x7151, "global"); AssignLCcode("Q", 0x72); AssignUCcode("q", 0x52); AssignDelcode("Q", 0x123);
   [LookupMathcode("a"), LookupLCcode("A"), LookupUCcode("a"), LookupSFcode("A"),
    LookupSFcode("Q"), LookupMathcode("Q"), LookupLCcode("Q"), LookupUCcode("q"), LookupDelcode("Q"),
-   if LookupLCcode("\u2603") == () { "undef" } else { "def" }].reduce(|s, x| if s == () { `${x}` } else { s + "," + x }) });
+   if LookupLCcode("\u2603") == () { "undef" } else { "def" }].reduce(|s, x| if !defined(s) { `${x}` } else { s + "," + x }) });
 DefConstructor("\\propT", "<ltx:text class='#t'>#t</ltx:text>", #{properties: || #{ t: LookupValue("lxrb:t") }});
 DefConstructor("\\propA", "<ltx:text class='#a'>#a</ltx:text>", #{properties: || #{ a: ReadArg() }});
 PushValue("lxrb:l", "a");

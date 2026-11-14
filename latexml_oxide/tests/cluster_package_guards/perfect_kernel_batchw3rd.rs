@@ -153,7 +153,7 @@ DefMacro("\\lxinfo", || {
   let r = [IsEmpty(Tokenize("{}")), IsEmpty(Tokenize("a")), Equals(T_CS("\\lxa"), T_CS("\\lxb")),
     Equals(T_CS("\\lxa"), T_CS("\\relax")), Equals("1", 1), CleanLabel(" ab "), CleanID("x:y"), UTF(65),
     roman(4), Roman(9), Explode("a b"), ExplodeText("cd"), LookupRegisterOrDefault("\\lxc"),
-    FindFile("article", #{type: "cls"}) != (), DigestIf("\\lxundefd") == ()];
+    defined(FindFile("article", #{type: "cls"})), DigestIf("\\lxundefd") == ()];
   let s = ""; for x in r { s += `${x} `; } s
 });
 DefPrimitive("\\lxset", || { SetCounter("lxk", 5); Input("lxin"); });
@@ -371,26 +371,50 @@ fn rhai_deprecated_aliases_warn_once() {
   assert!(xml.contains(r#"tex="\lxor{q}""#), "{xml}");
   // W3RD2bF (revW3i B1): the old test of a GetKeyVal value against a string (`w != ""`, the base's mykeyval.sty.rhai)
   // compares string forms, `()` as "", each Warned; red on 34740a129a8: a stray "Width: " for the omitted key, W=0.
+  // W3RD2bF2 (revW3j B1, DG ruling 9): `()` equals "" in both orders, as Perl's `undef eq ''` (Perl Warns
+  // `uninitialized`): `"" != w` and `s != ()` are false (red on dd79f1fc1b2: "R:" and "U2[]" by the left-only rule,
+  // `defined` "Function not found"); `defined(v)` is Perl's defined test, true for `""`.
   let kv = include_str!("../keyval_rhai/mykeyval.sty.rhai");
   let old = kv
-    .replace("if w != () {", "if w != \"\" && w != \"false\" {")
-    .replace("if h != () {", "if h != \"\" && h != \"false\" {");
+    .replace("if defined(w) {", "if w != \"\" && w != \"false\" {")
+    .replace("if defined(h) {", "if h != \"\" && h != \"false\" {")
+    + LXU;
   assert_eq!(old.matches("!= \"false\"").count(), 2);
   let (log, xml) = convert_files_with(
-    "\\documentclass{article}\\usepackage{mykeyval}\\begin{document}\\begin{KVstruct}[height=2]X\\end{KVstruct}\\end{document}",
+    "\\documentclass{article}\\usepackage{mykeyval}\\begin{document}\\begin{KVstruct}[height=2]X\\end{KVstruct}\n\n\
+     \\lxuA{x} \\lxuA[width=2cm]{y} \\lxuB{}\\end{document}",
     &[("mykeyval.sty.rhai", &old)],
     None,
   );
   assert_eq!(error_count(&log), 0, "{log}");
   assert_eq!(warning_count(&log), 2, "{log}");
   for line in [
-    "Warning:deprecated:() == string () == string is deprecated; use !!value or value == ()",
+    "Warning:deprecated:() == string () == string is deprecated; use defined(value) or !!value",
     "Warning:deprecated:value == string value == string is deprecated; use ToString(value) == string",
   ] {
     assert!(log.contains(line), "{line}\n{log}");
   }
   assert!(xml.contains("<p>&amp;Height: 2X</p>"), "{xml}");
+  assert!(xml.contains("<p>E;xR:2cmL:2cmD;yDefined: []</p>"), "{xml}");
 }
+
+/// The p2/p3 shapes of revW3j: `()` against a string on either side, `defined`.
+const LXU: &str = r#"
+DefConstructor("\\lxuA OptionalKeyVals:foo {}", |document, kv, b| {
+  let w = GetKeyVal(kv, "width");
+  if "" != w { document.absorbString("R:" + w); }
+  if w != "" { document.absorbString("L:" + w); }
+  if "" == w && w == "" && !defined(w) { document.absorbString("E;"); }
+  if defined(w) { document.absorbString("D;"); }
+  document.absorbString(b);
+});
+DefConstructor("\\lxuB{}", |document, a| {
+  let s = ToString(a);
+  if () != s { document.absorbString("U[" + s + "]"); }
+  if s != () { document.absorbString("U2[" + s + "]"); }
+  if defined(s) && !defined(()) { document.absorbString("Defined: [" + s + "]"); }
+});
+"#;
 
 const LXRD3: &str = r#"DefMacro("\\lxpt{}", |gullet, a| type_of(a) + "/" + type_of(gullet));
 DefMacro("\\lxpa{}{}", |gullet, a, b| Tokens(b, a));

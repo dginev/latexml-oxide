@@ -171,14 +171,16 @@ const DOCS: &[(&str, Doc)] = &[
     "!=",
     Doc::Note(
       "**Deprecated** (Warns once per binding load): a Tokens, Token or box against a string compares its string \
-       form (use `ToString(v) != s`); `() != s` takes `()` as `\"\"` (use `!!v` or `v != ()`).",
+       form (use `ToString(v) != s`); `()` against a string, either way round, is `\"\"`, as Perl's `undef ne ''` \
+       (use `defined(v)` or `!!v`).",
     ),
   ),
   (
     "==",
     Doc::Note(
       "**Deprecated** (Warns once per binding load): a Tokens, Token or box against a string compares its string \
-       form (use `ToString(v) == s`); `() == s` takes `()` as `\"\"` (use `!v` or `v == ()`).",
+       form (use `ToString(v) == s`); `()` against a string, either way round, is `\"\"`, as Perl's `undef eq ''` \
+       (use `defined(v)` or `!v`).",
     ),
   ),
   (
@@ -454,7 +456,9 @@ const DOCS: &[(&str, Doc)] = &[
   (
     "DefMacro",
     Doc::Rust(
-      "Define a macro's expansion; a closure body is Perl's `|gullet, args|`, each argument Tokens (or a `KeyVals`).",
+      "Define a macro's expansion; a closure body is Perl's `|gullet, args|`, each argument Tokens (or a `KeyVals`). \
+       A Perl-form closure declares its handle and every argument, `|gullet, x|`; fewer parameters is the old \
+       form, with a Warning naming the fix.",
       "latexml_core::binding::def::dialect::def_macro",
     ),
   ),
@@ -476,7 +480,9 @@ const DOCS: &[(&str, Doc)] = &[
   (
     "DefPrimitive",
     Doc::Rust(
-      "Define a primitive: it runs at digestion, after expansion; a closure body is Perl's `|stomach, args|`.",
+      "Define a primitive: it runs at digestion, after expansion; a closure body is Perl's `|stomach, args|`. A \
+       Perl-form closure declares its handle and every argument, `|stomach, x|`; fewer parameters is the old \
+       form, with a Warning naming the fix.",
       "latexml_core::binding::def::dialect::def_primitive",
     ),
   ),
@@ -490,6 +496,13 @@ const DOCS: &[(&str, Doc)] = &[
   (
     "DefRewrite",
     Doc::Note("Register a document rewrite rule (data form, or a replace closure)."),
+  ),
+  (
+    "defined",
+    Doc::Note(
+      "Perl's `defined($v)`: true for every value but `()` (`\"\"`, `0` and empty Tokens are defined); `v == ()` \
+       is not the test for a string, which compares equal to `()` when empty.",
+    ),
   ),
   (
     "Digest",
@@ -547,7 +560,7 @@ const DOCS: &[(&str, Doc)] = &[
     "GetKeyVal",
     Doc::Note(
       "One value of a keyval set, as Perl's: Tokens as read, a box once digested, `()` when missing; a repeated \
-       key's last value. Test it as Perl's `if ($v)` with `!!v`, or `v == ()` for `defined`.",
+       key's last value. Test it as Perl's `if ($v)` with `!!v`, or `defined(v)`.",
     ),
   ),
   (

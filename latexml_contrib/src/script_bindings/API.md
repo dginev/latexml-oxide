@@ -35,13 +35,13 @@ closure-registered functions; only the accepted types are.
 
 Called at the top level of a binding file, or from inside any body.
 
-178 functions, 276 calls.
+179 functions, 279 calls.
 
 | call | documentation |
 |---|---|
 | `!(?) -> bool` | Perl's truthiness, for `!!v` (`if ($v)`) and `!v` (`unless ($v)`): `()`, `""`, `"0"`, `0` and `0.0` are false, a bool is itself, every Token, Tokens (even empty), box, whatsit, array and map is true (Perl's objects overload no bool). |
-| `!=((), string) -> bool`<br>`!=(Digested, string) -> bool`<br>`!=(Token, string) -> bool`<br>`!=(Tokens, string) -> bool`<br>`!=(string, Digested) -> bool`<br>`!=(string, Token) -> bool`<br>`!=(string, Tokens) -> bool` | **Deprecated** (Warns once per binding load): a Tokens, Token or box against a string compares its string form (use `ToString(v) != s`); `() != s` takes `()` as `""` (use `!!v` or `v != ()`). |
-| `==((), string) -> bool`<br>`==(Digested, string) -> bool`<br>`==(Token, string) -> bool`<br>`==(Tokens, string) -> bool`<br>`==(string, Digested) -> bool`<br>`==(string, Token) -> bool`<br>`==(string, Tokens) -> bool` | **Deprecated** (Warns once per binding load): a Tokens, Token or box against a string compares its string form (use `ToString(v) == s`); `() == s` takes `()` as `""` (use `!v` or `v == ()`). |
+| `!=((), string) -> bool`<br>`!=(Digested, string) -> bool`<br>`!=(Token, string) -> bool`<br>`!=(Tokens, string) -> bool`<br>`!=(string, ()) -> bool`<br>`!=(string, Digested) -> bool`<br>`!=(string, Token) -> bool`<br>`!=(string, Tokens) -> bool` | **Deprecated** (Warns once per binding load): a Tokens, Token or box against a string compares its string form (use `ToString(v) != s`); `()` against a string, either way round, is `""`, as Perl's `undef ne ''` (use `defined(v)` or `!!v`). |
+| `==((), string) -> bool`<br>`==(Digested, string) -> bool`<br>`==(Token, string) -> bool`<br>`==(Tokens, string) -> bool`<br>`==(string, ()) -> bool`<br>`==(string, Digested) -> bool`<br>`==(string, Token) -> bool`<br>`==(string, Tokens) -> bool` | **Deprecated** (Warns once per binding load): a Tokens, Token or box against a string compares its string form (use `ToString(v) == s`); `()` against a string, either way round, is `""`, as Perl's `undef eq ''` (use `defined(v)` or `!v`). |
 | `AddToCounter(string, int)` | Add a number to a counter. ([`add_to_counter`](latexml_core::binding::counter::dialect::add_to_counter)) |
 | `AddToMacro(string\|Token, string\|Token)` | Append tokens (or TeX source) to a macro's expansion, keeping its lock, as Perl's `AddToMacro`; a non-expandable `cs` Warns and is ignored, an undefined one is defined with the tokens. ([`add_to_macro`](latexml_core::binding::content::add_to_macro)) |
 | `AppendSearchPath(string)` | Append a directory to the input search path (searched after existing paths). ([`add_search_path`](latexml_core::state::add_search_path)) |
@@ -94,12 +94,12 @@ Called at the top level of a binding file, or from inside any body.
 | `DefEnvironment(string, Fn)`<br>`DefEnvironment(string, Fn, map)`<br>`DefEnvironment(string, string)`<br>`DefEnvironment(string, string, map)` | Define an environment that constructs XML. ([`def_environment`](latexml_core::binding::def::dialect::def_environment)) |
 | `DefKeyVal(string, string, string)`<br>`DefKeyVal(string, string, string, string)`<br>`DefKeyVal(string, string, string, string, map)` | Declare one key of a keyval family. ([`define`](latexml_core::keyval::define)) |
 | `DefLigature(string, string)`<br>`DefLigature(string, string, map)` | Register a text ligature pattern; `#{fontTest: |font| …}` limits it to the fonts the closure accepts. |
-| `DefMacro(string, Fn)`<br>`DefMacro(string, Fn, map)`<br>`DefMacro(string, string)`<br>`DefMacro(string, string, map)` | Define a macro's expansion; a closure body is Perl's `|gullet, args|`, each argument Tokens (or a `KeyVals`). ([`def_macro`](latexml_core::binding::def::dialect::def_macro)) |
+| `DefMacro(string, Fn)`<br>`DefMacro(string, Fn, map)`<br>`DefMacro(string, string)`<br>`DefMacro(string, string, map)` | Define a macro's expansion; a closure body is Perl's `|gullet, args|`, each argument Tokens (or a `KeyVals`). A Perl-form closure declares its handle and every argument, `|gullet, x|`; fewer parameters is the old form, with a Warning naming the fix. ([`def_macro`](latexml_core::binding::def::dialect::def_macro)) |
 | `DefMath(string, string)`<br>`DefMath(string, string, map)` | Define a mathematical symbol or function. ([`def_math`](latexml_core::binding::def::dialect::def_math)) |
 | `DefMathLigature(Fn)`<br>`DefMathLigature(string, string, map)` | Register a math ligature, as a pattern or a matcher closure. |
 | `DefMathRewrite(map)`<br>`DefMathRewrite(map, Fn)` | As `DefRewrite`, scoped to math. |
 | `DefParameterType(string, Fn)`<br>`DefParameterType(string, Fn, map)` | Define a parameter type: the reader `|gullet, extra…|` returns its value (Tokens, a Token, `()` for none), with Perl's options `optional`, `novalue`, `semiverbatim`, `undigested`, `reversion`, `beforeDigest`, `afterDigest`, and `nargs` accepted unread, as Perl's. ([`Parameter`](latexml_core::parameter::Parameter)) |
-| `DefPrimitive(string, Fn)`<br>`DefPrimitive(string, Fn, map)` | Define a primitive: it runs at digestion, after expansion; a closure body is Perl's `|stomach, args|`. ([`def_primitive`](latexml_core::binding::def::dialect::def_primitive)) |
+| `DefPrimitive(string, Fn)`<br>`DefPrimitive(string, Fn, map)` | Define a primitive: it runs at digestion, after expansion; a closure body is Perl's `|stomach, args|`. A Perl-form closure declares its handle and every argument, `|stomach, x|`; fewer parameters is the old form, with a Warning naming the fix. ([`def_primitive`](latexml_core::binding::def::dialect::def_primitive)) |
 | `DefRegister(string, int)`<br>`DefRegister(string, string)` | Define a register with an initial value. ([`def_register`](latexml_core::binding::def::dialect::def_register)) |
 | `DefRewrite(map)`<br>`DefRewrite(map, Fn)` | Register a document rewrite rule (data form, or a replace closure). |
 | `Digest(Token) -> Digested`<br>`Digest(Tokens) -> Digested`<br>`Digest(string) -> Digested` | Digest TeX source (a string, TokenizeInternal'd), a `Token` or `Tokens`, returning the digested handle. ([`digest`](latexml_core::stomach::digest)) |
@@ -115,7 +115,7 @@ Called at the top level of a binding file, or from inside any body.
 | `ExplodeText(string) -> Tokens` | A string's characters as `Tokens`, letters LETTER and the rest OTHER. |
 | `Fatal(string, string, string)`<br>`Fatal(string, string, string, ?)` | End the conversion with `Fatal:<cat>:<obj>`, plus optional details. |
 | `FindFile(string) -> ?`<br>`FindFile(string, map) -> ?` | The path of a file on the search paths (Perl's `type`/`notex`/`noltxml`/`searchpaths_only`), or `()`. ([`find_file`](latexml_core::binding::content::find_file)) |
-| `GetKeyVal(?, string) -> ?` | One value of a keyval set, as Perl's: Tokens as read, a box once digested, `()` when missing; a repeated key's last value. Test it as Perl's `if ($v)` with `!!v`, or `v == ()` for `defined`. |
+| `GetKeyVal(?, string) -> ?` | One value of a keyval set, as Perl's: Tokens as read, a box once digested, `()` when missing; a repeated key's last value. Test it as Perl's `if ($v)` with `!!v`, or `defined(v)`. |
 | `GetKeyVals(?) -> map` | A whole keyval set as a map of `GetKeyVal`'s values, a repeated key's as an array. Accepts a `KeyVals` argument (read, or digested in a constructor) or its `k=v,…` source string. |
 | `Info(string, string, string)`<br>`Info(string, string, string, ?)` | Log an `Info:` line, plus optional details. |
 | `Input(string)` | Input a TeX file (`\input`'s core). ([`input`](latexml_core::binding::content::input)) |
@@ -213,6 +213,7 @@ Called at the top level of a binding file, or from inside any body.
 | `XEquals(string\|Token, string\|Token) -> bool` | Whether two tokens (CS name strings or `Token`s) have the same meaning. ([`x_equals`](latexml_core::state::x_equals)) |
 | `assign_global(string, string)` | **Deprecated** (Warns once per binding load): use `AssignValue(key, value, "global")`. [`assign_value`](latexml_core::state::assign_value) with [`Scope::Global`](latexml_core::state::Scope::Global): the binding survives the enclosing TeX group. |
 | `assign_value(string, string)` | **Deprecated** (Warns once per binding load): use `AssignValue(key, value, "local")`. [`assign_value`](latexml_core::state::assign_value) with [`Scope::Local`](latexml_core::state::Scope::Local), TeX's default: the binding expires with the enclosing group. |
+| `defined(?) -> bool` | Perl's `defined($v)`: true for every value but `()` (`""`, `0` and empty Tokens are defined); `v == ()` is not the test for a string, which compares equal to `()` when empty. |
 | `lookup_value(string) -> string` | **Deprecated** (Warns once per binding load): use `LookupValue(key)`. [`lookup_value`](latexml_core::state::lookup_value) coerced to a string; empty when unset, so an unbound key and an empty one are indistinguishable here. |
 | `neutralize_font()` | Reset the text and math fonts to their defaults, group-locally. ([`neutralize_font`](latexml_engine::base_utilities::neutralize_font)) |
 | `roman(int) -> Tokens` | Lower-case roman numerals of a number, as `Tokens`. |

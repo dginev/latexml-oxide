@@ -197,15 +197,17 @@
     omitted optional. A closure declaring no parameter is Perl's plain `sub {…}`. One declaring no leading handle —
     1 to as many parameters as the definition's arguments — keeps receiving TeX strings for one release, with
     `Warning:deprecated:DefMacro |args|` (`DefPrimitive |args|`, `DefColumnType |args|`, `reversion |args|`) once per
-    binding load; the two forms cannot be told apart by arity, so a Perl-form body names the handle and every
-    argument (`|gullet, _x|`, where Perl writes `my ($gullet) = @_`). A body that only concatenates its arguments
+    binding load; the two forms cannot be told apart by arity, so a Perl-form closure declares its handle and every
+    argument, `|gullet, x|` (`|gullet, _x|` where Perl writes `my ($gullet) = @_`); fewer parameters is the old form,
+    with a Warning naming the fix. A body that only concatenates its arguments
     (`"\\x{" + a + "}"`) migrates by adding the handle, one that calls string methods (`a.len()`) by `UnTeX(a)`. A
     whatsit in a string is its reversion, as Perl's `ToString($whatsit)`. `GetKeyVal(kv, key)` returns the value as
     Perl's (KeyVals.pm:31) — Tokens as read, a box once digested, `()` when missing — where it returned a string
     (`""` when missing): test it as Perl's `if ($v)` with `!!v` (`!v` for `unless`; Perl's truthiness: `()`, `""`,
-    `"0"`, `0` false, every Token, Tokens, box, array and map true) or `v == ()` for `defined`, and wrap a string use
-    in `ToString(…)`; an old test against a string (`v != ""`) compares the string forms, `()` as `""`, with
-    `Warning:deprecated:value == string` / `() == string` once per load. `GetKeyVals` gives those values (a repeated
+    `"0"`, `0` false, every Token, Tokens, box, array and map true) or `defined(v)` (Perl's `defined`), and wrap a
+    string use in `ToString(…)`; an old test against a string (`v != ""`, `"" != v`) compares the string forms, `()`
+    as `""` on either side as Perl's `undef eq ''`, with `Warning:deprecated:value == string` / `() == string` once
+    per load — so `v == ()` is no longer the defined test for a string (`"" == ()` is true). `GetKeyVals` gives those values (a repeated
     key's as an array).
     `ToString` takes any value; `document.absorbString` takes any value (its string; `()` adds nothing). New
     `DefParameterType(name, |gullet, extra…| …, #{…})` with Perl's `$parameter_options` (`nargs` accepted unread).

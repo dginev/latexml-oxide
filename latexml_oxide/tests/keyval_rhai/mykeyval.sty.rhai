@@ -18,10 +18,10 @@ DefEnvironment("{KVenv} OptionalKeyVals:foo",
 DefEnvironment("{KVstruct} OptionalKeyVals:foo", |document, kv| {
   document.openElement("ltx:text");
   let w = GetKeyVal(kv, "width");
-  if w != () { document.absorbString("Width: " + w); }
+  if defined(w) { document.absorbString("Width: " + w); }
   document.absorbString("&");
   let h = GetKeyVal(kv, "height");
-  if h != () { document.absorbString("Height: " + h); }
+  if defined(h) { document.absorbString("Height: " + h); }
   document.absorbProperty("body");
   document.closeElement("ltx:text");
 });
