@@ -36222,6 +36222,30 @@ post-merge). Offer upstream. **Guards**:
 `perfect_kernel_batchmml2::core_k_operators_have_no_operator_space` (repro
 `math-parse/slash_is_an_ord_without_operator_space.tex`), `operator_dictionary::tests::test_opdict_category_k_is_infix_only`.
 
+**Extension (2026-11-14, issue #824): TeX's Bin→Ord rule in the same walk.** The walk's atom types move toward TeX's classes in one
+mechanism: the Core-K Ord above, and a sign TeX makes an Ord is tight.
+**Principle (real TeX, MathML Core).** TeX converts a Bin atom to an Ord when it is the first atom of its list or
+follows a Bin, Op, Rel, Open or Punct, and converts the previous Bin when a Rel, Close or Punct follows or the list ends
+(tex.web §728-729, `@<Convert \(a)a bin...@>`); glue is not an atom there. MathML Core spaces an `<mo>` by its inferred
+form (§3.2.4.2): a last child is postfix, and `+` and `−` have no postfix entry, so they fall back to infix,
+0.2222em each side (B.1). Related: #1040. **Perl.** The space walk (`space_walk`/`adjust_pair`,
+MathML.pm:1097-1284) types each atom by its role alone, so a trailing `+` stays a Bin. **Rust.** `space_walk`
+(presentation.rs) collects an mrow's visually adjacent atoms first, then types them (`item_atom_type`, Perl's role
+table and #1033's Core-K Ord) and applies TeX's conversion over the list (`tex_atom_types`, an `mspace` skipped as
+glue; `∇`, `|`, `‖` and `.` read as TeX's Ords, class 0, where the role table says Op or Punct, so `\nabla\cdot B`
+keeps a binary `⋅`); `adjust_pair` spaces a pair that touches a converted sign by those types; every other pair keeps the role table's types (Perl's), so `\nabla\cdot B` still lacks TeX's medium space before `⋅` (RED `math-parse/nabla_cdot_is_a_binary_operation_red.tex`). A converted Bin `<mo>` after the list's first atom whose
+dictionary spacing is nonzero gets `lspace="0em" rspace="0em"`; a leading one is not marked (Core's prefix form gives
+`+` and `−` zero). `\showbox` (pdflatex, TL 2025) agrees on every row: `a+-b` has `\medmuskip` both sides of `+` and
+none around `−` (`<mo>+</mo><mo lspace="0em" rspace="0em">−</mo>`); `x\pm-1`, `f(0+)`, `a+ =b` (`\thickmuskip` only
+around `=`), `a+b+`, `x+,y`, `a+\,=b`, `\{+,-\}`, `x^{2+}`, `\lim_{x\to0+}`, an align cell ending `=b+`, mhchem's charge
+`2-` set the sign tight; `-x`, `(-x)`, `a=-b` keep a bare `<mo>` (the parser's prefix operator, already an Ord).
+This replaces a rule keyed on the parser's `limit-from` reading, which also tightened the binary `+` of `a+-b`.
+Residuals: scripts keep Bin, Rel and Punct space (TeX inserts none in script style, §764), so a converted sign
+after a comma in a script (2003.05751 `\mathcal{P}^{2,+}`) leaves the comma Core's 0.167em
+(`math-parse/script_style_rel_has_no_thick_space_red.tex`); a braced `{\mathop{\square}}` is TeX's Ord but the role
+table's Op (2012.06541). Offer upstream. **Guard**:
+`perfect_kernel_batchmml2::core_k_operators_have_no_operator_space` (repro `math-parse/bin_atom_becomes_ord.tex`).
+
 ### 1034. A small PDF figure is converted to SVG, raster-bearing ones too, unless it draws a raster enlarged (after PR 816)
 
 **Perl.** Every PDF graphic is rasterized to PNG (`Post/Graphics.pm:62`, `pdf => { destination_type => 'png' }`).
@@ -36389,7 +36413,7 @@ operators is `\lx@kludged{…}`, the unparsed row Perl uses for adjacency (Base_
 so no U+2062 `<mo>` sits between two elements (Firefox spaced it ~0.17em; copy gave "H2⁢O"); the amount's thin space
 before its species stays a U+2062 `<mo lspace="0.170em">`. A raw command with its argument (2407.15836
 `\ce{\textit{R}2Ir2Al20}`, `\mathrm{Y}`) is an atom of the run, its count on it; another raw token (`\cdot`, `\bond{-}`,
-mhchem's own output) parts the run. A charge's sign is tight because it ends its list, TeX's atom rule (#1044); a lone
+mhchem's own output) parts the run. A charge's sign is tight because it ends its list, TeX's atom rule (#1033); a lone
 sign (`e^-`, `Th+`) keeps a bare `<mo>`, as Core adds no space to a script that is one operator (§3.4.1). With `--cmml`
 a run is an unparsed row (`<cerror><csymbol cd="ambiguous">fragments</csymbol>…`, Perl's `cmml_unparsed`,
 MathML.pm:1361-1375, for any kludged row); the formula's content semantics are stage 2. MathML:
@@ -36404,27 +36428,3 @@ formula's `tex=` is the rewritten math, not `\ce{…}`. Cost (instructions:u): �
 parse is the price). **Guard**: `mhchem_formula::mhchem_formula_units_are_chemistry` (repros
 `package-bindings/mhchem_formula_units.tex`, `mhchem_formula_text_font.tex`, `mhchem_formula_state.tex`,
 `mhchem_formula_amount.tex`, `mhchem_formula_juxtaposed.tex`; witnesses issue 824, 2206.12015).
-
-### 1044. The MathML space walk types atoms by TeX's own rule: a Bin TeX makes an Ord is tight (issue #824)
-
-**Principle (real TeX, MathML Core).** TeX converts a Bin atom to an Ord when it is the first atom of its list or
-follows a Bin, Op, Rel, Open or Punct, and converts the previous Bin when a Rel, Close or Punct follows or the list ends
-(tex.web §728-729, `@<Convert \(a)a bin...@>`); glue is not an atom there. MathML Core spaces an `<mo>` by its inferred
-form (§3.2.4.2): a last child is postfix, and `+` and `−` have no postfix entry, so they fall back to infix,
-0.2222em each side (B.1). Related: #1033, #1040. **Perl.** The space walk (`space_walk`/`adjust_pair`,
-MathML.pm:1097-1284) types each atom by its role alone, so a trailing `+` stays a Bin. **Rust.** `space_walk`
-(presentation.rs) collects an mrow's visually adjacent atoms first, then types them (`item_atom_type`, Perl's role
-table and #1033's Core-K Ord) and applies TeX's conversion over the list (`tex_atom_types`, an `mspace` skipped as
-glue; `∇`, `|`, `‖` and `.` read as TeX's Ords, class 0, where the role table says Op or Punct, so `\nabla\cdot B`
-keeps a binary `⋅`); `adjust_pair` spaces each pair by those types, only a Bin's type changed. A converted Bin `<mo>` after the list's first atom whose
-dictionary spacing is nonzero gets `lspace="0em" rspace="0em"`; a leading one is not marked (Core's prefix form gives
-`+` and `−` zero). `\showbox` (pdflatex, TL 2025) agrees on every row: `a+-b` has `\medmuskip` both sides of `+` and
-none around `−` (`<mo>+</mo><mo lspace="0em" rspace="0em">−</mo>`); `x\pm-1`, `f(0+)`, `a+ =b` (`\thickmuskip` only
-around `=`), `a+b+`, `x+,y`, `a+\,=b`, `\{+,-\}`, `x^{2+}`, `\lim_{x\to0+}`, an align cell ending `=b+`, mhchem's charge
-`2-` set the sign tight; `-x`, `(-x)`, `a=-b` keep a bare `<mo>` (the parser's prefix operator, already an Ord).
-This replaces a rule keyed on the parser's `limit-from` reading, which also tightened the binary `+` of `a+-b`.
-Residuals: scripts keep Bin, Rel and Punct space (TeX inserts none in script style, §764), so a converted sign
-after a comma in a script (2003.05751 `\mathcal{P}^{2,+}`) leaves the comma Core's 0.167em
-(`math-parse/script_style_rel_has_no_thick_space_red.tex`); a braced `{\mathop{\square}}` is TeX's Ord but the role
-table's Op (2012.06541). Offer upstream. **Guard**:
-`perfect_kernel_batchmml2::core_k_operators_have_no_operator_space` (repro `math-parse/bin_atom_becomes_ord.tex`).

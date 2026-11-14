@@ -110,7 +110,9 @@ fn core_k_operators_have_no_operator_space() {
       "<mrow><mo stretchy=\"false\">(</mo><mrow><mo>−</mo><mi>x</mi></mrow><mo stretchy=\"false\">)</mo></mrow>"
         .to_string(),
     ),
-    // `∇` is TeX's Ord: the `⋅` stays a Bin (its 0em left is the role table's Op-Bin, Perl's residual).
+    // `∇` is TeX's Ord: the `⋅` stays a Bin. Its 0em left is the role table's Op-Bin (Perl's residual), NOT TeX's
+    // \medmuskip: pinned here so the §729 pass does not tighten the `⋅`; the missing left space is RED
+    // `math-parse/nabla_cdot_is_a_binary_operation_red.tex`.
     (
       "p1.m11",
       "\\nabla\\cdot B",
