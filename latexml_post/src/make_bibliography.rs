@@ -3517,6 +3517,8 @@ fn format_links(doc: &PostDocument, nodes: &[Node]) -> Vec<NodeData> {
     let tag = doc.get_qname(node).unwrap_or_default();
     let scheme = node.get_attribute("scheme").unwrap_or_default();
     let href = node.get_attribute("href");
+    // TeX prints the field as written (`\url` reads it verbatim), so a printed URL keeps its escapes.
+    let printed_url = href.as_deref().map(force_absolute_url);
     let content_text = node.get_content();
 
     // General rule (user, 2026-07-04): bibliography links are EXTERNAL.
@@ -3524,6 +3526,7 @@ fn format_links(doc: &PostDocument, nodes: &[Node]) -> Vec<NodeData> {
     // an authoring mistake that would resolve relative to the article —
     // normalize here so every source path (post .bib conversion,
     // .bbl-borne XML, pre-compiled .bib.xml) gets absolute links.
+    let href = href.map(|h| unescape_tex_url(&h));
     let href = match (&href, scheme.as_str()) {
       (None, "doi") if !content_text.trim().is_empty() && content_text.contains('/') => {
         Some(doi_href(&content_text))
@@ -3585,7 +3588,7 @@ fn format_links(doc: &PostDocument, nodes: &[Node]) -> Vec<NodeData> {
           // stands (bibtex.rs `\bib@field@default@url`; Perl always prints
           // `Link`). OXIDIZED_DESIGN_DIVERGENCES #289.
           let children = if URLS_AS_TEXT.with(|flag| flag.get()) && content_text.trim() == "Link" {
-            vec![NodeData::Text(href.clone())]
+            vec![NodeData::Text(printed_url.unwrap_or_else(|| href.clone()))]
           } else {
             children
           };
@@ -4387,6 +4390,30 @@ fn doi_href(doi: &str) -> String {
   href
 }
 
+/// A bibliography href without TeX's escapes: `\_ \% \# \& \$ \~ \{ \}` read as the character (`\~{}` as `~`), since
+/// a backslash is never valid in a URL (issue 808; a `url` field is Verbatim, BibTeX.pool.ltxml:740). Any other
+/// backslash is left alone. OXIDIZED_DESIGN_DIVERGENCES #1039.
+fn unescape_tex_url(href: &str) -> String {
+  let mut out = String::with_capacity(href.len());
+  let mut rest = href;
+  while let Some(at) = rest.find('\\') {
+    out.push_str(&rest[..at]);
+    rest = &rest[at + 1..];
+    match rest.chars().next() {
+      Some(c @ ('_' | '%' | '#' | '&' | '$' | '~' | '{' | '}')) => {
+        out.push(c);
+        rest = &rest[1..];
+        if c == '~' {
+          rest = rest.strip_prefix("{}").unwrap_or(rest);
+        }
+      },
+      _ => out.push('\\'),
+    }
+  }
+  out.push_str(rest);
+  out
+}
+
 /// Bibliography links are external: a scheme-less href would resolve
 /// relative to the article. Prepend https:// when no scheme is present.
 fn force_absolute_url(url: &str) -> String {
@@ -4428,6 +4455,22 @@ fn bib_lookup_candidates(bib_file: &str) -> Vec<String> {
 #[cfg(test)]
 mod tests {
   use super::*;
+
+  /// TeX's escapes leave a bibliography href; any other backslash, and a URL without one, stays (issue 808).
+  #[test]
+  fn unescape_tex_url_drops_only_tex_escapes() {
+    for (raw, href) in [
+      (
+        r"https://x.org/a\_b\%20c\#f\&q=1\$\{\}",
+        "https://x.org/a_b%20c#f&q=1${}",
+      ),
+      (r"https://x.org/\~{}u/\~v", "https://x.org/~u/~v"),
+      (r"https://x.org/a_b%20c", "https://x.org/a_b%20c"),
+      (r"C:\dir\file\", r"C:\dir\file\"),
+    ] {
+      assert_eq!(unescape_tex_url(raw), href, "{raw}");
+    }
+  }
 
   /// `join_fields` judges the joint by the text a field prints: after a field
   /// ending in a formula (whose own content ends in ".") or in a reference

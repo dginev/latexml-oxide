@@ -1,0 +1,10 @@
+% Driver for `bib_url_escapes.bib`: TeX's escapes in a `url` leave the bibliography href, the printed URL keeps them
+% (make_bibliography.rs `unescape_tex_url`; issue 808). Guard `06_cluster_bibliography::bib_url_escapes_leave_the_href`.
+\documentclass{article}
+\usepackage{natbib}
+\usepackage{url}
+\begin{document}
+See \cite{esc,doiesc,plain}.
+\bibliographystyle{plainnat}
+\bibliography{bib_url_escapes}
+\end{document}
