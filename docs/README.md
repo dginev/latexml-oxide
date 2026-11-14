@@ -49,6 +49,7 @@ The user-facing guides behind the root [`README.md`](../README.md), which is the
 | [`INSTALL.md`](INSTALL.md) | Installing: prebuilt binaries per platform (Ubuntu/Debian, macOS, Windows), Docker, the system dependencies, `cargo install`, use as a library. |
 | [`USAGE.md`](USAGE.md) | The two binaries, the output formats, running from a checkout. |
 | [`BUILDING.md`](BUILDING.md) | Building from source per platform, the format dumps, build profiles, development tips (hooks, test requirements and skips), Cargo features. |
+| [`SUPPORTED_PACKAGES.md`](SUPPORTED_PACKAGES.md) | Generated: every package and class binding — ported from Perl LaTeXML, contributed beyond Perl, or raw TeX with overrides — and the rule for the rest. |
 
 ## 🎯 Target 1 — faithful Perl translation (`parity/`)
 

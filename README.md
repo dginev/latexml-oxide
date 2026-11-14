@@ -69,6 +69,7 @@ Start with the [Rhai guide](docs/parity/RHAI_BINDINGS_GUIDE.md).
 | Installing (per platform, Docker, system dependencies, crates.io, as a library) | [docs/INSTALL.md](docs/INSTALL.md) |
 | Usage and the command line | [docs/USAGE.md](docs/USAGE.md) |
 | Building from source, build profiles, development tips, Cargo features | [docs/BUILDING.md](docs/BUILDING.md) |
+| Supported packages and classes (ported, contributed, raw) | [docs/SUPPORTED_PACKAGES.md](docs/SUPPORTED_PACKAGES.md) |
 | Writing a Rhai binding | [docs/parity/RHAI_BINDINGS_GUIDE.md](docs/parity/RHAI_BINDINGS_GUIDE.md), [worked examples](docs/examples/) |
 | Rhai API reference · Perl \| Rust macro \| Rhai cheat sheet | [interface](https://dginev.github.io/latexml-oxide/latexml_contrib/script_bindings/interface/index.html) · [cheat sheet](https://dginev.github.io/latexml-oxide/latexml_contrib/script_bindings/cheatsheet/index.html) |
 | Rust API (rustdoc) | [dginev.github.io/latexml-oxide/latexml/](https://dginev.github.io/latexml-oxide/latexml/) |
