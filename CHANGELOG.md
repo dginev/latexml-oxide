@@ -2,12 +2,12 @@
 
 ## Unreleased
 
-  - **No `rowspacing` on a MathML table** (issue 695). An `array`, `aligned` or other
-    multi-row table carried `rowspacing="0pt"`, which MathML Core does not have (Chrome
+  - **No default `rowspacing="0pt"` on a MathML table** (issue 695). An `array`, `aligned` or
+    other multi-row table carried `rowspacing="0pt"`, which MathML Core does not have (Chrome
     ignores it) but Firefox and MathJax honour, setting the rows touching. It is no longer
-    written, so they use their default row gap; `columnspacing` and `columnalign`, which LaTeXML.css
-    reads, stay. Guard
-    `aligned_mtable_columnspacing_zero::aligned_emits_zero_columnspacing_and_css_resets_mtd_padding`.
+    written, so they use their default row gap; an author's own row spacing (`\arraystretch`,
+    `\jot`) is still written. `columnspacing` and `columnalign`, which LaTeXML.css reads, stay.
+    Guard `aligned_mtable_columnspacing_zero::aligned_emits_zero_columnspacing_and_css_resets_mtd_padding`.
   - **An aligned left column meets its relation in Chrome** (issues 809, 755). MathML Core
     dropped `columnalign`, and Chrome set the left column of an `aligned` (inline, or in
     `gather*`) flush left in its cell, so the `=` came up to 21 px late. LaTeXML.css now

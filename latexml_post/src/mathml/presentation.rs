@@ -1598,6 +1598,16 @@ fn pmml_array(doc: &PostDocument, node: &Node) -> NodeData {
   pmml_maybe_resize(doc, node, result)
 }
 
+/// A length attribute that is zero (`0pt`, `0`, `0.0pt`, `-0em`); an unreadable one is not.
+fn is_zero_length(length: &str) -> bool {
+  length
+    .trim()
+    .trim_end_matches(|c: char| c.is_ascii_alphabetic())
+    .trim()
+    .parse::<f64>()
+    .is_ok_and(|v| v == 0.0)
+}
+
 fn pmml_array_inner(doc: &PostDocument, node: &Node) -> NodeData {
   let mut rows = Vec::new();
   let width = node.get_attribute("width");
@@ -1609,10 +1619,15 @@ fn pmml_array_inner(doc: &PostDocument, node: &Node) -> NodeData {
     "middle" | "" => "axis",
     _ => vattach.as_str(),
   };
+  // Perl L478-481 defaults `rowsep` to `0pt`; only an author's non-zero one is written (below).
+  let rowsep = node
+    .get_attribute("rowsep")
+    .filter(|sep| !is_zero_length(sep));
   let colsep = node
     .get_attribute("colsep")
     .unwrap_or_else(|| "5pt".to_string());
 
+  let mut nrows = 0;
   let mut ncols = 0;
   for row_node in element_children(node) {
     let mut cols = Vec::new();
@@ -1705,6 +1720,7 @@ fn pmml_array_inner(doc: &PostDocument, node: &Node) -> NodeData {
     if nc > ncols {
       ncols = nc;
     }
+    nrows += 1;
     rows.push(NodeData::Element {
       tag:        "m:mtr".to_string(),
       attributes: None,
@@ -1712,13 +1728,16 @@ fn pmml_array_inner(doc: &PostDocument, node: &Node) -> NodeData {
     });
   }
 
-  // Perl L478-482: no `columnspacing` for one column. Perl's `rowspacing` is not emitted:
-  // Core has none; Firefox and MathJax set `0pt` rows touching (issue 695, OXIDIZED_DESIGN #1039).
+  // Perl L478-482: no separators for one row/column. The default `rowspacing="0pt"` is not written: Core has
+  // none, and Firefox and MathJax set its rows touching (issue 695, OXIDIZED_DESIGN #1041).
   let emit_colsep = ncols >= 2;
 
   let mut table_attrs = HashMap::default();
   if align != "axis" {
     table_attrs.insert("align".to_string(), align.to_string());
+  }
+  if let Some(rowsep) = rowsep.filter(|_| nrows >= 2) {
+    table_attrs.insert("rowspacing".to_string(), rowsep);
   }
   if emit_colsep {
     table_attrs.insert("columnspacing".to_string(), colsep);
