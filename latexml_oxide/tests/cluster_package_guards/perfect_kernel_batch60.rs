@@ -432,6 +432,43 @@ fn array_cells_restore_their_interline_values() {
   );
 }
 
+/// Issue 778: a `p`/`m`/`b` cell, and a `\multicolumn` over one, is set with `\linewidth` its column's width
+/// (`\@arrayparboxrestore`, latex.ltx:16280), so `width=\linewidth` there fits the column; an l/c cell and the text
+/// after the table keep the page's (the base gave 345pt in every cell). Repro
+/// kernel-alignment/paragraph_cell_linewidth_is_the_column_width.
+#[test]
+fn paragraph_cell_linewidth_is_the_column_width() {
+  let (stderr, xml) = super::perfect_kernel_batch46::convert_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/kernel-alignment/paragraph_cell_linewidth_is_the_column_width.tex"
+    ),
+    None,
+  );
+  assert_eq!(
+    (error_count(&stderr), warning_count(&stderr)),
+    (0, 0),
+    "{stderr}"
+  );
+  assert_element(
+    &xml,
+    "tabular",
+    &[],
+    r#"<tabular vattach="middle"><tbody><tr>
+      <td align="left" vattach="top"><inline-block vattach="top" width="100.0pt"><p>P 100.0pt</p></inline-block></td>
+      <td align="left" vattach="middle"><inline-block vattach="middle" width="50.0pt"><p>M 50.0pt</p></inline-block></td>
+      <td align="left" vattach="bottom"><inline-block vattach="bottom" width="30.0pt"><p>B 30.0pt</p></inline-block></td>
+      <td align="center">C 345.0pt</td></tr><tr>
+      <td align="left" vattach="top"><inline-block vattach="top" width="80.0pt"><p>MC 80.0pt</p></inline-block></td>
+      <td vattach="middle"/><td vattach="bottom"/><td/></tr></tbody></tabular>"#,
+  );
+  assert_element(
+    &xml,
+    "para",
+    &["xml:id=\"p2\""],
+    r#"<para xml:id="p2"><p>After 345.0pt</p></para>"#,
+  );
+}
+
 /// 60l: amsmath's matrices, `cases` and `aligned` in a table cell keep their rows' strut (`\strutbox`'s, tex_tables.rs
 /// `array_strut`), not the cell's zero `\baselineskip` (pmatrix was 9.44pt/4.44pt). Repro
 /// kernel-alignment/array_strut_in_a_cell.

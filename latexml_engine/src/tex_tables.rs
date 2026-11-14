@@ -324,9 +324,12 @@ LoadDefinitions!({
     "\\lx@restore@interline",
     "\\lineskip\\normallineskip\\lineskiplimit\\normallineskiplimit\\baselineskip\\normalbaselineskip"
   );
+  // `\\@arrayparboxrestore`'s `\\linewidth\\hsize` (latex.ltx:16280): `width=\\linewidth` in the cell is the
+  // column's (issue 778; Perl sets `\\hsize` alone, TeX_Tables.pool.ltxml:76).
+  // Repro kernel-alignment/paragraph_cell_linewidth_is_the_column_width.
   DefMacro!(
     "\\lx@tabular@p{}{}",
-    "\\setlength\\hsize{#2}\\everypar{}\\lx@restore@interline\\lx@tabular@p@{#1}{\\the\\hsize}"
+    "\\setlength\\hsize{#2}\\linewidth\\hsize\\everypar{}\\lx@restore@interline\\lx@tabular@p@{#1}{\\the\\hsize}"
   );
   DefConstructor!("\\lx@tabular@p@ Position {Dimension} VBoxContents",
   sub[document, args, props] {
