@@ -178,7 +178,7 @@ pub struct Graphics {
   /// first attempted via the vector converters (mutool, then pdftocairo);
   /// 0 (the default) does so for PDFs up to 500 KiB (`should_try_svg_path`).
   /// Either way the raster (`convert`/`gs` → PNG) path takes over on
-  /// failure, timeout or oversized output.
+  /// failure, timeout, oversized output or an enlarged raster (OD #1034).
   /// Tracks upstream brucemiller/LaTeXML#902.
   svg_threshold_kb: u32,
   /// Whether conversions may be served from the shared, host-persistent
@@ -836,48 +836,15 @@ impl Graphics {
       new_tag.replace_range(start..start + old.len(), &value);
     }
     let cropped = format!("{}{new_tag}{}", &text[..at], &text[at + tag.len()..]);
-    Self::write_by_rename(path, &cropped)?;
-    Ok(true)
-  }
-
-  /// Replace `path` with `text` through a sibling temp file and a rename, never writing
-  /// through it (it may be a graphics-cache hard link).
-  fn write_by_rename(path: &str, text: &str) -> Result<(), String> {
-    let tmp = format!("{path}.rewritten.{}", std::process::id());
-    std::fs::write(&tmp, text).map_err(|e| {
+    let tmp = format!("{path}.cropped.{}", std::process::id());
+    std::fs::write(&tmp, cropped).map_err(|e| {
       let _ = std::fs::remove_file(&tmp);
       format!("{tmp}: {e}")
     })?;
     std::fs::rename(&tmp, path).map_err(|e| {
       let _ = std::fs::remove_file(&tmp);
       format!("{path}: {e}")
-    })
-  }
-
-  /// Mark each `<image>` of a vector render drawn larger than its own pixels (below 72 dpi in
-  /// the page's bp) `image-rendering="pixelated"`: with no `/Interpolate` (pdflatex sets none) a
-  /// PDF shows such a raster in hard pixel blocks, which a browser would smooth into a blur. A
-  /// downscaled image keeps the default, which `pixelated` aliases (1211.5349, in Chrome).
-  /// `Ok(false)` when nothing is marked; replaces the file by rename (it may be a cache link).
-  fn mark_upscaled_images_inplace(path: &str) -> Result<bool, String> {
-    let text = std::fs::read_to_string(path).map_err(|e| format!("{path}: {e}"))?;
-    if !text.contains("<image") {
-      return Ok(false);
-    }
-    let marks = upscaled_image_tags(&text);
-    if marks.is_empty() {
-      return Ok(false);
-    }
-    const HINT: &str = r#" image-rendering="pixelated""#;
-    let mut marked = String::with_capacity(text.len() + marks.len() * HINT.len());
-    let mut from = 0;
-    for at in marks {
-      marked.push_str(&text[from..at]);
-      marked.push_str(HINT);
-      from = at;
-    }
-    marked.push_str(&text[from..]);
-    Self::write_by_rename(path, &marked)?;
+    })?;
     Ok(true)
   }
 
@@ -1433,8 +1400,9 @@ impl Graphics {
   /// `LATEXML_GRAPHICS_VECTOR_AUTO_OFF=1` disables the auto default only;
   /// the explicit-threshold path stays active.
   ///
-  /// Safety net: a converter that fails, times out or emits
-  /// >`MAX_SVG_OUTPUT_BYTES` (8 MB) of SVG falls back to the raster path.
+  /// Safety net: a converter that fails, times out or emits more than
+  /// `MAX_SVG_OUTPUT_BYTES` (8 MB) of SVG falls back to the raster path, as does an SVG
+  /// that draws a raster larger than its pixels (`svg_enlarged_raster`).
   fn should_try_svg_path(source: &str, threshold_kb: u32) -> bool {
     if !source.to_lowercase().ends_with(".pdf") {
       return false;
@@ -2029,11 +1997,10 @@ impl Graphics {
 }
 
 /// An element of an SVG text, as [`svg_elements`] reads it: its name, its start tag (up to the
-/// `>`), the tag's offset and its child elements.
+/// `>`) and its child elements.
 struct SvgElement<'a> {
   name:     &'a str,
   tag:      &'a str,
-  start:    usize,
   children: Vec<usize>,
 }
 
@@ -2078,7 +2045,6 @@ fn svg_elements(text: &str) -> Option<Vec<SvgElement<'_>>> {
     elements.push(SvgElement {
       name,
       tag,
-      start,
       children: Vec::new(),
     });
     if !tag.ends_with('/') {
@@ -2129,58 +2095,78 @@ fn linear_compose(m: [f64; 4], f: [f64; 4]) -> [f64; 4] {
   ]
 }
 
-/// The offsets just past `<image` of each image drawn larger than its pixels wherever it is
-/// drawn, directly or through `<use>` (pdftocairo); an image with no readable placement or
-/// size stays unmarked, as one that already names its `image-rendering`.
-fn upscaled_image_tags(text: &str) -> Vec<usize> {
+/// A raster an SVG render draws larger than its own pixels: its size in pixels and its largest
+/// scale in user units (the PDF's bp, as mutool and pdftocairo keep them) per pixel; `None`
+/// where unreadable.
+#[derive(Debug, PartialEq)]
+struct EnlargedRaster {
+  pixels: Option<(usize, usize)>,
+  scale:  Option<f64>,
+}
+
+/// The first `<image>` in `text` drawn larger than its pixels (beyond float noise, 1 %) on any
+/// placement, directly or through `<use>` (pdftocairo). An image whose size, pixels or
+/// placement it cannot read (a `<pattern>`, a `<symbol>`, a skew) counts as enlarged.
+fn svg_enlarged_raster(text: &str) -> Option<EnlargedRaster> {
   use latexml_core::util::image::svg_attr_value;
+  const TOLERANCE: f64 = 1.01;
   fn href(tag: &str) -> Option<&str> {
     svg_attr_value(tag, "xlink:href").or_else(|| svg_attr_value(tag, "href"))
   }
-  fn upscaled(tag: &str, m: [f64; 4]) -> bool {
-    if svg_attr_value(tag, "image-rendering").is_some()
-      || svg_attr_value(tag, "style").is_some_and(|v| v.contains("image-rendering"))
-    {
-      return false;
-    }
+  fn pixels(tag: &str) -> Option<(usize, usize)> { href(tag).and_then(data_uri_pixels) }
+  /// User units per pixel along the image's wider-drawn axis, under the linear map `m`.
+  fn scale(tag: &str, m: [f64; 4]) -> Option<f64> {
     let length = |name| svg_attr_value(tag, name).and_then(|v| v.trim().parse::<f64>().ok());
-    let (Some(w), Some(h), Some((pw, ph))) = (
-      length("width"),
-      length("height"),
-      href(tag).and_then(data_uri_pixels),
-    ) else {
-      return false;
-    };
-    w * m[0].hypot(m[1]) > pw as f64 && h * m[2].hypot(m[3]) > ph as f64
+    let (w, h, (pw, ph)) = (length("width")?, length("height")?, pixels(tag)?);
+    let sx = w * m[0].hypot(m[1]) / pw as f64;
+    let sy = h * m[2].hypot(m[3]) / ph as f64;
+    Some(sx.max(sy)).filter(|s| s.is_finite())
   }
   struct Walk<'a> {
     elements: &'a [SvgElement<'a>],
     ids:      HashMap<&'a str, usize>,
-    verdict:  HashMap<usize, bool>,
+    /// Each reached image's largest scale; `None` once a placement is unreadable.
+    scales:   HashMap<usize, Option<f64>>,
   }
   impl Walk<'_> {
     fn element(&mut self, at: usize, m: Option<[f64; 4]>, depth: usize) {
-      let e = &self.elements[at];
+      let elements = self.elements;
+      let e = &elements[at];
       let own =
         svg_attr_value(e.tag, "transform").map_or(Some([1.0, 0.0, 0.0, 1.0]), svg_transform_linear);
       let m = m.zip(own).map(|(m, f)| linear_compose(m, f));
+      // A nested `<svg>` scales by its own viewBox, which this does not read.
+      let m =
+        m.filter(|_| at == 0 || e.name != "svg" || svg_attr_value(e.tag, "viewBox").is_none());
+      // A soft mask's image (both tools) is drawn in the masked element's user space.
+      let mask = svg_attr_value(e.tag, "mask")
+        .and_then(|v| v.trim().strip_prefix("url(#")?.strip_suffix(')'))
+        .and_then(|id| self.ids.get(id).copied())
+        .filter(|&target| elements[target].name == "mask" && depth < 8);
+      if let Some(target) = mask {
+        let units = svg_attr_value(elements[target].tag, "maskContentUnits");
+        let m = m.filter(|_| units.is_none_or(|u| u.trim() == "userSpaceOnUse"));
+        for &child in &elements[target].children {
+          self.element(child, m, depth + 1);
+        }
+      }
       match e.name {
         "image" => {
-          let up = m.is_some_and(|m| upscaled(e.tag, m));
-          *self.verdict.entry(at).or_insert(up) &= up;
+          let s = m.and_then(|m| scale(e.tag, m));
+          let worst = self.scales.entry(at).or_insert(s);
+          *worst = worst.zip(s).map(|(a, b)| a.max(b));
         },
         "use" if depth < 8 => {
           if let Some(&target) = href(e.tag).and_then(|h| self.ids.get(h.trim_start_matches('#'))) {
             // A `<symbol>` scales by its own viewBox, which this does not read.
-            let m = m.filter(|_| self.elements[target].name != "symbol");
+            let m = m.filter(|_| elements[target].name != "symbol");
             self.element(target, m, depth + 1);
           }
         },
         _ => {
-          for i in 0..e.children.len() {
-            let child = self.elements[at].children[i];
+          for &child in &e.children {
             if !matches!(
-              self.elements[child].name,
+              elements[child].name,
               "defs" | "clipPath" | "mask" | "pattern" | "symbol" | "marker"
             ) {
               self.element(child, m, depth);
@@ -2190,8 +2176,11 @@ fn upscaled_image_tags(text: &str) -> Vec<usize> {
       }
     }
   }
+  if !text.contains("<image") {
+    return None;
+  }
   let Some(elements) = svg_elements(text) else {
-    return Vec::new();
+    return Some(EnlargedRaster { pixels: None, scale: None });
   };
   let ids = elements
     .iter()
@@ -2201,19 +2190,17 @@ fn upscaled_image_tags(text: &str) -> Vec<usize> {
   let mut walk = Walk {
     elements: &elements,
     ids,
-    verdict: HashMap::default(),
+    scales: HashMap::default(),
   };
   if !elements.is_empty() {
     walk.element(0, Some([1.0, 0.0, 0.0, 1.0]), 0);
   }
-  let mut marks: Vec<usize> = walk
-    .verdict
-    .into_iter()
-    .filter(|&(_, up)| up)
-    .map(|(i, _)| elements[i].start + "<image".len())
-    .collect();
-  marks.sort_unstable();
-  marks
+  // An image the walk never reached is drawn some way it does not read.
+  elements.iter().enumerate().find_map(|(i, e)| {
+    let scale = walk.scales.get(&i).copied().flatten();
+    (e.name == "image" && scale.is_none_or(|s| s > TOLERANCE))
+      .then(|| EnlargedRaster { pixels: pixels(e.tag), scale })
+  })
 }
 
 /// The pixel size of a base64 `data:` URI's image, from its header.
@@ -2688,18 +2675,33 @@ impl Processor for Graphics {
                           })
                         },
                       );
-                      match svg_res {
-                        crate::graphics_cache::ConvertResult::Ok { dims } => {
-                          // Past the cache, so an entry stored unmarked is marked too.
-                          if let Err(why) = Self::mark_upscaled_images_inplace(abs_svg) {
-                            Warn!(
-                              "shell",
-                              "svg",
-                              "Graphics: can't mark the upscaled rasters of {} pixelated ({})",
-                              abs_svg,
-                              why
-                            );
-                          }
+                      // Judged past the cache, so a cached render is too: a raster drawn larger
+                      // than its pixels takes the PNG path (DG 2026-11-14, OD #1034).
+                      let enlarged = if svg_res.is_ok() {
+                        std::fs::read_to_string(abs_svg)
+                          .map_or(Some(EnlargedRaster { pixels: None, scale: None }), |text| {
+                            svg_enlarged_raster(&text)
+                          })
+                      } else {
+                        None
+                      };
+                      match (svg_res, enlarged) {
+                        (
+                          crate::graphics_cache::ConvertResult::Ok { .. },
+                          Some(EnlargedRaster { pixels, scale }),
+                        ) => {
+                          Info!(
+                            "shell",
+                            "svg",
+                            "Graphics: {} draws a {} raster at {} bp per pixel; using a PNG",
+                            source,
+                            pixels.map_or("?".to_string(), |(w, h)| format!("{w}x{h}")),
+                            scale.map_or("?".to_string(), |s| format!("{s:.2}"))
+                          );
+                          let _ = std::fs::remove_file(abs_svg);
+                          None
+                        },
+                        (crate::graphics_cache::ConvertResult::Ok { dims }, None) => {
                           let crop = ops.iter().find(|op| {
                             matches!(op, GraphicxOp::Trim { .. } | GraphicxOp::Clip { .. })
                           });
@@ -2728,7 +2730,7 @@ impl Processor for Graphics {
                             },
                           }
                         },
-                        crate::graphics_cache::ConvertResult::Failed => {
+                        (crate::graphics_cache::ConvertResult::Failed, _) => {
                           Warn!(
                             "shell",
                             "svg",
@@ -4266,10 +4268,9 @@ endobj
     assert!(missing_tool_hint("some_unknown_tool").is_none());
   }
 
-  /// What an SVG draws, in order: each `<image>` as `image WxH <media type>` plus its
-  /// `image-rendering`, and each glyph or path as `glyph`/`path`, resolving `<use>` through its
-  /// `xlink:href` (mutool draws the image inline, pdftocairo through a `<use>` of a `<defs>` entry;
-  /// both draw glyphs as `<use>`).
+  /// What an SVG draws, in order: each `<image>` as `image WxH <media type>` and each glyph or
+  /// path as `glyph`/`path`, resolving `<use>` through its `xlink:href` (mutool draws the image
+  /// inline, pdftocairo through a `<use>` of a `<defs>` entry; both draw glyphs as `<use>`).
   fn svg_drawn_shape(svg: &str) -> Vec<String> {
     const XLINK: &str = "http://www.w3.org/1999/xlink";
     fn index(node: &Node, ids: &mut HashMap<String, Node>) {
@@ -4286,12 +4287,8 @@ endobj
         .strip_prefix("data:")
         .and_then(|rest| rest.split(';').next())
         .unwrap_or("external");
-      let hint = node
-        .get_property("image-rendering")
-        .map(|v| format!(" image-rendering={v}"))
-        .unwrap_or_default();
       format!(
-        "image {}x{} {media}{hint}",
+        "image {}x{} {media}",
         node.get_property("width").unwrap_or_default(),
         node.get_property("height").unwrap_or_default()
       )
@@ -4344,67 +4341,135 @@ endobj
     found
   }
 
-  /// Only an image drawn larger than its pixels on every placement turns pixelated: Chrome
-  /// aliases a downscaled one under `pixelated` (1211.5349's 750 px plots shown at 234 px lose
-  /// their grid lines). Rows: mutool's inline image up and down, pdftocairo's `<defs>` image
-  /// through a `<use>`, once only upscaled and once also downscaled; marking twice is a no-op.
+  /// The decision of OD #1034 on hand-written SVG: an image drawn larger than its pixels on any
+  /// placement (inline, nested `<g>`, through `<use>` or a soft mask), or drawn in a way it does
+  /// not read, sends the figure to the PNG path. Scales in user units (bp) per pixel.
   #[test]
-  fn svg_marks_only_upscaled_images_pixelated() {
+  fn svg_enlarged_raster_reads_every_placement() {
     // A 4×4 PNG (`tests/fixtures/tile.png`).
     const PNG: &str = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAQAAAAEAQMAAACTPww9AAAABlBMVEXgQCAtZLS26lm/AAAADklEQVQI12MoYPgAhA8AC3gDMY2nLXUAAAAASUVORK5CYII=";
-    let svg = |hint: [&str; 4]| {
-      format!(
-        r##"<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 90 30">
-<defs>
-<image{} id="a" width="4" height="4" xlink:href="{PNG}"/>
-<image{} id="b" width="4" height="4" xlink:href="{PNG}"/>
-</defs>
-<g transform="matrix(7,0,0,7,1,1)">
-<image{} width="4" height="4" xlink:href="{PNG}"/>
-</g>
-<g transform="matrix(.5,0,0,.5,40,1)">
-<image{} width="4" height="4" xlink:href="{PNG}"/>
-</g>
-<use xlink:href="#a" transform="matrix(7, 0, 0, 7, 50, 1)"/>
-<use xlink:href="#b" transform="scale(7)"/>
-<use xlink:href="#b" transform="translate(80 1) scale(.5)"/>
-</svg>
-"##,
-        hint[0], hint[1], hint[2], hint[3]
-      )
-    };
-    const PIXELATED: &str = r#" image-rendering="pixelated""#;
-    let tmp = TempDir::new("svg_pixelated");
-    let path = tmp.join("fig.svg");
-    let path = path.to_str().unwrap();
-    std::fs::write(path, svg([""; 4])).unwrap();
-    assert_eq!(Graphics::mark_upscaled_images_inplace(path), Ok(true));
-    let marked = svg([PIXELATED, "", PIXELATED, ""]);
-    assert_eq!(std::fs::read_to_string(path).unwrap(), marked);
-    assert_eq!(Graphics::mark_upscaled_images_inplace(path), Ok(false));
-    assert_eq!(std::fs::read_to_string(path).unwrap(), marked);
+    let img = |attrs: &str| format!(r#"<image{attrs} width="4" height="4" xlink:href="{PNG}"/>"#);
+    let enlarged = |scale: Option<f64>| Some(EnlargedRaster { pixels: Some((4, 4)), scale });
+    let rows: Vec<(String, Option<EnlargedRaster>)> = vec![
+      ("<path d=\"M0 0h1\"/>".into(), None),
+      (
+        format!(r#"<g transform="matrix(7,0,0,7,1,1)">{}</g>"#, img("")),
+        enlarged(Some(7.0)),
+      ),
+      (
+        format!(r#"<g transform="matrix(.5,0,0,.5,1,1)">{}</g>"#, img("")),
+        None,
+      ),
+      (
+        format!(
+          r#"<g transform="matrix(1.005,0,0,1.005,0,0)">{}</g>"#,
+          img("")
+        ),
+        None,
+      ),
+      (
+        format!(r#"<g transform="scale(.5,2)">{}</g>"#, img("")),
+        enlarged(Some(2.0)),
+      ),
+      (
+        format!(
+          r#"<g transform="scale(2)"><g transform="translate(3 4) scale(.25)">{}</g></g>"#,
+          img("")
+        ),
+        None,
+      ),
+      (
+        format!(
+          r#"<g transform="scale(2)"><g transform="scale(.75)">{}</g></g>"#,
+          img("")
+        ),
+        enlarged(Some(1.5)),
+      ),
+      (
+        format!(
+          r##"<defs>{}</defs><use xlink:href="#a" transform="matrix(.5, 0, 0, .5, 50, 1)"/>"##,
+          img(r#" id="a""#)
+        ),
+        None,
+      ),
+      (
+        format!(
+          r##"<defs>{}</defs><use xlink:href="#a" transform="scale(.5)"/><use xlink:href="#a" transform="scale(7)"/>"##,
+          img(r#" id="a""#)
+        ),
+        enlarged(Some(7.0)),
+      ),
+      (
+        format!(
+          r##"<defs><mask id="m"><g transform="scale(.5)">{}</g></mask></defs><g mask="url(#m)"><g transform="scale(.5)">{}</g></g>"##,
+          img(""),
+          img("")
+        ),
+        None,
+      ),
+      (
+        format!(
+          r##"<defs><mask id="m"><g transform="scale(7)">{}</g></mask></defs><g mask="url(#m)"><g transform="scale(.5)">{}</g></g>"##,
+          img(""),
+          img("")
+        ),
+        enlarged(Some(7.0)),
+      ),
+      (
+        format!(
+          r##"<defs><mask id="m" maskContentUnits="objectBoundingBox">{}</mask></defs><g mask="url(#m)"/>"##,
+          img("")
+        ),
+        enlarged(None),
+      ),
+      (
+        format!(
+          r##"<defs><pattern id="p">{}</pattern></defs><path fill="url(#p)" d="M0 0h1"/>"##,
+          img("")
+        ),
+        enlarged(None),
+      ),
+      (
+        format!(
+          r##"<defs><symbol id="s" viewBox="0 0 1 1">{}</symbol></defs><use xlink:href="#s"/>"##,
+          img("")
+        ),
+        enlarged(None),
+      ),
+      (
+        format!(r#"<g transform="skewX(10)">{}</g>"#, img("")),
+        enlarged(None),
+      ),
+      (
+        r#"<image width="4" height="4" xlink:href="data:image/png;base64,AAAA"/>"#.into(),
+        Some(EnlargedRaster { pixels: None, scale: None }),
+      ),
+    ];
+    for (body, expected) in rows {
+      let svg = format!(
+        r#"<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 90 30">{body}</svg>"#
+      );
+      assert_eq!(svg_enlarged_raster(&svg), expected, "{body}");
+    }
   }
 
   /// A small PDF figure carrying a raster AND vector text takes the vector-SVG path under the
-  /// auto default (after PR 816): the label stays five vector glyphs, the 4×4 raster keeps its
-  /// pixels, and, drawn far larger than them with no `/Interpolate`, renders pixelated as in
-  /// the PDF (a browser smoothed it into a blur). Each converter, then the whole pipeline.
-  /// Fixture: `tests/fixtures/mixed_raster_vector.tex` (pdflatex `-no-shell-escape`).
+  /// auto default (after PR 816), its label five vector glyphs and its 64×64 raster drawn at
+  /// 48 bp; the same figure with a 4×4 tile drawn at 1 cm takes the PNG path (DG 2026-11-14:
+  /// a browser would blur what the PDF shows in pixel blocks). Each converter, then the
+  /// pipeline. Fixtures: `tests/fixtures/{native,mixed}_raster_vector.tex`.
   #[test]
-  fn mixed_raster_vector_pdf_renders_vector_labels_and_crisp_pixels() {
-    let fixture = concat!(
-      env!("CARGO_MANIFEST_DIR"),
-      "/tests/fixtures/mixed_raster_vector.pdf"
-    );
+  fn small_raster_pdf_keeps_vector_labels_unless_enlarged() {
+    let fixture = |name: &str| format!("{}/tests/fixtures/{name}.pdf", env!("CARGO_MANIFEST_DIR"));
     let expected = [
-      "image 4x4 image/png image-rendering=pixelated",
+      "image 64x64 image/png",
       "glyph",
       "glyph",
       "glyph",
       "glyph",
       "glyph",
     ];
-    let tmp = TempDir::new("mixed_raster_vector");
+    let tmp = TempDir::new("small_raster_pdf");
     type Converter = fn(&str, &str, Option<u32>) -> bool;
     let converters: [(&str, Converter); 2] = [
       ("mutool", Graphics::convert_image_svg_mutool),
@@ -4412,42 +4477,82 @@ endobj
     ];
     let mut any = false;
     for (tool, convert) in converters {
-      if !svg_tool_or_skip(tool, "mixed_raster_vector") {
+      if !svg_tool_or_skip(tool, "small_raster_pdf") {
         continue;
       }
       any = true;
-      let dest = tmp.join(&format!("{tool}.svg"));
-      let dest = dest.to_str().unwrap();
-      assert!(convert(fixture, dest, None), "{tool} converts");
-      assert_eq!(Graphics::mark_upscaled_images_inplace(dest), Ok(true));
-      let svg = std::fs::read_to_string(dest).unwrap();
+      let native = tmp.join(&format!("{tool}_native.svg"));
+      let native = native.to_str().unwrap();
+      assert!(
+        convert(&fixture("native_raster_vector"), native, None),
+        "{tool} converts"
+      );
+      let svg = std::fs::read_to_string(native).unwrap();
       assert_eq!(svg_drawn_shape(&svg), expected, "{tool}");
+      assert_eq!(svg_enlarged_raster(&svg), None, "{tool}");
+      let tile = tmp.join(&format!("{tool}_tile.svg"));
+      let tile = tile.to_str().unwrap();
+      assert!(
+        convert(&fixture("mixed_raster_vector"), tile, None),
+        "{tool} converts"
+      );
+      let decision = svg_enlarged_raster(&std::fs::read_to_string(tile).unwrap());
+      // 1 cm over 4 pixels: 7.09 bp per pixel in mutool, 6.95 in pdftocairo (2 % smaller).
+      let scale = decision.as_ref().and_then(|d| d.scale).unwrap_or_default();
+      assert!(
+        decision.as_ref().is_some_and(|d| d.pixels == Some((4, 4))) && (6.9..7.1).contains(&scale),
+        "{tool}: {decision:?}"
+      );
     }
     if !any {
       return;
     }
-    let src = tmp.join("mixed_raster_vector.pdf");
-    std::fs::copy(fixture, &src).unwrap();
-    let xml = format!(
-      r#"<document xmlns="http://dlmf.nist.gov/LaTeXML"><graphics graphic="mixed_raster_vector.pdf" candidates="{}"/></document>"#,
-      src.display()
-    );
-    let doc_opts = crate::document::PostDocumentOptions {
-      destination: Some(tmp.join("out.html").display().to_string()),
-      source_directory: Some(tmp.path().display().to_string()),
-      ..Default::default()
+    let pipeline = |name: &str| {
+      let dir = tmp.join(name);
+      std::fs::create_dir_all(&dir).unwrap();
+      let src = dir.join(format!("{name}.pdf"));
+      std::fs::copy(fixture(name), &src).unwrap();
+      let xml = format!(
+        r#"<document xmlns="http://dlmf.nist.gov/LaTeXML"><graphics graphic="{name}.pdf" candidates="{}"/></document>"#,
+        src.display()
+      );
+      let doc_opts = crate::document::PostDocumentOptions {
+        destination: Some(dir.join("out.html").display().to_string()),
+        source_directory: Some(dir.display().to_string()),
+        ..Default::default()
+      };
+      let doc = PostDocument::new_from_string(&xml, doc_opts).expect("parse");
+      let mut graphics =
+        Graphics::new(None, true).with_cache_policy(crate::graphics_cache::CachePolicy::Bypass);
+      let nodes = graphics.to_process(&doc);
+      assert_eq!(nodes.len(), 1);
+      let out = graphics.process(doc, nodes).expect("graphics process")[0].to_xml_string();
+      (out, dir)
     };
-    let doc = PostDocument::new_from_string(&xml, doc_opts).expect("parse");
-    let mut graphics =
-      Graphics::new(None, true).with_cache_policy(crate::graphics_cache::CachePolicy::Bypass);
-    let nodes = graphics.to_process(&doc);
-    assert_eq!(nodes.len(), 1);
-    let out = graphics.process(doc, nodes).expect("graphics process")[0].to_xml_string();
+    let (out, dir) = pipeline("native_raster_vector");
     assert!(
-      out.contains(r#" imagesrc="mixed_raster_vector.svg" "#),
+      out.contains(r#" imagesrc="native_raster_vector.svg" "#),
       "{out}"
     );
-    let svg = std::fs::read_to_string(tmp.join("mixed_raster_vector.svg")).unwrap();
+    let svg = std::fs::read_to_string(dir.join("native_raster_vector.svg")).unwrap();
     assert_eq!(svg_drawn_shape(&svg), expected);
+    // The PNG path rasterizes through ImageMagick, which CI does not install.
+    let raster = std::process::Command::new(im_convert_program())
+      .arg("-version")
+      .output()
+      .is_ok_and(|o| o.status.success());
+    if !raster {
+      eprintln!(
+        "SKIP small_raster_pdf's PNG row: {} not on PATH",
+        im_convert_program()
+      );
+      return;
+    }
+    let (out, dir) = pipeline("mixed_raster_vector");
+    assert!(
+      out.contains(r#" imagesrc="mixed_raster_vector.png" "#),
+      "{out}"
+    );
+    assert!(!dir.join("mixed_raster_vector.svg").exists());
   }
 }

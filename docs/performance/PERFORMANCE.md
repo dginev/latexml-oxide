@@ -1066,7 +1066,8 @@ structural math output on math-heavy fixtures before treating it as a win.
   ones included (PR 816: labels stay vector, the raster keeps its own resolution;
   measured 2026-11-14 over 673 such arXiv figures, mutool's SVG costs −8 ms CPU
   median per figure and 70 vs 157 MB gzipped against the PNG path). PNG on converter
-  failure, timeout or >8 MB output. Overrides:
+  failure, timeout or >8 MB output, and where the SVG draws a raster larger than
+  its own pixels (OD #1034). Overrides:
   `LATEXML_GRAPHICS_VECTOR_AUTO_OFF=1` or `--graphics-svg-threshold-kb N>0`.
 - **Sandbox worker default 20 → 8** — gs/convert fork-exec contention made
   graphics-bound papers 5–10× slower at 20 workers; raise `--workers` only when

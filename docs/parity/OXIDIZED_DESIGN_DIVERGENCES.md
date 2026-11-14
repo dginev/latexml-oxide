@@ -36147,7 +36147,7 @@ current colour. Residual (post-merge): `\hhline`'s `>{…}` colour codes stay sk
 (repros `alignment-bindings/arrayrulecolor_*`), `perfect_kernel_batch69a::arrayrulecolor_reads_to_the_brace`,
 `perfect_kernel_batch60::colortbl_noalign_idiom`, the `alignment/colortbls` golden.
 
-### 1034. A small PDF figure is converted to SVG, raster-bearing ones too; an upscaled raster in it renders pixelated (after PR 816)
+### 1034. A small PDF figure is converted to SVG, raster-bearing ones too, unless it draws a raster enlarged (after PR 816)
 
 **Perl.** Every PDF graphic is rasterized to PNG (`Post/Graphics.pm:62`, `pdf => { destination_type => 'png' }`).
 **Rust.** Beyond Perl, a PDF at most 500 KiB (the auto default, `--graphics-svg-threshold-kb 0`; an explicit `N`
@@ -36157,14 +36157,21 @@ bounds it at `N` KB) first tries the vector converters, `mutool convert -F svg`,
 vector, and an embedded raster keeps its own pixels (PERF816, 673 arXiv figures: mutool's SVG -8 ms CPU median per
 figure against the PNG, 70 vs 157 MB gzipped; 23 % of the PNGs lost raster resolution). Until PR 816 (amachino) an
 image XObject in the first 256 KB gated a PDF off the path; DG ruled on 2026-11-14 that size alone gates it (mutool
-first, pdftocairo the fallback; MuPDF, AGPL, only as an unmodified CLI subprocess). Neither tool marks a raster's
-rendering, so a browser smooths a 4-pixel tile drawn at 1 cm into a blur where the PDF (no `/Interpolate`, as
-pdflatex writes it) shows hard pixel blocks: `Graphics::mark_upscaled_images_inplace` gives each `<image>` drawn
-larger than its own pixels (below 72 dpi in the page's bp, every placement, directly or through a `<use>`)
-`image-rendering="pixelated"`. A downscaled raster keeps the default: in Chrome `pixelated` aliases it (1211.5349's
-750 px plots shown at 234 px lose their grid lines). Residual: `/Interpolate true` is not visible in either tool's
-SVG, so an upscaled raster that asks for smoothing is shown pixelated; an image drawn through a `<pattern>` or a
-`<symbol>`, or under a transform other than matrix/translate/scale/rotate, stays unmarked. **Guards**:
-`graphics::tests::mixed_raster_vector_pdf_renders_vector_labels_and_crisp_pixels` (each converter present, then the
-pipeline; fixture `latexml_post/tests/fixtures/mixed_raster_vector.tex`), `graphics::tests::svg_marks_only_upscaled_images_pixelated`,
-`graphics::tests::should_try_svg_path_auto_detect`.
+first, pdftocairo the fallback; MuPDF, AGPL, only as an unmodified CLI subprocess).
+
+**Enlarged rasters take the PNG path** (DG 2026-11-14, "PNG for enlarged rasters"): an SVG that draws any raster larger
+than its own pixels is discarded and the figure takes main's PNG path, with an `Info`, no Warning and no error count;
+every other figure keeps the SVG, so the path is never worse than main. Neither tool marks a raster's rendering, so a
+browser smooths an enlarged raster into a blur where the PDF (no `/Interpolate`, as pdflatex writes it) shows hard
+pixel blocks, and no static `image-rendering` suits every display size: `pixelated` aliases a raster the page or a phone
+shows smaller. `svg_enlarged_raster` reads every placement, inline, under nested `<g transform>`, through `<use>` and
+through a soft mask's `<mask>` (both tools draw an alpha channel there), and calls a raster enlarged when it is drawn at
+more than 1.01 SVG user units per pixel on either axis on any placement (user units are the PDF's bp, which both tools
+keep; 1.01 absorbs the tools' float rounding, pdftocairo drawing images about 2 % smaller than mutool). A placement it
+cannot read counts as enlarged: an image in a `<pattern>` or `<symbol>`, under a skew or a nested `<svg>` viewBox, past
+8 nested `<use>`, or with a size or pixel count it cannot read. The decision runs on every render after the graphics
+cache, so a cached SVG is judged too (the cache stores the converter's output, not the decision). `/Interpolate true` no
+longer matters (the PNG path renders such a raster as main does). **Guards**:
+`graphics::tests::small_raster_pdf_keeps_vector_labels_unless_enlarged` (each converter present, then the pipeline:
+`native_raster_vector.tex`, a 64×64 PNG at 48 bp, stays SVG; `mixed_raster_vector.tex`, a 4×4 tile at 1 cm, takes the
+PNG path), `graphics::tests::svg_enlarged_raster_reads_every_placement`, `graphics::tests::should_try_svg_path_auto_detect`.

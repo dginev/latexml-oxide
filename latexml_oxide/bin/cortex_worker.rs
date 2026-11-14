@@ -514,7 +514,8 @@ impl LatexmlWorker {
       schemadocs:                false,
       // Vector-SVG fast path. 0 = auto: every PDF at most 500 KiB, raster-bearing
       // ones included (PR 816), goes through the vector-SVG converters (mutool →
-      // pdftocairo), PNG on failure (PERFORMANCE.md §"Vector-SVG fast path").
+      // pdftocairo), PNG on failure or an enlarged raster (PERFORMANCE.md §"Vector-SVG
+      // fast path").
       // A positive integer is an explicit KB threshold;
       // `LATEXML_GRAPHICS_VECTOR_AUTO_OFF=1` disables the auto default.
       graphics_svg_threshold_kb: 0,

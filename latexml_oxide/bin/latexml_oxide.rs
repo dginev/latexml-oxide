@@ -222,7 +222,8 @@ struct Cli {
 
   /// Vector-SVG fast path for PDF graphics. `0` (default): PDFs at most
   /// 500 KiB, raster-bearing ones included, go through the SVG converters
-  /// (mutool → pdftocairo), falling back to PNG on failure or oversized output.
+  /// (mutool → pdftocairo), falling back to PNG on failure, oversized output or a
+  /// raster drawn larger than its pixels.
   /// `N > 0` forces the SVG path for any PDF at most N KB. Env
   /// `LATEXML_GRAPHICS_VECTOR_AUTO_OFF=1` disables auto-detect.
   #[arg(
