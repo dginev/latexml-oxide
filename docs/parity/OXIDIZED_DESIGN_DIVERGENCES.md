@@ -4665,16 +4665,21 @@ lines. Guard: `witnessed_css_delta::verbatim_whitespace_delta_stays_present`.
 
 `pre` is scoped where it broke layout (issues #431/#702): inline `\verb`
 (`<code>`) is `pre-wrap; overflow-wrap:break-word`, keeping its spaces but
-wrapping, as a 375 px page otherwise widened to 582 px; an fvextra
+wrapping so a long one cannot widen a narrow page, except in a table cell
+(`pre`: the cell is `nowrap`, and TeX does not break `\verb` either); an fvextra
 `breaklines` line's `\parbox` is `normal`, since `pre` rendered the markup's
 newlines as blank rows (a one-row line 60 px, 2605.00468's 849 lines 41,496 →
-13,650 px at 1280 px). A line, and xleftmargin's wrapper box around it
-(2605.01024), is capped at `max-width:100%`, and a line with a direct
-`.ltx_parbox` child is a flex row whose parbox shrinks beside the fixed
-break-indent boxes: the parbox's parent line carries an inline `width`, so the
-earlier `.ltx_framed_verbatim.ltx_break .ltx_parbox { max-width:100% }` capped
-nothing. Chrome at 375 px: framed breaklines scrollWidth 468 → 330 = clientWidth,
-page 488 → 375 px. Browser guard `browser_render_verbatim_narrow` (opt-in, local).
+13,650 px at 1280 px), and its paragraph's text `pre-wrap`, which wraps and keeps
+the source's spaces (`normal` rendered `        return   x` as `return x`). A
+line, and xleftmargin's wrapper box around it (2605.01024), is capped at
+`max-width:100%`, and a line with a `.ltx_parbox` child is a flex row whose
+parbox shrinks beside the fixed break-indent boxes; an `ltx_text` an id keeps
+around them (a numbered indented line) is `display:contents`. The parbox's
+parent line carries an inline `width`, so the earlier
+`.ltx_framed_verbatim.ltx_break .ltx_parbox { max-width:100% }` capped nothing.
+Chrome at 375 px on the browser guard's page: framed breaklines scrollWidth
+468 → 330 = clientWidth, page width 488 → 375 px. Browser guard
+`browser_render_verbatim_narrow` (opt-in, local).
 
 One serialization nuance, same entry: Perl nests two wrappers per line
 (`<text font="typewriter" width="345.0pt"><text class="ltx_verbatim"

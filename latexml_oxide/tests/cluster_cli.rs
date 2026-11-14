@@ -2218,18 +2218,29 @@ mod browser_render_verbatim_narrow {
   //! Issues #431/#702, the *rendered* guarantee at a phone width (375 px): an fvextra
   //! `breaklines` line wraps in its `\parbox` without blank rows from the markup's
   //! newlines, a `frame=single` breaklines box (with xleftmargin's wrapper, arXiv
-  //! 2605.01024) reflows instead of scrolling, and neither it, an unframed one nor a
-  //! long inline `\verb` widens the page. Opt-in and LOCAL like the guards above;
-  //! the CI half is `witnessed_css_delta::verbatim_whitespace_delta_stays_present`.
+  //! 2605.01024) reflows instead of scrolling, and neither it, an unframed one, a
+  //! numbered indented one (ids keep an `ltx_text` around its parbox) nor a long
+  //! inline `\verb` widens the page; a breaklines line keeps its spaces; a `\verb`
+  //! in a table cell stays one row, as the cell is nowrap. Opt-in and LOCAL like the
+  //! guards above; the CI half is
+  //! `witnessed_css_delta::verbatim_whitespace_delta_stays_present`.
 
-  const DOC: &str = "\\documentclass{article}\n\\usepackage{fvextra}\n\\begin{document}\n\
+  const DOC: &str = "\\documentclass{article}\n\\usepackage[ids]{latexml}\n\
+     \\usepackage{fvextra}\n\\begin{document}\n\
      \\begin{Verbatim}[frame=single,breaklines=true,xleftmargin=1mm]\n\
      a framed very long line of verbatim text that wraps because breaklines is true and it goes on and on\n\
      short\n\\end{Verbatim}\n\
      \\begin{Verbatim}[breaklines=true]\n\
      an unframed very long line of verbatim text that wraps because breaklines is true and it goes on and on\n\
+     \x20       return   x\n\
      \\end{Verbatim}\n\
-     A long inline \\verb|f(argument_one, argument_two, argument_three, argument_four)| ends here.\n\
+     \\begin{Verbatim}[breaklines=true,numbers=left]\n\
+     \x20   print(i, \"a long string that must certainly break somewhere along the way ok\")\n\
+     \\end{Verbatim}\n\
+     A long inline \\verb|f(argument_one, argument_two, argument_three, argument_four)| ends here.\n\n\
+     \\begin{tabular}{ll}\n\
+     \\verb|alpha beta gamma delta| & \\verb|epsilon zeta eta theta|\n\
+     \\end{tabular}\n\
      \\end{document}\n";
 
   #[test]
@@ -2242,6 +2253,8 @@ mod browser_render_verbatim_narrow {
     let v: serde_json::Value = serde_json::from_str(stdout.trim()).expect("parse JSON");
     // Before the fix: page 488 px, frame scrollWidth 468 > clientWidth 330, the
     // one-row `short` line 60 px (four rows of markup newlines), \verb one rect.
+    // On 39397129a3f: page 479 px (the numbered line's ltx_text wrapper), each
+    // cell's \verb 3 rects, the line `return x` (spaces collapsed).
     let (vw, doc_w) = (
       v["vw"].as_f64().unwrap(),
       v["docScrollWidth"].as_f64().unwrap(),
@@ -2271,6 +2284,16 @@ mod browser_render_verbatim_narrow {
     assert!(
       v["codeRects"][0].as_u64().unwrap() > 1,
       "the long \\verb did not wrap: {stdout}"
+    );
+    let cells = v["cellCodeRects"].as_array().expect("cellCodeRects");
+    assert!(
+      cells.len() == 2 && cells.iter().all(|n| n.as_u64() == Some(1)),
+      "a \\verb in a nowrap table cell wrapped: {stdout}"
+    );
+    assert_eq!(
+      v["returnLine"].as_str().map(str::trim_end),
+      Some("        return   x"),
+      "a breaklines line lost its spaces: {stdout}"
     );
   }
 }

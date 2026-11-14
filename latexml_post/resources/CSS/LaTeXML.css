@@ -590,12 +590,15 @@ foreignObject {
    rule, so a plain {verbatim} <pre> collapses to ONE line, and fancyvrb's
    per-line spans lose their leading indentation and runs of spaces. `pre`
    keeps nowrap's no-wrapping and preserves them all. Inline \verb (a <code>)
-   keeps its spaces but wraps, so a long one cannot widen a narrow page; in an
-   fvextra `breaklines` line's \parbox, `pre` would render the markup's
-   newlines as blank lines. */
+   keeps its spaces but wraps, so a long one cannot widen a narrow page; in a
+   table cell it stays unwrapped, as the cell is. In an fvextra `breaklines`
+   line's \parbox, `pre` would render the markup's newlines as blank lines: the
+   box is `normal`, its paragraph's text `pre-wrap` (wraps, keeps the spaces). */
 .ltx_verbatim { white-space:pre; }
 code.ltx_verbatim { white-space:pre-wrap; overflow-wrap:break-word; }
+.ltx_td code.ltx_verbatim, .ltx_th code.ltx_verbatim { white-space:pre; }
 .ltx_verbatim .ltx_parbox { white-space:normal; }
+.ltx_verbatim .ltx_parbox .ltx_p { white-space:pre-wrap; }
 /* fancyvrb typesets each source line as a width-limited box — a span with
    ltx_text + ltx_verbatim + ltx_inline-block (\FancyVerbFormatLine binding
    hack) — and inline-blocks flow side-by-side in a wide window. One source
@@ -622,10 +625,13 @@ code.ltx_verbatim { white-space:pre-wrap; overflow-wrap:break-word; }
 /* latexml-oxide local delta (not in vanilla LaTeXML.css; issue #702): an fvextra
    `breaklines` line is a fixed break-indent box beside a print-width \parbox,
    wider than a phone. As a flex row the parbox shrinks to the capped line and its
-   text reflows, framed (`.ltx_break`) or not; the indent boxes keep their width. */
-.ltx_text.ltx_verbatim.ltx_inline-block:has(> .ltx_parbox) { display:flex; }
-.ltx_verbatim > .ltx_inline-block { flex-shrink:0; }
-.ltx_verbatim > .ltx_parbox { flex-shrink:1; min-width:0; }
+   text reflows, framed (`.ltx_break`) or not; the indent boxes keep their width.
+   An ltx_text kept around the indent boxes and parbox (it carries an id, as
+   with `numbers=left` on an indented line) passes its children to the row. */
+.ltx_text.ltx_verbatim.ltx_inline-block:has(> .ltx_parbox, > .ltx_text > .ltx_parbox) { display:flex; }
+.ltx_verbatim > .ltx_text:has(> .ltx_parbox) { display:contents; }
+.ltx_verbatim > .ltx_inline-block, .ltx_verbatim > .ltx_text > .ltx_inline-block { flex-shrink:0; }
+.ltx_verbatim > .ltx_parbox, .ltx_verbatim > .ltx_text > .ltx_parbox { flex-shrink:1; min-width:0; }
 /* line height 0 just for this layer, to keep the line-box compact */
 .ltx_foreignobject_content {
     display:block;
