@@ -583,14 +583,14 @@ pub(super) struct RhaiCommand {
 #[derive(Clone)]
 struct WhatsitProxy;
 
-/// Rhai proxy returned by `LookupDefinition(cs)` (#321). Carries only the CS name;
-/// each `push*/unshift*` re-looks-up the CURRENT front definition, splices a hook,
-/// and re-installs — so sequential pushes accumulate (mirroring Perl BookML's
-/// in-place mutation of the shared def-hash). `LookupDefinition` returns `()`, not
-/// this proxy, when the CS is undefined.
+/// Rhai proxy returned by `LookupDefinition(cs)` (#321): the CS and the meaning found, which `AssignMeaning`
+/// installs as Perl's definition object. Each `push*/unshift*` re-looks-up the CURRENT front definition, splices a
+/// hook and re-installs — so sequential pushes accumulate (Perl BookML's in-place mutation of the shared def-hash).
+/// `LookupDefinition` returns `()`, not this proxy, when the CS is undefined.
 #[derive(Clone)]
 struct DefinitionProxy {
-  cs: Token,
+  cs:      Token,
+  meaning: Stored,
 }
 
 /// Resolve the top whatsit active-context (used by `WhatsitProxy` methods).
@@ -679,10 +679,10 @@ pub fn load_script(src: &str) -> Result<usize> {
 }
 
 /// Build a partial `Font` from a Rhai map, Perl Font.pm `merge`'s keys (920-961) — the `fontmap!` analog, shared by
-/// `MergeFont` and every `font:` option. A named color resolves as `LookupColor`; an unknown key Warns.
+/// `MergeFont` and every `font:` option. A named color resolves as `lookup_font_color`; an unknown key Warns.
 fn font_from_rhai_map(opts: Map) -> latexml_core::common::font::Font {
   use latexml_core::common::font::rationalize_font_size;
-  use latexml_package::package::color_sty::lookup_color_obj;
+  use latexml_package::package::color_sty::lookup_font_color;
   let mut font = latexml_core::common::font::Font::default();
   let number = |val: &Dynamic| {
     val
@@ -700,8 +700,8 @@ fn font_from_rhai_map(opts: Map) -> latexml_core::common::font::Font {
       "language" => font.language = Some(v.into()),
       "mathstyle" => font.mathstyle = Some(v.into()),
       "opacity" => font.opacity = Some(v.into()),
-      "color" => font.color = Some(lookup_color_obj(&v)),
-      "background" => font.bg = Some(lookup_color_obj(&v)),
+      "color" => font.color = Some(lookup_font_color(&v)),
+      "background" => font.bg = Some(lookup_font_color(&v)),
       // Perl's rationalizeFontSize: a size name (`large`) scales the default size, a number is points.
       "size" => font.size = number(&val).or_else(|| Some(rationalize_font_size(&v))),
       "scale" => font.scale = number(&val),
@@ -844,8 +844,32 @@ fn stored_to_dynamic(v: Stored) -> Dynamic {
     ),
     Stored::Charcode(c) => Dynamic::from(i64::from(c)),
     Stored::Catcode(c) => Dynamic::from(c as i64),
+    // A stored definition is Perl's definition object: a `LookupDefinition` handle.
+    Stored::Expandable(_)
+    | Stored::Conditional(_)
+    | Stored::Primitive(_)
+    | Stored::MathPrimitive(_)
+    | Stored::Constructor(_)
+    | Stored::Register(_) => match definition_cs(&v) {
+      Some(cs) => Dynamic::from(DefinitionProxy { cs, meaning: v }),
+      None => Dynamic::from(v.to_string()),
+    },
     other => Dynamic::from(other.to_string()),
   }
+}
+
+/// The CS a stored definition defines.
+fn definition_cs(v: &Stored) -> Option<Token> {
+  use latexml_core::definition::Definition;
+  Some(match v {
+    Stored::Expandable(d) => d.get_cs().into_owned(),
+    Stored::Conditional(d) => d.get_cs().into_owned(),
+    Stored::Primitive(d) => d.get_cs().into_owned(),
+    Stored::MathPrimitive(d) => d.get_cs().into_owned(),
+    Stored::Constructor(d) => d.get_cs().into_owned(),
+    Stored::Register(d) => d.get_cs().into_owned(),
+    _ => return None,
+  })
 }
 
 /// Marshal a Rhai value INTO a `Stored` (Perl's value table is untyped, Package.pm AssignValue :261,
@@ -869,6 +893,8 @@ fn dynamic_to_stored(v: Dynamic) -> Stored {
     Stored::Token(token)
   } else if let Some(digested) = v.clone().try_cast::<Digested>() {
     Stored::Digested(digested)
+  } else if let Some(def) = v.clone().try_cast::<DefinitionProxy>() {
+    def.meaning
   } else if let Some(value) = values::dynamic_to_register_value(&v) {
     match value {
       RegisterValue::Number(n) => Stored::Number(n),

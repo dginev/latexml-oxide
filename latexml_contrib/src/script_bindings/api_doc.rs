@@ -742,7 +742,7 @@ const DOCS: &[(&str, Mirror, Doc)] = &[
     "Number",
     Mirror("Number", "Number!"),
     Doc::Note(
-      "Perl's `Number(n)`: an int, a float (truncated) or a numeric string; a string's numeric prefix otherwise, with Perl's `perl:warn` Warning (`\"12abc\"` is 12).",
+      "Perl's `Number(n)`: an int, a float (truncated), or a string read as Perl's `int()` (`\"1e3\"` is 1000, `\"1.5\"` 1); a string that is not wholly a number Warns `perl:warn` and reads its numeric prefix (`\"12abc\"` is 12). One reader with the core's `Number::from(String)`.",
     ),
   ),
   (
@@ -2182,7 +2182,7 @@ const DOCS: &[(&str, Mirror, Doc)] = &[
   (
     "Roman",
     Mirror("Roman", "Roman!"),
-    Doc::Note("Upper-case roman numerals of a number, as `Tokens`."),
+    Doc::Note("Upper-case roman numerals of a number, as `Tokens`; a `Number` as in `roman`."),
   ),
   (
     "SetCounter",
@@ -2230,7 +2230,9 @@ const DOCS: &[(&str, Mirror, Doc)] = &[
   (
     "roman",
     Mirror("roman", "roman!"),
-    Doc::Note("Lower-case roman numerals of a number, as `Tokens`."),
+    Doc::Note(
+      "Lower-case roman numerals of a number, as `Tokens`; a `Number` (CounterValue's) is read as its int, Warned once as deprecated.",
+    ),
   ),
 ];
 

@@ -70,52 +70,6 @@ fn unreadable(ctor: &str, spec: &str) -> RhaiResult<()> {
   engine::script_error("unexpected", spec, &msg, None)
 }
 
-fn number_of(spec: &str) -> Number {
-  // Perl `int($number)` (Number.pm `new`): truncated; a trailing non-number Warns as Perl's `isn't numeric` and
-  // reads the numeric prefix (`12abc` is 12).
-  let trimmed = spec.trim_start();
-  let prefix = numeric_prefix(trimmed);
-  if prefix.len() != trimmed.len() || prefix.is_empty() {
-    latexml_core::Warn!(
-      "perl",
-      "warn",
-      format!("Argument \"{spec}\" isn't numeric in int")
-    );
-  }
-  Number(prefix.parse::<f64>().map_or(0, |f| f.trunc() as i64))
-}
-
-/// The longest prefix of `s` Perl's string-to-number conversion reads: `[+-]?\d*(\.\d*)?([eE][+-]?\d+)?`.
-fn numeric_prefix(s: &str) -> &str {
-  let b = s.as_bytes();
-  let digits = |mut i: usize| {
-    while i < b.len() && b[i].is_ascii_digit() {
-      i += 1;
-    }
-    i
-  };
-  let mut i = usize::from(matches!(b.first(), Some(b'+' | b'-')));
-  let start = i;
-  i = digits(i);
-  let mut mantissa = i > start;
-  if b.get(i) == Some(&b'.') {
-    let j = digits(i + 1);
-    mantissa |= j > i + 1;
-    i = j;
-  }
-  if !mantissa {
-    return "";
-  }
-  if matches!(b.get(i), Some(b'e' | b'E')) {
-    let k = i + 1 + usize::from(matches!(b.get(i + 1), Some(b'+' | b'-')));
-    let e = digits(k);
-    if e > k {
-      i = e;
-    }
-  }
-  &s[..i]
-}
-
 fn dimension_of(spec: &str) -> RhaiResult<Dimension> {
   if Dimension::is_spec(spec) {
     Dimension::spec_to_f64(spec)
@@ -182,7 +136,7 @@ fn register_value_of_spec(operation: &str, cs: &Token, spec: &str) -> RhaiResult
     },
   };
   Ok(match declared {
-    RegisterType::Number => number_of(spec).into(),
+    RegisterType::Number => Number::from_str_value(spec).into(),
     RegisterType::Glue => glue_of(spec)?.into(),
     RegisterType::MuGlue => muglue_of(spec)?.into(),
     RegisterType::Tokens => mouth::tokenize_internal(TeXString::assembled(spec.to_string())).into(),
@@ -354,7 +308,8 @@ pub(super) fn register_values(engine: &mut Engine) {
   // Perl's constructors: a spec string, or an integer (Number's value, the others' sp).
   engine.register_fn("Number", |n: i64| Number(n));
   engine.register_fn("Number", |f: f64| Number(f.trunc() as i64));
-  engine.register_fn("Number", number_of);
+  // Perl's `int($number)` (Number.pm:31-34), the core's `Number::from(String)`.
+  engine.register_fn("Number", Number::from_str_value);
   engine.register_fn("Dimension", |sp: i64| Dimension(sp));
   engine.register_fn("Dimension", |sp: f64| Dimension::new_f64(sp));
   engine.register_fn("Dimension", |s: &str| dimension_of(s));
@@ -484,24 +439,35 @@ pub(super) fn register_values(engine: &mut Engine) {
 
 fn prec_of(prec: i64) -> u8 { prec.clamp(0, 5) as u8 }
 
-/// `Number ⊕ int` and `int ⊕ Number` as the int arithmetic and comparisons they were, each Warned once per load.
+/// `Number ⊕ int`, `int ⊕ Number` and the float pairs as the arithmetic and comparisons they were, each Warned once
+/// per load (an unregistered Rhai comparison of two types answers `false` silently).
 fn register_number_int_transition(engine: &mut Engine) {
   fn int(n: Number) -> i64 {
     warn_deprecated("Number as an int");
     n.0
   }
+  fn float(n: Number) -> f64 { int(n) as f64 }
   engine.register_fn("+", |a: Number, b: i64| int(a) + b);
   engine.register_fn("+", |a: i64, b: Number| a + int(b));
   engine.register_fn("-", |a: Number, b: i64| int(a) - b);
   engine.register_fn("-", |a: i64, b: Number| a - int(b));
-  engine.register_fn("==", |a: Number, b: i64| int(a) == b);
-  engine.register_fn("==", |a: i64, b: Number| a == int(b));
-  engine.register_fn("!=", |a: Number, b: i64| int(a) != b);
-  engine.register_fn("!=", |a: i64, b: Number| a != int(b));
-  engine.register_fn("<", |a: Number, b: i64| int(a) < b);
-  engine.register_fn("<=", |a: Number, b: i64| int(a) <= b);
-  engine.register_fn(">", |a: Number, b: i64| int(a) > b);
-  engine.register_fn(">=", |a: Number, b: i64| int(a) >= b);
+  engine.register_fn("*", |a: i64, b: Number| a * int(b));
+  engine.register_fn("+", |a: Number, b: f64| float(a) + b);
+  engine.register_fn("+", |a: f64, b: Number| a + float(b));
+  engine.register_fn("-", |a: Number, b: f64| float(a) - b);
+  engine.register_fn("-", |a: f64, b: Number| a - float(b));
+  engine.register_fn("*", |a: f64, b: Number| a * float(b));
+  engine.register_fn("/", |a: Number, b: f64| float(a) / b);
+  engine.register_fn("/", |a: f64, b: Number| a / float(b));
+  macro_rules! compare {
+    ($($op:tt)*) => {$(
+      engine.register_fn(stringify!($op), |a: Number, b: i64| int(a) $op b);
+      engine.register_fn(stringify!($op), |a: i64, b: Number| a $op int(b));
+      engine.register_fn(stringify!($op), |a: Number, b: f64| float(a) $op b);
+      engine.register_fn(stringify!($op), |a: f64, b: Number| a $op float(b));
+    )*};
+  }
+  compare!(== != < <= > >=);
 }
 
 /// MuGlue + MuGlue as TeX adds glue (tex.web §1239): Glue's addition over the mu components.

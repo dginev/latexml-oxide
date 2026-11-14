@@ -142,6 +142,16 @@
     `document.setAttribute(key, value)` is deprecated for Perl's `(node, key, value)`.
     Guard `cluster_package_guards::perfect_kernel_batchw3rg`.
 
+  - **Rhai round G review fixes** (PR #829 round H). `int`/float comparisons and equality with a
+    Number, in either order, compare as ints with the deprecation Warning (`0 < CounterValue(c)`
+    was `false` silently), and `roman`/`Roman` take a Number the same way. A `LookupDefinition`
+    handle keeps the definition it found, so `AssignMeaning` after a redefinition installs the old
+    one, as Perl's. A base colour name (`red`) in `MergeFont` or a `font:` option needs no colour
+    package (dvipsnam.def is read only once one defines `\DefineNamedColor`; it was 4 Errors and
+    Black). `Number(string)` and the core `Number::from(String)` are one reader, Perl's `int()`:
+    `"1e3"` is 1000, a string not wholly a number Warns and reads its numeric prefix (the core gave
+    0 silently). Guard `perfect_kernel_batchw3rg::rhai_perl_names_review_rows`.
+
   - **Rhai Def* option bags follow Perl's option tables** (PR #829 round A). Each of
     `DefMacro`, `DefPrimitive`, `DefConstructor`, `DefEnvironment`, `DefMath` and
     `DefConditional` checks its bag against Perl's key table (Package.pm `CheckOptions`);

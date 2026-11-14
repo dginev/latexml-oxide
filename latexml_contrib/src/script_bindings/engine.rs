@@ -920,8 +920,8 @@ pub(super) fn make_engine() -> Engine {
     },
   );
 
-  // Perl `$STATE->assignMeaning($token, $meaning, $scope)` (State.pm:380), the `AssignMeaning!` macro: the meaning a
-  // `LookupDefinition` handle names (its current definition), a Token (`\let\x=a`), or `()` (undefines). A string
+  // Perl `$STATE->assignMeaning($token, $meaning, $scope)` (State.pm:380), the `AssignMeaning!` macro: the definition a
+  // `LookupDefinition` handle found (as Perl's object, unchanged by a later redefinition), a Token (`\let\x=a`), or `()` (undefines). A string
   // meaning is the old `Let` form, kept one release with a Warning.
   fn assign_meaning(
     cs: Dynamic,
@@ -935,8 +935,7 @@ pub(super) fn make_engine() -> Engine {
     } else if meaning.is_unit() {
       latexml_core::state::assign_meaning(&cs, Stored::None, scope);
     } else if let Some(def) = meaning.clone().try_cast::<DefinitionProxy>() {
-      let current = latexml_core::state::lookup_meaning(&def.cs).unwrap_or_default();
-      latexml_core::state::assign_meaning(&cs, current, scope);
+      latexml_core::state::assign_meaning(&cs, def.meaning, scope);
     } else {
       latexml_core::state::assign_meaning(&cs, token_arg("AssignMeaning", meaning)?, scope);
     }
@@ -1151,6 +1150,18 @@ pub(super) fn make_engine() -> Engine {
   engine.register_fn("Roman", |n: i64| {
     explode(
       &latexml_core::common::cleaners::roman_aux(n).to_ascii_uppercase(),
+      true,
+    )
+  });
+  // CounterValue returned an int before it returned Perl's Number: `roman(CounterValue(c))` keeps working, Warned.
+  engine.register_fn("roman", |n: Number| {
+    warn_deprecated("Number as an int");
+    explode(&latexml_core::common::cleaners::roman_aux(n.0), true)
+  });
+  engine.register_fn("Roman", |n: Number| {
+    warn_deprecated("Number as an int");
+    explode(
+      &latexml_core::common::cleaners::roman_aux(n.0).to_ascii_uppercase(),
       true,
     )
   });
@@ -2617,7 +2628,10 @@ pub(super) fn make_engine() -> Engine {
     |cs: Dynamic| -> std::result::Result<Dynamic, Box<EvalAltResult>> {
       let cs = token_arg("LookupDefinition", cs)?;
       Ok(match latexml_core::state::lookup_definition(&cs) {
-        Ok(Some(_)) => Dynamic::from(DefinitionProxy { cs }),
+        Ok(Some(_)) => match latexml_core::state::lookup_meaning(&cs) {
+          Some(meaning) => Dynamic::from(DefinitionProxy { cs, meaning }),
+          None => Dynamic::UNIT,
+        },
         _ => Dynamic::UNIT,
       })
     },

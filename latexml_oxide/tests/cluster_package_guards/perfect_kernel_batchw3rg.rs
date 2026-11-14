@@ -54,16 +54,7 @@ Text \fooA{x}.
 \end{document}
 ";
 
-/// Each row red on 72b3971e4ca (round F), Perl's output beside it. p1 (row 1): `MergeFont`'s Font.pm merge keys
-/// `color`/`background`/`size` by name/`forcebold` (all dropped; Perl `color="red"`, a name, where ours holds
-/// LookupColor's Color); an unknown key Warns (Perl ignores it). p2: ExplodeText's `é` is OTHER (row 3; 0 before);
-/// CounterValue a Number (row 5; i64); SetCounter/AddToCounter of a Number, StepCounter's `$noreset` (rows 6-7;
-/// "Function not found"); variadic Push/UnshiftValue (row 8); `Number("12abc")` 12 with Perl's `perl:warn` (row 10;
-/// an Error and 0) and Revert of a string; ptValue's precision clamped (row 11; 1.6); LookupDimension of a Token and
-/// of a Dimension (row 14). p3: `getAttribute` absent is `()` (row 2; ""), `document.setAttribute(node, k, v)` (row 9).
-/// p4 (AUDMAC, silent loss): a `DefPrimitive` body's returned box, or array of boxes, is the primitive's (`B`, `E`
-/// alone before), as Perl's `invoke` (Primitive.pm:78) and the `DefPrimitive!` macro.
-/// Diagnostics in Perl's `(cat, obj, $where, msg, @details)` form (row 4). Perl: 3 W, plus the Error; ours 1 W more.
+/// Rows red on 72b3971e4ca (round F), Perl's output beside each (OD #1032). Perl: 3 W plus the Error; ours 1 W more.
 #[test]
 fn rhai_perl_names_behave_as_perl() {
   let (log, xml) = convert_files_with(LXRG_TEX, &[("lxrg.sty.rhai", LXRG)], None);
@@ -94,6 +85,66 @@ fn rhai_perl_names_behave_as_perl() {
       r#"<para xml:id="p3"><p class="set3U">Text <text class="x">x</text>.</p></para>"#,
     ),
     ("p4", r#"<para xml:id="p4"><p>AB CDE</p></para>"#),
+  ] {
+    assert_element(&xml, "para", &[&format!("xml:id=\"{id}\"")], para);
+  }
+}
+
+/// W3RH, no colour package loaded: rows red on 02ce42ad5dc (revW3RFG). p1: a `LookupDefinition` handle keeps the
+/// definition it found, also stored as a value (`A:NEW:NEW`, `B:` an undefined `\baz`, before; Perl `A:OLD:NEW`). p2: a base colour name in `MergeFont` and a `font:` option
+/// without color.sty (dvipsnam.def read first: 4 Errors, Black; Perl 0 E; the `font:` colour outlives `\fC`, as Perl's). p3: `int ⊕ Number` and float pairs compare
+/// as ints (`0 < n` was `false` silently), `roman(Number)` (Function not found), Perl's `int()` of a string (OD #1032).
+const LXRH: &str = r#"DefMacro("\\foo", "OLD");
+DefMacro("\\swap", || { let d = LookupDefinition(T_CS("\\foo")); DefMacro("\\foo", "NEW"); AssignMeaning(T_CS("\\bar"), d); });
+DefMacro("\\saveit", || { AssignValue("saved", LookupDefinition(T_CS("\\foo"))); });
+DefMacro("\\restoreit", || { AssignMeaning(T_CS("\\baz"), LookupValue("saved")); });
+DefPrimitive("\\fR", || MergeFont(#{color: "red", background: "yellow"}));
+DefConstructor("\\fC{}", "<ltx:text class='c'>#1</ltx:text>", #{font: #{color: "blue"}});
+DefMacro("\\rows", || {
+  let n = CounterValue("cc");
+  let r = [0 < n, 3 <= n, 4 > n, 3 >= n, 3 == n, 4 != n, n < 3.5, 3.5 > n, n == 3.0, 3.0 == n, n + 0.5, 1.5 * n];
+  r.push(ToString(roman(n)) + ToString(Roman(n)));
+  for spec in ["1e3", ".5", "1.5", " -7 ", "abc"] { r.push(Number(spec).valueOf()); }
+  r.reduce(|s, v| if s == "" { `${v}` } else { s + " " + v }, "")
+});
+"#;
+
+const LXRH_TEX: &str = r"\documentclass{article}
+\usepackage{lxrh}
+\newcounter{cc}\setcounter{cc}{3}
+\begin{document}
+\swap A:\bar:\foo. \saveit\def\foo{NEWER}\restoreit B:\baz:\foo.
+
+{\fR D} \fC{E}
+
+\rows
+\end{document}
+";
+
+#[test]
+fn rhai_perl_names_review_rows() {
+  let (log, xml) = convert_files_with(LXRH_TEX, &[("lxrh.sty.rhai", LXRH)], None);
+  assert_eq!(error_count(&log), 0, "{log}");
+  assert_eq!(warning_count(&log), 2, "{log}");
+  for line in [
+    "Warning:deprecated:Number as an int",
+    "Warning:perl:warn Argument \"abc\" isn't numeric in int",
+  ] {
+    assert!(log.contains(line), "{line}\n{log}");
+  }
+  for (id, para) in [
+    (
+      "p1",
+      r#"<para xml:id="p1"><p>A:OLD:NEW. B:NEW:NEWER.</p></para>"#,
+    ),
+    (
+      "p2",
+      r##"<para xml:id="p2"><p><text backgroundcolor="#FFFF00" color="#FF0000">D</text> <text class="c" color="#0000FF">E</text></p></para>"##,
+    ),
+    (
+      "p3",
+      r##"<para xml:id="p3"><p><text color="#0000FF">true true true true true true true true true true 3.5 4.5 iiiIII 1000 0 1 -7 0</text></p></para>"##,
+    ),
   ] {
     assert_element(&xml, "para", &[&format!("xml:id=\"{id}\"")], para);
   }

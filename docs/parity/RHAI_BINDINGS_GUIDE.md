@@ -104,7 +104,7 @@ Each old name still works this release and Warns `Warning:deprecated` once per b
 | `DefAccent(cs, combining, standalone, true)` | `DefAccent(cs, combining, standalone, #{below: true})` |
 | a body naming only its arguments (`\|x\|`) | the Perl form (`\|gullet, x\|`) |
 | `value == "string"`, `() == ""` | `ToString(value) == "string"`, `defined(value)` / `!!value` |
-| `CounterValue(c) + 1`, `CounterValue(c) == 3` (an int before) | `CounterValue(c).valueOf() + 1` — it returns a Number, as Perl's |
+| `CounterValue(c) + 1`, `0 < CounterValue(c)`, `roman(CounterValue(c))` (an int before) | `CounterValue(c).valueOf() + 1` — it returns a Number, as Perl's |
 | `document.setAttribute(key, value)` (the current node) | `document.setAttribute(node, key, value)`, e.g. `document.getNode()` |
 | a `DefPrimitive` body whose last value is not a box (`\|\| RefStepCounter("c")`) | end it with `return;`, or return the boxes it should print |
 

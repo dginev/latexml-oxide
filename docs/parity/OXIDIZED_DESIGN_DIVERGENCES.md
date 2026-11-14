@@ -7774,8 +7774,9 @@ surrounding conditional bookkeeping ("Missing \fi or \else, conditional fell
 off end" at the .sty's EOF — the 13-bundle hep-* `expected:\fi` cluster).
 
 **Rust behavior**: `\@addtofilelist` receives `ExplodeText!` tokens —
-alphabetic chars catcode LETTER, the rest OTHER — exactly latex.ltx's
-`\string@makeletter` (L1784-1789) storage rule.
+the ASCII letters A-Z/a-z catcode LETTER, the rest (non-ASCII included) OTHER —
+exactly latex.ltx's `\string@makeletter` (L1784-1789) storage rule, whose
+`\char@if@alph` (L1790-1795) tests only those ranges.
 
 **Why**: kernel-contract restoration. hep-font.sty: first-error cluster →
 **0 errors**; hep-paper manual 370-warning cascade collapses to 2 unrelated
@@ -36201,3 +36202,24 @@ and the string form of `DefRegister`/`AssignRegister`, raise `Error:unexpected:<
 fresh register's unitless string (`DefRegister("\\c", "5")`) is the same Error, where Perl's untyped register errs at
 `\the`, while an existing register's declared type still reads it (`"5"` for a Number register is 5). A wrong value
 read silently is the likelier wrong output (BM, 2026-11-05). **Guard**: `perfect_kernel_batchw3rc::rhai_typed_registers_error_side`.
+
+### 1032. Rhai's Perl-named calls: where they keep our core's behaviour, and the transitions (PR #829 rounds G-H)
+
+**Perl.** `MergeFont(color => 'red')` keeps the name (`color="red"`) with or without a colour package, and Font.pm
+`merge` ignores an unknown key; `Number($s)` is `int($s)` (Number.pm:31-34; `"12abc"` Warns `isn't numeric`);
+`LookupDefinition` returns the definition object; `CounterValue` returns a Number; Perl's diagnostics take
+`(cat, obj, $where, msg, @details)`. **Rust.** The Rhai calls lower to the macros' core calls (rulings 10-13, DG
+2026-11-14): a colour name resolves to its colour (`#FF0000`), a base name (`red`, color.sty's eight) without a colour
+package included, while dvipsnam.def is read only once a package defines `\DefineNamedColor` (so `Blue` with no colour
+package is the lookup's Error and Black, where Perl prints the name); an unknown font key
+Warns; `Number(string)`, the string form of a Number register and the core `Number::from(String)` are one reader with
+Perl's `int()` (`"1e3"` 1000, `"1.5"` 1, a non-numeric remainder Warned and its prefix read), where the core read 0
+silently; a `LookupDefinition` handle keeps the meaning it found, so `AssignMeaning` installs it after a
+redefinition (`A:OLD:NEW`); a `DefPrimitive` body's returned box or array of boxes is its output (Primitive.pm:78).
+CounterValue's int uses (`+`, `-`, `*`, every comparison with an int or float in either order, `roman`/`Roman`) keep
+working one release with one deprecation Warning per load, since Rhai answers an unregistered comparison `false`
+silently. **Guards**: `perfect_kernel_batchw3rg::rhai_perl_names_behave_as_perl` (Font.pm keys, ExplodeText's ASCII
+letters, the counter calls, variadic Push/UnshiftValue, `ptValue`'s clamp, LookupDimension's argument forms,
+`getAttribute`/`setAttribute`, returned boxes, the diagnostics' form; Perl 3 W plus the Error, ours 1 W more, the
+unknown key), `perfect_kernel_batchw3rg::rhai_perl_names_review_rows` (no colour package, the kept definition, the
+mixed comparisons, `roman(Number)`, `Number(string)`).
