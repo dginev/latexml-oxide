@@ -652,9 +652,13 @@ code.ltx_verbatim { white-space:pre-wrap; overflow-wrap:break-word; }
    ltx_verbatim on an inline-block text span — inline \verb is a <code>
    without ltx_inline-block, so it is untouched. A line, and the box fvextra's
    xleftmargin/xrightmargin wrap it in (arXiv 2605.01024), is capped at its
-   container so a narrow viewport is not widened by its width. */
+   container so a narrow viewport is not widened by its width. That box is a flex
+   row, as TeX's \hbox{\kern\leftmargin\hbox to\linewidth{<line>}} is: its margin
+   (U+2003 text) stays beside the line, not on a line box of its own (a blank row
+   under every line, issue 853), and the line shrinks to the rest (#702). */
 .ltx_text.ltx_verbatim.ltx_inline-block { display:block; text-indent:0; min-height:1lh; max-width:100%; }
-.ltx_text.ltx_inline-block:has(> .ltx_text.ltx_verbatim.ltx_inline-block) { display:block; text-indent:0; max-width:100%; }
+.ltx_text.ltx_inline-block:has(> .ltx_text.ltx_verbatim.ltx_inline-block) { display:flex; text-indent:0; max-width:100%; }
+.ltx_text.ltx_inline-block > .ltx_text.ltx_verbatim.ltx_inline-block { min-width:0; }
 /* latexml-oxide local delta (not in vanilla LaTeXML.css; issue #525): a
    fancyvrb `frame=single` box (emitted by fancyvrb_sty.rs as an
    ltx_framed_rectangle carrying this class) spans the print \linewidth
