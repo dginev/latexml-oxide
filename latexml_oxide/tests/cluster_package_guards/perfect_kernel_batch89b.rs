@@ -102,8 +102,8 @@ fn undecodable_math_slot_is_fffd_and_warns() {
     r#"<XMTok role="CLOSE" stretchy="false">)</XMTok>"#,
   ];
   // Each simple symbol's Warning is at its first print, the position its box carries (89b round 2 kept it).
-  let expected_locations =
-    ["line 40 col 7", "line 40 col 38", "line 40 col 59"].map(|at| format!("at t; {at} - {at}"));
+  let expected_locations = ["line 40 col 7", "line 40 col 38", "line 40 col 59"]
+    .map(|at| format!("at t.tex; {at} - {at}"));
   let (log, xml) = convert_with(tex, Some(PRELOAD));
   assert_eq!((error_count(&log), warning_count(&log)), (0, 3), "{log}");
   assert_eq!(warnings(&log), expected_warnings, "{log}");
@@ -157,7 +157,7 @@ fn undecodable_math_accent_is_fffd_and_warns() {
     "Warning:missing_font_encoding:U/mathx Symbol font mathx (U/mathx) has no font map: the math accent \\mycheck \
      (slot \"71) prints U+FFFD, as will any other symbol of this font it cannot decode",
   ];
-  let accent_location = ["at t; line 22 col 10 - line 22 col 10"];
+  let accent_location = ["at t.tex; line 22 col 10 - line 22 col 10"];
   let (log, xml) = convert_with(tex, Some(PRELOAD));
   assert_eq!((error_count(&log), warning_count(&log)), (0, 1), "{log}");
   assert_eq!(warnings(&log), expected_warnings, "{log}");
@@ -200,7 +200,7 @@ fn undecodable_math_accent_is_fffd_and_warns() {
   );
   assert_eq!(
     warning_locations(&undeclared),
-    ["at t; line 4 col 12 - line 4 col 12"],
+    ["at t.tex; line 4 col 12 - line 4 col 12"],
     "{undeclared}"
   );
   let xml = squash(&xml);

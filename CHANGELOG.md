@@ -2,6 +2,59 @@
 
 ## Unreleased
 
+  - **The log locator names the file with its extension** (#794). A diagnostic's
+    location line read `at t; line 10 col 21 - …`, the file stem only; it now reads
+    `at t.tex; line 10 col 21 - …`, as Perl's `getShortSource` prints it, so a problem
+    matcher written for Perl's logs can find the file (a `.bib`'s own diagnostics name
+    `refs.bib` likewise when the reader has its path; an extension-less file reads `README.`,
+    as in Perl). The message layout is Perl's
+    (the message, then `at …`, then detail lines). Guard
+    `locator::tests::display_names_the_file_with_its_extension`; eleven guards that
+    pinned the stem now pin the file name.
+
+  - **A failing stylesheet is a Fatal, exits 1 and writes no output** (#782). A bad
+    XPath, an `xsl:message terminate="yes"` or a missing `xsl:import` logged
+    `Error:post:convert`, exited 0 and wrote the untransformed XML under the `.html`
+    name. A MathML or XSLT step that fails now stops post-processing with
+    `Fatal:post:convert` and nothing is written, as a die in Perl's ProcessChain does:
+    with `--split`, the pages this run rendered before the failing one are removed, serially
+    and under `LATEXML_RENDER_JOBS` (a page an earlier run left in the destination stays);
+    `api::convert_to_html` returns `Err` with the log. A core Fatal that keeps its partial
+    document is still post-processed and returned, as in Perl. A stylesheet that cannot be
+    found stays an Error, as in Perl. Guards `xslt_failure_is_fatal` (in
+    `cluster_xslt_split`), `api::tests::a_post_fatal_is_an_err` and
+    `api::tests::a_core_fatal_keeps_its_rescued_document`.
+
+  - **Split pages keep the document's processing instructions** (#795). With `--split`,
+    only the main page carried the `<?latexml …?>` PIs; the other pages lost them, so a
+    custom stylesheet reading them saw nothing there. Each page now gets a copy before its
+    root, as Perl's `newDocument` does (the streaming split already did). Guard
+    `document::tests::split_pages_carry_the_document_pis`.
+
+  - **An option given twice keeps its last value** (#530). `--urlstyle=file
+    --urlstyle=server` (and any other single-valued option or flag repeated) stopped
+    with "cannot be used multiple times"; the last one now wins, as with Perl's
+    GetOpt::Long, so a base option list can be overridden by appending to it. Repeatable
+    options (`--css`, `--path`, `--preload`, ...) still accumulate. Guard
+    `boolean_flag_last_wins_tests::repeated_options_are_last_wins`.
+
+  - **`--xsltparameter` takes Perl's `name:value`, and a malformed one is an error** (#803).
+    `--xsltparameter=FOO:bar` was silently ignored; it now sets `$FOO`, as in Perl's
+    `latexmlc`/`latexmlpost` (a `\w+` name, then `:`). `name=value` keeps working (it also
+    carries `{uri}name` names). A value with neither form stops the run with a usage error
+    (exit 2), as `latexmlpost` does (Perl's `latexmlc` only warns, LaTeXML.pm L574-578);
+    the library entry point logs an Error. Guard
+    `xsltparameter_tests` (in the binary's unit tests).
+
+  - **A `--stylesheet` on disk is used, even when it is named like a built-in one** (#806).
+    `--stylesheet=./LaTeXML-html5.xsl` loaded the embedded copy instead of the local file,
+    because the embedded stylesheets were matched by file name alone. A path that names an
+    existing file now loads that file, and so does an engine-named stylesheet it imports from
+    beside it; `urn:x-LaTeXML:XSLT:` imports and the default stylesheet always come from the
+    binary, whatever `resources/XSLT/` or `LaTeXML-*.xsl` files sit in the working or source
+    directory. A `%` in a plain path is a character (`/w/100%/LaTeXML-html5.xsl`); only a
+    `file:` URL is percent-decoded. Guards `xslt::local_stylesheet_tests`,
+    `xslt_custom_stylesheet::stray_engine_sheets_do_not_replace_the_default`.
   - **The no-dump expl3 reload no longer mutes its diagnostics silently** (#825). When
     `expl3.sty` re-reads `expl3-code.tex` raw (no kernel dump), the records the scope
     drops are now tallied (`IgnoreDiagnosticsScope::dropped`) and reported: a Warning
@@ -127,6 +180,11 @@
     It now rejects links by file type. Guard
     `only_this_users_files_no_one_else_can_write_are_trusted`, red on macOS
     before.
+  - **`--init` no longer segfaults intermittently on Linux.** `LATEXML_INI_MODE`
+    was set after the kpathsea prewarm thread started, so glibc's `setenv`
+    reallocated `environ` under that thread's `getenv` (7 of 200
+    `--init=latex.ltx` runs on Linux aarch64), failing `tools/make_formats.sh`.
+    It is now set before the thread exists (STABILITY_WITNESSES Cluster J).
 
   - **The XSLT recursion cap now applies in the statically linked release
     binaries.** `xsltMaxDepth = 1000` (Perl `XML::LibXSLT->max_depth(1000)`) was

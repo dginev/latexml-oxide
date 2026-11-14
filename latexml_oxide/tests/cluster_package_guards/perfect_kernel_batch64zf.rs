@@ -154,7 +154,7 @@ fn conditional_open_at_end_document() {
   );
   assert_eq!(
     lines_with(&log, "Conditional \\iftrue started"),
-    vec!["\tConditional \\iftrue started t; line 13 col 1 - line 13 col 8"],
+    vec!["\tConditional \\iftrue started t.tex; line 13 col 1 - line 13 col 8"],
     "{log}"
   );
   assert_element(
@@ -573,7 +573,7 @@ fn raw_sty_endgroup_against_hbox_is_one_error() {
   assert_eq!(error.len(), 1, "{log}");
   assert_eq!(warning_count(&log), 0, "{log}");
   assert!(
-    log.contains("at raw_sty_endgroup_against_hbox; line 2"),
+    log.contains("at raw_sty_endgroup_against_hbox.sty; line 2"),
     "{log}"
   );
   assert_element(
@@ -942,7 +942,7 @@ fn setspace_switch_in_a_section_title_reports_like_any_title_error() {
     "\\documentclass{article}\n\\usepackage{setspace}\n\\begin{document}\n\\section{\\doublespace T}\nZ.\n\\end{document}\n",
   );
   assert_eq!(error_count(&log), 2, "{log}");
-  assert_eq!(lines_with(&log, "\tat t; line 4").len(), 2, "{log}");
+  assert_eq!(lines_with(&log, "\tat t.tex; line 4").len(), 2, "{log}");
   assert!(!log.contains("Anonymous String"), "{log}");
   let (log, xml) = convert_ar5iv(
     "\\documentclass{article}\\usepackage{setspace}\n\\begin{document}\nText.\\footnote{{\\doublespace a} {\\doublespace b}} More.\n\\end{document}\n",

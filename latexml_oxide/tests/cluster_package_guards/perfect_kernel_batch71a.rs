@@ -527,14 +527,14 @@ fn undelimited_argument_warning_once_per_occurrence() {
     .collect();
   assert_eq!(located.len(), 12, "{log}");
   assert!(
-    located.iter().all(|at| at.starts_with("at t; line ")),
+    located.iter().all(|at| at.starts_with("at t.tex; line ")),
     "{log}"
   );
   assert_eq!(
     (located[0], located[11]),
     (
-      "at t; line 6 col 1 - line 6 col 37",
-      "at t; line 18 col 40 - line 18 col 40"
+      "at t.tex; line 6 col 1 - line 6 col 37",
+      "at t.tex; line 18 col 40 - line 18 col 40"
     ),
     "{log}"
   );

@@ -493,7 +493,7 @@ impl LatexmlWorker {
       // `<m:semantics>` that browsers render as stray text after every formula.
       cmml:                      false,
       keep_xmath:                false,
-      stylesheet:                Some("resources/XSLT/LaTeXML-html5.xsl"),
+      stylesheet:                latexml::post::default_stylesheet(Some("html5")),
       destination:               Some(&dest_html_str),
       source_directory:          Some(&source_dir),
       site_directory:            None,

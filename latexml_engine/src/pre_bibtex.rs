@@ -554,7 +554,8 @@ impl PreBibTeX {
     Ok(())
   }
 
-  /// Emit a diagnostic at the `.bib`'s own line (`at refs; line 9`), not at the
+  /// Emit a diagnostic at the `.bib`'s own line (`at refs.bib; line 9`, #794; a bare
+  /// `\bibliography` name stays bare), not at the
   /// anonymous string the reader was handed — an improvement on Perl, whose report
   /// says `at String; line 0 col 1` (OXIDIZED_DESIGN #518).
   /// The cap bookkeeping is `emit_error`'s (no `Error!` here: its location is
@@ -569,8 +570,8 @@ impl PreBibTeX {
     detail: &str,
   ) {
     let file = std::path::Path::new(&self.file_label)
-      .file_stem()
-      .and_then(|stem| stem.to_str())
+      .file_name()
+      .and_then(|name| name.to_str())
       .unwrap_or(&self.file_label);
     let text = s!("{message}\n\tat {file}; line {lineno}\n\t{detail}\n");
     if error {
