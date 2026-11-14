@@ -147,6 +147,49 @@ mod single_binary_smoke {
       "LaTeXML.css looks empty or invalid",
     );
   }
+
+  #[test]
+  fn class_and_opt_in_stylesheets_are_served_embedded() {
+    // moderncv's binding requests ltx-cv.css (Perl moderncv.cls.ltxml:25) and `--css=LaTeXML-epub.css`
+    // opts into Perl's epub page breaks: both were `missing_file` until embedded.
+    let bin = env!("CARGO_BIN_EXE_latexml_oxide");
+    let workdir = tempfile::tempdir().expect("create tempdir");
+    std::fs::write(
+      workdir.path().join("cv.tex"),
+      "\\documentclass{moderncv}\n\\firstname{Jane}\n\\familyname{Doe}\n\\begin{document}\n\
+       \\section{Education}\n\\cventry{2020}{PhD}{Uni}{City}{}{}\n\\newpage\nMore.\n\\end{document}\n",
+    )
+    .expect("write cv.tex");
+    let output = Command::new(bin)
+      .args(["cv.tex", "--css=LaTeXML-epub.css", "--dest", "cv.html"])
+      .current_dir(workdir.path())
+      .output()
+      .expect("spawn latexml_oxide");
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    let count = |p: &str| stderr.lines().filter(|l| l.starts_with(p)).count();
+    assert_eq!(
+      (count("Warning:"), count("Error:")),
+      (0, 0),
+      "no Warning/Error:\n{stderr}"
+    );
+    let html = std::fs::read_to_string(workdir.path().join("cv.html")).expect("read cv.html");
+    for css in ["ltx-cv.css", "LaTeXML-epub.css"] {
+      assert!(
+        html.contains(&format!(
+          "<link rel=\"stylesheet\" href=\"{css}\" type=\"text/css\">"
+        )),
+        "{css} linked:\n{html}"
+      );
+      let bundled = Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("../latexml_post/resources/CSS")
+        .join(css);
+      assert_eq!(
+        std::fs::read(workdir.path().join(css)).expect("copied css"),
+        std::fs::read(bundled).expect("bundled css"),
+        "{css} copied byte for byte"
+      );
+    }
+  }
 }
 
 mod telemetry {
@@ -448,6 +491,76 @@ mod cli_css_resource_copy {
       "remote @import should be left untouched, not copied locally",
     );
   }
+
+  /// Issue 807: every page links where `copyResource` put each resource, relative to that page (Perl
+  /// XSLT.pm:71-125) — an absolute `--css`/`--javascript` outside the source at the top level, a contained relative
+  /// one at its own path, `../` once from a split sub-page; the bundled `<ltx:resource>` CSS likewise.
+  #[test]
+  fn cli_resources_link_their_copies_from_every_page() {
+    let bin = env!("CARGO_BIN_EXE_latexml_oxide");
+    let work = tempfile::tempdir().expect("create tempdir");
+    let styles = work.path().join("styles");
+    std::fs::create_dir_all(styles.join("sub")).unwrap();
+    std::fs::write(styles.join("main.css"), "@import url(\"sub/x.css\");\n").unwrap();
+    std::fs::write(styles.join("sub/x.css"), "p { margin: 0; }\n").unwrap();
+    std::fs::write(styles.join("app.js"), "console.log(1);\n").unwrap();
+    let doc = work.path().join("doc");
+    std::fs::create_dir_all(doc.join("theme")).unwrap();
+    std::fs::write(doc.join("theme/rel.css"), "body { color: navy; }\n").unwrap();
+    std::fs::write(
+      doc.join("d.tex"),
+      "\\documentclass{article}\n\\begin{document}\n\\section{One}\\label{one}\nHello.\n\
+       \\subsection{Two}\\label{two}\nWorld.\n\\end{document}\n",
+    )
+    .unwrap();
+    let output = Command::new(bin)
+      .arg(format!("--css={}", styles.join("main.css").display()))
+      .arg("--css=theme/rel.css")
+      .arg(format!("--javascript={}", styles.join("app.js").display()))
+      .args([
+        "--split",
+        "--splitat=subsection",
+        "--splitnaming=labelrelative",
+        "--dest=h/d.html",
+        "d.tex",
+      ])
+      .current_dir(&doc)
+      .output()
+      .expect("spawn latexml_oxide");
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(output.status.success(), "stderr:\n{stderr}");
+    assert!(
+      !stderr.contains("Warning:") && !stderr.contains("Error:"),
+      "a clean conversion:\n{stderr}"
+    );
+    for copy in ["main.css", "sub/x.css", "theme/rel.css", "app.js"] {
+      assert!(doc.join("h").join(copy).is_file(), "{copy} not copied");
+    }
+    for (page, up) in [
+      ("d.html", ""),
+      ("one/index.html", "../"),
+      ("one/two.html", "../"),
+    ] {
+      let html = std::fs::read_to_string(doc.join("h").join(page)).unwrap();
+      let tags: Vec<&str> = ["<link", "<script"]
+        .iter()
+        .flat_map(|open| html.match_indices(open))
+        .map(|(at, _)| &html[at..at + html[at..].find('>').unwrap() + 1])
+        .filter(|tag| tag.contains("stylesheet") || tag.starts_with("<script"))
+        .collect();
+      let expected: Vec<String> = [
+        "LaTeXML.css",
+        "ltx-article.css",
+        "main.css",
+        "theme/rel.css",
+      ]
+      .iter()
+      .map(|css| format!("<link rel=\"stylesheet\" href=\"{up}{css}\" type=\"text/css\">"))
+      .chain([format!("<script src=\"{up}app.js\">")])
+      .collect();
+      assert_eq!(tags, expected, "{page}");
+    }
+  }
 }
 
 mod dest_htm_infers_html5 {
@@ -711,6 +824,61 @@ mod whatsinout {
 
   fn stderr_of(out: &std::process::Output) -> String {
     String::from_utf8_lossy(&out.stderr).to_string()
+  }
+
+  /// EPUBCheck (`apt install epubcheck`) finds nothing in `epub` but its known false reports. Absent, a visible
+  /// SKIP; with `LATEXML_EPUBCHECK_TESTS` set, absent is a failure.
+  fn assert_epubcheck_clean(epub: &Path) {
+    if Command::new("epubcheck").arg("--version").output().is_err() {
+      assert!(
+        std::env::var("LATEXML_EPUBCHECK_TESTS").is_err(),
+        "LATEXML_EPUBCHECK_TESTS is set but epubcheck is not on PATH"
+      );
+      eprintln!(
+        "SKIP epubcheck on {}: not on PATH (`apt install epubcheck`; LATEXML_EPUBCHECK_TESTS requires it)",
+        epub.display()
+      );
+      return;
+    }
+    let json = epub.with_extension("epubcheck.json");
+    let check = Command::new("epubcheck")
+      .arg(epub)
+      .arg("--json")
+      .arg(&json)
+      .output()
+      .expect("spawn epubcheck");
+    let report: serde_json::Value = serde_json::from_str(
+      &std::fs::read_to_string(&json).unwrap_or_default(),
+    )
+    .unwrap_or_else(|e| {
+      panic!(
+        "no epubcheck JSON ({e}):\n{}{}",
+        String::from_utf8_lossy(&check.stdout),
+        String::from_utf8_lossy(&check.stderr)
+      )
+    });
+    let messages: Vec<String> = report["messages"]
+      .as_array()
+      .expect("epubcheck's messages")
+      .iter()
+      .filter(|m| {
+        let (id, text) = (
+          m["ID"].as_str().unwrap_or(""),
+          m["message"].as_str().unwrap_or(""),
+        );
+        // EPUBCheck 4.2.6's CSS parser rejects Selectors-4 `:has(> …)`/`:is()` (LaTeXML.css, ar5iv.css): valid CSS.
+        // It validates MathML against MathML 3 (EPUB 3.3); `intent` is MathML 4, kept for screen readers (DG
+        // 2026-11-14).
+        id != "CSS-008" && !(id == "RSC-005" && text.contains("attribute \"intent\""))
+      })
+      .map(|m| {
+        format!(
+          "{} {} {} at {}",
+          m["severity"], m["ID"], m["message"], m["locations"]
+        )
+      })
+      .collect();
+    assert!(messages.is_empty(), "epubcheck:\n{}", messages.join("\n"));
   }
 
   #[test]
@@ -1013,6 +1181,239 @@ mod whatsinout {
       html.contains("Hello World"),
       "bundled HTML missing body:\n{html}"
     );
+  }
+
+  /// Issue 807: `--format=epub` writes the EPUB 3 container Perl `latexmlc --dest=x.epub` does (Manifest::Epub,
+  /// Pack/Zip.pm), not one bare XHTML file — `mimetype` first and STORED, the content and its CSS under `OPS/`.
+  #[test]
+  fn format_epub_writes_an_epub3_container() {
+    let work = tempfile::tempdir().expect("tempdir");
+    let tex = "\\documentclass{article}\n\\begin{document}\n\\section{Intro}\nHello $E = mc^2$.\n\\end{document}\n";
+    std::fs::write(work.path().join("min.tex"), tex).unwrap();
+    let out = run(work.path(), &[
+      "--format=epub",
+      "--dest=out.epub",
+      "min.tex",
+    ]);
+    let stderr = stderr_of(&out);
+    assert!(
+      out.status.success(),
+      "status {:?}\nstderr:\n{stderr}",
+      out.status.code()
+    );
+    assert!(
+      !stderr.contains("Warning:") && !stderr.contains("Error:"),
+      "a clean conversion:\n{stderr}"
+    );
+    let epub = work.path().join("out.epub");
+    let mut archive =
+      zip::ZipArchive::new(std::fs::File::open(&epub).unwrap()).expect("a zip container");
+    let names: Vec<String> = (0..archive.len())
+      .map(|i| archive.by_index(i).unwrap().name().unwrap().to_string())
+      .collect();
+    assert_eq!(names, [
+      "mimetype",
+      "META-INF/",
+      "META-INF/container.xml",
+      "OPS/",
+      "OPS/LaTeXML.css",
+      "OPS/content.opf",
+      "OPS/ltx-article.css",
+      "OPS/out.xhtml",
+    ]);
+    let mut mimetype = archive.by_index(0).unwrap();
+    assert_eq!(mimetype.compression(), zip::CompressionMethod::Stored);
+    let mut text = String::new();
+    mimetype.read_to_string(&mut text).unwrap();
+    assert_eq!(text, "application/epub+zip");
+    drop(mimetype);
+    let member = |archive: &mut zip::ZipArchive<std::fs::File>, name: &str| {
+      let mut text = String::new();
+      archive
+        .by_name(name)
+        .unwrap()
+        .read_to_string(&mut text)
+        .unwrap();
+      text
+    };
+    let opf = member(&mut archive, "OPS/content.opf");
+    let manifest = &opf[opf.find("<manifest>").expect("a manifest")..];
+    assert!(
+      manifest.starts_with(
+        "<manifest><item id=\"_out.xhtml\" href=\"out.xhtml\" media-type=\"application/xhtml+xml\" \
+         properties=\"mathml nav\"/><item id=\"_LaTeXML.css\" href=\"LaTeXML.css\" media-type=\"text/css\"/>\
+         <item id=\"_ltx-article.css\" href=\"ltx-article.css\" media-type=\"text/css\"/></manifest>\
+         <spine><itemref idref=\"_out.xhtml\"/></spine></package>"
+      ),
+      "{opf}"
+    );
+    assert!(
+      opf.contains("<dc:title>No Title</dc:title><dc:language>en</dc:language>"),
+      "{opf}"
+    );
+    // LaTeXML.pm check_TOC: the navigation document is the content's own undisplayed TOC.
+    let xhtml = member(&mut archive, "OPS/out.xhtml");
+    let nav = &xhtml[xhtml.find("<nav").expect("a nav")..xhtml.find("</nav>").expect("a nav") + 6];
+    assert_eq!(
+      nav,
+      "<nav xmlns:epub=\"http://www.idpf.org/2007/ops\" epub:type=\"toc\" \
+       class=\"ltx_TOC ltx_nodisplay ltx_list_toc ltx_toc_toc\">\n<ol class=\"ltx_toclist\">\n\
+       <li class=\"ltx_tocentry ltx_tocentry_section\"><a href=\"#S1\" title=\"\" class=\"ltx_ref\">\
+       <span class=\"ltx_text ltx_ref_title\"><span class=\"ltx_tag ltx_tag_ref\">1 </span>Intro</span></a></li>\n\
+       </ol></nav>"
+    );
+    assert!(!work.path().join("out.epub.zip").exists());
+    assert_epubcheck_clean(&epub);
+  }
+
+  /// Issue 807, `--split`: the manifest and spine list every page post wrote, subdirectories included, in Split's
+  /// order (the root, then each page before its children), as Perl's `@docs` reaches `Manifest::Epub::process`;
+  /// `S10` follows `S9`, not `S1`. Spine and manifest as Perl latexmlc writes them (review revI807).
+  #[test]
+  fn format_epub_split_pages_follow_splits_order() {
+    let work = tempfile::tempdir().expect("tempdir");
+    std::fs::write(
+      work.path().join("k.tex"),
+      include_str!("../../tools/perfect_kernel/repros/epub/split_pages_spine_reading_order.tex"),
+    )
+    .unwrap();
+    let out = run(work.path(), &[
+      "--split",
+      "--splitat=subsection",
+      "--splitnaming=labelrelative",
+      "--dest=k.epub",
+      "k.tex",
+    ]);
+    let stderr = stderr_of(&out);
+    assert!(
+      out.status.success(),
+      "status {:?}\nstderr:\n{stderr}",
+      out.status.code()
+    );
+    assert!(
+      !stderr.contains("Warning:") && !stderr.contains("Error:"),
+      "a clean conversion:\n{stderr}"
+    );
+    let mut archive =
+      zip::ZipArchive::new(std::fs::File::open(work.path().join("k.epub")).unwrap())
+        .expect("a zip container");
+    let mut pages: Vec<String> = (0..archive.len())
+      .map(|i| archive.by_index(i).unwrap().name().unwrap().to_string())
+      .filter(|name| name.ends_with(".xhtml"))
+      .collect();
+    pages.sort();
+    let sections: Vec<String> = (2..=11).map(|n| format!("S{n}/index.xhtml")).collect();
+    let mut expected: Vec<String> = ["k.xhtml", "sec_a/index.xhtml", "sec_a/sub_aa.xhtml"]
+      .iter()
+      .map(|page| page.to_string())
+      .chain(sections)
+      .collect();
+    let mut zipped: Vec<String> = expected.iter().map(|page| format!("OPS/{page}")).collect();
+    zipped.sort();
+    assert_eq!(pages, zipped);
+    let mut opf = String::new();
+    archive
+      .by_name("OPS/content.opf")
+      .unwrap()
+      .read_to_string(&mut opf)
+      .unwrap();
+    let id = |page: &str| format!("_{}", page.replace('/', "_x2F_"));
+    let items: String = expected
+      .iter()
+      .map(|page| {
+        let nav = if page == "k.xhtml" {
+          " properties=\"nav\""
+        } else {
+          ""
+        };
+        format!(
+          "<item id=\"{}\" href=\"{page}\" media-type=\"application/xhtml+xml\"{nav}/>",
+          id(page)
+        )
+      })
+      .collect();
+    let itemrefs: String = expected
+      .drain(..)
+      .map(|page| format!("<itemref idref=\"{}\"/>", id(&page)))
+      .collect();
+    let manifest = opf[opf.find("<manifest>").expect("a manifest")..].trim_end();
+    assert_eq!(
+      manifest,
+      format!(
+        "<manifest>{items}<item id=\"_LaTeXML.css\" href=\"LaTeXML.css\" media-type=\"text/css\"/>\
+         <item id=\"_ltx-article.css\" href=\"ltx-article.css\" media-type=\"text/css\"/></manifest>\
+         <spine>{itemrefs}</spine></package>"
+      )
+    );
+    assert_epubcheck_clean(&work.path().join("k.epub"));
+  }
+
+  /// Issue 807, DG's scenario: `--preload=ar5iv.sty` drops the default resources, so `--css` brings the stylesheet;
+  /// the EPUB carries it and its `@import`, and the page links the copy (Perl XSLT.pm:71-78), not the absolute path.
+  #[test]
+  fn format_epub_ar5iv_preload_carries_the_css_param() {
+    let work = tempfile::tempdir().expect("tempdir");
+    let styles = work.path().join("styles");
+    std::fs::create_dir_all(styles.join("sub")).unwrap();
+    std::fs::write(
+      styles.join("main.css"),
+      "@import url(\"sub/x.css\");\nbody { color: navy; }\n",
+    )
+    .unwrap();
+    std::fs::write(styles.join("sub/x.css"), "p { margin: 0; }\n").unwrap();
+    let doc = work.path().join("doc");
+    std::fs::create_dir(&doc).unwrap();
+    // A section: without one there is no nav document (no_sections_no_nav_red.tex, shared with Perl).
+    let tex =
+      "\\documentclass{article}\n\\begin{document}\n\\section{One}\nHello.\n\\end{document}\n";
+    std::fs::write(doc.join("d.tex"), tex).unwrap();
+    let css = format!("--css={}", styles.join("main.css").display());
+    let out = run(&doc, &[
+      "--preload=ar5iv.sty",
+      &css,
+      "--dest=d.epub",
+      "d.tex",
+    ]);
+    let stderr = stderr_of(&out);
+    assert!(
+      out.status.success(),
+      "status {:?}\nstderr:\n{stderr}",
+      out.status.code()
+    );
+    assert!(
+      !stderr.contains("Warning:") && !stderr.contains("Error:"),
+      "a clean conversion:\n{stderr}"
+    );
+    let epub = doc.join("d.epub");
+    let mut archive =
+      zip::ZipArchive::new(std::fs::File::open(&epub).unwrap()).expect("a zip container");
+    let mut member = |name: &str| {
+      let mut text = String::new();
+      archive
+        .by_name(name)
+        .unwrap()
+        .read_to_string(&mut text)
+        .unwrap();
+      text
+    };
+    let opf = member("OPS/content.opf");
+    assert_eq!(
+      opf
+        [opf.find("<manifest>").expect("a manifest")..opf.find("</manifest>").expect("a manifest")]
+        .to_string(),
+      "<manifest><item id=\"_d.xhtml\" href=\"d.xhtml\" media-type=\"application/xhtml+xml\" \
+       properties=\"nav\"/><item id=\"_main.css\" href=\"main.css\" media-type=\"text/css\"/>\
+       <item id=\"_sub_x2F_x.css\" href=\"sub/x.css\" media-type=\"text/css\"/>"
+    );
+    let xhtml = member("OPS/d.xhtml");
+    let links: Vec<&str> = xhtml
+      .match_indices("<link")
+      .map(|(at, _)| &xhtml[at..at + xhtml[at..].find('>').unwrap() + 1])
+      .collect();
+    assert_eq!(links, [
+      "<link rel=\"stylesheet\" href=\"main.css\" type=\"text/css\"/>"
+    ]);
+    assert_epubcheck_clean(&epub);
   }
 
   /// A zip of `entries` at `path`, as arXiv ships a submission.
@@ -2007,31 +2408,11 @@ mod display_math_text_nowrap {
   }
 }
 
-mod browser_render_display_math {
-  //! #527, the *rendered* guarantee: a real headless browser must lay out both a
-  //! pure-`\text{}` display and a mixed math+text display on ONE line without
-  //! clipping. The two failure modes need two metrics, so CSS-string matching
-  //! (the sibling test) is not enough: without the fix the pure-text cell STACKS
-  //! (tall `cellHeight`) while the mixed cell CLIPS (`scrollWidth > clientWidth`).
-  //! `tests/browser/measure.js` renders via Playwright (system Chrome) and reports
-  //! the geometry of every `td.ltx_eqn_cell.ltx_align_center`.
-  //!
-  //! **Opt-in, LOCAL only — deliberately NOT run in CI** (a headless-browser job
-  //! is expensive; the platform-independent `display_math_text_nowrap` is the
-  //! CI-enforced guard). This self-skips (visibly) when node / `playwright-core`
-  //! / a system Chrome is absent, which is the default everywhere including CI.
-  //! To run it: `npm install` in `latexml_oxide/tests/browser`, then
-  //! `LATEXML_BROWSER_TESTS=1 cargo test … browser_render_display_math` — with
-  //! that env set a missing toolchain becomes a hard FAILURE rather than a skip.
+mod browser_harness {
+  //! The opt-in headless-browser guards' shared step: convert a document to HTML5
+  //! with the bundled CSS and run a `tests/browser/*.js` measure script on it.
 
   use std::{fs, path::PathBuf, process::Command};
-
-  const DOC: &str = "\\documentclass[12pt]{article}\n\
-                     \\usepackage{amsmath}\n\
-                     \\begin{document}\n\
-                     \\[\n\\text{The solution is not valid}\n\\]\n\n\
-                     \\[\nx^2 + \\text{the solution is not valid here} = y^2\n\\]\n\
-                     \\end{document}\n";
 
   fn browser_dir() -> PathBuf { PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/browser") }
   fn runs(cmd: &str, arg: &str) -> bool {
@@ -2057,11 +2438,11 @@ mod browser_render_display_math {
       && browser_dir().join("node_modules/playwright-core").is_dir()
   }
 
-  #[test]
-  fn display_math_renders_on_one_line_without_clipping() {
+  /// The measure script's stdout for `doc`, or `None` after a visible SKIP when
+  /// node / playwright-core / a system Chrome is absent. With
+  /// `LATEXML_BROWSER_TESTS` set a missing toolchain is a failure, never a green.
+  pub fn render_and_measure(issue: &str, doc: &str, script: &str) -> Option<String> {
     if !toolchain_ready() {
-      // CI opts in via LATEXML_BROWSER_TESTS: there a missing toolchain is a
-      // failure (never a silent green), everywhere else it is a visible skip.
       assert!(
         std::env::var("LATEXML_BROWSER_TESTS").is_err(),
         "LATEXML_BROWSER_TESTS is set but node + playwright-core + a system Chrome \
@@ -2069,16 +2450,15 @@ mod browser_render_display_math {
         browser_dir().display()
       );
       eprintln!(
-        "SKIP browser render (#527): node/playwright-core/chrome unavailable — \
+        "SKIP browser render ({issue}): node/playwright-core/chrome unavailable — \
          `npm ci` in {} and set LATEXML_BROWSER_TESTS to require it",
         browser_dir().display()
       );
-      return;
+      return None;
     }
-
     let workdir = tempfile::tempdir().expect("tempdir");
     let root = workdir.path();
-    fs::write(root.join("doc.tex"), DOC).unwrap();
+    fs::write(root.join("doc.tex"), doc).unwrap();
     let conv = Command::new(env!("CARGO_BIN_EXE_latexml_oxide"))
       .current_dir(root)
       .arg("--format=html5")
@@ -2091,19 +2471,51 @@ mod browser_render_display_math {
       "conversion produced no HTML:\n{}",
       String::from_utf8_lossy(&conv.stderr)
     );
-
     let url = format!("file://{}", root.join("out.html").display());
     let m = Command::new("node")
-      .arg(browser_dir().join("measure.js"))
+      .arg(browser_dir().join(script))
       .arg(&url)
       .output()
-      .expect("run measure.js");
-    let stdout = String::from_utf8_lossy(&m.stdout);
+      .unwrap_or_else(|e| panic!("run {script}: {e}"));
+    let stdout = String::from_utf8_lossy(&m.stdout).into_owned();
     assert!(
       m.status.success(),
-      "measure.js failed: {}\n{stdout}",
+      "{script} failed: {}\n{stdout}",
       String::from_utf8_lossy(&m.stderr)
     );
+    Some(stdout)
+  }
+}
+
+mod browser_render_display_math {
+  //! #527, the *rendered* guarantee: a real headless browser must lay out both a
+  //! pure-`\text{}` display and a mixed math+text display on ONE line without
+  //! clipping. The two failure modes need two metrics, so CSS-string matching
+  //! (the sibling test) is not enough: without the fix the pure-text cell STACKS
+  //! (tall `cellHeight`) while the mixed cell CLIPS (`scrollWidth > clientWidth`).
+  //! `tests/browser/measure.js` renders via Playwright (system Chrome) and reports
+  //! the geometry of every `td.ltx_eqn_cell.ltx_align_center`.
+  //!
+  //! **Opt-in, LOCAL only — deliberately NOT run in CI** (a headless-browser job
+  //! is expensive; the platform-independent `display_math_text_nowrap` is the
+  //! CI-enforced guard). This self-skips (visibly) when node / `playwright-core`
+  //! / a system Chrome is absent, which is the default everywhere including CI.
+  //! To run it: `npm install` in `latexml_oxide/tests/browser`, then
+  //! `LATEXML_BROWSER_TESTS=1 cargo test … browser_render_display_math` — with
+  //! that env set a missing toolchain becomes a hard FAILURE rather than a skip.
+
+  const DOC: &str = "\\documentclass[12pt]{article}\n\
+                     \\usepackage{amsmath}\n\
+                     \\begin{document}\n\
+                     \\[\n\\text{The solution is not valid}\n\\]\n\n\
+                     \\[\nx^2 + \\text{the solution is not valid here} = y^2\n\\]\n\
+                     \\end{document}\n";
+
+  #[test]
+  fn display_math_renders_on_one_line_without_clipping() {
+    let Some(stdout) = super::browser_harness::render_and_measure("#527", DOC, "measure.js") else {
+      return;
+    };
 
     // One object per display-equation content cell.
     let cells: Vec<serde_json::Value> =
@@ -2150,8 +2562,6 @@ mod browser_render_aligned_math_spacing {
   //! platform-independent structural half is `aligned_mtable_columnspacing_zero`
   //! (below): the CSS reset only bites when `columnspacing="0pt"` is emitted.
 
-  use std::{fs, path::PathBuf, process::Command};
-
   // The reporter's MWE, distilled: a `gather*` wrapping an `aligned` makes the
   // whole thing ONE `<math>` with a native `<mtable>` (the path the bug lives on).
   const DOC: &str = "\\documentclass[12pt]{book}\n\
@@ -2163,75 +2573,13 @@ mod browser_render_aligned_math_spacing {
                      \\end{aligned}\n\\end{gather*}\n\
                      \\end{document}\n";
 
-  fn browser_dir() -> PathBuf { PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/browser") }
-  fn runs(cmd: &str, arg: &str) -> bool {
-    Command::new(cmd)
-      .arg(arg)
-      .output()
-      .map(|o| o.status.success())
-      .unwrap_or(false)
-  }
-  fn have_chrome() -> bool {
-    [
-      "google-chrome",
-      "google-chrome-stable",
-      "chromium",
-      "chromium-browser",
-    ]
-    .iter()
-    .any(|c| runs(c, "--version"))
-  }
-  fn toolchain_ready() -> bool {
-    runs("node", "--version")
-      && have_chrome()
-      && browser_dir().join("node_modules/playwright-core").is_dir()
-  }
-
   #[test]
   fn aligned_relation_is_not_double_spaced_by_mtd_padding() {
-    if !toolchain_ready() {
-      assert!(
-        std::env::var("LATEXML_BROWSER_TESTS").is_err(),
-        "LATEXML_BROWSER_TESTS is set but node + playwright-core + a system Chrome \
-         are not all available; run `npm ci` in {}",
-        browser_dir().display()
-      );
-      eprintln!(
-        "SKIP browser render (#755): node/playwright-core/chrome unavailable — \
-         `npm ci` in {} and set LATEXML_BROWSER_TESTS to require it",
-        browser_dir().display()
-      );
+    let Some(stdout) =
+      super::browser_harness::render_and_measure("#755", DOC, "measure_align_mtd.js")
+    else {
       return;
-    }
-
-    let workdir = tempfile::tempdir().expect("tempdir");
-    let root = workdir.path();
-    fs::write(root.join("doc.tex"), DOC).unwrap();
-    let conv = Command::new(env!("CARGO_BIN_EXE_latexml_oxide"))
-      .current_dir(root)
-      .arg("--format=html5")
-      .arg("--destination=out.html")
-      .arg("doc.tex")
-      .output()
-      .expect("run latexml_oxide");
-    assert!(
-      root.join("out.html").exists(),
-      "conversion produced no HTML:\n{}",
-      String::from_utf8_lossy(&conv.stderr)
-    );
-
-    let url = format!("file://{}", root.join("out.html").display());
-    let m = Command::new("node")
-      .arg(browser_dir().join("measure_align_mtd.js"))
-      .arg(&url)
-      .output()
-      .expect("run measure_align_mtd.js");
-    let stdout = String::from_utf8_lossy(&m.stdout);
-    assert!(
-      m.status.success(),
-      "measure_align_mtd.js failed: {}\n{stdout}",
-      String::from_utf8_lossy(&m.stderr)
-    );
+    };
 
     let v: serde_json::Value = serde_json::from_str(stdout.trim()).expect("parse JSON");
     let cells = v["cells"].as_array().expect("cells array");
@@ -2263,6 +2611,119 @@ mod browser_render_aligned_math_spacing {
       gap < 7.0,
       "aligned `y(x)`→`=` gap rendered {gap}px — double-spaced by mtd padding \
        (pre-fix ~10.8px; the relation space alone is ~4.4px): {stdout}"
+    );
+  }
+
+  /// #809 (inline `aligned`) and #755 (`gather*` around `aligned`): a left
+  /// column of unequal widths is right-aligned against the relation, so every
+  /// row's last-glyph→`=` gap is the relation's lspace alone (0.278 em; an
+  /// `mfrac` adds Chrome's 1px inline padding). Red before LaTeXML.css keyed
+  /// `justify-items` on `mtd[columnalign]`: 25.4/19.2/21.5/5.4 px at 16 px.
+  #[test]
+  fn aligned_left_column_is_right_aligned_against_the_relation() {
+    let doc = include_str!(
+      "../../tools/perfect_kernel/repros/alignment/aligned_left_column_is_right_aligned.tex"
+    );
+    if let Some(stdout) =
+      super::browser_harness::render_and_measure("#809", doc, "measure_align_mtd.js")
+    {
+      let v: serde_json::Value = serde_json::from_str(stdout.trim()).expect("parse JSON");
+      let rows = v["rowGaps"].as_array().expect("rowGaps array");
+      // Two `aligned` (inline, and in `gather*`) of 4 rows each.
+      assert_eq!(rows.len(), 8, "expected 8 aligned rows: {v}");
+      for (i, r) in rows.iter().enumerate() {
+        let gap = r["gap"].as_f64().expect("gap");
+        let want = 0.278 * r["fontPx"].as_f64().expect("fontPx");
+        assert!(
+          (gap - want).abs() <= 1.2,
+          "row {i}: left column→`=` gap {gap}px, want {want}px ± 1.2 — the left column \
+           is not right-aligned (LaTeXML.css `mtd[columnalign]`): {v}"
+        );
+      }
+    }
+  }
+}
+
+mod browser_render_verbatim_narrow {
+  //! Issues #431/#702, the *rendered* guarantee at a phone width (375 px): an fvextra
+  //! `breaklines` line wraps in its `\parbox` without blank rows from the markup's
+  //! newlines, a `frame=single` breaklines box (with xleftmargin's wrapper, arXiv
+  //! 2605.01024) reflows instead of scrolling, and neither it, an unframed one, a
+  //! numbered indented one (ids keep an `ltx_text` around its parbox) nor a long
+  //! inline `\verb` widens the page; a breaklines line keeps its spaces; a `\verb`
+  //! in a table cell stays one row, as the cell is nowrap. Opt-in and LOCAL like the
+  //! guards above; the CI half is
+  //! `witnessed_css_delta::verbatim_whitespace_delta_stays_present`.
+
+  const DOC: &str = "\\documentclass{article}\n\\usepackage[ids]{latexml}\n\
+     \\usepackage{fvextra}\n\\begin{document}\n\
+     \\begin{Verbatim}[frame=single,breaklines=true,xleftmargin=1mm]\n\
+     a framed very long line of verbatim text that wraps because breaklines is true and it goes on and on\n\
+     short\n\\end{Verbatim}\n\
+     \\begin{Verbatim}[breaklines=true]\n\
+     an unframed very long line of verbatim text that wraps because breaklines is true and it goes on and on\n\
+     \x20       return   x\n\
+     \\end{Verbatim}\n\
+     \\begin{Verbatim}[breaklines=true,numbers=left]\n\
+     \x20   print(i, \"a long string that must certainly break somewhere along the way ok\")\n\
+     \\end{Verbatim}\n\
+     A long inline \\verb|f(argument_one, argument_two, argument_three, argument_four)| ends here.\n\n\
+     \\begin{tabular}{ll}\n\
+     \\verb|alpha beta gamma delta| & \\verb|epsilon zeta eta theta|\n\
+     \\end{tabular}\n\
+     \\end{document}\n";
+
+  #[test]
+  fn breaklines_verbatim_reflows_at_phone_width() {
+    let Some(stdout) =
+      super::browser_harness::render_and_measure("#431/#702", DOC, "measure_verbatim.js")
+    else {
+      return;
+    };
+    let v: serde_json::Value = serde_json::from_str(stdout.trim()).expect("parse JSON");
+    // Before the fix: page 488 px, frame scrollWidth 468 > clientWidth 330, the
+    // one-row `short` line 60 px (four rows of markup newlines), \verb one rect.
+    // On 39397129a3f: page 479 px (the numbered line's ltx_text wrapper), each
+    // cell's \verb 3 rects, the line `return x` (spaces collapsed).
+    let (vw, doc_w) = (
+      v["vw"].as_f64().unwrap(),
+      v["docScrollWidth"].as_f64().unwrap(),
+    );
+    assert!(
+      doc_w <= vw,
+      "the page is {doc_w}px wide at {vw}px: {stdout}"
+    );
+    let frames = v["frames"].as_array().expect("frames");
+    assert_eq!(frames.len(), 1, "one frame=single box: {stdout}");
+    let (sw, cw) = (
+      frames[0]["scrollWidth"].as_f64().unwrap(),
+      frames[0]["clientWidth"].as_f64().unwrap(),
+    );
+    assert!(
+      sw <= cw + 1.0,
+      "the breaklines frame scrolls ({sw} > {cw}): {stdout}"
+    );
+    let (h, fs) = (
+      v["shortLine"]["height"].as_f64().unwrap(),
+      v["shortLine"]["fontSize"].as_f64().unwrap(),
+    );
+    assert!(
+      h < 2.0 * fs,
+      "a one-row breaklines line is {h}px at font {fs}px: {stdout}"
+    );
+    assert!(
+      v["codeRects"][0].as_u64().unwrap() > 1,
+      "the long \\verb did not wrap: {stdout}"
+    );
+    let cells = v["cellCodeRects"].as_array().expect("cellCodeRects");
+    assert!(
+      cells.len() == 2 && cells.iter().all(|n| n.as_u64() == Some(1)),
+      "a \\verb in a nowrap table cell wrapped: {stdout}"
+    );
+    assert_eq!(
+      v["returnLine"].as_str().map(str::trim_end),
+      Some("        return   x"),
+      "a breaklines line lost its spaces: {stdout}"
     );
   }
 }
@@ -2320,6 +2781,16 @@ mod aligned_mtable_columnspacing_zero {
     assert!(
       css.contains("mtable[columnspacing=\"0pt\"] mtd"),
       "LaTeXML.css is missing the native-MathML aligned mtd padding reset (#755)"
+    );
+    // #809: Core dropped `columnalign`; the left column is right-aligned only by the
+    // stylesheet rule keyed on it.
+    assert!(
+      html.contains("columnalign=\"right\""),
+      "aligned's left column lost columnalign=\"right\" (#809):\n{html}"
+    );
+    assert!(
+      css.contains("math mtd[columnalign=\"right\"]"),
+      "LaTeXML.css is missing the native-MathML mtd[columnalign] alignment (#809)"
     );
   }
 }

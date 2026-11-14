@@ -914,7 +914,7 @@
     </declare>
     <para xml:id="S6.p1">
       <equation xml:id="S6.Ex11">
-        <Math mode="display" tex="a\plus b;\baz,\foo{x},\foo{j}" text="list@(a + b, foo, foo@(x), foo@(j))" xml:id="S6.Ex11.m1">
+        <Math content-tex="a\plus b;\baz,\foo{x},\foo{j}" mode="display" tex="a+b;\mathbf{baz},\mathbf{foo},\mathbf{foo}" text="list@(a + b, foo, foo@(x), foo@(j))" xml:id="S6.Ex11.m1">
           <XMath>
             <XMDual>
               <XMApp>
@@ -954,7 +954,7 @@
         </Math>
       </equation>
       <equation xml:id="S6.Ex12">
-        <Math mode="display" tex="\oddball{a}{j};\oddball{abc}{j}" text="list@(oddball@(a, j), oddball@(a * b * c, j))" xml:id="S6.Ex12.m1">
+        <Math content-tex="\oddball{a}{j};\oddball{abc}{j}" mode="display" tex="\left|\left(a\right)_{j}\right|;\left|\left(abc\right)_{j}\right|" text="list@(oddball@(a, j), oddball@(a * b * c, j))" xml:id="S6.Ex12.m1">
           <XMath>
             <XMDual>
               <XMApp>
@@ -1015,7 +1015,7 @@
         </Math>
       </equation>
       <equation xml:id="S6.Ex13">
-        <Math mode="display" tex="\weird{a}{j};\weird{abc}{j}" text="list@(weird@(a, j), weird@(a * b * c, j))" xml:id="S6.Ex13.m1">
+        <Math content-tex="\weird{a}{j};\weird{abc}{j}" mode="display" tex="\left(\left[a\right]_{j}\right);\left(\left[abc\right]_{j}\right)" text="list@(weird@(a, j), weird@(a * b * c, j))" xml:id="S6.Ex13.m1">
           <XMath>
             <XMDual>
               <XMApp>

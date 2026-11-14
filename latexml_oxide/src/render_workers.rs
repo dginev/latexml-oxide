@@ -156,6 +156,8 @@ pub(crate) struct ParallelResult {
   /// A worker's MathML/XSLT step died (`Status:discard:1`): the pages written are removed and
   /// the render leaves no output (#782).
   pub(crate) discarded:      bool,
+  /// The pages the workers wrote, folded in chunk order — the serial render's page order.
+  pub(crate) written:        Vec<String>,
 }
 
 /// Remove the per-run handoff artifacts (db + WAL sidecars + manifests).
@@ -385,6 +387,7 @@ pub(crate) fn parallel_render(
       main_output:    None,
       pages_rendered: 0,
       discarded:      false,
+      written:        Vec::new(),
     });
   }
 
@@ -538,6 +541,7 @@ pub(crate) fn parallel_render(
       main_output:    None,
       pages_rendered: 0,
       discarded:      true,
+      written:        Vec::new(),
     });
   }
   let main_output = first_destination.and_then(|d| std::fs::read_to_string(&d).ok());
@@ -546,6 +550,7 @@ pub(crate) fn parallel_render(
     main_output,
     pages_rendered,
     discarded: false,
+    written,
   })
 }
 

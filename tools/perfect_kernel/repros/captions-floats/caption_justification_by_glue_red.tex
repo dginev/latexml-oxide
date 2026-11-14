@@ -1,0 +1,15 @@
+% issue #787, review revCAP3 item 2: a declared justification spelled as raw glue (`\leftskip`/`\rightskip` 0pt plus
+% 1fil) holds no alignment command, so it reads as `justify`; TeX centres each line. Same mechanism as
+% `caption_justification_through_a_macro_red`: read the digested alignment, not the body's spelling.
+% witness: synthetic
+% oracle:  pdflatex 0 errors; every line of the caption centred
+% engines: perl=0, `class="ltx_centering"` (the float's \centering); rust 639edab8d1=0, `text-align:justify`
+% expect:  0 errors, 0 warnings; `<caption cssstyle="text-align:center">`
+% status:  RED (moves: post-merge — read the alignment from the digested body, not its spelling)
+\documentclass{article}
+\usepackage{caption}
+\DeclareCaptionJustification{cskip}{\leftskip=0pt plus 1fil\rightskip=0pt plus 1fil\parfillskip=0pt}
+\captionsetup{justification=cskip,singlelinecheck=false}
+\begin{document}
+\begin{figure}\centering X\caption{A fairly long caption text that would surely run over more than a single line in the printed output so it wraps around.}\end{figure}
+\end{document}

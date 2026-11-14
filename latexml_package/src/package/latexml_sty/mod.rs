@@ -637,7 +637,7 @@ LoadDefinitions!({
     RawTeX!(r"\let\strcmp\pdfstrcmp");
     iftex_sty::define_xetex_interchar()?;
     set_l3sys_engine("xetex", "xelatex")?;
-    // After `\XeTeXrevision`: tuenc.def:49 takes its XeTeX branch on it.
+    // tuenc.def takes its XeTeX branch on `\XeTeXrevision` (v2.1d) or `\tex_Umathcode:D` (v2.2a, set by `set_l3sys_engine`).
     install_unicode_format_encoding()?;
   });
 

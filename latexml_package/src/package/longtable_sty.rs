@@ -230,8 +230,15 @@ LoadDefinitions!({
     engine::latex_constructs::begin_float_continuation("table");
     engine::latex_constructs::prepare_float_step("table")?;
     // Perl: AssignValue(LONGTABLE_CAPTIONS => [DigestText($toccap), DigestText($cap)], 'global')
+    // caption.sty:1169: `position=auto` is top while the table has no row (`\LT@rows`; caption_sty.rs, issue #787).
+    let rows = lookup_alignment()
+      .and_then(|a| a.alignment_cell().map(|data| data.borrow().rows().len()))
+      .unwrap_or_default();
+    let auto = if rows > 1 { "bottom" } else { "top" };
+    assign_value("lx@caption@auto", Stored::String(pin(auto)), Some(Scope::Global));
     let toccap_digested = digest_text(toccap)?;
     let cap_digested = digest_text(cap)?;
+    assign_value("lx@caption@auto", Stored::None, Some(Scope::Global));
     let captions = Stored::VecDigested(vec![toccap_digested, cap_digested]);
     assign_value("LONGTABLE_CAPTIONS", captions, Some(Scope::Global));
     Ok(())
@@ -332,6 +339,8 @@ LoadDefinitions!({
 });
 
 fn longtable_bindings(template: Template) -> Result<()> {
+  // ltcaption.sty's `\caption@LT@setup`: the table's captions take `\captionsetup[longtable]` (caption_sty.rs).
+  assign_value("lx@caption@longtable", Stored::Bool(true), None);
   let mut props = SymHashMap::default();
   props.insert("guess_headers", Stored::Bool(false));
   // longtable.sty:133 `\let\\\LT@tabularcr`, which opens with no brace (`\noalign\\` is "Missing { inserted")

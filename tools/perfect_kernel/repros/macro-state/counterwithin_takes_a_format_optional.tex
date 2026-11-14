@@ -1,0 +1,17 @@
+% mechanism: latex.ltx `\NewDocumentCommand \counterwithin {sO{\arabic}mm}` (and `\counterwithout`): an
+%   optional `[format]` replaces `\arabic` in the new `\the<ctr>`; Perl's `\counterwithin OptionalMatch:* {}{}`
+%   (latex_constructs.pool.ltxml:3079) reads `[` as the counter. tcolorbox 6.10's `number within` calls
+%   `\counterwithin[{\kvtcb@new@format}]` (tcolorbox.sty:2410), so every `auto counter,number within=` box erred.
+% witness: synthetic; the tcolorbox 6.10 guards (batch40_43, 54, 78g, cluster_newtcblisting_leading_optarg)
+% oracle:  pdflatex 0 errors, "[1.iii][B]"
+% engines: rust f2a0ab76509 (TL 2025): 2 errors (readBalanced), "]foosection]barsection" "[3][1.2]";
+%   perl the same text with 0 errors (silent)
+% expect:  0 errors; <p>[1.iii][B]</p>
+% status:  GREEN (WIN1b)
+\documentclass{article}
+\newcounter{foo}\newcounter{bar}
+\counterwithin[\roman]{foo}{section}\counterwithin{bar}{section}\counterwithout[{\Alph}]{bar}{section}
+\begin{document}
+\section{S}\setcounter{foo}{3}\setcounter{bar}{2}
+[\thefoo][\thebar]
+\end{document}

@@ -3,7 +3,7 @@ use std::{collections::VecDeque, str::FromStr};
 use super::{
   Alignment,
   cell::Cell,
-  template::{self, Align},
+  template::{self, Align, BorderSpec},
 };
 use crate::{
   BoxOps, Tokens,
@@ -196,17 +196,24 @@ fn normalize_overprint_spans(alignment: &mut Alignment) {
       } else {
         end
       };
+      let reach = cells[j]
+        .overprint_columns
+        .map_or(reach, |n| reach.min(j + n));
       if reach > start {
-        // The span's right edge is the last covered cell's.
-        if end > start {
-          let right: String = cells[end - 1]
+        // The span's right edge is the last covered cell's: a capped span (`\Block{1-2}`) stops before `end`.
+        let last = reach.min(end);
+        if last > start {
+          let right: String = cells[last - 1]
             .border
             .chars()
             .filter(|c| matches!(c, 'r' | 'R'))
             .collect();
+          let color = cells[end - 1]
+            .border_color_at(BorderSpec::Right)
+            .map(str::to_string);
           let spanning = &mut cells[j];
           spanning.border.retain(|c| !matches!(c, 'r' | 'R'));
-          spanning.border.push_str(&right);
+          spanning.add_border(&right, color.as_deref());
         }
         cells[j].colspan = Some(reach - j);
       }
@@ -413,20 +420,24 @@ pub fn normalize_mark_spans(alignment: &mut Alignment) -> Result<()> {
         if ii > i + 1 {
           let last_row_idx = ii - 1;
           let mut sborder = String::new();
+          let mut scolor = None;
           for jj in j..std::cmp::min(j + nc, alignment.rows[last_row_idx].get_columns().len()) {
-            let border = &alignment.rows[last_row_idx].get_columns()[jj].border;
+            let cell = &alignment.rows[last_row_idx].get_columns()[jj];
             if sborder.is_empty() {
               // mask all but bottom border
-              let bottom_only: String = border.chars().filter(|c| *c == 'b' || *c == 'B').collect();
+              let bottom_only: String = cell
+                .border
+                .chars()
+                .filter(|c| *c == 'b' || *c == 'B')
+                .collect();
               if !bottom_only.is_empty() {
                 sborder = bottom_only;
+                scolor = cell.border_color_at(BorderSpec::Bottom).map(str::to_string);
               }
             }
           }
           if !sborder.is_empty() {
-            alignment.rows[i].get_columns_mut()[j]
-              .border
-              .push_str(&sborder);
+            alignment.rows[i].get_columns_mut()[j].add_border(&sborder, scolor.as_deref());
           }
         }
       }
@@ -568,18 +579,22 @@ pub fn normalize_prune_rows(alignment: &mut Alignment) -> Result<()> {
           }
         }
         // Perl L767-771: mask all but top & bottom border, convert to top
-        let mut converted_border = String::new();
-        for border_c in rows[i].get_columns()[j].border.chars() {
+        let mut converted_border = Vec::new();
+        let pruned_cell = &rows[i].get_columns()[j];
+        for border_c in pruned_cell.border.chars() {
+          let color =
+            BorderSpec::of_letter(border_c).and_then(|side| pruned_cell.border_color_at(side));
           match border_c {
-            't' | 'b' => converted_border.push('t'),
-            'T' | 'B' => converted_border.push('T'),
+            't' | 'b' => converted_border.push(('t', color.map(str::to_string))),
+            'T' | 'B' => converted_border.push(('T', color.map(str::to_string))),
             _ => {},
           };
         }
-        if !converted_border.is_empty() && j < rows[next_idx].get_columns().len() {
-          rows[next_idx].get_columns_mut()[j]
-            .border
-            .push_str(&converted_border);
+        if j < rows[next_idx].get_columns().len() {
+          for (c, color) in converted_border {
+            rows[next_idx].get_columns_mut()[j]
+              .add_border(c.encode_utf8(&mut [0; 4]), color.as_deref());
+          }
         }
       }
       // Perl L773: save padding
@@ -616,18 +631,14 @@ pub fn normalize_prune_rows(alignment: &mut Alignment) -> Result<()> {
           };
         }
         if !converted_border.is_empty() && j < rows[prev_idx].get_columns().len() {
+          let color = rows[i].get_columns()[j]
+            .border_color_at(BorderSpec::Top)
+            .map(str::to_string);
           // Perl L790-792: follow rowspanned pointer
-          let ccol = &rows[prev_idx].get_columns()[j];
-          if let Some(rowspanned_idx) = ccol.rowspanned {
-            // Skip to spanning column
-            rows[rowspanned_idx].get_columns_mut()[j]
-              .border
-              .push_str(&converted_border);
-          } else {
-            rows[prev_idx].get_columns_mut()[j]
-              .border
-              .push_str(&converted_border);
-          }
+          let target = rows[prev_idx].get_columns()[j]
+            .rowspanned
+            .unwrap_or(prev_idx);
+          rows[target].get_columns_mut()[j].add_border(&converted_border, color.as_deref());
         }
       }
       // Perl L794: save padding
@@ -725,7 +736,7 @@ pub fn normalize_prune_columns(alignment: &mut Alignment) -> Result<()> {
           }
           continue;
         }
-        let mut new_border = String::new();
+        let mut new_border = Vec::new();
         let mut preserve = Vec::new();
         let mut colspanned = None;
         let mut lspaces_to_copy = None;
@@ -735,21 +746,15 @@ pub fn normalize_prune_columns(alignment: &mut Alignment) -> Result<()> {
             prunew = prunew.max(w.value_of());
           }
           // Perl L819-843: border handling
-          if j > 0 {
-            for c in col.border.chars() {
-              match c {
-                'l' | 'r' => new_border.push('r'),
-                'L' | 'R' => new_border.push('R'),
-                _ => {},
-              }
-            }
-          } else {
-            for c in col.border.chars() {
-              match c {
-                'l' | 'r' => new_border.push('l'),
-                'L' | 'R' => new_border.push('L'),
-                _ => {},
-              }
+          let (thin, thick) = if j > 0 { ('r', 'R') } else { ('l', 'L') };
+          for c in col.border.chars() {
+            let color = BorderSpec::of_letter(c)
+              .and_then(|side| col.border_color_at(side))
+              .map(str::to_string);
+            match c {
+              'l' | 'r' => new_border.push((thin, color)),
+              'L' | 'R' => new_border.push((thick, color)),
+              _ => {},
             }
           }
           preserve = preserved_boxes(col.boxes.as_ref());
@@ -782,8 +787,8 @@ pub fn normalize_prune_columns(alignment: &mut Alignment) -> Result<()> {
             idx
           };
           if let Some(prev) = row.get_columns_mut().get_mut(prev_idx) {
-            if !new_border.is_empty() {
-              prev.border.push_str(&new_border);
+            for (c, color) in &new_border {
+              prev.add_border(c.encode_utf8(&mut [0; 4]), color.as_deref());
             }
             // Perl L829-830: copy lspaces to prev's rspaces and update rpadding
             if let Some(ls) = lspaces_to_copy {
@@ -812,8 +817,8 @@ pub fn normalize_prune_columns(alignment: &mut Alignment) -> Result<()> {
         } else {
           // j==0: transfer to next column (now at index 0 after remove)
           if let Some(next) = row.get_columns_mut().get_mut(0) {
-            if !new_border.is_empty() {
-              next.border.push_str(&new_border);
+            for (c, color) in &new_border {
+              next.add_border(c.encode_utf8(&mut [0; 4]), color.as_deref());
             }
             // Perl L840-842: copy boxes to next
             if !preserve.is_empty() {

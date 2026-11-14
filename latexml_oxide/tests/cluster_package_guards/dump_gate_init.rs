@@ -249,10 +249,9 @@ fn current_file_is_defined_empty_under_latex() {
 /// and under nextest's 20 min terminate-after, so a genuine hang still surfaces:
 /// - issue #651 (witness: a bare `\usepackage{fvextra}` reported "Conversion
 ///   failed: 1 fatal error"): the symptom — an expl3-using document converts,
-///   exits 0 and keeps its body. Not the `expl3_sty.rs` mechanism that fixed it
-///   (scoping out the raw-load-only expl3-code.tex cascade, L33074-33180):
-///   `latex.rs`'s degraded branch has already raw-loaded expl3-code.tex, so
-///   `\tex_let:D` is defined and `expl3.sty` skips its own re-load;
+///   exits 0 and keeps its body; `expl3_sty.rs` mutes `expl3.sty`'s raw expl3-code.tex
+///   re-load (its raw-load-only cascade, L33074-33180) and, since issue #825, counts
+///   what it muted in one `Warning:expl3:raw-load`;
 /// - issue #719 (witness: user MWE): under `\parindent=0pt` the FIRST paragraph
 ///   is `ltx_noindent`. The first landing keyed the stamp on a one-shot that a
 ///   begin-document `\par` consumed first on this branch only; the stamp is now
@@ -260,7 +259,7 @@ fn current_file_is_defined_empty_under_latex() {
 ///   `06_cluster_regressions::cluster_first_para_noindent_719`;
 /// - the `\CurrentFile` family is defined and empty from `latex.rs`'s fallback
 ///   (dump half: `current_file_is_defined_empty_under_latex`), and the branch
-///   warns once, for its `recursion:LaTeX.pool` re-entrance;
+///   warns for its `recursion:LaTeX.pool` re-entrance;
 /// - `\@@underline` is latex.ltx:16368's saved `\underline` without a dump too
 ///   (KNOWN_PERL_ERRORS #987; dump half:
 ///   `perfect_kernel_batch77g::kernel_primitive_standins_mean_their_primitive`).
@@ -271,8 +270,15 @@ fn nodump_latex_branch_converts_healthily() {
   assert!(ok, "the NODUMP conversion exited non-zero:\n{stderr}");
   assert!(!stderr.contains("fatal error"), "{stderr}");
   assert_eq!(error_count(&stderr), 0, "{stderr}");
-  assert_eq!(warning_count(&stderr), 1, "{stderr}");
+  assert_eq!(warning_count(&stderr), 2, "{stderr}");
   assert!(stderr.contains("Warning:recursion:LaTeX.pool"), "{stderr}");
+  // (the muted re-load, counted: 5015 Error records on TL 2025, a count that varies with the tree, #825)
+  assert!(
+    stderr.contains(
+      "Warning:expl3:raw-load The raw expl3-code.tex reload (no kernel dump) completed with "
+    ),
+    "{stderr}"
+  );
   assert_element(
     &xml,
     "para",
@@ -435,8 +441,12 @@ fn a_dump_built_from_another_tree_is_not_used() {
   assert_eq!(error_count(&stderr), 0, "{stderr}");
   assert!(
     stderr.contains(&format!(
-      "Info:dump:other_tree latex dump {}/latex.{year}.dump.txt was built from another TeX tree: latex.ltx (built from /older/texlive/latex.ltx;",
-      forged.path().display()
+      "Info:dump:other_tree latex dump {} was built from another TeX tree: latex.ltx (built from /older/texlive/latex.ltx;",
+      // The engine names the dump by `Path::join`: `\` on Windows.
+      forged
+        .path()
+        .join(format!("latex.{year}.dump.txt"))
+        .display()
     )),
     "{stderr}"
   );
@@ -519,7 +529,9 @@ fn a_dump_built_from_another_tree_is_not_used() {
   )
   .expect("write a failing plain.tex");
   let mut failing = forced.to_vec();
-  failing.push(("TEXINPUTS", format!("{}:", shadow.path().display())));
+  // kpathsea's path separator: `;` on Windows, where `:` follows the drive letter.
+  let sep = if cfg!(windows) { ';' } else { ':' };
+  failing.push(("TEXINPUTS", format!("{}{sep}", shadow.path().display())));
   let plain_tex = "Text.\n\\bye\n";
   let failure = "building the plain format logged 1 error(s)";
   let (ok, stderr, _) = convert_cli_beside(plain_tex, &[], &failing);
@@ -621,10 +633,13 @@ fn a_dump_built_from_another_tree_is_not_used() {
   assert!(!stderr.contains("[format_dumps]"), "{stderr}");
   let loaded_from_matching = stderr.lines().any(|line| {
     line.starts_with("Info:dump_reader:loaded")
-      && line.contains(&format!(
-        "{}/latex.{year}.dump.txt",
-        matching.path().display()
-      ))
+      && line.contains(
+        &matching
+          .path()
+          .join(format!("latex.{year}.dump.txt"))
+          .display()
+          .to_string(),
+      )
   });
   assert!(loaded_from_matching, "{stderr}");
   assert_eq!(

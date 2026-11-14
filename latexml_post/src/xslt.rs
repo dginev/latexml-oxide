@@ -12,6 +12,7 @@ use std::{
   sync::LazyLock,
 };
 
+use latexml_core::util::pathname;
 use libxml::tree::Node;
 use regex::Regex;
 use rustc_hash::FxHashMap as HashMap;
@@ -398,6 +399,18 @@ impl XSLT {
   ///
   /// Port of `XSLT::copyResource`.
   fn copy_resource(&self, doc: &PostDocument, src: &str, resource_type: Option<&str>) -> String {
+    self.copy_resource_following(doc, src, resource_type, None)
+  }
+
+  /// [`copy_resource`](Self::copy_resource), and with `imports` (the `--css` route) also the copied CSS's local
+  /// `@import` chain (beyond Perl, [`copy_css_imports`]); `imports` dedups across one parameter's entries.
+  fn copy_resource_following(
+    &self,
+    doc: &PostDocument,
+    src: &str,
+    resource_type: Option<&str>,
+    imports: Option<&mut HashSet<PathBuf>>,
+  ) -> String {
     // If it's a URL, return as-is
     if src.starts_with("http://") || src.starts_with("https://") || src.starts_with("//") {
       return src.to_string();
@@ -432,7 +445,7 @@ impl XSLT {
     let rel_dest: String = if self.resource_directory.is_some() {
       basename.to_string()
     } else {
-      let relpath = latexml_core::util::pathname::relative(src, doc.get_source_directory());
+      let relpath = pathname::relative(src, doc.get_source_directory());
       if relpath.starts_with("../") || Path::new(&relpath).is_absolute() {
         basename.to_string()
       } else {
@@ -490,6 +503,11 @@ impl XSLT {
             Warn!("I/O", dest, "Couldn't copy {} to {}: {}", path, dest, e);
           }
         }
+        if let Some(seen) = imports
+          && info.is_some_and(|i| i.extension == "css")
+        {
+          copy_css_imports(Path::new(&path), Path::new(&dest), seen);
+        }
       },
       None => {
         // Not on disk — try the embedded table. CSS/JS assets are
@@ -520,195 +538,40 @@ impl XSLT {
       },
     }
 
-    // Return path relative to destination directory.
+    // Perl `pathname_relative($dest, $doc->getDestinationDirectory)`: `../x.css` from a split sub-page.
     if let Some(dest_dir) = doc.get_destination_directory() {
-      relative_path(&dest, dest_dir)
+      pathname::relative(&pathname::absolute(&dest), &pathname::absolute(dest_dir))
     } else {
       dest
     }
   }
 
-  /// Copy each resource named in a `"a|b|c"` quoted pipe-list stylesheet
-  /// parameter (`CSS`, `JAVASCRIPT`, `ICON`) to the destination so the
-  /// `<link>`/`<script>` the stylesheet emits actually resolve.
-  ///
-  /// Port of `XSLT::process` L71-78 (the param-resource copy, distinct from the
-  /// embedded `<ltx:resource>` handling): every `--css` / `--javascript` /
-  /// icon entry is searched on the path (then the embedded table), copied, and
-  /// a missing entry warns `missing_file`. This runs **regardless of
-  /// `no_resources`** — `--nodefaultresources` only governs embedded
-  /// `<ltx:resource>` nodes, not CLI-specified resources (Perl L62-78: the CSS/
-  /// JAVASCRIPT/ICON copies sit *outside* the `noresources` guard).
-  ///
-  /// The copy targets the **site directory** (the root the relativized links in
-  /// [`relativize_resource_params`] point at, via `../` for split sub-pages),
-  /// falling back to the destination directory when no site dir is set. Link
-  /// relativization itself stays in `relativize_resource_params`; this method
-  /// only performs the copy, so split/`--splitat` link paths are unchanged.
-  fn copy_param_resources(&self, doc: &PostDocument, value: &str, info: Option<&ResourceInfo>) {
-    let dest_root = match doc
+  /// The `CSS`/`JAVASCRIPT`/`ICON` stylesheet parameter (a `"a|b|c"` quoted pipe-list) with each entry copied
+  /// and replaced by the path `copy_resource` returns (Perl `XSLT::process` L71-78). This runs regardless of
+  /// `no_resources`: `--nodefaultresources` drops only the `<ltx:resource>` nodes (Perl L62-78).
+  fn copy_param_resources(
+    &self,
+    doc: &PostDocument,
+    value: &str,
+    resource_type: Option<&str>,
+  ) -> String {
+    if doc
       .get_site_directory()
       .or_else(|| doc.get_destination_directory())
+      .is_none()
     {
-      Some(d) => d.to_string(),
-      None => return,
-    };
-    let search_paths: Vec<&str> = doc
-      .get_search_paths()
-      .iter()
-      .chain(self.searchpaths.iter())
-      .map(String::as_str)
-      .collect();
-    // Only CSS recurses into its `@import`-ed sub-resources (below).
-    let is_css = info.is_some_and(|i| i.extension == "css");
-    // Cycle/dedup guard shared across every entry's @import graph.
+      return value.to_string();
+    }
     let mut seen: HashSet<PathBuf> = HashSet::new();
-    for entry in value.trim_matches('"').split('|') {
-      let entry = entry.trim();
-      // Skip empties and URLs (nothing to copy — same guard as copy_resource).
-      if entry.is_empty()
-        || entry.starts_with("http://")
-        || entry.starts_with("https://")
-        || entry.starts_with("//")
-      {
-        continue;
-      }
-      let basename = Path::new(entry)
-        .file_name()
-        .and_then(|f| f.to_str())
-        .unwrap_or(entry);
-      let dest = format!("{}/{}", dest_root, basename);
-      let ensure_parent = || {
-        if let Some(parent) = Path::new(&dest).parent() {
-          let _ = fs::create_dir_all(parent);
-        }
-      };
-      match find_resource_file(entry, info, &search_paths) {
-        Some(path) => {
-          if same_file(&path, &dest) {
-            // Only search-path match IS the destination — avoid the self-copy
-            // truncate; rewrite the embedded canonical bytes if bundled (#312).
-            if let Some(bytes) = embedded_resources::lookup(basename) {
-              ensure_parent();
-              if let Err(e) = fs::write(&dest, bytes) {
-                Warn!(
-                  "I/O",
-                  dest,
-                  "Couldn't rewrite embedded {} to {}: {}",
-                  basename,
-                  dest,
-                  e
-                );
-              }
-            }
-          } else {
-            ensure_parent();
-            if let Err(e) = fs::copy(&path, &dest) {
-              Warn!("I/O", dest, "Couldn't copy {} to {}: {}", path, dest, e);
-            }
-          }
-          // Beyond Perl: follow the copied CSS's local @import chain so split
-          // stylesheets (e.g. ar5iv.css -> ./ar5iv/*.css layer files) bring
-          // their sub-files along. Gated to CSS; no-op for JS/icon.
-          if is_css {
-            copy_css_imports(Path::new(&path), Path::new(&dest), &mut seen);
-          }
-        },
-        None => {
-          // Not on the path — try the binary's embedded resource table
-          // (same fallback as copy_resource, so bundled CSS/JS still land).
-          if let Some(bytes) = embedded_resources::lookup(basename) {
-            ensure_parent();
-            if let Err(e) = fs::write(&dest, bytes) {
-              Warn!(
-                "I/O",
-                dest,
-                "Couldn't write embedded resource {} to {}: {}",
-                basename,
-                dest,
-                e
-              );
-            }
-          } else {
-            Warn!(
-              "missing_file",
-              entry,
-              "Couldn't find resource file {} in paths {:?}",
-              entry,
-              search_paths
-            );
-          }
-        },
-      }
-    }
+    let entries: Vec<String> = value
+      .trim_matches('"')
+      .split('|')
+      .map(str::trim)
+      .filter(|entry| !entry.is_empty())
+      .map(|entry| self.copy_resource_following(doc, entry, resource_type, Some(&mut seen)))
+      .collect();
+    format!("\"{}\"", entries.join("|"))
   }
-
-  /// Build a per-doc parameter map with `CSS`, `JAVASCRIPT`, and `ICON`
-  /// relativized so each split sub-page references the resource at the
-  /// correct relative path.
-  ///
-  /// The raw values are constructed as `"foo.css|bar.css"` (quoted,
-  /// pipe-separated basenames) by the binary's `run_post_processing`.
-  /// They are interpreted as paths relative to the site root, so
-  /// sub-pages need `../foo.css` etc.
-  fn relativize_resource_params(&self, doc: &PostDocument) -> HashMap<String, String> {
-    let mut out = self.parameters.clone();
-    let (Some(site), Some(dest)) = (doc.get_site_directory(), doc.get_destination_directory())
-    else {
-      return out;
-    };
-    let prefix = match relative_dir_prefix(site, dest) {
-      Some(p) => p,
-      None => return out,
-    };
-    if prefix.is_empty() {
-      return out;
-    }
-    for key in ["CSS", "JAVASCRIPT", "ICON"] {
-      if let Some(value) = out.get(key).cloned() {
-        out.insert(
-          key.to_string(),
-          relativize_quoted_pipe_list(&value, &prefix),
-        );
-      }
-    }
-    out
-  }
-}
-
-/// Walk-up prefix from `dest_dir` to `site_dir`. Returns `Some("")` when
-/// they're identical, `Some("../")` when `dest_dir` is one level deeper,
-/// `Some("../../")` two levels, etc. Returns `None` if `dest_dir` is not
-/// inside `site_dir`.
-fn relative_dir_prefix(site_dir: &str, dest_dir: &str) -> Option<String> {
-  let site = Path::new(site_dir);
-  let dest = Path::new(dest_dir);
-  let rel = dest.strip_prefix(site).ok()?;
-  let depth = rel.components().count();
-  Some("../".repeat(depth))
-}
-
-/// Apply `prefix` to every basename in a `"a|b|c"` quoted pipe-list, but
-/// only when the entry doesn't already look absolute or scheme-prefixed.
-fn relativize_quoted_pipe_list(value: &str, prefix: &str) -> String {
-  let inner = value.trim_matches('"');
-  let parts: Vec<String> = inner
-    .split('|')
-    .map(|p| {
-      let p = p.trim();
-      if p.is_empty()
-        || p.starts_with('/')
-        || p.starts_with("./")
-        || p.starts_with("../")
-        || p.contains("://")
-      {
-        p.to_string()
-      } else {
-        format!("{}{}", prefix, p)
-      }
-    })
-    .collect();
-  format!("\"{}\"", parts.join("|"))
 }
 
 /// Extract the targets of CSS `@import` rules from stylesheet source.
@@ -854,21 +717,18 @@ impl Processor for XSLT {
       }
     }
 
-    // Copy CLI-specified --css/--javascript/icon resources to the destination
-    // and warn on any that can't be found. Port of XSLT::process L71-78 — the
-    // param-resource copy that the binary's `--css`/`--javascript` flow needs
-    // (those flags only set the CSS/JAVASCRIPT stylesheet params; without this
-    // the link is emitted but the file is never searched on --path or copied).
-    // Deliberately OUTSIDE the `no_resources` guard above: --nodefaultresources
-    // suppresses only the bundled defaults' <ltx:resource> nodes, not these.
-    if let Some(css) = self.parameters.get("CSS") {
-      self.copy_param_resources(&doc, css, Some(&RESOURCE_CSS));
-    }
-    if let Some(js) = self.parameters.get("JAVASCRIPT") {
-      self.copy_param_resources(&doc, js, Some(&RESOURCE_JS));
-    }
-    if let Some(icon) = self.parameters.get("ICON") {
-      self.copy_param_resources(&doc, icon, None);
+    // Perl XSLT.pm:71-78: the --css/--javascript/icon params carry where copyResource put each file, relative
+    // to this page (`../x.css` from a split sub-page).
+    let mut per_doc_params = self.parameters.clone();
+    for (key, resource_type) in [
+      ("CSS", Some("text/css")),
+      ("JAVASCRIPT", Some("text/javascript")),
+      ("ICON", None),
+    ] {
+      if let Some(value) = self.parameters.get(key) {
+        let copied = self.copy_param_resources(&doc, value, resource_type);
+        per_doc_params.insert(key.to_string(), copied);
+      }
     }
 
     // Serialize the entire libxslt-touching critical section process-wide.
@@ -928,11 +788,6 @@ impl Processor for XSLT {
     // (LaTeXML::Post::XSLT.pm L79).
     let transform_doc = doc.get_document().clone();
 
-    // Build parameters, relativizing path-valued ones (CSS, JAVASCRIPT,
-    // ICON) for the current doc's destination. The crate-level params
-    // hold basenames in site-relative form; split sub-pages live in a
-    // subdirectory and need `../foo.css` etc. to resolve correctly.
-    let per_doc_params = self.relativize_resource_params(&doc);
     let params: Vec<(&str, &str)> = per_doc_params
       .iter()
       .map(|(k, v)| (k.as_str(), v.as_str()))
@@ -1279,6 +1134,10 @@ mod embedded_resources {
       include_str!("../resources/CSS/LaTeXML-blue.css"),
     ),
     (
+      "LaTeXML-epub.css",
+      include_str!("../resources/CSS/LaTeXML-epub.css"),
+    ),
+    (
       "LaTeXML-marginpar.css",
       include_str!("../resources/CSS/LaTeXML-marginpar.css"),
     ),
@@ -1304,6 +1163,7 @@ mod embedded_resources {
       "ltx-book.css",
       include_str!("../resources/CSS/ltx-book.css"),
     ),
+    ("ltx-cv.css", include_str!("../resources/CSS/ltx-cv.css")),
     (
       "ltx-listings.css",
       include_str!("../resources/CSS/ltx-listings.css"),
@@ -1422,16 +1282,6 @@ fn find_resource_file(
   None
 }
 
-fn relative_path(target: &str, base: &str) -> String {
-  let target_path = Path::new(target);
-  let base_path = Path::new(base);
-  if let Ok(rel) = target_path.strip_prefix(base_path) {
-    rel.to_string_lossy().to_string()
-  } else {
-    target.to_string()
-  }
-}
-
 #[cfg(test)]
 mod witnessed_css_delta {
   //! Guards the intentional non-vanilla rules in the bundled default
@@ -1484,6 +1334,33 @@ mod witnessed_css_delta {
        plain verbatim would collapse to one line under vanilla's nowrap, and fancyvrb \
        source lines would reflow side-by-side with their indentation collapsed",
     );
+    // Issues #431/#702 at a phone width: inline \verb wraps (not in a nowrap table
+    // cell), a breaklines line's \parbox drops the markup's newlines while its text
+    // keeps its spaces, and shrinks in a flex row (through an id-carrying ltx_text
+    // wrapper too); lines and xleftmargin's wrapper are capped (Chrome at 375 px:
+    // page 488 -> 375, frame scrollWidth 468 -> 330; the browser half is
+    // `browser_render_verbatim_narrow`).
+    for rule in [
+      "code.ltx_verbatim { white-space:pre-wrap; overflow-wrap:break-word; }",
+      ".ltx_td code.ltx_verbatim, .ltx_th code.ltx_verbatim { white-space:pre; }",
+      ".ltx_verbatim .ltx_parbox { white-space:normal; }",
+      ".ltx_verbatim .ltx_parbox .ltx_p { white-space:pre-wrap; }",
+      ".ltx_text.ltx_verbatim.ltx_inline-block { display:block; text-indent:0; min-height:1lh; \
+       max-width:100%; }",
+      ".ltx_text.ltx_inline-block:has(> .ltx_text.ltx_verbatim.ltx_inline-block) { display:block; \
+       text-indent:0; max-width:100%; }",
+      ".ltx_text.ltx_verbatim.ltx_inline-block:has(> .ltx_parbox, > .ltx_text > .ltx_parbox) { \
+       display:flex; }",
+      ".ltx_verbatim > .ltx_text:has(> .ltx_parbox) { display:contents; }",
+      ".ltx_verbatim > .ltx_parbox, .ltx_verbatim > .ltx_text > .ltx_parbox { flex-shrink:1; \
+       min-width:0; }",
+      ".ltx_framed.ltx_framed_verbatim { display:block; width:fit-content; }",
+    ] {
+      assert!(
+        css.contains(rule),
+        "LaTeXML.css lost the verbatim rule `{rule}` (issues #431/#702)"
+      );
+    }
   }
 
   #[test]

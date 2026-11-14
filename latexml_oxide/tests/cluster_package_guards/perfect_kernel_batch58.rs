@@ -1,6 +1,6 @@
 //! Red/green guards for perfect-kernel phase-58 batches: the reledmac and floatrow kernel roots
 //! (58a) found in the 57cp review.
-use latexml::util::test::{assert_element, check_requirements, loads};
+use latexml::util::test::{assert_element, check_requirements, kpse_text, loads};
 
 use super::{
   perfect_kernel_batch46::{error_count, warning_count},
@@ -1494,36 +1494,44 @@ fn footnotemark_in_a_heading_pairs_with_its_text() {
 /// 58p: `\today` follows the babel language. LaTeXML maps babel's German and French `.ldf` files to
 /// bindings whose `\date<lang>` was an empty stub, so German and French printed the English date; the
 /// bindings define them as germanb.ldf:124-130, ngermanb.ldf:107-113 and french.ldf:332-345 do.
-/// babel's own warning about the 1901 `german` name is pdflatex's too. Repro
-/// babel-lang/today_follows_the_babel_language.
+/// babel's own warning about the 1901 `german` name is pdflatex's too, where its `babel-german.tex` gives it
+/// (babel 25.x, TL 2025 :12-17; 26.16 dropped it). Repro babel-lang/today_follows_the_babel_language.
 #[test]
 fn today_follows_the_babel_language() {
   let tex = include_str!(
     "../../../tools/perfect_kernel/repros/babel-lang/today_follows_the_babel_language.tex"
   );
-  assert_elements_with(
-    tex,
-    RAW,
-    (0, 1),
-    &["The name 'german' with the 'ldf' mechanism is"],
-    &[
-      (
-        "para",
-        "p1",
-        r##"<para xml:id="p1"><p>1. Oktober 2026</p></para>"##,
-      ),
-      (
-        "para",
-        "p2",
-        r##"<para xml:id="p2"><p>1. Oktober 2026</p></para>"##,
-      ),
-      (
-        "para",
-        "p3",
-        r##"<para xml:id="p3"><p><text xml:lang="fr">1<sup>er</sup> octobre 2026</text></p></para>"##,
-      ),
-    ],
-  );
+  // The 1901 notice is in babel 25.x's `babel-german.tex`, not 26.16's; no such file means no warning, as in pdflatex.
+  let warns_1901 = kpse_text("babel-german.tex")
+    .is_some_and(|ini| ini.contains("The name 'german' with the 'ldf' mechanism is"));
+  let warning: &[&str] = if warns_1901 {
+    &["The name 'german' with the 'ldf' mechanism is"]
+  } else {
+    &[]
+  };
+  assert_elements_with(tex, RAW, (0, warning.len()), warning, &[
+    (
+      "para",
+      "p1",
+      r##"<para xml:id="p1"><p>1. Oktober 2026</p></para>"##,
+    ),
+    (
+      "para",
+      "p2",
+      r##"<para xml:id="p2"><p>1. Oktober 2026</p></para>"##,
+    ),
+    (
+      "para",
+      "p3",
+      r##"<para xml:id="p3"><p><text xml:lang="fr">1<sup>er</sup> octobre 2026</text></p></para>"##,
+    ),
+    // WIN1a: babel's `\main@language` sets `\mainlocalename`, the main language (babel.sty:1190)
+    (
+      "para",
+      "p4",
+      r##"<para xml:id="p4"><p><text xml:lang="fr">ngerman</text></p></para>"##,
+    ),
+  ]);
 }
 
 /// 58q: acmart's copyright statement is frontmatter — `\\setcopyright` selects the owner and permission

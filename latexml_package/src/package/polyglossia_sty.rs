@@ -27,4 +27,10 @@ LoadDefinitions!({
   { \prg_set_conditional:Nnn \xpg_if_script:n { TF, T, F } { \prg_return_true: } }
 \ExplSyntaxOff"
   );
+  // v2.13 (2026/09/11, polyglossia.sty:681) asks fontspec's conditional itself: its true branch, the same answer
+  substitute_in_macro(
+    "\\__xpg_add_font_feature_script:nnn",
+    "\\fontspec_if_script:nTF",
+    "\\use_ii:nnn",
+  )?;
 });

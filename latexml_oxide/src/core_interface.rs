@@ -398,12 +398,8 @@ fn digest_step_guarded(boxes: &mut Vec<Digested>) -> Result<bool> {
       // carried a `Fatal:` line while the run summarised as `Conversion
       // complete: No obvious problems`, status code 0 — "ok" to cortex.
       // Guard: `101_fatal_salvages_partial_document`.
+      // (the Fatal's one line, as Perl prints it; no recovery Warning repeating it)
       e.log_fatal();
-      emit_warn(
-        "recovery",
-        "digest_internal",
-        &format!("digest_internal: error during recovery digestion: {:?}", e),
-      );
       // (the tokens the failed invocations left on the stack go, as Perl's `hardYankProcessing` empties it for every
       // Fatal: left there, the next digestion — the build's — failed its first push, 2410.07647, 2105.02599)
       stomach::clear_token_stack();
@@ -1224,7 +1220,7 @@ impl DigestionAPI for Core {
     let canonical_request = if pathname::is_literaldata(&request) || pathname::is_url(&request) {
       request.clone()
     } else {
-      std::fs::canonicalize(&request)
+      pathname::canonicalize(&request)
         .ok()
         .and_then(|p| p.to_str().map(String::from))
         .unwrap_or_else(|| request.clone())

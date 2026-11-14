@@ -28,6 +28,7 @@ mod bibliography_names_fields;
 mod bibref_show;
 mod binding_conformance;
 mod binding_singletons_56;
+mod bindings_batch2;
 mod box_primitives;
 mod braced_quantity_tail;
 mod case_change_equivalents;
@@ -126,6 +127,7 @@ mod vfs_file_end;
 mod xkeyval_internals;
 
 mod accent_composite_expansion;
+mod arrowfill_heads;
 mod beamer_includegraphics_overlay;
 /// Issues #772, #760, #801, #787, #773, #779: the bindings batch of 2026-11-13.
 mod bindings_batch1;
@@ -472,6 +474,7 @@ mod perfect_kernel_batchga5;
 mod perfect_kernel_batchgl1;
 /// HG1: the guards DEL1 left hollow asserting again — rows of one table, the wrong ones `_red.tex` catalog repros.
 mod perfect_kernel_batchhg1;
+mod perfect_kernel_batchi736;
 mod perfect_kernel_batchimg1;
 mod perfect_kernel_batchint19;
 mod perfect_kernel_batchint20;
@@ -489,6 +492,8 @@ mod perfect_kernel_batchlo4;
 mod perfect_kernel_batchlogo1;
 mod perfect_kernel_batchm1;
 mod perfect_kernel_batchm3;
+/// MACSYNC: the binding macros mean what Perl's same-named API means (AUDMAC).
+mod perfect_kernel_batchmacsync;
 /// MB1: the one label rule of the Kind step's lines — a labelled line named after the class's name of the entry, a
 /// mailbox link line's as an e-mail label's; OD #992.
 mod perfect_kernel_batchmb1;
@@ -499,6 +504,7 @@ mod perfect_kernel_batchmb2;
 mod perfect_kernel_batchmem1;
 /// MLN1: names led by their marks read as names (`names_led_by_marks`); OD #1019.
 mod perfect_kernel_batchmln1;
+mod perfect_kernel_batchmml2;
 mod perfect_kernel_batchn1;
 mod perfect_kernel_batchn2;
 mod perfect_kernel_batchn2r2;
@@ -614,6 +620,13 @@ mod perfect_kernel_batchta1;
 mod perfect_kernel_batchunc;
 /// VARW: a varwidth box measures its widest line (algxpar-doc, 2401.12710); KNOWN_PERL_ERRORS #1234.
 mod perfect_kernel_batchvarw;
+mod perfect_kernel_batchw3ra;
+mod perfect_kernel_batchw3rb;
+mod perfect_kernel_batchw3rc;
+mod perfect_kernel_batchw3rd;
+mod perfect_kernel_batchw3rg;
+/// W4: colortbl's `\arrayrulecolor` colours each border side as the rule is drawn (#773); OD #1025.
+mod perfect_kernel_batchw4;
 mod perfect_kernel_batchz1;
 mod perfect_kernel_batchz14;
 mod perfect_kernel_batchz18c;

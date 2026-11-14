@@ -23,39 +23,39 @@ fn pool_surface_state_counters_tokens() {
   load_script(
     r##"
       AssignValue("ws:k", "v1");
-      assign_global("ws:str", LookupString("ws:k"));
+      AssignValue("ws:str", LookupString("ws:k"), "global");
 
       RawTeX("\\def\\wsfoo{FOO}");
       Let("\\wsalias", "\\wsfoo");
-      assign_global("ws:def", if IsDefined("\\wsfoo") { "yes" } else { "no" });
-      assign_global("ws:alias", if IsDefined("\\wsalias") { "yes" } else { "no" });
-      assign_global("ws:xeq", if XEquals("\\wsalias", "\\wsfoo") { "eq" } else { "ne" });
-      assign_global("ws:expand", UnTeX(Expand(TokenizeInternal("\\wsfoo"))));
+      AssignValue("ws:def", if IsDefined("\\wsfoo") { "yes" } else { "no" }, "global");
+      AssignValue("ws:alias", if IsDefined("\\wsalias") { "yes" } else { "no" }, "global");
+      AssignValue("ws:xeq", if XEquals("\\wsalias", "\\wsfoo") { "eq" } else { "ne" }, "global");
+      AssignValue("ws:expand", UnTeX(Expand(TokenizeInternal("\\wsfoo"))), "global");
 
       NewCounter("wsctr");
       StepCounter("wsctr");
       StepCounter("wsctr");
       AddToCounter("wsctr", 3);
-      assign_global("ws:cv", CounterValue("wsctr").to_string());
+      AssignValue("ws:cv", CounterValue("wsctr").to_string(), "global");
       let refmap = RefStepCounter("wsctr");
-      assign_global("ws:ref", if ("tags" in refmap) && ("id" in refmap) { "has" } else { "none" });
+      AssignValue("ws:ref", if ("tags" in refmap) && ("id" in refmap) { "has" } else { "none" }, "global");
       ResetCounter("wsctr");
-      assign_global("ws:cv0", CounterValue("wsctr").to_string());
+      AssignValue("ws:cv0", CounterValue("wsctr").to_string(), "global");
 
-      assign_global("ws:digest", ToString(DigestText("ab")));
+      AssignValue("ws:digest", ToString(DigestText("ab")), "global");
 
-      assign_global("ws:cat", LookupCatcode("a").to_string());
+      AssignValue("ws:cat", LookupCatcode("a").to_string(), "global");
       AssignCatcode("~", 12);
-      assign_global("ws:cat2", LookupCatcode("~").to_string());
-      assign_global("ws:meaning", if LookupMeaning("\\wsfoo") == "" { "none" } else { "some" });
+      AssignValue("ws:cat2", LookupCatcode("~").to_string(), "global");
+      AssignValue("ws:meaning", if LookupMeaning("\\wsfoo") == "" { "none" } else { "some" }, "global");
       let idmap = RefStepID("wsctr");
-      assign_global("ws:refid", if "id" in idmap { "has" } else { "none" });
+      AssignValue("ws:refid", if "id" in idmap { "has" } else { "none" }, "global");
 
       AssignMapping("wsmap", "alpha", "A1");
-      assign_global("ws:map", LookupMapping("wsmap", "alpha"));
-      assign_global("ws:kv1", GetKeyVal("lang=rust, size={1, 2}", "size"));
+      AssignValue("ws:map", LookupMapping("wsmap", "alpha"), "global");
+      AssignValue("ws:kv1", ToString(GetKeyVal("lang=rust, size={1, 2}", "size")), "global");
       let kvm = GetKeyVals("lang=rust, size={1, 2}");
-      assign_global("ws:kv2", kvm.lang);
+      AssignValue("ws:kv2", ToString(kvm.lang), "global");
     "##,
   )
   .expect("wave-A surface script should load cleanly");
@@ -102,38 +102,50 @@ fn typed_assign_roundtrip() {
   fresh_state();
   load_script(
     r##"
-      AssignNumber("ta:n", 7);
+      AssignValue("ta:n", 7);
       AssignFloat("ta:f", 10.95);
-      AssignBool("ta:b", true);
-      AssignString("ta:s", "hi");
+      AssignValue("ta:b", true);
+      AssignValue("ta:s", "hi");
       // 3-arg scoped forms: global so they survive the script's own group.
-      AssignNumber("ta:ng", 42, "global");
+      AssignValue("ta:ng", 42, "global");
       AssignFloat("ta:fg", 3.5, "global");
 
       // Round-trip each value back THROUGH the bindings (not just the Rust
       // side). Range/equality witnesses dodge float-formatting fragility.
-      assign_global("ta:n_ok", if LookupNumber("ta:n") == 7 { "ok" } else { "bad" });
-      assign_global("ta:f_ok", if LookupFloat("ta:f") > 10.9 && LookupFloat("ta:f") < 11.0 { "ok" } else { "bad" });
-      assign_global("ta:b_ok", if LookupBool("ta:b") { "ok" } else { "bad" });
-      assign_global("ta:s_ok", if LookupString("ta:s") == "hi" { "ok" } else { "bad" });
+      AssignValue("ta:n_ok", if LookupNumber("ta:n") == 7 { "ok" } else { "bad" }, "global");
+      AssignValue("ta:f_ok", if LookupFloat("ta:f") > 10.9 && LookupFloat("ta:f") < 11.0 { "ok" } else { "bad" }, "global");
+      AssignValue("ta:b_ok", if LookupBool("ta:b") { "ok" } else { "bad" }, "global");
+      AssignValue("ta:s_ok", if LookupString("ta:s") == "hi" { "ok" } else { "bad" }, "global");
     "##,
   )
   .expect("typed-assign surface script should load cleanly");
   // Through-the-binding round-trips.
-  assert_eq!(lookup_str("ta:n_ok"), "ok", "AssignNumber -> LookupNumber");
+  assert_eq!(
+    lookup_str("ta:n_ok"),
+    "ok",
+    "AssignValue(int) -> LookupNumber"
+  );
   assert_eq!(
     lookup_str("ta:f_ok"),
     "ok",
     "AssignFloat -> LookupFloat keeps the fraction"
   );
-  assert_eq!(lookup_str("ta:b_ok"), "ok", "AssignBool -> LookupBool");
-  assert_eq!(lookup_str("ta:s_ok"), "ok", "AssignString -> LookupString");
+  assert_eq!(
+    lookup_str("ta:b_ok"),
+    "ok",
+    "AssignValue(bool) -> LookupBool"
+  );
+  assert_eq!(
+    lookup_str("ta:s_ok"),
+    "ok",
+    "AssignValue(string) -> LookupString"
+  );
   // Native-side witnesses: the typed variant really landed, and 10.95 kept its
   // fraction (a bare `f64 -> Stored` would floor it to 10 — issue #542).
   assert_eq!(
     state::lookup_number("ta:n").map(|n| n.0),
     Some(7),
-    "ta:n is a Number(7)"
+    "ta:n reads as Number(7)"
   );
   let f = state::lookup_float("ta:f").expect("ta:f is a Float");
   assert!(
@@ -145,6 +157,158 @@ fn typed_assign_roundtrip() {
   // 3-arg global forms survive the script's top-level group.
   assert_eq!(state::lookup_number("ta:ng").map(|n| n.0), Some(42));
   assert!((state::lookup_float("ta:fg").expect("ta:fg").0 - 3.5).abs() < 1e-9);
+}
+
+/// #796: `Let(a, b, scope)` — Perl's `Let` takes a scope (Package.pm:383). Inside a group, a
+/// "global" `\let` survives the group's end; a "local" one and the 2-arg default do not.
+#[test]
+fn let_takes_a_scope() {
+  use latexml_core::{T_CS, state};
+  fresh_state();
+  load_script(r##"RawTeX("\\def\\lsfoo{FOO}");"##).expect("define \\lsfoo");
+  state::push_frame();
+  load_script(
+    r##"
+      Let("\\lsglobal", "\\lsfoo", "global");
+      Let("\\lslocal", "\\lsfoo", "local");
+      Let("\\lsdefault", "\\lsfoo");
+      AssignValue("ls:inside", if IsDefined("\\lslocal") && IsDefined("\\lsdefault") { "both" } else { "missing" }, "global");
+    "##,
+  )
+  .expect("scoped Let script should load cleanly");
+  state::pop_frame().expect("pop the test's group");
+  assert_eq!(
+    lookup_str("ls:inside"),
+    "both",
+    "local and default Let hold inside the group"
+  );
+  assert!(
+    state::x_equals(&T_CS!("\\lsglobal"), &T_CS!("\\lsfoo")),
+    "a global Let survives the group"
+  );
+  assert!(
+    state::lookup_meaning(&T_CS!("\\lslocal")).is_none(),
+    "a local Let ends with the group"
+  );
+  assert!(
+    state::lookup_meaning(&T_CS!("\\lsdefault")).is_none(),
+    "the 2-arg Let is local"
+  );
+}
+
+/// #796: `Let` and its token-taking siblings take a string as a control-sequence name, or any `Token` as is (Perl
+/// `Package.pm:383-390`), so Perl's `Let(T_ACTIVE(" "), '\space')`, `Let(T_MATH, …)`, `Let(T_ALIGN, '\&')` port.
+#[test]
+fn let_takes_any_token() {
+  use latexml_core::{T_ACTIVE, T_CS, T_MATH, T_OTHER, common::store::Stored, state};
+  fresh_state();
+  load_script(r##"RawTeX("\\def\\ltfoo{FOO}");"##).expect("define \\ltfoo");
+  let math_before = state::lookup_definition_stored(&T_MATH!()).expect("lookup $");
+  let tilde_before = state::lookup_meaning(&T_ACTIVE!('~'));
+  state::push_frame();
+  load_script(
+    r##"
+      Let(T_ACTIVE("~"), "\\ltfoo");
+      AssignValue("lt:tilde", UnTeX(Expand(T_ACTIVE("~"))), "global");
+      Let(T_MATH(), "\\ltfoo");
+      Let("\\ltx", T_OTHER("a"));
+      AssignValue("lt:xeq", if XEquals("\\ltx", T_OTHER("a")) && IsDefined("\\ltx") { "eq" } else { "ne" }, "global");
+      Let(Token("+", CC_ACTIVE()), T_OTHER("b"));
+      AssignValue("lt:plus", if XEquals(T_ACTIVE("+"), Token("b", CC_OTHER())) { "eq" } else { "ne" }, "global");
+      Let(T_ACTIVE("?"), "\\ltfoo", "global");
+      Let(T_ACTIVE("="), T_ACTIVE("~"));
+      AssignValue("lt:assign", UnTeX(Expand(Tokens([T_ACTIVE("="), T_OTHER("x"), T_CS("\\ltfoo")]))), "global");
+      AssignValue("lt:tokens1", UnTeX(Expand(Tokens(T_CS("\\ltfoo")))), "global");
+      AssignValue("lt:meaning", LookupMeaning(T_OTHER("a")), "global");
+      AssignValue("lt:def", if LookupDefinition(T_ACTIVE("~")) == () { "none" } else { "some" }, "global");
+      AssignValue("lt:digest", ToString(Digest(T_CS("\\ltfoo"))), "global");
+    "##,
+  )
+  .expect("token-taking Let script should load cleanly");
+  assert_eq!(
+    lookup_str("lt:tilde"),
+    "FOO",
+    "~ let to \\ltfoo expands as \\ltfoo"
+  );
+  assert!(
+    state::lookup_definition_stored(&T_MATH!()).expect("lookup $")
+      == state::lookup_meaning(&T_CS!("\\ltfoo")),
+    "Let(T_MATH(), …) gives $ the meaning of \\ltfoo"
+  );
+  assert!(
+    matches!(state::lookup_meaning(&T_CS!("\\ltx")), Some(Stored::Token(t)) if t == T_OTHER!("a")),
+    "\\ltx is the character a"
+  );
+  assert_eq!(lookup_str("lt:xeq"), "eq");
+  assert!(
+    matches!(state::lookup_meaning(&T_ACTIVE!('+')), Some(Stored::Token(t)) if t == T_OTHER!("b")),
+    "a Token on both sides: the active + is the character b"
+  );
+  assert_eq!(lookup_str("lt:plus"), "eq");
+  assert_eq!(
+    lookup_str("lt:assign"),
+    "FOOxFOO",
+    "Let takes tokens; Tokens([...]) builds a list"
+  );
+  // revW3c: Perl's `Tokens(@tokens)` with one Token (was "Function not found").
+  assert_eq!(lookup_str("lt:tokens1"), "FOO");
+  assert_eq!(
+    lookup_str("lt:meaning"),
+    "a",
+    "a character's meaning is itself"
+  );
+  assert_eq!(lookup_str("lt:def"), "some");
+  assert_eq!(lookup_str("lt:digest"), "FOO", "Digest takes a Token");
+  state::pop_frame().expect("pop the test's group");
+  assert!(
+    state::lookup_definition_stored(&T_MATH!()).expect("lookup $") == math_before,
+    "a local Let of $ ends with the group"
+  );
+  assert!(
+    state::lookup_meaning(&T_ACTIVE!('~')) == tilde_before,
+    "a local Let of ~ ends with the group"
+  );
+  assert!(
+    state::x_equals(&T_ACTIVE!('?'), &T_CS!("\\ltfoo")),
+    "a global Let of a Token survives the group"
+  );
+  // A token list where a token is meant is an error naming the call, as `Tokens` is not a `Token`.
+  for (src, call) in [
+    (
+      r##"Let(T_ACTIVE("~"), TokenizeInternal("\\a\\b"));"##,
+      "Let",
+    ),
+    (
+      r##"Let(TokenizeInternal("\\relax"), "\\ltfoo", "global");"##,
+      "Let",
+    ),
+    (
+      r##"XEquals(TokenizeInternal("\\relax"), "\\relax");"##,
+      "XEquals",
+    ),
+  ] {
+    let err = load_script(src)
+      .expect_err("a Tokens is not a Token")
+      .to_string();
+    assert!(err.contains(call) && err.contains("Token"), "{src}: {err}");
+  }
+  // As `Let!` (`state::let_definition`): a provide-only binding load declines a `Let` of a name defined before it.
+  load_script(r##"RawTeX("\\def\\ltkept{KEPT}");"##).expect("define \\ltkept");
+  {
+    use latexml_core::definition::origin::{DefinitionOrigin, OriginGuard, ProvideOnlyGuard};
+    let _origin = OriginGuard::new(DefinitionOrigin::Binding);
+    let _provide = ProvideOnlyGuard::new();
+    load_script(r##"Let("\\ltkept", "\\ltfoo"); Let(T_ACTIVE("<"), "\\ltfoo");"##)
+      .expect("provide-only Let script should load cleanly");
+  }
+  assert!(
+    !state::x_equals(&T_CS!("\\ltkept"), &T_CS!("\\ltfoo")),
+    "a provide-only load keeps the earlier \\ltkept"
+  );
+  assert!(
+    state::x_equals(&T_ACTIVE!('<'), &T_CS!("\\ltfoo")),
+    "a provide-only load still lets an undefined token"
+  );
 }
 
 /// #540: the value-table list family (`PushValue`/`PopValue`/`UnshiftValue`/
@@ -164,10 +328,10 @@ fn pushvalue_family_and_search_paths() {
       PushValue("l540", "b");
       PushValue("l540", "c");            // ["a","b","c"]
       let p = PopValue("l540");          // "c"  -> ["a","b"]
-      assign_global("l540:pop_ok", if p == "c" { "ok" } else { "bad" });
+      AssignValue("l540:pop_ok", if p == "c" { "ok" } else { "bad" }, "global");
       UnshiftValue("l540", "z");         // ["z","a","b"]
       let s = ShiftValue("l540");        // "z"  -> ["a","b"]
-      assign_global("l540:shift_ok", if s == "z" { "ok" } else { "bad" });
+      AssignValue("l540:shift_ok", if s == "z" { "ok" } else { "bad" }, "global");
 
       // Dedicated search-path bindings. As of #561 SEARCHPATHS is a group-scoped
       // value-table list (like GRAPHICSPATHS), so these write that list globally.
@@ -245,18 +409,18 @@ fn pushvalue_preserves_types() {
       let b = PopValue("tv");
       let f = PopValue("tv");
       let i = PopValue("tv");
-      assign_global("tv:tok", if UnTeX(t).contains("alpha") { "ok" } else { "bad" });
-      assign_global("tv:bool", if b { "ok" } else { "bad" });
-      assign_global("tv:float", if f == 2.5 { "ok" } else { "bad" });
-      assign_global("tv:int", if i == 7 { "ok" } else { "bad" });
+      AssignValue("tv:tok", if UnTeX(t).contains("alpha") { "ok" } else { "bad" }, "global");
+      AssignValue("tv:bool", if b { "ok" } else { "bad" }, "global");
+      AssignValue("tv:float", if f == 2.5 { "ok" } else { "bad" }, "global");
+      AssignValue("tv:int", if i == 7 { "ok" } else { "bad" }, "global");
       // The point of the generalization: a popped int is an i64, NOT a string.
-      assign_global("tv:int_type", type_of(i));
+      AssignValue("tv:int_type", type_of(i), "global");
 
       // A digested handle survives the round-trip too (separate key, to keep the
       // LIFO ordering above intact).
       PushValue("tvd", DigestText("qq"));
       let d = PopValue("tvd");
-      assign_global("tvd:ok", if ToString(d) == "qq" { "ok" } else { "bad" });
+      AssignValue("tvd:ok", if ToString(d) == "qq" { "ok" } else { "bad" }, "global");
     "##,
   )
   .expect("typed-push script should load cleanly");
@@ -326,8 +490,8 @@ fn pool_surface_definition_forms() {
       DefKeyVal("WB", "color", "");
       DefLigature("ff", "F");
       DefMath("\\wbsum", "∑", #{ role: "SUMOP", meaning: "sum" });
-      DefConditional("\\ifwb{}", |x| x == "on");
-      DefMacro("\\wbprobe{}", |x| "\\ifwb{" + x + "}YES\\else NO\\fi");
+      DefConditional("\\ifwb{}", |x| UnTeX(x) == "on"); // the test is given Tokens, as Perl's
+      DefMacro("\\wbprobe{}", |gullet, x| "\\ifwb{" + x + "}YES\\else NO\\fi");
     "##,
   )
   .expect("wave-B surface script should load cleanly");
@@ -440,11 +604,11 @@ fn builder_conformance_macro_style_vs_rhai_afterdigest() {
   latexml_core::stomach::digest(mouth::tokenize_internal(r"\mfoo{ZED}")).expect("digest mfoo");
 
   // (2) Rhai: the equivalent \rfoo — same builder under the hood; afterDigest
-  // reads the whatsit via whatsit().
+  // receives the whatsit (#716).
   load_script(
     r#"DefConstructor("\\rfoo{}", "<ltx:text>#1</ltx:text>", #{
            mode: "text",
-           afterDigest: || { assign_global("conf:r", whatsit().argString(1)); }
+           afterDigest: |whatsit| { AssignValue("conf:r", ToString(whatsit.getArg(1)), "global"); }
          });"#,
   )
   .expect("load");
@@ -465,8 +629,8 @@ fn m1_script_macro_expands_through_real_gullet() {
   fresh_state();
   let n = load_script(
     r#"
-        DefMacro("\\twice{}", |x| x + x);
-        DefMacro("\\greet{}", |name| "Hello, " + name + "!");
+        DefMacro("\\twice{}", |gullet, x| Tokens(x, x));
+        DefMacro("\\greet{}", |gullet, name| "Hello, " + name + "!");
       "#,
   )
   .expect("load_script");
@@ -484,7 +648,7 @@ fn m1_script_macro_expands_through_real_gullet() {
 #[test]
 fn m1_expansion_to_control_sequence_is_faithful() {
   fresh_state();
-  load_script(r#"DefMacro("\\emphx{}", |x| "\\textit{" + x + "}");"#).expect("load");
+  load_script(r#"DefMacro("\\emphx{}", |gullet, x| "\\textit{" + x + "}");"#).expect("load");
   let out = gullet::do_expand(mouth::tokenize_internal(r"\emphx{hi}")).expect("expand");
   assert_eq!(out.to_string(), r"\textit{hi}");
   latexml_core::reset_thread_engine();
@@ -493,7 +657,7 @@ fn m1_expansion_to_control_sequence_is_faithful() {
 #[test]
 fn cache_reuses_compiled_script_and_still_wires() {
   fresh_state();
-  let src = r#"DefMacro("\\dup{}", |x| x + x);"#;
+  let src = r#"DefMacro("\\dup{}", |gullet, x| Tokens(x, x));"#;
   assert_eq!(load_script(src).expect("first load"), 1);
   // Second load is a cache hit (no recompile) but still installs the binding.
   assert_eq!(load_script(src).expect("second load"), 1);
@@ -506,7 +670,11 @@ fn cache_reuses_compiled_script_and_still_wires() {
 fn load_file_reads_and_installs() {
   fresh_state();
   let path = std::env::temp_dir().join("lx_script_bindings_load_file_test.sty.rhai");
-  std::fs::write(&path, r#"DefMacro("\\trip{}", |x| x + x + x);"#).expect("write temp");
+  std::fs::write(
+    &path,
+    r#"DefMacro("\\trip{}", |gullet, x| Tokens(x, x, x));"#,
+  )
+  .expect("write temp");
   let n = load_file(path.to_str().unwrap()).expect("load_file");
   assert_eq!(n, 1);
   let out = gullet::do_expand(mouth::tokenize_internal(r"\trip{ab}")).expect("expand");
@@ -524,7 +692,7 @@ fn declare_option_registers_and_runs() {
   load_script(
     r#"DeclareOption("opt", || {
            Digest(Tokenize("\\relax"));
-           assign_global("script:opt_ran", "yes");
+           AssignValue("script:opt_ran", "yes", "global");
          });"#,
   )
   .expect("load");
@@ -547,12 +715,11 @@ fn declare_option_registers_and_runs() {
 #[test]
 fn constructor_options_map_runs_afterdigest() {
   fresh_state();
-  // The parameterless afterDigest body reaches the in-flight whatsit via
-  // whatsit() — referencing context only when needed ("omit as implied").
+  // The afterDigest body receives the in-flight whatsit (Perl's `$whatsit`, #716).
   load_script(
     r#"DefConstructor("\\opt{}", "<ltx:text>#1</ltx:text>", #{
            mode: "text",
-           afterDigest: || { assign_global("script:cad", whatsit().argString(1)); }
+           afterDigest: |whatsit| { AssignValue("script:cad", ToString(whatsit.getArg(1)), "global"); }
          });"#,
   )
   .expect("load");
@@ -563,7 +730,7 @@ fn constructor_options_map_runs_afterdigest() {
   };
   assert_eq!(
     ran, "HELLO",
-    "afterDigest body did not read the whatsit arg via whatsit()"
+    "afterDigest body did not read the whatsit arg via its whatsit argument"
   );
   latexml_core::reset_thread_engine();
 }
@@ -578,9 +745,9 @@ fn primitive_option_bag_runs_before_and_after_digest() {
   fresh_state();
   load_script(
     r#"
-      DefPrimitive("\\optbagprim", || { assign_global("optbag:primlog", LookupString("optbag:primlog") + "X"); }, #{
-        beforeDigest: || { assign_global("optbag:primlog", LookupString("optbag:primlog") + "B"); },
-        afterDigest:  || { assign_global("optbag:primlog", LookupString("optbag:primlog") + "A"); }
+      DefPrimitive("\\optbagprim", || { AssignValue("optbag:primlog", LookupString("optbag:primlog") + "X", "global"); }, #{
+        beforeDigest: || { AssignValue("optbag:primlog", LookupString("optbag:primlog") + "B", "global"); },
+        afterDigest:  || { AssignValue("optbag:primlog", LookupString("optbag:primlog") + "A", "global"); }
       });
     "#,
   )
@@ -605,8 +772,8 @@ fn math_option_bag_runs_digest_hooks() {
     r#"
       DefMath("\\optbagmath", "∑", #{
         role: "SUMOP",
-        beforeDigest: || { assign_global("optbag:mathlog", LookupString("optbag:mathlog") + "B"); },
-        afterDigest:  || { assign_global("optbag:mathlog", LookupString("optbag:mathlog") + "A"); }
+        beforeDigest: || { AssignValue("optbag:mathlog", LookupString("optbag:mathlog") + "B", "global"); },
+        afterDigest:  || { AssignValue("optbag:mathlog", LookupString("optbag:mathlog") + "A", "global"); }
       });
     "#,
   )
@@ -634,7 +801,7 @@ fn lookup_tokens_on_vecdeque_value_does_not_panic() {
   // option strings (Stored::VecDequeStored of Stored::String).
   latexml_core::state::push_value("class_options", "a4paper").expect("push a4paper");
   latexml_core::state::push_value("class_options", "12pt").expect("push 12pt");
-  load_script(r#"assign_global("ct:opts", UnTeX(LookupTokens("class_options")));"#)
+  load_script(r#"AssignValue("ct:opts", UnTeX(LookupTokens("class_options")), "global");"#)
     .expect("LookupTokens on a VecDequeStored value must not panic");
   assert_eq!(
     lookup_str("ct:opts"),
@@ -653,7 +820,7 @@ fn lookup_string_on_list_value_is_empty_not_leaked() {
   fresh_state();
   latexml_core::state::push_value("class_options", "a4paper").expect("push a4paper");
   latexml_core::state::push_value("class_options", "12pt").expect("push 12pt");
-  load_script(r#"assign_global("ct:s", LookupString("class_options"));"#)
+  load_script(r#"AssignValue("ct:s", LookupString("class_options"), "global");"#)
     .expect("LookupString on a list value must not panic or leak");
   let got = lookup_str("ct:s");
   assert!(
@@ -679,11 +846,11 @@ fn lookup_value_on_list_returns_rhai_array() {
   load_script(
     r#"
     let opts = LookupValue("class_options");
-    assign_global("ct:0", opts[0]);
-    assign_global("ct:1", opts[1]);
+    AssignValue("ct:0", opts[0], "global");
+    AssignValue("ct:1", opts[1], "global");
     let joined = "";
     for o in opts { if joined != "" { joined += "|"; } joined += o; }
-    assign_global("ct:joined", joined);
+    AssignValue("ct:joined", joined, "global");
     "#,
   )
   .expect("LookupValue on a list value must return an indexable Rhai array");
@@ -786,7 +953,7 @@ fn def_primitive_nested_inside_a_primitive_body() {
   load_script(
     r#"
     DefPrimitive("\\outer", || {
-      DefPrimitive("\\inner", || { assign_global("nested:inner", "ran"); });
+      DefPrimitive("\\inner", || { AssignValue("nested:inner", "ran", "global"); });
     });
     "#,
   )
@@ -835,13 +1002,13 @@ fn command_output_runs_by_default_and_is_blockable_via_env() {
     r#"
     {ok_cmd}
     let out = cmd.output();
-    assign_global("cmd:out", out.stdout);
-    assign_global("cmd:ok", if out.success {{ "yes" }} else {{ "no" }});
-    assign_global("cmd:status", out.status.to_string());
+    AssignValue("cmd:out", out.stdout, "global");
+    AssignValue("cmd:ok", if out.success {{ "yes" }} else {{ "no" }}, "global");
+    AssignValue("cmd:status", out.status.to_string(), "global");
 
     {bad_cmd}
     let bout = bad.output();
-    assign_global("cmd:bad", if bout.success {{ "ok" }} else {{ "fail" }});
+    AssignValue("cmd:bad", if bout.success {{ "ok" }} else {{ "fail" }}, "global");
     "#
   ))
   .expect("Command(...).output() must run and capture by default");
@@ -896,11 +1063,11 @@ fn lookup_definition_pushes_and_accumulates_digest_hooks() {
   load_script(
     r#"
       DefConstructor("\\dh{}", "<ltx:text>#1</ltx:text>", #{ mode: "text" });
-      assign_global("dh:undef", if LookupDefinition("\\nope") == () { "unit" } else { "proxy" });
+      AssignValue("dh:undef", if LookupDefinition("\\nope") == () { "unit" } else { "proxy" }, "global");
       let d = LookupDefinition("\\dh");
-      d.pushAfterDigest(|| { assign_global("dh:log", LookupString("dh:log") + "B"); });
-      d.unshiftAfterDigest(|| { assign_global("dh:log", LookupString("dh:log") + "A"); });
-      d.pushAfterDigest(|| { assign_global("dh:log", LookupString("dh:log") + "C"); });
+      d.pushAfterDigest(|| { AssignValue("dh:log", LookupString("dh:log") + "B", "global"); });
+      d.unshiftAfterDigest(|| { AssignValue("dh:log", LookupString("dh:log") + "A", "global"); });
+      d.pushAfterDigest(|| { AssignValue("dh:log", LookupString("dh:log") + "C", "global"); });
     "#,
   )
   .expect("LookupDefinition + push/unshift AfterDigest must load");
@@ -927,7 +1094,7 @@ fn lookup_definition_construct_hook_on_primitive_errors() {
   fresh_state();
   let r = load_script(
     r#"
-      DefPrimitive("\\dprim{}", |x| { });
+      DefPrimitive("\\dprim{}", |stomach, x| { });
       LookupDefinition("\\dprim").pushAfterConstruct(|document| { });
     "#,
   );
@@ -946,7 +1113,8 @@ fn lookup_definition_construct_hook_on_primitive_errors() {
 fn latexml_version_binding_reads_published_version() {
   fresh_state();
   latexml_core::state::assign_value("LATEXML_VERSION", "0.7.5", Some(Scope::Global));
-  load_script(r#"assign_global("v:out", LaTeXMLVersion());"#).expect("LaTeXMLVersion() must load");
+  load_script(r#"AssignValue("v:out", LaTeXMLVersion(), "global");"#)
+    .expect("LaTeXMLVersion() must load");
   assert_eq!(
     lookup_str("v:out"),
     "0.7.5",
@@ -968,7 +1136,7 @@ fn m1_errors_are_clean() {
   // `Err`: there the package simply never installs.
   fresh_state();
   use latexml_core::common::error::{LogStatus, get_status};
-  load_script(r#"DefMacro("\\boom{}", |x| { throw "kaboom"; });"#).expect("load");
+  load_script(r#"DefMacro("\\boom{}", |gullet, x| { throw "kaboom"; });"#).expect("load");
   let before = get_status(LogStatus::Error);
   let expanded = gullet::do_expand(mouth::tokenize_internal(r"\boom{x}"))
     .expect("a throwing body must not abort the expansion");
@@ -1045,16 +1213,72 @@ fn api_reference_is_up_to_date() {
     "these .rhai calls share one api_doc::DOCS entry across different handles — \
      give each its own api_doc::HANDLE_DOCS entry: {ambiguous:?}"
   );
-  let generated = api_doc::generate(&engine);
-  let path = concat!(
-    env!("CARGO_MANIFEST_DIR"),
-    "/",
-    "src/script_bindings/API.md"
+  let stale_gaps = api_doc::stale_gaps(&engine);
+  assert!(
+    stale_gaps.is_empty(),
+    "api_doc::PERL_GAPS lists calls the engine now registers — move each to its DOCS entry's Mirror: \
+     {stale_gaps:?}"
   );
-  let on_disk = std::fs::read_to_string(path).unwrap_or_default();
+  // The cheat sheet's macro column names real macros: each must still be defined in the workspace.
+  let sources = macro_sources();
+  let undefined: Vec<&str> = api_doc::named_macros()
+    .into_iter()
+    .filter(|cell| {
+      cell.strip_suffix('!').is_none_or(|mac| {
+        !sources.contains(&format!("macro_rules! {mac} "))
+          && !sources.contains(&format!("macro_rules! {mac}("))
+      })
+    })
+    .collect();
+  assert!(
+    undefined.is_empty(),
+    "api_doc's Mirror/PERL_GAPS macro cells that are no `name!` a workspace crate defines: {undefined:?}"
+  );
+  for (file, generated) in [
+    ("API.md", api_doc::generate(&engine)),
+    ("CHEATSHEET.md", api_doc::generate_cheatsheet(&engine)),
+  ] {
+    check_generated(file, &generated);
+  }
+}
+
+/// Every non-comment `macro_rules!` line of the crates that define the binding macros, for the cheat-sheet check.
+fn macro_sources() -> String {
+  fn walk(dir: &std::path::Path, out: &mut String) {
+    for entry in std::fs::read_dir(dir).into_iter().flatten().flatten() {
+      let path = entry.path();
+      if path.is_dir() {
+        walk(&path, out);
+      } else if path.extension().is_some_and(|e| e == "rs") {
+        for line in std::fs::read_to_string(&path).unwrap_or_default().lines() {
+          if line.trim_start().starts_with("macro_rules!") {
+            out.push_str(line.trim_start());
+            out.push('\n');
+          }
+        }
+      }
+    }
+  }
+  let mut out = String::new();
+  for krate in ["latexml_core", "latexml_engine", "latexml_package"] {
+    walk(
+      &std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("..")
+        .join(krate)
+        .join("src"),
+      &mut out,
+    );
+  }
+  out
+}
+
+/// Compare a generated reference with its file beside `API.md`; `UPDATE_API_DOC=1` rewrites it.
+fn check_generated(file: &str, generated: &str) {
+  let path = format!("{}/src/script_bindings/{file}", env!("CARGO_MANIFEST_DIR"));
+  let on_disk = std::fs::read_to_string(&path).unwrap_or_default();
   if generated != on_disk {
     if std::env::var("UPDATE_API_DOC").is_ok() {
-      std::fs::write(path, &generated).expect("write API.md");
+      std::fs::write(&path, generated).expect("write the generated reference");
       return;
     }
     // Show the shape of the drift rather than a 200-line diff.
@@ -1069,7 +1293,7 @@ fn api_reference_is_up_to_date() {
       .filter(|l| !gen_lines.contains(l))
       .collect();
     panic!(
-      "src/script_bindings/API.md is stale — the engine registers a different \
+      "src/script_bindings/{file} is stale — the engine registers a different \
        surface than the reference documents.\n  added: {added:?}\n  removed: {removed:?}\n\
        Regenerate with: UPDATE_API_DOC=1 cargo test -p latexml_contrib --lib \
        api_reference_is_up_to_date"

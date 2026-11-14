@@ -40,7 +40,7 @@ $ latexml_oxide paper.tex --destination=paper.html
 $ latexmlmath_oxide 'a^2+b^2=c^2'
 ```
 
-`--format` takes `html5`, `html`, `xhtml`, `xml`, or `epub` — inferred from the
+`--format` takes `html5`, `html`, `xhtml`, `xml`, or `epub` (a zipped EPUB 3) — inferred from the
 `--destination` extension when omitted. `--help` lists every option.
 Working from a checkout instead of an installed binary? Prefix with
 `cargo run --bin latexml_oxide --`.
@@ -254,6 +254,10 @@ cache, which is slow.
 [`cargo-nextest`](https://nexte.st) (`cargo install cargo-nextest`) runs the same suite
 several times faster: `cargo nextest run --workspace`.
 
+With [EPUBCheck](https://www.w3.org/publishing/epubcheck/) installed (`apt install epubcheck`), the EPUB tests
+also validate the `.epub` they write; without it they print `SKIP epubcheck …`, and
+`LATEXML_EPUBCHECK_TESTS=1` turns that skip into a failure.
+
 ### Build profiles
 
 `Cargo.toml` defines named profiles for day-to-day development (`test`), the
@@ -335,8 +339,10 @@ Discovery rides the ordinary search paths (the document's own directory, plus an
 `article.cls.rhai` deliberately *overrides* the built-in `article` binding, which
 is how you patch a class without touching the binary.
 
-- **Worked example:** [`docs/examples/sample.sty.rhai`](docs/examples/sample.sty.rhai) — a tour of the whole surface (macros, constructors in template and imperative form, environments, options, counters, keyvals, math, rewrites). It is load-tested in CI, so it never rots.
-- **Interface reference:** [`latexml_contrib/src/script_bindings/API.md`](latexml_contrib/src/script_bindings/API.md) — every function you can call, grouped by handle (global, `document`, `Node`, `whatsit()`, `LookupDefinition()`, `Command`). It is **generated from the live engine** and re-checked on every test run, so it cannot drift from what is actually registered. It also renders into `cargo doc` as `latexml_contrib::script_bindings::interface`, so `cargo doc --workspace --open` (and docs.rs) show it beside the Rust API.
+- **Start here:** [`docs/parity/RHAI_BINDINGS_GUIDE.md`](docs/parity/RHAI_BINDINGS_GUIDE.md) — the dialect for newcomers: loading a binding, values, the Perl closure form, truthiness and `defined`, diagnostics, migrating from the deprecated names.
+- **Worked examples:** [`docs/examples/`](docs/examples/) — short bindings (macros, constructors, registers) and [`sample.sty.rhai`](docs/examples/sample.sty.rhai), a tour of the wider surface. CI converts each with its document, error- and warning-free, so they never rot.
+- **Cheat sheet:** [`CHEATSHEET.md`](latexml_contrib/src/script_bindings/CHEATSHEET.md) — every call as Perl | Rust macro | Rhai, generated and checked with the interface reference; its empty cells are the dialect's gaps.
+- **Interface reference:** [`latexml_contrib/src/script_bindings/API.md`](latexml_contrib/src/script_bindings/API.md) — every function you can call, grouped by handle (global, `document`, `Node`, `whatsit`, `LookupDefinition()`, `Command`). It is **generated from the live engine** and re-checked on every test run, so it cannot drift from what is actually registered. It also renders into `cargo doc` as `latexml_contrib::script_bindings::interface`, so `cargo doc --workspace --open` (and docs.rs) show it beside the Rust API.
 - **Semantics and design notes:** [`docs/parity/script_bindings_plan.md`](docs/parity/script_bindings_plan.md) — what the calls *mean*, the namespace rules, and what a failing binding degrades to.
 
 Because a `.rhai` beside a document is executed by a plain conversion, treat it as

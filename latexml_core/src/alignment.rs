@@ -48,6 +48,19 @@ use crate::{
   tokens::Tokens,
 };
 
+/// The colour of the horizontal rule being drawn, as colortbl's `\CT@arc@` gives it (colortbl.sty:166-192): set by
+/// the binding in the rule's group, taken by [`Alignment::add_line`].
+pub const RULE_COLOR: &str = "lx@alignment@rule@color";
+
+/// Takes the colour [`RULE_COLOR`] holds for the rule being drawn (`None`: the default ink).
+pub fn take_rule_color() -> Option<String> {
+  let Some(Stored::String(color)) = lookup_value(RULE_COLOR) else {
+    return None;
+  };
+  assign_value(RULE_COLOR, Stored::None, Some(Scope::Local));
+  Some(crate::common::arena::with(color, str::to_string))
+}
+
 /// token-locators: source span of an alignment cell (its content's locator).
 /// `tabular`/`tr`/`td` are opened before their content's `box_to_absorb` is set,
 /// so the absorb explicitly stamps each with its cell/row/table span via
@@ -314,6 +327,7 @@ impl Alignment {
   pub fn normalize(&mut self) -> Result<()> { normalize_alignment(self) }
 
   pub fn add_line(&mut self, border: &str, cols: Vec<usize>) {
+    let color = take_rule_color();
     if let Some(row_idx) = self.current_row {
       let Some(row) = self.rows.get_mut(row_idx) else {
         return;
@@ -329,12 +343,12 @@ impl Alignment {
         // tabular's column count.
         for c in cols {
           if let Some(colspec) = row.get_column_mut(c) {
-            colspec.border.push_str(border);
+            colspec.add_border(border, color.as_deref());
           }
         }
       } else {
         for colspec in row.get_columns_mut() {
-          colspec.border.push_str(border)
+          colspec.add_border(border, color.as_deref())
         }
       }
     }
@@ -864,8 +878,13 @@ impl BoxOps for Alignment {
         if let Some(w) = cell.width {
           cell_attrs.insert(String::from("width"), w.to_attribute());
         }
-        if let Some(vpad) = vpad_opt {
-          cell_attrs.insert(String::from("cssstyle"), s!("padding-bottom: {vpad}"));
+        let mut cssstyle: Vec<String> = vpad_opt
+          .map(|vpad| s!("padding-bottom: {vpad}"))
+          .into_iter()
+          .collect();
+        cssstyle.extend(cell.border_color_style());
+        if !cssstyle.is_empty() {
+          cell_attrs.insert(String::from("cssstyle"), cssstyle.join(";"));
         }
         // colortbl: backgroundcolor from \columncolor/\cellcolor
         if let Some(ref bg) = cell.backgroundcolor {
@@ -1351,6 +1370,7 @@ fn intercol_reachable_in_before(tokens: &Option<Tokens>) -> bool {
       }
       // These are skippable by the left-scan in Perl's extractAlignmentColumn
       if s == "\\vrule"
+        || s.starts_with("\\lx@CT@")
         || s == "\\relax"
         || s == "\\hfil"
         || s == "\\hfill"

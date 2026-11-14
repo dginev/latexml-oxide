@@ -5,7 +5,8 @@
 % oracle:  pdflatex 0 errors: rows "a b c d e f" and "g h i j k l", one rule (the second `\hhline`) between them
 % engines: rust 67int17b = Error:unexpected:\noalign (\noalign cannot be used here); Perl 0.8.8 the same
 %   (KNOWN_PERL_ERRORS #889)
-% expect:  0 errors; two rows of six cells
+% expect:  0 errors; two rows of six cells; the rules under `\arrayrulecolor{blue}` blue (#773: `\CT@arc@` is evaluated
+%   as a rule is drawn, so the unbraced `\color\hhline{---~~~}` never is)
 % status:  RED (67int17b) -> GREEN (69a)
 % preload: ar5iv.sty
 \documentclass{article}

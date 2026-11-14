@@ -56,6 +56,11 @@ pub fn opdict_lookup(content: &str, role: &str) -> OpDictProperties {
   props
 }
 
+/// The MathML Core category (Figure 25) of `content` in the form `role` implies.
+pub fn opdict_category(content: &str, role: &str) -> &'static str {
+  lookup_category(content, role_to_form(role))
+}
+
 /// Determine the operator category from content and form.
 ///
 /// Port of `lookup_category` — implements MathML Core Section 2.6.1 algorithm.
@@ -133,7 +138,7 @@ const INFIX_TABLE: &[(u32, u32, &str)] = &[
   (0x002C, 0x002C, "M"),
   (0x002D, 0x002D, "B"),
   (0x002E, 0x002E, "C"),
-  (0x002F, 0x002F, "B"),
+  (0x002F, 0x002F, "K"), // Core (TR 2025, ED) K; Perl :185 has B (KNOWN_PERL_ERRORS #1240)
   (0x003A, 0x003A, "M"),
   (0x003B, 0x003B, "M"),
   (0x003F, 0x0040, "C"),
@@ -599,6 +604,15 @@ mod tests {
     let props = opdict_lookup("\u{2062}", "MULOP");
     assert!((props.lspace - 0.0).abs() < 0.001); // Category K
     assert!((props.rspace - 0.0).abs() < 0.001);
+  }
+
+  #[test]
+  fn test_opdict_category_k_is_infix_only() {
+    for op in ["/", "\\", "_", "\u{2206}", "\u{2061}", "\u{2062}"] {
+      assert_eq!(opdict_category(op, "MULOP"), "K", "{op:?}");
+    }
+    assert_eq!(opdict_category("/", "OPEN"), "Default");
+    assert_eq!(opdict_category("\u{2215}", "MULOP"), "B");
   }
 
   #[test]

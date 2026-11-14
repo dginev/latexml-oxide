@@ -59,6 +59,11 @@ impl Dimension {
     round_to(self.0 as f64 / em_width, prec)
   }
 
+  /// Whether [`Self::spec_to_f64`] reads `spec` as written: empty, a dimension (`SPEC_RE`), or a number of sp.
+  pub fn spec_is_readable(spec: &str) -> bool {
+    spec.is_empty() || SPEC_RE.is_match(spec) || spec.parse::<f64>().is_ok()
+  }
+
   pub fn spec_to_f64(spec: &str) -> Result<f64> {
     if spec.is_empty() {
       Ok(0.0)
@@ -82,6 +87,14 @@ impl Dimension {
       // Perl parity: `kround($spec || 0)` — non-numeric input coerces to 0.
       Ok(kround(spec.parse::<f64>().unwrap_or(0.0)) as f64)
     }
+  }
+}
+
+impl Dimension {
+  /// Whether `spec` is a form Perl's `Dimension($spec)` reads (Dimension.pm `new`): a number with a two-letter
+  /// unit, or a bare number of sp; any other string Perl reads as a number, silently (`"1pt plus 2pt"` is 1sp).
+  pub fn is_spec(spec: &str) -> bool {
+    spec.is_empty() || SPEC_RE.is_match(spec) || spec.parse::<f64>().is_ok()
   }
 }
 

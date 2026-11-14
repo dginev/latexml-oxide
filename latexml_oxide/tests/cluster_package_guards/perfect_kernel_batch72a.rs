@@ -17,7 +17,8 @@ macro_rules! repro {
 }
 
 /// The census repro: the copy's `\kms` is an extra, its `\aj` the binding's (aas_macros.sty:94-97; 1309.5950,
-/// 1805.06442, 2001.05519, 1406.5372). pdflatex: "Speed 5 km s−1 in AJ-COPY."; the binding keeps "AJ".
+/// 1805.06442, 2001.05519, 1406.5372). pdflatex: "Speed 5 km s−1 in AJ-COPY."; the binding keeps "AJ". Repro
+/// tree_file: the same for a stand-in the installed TeX tree has.
 #[test]
 fn aas_macros_copy_adds_its_extras() {
   let (log, xml) = convert_files_with(
@@ -38,6 +39,20 @@ fn aas_macros_copy_adds_its_extras() {
       "Info:provide:\\aj \\aj keeps LaTeXML's definition: the paper's aas_macros.sty redefines it"
     ),
     "{log}"
+  );
+  // A copy of a stand-in a later TeX Live distributes (TL 2026's rasti.cls) is still the paper's file: TeX reads the
+  // document's directory first, whatever the process's cwd (revWIN1gh; pdflatex "Hello EXTRAWORD.").
+  let (log, xml) = convert_files_with(
+    repro!("tree_file/copy_of_a_tree_file_adds_its_extras.tex"),
+    &[("rasti.cls", repro!("tree_file/rasti.cls"))],
+    Some("ar5iv.sty"),
+  );
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  assert_element(
+    &xml,
+    "p",
+    &["xml:id=\"p1.1\""],
+    "<p xml:id=\"p1.1\">Hello EXTRAWORD.</p>",
   );
 }
 

@@ -53,6 +53,9 @@ pub struct Cell {
   pub x:                   Option<Dimension>,
   pub y:                   Option<Dimension>,
   pub border:              String,
+  /// The colour of each side's rule when it was drawn (colortbl's `\arrayrulecolor`, the
+  /// `RULE_COLOR`, or a `|` rule box's `border_color`), by [`BorderSpec`]: top, bottom, left, right; `None` the default ink.
+  pub border_color:        [Option<String>; 4],
   /// Perl: $$colspec{tabskip} — intercolumn glue from \halign template
   pub tabskip:             Option<Glue>,
   /// Perl: $$colspec{lspaces} — left-side spacing (incl. tabskip)
@@ -77,6 +80,9 @@ pub struct Cell {
   /// The cell's content overprints the cells to its right, as an `\rlap` does (`\lefteqn`, latex.ltx:15800): the
   /// empty cells that follow it join its span (`normalize_overprint_spans`). Set by `\lx@alignment@cell@overprint`.
   pub overprint:           bool,
+  /// The most columns an overprinting cell spans, its own included (a nicematrix `\Block{i-j}`'s `j`); `None` for no
+  /// bound.
+  pub overprint_columns:   Option<usize>,
 }
 impl Cell {
   /// Marks the column padded on its right when its after tokens hold an intercolumn macro (`\lx@intercol`, or a
@@ -91,6 +97,40 @@ impl Cell {
     }) {
       self.has_intercol_after = true;
     }
+  }
+
+  /// Adds the `border` letters (`t`/`b`/`l`/`r`, upper case alike), each side now drawn in `color`: a rule drawn
+  /// later is on top, as in TeX.
+  pub fn add_border(&mut self, sides: &str, color: Option<&str>) {
+    self.border.push_str(sides);
+    for side in sides.chars().filter_map(BorderSpec::of_letter) {
+      self.border_color[side as usize] = color.map(str::to_string);
+    }
+  }
+
+  pub fn border_color_at(&self, side: BorderSpec) -> Option<&str> {
+    self.border_color[side as usize].as_deref()
+  }
+
+  /// The `cssstyle` of the coloured sides the cell's `border` keeps (`border-top-color:#FF0000`).
+  pub fn border_color_style(&self) -> Option<String> {
+    let mut style = Vec::new();
+    for (side, name) in [
+      (BorderSpec::Top, "top"),
+      (BorderSpec::Bottom, "bottom"),
+      (BorderSpec::Left, "left"),
+      (BorderSpec::Right, "right"),
+    ] {
+      if let Some(color) = self.border_color_at(side)
+        && self
+          .border
+          .chars()
+          .any(|c| BorderSpec::of_letter(c) == Some(side))
+      {
+        style.push(format!("border-{name}-color:{color}"));
+      }
+    }
+    (!style.is_empty()).then(|| style.join(";"))
   }
 
   pub fn border_at(&self, side: BorderSpec) -> Option<usize> {

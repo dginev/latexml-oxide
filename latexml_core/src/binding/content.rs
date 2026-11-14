@@ -935,34 +935,10 @@ fn input_definitions_impl(
   // Track loaded files in \@filelist BEFORE loading (Perl: Package.pm calls
   // \@addtofilelist before reading the file, so \@filelist is available inside)
   //
-  // OXIDIZED_DESIGN #166: the kernel stores filelist names through
-  // `\string@makeletter` (latex.ltx L1784-1789), whose `\char@if@alph`
-  // (L1790-1795) tests the ASCII ranges A-Z / a-z ONLY: those characters get
-  // catcode LETTER (`\@expl@char@generate@@nn{`#1}{11}`), everything else —
-  // dots, digits, commas, and non-ASCII alike — keeps its `\string` catcode
-  // (OTHER). Reproduce that rule exactly (NOT `ExplodeText!`, whose
-  // Unicode-`is_alphabetic` letters more than the kernel does).
-  // All-OTHER tokens (`Explode!`) broke every delimited parse of
-  // `\@filelist` whose delimiter is source-typed letters: hep-font.sty's
-  // `\def\hepfont@get@class#1.cls#2\relax` matched nothing (letter `cls`
-  // vs other `cls`), and the resulting empty/mis-split arguments corrupted
-  // the surrounding conditional bookkeeping — the 13-bundle
-  // `expected:\fi` hep-* cluster (2026-08-31 corpus).
+  // OXIDIZED_DESIGN #166: latex.ltx's `\string@makeletter` (L1784-1795) stores the name's ASCII letters as LETTER,
+  // which hep-font.sty's `\def\hepfont@get@class#1.cls#2\relax` over `\@filelist` needs (the hep-* `expected:\fi` cluster).
   if options.handleoptions && lookup_definition(&T_CS!("\\@addtofilelist"))?.is_some() {
-    let name_tokens: Vec<Token> = filename
-      .chars()
-      .map(|c| {
-        let mut tmp = [0u8; 4];
-        let s = c.encode_utf8(&mut tmp);
-        if c.is_ascii_alphabetic() {
-          T_LETTER!(s)
-        } else if c == ' ' {
-          T_SPACE!()
-        } else {
-          T_OTHER!(s)
-        }
-      })
-      .collect();
+    let name_tokens = ExplodeText!(filename);
     digest(Tokens!(
       T_CS!("\\@addtofilelist"),
       T_BEGIN!(),
@@ -2118,6 +2094,13 @@ pub fn input(request: &str, options: InputOptions) -> Result<()> {
     return input_definitions(&clean_req, InputDefinitionOptions::default());
   }
   if lookup_bool_sym(crate::pin!("INTERPRETING_DEFINITIONS")) {
+    // A reader that set `\everyeof` takes the file as a token list (eTeX §362; expl3's `\file_get:nnN`), not a
+    // definitions load: OXIDIZED_DESIGN_DIVERGENCES #1029 (the TL 2026 format build's glyphtounicode.tex).
+    if everyeof_is_set()
+      && let Some(path) = find_file(&clean_req, None)
+    {
+      return read_as_token_list(&path);
+    }
     // TeX's `\input` reads the file on every call; only `\usepackage` /
     // `\RequirePackage` load once (latex.ltx `\@ifl@aded`). Perl routes an
     // `\input` met while reading definitions to InputDefinitions
@@ -2192,7 +2175,8 @@ pub fn input(request: &str, options: InputOptions) -> Result<()> {
   // load it (matching `\input harvmac` → `harvmac.tex.ltxml` preference
   // over a local `harvmac.tex`). Skip when the request carries a directory
   // (explicit local path).
-  let binding_loaded = {
+  // Under `\everyeof` the file itself is read, never a binding (#1029; `\file_get:nnN{ltluatex}`, revWIN1).
+  let binding_loaded = !everyeof_is_set() && {
     let has_dir = clean_req.contains('/') || clean_req.contains('\\');
     // Perl Package.pm:2109-2113 + 2255-2270: when `\input{name}` or
     // `\input{name.<ext>}` resolves to a known binding extension AND a
@@ -3195,6 +3179,31 @@ fn note_content_file(path: &str) {
   assign_value(CONTENT_FILES, files, Some(Scope::Global));
 }
 
+/// Whether `\everyeof` holds tokens: an `\input` under it feeds a reader of the file's tokens, so no binding answers
+/// it (see [`input`]).
+fn everyeof_is_set() -> bool {
+  matches!(
+    lookup_register("\\everyeof", Vec::new()),
+    Ok(Some(crate::definition::register::RegisterValue::Tokens(tokens))) if !tokens.is_empty()
+  )
+}
+
+/// TeX's `\input` of `path` while definitions are read and `\everyeof` is set: the file's text joins the input
+/// stream under the current catcodes and ends with the `\everyeof` tokens, for the reader that set them. Neither
+/// content of the document (no [`CONTENT_FILES`] entry, no binding) nor a definitions file (no loaded mark).
+fn read_as_token_list(path: &str) -> Result<()> {
+  let content = crate::binding::virtual_files::vfs_read(path);
+  gullet::open_mouth(
+    Mouth::create(path, MouthOptions {
+      notes: true,
+      content,
+      ..MouthOptions::default()
+    })?,
+    true,
+  );
+  gullet::mark_everyeof_mouth()
+}
+
 pub fn load_tex_content(path: &str, _options: InputOptions) -> Result<()> {
   // If there is a file-specific declaration file (name_tex.rs), load it first!
   // TODO: is this `.latexml` variation still relevant in the Rust port?
@@ -3993,6 +4002,58 @@ pub fn add_to_macro_scope() -> Scope {
     Scope::Local
   } else {
     Scope::Global
+  }
+}
+
+/// Perl `AddToMacro($cs, @tokens)` (Package.pm:2534): append to a macro's expansion, unlocked, in
+/// [`add_to_macro_scope`]; an undefined `cs` is an Error and is defined with the tokens, as latex.ltx's `\g@addto@macro`
+/// does (OD #1036). One implementation for the `AddToMacro!` macro and Rhai's `AddToMacro`.
+pub fn add_to_macro(cs: Token, tokens: Tokens) -> Result<()> {
+  // Package.pm:2547 `locked => $$defn{locked}`: the addition keeps the macro's lock.
+  let locked = lookup_bool(&format!("{cs}:locked"));
+  let options = || {
+    Some(ExpandableOptions {
+      scope: Some(add_to_macro_scope()),
+      nopack_parameters: true,
+      locked,
+      ..ExpandableOptions::default()
+    })
+  };
+  match lookup_definition(&cs)? {
+    // TeX's `\g@addto@macro` and Perl both err on an undefined cs (OD #1036); latex.ltx still defines it with the addition.
+    None => {
+      let message = s!("{cs} is not defined");
+      Error!("undefined", cs, message, "Defining it with the addition");
+      def_macro(cs, None, ExpansionBody::Tokens(tokens), options())
+    },
+    Some(defn) if !defn.is_expandable() => {
+      let message = s!("{cs} is not an expandable control sequence");
+      Warn!("unexpected", cs, message, "Ignoring addition");
+      Ok(())
+    },
+    Some(defn) => {
+      let mut expansion = match defn.get_expansion() {
+        Some(ExpansionBody::Tokens(old)) => old.clone().unlist(),
+        Some(ExpansionBody::Closure(_)) => {
+          let message = s!(
+            "{cs} has a closure body, AddToMacro will *override* with an ExpandableBody[Tokens] ! \
+             This is usually in error!"
+          );
+          Warn!("unexpected", "ExpandableBody[Closure]", message);
+          Vec::new()
+        },
+        None => Vec::new(),
+      };
+      expansion.extend(tokens.unlist());
+      // Package.pm:2545 `local $UNLOCKED = 1`: an addition may extend a `:locked` macro.
+      let _unlock_guard = local_state_unlocked_guard(true);
+      def_macro(
+        cs,
+        None,
+        ExpansionBody::Tokens(Tokens::new(expansion)),
+        options(),
+      )
+    },
   }
 }
 
@@ -5856,6 +5917,18 @@ pub fn def_color_model(model: &str, coremodel: &str) {
     Stored::String(arena::pin(coremodel)),
     Some(Scope::Global),
   );
+}
+
+/// Perl `Digest` (Package.pm:393-402): digest with side effects and mode changes, then leave a horizontal mode the
+/// digestion entered (`leaveHorizontal_internal`), as [`crate::parameter::Parameter::digest`] does for an argument.
+pub fn binding_digest<T: Into<Tokens>>(tokens: T) -> Result<Digested> {
+  let mode = lookup_string_from_sym(crate::pin!("MODE"));
+  let value = digest(tokens)?;
+  let nmode = lookup_string_from_sym(crate::pin!("MODE"));
+  if mode != nmode && nmode == "horizontal" {
+    leave_horizontal_internal();
+  }
+  Ok(value)
 }
 
 /// Digest tokens in text mode, whatever mode the caller is in.

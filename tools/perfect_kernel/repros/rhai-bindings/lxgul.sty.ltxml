@@ -1,0 +1,5 @@
+# Perl stand-in for lxgul.sty.rhai (the Perl run).
+package LaTeXML::Package::Pool;
+use LaTeXML::Package;
+DefMacro('\lxg{}', sub { my ($gullet) = @_; Tokens(T_CS('\textbf'), T_BEGIN, $gullet->readArg, T_END); });
+1;

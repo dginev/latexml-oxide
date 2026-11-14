@@ -43,10 +43,55 @@ macro_rules! Number {
 }
 
 impl From<String> for Number {
-  /// Parse a string into a Number. Non-numeric input silently becomes 0
-  /// to match Perl's `Number(ToString($x))` coercion — Perl's implicit
-  /// numeric context treats "abc" / undef as 0 without panicking.
-  fn from(s: String) -> Number { Number(s.trim().parse::<i64>().unwrap_or(0)) }
+  fn from(s: String) -> Number { Number::from_str_value(&s) }
+}
+
+impl Number {
+  /// Perl Number.pm:31-34 `int($number)`: Perl's numeric coercion, truncated toward zero (`"1e3"` is 1000, `"1.5"` 1);
+  /// a string that is not wholly a number Warns as Perl's `isn't numeric` and reads its numeric prefix (`"12abc"` 12).
+  pub fn from_str_value(spec: &str) -> Number {
+    let trimmed = spec.trim();
+    let prefix = numeric_prefix(trimmed);
+    if prefix.is_empty() || prefix.len() != trimmed.len() {
+      Warn!(
+        "perl",
+        "warn",
+        s!("Argument \"{spec}\" isn't numeric in int")
+      );
+    }
+    Number(prefix.parse::<f64>().map_or(0, |f| f.trunc() as i64))
+  }
+}
+
+/// The longest prefix of `s` Perl's string-to-number conversion reads: `[+-]?\d*(\.\d*)?([eE][+-]?\d+)?`.
+fn numeric_prefix(s: &str) -> &str {
+  let b = s.as_bytes();
+  let digits = |mut i: usize| {
+    while i < b.len() && b[i].is_ascii_digit() {
+      i += 1;
+    }
+    i
+  };
+  let mut i = usize::from(matches!(b.first(), Some(b'+' | b'-')));
+  let start = i;
+  i = digits(i);
+  let mut mantissa = i > start;
+  if b.get(i) == Some(&b'.') {
+    let j = digits(i + 1);
+    mantissa |= j > i + 1;
+    i = j;
+  }
+  if !mantissa {
+    return "";
+  }
+  if matches!(b.get(i), Some(b'e' | b'E')) {
+    let k = i + 1 + usize::from(matches!(b.get(i + 1), Some(b'+' | b'-')));
+    let e = digits(k);
+    if e > k {
+      i = e;
+    }
+  }
+  &s[..i]
 }
 
 impl fmt::Display for Number {
@@ -84,15 +129,20 @@ mod tests {
   }
 
   #[test]
-  fn number_from_string_nonnumeric_is_zero() {
-    // Perl-parity: non-numeric → 0 silently.
-    assert_eq!(Number::from(String::from("abc")).value_of(), 0);
-    assert_eq!(Number::from(String::from("")).value_of(), 0);
-    assert_eq!(
-      Number::from(String::from("3.14")).value_of(),
-      0,
-      "float string doesn't parse as integer — coerces to 0"
-    );
+  fn number_from_string_is_perls_int() {
+    // Perl `int($s)` (Number.pm:31-34): numeric coercion truncated; a non-numeric remainder reads the prefix.
+    for (input, n) in [
+      ("abc", 0),
+      ("", 0),
+      (".5", 0),
+      ("3.14", 3),
+      ("1e3", 1000),
+      ("-7", -7),
+      (" 42 ", 42),
+      ("12abc", 12),
+    ] {
+      assert_eq!(Number::from(String::from(input)).value_of(), n, "{input}");
+    }
   }
 
   #[test]
