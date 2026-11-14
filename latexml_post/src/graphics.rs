@@ -4536,23 +4536,34 @@ endobj
     );
     let svg = std::fs::read_to_string(dir.join("native_raster_vector.svg")).unwrap();
     assert_eq!(svg_drawn_shape(&svg), expected);
-    // The PNG path rasterizes through ImageMagick, which CI does not install.
-    let raster = std::process::Command::new(im_convert_program())
-      .arg("-version")
+    // The enlarged tile's SVG is dropped whatever the PNG path can do; main's PNG path rasterizes the PDF
+    // through Ghostscript (not ImageMagick), which a minimal CI image may lack.
+    let raster = std::process::Command::new(gs_program())
+      .arg("--version")
       .output()
       .is_ok_and(|o| o.status.success());
-    if !raster {
-      eprintln!(
-        "SKIP small_raster_pdf's PNG row: {} not on PATH",
-        im_convert_program()
-      );
-      return;
-    }
+    let _ = latexml_core::util::logger::init(log::LevelFilter::Info);
+    log::set_max_level(log::LevelFilter::Info);
+    latexml_core::util::logger::bind_log();
+    let before = latexml_core::common::error::snapshot_report_counts();
     let (out, dir) = pipeline("mixed_raster_vector");
+    let after = latexml_core::common::error::snapshot_report_counts();
     assert!(
-      out.contains(r#" imagesrc="mixed_raster_vector.png" "#),
+      !out.contains(r#" imagesrc="mixed_raster_vector.svg" "#),
       "{out}"
     );
     assert!(!dir.join("mixed_raster_vector.svg").exists());
+    if raster {
+      assert!(
+        out.contains(r#" imagesrc="mixed_raster_vector.png" "#),
+        "{out}"
+      );
+      assert_eq!(after.error, before.error, "{out}");
+    } else {
+      eprintln!(
+        "SKIP small_raster_pdf's PNG output check: {} not on PATH (the SVG drop is still checked)",
+        gs_program()
+      );
+    }
   }
 }
