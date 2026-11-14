@@ -103,6 +103,22 @@ a.ltx_LaTeXML_logo { text-decoration: none; }
     border:none; border-radius:0; box-shadow:none; text-align:center; }
 .ltx_authors_multiline .ltx_contact_name {
     display:none; }
+/* latexml-oxide local delta (issue #783): `\author{Name\\Line\\…}` makes each line an affiliation contact
+   (Perl Base_Utility.pool.ltxml:722), which the PDF prints under the name: an author with one shows its contacts
+   as lines, as ltx_authors_multiline does, rather than behind the starred pop-up. */
+.ltx_document:not(.ltx_authors_multiline) .ltx_creator:has(> .ltx_author_notes .ltx_role_affiliation) {
+    display:inline-block; vertical-align:top; }
+.ltx_document:not(.ltx_authors_multiline) .ltx_author_notes:has(.ltx_role_affiliation),
+.ltx_document:not(.ltx_authors_multiline) .ltx_author_notes:has(.ltx_role_affiliation) .ltx_contact {
+    display:block; }
+.ltx_document:not(.ltx_authors_multiline) .ltx_author_notes:has(.ltx_role_affiliation):before {
+    content:none; }
+.ltx_document:not(.ltx_authors_multiline) .ltx_author_notes:has(.ltx_role_affiliation) .ltx_author_notes_content,
+.ltx_document:not(.ltx_authors_multiline) .ltx_author_notes:has(.ltx_role_affiliation):hover .ltx_author_notes_content {
+    visibility:visible; opacity:1; position:static; z-index:auto; padding:0; background:none;
+    border:none; border-radius:0; box-shadow:none; font-size:inherit; text-align:inherit; }
+.ltx_document:not(.ltx_authors_multiline) .ltx_author_notes:has(.ltx_role_affiliation) .ltx_contact_name {
+    display:none; }
 
 .ltx_pubnotes:before {
     content:"\002020"; color:blue;

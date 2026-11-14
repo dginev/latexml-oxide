@@ -1,0 +1,18 @@
+% witness: issue 783 (reporter nasser1's MWE), synthetic
+% oracle:  pdflatex 0 errors; "name", "school name", "dept. name" on three centred lines
+% engines: rust 17a64c0415a and Perl: the two lines are affiliation contacts (Base_Utility.pool.ltxml:722); LaTeXML.css
+%          shows them only in a pop-up behind a blue star
+% expect:  0 errors; XML unchanged; in Chrome both lines visible under the name, no star
+% status:  RED (17a64c0415a) -> GREEN (CSSI: LaTeXML.css); guard
+%          cluster_cli::browser_render_eqn_tags_and_authors::equation_tags_stay_beside_and_author_lines_show
+\documentclass[12pt]{book}
+\begin{document}
+\title{the title}
+\author{name \\
+school name \\
+dept. name
+}
+\date{\today}
+\maketitle
+text
+\end{document}
