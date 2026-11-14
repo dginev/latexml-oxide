@@ -10,7 +10,7 @@
     (`The control sequence \X is not a register`, Package.pm:1367-1369); the macros on an undefined cs too
     (`warn_not_register`; the core `lookup_register` stays quiet on an undefined cs, which kernel code probes). `Dimension!` Warns on a spec that is neither a dimension nor a number (the value is
     unchanged, 0). `InstallDefinition!` takes `(definition[, scope])` (it did not compile). `AddToMacro!` Warns
-    when it defines an undefined cs (OXIDIZED_DESIGN #1035). Guards `perfect_kernel_batchmacsync::*`.
+    when it defines an undefined cs (OXIDIZED_DESIGN #1036). Guards `perfect_kernel_batchmacsync::*`.
   - **`\linewidth` in a `p`/`m`/`b` table cell is the column's width** (issue 778). A
     cell of a paragraph column set `\hsize` to the column's width but kept the page's
     `\linewidth`, so `\includegraphics[width=\linewidth]` in a `m{0.3\textwidth}` cell was

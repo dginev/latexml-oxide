@@ -36147,7 +36147,7 @@ current colour. Residual (post-merge): `\hhline`'s `>{…}` colour codes stay sk
 (repros `alignment-bindings/arrayrulecolor_*`), `perfect_kernel_batch69a::arrayrulecolor_reads_to_the_brace`,
 `perfect_kernel_batch60::colortbl_noalign_idiom`, the `alignment/colortbls` golden.
 
-### 1035. `AddToMacro!` on an undefined cs defines it with the addition, with a Warning (MACSYNC)
+### 1036. `AddToMacro!` on an undefined cs defines it with the addition, with a Warning (MACSYNC)
 
 **Perl.** `AddToMacro` (Package.pm:2534-2549) Warns ("not an expandable control sequence") and drops the addition when
 the cs is undefined; a later use of the cs is then an undefined-cs Error. **TeX.** latex.ltx:1832 `\g@addto@macro`'s

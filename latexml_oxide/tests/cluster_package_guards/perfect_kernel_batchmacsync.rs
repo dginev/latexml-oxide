@@ -107,7 +107,7 @@ fn binding_macros_mean_what_perls_names_mean() {
 }
 
 /// Row 3, Package.pm:2534-2549: `\g@addto@macro` on an undefined cs defines it with the addition, as latex.ltx does
-/// after TeX's error (pdflatex 1 `!`, "AXYB"), with a Warning (OXIDIZED_DESIGN #1035); the preamble `\AtEndOfPackage`,
+/// after TeX's error (pdflatex 1 `!`, "AXYB"), with a Warning (OXIDIZED_DESIGN #1036); the preamble `\AtEndOfPackage`,
 /// whose hook `\csname` makes, raises nothing.
 #[test]
 fn add_to_macro_on_an_undefined_cs_warns() {

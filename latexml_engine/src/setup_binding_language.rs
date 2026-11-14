@@ -2019,7 +2019,7 @@ macro_rules! ProcessKeyOptions {
 }
 
 /// Perl `AddToMacro($cs, @tokens)` (Package.pm:2534-2549), but an undefined cs is defined with the addition as
-/// latex.ltx's `\g@addto@macro` does (after TeX's undefined-cs error, here a Warning; OXIDIZED_DESIGN #1035).
+/// latex.ltx's `\g@addto@macro` does (after TeX's undefined-cs error, here a Warning; OXIDIZED_DESIGN #1036).
 #[macro_export]
 macro_rules! AddToMacro {
   ($cs:literal, $tokens:literal) => {{
