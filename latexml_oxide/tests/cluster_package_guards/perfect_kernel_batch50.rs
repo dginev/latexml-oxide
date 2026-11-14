@@ -52,7 +52,8 @@ T8:\ifx\d\e yes\else no\fi
 /// pre-subscript, `_ [4] ^ [95] [MoO] ^ [2 – ]`. Since mhchem's formula hook (OXIDIZED_DESIGN_DIVERGENCES
 /// #1040) the prescript sits on the element `Mo` and the charge on the formula; mhchem's
 /// `\mhchem@minispace` no longer runs, so the `$…\widthof{$b$}…$` line alone guards calc. The
-/// charge's `limit-from` reading is RED (repro package-bindings/mhchem_charge_meaning_red).
+/// charge's `limit-from` reading is RED (repro package-bindings/mhchem_charge_meaning_red). The elements are
+/// juxtaposed, a kludged row, not a product (DG 2026-11-14).
 #[test]
 fn calc_widthof_in_math_measures_own_box() {
   let (stderr, xml) = convert(
@@ -73,12 +74,11 @@ X $a\setlength{\mylen}{\widthof{$b$}}c$ Y
   assert_eq!(error_count(&stderr), 0, "{stderr}");
   assert_eq!(stderr.matches("Warning:").count(), 0, "{stderr}");
   assert!(!stderr.contains("lx@end@inline@math"), "{stderr}");
-  let moo4 = r#"<Math mode="inline" tex="\mathord{{}^{\mathrm{95}}\mathord{\mathrm{Mo}}\mathord{\mathrm{O}}_{\mathrm{4}}}^{\mathrm{2-}}" text="(^ 95 Mo * O _ 4) ^ (limit-from@(2, -))" xml:id="p3.m1">
+  let moo4 = r#"<Math mode="inline" tex="\mathord{{}^{\mathrm{95}}\mathord{\mathrm{Mo}}\mathord{\mathrm{O}}_{\mathrm{4}}}^{\mathrm{2-}}" text="^ 95 Mo@O _ 4 ^ (limit-from@(2, -))" xml:id="p3.m1">
         <XMath>
           <XMApp>
             <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
-            <XMApp role="ID">
-              <XMTok meaning="times" role="MULOP">⁢</XMTok>
+            <XMWrap role="ID" rule="kludge">
               <XMApp>
                 <XMTok role="SUPERSCRIPTOP" scriptpos="pre3"/>
                 <XMTok role="ID">Mo</XMTok>
@@ -89,7 +89,7 @@ X $a\setlength{\mylen}{\widthof{$b$}}c$ Y
                 <XMTok role="ID">O</XMTok>
                 <XMTok fontsize="70%" meaning="4" role="NUMBER">4</XMTok>
               </XMApp>
-            </XMApp>
+            </XMWrap>
             <XMApp>
               <XMTok meaning="limit-from"/>
               <XMTok fontsize="70%" meaning="2" role="NUMBER">2</XMTok>
