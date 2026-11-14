@@ -1,0 +1,15 @@
+% witness: synthetic (MnSymbol.sty:1795 `\linesegmentfill@` has the shape; the `ext_arrow_braced_mkern` fixture's `{\relbar\relbar}`)
+% oracle:  pdflatex 0 errors: one long left-to-two-headed arrow; one long bar
+% engines: rust AFH = 0 errors, each relation a `list@(…)` of its two ends (`A (list@(leftarrow, twoheadrightarrow)) B`);
+%          Perl 0.8.8 = 1 Error:undefined:\arrowfill@
+% expect:  one relation each: a pair with no composed glyph, or a multi-bar end, still reads as one arrow
+% status:  RED (AFH)
+% moves:   post-merge
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{amsmath,amssymb}
+\makeatletter
+\begin{document}
+$A \mathrel{\hbox{\arrowfill@\leftarrow\relbar\twoheadrightarrow\textstyle}} B$
+$A \mathrel{\hbox{\arrowfill@{\relbar\relbar}\relbar\relbar\textstyle}} B$
+\end{document}
