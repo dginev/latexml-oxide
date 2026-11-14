@@ -1,0 +1,20 @@
+% witness: issue 810 (reporter nasser1's MWE, shortened), synthetic
+% oracle:  pdflatex 0 errors; TeX never sets a formula under its number (tex.web §1202-1205: the formula moves
+%          left, or the number takes its own line)
+% engines: rust 17a64c0415a with LaTeXML.css, Chrome: (C.8.1) over its formula at 768 and 375 px, (C.8.2) at 375 px
+%          (the tag column is max-width:0 and overlays the right pad's 2em)
+% expect:  0 errors; in Chrome and Firefox at 1280/768/375 px each tag sits beside its formula (a one-row
+%          equation is a grid, a multi-row table keeps a tag column; OD #1042)
+% status:  RED (17a64c0415a) -> GREEN (CSSI: LaTeXML.css); guard
+%          cluster_cli::browser_render_eqn_tags::equation_tags_stay_beside
+\documentclass{book}
+\usepackage{amsmath}
+\begin{document}
+\begin{align}
+&=\frac{\frac{d}{dX}\left(-Y^{-1}e^{-XY^{-1}}+XY^{-2}e^{-XY^{-1}}U\right)\left(Y^{-2}e^{-Y^{-1}}U\right)-\left(-Y^{-1}e^{-XY^{-1}}+XY^{-2}e^{-XY^{-1}}U\right)\frac{d}{dX}\left(Y^{-2}e^{-Y^{-1}}U\right)}{\left(Y^{-2}e^{-Y^{-1}}U\right)^{2}}\tag{C.8.1}
+\end{align}
+But
+\begin{equation}
+\frac{d}{dX}\left(-Y^{-1}e^{-XY^{-1}}+XY^{-2}e^{-XY^{-1}}U\right)=\frac{d}{dX}\left(-Y^{-1}e^{-XY^{-1}}\right)+\frac{d}{dX}\left(XY^{-2}e^{-XY^{-1}}U\right)\tag{C.8.2}
+\end{equation}
+\end{document}

@@ -1,0 +1,11 @@
+% witness: review revCSSI of issue 810 (align, gather, eqnarray, subequations), synthetic
+% oracle:  pdflatex 0 errors; amsmath centres the rows in the full line, the tags at the margin
+% engines: rust CSSIb with LaTeXML.css, Chrome/Firefox at 1280/768/375 px: rows 10 px ((1)) to 24 px ((T)) left of
+%          the line's centre, as the tag column takes its width (base without the column: 0-14 px, tags could overlap)
+% expect:  rows centred in the full line while the tags fit
+% status:  RED (CSSIb); moves: post-merge (rows share columns, so the one-row grid of OD #1042 does not apply)
+\documentclass{article}
+\usepackage{amsmath}
+\begin{document}
+\begin{align}x&=y+z\\ u&=v\tag{T}\end{align}
+\end{document}

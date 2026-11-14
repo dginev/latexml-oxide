@@ -434,7 +434,7 @@ jobs:
   # mold RUSTFLAGS here). Uses Homebrew's `texlive`, which ships
   # libkpathsea + kpathsea.pc, so the in-process linked kpathsea backend is
   # exercised end-to-end. (MacTeX/BasicTeX's subprocess-`kpsewhich` fallback
-  # is documented in README.md but not gated here — it lacks the package set
+  # is documented in docs/BUILDING.md but not gated here — it lacks the package set
   # the full suite needs.)
   macos:
     name: latexml-oxide CI (macOS shard ${{ matrix.shard }}/4)

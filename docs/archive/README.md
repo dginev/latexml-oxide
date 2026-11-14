@@ -25,6 +25,10 @@ citations are why the file is kept.
 - `MALFORMED_CLOSE_NUMBERED_2026-06-10.md` — cited by `latexml_oxide/src/util/test.rs`; lesson in WISDOM #90.
 - `known_crashes/` — resolved crash records: `1804.01117_xint_stack_overflow_2026-06-20.md`, `kbordermatrix_halign_math/`, `blkarray_halign_math/`. Cited by sect10.rs, blkarray_sty.rs, arraycr_halign.tex, blkarray.tex, KNOWN_PERL_ERRORS, STABILITY_WITNESSES, WISDOM.
 
+- `PERFECT_KERNEL_2026-11-13.md` — the perfect-kernel brief, quality axes, scope, goal bar and close status; goal
+  met 2026-11-13, merged into main `6df4632fb1`. Live residual in `../SYNC_STATUS.md` row R; the rows' detail stays
+  in `../perfect_kernel/`. Cited by `beamer_cls.rs`, `tools/perfect_kernel/{scoreboard.py,*.tsv}`, `.claude/agents/`.
+
 - `PERL_LOADFORMAT_AUDIT.md` — strict-`LoadFormat` dump-parity audit; mission
   complete (zero-error `--init`, dumps match Perl). Cited by `CLAUDE.md`,
   `dump_writer.rs`, `../parity/{DUMP_DESIGN,ORGANIZATION}.md`.
@@ -100,6 +104,8 @@ citations are why the file is kept.
   ranked rows (G, XP, R4), the bundle rows int119a-int152a and int133a, row 98d, the pre-flip leftovers' history, the
   long rows' full records and the Rust Error Fixes' bodies, split into one fact per line. Each live residual keeps its
   row, under the same title, in SYNC_STATUS or (since SYNC1b) `../perfect_kernel/SILENT_LOSS_INVENTORY.md`.
+  Later moves add their own `## Moved from SYNC_STATUS by …` sections (SYNC3 2026-11-12; DOCSPM 2026-11-14: the pre-merge
+  table, the road's conclusions and the done WIN1 section with its TL 2026 install recipe).
 - `GEMINI_IMPROVEMENT_IDEAS_2026-09-19.md` — the Gemini engineering review; P1/P5/P6/P7 landed, P3/P4 settled, the
   open ideas lifted into `../performance/BEYOND_PERL_LEVERS.md`.
 - `round19_iteration_log.md` — pre-Round-25 sprint narratives. Cited by `CHANGELOG.md`.
