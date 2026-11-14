@@ -1242,6 +1242,35 @@ fn api_reference_is_up_to_date() {
   }
 }
 
+/// Every row of the checked-in API.md and CHEATSHEET.md tables has its header's columns: a `|` in a description
+/// (a closure's `|gullet, x|`) is escaped, or GitHub splits the row into extra cells (RHAIH part 3).
+#[test]
+fn api_tables_keep_their_columns() {
+  for file in ["API.md", "CHEATSHEET.md"] {
+    let path = format!("{}/src/script_bindings/{file}", env!("CARGO_MANIFEST_DIR"));
+    let text = std::fs::read_to_string(&path).expect("read the reference");
+    let cells = |line: &str| line.replace("\\|", "").matches('|').count();
+    let mut header = 0;
+    let bad: Vec<&str> = text
+      .lines()
+      .filter(|line| {
+        if !line.starts_with('|') {
+          header = 0;
+          return false;
+        }
+        if header == 0 {
+          header = cells(line);
+        }
+        cells(line) != header
+      })
+      .collect();
+    assert!(
+      bad.is_empty(),
+      "{file}: rows with a different column count: {bad:#?}"
+    );
+  }
+}
+
 /// Every non-comment `macro_rules!` line of the crates that define the binding macros, for the cheat-sheet check.
 fn macro_sources() -> String {
   fn walk(dir: &std::path::Path, out: &mut String) {

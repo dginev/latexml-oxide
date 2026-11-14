@@ -249,6 +249,10 @@
     provide-only binding load declines it. Guards `script_bindings::tests::let_takes_a_scope`,
     `script_bindings::tests::let_takes_any_token`.
 
+  - **The Rhai API reference's tables keep their columns.** A description quoting a closure (`|gullet, x|`) split its
+    `API.md` row into extra cells on GitHub; the generator escapes `|` in descriptions too. Guard
+    `script_bindings::tests::api_tables_keep_their_columns`.
+
   - **Rhai values print as their TeX** (Rhai round H). **BREAKING:** `LookupMeaning` returns the meaning, as Perl's
     and `LookupMeaning!` — a `Definition` handle (which `AssignMeaning` installs) or a Token, `()` when undefined —
     where it returned the printed string `Stored[??]`; a string comparison keeps working this release with a

@@ -2707,11 +2707,16 @@ fn lookup_entry(receiver: Option<&str>, name: &str) -> Option<(&'static Mirror, 
 
 /// The documentation cell for one call: a rustdoc intra-doc link, or the note; a deprecated alias says so first.
 fn doc_cell(receiver: Option<&str>, name: &str) -> String {
+  // `\|`: a closure's `|args|` in the text would split the Markdown table cell, code span or not (GFM tables).
   let doc = match lookup(receiver, name) {
     Some(Doc::Rust(summary, path)) => {
-      format!("{summary} ([`{}`]({path}))", short_path(path))
+      format!(
+        "{} ([`{}`]({path}))",
+        summary.replace('|', "\\|"),
+        short_path(path)
+      )
     },
-    Some(Doc::Note(note)) => (*note).to_string(),
+    Some(Doc::Note(note)) => note.replace('|', "\\|"),
     None => String::new(),
   };
   let alias = match receiver {
