@@ -10163,7 +10163,8 @@ is first-group, so the tree stays valid). The class means "text that preceded `\
 `ltx_titlepage_continued`, stands for no title: the XHTML `ltx:title` template still shows the title and creators
 beside it, and every engine reader of "a titlepage replacing the title" excludes both (`title_standing_titlepage`:
 `settle_cover_title_ink`, `lift_marked_field_ink`, `maybe_dedup_leading_title_ink`). Not wrapped: blank lines and
-`\vspace` (content-free), preamble residue, the paragraph holding a boxed `\maketitle`, and whatever follows the
+`\vspace` (content-free), preamble residue (and the body words that share its paragraph, as in TeX), the paragraph
+holding a boxed `\maketitle`, and whatever follows the
 first section, TOC or float (those still follow the frontmatter). A `{titlepage}` or `\section` flush before
 `\maketitle` places the frontmatter first, and the text before `\maketitle` still follows the title (RED
 `text_before_maketitle_after_an_earlier_flush_red`). Guard
