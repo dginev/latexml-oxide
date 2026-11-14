@@ -1023,6 +1023,10 @@ fn perl_truthy(v: &Dynamic) -> bool {
 #[doc = include_str!("API.md")]
 pub mod interface {}
 
+// The Perl | Rust macro | Rhai cheat sheet, generated beside `interface` by `api_doc.rs`.
+#[doc = include_str!("CHEATSHEET.md")]
+pub mod cheatsheet {}
+
 #[cfg(test)]
 mod api_doc;
 #[cfg(test)]
