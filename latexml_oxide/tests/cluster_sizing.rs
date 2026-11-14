@@ -92,7 +92,7 @@ mod delimiter_size_nominal_font {
     let got = sizes(&xml);
     for want in ["120%", "160%"] {
       assert!(
-        got.contains(&want.to_string()),
+        got.iter().any(|i| i == want),
         "expected a {want} delimiter under a0poster (NOMINAL_FONT_SIZE=25), got {got:?} — \
          the \\big family is using a hardcoded absolute size again, so the \
          delimiters are scaled against the wrong body size"
@@ -101,7 +101,7 @@ mod delimiter_size_nominal_font {
     // The pre-fix answers. Named so a regression is unmistakable.
     for bad in ["48%", "64%"] {
       assert!(
-        !got.contains(&bad.to_string()),
+        !got.iter().any(|i| i == bad),
         "delimiter rendered at {bad} — that is 1.2*10 (or 1.6*10) measured \
          against a 25pt body, i.e. the hardcoded-DEFSIZE regression"
       );

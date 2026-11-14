@@ -450,8 +450,8 @@ mod tests {
       <contact role="email"></contact></creator></document>"#
     ));
     let d = diff_front(&a, &b);
-    assert!(d.flags.contains(&"contact-emptied".to_string()), "{d:?}");
-    assert!(d.flags.contains(&"creator-changed".to_string()), "{d:?}");
+    assert!(d.flags.iter().any(|i| i == "contact-emptied"), "{d:?}");
+    assert!(d.flags.iter().any(|i| i == "creator-changed"), "{d:?}");
   }
 
   #[test]
@@ -466,7 +466,7 @@ mod tests {
       <creator role="author"><personname>Cy</personname></creator></document>"#
     ));
     let d = diff_front(&a, &b);
-    assert!(d.flags.contains(&"creator-lost".to_string()), "{d:?}");
+    assert!(d.flags.iter().any(|i| i == "creator-lost"), "{d:?}");
     assert!(
       d.notes.iter().any(|n| n.contains("creator lost \"Bob\"")),
       "{d:?}"
@@ -497,7 +497,7 @@ mod tests {
       "contact-link-fragment",
       "creator-changed",
     ] {
-      assert!(d.flags.contains(&flag.to_string()), "{flag}: {d:?}");
+      assert!(d.flags.iter().any(|i| i == flag), "{flag}: {d:?}");
     }
   }
 

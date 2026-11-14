@@ -13,16 +13,30 @@ fn import_path_fix(path: &str) -> String {
   }
 }
 
-/// The current `\import@path` (import.sty:142, empty outside any import).
-fn import_path() -> String { lookup_string("lx@import@path") }
+/// The current `\import@path` (import.sty:142, empty outside any import), the package's own macro: a document reads it
+/// (`\newcommand{\currentimportpath}{\import@path}`, issue #772).
+fn import_path() -> Result<String> { Ok(Expand!(Tokens!(T_CS!("\\import@path"))).to_string()) }
+
+/// import.sty:83 `\protected@xdef\import@path{…}` and :93 `\gdef\import@path{#5}`: global, as the package's.
+fn set_import_path(path: &str) -> Result<()> {
+  def_macro(
+    T_CS!("\\import@path"),
+    None,
+    Tokens::new(ExplodeText!(path)),
+    Some(ExpandableOptions {
+      scope: Some(Scope::Global),
+      ..Default::default()
+    }),
+  )
+}
 
 /// import.sty:82-85 `\@import`: `\import@path` becomes `path`, and `\input@path` gets it in front of the enclosing
 /// entries (TeX resolves each entry against the working directory, here the source directory). The `*` forms are
 /// the same (import.sty:60-62 "Consume now-meaningless `*`"); Perl's `*` searched only the import's directory, which
 /// loses the source directory the joined name is relative to (`\subimport*{nested/}{outer.tex}` reads
 /// `nested/outer.tex`).
-fn enter_import_path(path: String) {
-  assign_value("lx@import@path", Stored::String(pin(&path)), None);
+fn enter_import_path(path: String) -> Result<()> {
+  set_import_path(&path)?;
   let mut new_paths = Vec::new();
   if !path.is_empty() {
     let dir = if pathname::is_absolute(&path) {
@@ -39,6 +53,7 @@ fn enter_import_path(path: String) {
   }
   new_paths.extend(get_search_paths());
   set_search_paths_local(new_paths);
+  Ok(())
 }
 
 #[rustfmt::skip]
@@ -58,11 +73,14 @@ LoadDefinitions!({
   // (2408.09583: its chapters, then its statement files). Perl's `\input{#3}` against a search path made of the
   // first entry and the new directory (import.sty.ltxml:20-47) found neither (KPE #1171).
 
+  // import.sty:142 `\gdef\import@path{}`.
+  DefMacro!("\\import@path", "");
+
   // Perl import.sty.ltxml L20-29: \lx@set@path OptionalMatch:* {} — `\import`'s directory, relative to the source
   // directory unless absolute.
   DefPrimitive!("\\lx@set@path OptionalMatch:* {}", sub[(_star, path_tks)] {
     let path = import_path_fix(&Expand!(path_tks).to_string());
-    enter_import_path(path);
+    enter_import_path(path)?;
   });
 
   // Perl import.sty.ltxml L31-42: \lx@append@path OptionalMatch:* {} — `\subimport`'s directory, appended to the
@@ -81,9 +99,9 @@ LoadDefinitions!({
     let path = if pathname::is_absolute(raw) {
       import_path_fix(raw)
     } else {
-      import_path_fix(&s!("{}{raw}", import_path()))
+      import_path_fix(&s!("{}{raw}", import_path()?))
     };
-    enter_import_path(path);
+    enter_import_path(path)?;
   });
 
   // `\@import`'s read (import.sty:86-88): `<command>{\import@path <file>}`. Where that file does not exist but the
@@ -94,7 +112,7 @@ LoadDefinitions!({
   DefMacro!("\\lx@import@input{}{}", sub[(command, file)] {
     let mut toks = command.unlist();
     toks.push(T_BEGIN!());
-    let path = import_path();
+    let path = import_path()?;
     let name = Expand!(file.clone()).to_string();
     let name = name.trim();
     if !path.is_empty()
@@ -137,7 +155,7 @@ LoadDefinitions!({
       _ => VecDeque::new(),
     };
     stack.push_front(saved);
-    stack.push_front(Stored::String(pin(import_path())));
+    stack.push_front(Stored::String(pin(import_path()?)));
     assign_value("lx@import@saved@paths", Stored::VecDequeStored(stack), Some(Scope::Global));
   });
   DefPrimitive!("\\lx@import@restore", {
@@ -147,17 +165,20 @@ LoadDefinitions!({
     {
       assign_value("lx@import@saved@paths", Stored::VecDequeStored(stack), Some(Scope::Global));
       assign_value("SEARCHPATHS", saved, Some(Scope::Local));
-      assign_value("lx@import@path", saved_import_path, None);
+      let saved_import_path: String = (&saved_import_path).into();
+      set_import_path(&saved_import_path)?;
     }
   });
+  // import.sty:53-58: `\import`, `\inputfrom` and `\includefrom` empty `\import@path` globally before `\@sub@import`
+  // saves it, so a nested `\import` restores it to empty, not to the enclosing directory.
   DefMacro!("\\import OptionalMatch:* {}{}",
-    "\\lx@import@save\\lx@set@path #1{#2} \\lx@import@input{\\input}{#3}\\lx@import@restore");
+    "\\global\\let\\import@path\\@empty\\lx@import@save\\lx@set@path #1{#2}\\lx@import@input{\\input}{#3}\\lx@import@restore");
   DefMacro!("\\includefrom OptionalMatch:* {}{}",
-    "\\lx@import@save\\lx@set@path #1{#2} \\lx@import@input{\\include}{#3}\\lx@import@restore");
+    "\\global\\let\\import@path\\@empty\\lx@import@save\\lx@set@path #1{#2}\\lx@import@input{\\include}{#3}\\lx@import@restore");
   DefMacro!("\\subimport OptionalMatch:* {}{}",
-    "\\lx@import@save\\lx@append@path #1{#2} \\lx@import@input{\\input}{#3}\\lx@import@restore");
+    "\\lx@import@save\\lx@append@path #1{#2}\\lx@import@input{\\input}{#3}\\lx@import@restore");
   DefMacro!("\\subincludefrom OptionalMatch:* {}{}",
-    "\\lx@import@save\\lx@append@path #1{#2} \\lx@import@input{\\include}{#3}\\lx@import@restore");
+    "\\lx@import@save\\lx@append@path #1{#2}\\lx@import@input{\\include}{#3}\\lx@import@restore");
   Let!("\\inputfrom", "\\import");
   Let!("\\subinputfrom", "\\subimport");
 });

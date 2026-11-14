@@ -304,7 +304,7 @@
       <tag role="refnum">1</tag>
       <tag role="typerefnum">Figure 1</tag>
     </tags>
-    <rule align="center" height="34.5pt" width="172.5pt"/>
+    <rule align="center" height="36.0pt" width="180.0pt"/>
     <toccaption class="ltx_centering"><tag close=" ">1</tag>First figure</toccaption>
     <caption class="ltx_centering"><tag close=": ">Figure 1</tag>First figure</caption>
   </figure>

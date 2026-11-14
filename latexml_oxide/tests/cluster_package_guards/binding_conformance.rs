@@ -264,7 +264,8 @@ fn arydshln_binding_conforms_to_the_sty() {
       .as_ref()
       .unwrap()
       .chain
-      .contains(&"\\adl@ihdashline".to_string()),
+      .iter()
+      .any(|i| i == "\\adl@ihdashline"),
     "the raw view is arydshln's own: {:?}",
     raw[0]
   );

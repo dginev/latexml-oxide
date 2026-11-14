@@ -171,6 +171,7 @@ pub mod eqnarray_sty;
 pub mod esint_sty;
 pub mod espcrc_sty;
 pub mod etex_sty;
+pub mod etoc_sty;
 pub mod etoolbox_sty;
 pub mod eucal_sty;
 pub mod eufrak_sty;

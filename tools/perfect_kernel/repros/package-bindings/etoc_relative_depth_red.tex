@@ -1,0 +1,20 @@
+% etoc.sty:920-927 `\localtableofcontentswithrelativedepth{<n>}` sets `\Etoc@@startlocaltochook` to list the local
+% table to the enclosing unit's level plus <n>; the binding's `\localtableofcontents` never runs the hook, so the table
+% lists to `tocdepth` (review revW2 of issue #760).
+% witness: synthetic (review revW2)
+% oracle:  pdflatex 0 errors (two runs): the local table lists 1.1 and 1.2 only, no 1.1.1
+% engines: rust=0 (head 5149a37793: the local table lists 1.1, 1.1.1, 1.2) perl=1 (undefined)
+% expect:  0 errors; the local table lists 1.1 and 1.2
+% status:  RED
+% moves:   post-merge
+\documentclass{article}
+\usepackage{etoc}
+\begin{document}
+\section{First section}
+\localtableofcontentswithrelativedepth{+1}
+\subsection{First subsection}
+\subsubsection{Deep}
+text
+\subsection{Second subsection}
+text
+\end{document}

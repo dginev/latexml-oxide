@@ -5,9 +5,10 @@ use crate::prelude::*;
 #[rustfmt::skip]
 LoadDefinitions!({
   // Perl: elsarticle.cls.ltxml
-  // Generally ignorable options
+  // Generally ignorable options (the size options pass to article below, as elsarticle.cls:113 passes every option it
+  // does not declare: `[12pt]` 390pt, `\@ptsize` 2)
   for option in [
-    "12pt", "11pt", "10pt", "endfloat", "endfloats", "numafflabel",
+    "endfloat", "endfloats", "numafflabel",
     "oneside", "twoside", "onecolumn", "twocolumn",
     "lefttitle", "centertitle", "reversenotenum",
     "symbold", "ussrhead", "nameyear",
@@ -187,7 +188,7 @@ LoadDefinitions!({
       3 => declare_panel_page(222.0, 468.0, true),
       1 => {},
       _ => {
-        let (column, text) = standard_class_twocolumn_page();
+        let (column, text) = standard_class_twocolumn_page("article");
         declare_panel_page(column, text, true);
       },
     }

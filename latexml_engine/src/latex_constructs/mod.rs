@@ -1905,6 +1905,21 @@ fn after_digest_verbatim(starred: bool, whatsit: &mut Whatsit) -> Result<()> {
   } else {
     ("\\end{verbatim}", ' ')
   };
+  // latex.ltx `\@verbatim` runs `\@noligs`, whose active `'`/`` ` `` print as it says: upquote.sty:26-37 appends
+  // `\let'\textquotesingle` (or `\def'{\char13 }` in OT1 cmtt), upright, where the font's own are curly (issue #801).
+  let mut upquotes: Vec<(char, String)> = Vec::new();
+  for c in ['\'', '`'] {
+    let typeset = Tokens::new(vec![
+      T_CS!("\\hbox"),
+      T_BEGIN!(),
+      T_CS!("\\@noligs"),
+      T_ACTIVE!(c),
+      T_END!(),
+    ]);
+    let mut printed = String::new();
+    ink_text(&digest(typeset)?, &mut printed);
+    upquotes.push((c, printed));
+  }
   let mut lines: Vec<_> = Vec::new();
   // The body is decoded through the document's 8-bit input encoding (inputenc's
   // active upper-half characters keep their meaning: latex.ltx:15441-15459
@@ -1960,6 +1975,8 @@ fn after_digest_verbatim(starred: bool, whatsit: &mut Whatsit) -> Result<()> {
     for c in line.chars() {
       if c == ' ' || c == '\t' {
         decoded_line.push(space);
+      } else if let Some((_, typeset)) = upquotes.iter().find(|(q, t)| *q == c && !t.is_empty()) {
+        decoded_line.push_str(typeset);
       } else {
         let decoded_c = font::decode_string(pin_char(c), Some("OT1_typewriter"), true);
         with(decoded_c, |c_str| decoded_line.push_str(c_str));
@@ -4449,18 +4466,46 @@ pub fn declare_panel_page(column_pt: f64, text_pt: f64, twocolumn: bool) {
 pub fn withdraw_panel_page() { assign_value(PANEL_PAGE, Stored::None, Some(Scope::Global)); }
 
 /// The two-column page of LaTeX's standard classes (`declare_panel_page`), as `size10.clo`/`size11.clo`/`size12.clo`
-/// (and `bk1x.clo`) set it for the document's class options: in two columns `\textwidth` is the paper's width less
-/// 2in, at most twice the size's one-column 345/360/390pt, `\@settopoint`ed; `\columnwidth` is half of it less the
-/// classes' 10pt `\columnsep` (article.cls:627, latex.ltx `\twocolumn`). The paper is the last declared of the
-/// classes' paper options (article.cls:53-77, `landscape` swapping its sides), the size the last of `10pt`/`11pt`/
-/// `12pt` (`\ProcessOptions` runs them in their declaration order); under 2.09 compatibility (`\documentstyle`) the
-/// size files set 410pt (size10.clo `\if@compatibility\if@twocolumn\setlength\textwidth{410\p@}`). Returns (column,
-/// text) in points; pdflatex gives 229.5/469pt on letter paper, 221/452pt on A4, 200/410pt for `\documentstyle`.
-pub fn standard_class_twocolumn_page() -> (f64, f64) {
+/// (and `bk1x.clo`) set it for the options `class` was given (`standard_class_options`): in two columns `\textwidth`
+/// is the paper's width less 2in, at most twice the size's one-column 345/360/390pt, `\@settopoint`ed; `\columnwidth`
+/// is half of it less the classes' 10pt `\columnsep` (article.cls:627, latex.ltx `\twocolumn`). The paper is the last
+/// declared of the classes' paper options (article.cls:53-77, `landscape` swapping its sides), the size the last of
+/// `10pt`/`11pt`/`12pt` (`\ProcessOptions` runs them in their declaration order); under 2.09 compatibility
+/// (`\documentstyle`) the size files set 410pt (size10.clo `\if@compatibility\if@twocolumn\setlength\textwidth{410\p@}`).
+/// Returns (column, text) in points; pdflatex gives 229.5/469pt on letter paper, 221/452pt on A4, 200/410pt for
+/// `\documentstyle`.
+pub fn standard_class_twocolumn_page(class: &str) -> (f64, f64) {
   if lookup_bool("2.09_COMPATIBILITY") {
     return (200.0, 410.0);
   }
-  let (width, height) = match last_declared_class_option(&[
+  let (paper_width, one_column) = standard_class_size_file(class);
+  let text = (paper_width - 144.54_f64).min(2.0 * one_column).floor();
+  ((text - 10.0) / 2.0, text)
+}
+
+/// The options a standard class was given: latex.ltx's `\ProcessOptions` in a class reads its `\opt@<class>.cls`
+/// alone (`\@process@ptions`, no `\@classoptionslist`), which is the document's options when it is the document's class
+/// and what a class passes it otherwise (`\PassOptionsToClass`, `\LoadClass[…]`: elsarticle.cls:113, llncs.cls:47);
+/// here the State list `pass_options_with_raw` keeps with it.
+fn standard_class_options(class: &str) -> Vec<String> {
+  lookup_vecdeque(&s!("opt@{class}.cls"))
+    .unwrap_or_default()
+    .iter()
+    .flat_map(|item| match item {
+      Stored::String(o) => vec![with(*o, |o| o.to_string())],
+      Stored::Strings(os) => os.iter().map(|o| with(*o, |o| o.to_string())).collect(),
+      _ => Vec::new(),
+    })
+    .collect()
+}
+
+/// The size file's facts the standard classes' `\textwidth` is computed from: the paper's width (the last declared of
+/// the paper options, article.cls:53-77, `landscape` swapping its sides) and the size's one-column width (size10.clo,
+/// size11.clo, size12.clo and bk1x.clo `\@tempdimb`: 345/360/390pt for the last of `10pt`/`11pt`/`12pt`), in points;
+/// under 2.09 compatibility bk1x.clo:105's one column is 4.5in/5in/5in instead (`declare_standard_class_page`).
+fn standard_class_size_file(class: &str) -> (f64, f64) {
+  let given = standard_class_options(class);
+  let (width, height) = match last_declared_option(&given, &[
     "a4paper",
     "a5paper",
     "b5paper",
@@ -4475,33 +4520,68 @@ pub fn standard_class_twocolumn_page() -> (f64, f64) {
     Some("executivepaper") => (523.9575, 758.835),
     _ => (614.295, 794.97),
   };
-  let width = if given_class_options().iter().any(|o| o == "landscape") {
+  let width = if given.iter().any(|o| o == "landscape") {
     height
   } else {
     width
   };
-  let one_column = match last_declared_class_option(&["10pt", "11pt", "12pt"]) {
-    Some("11pt") => 360.0,
-    Some("12pt") => 390.0,
-    _ => 345.0,
-  };
-  let text = (width - 144.54_f64).min(2.0 * one_column).floor();
-  ((text - 10.0) / 2.0, text)
+  (
+    width,
+    standard_class_one_column(standard_class_ptsize(class)),
+  )
 }
 
-/// A standard class (article, report, book) that is the document's (`is_document_class`) declares its page in two
-/// columns (`standard_class_twocolumn_page`) under `twocolumn` (the last declared of `onecolumn`/`twocolumn`): its
+/// The standard classes' `\@ptsize` (article.cls:45-49 `\DeclareOption{11pt}{\renewcommand\@ptsize{1}}`): 0, 1 or 2
+/// for the last declared of `10pt`/`11pt`/`12pt` among the options `class` was given (`standard_class_options`; a raw
+/// class's bare `\LoadClass{article}` gives it none).
+pub fn standard_class_ptsize(class: &str) -> u8 {
+  match last_declared_option(&standard_class_options(class), &["10pt", "11pt", "12pt"]) {
+    Some("11pt") => 1,
+    Some("12pt") => 2,
+    _ => 0,
+  }
+}
+
+fn standard_class_one_column(ptsize: u8) -> f64 {
+  match ptsize {
+    1 => 360.0,
+    2 => 390.0,
+    _ => 345.0,
+  }
+}
+
+/// A standard class (article, report, book) given `twocolumn` (the last declared of `onecolumn`/`twocolumn`) that is
+/// the document's (`is_document_class`) declares its page in two columns (`standard_class_twocolumn_page`): its
 /// `figure` is set against the 229.5pt column, its `figure*` against the 469pt text on letter paper, where the
 /// registers' 345pt read as the column and twice it as the text (`panel_page`; rev79c2: `figure*` `panelline` 2 for
-/// the PDF's 2.044). A class loading it (OmniBus, elsarticle, REVTeX) is not it: its page is its own. One column is
-/// the registers' page.
-pub fn declare_standard_class_page(class: &str) {
-  if is_document_class(class)
-    && last_declared_class_option(&["onecolumn", "twocolumn"]) == Some("twocolumn")
+/// the PDF's 2.044). A class loading it (OmniBus, elsarticle, REVTeX) declares its own page. In one column it sets
+/// `\textwidth` from the options it was given, a loading class's own setting after it standing (llncs.cls:55).
+pub fn declare_standard_class_page(class: &str) -> Result<()> {
+  if last_declared_option(&standard_class_options(class), &["onecolumn", "twocolumn"])
+    == Some("twocolumn")
   {
-    let (column, text) = standard_class_twocolumn_page();
-    declare_panel_page(column, text, true);
+    if is_document_class(class) {
+      let (column, text) = standard_class_twocolumn_page(class);
+      declare_panel_page(column, text, true);
+    }
+  } else {
+    // size1x.clo:101-126 in one column: the paper's width less 2in, at most the size's width, `\@settopoint`ed (issue
+    // #779: 12pt's 390pt, where the kernel's register is 10pt's 345pt). Under 2.09 compatibility size1x.clo's
+    // 345/360/390pt and bk1x.clo:105's 4.5in/5in/5in, unrounded (pdflatex 325.215pt, 361.34999pt).
+    let (paper_width, one_column) = standard_class_size_file(class);
+    let sp = match (
+      lookup_bool("2.09_COMPATIBILITY"),
+      class,
+      standard_class_ptsize(class),
+    ) {
+      (true, "book", 0) => 21_313_290,
+      (true, "book", _) => 23_681_433,
+      (true, ..) => (one_column * 65536.0) as i64,
+      (false, ..) => ((paper_width - 144.54_f64).min(one_column).floor() * 65536.0) as i64,
+    };
+    assign_register("\\textwidth", Dimension::new(sp).into(), None, Vec::new())?;
   }
+  Ok(())
 }
 
 /// The state value of a class whose floats are centred (`declare_panel_floats_centred`).
@@ -4549,7 +4629,11 @@ pub fn last_class_option<'a>(options: &[&'a str]) -> Option<&'a str> {
 /// the one that stands where `\ProcessOptions` runs the options in their declaration order (latex.ltx's
 /// `\ProcessOptions`, as IEEEtran.cls's :376), for a binding's `declare_panel_page`.
 pub fn last_declared_class_option<'a>(options: &[&'a str]) -> Option<&'a str> {
-  let given = given_class_options();
+  last_declared_option(&given_class_options(), options)
+}
+
+/// Which of `options` (in their declaration order) `given` holds, the last declared.
+fn last_declared_option<'a>(given: &[String], options: &[&'a str]) -> Option<&'a str> {
   options
     .iter()
     .rev()
@@ -8745,7 +8829,7 @@ pub use sect01::{
 mod sect02;
 mod sect03;
 mod sect04;
-pub use sect04::kernel_chapter_with_warning;
+pub use sect04::{kernel_chapter_with_warning, toc_select};
 mod sect05;
 pub use sect05::note_title_page_part;
 pub(crate) use sect05::{

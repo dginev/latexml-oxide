@@ -19634,6 +19634,20 @@ Types \X.
 \end{document}
 ```
 
+## 1239. import.sty.ltxml's import commands typeset a stray space before the imported file
+
+import.sty.ltxml:44-47 define `\import`, `\includefrom`, `\subimport`, `\subincludefrom` as
+`{\lx@set@path #1{#2} \input{#3}}`: the space after `{#2}` is a space token, digested in horizontal mode, so the
+imported text follows a space import.sty does not typeset (its `\@import`, import.sty:82-92, reads `\input` directly).
+Rust drops it (OXIDIZED_DESIGN_DIVERGENCES #1023). Minimal trigger, with `sub/y.tex` = `Z%` (pdflatex 0 `!`, "XZY";
+Perl 0 Errors, `<p>X ZY</p>`; Rust `<p>XZY</p>`):
+
+```latex
+\documentclass{article}
+\usepackage{import}
+\begin{document}
+X\subimport{sub/}{y}Y
+
 ## 1241. `page=` on a single-page graphic is a transform: an SVG warns, a PNG or JPEG is re-encoded
 
 `image_graphicx_is_trivial` (Util/Image.pm:281-284) counts `page` beside rotate/clip/trim, so `Post/Graphics.pm:262-271`

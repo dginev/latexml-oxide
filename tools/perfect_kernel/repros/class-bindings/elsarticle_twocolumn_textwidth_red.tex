@@ -1,0 +1,15 @@
+% elsarticle.cls:82-83, :1282-1296: `5p` sets the page in two columns, `\textwidth` 522pt. The binding sets no
+% `\textwidth` in two columns, so it is article's one-column width for the size passed to it (elsarticle.cls:113):
+% 390pt at 12pt. The binding also declares `onecolumn`/`twocolumn`/`oneside`/`twoside` as no-ops, which the class
+% passes to article (`[twocolumn]{elsarticle}`: pdflatex 469pt). Sibling of `standard_class_twocolumn_textwidth_red.tex`.
+% witness: synthetic (review revW2b)
+% oracle:  pdflatex 0 errors: TEXTWIDTH = 522.0pt, PTSIZE = 2
+% engines: rust=0 (W2F2: 390.0pt, 2; head 0102466f6d: 345.0pt, 0)
+% expect:  0 errors; TEXTWIDTH = 522.0pt, PTSIZE = 2
+% status:  RED
+% moves:   post-merge
+\documentclass[5p,12pt]{elsarticle}
+\begin{document}
+\makeatletter
+TEXTWIDTH = \the\textwidth, PTSIZE = \@ptsize
+\end{document}

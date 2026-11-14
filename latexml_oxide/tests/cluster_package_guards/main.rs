@@ -127,6 +127,8 @@ mod xkeyval_internals;
 
 mod accent_composite_expansion;
 mod beamer_includegraphics_overlay;
+/// Issues #772, #760, #801, #787, #773, #779: the bindings batch of 2026-11-13.
+mod bindings_batch1;
 mod counter_id_formatters_from_the_dump;
 mod datatool_native_load;
 mod etex_logo;
