@@ -110,6 +110,12 @@ fn core_k_operators_have_no_operator_space() {
       "<mrow><mo stretchy=\"false\">(</mo><mrow><mo>−</mo><mi>x</mi></mrow><mo stretchy=\"false\">)</mo></mrow>"
         .to_string(),
     ),
+    // `∇` is TeX's Ord: the `⋅` stays a Bin (its 0em left is the role table's Op-Bin, Perl's residual).
+    (
+      "p1.m11",
+      "\\nabla\\cdot B",
+      "<mrow><mo>∇</mo><mo lspace=\"0em\" rspace=\"0.222em\">⋅</mo><mi>B</mi></mrow>".to_string(),
+    ),
     (
       "S0.E1.m2",
       "\\displaystyle=b+",

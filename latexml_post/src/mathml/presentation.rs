@@ -2948,15 +2948,15 @@ fn space_walk(root: &mut NodeData, path: Vec<usize>) {
         space_walk(root, next.clone());
         items.push((invisop, next));
       }
-      let types = tex_atom_types(root, &items);
+      let (roles, classes) = tex_atom_types(root, &items);
+      let converted = |i: usize| roles[i] == "Bin" && classes[i] == "Ord";
       // A Bin TeX made an Ord (`a+-b`'s `−`, `a+b+`) is tight where Core spaces it: a later child by its infix
       // entry, as postfix `+`/`−` have none (§3.2.4.2); a first child is prefix, 0 already (issue 824).
       for (i, (_, path)) in items.iter().enumerate().skip(1) {
         let inner = descend_embellishers(root, path.clone());
         let node = node_at(root, &inner);
-        if types[i] == "Ord"
+        if converted(i)
           && get_node_tag(node) == "m:mo"
-          && item_atom_type(root, path) == "Bin"
           && get_node_attr_f64(node, "_lspace") + get_node_attr_f64(node, "_rspace")
             > SPACING_EPSILON
         {
@@ -2966,8 +2966,14 @@ fn space_walk(root: &mut NodeData, path: Vec<usize>) {
           }
         }
       }
+      // A converted atom's pairs read TeX's classes (`|⊥⟩`, 2405.12855: `|` is an Ord); the others the role table.
       for (i, (invisop, next)) in items.iter().enumerate().skip(1) {
         let prev = &items[i - 1].1;
+        let types = if converted(i - 1) || converted(i) {
+          &classes
+        } else {
+          &roles
+        };
         adjust_pair(root, prev, next, invisop.as_deref(), types[i - 1], types[i]);
       }
     },
@@ -2989,12 +2995,25 @@ fn item_atom_type(root: &NodeData, path: &[usize]) -> &'static str {
 }
 
 /// The items' atom types after TeX's pass over the list (tex.web §728-729): a Bin first, after a Bin, Op, Rel,
-/// Open or Punct, before a Rel, Close or Punct, or last is an Ord. An `mspace` is glue there, not an atom.
+/// Open or Punct, before a Rel, Close or Punct, or last is an Ord. An `mspace` is glue there, not an atom. The pass
+/// reads `∇`, `|`, `‖` and `.` as TeX does, Ords (class 0), not as the role table's Op and Punct. Returns the role
+/// table's types and the classes after the pass.
 fn tex_atom_types(
   root: &NodeData,
   items: &[(Option<Vec<usize>>, Vec<usize>)],
-) -> Vec<&'static str> {
-  let mut types: Vec<&'static str> = items.iter().map(|(_, p)| item_atom_type(root, p)).collect();
+) -> (Vec<&'static str>, Vec<&'static str>) {
+  let roles: Vec<&'static str> = items.iter().map(|(_, p)| item_atom_type(root, p)).collect();
+  let mut types: Vec<&'static str> = items
+    .iter()
+    .zip(&roles)
+    .map(|((_, p), &ty)| {
+      let inner = descend_embellishers(root, p.clone());
+      match get_node_attr(node_at(root, &inner), "_role").as_deref() {
+        Some("OPERATOR" | "VERTBAR" | "PERIOD") => "Ord",
+        _ => ty,
+      }
+    })
+    .collect();
   let mut r: Option<usize> = None; // the previous noad; none acts as TeX's initial `op_noad`
   for (i, (_, path)) in items.iter().enumerate() {
     if get_node_tag(node_at(root, path)) == "m:mspace" {
@@ -3011,7 +3030,7 @@ fn tex_atom_types(
   if let Some(j) = r.filter(|&j| types[j] == "Bin") {
     types[j] = "Ord";
   }
-  types
+  (roles, types)
 }
 
 /// Adjust the spacing between a visually adjacent pair. Port of Perl

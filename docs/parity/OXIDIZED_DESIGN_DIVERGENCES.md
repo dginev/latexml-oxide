@@ -36415,13 +36415,16 @@ form (§3.2.4.2): a last child is postfix, and `+` and `−` have no postfix ent
 MathML.pm:1097-1284) types each atom by its role alone, so a trailing `+` stays a Bin. **Rust.** `space_walk`
 (presentation.rs) collects an mrow's visually adjacent atoms first, then types them (`item_atom_type`, Perl's role
 table and #1033's Core-K Ord) and applies TeX's conversion over the list (`tex_atom_types`, an `mspace` skipped as
-glue); `adjust_pair` spaces each pair by those types. A converted Bin `<mo>` after the list's first atom whose
+glue; `∇`, `|`, `‖` and `.` read as TeX's Ords, class 0, where the role table says Op or Punct, so `\nabla\cdot B`
+keeps a binary `⋅`); `adjust_pair` spaces each pair by those types, only a Bin's type changed. A converted Bin `<mo>` after the list's first atom whose
 dictionary spacing is nonzero gets `lspace="0em" rspace="0em"`; a leading one is not marked (Core's prefix form gives
 `+` and `−` zero). `\showbox` (pdflatex, TL 2025) agrees on every row: `a+-b` has `\medmuskip` both sides of `+` and
 none around `−` (`<mo>+</mo><mo lspace="0em" rspace="0em">−</mo>`); `x\pm-1`, `f(0+)`, `a+ =b` (`\thickmuskip` only
 around `=`), `a+b+`, `x+,y`, `a+\,=b`, `\{+,-\}`, `x^{2+}`, `\lim_{x\to0+}`, an align cell ending `=b+`, mhchem's charge
 `2-` set the sign tight; `-x`, `(-x)`, `a=-b` keep a bare `<mo>` (the parser's prefix operator, already an Ord).
 This replaces a rule keyed on the parser's `limit-from` reading, which also tightened the binary `+` of `a+-b`.
-Residual: scripts keep Bin and Rel space (TeX's `\medmuskip`/`\thickmuskip` are not inserted in script style;
-`math-parse/script_style_rel_has_no_thick_space_red.tex`). Offer upstream. **Guard**:
+Residuals: scripts keep Bin, Rel and Punct space (TeX inserts none in script style, §764), so a converted sign
+after a comma in a script (2003.05751 `\mathcal{P}^{2,+}`) leaves the comma Core's 0.167em
+(`math-parse/script_style_rel_has_no_thick_space_red.tex`); a braced `{\mathop{\square}}` is TeX's Ord but the role
+table's Op (2012.06541). Offer upstream. **Guard**:
 `perfect_kernel_batchmml2::core_k_operators_have_no_operator_space` (repro `math-parse/bin_atom_becomes_ord.tex`).
