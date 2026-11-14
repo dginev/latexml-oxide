@@ -1467,6 +1467,27 @@ pub fn hook_has_code(hook: &str) -> bool {
     || hook_slot_has_code(&T_CS!(s!("\\__hook_next {hook}")))
 }
 
+/// Whether `hook` holds a chunk labelled `label`: lthooks keeps labelled code in a flat prop (`\prop_if_in:cnTF`,
+/// latex.ltx:5544), each entry `\__prop_pair:wn <label> \s__prop {<code>}` (expl3-code.tex:9873).
+pub fn hook_has_labelled_code(hook: &str, label: &str) -> bool {
+  if !l3_hooks_loaded() {
+    return false;
+  }
+  let Some(Some(prop)) = macro_body(&T_CS!(s!("\\g__hook_{hook}_code_prop"))) else {
+    return false;
+  };
+  let (pair, sep) = (T_CS!("\\__prop_pair:wn"), T_CS!("\\s__prop"));
+  let mut entries = prop.split(|t| *t == pair).skip(1);
+  entries.any(|entry| {
+    let key = entry
+      .iter()
+      .take_while(|t| **t != sep)
+      .map(|t| t.to_string())
+      .collect::<String>();
+    key == label
+  })
+}
+
 /// No L3 hook system (the plain/no-op format): no hook code anywhere.
 fn l3_hooks_loaded() -> bool { lookup_meaning(&T_CS!("\\hook_if_empty:nTF")).is_some() }
 

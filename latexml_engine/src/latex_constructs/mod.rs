@@ -1885,19 +1885,25 @@ fn apply_dospecials() {
 
 fn before_digest_verbatim(starred: bool) -> Result<Vec<Digested>> {
   bgroup();
-  apply_dospecials();
+  let name = if starred { "verbatim*" } else { "verbatim" };
+  AssignValue!("current_environment", "verbatim");
+  def_macro(
+    T_CS!("\\@currenvir"),
+    None,
+    mouth::tokenize_internal(TeXString::assembled(name.into())),
+    None,
+  )?;
   let mut stuff = Vec::new();
   if let Some(b) = lookup_tokens("@environment@verbatim@atbegin") {
     stuff.push(digest(b.unlist())?);
   }
-  // latex.ltx:15362 `\UseHook{env/verbatim/begin}` in `\begin`'s group: this constructor is no DefEnvironment, whose
-  // closure fires it (dialect.rs), so the kernel hook's code was dropped (QA47B).
-  let begin_hook = env_hook_tokens(if starred { "verbatim*" } else { "verbatim" }, "begin");
+  // latex.ltx:15350-15352 `\UseHook{env/verbatim/begin}` after `\def\@currenvir`, before `\verbatim`'s `\dospecials` and
+  // font: this constructor is no DefEnvironment, whose closure fires it (dialect.rs), so it fires it itself (QA47B).
+  let begin_hook = env_hook_tokens(name, "begin");
   if !begin_hook.is_empty() {
     stuff.push(digest(begin_hook)?);
   }
-  AssignValue!("current_environment", "verbatim");
-  DefMacro!("\\@currenvir", "verbatim");
+  apply_dospecials();
   MergeFont!(family => "typewriter");
   Ok(stuff)
 }

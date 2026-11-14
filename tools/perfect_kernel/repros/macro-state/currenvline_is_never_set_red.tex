@@ -1,0 +1,19 @@
+% latex.ltx:15351 `\begin` sets `\@currenvline` to `\on@line` (" on input line N") with `\@currenvir`; no `\begin` path
+%   of ours sets it (sect01.rs `\let\@currenvline\@empty`), so a hook or `\@badend`'s message reads it empty.
+% witness: QAB1c (the brief's `\@currenvline` check); synthetic.
+% status:  RED
+% moves:   post-merge
+% oracle:  pdflatex 0 errors; "[ on input line 15]."
+% engines: rust QAB1b, QAB1c: "[]."; Perl: `\AddToHook` a no-op, "[]".
+% expect:  0 errors, 0 warnings; <p>[ on input line 15].</p>
+\documentclass{article}
+\makeatletter
+\newcommand\where{}
+\AddToHook{env/quote/begin}{\xdef\where{[\@currenvline]}}
+\makeatother
+\begin{document}
+\begin{quote}
+Q
+\end{quote}
+\where.
+\end{document}

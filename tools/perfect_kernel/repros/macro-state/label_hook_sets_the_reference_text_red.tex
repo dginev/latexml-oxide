@@ -1,0 +1,17 @@
+% latex.ltx:14941-14946 `\label` runs `\UseHookWithArguments{label}{1}{#1}` in a group BEFORE its `.aux` write, so a hook
+%   that changes `\@currentlabel` (or `\@currentlabelname`) changes what `\ref` prints; sect11.rs runs the hook after the
+%   label is recorded, so the reference keeps the old text.
+% witness: revQAB1 probe p/label4.tex; synthetic.
+% status:  RED
+% moves:   post-merge
+% oracle:  pdflatex 0 errors; "See Z1."
+% engines: rust QAB1b, QAB1c: "See 1."; Perl: `\AddToHookWithArguments` a no-op, "See 1.".
+% expect:  0 errors, 0 warnings; <p>See <ref labelref="LABEL:sec:a"/>.</p> resolving to "Z1"
+\documentclass{article}
+\makeatletter
+\AddToHookWithArguments{label}{\protected@edef\@currentlabel{Z\@currentlabel}}
+\makeatother
+\begin{document}
+\section{One}\label{sec:a}
+See \ref{sec:a}.
+\end{document}

@@ -180,8 +180,11 @@ LoadDefinitions!({
   RawTeX!(r"\AtBeginDocument{\lx@cref@building{1}}");
   // The kernel's first aid for cleveref.sty v0.21.4 (latex2e-first-aid-for-external-files.ltx:193-270, the
   // `package/cleveref/after` code labelled `firstaid`) repairs the raw file's `\label` and `\cref` machinery, which this
-  // binding replaces: not registered (DG 2026-11-14), so `\label` keeps no `label` hook code of it (QAB1b).
-  RawTeX!(r"\RemoveFromHook{package/cleveref/after}[firstaid]");
+  // binding replaces: not registered (DG 2026-11-14), so `\label` keeps no `label` hook code of it (QAB1b). Removed only
+  // where registered: the chunk dates from 2024-03-22 (firstaid changes.txt); an older kernel warns "Cannot remove chunk".
+  if hook_has_labelled_code("package/cleveref/after", "firstaid") {
+    RawTeX!(r"\RemoveFromHook{package/cleveref/after}[firstaid]");
+  }
   with_pretended_load("amsmath.sty", || -> Result<()> {
     InputDefinitions!("cleveref", noltxml => true, extension => Some(Cow::Borrowed("sty")));
     Ok(())
