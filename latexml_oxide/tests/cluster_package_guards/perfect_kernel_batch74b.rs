@@ -413,7 +413,8 @@ fn gls_only_in_display_math_is_listed() {
 /// asmejour's `\keywords`, stored for the abstract's coffin the locked `{abstract}` never builds, are the document's
 /// keywords under the class's label; the class's own date footnote keeps `\date` (asmejour_cls.rs; 2510.10694).
 /// asmejour 2025/11/30 (cls:1105-1128) plugs the `caption/label` socket on a 2025-11-01 kernel that declares none:
-/// pdflatex's 2 `!` "Socket 'caption/label' undeclared", ours the same 2 Errors, the only ones.
+/// pdflatex's 2 `!` "Socket 'caption/label' undeclared", ours the same 2 Errors; asmejour 1.28 on a 2026-11 kernel adds
+/// `\setlist` without enumitem (a 3rd Error, pdflatex's too), counted only where the installed class has that line.
 #[test]
 fn asmejour_keywords_are_kept() {
   if !check_requirements(&["asmejour.cls", "inconsolata.sty"]) {
