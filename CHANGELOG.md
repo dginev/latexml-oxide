@@ -69,6 +69,15 @@
     the EPUB tests validate their output. Guards
     `cli_css_resource_copy::cli_resources_link_their_copies_from_every_page` and
     `whatsinout::format_epub_ar5iv_preload_carries_the_css_param` (in `cluster_cli`).
+  - **`revert_as => 'context'` reverts by the dual branch, as Perl does** (#821, thanks
+    @nschloe). Both readers now take the branch from the locals stack: a no-argument
+    `DefMathI` (Package.pm L1849-1854), whose reversion the port had fixed to the CS at
+    definition time, and the `\lx@dual` reversion (Base_XMath.pool.ltxml L243), which read
+    a state value nothing set. So `ltx:Math`'s `tex` (presentation branch) got the user's
+    CS and `content-tex` was never written: `\lxDefMath{\plus}{+}` gave `tex="a\plus b"`
+    where Perl gives `tex="a+b"` + `content-tex="a\plus b"`. Golden `math/declare` moves
+    to Perl's attributes, except that `\foo{x}` with an unused `#1` reverts as TeX prints
+    it, `\mathbf{foo}`.
 
   - **The log locator names the file with its extension** (#794). A diagnostic's
     location line read `at t; line 10 col 21 - …`, the file stem only; it now reads
