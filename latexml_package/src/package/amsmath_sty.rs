@@ -3617,9 +3617,13 @@ pub fn define_ams_setstack_commands() -> Result<()> {
     "<ltx:XMArg enclose='box'>#1</ltx:XMArg>",
     alias => "\\boxed");
   DefConstructor!("\\boxed@text{}",
-    "<ltx:Math mode='display' framed='rectangle'><ltx:XMath>#1</ltx:XMath></ltx:Math>",
+    "<ltx:Math mode='display' framed='rectangle' framecolor='#framecolor' cssstyle='#cssstyle'>\
+     <ltx:XMath>#1</ltx:XMath></ltx:Math>",
     mode => "math",
     bounded => true,
+    properties => sub[_args] {
+      Ok(framed_properties(FramedOptions { margin: Some(s!("\\fboxsep")), ..FramedOptions::default() }))
+    },
     before_digest => { Let!("\\\\", "\\lx@newline"); },
     alias => "\\boxed");
 

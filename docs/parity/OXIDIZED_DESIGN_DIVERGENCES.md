@@ -4,7 +4,7 @@
 
 > **Numbering note:** the `### N` numbers are load-bearing (referenced from `.rs` comments) and are kept verbatim. `#16` and the math-grammar entries `#7–#18` live in [OXIDIZED_DESIGN_MATH.md](../math/OXIDIZED_DESIGN_MATH.md); in particular the code-referenced **`#18` is the f(x) "Speculative function application"** entry there, *not* the "Source-Level Bindings" `#18` below.
 >
-> **`#76` is a RETIRED number, not an omission** — its entry was consolidated into `#74` and the number was deliberately not reused (see the placeholder in sequence below). Next free number: **#907** (allocate at integration with `tools/perfect_kernel/next_entry_numbers.sh`).
+> **`#76` is a RETIRED number, not an omission** — its entry was consolidated into `#74` and the number was deliberately not reused (see the placeholder in sequence below). Next free number: **#907** (allocate at integration with `tools/perfect_kernel/next_entry_numbers.sh`, which also counts the numbers every open PR's head holds and flags a number two branches define as `CLASH`; `--local-only` reads the working tree alone).
 
 ---
 
@@ -36341,6 +36341,25 @@ letters, the counter calls, variadic Push/UnshiftValue, `ptValue`'s clamp, Looku
 `getAttribute`/`setAttribute`, returned boxes, the diagnostics' form; Perl 3 W plus the Error, ours 1 W more, the
 unknown key), `perfect_kernel_batchw3rg::rhai_perl_names_review_rows` (no colour package, the kept definition, the
 mixed comparisons, `roman(Number)`, `Number(string)`).
+
+### 1037. An EPUB keeps its log outside the container and never over an existing file (UPS1, upstream #2855)
+
+**Perl.** Since #2855 (1718f89e) `latexmlc` keeps an existing external log under an archive output
+(`$keep_log_file`, bin/latexmlc:111-134): a `.zip` packs the log as its `--log` basename (default `<name>.latexml.log`,
+LaTeXML.pm:621-629, t/932_zip.t), and an EPUB packs it into the container as `OPS/<log>`. **Rust.** The `.zip` is as
+Perl. An EPUB writes its log outside the container (epubcheck would flag a log member under `OPS/`), and when a file of
+the log's name already exists it is kept and the log not written ("Log not written: '<log>' exists and is kept" on
+stderr; DG 2026-11-14). A conversion that fails before it starts writes its Fatal log under the same rule.
+`cortex_worker` packs its own `cortex.log` and is unchanged. **Guard**: `cluster_cli::archive_output_keeps_an_existing_log`.
+
+### 1038. A listing `frame=` naming no side draws no frame (UPS1, upstream #2820)
+
+**Perl.** Since #2820 (7412d564) listings.sty.ltxml:277-287 frames a listing whose `frame=` is not `none`: a named
+frame from `%frames`, else the sides its letters name (`t`/`b`/`l`/`r`, either case); a value naming none (`xyz`,
+empty) joins to `''`, and `framedProperties` (TeX_Box.pool.ltxml:84) turns that into `framed="rectangle"`. **TeX.**
+lstmisc.sty:1387-1399 keeps such a value as `\lst@frame`, and the frame code draws only the sides whose letters it
+holds: no frame. **Rust.** `lst_frame_sides` (listings_sty.rs) returns no frame for it, as TeX. **Guard**:
+`perfect_kernel_batchups1::fboxsep_pads_fcolorbox_boxed_and_listing_frames` (its `frame=xyz` listing).
 
 ### 1039. A bibliography href drops TeX's escapes (issue 808)
 

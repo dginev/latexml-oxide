@@ -125,6 +125,11 @@ run "environment writes before the first thread" \
   "pass the value in-process, or allowlist the site in tools/lint_env_writes.sh with its ordering argument" -- \
   tools/lint_env_writes.sh
 
+# 1d. The entry-number allocator sees open PR heads (offline: a fake gh, a scratch repo).
+run "next_entry_numbers.sh self-test" \
+  "fix tools/perfect_kernel/next_entry_numbers.sh (its self-test lists the failing check)" -- \
+  tools/perfect_kernel/next_entry_numbers_test.sh
+
 # 2. Formatting must already be applied (check, don't rewrite).
 run "rustfmt (check)" \
   "run: cargo fmt --all" -- \
