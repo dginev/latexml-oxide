@@ -7,10 +7,11 @@ use super::perfect_kernel_batch46::{error_count, warning_count};
 
 /// One row per mechanism: the repro (under `package-bindings/`, 0 errors and 0 warnings) and whole squashed elements of
 /// its table. `p[c]{2em}` (2607.15452); `\Block{i-j}` spanning, stopping at a covered cell with text (2206.12224);
-/// `\Block{2-1}{Building\\Block}` (2206.12224); the body's two-color `\rowcolors` before a `$` cell (2602.03088).
+/// `\Block{2-1}{Building\\Block}` (2206.12224); the body's two-color `\rowcolors` before a `$` cell (2602.03088); a
+/// `\Block{1-2}` stopped by its width takes the right rule of the last column it covers (revI736).
 #[test]
 fn nicematrix_body_features_keep_the_table() {
-  let rows: [(&str, &str, &[&str]); 4] = [
+  let rows: [(&str, &str, &[&str]); 5] = [
     (
       "nicematrix_p_column_keys.tex",
       include_str!(
@@ -51,6 +52,15 @@ fn nicematrix_body_features_keep_the_table() {
       &[
         r#"<td align="center" thead="row" xml:id="p1.1.2.1"><Math mode="inline" tex="x_{1}" text="x _ 1" xml:id="p1.m1">"#,
         r#"<td align="center" xml:id="p1.1.2.2">c</td> </tr> <tr xml:id="p1.1.3"> <td align="center" thead="row" xml:id="p1.1.3.1">d</td> <td align="center" xml:id="p1.1.3.2">e</td> </tr>"#,
+      ],
+    ),
+    (
+      "nicematrix_block_right_rule.tex",
+      include_str!(
+        "../../../tools/perfect_kernel/repros/package-bindings/nicematrix_block_right_rule.tex"
+      ),
+      &[
+        r#"<tr xml:id="p1.1.1"> <td align="center" colspan="2" xml:id="p1.1.1.1">W</td> <td border="r" xml:id="p1.1.1.2"/> <td align="center" xml:id="p1.1.1.3">D</td> </tr>"#,
       ],
     ),
   ];
