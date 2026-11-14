@@ -89,10 +89,7 @@ fn a_class_email_call_in_a_thanks_keeps_its_contact() {
   let found = creators(&xml);
   assert_eq!(found.len(), 2, "{found:?}");
   assert_eq!(found[0][0], "Ann Smith");
-  assert!(
-    found[0].contains(&"email=ann@x.org".to_string()),
-    "{found:?}"
-  );
+  assert!(found[0].iter().any(|i| i == "email=ann@x.org"), "{found:?}");
   assert_eq!(
     creators_xml(&xml).concat().matches(">ann@x.org<").count(),
     1,

@@ -25,7 +25,7 @@ fn a_one_character_mailto_href_change_is_lost_text() {
   let row = compare("x", &input(&a, OK), &input(&b, OK));
   assert_eq!(row.tier, Some(Tier::Regression), "{row:?}");
   assert!(
-    row.flags.contains(&"lost-text:ref@href".to_string()),
+    row.flags.iter().any(|i| i == "lost-text:ref@href"),
     "{row:?}"
   );
 }
@@ -38,7 +38,7 @@ fn a_lost_graphics_element_with_unchanged_text_is_flagged() {
   let b = doc(r#"<figure><graphics graphic="p1"/><caption>Panels</caption></figure>"#);
   let row = compare("x", &input(&a, OK), &input(&b, OK));
   assert!(
-    row.flags.contains(&"lost-elements:graphics".to_string()),
+    row.flags.iter().any(|i| i == "lost-elements:graphics"),
     "{row:?}"
   );
   assert_eq!(row.tier, Some(Tier::Regression));
@@ -50,7 +50,7 @@ fn a_lost_space_between_two_words_is_flagged() {
   let a = doc(r#"<para><p>see <text font="italic">this</text> and</p></para>"#);
   let b = doc(r#"<para><p>see<text font="italic">this</text> and</p></para>"#);
   let row = compare("x", &input(&a, OK), &input(&b, OK));
-  assert!(row.flags.contains(&"lost-text:p".to_string()), "{row:?}");
+  assert!(row.flags.iter().any(|i| i == "lost-text:p"), "{row:?}");
 }
 
 #[test]
@@ -61,10 +61,7 @@ fn a_creator_whose_contact_empties_is_a_regression() {
   let b =
     doc(r#"<creator role="author"><personname>Ann</personname><contact role="email"/></creator>"#);
   let row = compare("x", &input(&a, OK), &input(&b, OK));
-  assert!(
-    row.flags.contains(&"contact-emptied".to_string()),
-    "{row:?}"
-  );
+  assert!(row.flags.iter().any(|i| i == "contact-emptied"), "{row:?}");
   assert_eq!(row.tier, Some(Tier::Regression));
 }
 
@@ -73,16 +70,10 @@ fn an_unparsable_xml_flags_on_either_side_and_in_the_audit() {
   let good = doc("<para><p>x</p></para>");
   let bad = "<document><p>x</document>";
   let row = compare("x", &input(&good, OK), &input(bad, OK));
-  assert!(
-    row.flags.contains(&"xml-unparsable:B".to_string()),
-    "{row:?}"
-  );
+  assert!(row.flags.iter().any(|i| i == "xml-unparsable:B"), "{row:?}");
   assert_eq!(row.tier, Some(Tier::Regression));
   let row = compare("x", &input(bad, OK), &input(&good, OK));
-  assert!(
-    row.flags.contains(&"xml-unparsable:A".to_string()),
-    "{row:?}"
-  );
+  assert!(row.flags.iter().any(|i| i == "xml-unparsable:A"), "{row:?}");
   let row = audit("x", &input(bad, OK));
   assert_eq!(row.flags, vec!["xml-unparsable".to_string()]);
   assert_eq!(row.tier, Some(Tier::Regression));
@@ -116,16 +107,14 @@ fn lost_attributes_markup_and_a_space_before_math_are_review_not_change() {
     "attrs-changed:p@class",
     "attrs-changed:text@font",
   ] {
-    assert!(row.flags.contains(&flag.to_string()), "{flag}: {row:?}");
+    assert!(row.flags.iter().any(|i| i == flag), "{flag}: {row:?}");
   }
   // The lost `name` is one flag (text), not also an attribute change; the space is not lost words.
   assert!(
-    !row
-      .flags
-      .contains(&"attrs-changed:contact@name".to_string()),
+    !row.flags.iter().any(|i| i == "attrs-changed:contact@name"),
     "{row:?}"
   );
-  assert!(!row.flags.contains(&"lost-text:p".to_string()), "{row:?}");
+  assert!(!row.flags.iter().any(|i| i == "lost-text:p"), "{row:?}");
   assert_eq!(row.tier, Some(Tier::Regression), "{row:?}");
 }
 
@@ -163,7 +152,7 @@ fn an_unparsable_status_is_a_regression() {
   ] {
     let row = compare("x", &input(&x, OK), &input(&x, log));
     assert!(
-      row.flags.contains(&"status-unparsable:B".to_string()),
+      row.flags.iter().any(|i| i == "status-unparsable:B"),
       "{log:?}: {row:?}"
     );
     assert_eq!(row.tier, Some(Tier::Regression));
@@ -175,11 +164,11 @@ fn in_the_audit_the_status_alone_raises_the_severity() {
   let x = doc("<para><p>x</p></para>");
   let row = audit("x", &input(&x, "Status:conversion:3\n"));
   for flag in ["fatal", "status-diag-mismatch"] {
-    assert!(row.flags.contains(&flag.to_string()), "{flag}: {row:?}");
+    assert!(row.flags.iter().any(|i| i == flag), "{flag}: {row:?}");
   }
   assert_eq!(row.tier, Some(Tier::Regression));
   let row = audit("x", &input(&x, "Status:conversion:2\n"));
-  assert!(row.flags.contains(&"errors".to_string()), "{row:?}");
+  assert!(row.flags.iter().any(|i| i == "errors"), "{row:?}");
 }
 
 #[test]
@@ -188,12 +177,15 @@ fn mid_line_errors_and_fatals_are_regressions_and_warnings_review() {
   let mid = |log: &str| compare("x", &input(&x, OK), &input(&x, log));
   let r = mid("(Loading foo.sty... Error:undefined:\\x bad\nStatus:conversion:0\n");
   for flag in ["error-midline:B", "status-diag-mismatch:B"] {
-    assert!(r.flags.contains(&flag.to_string()), "{flag}: {r:?}");
+    assert!(r.flags.iter().any(|i: &String| i == flag), "{flag}: {r:?}");
   }
   assert_eq!(r.tier, Some(Tier::Regression));
   // /tmp/rev_p0r3 T/midfatal and T/midwarn.
   let r = mid("(Loading foo) Fatal:timeout:wallclock\nStatus:conversion:0\n");
-  assert!(r.flags.contains(&"fatal-midline:B".to_string()), "{r:?}");
+  assert!(
+    r.flags.iter().any(|i: &String| i == "fatal-midline:B"),
+    "{r:?}"
+  );
   let r = mid("(Loading foo) Warning:missing:x y\nStatus:conversion:0\n");
   assert_eq!(r.flags, vec!["diag-midline:B".to_string()], "{r:?}");
   assert_eq!(r.tier, Some(Tier::Review));
@@ -207,10 +199,7 @@ fn a_fixed_undefined_macro_is_a_change_not_a_regression() {
   let a = doc(r#"<para><p>see <ERROR class="undefined">\foo</ERROR> bar</p></para>"#);
   let b = doc("<para><p>see baz bar</p></para>");
   let row = compare("x", &input(&a, OK), &input(&b, OK));
-  assert!(
-    row.flags.contains(&"lost-text:ERROR".to_string()),
-    "{row:?}"
-  );
+  assert!(row.flags.iter().any(|i| i == "lost-text:ERROR"), "{row:?}");
   assert_eq!(rank("lost-text:ERROR").0, Tier::Change);
   assert_eq!(rank("attrs-changed:ERROR@class").0, Tier::Change);
   assert!(row.tier >= Some(Tier::Review), "{row:?}");
@@ -268,7 +257,10 @@ fn svg_geometry_within_tolerance_is_equal_and_beyond_it_a_change() {
     svg("100", "M 0 0 L 0 0", ""),
   ] {
     let r = row(&b);
-    assert!(r.flags.contains(&"geometry-collapsed".to_string()), "{r:?}");
+    assert!(
+      r.flags.iter().any(|i: &String| i == "geometry-collapsed"),
+      "{r:?}"
+    );
     assert_eq!(r.tier, Some(Tier::Regression));
   }
   // g4, g5: small values compare relatively, so 0.01 → 0.05 and 0.04 → 0 are changes, not equal.
@@ -294,21 +286,22 @@ fn a_run_split_off_with_its_punctuation_is_moved_not_lost() {
   let a = doc(r#"<para><p>call <text font="typewriter">foo</text>, then</p></para>"#);
   let b = doc("<para><p>call <verbatim>foo</verbatim>, then</p></para>");
   let r = compare("x", &input(&a, OK), &input(&b, OK));
-  assert!(r.flags.contains(&"moved-text:p".to_string()), "{r:?}");
+  assert!(r.flags.iter().any(|i| i == "moved-text:p"), "{r:?}");
   assert!(!r.flags.iter().any(|f| f.starts_with("lost-text")), "{r:?}");
   // realloss: the word is gone; 64b worldsee: a lost space joins two words.
   let b = doc("<para><p>call <verbatim></verbatim>, then</p></para>");
   assert!(
     compare("x", &input(&a, OK), &input(&b, OK))
       .flags
-      .contains(&"lost-text:p".to_string())
+      .iter()
+      .any(|i| i == "lost-text:p")
   );
   let (a, b) = (
     doc("<para><p>world see</p></para>"),
     doc("<para><p>worldsee</p></para>"),
   );
   let r = compare("x", &input(&a, OK), &input(&b, OK));
-  assert!(r.flags.contains(&"lost-text:p".to_string()), "{r:?}");
+  assert!(r.flags.iter().any(|i| i == "lost-text:p"), "{r:?}");
   assert_eq!(r.tier, Some(Tier::Regression));
 }
 
@@ -321,13 +314,10 @@ fn numbers_jittering_in_text_are_review_not_lost() {
     ))
   };
   let r = compare("x", &input(&m("3.80254"), OK), &input(&m("3.80252"), OK));
-  assert!(
-    r.flags.contains(&"text-jitter:Math@tex".to_string()),
-    "{r:?}"
-  );
+  assert!(r.flags.iter().any(|i| i == "text-jitter:Math@tex"), "{r:?}");
   assert_eq!(r.tier, Some(Tier::Review), "{r:?}");
   let r = compare("x", &input(&m("3.8"), OK), &input(&m("4.8"), OK));
-  assert!(r.flags.contains(&"lost-text:Math@tex".to_string()), "{r:?}");
+  assert!(r.flags.iter().any(|i| i == "lost-text:Math@tex"), "{r:?}");
   // mhchem / zx-calculus witnesses pair.
   let r = compare("x", &input(&m("28.04677"), OK), &input(&m("28.04684"), OK));
   assert_eq!(r.flags, vec!["text-jitter:Math@tex".to_string()], "{r:?}");
@@ -356,7 +346,7 @@ fn numbers_jittering_in_text_are_review_not_lost() {
   ];
   for (a, b, flag) in cases {
     let r = compare("x", &input(&doc(a), OK), &input(&doc(b), OK));
-    assert!(r.flags.contains(&flag.to_string()), "{flag}: {r:?}");
+    assert!(r.flags.iter().any(|i| i == flag), "{flag}: {r:?}");
     assert!(
       !r.flags.iter().any(|f| f.starts_with("text-jitter")),
       "{flag}: {r:?}"
@@ -386,7 +376,7 @@ fn a_dimension_typeset_from_nowhere_is_a_leak_and_a_bare_number_a_look() {
   ] {
     let r = gained(leaked);
     assert!(
-      r.flags.contains(&"leaked-dimension:p".to_string()),
+      r.flags.iter().any(|i: &String| i == "leaked-dimension:p"),
       "{leaked}: {r:?}"
     );
     assert_eq!(r.tier, Some(Tier::Regression), "{leaked}");
@@ -395,14 +385,17 @@ fn a_dimension_typeset_from_nowhere_is_a_leak_and_a_bare_number_a_look() {
   for number in ["10", "2003.", "0.5"] {
     let r = gained(number);
     assert!(
-      r.flags.contains(&"gained-number:p".to_string()),
+      r.flags.iter().any(|i: &String| i == "gained-number:p"),
       "{number}: {r:?}"
     );
     assert_eq!(r.tier, Some(Tier::Review), "{number}");
   }
   // A dimension amid recovered prose (floatrow-rus, s147 → s148) is reviewed; one in code is the author's.
   let r = gained("Recovered whole sentences with a width of 4pt and many more words here");
-  assert!(r.flags.contains(&"gained-number:p".to_string()), "{r:?}");
+  assert!(
+    r.flags.iter().any(|i: &String| i == "gained-number:p"),
+    "{r:?}"
+  );
   let r = compare(
     "x",
     &input(&doc("<verbatim>x</verbatim>"), OK),
@@ -437,7 +430,7 @@ fn a_dimension_typeset_from_nowhere_is_a_leak_and_a_bare_number_a_look() {
   ] {
     let r = pair(a, b);
     assert!(
-      r.flags.contains(&"leaked-dimension:p".to_string()),
+      r.flags.iter().any(|i: &String| i == "leaked-dimension:p"),
       "{b}: {r:?}"
     );
   }
@@ -446,7 +439,10 @@ fn a_dimension_typeset_from_nowhere_is_a_leak_and_a_bare_number_a_look() {
     "<table><tabular><tr><td>3 x</td></tr></tabular></table>",
     "<table><tabular><tr><td>4 x 24pt</td></tr></tabular></table>",
   );
-  assert!(r.flags.contains(&"gained-number:td".to_string()), "{r:?}");
+  assert!(
+    r.flags.iter().any(|i: &String| i == "gained-number:td"),
+    "{r:?}"
+  );
   assert_eq!(token_number_kind("heading,24pt"), Some(true));
   assert_eq!(token_number_kind("24pt\\relax"), Some(true));
   assert_eq!(number_kind("(24pt),"), Some(true));
@@ -487,7 +483,7 @@ fn generated_numbers_and_table_values_are_not_leaks() {
       OK,
     ),
   );
-  assert!(r.flags.contains(&"gained-number:td".to_string()), "{r:?}");
+  assert!(r.flags.iter().any(|i| i == "gained-number:td"), "{r:?}");
   assert_eq!(r.tier, Some(Tier::Review));
   let r = compare(
     "x",
@@ -517,7 +513,7 @@ fn a_changed_prose_number_is_not_jitter() {
     let a = doc(&format!("<para><p>Value {x} here</p></para>"));
     let b = doc(&format!("<para><p>Value {y} here</p></para>"));
     let r = compare("x", &input(&a, OK), &input(&b, OK));
-    assert!(r.flags.contains(&"lost-text:p".to_string()), "{x}: {r:?}");
+    assert!(r.flags.iter().any(|i| i == "lost-text:p"), "{x}: {r:?}");
     assert!(
       !r.flags
         .iter()
@@ -540,10 +536,7 @@ fn mid_line_counts_compare_like_errors() {
   let mid = "(Loading foo) Fatal:timeout:wallclock\nStatus:conversion:0\n";
   // /tmp/rev_p0r4 A4/m: fixed by B.
   let r = compare("x", &input(&x, mid), &input(&x, OK));
-  assert!(
-    r.flags.contains(&"fatal-midline-fixed".to_string()),
-    "{r:?}"
-  );
+  assert!(r.flags.iter().any(|i| i == "fatal-midline-fixed"), "{r:?}");
   assert!(
     !r.flags.iter().any(|f| f.starts_with("fatal-midline:")),
     "{r:?}"
@@ -551,10 +544,10 @@ fn mid_line_counts_compare_like_errors() {
   // More in B: a regression; the same on both sides: `:both`.
   let two = "(a) Fatal:x:y z\n(b) Fatal:x:y z\nStatus:conversion:0\n";
   let r = compare("x", &input(&x, mid), &input(&x, two));
-  assert!(r.flags.contains(&"fatal-midline+".to_string()), "{r:?}");
+  assert!(r.flags.iter().any(|i| i == "fatal-midline+"), "{r:?}");
   assert_eq!(r.tier, Some(Tier::Regression));
   let r = compare("x", &input(&x, mid), &input(&x, mid));
-  assert!(r.flags.contains(&"fatal-midline:both".to_string()), "{r:?}");
+  assert!(r.flags.iter().any(|i| i == "fatal-midline:both"), "{r:?}");
   // /tmp/rev_p0r4 A5/B5 e: a Fatal appended after an anchored Error.
   let r = compare(
     "x",
@@ -564,7 +557,7 @@ fn mid_line_counts_compare_like_errors() {
       "Error:undefined:\\a x (Loading b.sty Fatal:too_many_errors:100 boom\nStatus:conversion:2\n",
     ),
   );
-  assert!(r.flags.contains(&"fatal-midline:B".to_string()), "{r:?}");
+  assert!(r.flags.iter().any(|i| i == "fatal-midline:B"), "{r:?}");
   assert_eq!(r.tier, Some(Tier::Regression));
 }
 
@@ -574,7 +567,7 @@ fn one_boundary_split_in_two_still_shows_a_lost_space() {
   let a = doc(r#"<para><p>see <Math tex="a"/> and</p></para>"#);
   let b = doc(r#"<para><p>see<Math tex="a"/><Math tex="b"/> and</p></para>"#);
   let r = compare("x", &input(&a, OK), &input(&b, OK));
-  assert!(r.flags.contains(&"space-lost:p".to_string()), "{r:?}");
+  assert!(r.flags.iter().any(|i| i == "space-lost:p"), "{r:?}");
 }
 
 #[test]
@@ -589,7 +582,7 @@ fn an_oom_of_the_base_alone_is_fixed() {
     ..input(&x, "Fatal:oom:alloc_failed big\nStatus:conversion:3\n")
   };
   let r = compare("x", &oom, &input(&x, OK));
-  assert!(r.flags.contains(&"oom-fixed".to_string()), "{r:?}");
+  assert!(r.flags.iter().any(|i| i == "oom-fixed"), "{r:?}");
   assert!(!r.flags.iter().any(|f| f.starts_with("oom:")), "{r:?}");
 }
 
@@ -609,9 +602,9 @@ fn a_missing_log_reads_fatals_from_stderr_and_137_with_oom_is_oom() {
   };
   let row = compare("x", &input(&x, OK), &killed);
   for flag in ["oom:B", "fatal-in-stderr:B", "log-missing:B"] {
-    assert!(row.flags.contains(&flag.to_string()), "{flag}: {row:?}");
+    assert!(row.flags.iter().any(|i| i == flag), "{flag}: {row:?}");
   }
-  assert!(!row.flags.contains(&"timeout:B".to_string()), "{row:?}");
+  assert!(!row.flags.iter().any(|i| i == "timeout:B"), "{row:?}");
   assert!(
     row.details.contains("stderr B: Fatal:oom:alloc_failed"),
     "{}",
@@ -631,7 +624,7 @@ fn an_unfinished_log_flags_the_fatal_its_captured_output_holds() {
   };
   let row = compare("x", &input(&x, OK), &cut);
   for flag in ["no-status:B", "fatal-in-stderr:B"] {
-    assert!(row.flags.contains(&flag.to_string()), "{flag}: {row:?}");
+    assert!(row.flags.iter().any(|i| i == flag), "{flag}: {row:?}");
   }
   assert!(
     row.details.contains("stderr B: Fatal:timeout:wallclock"),
@@ -653,7 +646,8 @@ fn a_fatal_that_exits_zero_is_a_contract_violation() {
   assert!(
     compare("x", &side(1), &side(0))
       .flags
-      .contains(&"contract-violation:B".to_string())
+      .iter()
+      .any(|i| i == "contract-violation:B")
   );
 }
 
@@ -670,8 +664,8 @@ fn a_math_only_change_is_still_xml_only_review() {
     r#"<para><p>x <Math tex="a"><XMath><XMWrap><XMTok>a</XMTok></XMWrap></XMath></Math></p></para>"#,
   );
   let row = compare("x", &input(&a, OK), &input(&b, OK));
-  assert!(row.flags.contains(&"math-changed".to_string()), "{row:?}");
-  assert!(row.flags.contains(&"xml-only".to_string()), "{row:?}");
+  assert!(row.flags.iter().any(|i| i == "math-changed"), "{row:?}");
+  assert!(row.flags.iter().any(|i| i == "xml-only"), "{row:?}");
   assert_eq!(row.tier, Some(Tier::Review));
 }
 
@@ -680,7 +674,7 @@ fn a_lost_bold_run_is_review() {
   let a = doc(r#"<para><p>x <text font="bold">y</text></p></para>"#);
   let b = doc(r#"<para><p>x y</p></para>"#);
   let row = compare("x", &input(&a, OK), &input(&b, OK));
-  assert!(row.flags.contains(&"wrappers-lost".to_string()), "{row:?}");
+  assert!(row.flags.iter().any(|i| i == "wrappers-lost"), "{row:?}");
   assert_eq!(row.tier, Some(Tier::Review));
 }
 
@@ -695,7 +689,7 @@ fn an_unexplained_exit_code_is_a_crash() {
     ..input(&x, log)
   };
   let row = compare("x", &with_rc(0, OK), &with_rc(139, OK));
-  assert!(row.flags.contains(&"crash:B".to_string()), "{row:?}");
+  assert!(row.flags.iter().any(|i| i == "crash:B"), "{row:?}");
   assert_eq!(row.tier, Some(Tier::Regression));
   // A Fatal exits 1 with status 3: a Fatal, not a crash.
   let fatal = "Fatal:x:y z\nStatus:conversion:3\n";
@@ -708,13 +702,13 @@ fn a_status_without_its_diagnostics_is_flagged_on_its_side() {
   let x = doc("<para><p>x</p></para>");
   let row = compare("x", &input(&x, OK), &input(&x, "Status:conversion:2\n"));
   assert!(
-    row.flags.contains(&"status-diag-mismatch:B".to_string()),
+    row.flags.iter().any(|i| i == "status-diag-mismatch:B"),
     "{row:?}"
   );
   assert_eq!(row.cells.last().map(String::as_str), Some("ok>mismatch"));
   let row = audit("x", &input(&x, "Error:a:b c\nStatus:conversion:0\n"));
   assert!(
-    row.flags.contains(&"status-diag-mismatch".to_string()),
+    row.flags.iter().any(|i| i == "status-diag-mismatch"),
     "{row:?}"
   );
 }
@@ -731,7 +725,7 @@ fn an_ansi_coloured_error_makes_errors_worse() {
     ),
   );
   for flag in ["errors+", "status-worse"] {
-    assert!(row.flags.contains(&flag.to_string()), "{flag}: {row:?}");
+    assert!(row.flags.iter().any(|i| i == flag), "{flag}: {row:?}");
   }
   assert_eq!(row.cells[1], "0>1");
 }
@@ -748,16 +742,17 @@ fn missing_pieces_never_pass() {
   };
   let row = compare("x", &input(&x, OK), &missing);
   for flag in ["xml-missing:B", "log-missing:B"] {
-    assert!(row.flags.contains(&flag.to_string()), "{flag}: {row:?}");
+    assert!(row.flags.iter().any(|i| i == flag), "{flag}: {row:?}");
   }
   let row = compare("x", &input(&x, OK), &input(&x, "no status line\n"));
-  assert!(row.flags.contains(&"no-status:B".to_string()), "{row:?}");
+  assert!(row.flags.iter().any(|i| i == "no-status:B"), "{row:?}");
   assert_eq!(row.tier, Some(Tier::Regression));
   let absent = DocInput::default();
   assert!(
     compare("x", &absent, &input(&x, OK))
       .flags
-      .contains(&"doc-missing:A".to_string())
+      .iter()
+      .any(|i| i == "doc-missing:A")
   );
 }
 

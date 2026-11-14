@@ -2106,7 +2106,7 @@ impl Processor for Graphics {
       search_paths.push(source_dir.clone());
     }
     // Add current directory as fallback
-    if !search_paths.contains(&".".to_string()) {
+    if !search_paths.iter().any(|p| p == ".") {
       search_paths.push(".".to_string());
     }
 

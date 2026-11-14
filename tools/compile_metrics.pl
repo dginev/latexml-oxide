@@ -61,7 +61,8 @@ $latexml->withState(sub {
       $keys_idx++;
       my $top_table = $$metrics{$key};
       next unless $top_table;
-      print $FH "  \"$key\" => MetricData {\n";
+      # Each entry in its own frame (`metric`): one per font, not one 1.7 MB frame for the table (clippy::large_stack_frames).
+      print $FH "  \"$key\" => metric(|| MetricData {\n";
       my @subkeys = keys %$top_table;
       my $subkey_idx = 0;
       for my $subkey (@subkeys) {
@@ -126,7 +127,7 @@ $latexml->withState(sub {
         }
       }
       my $sep = ($keys_idx == scalar(@keys)) ? '' : ',';
-      print $FH "    ..MetricData::default()}$sep\n";
+      print $FH "    ..MetricData::default()})$sep\n";
     }
 
     print $FH "\n  );\n)\n";
