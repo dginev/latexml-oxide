@@ -508,6 +508,16 @@ fn muglue_add(a: MuGlue, b: MuGlue) -> MuGlue {
   MuGlue::new_full(g.skip, g.plus, g.pfill, g.minus, g.mfill)
 }
 
+/// The `/` operator by a zero int or Number fails as Rhai's own `/` does (and as TeX's `\divide` raises "Arithmetic
+/// overflow"); the core `divide` would return a huge value silently. The `divide` method stays Perl's.
+fn nonzero_divisor(n: i64) -> RhaiResult<()> {
+  if n == 0 {
+    Err(EvalAltResult::ErrorArithmetic("division by zero".into(), rhai::Position::NONE).into())
+  } else {
+    Ok(())
+  }
+}
+
 /// Number.pm's methods every value type shares, its operators, and the comparisons by `valueOf`.
 fn register_numeric<T>(engine: &mut Engine)
 where T:
@@ -537,9 +547,15 @@ where T:
   engine.register_fn("multiply", |v: T, n: Number| v.multiply(n));
   engine.register_fn("*", |v: T, n: Number| v.multiply(n));
   engine.register_fn("divide", |v: T, n: i64| v.divide(Number(n)));
-  engine.register_fn("/", |v: T, n: i64| v.divide(Number(n)));
+  engine.register_fn("/", |v: T, n: i64| -> RhaiResult<T> {
+    nonzero_divisor(n)?;
+    Ok(v.divide(Number(n)))
+  });
   engine.register_fn("divide", |v: T, n: Number| v.divide(n));
-  engine.register_fn("/", |v: T, n: Number| v.divide(n));
+  engine.register_fn("/", |v: T, n: Number| -> RhaiResult<T> {
+    nonzero_divisor(n.value_of())?;
+    Ok(v.divide(n))
+  });
   engine.register_fn("divideround", |v: T, n: i64| v.divideround(Number(n)));
   engine.register_fn("==", |a: T, b: T| a == b);
   engine.register_fn("!=", |a: T, b: T| a != b);
