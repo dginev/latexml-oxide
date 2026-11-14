@@ -102,7 +102,7 @@ LoadDefinitions!({
   // expansion-primitives/register_command_on_a_non_register).
   DefPrimitive!("\\advance Variable", sub[(var)] {
     if let ArgWrap::RegisterDefinition(dbox) = var {
-      read_keyword(&["by"])?;
+      read_by_keyword()?;
       let (defn_token, inner) = *dbox;
       let defn_token_str = defn_token.to_string();
       if !defn_token_str.is_empty() && defn_token_str != "missing" {
@@ -132,7 +132,7 @@ LoadDefinitions!({
 
   DefPrimitive!("\\multiply Variable", sub[(var)] {
     if let ArgWrap::RegisterDefinition(dbox) = var {
-      read_keyword(&["by"])?;
+      read_by_keyword()?;
       let scale = read_number()?;
       let (varname, inner) = *dbox;
       // Upgrade: Why are the arguments used twice here? Is there a way to avoid cloning them?
@@ -151,7 +151,7 @@ LoadDefinitions!({
 
   DefPrimitive!("\\divide Variable", sub[(var)] {
     if let ArgWrap::RegisterDefinition(dbox) = var {
-      read_keyword(&["by"])?;
+      read_by_keyword()?;
       let scale = read_number()?;
       let (varname, inner) = *dbox;
       // Upgrade: Why are the arguments used twice here? Is there a way to avoid cloning them?
@@ -173,6 +173,14 @@ LoadDefinitions!({
     after_assignment(); // tex.web §1269, as for `\advance`
   });
 });
+
+/// The optional `by` of `\advance`, `\multiply` and `\divide`, read ahead of the operand as its first token is
+/// (`gullet::operand_lookahead`: a deposit's emptied field gives its value, DEPN).
+fn read_by_keyword() -> Result<()> {
+  let _operand = operand_lookahead();
+  read_keyword(&["by"])?;
+  Ok(())
+}
 
 /// Note that these define a "shorthand" for eg. \count123, but are NOT macros!
 pub fn shorthand_def(cs: Token, address_type: &str, init: RegisterValue) -> Result<()> {

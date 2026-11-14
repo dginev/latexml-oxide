@@ -1277,9 +1277,10 @@ pub(crate) fn load() -> Result<()> {
   // `\@maketitle`, or a `\let` copy of it, runs as written around it (TP1, OXIDIZED_DESIGN_DIVERGENCES #953).
   DefMacro!("\\lx@kernel@maketitle", "");
   DefMacro!("\\@maketitle", "\\lx@kernel@maketitle");
-  // The title-page reading's marks (`title_page_reading`), each printing nothing: where `\@author` begins, where what a
-  // document appended to it begins and ends (read where they stand, by their definitions: [`title_page_mark`]); the
+  // The title-page reading's marks (`title_page_reading`), each printing nothing: where `\@title` and `\@author` begin, where what a
+  // document appended to `\@author` begins and ends (read where they stand, by their definitions: [`title_page_mark`]); the
   // `\and` family where `\@author` prints, and article.cls's stand-in running, noted as they are digested.
+  DefConstructor!("\\lx@title@page@title", "");
   DefConstructor!("\\lx@title@page@author", "");
   DefConstructor!("\\lx@title@page@tail", "");
   DefConstructor!("\\lx@title@page@tail@end", "");
@@ -1289,6 +1290,7 @@ pub(crate) fn load() -> Result<()> {
     maketitle: defined("\\@maketitle"),
     marker:    defined("\\lx@kernel@maketitle"),
     marks:     [
+      (defined("\\lx@title@page@title"), INK_TITLE),
       (defined("\\lx@title@page@author"), INK_AUTHOR),
       (defined("\\lx@title@page@tail"), INK_TAIL),
       (defined("\\lx@title@page@tail@end"), INK_TAIL_END),
@@ -1421,8 +1423,10 @@ pub(crate) fn load() -> Result<()> {
     // What the class's title page prints, decided by TeX: the speculative sentinel runs (frontmatter_stores.rs
     // `before_title_page_runs`), made in the state the deposit and the replay below meet.
     crate::frontmatter_stores::before_title_page_runs()?;
-    // (and what the whole title page prints, in that state: its words, checked against the output's)
-    note_title_page_print()?;
+    // (and what the whole title page prints, in that state: its words, checked against the output's; and whether it
+    // prints the title block here, which `\lx@text@before@title` reads)
+    let prints = note_title_page_print()? && !fm_class_prints_title_at_setters();
+    AssignValue!("lx_maketitle_prints_title" => prints, Some(Scope::Global));
     // Both deposits null the title fields, so a `{titlepage}` either lays out
     // builds no `ltx:titlepage` (the `{titlepage}` constructor's `fields`).
     AssignValue!("lx_depositing_frontmatter_fields" => true, Some(Scope::Global));
@@ -1684,7 +1688,7 @@ pub(crate) fn load() -> Result<()> {
   DefMacro!("\\lx@maketitle@begin", "");
   DefMacro!(
     "\\lx@maketitle@body",
-    r"\lx@maketitle@begin\lx@maketitle@supersede\lx@author@tail\lx@store@defaults\lx@frontmatterhere\let\lx@frontmatter@fallback\relax\@startsection@hook\lx@deposit@maketitle\lx@maketitle@twocolumn\lx@store@untypeset\global\let\thanks\relax\global\let\@maketitle\relax\global\let\@thanks\@empty\global\let\@author\@empty\global\let\@date\@empty\global\let\@title\@empty\lx@maketitle@clear@and\global\let\lx@maketitle@opts\relax\lx@maketitle@cleanup",
+    r"\lx@maketitle@begin\lx@maketitle@supersede\lx@author@tail\lx@store@defaults\lx@frontmatterhere\let\lx@frontmatter@fallback\relax\@startsection@hook\lx@deposit@maketitle\lx@text@before@title\lx@maketitle@twocolumn\lx@store@untypeset\global\let\thanks\relax\global\let\@maketitle\relax\global\let\@thanks\@empty\global\let\@author\@empty\global\let\@date\@empty\global\let\@title\@empty\lx@maketitle@clear@and\global\let\lx@maketitle@opts\relax\lx@maketitle@cleanup",
     locked => true
   );
   // article.cls's `\maketitle` ends by disabling itself and the setters
@@ -5181,7 +5185,7 @@ pub(crate) fn own_maketitle() -> bool {
 struct KernelTitleDefs {
   maketitle: Option<Rc<dyn Definition>>,
   marker:    Option<Rc<dyn Definition>>,
-  marks:     [(Option<Rc<dyn Definition>>, char); 3],
+  marks:     [(Option<Rc<dyn Definition>>, char); 4],
 }
 
 thread_local! {
@@ -5339,10 +5343,11 @@ fn checks_run(
 /// title-page reading's ([`title_page_reading::title_page_reading`]), with what it prints without what a document
 /// appended to `\@author` where the title page in force is known not to print that (the check reports a lost word only
 /// the appended text prints as one the page annotates, an Info: FX27). Not inside a deposit or a replay (the title page
-/// they run is this one), nor when no run can be made or kept.
-pub(crate) fn note_title_page_print() -> Result<()> {
+/// they run is this one), nor when no run can be made or kept. True when the run printed `\@title` or `\@author`: the
+/// title block prints at this `\maketitle`.
+pub(crate) fn note_title_page_print() -> Result<bool> {
   if lookup_bool("lx_depositing_class_maketitle") || lookup_bool("lx_replaying_class_setter") {
-    return Ok(());
+    return Ok(false);
   }
   let reading = title_page_reading::title_page_reading()?;
   match reading.outcome {
@@ -5361,7 +5366,10 @@ pub(crate) fn note_title_page_print() -> Result<()> {
     },
     title_page_reading::RunOutcome::Aborted | title_page_reading::RunOutcome::Unavailable => {},
   }
-  Ok(())
+  Ok(
+    reading.outcome == title_page_reading::RunOutcome::Printed
+      && (reading.title || reading.author.printed),
+  )
 }
 
 /// A text reader of a speculative run's material, with the mark it sets before each `\insert`'s ([`checks_run`]).

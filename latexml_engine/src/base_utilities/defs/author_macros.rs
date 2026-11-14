@@ -739,10 +739,8 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
     if lift_marked_field_ink(doc)? {
       assign_value("lx_title_ink_dedup_done", true, Some(Scope::Global));
     }
-    // The text it printed before stays ahead of the title block (QA91; BM's probe Q2.3).
-    if let Some(before) = before {
-      wrap_text_before_title(doc, before)?;
-    }
+    // (the text it printed before, which `\lx@text@before@title` keeps ahead of the title block where it prints here)
+    hold_text_before_title(before);
   },
   after_digest => {
     // (a binding's `\maketitle` has no deposit: what the document gave the raw setters before it is read here,
@@ -758,6 +756,20 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
     // An abstract queued from here on is LATE (`\lx@frontmatter@mark`'s `late`, OXIDIZED_DESIGN_DIVERGENCES #903).
     assign_value("lx_frontmatter_here_digested", true, Some(Scope::Global));
   });
+
+  // The text a `\maketitle` flush found before it stays ahead of the title block, as the PDF prints it, where the class's
+  // title page prints the title or its authors at this `\maketitle` (the deposit's reading, `note_title_page_print`;
+  // QA91, BM's probe Q2.3), not where they print at their setters or never (iopart.cls:98 `\maketitle{\newpage}`;
+  // 2606.08462, 1407.1223).
+  DefConstructor!("\\lx@text@before@title", sub[doc, _args, props] {
+    if let Some(before) = take_text_before_title()
+      && matches!(props.get("prints"), Some(Stored::Bool(true)))
+    {
+      wrap_text_before_title(doc, before)?;
+    }
+  },
+  properties => sub[_args] { Ok(stored_map!("prints" => lookup_bool("lx_maketitle_prints_title"))) },
+  reversion => "");
 
   // Same, but put it at the beginning of document, but after any ltx:resources
   DefConstructor!("\\lx@frontmatter@fallback", sub[document,_args] {

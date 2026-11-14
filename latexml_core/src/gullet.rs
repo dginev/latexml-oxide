@@ -500,6 +500,16 @@ impl Drop for OperandRead {
   fn drop(&mut self) { READING_OPERAND.set(self.0); }
 }
 
+/// The guards of a read ahead of a quantity's operand that expands as the operand's does: an assignment's optional `=`
+/// (tex.web §405 `scan_optional_equals`), the `by` of `\advance`, `\multiply` and `\divide` (§1236 `scan_keyword`),
+/// whose first non-matching token is the operand's. Only while `OPERAND_VALUES` holds values (the deposit).
+pub fn operand_lookahead() -> Option<(OperandRead, NumberScan)> {
+  if OPERAND_VALUES.borrow().is_empty() {
+    return None;
+  }
+  Some((OperandRead::begin(), NumberScan::begin()))
+}
+
 /// Give the control sequences `OPERAND_VALUES` holds, returning the ones given before.
 pub fn set_operand_values(values: Vec<(Token, Tokens)>) -> Vec<(Token, Tokens)> {
   OPERAND_VALUES.replace(values)

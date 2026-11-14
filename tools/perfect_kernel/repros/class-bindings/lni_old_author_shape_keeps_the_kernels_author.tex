@@ -1,0 +1,27 @@
+% A paper's own lni.cls before v2.0 (v0.5, v1.7) loads no authblk and keeps LaTeX's `\author[]{}`
+% (`\renewcommand{\author}{\@dblarg\@@author}`); the lni binding installs authblk's 4-argument `\author` only where the
+% class loaded authblk (TL 2025's v2.0, lni.cls:362), so the kernel's reads this one (LXAB).
+% witness: 2203.09493 (its own lni.cls 2021/03/02 v1.7), 1705.02823 (v0.5), 2210.04484 (v1.7)
+% oracle:  pdflatex 0 errors (TL 2025, -no-shell-escape): "A Title", "Ann Able*", "Bob Baker†", "Body text.",
+%   footnotes "* Univ X", "† Univ Y"
+% engines: QAB4 round 2: 1 Error (undefined `\lx@AB@author@state`), the author block again in p1, `\startpage` lost,
+%   an invented ORCID https://orcid.org/1; perl: no lni binding (OmniBus, 4 other Errors)
+% expect:  0 errors, 0 warnings; two creators, each with its note; no ORCID; p1 is "Body text."
+% status:  RED (QAB4 round 2) → GREEN (QAB4c); guard
+%   perfect_kernel_batch68u::lni_authors_carry_email_orcid_and_affiliation
+% preload: ar5iv.sty
+\begin{filecontents*}[overwrite]{lni.cls}
+\ProvidesClass{lni}[2021/03/02 v1.7 stand-in: the pre-2.0 author shape, no authblk]
+\LoadClass{article}
+\renewcommand{\author}{\@dblarg\@@author}
+\newcommand{\@@author}[2][]{\gdef\@shortauthor{#1}\gdef\@author{#2}}
+\newcommand{\startpage}[1]{\setcounter{page}{#1}}
+\end{filecontents*}
+\documentclass{lni}
+\begin{document}
+\title{A Title}
+\author[Ann Able \and Bob Baker]{Ann Able\footnote{Univ X} \and Bob Baker\footnote{Univ Y}}
+\startpage{1}
+\maketitle
+Body text.
+\end{document}

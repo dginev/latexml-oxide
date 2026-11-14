@@ -6326,7 +6326,8 @@ Body.
 /// class that reads one as a quantity's operand reads its value (gullet.rs `set_operand_values`), in the replay of its
 /// own `\maketitle` and in its `\@maketitle`, through `\ifnum`, `\setcounter`, a dimension and an eTeX factor; the field
 /// printed after a dimension's unit stays empty, the date shown once. Red (QAB4base): "Exam session 0", 1 Warning;
-/// "Year 0", "Next 1", "pt Width 0.0pt", 3 Warnings. With `\date{}` pdflatex errs "Missing number": one Warning.
+/// "Year 0", "Next 1", "pt Width 0.0pt", 3 Warnings. With `\date{}` pdflatex errs "Missing number": one Warning. An
+/// assignment with no `=` and `\advance`/`\multiply`/`\divide` with no `by` read it too (`gullet::operand_lookahead`).
 #[test]
 fn deposit_reads_a_field_as_a_number() {
   let replay = include_str!(
@@ -6357,6 +6358,17 @@ fn deposit_reads_a_field_as_a_number() {
         r#"{date}<logical-block><para><p align="center">Recent edition</p><p align="center">Year 2024</p><p align="center">Next 2025</p><p align="center">Width 2024.0pt</p></para></logical-block><para><p>Text.</p></para></document>"#
       ),
     ),
+    // (revQAB4 S1: no `=`, no `by`; red on QAB4 round 2: the deposit dropped, its block lost)
+    (
+      include_str!(
+        "../../../tools/perfect_kernel/repros/sectioning-frontmatter/deposit_reads_a_field_as_a_number_without_equals.tex"
+      )
+      .to_string(),
+      0,
+      format!(
+        r#"{date}<logical-block><para><p align="center">A=2024</p><p align="center">B=2025</p><p align="center">C=4048</p><p align="center">D=2024</p><p align="center">W=2024.0pt</p><p align="center">Q=2</p><p align="center">E-even</p><p align="center">G=-2024</p></para></logical-block><para><p>Text.</p></para></document>"#
+      ),
+    ),
   ] {
     let (log, xml) = convert_with(&tex, Some("ar5iv.sty"));
     assert_eq!((error_count(&log), warning_count(&log)), (0, warnings), "{log}");
@@ -6378,7 +6390,9 @@ fn flat(xml: &str) -> String {
 /// ahead of the title block, as pdflatex prints it, wrapped as `<titlepage class="ltx_titlepage_before">` (OXIDIZED_DESIGN
 /// #262, `wrap_text_before_title`), and the HTML still shows the title and the creator beside it. Rows: the probe; a
 /// title printed with `\@title` before it, which the field-ink lift takes first (shown once, in `<title>`); a
-/// `\maketitle` in a minipage, whose paragraph is never wrapped; blank lines and `\vspace*` only, no titlepage. Red
+/// `\maketitle` in a minipage, whose paragraph is never wrapped; blank lines and `\vspace*` only, no titlepage; a class
+/// printing the title at its setters (raw, and iopart's binding declaring it), whose text before `\maketitle` follows
+/// the title block (red on QAB4 round 2: wrapped above it), and a raw class printing it at `\maketitle`. Red
 /// (QAB4base): the text after the title block.
 #[test]
 fn text_before_maketitle_stays_before_the_title() {
@@ -6391,6 +6405,7 @@ fn text_before_maketitle_stays_before_the_title() {
   let probe = include_str!(
     "../../../tools/perfect_kernel/repros/sectioning-frontmatter/text_before_maketitle_stays_before_the_title.tex"
   );
+  let setter_print = r#"<title>The Title</title><creator role="author"><personname>A. Author</personname></creator><para xml:id="p1"><p xml:id="p1.1">Dated May 14th.</p></para><para xml:id="p2"><p xml:id="p2.1">Body.</p></para>"#.to_string();
   for (tex, body) in [
     (
       probe,
@@ -6423,6 +6438,30 @@ fn text_before_maketitle_stays_before_the_title() {
       ),
       format!(
         r#"<title>The Title</title><creator role="author"><personname>A. Author</personname></creator>{intro}Body.</p></para></section>"#
+      ),
+    ),
+    // (revQAB4 B1: a raw class printing the title and the authors at their setters, then iopart's binding declaring
+    // it; text set between them and `\maketitle` follows them, as pdflatex prints it — and a raw class printing them
+    // at its `\maketitle`, the control)
+    (
+      include_str!(
+        "../../../tools/perfect_kernel/repros/sectioning-frontmatter/text_before_maketitle_where_the_title_prints_at_its_setter.tex"
+      ),
+      setter_print.clone(),
+    ),
+    (
+      include_str!(
+        "../../../tools/perfect_kernel/repros/sectioning-frontmatter/text_before_maketitle_under_a_binding_printing_at_its_setters.tex"
+      ),
+      setter_print,
+    ),
+    (
+      include_str!(
+        "../../../tools/perfect_kernel/repros/sectioning-frontmatter/text_before_maketitle_where_a_class_prints_the_title.tex"
+      ),
+      format!(
+        r#"{}Dated May 14th.</p></block></titlepage><title>The Title</title><creator role="author"><personname>A. Author</personname></creator><para xml:id="p2"><p xml:id="p2.1">Body.</p></para>"#,
+        before("p1", "")
       ),
     ),
   ] {

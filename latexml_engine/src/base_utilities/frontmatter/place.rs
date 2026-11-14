@@ -1,5 +1,7 @@
 //! Contact labels and author order, `digest_front_matter` and `place_frontmatter`.
 
+use std::cell::RefCell;
+
 use super::*;
 
 /// Where the contacts a class lists apart from the names, in the order the document gives them
@@ -1126,6 +1128,18 @@ pub struct TextBeforeTitle {
   run:         Vec<Node>,
   title_block: Node,
 }
+
+thread_local! {
+  /// The text the last `\maketitle` flush found ahead of it ([`hold_text_before_title`]).
+  static TEXT_BEFORE_TITLE: RefCell<Option<TextBeforeTitle>> = const { RefCell::new(None) };
+}
+
+/// Hold the text a `\maketitle` flush found ahead of it ([`place_frontmatter`]) for `\lx@text@before@title`, after the
+/// deposit, which knows whether the title block prints there.
+pub fn hold_text_before_title(lead: Option<TextBeforeTitle>) { TEXT_BEFORE_TITLE.set(lead); }
+
+/// The text [`hold_text_before_title`] held, taken.
+pub fn take_text_before_title() -> Option<TextBeforeTitle> { TEXT_BEFORE_TITLE.take() }
 
 /// Body text set before `\maketitle` stays ahead of the title block, as the PDF prints it (QA91, DG 2026-11-14), wrapped
 /// as a `<titlepage>` of [`BEFORE_TITLEPAGE`] since the schema puts the frontmatter group first (LaTeXML-structure.rnc:34;

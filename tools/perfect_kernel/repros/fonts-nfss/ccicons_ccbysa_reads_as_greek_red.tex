@@ -1,0 +1,14 @@
+% ccicons' `\ccbysa` (the CC BY-SA icons, glyphs of its own font) reads as the OT1 Greek of the same slots, "Γ Δ Θ",
+% text the PDF does not print. Exposed by LXAB: a pre-2.0 lni.cls's title page prints `\ccbysa` (lni.cls:385-387), now
+% deposited as the class's furniture (2203.09493, 2210.04484: `<titlepage class="ltx_titlepage_continued">` "Γ Δ Θ").
+% witness: 2203.09493, 2210.04484 (their own lni.cls v1.7, :167 `\RequirePackage{ccicons}`)
+% oracle:  pdflatex 0 errors (TL 2025, -no-shell-escape): "License", the three CC icons, "."
+% engines: QAB4c: `<p>License <text>Γ Δ Θ</text>.</p>`, 0 errors, 0 warnings
+% expect:  the icons as their meaning (e.g. a text or link "CC BY-SA"), never Greek letters
+% status:  RED (QAB4c)
+% moves:   post-merge
+\documentclass{article}
+\usepackage{ccicons}
+\begin{document}
+License \ccbysa.
+\end{document}

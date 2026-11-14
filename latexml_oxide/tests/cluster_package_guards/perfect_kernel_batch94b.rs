@@ -140,7 +140,7 @@ fn named_contacts(xml: &str) -> Vec<String> {
 
 /// The text of the document's body: everything after its frontmatter, the first `<section` or `<para` on — or, with
 /// text set before `\maketitle` kept ahead of the title (`ltx_titlepage_before`, QA91), everything from that text on
-/// but the document's title and creators.
+/// but the document's title and creators: the rest of the frontmatter (an abstract, a date) included.
 pub(super) fn body_text(xml: &str) -> String {
   if let Some(start) = xml.find(r#"<titlepage class="ltx_titlepage_before""#) {
     let title = regex::Regex::new(r"(?s)<title>.*?</title>").unwrap();
