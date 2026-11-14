@@ -1,0 +1,15 @@
+% The standard classes' size files set `\textwidth` in two columns too (size10.clo:108-124: the paper's width less 2in,
+% at most twice 345pt, `\@settopoint`ed; 410pt under 2.09 compatibility), and `\twocolumn` makes `\columnwidth` half of
+% it less `\columnsep`. The binding declares that page for floats only (`standard_class_twocolumn_page`); the registers
+% stay the kernel's 345pt (Perl's too). Found during review revW2 of issue #779 (`\documentstyle[12pt,twocolumn]{book}`:
+% pdflatex 410.0pt, ours 345.0pt).
+% witness: synthetic
+% oracle:  pdflatex 0 errors: TEXTWIDTH = 469.0pt, COLUMNWIDTH = 229.5pt
+% engines: rust=0 (fix/bindings-batch1 head: TEXTWIDTH = 345.0pt, COLUMNWIDTH = 345.0pt) perl=0 (345pt, the kernel's)
+% expect:  0 errors; TEXTWIDTH = 469.0pt, COLUMNWIDTH = 229.5pt
+% status:  RED
+% moves:   post-merge
+\documentclass[twocolumn]{article}
+\begin{document}
+TEXTWIDTH = \the\textwidth, COLUMNWIDTH = \the\columnwidth
+\end{document}

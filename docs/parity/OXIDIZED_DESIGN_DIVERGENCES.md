@@ -36011,3 +36011,54 @@ affiliation does (batch63's `$^{1}$Carnegie Mellon`). **Witnesses**: 2507.23021,
 2001.00788, 0710.4115, gr-qc0606119 (the old prefix shapes). **Guards**: `perfect_kernel_batchmln1::{batchmln1_mark_led_names_read_as_names,
 batchmln1_marked_affiliations_stay_affiliations}`, `perfect_kernel_batchfms2a2r4::prefix_marked_names_keep_their_notes`,
 `perfect_kernel_batch78f::llncs_inst_leading_marks_keep_their_names`.
+
+### 1020. The standard classes' size option sets `\textwidth` and `\@ptsize` as their size file does (#779)
+
+**TeX.** article/report/book `\input` `size1\@ptsize.clo` (book `bk1\@ptsize.clo`), whose one-column `\textwidth` is
+the paper's width less 2in, at most 345/360/390pt for 10/11/12pt, `\@settopoint`ed (size12.clo:101-126); under 2.09
+compatibility size1x.clo's 345/360/390pt and bk1x.clo:105's 4.5in/5in/5in (pdflatex 325.215pt, 361.34999pt).
+**Perl.** The kernel's `\textwidth` is 345pt (latex_constructs.pool.ltxml:1038) for every size, `\@ptsize` 0
+(article.cls.ltxml:51 "should depend on options..."). **Rust.** `declare_standard_class_page` sets `\textwidth` and
+`standard_class_ptsize` gives `\@ptsize` from the options the class was given, `\opt@<class>.cls`, which a class's
+`\ProcessOptions` reads alone (latex.ltx `\@process@ptions`): the document's options for the document's class, the
+passed ones for a class another loads (elsarticle.cls:113, llncs.cls:47 `\PassOptionsToClass`, `\LoadClassWithOptions`;
+none for a bare `\LoadClass{article}`). A loading class's own `\textwidth` stands after it (llncs.cls:55, 347.12354pt);
+the elsarticle binding passes the size options as the class does (Perl's declared them no-ops). Two goldens differ from Perl on purpose:
+`tokenize/fancyvrb.xml` (12pt, `width="390.0pt"`) and `complex/cleveref_minimal.xml` (a `\rule` sized from it).
+Residual (post-merge): in two columns the registers stay 345pt (pdflatex 469pt/229.5pt;
+`class-bindings/standard_class_twocolumn_textwidth_red.tex`), and elsarticle's `5p` 390pt at 12pt (pdflatex 522pt;
+`elsarticle_twocolumn_textwidth_red.tex`). **Guards**: `bindings_batch1::standard_class_size_option_sets_textwidth` (repro
+`class-bindings/standard_class_size_option_sets_textwidth.tex`).
+
+### 1021. `{verbatim}` prints the quotes `\@noligs` gives: upright under upquote (#801)
+
+**TeX.** latex.ltx's `\@verbatim` runs `\@noligs`, to which upquote.sty:26-37 appends `\let'\textquotesingle` (or
+`\def'{\char13 }` in OT1 cmtt), so `{verbatim}`/`{verbatim*}` print ' and ` upright, as fancyvrb's `Verbatim` and `\verb`
+do (pdflatex: all four forms upright). **Perl.** upquote is read raw (upquote.sty.ltxml:20) and the kernel's verbatim
+decodes its body through the typewriter font: all four forms print curly U+2019/U+2018. **Rust.** `after_digest_verbatim`
+typesets `\@noligs`'s active `'`/`` ` `` once per environment and prints what it gives; without upquote the font's
+curly quotes stay, as pdflatex prints them. **Guards**: `bindings_batch1::verbatim_quotes_follow_upquote` (repro
+`package-bindings/verbatim_quotes_follow_upquote.tex`).
+
+### 1022. A `<ltx:TOC>` whose `scope` is an xml:id lists that unit's children (#760)
+
+**Schema.** LaTeXML.rnc's `TOC_attributes` documents `scope` as `current`, `global`, "otherwise an xml:id".
+**Perl.** CrossRef.pm:219-226 reads only `global` (the root page); any other value is the current page. Perl has no
+etoc binding (`\localtableofcontents`, `\etocsetnexttocdepth` undefined, 2 Errors). **Rust.** crossref.rs's
+`fill_in_tocs` lists the children of the unit an xml:id scope names; etoc_sty.rs's `\localtableofcontents` emits a TOC
+scoped to its enclosing unit's id (`current` outside any unit), to `\etocsetnexttocdepth`'s depth. Residuals
+(post-merge): `\etocsettocstyle`'s heading (counted: a Warning naming the style's tokens) and
+`\localtableofcontentswithrelativedepth` (repros
+`package-bindings/etoc_settocstyle_heading_red.tex`, `etoc_relative_depth_red.tex`). **Guards**:
+`bindings_batch1::etoc_local_table_lists_the_unit` (repro `package-bindings/etoc_local_table_lists_the_unit.tex`).
+
+### 1023. The import commands typeset no space before the imported file; `\import@path` is import.sty's macro (#772)
+
+**TeX.** import.sty:53-92: `\import`/`\subimport` and their aliases run `\@import` with no group and no space token
+before the `\input`/`\include`, so `X\subimport{sub/}{y}Y` with `y.tex` = `Z%` prints "XZY"; `\import@path` is the
+package's macro, set globally (:83), restored after the input (:93), emptied by `\import`/`\inputfrom`/`\includefrom`
+before it is saved (:53-58). **Perl.** import.sty.ltxml:44-47 `{\lx@set@path #1{#2} \input{#3}}`: the space after the
+path argument is typeset ("X ZY", KNOWN_PERL_ERRORS #1239), and `\import@path` is undefined. **Rust.** The bodies
+carry no space; `\import@path` is defined and kept as import.sty keeps it, a nested `\import` restoring it to empty.
+**Guards**: `bindings_batch1::import_path_is_the_package_macro` (repros `package-bindings/import_path_is_the_package_macro.tex`,
+`import_nested_import_empties_the_path.tex`).

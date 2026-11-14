@@ -56,6 +56,30 @@
     `file:` URL is percent-decoded. Guards `xslt::local_stylesheet_tests`,
     `xslt_custom_stylesheet::stray_engine_sheets_do_not_replace_the_default`.
 
+  - **etoc binding (#760).** `\localtableofcontents` now lists the enclosing
+    chapter's or section's units, to the depth `\etocsetnexttocdepth` sets, and
+    `\tableofcontents` stays the document's contents; `\invisibletableofcontents`
+    prints nothing, as in etoc. A `<ltx:TOC>` whose `scope` is a unit's `xml:id`
+    lists that unit's children (the schema's documented meaning; Perl reads only
+    `global`).
+  - **`{verbatim}` honours upquote (#801).** With `\usepackage{upquote}`, the
+    `verbatim` and `verbatim*` environments now print `'` and `` ` `` upright, as
+    fancyvrb's `Verbatim` and `\verb` already did and as pdflatex prints all of
+    them. Without upquote they keep the typewriter font's curly quotes.
+  - **The standard classes' size options set `\textwidth` (#779).** In one column,
+    `article`, `report` and `book` now set `\textwidth` as their size file does
+    (`size1x.clo`/`bk1x.clo`): the paper's width less 2in, at most 345pt (10pt),
+    360pt (11pt) or 390pt (12pt). Before, every size got 10pt's 345pt, so a
+    `\begin{minipage}{\textwidth}` in a 12pt article was too narrow. Under
+    `\documentstyle`, book's width is `bk1x.clo`'s 4.5in (10pt) or 5in. `\@ptsize`
+    now follows the size option too. Both read the options the class was given,
+    so a class passing its options to `article` (elsarticle, llncs) reaches them;
+    llncs keeps its own 12.2cm.
+  - **`\import@path` is defined (#772).** import.sty's own macro now holds the
+    current import directory, as the package sets and restores it, so a document
+    that reads it (`\href{\import@path index.tex}{…}`) no longer gets an
+    undefined-macro error; a nested `\import` empties it, as import.sty does. Also
+    drops a stray space the import commands typeset before the imported file.
   - **`post::PostOptions::nodefaultresources` is now `default_resources`, with the
     meaning inverted.** The double negative (`nodefaultresources: false`) is gone.
     The positive name is Perl's option name (`Config.pm:120` `defaultresources!`),
