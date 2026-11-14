@@ -2545,8 +2545,9 @@ mod browser_render_aligned_math_spacing {
       && browser_dir().join("node_modules/playwright-core").is_dir()
   }
 
-  #[test]
-  fn aligned_relation_is_not_double_spaced_by_mtd_padding() {
+  /// Converts `doc` to HTML and measures it with `measure_align_mtd.js`; `None`
+  /// is the visible skip when the toolchain is absent.
+  fn render_and_measure(doc: &str, issue: &str) -> Option<serde_json::Value> {
     if !toolchain_ready() {
       assert!(
         std::env::var("LATEXML_BROWSER_TESTS").is_err(),
@@ -2555,16 +2556,16 @@ mod browser_render_aligned_math_spacing {
         browser_dir().display()
       );
       eprintln!(
-        "SKIP browser render (#755): node/playwright-core/chrome unavailable — \
+        "SKIP browser render ({issue}): node/playwright-core/chrome unavailable — \
          `npm ci` in {} and set LATEXML_BROWSER_TESTS to require it",
         browser_dir().display()
       );
-      return;
+      return None;
     }
 
     let workdir = tempfile::tempdir().expect("tempdir");
     let root = workdir.path();
-    fs::write(root.join("doc.tex"), DOC).unwrap();
+    fs::write(root.join("doc.tex"), doc).unwrap();
     let conv = Command::new(env!("CARGO_BIN_EXE_latexml_oxide"))
       .current_dir(root)
       .arg("--format=html5")
@@ -2590,8 +2591,15 @@ mod browser_render_aligned_math_spacing {
       "measure_align_mtd.js failed: {}\n{stdout}",
       String::from_utf8_lossy(&m.stderr)
     );
+    Some(serde_json::from_str(stdout.trim()).expect("parse JSON"))
+  }
 
-    let v: serde_json::Value = serde_json::from_str(stdout.trim()).expect("parse JSON");
+  #[test]
+  fn aligned_relation_is_not_double_spaced_by_mtd_padding() {
+    let Some(v) = render_and_measure(DOC, "#755") else {
+      return;
+    };
+    let stdout = v.to_string();
     let cells = v["cells"].as_array().expect("cells array");
     // The `aligned` has 2 rows x 2 columns → 4 native alignment cells.
     assert_eq!(
@@ -2622,6 +2630,32 @@ mod browser_render_aligned_math_spacing {
       "aligned `y(x)`→`=` gap rendered {gap}px — double-spaced by mtd padding \
        (pre-fix ~10.8px; the relation space alone is ~4.4px): {stdout}"
     );
+  }
+
+  /// #809 (inline `aligned`) and #755 (`gather*` around `aligned`): a left
+  /// column of unequal widths is right-aligned against the relation, so every
+  /// row's last-glyph→`=` gap is the relation's lspace alone (0.278 em; an
+  /// `mfrac` adds Chrome's 1px inline padding). Red before LaTeXML.css keyed
+  /// `justify-items` on `mtd[columnalign]`: 25.4/19.2/21.5/5.4 px at 16 px.
+  #[test]
+  fn aligned_left_column_is_right_aligned_against_the_relation() {
+    let doc = include_str!(
+      "../../tools/perfect_kernel/repros/alignment/aligned_left_column_is_right_aligned.tex"
+    );
+    if let Some(v) = render_and_measure(doc, "#809") {
+      let rows = v["rowGaps"].as_array().expect("rowGaps array");
+      // Two `aligned` (inline, and in `gather*`) of 4 rows each.
+      assert_eq!(rows.len(), 8, "expected 8 aligned rows: {v}");
+      for (i, r) in rows.iter().enumerate() {
+        let gap = r["gap"].as_f64().expect("gap");
+        let want = 0.278 * r["fontPx"].as_f64().expect("fontPx");
+        assert!(
+          (gap - want).abs() <= 1.2,
+          "row {i}: left column→`=` gap {gap}px, want {want}px ± 1.2 — the left column \
+           is not right-aligned (LaTeXML.css `mtd[columnalign]`): {v}"
+        );
+      }
+    }
   }
 }
 
@@ -2678,6 +2712,16 @@ mod aligned_mtable_columnspacing_zero {
     assert!(
       css.contains("mtable[columnspacing=\"0pt\"] mtd"),
       "LaTeXML.css is missing the native-MathML aligned mtd padding reset (#755)"
+    );
+    // #809: Core dropped `columnalign`; the left column is right-aligned only by the
+    // stylesheet rule keyed on it.
+    assert!(
+      html.contains("columnalign=\"right\""),
+      "aligned's left column lost columnalign=\"right\" (#809):\n{html}"
+    );
+    assert!(
+      css.contains("math mtd[columnalign=\"right\"]"),
+      "LaTeXML.css is missing the native-MathML mtd[columnalign] alignment (#809)"
     );
   }
 }

@@ -36166,6 +36166,37 @@ pdflatex prints `[read][42]Tail.` (0 `!`). An ordinary `\input` keeps its bindin
 binding answers `\input glyphtounicode` (`\pdfglyphtounicode` a no-op, the raw read's output the same, at fewer
 instructions). **Guards**: `perfect_kernel_batch51::file_get_reads_the_file_whole`, the format build's zero-error gate.
 
+### 1032. An aligned column's `columnalign` is the stylesheet's `justify-items` (issues #809, #755)
+
+**Perl** and Rust emit `<mtd columnalign="right">` (`ltx_align_right` unless a border class replaces it, MathML.pm
+L456-473); MathML Core dropped `columnalign`, and Chrome set a `columnalign="right"` cell flush left (start; revMML2: 0 px left,
+12.3 px right; only a cell without the attribute is centred), so an `aligned`'s left column ended short of its relation,
+up to 21 px late (issue 809's repro, 16 px) (`text-align` on `.ltx_align_right` does not reach it). Firefox honours `columnalign`. **Rust.** LaTeXML.css adds
+`math mtd[columnalign="right"] { justify-items:end; }` and `…[columnalign="left"] { justify-items:start; }`, keyed on the
+attribute, which every cell keeps; the markup is unchanged. Offer upstream (LaTeXML.css). **Guards**:
+`cluster_cli::browser_render_aligned_math_spacing::aligned_left_column_is_right_aligned_against_the_relation` (Chrome,
+local only, repro `alignment/aligned_left_column_is_right_aligned.tex`),
+`cluster_cli::aligned_mtable_columnspacing_zero::aligned_emits_zero_columnspacing_and_css_resets_mtd_padding` (the rule
+ships).
+
+### 1033. A visible MathML Core category-K operator has no operator space: `/` is K, and an Ord (issue #789)
+
+**TeX.** `/` is an Ord (mathcode "013D), as is `\backslash` (`\delimiter"26E30F`, class 0): `\showbox` of `$a/b$` and
+`$a\backslash b$` has no glue. **Core** (TR 2025 and ED, Figure 25) puts infix `/`, `\`, `_`, U+2061-2064 and U+2206 in
+category K, zero lspace and rspace. **Perl.** OperatorDictionary.pm:185 lists `/` in B (0.222 em; KNOWN_PERL_ERRORS
+#1240), and the space walk (`adjust_pair`) types an operator by its role, so `/` (MULOP) is a Bin and `\backslash`
+(MULOP, math_common.pool.ltxml:97) gets `lspace`/`rspace` 0.222 em; `<mo>/</mo>` is bare, and Chrome 155 spaces it 0.222 em
+each side (Firefox none). **Rust.** The dictionary has `/` in K; `is_core_k_glyph`
+(presentation.rs) marks a visible infix `<mo>` of category K `lspace="0em" rspace="0em"`, as Perl does for the ZWSP of
+`--noinvisibletimes` (MathML.pm:773), and the walk types it Ord when its role is a Bin (MULOP). A class digestion
+keeps wins: `\mathrel{/}`, `\mathrel{\backslash}` (RELOP) get 0.278 em each side, `\mathpunct{/}`,
+`\mathpunct{\backslash}` (PUNCT) 0 em / 0.167 em, TeX's `\thickmuskip` and `\thinmuskip`. The invisible K operators stay
+bare (Format text, Perl L747; Chrome and Firefox give them no space). Residual: `\mathbin{/}` and `\bigm/` lose their
+Bin/Rel class at digestion and get zero space too (RED `math-parse/mathbin_slash_keeps_binary_space_red.tex`,
+post-merge). Offer upstream. **Guards**:
+`perfect_kernel_batchmml2::core_k_operators_have_no_operator_space` (repro
+`math-parse/slash_is_an_ord_without_operator_space.tex`), `operator_dictionary::tests::test_opdict_category_k_is_infix_only`.
+
 ### 1034. A small PDF figure is converted to SVG, raster-bearing ones too, unless it draws a raster enlarged (after PR 816)
 
 **Perl.** Every PDF graphic is rasterized to PNG (`Post/Graphics.pm:62`, `pdf => { destination_type => 'png' }`).
