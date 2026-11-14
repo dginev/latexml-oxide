@@ -12,7 +12,7 @@
 //! LaTeXML's own ([`LATEXML_OWN`]; the pools, font maps and drivers such as `pgfsys-latexml.def` need no list).
 //!
 //! Every registered `.cls`/`.sty`/`.tex` binding TL 2025's kpathsea does not find is on exactly one of the three
-//! lists, by name and case (TeX on a case-sensitive file system finds neither `JHEP.cls` for TL 2007's `jhep.cls` nor
+//! lists (a stand-in the host's tree has, as TL 2026 has `rasti.cls`, is the tree's file there), by name and case (TeX on a case-sensitive file system finds neither `JHEP.cls` for TL 2007's `jhep.cls` nor
 //! `ieeeconf.cls` for `IEEEconf.cls`; TL 2025's `mn2e.cls` is a documentation file of mnras, which kpathsea does not
 //! search). TeX Live's history is read from its file lists: the TL 2007 image's
 //! `texmf/lists`, the TL 2008 tlpdb, the TL 2009 texmf listing and the tlpdb of every year 2010-2024. Guards:
@@ -333,9 +333,17 @@ pub const AUTHOR_FILE_STAND_INS: &[&str] = &[
 ];
 
 /// Is `file` (`arxiv.sty`) the name of a binding that stands in for an author's file? Matched without regard to
-/// case, as the binding registry matches a request (`jhep.cls` → `JHEP.cls`).
+/// case, as the binding registry matches a request (`jhep.cls` → `JHEP.cls`). A listed name the host's TeX tree
+/// distributes is that tree's file, as TeX finds it (TL 2026's `rasti.cls`; Windows' case-blind `ieeeconf.cls`).
 pub fn stands_in_for_an_author_file(file: &str) -> bool {
   AUTHOR_FILE_STAND_INS
     .iter()
     .any(|name| name.eq_ignore_ascii_case(file))
+    && !tex_tree_has(file)
+}
+
+/// Does kpathsea find `file` in a TeX tree (an absolute path), not in the current directory (`./file`)?
+fn tex_tree_has(file: &str) -> bool {
+  crate::util::pathname::kpsewhich(&[file])
+    .is_some_and(|path| std::path::Path::new(&path).is_absolute())
 }

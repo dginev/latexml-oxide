@@ -1,7 +1,9 @@
 //! Red/green guards for batch 68d: loader fixes from the `missing_file` study of 2605+2606 — a path-prefixed class is
 //! its basename's binding, a braced package name loses its braces, a binding standing in for an author's file does
 //! not answer `\IfFileExists` for it, and jfm's `lineno` option follows the paper's copy.
-use latexml::util::test::{assert_element, convert_files_with, convert_files_with_status};
+use latexml::util::test::{
+  assert_element, convert_files_with, convert_files_with_status, kpse_has,
+};
 
 use super::perfect_kernel_batch46::{error_count, warning_count};
 
@@ -175,7 +177,8 @@ fn in_tex_live(file: &str) -> bool {
 
 /// Every stand-in for an author's file, every former TeX Live file and every LaTeXML-own file
 /// (`latexml_core::binding::author_files`) is a registered binding TeX Live 2025 does not distribute (kpathsea finds
-/// none of them in its trees; it finds `article.cls`, so it is there to ask), and no name is on two lists.
+/// none of them in its trees; it finds `article.cls`, so it is there to ask), and no name is on two lists. A stand-in
+/// the installed tree has (TL 2026's `rasti.cls`) is the tree's file, not a stand-in.
 #[test]
 fn author_file_stand_ins_are_bindings_outside_tex_live() {
   use latexml_core::binding::author_files::{AUTHOR_FILE_STAND_INS, FORMER_TEX_LIVE, LATEXML_OWN};
@@ -199,7 +202,16 @@ fn author_file_stand_ins_are_bindings_outside_tex_live() {
         registered.iter().any(|r| r == file),
         "{list}: {file} is no registered binding"
       );
-      assert!(!in_tex_live(file), "{list}: {file} is a TeX Live file");
+      if *list == "AUTHOR_FILE_STAND_INS" {
+        let stands_in = latexml_core::binding::author_files::stands_in_for_an_author_file(file);
+        assert_eq!(
+          stands_in,
+          !kpse_has(file),
+          "{list}: {file} stands in, or is the tree's"
+        );
+      } else {
+        assert!(!in_tex_live(file), "{list}: {file} is a TeX Live file");
+      }
       if let Some(other) = seen.insert(file.to_string(), *list) {
         panic!("{file} is on both {other} and {list}");
       }
