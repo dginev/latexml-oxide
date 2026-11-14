@@ -19667,3 +19667,23 @@ Minimal trigger (pdflatex 0 `!`, "[1.iii][B]"; Perl 0 Errors, "]foosection]barse
 [\thefoo][\thebar]
 \end{document}
 ```
+
+## 1243. amsthm's `\theoremstyle` reads the style name unexpanded
+
+amsthm.sty defines `\theoremstyle#1` to test and use `\csname th@#1\endcsname`, so a macro holding the name expands to it
+(`\def\mystyle{remark}\theoremstyle{\mystyle}` sets the remark style; keytheorems' `style=` key passes its unexpanded key
+variable this way). Perl's amsthm.sty.ltxml:48 reads the argument as a string without expanding it: `Warning:undefined:theoremstyle
+Unknown theorem style '\mystyle', reverting to 'plain'`, and the theorem takes the plain style. Rust expands the name as amsthm does
+(WIN1i; guard `perfect_kernel_batchm1::the_block_instances_of_the_file_are_declared`'s `style=definition` lemma). Minimal trigger
+(pdflatex 0 `!`, an italic remark head; Perl the Warning and the plain style):
+
+```latex
+\documentclass{article}
+\usepackage{amsthm}
+\def\mystyle{remark}
+\theoremstyle{\mystyle}
+\newtheorem{note}{Note}
+\begin{document}
+\begin{note}Body.\end{note}
+\end{document}
+```
