@@ -217,7 +217,8 @@ fn titlesec_after_code_closes_an_unnumbered_title() {
 }
 
 /// nicematrix's `\Block{i-j}<tokens>{content}` sets the tokens before the content (nicematrix.sty:7258). Red
-/// (int40c): "¡Tall¿". Repro alignment-bindings/nicematrix_block_angle_tokens_apply_to_the_content.
+/// (int40c): "¡Tall¿". Repro alignment-bindings/nicematrix_block_angle_tokens_apply_to_the_content. The `2-1` block
+/// spans its two rows as pdflatex sets it (issue 736; it pinned the unspanned cell before).
 #[test]
 fn nicematrix_block_angle_tokens_apply_to_the_content() {
   assert_clean(
@@ -226,7 +227,7 @@ fn nicematrix_block_angle_tokens_apply_to_the_content() {
     &[(
       "td",
       "p1.1.1.1",
-      "<td align=\"center\" xml:id=\"p1.1.1.1\"><text font=\"bold\" xml:id=\"p1.1.1.1.1\">Tall</text></td>",
+      "<td align=\"center\" rowspan=\"2\" xml:id=\"p1.1.1.1\"><text font=\"bold\" xml:id=\"p1.1.1.1.1\">Tall</text></td>",
     )],
   );
 }

@@ -1,0 +1,21 @@
+% mechanism: inside a {NiceTabular} body nicematrix lets `\rowcolors` to `\__nicematrix_rowcolors_tabular { O{} m m }`
+%   and `\rowlistcolors` to `{ O{} m O{} }` (nicematrix.sty:1653-1656, :5966-5968); the binding's \CodeBefore forms
+%   (`{O{}mmm}`, :5772) read the next cell's `$` as a third argument
+% witness: 2602.03088 (`\rowcolors{gray!0}{}` before `$\rm \bf log(C_{emission})$`, 39 errors)
+% oracle:  pdflatex 0 errors: rows "a b" / "x_1 c" / "d e"
+% engines: rust c725371b0af = Error:unexpected:_ (Script _ can only appear in math mode) + the cell's math broken;
+%          Perl: no binding
+% expect:  0 errors; the second row's first cell is the formula x_1
+% status:  RED (c725371b0af) -> GREEN (I736)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{nicematrix}
+\begin{document}
+\begin{NiceTabular}{cc}
+a & b \\
+\rowcolors{gray!10}{}
+$x_1$ & c \\
+\rowlistcolors{red!10,blue!10}[cols=1]
+d & e \\
+\end{NiceTabular}
+\end{document}
