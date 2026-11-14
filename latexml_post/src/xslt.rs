@@ -1338,8 +1338,9 @@ mod witnessed_css_delta {
     // cell), a breaklines line's \parbox drops the markup's newlines while its text
     // keeps its spaces, and shrinks in a flex row (through an id-carrying ltx_text
     // wrapper too); lines and xleftmargin's wrapper are capped (Chrome at 375 px:
-    // page 488 -> 375, frame scrollWidth 468 -> 330; the browser half is
-    // `browser_render_verbatim_narrow`).
+    // page 488 -> 375, frame scrollWidth 468 -> 330); the wrapper is a flex row, so
+    // its U+2003 margin indents the line rather than take a row (issue 853: row
+    // 30 -> 15 px). The browser half is `browser_render_verbatim_narrow`.
     for rule in [
       "code.ltx_verbatim { white-space:pre-wrap; overflow-wrap:break-word; }",
       ".ltx_td code.ltx_verbatim, .ltx_th code.ltx_verbatim { white-space:pre; }",
@@ -1347,8 +1348,9 @@ mod witnessed_css_delta {
       ".ltx_verbatim .ltx_parbox .ltx_p { white-space:pre-wrap; }",
       ".ltx_text.ltx_verbatim.ltx_inline-block { display:block; text-indent:0; min-height:1lh; \
        max-width:100%; }",
-      ".ltx_text.ltx_inline-block:has(> .ltx_text.ltx_verbatim.ltx_inline-block) { display:block; \
+      ".ltx_text.ltx_inline-block:has(> .ltx_text.ltx_verbatim.ltx_inline-block) { display:flex; \
        text-indent:0; max-width:100%; }",
+      ".ltx_text.ltx_inline-block > .ltx_text.ltx_verbatim.ltx_inline-block { min-width:0; }",
       ".ltx_text.ltx_verbatim.ltx_inline-block:has(> .ltx_parbox, > .ltx_text > .ltx_parbox) { \
        display:flex; }",
       ".ltx_verbatim > .ltx_text:has(> .ltx_parbox) { display:contents; }",
@@ -1358,7 +1360,7 @@ mod witnessed_css_delta {
     ] {
       assert!(
         css.contains(rule),
-        "LaTeXML.css lost the verbatim rule `{rule}` (issues #431/#702)"
+        "LaTeXML.css lost the verbatim rule `{rule}` (issues #431/#702/853)"
       );
     }
   }
