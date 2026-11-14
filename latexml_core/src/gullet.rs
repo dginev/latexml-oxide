@@ -480,6 +480,53 @@ impl Drop for NumberScanSuspended {
 }
 fn in_number_scan() -> bool { NUMBER_SCAN_DEPTH.with(|c| c.get() > 0) }
 
+/// Control sequences emptied for printing whose value a quantity's operand still reads (tex.web §441: the token after
+/// the signs), with that value: the title-page deposit's fields (`\lx@deposit@maketitle`), set for its run.
+#[thread_local]
+static OPERAND_VALUES: RefCell<Vec<(Token, Tokens)>> = RefCell::new(Vec::new());
+/// Whether the scan is reading its operand's first token ([`OperandRead`]).
+#[thread_local]
+static READING_OPERAND: Cell<bool> = Cell::new(false);
+
+/// RAII marker for the read of a quantity's operand head ([`READING_OPERAND`]): [`scan_optional_signs`]'s, and the
+/// eTeX expression's factor (etex.ch `scan_expr`).
+pub struct OperandRead(bool);
+impl OperandRead {
+  pub fn begin() -> Self {
+    OperandRead(READING_OPERAND.replace(!OPERAND_VALUES.borrow().is_empty()))
+  }
+}
+impl Drop for OperandRead {
+  fn drop(&mut self) { READING_OPERAND.set(self.0); }
+}
+
+/// Give the control sequences [`OPERAND_VALUES`] holds, returning the ones given before.
+pub fn set_operand_values(values: Vec<(Token, Tokens)>) -> Vec<(Token, Tokens)> {
+  OPERAND_VALUES.replace(values)
+}
+
+/// The value an operand reads from `token`, while its meaning `defn` is still the empty macro it was made for printing.
+#[cold]
+fn operand_value(token: &Token, defn: &dyn Definition) -> Option<Tokens> {
+  use crate::definition::ExpansionBody;
+  let emptied = defn
+    .get_parameters()
+    .is_none_or(|p| p.get_parameters().is_empty())
+    && match defn.get_expansion() {
+      None => true,
+      Some(ExpansionBody::Tokens(body)) => body.unlist_ref().is_empty(),
+      Some(ExpansionBody::Closure(_)) => false,
+    };
+  if !emptied || !in_number_scan() {
+    return None;
+  }
+  OPERAND_VALUES
+    .borrow()
+    .iter()
+    .find(|(t, _)| t == token)
+    .map(|(_, v)| v.clone())
+}
+
 /// Hoisted env probe for the LATEXML_DEBUG_FATAL diagnostics (shared seam in
 /// `common::error`; read once so the per-token hot path pays one bool test).
 static DEBUG_FATAL: Lazy<bool> = Lazy::new(debug_fatal_enabled);
@@ -2620,6 +2667,12 @@ pub fn read_x_token(
           return Ok(Some(token));
         },
         Outcome::Invoke(defn) => {
+          if READING_OPERAND.get()
+            && let Some(value) = operand_value(&token, &*defn)
+          {
+            unread(value);
+            continue;
+          }
           invoke_expansion(token, &defn)?;
           continue;
         },
@@ -5169,6 +5222,7 @@ pub fn read_optional_signs() -> Result<bool> {
 /// <optional signs>, returning whether they are negative and the token after them (TeX's
 /// `cur_tok`, read with expansion and not put back).
 fn scan_optional_signs() -> Result<(bool, Option<Token>)> {
+  let _operand = OperandRead::begin();
   let mut sign = false;
   while let Some(t) = read_x_token(None, false, None)? {
     let sym = t.get_sym();

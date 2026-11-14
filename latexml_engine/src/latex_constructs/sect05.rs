@@ -1438,6 +1438,10 @@ pub(crate) fn load() -> Result<()> {
     let hold = util::logger::DiagnosticsHold::begin();
     // (what an `\insert` in it sets, after it: tex_inserts.rs)
     AssignValue!("lx_deposit_inserts" => Stored::VecDigested(Vec::new()), Some(Scope::Global));
+    // (a field emptied for printing still gives its value where the title page reads a number from it, in both runs)
+    let _operands = OperandValues(set_operand_values(
+      crate::frontmatter_stores::deposit_operand_values()?,
+    ));
     let deposit = digest(title_page_deposit_tokens(&[]));
     AssignValue!("lx_depositing_frontmatter_fields" => false, Some(Scope::Global));
     let mut inserts = take_deposit_inserts();
@@ -5011,6 +5015,12 @@ fn dropped_maketitle_takes_options() -> bool {
     }),
     _ => false,
   }
+}
+
+/// Gives back the operand values set before the title-page deposit (`gullet::set_operand_values`).
+struct OperandValues(Vec<(Token, Tokens)>);
+impl Drop for OperandValues {
+  fn drop(&mut self) { set_operand_values(std::mem::take(&mut self.0)); }
 }
 
 /// The kernel's title fields and their setters as the title-page deposit and replay read them: empty (the frontmatter

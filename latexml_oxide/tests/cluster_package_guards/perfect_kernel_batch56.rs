@@ -6322,6 +6322,49 @@ Body.
   }
 }
 
+/// DEPN (QAB4; BM's Q3.13 probe `session`, QA60): the deposit empties the frontmatter's fields for printing only. A
+/// class that reads one as a quantity's operand reads its value (gullet.rs `set_operand_values`), in the replay of its
+/// own `\maketitle` and in its `\@maketitle`, through `\ifnum`, `\setcounter`, a dimension and an eTeX factor; the field
+/// printed after a dimension's unit stays empty, the date shown once. Red (QAB4base): "Exam session 0", 1 Warning;
+/// "Year 0", "Next 1", "pt Width 0.0pt", 3 Warnings. With `\date{}` pdflatex errs "Missing number": one Warning.
+#[test]
+fn deposit_reads_a_field_as_a_number() {
+  let replay = include_str!(
+    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/deposit_replay_reads_a_field_as_a_number.tex"
+  );
+  let session = |year: &str| {
+    format!(
+      r#"<logical-block><para><p align="center"><text fontsize="120%">Course: MATH 410</text></p><p align="center"><text fontsize="120%">Exam session {year}</text></p></para></logical-block><para><p>Text.</p></para></document>"#
+    )
+  };
+  let date = r#"<date role="creation">2024</date>"#;
+  let ids = regex::Regex::new(r#" xml:id="[^"]*""#).unwrap();
+  let gaps = regex::Regex::new(r">\s+<").unwrap();
+  for (tex, warnings, tail) in [
+    (replay.to_string(), 0, format!("{date}{}", session("2024"))),
+    (
+      replay.replace(r"\date{2024}", r"\date{}"),
+      1,
+      format!("</creator>{}", session("0")),
+    ),
+    (
+      include_str!(
+        "../../../tools/perfect_kernel/repros/sectioning-frontmatter/deposit_maketitle_reads_a_field_as_a_number.tex"
+      )
+      .to_string(),
+      0,
+      format!(
+        r#"{date}<logical-block><para><p align="center">Recent edition</p><p align="center">Year 2024</p><p align="center">Next 2025</p><p align="center">Width 2024.0pt</p></para></logical-block><para><p>Text.</p></para></document>"#
+      ),
+    ),
+  ] {
+    let (log, xml) = convert_with(&tex, Some("ar5iv.sty"));
+    assert_eq!((error_count(&log), warning_count(&log)), (0, warnings), "{log}");
+    let flat = gaps.replace_all(&ids.replace_all(&xml, ""), "><").into_owned();
+    assert!(flat.ends_with(&format!("{tail}\n")), "{tail}\n{flat}");
+  }
+}
+
 /// Batch 56ha: the deposit's vocabulary gate skips what a no-op macro
 /// absorbs. uantwerpendocs' classes draw their title page inside eso-pic's
 /// `\AddToShipoutPicture*{…}` (a no-op here), so the undefined tikz in that

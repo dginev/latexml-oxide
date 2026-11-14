@@ -36341,3 +36341,18 @@ letters, the counter calls, variadic Push/UnshiftValue, `ptValue`'s clamp, Looku
 `getAttribute`/`setAttribute`, returned boxes, the diagnostics' form; Perl 3 W plus the Error, ours 1 W more, the
 unknown key), `perfect_kernel_batchw3rg::rhai_perl_names_review_rows` (no colour package, the kept definition, the
 mixed comparisons, `roman(Number)`, `Number(string)`).
+
+### 1044. The title-page deposit's emptied fields keep their value where a quantity's operand reads them (DEPN)
+
+**Perl** never runs a raw class's title page (State.pm:502-517). **Rust** deposits it (#124, #265) with the
+frontmatter's fields emptied (`\let\@date\@empty`, sect05.rs `TITLE_PAGE_FIELDS`, and the handed stores,
+`\lx@captured@stores`), so that the title page does not print them twice; a class that reads a field as a number met
+the empty one: `\@tempcnta=\@date\relax` printed "Exam session 0" with a "Missing number" Warning where pdflatex prints
+"Exam session 2024" (BM's probe `session`, QA60). Now the fields are emptied for printing only: while the deposit and
+the replay run, the token a quantity's operand reads after its signs (tex.web §441, gullet.rs `scan_optional_signs`; an
+eTeX expression's factor, etex.rs `etex_readexpr_i`) expands to the field's value when its meaning is still the emptied
+one (`gullet::set_operand_values`, `frontmatter_stores::deposit_operand_values`). The lookahead of a scan that already
+has its number (`\vskip 1em \@date`, the scan for `plus`) still reads it empty. Reach: no arXiv paper of a
+20,000-paper sample ships a class reading `\@date`/`\@title`/`\@author`/`\@thanks` as a number. **Guard**:
+`perfect_kernel_batch56::deposit_reads_a_field_as_a_number` (the replay, `\@maketitle` through `\ifnum`,
+`\setcounter`, a dimension and `\numexpr`, and `\date{}`, where pdflatex errs too: one Warning).
