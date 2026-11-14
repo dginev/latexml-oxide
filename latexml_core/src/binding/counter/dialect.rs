@@ -24,7 +24,7 @@ use crate::{
     numeric_ops::NumericOps,
   },
   definition::{Definition, ExpansionBody, expandable::ExpandableOptions},
-  mouth, state,
+  mouth,
   state::*,
   stomach,
   token::*,
