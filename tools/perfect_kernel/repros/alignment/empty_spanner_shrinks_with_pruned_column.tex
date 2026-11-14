@@ -1,0 +1,18 @@
+% witness: 2406.06521 Table 2 (`tables/dtu_new.tex`: an empty `\multicolumn{3}{c}{}` header over a column empty in
+%          every row; the header row came out 18 cells wide against the data rows' 20)
+% oracle:  pdflatex 0 errors: "24" above the numbers column, VolSDF and NeuS to its left
+% engines: rust 63r and Perl 0.8.8 = the header row `<td>24</td>` alone, over VolSDF (the empty spanner removed with
+%          the pruned column, its covered cells emitted by nothing; Alignment.pm L822-854)
+% expect:  0 errors, 0 warnings; the header row `<td colspan="2"/>` then "24", as wide as the data rows
+% status:  RED (63r) -> GREEN (63s)
+\documentclass{article}
+\usepackage{xcolor}
+\begin{document}
+\begin{table}
+\begin{tabular}{@{}lccc}
+\multicolumn{3}{c}{} & 24 \\
+ & VolSDF & & 1.14 \\
+ & NeuS & & 1.00 \\
+\end{tabular}
+\end{table}
+\end{document}

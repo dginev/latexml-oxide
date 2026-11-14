@@ -1,0 +1,28 @@
+% witness: sel78d item 3 (2,385/30k papers set a width inside a sub-float); 2509.19464 A1.F6; subcaption.sty:70-92
+%          makes {subfigure} a \minipage (latex.ltx:16312-16313, \@parboxrestore's \linewidth); Perl's sub-floats set
+%          only beforeFloat's \hsize (latex_constructs.pool.ltxml:3377) (KPE)
+% oracle:  pdflatex 0 errors: "96.59958pt 96.59958pt 96.59958pt 96.59958pt", the table's "155.24895pt" and the
+%          minipage's "68.99895pt" (\textwidth 345pt); \subcaptionbox[.2\textwidth] a \parbox (caption.sty:473):
+%          "68.99895pt 68.99895pt 345.0pt 345.0pt" (rev78d probe sfw case G)
+% engines: rust int45b = the sub-floats' four widths 345.0pt (the page's); the minipage's 68.99895pt;
+%          78d r1 = the \subcaptionbox's four 68.99895pt
+% expect:  0 errors; each sub-float's and minipage's four widths its width argument, the \subcaptionbox's \hsize
+%          and \linewidth only
+% status:  RED (int45b; the \subcaptionbox 78d r1) -> GREEN (78d r2)
+\documentclass{article}
+\usepackage{subcaption}
+\begin{document}
+\begin{figure}
+\begin{subfigure}[t]{.28\textwidth}\the\linewidth\ \the\hsize\ \the\textwidth\ \the\columnwidth\caption{A}\end{subfigure}
+\begin{minipage}[t]{.2\textwidth}\the\linewidth\end{minipage}
+\caption{Main}
+\end{figure}
+\begin{table}
+\begin{subtable}{.45\textwidth}\the\linewidth\caption{T}\end{subtable}
+\caption{Tab}
+\end{table}
+\begin{figure}
+\subcaptionbox{B}[.2\textwidth]{\the\linewidth\ \the\hsize\ \the\textwidth\ \the\columnwidth}
+\caption{Box}
+\end{figure}
+\end{document}

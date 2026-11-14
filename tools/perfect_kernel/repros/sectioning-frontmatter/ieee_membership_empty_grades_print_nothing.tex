@@ -1,0 +1,15 @@
+% witness: 1805.06045 (`Alexander Gasnikov~\IEEEmembership{}⏎ Nikolay Malkovsky`, five names parted by space alone)
+% oracle:  pdflatex 0 errors: "Ann Able∗ Bob Baker∗ Cy Coe"
+% engines: rust P5abase = three creators (the empty grade left out by the token cut)
+% expect:  0 errors, 0 warnings; three creators, no empty membership contact
+% status:  GREEN (P5abase) -> GREEN (P5a: an empty grade prints nothing, `\lx@IEEE@grade`)
+\documentclass[journal]{IEEEtran}
+\begin{document}
+\title{T}
+\author{Ann~Able$^{*}$~\IEEEmembership{}
+  Bob~Baker$^{*}$~\IEEEmembership{}
+  Cy Coe~\IEEEmembership{}
+  \thanks{Notes.}}
+\maketitle
+Text.
+\end{document}

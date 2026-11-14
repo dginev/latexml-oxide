@@ -152,7 +152,7 @@
             </Math>
             <MathBranch>
               <tr>
-                <td align="right"><text class="ltx_markedasmath">s.t.</text> </td>
+                <td align="right"><text class="ltx_markedasmath">s.t.</text></td>
                 <td/>
                 <td align="left"><Math mode="inline" tex="\displaystyle a(x)\leq 0" text="a@(x) &lt;= 0" xml:id="S0.E1.2.m2">
                     <XMath>

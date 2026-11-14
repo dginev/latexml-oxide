@@ -1,0 +1,19 @@
+% mechanism: the OmniBus route (an unknown class) of
+%   `author_footnotemark_note_is_the_creators_beside_the_name.tex`: the same `ltx:personname` close lifts the note
+%   (queue_digest.rs `lift_notes_beside`, OD #1001)
+% witness: synthetic (bundle int158a's lesson: an author-block change reaches the OmniBus path)
+% oracle:  pdflatex (TL 2025, -no-shell-escape, with article for the unknown class) 0 errors: "Ann Able∗ Bob Baker†",
+%   footnotes "1 Note A." "2 Note B."
+% engines: int159a2: 0 errors, 1 warning (the unknown class); each note inside its `ltx:personname`
+% expect:  0 errors, 1 warning (missing_file nosuchclass); `<personname>Ann Able</personname>` then `<note mark="1"
+%   role="footnote">` holding "Note A."; Bob Baker likewise with "2" and "Note B."
+% status:  RED (int159a2) -> GREEN (FN1)
+% preload: ar5iv.sty
+\documentclass{nosuchclass}
+\title{T}
+\author{Ann Able\footnotemark[1] \and Bob Baker\footnotemark[2]}
+\begin{document}
+\maketitle
+\footnotetext[1]{Note A.}\footnotetext[2]{Note B.}
+Text.
+\end{document}

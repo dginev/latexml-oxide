@@ -11,13 +11,15 @@ LoadDefinitions!({
   LoadClass!("OmniBus");
   // A real `.cls` binding owns its dependency loading (the unbound-class dep
   // scan is short-circuited once we bind MRM). MRM.cls pulls in the usual
-  // AMS math stack, hyperref (for \href/\url — used by \orcid and body links)
-  // and natbib (numeric \citen). Not xcolor (see the sn-jnl.cls option-conflict
-  // note). Witness 2509.13644 (\text in the abstract, \href in \orcid).
+  // AMS math stack and hyperref (for \href/\url — used by \orcid and body links).
+  // Not xcolor (see the sn-jnl.cls option-conflict note). Witness 2509.13644
+  // (\text in the abstract, \href in \orcid). Not natbib: MRM.cls:2441-2442 loads it
+  // under its `AMA` option, `\usepackage[numbers,super]{NJDnatbib}` (or natbib), where
+  // the paper's copy loads it with those options; an optionless one loaded here
+  // first left 2506.14995 author-year where its PDF has superscripts.
   RequirePackage!("amsmath");
   RequirePackage!("amssymb");
   RequirePackage!("hyperref");
-  RequirePackage!("natbib");
 
   // \author[aff-idx]{name}{orcid} — Wiley's three-part author. Drop the numeric
   // affiliation index (its meaning is carried by the matching \address[idx]);
@@ -27,8 +29,12 @@ LoadDefinitions!({
     "\\lx@add@creator[role=author]{#2}\\ifx&#3&\\else\\lx@add@orcid{#3}\\fi"
   );
   // \orcid{id} — used inline (matching sn-jnl.cls). Render the shared iD logo
-  // linked to the author's orcid.org page, via the kernel `\lx@orcidlink` asset.
-  DefMacro!("\\orcid{}", "\\lx@orcidlink{#1}{\\lx@orcidlogo}");
+  // linked to the author's orcid.org page, via the kernel `\lx@orcidlink` asset;
+  // an iD given as its orcid.org address is the iD (`\lx@orcid@id`, OXIDIZED_DESIGN_DIVERGENCES #616).
+  DefMacro!(
+    "\\orcid{}",
+    "\\expandafter\\lx@orcidlink\\expandafter{\\lx@orcid@id{#1}}{\\lx@orcidlogo}"
+  );
   // \authormark{...} — running-head author; redundant with the creator names.
   def_macro_noop("\\authormark{}")?;
   // \state{...} — a US-state address component. OmniBus deliberately omits it

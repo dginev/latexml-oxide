@@ -1,0 +1,30 @@
+% mechanism: an author's `\footnoteremember{uni}{…}` (a note, then `\newcounter{uni}\setcounter{uni}{\value{footnote}}`,
+%   global) made before the later authors' `\footnoterecall{uni}`. Its body's spaces print, so its definitions are in no
+%   replayable declaration (`field_notes::FieldNotes::printing`); its call is a note no name's run holds and the later
+%   recalls read its counter by name, so the emitter writes the block as Perl's `\lx@add@authors` splits it, its pieces
+%   digested in order (`declaration_reads_past`, `printing_read_later`, emit.rs)
+% witness: 2407.13730, 2606.19583 (scrarticle: footnoterecall_counter_defined_by_an_earlier_creator_red)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 `!`: Ann One ∗, Bob Two ∗, Cy Three ∗; footnote ∗ The University
+% engines: rust e6a6c93a18 0 errors, 3 warnings, Bob Two's mark dropped, Cy Three's empty ("Missing number")
+% expect:  0 errors, 1 warning (the decline); Ann One with the note, Bob Two and Cy Three each the mark ∗
+% status:  RED (e6a6c93a18) -> GREEN (perfect_kernel_batchcr7::a_definition_its_call_prints_takes_effect_in_order)
+\documentclass{article}
+\newcommand{\footnoteremember}[2]{
+	\footnote{#2}
+	\newcounter{#1}
+	\setcounter{#1}{\value{footnote}}
+}
+\newcommand{\footnoterecall}[1]{
+	\footnotemark[\value{#1}]
+}
+\begin{document}
+\title{T}
+\author{
+ Ann One\footnoteremember{uni}{The University}
+		\and  Bob Two \footnoterecall{uni}
+  \and
+	Cy Three\footnoterecall{uni}
+}
+\maketitle
+Text.
+\end{document}

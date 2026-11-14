@@ -1,0 +1,23 @@
+% An `\IEEEmembership` grade on the last `\\`-line of names is kept when the block's sentence ends in a full stop:
+%   the closing "." (or ";") after the grade is no part of the names (ieeetran_cls.rs `without_stop_after_grade`).
+% witness: 2405.17600 (ieeeconf; `…,\\ and Farshid Alambeigi$^{1}$ \IEEEmembership{Member, IEEE}\thanks{…}.}`)
+% oracle:  pdflatex (the paper's ieeeconf.cls beside it) 0 errors: "Susheela Sharma1 , Sarah Go1 , / and Farshid
+%          Alambeigi1 Member, IEEE ."
+% engines: rust 86d-base = 0 errors, no membership contact (the "." made the line read as no names); perl = no
+%          grade at all (IEEEtran.cls.ltxml:143 `\IEEEmembership` expands to nothing, KNOWN_PERL_ERRORS #534)
+% expect:  0 errors, 0 warnings; three creators, the last with role=membership "Member, IEEE", each with the note's
+%          text as its affiliation (its `$^{1}$` mark); with names that carry no marks, the notes after the grade are
+%          document notes, none an author's (86d r2: 2112.14209, 2409.11755, 2510.15773); with marks on the names but
+%          none leading a note, or with only symbol marks on the names (`$^{*}$`) over a note led by a number, the
+%          block as the base reads it (86d r3, r4; RED `author_ieee_correspondence_note_of_a_non_last_author`)
+% status:  RED (86d-base) -> GREEN (86d)
+% preload: ar5iv.sty
+\documentclass[conference]{ieeeconf}
+\IEEEoverridecommandlockouts
+\begin{document}
+\title{Spinal Fixation}
+\author{Susheela Sharma$^{1}$, Sarah Go$^{1}$,\\ and Farshid Alambeigi$^{1}$ \IEEEmembership{Member, IEEE}
+\thanks{$^{1}$All are with the University of Texas at Austin.}.}
+\maketitle
+Body.
+\end{document}

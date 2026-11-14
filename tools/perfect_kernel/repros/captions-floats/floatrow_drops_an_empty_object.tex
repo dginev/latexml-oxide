@@ -1,0 +1,22 @@
+% floatrow gobbles a floatbox's empty object and its frame (floatrow.sty:366-369), so a framed style draws no empty
+% box around nothing; a non-empty object is framed. A first 58i cut removed the test (to keep a `pspicture` Rust
+% measured 0pt) and drew an empty `framed` box (floatrow's frsample01, 8 figures).
+% witness: none (synthesized; the 58i review, rev58i2 e1).
+% Guard: perfect_kernel_batch58::floatrow_drops_an_empty_object.
+% status:  GREEN (58i)
+% oracle:  pdflatex 0 errors; "Figure 1: CapA", "Figure 2: CapB" with no frame, the framed rule, "Figure 3: CapC".
+% expect:  0 errors, 0 warnings.
+\documentclass{article}
+\usepackage{floatrow}
+\begin{document}
+\begin{figure}
+\ffigbox{\caption{CapA}}{}
+\end{figure}
+\floatsetup[figure]{framestyle=fbox}
+\begin{figure}
+\ffigbox{\caption{CapB}}{}
+\end{figure}
+\begin{figure}
+\ffigbox{\caption{CapC}}{\rule{1cm}{1cm}}
+\end{figure}
+\end{document}

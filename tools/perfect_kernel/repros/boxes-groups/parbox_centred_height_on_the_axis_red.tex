@@ -1,0 +1,12 @@
+% witness: synthetic (found by RG1b's sibling sweep: `\parbox{3cm}{x{ \par}}` measured as the plain `\parbox{3cm}{x}`)
+% oracle:  pdflatex 0 errors: H1=4.65277pt, D1=0.0pt; H2 the same (a `[c]` box is centred on the math axis, latex.ltx
+%          `\@iiiparbox` `\vcenter`)
+% engines: rust int162a = RG1b = H1=4.30554pt, D1=0.0pt; H2 the same (the box's first line's height)
+% expect:  0 errors; H1=4.65277pt, D1=0.0pt; H2 the same
+% status:  RED: a centred one-line parbox or minipage keeps its line's height. moves: post-merge
+\documentclass{article}
+\begin{document}
+\setbox0\hbox{\parbox{3cm}{x}}H1=\the\ht0, D1=\the\dp0.
+
+\setbox0\hbox{\begin{minipage}{3cm}x\end{minipage}}H2=\the\ht0, D2=\the\dp0.
+\end{document}

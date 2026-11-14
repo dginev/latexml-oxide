@@ -72,8 +72,9 @@ LoadDefinitions!({
   // colortbl.sty.ltxml L50 `DefMacro('\columncolor[]{}[][]', …)`. The two trailing
   // overhang args are layout-only (ignored) but must be consumed. Read them with
   // LaTeXML's optional-arg reader (the `[]{}[][]` signature), NOT TeX's
-  // `\@ifnextchar[` + a delimited `[#1]`: `\@ifnextchar[` matches a `\lbrack` (a CS
-  // `\let` to `[`) via `\ifx`, but the delimited reader then runs forward hunting a
+  // `\@ifnextchar[` + a delimited `[#1]`: `\@ifnextchar[` matched a `\lbrack` (then a CS
+  // `\let` to `[`; a macro since batch 66d, as latex.ltx:562 has it, so no `\ifx` match now) via `\ifx`, but the
+  // delimited reader then ran forward hunting a
   // LITERAL `[`, swallowing the row's `\\` and cascading the p/m-column mode
   // (`\@end@tabular … internal_vertical`, document + bibliography lost). LaTeXML's
   // `[]` reader matches only a literal `[` char, so a cell that starts with
@@ -95,13 +96,18 @@ LoadDefinitions!({
     \@setcellcolor}"
   );
 
-  RawTeX!(r"\def\rowcolor{\@ifnextchar[\lx@rowcolor@ii{\lx@rowcolor@ii[]}}");
+  // colortbl.sty:208-231: `\rowcolor[model]{color}` then `\CT@rowc` reads the two overhangs
+  // `[left][right]` (right defaults to left); layout only, but unread they became cell text
+  // ("[2pt][2pt] c") and, before a `\multicolumn`, a misplaced `\omit` (witnesses 2605.22864,
+  // 2605.08915, 2605.04906; Perl colortbl.sty.ltxml:55 `\rowcolor[]{}` shares it). As
+  // `\columncolor`, a RawTeX body with a DefMacro supplying the signature.
   RawTeX!(
-    r"\long\def\lx@rowcolor@ii[#1]#2{%
+    r"\long\def\lx@rowcolor@body#1#2{%
     \lx@hidden@noalign{%
       \ifx.#1.\pagecolor{#2}\else\pagecolor[#1]{#2}\fi
       \@setrowcolor}}"
   );
+  DefMacro!("\\rowcolor[]{}[][]", "\\lx@rowcolor@body{#1}{#2}");
 
   // Perl L64-74: \@setrowcolor — DefConstructor with afterDigest.
   //   afterDigest: captures font background, stores tabular_row_color globally.
@@ -193,11 +199,54 @@ LoadDefinitions!({
     alias => "");
   RawTeX!(r"\let\@setcellcolor\lxsetcellcolor");
 
-  // Perl L85: \arrayrulecolor — ignored.
-  DefMacro!("\\arrayrulecolor[]{}", None);
-  // Perl L88: \doublerulesepcolor — ignored.
-  DefMacro!("\\doublerulesepcolor[]{}", None);
+  // colortbl.sty's `\CT@*` internal surface, reached by raw derivatives that
+  // require colortbl (tabu.sty:720 `\CT@everycr\expandafter{…\the\CT@everycr…}`,
+  // tabulary.sty `\CT@arc@`/`\CT@color`/`\CT@column@color`/`\CT@row@color`/
+  // `\CT@cell@color`/`\CT@do@color`/`\CT@setup`/`\CT@start`/`\CT@extract`,
+  // tabularht/keyvaltable `\CT@arc@`): the binding stands in for colortbl.sty
+  // (Perl colortbl.sty.ltxml omits them too). `\CT@everycr` MUST be the
+  // `\everycr` toks register (colortbl.sty:116 `\let\CT@everycr\everycr` —
+  // tabu assigns to it and `\the`s it); the colour painters are the
+  // unrendered rule/cell colours (:75-166 `\let…\relax`/`\@empty`), so they
+  // are the same no-ops as the public `\arrayrulecolor`. Witness
+  // srdp-mathematik (`\multiplechoice` → raw tabu). Guard:
+  // `perfect_kernel_batch54::colortbl_internal_surface_is_defined`.
+  Let!("\\CT@everycr", "\\everycr");
+  RawTeX!(
+    r"\let\CT@arc@\relax \let\CT@drsc@\relax \let\CT@do@color\relax
+\let\CT@@do@color\relax \let\CT@column@color\@empty \let\CT@row@color\relax
+\let\CT@cell@color\relax \let\CT@color\relax \let\CT@setup\relax
+\let\CT@start\relax \let\CT@end\relax \let\CT@LT@sep\relax
+\def\CT@extract#1#2#3#4{}"
+  );
+  // Perl L85/L88: `\arrayrulecolor`, `\doublerulesepcolor` — ignored, the rule colour unrendered. Their argument is what
+  // colortbl.sty:156-164 reads, `\def\arrayrulecolor#1#{\CT@arc{#1}}` and `\def\CT@arc#1#2{…}`: everything up to the
+  // first `{` (the `[model]`, or nothing), then that group — so `\arrayrulecolor\hhline{---~~~}` takes the `\hhline`
+  // and its spec, as pdflatex does, where Perl's `[]{}` takes `\hhline` alone and leaves the spec a cell's text between
+  // rows ("\noalign cannot be used here", 1910.02206; KNOWN_PERL_ERRORS #889). Guard
+  // `perfect_kernel_batch69a::arrayrulecolor_reads_to_the_brace`.
+  RawTeX!(
+    r"\def\arrayrulecolor#1#{\lx@CT@gobble@color{#1}}\def\doublerulesepcolor#1#{\lx@CT@gobble@color{#1}}
+\def\lx@CT@gobble@color#1#2{}"
+  );
 
   // Perl L93: \minrowclearance
   DefRegister!("\\minrowclearance", Dimension::new(0));
+  // colortbl.sty:269-275: the count `\rownum` that `\rowcolors` steps, `\c@rownum` the same register, and `\therownum`
+  // (colortbl-DE prints it). The xcolor binding's `\rownum` (Perl xcolor.sty.ltxml:744, the alignment's row number) is
+  // no definition of xcolor.sty, so it gives way to the count here: `\c@rownum` is a count whatever loaded first, as
+  // tabularray's `\int_zero_new:N \c@rownum` and `\int_set:Nn` need (`\usepackage[table]{xcolor}` before tabularray:
+  // 2601.01074, 2409.12172). Under `\rowcolors` the xcolor binding's row hook steps the count (colortbl.sty:261).
+  if let (Some(rownum), Some(perl)) = (
+    lookup_definition(&T_CS!("\\rownum"))?,
+    lookup_definition(&T_CS!("\\lx@xcolor@rownum"))?,
+  ) && Rc::ptr_eq(&rownum, &perl)
+  {
+    RawTeX!(r"\let\rownum\@undefined");
+  }
+  RawTeX!(
+    r"\@ifundefined{rownum}{\@ifundefined{c@rownum}{\newcount\rownum\let\c@rownum\rownum}{\let\rownum\c@rownum}}%
+{\let\c@rownum\rownum}
+\providecommand\therownum{\arabic{rownum}}"
+  );
 });

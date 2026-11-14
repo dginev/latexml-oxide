@@ -1,0 +1,34 @@
+% mechanism: a second e-mail label glued to the address behind a first, spaced one, in an entry the class names
+%   (defs/frontmatter_api/kind.rs, the `(Some((label, rest)), name)` arm, `entry_line_label`'s class name before the
+%   labels, which `email_line_label` reads as the first and the glued one behind it, `joined_line_label`): the second
+%   label joins after the first, so aa's `\mail{E-mail: Email:zz@x.org}` is the contact `zz@x.org`
+%   named "Correspondence to: E-mail: Email: ", the class's name ahead of every printed label word. GL1 round 0 wrote
+%   the inner name after the outer one, which won: "Correspondence to:" and "E-mail:" were lost (review revGL1 B1).
+%   Perl reads no e-mail in `\mail` (aa_support.sty.ltxml:118-119)
+% witness: none in the corpus (synthetic, review revGL1 B1, probe aanest; the glued shape's witnesses hep-ph9606235,
+%          astro-ph0001190, hep-ph0411269, 2206.00543)
+% oracle:  pdflatex (TL 2025) 0 errors: "T", "A. Smith", "Univ. X, Y", "Body.", footnote "Correspondence to:
+%          E-mail: Email:zz@x.org"
+% engines: rust int157a (d86f58e8e2) = <contact name="Correspondence to: E-mail: " role="email">Email:zz@x.org
+%          </contact>; rust GL1 (e24e610cb4) = <contact name="Email: " role="email">zz@x.org</contact>
+% expect:  0 errors, 0 warnings; A. Smith: Univ. X, Y and <contact name="Correspondence to: E-mail: Email: "
+%          role="email">zz@x.org</contact>
+% status:  RED (GL1) -> GREEN (GL1b) — perfect_kernel_batchgl1::second_glued_label_joins_the_line_label
+% preload: ar5iv.sty
+\begin{filecontents*}[overwrite]{aa.cls}
+\NeedsTeXFormat{LaTeX2e}\ProvidesClass{aa}[2010/01/01 v7.0 stand-in]
+\LoadClass{article}
+\def\mailname{{\it Correspondence to\/}:}
+\def\email#1{{e-mail: \tt#1}}
+\def\institute#1{\gdef\@institute{#1}}\def\@institute{}
+\def\mail#1{\gdef\@mail{#1}}\def\@mail{}
+\def\@maketitle{{\Large\@title\par}\@author\par\@institute\par
+  \if!\@mail!\else\footnotetext[0]{\mailname\ \ignorespaces\@mail}\fi}
+\end{filecontents*}
+\documentclass{aa}
+\usepackage{hyperref}
+\begin{document}
+\title{T}\author{A. Smith}\institute{Univ. X, Y}\mail{E-mail: Email:zz@x.org}\date{Received 2010}
+\maketitle
+Body.
+\end{document}

@@ -46,7 +46,7 @@ pub enum ValidationPragmatics {
   FunctionsPreferWiderAbsorption,
   /// Bigops prefer wider absorption: `\int F\times Gdx` means `∫(F×G dx)`,
   /// not `∫(F)×Gdx`. Perl's moreOpArgFactors absorbs MulOp chains.
-  /// Rejects trees where mulop(bigop_app(narrow), rhs) when rhs is a simple factor.
+  /// Rejects a product in which a bigop application is followed by another factor.
   BigopPreferWiderAbsorption,
   /// Prefer binary ADDOP over unary when it follows a complete term.
   /// In `-12x^2 - 4xy + 2y`, the interior `-` and `+` should be binary operators,
@@ -59,6 +59,28 @@ pub enum ValidationPragmatics {
   /// or parentheses form a flat product — associativity doesn't matter semantically,
   /// and enumerating all groupings causes exponential ambiguity.
   FlattenSimpleInvisibleTimesChains,
+  /// A bar after a bar-free formula inside braces is the set-builder's such-that: Perl's `{`
+  /// tries `FormulaNOBar suchThatOp Formulae` first (MathGrammar:487-498) and reads a set only
+  /// when that fails. Fails a `set` whose one item is a relation holding a bar pair after its
+  /// start — `\{x\mid f|_{A}=0\}` read `set@(x * (delimited-∣|@(f)) _ A = 0)` beside
+  /// `conditional-set@(x, evaluated-at@(f, A) = 0)` (57bb train Perl sample: 2605.04766); a set
+  /// with no set-builder reading keeps its bars (`\{\sup_t|A_t|\le 2\vartheta\}`, 2605.06831).
+  SetBuildersTakeTheirBar,
+  /// A differential operator's number takes the factors juxtaposed after it (`numeric_monomial`):
+  /// `\partial_x 2u` ∂_x(2u), not ∂_x(2)·u — a soft preference counted per site, so a site where every
+  /// reading splits leaves the others alone (57cj.3–57cj.5 reviews; latent, no corpus witness;
+  /// `semantics::differentiated_number_sites`).
+  DifferentiatedNumbersTakeTheirFactors,
+  /// An expectation or probability reads as the letter it was lexed as (`expectation_letter`, in the
+  /// letter retry's stream) only where no reading takes it as an operator: the readings with the fewest
+  /// letter readings are kept, first at the root (M3; the untyped retry of 57cf.1–57ch.1 read every
+  /// expectation of the formula a letter).
+  ExpectationLettersAreFallbacks,
+  /// An integral's letter `d` before a variable its differential takes reads as the differential, as Perl's
+  /// IntFactor tries `diffd ATOM_OR_ID addScripts` first (MathGrammar:640-647): `\int f\,dx_1` f·differential-d@(x₁),
+  /// not f·d·x₁ — a soft preference counted per site (57cj.20; `semantics::letter_differential_sites`; 2605.28900,
+  /// 2605.08899).
+  LetterDsBeforeVariablesAreDifferentials,
   /// In `a = b + c + d`, the `=` must be at the outermost level.
   /// An ADDOP/MULOP cannot have an unfenced RELOP child — that would mean
   /// treating a relation as a term in an arithmetic expression.
@@ -97,25 +119,36 @@ impl ValidationPragmatics {
     ]
   }
   /// Pragmatic rules that are executed at the end of the parse process,
-  /// optionally, until there is a single parse left. If a pragmatic rule invalidates
-  /// all choices, the rule is skipped.
+  /// optionally, until there is a single parse left. Each keeps the readings it ranks best
+  /// (`rank_violations`): the clean ones when there are any, else the fewest-violation ones for a
+  /// counting pragma and all of them for a pass-or-fail one; ties go to enumeration order.
   pub fn student_defaults() -> Vec<Self> {
     // Order here is crucial - it shows a decreasing level of adoption of each rule in the
     // scientific community, ending with some "crutch"-like rules, as last ditch attempts to discard
     // parses
     use ValidationPragmatics::*;
     vec![
+      // A differential operator's number takes its factors, first among the student pragmas (it was a refusal
+      // in `apply_invisible_times` until the 57cj.3 review; soft, it keeps the last parse). The root's letter
+      // prune (`ExpectationLettersAreFallbacks`), bar rule and QM rule run before it; the letter prune must stay
+      // first of all (parser.rs, the letter retry's exactness).
+      DifferentiatedNumbersTakeTheirFactors,
       // First the Apply-shape pragmas that should be expert (always
       // strictly enforced) but in practice need to run here because
       // `apply_*` actions don't call `.specialize()` on their result.
-      // Their soft fallback ("skip if all pruned") is harmless: if
-      // all surviving trees fail the pragma, the original forest is
-      // restored.
+      // Their soft fallback is harmless: when every surviving tree
+      // fails a pass-or-fail pragma, the forest stays as it was.
+      // Perl's grammar makes this choice itself, the set-builder before the set (MathGrammar:487-498),
+      // so it comes before the other rankings (after the differentiated numbers', whose readings share no set).
+      SetBuildersTakeTheirBar,
       FencedLettersAreFunctionArguments,
       HigherOrderIDsAreExceptions,
       HigherOrderInvisibleOpsAreExceptions,
       AdjacentUnfencedScriptsDontApply,
       AdjacentFunctionsDontUnifyIntoOperator,
+      // (an integral's scripted differential, `\int f\,dx_1`, reads as its bare one, `\int f\,dx`, which the letter
+      // blocks decide — `d` an XDIFFUNK peer of the UNKNOWN `x`, not of a scripted `x_1`; 57cj.20)
+      LetterDsBeforeVariablesAreDifferentials,
       ConsistentLetterBlocks,
       FunctionsPreferWiderAbsorption,
       BigopPreferWiderAbsorption,
@@ -156,13 +189,99 @@ impl ValidationPragmatics {
       PreferBinaryAddop => pragma_prefer_binary_addop(tree),
       FlattenSimpleInvisibleTimesChains => pragma_flatten_simple_invisible_times(tree),
       RelopsAreOutermost => pragma_relops_are_outermost(tree),
+      SetBuildersTakeTheirBar => pragma_set_builders_take_their_bar(tree),
       ConsistentLetterBlocks => pragma_consistent_letter_blocks(tree),
       ConsistentCase => pragma_consistent_letter_case(tree),
       ConsistentCaseFlat => pragma_consistent_letter_case_flat(tree),
       ConsistentCaseFlatUnstyled => pragma_consistent_letter_case_flat_unstyled(tree),
+      DifferentiatedNumbersTakeTheirFactors => {
+        if crate::semantics::differentiated_number_sites(tree) > 0 {
+          Err("Prune: a differential operator's number leaves out the factor after it.".into())
+        } else {
+          Ok(())
+        }
+      },
+      LetterDsBeforeVariablesAreDifferentials => {
+        if crate::semantics::letter_differential_sites(tree) > 0 {
+          Err("Prune: an integral's letter d before a variable its differential takes.".into())
+        } else {
+          Ok(())
+        }
+      },
+      ExpectationLettersAreFallbacks => match tree {
+        XM::Lexeme(_, meta) if meta.expectation_letter => Err(
+          "Prune: an expectation read as a letter where a reading takes it as an operator.".into(),
+        ),
+        _ => Ok(()),
+      },
       // TODO: implement
       _ => Ok(()),
     }
+  }
+
+  /// How many times `tree`'s own node breaks this pragma: once or not at all for most, once per
+  /// offending pair of factors for `FencedLettersAreFunctionArguments`, whose chains hold several
+  /// (`P (x) dμ (x)` breaks it twice, `P@(x) dμ (x)` once; a node count ties them), once per differentiated
+  /// number for `DifferentiatedNumbersTakeTheirFactors`.
+  fn violations_at(&self, tree: &XM) -> usize {
+    match self {
+      ValidationPragmatics::FencedLettersAreFunctionArguments => fenced_letter_violations(tree).0,
+      ValidationPragmatics::DifferentiatedNumbersTakeTheirFactors => {
+        crate::semantics::differentiated_number_sites(tree)
+      },
+      ValidationPragmatics::LetterDsBeforeVariablesAreDifferentials => {
+        crate::semantics::letter_differential_sites(tree)
+      },
+      _ => usize::from(self.validate(tree).is_err()),
+    }
+  }
+
+  /// A reading's rank under this pragma, fewer first (`soft_prune_choices`, K19 step 1): the
+  /// violation count for `FencedLettersAreFunctionArguments`, whose count is checked (57av: in
+  /// `(f(x)+1)(g(x)+1)` every reading's top-level product broke it once, and the readings of `f(x)`
+  /// only add to that; 2605.18798 A2.E83, 2605.02365 `\dot{v}(t)`), for `SetBuildersTakeTheirBar`,
+  /// once per offending set, for `DifferentiatedNumbersTakeTheirFactors` once per differentiated number
+  /// (57cj.4 review), for `ExpectationLettersAreFallbacks` once per letter reading; pass or fail for every
+  /// other pragma, as before, until each is checked for count semantics — `HigherOrderInvisibleOpsAreExceptions`
+  /// breaks at every two-letter product, and a count preferred the reading with the fewest: one
+  /// bracket spanning `\langle Uf|Ug\rangle=\langle f|g\rangle` (2605.05292, 57av review).
+  pub fn rank_violations(&self, tree: &XM) -> usize {
+    match self {
+      // Each violation is its own set node, so a genuine set with bars elsewhere in the formula
+      // (`\{x\mid f|_{A}=0\}\cup\{y=|z|\}`, 57bb review) does not hide the set-builder reading.
+      ValidationPragmatics::FencedLettersAreFunctionArguments
+      | ValidationPragmatics::SetBuildersTakeTheirBar
+      // counted per site: one split the monomial cannot avoid does not make every other site split (57cj.4 review)
+      | ValidationPragmatics::DifferentiatedNumbersTakeTheirFactors
+      | ValidationPragmatics::LetterDsBeforeVariablesAreDifferentials => self.violation_count(tree),
+      ValidationPragmatics::ExpectationLettersAreFallbacks => {
+        crate::semantics::expectation_letter_count(tree)
+      },
+      _ => usize::from(self.validate_recursive(tree).is_err()),
+    }
+  }
+
+  /// How many times `tree` breaks this pragma, over the nodes `validate_recursive` visits: it fails
+  /// exactly when this is more than zero. For a pragma whose own check walks its node's subtree
+  /// (`FlattenSimpleInvisibleTimesChains`, `RelopsAreOutermost`) this counts a violation once per
+  /// ancestor; `rank_violations` counts through it only for the pragmas it lists.
+  pub fn violation_count(&self, tree: &XM) -> usize {
+    let here = self.violations_at(tree);
+    here
+      + match tree {
+        XM::Choices(subtrees) => subtrees.iter().map(|t| self.violation_count(t)).sum(),
+        XM::Apply(Operator(op), args, ..) => {
+          self.violation_count(op)
+            + args
+              .trees()
+              .iter()
+              .map(|arg| self.violation_count(arg))
+              .sum::<usize>()
+        },
+        XM::Dual(content, pres, ..) => self.violation_count(content) + self.violation_count(pres),
+        XM::Wrap(items, ..) => items.iter().map(|item| self.violation_count(item)).sum(),
+        _ => 0,
+      }
   }
 
   /// Recursively checks a tree at each level for applicable pragmatics.
@@ -235,15 +354,18 @@ pub struct LetterCaseKey {
 
 /// Return true iff `op` is an invisible-times operator head, in either of the
 /// two forms the XM tree produces: `XM::Lexeme("…invisible_operator…")` (the
-/// Marpa lexeme form) or `XM::Token { role: "MULOP", meaning: "times" }`
-/// (the post-`apply_invisible_times` form). Helpers across this file need to
+/// Marpa lexeme form) or `XM::Token { role: "MULOP", meaning: "times", content: "\u{2062}" }`
+/// (the post-`apply_invisible_times` form; a visible `×` of the same meaning is none). Helpers across this file need to
 /// match both — historically several sites matched only the Lexeme form and
 /// silently never fired on real parses.
-fn is_invisible_times_op(op: &XM) -> bool {
+pub(crate) fn is_invisible_times_op(op: &XM) -> bool {
   match op {
     XM::Lexeme(oplexeme, _) => oplexeme.contains("invisible_operator"),
+    // the juxtaposition's token (`invisible_times`), not a visible `×` of the same meaning (57cj.19 review)
     XM::Token(props, _) => {
-      props.meaning.as_deref() == Some("times") && props.role.as_deref() == Some("MULOP")
+      props.meaning.as_deref() == Some("times")
+        && props.role.as_deref() == Some("MULOP")
+        && props.content.as_deref() == Some("\u{2062}")
     },
     _ => false,
   }
@@ -443,58 +565,114 @@ fn pragma_fenced_letters_are_function_arguments(tree: &XM) -> Result<(), Box<dyn
   // ambiguous forest; this pragma chooses the mathematically-consistent one
   // unconditionally. MATHPARSER_SPECULATE has no role here — the decision is
   // a pragmatic preference, not a grammar switch.
+  match fenced_letter_violations(tree) {
+    (0, _) => Ok(()),
+    (_, reason) => Err(reason.unwrap_or_default().into()),
+  }
+}
+
+/// How often an invisible-times node breaks `FencedLettersAreFunctionArguments`, and the first
+/// reason: a fenced letter as the first factor, and every fenced factor after a factor that could
+/// take it as an argument — each factor beside the one before it, not the first two alone: in the
+/// flat chain `(a+b) g (x)` the fenced `(x)` follows `g` (57av; golden
+/// tests/parse/function_application.tex).
+fn fenced_letter_violations(tree: &XM) -> (usize, Option<&'static str>) {
   let XM::Apply(Operator(op), args, ..) = tree else {
-    return Ok(());
+    return (0, None);
   };
   if !is_invisible_times_op(op) {
-    return Ok(());
+    return (0, None);
   }
   let trees = args.trees();
-  let Some(top_lhs) = trees.first() else {
-    return Ok(());
-  };
-  if let Some(ref fences) = top_lhs.get_meta().fenced
-    && fences.as_str() == "parens"
-    && let XM::Lexeme(lhs_name, _) = top_lhs.get_baseline()
-    && !lhs_name.starts_with("NUMBER")
-  {
-    return Err("pruning non-argument parenthetical atom, used as LHS of invisible times".into());
-  }
+  let mut reasons = trees
+    .first()
+    .filter(|top_lhs| {
+      top_lhs.get_meta().fenced.as_deref() == Some("parens")
+        && matches!(top_lhs.get_baseline(), XM::Lexeme(name, _) if !name.starts_with("NUMBER"))
+    })
+    .map(|_| "pruning non-argument parenthetical atom, used as LHS of invisible times")
+    .into_iter()
+    .chain(
+      trees
+        .windows(2)
+        .filter_map(|pair| fenced_factor_after(pair[0], pair[1])),
+    );
+  let first = reasons.next();
+  (usize::from(first.is_some()) + reasons.count(), first)
+}
 
-  // Slightly tricky check -- the top RHS needs to be fenced, but we care about the
+/// Could `lhs` have taken the fenced factor after it as an argument? A letter could, scripted or not
+/// (`f_i(x)`), and so could any operator application whose last operand could: a function's
+/// (`\sin f` before `(a)`: the argument is f's), a product's, visible or not, a sum's, a quotient's
+/// (`n\cdot f` before `(n)`: f's; 57az, the 57ay train A/B's 396 lost applications: 2605.00201
+/// `\Omega(n\cdot f(n))`, 2605.00411 `\beta\cdot c(O)`, 2605.00423 `\mathbf{P}(A)\odot\mathbf{P}(B)`,
+/// 2605.00394 `\pi\cdot f(x)`, 2605.29782 `\mathbb{E}[X]\cdot\mathrm{Cov}(W,X)`), and so could an
+/// operator's application to one group (`D(a)` before `(b)`, 57bl). A fenced group, a number, or any
+/// other application whose last operand is fenced could not; a multiplication after one is
+/// the only reading, no prune: `f(x)(a+b)` is `f@(x) * (a + b)`, and a prune every reading shares
+/// cannot choose among them (57av; 2605.18798). Nor can a pre-built atom (`\binom`, `\frac`,
+/// `\sqrt`, a matrix), which lexes as ATOM and which no application rule takes (57be: a role-less
+/// XMDual had lexed as UNKNOWN; golden `tests/parse/function_application.tex`, "never a pre-built
+/// atom").
+fn could_take_an_argument(lhs: &XM) -> bool {
+  if lhs.get_meta().fenced.is_some() {
+    return false;
+  }
+  match lhs {
+    // A pre-built atom takes no argument either: no application rule takes an ATOM (57be).
+    XM::Lexeme(name, _) => !name.starts_with("NUMBER") && !name.starts_with("ATOM"),
+    XM::Apply(Operator(op), args, ..) => {
+      let trees = args.trees();
+      match crate::semantics::operator_category(op) {
+        Some("SUBSCRIPTOP" | "SUPERSCRIPTOP") => trees.first(),
+        // Defensive: the operand of a postfix operator sits left of it, a parsed fraction's under
+        // its bar, and neither meets the factor after (`n!(x)`); no reading tells them apart yet.
+        Some("POSTFIX" | "FRACOP") => None,
+        _ => trees.last(),
+      }
+      .is_some_and(|operand| could_take_an_argument(operand))
+    },
+    // A bare or scripted operator's application to one group takes the next group too, `D(a)(b)`
+    // (D@(a))@(b) as Perl (57bl; 2605.01526 `\nabla(F\circ\gamma)(w)`).
+    lhs @ XM::Dual(..) => crate::semantics::is_operator_group_application(lhs),
+    _ => false,
+  }
+}
+
+/// Why the invisible-times reading of `lhs rhs` prunes, when `rhs` is fenced: a fenced letter or
+/// group after a factor that could take it as an argument, or a fenced number after an unfenced
+/// factor (cycle notation `(a,b)(c,d)` keeps its product).
+fn fenced_factor_after(lhs: &XM, rhs: &XM) -> Option<&'static str> {
+  // A postfixed group reads as its group, under scripts too (`x(n+1)!`, `x(n+1)!^2` keep #18's
+  // application, 57bw; 2605.22959 `\epsilon(k-1)!`).
+  let rhs = crate::semantics::postfixed_operand(rhs).unwrap_or(rhs);
+  // Slightly tricky check -- the RHS needs to be fenced, but we care about the
   // "baseline" content being a variable - disregarding scripts.
-  if let Some(top_rhs) = trees.get(1) {
-    if let XM::Lexeme(rhs_name, _) = top_rhs.get_baseline() {
-      if let Some(ref fences) = top_rhs.get_meta().fenced
-        && fences.as_str() == "parens"
-      {
-        // if the RHS is a number, prune unless the LHS is fenced (things like cycle
-        // notation)
-        if !rhs_name.starts_with("NUMBER") {
-          return Err(
-            "pruning non-argument parenthetical atom, used as RHS of invisible times".into(),
-          );
-        } else {
-          match trees.first() {
-            Some(XM::Lexeme(_, lhs_meta)) if lhs_meta.fenced.is_none() => {
-              return Err(
-                "pruning non-argument parenthetical NUMBER, used as RHS of invisible times".into(),
-              );
-            },
-            Some(XM::Apply(_, _, _, lhs_meta)) if lhs_meta.fenced.is_none() => {
-              return Err(
-                "pruning non-argument parenthetical NUMBER, used as RHS of invisible times".into(),
-              );
-            },
-            _ => {},
-          }
+  if let XM::Lexeme(rhs_name, _) = rhs.get_baseline() {
+    if let Some(ref fences) = rhs.get_meta().fenced
+      && fences.as_str() == "parens"
+    {
+      // if the RHS is a number, prune unless the LHS is fenced (things like cycle
+      // notation)
+      if !rhs_name.starts_with("NUMBER") {
+        if could_take_an_argument(lhs) {
+          return Some("pruning non-argument parenthetical atom, used as RHS of invisible times");
+        }
+      } else {
+        match lhs {
+          XM::Lexeme(_, lhs_meta) | XM::Apply(_, _, _, lhs_meta) if lhs_meta.fenced.is_none() => {
+            return Some(
+              "pruning non-argument parenthetical NUMBER, used as RHS of invisible times",
+            );
+          },
+          _ => {},
         }
       }
-    } else if let Some(prune_reason) = is_dual_fenced_rhs(top_rhs, trees.first().copied()) {
-      return Err(prune_reason.into());
     }
+    None
+  } else {
+    is_dual_fenced_rhs(rhs, Some(lhs))
   }
-  Ok(())
 }
 
 /// Detect a parens-fenced `XM::Dual` on the RHS of invisible-times and
@@ -512,7 +690,8 @@ fn pragma_fenced_letters_are_function_arguments(tree: &XM) -> Result<(), Box<dyn
 /// 3. Special-case: if the inner content IS a `NUMBER`, fall through to the legacy "number with
 ///    non-fenced LHS" exception so the cycle-notation case `(a,b)(c,d)` doesn't double-prune.
 ///
-/// Returns `Some(error_msg)` if the parse should be pruned, `None`
+/// Returns `Some(error_msg)` if the parse should be pruned — for a non-numeric fence only when
+/// the factor before it could take it as an argument (`could_take_an_argument`, 57av) — `None`
 /// otherwise.
 /// Recognize an `XM::Dual(_, Wrap[OPEN, ..., CLOSE])` shape on the RHS
 /// of invisible-times where the outer delimiters are PARENS, BRACKETS,
@@ -610,7 +789,9 @@ fn is_dual_fenced_rhs(top_rhs: &XM, top_lhs: Option<&XM>) -> Option<&'static str
       _ => return None,
     }
   }
-  Some("pruning non-argument fenced Dual atom, used as RHS of invisible times")
+  top_lhs
+    .is_some_and(could_take_an_argument)
+    .then_some("pruning non-argument fenced Dual atom, used as RHS of invisible times")
 }
 
 /// If we have two standalone letters in the same, such as "A x" or "F X", prune parses that
@@ -669,7 +850,7 @@ fn pragma_opfunctions_are_rarely_arguments(tree: &XM) -> Result<(), Box<dyn Erro
   match *tree {
     XM::Apply(_, ref args, ..) if args.0.len() == 1 => {
       if let Some(XM::Lexeme(ref arg_name, ref atom_meta)) = args.0[0]
-        && arg_name.starts_with("OPFUNCTION")
+        && (arg_name.starts_with("OPFUNCTION") || arg_name.starts_with("EXPECTATION"))
         && atom_meta.fenced.is_none()
       {
         return Err("OPFUNCTIONs are rarely arguments, prune.".into());
@@ -826,7 +1007,9 @@ fn pragma_adjacent_functions_dont_unify_into_op(tree: &XM) -> Result<(), Box<dyn
   }
   Ok(())
 }
-/// Postfix
+/// Postfix. (An expert pragma, not run on Apply trees: an operator's postfixed argument, `\nabla f!`
+/// ∇@(f!), is the reading the 2026-09-29 ruling asks for — 57ca — so this must not prune it if it is
+/// ever turned on.)
 fn pragma_postfix_terms_are_fenced_if_single_arg(tree: &XM) -> Result<(), Box<dyn Error>> {
   if let XM::Apply(Operator(op), args, ..) = tree {
     let arg_trees = args.trees();
@@ -839,7 +1022,6 @@ fn pragma_postfix_terms_are_fenced_if_single_arg(tree: &XM) -> Result<(), Box<dy
       if op_name.starts_with("ID")
         || op_name.starts_with("UNKNOWN")
         || op_name.starts_with("FUNCTION")
-        || op_name.starts_with("OPERATOR")
         || op_name.starts_with("DIFFOP")
       {
         return Err("pruning postfix term used as single argument without fences".into());
@@ -919,7 +1101,9 @@ fn pragma_functions_prefer_wider_absorption(tree: &XM) -> Result<(), Box<dyn Err
       if let XM::Apply(Operator(func_op), func_args, _, func_meta) = trees[0] {
         // Check if the function op is FUNCTION/OPFUNCTION/TRIGFUNCTION
         let func_name = func_op.base_operator_name();
-        if (func_name.starts_with("OPFUNCTION") || func_name.starts_with("TRIGFUNCTION"))
+        if (func_name.starts_with("OPFUNCTION")
+          || func_name.starts_with("EXPECTATION")
+          || func_name.starts_with("TRIGFUNCTION"))
           && func_meta.fenced.is_none()
           && func_args.trees().len() == 1
         {
@@ -972,7 +1156,11 @@ fn pragma_functions_prefer_wider_absorption(tree: &XM) -> Result<(), Box<dyn Err
             props.role.as_deref(),
             Some("OPFUNCTION") | Some("TRIGFUNCTION")
           ),
-          XM::Lexeme(lex, _) => lex.starts_with("OPFUNCTION:") || lex.starts_with("TRIGFUNCTION:"),
+          XM::Lexeme(lex, _) => {
+            lex.starts_with("OPFUNCTION:")
+              || lex.starts_with("EXPECTATION:")
+              || lex.starts_with("TRIGFUNCTION:")
+          },
           _ => false,
         };
         if is_bare_absorbing_func {
@@ -988,58 +1176,125 @@ fn pragma_functions_prefer_wider_absorption(tree: &XM) -> Result<(), Box<dyn Err
   Ok(())
 }
 
-/// Bigop prefer wider absorption: reject mulop(bigop_app(narrow), rhs)
-/// when rhs is a simple factor that could have been part of the bigop's argument.
-/// Perl's moreOpArgFactors absorbs MulOp chains into bigop arguments.
+/// Is `op` a big operator, bare or scripted (`\sum_i`, `\int_0^1`: Perl's `bigop` with its
+/// `addScripts`, MathGrammar:596-610)? A scripted one is a sub/superscript application whose
+/// base is the big operator (`base_operator_name` does not look through a script token).
+fn is_bigop_operator(op: &XM) -> bool {
+  match op {
+    XM::Apply(Operator(script), args, ..)
+      if matches!(
+        crate::semantics::operator_category(script),
+        Some("SUBSCRIPTOP" | "SUPERSCRIPTOP")
+      ) =>
+    {
+      args
+        .trees()
+        .first()
+        .is_some_and(|base| is_bigop_operator(base))
+    },
+    other => crate::semantics::operator_category(other).is_some_and(|role| {
+      ["BIGOP", "SUMOP", "INTOP", "LIMITOP", "DIFFOP"]
+        .iter()
+        .any(|bigop| role.starts_with(bigop))
+    }),
+  }
+}
+
+/// Bigop prefer wider absorption: reject a product in which a bigop application is followed by
+/// another factor. Perl's `moreOpArgFactors` (MathGrammar:612-617; `moreIntOpArgFactors`
+/// :633-638) is greedy and takes every Factor after a MulOp or by juxtaposition into the bigop's
+/// operand — a function's or operator's application and another bigop too: `\int u\cdot\sin v`
+/// is ∫(u·sin v), `\sum_i a_i\cdot\log b_i` ∑(a_i·log b_i), `\int f\cdot g\cdot h` ∫(f·g·h),
+/// `a\cdot\sum_i b_i\cdot c` a·∑(b_i·c) (golden
+/// tests/parse/integrals_and_differentials.tex#bigop_operand_spans_an_application_after_a_mulop).
+/// Only a Factor: a relation or an additive operator ends the operand. A differential `d x` is a
+/// finished factor, no big operator (`Meta::differential`; `g\,du\,dv` keeps both differentials,
+/// 2605.12296, 2605.21644, 2605.24070, 2605.26800). A soft prune: kept when every parse is narrow.
 fn pragma_bigop_prefer_wider_absorption(tree: &XM) -> Result<(), Box<dyn Error>> {
-  // Pattern: mulop(bigop_app, simple_rhs) or invisible_times(bigop_app, simple_rhs)
-  if let XM::Apply(Operator(op), args, ..) = tree {
-    let is_mulop = match **op {
-      XM::Token(ref props, _) => props.role.as_deref() == Some("MULOP"),
-      XM::Lexeme(ref lex, _) => lex.starts_with("MULOP") || lex.contains("invisible_operator"),
-      _ => false,
-    };
-    if is_mulop {
-      let trees = args.trees();
-      if trees.len() == 2 {
-        // LHS is a bigop application (Apply with BIGOP/SUMOP/INTOP/LIMITOP/DIFFOP op)
-        if let XM::Apply(Operator(bigop_op), ..) = trees[0] {
-          let bigop_name = bigop_op.base_operator_name();
-          let is_bigop = bigop_name.starts_with("BIGOP")
-            || bigop_name.starts_with("SUMOP")
-            || bigop_name.starts_with("INTOP")
-            || bigop_name.starts_with("LIMITOP")
-            || bigop_name.starts_with("DIFFOP");
-          if is_bigop {
-            // RHS should be a simple factor, not another bigop or function
-            let rhs = trees[1];
-            let rhs_is_simple = match rhs {
-              XM::Lexeme(..) | XM::Token(..) | XM::Wrap(..) => true,
-              XM::Apply(Operator(rhs_op), ..) => {
-                let rhs_role = match &**rhs_op {
-                  XM::Token(props, _) => props.role.as_deref().unwrap_or(""),
-                  XM::Lexeme(lex, _) => lex.split(':').next().unwrap_or(""),
-                  _ => "",
-                };
-                // Scripted factors and invisible_times products are simple
-                rhs_role == "SUPERSCRIPTOP"
-                  || rhs_role == "SUBSCRIPTOP"
-                  || rhs_role == "MULOP"
-                  || rhs_role == "DIFFOP"
-              },
-              _ => false,
-            };
-            if rhs_is_simple {
-              return Err(
-                "Prune: bigop application followed by mulop factor — \
-                 prefer wider bigop absorption."
-                  .into(),
-              );
-            }
-          }
-        }
-      }
-    }
+  // Pattern: a mulop or invisible-times product whose factor before the last ends in a big operator's
+  // application — the application itself, or a coefficient's product ending in one: Perl's
+  // `addOpArgs`/`moreOpArgFactors` (MathGrammar:605-617) take every factor after the big operator,
+  // whatever stands before it (`c\sum_\beta z_\beta\otimes e_\beta` c·∑(z⊗e), `\frac12\sum_i a_i\otimes
+  // b_i`, `1/\sum_i a_i\cdot b`; 57bx, 2605.26205, 2605.02840, 628 formulas / 216 papers of the 57bv A/B).
+  if is_product(tree)
+    && let XM::Apply(_, args, ..) = tree
+    && let Some((_last, before)) = args.trees().split_last()
+    && before
+      .iter()
+      .any(|factor| ends_in_a_bigop_application(factor))
+  {
+    return Err(
+      "Prune: bigop application followed by mulop factor — prefer wider bigop absorption.".into(),
+    );
+  }
+  Ok(())
+}
+
+/// A MulOp's application or an invisible-times product — a MulOp, not necessarily a product: a
+/// decorated `\otimes_k` is a MULOP too, and a BINOP is a MulOp (Perl's `MulOp : BINOP addOpDecoration
+/// | MULOP addOpDecoration`, MathGrammar:688-689, in `moreOpArgFactors`).
+fn is_product(xm: &XM) -> bool {
+  matches!(xm, XM::Apply(Operator(op), ..)
+    if matches!(&**op, XM::Lexeme(lex, _) if lex.contains("invisible_operator"))
+      || crate::semantics::operator_category(op)
+        .is_some_and(|r| r.starts_with("MULOP") || r == "BINOP"))
+}
+
+/// A factor ending in a big operator's application: the application, or an unfenced product whose
+/// last factor ends in one. A differential and a differential operator's application are finished
+/// factors (`Meta::differential`; divergence #374: `\partial_x u` takes one factor, so
+/// `\nu\partial_x u\cdot\partial_x v` is ν·∂_x u·∂_x v, 2605.08634, 2605.15405), ending in one only through
+/// their operand (`\partial_t\int u\cdot v` keeps ∂_t(∫(u·v))). A pre-scripted differential operator
+/// still takes a term, as Perl's `bigop` (MathGrammar:717). A fenced group (`(c\sum_i a_i)\otimes b`),
+/// a sum or a relation ends the operand as written. An expectation that
+/// took the big operator after it (`semantics::expectation_takes_the_big_operator`) ends in its
+/// application too, alone or as a function's argument: `\mathbb{E}\sum_i X_i\cdot c` is
+/// 𝔼@(∑(X_i·c)), not (𝔼@(∑X_i))·c, as `\log\sum_i x_i\cdot c` is log@(∑(x_i·c)).
+fn ends_in_a_bigop_application(factor: &XM) -> bool {
+  match factor {
+    XM::Apply(_, args, _, meta) if meta.differential => args
+      .trees()
+      .first()
+      .is_some_and(|operand| ends_in_a_bigop_application(operand)),
+    XM::Apply(Operator(op), ..) if is_bigop_operator(op) => true,
+    XM::Apply(_, args, _, meta) if meta.fenced.is_none() && is_product(factor) => args
+      .trees()
+      .last()
+      .is_some_and(|last| matches!(last, XM::Apply(..)) && ends_in_a_bigop_application(last)),
+    // (an argument between delimiters ends there: `\log(\sum_i x_i)\cdot c`, `\mathbb{E}[\sum_i X_i]\cdot c`
+    // end in their group, 57cf review; the bare one is a big operator's application, which no bare argument is —
+    // `\mathbb{E}\int g\circ T\,d\mu` 𝔼@(∫(g∘T)·dμ), 2605.03300)
+    XM::Apply(Operator(op), args, _, meta)
+      if meta.fenced.is_none()
+        && matches!(
+          crate::semantics::operator_category(crate::semantics::script_nucleus(op)),
+          Some("OPFUNCTION" | "OPERATOR")
+        ) =>
+    {
+      matches!(args.trees().as_slice(), [arg]
+        if !matches!(arg, XM::Apply(.., arg_meta) if arg_meta.fenced.is_some())
+          && ends_in_a_bigop_application(arg))
+    },
+    _ => false,
+  }
+}
+
+/// `SetBuildersTakeTheirBar`: a brace `set` of one relational item holding a bar pair after its
+/// start fails.
+fn pragma_set_builders_take_their_bar(tree: &XM) -> Result<(), Box<dyn Error>> {
+  use crate::semantics::{holds_bar_pair, is_relational_item, opens_with_a_bar};
+  if let XM::Dual(content, presentation, ..) = tree
+    && let XM::Apply(Operator(op), args, ..) = &**content
+    && let XM::Token(props, _) = &**op
+    && props.meaning.as_deref() == Some("set")
+    && args.0.len() == 1
+    && let XM::Wrap(fenced, ..) = &**presentation
+    && let [_, item, _] = fenced.as_slice()
+    && is_relational_item(item)
+    && holds_bar_pair(item)
+    && !opens_with_a_bar(item)
+  {
+    return Err("Prune: a bar inside a set's relation is its set-builder's such-that.".into());
   }
   Ok(())
 }
@@ -1051,11 +1306,7 @@ fn pragma_bigop_prefer_wider_absorption(tree: &XM) -> Result<(), Box<dyn Error>>
 fn pragma_prefer_binary_addop(tree: &XM) -> Result<(), Box<dyn Error>> {
   // Check: infix ADDOP application where one argument is itself a prefix ADDOP
   if let XM::Apply(Operator(op), args, ..) = tree {
-    let is_addop = match **op {
-      XM::Token(ref props, _) => props.role.as_deref() == Some("ADDOP"),
-      XM::Lexeme(ref lex, _) => lex.starts_with("ADDOP"),
-      _ => false,
-    };
+    let is_addop = crate::semantics::operator_category(op).is_some_and(|r| r.starts_with("ADDOP"));
     if is_addop {
       // Check arguments: if any non-first argument is a unary prefix ADDOP application,
       // this parse used unary where binary was more appropriate.
@@ -1076,11 +1327,7 @@ fn pragma_prefer_binary_addop(tree: &XM) -> Result<(), Box<dyn Error>> {
 /// Check if a tree is a unary ADDOP prefix application (like -x or +x).
 fn is_unary_addop_prefix(tree: &XM) -> bool {
   if let XM::Apply(Operator(op), args, ..) = tree {
-    let is_addop = match **op {
-      XM::Token(ref props, _) => props.role.as_deref() == Some("ADDOP"),
-      XM::Lexeme(ref lex, _) => lex.starts_with("ADDOP"),
-      _ => false,
-    };
+    let is_addop = crate::semantics::operator_category(op).is_some_and(|r| r.starts_with("ADDOP"));
     if is_addop && args.trees().len() == 1 {
       return true; // unary prefix: addop(x) with single argument
     }
@@ -1172,6 +1419,7 @@ pub fn greek_name_to_letter(name: &str) -> Option<char> {
 pub fn name_is_functional(name: &str) -> bool {
   name.starts_with("FUNCTION")
     || name.starts_with("OPFUNCTION")
+    || name.starts_with("EXPECTATION")
     || name.starts_with("TRIGFUNCTION")
     || name.starts_with("UNKNOWN")
 }
@@ -1331,12 +1579,20 @@ fn pragma_relops_are_outermost(tree: &XM) -> Result<(), Box<dyn Error>> {
 }
 
 fn check_relops_recursive(tree: &XM, inside_addop_or_mulop: bool) -> Result<(), Box<dyn Error>> {
-  if let XM::Apply(Operator(op), args, ..) = tree
-    && let XM::Lexeme(ref name, _) = **op
-  {
-    let is_addop = name.starts_with("ADDOP");
-    let is_mulop = name.starts_with("MULOP") || &**name == "x.invisible_operator";
-    let is_relop = name.starts_with("RELOP");
+  if let XM::Apply(Operator(op), args, ..) = tree {
+    // The operator's category: a lexeme's, or the role a decorated operator keeps (`a+_k b`,
+    // `a\leq_k b`: semantics.rs `decorate_operator`).
+    let (category, invisible) = match &**op {
+      XM::Lexeme(name, _) => (&**name, &**name == "x.invisible_operator"),
+      XM::Apply(_, _, props, _) => match props.role.as_deref() {
+        Some(role) => (role, false),
+        None => return Ok(()),
+      },
+      _ => return Ok(()),
+    };
+    let is_addop = category.starts_with("ADDOP");
+    let is_mulop = category.starts_with("MULOP") || invisible;
+    let is_relop = category.starts_with("RELOP");
 
     // If we're inside an addop/mulop and this node is a relop, reject
     if inside_addop_or_mulop && is_relop {
@@ -1968,10 +2224,40 @@ mod tests {
     let props = XProps {
       role: Some(Cow::Borrowed("MULOP")),
       meaning: Some(Cow::Borrowed("times")),
+      content: Some(Cow::Borrowed("\u{2062}")),
       ..XProps::default()
     };
     let op = XM::Token(props, Meta::default());
     assert!(is_invisible_times_op(&op));
+  }
+
+  #[test]
+  fn is_invisible_times_op_rejects_contentless_times_token() {
+    use std::borrow::Cow;
+
+    use crate::semantics::{metadata::Meta, tree::XProps};
+    let props = XProps {
+      role: Some(Cow::Borrowed("MULOP")),
+      meaning: Some(Cow::Borrowed("times")),
+      ..XProps::default()
+    };
+    let op = XM::Token(props, Meta::default());
+    assert!(!is_invisible_times_op(&op));
+  }
+
+  #[test]
+  fn is_invisible_times_op_rejects_visible_times_token() {
+    use std::borrow::Cow;
+
+    use crate::semantics::{metadata::Meta, tree::XProps};
+    let props = XProps {
+      role: Some(Cow::Borrowed("MULOP")),
+      meaning: Some(Cow::Borrowed("times")),
+      content: Some(Cow::Borrowed("×")),
+      ..XProps::default()
+    };
+    let op = XM::Token(props, Meta::default());
+    assert!(!is_invisible_times_op(&op));
   }
 
   #[test]

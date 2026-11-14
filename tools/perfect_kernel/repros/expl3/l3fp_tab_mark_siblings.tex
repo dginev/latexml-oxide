@@ -1,0 +1,22 @@
+% mechanism: tex.web §342 inserts the column's v-part when a tab mark is read at `align_state` 0, and the door of TL 2025's l3fp has no
+%   `\group_align_safe_begin:` (that of 2026-01-19 has). So a `&` read at brace level 0 of a cell is the macro's, Errors included; the native
+%   path declines it (`l3fp_native::parse::tab_mark_ends_cell`) by the gullet's own count, so on the 2026 door it stays native. Every other read of one: an operand, a mark of another character, a name in a `\csname`, a `\dimexpr`, an argument one brace in at a stray `}`. perfect_kernel_batchp2 swaps this file's marked line for its other rows.
+% witness: review of batch P2r2, no arXiv paper
+% oracle:  pdflatex: 18 `!`, x[ 1@Γ]; each row errs there
+% engines: rust: native and raw byte-identical; raw's own report is short of pdflatex's on the `\csname` and the stray `}`
+% expect:  TL 2025: 3 Errors, 0 Warnings, x[0]
+% status:  GREEN
+\documentclass{article}
+\ExplSyntaxOn
+\cs_new:Npn \FT #1 { [\fp_to_tl:n {#1}] }
+\cs_new:Npn \one #1 {1}
+\ExplSyntaxOff
+\expandafter\def\csname known&\endcsname{2}
+\let\amp=&
+\begin{document}
+\ExplSyntaxOn
+\begin{tabular}{c}
+x\FT{&1} \\
+\end{tabular}
+\ExplSyntaxOff
+\end{document}

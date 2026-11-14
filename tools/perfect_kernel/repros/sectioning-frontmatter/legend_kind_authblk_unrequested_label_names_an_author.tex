@@ -1,0 +1,23 @@
+% authblk's labelled legend no author requests, `\affil[$\dagger$]{Corresponding author: Ann Able (ann@a.edu)}` under
+% `\author[1]{Ann Able}`, `\author[1]{Bob Baker}`: the nameless creator holding it carries for every author, so the name
+% it spells is an author's (`insert::kind_legend_contacts`'s carriers, review rev103c S2) and it is that creator's
+% `†` note; its address Ann Able's e-mail as before.
+% witness: 2609.08556 (wlscirep's authblk, `\affil[$\dag$]{corresponding author(s): Xiaofan Xu (…), Hua Zhu (…)}`),
+%          1507.04774, 2503.10710
+% oracle:  pdflatex 0 errors: "Ann Able1 and Bob Baker1", "1Univ A, Town", "†Corresponding author: Ann Able (ann@a.edu)"
+% engines: rust int130a = an affiliation of a nameless creator; rust 103c r1 = its note
+% expect:  0 errors, 0 warnings; Ann Able: Univ A and the e-mail ann@a.edu; Bob Baker: Univ A; a nameless creator: the
+%          ltx_thanks_correspondence note mark="†" "Corresponding author: Ann Able"
+% status:  RED (int130a) -> GREEN (103c)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{authblk}
+\begin{document}
+\title{T}
+\author[1]{Ann Able}
+\author[1]{Bob Baker}
+\affil[1]{Univ A, Town}
+\affil[$\dagger$]{Corresponding author: Ann Able (ann@a.edu)}
+\maketitle
+Text.
+\end{document}

@@ -1,0 +1,17 @@
+% witness: 2112.15328 (sigconf); acmart.cls:385-389 \bibstyle@acmnumeric `\setcitestyle{numbers,sort&compress,…}`,
+%          which acmart's own \setcitestyle (acmart.cls:306-345) reads
+% oracle:  pdflatex 0 errors: "See [1–3], [1, 2]."
+% engines: rust int50a = "[3, 1, 2], [2, 1]"
+% expect:  0 errors; "[1–3]", "[1, 2]"
+% status:  RED (int50a) -> GREEN (78j)
+\documentclass[sigconf]{acmart}
+\begin{document}
+\title{T}
+\maketitle
+See \cite{c,a,b}, \cite{b,a}.
+\begin{thebibliography}{3}
+\bibitem[Able(2001)]{a} A. Able. 2001. Paper. J. 1, 2.
+\bibitem[Bee(2002)]{b} B. Bee. 2002. Paper. J. 3, 4.
+\bibitem[Cee(2003)]{c} C. Cee. 2003. Paper. J. 3, 4.
+\end{thebibliography}
+\end{document}

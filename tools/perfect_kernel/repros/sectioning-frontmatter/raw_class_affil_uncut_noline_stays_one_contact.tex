@@ -1,0 +1,27 @@
+% witness: 1602.05576, 2405.08158 (ar-1col.cls:341, `\affil` inside `\author{}`); review rev94b r2 B1 (its probe `p/b1`
+%          noline)
+% oracle:  pdflatex 0 errors: "A Title", "Ann Able,1 Bob Baker2", the lines "1" and "2Univ B, City", "Body."
+% engines: rust 94b r2 = 0 errors, 0 warnings: an empty first entry: no cut, today's contact "Univ B, City" on a
+%          nameless creator
+% expect:  0 errors, 0 warnings; entries the writer could not cut are the one entry the leading marks label, today's
+%          contact on the names requesting them — never a nameless creator: Ann Able "Univ B, City" (labelled by the
+%          first mark, as before the cut); eager and --streaming the same
+% status:  RED (94b r2) -> GREEN (94b r3)
+% preload: ar5iv.sty
+\begin{filecontents*}[overwrite]{affilinauthor.cls}
+\ProvidesClass{affilinauthor}
+\LoadClass{article}
+\def\YES{yes}
+\def\chk@key{no}
+\def\affilfont{\small\leftskip2em\rightskip0pt plus1fil}
+\def\affil#1{\par\ifx\chk@key\YES\else\vskip6\p@\fi{\reset@font\affilfont#1\par}\def\chk@key{yes}}
+\def\@maketitle{\newpage{\Large\bfseries\@title\par}\vskip1em\noindent{\bfseries\@author\par}\vskip1em}
+\end{filecontents*}
+\documentclass{affilinauthor}
+\begin{document}
+\title{A Title}
+\author{Ann Able,$^1$ Bob Baker$^2$
+\affil{$^1$\\ $^2$Univ B, City}}
+\maketitle
+Body.
+\end{document}

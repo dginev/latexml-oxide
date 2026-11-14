@@ -1,0 +1,24 @@
+% witness: 1211.4329 (theoremref `\thlabel`/`\thref`: 5 dangling, "?THM?" before each)
+% oracle:  pdflatex 0 errors: "By Theorem 1.1, and Lemma 1.2 and Theorem 1.1." and "See Theorem 1.1 and 1.2."
+% engines: rust int97a = raw theoremref: `\thlabel` only writes its `\newlabel` to the .aux, so no label and every
+%          `\thref` prints "?THM?" before a missing reference
+% expect:  0 errors, 0 warnings; the theorems carry labels main and aux; `\thref` refers by typerefnum, two keys joined
+%          by "and"
+% status:  RED (int97a) -> GREEN (80h: latexml_contrib theoremref_sty.rs)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{amsthm}
+\usepackage{theoremref}
+\newtheorem{thm}{Theorem}[section]
+\newtheorem{lem}[thm]{Lemma}
+\begin{document}
+\section{A}
+By \thref{main}, and \thref{aux,main}.
+\begin{thm}\thlabel{main}
+First.
+\end{thm}
+\begin{lem}\thlabel{aux}
+Second.
+\end{lem}
+See \thref{main} and \ref{aux}.
+\end{document}

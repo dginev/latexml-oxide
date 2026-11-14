@@ -1,0 +1,24 @@
+% witness: 2007.11971 (pst-all's `\si` takes an argument, so `$d(S^{\si})$` leaves the script group open at the closing
+%          `$`; the rest of the paper is digested as math, 7,157 run-together pseudo-words such as
+%          "Thenweextenddonatupleaofelementsof"), 65i review (probe scratch_65i/review/perl/sb.tex)
+% oracle:  pdflatex 1 error ("Missing } inserted" at the `$`, tex.web §1131 off_save inserts the `}` and re-reads the
+%          `$`, which ends the formula); `\showbox`: `\mathon S \hbox{x} \mathoff`, then "hold." as text glue and
+%          characters; pdftotext "Let S x hold. / Text after."
+% engines: rust 65bundle and 65i: 0 errors, 2 warnings ("Missing } inserted"; the open group at \end{document}); the
+%          math end is deferred to the script group's end (tex_math.rs `end_math_or_defer`), which never comes, so the
+%          formula runs on (Math tex "S^{{x$hold.\par Textafter.\par}}"); 65bundle keeps "Textafter" in the formula, 65i
+%          (OD #542) closes the unended formula at the paragraph and "Textafter." follows as italic 70% script-font text
+%          with its spaces dropped
+% expect:  1 error, the "Missing } inserted" diagnostic only (TeX's Error); Math tex "S^{x}"; "hold." and "Text after." as upright spaced text
+%          after the formula, as pdflatex
+% preload: ar5iv.sty
+% status:  GREEN (65n: tex.web §1193 `mmode+math_shift` + §1064-1065 `off_save` — the `$` meeting the `{` group opened
+%          in the formula inserts the `}` (Error "Missing } inserted", as TeX's and Perl's "Attempt to end mode math")
+%          and is read again; tex_math.rs `end_math_or_defer`; OXIDIZED_DESIGN #553; guard
+%          perfect_kernel_batch65n::math_shift_closes_a_group_opened_in_the_formula)
+\documentclass{article}
+\begin{document}
+Let $S^{x$ hold.
+
+Text after.
+\end{document}

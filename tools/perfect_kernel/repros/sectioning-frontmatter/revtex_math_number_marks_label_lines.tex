@@ -1,0 +1,21 @@
+% mechanism: the shared reader of a mark spelled otherwise (`relocate::spaced_marks_written`, OXIDIZED_DESIGN_DIVERGENCES
+%   #964): a number set in math alone at a line's start, `$1$`, is the mark the names request (`$^1$`), so REVTeX's
+%   group rule reads the lines by their marks (`revtex4_support_sty.rs` `group_or_marked_affiliation`)
+% witness: 0708.2552 (`\author{…$^1$}\author{…$^2$}\affiliation{ $1$ Gazi University, …\\ $2$ Ankara University, …\\
+%   Department of Physics, …}`, census129 cluster 4)
+% oracle:  pdflatex (TL 2025, revtex4) 0 errors: "Ann Able 1 1, ∗ and Bob Baker 2 1 / 1 / 1 Univ A, Town / 2 Univ B, /
+%   City" (REVTeX's own number before the block)
+% engines: rust int131a0: both "1 Univ A, Town 2 Univ B,City"; perl: one affiliation, both authors'
+% expect:  0 errors, 0 warnings; Ann "Univ A, Town" (and her e-mail), Bob "Univ B,City"
+% status:  RED (int131a0) -> GREEN (104c) — perfect_kernel_batch104c::math_number_marks_label_lines
+% preload: ar5iv.sty
+\documentclass[aps,superscriptaddress]{revtex4}
+\begin{document}
+\title{T}
+\author{Ann Able $^1$}
+\email{ann@a.edu}
+\author{Bob Baker $^2$}
+\affiliation{ $1$ Univ A, Town\\ $2$ Univ B,\\ City}
+\maketitle
+Text.
+\end{document}

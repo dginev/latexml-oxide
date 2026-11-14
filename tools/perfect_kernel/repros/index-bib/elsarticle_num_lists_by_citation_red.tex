@@ -1,0 +1,14 @@
+% witness: synthetic (revGA3)
+% oracle: pdflatex+bibtex (clean, 0 `!` lines); engine: pdflatex
+% expect: elsarticle-num.bst is unsorted: "First [1] then [2]; both [2, 1]." References [1] Beta [2] Alpha
+% mechanism: elsarticle-num has no row in the engine's style table (`lookup_bibstyle_params`), so the node carries no
+%   `sort` and post lists alphabetically.
+% ours (GA3base and GA3): [1] Alpha [2] Beta, "First [2] then [1]"
+% status: RED
+% moves: post-merge (BSTN)
+\documentclass[preprint]{elsarticle}
+\begin{document}
+First \cite{b} then \cite{a}; both \cite{a,b}.
+\bibliographystyle{elsarticle-num}
+\bibliography{elsarticle_num_lists_by_citation_red}
+\end{document}

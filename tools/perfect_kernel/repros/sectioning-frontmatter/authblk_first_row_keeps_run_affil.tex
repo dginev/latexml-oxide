@@ -1,0 +1,16 @@
+% mechanism: the `\affil` run covers every creator of the `\author` call, however the reading parts the names the kernel read welded (`Resolver::record_run`, `repart::plan`)
+% witness: 2609.33075
+% oracle:  pdflatex: 0 errors; three names on three lines, then Univ X
+% engines: rust 108a r1: the first name without the `\affil`; int139a: one creator, one Error
+% expect:  0 errors; three creators, each its mark and Univ X
+% status:  RED (108a r1) -> GREEN (108a r2)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{authblk}
+\begin{document}
+\title{T}
+\author{Ann Able\textsuperscript{*} \\ Bob Baker\textsuperscript{*} \\ Cat Cole\textsuperscript{$\dagger$}}
+\affil{Univ X}
+\maketitle
+Text.
+\end{document}

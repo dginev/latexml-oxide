@@ -1,0 +1,27 @@
+% witness: base/source2e (3,518 \changes), biblatex-ieee, biblatex-chem (change history);
+%          joinbox, circledtext, sunpath (index prologue); stream A cluster 1, 38 manuals
+% oracle:  pdflatex + makeindex -s gglo.ist/-s gind.ist, 0 errors: "Change History v1.0
+%          General: Alpha stable release 1 v1.1 \foo: Bravo revised styles 1 Index Numbers
+%          written in italic refer to the page where the corresponding entry is described;
+%          numbers underlined refer to the definition; ... \foo 1, 1"
+% engines: rust (56jm) = 0 err, 2 warn (unexpected:glossary), nothing after "does nothing.";
+%          perl 0.8.8 = 3 err, 1 warn, same loss (KNOWN_PERL_ERRORS #281)
+% expect:  0 errors, 0 warnings
+% status:  RED (56js) -> GREEN (56js)
+% mechanism: \changes -> \glossary{v1.1>foo=\verb!*+\foo+:>...} in doc.sty's makeindex
+%   characters (doc.sty:521-524, 626-650); \PrintChanges/\PrintIndex -> \@input@{\jobname.gls,
+%   .ind} (doc.sty:680, 624), files only makeindex writes; doc's index entries `\verb\quotechar*
+%   \verbatimchar\bslash\@gtempa\verbatimchar` (doc.sty:1080-1093) ran to the entry's end.
+\documentclass{ltxdoc}
+\RecordChanges
+\PageIndex
+\begin{document}
+Body text about \DescribeMacro{\foo}\cs{foo}.
+\changes{v1.0}{2011/01/10}{Alpha stable release}
+\begin{macro}{\foo}
+\changes{v1.1}{2011/08/15}{Bravo revised styles}
+The macro \cs{foo} does nothing.
+\end{macro}
+\PrintChanges
+\PrintIndex
+\end{document}

@@ -1,0 +1,17 @@
+% mechanism: beamer's `\institute` list (the cutter `affiliation_calls`) holding `\let\sep\and` itself: the spelled
+%   split cuts at the `\and` that is `\let`'s operand, so `\sep` is never defined in the piece that uses it
+% witness: synthetic (P6f2, a sibling of revP6f's r1_let; a `\let` copy made in the preamble is invalid input here:
+%   it copies LaTeX's tabular `\and`, which beamer's title page cannot run, pdflatex 11 errors)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "Ann Able1 Bob Baker / 1 Univ Alpha / Univ Beta"
+% engines: P6fbase, P6f2: 1 error (undefined `\sep`), Ann Able "Univ Alpha \sep Univ Beta"
+% expect:  0 errors, 0 warnings; Ann Able "Univ Alpha", Bob Baker "Univ Beta" (or the one entry, no error)
+% status:  RED
+% moves:   post-merge (id BLET; a separator as an assignment's operand; reach unmeasured)
+% preload: ar5iv.sty
+\documentclass{beamer}
+\title{T}
+\author{Ann Able\inst{1} \and Bob Baker}
+\institute{\let\sep\and \inst{1}Univ Alpha \sep Univ Beta}
+\begin{document}
+\frame{\titlepage}
+\end{document}

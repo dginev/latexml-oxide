@@ -1,8 +1,6 @@
-use std::cell::{Cell, RefCell};
+use std::cell::{Cell as StdCell, RefCell};
 
 use latexml_package::{package::color_sty::parse_color, prelude::*};
-
-use crate::discard_env::discard_env_body;
 
 /// A rectangle of cells to fill, in nicematrix's 1-based MAIN-matrix
 /// coordinates (the `first-row`/`first-col` label line is excluded). `r2`/`c2`
@@ -25,8 +23,9 @@ thread_local! {
   static NICE_RECTS: RefCell<Vec<NiceRect>> = const { RefCell::new(Vec::new()) };
   /// Whether the current matrix declared `first-row` / `first-col`: shifts the
   /// coordinate origin by one and marks the label line `thead`.
-  static NICE_FIRST_ROW: Cell<bool> = const { Cell::new(false) };
-  static NICE_FIRST_COL: Cell<bool> = const { Cell::new(false) };
+  static NICE_FIRST_ROW: StdCell<bool> = const { StdCell::new(false) };
+  static NICE_FIRST_COL: StdCell<bool> = const { StdCell::new(false) };
+  static NICE_NAME: RefCell<Option<String>> = const { RefCell::new(None) };
 }
 
 /// Parse an `i-j` cell coordinate ("row-col").
@@ -97,6 +96,18 @@ fn nice_opts_has(opts: &str, flag: &str) -> bool {
   })
 }
 
+/// Extract the value for a `key=value` option in a comma-separated key list.
+fn nice_opts_get(opts: &str, key: &str) -> Option<String> {
+  for tok in opts.split(',') {
+    let mut parts = tok.splitn(2, '=');
+    let k = parts.next().unwrap_or("").trim();
+    if k == key {
+      return parts.next().map(|v| v.trim().to_string());
+    }
+  }
+  None
+}
+
 /// Inverse of [`nice_encode`].
 fn nice_decode(data: &str) -> (bool, bool, Vec<NiceRect>) {
   let mut it = data.splitn(3, ';');
@@ -124,16 +135,249 @@ fn nice_decode(data: &str) -> (bool, bool, Vec<NiceRect>) {
   (fr, fc, rects)
 }
 
-#[rustfmt::skip]
+/// Rewrite nicematrix's own column options, which the standard template
+/// reader must not see (nicematrix parses its preamble itself,
+/// nicematrix.sty `\__nicematrix_rec_preamble:n`):
+/// - `|[color=blue,start=2]` → `|`: the rule color/thickness keys are styling;
+///   unstripped, every following letter of the key text is miscounted as a
+///   column and the whole tabular desyncs (the nicematrix manual's ×54 `Extra
+///   alignment tab` cascade + a readBalanced runaway to EOF).
+/// - `X[<keys>]` → `X`, after the `>{…}` of the horizontal position the keys
+///   give (:2788-2826 `\__nicematrix_make_preamble_X_i:n` sets the
+///   `nicematrix / p-column` keys, :2390; `c`/`l`/`r` are `\centering`/
+///   `\raggedright`/`\raggedleft`, :2400-2415, justified without one); the
+///   weight and the vertical position are print layout. Unstripped, `X[c,m]`
+///   read an `m` column of width `]`, which calc reports (nicematrix manual
+///   ×5, `X[0.5,c,m]`, `X[m]`).
+fn nice_strip_rule_opts(toks: Vec<Token>) -> Vec<Token> {
+  let is_char = |t: &Token, c: &str| t.get_catcode() != Catcode::CS && t.with_str(|s| s == c);
+  let mut out: Vec<Token> = Vec::with_capacity(toks.len());
+  let mut i = 0;
+  while i < toks.len() {
+    let t = toks[i];
+    let is_bar = is_char(&t, "|");
+    let is_x = t.get_catcode() == Catcode::LETTER && t.with_str(|s| s == "X");
+    // `\__nicematrix_X: #1 #2` reads the next token as an undelimited
+    // argument, past spaces.
+    let mut open = i + 1;
+    if is_x {
+      while toks
+        .get(open)
+        .is_some_and(|t| t.get_catcode() == Catcode::SPACE)
+      {
+        open += 1;
+      }
+    }
+    if (is_bar || is_x) && toks.get(open).is_some_and(|next| is_char(next, "[")) {
+      let mut close = open + 1;
+      while close < toks.len() && !is_char(&toks[close], "]") {
+        close += 1;
+      }
+      if is_x {
+        let keys = Tokens::new(toks[open + 1..close.min(toks.len())].to_vec()).to_string();
+        let hpos = keys
+          .split(',')
+          .map(str::trim)
+          .rfind(|key| matches!(*key, "c" | "l" | "r"));
+        if let Some(hpos) = hpos {
+          let ragged = match hpos {
+            "c" => "\\centering",
+            "l" => "\\raggedright",
+            _ => "\\raggedleft",
+          };
+          out.extend([
+            T_OTHER!(">"),
+            T_BEGIN!(),
+            T_CS!(ragged),
+            T_CS!("\\arraybackslash"),
+            T_END!(),
+          ]);
+        }
+      }
+      out.push(t);
+      i = close + 1;
+      continue;
+    }
+    out.push(t);
+    i += 1;
+  }
+  out
+}
+
+/// Merge the two optional key lists of a `[opts]{colspec}[opts]` signature
+/// (nicematrix.sty:2007 keys are set from both) into one comma list.
+fn nice_merge_opts(a: Option<Tokens>, b: Option<Tokens>) -> Tokens {
+  let mut out: Vec<Token> = Vec::new();
+  for o in [a, b].into_iter().flatten() {
+    let toks = o.unlist();
+    if toks.is_empty() {
+      continue;
+    }
+    if !out.is_empty() {
+      out.push(T_OTHER!(","));
+    }
+    out.extend(toks);
+  }
+  Tokens::new(out)
+}
+
+/// nicematrix.sty:1953 `t \CodeBefore`: whether a `\CodeBefore … \Body` pre-layer opens the matrix, spaces skipped,
+/// before the matrix's own alignment starts. ltcmd tests it with an expl3 peek, which runs between
+/// `\group_align_safe_begin:` and `_end:` (expl3-code.tex:9730; l3basics' `\if_false: { \fi:` brace, which tex.web
+/// §342 counts), so a `&` it meets is no tab of an alignment around the matrix. Peeked (`peek_token`, alignment-safe
+/// in the same way), not read as `\@ifnextchar`'s `\futurelet` does: a first row that starts with `&`
+/// (`\begin{pNiceArray}{cc}[first-row]` + newline + `& \text{$i$th} & …`) inside `align` gave that `&` to the align
+/// (12 errors, the matrix broken, pdflatex 0; 2302.00928, 2406.05750, 2207.07825). Guard
+/// `perfect_kernel_batch79o::a_matrix_row_that_starts_with_a_tab_is_the_matrixs`.
+fn nice_code_before_follows() -> Result<bool> {
+  loop {
+    match ::latexml_core::gullet::peek_token()? {
+      Some(t) if t.get_catcode() == Catcode::SPACE => {
+        let _ = ::latexml_core::gullet::read_token()?;
+      },
+      Some(t) => return Ok(t == T_CS!("\\CodeBefore")),
+      None => return Ok(false),
+    }
+  }
+}
+
+/// `\begin{NiceTabular…}[opts]{colspec}[opts]` → `\lx@nice@setopts{opts}
+/// \lx@nice@array@begin{<starter>{colspec'}}` with the rule-only column
+/// options stripped from the colspec (see `\NiceTabular` below), and a `c`
+/// grown on the side of `first-col`/`last-col` (the label column every
+/// source row then carries — nicematrix.tex:2569/2617; without it each row
+/// overflows the template: "Extra alignment tab"). Same growth as the array
+/// family's `\NiceArrayWithDelims`.
+fn nice_tabular_expansion(
+  opts_toks: Tokens,
+  pream: Vec<Token>,
+  starter: Vec<Token>,
+  guard_column: bool,
+) -> Tokens {
+  let opts_str = opts_toks.to_string();
+  let mut out: Vec<Token> = Vec::new();
+  out.push(T_CS!("\\lx@nice@setopts"));
+  out.push(T_BEGIN!());
+  out.extend(opts_toks.unlist());
+  out.push(T_END!());
+  out.push(T_CS!("\\lx@nice@array@begin"));
+  out.push(T_BEGIN!());
+  out.extend(starter);
+  out.push(T_BEGIN!());
+  if nice_opts_has(&opts_str, "first-col") {
+    out.push(T_LETTER!("c"));
+  }
+  out.extend(nice_strip_rule_opts(pream));
+  if nice_opts_has(&opts_str, "last-col") {
+    out.push(T_LETTER!("c"));
+  }
+  // nicematrix.sty:2236-2243: with no width given, the preamble ends in a guard column `> { \__nicematrix_err_too_much_cols: } l`,
+  // whose template errs only when a cell runs it — a `\multicolumn` spanning into it runs none, silent in TeX (2505.05139:
+  // `A & \multicolumn{3}{|c|}{B}` in a three-column `{NiceTabular}`; was "Extra alignment tab").
+  if guard_column {
+    out.extend([
+      T_OTHER!(">"),
+      T_BEGIN!(),
+      T_CS!("\\lx@nicematrix@err@too@much@cols"),
+      T_END!(),
+      T_LETTER!("l"),
+    ]);
+  }
+  out.push(T_END!());
+  out.push(T_END!());
+  Tokens::new(out)
+}
+
+/// The fill color of a `\CodeBefore` color command. nicematrix.sty:5605-5616 (`\__nicematrix_color_opacity:w`) reads
+/// the optional argument as keys: `opacity=` sets the fill opacity (`\pgfsetfillopacity`), and what is left is the
+/// color model. A fill at opacity `o` over the white page shows as the color mixed with white at `o`. Witness
+/// 2605.25123 (`\columncolor[opacity=0.2]{blue}{3}`, an "Unrecognized color model" Error before).
+fn nice_color(model: Option<Tokens>, color: Tokens) -> Result<String> {
+  let mut opacity = None;
+  let mut keys = Vec::new();
+  if let Some(model) = model {
+    for key in do_expand(model)?
+      .to_string()
+      .split(',')
+      .map(str::trim)
+      .filter(|key| !key.is_empty())
+    {
+      match key.split_once('=') {
+        Some((name, value)) if name.trim() == "opacity" => {
+          opacity = value.trim().parse::<f64>().ok()
+        },
+        _ => keys.push(key.to_string()),
+      }
+    }
+  }
+  let model = (!keys.is_empty()).then(|| keys.join(","));
+  let color = parse_color(model.as_deref(), &do_expand(color)?.to_string());
+  Ok(
+    match opacity {
+      Some(opacity) => color.mix(&common::color::WHITE, opacity.clamp(0.0, 1.0)),
+      None => color,
+    }
+    .to_attribute(),
+  )
+}
+
 LoadDefinitions!({
+  // nicematrix.sty:9595 reads its options with `\ProcessKeyOptions`, which marks them processed: `\@curroptions` stays as it was.
+  key_options_processed()?;
   RequirePackage!("pgfcore");
   RequirePackage!("amsmath");
   RequirePackage!("array");
-  Warn!(
-    "missing_file",
-    "nicematrix.sty",
-    "nicematrix.sty is not implemented and will not be interpreted raw."
-  );
+  RequirePackage!("colortbl");
+  // nicematrix.sty:146-159 `\ProvideDocumentCommand \iddots { }`, the inverse diagonal dots (mathdots' `\iddots`,
+  // U+22F0), defined only when no package defined it first (26 papers; 2108.05847, 2210.04594, 2303.11962,
+  // 2309.01644, 2402.13113). `\Iddots` below is nicematrix's own (nicematrix.sty:1632 `\__nicematrix_Iddots:`, which
+  // :1552 lets `\iddots` to inside its environments), whatever a paper made `\iddots` (the private
+  // `\lx@nicematrix@Iddots`, reverting as `\Iddots`). Guards: `perfect_kernel_batch68j::nicematrix_provides_iddots`,
+  // `::nicematrix_iddots_keeps_a_paper_definition`.
+  if !is_defined("\\iddots") {
+    DefMath!("\\iddots", None, "\u{22F0}", role => "ID");
+  }
+  DefMath!("\\lx@nicematrix@Iddots", None, "\u{22F0}", role => "ID", name => "iddots", alias => "\\Iddots");
+  // nicematrix's own preamble parser accepts `V{width}` (nicematrix.sty:2541:
+  // a varwidth[t] cell when varwidth is loaded — varwidth.sty:308-313 only
+  // registers its `\newcolumntype{V}` when array preceded it, which is the
+  // uncommon order). Model it as the top-attached paragraph column `p{width}`
+  // (tex_tables.rs `\lx@tabular@p t`): natural-width-up-to is print layout.
+  // Unregistered, the reader's "safety valve" re-read `3cm` as columns and
+  // `m` consumed the template's closing brace — nicematrix/nicematrix
+  // exemplar 109 → 1002 errors + Fatal after b33.
+  DefColumnType!("V{}", sub[(width)] {
+    let mut before = vec![T_CS!("\\lx@tabular@p"), T_LETTER!("t"), T_BEGIN!()];
+    before.extend(width.unlist());
+    before.push(T_END!());
+    before.push(T_BEGIN!());
+    with_building_template(|template| {
+      template.add_column(Cell {
+        before: Some(Tokens::new(before)),
+        after: Some(Tokens!(T_END!())),
+        align: Some(Align::Justify),
+        vattach: Some("top".to_string()),
+        ..Default::default()
+      })
+    });
+  });
+  // nicematrix.sty L21-22 defines its own `\myfileversion`/`\myfiledate`
+  // (its manual typesets them on the title page). The binding shadows the
+  // raw load, so read the REAL values from the installed .sty rather than
+  // hardcoding a copy that drifts with the TL version.
+  if let Some(path) = find_file("nicematrix.sty", None)
+    && let Ok(src) = std::fs::read_to_string(&path)
+  {
+    for name in ["myfileversion", "myfiledate"] {
+      let needle = s!("\\def\\{name}{{");
+      if let Some(pos) = src.find(&needle)
+        && let Some(end) = src[pos + needle.len()..].find('}')
+      {
+        let val = &src[pos + needle.len()..pos + needle.len() + end];
+        def_macro(T_CS!(s!("\\{name}")), None, Tokens!(Explode!(val)), None)?;
+      }
+    }
+  }
 
   // The tabular-like environments (`\NiceTabular`, `\NiceArray`, …) still degrade
   // to a placeholder-or-\tabular; the math Nice* MATRIX family below renders as a
@@ -144,8 +388,60 @@ LoadDefinitions!({
   // 2605.08776, 2605.13835, 2605.18423) instead of discarding the body +
   // Error:undefined. Beyond-Perl: the ar5iv nicematrix.sty.ltxml stub still errors
   // here; mirror this upgrade there for strict Rust<->ar5iv parity.
-  DefMacro!("\\NiceTabular[]{}[]", "\\tabular{#2}", locked => true);
-  DefMacro!("\\endNiceTabular", "\\endtabular", locked => true);
+  // Routed through the same `\CodeBefore … \Body` grabber as the matrix
+  // family: executed INLINE, nicematrix's 2-arg `\rowcolor{color}{rows}`
+  // (vs colortbl's 1-arg) desyncs the tabular's cell counting and a later
+  // `\cmidrule` lands mid-cell ("\noalign cannot be used here" — the
+  // exemplar manual's last error). Recorded rects are simply not painted for
+  // text tabulars (color overlay is styling; the content is what matters).
+  DefMacro!("\\NiceTabular OptionalBalanced {} OptionalBalancedNoSkip", sub[(opts, pream, post)] {
+    let opts_toks = nice_merge_opts(opts.map(|o| Tokens!(o.revert())), post.map(|o| Tokens!(o.revert())));
+    nice_tabular_expansion(opts_toks, pream.revert(), vec![T_CS!("\\tabular")], true)
+  }, locked => true);
+  DefMacro!("\\endNiceTabular", "\\endtabular\\lx@nicematrix@materializenodes", locked => true);
+  // The guard column's template (nicematrix.sty:9660-9670 `\__nicematrix_err_too_much_cols:`, :9739-9745 the message): a
+  // row with more cells than the preamble declares. nicematrix stops TeX there (`\msg_fatal`); the conversion goes on
+  // with the cell kept, an Error as the kernel's "Extra alignment tab" it replaces.
+  DefPrimitive!("\\lx@nicematrix@err@too@much@cols", {
+    Error!(
+      "unexpected",
+      "&",
+      "Too much columns: in this row you try to use more columns than allowed by your {NiceTabular}"
+    );
+  });
+  // NiceTabular* {width}[opts]{colspec}[opts] / NiceTabularX {width}[opts]
+  // {colspec}[opts] (nicematrix.sty:3788/3801 `{ m O{} m !O{} }`): the SAME
+  // reduction; `NiceTabularX` is a tabularx (its `X` columns need the
+  // tabularx column engine — `\tabular{l||*{3}{X}}` had dropped every X cell,
+  // witness nicematrix.tex `\begin{NiceTabularX}{\linewidth}{l||*{\LastDay}{X}}`)
+  // and `NiceTabular*` a `\tabular*` — the fixed total width is print layout.
+  RequirePackage!("tabularx");
+  DefMacro!(T_CS!("\\NiceTabular*"), "{} OptionalBalanced {} OptionalBalancedNoSkip", sub[(width, opts, pream, post)] {
+    let mut starter = vec![T_CS!("\\tabular*"), T_BEGIN!()];
+    starter.extend(width.revert()?.unlist());
+    starter.push(T_END!());
+    let opts_toks = nice_merge_opts(
+      if opts.is_some() { Some(opts.revert()?) } else { None },
+      if post.is_some() { Some(post.revert()?) } else { None },
+    );
+    nice_tabular_expansion(opts_toks, pream.revert()?.unlist(), starter, false)
+  });
+  DefMacro!(
+    T_CS!("\\endNiceTabular*"),
+    None,
+    "\\endtabular*\\lx@nicematrix@materializenodes"
+  );
+  DefMacro!("\\NiceTabularX{} OptionalBalanced {} OptionalBalancedNoSkip", sub[(width, opts, pream, post)] {
+    let mut starter = vec![T_CS!("\\tabularx"), T_BEGIN!()];
+    starter.extend(width.revert());
+    starter.push(T_END!());
+    let opts_toks = nice_merge_opts(
+      opts.map(|o| Tokens!(o.revert())),
+      post.map(|o| Tokens!(o.revert())),
+    );
+    nice_tabular_expansion(opts_toks, pream.revert(), starter, false)
+  }, locked => true);
+  DefMacro!("\\endNiceTabularX", "\\endtabularx\\lx@nicematrix@materializenodes", locked => true);
 
   //======================================================================
   // #6569: the math Nice* MATRIX family renders as real bracketed math arrays,
@@ -173,10 +469,18 @@ LoadDefinitions!({
   // \begin{<x>NiceMatrix}: clears the rect list and records whether [opts]
   // requested a label line.
   DefPrimitive!("\\lx@nice@setopts{}", sub[(opts)] {
-    let opts = do_expand(opts)?.to_string();
+    let opts = opts.to_string();
     NICE_RECTS.with(|c| c.borrow_mut().clear());
     NICE_FIRST_ROW.with(|c| c.set(nice_opts_has(&opts, "first-row")));
     NICE_FIRST_COL.with(|c| c.set(nice_opts_has(&opts, "first-col")));
+    let name = nice_opts_get(&opts, "name").or_else(|| {
+      if nice_opts_has(&opts, "create-cell-nodes") {
+        Some("NiceMatrix".to_string())
+      } else {
+        None
+      }
+    });
+    NICE_NAME.with(|c| *c.borrow_mut() = name);
     Ok(Vec::new())
   });
 
@@ -186,8 +490,7 @@ LoadDefinitions!({
   // elsewhere (DRY). nicematrix.sty: \rectanglecolor 5752, \cellcolor, \rowcolor,
   // \columncolor, \arraycolor.
   DefPrimitive!("\\lx@nice@rectanglecolor[]{}{}{}", sub[(model, color, corner1, corner2)] {
-    let model = model.and_then(|m| do_expand(m).ok()).map(|t| t.to_string());
-    let hex = parse_color(model.as_deref(), &do_expand(color)?.to_string()).to_attribute();
+    let hex = nice_color(model, color)?;
     let a = do_expand(corner1)?.to_string();
     let b = do_expand(corner2)?.to_string();
     if let (Some((r1, c1)), Some((r2, c2))) = (nice_parse_cell(&a), nice_parse_cell(&b)) {
@@ -196,8 +499,7 @@ LoadDefinitions!({
     Ok(Vec::new())
   });
   DefPrimitive!("\\lx@nice@cellcolor[]{}{}", sub[(model, color, cells)] {
-    let model = model.and_then(|m| do_expand(m).ok()).map(|t| t.to_string());
-    let hex = parse_color(model.as_deref(), &do_expand(color)?.to_string()).to_attribute();
+    let hex = nice_color(model, color)?;
     for item in do_expand(cells)?.to_string().split(',') {
       if let Some((r, c)) = nice_parse_cell(item) {
         nice_push_rect(&hex, r, c, r, c);
@@ -206,32 +508,101 @@ LoadDefinitions!({
     Ok(Vec::new())
   });
   DefPrimitive!("\\lx@nice@rowcolor[]{}{}", sub[(model, color, rows)] {
-    let model = model.and_then(|m| do_expand(m).ok()).map(|t| t.to_string());
-    let hex = parse_color(model.as_deref(), &do_expand(color)?.to_string()).to_attribute();
+    let hex = nice_color(model, color)?;
     for (lo, hi) in nice_ranges(&do_expand(rows)?.to_string()) {
       nice_push_rect(&hex, lo, 1, hi, i32::MAX);
     }
     Ok(Vec::new())
   });
   DefPrimitive!("\\lx@nice@columncolor[]{}{}", sub[(model, color, cols)] {
-    let model = model.and_then(|m| do_expand(m).ok()).map(|t| t.to_string());
-    let hex = parse_color(model.as_deref(), &do_expand(color)?.to_string()).to_attribute();
+    let hex = nice_color(model, color)?;
     for (lo, hi) in nice_ranges(&do_expand(cols)?.to_string()) {
       nice_push_rect(&hex, 1, lo, i32::MAX, hi);
     }
     Ok(Vec::new())
   });
   DefPrimitive!("\\lx@nice@arraycolor[]{}", sub[(model, color)] {
-    let model = model.and_then(|m| do_expand(m).ok()).map(|t| t.to_string());
-    let hex = parse_color(model.as_deref(), &do_expand(color)?.to_string()).to_attribute();
+    let hex = nice_color(model, color)?;
     nice_push_rect(&hex, 1, 1, i32::MAX, i32::MAX);
     Ok(Vec::new())
   });
   // Recognized-but-unpainted \CodeBefore color commands: gobble args (no-op) so a
   // paper using them keeps rendering instead of erroring. nicematrix.sty:
   // \chessboardcolors, \rowlistcolors.
-  DefMacro!("\\lx@nice@chessboardcolors[]{}{}", "", locked => true);
-  DefMacro!("\\lx@nice@rowlistcolors[]{}{}", "", locked => true);
+  DefMacro!("\\chessboardcolors OptionalBalanced {}{}", "", locked => true);
+  DefMacro!("\\lx@nice@chessboardcolors OptionalBalanced {}{}", "", locked => true);
+  // The rest of the `\CodeBefore`-scoped surface (nicematrix.sty:1790-1809,
+  // `\cs_set_eq:NN` inside `\__nicematrix_exec_code_before:`): `\EmptyColumn{j}`
+  // / `\EmptyRow{i}` (:6020/6029 — mark a column/row as empty for the
+  // `corners` key; witness nicematrix.tex:2716 was `undefined`),
+  // `\roundedrectanglecolor[model]{color}{i-j}{k-l}`, `\rowcolors[model]
+  // {i}{c1}{c2}`, `\SubMatrix(…)` / `\ShowCellNames` / `\TikzEveryCell{…}`
+  // (TikZ overlays). All print styling: gobble arguments, emit nothing.
+  DefMacro!("\\SubMatrix {}{}{}{} OptionalBalanced", "", locked => true);
+  DefMacro!("\\lx@nice@submatrix {}{}{}{} OptionalBalanced", "", locked => true);
+  DefMacro!("\\EmptyColumn{}", "", locked => true);
+  DefMacro!("\\lx@nice@emptycolumn{}", "", locked => true);
+  DefMacro!("\\EmptyRow{}", "", locked => true);
+  DefMacro!("\\lx@nice@emptyrow{}", "", locked => true);
+  DefMacro!("\\roundedrectanglecolor OptionalBalanced {}{}{}", "", locked => true);
+  DefMacro!("\\lx@nice@roundedrectanglecolor OptionalBalanced {}{}{}", "", locked => true);
+  // nicematrix.sty:5772 `\rowcolors {O{}mmm}` chains into :5704
+  // `\__nicematrix_rowlistcolors {O{}mm O{}}`, whose TRAILING optional absorbs a
+  // following `[cols=2-3,restart]` (manual :2412, :2446) — without it the keys
+  // leaked as a text node before the tabular. Guard:
+  // `perfect_kernel_batch56::nicematrix_rowcolors_trailing_optional_is_absorbed`.
+  DefMacro!("\\rowcolors OptionalBalanced {}{}{} OptionalBalanced", "", locked => true);
+  DefMacro!("\\lx@nice@rowcolors OptionalBalanced {}{}{} OptionalBalanced", "", locked => true);
+  DefMacro!("\\ShowCellNames", "", locked => true);
+  DefMacro!("\\lx@nice@showcellnames", "", locked => true);
+  DefMacro!("\\TikzEveryCell OptionalBalanced {}", "", locked => true);
+  DefMacro!("\\lx@nice@tikzeverycell OptionalBalanced {}", "", locked => true);
+  DefMacro!("\\rowlistcolors OptionalBalanced {}{} OptionalBalanced", "", locked => true);
+  DefMacro!("\\lx@nice@rowlistcolors OptionalBalanced {}{} OptionalBalanced", "", locked => true);
+
+  RawTeX!(concat!(
+    r"\def\lx@nice@fakenode#1{",
+    r"\expandafter\gdef\csname pgf@sh@ns@#1\endcsname{coordinate}",
+    r"\expandafter\gdef\csname pgf@sh@np@#1\endcsname{\def\centerpoint{\pgfpointorigin}}",
+    r"\expandafter\gdef\csname pgf@sh@nt@#1\endcsname{{1}{0}{0}{1}{0pt}{0pt}}",
+    r"\expandafter\global\expandafter\let\csname pgf@sh@ma@#1\endcsname\empty",
+    r"\expandafter\gdef\csname pgf@sh@pi@#1\endcsname{1}}",
+  ));
+
+  DefPrimitive!("\\lx@nicematrix@materializenodes", {
+    let name_opt = NICE_NAME.with(|c| c.borrow_mut().take());
+    if let Some(name) = name_opt {
+      let n_rows = lookup_int("LAST_ALIGNMENT_ROWS");
+      let n_cols = lookup_int("LAST_ALIGNMENT_COLS");
+      let mut names = Vec::new();
+      names.push(name.clone());
+      for i in 1..=n_rows {
+        for j in 1..=n_cols {
+          names.push(format!("{name}-{i}-{j}"));
+          names.push(format!("{i}-{j}"));
+        }
+        names.push(format!("{name}-{i}-last"));
+        names.push(format!("{name}-row-{i}"));
+        names.push(format!("{i}-last"));
+      }
+      for j in 1..=n_cols {
+        names.push(format!("{name}-last-{j}"));
+        names.push(format!("{name}-col-{j}"));
+        names.push(format!("last-{j}"));
+      }
+      names.push(format!("{name}-last-last"));
+      names.push("last-last".to_string());
+      let mut cmd = String::new();
+      for n in names {
+        cmd.push_str("\\lx@nice@fakenode{");
+        cmd.push_str(&n);
+        cmd.push('}');
+      }
+      let t = mouth::tokenize_internal(TeXString::assembled(cmd));
+      digest(t)?;
+    }
+    Ok(Vec::new())
+  });
 
   // Paint the recorded \CodeBefore rectangles onto the just-built XMArray, and mark
   // first-row/first-col label cells thead. A no-output DefConstructor (like
@@ -335,101 +706,503 @@ LoadDefinitions!({
   // rebound to the recording primitives inside a group (so colortbl's
   // \cellcolor/\rowcolor/\columncolor in text tabulars are untouched), the
   // CodeBefore block (#2) is executed to record its rectangles, then the matrix
-  // starts. `\CodeBefore`/`\Body` are \relax (harmless marker / delimiter).
-  Let!("\\CodeBefore", "\\relax");
-  Let!("\\Body", "\\relax");
+  // starts. `\CodeBefore`/`\Body` are harmless no-ops with UNIQUE meanings
+  // (nicematrix.sty:1642/1765 give them their own `\__nicematrix_…` bodies):
+  // `\let` to `\relax`, `\@ifnextchar\CodeBefore` — a meaning comparison —
+  // matched any `\relax`-meaning token at a matrix start and the
+  // `Until:\Body` grab ran to EoF (the nicematrix manual's Fatal); the test
+  // (`nice_code_before_follows`) now compares the token itself. Guard:
+  // `perfect_kernel_batch54::nicematrix_relax_at_matrix_start_is_not_codebefore`.
+  DefMacro!("\\CodeBefore OptionalBalanced", "", locked => true);
+  DefMacro!("\\Body", "", locked => true);
+  DefMacro!("\\lx@nice@matrix@begin{}", sub[(keys)] {
+    let grab = if nice_code_before_follows()? { "\\lx@nice@grabcode" } else { "\\lx@ams@matrix" };
+    Tokens!(T_CS!(grab), T_BEGIN!(), keys, T_END!())
+  });
   RawTeX!(concat!(
-    r"\def\lx@nice@matrix@begin#1{",
-      r"\@ifnextchar\CodeBefore{\lx@nice@grabcode{#1}}{\lx@ams@matrix{#1}}}",
     r"\long\def\lx@nice@grabcode#1#2\Body{",
-      r"\begingroup",
-        r"\let\rectanglecolor\lx@nice@rectanglecolor",
-        r"\let\cellcolor\lx@nice@cellcolor",
-        r"\let\rowcolor\lx@nice@rowcolor",
-        r"\let\columncolor\lx@nice@columncolor",
-        r"\let\arraycolor\lx@nice@arraycolor",
-        r"\let\chessboardcolors\lx@nice@chessboardcolors",
-        r"\let\rowlistcolors\lx@nice@rowlistcolors",
-        r"#2",
-      r"\endgroup",
-      r"\lx@ams@matrix{#1}}"
+    r"\begingroup",
+    r"\let\rectanglecolor\lx@nice@rectanglecolor",
+    r"\let\cellcolor\lx@nice@cellcolor",
+    r"\let\rowcolor\lx@nice@rowcolor",
+    r"\let\columncolor\lx@nice@columncolor",
+    r"\let\arraycolor\lx@nice@arraycolor",
+    r"\let\chessboardcolors\lx@nice@chessboardcolors",
+    r"\let\rowlistcolors\lx@nice@rowlistcolors",
+    r"\let\EmptyColumn\lx@nice@emptycolumn",
+    r"\let\EmptyRow\lx@nice@emptyrow",
+    r"\let\roundedrectanglecolor\lx@nice@roundedrectanglecolor",
+    r"\let\rowcolors\lx@nice@rowcolors",
+    r"\let\ShowCellNames\lx@nice@showcellnames",
+    r"\let\TikzEveryCell\lx@nice@tikzeverycell",
+    r"\let\SubMatrix\lx@nice@submatrix",
+    r"\lx@nice@codebefore{#2}",
+    r"\endgroup",
+    r"\lx@ams@matrix{#1}}"
   ));
+  // The `\CodeBefore` block is EXECUTED to record its color commands, but a
+  // drawing `\begin{tikzpicture}…\end{tikzpicture}`/`{scope}`/`\tikz … ;` inside
+  // it (the `create-cell-nodes` overlays, nicematrix-french:6154…) references cell
+  // nodes LaTeXML never materializes ("No shape named 'i-j'" ×280) and is
+  // pure overlay — drop those environments and inline \tikz commands, keep the rest. Guard:
+  // `perfect_kernel_batch54::nicematrix_codebefore_drops_drawing_environments`.
+  DefPrimitive!("\\lx@nice@codebefore{}", sub[(block)] {
+    let toks = block.unlist();
+    let mut kept: Vec<Token> = Vec::with_capacity(toks.len());
+    let begin_cs = T_CS!("\\begin");
+    let end_cs = T_CS!("\\end");
+    let tikz_cs = T_CS!("\\tikz");
+    let mut i = 0;
+    let mut skip_depth = 0usize;
+    let env_name = |toks: &[Token], i: usize| -> String {
+      // `\begin{name}` → the tokens between the braces after position i
+      let mut j = i + 1;
+      if j < toks.len() && toks[j].get_catcode() == Catcode::BEGIN {
+        j += 1;
+        let mut name = String::new();
+        while j < toks.len() && toks[j].get_catcode() != Catcode::END {
+          name.push_str(&toks[j].to_string());
+          j += 1;
+        }
+        name
+      } else {
+        String::new()
+      }
+    };
+    while i < toks.len() {
+      let t = &toks[i];
+      if *t == begin_cs {
+        let name = env_name(&toks, i);
+        if skip_depth > 0 || name == "tikzpicture" || name == "scope" {
+          skip_depth += 1;
+        }
+      } else if *t == end_cs && skip_depth > 0 {
+        skip_depth -= 1;
+        // consume the `{name}` of this \end
+        let mut j = i + 1;
+        if j < toks.len() && toks[j].get_catcode() == Catcode::BEGIN {
+          while j < toks.len() && toks[j].get_catcode() != Catcode::END {
+            j += 1;
+          }
+        }
+        i = j + 1;
+        continue;
+      }
+      if skip_depth == 0 && *t == tikz_cs {
+        let mut j = i + 1;
+        while j < toks.len() && toks[j].get_catcode() == Catcode::SPACE {
+          j += 1;
+        }
+        if j < toks.len() && toks[j].with_str(|s| s == "[") {
+          let mut bdepth = 1usize;
+          j += 1;
+          while j < toks.len() && bdepth > 0 {
+            if toks[j].with_str(|s| s == "[") {
+              bdepth += 1;
+            } else if toks[j].with_str(|s| s == "]") {
+              bdepth -= 1;
+            }
+            j += 1;
+          }
+        }
+        while j < toks.len() && toks[j].get_catcode() == Catcode::SPACE {
+          j += 1;
+        }
+        if j < toks.len() && toks[j].get_catcode() == Catcode::BEGIN {
+          let mut bdepth = 1usize;
+          j += 1;
+          while j < toks.len() && bdepth > 0 {
+            if toks[j].get_catcode() == Catcode::BEGIN {
+              bdepth += 1;
+            } else if toks[j].get_catcode() == Catcode::END {
+              bdepth -= 1;
+            }
+            j += 1;
+          }
+          i = j;
+          continue;
+        } else {
+          let mut bdepth = 0usize;
+          while j < toks.len() {
+            if toks[j].get_catcode() == Catcode::BEGIN {
+              bdepth += 1;
+            } else if toks[j].get_catcode() == Catcode::END && bdepth > 0 {
+              bdepth -= 1;
+            } else if bdepth == 0 && toks[j].with_str(|s| s == ";") {
+              j += 1;
+              break;
+            }
+            j += 1;
+          }
+          i = j;
+          continue;
+        }
+      }
+      if skip_depth == 0 {
+        kept.push(*t);
+      }
+      i += 1;
+    }
+    digest(Tokens::new(kept))
+  });
 
   // The MATRIX family: `\<x>NiceMatrix[opts]` → set opts, then reduce to the
   // amsmath matrix flavour for delimiter <x>; `\end<x>NiceMatrix` closes the array
   // and paints the recorded colors. Mirrors amsmath_sty.rs:393-427.
-  DefMacro!("\\NiceMatrix[]",
+  DefMacro!("\\NiceMatrix OptionalBalancedNoSkip",
     "\\lx@nice@setopts{#1}\\lx@nice@matrix@begin{name=NiceMatrix,datameaning=matrix}",
     locked => true);
-  DefMacro!("\\endNiceMatrix", "\\lx@end@ams@matrix\\lx@nicematrix@applycolors", locked => true);
-  DefMacro!("\\pNiceMatrix[]",
+  DefMacro!("\\endNiceMatrix", "\\lx@end@ams@matrix\\lx@nicematrix@materializenodes\\lx@nicematrix@applycolors", locked => true);
+  DefMacro!("\\pNiceMatrix OptionalBalancedNoSkip",
     "\\lx@nice@setopts{#1}\\lx@nice@matrix@begin{name=pNiceMatrix,datameaning=matrix,left=\\lx@left(,right=\\lx@right)}",
     locked => true);
-  DefMacro!("\\endpNiceMatrix", "\\lx@end@ams@matrix\\lx@nicematrix@applycolors", locked => true);
-  DefMacro!("\\bNiceMatrix[]",
+  DefMacro!("\\endpNiceMatrix", "\\lx@end@ams@matrix\\lx@nicematrix@materializenodes\\lx@nicematrix@applycolors", locked => true);
+  DefMacro!("\\bNiceMatrix OptionalBalancedNoSkip",
     "\\lx@nice@setopts{#1}\\lx@nice@matrix@begin{name=bNiceMatrix,datameaning=matrix,left=\\lx@left[,right=\\lx@right]}",
     locked => true);
-  DefMacro!("\\endbNiceMatrix", "\\lx@end@ams@matrix\\lx@nicematrix@applycolors", locked => true);
-  DefMacro!("\\BNiceMatrix[]",
+  DefMacro!("\\endbNiceMatrix", "\\lx@end@ams@matrix\\lx@nicematrix@materializenodes\\lx@nicematrix@applycolors", locked => true);
+  DefMacro!("\\BNiceMatrix OptionalBalancedNoSkip",
     "\\lx@nice@setopts{#1}\\lx@nice@matrix@begin{name=BNiceMatrix,datameaning=matrix,left=\\lx@left\\{,right=\\lx@right\\}}",
     locked => true);
-  DefMacro!("\\endBNiceMatrix", "\\lx@end@ams@matrix\\lx@nicematrix@applycolors", locked => true);
-  DefMacro!("\\vNiceMatrix[]",
+  DefMacro!("\\endBNiceMatrix", "\\lx@end@ams@matrix\\lx@nicematrix@materializenodes\\lx@nicematrix@applycolors", locked => true);
+  DefMacro!("\\vNiceMatrix OptionalBalancedNoSkip",
     "\\lx@nice@setopts{#1}\\lx@nice@matrix@begin{name=vNiceMatrix,delimitermeaning=determinant,datameaning=matrix,left=\\lx@left|,right=\\lx@right|}",
     locked => true);
-  DefMacro!("\\endvNiceMatrix", "\\lx@end@ams@matrix\\lx@nicematrix@applycolors", locked => true);
-  DefMacro!("\\VNiceMatrix[]",
+  DefMacro!("\\endvNiceMatrix", "\\lx@end@ams@matrix\\lx@nicematrix@materializenodes\\lx@nicematrix@applycolors", locked => true);
+  DefMacro!("\\VNiceMatrix OptionalBalancedNoSkip",
     "\\lx@nice@setopts{#1}\\lx@nice@matrix@begin{name=VNiceMatrix,delimitermeaning=norm,datameaning=matrix,left=\\lx@left\\|,right=\\lx@right\\|}",
     locked => true);
-  DefMacro!("\\endVNiceMatrix", "\\lx@end@ams@matrix\\lx@nicematrix@applycolors", locked => true);
+  DefMacro!("\\endVNiceMatrix", "\\lx@end@ams@matrix\\lx@nicematrix@materializenodes\\lx@nicematrix@applycolors", locked => true);
 
-  // The ARRAY family (`\NiceArray`/`pNiceArray`/…/`NiceArrayWithDelims`/
-  // `NiceTabular*`/`NiceTabularX`) takes a `{colspec}` and stays a placeholder
-  // stub for now (no faithful colspec reduction yet).
-  DefConstructor!(T_CS!("\\begin{NiceArray}"), None,
-    "<ltx:note role=\"nicematrix-placeholder\">NiceArray (nicematrix)</ltx:note>",
-    bounded => true, mode => "text", locked => true,
-    before_digest => { discard_env_body("NiceArray", "nicematrix.sty.ltxml")?; });
-  DefMacro!("\\endNiceArray", "\\relax", locked => true);
-  DefConstructor!(T_CS!("\\begin{NiceArrayWithDelims}"), None,
-    "<ltx:note role=\"nicematrix-placeholder\">NiceArrayWithDelims (nicematrix)</ltx:note>",
-    bounded => true, mode => "text", locked => true,
-    before_digest => { discard_env_body("NiceArrayWithDelims", "nicematrix.sty.ltxml")?; });
-  DefMacro!("\\endNiceArrayWithDelims", "\\relax", locked => true);
-  DefConstructor!(T_CS!("\\begin{NiceTabular*}"), None,
-    "<ltx:note role=\"nicematrix-placeholder\">NiceTabular* (nicematrix)</ltx:note>",
-    bounded => true, mode => "text", locked => true,
-    before_digest => { discard_env_body("NiceTabular*", "nicematrix.sty.ltxml")?; });
-  DefConstructor!(T_CS!("\\begin{pNiceArray}"), None,
-    "<ltx:note role=\"nicematrix-placeholder\">pNiceArray (nicematrix)</ltx:note>",
-    bounded => true, mode => "text", locked => true,
-    before_digest => { discard_env_body("pNiceArray", "nicematrix.sty.ltxml")?; });
-  DefMacro!("\\endpNiceArray", "\\relax", locked => true);
-  DefConstructor!(T_CS!("\\begin{NiceTabularX}"), None,
-    "<ltx:note role=\"nicematrix-placeholder\">NiceTabularX (nicematrix)</ltx:note>",
-    bounded => true, mode => "text", locked => true,
-    before_digest => { discard_env_body("NiceTabularX", "nicematrix.sty.ltxml")?; });
-  DefMacro!("\\endNiceTabularX", "\\relax", locked => true);
-  DefConstructor!(T_CS!("\\begin{bNiceArray}"), None,
-    "<ltx:note role=\"nicematrix-placeholder\">bNiceArray (nicematrix)</ltx:note>",
-    bounded => true, mode => "text", locked => true,
-    before_digest => { discard_env_body("bNiceArray", "nicematrix.sty.ltxml")?; });
-  DefMacro!("\\endbNiceArray", "\\relax", locked => true);
-  DefConstructor!(T_CS!("\\begin{BNiceArray}"), None,
-    "<ltx:note role=\"nicematrix-placeholder\">BNiceArray (nicematrix)</ltx:note>",
-    bounded => true, mode => "text", locked => true,
-    before_digest => { discard_env_body("BNiceArray", "nicematrix.sty.ltxml")?; });
-  DefMacro!("\\endBNiceArray", "\\relax", locked => true);
-  DefConstructor!(T_CS!("\\begin{vNiceArray}"), None,
-    "<ltx:note role=\"nicematrix-placeholder\">vNiceArray (nicematrix)</ltx:note>",
-    bounded => true, mode => "text", locked => true,
-    before_digest => { discard_env_body("vNiceArray", "nicematrix.sty.ltxml")?; });
-  DefMacro!("\\endvNiceArray", "\\relax", locked => true);
-  DefConstructor!(T_CS!("\\begin{VNiceArray}"), None,
-    "<ltx:note role=\"nicematrix-placeholder\">VNiceArray (nicematrix)</ltx:note>",
-    bounded => true, mode => "text", locked => true,
-    before_digest => { discard_env_body("VNiceArray", "nicematrix.sty.ltxml")?; });
-  DefMacro!("\\endVNiceArray", "\\relax", locked => true);
+  // The ARRAY family — REAL reductions (policy 2026-08-31: content must
+  // survive; the former placeholders DISCARDED every body). First principles
+  // from nicematrix.sty: `\begin{<x>NiceArray}{colspec}[opts]` is an
+  // array-with-delimiters — nicematrix builds every one of them on
+  // `{NiceArrayWithDelims}{l}{r}{colspec}` (nicematrix.sty v6:
+  // `\NewDocumentEnvironment{pNiceArray}… {NiceArrayWithDelims}{(}{)}`),
+  // which is itself a math `{array}` wrapped in `\left l … \right r`.
+  // Reduce exactly that way, through the SAME `\CodeBefore … \Body`
+  // pre-layer grabber and post-paint hook as the matrix family, so cell
+  // colors work identically.
+  DefMacro!("\\lx@nice@array@begin{}", sub[(starter)] {
+    if nice_code_before_follows()? {
+      Tokens!(T_CS!("\\lx@nice@grabcode@arr"), T_BEGIN!(), starter, T_END!())
+    } else {
+      starter
+    }
+  });
+  RawTeX!(concat!(
+    r"\long\def\lx@nice@grabcode@arr#1#2\Body{",
+    r"\begingroup",
+    r"\let\rectanglecolor\lx@nice@rectanglecolor",
+    r"\let\cellcolor\lx@nice@cellcolor",
+    r"\let\rowcolor\lx@nice@rowcolor",
+    r"\let\columncolor\lx@nice@columncolor",
+    r"\let\arraycolor\lx@nice@arraycolor",
+    r"\let\chessboardcolors\lx@nice@chessboardcolors",
+    r"\let\rowlistcolors\lx@nice@rowlistcolors",
+    r"\let\EmptyColumn\lx@nice@emptycolumn",
+    r"\let\EmptyRow\lx@nice@emptyrow",
+    r"\let\roundedrectanglecolor\lx@nice@roundedrectanglecolor",
+    r"\let\rowcolors\lx@nice@rowcolors",
+    r"\let\ShowCellNames\lx@nice@showcellnames",
+    r"\let\TikzEveryCell\lx@nice@tikzeverycell",
+    r"\let\SubMatrix\lx@nice@submatrix",
+    r"\lx@nice@codebefore{#2}",
+    r"\endgroup",
+    r"#1}"
+  ));
+  // nicematrix.sty:1953 `NiceArrayWithDelims { m m O{} m !O{} t\CodeBefore }`
+  // and :3665-3672 `NiceArray` → `[opts1]{cols}[opts2]`: the preamble is
+  // flanked by TWO option lists (`\begin{NiceArray}[t]{lcccccc}[no-cell-nodes]`,
+  // nicematrix.tex:409). A signature without the leading one bound `[t]` as
+  // the preamble ("Unrecognized tabular template [", 57 extra `&` + the
+  // `Until:\Body` EOF fatal that aborted the rest of the manual).
+  DefMacro!("\\NiceArray[]{} OptionalBalancedNoSkip", "\\NiceArrayWithDelims.{.}[#1]{#2}[#3]", locked => true);
+  DefMacro!("\\endNiceArray", "\\endNiceArrayWithDelims", locked => true);
+  // Closure form: `[first-col]`/`[last-col]` add LABEL cells to every source
+  // row, so the colspec must grow a `c` on that side or each row overflows
+  // the template ("Extra alignment tab"). first-row needs no preamble change
+  // (row count is unconstrained). nicematrix.sty does the analogue in its
+  // preamble parser.
+  DefMacro!("\\NiceArrayWithDelims{}{}[]{} OptionalBalancedNoSkip", sub[(l, r, opts1, pream, opts2)] {
+    let opts_toks = nice_merge_opts(opts1.map(|o| Tokens!(o.revert())), opts2.map(|o| Tokens!(o.revert())));
+    let opts_str = opts_toks.to_string();
+    let mut out: Vec<Token> = Vec::new();
+    out.push(T_CS!("\\def"));
+    out.push(T_CS!("\\lx@nice@awd@right"));
+    out.push(T_BEGIN!());
+    out.extend(r.revert());
+    out.push(T_END!());
+    out.push(T_CS!("\\lx@nice@setopts"));
+    out.push(T_BEGIN!());
+    out.extend(opts_toks.unlist());
+    out.push(T_END!());
+    out.push(T_CS!("\\lx@nice@array@begin"));
+    out.push(T_BEGIN!());
+    out.push(T_CS!("\\left"));
+    out.extend(l.revert());
+    out.push(T_CS!("\\array"));
+    out.push(T_BEGIN!());
+    if nice_opts_has(&opts_str, "first-col") {
+      out.push(T_LETTER!("c"));
+    }
+    out.extend(nice_strip_rule_opts(pream.revert()));
+    if nice_opts_has(&opts_str, "last-col") {
+      out.push(T_LETTER!("c"));
+    }
+    out.push(T_END!());
+    out.push(T_END!());
+    Tokens::new(out)
+  }, locked => true);
+  DefMacro!("\\endNiceArrayWithDelims",
+    "\\endarray\\expandafter\\right\\lx@nice@awd@right\\lx@nicematrix@materializenodes\\lx@nicematrix@applycolors", locked => true);
+  DefMacro!("\\pNiceArray[]{} OptionalBalancedNoSkip", "\\NiceArrayWithDelims({)}[#1]{#2}[#3]", locked => true);
+  DefMacro!("\\endpNiceArray", "\\endNiceArrayWithDelims", locked => true);
+  DefMacro!("\\bNiceArray[]{} OptionalBalancedNoSkip", "\\NiceArrayWithDelims[{]}[#1]{#2}[#3]", locked => true);
+  DefMacro!("\\endbNiceArray", "\\endNiceArrayWithDelims", locked => true);
+  DefMacro!("\\BNiceArray[]{} OptionalBalancedNoSkip", "\\NiceArrayWithDelims\\{{\\}}[#1]{#2}[#3]", locked => true);
+  DefMacro!("\\endBNiceArray", "\\endNiceArrayWithDelims", locked => true);
+  DefMacro!("\\vNiceArray[]{} OptionalBalancedNoSkip", "\\NiceArrayWithDelims|{|}[#1]{#2}[#3]", locked => true);
+  DefMacro!("\\endvNiceArray", "\\endNiceArrayWithDelims", locked => true);
+  DefMacro!("\\VNiceArray[]{} OptionalBalancedNoSkip", "\\NiceArrayWithDelims\\|{\\|}[#1]{#2}[#3]", locked => true);
+  DefMacro!("\\endVNiceArray", "\\endNiceArrayWithDelims", locked => true);
+
+  // AutoNiceMatrix family: automated matrix population with delimiter variants.
+  DefMacro!("\\AutoNiceMatrixWithDelims{}{} OptionalBalanced {} OptionalBalanced {} OptionalBalanced", sub[(l, r, opt1, dims, opt2, pat, opt3)] {
+    let opts12 = nice_merge_opts(opt1.map(|o| Tokens!(o.revert())), opt2.map(|o| Tokens!(o.revert())));
+    let opts_toks = nice_merge_opts(Some(opts12), opt3.map(|o| Tokens!(o.revert())));
+    let dims_str = dims.to_string();
+    let (n_rows, n_cols) = match dims_str.split_once('-') {
+      Some((r_str, c_str)) => {
+        let r = r_str.trim().parse::<usize>().unwrap_or(1).clamp(1, 100);
+        let c = c_str.trim().parse::<usize>().unwrap_or(1).clamp(1, 100);
+        (r, c)
+      },
+      None => (1, 1),
+    };
+    let mut out: Vec<Token> = Vec::new();
+    out.push(T_CS!("\\begin"));
+    out.push(T_BEGIN!());
+    out.extend(Tokenize!(TeXString::from("NiceArrayWithDelims")).unlist());
+    out.push(T_END!());
+
+    out.push(T_BEGIN!());
+    out.extend(l.revert());
+    out.push(T_END!());
+
+    out.push(T_BEGIN!());
+    out.extend(r.revert());
+    out.push(T_END!());
+
+    out.push(T_BEGIN!());
+    out.extend(Tokenize!(TeXString::assembled(format!("*{{{n_cols}}}{{c}}"))).unlist());
+    out.push(T_END!());
+
+    if !opts_toks.is_empty() {
+      out.push(T_OTHER!("["));
+      out.extend(opts_toks.unlist());
+      out.push(T_OTHER!("]"));
+    }
+
+    let pat_tokens = pat.revert();
+    for i in 1..=n_rows {
+      for j in 1..=n_cols {
+        out.extend(Tokenize!(TeXString::assembled(format!("\\setcounter{{iRow}}{{{i}}}\\setcounter{{jCol}}{{{j}}}"))).unlist());
+        out.extend(pat_tokens.clone());
+        if j < n_cols {
+          out.push(T_ALIGN!());
+        }
+      }
+      out.push(T_CS!("\\\\"));
+    }
+
+    out.push(T_CS!("\\end"));
+    out.push(T_BEGIN!());
+    out.extend(Tokenize!(TeXString::from("NiceArrayWithDelims")).unlist());
+    out.push(T_END!());
+
+    Tokens::new(out)
+  }, locked => true);
+
+  DefMacro!("\\AutoNiceMatrix OptionalBalanced {} OptionalBalanced {} OptionalBalanced",
+    "\\AutoNiceMatrixWithDelims{.}{.}[#1]{#2}[#3]{#4}[#5]", locked => true);
+  DefMacro!("\\pAutoNiceMatrix OptionalBalanced {} OptionalBalanced {} OptionalBalanced",
+    "\\AutoNiceMatrixWithDelims{(}{)}[#1]{#2}[#3]{#4}[#5]", locked => true);
+  DefMacro!("\\bAutoNiceMatrix OptionalBalanced {} OptionalBalanced {} OptionalBalanced",
+    "\\AutoNiceMatrixWithDelims{[}{]}[#1]{#2}[#3]{#4}[#5]", locked => true);
+  DefMacro!("\\vAutoNiceMatrix OptionalBalanced {} OptionalBalanced {} OptionalBalanced",
+    "\\AutoNiceMatrixWithDelims{|}{|}[#1]{#2}[#3]{#4}[#5]", locked => true);
+  DefMacro!("\\VAutoNiceMatrix OptionalBalanced {} OptionalBalanced {} OptionalBalanced",
+    "\\AutoNiceMatrixWithDelims{\\|}{\\|}[#1]{#2}[#3]{#4}[#5]", locked => true);
+  DefMacro!("\\BAutoNiceMatrix OptionalBalanced {} OptionalBalanced {} OptionalBalanced",
+    "\\AutoNiceMatrixWithDelims{\\{}{\\}}[#1]{#2}[#3]{#4}[#5]", locked => true);
+
+  // In-tabular decoration commands the manuals use pervasively.
+  // \Block[opts]{i-j}{content}: nicematrix paints `content` OVER an i×j cell
+  // rectangle whose other source cells are empty. The logical position of the
+  // content is the anchor cell, so emitting it in place preserves content and
+  // reading order; the visual spanning overlay is print styling (a
+  // \multicolumn/rowspan rewrite would break the row's cell count, since the
+  // covered cells are still present in the source). The starred form and
+  // math-mode `$`-wrapped bodies pass through unchanged.
+  // Under `ampersand-in-blocks` (nicematrix.sty:7310-7311, `\__nicematrix_Block_vii`
+  // :7592) a body holding `&`/`\\` is typeset as a SUB-GRID — a `tabular`
+  // in text, `$\begin{array}$` in math (:7398/:7406), split on `&` (:7906).
+  // Emitting the body bare re-exposed the inner `&` to the outer `\halign`
+  // ("Extra alignment tab '&'", nicematrix.tex:1152, nicematrix-french:1204).
+  // The sub-grid is built from the body's widest row; without a depth-0 `&`
+  // the body passes through as before. Guard:
+  // `perfect_kernel_batch54::nicematrix_block_ampersand_body_is_a_subgrid`.
+  // The `<…>` tokens go before the content in its box (nicematrix.sty:7258 `{ m m D < > { } +m }`, `#4` set before
+  // `#5`: `\Block{2-1}<\bfseries>{Tall}`); unread, they printed as text ("¡Tall¿"; OXIDIZED_DESIGN_DIVERGENCES #787;
+  // witnesses 2509.04931 `<\LARGE>`, 2411.17050 `<\Large>`, whose formulas parsed only once they were read). Guard
+  // `perfect_kernel_batch78a::nicematrix_block_angle_tokens_apply_to_the_content`.
+  DefMacro!("\\Block OptionalMatch:* []{} OptionalAngled {}", sub[args] {
+    let mut args = args.into_iter().skip(3);
+    let prefix: Option<Tokens> = args.next().unwrap().into();
+    let body: Tokens = args.next().unwrap().into();
+    let toks = body.unlist();
+    let mut depth = 0i32;
+    let mut cols = 1usize;
+    let mut max_cols = 1usize;
+    let newline = T_CS!("\\\\");
+    for t in &toks {
+      match t.get_catcode() {
+        Catcode::BEGIN => depth += 1,
+        Catcode::END => depth -= 1,
+        Catcode::ALIGN if depth == 0 => cols += 1,
+        _ if depth == 0 && *t == newline => {
+          max_cols = max_cols.max(cols);
+          cols = 1;
+        },
+        _ => {},
+      }
+    }
+    max_cols = max_cols.max(cols);
+    let content = if max_cols == 1 {
+      toks
+    } else {
+      let (env_begin, env_end) = if lookup_bool_sym(pin!("IN_MATH")) {
+        (s!("\\begin{{array}}{{*{{{max_cols}}}{{c}}}}"), "\\end{array}".to_string())
+      } else {
+        (s!("\\begin{{tabular}}{{*{{{max_cols}}}{{c}}}}"), "\\end{tabular}".to_string())
+      };
+      let mut out: Vec<Token> = Tokenize!(TeXString::assembled(env_begin)).unlist();
+      out.extend(toks);
+      out.extend(Tokenize!(TeXString::assembled(env_end)).unlist());
+      out
+    };
+    match prefix.filter(|p| !p.is_empty()) {
+      Some(prefix) => {
+        let mut out = vec![T_BEGIN!()];
+        out.extend(prefix.unlist());
+        out.extend(content);
+        out.push(T_END!());
+        Ok(Tokens::new(out))
+      },
+      None => Ok(Tokens::new(content)),
+    }
+  }, locked => true);
+  // \Hline[opts]: nicematrix's own \hline that survives its internal
+  // machinery; opts (color=, thickness=) are rule styling. Reduce to \hline.
+  DefMacro!("\\Hline []", "\\hline", locked => true);
+  // \rotate: rotates the CELL CONTENT 90° in print — pure presentation, the
+  // content itself follows. Justified noop.
+  def_macro_noop("\\rotate")?;
+
+  // Continuous-dots commands (nicematrix's \\Cdots family draws dotted lines
+  // ACROSS cells). Semantically these are the amsmath ellipses in the anchor
+  // cell; the cross-cell line extension is drawing-layer presentation.
+  // Optional [line-style] args are styling.
+  DefMacro!("\\Cdots []", "\\cdots", locked => true);
+  DefMacro!("\\Ldots []", "\\ldots", locked => true);
+  DefMacro!("\\Vdots []", "\\vdots", locked => true);
+  DefMacro!("\\Ddots []", "\\ddots", locked => true);
+  // `\Iddots` is the inverse diagonal, nicematrix's own (nicematrix.sty:1632), not whatever `\iddots` is.
+  DefMacro!("\\Iddots []", "\\lx@nicematrix@Iddots", locked => true);
+  DefMacro!("\\Hdotsfor{}", "\\hdotsfor{#1}", locked => true);
+  DefMacro!("\\Vdotsfor OptionalBalanced {}", "\\vdots", locked => true);
+  DefMacro!("\\Hspace OptionalMatch:* {}", "\\hspace#1{#2}", locked => true);
+  DefMacro!("\\Hbrace OptionalBalanced {}{}", "#3", locked => true);
+  DefMacro!("\\Vbrace OptionalBalanced {}{}", "#3", locked => true);
+  // `\tabularnote[label]{text}` (nicematrix.sty:577, `{ o m }`): the label is the note's mark in place of its number
+  // (:627), as `\footnote[mark]`'s. The parameter strips the brackets, so the label is passed back inside them: as
+  // `\footnote#1` a `[x]` label became the note's text and the text fell into the cell, and a `[$\star$]` one opened
+  // math in the note's argument that closed nowhere, losing every section after the table (2602.00629).
+  DefMacro!("\\tabularnote OptionalBalanced {}", sub[(label, text)] {
+    let mut tokens = vec![T_CS!("\\footnote")];
+    if let Some(label) = label {
+      tokens.push(T_OTHER!("["));
+      tokens.extend(label.revert());
+      tokens.push(T_OTHER!("]"));
+    }
+    tokens.push(T_BEGIN!());
+    tokens.extend(text.revert());
+    tokens.push(T_END!());
+    Ok(Tokens::new(tokens))
+  }, locked => true);
+  NewCounter!("iRow");
+  NewCounter!("jCol");
+  NewCounter!("tabularnote");
+
+  // {NiceMatrixBlock}[opts]: a grouping wrapper that equalizes column widths
+  // across the matrices INSIDE it — layout-only; the content flows through.
+  DefMacro!("\\NiceMatrixBlock []", "", locked => true);
+  DefMacro!("\\endNiceMatrixBlock", "", locked => true);
+  // \CodeAfter: everything from here to the environment's \end is an
+  // overlay-drawing layer (\line, \SubMatrix, \tikz over the built grid) —
+  // drawing-only, no document content; grab and drop, keeping the \end so
+  // the environment closes normally.
+  // (Plain `Until` — unexpanded scan. `XUntil` EXPANDS while scanning, which
+  // would EXECUTE the overlay's \begin{tikzpicture}/\SubMatrix mid-grab.)
+  // The grab is ENVIRONMENT-BALANCED: a `\begin{tikzpicture}…\end{tikzpicture}`
+  // (or `{scope}`) inside `\CodeAfter` has its own `\end`, and a plain
+  // `Until:\end` stopped there, re-emitting `\end{tikzpicture}` into a context
+  // with no open picture (23 "`\endgroup` Attempt to close non-boxing group"
+  // + leaked `\node[fit=(A)]` pgf errors, nicematrix-french). Guard:
+  // `perfect_kernel_batch54::nicematrix_codeafter_grab_is_environment_balanced`.
+  DefMacro!("\\CodeAfter", sub[_args] {
+    let begin_cs = T_CS!("\\begin");
+    let end_cs = T_CS!("\\end");
+    let mut depth = 0usize;
+    while let Some(t) = read_token()? {
+      if t == begin_cs {
+        depth += 1;
+      } else if t == end_cs {
+        if depth == 0 {
+          unread_one(t);
+          break;
+        }
+        depth -= 1;
+      }
+    }
+    Ok(Tokens!())
+  });
+  // Decoration/rule commands usable in cells and preambles: dotted/double
+  // rules are rule styling (reduce to \hline / nothing); \RowStyle sets
+  // per-row styling keys.
+  DefMacro!("\\hdottedline", "\\hline", locked => true);
+  DefMacro!("\\cdottedline{}", "\\hline", locked => true);
+  def_macro_noop("\\DoubleRule")?;
+  def_macro_noop("\\RowStyle[]{}")?;
+  def_macro_noop("\\rowlistcolors[]{}{}")?;
+  // `\NotEmpty` (nicematrix.sty:1644 `\cs_set_eq:NN \NotEmpty
+  // \__nicematrix_NotEmpty:`, :3745) only flags the cell non-empty so
+  // `hvlines` draws its rules — no content. Witness cahierprof.sty:619
+  // `\replicate{\NbColonnes}{&\NotEmpty}`.
+  def_macro_noop("\\NotEmpty")?;
+  // Public CodeBefore hook (nicematrix.sty:394 `\tl_new:N
+  // \g_nicematrix_code_before_tl`) that user packages append tikz drawing
+  // to (cahierprof.sty:519/531 `\tl_gput_right:Nx`). The binding drops the
+  // CodeBefore drawing layer, so the accumulated content is never painted,
+  // but the variable must exist for the append to succeed. Guard:
+  // `perfect_kernel_batch54::nicematrix_notempty_and_code_before_hook`.
+  RawTeX!(r"\ExplSyntaxOn \tl_new:N \g_nicematrix_code_before_tl \ExplSyntaxOff");
+  // \diagbox{lower}{upper} (diagbox-style split cell): both texts are
+  // content — keep them, separator as a slash.
+  DefMacro!("\\diagbox{}{}", "#1/#2", locked => true);
+
   // Configuration entry-points — `\NiceMatrixOptions{...}` /
   // `\NewCollectionOfColumnsType{...}` etc. set internal styling keys that are
   // visually irrelevant to our rendering. No-op stubs prevent Error:undefined for

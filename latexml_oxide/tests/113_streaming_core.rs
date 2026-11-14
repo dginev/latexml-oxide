@@ -91,6 +91,28 @@ fn streaming_math_dense_is_byte_identical_to_eager() {
   );
 }
 
+/// The math parser's `d`-token evidence is the whole document's in both modes: the lone `\rho_t\,dt` of the first
+/// section reads as a differential from the integral of the last, though pass 2 parses its segment before the spine
+/// that holds the evidence (`Document::spill_observer`, `latexml_math_parser::read_differential_evidence`).
+#[test]
+fn streaming_differential_evidence_is_the_whole_documents() {
+  let source = "tests/streaming/differential_evidence_follows.tex";
+  let (eager_xml, ..) = convert(source, None);
+  let (streamed_xml, yields, spills) = convert(source, Some(3));
+  assert!(
+    yields > 0 && spills > 0,
+    "streaming must actually yield and spill"
+  );
+  assert!(
+    eager_xml.contains(r#"text="rho _ t * differential-d@(t)""#),
+    "the lone dt reads the document's evidence:\n{eager_xml}"
+  );
+  assert_eq!(
+    eager_xml, streamed_xml,
+    "streamed output must be byte-identical to eager"
+  );
+}
+
 #[test]
 fn streaming_is_byte_identical_to_eager() {
   let source = "tests/streaming/streaming_gate.tex";

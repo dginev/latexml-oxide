@@ -1,0 +1,16 @@
+% witness: 72b review r2 finding 8 (SYNC_STATUS "combine's book/report/memoir option is ignored"); 2310.14794 is an
+%          article combine
+% oracle:  pdflatex "Chapter 1 / Start" then "1.1 Part" (combine.cls:85, :105-111 `\LoadClass{\c@lclass}`), and 1 error,
+%          "Extra \endgroup" from combine.cls's `\document` under TL 2025 (any option: `\documentclass{combine}` alike;
+%          the 2010 class against the current kernel, a harness limit)
+% engines: rust 529dc1b543 = article loaded whatever the option: `\chapter` undefined, read by the chapterless stand-in;
+%          perl not compared (no combine binding)
+% expect:  0 errors, 0 warnings; a `<chapter>` "Start" holding the `<section>` "Part" numbered 1.1
+% status:  RED (529dc1b543) -> GREEN (77v)
+% preload: ar5iv.sty
+\documentclass[book]{combine}
+\begin{document}
+\chapter{Start}
+\section{Part}
+Text.
+\end{document}

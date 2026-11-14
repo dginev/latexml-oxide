@@ -1,0 +1,15 @@
+% mechanism: an author call whose `\and` comes from a document wrapper (`\pair{Ann Able}{Bob Baker}`, `\pair` printing
+%   `#1 \and #2`): OmniBus's spelling split sees no `\and`; the reading cuts the rehearsed block at its `Sep(And)`
+% witness: OC1's spelling probe of bindsplit om1 (a class wrapper's shape)
+% oracle:  pdflatex (TL 2025, -no-shell-escape, `article` for the missing class) 0 errors: "Ann Able" and "Bob Baker"
+% engines: Perl 0.8.8 one creator (the spelling split); int156a (MB1): two creators
+% expect:  0 errors, 1 warning (the missing class binding); creators Ann Able, Bob Baker
+% status:  GREEN (int156a, before OC1; guard perfect_kernel_batchoc1)
+\documentclass{nosuchclass}
+\newcommand\pair[2]{#1 \and #2}
+\title{T}
+\author{\pair{Ann Able}{Bob Baker}}
+\begin{document}
+\maketitle
+Text.
+\end{document}

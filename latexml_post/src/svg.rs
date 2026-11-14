@@ -11,7 +11,7 @@
 
 use std::f64::consts::PI;
 
-use libxml::tree::Node;
+use libxml::tree::{Node, NodeType};
 use rustc_hash::FxHashMap as HashMap;
 
 use crate::{
@@ -46,7 +46,7 @@ impl SVG {
       .unwrap_or(0.0);
 
     // Build a group with the y-flip transform
-    let children: Vec<NodeData> = element_children_iter(node)
+    let children: Vec<NodeData> = drawn_children(doc, node)
       .filter_map(|child| self.convert_node(doc, &child))
       .collect();
 
@@ -62,7 +62,16 @@ impl SVG {
     let height = node.get_attribute("height").map(|s| to_px(&s));
     let clip = node.get_attribute("clip").as_deref() == Some("true");
 
-    let mut svg_attrs = HashMap::default();
+    // `SVG.pm::ProcessSVG` L96-97: the picture's own attributes that are
+    // valid on `svg:svg` move onto it (`copy_valid_attributes`, model-checked
+    // in Perl — LaTeXML loads the full svg-structure schema, so `fill`/
+    // `stroke` qualify; the allowlist here is `copy_valid_attrs`): the
+    // `fill="none" stroke="none"` of the picture state, `class`, `style`.
+    // The picture's `xml:id` is NOT carried over — Perl drops it with the
+    // replaced node, and so does this.
+    let mut svg_attrs = self.copy_valid_attrs(node);
+    svg_attrs.remove("width");
+    svg_attrs.remove("height");
     svg_attrs.insert("version".to_string(), "1.1".to_string());
     if let Some(w) = width {
       svg_attrs.insert("width".to_string(), format!("{:.2}", w));
@@ -107,19 +116,39 @@ impl SVG {
     }
   }
 
+  /// A picture nested in a picture (`\put(x,y){\begin{picture}…}`). TeX sets the inner box with its
+  /// lower-left corner at the `\put` point, so its content is already in the enclosing picture's y-up
+  /// space: a picture of LaTeXML primitives is a plain group. A picture that is rendered SVG already
+  /// (a tikzpicture's `svg:svg`, y-down) is flipped back once and kept as SVG. Perl's `convertPicture`
+  /// (SVG.pm:191-197) flips every nested picture, mirroring it about its mid-height, and wraps a
+  /// rendered `svg:svg` in a flipped `foreignObject` (`convertNode`'s else branch), mirroring it again:
+  /// uantwerpenexam's title-page tikz overlay came out upside-down (OXIDIZED_DESIGN_DIVERGENCES #414).
   fn convert_picture(&self, doc: &PostDocument, node: &Node) -> Option<NodeData> {
+    let children: Vec<Node> = drawn_children(doc, node).collect();
+    let rendered = !children.is_empty()
+      && children.iter().all(|child| {
+        child
+          .get_namespace()
+          .is_some_and(|ns| ns.get_href() == SVG_URI)
+      });
+    if !rendered {
+      return Some(NodeData::Element {
+        tag:        "svg:g".to_string(),
+        attributes: None,
+        children:   self.convert_children(doc, node),
+      });
+    }
     let h = node
       .get_attribute("height")
       .map(|s| to_px(&s))
       .unwrap_or(0.0);
-    let children = self.convert_children(doc, node);
     Some(NodeData::Element {
-      tag: "svg:g".to_string(),
+      tag:        "svg:g".to_string(),
       attributes: Some(HashMap::from_iter([(
         "transform".to_string(),
         format!("translate(0,{:.2}) scale(1,-1)", h),
       )])),
-      children,
+      children:   children.into_iter().map(NodeData::XmlNode).collect(),
     })
   }
 
@@ -296,9 +325,19 @@ impl SVG {
       x1, y1, r, r, large_arc, x2, y2
     );
 
+    // The arc's own presentation (`stroke`, `stroke-width`, a dash, a
+    // `transform`) carries over, as `SVG.pm::convertArc` copies it
+    // (`copy_valid_attributes($newArc, $node)`, L385-387): without it the arc
+    // inherits the picture's `stroke="none"` and is invisible (`\psarc`,
+    // axodraw's `\CArc`). Its geometry (`x`, `y`, `r`) is not valid on a path.
+    let mut attrs = self.copy_valid_attrs(node);
+    for geometry in ["x", "y", "r"] {
+      attrs.remove(geometry);
+    }
+    attrs.insert("d".to_string(), d);
     Some(NodeData::Element {
       tag:        "svg:path".to_string(),
-      attributes: Some(HashMap::from_iter([("d".to_string(), d)])),
+      attributes: Some(attrs),
       children:   vec![],
     })
   }
@@ -368,10 +407,21 @@ impl SVG {
     })
   }
 
-  fn convert_text(&self, _doc: &PostDocument, node: &Node) -> Option<NodeData> {
+  fn convert_text(&self, doc: &PostDocument, node: &Node) -> Option<NodeData> {
     let x = node.get_attribute("x").unwrap_or_else(|| "0".to_string());
     let y = node.get_attribute("y").unwrap_or_else(|| "0".to_string());
-    let text = node.get_content();
+    // Mixed content, as `SVG.pm::convertText` (L256-261): a text child is
+    // appended as text, an element child (a nested `<text>`, a `<Math>` or
+    // `<graphics>` label) recurses through `convert_node`. `get_content`
+    // would flatten the subtree to its characters and drop the elements.
+    let children: Vec<NodeData> =
+      std::iter::successors(node.get_first_child(), |c| c.get_next_sibling())
+        .filter_map(|child| match child.get_type() {
+          Some(NodeType::TextNode) => Some(NodeData::Text(child.get_content())),
+          Some(NodeType::ElementNode) => self.convert_node(doc, &child),
+          _ => None,
+        })
+        .collect();
 
     let mut attrs = HashMap::default();
     attrs.insert("x".to_string(), x);
@@ -394,29 +444,52 @@ impl SVG {
         attrs.insert("font-variant".to_string(), "small-caps".to_string());
       }
     }
-    if let Some(fill) = node.get_attribute("fill") {
-      attrs.insert("fill".to_string(), fill);
-    }
+    // Black unless the text says otherwise: Perl's font stack starts `{ fill => 'black' }` (SVG.pm:82, applied
+    // by `convertText` L251-254 to an attribute the text does not set). The picture's own `fill="none"` (its
+    // shapes are unfilled, latex_constructs.pool.ltxml:4960) is on the `svg:svg` and is inherited: without
+    // this every picture label (`\put(…){text}`) was invisible in the HTML.
+    attrs.insert(
+      "fill".to_string(),
+      node
+        .get_attribute("fill")
+        .unwrap_or_else(|| "black".to_string()),
+    );
 
     Some(NodeData::Element {
-      tag:        "svg:text".to_string(),
+      tag: "svg:text".to_string(),
       attributes: Some(attrs),
-      children:   vec![NodeData::Text(text)],
+      children,
     })
   }
 
   /// Wrap foreign (non-picture) elements in svg:foreignObject.
+  ///
+  /// Port of `SVG.pm::convertNode`'s else-branch (L148-183): the size comes
+  /// from the node's own `width`/`height`/`depth` (or `imagewidth`/
+  /// `imageheight` for an image), else from the CONTAINING `ltx:g`'s
+  /// `innerwidth`/`innerheight`/`innerdepth`, else its `width`/`height`/
+  /// `depth` — a `\makebox(0,0){$x$}` label's `<Math>` carries no size of its
+  /// own, the `<g>` that `\put` built around it does. `1pt` (non-zero,
+  /// required) when nothing is recorded.
   fn convert_foreign(&self, _doc: &PostDocument, node: &Node) -> Option<NodeData> {
+    let parent = node.get_parent();
+    let parent_attr = |name: &str| parent.as_ref().and_then(|p| p.get_attribute(name));
     let width = node
       .get_attribute("width")
       .or_else(|| node.get_attribute("imagewidth"))
+      .or_else(|| parent_attr("innerwidth"))
+      .or_else(|| parent_attr("width"))
       .unwrap_or_else(|| "1pt".to_string());
     let height = node
       .get_attribute("height")
       .or_else(|| node.get_attribute("imageheight"))
+      .or_else(|| parent_attr("innerheight"))
+      .or_else(|| parent_attr("height"))
       .unwrap_or_else(|| "1pt".to_string());
     let depth = node
       .get_attribute("depth")
+      .or_else(|| parent_attr("innerdepth"))
+      .or_else(|| parent_attr("depth"))
       .unwrap_or_else(|| "0pt".to_string());
 
     let h_px = to_px(&height);
@@ -445,7 +518,7 @@ impl SVG {
 
   /// Convert all element children of a node.
   fn convert_children(&self, doc: &PostDocument, node: &Node) -> Vec<NodeData> {
-    element_children_iter(node)
+    drawn_children(doc, node)
       .filter_map(|child| self.convert_node(doc, &child))
       .collect()
   }
@@ -475,18 +548,54 @@ impl Processor for SVG {
   fn get_name(&self) -> &str { &self.name }
 
   fn to_process(&self, doc: &PostDocument) -> Vec<Node> {
-    doc.findnodes("//ltx:picture[child::*[not(local-name()='svg')]]")
+    doc.findnodes("//ltx:picture[child::*[not(local-name()='svg') and not(self::ltx:tags)]]")
   }
 
   fn process(&mut self, mut doc: PostDocument, nodes: Vec<Node>) -> ProcessResult {
     if !nodes.is_empty() {
       doc.add_namespace("svg", SVG_URI);
     }
-    for node in &nodes {
-      if let Some(svg) = self.process_svg(&doc, node) {
-        let node_mut = node.clone();
-        doc.replace_node(&node_mut, &[svg]);
+    // Every `ltx:picture` gets converted, as Perl's SVG.pm does: its
+    // `convertNode` MOVES a foreign subtree into the `svg:foreignObject`
+    // (SVG.pm:155-182), so a picture NESTED in that subtree — the
+    // `\makebox(w,h)` inside a `\scalebox`ed box re-opens one — keeps its
+    // identity and is converted by the next iteration in place. Here
+    // `convert_foreign` deep-CLONES the subtree (document.rs `append_clone`)
+    // and `replace_node` detaches the original, so the pre-collected inner
+    // picture was processed detached and its live clone stayed a raw
+    // `ltx:picture` — rendered `as-TeX` into an empty span, its text lost
+    // (`\scalebox{4.5}{\makebox{\parbox{2cm}{…}}}` in a picture; simplecd's
+    // jewel-case labels, sim-os-menus' terminal text). So: convert, then
+    // look for pictures again until none is left — each pass turns at least
+    // one raw picture into `svg:svg`, and nesting is finite.
+    let mut pending = nodes;
+    let mut passes = 0usize;
+    while !pending.is_empty() {
+      for node in &pending {
+        if node.get_parent().is_none() {
+          continue; // detached by an earlier replacement; its clone is live
+        }
+        if let Some(svg) = self.process_svg(&doc, node) {
+          let mut node_mut = node.clone();
+          if node.has_attribute("labels") {
+            // A labelled picture — the box a raw `\refstepcounter` numbered, carrying the step's label and number
+            // (`Document::float_to_label_for`, OXIDIZED_DESIGN_DIVERGENCES #813) — is a reference's target: it stays,
+            // with its id, `labels` and `ltx:tags`, around its drawing made SVG, as a pgf picture's is (rendered
+            // `as-svg`, the id on the `svg`). Witnesses: 2506.01072 (`\newtcbtheorem`), 2505.20088
+            // (`\newtcolorbox[auto counter]`), 2402.06608 (`[blend into=figures]`).
+            let drawn: Vec<Node> = drawn_children(&doc, node).collect();
+            doc.remove_nodes(&drawn);
+            doc.add_nodes(&mut node_mut, &[svg]);
+          } else {
+            doc.replace_node(&node_mut, &[svg]);
+          }
+        }
       }
+      passes += 1;
+      if passes > 64 {
+        break; // a picture that never converts must not loop forever
+      }
+      pending = self.to_process(&doc);
     }
     Ok(vec![doc])
   }
@@ -494,6 +603,12 @@ impl Processor for SVG {
 
 // ======================================================================
 // Utility functions
+
+/// A picture's element children but its `ltx:tags` (the number a labelled picture carries, OXIDIZED_DESIGN_DIVERGENCES
+/// #813): what it draws.
+fn drawn_children<'a>(doc: &'a PostDocument, node: &Node) -> impl Iterator<Item = Node> + 'a {
+  element_children_iter(node).filter(|child| doc.get_qname(child).as_deref() != Some("ltx:tags"))
+}
 
 /// Convert a TeX dimension string to SVG pixels.
 ///

@@ -1,0 +1,23 @@
+% A `\thanks` in the `\author` of a second `\maketitle`, under a class whose own `\maketitle` leaves
+% the setters live (KOMA >= 3.12 keeps `\thanks` too, scrbook.cls:3264-3265), is the author's note.
+% Was: `\thanks` disabled by the first `\maketitle` (`\relax`) matched the disabled `\and` delimiter by
+% meaning, and "Funded by X" was read as a second author.
+% witness: none (review of 59e, probe k3).
+% status:  GREEN (59e)
+% oracle:  pdflatex 0 errors (this class's `\maketitle` typesets nothing); semantic target: Alice
+%          with the note "Funded by X.".
+% expect:  0 errors, 0 warnings; one creator holding the note.
+\begin{filecontents*}[overwrite]{lxmaketitle.cls}
+\NeedsTeXFormat{LaTeX2e}
+\ProvidesClass{lxmaketitle}
+\LoadClass{article}
+% (a class's own `\maketitle`, as KOMA's: the binding's stays, and leaves the setters live)
+\renewcommand\maketitle{\par}
+\end{filecontents*}
+\documentclass{lxmaketitle}
+\begin{document}
+\title{T0}\author{Max M}\maketitle
+Text.
+\title{T}\author{Alice A\thanks{Funded by X.}}\maketitle
+Body.
+\end{document}

@@ -1,0 +1,13 @@
+% witness: 0712.2739 (its jfm.cls:953-958 `\@makecaption`); the old subfigure package does not load caption
+% oracle:  pdflatex 0 errors; "(a) Left." at the sub-caption size, "Figure 1. Schematic." and "Table 1 Values." with
+%          the labels in small caps (CMCSC10)
+% engines: rust 78a r1 = the same (control: the class's format stays where caption is not loaded)
+% expect:  0 errors, 0 warnings; <tag close=". "> with the label in small caps; after `\removefullpoint` close=" "
+% status:  GREEN (78a r2)
+% preload: ar5iv.sty
+\documentclass{jfm}
+\usepackage{subfigure}
+\begin{document}
+\begin{figure}\subfigure[Left.]{x}\caption{Schematic.}\end{figure}
+\begin{table}\removefullpoint\caption{Values.}\end{table}
+\end{document}

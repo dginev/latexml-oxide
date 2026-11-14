@@ -1,0 +1,13 @@
+% witness: the 77y review (finding 5, probe n1)
+% oracle:  pdflatex 0 errors: Wei Zhang, Weiwen Zhang over Univ A over zhangweiwei@x.edu
+% engines: rust 77y r1 = 0 errors; the address on Weiwen Zhang (a shared prefix of ten letters, not a truncation of
+%          "zhangweiwen"); int38b on Wei Zhang
+% expect:  0 errors, 0 warnings; the address on Wei Zhang, whose "zhangwei" it opens with
+% status:  RED (77y r1) -> GREEN (77y r2)
+\documentclass{article}
+\title{T}
+\author{Wei Zhang, Weiwen Zhang \\ Univ A \\ \texttt{zhangweiwei@x.edu}}
+\begin{document}
+\maketitle
+Text.
+\end{document}

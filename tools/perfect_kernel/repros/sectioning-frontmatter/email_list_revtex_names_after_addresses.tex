@@ -1,0 +1,28 @@
+% REVTeX's `\email[Corresponding author]{: zx81@x.org (Ann Able); qq7@y.org (Bob Baker)}` on Bob Baker's call: each
+%   address goes to the author whose name is printed beside it — the strongest evidence, above spelling (neither
+%   address spells anyone) —, the name no part of the e-mail's text; the call's label is each owner's correspondence
+%   note (`distribute_address_lists`, OD #972; census138 ADDR-b).
+% witness: 2009.14655 (`\email[Corresponding author]{: xiazh@zju.edu.cn (Zhenhua Xia); lianghongstefanie@hdu.edu.cn
+%   (Hong Liang)}`)
+% oracle:  pdflatex 0 errors: "Ann Able,1 Bob Baker,1, ∗ and Cat Cole2" (the footnote an endnote after a BibTeX run)
+% engines: rust int139a3 = one e-mail ": zx81@x.org (Ann Able); qq7@y.org (Bob Baker)" on Bob Baker
+% expect:  0 errors, 0 warnings; Ann Able: Univ X, the "Corresponding author" note, zx81@x.org; Bob Baker: the note,
+%   qq7@y.org, Univ X; Cat Cole: Univ Y
+% status:  RED (int139a3) -> GREEN (107f)
+% preload: ar5iv.sty
+\documentclass[aps,prl,superscriptaddress]{revtex4-2}
+\begin{document}
+\title{T}
+\author{Ann Able}
+\affiliation{Univ X, Town}
+\author{Bob Baker}
+\email[Corresponding author]{: zx81@x.org (Ann Able); qq7@y.org (Bob Baker)}
+\affiliation{Univ X, Town}
+\author{Cat Cole}
+\affiliation{Univ Y, City}
+\begin{abstract}
+A.
+\end{abstract}
+\maketitle
+Text.
+\end{document}

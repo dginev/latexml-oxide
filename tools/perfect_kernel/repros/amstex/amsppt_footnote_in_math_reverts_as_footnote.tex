@@ -1,0 +1,14 @@
+% A footnote inside amsppt math reverts in the formula's `tex=` as the author wrote it, `\footnote{…}`; since the
+% binding's `\footnote` became a short macro over `\lx@amsppt@footnote` (77v), the internal name leaked into `tex=`.
+% witness: review of batch 77v (probe rev77v/ap2.tex)
+% oracle:  pdftex (\input amstex, \documentstyle{amsppt}) this file: 0 errors, the mark "1" after "a = b" (a footnote
+%          in math needs amstex `\text`, pdftex errs on a bare one; the texts, inserts in a math box, are not printed)
+% engines: rust (77v-rel) `\lx@amsppt@footnote{In display.}`, `\lx@amsppt@footnotetext{Its text.}` in `tex=`
+% expect:  `\footnote{In display.}`, `\footnotetext{Its text.}` in `tex=`; 0 errors
+% status:  RED -> GREEN (77v r2; guard perfect_kernel_batch77v::amsppt_footnote_in_math_reverts_as_footnote)
+\input amstex
+\documentstyle{amsppt}
+\document
+$$ a = b \text{\footnote{In display.}} $$
+$$ c = d \text{\footnotetext{Its text.}} $$
+\enddocument

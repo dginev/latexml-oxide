@@ -1,0 +1,18 @@
+% mechanism: (RED, deferred: pathological) an unmarked `\affiliation` after a cut list, whose marks are those of a template
+%   e-mail line (`$\{$name.surname$\}$ @ $^1$polytechnique.edu, $^2$inria.fr`), is no author's: right is the block
+% witness: 2009.04283 (acmart; review rev99a B1/N1)
+% oracle:  pdflatex (TL 2025) 0 errors: "Ann Able1, Bob Baker2 / 1Univ A, 2Univ B / X / {name.surname} @ 1x.edu, 2y.fr / X"
+% engines: rust int126b: the template line the last author's; 99a: every author's (`annotate=new` walks while the cut
+%   entries wait for their labels — R1 at call time, Stage 1's `resolver/api.rs`)
+% expect:  0 errors, 0 warnings; Ann "1Univ A", Bob "2Univ B", the template line once on the block
+% status:  RED (int126b, 99a) — deferred (SYNC row 99a); no guard
+% preload: ar5iv.sty
+\documentclass[sigconf]{acmart}
+\begin{document}
+\title{T}
+\author{Ann Able$^1$, Bob Baker$^2$}
+\affiliation{\institution{$^1$Univ A, $^2$Univ B}\country{X}}
+\affiliation{\institution{$\{$name.surname$\}$ @ $^1$x.edu, $^2$y.fr}\country{X}}
+\maketitle
+Text.
+\end{document}

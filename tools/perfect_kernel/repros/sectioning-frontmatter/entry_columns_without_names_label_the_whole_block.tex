@@ -1,0 +1,20 @@
+% mechanism: `\and` columns holding marked entries and no names (`$^{1}$Univ A \and $^{2}$Univ B \and $^{1}${\tt …}`) are
+%   no author's column: the per-column label rule (a label several columns hold labels each column's own names) applies
+%   where the entry's column holds names of its own; else the label is the whole block's, as the switch off reads the
+%   `\and` columns as lines (`affil_splits`) and matches by label across the block — with `=2` both
+%   affiliations and an e-mail went to a nameless creator
+% witness: 2404.00915 (CVPR `\author{Tianyu Huang$^{1}$ \and Liangzu Peng$^{2}$ \and … \and $^{1}$The Chinese University
+%   of Hong Kong \and $^{2}$University of Pennsylvania \and $^{1}${\tt\small tyhuang, yhliu@…} \and $^{2}${\tt\small
+%   lpenn, vidalr@…}}`)
+% oracle:  pdflatex 0 errors: "Ann Able1", "Bob Baker2", "1Univ A", "2Univ B", "1ann@a.edu", "2bob@b.edu" side by side
+% engines: off = Ann: Univ A, ann@a.edu; Bob: Univ B, bob@b.edu; `=2` (int149a) = Univ A, Univ B a nameless creator's
+% expect:  0 errors 0 warnings; `=2` as off
+% status:  RED (int149a `=2`) -> GREEN (KEY COLUMN)
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{Ann Able$^{1}$ \and Bob Baker$^{2}$ \and $^{1}$Univ A \and $^{2}$Univ B \and $^{1}${\tt ann@a.edu} \and
+$^{2}${\tt bob@b.edu}}
+\maketitle
+Text.
+\end{document}

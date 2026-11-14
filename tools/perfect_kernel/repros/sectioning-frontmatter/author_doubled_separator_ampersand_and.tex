@@ -1,0 +1,16 @@
+% mechanism: a doubled separator, `Barrientos, \& and Omar`: the name count read "&" as a part that is no name (so the
+%   cautious per-author split kept the list whole), and the split left "and" on the last name. A separator alone is
+%   no part (`name_parts`), and an "and" opening a piece after a separator is the separator too.
+% witness: astro-ph9612009 (OmniBus's inst_support `\author` had split it)
+% oracle:  pdflatex with astro-ph9701025's aaspp4.sty: 0 errors; "David Schade, L. Felipe Barrientos, & and Omar
+%   López-Cruz" over the affiliation
+% engines: rust 64zd-base: one creator holding the list; perl: the same
+% expect:  0 errors; three creators, each with the affiliation
+% status:  RED (base) -> GREEN (64zd)
+% preload: ar5iv.sty
+\documentstyle[aaspp4]{article}
+\begin{document}
+\author{David Schade, L. Felipe Barrientos, \& and Omar L\'{o}pez-Cruz}
+\affil{Department of Astronomy, University of Toronto}
+Text.
+\end{document}

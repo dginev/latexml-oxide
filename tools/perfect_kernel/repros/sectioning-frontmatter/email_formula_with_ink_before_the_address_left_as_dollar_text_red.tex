@@ -1,0 +1,18 @@
+% mechanism: a formula before an address that prints ink but no address text — `$\phantom{x}$` (invisible ink of an x's
+%   width), `$\quad\cdot$` (a dot), `$\rule{1cm}{1pt}$` (a bar) — is copied into the e-mail contact as literal source text:
+%   "$ x $e@x.edu", "$ ⋅ $f@x.edu" (invented `$` text the PDF never prints). IV1's spacing-alone predicate leaves
+%   them: they print ink, and `leading_spacing_end` counts `\rule` as spacing (revIV1 NIT 3, pre-existing on int159a)
+% witness: synthetic (revIV1 probe p1/ams)
+% oracle:  pdflatex (TL 2025, -no-shell-escape): the addresses with a gap, a dot, a bar before them
+% expect:  each e-mail contact the address alone (the dot or bar, if kept, not as `$` source text)
+% status:  RED (int159a, IV1)
+% preload: ar5iv.sty
+\documentclass{amsart}
+\begin{document}
+\title{T}
+\author{Eve E}\email{$\phantom{x}$e@x.edu}
+\author{Fay F}\email{$\quad\cdot$f@x.edu}
+\author{Gil G}\email{$\rule{1cm}{1pt}$g@x.edu}
+\maketitle
+Text.
+\end{document}

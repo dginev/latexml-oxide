@@ -1,0 +1,26 @@
+% witness: 1503.04650, 1711.03341 (the dgruyter.sty of 176 papers, :1704-1706 and :2052-2058, in DVI mode)
+% oracle:  latex/pdflatex with \pdfoutput=0: 0 errors (breakurl's character lists exist only in DVI mode)
+% engines: rust 67int6 = undefined \ST@newpage, \burl@addtocharlistafter, \burl@defifstructure
+% expect:  0 errors, 0 warnings; the supertabular as one table
+% status:  RED (67int6) -> GREEN (68c); guard perfect_kernel_batch68c::dgruyter_patches_supertabular_and_breakurl
+\pdfoutput=0
+\documentclass{article}
+\usepackage{hyperref}
+\usepackage{supertabular}
+\usepackage{breakurl}
+\makeatletter
+% dgruyter.sty:1704-1706 and :2054-2058
+\let\bareST@newpage\ST@newpage
+\expandafter\def\expandafter\ST@newpage\expandafter{%
+  \ST@newpage\noalign{\gdef\@tablefont{\tablefont}}}
+\bgroup
+  \catcode`\&=12\relax
+  \hyper@normalise\burl@addtocharlistafter{=}
+\egroup
+\burl@defifstructure
+\makeatother
+\begin{document}
+\begin{supertabular}{ll}
+a & b\\
+\end{supertabular}
+\end{document}

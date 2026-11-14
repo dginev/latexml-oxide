@@ -1,0 +1,17 @@
+% The author's own package shipped beside the paper defines `\newcommand{\abst}[1]{|#1|}`; under a class with no
+% binding (OmniBus, `\let\abst\abstract`), the package is a raw File, not the document, so its definition still
+% yields to OmniBus's alias and `\abst{a}` opens an abstract inside the formula (59g covers the document's own
+% `\newcommand` only; whether a file from the document's directory counts as the document needs a ruling).
+% witness: none (review of 59g, probe p11; the 2605.05619 shape with the macros in a .sty).
+% status:  RED
+% oracle:  pdflatex (with a real class) 0 errors: "|a|".
+% expect:  0 errors; `\abst{a}` the package's absolute value.
+\begin{filecontents*}[overwrite]{lxmymacros.sty}
+\ProvidesPackage{lxmymacros}
+\newcommand{\abst}[1]{|#1|}
+\end{filecontents*}
+\documentclass{nosuchclass}
+\usepackage{lxmymacros}
+\begin{document}
+$\abst{a}$
+\end{document}

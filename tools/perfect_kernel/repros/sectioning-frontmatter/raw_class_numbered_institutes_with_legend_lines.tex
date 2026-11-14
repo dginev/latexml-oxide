@@ -1,0 +1,47 @@
+% RED (batch 104b, not supported): a class-numbered `\and` institute store (comsis2.cls:829-855's `\institutename`,
+% `\stepcounter{@inst}`) whose last entry carries the legend lines of the names' symbol marks (`\\ \textit{
+% \textsuperscript{*}corresponding author}`). The store holds marks of its own, so it is not read as numbered
+% (`class_numbered_institutes` declines a store with a mark, `author_mark_position`) and the institutes go whole to the
+% last author; the legends would need cutting off as notes first. One dev20k paper.
+% witness: 2207.09249 (comsis2)
+% oracle:  pdflatex 0 errors: "Ann Able1† , Bob Baker2* and Cy Cole1†", "1 Univ A, Town", "2 Univ B, City",
+%          "* corresponding author", "† authors contribute equally"
+% engines: rust 104b = 0 errors, 0 warnings, Cy Cole holds both institutes, Ann Able and Bob Baker none
+% expect:  Ann Able and Cy Cole "Univ A, Town", Bob Baker "Univ B, City"; the legends notes of their carriers
+% status:  RED (catalog, no guard)
+% preload: ar5iv.sty
+\begin{filecontents*}[overwrite]{cslegend.cls}
+\ProvidesClass{cslegend}\LoadClass{article}
+\newcounter{@inst}
+\def\institute#1{\gdef\@institute{#1}}
+\def\institutename{\par
+ \begingroup
+ \parskip=\z@
+ \parindent=\z@
+ \setcounter{@inst}{1}%
+ \def\and{\par\stepcounter{@inst}%
+ \noindent$^{\the@inst}$\enspace\ignorespaces}%
+ \setbox0=\vbox{\def\thanks##1{}\@institute}%
+ \ifnum\c@@inst=1\relax
+ \else
+   \setcounter{@inst}{1}%
+   \noindent$^{\the@inst}$\enspace
+ \fi
+ \ignorespaces
+ \@institute\par
+ \endgroup}
+\def\inst#1{\unskip$^{#1}$}
+\def\@maketitle{\newpage\noindent{\Large\@title\par}\vskip6pt
+  {\large\noindent\ignorespaces\@author\par}\vskip6pt
+  {\small\institutename}}
+\end{filecontents*}
+\documentclass{cslegend}
+\begin{document}
+\title{A Title}
+\author{Ann Able\inst{1}\textsuperscript{\dag}, Bob Baker\inst{2}\textsuperscript{*} and Cy Cole\inst{1}\textsuperscript{\dag}}
+\institute{Univ A, Town \and Univ B, City\\
+  \textit{\textsuperscript{*}corresponding author}\\
+  \textit{\textsuperscript{\dag}authors contribute equally}}
+\maketitle
+Text.
+\end{document}

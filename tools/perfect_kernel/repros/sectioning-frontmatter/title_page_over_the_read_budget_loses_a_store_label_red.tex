@@ -1,0 +1,25 @@
+% mechanism: TP3 runs the stores' sentinel probes under the one read budget (8 M per run, 24 M per conversion); a raw class whose
+%   `\maketitle` reads more per run (a 400 k-iteration `\loop`) falls back to the code walk, and a store only the run decides is
+%   lost: the class's `\thanks{Corresponding author: \@corr}` label goes, the pubnote bare; only the `check_budget` Warning names
+%   the probe (it says such words are not counted). The trade TP0 described; no real paper of 397 raw-class title pages reaches it
+%   (max 2.77 M, 2407.17431).
+% witness: synthetic (revTP3 syn/heavy2.tex)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 `!`: "1 Corresponding author: ann.able@lunar.org"
+% engines: rust TP3base: `<pubnote name="Corresponding author: ">`; rust TP3: a bare `<pubnote>`, 1 W (check_budget)
+% expect:  the label kept, or the lost words counted by name
+% status:  RED (revTP3, int168a) — moves: post-merge (TP3H)
+\begin{filecontents*}[force]{heavycls.cls}
+\LoadClass{article}
+\def\corr#1{\gdef\@corr{#1}}\def\@corr{}
+\def\work{\count@=0 \loop\advance\count@ by 1 \ifnum\count@<\workn\repeat}
+\renewcommand\maketitle{\par\begingroup\centering\work{\Large\@title\par}%
+  {\@author\thanks{Corresponding author: \@corr}\par}\@thanks\endgroup}
+\end{filecontents*}
+\documentclass{heavycls}
+\makeatletter\def\workn{400000}\makeatother
+\title{A Title}
+\author{Ann Able}
+\corr{ann.able@lunar.org}
+\begin{document}\maketitle
+Text.
+\end{document}

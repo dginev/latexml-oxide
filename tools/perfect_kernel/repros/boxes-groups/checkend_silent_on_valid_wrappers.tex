@@ -1,0 +1,46 @@
+% witness: review 64y round 2 (n1: 18 macro environments around bound ones)
+% oracle:  pdflatex 0 errors
+% engines: rust 64w 0/0, 64y 0/0; Perl 3E
+% expect:  0 errors 0 warnings: \lx@checkend reports nothing on valid wrappers
+% status:  GREEN (64y r3); guard perfect_kernel_batch64y::checkend_silent_on_valid_wrappers
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{amsthm,environ,etoolbox}
+\newtheorem{thm}{Theorem}
+\newenvironment{wc}{\begin{center}}{\end{center}}
+\newenvironment{bc}{\center}{\endcenter}
+\newenvironment{wq}{\begin{quote}\itshape}{\end{quote}}
+\newenvironment{wi}{\begin{itemize}}{\end{itemize}}
+\newenvironment{wt}{\begin{tabular}{c}}{\end{tabular}}
+\newenvironment{wg}{\begingroup\bfseries}{\endgroup}
+\newenvironment{wf}{\begin{figure}[h]}{\end{figure}}
+\newenvironment{bfig}{\figure[h]}{\endfigure}
+\newenvironment{wm}{\begin{minipage}{3cm}}{\end{minipage}}
+\newenvironment{wprf}{\begin{proof}}{\end{proof}}
+\newenvironment{wth}{\begin{thm}}{\end{thm}}
+\newenvironment{bth}{\thm}{\endthm}
+\newenvironment{outr}{\begin{wc}}{\end{wc}}
+\NewEnviron{boxed}{\fbox{\BODY}}
+\let\myquote\quote \let\endmyquote\endquote
+\AtEndEnvironment{wc}{[atend]}
+\AtBeginEnvironment{wq}{[atbegin]}
+\begin{document}
+Intro.
+\begin{wc} centered \end{wc}
+\begin{bc} bare centered \end{bc}
+\begin{wq} quoted \end{wq}
+\begin{wi}\item one \item two\end{wi}
+\begin{wt} cell \end{wt}
+\begin{wg} grouped \end{wg}
+\begin{wf} figure body \caption{Cap}\end{wf}
+\begin{bfig} bare figure body \caption{Cap2}\end{bfig}
+\begin{wm} mini \end{wm}
+\begin{wprf} A proof. \end{wprf}
+\begin{wth} A theorem. \end{wth}
+\begin{bth} A bare theorem. \end{bth}
+\begin{outr} nested macro envs \end{outr}
+\begin{boxed} environ body \end{boxed}
+\begin{myquote} let quote \end{myquote}
+\begin{wc}\begin{wq} two deep \end{wq}\end{wc}
+After all.
+\end{document}

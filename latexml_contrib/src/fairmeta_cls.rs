@@ -37,6 +37,8 @@ LoadDefinitions!({
     s!("columnsep=0.65cm"),
   ])?;
   RequirePackage!("geometry");
+  // fairmeta.cls loads amsmath, directly or through `tcolorbox[most]` and nicematrix (every copy of a 1/20 arXiv sample;
+  // tcbtheorems.code.tex:23).
   RequirePackage!("amsmath");
   RequirePackage!("amssymb");
   RequirePackage!("graphicx");
@@ -50,6 +52,12 @@ LoadDefinitions!({
   RequirePackage!("cleveref");
   RequirePackage!("natbib");
   RequirePackage!("nicematrix");
+  // fairmeta.cls:17, 19, 35, 69: packages whose commands papers call — `\FloatBarrier` (placeins), `\titlespacing`
+  // (titlesec), subfigures (subcaption), `\onehalfspacing` (setspace); 2609.11172.
+  RequirePackage!("placeins");
+  RequirePackage!("setspace");
+  RequirePackage!("subcaption");
+  RequirePackage!("titlesec");
   // Faithful to the class's `\RequirePackage[most]{tcolorbox}` (fairmeta.cls
   // L42). PassOptions BEFORE the require (Perl idiom, mirrors ar5iv.sty.ltxml)
   // so tcolorbox.sty's own \ProcessOptions sees `most` at raw-load time and

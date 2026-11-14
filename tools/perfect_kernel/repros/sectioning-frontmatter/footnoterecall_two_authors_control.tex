@@ -1,0 +1,13 @@
+% mechanism: the control of footnoterecall_counter_defined_by_an_earlier_creator_red: an unspaced remember macro is a
+%   definition the author block can't replay apart from what it prints (`declaration_reads_past`, emit.rs), so the block
+%   is written as Perl's `\lx@add@authors` splits it, its pieces digested in order: B's recall reads A's counter.
+% witness: synthetic (revGA1d p1/fnremember; the shape of 2407.13730, 2606.19583)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 `!`: A∗ B∗; footnote ∗X
+% engines: rust int163a, GA1d, GA1e 0 errors, 1 warning (the block written whole, counted), A's note X, B's mark ∗
+% expect:  0 errors, 1 warning; A with the note X, B with the mark ∗
+% status:  GREEN (int163a, GA1d, GA1e)
+\documentclass{article}
+\newcommand{\footnoteremember}[2]{\footnote{#2}\newcounter{#1}\setcounter{#1}{\value{footnote}}}
+\newcommand{\footnoterecall}[1]{\footnotemark[\value{#1}]}
+\title{T}\author{A\footnoteremember{u}{X}\and B\footnoterecall{u}}
+\begin{document}\maketitle Body.\end{document}

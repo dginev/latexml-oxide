@@ -1,0 +1,28 @@
+% A raw class's `\maketitle` sets an author's note it never flushes: drcls runs `\thanks{Draft}` under its `draft`
+% option and no `\@thanks`, so pdflatex prints a footnote mark and no "Draft". The title-page check's run of the title
+% page takes latex.ltx's `\thanks` (its text appended to `\@thanks`, printed only where `\@thanks` runs: sect05.rs
+% `note_title_page_print`), so nothing it prints is lost and nothing is counted, not even as the class's text. Review
+% rev106s B1 (probe p3): 106s r1 set every note's text in place and counted "draft". With `\@thanks` after the author
+% line (probe p4) pdflatex prints "Draft", which the output lacks: the class's own word — the document writes "draft"
+% only as a class option, which is no word of the document's (`keyed_arguments`) — an Info, no Warning.
+% witness: none (synthetic; review rev106s probes p3, p4)
+% oracle:  pdflatex 0 errors (TL 2025, -no-shell-escape): "A Title", "Ann Able1", "Text.", and no "Draft"; with
+%          `\@thanks`, the page foot's "1 Draft" too
+% engines: rust 106s r1 = 0 errors, 1 warning (frontmatter:unclaimed "draft"; with `\@thanks` the same)
+% expect:  0 errors, 0 warnings and no frontmatter:class_text Info; with `\@thanks` 0 warnings, the Info "draft"
+% status:  RED (106s r1) -> GREEN (106s r2)
+% preload: ar5iv.sty
+\begin{filecontents*}[overwrite]{drcls.cls}
+\ProvidesClass{drcls}
+\newif\ifdr \DeclareOption{draft}{\drtrue}\DeclareOption*{\PassOptionsToClass{\CurrentOption}{article}}
+\ProcessOptions\relax\LoadClass{article}
+\renewcommand\maketitle{\par\begingroup\centering{\Large\@title\par}%
+  {\@author\ifdr\thanks{Draft}\fi\par}\endgroup}
+\end{filecontents*}
+\documentclass[draft]{drcls}
+\begin{document}
+\title{A Title}
+\author{Ann Able}
+\maketitle
+Text.
+\end{document}

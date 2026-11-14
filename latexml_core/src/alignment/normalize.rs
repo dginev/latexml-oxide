@@ -1,6 +1,10 @@
 use std::{collections::VecDeque, str::FromStr};
 
-use super::{Alignment, cell::Cell, template::Align};
+use super::{
+  Alignment,
+  cell::Cell,
+  template::{self, Align},
+};
 use crate::{
   BoxOps, Tokens,
   common::{
@@ -11,7 +15,7 @@ use crate::{
     object::Object,
     store::Stored,
   },
-  digested::Digested,
+  digested::{Digested, DigestedData},
   list::List,
 };
 
@@ -44,6 +48,7 @@ use crate::{
 pub fn normalize_alignment(alignment: &mut Alignment) -> Result<()> {
   if !alignment.is_normalized {
     normalize_cell_sizes(alignment)?;
+    normalize_overprint_spans(alignment);
     normalize_mark_spans(alignment)?;
     normalize_prune_rows(alignment)?;
     normalize_prune_columns(alignment)?;
@@ -109,10 +114,14 @@ pub fn normalize_cell_sizes(alignment: &mut Alignment) -> Result<()> {
               || b.get_property_bool("isVerticalRule")
               || b.get_property_bool("alignmentSkippable")
               || b.is_comment()
+              || b.is_strut()
           });
-        // Perl L457-462: ((fullw_small AND ch_cd_small) OR isrule) AND !preserved
+        // Perl L457-462: ((fullw_small AND ch_cd_small) OR isrule) AND !preserved — a preserved box anywhere in the
+        // cell: a `\label` makes no box (KNOWN_PERL_ERRORS #1144), so a cell holding one in its math (amsmath's
+        // `{gather}` row `c \\ \label{ga}`) is 0 wide, where Perl's was its key text's width and so not empty.
         let empty = ((fullw.value_of() < 1 && (ch.value_of() < 1 && cd.value_of() < 1)) || isrule)
-          && preserved_boxes(Some(boxes)).is_empty();
+          && preserved_boxes(Some(boxes)).is_empty()
+          && !holds_preserved_box(boxes);
         let skippable = empty || boxes.is_skippable();
         cell.cached_width = Some(w);
         cell.cached_height = Some(h);
@@ -138,11 +147,186 @@ pub fn normalize_cell_sizes(alignment: &mut Alignment) -> Result<()> {
   }
   Ok(())
 }
+/// A cell whose content overprints to its right (`Cell::overprint`, an `\rlap` such as `\lefteqn`'s, latex.ltx:15800)
+/// spans the empty cells that follow it in its row, up to the first that holds content, spans or is spanned: TeX
+/// prints the zero-width box over them, and HTML, which cannot overprint, gives it their room instead. A following cell
+/// with content keeps its own column (OXIDIZED_DESIGN_DIVERGENCES #556; Perl spans a fixed `\multicolumn{3}`,
+/// latex_constructs.pool.ltxml:2194-2197, and the row's next `&` overflows; 0707.3929's and nucl-th9512020's
+/// `\lefteqn{lhs}&&\nonumber\\`). Runs between the sizes, which say which cells are empty, and
+/// `normalize_mark_spans`, which marks the cells covered.
+///
+/// TeX does not span here: each `&` closes the cell and opens the next preamble column whatever either holds (tex.web
+/// §791 `fin_col`), and the `\rlap`'s ink lies over the next cells' boxes. So a covered cell must be one TeX shows
+/// nothing for. A covered cell is never absorbed, so only a cell whose boxes are structurally skippable (spaces, empty
+/// or invisible boxes such as a `\phantom`, an empty math shell such as the eqnarray template's `$\displaystyle$`) is
+/// covered: a small cell is not an empty one, and an `\index` or a `\hypertarget` anchor ends the span and keeps
+/// its own column.
+fn normalize_overprint_spans(alignment: &mut Alignment) {
+  // Examines: overprint, skippable, boxes, colspan, rowspan, rowspanned, skipped
+  // Sets: colspan, border
+  // A row may stop short of the table (amsmath's repeating templates add cells as the row reaches them): the cells it
+  // lacks are empty too.
+  let width = alignment
+    .rows
+    .iter()
+    .map(|row| row.get_columns().len())
+    .max()
+    .unwrap_or(0);
+  for row in &mut alignment.rows {
+    let cells = row.get_columns_mut();
+    for j in 0..cells.len() {
+      if !cells[j].overprint || cells[j].skipped {
+        continue;
+      }
+      let start = j + cells[j].colspan.unwrap_or(1);
+      let end = (start..cells.len())
+        .find(|&k| {
+          let cell = &cells[k];
+          !cell.skippable
+            || cell.boxes.as_ref().is_some_and(|b| !b.is_skippable())
+            || cell.skipped
+            || cell.colspan.unwrap_or(1) != 1
+            || cell.rowspan.is_some_and(|n| n > 1)
+            || cell.rowspanned.is_some()
+        })
+        .unwrap_or(cells.len());
+      // Through the row's end: on over the cells it lacks.
+      let reach = if end == cells.len() {
+        width.max(end)
+      } else {
+        end
+      };
+      if reach > start {
+        // The span's right edge is the last covered cell's.
+        if end > start {
+          let right: String = cells[end - 1]
+            .border
+            .chars()
+            .filter(|c| matches!(c, 'r' | 'R'))
+            .collect();
+          let spanning = &mut cells[j];
+          spanning.border.retain(|c| !matches!(c, 'r' | 'R'));
+          spanning.border.push_str(&right);
+        }
+        cells[j].colspan = Some(reach - j);
+      }
+    }
+  }
+}
+/// Whether a cell holds nothing a span over it would hide: skippable, or an empty paragraph cell (KNOWN_PERL_ERRORS
+/// #1015; witnesses 2602.22000, 2605.23257).
+fn holds_nothing(cell: &Cell) -> bool {
+  cell.skippable
+    || cell
+      .boxes
+      .as_ref()
+      .is_some_and(Digested::is_empty_paragraph_cell)
+}
+
+/// A negative `\multirow{-n}` (`Cell::rowspan_up`) spans its row and the n-1 rows above it: multirow.sty:172
+/// (`\ifdim#2pt<\z@`) raises the box over them, the colortbl idiom that sets the text in the last row so the rows'
+/// colours do not paint over it (1509.00049, 42 of them). HTML spans downward, so the cell's content moves to the top
+/// row of the span, which takes `rowspan=n`, when the cells it covers above are empty (the downward marking then
+/// covers the rest); else the content stays in its row, spanning it alone, with a Warning. Perl's binding forces the
+/// rowspan to 1 with a Warning (multirow.sty.ltxml:28): KNOWN_PERL_ERRORS #1074. Guard
+/// `perfect_kernel_batch78j::multirow_negative_spans_the_rows_above`.
+fn normalize_upward_spans(alignment: &mut Alignment) {
+  // Examines: rowspan_up, colspan, pseudorow, skippable, boxes, skipped, rowspan, rowspanned
+  // Sets: boxes, align and sizes (moved), rowspan
+  for i in 0..alignment.rows.len() {
+    for j in 0..alignment.rows[i].get_columns().len() {
+      let Some(n) = alignment.rows[i].get_columns_mut()[j].rowspan_up.take() else {
+        continue;
+      };
+      if n < 2 {
+        continue;
+      }
+      let nc = alignment.rows[i].get_columns()[j]
+        .colspan
+        .unwrap_or(1)
+        .max(1);
+      // The n-1 rows above (pseudo rows, a rule's, are not counted), each empty over the cell's columns.
+      let mut above = Vec::new();
+      let mut row = i;
+      while above.len() < n - 1 && row > 0 {
+        row -= 1;
+        if !alignment.rows[row].is_pseudo() {
+          above.push(row);
+        }
+      }
+      let covered_empty = above.len() == n - 1
+        && above.iter().all(|&r| {
+          let cells = alignment.rows[r].get_columns();
+          cells.len() >= j + nc
+            && cells[j..j + nc].iter().all(|cell| {
+              holds_nothing(cell)
+                && !cell.skipped
+                && cell.rowspanned.is_none()
+                && cell.rowspan.is_none_or(|r| r <= 1)
+                && cell.colspan.is_none_or(|c| c <= 1)
+            })
+        });
+      let Some(&top) = above.last().filter(|_| covered_empty) else {
+        Warn!(
+          "unsupported",
+          "multirow",
+          s!(
+            "\\multirow{{-{}}} in cell({},{}) covers non-empty cells above it; spanning its own row only",
+            n,
+            i,
+            j
+          )
+        );
+        continue;
+      };
+      let mut source = std::mem::take(&mut alignment.rows[i].get_columns_mut()[j]);
+      let target = &mut alignment.rows[top].get_columns_mut()[j];
+      // The material between rows each cell carries (`alignmentNoalign`: `\rowcolor`'s row colour, 1509.00049) stays
+      // with its row: the top row's in its cell, the last row's at the row's start (`before`), as its covered cell is
+      // not constructed.
+      let (source_noalign, source_content) = split_noalign(source.boxes.take());
+      let (target_noalign, target_content) = split_noalign(target.boxes.take());
+      let mut moved = target_noalign;
+      moved.extend(source_content);
+      target.boxes = (!moved.is_empty()).then(|| Digested::from(List::new(moved)));
+      source.boxes =
+        (!target_content.is_empty()).then(|| Digested::from(List::new(target_content)));
+      std::mem::swap(&mut target.empty, &mut source.empty);
+      std::mem::swap(&mut target.skippable, &mut source.skippable);
+      std::mem::swap(&mut target.cached_width, &mut source.cached_width);
+      std::mem::swap(&mut target.cached_height, &mut source.cached_height);
+      std::mem::swap(&mut target.cached_depth, &mut source.cached_depth);
+      std::mem::swap(&mut target.content_class, &mut source.content_class);
+      std::mem::swap(&mut target.content_length, &mut source.content_length);
+      std::mem::swap(&mut target.vattach, &mut source.vattach);
+      std::mem::swap(&mut target.align, &mut source.align);
+      target.rowspan = Some(n);
+      if nc > 1 {
+        target.colspan = Some(nc);
+      }
+      source.rowspan = None;
+      alignment.rows[i].get_columns_mut()[j] = source;
+      alignment.rows[i].before.extend(source_noalign);
+    }
+  }
+}
+
+/// A cell's boxes split into the material between rows it carries (`alignmentNoalign`, `\lx@hidden@noalign`'s) and
+/// the rest, each in order.
+fn split_noalign(boxes: Option<Digested>) -> (Vec<Digested>, Vec<Digested>) {
+  boxes
+    .map(|boxes| boxes.unlist())
+    .unwrap_or_default()
+    .into_iter()
+    .partition(|item| item.get_property_bool("alignmentNoalign"))
+}
+
 /// Mark any cells that are covered by rowspan or colspan.
 /// Perl: normalize_mark_spans (Alignment.pm L667-726)
 pub fn normalize_mark_spans(alignment: &mut Alignment) -> Result<()> {
   // Examines: rowspan, colspan, pseudorow, empty
   // Sets: skipped, colspanned, rowspanned
+  normalize_upward_spans(alignment);
   let nrows = alignment.rows.len();
   for i in 0..nrows {
     let ncols = alignment.rows[i].get_columns().len();
@@ -164,6 +348,14 @@ pub fn normalize_mark_spans(alignment: &mut Alignment) -> Result<()> {
           alignment.rows[i].get_columns_mut()[j].rowspan = Some(cnr);
         }
       }
+      // A cell an earlier row's span already covers spans no rows of its own: an empty `\multirow{3}{*}{}` under
+      // `\multirow{5}{*}{Nodes}` (2507.20312) would re-mark the rows below as its own, and the empty rows pruned
+      // later shrink it instead of the outer span. TeX overlaps the empty nested box. (Perl Alignment.pm L697 marks
+      // it too; a covered cell is always skippable, else the outer span is truncated before it, L716-721.)
+      // (and keeps none, which the header guess would read as a span into the body: 2401.13447)
+      if alignment.rows[i].get_columns()[j].rowspanned.is_some() {
+        alignment.rows[i].get_columns_mut()[j].rowspan = None;
+      }
       let nr = alignment.rows[i].get_columns()[j].rowspan.unwrap_or(1);
       if nr > 1 {
         // If this column spans rows
@@ -180,7 +372,8 @@ pub fn normalize_mark_spans(alignment: &mut Alignment) -> Result<()> {
             nrc -= 1;
           }
           for jj in j..std::cmp::min(j + ncspan, rrow.get_columns().len()) {
-            if !rrow.get_columns()[jj].skippable {
+            // An empty paragraph cell is covered too (KNOWN_PERL_ERRORS #1015; witnesses 2602.22000, 2605.23257).
+            if !holds_nothing(&rrow.get_columns()[jj]) {
               row_empty = false;
             }
           }
@@ -322,6 +515,16 @@ pub fn normalize_prune_rows(alignment: &mut Alignment) -> Result<()> {
       if preserve && i + 1 < nrows {
         prunable = false;
       }
+    }
+    // A row the author tagged is not empty: its tag is its content. Perl prunes the empty last row with its tag
+    // (KNOWN_PERL_ERRORS #682, surpass OD #591) — Scientific Word's `… \nonumber \\ && \TCItag{27}`, amsmath's
+    // `\\ && \tag{27}`, where pdflatex prints (27) on that row (witness nlin0106009).
+    // So is a row whose number prints on a row of its own (`template::NUMBER_ROW_PROPERTY`: eqnarray's
+    // `x &=& y \cr \end{eqnarray}`, 0708.0012).
+    if prunable
+      && (row.has_explicit_tags() || row.properties.contains_key(template::NUMBER_ROW_PROPERTY))
+    {
+      prunable = false;
     }
     keep[i] = !prunable;
   }
@@ -494,6 +697,34 @@ pub fn normalize_prune_columns(alignment: &mut Alignment) -> Result<()> {
       // Empty!
       let mut prunew: i64 = 0;
       for row in &mut alignment.rows {
+        // An empty spanner at `j` (`\multicolumn{3}{c}{}`) spans the empty column with the ones after it: it shrinks
+        // by one, its first covered cell removed, and keeps its place, borders and content. Removing it (Perl
+        // Alignment.pm L855) left its covered cells spanned by nothing, never emitted, the row a cell short and the
+        // header sliding over the next column (2406.06521 Table 2).
+        let spanner_shrinks = row
+          .get_columns()
+          .get(j)
+          .is_some_and(|col| col.colspanned.is_none() && col.colspan.unwrap_or(1) > 1)
+          && row
+            .get_columns()
+            .get(j + 1)
+            .is_some_and(|next| next.colspanned == Some(j));
+        if spanner_shrinks {
+          let covered = row.get_columns_mut().remove(j + 1);
+          let preserve = preserved_boxes(covered.boxes.as_ref());
+          let spanner = &mut row.get_columns_mut()[j];
+          spanner.colspan = spanner.colspan.map(|n| n - 1);
+          if !preserve.is_empty() {
+            let mut boxes = spanner
+              .boxes
+              .as_mut()
+              .map(|b| b.unlist())
+              .unwrap_or_default();
+            boxes.extend(preserve);
+            spanner.boxes = Some(Digested::from(List::new(boxes)));
+          }
+          continue;
+        }
         let mut new_border = String::new();
         let mut preserve = Vec::new();
         let mut colspanned = None;
@@ -856,6 +1087,27 @@ pub fn normalize_sum_sizes(alignment: &mut Alignment) -> Result<()> {
   }
 
   Ok(())
+}
+
+/// Does `boxes` hold a box an alignment preserves (`alignmentPreserve`: a `\label`) at any depth — in a list, a
+/// whatsit's arguments or body (a cell's math)?
+fn holds_preserved_box(boxes: &Digested) -> bool {
+  if boxes.get_property_bool("alignmentPreserve") {
+    return true;
+  }
+  match boxes.data() {
+    DigestedData::List(_) => boxes.unlist().iter().any(holds_preserved_box),
+    DigestedData::Whatsit(w) => {
+      let w = w.borrow();
+      w.get_args().iter().flatten().any(holds_preserved_box)
+        || w
+          .get_body()
+          .ok()
+          .flatten()
+          .is_some_and(|body| holds_preserved_box(&body))
+    },
+    _ => false,
+  }
 }
 
 fn preserved_boxes(boxes_opt: Option<&Digested>) -> Vec<Digested> {

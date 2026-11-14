@@ -1,0 +1,22 @@
+% tabularray's template and default-list commands. `\SetTblrTemplate{<elements>}{<name>}` with a name the
+% element has no template of is an error ("Undefined template ... for element ...", tabularray.sty:5703-5718)
+% and changes nothing; an unknown element is the same error. `\SetTblrInner[]{…}` with an explicitly empty
+% list (`O{tblr}`) applies to no environment: the colspec-less table stays `l`.
+% witness: 57cp review 2/3 (NIT 8, NIT 9). Guard: perfect_kernel_batch57::tabularray_template_names_and_environment_lists.
+% status:  GREEN (57cp)
+% oracle:  pdflatex 4 errors (nosuch/caption, simple/caption-tag, simple/note-tag, normal/nosuchelement).
+% engines: rust 57cp3: 0 errors; the tblr right-aligned.
+% expect:  4 errors, 0 warnings.
+\documentclass{article}
+\usepackage{tabularray}
+\SetTblrTemplate{caption}{nosuch}
+\SetTblrTemplate{caption-tag,note-tag}{simple}
+\SetTblrTemplate{caption}{simple}
+\SetTblrTemplate{nosuchelement}{normal}
+\SetTblrTemplate{head}{default}
+\SetTblrInner[]{colspec={r}}
+\begin{document}
+\begin{talltblr}[caption={Cap}, note{a}={Note text}]{ll} a & b \\ \end{talltblr}
+
+\begin{tblr}{} c \\ \end{tblr}
+\end{document}

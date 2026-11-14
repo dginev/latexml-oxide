@@ -1,0 +1,18 @@
+% Slices of `\@title` (xstring's `\StrLeft` and `\StrGobbleLeft`, as neoschool's `\StrMid`) are the document's own
+% text, not a print of the field: a run of title ink is lifted only when it reaches the stored value's first and last
+% character, and the paragraph between the two slices is no title ink at all (fms1 review finding 2).
+% status:  RED (fms1 round 1: the first slice's begin mark paired with the second's end mark, and the paragraph
+%          between them was removed) → GREEN (fms1 round 2).
+% oracle:  pdflatex 0 errors: "Split", "An important paragraph the author wrote.", "Title", "1 Intro Text."
+% expect:  0 errors, 0 warnings; no `field_ink` Info; both slices and the paragraph kept.
+\documentclass{article}
+\usepackage{xstring}
+\makeatletter
+\title{Split Title}
+\begin{document}
+\begin{center}\StrLeft{\@title}{5}\end{center}
+An important paragraph the author wrote.
+\begin{center}\StrGobbleLeft{\@title}{6}\end{center}
+\section{Intro}
+Text.
+\end{document}

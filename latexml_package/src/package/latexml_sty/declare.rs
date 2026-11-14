@@ -7,7 +7,7 @@
 //! | [`next_declaration_id`]      | `next_declaration_id` (L544-550)          |
 //! | [`split_declare_tag`]        | `splitDeclareTag` (L437-449)              |
 //! | [`normalize_declare_keys`]   | `normalizeDeclareKeys` (L417-434)         |
-//! | [`get_declaration_scope`]    | `getDeclarationScope` (L552-559)          |
+//! | [`get_declaration_scope`]    | `getDeclarationScope` (L549-556)          |
 //! | [`create_declaration_rewrite`] | `createDeclarationRewrite` (L561-580)   |
 //! | [`emit_declare_element`]     | the shared `<ltx:declare>` constructor    |
 //! |                              | body (`\lxDeclare` L474-485 /             |
@@ -89,13 +89,12 @@ pub(super) fn normalize_declare_keys(
 /// Rust-only companion to the rewrite path.
 ///
 /// Line format: `body_text \t role \t name \t meaning \t decl_id \t
-/// match_font \t scope_prefix`. The trailing match_font makes
-/// apply_lx_declarations font-aware (a plain italic `$x$` must not annotate
-/// a bold `\mathbf{x}`), mirroring the font-aware rewrite path
-/// (declare_node_matches). Empty when the pattern carried no distinguishing
-/// font. The 7th field gates UNTAGGED `scope=section` declarations (no
-/// decl_id to carry the section prefix) so the fast path doesn't apply them
-/// document-globally (PR_READINESS cluster C).
+/// match_font \t scope`. The match_font makes apply_lx_declarations
+/// font-aware (a plain italic `$x$` must not annotate a bold `\mathbf{x}`),
+/// mirroring the font-aware rewrite path (declare_node_matches); empty when
+/// the pattern carried no distinguishing font. The scope is the declaration's
+/// (`get_declaration_scope`: `id:S2`, `label:…`, or empty for the whole
+/// document), so the fast path applies it where the rewrite rule does.
 pub(super) fn record_declaration_lines(
   body_text: &str,
   role: &str,
@@ -103,7 +102,7 @@ pub(super) fn record_declaration_lines(
   meaning: &str,
   decl_id: &str,
   match_font: Option<&str>,
-  scope_opt: &str,
+  scope: &str,
 ) -> Result<()> {
   let key = "LATEXML_DECLARATIONS";
   let mut decls: Vec<String> = match lookup_value(key) {
@@ -118,22 +117,9 @@ pub(super) fn record_declaration_lines(
     _ => Vec::new(),
   };
   let match_font_field = match_font.unwrap_or("");
-  let scope_prefix = if scope_opt == "section" {
-    if !decl_id.is_empty() {
-      decl_id.split('.').next().unwrap_or("").to_string()
-    } else {
-      // afterDigest — where \thesection@ID is still correct.
-      do_expand(T_CS!("\\thesection@ID"))
-        .ok()
-        .map(|t| t.to_string().trim().to_string())
-        .unwrap_or_default()
-    }
-  } else {
-    String::new()
-  };
   decls.push(format!(
     "{}\t{}\t{}\t{}\t{}\t{}\t{}",
-    body_text, role, name_val, meaning, decl_id, match_font_field, scope_prefix
+    body_text, role, name_val, meaning, decl_id, match_font_field, scope
   ));
   // Mathcode decoding for single-char bodies
   if body_text.chars().count() == 1 {
@@ -184,15 +170,11 @@ pub(super) fn record_declaration_lines(
           if let Some(dc) = decoded {
             let ds = dc.to_string();
             if ds != body_text {
-              // Same 6-field shape (empty decl_id, trailing match_font)
-              // so apply_lx_declarations parses it uniformly.
+              // The same line for the alternate codepoint (`*` → `∗`), with
+              // the declaration's id and scope: its scope is the declaration's.
               decls.push(format!(
-                "{}\t{}\t{}\t{}\t\t{}",
-                ds,
-                role,
-                name_val,
-                meaning,
-                match_font.unwrap_or("")
+                "{}\t{}\t{}\t{}\t{}\t{}\t{}",
+                ds, role, name_val, meaning, decl_id, match_font_field, scope
               ));
             }
           }
@@ -261,47 +243,28 @@ pub(super) fn emit_declare_element(
   Ok(())
 }
 
-/// Perl `getDeclarationScope`: resolve `scope=section` to the current
-/// section's `id:` scope. Uses the decl_id prefix (e.g. `S1` from
-/// `S1.XMD1`) since it was computed in afterDigest where `\thesection@ID`
-/// is correct — in afterConstruct it may be stale; falls back to walking
-/// the document node's ancestor section.
-pub(super) fn get_declaration_scope(
-  document: &Document,
-  scope_opt: &str,
-  decl_id: &str,
-) -> Option<Scope> {
-  if scope_opt != "section" {
-    return None;
-  }
-  let section_id = if !decl_id.is_empty() {
-    decl_id.split('.').next().unwrap_or("").to_string()
-  } else {
-    // Fallback: use the node's ancestor section id
-    let mut node = document.get_node().clone();
-    let mut sid = String::new();
-    loop {
-      if node.get_name() == "section" {
-        if let Some(id) = node
-          .get_property("xml:id")
-          .or_else(|| node.get_property("id"))
-        {
-          sid = id;
-        }
-        break;
-      }
-      match node.get_parent() {
-        Some(p) => node = p,
-        None => break,
-      }
-    }
-    sid
+/// Perl `getDeclarationScope` (latexml.sty.ltxml:549-556), in afterDigest: the `scope=` key, else
+/// the counter `\refstepcounter` last stepped (`current_counter`, assigned locally, Package.pm:776)
+/// — the current section, subsection, equation, item or theorem; none before the first, when the
+/// declaration is the whole document's. A counter names its current unit: `id:` and
+/// `\the<counter>@ID` (`section` → `id:S2`). Any other scope (`id:…`, `label:…`) is kept as written.
+pub(super) fn get_declaration_scope(scope_key: Option<&str>) -> Result<Option<String>> {
+  let scope = match scope_key {
+    // A `scope=` key, even an empty one, is the scope: `scope=` is the whole document.
+    Some("") => return Ok(None),
+    Some(key) => key.to_string(),
+    None => match with_value("current_counter", |counter| {
+      counter.map(ToString::to_string)
+    }) {
+      Some(counter) if !counter.is_empty() => counter,
+      _ => return Ok(None),
+    },
   };
-  if !section_id.is_empty() {
-    Some(Scope::Named(pin(format!("id:{section_id}"))))
-  } else {
-    None
+  if lookup_register(&format!("\\c@{scope}"), Vec::new())?.is_some() {
+    let id = digest_literal(Tokens!(T_CS!(&format!("\\the{scope}@ID"))))?.to_string();
+    return Ok(Some(format!("id:{id}")));
   }
+  Ok(Some(scope))
 }
 
 /// Perl `createDeclarationRewrite`: build the rewrite rule from whatever

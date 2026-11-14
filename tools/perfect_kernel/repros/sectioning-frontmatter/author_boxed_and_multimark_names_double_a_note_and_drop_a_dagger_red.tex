@@ -1,0 +1,19 @@
+% mechanism: among boxed and multi-mark names, Cy Cole's `\footnotemark[3]\footnotemark[4]` gives three notes ("Note C1."
+%   twice) and Di Dunn's `$^{\dagger}$` is dropped with no Warning — an interaction with the authors before (each line
+%   alone is right; not minimised). revFN1, pre-existing on int159a2 and FN1b alike
+% witness: synthetic (revFN1 probe a1_article)
+% expect:  each note once; Di Dunn's † kept (or its loss counted)
+% status:  RED (int159a2, FN1b)
+% preload: ar5iv.sty
+\documentclass{article}
+\title{A Title\footnotemark[5]}
+\author{\parbox{5cm}{Ann Able\footnotemark[1]} \and
+\begin{minipage}{4cm}Bob Baker\footnotemark[2]\end{minipage} \and
+Cy Cole\footnotemark[3]\footnotemark[4] \and Di Dunn$^{\dagger}$\footnotemark[6]}
+\date{May 2020\footnotemark[7]}
+\begin{document}
+\maketitle
+\footnotetext[1]{Note A.}\footnotetext[2]{Note B.}\footnotetext[3]{Note C1.}
+\footnotetext[4]{Note C2.}\footnotetext[5]{Note T.}\footnotetext[6]{Note D.}\footnotetext[7]{Note Date.}
+Body.
+\end{document}

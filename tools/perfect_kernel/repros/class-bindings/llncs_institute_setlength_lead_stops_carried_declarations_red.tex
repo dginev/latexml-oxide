@@ -1,0 +1,21 @@
+% mechanism: the list cutter's carried lead (`classify::notes` `lead_declarations` → `opening_declarations`): the scan
+%   of a line's unprinted lead stops at a command with a braced argument it does not know (`\setlength{\parindent}{0pt}`),
+%   so the `\footnotesize` after it is carried to no later piece
+% witness: synthetic (revP4b4a2 probe d4_setlength; revP4b4a3 nit)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "Ann Able1 and Bob Baker2" over "1 Univ A, 2 Univ B",
+%   both in CMR9 (llncs.cls `\let\footnotesize\small`)
+% engines: rust P4b4abase: 0 errors, 0 warnings, neither entry sized; P4b4a4: 0 errors, 0 warnings, Ann Able's entry
+%   at 80 %, Bob Baker's unsized
+% expect:  0 errors, 0 warnings; Ann Able "1 Univ A", Bob Baker "2 Univ B", each at the `\footnotesize` size (80 % today;
+%   90 % once llncs's `\footnotesize` is its `\small`, llncs_footnotesize_is_small_red.tex)
+% status:  RED (P4b4abase: no size; P4b4a4: Bob Baker's entry; no word lost)
+% moves:   post-merge (P4SET: the lead scan reads past an assignment that prints nothing)
+% preload: ar5iv.sty
+\documentclass{llncs}
+\begin{document}
+\title{A Title}
+\author{Ann Able$^{1}$ \and Bob Baker$^{2}$}
+\institute{\setlength{\parindent}{0pt}\footnotesize $^{1}$Univ A, $^{2}$Univ B}
+\maketitle
+Body.
+\end{document}

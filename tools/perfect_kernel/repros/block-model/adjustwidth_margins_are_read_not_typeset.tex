@@ -1,0 +1,19 @@
+% witness: 57l root-cause; arXiv 2605.02723 (a `width=\linewidth` figure inside `{adjustwidth}{-0.005\linewidth}`
+%          came out at width 0): the binding digested the margins, and `\linewidth` in a digested
+%          dimension is an assignment that zeroed it (warning "Missing number"); changepage.sty:110 reads
+%          them as `\list` parameters
+% oracle:  pdflatex 0 errors; the rule at the text width
+% engines: rust 57k=0 but a "Missing number" warning and `<rule width="0.0pt"/>`; perl (ar5iv binding): same
+% expect:  0 errors, 0 warnings; `<rule height="1.0pt" width="345.0pt"/>` between the paragraphs A | B | C
+% status:  RED (57k) -> GREEN (57l)
+\documentclass{article}
+\usepackage{changepage}
+\usepackage{graphicx}
+\begin{document}
+A
+\begin{adjustwidth}{-0.005\linewidth}{0pt}
+\rule{\linewidth}{1pt}
+B
+\end{adjustwidth}
+C
+\end{document}

@@ -1,0 +1,12 @@
+% mechanism: `\chapter` inside `{quotation}` in a report: the chapter closes the quotation (dropped, empty) and is the
+%   document's chapter, its section its own (main-session ruling 2026-10-17, OXIDIZED_DESIGN_DIVERGENCES #678)
+% witness: review probe s_chapter
+% oracle:  pdflatex 0 errors: Contents; "Chapter 1 One", "Text."; "Chapter 2 Quoted", "Quoted.", "2.1 Sec",
+%   "Sec text."; "Chapter 3 Two", "See 2, 2.1."
+% engines: rust 67int17b = Error:malformed:ltx:chapter (in <ltx:quote>); Perl errs the same way
+% expect:  0 errors, 0 warnings; three chapters at the top level, the second labelled c:q holding section s:q
+% status:  RED (67int17b) -> GREEN (69a r2)
+% preload: ar5iv.sty
+\documentclass{report}\begin{document}\tableofcontents\chapter{One}Text.
+\begin{quotation}\chapter{Quoted}\label{c:q}Quoted.\section{Sec}\label{s:q}Sec text.\end{quotation}
+\chapter{Two}See \ref{c:q}, \ref{s:q}.\end{document}

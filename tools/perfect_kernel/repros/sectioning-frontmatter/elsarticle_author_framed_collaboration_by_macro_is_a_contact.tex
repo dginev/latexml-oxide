@@ -1,0 +1,31 @@
+% mechanism: an author call printing only a collaboration framed for the names before it ("on behalf of", "for",
+%   "representing", brackets, dashes) is their collaboration contact, no creator, its framing read from the words the
+%   reading digests (`resolver::lines::frames_the_names`, `framed_collaboration`), however spelled: a document macro
+%   printing "On behalf of" here; a `\let` copy, `\csname`, `\MakeUppercase`, ties, a font group, a `\parbox`, the
+%   unknown-class and revtex routes are the guard's rows. The token reading `whole_name_collaboration` (deleted, P5b)
+%   saw only the spelling. OXIDIZED_DESIGN_DIVERGENCES #967.
+% witness: segaudit col1 (`\obo{} the KM3NeT Consortium`, synthetic, after 1201.5050's `\author{On behalf of the
+%   KM3NeT Consortium}`)
+% oracle:  pdflatex (TL 2025) 0 errors: "Ann Able∗ , Bob Baker", "Univ X", "On behalf of the XYZ Consortium"
+% engines: rust P5bbase: two creators, each with the collaboration (the reading's `speaks_for`); perl: a third
+%   creator "On behalf of the XYZ Consortium"
+% expect:  0 errors, 0 warnings; two creators, each with the address and the collaboration contact, Ann Able the
+%   corresponding author (perfect_kernel_batchp5b::a_framed_collaboration_call_is_the_names_contact)
+% status:  GREEN (P5bbase, by the reading) -> GREEN (P5b, the token reading deleted)
+% preload: ar5iv.sty
+\documentclass{elsarticle}
+\newcommand\obo{On behalf of}
+\begin{document}
+\begin{frontmatter}
+\title{T}
+\author{Ann Able\corref{cor1}}
+\cortext[cor1]{Corresponding author.}
+\author{Bob Baker}
+\address{Univ X}
+\author{\obo{} the XYZ Consortium}
+\begin{abstract}
+A.
+\end{abstract}
+\end{frontmatter}
+Text.
+\end{document}

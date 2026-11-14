@@ -1,0 +1,14 @@
+% witness: 2404.02153 (jcappub's journal abbreviations `\jcap`, `\apj`, … in the references: 13 undefined;
+%          jcappub.sty:72-146; the jheppub binding that serves jcappub lacked them)
+% oracle:  pdflatex 0 errors: "See JCAP, ApJ, PhRvL, MNRAS."
+% engines: rust 63n = 4 undefined; Perl 0.8.8 the same
+% expect:  0 errors, 0 warnings; the paragraph reads "See JCAP, ApJ, PhRvL, MNRAS."
+% status:  RED (63n) -> GREEN (63o)
+\documentclass{article}
+\usepackage{jcappub}
+\title{A Title}
+\author{A. Author}
+\begin{document}
+\maketitle
+See \jcap, \apj, \prl, \mnras.
+\end{document}

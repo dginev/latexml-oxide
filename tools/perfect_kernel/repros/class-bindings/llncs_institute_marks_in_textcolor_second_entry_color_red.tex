@@ -1,0 +1,20 @@
+% mechanism: the list cutter (`classify::entry_starts` `cut_at_starts`): a line set in a wrapper whose argument group
+%   follows another group (`\textcolor{blue}{$^{1}$ Univ A, $^{2}$ Univ B}`) cut inside it; the second piece reopens a
+%   bare `{`, not the wrapper with its first argument, so its color is lost
+% witness: synthetic (revP4b4a S2, `\mbox{\parbox{w}{…}}` there; P4b4a3 probe s12)
+% oracle:  pdflatex (TL 2025, xcolor, -no-shell-escape) 0 errors: "Ann Able1 and Bob Baker2" over "1 Univ A, 2 Univ B",
+%   both blue
+% engines: rust P4b4abase: 0 errors, 0 warnings, each name its entry, neither blue; P4b4a3: "1 Univ A" blue, "2 Univ B"
+%   not
+% expect:  0 errors, 0 warnings; Ann Able "1 Univ A", Bob Baker "2 Univ B", both blue
+% status:  RED (P4b4abase, P4b4a3: the second entry's color; no word lost)
+% moves:   post-merge
+\documentclass{llncs}
+\usepackage{xcolor}
+\begin{document}
+\title{A Title}
+\author{Ann Able$^{1}$ \and Bob Baker$^{2}$}
+\institute{\textcolor{blue}{$^{1}$ Univ A, $^{2}$ Univ B}}
+\maketitle
+Body.
+\end{document}

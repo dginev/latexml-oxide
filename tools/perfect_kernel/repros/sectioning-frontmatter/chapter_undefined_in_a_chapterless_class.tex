@@ -1,0 +1,16 @@
+% witness: OXIDIZED_DESIGN #179/#734 (72b); blindtext.sty:243 `\blinddocument` tests `\chapter` in the body
+% oracle:  pdflatex 0 errors; "P=S. B=S. D=S." (article defines no \chapter: every test says undefined)
+% engines: rust 67int21 = "P=S. B=S. D=S."; Perl 0.8.8 = "P=C. B=C. D=C." (KNOWN_PERL_ERRORS #962)
+% expect:  0 errors, 0 warnings; paragraph "P=S. B=S. D=S."
+% status:  CONTROL (72b: the begin-document stand-in for \chapter leaves the name undefined)
+% preload: ar5iv.sty
+\documentclass{article}
+\makeatletter
+\@ifundefined{chapter}{\def\p{S}}{\def\p{C}}
+\AtBeginDocument{\@ifundefined{chapter}{\gdef\b{S}}{\gdef\b{C}}}
+\makeatother
+\begin{document}
+\makeatletter
+P=\p. B=\b. D=\@ifundefined{chapter}{S}{C}.
+\makeatother
+\end{document}

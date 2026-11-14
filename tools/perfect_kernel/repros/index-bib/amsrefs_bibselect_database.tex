@@ -1,0 +1,16 @@
+% witness: 1904.05225 (`\bibselect{CF}` with `CF.ltb` shipped), 2103.06687, 2508.05726 (`\bibselect` with the
+%          `.bbl` shipped); amsrefs.sty:1291-1340 reads the `\bib` records of `<db>.ltb` and keeps the cited ones
+% oracle:  pdflatex 0 errors: References lists [1] I. Gel′fand, Cited — the uncited B is not printed
+% engines: rust 65int2 = 1 error (`\bibselect` undefined), no References; Perl has no `\bibselect` (KNOWN_PERL_ERRORS
+%          #627)
+% expect:  0 errors, 0 warnings; the bibliography lists A only
+% status:  RED (65int2) -> GREEN (65r)
+% preload: ar5iv.sty
+\documentclass{amsart}
+\usepackage{amsrefs}
+\begin{document}
+Cite \cite{A}.
+\begin{bibdiv}\begin{biblist}
+\bibselect{amsrefs_bibselect_db}
+\end{biblist}\end{bibdiv}
+\end{document}

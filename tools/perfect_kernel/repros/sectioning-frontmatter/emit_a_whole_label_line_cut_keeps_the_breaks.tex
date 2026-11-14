@@ -1,0 +1,27 @@
+% mechanism: a cut that takes a whole line of an entry whose lines no balanced run holds — a label line, `\small{\textbf{Correspondence:}
+%   \href{mailto:…}{…},}` — takes the line with one break beside it, the entry's other lines and breaks kept, at
+%   `=2` (`emitter::emit::lines_run`; OD #980 P1c); the label goes with the run in the reading
+%   (`resolver::labels::take_labels`); `=2` only
+% witness: 2604.06805 ("Science 333 Longteng Road" on two authors, the entry its plain text, counted); review revP1br2 S1's
+%   probe r1_lines_label
+% oracle:  pdflatex 0 errors; "Ann Able1, Bob Baker2" / "1Univ X" / "1 Main Road, Town" / "2Univ Z" / "2 Side Road, City" /
+%   "Correspondence: bob@z.org,"
+% engines: rust P1br2 `=2`: "Univ Z 2 Side Road, City" plain, 2 Warnings (its markup lost); LO4 `=2` and off:
+%   "Univ Z<break/>2 Side Road, City"
+% expect:  0 errors, 0 warnings; Bob's entry "Univ Z<break/>2 Side Road, City", his e-mail its link named "Correspondence: "
+% status:  RED (P1br2) -> GREEN (perfect_kernel_batchp1c::a_whole_label_line_cut_keeps_the_breaks)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{hyperref}
+\begin{document}
+\title{A label line cut whole}
+\author{\textbf{Ann Able\textsuperscript{1}}, \textbf{Bob Baker\textsuperscript{2}}\\
+\textsuperscript{1}Univ X\\
+1 Main Road, Town\\
+\textsuperscript{2}Univ Z\\
+2 Side Road, City\\
+\small{\textbf{Correspondence:} \href{mailto:bob@z.org}{bob@z.org},}}
+\date{}
+\maketitle
+Text.
+\end{document}

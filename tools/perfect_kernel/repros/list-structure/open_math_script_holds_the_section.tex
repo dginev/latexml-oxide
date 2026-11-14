@@ -1,0 +1,28 @@
+% witness: 2007.11971 (pst-all's `\si` takes an argument: `$d(S^{\si})$` leaves the script group and the math open;
+%          64ze 9 errors, 65c+ 101 + Fatal:TooManyErrors: 51 `malformed:ltx:theorem`, 26 `ltx:equation` "isn't allowed
+%          in <ltx:XMArg>"), nucl-th0401019 (an open `\cases` alignment in an `equation`), 1210.0368 (an `\fbox` around
+%          an open xymatrix), math9805003, 1204.0071
+% oracle:  pdflatex 1 error ("Missing } inserted"), every word: "1. Let S x hold. 1 After Text after. References [1] …"
+% engines: rust 65bundle = 5 errors (the 2 mode errors; `malformed:ltx:section` ×2, `malformed:ltx:bibliography` in
+%          the script's XMArg), the rest of the document in the formula; Perl = 27 errors; 65i = 2 errors (the mode
+%          errors), 2 warnings
+% mechanism: before 65n the formula stayed open because the `$` deferred the math end to the end of the script group
+%          (tex_math.rs `end_math_or_defer`), which never ended, so the document ended inside the script, the formula
+%          and the enumerate, each `lx@unended` (OXIDIZED_DESIGN #542), and the section closed them. Since 65n the `$`
+%          inserts the `}` and ends the formula there, as TeX (§1193 + §1064-1065 `off_save`, OXIDIZED_DESIGN #553):
+%          the document no longer ends inside it
+% expect:  1 error ("Missing } inserted", = pdflatex), 0 warnings; the section and the bibliography outside the
+%          formula and the list, document children; "hold." and "Text after." spaced text, as pdflatex
+% status:  GREEN (65i structure; 65n text and diagnostics)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\begin{enumerate}
+\item Let $S^{x$ hold.
+\end{enumerate}
+\section{After}
+Text after.
+\begin{thebibliography}{9}
+\bibitem{a} A. Author, Title.
+\end{thebibliography}
+\end{document}

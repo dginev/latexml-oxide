@@ -1,0 +1,17 @@
+% witness: mathastext.sty:2585-2588 (\MTversion runs \mathversion{#2} first), :2411-2420 (\MTDeclareVersion
+%          declares its math version), :843-846 (\Mathastextencoding, …series, …shape); 68c review B4
+% oracle:  pdflatex 0 errors, "Bold x and sans z." (x in bold math, z in the declared version)
+% engines: rust 68c r1 = \MTversion a no-op (x not bold); undefined \Mathastextencoding, \Mathastextseries,
+%          \Mathastextshape
+% expect:  0 errors, 0 warnings; x bold, z not (its version is selectable, its fonts not modelled; the bold is
+%          left by its group: \MTversion{normal} keeps it, KNOWN_PERL_ERRORS #687)
+% status:  RED (68c r1) -> GREEN (68c r2); guard perfect_kernel_batch68c::mathastext_version_selects_math_version
+\documentclass{article}
+\usepackage{mathastext}
+\Mathastextencoding{T1}
+\Mathastextseries{m}
+\Mathastextshape{n}
+\MTDeclareVersion{sans}{T1}{cmss}{m}{n}
+\begin{document}
+{\MTversion{bold}Bold $x$} and \MTversion{sans}sans $z$.
+\end{document}

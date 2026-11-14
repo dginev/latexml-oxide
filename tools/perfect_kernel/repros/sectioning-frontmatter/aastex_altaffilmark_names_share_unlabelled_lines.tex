@@ -1,0 +1,21 @@
+% mechanism: an `\altaffilmark{N}` asks for an `\altaffiltext` (label `altaffil:N`), no affiliation: the names do not
+%   request affiliations by it, so unlabelled `\affil` lines under them stay with the row, every author each line (user
+%   ruling R1, 2026-11-01; aas_support_sty.rs `\affiliation`, `relocate::run_names_show_a_mark` reads superscripts only).
+% witness: 1210.4079 (aastex, `Michael D. Pavel\altaffilmark{1} and D. P. Clemens`, `\altaffiltext{1}{Current address:
+%   …}`, `\affil{Institute for Astrophysical Research}\affil{Boston University, …}`), 1506.04015; review rev97cd F1
+% oracle:  pdflatex (TL 2025, emulateapj) 0 errors: "Ann Able1 and Bob Baker / Uni One / Main Street 5"
+% engines: rust 97f r1: as expected; rust 97d: Ann Able Uni One only; perl: Bob Baker both, Ann Able none
+% expect:  0 errors, 0 warnings; Ann Able Uni One, Main Street 5 and the altaffiliation, Bob Baker Uni One and Main
+%   Street 5
+% status:  GREEN (97f r1, r2)
+\documentclass{emulateapj}
+\begin{document}
+\title{T}
+\author{Ann Able\altaffilmark{1} and Bob Baker}
+\altaffiltext{1}{Current address: Lab X}
+\affil{Uni One}
+\affil{Main Street 5}
+\begin{abstract}A.\end{abstract}
+\section{Intro}
+Text.
+\end{document}

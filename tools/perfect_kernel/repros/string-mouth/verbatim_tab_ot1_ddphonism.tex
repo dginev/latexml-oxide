@@ -1,0 +1,17 @@
+% witness: verbatim bodies containing a literal TAB (ddphonism-adjacent; general verbatim)
+% oracle:  pdflatex 0 errors (tab in verbatim = one inter-word space)
+% engines: rust=0 err renders tab as "Ψ"  perl=0 err renders "Ψ" (2026-09-03, b54t) -> SHARED / PERL-ORIGIN
+% expect:  <ltx:verbatim> text has NO U+03A8 "Ψ"; tab shows as a space (verbatim*: U+2423)
+% status:  GREEN (b54w, batch 54p)
+% mechanism: after_digest_verbatim char loop (latex_constructs.rs:824-831) sends every non-' ' char
+%   through font::decode_string(c, "OT1_typewriter"); a TAB (0x09) is not ' ', so it decodes to OT1
+%   slot 9 = "Ψ". Faithful port of Perl afterDigestVerbatim latex_constructs.pool.ltxml:1773
+%   (FontDecodeString($_, 'OT1_typewriter')). Real TeX: \dospecials (latex.ltx \dospecials list)
+%   does NOT touch ^^I, so a tab keeps catcode 10 (space) in verbatim -> it is a space, not a glyph.
+% fix: latex_constructs.rs:824 -- treat '\t' (0x09) like ' ' (push `space`), matching tab's cc10.
+\documentclass{article}\begin{document}
+\begin{verbatim}
+	a	b
+\end{verbatim}
+done.
+\end{document}

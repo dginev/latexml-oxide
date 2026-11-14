@@ -1,0 +1,19 @@
+% witness: 1009.1371 (mn2e, 73 names and 32 lines in two `\parbox{\textwidth}`s, `Ca\~nada`, `Astrof{\'\i}sica`),
+%          2401.03603 (`H\"ugel`, `Astrof\'{\i}sica`); the main session's giant-list census repro giant/rep/mnH.tex
+% oracle:  pdflatex (TL 2025): "A. Able,1 B. Baker,2 and C. Cole1,2", "1 Uni One, City", "2 Villanueva de la Cañada, Spain"
+% engines: rust 97c/97e r1 = the reading right, the block-line cut declined: the source span's letters ("Canada", an
+%          accent command's and `\i`'s letters unread) were not the key's ("cañada") — two `ltx_parbox` contacts kept
+% expect:  0 errors, 0 warnings; each line cut and written: Able Uni One, Baker Villanueva de la Cañada, Cole both
+% status:  RED (97e r1) -> GREEN (97e) — perfect_kernel_batch97e::a_block_line_with_accents_is_cut
+% preload: ar5iv.sty
+\documentclass{mnras}
+\title{T}
+\author[A. Able et al.]
+{\parbox{\textwidth}{\raggedright A.~Able,$^{1}$
+B.~Baker,$^{2}$ and C.~Cole$^{1,2}$}\vspace{0.4cm}\\
+\parbox{\textwidth}{\raggedright $^{1}$Uni One, City\\
+$^{2}$Villanueva de la Ca\~nada, Spain}}
+\begin{document}
+\maketitle
+Text.
+\end{document}

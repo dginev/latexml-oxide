@@ -1,0 +1,35 @@
+% witness: 2203.01270 (`R.~Abbott$^{1}$, …` names, `$^{\dag}$` symbol marks, and after `\\` the legend lines
+%          `{${}^{\ast}$Deceased, August 2020. } {${}^{\dag}$Deceased, April 2021. }`)
+% oracle:  pdflatex 0 errors (with the shipped ptephy_v1.cls, authblk-TI.sty, preprint_v1.clo): "A. One†1, B. Two∗2,
+%          and C. Three2", then "∗ Deceased, August 2020. † Deceased, April 2021."
+% engines: rust 65e r1 = the `†` mark dropped (a superscript symbol requests an affiliation none answers) and the
+%          legend lines one more creator ("∗Deceased, August 2020. Deceased, April 2021"); 65a every name held
+%          the whole affiliation list, the legends in C. Three's name
+% expect:  0 errors; One: † shown, University One; Two: ∗ shown, University Two; Three: University Two; three
+%          creators; the two legends two document notes, each with its mark
+% status:  RED (65e r1) -> GREEN (65e)
+% preload: ar5iv.sty
+\documentclass[preprint]{ptephy_v1}
+\begin{document}
+\title{A title}
+\author{
+A.~One$^{\dag}$$^{1}$,
+B.~Two$^{\ast}$$^{2}$,
+and
+C.~Three$^{2}$
+\\
+{${}^{\ast}$Deceased, August 2020. }
+{${}^{\dag}$Deceased, April 2021. }
+}\affil{
+$^{1}$University One, City One
+\\
+$^{2}$University Two, City Two
+\\
+}
+\begin{abstract}
+Text.
+\end{abstract}
+\maketitle
+\section{Intro}
+Body.
+\end{document}

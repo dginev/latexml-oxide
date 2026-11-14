@@ -1,0 +1,20 @@
+% mechanism: `\MT_start_cases:nnnn` (mathtools.sty:995-1008) for an environment whose end is `\newcases`'s own
+%   `\MH_end_cases:\right<d>` (:1018): a copied `{rcases}` (`\right\}`) or bracket cases (`\right]`) close the cases'
+%   `\left` with `<d>`, its right fence; the binding reads the end of the environment it was called from and passes
+%   `<d>` as the cases' right delimiter (mathtools_sty.rs `cases_keys`, `right=`), the end dropping it.
+% witness: review 68x r2 probe mt1
+% oracle:  pdflatex: 0 errors; "1 x>0 / 2 x≤0" closed by a tall "}" "= g"; "h = [3 a / 4 b]"
+% engines: rust 68x r2: an unfenced CLOSE glyph after each array, ltx_math_unparsed, Warning:unparsed_math per formula;
+%   67int16: `\MT_start_cases:nnnn` undefined
+% expect:  0 errors, 0 warnings; the first cases fenced by "}" only, the second by "[" and "]"
+% status:  RED (68x r2) -> GREEN (68x r3)
+\documentclass{article}
+\usepackage{mathtools}
+\makeatletter\MHInternalSyntaxOn
+\newenvironment{myrcases}{\MT_start_cases:nnnn{\quad}{$\m@th##$\hfil}{$\m@th##$\hfil}{.}}{\MH_end_cases:\right\}}
+\newenvironment{mybcases}{\MT_start_cases:nnnn{\quad}{$\m@th##$\hfil}{$\m@th##$\hfil}{[}}{\MH_end_cases:\right]}
+\MHInternalSyntaxOff\makeatother
+\begin{document}
+\[ \begin{myrcases} 1 & x>0 \\ 2 & x\le 0\end{myrcases} = g \]
+\[ h=\begin{mybcases} 3 & a \\ 4 & b\end{mybcases} \]
+\end{document}

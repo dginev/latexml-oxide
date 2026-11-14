@@ -1,0 +1,21 @@
+% witness: none (77m review probe rev77m/p2/f.tex)
+% oracle:  pdflatex 0 errors: "T: Given", "T: Default", "Name (Python)" over their code
+% engines: rust 77m r1 = 0 errors, "T:" and "Name ()" (the leading optional's default was lost); perl: raw tcblistings
+% expect:  0 errors, 0 warnings; captions "T: Given", "T: Default", "Name (Python)"
+% status:  RED (77m r1) -> GREEN (77m r2: tcolorbox_sty.rs `tcb_xparse_listing` defaults the leading optional to its stand-in)
+\documentclass{article}
+\usepackage[listings]{tcolorbox}
+\tcbuselibrary{xparse}
+\NewTCBListing{titled}{ O{Default} }{listing only,title={T: #1}}
+\DeclareTCBListing{named}{ D[]{Python} m }{listing only,title={#2 (#1)}}
+\begin{document}
+\begin{titled}[Given]
+a = 1
+\end{titled}
+\begin{titled}
+b = 2
+\end{titled}
+\begin{named}{Name}
+c = 3
+\end{named}
+\end{document}

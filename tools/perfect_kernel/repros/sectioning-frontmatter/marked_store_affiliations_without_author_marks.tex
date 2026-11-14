@@ -1,0 +1,23 @@
+% A raw class's affiliation store whose entries carry superscript marks (`\textsuperscript{1}Dept
+% One \and \textsuperscript{2}Dept Two`) when the authors carry none annotates every author, the marks
+% kept as the class's text: marks label affiliations only when the authors carry marks to match (a
+% new, name-less `<creator role="author">` held them). pdflatex prints them under the authors.
+% witness: none (synthetic; review probe of the K11 store timing).
+% status:  GREEN (58m)
+% oracle:  pdflatex 0 errors: "Anton", "Berta", "1Dept One", "2Dept Two".
+% engines: rust 58m4: an extra name-less creator; mg58l: the affiliations in the body.
+% expect:  0 errors, 0 warnings; no creator without a personname.
+\begin{filecontents*}[overwrite]{rcmarked.cls}
+\ProvidesClass{rcmarked}
+\LoadClass{article}
+\newcommand*\department[1]{\gdef\@department{#1}}
+\def\@department{}
+\def\@maketitle{\@title\par\@author\par\@department}
+\end{filecontents*}
+\documentclass{rcmarked}
+\title{T}\author{Anton \and Berta}
+\department{\textsuperscript{1}Dept One \and \textsuperscript{2}Dept Two}
+\begin{document}
+\maketitle
+Text.
+\end{document}

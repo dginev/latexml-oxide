@@ -1,0 +1,26 @@
+% witness: 57k review: with a literal `DefPrimitive!` body entering horizontal mode inside its own
+%          `bounded` group and `font`, `\everypar` (fired by enter_horizontal, OXIDIZED_DESIGN #267) ran in
+%          the glyph's font and group: `\textdagger` (textcomp, TS1) lost the hook's "E" silently, and
+%          `\ataribox`'s "E" came out white on black. LaTeX starts the paragraph before the group
+%          (`\UseTextSymbol` → `\hmode@start@before@group`, latex.ltx:9967)
+% oracle:  pdflatex 0 errors; each paragraph begins with a bold E, then the glyph: E† a., E⛋ b., E† c.,
+%          E⛋ d., E¢ e., E© f.
+% engines: rust 57k first cut=0 but "† a." (E lost) and E inside the black box; rust 57j2: "†E" order
+% expect:  0 errors; `<text font="bold">E</text>` first in every paragraph, outside the glyph's font
+% status:  RED (57k first cut) -> GREEN (57k)
+\documentclass{article}
+\usepackage{wasysym}
+\begin{document}
+\everypar{\textbf{E}}
+\textdagger{} a.
+
+\iftrue\ataribox\fi{} b.
+
+\iftrue\textdagger\fi{} c.
+
+\ataribox{} d.
+
+\cent{} e.
+
+\copyright{} f.
+\end{document}

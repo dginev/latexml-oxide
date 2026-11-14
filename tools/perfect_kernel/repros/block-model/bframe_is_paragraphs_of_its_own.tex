@@ -1,0 +1,10 @@
+% witness: K13 r3 (57p) lineno \bframe PROLOGUE_LEAVEH_MISSING; lineno.sty:2881-2908 {bframe} begins and ends with \par
+% oracle:  pdflatex 0 errors; three paragraphs "Text" / "framed" / "after."
+% engines: rust 57p=0 errors, one <p>"Text framed after."</p>; perl=1 error ({bframe} undefined)
+% expect:  0 errors; "Text", "framed" and "after." in three separate ltx:p
+% status:  RED (57p) -> GREEN (57s)
+\documentclass{article}
+\usepackage{lineno}
+\begin{document}
+Text \begin{bframe}framed\end{bframe} after.
+\end{document}

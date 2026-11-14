@@ -1,0 +1,15 @@
+% mechanism: a nested `\IEEEauthorblockA` led by a mark inside a font switch (`\textbf{\IEEEauthorrefmark{1}}`): the binding's
+%   mark reader (`leading_line_label`, relocate.rs:1096; ieeetran_cls.rs:1336-1341) skips `\textbf` as a switch and stops at its
+%   `{`, so the block is spliced, not lifted; the later reader still sees the bold mark — one fact, two readers
+% witness: synthetic (revP4cR2b 1)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 `!`: "Dept X" over both names; "* Univ A", "† Univ B"
+% engines: P4cR2b: Ann * Univ A only, Bob Dept X (Ann loses Dept X); P4b2: Dept X both, Bob also * Univ A
+% expect:  0 errors; Ann {Dept X, * Univ A}, Bob {Dept X, † Univ B}
+% status:  RED (P4cR2b, P4b2) — moves: post-merge (IEEO; fix in the mark reader: read inside a font switch's group)
+\documentclass[conference]{IEEEtran}
+\begin{document}
+\title{T}
+\author{\IEEEauthorblockN{Ann Able\IEEEauthorrefmark{1}, Bob Baker\IEEEauthorrefmark{2}}\IEEEauthorblockA{Dept X\IEEEauthorblockA{\textbf{\IEEEauthorrefmark{1}}Univ A}\IEEEauthorblockA{\textbf{\IEEEauthorrefmark{2}}Univ B}}}
+\maketitle
+Body.
+\end{document}

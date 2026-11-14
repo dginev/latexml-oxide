@@ -1,0 +1,44 @@
+% status: RED (56jm) -> GREEN (56jn)
+% expect: 0
+% The case changer leaves a command whose expansion opens with
+% \@protected@testopt unexpanded (l3text \__text_expand_testopt:N,
+% expl3-code.tex:36319-36328), so its optional argument is read when it is
+% typeset, after the case change: every \newcommand/\newenvironment with an
+% optional argument (latex.ltx:1249 \@xargdef), and a hand-written
+% \@protected@testopt macro. The token after the command is cased as usual.
+% The stored command is typeset inside the case changer's group, which lets
+% \oe/\OE as latex.ltx:22380-22393 does and no longer \def's \i/\j (Perl's
+% latex_constructs.pool.ltxml:5917): G keeps its dotless i.
+% pdflatex:
+%   A: AxB.  B: AQ B.  C: Ay-CD.  D: AzB.  E: axb.  F: AwB.
+%   G: Lıst Œuvre.  H: IJ ŒX.  I: œx.
+% (56jm: AXB, AY-CD, AZB, AWB — the default was expanded and cased.)
+\documentclass{article}
+\newcommand\foo[1][x]{#1}
+\newcommand\foob[2][y]{#1-#2}
+\makeatletter
+\edef\baz{\noexpand\@protected@testopt\noexpand\baz
+  \expandafter\noexpand\csname\string\baz\endcsname{z}}
+\expandafter\def\csname\string\baz\endcsname[#1]{#1}
+\makeatother
+\newenvironment{env}[1][w]{#1}{}
+\newcommand\fooij[1][]{L\i st \oe uvre}
+\begin{document}
+A: \MakeUppercase{a\foo b}.
+
+B: \MakeUppercase{a\foo[q] b}.
+
+C: \MakeUppercase{a\foob{c}d}.
+
+D: \MakeUppercase{a\baz b}.
+
+E: \MakeLowercase{A\foo B}.
+
+F: \MakeUppercase{a\env b}.
+
+G: \MakeUppercase{\fooij}.
+
+H: \MakeUppercase{\i\j\ \oe x}.
+
+I: \MakeLowercase{\OE X}.
+\end{document}

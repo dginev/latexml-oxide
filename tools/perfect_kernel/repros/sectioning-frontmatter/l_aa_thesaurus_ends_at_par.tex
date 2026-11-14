@@ -1,0 +1,27 @@
+% mechanism: l-aa.sty:453 `\def\thesaurus#1` is not `\long`: a `\par` in its argument ends the call, "Paragraph
+%   ended before \thesaurus was complete" (tex.web §396), and the document goes on. A binding macro reads its
+%   argument without that check, so a `%`-commented closing brace made the rest of the document the codes.
+% witness: astro-ph9405007 (`(… 02.19.1) % Shock waves }`)
+% oracle:  pdflatex (with l-aa.sty v3.0) 1 error, "Paragraph ended before \thesaurus was complete"; title, author,
+%   abstract and section typeset
+% engines: rust 64k: 1 error (\thesaurus undefined; its group left open to the end); 64u's binding before the check:
+%   the rest of the document read as the codes (astro-ph9405007: 9 errors, no title, sections or bibliography);
+%   perl: \thesaurus undefined
+% expect:  1 error, the paragraph runaway; title, author, affiliation, abstract, section kept
+% status:  RED (base) -> GREEN (64u)
+% preload: ar5iv.sty
+\documentstyle[referee]{l-aa}
+\begin{document}
+\thesaurus{08                     % A&A Section 8
+           (02.19.1)              % Shock waves                     }
+
+\title{A young remnant}
+\author{J. Greiner}
+\institute{MPE Garching}
+\maketitle
+\begin{abstract}
+We report.
+\end{abstract}
+\section{Intro}
+Text.
+\end{document}

@@ -1,0 +1,23 @@
+% `\pgfmathsetlength\reg{+…}` reads the value from its argument alone, as pgf's `#1#2\unskip`
+% (pgfmathcalc.code.tex:30-38): the following `\ifdim` is not expanded by the unit's optional
+% space and keyword scan, so it compares the new value (pgf decorations' `\pgf@decorate@switch@if`,
+% pgfmoduledecorations.code.tex:1020-1035). A dimen register takes a dimension, a skip glue.
+% witness: wheelchart manual (`arc data` text cut short, "did (possibly) not fit").
+% status:  GREEN (59b)
+% Tokens after the value are typeset after the assignment; a mu register takes mu glue.
+% oracle:  lualatex 0 errors: "N[1.0pt plus 2.0pt]", "CXY[3.0pt]D[3.0mu]".
+% expect:  0 errors, 0 warnings.
+\documentclass{article}
+\usepackage{pgf}
+\begin{document}
+\makeatletter\newskip\sk
+\pgf@x=5pt \pgfmathsetlength\pgf@x{+0pt}\ifdim 1pt<\pgf@x Y\else N\fi
+\pgfmathsetlength\sk{+1pt plus 2pt}[\the\sk]
+
+\newdimen\dd \newmuskip\mk
+C\pgfmathsetlength\dd{+3pt XY}[\the\dd]D\pgfmathsetlength\mk{+3mu}[\the\mk]
+
+\newdimen\seg \seg=4pt
+E\pgfmathsetlength\dd{+.5\seg X }F[\the\dd]
+\makeatother
+\end{document}

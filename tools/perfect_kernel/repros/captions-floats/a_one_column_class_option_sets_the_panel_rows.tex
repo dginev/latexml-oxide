@@ -1,0 +1,18 @@
+% witness: 2211.03584, 1604.07648, 1404.3152, 1809.02562, 2103.06618 (IEEEtran `onecolumn`, whose `\if@twocolumn`
+%          the binding keeps true); review rev78x §3
+% oracle:  pdflatex 0 errors, 0 overfull (\textwidth = \columnwidth 516pt); one row of two
+% engines: rust int67a = two rows; 78x r1 = two rows (a two-column 345pt column); Perl 0.8.8 two rows
+% expect:  0 errors, 0 warnings; no `ltx:break`
+% status:  RED (int67a, 78x r1) -> GREEN (78x r2, OXIDIZED_DESIGN_DIVERGENCES #885: the declared page in one column
+%          under `onecolumn`)
+% preload: ar5iv.sty
+\documentclass[journal,onecolumn]{IEEEtran}
+\usepackage{graphicx}
+\begin{document}
+\begin{figure}
+\centering
+\includegraphics[width=3.3in]{example-image}
+\includegraphics[width=3.3in]{example-image}
+\caption{Two panels on a one-column page.}
+\end{figure}
+\end{document}

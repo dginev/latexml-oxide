@@ -18,9 +18,9 @@ use crate::{
   pragmatics::ValidationPragmatics,
 };
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct Operator(pub Box<XM>);
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct Args(pub Vec<Option<XM>>);
 
 #[derive(Debug, Clone, Default)]
@@ -43,8 +43,10 @@ pub struct XProps {
   pub idref:             Option<Cow<'static, str>>,
   /// an intermediate key to be fully realized as an id at a later time
   pub xmkey:             Option<Cow<'static, str>>,
-  /// an optional subtree-specific Font
-  pub font:              Option<Font>,
+  /// an optional subtree-specific Font, shared: parse-tree dedup compares and clones `XProps`
+  /// millions of times on an ambiguous formula, and a by-value `Font` made that cost grow with
+  /// the font's size (`Rc<Font: Eq>` compares pointers first).
+  pub font:              Option<Rc<Font>>,
   /// usually associated with the internal `_font` attribute references
   pub fontref:           Option<Cow<'static, str>>,
   /// stretchy attribute for delimiters (e.g. "false" to suppress MathML stretching)
@@ -89,6 +91,25 @@ impl PartialEq for XProps {
   }
 }
 impl Eq for XProps {}
+/// Consistent with the `PartialEq` above: it hashes a subset of the compared fields (all but
+/// `font`, whose `Font` has no `Hash`), so equal properties hash equal. The parse-tree dedup's
+/// pre-filter (`parser.rs` `UniqueTrees`).
+impl std::hash::Hash for XProps {
+  fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+    self.content.hash(state);
+    self.role.hash(state);
+    self.meaning.hash(state);
+    self.name.hash(state);
+    self.fontref.hash(state);
+    self.stretchy.hash(state);
+    self.possible_function.hash(state);
+    self.mathstyle.hash(state);
+    self.thickness.hash(state);
+    self.decl_id.hash(state);
+    self.lpadding.hash(state);
+    self.rpadding.hash(state);
+  }
+}
 
 impl Display for XProps {
   fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -153,7 +174,11 @@ impl XProps {
       attrs.insert(String::from("rpadding"), rp.into_owned());
     }
     let attrs_opt = if attrs.is_empty() { None } else { Some(attrs) };
-    (self.content.take(), self.font.take(), attrs_opt)
+    (
+      self.content.take(),
+      self.font.take().map(Rc::unwrap_or_clone),
+      attrs_opt,
+    )
   }
 }
 
@@ -162,7 +187,7 @@ impl XProps {
 ///
 /// The main structural variants are associated with
 /// a "parsing state::, via an attached `Meta` object.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum XM {
   /// Token-name lexeme (e.g. "RELOP:less-than:3", "letter:a",
   /// "delimited-open-paren"). The name is stored as `Rc<str>` so:
@@ -211,12 +236,7 @@ impl Operator {
     meta.curry_constraints.iter().collect()
   }
   /// extract the constraints and pass them to the outer caller
-  pub fn drain_constraints(&mut self) -> Vec<CurryConstraint> {
-    // while we're at it, operators shouldn't have a curry_level set at this stage. Should they?!
-    let meta = self.0.get_meta_mut();
-    meta.curry_level = None;
-    meta.curry_constraints.drain().collect()
-  }
+  pub fn drain_constraints(&mut self) -> Vec<CurryConstraint> { self.0.drain_constraints() }
 
   pub fn unconstrain_recursive(&mut self) { self.0.unconstrain_recursive(); }
 
@@ -300,6 +320,11 @@ impl From<Vec<XM>> for Args {
   fn from(items: Vec<XM>) -> Args { Args(items.into_iter().map(Some).collect()) }
 }
 
+/// The metadata of a node that carries none: an `XM::Ref` (the differential `d` of a content
+/// branch is one, as an Apply's operator) or an `XM::Arg` has no trace, curry level or
+/// constraints.
+static NO_META: std::sync::LazyLock<Meta> = std::sync::LazyLock::new(Meta::default);
+
 impl XM {
   pub fn get_meta(&self) -> &Meta {
     match self {
@@ -309,7 +334,7 @@ impl XM {
       XM::Dual(_, _, _, meta) => meta,
       XM::Wrap(_, _, meta) => meta,
       XM::Choices(cs) => cs[0].get_meta(), // Should we return a none type instead?
-      XM::Ref(_) | XM::Arg(_) => todo!(),
+      XM::Ref(_) | XM::Arg(_) => &NO_META,
     }
   }
   pub fn get_meta_mut(&mut self) -> &mut Meta {
@@ -398,7 +423,10 @@ impl XM {
   ) -> Result<Self, Box<dyn Error>> {
     match self {
       XM::Lexeme(name, meta) => {
-        let new_meta = meta.with_curry_atom(into, &name)?;
+        // (an expectation read as a letter keeps its mark, `Meta::expectation_letter`, M3)
+        let letter = meta.expectation_letter;
+        let mut new_meta = meta.with_curry_atom(into, &name)?;
+        new_meta.expectation_letter = letter;
         Ok(XM::Lexeme(name, new_meta))
       },
       XM::Token(t, meta) => {
@@ -497,21 +525,30 @@ impl XM {
     }
   }
 
-  /// Prunes choices based on a validation pass leveraging a choice of pragmatics
-  /// if the pruning arrives at no viable trees at all, the original tree is returned,
-  /// hence the "soft" function name.
-  /// These are executed at the end of the program, so need to be invoked recursively on each
-  /// subtree
+  /// Keeps the readings a pragma ranks best (`rank_violations`) — "soft": when no reading is clean,
+  /// the fewest violations of a counting pragma win, and a pass-or-fail pragma keeps them all.
+  /// Ranking, not filtering (K19 step 1, ARCHITECTURE_THEMES 12): for the fenced-letters pragma a
+  /// failure every reading shares no longer turns it off, leaving the reading to the order the
+  /// route enumerated — in `(f(x)+1)(g(x)+1)` every reading's top-level product has a fenced
+  /// factor, and `f(x)` read as a product only because the route listed that reading first (#18;
+  /// 2605.18798 A2.E83, 2605.02365; golden tests/parse/function_application.tex). Where a reading is
+  /// clean this is the filter it always was.
   pub fn soft_prune_choices(self, pragmatics: ValidationPragmatics) -> Self {
     match self {
       XM::Choices(trees) => {
-        let (consistent_trees, inconsistent_trees): (Vec<XM>, Vec<XM>) = trees
+        let violations: Vec<usize> = trees
+          .iter()
+          .map(|tree| pragmatics.rank_violations(tree))
+          .collect();
+        let fewest = violations.iter().copied().min().unwrap_or(0);
+        let mut kept: Vec<XM> = trees
           .into_iter()
-          .partition(|tree| pragmatics.validate_recursive(tree).is_ok());
-        match consistent_trees.len() {
-          0 => XM::Choices(inconsistent_trees),
-          1 => consistent_trees.into_iter().next().unwrap(),
-          _more => XM::Choices(consistent_trees),
+          .zip(violations)
+          .filter_map(|(tree, count)| (count == fewest).then_some(tree))
+          .collect();
+        match kept.len() {
+          1 => kept.remove(0),
+          _ => XM::Choices(kept),
         }
       },
       other => other,
@@ -701,6 +738,57 @@ impl XM {
         }
       },
       other => other,
+    }
+  }
+
+  /// Multi-tree pragma, divergence #350: keep the trees with the fewest single-bar fences holding
+  /// an evaluation bar (`Meta::evaluation_bar_inside`; Perl's `absExpression` `$forbidEvalAt`,
+  /// MathGrammar:410, a prune there). A count, not a veto: a formula keeps the bar in the one pair
+  /// whose every reading nests it (`|f(x)|_{0}^{1}|`, where Perl fails) while its other pairs read
+  /// Perl's way — `|\nabla a|_L|\nabla b|_L + |f(x)|_{0}^{1}|` keeps |∇a|_L·|∇b|_L (repro
+  /// math-parse/evaluated_at_stays_outside_absolute_bars).
+  pub fn prefer_fewest_evaluation_bars_inside(self) -> Self {
+    match self {
+      XM::Choices(trees) if trees.len() > 1 => {
+        let min = trees
+          .iter()
+          .map(XM::count_evaluation_bars_inside)
+          .min()
+          .unwrap_or(0);
+        let kept: Vec<XM> = trees
+          .into_iter()
+          .filter(|t| t.count_evaluation_bars_inside() == min)
+          .collect();
+        match kept.len() {
+          0 => XM::Choices(Vec::new()),
+          1 => kept.into_iter().next().unwrap(),
+          _ => XM::Choices(kept),
+        }
+      },
+      other => other,
+    }
+  }
+
+  /// The single-bar fences in this tree that hold an evaluation bar (`Meta::evaluation_bar_inside`).
+  fn count_evaluation_bars_inside(&self) -> usize {
+    match self {
+      XM::Apply(op, args, ..) => {
+        op.0.count_evaluation_bars_inside()
+          + args
+            .trees()
+            .iter()
+            .map(|a| a.count_evaluation_bars_inside())
+            .sum::<usize>()
+      },
+      XM::Dual(c, p, _, meta) => {
+        usize::from(meta.evaluation_bar_inside)
+          + c.count_evaluation_bars_inside()
+          + p.count_evaluation_bars_inside()
+      },
+      XM::Wrap(items, ..) | XM::Choices(items) | XM::Arg(items) => {
+        items.iter().map(|i| i.count_evaluation_bars_inside()).sum()
+      },
+      XM::Token(..) | XM::Lexeme(..) | XM::Ref(_) => 0,
     }
   }
 
@@ -1033,6 +1121,57 @@ impl XM {
     }
   }
 
+  /// Multi-tree pragma: a comma list LEFT of a relation, `a,b \in A`, is the ruled distributed
+  /// relation (`formulae_apply` → `distribute_list_relation`, the 2026-06-22 surpass) — never a
+  /// `list@(a, b∈A)` whose relation binds only the last item, which `list_apply` also derives. The
+  /// two readings reach the root in either order: the ASF route and the tree-iterator fallback
+  /// (past `HYBRID_AND_NODE_LIMIT`) enumerate them differently, so without this the choice
+  /// depended on the route (57ag A/B: `x_1,x_2\in X` flipped in 54 papers when a formula's
+  /// and-node count crossed the limit). Keeps the distributed dual; drops every list holding a
+  /// binary relation as an item — Perl's Formulae rules (MathGrammar:141-170) never build one, and
+  /// a relation inside the list, not only at its end, is `list_apply`'s too (`a_1,b_2\vdash c,d`
+  /// as `list@(a_1, b_2⊢c, d)`, 2605.14476). Root only: `formulae` is a root alternative.
+  pub fn prefer_distributed_relation_at_root(self) -> Self {
+    match self {
+      XM::Choices(trees) if trees.len() > 1 => {
+        if !trees.iter().any(|t| t.is_distributed_relation()) {
+          return XM::Choices(trees);
+        }
+        let kept: Vec<XM> = trees
+          .into_iter()
+          .filter(|t| !t.is_list_holding_a_relation())
+          .collect();
+        match kept.len() {
+          0 => XM::Choices(Vec::new()),
+          1 => kept.into_iter().next().unwrap(),
+          _ => XM::Choices(kept),
+        }
+      },
+      other => other,
+    }
+  }
+
+  /// `distribute_list_relation`'s dual: `formulae@(…)` content, the relation (`Apply(rel,
+  /// [XMWrap(list), rhs])`) as presentation.
+  fn is_distributed_relation(&self) -> bool {
+    matches!(self, XM::Dual(content, pres, ..)
+      if matches!(&**content, XM::Apply(Operator(op), ..)
+        if matches!(&**op, XM::Token(props, _) if props.meaning.as_deref() == Some("formulae")))
+        && matches!(&**pres, XM::Apply(Operator(op), args, ..)
+          if args.trees().len() == 2 && super::is_relational_op(op)))
+  }
+
+  /// A `list@(…)` dual whose presentation holds a binary relation as an item: `list@(a, b∈A)`,
+  /// `list@(a, b⊢c, d)`.
+  fn is_list_holding_a_relation(&self) -> bool {
+    matches!(self, XM::Dual(content, pres, ..)
+      if matches!(&**content, XM::Apply(Operator(op), ..)
+        if matches!(&**op, XM::Token(props, _) if props.meaning.as_deref() == Some("list")))
+        && matches!(&**pres, XM::Wrap(items, ..)
+          if items.iter().any(|item| matches!(item, XM::Apply(Operator(op), args, ..)
+            if args.trees().len() == 2 && super::is_relational_op(op)))))
+  }
+
   /// Multi-tree pragma: when the forest contains parses whose root
   /// is a named 2-arg interval (`open-interval`, `closed-interval`,
   /// or half-open variants) AND parses whose root is either
@@ -1046,9 +1185,9 @@ impl XM {
   ///   - `fenced_factor → vector@(2)` or `delimited-XY@(...)` wrapper (the generic-bracket
   ///     interpretation)
   ///
-  /// Math convention reads these as intervals. Tree-iteration order in
-  /// legacy picks the interval; under ASF the Cartesian-product
-  /// order goes the other way.
+  /// Brackets and half-open pairs read as intervals; a balanced paren pair is named
+  /// afterwards by the slot it fills, whichever tree this keeps (`rename_fenced_lists`,
+  /// divergence #371), so for parens this pragma decides structure only.
   ///
   /// Scope is **deliberately narrow**: only applied at the root of
   /// the parse forest. Vectors / wrappers inside function arguments
@@ -1522,7 +1661,8 @@ impl XM {
   pub fn count_conditionals(&self) -> usize {
     let is_conditional_op = |op: &XM| -> bool {
       match op {
-        XM::Token(props, _) => props.meaning.as_deref() == Some("conditional"),
+        // A content branch's conditional is an annotated `XMRef` (57bc).
+        XM::Token(props, _) | XM::Ref(props) => props.meaning.as_deref() == Some("conditional"),
         _ => false,
       }
     };
@@ -1803,6 +1943,9 @@ impl XM {
 
   /// extract the constraints and pass them to the outer caller
   pub fn drain_constraints(&mut self) -> Vec<CurryConstraint> {
+    if matches!(self, XM::Ref(_) | XM::Arg(_)) {
+      return Vec::new(); // no metadata of its own (`NO_META`)
+    }
     // while we're at it, operators shouldn't have a curry_level set at this stage. Should they?!
     let meta = self.get_meta_mut();
     meta.curry_level = None;
@@ -2058,6 +2201,13 @@ impl XM {
         if let Some(id) = refprops.id {
           document.set_attribute(&mut ref_node, "idref", &id)?;
         }
+        // Perl `Annotate` puts the parse's role and meaning on an XMRef (MathParser.pm:1206-1235).
+        if let Some(role) = refprops.role {
+          document.set_attribute(&mut ref_node, "role", &role)?;
+        }
+        if let Some(meaning) = refprops.meaning {
+          document.set_attribute(&mut ref_node, "meaning", &meaning)?;
+        }
         if let Some(xmkey) = refprops.xmkey {
           // Use _pxmkey for parser-generated keys (pxm prefix) to avoid
           // conflicting with base_xmath's \lx@dual resolver.
@@ -2094,7 +2244,7 @@ impl XM {
         };
       },
       XM::Apply(op, ..) => {
-        // Compound operator (e.g. composed_bigop): get meaning from the operator
+        // Compound operator (e.g. `compound_operator`, a scripted op): get meaning from the operator
         return op.0.get_token_meaning(nodes);
       },
       _ => return Ok(None),

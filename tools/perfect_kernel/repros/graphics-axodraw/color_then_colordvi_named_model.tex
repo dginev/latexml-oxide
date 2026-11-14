@@ -1,0 +1,14 @@
+% witness: 64w review round 3 probe h_color_before_named.tex — color loaded first; axodraw's colordvi then read
+%          dvipsnam.def and used it up, so color's on-demand read for `\color[named]{Blue}` never happened
+% oracle:  pdflatex 0 errors (with a v1 axodraw.sty): "blue text" in blue
+% engines: rust 64w r3 = "Can't find color named 'named_Blue'"; Perl: its colordvi binding reads dvipsnam.def the
+%          same way
+% expect:  0 errors, 0 warnings; "blue text" #0000FF
+% status:  RED (64w r3) -> GREEN (64w)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{color}
+\usepackage{axodraw}
+\begin{document}
+Plain {\color[named]{Blue} blue text} here.
+\end{document}

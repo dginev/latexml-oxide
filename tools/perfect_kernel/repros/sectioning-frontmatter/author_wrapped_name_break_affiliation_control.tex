@@ -1,0 +1,15 @@
+% Control (R12) inside a wrapper: a `\parbox` around a name and the line under it, `\parbox{\linewidth}{\centering Ann
+% Able \\ University of Alpha}` — its lines the block's (107b), so the line is her affiliation, as without the box.
+% (A font command around both lines, `\textbf{Ann Able \\ University of Alpha}`, is invalid in article's tabular
+% `\@author`: pdflatex errs.)
+% oracle:  pdflatex 0 errors: "Ann Able", "University of Alpha"
+% engines: rust int138a = one creator, the affiliation under her (control); Perl one creator holding both
+% expect:  0 errors, 0 warnings; one creator, its affiliation
+% status:  GREEN (int138a, 107b)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{\parbox{\linewidth}{\centering Ann Able \\ University of Alpha}}
+\maketitle
+\end{document}

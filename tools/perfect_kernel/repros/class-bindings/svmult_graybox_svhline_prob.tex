@@ -1,0 +1,25 @@
+% witness: 0801.0527, 0805.1759 ({svgraybox}: 131 run-336 svmult/svmono papers), 1511.08212 (\svhline), 1509.02295 ({prob})
+% oracle:  pdflatex 0 errors (svmult.cls v5.5 shipped by 2002.09381): the shaded box, a two-rule table, "1 Problem TEXT."
+%          and "1 Solution TEXT."
+% engines: rust 64zc = 5 errors ({svgraybox}, \svhline x2, {prob}, {sol} undefined); Perl the same (svmult.cls.ltxml)
+% expect:  0 errors; the box shaded gray .85 (svmult.cls:186), the table ruled top and bottom, prob numbered, sol headed
+% status:  RED (64zc) -> GREEN (64ze)
+% preload: ar5iv.sty
+\documentclass[graybox]{svmult}
+\begin{document}
+\section{One}
+\begin{svgraybox}
+Boxed TEXT.
+\end{svgraybox}
+\begin{tabular}{ll}
+\svhline\noalign{\smallskip}
+a & b\\
+\noalign{\smallskip}\svhline
+\end{tabular}
+\begin{prob}\label{p1}
+Problem TEXT.
+\end{prob}
+\begin{sol}{p1}
+Solution TEXT.
+\end{sol}
+\end{document}

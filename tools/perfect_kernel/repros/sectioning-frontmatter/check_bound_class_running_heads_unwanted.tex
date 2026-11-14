@@ -1,0 +1,32 @@
+% A bound class's running heads and an e-mail its title page does not print: AASTeX 7 prints `\shorttitle` and
+% `\shortauthors` only in later pages' heads and an `\email` without `[show]` nowhere. The title-page check's second
+% source (title_page_check.rs `note_frontmatter_entry`) wants only what the binding places: `\shortauthors`, which the
+% binding drops (aas_support_sty.rs, as Perl), queues no entry and is no frontmatter command; a running head the
+% frontmatter API holds as one (`ltx:toctitle`) is not the title page's; the e-mails are the creators' contacts. Nothing
+% is counted.
+% witness: control (aastex7 2606.23168, 2607.00453, 2603.06433: the scorer's lost e-mails AASTeX 7 never prints)
+% oracle:  pdflatex 0 errors (TL 2025, -no-shell-escape): "A Title", "Ann Able and Bob Baker", "1 Lunar College",
+%          "2 Solar Institute", "ABSTRACT", "Text of the abstract.", "Keywords: alpha — beta", "1. INTRO", "Body."
+% engines: rust int135e = 0 errors, 0 warnings; perl = 0 errors, 0 warnings
+% expect:  0 errors, 0 warnings, no frontmatter:class_text Info
+% status:  GREEN (negative)
+% preload: ar5iv.sty
+\pdfoutput=1
+\documentclass{aastex701}
+\shorttitle{Short Moonlit Heading}
+\shortauthors{Able and Baker}
+\begin{document}
+\title{A Title}
+\author{Ann Able}
+\affiliation{Lunar College}
+\email{ann@lunarcollege.org}
+\author{Bob Baker}
+\affiliation{Solar Institute}
+\email{bob@solarinst.org}
+\begin{abstract}
+Text of the abstract.
+\end{abstract}
+\keywords{alpha --- beta}
+\section{Intro}
+Body.
+\end{document}

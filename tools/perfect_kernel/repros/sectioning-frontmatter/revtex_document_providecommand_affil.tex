@@ -1,0 +1,18 @@
+% mechanism: revtex_document_newcommand_affil.tex's guess, provided: a document's \providecommand{\affil}[1]{...}
+%   under revtex4-2 defines it (REVTeX has none), so the provided macro, not the binding's \affil, runs.
+% witness: (construct; 1104.4073's shape)
+% oracle:  pdflatex 0 errors: "Ann Able / Dept. of Physics, Univ. X"
+% engines: rust int116a = 0 errors, \affil{...} read as the binding's affiliation of nobody's; 86c = the document's
+% expect:  0 errors, 0 warnings; the creator's affiliation is "Dept. of Physics, Univ. X"
+% status:  RED (int116a) -> GREEN (86c)
+% preload: ar5iv.sty
+\documentclass[aps,prl]{revtex4-2}
+\providecommand{\affil}[1]{Dept. of Physics, #1}
+\begin{document}
+\title{Spontaneous emission}
+\author{Ann Able}
+\affiliation{\affil{Univ. X}}
+\begin{abstract}Abs.\end{abstract}
+\maketitle
+Body.
+\end{document}

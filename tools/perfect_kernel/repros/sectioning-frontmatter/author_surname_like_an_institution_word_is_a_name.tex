@@ -1,0 +1,11 @@
+% witness: 63e review r4 finding 1 ("Strasser" read as `strasse`: prefix matching folded the name into the one before, silently)
+% oracle:  pdflatex 0 errors: "Ann Able^1, Patrick Strasser^2"
+% engines: rust (63e r5) = ONE creator "Ann Able, Patrick Strasser", no error; rust 63d and Perl two
+% expect:  2 creators, each with its affiliation; 0 errors
+% status:  RED (63e r5) -> GREEN (63e)
+\documentclass{article}
+\author{Ann Able$^{1}$, Patrick Strasser$^{2}$\\ $^{1}$Univ A\\ $^{2}$Univ B}
+\title{T}
+\begin{document}
+\maketitle
+\end{document}

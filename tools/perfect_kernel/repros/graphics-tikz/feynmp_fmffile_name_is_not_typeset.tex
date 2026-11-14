@@ -1,0 +1,13 @@
+% witness: 1906.06341, 2512.17695 (`\begin{fmffile}{sde_feynman}`)
+% oracle:  pdflatex 0 errors: feynmp.sty:97-109 `\fmffile#1` only names the MetaPost file (`\openout`)
+% engines: rust 65i = 1 Error:unexpected:_ (feynmf_sty.rs digested the name); Perl 0.8.8 = 6
+% expect:  0 errors, 0 warnings; the diagram note, no "sde_feynman" text
+% status:  RED (65i) -> GREEN (65m)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{feynmp}
+\begin{document}
+\begin{fmffile}{sde_feynman}
+\begin{fmfgraph}(40,25) \fmfleft{i} \fmfright{o} \fmf{fermion}{i,o} \end{fmfgraph}
+\end{fmffile}
+\end{document}

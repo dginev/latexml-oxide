@@ -1,0 +1,18 @@
+% witness: none in the 67j A/B set (review of 67j r1, finding 2; synthetic)
+% oracle: pdflatex with tcilatex 5.0 (:760-774 \@@eqncr prints \@taggnum only under \if@eqnsw): neither (st) nor (nt) printed
+% engines: rust 67j r1 emits (st) and (nt); 67j r0 dropped the rows
+% expect: no tag for a \TCItag in eqnarray* or after \nonumber on the same row
+% mechanism: \TCItag is amsmath's \tag (tcilatex_tex.rs), which numbers regardless of the row's \if@eqnsw
+% status: RED
+\documentclass{article}
+\input{tcilatex}
+\begin{document}
+\begin{eqnarray*}
+a&=&b \\
+&& \TCItag{st}
+\end{eqnarray*}
+\begin{eqnarray}
+c&=&d \nonumber\\
+&& \nonumber\TCItag{nt}
+\end{eqnarray}
+\end{document}

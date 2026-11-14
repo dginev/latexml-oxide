@@ -1,0 +1,18 @@
+% mechanism: a sprocl address led by an author's mark goes to the authors showing it (`leads_with_mark`, as REVTeX's
+%   `\affiliation`): `\author{A. ABLE$^a$, B. BAKER$^b$}\address{$^a$X}\address{$^b$Y}` gave both addresses to BAKER.
+% witness: review 64zd round 2 (ws1.tex)
+% oracle:  pdflatex with hep-ph9701265's sprocl.sty: 0 errors; "A. ABLEa, B. BAKERb" over "aUniv X, City" and "bUniv Y,
+%   Town"
+% engines: rust 64zd r4: B. BAKER with both, A. ABLE with none; perl: no sprocl binding (OmniBus)
+% expect:  0 errors; A. ABLE with Univ X, B. BAKER with Univ Y
+% status:  RED (64zd r4) -> GREEN (64zd)
+% preload: ar5iv.sty
+\documentstyle[sprocl]{article}
+\begin{document}
+\title{T}
+\author{A. ABLE$^a$, B. BAKER$^b$}
+\address{$^a$Univ X, City}
+\address{$^b$Univ Y, Town}
+\maketitle
+Text.
+\end{document}

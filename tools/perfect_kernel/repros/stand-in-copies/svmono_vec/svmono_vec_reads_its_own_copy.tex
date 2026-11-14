@@ -1,0 +1,14 @@
+% witness: 0910.4696, 1001.2906, 1408.4098 (svmono.cls v5.x copies whose `\vec` test runs in the class body, :673-688
+%          of 0910.4696's, the code this directory's svmono.cls holds), 2407.02289 (a begin-document copy); SNmult
+%          2602.15816, 2609.20684 (review rev79b finding 8)
+% oracle:  pdflatex 0 errors with this svmono.cls: under `vecarrow` the kernel's arrow (CMMI10 and the accent);
+%          without it the upright bold (CMBX10)
+% engines: rust 79b = the bold italic under `vecarrow` (the binding read `svmult.cls`, which an svmono paper lacks, and
+%          took the class-as-distributed begin-document form); Perl 0.8.8 the arrow (no `\vec`, KNOWN_PERL_ERRORS #1143)
+% expect:  0 errors, 0 warnings; v under the OVERACCENT arrow
+% status:  RED (79b) -> GREEN (79d)
+% preload: ar5iv.sty
+\documentclass[vecarrow]{svmono}
+\begin{document}
+$\vec{v} + \vec{\omega} = x$
+\end{document}

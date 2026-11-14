@@ -3,6 +3,10 @@
 //!
 //! Defines common frontmatter commands, theorem environments, natbib autoloads,
 //! and various compatibility macros encountered in real-world arxiv submissions.
+use latexml_core::definition::origin::{
+  DefinitionOrigin, OriginGuard, ProvideOnlyGuard, provide_only, with_origin,
+};
+
 use crate::prelude::*;
 
 /// Push the digested body of a `{keyword}`/`{keywords}` env directly into
@@ -25,7 +29,7 @@ fn push_keyword_body_to_frontmatter(whatsit: &mut Whatsit) -> Result<Vec<Digeste
       if let Some(Stored::HashTagData(frnt)) = val_opt {
         frnt
           .entry("ltx:classification".to_string())
-          .or_insert_with(Vec::new)
+          .or_default()
           .push(entry);
       }
     });
@@ -42,17 +46,88 @@ fn is_all_ascii_digits(arg: &Tokens) -> bool {
   !s.is_empty() && s.chars().all(|c| c.is_ascii_digit())
 }
 
+/// An `\authors` list with each `\affil{…}` whose argument is numbers (`1`, `1,2`) written `\inst{…}`: the request
+/// of those numbered affiliations, read as llncs's mark is (`\authors`, below).
+fn numbered_affil_marks(list: Tokens) -> Tokens {
+  let tokens = list.unlist();
+  let mut out = Vec::with_capacity(tokens.len());
+  let mut at = 0;
+  while at < tokens.len() {
+    let t = tokens[at];
+    at += 1;
+    if t == T_CS!("\\affil") {
+      let open = at
+        + tokens[at..]
+          .iter()
+          .take_while(|t| t.get_catcode() == Catcode::SPACE)
+          .count();
+      if tokens
+        .get(open)
+        .is_some_and(|t| t.get_catcode() == Catcode::BEGIN)
+        && let Some(close) = tokens[open + 1..]
+          .iter()
+          .position(|t| t.get_catcode() == Catcode::END)
+          .map(|end| open + 1 + end)
+      {
+        let text = Tokens::new(tokens[open + 1..close].to_vec()).to_string();
+        let numbers = text.chars().any(|c| c.is_ascii_digit())
+          && text
+            .chars()
+            .all(|c| c.is_ascii_digit() || c == ',' || c == ' ');
+        if numbers {
+          out.push(T_CS!("\\inst"));
+          continue;
+        }
+      }
+    }
+    out.push(t);
+  }
+  Tokens::new(out)
+}
+
+/// OmniBus over the base class a stand-in binding loaded as its real file does (OXIDIZED_DESIGN_DIVERGENCES #736):
+/// provide-only ([`ProvideOnlyGuard`], as `\documentstyle` loads it over a class, sect01.rs), so it adds the frontmatter
+/// commands and environments the base class leaves undefined (`{keywords}`, `\email`, `\affiliation`, …) and replaces
+/// none of the base class's. A binding that once loaded OmniBus as its base (ceurart, atlasdoc, lmcs, pnas-new,
+/// czipreprint) keeps what OmniBus gave it where the real base class (scrartcl, amsart, extarticle) has nothing:
+/// ceurart's `{keywords}`, OmniBus's `ltx:classification`, which a trial without it lost (-10 to -15 words a paper;
+/// ceurart witnesses 2509.11496, 2608.23214).
+pub fn provide_over_base_class() -> Result<()> {
+  let _provide_only = ProvideOnlyGuard::new();
+  load_class("OmniBus", Vec::new(), Tokens!())
+}
+
 #[rustfmt::skip]
 LoadDefinitions!({
-  // Perl L33: LoadClass('article');
-  LoadClass!("article");
+  // Perl L33: LoadClass('article'). Loaded provide-only (`\compat@loadpackages`), a class is loaded already, and
+  // article's numbering and layout are not that class's (`\documentstyle[foobarx]{report}` numbers "1.1", not "1").
+  // Loaded as the fallback the class loader chose for a class with no binding (`fallback_target`, `load_class`), not
+  // as the base of a named binding (bmvc2k_cls.rs, wileynjd_cls.rs): an unknown class may have chapters, so it keeps
+  // the kernel's `\chapter` (OXIDIZED_DESIGN #179 (c), `settle_chapter_after_class_load`) — from article's return on,
+  // so the packages the class's dependency scan loads after it see it too.
+  if lookup_string("fallback_target") == "OmniBus" {
+    assign_value("OmniBus:fallback", true, Some(Scope::Global));
+  }
+  if !provide_only() {
+    LoadClass!("article");
+  }
+  // What OmniBus itself defines is a guess about a class it does not know: a document's own `\newcommand` of
+  // the name wins over it (`DefinitionOrigin::Fallback`, `is_definable_latex`; OXIDIZED_DESIGN_DIVERGENCES #408).
+  let _fallback = OriginGuard::new(DefinitionOrigin::Fallback);
   // Perl L34: ProcessOptions();
   ProcessOptions!();
 
-  // Perl L37-45: Various common packages
+  // Perl L37-45: Various common packages. inst_support (`\inst`, `\institute`) and aas_macros (`\apj`, `\mnras`) are
+  // conventions guessed for the class, so they load as part of the guess (`Fallback`, `input_definitions`): a
+  // document's own `\newcommand{\inst}` replaces them (2603.21740, cas-sc: whose class defines no `\inst`). epsf and
+  // graphicx are packages whose commands are their own: they keep a binding's standing, and a document's
+  // `\providecommand{\includegraphics}` stays declined.
   RequirePackage!("inst_support");
-  RequirePackage!("epsf");
-  RequirePackage!("graphicx");
+  with_origin(DefinitionOrigin::Binding, || -> Result<()> {
+    RequirePackage!("epsf");
+    RequirePackage!("graphicx");
+    Ok(())
+  })?;
   RequirePackage!("aas_macros");
 
   // Perl L48-51: natbib autoloads — `DefAutoload($trigger, 'natbib.sty.ltxml')`
@@ -114,34 +189,36 @@ LoadDefinitions!({
     // GLOBAL so they survive the group pop (matching a top-level
     // `\usepackage{natbib}`). Witness: 2209.11799 (sn-jnl, `\citep` after a
     // `\citeauthoryear` `\bibitem`-triggered natbib load).
-    let pre_keys = snapshot_top_frame_meaning_keys();
+    let pre_keys = snapshot_top_frame_keys();
     require_package(&pkg.to_string(), RequireOptions::default())?;
-    hoist_top_frame_meaning_delta(&pre_keys);
+    hoist_top_frame_package_load(&pre_keys);
   });
+  // It extends the class's `\bibitem` (delegates to the one saved above), so a provide-only load installs it too:
+  // a class without natbib and `[\protect\citeauthoryear…]` labels got natbib loaded inside the first bibitem's tag
+  // otherwise (cond-mat9808262, crckapb: "<ltx:tags> isn't allowed in <ltx:tag>").
   DefMacro!("\\bibitem",
-    "\\@ifnext@n{[\\protect\\citeauthoryear}{\\lx@late@usepackage{natbib}\\bibitem}{\\lx@OmniBus@saved@bibitem}");
+    "\\@ifnext@n{[\\protect\\citeauthoryear}{\\lx@late@usepackage{natbib}\\bibitem}{\\lx@OmniBus@saved@bibitem}",
+    extends => true);
 
-  // Perl L58-60: frontmatter section environments
-  DefEnvironment!("{frontmatter}", "#body");
-  DefEnvironment!("{mainmatter}",  "#body");
-  DefEnvironment!("{backmatter}",  "#body");
-  // Override the bare-`\frontmatter` / `\mainmatter` / `\backmatter`
-  // macros to noops AFTER the DefEnvironment registration. Modern
-  // book.cls-style papers (e.g. memo-l / amsmemo "Memoirs" templates
-  // — paper-bundled, no binding) call bare `\frontmatter` as a
-  // noop marker (book.cls semantics: sets page numbering style,
-  // increments chapter counter style). Our DefEnvironment binds
-  // `\frontmatter` to the env-opener, which pushes a structural
-  // frame that blocks subsequent display math (`$$...$$` triggers
-  // "Script _ can only appear in math mode" cascades; witness
-  // 1102.3639 — book-style paper using memo-l). LaTeX's
-  // `\begin{frontmatter}` / `\end{frontmatter}` env-bracket
-  // tracking still functions when the opener is a noop, so
-  // elsart/JHEP-style `\begin{frontmatter}...\end{frontmatter}`
-  // usage continues to work (env body flows as plain text).
-  Let!("\\frontmatter", "\\@empty");
-  Let!("\\mainmatter",  "\\@empty");
-  Let!("\\backmatter",  "\\@empty");
+  // Perl L58-60: frontmatter section environments. Perl's DefEnvironments box the body in restricted horizontal
+  // mode, where a `$$` is two empty inline formulas (TeX_Math.pool.ltxml:65) and the formula ran as text ("Script _
+  // can only appear in math mode": a display in an IMS abstract, imsart's `{frontmatter}`). The classes these stand
+  // for define them as markers (book.cls:284-298 `\frontmatter`/`\mainmatter`/`\backmatter`, page numbering) or as
+  // plain environments (elsarticle.cls:1303 `\newenvironment{frontmatter}{}{\maketitle}`, imsart.sty:1802
+  // `\def\frontmatter`), so the body stays in the mode around it, where `$$` is display math (tex.web:21715). The
+  // bare `\frontmatter` (book-style memo-l papers, 1102.3639) is the same no-op.
+  Let!("\\frontmatter",    "\\@empty");
+  Let!("\\endfrontmatter", "\\@empty");
+  Let!("\\mainmatter",     "\\@empty");
+  Let!("\\endmainmatter",  "\\@empty");
+  Let!("\\backmatter",     "\\@empty");
+  Let!("\\endbackmatter",  "\\@empty");
+  // …and the flag book.cls declares with them (book.cls:53 `\newif\if@mainmatter \@mainmattertrue`), which a
+  // package that finds `\mainmatter` defined expects: scrlayer.sty:102-110 warns "\mainmatter defined without
+  // \if@mainmatter!" otherwise, as it did on the ceurart papers whose base class is scrartcl with OmniBus provided over
+  // it (`provide_over_base_class`; 111 of the 112 of 2506+2509: 2509.11492, 2509.11496), where pdflatex, whose
+  // scrartcl has no `\mainmatter`, is quiet. A class that declares the flag keeps its own.
+  RawTeX!(r"\@ifundefined{if@mainmatter}{\newif\if@mainmatter\@mainmattertrue}{}");
 
   // Perl L62-63
   DefMacro!("\\shorttitle{}", "\\lx@add@toctitle{#1}");
@@ -183,26 +260,20 @@ LoadDefinitions!({
   // (AGU's agujournal2019, ametsoc, …) as an alternative to \author. It holds
   // ONE comma-separated list of authors, the last joined with "and", each name
   // trailed by an `\affil{n}` superscript that cross-references a numbered
-  // `\affiliation{n}{text}` block (see \affil / \affiliation below). Split it on
-  // comma + the literal " and " into SEPARATE creators (never one merged blob,
-  // never the old side-margin `<note role=authors>` — arXiv/html_feedback #6901,
-  // witness 2608.15512). Each piece keeps its `\affil{n}`, which registers the
-  // affiliation annotation on that creator during personname digestion. Empty
-  // pieces (a trailing comma, or the "and" split leaving nothing) are dropped.
+  // `\affiliation{n}{text}` block (see \affil / \affiliation below): separate
+  // creators (never one merged blob, never the old side-margin `<note role=authors>`
+  // — arXiv/html_feedback #6901, witness 2608.15512). The list goes whole to the
+  // reading (`\lx@add@author@split`, as llncs's `\author`, OD #984), which parts it
+  // at its commas and " and ". Inside it an `\affil` of numbers (`\affil{1}`,
+  // `\affil{1,2}`) is the request of those affiliations, as llncs's `\inst{n}` is,
+  // and is read as that mark (`\inst`, which every author's content makes the
+  // request, `\lx@author@withinst`): read as an affiliation call it gave the
+  // reading an entry "1" and left the numbered blocks on a nameless creator, and
+  // the old split made `\affil{1,2}` the affiliation text "1,2" (2003.03010,
+  // 2103.05990, 2209.10103). Any other `\affil{text}` stays the affiliation it is.
+  // Witnesses 1810.04324, 1903.07205, 2108.10255, 2604.17795 (agutexSI2019).
   DefMacro!("\\authors{}", sub[(list)] {
-    // Reuse the engine's canonical author-name splitter (comma + literal " and ",
-    // plus its font-wrapper descent) rather than re-listing separators — this is
-    // exactly the split `\lx@add@authors` applies to a superscript-marked author
-    // line. Each piece keeps its `\affil{n}`, which registers the affiliation
-    // annotation on that creator during personname digestion.
-    let mut calls: Vec<Token> = Vec::new();
-    for piece in split_author_line(list) {
-      if piece.to_string().trim().is_empty() {
-        continue;
-      }
-      calls.extend(Invocation!(T_CS!("\\lx@add@author"), vec![None, Some(piece)]).unlist());
-    }
-    Ok(Tokens::new(calls))
+    Ok(Invocation!(T_CS!("\\lx@add@author@split"), vec![None, Some(numbered_affil_marks(list))]))
   });
   def_macro_noop("\\alignauthor")?;
   // \correspondingauthor{name/email} — common journal-class CS used
@@ -229,10 +300,7 @@ LoadDefinitions!({
   DefMacro!("\\speaker{}", "\\lx@add@creator[role=speaker]{#1}");
 
   // Perl (PR #2767): affiliations, like from aas
-  DefMacro!("\\altaffilmark Semiverbatim",
-    "\\lx@request@frontmatter@annotation[altaffil]{#1}");
-  DefMacro!("\\altaffiltext Semiverbatim {}",
-    "\\lx@add@contact[role=altaffiliation,label={altaffil:#1}]{#2}");
+  aas_support_sty::altaffil_markup()?;
 
   DefMacro!("\\address[]{}", "\\lx@add@address{#2}");
   Let!("\\affaddr", "\\address");
@@ -354,7 +422,19 @@ LoadDefinitions!({
   // Perl (PR #2767): keyword macros
   DefMacro!("\\keywords{}", "\\lx@add@keywords{#1}");
   DefMacro!("\\kword{}",    "\\lx@add@keywords{#1}");
-  DefMacro!("\\kwd[]{}",    "\\lx@add@keywords{#2, }");
+  // Each `\kwd{<entry>}` adds to the entries before it (`\begin{keyword}\kwd{a}\kwd{b}\end{keyword}`: "a, b, "), as
+  // the classes defining `\kwd` list them (imsart.sty:1566 of 1410.4462's copy, bmcart.cls:1560 of 1507.06515's).
+  // Perl's re-added the keywords with only its own entry, `\lx@add@keywords` clearing them first
+  // (Base_Utility.pool.ltxml:613-615), so the last entry was all that was kept (KNOWN_PERL_ERRORS #1196). Found on
+  // 1401.3408's `myimsart`, which now has imsart's own markup (ims_support_sty.rs `vtex_keyword_markup`): no live corpus
+  // paper reaches this `\kwd`. The list is the document's, never reset: the entries of every block are one `<keywords>`,
+  // in order, each once (`\lx@add@keywords` replaces the element it re-adds; a reset per block would drop the blocks
+  // before it).
+  RawTeX!(r"\gdef\lx@omnibus@kwd@list{}");
+  DefMacro!(
+    "\\kwd[]{}",
+    "\\g@addto@macro\\lx@omnibus@kwd@list{#2, }\\expandafter\\lx@add@keywords\\expandafter{\\lx@omnibus@kwd@list}"
+  );
 
   // Perl L133-156: {keyword}, {keywords} as environments, plus auto-variants
   // via `\keywords` that can be used as a section-like bare macro.
@@ -449,16 +529,55 @@ LoadDefinitions!({
   DefMacro!("\\classification{}", "\\lx@add@classification{#1}");
   DefMacro!("\\pacs{}",
     "\\lx@add@classification[scheme=pacs]{#1}", locked => true);
-  // \doi — frontmatter in preamble, url-like in body.
-  DefMacro!("\\doi{}",
-    "\\if@in@preamble{\\lx@add@pubnote[role=doi]{#1}\
+  // \doi — frontmatter in preamble, url-like in body. A DOI is read as a url is (`HyperVerbatim`,
+  // as revtex4_1_cls.rs's `\doi`): Perl's `\doi{}` (OmniBus.cls.ltxml:154) digests `_`, `~`, `%`
+  // and `<…>` as TeX — "Script _ can only appear in math mode", `~` a space in the href. The
+  // classes that fall to OmniBus (apa6, apa7) define no `\doi`, so it also stands in for the
+  // package's (apacite's `\providecommand{\doi}`, apacite.sty:1812-1816) in their `.bbl`s.
+  // The verbatim read starts only at a brace: `HyperVerbatim` scans ahead to the next `{`, so a
+  // bare `\doi` would swallow the text up to it; without one `\doi` takes its token as `\doi{}`
+  // did. In the frontmatter the characters are set in the ASCII encoding, as `\UrlFont` does.
+  // (locked with OmniBus's other semantic frontmatter commands, at the end)
+  DefMacro!("\\doi", "\\@ifnextchar\\bgroup\\lx@doi@verbatim\\lx@doi@token");
+  // A DOI with a character TeX cannot set in text (`_`, `^`, `#`, `&`, `$`) is an
+  // error under the `\doi` TeX would use when that reads its argument as TeX:
+  // apacite's `\providecommand{\doi}[1]` (apacite.sty:1812-1816; a class falling
+  // to OmniBus defines none) — pdflatex "Missing $ inserted", Perl
+  // `Error:unexpected:_`. doi.sty's `\doi` reads a URL (no error). Read as a URL
+  // here, it is a correct link, so the report is a Warning
+  // (omnibus_doi_reads_as_a_url).
+  DefMacro!("\\lx@doi@check{}", sub[(doi)] {
+    if !package_loaded("apacite") || package_loaded("doi") {
+      return Ok(Tokens!());
+    }
+    let doi = doi.to_string();
+    // An escaped one (`10.1000/j\_x`) is text to TeX too.
+    let mut escaped = false;
+    let special = doi.chars().find(|&c| {
+      let found = !escaped && matches!(c, '_' | '^' | '#' | '&' | '$');
+      escaped = !escaped && c == '\\';
+      found
+    });
+    if let Some(c) = special {
+      Warn!(
+        "unexpected",
+        "\\doi",
+        s!("The DOI '{doi}' holds '{c}', which TeX cannot set as text; it is kept as a link to the DOI")
+      );
+    }
+    Ok(Tokens!())
+  });
+  DefMacro!("\\lx@doi@verbatim HyperVerbatim",
+    "\\lx@doi@check{#1}\\if@in@preamble{\\lx@add@pubnote[role=doi]{{\\lx@fontencoding{ASCII}\\selectfont #1}}\
      \\else\\lx@doi{#1}\\fi");
+  DefMacro!("\\lx@doi@token{}",
+    "\\if@in@preamble{\\lx@add@pubnote[role=doi]{#1}\\else\\lx@doi{#1}\\fi");
   // INTENTIONAL DIVERGENCE (Rust supersedes): Perl OmniBus.cls.ltxml:157 has a
   // typo — `href="https:/doi.org/#1"` (single slash) — producing a broken DOI
   // link. We emit the valid `https://`. A DOI href is a functional link, so per
   // "fix simple Perl bugs in Rust" we keep the working URL. See
   // KNOWN_PERL_ERRORS.md #36. (Do NOT revert to the single-slash form.)
-  DefConstructor!("\\lx@doi{}",
+  DefConstructor!("\\lx@doi Semiverbatim",
     "<ltx:ref href='https://doi.org/#1'>#1</ltx:ref>",
     enter_horizontal => true);
 
@@ -468,49 +587,62 @@ LoadDefinitions!({
 
   // Perl L169-219: theorem env autoloads — if a common theorem env name is
   // used without being declared, load amsthm and define a standard set.
+  // Each only where the name is free: LaTeX's `\newtheorem` refuses a defined
+  // name (latex.ltx:17174-17195 `\@ifdefinable`, amsthm.sty:78-80), and the
+  // set, a fallback the author never wrote, refuses it silently. Perl defines
+  // them all, so an author's `\newcommand{\conj}[1]{\overline{#1}}` became the
+  // {conj} theorem at the first `\begin{theorem}`, and `\conj{y}` in math opened
+  // a theorem there (1308.6566, 0811.3048; cs0511055 `\fact`). A name numbered within another's counter
+  // (`\newtheorem{cor}[thm]{…}`) whose owner the set refused for an author's macro (`\newcommand{\thm}{…}`) has no
+  // such counter: it gets its own (`\@ifundefined{c@thm}`), not an undefined `\thethm`.
+  // The set runs with the document's origin (from the stub below, at the first undeclared `\begin{proof}`), so it
+  // declares through `\lx@guess@newtheorem` (sect08.rs), which never claims a name: the author's own later
+  // `\newtheorem{note}{Notation}` replaces the guessed {note} rather than being refused as a second declaration.
+  // Guard `perfect_kernel_batch77v::omnibus_guess_yields_to_document_newtheorem`.
   let theorem_preload = concat!(
-    "\\newtheorem{theorem}{Theorem}[section]",
-    "\\newtheorem{conjecture}[theorem]{Conjecture}",
-    "\\newtheorem{proposition}[theorem]{Proposition}",
-    "\\newtheorem{proof}[theorem]{Proof}",
-    "\\newtheorem{lemma}[theorem]{Lemma}",
-    "\\newtheorem{corollary}[theorem]{Corollary}",
-    "\\newtheorem{example}[theorem]{Example}",
-    "\\newtheorem{exercise}[theorem]{Exercise}",
-    "\\newtheorem{definition}[theorem]{Definition}",
-    "\\newtheorem{problem}[theorem]{Problem}",
-    "\\newtheorem{question}[theorem]{Question}",
-    "\\newtheorem{remark}[theorem]{Remark}",
-    "\\newtheorem{solution}[theorem]{Solution}",
-    "\\newtheorem{step}[theorem]{Step}",
-    "\\newtheorem{note}[theorem]{Note}",
-    "\\newtheorem{thm}{Theorem}",
-    "\\newtheorem{cor}[thm]{Corollary}",
-    "\\newtheorem{lem}[thm]{Lemma}",
-    "\\newtheorem{claim}[thm]{Claim}",
-    "\\newtheorem{axiom}[thm]{Axiom}",
-    "\\newtheorem{conj}[thm]{Conjecture}",
-    "\\newtheorem{fact}[thm]{Fact}",
-    "\\newtheorem{hypo}[thm]{Hypothesis}",
-    "\\newtheorem{assum}[thm]{Assumption}",
-    "\\newtheorem{prop}[thm]{Proposition}",
-    "\\newtheorem{crit}[thm]{Criterion}",
+    "\\@ifundefined{theorem}{\\lx@guess@newtheorem{theorem}{Theorem}[section]}{}",
+    "\\@ifundefined{conjecture}{\\@ifundefined{c@theorem}{\\lx@guess@newtheorem{conjecture}{Conjecture}}{\\lx@guess@newtheorem{conjecture}[theorem]{Conjecture}}}{}",
+    "\\@ifundefined{proposition}{\\@ifundefined{c@theorem}{\\lx@guess@newtheorem{proposition}{Proposition}}{\\lx@guess@newtheorem{proposition}[theorem]{Proposition}}}{}",
+    "\\@ifundefined{proof}{\\@ifundefined{c@theorem}{\\lx@guess@newtheorem{proof}{Proof}}{\\lx@guess@newtheorem{proof}[theorem]{Proof}}}{}",
+    "\\@ifundefined{lemma}{\\@ifundefined{c@theorem}{\\lx@guess@newtheorem{lemma}{Lemma}}{\\lx@guess@newtheorem{lemma}[theorem]{Lemma}}}{}",
+    "\\@ifundefined{corollary}{\\@ifundefined{c@theorem}{\\lx@guess@newtheorem{corollary}{Corollary}}{\\lx@guess@newtheorem{corollary}[theorem]{Corollary}}}{}",
+    "\\@ifundefined{example}{\\@ifundefined{c@theorem}{\\lx@guess@newtheorem{example}{Example}}{\\lx@guess@newtheorem{example}[theorem]{Example}}}{}",
+    "\\@ifundefined{exercise}{\\@ifundefined{c@theorem}{\\lx@guess@newtheorem{exercise}{Exercise}}{\\lx@guess@newtheorem{exercise}[theorem]{Exercise}}}{}",
+    "\\@ifundefined{definition}{\\@ifundefined{c@theorem}{\\lx@guess@newtheorem{definition}{Definition}}{\\lx@guess@newtheorem{definition}[theorem]{Definition}}}{}",
+    "\\@ifundefined{problem}{\\@ifundefined{c@theorem}{\\lx@guess@newtheorem{problem}{Problem}}{\\lx@guess@newtheorem{problem}[theorem]{Problem}}}{}",
+    "\\@ifundefined{question}{\\@ifundefined{c@theorem}{\\lx@guess@newtheorem{question}{Question}}{\\lx@guess@newtheorem{question}[theorem]{Question}}}{}",
+    "\\@ifundefined{remark}{\\@ifundefined{c@theorem}{\\lx@guess@newtheorem{remark}{Remark}}{\\lx@guess@newtheorem{remark}[theorem]{Remark}}}{}",
+    "\\@ifundefined{solution}{\\@ifundefined{c@theorem}{\\lx@guess@newtheorem{solution}{Solution}}{\\lx@guess@newtheorem{solution}[theorem]{Solution}}}{}",
+    "\\@ifundefined{step}{\\@ifundefined{c@theorem}{\\lx@guess@newtheorem{step}{Step}}{\\lx@guess@newtheorem{step}[theorem]{Step}}}{}",
+    "\\@ifundefined{note}{\\@ifundefined{c@theorem}{\\lx@guess@newtheorem{note}{Note}}{\\lx@guess@newtheorem{note}[theorem]{Note}}}{}",
+    "\\@ifundefined{thm}{\\lx@guess@newtheorem{thm}{Theorem}}{}",
+    "\\@ifundefined{cor}{\\@ifundefined{c@thm}{\\lx@guess@newtheorem{cor}{Corollary}}{\\lx@guess@newtheorem{cor}[thm]{Corollary}}}{}",
+    "\\@ifundefined{lem}{\\@ifundefined{c@thm}{\\lx@guess@newtheorem{lem}{Lemma}}{\\lx@guess@newtheorem{lem}[thm]{Lemma}}}{}",
+    "\\@ifundefined{claim}{\\@ifundefined{c@thm}{\\lx@guess@newtheorem{claim}{Claim}}{\\lx@guess@newtheorem{claim}[thm]{Claim}}}{}",
+    "\\@ifundefined{axiom}{\\@ifundefined{c@thm}{\\lx@guess@newtheorem{axiom}{Axiom}}{\\lx@guess@newtheorem{axiom}[thm]{Axiom}}}{}",
+    "\\@ifundefined{conj}{\\@ifundefined{c@thm}{\\lx@guess@newtheorem{conj}{Conjecture}}{\\lx@guess@newtheorem{conj}[thm]{Conjecture}}}{}",
+    "\\@ifundefined{fact}{\\@ifundefined{c@thm}{\\lx@guess@newtheorem{fact}{Fact}}{\\lx@guess@newtheorem{fact}[thm]{Fact}}}{}",
+    "\\@ifundefined{hypo}{\\@ifundefined{c@thm}{\\lx@guess@newtheorem{hypo}{Hypothesis}}{\\lx@guess@newtheorem{hypo}[thm]{Hypothesis}}}{}",
+    "\\@ifundefined{assum}{\\@ifundefined{c@thm}{\\lx@guess@newtheorem{assum}{Assumption}}{\\lx@guess@newtheorem{assum}[thm]{Assumption}}}{}",
+    "\\@ifundefined{prop}{\\@ifundefined{c@thm}{\\lx@guess@newtheorem{prop}{Proposition}}{\\lx@guess@newtheorem{prop}[thm]{Proposition}}}{}",
+    "\\@ifundefined{crit}{\\@ifundefined{c@thm}{\\lx@guess@newtheorem{crit}{Criterion}}{\\lx@guess@newtheorem{crit}[thm]{Criterion}}}{}",
     // Guard `\theoremstyle{definition}` with `\@ifundefined` so the
     // stub does NOT error when the document deliberately undefined
     // `\theoremstyle` (e.g. `\let\theoremstyle\@undefined` followed
-    // by `\usepackage{amsthm}`-as-no-op-because-already-loaded). The
-    // stub is a *fallback* for env auto-loading; if the document
+    // by a `\usepackage{amsthm}` that is a no-op because amsthm is already
+    // loaded). The stub is a *fallback* for env auto-loading; if the document
     // chose to disable `\theoremstyle`, respect that choice instead
     // of resurrecting an undefined-error. Witness: arXiv:2603.11260,
-    // 2603.11265 (ifacconf.cls -> theorem.sty -> amsthm pre-loaded,
-    // then user `\let\theoremstyle\@undefined`).
+    // 2603.11265 (ifacconf.cls -> theorem.sty, then user
+    // `\let\theoremstyle\@undefined\usepackage{amsthm}`; since 67p the
+    // theorem binding leaves amsthm unloaded, so that load is real).
     "\\@ifundefined{theoremstyle}{}{\\theoremstyle{definition}}",
-    "\\newtheorem{defn}[thm]{Definition}",
-    "\\newtheorem{exmp}[thm]{Example}",
-    "\\newtheorem{rem}[thm]{Remark}",
-    "\\newtheorem{prob}[thm]{Problem}",
-    "\\newtheorem{prin}[thm]{Principle}",
-    "\\newtheorem{alg}{Algorithm}",
+    "\\@ifundefined{defn}{\\@ifundefined{c@thm}{\\lx@guess@newtheorem{defn}{Definition}}{\\lx@guess@newtheorem{defn}[thm]{Definition}}}{}",
+    "\\@ifundefined{exmp}{\\@ifundefined{c@thm}{\\lx@guess@newtheorem{exmp}{Example}}{\\lx@guess@newtheorem{exmp}[thm]{Example}}}{}",
+    "\\@ifundefined{rem}{\\@ifundefined{c@thm}{\\lx@guess@newtheorem{rem}{Remark}}{\\lx@guess@newtheorem{rem}[thm]{Remark}}}{}",
+    "\\@ifundefined{prob}{\\@ifundefined{c@thm}{\\lx@guess@newtheorem{prob}{Problem}}{\\lx@guess@newtheorem{prob}[thm]{Problem}}}{}",
+    "\\@ifundefined{prin}{\\@ifundefined{c@thm}{\\lx@guess@newtheorem{prin}{Principle}}{\\lx@guess@newtheorem{prin}[thm]{Principle}}}{}",
+    "\\@ifundefined{alg}{\\lx@guess@newtheorem{alg}{Algorithm}}{}",
   );
   // Only install autoload stubs for CSes that aren't already defined. If
   // amsthm was pre-loaded (e.g. via dep-scan of a local .cls that
@@ -547,8 +679,22 @@ LoadDefinitions!({
     if IsDefined!(&cs) { continue; }
     let beginenv_clone = beginenv.clone();
     let preload = theorem_preload.to_string();
+    let env_cs = T_CS!(s!("\\{env}"));
+    // (a stub, not a definition of the environment: it steps aside for the one a class declares, so a stand-in's copy
+    // declaring it declares it whole — cimart.cls:295-315's `\newtheorem{theorem}[definition]`, whose `\begin{theorem}`
+    // the binding kept and whose `\end{theorem}` stood, left a group open: 2412.00032, 2408.07575's `{example}`;
+    // `state::note_copy_provides_assignment`)
+    let _stub = OriginGuard::new(DefinitionOrigin::Stub);
     def_macro(cs, None,
       ExpansionBody::Closure(Rc::new(move |_args| {
+        // The stub fires once: `\begin` looks it up before `\<env>`, so it steps aside for the environment the
+        // set declares, or one declared since it was installed (a raw class's `\newenvironment{proof}`, tlp.cls:494;
+        // cs0511055), which the set refuses; it would otherwise run again for ever. A name the set leaves alone (an
+        // author's macro of that name) is then `\begin`'s ordinary lookup: the macro, or LaTeX's undefined environment.
+        assign_meaning(&cs, Stored::None, Some(Scope::Global));
+        if IsDefined!(&env_cs) {
+          return Ok(mouth::tokenize_internal(TeXString::assembled(beginenv_clone.clone())));
+        }
         require_package("amsthm", RequireOptions::default())?;
         let mut expanded = preload.clone();
         expanded.push_str(&beginenv_clone);
@@ -580,11 +726,14 @@ LoadDefinitions!({
   // Perl L222-223: abstract aliases
   Let!("\\abstracts", "\\abstract");
   Let!("\\abst",      "\\abstract");
+  // and their ends, for `\begin{abstracts}…\end{abstracts}` (nic-series, 2410.14397; Perl lets the begin only)
+  Let!("\\endabstracts", "\\endabstract");
+  Let!("\\endabst",      "\\endabstract");
 
   // Perl L226-235: acknowledgments
   DefConstructor!("\\acknowledgments", "<ltx:acknowledgements name='#name'>",
     properties => {
-      Ok(stored_map!("name" => digest(T_CS!("\\acknowledgmentsname"))?))
+      Ok(stored_map!("name" => digest_in_group(T_CS!("\\acknowledgmentsname"))?))
     });
   // \endacknowledgments — tolerant close. A common pattern is
   //   \begin{acknowledgments} ... \bibliography{...} \end{acknowledgments}
@@ -664,8 +813,9 @@ LoadDefinitions!({
   });
   Let!("\\reference", "\\bibitem");
 
-  // Perl L282-284
-  def_macro_noop("\\comment{}")?;
+  // Perl L282-284; the binding's declared drop (the title-page check wants none of it, OXIDIZED_DESIGN_DIVERGENCES #953
+  // "106t")
+  DefMacro!("\\comment{}", "", drops => [1]);
   DefMacro!("\\etal",         "\\textit{et al.}");
   def_macro_noop("\\firstsection")?;
 
@@ -724,6 +874,10 @@ LoadDefinitions!({
           if is_cls {
             load_class(
               &name_str, Vec::new(), Tokens::default())?;
+          } else if name_str == "amsmath" {
+            // A guess for a class we do not know: amsmath's environments, not its "Old form" error, which waits for a
+            // real load (`amsmath_sty::require_amsmath_beyond_original`; KNOWN_PERL_ERRORS #993).
+            amsmath_sty::require_amsmath_beyond_original(false, &[])?;
           } else {
             require_package(&name_str, RequireOptions::default())?;
           }
@@ -741,4 +895,21 @@ LoadDefinitions!({
 
   // Perl L310: author block env
   DefEnvironment!("{aug}", "#body");
+
+  // What OmniBus defines yields to the document's own definition (`DefinitionOrigin::Fallback`), but its
+  // semantic frontmatter commands keep their markup against any later one — a document's presentational
+  // `\newcommand{\orcid}` (2605.08630, `\href` and an icon), `\providecommand{\keywords}`, a package's
+  // `\AtBeginDocument{\providecommand{\doi}…}` (apacite) — user ruling 2026-10-01. Conveniences and aliases
+  // (`\abst`, `\etal`, `\corref`) and common words (`\volume`, `\issue`, `\journal`) still yield
+  // (OXIDIZED_DESIGN_DIVERGENCES #408).
+  for cs in [
+    "\\doi", "\\orcid", "\\email", "\\emailaddr", "\\ead", "\\address", "\\affil", "\\affiliation",
+    "\\keywords", "\\kword", "\\kwd", "\\begin{keyword}", "\\begin{keywords}", "\\classification",
+    "\\correspondingauthor", "\\subtitle", "\\titlenote", "\\dedicated",
+  ] {
+    // Loaded provide-only (`\compat@loadpackages`), it locks only the names it provided.
+    if !provide_only() || is_fallback_meaning(&T_CS!(cs)) {
+      AssignValue!(&s!("{cs}:locked") => true, Some(Scope::Global));
+    }
+  }
 });

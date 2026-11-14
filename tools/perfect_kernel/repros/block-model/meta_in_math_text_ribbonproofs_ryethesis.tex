@@ -1,0 +1,19 @@
+% witness: ribbonproofs/ribbonproofsmanual, sidenotesplus/tests-sidenoteplus, ryethesis/ryesample
+%   (\footnote/\index/\nomenclature inside \text{} in math → note/indexmark/glossarydefinition in XMText)
+% oracle:  pdflatex 0 errors; footnote marks in the formulas, texts at the page foot
+% engines: rust (s117) = 0 errors, schema-invalid (7 jing errors over the 3 docs); perl = same tree
+% expect:  0 errors; jing-valid; each marker right after its Math (p / equation / align td),
+%   one note per footnote, every footnote rendered in HTML
+% status:  GREEN (batch 56gx, user ruling 2026-09-23, OXIDIZED_DESIGN #272)
+\documentclass{article}
+\usepackage{amsmath}
+\usepackage{makeidx}
+\makeindex
+\begin{document}
+A $a = \text{b\footnote{fn}} + c$ B. C $x \text{y\index{idx}} z$ D.
+\[ d = \text{e\footnote{disp}} \]
+\begin{align}
+f &= \text{g\footnote{al}}\\
+h &= k\footnote{bare}
+\end{align}
+\end{document}

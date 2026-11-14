@@ -1,0 +1,19 @@
+% mechanism: a regular 2x2 IEEEtran grid held whole in a document macro (`\author{\aut}`): IEEEtran's `\author`
+%   chose its route by spelling and took the plain route (`\lx@add@authors`), the names lost. Now the macro, holding
+%   names blocks, is read as it means before the route (ieeetran_cls.rs `blocks_as_printed`): the block route, the grid
+%   transposed to the printed rows (OXIDIZED_DESIGN_DIVERGENCES #128)
+% witness: synthetic (the sibling of `ieeetran_author_grid_in_a_macro`, OC1's spelling probe)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: row 1 "Ann Able", "Bob Baker"; row 2 "Cy Coe", "Dan Dee"
+% engines: int158a: one nameless creator holding Univ A, C, B, D, 0 errors, 4 warnings; P28: Ann Able, Bob Baker,
+%   Cy Coe, Dan Dee, each with their Univ
+%   int168a: six creators (Ann Able, Bob Baker and Cy Coe twice each, Dan Dee lost), 0 warnings; P28m (P2-8a on int168a): as P28
+% expect:  0 errors, 0 warnings; creators Ann Able (Univ A), Bob Baker (Univ B), Cy Coe (Univ C), Dan Dee (Univ D)
+% status:  RED (int158a, int168a) -> GREEN (P28, P28m; guard perfect_kernel_batchp28)
+\documentclass[conference]{IEEEtran}
+\newcommand\aut{\IEEEauthorblockN{Ann Able}\IEEEauthorblockA{Univ A}\\ \IEEEauthorblockN{Cy Coe}\IEEEauthorblockA{Univ C}\and\IEEEauthorblockN{Bob Baker}\IEEEauthorblockA{Univ B}\\ \IEEEauthorblockN{Dan Dee}\IEEEauthorblockA{Univ D}}
+\title{T}
+\author{\aut}
+\begin{document}
+\maketitle
+Text.
+\end{document}

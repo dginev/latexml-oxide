@@ -1,0 +1,27 @@
+% footnotehyper's saved footnotes (a \makesavenoteenv tabular, savenotes) run hyperref's footnote
+% internals: \Hy@footnote@currentHref (hyperref.sty:6114, \let to \@empty), passed to \hyper@@anchor
+% inside \Hy@raisedlink — whose argument runs since 57cn — and \H@@footnotetext (:7127, the kernel's
+% \@footnotetext, which footnotehyper.sty:63 copies). Both were undefined; an empty anchor name
+% anchors nothing (hyperref.sty:5122-5124).
+% witness: 57cn review (footnotehyper manual 36 -> 37 errors: Error:undefined:\Hy@footnote@currentHref;
+%   \FNH@H@@footnotetext undefined before 57cn too). Guard: perfect_kernel_batch57::footnote_anchor_name_is_defined.
+% status:  GREEN (57cn.1)
+% oracle:  pdflatex 0 errors.
+% engines: rust 57cl4: Error:undefined:\FNH@H@@footnotetext; 57cn2: + Error:undefined:\Hy@footnote@currentHref.
+% expect:  0 errors, 0 warnings; no anchor named after a control sequence.
+\documentclass{article}
+\usepackage{hyperref}
+\usepackage{footnotehyper}
+\makesavenoteenv{tabular}
+\makeatletter
+\def\myfn{\gdef\@thefnmark{}\@footnotetext}
+\makeatother
+\begin{document}
+\begin{tabular}{l}
+Cell\myfn{Raw footnotetext in table.}\\
+\end{tabular}
+
+\begin{savenotes}
+X\myfn{Saved raw.}
+\end{savenotes}
+\end{document}

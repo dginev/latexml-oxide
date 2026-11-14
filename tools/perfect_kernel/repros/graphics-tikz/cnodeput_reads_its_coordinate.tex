@@ -1,0 +1,16 @@
+% witness: cs0702114 (`\cnodeput[](-2,-1){A}{$$}` in a pspicture)
+% oracle:  latex+dvips (clean): pst-node.tex:206-220 `\cnodeput*[par]{angle}(x,y){name}{stuff}`, the stuff in the node's box
+% engines: rust 67int22 = 2 errors (read as `[] [] {}{}{}`, the coordinate spilled); Perl `[] OptionalBracketed
+%          ZeroPSCoord {}{}` = 0
+% expect:  0 errors, 0 warnings; two placed (empty) node bodies in the picture
+% status:  RED (67int22) -> GREEN (73a)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{pstricks,pst-node}
+\begin{document}
+\begin{pspicture}(-3,-2)(3,2)
+ \cnodeput[](-2,-1){A}{$$}
+ \cnodeput[](2,-1){B}{$$}
+ \ncline{A}{B}
+\end{pspicture}
+\end{document}

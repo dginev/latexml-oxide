@@ -1,0 +1,16 @@
+% witness: 2204.13665 (macros.tex:37 `\newcommand*\lin[1]{\bm{\left\langle} #1 \bm{\right\rangle}}`; 587 errors)
+% oracle:  pdflatex 0 errors; bold ⟨ x ⟩, bold ( a ), { y bold| y > 0 }, bold x. bm.sty:240-305 scans its argument
+%          token by token at the outer level (no group): \left/\right (\let to \holdinginserts while scanning,
+%          bm.sty:173-174) are emitted as they are and their delimiter is a bold \delimiter (\bm@delimiter, :416)
+% engines: rust 65a = 0 errors (\rangle lost, x bold); 65bundle = 1 error ("\bm Attempt to close a group that
+%          switched to mode math"); Perl 0.8.8 bounded \bm (bm.sty.ltxml:20)
+% expect:  0 errors; bold ⟨ x ⟩ fenced in one formula, \bm{x} unchanged
+% status:  RED (65bundle) -> GREEN (65j)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{bm}
+\newcommand*\lin[1]{\bm{\left\langle} #1 \bm{\right\rangle}}
+\begin{document}
+Pair $\lin{x}$, group $\bm{\left( a \right)}$,
+set $\left\{ y \bm{\middle\vert} y > 0 \right\}$ and $\bm{x}$.
+\end{document}

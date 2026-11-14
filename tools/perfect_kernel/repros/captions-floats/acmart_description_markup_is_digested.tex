@@ -1,0 +1,19 @@
+% witness: 2403.09168 (`\Description{Each components illustrate key feature of \sysname{}. …}`), 2401.04997,
+%          2304.01062, 2312.11013 (17 of 106 report papers with such notes): the description note held the argument
+%          undigested, so its markup printed as raw TeX
+% oracle:  pdflatex 0 errors (acmart.cls:895 `\Description[2][]` sets nothing); Perl acmart.cls.ltxml:78 digests `{}`
+% engines: rust 63m = `<note class="ltx_nodisplay ltx_acm_description">The table of \emph{all} \sysname{}
+%          results.</note>`
+% expect:  0 errors, 0 warnings; the note reads "The table of all SysName results." with `all` emphasized
+% status:  RED (63m) -> GREEN (63n)
+\documentclass[nonacm]{acmart}
+\newcommand\sysname{SysName}
+\begin{document}
+\title{T}
+\maketitle
+\begin{table}
+  \caption{First caption.}
+  \Description{The table of \emph{all} \sysname{} results.}
+  \begin{tabular}{c}a\end{tabular}
+\end{table}
+\end{document}

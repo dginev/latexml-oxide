@@ -1,0 +1,23 @@
+% witness: review of 65o round 1 (probe p1): `\lefteqn{lhs}&\index{x}&\nonumber\\`. A `\lefteqn` is an `\rlap`
+%          (latex.ltx:15800) and TeX does not span: each `&` opens the next column whatever it holds (tex.web §791
+%          `fin_col`). 65o round 1 covered every cell measuring under 1pt, and a covered cell is never absorbed
+% oracle:  pdflatex 0 errors
+% engines: rust 65o round 1 = the `\lefteqn` cell `colspan="3"` over the `\index` and `\hypertarget` cells; Perl 0.8.8
+%          and 65int2 = `\multicolumn{3}`, the `&` overflow (2 "Extra alignment tab" a row)
+% expect:  0 errors, 0 warnings; the span stops at a cell holding an `\index` or an anchor (three `td`), and covers an
+%          invisible `\phantom` (one `td`, colspan 3). The side content itself is still lost: RED repro
+%          alignment/eqnarray_side_content_only_cell
+% status:  RED (65o r1) -> GREEN (65o r2)
+\documentclass{article}
+\usepackage{makeidx}\makeindex
+\usepackage{hyperref}
+\begin{document}
+\begin{eqnarray}
+\lefteqn{A = B}&\index{idxone}&\nonumber\\
+&=& D\\
+\lefteqn{E = F}&\hypertarget{tgt}{}&\nonumber\\
+&=& G\\
+\lefteqn{H = I}&\phantom{=}&\nonumber\\
+&=& J
+\end{eqnarray}
+\end{document}

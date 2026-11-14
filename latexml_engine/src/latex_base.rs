@@ -64,6 +64,7 @@ LoadDefinitions!({
       \@rightskip\z@skip
       \parfillskip\@flushglue
       \lineskip\normallineskip
+      \lineskiplimit\normallineskiplimit
       \baselineskip\normalbaselineskip
       \sloppy}
     "
@@ -100,6 +101,13 @@ LoadDefinitions!({
   // (undefined:\@ehd). Help text is log-only (not rendered) but must exist.
   // Faithful port; Perl defines it via the kernel.
   DefMacro!("\\@ehd", r"You're in trouble here.  \space\@ehc");
+  // latex.ltx:8956 `\gdef\@eha{Your command was ignored. …}` — the help text
+  // behind `\@notprerr` (latex.ltx:9019) and `\@latex@error{…}\@eha` sites;
+  // `\GenericError` expands the help slot, so it must exist like `\@ehd`.
+  DefMacro!(
+    "\\@eha",
+    r"Your command was ignored.\MessageBreak Type  I <command> <return>  to replace it with another command,\MessageBreak or  <return>  to continue without it."
+  );
 
   // Perl L40-47: gobble/firstof/secondof macros
   def_macro_noop("\\@gobble{}")?;
@@ -509,6 +517,10 @@ LoadDefinitions!({
   \DeclareRobustCommand\usebox[1]{\leavevmode\copy #1\relax}
   """#
   );
+  // latex.ltx:16368 saves the primitive before its robust `\underline` (between `\rule` and `\raisebox`); the dump
+  // records it (`M \@@underline PA \underline`), Perl latex_base.pool.ltxml has no copy, so without a dump
+  // `\@@underline` was undefined (KNOWN_PERL_ERRORS #987).
+  Let!("\\@@underline", "\\underline");
 
   //======================================================================
   // Error/Warning/Info infrastructure

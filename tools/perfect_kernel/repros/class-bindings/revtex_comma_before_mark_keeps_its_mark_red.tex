@@ -1,0 +1,24 @@
+% A revtex names line whose first name prints its mark after a separator (`A.~One,$^{1}$ and~B.~Two$^{2}$`: the comma,
+% then the mark) loses that mark: the name is split off without it, so "1" is printed nowhere in the XML, while B. Two
+% keeps its "2". The second creator's before="  " loses the printed ", and" too (the lost-separator kind:
+% author_marked_list_keeps_its_printed_separators_red). The same with the address block in a `\parbox`
+% (revtex_unsplit_labelled_address_block_lands_once, whose row in perfect_kernel_batchhg1::marked_blocks_restored_read_as_printed
+% pins today's output and cites this RED); without the comma (`A.~One$^{1}$ and~B.~Two$^{2}$`) the mark is kept.
+% witness: synthetic (review revHG1 B1; the class of hep-ex0409040 and hep-ex0612013)
+% oracle:  pdflatex (TL 2025, revtex4-1, -no-shell-escape): 0 `!`; prints "A. One,1 and B. Two2", then "1 Alpha
+%          University, Beijing", "2 Beta Institute, Rome"
+% engines: rust int160a (HG1b) = 0 errors, 0 warnings: <personname>A. One</personname> (no mark) with Alpha University,
+%          Beijing; B. Two<sup>2</sup> (before="  ") with Beta Institute, Rome
+% expect:  0 errors, 0 warnings; A. One keeps its printed mark "1" (in its name, as B. Two keeps "2"); B. Two
+%          before=", and "
+% status:  RED (int160a, HG1b)
+% preload: ar5iv.sty
+\documentclass[aps,prl,groupedaddress]{revtex4-1}
+\begin{document}
+\title{T}
+\author{A.~One,$^{1}$ and~B.~Two$^{2}$}
+\address{$^{1}$Alpha University, Beijing\\ $^{2}$Beta Institute, Rome}
+\begin{abstract}Abs.\end{abstract}
+\maketitle
+Body.
+\end{document}

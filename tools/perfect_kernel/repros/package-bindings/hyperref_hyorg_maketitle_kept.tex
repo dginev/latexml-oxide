@@ -1,0 +1,18 @@
+% witness: 1509.06375 (pittetd.cls: `\AtBeginDocument{\let\maketitle\HyOrg@maketitle}` after hyperref)
+% oracle: pdflatex 0 errors; hyperref.sty:7302 `\let\HyOrg@maketitle\maketitle` keeps the original title command
+% engines: rust 67o1 = `\maketitle` undefined at every use (our binding, like Perl's, saves no `\HyOrg@maketitle`)
+% expect: 0 Errors; the title is made
+% mechanism: hyperref binding `\let\HyOrg@maketitle\maketitle`
+% status: RED (67o1) -> GREEN (67q)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{hyperref}
+\makeatletter
+\AtBeginDocument{\let\maketitle\HyOrg@maketitle}
+\makeatother
+\title{A Thesis}
+\author{A. Author}
+\begin{document}
+\maketitle
+Text.
+\end{document}

@@ -82,11 +82,11 @@
     <title><tag close=" ">2</tag>Intervals</title>
     <para xml:id="S2.p1">
       <equation xml:id="S2.Ex3">
-        <Math mode="display" tex="(a,b)" text="open-interval@(a, b)" xml:id="S2.Ex3.m1">
+        <Math mode="display" tex="(a,b)" text="vector@(a, b)" xml:id="S2.Ex3.m1">
           <XMath>
             <XMDual>
               <XMApp>
-                <XMTok meaning="open-interval"/>
+                <XMTok meaning="vector"/>
                 <XMRef idref="S2.Ex3.m1.1"/>
                 <XMRef idref="S2.Ex3.m1.2"/>
               </XMApp>

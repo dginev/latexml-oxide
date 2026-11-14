@@ -1,0 +1,19 @@
+% `\if` expands its operands until it has two unexpandable tokens (tex.web §506): `\@ifnextchar` opens with an
+% unexpandable `\let` (latex.ltx:1756-1760), so `\if Z\@ifnextchar*{A}{\foofalse}` compares Z with that `\let` (false)
+% and skips to `\else`. Rust's `\@ifnextchar` is a closure that peeks while expanding (sect13.rs `\@ifnextchar`, from
+% Perl latex_constructs.pool.ltxml:5636): inside the `\if` it reads ahead, picks a branch, and the skip runs off
+% (`Error:expected:\fi \if`). SHARED (Perl 2 errors). Witness: xskak/xskak (skak's `\EqStr{Z}{\xskakset…}` → xkeyval
+% `\XKV@ifstar`, xkvutils.tex:73: the `tag=C` key lost, then "Unknown tag C" and 11 more errors; sweep #136 root cause,
+% exposed by 59u running the examples to the end).
+% oracle:  pdflatex 0 errors: [E]
+% engines: rust 60b = `Error:expected:\fi \if`; Perl 2 errors.
+% expect:  0 errors; <p>[E]</p>
+% status:  RED (open; fix: the `ExpandedIfToken` reader (tex_logic.rs) stops at a macro marked `peeks_by_futurelet`,
+%   as number scans do (gullet.rs `scan_stops_at_futurelet_peek`), taking it as a non-character operand and leaving
+%   its arguments for the skip; MED risk — every `\if` meeting `\@ifstar`/`\@testopt`/`\@ifnextchar`)
+\documentclass{article}
+\newif\iffoo
+\begin{document}
+\makeatletter
+[\if Z\@ifnextchar*{A}{\foofalse}\else E\fi]
+\end{document}

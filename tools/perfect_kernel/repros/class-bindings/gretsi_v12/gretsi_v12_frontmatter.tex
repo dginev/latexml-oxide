@@ -1,0 +1,24 @@
+% witness: 1001.1912, 0706.1914, 1311.3768 (`\titre`, `\coord`, `\adresse`, `\resumefrancais`/`\resumeanglais`); 1512.06999,
+%          2206.05928 (`\author{\coord…}`, `\englishabstract`); 1311.3768, 1503.06716 (`\legende`)
+% oracle:  pdflatex with 1001.1912's gretsi.cls (v1.2): "Méthode du point proximal", "Ziad Naja1 , Pierre Duhamel2",
+%          "1 Univ Paris-Sud 11", "2 CNRS Gif-sur-Yvette", "Résumé – Cet article…", "Abstract – This paper…",
+%          "Figure 1 – Une figure."; 0 errors
+% engines: rust 67int10 = 5 errors (undefined `\titre`, `\coord`, `\resumefrancais`, `\resumeanglais`, `\legende`)
+% expect:  0 errors, 0 warnings; two authors with their marked affiliations, the e-mail, the French then the English
+%          abstract (the latter `xml:lang="en"`), the figure captioned "Une figure."
+% status:  RED (67int10) -> GREEN (68k)
+% preload: ar5iv.sty
+\documentclass{gretsi}
+\usepackage[english,french]{babel}
+\titre{M\'ethode du point proximal}
+\auteur{\coord{Ziad}{Naja}{1}, \coord{Pierre}{Duhamel}{2}}
+\adresse{\affil{1}{Univ Paris-Sud 11}\affil{2}{CNRS \\ Gif-sur-Yvette}}
+\email{ziad.naja@lss.fr}
+\resumefrancais{Cet article est bas\'e sur la m\'ethode.}
+\resumeanglais{This paper recalls the proximal point method.}
+\begin{document}
+\maketitle
+\section{Introduction}
+Texte du corps.
+\begin{figure}[h]\centering\fbox{F}\legende{Une figure.}\end{figure}
+\end{document}

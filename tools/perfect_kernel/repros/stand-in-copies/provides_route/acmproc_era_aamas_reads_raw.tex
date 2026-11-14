@@ -1,0 +1,20 @@
+% An acmproc-era aamas class (aamas2013, "based on acmproc.cls V1.3", `\alignauthor` author columns) is read raw, as the
+% class it is: the aamas binding models the acmart-based aamas.cls, whose `\author` met the columns.
+% witness: 1401.1086 (confSt.cls, `\ProvidesClass{aamas2013}`: the declaration route sent it to the aamas binding at
+%          int40a/int40b — 0 → 6 Errors, one merged creator, the footnote a contact, citations "( , )")
+% oracle:  pdflatex 0 errors; two author columns, Shakarian and Lindelauf, each with an address and an e-mail
+% engines: rust int39a and int40b (c42be4a9a8 + 77w) = 3 Errors ("Attempt to close a group that switched to mode
+%          restricted_horizontal"), one creator; the version fallback answers `aamas2013` with the aamas binding
+% expect:  0 errors; two creators, each with its own address and e-mail
+% status:  RED (int40b) -> GREEN (int40 follow-up: aamas_cls.rs reads an acmproc-era copy raw)
+% preload: ar5iv.sty
+\documentclass{aamas2013}
+\begin{document}
+\title{Power Grid Defense}
+\numberofauthors{2}
+\author{\alignauthor Paulo Shakarian \\ \affaddr{Dept. EECS}\\ \email{p@x.net}
+\alignauthor Roy Lindelauf \\ \affaddr{Netherlands Defence Academy}\\ \email{r@nlda.nl}}
+\maketitle
+Text\footnote{A note.} \cite{k}.
+\begin{thebibliography}{1}\bibitem{k} K. Ref.\end{thebibliography}
+\end{document}

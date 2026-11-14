@@ -1,0 +1,21 @@
+% mechanism: apacite's citation mode (apacite.sty:71-110: `apaciteclassic`, the default, :181-182; `natbibemu`;
+%   `natbibapa`; `nocitation`) chooses its `\cite`: the classic one (`\if@APAC@classic@cite`, :258-267) is parenthetical
+%   with or without notes; under `natbibapa` (:995-1037) apacite defines no `\cite` and natbib's own stays — textual
+%   without an optional argument, parenthetical with one (natbib.sty:694-701). The binding made every `\cite`
+%   parenthetical whatever the option (`DeclareOption!(None, {})` dropped them all).
+% witness: 2307.11525 (all 30 `\cite` parenthetical), 2406.19732 (31/34); WileyASNA-v1.cls:2120, the Wiley NJD classes and
+%   sn-jnl.cls's `sn-apa` (L1683-1685) load `[natbibapa]{apacite}`
+% oracle:  pdflatex 0 errors: "A Smith (2001). B (Smith, 2001, p. 5). C (Smith, 2001). D Smith (2001). E (e.g. Smith,
+%          2001)."
+% engines: rust 68w r3 "A (Smith, 2001)"; 67int15 textual; Perl 0.8.8 has no apacite binding
+% expect:  0 errors, 0 warnings; `\cite{a}` natbib's textual citation
+% status:  FIXED (int17)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage[natbibapa]{apacite}
+\begin{document}
+A \cite{a}. B \cite[p.~5]{a}. C \citep{a}. D \citet{a}. E \citep[e.g.][]{a}.
+\begin{thebibliography}{}
+\bibitem[\protect\citeauthoryear{Smith}{Smith}{2001}]{a} Smith, J. (2001). Title.
+\end{thebibliography}
+\end{document}

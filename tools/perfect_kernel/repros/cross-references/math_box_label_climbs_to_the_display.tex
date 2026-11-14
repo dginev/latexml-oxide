@@ -1,0 +1,20 @@
+% witness: review probes rev78g3 tbx.tex, tbx3.tex (a tcolorbox in `\text`/`\mbox` in math after a raw `\refstepcounter`; tcolorbox.sty:2311 `\refstepcounter` in the phantom code)
+% oracle:  pdflatex 0 errors; "See 41, 42, 43, 44, 45 and 46." (newlabel m:a {41} .. m:f {46})
+% engines: rust (int47a) = "See 2, 2, 2, 1, 2 and 2." (labels on the displays and the section, no step number); rust (78g r3) = "See , , , ,  and 46." (labels on the box pictures inside the math, ids lost in the HTML: Missing Target warning); Perl 0.8.8 as int47a (KNOWN_PERL_ERRORS #1038)
+% expect:  0 errors, 0 warnings; m:a on the `{gather*}` row, m:c on the `\[…\]` display, m:f (a `\parbox`, labelled at once: `\@arrayparboxrestore`, amsmath.sty:1237-1238) on its `{gather*}` row, each with the step's refnum 41, 43, 46; m:b (inline) on S2 "2"; m:d, m:e on their numbered displays "1", "2" (their own numbers: OXIDIZED_DESIGN_DIVERGENCES #813 residual); every `\ref` a working link
+% status:  GREEN (78g r4)
+\documentclass{article}
+\usepackage{amsmath}
+\usepackage{tcolorbox}
+\newcounter{foo}\setcounter{foo}{40}
+\begin{document}
+\section{One}
+\section{Two}
+\begin{gather*} a=b \refstepcounter{foo}\text{\begin{tcolorbox}\label{m:a}x\end{tcolorbox}}\end{gather*}
+\refstepcounter{foo} $a=\mbox{\begin{tcolorbox}\label{m:b}y\end{tcolorbox}}$
+\[ c=d \refstepcounter{foo}\text{\begin{tcolorbox}\label{m:c}z\end{tcolorbox}}\]
+\begin{equation} e=f \refstepcounter{foo}\text{\begin{tcolorbox}\label{m:d}w\end{tcolorbox}}\end{equation}
+\begin{gather} g=h \refstepcounter{foo}\text{\begin{tcolorbox}\label{m:e}v\end{tcolorbox}}\end{gather}
+\begin{gather*} i=j \refstepcounter{foo}\text{\parbox{2cm}{\label{m:f}u}}\end{gather*}
+See \ref{m:a}, \ref{m:b}, \ref{m:c}, \ref{m:d}, \ref{m:e} and \ref{m:f}.
+\end{document}

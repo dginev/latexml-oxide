@@ -1,0 +1,19 @@
+% witness: 77n r3 — authblk `\author{Ann$^{1}$\thanks{Corresponding, ann@x.org}}…\author{Cat$^{1}$}` (the r2 review
+%          probe c5: the note's comma sent Ann to the list path)
+% oracle:  pdflatex 0 errors: "Ann1*, Bob2 , and Cat1 / 1Univ X / 2Univ Y"
+% engines: rust int32a = Ann X, Bob X, Cat X and Y; 77n r2 = Cat none (her mark kept, requesting nothing)
+% expect:  0 errors, 0 warnings; 3 creators, Ann with her note and Univ X, Bob with Univ Y, Cat with Univ X
+% status:  RED (77n r2) -> GREEN (77n r3)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{authblk}
+\begin{document}
+\title{T}
+\author{Ann$^{1}$\thanks{Corresponding, ann@x.org}}
+\author{Bob$^{2}$}
+\author{Cat$^{1}$}
+\affil{$^1$Univ X}
+\affil{$^2$Univ Y}
+\maketitle
+x
+\end{document}

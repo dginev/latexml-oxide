@@ -49,6 +49,64 @@ LoadDefinitions!({
   DefMacro!("\\mcitefwdBIBdecl", "\\relax");
   DefMacro!("\\mcitebibitem", "\\bibitem");
   DefMacro!("\\mcitethebibliography", "\\thebibliography");
+  // mciteplus.sty:140/775/780-782 — `\mciteSubRef[track]{key}` is a `\ref` to
+  // the label the .bbl's sub-reference entries define (achemso-demo).
+  RawTeX!(
+    r"\def\mcitetrackID{main}\def\@mcitereflabelprefix{MciteSubReferenceLabel}
+\def\mciteSubRef{\@ifnextchar[{\@mciteSubRef}{\@mciteSubRef[\mcitetrackID]}}
+\def\@mciteSubRef[#1]#2{\ref{\@mcitereflabelprefix:#1:#2}}
+\def\mciteSubPageRef{\@ifnextchar[{\@mciteSubPageRef}{\@mciteSubPageRef[\mcitetrackID]}}
+\def\@mciteSubPageRef[#1]#2{\pageref{\@mcitereflabelprefix:#1:#2}}"
+  );
   DefMacro!("\\endmcitethebibliography", "\\endthebibliography");
   DefConditional!("\\ifmciteBstWouldAddEndPunct");
+  // mciteplus.sty:72-87, 182-184 the package's public switches: a document, a `.bbl` or a bibliography style sets
+  // them (apsrevM.bst's `.bbl` opens with `\mciteErrorOnUnknownfalse`; witness 0802.3383), the counters number the
+  // entries (:105-108), `\mciteSetSublistLabelBeginEnd` is the user-level `\mciteSetBstSublistLabelBeginEnd`
+  // (:170), the max-width/count stores are what mciteplus writes to the `.aux` (:390-418), and
+  // `\mciteSubPageRef` is `\mciteSubRef`'s `\pageref` (:783-784).
+  RawTeX!(
+    r"\newif\ifmciteErrorOnUnknown\mciteErrorOnUnknowntrue
+\newif\ifmciteResetBibitemCount\mciteResetBibitemCounttrue
+\newif\ifmciteMacroOptArgI\mciteMacroOptArgIfalse
+\newif\ifmciteMacroOptArgII\mciteMacroOptArgIIfalse
+\newif\ifmciteMacroStarForm\mciteMacroStarFormfalse
+\newif\ifmciteCiteStarFwdArg\mciteCiteStarFwdArgfalse
+\newif\ifmciteBibitemOptArgI\mciteBibitemOptArgIfalse
+\newif\ifmciteCurheadBibitemOptArgI\mciteCurheadBibitemOptArgIfalse
+\newcounter{mcitebibitemcount}\setcounter{mcitebibitemcount}{0}
+\newcounter{mcitesubitemcount}
+\long\def\mciteSetSublistLabelBeginEnd#1#2#3{\long\def\mcitesublistlabel{#1}\long\def\mcitesublistbegin{#2}%
+\long\def\mcitesublistend{#3}}
+\def\mciteSetMaxWidth#1#2#3{\expandafter\xdef\csname @mciteMaxWidthStore@#1@#2\endcsname{#3}}
+\def\mciteGetMaxWidth#1#2#3{\expandafter\global\expandafter\let\expandafter#3\csname @mciteMaxWidthStore@#1@#2\endcsname}
+\def\mciteSetMaxCount#1#2#3{\expandafter\xdef\csname @mciteMaxCountStore@#1@#2\endcsname{#3}}
+\def\mciteGetMaxCount#1#2#3{\expandafter\global\expandafter\let\expandafter#3\csname @mciteMaxCountStore@#1@#2\endcsname}
+\def\mciteauxout{\@auxout}\def\mcitebibauxout{\@mainaux}\def\mcitebibtrackID{main}"
+  );
+  // mciteplus sends every citation through `\\mciteCiteA` (mciteplus.sty:1020; natbib's commands :1079-1084): a key
+  // with a leading `*` (`\\@mciteCheckKey`, :757-762) joins the previous entry's group, written to the aux as a
+  // `\\citation` (:764) in its place among the others, so bibtex lists it, but left out of the citation the text prints
+  // (:567-568). So every key, the `*` stripped, is cited in order for the bibliography (`\\lx@mark@nocite` where it
+  // stands, not `\\nocite`'s mark at `\\end{document}`: an unsorted style numbers them in citation order), and the
+  // citation keeps the unstarred ones: `\cite{a,*b,c,*d}` prints [1, 3]. An empty or blank key (`\cite{a,}`, which
+  // mciteplus rejects) adds nothing (the `\@empty` sentinel); a starred key before any unstarred one raises
+  // mciteplus's error (:641-645). Repro index-bib/mciteplus_starred_keys; DIVERGENCES #427.
+  RawTeX!(
+    r"\let\lx@mciteplus@bibref\@@bibref
+\def\@@bibref#1#2#3#4{\let\lx@mciteplus@heads\@empty\let\lx@mciteplus@all\@empty\let\lx@mciteplus@starred\@empty
+  \@for\lx@mciteplus@key:=#2\do{\ifx\lx@mciteplus@key\@empty\else
+    \expandafter\lx@mciteplus@sort\lx@mciteplus@key\@empty\@nil\fi}%
+  \edef\lx@mciteplus@next{%
+    \ifx\lx@mciteplus@starred\@empty\else\noexpand\lx@mark@nocite{\lx@mciteplus@all}\fi
+    \noexpand\lx@mciteplus@bibref{\unexpanded{#1}}{\lx@mciteplus@heads}{\unexpanded{#3}}{\unexpanded{#4}}}%
+  \lx@mciteplus@next}
+\def\lx@mciteplus@sort#1#2\@nil{%
+  \ifx*#1\def\lx@mciteplus@starred{*}\lx@mciteplus@add\lx@mciteplus@all{#2}%
+    \ifx\lx@mciteplus@heads\@empty\PackageError{mciteplus}{Tail `#2' is declared without a valid head}{You have to
+      declare a head citation before entering tail citations in cite list.}\fi
+  \else\lx@mciteplus@add\lx@mciteplus@heads{#1#2}\lx@mciteplus@add\lx@mciteplus@all{#1#2}\fi}
+\def\lx@mciteplus@add#1#2{\edef\lx@mciteplus@this{#2}\ifx\lx@mciteplus@this\@empty\else
+  \ifx#1\@empty\let#1\lx@mciteplus@this\else\edef#1{#1,\lx@mciteplus@this}\fi\fi}"
+  );
 });

@@ -1,0 +1,21 @@
+% mechanism: one local part in printed braces is no list of local parts (`links::lists_local_parts`): the address
+%   spells its author, as the plain address does — both engines' spelled step (`spelled_owner`, the frontmatter
+%   observer's `spelled_name`); an address no name spells stays the block's
+% witness: 2403.13468 (llncs, `\email{\{raffaele.perego\}@isti.cnr.it}` under an institute three authors carry;
+%   census129 §6 (i); batch 104d L4)
+% oracle:  pdflatex (TL 2025 llncs.cls) 0 errors: "Ann Able 1 , Bob Baker 1 , and Cat Cole 2" / "Univ A, Town" /
+%   "{bbaker}@a.edu" / "{office}@a.edu" / "Univ B, City"
+% engines: rust int130a: {bbaker}@a.edu on Ann Able, {office}@a.edu on Bob Baker (in order); alone under the
+%   institute, `{bbaker}@a.edu` went to a nameless creator
+% expect:  0 errors, 0 warnings; Bob Baker holds {bbaker}@a.edu, {office}@a.edu is the block's
+% status:  RED (int130a) -> GREEN (104d)
+% preload: ar5iv.sty
+\documentclass{llncs}
+\begin{document}
+\title{T}
+\author{Ann Able\inst{1} \and Bob Baker\inst{1} \and Cat Cole\inst{2}}
+\institute{Univ A, Town\\ \email{\{bbaker\}@a.edu}\\ \email{\{office\}@a.edu} \and Univ B, City}
+\maketitle
+\begin{abstract}Abs.\end{abstract}
+Text.
+\end{document}

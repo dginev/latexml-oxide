@@ -13,8 +13,6 @@
 
 use std::{io::Write, path::Path};
 
-use rustc_hash::FxHashMap as HashMap;
-
 use crate::definition::Definition; // trait for get_expansion(), get_cs(), etc.
 use crate::{
   common::{arena, numeric_ops::NumericOps, store::Stored},
@@ -28,22 +26,29 @@ use crate::{
 /// `TeX_Job.pool.ltxml::DumpFile` which separates
 /// `@cmds_early` / `@cmds` / `@cmds_late`:
 ///
-///   1. **cmds_early** — M:PA / M:MPA let-aliases whose **target pre-existed** in the bootstrap
-///      snapshot (e.g. `\tex_let:D → \let`, `\tex_def:D → \def`). Applied first because their
-///      targets are always available (they're in the bootstrap pool we loaded unconditionally
-///      before this dump).
+///   1. **cmds_early** — M:PA / M:MPA let-aliases that are still the **bootstrap snapshot's**
+///      definition of their target (e.g. `\tex_let:D → \let`, `\tex_def:D → \def`,
+///      `\tex_jobname:D → \jobname`). Applied first because their targets are always available
+///      (they're in the bootstrap pool we loaded unconditionally before this dump).
 ///   2. **cmds** (regular) — V / M:E / M:T / R / C / LC / UC / SC / MC / DC entries: data,
-///      expandable definitions, registers, codes.
-///   3. **cmds_late** — M:PA / M:MPA let-aliases whose **target is defined by this dump**. Applied
-///      last so the target is installed before the alias fires.
+///      expandable definitions, registers, codes — including a `\let` copy of a token-bodied
+///      macro whose target was redefined since, written by value.
+///   3. **cmds_late** — M:PA / M:MPA let-aliases that are the target's **current** definition,
+///      defined by this dump (e.g. `\bool_if_exist:NTF → \cs_if_exist:NTF`). Applied last so the
+///      target is installed before the alias fires.
 ///
 /// The early/late split requires the caller (ini_tex) to have staged a
 /// snapshot via `state::stage_snapshot("bootstrap")`. If no snapshot is
 /// available, all aliases are emitted as `late` (safe — they just wait
 /// until after regular entries).
+///
+/// `sources` are header lines naming the format files the dump was built from
+/// (`latexml_engine::dump_paths::SourceStamp::header_line`), which a loader checks against the TeX tree
+/// it reads packages from.
 pub fn write_dump(
   path: &Path,
   entries: &[(TableName, arena::SymStr, Stored)],
+  sources: &[String],
 ) -> Result<usize, String> {
   let mut file =
     std::fs::File::create(path).map_err(|e| format!("Failed to create dump file: {}", e))?;
@@ -55,6 +60,9 @@ pub fn write_dump(
     entries.len()
   )
   .ok();
+  for source in sources {
+    writeln!(file, "{source}").ok();
+  }
   writeln!(file, "# Format: <table>\\t<key>\\t<data>").ok();
   writeln!(file, "#   <table> = M | V | C | LC | UC | SC | MC | DC").ok();
   writeln!(file, "#   <data> depends on <table>:").ok();
@@ -100,7 +108,11 @@ pub fn write_dump(
     "#     DC/LC/UC/SC/MC:     CH\\t<u32>  (char-indexed table entries)"
   )
   .ok();
-  writeln!(file, "#   <flags> = subset of {{L, P}} (long, protected)").ok();
+  writeln!(
+    file,
+    "#   <flags> = subset of {{L, P, T}} (long, protected, checks \\par: tex.web §392)"
+  )
+  .ok();
   writeln!(
     file,
     "#   All keys and proto are url-encoded (%09 for tab etc.); token body"
@@ -123,20 +135,20 @@ pub fn write_dump(
   let mut late_aliases: Vec<(String, String, String)> = Vec::new();
   let mut skipped = 0usize;
 
-  // expl3 implements intarrays by stashing values in `\fontdimen<idx>\<font>`
-  // slots, picking `cmr10` at various tiny `at <N>sp` instantiations to
-  // get one font instance per intarray. Each slot is normally written as
-  // an individual `V\tfontdimen_fontinfo_<font> at <Nsp>_<idx>\tD\t<val>`
-  // record; that produces ~89k V-records (≈40% of the dump) for an
-  // initialized expl3 + LaTeX kernel. We group them by (font,size) and
-  // emit a single `IA` record per intarray with the values RLE-encoded
-  // — same in-memory state after replay, ~10× smaller on disk.
-  // See `docs/archive/PERL_LOADFORMAT_AUDIT.md` ("Fontdimen/intarray storage").
-  let mut fontdimen_groups: HashMap<String, Vec<(u32, i64)>> = HashMap::default();
+  // Perl TeX_Job.pool.ltxml:150,153 walks `sort @tables` and, in each, `sort keys %$table`, so
+  // every section of its dump is in (table name, key) order. The diff arrives in hash-table order,
+  // which differs from one binary to the next (det354: one key set in 55 orders across 173 dumps),
+  // and the dump is applied in file order, so the order also fixes the symbol ids of every
+  // conversion. Sorting here makes the dump a function of its content alone. A table's `Display`
+  // name is Perl's capitalized (`Catcode` .. `Value`), so it sorts as Perl's `@tables` do.
+  let mut ordered: Vec<(String, String, &(TableName, arena::SymStr, Stored))> = entries
+    .iter()
+    .map(|entry| (entry.0.to_string(), arena::to_string(entry.1), entry))
+    .collect();
+  ordered.sort_unstable_by(|a, b| (&a.0, &a.1).cmp(&(&b.0, &b.1)));
 
-  for (table, key, value) in entries {
+  for (_, key_str, (table, _, value)) in ordered {
     let table_code = table_to_code(*table);
-    let key_str = arena::with(*key, |s| s.to_string());
 
     // Skip \ver@ package version markers (runtime metadata, not definitions)
     if key_str.starts_with("\\ver@") {
@@ -156,18 +168,22 @@ pub fn write_dump(
       skipped += 1;
       continue;
     }
+    // Skip the files a run read as content (`binding::content::CONTENT_FILES`): the format's own sources are no
+    // document's text, and a dumped list would stand in a conversion's for the files it reads.
+    if matches!(*table, TableName::Value) && key_str == crate::binding::content::CONTENT_FILES {
+      skipped += 1;
+      continue;
+    }
 
-    // Skip \@currname / \@currext file-IO bookkeeping. These are
-    // assigned per-document during `\input` by `read_input_file_recursive`
-    // (see `binding/content.rs:262-263`) to the literal filename's
-    // tokens, so the snapshot captures the LAST opened file's name
-    // ("plain.tex" / "latex.ltx"). Perl's `TeX_FileIO.pool.ltxml:28-29`
-    // initializes them via `Let('\@currname','\lx@empty')` before any
-    // file load, and Perl's plain_dump.pool.ltxml omits them — so
-    // post-dump they remain at the `\lx@empty` baseline. Matching that
-    // behavior here keeps us file-IO-state-agnostic in the dump.
-    if matches!(*table, TableName::Meaning) && (key_str == "\\@currname" || key_str == "\\@currext")
-    {
+    // Skip the file-IO bookkeeping family (`is_file_io_bookkeeping`). The
+    // dump is applied WHILE the document's preload is being read (the
+    // LaTeX pool+dump load runs inside `latexml.sty`), so any per-load
+    // state it carries clobbers the live values: a dumped
+    // `\@currnamestack` = empty made `latexml.sty`'s `\@popfilename` pop
+    // nothing, `\catcode`\@` then read an empty number ("Missing number")
+    // and every later `@`-name broke — a4wide 3 → 35 errors, every
+    // siunitx tabular (2026-09-17, cortex dump regeneration).
+    if matches!(*table, TableName::Meaning) && is_file_io_bookkeeping(&key_str) {
       skipped += 1;
       continue;
     }
@@ -218,9 +234,7 @@ pub fn write_dump(
     if matches!(*table, TableName::Value)
       && matches!(
         key_str.as_str(),
-        "if_count"
-          | "absorb_count"
-          | "if_stack"
+        "if_stack"
           | "DOCUMENT_REWRITE_RULES"
           | "PARAMETER_TYPES"
           | "TAG_PROPERTIES"
@@ -241,16 +255,57 @@ pub fn write_dump(
       continue;
     }
 
-    // Intarray slot consolidation — see fontdimen_groups comment above.
-    if matches!(*table, TableName::Value)
-      && let Some((prefix, idx)) = parse_fontdimen_key(&key_str)
-      && let Stored::Dimension(d) = value
+    // A font's parameter array (expl3 keeps its intarrays there, ~89k slots
+    // for an initialized expl3 + LaTeX kernel): one `IA` row, its values
+    // run-length encoded. See `docs/parity/DUMP_DESIGN.md` (IA records) and
+    // `docs/parity/WISDOM.md` #53.
+    if let Stored::FontDimens(_) = value
+      && let Some(body) = serialize_stored(value)
     {
-      fontdimen_groups
-        .entry(prefix.to_string())
-        .or_default()
-        .push((idx, d.0));
+      regular.push(("IA".to_string(), url_encode(&key_str), body));
       continue;
+    }
+
+    // Perl TeX_Job.pool.ltxml:185-197: a `\let` copy — a meaning whose own cs is not its key —
+    // that is still the very definition of that cs, before the load (the bootstrap snapshot) or
+    // now, is written `Lt(<key>, <cs>)` and re-`\let` when the dump loads, so it takes the cs's
+    // definition in the run it is loaded into; any other copy is written by value. Closure bodies
+    // and primitives always take this alias form (`PA`, `serialize_stored`); a token body was
+    // written by value, which froze `\tex_jobname:D` (l3names `\cs_new_eq:NN \tex_jobname:D
+    // \jobname`) to the dump run's empty `\jobname` placeholder, so `\c_sys_jobname_str` was
+    // empty in every conversion. Repro expl3/tex_jobname_is_the_jobname.
+    if matches!(*table, TableName::Meaning)
+      && let Stored::Expandable(exp) = value
+      && !matches!(
+        exp.get_expansion(),
+        Some(crate::definition::ExpansionBody::Closure(_))
+      )
+    {
+      let cs = exp.get_cs().into_owned();
+      let cs_name = cs.with_str(ToString::to_string);
+      if cs_name != key_str {
+        let same = |other: Option<&Stored>| match other {
+          Some(Stored::Expandable(o)) => std::rc::Rc::ptr_eq(o, exp),
+          _ => false,
+        };
+        let early = bootstrap_snap
+          .as_ref()
+          .is_some_and(|snap| same(snap.get(&(TableName::Meaning, arena::pin(&cs_name)))));
+        let late = !early && crate::state::with_meaning(&cs, same);
+        if early || late {
+          let row = (
+            table_code.to_string(),
+            url_encode(&key_str),
+            format!("PA\t{}", url_encode(&cs_name)),
+          );
+          if early {
+            early_aliases.push(row);
+          } else {
+            late_aliases.push(row);
+          }
+          continue;
+        }
+      }
     }
 
     let Some(serialized) = serialize_stored(value) else {
@@ -283,43 +338,6 @@ pub fn write_dump(
     } else {
       regular.push(row);
     }
-  }
-
-  // Emit one IA record per intarray group. Fall back to individual V
-  // records for any non-dense group (defensive: dump_reader only knows
-  // how to expand contiguous 1..N runs).
-  let mut ia_count = 0usize;
-  let mut ia_fallback_v = 0usize;
-  for (prefix, mut slots) in fontdimen_groups.into_iter() {
-    slots.sort_by_key(|s| s.0);
-    let dense = slots
-      .iter()
-      .enumerate()
-      .all(|(i, (idx, _))| *idx == (i as u32 + 1));
-    if !dense {
-      eprintln!(
-        "[dump_writer] non-dense intarray {:?} ({} slots) — emitting as individual V records",
-        prefix,
-        slots.len()
-      );
-      for (idx, val) in &slots {
-        let key = format!("{}_{}", prefix, idx);
-        regular.push(("V".to_string(), url_encode(&key), format!("D\t{}", val)));
-        ia_fallback_v += 1;
-      }
-      continue;
-    }
-    let values: Vec<i64> = slots.into_iter().map(|(_, v)| v).collect();
-    let rle = rle_encode_i64(&values);
-    let body = format!("{}\t{}", values.len(), rle);
-    regular.push(("IA".to_string(), url_encode(&prefix), body));
-    ia_count += 1;
-  }
-  if ia_count > 0 || ia_fallback_v > 0 {
-    eprintln!(
-      "[dump_writer] intarray consolidation: {} IA records, {} V fallbacks",
-      ia_count, ia_fallback_v
-    );
   }
 
   writeln!(
@@ -377,7 +395,7 @@ fn table_to_code(t: TableName) -> &'static str {
 
 /// Serialize a Stored value to a type-tag + data string.
 /// Returns None if the value can't be serialized.
-fn serialize_stored(stored: &Stored) -> Option<String> {
+pub(crate) fn serialize_stored(stored: &Stored) -> Option<String> {
   match stored {
     Stored::None => Some("N".to_string()),
     Stored::Bool(b) => Some(format!("B\t{}", if *b { "1" } else { "0" })),
@@ -403,6 +421,11 @@ fn serialize_stored(stored: &Stored) -> Option<String> {
       }
       if exp.is_protected() {
         flags.push('P');
+      }
+      // Rust-only: the macro checks its arguments for `\par` (tex.web §392; `Expandable::checks_par`), which a
+      // restored definition cannot recompute (its origin is the dump's). Perl's Dumper stores none (Dumper.pm:353).
+      if exp.checks_par {
+        flags.push('T');
       }
       // Two parallel parameter encodings:
       //
@@ -493,6 +516,11 @@ fn serialize_stored(stored: &Stored) -> Option<String> {
       }
       let target_cs = p.cs.with_str(url_encode);
       Some(format!("PA\t{}", target_cs))
+    },
+    // A font's parameter array, the body of its `IA` row: `<len>\t<rle>`.
+    Stored::FontDimens(params) => {
+      let params = params.borrow();
+      Some(format!("{}\t{}", params.len(), rle_encode_i64(&params)))
     },
     Stored::Font(f) => {
       // Perl `dump_font` (Core/Dumper.pm L281-284) emits `F(... components ...)`.
@@ -795,23 +823,6 @@ fn url_encode(s: &str) -> String {
   result
 }
 
-/// Recognize expl3's intarray-as-fontdimen storage keys, e.g.
-/// `fontdimen_fontinfo_cmr10 at 15sp_12737` → ("fontdimen_fontinfo_cmr10 at 15sp", 12737).
-/// Returns None for other Value keys (so the regular V-record path applies).
-fn parse_fontdimen_key(key: &str) -> Option<(&str, u32)> {
-  // Cheap gate first to keep the hot path fast on non-fontdimen keys.
-  if !key.starts_with("fontdimen_fontinfo_") {
-    return None;
-  }
-  // The last `_<digits>` tail is the slot index; everything before is the
-  // per-intarray prefix. Be defensive: an all-letter tail (e.g. a future
-  // non-indexed `fontdimen_fontinfo_*` key) should not match.
-  let last_us = key.rfind('_')?;
-  let (prefix, tail) = (&key[..last_us], &key[last_us + 1..]);
-  let index: u32 = tail.parse().ok()?;
-  Some((prefix, index))
-}
-
 /// Run-length encode a slice of i64 values as a comma-separated list:
 /// each run is either `<v>` (single) or `<v>x<n>` (count ≥ 2). Decoder
 /// in `dump_reader::rle_decode_i64` is the inverse.
@@ -837,8 +848,44 @@ fn rle_encode_i64(values: &[i64]) -> String {
   out
 }
 
+/// Per-load file-IO state that must never be dumped. `\@currname` /
+/// `\@currext` are assigned per `\input` by `read_input_file_recursive`
+/// (`binding/content.rs`), so at snapshot time they hold the LAST opened
+/// file ("latex.ltx") — Perl's `\input` leaves them at the `\@empty`
+/// baseline its latex_dump records (latex_dump.pool.ltxml:24122-24123).
+/// `\@currnamestack` is the `\@pushfilename`/`\@popfilename` stack
+/// (tex_file_io.rs:20-31) and carries `\the\catcode`\@`; Perl never dumps it
+/// because its serialized form equals the bootstrap's (`diff_from_snapshot`
+/// now makes the same comparison — this list is the belt to that brace).
+/// All describe the file being read at dump time, not the format.
+/// ltfilehook's `\CurrentFile*` token lists are NOT in the family: latex.ltx
+/// (:19582-19585) creates them, so the dump carries them EMPTY, as Perl's
+/// blib latex_dump.pool.ltxml:2716-2719 does.
+pub(crate) fn is_file_io_bookkeeping(key: &str) -> bool {
+  matches!(key, "\\@currname" | "\\@currext" | "\\@currnamestack")
+}
+
 #[cfg(test)]
 mod tests {
+  #[test]
+  fn file_io_bookkeeping_family_is_skipped() {
+    for k in ["\\@currname", "\\@currext", "\\@currnamestack"] {
+      assert!(is_file_io_bookkeeping(k), "{k}");
+    }
+    // The static popper macro is part of the format and stays; so do
+    // latex.ltx's `\CurrentFile*` token lists (its `\tl_new:N`, dumped empty).
+    for k in [
+      "\\@p@pfilename",
+      "\\@array",
+      "\\CurrentFile",
+      "\\CurrentFilePath",
+      "\\CurrentFileUsed",
+      "\\CurrentFilePathUsed",
+    ] {
+      assert!(!is_file_io_bookkeeping(k), "{k}");
+    }
+  }
+
   use super::*;
   use crate::{
     parameter::{Parameter, Parameters},
@@ -878,30 +925,10 @@ mod tests {
   #[test]
   fn v3_encoding_until_with_braces() {
     let delim = Tokens::new(vec![
-      Token {
-        text: arena::pin("\\end"),
-        code: Catcode::CS,
-        #[cfg(feature = "token-locators")]
-        loc: 0,
-      },
-      Token {
-        text: arena::pin("{"),
-        code: Catcode::BEGIN,
-        #[cfg(feature = "token-locators")]
-        loc: 0,
-      },
-      Token {
-        text: arena::pin("verbatim"),
-        code: Catcode::LETTER,
-        #[cfg(feature = "token-locators")]
-        loc: 0,
-      },
-      Token {
-        text: arena::pin("}"),
-        code: Catcode::END,
-        #[cfg(feature = "token-locators")]
-        loc: 0,
-      },
+      T_CS!("\\end"),
+      T_BEGIN!(),
+      T_LETTER!("verbatim"),
+      T_END!(),
     ]);
     let ps = Parameters::new(vec![raw_param("Until", "Until:\\end{verbatim}", vec![
       delim,
@@ -944,18 +971,8 @@ mod tests {
   /// are separated by GS. Verifies the three-level delimiter scheme.
   #[test]
   fn v3_encoding_multiple_extra_tokens() {
-    let t1 = Tokens::new(vec![Token {
-      text: arena::pin("a"),
-      code: Catcode::LETTER,
-      #[cfg(feature = "token-locators")]
-      loc: 0,
-    }]);
-    let t2 = Tokens::new(vec![Token {
-      text: arena::pin("b"),
-      code: Catcode::LETTER,
-      #[cfg(feature = "token-locators")]
-      loc: 0,
-    }]);
+    let t1 = Tokens::new(vec![T_LETTER!("a")]);
+    let t2 = Tokens::new(vec![T_LETTER!("b")]);
     let ps = Parameters::new(vec![raw_param("Match", "Match:ab", vec![t1, t2])]);
     let s = serialize_parameters_v3(&ps);
     // Expected extras field: "11:a<GS>11:b"
@@ -1001,57 +1018,172 @@ mod tests {
   }
 
   #[test]
+  fn font_parameter_array_round_trips_as_its_ia_row() {
+    use std::{cell::RefCell, rc::Rc};
+    let params = Stored::FontDimens(Rc::new(RefCell::new(vec![10, 20, 20])));
+    let body = serialize_stored(&params);
+    assert_eq!(body.as_deref(), Some("3\t10,20x2"));
+    let key = "fontdimen_fontinfo_writer_test at 1sp";
+    crate::dump_reader::load_from_str(&format!("IA\t{}\t{}\n", url_encode(key), body.unwrap()))
+      .unwrap();
+    assert_eq!(crate::state::lookup_value(key), Some(params));
+  }
+
+  #[test]
+  fn an_array_written_after_the_snapshot_is_in_the_diff() {
+    use crate::state;
+    let key = "fontdimen_fontinfo_snapshot_test at 1sp";
+    assert!(state::set_font_parameter(key, 1, 5));
+    let snapshot = state::take_snapshot();
+    // In place: the live array changes, the snapshot's copy does not.
+    assert!(state::set_font_parameter(key, 1, 7));
+    let diff = state::diff_snapshot(&snapshot);
+    let (_, _, value) = diff
+      .iter()
+      .find(|(_, k, _)| arena::with(*k, |k| k == key))
+      .expect("the rewritten array is in the diff");
+    assert_eq!(
+      serialize_stored(value).unwrap().split(['\t', ',']).nth(1),
+      Some("7")
+    );
+  }
+
+  /// Perl TeX_Job.pool.ltxml:185-197: a `\let` copy still sharing the bootstrap's definition of
+  /// its cs is an early `PA` row (Perl's `@cmds_early` `Lt`), one sharing the cs's current
+  /// definition a late one (`@cmds_late`), and one whose cs was redefined since is written by value.
+  #[test]
+  fn let_copies_are_written_as_lt_aliases() {
+    use std::rc::Rc;
+
+    use crate::{definition::expandable::Expandable, state};
+    let macro_of = |cs: &str, body: &str| {
+      Stored::Expandable(Rc::new(Expandable {
+        cs: T_CS!(cs),
+        paramlist: None,
+        expansion: Tokens::new(Explode!(body)).into(),
+        ..Expandable::default()
+      }))
+    };
+    state::reset_thread_state();
+    state::install_definition(macro_of("\\wdboot", "b"), None);
+    state::stage_snapshot("bootstrap");
+    state::let_i(&T_CS!("\\wdearly"), &T_CS!("\\wdboot"), None);
+    state::install_definition(macro_of("\\wdlate", "l"), None);
+    state::let_i(&T_CS!("\\wdlatecopy"), &T_CS!("\\wdlate"), None);
+    state::install_definition(macro_of("\\wdgone", "g"), None);
+    state::let_i(&T_CS!("\\wdstale"), &T_CS!("\\wdgone"), None);
+    state::install_definition(macro_of("\\wdgone", "h"), None);
+    let entries: Vec<_> = ["\\wdearly", "\\wdlatecopy", "\\wdstale"]
+      .iter()
+      .map(|k| {
+        (
+          TableName::Meaning,
+          arena::pin(k),
+          state::lookup_meaning(&T_CS!(k)).unwrap(),
+        )
+      })
+      .collect();
+    let path = std::env::temp_dir().join(format!("lt_aliases_{}.dump.txt", std::process::id()));
+    write_dump(&path, &entries, &[]).unwrap();
+    let text = std::fs::read_to_string(&path).unwrap();
+    let _ = std::fs::remove_file(&path);
+    let lines: Vec<&str> = text.lines().collect();
+    let at = |prefix: &str| lines.iter().position(|l| l.starts_with(prefix)).unwrap();
+    let (regular, late) = (at("# Section 1"), at("# Section 2"));
+    let early = at("M\t\\wdearly\t");
+    assert_eq!(lines[early], "M\t\\wdearly\tPA\t\\wdboot");
+    assert!(early < regular);
+    let late_copy = at("M\t\\wdlatecopy\t");
+    assert_eq!(lines[late_copy], "M\t\\wdlatecopy\tPA\t\\wdlate");
+    assert!(late_copy > late);
+    let stale = at("M\t\\wdstale\t");
+    assert!(
+      lines[stale].starts_with("M\t\\wdstale\tE\t\\wdgone\t"),
+      "{}",
+      lines[stale]
+    );
+    assert!(regular < stale && stale < late);
+  }
+
+  /// Perl TeX_Job.pool.ltxml:150,153 (`sort @tables`, `sort keys`): the dump is in (table, key)
+  /// order whatever order the diff came in, so a shuffled entry list writes the same bytes (det354
+  /// B1: one key set in 55 record orders across 173 dumps).
+  #[test]
+  fn a_shuffled_diff_writes_the_same_dump() {
+    use std::rc::Rc;
+
+    use crate::definition::expandable::Expandable;
+    let macro_of = |cs: &str, body: &str| {
+      Stored::Expandable(Rc::new(Expandable {
+        cs: T_CS!(cs),
+        paramlist: None,
+        expansion: Tokens::new(Explode!(body)).into(),
+        ..Expandable::default()
+      }))
+    };
+    let entries = vec![
+      (TableName::Value, arena::pin("zeta@count"), Stored::Int(3)),
+      (
+        TableName::Meaning,
+        arena::pin("\\sdbeta"),
+        macro_of("\\sdbeta", "b"),
+      ),
+      (
+        TableName::Catcode,
+        arena::pin("@"),
+        Stored::Catcode(Catcode::LETTER),
+      ),
+      (
+        TableName::Value,
+        arena::pin("alpha@flag"),
+        Stored::Bool(true),
+      ),
+      (
+        TableName::Meaning,
+        arena::pin("\\sdalpha"),
+        macro_of("\\sdalpha", "a"),
+      ),
+      (TableName::Lccode, arena::pin("A"), Stored::Int(97)),
+      (
+        TableName::Value,
+        arena::pin("mid@name"),
+        Stored::String(arena::pin("m")),
+      ),
+    ];
+    let write = |entries: &[(TableName, arena::SymStr, Stored)], tag: &str| {
+      let path = std::env::temp_dir().join(format!("sorted_{tag}_{}.dump.txt", std::process::id()));
+      write_dump(&path, entries, &[]).unwrap();
+      let text = std::fs::read_to_string(&path).unwrap();
+      let _ = std::fs::remove_file(&path);
+      text
+    };
+    let written = write(&entries, "a");
+    let mut reversed = entries.clone();
+    reversed.reverse();
+    let mut rotated = entries.clone();
+    rotated.rotate_left(3);
+    assert_eq!(write(&reversed, "b"), written);
+    assert_eq!(write(&rotated, "c"), written);
+    let rows: Vec<String> = written
+      .lines()
+      .filter(|l| !l.starts_with('#'))
+      .map(|l| l.splitn(3, '\t').take(2).collect::<Vec<_>>().join(" "))
+      .collect();
+    assert_eq!(rows, [
+      "C @",
+      "LC A",
+      "M \\sdalpha",
+      "M \\sdbeta",
+      "V alpha@flag",
+      "V mid@name",
+      "V zeta@count"
+    ]);
+  }
+
+  #[test]
   fn rle_extreme_values() {
     assert_eq!(rle_encode_i64(&[i64::MIN]), i64::MIN.to_string());
     assert_eq!(rle_encode_i64(&[i64::MAX]), i64::MAX.to_string());
     assert_eq!(rle_encode_i64(&[0; 3]), "0x3");
-  }
-
-  // --- parse_fontdimen_key tests ---
-
-  #[test]
-  fn fontdimen_key_standard() {
-    assert_eq!(
-      parse_fontdimen_key("fontdimen_fontinfo_cmr10 at 15sp_12737"),
-      Some(("fontdimen_fontinfo_cmr10 at 15sp", 12737))
-    );
-  }
-
-  #[test]
-  fn fontdimen_key_index_one() {
-    assert_eq!(
-      parse_fontdimen_key("fontdimen_fontinfo_cmr10 at 5sp_1"),
-      Some(("fontdimen_fontinfo_cmr10 at 5sp", 1))
-    );
-  }
-
-  #[test]
-  fn fontdimen_key_non_fontdimen() {
-    assert_eq!(parse_fontdimen_key("count@"), None);
-    assert_eq!(parse_fontdimen_key("\\@oddpage"), None);
-  }
-
-  #[test]
-  fn fontdimen_key_wrong_prefix() {
-    // Missing the `_fontinfo_` segment — must not match.
-    assert_eq!(parse_fontdimen_key("fontdimen_cmr10_15"), None);
-  }
-
-  #[test]
-  fn fontdimen_key_non_numeric_tail() {
-    // No trailing digits after last `_` ⇒ no index ⇒ no match.
-    assert_eq!(
-      parse_fontdimen_key("fontdimen_fontinfo_cmr10 at 15sp_abc"),
-      None
-    );
-  }
-
-  #[test]
-  fn fontdimen_key_empty_tail() {
-    // Trailing underscore with no digits ⇒ no match.
-    assert_eq!(
-      parse_fontdimen_key("fontdimen_fontinfo_cmr10 at 15sp_"),
-      None
-    );
   }
 }

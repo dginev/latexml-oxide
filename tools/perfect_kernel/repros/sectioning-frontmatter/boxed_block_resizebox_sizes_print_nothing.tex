@@ -1,0 +1,20 @@
+% mechanism: `\resizebox{w}{h}{…}` round a boxed author block: the box's height type and sizes (`\Gscale@@box`'s first
+%   three arguments) printed "0pt" into the names to the observer's lexer, which declined. Fix: `\Gscale@@box` among
+%   the lexer's KEYED_CONSTRUCTORS (observer/events/mod.rs). OD #958.
+% witness: 2107.12423
+% oracle:  pdflatex 0 errors
+% engines: rust int127a: one creator holding the tabular; perl the same
+% expect:  0 errors; Ann (Univ A), Bob (Univ B); no "0pt"
+% status:  GREEN (100c)
+\documentclass{article}
+\usepackage{graphicx}
+\title{T}
+\author{\resizebox{0.5\linewidth}{!}{\begin{tabular}{cc}
+Ann Able$^{1}$ & Bob Baker$^{2}$ \\
+\multicolumn{2}{c}{$^{1}$Univ A} \\
+\multicolumn{2}{c}{$^{2}$Univ B}
+\end{tabular}}}
+\begin{document}
+\maketitle
+Text.
+\end{document}

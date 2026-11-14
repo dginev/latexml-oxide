@@ -1,0 +1,17 @@
+% mechanism: article's `\maketitle` under `titlepage` prints its own page, which prints `\@author` (article.cls:169-192);
+%   with no `\@maketitle` of the document's, the tail appended to `\@author` is read (TP1c's keyed rule leaves the
+%   kernel's page alone)
+% witness: synthetic (TP1c brief)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "A Title / Alice A Bob B / <date> / Body."
+% engines: int160a0, TP1b, TP1c: Alice A, Bob B, 0 warnings; perl not run
+% expect:  0 errors, 0 warnings; creators Alice A, Bob B
+% status:  GREEN. Guard perfect_kernel_batchfx24::an_author_tail_the_title_page_prints_is_read
+% preload: ar5iv.sty
+\documentclass[titlepage]{article}
+\begin{document}
+\title{A Title}
+\author{Alice A}
+\makeatletter\g@addto@macro\@author{\and Bob B}\makeatother
+\maketitle
+Body.
+\end{document}

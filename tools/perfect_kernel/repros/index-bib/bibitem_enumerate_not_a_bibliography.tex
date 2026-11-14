@@ -1,0 +1,26 @@
+% witness: hep-ph9804413 ("Figure Captions" written as an {enumerate} of \bibitem's; 64x review)
+% oracle:  pdflatex 0 errors: the centred bold "Figure Captions", then the numbered captions 1. and 2.
+% engines: rust 64x round 1 = 0 errors, but the list becomes a second <bibliography> titled "References" after the bold
+%          "Figure Captions" line (\lx@mung@bibliography); Perl 0.8.8 Error:malformed per \bibitem (no bibliography)
+% expect:  0 errors; the captions a <bibliography> titled "Figure Captions" (the bold line absorbed), no "References"
+%          heading (user ruling 2026-10-10)
+% status:  RED (64x round 1) -> GREEN (64x round 2)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage[numbers]{natbib}
+\begin{document}
+Text.
+\begin{thebibliography}{9}
+\bibitem{a} Able, A title.
+\end{thebibliography}
+
+\begin{center}
+{\bf Figure Captions}
+\end{center}
+\begin{enumerate}
+\bibitem 1
+Pion multiplicity distribution.
+\bibitem 2
+Kaon multiplicity distribution.
+\end{enumerate}
+\end{document}

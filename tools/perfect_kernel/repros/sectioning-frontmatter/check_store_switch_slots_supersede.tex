@@ -1,0 +1,27 @@
+% (rev108b2 finding 2, synthetic): the supersede rule drops words when a setter's writes to two stores sit in branches of a conditional.
+% witness: none lost (nst.cls `\add@author@list` has the shape, 2210.08941; its authors reach the output)
+% engines: 108b names only "gravel road"; pdflatex prints both
+% expect:  0 errors; every word the branches store kept or counted — the Warning naming "lunar institute" too if it is
+%          lost (no replacing when writes to 2+ stores have `\else`/`\or` between them; 1612.06202 stays superseded)
+% engines: int159a (ST1): INVALID as committed: `cswitch_ifnum.cls` was never committed (pdflatex: "File `cswitch_ifnum.cls' not found"), so OmniBus keeps both addresses; the mechanism is not exercised. RED until its class is restored
+% engines: rust int160a (HG1) = 0 errors, 0 warnings, the class now written by `filecontents*` (rev108b2 finding 2's
+%          `\ifnum\addrn=1 \gdef\@addri{#1}\else\gdef\@addrii{#1}\fi`, two `\address` calls): both lines kept, Ann Able's
+%          address contacts "Lunar Institute" and "Gravel Road"; nothing lost, so nothing to count
+% oracle:  pdflatex 0 errors (TL 2025, -no-shell-escape): "A Title", "Ann Able", "Lunar Institute", "Gravel Road"
+% status:  RED (rev108b2) -> INVALID (ST1, the class never committed) -> GREEN (HG1; perfect_kernel_batchhg1::hollow_guards_restored_read_as_printed)
+% preload: ar5iv.sty
+\begin{filecontents*}[overwrite]{cswitch_ifnum.cls}
+\ProvidesClass{cswitch_ifnum}\LoadClass{article}
+\newcount\addrn
+\def\@addri{}\def\@addrii{}
+\newcommand\address[1]{\global\advance\addrn by 1
+  \ifnum\addrn=1 \gdef\@addri{#1}\else\gdef\@addrii{#1}\fi}
+\def\@maketitle{\newpage\null\vskip 2em\begin{center}{\LARGE\@title\par}\vskip 1.5em
+  {\large\@author\par}\vskip 1em{\@addri\par\@addrii\par}\end{center}\par\vskip 1.5em}
+\end{filecontents*}
+\documentclass{cswitch_ifnum}
+\title{A Title}\author{Ann Able}
+\address{Lunar Institute}\address{Gravel Road}
+\begin{document}\maketitle
+Body text.
+\end{document}

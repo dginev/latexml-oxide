@@ -1,0 +1,22 @@
+% mechanism: a column after the names that reads as a collaboration or a team, whole or as the remark on a name
+%            speaking for it, is no shared affiliation of every name above it (`resolver::blocks` `shared_column`,
+%            `names_collaboration`: the old reader's `reads_as_collaboration`); it keeps the reading's own collaboration
+% witness: 2408.02330 (`\and \\the Solar Orbiter EPD and Parker Solar Probe ISIS teams`, iau_FM); 2607.01090 (`\and
+%          Shuang-Nan Zhang\inst{23} on behalf of the \textit{SVOM} collaboration\inst{24}.`, raa) — each every
+%          author's affiliation at `=2` on int150a
+% oracle:  pdflatex: 0 errors; "Ann Able1", "Bob Baker2", "the ATLAS and CMS teams" (the remark form: "Cat Cole on
+%          behalf of the XYZ collaboration4 .")
+% engines: rust int150a `=2`: "the ATLAS and CMS teams" (the remark form "Cat Cole on behalf of the XYZ collaboration
+%          .") the affiliation of Ann Able and of Bob Baker; off: the team a creator, Cat Cole a creator with the
+%          collaboration contact
+% expect:  0 errors, 0 warnings at `=2`; Ann Able and Bob Baker without an affiliation, the team words in a creator or
+%          a collaboration contact; the remark form Cat Cole a creator with the collaboration contact
+% status:  RED (int150a) -> GREEN at `=2` (FB2b7)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{Ann Able$^1$ \and Bob Baker$^2$ \and \\the ATLAS and CMS teams}
+\maketitle
+Text.
+\end{document}

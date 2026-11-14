@@ -1,0 +1,17 @@
+% memoir's lists (memoir.cls:7074-7114 `\newlistof`; toc :7135, lof :12149): a chapter-style heading then
+% `\@starttoc{<ext>}`, which memoir renews (:7122) to `\@input{\jobname.<ext>}`, a file LaTeXML never writes.
+% witness: biblatex-oxref/oxnum-doc, memman, 1306.4853, 1807.06345, 2107.04315, 2505.14933 (TOC0 root A)
+% oracle:  pdflatex 0 `!`: "Contents" listing "List of Figures" and "1 Intro", "List of Figures" listing "1.1 A figure".
+% engines: rust int170a E=0 W=1, no `<TOC>`, two styled paragraphs "Contents"/"List of Figures"; Perl 0.8.8 (no memoir
+%          binding, OmniBus) E=1 (undefined `\memfontenc`), `<TOC lists="toc">` + `<TOC lists="lof">`.
+% expect:  `<TOC lists="toc" …><title>Contents</title></TOC>`, `<TOC lists="lof" …><title>List of Figures</title></TOC>`,
+%          no `*`, no heading paragraph; W=1 is the raw load's `misdefined:\@iffirstamp` (memoir.cls:5454), not this one's.
+% status:  RED (int170a) -> GREEN (MEM1)
+\documentclass{memoir}
+\begin{document}
+\tableofcontents*
+\listoffigures
+\chapter{Intro}
+Text.
+\begin{figure}\caption{A figure}\end{figure}
+\end{document}

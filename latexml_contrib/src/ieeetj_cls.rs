@@ -1,35 +1,61 @@
 //! ieeetj.cls — IEEE Transactions journal template (author-bundled, ~4900 lines;
-//! not raw-loaded). OmniBus renders the authors (`\author`, `\affil` via
-//! inst_support) fine, but the class's late-defined journal-metadata frontmatter
-//! macros are undefined and leak as literal text (witness 2405.01673, 2603.04284
-//! → `\corresp \authornote \receiveddate …`). Bind just those frontmatter
-//! macros; everything else falls through to OmniBus.
+//! not raw-loaded). The class is IEEEtran V1.7a copied inline (its header,
+//! ieeetj.cls:209) plus its own `\affil{…}` store (:4856-4858, numbered
+//! affiliations after a flat `\author` list), so it is IEEEtran with that
+//! `\affil` (authblk's would attach every affiliation to every author). As an
+//! OmniBus stub, IEEEtran's `\ifCLASSOPTION…`
+//! conditionals, `{IEEEkeywords}`, `\IEEEPARstart` and `\IEEEpubidadjcol` were
+//! undefined (arXiv 2605.01773). The class's late-defined journal-metadata
+//! frontmatter macros are bound below; they leaked as literal text before
+//! (witness 2405.01673, 2603.04284 → `\corresp \authornote \receiveddate …`).
 use latexml_package::prelude::*;
 
 LoadDefinitions!({
-  LoadClass!("OmniBus");
+  LoadClass!("IEEEtran");
+  // ieeetj.cls:1792-1810 (2510.05542's copy) `\@makecaption`: a table's caption "TABLE 1. text" on one line, as a
+  // figure's "FIGURE 1. text", in place of IEEEtran's label over the text (ieeetran_cls.rs); caption, when loaded,
+  // replaces it (caption_sty.rs). The names and numbers (:1650, 1850-1852): figures "FIGURE", tables arabic, in place of
+  // IEEEtran's "Fig." and Roman tables. Guard `perfect_kernel_batch78y::ieeetj_caption_names`.
+  caption_sty::class_makecaption_label("", ". ", false)?;
+  RawTeX!(r"\def\thetable{\@arabic\c@table}\def\figurename{FIGURE}");
+  // The author list is flat, with `\\` as a line break inside it (2405.01673);
+  // inst_support's `\author` reads it that way, as under OmniBus.
+  RequirePackage!("inst_support");
+  // ieeetj.cls:4858 `\affil{text}` stores one numbered affiliation block.
+  DefMacro!("\\affil{}", "\\lx@add@affiliation{#1}");
 
-  // Corresponding-author byline and author/funding note — preserve as notes.
+  // Corresponding-author byline and author/funding note — preserve as notes, each keeping its last value as the
+  // class's `\gdef` does.
   DefMacro!(
     "\\corresp{}",
-    "\\lx@add@frontmatter{ltx:note}[role=corresponding]{#1}"
+    "\\lx@clear@frontmatter{ltx:note}[role=corresponding]\\lx@add@frontmatter{ltx:note}[role=corresponding]{#1}"
   );
   DefMacro!(
     "\\authornote{}",
-    "\\lx@add@frontmatter{ltx:note}[role=note]{#1}"
+    "\\lx@clear@frontmatter{ltx:note}[role=note]\\lx@add@frontmatter{ltx:note}[role=note]{#1}"
   );
   // `\affil{…}` — a numbered affiliation block. inst_support already defines
   // `\affil`; keep that. (Listed here only for the record.)
 
-  // Editorial dates and identifiers. IEEE templates ship these as unfilled
-  // "XX Month, XXXX" / "XXXX.2022.1234567" placeholders; rendering them would
-  // surface template noise, so gobble them (they leaked as raw text before).
-  def_macro_noop("\\receiveddate{}")?;
-  def_macro_noop("\\reviseddate{}")?;
-  def_macro_noop("\\accepteddate{}")?;
-  def_macro_noop("\\publisheddate{}")?;
-  def_macro_noop("\\currentdate{}")?;
-  def_macro_noop("\\doiinfo{}")?;
+  // Editorial dates and the DOI, as the first page prints them (ieeetj.cls:3439-3440 "Received …; revised …;
+  // accepted …; Date of publication …; date of current version …", "Digital Object Identifier 10.1109/…"; a
+  // template's "XX Month, XXXX" placeholders included, as pdflatex prints them); gobbling them as template noise
+  // dropped real dates and DOIs too.
+  DefMacro!("\\receiveddate{}", "\\lx@add@date[role=received]{#1}");
+  DefMacro!("\\reviseddate{}", "\\lx@add@date[role=revised]{#1}");
+  DefMacro!("\\accepteddate{}", "\\lx@add@date[role=accepted]{#1}");
+  DefMacro!("\\publisheddate{}", "\\lx@add@date[role=published]{#1}");
+  DefMacro!("\\currentdate{}", "\\lx@add@date[role=current]{#1}");
+  // Labelled as the class prints it (FIDELITY_CHARTER §4, user ruling 2026-10-30; OXIDIZED_DESIGN_DIVERGENCES #915): ieeetj.cls:3440 (2510.05542's copy) "Digital Object
+  // Identifier 10.1109/…" — not the role's "DOI: ".
+  // An empty `\doiinfo{}` (the class's own default) prints no DOI line (ieeetj.cls:3440 `\ifx\@doiinfo\@empty`; 2609.27083).
+  DefMacro!(
+    "\\doiinfo{}",
+    "\\lx@clear@frontmatter{ltx:pubnote}[role=doi]\\def\\lx@ieee@doi{#1}\\ifx\\lx@ieee@doi\\@empty\\else\\lx@add@pubnote[role=doi,name={Digital Object Identifier~}]{10.1109/#1}\\fi"
+  );
+  // The names the first page prints them with (ieeetj.cls:3439; Perl looks a date's name up as `\lx@date@<role>@name`).
+  DefMacro!("\\lx@date@published@name", "Date of publication~");
+  DefMacro!("\\lx@date@current@name", "Date of current version~");
   def_macro_noop("\\history{}")?;
   def_macro_noop("\\articletype{}")?;
   // Author-supplied funding acknowledgement — preserve rather than gobble.

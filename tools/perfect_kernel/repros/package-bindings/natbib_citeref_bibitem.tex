@@ -1,0 +1,18 @@
+% witness: 2309.05436 (natbib + citeref, 58 errors); citeref.sty:96 `\def\@@lbibitem[#1]#2#3\par` (real natbib
+%          defines no `\@@lbibitem`; Perl natbib.sty.ltxml:640-643 names its entry constructor so)
+% oracle:  pdflatex 0 errors; the entry "Batselier, K. (2017)."
+% engines: rust 67int18b = 1 error (citeref's `\@@lbibitem` reads a `[` that is not there)
+% expect:  0 errors; one bibitem, key a, its text kept
+% status:  RED (67int18b) -> GREEN (70a)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage[round]{natbib}
+\usepackage{citeref}
+\begin{document}
+\citet{a}
+\begin{thebibliography}{}
+\bibitem[Batselier et~al., 2017]{a}
+Batselier, K. (2017).
+
+\end{thebibliography}
+\end{document}

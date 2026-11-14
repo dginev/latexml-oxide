@@ -2,6 +2,127 @@
 
 ## Unreleased
 
+  - **The log locator names the file with its extension** (#794). A diagnostic's
+    location line read `at t; line 10 col 21 - …`, the file stem only; it now reads
+    `at t.tex; line 10 col 21 - …`, as Perl's `getShortSource` prints it, so a problem
+    matcher written for Perl's logs can find the file (a `.bib`'s own diagnostics name
+    `refs.bib` likewise when the reader has its path; an extension-less file reads `README.`,
+    as in Perl). The message layout is Perl's
+    (the message, then `at …`, then detail lines). Guard
+    `locator::tests::display_names_the_file_with_its_extension`; eleven guards that
+    pinned the stem now pin the file name.
+
+  - **A failing stylesheet is a Fatal, exits 1 and writes no output** (#782). A bad
+    XPath, an `xsl:message terminate="yes"` or a missing `xsl:import` logged
+    `Error:post:convert`, exited 0 and wrote the untransformed XML under the `.html`
+    name. A MathML or XSLT step that fails now stops post-processing with
+    `Fatal:post:convert` and nothing is written, as a die in Perl's ProcessChain does:
+    with `--split`, the pages this run rendered before the failing one are removed, serially
+    and under `LATEXML_RENDER_JOBS` (a page an earlier run left in the destination stays);
+    `api::convert_to_html` returns `Err` with the log. A core Fatal that keeps its partial
+    document is still post-processed and returned, as in Perl. A stylesheet that cannot be
+    found stays an Error, as in Perl. Guards `xslt_failure_is_fatal` (in
+    `cluster_xslt_split`), `api::tests::a_post_fatal_is_an_err` and
+    `api::tests::a_core_fatal_keeps_its_rescued_document`.
+
+  - **Split pages keep the document's processing instructions** (#795). With `--split`,
+    only the main page carried the `<?latexml …?>` PIs; the other pages lost them, so a
+    custom stylesheet reading them saw nothing there. Each page now gets a copy before its
+    root, as Perl's `newDocument` does (the streaming split already did). Guard
+    `document::tests::split_pages_carry_the_document_pis`.
+
+  - **An option given twice keeps its last value** (#530). `--urlstyle=file
+    --urlstyle=server` (and any other single-valued option or flag repeated) stopped
+    with "cannot be used multiple times"; the last one now wins, as with Perl's
+    GetOpt::Long, so a base option list can be overridden by appending to it. Repeatable
+    options (`--css`, `--path`, `--preload`, ...) still accumulate. Guard
+    `boolean_flag_last_wins_tests::repeated_options_are_last_wins`.
+
+  - **`--xsltparameter` takes Perl's `name:value`, and a malformed one is an error** (#803).
+    `--xsltparameter=FOO:bar` was silently ignored; it now sets `$FOO`, as in Perl's
+    `latexmlc`/`latexmlpost` (a `\w+` name, then `:`). `name=value` keeps working (it also
+    carries `{uri}name` names). A value with neither form stops the run with a usage error
+    (exit 2), as `latexmlpost` does (Perl's `latexmlc` only warns, LaTeXML.pm L574-578);
+    the library entry point logs an Error. Guard
+    `xsltparameter_tests` (in the binary's unit tests).
+
+  - **A `--stylesheet` on disk is used, even when it is named like a built-in one** (#806).
+    `--stylesheet=./LaTeXML-html5.xsl` loaded the embedded copy instead of the local file,
+    because the embedded stylesheets were matched by file name alone. A path that names an
+    existing file now loads that file, and so does an engine-named stylesheet it imports from
+    beside it; `urn:x-LaTeXML:XSLT:` imports and the default stylesheet always come from the
+    binary, whatever `resources/XSLT/` or `LaTeXML-*.xsl` files sit in the working or source
+    directory. A `%` in a plain path is a character (`/w/100%/LaTeXML-html5.xsl`); only a
+    `file:` URL is percent-decoded. Guards `xslt::local_stylesheet_tests`,
+    `xslt_custom_stylesheet::stray_engine_sheets_do_not_replace_the_default`.
+
+  - **etoc binding (#760).** `\localtableofcontents` now lists the enclosing
+    chapter's or section's units, to the depth `\etocsetnexttocdepth` sets, and
+    `\tableofcontents` stays the document's contents; `\invisibletableofcontents`
+    prints nothing, as in etoc. A `<ltx:TOC>` whose `scope` is a unit's `xml:id`
+    lists that unit's children (the schema's documented meaning; Perl reads only
+    `global`).
+  - **`{verbatim}` honours upquote (#801).** With `\usepackage{upquote}`, the
+    `verbatim` and `verbatim*` environments now print `'` and `` ` `` upright, as
+    fancyvrb's `Verbatim` and `\verb` already did and as pdflatex prints all of
+    them. Without upquote they keep the typewriter font's curly quotes.
+  - **The standard classes' size options set `\textwidth` (#779).** In one column,
+    `article`, `report` and `book` now set `\textwidth` as their size file does
+    (`size1x.clo`/`bk1x.clo`): the paper's width less 2in, at most 345pt (10pt),
+    360pt (11pt) or 390pt (12pt). Before, every size got 10pt's 345pt, so a
+    `\begin{minipage}{\textwidth}` in a 12pt article was too narrow. Under
+    `\documentstyle`, book's width is `bk1x.clo`'s 4.5in (10pt) or 5in. `\@ptsize`
+    now follows the size option too. Both read the options the class was given,
+    so a class passing its options to `article` (elsarticle, llncs) reaches them;
+    llncs keeps its own 12.2cm.
+  - **`\import@path` is defined (#772).** import.sty's own macro now holds the
+    current import directory, as the package sets and restores it, so a document
+    that reads it (`\href{\import@path index.tex}{…}`) no longer gets an
+    undefined-macro error; a nested `\import` empties it, as import.sty does. Also
+    drops a stray space the import commands typeset before the imported file.
+  - **`post::PostOptions::nodefaultresources` is now `default_resources`, with the
+    meaning inverted.** The double negative (`nodefaultresources: false`) is gone.
+    The positive name is Perl's option name (`Config.pm:120` `defaultresources!`),
+    and the XSLT step still receives its negation as `noresources`, as
+    `LaTeXML.pm:584` passes it. The CLI flags `--defaultresources` and
+    `--nodefaultresources` are unchanged.
+  - **New `api::convert_to_html_with(tex, &HtmlOptions)`.** `HtmlOptions` holds the
+    settings of the library's HTML entry point, and its `Default` is what
+    `api::convert_to_html(tex)` does, so that function is unchanged. The first
+    setting is `default_resources`; set it to `false` (the `--nodefaultresources`
+    equivalent) to get the page without links to the bundled CSS/JS and with
+    nothing written to the working directory. Construct `HtmlOptions` with
+    `..Default::default()`, so a setting added later leaves callers compiling. The
+    tests use it through `util::test::convert_to_html_page`, so a test run no
+    longer leaves `LaTeXML.css`/`ltx-*.css` in `latexml_oxide/`.
+  - **A symbolic link among the cached format dumps is never trusted on macOS.**
+    `private_to_user` rejected a link by its mode bits, which are `0o777` on
+    Linux but follow the umask on macOS, so a link to another file passed there.
+    It now rejects links by file type. Guard
+    `only_this_users_files_no_one_else_can_write_are_trusted`, red on macOS
+    before.
+  - **`--init` no longer segfaults intermittently on Linux.** `LATEXML_INI_MODE`
+    was set after the kpathsea prewarm thread started, so glibc's `setenv`
+    reallocated `environ` under that thread's `getenv` (7 of 200
+    `--init=latex.ltx` runs on Linux aarch64), failing `tools/make_formats.sh`.
+    It is now set before the thread exists (STABILITY_WITNESSES Cluster J).
+  - **TikZ matrix and tikz-cd cells sit on their last row's baseline (#785).**
+    `openTikzAlignment` placed a matrix at `y = h + d`; Perl
+    (`pgfsys-latexml.def.ltxml` L952-975) subtracts the last row's depth, read
+    from the row sizes `Alignment.pm` passes to `openContainer` (L321-323). Rust
+    passed none, so every cell of a tikz-cd diagram or `\matrix` sat one
+    last-row depth above its arrows. The alignment now passes
+    `rowheights`/`rowdepths`/`columnwidths` to the container callback as Perl
+    does. Guard `picture_sizing::tikz_matrix_places_last_row_baseline_at_origin`.
+
+  - **The XSLT recursion cap now applies in the statically linked release
+    binaries.** `xsltMaxDepth = 1000` (Perl `XML::LibXSLT->max_depth(1000)`) was
+    written through `dlsym`, which cannot see a global of a statically linked
+    libxslt, so those binaries kept libxslt's default of 3000. A stylesheet that
+    recursed between 1000 and 3000 levels deep now aborts in post-processing, as
+    in Perl and in dynamically linked builds. Guard
+    `xslt::max_depth_tests::transform_aborts_past_perls_recursion_depth`.
+
 ## [0.7.6] (graphics & SVG figure fidelity; minted highlighting + overpic; author/frontmatter class sweep; Rhai runtime binding API; latexmlpost CLI parity; wider package & bibliography coverage)
 
   - **OmniBus fallback captures `\orcid` and no-ops the `\lefttitle`/`\righttitle`
@@ -1241,7 +1362,7 @@
     when the strict split skips `_base.rs`, only Token bodies
     survive in the dump.
   - **Historical active gaps from the Apr 26 pivot** are preserved in
-    [`PERL_LOADFORMAT_AUDIT.md`](docs/PERL_LOADFORMAT_AUDIT.md), but
+    [`PERL_LOADFORMAT_AUDIT.md`](docs/archive/PERL_LOADFORMAT_AUDIT.md), but
     must be re-audited before action. Several were superseded by the
     Apr 28-30 dump cleanup and package-loading fixes.
 

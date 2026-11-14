@@ -1,0 +1,12 @@
+% witness: 2406.11917 (\diagbox[dir=SW]{}<spaces>& b; diagbox.sty:212 \newcommand\diagbox[3][]); rc_struct2 A7
+% oracle:  pdflatex 0 errors (an empty diagonal box between "a" and "b")
+% expect:  0 errors; the diagbox picture in cell 2, "b" alone in cell 3
+% status:  GREEN (batch 68z, perfect_kernel_batch68z::a_cell_head_newcommand_optional_macro_reads_its_arguments_in_the_cell);
+%          before 68z 1 Error "Stray alignment &" (the cell-head peek expanded \diagbox, which read the & as its argument)
+\documentclass{article}
+\usepackage{diagbox}
+\begin{document}
+\begin{tabular}{ccc}
+a & \diagbox[dir=SW]{}     & b \\
+\end{tabular}
+\end{document}

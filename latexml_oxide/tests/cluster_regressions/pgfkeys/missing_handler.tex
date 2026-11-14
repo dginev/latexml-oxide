@@ -1,0 +1,15 @@
+\documentclass{article}
+\usepackage{pgfkeys}
+\makeatletter
+% A rawstyles pgf load reaches `\pgfkeys{/pgf/.is family}` (pgfsys.code.tex:19)
+% before `/handlers/.unknown` exists. `\pgfkeys@unknown` (pgfkeys.code.tex:494)
+% loads `\pgfkeys@code` through `\pgfkeysgetvalue`, which lets it to `\relax`
+% when the handler is absent, so the dispatch no-ops instead of erroring.
+\pgfkeys{/t/a/.code={[a:#1]}}
+\expandafter\let\csname pgfk@/handlers/.unknown/.@cmd\endcsname\@undefined
+% `\pgfeov` is the argument terminator only the raw `\pgfkeys@code` bodies eat.
+\def\pgfeov{}
+\makeatother
+\begin{document}
+\pgfkeys{/t/a=1, /foo bar/.nonexistent, /t/a=2}[end]
+\end{document}

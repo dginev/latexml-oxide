@@ -1,0 +1,17 @@
+% witness: 2201.11183, 2111.13260 (the title block's notes step the footnote counter; see
+%          article_title_notes_step_the_footnote_counter)
+% oracle:  pdflatex 0 errors: "T∗", "A† B‡§", "D¶", notes "∗ tt" "† ta" "‡ tb" "¶ td", "Body1" with note "1 bodyone" —
+%          article.cls `\@maketitle` typesets the title, the authors and the date in turn, each `\thanks` a step of the
+%          counter (latex.ltx:17215), the bare `\footnotemark` after B's another (the fourth, "§")
+% engines: rust 78o r1 = 0 errors, B's `\footnotemark` "∗" (nothing stepped before it); int52a and perl "1", and the
+%          body's note "2" (no reset after the title)
+% expect:  0 errors, 0 warnings; B's mark "§", the body's "1 bodyone"
+% status:  GREEN (78o r2)
+\documentclass{article}
+\title{T\thanks{tt}}
+\author{A\thanks{ta} \and B\thanks{tb}\footnotemark}
+\date{D\thanks{td}}
+\begin{document}
+\maketitle
+Body\footnote{bodyone}.
+\end{document}

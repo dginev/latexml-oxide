@@ -1,0 +1,16 @@
+% witness: sel78i item 3 (cite.sty: 3,616/30k papers)
+% oracle:  pdflatex 0 errors: "X [1–4], [1, 2], [1]." (cite.sty:95 \@compress@cite, :272-297; default sort, compress)
+% engines: rust int50a = "[3, 1, 2, 4], [2, 1], [1]" (cite_sty.rs:4 ignores the order; Perl cite.sty.ltxml:17-19)
+% expect:  0 errors; "[1–4]", the run of two "[1, 2]"
+% status:  RED (int50a) -> GREEN (78j)
+\documentclass{article}
+\usepackage{cite}
+\begin{document}
+X \cite{c,a,b,d}, \cite{b,a}, \cite{a}.
+\begin{thebibliography}{9}
+\bibitem{a} A. Able.
+\bibitem{b} B. Baker.
+\bibitem{c} C. Cole.
+\bibitem{d} D. Dee.
+\end{thebibliography}
+\end{document}

@@ -1,0 +1,33 @@
+% mechanism: 86g's fail-safe keeps a late run in int116a's slot when an entry comes from a store the class's title
+%   page may print (`title_page_may_print`: the speculative title-page run reached the store's sentinel). A class that
+%   prints the store through a field the kernel refuses — here a raw `\renewcommand\author` whose `\@author` appends
+%   `Keywords: \@keywords` — is not seen by that run (`Ignoring redefinition of \author`; "printed [] of 1 candidate
+%   stores"), so the run moves: the keywords go behind the continued titlepage although pdflatex prints them above it.
+%   Siblings: any refused or nulled creator field (`\@author`, `\@date`, a refused `\title`) a class extends with a
+%   store. Not fixed (no corpus witness; as many out-of-order pairs as int116a): the detector would have to read the
+%   bodies of refused class redefinitions. OXIDIZED_DESIGN_DIVERGENCES #903 residual.
+% witness: the 86g r4 re-review's m9; no corpus paper (0 of 3,990 rows differ from 86g r3)
+% oracle:  pdflatex 0 errors; "Probe Title / Ann Author / Keywords: Probe keyword / Department of Probes / Abstract"
+% engines: rust int116a = abstract, keywords, para(Department); 86g = titlepage[Department], abstract, keywords
+% expect:  0 errors, 0 warnings; the keywords before "Department of Probes", or the run left in int116a's slot
+% status:  RED (86g r4)
+% preload: ar5iv.sty
+\begin{filecontents*}[overwrite]{rm9.cls}
+\ProvidesClass{rm9}
+\LoadClass{article}
+\newbox\kwbox
+\newcommand*\keywords[1]{\gdef\@keywords{#1}}
+\def\@keywords{}
+\def\@maketitle{\begin{center}{\Large\@title\par}\@author\par\end{center}}\renewcommand\author[1]{\gdef\@author{#1\\ Keywords: \@keywords}}
+\end{filecontents*}
+\documentclass{rm9}
+\title{Probe Title}\author{Ann Author}\keywords{Probe keyword}
+\begin{document}
+\maketitle
+\begin{center}Department of Probes\end{center}
+\begin{abstract}
+Late abstract words.
+\end{abstract}
+\section{Intro}
+Intro text.
+\end{document}

@@ -1,0 +1,18 @@
+% witness: 1312.5886, 2008.09739, 2107.14385 (QA41 audit)
+% oracle:  pdflatex 0 errors; Perl's `\centering`/`\raggedright`/`\raggedleft` are the constructors themselves
+%          (latex_constructs.pool.ltxml:1237-1240) and revert to that name; ragged2e lets `\Centering` to `\centering`
+% engines: rust int161a = tex="\lx@do@centering x=1\@add@centering" (sect06.rs: macros over `\lx@do@…` constructors,
+%          no alias); perl = tex="\centering x=1\@add@centering"
+% expect:  0 errors, 0 warnings; tex="\centering x=1\@add@centering", "\raggedright y=2\@add@raggedright",
+%          "\raggedleft z=3\@add@raggedleft", "\centering w=4\@add@centering", "a\centering b\@add@centering"
+%          (`\@add@…` stays as Perl shows it)
+% status:  RED (int161a) -> GREEN (RV1)
+\documentclass{article}
+\usepackage{ragged2e}
+\begin{document}
+\begin{equation}\centering x=1 \end{equation}
+\begin{equation}\raggedright y=2 \end{equation}
+\begin{equation}\raggedleft z=3 \end{equation}
+\begin{equation}\Centering w=4 \end{equation}
+$a\centering b$ and \parbox{3cm}{\centering $c$ text}
+\end{document}

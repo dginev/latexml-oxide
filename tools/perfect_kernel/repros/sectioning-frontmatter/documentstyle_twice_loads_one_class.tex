@@ -1,0 +1,11 @@
+% witness: astro-ph9812142 (`#\documentstyle[psfig,epsf]{/disk/…/aa}` then `\documentstyle[psfig,epsf]{aa}`)
+% oracle:  pdflatex 1 error, "Two \documentclass or \documentstyle commands" (latex.ltx:18617-18624, :18944-18947)
+% engines: rust 67int20 = Fatal Timeout:Convert (latex209 applied and the class loaded twice: `\normalsize` and
+%          `\original@normalsize` calling each other); 67int19b 0 errors; Perl 0
+% expect:  1 error ("Two \documentclass or \documentstyle commands"), 0 warnings; the text
+% status:  GREEN (batch 77r: a second class declaration raises LaTeX's error and loads no class)
+\documentstyle{article}
+\documentstyle{aa}
+\begin{document}
+Hello \textbf{world}. {\small small}
+\end{document}

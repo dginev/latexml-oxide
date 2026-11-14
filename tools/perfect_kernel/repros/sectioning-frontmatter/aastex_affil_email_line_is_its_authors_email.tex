@@ -1,0 +1,26 @@
+% mechanism: an AASTeX `\affil` holding only an e-mail (`\affil{e-mail: kangx@uni.edu}`) is no affiliation: the e-mail
+%   of the author it spells: the affiliation's address line the Kind step's (`kind_entry_addresses`, its label the
+%   contact's `name`), placed by the Link step (`entry_address_owners`; OD #992 — 97f r2's `placed_email_line_calls`,
+%   deleted Z18l); spelling no one it is the block's (`\affil{Email: office@uni.edu}` -> the shared creator, OD #159) —
+%   under unmarked, `\altaffilmark` or `$^N$` names alike (under `$^N$` names the stopgap carrier is no owner, Z18o:
+%   `aastex_affil_unmarked_email_line_under_marked_names_is_the_blocks`, review revZ18l F1).
+% witness: astro-ph0408475 (aastex, `\author{X. Kang$^{1,2}$, Y. P. Jing$^{1}$, …}` … `\affil{e-mail: kangx@shao.ac.cn}`:
+%   97d an affiliation of G. Börner, 97f r1 of all four authors); review rev97cd F3
+% oracle:  pdflatex (TL 2025, emulateapj) 0 errors: "Xu Kang1, Yi Jing1 and Hu Mo2 / 1 Uni One / 2 Uni Two and /
+%   e-mail: kangx@uni.edu"
+% engines: rust 97f r1: the e-mail an affiliation of all three; rust 97d: Hu Mo's affiliation; perl: Hu Mo's
+%   affiliation (aas_support.sty.ltxml:118)
+% expect:  0 errors, 0 warnings; Xu Kang Uni One and the e-mail kangx@uni.edu (name "e-mail: "), Yi Jing Uni One, Hu Mo
+%   Uni Two
+% status:  RED (97f r1) -> GREEN (97f r2)
+\documentclass{emulateapj}
+\begin{document}
+\title{T}
+\author{Xu Kang$^{1}$, Yi Jing$^{1}$ and Hu Mo$^{2}$}
+\affil{$^1$Uni One}
+\affil{$^2$Uni Two}
+\affil{e-mail: kangx@uni.edu}
+\begin{abstract}A.\end{abstract}
+\section{Intro}
+Text.
+\end{document}

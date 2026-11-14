@@ -1,0 +1,15 @@
+% witness: dev20k 2111.07950, 1503.06795, 2504.05692, 2008.02300, 2404.01856; 2212.01433, 2608.06741 (W1b, the same cause)
+% oracle:  pdflatex 0 errors: "Ann Able1 Bob Baker3" over "1 Univ of Science and Technology 3 Univ C"; the comma variant
+%          (`$ ^1 $ Univ A, X ~~~ $ ^2 $ Univ B`, the guard's) "1 Univ A, X 2 Univ B"
+% engines: rust 97b = Ann holds "Univ of Science and Technology 3Univ C", Bob nothing (the entry's span was its first
+%          piece's, "Univ", so the writer's cut failed: "a block line does not cut"); Perl splits the names line at its
+%          "and" (three creators "Ann Able Bob Baker", "Univ of Science", "Technology Univ C"), no affiliation
+% expect:  0 errors 0 warnings; Ann Able holds "Univ of Science and Technology", Bob Baker "Univ C"
+% status:  RED (97b) -> GREEN (97c)
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{Ann Able$^{1}$ Bob Baker$^{3}$\\ \vspace{.15em} $^{1}$Univ of Science and Technology~~~~$^{3}$Univ C}
+\date{}
+\maketitle
+\end{document}

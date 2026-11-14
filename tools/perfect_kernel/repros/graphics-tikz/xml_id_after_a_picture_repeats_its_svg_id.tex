@@ -1,0 +1,18 @@
+% An xml:id recorded after a picture that already holds the same svg id repeats it: the svg id
+% check (Document::record_svg_ids) consults the xml:id store, but record_id_with_node does not
+% consult the svg id set, so only the picture-second order is renamed.
+% witness: 57cl.1 review (p10xmlid); both attributes are schema IDs (svg-core-attrib.rng:26-28).
+% status:  RED
+% oracle:  pdflatex has no ids; perl writes both duplicates (KNOWN_PERL_ERRORS #391 family).
+% engines: rust 57cl3: pgfcp1 before the picture -> the picture's clipPath becomes pgfcp1a (fine);
+%          \hypertarget{pgfsh2} after the picture -> 2 jing lines "ID "pgfsh2" has already been defined".
+% expect:  0 errors; jing-valid (the later xml:id, or the svg id, suffixed).
+% classification: SHARED (Perl duplicates in both orders); fix site record_id_with_node.
+\documentclass{article}
+\usepackage{tikz}
+\usepackage{hyperref}
+\begin{document}
+\hypertarget{pgfcp1}{before}
+\begin{tikzpicture}\shade[ball color=red] (0,0) circle (1);\end{tikzpicture}
+\hypertarget{pgfsh2}{after}
+\end{document}

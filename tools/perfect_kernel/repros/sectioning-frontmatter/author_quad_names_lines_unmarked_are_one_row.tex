@@ -1,0 +1,17 @@
+% Two lines of unmarked names, each parted by `\quad`: the second line is more names of the row, never an affiliation
+% of the first line's last name (`space_parted_rows_joined`: the line break before a names line is the space between
+% two names). Pre-existing at the top level (both int138a and 107b r1).
+% witness: synthetic (review rev107b B1, probe r01); the parbox form is 107b r1's (2306.04988's `\parbox` lines)
+% oracle:  pdflatex 0 errors: "Ann Able Bob Baker", "Cat Cole Dan Dee"
+% engines: rust int138a, 107b r1 = three creators, Bob Baker holding the affiliation "Cat Cole", 0 errors (silent);
+%          Perl one creator
+% expect:  0 errors, 0 warnings; four creators, no affiliation
+% status:  RED (107b r1) -> GREEN (107b r2)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{Ann Able \quad Bob Baker\\ Cat Cole \quad Dan Dee}
+\maketitle
+Body.
+\end{document}

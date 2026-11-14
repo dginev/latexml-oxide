@@ -1,0 +1,21 @@
+% \bezier{N} and \qbezier[N] carry Perl's displayedpoints only for a nonzero count: Perl tests the
+% argument's string (Constructor/Compiler.pm:166, "0" is false), the Rust template's ?#1 any given
+% argument, so W12 wrote displayedpoints="0" for \qbezier[0] and a count-less \bezier, which the
+% SVG post draws dashed. \bezier is stroked, where Perl's template (latex_constructs.pool.ltxml
+% :5034-5038) has no stroke and the curve is invisible in a {picture} (KNOWN_PERL_ERRORS #271).
+% witness: W12 re-review probe bz (orchestrator, 2026-09-25)
+% oracle:  pdflatex draws every curve (the first as 20 dots); same-host Perl: displayedpoints="20" on
+%          the first, none on the second or the count-less last, the auto-opened picture 11.92x8.65
+% engines: rust (W12 1b7df49e8e) = displayedpoints="0" on \qbezier[0]
+% expect:  0 errors; as Perl, but stroked and in px
+% status:  GREEN (56jo, W12; guard node_box_append::bezier_is_stroked_and_counts_its_points)
+\documentclass{article}
+\begin{document}
+\begin{picture}(100,50)\bezier{20}(0,0)(50,50)(100,0)\end{picture}
+
+\begin{picture}(100,50)\qbezier[0](0,0)(50,50)(100,0)\end{picture}
+
+x \bezier{20}(0,0)(50,50)(100,0) y
+
+\begin{picture}(100,50)\bezier(0,0)(50,50)(100,0)\end{picture}
+\end{document}

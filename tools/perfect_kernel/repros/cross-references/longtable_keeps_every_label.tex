@@ -1,0 +1,18 @@
+% witness: 2211.06081 (a notation `longtable`, a `\label` and `\pageref` per row: 3 dangling)
+% oracle:  pdflatex 0 errors: every `\label` in the table names it (`\@currentlabel` there is the table's number, or
+%          the enclosing unit's before a `\caption`) and every `\pageref` prints its page
+% engines: rust int96a = only the last label kept: longtable's `\label` (longtable.sty.ltxml:134-135, ours alike) stored
+%          one `LONGTABLE_LABEL`, each label replacing the one before
+% expect:  0 errors, 0 warnings; the table carries labels a, b, c and the references to them resolve
+% status:  RED (int96a) -> GREEN (80g: longtable_sty.rs `\lx@longtable@label` accumulates)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{longtable}
+\begin{document}
+\section*{List of notations}
+\begin{longtable}{cc}
+$x$\label{a} & \pageref{a}\\
+$y$\label{b} & \pageref{b}\\
+z\label{c} & \pageref{c}\\
+\end{longtable}
+\end{document}

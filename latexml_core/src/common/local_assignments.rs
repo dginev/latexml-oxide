@@ -95,18 +95,59 @@ pub fn expire_dual_branch() { locals_mut!().dual_branch.pop(); }
 /// get the current value for "dual branch"
 pub fn get_dual_branch() -> Option<&'static str> { locals!().dual_branch.last().cloned() }
 
-pub fn increment_align_group_count() {
+/// Cached snapshot of `LXML_TRACE_ALIGN_STATE`: print every change of the
+/// alignment ledger (tex.web `align_state`) with the current token and a
+/// short backtrace, to bisect a ledger drift (a cell-ending `&`/`\\` is only
+/// recognized at `align_group_count()==0`). Debug aid, off by default.
+static TRACE_ALIGN_STATE: Lazy<bool> =
+  Lazy::new(|| std::env::var("LXML_TRACE_ALIGN_STATE").is_ok());
+
+fn trace_align_state(what: &str, before: i32, after: i32) {
+  if *TRACE_ALIGN_STATE && !locals!().reading_alignment.is_empty() {
+    let tok = get_current_token()
+      .map(|t| t.to_string())
+      .unwrap_or_default();
+    let bt = std::backtrace::Backtrace::force_capture().to_string();
+    let frames: Vec<&str> = bt
+      .lines()
+      .filter(|l| l.contains("latexml_") && !l.contains("local_assignments"))
+      .take(4)
+      .map(str::trim)
+      .collect();
+    eprintln!(
+      "ALIGN_STATE {what}: {before} -> {after} at {tok} | {}",
+      frames.join(" < ")
+    );
+  }
+}
+
+/// Bump the current `align_state` by `delta` (tex.web §358: `left_brace:
+/// incr(align_state)`, `right_brace: decr(align_state)`), returning the new
+/// value. Every scanned `{`/`}` lands here, so it is one thread-local
+/// borrow; the trace's before/after read is behind the off-by-default switch.
+fn shift_align_group_count(delta: i32) -> i32 {
   let mut locals = locals_mut!();
   match locals.align_group_count.last_mut() {
-    Some(v) => *v += 1,
-    None => locals.align_group_count.push(1),
+    Some(v) => {
+      *v += delta;
+      *v
+    },
+    None => {
+      locals.align_group_count.push(delta);
+      delta
+    },
+  }
+}
+pub fn increment_align_group_count() {
+  let after = shift_align_group_count(1);
+  if *TRACE_ALIGN_STATE {
+    trace_align_state("+1", after - 1, after);
   }
 }
 pub fn decrement_align_group_count() {
-  let mut locals = locals_mut!();
-  match locals.align_group_count.last_mut() {
-    Some(v) => *v -= 1,
-    None => locals.align_group_count.push(-1),
+  let after = shift_align_group_count(-1);
+  if *TRACE_ALIGN_STATE {
+    trace_align_state("-1", after + 1, after);
   }
 }
 
@@ -122,6 +163,7 @@ pub fn align_group_count() -> i32 {
     .unwrap_or_default()
 }
 pub fn set_align_group_count(v: i32) {
+  trace_align_state("set", align_group_count(), v);
   match locals_mut!().align_group_count.last_mut() {
     Some(gc) => {
       *gc = v;
@@ -132,18 +174,44 @@ pub fn set_align_group_count(v: i32) {
   }
 }
 pub fn local_align_group_count(v: i32) { locals_mut!().align_group_count.push(v); }
+/// The alignment brace count as it stands (tex.web's `align_state`, with its stack of saved values), to be put back by
+/// [`restore_align_group_count`] after a digestion whose tokens are not the document's input.
+pub fn mark_align_group_count() -> (usize, Option<i32>) {
+  let locals = locals!();
+  (
+    locals.align_group_count.len(),
+    locals.align_group_count.last().copied(),
+  )
+}
+/// Puts back the alignment brace count [`mark_align_group_count`] read: the stack at its depth then, the current value
+/// as it was. A `{` the abandoned digestion scanned and never closed is no longer counted against the document's `&`s.
+pub fn restore_align_group_count(mark: (usize, Option<i32>)) {
+  let (depth, value) = mark;
+  trace_align_state("restore", align_group_count(), value.unwrap_or_default());
+  let mut locals = locals_mut!();
+  let stack = &mut locals.align_group_count;
+  stack.truncate(depth);
+  if let Some(value) = value {
+    if stack.len() < depth {
+      stack.resize(depth, value);
+    }
+    if let Some(top) = stack.last_mut() {
+      *top = value;
+    }
+  }
+}
 pub fn expire_align_group_count() -> Option<i32> { locals_mut!().align_group_count.pop() }
 
 /// Disables tab marks for the lifetime of the guard, restoring the previous
-/// count on drop — `tex.web` §394 `macro_call`:
-///
-/// ```text
-/// align_state:=1000000; {disable tab marks, etc.}
-/// ```
-///
-/// TeX suppresses `&` and `\cr` while it scans a macro's parameters, so a tab
-/// mark inside an argument is an ordinary token. Without that, a `&` in a
-/// **delimiter-fenced** argument reaches the alignment as a cell break: for
+/// count on drop — what ltcmd does around every argument it reads: latex.ltx:2103-2110
+/// (`\__cmd_start:nNNnnn`) opens `\group_align_safe_begin:` (closed at :2128), which raises `align_state`
+/// by the backquote-constant rule (tex.web §442), and physics.sty does it by hand around its fenced reads
+/// (`{\ifnum\z@=`}\fi`, physics.sty:35/74/141). TeX's own `macro_call` (§389-399) does NOT disable tab
+/// marks — the `{disable tab marks, etc.}` of `align_state:=1000000` is `read_toks`, behind `\read`
+/// (tex.web §482) — so a plain macro's delimited argument holding an `&` inside an alignment errs in TeX
+/// too ("Argument of \… has an extra }"); arming this in `Parameters::read_arguments` would be unfaithful.
+/// For an ltcmd/physics reader, without it a `&` in a **delimiter-fenced** argument reaches the alignment as a
+/// cell break: for
 /// `\mqty( b_0 &0 \\ 0 &b_1 )` (physics.sty, witness 2605.05903) the row splits
 /// mid-argument and the alignment then cannot close its own group —
 /// `Error:unexpected:\lx@begin@alignment Attempt to close a group that switched
@@ -198,6 +266,16 @@ pub fn take_build_template() -> Option<Template> { locals_mut!().build_template.
 pub fn with_current_build_template<R, FnR>(caller: FnR) -> R
 where FnR: FnOnce(Option<&mut Template>) -> R {
   caller(locals_mut!().build_template.last_mut())
+}
+
+/// Runs `caller` on the alignment template being built, if one is. A column type's `\NC@rewrite@<c>` expanded outside
+/// a preamble (an `\edef` that meets it) builds nothing: in TeX it only yields tokens there (`\NC@find p{…}`), and
+/// unwrapping the missing template panicked (2605.18869: tabularx's `X`, current inside a tabularx since 61s, met by an
+/// `\edef` while an algorithm's unclosed group was open).
+pub fn with_building_template(caller: impl FnOnce(&mut Template)) {
+  if let Some(template) = locals_mut!().build_template.last_mut() {
+    caller(template);
+  }
 }
 
 // ============================================================

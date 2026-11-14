@@ -1,0 +1,16 @@
+% witness: arXiv 2606.05709 (cortex run 322, PDF output by default): `\ifpdf\usepackage{epstopdf}
+%          \PrependGraphicsExtensions{.svg}\fi`
+% oracle:  pdflatex 0 errors; Figure text.
+% engines: rust (56ig) = "\PrependGraphicsExtensions undefined": our epstopdf binding (Perl's
+%          epstopdf.sty.ltxml:19 stub alike) never loads grfext, which epstopdf.sty:150 requires
+% expect:  0 errors, 0 warnings; <p>Figure text.</p>
+% status:  RED (56ig) -> GREEN (56ij)
+\documentclass{article}
+\usepackage{graphicx}
+\usepackage{epstopdf}
+\PrependGraphicsExtensions{.svg}
+\AppendGraphicsExtensions*{.png}
+\RemoveGraphicsExtensions{.eps}
+\begin{document}
+Figure text.
+\end{document}

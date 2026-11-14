@@ -1,0 +1,12 @@
+% witness: the 77y review (finding 2, probe k7)
+% oracle:  pdflatex 0 errors: Ann Able†, Bob Baker‡ on one line; "†Univ A ‡Univ B" under them; "Hong Kong" under both
+% engines: rust 77y r1 = 0 errors; a creator named "Hong Kong", no contact; int38b a line of the shared creator
+% expect:  0 errors, 0 warnings; two authors, Univ A on Ann Able, Univ B on Bob Baker; "Hong Kong" on the shared creator
+% status:  RED (77y r1) -> GREEN (77y r2)
+\documentclass{article}
+\title{T}
+\author{Ann Able$^{\dagger}$ \quad Bob Baker$^{\ddagger}$ \\ $^\dagger$Univ A \quad $^\ddagger$Univ B \\ Hong Kong}
+\begin{document}
+\maketitle
+Text.
+\end{document}

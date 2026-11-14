@@ -1,0 +1,13 @@
+% witness: 64d review r4 (synthetic) — after a wrapped affiliation list, a spacing lead before the next mark separates it
+% oracle:  pdflatex 0 errors: "1Univ A, 2Univ B / 3Univ C"
+% engines: rust 64d9 = Bob "Univ B ³Univ C", Cat without an affiliation; 64f3/64d8 right
+% expect:  0 errors; Ann (Univ A), Bob (Univ B), Cat (Univ C)
+% status:  RED (64d9) -> GREEN (64d)
+\documentclass{article}
+\usepackage{xcolor}
+\title{T}
+\author{Ann$^{1}$, Bob$^{2}$ and Cat$^{3}$ \\ {\small $^1$Univ A, $^2$Univ B} \vspace{1mm} $^3$Univ C}
+\begin{document}
+\maketitle
+Text.
+\end{document}

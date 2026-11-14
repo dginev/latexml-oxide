@@ -1,0 +1,17 @@
+% witness: 2103.00666 (4 bare `\fig` panels in a `figure*`: the caption read "Figure 3" where the PDF prints 1)
+% oracle:  pdflatex 0 errors: "Figure 1" with panels (a1), (a2); the next float "Figure 2"
+% engines: rust 64c7 = each panel a numbered nested figure (Figure 1, 2), the outer Figure 3, the next Figure 4; Perl
+%          the same (aas_support.sty.ltxml:211-225 `\fig` → `\begin{figure}\caption…`)
+% expect:  0 errors; outer figure Figure 1 holding two untagged panels; the next figure Figure 2
+% status:  RED (64c7) -> GREEN (64e)
+\documentclass{aastex701}
+\begin{document}
+\begin{figure*}
+\centering
+\fig{figs/a.eps}{0.24\textwidth}{(a1)}
+\fig{figs/a.eps}{0.24\textwidth}{(a2)}
+\caption{Panel (a1) and (a2).}\label{f:x}
+\end{figure*}
+\begin{figure}\plotone{figs/a.eps}\caption{Next.}\end{figure}
+See Figure~\ref{f:x}.
+\end{document}

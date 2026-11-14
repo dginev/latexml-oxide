@@ -1,0 +1,19 @@
+% mechanism: as bibunits_unit_closed_after_an_include_red: an argless `\bibliographyunit` inside an `\include`d chapter
+%   closes the main file's section unit; TeX's `\std@cite` then writes the chapter's aux, ours restores the main list.
+% witness: synthetic (revBU1b S1, probe b)
+% oracle:  pdflatex: 0 errors; cb2ch.aux holds alpha, so the chapter's Bibliography lists Alpha
+% engines: rust int160c: alpha in bu1's list; BU1b: alpha in the main list (bibb.bib1), the chapter's References empty
+% expect:  alpha in the chapter's References
+% status:  RED (int160c, BU1b)
+\documentclass{report}
+\usepackage{chapterbib}
+\usepackage{bibunits}
+\begin{document}
+\bibliographyunit[\section]
+\section{S}
+Sec \cite{beta}.
+\putbib[refs]
+\include{cb2ch}
+\bibliographystyle{plain}
+\bibliography{refs}
+\end{document}

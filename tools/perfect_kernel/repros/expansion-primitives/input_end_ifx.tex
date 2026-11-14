@@ -1,0 +1,19 @@
+% mechanism: \ifx reads its two tokens with get_next (tex.web §507), which at `normal` status
+%   crosses the end of an \input file (§362): a file ending in `\ifx\foo` compares \foo with
+%   the first token after the file.
+% witness: batch 56jj review (the `Token` parameter of a conditional)
+% oracle:  pdflatex 0 errors, "H YES"
+% engines: rust=1 error ("\fi \ifx"), "H FOOYES": \ifx compared \foo with \relax
+%          (56jg-rel, 2026-09-25)
+% expect:  0 errors, "H YES"
+% status:  GREEN (56jj: the `Token` parameter reads with read_primitive_token; guard
+%          token_kernel_gaps::ifx_crosses_a_file_end)
+\documentclass{article}
+\begin{filecontents*}{input_end_ifx_in.tex}
+\ifx\foo
+\end{filecontents*}
+\def\foo{FOO}\let\bar\foo
+\makeatletter
+\begin{document}
+H \@@input input_end_ifx_in.tex \bar YES\else NO\fi
+\end{document}

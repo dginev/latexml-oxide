@@ -1,0 +1,19 @@
+% witness: 1003.3225, 1910.14533, 2010.14300, 2109.09102, 2002.09734 (`\history`, mdpi.cls:384 in the 2109.09102 copy);
+%          `\changeurlcolor` (mdpi.cls:295)
+% oracle:  pdflatex (2109.09102's Definitions/mdpi.cls, TL 2025) 0 errors: the title page prints "Received: 28 March
+%          2020; Accepted: 7 May 2020" under the abstract (status `accept`, mdpi.cls:664-670)
+% engines: rust 64h4 = 2 errors (\history, \changeurlcolor undefined); perl 0.8.8 = 4 (\history, \changeurlcolor, \Title, \Author)
+% expect:  0 errors; one frontmatter <note role="history"> holding the author's text, the later `\history`'s (mdpi.cls:384
+%          `\gdef`); "Text." in the body
+% status:  RED (base) -> GREEN (64qa)
+% preload: ar5iv.sty
+\documentclass[preprints,article,accept,moreauthors,pdftex]{Definitions/mdpi}
+\history{Received: date; Accepted: date}
+\history{Received: 28 March 2020; Accepted: 7 May 2020}
+\Title{A Title}
+\Author{Ann Able}
+\address{Univ A}
+\abstract{An abstract.}
+\begin{document}
+\changeurlcolor{black}Text.
+\end{document}

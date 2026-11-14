@@ -1,0 +1,21 @@
+% witness: 1807.02967 (ptephy_v1: `\address{${}^1$\affil{1}{… \email{…}} \\ ${}^2$\affil{2}{…}}`); 1407.3513
+%          (`\vspace{1mm}` between the `\affil`s)
+% oracle:  pdflatex (1412.6580's ptephy.cls and a stand-in for its logo graphic `newlogo`, TL 2025) 0 errors: each
+%          affiliation printed with its mark twice ("^1 ^1 Univ A"), as the author typed it
+% engines: rust 64h4 = 1 error (\name undefined)
+% expect:  0 errors; two creators, Ann with Univ A and the email written inside her `\affil`, Bob with Lab B;
+%          no paragraph before the section, no empty address from the `\vspace`
+% status:  RED (base) -> GREEN (64qa)
+% preload: ar5iv.sty
+\documentclass{ptephy}
+\begin{document}
+\title{A Title}
+\author{\name{Ann Able}{1} and \name{Bob Baker}{2}}
+\address{${}^1$\affil{1}{Univ A, Tokyo \email{ann@example.org}}
+\vspace{1mm}
+${}^2$\affil{2}{Lab B, Kyoto}}
+\begin{abstract}An abstract.\end{abstract}
+\maketitle
+\section{Intro}
+Text.
+\end{document}

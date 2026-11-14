@@ -1,0 +1,23 @@
+% mechanism: a `\psfig{figure=…}` without size keys is as wide as its EPS's BoundingBox in bp (150bp = 150.5625pt), so
+%   three such sub-figures are two and one in a 345pt text width, as latex and pdflatex set them. `\psfig` is sized by
+%   `image_graphicx_sizer` (Perl epsfig.sty.ltxml:37, OXIDIZED_DESIGN_DIVERGENCES #876), which read the BoundingBox as
+%   pixels at `DPI` 100 (Perl Util/Image.pm:271), 108.405pt a panel, and set all three in one row (OD #886).
+% witness: 1106.2745 Figs 1-2, 7, 8, 10 (the 78t SYNC row's `\psfig` panels)
+% oracle:  pdflatex and latex + dvips (TL 2025) 0 errors: "(a) One" and "(b) Two" on a row, "(c) Three" under them
+% engines: rust int67a: one row of three (no `ltx:break`); Perl 0.8.8 one panel per row (the captioned box)
+% expect:  0 errors, 0 warnings; one `ltx:break`, before "(c)"; all three sub-figures `ltx_figure_panel`
+% files:   wide.eps (%%BoundingBox: 0 0 150 75), written by the guard
+% status:  RED (int67a) -> GREEN (78z)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{epsfig}
+\usepackage{subfigure}
+\begin{document}
+\begin{figure}
+\centering
+\subfigure[One]{\psfig{figure=wide.eps}}
+\subfigure[Two]{\psfig{figure=wide.eps}}
+\subfigure[Three]{\psfig{figure=wide.eps}}
+\caption{Three psfig panels at their natural size.}\label{f1}
+\end{figure}
+\end{document}

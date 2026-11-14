@@ -1,0 +1,13 @@
+% witness: none (review of 65z r3); the class-setter paths of titling's \thetitle/\theauthor
+% oracle:  pdflatex 0 errors; titling.sty:245-268 wraps the setter in force when it loads: TT[My Title] TA[A. Author]
+% engines: rust 65z r3 = 2 errors (\thetitle/\theauthor undefined: only the kernel setters ran titling's code)
+% expect:  0 errors; "TT[My Title] TA[A. Author]" in the body
+% status:  RED (65z r3) -> GREEN (65z r4)
+\documentclass{revtex4-1}
+\usepackage{titling}
+\title{My Title}
+\author{A. Author}
+\begin{document}
+\maketitle
+TT[\thetitle] TA[\theauthor]
+\end{document}

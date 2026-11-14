@@ -1,0 +1,26 @@
+% FIDELITY_CHARTER §4 #420's own example: Anna Smith's own `\email{mueller-group@x.de}` beside `\author{J\"org M\"uller}`.
+%   A transliterated spelling is a spelling of the name as printed (user ruling 2026-11-05: `joerg.mueller@` is Jörg
+%   Müller's, "also written Joerg Mueller"), so `mueller-group@` spells Jörg Müller (ü -> ue) as its ASCII twin beside
+%   `\author{Jorg Mueller}` does, and `insert::respell_emails` moves it to him (`NameKeys::as_printed`;
+%   OXIDIZED_DESIGN_DIVERGENCES #970). The rest of #420 stands: a one-address own call whose address spells no other
+%   author keeps it, and a base-letter fold is no spelling as printed (sibling
+%   amsart_email_spelling_an_accented_coauthor_stays.tex: `muller-group@` stays on Anna Smith).
+% witness: the charter example (#420); 2410.00275 (the base-letter veto)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "ANNA SMITH AND JÖRG MÜLLER", "Univ X  Email address:
+%   mueller-group@x.de", "Univ Y  Email address: jm@y.de"
+% engines: rust int138a, 107a r1: on Anna Smith; perl: on Anna Smith
+% expect:  0 errors, 0 warnings; Anna Smith "Univ X", no e-mail; Jörg Müller "Univ Y", jm@y.de and mueller-group@x.de
+% status:  GREEN as "stays" (int138a, 107a r1) -> GREEN as "moves" (107a r2, the user ruling 2026-11-05)
+% preload: ar5iv.sty
+\documentclass{amsart}
+\begin{document}
+\title{T}
+\author{Anna Smith}
+\address{Univ X}
+\email{mueller-group@x.de}
+\author{J\"org M\"uller}
+\address{Univ Y}
+\email{jm@y.de}
+\maketitle
+Text.
+\end{document}

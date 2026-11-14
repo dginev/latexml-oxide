@@ -1,0 +1,13 @@
+% witness: 2401.14559 (arabtex: asect.sty:297 \let\endabstract\endquotation, alatex.sty:105-109 a raw \end calling \csname end#1\endcsname)
+% oracle:  pdflatex 0 errors (the abstract and the body print)
+% engines: rust 65int8 = 2 errors (Attempt to end mode internal_vertical; \endgroup meets the open abstract body); perl 0 (no raw arabtex)
+% expect:  0 errors; one abstract holding "Abstract text."
+% status:  GREEN (66c)
+\documentclass{report}
+\usepackage{arabtex}
+\begin{document}
+\begin{abstract}
+Abstract text.
+\end{abstract}
+Body.
+\end{document}

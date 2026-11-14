@@ -1,0 +1,16 @@
+% A letter with no `\maketitle` that ends `\noindent\@author` signs it: body text precedes the print, so it is not
+% in the document's title block and stays where pdflatex prints it (fms1 re-review finding 3, probe q3).
+% status:  RED (fms1 round 2: the `\end{document}` fallback lifted the signature) → GREEN (fms1 round 3).
+% oracle:  pdflatex 0 errors: the two letter paragraphs, then "John Smith"; no title block.
+% expect:  0 errors, 0 warnings; no `field_ink` Info; the signature paragraph kept.
+\documentclass{article}
+\makeatletter
+\title{Plain Letter}
+\author{John Smith}
+\begin{document}
+Dear colleague, this is the body of my letter, with several words in it.
+
+Another paragraph of the letter.
+
+\noindent\@author
+\end{document}

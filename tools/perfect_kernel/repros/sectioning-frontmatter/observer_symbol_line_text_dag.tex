@@ -1,0 +1,21 @@
+% mechanism: a footnote-symbol line under symbol-marked names (ruling 2026-10-21 2: a line led by a symbol labels
+%   itself with it, for every name carrying the symbol), its symbol printed as text `\dag`; the frontmatter observer's shadow
+%   events (OXIDIZED_DESIGN_DIVERGENCES #837) read the line's first ink as the mark † whatever command printed it
+% witness: the FM S2 design refresh's probe `dag` (2026-10-21_fms2_design_refresh.md §0)
+% oracle:  pdflatex 0 errors: "Ann Able†", "Bob Baker‡", "Cat Cole†" in three columns, "†Univ A" and "‡Univ B" set
+%   under the third
+% engines: rust int50a: "†Univ A ‡Univ B" one contact on Cat Cole, Ann Able and Bob Baker none; shadow (fms2a1)
+%   N M†* S:and N M‡* S:and N M†* B M†*^ N B M‡*^ N (guard perfect_kernel_batchfms2a1::
+%   symbol_lines_are_symbol_marks_whatever_prints_them)
+% expect:  0 errors, 0 warnings; Ann Able and Cat Cole with Univ A, Bob Baker with Univ B (stage S2b)
+% status:  RED (int50a)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{Ann Able$^{\dag}$ \and Bob Baker$^{\ddag}$ \and Cat Cole$^{\dag}$\\
+\dag Univ A\\
+\ddag Univ B}
+\maketitle
+Body.
+\end{document}

@@ -1,0 +1,19 @@
+% witness: 1707.06238, 1302.1442 (the `\ref`-list mark, here in a written family; review rev92a_r1 S1)
+% oracle:  pdflatex (revtex4-2): "Ann Able, and Bob Baker", "University X, Town and University Y, City" under the
+%          shared author group
+% engines: perl 0.8.8 = 0 errors, both affiliations lost (3 warnings); rust 90a = 0 errors, University X on a
+%          nameless creator, Ann Able without it
+% expect:  0 errors, 0 warnings; written: Ann Able University X and Y, Bob Baker University Y
+% status:  RED (90a) -> GREEN (92a)
+% preload: ar5iv.sty
+\documentclass{revtex4-2}
+\begin{document}
+\title{A title}
+\author{Ann Able$^{\ref{a1},\ref{a2}}$}
+\author{Bob Baker$^{\ref{a2}}$}
+\affiliation{\label{a1}University X, Town}
+\affiliation{\label{a2}University Y, City}
+\begin{abstract}Abs.\end{abstract}
+\maketitle
+Text.
+\end{document}

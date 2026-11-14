@@ -1,0 +1,27 @@
+% mechanism: the fail-safe of REVTeX's group rule (revtex4_support_sty.rs `group_or_marked_affiliation`,
+%   `relocate::requested_marks_held`; FRONTMATTER_SINGLE_ENGINE_PLAN "The structure model" step 4): a block holding
+%   more than one label the names request, no mark leading it and its lines not read as lines (a `\parbox`), is no
+%   entry a group shares — it lands once at the block (`label={addresses:block}`, OD #159), never a copy per author.
+% witness: the class of hep-ex0409040 and hep-ex0612013 (D0, every author the whole block); review revab126
+% oracle:  pdflatex (TL 2025, revtex4-1) 0 errors: "A. One,1 and B. Two2 / 1 Alpha University, Beijing / 2 Beta
+%   Institute, Rome"
+% engines: rust 98a: each creator the parbox as one affiliation; perl: B. Two alone
+% expect:  0 errors, 0 warnings; the names no affiliation, the block (a nameless creator) the two lines once
+% engines: rust int160a (HG1) = 0 errors, 0 warnings: each line on the name its mark names (A. One Alpha University,
+%          B. Two Beta Institute), the marks kept in the lines — the block split by its marks, as pdflatex pairs them, no
+%          copy of the block per author. Two parts are wrong: A. One's printed mark "1" is lost from its name (B. Two keeps
+%          "2"; RED revtex_comma_before_mark_keeps_its_mark_red, the comma before the mark), and B. Two's before="  "
+%          loses the printed ", and" (RED author_marked_list_keeps_its_printed_separators_red). The pre-DEL1 guard
+%          expected "A. One 1" with the block once at a nameless creator.
+% status:  RED (98a) -> GREEN (98e) -> RED (int160a; the mark and separator, HG1b). Today's output pinned, the two REDs
+%          cited, by perfect_kernel_batchhg1::marked_blocks_restored_read_as_printed
+% preload: ar5iv.sty
+\documentclass[aps,prl,groupedaddress]{revtex4-1}
+\begin{document}
+\title{T}
+\author{A.~One,$^{1}$ and~B.~Two$^{2}$}
+\address{\parbox{\linewidth}{$^{1}$Alpha University, Beijing\\ $^{2}$Beta Institute, Rome}}
+\begin{abstract}Abs.\end{abstract}
+\maketitle
+Body.
+\end{document}

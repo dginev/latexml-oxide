@@ -1,0 +1,19 @@
+% witness: 2603.09835 (`\textbf{Pratham Grover}\\ \textbf{Ramakrishna B.~Bairi}\ \ \textbf{Ritabrata Maiti}\ \ …\\
+%          \textbf{Rishikesh Maurya}\ \ \textbf{Vageesh D. C.}\\ Microsoft`: rows of names parted by runs, one address
+%          under them all)
+% oracle:  pdflatex 0 errors: three rows of names, "Microsoft" under them
+% engines: rust 77p r2 = 0 errors; "Dan B. Dorn" and "Fay Fox", each first on its row, read as address lines of the
+%          name before the break (Cat Cole, Eve Eads: two authors lost), "Microsoft" on Gil Gray only; int34a one
+%          creator holding every name (no spacing-run rule); Perl the same as int34a
+% expect:  0 errors, 0 warnings; seven authors, each with the affiliation Microsoft
+% status:  RED (77p r2) -> GREEN (77p r3)
+\documentclass{article}
+\title{T}
+\author{\textbf{Ann Able}\thanks{Equal contribution.}~~\ \ \textbf{Bob Baker}$^{*}$\ \ \textbf{Cat Cole}\\
+\textbf{Dan B.~Dorn}\ \ \textbf{Eve Eads}\\
+\textbf{Fay Fox}\ \ \textbf{Gil Gray}\\
+Microsoft}
+\begin{document}
+\maketitle
+Text.
+\end{document}

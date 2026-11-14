@@ -1,0 +1,11 @@
+% witness: review of 63y: interact's `\and` prints "and " (interact.cls:266) inside one `\name`
+% oracle:  pdflatex 0 errors: "Ann Able and Bob Baker" over "Univ X"
+% engines: rust 63y4 = `\and` read as an author-group boundary: Univ X on Bob Baker only
+% expect:  0 errors; two creators, each with Univ X
+% status:  RED (63y4) -> GREEN (63y)
+\documentclass{interact}
+\title{T}\author{\name{Ann Able \and Bob Baker}\affil{Univ X}}
+\begin{document}
+\maketitle
+Text.
+\end{document}

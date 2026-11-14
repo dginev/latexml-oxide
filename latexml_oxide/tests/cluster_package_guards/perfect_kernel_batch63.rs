@@ -1,0 +1,4188 @@
+//! Red/green guards for perfect-kernel phase-63 batches: run 336's `Fatal:Stomach:Recursion` cluster (arxbj
+//! `{longlist}`, etex register blocks, the autoref tag's `~` in math) and the VTeX IMS markup arxbj shares with
+//! arximspdf.
+use latexml::util::test::{assert_element, check_requirements, loads};
+
+use super::perfect_kernel_batch57::{RAW, assert_elements};
+
+/// 63a: arxbj.cls:930-958 makes `{longlist}` a `\list` counted `longlist` and labelled "(i)", "(ii)" (:1070); the
+/// binding's `\let\longlist\list` took the first `\item` as the label argument, every label `\item` again: an endless
+/// recursion (1203.0186, 1003.1189). Repro list-structure/arxbj_longlist_items_are_labelled.
+#[test]
+fn arxbj_longlist_items_are_labelled() {
+  let xml = assert_elements(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/list-structure/arxbj_longlist_items_are_labelled.tex"
+    ),
+    RAW,
+    (0, 0),
+    &[],
+  );
+  assert_element(
+    &xml,
+    "itemize",
+    &[],
+    r#"<itemize><item xml:id="S0.I1.i1"><tags><tag>(i)</tag><tag role="autoref">i</tag><tag role="refnum">i</tag></tags><para xml:id="S0.I1.i1.p1"><p>first</p></para></item><item xml:id="S0.I1.i2"><tags><tag>(ii)</tag><tag role="autoref">ii</tag><tag role="refnum">ii</tag></tags><para xml:id="S0.I1.i2.p1"><p>second</p></para></item></itemize>"#,
+  );
+}
+
+/// 63a: etex.sty:382-425 `\globtoksblk\prooftoks{1000}` names the first of a block of registers; undefined, the
+/// "proofs at the end" idiom's `\toks\numexpr\prooftoks+\count@` left `+\count@\relax`, which reset its `\loop`
+/// counter: an endless loop (1610.01929, 1801.07292; Perl too). Repro macro-state/etex_register_blocks_allocate.
+#[test]
+fn etex_register_blocks_allocate() {
+  assert_elements(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/macro-state/etex_register_blocks_allocate.tex"
+    ),
+    RAW,
+    (0, 0),
+    &[
+      (
+        "para",
+        "p1",
+        r#"<para xml:id="p1"><p>First proof.</p></para>"#,
+      ),
+      (
+        "para",
+        "p2",
+        r#"<para xml:id="p2"><p>Block: 31768.</p></para>"#,
+      ),
+    ],
+  );
+}
+
+/// 63a: an equation's tags are digested in its math, where vdm.sty's `\everymath{\let~\hook}` made their `~` a
+/// `\vbox{\ialign…}` that re-stepped the equation: an endless recursion (1601.02132). A reference prints a tag in text,
+/// so a tag's `~` is the kernel's no-break space: the autoref tag reads "Equation 1" as it does without the
+/// rebinding. Repro macro-state/autoref_tag_tilde_is_the_kernel_space.
+#[test]
+fn autoref_tag_tilde_is_the_kernel_space() {
+  let xml = assert_elements(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/macro-state/autoref_tag_tilde_is_the_kernel_space.tex"
+    ),
+    RAW,
+    (0, 0),
+    &[
+      (
+        "equation",
+        "S0.E1",
+        r#"<equation labels="LABEL:e" xml:id="S0.E1"><tags><tag>(1)</tag><tag role="autoref">Equation 1</tag><tag role="refnum">1</tag></tags><MathFork><Math tex="\displaystyle a=b" text="a = b" xml:id="S0.E1.m4"><XMath><XMApp><XMTok meaning="equals" role="RELOP">=</XMTok><XMTok font="italic" role="UNKNOWN">a</XMTok><XMTok font="italic" role="UNKNOWN">b</XMTok></XMApp></XMath></Math><MathBranch><tr><td align="right"><Math mode="inline" tex="\displaystyle a" text="a" xml:id="S0.E1.m1"><XMath><XMTok font="italic" role="UNKNOWN">a</XMTok></XMath></Math></td><td align="center"><Math mode="inline" tex="\displaystyle=" text="=" xml:id="S0.E1.m2"><XMath><XMTok meaning="equals" role="RELOP">=</XMTok></XMath></Math></td><td align="left"><Math mode="inline" tex="\displaystyle b" text="b" xml:id="S0.E1.m3"><XMath><XMTok font="italic" role="UNKNOWN">b</XMTok></XMath></Math></td></tr></MathBranch></MathFork></equation>"#,
+      ),
+      (
+        "equationgroup",
+        "S0.EGx2",
+        r#"<equationgroup class="ltx_eqn_eqnarray" xml:id="S0.EGx2"><equation xml:id="S0.Ex1"><MathFork><Math tex="\displaystyle\begin{array}[]{c}f\\&#10;g\end{array}" text="Array[[f], [g]]" xml:id="S0.Ex1.m2"><XMath><XMArray role="ARRAY" vattach="middle"><XMRow><XMCell align="center"><XMTok font="italic" role="UNKNOWN">f</XMTok></XMCell></XMRow><XMRow><XMCell align="center"><XMTok font="italic" role="UNKNOWN">g</XMTok></XMCell></XMRow></XMArray></XMath></Math><MathBranch><td align="right"><Math mode="inline" tex="\displaystyle\begin{array}[]{c}f\\&#10;g\end{array}" text="Array[[f], [g]]" xml:id="S0.Ex1.m1"><XMath><XMArray role="ARRAY" vattach="middle"><XMRow><XMCell align="center"><XMTok font="italic" role="UNKNOWN">f</XMTok></XMCell></XMRow><XMRow><XMCell align="center"><XMTok font="italic" role="UNKNOWN">g</XMTok></XMCell></XMRow></XMArray></XMath></Math></td></MathBranch></MathFork></equation></equationgroup>"#,
+      ),
+    ],
+  );
+  // The reference the tag is printed by.
+  assert_element(
+    &xml,
+    "p",
+    &[],
+    r#"<p>See <ref class="ltx_refmacro_autoref" labelref="LABEL:e" show="autoref"/>.</p>"#,
+  );
+}
+
+/// 63a: arxbj.cls shares arximspdf.cls's VTeX IMS markup — the structured bibliography (:2599-2897), `{pf}`/`{pf*}`
+/// with the automatic `\qed` (:1428-1445), `\tablewidth` (:1684) and `\bolds` — now one binding, `ims_support`
+/// (1003.1189 17 undefined, 1203.0186 `\tablewidth`). Repro index-bib/ims_structured_bibliography_and_proofs.
+#[test]
+fn ims_structured_bibliography_and_proofs() {
+  let xml = assert_elements(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/index-bib/ims_structured_bibliography_and_proofs.tex"
+    ),
+    RAW,
+    (0, 0),
+    &[(
+      "bibitem",
+      "bib.bib1",
+      r#"<bibitem key="a" xml:id="bib.bib1"><tags><tag>[1]</tag><tag role="autoref">1</tag><tag role="refnum">1</tag></tags><bibblock>Doe, J. (2001). A title. Bernoulli 7 1–2. <ref class="ltx_href" href="http://www.ams.org/mathscinet-getitem?mr=2363971">MR2363971</ref></bibblock></bibitem>"#,
+    )],
+  );
+  // `{pf}` and `{pf*}`, each ending in the class's square.
+  assert_element(
+    &xml,
+    "proof",
+    &[],
+    r#"<proof><title class="ltx_runin">Proof.</title><para xml:id="p2"><p>Obvious.<Math mode="inline" tex="\square" text="square" xml:id="p2.m1"><XMath><XMTok name="square" role="UNKNOWN">□</XMTok></XMath></Math></p></para></proof>"#,
+  );
+  let second = &xml[xml.find("</proof>").expect("a first proof")..];
+  assert_element(
+    second,
+    "proof",
+    &[],
+    r#"<proof><title class="ltx_runin">Proof of the claim.</title><para xml:id="p3"><p>Trivial.<Math mode="inline" tex="\square" text="square" xml:id="p3.m1"><XMath><XMTok name="square" role="UNKNOWN">□</XMTok></XMath></Math></p></para></proof>"#,
+  );
+}
+
+/// 63b: nameref.sty:352-359 redeclares `\ref`, `\pageref` and `\Ref` at `\begin{document}`, so a self-recursive
+/// preamble `\renewcommand{\ref}` never runs (2503.08060, 1908.01329, 1811.01873; KNOWN_PERL_ERRORS #519). nameref's
+/// `\NR@setref`'s selector names the field a reference prints (`\@firstoffive`: the number). Repro
+/// macro-state/preamble_ref_redefinition_reset_at_begin_document.
+#[test]
+fn preamble_ref_redefinition_reset_at_begin_document() {
+  assert_elements(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/macro-state/preamble_ref_redefinition_reset_at_begin_document.tex"
+    ),
+    RAW,
+    (0, 0),
+    &[
+      (
+        "para",
+        "S1.p1",
+        r#"<para xml:id="S1.p1"><p>See <ref labelref="LABEL:a"/>.</p></para>"#,
+      ),
+      (
+        "para",
+        "S1.p2",
+        r#"<para xml:id="S1.p2"><p>Also <ref labelref="LABEL:a"/>.</p></para>"#,
+      ),
+      (
+        "para",
+        "S1.p3",
+        r#"<para xml:id="S1.p3"><p>Named <ref class="ltx_refmacro_nameref" labelref="LABEL:a" show="title"/>.</p></para>"#,
+      ),
+    ],
+  );
+}
+
+/// 63b: nameref's reset is a `nameref`-labelled begindocument chunk, so the document's own `\AtBeginDocument` code runs
+/// after it and keeps its `\pageref`/`\Ref`, while a preamble `\DeclareRobustCommand{\ref}` (its `\ref␣` too) is
+/// reset (KNOWN_PERL_ERRORS #519). Repro macro-state/begin_document_ref_redefinition_survives_nameref.
+#[test]
+fn begin_document_ref_redefinition_survives_nameref() {
+  assert_elements(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/macro-state/begin_document_ref_redefinition_survives_nameref.tex"
+    ),
+    RAW,
+    (0, 0),
+    &[(
+      "para",
+      "S1.p1",
+      r#"<para xml:id="S1.p1"><p>See <ref labelref="LABEL:a"/>; <ref class="ltx_refmacro_autoref" labelref="LABEL:a" show="autoref"/>; the section a.</p></para>"#,
+    )],
+  );
+}
+
+/// 63b: an `\halign` or `{array}` in an `{eqnarray}` row inherited `\eqnarray@row@before` and stepped the equation once
+/// per inner row (1601.02132; Perl alike, KNOWN_PERL_ERRORS #518); a new alignment's rows run no enclosing row hook,
+/// and the eqnarray's own later rows still do. Repro kernel-alignment/nested_alignment_inherits_eqnarray_row_hook.
+#[test]
+fn nested_alignment_inherits_no_eqnarray_row_hook() {
+  let xml = assert_elements(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/kernel-alignment/nested_alignment_inherits_eqnarray_row_hook.tex"
+    ),
+    RAW,
+    (0, 0),
+    &[(
+      "equationgroup",
+      "S0.EGx4",
+      r#"<equationgroup class="ltx_eqn_eqnarray" xml:id="S0.EGx4"><equation xml:id="S0.E4"><tags><tag>(4)</tag><tag role="refnum">4</tag></tags><MathFork><Math tex="\displaystyle a=\begin{array}[]{c}x\\&#10;y\end{array}" text="a = Array[[x], [y]]" xml:id="S0.E4.m4"><XMath><XMApp><XMTok meaning="equals" role="RELOP">=</XMTok><XMTok font="italic" role="UNKNOWN">a</XMTok><XMArray role="ARRAY" vattach="middle"><XMRow><XMCell align="center"><XMTok font="italic" role="UNKNOWN">x</XMTok></XMCell></XMRow><XMRow><XMCell align="center"><XMTok font="italic" role="UNKNOWN">y</XMTok></XMCell></XMRow></XMArray></XMApp></XMath></Math><MathBranch><tr><td align="right"><Math mode="inline" tex="\displaystyle a" text="a" xml:id="S0.E4.m1"><XMath><XMTok font="italic" role="UNKNOWN">a</XMTok></XMath></Math></td><td align="center"><Math mode="inline" tex="\displaystyle=" text="=" xml:id="S0.E4.m2"><XMath><XMTok meaning="equals" role="RELOP">=</XMTok></XMath></Math></td><td align="left"><Math mode="inline" tex="\displaystyle\begin{array}[]{c}x\\&#10;y\end{array}" text="Array[[x], [y]]" xml:id="S0.E4.m3"><XMath><XMArray role="ARRAY" vattach="middle"><XMRow><XMCell align="center"><XMTok font="italic" role="UNKNOWN">x</XMTok></XMCell></XMRow><XMRow><XMCell align="center"><XMTok font="italic" role="UNKNOWN">y</XMTok></XMCell></XMRow></XMArray></XMath></Math></td></tr></MathBranch></MathFork></equation><equation xml:id="S0.E5"><tags><tag>(5)</tag><tag role="refnum">5</tag></tags><MathFork><Math tex="\displaystyle c=d" text="c = d" xml:id="S0.E5.m4"><XMath><XMApp><XMTok meaning="equals" role="RELOP">=</XMTok><XMTok font="italic" role="UNKNOWN">c</XMTok><XMTok font="italic" role="UNKNOWN">d</XMTok></XMApp></XMath></Math><MathBranch><tr><td align="right"><Math mode="inline" tex="\displaystyle c" text="c" xml:id="S0.E5.m1"><XMath><XMTok font="italic" role="UNKNOWN">c</XMTok></XMath></Math></td><td align="center"><Math mode="inline" tex="\displaystyle=" text="=" xml:id="S0.E5.m2"><XMath><XMTok meaning="equals" role="RELOP">=</XMTok></XMath></Math></td><td align="left"><Math mode="inline" tex="\displaystyle d" text="d" xml:id="S0.E5.m3"><XMath><XMTok font="italic" role="UNKNOWN">d</XMTok></XMath></Math></td></tr></MathBranch></MathFork></equation></equationgroup>"#,
+    )],
+  );
+  // The four `\theequation` reports, each a whole `<p>`; the last eqnarray numbers its two rows 4 and 5.
+  let afters: Vec<&str> = xml
+    .match_indices("<p>After")
+    .map(|(at, _)| &xml[at..at + xml[at..].find("</p>").expect("a closed paragraph") + 4])
+    .collect();
+  assert_eq!(afters, [
+    "<p>After: 1.</p>",
+    "<p>After: 2.</p>",
+    "<p>After: 3.</p>",
+    "<p>After: 5.</p>"
+  ]);
+}
+
+/// 63b: PiCTeX's `\plot` sets each dot with its own `\raise`; the stomach's loop detector hashed a register value by its
+/// kind alone, so a long line of dots read as a loop past 50,000 boxes (0801.0709, Rust only). Repro
+/// boxes-groups/pictex_finite_dots_are_not_a_loop.
+#[test]
+fn pictex_finite_dots_are_not_a_loop() {
+  let xml = assert_elements(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/boxes-groups/pictex_finite_dots_are_not_a_loop.tex"
+    ),
+    RAW,
+    (0, 0),
+    &[],
+  );
+  assert!(
+    xml.matches("<text").count() >= 18_000,
+    "every dot of the 30 lines is kept"
+  );
+}
+
+/// 63d: tex.web §1275 — `\openin` first closes the stream, so a name that cannot be opened leaves it closed; ours kept
+/// the previous file open, and pinlabel's next figure read the last one's EPS (1010.6236; Perl alike, KNOWN_PERL_ERRORS
+/// #520). Repro macro-state/openin_closes_the_stream_first.
+#[test]
+fn openin_closes_the_stream_first() {
+  assert_elements(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/macro-state/openin_closes_the_stream_first.tex"
+    ),
+    RAW,
+    (0, 0),
+    &[("para", "p1", r#"<para xml:id="p1"><p>CLOSED</p></para>"#)],
+  );
+}
+
+/// 63d: `\pdfximage` takes pdfTeX's keywords (`cropbox` …) and an expanded file name, and `\pdfximagebbox` reports
+/// the image's box corners as pdfTeX prints them (pinlabel.sty:588-592; 1904.09721, 1310.1838). Repro
+/// expansion-primitives/pdfximagebbox_reads_the_cropbox.
+#[test]
+fn pdfximagebbox_reads_the_cropbox() {
+  assert_elements(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/expansion-primitives/pdfximagebbox_reads_the_cropbox.tex"
+    ),
+    RAW,
+    (0, 0),
+    &[(
+      "para",
+      "p1",
+      r#"<para xml:id="p1"><p>BB: 0.0pt0.0pt321.2pt240.9pt</p></para>"#,
+    )],
+  );
+}
+
+/// 63d: pinlabel.sty is read raw, so every `\pinlabel`'s text stays with its figure, and the picture with it: the
+/// pdfTeX branch's `\ps@begin` includes `<stem>.pdf` (math0412330, 1904.09721; 85 papers of run 336's first 265k had
+/// `\labellist`/`\pinlabel` undefined). Repro graphics-tikz/pinlabel_labels_every_figure.
+#[test]
+fn pinlabel_labels_every_figure() {
+  let xml = assert_elements(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/graphics-tikz/pinlabel_labels_every_figure.tex"
+    ),
+    RAW,
+    (0, 0),
+    &[],
+  );
+  // mwe's images are found in the TeX tree, wherever it is installed
+  let texmf = regex::Regex::new(r#"candidates="[^"]*/(example-image-[ab]\.pdf)""#).unwrap();
+  let xml = texmf.replace_all(&xml, r#"candidates="TEXMF/$1""#);
+  assert_element(
+    &xml,
+    "figure",
+    &[r#"xml:id="fig1""#],
+    concat!(
+      r#"<figure xml:id="fig1"><block vattach="bottom"><p vattach="bottom" width="144.5pt"/><p width="0.0pt"><graphics candidates="TEXMF/example-image-a.pdf" graphic="example-image-a.pdf" options="width=144.54pt,height=108.40498pt" xml:id="g1"/></p><p vattach="bottom" width="144.5pt"><text fontsize="90%">"#,
+      "\u{2003}\u{2003}\u{2003}\u{2003}\u{2003}\u{2009}",
+      r#"</text><text fontsize="90%" width="7.4pt"><Math mode="inline" tex="P_{A}" text="P _ A" xml:id="m1"><XMath><XMApp><XMTok role="SUBSCRIPTOP" scriptpos="post1"/><XMTok font="italic" role="UNKNOWN">P</XMTok><XMTok font="italic" fontsize="70%" role="UNKNOWN">A</XMTok></XMApp></XMath></Math></text></p></block></figure>"#
+    ),
+  );
+  assert_element(
+    &xml,
+    "figure",
+    &[r#"xml:id="fig2""#],
+    concat!(
+      r#"<figure xml:id="fig2"><block vattach="bottom"><p vattach="bottom" width="144.5pt"/><p width="0.0pt"><graphics candidates="TEXMF/example-image-b.pdf" graphic="example-image-b.pdf" options="width=144.54pt,height=108.40498pt" xml:id="g2"/></p><p vattach="bottom" width="144.5pt">"#,
+      "\u{2003}\u{2003}\u{2005}",
+      r#"<Math mode="inline" tex="P_{B}" text="P _ B" xml:id="m2"><XMath><XMApp><XMTok role="SUBSCRIPTOP" scriptpos="post1"/><XMTok font="italic" role="UNKNOWN">P</XMTok><XMTok font="italic" fontsize="70%" role="UNKNOWN">B</XMTok></XMApp></XMath></Math></p></block></figure>"#
+    ),
+  );
+}
+
+/// 63d: an EPS figure puts pinlabel on its DVI branch (`\pdfoutput=0`), whose `\ps@begin` places the picture with
+/// dvips's `\special{PSfile=…}` (pinlabel.sty:254-258) — not rendered, so the figure kept its labels and lost its
+/// picture (1010.6236 12 → 2 images, 1112.5970 30 → 1). Both branches include through graphicx: the `.eps` the DVI
+/// branch found, at the psfig size.
+#[test]
+fn pinlabel_dvi_figure_keeps_its_picture() {
+  let (stderr, xml) = super::perfect_kernel_batch46::convert_files(
+    r"\documentclass{article}
+\usepackage{graphicx}
+\usepackage{pinlabel}
+\begin{document}
+\begin{figure}
+\labellist
+\pinlabel $P$ at 10 10
+\endlabellist
+\includegraphics[width=2in]{fig}
+\end{figure}
+\end{document}
+",
+    &[(
+      "fig.eps",
+      "%!PS-Adobe-3.0 EPSF-3.0\n%%BoundingBox: 0 0 144 72\nnewpath 0 0 moveto 144 72 lineto stroke\nshowpage\n",
+    )],
+  );
+  assert_eq!(
+    super::perfect_kernel_batch46::error_count(&stderr),
+    0,
+    "{stderr}"
+  );
+  assert_eq!(
+    super::perfect_kernel_batch46::warning_count(&stderr),
+    0,
+    "{stderr}"
+  );
+  assert_element(
+    &xml,
+    "figure",
+    &[r#"xml:id="fig1""#],
+    concat!(
+      r#"<figure xml:id="fig1"><block vattach="bottom"><p vattach="bottom" width="144.5pt"/><p width="0.0pt"><graphics candidates="fig.eps" graphic="fig.eps" options="width=144.54pt,height=72.26999pt" xml:id="g1"/></p><p vattach="bottom" width="144.5pt">"#,
+      "\u{2003}",
+      r#"<Math mode="inline" tex="P" text="P" xml:id="m1"><XMath><XMTok font="italic" role="UNKNOWN">P</XMTok></XMath></Math></p></block></figure>"#
+    ),
+  );
+}
+
+/// The creators of an author repro under the arXiv profile, 0 errors and 0 warnings, each `<creator>` whole.
+fn assert_creators(tex: &str, expected: &[&str]) {
+  let (log, xml) = latexml::util::test::convert_with(tex, Some("ar5iv.sty"));
+  assert_eq!(super::perfect_kernel_batch46::error_count(&log), 0, "{log}");
+  assert_eq!(
+    super::perfect_kernel_batch46::warning_count(&log),
+    0,
+    "{log}"
+  );
+  let found = super::perfect_kernel_batch61::creators_of(&xml);
+  assert!(
+    found == expected,
+    "creators differ\n--- found:\n{}\n--- xml:\n{xml}",
+    found.join("\n")
+  );
+}
+
+/// 63e: a name list in one aastex/emulateapj `\author` is one author each, each with its `\altaffilmark` (1010.1318, 0908.0757,
+/// astro-ph0502290; Perl aas_support.sty.ltxml:103 makes one author). Repro sectioning-frontmatter/author_emulateapj_altaffilmark_list_splits.
+#[test]
+fn author_emulateapj_altaffilmark_list_splits() {
+  assert_creators(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_emulateapj_altaffilmark_list_splits.tex"
+    ),
+    &[
+      "<creator role=\"author\"><personname>Joshua N. Winn</personname><contact name=\"Alternate Affiliation:\u{a0}\" role=\"altaffiliation\">MIT, Cambridge, MA</contact></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Andrew W. Howard</personname><contact name=\"Alternate Affiliation:\u{a0}\" role=\"altaffiliation\">UC Berkeley, CA</contact></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Avi Shporer</personname><contact name=\"Alternate Affiliation:\u{a0}\" role=\"altaffiliation\">MIT, Cambridge, MA</contact></creator>",
+    ],
+  );
+}
+
+/// 63e: aastex writes a name's mark after the comma that follows it (`Todd M. Tripp,\altaffilmark{2} Bart P. Wakker`,
+/// astro-ph0302534): the mark stays with the name before. Repro sectioning-frontmatter/author_aastex_mark_after_comma_is_the_name_before.
+#[test]
+fn author_aastex_mark_after_comma_is_the_name_before() {
+  assert_creators(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_aastex_mark_after_comma_is_the_name_before.tex"
+    ),
+    &[
+      "<creator role=\"author\"><personname>Todd M. Tripp</personname><contact name=\"Alternate Affiliation:\u{a0}\" role=\"altaffiliation\">Princeton University Observatory, Princeton, NJ</contact></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bart P. Wakker</personname><contact name=\"Alternate Affiliation:\u{a0}\" role=\"altaffiliation\">Department of Astronomy, University of Wisconsin, Madison, WI</contact></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Edward B. Jenkins</personname><contact name=\"Alternate Affiliation:\u{a0}\" role=\"altaffiliation\">Princeton University Observatory, Princeton, NJ</contact></creator>",
+    ],
+  );
+}
+
+/// 63e: amsart's `\author{Klemens Fellner and Bao Quoc Tang}` names two (1708.01427, 1012.2719; Perl ams_support.sty.ltxml:99
+/// makes one). Repro sectioning-frontmatter/author_per_author_class_and_list_splits.
+#[test]
+fn author_per_author_class_and_list_splits() {
+  assert_creators(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_per_author_class_and_list_splits.tex"
+    ),
+    &[
+      "<creator role=\"author\"><personname>Klemens Fellner</personname></creator>",
+      "<creator before=\" and \" role=\"author\"><personname>Bao Quoc Tang</personname><contact name=\"Address:\u{a0}\" role=\"address\">Institute of Mathematics, University of Graz</contact></creator>",
+    ],
+  );
+}
+
+/// 63e: revtex's `\author{Brent Preston and Eric Poisson}` names two, both with the `\affiliation` after them
+/// (gr-qc0606093, cond-mat0205631). Repro sectioning-frontmatter/author_revtex_and_list_splits.
+#[test]
+fn author_revtex_and_list_splits() {
+  assert_creators(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_revtex_and_list_splits.tex"
+    ),
+    &[
+      "<creator role=\"author\"><personname>Brent Preston</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Department of Physics, University of Guelph</contact></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Eric Poisson</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Department of Physics, University of Guelph</contact></creator>",
+    ],
+  );
+}
+
+/// 63e: llncs/aa `\author{R. Braun\inst{1} and W. B. Burton\inst{2}}` names two, each linked to its institute
+/// (astro-ph9810433; Perl inst_support.sty.ltxml:35 splits at `\and` and commas only). Repro
+/// sectioning-frontmatter/author_inst_literal_and_splits.
+#[test]
+fn author_inst_literal_and_splits() {
+  assert_creators(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_inst_literal_and_splits.tex"
+    ),
+    &[
+      "<creator role=\"author\"><personname>R. Braun</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Netherlands Foundation for Research in Astronomy</contact></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>W. B. Burton</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Sterrewacht Leiden</contact></creator>",
+    ],
+  );
+}
+
+/// 63e: an "and" line between two name-and-address blocks separates two authors (cond-mat9705101; Perl
+/// Base_Utility.pool.ltxml:720-725 reads every line after the first as an affiliation). Repro
+/// sectioning-frontmatter/author_bare_and_line_separates_authors.
+#[test]
+fn author_bare_and_line_separates_authors() {
+  assert_creators(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_bare_and_line_separates_authors.tex"
+    ),
+    &[
+      "<creator role=\"author\"><personname><text font=\"italic\" xml:id=\"id1\">D.A. Johnston</text></personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Dept. of Mathematics</contact><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Heriot-Watt University</contact></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname><text font=\"italic\" xml:id=\"id2\">P. Plecháč</text></personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Mathematical Institute</contact><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Oxford</contact></creator>",
+    ],
+  );
+}
+
+/// 63e: names after an affiliation, styled as the group's names were, open the next names (0811.1526). Repro
+/// sectioning-frontmatter/author_third_line_names_after_affiliation.
+#[test]
+fn author_third_line_names_after_affiliation() {
+  assert_creators(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_third_line_names_after_affiliation.tex"
+    ),
+    &[
+      "<creator role=\"author\"><personname>Christian Gollwitzer</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><text font=\"slanted\" xml:id=\"id1\">Experimentalphysik V, Univ. Bayreuth</text></contact></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Marina Krekhova</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><text font=\"slanted\" xml:id=\"id2\">Makromolekulare Chemie I, Univ. Bayreuth</text></contact></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Günter Lattermann</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><text font=\"slanted\" xml:id=\"id3\">Makromolekulare Chemie I, Univ. Bayreuth</text></contact></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Ingo Rehberg</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><text font=\"slanted\" xml:id=\"id4\">Experimentalphysik V, Univ. Bayreuth</text></contact></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Reinhard Richter</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><text font=\"slanted\" xml:id=\"id5\">Experimentalphysik V, Univ. Bayreuth</text></contact></creator>",
+    ],
+  );
+}
+
+/// 63e: `\newline` breaks an author line as `\\` does (latex.ltx:9256; 2401.14196). Repro
+/// sectioning-frontmatter/author_newline_separates_marked_name_lines.
+/// T1 (`=2`): the same four and links; the names keep the `\small` they print in, as the
+/// affiliations do, and the first creator has no separator before it (the leading `\hspace` none).
+#[test]
+fn author_newline_separates_marked_name_lines() {
+  assert_creators(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_newline_separates_marked_name_lines.tex"
+    ),
+    &[
+      "<creator role=\"author\"><personname><text fontsize=\"90%\" xml:id=\"id1\">Ann Able</text></personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><text fontsize=\"90%\" xml:id=\"id2\">Univ A</text></contact></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname><text fontsize=\"90%\" xml:id=\"id3\">Bob Baker</text></personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><text fontsize=\"90%\" xml:id=\"id4\">Univ A</text></contact><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><text fontsize=\"90%\" xml:id=\"id5\">Univ B</text></contact></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname><text fontsize=\"90%\" xml:id=\"id6\">Cat Cole</text></personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><text fontsize=\"90%\" xml:id=\"id7\">Univ A</text></contact></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname><text fontsize=\"90%\" xml:id=\"id8\">Dan Dunn</text></personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><text fontsize=\"90%\" xml:id=\"id9\">Univ B</text></contact></creator>",
+    ],
+  );
+}
+
+/// 63e: an `\IEEEauthorblockN` name list is one author each, every one with the block's affiliation (2410.19527); the
+/// `\\` between the blocks is no affiliation. Repro sectioning-frontmatter/author_ieee_blockn_name_list_splits.
+#[test]
+fn author_ieee_blockn_name_list_splits() {
+  assert_creators(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_ieee_blockn_name_list_splits.tex"
+    ),
+    &[
+      "<creator role=\"author\"><personname>Clemens Paul Zengler<sup xml:id=\"id1\">*</sup></personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Technical University of Denmark.</contact></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Niels Troldborg</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Technical University of Denmark.</contact></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Mac Gaunaa</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Technical University of Denmark.</contact></creator>",
+    ],
+  );
+}
+
+/// 63e: authblk's `\author[1]{Ann Able, Bob Baker}` is one author each, both with the label (2401.14196's
+/// deepseek.cls). Repro sectioning-frontmatter/author_authblk_labelled_list_splits.
+#[test]
+fn author_authblk_labelled_list_splits() {
+  assert_creators(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_authblk_labelled_list_splits.tex"
+    ),
+    &[
+      "<creator role=\"author\"><personname>Ann Able</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A</contact></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A</contact></creator>",
+    ],
+  );
+}
+
+/// 63e: an author holding two names is a loss the document cannot show — LaTeX typesets two people, the XML has one —
+/// so it is an error (`Error:frontmatter:merged_creators`), once per such author. acmart's `\author` is one author by
+/// the class's contract, so the list stays as written and is reported (the run-336 fidelity audit's 16 silent
+/// merged-author papers). Repro sectioning-frontmatter/author_merged_names_are_an_error.
+#[test]
+fn author_merged_names_are_an_error() {
+  let (log, xml) = latexml::util::test::convert_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_merged_names_are_an_error.tex"
+    ),
+    Some("ar5iv.sty"),
+  );
+  assert_eq!(super::perfect_kernel_batch46::error_count(&log), 1, "{log}");
+  assert_eq!(
+    super::perfect_kernel_batch46::warning_count(&log),
+    0,
+    "{log}"
+  );
+  assert!(
+    log
+      .lines()
+      .any(|l| l.starts_with("Error:frontmatter:merged_creators")
+        && l.contains("Ann Able and Bob Baker")),
+    "{log}"
+  );
+  assert_eq!(
+    super::perfect_kernel_batch61::creators_of(&xml),
+    [
+      "<creator role=\"author\"><personname>Ann Able and Bob Baker</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><text class=\"ltx_affiliation_institution\" xml:id=\"id1\">Univ A</text>, <text class=\"ltx_affiliation_country\" xml:id=\"id2\">Country</text></contact></creator>"
+    ],
+    "{xml}"
+  );
+}
+
+/// 63e (negative): the lines under a name are its affiliations, a city line with its postal code included
+/// (`Los Angeles, CA 90095, USA`: a code after a space is text, not a mark). Repro
+/// sectioning-frontmatter/author_affiliation_lines_stay_affiliations.
+#[test]
+fn author_affiliation_lines_stay_affiliations() {
+  assert_creators(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_affiliation_lines_stay_affiliations.tex"
+    ),
+    &[
+      "<creator role=\"author\"><personname>John Smith</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><text font=\"italic\" xml:id=\"id1\">Dept. of Physics, UCLA</text></contact><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Los Angeles, CA 90095, USA</contact></creator>",
+    ],
+  );
+}
+
+/// 63e: amsart's `\author{Name\\ \small Faculty …}` is a name over its affiliations and address (math0606082; Perl one
+/// personname). Repro sectioning-frontmatter/author_amsart_name_then_affiliation_lines.
+#[test]
+fn author_amsart_name_then_affiliation_lines() {
+  assert_creators(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_amsart_name_then_affiliation_lines.tex"
+    ),
+    &[
+      "<creator role=\"author\"><personname>Masao Ishikawa</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><text fontsize=\"90%\" xml:id=\"id1\">Faculty of Education, Tottori University</text></contact><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><text fontsize=\"90%\" xml:id=\"id2\">Koyama, Tottori, Japan</text></contact><contact name=\"Email:\u{a0}\" role=\"email\"><text font=\"typewriter\" fontsize=\"90%\" xml:id=\"id3\">ishikawa@fed.tottori-u.ac.jp</text></contact></creator>",
+    ],
+  );
+}
+
+/// 63e (negative): an all-capitals name is a name, not a society after a grade (`WEI LI\inst{1}, HONG ZHANG\inst{2}`).
+/// Repro sectioning-frontmatter/author_uppercase_names_stay_apart.
+#[test]
+fn author_uppercase_names_stay_apart() {
+  assert_creators(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_uppercase_names_stay_apart.tex"
+    ),
+    &[
+      "<creator role=\"author\"><personname>WEI LI</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A</contact></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>HONG ZHANG</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ B</contact></creator>",
+    ],
+  );
+}
+
+/// 63e (negative): an `\IEEEauthorblockN` line under the name is its affiliation, not more authors. Repro
+/// sectioning-frontmatter/author_ieee_blockn_lines_after_the_name_are_affiliations.
+#[test]
+fn author_ieee_blockn_lines_after_the_name_are_affiliations() {
+  assert_creators(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_ieee_blockn_lines_after_the_name_are_affiliations.tex"
+    ),
+    &[
+      "<creator role=\"author\"><personname>Ann Able</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">University of X, City, Country</contact></creator>",
+    ],
+  );
+}
+
+/// 63e (negative): degrees after a name stay with it (`\author[1]{Jane Doe, MD, PhD}`). Repro
+/// sectioning-frontmatter/author_degrees_stay_with_the_name.
+#[test]
+fn author_degrees_stay_with_the_name() {
+  assert_creators(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_degrees_stay_with_the_name.tex"
+    ),
+    &[
+      "<creator role=\"author\"><personname>Jane Doe, MD, PhD</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A</contact></creator>",
+    ],
+  );
+}
+
+/// 63e (negative): a names line ending in a comma does not make an affiliation styled unlike it a name
+/// (`John Smith,\\ {\it Bell Labs, Murray Hill}`). Repro sectioning-frontmatter/author_comma_before_styled_affiliation.
+#[test]
+fn author_comma_before_styled_affiliation() {
+  assert_creators(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_comma_before_styled_affiliation.tex"
+    ),
+    &[
+      "<creator role=\"author\"><personname>John Smith</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><text font=\"italic\" xml:id=\"id1\">Bell Labs, Murray Hill</text></contact></creator>",
+    ],
+  );
+}
+
+/// 63e: a names line wrapped whole in a group with its declarations splits like `\textbf{A, B}` does (hep-th9212083,
+/// 2608.16650). Repro sectioning-frontmatter/author_group_wrapped_names_split.
+#[test]
+fn author_group_wrapped_names_split() {
+  assert_creators(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_group_wrapped_names_split.tex"
+    ),
+    &[
+      "<creator role=\"author\"><personname>Daniel Boyanovsky</personname></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Da-Shin Lee</personname></creator>",
+    ],
+  );
+}
+
+/// 63e: a thin space before "and" is the space of " and " (`Aghil Alaee\footnote{…} \,\,and Hari K. Kunduri`, 1407.0988),
+/// and an unmarked names line on the marked path is split when it names several; the department, whose mark no author
+/// requests, keeps a creator of its own (OXIDIZED_DESIGN #159, repro author_block_orphan_mark_is_kept_red).
+/// Repro sectioning-frontmatter/author_thin_space_before_and_separates.
+#[test]
+fn author_thin_space_before_and_separates() {
+  assert_creators(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_thin_space_before_and_separates.tex"
+    ),
+    &[
+      "<creator role=\"author\"><personname>Aghil Alaee</personname><contact name=\"Note:\u{a0}\" role=\"note\">aak818@mun.ca</contact></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Hari K. Kunduri</personname><contact name=\"Note:\u{a0}\" role=\"note\">hkkunduri@mun.ca</contact></creator>",
+      "<creator role=\"author\"><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><text font=\"slanted\" fontsize=\"90%\" xml:id=\"id1\"> Department of Mathematics and Statistics, Memorial University of Newfoundland</text></contact></creator>",
+    ],
+  );
+}
+
+/// 63e: the marks written after the commas inside a group-wrapped name list stay with the names before them
+/// (`{\bf Todd M. Tripp,\altaffilmark{2} Bart P. Wakker,\altaffilmark{4}}`, astro-ph0302534's shape). Repro
+/// sectioning-frontmatter/author_group_wrapped_marks_after_commas.
+#[test]
+fn author_group_wrapped_marks_after_commas() {
+  assert_creators(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_group_wrapped_marks_after_commas.tex"
+    ),
+    &[
+      "<creator role=\"author\"><personname>Todd M. Tripp</personname><contact name=\"Alternate Affiliation:\u{a0}\" role=\"altaffiliation\">Princeton University Observatory, Princeton, NJ</contact></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bart P. Wakker</personname><contact name=\"Alternate Affiliation:\u{a0}\" role=\"altaffiliation\">Department of Astronomy, University of Wisconsin, Madison, WI</contact></creator>",
+    ],
+  );
+}
+
+/// 63e: an "and" inside the markup that opens a names line after affiliations is dropped from the name
+/// (`{\it and Zhenghan Wang}`). Repro sectioning-frontmatter/author_and_inside_markup_opens_an_author.
+#[test]
+fn author_and_inside_markup_opens_an_author() {
+  assert_creators(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_and_inside_markup_opens_an_author.tex"
+    ),
+    &[
+      "<creator role=\"author\"><personname><text font=\"italic\" xml:id=\"id1\">James Brink</text></personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Dept of Math., UC Berkeley</contact></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname><text font=\"italic\" xml:id=\"id2\">Zhenghan Wang</text></personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Dept of Math., Indiana University</contact></creator>",
+    ],
+  );
+}
+
+/// 63e: "A, B, and C" makes three authors and no empty fourth, so an affiliation for them all is each one's once
+/// (an empty creator took a copy and merged it onto B). Repro sectioning-frontmatter/author_serial_comma_list_shares_one_affiliation.
+#[test]
+fn author_serial_comma_list_shares_one_affiliation() {
+  assert_creators(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_serial_comma_list_shares_one_affiliation.tex"
+    ),
+    &[
+      "<creator role=\"author\"><personname>Ann Able</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Department of Physics, University X</contact></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Department of Physics, University X</contact></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Cat Cole</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Department of Physics, University X</contact></creator>",
+    ],
+  );
+}
+
+/// 63e (negative): a line of only "and" before an affiliation is affiliation text, not the start of an author.
+/// Repro sectioning-frontmatter/author_and_line_before_an_institution_stays_text.
+/// T1 (`=2`): no author invented; the two institutions John Smith's, the line "and" between them
+/// the separator word no contact keeps (`repart.rs` `SepKind::Word`), as between names.
+#[test]
+fn author_and_line_before_an_institution_stays_text() {
+  assert_creators(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_and_line_before_an_institution_stays_text.tex"
+    ),
+    &[
+      "<creator role=\"author\"><personname>John Smith</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Dept. of Physics</contact><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Center for Theoretical Physics</contact></creator>",
+    ],
+  );
+}
+
+/// 63e: an aastex `\affiliation` is every preceding author's that has none (AASTeX 6, revtex-derived). Repro
+/// sectioning-frontmatter/author_aastex_affiliation_goes_to_the_authors_before.
+#[test]
+fn author_aastex_affiliation_goes_to_the_authors_before() {
+  assert_creators(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_aastex_affiliation_goes_to_the_authors_before.tex"
+    ),
+    &[
+      "<creator role=\"author\"><personname>Ann Able</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ</contact></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ</contact></creator>",
+    ],
+  );
+}
+
+/// 63e (negative): institution words are whole words, not word openings — "Patrick Strasser" is a name, not
+/// `strasse` (folded into the name before it, silently). Repro sectioning-frontmatter/author_surname_like_an_institution_word_is_a_name.
+#[test]
+fn author_surname_like_an_institution_word_is_a_name() {
+  assert_creators(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_surname_like_an_institution_word_is_a_name.tex"
+    ),
+    &[
+      "<creator role=\"author\"><personname>Ann Able</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A</contact></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Patrick Strasser</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ B</contact></creator>",
+    ],
+  );
+}
+
+/// 63e (negative): amsart's `\author{Ann Able and Patrick Strasser}` is two authors. Repro
+/// sectioning-frontmatter/author_amsart_and_list_with_institution_like_surname.
+#[test]
+fn author_amsart_and_list_with_institution_like_surname() {
+  assert_creators(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_amsart_and_list_with_institution_like_surname.tex"
+    ),
+    &[
+      "<creator role=\"author\"><personname>Ann Able</personname></creator>",
+      "<creator before=\" and \" role=\"author\"><personname>Patrick Strasser</personname></creator>",
+    ],
+  );
+}
+
+/// 63e: a membership grade in an IEEE name block (`Ann Able,~\IEEEmembership{Member,~IEEE}`) stays with its name, not an
+/// empty author taking a copy of the block's affiliation (conference mode prints no grade, IEEEtran.cls:6270). Repro
+/// sectioning-frontmatter/author_ieee_membership_in_a_block_stays_with_its_name.
+#[test]
+fn author_ieee_membership_in_a_block_stays_with_its_name() {
+  assert_creators(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_ieee_membership_in_a_block_stays_with_its_name.tex"
+    ),
+    &[
+      "<creator role=\"author\"><personname>Ann Able</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ</contact></creator>",
+    ],
+  );
+}
+
+/// 63e (negative): an "and" line before "SISSA, Trieste, Italy" is affiliation text. Repro
+/// sectioning-frontmatter/author_and_line_before_an_acronym_institution_stays_text.
+/// T1 (`=2`): no author invented; the two institutions John Smith's, the line "and" between them
+/// the separator word no contact keeps (`repart.rs` `SepKind::Word`), as between names.
+#[test]
+fn author_and_line_before_an_acronym_institution_stays_text() {
+  assert_creators(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_and_line_before_an_acronym_institution_stays_text.tex"
+    ),
+    &[
+      "<creator role=\"author\"><personname>John Smith</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Dept. of Physics, Univ. X</contact><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">SISSA, Trieste, Italy</contact></creator>",
+    ],
+  );
+}
+
+/// 63e (negative): authors written as macros (`\author{\A, \B}`) are something to read, not marks: two authors. Repro
+/// sectioning-frontmatter/author_macro_names_stay_apart.
+#[test]
+fn author_macro_names_stay_apart() {
+  assert_creators(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_macro_names_stay_apart.tex"
+    ),
+    &[
+      "<creator role=\"author\"><personname>Ann Able</personname></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker</personname></creator>",
+    ],
+  );
+}
+
+/// 63e (negative): "Street" is a surname (`Rachel Street$^{2}$`), not an institution word. Repro
+/// sectioning-frontmatter/author_surname_street_is_a_name.
+#[test]
+fn author_surname_street_is_a_name() {
+  assert_creators(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_surname_street_is_a_name.tex"
+    ),
+    &[
+      "<creator role=\"author\"><personname>Ann Able</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A</contact></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Rachel Street</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ B</contact></creator>",
+    ],
+  );
+}
+
+/// 63e (negative): a per-author binding keeps its authors' marks visible, as Perl does. Since 64a (KPE #553) the
+/// block's marked `\IEEEauthorblockA` lines answer those marks, each author linked to the line its mark names
+/// (63e had given the whole block to every author). Repro sectioning-frontmatter/author_ieee_block_marks_stay_visible.
+#[test]
+fn author_ieee_block_marks_stay_visible() {
+  // (P4c: the lists' printed marks shown in the pins below, as pdflatex prints them — P4S Q1)
+  assert_creators(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_ieee_block_marks_stay_visible.tex"
+    ),
+    &[
+      "<creator role=\"author\"><personname>Ann Able<sup xml:id=\"id1\"><text font=\"italic\" xml:id=\"id1.1\">1</text></sup></personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id2\"><text font=\"italic\" xml:id=\"id2.1\">1</text></sup>Univ A</contact></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker<sup xml:id=\"id3\"><text font=\"italic\" xml:id=\"id3.1\">2</text></sup></personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id4\"><text font=\"italic\" xml:id=\"id4.1\">2</text></sup>Univ B</contact></creator>",
+    ],
+  );
+}
+
+/// 63e (negative): amsart's marked `\author{Ann Able$^{1}$ and Bob Baker$^{2}$}` keeps both marks visible. Repro
+/// sectioning-frontmatter/author_amsart_marks_stay_visible.
+#[test]
+fn author_amsart_marks_stay_visible() {
+  assert_creators(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_amsart_marks_stay_visible.tex"
+    ),
+    &[
+      "<creator role=\"author\"><personname>Ann Able<sup xml:id=\"id1\"><text font=\"italic\" xml:id=\"id1.1\">1</text></sup></personname><contact name=\"Address:\u{a0}\" role=\"address\"><sup xml:id=\"id2\">1</sup>Univ A</contact></creator>",
+      "<creator before=\" and \" role=\"author\"><personname>Bob Baker<sup xml:id=\"id3\"><text font=\"italic\" xml:id=\"id3.1\">2</text></sup></personname><contact name=\"Address:\u{a0}\" role=\"address\"><sup xml:id=\"id4\">2</sup>Univ B</contact></creator>",
+    ],
+  );
+}
+
+/// 63e: a piece of marks and notes only (`$^{*}$\thanks{…}`) stays with the name before it, not an author showing
+/// only "*". Repro sectioning-frontmatter/author_symbol_mark_piece_stays_with_the_name.
+/// T1 (`=2`): the same two; the math `*` written ∗ (U+2217), as LaTeXML writes a math asterisk
+/// (FIDELITY_CHARTER §4: all asterisks one label key, the printed glyph as written).
+#[test]
+fn author_symbol_mark_piece_stays_with_the_name() {
+  assert_creators(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_symbol_mark_piece_stays_with_the_name.tex"
+    ),
+    &[
+      "<creator role=\"author\"><personname>Ann Able<sup xml:id=\"id1\">∗</sup></personname><note class=\"ltx_note_frontmatter ltx_thanks_contribution\" role=\"thanks\" xml:id=\"id2\">Equal contribution</note></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker</personname></creator>",
+    ],
+  );
+}
+
+/// 63e: in an IEEE block, a line of names each marked after it continues the names above, as authors' marks stand
+/// (`Ann Able$^{1}$\\ Bob Baker$^{2}$`), not an affiliation of the first (review r7). Repro
+/// sectioning-frontmatter/author_ieee_blockn_marked_name_lines_are_names.
+/// 64a: the block's marked affiliation lines answer the marks, each author linked to its own (KPE #553).
+#[test]
+fn author_ieee_blockn_marked_name_lines_are_names() {
+  // (P4c: the lists' printed marks shown in the pins below, as pdflatex prints them — P4S Q1)
+  assert_creators(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_ieee_blockn_marked_name_lines_are_names.tex"
+    ),
+    &[
+      "<creator role=\"author\"><personname>Ann Able<sup xml:id=\"id1\"><text font=\"italic\" xml:id=\"id1.1\">1</text></sup></personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id2\"><text font=\"italic\" xml:id=\"id2.1\">1</text></sup>Univ A</contact></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker<sup xml:id=\"id3\"><text font=\"italic\" xml:id=\"id3.1\">2</text></sup></personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id4\"><text font=\"italic\" xml:id=\"id4.1\">2</text></sup>Univ B</contact></creator>",
+    ],
+  );
+}
+
+/// 63e: an emulateapj name list over two lines, every name with its `\altaffilmark` after it, is one list of authors
+/// with no comma before the break (review r7). Repro sectioning-frontmatter/author_emulateapj_marked_name_lines_continue.
+#[test]
+fn author_emulateapj_marked_name_lines_continue() {
+  assert_creators(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_emulateapj_marked_name_lines_continue.tex"
+    ),
+    &[
+      "<creator role=\"author\"><personname>Ann Able</personname><contact name=\"Alternate Affiliation:\u{a0}\" role=\"altaffiliation\">Univ A</contact></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker</personname><contact name=\"Alternate Affiliation:\u{a0}\" role=\"altaffiliation\">Univ B</contact></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Cat Cole</personname><contact name=\"Alternate Affiliation:\u{a0}\" role=\"altaffiliation\">Univ C</contact></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Dan Dole</personname><contact name=\"Alternate Affiliation:\u{a0}\" role=\"altaffiliation\">Univ D</contact></creator>",
+    ],
+  );
+}
+
+/// 63e: a block of names marked before them (`$^{1}$Ann Able \quad $^{2}$Bob Baker`) holds no affiliation its marks
+/// request: two authors, not an author and an affiliation labelled 2 (review r7). Repro
+/// sectioning-frontmatter/author_ieee_blockn_prefix_marks_across_quad.
+/// 64a: the block's marked affiliation lines answer the marks, each author linked to its own (KPE #553).
+/// T1 (`=2`): each author linked as before; Bob Baker's answered mark no longer shown on his name
+/// (FIDELITY_CHARTER §4, a name's label is the name alone), Ann Able's still (a residual both switches share, one fewer at 2;
+/// T1's mechanism B, answered marks left on names, as `…_affiliations_after_break`).
+#[test]
+fn author_ieee_blockn_prefix_marks_across_quad() {
+  // (P4c: the lists' printed marks shown in the pins below, as pdflatex prints them — P4S Q1)
+  assert_creators(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_ieee_blockn_prefix_marks_across_quad.tex"
+    ),
+    &[
+      "<creator role=\"author\"><personname><sup xml:id=\"id1\"><text font=\"italic\" xml:id=\"id1.1\">1</text></sup>Ann Able</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id2\"><text font=\"italic\" xml:id=\"id2.1\">1</text></sup>Univ A</contact></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id3\"><text font=\"italic\" xml:id=\"id3.1\">2</text></sup>Univ B</contact></creator>",
+    ],
+  );
+}
+
+/// 63e: a per-author class's `\author` is added whole, so an `\affiliations` marker in it (`\let\affiliations\relax`)
+/// does not re-enter as a replacing `\author` that drops the authors before it (review r7). Repro
+/// sectioning-frontmatter/author_revtex_ijcai_marker_keeps_earlier_authors.
+#[test]
+fn author_revtex_ijcai_marker_keeps_earlier_authors() {
+  assert_creators(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_revtex_ijcai_marker_keeps_earlier_authors.tex"
+    ),
+    &[
+      "<creator role=\"author\"><personname>Ann Able</personname></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker Univ A</personname></creator>",
+    ],
+  );
+}
+
+/// 63e: names marked before them that share a label, side by side in an IEEE block (`$^{1}$Ann Able \quad
+/// $^{1}$Bob Baker`), are two authors keeping their marks, not an author and her affiliation (review r8). Repro
+/// sectioning-frontmatter/author_ieee_blockn_prefix_marks_shared_label.
+/// 64a: the block's marked affiliation lines answer the marks, each author linked to its own (KPE #553).
+/// T1 (`=2`): the same two links; the answered marks no longer shown on the names (FIDELITY_CHARTER
+/// §4, a name's label is the name alone), as a mark after a name is not.
+#[test]
+fn author_ieee_blockn_prefix_marks_shared_label() {
+  // (P4c: the lists' printed marks shown in the pins below, as pdflatex prints them — P4S Q1)
+  assert_creators(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_ieee_blockn_prefix_marks_shared_label.tex"
+    ),
+    &[
+      "<creator role=\"author\"><personname>Ann Able</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id1\"><text font=\"italic\" xml:id=\"id1.1\">1</text></sup>Univ A</contact></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id2\"><text font=\"italic\" xml:id=\"id2.1\">1</text></sup>Univ A</contact></creator>",
+    ],
+  );
+}
+
+/// 63e: three names marked before them on one printed line of an IEEE block are three authors (review r8). Repro
+/// sectioning-frontmatter/author_ieee_blockn_prefix_marks_three_names.
+/// 64a: the block's marked affiliation lines answer the marks, each author linked to its own (KPE #553).
+/// T1 (`=2`): the same three links; the answered marks no longer shown on the names (FIDELITY_CHARTER
+/// §4, a name's label is the name alone), as a mark after a name is not.
+#[test]
+fn author_ieee_blockn_prefix_marks_three_names() {
+  // (P4c: the lists' printed marks shown in the pins below, as pdflatex prints them — P4S Q1)
+  assert_creators(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_ieee_blockn_prefix_marks_three_names.tex"
+    ),
+    &[
+      "<creator role=\"author\"><personname>Ann Able</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id1\"><text font=\"italic\" xml:id=\"id1.1\">1</text></sup>Univ A</contact></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id2\"><text font=\"italic\" xml:id=\"id2.1\">2</text></sup>Univ B</contact></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Cat Cole</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id3\"><text font=\"italic\" xml:id=\"id3.1\">1</text></sup>Univ A</contact></creator>",
+    ],
+  );
+}
+
+/// 63e: in the article `\author`, names marked before them beside the first on its printed line are authors, the
+/// marked lines after the break their affiliations, linked by mark (review r8). Repro
+/// sectioning-frontmatter/author_prefix_marked_names_beside_on_one_line.
+#[test]
+fn author_prefix_marked_names_beside_on_one_line() {
+  assert_creators(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_prefix_marked_names_beside_on_one_line.tex"
+    ),
+    &[
+      "<creator role=\"author\"><personname>Ann Able</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A</contact></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A</contact></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Cat Cole</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ B</contact></creator>",
+    ],
+  );
+}
+
+/// 63e: a `\thanks` on the affiliation line under a revtex name is a note of that author, as Perl gives it (the
+/// article `\author` keeps Perl's document-level note, html_feedback#6888) (review r8). Repro
+/// sectioning-frontmatter/author_revtex_affiliation_line_thanks_stays_with_author.
+#[test]
+fn author_revtex_affiliation_line_thanks_stays_with_author() {
+  assert_creators(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_revtex_affiliation_line_thanks_stays_with_author.tex"
+    ),
+    &[
+      "<creator role=\"author\"><personname>Ann Able</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A</contact><note class=\"ltx_note_frontmatter ltx_thanks_funding\" role=\"thanks\" xml:id=\"id1\">Grant</note></creator>",
+    ],
+  );
+}
+
+/// 63e: a line break before a `\quad` ends the printed line of names marked before them: the marked lines after it
+/// are affiliations (review r9). Repro sectioning-frontmatter/author_prefix_marked_affiliations_after_break_and_quad.
+#[test]
+fn author_prefix_marked_affiliations_after_break_and_quad() {
+  assert_creators(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_prefix_marked_affiliations_after_break_and_quad.tex"
+    ),
+    &[
+      "<creator role=\"author\"><personname>Ann Able</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A</contact></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ B</contact></creator>",
+    ],
+  );
+}
+
+/// 63e (negative): a name-shaped affiliation line whose mark nothing below answers (`$^{3}$Google DeepMind`) stays an
+/// affiliation, kept apart as no author requests it (OD #159) (review r9). Repro
+/// sectioning-frontmatter/author_prefix_marked_unrequested_affiliation_stays_affiliation.
+#[test]
+fn author_prefix_marked_unrequested_affiliation_stays_affiliation() {
+  assert_creators(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_prefix_marked_unrequested_affiliation_stays_affiliation.tex"
+    ),
+    &[
+      "<creator role=\"author\"><personname>Ann Able</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A</contact></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ B</contact></creator>",
+      "<creator role=\"author\"><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Google DeepMind</contact></creator>",
+    ],
+  );
+}
+
+/// 63e (negative): a name-shaped company affiliation (`$^{1}$Google DeepMind`) stays an affiliation when the line
+/// below led by its mark is an email: only an affiliation-shaped line answers a mark (review r10). Repro
+/// sectioning-frontmatter/author_prefix_marked_company_affiliation_with_email_line.
+#[test]
+fn author_prefix_marked_company_affiliation_with_email_line() {
+  // (each mark-led address line an e-mail of the name it spells, today's affiliation of it cut by the writer — 95c, OD
+  // #938; it was an affiliation, the writer declining)
+  assert_creators(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_prefix_marked_company_affiliation_with_email_line.tex"
+    ),
+    &[
+      "<creator role=\"author\"><personname>Ann Able</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Google DeepMind</contact><contact name=\"Email:\u{a0}\" role=\"email\"><text font=\"typewriter\" xml:id=\"id1\">ann@google.com</text></contact></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Huawei Technologies</contact><contact name=\"Email:\u{a0}\" role=\"email\"><text font=\"typewriter\" xml:id=\"id2\">bob@huawei.com</text></contact></creator>",
+    ],
+  );
+}
+
+/// 63e (negative): a name-shaped company affiliation stays an affiliation when the line below led by its mark is a
+/// place (`$^{1}$Hong Kong`) (review r10). Repro
+/// sectioning-frontmatter/author_prefix_marked_company_affiliation_with_place_line.
+#[test]
+fn author_prefix_marked_company_affiliation_with_place_line() {
+  assert_creators(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_prefix_marked_company_affiliation_with_place_line.tex"
+    ),
+    &[
+      "<creator role=\"author\"><personname>Ann Able</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Google DeepMind</contact><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Hong Kong</contact></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Hong Kong Baptist University</contact></creator>",
+    ],
+  );
+}
+
+/// 63e: names marked before them side by side, their company affiliations and emails below, are two authors each
+/// with theirs (review r10). Repro sectioning-frontmatter/author_prefix_marked_names_beside_company_affiliations_below.
+#[test]
+fn author_prefix_marked_names_beside_company_affiliations_below() {
+  // (each mark-led address line an e-mail of the name it spells, today's affiliation of it cut by the writer — 95c, OD
+  // #938; it was an affiliation, the writer declining)
+  assert_creators(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_prefix_marked_names_beside_company_affiliations_below.tex"
+    ),
+    &[
+      "<creator role=\"author\"><personname>Ann Able</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Google DeepMind</contact><contact name=\"Email:\u{a0}\" role=\"email\"><text font=\"typewriter\" xml:id=\"id1\">ann@google.com</text></contact></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Huawei Technologies</contact><contact name=\"Email:\u{a0}\" role=\"email\"><text font=\"typewriter\" xml:id=\"id2\">bob@huawei.com</text></contact></creator>",
+    ],
+  );
+}
+
+/// 63e (negative): a name-shaped affiliation line whose mark a name above requests (`$^{1}$Carnegie Mellon`) stays an
+/// affiliation, though a second line with that mark answers it (review r11). Repro
+/// sectioning-frontmatter/author_prefix_marked_company_affiliation_repeated_mark_line.
+#[test]
+fn author_prefix_marked_company_affiliation_repeated_mark_line() {
+  assert_creators(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_prefix_marked_company_affiliation_repeated_mark_line.tex"
+    ),
+    &[
+      "<creator role=\"author\"><personname>Ann Able</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Carnegie Mellon</contact><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">School of Computer Science</contact></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ B</contact></creator>",
+    ],
+  );
+}
+
+/// 63f: acmart's `\received` adds to one history (acmart.cls:1859-1872, "Received 20 February 2007; revised 12 March
+/// 2009; revised 3 May 2009; accepted 5 June 2009"): the first unlabelled date is received, a later unlabelled one
+/// revised, a labelled one its label — each its own date, the later ones `accumulate`. Perl's `\lx@add@date[role=received]` per call (acmart.cls.ltxml:58) cleared the
+/// earlier ones, so only the last survived, as "Received". Repro sectioning-frontmatter/acmart_received_dates_all_kept.
+#[test]
+fn acmart_received_dates_all_kept() {
+  let (log, xml) = latexml::util::test::convert_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/acmart_received_dates_all_kept.tex"
+    ),
+    Some("ar5iv.sty"),
+  );
+  assert_eq!(
+    (
+      super::perfect_kernel_batch46::error_count(&log),
+      super::perfect_kernel_batch46::warning_count(&log)
+    ),
+    (0, 0),
+    "{log}"
+  );
+  let mut dates = Vec::new();
+  let mut from = 0;
+  while let Some(at) = xml[from..].find("<date") {
+    dates.extend(latexml::util::test::xml_element(
+      &xml[from + at..],
+      "date",
+      &[],
+    ));
+    from += at + 1;
+  }
+  // acmart's own copyright date carries the year of the run
+  dates.retain(|date| !date.contains("role=\"copyright\""));
+  assert_eq!(
+    dates,
+    [
+      "<date name=\"Received\u{a0}\" role=\"received\">20 February 2007</date>",
+      "<date name=\"revised\u{a0}\" role=\"revised\">12 March 2009</date>",
+      "<date name=\"revised\u{a0}\" role=\"revised\">3 May 2009</date>",
+      "<date name=\"accepted\u{a0}\" role=\"accepted\">5 June 2009</date>",
+    ],
+    "{xml}"
+  );
+}
+
+/// 63f: initials glued to the surname they precede (`A.G.Bogdanchikov`, `Yu.M.Shatunov`) read as a name, and a
+/// `\vspace{1mm}` on the last names line is no text, so a collaboration list continued over `\\` lines stays names
+/// (hep-ex0105093: 5 creators, 38 in 63f). Repro sectioning-frontmatter/author_glued_initials_list_continues.
+#[test]
+fn author_glued_initials_list_continues() {
+  assert_creators(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_glued_initials_list_continues.tex"
+    ),
+    &[
+      "<creator role=\"author\"><personname>G.N.Abramov</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Budker Institute of Nuclear Physics</contact><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">630090, Novosibirsk, Russia</contact></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>M.N.Achasov</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Budker Institute of Nuclear Physics</contact><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">630090, Novosibirsk, Russia</contact></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>A.G.Bogdanchikov</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Budker Institute of Nuclear Physics</contact><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">630090, Novosibirsk, Russia</contact></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Yu.M.Shatunov</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Budker Institute of Nuclear Physics</contact><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">630090, Novosibirsk, Russia</contact></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>A.V.Vasiljev</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Budker Institute of Nuclear Physics</contact><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">630090, Novosibirsk, Russia</contact></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Yu.S.Velikzhanin</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Budker Institute of Nuclear Physics</contact><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">630090, Novosibirsk, Russia</contact></creator>",
+    ],
+  );
+}
+
+/// 63f: the period of an initial or of a suffix written with one ends the name (`Sridhar K.`, hep-ph9306209; `John
+/// Smith Jr.`); Perl's personname clean-up strips every trailing non-word character (KNOWN_PERL_ERRORS #523). A
+/// two-letter last word is a surname as often as an initial (`Wei Li.`): its period goes, as Perl's. Repro
+/// sectioning-frontmatter/author_name_ending_in_an_initial_keeps_its_period.
+#[test]
+fn author_name_ending_in_an_initial_keeps_its_period() {
+  assert_creators(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_name_ending_in_an_initial_keeps_its_period.tex"
+    ),
+    &[
+      "<creator role=\"author\"><personname>Sridhar K.</personname></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>John Smith Jr.</personname></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Wei Li</personname></creator>",
+    ],
+  );
+}
+
+/// 63f (negative): a glued place abbreviation (`St.Petersburg`) under an unfinished names list is no name: St., Mt., Ft.
+/// are no initials (review r1). Repro sectioning-frontmatter/author_glued_place_abbreviation_stays_affiliation.
+#[test]
+fn author_glued_place_abbreviation_stays_affiliation() {
+  assert_creators(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_glued_place_abbreviation_stays_affiliation.tex"
+    ),
+    &[
+      "<creator role=\"author\"><personname>Ivan Petrov</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">St.Petersburg</contact></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Oleg Sidorov</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">St.Petersburg</contact></creator>",
+    ],
+  );
+}
+
+/// 63g: svjour3's EPJ style links an author to its institutes and notes by key (svepjc3.clo:317-410):
+/// `\thanksref{addr2,e1}` requests them, an institute's `\label{addr2}` labels its affiliation, a `\thankstext{e1}`
+/// is a thanks contact so labelled; printed as the keys, they leaked and nothing linked (2304.02920). Repro
+/// sectioning-frontmatter/svjour3_epj_thanksref_links_institutes_and_notes.
+#[test]
+fn svjour3_epj_thanksref_links_institutes_and_notes() {
+  assert_creators(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/svjour3_epj_thanksref_links_institutes_and_notes.tex"
+    ),
+    &[
+      "<creator role=\"author\"><personname>Ann Able</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A</contact></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker</personname><note class=\"ltx_note_frontmatter ltx_thanks_correspondence\" role=\"thanks\" xml:id=\"id1\">Corresponding author: bob@b.org</note><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ B</contact></creator>",
+    ],
+  );
+}
+
+/// 63g: an EPJ title's `\thanksref` gets its `\thankstext` as a note (a note is valid in a title, a contact is not),
+/// an institute's own `\thanksref` leaves the institute's label alone — its note, cited by no author, kept — and both
+/// authors keep Univ A (review r1). Repro sectioning-frontmatter/svjour3_epj_title_and_institute_notes.
+#[test]
+fn svjour3_epj_title_and_institute_notes() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/svjour3_epj_title_and_institute_notes.tex"
+  );
+  let (log, xml) = latexml::util::test::convert_with(tex, Some("ar5iv.sty"));
+  assert_eq!(
+    (
+      super::perfect_kernel_batch46::error_count(&log),
+      super::perfect_kernel_batch46::warning_count(&log)
+    ),
+    (0, 0),
+    "{log}"
+  );
+  let title = xml
+    .find("<title")
+    .and_then(|at| latexml::util::test::xml_element(&xml[at..], "title", &[]));
+  assert_eq!(
+    title.as_deref(),
+    Some(
+      "<title>My Title<note class=\"ltx_note_frontmatter ltx_thanks_funding\" role=\"thanks\" xml:id=\"id1\">Grant note XYZ.</note></title>"
+    ),
+    "{xml}"
+  );
+  let found = super::perfect_kernel_batch61::creators_of(&xml);
+  assert!(
+    found
+      == [
+        "<creator role=\"author\"><personname>Ann Able</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A </contact></creator>",
+        "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A </contact></creator>",
+        "<creator role=\"author\"><note class=\"ltx_note_frontmatter ltx_thanks_note\" role=\"thanks\" xml:id=\"id2\">Visiting from Z.</note></creator>",
+      ],
+    "creators differ\n--- found:\n{}\n--- xml:\n{xml}",
+    found.join("\n")
+  );
+}
+
+/// The title element and the creators of `tex`, which converts with no error or warning.
+fn assert_title_and_creators(tex: &str, title: &str, creators: &[&str]) {
+  let (log, xml) = latexml::util::test::convert_with(tex, Some("ar5iv.sty"));
+  assert_eq!(
+    (
+      super::perfect_kernel_batch46::error_count(&log),
+      super::perfect_kernel_batch46::warning_count(&log)
+    ),
+    (0, 0),
+    "{log}"
+  );
+  let found_title = xml
+    .find("<title")
+    .and_then(|at| latexml::util::test::xml_element(&xml[at..], "title", &[]));
+  assert_eq!(found_title.as_deref(), Some(title), "{xml}");
+  let found = super::perfect_kernel_batch61::creators_of(&xml);
+  assert!(
+    found == creators,
+    "creators differ\n--- found:\n{}\n--- xml:\n{xml}",
+    found.join("\n")
+  );
+}
+
+/// 63h: the AAS title footnote (`\title{..\altaffilmark{1}}` answered by `\altaffiltext{1}`; 0704.0478, 1001.2402) is
+/// the title's note: a title holds no contact (title_model), so the relocated annotation becomes the frontmatter thanks
+/// note `\lx@add@thanks` makes. An author's `\altaffiltext` stays its contact. Repro
+/// sectioning-frontmatter/aastex_title_altaffilmark_is_a_note.
+#[test]
+fn aastex_title_altaffilmark_is_a_note() {
+  assert_title_and_creators(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/aastex_title_altaffilmark_is_a_note.tex"
+    ),
+    "<title>Velocity Dispersions in M82<note class=\"ltx_note_frontmatter ltx_thanks_note\" role=\"thanks\" xml:id=\"id1\">Based on observations made at the Keck Observatory.</note></title>",
+    &[
+      "<creator role=\"author\"><personname>Nate Able</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A</contact><contact name=\"Alternate Affiliation:\u{a0}\" role=\"altaffiliation\">Hubble Fellow.</contact></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>James Baker</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A</contact></creator>",
+    ],
+  );
+}
+
+/// 63h: elsarticle's `\tnoteref{t1}` in `\title` and its `\tnotetext[t1]{..}` (the Elsevier template's title note) give
+/// the title a frontmatter note, as for aastex. Repro sectioning-frontmatter/elsarticle_title_tnote_is_a_note.
+#[test]
+fn elsarticle_title_tnote_is_a_note() {
+  assert_title_and_creators(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/elsarticle_title_tnote_is_a_note.tex"
+    ),
+    "<title>My Title<note class=\"ltx_note_frontmatter ltx_thanks_funding\" role=\"thanks\" xml:id=\"id1\">Funded by grant XYZ.</note></title>",
+    &[
+      "<creator role=\"author\"><personname>Ann Able</personname><contact name=\"Email:\u{a0}\" role=\"email\"><text font=\"typewriter\" xml:id=\"id2\">ann@a.org</text></contact><contact name=\"Corresponding author:\u{a0}\" role=\"correspondent\">Corresponding author.</contact><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A</contact></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker</personname><contact name=\"Note:\u{a0}\" role=\"note\">Visiting from Z.</contact><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ B</contact></creator>",
+    ],
+  );
+}
+
+/// 63h: one unlabelled svjour3 `\institute` under two authors is shared by both, as the PDF prints it once below them:
+/// the trailing creator of OXIDIZED_DESIGN_DIVERGENCES #159, not the last author's alone (63g review r2). Repro
+/// sectioning-frontmatter/svjour3_epj_one_institute_shared.
+#[test]
+fn svjour3_epj_one_institute_shared() {
+  assert_creators(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/svjour3_epj_one_institute_shared.tex"
+    ),
+    &[
+      "<creator role=\"author\"><personname>Ann Able</personname></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker</personname></creator>",
+      "<creator role=\"author\"><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A</contact></creator>",
+    ],
+  );
+}
+
+/// 63h: one author and an unlabelled svjour3 `\institute`: the institute and its e-mail are that author's (1709.03696,
+/// 2003.07473; Perl alike), not a name-less creator's (OXIDIZED_DESIGN_DIVERGENCES #159). Repro
+/// sectioning-frontmatter/svjour3_sole_author_keeps_the_institute.
+#[test]
+fn svjour3_sole_author_keeps_the_institute() {
+  assert_creators(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/svjour3_sole_author_keeps_the_institute.tex"
+    ),
+    &[
+      "<creator role=\"author\"><personname>Ann Able</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A</contact><contact name=\"E-mail: \" role=\"email\">ann@a.org</contact></creator>",
+    ],
+  );
+}
+
+/// 63h: the same for llncs, whose `\institute` without `\inst` went to a name-less creator even under one author (#159).
+/// Since 85b its e-mail is a line under the names (#901; the old row split `share_row_contacts`, deleted in P27b), which
+/// takes the space before it.
+/// Repro sectioning-frontmatter/llncs_sole_author_keeps_the_institute.
+#[test]
+fn llncs_sole_author_keeps_the_institute() {
+  assert_creators(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/llncs_sole_author_keeps_the_institute.tex"
+    ),
+    &[
+      "<creator role=\"author\"><personname>Ann Able</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A</contact><contact name=\"E-mail\u{a0}\" role=\"email\"><text font=\"typewriter\" xml:id=\"id1\">ann@a.org</text></contact></creator>",
+    ],
+  );
+}
+
+/// 63h: a svjour3 `\and` piece holding "A and B" is two people (1406.5162, 2105.12728), split as llncs splits its pieces.
+/// Repro sectioning-frontmatter/author_svjour3_and_piece_splits.
+#[test]
+fn author_svjour3_and_piece_splits() {
+  assert_creators(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_svjour3_and_piece_splits.tex"
+    ),
+    &[
+      "<creator role=\"author\"><personname>Ann Able</personname></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker</personname></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Carl Cole</personname></creator>",
+      "<creator role=\"author\"><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A</contact></creator>",
+    ],
+  );
+}
+
+/// 63h: an elsarticle `\fntext[t1]` no `\fnref` cites does not reach the title's `\tnoteref{t1}` by the prefix-stripped
+/// label fallback, which serves creators only; it is kept on the sole author, with the orphan warning (63h review r1,
+/// r2).
+/// Repro sectioning-frontmatter/elsarticle_orphan_fntext_stays_off_the_title.
+#[test]
+fn elsarticle_orphan_fntext_stays_off_the_title() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/elsarticle_orphan_fntext_stays_off_the_title.tex"
+  );
+  let (log, xml) = latexml::util::test::convert_with(tex, Some("ar5iv.sty"));
+  assert_eq!(
+    (
+      super::perfect_kernel_batch46::error_count(&log),
+      super::perfect_kernel_batch46::warning_count(&log)
+    ),
+    (0, 1),
+    "{log}"
+  );
+  assert!(
+    log.contains("Orphaned frontmatter annotation couldn't find target for label=fn:t1"),
+    "{log}"
+  );
+  let title = xml
+    .find("<title")
+    .and_then(|at| latexml::util::test::xml_element(&xml[at..], "title", &[]));
+  assert_eq!(
+    title.as_deref(),
+    Some(
+      "<title>My Title<note class=\"ltx_note_frontmatter ltx_thanks_funding\" role=\"thanks\" xml:id=\"id1\">Funded by grant XYZ.</note></title>"
+    ),
+    "{xml}"
+  );
+  let found = super::perfect_kernel_batch61::creators_of(&xml);
+  assert!(
+    found
+      == [
+        "<creator role=\"author\"><personname>Ann Able</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A</contact><contact name=\"Note:\u{a0}\" role=\"note\">Visiting from Z.</contact></creator>",
+      ],
+    "creators differ\n--- found:\n{}\n--- xml:\n{xml}",
+    found.join("\n")
+  );
+}
+
+/// 63h: svjour3 `\at` institutes go to the author whose surname each names, in any order (`B. Baker \at Univ B \and
+/// A. Able \at Univ A`; the abbreviated names miss the exact match; 63h review r2). Repro
+/// sectioning-frontmatter/svjour3_at_institutes_link_by_surname_in_any_order.
+#[test]
+fn svjour3_at_institutes_link_by_surname_in_any_order() {
+  assert_creators(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/svjour3_at_institutes_link_by_surname_in_any_order.tex"
+    ),
+    &[
+      "<creator role=\"author\"><personname>Ann Able</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A</contact></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ B</contact></creator>",
+    ],
+  );
+}
+
+/// 63h: a name-only svjour3 institute piece (`\institute{A. Able \and B. Baker \at Univ A}`; 1406.4834, 1603.00632,
+/// 1709.00485, 2311.02489, 2208.03119) pairs nothing by position: the institute stays shared, as at 63g (63h review r2).
+/// The name-only piece "A. Able" pinned as a shared affiliation (at 63g it sat on the last author) is the known residual of
+/// RED svjour3_name_only_piece_shares_the_next_institute: turning that green updates this guard. Since 97e (sv_support
+/// written) the `\at` piece is Bob Baker's, the institute's e-mail Ann Able's, whom it spells; the name-only piece stays
+/// the block's (Ann Able's Univ A, pdflatex's "A. Able · B. Baker" over "Univ A", is the RED residual's).
+/// Repro sectioning-frontmatter/svjour3_name_only_piece_keeps_the_institute_shared.
+#[test]
+fn svjour3_name_only_piece_keeps_the_institute_shared() {
+  assert_creators(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/svjour3_name_only_piece_keeps_the_institute_shared.tex"
+    ),
+    &[
+      "<creator role=\"author\"><personname>Ann Able</personname><contact name=\"E-mail: \" role=\"email\">ann@a.org</contact></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A</contact></creator>",
+      "<creator role=\"author\"><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">A. Able</contact></creator>",
+    ],
+  );
+}
+
+/// 63h: lettered elsarticle addresses no author cites are no numbering to pair by: both stay shared (63h review r2).
+/// Repro sectioning-frontmatter/elsarticle_lettered_addresses_no_one_cites_stay_shared.
+#[test]
+fn elsarticle_lettered_addresses_no_one_cites_stay_shared() {
+  assert_creators(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/elsarticle_lettered_addresses_no_one_cites_stay_shared.tex"
+    ),
+    &[
+      "<creator role=\"author\"><personname>Ann Able</personname></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker</personname></creator>",
+      "<creator role=\"author\"><contact name=\"Address:\u{a0}\" role=\"address\">Univ A</contact><contact name=\"Address:\u{a0}\" role=\"address\">Univ B</contact></creator>",
+    ],
+  );
+}
+
+/// 63h: an svjour3 `\at` piece naming several authors (`Olivier Augereau, Koichi Kise, and Motoi Iwata \at …`,
+/// 1811.03214; 1001.2544) is every one of theirs; since 97e (sv_support written) the piece's e-mail is Carl Cole's, whom
+/// it spells, no longer the block's. Repro sectioning-frontmatter/svjour3_at_piece_naming_several_authors.
+#[test]
+fn svjour3_at_piece_naming_several_authors() {
+  assert_creators(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/svjour3_at_piece_naming_several_authors.tex"
+    ),
+    &[
+      "<creator role=\"author\"><personname>Ann Able</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A</contact></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ B</contact></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Carl Cole</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ B</contact><contact name=\"E-mail: \" role=\"email\">carl@b.org</contact></creator>",
+    ],
+  );
+}
+
+/// 63i: revtex authors all first, then `$^{a}$`-marked `\affiliation`s (2011.01984, 2301.08449): each affiliation is
+/// the authors' whose names show its mark, not every author's (revtex's group rule). Repro
+/// sectioning-frontmatter/revtex_marked_affiliations_link_by_mark.
+#[test]
+fn revtex_marked_affiliations_link_by_mark() {
+  // (P4c: the lists' printed marks shown in the pins below, as pdflatex prints them — P4S Q1)
+  // (the corresponding author's address Ann's, which it spells — FIDELITY_CHARTER §4, not the last author's, 82x)
+  assert_creators(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/revtex_marked_affiliations_link_by_mark.tex"
+    ),
+    &[
+      "<creator role=\"author\"><personname>Ann Able<sup xml:id=\"id1\"><text font=\"italic\" xml:id=\"id1.1\">a</text></sup></personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id2\"><text font=\"italic\" xml:id=\"id2.1\">a</text></sup>Univ A</contact><contact name=\"Email:\u{a0}\" role=\"email\">Corresponding author: ann@a.org</contact></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker<sup xml:id=\"id3\"><text font=\"italic\" xml:id=\"id3.1\">b</text></sup></personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id4\"><text font=\"italic\" xml:id=\"id4.1\">b</text></sup>Univ B</contact></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Cat Cole<sup xml:id=\"id5\"><text font=\"italic\" xml:id=\"id5.1\">a</text></sup></personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id6\"><text font=\"italic\" xml:id=\"id6.1\">a</text></sup>Univ A</contact></creator>",
+    ],
+  );
+}
+
+/// 63i: svjour3 marked authors and institutes listed out of order link by mark (63h review r1). Repro
+/// sectioning-frontmatter/svjour3_marked_institutes_link_by_mark.
+#[test]
+fn svjour3_marked_institutes_link_by_mark() {
+  // (P4c: the lists' printed marks shown in the pins below, as pdflatex prints them — P4S Q1)
+  assert_creators(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/svjour3_marked_institutes_link_by_mark.tex"
+    ),
+    &[
+      "<creator role=\"author\"><personname>Ann Able<sup xml:id=\"id1\"><text font=\"italic\" xml:id=\"id1.1\">1</text></sup></personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id2\"><text font=\"italic\" xml:id=\"id2.1\">1</text></sup>Univ A</contact></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker<sup xml:id=\"id3\"><text font=\"italic\" xml:id=\"id3.1\">2</text></sup></personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id4\"><text font=\"italic\" xml:id=\"id4.1\">2</text></sup>Univ B</contact></creator>",
+    ],
+  );
+}
+
+/// 63i: author marks link institutes only where every mark is answered: one `\institute` whose lines carry numbers
+/// (`{1} Univ A \\ {2} Univ B`, aa astro-ph0305539) stays shared, not the first author's by its `affiliation:1`. Repro
+/// sectioning-frontmatter/institute_with_numbered_lines_is_no_marked_list.
+#[test]
+fn institute_with_numbered_lines_is_no_marked_list() {
+  assert_creators(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/institute_with_numbered_lines_is_no_marked_list.tex"
+    ),
+    &[
+      "<creator role=\"author\"><personname>Ann Able<sup xml:id=\"id1\"><text font=\"italic\" xml:id=\"id1.1\">1,2</text></sup></personname></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker<sup xml:id=\"id2\"><text font=\"italic\" xml:id=\"id2.1\">2</text></sup></personname></creator>",
+      "<creator role=\"author\"><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">1 Univ A, City A<break/>2 Univ B, City B</contact></creator>",
+    ],
+  );
+}
+
+/// 63i: an interleaved revtex group whose author shows `$^{2,\dagger}$` keeps its affiliation (the group rule; 63i review r1). Repro
+/// sectioning-frontmatter/revtex_interleaved_mark_with_symbol_keeps_the_group_rule.
+#[test]
+fn revtex_interleaved_mark_with_symbol_keeps_the_group_rule() {
+  assert_creators(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/revtex_interleaved_mark_with_symbol_keeps_the_group_rule.tex"
+    ),
+    &[
+      "<creator role=\"author\"><personname>Ann Able<sup xml:id=\"id1\"><text font=\"italic\" xml:id=\"id1.1\">1</text></sup></personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id2\"><text font=\"italic\" xml:id=\"id2.1\">1</text></sup>Univ A</contact></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker<sup xml:id=\"id3\"><text font=\"italic\" xml:id=\"id3.1\">2,†</text></sup></personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id4\"><text font=\"italic\" xml:id=\"id4.1\">2</text></sup>Univ B</contact></creator>",
+    ],
+  );
+}
+
+/// 63i: interleaved revtex groups keep the group rule though one author mark is answered by none (63i review r1). Repro
+/// sectioning-frontmatter/revtex_interleaved_group_with_unanswered_mark.
+#[test]
+fn revtex_interleaved_group_with_unanswered_mark() {
+  assert_creators(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/revtex_interleaved_group_with_unanswered_mark.tex"
+    ),
+    &[
+      "<creator role=\"author\"><personname>Ann Able<sup xml:id=\"id1\"><text font=\"italic\" xml:id=\"id1.1\">1</text></sup></personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id2\"><text font=\"italic\" xml:id=\"id2.1\">1</text></sup>Univ A</contact></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker<sup xml:id=\"id3\"><text font=\"italic\" xml:id=\"id3.1\">1,5</text></sup></personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id4\"><text font=\"italic\" xml:id=\"id4.1\">1</text></sup>Univ A</contact></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Cat Cole<sup xml:id=\"id5\"><text font=\"italic\" xml:id=\"id5.1\">2</text></sup></personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id6\"><text font=\"italic\" xml:id=\"id6.1\">2</text></sup>Univ B</contact></creator>",
+    ],
+  );
+}
+
+/// 63i: a revtex `\affiliation` with a superscript inside it (`Laboratory for $^{3}$He`) is no marked line (63i review r1). Repro
+/// sectioning-frontmatter/revtex_affiliation_with_inner_superscript_is_no_marked_line.
+#[test]
+fn revtex_affiliation_with_inner_superscript_is_no_marked_line() {
+  assert_creators(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/revtex_affiliation_with_inner_superscript_is_no_marked_line.tex"
+    ),
+    &[
+      "<creator role=\"author\"><personname>Ann Able<sup xml:id=\"id1\"><text font=\"italic\" xml:id=\"id1.1\">1</text></sup></personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id2\"><text font=\"italic\" xml:id=\"id2.1\">1</text></sup>Univ A</contact></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker<sup xml:id=\"id3\"><text font=\"italic\" xml:id=\"id3.1\">2</text></sup></personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Laboratory for <sup xml:id=\"id4\"><text font=\"italic\" xml:id=\"id4.1\">3</text></sup>He Physics, Univ B</contact></creator>",
+    ],
+  );
+}
+
+/// 63i: revtex authors first, one marked `$^{b,\dagger}$`, link to their marked affiliations by the letter (63i review r1). Repro
+/// sectioning-frontmatter/revtex_marked_affiliations_with_symbol_marks_link_by_mark.
+#[test]
+fn revtex_marked_affiliations_with_symbol_marks_link_by_mark() {
+  // (P4c: the lists' printed marks shown in the pins below, as pdflatex prints them — P4S Q1)
+  assert_creators(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/revtex_marked_affiliations_with_symbol_marks_link_by_mark.tex"
+    ),
+    &[
+      "<creator role=\"author\"><personname>Ann Able<sup xml:id=\"id1\"><text font=\"italic\" xml:id=\"id1.1\">a</text></sup></personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id2\"><text font=\"italic\" xml:id=\"id2.1\">a</text></sup>Univ A</contact></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker<sup xml:id=\"id3\"><text font=\"italic\" xml:id=\"id3.1\">b,†</text></sup></personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id4\"><text font=\"italic\" xml:id=\"id4.1\">b</text></sup>Univ B</contact></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Cat Cole<sup xml:id=\"id5\"><text font=\"italic\" xml:id=\"id5.1\">a</text></sup></personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id6\"><text font=\"italic\" xml:id=\"id6.1\">a</text></sup>Univ A</contact></creator>",
+    ],
+  );
+}
+
+/// 63i: svjour3 marked institute lines link by mark though one carries its own `\thanksref` (63i review r1). Repro
+/// sectioning-frontmatter/svjour3_marked_institutes_with_thanksref_link_by_mark.
+#[test]
+fn svjour3_marked_institutes_with_thanksref_link_by_mark() {
+  // (P4c: the lists' printed marks shown in the pins below, as pdflatex prints them — P4S Q1)
+  assert_creators(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/svjour3_marked_institutes_with_thanksref_link_by_mark.tex"
+    ),
+    &[
+      "<creator role=\"author\"><personname>Ann Able<sup xml:id=\"id1\"><text font=\"italic\" xml:id=\"id1.1\">1</text></sup></personname><note class=\"ltx_note_frontmatter ltx_thanks_note\" role=\"thanks\" xml:id=\"id2\">e-mail: ann@a.org</note><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id3\"><text font=\"italic\" xml:id=\"id3.1\">1</text></sup>Univ A</contact></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker<sup xml:id=\"id4\"><text font=\"italic\" xml:id=\"id4.1\">2</text></sup></personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id5\"><text font=\"italic\" xml:id=\"id5.1\">2</text></sup>Univ B</contact></creator>",
+      "<creator role=\"author\"><note class=\"ltx_note_frontmatter ltx_thanks_note\" role=\"thanks\" xml:id=\"id6\">Institute note.</note></creator>",
+    ],
+  );
+}
+
+/// 63i: a `$^{\mathrm{a}}$` mark is read alike on the author and the affiliation: an interleaved group keeps the group rule (63i review r2). Repro
+/// sectioning-frontmatter/revtex_mathrm_mark_interleaved_group_keeps_the_group_rule.
+#[test]
+fn revtex_mathrm_mark_interleaved_group_keeps_the_group_rule() {
+  assert_creators(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/revtex_mathrm_mark_interleaved_group_keeps_the_group_rule.tex"
+    ),
+    &[
+      "<creator role=\"author\"><personname>Ann Able<sup xml:id=\"id1\"><text font=\"italic\" xml:id=\"id1.1\">a</text></sup></personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id2\"><text font=\"italic\" xml:id=\"id2.1\">a</text></sup>Univ A</contact></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id3\"><text font=\"italic\" xml:id=\"id3.1\">a</text></sup>Univ A</contact></creator>",
+    ],
+  );
+}
+
+/// 63i: revtex authors first with `$^{\mathrm{a}}$` marks link to their marked affiliations (63i review r2). Repro
+/// sectioning-frontmatter/revtex_mathrm_marked_affiliations_link_by_mark.
+#[test]
+fn revtex_mathrm_marked_affiliations_link_by_mark() {
+  // (P4c: the lists' printed marks shown in the pins below, as pdflatex prints them — P4S Q1)
+  assert_creators(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/revtex_mathrm_marked_affiliations_link_by_mark.tex"
+    ),
+    &[
+      "<creator role=\"author\"><personname>Ann Able<sup xml:id=\"id1\"><text font=\"italic\" xml:id=\"id1.1\">a</text></sup></personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id2\"><text font=\"italic\" xml:id=\"id2.1\">a</text></sup>Univ A</contact></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker<sup xml:id=\"id3\"><text font=\"italic\" xml:id=\"id3.1\">b</text></sup></personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id4\"><text font=\"italic\" xml:id=\"id4.1\">b</text></sup>Univ B</contact></creator>",
+    ],
+  );
+}
+
+/// 63i: `\textsuperscript` marks count as `^` ones in the group check: an interleaved group keeps the group rule (63i review r2). Repro
+/// sectioning-frontmatter/revtex_textsuperscript_interleaved_group_keeps_the_group_rule.
+#[test]
+fn revtex_textsuperscript_interleaved_group_keeps_the_group_rule() {
+  assert_creators(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/revtex_textsuperscript_interleaved_group_keeps_the_group_rule.tex"
+    ),
+    &[
+      "<creator role=\"author\"><personname>Ann Able<sup xml:id=\"id1\">1</sup></personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id2\">1</sup>Univ A</contact></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id3\">1</sup>Univ A</contact></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Cat Cole<sup xml:id=\"id4\">2</sup></personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id5\">2</sup>Univ B</contact></creator>",
+    ],
+  );
+}
+
+/// 63i: an interleaved group keeps its affiliation though no author shows its mark (63i review r2). Repro
+/// sectioning-frontmatter/revtex_interleaved_typo_mark_keeps_the_group_rule.
+#[test]
+fn revtex_interleaved_typo_mark_keeps_the_group_rule() {
+  assert_creators(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/revtex_interleaved_typo_mark_keeps_the_group_rule.tex"
+    ),
+    &[
+      "<creator role=\"author\"><personname>Ann Able<sup xml:id=\"id1\"><text font=\"italic\" xml:id=\"id1.1\">1</text></sup></personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id2\"><text font=\"italic\" xml:id=\"id2.1\">1</text></sup>Univ A</contact></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker<sup xml:id=\"id3\"><text font=\"italic\" xml:id=\"id3.1\">1</text></sup></personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id4\"><text font=\"italic\" xml:id=\"id4.1\">1</text></sup>Univ A</contact></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Cat Cole<sup xml:id=\"id5\"><text font=\"italic\" xml:id=\"id5.1\">2</text></sup></personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id6\"><text font=\"italic\" xml:id=\"id6.1\">3</text></sup>Univ B</contact></creator>",
+    ],
+  );
+}
+
+/// 63j: algorithmic's `\REQUIRE`/`\ENSURE` (`\item[\algorithmicrequire]`, algorithmic.sty:155) tag their lines with
+/// their labels ("Input:" as 2201.01230 renames it), not the line counter's "0:". Repro
+/// list-structure/algorithmic_labelled_item_shows_its_label.
+#[test]
+fn algorithmic_labelled_item_shows_its_label() {
+  let (log, xml) = latexml::util::test::convert_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/list-structure/algorithmic_labelled_item_shows_its_label.tex"
+    ),
+    None,
+  );
+  assert_eq!(
+    (
+      super::perfect_kernel_batch46::error_count(&log),
+      super::perfect_kernel_batch46::warning_count(&log)
+    ),
+    (0, 0),
+    "{log}"
+  );
+  let listing = xml
+    .find("<listing ")
+    .and_then(|at| latexml::util::test::xml_element(&xml[at..], "listing", &[]));
+  assert_eq!(
+    listing.as_deref(),
+    Some(
+      "<listing framed=\"topbottom\"><listingline xml:id=\"alg1.l0\"><tags><tag><text font=\"bold\">Input:</text></tag></tags>\u{2002}the data</listingline><listingline xml:id=\"alg1.l0a\"><tags><tag><text font=\"bold\">Ensure:</text></tag></tags>\u{2002}the model</listingline><listingline xml:id=\"alg1.l1\"><tags><tag><text fontsize=\"80%\">1:</text></tag><tag role=\"refnum\">1</tag></tags>\u{2002}x</listingline></listing>"
+    ),
+    "{xml}"
+  );
+}
+
+/// The `<tags>` of the equation carrying `label` in `xml`.
+fn tags_of_labelled_equation(xml: &str, label: &str) -> Option<String> {
+  let at = xml.find(&format!("<equation labels=\"{label}\""))?;
+  let eq = &xml[at..];
+  let tags = eq.find("<tags>")?;
+  latexml::util::test::xml_element(&eq[tags..], "tags", &[])
+}
+
+/// 63j: an eqnarray row holding only `\label` keeps its number and label (latex.ltx:15795 numbers it; 1011.4399,
+/// hep-th9412215, 1305.3072): the last row's (1) joins the unnumbered equation above, a middle one's (2) stands alone.
+/// Repro alignment/eqnarray_empty_labelled_row_keeps_number.
+#[test]
+fn eqnarray_empty_labelled_row_keeps_number() {
+  let (log, xml) = latexml::util::test::convert_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/alignment/eqnarray_empty_labelled_row_keeps_number.tex"
+    ),
+    None,
+  );
+  assert_eq!(
+    (
+      super::perfect_kernel_batch46::error_count(&log),
+      super::perfect_kernel_batch46::warning_count(&log)
+    ),
+    (0, 0),
+    "{log}"
+  );
+  assert_eq!(
+    (
+      tags_of_labelled_equation(&xml, "LABEL:last").as_deref(),
+      tags_of_labelled_equation(&xml, "LABEL:mid").as_deref()
+    ),
+    (
+      Some("<tags><tag>(1)</tag><tag role=\"refnum\">1</tag></tags>"),
+      Some("<tags><tag>(2)</tag><tag role=\"refnum\">2</tag></tags>")
+    ),
+    "{xml}"
+  );
+}
+
+/// 63j: amsmath's align and gather keep a row holding only `\label`, with its number (Perl amsmath.sty.ltxml:483
+/// "Numbered ones still show in print out!!!"). Repro alignment/align_empty_labelled_row_keeps_number.
+#[test]
+fn align_empty_labelled_row_keeps_number() {
+  let (log, xml) = latexml::util::test::convert_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/alignment/align_empty_labelled_row_keeps_number.tex"
+    ),
+    None,
+  );
+  assert_eq!(
+    (
+      super::perfect_kernel_batch46::error_count(&log),
+      super::perfect_kernel_batch46::warning_count(&log)
+    ),
+    (0, 0),
+    "{log}"
+  );
+  assert_eq!(
+    (
+      tags_of_labelled_equation(&xml, "LABEL:al").as_deref(),
+      tags_of_labelled_equation(&xml, "LABEL:ga").as_deref()
+    ),
+    (
+      Some("<tags><tag>(2)</tag><tag role=\"refnum\">2</tag></tags>"),
+      Some("<tags><tag>(4)</tag><tag role=\"refnum\">4</tag></tags>")
+    ),
+    "{xml}"
+  );
+}
+
+/// 63j: an author list's "and~" (the "and" tied to the last name: 2011.10474, 2408.09035, 1406.6147) separates as
+/// " and " does. Repro sectioning-frontmatter/author_and_tied_to_the_last_name_splits.
+#[test]
+fn author_and_tied_to_the_last_name_splits() {
+  assert_creators(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_and_tied_to_the_last_name_splits.tex"
+    ),
+    &[
+      "<creator role=\"author\"><personname>Ann\u{a0}Able</personname></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob\u{a0}Baker</personname></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Cat\u{a0}Cole</personname></creator>",
+    ],
+  );
+}
+
+/// 63j review: an empty row holding `\label` but no number is dropped and its label left unresolved in an align*
+/// (pdflatex "??"), while align's numbered one keeps (2). In an eqnarray the label names the counter's next value,
+/// pdflatex's 2: since 78r its row stands with that number's reference forms and no printed tag (OD #847, KPE #1106;
+/// `perfect_kernel_batch78r::eqnarray_label_with_no_numbered_row_after_it_names_the_next_number`). Repro
+/// alignment/unnumbered_empty_labelled_row_stays_unresolved.
+#[test]
+fn unnumbered_empty_labelled_row_stays_unresolved() {
+  let (log, xml) = latexml::util::test::convert_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/alignment/unnumbered_empty_labelled_row_stays_unresolved.tex"
+    ),
+    None,
+  );
+  assert_eq!(
+    (
+      super::perfect_kernel_batch46::error_count(&log),
+      super::perfect_kernel_batch46::warning_count(&log)
+    ),
+    (0, 0),
+    "{log}"
+  );
+  let labelled: Vec<&str> = xml
+    .match_indices(" labels=\"")
+    .map(|(at, attr)| {
+      let value = &xml[at + attr.len()..];
+      &value[..value.find('"').unwrap_or(0)]
+    })
+    .collect();
+  assert_eq!(
+    (
+      labelled,
+      tags_of_labelled_equation(&xml, "LABEL:un").as_deref(),
+      tags_of_labelled_equation(&xml, "LABEL:nu").as_deref()
+    ),
+    (
+      vec!["LABEL:un", "LABEL:nu"],
+      Some("<tags><tag role=\"refnum\">2</tag></tags>"),
+      Some("<tags><tag>(2)</tag><tag role=\"refnum\">2</tag></tags>")
+    ),
+    "{xml}"
+  );
+}
+
+/// 63j review: algpseudocode's `\Require`/`\Ensure` (`\item[\algorithmicrequire]`, algpseudocode.sty:78-79) tag their
+/// lines with their labels, the line counter unstepped. Repro list-structure/algpseudocode_require_shows_its_label.
+#[test]
+fn algpseudocode_require_shows_its_label() {
+  let (log, xml) = latexml::util::test::convert_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/list-structure/algpseudocode_require_shows_its_label.tex"
+    ),
+    None,
+  );
+  assert_eq!(
+    (
+      super::perfect_kernel_batch46::error_count(&log),
+      super::perfect_kernel_batch46::warning_count(&log)
+    ),
+    (0, 0),
+    "{log}"
+  );
+  let listing = xml
+    .find("<listing ")
+    .and_then(|at| latexml::util::test::xml_element(&xml[at..], "listing", &[]));
+  assert_eq!(
+    listing.as_deref(),
+    Some(
+      "<listing framed=\"topbottom\"><listingline xml:id=\"alg1.l0\"><tags><tag><text font=\"bold\">Require:</text></tag></tags>data</listingline><listingline xml:id=\"alg1.l0a\"><tags><tag><text font=\"bold\">Ensure:</text></tag></tags>out</listingline><listingline xml:id=\"alg1.l1\"><tags><tag><text fontsize=\"80%\">1:</text></tag><tag role=\"refnum\">1</tag></tags>x</listingline></listing>"
+    ),
+    "{xml}"
+  );
+}
+
+/// 63j review: algpseudocode's `\Statex` (`\item[]`, algorithmicx.sty:632) is an unnumbered line whose own text may
+/// open with "[" (`\Statex [Phase one] begins`); a braced label keeps its "]". Repro
+/// list-structure/algpseudocode_statex_keeps_its_bracket_text.
+#[test]
+fn algpseudocode_statex_keeps_its_bracket_text() {
+  let (log, xml) = latexml::util::test::convert_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/list-structure/algpseudocode_statex_keeps_its_bracket_text.tex"
+    ),
+    None,
+  );
+  assert_eq!(
+    (
+      super::perfect_kernel_batch46::error_count(&log),
+      super::perfect_kernel_batch46::warning_count(&log)
+    ),
+    (0, 0),
+    "{log}"
+  );
+  let listing = xml
+    .find("<listing")
+    .and_then(|at| latexml::util::test::xml_element(&xml[at..], "listing", &[]));
+  assert_eq!(
+    listing.as_deref(),
+    Some(
+      "<listing><listingline xml:id=\"algx1.l0\"><tags><tag><text font=\"bold\">Require:</text></tag></tags>data</listingline><listingline xml:id=\"algx1.l0a\">[Phase one] begins</listingline><listingline xml:id=\"algx1.l1\"><tags><tag><text fontsize=\"80%\">1:</text></tag><tag role=\"refnum\">1</tag></tags>x</listingline><listingline xml:id=\"algx1.l1a\"><tags><tag>a]b</tag></tags>c</listingline><listingline xml:id=\"algx1.l1b\"><tags><tag><text font=\"bold\">Ensure:</text></tag></tags>out</listingline><listingline xml:id=\"algx1.l2\"><tags><tag><text fontsize=\"80%\">2:</text></tag><tag role=\"refnum\">2</tag></tags>y</listingline></listing>"
+    ),
+    "{xml}"
+  );
+}
+
+/// 63j review: algorithmic's `\item[{a]b}]` keeps its label whole and `\item[]` is an untagged line, the line counter
+/// stepped by `\STATE` alone. Repro list-structure/algorithmic_empty_and_bracketed_item_labels.
+#[test]
+fn algorithmic_empty_and_bracketed_item_labels() {
+  let (log, xml) = latexml::util::test::convert_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/list-structure/algorithmic_empty_and_bracketed_item_labels.tex"
+    ),
+    None,
+  );
+  assert_eq!(
+    (
+      super::perfect_kernel_batch46::error_count(&log),
+      super::perfect_kernel_batch46::warning_count(&log)
+    ),
+    (0, 0),
+    "{log}"
+  );
+  let listing = xml
+    .find("<listing")
+    .and_then(|at| latexml::util::test::xml_element(&xml[at..], "listing", &[]));
+  assert_eq!(
+    listing.as_deref(),
+    Some(
+      "<listing><listingline xml:id=\"algx1.l0\"><tags><tag><text font=\"bold\">Require:</text></tag></tags>\u{2002}data</listingline><listingline xml:id=\"algx1.l1\"><tags><tag><text fontsize=\"80%\">1:</text></tag><tag role=\"refnum\">1</tag></tags>\u{2002}x</listingline><listingline xml:id=\"algx1.l1a\"><tags><tag>a]b</tag></tags>\u{2002} c</listingline><listingline xml:id=\"algx1.l1b\">\u{2002} blank</listingline><listingline xml:id=\"algx1.l2\"><tags><tag><text fontsize=\"80%\">2:</text></tag><tag role=\"refnum\">2</tag></tags>\u{2002}y</listingline></listing>"
+    ),
+    "{xml}"
+  );
+}
+
+/// Core XML of `tex` (0 errors, 0 warnings) through the post-processor's CrossRef pass, as XML (no stylesheet).
+fn post_xml(tex: &str) -> String {
+  let (log, xml) = latexml::util::test::convert_with(tex, None);
+  assert_eq!(
+    (
+      super::perfect_kernel_batch46::error_count(&log),
+      super::perfect_kernel_batch46::warning_count(&log)
+    ),
+    (0, 0),
+    "{log}"
+  );
+  latexml_core::util::logger::bind_log();
+  let opts = latexml::post::PostOptions {
+    pmml:                      true,
+    cmml:                      false,
+    keep_xmath:                false,
+    stylesheet:                None,
+    destination:               None,
+    source_directory:          None,
+    site_directory:            None,
+    search_paths:              &[],
+    default_resources:         false,
+    css_files:                 &[],
+    js_files:                  &[],
+    noinvisibletimes:          false,
+    plane1:                    true,
+    hackplane1:                false,
+    mathtex:                   false,
+    url_style:                 latexml_post::crossref::UrlStyle::File,
+    navigationtoc:             None,
+    schemadocs:                false,
+    split:                     false,
+    split_xpath:               None,
+    split_naming:              None,
+    xslt_parameters:           &[],
+    graphics_svg_threshold_kb: 0,
+    graphicimages:             false,
+    timestamp:                 None,
+    icon:                      None,
+    whatsout:                  latexml_post::extract::Whatsout::default(),
+  };
+  let out = latexml::post::run_post_processing(&xml, &opts);
+  let log = latexml_core::util::logger::flush_log();
+  assert_eq!(
+    (
+      latexml::util::test::error_count(&log),
+      super::perfect_kernel_batch46::warning_count(&log)
+    ),
+    (0, 0),
+    "POST diagnostics:\n{log}"
+  );
+  out
+}
+
+/// The `<ref>` element filled for `idref` in the post XML's table of contents.
+fn toc_ref(xml: &str, idref: &str) -> Option<String> {
+  let toc = xml.find("<toclist")?;
+  let at = toc + xml[toc..].find(&format!("<ref idref=\"{idref}\""))?;
+  latexml::util::test::xml_element(&xml[at..], "ref", &[])
+}
+
+/// 63k: a `\ref` in a section title fills the TOC entry and the tooltips that reuse the title, unlinked (Perl
+/// CrossRef.pm:882-904 `fillInTitle`; 1011.3492, 1111.3672). Repro sectioning-frontmatter/ref_in_section_title_fills_toc_and_tooltip.
+#[test]
+fn ref_in_section_title_fills_toc_and_tooltip() {
+  let xml = post_xml(include_str!(
+    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/ref_in_section_title_fills_toc_and_tooltip.tex"
+  ));
+  let see = xml
+    .find("See Section")
+    .and_then(|at| latexml::util::test::xml_element(&xml[at..], "ref", &[]));
+  assert_eq!(
+    (
+      toc_ref(&xml, "S1").as_deref(),
+      toc_ref(&xml, "S1.SS1").as_deref(),
+      see.as_deref()
+    ),
+    (
+      Some(
+        "<ref idref=\"S1\" show=\"toctitle\"><text class=\"ltx_ref_title\"><tag close=\" \">1</tag>Proof of Theorem\u{a0}<text class=\"ltx_ref_tag\">1</text></text></ref>"
+      ),
+      Some(
+        "<ref idref=\"S1.SS1\" show=\"toctitle\" title=\"In 1 Proof of Theorem 1\"><text class=\"ltx_ref_title\"><tag close=\" \">1.1</tag>Case (<text class=\"ltx_ref_tag\">1</text>) and\u{a0}(<text class=\"ltx_ref_tag\">1</text>)</text></ref>"
+      ),
+      Some(
+        "<ref idref=\"S1\" labelref=\"LABEL:sec\" title=\"1 Proof of Theorem 1\"><text class=\"ltx_ref_tag\">1</text></ref>"
+      )
+    ),
+    "{xml}"
+  );
+}
+
+/// 63k: `\nameref` shows the section's title without its number (Perl CrossRef.pm:774-777), in the text and inside
+/// another section's title, in its TOC entry (KNOWN_PERL_ERRORS #531). Repro
+/// sectioning-frontmatter/nameref_drops_the_section_number.
+#[test]
+fn nameref_drops_the_section_number() {
+  let xml = post_xml(include_str!(
+    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/nameref_drops_the_section_number.tex"
+  ));
+  let see = xml
+    .find("See <ref")
+    .and_then(|at| latexml::util::test::xml_element(&xml[at + 4..], "ref", &[]));
+  assert_eq!(
+    (see.as_deref(), toc_ref(&xml, "S3").as_deref()),
+    (
+      Some(
+        "<ref class=\"ltx_refmacro_nameref\" idref=\"S2\" labelref=\"LABEL:tgt\" show=\"title\"><text class=\"ltx_ref_title\">Target</text></ref>"
+      ),
+      Some(
+        "<ref idref=\"S3\" show=\"toctitle\"><text class=\"ltx_ref_title\"><tag close=\" \">3</tag>After <text class=\"ltx_ref_title\">Target</text></text></ref>"
+      )
+    ),
+    "{xml}"
+  );
+}
+
+/// 63k review: a display copy keeps its `xml:` attributes namespaced — the TOC's copy of a `\foreignlanguage` title
+/// was `<text lang="de">`, which the schema refuses — cloned as stored, or rebuilt around a filled `\ref`. Repro sectioning-frontmatter/toc_copy_keeps_its_language.
+#[test]
+fn toc_copy_keeps_its_language() {
+  let xml = post_xml(include_str!(
+    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/toc_copy_keeps_its_language.tex"
+  ));
+  assert_eq!(
+    (
+      toc_ref(&xml, "S1").as_deref(),
+      toc_ref(&xml, "S2").as_deref()
+    ),
+    (
+      Some(
+        "<ref idref=\"S1\" show=\"toctitle\"><text class=\"ltx_ref_title\"><tag close=\" \">1</tag><text xml:lang=\"de\">Beweis</text></text></ref>"
+      ),
+      Some(
+        "<ref idref=\"S2\" show=\"toctitle\"><text class=\"ltx_ref_title\"><tag close=\" \">2</tag><text xml:lang=\"de\">Beweis von Satz <text class=\"ltx_ref_tag\">1</text></text></text></ref>"
+      )
+    ),
+    "{xml}"
+  );
+}
+
+/// 63l: `\fnmsep` between an author's marks leaves no comma in the name once the marks become a link and a note
+/// (astro-ph0001054, astro-ph0611016). Repro sectioning-frontmatter/author_fnmsep_leaves_no_comma.
+#[test]
+fn author_fnmsep_leaves_no_comma() {
+  assert_creators(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_fnmsep_leaves_no_comma.tex"
+    ),
+    &[
+      "<creator role=\"author\"><personname>U.\u{a0}Hopp</personname><note class=\"ltx_note_frontmatter ltx_thanks_note\" role=\"thanks\" xml:id=\"id1\">Visiting astronomer</note><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">A</contact></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>D.\u{a0}Engels</personname><note class=\"ltx_note_frontmatter ltx_thanks_note\" role=\"thanks\" xml:id=\"id2\">Fellow<sup xml:id=\"id2.1\"><text font=\"italic\" xml:id=\"id2.1.1\">,</text></sup> of X</note><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">B</contact></creator>",
+    ],
+  );
+}
+
+/// 63l: `\IEEEmembership` is its author's unlabelled membership contact, the comma before it no author separator
+/// (2306.15457, 2508.00603), nor the comma at the end of a grade (2408.00327). Repro
+/// sectioning-frontmatter/ieee_membership_is_a_contact.
+#[test]
+fn ieee_membership_is_a_contact() {
+  assert_creators(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/ieee_membership_is_a_contact.tex"
+    ),
+    &[
+      "<creator role=\"author\"><personname>Yun-Chih\u{a0}Chen</personname><contact role=\"membership\">Member,\u{a0}IEEE</contact></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Yuan-Hao\u{a0}Chang</personname><contact role=\"membership\">Fellow,\u{a0}IEEE</contact></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Hong Joo Lee</personname></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Yong Man Ro</personname><contact role=\"membership\">Senior Member,\u{a0}IEEE</contact></creator>",
+    ],
+  );
+}
+
+/// 63l review: a grade whose author cannot be known — a biography heading, the body — stays dropped, as in Perl,
+/// rather than going to the author before it, each counted by a Warning (UNC: pdflatex prints it); names continued past a
+/// `\\` (2408.01902) keep theirs (63m). Repro sectioning-frontmatter/ieee_membership_outside_the_names_stays_dropped.
+#[test]
+fn ieee_membership_outside_the_names_stays_dropped() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/ieee_membership_outside_the_names_stays_dropped.tex"
+  );
+  let (log, xml) = latexml::util::test::convert_with(tex, Some("ar5iv.sty"));
+  let counts = (
+    super::perfect_kernel_batch46::error_count(&log),
+    super::perfect_kernel_batch46::warning_count(&log),
+  );
+  assert_eq!(counts, (0, 2), "{log}");
+  for grade in ["Member,~IEEE", "Stray"] {
+    let line = format!(
+      "Warning:missing_feature:IEEEmembership The membership grade '{grade}' outside the author fields is not kept"
+    );
+    assert!(log.contains(&line), "{line}\n{log}");
+  }
+  assert_eq!(super::perfect_kernel_batch61::creators_of(&xml), [
+    "<creator role=\"author\"><personname>Wenming\u{a0}Li</personname></creator>",
+    "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Xiaochun\u{a0}Ye</personname></creator>",
+    "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Dongrui\u{a0}Fan</personname><contact role=\"membership\">Senior\u{a0}Member,\u{a0}IEEE</contact></creator>",
+    "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Yuan\u{a0}Xie</personname><contact role=\"membership\">Fellow,\u{a0}IEEE</contact></creator>",
+  ]);
+}
+
+/// 63l review: grades in an `\IEEEauthorblockN` name list followed by the author's own comma (2408.01956, 2408.00368)
+/// stay with their names, the list split as before. Repro sectioning-frontmatter/ieee_membership_in_a_block_list.
+#[test]
+fn ieee_membership_in_a_block_list() {
+  assert_creators(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/ieee_membership_in_a_block_list.tex"
+    ),
+    &[
+      "<creator role=\"author\"><personname>Huizhi\u{a0}Wang</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Southeast University</contact></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Yong\u{a0}Zeng</personname><contact role=\"membership\">Senior Member, IEEE</contact><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Southeast University</contact></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Shi\u{a0}Jin</personname><contact role=\"membership\">Fellow, IEEE</contact><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Southeast University</contact></creator>",
+    ],
+  );
+}
+
+/// 63l review: a document's own `\IEEEmembership` (2408.00647 prints its grades in italics) keeps its meaning; the
+/// grades are not made contacts behind its back. Repro sectioning-frontmatter/ieee_membership_own_definition_kept.
+/// T1 (`=2`): the grades printed by the document's own macro, italic, each the name's
+/// `membership` contact, as a written grade is (106c, OXIDIZED_DESIGN_DIVERGENCES #967) — the personname the name alone.
+#[test]
+fn ieee_membership_own_definition_kept() {
+  assert_creators(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/ieee_membership_own_definition_kept.tex"
+    ),
+    &[
+      "<creator role=\"author\"><personname>Nuno C. Martins</personname><contact role=\"membership\"><text font=\"italic\" xml:id=\"id1\">Senior Member, IEEE</text></contact></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Jair Certorio</personname><contact role=\"membership\"><text font=\"italic\" xml:id=\"id2\">Student Member, IEEE</text></contact></creator>",
+    ],
+  );
+}
+
+/// 63l review: `\IEEEoverridecommandlockouts` (IEEEtran.cls:6278-6288, in the IEEE conference template) lets the grade
+/// print in conference mode, so it is the author's contact there too. Repro
+/// sectioning-frontmatter/ieee_membership_conference_override.
+#[test]
+fn ieee_membership_conference_override() {
+  assert_creators(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/ieee_membership_conference_override.tex"
+    ),
+    &[
+      "<creator role=\"author\"><personname>Ann Able</personname><contact role=\"membership\">Member,\u{a0}IEEE</contact><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ</contact></creator>",
+    ],
+  );
+}
+
+/// 63m: an affiliation line under a group of names is each name's, as LaTeX prints it under them (0911.0568's five
+/// LPT Orsay names over one line); an email still goes to the name it spells, ahead of the group's line there (the
+/// line is digested once, under the group's last name). Repro
+/// sectioning-frontmatter/author_group_affiliation_goes_to_each_name.
+#[test]
+fn author_group_affiliation_goes_to_each_name() {
+  assert_creators(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_group_affiliation_goes_to_each_name.tex"
+    ),
+    &[
+      "<creator role=\"author\"><personname>Ann Able</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Dept. of Physics, Univ. A</contact></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Dept. of Physics, Univ. A</contact><contact name=\"E-mail: \" role=\"email\"><text font=\"typewriter\" xml:id=\"id1\">bob.baker@a.edu</text></contact></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Cat Cole</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Dept. of Physics, Univ. A</contact></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Dan Doe</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ. B</contact></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Eve Elm</personname></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Fay Fox</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ. C</contact></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Gus Gray</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ. C</contact></creator>",
+    ],
+  );
+}
+
+/// 63m: IEEE names continued past a `\\` after an unfinished list are names, their grades membership contacts, and a
+/// compsoc `\IEEEcompsocitemizethanks` after the last is its note (2408.01902). Repro
+/// sectioning-frontmatter/ieee_compsoc_names_continue_past_a_break.
+#[test]
+fn ieee_compsoc_names_continue_past_a_break() {
+  assert_creators(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/ieee_compsoc_names_continue_past_a_break.tex"
+    ),
+    &[
+      "<creator role=\"author\"><personname>Ann\u{a0}Able</personname></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob\u{a0}Baker</personname><contact role=\"membership\">Member,\u{a0}IEEE</contact></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Cat\u{a0}Cole</personname></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Dan\u{a0}Doe</personname></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Eve\u{a0}Elm</personname><contact role=\"membership\">Senior\u{a0}Member,\u{a0}IEEE</contact></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Fay\u{a0}Fox</personname><contact role=\"membership\">Fellow,\u{a0}IEEE</contact><note class=\"ltx_note_frontmatter ltx_thanks_note\" role=\"thanks\" xml:id=\"id1\">A. Able, B. Baker and C. Cole are with Univ A. F. Fox is with Univ B.</note></creator>",
+    ],
+  );
+}
+
+/// 63m: a line of names joined by "&" alone is an affiliation (`Meta FAIR \& Inria Rennes`, 2402.14904); a names line
+/// is a comma list. Repro sectioning-frontmatter/author_ampersand_affiliation_line_is_not_names.
+#[test]
+fn author_ampersand_affiliation_line_is_not_names() {
+  assert_creators(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_ampersand_affiliation_line_is_not_names.tex"
+    ),
+    &[
+      "<creator role=\"author\"><personname>Ann Able</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Meta FAIR &amp; Inria Rennes</contact></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Meta FAIR</contact></creator>",
+    ],
+  );
+}
+
+/// 63m: a line of more addresses than its group has names gives each to the name it spells in any group of the
+/// author block (`\author{Rose Bohrer \and Ashe Neth\\ … \\ \texttt{\{rbohrer,aneth\}@wpi.edu}}`, 2409.18978), by the
+/// names as printed (1706.03762's `\thanks` names no one); a line of one address under one name is that name's
+/// (2409.00286). Repro
+/// sectioning-frontmatter/author_email_owner_in_another_group.
+#[test]
+fn author_email_owner_in_another_group() {
+  assert_creators(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_email_owner_in_another_group.tex"
+    ),
+    &[
+      "<creator role=\"author\"><personname>Ann Able</personname><note class=\"ltx_note_frontmatter ltx_thanks_contribution\" role=\"thanks\" xml:id=\"id1\">Equal contribution with Bob.</note><contact name=\"Email:\u{a0}\" role=\"email\"><text font=\"typewriter\" xml:id=\"id2\">aable@x.edu</text></contact></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Dept. of CS</contact><contact name=\"Email:\u{a0}\" role=\"email\"><text font=\"typewriter\" xml:id=\"id3\">bob@x.edu</text></contact></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Zed Chen</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ. Z</contact><contact name=\"Email:\u{a0}\" role=\"email\"><text font=\"typewriter\" xml:id=\"id4\">zc@z.edu</text></contact></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Chengxi Li</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ. Y</contact><contact name=\"Email:\u{a0}\" role=\"email\"><text font=\"typewriter\" xml:id=\"id5\">chengxil@y.edu</text></contact></creator>",
+    ],
+  );
+}
+
+/// 63m: a line of several brace groups of addresses (`{a, b}@x, {c, d}@y`) is the names' emails, each group's local
+/// parts taking its domain (2402.02746, 2410.19160). Repro sectioning-frontmatter/author_brace_email_groups_on_one_line.
+#[test]
+fn author_brace_email_groups_on_one_line() {
+  assert_creators(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_brace_email_groups_on_one_line.tex"
+    ),
+    &[
+      "<creator role=\"author\"><personname>Ann Able</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Dept. of CS</contact><contact name=\"Email:\u{a0}\" role=\"email\"><text font=\"typewriter\" xml:id=\"id1\">able@a.edu</text></contact></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Dept. of CS</contact><contact name=\"Email:\u{a0}\" role=\"email\"><text font=\"typewriter\" xml:id=\"id2\">baker@a.edu</text></contact></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Cat Cole</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Dept. of CS</contact><contact name=\"Email:\u{a0}\" role=\"email\"><text font=\"typewriter\" xml:id=\"id3\">cole@b.edu</text></contact></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Dan Doe</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Dept. of CS</contact><contact name=\"Email:\u{a0}\" role=\"email\"><text font=\"typewriter\" xml:id=\"id4\">dan.doe@b.edu</text></contact></creator>",
+    ],
+  );
+}
+
+/// 63m: a marked block's address line in another order than the authors is not the authors' in order (2509.10377
+/// lists one address for each author, by institution; 2406.06326): each address goes to the author it spells (77p r3,
+/// `owners_by_elimination`; was the whole line one contact of the last author), and a line that spells no one is the
+/// block's, on the shared creator (user ruling R10 2026-10-20; was one contact of the last author). Repro
+/// sectioning-frontmatter/author_email_list_out_of_author_order.
+#[test]
+fn author_email_list_out_of_author_order() {
+  assert_creators(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_email_list_out_of_author_order.tex"
+    ),
+    &[
+      "<creator role=\"author\"><personname>Ann Able</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ. A</contact><contact name=\"Email:\u{a0}\" role=\"email\"><text font=\"typewriter\" xml:id=\"id1\">able@a.edu</text></contact></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ. B</contact><contact name=\"Email:\u{a0}\" role=\"email\"><text font=\"typewriter\" xml:id=\"id2\">baker@b.edu</text></contact></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Cat Cole</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ. A</contact><contact name=\"Email:\u{a0}\" role=\"email\"><text font=\"typewriter\" xml:id=\"id3\">cole@a.edu</text></contact></creator>",
+      "<creator role=\"author\"><contact name=\"Email:\u{a0}\" role=\"email\"><text font=\"typewriter\" xml:id=\"id4\">zed@z.edu</text></contact></creator>",
+    ],
+  );
+}
+
+/// 63m: an address split out of a line of several keeps its underscore (`wu\_zhiliang`, 2509.10377). Repro
+/// sectioning-frontmatter/author_email_underscore_kept.
+#[test]
+fn author_email_underscore_kept() {
+  assert_creators(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_email_underscore_kept.tex"
+    ),
+    &[
+      "<creator role=\"author\"><personname>Ann Able</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ. A</contact><contact name=\"Email:\u{a0}\" role=\"email\"><text font=\"typewriter\" xml:id=\"id1\">ann_able@x.edu</text></contact></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ. A</contact><contact name=\"Email:\u{a0}\" role=\"email\"><text font=\"typewriter\" xml:id=\"id2\">bob@y.edu</text></contact></creator>",
+    ],
+  );
+}
+
+/// 63m: a bare word before an address is no local part (`Berlin, Germany, foo@bar.de` invents no `germany@bar.de`);
+/// the line is the names' affiliation, its unlabelled tail address (after the comma and a space) the block creator's
+/// e-mail, spelling no one (107c, OD #966 amended; was: the address inside the affiliation of both). Repro
+/// sectioning-frontmatter/author_place_before_address_is_affiliation.
+#[test]
+fn author_place_before_address_is_affiliation() {
+  assert_creators(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_place_before_address_is_affiliation.tex"
+    ),
+    &[
+      "<creator role=\"author\"><personname>Ann Able</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Berlin, Germany</contact></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Berlin, Germany</contact></creator>",
+      "<creator role=\"author\"><contact name=\"Email:\u{a0}\" role=\"email\">foo@bar.de</contact></creator>",
+    ],
+  );
+}
+
+/// 63m: a comma line of name-shaped parts under one name is its affiliation (`Jane Doe\\ Carnegie Mellon, Pittsburgh
+/// PA`); only a list of names continues (2308.07107). Repro
+/// sectioning-frontmatter/author_affiliation_comma_line_under_one_name.
+#[test]
+fn author_affiliation_comma_line_under_one_name() {
+  assert_creators(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_affiliation_comma_line_under_one_name.tex"
+    ),
+    &[
+      "<creator role=\"author\"><personname>Jane Doe</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Carnegie Mellon, Pittsburgh PA</contact></creator>",
+    ],
+  );
+}
+
+/// 63m: a line of addresses parted by a spacing macro alone (no space token between them, 2410.07147's `\nsone`) is
+/// still an email line, one contact, not welded onto the affiliation. Repro
+/// sectioning-frontmatter/author_addresses_parted_by_a_macro.
+/// T1 (`=2`): each address the e-mail of the author it spells (FIDELITY_CHARTER §4, the placement
+/// order step 2), as printed.
+#[test]
+fn author_addresses_parted_by_a_macro() {
+  assert_creators(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_addresses_parted_by_a_macro.tex"
+    ),
+    &[
+      "<creator role=\"author\"><personname>Ann Able</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ. A</contact><contact name=\"Email:\u{a0}\" role=\"email\">able@a.edu</contact></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ. A</contact><contact name=\"Email:\u{a0}\" role=\"email\">baker@a.edu</contact></creator>",
+    ],
+  );
+}
+
+/// The start tag of the first `<name …>` element of `xml`, and the whole first `<note …>…</note>` of class `class`.
+fn hf4_elements(xml: &str, name: &str) -> (String, String) {
+  let open = xml
+    .find(&format!("<{name} "))
+    .map(|at| xml[at..at + xml[at..].find('>').unwrap() + 1].to_string())
+    .unwrap_or_default();
+  let note = xml
+    .find("<note class=\"ltx_nodisplay ltx_acm_description\"")
+    .or_else(|| xml.find("<note class=\"ltx_acm_description"))
+    .map(|at| xml[at..at + xml[at..].find("</note>").unwrap() + "</note>".len()].to_string())
+    .unwrap_or_default();
+  (open, note)
+}
+
+/// 63n: a `\label` after acmart's `\Description` names the float, not the hidden description note (2403.09168: ten
+/// labels on notes; Perl the same, KNOWN_PERL_ERRORS #535). Repro captions-floats/acmart_description_label_after_names_the_float.
+#[test]
+fn acmart_description_label_after_names_the_float() {
+  let (log, xml) = latexml::util::test::convert_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/captions-floats/acmart_description_label_after_names_the_float.tex"
+    ),
+    Some("ar5iv.sty"),
+  );
+  assert_eq!(super::perfect_kernel_batch46::error_count(&log), 0, "{log}");
+  assert_eq!(
+    super::perfect_kernel_batch46::warning_count(&log),
+    0,
+    "{log}"
+  );
+  let (table, note) = hf4_elements(&xml, "table");
+  assert_eq!(
+    (table.as_str(), note.as_str()),
+    (
+      "<table aria:describedby=\"acmlabel1\" inlist=\"lot\" labels=\"LABEL:tab:x\" xml:id=\"S0.T1\">",
+      "<note class=\"ltx_nodisplay ltx_acm_description\" xml:id=\"acmlabel1\">Hidden description.</note>"
+    ),
+    "{xml}"
+  );
+}
+
+/// 63n: acmart's `\Description` digests its description, so its markup is markup in the note, not raw TeX
+/// (`\sysname{}`, 2403.09168; 2401.04997, 2304.01062, 2312.11013; Perl acmart.cls.ltxml:78 digests `{}`). Repro
+/// captions-floats/acmart_description_markup_is_digested.
+#[test]
+fn acmart_description_markup_is_digested() {
+  let (log, xml) = latexml::util::test::convert_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/captions-floats/acmart_description_markup_is_digested.tex"
+    ),
+    Some("ar5iv.sty"),
+  );
+  assert_eq!(super::perfect_kernel_batch46::error_count(&log), 0, "{log}");
+  assert_eq!(
+    super::perfect_kernel_batch46::warning_count(&log),
+    0,
+    "{log}"
+  );
+  let (table, note) = hf4_elements(&xml, "table");
+  assert_eq!(
+    (table.as_str(), note.as_str()),
+    (
+      "<table aria:describedby=\"acmlabel1\" inlist=\"lot\" xml:id=\"S0.T1\">",
+      "<note class=\"ltx_nodisplay ltx_acm_description\" xml:id=\"acmlabel1\">The table of <emph font=\"italic\" xml:id=\"acmlabel1.1\">all</emph> SysName results.</note>"
+    ),
+    "{xml}"
+  );
+}
+
+/// 63n: a display listing is as high as TeX sets it — aboveskip, a `\baselineskip` per line, belowskip — so a
+/// tcolorbox around it is too (html_feedback HF1: 230 of 290 boxed listings a line high; 2406.06469, 2402.10176;
+/// OXIDIZED_DESIGN_DIVERGENCES #462). Repro boxes-groups/tcb_listing_body_height.
+#[test]
+fn tcb_listing_body_height() {
+  let (log, xml) = latexml::util::test::convert_with(
+    include_str!("../../../tools/perfect_kernel/repros/boxes-groups/tcb_listing_body_height.tex"),
+    Some("ar5iv.sty"),
+  );
+  assert_eq!(super::perfect_kernel_batch46::error_count(&log), 0, "{log}");
+  assert_eq!(
+    super::perfect_kernel_batch46::warning_count(&log),
+    0,
+    "{log}"
+  );
+  let at = xml.find("<svg:foreignObject").expect("a foreignObject");
+  let object = &xml[at..at + xml[at..].find("</svg:foreignObject>").unwrap()];
+  assert_eq!(
+    &object[..object.find('>').unwrap() + 1],
+    "<svg:foreignObject height=\"116.23\" overflow=\"visible\" style=\"--ltx-fo-width:31.37em;--ltx-fo-height:8.4em;--ltx-fo-depth:0em;font-size:10pt;\" transform=\"matrix(1 0 0 -1 0 116.23)\" width=\"434.07\">",
+    "{xml}"
+  );
+  assert_eq!(object.matches("<listingline ").count(), 6, "{object}");
+}
+
+/// 63n: acmart's `\Description` typesets nothing, so `_ ^ & #` written plain in it are the characters they show, not
+/// errors (2502.07049 `\Description{Complaint_Loss}`, 2404.00573, 2503.04114). Repro
+/// captions-floats/acmart_description_unescaped_characters.
+#[test]
+fn acmart_description_unescaped_characters() {
+  let (log, xml) = latexml::util::test::convert_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/captions-floats/acmart_description_unescaped_characters.tex"
+    ),
+    Some("ar5iv.sty"),
+  );
+  assert_eq!(super::perfect_kernel_batch46::error_count(&log), 0, "{log}");
+  assert_eq!(
+    super::perfect_kernel_batch46::warning_count(&log),
+    0,
+    "{log}"
+  );
+  let (_, note) = hf4_elements(&xml, "table");
+  assert_eq!(
+    note,
+    "<note class=\"ltx_nodisplay ltx_acm_description\" xml:id=\"acmlabel1\">Complaint_Loss, 5^2, A &amp; B, #1 and <Math mode=\"inline\" tex=\"x_{i}\" text=\"x _ i\" xml:id=\"acmlabel1.m1\">\n          <XMath xml:id=\"acmlabel1.m1.1\">\n            <XMApp xml:id=\"acmlabel1.m1.1.1\">\n              <XMTok role=\"SUBSCRIPTOP\" scriptpos=\"post1\"/>\n              <XMTok font=\"italic\" role=\"UNKNOWN\">x</XMTok>\n              <XMTok font=\"italic\" fontsize=\"70%\" role=\"UNKNOWN\">i</XMTok>\n            </XMApp>\n          </XMath>\n        </Math></note>",
+    "{xml}"
+  );
+}
+
+/// 63n: a comment spanning lines counts each of its lines in the listing's height (its class group stays open across
+/// them; OXIDIZED_DESIGN_DIVERGENCES #462). Repro boxes-groups/tcb_listing_comment_lines.
+#[test]
+fn tcb_listing_comment_lines() {
+  let (log, xml) = latexml::util::test::convert_with(
+    include_str!("../../../tools/perfect_kernel/repros/boxes-groups/tcb_listing_comment_lines.tex"),
+    Some("ar5iv.sty"),
+  );
+  assert_eq!(super::perfect_kernel_batch46::error_count(&log), 0, "{log}");
+  assert_eq!(
+    super::perfect_kernel_batch46::warning_count(&log),
+    0,
+    "{log}"
+  );
+  let at = xml.find("<svg:foreignObject").expect("a foreignObject");
+  let object = &xml[at..at + xml[at..].find("</svg:foreignObject>").unwrap()];
+  assert_eq!(
+    &object[..object.find('>').unwrap() + 1],
+    "<svg:foreignObject height=\"83.02\" overflow=\"visible\" style=\"--ltx-fo-width:31.37em;--ltx-fo-height:6em;--ltx-fo-depth:0em;font-size:10pt;\" transform=\"matrix(1 0 0 -1 0 83.02)\" width=\"434.07\">",
+    "{xml}"
+  );
+  assert_eq!(object.matches("<listingline ").count(), 4, "{object}");
+}
+
+/// The first whole `<name …>…</name>` (or `<name …/>`) element of `xml` whose text contains `needle`.
+fn element_with(xml: &str, name: &str, needle: &str) -> String {
+  let mut at = 0;
+  while let Some(start) = xml[at..].find(&format!("<{name} ")).map(|i| at + i) {
+    let open_end = start + xml[start..].find('>').unwrap();
+    let end = if xml.as_bytes()[open_end - 1] == b'/' {
+      open_end + 1
+    } else {
+      xml[start..]
+        .find(&format!("</{name}>"))
+        .map_or(open_end + 1, |i| start + i + name.len() + 3)
+    };
+    if xml[start..end].contains(needle) {
+      return xml[start..end].to_string();
+    }
+    at = open_end;
+  }
+  String::new()
+}
+
+/// Converts the repro `tex`, asserts 0 errors and 0 warnings, and returns the element `element_with` finds.
+fn hf3_element(tex: &str, name: &str, needle: &str) -> String {
+  let (log, xml) = latexml::util::test::convert_with(tex, Some("ar5iv.sty"));
+  assert_eq!(super::perfect_kernel_batch46::error_count(&log), 0, "{log}");
+  assert_eq!(
+    super::perfect_kernel_batch46::warning_count(&log),
+    0,
+    "{log}"
+  );
+  element_with(&xml, name, needle)
+}
+
+/// 63o: svmult's run-in headings (svmult.cls:701-710; 1805.00023). Repro sectioning-frontmatter/svmult_runinhead.
+#[test]
+fn svmult_runinhead() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/svmult_runinhead.tex"
+  );
+  assert_eq!(
+    hf3_element(tex, "paragraph", "Transiting"),
+    "<paragraph inlist=\"toc\" xml:id=\"Ch0.S0.SS0.SSS0.Px1\">\n    <title>Transiting Giant Planets</title>\n    <para xml:id=\"Ch0.S0.SS0.SSS0.Px1.p1\">\n      <p xml:id=\"Ch0.S0.SS0.SSS0.Px1.p1.1\">Some text.</p>\n    </para>\n  </paragraph>"
+  );
+  assert_eq!(
+    hf3_element(tex, "paragraph", "Dwarfs"),
+    "<paragraph inlist=\"toc\" xml:id=\"Ch0.S0.SS0.SSS0.Px2\">\n    <title>Dwarfs</title>\n    <para xml:id=\"Ch0.S0.SS0.SSS0.Px2.p1\">\n      <p xml:id=\"Ch0.S0.SS0.SSS0.Px2.p1.1\">More text.</p>\n    </para>\n  </paragraph>"
+  );
+}
+
+/// 63o: interact's `\tbl{caption}{body}` (interact.cls:493-499; 2312.11500, 2501.02233). Repro
+/// captions-floats/interact_tbl.
+#[test]
+fn interact_tbl() {
+  let tex = include_str!("../../../tools/perfect_kernel/repros/captions-floats/interact_tbl.tex");
+  assert_eq!(
+    hf3_element(tex, "table", "IMO"),
+    "<table inlist=\"lot\" xml:id=\"S0.T1\">\n    <tags>\n      <tag>Table 1</tag>\n      <tag role=\"autoref\">Table\u{a0}1<text xml:id=\"S0.T1.1\"/></tag>\n      <tag role=\"refnum\">1</tag>\n      <tag role=\"typerefnum\">Table 1</tag>\n    </tags>\n    <toccaption><tag close=\" \">1</tag>IMO definitions.</toccaption>\n    <caption><tag close=\": \">Table 1</tag>IMO definitions.</caption>\n    <tabular vattach=\"middle\" xml:id=\"S0.T1.2\">\n      <tbody>\n        <tr xml:id=\"S0.T1.2.1\">\n          <td align=\"center\" xml:id=\"S0.T1.2.1.1\">a</td>\n          <td align=\"center\" xml:id=\"S0.T1.2.1.2\">b</td>\n        </tr>\n      </tbody>\n    </tabular>\n  </table>"
+  );
+}
+
+/// 63o: IEEEtaes's `\member` is the author's membership; empty `\editor`/`\supplementary` are nothing
+/// (IEEEtaes.cls:4882, :3455-3456; 2403.15966). Repro sectioning-frontmatter/ieeetaes_member.
+#[test]
+fn ieeetaes_member() {
+  let tex =
+    include_str!("../../../tools/perfect_kernel/repros/sectioning-frontmatter/ieeetaes_member.tex");
+  let (log, xml) = latexml::util::test::convert_with(tex, Some("ar5iv.sty"));
+  assert_eq!(super::perfect_kernel_batch46::error_count(&log), 0, "{log}");
+  assert_eq!(
+    super::perfect_kernel_batch46::warning_count(&log),
+    0,
+    "{log}"
+  );
+  assert_eq!(
+    super::perfect_kernel_batch61::creators_of(&xml),
+    [
+      "<creator role=\"author\"><personname>SHASHWAT JAIN</personname><contact role=\"membership\">Student Member, IEEE</contact></creator>"
+    ],
+    "{xml}"
+  );
+  assert_eq!(
+    element_with(&xml, "note", "Recommended"),
+    "<note role=\"editor\" xml:id=\"id1\">Recommended by X.</note>",
+    "{xml}"
+  );
+  assert!(!xml.contains("role=\"supplementary\""), "{xml}");
+}
+
+/// 63o: jcappub's journal abbreviations (jcappub.sty:72-146; 2404.02153). Repro index-bib/jcappub_journal_macros.
+#[test]
+fn jcappub_journal_macros() {
+  let tex =
+    include_str!("../../../tools/perfect_kernel/repros/index-bib/jcappub_journal_macros.tex");
+  assert_eq!(
+    hf3_element(tex, "p", "See"),
+    "<p xml:id=\"p1.1\">See JCAP, ApJ, PhRvL, MNRAS.</p>"
+  );
+}
+
+/// 63o: svg's `\svgsetup`/`\svgpath` (svg.sty:810, :814-823), and the `\setsvg` options reach `\includegraphics`
+/// expanded (2401.10458, 2402.15627). Repro graphics-tikz/svg_setup_options.
+#[test]
+fn svg_setup_options() {
+  let tex =
+    include_str!("../../../tools/perfect_kernel/repros/graphics-tikz/svg_setup_options.tex");
+  assert_eq!(
+    hf3_element(tex, "graphics", "fig"),
+    "<graphics graphic=\"fig\" options=\"inkscapelatex=false,inkscapelatex=false,width=85.35826pt,keepaspectratio=true\" xml:id=\"p1.g1\"/>"
+  );
+}
+
+/// 63o: mdpi loads soul (mdpi.cls:48; `\hl`, 2312.16815) and has its reference shorthands (mdpi.cls:381-385).
+/// Repro loader/mdpi_requires_soul.
+#[test]
+fn mdpi_requires_soul() {
+  let tex = include_str!("../../../tools/perfect_kernel/repros/loader/mdpi_requires_soul.tex");
+  assert_eq!(
+    hf3_element(tex, "p", "important"),
+    "<p xml:id=\"p1.1\">This is <text backgroundcolor=\"#FFFF00\" xml:id=\"p1.1.1\">important</text> text, see Figure\u{a0}<ref labelref=\"LABEL:f1\"/>.</p>"
+  );
+}
+
+/// 63o: bmvc2k loads xspace (bmvc2k.cls:118; 2606.17384). Repro loader/bmvc2k_requires_xspace.
+#[test]
+fn bmvc2k_requires_xspace() {
+  let tex = include_str!("../../../tools/perfect_kernel/repros/loader/bmvc2k_requires_xspace.tex");
+  assert_eq!(
+    hf3_element(tex, "p", "here"),
+    "<p xml:id=\"p1.1\">BMVC is here.</p>"
+  );
+}
+
+/// The start tag of the `<picture>` in the `<figure>` of `xml`, and how many `<graphics>` that figure holds.
+fn figure_picture(xml: &str) -> (String, usize) {
+  let figure = element_with(xml, "figure", "<");
+  let picture = figure
+    .find("<picture")
+    .map(|at| figure[at..at + figure[at..].find('>').unwrap() + 1].to_string())
+    .unwrap_or_default();
+  (picture, figure.matches("<graphics").count())
+}
+
+/// 63p: `\includestandalone` of a sub-file that ships only as `.tex` inputs it, as standalone.sty's default `tex` mode
+/// does (standalone.sty:211, :1014-1093), scaled to the width asked for (html_feedback HF12: 2412.12317, 2505.19304,
+/// 2608.05283). Repro graphics-tikz/includestandalone_tex_figure.
+#[test]
+fn includestandalone_tex_figure() {
+  let (log, xml) = latexml::util::test::convert_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/graphics-tikz/includestandalone_tex_figure.tex"
+    ),
+    Some("ar5iv.sty"),
+  );
+  assert_eq!(super::perfect_kernel_batch46::error_count(&log), 0, "{log}");
+  assert_eq!(
+    super::perfect_kernel_batch46::warning_count(&log),
+    0,
+    "{log}"
+  );
+  assert_eq!(
+    figure_picture(&xml),
+    (
+      "<picture height=\"39.92\" width=\"39.92\" xml:id=\"S0.F1.pic1\">".to_string(),
+      0
+    ),
+    "{xml}"
+  );
+  // scaled to half the line width as gincltex's `\resizebox` does
+  let figure = element_with(&xml, "figure", "<");
+  let at = figure.find("<inline-block").expect("the resized box");
+  assert_eq!(
+    &figure[at..at + figure[at..].find('>').unwrap() + 1],
+    "<inline-block align=\"center\" depth=\"0.0pt\" height=\"128.1pt\" width=\"172.5pt\" xscale=\"4.43984160254303\" xtranslate=\"66.8pt\" yscale=\"4.43984160254303\" ytranslate=\"-49.6pt\" xml:id=\"S0.F1.1\">",
+    "{xml}"
+  );
+}
+
+/// 63p: the sub-file is found as a graphic is, through `\graphicspath` (2403.01643 `\graphicspath{{figs/}}` and
+/// `\includestandalone{archs/eff_att}`).
+#[test]
+fn includestandalone_through_graphicspath() {
+  let (log, xml) = latexml::util::test::convert_files_with(
+    "\\documentclass{article}\n\\usepackage{tikz}\n\\usepackage{standalone}\n\\graphicspath{{sfigs/}}\n\
+     \\begin{document}\n\\begin{figure}\\includestandalone{archs/fig}\\caption{C.}\\end{figure}\n\\end{document}\n",
+    &[(
+      "sfigs/archs/fig.tex",
+      "\\documentclass{standalone}\n\\usepackage{tikz}\n\\begin{document}\n\
+       \\begin{tikzpicture}\\draw (0,0)--(1,1);\\end{tikzpicture}\n\\end{document}\n",
+    )],
+    Some("ar5iv.sty"),
+  );
+  assert_eq!(super::perfect_kernel_batch46::error_count(&log), 0, "{log}");
+  assert_eq!(
+    super::perfect_kernel_batch46::warning_count(&log),
+    0,
+    "{log}"
+  );
+  assert_eq!(
+    figure_picture(&xml),
+    (
+      "<picture height=\"39.92\" width=\"39.92\" xml:id=\"S0.F1.pic1\">".to_string(),
+      0
+    ),
+    "{xml}"
+  );
+}
+
+/// 63p: a sub-file's preamble is skipped as standalone.sty's `\sa@documentclass` skips it (standalone.sty:602-646): its
+/// `\title`/`\author` print nothing in the figure (2504.17583), its packages and inputs are not loaded (2403.17633,
+/// 2508.06316). Repro graphics-tikz/standalone_subfile_preamble_skipped.
+#[test]
+fn standalone_subfile_preamble_skipped() {
+  let (log, xml) = latexml::util::test::convert_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/graphics-tikz/standalone_subfile_preamble_skipped.tex"
+    ),
+    Some("ar5iv.sty"),
+  );
+  assert_eq!(super::perfect_kernel_batch46::error_count(&log), 0, "{log}");
+  assert_eq!(
+    super::perfect_kernel_batch46::warning_count(&log),
+    0,
+    "{log}"
+  );
+  let (picture, graphics) = figure_picture(&xml);
+  assert_eq!(
+    (picture.as_str(), graphics),
+    (
+      "<picture class=\"ltx_centering\" height=\"39.92\" width=\"39.92\" xml:id=\"S0.F1.pic1\">",
+      0
+    ),
+    "{xml}"
+  );
+  assert!(!element_with(&xml, "figure", "<").contains("Adar"), "{xml}");
+}
+
+/// 63q: the forms a title code defines its author markup with — `\let`, a spaced `\newcommand [1] {…}`, `\def\x#1`, two
+/// `\def`s of one name (the last wins) — in force for the author and its affiliation lines (2406.07496's `\email`
+/// line), none left defined after it; a definition already in force stands; one in a group closed before `\@author`
+/// is not replayed. Repro sectioning-frontmatter/author_markup_title_code_forms.
+#[test]
+fn author_markup_title_code_forms() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_markup_title_code_forms.tex"
+  );
+  let (log, _) = latexml::util::test::convert_with(tex, Some("ar5iv.sty"));
+  assert_eq!(super::perfect_kernel_batch46::error_count(&log), 0, "{log}");
+  assert_eq!(
+    super::perfect_kernel_batch46::warning_count(&log),
+    0,
+    "{log}"
+  );
+}
+
+/// 63r: imsart's `\ead[label=e1]{x}` is the author's email (a URL with `url`), `\printead` in an address leaves it out
+/// (each address already the author's contact), `\author[A]`/`\address[A]` link by their marks and `\thanksref{l}` by
+/// its labels, `\thankstext{l}{…}` is the note it names, `\arxiv{id}` the paper's pubnote (imsart.sty:944, :965, :2003,
+/// :2088, :746, :789, :1186; 2201.11773, 2507.12447, 2201.09706, 2201.08502). Repro
+/// sectioning-frontmatter/imsart_ead_and_address_marks.
+#[test]
+fn imsart_ead_and_address_marks() {
+  let (log, xml) = latexml::util::test::convert_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/imsart_ead_and_address_marks.tex"
+    ),
+    Some("ar5iv.sty"),
+  );
+  assert_eq!(super::perfect_kernel_batch46::error_count(&log), 0, "{log}");
+  assert_eq!(
+    super::perfect_kernel_batch46::warning_count(&log),
+    0,
+    "{log}"
+  );
+  // the title's `\thanksref{T0}` note, and a document-level `\renewcommand\arxiv` in the bibliography
+  for whole in [
+    "<title>A Title<note class=\"ltx_note_frontmatter ltx_thanks_funding\" role=\"thanks\" xml:id=\"id1\">Supported by a fund.</note></title>",
+    "<bibblock> A. Author. A paper. arXiv:1234.5678.\n</bibblock>",
+  ] {
+    assert!(xml.contains(whole), "{whole}\n{xml}");
+  }
+  assert_eq!(
+    element_with(&xml, "creator", "Ann"),
+    "<creator role=\"author\">\n    <personname>Ann Able</personname>\n    <contact name=\"Email:\u{a0}\" role=\"email\"><text font=\"typewriter\" xml:id=\"id2\">ann_a@uni.edu</text></contact>\n    <contact name=\"Address:\u{a0}\" role=\"address\">Department of Mathematics, McGill University</contact>\n    <contact name=\"Thanks:\u{a0}\" role=\"thanks\">Supported by a grant.</contact>\n  </creator>"
+  );
+  assert_eq!(
+    element_with(&xml, "creator", "Bob"),
+    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Bob Baker</personname>\n    <contact name=\"Email:\u{a0}\" role=\"email\"><text font=\"typewriter\" xml:id=\"id3\">bob@rug.nl</text></contact>\n    <contact name=\"URL:\u{a0}\" role=\"url\"><text font=\"typewriter\" xml:id=\"id4\">https://bob.example.org</text></contact>\n    <contact name=\"Address:\u{a0}\" role=\"address\">Bernoulli Institute, University of Groningen</contact>\n  </creator>"
+  );
+  // a name list in one `\author`, each name an author with the address its `\thanksref` names
+  assert_eq!(
+    element_with(&xml, "creator", "Cy"),
+    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Cy Cole</personname>\n    <contact name=\"Address:\u{a0}\" role=\"address\">Cole Institute</contact>\n  </creator>"
+  );
+  assert_eq!(
+    element_with(&xml, "creator", "Di Dunn"),
+    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Di Dunn</personname>\n    <contact name=\"Address:\u{a0}\" role=\"address\">Cole Institute</contact>\n  </creator>"
+  );
+  // an `\ead` after a space is the author's email, once
+  assert_eq!(
+    element_with(&xml, "creator", "Eve"),
+    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Eve Earl</personname>\n    <contact name=\"Email:\u{a0}\" role=\"email\"><text font=\"typewriter\" xml:id=\"id5\">eve@uni.edu</text></contact>\n  </creator>"
+  );
+  assert_eq!(
+    element_with(&xml, "pubnote", "0000"),
+    "<pubnote name=\"arXiv:\u{a0}\" role=\"arxiv\">0000.00000</pubnote>"
+  );
+}
+
+/// 63s: an empty spanner over a column the pruning removes shrinks by one rather than being dropped with it, so the
+/// header row stays as wide as the data rows (2406.06521 Table 2; Perl Alignment.pm L822-855 removes the spanner). Repro
+/// alignment/empty_spanner_shrinks_with_pruned_column.
+#[test]
+fn empty_spanner_shrinks_with_pruned_column() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/alignment/empty_spanner_shrinks_with_pruned_column.tex"
+  );
+  assert_eq!(
+    hf3_element(tex, "tabular", "24"),
+    "<tabular class=\"ltx_guessed_headers\" vattach=\"middle\" xml:id=\"tab1.1\">\n      <tbody>\n        <tr xml:id=\"tab1.1.1\">\n          <td colspan=\"2\" xml:id=\"tab1.1.1.1\"/>\n          <td align=\"center\" thead=\"column\" xml:id=\"tab1.1.1.2\">24</td>\n        </tr>\n        <tr xml:id=\"tab1.1.2\">\n          <td align=\"center\" xml:id=\"tab1.1.2.1\">VolSDF</td>\n          <td xml:id=\"tab1.1.2.2\"/>\n          <td align=\"center\" xml:id=\"tab1.1.2.3\">1.14</td>\n        </tr>\n        <tr xml:id=\"tab1.1.3\">\n          <td align=\"center\" xml:id=\"tab1.1.3.1\">NeuS</td>\n          <td xml:id=\"tab1.1.3.2\"/>\n          <td align=\"center\" xml:id=\"tab1.1.3.3\">1.00</td>\n        </tr>\n      </tbody>\n    </tabular>"
+  );
+}
+
+/// 63s: an empty `\multirow` an outer `\multirow` covers spans no rows of its own, so the empty rows pruned below
+/// shrink the outer span (2507.20312 Table 2; Perl Alignment.pm L697-726 lets it re-mark the rows). Repro
+/// alignment/nested_empty_multirow_keeps_outer_span.
+#[test]
+fn nested_empty_multirow_keeps_outer_span() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/alignment/nested_empty_multirow_keeps_outer_span.tex"
+  );
+  assert_eq!(
+    hf3_element(tex, "tabular", "Nodes"),
+    "<tabular class=\"ltx_guessed_headers\" vattach=\"middle\" xml:id=\"p1.1\">\n      <tbody>\n        <tr xml:id=\"p1.1.1\">\n          <td align=\"left\" border=\"r t\" rowspan=\"3\" thead=\"column row\" xml:id=\"p1.1.1.1\"><text xml:id=\"p1.1.1.1.1\">Nodes</text></td>\n          <td align=\"left\" border=\"r t\" thead=\"column\" xml:id=\"p1.1.1.2\">xeon</td>\n          <td align=\"left\" border=\"t\" thead=\"column\" xml:id=\"p1.1.1.3\">A</td>\n        </tr>\n        <tr xml:id=\"p1.1.2\">\n          <td align=\"left\" border=\"r t\" xml:id=\"p1.1.2.1\">gpu</td>\n          <td align=\"left\" border=\"t\" xml:id=\"p1.1.2.2\">B</td>\n        </tr>\n        <tr xml:id=\"p1.1.3\">\n          <td align=\"left\" border=\"r t\" xml:id=\"p1.1.3.1\">amd</td>\n          <td align=\"left\" border=\"t\" xml:id=\"p1.1.3.2\">C</td>\n        </tr>\n        <tr xml:id=\"p1.1.4\">\n          <td align=\"left\" border=\"b r t\" thead=\"row\" xml:id=\"p1.1.4.1\">Metrics</td>\n          <td align=\"left\" border=\"b r t\" xml:id=\"p1.1.4.2\">time</td>\n          <td align=\"left\" border=\"b t\" xml:id=\"p1.1.4.3\">D</td>\n        </tr>\n      </tbody>\n    </tabular>"
+  );
+  // the witness's form, each multirow inside a `\multicolumn`
+  assert_eq!(
+    hf3_element(tex, "tabular", "Hosts"),
+    "<tabular class=\"ltx_guessed_headers\" vattach=\"middle\" xml:id=\"p2.1\">\n      <tbody>\n        <tr xml:id=\"p2.1.1\">\n          <td align=\"left\" border=\"r t\" rowspan=\"4\" thead=\"row\" xml:id=\"p2.1.1.1\"><text xml:id=\"p2.1.1.1.1\">Hosts</text></td>\n          <td align=\"left\" border=\"r t\" xml:id=\"p2.1.1.2\">xeon</td>\n          <td align=\"left\" border=\"t\" xml:id=\"p2.1.1.3\">A</td>\n        </tr>\n        <tr xml:id=\"p2.1.2\">\n          <td align=\"left\" border=\"r t\" xml:id=\"p2.1.2.1\">gpu</td>\n          <td align=\"left\" border=\"t\" xml:id=\"p2.1.2.2\">B</td>\n        </tr>\n        <tr xml:id=\"p2.1.3\">\n          <td align=\"left\" border=\"r t\" xml:id=\"p2.1.3.1\">amd</td>\n          <td align=\"left\" border=\"t\" xml:id=\"p2.1.3.2\">C</td>\n        </tr>\n        <tr xml:id=\"p2.1.4\">\n          <td border=\"t\" xml:id=\"p2.1.4.1\"/>\n          <td border=\"t\" xml:id=\"p2.1.4.2\"/>\n        </tr>\n        <tr xml:id=\"p2.1.5\">\n          <td align=\"left\" border=\"b r t\" thead=\"row\" xml:id=\"p2.1.5.1\">Metrics</td>\n          <td align=\"left\" border=\"b r t\" xml:id=\"p2.1.5.2\">time</td>\n          <td align=\"left\" border=\"b t\" xml:id=\"p2.1.5.3\">D</td>\n        </tr>\n      </tbody>\n    </tabular>"
+  );
+}
+
+/// 63s: `\lxRequireResource[content=…]` builds the resource with its content (Package.pm:3139-3167), and under ar5iv a
+/// style sheet given inline is kept, the paper's and a class option's (2606.12996). Repro
+/// loader/lx_require_resource_content.
+#[test]
+fn lx_require_resource_content() {
+  let tex =
+    include_str!("../../../tools/perfect_kernel/repros/loader/lx_require_resource_content.tex");
+  // openbib's own rules (article.cls.ltxml:35), then the paper's
+  assert_eq!(
+    hf3_element(tex, "resource", "bibblock"),
+    "<resource type=\"text/css\">.ltx_bibblock{display:block;}</resource>"
+  );
+  assert_eq!(
+    hf3_element(tex, "resource", "width"),
+    "<resource type=\"text/css\">.ltx_tabular .ltx_tabular { width: auto; }</resource>"
+  );
+}
+
+/// 63t: jmlr.cls's object references print their name and number through jmlrutils.sty's `\objectref`
+/// (jmlrutils.sty:116-165; 2507.03899, 2409.07012) rather than the label key. Repro loader/jmlr_object_refs.
+#[test]
+fn jmlr_object_refs() {
+  let tex = include_str!("../../../tools/perfect_kernel/repros/loader/jmlr_object_refs.tex");
+  assert_eq!(
+    hf3_element(tex, "p", "Table"),
+    "<p xml:id=\"p1.1\">Table\u{a0}<ref labelref=\"LABEL:tab:raw_perf\"/> and Figure\u{a0}<ref labelref=\"LABEL:tab:raw_perf\"/> and Section\u{a0}<ref labelref=\"LABEL:tab:raw_perf\"/>.</p>"
+  );
+}
+
+/// 63t: fcs.cls's `{biography}` sets the photo beside the text (fcs.cls:637-660, :684) and `{competinginterest}` heads
+/// its paragraph (fcs.cls:570-588; 2504.14891). Repro loader/fcs_biography.
+#[test]
+fn fcs_biography() {
+  let tex = include_str!("../../../tools/perfect_kernel/repros/loader/fcs_biography.tex");
+  assert_eq!(
+    hf3_element(tex, "float", "biography"),
+    "<float class=\"biography\" xml:id=\"tab1\">\n    <tabular xml:id=\"tab1.1\">\n      <tr xml:id=\"tab1.1.1\">\n        <td xml:id=\"tab1.1.1.1\"><graphics graphic=\"photo/Aoran_Gan.jpg\" options=\"width=71.13188pt,keepaspectratio=true\" xml:id=\"g1\"/></td>\n        <td xml:id=\"tab1.1.1.2\"><inline-block xml:id=\"tab1.1.1.2.1\">\n            <p xml:id=\"tab1.1.1.2.1.1\">Aoran Gan is a PhD student.</p>\n          </inline-block></td>\n      </tr>\n    </tabular>\n  </float>"
+  );
+  assert_eq!(
+    hf3_element(tex, "p", "Competing"),
+    "<p xml:id=\"p2.1\"><text font=\"bold\" xml:id=\"p2.1.1\">Competing interests</text>\u{2003}\nThe authors declare none.</p>"
+  );
+}
+
+/// 63t: newclude's `\include*{file}` inputs the file, and `\include[pre]{file}[post]` it between the two hooks
+/// (newclude.sty:743-750; 2507.19635). Repro loader/newclude_include_star.
+#[test]
+fn newclude_include_star() {
+  let tex = include_str!("../../../tools/perfect_kernel/repros/loader/newclude_include_star.tex");
+  assert_eq!(
+    hf3_element(tex, "p", "Intro"),
+    "<p xml:id=\"p1.1\">Intro text.\nPREMore text.\nPOST</p>"
+  );
+}
+
+/// 63t: biblatex's `\Citeauthor` is its capitalized `\citeauthor` (biblatex.def:2624-2625; 2410.22329). In this
+/// numeric style too it prints the name (78a, OXIDIZED_DESIGN_DIVERGENCES #786; until then the bracketed number,
+/// index-bib/biblatex_citeauthor_numeric_prints_name). Repro loader/biblatex_capital_citeauthor.
+#[test]
+fn biblatex_capital_citeauthor() {
+  let tex =
+    include_str!("../../../tools/perfect_kernel/repros/loader/biblatex_capital_citeauthor.tex");
+  assert_eq!(
+    hf3_element(tex, "p", "showed"),
+    "<p xml:id=\"p1.1\"><cite class=\"ltx_citemacro_citeauthor\"><bibref bibrefs=\"Hampe_2017\" separator=\",\" show=\"Authors\" yyseparator=\",\"/></cite> showed it.</p>"
+  );
+}
+
+/// 63t: jfm.cls builds subeqnarray in (jfm.cls:663-712; 2512.18771). Repro loader/jfm_subeqnarray.
+#[test]
+fn jfm_subeqnarray() {
+  let (log, xml) = latexml::util::test::convert_with(
+    include_str!("../../../tools/perfect_kernel/repros/loader/jfm_subeqnarray.tex"),
+    Some("ar5iv.sty"),
+  );
+  assert_eq!(super::perfect_kernel_batch46::error_count(&log), 0, "{log}");
+  assert_eq!(
+    super::perfect_kernel_batch46::warning_count(&log),
+    0,
+    "{log}"
+  );
+  // the rows numbered (0.1a), (0.1b) under the group's (0.1): jfm numbers the equations within the sections, "0.1"
+  // before the first (jfm.cls v1.27 :573, pdflatex with the selection probe's copy; 78q, KNOWN_PERL_ERRORS #1097)
+  for (row, id) in [("0.1a", "S0.E1.1.1"), ("0.1b", "S0.E1.2.1")] {
+    let tags = format!(
+      "<tags>\n            <tag>({row})</tag>\n            <tag role=\"autoref\">Equation\u{a0}{row}<text xml:id=\"{id}\"/></tag>\n            <tag role=\"refnum\">{row}</tag>\n          </tags>"
+    );
+    assert!(xml.contains(&tags), "{xml}");
+  }
+  assert_eq!(
+    element_with(&xml, "Math", "p_{x}="),
+    "<Math tex=\"\\displaystyle p_{x}=\\mu u_{zz}\" text=\"p _ x = mu * u _ (z * z)\" xml:id=\"S0.E1.1.m4\">\n              <XMath xml:id=\"S0.E1.1.m4.1\">\n                <XMApp xml:id=\"S0.E1.1.m4.1.1\">\n                  <XMTok meaning=\"equals\" role=\"RELOP\">=</XMTok>\n                  <XMApp xml:id=\"S0.E1.1.m4.1.1.2\">\n                    <XMTok role=\"SUBSCRIPTOP\" scriptpos=\"post1\"/>\n                    <XMTok font=\"italic\" role=\"UNKNOWN\">p</XMTok>\n                    <XMTok font=\"italic\" fontsize=\"70%\" role=\"UNKNOWN\">x</XMTok>\n                  </XMApp>\n                  <XMApp xml:id=\"S0.E1.1.m4.1.1.3\">\n                    <XMTok meaning=\"times\" role=\"MULOP\">⁢</XMTok>\n                    <XMTok font=\"italic\" name=\"mu\" role=\"UNKNOWN\">μ</XMTok>\n                    <XMApp xml:id=\"S0.E1.1.m4.1.1.3.3\">\n                      <XMTok role=\"SUBSCRIPTOP\" scriptpos=\"post1\"/>\n                      <XMTok font=\"italic\" role=\"UNKNOWN\">u</XMTok>\n                      <XMApp xml:id=\"S0.E1.1.m4.1.1.3.3.3\">\n                        <XMTok meaning=\"times\" role=\"MULOP\">⁢</XMTok>\n                        <XMTok font=\"italic\" fontsize=\"70%\" role=\"UNKNOWN\">z</XMTok>\n                        <XMTok font=\"italic\" fontsize=\"70%\" role=\"UNKNOWN\">z</XMTok>\n                      </XMApp>\n                    </XMApp>\n                  </XMApp>\n                </XMApp>\n              </XMath>\n            </Math>"
+  );
+  assert_eq!(
+    element_with(&xml, "Math", "p_{z}="),
+    "<Math tex=\"\\displaystyle p_{z}=-\\rho g\" text=\"p _ z = - rho * g\" xml:id=\"S0.E1.2.m4\">\n              <XMath xml:id=\"S0.E1.2.m4.1\">\n                <XMApp xml:id=\"S0.E1.2.m4.1.1\">\n                  <XMTok meaning=\"equals\" role=\"RELOP\">=</XMTok>\n                  <XMApp xml:id=\"S0.E1.2.m4.1.1.2\">\n                    <XMTok role=\"SUBSCRIPTOP\" scriptpos=\"post1\"/>\n                    <XMTok font=\"italic\" role=\"UNKNOWN\">p</XMTok>\n                    <XMTok font=\"italic\" fontsize=\"70%\" role=\"UNKNOWN\">z</XMTok>\n                  </XMApp>\n                  <XMApp xml:id=\"S0.E1.2.m4.1.1.3\">\n                    <XMTok meaning=\"minus\" role=\"ADDOP\">-</XMTok>\n                    <XMApp xml:id=\"S0.E1.2.m4.1.1.3.2\">\n                      <XMTok meaning=\"times\" role=\"MULOP\">⁢</XMTok>\n                      <XMTok font=\"italic\" name=\"rho\" role=\"UNKNOWN\">ρ</XMTok>\n                      <XMTok font=\"italic\" role=\"UNKNOWN\">g</XMTok>\n                    </XMApp>\n                  </XMApp>\n                </XMApp>\n              </XMath>\n            </Math>"
+  );
+}
+
+/// 63t: breqn's math-active `_` and `^` (mathstyle.sty:233-236, :250-261) still script in math, siunitx's units
+/// among them (siunitx.sty:6810-6813), and `_` in text prints (2402.04396, 2403.03720). The one warning is the binding's own "breqn.sty is minimally stubbed". Repro
+/// loader/breqn_text_underscore.
+#[test]
+fn breqn_text_underscore() {
+  let (log, xml) = latexml::util::test::convert_with(
+    include_str!("../../../tools/perfect_kernel/repros/loader/breqn_text_underscore.tex"),
+    Some("ar5iv.sty"),
+  );
+  assert_eq!(super::perfect_kernel_batch46::error_count(&log), 0, "{log}");
+  assert_eq!(
+    super::perfect_kernel_batch46::warning_count(&log),
+    1,
+    "{log}"
+  );
+  assert_eq!(
+    element_with(&xml, "p", "boiler"),
+    "<p xml:id=\"p1.1\">Code at https://github.com/x/boiler_room and <Math mode=\"inline\" tex=\"a_{1}\" text=\"a _ 1\" xml:id=\"p1.m1\">\n        <XMath xml:id=\"p1.m1.1\">\n          <XMApp xml:id=\"p1.m1.1.1\">\n            <XMTok role=\"SUBSCRIPTOP\" scriptpos=\"post1\"/>\n            <XMTok font=\"italic\" role=\"UNKNOWN\">a</XMTok>\n            <XMTok fontsize=\"70%\" meaning=\"1\" role=\"NUMBER\">1</XMTok>\n          </XMApp>\n        </XMath>\n      </Math>, <Math mode=\"inline\" tex=\"\\mathrm{m}^{2}\" text=\"m ^ 2\" xml:id=\"p1.m2\">\n        <XMath xml:id=\"p1.m2.1\">\n          <XMApp xml:id=\"p1.m2.1.1\">\n            <XMTok role=\"SUPERSCRIPTOP\" scriptpos=\"post1\"/>\n            <XMTok role=\"UNKNOWN\">m</XMTok>\n            <XMTok fontsize=\"70%\" meaning=\"2\" role=\"NUMBER\">2</XMTok>\n          </XMApp>\n        </XMath>\n      </Math>.</p>"
+  );
+  assert_eq!(
+    element_with(&xml, "equation", "y_{2}"),
+    "<equation xml:id=\"S0.E1\">\n      <tags>\n        <tag>(1)</tag>\n        <tag role=\"refnum\">1</tag>\n      </tags>\n      <Math mode=\"display\" tex=\"y_{2}=x^{2}\" text=\"y _ 2 = x ^ 2\" xml:id=\"S0.E1.m1\">\n        <XMath xml:id=\"S0.E1.m1.1\">\n          <XMApp xml:id=\"S0.E1.m1.1.1\">\n            <XMTok meaning=\"equals\" role=\"RELOP\">=</XMTok>\n            <XMApp xml:id=\"S0.E1.m1.1.1.2\">\n              <XMTok role=\"SUBSCRIPTOP\" scriptpos=\"post1\"/>\n              <XMTok font=\"italic\" role=\"UNKNOWN\">y</XMTok>\n              <XMTok fontsize=\"70%\" meaning=\"2\" role=\"NUMBER\">2</XMTok>\n            </XMApp>\n            <XMApp xml:id=\"S0.E1.m1.1.1.3\">\n              <XMTok role=\"SUPERSCRIPTOP\" scriptpos=\"post1\"/>\n              <XMTok font=\"italic\" role=\"UNKNOWN\">x</XMTok>\n              <XMTok fontsize=\"70%\" meaning=\"2\" role=\"NUMBER\">2</XMTok>\n            </XMApp>\n          </XMApp>\n        </XMath>\n      </Math>\n    </equation>"
+  );
+  // `_` is "other" in the body, unless `mathstyleoff` (breqn.sty:42-44, flexisym.sty:401-402) asks for TeX's 8
+  for (options, catcode) in [("", "12"), ("[mathstyleoff]", "8")] {
+    let (log, xml) = latexml::util::test::convert_with(
+      &format!(
+        "\\documentclass{{article}}\\usepackage{options}{{breqn}}\\begin{{document}}\\the\\catcode`\\_\\end{{document}}"
+      ),
+      Some("ar5iv.sty"),
+    );
+    assert_eq!(super::perfect_kernel_batch46::error_count(&log), 0, "{log}");
+    assert_eq!(
+      super::perfect_kernel_batch46::warning_count(&log),
+      1,
+      "{log}"
+    );
+    assert_eq!(
+      element_with(&xml, "p", catcode),
+      format!("<p xml:id=\"p1.1\">{catcode}</p>")
+    );
+  }
+}
+
+/// 63t: cas-common.sty prints `\ead`'s address stringified (cas-common.sty:362; 2410.07921), so its `_` prints, in the
+/// typewriter type it sets it in (64zc); the HTML `mailto:` link is made of the address text.
+/// Repro sectioning-frontmatter/cas_ead_verbatim.
+#[test]
+fn cas_ead_verbatim() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/cas_ead_verbatim.tex"
+  );
+  assert_eq!(
+    hf3_element(tex, "creator", "A."),
+    "<creator role=\"author\">\n    <personname>A. B</personname>\n    <contact name=\"Email:\u{a0}\" role=\"email\"><text font=\"typewriter\" xml:id=\"id1\">arash_khajooei@alumni.iust.ac.ir</text></contact>\n  </creator>"
+  );
+  let html = latexml::util::test::convert_to_html_page(tex).expect("HTML");
+  assert!(
+    html.contains(
+      "<a href=\"mailto:arash_khajooei@alumni.iust.ac.ir\"><span class=\"ltx_text ltx_font_typewriter\">arash_khajooei@alumni.iust.ac.ir</span></a>"
+    ),
+    "{html}"
+  );
+}
+
+/// 63t: acmart prints `\acmDOI`'s value through `\url` (acmart.cls:2052; 2401.02563). Repro
+/// sectioning-frontmatter/acmart_doi_verbatim.
+#[test]
+fn acmart_doi_verbatim() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/acmart_doi_verbatim.tex"
+  );
+  assert_eq!(
+    hf3_element(tex, "pubnote", "doi"),
+    "<pubnote role=\"doi\">10.475/123_4</pubnote>"
+  );
+}
+
+/// 63t: `\underbar` boxes its argument in text mode (latex.ltx:619), so `\underbar{$\psi$}` in math stays in math
+/// (2308.06669; Perl lets it to `\underline`, KPE #542); an argument without a `$` keeps the formula reading (OD #469). Repro expansion-primitives/underbar_boxes_its_argument.
+#[test]
+fn underbar_boxes_its_argument() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/expansion-primitives/underbar_boxes_its_argument.tex"
+  );
+  assert_eq!(
+    hf3_element(tex, "Math", "underline"),
+    "<Math mode=\"inline\" tex=\"\\underline{\\hbox{$\\psi$}}\\in P\" text=\"underline@(psi) element-of P\" xml:id=\"p1.m1\">\n        <XMath xml:id=\"p1.m1.1\">\n          <XMApp xml:id=\"p1.m1.1.1\">\n            <XMTok meaning=\"element-of\" name=\"in\" role=\"RELOP\">∈</XMTok>\n            <XMApp xml:id=\"p1.m1.1.1.2\">\n              <XMTok name=\"underline\" role=\"UNDERACCENT\" stretchy=\"true\">¯</XMTok>\n              <XMTok font=\"italic\" name=\"psi\" role=\"UNKNOWN\">ψ</XMTok>\n            </XMApp>\n            <XMTok font=\"italic\" role=\"UNKNOWN\">P</XMTok>\n          </XMApp>\n        </XMath>\n      </Math>"
+  );
+  // without a `$` of its own the argument keeps the formula reading: an underlined variable
+  assert_eq!(
+    hf3_element(tex, "Math", "\\underline{x}"),
+    "<Math mode=\"inline\" tex=\"\\underline{x}\" text=\"underline@(x)\" xml:id=\"p1.m3\">\n        <XMath xml:id=\"p1.m3.1\">\n          <XMApp xml:id=\"p1.m3.1.1\">\n            <XMTok name=\"underline\" role=\"UNDERACCENT\" stretchy=\"true\">¯</XMTok>\n            <XMTok font=\"italic\" role=\"UNKNOWN\">x</XMTok>\n          </XMApp>\n        </XMath>\n      </Math>"
+  );
+}
+
+/// 63t: `\TextOrMath` defers its choice to a `\protected` second stage (latex.ltx:10243-10248), so at an alignment
+/// cell's start it chooses in the cell's math (2311.14468; Perl chooses the text branch there, KPE #543). Repro
+/// expansion-primitives/textormath_in_align_cell.
+#[test]
+fn textormath_in_align_cell() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/expansion-primitives/textormath_in_align_cell.tex"
+  );
+  assert_eq!(
+    hf3_element(tex, "p", "Text"),
+    "<p xml:id=\"p1.1\">Text <Math mode=\"inline\" tex=\"L_{c}\" text=\"L _ c\" xml:id=\"p1.m1\">\n        <XMath xml:id=\"p1.m1.1\">\n          <XMApp xml:id=\"p1.m1.1.1\">\n            <XMTok role=\"SUBSCRIPTOP\" scriptpos=\"post1\"/>\n            <XMTok font=\"italic\" role=\"UNKNOWN\">L</XMTok>\n            <XMTok font=\"italic\" fontsize=\"70%\" role=\"UNKNOWN\">c</XMTok>\n          </XMApp>\n        </XMath>\n      </Math> here.</p>"
+  );
+  assert_eq!(
+    hf3_element(tex, "Math", "L_{c}=x"),
+    "<Math tex=\"\\displaystyle L_{c}=x_{i}\" text=\"L _ c = x _ i\" xml:id=\"S0.E1.m2\">\n            <XMath xml:id=\"S0.E1.m2.1\">\n              <XMApp xml:id=\"S0.E1.m2.1.1\">\n                <XMTok meaning=\"equals\" role=\"RELOP\">=</XMTok>\n                <XMApp xml:id=\"S0.E1.m2.1.1.2\">\n                  <XMTok role=\"SUBSCRIPTOP\" scriptpos=\"post1\"/>\n                  <XMTok font=\"italic\" role=\"UNKNOWN\">L</XMTok>\n                  <XMTok font=\"italic\" fontsize=\"70%\" role=\"UNKNOWN\">c</XMTok>\n                </XMApp>\n                <XMApp xml:id=\"S0.E1.m2.1.1.3\">\n                  <XMTok role=\"SUBSCRIPTOP\" scriptpos=\"post1\"/>\n                  <XMTok font=\"italic\" role=\"UNKNOWN\">x</XMTok>\n                  <XMTok font=\"italic\" fontsize=\"70%\" role=\"UNKNOWN\">i</XMTok>\n                </XMApp>\n              </XMApp>\n            </XMath>\n          </Math>"
+  );
+}
+
+/// 63t: a contact's HTML link is made of its whole text, so an address inside an element of its own (the font
+/// wrapper of a `\small` after the title block, RED sectioning-frontmatter/frontmatter_digested_in_body_font; 2609.14733,
+/// 2609.03698) still links to itself (Perl's stylesheet: `text()`, the link `mailto:` alone). Repro
+/// sectioning-frontmatter/contact_link_from_whole_text.
+#[test]
+fn contact_link_from_whole_text() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/contact_link_from_whole_text.tex"
+  );
+  let (log, _xml) = latexml::util::test::convert_with(tex, Some("ar5iv.sty"));
+  assert_eq!(super::perfect_kernel_batch46::error_count(&log), 0, "{log}");
+  assert_eq!(
+    super::perfect_kernel_batch46::warning_count(&log),
+    0,
+    "{log}"
+  );
+  let html = latexml::util::test::convert_to_html_page(tex).expect("HTML");
+  let at = html.find("<a href=\"mailto:").expect("the email link");
+  assert_eq!(
+    &html[at..at + html[at..].find("</a>").unwrap() + 4],
+    "<a href=\"mailto:ab@x.org\"><span class=\"ltx_text ltx_font_typewriter\" style=\"font-size:90%;\">ab@x.org</span></a>",
+    "{html}"
+  );
+  // an address that is the contact's own text links to that text alone, not the marks after it; a contact that is
+  // already a link (`\href`) is not wrapped in another
+  let html = latexml::util::test::convert_to_html_page(
+    r"\documentclass{revtex4-2}
+\usepackage{hyperref}
+\begin{document}
+\title{T}
+\author{A. B}
+\email{a@b.org \textsuperscript{*}}
+\homepage{http://x.org/ \textit{(lab)}}
+\author{C. D}
+\email{\href{mailto:c@d.org}{c@d.org}}
+\maketitle
+Body.
+\end{document}",
+  )
+  .expect("HTML");
+  for anchor in [
+    "<a href=\"mailto:a@b.org\">",
+    "<a href=\"http://x.org/\">",
+    "<span class=\"ltx_contact_name\">Email:\u{a0}</span><a href=\"mailto:c@d.org\" title=\"\" class=\"ltx_ref ltx_href\">c@d.org</a>",
+  ] {
+    assert!(html.contains(anchor), "{anchor}\n{html}");
+  }
+}
+
+/// 63u: elsarticle.cls:387-440 prints each `stm/affiliation` value with its separator, and an unknown key as its value
+/// or own text (2609.01851 `citysep={}`; Perl's parser joined the known values and dropped the rest, KPE #545); an
+/// argument with no key at all is kept as written, its commas with it (OD #472). Repro
+/// sectioning-frontmatter/elsarticle_affiliation_keyvals.
+#[test]
+fn elsarticle_affiliation_keyvals() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/elsarticle_affiliation_keyvals.tex"
+  );
+  let (log, xml) = latexml::util::test::convert_with(tex, Some("ar5iv.sty"));
+  assert_eq!(super::perfect_kernel_batch46::error_count(&log), 0, "{log}");
+  assert_eq!(
+    super::perfect_kernel_batch46::warning_count(&log),
+    0,
+    "{log}"
+  );
+  assert_eq!(xml.matches("<creator ").count(), 4, "{xml}");
+  for creator in [
+    "<creator role=\"author\">\n    <personname>A. B</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">School of CS, Guangzhou University, 1 Main St, Guang Zhou 510006, Guangdong, China</contact>\n  </creator>",
+    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>C. D</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Plain Univ, Some City, Country</contact>\n  </creator>",
+    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>E. F</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">ARTORG Center, University of Bern, Bern, Switzerland</contact>\n  </creator>",
+    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>G. H</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Dept X Org Y, Z</contact>\n  </creator>",
+  ] {
+    assert!(xml.contains(creator), "{creator}\n{xml}");
+  }
+}
+
+/// 63u: cas reads `\affiliation`'s argument as the same keys (cas-common.sty:1118-1160), and its marks link it to its
+/// authors (2609.00047; the keys were typeset as text, in 160 of 200 cas papers of 2609). Repro
+/// sectioning-frontmatter/cas_affiliation_keyvals.
+#[test]
+fn cas_affiliation_keyvals() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/cas_affiliation_keyvals.tex"
+  );
+  assert_eq!(
+    hf3_element(tex, "creator", "A. B"),
+    "<creator role=\"author\">\n    <personname>A. B</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">School of Computer Science, Guangzhou University, Guang Zhou, 510006, Guangdong, China</contact>\n  </creator>"
+  );
+}
+
+/// 63u: diagbox.sty:24-27 loads keyval, pict2e, calc and array (2408.08776). Repro loader/diagbox_requires_array.
+#[test]
+fn diagbox_requires_array() {
+  let tex = include_str!("../../../tools/perfect_kernel/repros/loader/diagbox_requires_array.tex");
+  assert_eq!(
+    hf3_element(tex, "tabular", "<td"),
+    "<tabular vattach=\"middle\" xml:id=\"p1.1\">\n      <tbody>\n        <tr xml:id=\"p1.1.1\">\n          <td align=\"left\" border=\"l r\" vattach=\"middle\" xml:id=\"p1.1.1.1\"><inline-block vattach=\"middle\" width=\"56.9pt\" xml:id=\"p1.1.1.1.1\">\n              <p xml:id=\"p1.1.1.1.1.1\">a</p>\n            </inline-block></td>\n          <td align=\"left\" border=\"r\" vattach=\"middle\" xml:id=\"p1.1.1.2\"><inline-block vattach=\"middle\" width=\"28.5pt\" xml:id=\"p1.1.1.2.1\">\n              <p xml:id=\"p1.1.1.2.1.1\">b</p>\n            </inline-block></td>\n          <td align=\"left\" border=\"r\" vattach=\"middle\" xml:id=\"p1.1.1.3\"><inline-block vattach=\"middle\" width=\"28.5pt\" xml:id=\"p1.1.1.3.1\">\n              <p xml:id=\"p1.1.1.3.1.1\">c</p>\n            </inline-block></td>\n        </tr>\n      </tbody>\n    </tabular>"
+  );
+}
+
+/// 63u: fdsymbol.sty:29, :74-75 load xkeyval, amsmath and textcomp (2311.09182). Repro loader/fdsymbol_requires_amsmath.
+#[test]
+fn fdsymbol_requires_amsmath() {
+  let tex =
+    include_str!("../../../tools/perfect_kernel/repros/loader/fdsymbol_requires_amsmath.tex");
+  assert_eq!(
+    hf3_element(tex, "Math", "split"),
+    "<Math mode=\"display\" tex=\"\\begin{split}a&amp;=\\text{b}\\end{split}\" text=\"a = [b]\" xml:id=\"S0.E1.m1\">\n        <XMath xml:id=\"S0.E1.m1.4\">\n          <XMDual xml:id=\"S0.E1.m1.4.1\">\n            <XMApp xml:id=\"S0.E1.m1.4.1.1\">\n              <XMRef idref=\"S0.E1.m1.2\" xml:id=\"S0.E1.m1.4.1.1.1\"/>\n              <XMRef idref=\"S0.E1.m1.1\" xml:id=\"S0.E1.m1.4.1.1.2\"/>\n              <XMRef idref=\"S0.E1.m1.3\" xml:id=\"S0.E1.m1.4.1.1.3\"/>\n            </XMApp>\n            <XMArray colsep=\"0pt\" name=\"aligned\" xml:id=\"S0.E1.m1.4.1.2\">\n              <XMRow xml:id=\"S0.E1.m1.4.1.2.1\">\n                <XMCell align=\"right\" xml:id=\"S0.E1.m1.4.1.2.1.1\">\n                  <XMTok font=\"italic\" role=\"UNKNOWN\" xml:id=\"S0.E1.m1.1\">a</XMTok>\n                </XMCell>\n                <XMCell align=\"left\" xml:id=\"S0.E1.m1.4.1.2.1.2\">\n                  <XMApp xml:id=\"S0.E1.m1.4.1.2.1.2.1\">\n                    <XMTok meaning=\"equals\" role=\"RELOP\" xml:id=\"S0.E1.m1.2\">=</XMTok>\n                    <XMTok meaning=\"absent\"/>\n                    <XMText xml:id=\"S0.E1.m1.3\">b</XMText>\n                  </XMApp>\n                </XMCell>\n              </XMRow>\n            </XMArray>\n          </XMDual>\n        </XMath>\n      </Math>"
+  );
+}
+
+/// 63u: WileyASNA-v1.cls:2120 loads apacite with `natbibapa` (2407.11648). Repro index-bib/wileyasna_apacite.
+#[test]
+fn wileyasna_apacite() {
+  let tex = include_str!("../../../tools/perfect_kernel/repros/index-bib/wileyasna_apacite.tex");
+  assert_eq!(
+    hf3_element(tex, "p", "See"),
+    "<p xml:id=\"p1.1\">See <cite class=\"ltx_citemacro_citet\"><bibref bibrefs=\"2021A&amp;A...650A..49B\" separator=\";\" show=\"Authors Phrase1YearPhrase2\" yyseparator=\",\">\n          <bibrefphrase>(</bibrefphrase>\n          <bibrefphrase>)</bibrefphrase>\n        </bibref></cite>.</p>"
+  );
+}
+
+/// 63u: cas-common.sty:1500 loads moreverb, and so verbatim's `{comment}` (2506.19439). Repro loader/cas_moreverb_comment.
+#[test]
+fn cas_moreverb_comment() {
+  let tex = include_str!("../../../tools/perfect_kernel/repros/loader/cas_moreverb_comment.tex");
+  assert_eq!(hf3_element(tex, "p", "x"), "<p xml:id=\"p1.1\">x\ny</p>");
+}
+
+/// 63u: OmniBus's `{abstracts}` has its end (2410.14397, nic-series; Perl lets the begin only, KPE #546). Repro
+/// sectioning-frontmatter/omnibus_endabstracts.
+#[test]
+fn omnibus_endabstracts() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/omnibus_endabstracts.tex"
+  );
+  assert_eq!(
+    hf3_element(tex, "abstract", "report"),
+    "<abstract inlist=\"toc\" name=\"Abstract\" xml:id=\"abstract1\">\n    <p xml:id=\"abstract1.1\">We report.</p>\n  </abstract>"
+  );
+}
+
+/// 63u: `\cmidrule[.5pt]` is read as a width (2405.01314; `\ifx.#1.` took it for empty, KPE #546). Repro
+/// alignment/booktabs_cmidrule_width.
+#[test]
+fn booktabs_cmidrule_width() {
+  let tex =
+    include_str!("../../../tools/perfect_kernel/repros/alignment/booktabs_cmidrule_width.tex");
+  assert_eq!(
+    hf3_element(tex, "tabular", "<td"),
+    "<tabular vattach=\"middle\" xml:id=\"p1.1\">\n      <tbody>\n        <tr xml:id=\"p1.1.1\">\n          <td align=\"center\" border=\"tt\" xml:id=\"p1.1.1.1\">a</td>\n          <td align=\"center\" border=\"tt\" xml:id=\"p1.1.1.2\">b</td>\n          <td align=\"center\" border=\"tt\" xml:id=\"p1.1.1.3\">c</td>\n          <td align=\"center\" border=\"tt\" xml:id=\"p1.1.1.4\">d</td>\n        </tr>\n        <tr xml:id=\"p1.1.2\">\n          <td border=\"bb\" xml:id=\"p1.1.2.1\"/>\n          <td align=\"center\" border=\"bb t\" xml:id=\"p1.1.2.2\">x</td>\n          <td align=\"center\" border=\"bb t\" xml:id=\"p1.1.2.3\">y</td>\n          <td align=\"center\" border=\"bb\" xml:id=\"p1.1.2.4\">z</td>\n        </tr>\n      </tbody>\n    </tabular>"
+  );
+}
+
+/// 63u: iopart's `\eqalign` ends a row at `\\` (iopart.cls:807-809; 2402.10275, KPE #546). Repro
+/// alignment/iopart_eqalign_rows.
+#[test]
+fn iopart_eqalign_rows() {
+  let tex = include_str!("../../../tools/perfect_kernel/repros/alignment/iopart_eqalign_rows.tex");
+  assert_eq!(
+    hf3_element(tex, "Math", "eqalign"),
+    "<Math mode=\"display\" tex=\"\\eqalign{a&amp;=b=\\cr&amp;=c.}\" text=\"Array[[a, absent = b = absent], [, absent = c]]\" xml:id=\"S0.E1.m1\">\n        <XMath xml:id=\"S0.E1.m1.2\">\n          <XMArray vattach=\"baseline\" xml:id=\"S0.E1.m1.2.1\">\n            <XMRow xml:id=\"S0.E1.m1.2.1.1\">\n              <XMCell align=\"right\" xml:id=\"S0.E1.m1.2.1.1.1\">\n                <XMTok font=\"italic\" role=\"UNKNOWN\">a</XMTok>\n              </XMCell>\n              <XMCell align=\"left\" xml:id=\"S0.E1.m1.2.1.1.2\">\n                <XMApp xml:id=\"S0.E1.m1.2.1.1.2.1\">\n                  <XMTok meaning=\"multirelation\"/>\n                  <XMTok meaning=\"absent\"/>\n                  <XMTok meaning=\"equals\" role=\"RELOP\">=</XMTok>\n                  <XMTok font=\"italic\" role=\"UNKNOWN\">b</XMTok>\n                  <XMTok meaning=\"equals\" role=\"RELOP\">=</XMTok>\n                  <XMTok meaning=\"absent\"/>\n                </XMApp>\n              </XMCell>\n            </XMRow>\n            <XMRow xml:id=\"S0.E1.m1.2.1.2\">\n              <XMCell xml:id=\"S0.E1.m1.2.1.2.1\"/>\n              <XMCell align=\"left\" xml:id=\"S0.E1.m1.2.1.2.2\">\n                <XMDual xml:id=\"S0.E1.m1.2.1.2.2.1\">\n                  <XMRef idref=\"S0.E1.m1.1\" xml:id=\"S0.E1.m1.2.1.2.2.1.1\"/>\n                  <XMWrap xml:id=\"S0.E1.m1.2.1.2.2.1.2\">\n                    <XMApp xml:id=\"S0.E1.m1.1\">\n                      <XMTok meaning=\"equals\" role=\"RELOP\">=</XMTok>\n                      <XMTok meaning=\"absent\"/>\n                      <XMTok font=\"italic\" role=\"UNKNOWN\">c</XMTok>\n                    </XMApp>\n                    <XMTok role=\"PERIOD\">.</XMTok>\n                  </XMWrap>\n                </XMDual>\n              </XMCell>\n            </XMRow>\n          </XMArray>\n        </XMath>\n      </Math>"
+  );
+}
+
+/// 63u: ulem's declaration `{\ul …}` underlines the rest of its group (ulem.sty:286-293, :107; 2406.03441). Repro
+/// loader/ulem_declaration_form.
+#[test]
+fn ulem_declaration_form() {
+  let tex = include_str!("../../../tools/perfect_kernel/repros/loader/ulem_declaration_form.tex");
+  assert_eq!(
+    hf3_element(tex, "p", "Some"),
+    "<p xml:id=\"p1.1\">Some <text class=\"ltx_ulem_uline\" xml:id=\"p1.1.1\">underlined words</text> here and plain.</p>"
+  );
+}
+
+/// 63u: under `nonacm` acmart prints no conference or booktitle (acmart.cls:2943, :3079-3250), so they are no notes, and an
+/// `&` in them is legal (2403.18105; display-toggle ruling 2026-10-06, KPE #546); without it they are. Repro
+/// sectioning-frontmatter/acmart_nonacm_conference_amp.
+#[test]
+fn acmart_nonacm_conference_amp() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/acmart_nonacm_conference_amp.tex"
+  );
+  let (log, xml) = latexml::util::test::convert_with(tex, Some("ar5iv.sty"));
+  assert_eq!(super::perfect_kernel_batch46::error_count(&log), 0, "{log}");
+  assert_eq!(
+    super::perfect_kernel_batch46::warning_count(&log),
+    0,
+    "{log}"
+  );
+  assert!(!xml.contains("<pubnote"), "{xml}");
+  // the same notes, without `nonacm` and without the `&` it would no longer allow
+  let (log, xml) = latexml::util::test::convert_with(
+    &tex
+      .replace("[sigconf,nonacm]", "[sigconf]")
+      .replace(" & ", " and "),
+    Some("ar5iv.sty"),
+  );
+  assert_eq!(super::perfect_kernel_batch46::error_count(&log), 0, "{log}");
+  assert_eq!(
+    super::perfect_kernel_batch46::warning_count(&log),
+    0,
+    "{log}"
+  );
+  assert_eq!(
+    element_with(&xml, "pubnote", "booktitle"),
+    "<pubnote role=\"booktitle\">KDD: Discovery and Data Mining</pubnote>"
+  );
+}
+
+/// 63u: cas's `\author[1,2]` marks link the author to the affiliations `\affiliation[1]` labels (cas-common.sty:895-940,
+/// :1252-1266; 2609.00047, 2609.00281): an unmarked author has none (every affiliation went to the last author).
+/// Repro sectioning-frontmatter/cas_author_marks_link_affiliations.
+#[test]
+fn cas_author_marks_link_affiliations() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/cas_author_marks_link_affiliations.tex"
+  );
+  let (log, xml) = latexml::util::test::convert_with(tex, Some("ar5iv.sty"));
+  assert_eq!(super::perfect_kernel_batch46::error_count(&log), 0, "{log}");
+  assert_eq!(
+    super::perfect_kernel_batch46::warning_count(&log),
+    0,
+    "{log}"
+  );
+  assert_eq!(xml.matches("<creator ").count(), 3, "{xml}");
+  for creator in [
+    "<creator role=\"author\">\n    <personname>Ann Able</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A, Xland</contact>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ B, Yland</contact>\n  </creator>",
+    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Bob Baker</personname>\n  </creator>",
+    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Cy Cole</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ B, Yland</contact>\n  </creator>",
+  ] {
+    assert!(xml.contains(creator), "{creator}\n{xml}");
+  }
+}
+
+/// 63v: within a tabularx `\verb` ends at its delimiter token however it was read (tabularx.sty:91, :205-209), so a
+/// `\verb|…|` in a `\makecell` cell is whole (2404.06128, 2309.04295). Repro alignment/tabularx_verb_in_argument.
+#[test]
+fn tabularx_verb_in_argument() {
+  let tex =
+    include_str!("../../../tools/perfect_kernel/repros/alignment/tabularx_verb_in_argument.tex");
+  let (log, xml) = latexml::util::test::convert_with(tex, Some("ar5iv.sty"));
+  assert_eq!(super::perfect_kernel_batch46::error_count(&log), 0, "{log}");
+  assert_eq!(
+    super::perfect_kernel_batch46::warning_count(&log),
+    0,
+    "{log}"
+  );
+  // the outer tabularx, whole (the makecell's tabular nests in it)
+  assert!(
+    xml.contains(
+      "<tabular vattach=\"middle\" xml:id=\"p1.1\">\n      <tr xml:id=\"p1.1.1\">\n        <td align=\"left\" border=\"l r t\" xml:id=\"p1.1.1.1\">A</td>\n        <td align=\"left\" border=\"r t\" xml:id=\"p1.1.1.2\"><inline-logical-block vattach=\"top\" xml:id=\"p1.1.1.2.1\">\n            <para class=\"ltx_noindent\" xml:id=\"p1.p1\">\n              <p xml:id=\"p1.p1.1\"><text xml:id=\"p1.p1.1.1\"/><text xml:id=\"p1.p1.1.2\"><tabular vattach=\"middle\" xml:id=\"p1.p1.1.2.1\">\n                    <tr xml:id=\"p1.p1.1.2.1.1\">\n                      <td align=\"left\" class=\"ltx_nopad_r\" xml:id=\"p1.p1.1.2.1.1.1\"><verbatim font=\"typewriter\" xml:id=\"p1.p1.1.2.1.1.1.1\">theorem</verbatim></td>\n                    </tr>\n                    <tr xml:id=\"p1.p1.1.2.1.2\">\n                      <td align=\"left\" class=\"ltx_nopad_r\" xml:id=\"p1.p1.1.2.1.2.1\">  \u{2003}<verbatim font=\"typewriter\" xml:id=\"p1.p1.1.2.1.2.1.1\">fixes a b :: real</verbatim></td>\n                    </tr>\n                  </tabular></text><text xml:id=\"p1.p1.1.3\"/></p>\n            </para>\n          </inline-logical-block></td>\n      </tr>\n      <tr xml:id=\"p1.1.2\">\n        <td align=\"left\" border=\"b l r t\" xml:id=\"p1.1.2.1\">B</td>\n        <td align=\"left\" border=\"b r t\" xml:id=\"p1.1.2.2\"><inline-block vattach=\"top\" xml:id=\"p1.1.2.2.1\">\n            <p xml:id=\"p1.1.2.2.1.1\">C</p>\n          </inline-block></td>\n      </tr>\n    </tabular>"
+    ),
+    "{xml}"
+  );
+}
+
+/// 63v: the rest of a listing's `\end` line stays the current input line (`restore_raw_line_rest`), so a listing
+/// begun there reads its body from the lines after (2408.11865). Repro loader/listings_end_begin_same_line.
+#[test]
+fn listings_end_begin_same_line() {
+  let tex =
+    include_str!("../../../tools/perfect_kernel/repros/loader/listings_end_begin_same_line.tex");
+  // both listings, the text between them
+  assert_eq!(
+    hf3_element(tex, "para", "c_d"),
+    "<para xml:id=\"p1\">\n    <listing class=\"ltx_lstlisting\" data=\"YQ==\" dataencoding=\"base64\" datamimetype=\"text/plain\" xml:id=\"p1.1\">\n      <listingline xml:id=\"lstnumberx1\"><text class=\"ltx_lst_identifier\" xml:id=\"lstnumberx1.1\">a</text></listingline>\n    </listing>\n    <p xml:id=\"p1.2\">x</p>\n    <listing class=\"ltx_lstlisting\" data=\"Y19k\" dataencoding=\"base64\" datamimetype=\"text/plain\" xml:id=\"p1.3\">\n      <listingline xml:id=\"lstnumberx2\"><text class=\"ltx_lst_identifier\" xml:id=\"lstnumberx2.1\">c_d</text></listingline>\n    </listing>\n  </para>"
+  );
+}
+
+/// 63v: a `>{…}` column prefix is followed by `\ignorespaces` (array.sty:97-101), which a one-argument prefix macro
+/// takes instead of the cell's first token (2504.02110). Repro alignment/array_prefix_takes_ignorespaces.
+#[test]
+fn array_prefix_takes_ignorespaces() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/alignment/array_prefix_takes_ignorespaces.tex"
+  );
+  assert_eq!(
+    hf3_element(tex, "tabular", "<td"),
+    "<tabular vattach=\"middle\" xml:id=\"p1.1\">\n      <tbody>\n        <tr xml:id=\"p1.1.1\">\n          <td align=\"center\" xml:id=\"p1.1.1.1\">a</td>\n          <td align=\"center\" xml:id=\"p1.1.1.2\"><text xml:id=\"p1.1.1.2.1\">x</text> y</td>\n          <td align=\"center\" xml:id=\"p1.1.1.3\">c</td>\n        </tr>\n      </tbody>\n    </tabular>"
+  );
+}
+
+/// 63v: inside a longtable caption's `\captionsetup` is a `\noalign` (caption.sty:1142-1147; 2310.02059). Repro
+/// captions-floats/longtable_captionsetup_noalign.
+#[test]
+fn longtable_captionsetup_noalign() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/captions-floats/longtable_captionsetup_noalign.tex"
+  );
+  assert_eq!(
+    hf3_element(tex, "table", "Cap"),
+    "<table inlist=\"lot\" labels=\"LABEL:t\" xml:id=\"S0.T1\">\n    <tags>\n      <tag>Table 1</tag>\n      <tag role=\"refnum\">1</tag>\n      <tag role=\"typerefnum\">Table 1</tag>\n    </tags>\n    <caption><tag close=\": \">Table 1</tag>Cap</caption>\n    <toccaption><tag close=\" \">1</tag>Cap</toccaption>\n    <tabular xml:id=\"S0.T1.1\">\n      <thead>\n        <tr xml:id=\"S0.T1.1.1\">\n          <td align=\"left\" border=\"t\" thead=\"column\" xml:id=\"S0.T1.1.1.1\">a</td>\n          <td align=\"left\" border=\"t\" thead=\"column\" xml:id=\"S0.T1.1.1.2\">b</td>\n        </tr>\n      </thead>\n      <tbody>\n        <tr xml:id=\"S0.T1.1.2\">\n          <td align=\"left\" border=\"t\" xml:id=\"S0.T1.1.2.1\">c</td>\n          <td align=\"left\" border=\"t\" xml:id=\"S0.T1.1.2.2\">d</td>\n        </tr>\n      </tbody>\n    </tabular>\n  </table>"
+  );
+}
+
+/// 63v: `\if@in@firstcolumn` is true only before the first cell, so `&\lefteqn{…}` is an `\rlap` in its column, not a
+/// span over the template's end (2205.04522, 2411.04274; KPE #547). Repro alignment/lefteqn_second_column.
+#[test]
+fn lefteqn_second_column() {
+  let tex =
+    include_str!("../../../tools/perfect_kernel/repros/alignment/lefteqn_second_column.tex");
+  // the second row: the `\lefteqn` in its own (second) column, no span (the formula's joined `tex=` still writes it
+  // as an `\mbox`, RED alignment/lefteqn_rlap_tex_reversion)
+  assert_eq!(
+    hf3_element(tex, "tr", "P(b)"),
+    "<tr xml:id=\"S0.Ex3.2\">\n              <td xml:id=\"S0.Ex3.2.1\"/>\n              <td align=\"center\" xml:id=\"S0.Ex3.2.2\"><text class=\"ltx_markedasmath\" width=\"0.0pt\" xml:id=\"S0.Ex3.2.2.1\"><Math mode=\"inline\" tex=\"\\displaystyle P(b)\\times P(c)\" text=\"P@(b) * P@(c)\" xml:id=\"S0.Ex2.m1.m1\">\n                    <XMath xml:id=\"S0.Ex2.m1.m1.3\">\n                      <XMApp xml:id=\"S0.Ex2.m1.m1.3.1\">\n                        <XMTok meaning=\"times\" role=\"MULOP\">×</XMTok>\n                        <XMApp xml:id=\"S0.Ex2.m1.m1.3.1.2\">\n                          <XMTok font=\"italic\" role=\"UNKNOWN\">P</XMTok>\n                          <XMDual xml:id=\"S0.Ex2.m1.m1.3.1.2.2\">\n                            <XMRef idref=\"S0.Ex2.m1.m1.1\" xml:id=\"S0.Ex2.m1.m1.3.1.2.2.1\"/>\n                            <XMWrap xml:id=\"S0.Ex2.m1.m1.3.1.2.2.2\">\n                              <XMTok role=\"OPEN\" stretchy=\"false\">(</XMTok>\n                              <XMTok font=\"italic\" role=\"UNKNOWN\" xml:id=\"S0.Ex2.m1.m1.1\">b</XMTok>\n                              <XMTok role=\"CLOSE\" stretchy=\"false\">)</XMTok>\n                            </XMWrap>\n                          </XMDual>\n                        </XMApp>\n                        <XMApp xml:id=\"S0.Ex2.m1.m1.3.1.3\">\n                          <XMTok font=\"italic\" role=\"UNKNOWN\">P</XMTok>\n                          <XMDual xml:id=\"S0.Ex2.m1.m1.3.1.3.2\">\n                            <XMRef idref=\"S0.Ex2.m1.m1.2\" xml:id=\"S0.Ex2.m1.m1.3.1.3.2.1\"/>\n                            <XMWrap xml:id=\"S0.Ex2.m1.m1.3.1.3.2.2\">\n                              <XMTok role=\"OPEN\" stretchy=\"false\">(</XMTok>\n                              <XMTok font=\"italic\" role=\"UNKNOWN\" xml:id=\"S0.Ex2.m1.m1.2\">c</XMTok>\n                              <XMTok role=\"CLOSE\" stretchy=\"false\">)</XMTok>\n                            </XMWrap>\n                          </XMDual>\n                        </XMApp>\n                      </XMApp>\n                    </XMath>\n                  </Math></text></td>\n              <td xml:id=\"S0.Ex3.2.3\"/>\n            </tr>"
+  );
+}
+
+/// 63w: a protected macro yielding `&` after a `\multicolumn` cell ends that cell: the stomach hands the column end
+/// back to the cell's reader (`read_x_token_after_expansion`; sgamex.sty:56-58, 2410.16600). Repro
+/// alignment/protected_tab_after_multicolumn.
+#[test]
+fn protected_tab_after_multicolumn_ends_the_cell() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/alignment/protected_tab_after_multicolumn.tex"
+  );
+  assert_eq!(
+    hf3_element(tex, "tr", ">b<"),
+    "<tr xml:id=\"p1.1.1\">\n          <td align=\"center\" border=\"r\" thead=\"column row\" xml:id=\"p1.1.1.1\">a</td>\n          <td align=\"center\" thead=\"column\" xml:id=\"p1.1.1.2\">b</td>\n          <td align=\"center\" thead=\"column\" xml:id=\"p1.1.1.3\">c</td>\n        </tr>"
+  );
+}
+
+/// 63w: blkarray's repeating preamble, `\BA@colsep` and `\BAhhline` (blkarray.sty:749, :1206-1208, :2074-2210;
+/// 2301.06399). Repro alignment-bindings/blkarray_repeating_preamble.
+#[test]
+fn blkarray_repeating_preamble() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/alignment-bindings/blkarray_repeating_preamble.tex"
+  );
+  // the `\BAhhline{~--}` row rules columns 2-3 as `\cline{2-3}` does; the last row keeps its fourth cell
+  assert_eq!(
+    hf3_element(tex, "XMArray", "ARRAY"),
+    "<XMArray role=\"ARRAY\" vattach=\"middle\" xml:id=\"S0.Ex1.m1.1.1\">\n            <XMRow xml:id=\"S0.Ex1.m1.1.1.1\">\n              <XMCell xml:id=\"S0.Ex1.m1.1.1.1.1\"/>\n              <XMCell align=\"center\" xml:id=\"S0.Ex1.m1.1.1.1.2\">\n                <XMTok font=\"italic\" role=\"UNKNOWN\">a</XMTok>\n              </XMCell>\n              <XMCell align=\"center\" xml:id=\"S0.Ex1.m1.1.1.1.3\">\n                <XMTok font=\"italic\" role=\"UNKNOWN\">b</XMTok>\n              </XMCell>\n            </XMRow>\n            <XMRow xml:id=\"S0.Ex1.m1.1.1.2\">\n              <XMCell align=\"center\" xml:id=\"S0.Ex1.m1.1.1.2.1\">\n                <XMTok font=\"italic\" role=\"UNKNOWN\">x</XMTok>\n              </XMCell>\n              <XMCell align=\"center\" xml:id=\"S0.Ex1.m1.1.1.2.2\">\n                <XMTok meaning=\"1\" role=\"NUMBER\">1</XMTok>\n              </XMCell>\n              <XMCell align=\"center\" xml:id=\"S0.Ex1.m1.1.1.2.3\">\n                <XMTok meaning=\"2\" role=\"NUMBER\">2</XMTok>\n              </XMCell>\n            </XMRow>\n            <XMRow xml:id=\"S0.Ex1.m1.1.1.3\">\n              <XMCell xml:id=\"S0.Ex1.m1.1.1.3.1\"/>\n              <XMCell border=\"t\" xml:id=\"S0.Ex1.m1.1.1.3.2\"/>\n              <XMCell border=\"t\" xml:id=\"S0.Ex1.m1.1.1.3.3\"/>\n            </XMRow>\n            <XMRow xml:id=\"S0.Ex1.m1.1.1.4\">\n              <XMCell align=\"center\" xml:id=\"S0.Ex1.m1.1.1.4.1\">\n                <XMTok font=\"italic\" role=\"UNKNOWN\">y</XMTok>\n              </XMCell>\n              <XMCell align=\"center\" xml:id=\"S0.Ex1.m1.1.1.4.2\">\n                <XMTok meaning=\"1\" role=\"NUMBER\">1</XMTok>\n              </XMCell>\n              <XMCell align=\"center\" xml:id=\"S0.Ex1.m1.1.1.4.3\">\n                <XMTok meaning=\"2\" role=\"NUMBER\">2</XMTok>\n              </XMCell>\n              <XMCell align=\"left\" xml:id=\"S0.Ex1.m1.1.1.4.4\">\n                <XMTok meaning=\"3\" role=\"NUMBER\">3</XMTok>\n              </XMCell>\n            </XMRow>\n          </XMArray>"
+  );
+}
+
+/// Converts an Interspeech repro (with `files` beside it), asserts 0 errors and 0 warnings, and returns its XML.
+fn interspeech_xml(tex: &str, files: &[(&str, &str)]) -> String {
+  let (log, xml) = latexml::util::test::convert_files_with(tex, files, Some("ar5iv.sty"));
+  assert_eq!(super::perfect_kernel_batch46::error_count(&log), 0, "{log}");
+  assert_eq!(
+    super::perfect_kernel_batch46::warning_count(&log),
+    0,
+    "{log}"
+  );
+  xml
+}
+
+/// 63w: the 2026 Interspeech `\author[keys]{First}{Last}` with its marked `\address` lines, ORCID, email, and the
+/// corresponding-author note on the author marked `**` (2605.02715). Repro sectioning-frontmatter/interspeech_author_keys.
+#[test]
+fn interspeech_author_keys() {
+  if !check_requirements(loads::TIPA) {
+    return;
+  }
+  let xml = interspeech_xml(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/interspeech_author_keys.tex"
+    ),
+    &[],
+  );
+  assert_eq!(
+    element_with(&xml, "creator", "Byron-King"),
+    "<creator role=\"author\">\n    <personname>Ada Byron-King</personname>\n    <contact role=\"orcid\"><ref class=\"ltx_orcid\" href=\"https://orcid.org/0009-0008-0680-1817\" title=\"ORCID 0009-0008-0680-1817\"><svg:svg class=\"ltx_orcidlogo\" height=\"1em\" version=\"1.1\" viewBox=\"0 0 72 72\" width=\"1em\">\n          <svg:path d=\"M72,36 C72,55.884375 55.884375,72 36,72 C16.115625,72 0,55.884375 0,36 C0,16.115625 16.115625,0 36,0 C55.884375,0 72,16.115625 72,36 Z\" fill=\"#A6CE39\"/>\n          <svg:g fill=\"#FFFFFF\" transform=\"translate(18.868966, 12.910345)\">\n            <svg:polygon points=\"5.03734929 39.1250878 0.695429861 39.1250878 0.695429861 9.14431787 5.03734929 9.14431787 5.03734929 22.6930505 5.03734929 39.1250878\"/>\n            <svg:path d=\"M11.409257,9.14431787 L23.1380784,9.14431787 C34.303014,9.14431787 39.2088191,17.0664074 39.2088191,24.1486995 C39.2088191,31.846843 33.1470485,39.1530811 23.1944669,39.1530811 L11.409257,39.1530811 L11.409257,9.14431787 Z M15.7511765,35.2620194 L22.6587756,35.2620194 C32.49858,35.2620194 34.7541226,27.8438084 34.7541226,24.1486995 C34.7541226,18.1301509 30.8915059,13.0353795 22.4332213,13.0353795 L15.7511765,13.0353795 L15.7511765,35.2620194 Z\"/>\n            <svg:path d=\"M5.71401206,2.90182329 C5.71401206,4.441452 4.44526937,5.72914146 2.86638958,5.72914146 C1.28750978,5.72914146 0.0187670918,4.441452 0.0187670918,2.90182329 C0.0187670918,1.33420133 1.28750978,0.0745051096 2.86638958,0.0745051096 C4.44526937,0.0745051096 5.71401206,1.36219458 5.71401206,2.90182329 Z\"/>\n          </svg:g>\n        </svg:svg></ref></contact>\n    <contact name=\"Affiliation: \" role=\"affiliation\"> University A, Country A</contact>\n    <contact name=\"Affiliation: \" role=\"affiliation\"> University B, Country B</contact>\n    <note class=\"ltx_note_frontmatter ltx_thanks_correspondence\" role=\"thanks\" xml:id=\"id1\">indicates the corresponding author.</note>\n  </creator>"
+  );
+  assert_eq!(
+    element_with(&xml, "creator", "Bo Li"),
+    "<creator before=\"  \" role=\"author\">\n    <personname>Bo Li</personname>\n    <contact name=\"Affiliation: \" role=\"affiliation\"> University B, Country B</contact>\n  </creator>"
+  );
+  assert_eq!(
+    element_with(&xml, "note", "ada@"),
+    "<note role=\"email\" xml:id=\"id2\">ada@x.org</note>"
+  );
+}
+
+/// 63w: without the camera-ready switch the Interspeech classes print "Anonymous submission to Interspeech" for the
+/// authors and no affiliation or email (ruling 2026-10-06). Repro sectioning-frontmatter/interspeech_anonymous_submission.
+#[test]
+fn interspeech_anonymous_submission() {
+  if !check_requirements(loads::TIPA) {
+    return;
+  }
+  let xml = interspeech_xml(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/interspeech_anonymous_submission.tex"
+    ),
+    &[],
+  );
+  assert_eq!(
+    element_with(&xml, "note", "Anonymous"),
+    "<note role=\"authors\" xml:id=\"id1\">Anonymous submission to Interspeech</note>"
+  );
+  for absent in ["<creator", "<contact", "ada@x.org", "University"] {
+    assert!(!xml.contains(absent), "{absent} in {xml}");
+  }
+}
+
+/// 63w: the 2025 Interspeech `\affiliation{department}{institution}{place}`, numbered as the class numbers it, and its
+/// bold `\vec` (2409.08589). Repro sectioning-frontmatter/interspeech_affiliation_counter.
+#[test]
+fn interspeech_affiliation_counter() {
+  if !check_requirements(loads::TIPA) {
+    return;
+  }
+  let xml = interspeech_xml(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/interspeech_affiliation_counter.tex"
+    ),
+    &[],
+  );
+  assert_eq!(
+    element_with(&xml, "creator", "Ada Byron"),
+    "<creator role=\"author\">\n    <personname>Ada Byron</personname>\n    <contact name=\"Affiliation: \" role=\"affiliation\">University A, City A, Country A</contact>\n  </creator>"
+  );
+  assert_eq!(
+    element_with(&xml, "creator", "Bo Li"),
+    "<creator before=\"  \" role=\"author\">\n    <personname>Bo Li</personname>\n    <contact name=\"Affiliation: \" role=\"affiliation\">Department B, University B, City B, Country B</contact>\n  </creator>"
+  );
+  assert_eq!(
+    element_with(&xml, "Math", "bm"),
+    "<Math mode=\"inline\" tex=\"\\bm{{v}}\" text=\"v\" xml:id=\"p1.m1\">\n        <XMath xml:id=\"p1.m1.1\">\n          <XMTok font=\"bold italic\" role=\"UNKNOWN\">v</XMTok>\n        </XMath>\n      </Math>"
+  );
+}
+
+/// 63w: the packages the Interspeech class requires: `\color` and siunitx's `S` column (Interspeech.cls:66-81;
+/// 2605.02715). Repro loader/interspeech_class_packages.
+#[test]
+fn interspeech_class_packages() {
+  if !check_requirements(loads::TIPA) {
+    return;
+  }
+  let xml = interspeech_xml(
+    include_str!("../../../tools/perfect_kernel/repros/loader/interspeech_class_packages.tex"),
+    &[],
+  );
+  assert_eq!(
+    element_with(&xml, "text", "#FF0000"),
+    "<text color=\"#FF0000\" xml:id=\"p1.1.1\">x</text>"
+  );
+  assert_eq!(
+    element_with(&xml, "tabular", "1.5"),
+    "<tabular vattach=\"middle\" xml:id=\"p1.1.2\">\n        <tbody>\n          <tr xml:id=\"p1.1.2.1\">\n            <td align=\"left\" xml:id=\"p1.1.2.1.1\">a</td>\n            <td align=\"left\" xml:id=\"p1.1.2.1.2\"><Math mode=\"inline\" tex=\"1.5\" text=\"1.5\" xml:id=\"p1.m1\">\n                <XMath xml:id=\"p1.m1.1\">\n                  <XMTok meaning=\"1.5\" role=\"NUMBER\">1.5</XMTok>\n                </XMath>\n              </Math></td>\n          </tr>\n        </tbody>\n      </tabular>"
+  );
+}
+
+/// 63w: affiliation marks the class sets in math (`1^{\dagger}`, `1{^\dagger}{^\#}`) or glues to a symbol (`2*`), and
+/// the 2026 class's `\ifcameraready` (2406.08931, 2605.04749, 2406.07909, 2409.15974). Repro
+/// sectioning-frontmatter/interspeech_math_affiliation_marks.
+#[test]
+fn interspeech_math_affiliation_marks() {
+  if !check_requirements(loads::TIPA) {
+    return;
+  }
+  let xml = interspeech_xml(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/interspeech_math_affiliation_marks.tex"
+    ),
+    &[],
+  );
+  assert_eq!(
+    element_with(&xml, "creator", "Ada Byron"),
+    "<creator role=\"author\">\n    <personname>Ada Byron</personname>\n    <contact name=\"Affiliation: \" role=\"affiliation\"> University A</contact>\n    <contact name=\"Affiliation: \" role=\"affiliation\"> University B</contact>\n  </creator>"
+  );
+  assert_eq!(
+    element_with(&xml, "creator", "Bo Li"),
+    "<creator before=\"  \" role=\"author\">\n    <personname>Bo Li</personname>\n    <contact name=\"Affiliation: \" role=\"affiliation\"> University A</contact>\n  </creator>"
+  );
+  assert_eq!(
+    element_with(&xml, "creator", "Cy Dee"),
+    "<creator before=\"  \" role=\"author\">\n    <personname>Cy Dee</personname>\n    <contact name=\"Affiliation: \" role=\"affiliation\"> University B</contact>\n  </creator>"
+  );
+  assert_eq!(
+    element_with(&xml, "p", "reviewers"),
+    "<p xml:id=\"p1.1\">Text.\nThanks to the reviewers.</p>"
+  );
+}
+
+/// 63w: the class decides at `\maketitle`: the switch and the frontmatter given after `\begin{document}` count.
+/// Repro sectioning-frontmatter/interspeech_frontmatter_in_body.
+#[test]
+fn interspeech_frontmatter_in_body() {
+  if !check_requirements(loads::TIPA) {
+    return;
+  }
+  let xml = interspeech_xml(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/interspeech_frontmatter_in_body.tex"
+    ),
+    &[],
+  );
+  assert_eq!(
+    element_with(&xml, "creator", "Ada Byron"),
+    "<creator role=\"author\">\n    <personname>Ada Byron</personname>\n    <contact name=\"Affiliation: \" role=\"affiliation\">University A, City A</contact>\n  </creator>"
+  );
+  assert_eq!(
+    element_with(&xml, "note", "ada@"),
+    "<note role=\"email\" xml:id=\"id1\">ada@x.org</note>"
+  );
+  assert!(!xml.contains("Anonymous"), "{xml}");
+}
+
+/// 63w: a whole author list in one `\author{…}`, its names marked out of order, linked to the numbered affiliations
+/// they name (2506.00350). Repro sectioning-frontmatter/interspeech_author_list_argument.
+#[test]
+fn interspeech_author_list_argument() {
+  if !check_requirements(loads::TIPA) {
+    return;
+  }
+  let xml = interspeech_xml(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/interspeech_author_list_argument.tex"
+    ),
+    &[],
+  );
+  assert_eq!(
+    element_with(&xml, "creator", "Ada Byron"),
+    "<creator role=\"author\">\n    <personname>Ada Byron</personname>\n    <contact name=\"Affiliation: \" role=\"affiliation\">University B, City B</contact>\n  </creator>"
+  );
+  assert_eq!(
+    element_with(&xml, "creator", "Bo Li"),
+    "<creator before=\"  \" role=\"author\">\n    <personname>Bo Li</personname>\n    <contact name=\"Affiliation: \" role=\"affiliation\">University A, City A</contact>\n    <contact name=\"Affiliation: \" role=\"affiliation\">University B, City B</contact>\n  </creator>"
+  );
+  assert_eq!(
+    element_with(&xml, "creator", "Cy Dee"),
+    "<creator before=\"  \" role=\"author\">\n    <personname>Cy Dee</personname>\n    <contact name=\"Affiliation: \" role=\"affiliation\">University A, City A</contact>\n  </creator>"
+  );
+}
+
+/// 63w: `\affiliation[nocounter]{…}{…}{…}`, an affiliation the class prints unnumbered, all the authors' (2506.10653
+/// Interspeech.cls:152-176). Repro sectioning-frontmatter/interspeech_affiliation_nocounter. University A before Lab B,
+/// as printed (since 99a r2 in print order (R8: `relocate::at_queue_position`, OD #954)).
+#[test]
+fn interspeech_affiliation_nocounter() {
+  if !check_requirements(loads::TIPA) {
+    return;
+  }
+  let xml = interspeech_xml(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/interspeech_affiliation_nocounter.tex"
+    ),
+    &[],
+  );
+  assert_eq!(
+    element_with(&xml, "creator", "Ada Byron"),
+    "<creator role=\"author\">\n    <personname>Ada Byron</personname>\n    <contact name=\"Affiliation: \" role=\"affiliation\">University A, City A</contact>\n    <contact name=\"Affiliation: \" role=\"affiliation\">Lab B, Company B, Country B</contact>\n  </creator>"
+  );
+  assert_eq!(
+    element_with(&xml, "creator", "Bo Li"),
+    "<creator before=\"  \" role=\"author\">\n    <personname>Bo Li</personname>\n    <contact name=\"Affiliation: \" role=\"affiliation\">University A, City A</contact>\n    <contact name=\"Affiliation: \" role=\"affiliation\">Lab B, Company B, Country B</contact>\n  </creator>"
+  );
+  assert_eq!(
+    element_with(&xml, "creator", "Cy Dee"),
+    "<creator before=\"  \" role=\"author\">\n    <personname>Cy Dee</personname>\n    <contact name=\"Affiliation: \" role=\"affiliation\">Lab B, Company B, Country B</contact>\n  </creator>"
+  );
+  assert!(!xml.contains("counter]"), "{xml}");
+}
+
+/// 63w: an `\address` block without marks is the affiliation of all the authors (2401.07506, 2406.04791). Repro
+/// sectioning-frontmatter/interspeech_unmarked_address_shared.
+#[test]
+fn interspeech_unmarked_address_shared() {
+  if !check_requirements(loads::TIPA) {
+    return;
+  }
+  let xml = interspeech_xml(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/interspeech_unmarked_address_shared.tex"
+    ),
+    &[],
+  );
+  assert_eq!(
+    element_with(&xml, "creator", "Ada Byron"),
+    "<creator role=\"author\">\n    <personname>Ada Byron</personname>\n    <contact name=\"Affiliation: \" role=\"affiliation\">Department A <break/>University A, City A</contact>\n  </creator>"
+  );
+  assert_eq!(
+    element_with(&xml, "creator", "Bo Li"),
+    "<creator before=\"  \" role=\"author\">\n    <personname>Bo Li</personname>\n    <contact name=\"Affiliation: \" role=\"affiliation\">Department A <break/>University A, City A</contact>\n  </creator>"
+  );
+  assert_eq!(
+    element_with(&xml, "creator", "Cy Dee"),
+    "<creator before=\"  \" role=\"author\">\n    <personname>Cy Dee</personname>\n    <contact name=\"Affiliation: \" role=\"affiliation\">Department A <break/>University A, City A</contact>\n  </creator>"
+  );
+}
+
+/// 63w: `\affiliation`s given before the `\author`s, linked all the same (the authors are added first). Repro
+/// sectioning-frontmatter/interspeech_affiliations_before_authors.
+#[test]
+fn interspeech_affiliations_before_authors() {
+  if !check_requirements(loads::TIPA) {
+    return;
+  }
+  let xml = interspeech_xml(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/interspeech_affiliations_before_authors.tex"
+    ),
+    &[],
+  );
+  assert_eq!(
+    element_with(&xml, "creator", "Ada Byron"),
+    "<creator role=\"author\">\n    <personname>Ada Byron</personname>\n    <contact name=\"Affiliation: \" role=\"affiliation\">University A, City A</contact>\n  </creator>"
+  );
+  assert_eq!(
+    element_with(&xml, "creator", "Bo Li"),
+    "<creator before=\"  \" role=\"author\">\n    <personname>Bo Li</personname>\n    <contact name=\"Affiliation: \" role=\"affiliation\">University B, City B</contact>\n  </creator>"
+  );
+}
+
+/// 63w: the switch starts as the paper's copy of the class sets it: a copy edited to `\interspeechfinaltrue` prints the
+/// authors with no switch in the paper (2506.01138's Interspeech.cls:133). Repro
+/// sectioning-frontmatter/interspeech_class_starts_final.
+#[test]
+fn interspeech_class_starts_final() {
+  if !check_requirements(loads::TIPA) {
+    return;
+  }
+  let xml = interspeech_xml(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/interspeech_class_starts_final.tex"
+    ),
+    &[(
+      "Interspeech.cls",
+      "% an edited copy of the ISCA template\n\\interspeechfinaltrue\n",
+    )],
+  );
+  assert_eq!(
+    element_with(&xml, "creator", "Ada Byron"),
+    "<creator role=\"author\">\n    <personname>Ada Byron</personname>\n    <contact name=\"Affiliation: \" role=\"affiliation\">University A, City A</contact>\n  </creator>"
+  );
+  assert_eq!(
+    element_with(&xml, "note", "ada@"),
+    "<note role=\"email\" xml:id=\"id1\">ada@x.org</note>"
+  );
+  assert!(!xml.contains("Anonymous"), "{xml}");
+}
+
+/// 63w: a class copy that calls `\interspeechcameraready` after defining it starts camera-ready too (2406.07291's
+/// Interspeech2024.cls:110-113). Repro sectioning-frontmatter/interspeech_class_starts_final.
+#[test]
+fn interspeech_class_calls_cameraready() {
+  if !check_requirements(loads::TIPA) {
+    return;
+  }
+  let xml = interspeech_xml(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/interspeech_class_starts_final.tex"
+    ),
+    &[(
+      "Interspeech.cls",
+      "\\newif\\ifinterspeechfinal\n\\def\\interspeechcameraready{%\n  \\global\\interspeechfinaltrue\n}\n\\interspeechcameraready\n",
+    )],
+  );
+  assert_eq!(
+    element_with(&xml, "creator", "Ada Byron"),
+    "<creator role=\"author\">\n    <personname>Ada Byron</personname>\n    <contact name=\"Affiliation: \" role=\"affiliation\">University A, City A</contact>\n  </creator>"
+  );
+  assert_eq!(
+    element_with(&xml, "note", "ada@"),
+    "<note role=\"email\" xml:id=\"id1\">ada@x.org</note>"
+  );
+  assert!(!xml.contains("Anonymous"), "{xml}");
+}
+
+/// 63w: a class copy that only defines `\interspeechcameraready` (its call commented out), or whose last setting turns
+/// the switch off, starts anonymous, as the template does. Repro sectioning-frontmatter/interspeech_class_starts_final.
+#[test]
+fn interspeech_class_template_stays_anonymous() {
+  if !check_requirements(loads::TIPA) {
+    return;
+  }
+  let xml = interspeech_xml(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/interspeech_class_starts_final.tex"
+    ),
+    &[(
+      "Interspeech.cls",
+      "\\newif\\ifinterspeechfinal\n\\def\\interspeechcameraready{%\n  \\global\\interspeechfinaltrue\n}\n% \\interspeechcameraready\n\\interspeechfinaltrue\n\\interspeechfinalfalse\n",
+    )],
+  );
+  assert_eq!(
+    element_with(&xml, "note", "Anonymous"),
+    "<note role=\"authors\" xml:id=\"id1\">Anonymous submission to Interspeech</note>"
+  );
+  assert!(!xml.contains("<creator"), "{xml}");
+}
+
+/// 63x: every creator of a repro converted under ar5iv (0 errors, 0 warnings), whole and in document order.
+fn creators_63x(tex: &str) -> Vec<String> {
+  let (log, xml) = latexml::util::test::convert_with(tex, Some("ar5iv.sty"));
+  assert_eq!(super::perfect_kernel_batch46::error_count(&log), 0, "{log}");
+  assert_eq!(
+    super::perfect_kernel_batch46::warning_count(&log),
+    0,
+    "{log}"
+  );
+  creators_in(&xml)
+}
+
+/// Every creator of `xml`, whole and in document order.
+fn creators_in(xml: &str) -> Vec<String> {
+  let mut creators = Vec::new();
+  let mut rest = xml;
+  while let Some(i) = rest.find("<creator ") {
+    let end = i
+      + rest[i..]
+        .find("</creator>")
+        .map_or(0, |j| j + "</creator>".len());
+    creators.push(rest[i..end].to_string());
+    rest = &rest[end..];
+  }
+  creators
+}
+
+/// 63x: cas's `\author[a]{A and B}` is two authors, split as the kernel splits an author list, both linked to the
+/// affiliation `a` (review of 63u). Repro sectioning-frontmatter/cas_author_and_splits.
+#[test]
+fn cas_author_and_splits() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/cas_author_and_splits.tex"
+  );
+  assert_eq!(creators_63x(tex), vec![
+    "<creator role=\"author\">\n    <personname>Cy Cee</personname>\n    <contact name=\"Affiliation: \" role=\"affiliation\">Univ A, Xland</contact>\n  </creator>",
+    "<creator before=\"  \" role=\"author\">\n    <personname>Dee Dee</personname>\n    <contact name=\"Affiliation: \" role=\"affiliation\">Univ A, Xland</contact>\n  </creator>",
+  ]);
+}
+
+/// 63x: an unlabelled `\affiliation` above the first `\author` (cas-common.sty:1252-1290 prints it under the authors) is
+/// placed as an orphan is, a sole author's; it was dropped unplaced (review of 63u). Repro
+/// sectioning-frontmatter/cas_affiliation_before_author.
+#[test]
+fn cas_affiliation_before_author() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/cas_affiliation_before_author.tex"
+  );
+  assert_eq!(creators_63x(tex), vec![
+    "<creator role=\"author\">\n    <personname>Ann Able</personname>\n    <contact name=\"Affiliation: \" role=\"affiliation\">Univ Before, Xland</contact>\n  </creator>",
+  ]);
+}
+
+/// 63x: the same above two authors is every author's, as cas prints it under the whole row of names (batch 104d L1,
+/// `_share=authors`; it was a creator of its own below them, and before that promoted in place, above the authors).
+/// Repro sectioning-frontmatter/cas_affiliation_before_authors_shared.
+#[test]
+fn cas_affiliation_before_authors_shared() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/cas_affiliation_before_authors_shared.tex"
+  );
+  assert_eq!(creators_63x(tex), vec![
+    "<creator role=\"author\">\n    <personname>Ann Able</personname>\n    <contact name=\"Affiliation: \" role=\"affiliation\">Univ Before, Xland</contact>\n  </creator>",
+    "<creator before=\"  \" role=\"author\">\n    <personname>Bob Bee</personname>\n    <contact name=\"Affiliation: \" role=\"affiliation\">Univ Before, Xland</contact>\n  </creator>",
+  ]);
+}
+
+/// 63x (HF2): an acmart `\author{A, B, C}` name list is three people, as acmart prints it (acmart.cls:1620 only warns),
+/// each with the `\affiliation` after it; it was one creator holding three names. Witness 2604.12138. Repro
+/// sectioning-frontmatter/acmart_comma_author_list.
+#[test]
+fn acmart_comma_author_list() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/acmart_comma_author_list.tex"
+  );
+  assert_eq!(creators_63x(tex), vec![
+    "<creator role=\"author\">\n    <personname>Aditya Agrawal</personname>\n    <contact name=\"Affiliation: \" role=\"affiliation\"><text class=\"ltx_affiliation_institution\" xml:id=\"id1\">Amazon.com</text>, <text class=\"ltx_affiliation_country\" xml:id=\"id2\">USA</text></contact>\n  </creator>",
+    "<creator before=\", \" role=\"author\">\n    <personname>Alwarappan Nakkiran</personname>\n    <contact name=\"Affiliation: \" role=\"affiliation\"><text class=\"ltx_affiliation_institution\" xml:id=\"id3\">Amazon.com</text>, <text class=\"ltx_affiliation_country\" xml:id=\"id4\">USA</text></contact>\n  </creator>",
+    "<creator before=\" and \" role=\"author\">\n    <personname>Darshan Fofadiya</personname>\n    <contact name=\"Affiliation: \" role=\"affiliation\"><text class=\"ltx_affiliation_institution\" xml:id=\"id5\">Amazon.com</text>, <text class=\"ltx_affiliation_country\" xml:id=\"id6\">USA</text></contact>\n  </creator>",
+  ]);
+}
+
+/// 63x (HF2): a mark manyfoot declares beside `\footnotemark` (`\footnotemarkAAffil[1]`, manyfoot.sty:253-257) after
+/// each name of an acmart author list is a mark, so the comma between the names separates two authors. Witness
+/// 2309.13063. Repro sectioning-frontmatter/acmart_manyfoot_marks. 95b (acmart written, OD #942): each marked line
+/// of the affiliation its marked author's (`api:split-by-marks`).
+#[test]
+fn acmart_manyfoot_marks() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/acmart_manyfoot_marks.tex"
+  );
+  assert_eq!(creators_63x(tex), vec![
+    "<creator role=\"author\">\n    <personname>Ann Able<sup xml:id=\"id1\">1</sup></personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id2\">1</sup>Univ A</contact>\n  </creator>",
+    "<creator before=\" and \" role=\"author\">\n    <personname>Bob Bee<sup xml:id=\"id3\">2</sup></personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id4\">2</sup>Univ B <text class=\"ltx_affiliation_country\" xml:id=\"id5\">USA</text></contact>\n  </creator>",
+  ]);
+}
+
+/// 63x: iopart typesets each `\author` where it stands (iopart.cls:225-231), so each call adds its authors, each with
+/// the `\address`/`\ead` after it; the kernel `\author` replaced them, keeping the last (KNOWN_PERL_ERRORS #550).
+/// Witness 2311.17496. Repro sectioning-frontmatter/iopart_author_per_call.
+#[test]
+fn iopart_author_per_call() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/iopart_author_per_call.tex"
+  );
+  assert_eq!(creators_63x(tex), vec![
+    "<creator role=\"author\">\n    <personname>Ann Able</personname>\n    <contact name=\"Affiliation: \" role=\"affiliation\">Univ A</contact>\n    <contact name=\"Email: \" role=\"email\"><text font=\"typewriter\" xml:id=\"id1\">a@a.a</text></contact>\n  </creator>",
+    "<creator before=\"  \" role=\"author\">\n    <personname>Bob Bee</personname>\n    <contact name=\"Affiliation: \" role=\"affiliation\">Univ B</contact>\n  </creator>",
+  ]);
+}
+
+/// 63x: authblk loaded under iopart still has its own `\author[mark]`/`\affil` (a binding loaded later replaces the
+/// class's locked `\author`; review of 63x).
+#[test]
+fn iopart_authblk_author_wins() {
+  let tex = "\\documentclass[12pt]{iopart}\\usepackage{authblk}\\begin{document}\\title{T}\n\\author[1]{Ann Able}\n\\author[2]{Bob Bee}\n\\affil[1]{Univ A}\n\\affil[2]{Univ B}\nx\n\\end{document}\n";
+  assert_eq!(creators_63x(tex), vec![
+    "<creator role=\"author\">\n    <personname>Ann Able</personname>\n    <contact name=\"Affiliation: \" role=\"affiliation\">Univ A</contact>\n  </creator>",
+    "<creator before=\"  \" role=\"author\">\n    <personname>Bob Bee</personname>\n    <contact name=\"Affiliation: \" role=\"affiliation\">Univ B</contact>\n  </creator>",
+  ]);
+}
+
+/// 63x: a conditional around IEEE author blocks (`\ifdefined\x \IEEEauthorblockN{…} \else … \fi`) keeps its tokens as
+/// written: only the true branch's authors, no empty affiliation, no nameless creator (the `\if`, `\else` and `\fi`
+/// were wrapped as bare affiliation text). Witness 2407.02944. Repro
+/// sectioning-frontmatter/ieeetran_author_block_conditional. Since 100b (OD #956, ruling E) the address line of the
+/// institute both names share, spelling neither, is the block's, once — it had stayed welded into the affiliation.
+#[test]
+fn ieeetran_author_block_conditional() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/ieeetran_author_block_conditional.tex"
+  );
+  assert_eq!(creators_63x(tex), vec![
+    "<creator role=\"author\">\n    <personname>Ann Able</personname>\n    <contact name=\"Affiliation: \" role=\"affiliation\">Univ A</contact>\n  </creator>",
+    "<creator before=\"  \" role=\"author\">\n    <personname>Bob Bee</personname>\n    <contact name=\"Affiliation: \" role=\"affiliation\">Univ A</contact>\n  </creator>",
+    "<creator role=\"author\">\n    <contact name=\"Email: \" role=\"email\">a@b.c</contact>\n  </creator>",
+  ]);
+}
+
+/// 63x: a conditional the bare run after a block holds whole is wrapped with it, as any bare text (the email of its
+/// true branch stays the author's, not the body's; review of 63x, the 1901.07768 shape). 95b (IEEEtran written, OD
+/// #942): the group's two addresses its only carrier's e-mails (`owner:only-carrier`).
+#[test]
+fn ieeetran_conditional_in_bare_run() {
+  let tex = "\\documentclass[10pt,conference]{IEEEtran}\\def\\x{}\\title{T}\n\\author{\\IEEEauthorblockN{Ann Able}\\IEEEauthorblockA{Univ A}\\ifdefined\\x \\{a,b\\}@host.org\\else Hidden Text\\fi}\n\\begin{document}\n\\maketitle\nx\n\\end{document}\n";
+  assert_eq!(creators_63x(tex), vec![
+    "<creator role=\"author\">\n    <personname>Ann Able</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A</contact>\n    <contact name=\"Email:\u{a0}\" role=\"email\">a@host.org</contact>\n    <contact name=\"Email:\u{a0}\" role=\"email\">b@host.org</contact>\n  </creator>",
+  ]);
+}
+
+/// 63y (HF2 S4): elsarticle prints a name list in one `\author` as written, so it is several people, read as the
+/// per-author classes read theirs (Perl's elsart_support_core.sty.ltxml:35-36 makes one creator). Witness 2511.07560.
+/// Repro sectioning-frontmatter/elsarticle_author_name_list.
+#[test]
+fn elsarticle_author_name_list() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/elsarticle_author_name_list.tex"
+  );
+  assert_eq!(creators_63x(tex), vec![
+    "<creator role=\"author\">\n    <personname>Ann Able</personname>\n    <contact name=\"Affiliation: \" role=\"affiliation\">Univ A</contact>\n  </creator>",
+    "<creator before=\"  \" role=\"author\">\n    <personname>Bob Baker</personname>\n    <contact name=\"Affiliation: \" role=\"affiliation\">Univ A</contact>\n  </creator>",
+  ]);
+}
+
+/// 63y: an unlabelled elsarticle `\affiliation` is printed under the authors before it, so it goes to the run of them
+/// with none yet (`annotate=new`); it went to the last author only. Repro
+/// sectioning-frontmatter/elsarticle_unlabelled_affiliation_shared.
+#[test]
+fn elsarticle_unlabelled_affiliation_shared() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/elsarticle_unlabelled_affiliation_shared.tex"
+  );
+  assert_eq!(creators_63x(tex), vec![
+    "<creator role=\"author\">\n    <personname>Ann Able</personname>\n    <contact name=\"Affiliation: \" role=\"affiliation\">Univ A</contact>\n  </creator>",
+    "<creator before=\"  \" role=\"author\">\n    <personname>Bob Baker</personname>\n    <contact name=\"Affiliation: \" role=\"affiliation\">Univ A</contact>\n  </creator>",
+  ]);
+}
+
+/// 63y (HF2 S4): a name list in one sn-jnl `\author` is several people (Perl, with no sn-jnl binding, splits it).
+/// Witness 2312.04825. Repro sectioning-frontmatter/snjnl_author_name_list.
+#[test]
+fn snjnl_author_name_list() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/snjnl_author_name_list.tex"
+  );
+  assert_eq!(creators_63x(tex), vec![
+    "<creator role=\"author\">\n    <personname>Ann Able<sup xml:id=\"id1\"><text font=\"italic\" xml:id=\"id1.1\">1</text></sup></personname>\n    <contact name=\"Affiliation: \" role=\"affiliation\">Univ A</contact>\n  </creator>",
+    "<creator before=\"  \" role=\"author\">\n    <personname>Bob Baker<sup xml:id=\"id2\"><text font=\"italic\" xml:id=\"id2.1\">2</text></sup></personname>\n    <contact name=\"Affiliation: \" role=\"affiliation\">Univ A</contact>\n  </creator>",
+    "<creator before=\"  \" role=\"author\">\n    <personname>Cat Cole<sup xml:id=\"id3\"><text font=\"italic\" xml:id=\"id3.1\">1</text></sup></personname>\n    <contact name=\"Affiliation: \" role=\"affiliation\">Univ A</contact>\n  </creator>",
+  ]);
+}
+
+/// 63y (HF2 S4): interact's `\author{\name{…}\affil{…}}` gives the kernel the lines the class prints
+/// (interact.cls:272-273), so the names are its authors, linked to the affiliations by their marks. Witness
+/// 2112.10522. Repro sectioning-frontmatter/interact_author_name_list.
+#[test]
+fn interact_author_name_list() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/interact_author_name_list.tex"
+  );
+  assert_eq!(creators_63x(tex), vec![
+    "<creator role=\"author\">\n    <personname>Ann Able</personname>\n    <contact name=\"Affiliation: \" role=\"affiliation\">Univ A</contact>\n  </creator>",
+    "<creator before=\"  \" role=\"author\">\n    <personname>Bob Baker</personname>\n    <contact name=\"Affiliation: \" role=\"affiliation\">Univ B</contact>\n  </creator>",
+    "<creator before=\"  \" role=\"author\">\n    <personname>Cat Cole</personname>\n    <contact name=\"Affiliation: \" role=\"affiliation\">Univ A</contact>\n  </creator>",
+  ]);
+}
+
+/// 63y (HF2 S7): mnras's `\newauthor` starts a new author row as `\and` does (mnras.cls:1072-1079), and the "and"
+/// opening the row after it is a separator. Witness 2401.11878. Repro sectioning-frontmatter/mnras_newauthor.
+#[test]
+fn mnras_newauthor() {
+  let tex =
+    include_str!("../../../tools/perfect_kernel/repros/sectioning-frontmatter/mnras_newauthor.tex");
+  assert_eq!(creators_63x(tex), vec![
+    "<creator role=\"author\">\n    <personname>Ann Able</personname>\n    <contact name=\"Affiliation: \" role=\"affiliation\">Univ A</contact>\n  </creator>",
+    "<creator before=\"  \" role=\"author\">\n    <personname>Bob Baker</personname>\n    <contact name=\"Affiliation: \" role=\"affiliation\">Univ B</contact>\n  </creator>",
+    "<creator before=\"  \" role=\"author\">\n    <personname>Cat Cole</personname>\n    <contact name=\"Affiliation: \" role=\"affiliation\">Univ A</contact>\n  </creator>",
+  ]);
+}
+
+/// 63y: an author argument opening with a line that prints nothing (`\protect\\`, `\vspace{2mm}\\`) has its names on
+/// the next line; read as the name, it made them the affiliation of the author before (2609.08102, 2504.09158). Repro
+/// sectioning-frontmatter/elsarticle_author_line_printing_nothing.
+#[test]
+fn elsarticle_author_line_printing_nothing() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/elsarticle_author_line_printing_nothing.tex"
+  );
+  assert_eq!(creators_63x(tex), vec![
+    "<creator role=\"author\">\n    <personname>Ann Able</personname>\n    <contact name=\"Affiliation: \" role=\"affiliation\">Univ A</contact>\n  </creator>",
+    "<creator before=\"  \" role=\"author\">\n    <personname>Bob Baker</personname>\n    <contact name=\"Affiliation: \" role=\"affiliation\">Univ A</contact>\n  </creator>",
+    "<creator before=\"  \" role=\"author\">\n    <personname>Cat Cole</personname>\n    <contact name=\"Affiliation: \" role=\"affiliation\">Univ A</contact>\n  </creator>",
+    "<creator before=\"  \" role=\"author\">\n    <personname>Dan Dorn</personname>\n    <contact name=\"Affiliation: \" role=\"affiliation\">Univ A</contact>\n  </creator>",
+  ]);
+}
+
+/// 63y: mnras's `\newauthor` starts a row of the same author tabular, the addresses after all rows
+/// (mnras.cls:1072-1079): it separates names, so an unmarked shared address is every author's (review of 63y). Repro
+/// sectioning-frontmatter/mnras_newauthor_unmarked.
+#[test]
+fn mnras_newauthor_unmarked() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/mnras_newauthor_unmarked.tex"
+  );
+  assert_eq!(creators_63x(tex), vec![
+    "<creator role=\"author\">\n    <personname>Ann Able</personname>\n    <contact name=\"Affiliation: \" role=\"affiliation\">Univ A</contact>\n  </creator>",
+    "<creator before=\"  \" role=\"author\">\n    <personname>Bob Baker</personname>\n    <contact name=\"Affiliation: \" role=\"affiliation\">Univ A</contact>\n  </creator>",
+    "<creator before=\"  \" role=\"author\">\n    <personname>Cat Cole</personname>\n    <contact name=\"Affiliation: \" role=\"affiliation\">Univ A</contact>\n  </creator>",
+  ]);
+}
+
+/// 63y: interact's `\author{\name{A}\affil{X}\name{B}\affil{Y}}` is two authors, each with its own affiliation
+/// (each later `\name` opens a group; review of 63y). Repro sectioning-frontmatter/interact_author_name_pairs.
+#[test]
+fn interact_author_name_pairs() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/interact_author_name_pairs.tex"
+  );
+  assert_eq!(creators_63x(tex), vec![
+    "<creator role=\"author\">\n    <personname>Ann Able</personname>\n    <contact name=\"Affiliation: \" role=\"affiliation\">Univ X</contact>\n  </creator>",
+    "<creator before=\"  \" role=\"author\">\n    <personname>Bob Baker</personname>\n    <contact name=\"Affiliation: \" role=\"affiliation\">Univ Y</contact>\n  </creator>",
+  ]);
+}
+
+/// 63y: interact's `\and` prints "and " (interact.cls:266), so `\name{A \and B}\affil{X}` is two authors sharing
+/// X (review of 63y). Repro sectioning-frontmatter/interact_and_in_name.
+#[test]
+fn interact_and_in_name() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/interact_and_in_name.tex"
+  );
+  assert_eq!(creators_63x(tex), vec![
+    "<creator role=\"author\">\n    <personname>Ann Able</personname>\n    <contact name=\"Affiliation: \" role=\"affiliation\">Univ X</contact>\n  </creator>",
+    "<creator before=\"  \" role=\"author\">\n    <personname>Bob Baker</personname>\n    <contact name=\"Affiliation: \" role=\"affiliation\">Univ X</contact>\n  </creator>",
+  ]);
+}
+
+/// 63y: two unlabelled elsarticle addresses after unlabelled authors are both authors' (the second takes the run
+/// the first did; review of 63y; witness 2609.07632). Repro sectioning-frontmatter/elsarticle_unlabelled_addresses_shared.
+#[test]
+fn elsarticle_unlabelled_addresses_shared() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/elsarticle_unlabelled_addresses_shared.tex"
+  );
+  assert_eq!(creators_63x(tex), vec![
+    "<creator role=\"author\">\n    <personname>Ann Able</personname>\n    <contact name=\"Address: \" role=\"address\">Univ X</contact>\n    <contact name=\"Address: \" role=\"address\">Univ Y</contact>\n  </creator>",
+    "<creator before=\"  \" role=\"author\">\n    <personname>Bob Baker</personname>\n    <contact name=\"Address: \" role=\"address\">Univ X</contact>\n    <contact name=\"Address: \" role=\"address\">Univ Y</contact>\n  </creator>",
+  ]);
+}
+
+/// 63y: in a labelled elsarticle document an unlabelled `\affiliation` names no author and stays the last's, as in
+/// Perl (2609.07780). Repro sectioning-frontmatter/elsarticle_labelled_unlabelled_affiliation. Univ A before the
+/// unmarked line, as elsarticle.cls:634-653 prints both `\affiliation`s, in call order (since 99a r2 in print order (R8: `relocate::at_queue_position`, OD #954)).
+/// The unmarked line is a correspondence legend that prints no mark, so it stays the affiliation it was
+/// (`insert::kind_legend_contacts`, OD #961: an unmarked note is unreachable on the page, review rev103c B1).
+#[test]
+fn elsarticle_labelled_unlabelled_affiliation() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/elsarticle_labelled_unlabelled_affiliation.tex"
+  );
+  assert_eq!(creators_63x(tex), vec![
+    "<creator role=\"author\">\n    <personname>Ann Able</personname>\n    <contact name=\"Affiliation: \" role=\"affiliation\">Univ A</contact>\n  </creator>",
+    "<creator before=\"  \" role=\"author\">\n    <personname>Bob Baker</personname>\n    <contact name=\"Affiliation: \" role=\"affiliation\">Univ A</contact>\n    <contact name=\"Affiliation: \" role=\"affiliation\">Corresponding: Ann Able</contact>\n  </creator>",
+  ]);
+}
+
+/// 63z (HF2 S1): a styled group holding several names, not the whole line (`\textbf{A$^1$, B$^2$}\thanks{…}`),
+/// splits into its names, each in the wrapper, the note after it the last's; Perl's SplitTokens passes over groups.
+/// Witness 2303.16563. Repro sectioning-frontmatter/author_styled_group_names.
+#[test]
+fn author_styled_group_names() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_styled_group_names.tex"
+  );
+  assert_eq!(creators_63x(tex), vec![
+    "<creator role=\"author\">\n    <personname>Ann Able</personname>\n    <contact name=\"Affiliation: \" role=\"affiliation\">Univ A</contact>\n  </creator>",
+    "<creator before=\"  \" role=\"author\">\n    <personname>Bob Baker</personname>\n    <contact name=\"Affiliation: \" role=\"affiliation\">Univ B</contact>\n  </creator>",
+    "<creator before=\"  \" role=\"author\">\n    <personname>Cat Cole</personname>\n    <contact name=\"Affiliation: \" role=\"affiliation\">Univ A</contact>\n  </creator>",
+    "<creator before=\"  \" role=\"author\">\n    <personname>Dan Dorn</personname>\n    <note class=\"ltx_note_frontmatter ltx_thanks_correspondence\" role=\"thanks\" xml:id=\"id1\">Corresponding.</note>\n    <contact name=\"Affiliation: \" role=\"affiliation\">Univ B</contact>\n  </creator>",
+  ]);
+}
+
+/// 63z (HF2 S2): a separator at a wrapper's edge (`\textbf{Name,}`, `\textbf{Name}`) or a wrapper holding only one
+/// (`\textbf{}`, `{\rm and}`) separates the names around it. Witnesses 2310.10477, 2403.11004, 2505.02214. Repro
+/// sectioning-frontmatter/author_separator_in_wrapper.
+#[test]
+fn author_separator_in_wrapper() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_separator_in_wrapper.tex"
+  );
+  assert_eq!(creators_63x(tex), vec![
+    "<creator role=\"author\">\n    <personname>Ann Able</personname>\n    <contact name=\"Affiliation: \" role=\"affiliation\">Univ A</contact>\n  </creator>",
+    "<creator before=\"  \" role=\"author\">\n    <personname>Bob Baker</personname>\n    <contact name=\"Affiliation: \" role=\"affiliation\">Univ B</contact>\n  </creator>",
+    "<creator before=\"  \" role=\"author\">\n    <personname>Cat Cole</personname>\n    <contact name=\"Affiliation: \" role=\"affiliation\">Univ A</contact>\n  </creator>",
+    "<creator before=\"  \" role=\"author\">\n    <personname>Dan Dorn</personname>\n    <contact name=\"Affiliation: \" role=\"affiliation\">Univ B</contact>\n  </creator>",
+    "<creator before=\"  \" role=\"author\">\n    <personname>Eve Ernst</personname>\n    <contact name=\"Affiliation: \" role=\"affiliation\">Univ B</contact>\n  </creator>",
+    "<creator before=\"  \" role=\"author\">\n    <personname>Fay Fox</personname>\n    <contact name=\"Affiliation: \" role=\"affiliation\">Univ A</contact>\n  </creator>",
+  ]);
+}
+
+/// 63z: a comma inside a math mark (`$^{\dagger, 1}$`) is the formula's: the separator hoist leaves math and script
+/// arguments alone (2301.11477). Repro sectioning-frontmatter/author_mark_comma_in_math.
+#[test]
+fn author_mark_comma_in_math() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_mark_comma_in_math.tex"
+  );
+  assert_eq!(creators_63x(tex), vec![
+    // (the `\dagger` nothing answers stays shown, as printed: 65e `show_unanswered_marks`)
+    "<creator role=\"author\">\n    <personname>Ann Able<sup xml:id=\"id1\">\u{2020}</sup></personname>\n    <contact name=\"Affiliation: \" role=\"affiliation\">Univ A</contact>\n  </creator>",
+    "<creator before=\"  \" role=\"author\">\n    <personname>Bob Baker</personname>\n    <contact name=\"Affiliation: \" role=\"affiliation\">Univ B</contact>\n  </creator>",
+  ]);
+}
+
+/// 63z: a comma inside a mark command's argument (`\textsuperscript{\dag,\ddag}`) is the mark's: a group after a
+/// command the hoist does not unwrap is that command's argument (2503.01996). Repro
+/// sectioning-frontmatter/author_mark_argument_comma.
+#[test]
+fn author_mark_argument_comma() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_mark_argument_comma.tex"
+  );
+  assert_eq!(creators_63x(tex), vec![
+    "<creator role=\"author\">\n    <personname>Ann Able</personname>\n    <contact name=\"Affiliation: \" role=\"affiliation\">Univ A</contact>\n  </creator>",
+    "<creator before=\"  \" role=\"author\">\n    <personname>Bob Baker</personname>\n    <contact name=\"Affiliation: \" role=\"affiliation\">Univ A</contact>\n    <contact name=\"Affiliation: \" role=\"affiliation\">Univ B</contact>\n  </creator>",
+  ]);
+}
+
+/// 63z: a comma and a tie at a wrapper's edge (`\textbf{Name$^{1}$,~}`) separate the names (2505.20214). Repro
+/// sectioning-frontmatter/author_separator_tie_in_wrapper.
+#[test]
+fn author_separator_tie_in_wrapper() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_separator_tie_in_wrapper.tex"
+  );
+  assert_eq!(creators_63x(tex), vec![
+    "<creator role=\"author\">\n    <personname>Ann Able</personname>\n    <contact name=\"Affiliation: \" role=\"affiliation\">Univ A</contact>\n  </creator>",
+    "<creator before=\"  \" role=\"author\">\n    <personname>Bob Baker</personname>\n    <contact name=\"Affiliation: \" role=\"affiliation\">Univ B</contact>\n  </creator>",
+  ]);
+}
+
+/// 63z: the true branch of the same toggle (Anonymous), no `Error:expected:\fi`, no name leaking from the other
+/// branch (review of 63z). Repro sectioning-frontmatter/author_list_in_macro_toggle_true.
+#[test]
+fn author_list_in_macro_toggle_true() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_list_in_macro_toggle_true.tex"
+  );
+  assert_eq!(creators_63x(tex), vec![
+    "<creator role=\"author\">\n    <personname>Anonymous</personname>\n  </creator>",
+  ]);
+}
+
+/// 63z: `{\rm and}` and `{\bf Name\textsuperscript{2},}` separate the names around them (2401.03205, 2405.12130). Repro
+/// sectioning-frontmatter/author_separator_in_declaration_group.
+#[test]
+fn author_separator_in_declaration_group() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_separator_in_declaration_group.tex"
+  );
+  assert_eq!(creators_63x(tex), vec![
+    "<creator role=\"author\">\n    <personname>Ann Able</personname>\n    <contact name=\"Affiliation: \" role=\"affiliation\">Univ A</contact>\n  </creator>",
+    "<creator before=\"  \" role=\"author\">\n    <personname>Bob Baker</personname>\n    <contact name=\"Affiliation: \" role=\"affiliation\">Univ B</contact>\n  </creator>",
+    "<creator before=\"  \" role=\"author\">\n    <personname>Cat Cole</personname>\n    <contact name=\"Affiliation: \" role=\"affiliation\">Univ A</contact>\n  </creator>",
+    "<creator before=\"  \" role=\"author\">\n    <personname>Dan Dorn</personname>\n    <contact name=\"Affiliation: \" role=\"affiliation\">Univ B</contact>\n  </creator>",
+  ]);
+}

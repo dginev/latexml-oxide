@@ -21,165 +21,15 @@ fn def_jhep_journal(cs: &str, body: &str) -> Result<()> {
   Ok(())
 }
 
+/// JHEP.cls's journal-citation macros (Perl JHEP.cls.ltxml L143-261): `\@spires`, the
+/// `\<journal>{vol}{year}{page}` aliases (`\apj`, `\prd`, …), `\jhep`, `\newjournal`,
+/// `\ibid` and the arXiv-archive links (`\hepth{}`, …, `\Math{}{}`). JHEP, JHEP2 and
+/// JHEP3 have them; PoS.cls, whose binding loads JHEP's as Perl's does (PoS.cls.ltxml
+/// LoadClass JHEP), defines none (it has its own `\href`, PoS.cls:247): a PoS paper's
+/// `\newcommand{\apj}{ApJ}` was refused and its `\apj` read three arguments, swallowing
+/// what followed (an `unexpected:}` Error: 1507.03892, 1510.07042, 1807.03003, 1908.00100).
 #[rustfmt::skip]
-LoadDefinitions!({
-  // Perl L26-35: Class options
-  DeclareOption!("proceedings", {});
-  DeclareOption!("published", {});
-  DeclareOption!("hyper", {});
-  DeclareOption!("nohyper", {});
-  DeclareOption!("notoc", {});
-  ProcessOptions!();
-  load_class("article", Vec::new(), Tokens!())?;
-  RequirePackage!("amssymb");
-  // The raw JHEP.cls loads hyperref, giving authors \href / \url / \hypertarget
-  // without an explicit \usepackage{hyperref}. Perl's JHEP.cls.ltxml omits
-  // this, but the real-world paper corpus (e.g. arxiv 1010.4240 via PoS →
-  // JHEP) depends on hyperref being active. Load it here so the arxiv sandbox
-  // resolves \href without an Error:undefined cascade.
-  RequirePackage!("hyperref");
-
-  // Perl L40-58: Frontmatter
-  DefMacro!("\\speaker{}", "\\lx@add@creator[role=speaker]{#1}");
-  DefMacro!("\\abstract{}", "\\lx@add@abstract[name={\\abstractname~}]{#1}");
-  DefMacro!("\\email Semiverbatim", "\\lx@add@email{#1}");
-  // Perl L50-52: each date macro ships `name={\<role>name}` so the localized
-  // label is attached to the frontmatter date entry. Restored to match.
-  DefMacro!("\\received{}", "\\lx@add@date[role=received,name={\\receivedname}]{#1}");
-  DefMacro!("\\revised{}", "\\lx@add@date[role=revised,name={\\revisedname}]{#1}");
-  DefMacro!("\\accepted{}", "\\lx@add@date[role=accepted,name={\\acceptedname}]{#1}");
-  DefMacro!("\\JHEPcopydate{}", "\\lx@add@date[role=copydate]{#1}");
-  DefMacro!("\\dedicated{}", "\\lx@add@pubnote[role=dedication]{#1}");
-  DefMacro!("\\conference{}", "\\lx@add@pubnote[role=conference]{#1}");
-  DefMacro!("\\preprint{}", "\\lx@add@pubnote[role=preprint]{#1}");
-  DefMacro!("\\keywords{}", "\\lx@add@keywords[name={\\keywordsname~}]{#1}");
-
-  // Perl L61-64: Acknowledgements environment. Perl uses
-  //   properties => sub { (name => Digest(T_CS('\acknowlname'))) }
-  // — i18n via the user's current \acknowlname binding. Hardcoded
-  // "Acknowledgments" was breaking non-English JHEP submissions.
-  DefConstructor!("\\acknowledgments", "<ltx:acknowledgements name='#name'>",
-    properties => {
-      let name_toks = DigestIf!(T_CS!("\\acknowlname"))?;
-      stored_map!("name" => name_toks)
-    });
-  DefConstructor!("\\endacknowledgments", "</ltx:acknowledgements>");
-  // Perl L64: explicit autoClose so a stray paragraph or sectioning command
-  // can flush an unclosed `\acknowledgments` block (no \endacknowledgments).
-  // ltx:acknowledgements Tag (autoClose + inlist=toc) is global — set in
-  // latex_constructs.rs (arXiv-fork 23771504 removed the binding-local copies).
-
-  // Perl L67-76: Misc macros.
-  // \hash: Perl `DefPrimitiveI('\hash', undef, '#')` emits "#" text.
-  // Rust delegates to `\#` — observationally equivalent (both yield "#").
-  // DP-flag: DefPrimitive → DefMacro, WISDOM #44; safe as `\hash` is a
-  // user-facing text macro, never `\edef`-observed in JHEP documents.
-  DefMacro!("\\hash", "\\#");
-  DefMacro!("\\secstyle", "\\bfseries");
-  DefMacro!("\\militarytime", "\\time");
-  Let!("\\textref", "\\ref");
-  def_macro_noop("\\tocsecs")?;
-  DefMacro!("\\logo", "JHEP");
-  // \JHEP{volume/issue} and \PrHEP{volume/issue} carry journal-issue
-  // metadata. Perl L73-74 gobbles with `?` (uncertain); we surpass
-  // by preserving as ltx:note for downstream JATS metadata.
-  DefMacro!("\\JHEP{}", "\\lx@add@frontmatter{ltx:note}[role=jhep-issue]{#1}");
-  DefMacro!("\\PrHEP{}", "\\lx@add@frontmatter{ltx:note}[role=prhep-issue]{#1}");
-  DefMacro!("\\Proof", "\\emph{Proof.}\\ ");
-
-  // Perl L80-83: Figure/table macros (map to environments)
-  // Perl wraps into `{floatingfigure}` / `{floatingtable}` so the nested
-  // `\caption` sees a proper `\@captype`. Previously Rust expanded to bare
-  // `#2` which dumped the caption into text-mode and triggered
-  // `Error:unexpected:\caption (outside any known float)`.
-  DefMacro!("\\FIGURE[]{}", "\\begin{floatingfigure}[#1]#2\\end{floatingfigure}");
-  DefMacro!("\\TABLE[]{}",  "\\begin{floatingtable}[#1]#2\\end{floatingtable}");
-  DefMacro!("\\EPSFIGURE[]{}{}", "\\begin{floatingfigure}[#1]\\epsfig{file=#2}\\caption{#3}\\end{floatingfigure}");
-  DefMacro!("\\TABULAR[]{}{}{}",
-    "\\begin{floatingtable}[#1]\\begin{tabular}{#2}#3\\end{tabular}\\caption{#4}\\end{floatingtable}");
-
-  // Perl JHEP.cls.ltxml L85-89: \DOUBLEFIGURE[pos]{img1}{img2}{cap1}{cap2}
-  DefMacro!("\\DOUBLEFIGURE[]{}{}{}{}",
-    "\\begin{figure}[#1]\
-     \\begin{@half@doublefigure}\\epsfig{file=#2}\\caption{#4}\\end{@half@doublefigure}\
-     \\begin{@half@doublefigure}\\epsfig{file=#3}\\caption{#5}\\end{@half@doublefigure}\
-     \\end{figure}");
-  DefEnvironment!("{@half@doublefigure}",
-    "<ltx:figure xml:id='#id' inlist='#inlist' width='0.45%'>#body</ltx:figure>#tags",
-    before_digest => { before_float("figure", None); },
-    after_digest  => sub[whatsit] { after_float(whatsit); },
-    mode => "internal_vertical");
-
-  // Perl JHEP.cls.ltxml L96-100: \DOUBLETABLE[pos]{tab1}{tab2}{cap1}{cap2}
-  DefMacro!("\\DOUBLETABLE[]{}{}{}{}",
-    "\\begin{table}[#1]\
-     \\begin{@half@doubletable}#2\\caption{#4}\\end{@half@doubletable}\
-     \\begin{@half@doubletable}#3\\caption{#5}\\end{@half@doubletable}\
-     \\end{table}");
-  DefEnvironment!("{@half@doubletable}",
-    "<ltx:table xml:id='#id' inlist='#inlist' width='0.45%'>#body</ltx:table>#tags",
-    before_digest => { before_float("table", None); },
-    after_digest  => sub[whatsit] { after_float(whatsit); },
-    mode => "internal_vertical");
-
-  // Perl JHEP.cls.ltxml L109-117: JHEP-specific {floatingfigure} without
-  // the `{Dimension}` width arg that the standalone floatfig package uses.
-  DefEnvironment!("{floatingfigure}[]",
-    "<ltx:figure xml:id='#id' inlist='#inlist' float='#float'>#tags#body</ltx:figure>",
-    before_digest => { before_float("figure", None); },
-    after_digest  => sub[whatsit] { after_float(whatsit); },
-    properties    => sub[args] {
-      let pos = args[0].as_ref().map(|a| a.to_string()).unwrap_or_default();
-      let float = if pos.starts_with('v') || pos.starts_with('r') { "right" } else { "left" };
-      Ok(stored_map!("float" => float))
-    },
-    mode => "internal_vertical");
-  DefEnvironment!("{floatingtable}[]",
-    "<ltx:table xml:id='#id' inlist='#inlist' float='#float'>#tags#body</ltx:table>",
-    before_digest => { before_float("table", None); },
-    after_digest  => sub[whatsit] { after_float(whatsit); },
-    properties    => sub[args] {
-      let pos = args[0].as_ref().map(|a| a.to_string()).unwrap_or_default();
-      let float = if pos.starts_with('v') || pos.starts_with('r') { "right" } else { "left" };
-      Ok(stored_map!("float" => float))
-    },
-    mode => "internal_vertical");
-
-  // Perl JHEP.cls.ltxml L133-136 — JHEP redefines `\href` as a 2-arg
-  // `Semiverbatim Semiverbatim` Constructor. The crucial difference from
-  // hyperref.sty's `\href HyperVerbatim {}` is that the SECOND arg is
-  // also `Semiverbatim`: catcode-neutralized so `^` / `_` in the body
-  // become OTHER tokens and do NOT fire script_handler when digested in
-  // math mode.
-  //
-  // Why this matters: JHEP defines journal-citation macros like
-  //   \am{}{}{} → \@spires{ANMAA\%2C#1\%2C#3}{...#3}
-  // where `\@spires{URL}{BODY}` expands to `\href{URL}{BODY}`. Papers
-  // call them inside math (`\beq … \am\mgr M^2S …`), grabbing `^` as
-  // the third arg. The `^` then ends up at the end of `\href`'s body
-  // — and `\href`'s body MUST treat it as Semiverbatim text, not as
-  // a SUPER catcode token that would fire script_handler. The earlier
-  // Rust port omitted this override, so `\href` stayed bound to
-  // hyperref's `HyperVerbatim {}` form and the trailing `^` errored.
-  //
-  // Witness: arXiv:2602.22473 (Pallis et al.) line 1019
-  //   \beq … -2\ld\am\mgr
-  //   M^2S, … \eeq
-  // Rust=1, Perl=0 → 0/0 with this binding.
-  DefConstructor!("\\href Semiverbatim Semiverbatim",
-    "<ltx:ref href='#href'>#2</ltx:ref>",
-    enter_horizontal => true,
-    properties => sub[args] {
-      let url = args.first().and_then(|a| a.as_ref()).map(|t| t.to_string()).unwrap_or_default();
-      let href = compose_url(&lookup_string("BASE_URL"), &url, None);
-      Ok(stored_map!("href" => href))
-    });
-
-  // Perl L138-140: Stubs.
-  def_macro_noop("\\JHEPspecialurl Semiverbatim")?;
-  def_macro_noop("\\base Semiverbatim")?;
-  def_macro_noop("\\name Semiverbatim")?;
-
+fn def_jhep_journal_macros() -> Result<()> {
   // Perl L143: SPIRES URL generator
   DefMacro!("\\@spires{}", "\\href{http://www-spires.slac.stanford.edu/spires/find/hep/www?j=#1}");
 
@@ -303,6 +153,191 @@ LoadDefinitions!({
   DefMacro!("\\quantph{}", "\\href{http://xxx.lanl.gov/abs/quant-ph/#1}{\\tt quant-ph/#1}");
   DefMacro!("\\solvint{}", "\\href{http://xxx.lanl.gov/abs/solv-int/#1}{\\tt solv-int/#1}");
   DefMacro!("\\Math{}{}", "\\href{http://xxx.lanl.gov/abs/math.#1/#2}{\\tt math.#1/#2}");
+  Ok(())
+}
+
+#[rustfmt::skip]
+LoadDefinitions!({
+  // Perl L26-35: Class options
+  DeclareOption!("proceedings", {});
+  DeclareOption!("published", {});
+  DeclareOption!("hyper", {});
+  DeclareOption!("nohyper", {});
+  DeclareOption!("notoc", {});
+  ProcessOptions!();
+  LoadClass!("article");
+  RequirePackage!("amssymb");
+  // The raw JHEP.cls loads hyperref, giving authors \href / \url / \hypertarget
+  // without an explicit \usepackage{hyperref}. Perl's JHEP.cls.ltxml omits
+  // this, but the real-world paper corpus (e.g. arxiv 1010.4240 via PoS →
+  // JHEP) depends on hyperref being active. Load it here so the arxiv sandbox
+  // resolves \href without an Error:undefined cascade.
+  RequirePackage!("hyperref");
+
+  // Perl L40-58: Frontmatter
+  // Each `\author` adds one more author block (JHEP.cls:513, JHEP3.cls:764, PoS.cls:666 append to `\@author`:
+  // `\xdef\@author{\the\prev@t\the\cur@t}`), read as the article `\author` reads its block: one author with its
+  // `\\` lines (affiliation, email), or a marked name list with its marked affiliations (`$^{ab}$`, 0811.4645,
+  // 1011.0516). Perl kept the kernel's `\author`, each call replacing the last: astro-ph0611258 (PoS) kept only its
+  // third author (63k).
+  DefMacro!("\\author{}", "\\lx@add@authors@list{#1}");
+  DefMacro!("\\speaker{}", "\\lx@add@creator[role=speaker]{#1}");
+  DefMacro!("\\abstract{}", "\\lx@add@abstract[name={\\abstractname~}]{#1}");
+  // JHEP.cls:806 `\newcommand\email[1]{{\tt\href{mailto:#1}{#1}}}` (no corpus `_` witness; JHEP3's
+  // `E-mail: \email{…}` author lines, 0911.0568, 0911.0082)
+  DefMacro!("\\email Semiverbatim", "\\lx@add@email{\\lx@address@urlfont{#1}}");
+  // Perl L50-52: each date macro ships `name={\<role>name}` so the localized
+  // label is attached to the frontmatter date entry. Restored to match.
+  DefMacro!("\\received{}", "\\lx@add@date[role=received,name={\\receivedname}]{#1}");
+  DefMacro!("\\revised{}", "\\lx@add@date[role=revised,name={\\revisedname}]{#1}");
+  DefMacro!("\\accepted{}", "\\lx@add@date[role=accepted,name={\\acceptedname}]{#1}");
+  DefMacro!("\\JHEPcopydate{}", "\\lx@add@date[role=copydate]{#1}");
+  // No label, as the class prints none (FIDELITY_CHARTER §4, user ruling 2026-10-30; OXIDIZED_DESIGN_DIVERGENCES #921): JHEP.cls:608 sets the dedication in italics, :390
+  // the preprint header's number, and the conference line its name alone (hep-th0103183's copy) — the role stays.
+  DefMacro!("\\dedicated{}", "\\lx@add@pubnote[role=dedication,name={}]{#1}");
+  DefMacro!("\\conference{}", "\\lx@add@pubnote[role=conference,name={}]{#1}");
+  DefMacro!("\\preprint{}", "\\lx@add@pubnote[role=preprint,name={}]{#1}");
+  DefMacro!("\\keywords{}", "\\lx@add@keywords[name={\\keywordsname~}]{#1}");
+
+  // Perl L61-64: Acknowledgements environment. Perl uses
+  //   properties => sub { (name => Digest(T_CS('\acknowlname'))) }
+  // — i18n via the user's current \acknowlname binding. Hardcoded
+  // "Acknowledgments" was breaking non-English JHEP submissions.
+  DefConstructor!("\\acknowledgments", "<ltx:acknowledgements name='#name'>",
+    properties => {
+      let name_toks = digest_in_group_if(T_CS!("\\acknowlname"))?;
+      stored_map!("name" => name_toks)
+    });
+  DefConstructor!("\\endacknowledgments", "</ltx:acknowledgements>");
+  // Perl L64: explicit autoClose so a stray paragraph or sectioning command
+  // can flush an unclosed `\acknowledgments` block (no \endacknowledgments).
+  // ltx:acknowledgements Tag (autoClose + inlist=toc) is global — set in
+  // latex_constructs.rs (arXiv-fork 23771504 removed the binding-local copies).
+
+  // Perl L67-76: Misc macros.
+  // \hash: Perl `DefPrimitiveI('\hash', undef, '#')` emits "#" text.
+  // Rust delegates to `\#` — observationally equivalent (both yield "#").
+  // DP-flag: DefPrimitive → DefMacro, WISDOM #44; safe as `\hash` is a
+  // user-facing text macro, never `\edef`-observed in JHEP documents.
+  DefMacro!("\\hash", "\\#");
+  DefMacro!("\\secstyle", "\\bfseries");
+  DefMacro!("\\militarytime", "\\time");
+  Let!("\\textref", "\\ref");
+  def_macro_noop("\\tocsecs")?;
+  DefMacro!("\\logo", "JHEP");
+  // \JHEP{volume/issue} and \PrHEP{volume/issue} carry journal-issue
+  // metadata. Perl L73-74 gobbles with `?` (uncertain); we surpass
+  // by preserving as ltx:note for downstream JATS metadata.
+  DefMacro!("\\JHEP{}", "\\lx@add@frontmatter{ltx:note}[role=jhep-issue]{#1}");
+  DefMacro!("\\PrHEP{}", "\\lx@add@frontmatter{ltx:note}[role=prhep-issue]{#1}");
+  DefMacro!("\\Proof", "\\emph{Proof.}\\ ");
+
+  // Perl L80-83: Figure/table macros (map to environments)
+  // Perl wraps into `{floatingfigure}` / `{floatingtable}` so the nested
+  // `\caption` sees a proper `\@captype`. Previously Rust expanded to bare
+  // `#2` which dumped the caption into text-mode and triggered
+  // `Error:unexpected:\caption (outside any known float)`.
+  DefMacro!("\\FIGURE[]{}", "\\begin{floatingfigure}[#1]#2\\end{floatingfigure}");
+  DefMacro!("\\TABLE[]{}",  "\\begin{floatingtable}[#1]#2\\end{floatingtable}");
+  DefMacro!("\\EPSFIGURE[]{}{}", "\\begin{floatingfigure}[#1]\\epsfig{file=#2}\\caption{#3}\\end{floatingfigure}");
+  DefMacro!("\\TABULAR[]{}{}{}",
+    "\\begin{floatingtable}[#1]\\begin{tabular}{#2}#3\\end{tabular}\\caption{#4}\\end{floatingtable}");
+
+  // Perl JHEP.cls.ltxml L85-89: \DOUBLEFIGURE[pos]{img1}{img2}{cap1}{cap2}
+  DefMacro!("\\DOUBLEFIGURE[]{}{}{}{}",
+    "\\begin{figure}[#1]\
+     \\begin{@half@doublefigure}\\epsfig{file=#2}\\caption{#4}\\end{@half@doublefigure}\
+     \\begin{@half@doublefigure}\\epsfig{file=#3}\\caption{#5}\\end{@half@doublefigure}\
+     \\end{figure}");
+  DefEnvironment!("{@half@doublefigure}",
+    "<ltx:figure xml:id='#id' inlist='#inlist' width='0.45%'>#body</ltx:figure>#tags",
+    // The begin code opens a TeX group of its own: a float: `\@float` (latex.ltx:17479 `\color@vbox`).
+    tex_group => { TexGroup::Box },
+    before_digest => { before_float("figure", None)?; engine::latex_constructs::reset_float_box()?; },
+    after_digest  => sub[whatsit] { after_float(whatsit); },
+    mode => "internal_vertical");
+
+  // Perl JHEP.cls.ltxml L96-100: \DOUBLETABLE[pos]{tab1}{tab2}{cap1}{cap2}
+  DefMacro!("\\DOUBLETABLE[]{}{}{}{}",
+    "\\begin{table}[#1]\
+     \\begin{@half@doubletable}#2\\caption{#4}\\end{@half@doubletable}\
+     \\begin{@half@doubletable}#3\\caption{#5}\\end{@half@doubletable}\
+     \\end{table}");
+  DefEnvironment!("{@half@doubletable}",
+    "<ltx:table xml:id='#id' inlist='#inlist' width='0.45%'>#body</ltx:table>#tags",
+    // The begin code opens a TeX group of its own: a float: `\@float` (latex.ltx:17479 `\color@vbox`).
+    tex_group => { TexGroup::Box },
+    before_digest => { before_float("table", None)?; engine::latex_constructs::reset_float_box()?; },
+    after_digest  => sub[whatsit] { after_float(whatsit); },
+    mode => "internal_vertical");
+
+  // Perl JHEP.cls.ltxml L109-117: JHEP-specific {floatingfigure} without
+  // the `{Dimension}` width arg that the standalone floatfig package uses.
+  DefEnvironment!("{floatingfigure}[]",
+    "<ltx:figure xml:id='#id' inlist='#inlist' float='#float'>#tags#body</ltx:figure>",
+    // The begin code opens a TeX group of its own: a float: `\@float` (latex.ltx:17479 `\color@vbox`).
+    tex_group => { TexGroup::Box },
+    before_digest => { before_float("figure", None)?; engine::latex_constructs::reset_float_box()?; },
+    after_digest  => sub[whatsit] { after_float(whatsit); },
+    properties    => sub[args] {
+      let pos = args[0].as_ref().map(|a| a.to_string()).unwrap_or_default();
+      let float = if pos.starts_with('v') || pos.starts_with('r') { "right" } else { "left" };
+      Ok(stored_map!("float" => float))
+    },
+    mode => "internal_vertical");
+  DefEnvironment!("{floatingtable}[]",
+    "<ltx:table xml:id='#id' inlist='#inlist' float='#float'>#tags#body</ltx:table>",
+    // The begin code opens a TeX group of its own: a float: `\@float` (latex.ltx:17479 `\color@vbox`).
+    tex_group => { TexGroup::Box },
+    before_digest => { before_float("table", None)?; engine::latex_constructs::reset_float_box()?; },
+    after_digest  => sub[whatsit] { after_float(whatsit); },
+    properties    => sub[args] {
+      let pos = args[0].as_ref().map(|a| a.to_string()).unwrap_or_default();
+      let float = if pos.starts_with('v') || pos.starts_with('r') { "right" } else { "left" };
+      Ok(stored_map!("float" => float))
+    },
+    mode => "internal_vertical");
+
+  // Perl JHEP.cls.ltxml L133-136 — JHEP redefines `\href` as a 2-arg
+  // `Semiverbatim Semiverbatim` Constructor. The crucial difference from
+  // hyperref.sty's `\href HyperVerbatim {}` is that the SECOND arg is
+  // also `Semiverbatim`: catcode-neutralized so `^` / `_` in the body
+  // become OTHER tokens and do NOT fire script_handler when digested in
+  // math mode.
+  //
+  // Why this matters: JHEP defines journal-citation macros like
+  //   \am{}{}{} → \@spires{ANMAA\%2C#1\%2C#3}{...#3}
+  // where `\@spires{URL}{BODY}` expands to `\href{URL}{BODY}`. Papers
+  // call them inside math (`\beq … \am\mgr M^2S …`), grabbing `^` as
+  // the third arg. The `^` then ends up at the end of `\href`'s body
+  // — and `\href`'s body MUST treat it as Semiverbatim text, not as
+  // a SUPER catcode token that would fire script_handler. The earlier
+  // Rust port omitted this override, so `\href` stayed bound to
+  // hyperref's `HyperVerbatim {}` form and the trailing `^` errored.
+  //
+  // Witness: arXiv:2602.22473 (Pallis et al.) line 1019
+  //   \beq … -2\ld\am\mgr
+  //   M^2S, … \eeq
+  // Rust=1, Perl=0 → 0/0 with this binding.
+  DefConstructor!("\\href Semiverbatim Semiverbatim",
+    "<ltx:ref href='#href'>#2</ltx:ref>",
+    enter_horizontal => true,
+    properties => sub[args] {
+      let url = args.first().and_then(|a| a.as_ref()).map(|t| t.to_string()).unwrap_or_default();
+      let href = compose_url(&lookup_string("BASE_URL"), &url, None);
+      Ok(stored_map!("href" => href))
+    });
+
+  // Perl L138-140: Stubs.
+  def_macro_noop("\\JHEPspecialurl Semiverbatim")?;
+  def_macro_noop("\\base Semiverbatim")?;
+  def_macro_noop("\\name Semiverbatim")?;
+
+  // JHEP's own journal-citation interface (`def_jhep_journal_macros`) — not PoS's, which
+  // loads this class (pos_cls.rs) for everything else.
+  if !lookup_bool("JHEP@without@journal@macros") {
+    def_jhep_journal_macros()?;
+  }
 
   // Conditionals — Perl L267-291
   TeX!(r"
@@ -338,4 +373,14 @@ LoadDefinitions!({
   DefMacro!("\\figurename", "Figure");
   DefMacro!("\\tablename", "Table");
   DefMacro!("\\partname", "Part");
+
+  // The equations are numbered within the sections, "(2.1)", plain "(1)" before the first section, the appendices'
+  // "(A.1)" (`\appendix` sets `\thesection` to `\@Alph`): JHEP.cls v2.0.3 (1201.5394's copy):675-676 and :1451,
+  // JHEP3.cls:905-906 and :1787 (0708.0971's copy), PoS.cls:771-772 and :1419 (2205.03535's copy; PoS's binding loads
+  // this one), each `\renewcommand\theequation{\ifnum\c@section=0\else\thesection.\fi\@arabic\c@equation}` and
+  // `\@addtoreset{equation}{section}`. Perl's JHEP*.cls.ltxml and PoS.cls.ltxml keep the article's "(1)", "(2)" through
+  // the paper (2205.03535: 77 equation references "2" where the PDF prints "1.2"; KNOWN_PERL_ERRORS #1097). Guard
+  // `perfect_kernel_batch78q::jhep_family_equations_within_sections`.
+  RawTeX!(r"\renewcommand\theequation{\ifnum\c@section=0\else\thesection.\fi\@arabic\c@equation}
+\@addtoreset{equation}{section}");
 });

@@ -1,0 +1,24 @@
+% witness: every \documentclass{scrartcl} paper; ceurart (scrartcl base: 2509.11496, 2506.00694, 2608.23214), atlasdoc
+%          (scrartcl/scrreprt/scrbook base: 2509.01219)
+% oracle:  pdflatex 0 errors, 0 warnings: "1. A", "(1)", "1.1. B", "Figure 1: F", "A. Proofs", "B. Inner" (KOMA's `numbers=autoendperiod` dots: an appendix letter);
+%          Perl (OmniBus→article for every KOMA class)
+%          ids S1, S1.E1, S1.SS1, S1.F1 and `<appendix>` A1, A2
+% engines: rust 72a r9 = ids after the counter names (section1, equation1, section1.subsection1, figure1), the
+%          appendix more sections (ids colliding: section1a), and the 2 KOMA Warnings ("`\@startsection' has been
+%          changed", "Unexpected definition of \@sect!")
+% expect:  0 errors, 0 warnings; ids S1, S1.E1, S1.SS1, S1.F1; the appendix A1 "Appendix A Proofs" (KOMA lettering A), its section Inner A2
+% status:  RED (72a r9) -> GREEN (72a r10)
+% preload: ar5iv.sty
+\documentclass{scrartcl}
+\begin{document}
+
+\section{A}
+Text \ref{eq1} and \ref{sb}.
+\begin{equation}x=1\label{eq1}\end{equation}
+\subsection{B}\label{sb}
+\begin{figure}\caption{F}\end{figure}
+\appendix
+\section{Proofs}
+\section{Inner}
+More.
+\end{document}

@@ -1,0 +1,22 @@
+% mechanism: the events' walker reads a paragraph's list as no group only at the block's own level (events/mod.rs
+%   `paragraph_is_no_group`, OD #993 P2-1c). Inside `\parbox{\textwidth}{\Large{…}}` the paragraph stays a group; read
+%   as no group, the braced `{\color{blue}\footnotemark[1]}` mark's group became the `\parbox`, and the e-mail contact
+%   the `\thanks`'s `\href{mailto:…}` makes was written as its address alone, the link lost
+% witness: 2601.03873 (MAGIC + WEBT, 250 names in one `\parbox`; reduced by line deletion to these three)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "Team X: Ann Able1 , Bob Baker2⋆ , Cy Cole3⋆ ,"
+% engines: rust int158a = `<contact name="Email: " role="email">team@x.org</contact>`; int157a = P21e's XML
+% expect:  0 errors, 2 warnings (the "Team X:" separator the safety net counts; the address's second placement the
+%          content check counts — both int157a's too); the e-mail contact `<ref class="ltx_href" href="mailto:team@x.org">`;
+%          its owner, Ann Able, is int157a's (pdflatex prints the address in Cy Cole's footnote: pre-existing)
+% status:  RED (int158a) -> GREEN (P21e) — perfect_kernel_batchp21e::a_paragraph_in_a_box_keeps_a_contacts_markup
+% preload: ar5iv.sty
+\documentclass{mnras}
+\title{T}
+\author[A. Able et al.]{\parbox{\textwidth}{\Large{Team X: Ann Able$^{1}$,
+Bob Baker$^{2}${\color{blue}\footnotemark[1]},
+Cy Cole$^{3}$\thanks{Corresponding authors: C. Cole, B. Baker.~\href{mailto:team@x.org}{team@x.org}},
+}}}
+\begin{document}
+\maketitle
+Text.
+\end{document}

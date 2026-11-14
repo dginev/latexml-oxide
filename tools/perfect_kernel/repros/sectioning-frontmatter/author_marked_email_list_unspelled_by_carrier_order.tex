@@ -1,0 +1,19 @@
+% mechanism: a block line's e-mail entry under a mark several names carry, one address per carrier that every spelled
+%   address agrees with (`$^\dagger$\texttt{zq77@x.org, cat@x.org}` under Ann Able† and Cat Cole†): the unspelled
+%   address the carrier at its place (FIDELITY_CHARTER §4's author order, OD #805; `owner:order`), not both names'.
+% witness: 2510.10618 (`$^{\dagger}$ \texttt{dawnkun1993@gmail.com, chenma@cityu.edu.hk}` under Xiaokun Zhang† and Chen
+%   Ma†: dawnkun1993 Xiaokun Zhang's)
+% oracle:  pdflatex 0 errors: "Ann Able1† , Bob Baker2 , Cat Cole1†" over "1 Univ A 2 Univ B" and "† zq77@x.org,
+%   cat@x.org"
+% engines: rust 93a: both addresses on both names; rust 92c: cat@x.org Cat Cole's, zq77@x.org the block's
+% expect:  0 errors, 0 warnings; Ann Able zq77@x.org, Cat Cole cat@x.org
+% status:  GREEN (93a r2)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{A Title}
+\author{Ann Able$^{1\dagger}$, Bob Baker$^2$, Cat Cole$^{1\dagger}$ \\ $^1$Univ A \\ $^2$Univ B \\
+$^\dagger$\texttt{zq77@x.org, cat@x.org}}
+\maketitle
+Text.
+\end{document}

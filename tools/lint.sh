@@ -118,6 +118,13 @@ run "raw log-diagnostic ban" \
   "use Info!/Warn!/Error!/Fatal! or emit_{info,warn,error,fatal}" -- \
   tools/lint_raw_log_diag.sh
 
+# 1c. The process environment is written only before the first thread exists:
+#     a write after a spawn is a use-after-free of `environ` under any concurrent
+#     getenv (STABILITY_WITNESSES Cluster J). Allowlisted start-up/test sites only.
+run "environment writes before the first thread" \
+  "pass the value in-process, or allowlist the site in tools/lint_env_writes.sh with its ordering argument" -- \
+  tools/lint_env_writes.sh
+
 # 2. Formatting must already be applied (check, don't rewrite).
 run "rustfmt (check)" \
   "run: cargo fmt --all" -- \

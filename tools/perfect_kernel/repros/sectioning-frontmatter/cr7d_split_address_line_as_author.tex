@@ -1,0 +1,19 @@
+% mechanism: the decline split's fail-safe — a piece of Perl's split that isn't the first and starts with a printed mark
+%   is an address line (its mark past Perl's 8 tokens of a marked affiliation line), which would be a creator, so the
+%   block is written whole, as the base did (`emit`'s `split_owns_falsely`)
+% witness: 0809.5152 (tMOP2e: `\\\vspace{6pt} \vspace{3pt} $^{a}${\em{Istituto …}}`); review revCR7c B2
+% oracle:  pdflatex 0 errors: "Ann Ablea∗, Bob Bakerb and Carl Colea", "a Univ X, Town", "b Univ Y, City"
+% engines: rust CR7c: the two address lines are creators, their marks after the text; perl 0 errors: both lines inside
+%   the last creator's name
+% expect:  0 errors, 1 warning (the decline's, written whole); one creator holding every name and both address lines,
+%   no address a creator
+% status:  RED (CR7c) -> GREEN (perfect_kernel_batchcr7::a_split_making_an_address_line_a_creator_keeps_the_block_whole)
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{Ann Able$^{a}$\thanks{Corresponding author.}\addtocounter{footnote}{-1}\thanks{Visiting.}, Bob Baker$^{b}$ and Carl Cole$^{a}$ \\\vspace{6pt}
+\vspace{3pt} $^{a}${\em{Univ X, Town}}\\
+\vspace{3pt} $^{b}${\em{Univ Y, City}}}
+\maketitle
+Body.
+\end{document}

@@ -1,0 +1,11 @@
+% witness: K13 stage-2 audit (57h): arydshln.sty:677 `\def\ADLdrawingmode#1`; the binding read nothing
+% oracle:  pdflatex 0 errors; "Text." alone
+% engines: rust 57h=0: the mode digit "1" printed before "Text."
+% expect:  0 errors; the paragraph holds "Text." only (the binding's stub warning stays)
+% status:  RED (57h) -> GREEN (57i)
+\documentclass{article}
+\usepackage{arydshln}
+\ADLdrawingmode{1}
+\begin{document}
+Text.
+\end{document}

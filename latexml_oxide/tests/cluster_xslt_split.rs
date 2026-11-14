@@ -108,6 +108,7 @@ mod xslt_head_keywords {
   #[test]
   fn head_keywords_distinct_sorted() {
     const DOC: &str = "\\documentclass{article}\n\
+                       \\usepackage{makeidx}\n\
                        \\begin{document}\n\
                        \\section{S}\n\
                        Text\\index{banana} more\\index{apple} and\\index{banana} \
@@ -370,6 +371,244 @@ mod xslt_custom_stylesheet {
       html.contains("nma_latexml.css"),
       "#292: the custom head-resources override was not applied:\n{html}"
     );
+  }
+
+  /// #806: with no `--stylesheet`, the default is the embedded sheet, whatever engine-named
+  /// copies sit in the working (and source) directory — probe revW1 p806.
+  #[test]
+  fn stray_engine_sheets_do_not_replace_the_default() {
+    let work = tempfile::tempdir().expect("tempdir");
+    let marker = |m: &str| {
+      format!(
+        "<xsl:stylesheet version=\"1.0\" xmlns:xsl=\"http://www.w3.org/1999/XSL/Transform\">\
+         <xsl:template match=\"/\"><out>{m}</out></xsl:template></xsl:stylesheet>"
+      )
+    };
+    std::fs::create_dir_all(work.path().join("resources/XSLT")).unwrap();
+    for (path, m) in [
+      ("resources/XSLT/LaTeXML-html5.xsl", "STRAY-HTML5"),
+      ("LaTeXML-html5.xsl", "STRAY-BARE-HTML5"),
+      ("LaTeXML-all-xhtml.xsl", "STRAY-ALL-XHTML"),
+    ] {
+      std::fs::write(work.path().join(path), marker(m)).unwrap();
+    }
+    std::fs::write(
+      work.path().join("B.tex"),
+      "\\documentclass{article}\n\\begin{document}\nHello stray world.\n\\end{document}\n",
+    )
+    .unwrap();
+    let out = run(work.path(), &["B.tex", "--dest", "B.html"]);
+    let stderr = String::from_utf8_lossy(&out.stderr);
+    assert!(out.status.success(), "{stderr}");
+    let html = std::fs::read_to_string(work.path().join("B.html")).expect("read B.html");
+    assert!(!html.contains("STRAY"), "{html}");
+    assert!(html.contains("<article class=\"ltx_document\">"), "{html}");
+    assert!(html.contains("Hello stray world."), "{html}");
+  }
+}
+
+mod xslt_failure_is_fatal {
+  //! #782: a stylesheet that fails (a bad XPath, `xsl:message terminate`, a missing import) stops
+  //! post-processing with a Fatal, exit 1 and no output, as Perl's die inside ProcessChain does
+  //! (LaTeXML.pm L605-614) — not an Error with the raw XML written under `.html`.
+
+  use std::{path::Path, process::Command};
+
+  const XML: &str = "<?xml version=\"1.0\"?><document xmlns=\"http://dlmf.nist.gov/LaTeXML\"><para><p>Hi</p></para></document>";
+
+  fn stylesheet(dir: &Path, name: &str, body: &str) -> String {
+    let path = dir.join(name);
+    std::fs::write(
+      &path,
+      format!(
+        "<xsl:stylesheet version=\"1.0\" xmlns:xsl=\"http://www.w3.org/1999/XSL/Transform\">{body}</xsl:stylesheet>"
+      ),
+    )
+    .unwrap();
+    path.to_string_lossy().into_owned()
+  }
+
+  fn rows(dir: &Path) -> [String; 3] {
+    [
+      stylesheet(
+        dir,
+        "bad_xpath.xsl",
+        "<xsl:template match=\"/\"><x><xsl:value-of select=\"//*[[bad\"/></x></xsl:template>",
+      ),
+      stylesheet(
+        dir,
+        "terminate.xsl",
+        "<xsl:template match=\"/\"><xsl:message terminate=\"yes\">STOP</xsl:message></xsl:template>",
+      ),
+      stylesheet(
+        dir,
+        "badimport.xsl",
+        "<xsl:import href=\"does-not-exist.xsl\"/><xsl:template match=\"/\"><x/></xsl:template>",
+      ),
+    ]
+  }
+
+  fn post_options(xsl: &str) -> latexml::post::PostOptions<'_> {
+    latexml::post::PostOptions {
+      pmml:                      false,
+      cmml:                      false,
+      keep_xmath:                false,
+      stylesheet:                Some(xsl),
+      destination:               None,
+      source_directory:          None,
+      site_directory:            None,
+      search_paths:              &[],
+      default_resources:         false,
+      css_files:                 &[],
+      js_files:                  &[],
+      noinvisibletimes:          false,
+      plane1:                    true,
+      hackplane1:                false,
+      mathtex:                   false,
+      url_style:                 latexml_post::crossref::UrlStyle::File,
+      navigationtoc:             None,
+      schemadocs:                false,
+      split:                     false,
+      split_xpath:               None,
+      split_naming:              None,
+      xslt_parameters:           &[],
+      graphics_svg_threshold_kb: 0,
+      graphicimages:             true,
+      timestamp:                 None,
+      icon:                      None,
+      whatsout:                  latexml_post::extract::Whatsout::default(),
+    }
+  }
+
+  #[test]
+  fn a_failing_stylesheet_is_fatal_with_no_output() {
+    let _ = latexml_core::util::logger::init(log::LevelFilter::Warn);
+    let dir = tempfile::tempdir().expect("tempdir");
+    for xsl in rows(dir.path()) {
+      latexml_core::common::error::initialize_report();
+      let out = latexml::post::run_post_processing_logged(XML, &post_options(&xsl));
+      assert_eq!(out.status_code, 3, "{xsl}: {}", out.log);
+      assert_eq!(out.html, "", "{xsl}");
+      assert_eq!(
+        out.log.matches("Fatal:post:convert").count(),
+        1,
+        "{xsl}: {}",
+        out.log
+      );
+      assert_eq!(out.log.matches("Error:").count(), 0, "{xsl}: {}", out.log);
+    }
+    latexml_core::common::error::initialize_report();
+  }
+
+  /// A sheet that dies only on the page carrying the paragraph `BOOM`.
+  fn boom(dir: &Path) -> String {
+    stylesheet(
+      dir,
+      "boom.xsl",
+      "<xsl:template match=\"/\"><xsl:if test=\"//*[local-name()='p' and .='BOOM']\">\
+       <xsl:message terminate=\"yes\">STOP</xsl:message></xsl:if><out/></xsl:template>",
+    )
+  }
+
+  fn html_files(dir: &Path) -> Vec<String> {
+    let mut found: Vec<String> = std::fs::read_dir(dir)
+      .unwrap()
+      .filter_map(|e| e.ok()?.file_name().into_string().ok())
+      .filter(|n| n.ends_with(".html"))
+      .collect();
+    found.sort();
+    found
+  }
+
+  /// `--split`: the pages rendered before the failing one are removed, as Perl writes none.
+  #[test]
+  fn a_split_render_that_dies_keeps_no_page() {
+    let _ = latexml_core::util::logger::init(log::LevelFilter::Warn);
+    let dir = tempfile::tempdir().expect("tempdir");
+    let xsl = boom(dir.path());
+    let dest = dir.path().join("index.html").to_string_lossy().into_owned();
+    let xml = "<?xml version=\"1.0\"?><document xmlns=\"http://dlmf.nist.gov/LaTeXML\">\
+               <section xml:id=\"S1\"><title>One</title><para><p>fine</p></para></section>\
+               <section xml:id=\"S2\"><title>Two</title><para><p>BOOM</p></para></section>\
+               </document>";
+    latexml_core::common::error::initialize_report();
+    let out = latexml::post::run_post_processing_logged(xml, &latexml::post::PostOptions {
+      destination: Some(&dest),
+      split: true,
+      split_xpath: Some("//ltx:section".to_string()),
+      ..post_options(&xsl)
+    });
+    latexml_core::common::error::initialize_report();
+    assert_eq!(out.status_code, 3, "{}", out.log);
+    assert_eq!(out.html, "");
+    assert_eq!(
+      out.log.matches("Fatal:post:convert").count(),
+      1,
+      "{}",
+      out.log
+    );
+    assert_eq!(html_files(dir.path()), Vec::<String>::new(), "{}", out.log);
+  }
+
+  /// The parallel page render (`LATEXML_RENDER_JOBS`, 64+ pages): a worker's Fatal removes every
+  /// page the workers wrote, never a stale page of an earlier run (`S70.html`, planned but unwritten
+  /// here), and the CLI exits 1.
+  #[test]
+  fn a_parallel_split_render_that_dies_keeps_no_page() {
+    let dir = tempfile::tempdir().expect("tempdir");
+    let xsl = boom(dir.path());
+    let mut tex = String::from("\\documentclass{article}\n\\begin{document}\n");
+    for i in 1..=70 {
+      let body = if i == 60 { "BOOM" } else { "fine" };
+      tex.push_str(&format!("\\section{{S{i}}}\n{body}\n\n"));
+    }
+    tex.push_str("\\end{document}\n");
+    std::fs::write(dir.path().join("a.tex"), tex).unwrap();
+    std::fs::write(dir.path().join("S70.html"), "STALE").unwrap();
+    let out = Command::new(env!("CARGO_BIN_EXE_latexml_oxide"))
+      .args([
+        &format!("--stylesheet={xsl}"),
+        "--splitat=section",
+        "--dest=a.html",
+        "a.tex",
+      ])
+      .env("LATEXML_RENDER_JOBS", "2")
+      .current_dir(dir.path())
+      .output()
+      .expect("spawn latexml_oxide");
+    let stderr = String::from_utf8_lossy(&out.stderr);
+    assert!(
+      stderr.contains("parallel page render engaged: 2 worker(s)"),
+      "{stderr}"
+    );
+    assert_eq!(out.status.code(), Some(1), "{stderr}");
+    assert_eq!(stderr.matches("Fatal:post:convert").count(), 1, "{stderr}");
+    assert_eq!(html_files(dir.path()), vec!["S70.html"], "{stderr}");
+    assert_eq!(
+      std::fs::read_to_string(dir.path().join("S70.html")).unwrap(),
+      "STALE"
+    );
+  }
+
+  /// The CLI exits 1 and writes no `.html`.
+  #[test]
+  fn the_cli_exits_nonzero_and_writes_nothing() {
+    let dir = tempfile::tempdir().expect("tempdir");
+    let xsl = &rows(dir.path())[1];
+    std::fs::write(
+      dir.path().join("a.tex"),
+      "\\documentclass{article}\n\\begin{document}\nHello.\n\\end{document}\n",
+    )
+    .unwrap();
+    let out = Command::new(env!("CARGO_BIN_EXE_latexml_oxide"))
+      .args([&format!("--stylesheet={xsl}"), "--dest=a.html", "a.tex"])
+      .current_dir(dir.path())
+      .output()
+      .expect("spawn latexml_oxide");
+    let stderr = String::from_utf8_lossy(&out.stderr);
+    assert_eq!(out.status.code(), Some(1), "{stderr}");
+    assert_eq!(stderr.matches("Fatal:post:convert").count(), 1, "{stderr}");
+    assert!(!dir.path().join("a.html").exists(), "{stderr}");
   }
 }
 
@@ -1439,5 +1678,140 @@ mod urlstyle {
       err.contains("bogus") || err.to_lowercase().contains("invalid"),
       "error should name the bad value:\n{err}"
     );
+  }
+}
+
+/// Batch 56bz: `<ltx:picture>` is converted to SVG on the live page DOM by
+/// `latexml_post::svg::SVG` before MathML/XSLT (Perl's chain order,
+/// `LaTeXML.pm` Graphics → SVG → MathML → XSLT), not by a regex over the
+/// serialized XML spliced into the XSLT's placeholder span after the fact. The
+/// regex path truncated an outer picture at its first NESTED `</picture>` and
+/// had no `foreignObject` branch for `<block>`/`<p>`/`<inline-block>` children
+/// (`SVG.pm:148` `convertNode`'s else-branch), so every text label after a
+/// nested picture and every `\parbox`/`minipage` inside a picture vanished
+/// between the core XML and the HTML: pagelayout ×3, ticket ×2, vocaltract,
+/// bookcover-example2 and latex-refsheet/header-graph went from 100% to 0-11%
+/// PDF-text recall at post. The assertions cover the WHOLE rendered `<svg>`:
+/// the nested picture's group and path, then the label after it. The outer
+/// `<svg>` carries the picture's own valid attributes (`fill`/`stroke`, as
+/// `SVG.pm::ProcessSVG`'s `copy_valid_attributes`).
+mod picture_svg_on_the_live_dom {
+  use std::{path::Path, process::Command};
+
+  fn run(cwd: &Path, args: &[&str]) -> std::process::Output {
+    Command::new(env!("CARGO_BIN_EXE_latexml_oxide"))
+      .args(args)
+      .current_dir(cwd)
+      .output()
+      .expect("spawn latexml_oxide")
+  }
+
+  fn html_of(name: &str, tex: &str) -> String {
+    let work = tempfile::tempdir().expect("tempdir");
+    std::fs::write(work.path().join(format!("{name}.tex")), tex).unwrap();
+    let out = run(work.path(), &[
+      &format!("{name}.tex"),
+      "--dest",
+      &format!("{name}.html"),
+    ]);
+    let stderr = String::from_utf8_lossy(&out.stderr).to_string();
+    assert!(
+      out.status.success(),
+      "conversion failed (status {:?}):\n{stderr}",
+      out.status.code()
+    );
+    let diagnostic = regex::Regex::new(r"(Error|Fatal):[A-Za-z_]+:").unwrap();
+    assert!(!stderr.lines().any(|l| diagnostic.is_match(l)), "{stderr}");
+    std::fs::read_to_string(work.path().join(format!("{name}.html"))).expect("read html")
+  }
+
+  /// A text label placed AFTER a nested picture survives, black (Perl's font
+  /// stack `{ fill => 'black' }`, SVG.pm:82: the picture's `fill="none"` is
+  /// inherited, and the label was invisible), and the nested picture is a plain
+  /// group in the enclosing picture's y-up space: its rule at y=0 is the outer
+  /// picture's bottom. Perl flips it about its mid-height (`SVG.pm:191-197`
+  /// `convertPicture`); OXIDIZED_DESIGN_DIVERGENCES #414.
+  #[test]
+  fn label_after_a_nested_picture_renders_in_the_svg() {
+    let html = html_of(
+      "nested",
+      "\\documentclass{article}\n\\begin{document}\n\\setlength{\\unitlength}{1pt}\n\
+       \\begin{picture}(200,100)\n\
+       \\put(0,0){\\begin{picture}(50,50)\\put(0,0){\\line(1,0){50}}\\end{picture}}\n\
+       \\put(100,50){\\makebox(0,0){VISIBLETEXTLABEL}}\n\
+       \\end{picture}\n\\end{document}\n",
+    );
+    let expected = concat!(
+      r##"<svg fill="none" height="132.84" overflow="visible" stroke="none" version="1.1" width="265.67">"##,
+      r##"<g transform="translate(0,132.84) scale(1,-1)">"##,
+      r##"<g transform="translate(0,0)"><g>"##,
+      r##"<g transform="translate(0,0)">"##,
+      r##"<path style="--ltx-stroke-color:#000000;" d="M 0,0 69.19,0" stroke="#000000" stroke-width="0.4"></path>"##,
+      r##"</g></g></g>"##,
+      r##"<g transform="translate(138.37,69.19)"><g class="makebox" transform="translate(-71.3,-4.73)">"##,
+      r##"<text style="--ltx-fill-color:black;" fill="black" transform="scale(1,-1)" x="0" y="0">VISIBLETEXTLABEL</text>"##,
+      r##"</g></g></g></svg>"##,
+    );
+    assert!(html.contains(expected), "{html}");
+  }
+
+  /// A `\parbox` inside a picture is wrapped in `<foreignObject>` with the
+  /// XSLT's container spans (`SVG.pm:148-183` `convertNode` else-branch), and
+  /// sized from the containing `<g>`'s `innerheight`/`innerdepth` (the parbox
+  /// carries no height of its own): height 17.14 px, y-offset 27.63 = height +
+  /// depth — Perl's 17.85 / 28.78 at its 100 dpi basis. Since 56eq (#243) the
+  /// `\parbox` capture in the picture `<g>` is a schema-valid `<inline-block>`
+  /// (an LR-box), so the foreignObject holds `<span class="ltx_inline-block">`
+  /// (was Perl's schema-invalid `<block>`/`<div class="ltx_block">`); the
+  /// foreignObject dimensions and position are unchanged (render-faithful).
+  #[test]
+  fn parbox_inside_a_picture_renders_as_a_foreign_object() {
+    let html = html_of(
+      "parbox",
+      "\\documentclass{article}\n\\begin{document}\n\\setlength{\\unitlength}{1pt}\n\
+       \\begin{picture}(200,100)\n\
+       \\put(0,0){\\parbox{100pt}{PARBOXVISIBLEWORD inside picture}}\n\
+       \\end{picture}\n\\end{document}\n",
+    );
+    let expected = concat!(
+      r##"<svg fill="none" height="132.84" overflow="visible" stroke="none" version="1.1" width="265.67">"##,
+      r##"<g transform="translate(0,132.84) scale(1,-1)"><g transform="translate(0,0)">"##,
+      r##"<g transform="translate(0,27.63) scale(1,-1)">"##,
+      r##"<foreignObject height="17.14" overflow="visible" width="132.84">"##,
+      r##"<span class="ltx_foreignobject_container"><span class="ltx_foreignobject_content">"##,
+      "\n",
+      r##"<span class="ltx_inline-block ltx_parbox ltx_align_middle" style="width:100.0pt;">"##,
+      "\n",
+      r##"<span class="ltx_p">PARBOXVISIBLEWORD inside picture</span>"##,
+      "\n",
+      r##"</span></span></span></foreignObject></g></g></g></svg>"##,
+    );
+    assert!(html.contains(expected), "{html}");
+  }
+
+  /// 59p: a tikzpicture `\put` in a picture keeps its orientation. Its `svg:svg`
+  /// (y-down) is flipped back once inside the enclosing picture's y-up space and
+  /// stays SVG; Perl wraps it in a flipped `foreignObject` on top of the nested
+  /// picture's own flip, and it came out upside-down (uantwerpenexam's title page,
+  /// a tikzpicture in eso-pic's page picture). Repro
+  /// graphics-tikz/picture_put_tikzpicture_keeps_orientation (pdflatex: HIGH over
+  /// the rule, TIKZHIGH over TIKZLOW); OXIDIZED_DESIGN_DIVERGENCES #414.
+  #[test]
+  fn tikzpicture_in_a_picture_keeps_its_orientation() {
+    let html = html_of(
+      "tikzput",
+      include_str!(
+        "../../tools/perfect_kernel/repros/graphics-tikz/picture_put_tikzpicture_keeps_orientation.tex"
+      ),
+    );
+    let expected = concat!(
+      r##"<g transform="translate(0,0)"><g><g transform="translate(0,0)">"##,
+      r##"<path style="--ltx-stroke-color:#000000;" d="M 0,0 69.19,0" stroke="#000000" stroke-width="0.4"></path></g>"##,
+      r##"<g transform="translate(0,55.35)">"##,
+      r##"<text style="--ltx-fill-color:black;" fill="black" transform="scale(1,-1)" x="0" y="0">HIGH</text></g></g></g>"##,
+      r##"<g transform="translate(138.37,0)"><g transform="translate(0,58.60) scale(1,-1)">"##,
+      r##"<svg height="58.6" overflow="visible" version="1.1" viewBox="0 0 80.04 58.6" width="80.04">"##,
+    );
+    assert!(html.contains(expected), "{html}");
   }
 }

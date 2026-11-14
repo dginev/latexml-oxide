@@ -1,0 +1,14 @@
+% witness: synthetic (a sibling of review revP5a S1: a line printing the grade alone, under an affiliation line)
+% oracle:  pdflatex 0 errors: "Ann Able and Bob Baker", "Univ A, Town", "Fellow, IEEE"
+% engines: rust P5abase = "Fellow, IEEE" dropped silently, 0 warnings; rust P5a = Bob's membership (the last name above)
+% expect:  0 errors, 1 warning (the emitter's net: no place for "Fellow IEEE", kept as a note of the author block)
+% status:  RED (P5a) -> GREEN (P5a2)
+\documentclass[journal]{IEEEtran}
+\begin{document}
+\title{T}
+\author{Ann~Able and Bob~Baker\\
+Univ A, Town\\
+\IEEEmembership{Fellow,~IEEE}}
+\maketitle
+Body.
+\end{document}

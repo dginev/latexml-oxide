@@ -1,0 +1,18 @@
+% mechanism: beamer's `\institute` (`\lx@add@affiliations`, the binding's own cutter `affiliation_calls`) under names
+%   printing `$^n$`: beamer's `\author` replaces, so its names hide their marks (`per_author_marks` false) and the
+%   cutter hides its entries' marks with them (OD #1009); pdflatex prints both
+% witness: synthetic (census P4fC: beamer 10 papers through the cutter)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "Ann Able1", "Bob Baker2", "1 Univ A, Town A",
+%   "2 Univ B, Town B"
+% engines: int164a, P4f: Ann Able "Univ A, Town A", Bob Baker "Univ B, Town B" (every mark hidden, 0 warnings)
+% expect:  0 errors, 0 warnings; Ann Able 1 "1 Univ A, Town A"; Bob Baker 2 "2 Univ B, Town B"
+% status:  RED (P4f)
+% moves:   post-merge (AUMK)
+% preload: ar5iv.sty
+\documentclass{beamer}
+\title{T}
+\author{Ann Able$^{1}$ \and Bob Baker$^{2}$}
+\institute{$^{1}$Univ A, Town A \and $^{2}$Univ B, Town B}
+\begin{document}
+\frame{\titlepage}
+\end{document}

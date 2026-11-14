@@ -1,0 +1,19 @@
+% mechanism: REVTeX's group rule (`group_or_marked_affiliation`): every name's mark opens with a symbol (`$^{*,1,2}$`,
+%   `$^{\dagger,2,3}$`); each label piece is read apart (`relocate::requested_labels`), so the numbers still request their
+%   lines and the unmarked head is the requested 1 no line prints (2109.01501's rule), under superscriptaddress too
+% witness: synthetic (review revP4b3 B1, probe p12)
+% oracle:  pdflatex (TL 2025, revtex4-2, -no-shell-escape) 0 errors: "Ann Able∗,1,21 and Bob Baker†,2,31 / 1 Univ A, Town A /
+%          2 Univ B, Town B / 3 Univ C, Town C" (superscriptaddress numbers the block 1)
+% engines: P4b3base: as expected; P4b3b: the whole block copied onto both names
+% expect:  0 errors, 0 warnings; Ann Able "Univ A, Town A", "2 Univ B, Town B"; Bob Baker "2 Univ B, Town B", "3 Univ C, Town C"
+% status:  RED (P4b3b) -> GREEN (P4b3c; guard perfect_kernel_batchc1::group_rule_reads_marks_as_digested)
+\documentclass[aps,superscriptaddress]{revtex4-2}
+\begin{document}
+\title{T}
+\author{Ann Able$^{*,1,2}$}
+\author{Bob Baker$^{\dagger,2,3}$}
+\affiliation{Univ A, Town A\\ $^{2}$Univ B, Town B\\ $^{3}$Univ C, Town C}
+\begin{abstract}x\end{abstract}
+\maketitle
+Text.
+\end{document}

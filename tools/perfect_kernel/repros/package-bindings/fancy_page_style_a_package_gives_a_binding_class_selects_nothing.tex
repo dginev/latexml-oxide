@@ -1,0 +1,35 @@
+% A shipped package redefines the acmart class's page style with fancyhdr (popets.sty:187-279's
+% `\AtBeginDocument{\fancypagestyle{standardpagestyle}{…}\pagestyle{standardpagestyle}}`), its code testing acmart.cls's
+% own switches (`\if@ACM@printfolios`, `\if@ACM@timestamp`, acmart.cls:147-153 `\define@boolkey…{timestamp}`), which
+% the acmart binding does not model. fancyhdr_sty.rs stores the style as `\ps@standardpagestyle`, to be read
+% (frontmatter_stores.rs' toks stores), and selecting it runs nothing, as Perl's no-op `\fancypagestyle` and
+% `\pagestyle` (latex_constructs.pool.ltxml:997): its fields set no head or foot here. Running it raised 9 Errors on
+% the witnesses (`\if@ACM@printfolios` read as no conditional, `\or`/`\else`/`\fi` unexpected, `\if@ACM@timestamp`
+% undefined). A field using fancyhdr's `\fancycenter` (fancyhdr.sty:378) is read clean too (review rev95d S3, probe p3).
+% witness: 2408.16304, 2602.20222, 2606.05273 (acmart + popets.sty; the 95b-r2 census)
+% oracle:  pdflatex 0 errors: "T", "Ann Able", "Text."
+% engines: rust int124a = 0 errors; rust 95d = 1 error (`\if@ACM@timestamp` undefined; the witnesses' full style 9:
+%          an undefined switch read as no conditional, its `\or`/`\else`/`\fi` unexpected); perl = 0 errors
+%          (`\fancypagestyle` a no-op)
+% expect:  0 errors, 0 warnings; "Text." kept
+% status:  RED (95d) -> GREEN (95d-r2)
+% preload: ar5iv.sty
+\begin{filecontents*}[overwrite]{acmstyle.sty}
+\AtBeginDocument{%
+\fancypagestyle{standardpagestyle}{%
+  \fancyhf{}%
+  \fancyfoot[C]{\if@ACM@printfolios\footnotesize\thepage\fi}%
+  \fancyhead[C]{\fancycenter{a}{b}{c}}%
+  \if@ACM@timestamp
+     \fancyfoot[LO,RE]{\ACM@timestamp}
+  \fi
+}%
+\pagestyle{standardpagestyle}}
+\end{filecontents*}
+\documentclass[sigconf]{acmart}
+\usepackage{acmstyle}
+\begin{document}
+\title{T}\author{Ann Able}
+\maketitle
+Text.
+\end{document}

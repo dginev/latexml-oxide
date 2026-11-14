@@ -1,0 +1,18 @@
+% mechanism: the e-mail line of llncs's one `\institute` is each address its owner's whether `\inst{1}` picks the
+%   institute or it is shared (`share_row_contacts`, OXIDIZED_DESIGN_DIVERGENCES #901; FIDELITY_CHARTER §4).
+% witness: the 85b review's p16; 2608.11332 (`\inst{1}` on every author, arXiv/html_feedback#6881)
+% oracle:  pdflatex 0 errors; "Ann Able1 and Bob Baker1" over "Univ X" and "{able,baker}@x.edu"
+% engines: rust int114a and 85b r1 = `{able,baker}@x.edu` whole on both authors (inheriting `affiliation:1`)
+% expect:  0 errors, 0 warnings; the institute on both; able@ Ann Able's, baker@ Bob Baker's
+% status:  RED (85b r1) -> GREEN (85b r2); no guard of its own: the same shape is
+%   `06_cluster_frontmatter::frontmatter_llncs_institute_shared_email`
+% preload: ar5iv.sty
+\documentclass{llncs}
+\begin{document}
+\title{A Title}
+\author{Ann Able\inst{1} \and Bob Baker\inst{1}}
+\institute{Univ X\\ \email{\{able,baker\}@x.edu}}
+\maketitle
+\begin{abstract}Text.\end{abstract}
+Body.
+\end{document}

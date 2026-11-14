@@ -1,0 +1,16 @@
+% mechanism: an author's mark whose operand starts with a `\relax` (`\textsuperscript{\relax 3}`, no note involved):
+%   the mark reader reads the operand as the label, `\relax 3`, which no list answers, so the label "3" prints nothing;
+%   TeX's `\relax` typesets nothing and pdflatex prints "3". Older than 78v (int62a has it); the same reader drops
+%   `\textsuperscript{\relax 1\thanks{a}}`'s "1" (review rev78v2 finding 6a, probe sh3.tex)
+% witness: none in the census (review rev78v2 probe sh3.tex)
+% oracle:  pdflatex 0 errors; "Ann Alpha3 , Bob Beta1∗", footnote "∗ a"
+% engines: rust int62a, int63a, 78v r3: Ann's "3" lost, Bob's "1" lost (his note kept)
+% expect:  0 errors, 0 warnings; Ann's mark "3"; Bob's mark "1" and his thanks note
+% status:  RED (78v r3)
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{Ann Alpha\textsuperscript{\relax 3}, Bob Beta\textsuperscript{\relax 1\thanks{a}}}
+\maketitle
+Body.
+\end{document}

@@ -153,7 +153,7 @@ jobs:
   # interner / arena bounds-skip (resolve_unchecked) + re-entrant `&mut *ptr`
   # sites (docs/release/SAFETY.md categories B/C), the only `unsafe` here with genuine
   # UB potential that Miri can execute. The FFI-bearing unsafe (libc / kpathsea
-  # / libxml2 / libxslt dlsym / getrusage / signal) CANNOT run under Miri, so
+  # / libxml2 / libxslt globals / getrusage / signal) CANNOT run under Miri, so
   # coverage is deliberately scoped via tools/miri_check.sh. Build scripts
   # (libxml/kpathsea/marpa) still compile C natively, hence the dev headers.
   miri:
@@ -234,7 +234,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: resources/dumps
-          key: dumps-v1-${{ runner.os }}-tl${{ steps.tlfp.outputs.year }}-${{ hashFiles('latexml_core/src/**', 'latexml_engine/src/**', 'latexml_codegen/src/**') }}
+          key: dumps-v1-${{ runner.os }}-tl${{ steps.tlfp.outputs.year }}-${{ hashFiles('latexml_core/src/**', 'latexml_engine/src/**', 'latexml_codegen/src/**', 'latexml_oxide/src/ini_tex.rs') }}
       - name: make formats
         if: steps.dumps.outputs.cache-hit != 'true'
         env:
@@ -263,7 +263,7 @@ jobs:
         run: cargo nextest run --cargo-profile ci --profile ci --target x86_64-unknown-linux-gnu -p latexml --test 06_cluster_math
 
   test:
-    # Sharded across 4 runners. The suite's cost is ~398 s of in-binary
+    # Sharded across runners (8 since 2026-11-13, below). The suite's cost is ~398 s of in-binary
     # execution spread over the test targets (consolidated 2026-08 into fewer,
     # concern-grouped `cluster_*` binaries), and `cargo test` runs those
     # targets SEQUENTIALLY — so the test step was 18.7 min on Linux / 29.4 min
@@ -271,31 +271,49 @@ jobs:
     # Splitting the test list across runners is the fix that does NOT raise
     # per-runner memory: each shard still runs 2 tests at a time inside its own
     # 16 GB (see `test-threads` in .config/nextest.toml). `--partition` is
-    # exact — measured 524 + 462 + 433 + 416 = 1835, the whole suite.
-    name: latexml-oxide CI (shard ${{ matrix.shard }}/4)
+    # exact — measured 850 + 876 + 882 + 814 = 3422, the whole suite
+    # (2026-09-26).
+    #
+    # `hash:` assigns each test by a hash of its binary + name. `count:` dealt
+    # tests round-robin WITHIN each binary, so every single-test binary (the 10
+    # streaming sweeps, the two serialized RSS tests, …: 18 of them, the
+    # heaviest tests in the suite) landed in shard 1, which was the critical
+    # path of every run. `hash:` spreads them 3-7 per shard, and a test keeps
+    # its shard when others are added.
+    #
+    # 8 shards (CIP0, 2026-11-13): the perfect_kernel suite is ~8,090 tests,
+    # projected ≈ 292 test-min on this runner (≈ 18 min per shard at 2 test
+    # threads, hash max-shard ≈ 22-24 min). Raise the count, not the threads.
+    name: latexml-oxide CI (shard ${{ matrix.shard }}/8)
     needs: changes
     # Full Linux suite on every code change (PR and main push); skipped only
     # for a docs-only diff.
     if: needs.changes.outputs.not_docs == 'true'
     runs-on: ubuntu-latest
-    timeout-minutes: 50
+    # 75: a shard on a dump-cache miss pays `make formats` (7-11 min) + the
+    # build before its ≈ 22-24-min test step; 75 keeps the worst case ≤ 70 %.
+    timeout-minutes: 75
     strategy:
       # One shard's failure must not cancel the others: we want the FULL
       # failure picture from a red run, the same reason the local command
       # carries --no-fail-fast.
       fail-fast: false
       matrix:
-        shard: [1, 2, 3, 4]
+        shard: [1, 2, 3, 4, 5, 6, 7, 8]
     env:
       # Runner: ubuntu-latest = 4 vCPU / 16 GB RAM / ~14 GB disk.
       #
       # All build settings live on the dedicated `ci` profile in the
-      # workspace `Cargo.toml` (`[profile.ci]` + per-package overrides
-      # for `latexml_contrib` / `latexml_package`). That profile is
+      # workspace `Cargo.toml` (`[profile.ci]`: workspace crates at
+      # opt-level 0, and per-package overrides putting every dependency
+      # and `latexml_core` at opt-level 1 — test CPU 88 → 23.8 min for
+      # +46 s of build over warm deps, +1:55 cold). That profile is
       # version-controlled and reviewable; previously the same knobs
       # lived as `CARGO_PROFILE_RELEASE_*` env-vars here, which had the
       # side-effect of contaminating the `release` profile used for
-      # distribution. Use `--profile ci` from every cargo invocation.
+      # distribution. Select it in every cargo invocation:
+      # `--cargo-profile ci` for nextest, `--profile ci` for plain cargo,
+      # `PROFILE=ci` for tools/make_formats.sh.
       #
       # Other knobs:
       #  * CARGO_BUILD_JOBS=2 — two rustc workers fit comfortably in
@@ -315,9 +333,13 @@ jobs:
     steps:
       # Minimal apt set: only what `make formats` + tests actually need.
       # Removed: imagemagick, inkscape (graphics post-processing —
-      # not exercised by the test suite); texlive-lang-* (only en/de/fr/
-      # ru/el needed by tests, and texlive-lang-european is the heaviest
-      # superset). Net: ~1.5 GB less apt download + install time.
+      # not exercised by the test suite). The second block (≈230 MB) is what the
+      # guards load (CIF0, 2026-11-13): tracklang/expkv (plain-generic), tipa,
+      # pstricks, the t4/lae/magyar/spanish encodings and languages, tex-gyre, and
+      # jing for the schema guards. texlive-fonts-extra (669 MB), lang-chinese/
+      # korean and games stay out: the tests that load them declare it with
+      # `requires` and skip visibly (listed after the run). These packages add
+      # no file the dumps read (latex.ltx/expl3), so the dump-cache key stays.
       - name: install dependencies
         run: |
           sudo apt-get update
@@ -327,7 +349,10 @@ jobs:
             texlive texlive-latex-extra texlive-science \
             texlive-bibtex-extra texlive-publishers \
             texlive-lang-german texlive-lang-french texlive-lang-greek \
-            texlive-lang-cyrillic
+            texlive-lang-cyrillic \
+            texlive-plain-generic tipa texlive-pstricks texlive-lang-other \
+            texlive-lang-arabic texlive-lang-european texlive-lang-spanish \
+            tex-gyre jing
       - uses: actions/checkout@v6
       - uses: dtolnay/rust-toolchain@nightly
       - uses: Swatinem/rust-cache@v2
@@ -350,7 +375,9 @@ jobs:
       # are NOT in the base dump and are deliberately EXCLUDED from the key —
       # otherwise the common case (editing a package binding) would needlessly
       # bust the cache. The dump is thus a deterministic function of
-      # latexml_{core,engine,codegen}/src + the TeX Live release, so most PRs
+      # latexml_{core,engine,codegen}/src, the init driver
+      # (latexml_oxide/src/ini_tex.rs: it sets initex's brace catcodes before
+      # the format is read) + the TeX Live release, so most PRs
       # (post, math-parser, PACKAGE bindings, tests, docs) skip the ~8-min
       # dump-generation step. Conservative within that set (over-regenerate,
       # never stale; the test suite catches a bad dump). `runner.os` keeps
@@ -363,7 +390,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: resources/dumps
-          key: dumps-v1-${{ runner.os }}-tl${{ steps.tlfp.outputs.year }}-${{ hashFiles('latexml_core/src/**', 'latexml_engine/src/**', 'latexml_codegen/src/**') }}
+          key: dumps-v1-${{ runner.os }}-tl${{ steps.tlfp.outputs.year }}-${{ hashFiles('latexml_core/src/**', 'latexml_engine/src/**', 'latexml_codegen/src/**', 'latexml_oxide/src/ini_tex.rs') }}
       - name: make formats
         if: steps.dumps.outputs.cache-hit != 'true'
         env:
@@ -385,7 +412,15 @@ jobs:
         # `--cargo-profile ci` selects the Cargo profile; `--profile ci`
         # selects the NEXTEST profile (.config/nextest.toml). They are
         # different knobs that happen to share a name.
-        run: cargo nextest run --cargo-profile ci --profile ci --workspace --partition count:${{ matrix.shard }}/4
+        env:
+          LATEXML_TEST_SKIP_LOG: ${{ github.workspace }}/target/test-skips.log
+        run: cargo nextest run --cargo-profile ci --profile ci --workspace --partition hash:${{ matrix.shard }}/8
+
+      - name: skipped tests (requirements not met)
+        # `check_requirements` skips (Perl's check_requirements); no log = none skipped.
+        if: always()
+        shell: bash
+        run: bash tools/test_skip_summary.sh
 
   # macOS mirror of the Linux job above (issue #217). Same `ci` profile,
   # same make-formats → build → run flow; only the platform deps differ:
@@ -430,7 +465,7 @@ jobs:
       - name: install dependencies
         run: |
           command -v pkg-config >/dev/null || brew install pkgconf
-          brew install libxml2 libxslt texlive
+          brew install libxml2 libxslt texlive jing-trang
       - name: surface keg-only pkg-config paths
         run: |
           echo "PKG_CONFIG_PATH=$(brew --prefix libxml2)/lib/pkgconfig:$(brew --prefix libxslt)/lib/pkgconfig" >> "$GITHUB_ENV"
@@ -459,7 +494,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: resources/dumps
-          key: dumps-v1-${{ runner.os }}-tl${{ steps.tlfp.outputs.year }}-${{ hashFiles('latexml_core/src/**', 'latexml_engine/src/**', 'latexml_codegen/src/**') }}
+          key: dumps-v1-${{ runner.os }}-tl${{ steps.tlfp.outputs.year }}-${{ hashFiles('latexml_core/src/**', 'latexml_engine/src/**', 'latexml_codegen/src/**', 'latexml_oxide/src/ini_tex.rs') }}
       - name: make formats
         if: steps.dumps.outputs.cache-hit != 'true'
         env:
@@ -474,7 +509,15 @@ jobs:
         # `--cargo-profile ci` selects the Cargo profile; `--profile ci`
         # selects the NEXTEST profile (.config/nextest.toml). They are
         # different knobs that happen to share a name.
-        run: cargo nextest run --cargo-profile ci --profile ci --workspace --partition count:${{ matrix.shard }}/4
+        env:
+          LATEXML_TEST_SKIP_LOG: ${{ github.workspace }}/target/test-skips.log
+        run: cargo nextest run --cargo-profile ci --profile ci --workspace --partition hash:${{ matrix.shard }}/4
+
+      - name: skipped tests (requirements not met)
+        # `check_requirements` skips (Perl's check_requirements); no log = none skipped.
+        if: always()
+        shell: bash
+        run: bash tools/test_skip_summary.sh
 
   # Single aggregating gate. Branch protection matches required checks BY NAME,
   # and a skipped matrix check (`shard 1/4`, `macOS shard 2/4`, …) leaves a PR

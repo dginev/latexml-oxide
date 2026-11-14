@@ -1,0 +1,27 @@
+% mechanism: an author whose whole content is a collaboration framed as a remark (elsarticle's `\author{On behalf of
+%   the XYZ Consortium}` after its authors) is the collaboration contact of the authors before it, no creator
+%   (the reading's `frames_the_names`; until P5b `\lx@add@author`'s `whole_name_collaboration`; FIDELITY_CHARTER §4;
+%   OXIDIZED_DESIGN_DIVERGENCES #967); a collaboration named alone (`\collab{The XYZ Collaboration}`) stays a creator.
+% witness: 1201.5050 (elsarticle: `\author{A.G. Tsirigotis\corref{cor1}} … \author{S. E. Tzamarias}
+%   \address{…} \author{On behalf of the KM3NeT Consortium}`); census132 row 10 (NAMETAIL)
+% oracle:  pdflatex (TL 2025) 0 errors: "Ann Able∗ , Bob Baker", "Univ X", "On behalf of the XYZ Consortium"
+% engines: rust int134b: a third creator "On behalf of the XYZ Consortium"; perl: the same
+% expect:  0 errors, 0 warnings; two creators, each with the address and the collaboration contact, Ann Able the
+%   corresponding author
+% status:  RED (int134b) -> GREEN (106c)
+% preload: ar5iv.sty
+\documentclass{elsarticle}
+\begin{document}
+\begin{frontmatter}
+\title{T}
+\author{Ann Able\corref{cor1}}
+\cortext[cor1]{Corresponding author.}
+\author{Bob Baker}
+\address{Univ X}
+\author{On behalf of the XYZ Consortium}
+\begin{abstract}
+A.
+\end{abstract}
+\end{frontmatter}
+Text.
+\end{document}

@@ -1,0 +1,23 @@
+% mechanism: bibunits' `\putbib` outside every unit expands `\@startbibunitorrelax`, undefined before the first `\bibunit`
+%   (bibunits.sty:251-256, 324-325), so pdflatex errs. Rule (3): only TeX errs and the recovery is not semantic (the
+%   cite dangles, an empty References), so an Error (EB1); a row of `perfect_kernel_error_boundary`.
+% witness: synthetic (revBU1b PE1)
+% oracle:  pdflatex: `! Undefined control sequence` once; prints "Main [?]" and no Alpha entry; Perl 0 E, 0 W
+% engines: rust int160c: 0 E 0 W, Alpha listed in an unprinted bu0 References; BU1b: 0 E 1 W (Missing Entry alpha),
+%   [alpha] dangles; EB1: 1 Error (undefined:\@startbibunitorrelax), 0 W, the rest as BU1b
+% expect:  1 Error at the main `\putbib`; the two units as today
+% status:  RED (int160c, BU1b) -> GREEN (EB1)
+\documentclass{article}
+\usepackage{bibunits}
+\begin{document}
+Main \cite{alpha}.
+\putbib[refs]
+\begin{bibunit}[plain]
+No cite here.
+\putbib[refs]
+\end{bibunit}
+\begin{bibunit}[plain]
+Two \cite{beta}.
+\putbib[refs]
+\end{bibunit}
+\end{document}

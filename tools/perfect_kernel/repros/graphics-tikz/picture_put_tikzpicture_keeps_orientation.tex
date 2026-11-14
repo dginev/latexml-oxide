@@ -1,0 +1,18 @@
+% witness: uantwerpenexam-example1 (uantwerpenexam.cls:282-401: the title page is a tikzpicture `\put(0,0)` in
+%   eso-pic's page picture); any `\put(…){\begin{tikzpicture}…}` or `\put(…){\begin{picture}…}` in a picture
+% oracle:  pdflatex 0 errors; LOW at the bottom of the frame, HIGH above it, the rule along the bottom
+% engines: rust 59o5 = the nested picture flipped about its mid-height, a nested tikzpicture's SVG wrapped in a
+%   flipped foreignObject: upside-down (Perl the same, SVG.pm:191-197 convertPicture, PERL-ORIGIN)
+% expect:  0 errors; in the HTML the nested picture is a plain group, the tikzpicture's svg one flip back, no
+%   foreignObject (cluster_xslt_split picture_svg_on_the_live_dom)
+% status:  GREEN (59p: latexml_post svg.rs `convert_picture`, OXIDIZED_DESIGN_DIVERGENCES #414)
+\documentclass{article}
+\usepackage{tikz}
+\begin{document}
+\setlength{\unitlength}{1pt}
+\begin{picture}(200,100)
+\put(0,0){\begin{picture}(50,50)\put(0,0){\line(1,0){50}}\put(0,40){HIGH}\end{picture}}
+\put(100,0){\begin{tikzpicture}\draw (0,0) -- (1,0); \node[above] at (0.5,1) {TIKZHIGH}; \node[above] at (0.5,0) {TIKZLOW};\end{tikzpicture}}
+\put(60,0){LOW}
+\end{picture}
+\end{document}

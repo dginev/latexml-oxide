@@ -1,0 +1,13 @@
+% mechanism: the safe side of author_note_macro_defines_what_a_later_author_reads: a note macro whose definition is
+%   local to a group of its own (`\begingroup\renewcommand\thefootnote{}\footnote{#1}\endgroup`) leaves nothing a later
+%   author reads (`FieldDeclaration::outlives_its_call`), so the block is read as before: no decline
+% witness: 2602.15181 (`\blfootnote`), 0903.4816 (`\symbolfootnote`), 2311.17684 (`\footaffil`)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 `!`: "Ann One", "Bob Two"; footnote "∗Corresponding Author." (the
+%   title's own `\thefootnote` at `\@thanks`)
+% engines: rust e6a6c93a18 0 errors, 0 warnings, as expected
+% expect:  0 errors, 0 warnings; Ann One with the note, Bob Two
+% status:  GREEN (e6a6c93a18; perfect_kernel_batchcr7::a_definition_its_call_prints_takes_effect_in_order)
+\documentclass{article}
+\newcommand\blfootnote[1]{\begingroup\renewcommand\thefootnote{}\footnote{#1}\endgroup}
+\title{T}\author{Ann One\blfootnote{Corresponding Author.} \and Bob Two}
+\begin{document}\maketitle Body.\end{document}

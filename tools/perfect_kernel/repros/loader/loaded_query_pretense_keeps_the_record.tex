@@ -1,0 +1,30 @@
+% witness: synthetic (revGA2 S1): amsmath loaded, its mark taken back, then cleveref, whose binding pretends amsmath
+%          loaded while it reads cleveref.sty (Perl cleveref.sty.ltxml:23-27)
+% oracle:  pdflatex 0 errors: "amsmath not loaded."; a=b and e=f unnumbered, c=d (1), g=h (2), "See eq. (1)."
+% engines: rust GA2 (c21ad0900e) = 0 errors, a=b numbered (1) (the pretense cleared amsmath's real load record)
+% expect:  0 errors, 0 warnings; pdflatex's text and numbering
+% status:  RED (GA2) -> GREEN (GA2b)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{amsmath}
+\makeatletter
+\expandafter\let\csname ver@amsmath.sty\endcsname\relax
+\makeatother
+\usepackage{cleveref}
+\makeatletter
+\edef\a{amsmath \@ifpackageloaded{amsmath}{loaded}{not loaded}.}
+\makeatother
+\begin{document}
+\a
+\begin{equation}
+a=b\nonumber
+\end{equation}
+\begin{equation}
+c=d\label{e}
+\end{equation}
+\begin{align}
+e&=f\nonumber\\
+g&=h
+\end{align}
+See \cref{e}.
+\end{document}

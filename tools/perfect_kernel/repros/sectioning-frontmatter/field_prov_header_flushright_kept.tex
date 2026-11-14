@@ -1,0 +1,18 @@
+
+% A report number in `{flushright}` before the document's own title block: a list environment (`\trivlist`) is no
+% TeX box, its paragraph is the page's body text, so the print after it is not in the document's title block and
+% stays (fms1 round-4 review finding 3 ruling: `{flushright}`, `{center}`, `quote` are body text). A header case
+% OXIDIZED_DESIGN #715 lists.
+% status:  GREEN (fms1 rounds 4, 5).
+% oracle:  pdflatex 0 errors: "LA-UR-12-3456" at the right, "Header Title / Ann Author", "1 Intro Text.".
+% expect:  0 errors, 0 warnings; no `field_ink` Info; the title block kept.
+\documentclass{article}
+\makeatletter
+\title{Header Title}\author{Ann Author}
+\begin{document}
+\begin{flushright}LA-UR-12-3456\end{flushright}
+\vspace{1cm}
+\begin{center}{\Large\@title}\\[1em]\@author\end{center}
+\section{Intro}
+Text.
+\end{document}

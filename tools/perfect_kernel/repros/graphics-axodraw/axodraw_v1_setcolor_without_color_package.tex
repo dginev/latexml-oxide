@@ -1,0 +1,16 @@
+% witness: 0709.2086, 1712.05312 (`\SetColor{Purple}` with no color package): the colordvi-aware v1 `\input`s
+%          colordvi.sty, which TeX Live has, for its color names
+% oracle:  latex + dvips with the colordvi-aware v1 axodraw.sty hep-ph0101235 ships: 0 errors, a purple gluon;
+%          pdflatex with that file: 0 errors, nothing drawn
+% engines: rust 64qb = Error:undefined:\SetColor, \Gluon; Perl = the same (no axodraw binding)
+% expect:  0 errors; the gluon's curves stroked with dvipsnam's Purple (cmyk 0.45 0.86 0 0)
+% status:  RED (64qb) -> GREEN (64w)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{axodraw}
+\begin{document}
+\begin{picture}(100,40)(0,0)
+\SetColor{Purple}
+\Gluon(0,20)(100,20){5}{4}
+\end{picture}
+\end{document}

@@ -1,0 +1,21 @@
+% witness: 2303.08174, 2311.02521, 2601.20473 (aa: `Dominique Segura-Cox\inst{1,3,\thanks{NSF Astronomy and Astrophysics
+%          Postdoctoral Fellow}}`); the `\fnmsep\thanks` form after the `\inst` for comparison
+% oracle:  pdflatex (TL 2025, 2601.20473's aa.cls) 0 errors: "Ann Able1, Bob Bell2,⋆, and Cat Cole1,2,⋆⋆", the
+%          institutes, the notes "⋆ NASA Sagan Fellow", "⋆⋆ Hubble Fellow" at the foot (aa.cls:759-760 sets the `\inst`
+%          argument in a superscript, so its `\thanks` runs there)
+% engines: rust int126a = Bob Bell without his note (the note's text read as a label of the `\inst` request); Perl 0.8.8
+%          the same (aa.cls.ltxml:50)
+% expect:  0 errors, 0 warnings; Bob Bell with his note and University of Y, Cat Cole with hers and both institutes
+% status:  RED (int126a) -> GREEN (98b) — perfect_kernel_batch98b::thanks_inside_inst_is_the_authors_note
+% preload: ar5iv.sty
+\documentclass{aa}
+\begin{document}
+\title{A Title}
+\author{Ann Able\inst{1}
+   \and Bob Bell\inst{2,\thanks{NASA Sagan Fellow}}
+   \and Cat Cole\inst{1,2}\fnmsep\thanks{Hubble Fellow}}
+\institute{University of X \and University of Y}
+\abstract{An abstract.}
+\maketitle
+Text.
+\end{document}

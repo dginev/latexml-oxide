@@ -1,0 +1,23 @@
+% A marked role tag after a list of addresses, `aable@x.edu, bakerb@y.edu (* corresponding author)` under the names:
+%   the tag follows the last address, so it is that address's — its owner's note, with the mark (`role_tag`, OD #966
+%   "107f"); the addresses each the author they spell, out of the affiliation the line was glued to (107c's open item).
+% witness: 2210.14319 (`\tt\small xychen@ku.edu, wangcs@ryerson.ca (* corresponding author)`)
+% oracle:  pdflatex 0 errors: "Ann Able1, Bob Baker2∗", "1 Univ X, Town.", "2 Univ Y, City.", "aable@x.edu,
+%   bakerb@y.edu (* corresponding author)"
+% engines: rust int139a3 = the line glued into Bob Baker's affiliation
+% expect:  0 errors, 0 warnings; Ann Able: Univ X, aable@x.edu; Bob Baker: Univ Y, the "* corresponding author" note,
+%   bakerb@y.edu
+% status:  RED (int139a3) -> GREEN (107f)
+% preload: ar5iv.sty
+\documentclass{article}
+\title{T}
+\author{Ann Able\textsuperscript{1}, Bob Baker\textsuperscript{2}$^*$\\
+\textsuperscript{1}Univ X, Town. \\
+\textsuperscript{2}Univ Y, City. \\
+\tt\small aable@x.edu, bakerb@y.edu (* corresponding author)
+}
+\date{}
+\begin{document}
+\maketitle
+Text.
+\end{document}

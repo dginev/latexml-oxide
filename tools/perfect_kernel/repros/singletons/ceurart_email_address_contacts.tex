@@ -1,0 +1,21 @@
+% witness: arXiv 2511.11770 (ceurart; no ceurart user in the TL corpus)
+% oracle:  pdflatex (ceurart.cls from the arXiv source) 0 errors
+% engines: rust=0 (56ir-rel2, 2026-09-25) — structural: contacts outside <creator>
+% expect:  0 errors; email/url/affiliation are <contact>s inside each <creator>
+% status:  GREEN (guard binding_singletons_56, 2026-09-25; was RED)
+% mechanism: the ceurart binding sent \address, \ead, the author keyval
+%   email/url keys and \emailauthor/\urlauthor to document-level
+%   \@add@frontmatter{ltx:note}; Perl's pattern (aas_support.sty.ltxml:118,122)
+%   is \lx@add@affiliation / \lx@add@email, which attach to the creator
+%   (by label, ceurart.cls:1477 \address[label]{text}).
+\documentclass{ceurart}
+\author[1]{Alice Smith}[email=alice@example.org,url=https://alice.example.org]
+\author[2]{Bob Jones}
+\ead{bob@example.org}
+\ead[url]{https://bob.example.org}
+\address[1]{Alpha University}
+\address[2]{Beta Institute}
+\begin{document}
+\maketitle
+Body.
+\end{document}

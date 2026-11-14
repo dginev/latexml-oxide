@@ -1,0 +1,19 @@
+% witness: 2310.02059: caption.sty:1142-1147 makes `\captionsetup` a `\noalign` inside a longtable, so one between rows
+%          opens no row; the binding's opened a cell before the `\hline`
+% oracle:  pdflatex 0 errors
+% engines: rust 63u5 = `Error:unexpected:\noalign`; Perl 0.8.8 = 5 errors
+% expect:  0 errors, 0 warnings; the caption and the table rows
+% status:  RED (63u5) -> GREEN (63v)
+\documentclass{article}
+\usepackage{longtable,caption,xcolor}
+\begin{document}
+\begin{longtable}{ll}
+\captionsetup{labelfont={color=black}}
+\caption{Cap} \label{t} \\
+\captionsetup{labelfont={}}
+\hline
+a & b \\ \hline
+\endfirsthead
+c & d \\
+\end{longtable}
+\end{document}

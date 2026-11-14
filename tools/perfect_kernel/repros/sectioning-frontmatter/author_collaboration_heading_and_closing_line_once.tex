@@ -1,0 +1,36 @@
+% mechanism: a collaboration named before any name of the call is a heading over the names after it, and the same
+%   collaboration closing them is that one contact, once (`Collaborations`, author_block/collaborations.rs;
+%   OXIDIZED_DESIGN_DIVERGENCES #946): every name carries one `contact role="collaboration"`, the heading no creator,
+%   the closing piece no part of the last name. The closing piece here is on the names line (no line break before it),
+%   as the witness writes it, `… J.~Zu$^{68,55}$ \vspace{0.2cm} (BESIII Collaboration)\\`.
+% witness: 2212.06489 (revtex4-2, authorlist_2022-08-19.tex: `\author{\center BESIII Collaboration\\~\\
+%   M.~Ablikim$^{1}$, … J.~Zu$^{68,55}$ (BESIII Collaboration)\\ … {\it $^{1}$ Institute …}}`, 582 names: 97b three
+%   creators — "BESIII Collaboration", the 582 names in one, a nameless one — and the merge Error)
+% oracle:  pdflatex (TL 2025) 0 errors: "XYZ Collaboration" centred, then "A. Able1 , B. Baker2,a , C. Cole1,2 (XYZ
+%   Collaboration)", then the two institutes and the lettered note
+% engines: rust 97b: creators "XYZ Collaboration" and "A. Able, B. Baker, C. Cole (XYZ Collaboration)" (every
+%   institute its), `Error:frontmatter:merged_creators`; perl: not run
+% expect:  0 errors, 0 warnings; three creators, each with `<contact role="collaboration">XYZ Collaboration</contact>`
+%   (the heading's, first, as it prints above the names) and the institutes its marks name: A. Able — One; B. Baker —
+%   Two + "Also at Laboratory A"; C. Cole — One + Two
+% status:  RED (97b) -> GREEN (97d; the heading's text and place since 97d r2)
+% preload: ar5iv.sty
+\documentclass[aps,prd]{revtex4-1}
+\begin{document}
+\title{T}
+\author{\center XYZ Collaboration\\~\\
+A.~Able$^{1}$, B.~Baker$^{2,a}$, C.~Cole$^{1,2}$
+\vspace{0.2cm}
+(XYZ Collaboration)\\
+\vspace{0.2cm} {\it
+$^{1}$ Institute of One, Town 100000, Country\\
+$^{2}$ University of Two, City 200000, Country\\
+}
+$^{a}$ Also at Laboratory A, Village 300000, Country\\
+}
+\begin{abstract}
+An abstract.
+\end{abstract}
+\maketitle
+Body.
+\end{document}

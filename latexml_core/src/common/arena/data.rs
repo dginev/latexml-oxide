@@ -34,15 +34,29 @@ impl<T> SymHashMap<T> {
   #[inline]
   pub fn is_empty(&self) -> bool { self.0.is_empty() }
   #[inline]
-  pub fn get(&self, key: &str) -> Option<&T> { self.0.get(&arena::pin(key)) }
+  // The `&str` PROBES (`get`/`get_mut`/`contains_key`/`remove`) resolve the
+  // key with `arena::get`, which does not intern: a key that was never
+  // interned cannot be in the map (every entry was minted through
+  // `insert`/`entry`, which still pin), so a negative probe leaves the arena
+  // unchanged instead of permanently growing it (handoff 2026-09-03 §2.3;
+  // the same invariant `state.rs` uses for the `:locked` twin).
+  pub fn get(&self, key: &str) -> Option<&T> {
+    let sym = arena::get(key)?;
+    self.0.get(&sym)
+  }
   #[inline]
   pub fn get_sym(&self, key: SymStr) -> Option<&T> { self.0.get(&key) }
   #[inline]
-  pub fn get_mut(&mut self, key: &str) -> Option<&mut T> { self.0.get_mut(&arena::pin(key)) }
+  pub fn get_mut(&mut self, key: &str) -> Option<&mut T> {
+    let sym = arena::get(key)?;
+    self.0.get_mut(&sym)
+  }
   #[inline]
   pub fn get_mut_sym(&mut self, key: SymStr) -> Option<&mut T> { self.0.get_mut(&key) }
   #[inline]
-  pub fn contains_key(&self, key: &str) -> bool { self.0.contains_key(&arena::pin(key)) }
+  pub fn contains_key(&self, key: &str) -> bool {
+    arena::get(key).is_some_and(|sym| self.0.contains_key(&sym))
+  }
   #[inline]
   pub fn contains_key_sym(&self, key: &SymStr) -> bool { self.0.contains_key(key) }
   #[inline]
@@ -50,7 +64,11 @@ impl<T> SymHashMap<T> {
   #[inline]
   pub fn insert_sym(&mut self, key: SymStr, value: T) { self.0.insert(key, value); }
   #[inline]
-  pub fn remove(&mut self, key: &str) { self.0.remove(&arena::pin(key)); }
+  pub fn remove(&mut self, key: &str) {
+    if let Some(sym) = arena::get(key) {
+      self.0.remove(&sym);
+    }
+  }
   #[inline]
   pub fn remove_sym(&mut self, key: SymStr) { self.0.remove(&key); }
   #[inline]
@@ -127,4 +145,25 @@ impl<T> Index<&SymStr> for SymHashMap<T> {
   /// Panics if the key is not present in the `HashMap`.
   #[inline]
   fn index(&self, key: &SymStr) -> &T { &self.0[key] }
+}
+
+#[cfg(test)]
+mod negative_probe_tests {
+  use super::*;
+
+  /// A negative `&str` probe must not grow the interner; the positive path
+  /// (insert then get) still works.
+  #[test]
+  fn negative_probes_do_not_intern() {
+    let mut map: SymHashMap<u8> = SymHashMap::default();
+    let before = arena::len();
+    assert!(map.get("zz-never-interned-probe-1").is_none());
+    assert!(!map.contains_key("zz-never-interned-probe-2"));
+    assert!(map.get_mut("zz-never-interned-probe-3").is_none());
+    map.remove("zz-never-interned-probe-4");
+    assert_eq!(arena::len(), before, "a negative probe interned its key");
+    map.insert("zz-inserted-key", 7);
+    assert_eq!(map.get("zz-inserted-key"), Some(&7));
+    assert!(map.contains_key("zz-inserted-key"));
+  }
 }

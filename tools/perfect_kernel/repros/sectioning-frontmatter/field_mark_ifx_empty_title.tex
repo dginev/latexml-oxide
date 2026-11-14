@@ -1,0 +1,14 @@
+% `\ifx\@title\@empty` for a title set empty (12 TL classes test it, univie-ling-*): the kernel leaves an empty or blank
+% value unmarked (`\lx@field@mark`), so the test holds as in pdflatex.
+% status:  GREEN at 67int19b → GREEN (fms1), guarding the empty case.
+% oracle:  pdflatex 0 errors: "Test: EMPTY." "1 Intro Text."
+% expect:  0 errors, 0 warnings; the paragraph "Test: EMPTY.".
+\documentclass{article}
+\makeatletter
+\title{}
+\def\mytest{\ifx\@title\@empty EMPTY\else NONEMPTY\fi}
+\begin{document}
+Test: \mytest.
+\section{Intro}
+Text.
+\end{document}

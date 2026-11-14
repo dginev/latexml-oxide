@@ -33,6 +33,8 @@ LoadDefinitions!({
     "mathpartir.sty",
     "mathpartir.sty is minimally stubbed — \\inferrule renders as a frac; mathpar / mathparpagebreakable wrap their body in a display equation."
   );
+  // mathpartir.sty:34 `\RequirePackage{keyval}`.
+  RequirePackage!("keyval");
 
   // \inferrule[label]{premises}{conclusion}
   //   → \ensuremath{\frac{premises}{conclusion}} with the label
@@ -64,10 +66,19 @@ LoadDefinitions!({
     // cascade (witness 1702.02972: llncs + `\begin{gather*}\inferrule{A \\ B}{C}`,
     // Perl 0, raw-mathpartir lays the premises out without leaking `\\`).
     // Skip a `\\[dim]` optional spacing arg so it doesn't render literally.
+    // Only a `\\` at the premises' own brace level separates them: mathpartir splits them with delimited arguments
+    // (mathpartir.sty:133-146 `\mpr@flatten@ \\#1\\#2`, `\mpr@makelist`), which never see a `\\` inside a group — a
+    // braced `{\begin{cases} a & b \\ c & d \end{cases}}` keeps its rows (2604.09165; was "Extra alignment tab").
     let prem_toks = prem.unlist();
     let mut i = 0;
+    let mut depth = 0usize;
     while i < prem_toks.len() {
-      if prem_toks[i] == T_CS!("\\\\") {
+      match prem_toks[i].get_catcode() {
+        Catcode::BEGIN => depth += 1,
+        Catcode::END => depth = depth.saturating_sub(1),
+        _ => {},
+      }
+      if depth == 0 && prem_toks[i] == T_CS!("\\\\") {
         out.push(T_CS!("\\quad"));
         i += 1;
         // Skip an optional `[dim]` spacing argument following `\\`.
@@ -114,6 +125,17 @@ LoadDefinitions!({
   // Perl 0). Guarding with `\@ifundefined` preserves proof's `\infer` and still
   // offers the alias to mathpartir-only documents.
   RawTeX!(r"\@ifundefined{infer}{\let\infer\inferrule}{}");
+  // mathpartir.sty:62-68 the separators a rule's premises and a `{mathpar}`'s rules are spaced with, which
+  // packages built on mathpartir use directly (ottalt.sty:33/90 separates premises with `\mpr@andcr`; witness
+  // 2304.05276).
+  RawTeX!(
+    r"\newskip\mpr@andskip \mpr@andskip 2em plus 0.5fil minus 0.5em
+\def\mpr@goodbreakand{\hskip -\mpr@andskip \penalty -1000\hskip \mpr@andskip}
+\def\mpr@and{\hskip \mpr@andskip}
+\def\mpr@andcr{\penalty 50\mpr@and}
+\def\mpr@cr{\penalty -10000\mpr@and}
+\def\mpr@eqno#1{\mpr@andcr #1\hskip 0em plus -1fil \penalty 10}"
+  );
 
   // `mathpar` environment: wrap body in a display equation.
   // Optional `[keys]` consumed and discarded — we don't honour

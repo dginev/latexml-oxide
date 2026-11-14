@@ -1,0 +1,15 @@
+% mechanism: a macro-held `\and` (`\newcommand\sep{\and}`) at interact_cls.rs `\author`: an `\and` before a later `\name` separates nothing more: found by the separator query (Option C P2-5, `and_by_meaning`)
+% witness: P2P plan step P2-5 (no census paper holds a macro-held or `\let` separator)
+% oracle:  pdflatex with 1603.08785's interact.cls: "Ann Able" / "Univ A" / "and Bob Baker" (1 `!` line on every row)
+% engines: perl not run; int158a: as expected (the reading cut it downstream)
+% expect:  0 errors, 0 warnings; creators Ann Able (Univ A), Bob Baker (Univ B)
+% status:  GREEN (int158a and P25; guard perfect_kernel_batchp25)
+% preload: ar5iv.sty
+\documentclass{interact}
+\newcommand\sep{\and}
+\title{T}
+\author{\name{Ann Able}\affil{Univ A} \sep \name{Bob Baker}\affil{Univ B}}
+\begin{document}
+\maketitle
+Text.
+\end{document}

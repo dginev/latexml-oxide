@@ -1,0 +1,16 @@
+% witness: 2504.02110: array.sty:97-101 `\insert@column` puts `\ignorespaces` between a column's `>{…}` tokens and the
+%          cell, so `>{\form}` with a one-argument `\form` takes the `\ignorespaces`; the template had nothing there and
+%          `\form` took the cell's first token (`\mbox`), the rest astray
+% oracle:  pdflatex 0 errors: "a x y c"
+% engines: rust 63u5 = 2 errors (`\endgroup`, `\@@tabular`)
+% expect:  0 errors, 0 warnings; one row of three cells
+% status:  RED (63u5) -> GREEN (63v)
+\documentclass{article}
+\usepackage{array}
+\newcommand{\form}[1]{{#1}}
+\newcolumntype{Z}{>{\form}c}
+\begin{document}
+\begin{tabular}{c Z c}
+a & \mbox{x} y & c \\
+\end{tabular}
+\end{document}

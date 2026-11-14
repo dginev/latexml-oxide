@@ -1,0 +1,18 @@
+% witness: run 340 acmart papers shipping acmart.cls 2.x (`\noindentparagraph` 15 of 120, `\acmArticleType` 10,
+%   `\AtBeginMaketitle` 7, `\acmCodeLink` 7, `\anon` 6, `\acmBadgeR` 5)
+% oracle:  pdflatex with TL 2025 acmart.cls (:1770-1798, :1895-1915, :2211-2220, :3323-3327): 0 errors
+% engines: rust 65w = errors (each undefined); Perl's `\acmBadgeL` printed its arguments as text
+% expect:  0 errors; the run-in paragraph heading, "Our tool" (not anonymous), no badge file name in the text, the hook's
+%   text at the title; the hook's copyright choices (none, 2022) read by the title block
+% status:  RED (65w) -> GREEN (65x)
+\documentclass[sigconf]{acmart}
+\acmArticleType{Research}
+\acmCodeLink{https://example.org/code}
+\acmBadgeR[https://example.org/badge]{badge-file.pdf}
+\AtBeginMaketitle{\setcopyright{none}\copyrightyear{2022}\def\lxhooktext{Hooked}}
+\title{A Title}
+\author{Ann Able}
+\begin{document}
+\maketitle
+\noindentparagraph{Head} Text. \anon{Our tool} works. \lxhooktext.
+\end{document}

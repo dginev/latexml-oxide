@@ -1,0 +1,19 @@
+% mechanism: a count or an e-TeX expression replaces the number before it, and a dimension after it scales the result
+%   (pgfmathparser.code.tex:430-476, the operand loop keeps parsing :448-458). Ours returns at the count operand
+%   (`try_cs_register` → `CsOperand::Count`, pgfmath_code_tex.rs:1581-1585) and never reads the dimension after it;
+%   the fix continues to the second-operand check (:1611-1617), the two branches made one (revPGR1 S1).
+% witness: synthetic (revPGR1 S1)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 `!`: [15.0|U] [50.0|U] [6.0|U]
+% engines: rust int162a: [10.0|U] [10.0|U] [0.0|U]; PGR1: [5|N] [5|N] [2|N]; 0 errors 0 warnings on both
+% expect:  [15.0|U] [50.0|U] [6.0|U], 0 errors 0 warnings
+% status:  RED (int162a, PGR1)
+% moves:   post-merge (PGCNT)
+\documentclass{article}
+\usepackage{pgfmath}
+\newcount\myc \myc=5
+\newdimen\mydim \mydim=3pt
+\setbox0=\hbox to 10pt{}
+\newcommand\T[1]{\pgfmathparse{#1}[\pgfmathresult|\ifpgfmathunitsdeclared U\else N\fi] }
+\begin{document}
+\T{2\myc\mydim}\T{2\myc\wd0}\T{0.5\numexpr 2\relax\mydim}
+\end{document}

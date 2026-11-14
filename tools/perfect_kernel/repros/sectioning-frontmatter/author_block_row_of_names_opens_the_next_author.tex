@@ -1,0 +1,29 @@
+% witness: the 85a r1 review's finding 5 (probe r1): a line that opens the next author after a name's lines holding a
+%          row of names parted by a run of spacing (`Bob Baker~~~~Cat Cole`, `Dan Dorn\;\;Eve Eads`, `{\bf Gil
+%          Gray}~~~{\bf Hal Hunt}`) is parted as a block's first names line is (OD #52(o)), each name a creator with the
+%          lines under the row (SYNC_STATUS row 121's shape, once a gap or the names' styling opens the line)
+% oracle:  pdflatex 0 errors: Ann Able, Univ A, a gap, "Bob Baker Cat Cole", Univ B, a gap, "Dan Dorn Eve Eads",
+%          Univ C; Fay Fox, Univ F, "Gil Gray Hal Hunt", Univ G (names bold, institutions italic)
+% engines: rust int114a = "Bob Baker Cat Cole", "Dan Dorn Eve Eads" affiliation lines of Ann Able, "Gil Gray Hal Hunt"
+%          one creator; rust 85a r1 = creators "Bob Baker Cat Cole", "Dan Dorn Eve Eads", "Gil Gray Hal Hunt"
+% expect:  0 errors, 0 warnings; eight creators, each with the line under its row
+% status:  RED (int114a) -> GREEN (85a)
+% preload: ar5iv.sty
+\documentclass{article}
+\title{T}
+\author{Ann Able \\
+Univ A \\
+\\
+Bob Baker~~~~Cat Cole \\
+Univ B \\
+\vspace{4pt} \\
+Dan Dorn\;\;Eve Eads \\
+Univ C
+\and {\bf Fay Fox} \\
+{\it Univ F} \\
+{\bf Gil Gray}~~~{\bf Hal Hunt} \\
+{\it Univ G}}
+\begin{document}
+\maketitle
+Text.
+\end{document}

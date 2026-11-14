@@ -1,0 +1,18 @@
+% witness: synthetic (revPSF1 blocker, p1/gz: a compressed EPS through its graphics rule)
+% oracle:  latex + dvips -R0 (the rule's gunzip runs only outside secure mode), 0 `!`, prints α for "A" (`\Gin@rule@.eps.gz` is of type eps, so psfrag's `\Ginclude@eps`
+%          places the fragment); the file is the gzip of psfragi.epsi's PostScript (`gzip -c x.eps > psfraggz.eps.gz`),
+%          which the guard writes beside the document
+% engines: rust PSF1b = a plain `<graphics>`, 0 errors, 0 warnings
+% expect:  one Warning naming "A" and the graphic; 0 errors
+% status:  GREEN (PSF1c: the extension's declared rule of type eps); rendering moves to PSFR (post-merge)
+\documentclass{article}
+\usepackage[dvips]{graphicx}
+\usepackage{psfrag}
+\DeclareGraphicsRule{.eps.gz}{eps}{.eps.bb}{`gunzip -c #1}
+\begin{filecontents*}{psfraggz.eps.bb}
+%%BoundingBox: 0 0 72 36
+\end{filecontents*}
+\begin{document}
+\psfrag{A}{$\alpha$}
+\includegraphics{psfraggz.eps.gz}
+\end{document}

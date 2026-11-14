@@ -1,0 +1,15 @@
+% endnotes.sty:278-283 `\endnote[<n>]` (:351-357 `\endnotemark`, :373-378 `\endnotetext` alike) sets the counter to
+% <n> in a group and stores `\theendnote` as the mark, so a `\roman` `\theendnote` prints "iv" at the note, in the
+% list and as `\theenmark`; Rust stored the number as given, "4".
+% witness: review of batch 77v (probe rev77v/en1.tex)
+% oracle:  pdflatex "twoiv mark: iv." and "iv B." in the list
+% engines: rust (77v-rel) mark "4", "mark: 4."; perl mark "4"
+% expect:  the note's mark and tag "iv", "mark: iv."; the next unnumbered note "ii"; 0 errors
+% status:  RED -> GREEN (77v r2; guard perfect_kernel_batch77v::endnotes_given_number_is_formatted)
+\documentclass{article}
+\usepackage{endnotes}
+\renewcommand\theendnote{\roman{endnote}}
+\begin{document}
+One\endnote{A.} two\endnote[4]{B.} mark: \theenmark. Three\endnote{C.}
+\theendnotes
+\end{document}

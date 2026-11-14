@@ -1,0 +1,21 @@
+% mechanism: a legend line under a run whose entries each sit in a font command opened by their mark: the observer's
+%   writer cuts each entry from inside its wrapper (`emitter::plan::wrapped_entry_mark`: the Mark event is the wrapper's
+%   box, so it covered the entry and no entry was cut), so the legend reaches the legend reader as after a plain run
+%   (`$^1$Univ A \quad $^2$Univ B`) — its words the notes of the names carrying its marks
+% witness: 2605.25195 (`\textbf{$^1$Fudan University}  \textbf{$^2$Tencent Hunyuan}\\ $^*$ Equal Contribution, $^\S$
+%   Corresponding Authors, $^\dagger$  Project Leader`); review rev107e finding 1 (s1)
+% oracle:  pdflatex (TL 2025) 0 errors: "Ann Lee1,∗ , Bob Ray2,∗ , Cy Do2,† / 1 Univ A 2 Univ B / ∗ Equal Contribution, † Project Leader"
+% engines: rust 107e (r1): Bob and Cy "Univ B * Equal Contribution, † Project Leader" as affiliation text; int139a: Ann
+%   one contact holding the whole run and the legend
+% expect:  0 errors, 0 warnings; Ann "Univ A" + note "∗ Equal Contribution"; Bob "Univ B" + the same note; Cy "Univ B"
+%   + note "† Project Leader"; the entries bold, as printed
+% status:  RED (107e r1) -> GREEN (107e r2) — perfect_kernel_batch107e::a_legend_after_a_wrapped_run_is_its_carriers_notes
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{Ann Lee$^{1,*}$, Bob Ray$^{2,*}$, Cy Do$^{2,\dagger}$\\
+\textbf{$^1$Univ A}  \textbf{$^2$Univ B}\\
+$^*$ Equal Contribution, $^\dagger$ Project Leader}
+\maketitle
+\end{document}

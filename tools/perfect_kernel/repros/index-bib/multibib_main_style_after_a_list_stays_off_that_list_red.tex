@@ -1,0 +1,19 @@
+% The kernel's `\bibstyle` sets its style on the document's first `ltx:bibliography` (sect11.rs, Perl pool:3972-3977, for a
+% style declared after its one list), so a `\bibliographystyle` after a `web` list takes that list's attribute. Each list's
+% own record (multibib_sty.rs) cannot reach it: the node is the kernel's to choose, outside the binding. The other limit of the
+% record, one line: `\bibliographyweb{x}\bibliographystyleweb{alpha}` reaches `BIBSTYLE` only, the list stays numbered.
+% witness: the review of M2 (`multibib_each_list_reads_its_own_style` is the order that holds).
+% oracle:  pdflatex + bibtex (TL 2025) 0 errors: web list [1], main list [Zet01].
+% engines: int140a, M2 and M2r2: bibstyle="alpha" on both.
+% expect:  0 errors; bibstyle="plain" on the web list, "alpha" on the main list.
+% status:  RED
+\documentclass{article}
+\usepackage{multibib}
+\newcites{web}{Web}
+\begin{document}
+Text \cite{zet} and \citeweb{wik}.
+\bibliographystyleweb{plain}
+\bibliographyweb{multibib_each_list_reads_its_own_style}
+\bibliographystyle{alpha}
+\bibliography{multibib_each_list_reads_its_own_style}
+\end{document}

@@ -1,0 +1,32 @@
+% An apacite.bst .bbl formats like pdflatex: every macro the .bst writes (\APACrefYearMonthDay,
+% \APACjournalVolNumPages, \APACaddressSchool, \APACtypeAddressSchool, \APACbVolEdTR(pgs),
+% \APACorigyearnote/\APACorigbooknote, {APACrefURL}[date], {APACrefDOI}, \BCBT/\BCBL/\BDBL,
+% \BPBI, \BCnt/\BCntIP, \bibnodate, \bibcorporate, \nocitemeta + \APACinsertmetastar) prints the
+% text apacite.sty gives it (apacite.sty:1122-1136, 1243-1522, 2068-2156), and the label's
+% \APACyear{2001}\APACexlab{\BCnt{1}} is the year "2001a", so the citation is "Smith & Doe (2001a)".
+% witness: 57m (57j K13 finding); binding witnesses 2205.09172, 2106.02003, 2205.05718, 2005.03899
+%   (their .bbl reference lists went 0/114 -> 114/114 entries matching pdflatex's text). The .bbl
+%   beside it is bibtex 0.99d + apacite.bst 2013/07/21 v6.03 output for the .bib beside it:
+%   cp apacite_bbl_formats_like_pdflatex.bib apacite_bbl_formats_like_pdflatex_absent.bib;
+%   pdflatex; bibtex; pdflatex; pdflatex; rm the _absent.bib.
+% oracle:  pdflatex 0 errors: "See (Smith & Doe, 2001b), (Smith & Doe, 2001a), ..."; References
+%          "Smith, J. K., & Doe, J. (2001a). Another study of things. Journal of Studies, 13, 1–9."
+%          (19 entries). perl: no binding (53 errors); --includestyles 0 errors, the text but
+%          "Smith, J. K., Doe, J." and every citation "(?, ?)".
+% engines: rust 57k: 4 errors (\BCntIP, \bibcorporate, \bibnodate, \nocitemeta), 0/19 entries as
+%          pdflatex's: "Smith, J.K. & Doe, J. (20011). ... Journal of Studies 13 1–9.", year tag
+%          "(2001)" for both Smith & Doe entries, every citation "((2001))".
+% expect:  0 errors, 0 warnings; every entry's text as pdflatex's; year tags 2001a/2001b
+%          (open: the meta-analysis note pdflatex prints before the list — KPE #325)
+% status:  RED (57k) -> GREEN (57m)
+\documentclass{article}
+\usepackage{apacite}
+\begin{document}
+See \cite{smith2001}, \cite{smith2001b}, \citeA{brown1999}, \cite{black2005}, \cite{blue2012},
+\cite{gray2010}, \cite{web2015}, \cite{soft2018}, \cite{old1950}, \cite{many2020}, \cite{nodate},
+\cite{conf2019}, \cite{anon1990}, \cite{kim-ipa}, \cite{kim-ipb}, \cite{apa2010},
+\cite{foreign2000}, \cite{reprintb1998}, \cite{intr2003}.
+\nocitemeta{gray2010}
+\bibliographystyle{apacite}
+\bibliography{apacite_bbl_formats_like_pdflatex_absent}
+\end{document}

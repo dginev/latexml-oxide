@@ -1,0 +1,15 @@
+% witness: the user ruling of 2026-10-20 on 77p r6's question 3 (a project URL line in an author block is a URL
+%          contact); its marked-block witnesses 2605.06223, 2602.08439, 2604.12896, 2602.09509
+% oracle:  pdflatex 0 errors: the project link under the two names and their institution
+% engines: rust 77p r6 = 0 errors; the link an affiliation of each name ("Affiliation: https://…" twice)
+% expect:  0 errors, 0 warnings; Univ A on both names; the link one URL contact of the whole block, the shared creator
+%          below the authors, its size kept
+% status:  RED (77p r6) -> GREEN (77p r7)
+\documentclass{article}
+\usepackage{url}
+\title{T}
+\author{Ann Able, Bob Baker \\ Univ A \\ {\small \url{https://project.example.org}}}
+\begin{document}
+\maketitle
+Text.
+\end{document}

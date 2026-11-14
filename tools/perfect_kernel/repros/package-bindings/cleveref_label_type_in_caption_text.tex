@@ -1,0 +1,19 @@
+% witness: 2404.11739 (the `\label[type]` mechanism, 77s r1; review r2 finding 2)
+% oracle:  pdflatex 0 errors: "See appendix table 1, appendix table 2, appendix table 4 and table 3."
+% engines: rust 77s r1 = the caption-text and longtable labels read `[` as the key (labels="LABEL:[", the caption
+%          "Fooappendixtable]tin", the longtable's type dropped); int34a the same
+% expect:  0 errors, 0 warnings; tables 1, 2, 4 carry the appendix table creftype tags, table 3 the table ones
+% status:  RED (77s r1) -> GREEN (77s r2)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{longtable}
+\usepackage{cleveref}
+\crefname{appendixtable}{appendix table}{appendix tables}
+\begin{document}
+See \cref{tin}, \cref{tout}, \cref{lt} and \cref{plain}.
+\begin{table}\caption{Foo\label[appendixtable]{tin}}\end{table}
+\begin{table}\caption{Bar}\label[appendixtable]{tout}\end{table}
+\begin{table}\caption{Baz\label{plain}}\end{table}
+\begin{longtable}{l}\caption{Long}\label[appendixtable]{lt}\\ x\\\end{longtable}
+End.
+\end{document}

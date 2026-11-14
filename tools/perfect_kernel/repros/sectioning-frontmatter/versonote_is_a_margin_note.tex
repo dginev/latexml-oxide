@@ -1,0 +1,14 @@
+% witness: versonotes/sample (sweep #121 recall 61.5 %, 272 words missing): 30 `\N{term}{explanation}`
+%          = `\versonote{\emph{term}: explanation}` annotations lost (root-causer rc_s3tail)
+% oracle:  pdflatex (two runs) sets each note on the facing verso page
+% engines: rust (56ii) = note absent: versonotes.sty:42-45 writes it to the .aux for the next run's
+%          shipout hook (:217-254), which a single pass never reads back; Perl identical (no binding)
+% expect:  0 errors; a margin note (ltx:note role=margin) holding "Aeneid" and "the epic of Vergil."
+%          at the point it is written; the body text stays
+% status:  RED (56ii) -> GREEN (56ij)
+\documentclass{article}
+\usepackage{versonotes}
+\begin{document}
+Body word alpha.\versonote{\emph{Aeneid}: the epic of Vergil.}
+More text.
+\end{document}

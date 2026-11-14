@@ -1,0 +1,15 @@
+% witness: 57aj A/B, 2605.13278 A4.Ex64 `\|\nabla_{x_t}\log\pi_t(x_t)-\nabla_{x_t}\log\pi_t^{\lambda}(x_t)\|
+%          =\frac{\mu(t)}{\sigma^2(t)}\|\mu-u^*\|\leq…` read the norms' bars as `conditional` bars. A bocage
+%          over 500 and-nodes takes the hybrid route's tree-iterator fallback (latexml_math_parser
+%          parser.rs), which stopped after 16 trees in a row adding no new parse; libmarpa varies the root
+%          choice — how the bars pair up — last (`marpa_t_next`), so the pairing Perl reads was never
+%          reached (tree 19 of 27 below, 165 of 192 in the witness); the ASF route found it (RUST-ONLY)
+% oracle:  Perl `absolute-value@(logarithm@(x) - logarithm@(y)) = a * absolute-value@(u) <= c`,
+%          `norm@(((nabla _ x)@(logarithm))@(pi) * x - ((nabla _ x)@(logarithm))@(rho) * x) = a * norm@(mu - u) <= c`
+% engines: rust 57aj2 `conditional@(absolute-value@(…) = a, conditional@(u, absent <= c))` and the like
+% expect:  Perl's text on both routes; 0 errors
+% status:  RED (57aj) -> GREEN (57ak: no cap stops the tree iterator on a run of repeats)
+\documentclass{article}
+\begin{document}
+$|\log x-\log y|=a|u|\leq c$ $\|\nabla_{x}\log\pi(x)-\nabla_{x}\log\rho(x)\|=a\|\mu-u\|\leq c$
+\end{document}

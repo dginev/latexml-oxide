@@ -1,0 +1,28 @@
+% mechanism: `\input epsf.sty` reads the paper's epsf.sty, as `\usepackage{epsf}` does, but leaves `\@currname` unset, so
+%   epsf_sty.rs `epsf_resets_globally` read only epsf.tex (none here: global, as TL's) for the reset scope. The binding
+%   now reads the file it answers (`binding_request`, content.rs `_load_binding`): epsf.sty, a 1991 copy resetting the
+%   size in the current group, which `\subfigure`'s box confines (subfigure.sty:74), so the size serves both panels.
+% witness: 0906.1361, astro-ph0006390, astro-ph0109126, astro-ph0410051, astro-ph9701125 (`\input{epsf.sty}` with a
+%   shipped 1991 epsf.sty; latex logs the width kept); review rev78s2 finding 1 (probe e4)
+% oracle:  pdflatex 0 errors; "a.eps: width=100.0pt", "b.eps: width=100.0pt"
+% engines: perl: both 100pt (no reset, KNOWN_PERL_ERRORS #1117); rust int61a: b.eps at its natural size
+% expect:  0 errors, 0 warnings; both graphics options="width=100.0pt"
+% status:  GREEN (78v)
+\begin{filecontents*}[overwrite]{epsf.sty}
+% A 1991 epsf.sty, reduced: its \epsfbox resets the size locally.
+\newdimen\epsfxsize \newdimen\epsfysize
+\epsfxsize=0pt \epsfysize=0pt
+\def\epsfbox#1{\message{#1: width=\the\epsfxsize}\hbox to\epsfxsize{\hfil}%
+\epsfxsize=0pt\epsfysize=0pt}
+\end{filecontents*}
+\documentclass{article}
+\usepackage{subfigure}
+\input epsf.sty
+\begin{document}
+\begin{figure}
+\setlength{\epsfxsize}{100pt}
+\subfigure[One]{\epsfbox{a.eps}}
+\subfigure[Two]{\epsfbox{b.eps}}
+\caption{C.}
+\end{figure}
+\end{document}

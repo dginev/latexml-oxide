@@ -1,0 +1,37 @@
+% Setters that append through a scratch or a temporary name, each call printed: `\expandafter\gdef\expandafter\store`
+% (a real shape: SCIS2026.cls's `\@authoremail`), a scratch register then `\xdef`, a temporary macro then
+% `\expandafter\g@addto@macro`, a scratch `\def` then `\global\let`. `\expandafter` is no store's name, a scratch name is no store, and a
+% macro a setter writes hands its parameters on to what it is written into; a later call supersedes an earlier one when
+% each write replaces a known store (`\onlylast`, and `\twostores`, as acm's `\conferenceinfo`: 1612.06202), not when a
+% write reads a store written before it (`\thenappend`).
+% oracle:  pdflatex 0 errors (TL 2025, -no-shell-escape): every word below but "obsoleteword", "obsoleteone", "obsoletetwo"
+% engines: rust int139c = 0 errors, 0 warnings; rust 108b = 1 warning naming only each setter's last call; perl = not run
+% expect:  0 errors, 1 warning (frontmatter:unclaimed_store) naming, in call order, "firstex secondex firsttok secondtok
+%          firsttmp secondtmp letword keptword firstappend secondappend keptone kepttwo"; no "obsoleteword"
+% status:  RED (108b) -> GREEN (108b2)
+% preload: ar5iv.sty
+\begin{filecontents*}[force]{checkstorereplacincls.cls}
+\LoadClass{article}
+\newcount\aucount
+\def\author#1{\advance\aucount by 1 \gdef\@author{#1}}
+\def\aex{}\def\viaex#1{\expandafter\gdef\expandafter\aex\expandafter{\aex #1\par}}
+\def\atok{}\def\viatok#1{\toks@\expandafter{\atok #1\par}\xdef\atok{\the\toks@}}
+\def\atmp{}\def\viatmp#1{\gdef\@tmpz{#1\par}\expandafter\g@addto@macro\expandafter\atmp\expandafter{\@tmpz}}
+\def\vialet#1{\def\@tempa{#1}\global\let\alet\@tempa}
+\def\onlylast#1{\gdef\alast{#1}}
+\def\aapp{}\def\thenappend#1{\gdef\app@one{#1\par}\expandafter\g@addto@macro\expandafter\aapp\expandafter{\app@one}}
+\def\twostores#1#2{\gdef\aone{#1}\gdef\atwo{#2}}
+\renewcommand\maketitle{\par{\@title\par}\ifnum\aucount>0 {\@author\par}{\aex}{\atok}{\atmp}{\alet\par}{\alast\par}{\aapp}{\aone\par\atwo\par}\fi}
+\end{filecontents*}
+\documentclass{checkstorereplacincls}
+\title{A Title}\author{Ann Able}
+\viaex{Firstex}\viaex{Secondex}
+\viatok{Firsttok}\viatok{Secondtok}
+\viatmp{Firsttmp}\viatmp{Secondtmp}
+\vialet{Letword}
+\onlylast{Obsoleteword}\onlylast{Keptword}
+\thenappend{Firstappend}\thenappend{Secondappend}
+\twostores{Obsoleteone}{Obsoletetwo}\twostores{Keptone}{Kepttwo}
+\begin{document}\maketitle
+Body text.
+\end{document}

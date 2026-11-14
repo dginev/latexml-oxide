@@ -1,0 +1,18 @@
+% witness: TL class census 2026-09-24 — cv4tw, arabic-book (catoptions.sty:215/1756
+%          \cptchardef\cpt@optionstacklimit=4 → \chardef\cs\reserved@a, \reserved@a = "=4\relax";
+%          the limit read as 0, so the second option-state push raised "Current option/key
+%          state is being pushed")
+% oracle:  pdflatex 0 errors; [4][4]
+% engines: rust (56hy) = "=4=4=4[0][0]" + Missing number ×3; Perl the same (Gullet readMatch unexpanded)
+% expect:  0 diagnostics; <p>[4][4]</p>
+% status:  RED (56hy) -> GREEN (56hz, KNOWN_PERL_ERRORS #236)
+% mechanism: tex.web §1224 shorthand_def: \relax, then scan_optional_equals (§405), which reads
+%   the = with get_x_token (expanding). SkipMatch:= matched it unexpanded.
+\documentclass{article}
+\makeatletter
+\def\eqfour{=4\relax}
+\chardef\x\eqfour \countdef\y\eqfour \mathchardef\z\eqfour
+\makeatother
+\begin{document}
+[\the\x][\the\z]
+\end{document}

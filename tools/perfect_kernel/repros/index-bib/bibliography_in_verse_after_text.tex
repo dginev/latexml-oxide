@@ -1,0 +1,18 @@
+% mechanism: as bibliography_in_quote, in a `{verse}` holding text before the bibliography and after it: the quote keeps
+%   its text before, closed for the bibliography; the text after it follows the bibliography
+% witness: 1504.06728 (verse)
+% oracle:  pdflatex 0 errors: "Lines." then "References", "[1] A. Author, J. 1.", "More." all in the verse margins
+% engines: rust 67int17b = Error:malformed:ltx:section + Error:malformed:ltx:bibliography (in <ltx:quote>)
+% expect:  0 errors; <quote role="verse"> holding "Lines.", then the bibliography, then "More." in a paragraph
+% status:  RED (67int17b) -> GREEN (69a)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\begin{verse}
+Lines.
+\begin{thebibliography}{9}
+\bibitem{a} A. Author, J. 1.
+\end{thebibliography}
+More.
+\end{verse}
+\end{document}

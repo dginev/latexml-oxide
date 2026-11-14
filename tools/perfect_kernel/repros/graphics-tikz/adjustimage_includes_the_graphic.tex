@@ -1,0 +1,13 @@
+% witness: 2410.09019 (3 `\adjustimage` figures, empty), 2405.10928, 2404.05726, 2306.17837, 2410.02073
+% oracle:  pdflatex 0 errors: the image twice (3cm, 2cm wide)
+% engines: rust 64b3 = two empty inline-blocks (adjustbox.sty:275-280 `\adjustbox{#1}{\Gin@clipfalse\Gin@i{#2}}`, and
+%          `\Gin@i` defined to nothing: graphics.sty.ltxml:327, graphics_sty.rs); Perl the same
+% expect:  0 errors; two <graphics candidates="figs/a.eps"> (adjustbox's width= not yet applied to the box)
+% status:  RED (64b3) -> GREEN (64c)
+\documentclass{article}
+\usepackage{graphicx}
+\usepackage[export]{adjustbox}
+\begin{document}
+\adjustimage{width=3cm}{figs/a.eps}
+\adjincludegraphics[width=2cm]{figs/a.eps}
+\end{document}

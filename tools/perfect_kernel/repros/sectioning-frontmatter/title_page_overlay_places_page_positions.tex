@@ -1,0 +1,18 @@
+% witness: lni (lni.cls:544-553: the title page's DOI under `\AddToShipoutPictureBG*{\AtPageLowerLeft{…}}`)
+% oracle:  pdflatex 0 errors; "DOI line" near the page's lower-left corner, "Extra info." in the text
+% engines: rust 59p1 = `\AtPageLowerLeft` a no-op: the DOI lost and an empty page-sized `<picture/>` kept (lni's
+%   template, whose DOI is empty, gains it too)
+% expect:  0 errors; one overlay picture holding "DOI line" at (72,72); the empty overlay leaves nothing
+% status:  GREEN (59p: eso-pic's page positions are `\put`s, eso-pic.sty:32-38; an overlay that shows nothing is
+%   dropped)
+\documentclass{article}
+\usepackage{eso-pic}
+\renewcommand\maketitle{%
+  \AddToShipoutPictureBG*{\AtPageLowerLeft{\put(72,72){DOI line}}}%
+  \AddToShipoutPictureFG*{\AtPageLowerLeft{\put(72,72){}}}%
+  Extra info.}
+\title{T}
+\begin{document}
+\maketitle
+Body.
+\end{document}

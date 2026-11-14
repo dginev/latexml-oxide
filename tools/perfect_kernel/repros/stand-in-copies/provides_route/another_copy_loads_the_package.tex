@@ -1,0 +1,17 @@
+% witness: the 77w review's finding 6 (`<file>:loaded_by_stand_in` true for a load made while any stand-in loaded);
+%          the copy's own repeat that is its load: 1811.10063 (copy_loads_its_binding_package.tex)
+% oracle:  pdflatex 1 error, "Option clash for package natbib" (elscopy0.cls loaded natbib first, `[numbers]`):
+%          "See [1]."
+% engines: rust c400169c19 (77w r1) = the ijcai copy's `[round]` applied as the copy's own load, no Error, "See (1)."
+% expect:  1 error (the Option clash), 0 warnings; the first load's numeric citation in square brackets
+% status:  RED (c400169c19) -> GREEN (77w r2: the load records the stand-in that made it; only that binding's copy
+%          takes it as its own)
+% preload: ar5iv.sty
+\documentclass{elscopy0}
+\usepackage{ijcaicopy}
+\begin{document}
+See \citep{a}.
+\begin{thebibliography}{1}
+\bibitem[Smith(2001)]{a} J. Smith. A paper. 2001.
+\end{thebibliography}
+\end{document}

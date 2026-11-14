@@ -1,0 +1,9 @@
+% witness: hep-ph9210212's `\def\chapter#1{\par{\bf #1}\par}` (found by 64h's plain-routing guard)
+% oracle:  pdftex 0 errors: "Intro" in bold
+% engines: rust 64g = <p>I<text font="bold">ntro</text></p>, the first letter outside the bold group; Perl the same (SHARED)
+% expect:  0 errors; <p><text font="bold">Intro</text></p>
+% status:  RED (64h)
+{\bf Intro}
+
+Text.
+\bye

@@ -1,0 +1,18 @@
+% A document's own `\def\affil#1{\gdef\lastaff{#1}}` is refused by the binding's lock, and its body replayed: the store
+% it makes stays, as the body reads it, and the affiliation stays the binding's contact (OXIDIZED_DESIGN #482's replay,
+% OXIDIZED_DESIGN_DIVERGENCES #959). pdflatex prints no affiliation under the name: the document's \affil prints none.
+% witness: none (synthetic; the replay path of 2504.08081's lock)
+% oracle:  pdflatex 0 errors: "A Title", "Ann Able", "Last: Univ X."
+% engines: rust int129a = 0 errors; Ann Able alone, "Last: Univ X."
+% expect:  0 errors, 0 warnings; Ann Able with the affiliation "Univ X"; the body "Last: Univ X."
+% status:  RED (int129a: Ann Able alone) -> GREEN (102a); the contact goes beyond TeX, which prints no affiliation
+%          under the name: under the D1 lock (OD #500) a refused definition's text is the binding's affiliation (OD #959)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{authblk}
+\makeatletter
+\def\affil#1{\gdef\lastaff{#1}}
+\makeatother
+\title{A Title}\author{Ann Able}
+\affil{Univ X}
+\begin{document}\maketitle Last: \lastaff.\end{document}

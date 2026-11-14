@@ -1,0 +1,32 @@
+% witness: 57g review (third pass): settling float-box lines per streaming segment minted each
+%          row's id under the segment's wrapper, not the section — a section's row was
+%          `S1.fig2` eager but a root-level `fig13` streamed, and root rows renumbered (18 ids of
+%          a 42-segment run differed)
+% oracle:  pdflatex 0 errors (with the images present); each section's C/D pair side by side
+% engines: rust 57g3=0: eager and `--streaming` (forced spill) differ in row ids; rust 57g
+%          final=0: identical — a row takes over its paragraph's id (`S1.p2`), minted during
+%          construction, so no settling step numbers anything
+% expect:  0 errors; eager and streamed XML identical; each row carries its paragraph's id
+% status:  GREEN (57g)
+\documentclass{article}
+\usepackage{graphicx,caption}
+\newcommand{\fb}[1]{\begin{minipage}{.4\textwidth}\includegraphics{#1}\captionof{figure}{#1}\end{minipage}}
+\begin{document}
+Root text.
+
+\fb{ra}\hfill\fb{rb}
+
+\section{One}
+Section text.
+
+\fb{c1}\hfill\fb{d1}
+
+\section{Two}
+Section text.
+
+\fb{c2}\hfill\fb{d2}
+
+\begin{figure}[h]\includegraphics{u2}\end{figure}
+
+Done.
+\end{document}

@@ -7,6 +7,9 @@ pub use std::{borrow::Cow, collections::VecDeque, rc::Rc, str::FromStr, sync::Ar
 
 // Re-export the public API available in latexml_core
 pub use latexml_core::binding::content::*;
+pub use latexml_core::binding::virtual_files::{
+  output_file_name, vfs_append_line, vfs_exists, vfs_read, vfs_store,
+};
 pub use latexml_core::{
   BoxOps,
   Core,
@@ -14,7 +17,7 @@ pub use latexml_core::{
   alignment::{
     Alignment, AlignmentConfig,
     cell::Cell,
-    template::{Align, Template},
+    template::{Align, NUMBER_ROW_PROPERTY, TAGGED_ROW_ATTRIBUTE, Template},
   },
   binding::{
     counter::dialect::*,
@@ -28,7 +31,7 @@ pub use latexml_core::{
     dimension::Dimension,
     float::{Float, floatformat},
     font,
-    font::Font,
+    font::{Font, LettersClass},
     glue::Glue,
     locator::Locator,
     model,
@@ -46,7 +49,7 @@ pub use latexml_core::{
     ReplacementClosure, Reversion,
     argument::ArgWrap,
     conditional::{Conditional, ConditionalOptions, ConditionalType},
-    constructor::ConstructorOptions,
+    constructor::{ConstructorOptions, TexGroup},
     expandable::{Expandable, ExpandableOptions},
     math_primitive::{MathPrimitive, MathPrimitiveOptions},
     primitive::{Primitive, PrimitiveOptions},
@@ -65,7 +68,11 @@ pub use latexml_core::{
   list::List,
   mouth,
   mouth::{Mouth, MouthOptions},
-  parameter::{Parameter, Parameters, ReaderClosure, ReversionClosure},
+  parameter::{
+    BETWEEN_ALIGNMENT_ROWS, IN_EVERY_CELL, Parameter, Parameters, ReaderClosure, ReversionClosure,
+    drop_argument_tail, dropping_argument_tails, in_braced_read, read_braced, read_braced_value,
+    read_length_value, read_through_redefined_setlength,
+  },
   pin,
   rewrite::{Rewrite, RewriteOptions},
   state::*,
@@ -106,12 +113,30 @@ pub use crate::base_utilities::*;
 // route through the same loop-safe path instead of hand-rolling it.
 pub use crate::tex::def_autoload;
 pub use crate::{
+  base_parameter_types::{tex_file_name, with_unexpandable_protect},
   latex_constructs::{
-    begin_appendices, end_appendices, make_note_tags, only_preamble, relocate_footnote,
-    start_appendices, tabular_bindings,
+    EQUATIONROW_HOLDS, SUBEQUATION_ROLLBACK, begin_appendices, declare_bound_text_symbols,
+    declare_capital_greek, declare_capital_greek_named, declare_panel_floats_centred,
+    declare_panel_page, declare_panel_parbox_width, declare_panel_width,
+    declare_standard_class_page, end_appendices, given_class_options, has_chapter_counter,
+    is_document_class, keep_pending_next_numbers, kernel_chapter_with_warning, last_class_option,
+    last_declared_class_option, make_note_tags, note_size_in_line, only_preamble, out_of_line_size,
+    relocate_footnote, set_minipage_width, set_panel_page_twocolumn, standard_class_ptsize,
+    standard_class_twocolumn_page, start_appendices, tabular_bindings, toc_select,
+    withdraw_panel_floats_centred, withdraw_panel_page,
   },
+  math_common::{augment_delimiter_properties, symbolic_font_size},
   tex_box::{FramedOptions, framed_properties},
+  tex_registers::shorthand_def,
 };
+
+/// The value of a `SetlengthDimension` parameter (base_parameter_types.rs): a
+/// `Dimension` read as latex.ltx's `\setlength` operand.
+pub type SetlengthDimension = Dimension;
+pub type TempboxaDimension = Dimension;
+/// The value of a `SetlengthGlue` parameter: a `Glue` read as latex.ltx's
+/// `\setlength` operand.
+pub type SetlengthGlue = Glue;
 // Note: `pub use crate::package::*` was here when the prelude lived in
 // latexml_package; it doesn't apply at the engine layer (engine has zero
 // references to package). The latexml_package prelude re-exports
@@ -142,6 +167,12 @@ pub fn GetKeyVal(keyval_opt: &Option<Digested>, key: &str) -> Option<Digested> {
 //   - wisdom_helper_monomorphization_trap (no generic T: Into<X>)
 // ============================================================
 
+/// Whether the LaTeX counter `name` exists: latex.ltx's `\@ifundefined{c@#1}`
+/// test in `\setcounter`/`\addtocounter` (:10115-10122).
+pub fn counter_is_defined(name: &str) -> bool {
+  lookup_register_definition(&T_CS!(s!("\\c@{name}"))).is_some()
+}
+
 /// Empty-body `DefMacro!("\\cs[opt-spec]", "")` stub via runtime call.
 pub fn def_macro_noop(proto: &str) -> Result<()> {
   let (cs_tok, params) = parse_prototype(proto, true)?;
@@ -159,8 +190,8 @@ pub fn def_macro_identity(proto: &str) -> Result<()> {
   Ok(())
 }
 
-/// Empty-body `DefPrimitive!("\\cs[opt-spec]", None);` stub —
-/// digestion-time no-op primitive (no Box emitted).
+/// Empty-body `DefPrimitive!("\\cs[opt-spec]", None);` stub — Perl's undef body: an empty box
+/// reverting to the call, its arguments included (Primitive.pm:74-76).
 pub fn def_primitive_noop(proto: &str) -> Result<()> {
   let (cs_tok, params) = parse_prototype(proto, true)?;
   def_primitive(cs_tok, params, None, PrimitiveOptions::default())?;

@@ -1,0 +1,18 @@
+% mechanism: webofc_cls.rs `\author` hands its whole list to the reading in one `\lx@add@author@split` call, which cuts it
+%   at its `\and` (`Sep(And)`, P1) and each piece at its commas — no `\lx@splitting` by spelling before digestion
+%   (Option C P2-1, OD #993)
+% witness: synthetic (the P2P census: no webofc paper holds a separator the spelling split missed)
+% oracle:  pdflatex (TL 2025, -no-shell-escape, the cut-down class-bindings/webofc/webofc.cls) 0 errors: Ann Able, Dan Dee, Bob Baker
+% engines: Perl 0.8.8 no webofc binding (OmniBus); int157a (split by spelling) and P21 (one block) the same XML
+% expect:  0 errors, 0 warnings; creators Ann Able (Univ A), Dan Dee (Univ B), Bob Baker (Univ B)
+% status:  GREEN (int157a and P21; guard perfect_kernel_batchp21)
+% preload: ar5iv.sty
+\documentclass{webofc}
+\begin{document}
+\title{T}
+\author{Ann Able\inst{1}, Dan Dee\inst{2} \and Bob Baker\inst{2}}
+\institute{Univ A \and Univ B}
+\abstract{A.}
+\maketitle
+Text.
+\end{document}

@@ -1,0 +1,18 @@
+% witness: synthetic (QA54 q3; ≈1/30k papers rely on it); lineno.sty:264-265 `\RequirePackage{etoolbox}`,
+%          `\RequirePackage{kvoptions}`
+% oracle:  pdflatex 0 errors ("Quoted. Set: yes")
+% engines: rust int160b = 2 errors (`\cspreto`, `\SetupKeyvalOptions` undefined) and stray text "quote";
+%          Perl 3 errors (the same two and an `unexpected:}`; lineno.sty.ltxml loads neither)
+% expect:  0 errors, 0 warnings; the quote holds "Quoted." and no stray "quote"; "Set: yes"
+% status:  RED (int160b) -> GREEN (PI1)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{lineno}
+\makeatletter
+\SetupKeyvalOptions{family=my,prefix=my@}
+\makeatother
+\begin{document}
+\cspreto{quote}{\linenomath}
+\begin{quote} Quoted. \end{quote}
+Set: \ifdefined\ProcessKeyvalOptions yes\else no\fi
+\end{document}

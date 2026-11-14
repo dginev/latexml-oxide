@@ -92,4 +92,95 @@ LoadDefinitions!({
   DefPrimitive!("\\straighttheta",   "\u{03B8}"); // θ
   DefPrimitive!("\\straightphi",     "\u{03D5}"); // ϕ (PHI SYMBOL)
   DefPrimitive!("\\straightepsilon", "\u{03F5}"); // ϵ (LUNATE EPSILON SYMBOL)
+
+  // alphabeta.sty L205ff: bare-name aliases (`\providecommand*{\Alpha}
+  // {\textAlpha}` and siblings) — Greek LETTERS, content-bearing. Sweep-12
+  // cluster witnesses greek-fontenc char-list-alphabeta (91 errs),
+  // teubner-doc, biblatex-sbl/sbl-paper.
+  DefPrimitive!("\\Alpha",      "\u{0391}");
+  DefPrimitive!("\\Beta",       "\u{0392}");
+  DefPrimitive!("\\Epsilon",    "\u{0395}");
+  DefPrimitive!("\\Zeta",       "\u{0396}");
+  DefPrimitive!("\\Eta",        "\u{0397}");
+  DefPrimitive!("\\Iota",       "\u{0399}");
+  DefPrimitive!("\\Kappa",      "\u{039A}");
+  DefPrimitive!("\\Mu",         "\u{039C}");
+  DefPrimitive!("\\Nu",         "\u{039D}");
+  DefPrimitive!("\\Omicron",    "\u{039F}");
+  DefPrimitive!("\\Rho",        "\u{03A1}");
+  DefPrimitive!("\\Tau",        "\u{03A4}");
+  DefPrimitive!("\\Chi",        "\u{03A7}");
+  DefPrimitive!("\\omicron",    "\u{03BF}");
+  DefPrimitive!("\\finalsigma", "\u{03C2}");
+  DefPrimitive!("\\varbeta",    "\u{03D0}");
+  // \providecommand semantics (alphabeta.sty L205ff): \varkappa/\digamma
+  // are also amssymb MATH symbols — never clobber an existing definition.
+  if !IsDefined!(&T_CS!("\\varkappa")) {
+    DefPrimitive!("\\varkappa", "\u{03F0}");
+  }
+  if !IsDefined!(&T_CS!("\\digamma")) {
+    DefPrimitive!("\\digamma", "\u{03DD}");
+  }
+  DefPrimitive!("\\Digamma",    "\u{03DC}");
+  DefPrimitive!("\\koppa",      "\u{03DF}");
+  DefPrimitive!("\\Koppa",      "\u{03DE}");
+  DefPrimitive!("\\Sampi",      "\u{03E0}");
+  DefPrimitive!("\\sampi",      "\u{03E1}");
+  DefPrimitive!("\\Stigma",     "\u{03DA}");
+  DefPrimitive!("\\stigma",     "\u{03DB}");
+  DefPrimitive!("\\Qoppa",      "\u{03D8}");
+  DefPrimitive!("\\qoppa",      "\u{03D9}");
+  DefPrimitive!("\\thetasymbol",   "\u{03D1}");
+  DefPrimitive!("\\phisymbol",     "\u{03D5}");
+  DefPrimitive!("\\pisymbol",      "\u{03D6}");
+  DefPrimitive!("\\rhosymbol",     "\u{03F1}");
+  DefPrimitive!("\\kappasymbol",   "\u{03F0}");
+  DefPrimitive!("\\betasymbol",    "\u{03D0}");
+  DefPrimitive!("\\epsilonsymbol", "\u{03F5}");
+
+  // alphabeta.sty L109-160: `\math<letter>` aliases saving the ORIGINAL math
+  // meanings before alphabeta re-declares the bare names as
+  // `\TextOrMath{\text<x>}{\math<x>}`. Packages built on alphabeta call these
+  // directly: hep-math-font.sty L146-186 (`\hep@greek{\textdelta}{\mathdelta}`).
+  // Since `alphabeta` maps to THIS binding (lib.rs), the raw let-block never
+  // runs — port it verbatim. Witness: hep-paper manual (perfect-kernel,
+  // \mathdelta/\mathmu/\mathphi undefined).
+  RawTeX!(
+    r"\let\mathGamma\Gamma \let\mathDelta\Delta \let\mathTheta\Theta
+\let\mathLambda\Lambda \let\mathXi\Xi \let\mathPi\Pi
+\let\mathSigma\Sigma \let\mathUpsilon\Upsilon \let\mathPhi\Phi
+\let\mathPsi\Psi \let\mathOmega\Omega
+\let\mathalpha\alpha \let\mathbeta\beta \let\mathgamma\gamma
+\let\mathdelta\delta \let\mathepsilon\epsilon \let\mathvarepsilon\varepsilon
+\let\mathzeta\zeta \let\matheta\eta \let\maththeta\theta
+\let\mathvartheta\vartheta \let\mathiota\iota \let\mathkappa\kappa
+\let\mathlambda\lambda \let\mathmu\mu \let\mathnu\nu
+\let\mathxi\xi \let\mathpi\pi \let\mathvarpi\varpi
+\let\mathrho\rho \let\mathvarrho\varrho \let\mathsigma\sigma
+\let\mathvarsigma\varsigma \let\mathtau\tau \let\mathupsilon\upsilon
+\let\mathphi\phi \let\mathvarphi\varphi \let\mathchi\chi
+\let\mathpsi\psi \let\mathomega\omega"
+  );
+
+  // greek-fontenc accent commands (lgrenc.def L439ff \DeclareTextAccent —
+  // our \DeclareTextAccent is a no-op, as in Perl). Bounded surpass: map
+  // each to its Unicode COMBINING mark placed after the argument's first
+  // char via \lx@applyaccent's convention is overkill here — emit
+  // argument + combining mark, which NFC-normalizes downstream.
+  DefMacro!("\\acctonos{}", "#1\u{0301}");
+  DefMacro!("\\accvaria{}", "#1\u{0300}");
+  DefMacro!("\\accperispomeni{}", "#1\u{0342}");
+  DefMacro!("\\accdialytika{}", "#1\u{0308}");
+  DefMacro!("\\accpsili{}", "#1\u{0313}");
+  DefMacro!("\\accdasia{}", "#1\u{0314}");
+  DefMacro!("\\accpsilioxia{}", "#1\u{0313}\u{0301}");
+  DefMacro!("\\accdasiaoxia{}", "#1\u{0314}\u{0301}");
+  DefMacro!("\\accpsilivaria{}", "#1\u{0313}\u{0300}");
+  DefMacro!("\\accdasiavaria{}", "#1\u{0314}\u{0300}");
+  DefMacro!("\\accpsiliperispomeni{}", "#1\u{0313}\u{0342}");
+  DefMacro!("\\accdasiaperispomeni{}", "#1\u{0314}\u{0342}");
+  DefMacro!("\\accdialytikatonos{}", "#1\u{0308}\u{0301}");
+  DefMacro!("\\accdialytikavaria{}", "#1\u{0308}\u{0300}");
+  DefMacro!("\\accdialytikaperispomeni{}", "#1\u{0308}\u{0342}");
+  DefMacro!("\\ypogegrammeni", "\u{0345}");
 });

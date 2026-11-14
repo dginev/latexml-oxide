@@ -1,0 +1,18 @@
+% witness: fascicules.sty:142 `\renewenvironment{proof}{\textbf{D\'emonstration:} \par}{\hfill \qed}`, NotesTeX.sty:124,
+%          beautybook.cls:1211; synthetic shape: 67ps review t9 (an author's package)
+% oracle:  pdflatex 0 errors, "Beweisskizze: Body nine. ■"
+% engines: rust 67o1 = as pdflatex; rust a03442572a = <proof> "Proof." with ∎ (the 67s proof lock refused the head
+%          text and end mark the file wrote); perl = as pdflatex
+% expect:  0 errors, 0 warnings; no <proof>; the small-caps "Beweisskizze:" head and the ■
+% status:  RED (a03442572a) -> GREEN (67ps); guard perfect_kernel_batch67ps::proof_with_a_head_of_its_own_goes_through
+\begin{filecontents*}[overwrite]{authproofpkg.sty}
+\ProvidesPackage{authproofpkg}
+\RequirePackage{amssymb}
+\renewenvironment{proof}{\par\noindent\textsc{Beweisskizze:}\ }{\hfill$\blacksquare$\par}
+\end{filecontents*}
+\documentclass{article}
+\usepackage{amsthm}
+\usepackage{authproofpkg}
+\begin{document}
+\begin{proof}Body nine.\end{proof}
+\end{document}

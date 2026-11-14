@@ -1,0 +1,12 @@
+% witness: the 59n review (agent_reports/*_a3478ee89d90d8e3d.md, probe pM.tex)
+% oracle:  pdflatex 0 errors; three columns (tabularray counts the cells of the expanded body)
+% engines: rust 59l/59n = `*{2}{l}` and "Extra alignment tab": a math table without a colspec is sized by
+%   `tblr_body_width`, which reads the body before `expand=`/`evaluate=` run
+% expect:  0 errors; a 3-column math array
+% status:  RED (open; fix: size a preprocessed math table from the processed body)
+\documentclass{article}
+\usepackage{tabularray}
+\newcommand*\rowa{20 & 30 & 40 \\}
+\begin{document}
+$\begin{tblr}[expand=\rowa]{} a & b \\ \rowa \end{tblr}$
+\end{document}

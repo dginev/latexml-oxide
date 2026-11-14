@@ -1,0 +1,14 @@
+% Two minipages side by side in a `\vbox` start a paragraph (latex.ltx `\@iiiminipage` begins with `\leavevmode`) and
+% sit in its one line, so the box is one line tall; Rust stacks them as two blocks (review 60l r3 finding 4; identical
+% before 60l, not caused by it).
+% status:  RED (open)
+% oracle:  pdflatex 0 errors: "F 13.5pt+8.5pt."
+% engines: rust 60l: "F 36.5pt+8.5pt." (stacked); 60m alike
+% expect:  0 errors; "F 13.5pt+8.5pt."
+\documentclass[10pt]{article}
+\begin{document}
+\newcommand\M[2]{\setbox0\hbox{#2}\xdef#1{\the\ht0+\the\dp0}}
+\newcommand\R{\hbox{\rule{1pt}{10pt}}}
+\M\f{\vbox{\begin{minipage}{3cm}\R\R\end{minipage}\begin{minipage}{3cm}\R\R\end{minipage}}}
+\noindent F \f.
+\end{document}

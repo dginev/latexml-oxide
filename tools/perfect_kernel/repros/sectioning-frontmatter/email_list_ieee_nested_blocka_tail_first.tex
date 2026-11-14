@@ -1,0 +1,21 @@
+% An IEEE second blockA nesting a third for the list's last line, `\IEEEauthorblockA{{\{ann.able, bob.baker,}
+%   \IEEEauthorblockA{\underline{cat.cole}\}@x.org}}`: the inner block is digested, and placed, before the outer one,
+%   so the list's tail stood before its head and neither was read — two affiliations of the last author, no e-mail.
+%   The tail placed just before its head is joined to it (`join_split_address_contacts`), and the list read as one
+%   (OD #970, #972; census138 ADDR-b).
+% witness: 2410.15681 (`\IEEEauthorblockA{{\{nishant.shankar.gaikwad, …, christopher.mutschler,}
+%   \IEEEauthorblockA{\underline{felix.ott}\}@iis.fraunhofer.de}}}`)
+% oracle:  pdflatex 0 errors: "Ann Able, Bob Baker, Cat Cole", "Univ X, Town", "{ann.able, bob.baker,", "cat.cole}@x.org"
+% engines: rust int139a3 = Cat Cole holds "cat.cole}@x.org" and "{ann.able, bob.baker," as affiliations
+% expect:  0 errors, 0 warnings; each author: Univ X, Town and the address they spell
+% status:  RED (int139a3) -> GREEN (107f)
+% preload: ar5iv.sty
+\documentclass[conference]{IEEEtran}
+\begin{document}
+\title{T}
+\author{\IEEEauthorblockN{Ann Able, Bob Baker, Cat Cole}
+\IEEEauthorblockA{Univ X, Town}
+\IEEEauthorblockA{{\{ann.able, bob.baker,} \IEEEauthorblockA{\underline{cat.cole}\}@x.org}}}
+\maketitle
+Text.
+\end{document}

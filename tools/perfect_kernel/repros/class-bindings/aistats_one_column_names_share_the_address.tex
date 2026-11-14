@@ -1,0 +1,32 @@
+% mechanism: aistats's `\aistatsauthor` row of one column (names apart by `\quad`, not `\And`) under one
+%   `\aistatsaddress`: the copy centres the address under all the names, so it is every author's affiliation
+%   (`\lx@add@affiliation@shared[annotate=run]`), its e-mail line the authors' e-mails, one each in their order — not
+%   paired with the last name only, as a one-column pair (`names \\ address`) gave it.
+% witness: 2510.09534 (aistats2026: `Jeong$^\ast$ \quad Zhai$^\ast$ \quad Ro\v{c}kov\'{a}` over one University of
+%   Chicago); 1806.02924's `{asuggala, …}@cs.cmu.edu` line
+% oracle:  pdflatex 0 errors; "A Title / Ann Able* Bob Baker* Cat Cole / Univ X / {able,baker,cole}@x.edu"
+% engines: rust 77o r1: 0 errors, the affiliation and the e-mail line on Cat Cole only; rust int32a: no title, no
+%   creators; perl: no aistats binding
+% expect:  0 errors; 3 creators, each with Univ X and its own e-mail
+% status:  RED (77o r1) -> GREEN (77o r2)
+\begin{filecontents*}{aistats2027.sty}
+\ProvidesPackage{aistats2027}
+\DeclareOption{accepted}{\renewcommand{\statePaper}{\acceptedPaper}}
+\newcommand{\statePaper}{0}\newcommand{\acceptedPaper}{1}
+\ProcessOptions\relax
+\long\def\aistatstitle#1{{\centering{\Large\bfseries #1\par}}\vskip 0.25in}
+\long\def\aistatsauthor#1{\ifnum\statePaper=0 {\begin{tabular}[t]{c}\bfseries Anonymous Author\end{tabular}}\else
+  {\def\And{\end{tabular}\hskip 1in\begin{tabular}[t]{c}\bfseries}\begin{tabular}[t]{c}\bfseries #1\end{tabular}}\fi\par}
+\long\def\aistatsaddress#1{\ifnum\statePaper=0 {\begin{tabular}[t]{c}Anonymous Institution\end{tabular}}\else
+  {\def\And{\end{tabular}\hskip 1in\begin{tabular}[t]{c}}\begin{tabular}[t]{c}#1\end{tabular}}\fi\par}
+\end{filecontents*}
+\documentclass[twoside]{article}
+\usepackage[accepted]{aistats2027}
+\begin{document}
+\twocolumn[\aistatstitle{A Title}
+
+\aistatsauthor{Ann Able$^\ast$ \quad Bob Baker$^\ast$ \quad Cat Cole}
+
+\aistatsaddress{Univ X \\ \texttt{\{able,baker,cole\}@x.edu}}]
+\section{Intro} Body.
+\end{document}

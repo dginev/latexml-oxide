@@ -1,0 +1,16 @@
+% mechanism: the OmniBus path (an unknown class): a name led by `\LaTeX` lost the logo (util_text.rs `printed_own_text`).
+% witness: synthetic (LOGO1; the int158a lesson: probe the unknown-class fallback)
+% oracle:  no class file (pdflatex 3 `!`, the missing class); under article the author line prints "LATEX Project",
+%          revtex4-2's `\affiliation` "TEX Users Group"
+% engines: rust int171a base 0 E 2 W: <personname>Project</personname>, the content check's "excess" LaTeX, and the
+%          OmniBus Warning
+% expect:  0 E, 1 W (the OmniBus Warning); the logo element and " Project", affiliation "TeX Users Group"
+% status:  RED -> GREEN (LOGO1)
+\documentclass{nosuchclass}
+\begin{document}
+\title{T}
+\author{\LaTeX\ Project}
+\affiliation{\TeX\ Users Group}
+\maketitle
+Body.
+\end{document}

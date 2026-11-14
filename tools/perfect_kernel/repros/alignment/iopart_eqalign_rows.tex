@@ -1,0 +1,14 @@
+% witness: 2402.10275: iopart.cls:807-809 `\eqalign` defines `\\` as `\cr`; plain's `\eqalign` (plain_constructs) does
+%          not, so `\\` did not end the row (Perl the same)
+% oracle:  pdflatex 0 errors with the witness's iopart.cls (not in TeX Live; the binding does not read it)
+% engines: rust 63t7 and Perl 0.8.8 = 1 error (rust `Error:unexpected:&`)
+% expect:  0 errors, 0 warnings; an alignment of two rows
+% status:  RED (63t7) -> GREEN (63u)
+\documentclass[12pt]{iopart}
+\begin{document}
+\begin{equation}
+\eqalign{
+a & = b = \\
+& = c .}
+\end{equation}
+\end{document}

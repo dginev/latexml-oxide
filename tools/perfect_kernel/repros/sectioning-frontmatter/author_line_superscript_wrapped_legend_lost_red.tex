@@ -1,0 +1,23 @@
+% witness: 2502.05252 (fairmeta, one `\author{}` holding the names, their affiliations and two legend lines each
+%          wrapped whole in `\textsuperscript{$^*$ …}`); the article and authblk readings of an author line the same
+% oracle:  pdflatex 0 errors; "∗ Equal contributions. A coin flip decides the order." and "† Work done during an
+%          internship at Carnegie Mellon University." printed under the names
+% engines: rust (SBX1, CAU1 the same) 3 creators with their affiliations, both legend lines lost, 0 errors 0 warnings
+%          (silent); a legend line not wrapped (`$^*$ Equal contributions. …`) is kept as the starred names' note
+% expect:  0 errors; both legend lines kept, as the notes of the names showing their marks
+% perl:    0 errors; the shared origin: Perl reads the wrapped line as an empty affiliation's label
+%          (Base_Utility.pool.ltxml:695-706, 734-739)
+% status:  RED (SBX1, pre-existing on CAU1); id LEGA
+% moves:   post-merge (LEG0's census: 1 of 35,942 papers)
+\documentclass{article}
+\title{T}
+\author{Yang Zhou$^{1*}$, Hongyi Liu$^{1*}\dag$, Beidi Chen$^{2}$\\
+$^1$Carnegie Mellon University\\
+$^2$Meta AI\\
+\textsuperscript{$^*$ Equal contributions. A coin flip decides the order.} \\
+\textsuperscript{$\dag$ Work done during an internship at Carnegie Mellon University.}
+}
+\begin{document}
+\maketitle
+Text.
+\end{document}

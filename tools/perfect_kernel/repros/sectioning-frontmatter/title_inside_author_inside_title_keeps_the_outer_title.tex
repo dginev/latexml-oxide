@@ -1,0 +1,15 @@
+% mechanism: a `\title` run inside an author block read at `\maketitle`'s flush changes nothing printed — `\@maketitle`
+%   prints the title before the author line — so only a date there is deferred to the end of the outermost flush
+%   (`emit::recover_queued`); the outer title stands. OXIDIZED_DESIGN_DIVERGENCES #985
+% witness: review revCR4b finding 1 (synthetic; CR4/CR4b deferred titles too and printed "Inner")
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "A Title"
+% engines: int154w "A Title"; CR4b "Inner" (W=1); int154a after the fix "A Title"
+% expect:  0 Errors; `<title>A Title</title>`
+% status:  RED (CR4b) -> GREEN (int154a merge)
+\documentclass{article}
+\begin{document}
+\title{A Title \author{Ann Able \title{Inner}}}
+\maketitle
+\section{S}
+Body.
+\end{document}

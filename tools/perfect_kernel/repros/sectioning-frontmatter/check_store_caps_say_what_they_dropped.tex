@@ -1,0 +1,28 @@
+% The third source's bounds say what they drop, in an Info: the calls past the first 512 (here 520 calls, the last
+% `\setaddr{Lunar}`), and an argument no run could read (`\longaddr`'s 16,384 words end its run in a Fatal, discarded).
+% oracle:  pdflatex 0 errors (TL 2025, -no-shell-escape): "A Title", "Ann Able", "Filler" 520 times, "Lunar", "Word" 16,384 times
+% engines: rust int139c = 0 errors, 0 warnings; rust 108b = 1 warning naming only "filler", the rest with no record; perl = not run
+% expect:  0 errors, 1 warning (frontmatter:unclaimed_store) "filler"; an Info frontmatter:store_calls_dropped (9 later
+%          calls, of \setaddr), an Info frontmatter:unread_argument (\longaddr's, by its size and first tokens)
+% status:  RED (108b) -> GREEN (108b2)
+% preload: ar5iv.sty
+\begin{filecontents*}[force]{checkstorecapssaywcls.cls}
+\LoadClass{article}
+\newcount\aucount
+\def\author#1{\advance\aucount by 1 \gdef\@author{#1}}
+\def\auaddress{}\newcommand{\setaddr}[1]{\g@addto@macro\auaddress{#1\par}}
+\newcommand{\longaddr}[1]{\g@addto@macro\auaddress{#1\par}}
+\renewcommand\maketitle{\par{\@title\par}\ifnum\aucount>0 {\@author\par}{\auaddress}\fi}
+\end{filecontents*}
+\documentclass{checkstorecapssaywcls}
+\title{A Title}\author{Ann Able}
+\def\words{Word Word Word Word Word Word Word Word }
+\newcount\doubling\doubling=11
+\loop\edef\words{\words\words}\advance\doubling by -1 \ifnum\doubling>0 \repeat
+\expandafter\longaddr\expandafter{\words}
+\newcount\callsleft\callsleft=519
+\loop\setaddr{Filler}\advance\callsleft by -1 \ifnum\callsleft>0 \repeat
+\setaddr{Lunar}
+\begin{document}\maketitle
+Body text.
+\end{document}

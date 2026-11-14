@@ -213,7 +213,7 @@ const SAMPLE: &str = r##"
   DefEnvironment("{rproof}[]",
     "<ltx:proof class=\"ltx_proof\"><ltx:title font=\"#font\">#title</ltx:title>#body</ltx:proof>", #{
     mode: "internal_vertical",
-    properties: |_a| {
+    properties: |args| {
       let title = DigestText("{\\bfseries Proof:}");
       #{ title: title, font: title }
     }
@@ -243,7 +243,7 @@ const SAMPLE: &str = r##"
   // COMPUTES from the numeric args (the dual properties/afterDigest pattern).
   DefConstructor("\\gsbox {Float}{Float} {}",
     "<ltx:inline-block class=\"gs\" xscale=\"#xscale\" yscale=\"#yscale\">#3</ltx:inline-block>", #{
-    properties: |xs, ys, _box| #{ xscale: xs, yscale: ys }
+    properties: |xs, ys, unused_box| #{ xscale: xs, yscale: ys }
   });
 
   // listings/siunitx-style OptionalKeyVals: the keyval dict arrives as the
@@ -1137,7 +1137,7 @@ const THROW_SAMPLE: &str = r##"
   });
   DefConditional("\\ifthrcond", || { throw "conditional boom"; });
   DefConstructor("\\thrprops{}", "<ltx:text class=\"#cls\">#1</ltx:text>", #{
-    properties: |_x| { throw "properties boom"; }
+    properties: |x| { throw "properties boom"; }
   });
   DefConstructor("\\thrbefore{}", "<ltx:text class=\"thr-before\">#1</ltx:text>", #{
     beforeDigest: || { throw "beforeDigest boom"; }
@@ -1559,6 +1559,65 @@ fn getkeyvals_accepts_a_digested_and_revert_keeps_values() {
     get_status(LogStatus::Error) == 0 && get_status(LogStatus::Fatal) == 0,
     "the digested-KeyVals binding logged errors: {}",
     latexml_core::common::error::get_status_message()
+  );
+
+  drop(latexml);
+  latexml_core::reset_thread_engine();
+}
+
+/// A Rhai rewrite's `scope` is a Perl scope pattern (`label:…`, `id:…`): `scope_of` kept only
+/// `local`/`global` and dropped `label:sec:in`, so the rule stamped every mark in the document
+/// (57as review). Only the mark in the labelled section is stamped.
+const RW_SCOPE_SAMPLE: &str = r##"
+  DefConstructor("\\rwmark{}", "<ltx:text class=\"rwscope\">#1</ltx:text>");
+  DefRewrite(#{ scope: "label:sec:in", xpath: "descendant-or-self::ltx:text[@class='rwscope']",
+                attributes: #{ class: "rwscope-in" } });
+"##;
+
+fn rw_scope_dispatch(request: &str) -> Option<Result<()>> {
+  let base = request.split('.').next().unwrap_or(request);
+  (base == "lxrwscopetest")
+    .then(|| latexml_contrib::script_bindings::load_script(RW_SCOPE_SAMPLE).map(|_| ()))
+}
+
+#[test]
+fn a_rewrite_scope_names_its_unit() {
+  use latexml_core::common::error::{LogStatus, get_status};
+  let mut latexml = Core::new(CoreOptions {
+    verbosity: Some(-2),
+    include_comments: Some(false),
+    ..CoreOptions::default()
+  });
+  state::set_bindings_dispatch(latexml_core::common::native_dispatcher(
+    latexml_package::dispatch,
+  ));
+  state::add_binding_names(latexml_package::binding_names());
+  state::set_extra_bindings_dispatch(Rc::new(rw_scope_dispatch));
+
+  let tex = concat!(
+    "literal:\\documentclass{article}\\usepackage{lxrwscopetest}\\begin{document}",
+    "\\section{In}\\label{sec:in}\\rwmark{INSIDE}\\section{Out}\\rwmark{OUTSIDE}",
+    "\\end{document}"
+  );
+  let doc = latexml
+    .convert_file(tex.to_string())
+    .expect("a scoped rewrite must convert");
+  let xml = doc.serialize_to_string();
+  assert!(
+    get_status(LogStatus::Error) == 0 && get_status(LogStatus::Fatal) == 0,
+    "conversion logged errors; xml=\n{xml}"
+  );
+  latexml::util::test::assert_element(
+    &xml,
+    "text",
+    &[r#"class="rwscope-in""#],
+    r#"<text class="rwscope-in">INSIDE</text>"#,
+  );
+  latexml::util::test::assert_element(
+    &xml,
+    "text",
+    &[r#"class="rwscope""#],
+    r#"<text class="rwscope">OUTSIDE</text>"#,
   );
 
   drop(latexml);

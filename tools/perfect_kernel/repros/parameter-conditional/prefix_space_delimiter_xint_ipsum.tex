@@ -1,0 +1,18 @@
+% witness: ipsum/ipsum-doc (xinttools \xintZapSpaces; 70 `Match` errors under the 56gn strict
+%   delimiter check), any xint user
+% oracle:  pdflatex 0 errors; `( X)` and xintZapSpaces{ a b } = `a b`
+% engines: rust (s117) = `(X)`, xintZapSpaces left a trailing `\xint:` residue; perl = `(X)` (KPE #222)
+% expect:  0 errors; the text `( X)` and `[a b]`
+% status:  GREEN (batch 56gy)
+% mechanism: gullet.rs read_match skipped every space after a matched delimiter space
+%   (Perl Gullet.pm:614-617); tex.web §392 matches the delimiter tokens one for one.
+\documentclass{article}
+\usepackage{xinttools}
+\long\def\myfirstofone#1{#1}
+\long\def\showit#1\stop{(\detokenize{#1})}
+\myfirstofone{\def\again\Bdelim} {\showit}
+\def\Bdelim{}
+\def\mk#1{\def\mk{\again\Bdelim#1#1X\stop}}\mk{ }
+\begin{document}
+\edef\z{\mk}\z\ [\xintZapSpaces{ a b }]
+\end{document}

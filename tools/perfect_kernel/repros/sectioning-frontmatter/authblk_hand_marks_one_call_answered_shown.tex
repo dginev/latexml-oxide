@@ -1,0 +1,17 @@
+% mechanism: one `\author{… and …}` (`\lx@add@authors@list`, split by the reading) and one `\affil` list the API Cut
+%   parts at its marks: each name shows the mark it prints (`per_author_marks`), each entry its own
+% witness: synthetic (P4b2b; reviewer revP4b2 q3; the shape of 2410.01932)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "Ann Able1 and Bob Baker2", "1Univ A, Town A", "2Univ B, Town B"
+% engines: P4b2: Ann Able, Bob Baker (no mark), each entry with its mark; P4b2b: the names' marks shown
+% expect:  0 errors, 0 warnings; Ann Able 1 "1 Univ A, Town A", Bob Baker 2 "2 Univ B, Town B"
+% status:  GREEN (guard perfect_kernel_batchc1::authblk_names_show_their_printed_marks)
+\documentclass{article}
+\usepackage{authblk}
+\title{T}
+\author{Ann Able$^{1}$ and Bob Baker$^{2}$}
+\affil{$^{1}$Univ A, Town A\\ $^{2}$Univ B, Town B}
+\date{}
+\begin{document}
+\maketitle
+Body.
+\end{document}

@@ -1,0 +1,16 @@
+% mechanism: Perl's split cuts at the comma and " and " before the `\\` lines (Base_Utility.pool.ltxml:679, 714), so an
+%   affiliation line "Dept of Physics, Univ X, City" became three authors; the declined block's split cuts only a names
+%   line at them (OXIDIZED_DESIGN_DIVERGENCES #988, the kernel's #52 rule)
+% witness: 1302.3028 (PoS `\\ Department of Physics, College of Science, Swansea University, …`)
+% oracle:  pdflatex 0 errors: "Ann Able∗ / Dept of Physics, Univ X, City" and "Bob Baker / Univ Y", "∗ Zebra note."
+% engines: rust int154u: one creator; perl 0 errors, four creators ("Univ X", "City" authors)
+% expect:  0 errors, 1 warning; Ann (note, affiliation "Dept of Physics, Univ X, City"), Bob (Univ Y)
+% status:  RED (int154u) -> GREEN (perfect_kernel_batchcr7::a_split_keeps_the_commas_of_its_lines)
+\documentclass{article}
+\newcommand{\footremember}[2]{\footnote{#2}\newcounter{#1}\setcounter{#1}{\value{footnote}}}
+\title{T}
+\author{Ann Able\footremember{zz}{Zebra note.}\\ Dept of Physics, Univ X, City \and Bob Baker\\ Univ Y}
+\begin{document}
+\maketitle
+Body.
+\end{document}

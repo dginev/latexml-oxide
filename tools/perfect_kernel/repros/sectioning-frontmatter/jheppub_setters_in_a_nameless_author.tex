@@ -1,0 +1,19 @@
+% witness: 1211.2861 (jheppub: `\author{\abstract{We define …} \keywords{defect operator, …}}` after three
+%          `\author[x]{…}` calls)
+% oracle:  pdflatex 0 errors with the repros' jheppub.sty (:71 `\renewcommand{\abstract}[1]{\gdef\@abstract{#1}}`, :69
+%          `\keywords` a setter): "Abstract: We define a class of loops." and "Keywords: defect operator, supersymmetry"
+%          under the names
+% engines: rust (PBb) no abstract, no keywords, 0 Warnings
+% expect:  0 errors, 0 warnings; one creator Ann Able; the <abstract> and the <keywords> written
+% status:  RED (PBb) -> GREEN (CR10b)
+% preload: ar5iv.sty
+\documentclass[a4paper,11pt]{article}
+\usepackage{jheppub}
+\title{T}
+\author[a]{Ann Able}
+\affiliation[a]{Zebra University}
+\author{\abstract{We define a class of loops.} \keywords{defect operator, supersymmetry}}
+\begin{document}
+\maketitle
+Body.
+\end{document}

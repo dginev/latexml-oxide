@@ -4,6 +4,7 @@ pub mod argument;
 pub mod conditional;
 pub mod constructor;
 pub mod math_primitive;
+pub mod origin;
 pub mod primitive;
 pub mod register;
 
@@ -69,10 +70,25 @@ impl ExpansionBody {
   }
 }
 
+/// What a body coded in the host language prints where Perl prints `CODE(0x…)`: no address, so the same on every run
+/// (QA89), and still `CODE(`, etoolbox_sty's `\lx@ifnativecmd` sentinel.
+pub const CLOSURE_BODY_TEXT: &str = "CODE(native)";
+
+/// `\meaning`'s text for a closure body of `cs`: its name, letters only, keeps two natives' meanings apart as Perl's
+/// addresses did (`\value` vs `\arabic`); any other name prints [`CLOSURE_BODY_TEXT`].
+pub fn closure_body_meaning(cs: &str) -> String {
+  let name = cs.strip_prefix('\\').unwrap_or(cs);
+  if !name.is_empty() && name.chars().all(|c| c.is_ascii_alphabetic() || c == '@') {
+    format!("CODE({name})")
+  } else {
+    CLOSURE_BODY_TEXT.to_string()
+  }
+}
+
 impl fmt::Debug for ExpansionBody {
   fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
     match self {
-      ExpansionBody::Closure(code) => write!(f, "CODE({:p})", Rc::as_ptr(code)),
+      ExpansionBody::Closure(_) => f.write_str(CLOSURE_BODY_TEXT),
       ExpansionBody::Tokens(ts) => write!(f, "{ts:?}"),
     }
   }
@@ -84,22 +100,21 @@ impl Default for ExpansionBody {
 
 impl PartialEq for ExpansionBody {
   fn eq(&self, other: &ExpansionBody) -> bool {
-    match self {
-      ExpansionBody::Closure(self_closure) => match other {
-        ExpansionBody::Closure(other_closure) => Rc::ptr_eq(self_closure, other_closure),
-        ExpansionBody::Tokens(other_tokens) => {
-          // sometimes the \meaning game forces us into the same CODE(0x...) pointer footprint
-          // appearing as Tokens and as the original Closure. if we do this carefully, we
-          // can get the two .to_string() variants to match...
-          format!("CODE({:p})", Rc::as_ptr(self_closure)) == other_tokens.to_string()
-        },
-      },
-      ExpansionBody::Tokens(self_tks) => match other {
-        ExpansionBody::Tokens(other_tks) => self_tks == other_tks,
-        ExpansionBody::Closure(other_closure) => {
-          format!("CODE({:p})", Rc::as_ptr(other_closure)) == self_tks.to_string()
-        },
-      },
+    // A closure body is never `\ifx`-equal to a token body — OXIDIZED_DESIGN
+    // #183. Perl `Common/Object.pm:80-95` `Equals` (and this port, until 2026-09)
+    // matched the closure's `CODE(0x…)` `\meaning` text against a token body so
+    // a `\meaning`→`\scantokens`→`\ifx` round-trip "reconstructed" native
+    // macros; biditools' patchcmd clone (`\bidi@ifscanable`, biditools.sty:792)
+    // then believed it could patch the native `\begin`/`\end` and replaced
+    // them with a body whose tail was the literal text `CODE(…)` — every later
+    // environment lost its `\begingroup` ("Attempt to close a group that
+    // switched to mode horizontal", crbox-doc, ghab-doc; Perl errs the same
+    // way, KNOWN_PERL_ERRORS #147). Guard:
+    // `perfect_kernel_batch54::biditools_env_patch_leaves_begin_end_intact`.
+    match (self, other) {
+      (ExpansionBody::Closure(a), ExpansionBody::Closure(b)) => Rc::ptr_eq(a, b),
+      (ExpansionBody::Tokens(a), ExpansionBody::Tokens(b)) => a == b,
+      _ => false,
     }
   }
 }
@@ -239,8 +254,55 @@ impl PartialEq for FontDirective {
   }
 }
 
+/// The mode transitions a binding's options compile to for a primitive or constructor (its
+/// `mode`, `enter_horizontal`, `leave_horizontal`, `bounded`, `require_math` and `forbid_math`
+/// options), kept beside the digestion closures so that an audit can compare them with the
+/// prologue of the real macro the binding replaces (KERNEL_CAPABILITIES K13). The definers
+/// build those closures from this record, so the two cannot drift apart.
+///
+/// It holds what the options compile to, not their spelling: an environment that names no
+/// mode records `restricted_horizontal` (Perl's `DefEnvironmentI`, Package.pm:1902), and
+/// `bounded` is dropped when a mode is given. It covers the opening side only (`\begin{env}`
+/// and the bare `\env`; the closers undo it), and only the options: a prologue a binding's
+/// closure performs by hand (`enter_horizontal()` in its body) is not in it. A robust
+/// command's record is on its `\cs␣` body, not on the `\protect` wrapper.
+///
+/// The prologue runs in the fixed order of Perl's `DefPrimitiveI`/`DefConstructorI`
+/// (Package.pm:1303-1309, 1465-1471): `require_math`, `forbid_math`, `enter_horizontal`,
+/// `leave_horizontal`, then the mode (or the group when `bounded`). No definition declares both
+/// horizontal transitions, in Perl's pools or here; one that did would start a paragraph and
+/// then end it.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub struct DeclaredMode {
+  /// The mode the definition begins, after `text` is lowered to `restricted_horizontal`.
+  pub mode:             Option<SymStr>,
+  /// Starts a paragraph first: declared, or implied by a primitive's or constructor's
+  /// `mode => "text"` (Package.pm:1297-1299, 1459-1461; not an environment's).
+  pub enter_horizontal: bool,
+  /// Ends the paragraph, after `enter_horizontal` when both are declared.
+  pub leave_horizontal: bool,
+  /// Opens a group: `bounded` with no mode, or a math constructor without `nogroup`.
+  pub bounded:          bool,
+  pub require_math:     bool,
+  pub forbid_math:      bool,
+  /// Declared `mode => "restricted_horizontal"` itself (not `text`, not an environment's default): the constructor
+  /// builds a TeX box (`\hbox`, `\mbox`, `\fcolorbox`, `\scalebox`), the first element it opens outside math marked
+  /// for a frontmatter field's print (core `document::FIELD_BOX_PROPERTY`, OXIDIZED_DESIGN #715).
+  pub restricted_box:   bool,
+}
+
 pub trait Definition: Object {
   fn invoke(&self, once_only: bool) -> Result<Tokens>;
+  /// Expand onto the input: [`Self::invoke`]'s result pushed back with [`crate::gullet::unread_expansion`], as
+  /// the gullet's macro expansion does. An expandable with a token-list body substitutes its arguments straight
+  /// onto the input instead (tex.web §390 `macro_call`).
+  fn invoke_onto_input(&self, once_only: bool) -> Result<()> {
+    crate::gullet::unread_expansion(self.invoke(once_only)?);
+    Ok(())
+  }
+  /// [`expandable::SpecialCall::Native`], for a call the gullet expands in full: only there, so a one-step
+  /// `\expandafter` and every other reader of the expansion get the macro's own body.
+  fn native_expansion(&self) -> Result<Option<Tokens>> { Ok(None) }
   fn invoke_primitive(&self) -> Result<Vec<Digested>>;
 
   /// We can almost always return the CS by reference, except in a Register's RefCell, where we are
@@ -254,8 +316,32 @@ pub trait Definition: Object {
     }
   }
   fn get_sizer(&self) -> Option<SizingClosure> { None }
+  /// The mode transitions the binding declared ([`DeclaredMode`]); `None` for definitions
+  /// not made by a definer that takes mode options (macros, registers, raw-TeX definitions,
+  /// a primitive built by hand). The audit reads `None` on a primitive or constructor as
+  /// declaring nothing.
+  fn declared_mode(&self) -> Option<DeclaredMode> { None }
+  /// The font a primitive or constructor was declared with (its `font => {…}` option), which its
+  /// digestion merges into the current font; `None` for every other definition. latex.ltx's
+  /// `\@fontswitch` reads a math alphabet as a switch to the group's end (`\mathrm\relax` with
+  /// `\math@bgroup` let to `\relax`, latex.ltx:14312-14321): the binding's switch merges this font
+  /// (`\lx@math@alphabet@switch`, latex_constructs/sect13.rs).
+  fn declared_font(&self) -> Option<&FontDirective> { None }
+  /// The literal XML template that is a constructor's whole construction: its replacement's source (`DefConstructor!`
+  /// with a string replacement), when no construction hook (`before_construct`, `after_construct`) adds to it. `None`
+  /// for a closure replacement, a constructor made at run time and every other definition: what it builds cannot be
+  /// read off it (the frontmatter's no-ink test, latexml_engine util_text.rs `first_ink`, counts such a whatsit as ink).
+  fn replacement_template(&self) -> Option<&'static str> { None }
   fn get_alias(&self) -> Option<&String>;
   fn is_protected(&self) -> bool { false }
+  /// Whether this macro peeks at the next token the way latex.ltx's
+  /// `\@ifnextchar` does (1756-1760): by `\futurelet`, behind an unexpandable
+  /// `\let`. A number scan (tex.web §445) ends at such a macro instead of
+  /// expanding it (see `gullet::expands_now`). A binding closure that makes an
+  /// assignment as it expands carries it too when its TeX original reaches an
+  /// unexpandable token (`\begingroup`, `\let`, `\relax`) before it acts:
+  /// etoolbox's `\newrobustcmd` and `\patchcmd`, amsthm's `\pushQED`.
+  fn peeks_by_futurelet(&self) -> bool { false }
   fn is_register(&self) -> bool { false }
   fn is_prefix(&self) -> bool { false }
   fn is_readonly(&self) -> bool { false }
@@ -396,9 +482,7 @@ impl fmt::Display for ExpansionBody {
   fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
     match self {
       ExpansionBody::Tokens(t) => write!(f, "{t}"),
-      ExpansionBody::Closure(code) => {
-        write!(f, "ExpansionBody::Closure({:p})", Rc::as_ptr(code))
-      }, // what is the right way to serialize this, e.g. for the \meaning macro
+      ExpansionBody::Closure(_) => f.write_str(CLOSURE_BODY_TEXT),
     }
   }
 }

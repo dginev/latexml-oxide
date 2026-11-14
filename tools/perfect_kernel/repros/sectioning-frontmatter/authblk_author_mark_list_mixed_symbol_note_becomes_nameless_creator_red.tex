@@ -1,0 +1,20 @@
+% witness: 2509.15733, 2606.27251 (id LEGB; the mark item `2\dag` not split into `2` + `\dag` before label matching);
+%          authblk's own `\author[marks]` form of author_list_mixed_mark_note_becomes_nameless_creator_red
+% oracle:  pdflatex 0 `!`: "Ann Lee1 and Bob Ray1,2†", "1 Univ A", "2 Univ B", "† Corresponding author"
+% engines: rust CAU1, SBX1 the same, 0 errors 0 warnings (silent): Bob Ray Univ A + Univ B, and the note
+%          "Corresponding author" a creator of its own with no name ("(nameless)")
+% expect:  0 errors; Bob Ray (marks 1, 2, †) holding the note, no nameless creator
+% status:  RED (SBX1, pre-existing on CAU1); id LEGB
+% moves:   post-merge (LEG0's census: low reach)
+\documentclass{article}
+\usepackage{authblk}
+\begin{document}
+\title{T}
+\author[1]{Ann Lee}
+\author[1,2\dag]{Bob Ray}
+\affil[1]{Univ A}
+\affil[2]{Univ B}
+\affil[\dag]{Corresponding author}
+\maketitle
+Body.
+\end{document}

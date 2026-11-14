@@ -68,21 +68,106 @@ pub fn scaled_properties(
 
   let dim_attr = |v: f64| attribute_format(kround(v), None);
 
+  // The box's size is typed (Perl graphics.sty.ltxml:63-81 stores Dimensions,
+  // truncated to sp by `multiply`, Number.pm:107-109): the size code reads only a Dimension, and a
+  // rendered string made `\wd` sum the arguments as text (`\resizebox{1em}`
+  // measured 49.7pt). The template renders it to the same attribute.
   Ok(vec![
-    ("width", Stored::from(dim_attr(sw))),
-    ("height", Stored::from(dim_attr(sh))),
-    ("depth", Stored::from(dim_attr(sd))),
+    ("width", Stored::Dimension(Dimension::new(sw as i64))),
+    ("height", Stored::Dimension(Dimension::new(sh as i64))),
+    ("depth", Stored::Dimension(Dimension::new(sd as i64))),
     ("xtranslate", Stored::from(dim_attr(xtranslate))),
     ("ytranslate", Stored::from(dim_attr(ytranslate))),
   ])
 }
 
-/// Perl: rotatedProperties($box, $angle, %options) in graphics.sty.ltxml L152-202
-/// Computes bounding box and translation for rotated box content.
+/// One `Grot` key of `\\rotatebox[…]`, in the order given (`\\setkeys{Grot}`).
+#[derive(Clone, Debug)]
+pub enum RotationKey {
+  /// `origin=<letters>`: `l`/`r` set x, `t`/`b`/`B` set y, the last per axis
+  /// winning; `c` (the default value) changes nothing.
+  Origin(String),
+  /// `x=<length>`, in sp.
+  X(f64),
+  /// `y=<length>`, in sp.
+  Y(f64),
+}
+
+/// The point a box turns about, and `smash` (a zero width, rotating.sty).
+/// Without `[…]` it is the reference point (graphicx `\\Grot@box@std`,
+/// rotating.sty's environments: `\\Grot@x\\z@ \\Grot@y\\z@`). With `[…]`,
+/// graphicx's `\\Grot@box@kv` (graphicx.sty:226-242) starts at the box's
+/// centre, `\\width/2` and `(\\height-\\depth)/2` (truncating `\\divide`),
+/// then applies the keys in order. Perl's `rotatedProperties`
+/// (graphics.sty.ltxml:159-169) starts at the reference point and reads `c` as
+/// the centre, so a single-axis origin (`origin=r`) turned about the wrong
+/// point (OXIDIZED_DESIGN_DIVERGENCES #329). Witnesses 2605.02583 (`valign=m`
+/// label), 2605.30813, 2605.25220 (`origin=l`/`r`).
+#[derive(Clone, Debug, Default)]
+pub struct RotationOptions {
+  pub keys:  Option<Vec<RotationKey>>,
+  pub smash: bool,
+}
+
+impl RotationOptions {
+  /// `\\rotatebox`'s optional `Grot` keyvals, `None` when there are none (Perl
+  /// passes `$kv->getHash`, graphics.sty.ltxml:219-225).
+  pub fn from_keyvals(keyvals: Option<&Digested>) -> Self {
+    let Some(arg) = keyvals else {
+      return Self::default();
+    };
+    let DigestedData::KeyVals(ref keyvals) = *arg.data() else {
+      return Self::default();
+    };
+    let mut taken: HashMap<&str, usize> = HashMap::default();
+    let mut keys = Vec::new();
+    for (key, _) in keyvals.get_pairs() {
+      let index = taken.entry(key.as_str()).or_default();
+      let value = keyvals
+        .get_values_digested(key)
+        .and_then(|values| values.get(*index));
+      *index += 1;
+      let length = || {
+        value
+          .and_then(|value| value.get_dimension())
+          .map(|value| value.value_of() as f64)
+      };
+      match key.as_str() {
+        "origin" => keys.push(RotationKey::Origin(
+          value.map_or_else(String::new, |value| value.to_string()),
+        )),
+        "x" => keys.extend(length().map(RotationKey::X)),
+        "y" => keys.extend(length().map(RotationKey::Y)),
+        _ => {},
+      }
+    }
+    RotationOptions {
+      keys:  Some(keys),
+      smash: false,
+    }
+  }
+}
+
+/// Perl: rotatedProperties($box, $angle, %options) in graphics.sty.ltxml L152-202,
+/// turning about the reference point.
 pub fn rotated_properties(
-  mut body: Digested,
+  body: Digested,
   angle: f64,
   smash: bool,
+) -> Result<Vec<(&'static str, Stored)>> {
+  rotated_properties_with(body, angle, &RotationOptions {
+    smash,
+    ..RotationOptions::default()
+  })
+}
+
+/// Perl: rotatedProperties($box, $angle, %options) in graphics.sty.ltxml L152-202:
+/// the bounding box and translation of `body` turned by `angle` degrees about
+/// the point `options` names.
+pub fn rotated_properties_with(
+  mut body: Digested,
+  angle: f64,
+  options: &RotationOptions,
 ) -> Result<Vec<(&'static str, Stored)>> {
   let (w_dim, h_dim, d_dim, ..) = body.get_size(None)?;
   let w = w_dim.value_of() as f64;
@@ -91,9 +176,29 @@ pub fn rotated_properties(
   if w == 0.0 && h == 0.0 && d == 0.0 {
     return Ok(Vec::new());
   }
-  let x0: f64 = 0.0;
-  let y0: f64 = 0.0;
-  // Origin parsing omitted for now (TODO: parse from keyvals)
+  let (mut x0, mut y0) = (0.0, 0.0);
+  if let Some(keys) = &options.keys {
+    x0 = (w / 2.0).trunc();
+    y0 = ((h - d) / 2.0).trunc();
+    for key in keys {
+      match key {
+        RotationKey::Origin(letters) => {
+          for letter in letters.chars() {
+            match letter {
+              'l' => x0 = 0.0,
+              'r' => x0 = w,
+              't' => y0 = h,
+              'b' => y0 = -d,
+              'B' => y0 = 0.0,
+              _ => {},
+            }
+          }
+        },
+        RotationKey::X(x) => x0 = *x,
+        RotationKey::Y(y) => y0 = *y,
+      }
+    }
+  }
 
   let total_h = h + d;
   #[allow(clippy::approx_constant)]
@@ -113,17 +218,15 @@ pub fn rotated_properties(
   let ysh = (h + d - hp - dp) / 2.0;
 
   let dim_attr = |v: f64| attribute_format(kround(v), None);
-  let width_val = if smash {
-    "0.0pt".to_string()
-  } else {
-    dim_attr(wp)
-  };
+  // Typed, as `scaled_properties`', but rounded: Perl builds these with
+  // `Dimension($float)`, which rounds (Dimension.pm:40-47; graphics.sty.ltxml:183-188).
+  let width_val = if options.smash { 0 } else { kround(wp) };
 
   Ok(vec![
     ("angle", Stored::from(s!("{angle}"))),
-    ("width", Stored::from(width_val)),
-    ("height", Stored::from(dim_attr(hp))),
-    ("depth", Stored::from(dim_attr(dp))),
+    ("width", Stored::Dimension(Dimension::new(width_val))),
+    ("height", Stored::Dimension(Dimension::new(kround(hp)))),
+    ("depth", Stored::Dimension(Dimension::new(kround(dp)))),
     ("innerwidth", Stored::from(dim_attr(w))),
     ("innerheight", Stored::from(dim_attr(h))),
     ("innerdepth", Stored::from(dim_attr(d))),
@@ -179,7 +282,10 @@ LoadDefinitions!({
   // from a register lookup that resolved to a Dimension/Dimension form.
   // Without a Rust port, papers using these intermediate CSes (rare but
   // present in some templates) would error with undefined CS.
-  DefConstructor!("\\Gscale@box@dd {Dimension}{Dimension}{}",
+  // Its lengths are `\setlength` operands (graphics.sty:555-568): read through a
+  // redefined `\setlength` (OXIDIZED_DESIGN #325), with the box set, so that
+  // `\width` etc. measure it (`\Gscale@box@dd` sets `\@tempboxa` first).
+  DefConstructor!("\\Gscale@box@dd {TempboxaDimension}{TempboxaDimension}{}",
   "<ltx:inline-block xscale='#xscale' yscale='#yscale' width='#width' height='#height' depth='#depth' xtranslate='#xtranslate' ytranslate='#ytranslate'>#3</ltx:inline-block>",
   mode => "restricted_horizontal", enter_horizontal => true,
   after_digest => sub[whatsit] {
@@ -199,7 +305,7 @@ LoadDefinitions!({
 
   // \Gscale@box@dddd {xnum}{xdenom}{ynum}{ydenom}{body} — Perl L112-118.
   // Same idea, but separate xscale/yscale ratios.
-  DefConstructor!("\\Gscale@box@dddd {Dimension}{Dimension}{Dimension}{Dimension}{}",
+  DefConstructor!("\\Gscale@box@dddd {TempboxaDimension}{TempboxaDimension}{TempboxaDimension}{TempboxaDimension}{}",
   "<ltx:inline-block xscale='#xscale' yscale='#yscale' width='#width' height='#height' depth='#depth' xtranslate='#xtranslate' ytranslate='#ytranslate'>#5</ltx:inline-block>",
   mode => "restricted_horizontal", enter_horizontal => true,
   after_digest => sub[whatsit] {
@@ -233,7 +339,19 @@ LoadDefinitions!({
       if let Some(tok) = next {
         unread_one(tok);
       }
-      let dim = read_dimension()?;
+      // graphics.sty:555-568 `\Gscale@box@dd`/`\Gscale@box@dddd` read the
+      // lengths with `\setlength`, which calc redefines (calc.sty:86): with
+      // calc loaded, `\resizebox{\width}{\ht\cut@boxi+\dp\cut@boxi}` is
+      // one expression (perfectcut.sty:119), whose `+\dp\cut@boxi` came
+      // back as text since 56jr (OXIDIZED_DESIGN #317). A package's own
+      // `\setlength` (bxcalc's units) reads it first (OXIDIZED_DESIGN #325).
+      let dim: Dimension = match read_through_redefined_setlength(RegisterType::Dimension)? {
+        Some(value) => value.into(),
+        None => match braced_length_evaluator() {
+          Some(evaluate) if in_braced_read() => evaluate(RegisterType::Dimension)?.into(),
+          _ => read_dimension()?,
+        },
+      };
       // Return the raw sp value as tokens for lossless round-trip.
       // to_attribute() rounds to 1 decimal pt, losing precision in scale calculations.
       Ok(Tokenize!(TeXString::assembled(dim.value_of().to_string())))
@@ -354,6 +472,8 @@ LoadDefinitions!({
       }
     }
   });
+  // The width it states is a float panel's (the panel grid rule, `declare_panel_width`).
+  declare_panel_width("\\Gscale@@box", 2, &[], &[]);
 
   // == Rotation ==
 
@@ -402,7 +522,8 @@ LoadDefinitions!({
       .map(|a| a.to_attribute().parse::<f64>().unwrap_or(0.0))
       .unwrap_or(0.0);
     if let Some(body) = whatsit.get_arg(3) {
-      let rotated = rotated_properties(body.clone(), angle, false);
+      let options = RotationOptions::from_keyvals(whatsit.get_arg(1));
+      let rotated = rotated_properties_with(body.clone(), angle, &options);
       if let Ok(props) = rotated {
         for (k, v) in props {
           whatsit.set_property(k, v);
@@ -412,6 +533,16 @@ LoadDefinitions!({
   });
 
   DefMacro!("\\Grot@erotate", "\\rotatebox[]");
+  // graphics.sty:445-460 rotation internals reached by isorot.sty's own
+  // `\sideways`/`\turn`: `\Grot@setangle` records the angle, `\Grot@x`/
+  // `\Grot@y` are the origin shifts (no XML meaning), and `\Grot@box`
+  // rotates `\box\z@` through the constructor above (isorot/rotman,
+  // newpax/doc-use-newpax; Perl errs the same way).
+  RawTeX!(
+    r"\def\Grot@setangle#1{\edef\Grot@angle{#1}}
+\newdimen\Grot@x \newdimen\Grot@y
+\def\Grot@box{\expandafter\rotatebox\expandafter{\Grot@angle}{\box\z@}}"
+  );
 
   // Perl: DefConstructor('\reflectbox {}', ...) with properties callback
   // Returns width/height/depth from box size, xscale=-1, yscale=1
@@ -421,9 +552,9 @@ LoadDefinitions!({
     if let Some(mut body) = whatsit.get_arg(1).cloned()
       && let Ok((w, h, d, _, _, _)) = body.get_size(None)
         && (w.value_of() != 0 || h.value_of() != 0 || d.value_of() != 0) {
-          whatsit.set_property("width", Stored::from(w.to_attribute()));
-          whatsit.set_property("height", Stored::from(h.to_attribute()));
-          whatsit.set_property("depth", Stored::from(d.to_attribute()));
+          whatsit.set_property("width", Stored::Dimension(w));
+          whatsit.set_property("height", Stored::Dimension(h));
+          whatsit.set_property("depth", Stored::Dimension(d));
           whatsit.set_property("xscale", Stored::from("-1".to_string()));
           whatsit.set_property("yscale", Stored::from("1".to_string()));
         }
@@ -437,6 +568,10 @@ LoadDefinitions!({
   //
   // DirectoryList reads the arg ToString-first so `_` in path names never
   // becomes a SUB-catcode during digestion.
+  // graphics.sty:157-159's test (`\let\Ginput@path\input@path` there; empty here). Not
+  // `\providecommand`: a plain document (`\input psfig.sty`, 1409.5819) would autoload
+  // LaTeX mid-document, which Perl never loads.
+  RawTeX!(r"\ifx\Ginput@path\@undefined \def\Ginput@path{}\fi");
   DefConstructor!("\\graphicspath DirectoryList",
   sub[document, _args, props] {
     if let Some(Stored::String(paths_sym)) = props.get("paths") {
@@ -453,10 +588,20 @@ LoadDefinitions!({
       .and_then(|a| a.as_ref())
       .map(|a| a.to_string())
       .unwrap_or_default();
+    // graphics.sty:156 `\def\graphicspath#1{\def\Ginput@path{#1}}` — the
+    // TeX-visible search-path macro (upmethodology reads it back), each directory in its braces
+    // (`{nonexist/}{figs/}`; the DirectoryList hands them over joined by `,`).
+    let mut input_path: Vec<Token> = Vec::new();
+    for dir in arg.split(',').filter(|d| !d.is_empty()) {
+      input_path.push(T_BEGIN!());
+      input_path.extend(ExplodeText!(dir));
+      input_path.push(T_END!());
+    }
+    def_macro(T_CS!("\\Ginput@path"), None, Tokens::new(input_path), None)?;
     let root = with_value("SOURCEDIRECTORY",
       |v| v.map(|s| s.to_string()).unwrap_or_default());
     let mut collected: Vec<String> = Vec::new();
-    for dir in arg.split('}') {
+    for dir in arg.split(',') {
       // Beyond-Perl (OXIDIZED_DESIGN #55): strip surrounding double-quotes
       // from each directory entry. pdflatex/kpathsea tolerate quoted paths
       // such as `\graphicspath{{"./figures"}}` — the quotes guard embedded
@@ -468,7 +613,7 @@ LoadDefinitions!({
       // strip on the includegraphics FILENAME side (`image_candidates`,
       // `image.rs:53` `path.trim_matches('"')`). Witness: arXiv 2606.22880
       // (acmart, 9 figures, all lost under both Perl and Rust-before).
-      let dir = dir.trim_start_matches('{').trim().trim_matches('"').trim();
+      let dir = dir.trim().trim_matches('"').trim();
       if !dir.is_empty() {
         // Perl: pathname_absolute(pathname_canonical($dir), $root)
         let path = if root.is_empty() || dir.starts_with('/') {
@@ -501,27 +646,106 @@ LoadDefinitions!({
       let candidates = util::image::image_candidates(&path);
       Ok(stored_map!("graphic" => path, "candidates" => candidates, "options" => ""))
     },
+    after_digest => sub[whatsit] {
+      psfrag_sty::psfrag_graphic(whatsit);
+    },
     alias => "\\includegraphics");
 
-  DefConstructor!("\\DeclareGraphicsExtensions{}", "");
-  DefConstructor!("\\DeclareGraphicsRule{}{}{} Undigested", "");
+  // graphics.sty:189 `\Ginclude@graphics#1` is the driver-level include that
+  // `\includegraphics` reaches after its keyval pass (graphicx.sty:87 only
+  // re-points it for `type=`). Classes call it directly — pagelayout.cls:1494
+  // `\Ginclude@graphics#6` inside `\pal@putgraphic`'s crop probe. Perl's
+  // graphics.sty.ltxml has no internal either (SHARED, pdflatex clean); route it
+  // to the constructor `\includegraphics` itself expands to. Witness:
+  // pagelayout/example-grid (1→0), example-graphic, quickstart.
+  // Guard: `perfect_kernel_batch56::ginclude_graphics_internal_routes_to_the_constructor`.
+  DefMacro!("\\Ginclude@graphics{}", "\\@includegraphics{#1}");
+
+  // graphics.sty:116-117 `\DeclareGraphicsExtensions#1{\edef\Gin@extensions{\zap@space#1 \@empty}}`: a macro that records
+  // the list and typesets nothing. As a constructor its argument was digested, so `.pdf_tex` erred (1810.02483; Perl's
+  // constructor the same, graphics.sty.ltxml:306, KNOWN_PERL_ERRORS #966). Guard:
+  // `perfect_kernel_batch73a::declare_graphics_extensions_is_not_typeset`.
+  DefMacro!(
+    "\\DeclareGraphicsExtensions{}",
+    r"\edef\Gin@extensions{\zap@space#1 \@empty}"
+  );
+  // graphics.sty:150-154 `\DeclareGraphicsRule{<ext>}{<type>}{<read-file>}{<command>}` records the rule as
+  // `\Gin@rule@<ext>#1` → `{<type>}{<read-file>}{<command>, or #1 the file when empty}` and typesets nothing: a
+  // macro, so its arguments are not digested — figlatex.sty:120's `\DeclareGraphicsRule{.pdftex_t}{rawtex}{.pdftex}{}`
+  // typeset `.pdftex_t`, a math error (1605.08743; Perl's constructor the same, graphics.sty.ltxml:307,
+  // KNOWN_PERL_ERRORS #858). The rule is kept, as graphicx's `\includegraphics` reads it (`\lx@Gin@include`: a TeX
+  // source given as a graphic, gincltex.sty:43's `.tex`, is read as TeX). One divergence: `<command>` is kept
+  // `\unexpanded`, where graphics.sty's `\edef` would expand a converter's macros (`\OutputFile`) that only the
+  // driver defines — no converter runs here (OXIDIZED_DESIGN_DIVERGENCES #701).
+  RawTeX!(
+    r"\def\DeclareGraphicsRule#1#2#3#4{\edef\@tempa{\string *}\def\@tempb{#3}\expandafter\edef\csname Gin@rule@#1\endcsname##1{{#2}{\ifx\@tempa\@tempb\noexpand\Gin@ext\else#3\fi}{\ifx\indent#4\indent##1\else\unexpanded{#4}\fi}}}"
+  );
+  // graphics.sty:109-112 the bounding box a graphic's reader (`\Gread@<type>`) sets, and :141-148 `\Gin@defaultbp`,
+  // which it sets them with (gincltex.sty:85-86 `\Gin@defaultbp\Gin@urx{\wd\gincltex@box}`).
+  RawTeX!(r"\def\Gin@llx{0}\let\Gin@lly\Gin@llx\let\Gin@urx\Gin@llx\let\Gin@ury\Gin@llx");
+  RawTeX!(
+    r"\def\Gin@defaultbp#1#2{\afterassignment\Gin@def@bp\dimen@#2bp\relax{#1}{#2}}\def\Gin@def@bp#1\relax#2#3{\if!#1!\def#2{#3}\else\dimen@.99626\dimen@\edef#2{\strip@pt\dimen@}\fi}"
+  );
 
   // == Gin internal macros (Perl: RawTeX block, lines 311-324) ==
 
-  // \Gin@extensions — comma-separated list of recognized image extensions.
-  // Real graphics.sty assigns this from the chosen graphics driver
-  // (.eps for dvips, .pdf,.png,.jpg for pdftex). User code rarely reads
-  // it directly, but `\graphicspath` / `\@for` loops in third-party
-  // packages (e.g. xkeyval drivers) iterate over it. Pre-define as
-  // empty to suppress "undefined" cascades — the actual driver-specific
-  // list is filled in elsewhere if a graphics driver binding loads.
-  // Driver: 2103.04594.
-  Let!("\\Gin@extensions", "\\@empty");
+  // \Gin@extensions — the extensions a name without one is tried with, in turn (graphics.sty:206-224), as pdftex.def
+  // sets it (pdftex.def:597-600), the order of `GRAPHICS_EXTENSIONS` (util/image.rs), which reads the list to order an
+  // image's candidates. It is pdftex.def's list under any driver option, where TeX's is the named driver's:
+  // `[dvips]` loads dvips.def, whose list is `.eps,.ps,.eps.gz,.ps.gz,.eps.Z,.mps` (dvips.def:202; pdflatex with
+  // `\usepackage[dvips]{graphicx}` takes `q.eps` beside `q.png`, review rev79a2 finding 3), though `\Gin@driver`
+  // below names that file (`graphics_driver`) — an open row (SYNC_STATUS "`\Gin@extensions` is seeded with
+  // pdftex.def's list"). `.eps` joins it at `\begin{document}`, or
+  // when epstopdf loads (`\lx@graphics@eps@last`). So grfext's `\AppendGraphicsExtensions{.gif}` (1711.06128) puts
+  // `.gif` after the driver's, its `\Prepend…` before, as in TeX; started `\@empty`, an appended `.eps` alone was the
+  // list and ranked first (review rev79a finding 3). `\@for` loops in third-party packages iterate over it
+  // (2103.04594: defined, no "undefined" cascade).
+  DefMacro!(
+    "\\Gin@extensions",
+    ".pdf,.png,.jpg,.mps,.jpeg,.jbig2,.jb2,.PDF,.PNG,.JPG,.JPEG,.JBIG2,.JB2"
+  );
+  // epstopdf-base.sty:498-505 `\AppendGraphicsExtensions{.eps}` (grfext.sty:153-158, :187-193: every `.eps` removed,
+  // one appended), when epstopdf-base loads and grfext is loaded: `.eps` goes last, after what the document declared
+  // before — `\DeclareGraphicsExtensions{.pdf,.eps,.png}\usepackage{epstopdf}` tries `.png` first.
+  DefPrimitive!("\\lx@graphics@eps@last", {
+    let list = match lookup_meaning(&T_CS!("\\Gin@extensions")) {
+      Some(Stored::Expandable(defn)) => match defn.get_expansion() {
+        Some(ExpansionBody::Tokens(body)) => body.to_string(),
+        _ => String::new(),
+      },
+      _ => String::new(),
+    };
+    let mut kept: Vec<&str> = list
+      .split(',')
+      .map(str::trim)
+      .filter(|ext| !ext.is_empty() && *ext != ".eps")
+      .collect();
+    kept.push(".eps");
+    DefMacro!(
+      T_CS!("\\Gin@extensions"),
+      None,
+      Tokens!(Explode!(kept.join(",")))
+    );
+  });
   Let!("\\Gin@decode", "\\@empty");
   DefMacro!("\\Gin@exclamation", "!");
   Let!("\\Gin@page", "\\@empty");
   DefMacro!("\\Gin@pagebox", "cropbox");
-  DefConditional!("\\ifGin@interpolate");
+  // Real graphics.sty boolean state, ported as the actual \newif lines so
+  // the \Gin@<name>true/false setters exist — raw packages drive them
+  // directly and through graphicx's \Gin@boolkey dispatcher (sweep-11
+  // clusters: `\Gin@boolkey` 34 docs incl. hvfloat.sty L411
+  // `\Gin@boolkey{true}{iso}`; `\Gin@draftfalse` 9 docs, e.g. bohr,
+  // pagelayout). Sources: graphics.sty L55 (draft), L63 (setpagesize,
+  // default true), L253 (Gread@, default true), L307 (interpolate),
+  // L319 (bbox), L579 (iso). Guard:
+  // cluster_package_guards::graphicx_internals.
+  RawTeX!(r"\newif\ifGin@draft");
+  RawTeX!(r"\newif\ifGin@setpagesize\Gin@setpagesizetrue");
+  RawTeX!(r"\newif\ifGread@\Gread@true");
+  RawTeX!(r"\newif\ifGin@interpolate");
+  RawTeX!(r"\newif\ifGin@bbox");
+  RawTeX!(r"\newif\ifGin@iso");
   Let!("\\Gin@log", "\\wlog");
   Let!("\\Gin@req@sizes", "\\relax");
   DefMacro!("\\Gin@scalex", "1");
@@ -533,10 +757,15 @@ LoadDefinitions!({
   Let!("\\Gin@req@width", "\\Gin@nat@width");
   Let!("\\Gin@viewport@code", "\\relax");
 
-  // Perl: DefConditional('\ifGin@clip');
-  DefConditional!("\\ifGin@clip");
-  // Perl: DefMacro('\Gin@i [][]{}', '');
-  def_macro_noop("\\Gin@i[][]{}")?;
+  // graphics.sty L115 (\newif form, so \Gin@cliptrue/false exist too;
+  // was DefConditional per Perl, which lacks the setters raw code calls).
+  RawTeX!(r"\newif\ifGin@clip");
+  // Beyond Perl (`DefMacro('\Gin@i [][]{}', '')`, graphics.sty.ltxml:327): `\Gin@i` is the body of
+  // `\includegraphics` (graphics.sty:119-124), its `[llx,lly][urx,ury]{file}`; graphicx redefines it with the keyval
+  // form (graphicx_sty.rs), which adjustbox's `\adjustimage` and `\adjincludegraphics` call (adjustbox.sty:275-280
+  // `\adjustbox{#1}{\Gin@clipfalse\Gin@i{#2}}`): read as nothing, their image was lost (2410.09019, 2405.10928,
+  // 2404.05726, 2306.17837, 2410.02073; OXIDIZED_DESIGN_DIVERGENCES #475).
+  DefMacro!("\\Gin@i [][]{}", "\\@includegraphics[#1][#2]{#3}");
 
   // Perl: DefPrimitive('\Gscale@div DefToken Dimension Dimension', sub {
   //   my $n = $num->valueOf; my $d = $denom->valueOf;
@@ -553,7 +782,130 @@ LoadDefinitions!({
     DefMacro!(cs, None, Tokens!(Explode!(format!("{ratio}"))));
   });
 
+  // graphics.sty:66-107: the driver file the options or graphics.cfg chose (`graphics_driver`), which packages read to
+  // choose their own drivers: trimclip's `tc-\Gin@driver` (trimclip.sty:24, :252-258), eso-pic, crop, pgfplots,
+  // epstopdf-base. Left empty (latex_constructs_rust_only.rs), trimclip fell back to tc-pgf.def and read pgf where
+  // pdflatex reads tc-pdftex.def and no pgf (2202.10115, 2507.09618, 2306.09847); epstopdf-base warned "Drivers other
+  // than `pdftex' and `luatex' are not supported". The driver file itself is not read: its drawing is the binding's.
+  // A token body, as `\def\Gin@driver{pdftex.def}`: packages compare it with `\ifx` (epstopdf-base.sty:193-196).
+  def_macro(
+    T_CS!("\\Gin@driver"),
+    None,
+    mouth::tokenize(TeXString::assembled(graphics_driver().to_string())),
+    None,
+  )?;
   // Perl: \set@color defined elsewhere but referenced by graphics
   // Provide a no-op fallback if not already defined
   def_macro_noop("\\set@color")?;
+
+  // The pdftex driver's begin-document load (pdftex.def:681-701; luatex.def:681-700 alike): unless
+  // `\DoNotLoadEpstopdf` is defined, with `\includegraphics` defined and neither pst-pdf nor pdftricks loaded, it
+  // requires epstopdf-base. Its conversion rules mean nothing here, but one branch does: when `\@curroptions` (what
+  // the last package's options processing left) is not empty, it requires pdftexcmds (epstopdf-base.sty:151-182),
+  // and that iftex, which defines `\ifpdf` afresh when it loads first. A paper's earlier `\let\ifpdf\relax` is then
+  // undone in TeX; kept, JINST's `\label` (JINST.cls:328-334, `\ifpdf…\fi` inside its own conditional) left a stray
+  // `\fi` that ended the caption's argument scan in a Fatal (1310.6454). Before it, pdftex.def:695 adds `.eps` to
+  // `\Gin@extensions`, and epstopdf-base, loaded now, moves it last when grfext is loaded — which that branch loads,
+  // :178-181 — (`\lx@graphics@eps@last`): a document's `\PrependGraphicsExtensions{.eps}` in the preamble, with
+  // epstopdf not loaded, is undone, as pdflatex prints the png beside the eps.
+  DefMacro!("\\lx@graphics@if@epstopdf@driver", sub[_args] {
+    Ok(Tokens!(if graphics_driver_loads_epstopdf() {
+      T_CS!("\\@firstoftwo")
+    } else {
+      T_CS!("\\@secondoftwo")
+    }))
+  });
+  // Loaded as a package loads it: the driver's load is no `\RequirePackage` of the document's, and leaves no
+  // `<?latexml package?>` for one.
+  DefPrimitive!("\\lx@graphics@require@pdftexcmds", {
+    RequirePackage!("pdftexcmds");
+  });
+  // pdftex.def's guards as it writes them: the `\csname` tests leave both names undefined (`\begingroup` …
+  // `\endgroup`), and with no `\AtEndOfPackage` — graphics read by plain TeX through miniltx, whose `\AtBeginDocument`
+  // runs its argument at once (miniltx.tex:477) — there is no load at all. Unguarded, that `\@ifpackageloaded` was an
+  // undefined LaTeX command in a plain document (1710.04722, 1802.06281: miniltx + graphicx + pictex).
+  RawTeX!(
+    r"\begingroup\expandafter\expandafter\expandafter\endgroup
+    \expandafter\ifx\csname DoNotLoadEpstopdf\endcsname\relax
+      \begingroup\expandafter\expandafter\expandafter\endgroup
+      \expandafter\ifx\csname AtEndOfPackage\endcsname\relax
+      \else
+        \AtEndOfPackage{\AtBeginDocument{\ifx\includegraphics\@undefined\else\lx@graphics@if@epstopdf@driver{%
+          \@ifpackageloaded{pst-pdf}{}{\@ifpackageloaded{pdftricks}{}{%
+            \edef\Gin@extensions{\Gin@extensions,.eps}%
+            \@ifpackageloaded{epstopdf}{}{\@ifpackageloaded{epstopdf-base}{}{%
+              \ifx\@curroptions\@empty
+                \ifx\AppendGraphicsExtensions\@undefined\else\lx@graphics@eps@last\fi
+              \else\lx@graphics@require@pdftexcmds\lx@graphics@eps@last\fi}}}}}{}\fi}}%
+      \fi
+    \fi"
+  );
 });
+
+/// graphics.sty's driver options in declaration order (graphics.sty:67-88), with the driver file each names
+/// (`xdvi` and `oztex` are `dvips`, `dviwindo` is `dvipsone`, `dvipdfm` is `dvipdfmx`).
+const GRAPHICS_DRIVER_OPTIONS: [(&str, &str); 22] = [
+  ("dvips", "dvips.def"),
+  ("xdvi", "dvips.def"),
+  ("dvipdf", "dvipdf.def"),
+  ("dvipdfm", "dvipdfmx.def"),
+  ("dvipdfmx", "dvipdfmx.def"),
+  ("xetex", "xetex.def"),
+  ("pdftex", "pdftex.def"),
+  ("luatex", "luatex.def"),
+  ("dvisvgm", "dvisvgm.def"),
+  ("dvipsone", "dvipsone.def"),
+  ("dviwindo", "dvipsone.def"),
+  ("emtex", "emtex.def"),
+  ("dviwin", "dviwin.def"),
+  ("oztex", "dvips.def"),
+  ("textures", "textures.def"),
+  ("pctexps", "pctexps.def"),
+  ("pctexwin", "pctexwin.def"),
+  ("pctexhp", "pctexhp.def"),
+  ("pctex32", "pctex32.def"),
+  ("truetex", "truetex.def"),
+  ("tcidvi", "tcidvi.def"),
+  ("vtex", "vtex.def"),
+];
+
+/// graphics.sty's driver file (`\Gin@driver`): `\ProcessOptions` runs the declared driver options that the package
+/// or the class was given in declaration order, so the last one listed wins; graphicx passes its own options on
+/// (graphicx.sty:29). With none, graphics.cfg picks xetex.def under XeTeX, pdftex.def for PDF output (`\pdfoutput` >
+/// 0, as K6 sets it), else dvips.def (graphics.cfg:24-68).
+fn graphics_driver() -> &'static str {
+  let mut given: Vec<String> = Vec::new();
+  for key in ["opt@graphics.sty", "opt@graphicx.sty", "class_options"] {
+    for item in lookup_vecdeque(key).unwrap_or_default() {
+      match item {
+        Stored::String(s) => given.push(with(s, |s| s.trim().to_string())),
+        Stored::Strings(ss) => given.extend(ss.iter().map(|s| with(*s, |s| s.trim().to_string()))),
+        _ => {},
+      }
+    }
+  }
+  match GRAPHICS_DRIVER_OPTIONS
+    .iter()
+    .rev()
+    .find(|(name, _)| given.iter().any(|g| g == name))
+  {
+    Some((_, driver)) => driver,
+    None if lookup_bool("XETEX_PROFILE") => "xetex.def",
+    None => {
+      if lookup_register("\\pdfoutput", Vec::new())
+        .ok()
+        .flatten()
+        .is_some_and(|value| Number::from(&value).value_of() > 0)
+      {
+        "pdftex.def"
+      } else {
+        "dvips.def"
+      }
+    },
+  }
+}
+
+/// Does graphics.sty's driver load epstopdf-base at `\begin{document}`? Only pdftex.def and luatex.def do.
+fn graphics_driver_loads_epstopdf() -> bool {
+  matches!(graphics_driver(), "pdftex.def" | "luatex.def")
+}

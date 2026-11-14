@@ -2,15 +2,15 @@ use crate::prelude::*;
 
 #[rustfmt::skip]
 LoadDefinitions!({
-  // stmaryrd.sty L40: \def\stmry@if#1#2{\let#2=\@undefined\iftrue#1#2}
-  // The pattern in TL is `\stmry@if X Y \fi` where #1=X, #2=Y. The
-  // default (option `only` not given) opens an \iftrue that absorbs
-  // content until the trailing \fi. We bind stmaryrd symbols
-  // directly (not via raw load), but old-arrows.sty raw-loads
-  // stmaryrd and triggers \stmry@if at definition time. Provide a
-  // \iftrue-emitting stub so the \fi matches.
-  // Witness 2406.00395 (old-arrows), 2406.02375.
-  RawTeX!(r"\def\stmry@if#1#2{\iftrue}");
+  // stmaryrd.sty:40 `\def\stmry@if#1#2{\let#2=\@undefined\iftrue#1#2}`: the pattern is `\stmry@if <definer> <cs>
+  // <rest> \fi`, which (option `only` not given) undefines `<cs>` and runs `<definer><cs><rest>` inside an `\iftrue`
+  // the trailing `\fi` closes. We bind stmaryrd's symbols directly (not via raw load), but other packages use it:
+  // old-arrows.sty:489-492 `\stmry@if\def\varmapsfrom{\varleftarrow\mapsfromchar}\fi` when stmaryrd is loaded.
+  // A stub that only opened the `\iftrue` (gobbling `<definer><cs>`) left `{\varleftarrow\mapsfromchar}` to run at
+  // load time: `\varleftarrow`/`\varlongleftarrow` undefined (default options define neither), 19 papers.
+  // Witnesses 2406.00395 (old-arrows), 2406.02375, 2006.11831, 2102.02198, 2208.02506. Guard:
+  // `perfect_kernel_batch68j::stmaryrd_if_defines_its_cs`.
+  RawTeX!(r"\def\stmry@if#1#2{\let#2=\@undefined\iftrue#1#2}");
 
   // Relational operators
   DefMath!("\\Yup",    None, "\u{2144}",                  role => "RELOP");
@@ -63,6 +63,11 @@ LoadDefinitions!({
   DefMath!("\\varcurlyvee",         None, "\u{22CE}",         role => "RELOP");
   DefMath!("\\varcurlywedge",       None, "\u{22CF}",         role => "RELOP");
   DefMath!("\\varoast",             None, "\u{229B}",         role => "MULOP");
+  // stmaryrd.sty:149-150 `\let\oast\circledast`, `\let\ocircle\circledcirc`: amssymb's glyphs
+  // (amssymb_sty.rs), defined here whether or not amssymb came first. `\oast` was the first error of 111
+  // run-340 papers still failing at the int7 head (121 in all of run 340; witnesses 2103.07308, 1904.01031).
+  DefMath!("\\oast",                None, "\u{229B}",         role => "MULOP");
+  DefMath!("\\ocircle",             None, "\u{229A}",         role => "MULOP");
   DefMath!("\\varobar",             None, "\u{29B6}",         role => "RELOP");
   DefMath!("\\varobslash",          None, "\u{29B8}",         role => "MULOP");
   DefMath!("\\varocircle",          None, "\u{229A}",         role => "MULOP");
@@ -83,25 +88,25 @@ LoadDefinitions!({
   // Perl: scriptpos => \&doScriptpos, mathstyle => \&doVariablesizeOp
   DefMath!("\\bigbox", None, "\u{25A1}",
     font => { scale => 1.6 },
-    role => "SUMOP", dynamic_scriptpos => true, dynamic_mathstyle => true);
+    role => "SUMOP", dynamic_scriptpos => true, variablesize_op => true);
   DefMath!("\\bigcurlywedge", None, "\u{22CF}",
     font => { scale => 1.6 },
-    role => "SUMOP", dynamic_scriptpos => true, dynamic_mathstyle => true);
+    role => "SUMOP", dynamic_scriptpos => true, variablesize_op => true);
   DefMath!("\\bigcurlyvee", None, "\u{22CE}",
     font => { scale => 1.6 },
-    role => "SUMOP", dynamic_scriptpos => true, dynamic_mathstyle => true);
+    role => "SUMOP", dynamic_scriptpos => true, variablesize_op => true);
   DefMath!("\\biginterleave", None, "\u{2AFC}",
-    role => "SUMOP", dynamic_scriptpos => true, dynamic_mathstyle => true);
+    role => "SUMOP", dynamic_scriptpos => true, variablesize_op => true);
   DefMath!("\\bigparallel", None, "\u{2016}",
-    role => "SUMOP", dynamic_scriptpos => true, dynamic_mathstyle => true);
+    role => "SUMOP", dynamic_scriptpos => true, variablesize_op => true);
   DefMath!("\\bigsqcap", None, "\u{2A05}",
-    role => "SUMOP", dynamic_scriptpos => true, dynamic_mathstyle => true);
+    role => "SUMOP", dynamic_scriptpos => true, variablesize_op => true);
   DefMath!("\\bigtriangledown", None, "\u{25BD}",
     font => { scale => 1.6 },
-    role => "SUMOP", dynamic_scriptpos => true, dynamic_mathstyle => true);
+    role => "SUMOP", dynamic_scriptpos => true, variablesize_op => true);
   DefMath!("\\bigtriangleup", None, "\u{25B3}",
     font => { scale => 1.6 },
-    role => "SUMOP", dynamic_scriptpos => true, dynamic_mathstyle => true);
+    role => "SUMOP", dynamic_scriptpos => true, variablesize_op => true);
 
   // More relational operators
   DefMath!("\\inplus",                None, "\u{2A2D}", role => "RELOP");
@@ -127,8 +132,9 @@ LoadDefinitions!({
     role => "ADDOP", meaning => "intersection-plus");
   DefMath!("\\bignplus", None,
     "\\lx@kludged{\\bigcap\\mathchoice{\\lx@tweaked{width=0pt,xoffset=-1.6em,yoffset=0.2ex}{+}}{\\lx@tweaked{width=0pt,xoffset=-1.3em,yoffset=0.2ex}{+}}{\\lx@tweaked{width=0pt,xoffset=-1.3em,yoffset=0.2ex}{+}}{\\lx@tweaked{width=0pt,xoffset=-1.3em,yoffset=0.2ex}{+}}}",
+    // Perl stmaryrd.sty.ltxml:149-158: `mathstyle => \&doVariablesizeOp` only, no `scriptpos`.
     role => "ADDOP", meaning => "intersection-plus",
-    dynamic_scriptpos => true, dynamic_mathstyle => true);
+    variablesize_op => true);
 
   DefMath!("\\trianglelefteqslant",  None, "\u{22B4}",                  role => "RELOP");
   DefMath!("\\trianglerighteqslant", None, "\u{22B5}",                  role => "RELOP");

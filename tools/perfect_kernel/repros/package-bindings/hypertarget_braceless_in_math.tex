@@ -1,0 +1,25 @@
+% witness: 2606.15438 (MajorMinorArcs-Arxiv.tex:240-241)
+% oracle: pdflatex (clean); engine: pdflatex
+% expect: 0 errors; one \left( \frac{n}{p} \right) fenced pair in the equation; the brace-less \frac after e2 keeps
+%   n over p (hyperref's own #2 sits before its \fi, so pdflatex reads \fi as that numerator); in text the anchor
+%   holds its text; at a math alignment row's start (align, aligned, array) the same as in a plain formula
+% mechanism: hyperref.sty:4805-4811 puts \hypertarget's #2 after the anchor in the current list; ours digested it as
+%   the anchor's own text, so a brace-less call's \left( was closed at that argument's end and the real \right)
+%   was "Extra". Fixed: hyperref_sty.rs, in math an empty anchor and #2 in place, after the mode test, which a
+%   \relax shields from a cell's \omit look-ahead.
+% status:  GREEN
+\documentclass{article}
+\usepackage{amsmath}
+\usepackage{hyperref}
+\begin{document}
+\begin{equation}\hypertarget{e1}
+  \left( \frac{n}{p}\right) = 1
+\end{equation}
+\[ a\hypertarget{e2}\frac{n}{p} b \]
+See \hypertarget{t1}{Target} here.
+\begin{align}\hypertarget{e3}
+  \left( \frac{n}{p}\right) &= 1
+\end{align}
+\begin{equation}\begin{aligned}\hypertarget{e4}\left( a \right) &= b\end{aligned}\end{equation}
+\[ \begin{array}{c} \hypertarget{e5}\frac{n}{p} \end{array} \]
+\end{document}

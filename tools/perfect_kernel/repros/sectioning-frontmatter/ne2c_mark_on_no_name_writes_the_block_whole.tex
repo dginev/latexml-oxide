@@ -1,0 +1,19 @@
+% mechanism: a `\footnotemark` an author block prints that no name its `=2` reading writes and no item holds (one on the
+%   line a `\\` opens under a name) was dropped with no Warning, and the next name's mark came out one symbol short;
+%   the block is now written whole, Perl's whole-block creator, its tokens digested in order, with a counted Warning
+%   (`emit.rs` `mark_dropped`). A mark past its name's note is carried instead (ne2c_mark_after_note)
+% witness: 1911.13299 (`Vivek Ramanujan \thanks{equal contribution} \\ \footnotemark[2]`); 2101.04763 (a mark past a
+%   name's comma), 2511.12633 (a mark in a formula with a note) — review revNE2r2 Q2
+% oracle:  pdflatex 0 errors; "Ann Able∗ †  Bob Baker‡" (pdftotext; Ann's † on the line under her name)
+% engines: rust off: 0 errors, Ann's † the mark of an affiliation line of hers, Bob ‡; rust =2 (NE2b): 0 errors, 0
+%   warnings, Ann's mark lost, Bob †
+% expect:  =2: the block written whole (one creator, Ann †, Bob ‡, every note kept), 1 Warning
+% status:  RED (NE2b) -> GREEN (perfect_kernel_batchne2::a_mark_on_no_name_writes_the_block_whole)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{Ann Able\thanks{Univ X.} \\ \footnotemark \and Bob Baker\footnotemark}
+\maketitle
+Text.
+\end{document}

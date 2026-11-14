@@ -1,0 +1,13 @@
+% witness: 1509.02957 (rc_struct6 row 10)
+% oracle:  pdflatex 0 errors: `\@sect` hands its style `#6` a braced group (latex.ltx:17256-17259), so the trailing
+%   `\uppercase` takes the whole heading: "1 INTRODUCTION"
+% engines: rust 67int23b = 1 ("Expected opening '{'"), perl = 3
+% expect:  0 errors; title "INTRODUCTION", centred, 120%; the toc copy keeps "Introduction"
+% status:  RED (67int23b) -> GREEN (73b: base_utilities.rs `\lx@format@title@@` braces the title)
+\documentclass{article}
+\usepackage{sectsty}
+\sectionfont{\large\centering\uppercase}
+\begin{document}
+\section{Introduction}
+Text.
+\end{document}

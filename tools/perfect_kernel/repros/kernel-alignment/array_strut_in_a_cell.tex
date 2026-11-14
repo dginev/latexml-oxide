@@ -1,0 +1,16 @@
+% amsmath's matrices and `cases` are `\array`s (amsmath.sty:1073-1076, :1121-1126) whose rows take `\@arstrutbox`'s
+% height, and `aligned`'s rows carry `\strut@` (:714-718), both `\strutbox`'s copies: in a table cell, where `\@array`
+% zeroed `\baselineskip`, they keep their rows' height. 60l's first cut read the strut from the zero `\baselineskip`
+% (pmatrix 9.44pt/4.44pt; review 60l r1 finding 1); `array_strut` reads `\strutbox`.
+% status:  GREEN 60l (no regression; the sizes are 60m's, below pdflatex's — math sizing, not this mechanism)
+% oracle:  pdflatex 0 errors: pmatrix 14.50012pt/9.5001pt; cases 17.50015pt/12.50014pt; aligned 16.0pt/11.0pt
+% engines: rust 60m: pmatrix 11.97221pt/6.97221pt; cases 12.69444pt/7.69444pt; aligned 11.97221pt/6.97221pt
+% expect:  0 errors; rust 60m's sizes (the strut is kept)
+\documentclass{article}
+\usepackage{amsmath}
+\begin{document}
+\setbox0\hbox{\begin{tabular}{c}$\begin{pmatrix}a&b\\c&d\end{pmatrix}$\end{tabular}}
+\setbox2\hbox{\begin{tabular}{c}$\begin{cases}1&x\\2&y\end{cases}$\end{tabular}}
+\setbox4\hbox{\begin{tabular}{c}$\begin{aligned}a&=b\\c&=d\end{aligned}$\end{tabular}}
+\noindent pmatrix \the\ht0/\the\dp0; cases \the\ht2/\the\dp2; aligned \the\ht4/\the\dp4.
+\end{document}

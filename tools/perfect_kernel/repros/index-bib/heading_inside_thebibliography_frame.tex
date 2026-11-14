@@ -1,0 +1,22 @@
+% witness: 1301.0681 (a beamer frame inside `{thebibliography}`)
+% oracle:  pdflatex 0 errors: a "References" slide with [1] A, [2] B
+% engines: rust 67int15 = 3 Error:malformed:ltx:bibitem (in <ltx:subsection>, <ltx:bibblock>, <ltx:text>); Perl errs too
+% expect:  0 errors; the frame's <subsection> holds one <bibliography> with both entries; no empty bibliography before it
+% status:  FIXED (68w)
+% preload: ar5iv.sty
+\documentclass{beamer}
+\begin{document}
+\begin{frame}{Intro}
+Text \cite{a,b}.
+\end{frame}
+\begin{thebibliography}{20}
+
+\begin{frame}[allowframebreaks]
+\frametitle{References}
+
+\bibitem{a} A. Author, J. 1 (2000).
+
+\bibitem{b} B. Author, J. 2 (2001).
+\end{frame}
+\end{thebibliography}
+\end{document}

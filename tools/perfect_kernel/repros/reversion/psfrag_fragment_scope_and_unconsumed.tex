@@ -1,0 +1,27 @@
+% witness: synthetic (PSF1 sibling: a fragment is local to its group as psfrag's `\pfg@pcount`, psfrag.sty:100; a
+%          fragment no EPS graphic follows in its scope prints nothing in TeX either, so it is no loss)
+% oracle:  latex + dvips, 0 `!`, the figure prints α for "A", the graphic after it "A" (the fragment ended with the
+%          group); "B" (a group with no graphic) and "C" (no graphic after it) print nothing anywhere
+% engines: rust int166a = three plain `<graphics>`, 0 errors, 0 warnings
+% expect:  one Warning, for "A" in the figure's graphic; none for the graphic after the group, none for "B" or "C"
+% status:  GREEN (PSF1); rendering moves to PSFR (post-merge)
+\documentclass{article}
+\usepackage{graphicx,psfrag}
+\begin{filecontents*}{psfragscope.eps}
+%!PS-Adobe-3.0 EPSF-3.0
+%%BoundingBox: 0 0 72 36
+/Times-Roman findfont 12 scalefont setfont
+10 10 moveto (A) show
+40 10 moveto (B) show
+showpage
+\end{filecontents*}
+\begin{document}
+\begin{figure}
+\psfrag{A}{$\alpha$}
+\includegraphics{psfragscope.eps}
+\caption{Inside}
+\end{figure}
+\includegraphics{psfragscope.eps}
+{\psfrag{B}{$\beta$}}
+\psfrag{C}{$\gamma$}
+\end{document}

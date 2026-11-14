@@ -1,0 +1,14 @@
+% witness: 63e review r12 R-a (i1: an IEEE name block of two names stacked with `\\`, no marks)
+% oracle:  pdflatex 0 errors: "Ann Able" over "Bob Baker", then "Univ A"
+% engines: rust (63d) = one creator "Ann Able Bob Baker" (merged, silent); rust (63e) = Ann Able with "Bob Baker"
+%          her affiliation (0 errors, silent): a `\\` line under a name is its affiliation in a per-author block;
+%          Perl one creator (IEEEtran.cls.ltxml `\IEEEauthorblockN` → `\lx@add@author`)
+% expect:  2 creators, Ann Able and Bob Baker, each with Univ A; 0 errors
+% status:  RED (open; OD #459: an unmarked name line under a name reads as its affiliation unless the names above
+%          read as an unfinished list)
+\documentclass[conference]{IEEEtran}
+\author{\IEEEauthorblockN{Ann Able\\ Bob Baker}\IEEEauthorblockA{Univ A}}
+\title{T}
+\begin{document}
+\maketitle
+\end{document}

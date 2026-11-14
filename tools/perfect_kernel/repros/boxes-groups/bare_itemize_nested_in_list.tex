@@ -1,0 +1,13 @@
+% witness: isolation of the nested-list shape of the M1 cluster
+% oracle:  pdflatex 0 errors
+% engines: rust 1 Error:unexpected:} + 1 Warning (64ra) -> 0/0 (64y); Perl 3 Error
+% expect:  0 errors; inner itemize ends inside the first outer item, 'Outer tail.' stays in that item, the second item is the enumerate's
+% status:  RED (base) -> GREEN (64y); guard perfect_kernel_batch64y::bare_itemize_nested_in_list
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\begin{enumerate}
+\item Outer item. {\itemize \item Inner item.} Outer tail.
+\item Second outer.
+\end{enumerate}
+\end{document}

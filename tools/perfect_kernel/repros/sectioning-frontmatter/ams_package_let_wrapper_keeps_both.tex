@@ -1,0 +1,33 @@
+% mechanism: ams_package_wrapping_setters_keeps_both.tex's wrapper installed with \let (\def\wr@address#1{...
+%   \@pigaaddress{#1}}\let\address\wr@address): a boundary a lock on the AMS contact setters against the files must keep
+%   on its \let path too. Review finding S2 of the AMS setter lock (SYNC_STATUS frontmatter row).
+% witness: (construct; 2206.02674's epigamath.sty shape, 2602.16384's MyCommA.sty)
+% oracle:  pdflatex 0 errors: "A. KOLLAR"; "Princeton University" twice (the package's \displayaddresses and amsart's
+%          end matter), "Email address: kollar@math.princeton.edu"
+% engines: rust int116a = the creator's address and linked e-mail, the package's paragraph kept
+% expect:  0 errors, 0 warnings; the creator has the address and the e-mail, its link kept; the document's last
+%          paragraph is the address the package printed again
+% status:  CONTROL (int116a; no guard)
+% preload: ar5iv.sty
+\begin{filecontents*}{wraplet.sty}
+% A minimal stand-in for epigamath.sty:227-232 and MyCommA.sty:530-533, written for a latexml-oxide test.
+\ProvidesPackage{wraplet}[2022/01/01 stand-in]
+\def\displayaddresses{}
+\let\@pigaaddress\address
+\def\wr@address#1{\g@addto@macro{\displayaddresses}{\par\noindent#1}\@pigaaddress{#1}}\let\address\wr@address
+\let\orgemail=\email
+\renewcommand{\email}[1]{\orgemail{\href{mailto:#1}{#1}}}
+\end{filecontents*}
+\documentclass{amsart}
+\usepackage{hyperref}
+\usepackage{wraplet}
+\begin{document}
+\title{Families of Varieties}
+\author{A. Kollar}
+\address{Princeton University}
+\email{kollar@math.princeton.edu}
+\maketitle
+Body.
+
+\displayaddresses
+\end{document}

@@ -6,10 +6,14 @@
 //! same structured creator/contact markup acmart uses. `\author[n]{}` already
 //! works via OmniBus; add the starred (corresponding-author) form and the
 //! contact macros.
-use latexml_package::prelude::*;
+//!
+//! The base class is the one czipreprint.cls loads, `\LoadClass[reqno]{amsart}` (2508.00826, 2511.02986, 2511.06418;
+//! OXIDIZED_DESIGN_DIVERGENCES #736), with OmniBus, the base this binding had before, provided over it.
+use latexml_package::{package::omnibus_cls::provide_over_base_class, prelude::*};
 
 LoadDefinitions!({
-  LoadClass!("OmniBus");
+  LoadClass!("amsart", vec![s!("reqno")], Tokens!());
+  provide_over_base_class()?;
 
   // czipreprint's `\author[n]{Name}` carries a NUMERIC affiliation index in the
   // optional arg (not a running-head short name), and `\author*[n]{Name}` marks

@@ -1,0 +1,19 @@
+% witness: yquant/yquant-doc (yquant-doc.tex:3832, where an \edef-expanded
+%   \pgfsyssoftpath@flushbuffers yields `\gdef{}\global...{`): 177 "Missing argument Match:}"
+%   errors, then 679 expected:Match + 162 unexpected:} -> TooManyErrors (56ji-rel)
+% oracle:  pdflatex 1 error ("Missing control sequence inserted"), "XY Before a and b after."
+% engines: rust=4 errors, "Before a and <bold>b after.</bold>" — X and Y lost, bold leaks
+%          (56ji-rel, 2026-09-25); Perl shares the Begin-key definition
+%          (TeX_Macro.pool.ltxml:174-177 `\def SkipSpaces Token`)
+% expect:  1 error; <p>XY Before a and <text font="bold">b</text> after.</p>
+% status:  GREEN (56jp, W17: gullet.rs read_redefinable_token; guard
+%          rtoken_patchcmd::def_of_a_non_cs_defines_inaccessible)
+% mechanism: tex.web §1215 get_r_token: a name that is neither a control sequence nor an active
+%   character is "Missing control sequence inserted"; the token is read again (back_input) and
+%   the frozen \inaccessible is defined instead. Rust's read_redefinable_token returned the `{`,
+%   so \gdef installed a macro on the Begin catcode and every later `{` became a delimited macro.
+\documentclass{article}
+\begin{document}
+\gdef{}X{Y}
+Before {a} and \textbf{b} after.
+\end{document}

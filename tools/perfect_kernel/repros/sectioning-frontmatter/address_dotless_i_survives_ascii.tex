@@ -1,0 +1,17 @@
+% mechanism: an address in the ASCII encoding (`\lx@address@urlfont`, `\lx@address@textfont`) lost `\i`/`\j`: the ASCII
+%   fontmap had no 0x10/0x11 (Perl TeX_Fonts.pool.ltxml:179-182), so `\'{\i}` printed the accent alone, "mar´a".
+% witness: (construct, review of 64zc)
+% oracle:  pdflatex 0 errors; "maría@a.edu" in CMTT8
+% engines: rust 64u: "maría@a.edu" in roman; 64zc round 1: "mar´a@a.edu"; perl: "maría@a.edu" in roman
+% expect:  "maría@a.edu" in typewriter type
+% status:  RED (64zc round 1) -> GREEN (64zc)
+% preload: ar5iv.sty
+\documentclass{amsart}
+\begin{document}
+\title{Title}
+\author{Mar\'{\i}a Able}
+\address{University of A}
+\email{mar\'{\i}a@a.edu}
+\maketitle
+Text.
+\end{document}

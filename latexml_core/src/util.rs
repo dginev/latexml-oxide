@@ -7,8 +7,11 @@ pub mod image;
 pub mod logger;
 /// helper methods for file system paths
 pub mod pathname;
+/// files trusted only when this user wrote them (format dump caches)
+pub mod private_files;
 /// "radix" may be a misnomer here. Primarily used to generate labels, or uniquifying suffixes to
 /// make ID's
 pub mod radix;
 /// helpers for extracting structured data from replacement (and other) strings
 pub mod text;
+pub mod thread;

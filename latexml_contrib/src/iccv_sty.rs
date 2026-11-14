@@ -4,7 +4,12 @@
 use latexml_package::prelude::*;
 
 LoadDefinitions!({
-  def_macro_noop("\\thetitle")?;
+  // iccv.sty:477-479, like cvpr.sty: `\title` keeps a copy in `\thetitle` (2609.03695); the cvpr binding's wrapper.
+  if !IsDefined!(&T_CS!("\\lx@cvpr@title")) {
+    def_macro_noop("\\thetitle")?;
+    Let!("\\lx@cvpr@title", "\\title");
+    DefMacro!("\\title[]{}", "\\gdef\\thetitle{#2}\\lx@cvpr@title[#1]{#2}", locked => true);
+  }
   def_macro_noop("\\maketitlesupplementary")?;
   DefConditional!("\\ificcvfinal");
   DefConditional!("\\ificcvrebuttal");

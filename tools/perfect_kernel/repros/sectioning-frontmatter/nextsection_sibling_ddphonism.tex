@@ -1,0 +1,26 @@
+% witness: ddphonism/ddphonism (a \subsection then \section in ONE \item; residue 9->6 after Root C leniency)
+% oracle:  pdflatex 0 errors
+% engines: rust=1 perl=2 (2026-09-03) — SHARED (both NEST the 2nd unit; sibling is a surpass)
+% expect:  0 errors; the 2nd <ltx:subsection> is a SIBLING of the 1st inside <ltx:item> (not nested),
+%          and <ltx:section> Z is at <ltx:document> level (after \end{itemize})
+% status:  GREEN (b54w, batch 54p)
+% mechanism: after Root C, a 1st \subsection is inserted nested in <ltx:item> (leniency,
+%   document.rs:3082-3101). The NEXT sectioning command (2nd \subsection, or a \section) is
+%   opened while self.node = that 1st <ltx:subsection>. \@startsection (latex_constructs.pool
+%   .ltxml:561-564) closes the PRIOR sectioning unit but NOT the list, so LaTeX makes the new
+%   heading a SIBLING inside the item. The auto-close walk (document.rs:3019-3033) only breaks
+%   when an ANCESTOR can contain qsym; <ltx:item> can't hold a subsection and <ltx:itemize> is
+%   not auto-closeable, so close_to stays None -> error `<ltx:subsection> isn't allowed in
+%   <ltx:subsection>` and the unit NESTS in its predecessor (wrong). Perl nests too (2 errors).
+%   Fix: in the walk, when node is a sectioning unit whose parent is a list item / float
+%   (ltx:item, ltx:figure), close node so the retry lands in the container and the leniency
+%   inserts the new unit as a sibling. The existing `sym_can_contain_somehow(parent,qsym)` check
+%   above still handles same/deeper level first (a \subsubsection after a \subsubsection nests
+%   in the parent \subsection). pdflatex clean -> surpass approved.
+\documentclass{article}
+\begin{document}
+\begin{itemize}
+\item A \subsection{X} text \subsection{Y} text
+\end{itemize}
+\section{Z}
+\end{document}

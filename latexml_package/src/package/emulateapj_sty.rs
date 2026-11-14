@@ -35,7 +35,9 @@ LoadDefinitions!({
   Let!("\\tablefontsize", "\\tabletypesize");
   def_macro_noop("\\subtitle")?;
   DefMacro!("\\submitted{}",   "\\lx@add@date[role=submitted]{#1}");
-  DefMacro!("\\journalinfo{}", "\\lx@add@pubnote[role=journal]{#1}");
+  // emulateapj.cls:880/884 `\journalinfo`: the journal line of the first page's head, in small capitals, no label
+  // (FIDELITY_CHARTER §4, user ruling 2026-10-30; OXIDIZED_DESIGN_DIVERGENCES #921).
+  DefMacro!("\\journalinfo{}", "\\lx@add@pubnote[role=journal,name={}]{#1}");
   DefMacro!("\\keywordsname", "Subject headings");
   DefMacro!("\\ulap{}", "\\hbox{#1}");
   DefMacro!("\\dlap{}", "\\hbox{#1}");
@@ -44,4 +46,7 @@ LoadDefinitions!({
   DefMacro!("\\format@title@subsection{}", "\\lx@tag[][.\\space]{\\thesubsection}#1");
   DefMacro!("\\format@title@figure{}",     "\\lx@tag[][.\\lx@emdash\\space]{\\lx@fnum@@{figure}}#1");
   DefMacro!("\\format@title@table{}",      "\\lx@tag{\\lx@fnum@@{table}}#1");
+  // emulateapj.cls:1303-1313 `\LT@makecaption` prints a longtable's caption as the table's, "Table 4~~Galaxies"
+  // (longtable_sty.rs `\lx@longtable@format`). Guard `perfect_kernel_batch68y::emulateapj_deluxetable_is_open_from_its_head`.
+  RawTeX!(r"\def\lx@longtable@classformat{}");
 });

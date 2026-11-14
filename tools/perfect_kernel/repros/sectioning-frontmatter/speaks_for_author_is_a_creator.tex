@@ -1,0 +1,18 @@
+% witness: 2605.24212 (`\author[ ]{for~the~PAROS~Clinical~Research~Network}`, authblk): whom the authors speak for,
+%          an author entry of its own (here unmarked, so authblk gives it the first affiliation's mark)
+% oracle:  pdflatex 0 errors; "Siqi Li1, Chuan Hong2, and for the PAROS Clinical Research Network1"
+% engines: rust (CAU1) the 3 creators below and Error:frontmatter:creator_not_a_name
+% expect:  0 errors 0 warnings; 3 creators, the third "for the PAROS Clinical Research Network" (Duke-NUS Medical School)
+% status:  RED (CAU1) -> GREEN (SBX1; perfect_kernel_batchsbx1::sandbox_2605_rows)
+\documentclass{article}
+\usepackage{authblk}
+\title{T}
+\author[1]{Siqi Li}
+\author[2]{Chuan Hong}
+\author{for~the~PAROS~Clinical~Research~Network}
+\affil[1]{Duke-NUS Medical School, Singapore}
+\affil[2]{Duke University, Durham, NC, USA}
+\begin{document}
+\maketitle
+Text.
+\end{document}

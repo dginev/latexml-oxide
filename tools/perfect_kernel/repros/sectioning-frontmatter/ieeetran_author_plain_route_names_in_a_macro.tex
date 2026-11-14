@@ -1,0 +1,19 @@
+% mechanism: IEEEtran's plain route (no names block) with the names list held in a document macro (`\author{\aut}`,
+%   `\aut` holding a grade and an `\and`): the macro, holding an `\and`, is read as it means before the route
+%   (ieeetran_cls.rs `blocks_as_printed`, P2-8a), so `name_memberships` reads the grade as Ann Able's and the emitter
+%   writes each name from its own tokens. Since P5a the grade is the reading's contact event (`\lx@IEEE@grade`,
+%   OXIDIZED_DESIGN_DIVERGENCES #1016), its owner the name it follows in the macro's expansion, with or without P2-8a
+% witness: synthetic (the plain-route sibling of `ieeetran_author_grid_in_a_macro`)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "Ann Able, Member, IEEE, and Bob Baker Cy Coe"
+% engines: int158a: Ann Able, Bob Baker, Cy Coe, the grade lost, 0 errors, 3 warnings (each name "as its plain text");
+%   P28: Ann Able (membership Member, IEEE), Bob Baker, Cy Coe, 0 warnings; int168a and P28m: as P28 (XML the same)
+% expect:  0 errors, 0 warnings; creators Ann Able (membership: Member, IEEE), Bob Baker, Cy Coe
+% status:  RED (int158a) -> GREEN (P28; int168a by P5a; guard perfect_kernel_batchp28)
+\documentclass[journal]{IEEEtran}
+\newcommand\aut{Ann~Able,~\IEEEmembership{Member,~IEEE}, and~Bob~Baker \and Cy Coe}
+\title{T}
+\author{\aut}
+\begin{document}
+\maketitle
+Text.
+\end{document}

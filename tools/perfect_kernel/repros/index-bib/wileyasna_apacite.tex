@@ -1,0 +1,20 @@
+% witness: 2407.11648 (30 errors): WileyASNA-v1.cls:2120 `\RequirePackage[natbibapa]{apacite}`; the class shared the
+%          WileyNJD binding, which never loads apacite, so the `.bbl`'s `\APACinsertmetastar`, `{APACrefauthors}`, … are
+%          undefined
+% oracle:  pdflatex 0 errors with the witness's WileyASNA-v1.cls (not in TeX Live; the binding does not read it)
+% engines: rust 63t7 = 12 errors (undefined apacite macros)
+% expect:  0 errors, 0 warnings; one author-year citation
+% status:  RED (63t7) -> GREEN (63u)
+\documentclass{WileyASNA-v1}
+\begin{document}
+See \citet{2021A&A...650A..49B}.
+\begin{thebibliography}{}
+\bibitem [\protect \citeauthoryear {{B{\'e}thune}, {Latter}\BCBL {}\ \BBA {} {Kley}}{{B{\'e}thune}\ \protect \BOthers {.}}{{\protect \APACyear {2021}}}]{2021A&A...650A..49B}
+\APACinsertmetastar {2021A&A...650A..49B}\begin{APACrefauthors}{B{\'e}thune}, W.\end{APACrefauthors}\unskip\
+\newblock
+\APACrefYearMonthDay{2021}{{\APACmonth{06}}}{},
+\newblock
+\begin{APACrefDOI} \doi{10.1051/0004-6361/202040094} \end{APACrefDOI}
+\PrintBackRefs{\CurrentBib}
+\end{thebibliography}
+\end{document}

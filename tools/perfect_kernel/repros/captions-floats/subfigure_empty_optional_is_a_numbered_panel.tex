@@ -1,0 +1,19 @@
+% witness: 1507.00722 (`\subfigure[]{…\label{fig1a}}`, PDF 1(a) and 1(b), int57a "1" and "1"), 1808.10020; census 229 papers
+%          with `\subfigure[]` or an uncaptioned `\subfigure{…}`
+% oracle:  pdflatex 0 errors; "See 1(a), 1(b), 1(c), 1." (subfigure.sty:217 `\refstepcounter{sub\@captype}` whatever the
+%          arguments; an explicit `[]` prints the "(a)" caption, :251/:257 `\ifx\@empty#3`; `[list][caption]` the second)
+% engines: rust int57a = "1, 1, 1(a), 1" (no panel number without caption text); Perl 0.8.8 the same
+% expect:  0 errors, 0 warnings; panels 1(a) with an "(a)" caption, 1(b) with none, 1(c) "Third panel"
+% status:  RED (int57a) -> GREEN (78t, OXIDIZED_DESIGN_DIVERGENCES #876, KNOWN_PERL_ERRORS #1125)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{subfigure}
+\begin{document}
+\begin{figure}
+\subfigure[]{\rule{1cm}{1cm}\label{a}}
+\subfigure{\rule{1cm}{1cm}\label{b}}
+\subfigure[][Third panel]{\rule{1cm}{1cm}\label{c}}
+\caption{Main.}\label{f}
+\end{figure}
+See \ref{a}, \ref{b}, \ref{c}, \ref{f}.
+\end{document}

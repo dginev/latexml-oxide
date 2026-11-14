@@ -1,0 +1,15 @@
+% witness: rev78j2 st (1905.03839 siamart `\crefformat{equation}{\textup{#2(#1)#3}}` + `\tag{$\star$}`)
+% oracle:  pdflatex 0 errors: "A (⋆). B (*)."
+% engines: rust 78j r2 = "A ( ⋆ ) ‣ section 1. B (*) ‣ section 1." (no letter or digit: the parent's context added)
+% expect:  0 errors; a document format the target has is the whole reference
+% status:  RED (78j r2) -> GREEN (78j r3)
+\documentclass{article}
+\usepackage{amsmath}
+\usepackage{cleveref}
+\crefformat{equation}{\textup{#2(#1)#3}}
+\begin{document}
+\section{Intro}
+\begin{equation}x\tag{$\star$}\label{x}\end{equation}
+\begin{equation}y\tag{*}\label{y}\end{equation}
+A \cref{x}. B \cref{y}.
+\end{document}

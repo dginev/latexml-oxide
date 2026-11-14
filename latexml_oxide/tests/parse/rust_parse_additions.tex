@@ -1,0 +1,220 @@
+% Rust-only rows that once extended the Perl parse tests (parse/functions, relations, sets, vertbars),
+% under those files' declarations (a, b, c are IDs; f, g FUNCTIONs); kept apart so the Perl mirrors
+% stay verbatim copies of LaTeXML/t/parse.
+\documentclass{article}
+\usepackage{amsmath,amssymb}
+\usepackage{latexml}
+\lxDeclare[role=ID]{$a$}%
+\lxDeclare[role=ID]{$b$}%
+\lxDeclare[role=ID]{$c$}%
+\lxDeclare[role=FUNCTION]{$f$}%
+\lxDeclare[role=FUNCTION]{$g$}%
+\begin{document}
+
+% Rust-only addition to parse/functions.tex (b53811d5c0); Perl MathParser.pm:1291 ApplyDelimited
+% A known function applied to a paren comma-list spreads the items: f@(a,b), not f@(vector@(a,b));
+% an unknown keeps its vector wrap (OXIDIZED_DESIGN_MATH #18)
+\section{Multi-argument calls flatten}
+\[ f(a,b) \]
+\[ g(a,b,c) \]
+\[ \max(a,b) \]
+
+% Rust-only addition to parse/relations.tex (7d847c113f; the 2026-06-22 `distribute_list_relation` surpass)
+% a,b \in A: content distributes the relation over each list item (formulae@(a\in A, b\in A));
+% presentation keeps the list as the relation's left side; a list RIGHT of a relation stays list@(0<x,y)
+\section{Comma-list left of a relation (distributed XMDual)}
+\[ a,b \in A \]
+% (57cc.1) not from a text label beside math — `\text{where}\quad G=W\times A` (2605.01549), `\text{Poisson:}\quad y\mid\lambda\sim P`
+% keep the label an item — but over text-styled items, kin to the relation's text-styled left operand (57cc's A/B:
+% `\textbf{A},\textbf{B}\in\mathbb{R}^{n}` 2605.12082, `\mbox{det}\,G,\mbox{det}\,G_h\geq c_0`, `\texttt{H},\texttt{K}\in\Sigma` 2605.11417)
+$\text{where}\quad G=W\times A$ $\text{Poisson:}\quad y\mid\lambda\sim P$ $\textbf{A},\textbf{B}\in\mathbb{R}^{n}$
+$\mbox{det}\,G,\mbox{det}\,G_h\geq c_0$ $\texttt{H},\texttt{K}\in\Sigma$ $\text{Var}(X),\text{Var}(Y)\leq 1$
+\[ x,y \le z \]
+
+% Rust-only addition to parse/sets.tex (439630485a): \mid inside fences parses like |
+\section{A set-builder bar may be written mid}
+\[ \{ a \mid a\in b \} \]
+
+% Rust-only addition to parse/vertbars.tex (842724b94e): [a|b] is delimited-[]@(conditional@(a,b)), as Perl;
+% \mid is canonicalized to | so [a\mid b] is the same
+\section{Bracketed conditional}
+\[ [a|b] \]
+\[ [a \mid b] \]
+\[ E[X|Y] \]
+
+% A trig application is one factor whatever it takes, so it follows other factors (57bg; Perl `preScripted['TRIGFUNCTION']
+% addTrigFunArgs`, MathGrammar:284, :562-567; `Term : Factor moreFactors`, :249-264): these were unparsed (2605.20503,
+% 2605.09037, 2605.11904). Perl: `cosine@(x) * sine@(y)`, `2 * sine@(theta _ i)`, `r * cosine@(theta _ i) * sine@(phi _
+% j)`, `2 * cosine@(t, r)`, `2 * sine@(absolute-value@(x))`, `sine@(a ^ 2) * cosine@(b ^ 2)`
+\section{A trig application follows other factors}
+$\cos\{x\}\sin\{y\}$ $2\sin\theta_i$ $r\cos\theta_i\sin\phi_j$ $2\cos(t,r)$ $2\sin|x|$ $\sin a^2\cos b^2$
+
+% A trig function's bare argument takes scripted atoms, identifiers, unknowns and numbers anywhere in its chain (Perl
+% `aTrigBarearg`, MathGrammar:341-348), and a scripted trig function takes the bare one's arguments (Perl
+% `preScripted['TRIGFUNCTION'] addTrigFunArgs`, :284, :430-433) — 57bo, root-caused by a read-only agent; were
+% `cosine@(2) * theta _ i`, unparsed, `(sine ^ 2)@(x * (cosine ^ 2)@(y))` (2605.08634, 2605.22136, 2605.02925,
+% 2605.05470, 2605.01844, 2605.28758, 2605.17056, 2605.25849; ~77 formulas / 29 papers). A trig function takes no
+% operator, which follows it as a factor (`aTrigBarearg` has none). Perl: `cosine@(2 * theta _ i)`,
+% `sine@(omega _ 0 * t)`, `a * cosine@(2 * theta)`, `z * cosine@(pi * x) * sine@(pi * y)`, `(sine ^ 2)@(2 * x)`,
+% `(sine ^ 2)@(x) * (cosine ^ 2)@(y)`, `(sine ^ 2)@(x) * cosine@(y)`, `sine * nabla@(a - b)`, `a * sine * nabla@(u)`,
+% `sine ^ 2 * nabla@(u)`, `sine@(x _ 1 * x _ 2)`, `2 * (sine ^ (- 1))@((1 / 2) * q)`; `sine * nabla@(u) * g@(y)` (a
+% letter after the operator's application, 57bl ruling)
+\section{A trig function takes its bare argument wherever it stands}
+$\cos 2\theta_i$ $\sin\omega_0 t$ $a\cos 2\theta$ $z\cos\pi x\sin\pi y$ $\sin^2 2x$ $\sin^2 x\cos^2 y$
+$\sin^2\{x\}\cos y$ $\sin\nabla(a-b)$ $a\sin\nabla u$ $\sin^2\nabla u$ $\sin x_1x_2$ $2\sin^{-1}\frac12 q$
+$\sin\nabla(u)g(y)$
+
+% Explicit space or a differential `d` ends a trig function's bare argument (divergence #367):
+% `sine@(theta) * d * theta`, `sine@(theta _ W) * C _ (u * B)`, `sine@(x) * y`, `sine@(theta) * d * theta` without
+% the space, `d * cosine@(theta _ 1) * d * cosine@(theta _ 2)`, where Perl's greedy `moreTrigBareargs` takes them
+% (`sine@(theta * d * theta)`; 2605.12033, 2605.03429, 2605.00265, 2605.10520, 2605.26406)
+\section{Explicit space ends a trig function's bare argument}
+$\sin\theta\,d\theta$ $\sin\theta_W\,C_{uB}$ $\sin x\;y$ $\cos 2\theta\,x$ $\sin\theta d\theta$
+$d\cos\theta_1 d\cos\theta_2$
+% (57cj.6 review) the space after an application's argument ends the trig argument too, at any depth
+% (`ends_with_space`): `sine@(logarithm@(u)) * v` (was unparsed), `sine@((partial-differential _ x)@(logarithm@(u))) * v`
+% (was ∂_x(log(u·v)) inside the sine)
+$\sin\log u\,v$ $\sin\partial_x\log u\,v$
+% (57cj.7 review) … through an application's bracketed argument too, its closing bracket's space (`\sin\log(x)\,y`
+% sin@(log(x))·y, as `\sin f(x)\,y`); and a letter applied to a group across the space that ends the argument is no
+% trig argument: `\cos\phi\,(1-x)` cos@(φ)·(1−x) (2605.29683 A1.E17: `\cos\phi\,\bigl(10-\cos(6\theta)\bigr)\,r^{6}`)
+$\sin\log(x)\,y$ $\sin\exp(x)\,y$ $\sin\exp\bigl(x\bigr)\,y$ $\sin\log\left(x\right)\,y$ $\sin\log[x]\,y$ $\sin\partial_x\log(u)\,v$
+$\cos\phi\,(1-x)$ $\cos\phi\,\bigl(10-\cos(6\theta)\bigr)\,r^{6}$ $\cos\omega(k)\,t$
+% witness: user ruling Q6 (2026-10-01; the 57cj.8 review item 5a: 429 formulas in 140 of the 3,003 A/B papers): explicit
+%          space before a group that is no argument list multiplies it everywhere, as in trig arguments and derivative
+%          operands — `k\,(x-y)` k·(x−y), `\log k\,(x-y)` log(k)·(x−y), `\exp\phi\,(1-x)`, `\nabla\phi\,(1-x)` (were k@(x−y), …);
+%          an argument list keeps the application (`u\,(x,t)`), and without the space nothing changes (`k(x-y)` k@(x−y));
+%          2605.09037 `r=a\,(1-e\cos f_e)`, `x=r\,(\cos\Omega\cos(\omega+f)-…)`, 2605.25633 `c_1\,S\,(L+1)`
+\section{Explicit space before a group multiplies it}
+$k\,(x-y)$ $\log k\,(x-y)$ $\exp\phi\,(1-x)$ $\nabla\phi\,(1-x)$ $a\,[b+c]$ $k\;(x-y)$ $k\ (x-y)$ $k~(x-y)$
+$k(x-y)$ $\log k(x-y)$ $u\,(x,t)$ $\partial_x u\,(0,t)$ $\cos\phi\,(1-x)$ $x\,(x+1)$ $k\!(x)$
+% (the km24 A/B) a letter, scripted or bold too, not a name: a named function keeps its argument across the space
+$a_i\,(1-x)$ $\mathbf{v}\,(1+t)$ $\mathrm{Unif}\,[0.01,0.1]$ $\mathrm{sigmoid}\,(\tau x)$ ${\rm Pr}\,[A]$ $\mathrm{diag}\ (v)$ $\mathrm{cos}\,(\Omega t)$
+% (the merge review) a group whose content is only ever an argument — a condition, a relation, a semicolon parameter list —
+% keeps the application across the space (`holds_an_argument_s_content`)
+$p\,(x\mid y)$ $p\,(x|y)$ $P\,(X\in A)$ $\phi\,(x;\theta)$ $f\,(x\to 0)$ $k\,(x;y)$ $P\,(A,B)$
+% witness: user ruling Q5 (2026-10-01): a coefficient run — numbers, π, constants — ends nothing at a space, the angle it
+%          scales follows: `\cos 2\,\theta` cos(2θ), `\sin 2\pi\,\nu t` sin(2πνt) (this document declares `f` a function), `\partial_x\cos 2\pi\,u` ∂_x cos(2πu)
+%          (57cj.7 review item 10; latent in the 3,003 A/B sources); an item past the coefficients still ends at a space
+\section{A coefficient run ends no trig argument at a space}
+$\cos 2\,\theta$ $\sin 2\pi\,\nu t$ $\partial_x\cos 2\pi\,u$ $\sin 2\,\mathcal P$ $\cos\frac{\pi}{4}\,x$ $\cos 2\pi i\,\omega t$
+$\cos 2\,\theta+\sin 2\,\phi$ $\int\cos 2\,\theta\,d\theta$ $\cos 2\,d\theta$ $\sin 2x\,y$ $\sin\theta\,x$ $\sin 3\,(x+y)$
+
+% A symbol of another type ends a trig function's bare argument (57bq; divergence #367; user direction 2026-09-29:
+% prune by the types inside a compound argument): a vector's, operator's or set's font or accent (bold, calligraphic,
+% blackboard, upright, `\vec`, `\hat`, `\dot`), a derivative, a fraction holding a trig function, an adjoint. Perl's
+% greedy `moreTrigBareargs` takes them (`cosine@(phi _ m * (vec@(e)) _ x _ m)`; 2605.31180, 2605.28946, 2605.14528,
+% 2605.15451, 2605.20574, 2605.14924). The argument so far must hold something besides numbers (`\sin 2\mathcal P`)
+% and no item of the same mark (`\cosh\mathcal K\mathcal S`); `\tilde`, Greek and capital italic letters stay angles
+\section{A symbol of another type ends a trig function's bare argument}
+$\cos\phi_m\vec{e}_{x_m}$ $\sin\theta\mathbf{v}$ $\cos\psi\mathbf{I}+\sin\psi\mathbf{J}$ $\sin\theta\hat{x}$
+$\sin u\mathcal{S}$ $\sin\theta\mathrm{P}_1$ $\sin\theta\dfrac{\partial Y}{\partial\theta}$ $\cot\theta_a\frac{x}{\sin^2 x}$
+$\cos\theta A^\dagger$ $\sin^2\theta\dot\phi^2$ $\cos\theta\mathbb{I}$ $\cos\theta\;1$
+
+$\sin 2\mathcal{P}$ $\cosh\mathcal{K}\mathcal{S}$ $\cos\omega\tilde{t}$ $\cos 2\hat\varphi$ $\cos 2\pi k\phi_i$
+$\cos\mathbf{k}\cdot\mathbf{r}$ $\cos\omega T$ $\sin^2 2\pi x$
+
+% 57bq review: a parsed Leibniz fraction (its parts' products and scripts), `\top`, a number with a script after
+% space, a split row's XMRef'd script and number; π and 1/2 are coefficients, π inside a fraction too (57bu.2). Known split against intent: a font
+% switch around the whole formula, `\mathbf{\cos\omega t}` (the function keeps its operator font, so the DOM
+% cannot tell it from `\cos\omega\mathbf{t}`)
+$\tan\theta\frac{d\theta}{dt}$ $\cos\theta\frac{d}{dt}$ $\sin\theta\frac{\partial^2 u}{\partial x^2}$ $\cos\theta A^\top$
+$\cos\theta\;2^n$ $\mathbf{\cos\omega t}$ $\cos 2\pi\mathbf{k}\cdot\mathbf{r}$ $\sin\frac12\mathbf{k}\cdot\mathbf{a}$ $\cos\frac{\pi}{2}\mathbf{k}$
+
+% 57bq A/B (type evidence ends the argument, re-checked): 2605.14924, 2605.29487, 2605.20574, 2605.15451
+$\cos\Phi\;\mathbf{1}-i\sin\Phi\;\sigma^{x}_{A}$ $\frac{\mathbf{\hat{\Omega}}-\cos i\mathbf{\hat{o}}}{\sin i}$
+$\frac{2+e\cos f}{\big(1+e\cos f\big)^{3}}\sin f\mathcal{S}$ $\pi\cot{\theta_{a}}\frac{\mathbf{f}(-\theta_{a})}{\sin^{2}{(\theta_{a}+\theta_{d})}}$
+\begin{equation}\begin{split}y&=\cos\theta A^\dagger\\&=\cos\theta\;1\end{split}\end{equation}
+
+% A script whose argument is one float script alone (57bj; RED-drain survey P3, 2605.21192, 2605.04817, 2605.18286;
+% 543 formulas / 76 papers were unparsed). Perl parses a one-node script argument as is (MathParser.pm:680-681) and
+% keeps the raw float, `F ^ ^prime <= F`; Rust builds the float as a script of an absent base, `F ^ ^ prime absent`;
+% a fenced float keeps its content (`\Gamma^{{}^{(2)}}_{ij}` gave an XMRef with no idref, 57bj review)
+\section{A script may be a float script alone}
+$(a-b)^{{}^{\prime}}$ $F^{{}^{\prime}}\leq F$ $H_{{}_{\mathrm{I}}}$ $A_{n,l}^{{}^{\prime}}\cdot P_{n,l}$
+$\Gamma^{{}^{(2)}}_{ij}$ $A^{{}^{\ast}}B$ $x^{{}^{+}}$
+
+% A bare operator as a relation's right side (57bj; RED-drain survey P10, 2605.03453, 2605.01293; 42 formulas / 17
+% papers were unparsed). Perl `Expression : AnyOp ...anyOpIsolator` (MathGrammar:204-206): `a = plus-or-minus`,
+% `x = bottom`, `formulae@(a = plus-or-minus, b = minus-or-plus)`, `x to -`
+\section{A bare operator is a relation's right side}
+$a=\pm$ $x=\bot$ $a=\pm,b=\mp$ $x\to-$
+
+% (57cj.8 review) A trig function's argument takes an OPFUNCTION's application as an OPFUNCTION's argument does —
+% scripted heads, product, bar and nested arguments (Perl `aTrigBarearg : preScripted['OPFUNCTION'] addOpFunArgs`,
+% MathGrammar:341-343; Rust-only unparsed or misread before, `\sin\log_2(x)` sin@(log₂)·x) — its bare argument ending
+% where the trig argument ends (`\sin\log u\,v` sin@(log u)·v; a mention of a bound variable goes on,
+% `\sin\max_i u_i\,v_i`), before a trig function (`\sin\log x\cos y` sin@(log x)·cos y); a group application takes
+% its scripts, #351 (`\sin\log(x)^2` sin@((log x)²), was sin@(log(x²))); a letter's group across the space does not
+% join it (`\cos\phi\,(1-x)!`)
+\section{A trig function's argument takes an OPFUNCTION's application}
+$\sin\log_2 x$ $\sin\log^2 x$ $\cos\ln^2 x$ $\sin\max_i x_i$ $\sin\log 2x$ $\sin\log uv$ $\sin\operatorname{tr}AB$ $\sin\ln\frac{x}{2}y$
+$\sin\log\log x$ $\sin\log\max(a,x)$ $\sin\log\partial_x u$ $\sin\log|x|y$ $\sin\log_2(x)$ $\sin\log^2(x)$ $\sin\max_i\log x_i$
+$\sin\log u\,v$ $\sin\log_2 x\,y$ $\sin\log 2x\,y$ $\sin^2\log_2 x$ $\sin\log\exp x$ $\sin\ln x^2 y$ $\cos\log_{10}x\,\mathbf k$
+$\sin\log x\sin y$ $\sin\log x\cos y$ $\sin\log x!$ $\sin\log(x)y$ $\sin\max_i u_i\,v_i$ $\sin\max_i u_i\,w$
+$\sin\log(x)^2$ $\sin\log(x)^2\,y$ $\sin\log\bigl(x\bigr)^{2}\,y$ $\sin\exp(x)^2\,y$ $\sin\log_2(x)^2\,y$ $\sin\log x^2\,y$
+$\cos\phi\,(1-x)!$ $\cos\phi\,(n)!$ $\sin^2\phi\,(1-x)!$ $\cos\phi\,(1-x)(1+x)$ $\sin\log\phi\,(1-x)$ $\sin\log u\,(1-x)$
+% (57cj.7, 57cj.8 reviews) the delta A/B's readings (2605.11097, 2605.15566, 2605.27600) and the review's pins
+$\sin^{2}\beta\,\big(F(m_{P_{1}}^{2},m_{N_{k}}^{2})-F(m_{S_{1}}^{2},m_{N_{k}}^{2})\big)$
+$\bar{A}_{\hat{\varphi}}=-q\cos\theta~(\bar{\mathcal{F}}=\frac{2q^{2}}{r^{4}})$ $\cosh^{2}Z\,(dZ^{2}+d\varphi^{2})$
+$\sin\log|x|\,y$ $\sin\log\|x\|\,y$ $\sin\max(a,b)\,y$ $\sin k\,(x-y)$
+
+% (57cj.9 review) … and an OPFUNCTION before a big operator (Perl's `aTrigBarearg` takes the OPFUNCTION's arguments;
+% Rust-only unparsed before): a limit-type operator's application the OPFUNCTION takes (`\sin\log\det A`
+% sin@(log(det A)), #390), a sum's or an integral's too since 57cj.22 (user ruling Q7: `\sin\log\sum_i x_i` sin@(log(∑…))); a
+% trig function's application
+% ends the OPFUNCTION's bare chain in the grammar (one tree, `parse_tree_count_limits`); a tuple after a space is a vector
+% the trig value scales (`\cos\phi\,(x,y)` cos φ·(x,y), 57cj.13; the argument list's application, #18's 2605.24758 row,
+% keeps to a derivative's operand); readings 57cj.9 changed by the rule:
+% `\sin\log x\cdot y` sin@(log(x·y)) as `\log x\cdot y`, `\cos 2\pi i\mathbf k` cos@(2πi·k), `\cos\log 2\mathbf k` cos@(log(2k))
+$\sin\log\det A$ $\cos\ln\det\Sigma$ $\cos\log\sup_x f$ $\sin\exp\lim_n a_n$ $\sin\log\sum_i x_i$ $\sin\log\int f$ $\sin\max_i\det A_i$
+$\sin\max_i\sup_z f$ $\sin\log x\cos y+\cos\log x\sin y$ $\sin\max_i$ $\sin\log^2$ $\sin\log_2=3$ $\cos\phi\,(x,y)$
+$\sin\log x\cdot y$ $\cos 2\pi i\mathbf{k}$ $\cos\log 2\mathbf{k}$
+
+% (57cj.10 review) … a tuple, a bracketed pair or a semicolon list after a space is a vector or a list the trig value
+% scales, as Perl reads it (`\cos\theta\,(1,0)+\sin\theta\,(0,1)` cos θ·(1,0)+sin θ·(0,1)); since 57cj.13 whatever its items
+% (`\cos\phi\,(x_1,\ldots,x_n)`, `\cos\phi\,(\alpha,\beta)`, applications in 57cj.10-57cj.12)
+$\cos\theta\,(1,0)+\sin\theta\,(0,1)$ $\hat{r}=\sin\theta\,(\cos\phi,\sin\phi,0)+\cos\theta\,(0,0,1)$
+$\cos\alpha\,(\cos\beta,\sin\beta,0)$ $\cos\phi\,[x,y]$ $\cos\phi\,(x;y)$ $\cos\phi\,(x^2,y)$ $\cos\phi\,(x+y,z)$ $\cos\phi\,\left(1,0\right)$
+$\cos\phi\,(x_1,\ldots,x_n)$ $\cos\phi\,(x',y)$ $\cos\phi\,(\alpha,\beta)$ $\cos\phi\,\left(x,y\right)$
+
+% (57cj.12 review; decided 2026-09-30 under the user's ruling "the mathematically correct reading in context") a trig
+% argument is an angle, so a tuple after a space is a vector the trig value scales, whatever its items — a vector by
+% components `\mathbf v=\cos\alpha\,(v_x,0)+\sin\alpha\,(0,v_y)` cos α·(v_x,0) + sin α·(0,v_y), `\cos\phi\,(x,0)` cos φ·(x,0),
+% as Perl (57cj.12 read cos@(α(v_x,0))); the evaluation point is a derivative operand's (integrals_and_differentials,
+% #374), and without the space the letter applies (`\cos\phi(x,y)` cos@(φ(x,y)), #18)
+$\cos\phi\,(x,0)$ $\cos\phi\,(\hat x,y)$ $\cos\phi\,(\tilde x,\tilde y)$ $\cos\phi\,(x,0)!$ $\sin^2\phi\,(\hat x,y)!$ $\cos\phi\,(0,\pi)$
+$\cos\phi\,(x^1,x^2)$ $\mathbf v=\cos\alpha\,(v_x,0)+\sin\alpha\,(0,v_y)$ $\mathbf e=\cos\theta\,(a,0)+\sin\theta\,(0,b)$
+$\cos\theta\,(i,0)$ $\sin^2\phi\,(x,y)$ $\cos\phi(x,y)$ $\sin\partial_x u\,(x,0)$
+
+% (57cj.11 review) an ellipsis opens a trig argument as it opens an OPFUNCTION's (`\cdots` an ELIDEOP; Rust-only
+% unparsed before, Perl parses them): `\cos\cdots x` cos@(⋯·x), `\sin\cos\cdots x` sin@(cos@(⋯·x)) (#367); after an item it
+% ends the argument (`\cos\theta_1\cos\theta_2\cdots\cos\theta_n`). (57cj.12 review) the argument goes on after it as
+% after any first item, a run of ellipses too, and its twin cos@(⋯)·x is refused (one tree, as `\cos\ldots x`):
+% `\cos\cdots x\,y` cos@(⋯·x)·y, `\sin^2\cdots x` (sin²)@(⋯·x), `\sin\cdots\cdots x` sin@(⋯·⋯·x) (were cos@(⋯)·x·y, …)
+$\cos\cdots x$ $\cos\cdots$ $\sin\,\cdots$ $f(\sin\cdots)$ $\sin\cos\cdots$ $\sin\cos\cdots x$ $\sin\cos\ldots x$
+$\cos\theta_1\cos\theta_2\cdots\cos\theta_n$ $\sin\theta_1\cdots\sin\theta_n$
+$\cos\cdots x\,y$ $\sin^2\cdots x$ $\sin\cdots\cdots x$ $\sin_a\cdots x$ $\tan\cdots\cdots\cdots x$ $\sin\cdots\,x$ $\sin\cdots\,\cdots$
+% (57cj.13 review) one run of ellipses whatever the macros: `\ldots` before `\cdots` goes on too, `\sin\ldots\cdots x`
+% sin@(…·⋯·x) as `\sin\cdots\ldots x` and Perl (was sin@(…)·⋯·x); not across a space (`\sin\ldots\,\cdots x` sin@(…)·⋯·x)
+$\sin\ldots\cdots x$ $\cos\ldots\cdots$ $\sin\cdots\ldots x$ $\sin\ldots\ldots x$ $\sin\dots\cdots\ldots x$ $\sin\ldots\,\cdots x$
+% (57cj.14 review) … every run of them, IDs before a later `\cdots` too (`trig_ellipses`, `trig_ellipsis_ids`): 57cj.14
+% derived one leading ID only and refused sin@(…·…)·⋯, so these lost their parse (57cj.13 read sin@(…·…)·⋯·x); as Perl
+$\cos\ldots\ldots\cdots$ $\sin\ldots\ldots\cdots x$ $\sin\cdots\ldots\cdots x$ $a+\cos\ldots\ldots\cdots$ $\sin\cdots\ldots\cdots$
+$\sin\ldots\ldots\cdots$ $\sin\dots\dots\cdots y$ $\sin^2\ldots\ldots\cdots x$ $\sin\dots\cdots\ldots\cdots x$ $\sin\cdots\ldots\cdots\ldots x$
+$\sin\ldots\cdots\ldots\cdots\ldots\cdots\ldots\cdots x$ $\sin\dotsb\dotsc\cdots x$ $\sin\ldots\ldots\cdots\cdots x$ $\sin\cos\ldots\ldots\cdots x$
+$\sin\ldots\ldots\,\cdots x$
+
+% (57cj.10 review) a trig function's argument composes another trig function's application (Rust-only unparsed before;
+% Perl sine·cosine@(x), divergence #367): `\sin\cos x` sin@(cos@(x)), the space and a later trig function ending the
+% inner argument; before a big operator the inner trig function takes a limit-type operator's application (#390) and
+% multiplies a sum (`\sin\cos\sum_i x_i` sin@(cos·∑…)); a function before an operator's application multiplies it, as
+% outside (`\sin\log\nabla u` sin@(log·∇u)); a nested OPFUNCTION's bare chain takes no trig function either
+% (`\sin\log\log x\cos y`)
+$\sin\cos x$ $\cos\sin x+1$ $\sin^2\cos x$ $\sin\cos^2 x$ $\sin\cos x\,y$ $\sin\cos x\cos y$ $\sin\cos xy$ $\cos\cos\cos x$
+$\int\sin\cos x\,dx$ $\partial_x\sin\cos u$ $\sin\cos\frac{\pi}{4}$ $\sin\cos^{-1}x$ $e^{i\sin\cos x}$
+$\sin\cos\det A$ $\sin\cos\sum_i x_i$ $\sin\sin\sup_x f$ $\sin\tan\lim_n a_n$ $\sin\cos\int f$ $\log\sin\cos\det A$
+$\sin\cos\det A\,y$ $\sin\cosh\sup_t u$ $\sin\cos\max_i x_i$
+$\sin\log\nabla u$ $\sin\cos\nabla u$ $\sin\log\log x\cos y$ $\sin\log\log\log x\cos y$ $\sin^2\log\log x\,dy$
+
+\end{document}

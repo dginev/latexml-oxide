@@ -1,0 +1,15 @@
+% witness: 2606.12996 (`\lxRequireResource[type=text/css,content={...}]{}` under `\iflatexml`, its inline CSS rules)
+% oracle:  pdflatex 0 errors ("Text."; LaTeXML's `\iflatexml` branch is skipped there)
+% engines: rust 63r = `Warning:expected:resource` and no resource (`content=` dropped); Perl latexml.sty.ltxml:246-248
+%          passes the options to RequireResource (Package.pm:3139-3167); ar5iv dropped every non-http resource
+% expect:  0 errors, 0 warnings; under ar5iv the inline style sheets are kept: the paper's rules, and openbib's own
+%          `.ltx_bibblock{display:block;}` (article.cls.ltxml:35)
+% status:  RED (63r) -> GREEN (63s)
+\documentclass[openbib]{article}
+\providecommand{\iflatexml}{\iffalse}
+\iflatexml
+\lxRequireResource[type=text/css,content={.ltx_tabular .ltx_tabular { width: auto; }}]{}
+\fi
+\begin{document}
+Text.
+\end{document}

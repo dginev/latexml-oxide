@@ -1,0 +1,23 @@
+% witness: 1703.08480 (fditoolsdoc.tex:6742-6919, a hyperref `.ind` pasted into the document), side finding of 65c
+% mechanism: hyperref's index page commands (hyperref.sty: `\hyperpage`, `\hyperindexformat{#1}{#2}` = `#1{\hyperpage{#2}}`)
+%   are not bound (Perl hyperref.sty.ltxml neither), so `\hyperindexformat{\see{X}}{20}` reads as an undefined CS
+%   followed by a `{` group whose `\see{X}` takes the group's closing brace as its page argument: the group stays open,
+%   `\end{theindex}` meets it, and `theindex` is still open at `\end{document}`. Since 65c the content after it is kept
+%   (inside the index); before, it was lost.
+% oracle:  pdflatex 0 errors; "AFDP, see fault detection problem" and "FDD, 12", then "After." after the index
+% engines: rust 64ze = 4 errors (2 undefined, `\end{theindex}` mode, malformed ltx:index), "see ... After." lost;
+%          65c = 3 errors, every word kept but "After." inside the index; Perl = undefined \hyperindexformat/\hyperpage
+% expect:  0 errors; `\see` rendered as the index cross-reference, `\hyperpage{12}` as the page, "After." after the index
+% status:  RED (65c side finding: hyperref index page commands unbound; not this batch's mechanism)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{makeidx}
+\usepackage{hyperref}
+\begin{document}
+Text.
+\begin{theindex}
+\item AFDP, \hyperindexformat{\see{fault detection problem}}{20}
+\item FDD, \hyperpage{12}
+\end{theindex}
+After.
+\end{document}

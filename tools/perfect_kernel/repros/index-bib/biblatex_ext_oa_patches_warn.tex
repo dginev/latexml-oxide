@@ -1,0 +1,15 @@
+% witness: biblatex-ext (biblatex-ext.tex:56 loads biblatex-ext-oa; its open-access examples)
+% oracle:  pdflatex + biber 0 errors, 0 warnings; open-access marks printed in the bibliography
+% engines: rust 59l = 0 errors, 1 warning "Failed to patch 'begentry' bibmacro" (biblatex-ext-oa.sty:401 `\apptocmd`
+%   of a bibmacro the binding never stores: its `\newbibmacro` keeps none), so no open-access mark prints; the same
+%   under symbolpackage=l3draw and pict2e. The warning is accurate and stays (no stub to silence it).
+% expect:  0 errors, 1 warning; `\oasymbol` defined; the bibliography element
+% status:  RED (open: no open-access marks) — pinned by count in perfect_kernel_batch59::biblatex_ext_oa_patches_warn
+\documentclass{article}
+\usepackage[style=authoryear,backend=biber]{biblatex}
+\usepackage[symbolpackage=tikz]{biblatex-ext-oa}
+\addbibresource{biblatex-examples.bib}
+\begin{document}
+Text \cite{sigfridsson}. Symbol: \ifdefined\oasymbol defined\else undefined\fi.
+\printbibliography
+\end{document}

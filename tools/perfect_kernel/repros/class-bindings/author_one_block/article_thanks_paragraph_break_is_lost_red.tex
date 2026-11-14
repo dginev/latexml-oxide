@@ -1,0 +1,18 @@
+% mechanism: an `\endgraf` inside an author's `\thanks`: the note's paragraphs are glued ("Dept YUniv X"), and the
+%   content check counts "univ" as unheld (revP21e pre-existing; amsart's pubnote `\thanks` keeps the break,
+%   1411.0985)
+% witness: synthetic (revP21e: "北京大学Univ X"; stage2 has 10 `\thanks` with a paragraph break, e.g. 2005.13770,
+%   2309.10932)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "Ann Able∗", footnote "∗ Dept Y" / "Univ X" on two lines
+% engines: int158a (`latexml_oxide.int158a-rel`): 0 errors, 1 warning ("The title page prints 1 word(s) … does not
+%   hold: univ"); creator Ann Able with the note "Dept YUniv X"; perl not run
+% expect:  0 errors, 0 warnings; creator Ann Able with the note "Dept Y", a break, "Univ X"
+% status:  RED (int158a; RR1 gap 14)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{Ann Able\thanks{Dept Y\endgraf Univ X}}
+\maketitle
+Text.
+\end{document}

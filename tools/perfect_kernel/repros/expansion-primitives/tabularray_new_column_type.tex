@@ -1,0 +1,22 @@
+% mechanism: tabularray's `\NewColumnType{<name>}[<n>][<default>]{<body>}` (tabularray.sty:3291-3334,
+%   `m O{0} o m`) defines a column type whose arguments go into its body, read as more colspec. The
+%   binding's `\NewColumnType` was a no-op, so the colspec translation bailed on `U` and the whole
+%   spec became the template: its key text read as columns, a `b` (of "table") took `l` as its width,
+%   which calc reports since 56jr ("`l' invalid at this point").
+% witness: TL manual non-decimal-units (11 -> 15 errors in 56jr; non-decimal-units.sty:778
+%   `\NewColumnType{#1}[2]{Q[r, cmd=\ndu_tblr_cell:nnn {##1} {##2}]}`, `U{danish rigsdaler}{…}`)
+% oracle:  pdflatex 0 errors; a 4-column table, `Y` centred (its default `c`), `Y[l]` left
+% engines: rust 56jr = 1 error, 37 warnings; perl = 0 errors (raw tabularray; no table, the cells
+%          as paragraphs)
+% expect:  0 errors, 0 warnings
+% status:  RED (56ju) -> GREEN (56ju)
+\documentclass{article}
+\usepackage{calc,tabularray}
+\NewColumnType{U}[2]{Q[r,cmd={\textbf}]}
+\NewColumnType{Y}[1][c]{Q[#1]}
+\begin{document}
+\begin{tblr}{r U{danish rigsdaler}{add to variable=table result 1}| Y Y[l]}
+a & 1.2.3 & x & u \\
+b & 100.0.0 & y & v \\
+\end{tblr}
+\end{document}

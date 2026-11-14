@@ -1,0 +1,21 @@
+% mechanism: authblk's `\author` gate by meaning (Option C P2-7, `authblk_sty.rs` `separated_by_and`): a document's
+%   `\renewcommand\and` printing the word is no kernel column (trap T8 of the P2 plan: the separator query reads it
+%   `Raw`), so the gate sends the call to `\lx@add@creator`, not the list path the spelling test chose; the emitter's
+%   cut of an API creator call parts it at its own `Sep(And)` (OC1c, the rehearsal binds `\and` whatever it means), the
+%   two people the line names "Ann Able and Bob Baker" two creators either way. Pins today's output on both binaries
+% witness: P27 probe s1 (scratch_P27/probes)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "Ann Able and Bob Baker", "Univ X" (one line)
+% engines: Perl 0.8.8 (authblk.sty.ltxml:52-55, read, not run): `\and` by name, the list split; int158a: Ann Able, Bob
+%   Baker (each Univ X), 0 errors, 0 warnings
+% expect:  0 errors, 0 warnings; Ann Able, Bob Baker, each Univ X
+% status:  GREEN (int158a and P27; guard perfect_kernel_batchp27::authblk_and_gates_read_the_separator_by_meaning)
+\documentclass{article}
+\usepackage{authblk}
+\renewcommand\and{\unskip\ and\ }
+\title{T}
+\author{Ann Able \and Bob Baker}
+\affil{Univ X}
+\begin{document}
+\maketitle
+Text.
+\end{document}

@@ -1,0 +1,14 @@
+% witness: hep-ph0311131 (the role heading's rows, `{\bf Editor}: P.~Aurenche`), whose rule this narrows: a heading over words is no row of names
+% oracle:  pdflatex 0 errors: the name, the heading line, the marked institute
+% engines: Perl: one creator; ours at Z14: `Editors: Springer Nature` read as a person after its role heading (review revZ14 RED)
+% expect:  0 errors; one creator, the heading line not a person (perfect_kernel_batchz14::a_role_heading_over_words_opens_no_names)
+% status:  GREEN (Z14r2)
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{Ann Able$^1$\\
+Editors: Springer Nature\\
+$^1$Univ A}
+\maketitle
+Body.
+\end{document}

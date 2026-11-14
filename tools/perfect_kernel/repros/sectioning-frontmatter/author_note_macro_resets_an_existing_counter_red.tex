@@ -1,0 +1,16 @@
+% mechanism: a note macro re-assigning a counter the preamble made (` \footnote{#2} \setcounter{#1}{\value{footnote}} `)
+%   read by the next author's `\footnotemark[\value{uni}]`. FNR1 writes a block in order only for a printing call's
+%   definition the block introduces (undefined once the rehearsal is undone); this one re-assigns, so the emitter's
+%   reading keeps the block and the later mark reads the counter's preamble value
+% witness: synthetic (the re-assigning sibling of footnoterecall_three_authors_spaced_remember)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 `!`: "Ann One ∗", "Bob Two∗"; footnote ∗ The University
+% engines: rust e6a6c93a18, FNR1 0 errors, 1 warning (the note written as plain text), Bob Two's mark empty (the
+%   counter's preamble 0), uncounted
+% expect:  0 errors; Bob Two's mark ∗
+% status:  RED (e6a6c93a18, FNR1)
+% moves:   post-merge (a later read of a printing call's definition: the rehearsal's read of the meaning)
+\documentclass{article}
+\newcounter{uni}
+\newcommand{\fnset}[2]{ \footnote{#2} \setcounter{#1}{\value{footnote}} }
+\title{T}\author{Ann One\fnset{uni}{The University} \and Bob Two\footnotemark[\value{uni}]}
+\begin{document}\maketitle Body.\end{document}

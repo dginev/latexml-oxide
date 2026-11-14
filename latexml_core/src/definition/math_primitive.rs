@@ -3,11 +3,11 @@ use std::borrow::Cow;
 use libxml::tree::Node;
 
 use super::SizingClosure;
-// use crate::common::font::Font;
-use crate::common::arena::SymHashMap as HashMap;
 use crate::{
   Digested,
-  common::{error::*, object::Object, store::Stored},
+  common::{
+    arena::SymHashMap as HashMap, error::*, font::LettersClass, object::Object, store::Stored,
+  },
   definition::{
     BeforeDigestClosure, ConstructionClosure, Definition, DigestionClosure, FontDirective,
     PrimitiveClosure, Reversion,
@@ -35,7 +35,7 @@ use crate::{
 // When to make a dual ?
 // If the $presentation seems to be TeX (ie. it involves #1... but not ONLY!)
 
-#[derive(Clone)]
+#[derive(Clone, Default)]
 pub struct MathPrimitiveOptions {
   pub bounded:          bool,
   pub mode:             Option<String>,
@@ -66,9 +66,11 @@ pub struct MathPrimitiveOptions {
   pub reorder:                bool,
   pub dual:                   bool,
   pub mathstyle:              Option<String>,
-  /// Dynamic mathstyle: compute "display"/"text" based on current font mathstyle at invocation
-  /// time Perl: mathstyle => \&doVariablesizeOp
-  pub dynamic_mathstyle:      bool,
+  /// A variable-size operator: Perl's `mathstyle => \&doVariablesizeOp`
+  /// (TeX_Math.pool.ltxml:353) — the `mathstyle` is computed at construction
+  /// from the current style (`display` in display style, else `text`) instead
+  /// of being a fixed value (`\int`, `\sum`, amsmath's `\iint` family).
+  pub variablesize_op:        bool,
   pub scriptpos:              Option<String>,
   /// Dynamic scriptpos: compute "mid"/"post" based on current font mathstyle at invocation time
   /// Perl: scriptpos => \&doScriptpos
@@ -81,52 +83,16 @@ pub struct MathPrimitiveOptions {
   pub revert_as:              Option<Cow<'static, str>>,
   pub lpadding:               Option<usize>,
   pub rpadding:               Option<usize>,
-}
-impl Default for MathPrimitiveOptions {
-  fn default() -> Self {
-    MathPrimitiveOptions {
-      bounded:          false,
-      before_digest:    Vec::new(),
-      after_digest:     Vec::new(),
-      before_construct: Vec::new(),
-      after_construct:  Vec::new(),
-      mode:             None,
-      is_prefix:        false,
-      scope:            None,
-      require_math:     false,
-      forbid_math:      false,
-      locked:           false,
-      alias:            None,
-      font:             None,
-      decl_id:          None,
-      replace:          None,
-      protected:        false,
-      robust:           false,
-
-      // math-specific
-      name:                   None,
-      meaning:                None,
-      omcd:                   None,
-      reversion:              None,
-      sizer:                  None,
-      role:                   None,
-      operator_role:          None,
-      reorder:                false,
-      dual:                   false,
-      mathstyle:              None,
-      dynamic_mathstyle:      false,
-      scriptpos:              None,
-      dynamic_scriptpos:      false,
-      operator_scriptpos:     None,
-      stretchy:               None,
-      operator_stretchy:      None,
-      nogroup:                true,
-      hide_content_reversion: false,
-      revert_as:              None,
-      lpadding:               None,
-      rpadding:               None,
-    }
-  }
+  /// A glyph `\DeclareMathSymbol`'d from the math italic symbol font (`letters`), with its math class: the token's
+  /// font is specialized by `Font::specialize_letters` (a capital Greek letter italic as the class says).
+  pub letters_class:          Option<LettersClass>,
+  /// A Warning that belongs to the symbol's print, not its digestion: carried as the box's
+  /// [`ABSORB_WARNING_PROPERTY`](crate::document::ABSORB_WARNING_PROPERTY) (on the simple primitive's box and on a
+  /// constructor's whatsit alike) and raised once per key when the document absorbs it
+  /// ([`absorb_warning`](crate::document::absorb_warning)) — an undecodable glyph's once-per-font Warning
+  /// (`\DeclareMathSymbol`, OXIDIZED_DESIGN_DIVERGENCES #27). A property, so a simple symbol stays on the primitive
+  /// path with a simple symbol's box and sizing.
+  pub absorb_warning:         Option<Stored>,
 }
 impl PartialEq for MathPrimitiveOptions {
   fn eq(&self, other: &MathPrimitiveOptions) -> bool {
@@ -151,6 +117,9 @@ impl MathPrimitiveOptions {
     }
     if let Some(ref decl_id) = self.decl_id {
       h.insert("decl_id", decl_id.into());
+    }
+    if let Some(ref warning) = self.absorb_warning {
+      h.insert(crate::document::ABSORB_WARNING_PROPERTY, warning.clone());
     }
     if let Some(ref operator_role) = self.operator_role {
       h.insert("operator_role", operator_role.into());
@@ -218,20 +187,24 @@ impl MathPrimitiveOptions {
     h
   }
 
-  // Attempt at emulating the `%simpletoken_options` check in Perl
-  /// Checks if complex options are present,
-  /// suggestive of using a `Constructor` instead of a `Primitive`
+  /// Whether an option outside Perl's `$simpletoken_options` is present (Package.pm:1603-1607:
+  /// name, meaning, omcd, role, mathstyle, stretchy, protected, robust, alias, lpadding,
+  /// rpadding, font, scriptpos, scope, locked), which makes a parameterless DefMath a constructor
+  /// rather than a box (Package.pm:1665). `alias` and `stretchy` are simple: counted complex, the
+  /// eighteen stretchy delimiters (`\langle`, `\{`, `\lceil`, amsmath's `\lvert`, …) became
+  /// constructors whose font is read at construction, so `\big\langle` lost its size and
+  /// `\boldmath` its bold. `variablesize_op` and `dynamic_scriptpos` are Perl's code-valued
+  /// `mathstyle` and `scriptpos`; the construct hooks are complex, as in Perl.
   pub fn has_complex_option(&self) -> bool {
-    //DG: note that `nogroup` is true by default, so checking for it is counter-intuitive (should
-    // we even?)
+    // Perl's simple-token options (Package.pm:1602-1606) do not include `nogroup`.
     self.bounded
+      || self.nogroup
       || self.mode.is_some()
       || !self.before_digest.is_empty()
       || !self.after_digest.is_empty()
       || self.is_prefix
       || self.require_math
       || self.forbid_math
-      || self.alias.is_some()
       || self.decl_id.is_some()
       || self.replace.is_some()
       || self.reversion.is_some()
@@ -240,10 +213,11 @@ impl MathPrimitiveOptions {
       || self.reorder
       || self.dual
       || self.operator_scriptpos.is_some()
-      || self.stretchy.is_some()
       || self.operator_stretchy.is_some()
       || self.hide_content_reversion
       || self.revert_as.is_some()
+      || !self.before_construct.is_empty()
+      || !self.after_construct.is_empty()
   }
 }
 
@@ -255,6 +229,7 @@ pub struct MathPrimitive {
   pub replacement: Option<PrimitiveClosure>,
   pub options:     MathPrimitiveOptions,
   pub alias:       Option<String>,
+  pub origin:      crate::definition::origin::DefinitionOrigin,
 }
 impl Default for MathPrimitive {
   fn default() -> Self {
@@ -265,6 +240,7 @@ impl Default for MathPrimitive {
       replacement: None,
       options:     MathPrimitiveOptions::default(),
       alias:       None,
+      origin:      crate::definition::origin::current_origin(),
     }
   }
 }
@@ -348,9 +324,12 @@ mod tests {
     assert!(!o.protected);
     assert!(!o.reorder);
     assert!(!o.dual);
-    assert!(!o.dynamic_mathstyle);
+    assert!(!o.variablesize_op);
     assert!(!o.dynamic_scriptpos);
-    assert!(o.nogroup, "nogroup defaults to true (Perl parity)");
+    assert!(
+      !o.nogroup,
+      "a DefMath constructor digests in its own group unless nogroup (Package.pm:1707)"
+    );
     assert!(!o.hide_content_reversion);
     assert!(o.name.is_none());
     assert!(o.meaning.is_none());

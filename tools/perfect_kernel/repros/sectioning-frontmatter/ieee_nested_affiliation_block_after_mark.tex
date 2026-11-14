@@ -1,0 +1,17 @@
+% mechanism: an `\IEEEauthorblockA` nested in another's argument after its mark is a block of its own, the mark its
+%   label (ieeetran_cls.rs `unnested_affiliation_blocks`, OD #1009): one marked entry per line, as pdflatex prints it
+% witness: 1710.07993 (each outer block's mark alone an affiliation, `affiliation: *`), 2004.11080, 2107.11588
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "Ann Able∗ , Bob Baker† , Cy Cole∗", "∗Dept A, Univ A, Town", "†Dept B, Univ B, City"
+% engines: int162a: the entries without their marks; int163a, P4b2: each outer mark a mark-only affiliation, then the entry
+% expect:  0 errors, 0 warnings; Ann Able and Cy Cole "* Dept A, Univ A, Town", Bob Baker "† Dept B, Univ B, City"
+% status:  RED (P4b2 5e4324996e) -> GREEN (P4cR2)
+% preload: ar5iv.sty
+\documentclass[journal]{IEEEtran}
+\begin{document}
+\title{T}
+\author{\IEEEauthorblockN{Ann Able\IEEEauthorrefmark{1}, Bob Baker\IEEEauthorrefmark{2}, Cy Cole\IEEEauthorrefmark{1}}\\
+\IEEEauthorblockA{\IEEEauthorrefmark{1}\IEEEauthorblockA{Dept A, Univ A, Town}}\\
+\IEEEauthorblockA{\IEEEauthorrefmark{2}\IEEEauthorblockA{Dept B, Univ B, City}}}
+\maketitle
+Body.
+\end{document}

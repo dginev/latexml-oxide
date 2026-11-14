@@ -1,0 +1,19 @@
+% RED (review rev101c finding 3, synthetic; pre-existing, base too): an e-mail row that continues a marked legend line
+% (`$^{*}$\,Corresponding author: Jane Doe\\ jane.doe@example.org`) in an IEEE one-\author block becomes a creator with
+% no name holding the e-mail, a sibling of SYNC row 100c's open 3B ("block e-mail no name spells") on a non-boxed block.
+% fix:     an address row under a marked legend line is that legend's (the note's), or its spelled person's, never a creator.
+% oracle:  pdflatex 0 errors: "Ann Able a*, Bob Baker a / a Univ X … / * Corresponding author: Jane Doe / jane.doe@example.org"
+% engines: rust 101c = Ann Able (Univ X, the ∗ correspondence note), Bob Baker (Univ X), and a nameless creator holding
+%          jane.doe@example.org; 0 errors, 0 warnings
+% expect:  0 errors; two creators; no creator without a personname; jane.doe@example.org kept (with the ∗ note)
+% status:  RED
+\documentclass[conference]{IEEEtran}
+\title{T}
+\author{{Ann Able{\small $~^{a*}$}, Bob Baker{\small $~^{a}$} }
+{}\vspace{1.6mm}\\ \itshape
+$^{a}$\,Univ X\\ 63 Avenue des Champs, Paris\\ \,\\
+$^{*}$\,Corresponding author: Jane Doe\\ jane.doe@example.org\\}
+\begin{document}
+\maketitle
+Text.
+\end{document}

@@ -5,7 +5,7 @@ use crate::prelude::*;
 #[rustfmt::skip]
 LoadDefinitions!({
   // Perl: LoadClass('article');
-  load_class("article", Vec::new(), Tokens!())?;
+  LoadClass!("article");
 
   // Beyond-Perl fidelity (OXIDIZED_DESIGN #50): real moderncv.cls L124-125 loads
   // `\RequirePackage[T1]{fontenc}` under `\ifpdftex` (which we emulate), so

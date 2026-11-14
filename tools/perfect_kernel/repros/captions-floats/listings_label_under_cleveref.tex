@@ -1,0 +1,22 @@
+% mechanism: the listings binding labels a captioned listing with `Invocation(\label, <label>)`
+%   (Perl listings.sty.ltxml:196-198), which reverts the label against `\label`'s CURRENT
+%   parameters. Under cleveref `\label` is `\lx@cleverref@label[]` (Perl cleveref.sty.ltxml:22,
+%   cleveref_sty.rs), so the label went into the `[]` and was lost, and the real `\label` then
+%   read the caption's expansion as its argument (tex.web §1215 since 56jp: 4 "cannot be a
+%   definition's name" errors, no <caption>). listings.sty:1641 writes a literal
+%   `\label{\lst@label}`.
+% witness: ualberta/ualberta (16 errors), unbtex/unbtex-example (22)
+% oracle:  pdflatex 0 errors: "Listing 1: Example of How", then "x = 1"
+% engines: rust (56js) = 4 errors, labels="LABEL:\@@toccaption{…}\@@caption{…}", no caption;
+%          perl = 0 errors, labels="LABEL:" (the label lost), caption kept
+% expect:  0 errors, 0 warnings; <float labels="LABEL:lst:T"> with
+%          <caption><tag close=": ">Listing 1</tag>Example of How</caption>
+% status:  RED (56jw) -> GREEN (56jw)
+\documentclass{article}
+\usepackage{listings}
+\usepackage{cleveref}
+\begin{document}
+\begin{lstlisting}[caption=Example of How,label=lst:T]
+x = 1
+\end{lstlisting}
+\end{document}

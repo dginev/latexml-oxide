@@ -1,0 +1,19 @@
+% mechanism: the content check's reading of a juggle's printed text: what prints nothing reads no word — a `\\`'s `*`
+%            and `[…]` (`rehearsal::past_line_break`, the one reading the juggle's reopen shares) and a tabular's
+%            own call, `\begin{tabular}{c}` with its column spec, `\end{tabular}` (`rehearsal::past_tabular_call`)
+% witness: 1401.6981 (the sig-alternate juggle's shape); synthetic, review revCK1b finding 5 (probes q1, q2), review
+%          revI2 finding 1 (probe g14: "c tabular")
+% shape:   the tie juggle, `\\[2mm]` before it and `\\*[1mm]` in the second column
+% oracle:  pdflatex: 0 errors; "A One Univ A Dept Lab"
+% engines: rust CK3base `=2`: E=0 W=2, the content-check Warning `1mm 2mm c Lab tabular` (all but "Lab" false)
+% expect:  "A One", affiliation "Univ A Dept"; at `=2` 2 Warnings (a span's markup, the content check), `Lab`
+% status:  RED (CK3base) -> GREEN (perfect_kernel_batchfs1::an_open_group_rehearsals_word_matching, CK3)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage[utf8]{inputenc}
+\begin{document}
+\title{T}
+\author{A One \\[2mm] Univ A \end{tabular}~\begin{tabular}{c} Dept\\*[1mm]Lab}
+\maketitle
+Text.
+\end{document}

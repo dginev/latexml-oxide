@@ -1,0 +1,13 @@
+% witness: 0901.2111, 1101.4089, 1301.0675, 1301.5845, 1301.6481, 1701.08134 ship axodraw4j.sty
+%          (`\ProvidesPackage{axodraw4j}[2008/11/19]`, JaxoDraw's keyval forerunner of axodraw2: `\Line[arrow,dash]`,
+%          `\Arc[clock]`, `\DoubleLine`); aliasing it to the v1 binding replaced their copies (0 -> 1..50 errors)
+% oracle:  pdflatex 0 errors with the stand-in axodraw4j.sty beside this file: "axodraw4j read"
+% engines: rust 64qb = 0 errors, the shipped file read; rust 64w r1 = Error:undefined:\axofourjmark; Perl not run
+% expect:  0 errors; the paragraph "axodraw4j read" (the paper's own file, not a binding)
+% status:  RED (64w r1) -> GREEN (64w)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{axodraw4j}
+\begin{document}
+\axofourjmark
+\end{document}

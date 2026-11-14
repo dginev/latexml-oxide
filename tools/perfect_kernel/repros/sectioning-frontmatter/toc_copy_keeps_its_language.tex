@@ -1,0 +1,16 @@
+% witness: synthetic (63k review: the TOC's copy of a `\foreignlanguage` title, with a `\ref` inside it too)
+% oracle:  pdflatex 0 errors: contents "1 Beweis", "2 Beweis von Satz 1"
+% engines: rust 63j = the TOC entry's copy `<text lang="de">`, an attribute the schema refuses (the clone named the
+%          `xml:lang` attribute bare); Perl's cloneNode keeps `xml:lang`
+% expect:  0 errors; both TOC entries' text keeps `xml:lang="de"`, the second with its ref filled
+% status:  RED (63j) -> GREEN (63k)
+\documentclass{article}
+\usepackage[ngerman,english]{babel}
+\begin{document}
+\tableofcontents
+\section{\foreignlanguage{ngerman}{Beweis}}
+Text.
+\newtheorem{theorem}{Theorem}
+\begin{theorem}\label{thm} T. \end{theorem}
+\section{\foreignlanguage{ngerman}{Beweis von Satz~\ref{thm}}}
+\end{document}

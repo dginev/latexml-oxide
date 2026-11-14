@@ -1,0 +1,22 @@
+% mechanism: the position or alignment argument of a box is a keyword LaTeX only tests (`\makebox[w][l]`,
+%   `\framebox[w][r]`, `\shortstack[l]`, `\begin{tabularx}{w}[t]`, longtable's `[c]`, a p column's `t`, wrapfig's
+%   `{r}`): read and digested as `[]`/`{}`, but declared `OptionalPosition`/`Position`, which `shown_arguments` does not
+%   show, so a class's emptied `\@maketitle` deposit holding only such boxes around a strut prints nothing and goes. The
+%   letter is still read where the boxes print (`align`, `vattach`, `float`).
+% witness: 77o review probes m1_makebox_l, m1_shortstack_l (the r1 name table missed these constructors)
+% oracle:  pdflatex 0 errors; nothing before "1 Intro", then "left Body x"
+% engines: rust 77o r1: 0 errors + an empty deposit paragraph holding the rules; perl: no deposit mechanism
+% expect:  0 errors; no <rule> and no paragraph before the section
+% status:  RED (77o r1) -> GREEN (77o r2)
+\documentclass{article}
+\makeatletter
+\def\@maketitle{\makebox[0pt][l]{\rule{0pt}{1pt}}\framebox[0pt][r]{\rule{0pt}{1pt}}%
+  \shortstack[l]{\rule{0pt}{1pt}}\par}
+\makeatother
+\title{T}
+\author{A}
+\date{}
+\begin{document}
+\maketitle
+\section{Intro}\makebox[2cm][l]{left} Body \shortstack[r]{x}
+\end{document}

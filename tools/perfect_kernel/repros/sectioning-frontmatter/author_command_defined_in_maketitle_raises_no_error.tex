@@ -1,0 +1,18 @@
+% mechanism: a command the class's title code defines inside its `\maketitle` (kr.sty's `\affiliations`, kr.sty:94-100)
+%   and the author block uses is defined where TeX expands `\@author`: the flush's net raises no command the flush's
+%   code assigns a meaning (`reading::HeldUndefined`, the meaning recorder over the flush). OXIDIZED_DESIGN_DIVERGENCES #983
+% witness: 2602.18351, 2604.26688, 2405.06973 (kr.sty); review revERR2 finding 2
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "Ann Able" over "Univ X"
+% engines: Perl 0.8.8: 1 Error (`\affiliations`, its block digested outside the class's `\maketitle`,
+%   KNOWN_PERL_ERRORS #1219), one creator "Ann Able \affiliations Univ X"; ERR2: 0 Errors
+% expect:  0 Errors, 0 Warnings; the creator Ann Able with the affiliation Univ X
+% status:  GREEN (ERR2)
+\documentclass{article}
+\makeatletter
+\def\@maketitle{{\def\affiliations{\par}\@author}}
+\makeatother
+\author{Ann Able \affiliations Univ X}
+\title{T}
+\begin{document}
+\maketitle
+\end{document}

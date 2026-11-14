@@ -1,0 +1,30 @@
+% mechanism: a name list a binding splits at its commas and "and" (`\lx@add@author@split`: llncs, aa, inst_support,
+%   sv_support, webofc, ptephy) reads the collaboration it names beside its names as the kernel's author line does
+%   (the old driver's `split_author_calls` in author_block/collaborations.rs, deleted in DEL2; OXIDIZED_DESIGN_DIVERGENCES #946): a
+%   `<contact role="collaboration">` on the name, no part of it, the marks and notes written after the remark the
+%   name's (`name_takes_annotations`, `\fnsep` with them).
+% witness: 1502.05517 (`\author{F. Curciarello\inst{1,2}\fnsep\thanks{\email{…}} on behalf of the KLOE-2
+%   Collaboration}`), 1904.12569 (`… for the CMS Collaboration`), 2411.14337 (`…\ (for the PHENIX Collaboration)`),
+%   1611.00816 (`~for the IceCube Collaboration \footnote{…}`), 1512.03605 (`Laure Massacrier on behalf of the LHCb
+%   Collaboration\inst{1,2}\fnsep\thanks{…}`); census129 cluster 5 (C)
+% oracle:  pdflatex (TL 2025, the stand-in class) 0 errors: "Ann Able1,1 on behalf of the XYZ Collaboration, Bob Baker2
+%   (for the ABC Collaboration), Cat Cole for the DEF Collaboration1,2,2", "Univ A", "Univ B", the footnotes "1 e-mail:
+%   ann@a.edu", "2 e-mail: cat@c.edu"
+% engines: rust int130a: personnames "Ann Able on behalf of the XYZ Collaboration", "Bob Baker (for the ABC
+%   Collaboration)", "Cat Cole for the DEF Collaboration"; perl: no webofc binding, the names the same (the paper's
+%   class: `Error:undefined:\fnsep`)
+% expect:  0 errors, 0 warnings; personnames "Ann Able", "Bob Baker", "Cat Cole", each with its collaboration contact,
+%   institutes and e-mail
+% status:  RED (int130a) -> GREEN (103b)
+% preload: ar5iv.sty
+\documentclass{webofc}
+\begin{document}
+\title{T}
+\author{Ann Able\inst{1}\fnsep\thanks{\email{ann@a.edu}} on behalf of the XYZ Collaboration
+  \and Bob Baker\inst{2}\ (for the ABC Collaboration)
+  \and Cat Cole for the DEF Collaboration\inst{1,2}\fnsep\thanks{\email{cat@c.edu}}}
+\institute{Univ A \and Univ B}
+\abstract{Abs.}
+\maketitle
+Text.
+\end{document}

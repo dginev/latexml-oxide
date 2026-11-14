@@ -1,0 +1,25 @@
+% mechanism: caption (here loaded by subcaption) replaces IEEEtran's `\@makecaption` (caption3.sty:1152-1168: an
+%   unknown class, standard defaults): every caption "<label>: <text>" on one line, the class format not installed
+%   (caption_sty.rs `class_makecaption`).
+% witness: review rev78s2 finding 5 (the 78v caption-separator row)
+% oracle:  pdflatex 0 errors; "Fig. 1: Fig one.", "TABLE I: Tab one.", "Listing 1: Code one.", "Program 1: Prog one."
+% engines: perl: caption settings not applied (KNOWN_PERL_ERRORS #795); rust int65a: the same labels; "Program 1" text after a stray space
+% expect:  0 errors, 0 warnings; all four labels closed by ": "
+% status:  GREEN (78y; guard for the class format, red on int65a only by the space)
+\documentclass[journal]{IEEEtran}
+\usepackage{subcaption}
+\usepackage{newfloat}
+\DeclareFloatingEnvironment[name=Listing]{listing}
+\usepackage{float}
+\floatstyle{plain}
+\newfloat{program}{tbp}{lop}
+\floatname{program}{Program}
+\begin{document}
+\title{T}
+\author{A}
+\maketitle
+\begin{figure}[h]\centering X\caption{Fig one.}\end{figure}
+\begin{table}[h]\caption{Tab one.}\centering\begin{tabular}{c}Y\end{tabular}\end{table}
+\begin{listing}[h]Z\caption{Code one.}\end{listing}
+\begin{program}[h]W\caption{Prog one.}\end{program}
+\end{document}

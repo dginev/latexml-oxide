@@ -1,0 +1,26 @@
+% A `\thanks` a stored argument reaches through a macro, in a class that flushes `\@thanks` only at the end of the document.
+% pdflatex prints every word the argument spells on the title page, and Thanksword in the foot at the end. Neither output
+% holds Thanksword: the output has no `\@thanks` to run, and the print's run sets the note only where `\@thanks` runs. The
+% third source's own digestion (title_page_check.rs `digest_raw_setter_calls`) reads it, so it is counted. Nothing the print
+% holds can stand in for that digestion: no words of the argument's spelling tell what a macro in it prints, and no test of
+% the spelling sees `\thanks` behind an alias (`print_holds`, which skipped the digestion, lost this word; #953 "R1", removed).
+% Guard's second shape: `\fnt{Thanksword}` a class macro, in an argument of 7 words the print holds 6 of.
+% witness: none (rev R1 q1 p10, p11)
+% oracle:  pdflatex 0 errors (TL 2025, -no-shell-escape): "A Title", "Ann Able", "Noteword one1", "Text.", "1 Thanksword"
+% engines: rust P1 = 1 warning; rust R1 = 0 warnings, the word uncounted; perl = not run
+% expect:  0 errors, 1 warning (frontmatter:unclaimed_store "thanksword")
+% status:  RED (R1) -> GREEN (R1r2)
+% preload: ar5iv.sty
+\begin{filecontents*}[force]{checkstorealiascls.cls}
+\LoadClass{article}
+\def\noted#1{\gdef\@noted{#1}}\def\@noted{}
+\renewcommand\maketitle{\par\begingroup\centering{\Large\@title\par}{\@author\par}\@noted\par\endgroup\AtEndDocument{\par\@thanks}}
+\end{filecontents*}
+\documentclass{checkstorealiascls}
+\newcommand\grant{\thanks{Thanksword}}
+\title{A Title}
+\author{Ann Able}
+\noted{Noteword one\grant}
+\begin{document}\maketitle
+Text.
+\end{document}

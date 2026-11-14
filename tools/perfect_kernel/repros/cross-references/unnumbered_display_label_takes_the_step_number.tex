@@ -1,0 +1,18 @@
+% witness: none in the corpus (review probe rev78g eq.tex and tag.tex; the reach of the raw-step label outside tcolorbox, 2506.01072/2505.20088)
+% oracle:  pdflatex 0 errors; "See 21, 41, 42 and 43." (newlabel d:a {21} `\refstepcounter{equation}` in `\[…\]`; d:b {41} `equation*`; d:c {42} `$$…$$`; d:d {43} `$$…\eqno(B)$$`, `\eqno` leaving `\@currentlabel` alone)
+% engines: rust (int47a) = "See 2, 2, 2 and (B)." (the section's; d:d the `\eqno` tag, math); 78g r1 "See 21, 41, 42 and (B)." (d:d with two `ltx:tags`); Perl 0.8.8 the section's
+% expect:  0 errors; each display unnumbered (no visible tag) with its step's number for `\ref`; d:d one `ltx:tags`: "(B)" shown, `\ref` the step's "43"
+% status:  GREEN (78g r2)
+\documentclass{article}
+\usepackage{amsmath}
+\newcounter{foo}\setcounter{foo}{40}
+\begin{document}
+\section{One}
+\section{Two}
+\setcounter{equation}{20}
+\[ a=b \refstepcounter{equation}\label{d:a} \]
+\begin{equation*} c=d \refstepcounter{foo}\label{d:b} \end{equation*}
+$$ e=f \refstepcounter{foo}\label{d:c} $$
+$$ \refstepcounter{foo}\label{d:d} g=h \eqno(B) $$
+See \ref{d:a}, \ref{d:b}, \ref{d:c} and \ref{d:d}.
+\end{document}

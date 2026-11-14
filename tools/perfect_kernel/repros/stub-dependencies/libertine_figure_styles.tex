@@ -1,0 +1,11 @@
+% witness: 2103.15770, 2103.03800; run 340: `\useosf` the first error of 233 papers
+% oracle:  pdflatex with libertine.sty (type1 branch :441-523): 0 errors; old-style figures, superior "2"
+% engines: rust 65x = error (`\useosf` undefined)
+% expect:  0 errors; the text kept, \textsup as a superscript
+% status:  RED (65x) -> GREEN (65y)
+\documentclass{article}
+\usepackage{libertine}
+\useosf
+\begin{document}
+Text\textsup{2} and \liningnums{123} with \tabularnums{45}.
+\end{document}

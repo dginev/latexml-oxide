@@ -1,0 +1,26 @@
+% mechanism: REVTeX's group rule over an `\affiliation` whose lines a document macro holds (`\affiliation{\Insts}`, the
+%   lines' marks printed by macros `\ub`, `\uc`): the inline twin revtex_unmarked_head_macro_mark_lines reads the lines
+%   under their names; held in a macro, the block is one nameless creator
+% witness: synthetic (found by CST2's gate rows; 2103.04797's `\affiliation{\Amsterdam}` is the unmarked shape)
+% oracle:  pdflatex (TL 2025, revtex4-2, -no-shell-escape) 0 errors: "Ann Able1,2, Bob Baker2,3, and Cy Cole / Univé A,
+%          Town A / 2Univ B, Town B / 3Univ C, Town C"
+% engines: int165a and CST2 (byte-identical): the three names bare, a nameless creator "Univé A, Town A 2 Univ B, Town B
+%          3 Univ C, Town C"
+% expect:  0 errors, 0 warnings; as the inline twin: Ann Able "Univé A, Town A", "2 Univ B, Town B"; Bob Baker "2 Univ B,
+%          Town B", "3 Univ C, Town C"; Cy Cole none
+% moves:   post-merge
+% status:  RED (CST2, int166a) — moves: post-merge (MHAF)
+\documentclass[aps,prl]{revtex4-2}
+\newcommand\ub{$^{2}$}
+\newcommand\uc{$^{3}$}
+\newcommand\Insts{Univ\'e A, Town~A\\ \ub Univ B, Town B\\ \uc Univ C, Town C}
+\begin{document}
+\title{T}
+\author{Ann Able$^{1,2}$}
+\author{Bob Baker$^{2,3}$}
+\author{Cy Cole}
+\affiliation{\Insts}
+\begin{abstract}x\end{abstract}
+\maketitle
+Text.
+\end{document}

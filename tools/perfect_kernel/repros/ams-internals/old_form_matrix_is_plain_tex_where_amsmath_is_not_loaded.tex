@@ -1,0 +1,17 @@
+% witness: 1003.3524 (spie; 16 "Old form" errors under 77q r1), 0805.4522 (tcilatex 2.5, 22), nucl-th0206027
+%          (ws-procs9x6, 1), quant-ph0607049 (ws-ijmpb, 1): pdflatex loads no amsmath for any of them, 0 old-form errors
+% oracle:  pdflatex 0 errors, AMSUNLOADED: spie.cls loads no amsmath, `\pmatrix{…}` is Plain TeX's (plain.tex:1091-1097);
+%          with `\usepackage{amsmath}` (or mathtools) the "Old form `\pmatrix'" error and 5 after it, AMSLOADED
+% engines: rust 77q r1 = 1 error (amsmath's old-form error: the spie binding preloads amsmath), AMSLOADED; perl = 0
+%          errors, the matrix lost to an alignment cell (KNOWN_PERL_ERRORS #993)
+% expect:  0 errors, 0 warnings; AMSUNLOADED; `B = matrix@(Array[[1, 2], [3, 4]])`
+% status:  RED (77q r1) -> GREEN (77q r2: amsmath_sty.rs `require_amsmath_beyond_original`)
+% preload: ar5iv.sty
+\documentclass{spie}
+\begin{document}
+\makeatletter\@ifpackageloaded{amsmath}{AMSLOADED}{AMSUNLOADED}\makeatother
+\begin{equation}
+B=\pmatrix{1 & 2\cr 3 & 4}
+\end{equation}
+After.
+\end{document}

@@ -1,0 +1,61 @@
+% mechanism: imsart's `{keyword}[class=…]` blocks of `\kwd` entries are the VTeX classes' shared markup (ims_support's
+%   `vtex_keyword_markup`), locked against imsart.sty's own, which under a journal's `keywordsasfootnote` option (aap,
+%   aop, aos, …) collects the blocks through its `\pseudo@keyword`, read first by its own `\begin`, for a title footnote.
+% witness: 1410.4462 (imsart.sty:474-490 `\newpseudoenvironment`, :1518-1567 the blocks and `\kwd`, :1604-1630 the
+%          footnote option); here as a minimal stand-in of the shipped file
+% oracle:  pdflatex 0 errors (with 1410.4462's imsart files): "MSC 2010 subject classifications: Primary 60J10;
+%          Secondary 60G35. Keywords and phrases: coupling, conditional ergodicity, perfect simulation."
+% engines: rust int114a/85a = 0 errors, <keywords>perfect simulation, </keywords> (OmniBus's `\kwd`, each one clearing
+%          the keywords: KNOWN_PERL_ERRORS #1196), the MSC codes lost; perl (2026-10-28) 0 errors, neither element
+% expect:  0 errors, 0 warnings; <keywords name="Keywords and phrases: "> with the three entries in order and a
+%          <classification scheme="MSC 2010 subject classifications"> (the printed heading, which the HTML shows) with
+%          "Primary 60J10; Secondary 60G35"
+% status:  RED (85a) -> GREEN (86a)
+% preload: ar5iv.sty
+\begin{filecontents*}{imsart.cls}
+\NeedsTeXFormat{LaTeX2e}\ProvidesClass{imsart}
+\LoadClass{article}
+\RequirePackage{imsart}
+\end{filecontents*}
+\begin{filecontents*}{imsart.sty}
+\NeedsTeXFormat{LaTeX2e}\ProvidesPackage{imsart}
+\newif\if@keywordsasfootnote
+\DeclareOption{aap}{\@keywordsasfootnotetrue}
+\ProcessOptions
+\def\setattribute#1#2#3{\expandafter\gdef\csname #1@#2\endcsname{#3}}
+\def\sep@key@value#1=#2/?/#3{\setattribute{#3}{#1}{#2}}
+\def\do@option@list#1#2{\@for\curr@option:=#2\do{\expandafter\sep@key@value\curr@option/?/{#1}\relax}}
+\let\org@begin\begin
+\let\org@end\end
+\def\begin#1{\@ifundefined{pseudo@#1}{\org@begin{#1}}{\csname pseudo@#1\endcsname[0]\relax}}
+\def\end#1{\@ifundefined{pseudo@#1}{\org@end{#1}}{\csname pseudo@#1\endcsname[1]\relax}}
+\def\newpseudoenvironment#1#2#3{\expandafter\gdef\csname pseudo@#1\endcsname[##1]{\relax
+  \ifcase##1\relax\def\@@next@@{#2}\or\def\@@next@@{#3}\else\let\@@next@@\relax\fi\@@next@@}}
+\setattribute{keyword}{MSC}{MSC 2010 subject classifications:}
+\setattribute{keyword}{KWD}{Keywords and phrases:}
+\def\sep{\unskip\string, }
+\DeclareRobustCommand*\kwd{\@ifnextchar[\@kwd{\@kwd[\kwd@sep]}}
+\def\@kwd[#1]#2{\unskip#1{#2}\let\kwd@sep\sep}
+\if@keywordsasfootnote
+  \newtoks\keyword@toks
+  \newpseudoenvironment{keyword}{\gdef\keyword@exist{1}\get@keyword@toks}{}
+  \def\get@keyword@toks#1\end{\keyword@toks=\expandafter{\the\keyword@toks\keyword#1\endkeyword}\@gobble}
+  \def\keyword@exist{0}
+  \gdef\keyword#1{\@ifnextchar[{\@keyword}{\@keyword[class=KWD]}}
+  \gdef\@keyword[#1]{\do@option@list{keyword}{#1}\let\kwd@sep\relax\pre@kwd
+    \hbox{\csname keyword@\keyword@class\endcsname}\space\hskip.1pt}
+  \gdef\endkeyword{\unskip.\gdef\pre@kwd{\par\leavevmode}}
+  \let\pre@kwd\relax
+  \def\keyword@fmt{\ifcase\keyword@exist\else\footnotetext{\the\keyword@toks}\fi}
+\fi
+\newenvironment{frontmatter}{}{\maketitle}
+\def\maketitle{\keyword@fmt}
+\end{filecontents*}
+\documentclass[aap]{imsart}
+\begin{document}
+\begin{frontmatter}
+\begin{keyword}[class=MSC] \kwd[Primary ]{60J10} \kwd[; Secondary ]{60G35}\end{keyword}
+\begin{keyword} \kwd{coupling} \kwd{conditional ergodicity} \kwd{perfect simulation}\end{keyword}
+\end{frontmatter}
+Body.
+\end{document}

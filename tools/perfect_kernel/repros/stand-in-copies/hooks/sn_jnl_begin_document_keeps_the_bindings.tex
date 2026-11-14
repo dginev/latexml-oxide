@@ -1,0 +1,18 @@
+% witness: sn-jnl.cls:1409-1440 `\AtBeginDocument` redefining {appendices}, \thefigure, \thetable, \theequation (128
+%          copies; 2604.20688, 1012.4730; census 2026-10-17)
+% oracle:  pdflatex 0 errors (the copy's: "Table T1", the appendix equation "(A1)", SN-EXTRA)
+% engines: rust 67int20b = 1 error (\snextra undefined: the copy is not read)
+% expect:  0 errors, 0 warnings; SN-EXTRA; the table, the appendix and its equation as the binding numbers them
+%          without the copy's hook
+% status:  RED (67int20b) -> GREEN (72a)
+% preload: ar5iv.sty
+\documentclass{sn-jnl}
+\begin{document}
+\section{One}
+\snextra
+\begin{table}[h]\caption{A table}\end{table}
+\begin{appendices}
+\section{Two}
+\begin{equation}b=1\end{equation}
+\end{appendices}
+\end{document}

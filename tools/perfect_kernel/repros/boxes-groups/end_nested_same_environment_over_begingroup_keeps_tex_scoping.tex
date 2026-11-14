@@ -1,0 +1,16 @@
+% The same environment nested, the inner one over a `\begingroup` opened inside it: the first `\end{center}` closes
+% the class-style group and the inner center, whose group stays open recording "center" (LaTeX's `\@currenvir`); the
+% second `\end{center}` closes that group (`\@checkend` sees "center") and ends the outer center, whose group the
+% `\endgroup` closes (tex.web §1063-1069; latex.ltx:15384-15393). A group above X recording X itself is not a raw
+% environment's `\begin{Y}` (stomach.rs end_environment_over_plain_groups; the control
+% end_over_a_raw_environments_begin_stays_an_error).
+% witness: synthetic (sibling of 1404.3644's raa.cls:322-349 shape)
+% oracle:  pdflatex 0 errors: "A words." and "B words." centred, then "C words.D words."
+% engines: rust int132a1 = 2 errors, 1 warning (`Attempt to end mode` at each `\end{center}`); perl = 5 errors, 1 warning
+% expect:  0 errors, 0 warnings; "A words." and "B words." centred paragraphs in one block, "C words.D words." after
+% status:  RED (int132a1) -> GREEN (98d; guard perfect_kernel_batch98d::end_over_begingroups_keeps_tex_scoping)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\begin{center}\begin{center}\begingroup A words.\end{center}B words.\end{center}C words.\endgroup D words.
+\end{document}

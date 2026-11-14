@@ -1,0 +1,21 @@
+% IEEEtran's `\IEEEauthorblockA{Univ A, Town, see data@a.org for data\\ ann.able@a.edu (Ann), bbaker@a.edu (Bob)\\
+% \{firstname.lastname\}@a.edu\\ Contact: forename.surname@a.edu}`: an address beside words with no label, a tagged
+% run and a template, bare or labelled, are no lines of addresses (the fail-safe of OD #966): the entry stays as it
+% printed.
+% witness: 2512.10975 (tagged runs), 2009.04283 (a template), 2410.09681 (`Contact: forename.surname@…`, review rev106a S2)
+% oracle:  pdflatex 0 errors: "Ann Able, Bob Baker, Cat Cole", "Univ A, Town, see data@a.org for data",
+%          "ann.able@a.edu (Ann), bbaker@a.edu (Bob)", "{firstname.lastname}@a.edu", "Contact: forename.surname@a.edu"
+% engines: rust int133a = the three lines one affiliation of every author, as expected
+%          (106a r1 = `forename.surname@a.edu` a block e-mail, "Contact" left in the entry)
+% expect:  0 errors, 0 warnings; each author holds the whole entry, its four lines
+\documentclass[conference]{IEEEtran}
+\begin{document}
+\title{T}
+\author{\IEEEauthorblockN{Ann Able, Bob Baker,\\ Cat Cole}
+\IEEEauthorblockA{Univ A, Town, see data@a.org for data\\
+ann.able@a.edu (Ann), bbaker@a.edu (Bob)\\
+\{firstname.lastname\}@a.edu\\
+Contact: forename.surname@a.edu}}
+\maketitle
+Text.
+\end{document}

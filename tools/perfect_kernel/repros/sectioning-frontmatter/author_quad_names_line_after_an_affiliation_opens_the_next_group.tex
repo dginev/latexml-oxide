@@ -1,0 +1,16 @@
+% A row of `\quad`-parted names under an affiliation line opens the next group (`space_parted_rows_joined`: the line
+% break after a line under the names is an `\and`): each row its own affiliation.
+% witness: synthetic (review rev107b B1's sibling: a names line after the lines under the names)
+% oracle:  pdflatex 0 errors: "Ann Able Bob Baker", "University of Alpha", "Cat Cole Dan Dee", "University of Beta"
+% engines: rust 107b r1 = Bob Baker holding "University of Alpha" and "Cat Cole", Ann Able none, 0 errors (silent)
+% expect:  0 errors, 0 warnings; four creators, Ann Able and Bob Baker University of Alpha, Cat Cole and Dan Dee
+%          University of Beta
+% status:  RED (107b r1) -> GREEN (107b r2)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{Ann Able \quad Bob Baker\\ University of Alpha\\ Cat Cole \quad Dan Dee\\ University of Beta}
+\maketitle
+Body.
+\end{document}

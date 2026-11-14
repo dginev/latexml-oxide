@@ -1,0 +1,19 @@
+% witness: review rev92e r1 B1 (aa's `\offprints{\LaTeX}` and svjour3's `\offprints{\dots}` dropped: the class's
+%          publication note, `\lx@add@frontmatter`, read by the same no-ink test)
+% oracle:  pdflatex with 0903.3512's aa.cls (:337-340): 0 errors; the title-page footnote "Send offprint requests to:
+%          LaTeX"
+% engines: rust 92e r1 (8f49d20) = no pubnote; rust 92a5 = the pubnote named "Preprint: " (before 92e's label);
+%          Perl the same as 92a5 (aa_support.sty.ltxml:107)
+% expect:  0 errors, 0 warnings; the pubnote named "Send offprint requests to: ", role preprint, holding the LaTeX logo
+% status:  RED (92e r1) -> GREEN (92e r2)
+% preload: ar5iv.sty
+\documentclass{aa}
+\begin{document}
+\title{T}
+\author{O. Kochukhov}
+\offprints{\LaTeX}
+\institute{Uppsala University}
+\maketitle
+\section{S}
+Text.
+\end{document}

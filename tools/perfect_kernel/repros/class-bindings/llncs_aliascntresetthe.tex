@@ -1,0 +1,20 @@
+% witness: none in the 484-paper llncs sample (the 68g r2 re-review's q1 shape); 2605.20695 for aliascnt itself
+% oracle:  pdflatex with TL 2025 llncs.cls v2.26 + aliascnt.sty v1.5: "Theorem 1. Lemma 2. ClaimX 3. See Theorem 1,
+%          Lemma 2, ClaimX 3."; 0 errors (`\aliascntresetthe{lemma}` finds the class's alias, aliascnt.sty:54-57
+%          `\AC@cnt@lemma`)
+% engines: rust 67int9 / 68g r2 = "Package aliascnt Error: `lemma' is not an alias counter" (the class's alias without
+%          `\AC@cnt@<alias>`)
+% expect:  0 errors, 0 warnings; the oracle's tags and autoref names
+% status:  RED (68g r2) -> GREEN (68g r3)
+% preload: ar5iv.sty
+\documentclass[envcountsame]{llncs}
+\usepackage{aliascnt}
+\usepackage{hyperref}
+\aliascntresetthe{lemma}
+\spnewtheorem{claimx}[lemma]{ClaimX}{\bfseries}{\itshape}
+\begin{document}
+\begin{theorem}\label{t1}a\end{theorem}
+\begin{lemma}\label{l1}b\end{lemma}
+\begin{claimx}\label{c1}c\end{claimx}
+See \autoref{t1}, \autoref{l1}, \autoref{c1}.
+\end{document}

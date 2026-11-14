@@ -1,0 +1,15 @@
+% witness: 77a r4 review probe n5
+% oracle:  pdflatex + bibtex (plainnat) 0 errors: "X [Knuth, 1984]."; References: Donald Knuth. The TeXbook. AW, 1984.
+%          — a .bib field `shorthand` is data plainnat never prints
+% engines: rust 77a r4 digested the field (biblatex's label handler, defined for every BibTeX route):
+%          Error:undefined:\undefinedmacro; Perl keeps it raw (BibTeX.pool \bib@field@default@default)
+% expect:  clean (0 errors, 0 warnings); the field stays raw bib-data
+% status:  GREEN (77a r5: the shorthand/labelalpha handlers are defined only by the biblatex binding)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{natbib}
+\begin{document}
+X \citep{knuth}.
+\bibliographystyle{plainnat}
+\bibliography{natbib_shorthand_field_is_raw_data}
+\end{document}

@@ -73,9 +73,12 @@ picture =
 element picture { picture_attributes, picture_model }
 
 ## Attributes for \elementref{picture}.
+# `Labelled.attributes` (for `ID.attributes`) and `tags` added by latexml-oxide (OXIDIZED_DESIGN #813): a box drawn
+# as a picture carries the label of the counter step made inside it, and that step's number (`\refstepcounter` in a
+# tcolorbox, or in a `\put`), as a float carries its caption's.
 picture_attributes = 
   Common.attributes,
-  ID.attributes,
+  Labelled.attributes,
   Picture.attributes,
   Imageable.attributes,
   attribute clip {xsd:boolean}?,
@@ -89,7 +92,7 @@ picture_attributes =
   attribute content-tex { text }?
 
 ## Content model for \elementref{picture}.
-picture_model = (Picture.class | Inline.class | Misc.class | Meta.class)*
+picture_model = tags?, (Picture.class | Inline.class | Misc.class | Meta.class)*
 
 #======================================================================
 

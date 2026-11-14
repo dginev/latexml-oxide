@@ -1,0 +1,26 @@
+% issue #760: etoc's `\localtableofcontents` lists the enclosing unit's children, to `\etocsetnexttocdepth`'s depth
+% (etoc.sty:911-919, :2054); `\tableofcontents` stays the document's; `\invisiblelocaltableofcontents` prints nothing
+% (:2052, depth -3). No Perl binding: both commands were undefined.
+% witness: synthetic (issue #760)
+% oracle:  pdflatex 0 errors (two runs): Contents 1, 2; Contents 1.1, 1.2 in section 1; nothing in section 2
+% engines: rust=2 perl=2 (2026-11-13, undefined \etocsetnexttocdepth, \localtableofcontents)
+% expect:  0 errors; the two tables as pdflatex lists them
+% status:  GREEN
+\documentclass{article}
+\usepackage{etoc}
+\begin{document}
+\setcounter{tocdepth}{1}
+\tableofcontents
+\section{First section}
+\etocsetnexttocdepth{subsection}
+\localtableofcontents
+\subsection{First subsection}
+text
+\subsection{Second subsection}
+\subsubsection{Deep}
+text
+\section{Second section}
+\invisiblelocaltableofcontents
+\subsection{Third subsection}
+more
+\end{document}

@@ -1,0 +1,14 @@
+% witness: 2303.16563 (neurips_2023: `\\ \textbf{Penglin Cai$^3$, Hao Dong$^{1}$, Zongqing Lu$^{1,4}$}\thanks{…}`); same shape
+%          2409.03810, 2404.04969, 2505.13142 (trailing \thanks/$^n$), 2402.07939, 2412.05271 (\scalebox), 2312.07592 (\href)
+% oracle:  pdflatex 0 errors: one centred block, line 2 bold "Cat Cole1, Dan Dorn2*" — four people
+% engines: rust 63y7 = Error:frontmatter:merged_creators "Cat Cole, Dan Dorn" (a styled group holding two names, not the
+%          whole line: the \thanks after it); Perl one author too (SplitTokens passes over groups)
+% expect:  0 errors; four creators linked by their marks, the \thanks Dan Dorn's
+% status:  RED (63y7) -> GREEN (63z)
+\documentclass{article}
+\title{T}
+\author{Ann Able$^1$, Bob Baker$^2$\\ \textbf{Cat Cole$^1$, Dan Dorn$^2$}\thanks{Corresponding.}\\ $^1$Univ A\\ $^2$Univ B}
+\begin{document}
+\maketitle
+Text.
+\end{document}

@@ -1,0 +1,22 @@
+% mechanism: the writer's reading (OD #928, review rev94a r3): where the shadow reading took one whole creator of
+%   today's for another's affiliation from its words alone (`classify:institution`), the writer gives the creator back
+%   (`repart::concede`), as today's printed it apart, and writes what the structure shows: the `$^*$` line goes to the
+%   name showing its mark, today's item copied (an affiliation, as today's holds it). 94a r3 made the team Bob Baker's
+%   affiliation; a decline alone would leave the line on the team, where today's old reader put it.
+% witness: 1109.6488 (asp2010: `…, G. Verner$^9$, and the PE11 team of {\it Kepler} WG\#1\\ {$^*$} Affiliations are
+%   given at the end of the paper`); review rev94a r3 probe s/p33_team_of
+% oracle:  pdflatex 0 errors: "Ann Able*,1, Bob Baker1, and the PE11 team of Kepler WG#1 / * Affiliations are given at
+%   the end of the paper"
+% engines: rust 93a: three creators, the `$^*$` line the team's affiliation; rust 94a r3: the line Ann Able's, the team
+%   Bob Baker's affiliation; perl: not run
+% expect:  0 errors, 0 warnings; Ann Able with the `$^*$` line; Bob Baker; the team a creator of its own
+% status:  RED (94a r3) -> GREEN (94a r4)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{A Title}
+\author{Ann Able$^{*,1}$, Bob Baker$^1$, and the PE11 team of {\it Kepler} WG\#1\\
+{$^*$} Affiliations are given at the end of the paper}
+\maketitle
+Body.
+\end{document}

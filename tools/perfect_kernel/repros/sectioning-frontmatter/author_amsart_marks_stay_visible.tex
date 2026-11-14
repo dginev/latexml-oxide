@@ -1,0 +1,13 @@
+% witness: 63e review r6 finding 1 (amsart `\author{Ann Able$^{1}$ and Bob Baker$^{2}$}` with marked `\address`es)
+% oracle:  pdflatex 0 errors: the two names with their marks, the two addresses with theirs
+% engines: rust (63e r10) = Ann without her mark or address, Bob with both
+% expect:  2 creators, each keeping its visible mark; 0 errors
+% status:  RED (63e r10) -> GREEN (63e)
+\documentclass{amsart}
+\begin{document}
+\title{T}
+\author{Ann Able$^{1}$ and Bob Baker$^{2}$}
+\address{$^1$Univ A}
+\address{$^2$Univ B}
+\maketitle
+\end{document}

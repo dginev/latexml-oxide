@@ -1,0 +1,17 @@
+% mechanism: iopart's `\author` is `\lx@add@authors@list` too (iopart_support), its `\address` calls print their marks:
+%   each name shows the mark it prints (`per_author_marks`), as authblk's
+% witness: synthetic (P4b2b, the sibling sweep of 2410.01932's fix; iopart 1205.6912's marked addresses)
+% oracle:  pdflatex with this directory's iopart.cls (-no-shell-escape) 0 errors: "Ann Able1 and Bob Baker2",
+%          "1 Univ A, Town A", "2 Univ B, Town B"
+% engines: P4b2: Ann Able, Bob Baker (no mark), each address with its mark; P4b2b: the names' marks shown
+% expect:  0 errors, 0 warnings; Ann Able 1 "1 Univ A, Town A", Bob Baker 2 "2 Univ B, Town B"
+% status:  GREEN (guard perfect_kernel_batchc1::authblk_names_show_their_printed_marks)
+\documentclass{iopart}
+\begin{document}
+\title{T}
+\author{Ann Able$^1$ and Bob Baker$^2$}
+\address{$^1$ Univ A, Town A}
+\address{$^2$ Univ B, Town B}
+\maketitle
+Body.
+\end{document}

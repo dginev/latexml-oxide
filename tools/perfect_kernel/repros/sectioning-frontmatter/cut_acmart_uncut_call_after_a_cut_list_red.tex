@@ -1,0 +1,18 @@
+% mechanism: (RED, deferred: pathological) an `\affiliation` the Cut leaves whole (its glued `$^2$H` is the entry's
+%   text, so one requested mark leads it) after a cut list is placed by `annotate=new` while the cut entries wait for
+%   their labels: every author's, where the last author's is the PDF's reading
+% witness: review rev99a2 S-b probe q3g (sibling of cut_acmart_template_address_line_red, 2009.04283)
+% oracle:  pdflatex (TL 2025) 0 errors: "1Univ A 2Univ B / X / 3Inst for 2H Research 4Univ D / Y"
+% engines: rust int126b: the second call Cy's; 99a r2, r3: every author's
+% expect:  0 errors, 0 warnings; Ann "1 Univ A, X", Bob "2 Univ B, X", Cy the second call
+% status:  RED (99a r2, r3) — deferred (SYNC row 99a); no guard
+% preload: ar5iv.sty
+\documentclass[sigconf]{acmart}
+\begin{document}
+\title{T}
+\author{Ann Able$^1$, Bob Baker$^2$, Cy Cole$^3$}
+\affiliation{\institution{$^1$Univ A \quad $^2$Univ B}\country{X}}
+\affiliation{\institution{$^3$Inst for $^2$H Research \quad $^4$Univ D}\country{Y}}
+\maketitle
+Text.
+\end{document}

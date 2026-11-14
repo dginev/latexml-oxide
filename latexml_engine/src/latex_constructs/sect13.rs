@@ -1,0 +1,2670 @@
+//! `latex_constructs` section 13: C.14-C.15 Pictures, Fonts, Symbols
+//!
+//! Split verbatim from the single `LoadDefinitions!` body (2026-09-03); the
+//! definitions run in the original order from `super::load_definitions`.
+
+use latexml_core::common::numeric_ops::UNITY_F64;
+
+use super::*;
+use crate::base_utilities::{shown_arguments, unitlength_sp};
+
+/// `\unitlength` in pt, to the sp: Perl's `picScale` multiplies the register
+/// (latex_constructs.pool.ltxml:4896-4921).
+fn unitlength_pt() -> Result<f64> { Ok(unitlength_sp()? as f64 / UNITY_F64) }
+
+/// Perl `picScale` (latex_constructs.pool.ltxml:4896-4921): `\unitlength` times
+/// a coordinate, truncated to the sp as `Dimension::multiply` is.
+fn pic_scale(coordinate: f64) -> Result<Dimension> {
+  Ok(Dimension::new(
+    (unitlength_sp()? as f64 * coordinate) as i64,
+  ))
+}
+
+#[rustfmt::skip]
+/// How many parameterless macros (or `\protect` wrappers) [`math_alphabet_font`] looks through. TeX itself
+/// expands without bound; a parameterless macro chain longer than this is a loop, which TeX's `#2\relax`
+/// would run anyway.
+const MATH_ALPHABET_LOOKTHROUGH: usize = 16;
+
+/// The font the math alphabet `alphabet` (the `#2` of latex.ltx's `\@fontswitch`, 14312-14321) selects, when it
+/// reaches one: a control sequence whose definition carries a font (`\mathrm`, `\mathbb`, a
+/// `\DeclareMathAlphabet`'d alphabet: `Definition::declared_font`, `\let` copies included), possibly behind
+/// parameterless macros with a token body (`\newcommand\Bbbx{\mathbb}`) and `\protect` (a robust command's
+/// `\protect\X␣`), which TeX's `#2\relax` expands on its way to the alphabet. A closure body is not run here, so a
+/// macro computed by a binding is not looked through. `None` for anything else.
+fn math_alphabet_font(alphabet: &[Token]) -> Result<Option<FontDirective>> {
+  let protect = T_CS!("\\protect");
+  let mut head: Vec<Token> = alphabet.to_vec();
+  for _ in 0..MATH_ALPHABET_LOOKTHROUGH {
+    match head.as_slice() {
+      [first, rest @ ..] if *first == protect && !rest.is_empty() => {
+        head = rest.to_vec();
+      },
+      [cs] if cs.code.is_active_or_cs() => {
+        let Some(defn) = lookup_definition(cs)? else {
+          return Ok(None);
+        };
+        if let Some(font) = defn.declared_font() {
+          return Ok(Some(font.clone()));
+        }
+        if !defn.is_expandable()
+          || defn
+            .get_parameters()
+            .is_some_and(|p| !p.get_parameters().is_empty())
+        {
+          return Ok(None);
+        }
+        match defn.get_expansion() {
+          Some(ExpansionBody::Tokens(body)) => head = body.clone().unlist(),
+          _ => return Ok(None),
+        }
+      },
+      _ => return Ok(None),
+    }
+  }
+  Ok(None)
+}
+
+pub(crate) fn load() -> Result<()> {
+  // ======================================================================
+  // C.14-C.15 Pictures, Fonts, Symbols
+  // ======================================================================
+
+  // Not sure that ltx:p is the best to use here, but ... (see also \vbox, \vtop)
+  // This should be fairly compact vertically.
+  DefConstructor!("\\@shortstack@cr",
+    "</ltx:p><ltx:p>",
+    properties   => { stored_map!("isBreak" => true) },
+    reversion    => Tokens!(T_CS!("\\\\"), T_CR!()),
+    before_digest => { egroup()?; },
+    after_digest  => { bgroup(); });
+
+  DefConstructor!("\\shortstack OptionalPosition {}  OptionalMatch:* [Dimension]",
+  "<ltx:inline-block align='#align'><ltx:p>#2</ltx:p></ltx:inline-block>",
+  bounded      => true,
+  sizer        => "#2",
+  before_digest => {
+    // Rebind \\ and \lx@newline to shortstack line break.
+    // Matches Perl: only \\ is rebound (Perl does NOT rebind \lx@hidden@cr).
+    // \lx@newline is also rebound because \\ is Let to \lx@newline at the
+    // top level, so \lx@newline tokens in content must also become @shortstack@cr.
+    // NOTE: \lx@hidden@cr must NOT be rebound — it is a COLUMN_END sentinel,
+    // recognized by its command code (gullet.rs `is_column_end`), so `\let`ting
+    // it to `\@shortstack@cr` would stop it ending the rows of an alignment
+    // built inside the stack.
+    Let!("\\\\", "\\@shortstack@cr");
+    Let!("\\lx@newline", "\\@shortstack@cr");
+    AssignRegister!("\\baselineskip" , Glue::new_spec("-1pt", None, None, None, None).into());
+    AssignRegister!("\\lineskip"     , Glue::new_spec("3pt", None, None, None, None).into());
+    bgroup(); },
+  after_digest => sub[_whatsit] {
+    egroup()?; },
+  // Note: does not get layout=vertical, since linebreaks are explicit
+  properties => sub[args] {
+    let align = args[0].as_ref().map(|a| {
+      match a.to_string().as_str() {
+        "l" => "left", "r" => "right", _ => ""
+      }
+    }).unwrap_or("");
+    Ok(stored_map!("align" => align, "vattach" => "bottom"))
+  },
+  mode => "restricted_horizontal");
+
+  //======================================================================
+  // C.14.1 The picture Environment
+  // Perl: latex_constructs.pool.ltxml lines 4927-5185
+  //======================================================================
+
+  // Registers
+  DefRegister!("\\unitlength" => Dimension!("1pt"));
+  DefRegister!("\\@wholewidth" => Dimension!("0.4pt"));
+  DefRegister!("\\@halfwidth" => Dimension!("0.2pt"));
+
+  // \thinlines / \thicklines — set \@wholewidth register
+  // Perl L4928-4929: DefPrimitiveI — assigns \@wholewidth register directly at
+  // stomach level (not via TeX-level expansion). Faithful port.
+  DefPrimitive!("\\thinlines", {
+    assign_register(
+      "\\@wholewidth",
+      RegisterValue::Dimension(Dimension!("0.4pt")),
+      None,
+      vec![],
+    )?;
+  });
+  DefPrimitive!("\\thicklines", {
+    assign_register(
+      "\\@wholewidth",
+      RegisterValue::Dimension(Dimension!("0.8pt")),
+      None,
+      vec![],
+    )?;
+  });
+  DefMacro!("\\linethickness{}", "\\@wholewidth #1\\relax");
+  // Perl L4933: DefPrimitive('\arrowlength{Dimension}', sub { AssignValue('arrowlength', $_[1]); });
+  // Stores the dimension under state key `arrowlength` for later lookup
+  // by the picture drawing routines (see Perl L4978-4979).
+  DefPrimitive!("\\arrowlength {Dimension}", sub[(length)] {
+    assign_value("arrowlength", Stored::Dimension(length), None);
+  });
+  DefMacro!("\\qbeziermax", "500");
+  DefMacro!(
+    "\\@killglue",
+    "\\unskip\\@whiledim \\lastskip >\\z@\\do{\\unskip}"
+  );
+
+  // Tag: ltx:picture — Perl latex_constructs.pool.ltxml L4995:
+  //   Tag('ltx:picture', autoOpen => 0.5, autoClose => 1, afterOpen => &GenerateID)
+  // The 0.5 fractional priority is honoured by `compute_indirect_model` in
+  // state.rs: picture is the only tag with lower-than-full openability, so
+  // other auto-openers (para, p, text, item, …) win whenever they can also
+  // reach the target element. Picture is selected only for picture-specific
+  // primitives (\line, \circle, \vector, \put) used bare inside a {figure}
+  // or similar context where no fuller wrapper fits.
+  // Perl latex_constructs.pool.ltxml:4943-4950: a picture that was
+  // auto-opened (a drawing object outside any explicit picture) has no size
+  // of its own, so `afterClose` gives it the size of its node's box — width,
+  // and height plus depth, in px — unless it has one. Without it the SVG had
+  // no width or height, which a browser draws as a 300×150 box, flipped
+  // (pst-flags-doc: 517 such pictures; egameps: 162). The size is Perl's
+  // `getSize`: a box's requested `width`/`height`/`depth` properties (the
+  // `\pic@makebox@` of `\frame`) win over its computed size. The box is the
+  // node's whole record: `open_element_at` extends an auto-opened node's box
+  // with everything opened or written inside it (`appendNodeBox`,
+  // Document.pm:1685-1700), and the drawing objects take Perl's box-free
+  // coordinate arguments (`Pair`, `{Float}`), so they measure nothing.
+  // `\put(0,0){Hello}` measures as in Perl (31.13×9.61); `x \line(1,0){250} y`
+  // 11.92×8.65, `x \frame{X} y` 22.29×12.15. Guards:
+  // `picture_sizing::auto_opened_picture_is_sized_from_its_box`,
+  // `node_box_append::*`.
+  // Perl latex_constructs.pool.ltxml:4943 `autoOpen => 0.5`: a picture loses the
+  // auto-open path to a full auto-opener (`ltx:para`, `ltx:text`).
+  Tag!("ltx:picture",
+    auto_open  => 0.5,
+    auto_close => true,
+    after_open => sub[document, node] {
+      document.generate_id(node, "pic")?;
+    },
+    after_close => sub[_document, node, whatsit] {
+      let (has_width, has_height) =
+        (node.get_attribute("width").is_some(), node.get_attribute("height").is_some());
+      if let Some(whatsit) = whatsit
+        && !(has_width && has_height)
+      {
+        let (width, height, depth, ..) = whatsit.clone().get_size(None)?;
+        if !has_width {
+          node.set_attribute("width", &fmt_px(width.px_value(None)))?;
+        }
+        if !has_height {
+          node.set_attribute("height", &fmt_px(height.add(depth).px_value(None)))?;
+        }
+      }
+    }
+  );
+
+  // {picture} environment: (width,height) with optional (origin-x,origin-y)
+  // Pair now survives digestion via RegisterValue::Pair, so properties can extract coordinates.
+  DefEnvironment!("{picture} Pair OptionalPair",
+    "<ltx:picture width='#width' height='#height' origin-x='#origin-x' origin-y='#origin-y'\
+      fill='none' stroke='none' unitlength='#unitlength'>\
+      ?#transform(<ltx:g transform='#transform'>#body</ltx:g>)(#body)\
+    </ltx:picture>",
+    // Perl #2798: picture is an inline block — internal_vertical, no leaveHorizontal.
+    // The begin code opens a TeX group of its own: latex.ltx:16771-16778
+    // `\@picture` `\setbox\@picbox\hb@xt@\@tempdimc\bgroup`.
+    tex_group => { TexGroup::Box },
+    mode => "inline_internal_vertical",
+    before_digest => {
+      // Perl: before_picture — Let \raisebox to \pic@raisebox
+      Let!("\\raisebox", "\\pic@raisebox");
+      // PiCTeX's `\beginpicture` takes `\put`, `\multiput`, `\frame` and `\linethickness` over, and its `\@picture`
+      // (postpictex.tex:39-46, saving the kernel's as `\!latex@picture`) gives a LaTeX picture LaTeX's back; this
+      // environment does not pass through `\@picture`, so it makes those `\let`s itself: a LaTeX picture inside a PiCTeX
+      // `\put{…} at x y` read its own `\put(3,0)` as PiCTeX's, which scanned to the input's end for `at` (1301.4518)
+      if lookup_meaning(&T_CS!("\\!latex@picture")).is_some() {
+        for (cs, latex) in [
+          ("\\put", "\\!latexput"),
+          ("\\multiput", "\\!latexmultiput"),
+          ("\\frame", "\\!latexframe"),
+          ("\\linethickness", "\\!latexlinethickness"),
+        ] {
+          if lookup_meaning(&T_CS!(latex)).is_some() {
+            let_i(&T_CS!(cs), &T_CS!(latex), None);
+          }
+        }
+      }
+    },
+    properties => sub[args] {
+      let unit = unitlength_pt()?;
+      let (x, y) = match args[0].as_ref().map(|d| d.data()) {
+        Some(DigestedData::RegisterValue(RegisterValue::Pair(p))) => (p.x.0, p.y.0),
+        _ => (0.0, 0.0),
+      };
+      // curve2e.sty:273-280 `\@picture` records the picture's span and offset
+      // as `\pict@dimen`/`\pict@offset` (in `\unitlength` multiples) for its
+      // `\AutoGrid`/`\GraphGrid` defaults; the pict2e binding reads these.
+      let raw_pair = |data: Option<&DigestedData>| -> String {
+        match data {
+          Some(DigestedData::RegisterValue(RegisterValue::Pair(p))) => format!("{},{}", p.x.0, p.y.0),
+          _ => "0,0".to_string(),
+        }
+      };
+      assign_value("PICTURE_DIMEN", raw_pair(args[0].as_ref().map(|d| d.data())), Some(Scope::Global));
+      assign_value("PICTURE_OFFSET", raw_pair(args[1].as_ref().map(|d| d.data())), Some(Scope::Global));
+      // Typed sizes, as Perl's (latex_constructs.pool.ltxml:4966-4973: `picScale`
+      // Dimensions, depth 0): the size code reads only typed sizes, so strings
+      // made a picture measure its contents (arXiv 2605.26285, 2605.15276 scaled
+      // pictures). The template renders them to 0.1pt, as Perl's.
+      let mut map = stored_map!(
+        "width"      => Stored::Dimension(pic_scale(x)?),
+        "height"     => Stored::Dimension(pic_scale(y)?),
+        "depth"      => Stored::Dimension(Dimension::new(0)),
+        "unitlength" => Stored::Dimension(Dimension::new(unitlength_sp()?))
+      );
+      // Origin from OptionalPair — Perl: origin-x, origin-y, transform
+      if let Some(d) = args[1].as_ref()
+        && let DigestedData::RegisterValue(RegisterValue::Pair(p)) = d.data() {
+          let ox = p.x.0 * unit;
+          let oy = p.y.0 * unit;
+          map.insert("origin-x", Stored::Dimension(pic_scale(p.x.0)?));
+          map.insert("origin-y", Stored::Dimension(pic_scale(p.y.0)?));
+          // Perl: translate(negate(origin).pxValue)
+          let tx = px_value(-ox);
+          let ty = px_value(-oy);
+          map.insert("transform", Stored::String(pin(
+            format!("translate({},{})", fmt_px(tx), fmt_px(ty)))));
+        }
+      Ok(map)
+    }
+  );
+
+  // \put(x,y){content} — Perl: Match:( reads "(", Until:, reads y, Until:) reads y
+  // Now that Pair survives digestion (RegisterValue::Pair), use it directly.
+  DefMacro!(
+    "\\put SkipSpaces Match:( Until:, Until:) {}",
+    "\\lx@pic@put(#2,#3){#4\\relax}"
+  );
+  DefConstructor!("\\lx@pic@put Pair {}",
+    "<ltx:g transform='#transform' innerwidth='#innerwidth' innerheight='#innerheight' innerdepth='#innerdepth'>#2</ltx:g>",
+    alias => "\\put",
+    mode  => "restricted_horizontal",
+    properties => sub[args] {
+      let (x, y) = match args[0].as_ref() {
+        Some(d) => match d.data() {
+          DigestedData::RegisterValue(RegisterValue::Pair(p)) => (p.x.0, p.y.0),
+          _ => { let s = d.to_string(); let mut p = s.splitn(2, ',');
+            (p.next().unwrap_or("0").trim().parse().unwrap_or(0.0),
+             p.next().unwrap_or("0").trim().parse().unwrap_or(0.0)) }
+        },
+        None => (0.0, 0.0),
+      };
+      let unit = unitlength_pt()?;
+      let tx = px_value(x * unit);
+      let ty = px_value(y * unit);
+      let transform_str = format!("translate({},{})", fmt_px(tx), fmt_px(ty));
+      // Perl: $box->getSize to extract inner dimensions
+      let (iw, ih, id) = if let Some(body) = args[1].as_ref() {
+        let (w, h, d, _, _, _) = body.clone().get_size(None)?;
+        // Perl: $w = undef if $w && ($w->ptValue == 0)
+        let w_opt = if w.value_of() == 0 { None } else { Some(w) };
+        (w_opt, Some(h), Some(d))
+      } else {
+        (None, None, None)
+      };
+      let mut map = stored_map!(
+        "transform" => Stored::String(pin(&transform_str))
+      );
+      if let Some(w) = iw { map.insert("innerwidth", Stored::Dimension(w)); }
+      if let Some(h) = ih { map.insert("innerheight", Stored::Dimension(h)); }
+      if let Some(d) = id { map.insert("innerdepth", Stored::Dimension(d)); }
+      Ok(map)
+    }
+  );
+
+  //============================================================
+  // Picture primitives (\line, \vector, \oval, \qbezier, \bezier)
+  //============================================================
+  //
+  // Perl (latex_constructs.pool.ltxml:4992-5033) defines each picture
+  // primitive over box-free arguments:
+  //   DefConstructor('\line Pair:Number {Float}', …)
+  //   DefConstructor('\vector Pair:Number {Float}', …)
+  //   DefConstructor('\oval [Float] Pair []', …)
+  //   DefConstructor('\qbezier [Number] Pair Pair Pair', …)
+  //   DefConstructor('\lx@pic@bezier {Number} Pair Pair Pair', …)
+  // A `Pair` or a `Float` is not a box, so the drawing object's whatsit sizes
+  // to nothing (Whatsit.pm:253-255 sums only box arguments). That size is what
+  // an auto-opened `ltx:picture` reports (its tag's `afterClose`): a port that
+  // digested `(1,0){250}` as text measured the text "1", "0", "250" instead
+  // (`x \line(1,0){250} y`: 57.27×11.61 px against Perl's 11.92×8.65). The
+  // Rust `Pair` reader reads its items as floats (Perl's `Pair:Number` reads
+  // integers): pict2e's decimal slopes keep working. All are Perl's
+  // constructors but `\line`, which keeps a peek front (below). A `Float`
+  // argument is the one
+  // exception: Perl's digests to itself (Object.pm:156), this port's to a
+  // text box of its digits (common/float.rs `be_digested`), so a constructor
+  // with a `{Float}` (a `{DefaultUnits}` since batch 56jr, OXIDIZED_DESIGN #317,
+  // which digests the same way) states Perl's size as its `sizer` — the box arguments
+  // Perl would sum (none for `\line`/`\vector`, the `*` of `\circle*`, the
+  // `[part]` of `\oval`). Guard:
+  // `node_box_append::drawing_objects_measure_no_coordinates`.
+
+  // \line(slope){length} — Perl: DefConstructor('\line Pair:Number {Float}', ...)
+  //
+  // Some papers (witness 2306.13101) use `\line` in non-picture context as a
+  // length unit, e.g. `\diagbox[height=2.5\line]{…}{…}`. There the
+  // following token is NOT `(` and the strict `Match:(` reader emits
+  // `Error:expected:Match Missing argument Match:(`. Dispatch by peeking
+  // the next non-space token: if `(`, run the picture chain; otherwise
+  // fall back to plain TeX's `\line` (an `\hbox to \hsize` length builder
+  // from plain_base.rs) so a surrounding dimension reader can consume
+  // `\line` as a length without errors.
+  // Intentional divergence (WISDOM #44 class: dual-use CS): a `DefMacro`
+  // front for Perl's `DefConstructor('\line Pair:Number {Float}')`, the
+  // constructor itself being `\lx@pic@line`.
+  // In a LaTeX document the fallback recovers a TeX error: LaTeX's `\line` is
+  // only the picture object (latex.ltx `\def\line(#1,#2)#3`), so pdflatex
+  // reports "Use of \line doesn't match its definition" there. The recovered box
+  // is what the author meant, so the report is a Warning. A plain TeX document
+  // (phyzzx: hep-th9312131) or an AMS-TeX one (`\input amstex`, which arXiv's
+  // route reads as LaTeX: funct-an9211010, hep-th9304061) means plain's.
+  DefMacro!("\\line", sub[_args] {
+    if if_next(T_OTHER!("("))? {
+      Ok(Tokens!(T_CS!("\\lx@pic@line")))
+    } else {
+      if !plain_tex_document() && !lookup_bool("AmSTeX.pool_loaded") {
+        Warn!(
+        "unexpected",
+        "\\line",
+        "Use of \\line doesn't match its definition \\line(x,y){length}; read as plain TeX's \\hbox to\\hsize"
+        );
+      }
+      Ok(mouth::tokenize_internal("\\hbox to \\hsize"))
+    }
+  });
+  // The actual picture-mode \line dispatched from the peek above. Its length,
+  // like `\vector`'s, `\circle`'s, `\dashbox`'s and `\oval`'s radius, is a
+  // `DefaultUnits` (latex.ltx:16766-16767 `\@defaultunitsset`: a number of
+  // `\unitlength`s or a length; Perl's `{Float}`; OXIDIZED_DESIGN #317).
+  DefConstructor!("\\lx@pic@line Pair {DefaultUnits}",
+    "<ltx:line points='#points' stroke='#color' stroke-width='#thick'/>",
+    alias => "\\line",
+    sizer => 0,
+    properties => sub[args] {
+      let (mx, my) = pic_pair_arg(args[0].as_ref());
+      let xlength = pic_float_arg(args[1].as_ref());
+      let unit = unitlength_pt()?;
+      let thick = match lookup_register("\\@wholewidth", Vec::new())? {
+        Some(RegisterValue::Dimension(d)) => d.pt_value(None),
+        _ => 0.4,
+      };
+      // slopeToPicCoord: compute endpoint from slope and length, then convert to px
+      let s = if mx > 0.0 { 1.0 } else if mx < 0.0 { -1.0 } else { 0.0 };
+      let ex = px_value(xlength * unit * s);
+      let ey = if s == 0.0 {
+        px_value(xlength * unit * (if my > 0.0 { 1.0 } else { -1.0 }))
+      } else {
+        px_value(xlength * unit * my / mx.abs())
+      };
+      Ok(stored_map!(
+        "points" => Stored::String(pin(format!("0,0 {},{}", fmt_px(ex), fmt_px(ey)))),
+        "thick"  => Stored::String(pin(format!("{thick}"))),
+        "color"  => "#000000"
+      ))
+    }
+  );
+
+  // pict2e.sty:686-740 `\polyline(x1,y1)(x2,y2)…`, `\polygon[*]`, `\Line`,
+  // `\Vector`/`\polyvector`: a polyline in ABSOLUTE picture coordinates
+  // (`\unitlength` multiples), rendered as one `ltx:line` (the same element
+  // `\line` emits). `\lx@pic@polyline{terminators}{closed}` reads the `(x,y)`
+  // pairs itself. The pict2e binding is otherwise a no-op stub (its driver
+  // chain has no XML meaning); curve2e.sty:240 `\renewcommand*\polyline`
+  // needs the base to exist. Witnesses sapthesis-doc, unifith-doc.
+  fn read_pic_pairs() -> Result<Vec<(f64, f64)>> {
+    let mut pairs = Vec::new();
+    loop {
+      skip_spaces()?;
+      if !if_next(T_OTHER!("("))? {
+        break;
+      }
+      read_token()?;
+      let x = read_until(&Tokens!(T_OTHER!(",")))?
+        .map(|t| t.to_string())
+        .unwrap_or_default();
+      let y = read_until(&Tokens!(T_OTHER!(")")))?
+        .map(|t| t.to_string())
+        .unwrap_or_default();
+      let parse = |s: String| -> f64 { s.trim().parse().unwrap_or(0.0) };
+      pairs.push((parse(x), parse(y)));
+    }
+    Ok(pairs)
+  }
+  // Its `{terminators}{closed}` flags are text, so its size is stated: none,
+  // as the box-free `\line` measures (an auto-opened picture's size). `closed` is `0` (open), `1` (closed) or `2`
+  // (closed and filled, unstroked, as `\circle*`: pict2e's `\fillpath`, `\polygon*`, ellipse.sty's `\ellipse*`).
+  DefConstructor!("\\lx@pic@polyline{}{}",
+    "<ltx:line points='#points' stroke='#color' stroke-width='#thick' fill='#fill' terminators='#terminators'/>",
+    sizer => 0,
+    properties => sub[args] {
+      let terminators = args[0].as_ref().map(|d| d.to_string()).unwrap_or_default();
+      let mode = args[1].as_ref().map(|d| d.to_string()).unwrap_or_default();
+      let filled = mode == "2";
+      let closed = filled || mode == "1";
+      let unit = unitlength_pt()?;
+      let thick = match lookup_register("\\@wholewidth", Vec::new())? {
+        Some(RegisterValue::Dimension(d)) => d.pt_value(None),
+        _ => 0.4,
+      };
+      let mut pairs = read_pic_pairs()?;
+      if closed && let Some(first) = pairs.first().copied() {
+        pairs.push(first);
+      }
+      let points = pairs.iter()
+        .map(|(x, y)| format!("{},{}", fmt_px(px_value(x * unit)), fmt_px(px_value(y * unit))))
+        .collect::<Vec<_>>().join(" ");
+      Ok(stored_map!(
+        "points" => Stored::String(pin(points)),
+        "thick"  => Stored::String(pin(format!("{thick}"))),
+        "color"  => if filled { "none" } else { "#000000" },
+        "fill"   => if filled { "#000000" } else { "" },
+        "terminators" => Stored::String(pin(terminators))
+      ))
+    }
+  );
+
+  // \vector(slope){length} — Perl: DefConstructor('\vector Pair:Number {Float}', ...)
+  DefConstructor!("\\vector Pair {DefaultUnits}",
+    "<ltx:line points='#points' stroke='#color' stroke-width='#thick' terminators='->'/>",
+    alias => "\\vector",
+    sizer => 0,
+    properties => sub[args] {
+      let (mx, my) = pic_pair_arg(args[0].as_ref());
+      let xlength = pic_float_arg(args[1].as_ref());
+      let unit = unitlength_pt()?;
+      let thick = match lookup_register("\\@wholewidth", Vec::new())? {
+        Some(RegisterValue::Dimension(d)) => d.pt_value(None),
+        _ => 0.4,
+      };
+      let s = if mx > 0.0 { 1.0 } else if mx < 0.0 { -1.0 } else { 0.0 };
+      let ex = px_value(xlength * unit * s);
+      let ey = if s == 0.0 {
+        px_value(xlength * unit * (if my > 0.0 { 1.0 } else { -1.0 }))
+      } else {
+        px_value(xlength * unit * my / mx.abs())
+      };
+      Ok(stored_map!(
+        "points" => Stored::String(pin(format!("0,0 {},{}", fmt_px(ex), fmt_px(ey)))),
+        "thick"  => Stored::String(pin(format!("{thick}"))),
+        "color"  => "#000000"
+      ))
+    }
+  );
+
+  // \circle*{diameter} — filled or unfilled circle
+  DefConstructor!("\\circle OptionalMatch:* {DefaultUnits}",
+    "<ltx:circle x='0' y='0' r='#radius' fill='#fill' stroke='#stroke' stroke-width='#thick'/>",
+    alias => "\\circle",
+    sizer => "#1",
+    properties => sub[args] {
+      let filled = args[0].is_some(); // OptionalMatch:* → Some if * present
+      let dia: f64 = args[1]
+        .as_ref()
+        .map(|d| d.to_string().trim().parse().unwrap_or(0.0))
+        .unwrap_or(0.0);
+      let unit = unitlength_pt()?;
+      let thick = match lookup_register("\\@wholewidth", Vec::new())? {
+        Some(RegisterValue::Dimension(d)) => d.pt_value(None),
+        _ => 0.4,
+      };
+      let radius = px_value(dia * unit * 0.5);
+      let (fill, stroke) = if filled {
+        ("#000000", "none")
+      } else {
+        ("none", "#000000")
+      };
+      Ok(stored_map!(
+        "radius" => Stored::String(pin(fmt_px(radius))),
+        "fill"   => fill,
+        "stroke" => stroke,
+        "thick"  => Stored::String(pin(format!("{thick}")))
+      ))
+    }
+  );
+
+  // \oval[radius](width,height)[part] — Perl: DefConstructor('\oval [Float] Pair []', …)
+  DefConstructor!("\\oval [DefaultUnits] Pair []",
+    "<ltx:rect x='#ox' y='#oy' width='#owidth' height='#oheight' rx='#radius'\
+      stroke='#color' fill='none' part='#3' stroke-width='#thick'/>",
+    sizer => "#3",
+    properties => sub[args] {
+      let unit = unitlength_pt()?;
+      let thick = match lookup_register("\\@wholewidth", Vec::new())? {
+        Some(RegisterValue::Dimension(d)) => d.pt_value(None),
+        _ => 0.4,
+      };
+      // Perl: $r = ($r ? picScale($r) : Dimension('40pt'))
+      let r_requested: f64 = args[0].as_ref()
+        .map(|d| d.to_string().trim().parse().unwrap_or(40.0) * unit)
+        .unwrap_or(40.0);
+      // Extract size from Pair
+      let (sx, sy) = match args[1].as_ref() {
+        Some(d) => match d.data() {
+          DigestedData::RegisterValue(RegisterValue::Pair(p)) => (p.x.0 * unit, p.y.0 * unit),
+          _ => (0.0, 0.0),
+        },
+        None => (0.0, 0.0),
+      };
+      let (hx, hy) = (sx * 0.5, sy * 0.5);
+      // Perl: $r = $r->smaller($halfsize->getX->absolute)->smaller($halfsize->getY->absolute)
+      let r = r_requested.min(hx.abs()).min(hy.abs());
+      // Perl `width => Dimension($size->getX->valueOf), height => …` (depth
+      // left to the computed size): the oval's box is its size, so an
+      // auto-opened picture around `x \oval(20,10)[tl] y` is 39.59×16.53 px.
+      let to_dim = |pt: f64| Stored::Dimension(Dimension::new((pt * 65536.0) as i64));
+      Ok(stored_map!(
+        "ox"      => Stored::String(pin(fmt_px(px_value(-hx)))),
+        "oy"      => Stored::String(pin(fmt_px(px_value(-hy)))),
+        "owidth"  => Stored::String(pin(fmt_px(px_value(sx)))),
+        "oheight" => Stored::String(pin(fmt_px(px_value(sy)))),
+        "width"   => to_dim(sx),
+        "height"  => to_dim(sy),
+        "radius"  => Stored::String(pin(fmt_px(px_value(r)))),
+        "thick"   => Stored::String(pin(s!("{thick}"))),
+        "color"   => "#000000"
+      ))
+    }
+  );
+
+  // \qbezier[N](p1)(p2)(p3) — quadratic Bezier. Perl LaTeX.pool.ltxml L5182:
+  //   DefConstructor('\qbezier [Number] Pair Pair Pair', …).
+  // Read each coordinate via the `Pair` parameter type (`(x,y)`, skipping
+  // leading spaces), mirroring Perl, rather than a manual
+  // `Match:( Until:, Until:)` decomposition. The manual form had two faults:
+  // (1) the THIRD pair's y-coordinate was always dropped — the terminal
+  // `Until:)` slot returned empty, so `\qbezier(1,2)(3,4)(5,6)` rendered
+  // `points="…,0"` instead of `…,6` (with an optional `[N]` it grabbed
+  // unrelated garbage); (2) a space after the optional `[N]`
+  // (`\qbezier[10] (…)`) failed the first match. `Pair` reads each `(x,y)`
+  // cleanly (and skips leading spaces), fixing both. Witness 1701.03735
+  // (`\qbezier[10] (…)`) + the long-standing y3 drop (picture.xml baseline).
+  // The pairs are the constructor's own arguments, as in Perl: forwarding them
+  // as text to a `{}{}…` constructor measured the digits as the whatsit's size
+  // (an auto-opened picture's size). The points are scaled by \unitlength to
+  // px — a pre-existing divergence from Perl's raw `&ptValue(#pt)` storage,
+  // kept unchanged.
+  DefConstructor!("\\qbezier [Number] Pair Pair Pair",
+    "<ltx:bezier ?#npoints(displayedpoints='#npoints') points='#points' stroke='#color' stroke-width='#thick'/>",
+    alias => "\\qbezier",
+    properties => sub[args] { pic_bezier_properties(args[0].as_ref(), &args[1..=3]) }
+  );
+  // Perl: \bezier — the LaTeX 2.09 form of \qbezier, its point count
+  // required (latex_constructs.pool.ltxml:5033-5038). Perl's template draws
+  // no `stroke`, which leaves the curve invisible inside a `{picture}`
+  // (`stroke='none'`); this one strokes it, as `\qbezier` does.
+  DefMacro!(
+    "\\bezier Until:(",
+    "\\ifx.#1.\\lx@pic@bezier{0}(\\else\\lx@pic@bezier{#1}(\\fi"
+  );
+  DefConstructor!("\\lx@pic@bezier {Number} Pair Pair Pair",
+    "<ltx:bezier ?#npoints(displayedpoints='#npoints') points='#points' stroke='#color' stroke-width='#thick'/>",
+    alias => "\\bezier",
+    properties => sub[args] { pic_bezier_properties(args[0].as_ref(), &args[1..=3]) }
+  );
+
+  // `\lx@pic@cbezier{N}{x0}{y0}…{x3}{y3}` — the four-point (cubic) sibling of
+  // `\qbezier`, the target of pict2e's `\cbezier` (pict2e_sty.rs); a
+  // four-point `<ltx:bezier>` renders as an SVG `C` segment (latexml_post
+  // svg.rs `convert_bezier`, Perl SVG.pm `convertBezier`). Its coordinates
+  // arrive as text, so its size is stated: none, as `\qbezier`'s box-free
+  // `Pair`s measure (an auto-opened picture's size).
+  DefConstructor!("\\lx@pic@cbezier{}{}{}{}{}{}{}{}{}",
+    "<ltx:bezier points='#points' stroke='#color' stroke-width='#thick'/>",
+    alias => "\\cbezier",
+    sizer => 0,
+    properties => sub[args] {
+      let unit = unitlength_pt()?;
+      let thick = match lookup_register("\\@wholewidth", Vec::new())? {
+        Some(RegisterValue::Dimension(d)) => d.pt_value(None),
+        _ => 0.4,
+      };
+      let parse_f = |i: usize| -> f64 {
+        args[i].as_ref().map(|d| d.to_string().trim().parse().unwrap_or(0.0)).unwrap_or(0.0)
+      };
+      let pts: Vec<String> = (0..4)
+        .map(|k| {
+          let (x, y) = (px_value(parse_f(2 * k + 1) * unit), px_value(parse_f(2 * k + 2) * unit));
+          format!("{},{}", fmt_px(x), fmt_px(y))
+        })
+        .collect();
+      Ok(stored_map!(
+        "points" => Stored::String(pin(pts.join(" "))),
+        "thick"  => Stored::String(pin(format!("{thick}"))),
+        "color"  => "#000000"
+      ))
+    }
+  );
+
+  // Perl L5166-5175: \multiput expands to n \put commands with coordinate stepping.
+  DefMacro!("\\multiput Pair Pair {}{}", sub[args] {
+    let (x0, y0) = args.first().and_then(|a| match a {
+      ArgWrap::Pair(p) => Some((p.x.0, p.y.0)),
+      _ => None,
+    }).unwrap_or((0.0_f64, 0.0_f64));
+    let (dx, dy) = args.get(1).and_then(|a| match a {
+      ArgWrap::Pair(p) => Some((p.x.0, p.y.0)),
+      _ => None,
+    }).unwrap_or((0.0_f64, 0.0_f64));
+    let n: i64 = args.get(2).map(|a| a.revert().unwrap_or_default().to_string()
+      .trim().parse().unwrap_or(1)).unwrap_or(1);
+    let body = args.get(3).map(|a| a.revert().unwrap_or_default()).unwrap_or_default();
+
+    let mut x: f64 = x0;
+    let mut y: f64 = y0;
+
+    // Each iteration emits roughly `8 + body.len()` tokens; pre-size
+    // conservatively + use borrow-iter-copied for body to avoid the
+    // per-iteration Vec<Token> clone.
+    let body_len = body.len();
+    let mut result = Vec::with_capacity(((n as usize) * (8 + body_len)).min(1 << 20));
+    for _ in 0..n {
+      result.push(T_CS!("\\put"));
+      result.push(T_OTHER!("("));
+      result.extend(Explode!(s!("{}", x)));
+      result.push(T_OTHER!(","));
+      result.extend(Explode!(s!("{}", y)));
+      result.push(T_OTHER!(")"));
+      result.push(T_BEGIN!());
+      result.extend(body.unlist_ref().iter().copied());
+      result.push(T_END!());
+      x += dx;
+      y += dy;
+    }
+    Ok(Tokens::new(result))
+  });
+
+  // Box commands for picture mode
+  // Perl: \pic@makebox@ Undigested RequiredKeyVals Pair []{} — the master box constructor
+  // Creates optional <rect> for frame + <g class="makebox"> for content with positioning.
+  // Properties compute inner dimensions from $box->getSize and position from [pos] arg.
+  //
+  // The Perl macros are:
+  //   \pic@makebox  → \pic@makebox@{\makebox}{}
+  //   \pic@framebox → \pic@makebox@{\framebox}{framed=true}
+  //   \frame{}      → \pic@makebox@{\framebox}{framed=true}(0,0)[bl]{#1}
+  //   \dashbox      → \pic@makebox@{\dashbox(N)}{framed=true,dash={N}}
+  //
+  // For now: simplified port without getSize (uses zero defaults).
+  // The constructor uses sub[] to build DOM directly matching Perl's output structure.
+  DefConstructor!("\\pic@makebox@ Undigested {} Pair []{}",
+    sub[document, args, props] {
+      // args: [0]=cs(Undigested), [1]=kv_text({}), [2]=size(Pair), [3]=pos([]), [4]=box({})
+      let framed = props.get("framed").is_some();
+      // \@wholewidth captured at digest time in properties callback
+      let thick = match props.get("thick") {
+        Some(Stored::String(s)) => with(*s, |v| v.parse::<f64>().unwrap_or(0.4)),
+        _ => 0.4,
+      };
+      // Frame rect (only when framed=true)
+      if framed {
+        let mut rect_attrs = map!(
+          "x" => "0".to_string(), "y" => "0".to_string(),
+          "width" => props.get("fwidth").map(|s| s.to_attribute()).unwrap_or_else(|| "0".into()),
+          "height" => props.get("fheight").map(|s| s.to_attribute()).unwrap_or_else(|| "0".into()),
+          "stroke" => "#000000".to_string(),
+          "stroke-width" => format!("{thick}"),
+          "fill" => "none".to_string()
+        );
+        if let Some(dash) = props.get("dash") {
+          rect_attrs.insert("stroke-dasharray".to_string(), dash.to_string());
+        }
+        document.insert_element("ltx:rect", Vec::new(), Some(rect_attrs))?;
+      }
+      // Content <g>: Perl `innerwidth='#width' innerheight='#height'
+      // innerdepth='#depth'`, the Dimensions rendered as attributes (0.1pt), as
+      // the rect's `#fwidth`/`#fheight` are.
+      let mut g_attrs = map!("class" => "makebox".to_string());
+      for (attr, key) in [("innerwidth", "width"), ("innerheight", "height"), ("innerdepth", "depth")] {
+        if let Some(v) = props.get(key) {
+          let vs = v.to_attribute();
+          if !vs.is_empty() {
+            g_attrs.insert(attr.to_string(), vs);
+          }
+        }
+      }
+      let xshift = props.get("xshift").map(|s| s.to_string()).unwrap_or_else(|| s!("0"));
+      let yshift = props.get("yshift").map(|s| s.to_string()).unwrap_or_else(|| s!("0"));
+      g_attrs.insert(s!("transform"), format!("translate({xshift},{yshift})"));
+      document.open_element("ltx:g", Some(g_attrs), None)?;
+      if let Some(body) = args.get(4).and_then(|a| a.as_ref()) {
+        document.absorb(body, None)?;
+      }
+      document.close_element("ltx:g")?;
+    },
+    properties => sub[args] {
+      // Capture \@wholewidth at digest time for frame stroke-width
+      let thick = match lookup_register("\\@wholewidth", Vec::new())? {
+        Some(RegisterValue::Dimension(d)) => d.pt_value(None),
+        _ => 0.4,
+      };
+      // args: [0]=cs, [1]=kv_text, [2]=size(Pair), [3]=pos, [4]=box
+      let kv_str = args[1].as_ref().map(|d| d.to_string()).unwrap_or_default();
+
+      // Perl: $box->getSize — extract (width, height, depth) from body
+      let (w, h, d) = if let Some(body) = args[4].as_ref() {
+        let (bw, bh, bd, _, _, _) = body.clone().get_size(None)?;
+        (bw, bh, bd)
+      } else {
+        (Dimension::default(), Dimension::default(), Dimension::default())
+      };
+      let ht = Dimension::new(h.value_of() + d.value_of()); // total height = h + d
+
+      // Extract frame size from Pair parameter (args[2]). The size PAIR being
+      // present is what selects the positioning branch — Perl's
+      // `if ($size)` (latex_constructs.pool.ltxml:5054) with the nonzero-value
+      // test DELIBERATELY commented out — so a `\makebox(0,0){…}` gets its
+      // centring offset `translate(-w/2,-(h+d)/2)` like any other size: the
+      // dominant picture-label idiom `\put(x,y){\makebox(0,0){…}}` (and
+      // overpic's `[bl]` form) anchors at its centre, not its bottom-left. A
+      // nonzero guard here left every zero-size label at `translate(0,0)`
+      // (Perl `translate(-7.06,-5.63)` for `$x^2$`). Guards:
+      // `cluster_package_guards::picture_makebox_offset::*`.
+      let size = match args[2].as_ref().map(|d| d.data()) {
+        Some(DigestedData::RegisterValue(RegisterValue::Pair(p))) => Some((
+          pic_scale(p.x.0)?,
+          pic_scale(p.y.0)?,
+        )),
+        _ => None,
+      };
+      let (mut ww, mut hh) = (w, ht);
+
+      // Perl: position-based shift computation
+      let (mut xshift, mut yshift) = (Dimension::default(), Dimension::default());
+      if let Some((sw, sh)) = size {
+        ww = sw;
+        hh = sh;
+        let pos = args[3].as_ref().map(|d| d.to_string().to_lowercase()).unwrap_or_default();
+        // x positioning
+        if pos.contains('l') {
+          xshift = Dimension::default(); // left-aligned: x = 0
+        } else if pos.contains('r') {
+          xshift = Dimension::new(ww.value_of() - w.value_of()); // right-aligned
+        } else {
+          xshift = Dimension::new((ww.value_of() - w.value_of()) / 2); // centered
+        }
+        // y positioning
+        if pos.contains('b') {
+          yshift = Dimension::default(); // bottom-aligned: y = 0
+        } else if pos.contains('t') {
+          yshift = Dimension::new(hh.value_of() - ht.value_of()); // top-aligned
+        } else {
+          yshift = Dimension::new((hh.value_of() - ht.value_of()) / 2); // centered
+        }
+      }
+
+      // Frame dimensions: use ww/hh if nonzero, else content size
+      let fw = if ww.value_of() != 0 { ww } else { w };
+      let fh = if hh.value_of() != 0 { hh } else { Dimension::new(h.value_of() + d.value_of()) };
+
+      // Perl `$x->pxValue`: from the exact sp, not a 0.01pt-rounded pt value.
+      let xs_px = px_value(xshift.value_of() as f64 / UNITY_F64);
+      let ys_px = px_value(yshift.value_of() as f64 / UNITY_F64);
+
+      // Perl `width => $w, height => $h, depth => $d`: the box's size is its
+      // content's, a completely specified request (Box.pm:275, `getSize`), so
+      // the `{framed=true}` and `[bl]` arguments are not measured — `x \frame{X}
+      // y` auto-opens a picture 22.29×12.15 px, as in Perl.
+      let mut map = stored_map!(
+        "width" => Stored::Dimension(w),
+        "height" => Stored::Dimension(h),
+        "depth" => Stored::Dimension(d),
+        "fwidth" => Stored::Dimension(fw),
+        "fheight" => Stored::Dimension(fh),
+        "xshift" => Stored::String(pin(fmt_px(xs_px))),
+        "yshift" => Stored::String(pin(fmt_px(ys_px)))
+      );
+      if kv_str.contains("framed") {
+        map.insert("framed", Stored::Bool(true));
+      }
+      // `dash={N}` (Perl latex_constructs.pool.ltxml:5076 `\lx@pic@dashbox`):
+      // the keyval argument is digested, so its braces may already be gone
+      // (`dash=2`) — read the value up to the next `}`/`,`/end, brace or not.
+      // The `stroke-dasharray` was dropped on every `\dashbox` before.
+      if let Some(dash_start) = kv_str.find("dash=") {
+        let rest = kv_str[dash_start + 5..].trim_start_matches('{');
+        let end = rest.find(['}', ',']).unwrap_or(rest.len());
+        let dash = rest[..end].trim();
+        if !dash.is_empty() {
+          map.insert("dash", Stored::String(pin(dash)));
+        }
+      }
+      map.insert("thick", Stored::String(pin(s!("{thick}"))));
+      Ok(map)
+    },
+    mode => "text"
+  );
+
+  // Perl macro aliases
+  DefMacro!("\\pic@makebox", "\\pic@makebox@{\\makebox}{}");
+  DefMacro!("\\pic@framebox", "\\pic@makebox@{\\framebox}{framed=true}");
+  DefMacro!(
+    "\\lx@pic@dashbox{DefaultUnits}",
+    "\\pic@makebox@{\\dashbox(#1)}{framed=true,dash={#1}}"
+  );
+  DefMacro!(
+    "\\dashbox Until:(",
+    "\\ifx.#1.\\lx@pic@dashbox{0}(\\else\\lx@pic@dashbox{#1}(\\fi"
+  );
+  DefMacro!(
+    "\\frame{}",
+    "\\pic@makebox@{\\framebox}{framed=true}(0,0)[bl]{#1}"
+  );
+
+  // \pic@raisebox — simplified raisebox for picture mode. Its box is an `\hbox` (latex.ltx `\@argrsbox`), read in
+  // text as `\raisebox`'s is: inside a formula in a `\put`, `\raisebox{.2ex}{\tiny $+$}` is a formula of its own, not
+  // the end of the outer one (Perl reads it in the current mode, KNOWN_PERL_ERRORS #678; 0902.1321). Guard:
+  // `perfect_kernel_batch66y::picture_raisebox_reads_its_box_in_text`.
+  DefConstructor!("\\pic@raisebox{Dimension}[Dimension][Dimension]{}",
+    "<ltx:g y='#1'>#4</ltx:g>",
+    alias => "\\raisebox",
+    mode => "restricted_horizontal", bounded => true
+  );
+
+  // Perl: latex_constructs.pool.ltxml line 4862
+  // Stubs for color/xcolor packages (overridden when color.sty is loaded)
+  Let!("\\set@color", "\\relax");
+  Let!("\\color@begingroup", "\\relax");
+  Let!("\\color@endgroup", "\\relax");
+  Let!("\\color@setgroup", "\\relax");
+  Let!("\\color@hbox", "\\relax");
+  Let!("\\color@vbox", "\\relax");
+  Let!("\\color@endbox", "\\relax");
+
+  // Perl: latex_constructs.pool.ltxml line 5802
+  // \stop — closes the current input mouth (Plain TeX command)
+  Let!("\\stop", "\\endinput");
+  def_macro_noop("\\ignorespacesafterend")?;
+
+  // \Gin@driver lives in `latex_constructs_rust_only.rs` (pure Rust
+  // hotfix, not in any Perl latex_*.pool.ltxml).
+
+  //**********************************************************************
+  // C.15 Font Selection
+  //**********************************************************************
+  //======================================================================
+  // C.15.1 Changing the Type Style
+  //======================================================================
+  // Text styles. The family/series/shape codes are LOCKED, as in Perl
+  // (latex_constructs.pool.ltxml:5146-5154): LaTeXML maps these CM names to its
+  // abstract fonts and loads no `.fd`, so a font package's
+  // `\renewcommand*{\rmdefault}{Nunito-TOsF}` (nunito.sty:64; ~186 TL font
+  // packages do the same) named a family `\selectfont` cannot map. Outside a
+  // picture the prior font persisted; inside one pgf's `\nullfont` regime
+  // (pgfcorescopes.code.tex:244, 748-755) was never left, and every node's text
+  // was dropped as nullfont (bfh-ci DEMO-BFHSciPoster lost its poster body;
+  // tuda-ci DEMO-TUDaSciPoster via roboto). `\familydefault` & co. stay open.
+  // Guard: `perfect_kernel_batch56::font_defaults_are_locked`.
+
+  DefMacro!("\\rmdefault", "cmr", locked => true);
+  DefMacro!("\\sfdefault", "cmss", locked => true);
+  DefMacro!("\\ttdefault", "cmtt", locked => true);
+  DefMacro!("\\bfdefault", "bx", locked => true);
+  DefMacro!("\\mddefault", "m", locked => true);
+  DefMacro!("\\itdefault", "it", locked => true);
+  DefMacro!("\\sldefault", "sl", locked => true);
+  DefMacro!("\\scdefault", "sc", locked => true);
+  DefMacro!("\\updefault", "n", locked => true);
+  DefMacro!("\\encodingdefault", "OT1");
+  DefMacro!("\\familydefault", "\\rmdefault");
+  DefMacro!("\\seriesdefault", "\\mddefault");
+  DefMacro!("\\shapedefault", "\\updefault");
+
+  Let!("\\mediumseries", "\\mdseries");
+
+  // ? DefMacro("\\f@encoding','cm');
+  DefMacro!("\\f@family", "cmr");
+  DefMacro!("\\f@series", "m");
+  DefMacro!("\\f@shape", "n");
+  DefMacro!("\\f@size", "10");
+
+  // These do NOT immediately effect the font!
+  //
+  // They and the font switches below are robust, as latex.ltx declares them
+  // for the preamble (`\DeclareRobustCommand`, `\protect\cs␣`; at
+  // `\begin{document}` `\reinstall@nfss@defs`, :12489-12514, makes the shape
+  // switches `\protected` macros, latex_constructs_rust_only.rs): `\fontfamily` :14139,
+  // `\fontseries` :12259, `\fontshape` :12436, `\usefont` :10518, `\mdseries`
+  // :13948, `\bfseries` :13923, `\rmfamily` :13983, `\sffamily` :13988,
+  // `\ttfamily` :13993, `\upshape`/`\slshape`/`\scshape`/`\itshape`
+  // :13794-13803, `\normalfont` :14113 (`\fontencoding` :10490 is in sect08).
+  // Perl defines plain macros (latex_constructs.pool.ltxml:5170-5194), so a
+  // `\protected@edef` expanded `\ttfamily` to `\edef\f@family{\ttdefault}`,
+  // whose `\f@family` expanded in turn: the stored `\edef cmr{cmtt}` defined
+  // the letter c and the font was lost (pythonimmediate's `\DescribeOption`,
+  // titlecaps' `\titlecap`, doc's `\SpecialEnvIndex` in `\index` entries).
+  // Guards: `rtoken_patchcmd::font_switches_are_robust_in_protected_edef`,
+  // `rtoken_patchcmd::body_shape_switches_are_protected`,
+  // `perfect_kernel_batch56::deferred_math_end_walks_real_groups`.
+  DefMacro!("\\fontfamily{}", "\\edef\\f@family{#1}", robust => true);
+  DefMacro!("\\fontseries{}", "\\edef\\f@series{#1}", robust => true);
+  DefMacro!("\\fontshape{}", "\\edef\\f@shape{#1}", robust => true);
+
+  // For fonts not allowed in math!!!
+  // Perl L5226: \not@math@alphabet@@ checks if we're in math mode
+  // LaTeX kernel also defines \not@math@alphabet (2 args) — stub both
+  // Perl L5349: DefMacro('\not@math@alphabet{}{}', ...) — conditional error
+  // message in math mode, no-op otherwise. Rust keeps the no-op stub but
+  // matches the Perl kind (DefMacro — expansion-time, same as the
+  // invocation sites `\mdseries`/`\bfseries` which expand it inline).
+  def_macro_noop("\\not@math@alphabet{}{}")?;
+  DefPrimitive!("\\not@math@alphabet@@ {}", sub[(c)] {
+    if lookup_bool_sym(pin!("IN_MATH")) {
+      let c = c.to_string();
+      let message = s!("Command {:?} invalid in math mode", c);
+      Warn!("unexpected", c, message);
+    }
+    Ok(vec![])
+  });
+
+  // These DO immediately effect the font!
+  DefMacro!(
+    "\\mdseries",
+    "\\not@math@alphabet@@{\\mddefault}\\fontseries{\\mddefault}\\selectfont",
+    robust => true
+  );
+  DefMacro!(
+    "\\bfseries",
+    "\\not@math@alphabet@@{\\bfdefault}\\fontseries{\\bfdefault}\\selectfont",
+    robust => true
+  );
+
+  DefMacro!(
+    "\\rmfamily",
+    "\\not@math@alphabet@@{\\rmdefault}\\fontfamily{\\rmdefault}\\selectfont",
+    robust => true
+  );
+  DefMacro!(
+    "\\sffamily",
+    "\\not@math@alphabet@@{\\sfdefault}\\fontfamily{\\sfdefault}\\selectfont",
+    robust => true
+  );
+  DefMacro!(
+    "\\ttfamily",
+    "\\not@math@alphabet@@{\\ttdefault}\\fontfamily{\\ttdefault}\\selectfont",
+    robust => true
+  );
+
+  DefMacro!(
+    "\\upshape",
+    "\\not@math@alphabet@@{\\updefault}\\fontshape{\\updefault}\\selectfont",
+    robust => true
+  );
+  // latex.ltx:12486-12488 `\protected\def\normalshape{… \fontshape\shapedefault
+  // \selectfont}`, in the preamble and the body alike. Perl
+  // (latex_constructs.pool.ltxml:5161) lets it to `\upshape`, which ran before
+  // `\upshape` was bound and so copied the dump's robust wrapper: a plain
+  // `\edef` expanded it (1 error under tex.web §1215, the upright shape lost).
+  // Guard: `rtoken_patchcmd::body_shape_switches_are_protected`.
+  DefMacro!(
+    "\\normalshape",
+    "\\not@math@alphabet@@{\\shapedefault}\\fontshape{\\shapedefault}\\selectfont",
+    protected => true
+  );
+  DefMacro!(
+    "\\itshape",
+    "\\not@math@alphabet@@{\\itdefault}\\fontshape{\\itdefault}\\selectfont",
+    robust => true
+  );
+  DefMacro!(
+    "\\slshape",
+    "\\not@math@alphabet@@{\\sldefault}\\fontshape{\\sldefault}\\selectfont",
+    robust => true
+  );
+  DefMacro!(
+    "\\scshape",
+    "\\not@math@alphabet@@{\\scdefault}\\fontshape{\\scdefault}\\selectfont",
+    robust => true
+  );
+
+  // latex.ltx:14113-14121 `\normalfont`: `\fontencoding\encodingdefault`, `\edef\f@family{\familydefault}`,
+  // `\edef\f@series{\seriesdefault}`, `\edef\f@shape{\shapedefault}`, `\selectfont` — the DOCUMENT's defaults, and
+  // `\reset@font` (:14122) is the same command, so every reset (`\begin{document}`'s `\init@series@setup`, a
+  // footnote's `\reset@font\footnotesize`, `\textnormal`, a float's `\@floatboxreset`) returns to them. Perl
+  // (latex_constructs.pool.ltxml:5194-5195) resets to `\rmdefault`, `\mddefault`, `\updefault` and keeps the
+  // encoding: a document with `\renewcommand\familydefault{\sfdefault}` (helvet's, cmbright's, sans-serif
+  // posters' and theses' idiom), which pdflatex sets in CMSS throughout, came out serif from the first reset on.
+  // `\lx@normalfont@base` first puts LaTeXML's serif medium upright in force, so a default the font table does not
+  // know (`\familydefault` = `droidserif`, droidserif.sty's `[default]`, 2603.23615) resets to that, as Perl's
+  // `\rmdefault` did, where `\selectfont` alone keeps the font in force for an unknown family (the sans of a
+  // `\sffamily` it was meant to end). OXIDIZED_DESIGN_DIVERGENCES #779. Guards
+  // `perfect_kernel_batch77u::{family_default_sets_the_body, family_default_survives_a_preamble_switch,
+  // unknown_family_default_resets_to_serif}`.
+  DefPrimitive!("\\lx@normalfont@base", {
+    let current = lookup_font().unwrap_or_else(|| Rc::new(Font::text_default()));
+    let base =
+      current.merge_ref(&fontmap!(family => "serif", series => "medium", shape => "upright"));
+    assign_font(Rc::new(base), Some(Scope::Local));
+    Ok(Vec::new())
+  });
+  DefMacro!(
+    "\\normalfont",
+    "\\fontencoding\\encodingdefault\\lx@normalfont@base\\fontfamily{\\familydefault}\
+     \\fontseries{\\seriesdefault}\\fontshape{\\shapedefault}\\selectfont",
+    robust => true
+  );
+  // `\lx@fontencoding{ASCII}` (OXIDIZED_DESIGN #144, issue #723): a verbatim `~`/`^`
+  // is a literal catcode-12 char, so under T1 it decodes through the fontmap to
+  // Bruce Miller's deliberate accent glyphs U+02DC/U+02C6 (LaTeXML #2435). In a
+  // verbatim/URL those must stay ASCII. Selecting the identity `ASCII` fontmap for
+  // the verbatim font (grouped, so it reverts after) keeps `~`/`^` ASCII while the
+  // `\ttdefault` family still drives the typewriter styling — the same treatment
+  // `Verbatim`/`HyperVerbatim` apply at digest time. Perl loses ASCII here too.
+  // Through `\lx@fontencoding`, not a `\fontencoding` a package may have made the
+  // kernel's checking one (luatexja; qworld; see url_sty.rs `\UrlFont`).
+  DefMacro!(
+    "\\verbatim@font",
+    "\\lx@fontencoding{ASCII}\\fontfamily{\\ttdefault}\\fontseries{\\mddefault}\\fontshape{\\updefault}\\selectfont"
+  );
+
+  Let!("\\reset@font", "\\normalfont");
+
+  // `\@fontswitch{text}{math}` (latex.ltx:14312-14321), the body of every `\DeclareOldFontCommand`
+  // and of article/book/report/letter's `\cal` (`\@fontswitch\relax\mathcal`) and `\mit`: in maths
+  // it lets `\math@bgroup` to `\relax` and runs `#2\relax`, so the alphabet `\mathrm\relax` takes
+  // the `\relax` as its argument and selects its math group to the end of the enclosing group —
+  // `{\rm LP-HF}` is `LP-HF` upright, `{\cal H}` a calligraphic H. Perl's
+  // `\ifmmode #2\relax\else #1 \fi` (latex_constructs.pool.ltxml:5200, KNOWN_PERL_ERRORS) runs the
+  // alphabet with its own grouping, so it read the next token as its argument: `\mathrm{L}P-HF`,
+  // `\mathcal{}H`, `{\rm ^{8}Be}` "Missing sub/superscript argument", `{\rm \left(…\right)}`
+  // "Extra \right" — 511 outputs once a raw class re-declares the old font commands (ptptex,
+  // jpsj2 cond-mat0510381, paper, artikel1; OXIDIZED_DESIGN_DIVERGENCES #593). The text branch is
+  // latex.ltx's `#1` (Perl's `#1 ` set a space after `{\cal x}`'s `\relax`).
+  DefMacro!(
+    "\\@fontswitch{}{}",
+    "\\ifmmode\\lx@math@alphabet@switch{}{#2}\\else#1\\fi"
+  );
+  // `\lx@math@alphabet@switch{reversion}{alphabet}`: the maths branch of `\@fontswitch`. An
+  // alphabet whose binding carries a font (`\mathrm`, `\mathbf`, `\mathcal`, `\mathnormal`, … and
+  // every `\DeclareMathAlphabet`'d one: `Definition::declared_font`) merges that font into the
+  // current one for the rest of the group, as the native `\rm`/`\bf` switches do in maths
+  // (plain_constructs.rs); its box reverts as `reversion` (the old font command's name, a character
+  // string so an `\edef` in maths cannot expand it into itself) or else as the alphabet. In TeX the
+  // `\math@bgroup` let to `\relax` makes ANY alphabet `#2` reaches a switch, so `#2` is looked
+  // through while its head is a parameterless macro or a `\protect` (`\newcommand\Bbbx{\mathbb}`
+  // `\DeclareOldFontCommand{\bbx}{\normalfont}{\Bbbx}`: `{\bbx RZ}` is a blackboard R and Z,
+  // `\U/msb/m/n/10` in pdflatex): [`math_alphabet_font`]. Any other `#2` (a macro with an argument,
+  // or one that ends somewhere else than an alphabet) is TeX's `#2\relax`: it reads the `\relax`,
+  // never the next maths token.
+  DefPrimitive!("\\lx@math@alphabet@switch{}{}", sub[(reversion, alphabet)] {
+    let alphabet = alphabet.unlist();
+    let font = math_alphabet_font(&alphabet)?;
+    let Some(font) = font.filter(|_| lookup_bool_sym(pin!("IN_MATH"))) else {
+      let mut call = alphabet;
+      call.push(T_RELAX!());
+      unread(Tokens::new(call));
+      return Ok(Vec::new());
+    };
+    merge_font_ref(&*font.get_font(None)?);
+    let name = reversion.to_string();
+    let revert = if name.is_empty() {
+      Tokens::new(alphabet)
+    } else if name.starts_with('\\') && name.len() > 1 {
+      Tokens::from(T_CS!(name))
+    } else {
+      Tokens::new(Explode!(name))
+    };
+    let mut props = SymHashMap::default();
+    props.insert("isEmpty", Stored::Bool(true));
+    Ok(vec![Digested::from(Tbox::new(pin!(""), None, None, revert, props))])
+  });
+
+  // Perl: latex_constructs.pool.ltxml L5204-5222.
+  //
+  // `already_reported` mirrors Perl's `reported_unrecognized_font_*` guard:
+  // an unrecognized family/series/shape is announced ONCE per document,
+  // globally, not once per `\selectfont`. Before this, 2503.04421 emitted
+  // 28 identical `Info:unexpected:ding` lines — one per table cell.
+  //
+  // The middle `LoadFontMap($family)` branch is load-bearing for the whole
+  // family of dingbat/symbol packages that select a font by FAMILY rather
+  // than by encoding: bbding's `\dingfamily` is
+  // `\fontencoding{U}\fontfamily{ding}\selectfont`, and there is no
+  // `u.fontmap` — so the glyph can only be decoded by treating the family
+  // name as the encoding and consulting `ding.fontmap`. Without it,
+  // `\XSolidBrush` (`\@chooseSymbol{'045}`) fell through to the OT1
+  // fallback and silently emitted that slot's TEXT character, `%`
+  // (witness 2503.04421: 28 result-table cells read `%`/`!` instead of
+  // ✗/✓). Same shape as Perl's own comment: this is a hack, but it is the
+  // hack Perl commits to.
+  DefPrimitive!("\\selectfont", {
+    let current = lookup_font().unwrap();
+    assign_font(
+      Rc::new(nfss_selected_font(&current, true)?),
+      Some(Scope::Local),
+    );
+    crate::tex_fonts::pickup_font()?;
+    // latex.ltx:12581: `\selectfont` ends by running the size update a
+    // `\fontsize` armed (see `\set@fontsize` below; OXIDIZED_DESIGN_DIVERGENCES
+    // #288). It is read next from the input, in this same group, as the
+    // kernel's macro would have it.
+    let update = T_CS!("\\size@update");
+    if lookup_definition(&update)?.is_some() && !update.defined_as(&TOKEN_RELAX) {
+      unread_one(update);
+    }
+    Ok(Vec::new())
+  });
+
+  DefMacro!(
+    "\\usefont{}{}{}{}",
+    "\\fontencoding{#1}\\fontfamily{#2}\\fontseries{#3}\\fontshape{#4}\\selectfont",
+    robust => true
+  );
+
+  // If these series or shapes appear in math, they revert it to roman, medium, upright (?)
+  DefConstructor!("\\textmd@math{}", "<ltx:text _noautoclose='1'>#1</ltx:text>", mode => "text",
+    bounded      => true, font => { series => "medium" }, alias => "\\textmd",
+    before_digest => { DefMacro!("\\f@series", "m"); });
+  DefConstructor!("\\textbf@math{}", "<ltx:text _noautoclose='1'>#1</ltx:text>", mode => "text",
+    bounded      => true, font => { series => "bold" }, alias => "\\textbf",
+    before_digest => { DefMacro!("\\f@series", "b"); });
+  DefConstructor!("\\textrm@math{}", "<ltx:text _noautoclose='1'>#1</ltx:text>",
+    mode => "text", bounded => true, font => { family => "serif" }, alias => "\\textrm",
+    before_digest => { DefMacro!("\\f@family", "cm"); });
+  DefConstructor!("\\textsf@math{}", "<ltx:text _noautoclose='1'>#1</ltx:text>", mode => "text",
+    bounded      => true, font => { family => "sansserif" }, alias => "\\textsf",
+    before_digest => { DefMacro!("\\f@family", "cmss"); });
+  DefConstructor!("\\texttt@math{}", "<ltx:text _noautoclose='1'>#1</ltx:text>", mode => "text",
+    bounded      => true, font => { family => "typewriter" }, alias => "\\texttt",
+    before_digest => { DefMacro!("\\f@family", "cmtt"); });
+  DefConstructor!("\\textup@math{}", "<ltx:text _noautoclose='1'>#1</ltx:text>", mode => "text",
+    bounded      => true, font => { shape => "upright" }, alias => "\\textup",
+    before_digest => { DefMacro!("\\f@shape", ""); });
+  DefConstructor!("\\textit@math{}", "<ltx:text _noautoclose='1'>#1</ltx:text>", mode => "text",
+    bounded      => true, font => { shape => "italic" }, alias => "\\textit",
+    // Perl: `DefMacro('\f@shape', 'it')` (latex_constructs.pool.ltxml L5255) —
+    // `it`, not `i`. Both keys map to `italic` in FONT_SHAPE, so this is only
+    // visible to code that reads `\f@shape` textually; the sibling
+    // `\textsl@math`/`\textsc@math` already use Perl's `sl`/`sc`.
+    before_digest => { DefMacro!("\\f@shape", "it"); });
+  DefConstructor!("\\textsl@math{}", "<ltx:text _noautoclose='1'>#1</ltx:text>", mode => "text",
+    bounded      => true, font => { shape => "slanted" }, alias => "\\textsl",
+    before_digest => { DefMacro!("\\f@shape", "sl"); });
+  DefConstructor!("\\textsc@math{}", "<ltx:text _noautoclose='1'>#1</ltx:text>", mode => "text",
+    bounded      => true, font => { shape => "smallcaps" }, alias => "\\textsc",
+    before_digest => { DefMacro!("\\f@shape", "sc"); });
+  // `\f@family` is `\normalfont`'s `\rmdefault` (latex.ltx `\textnormal`);
+  // Perl's `cmtt` (latex_constructs.pool.ltxml:5267) contradicts its own
+  // serif font and, now that a size switch re-selects `\f@family`
+  // (dialect.rs), would turn `\textnormal{\small x}` typewriter.
+  DefConstructor!("\\textnormal@math{}", "<ltx:text _noautoclose='1'>#1</ltx:text>", mode =>
+  "text",   bounded => true, font => { family => "serif", series => "medium", shape => "upright"
+  }, alias => "\\textnormal",   before_digest => {
+    DefMacro!("\\f@family", "cmr");
+    DefMacro!("\\f@series", "m");
+    DefMacro!("\\f@shape",  "n"); });
+
+  // These really should be robust! which is a source of expand timing issues!
+  // The text branch closes with `\expandafter\egroup\fi`, as latex.ltx's
+  // `\DeclareTextFontCommand` does (`\hmode@bgroup…##1…\expandafter\egroup\fi`):
+  // an implicit end-group token, not a `}` character. A `\futurelet` scanner
+  // reading the argument's characters one by one (seqsplit's `\SQSPL@scan`)
+  // peeks the token after the last one; a catcode-2 `}` there made
+  // `\seqsplit{\texttt{infra\_sweep.py}}` loop to the conditional limit
+  // (arXiv 2605.04530; Perl's `{…}`, latex_constructs.pool.ltxml:5272-5281,
+  // loops the same once seqsplit loads). pdflatex converts it.
+  DefMacro!("\\textmd{}",     "\\ifmmode\\textmd@math{#1}\\else\\bgroup\\mdseries #1\\expandafter\\egroup\\fi",       protected => true);
+  DefMacro!("\\textbf{}",     "\\ifmmode\\textbf@math{#1}\\else\\bgroup\\bfseries #1\\expandafter\\egroup\\fi",       protected => true);
+  DefMacro!("\\textrm{}",     "\\ifmmode\\textrm@math{#1}\\else\\bgroup\\rmfamily #1\\expandafter\\egroup\\fi",       protected => true);
+  DefMacro!("\\textsf{}",     "\\ifmmode\\textsf@math{#1}\\else\\bgroup\\sffamily #1\\expandafter\\egroup\\fi",       protected => true);
+  DefMacro!("\\texttt{}",     "\\ifmmode\\texttt@math{#1}\\else\\bgroup\\ttfamily #1\\expandafter\\egroup\\fi",       protected => true);
+  DefMacro!("\\textup{}",     "\\ifmmode\\textup@math{#1}\\else\\bgroup\\upshape #1\\expandafter\\egroup\\fi",        protected => true);
+  DefMacro!("\\textit{}",     "\\ifmmode\\textit@math{#1}\\else\\bgroup\\itshape #1\\expandafter\\egroup\\fi",        protected => true);
+  DefMacro!("\\textsl{}",     "\\ifmmode\\textsl@math{#1}\\else\\bgroup\\slshape #1\\expandafter\\egroup\\fi",        protected => true);
+  DefMacro!("\\textsc{}",     "\\ifmmode\\textsc@math{#1}\\else\\bgroup\\scshape #1\\expandafter\\egroup\\fi",        protected => true);
+  DefMacro!("\\textnormal{}", "\\ifmmode\\textnormal@math{#1}\\else\\bgroup\\normalfont #1\\expandafter\\egroup\\fi", protected => true);
+
+  // Perl: latex_constructs.pool.ltxml:5315-5320
+  // \DeclareOldFontCommand{\cmd}{text-font-switch}{math-font-cmd}
+  // Defines \cmd to use text-font-switch in text mode, math-font-cmd in math mode — latex.ltx's
+  // `\DeclareRobustCommand#1{\@fontswitch{#2}{#3}}` (14309-14311). In maths that is the alphabet as
+  // a switch to the group's end (`\lx@math@alphabet@switch`, above), reverting as `\cmd`; Perl's
+  // bare `#3` read the next token as the alphabet's argument (`{\rm LP-HF}` → `\mathrm{L}P-HF`,
+  // witnesses jpsj2 cond-mat0510381 and the ptptex/paper/artikel1 classes).
+  DefPrimitive!("\\DeclareOldFontCommand{}{}{}", sub[(cmd, font, mathcmd)] {
+    // cmd contains a CS token like \bf; get the first token
+    let cmd_cs = *cmd.unlist_ref().first()
+      .ok_or("DeclareOldFontCommand: expected a CS token")?;
+    let mut math = vec![T_CS!("\\lx@math@alphabet@switch"), T_BEGIN!()];
+    math.extend(Explode!(cmd_cs.to_string()));
+    math.push(T_END!());
+    math.push(T_BEGIN!());
+    math.extend(mathcmd.unlist());
+    math.push(T_END!());
+    let math = Tokens::new(math);
+    // Move `font` and `math` directly into the closure capture —
+    // they're not used outside. Saves two Tokens clones at setup time.
+    DefMacro!(cmd_cs, None, ExpansionBody::Closure(Rc::new(move |_args| {
+      if lookup_bool_sym(pin!("IN_MATH")) {
+        Ok(math.clone())
+      } else {
+        Ok(font.clone())
+      }
+    })));
+    Ok(Vec::new())
+  });
+
+  // Perl L5428-5434: \DeclareTextFontCommand defines the command as a
+  // CONSTRUCTOR (non-expandable), digesting the font argument at
+  // digestion time in beforeDigest:
+  //   DefConstructorI($cmd, "{}",
+  //     "?#isMath(<ltx:text _noautoclose='1'>#1</ltx:text>)(#1)",
+  //     mode => 'text', bounded => 1, beforeDigest => sub { Digest($font); () });
+  // It is CRITICAL that this be a constructor, not an expandable macro
+  // expanding to `{<font> #1}`. natbib's `\lx@NAT@parselabel` `Expand!`s
+  // bibitem labels for-execution (full expansion). An expandable
+  // `\textcyr{…}` → `{\cyrfamily …}` would, during that expansion, run
+  // `\cyrfamily`→`\cyracc`, whose body ends with
+  // `\def\!{…\def\result{\@stressit}\fi\result}`; for-execution expansion
+  // of a `\def`'s replacement-text wrongly expands that body, invoking
+  // `\result`→`\@stressit`→`\futurelet\chartest\@stresschar`, which loops
+  // until the 650000 PushbackLimit fires (FATAL). As a constructor (the
+  // Perl form) `Expand!` leaves `\textcyr{…}` intact — the font is digested
+  // only when the constructor is actually digested. Witness 1803.11541
+  // (Cyrillic bibliography: amsfonts `cyracc.def` + `\DeclareTextFontCommand`
+  // `\textcyr` + natbib `\bibitem[{\textcyr{…\u\i…}}(1906)]{key}`); Perl
+  // converts it (282 KB), Rust looped to FATAL before this fix.
+  DefPrimitive!("\\DeclareTextFontCommand DefToken {}", sub[(cmd, font)] {
+    let cs = cmd;
+    let font_toks: Tokens = font;
+    let params = parse_parameters("{}", &cs, true)?;
+    DefConstructor!(cs, params,
+      "?#isMath(<ltx:text _noautoclose='1'>#1</ltx:text>)(#1)",
+      mode => "text", bounded => true,
+      before_digest => { Digest!(font_toks.clone())?; });
+  });
+
+  // Perl L5373: \newfont{cmd}{fontname} — legacy LaTeX font command
+  DefMacro!("\\newfont{}{}", "\\font#1=#2\\relax");
+  // Perl L5375: \normalcolor — default no-op (overridden by color.sty)
+  Let!("\\normalcolor", "\\relax");
+
+  // Perl L5364: \math@version default
+  DefMacro!("\\math@version", "normal");
+
+  // Perl latex_constructs.pool.ltxml L5290-5297: \mathversion switches the
+  // MATHFONT — `AssignValue(mathfont => LookupValue('mathfont')->merge(forcebold
+  // => N), 'local')` — exactly as \boldmath/\unboldmath do (plain_base.rs
+  // L748-762). It was using `MergeFont!`, which merges the current *text* `font`
+  // value, so `\mathversion{bold}` never reached the math font; and an unknown
+  // version fell to `_ => {}`, silently swallowed where Perl raises
+  // `Error('unexpected', …)`. Both now match Perl. (\mathversion has no
+  // `forbidMath`, unlike \boldmath/\unboldmath — Perl doesn't either.)
+  // The name is expanded, as latex.ltx:10545-10554 uses it only in `\csname mv@#1\endcsname` and
+  // `\edef\math@version{#1}`: figureversions.sty:169-179 (XCharter, via fontaxes) passes `\l_tmpa_str`
+  // (witnesses 2605.11518, 2605.12374, 2605.22763; Perl reads it unexpanded, but never raw-loads XCharter).
+  DefPrimitive!("\\mathversion Expanded", sub[(version)] {
+    let set_forcebold = |bold: bool| {
+      let mf = lookup_mathfont().unwrap_or_else(|| Rc::new(Font::math_default()));
+      let merged = mf.merge(Font { forcebold: Some(bold), ..Font::default() });
+      assign_value("mathfont", Stored::Font(Rc::new(merged)), Some(Scope::Local));
+    };
+    match version.to_string().trim() {
+      "bold" => set_forcebold(true),
+      "normal" => set_forcebold(false),
+      // a version registered by `\DeclareMathVersion` (sect08.rs) is
+      // selectable; it changes no font here
+      other if lookup_bool(&s!("MATH_VERSION_{other}")) => {},
+      other => { Error!("unexpected", other, s!("Unknown math version '{other}'")); },
+    }
+  });
+
+  //======================================================================
+  // C.15.3 Special Symbol
+  //======================================================================
+  DefMacro!("\\symbol{}", "\\char#1\\relax");
+
+  // These in LaTeX, but not in the book...
+  DefPrimitive!("\\textdollar", "$");
+  DefPrimitive!("\\textemdash", "\u{2014}"); // EM DASH
+  DefPrimitive!("\\textendash", "\u{2013}"); // EN DASH
+  DefPrimitive!("\\textexclamdown", "\u{00A1}"); // INVERTED EXCLAMATION MARK
+  DefPrimitive!("\\textquestiondown", "\u{00BF}"); // INVERTED QUESTION MARK
+  DefPrimitive!("\\textquotedblleft", "\u{201C}"); // LEFT DOUBLE QUOTATION MARK
+  DefPrimitive!("\\textquotedblright", "\u{201D}"); // RIGHT DOUBLE QUOTATION MARK
+  DefPrimitive!("\\textquotedbl", "\""); // plain ascii DOUBLE QUOTATION
+  DefPrimitive!("\\textquoteleft", "\u{2018}"); // LEFT SINGLE QUOTATION MARK
+  DefPrimitive!("\\textquoteright", "\u{2019}"); // RIGHT SINGLE QUOTATION MARK
+  DefPrimitive!("\\textsterling", "\u{00A3}"); // POUND SIGN
+  DefPrimitive!("\\textasteriskcentered", "*");
+  DefPrimitive!("\\textbackslash", "\u{005C}"); // REVERSE SOLIDUS
+  DefPrimitive!("\\textbar", "|");
+  DefPrimitive!("\\textbraceleft", "{");
+  DefPrimitive!("\\textbraceright", "}");
+  DefPrimitive!("\\textbullet", "\u{2022}"); // BULLET
+  DefPrimitive!("\\textdaggerdbl", "\u{2021}"); // DOUBLE DAGGER
+  DefPrimitive!("\\textdagger", "\u{2020}"); // DAGGER
+  DefPrimitive!("\\textparagraph", "\u{00B6}"); // PILCROW SIGN
+  // \textperiodcentered defined in `latex_constructs_rust_only.rs` (Perl
+  // uses it but never defines it — Perl-side gap noted in rust_only.rs).
+  DefPrimitive!("\\textsection", "\u{00A7}"); // SECTION SIGN
+  // Perl: DefPrimitive('\textcircled {}', sub { ... })
+  // Uses unicode_enclosed_alphanumerics table, falls back to combining circle U+20DD.
+  // `\textcircled` is a text accent (latex.ltx:10057, :14449-14450 `\UseTextAccent`), which typesets
+  // its argument under the circle, so the circle holds the text of the DIGESTED argument (in a
+  // group): `\textcircled{\small
+  // \arabic{enumi}}` is ①. Perl's `ToString($arg)` circles the raw tokens, "\small\arabic{enumi}⃝"
+  // (PERL-ORIGIN, KNOWN_PERL_ERRORS #361; enumitem `\textcircled{\arabic*}` labels, witness
+  // latex-via-exemplos). Repro: fonts-nfss/textcircled_circles_its_typeset_argument.
+  DefPrimitive!("\\textcircled {}", sub[(arg)] {
+    // `\hmode@bgroup` (omsenc.def:62, latex.ltx:9914): `\leavevmode\bgroup`, so a paragraph it
+    // starts runs `\everypar` before the argument. The argument is typeset in `\ooalign`'s
+    // `\hbox` (omsenc.def:64), restricted horizontal even in math: `$\textcircled{$C$}_1$`'s inner
+    // `$` opens a formula, not closes the outer one (1009.5713, 53 errors).
+    enter_horizontal();
+    begin_mode("restricted_horizontal")?;
+    let digested = digest(arg.clone())?;
+    end_mode("restricted_horizontal")?;
+    // the spacing around the text (`\hspace{-1.1mm} \small 1`, 2501.14912) is the circle's layout
+    let text = typeset_text(&digested, false)
+      .unwrap_or_else(|| digested.to_string())
+      .trim()
+      .to_string();
+    let content = unicode_enclosed_alphanumeric(&text)
+      .unwrap_or_else(|| format!("{}\u{20DD}", text));
+    let in_math = lookup_bool_sym(pin!("IN_MATH"));
+    let is_number = !text.is_empty() && text.chars().all(|c| c.is_ascii_digit());
+    let mut props = stored_map!();
+    if in_math {
+      props.insert("role", Stored::from(if is_number { "NUMBER" } else { "UNKNOWN" }));
+      props.insert("meaning", Stored::from(format!("circled-{}", text)));
+    }
+    Tbox::new(pin(&content), None, None,
+      Invocation!(T_CS!("\\textcircled"), vec![arg]),
+      props)
+  });
+  // From latex_constructs.pool.ltxml
+  DefAccent!("\\k", '\u{0328}', "\u{02DB}", below => true); // COMBINING OGONEK & OGONEK
+  DefPrimitive!("\\textless", "<");
+  DefPrimitive!("\\textgreater", ">");
+  DefPrimitive!("\\textcopyright", "\u{00A9}"); // COPYRIGHT SIGN
+  DefPrimitive!("\\textasciicircum", "^");
+  DefPrimitive!("\\textasciitilde", "~");
+  DefPrimitive!("\\textcompwordmark", ""); // ???
+  DefPrimitive!("\\textcapitalcompwordmark", ""); // ???
+  DefPrimitive!("\\textascendercompwordmark", ""); // ???
+  DefPrimitive!("\\textunderscore", "_");
+  // SYMBOL FOR SPACE;  Not really the right symbol!
+  DefPrimitive!("\\textvisiblespace", "\u{2423}");
+  DefPrimitive!("\\textellipsis", "\u{2026}"); // HORIZONTAL ELLIPSIS
+  DefPrimitive!("\\textregistered", "\u{00AE}"); // REGISTERED SIGN
+  DefPrimitive!("\\texttrademark", "\u{2122}"); // TRADE MARK SIGN
+  DefConstructor!("\\textsuperscript{}", "<ltx:sup>#1</ltx:sup>",  mode => "text");
+  // Perl L5424-5425: locked variant for \@makefnmark
+  DefConstructor!("\\@textsuperscript{}", "<ltx:sup>#1</ltx:sup>",
+    mode => "text", locked => true);
+  DefConstructor!("\\textsubscript{}", "<ltx:sub>#1</ltx:sub>",  mode => "text");
+  // This is something coming from xetex/xelatex ? Why define this way?
+  //DefConstructor!("\\realsuperscript{}', "<ltx:text yoffset='0.5em'
+  // _noautoclose='1'>#1</ltx:text>");
+  DefConstructor!("\\realsuperscript{}", "<ltx:sup>#1</ltx:sup>",  mode => "text");
+  DefPrimitive!("\\textordfeminine", "\u{00AA}"); // FEMININE ORDINAL INDICATOR
+  DefPrimitive!("\\textordmasculine", "\u{00BA}"); // MASCULINE ORDINAL INDICATOR
+  DefPrimitive!("\\SS", "SS"); // ?
+
+  DefMacro!("\\dag", "\\ifmmode{\\dagger}\\else\\textdagger\\fi");
+  DefMacro!("\\ddag", "\\ifmmode{\\ddagger}\\else\\textdaggerdbl\\fi");
+
+  // Real LaTeX (latex.ltx) defines `\sqrtsign` as a MACRO: `\def\sqrtsign{\radical"270370\relax}`.
+  // `\meaning\sqrtsign` is therefore `macro:->\radical "270370\relax ` — note the TWO catcode-12
+  // backslashes (`\radical`, `\relax`). mdwmath's catcode-tricky `\sq@readrad #1"#2\#3` parses
+  // exactly this: #1 up to `"` = `macro:->\radical `, #2 up to the `\` of `\relax` = `270370`,
+  // #3 up to `\relax`. LaTeXML had `\sqrtsign` as a 1-arg square-root *constructor*, whose meaning
+  // lacked that structure → `\sq@readrad` ran away consuming `\endgroup`, leaving `\` at catcode-12
+  // and corrupting every later `\def` (43 `#`-to-Stomach leaks; ~1080 canvas papers; SHARED w/ Perl).
+  // Match real LaTeX. `\sqrt` does its own construction; nothing in core calls `\sqrtsign{…}`.
+  TeX!(r#"\def\sqrtsign{\radical"270370\relax}"#);
+
+  DefPrimitive!("\\mathparagraph", "\u{00B6}");
+  DefPrimitive!("\\mathsection", "\u{00A7}");
+  DefPrimitive!("\\mathdollar", "$");
+  DefPrimitive!("\\mathsterling", "\u{00A3}");
+  DefPrimitive!("\\mathunderscore", "_");
+  DefPrimitive!("\\mathellipsis", "\u{2026}");
+
+  // Perl: plain_constructs.pool.ltxml — glyph pieces that also work as delimiters
+  DefMath!("\\arrowvert", None, "|", role => "VERTBAR");
+  DefMath!("\\Arrowvert", None, "\u{2225}", role => "VERTBAR");
+
+  // The following are glyph "pieces"...
+  DefPrimitive!("\\braceld", "\u{239D}"); //   left brace down part
+  DefPrimitive!("\\bracelu", "\u{239B}"); //   left brace up part
+  DefPrimitive!("\\bracerd", "\u{23A0}"); //   right brace down part
+  DefPrimitive!("\\braceru", "\u{239E}"); //   right brace up part
+
+  // Perl: plain_constructs.pool.ltxml
+  DefMath!("\\cdotp", None, "\u{22C5}", role => "MULOP");
+  DefMath!("\\ldotp", None, ".", role => "MULOP");
+  // Perl: latex_constructs.pool.ltxml — intop/ointop with dynamic scriptpos/mathstyle
+  DefMath!("\\intop", None, "\u{222B}", role => "INTOP", meaning => "integral",
+    dynamic_scriptpos => true, variablesize_op => true);
+  DefMath!("\\ointop", None, "\u{222E}", role => "INTOP", meaning => "contour-integral",
+    dynamic_scriptpos => true, variablesize_op => true);
+
+  // WHat are these? They look like superscripted parentheses, or combining accents!
+  // \lhook
+  // \rhook
+  Let!("\\gets", "\\leftarrow");
+
+  DefPrimitive!("\\lmoustache", "\u{23B0}");
+  DefPrimitive!("\\rmoustache", "\u{23B1}");
+  // Perl: plain_constructs.pool.ltxml
+  DefMath!("\\mapstochar", None, "\u{21A6}", role => "ARROW", meaning => "maps-to");
+  DefMath!("\\owns", None, "\u{220B}", role => "RELOP", meaning => "contains");
+
+  // \symbol lookup symbol in font by index?
+
+  // Perl: latex_constructs.pool.ltxml L5805
+  Let!("\\mathalpha", "\\relax");
+
+  // Perl latex_constructs.pool.ltxml L5937-5938:
+  // LaTeX now includes textcomp by default.
+  RequirePackage!("textcomp");
+
+  //======================================================================
+  // Perl latex_constructs.pool.ltxml L5941-5993: Case-changing
+  //======================================================================
+
+  DefMacro!(
+    "\\@uclclist",
+    r"\oe\OE\o\O\ae\AE\dh\DH\dj\DJ\l\L\ng\NG\ss\SS\th\TH"
+  );
+
+  DefPrimitive!("\\lx@prepare@case@mapping", {
+    assign_mapping("text_uppercase", "\\i ", Some(T_LETTER!("I")));
+    assign_mapping("text_uppercase", "\\j ", Some(T_LETTER!("J")));
+    // Perl (latex_constructs.pool L5546-5550):
+    //   my @pairs = $STATE->lookupDefinition(T_CS('\@uclclist'))
+    //                     ->getExpansion->unlist;
+    // — reads the RAW expansion body, NOT further expanded. Critical when
+    // the pair members (\ae, \oe, ...) are robust-wrapped: deep-expanding
+    // would unfold each to `\protect <cs-munged>`, shifting pair indices
+    // and mis-registering the case mapping.
+    let listed: Vec<Token> = match lookup_definition_stored(&T_CS!("\\@uclclist"))? {
+      Some(Stored::Expandable(exp)) => match exp.get_expansion() {
+        Some(ExpansionBody::Tokens(tks)) => tks.clone().unlist(),
+        _ => Vec::new(),
+      },
+      _ => Vec::new(),
+    };
+    // l3text's letter-like table (expl3-code.tex:37926-37952) starts from
+    // fixed `<upper> <lower>` constants and `\i`/`\j` -> I/J, then adds the
+    // `\@uclclist` pairs (`<lower> <upper>`) FIRST-wins at begin-document: a
+    // later pair for a command already mapped is skipped (37953-37988,
+    // `\cs_if_exist:cF` at 37965/37972). greek-fontenc lists
+    // defaults first (greek-fontenc.def:326-327 "Since 2022, \MakeUppercase
+    // expects the default for ambiguous mappings in first position"), so
+    // `\MakeLowercase{\textEpsilon}` is `\textepsilon`, not the later
+    // `\textvarepsilon`. Perl assigns every pair, last-wins.
+    const FIXED_UPPER_LOWER: [(&str, &str); 11] = [
+      ("\\AA", "\\aa"),
+      ("\\AE", "\\ae"),
+      ("\\DH", "\\dh"),
+      ("\\DJ", "\\dj"),
+      ("\\IJ", "\\ij"),
+      ("\\L", "\\l"),
+      ("\\NG", "\\ng"),
+      ("\\O", "\\o"),
+      ("\\OE", "\\oe"),
+      ("\\SS", "\\ss"),
+      ("\\TH", "\\th"),
+    ];
+    let mut pairs: Vec<(Token, Token)> = FIXED_UPPER_LOWER
+      .iter()
+      .map(|(upper, lower)| (T_CS!(*lower), T_CS!(*upper)))
+      .collect();
+    pairs.extend(
+      listed
+        .as_chunks::<2>()
+        .0
+        .iter()
+        .map(|&[lower, upper]| (lower, upper)),
+    );
+    // `\i`/`\j` (assigned above) are constants too: a pair for them loses.
+    let mut mapped_upper: std::collections::HashSet<String> =
+      ["\\i ", "\\j "].into_iter().map(String::from).collect();
+    let mut mapped_lower = std::collections::HashSet::new();
+    for (lower, upper) in pairs {
+      let lower_key = lower.with_str(|s| format!("{} ", s));
+      let upper_key = upper.with_str(|s| format!("{} ", s));
+      if mapped_upper.insert(lower_key.clone()) {
+        assign_mapping("text_uppercase", &lower_key, Some(upper));
+      }
+      if mapped_lower.insert(upper_key.clone()) {
+        assign_mapping("text_lowercase", &upper_key, Some(lower));
+      }
+    }
+  });
+
+  DefPrimitive!("\\AddToNoCaseChangeList DefToken", sub[(cs)] {
+    let key = cs.with_str(|s| s.trim_end().to_string());
+    assign_mapping("text_case_exclude", &key, Some(true));
+  });
+
+  DefMacro!("\\NoCaseChange {}", "#1", robust => true);
+
+  DefMacro!("\\lx@latex@changecase {} GeneralText", sub[(case, tokens)] {
+    let req_case = Expand!(case).to_string().to_lowercase();
+    Ok(Tokens::new(lx_change_case_tokens(&req_case, &tokens)?))
+  });
+
+  TeX!(
+    r"\AddToNoCaseChangeList{\NoCaseChange}%
+\AddToNoCaseChangeList{\label}%
+\AddToNoCaseChangeList{\ref}%
+\AddToNoCaseChangeList{\cite}%
+\AddToNoCaseChangeList{\ensuremath}%
+\AddToNoCaseChangeList{\@ensuremath}%
+\AddToNoCaseChangeList{\thanks}%
+\AddToNoCaseChangeList{\begin}%
+\AddToNoCaseChangeList{\end}%"
+  );
+
+  // Perl L5966-5993: \MakeUppercase, \MakeLowercase, \MakeTitlecase. They read the
+  // kernel's `O{} +m` (latex.ltx:22367-22378): the optional is the locale keys (`lang=`),
+  // whose language-specific mappings are not modelled; Perl's `[1]` printed them (KPE #370).
+  // The pre-2022 `\protected@edef\MakeUppercase#1{…}` wrappers read `[` as the argument; the
+  // kernel's expandable fronts follow.
+  // The group lets `\oe`/`\OE` as latex.ltx:22380-22393 does. Perl's
+  // `\def\i{I}\def\j{J}` (L5917) is gone: the case loop maps a bare `\i`/`\j`
+  // through the letter-like table, and the `\def`s reached the body of a
+  // `\newcommand` optional-argument command the loop stores unexpanded (56jn):
+  // `\MakeUppercase{\foo}` with `\foo` = `L\i st \oe uvre` gave "LIst œuvre",
+  // pdflatex "Lıst Œuvre".
+  // Pre-define the UTF@*octets@noexpand CSes that the bodies below
+  // unconditionally `\let` to `\@empty`. Without these the `\edef`
+  // partial-expansion auto-defines them as `<ltx:ERROR/>` (unexpected
+  // for a guard meant to prevent expansion within case-change). Real
+  // TeX's `\let<undef>\@empty` is a no-op without error; mirror that
+  // by stubbing them as `\@empty` ahead of `\edef`. inputenc.sty
+  // overrides these when utf8 encoding is active.
+  Let!("\\UTF@two@octets@noexpand", "\\@empty");
+  Let!("\\UTF@three@octets@noexpand", "\\@empty");
+  Let!("\\UTF@four@octets@noexpand", "\\@empty");
+  TeX!(
+    r"\protected\long\def\lx@MakeUppercase@robust[#1]#2{{%
+  \lx@prepare@case@mapping%
+  \def\({$}\let\)\(%
+  \let\oe\OE
+  \let\UTF@two@octets@noexpand\@empty
+  \let\UTF@three@octets@noexpand\@empty
+  \let\UTF@four@octets@noexpand\@empty
+  \edef\reserved@a{\lx@latex@changecase{upper}{#2}}%
+  \reserved@a
+}}
+\protected\long\def\lx@MakeLowercase@robust[#1]#2{{%
+  \lx@prepare@case@mapping%
+  \def\({$}\let\)\(%
+  \let\OE\oe
+  \let\UTF@two@octets@noexpand\@empty
+  \let\UTF@three@octets@noexpand\@empty
+  \let\UTF@four@octets@noexpand\@empty
+  \edef\reserved@a{\lx@latex@changecase{lower}{#2}}%
+  \reserved@a
+}}
+\protected\long\def\lx@MakeTitlecase@robust[#1]#2{{%
+  \lx@prepare@case@mapping%
+  \def\({$}\let\)\(%
+  \let\oe\OE
+  \let\UTF@two@octets@noexpand\@empty
+  \let\UTF@three@octets@noexpand\@empty
+  \let\UTF@four@octets@noexpand\@empty
+  \edef\reserved@a{\lx@latex@changecase{sentence}{#2}}%
+  \reserved@a
+}}"
+  );
+  // The kernel's are `\NewExpandableDocumentCommand {O{} +m}` fronts (latex.ltx:22367-22378) that
+  // re-brace what they read onto the e-TeX-protected `\MakeUppercase␣␣␣[#1]{#2}` (`\cs_new_protected`,
+  // :22380-22394; here `\lx@MakeUppercase@robust`): an unbraced argument (`\MakeUppercase\foo`) is
+  // read whole, and any `\edef` keeps the call (`\protected@edef\z{\MakeUppercase\foo}`, a plain
+  // `\edef\y{\MakeUppercase{abc}}`), as the pre-2022 `\protected@edef` wrappers did for the one
+  // argument.
+  // The fronts read their arguments by hand: a leading `[]` parameter is a `\newcommand`
+  // optional, which does not expand under `\protected@edef` (`optional_arg_protected`), where
+  // the kernel's expandable front does.
+  for (front, robust) in [
+    ("\\MakeUppercase", "\\lx@MakeUppercase@robust"),
+    ("\\MakeLowercase", "\\lx@MakeLowercase@robust"),
+    ("\\MakeTitlecase", "\\lx@MakeTitlecase@robust"),
+  ] {
+    DefMacro!(front, sub[_args] {
+      let locale = read_optional(None)?.unwrap_or_default();
+      let text = read_arg(ExpansionLevel::Off)?;
+      let mut out = vec![T_CS!(robust), T_OTHER!("[")];
+      out.extend(locale.unlist());
+      out.extend([T_OTHER!("]"), T_BEGIN!()]);
+      out.extend(text.unlist());
+      out.push(T_END!());
+      Ok(Tokens::new(out))
+    });
+  }
+
+  // Perl L5913,5916: fixltx2e defaults. `\em` is latex.ltx's (the format),
+  // which takes `\eminnershape` in a slanted font (`\fontdimen1\font>0pt`,
+  // latex.ltx:14048-14052): latex.ltx's `\upshape` (:14058), where Perl leaves
+  // it empty — emphasis in italic or slanted text would not show, now that a
+  // font's slant is its TFM's (56kr; DIVERGENCES #332).
+  DefMacro!("\\eminnershape", "\\upshape");
+  // latex.ltx:10243-10248: `\TextOrMath{t}{m}` expands to a `\protected` `\TextOrMath␣{t}{m}`, which chooses only when
+  // executed: at the start of an alignment cell TeX's lookahead stops at it, so it chooses after the cell's template
+  // has put TeX in math (`\begin{align}\TextOrMath{$L_c$}{L_c}…`, 2311.14468; Perl's one-stage `\ifmmode` chose the
+  // text branch there, latex_constructs.pool.ltxml:5864).
+  RawTeX!(
+    r"\expandafter\protected\expandafter\def\csname TextOrMath\space\endcsname{\ifmmode\expandafter\@secondoftwo\else\expandafter\@firstoftwo\fi}
+\edef\TextOrMath#1#2{\expandafter\noexpand\csname TextOrMath\space\endcsname{#1}{#2}}"
+  );
+
+  //======================================================================
+  // Semi-undocumented commands
+  // Perl: latex_constructs.pool.ltxml various locations
+  //======================================================================
+
+  // The kernel's peeking closures (`\@ifnext@n`, `\@ifstar`, `\@testopt`,
+  // and `\@ifnextchar` below) peek as they expand, where latex.ltx's peek by
+  // `\futurelet` behind an unexpandable `\let` (1756-1775, 1259-1260):
+  // `peeks_by_futurelet` has a number scan end at them instead
+  // (`gullet::scan_stops_at_futurelet_peek`).
+
+  // Hacky version matches multiple chars! but does NOT expand
+  DefMacro!("\\@ifnext@n {}{}{}", sub[(tokens,if_toks,else_toks)] {
+    let mut toks = VecDeque::from(tokens.unlist());
+    let mut read = Vec::new();
+
+    while let Some(t) = read_token()? {
+      // Stop as soon as we've matched the full token sequence —
+      // otherwise the `toks[0]` index panics on the next iteration
+      // (arxiv 1608.08252 hit this with a matching prefix followed
+      // by arbitrary tokens in the stream).
+      if toks.is_empty() {
+        read.push(t);
+        break;
+      }
+      if t == toks[0] {
+        toks.pop_front();
+        read.push(t);
+      } else {
+        read.push(t);
+        break;
+      }
+    }
+    let mut result = if toks.is_empty() {
+      if_toks.unlist()
+    } else {
+      else_toks.unlist()
+    };
+    // The matched/peeked tokens were read (brace-counted) and re-enter via
+    // our expansion: retract (tex.web back_input flavor).
+    retract_scanned_braces(&read);
+    result.extend(read);
+    Ok(Tokens::new(result))
+  }, peeks_by_futurelet => true);
+
+  // latex.ltx:1775 `\def\@ifstar#1{\@ifnextchar *{\@firstoftwo{#1}}}`, so it lets `\@let@token` as `\@ifnextchar`
+  // does ([`let_peeked_token`]).
+  DefMacro!("\\@ifstar {}{}", sub[(if_toks,else_toks)] {
+    let next_opt = read_non_space()?;
+    let_peeked_token(next_opt.as_ref());
+    if next_opt == Some(T_OTHER!("*")) {
+      Ok(if_toks)
+    } else {
+      let mut result = else_toks.unlist();
+      if let Some(next) = next_opt {
+        // `next` was read (brace-counted) and re-enters via our expansion:
+        // retract, tex.web back_input flavor (see gullet::retract_scanned_braces).
+        retract_scanned_brace(&next);
+        result.push(next);
+      }
+      Ok(Tokens::new(result))
+    }
+  }, peeks_by_futurelet => true);
+
+  DefMacro!("\\@dblarg {}", r"\kernel@ifnextchar[{#1}{\@xdblarg{#1}}");
+  DefMacro!("\\@xdblarg {}{}", r"#1[{#2}]{#2}");
+
+  // latex.ltx:1259-1260 `\long\def\@testopt#1#2{\kernel@ifnextchar[{#1}{#1[{#2}]}}`:
+  // the default goes in braced, so a `]` in it stays inside the argument
+  // (`\@testopt\oo{a]b}` reads `a]b`, pdflatex; unbraced it read `a`).
+  DefMacro!("\\@testopt{}{}", sub[(cmd, option)] {
+    if if_next(T_OTHER!("["))? {
+      Ok(cmd)
+    } else {
+      Ok(Tokens!(cmd.unlist(), T_OTHER!("["), T_BEGIN!(), option.unlist(), T_END!(),
+        T_OTHER!("]")))
+    }
+  }, peeks_by_futurelet => true);
+  TeX!(
+    r"
+  \def\@protected@testopt#1{%%
+    \ifx\protect\@typeset@protect
+      \expandafter\@testopt
+    \else
+      \@x@protect#1%
+    \fi}"
+  );
+
+  Let!("\\l@ngrel@x", "\\relax");
+  DefMacro!(
+    "\\@star@or@long{}",
+    r"\@ifstar{\let\l@ngrel@x\relax#1}{\let\l@ngrel@x\long#1}"
+  );
+
+  TeX!(
+    r"
+  \def\in@#1#2{%
+  \def\in@@##1#1##2##3\in@@{%
+    \ifx\in@##2\in@false\else\in@true\fi}%
+  \in@@#2#1\in@\in@@}
+  \newif\ifin@"
+  );
+
+  // The file name is expanded as `\set@curr@file` (latex.ltx) does, inside a
+  // `\csname` (`gullet::expand_as_csname_text`), as `\input` does it.
+  // The name's surrounding blanks are no part of it (latex.ltx `\set@curr@file` reads it as `\@firstofone#1`, an
+  // undelimited argument, and pdflatex finds `x.tex` for `\input{ x.tex}` and `\input{dir/x }`; `content::input`).
+  DefMacro!("\\IfFileExists{}{}{}", sub[(file, if_tks, else_tks)] {
+    let file_string = ::latexml_core::gullet::expand_as_csname_text(file)?.to_string();
+    let file_string = file_string.trim().to_string();
+    // latex.ltx:19794 file substitution applies before the existence test.
+    let file_string = substitute_file_request(&file_string).unwrap_or(file_string);
+    // Disk-search variant first (matches Perl FindFile default).
+    let found = find_file(&file_string, None).is_some()
+      // Then binding-only fallback (notex=true): pgf's
+      // `\IfFileExists{pgfsys-latexml.def}` and similar driver-file probes
+      // need to discover compiled-in bindings (.def/.sty/.cls registered
+      // via `latexml_package::package`). Without this fallback the
+      // notex=false disk search returns None for binding-only files,
+      // pgf bails with "Driver file ... not found", and the entire
+      // tikz/pgf rendering pipeline fails (11 PGF/tikz tests + 10k_sandbox
+      // pgf-using papers). A binding standing in for an author's file does
+      // not count: `\IfFileExists{arxiv.sty}` is false unless the paper
+      // ships it, as in TeX (`binding_counts_as_file`, 2606.27281).
+      || binding_counts_as_file(&file_string);
+    // latex.ltx:9670 `\IfFileExists@` re-`\def`s the selected branch
+    // (`\expandafter\def\expandafter\reserved@a\expandafter{\reserved@a{#2}{#3}}`),
+    // so a `\def\x##1{…}` written inside it is scanned as a replacement text
+    // and its `##` halves once (tex.web §473-476). Returning the branch
+    // verbatim (Perl latex_constructs.pool.ltxml:5692-5697 too) left the
+    // doubled `#` in `\react@`'s body — chemexec.sty:274-289, 20 PARAM
+    // errors per manual. `pack_parameters` is that halving.
+    // Guard: `perfect_kernel_batch56::iffileexists_branch_halves_doubled_parameters`.
+    if found {
+      let found_str = s!("\"{file_string}\" ");
+      def_macro(T_CS!("\\@filef@und"), None, Some(found_str.into()), None)?;
+      if_tks.pack_parameters()?
+    } else {
+      else_tks.pack_parameters()?
+    }
+  });
+
+  // \IfFormatAtLeastTF stub lives in `latex_constructs_rust_only.rs` (loads
+  // last). Removed duplicate identical-body DefMacro here.
+
+  DefMacro!("\\InputIfFileExists{}{}{}", sub[(file, if_tks, else_tks)] {
+    let file_tks = ::latexml_core::gullet::expand_as_csname_text(file)?;
+    // (surrounding blanks no part of the name, as `\IfFileExists`)
+    let file_string = file_tks.to_string().trim().to_string();
+    // latex.ltx:19794 file substitution applies before the existence test;
+    // `input()` re-applies it to the name we hand `\ltx@input`.
+    let file_string = substitute_file_request(&file_string).unwrap_or(file_string);
+    // Disk-search first (matches Perl FindFile default), then
+    // binding-only fallback (notex=true) so registered .ldf / .def
+    // bindings shipped via latexml_package are discoverable. Without
+    // the fallback, babel.sty L4175 `\InputIfFileExists{italian.ldf}`
+    // returns "not found" even though we ship `italian.ldf` as a
+    // compile-time binding — and babel errors with "Unknown option
+    // 'italian'". Witness: 38 papers across recent stages with
+    // missing-on-disk babel-language packages (italian/spanish/
+    // portuges/brazil/...). Not a binding standing in for an author's file
+    // (`binding_counts_as_file`, as `\IfFileExists`).
+    let found = find_file(&file_string, None).is_some()
+      || binding_counts_as_file(&file_string);
+    if found {
+      let found_str = s!("\"{file_string}\" ");
+      def_macro(T_CS!("\\@filef@und"), None, Some(found_str.into()), None)?;
+      Tokens!(if_tks.pack_parameters()?, T_CS!("\\@addtofilelist"), T_BEGIN!(), file_tks.clone(), T_END!(),
+        T_CS!("\\ltx@input"), T_BEGIN!(), file_tks, T_END!())
+    } else {
+      else_tks.pack_parameters()?
+    }
+  });
+
+  // Perl latex_constructs.pool.ltxml:5461-5468 tests `isDefinableLaTeX`: a CS whose
+  // prior definition came from the PLAIN pool is definable too (LaTeX redefines plain
+  // macros freely). Guard `perfect_kernel_batch56::ifdefinable_accepts_a_plain_macro`.
+  // The name is read as a `{}` argument: one token (spaces aside, as a DefToken) is the CS tested; more than one is
+  // tested as latex.ltx:1296-1305 does, by the `\string` of the whole argument, so `\@ifdefinable{\@nameuse{olA}}{…}`
+  // asks whether `\csname @nameuse{olA}\endcsname` is defined — it is not, and the definition runs. Perl's DefToken
+  // reads `\@nameuse` alone, which is defined: "undefined \olA" (1703.00683: 23 macros, `\olu`, `\calA`, …;
+  // KNOWN_PERL_ERRORS #1116). Guard `perfect_kernel_batch78s::ifdefinable_of_a_group_tests_its_string`.
+  DefMacro!("\\@ifdefinable {} {}", sub[(name, iftoken)] {
+    let mut significant = name.unlist_ref().iter().filter(|t| {
+      let cc = t.get_catcode();
+      cc != Catcode::SPACE && cc != Catcode::COMMENT
+    });
+    match (significant.next().copied(), significant.next()) {
+      (Some(token), None) if token.get_catcode() != Catcode::BEGIN => {
+        if is_definable_latex(&token)?.0 {
+          iftoken.unlist()
+        } else {
+          let token_str = token.to_string();
+          let mut s = ExplodeText!(token_str);
+          if token_str.starts_with('\\') {
+            s.remove(0);
+          }
+          DefMacro!(T_CS!("\\reserved@a"), None, Tokens::new(s));
+          vec![T_CS!("\\@notdefinable")]
+        }
+      },
+      (None, _) => {
+        Error!("expected", "DefToken", "Expected a DefToken parameter, found nothing.");
+        Vec::new()
+      },
+      _ => {
+        let mut tokens = TokenizeInternal!(r"\edef\reserved@a{\expandafter\@gobble\string").unlist();
+        tokens.extend(name.unlist());
+        tokens.extend(TokenizeInternal!(
+          r"}\@ifundefined\reserved@a{\edef\reserved@b{\expandafter\@carcube\reserved@a xxx\@nil}\ifx\reserved@b\@qend\@notdefinable\else\ifx\reserved@a\@qrelax\@notdefinable\else"
+        ).unlist());
+        tokens.extend(iftoken.unlist());
+        tokens.extend(TokenizeInternal!(r"\fi\fi}\@notdefinable").unlist());
+        tokens
+      },
+    }
+  });
+
+  Let!("\\@@ifdefinable", "\\@ifdefinable");
+
+  DefMacro!("\\@rc@ifdefinable DefToken {}", sub[(_token, iftoken)] {
+    Let!("\\@ifdefinable", "\\@@ifdefinable");
+    iftoken.unlist()
+  });
+
+  // latex.ltx:8969-8974 passes `\@eha` as the help text: `\@latex@error` takes two arguments (latex.ltx:8913), so
+  // without it (as in Perl) the help slot took the document's next token — a blank line's `\par` is "Paragraph ended
+  // before \@latex@error was complete" (tex.web §392, 62h; jlreq's `\NewBlockHeading{section}`). The one-line text is
+  // Perl's: `is_typesetting_only_message` keys on "already defined. Or name".
+  DefMacro!(
+    "\\@notdefinable",
+    None,
+    r###"\@latex@error{%
+    Command \@backslashchar\reserved@a\space
+    already defined.
+    Or name \@backslashchar\@qend... illegal, see p.192 of the manual}\@eha"###
+  );
+
+  // Sundry
+  // Perl latex_constructs.pool L5771: DefPrimitiveI('\textprime', undef, UTF(0xB4))
+  DefPrimitive!("\\textprime", "\u{00B4}"); // ACUTE ACCENT
+  Let!("\\endgraf", "\\par");
+  Let!("\\endline", "\\cr");
+  // Perl predefines `\fileversion` and `\filedate` empty (latex_constructs.pool.ltxml:5726-5727); latex.ltx defines
+  // neither, so a package's or document's `\newcommand` of them stands (OXIDIZED_DESIGN_DIVERGENCES #417).
+  DefMacro!("\\chaptername", "Chapter");
+  DefMacro!("\\partname", "Part");
+  // \appendixname already defined earlier in this file (DefMacro `Appendix` at the
+  // C.4.4 appendix block); avoid duplicate identical re-definition.
+  DefMacro!(
+    "\\sectiontyperefname",
+    "\\lx@sectionsign\\lx@ignorehardspaces"
+  );
+  DefMacro!(
+    "\\subsectiontyperefname",
+    "\\lx@sectionsign\\lx@ignorehardspaces"
+  );
+  DefMacro!(
+    "\\subsubsectiontyperefname",
+    "\\lx@sectionsign\\lx@ignorehardspaces"
+  );
+  DefMacro!(
+    "\\paragraphtyperefname",
+    "\\lx@paragraphsign\\lx@ignorehardspaces"
+  );
+  DefMacro!(
+    "\\subparagraphtyperefname",
+    "\\lx@paragraphsign\\lx@ignorehardspaces"
+  );
+
+  //======================================================================
+  // Perl latex_constructs.pool.ltxml L5796-5800: aux file stubs
+  //======================================================================
+  def_macro_noop("\\bibdata{}")?;
+  def_macro_noop("\\bibcite{}{}")?;
+  def_macro_noop("\\citation{}")?;
+  def_macro_noop("\\contentsline{}{}{}")?;
+  // latex.ltx `\newlabel` (`\@newl@bel r`): `\global\@namedef{r@<name>}{<value>}`, the record an `.aux` file gives a
+  // label, which `\ref` prints. Perl stubs it (LaTeXML reads no `.aux`), and a document's own — the labels of a
+  // companion paper written into its source (1608.05314's `\newlabel{cohadj:eq:horn-1}{{1.1.2}…}`, 2608.10941's
+  // supplement table), or made by its own label macros (0902.1427) — left every reference to them missing; pdflatex
+  // prints the record's text. Recorded as xr records another document's (sect11.rs `record_newlabel`).
+  // OXIDIZED_DESIGN_DIVERGENCES #896.
+  DefPrimitive!("\\newlabel{}{}", sub[(name, value)] {
+    let name = Expand!(name).to_string();
+    let name = name.trim();
+    record_newlabel(name, &value.clone().untex(), None);
+    DefMacro!(T_CS!(s!("\\r@{name}")), None, value, scope => Some(Scope::Global));
+  });
+
+  // Perl L5804-5806
+  Let!("\\mathgroup", "\\fam");
+
+  // Perl L5808-5821: nocorr, text@command, check@ic stubs
+  DefMacro!("\\nocorrlist", None, ".,");
+  Let!("\\nocorr", "\\relax");
+  Let!("\\check@icl", "\\@empty");
+  Let!("\\check@icr", "\\@empty");
+  Let!("\\curr@math@size", "\\@empty");
+  def_macro_noop("\\text@command{}")?;
+  def_macro_noop("\\check@nocorr@ Until:\\nocorr Until:\\@nil")?;
+  TeX!("\\newif\\ifmaybe@ic");
+  DefMacro!("\\maybe@ic", None, None);
+  DefMacro!("\\maybe@ic@", None, None);
+  DefMacro!("\\sw@slant", None, None);
+  DefMacro!("\\fix@penalty", None, None);
+
+  // Perl L5814: \mathhexbox
+  DefPrimitive!("\\mathhexbox {}{}{}", sub[(a, b, c)] {
+    let n = a.to_string().trim().parse::<i32>().unwrap_or(0) * 256
+      + b.to_string().trim().parse::<i32>().unwrap_or(0) * 16
+      + c.to_string().trim().parse::<i32>().unwrap_or(0);
+    let (glyph, _font) = font_decode(n, None, None);
+    if let Some(ch) = glyph {
+      vec![Tbox::new(pin_char(ch), None, None, Tokens!(), SymHashMap::default()).into()]
+    } else {
+      Vec::new()
+    }
+  });
+
+  // \extrafloats (modern LaTeX 2015+; no Perl pool source) lives in
+  // `latex_constructs_rust_only.rs`. Identical-body duplicate removed here.
+
+  //======================================================================
+  // Perl latex_constructs.pool.ltxml:5778-5830: language declarations
+  // Pre-declare hyphenation languages for babel's \iflanguage checks
+  //======================================================================
+  // Perl declares these so that the `\l@<language>` names babel checks for exist ("modern pdflatex seems to come
+  // with hyphenation tables predefined for many languages"), and its `\newlanguage` runs over every name: one the
+  // format already numbered is numbered again past the format's table. The format does number them — TeX Live's
+  // language.dat read into latex.ltx gives `\l@english` 0 (the language TeX starts in, `\language` 0) and
+  // `\l@nohyphenation` 2, and the dump keeps that table — so the re-allocation made `\l@english` 90: a package
+  // comparing `\language` with `\l@english` without babel took the wrong branch, and languages.sty's check
+  // ("Inconsistent language numbering", 0802.3014) failed where pdflatex's 0 passes. Only a name the format left
+  // undefined is declared (KPE #1168).
+  for name in [
+    "english",
+    "usenglishmax",
+    "USenglish",
+    "dumylang",
+    "nohyphenation",
+    "arabic",
+    "basque",
+    "bulgarian",
+    "coptic",
+    "welsh",
+    "czech",
+    "slovak",
+    "german",
+    "ngerman",
+    "danish",
+    "esperanto",
+    "spanish",
+    "catalan",
+    "galician",
+    "estonian",
+    "farsi",
+    "finnish",
+    "french",
+    "greek",
+    "monogreek",
+    "ancientgreek",
+    "croatian",
+    "hungarian",
+    "interlingua",
+    "ibycus",
+    "indonesian",
+    "icelandic",
+    "italian",
+    "latin",
+    "mongolian",
+    "dutch",
+    "norsk",
+    "polish",
+    "portuguese",
+    "pinyin",
+    "romanian",
+    "russian",
+    "slovenian",
+    "uppersorbian",
+    "serbian",
+    "swedish",
+    "turkish",
+    "ukenglish",
+    "ukrainiane",
+  ] {
+    let cs = T_CS!(s!("\\l@{name}"));
+    if lookup_meaning(&cs).is_none() {
+      digest(Tokens!(T_CS!("\\newlanguage"), cs))?;
+    }
+  }
+
+  // Perl latex_constructs: \protected@write — the prelude only; nothing is written. A label record written to the
+  // `.aux` file is written as latex.ltx writes it (`\let\protect\@unexpandable@protect`, `\write#1{#3}`), so that it
+  // is read back (tex_file_io.rs `\write`, sect11.rs `read_back_aux_text`): 2503.03625's
+  // `\customlabel{eq:TC-1}{TC-1}`, `\protected@write\@auxout{}{\string\newlabel{#1}{{#2}{\thepage}{#2}{#1}{}}}`,
+  // names what `\ref{eq:TC-1}` prints. No other record of the file is read back, and other writes stay unwritten.
+  DefPrimitive!("\\protected@write{Number}{}{}", sub[(port, prelude, tokens)] {
+    bgroup();
+    Let!("\\thepage", "\\relax");
+    let _digested = digest(prelude)?;
+    let port = port.value_of();
+    let to_aux = lookup_string(&s!("output_file:{port}")).ends_with(".aux");
+    let newlabel = T_CS!("\\newlabel");
+    if to_aux && tokens.unlist_ref().contains(&newlabel) {
+      Let!("\\protect", "\\@unexpandable@protect");
+      let mut write = vec![T_CS!("\\write")];
+      write.extend(ExplodeText!(port.to_string()));
+      write.push(T_BEGIN!());
+      write.extend(tokens.unlist());
+      write.push(T_END!());
+      digest(Tokens::new(write))?;
+    }
+    egroup()?;
+  });
+
+  // \@@end — saved TeX \end primitive
+  DefPrimitive!("\\@@end", {
+    if !lookup_bool_sym(pin!("INTERPRETING_DEFINITIONS")) {
+      flush();
+    }
+  });
+
+  //======================================================================
+  // Closure-backed primitives — Perl: latex_constructs.pool.ltxml L5645-5766.
+  // These MUST live in `_constructs` (always loaded), not `_base` (optional
+  // under Perl's LoadFormat mutual-exclusivity). Their closures cannot be
+  // serialized into the kernel dump; defining them here guarantees they
+  // exist whether or not the dump short-circuits `_base`.
+  //
+  // Relocated from `latex_base.rs` 2026-04-18 for Perl-parity and to
+  // unblock `LATEXML_DUMP_ONLY=1` paths (see SYNC_STATUS D0 v3.f).
+
+  // Perl L5645
+  DefPrimitive!("\\@onlypreamble{}", {
+    only_preamble("\\@onlypreamble")?;
+  });
+
+  // Perl L5646-5648
+  DefPrimitive!("\\GenericError{}{}{}{}", sub[(arg1,arg2,arg3,arg4)] {
+    // Perl passes ALL four args; make_generic_message peels the first as
+    // the message $type (the `(pkgname)` prefix) and joins the rest.
+    make_generic_message("\\GenericError", vec![arg1, arg2, arg3, arg4], "error")?;
+  });
+  DefPrimitive!("\\GenericWarning{}{}", sub[(arg1,arg2)] {
+    make_generic_message("\\GenericWarning", vec![arg1,arg2], "warn")?;
+  });
+  DefPrimitive!("\\GenericInfo{}{}", sub[(arg1,arg2)] {
+    make_generic_message("\\GenericInfo", vec![arg1,arg2], "info")?;
+  });
+
+  // `\ltx@hard@MessageBreak` is the literal newline target used by
+  // `make_generic_message` to convert `\MessageBreak`-separated lines
+  // in `\GenericInfo`/`\GenericWarning`/`\GenericError` messages.
+  // Originally defined in `latex_base.rs:287`, but `latex_base` is
+  // replaced by `latex_dump` in dump path — so the DefMacro doesn't
+  // run there and `\ltx@hard@MessageBreak` is undefined. When
+  // `make_generic_message` then calls `let_i(\MessageBreak,
+  // \ltx@hard@MessageBreak)`, the let-target is undefined → meaning
+  // becomes Stored::None → `\MessageBreak` becomes undefined for the
+  // remainder of the digestion. The next babel info message
+  // \ltx@hard@MessageBreak lives in `latex_constructs_rust_only.rs`
+  // (not in any Perl latex_*.pool.ltxml; covers both dump and NODUMP
+  // paths since rust_only.rs runs last).
+
+  // Perl L5650 — re-let `\MessageBreak` to `\relax` here, post-dump.
+  // Defensive parity with Perl's exact placement.
+  Let!("\\MessageBreak", "\\relax");
+
+  // Perl L5652 — `DefMacro` in Perl (not DefPrimitive), empty-body no-op.
+  def_macro_noop("\\@setsize{}{}{}{}")?;
+
+  // Perl L5654-5666 — kernel CSes the comment in latex_base.rs:572-575
+  // promised would live here. Without these, `\on@line` (used by
+  // `\@latex@error`/`\@warning` and our own `\@currenvline` block at
+  // L8219) and friends are auto-defined as `<ltx:ERROR/>`, leaking
+  // raw `#` parameters into the Stomach (witness 1610.05489 + ~17 more).
+  DefMacro!(
+    "\\hexnumber@ {}",
+    r"\ifcase\number#1 0\or 1\or 2\or 3\or 4\or 5\or 6\or 7\or 8\or 9\or A\or B\or C\or D\or E\or F\fi"
+  );
+  DefMacro!("\\on@line", r" on input line \the\inputlineno");
+  Let!("\\@warning", "\\@latex@warning");
+  Let!("\\@@warning", "\\@latex@warning@no@line");
+  def_macro_noop("\\G@refundefinedtrue")?;
+  DefMacro!(
+    "\\@nomath{}",
+    r"\relax\ifmmode\@font@warning{Command \noexpand#1invalid in math mode}\fi"
+  );
+  DefMacro!(
+    "\\@font@warning{}",
+    r"\GenericWarning{(Font)\@spaces\@spaces\@spaces\space\space}{LaTeX Font Warning: #1}"
+  );
+
+  // Perl L5765-5766
+  DefPrimitive!("\\makeatletter", {
+    AssignCatcode!('@', Catcode::LETTER, Some(Scope::Local));
+  });
+  DefPrimitive!("\\makeatother", {
+    AssignCatcode!('@', Catcode::OTHER, Some(Scope::Local));
+  });
+
+  // Perl L5670-5673 — font size stubs. Token-list bodies (Perl:
+  // `Tokens()` = empty) that swallow their args. Relocated from
+  // latex_base.rs 2026-04-18 for Perl-parity AND so they round-trip
+  // through the dump under LATEXML_DUMP_ONLY=1 (the dump reader's
+  // @-internal safety filter rejects public-CS macros, so public
+  // kernel CSes like `\fontsize` must live in always-loaded
+  // `_constructs.rs`).
+  // NFSS size state (OXIDIZED_DESIGN_DIVERGENCES #288; Perl's `\fontsize`
+  // swallows its arguments, `\f@size` is a constant `10`): `\fontsize` is the
+  // kernel's (latex.ltx:10527-10528), and `\set@fontsize` (latex.ltx:12585-
+  // 12601) records `\f@size`, `\f@baselineskip` and `\f@linespread` and arms
+  // `\size@update`, which the next `\selectfont` runs once. The update also
+  // merges `\f@size` into the current font (`\lx@fontsize@merge`), the size
+  // half of `\selectfont`'s font choice (latex.ltx:12576-12578): a document's
+  // `{\fontsize{24}{28}\selectfont …}` kept no size, and a raw class's
+  // `\normalsize` (scrsize11pt.clo, `\@setfontsize\normalsize\@xipt{13.6}`)
+  // left the text at 10 pt, so typearea's good-width measure warned "Bad type
+  // area settings!" in 765 KOMA-Script manuals (sweep #121). A `\selectfont`
+  // with no pending update (`\bfseries` after `\large`) leaves the size alone,
+  // as the kernel's deferral does. The update disarms itself first (the
+  // kernel does it last), so a `\selectfont` met inside its `\hbox` cannot
+  // run it again. The class bindings' size switches keep `\f@size` in step
+  // (binding/def/dialect.rs).
+  TeX!(
+    r"\protected\def\fontsize#1#2{\set@fontsize\baselinestretch{#1}{#2}}%
+\def\set@fontsize#1#2#3{%
+  \@defaultunits\@tempdimb#2pt\relax\@nnil
+  \edef\f@size{\strip@pt\@tempdimb}%
+  \@defaultunits\@tempskipa#3pt\relax\@nnil
+  \edef\f@baselineskip{\the\@tempskipa}%
+  \edef\f@linespread{#1}%
+  \let\baselinestretch\f@linespread
+  \def\size@update{%
+    \let\size@update\relax
+    \lx@fontsize@merge
+    \check@mathfonts
+    \baselineskip\f@baselineskip\relax
+    \baselineskip\f@linespread\baselineskip
+    \normalbaselineskip\baselineskip
+    \setbox\strutbox\hbox{\vrule\@height.7\baselineskip\@depth.3\baselineskip\@width\z@}}}%
+\let\size@update\relax"
+  );
+  // `\check@mathfonts` (latex.ltx:12622-12629; Perl's is a no-op) is the size
+  // half of the kernel's `\glb@settings` (:12603-12618): `\tf@size`,
+  // `\sf@size` and `\ssf@size` for `\f@size`, from fontmath.ltx's table
+  // (:75-86, replayed through the kernel's `\@DeclareMathSizes`, as our
+  // `\DeclareMathSizes` is Perl's no-op) or from `\calculate@math@sizes`. The
+  // math-font loading half has no counterpart here. The kernel runs it at
+  // every math entry (`\frozen@everymath`, :10568-10579); here it runs at load
+  // and after each size update, so `\@textsuperscript`'s and the logos'
+  // `\fontsize\sf@size…` (:17643, :10076) read a defined size, as they did
+  // while `\fontsize` swallowed its arguments (\hologo{AmSLaTeX} in
+  // program-doc, `\uhr` in uhrzeit-doc; OXIDIZED_DESIGN_DIVERGENCES #288).
+  // The kernel's math-size machinery comes with the dump (latex.ltx raw);
+  // without one (`LATEXML_NODUMP`) the base pool lacks it, so it is defined
+  // here from latex.ltx:10467, :10472-10489 and :10742-10754.
+  if lookup_definition(&T_CS!("\\@DeclareMathSizes"))?.is_none() {
+    TeX!(
+      r"\expandafter\newif\csname ifmath@fonts\endcsname \math@fontstrue
+\expandafter\ifx\csname @font@info\endcsname\relax\def\@font@info#1{}\fi
+\def\@DeclareMathSizes #1#2#3#4#5{%
+  \@defaultunits\dimen@ #2pt\relax\@nnil
+  \if $#3$%
+    \expandafter\let\csname S@\strip@pt\dimen@\endcsname\math@fontsfalse
+  \else
+    \@defaultunits\dimen@ii #3pt\relax\@nnil
+    \@defaultunits\@tempdima #4pt\relax\@nnil
+    \@defaultunits\@tempdimb #5pt\relax\@nnil
+    \toks@{#1}%
+    \expandafter\xdef\csname S@\strip@pt\dimen@\endcsname{%
+      \gdef\noexpand\tf@size{\strip@pt\dimen@ii}%
+      \gdef\noexpand\sf@size{\strip@pt\@tempdima}%
+      \gdef\noexpand\ssf@size{\strip@pt\@tempdimb}%
+      \the\toks@}%
+  \fi}%
+\gdef\calculate@math@sizes{%
+  \@font@info{Calculating\space math\space sizes\space for\space size\space <\f@size>}%
+  \dimen@\f@size \p@
+  \@tempdimb \defaultscriptratio \dimen@
+  \dimen@ \defaultscriptscriptratio \dimen@
+  \expandafter\xdef\csname S@\f@size\endcsname{%
+    \gdef\noexpand\tf@size{\f@size}%
+    \gdef\noexpand\sf@size{\strip@pt\@tempdimb}%
+    \gdef\noexpand\ssf@size{\strip@pt\dimen@}%
+    \noexpand\math@fontstrue}}%
+\def\defaultscriptratio{.7}%
+\def\defaultscriptscriptratio{.5}"
+    );
+  }
+  TeX!(
+    r"\@DeclareMathSizes{}{5}{5}{5}{5}%
+\@DeclareMathSizes{}{6}{6}{5}{5}%
+\@DeclareMathSizes{}{7}{7}{5}{5}%
+\@DeclareMathSizes{}{8}{8}{6}{5}%
+\@DeclareMathSizes{}{9}{9}{6}{5}%
+\@DeclareMathSizes{}{\@xpt}{\@xpt}{7}{5}%
+\@DeclareMathSizes{}{\@xipt}{\@xipt}{8}{6}%
+\@DeclareMathSizes{}{\@xiipt}{\@xiipt}{8}{6}%
+\@DeclareMathSizes{}{\@xivpt}{\@xivpt}{\@xpt}{7}%
+\@DeclareMathSizes{}{\@xviipt}{\@xviipt}{\@xiipt}{\@xpt}%
+\@DeclareMathSizes{}{\@xxpt}{\@xxpt}{\@xivpt}{\@xiipt}%
+\@DeclareMathSizes{}{\@xxvpt}{\@xxvpt}{\@xxpt}{\@xviipt}%
+\def\check@mathfonts{\ifx\glb@currsize\f@size\else
+  \expandafter\ifx\csname S@\f@size\endcsname\relax\calculate@math@sizes\fi
+  \csname S@\f@size\endcsname
+  \global\let\glb@currsize\f@size\fi}%
+\check@mathfonts"
+  );
+  // latex.ltx:14103-14107 guards the `\let` with `\ifx\protect\@typeset@protect`
+  // so `\@setfontsize` is a no-op inside `\protected@edef`; unguarded (Perl
+  // latex_constructs.pool:5622 identical, OOMs same-host) a raw class whose
+  // size commands route through it (tufte-common.def:368-405) re-expanded
+  // `\@currsize`→`\normalsize`→`\@setfontsize\normalsize…` without bound
+  // when pgf edef'd a `font=\normalsize` label — tikz-network manual
+  // PushbackLimit Fatal. `\@nomath`/`\fontsize…\selectfont` stay dropped.
+  // …and `\set@fontsize` (latex.ltx:12580-12599) sets `\baselineskip` from
+  // `#3` and rebuilds `\strutbox` as `.7\baselineskip`/`.3\baselineskip` —
+  // the part that keeps `\strut`-based measurements honest (fillwith's line
+  // coffins, see plain_base.rs `\strutbox`). `#3` is read through
+  // `\@defaultunits…pt\relax\@nnil` (latex.ltx:12588): a class passes a bare
+  // number there (jpsj2.cls:317 `\@setfontsize\normalsize\@xipt{18}`, KOMA's
+  // scrsize11pt.clo:99), and a bare `\baselineskip#3` warned "Illegal unit
+  // of measure" once per size switch — surfaced by K11 typesetting a raw
+  // class's `\@maketitle` (sweep #94: injpsj2 +6, TUDaPhD +3, BFHThesis +2).
+  // Now `\fontsize{#2}{#3}\selectfont`, as latex.ltx:14107 has it, inside the
+  // same guard (the `\set@fontsize` update above does the `\baselineskip` and
+  // `\strutbox` work, and reads `#3` through `\@defaultunits`). A preamble
+  // `\normalsize` also sets the nominal size (`\lx@nominal@fontsize`,
+  // latex_constructs_rust_only.rs).
+  DefMacro!(
+    "\\@setfontsize{}{}{}",
+    "\\ifx\\protect\\@typeset@protect\\let\\@currsize#1\\fontsize{#2}{#3}\\lx@nominal@fontsize{#1}\\selectfont\\fi"
+  );
+  // OXIDIZED_DESIGN #165: real LaTeX guarantees `\@currsize` is defined once
+  // `\begin{document}` has run `\normalsize` (whose class definition routes
+  // through `\@setfontsize`). Our class bindings define the size commands as
+  // font primitives that never call `\@setfontsize`, so `\@currsize` stayed
+  // permanently undefined (Perl 0.8.8 identical, same-host verified) and raw
+  // packages that restore the surrounding size via `\@currsize` errored —
+  // linguistics doc family (linguex, covington, philex, drs,
+  // movement-arrows; 5 TL doc bundles). Provide the invariant as an
+  // expansion-indirection default; a class that DOES route through
+  // `\@setfontsize` overwrites it with the exact size command. Kept a MACRO:
+  // a `\let` here would copy latex.ltx:14104's placeholder `\normalsize` (the
+  // "font size command not defined" error) before any class defines the real
+  // one. The `\ifx\@currsize\normalsize` identity (ltugboat's `\SMC` cascade,
+  // latex-doc-ptr.sty:203-215; Gemini L5) is established the way size10.clo:54
+  // does it — the class bindings EXECUTE `\normalsize` after defining the size
+  // commands, and the size switch itself lets `\@currsize` (dialect.rs).
+  DefMacro!("\\@currsize", "\\normalsize");
+  // latex.ltx:18349-18350 `\ifx\@normalsize\@undefined\let\@normalsize\normalsize\fi`
+  // — the size `.clo`s set it through `\@setfontsize\@normalsize…`, which the
+  // font-primitive size commands here bypass (UNAMThesis under report).
+  DefMacro!("\\@normalsize", "\\normalsize");
+
+  // Perl L5636-5643 — \@ifnextchar + \kernel@ifnextchar (closure-backed).
+  // Relocated from latex_base.rs 2026-04-18 to survive dump-only mode.
+  // latex.ltx:1756-1760 peeks by `\futurelet` behind an unexpandable `\let`,
+  // so a number scan ends at it (`peeks_by_futurelet`; egpeirce-doc lost its
+  // document to a `\psset` → `\XKV@ifstar` read inside `\ifodd`'s scan).
+  // Guard: `ifnextchar_scans::a_number_scan_ends_at_ifnextchar`. The peek is
+  // `\futurelet\@let@token\@ifnch`, so the next token is left in
+  // `\@let@token` for the branch to test ([`let_peeked_token`]).
+  DefMacro!("\\@ifnextchar DefToken {}{}", sub[(token, t_if, t_else)] {
+    let next = read_non_space()?;
+    let_peeked_token(next.as_ref());
+    let next_test = match next {
+      Some(ref n) => XEquals!(&token, n),
+      None => XEquals!(&token, &*TOKEN_END)
+    };
+    let which = if next_test { t_if } else { t_else };
+    // Real \@ifnextchar re-scans BOTH branches as macro bodies
+    // (`\def\reserved@a{#2}`, latex.ltx L1756-1760), which collapses `##`
+    // to `#`. `substitute_parameters` passes PARAM tokens through
+    // untouched (Perl Tokens.pm substituteParameters likewise — its
+    // L5639 pool comment "collapsing ## pairs" is stale), so a branch
+    // like `{\def\ATleftbranch##1##2{…}}` replayed the doubled params
+    // and the later \def leaked `#` to the stomach (adtreesdoc ×2,
+    // misdefined:# family; pdflatex clean, Perl shares the bug).
+    let mut result = which
+      .substitute_parameters(&[])
+      .pack_parameters()?
+      .unlist();
+    if let Some(t_next) = next {
+      // Read token re-enters via our expansion: retract its brace count
+      // (tex.web back_input flavor; see gullet::retract_scanned_braces).
+      retract_scanned_brace(&t_next);
+      result.push(t_next);
+    }
+    result
+  }, peeks_by_futurelet => true);
+  Let!("\\kernel@ifnextchar", "\\@ifnextchar");
+
+  // Re-establish the engine `\hline` override after dump load.
+  // Mirrors `TeX_Tables.pool.ltxml`'s `DefMacro('\hline', '\noalign{\@@alignment@hline}')`
+  // which Rust port has at `tex_tables.rs:418` (TeX.pool baseline). However:
+  // CLAUDE.md "Unconditional dump apply" → the dump's M-line for `\hline`
+  // (latex.ltx's `\def\hline{\noalign{...\hrule...\@xhline}}`) overwrites
+  // the engine version on dump-load. The macro expansion emits a literal
+  // `\hrule` inside `<td>` (Constructor at `tex_box.rs:1100`) instead of
+  // setting `border="t"` on the next row, breaking ~30 tabular tests
+  // (lettercase, ot1/t1/t2*/ts1/ly1, latin*, cp*, applemac, longtable,
+  // array, colortbls, tabular, supertabular, morse, cells, ntheorem, …).
+  //
+  // This is NOT a Rust-only divergence — same definition as
+  // `tex_tables.rs:418` and Perl's `TeX_Tables.pool.ltxml`. The only
+  // divergence is location: pragmatic late re-install after dump-load,
+  // since under unconditional-dump-apply the only way for the engine
+  // override to survive is to apply it AFTER the dump has been read.
+  DefMacro!("\\hline", r"\noalign{\@@alignment@hline}");
+
+  // Re-establish the engine `\documentstyle` impl after dump load. Same
+  // pattern as `\hline` above: under unconditional dump-apply the dump's
+  // `\documentstyle` body — `\input{latex209.def}\documentclass` — wins
+  // over the engine `Let \documentstyle = \lx@documentstyle@impl` from
+  // `tex_job.rs:279`. That dump body routes everything through
+  // `\documentclass`, which calls `load_class(name, opts,
+  // after=\AtBeginDocument\warn@unusedclassoptions)` — DROPPING the
+  // `\compat@loadpackages` after-hook our `\documentstyle` impl
+  // installs. Symptom: `\documentstyle[multicol,...]{revtex}` doesn't
+  // route the `multicol` option to `RequirePackage{multicol}`, leaving
+  // `\multicols`/`\multicolsep` undefined. Witness: cond-mat0109091.
+  //
+  // The Let-restore in `tex.rs` `\@load@latex@pool` only fires when an
+  // autoload trigger CS (\documentclass, \usepackage, …) is invoked
+  // AFTER engine init — but `\documentstyle` is not in the trigger
+  // list, so a paper whose first command is `\documentstyle` never
+  // gets the restore. Doing it here, at the end of the
+  // bootstrap → dump → constructs flow, guarantees our impl wins.
+  Let!("\\documentstyle", "\\lx@documentstyle@impl");
+  Ok(())
+}
+
+/// latex.ltx:1756-1771 `\@ifnextchar` peeks by `\futurelet\@let@token\@ifnch` (`\@xifnch` peeks again past a
+/// space): the first token after the spaces is left `\let` to `\@let@token` (a local assignment), which the branch taken
+/// may test. tikz-timing.sty:1156-1170 `\tikztimingtable@checkrow` takes `\@ifnextchar\end`'s false branch and asks
+/// `\ifx\@let@token\extracode`; without it each `\extracode` was read as a table row up to the end of the file
+/// (2409.18120). Perl's closure (latex_constructs.pool.ltxml:5636-5642) sets nothing: KPE #1165. Guard
+/// `perfect_kernel_batch79x::ifnextchar_leaves_the_next_token_in_let_token`.
+fn let_peeked_token(next: Option<&Token>) {
+  if let Some(next) = next {
+    let_i(&T_CS!("\\@let@token"), next, None);
+  }
+}
+
+/// The `(x, y)` of a `Pair` argument of a picture constructor; `(0, 0)` when
+/// absent (Perl's `ReadPair` returns undef for a missing `(`).
+fn pic_pair_arg(arg: Option<&Digested>) -> (f64, f64) {
+  match arg.map(Digested::data) {
+    Some(DigestedData::RegisterValue(RegisterValue::Pair(p))) => (p.x.0, p.y.0),
+    _ => (0.0, 0.0),
+  }
+}
+
+/// The value of a `{Float}` argument of a picture constructor (digested to the
+/// text of its digits, common/float.rs `be_digested`); 0 when absent.
+fn pic_float_arg(arg: Option<&Digested>) -> f64 {
+  arg
+    .map(|d| d.to_string().trim().parse().unwrap_or(0.0))
+    .unwrap_or(0.0)
+}
+
+/// The text a digested `\textcircled` argument typesets, for the circle, or `None` when the circle cannot hold it
+/// as text — then the caller circles the argument's string, its TeX reversion (Perl's `ToString`, KNOWN_PERL_ERRORS
+/// #361): ugly but complete. A box gives its string and a list its pieces in order. A whatsit gives: nothing when it
+/// is space-like (Perl's `isSpace`: the `\phantom{0}` padding of 2501.11185, `\hspace`, `\kern`) or a rule
+/// (`\rule`, the `\vrule` of `\strut`: arguments that are all dimensions or key-values, no text); its formula's body
+/// when it is inline math (`\textcircled{$\cap$}`, 1401.5657); else the text of its one box-valued argument that it
+/// shows (base_utilities.rs `shown_arguments`: no key, keyvals or position keyword) — the content of a box constructor (`\raisebox{-0.9pt}{1}` the `1`, `\mbox`, `\hbox`,
+/// `\fbox`; the `\newcommand\circled[1]{\textcircled{\raisebox{-0.9pt}{#1}}}` idiom, 27 of the 30k sample, sel78k;
+/// 2104.12292, 2110.15350). `None` for anything whose text is not one run of characters: a whatsit inside a formula
+/// (a script, `\frac`, `\sqrt`, an accent, `\overset`, `\mathbb`: `$q_0$` circled as "q0" lost its subscript,
+/// 2508.14614), a whatsit with more than one box-valued argument (`\scalebox{.8}{3}`'s factor is a box too) and an
+/// environment body. A whatsit with no content argument gives its own string: none for `\label{q}`, the reversion
+/// for `\ref{s}` (whose number is not known while digesting) and `\ldots`. Repros:
+/// fonts-nfss/textcircled_of_a_box_circles_its_text, fonts-nfss/textcircled_of_a_formula_keeps_its_source.
+fn typeset_text(digested: &Digested, in_formula: bool) -> Option<String> {
+  match digested.data() {
+    DigestedData::List(list) => list
+      .borrow()
+      .boxes
+      .iter()
+      .map(|b| typeset_text(b, in_formula))
+      .collect(),
+    DigestedData::Whatsit(whatsit) => {
+      let whatsit = whatsit.borrow();
+      // a space-like whatsit (Perl's `isSpace`: `\phantom`, `\hphantom`, `\mathstrut`) shows no text
+      if whatsit.get_property_bool("isSpace") {
+        return Some(String::new());
+      }
+      // a script, a fraction, a root, an accent or a font switch in a formula is no run of characters
+      if in_formula {
+        return None;
+      }
+      if let Ok(Some(body)) = whatsit.get_body() {
+        // a formula's body is its text; an environment's is not
+        let is_formula = matches!(body.data(), DigestedData::List(list)
+          if list.borrow().mode == Some(TexMode::Math));
+        return if is_formula {
+          typeset_text(&body, true)
+        } else {
+          None
+        };
+      }
+      // the arguments it shows as text, by their parameter types: never a key (`\ref{s}`'s label), keyvals or a
+      // position keyword (`\makebox[0pt][c]{2}`'s `c`, 2501.11185)
+      let shown = shown_arguments(&whatsit);
+      let args = whatsit.get_args();
+      let present: Vec<(usize, &Digested)> = args
+        .iter()
+        .enumerate()
+        .filter_map(|(i, arg)| Some((i, arg.as_ref()?)))
+        .collect();
+      let is_box = |arg: &Digested| {
+        matches!(
+          arg.data(),
+          DigestedData::TBox(_) | DigestedData::List(_) | DigestedData::Whatsit(_)
+        )
+      };
+      // a rule (`\rule{1pt}{1pt}`, `\strut`'s `\vrule height…`): dimensions and key-values only, no text
+      if !present.is_empty()
+        && present.iter().all(|(_, arg)| {
+          matches!(
+            arg.data(),
+            DigestedData::RegisterValue(_) | DigestedData::KeyVals(_)
+          )
+        })
+      {
+        return Some(String::new());
+      }
+      let mut content = present
+        .iter()
+        .filter(|(i, arg)| is_box(arg) && shown.get(*i).copied().unwrap_or(true));
+      match (content.next(), content.next()) {
+        (Some((_, arg)), None) => typeset_text(arg, false),
+        // no content argument: the whatsit's own string (`\label{q}` none, `\ref{s}` its reversion)
+        (None, _) => Some(digested.to_string()),
+        _ => None,
+      }
+    },
+    DigestedData::RegisterValue(_) | DigestedData::KeyVals(_) | DigestedData::Comment(_) => {
+      Some(String::new())
+    },
+    DigestedData::TBox(_) => Some(digested.to_string()),
+    _ => None,
+  }
+}
+
+/// Perl `picProperties(pt => PairList(picScale(p1), picScale(p2),
+/// picScale(p3)))` for `\qbezier` and `\bezier` (latex_constructs.pool.ltxml
+/// :5027-5039): the three points, scaled by `\unitlength`, in px (Perl stores
+/// pt, `&ptValue(#pt)`), with the line thickness and colour; and the point
+/// count as `npoints`, for Perl's `?#1(displayedpoints='#1')`. Perl's test is
+/// the argument's string (Constructor/Compiler.pm:166), false for "0", where
+/// the Rust template's `?#1` holds for any argument given: `\qbezier[0]` and a
+/// count-less `\bezier(…)` (`\lx@pic@bezier{0}`) draw solid, as in Perl.
+fn pic_bezier_properties(
+  count: Option<&Digested>,
+  points: &[Option<Digested>],
+) -> Result<SymHashMap<Stored>> {
+  let unit = unitlength_pt()?;
+  let thick = match lookup_register("\\@wholewidth", Vec::new())? {
+    Some(RegisterValue::Dimension(d)) => d.pt_value(None),
+    _ => 0.4,
+  };
+  let points = points
+    .iter()
+    .map(|point| {
+      let (x, y) = pic_pair_arg(point.as_ref());
+      format!(
+        "{},{}",
+        fmt_px(px_value(x * unit)),
+        fmt_px(px_value(y * unit))
+      )
+    })
+    .collect::<Vec<_>>()
+    .join(" ");
+  let mut map = stored_map!(
+    "points" => Stored::String(pin(points)),
+    "thick"  => Stored::String(pin(format!("{thick}"))),
+    "color"  => "#000000"
+  );
+  if let Some(count) = count
+    .map(|c| c.to_string())
+    .filter(|c| !c.is_empty() && c != "0")
+  {
+    map.insert("npoints", Stored::String(pin(count)));
+  }
+  Ok(map)
+}
+
+/// The font `\selectfont` puts in force over `base`: LaTeX's `\f@family`, `\f@series` and `\f@shape` merged in
+/// (Perl latex_constructs.pool.ltxml L5204-5222), without assigning it, so pgf's `\pgfmath@selectfont` reads the same
+/// font (pgfmath_code_tex.rs `pgfmath_font`). An unknown family is tried as an encoding (`LoadFontMap($family)`, bbding's
+/// `\dingfamily`), then as `\wrong@fontshape`'s encoding defaults; `report` announces an unrecognized family, series
+/// or shape once per document, as `\selectfont` does.
+pub fn nfss_selected_font(base: &Font, report: bool) -> Result<Font> {
+  let family = Expand!(T_CS!("\\f@family")).to_string();
+  let mut series = Expand!(T_CS!("\\f@series")).to_string();
+  let mut shape = Expand!(T_CS!("\\f@shape")).to_string();
+  let mut font = base.clone();
+  // The merges take the codes as they are: they ARE the NFSS state (content.rs `merge_selected_font`).
+  if let Some(sh) = font::lookup_font_family(&family) {
+    font = font.merge_ref(sh);
+  } else if load_font_map(&family).is_some() {
+    // Special case hack: Tentatively treat family as the encoding!
+    // (typically "U" encoding)
+    font = font.merge_ref(&fontmap!(encoding => family));
+  } else if let Some([default_family, default_series, default_shape]) =
+    undeclared_family_defaults(&family)?
+  {
+    // latex.ltx `\wrong@fontshape`: no shape of a family LaTeX does not know is defined, so the shape, the series
+    // and the family all become the encoding's defaults (an unknown family left pgf's `\nullfont` in force and the
+    // node text was dropped: `\usefont{T1}{verdana}{m}{n}`, pgfPT.colorSchemes.info).
+    if report && !already_reported(&s!("reported_undefined_font_family_{family}")) {
+      let message = s!("Font family {family:?} undefined; using {default_family:?}.");
+      Info!("unexpected", family, message);
+    }
+    if let Some(sh) = font::lookup_font_family(&default_family) {
+      font = font.merge_ref(sh);
+    }
+    series = default_series;
+    shape = default_shape;
+  } else if report && !already_reported(&s!("reported_unrecognized_font_family_{family}")) {
+    let message = s!("Unrecognized font family {:?}.", family);
+    Info!("unexpected", family, message);
+  }
+  // A family named what the font table does not map keeps the font in force, but `\nullfont` holds no characters, so
+  // `\selectfont` leaves it, on the serif `\lx@normalfont@base` falls back to (`\usepackage[default]{opensans}`'s
+  // `\familydefault` = `opensans-LF`, whose `.fd` LaTeXML does not read, in a pgf node, pgf's `\nullfont` regime: prerex's
+  // `chart` manual lost every cell, silently). pgf's own next `\nullfont` keeps text at picture level dropped.
+  if font.get_family().is_some_and(|family| family == "nullfont") {
+    font = font.merge_ref(&fontmap!(family => "serif"));
+  }
+  if let Some(sh) = font::lookup_font_series(&series) {
+    font = font.merge_ref(sh);
+  } else if report && !already_reported(&s!("reported_unrecognized_font_series_{series}")) {
+    let message = s!("Unrecognized font series {:?}.", series);
+    Info!("unexpected", series, message);
+  }
+  if let Some(sh) = font::lookup_font_shape(&shape) {
+    font = font.merge_ref(sh);
+  } else if report && !already_reported(&s!("reported_unrecognized_font_shape_{shape}")) {
+    let message = s!("Unrecognized font shape {:?}.", shape);
+    Info!("unexpected", shape, message);
+  }
+  // An encoding with no map of its own decodes through OT1 (`\lx@fontencoding`, tex_fonts.rs, which keeps its name
+  // for `\f@encoding`). A family with a map of its own under it is that font's layout, so the font takes the named
+  // encoding back and decodes through the family's map: `\usefont{U}{bbold}{m}{n}` is bbold's blackboard
+  // (`U_blackboard`, bbold_sty.rs), as `\bbfamily` is. OXIDIZED_DESIGN_DIVERGENCES #914.
+  let unmapped = lookup_string_from_sym(pin!("lx@fontencoding@unmapped"));
+  if !unmapped.is_empty()
+    && font
+      .get_encoding()
+      .is_some_and(|encoding| encoding == "OT1")
+    && let Some(family) = font.get_family()
+    && lookup_value(&s!("{unmapped}_{family}_fontmap")).is_some()
+  {
+    font = font.merge_ref(&fontmap!(encoding => unmapped));
+  }
+  Ok(font)
+}
+
+/// The encoding's default family, series and shape when LaTeX does not know `family`: neither declared
+/// (`\<enc>+<family>`, `\DeclareFontFamily`) nor loadable (`<enc><family>.fd`, lowercased or as written), which latex.ltx
+/// `\try@load@fontshape` (:10605-10620) checks before `\wrong@fontshape` (:10689-10705) substitutes from `\D@<enc>`
+/// (`\DeclareFontSubstitution`). `\D@<enc>` runs in a group, as in `\define@newfont` (:10593-10603), so `\f@family`
+/// and the `\default@` macros keep their values. `None` when the family is known or the encoding has no defaults.
+fn undeclared_family_defaults(family: &str) -> Result<Option<[String; 3]>> {
+  let encoding = Expand!(T_CS!("\\f@encoding")).to_string();
+  let defaults = T_CS!(s!("\\D@{encoding}"));
+  if lookup_meaning(&defaults).is_none()
+    || lookup_meaning(&T_CS!(s!("\\{encoding}+{family}"))).is_some()
+  {
+    return Ok(None);
+  }
+  // `\try@load@fontshape` inputs `<enc><family>.fd` lowercased, else as written (:10617-10619): autoinst families are
+  // mixed-case (`OT1LinuxLibertineT-TLF.fd`, `T1Nunito-TOsF.fd`). The lookup is remembered, as the kernel's
+  // `\global\let\<enc>+<family>\@empty` does.
+  let fd = s!("{encoding}{family}.fd");
+  let fd_found_key = s!("fd_found:{fd}");
+  let fd_found = match lookup_value(&fd_found_key) {
+    Some(Stored::Bool(found)) => found,
+    _ => {
+      let found = find_file(&fd.to_lowercase(), None).is_some() || find_file(&fd, None).is_some();
+      assign_value(&fd_found_key, found, Some(Scope::Global));
+      found
+    },
+  };
+  if fd_found {
+    return Ok(None);
+  }
+  push_frame();
+  let codes = (|| -> Result<[String; 3]> {
+    digest(Tokens!(defaults))?;
+    Ok([
+      Expand!(T_CS!("\\default@family")).to_string(),
+      Expand!(T_CS!("\\default@series")).to_string(),
+      Expand!(T_CS!("\\default@shape")).to_string(),
+    ])
+  })();
+  pop_frame()?;
+  codes.map(Some)
+}

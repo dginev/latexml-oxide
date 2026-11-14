@@ -1,0 +1,18 @@
+% witness: 2303.05792 (jinstpub, sixteen `$^{1,2}$`-marked names, one `\affiliation{$^{1}$CERN, Switzerland, $^{2}$…}`)
+% oracle:  pdflatex (TL 2025, 2303.05792's jinstpub.sty): "Ann Able1,2 , Bob Baker1 , Cy Cole3", "1 Univ A, Town A, 2 Univ
+%          B, Town B, 3 Univ C, Town C", "E-mail: ann@a.org"
+% engines: rust 97c = the reading right, not written: the whole line Cy Cole's
+% expect:  0 errors, 0 warnings; jinstpub written (brief 97e): each piece its marked names', the e-mail Ann Able's
+% status:  RED (97c) -> GREEN (97e) — perfect_kernel_batch97e::jheppub_family_is_written
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{jinstpub}
+\title{T}
+\author{Ann Able$^{1,2}$, Bob Baker$^{1}$, Cy Cole$^{3}$}
+\affiliation{$^{1}$Univ A, Town A, $^{2}$Univ B, Town B, $^{3}$Univ C, Town C}
+\emailAdd{ann@a.org}
+\abstract{Ab.}
+\begin{document}
+\maketitle
+Body.
+\end{document}

@@ -1,0 +1,13 @@
+% revtex4-2.cls is no article: its own page sets `\textwidth` (468pt here). The binding loads article and passes it the
+% options it does not declare, so `[12pt]` reaches article's size file (OXIDIZED_DESIGN_DIVERGENCES #1020): 390pt
+% (345pt before W2F2), neither the class's; `[12pt]{aa}` and `[12pt]{svjour3}` stay 345pt.
+% witness: synthetic (review revW2b sibling, W2F2)
+% oracle:  pdflatex 0 errors: TEXTWIDTH = 468.0pt
+% engines: rust=0 (W2F2: 390.0pt; head 0102466f6d: 345.0pt)
+% expect:  0 errors; TEXTWIDTH = 468.0pt
+% status:  RED
+% moves:   post-merge
+\documentclass[12pt]{revtex4-2}
+\begin{document}
+TEXTWIDTH = \the\textwidth
+\end{document}

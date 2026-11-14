@@ -1,0 +1,31 @@
+% witness: 85a's rule (a name line under a name's lines starts the next author) misses a person's name with an initial
+%          over an institution in two shapes: the line above it is a place that reads as a name (`University of X \\
+%          Costa Rica \\ Bob B. Baker \\ Institute of Y`: the stacked-run veto reads "Costa Rica" as a name over
+%          "Bob B. Baker", the 85a r2 review's finding 5b, probe w4), and the institution under it opens with a head
+%          noun and its adjective before the first comma (`Bob B. Baker \\ Imperial College, London`, `Technical
+%          University, Munich`: `continues_the_line` reads them as the name line's institution going on, its finding
+%          6, probes x1, x2). Missed gains, the int114a reading kept: a SYNC_STATUS residual
+% oracle:  pdflatex 0 errors: one centred column per group, each name over its lines
+% engines: rust int114a, 85a r2, r3, r4 = one creator per group, the second name among its lines
+% expect:  0 errors, 0 warnings; six creators, each with its own lines
+% status:  RED (int114a, 85a r3, 85a r4)
+% preload: ar5iv.sty
+\documentclass{article}
+\title{T}
+\author{Ann Able \\
+University of X \\
+Costa Rica \\
+Bob B. Baker \\
+Institute of Y
+\and Cat Cole \\
+University of X \\
+Dan D. Dorn \\
+Imperial College, London
+\and Eve Eads \\
+University of X \\
+Fay F. Fox \\
+Technical University, Munich}
+\begin{document}
+\maketitle
+Text.
+\end{document}

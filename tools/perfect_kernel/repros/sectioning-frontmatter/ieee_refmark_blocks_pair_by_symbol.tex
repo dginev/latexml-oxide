@@ -1,0 +1,19 @@
+% A block marked with `\IEEEauthorrefmark` alone: the names print the symbols (`∗‡`), every blockA line pairs with the
+% names its mark labels, and the marked legend line is its carriers' note marked with the symbol it prints (`‡`).
+% witness: 2311.03600, 2410.12184, 2205.00125
+% oracle:  pdflatex 0 errors: "Ann Able∗‡ , Bob Bell†‡ , Cat Cole∗", "∗ Univ A, City A", "† Univ B, City B", "‡ These authors contributed equally"
+% engines: rust int134b = 0 errors; names print "13", "23", "1", the legend note's mark "3"; perl = `{1}` leaks as text
+% expect:  0 errors, 0 warnings; Ann Univ A + note ‡, Bob Univ B + note ‡, Cat Univ A
+% status:  RED (int134b) -> GREEN (106b)
+% preload: ar5iv.sty
+\documentclass[conference]{IEEEtran}
+\begin{document}
+\title{Block marks}
+\author{\IEEEauthorblockN{Ann Able\IEEEauthorrefmark{1}\IEEEauthorrefmark{3}\thanks{Supported by Grant 1.},
+Bob Bell\IEEEauthorrefmark{2}\IEEEauthorrefmark{3}, Cat Cole\IEEEauthorrefmark{1}}\\
+\IEEEauthorblockA{\IEEEauthorrefmark{1}Univ A, City A}\\
+\IEEEauthorblockA{\IEEEauthorrefmark{2}Univ B, City B}\\
+\IEEEauthorblockA{\IEEEauthorrefmark{3}These authors contributed equally}}
+\maketitle
+Text.
+\end{document}

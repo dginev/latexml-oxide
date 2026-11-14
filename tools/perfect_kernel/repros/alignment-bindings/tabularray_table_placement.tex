@@ -1,0 +1,42 @@
+% A long or tall tabularray table is one box placed where it is written (tabularray.sty:6384-6474): its
+% caption, table and notes stay together — in a quote, a footnote, a tabular cell, `\fbox`,
+% `\resizebox` (57cp review: a float opened there moved out of it and left the box empty), a
+% threeparttable (the caption had split from its table), a longtable cell (longtable's row caption
+% swallowed the table); a long table after text ends the paragraph (:6550 `\par`) and stands as the
+% table; a table in a table's cell has its own caption; a hidden caption keeps the number a `\ref`
+% reads (:6457-6466).
+% witness: 57cp reviews 1-2 (rev57cp, rev57cp2 probes). Guard:
+%   perfect_kernel_batch57::tabularray_table_placement.
+% status:  GREEN (57cp)
+% oracle:  pdflatex 0 errors.
+% engines: rust 57co2: no caption or notes; 57cpe: tables moved out of quotes/boxes, longtable cell
+%          table lost, threeparttable caption split, "Ref ." for the hidden caption.
+% expect:  0 errors, 0 warnings.
+\documentclass{article}
+\usepackage{graphicx,longtable,threeparttable,tabularray}
+\NewTblrTheme{naked}{\SetTblrTemplate{head}{empty}}
+\begin{document}
+\begin{quote}
+Quote \begin{talltblr}[caption={In quote}]{colspec={ll}} A & B \\ \end{talltblr} end.
+\end{quote}
+Text\footnote{Note \begin{talltblr}[caption={In note}]{colspec={ll}} C & D \\ \end{talltblr} end.}
+\fbox{\begin{talltblr}[caption={In fbox}]{colspec={ll}} E & F \\ \end{talltblr}}
+\resizebox{0.5\linewidth}{!}{\begin{talltblr}[caption={Scaled}, note{a}={Scaled note.}]{colspec={ll}} G & H \\ \end{talltblr}}
+\begin{tabular}{l}
+\begin{talltblr}[caption={In cell}]{colspec={ll}} I & J \\ \end{talltblr} \\
+\end{tabular}
+\begin{threeparttable}
+\begin{talltblr}[caption={In threeparttable}]{colspec={ll}} K & L \\ \end{talltblr}
+\end{threeparttable}
+\begin{longtable}{l}
+\begin{talltblr}[caption={In longtable}]{colspec={ll}} M & N \\ \end{talltblr} \\
+\end{longtable}
+Before the long table.
+\begin{longtblr}[caption={Long after text}]{colspec={ll}} O & P \\ \end{longtblr}
+After the long table.
+\begin{talltblr}[caption={Outer}]{colspec={ll}}
+ Q & {\begin{talltblr}[caption={Inner}]{colspec={l}} R \\ \end{talltblr}} \\
+\end{talltblr}
+\begin{longtblr}[theme=naked, label={t:hidden}]{colspec={ll}} S & T \\ \end{longtblr}
+See Table~\ref{t:hidden}.
+\end{document}

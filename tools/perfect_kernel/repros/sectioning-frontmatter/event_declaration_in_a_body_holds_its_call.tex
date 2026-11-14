@@ -1,0 +1,20 @@
+% mechanism: a definer in the body of a macro the field defined runs at the macro's call, its tokens at the positions they were written at. Its span is that call, from the
+%   invocation's stamp (`FieldNotes::last_call`, `FieldDeclaration::run_at`), never what lies between the definition and the call, which holds printed text
+% witness: review revZ3 S1 (no corpus witness: Z4's emitter replays these spans, and would print those words twice)
+% oracle:  pdflatex 0 errors: "Ann Bob" "Cat Dan Eve" "Fay" "Gil Hal" "IvyXJon" "Kim Lee" "MayNed"
+% engines: Perl has no events; Z3: `\t` [9,18] holding " Ann Bob"; `\n \o` holding " Cat"; `\o` labelled on `\m`
+% expect:  0 errors, 0 warnings; each Declaration whole (perfect_kernel_batchz3::a_declaration_in_a_body_holds_its_call)
+% status:  GREEN (Z3r2)
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{\def\s{\def\t{1}} Ann Bob\s \and
+  \def\m{\def\n{\def\o{1}}} Cat\m\ Dan\n\ Eve \and
+  \def\ma{\def\na{\def\oa{1}}}\ma\na Fay \and
+  \def\q{\def\r} Gil\q{1} Hal \and
+  \def\u{\def\v{1}X}Ivy\u Jon \and
+  \def\w{\def\xa{1}\def\xb{2}} Kim\w\ Lee \and
+  \textbf{May\def\y{\def\z{1}}\y}Ned}
+\maketitle
+Text.
+\end{document}

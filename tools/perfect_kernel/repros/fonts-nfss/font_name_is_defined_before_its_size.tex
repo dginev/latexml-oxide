@@ -1,0 +1,20 @@
+% tex.web §1257 `new_font` defines the identifier as `\nullfont` before it scans the file name and the `at`/`scaled`
+% keywords, so `\font\y=cmr10 \y` reads `\y` as a font while looking for "at": `\y` is not expanded into an error.
+% Rust read the keywords before `\y` had any meaning: "Error:undefined:\y". A pending `\afterassignment` token
+% follows the whole `\font` (§1269): as a `\let` the early definition fired it before "at 12pt" was read, which then
+% printed as text, and `\font` itself never fired it, so it surfaced as a stray paragraph at the end (Perl never fires
+% it: DIVERGENCES #394; luatexko.sty:495-499 and ptb-fonts.tex:45 set one before a `\font`).
+% witness: none (synthesized; the 58g review).
+% Guard: perfect_kernel_batch58::font_name_is_defined_before_its_size.
+% status:  GREEN (58g)
+% oracle:  pdflatex 0 errors; "abc", then "[AA]Hello world." with "Hello" at 12pt.
+% engines: rust 58f and Perl: 1 error (`undefined:\y`); rust 58f: a trailing `<p>[AA]</p>`; Perl no "[AA]"; rust 58g
+%          first cut: "at 12pt Hello world.".
+% expect:  0 errors, 0 warnings.
+\documentclass{article}
+\begin{document}
+\font\y=cmr10 \y abc
+
+\def\foo{[AA]}\afterassignment\foo\font\x=cmr10 at 12pt
+{\x Hello} world.
+\end{document}

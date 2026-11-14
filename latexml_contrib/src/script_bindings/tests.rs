@@ -927,7 +927,7 @@ fn lookup_definition_construct_hook_on_primitive_errors() {
   fresh_state();
   let r = load_script(
     r#"
-      DefPrimitive("\\dprim{}", |_x| { });
+      DefPrimitive("\\dprim{}", |x| { });
       LookupDefinition("\\dprim").pushAfterConstruct(|document| { });
     "#,
   );

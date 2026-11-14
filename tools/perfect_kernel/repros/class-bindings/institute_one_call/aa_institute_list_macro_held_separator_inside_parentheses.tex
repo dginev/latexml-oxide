@@ -1,0 +1,25 @@
+% mechanism: aa_cls.rs `\institute` → `\lx@aa@institute@dispatch`: the list cut first at the kernel's `\and` by meaning,
+%   then each segment by spelling at `\and`/`\And`, no token rewritten (`split_at_kernel_separators`; Option C P2-2, P22c,
+%   OD #995), the pieces counted at the written top-level `\and`s (aa.cls:745-757 `\aa@cntinstitutes`) and at each cut
+%   by meaning alone made — a document macro holding only `\and` inside balanced parentheses (which the spelling split
+%   protects), in a list with an `\email` line: cut there, three pieces, one contact call each
+% witness: synthetic (review revP22b B1, S1)
+% oracle:  pdflatex (TL 2025, -no-shell-escape, aa.cls of 2405.18257) 0 errors: three numbered institutes, "1 Univ A
+%   (North", "2 South), Town / e-mail: ann@a.org", "3 Univ B"
+% engines: Perl 0.8.8 splits by spelling (inst_support.sty.ltxml:36-38, which aa_support.sty.ltxml:47 loads) and misses it;
+%   int158a (2ff10b7ff9) and P22b (9ccabf4923): "Univ A (North and South), Town" written for Ann Able and Bob Baker,
+%   0 errors, 1 warning (the content check counts the invented "and")
+% expect:  0 errors, 0 warnings; Ann Able: Univ A (North, e-mail ann@a.org (her address, by its spelling); Bob Baker:
+%   South), Town; the third piece, Univ B, no author's (no `\inst{3}`)
+% status:  GREEN (P22c; guard perfect_kernel_batchp22b::a_kernel_and_inside_parentheses_cut_where_it_stands)
+% preload: ar5iv.sty
+\documentclass{aa}
+\newcommand\sep{\and}
+\begin{document}
+\title{T}
+\author{Ann Able\inst{1} \and Bob Baker\inst{2}}
+\institute{Univ A (North \sep South), Town\\ \email{ann@a.org} \and Univ B}
+\abstract{Abs.}
+\maketitle
+Text.
+\end{document}

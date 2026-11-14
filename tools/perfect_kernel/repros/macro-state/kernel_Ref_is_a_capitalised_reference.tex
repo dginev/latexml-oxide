@@ -1,0 +1,15 @@
+% witness: 57ah re-review side finding (probe r1): the kernel's `\Ref` (latex.ltx:14979-14984,
+%          `\protected@edef\reserved@a{\@kernel@ref{#1}}\expandafter\MakeUppercase\reserved@a`) reads the
+%          reference's text at digestion, which LaTeXML resolves only in post-processing, so it prints
+%          the undefined-reference "??" with no diagnostic
+% oracle:  pdflatex 0 errors: "X: section 1 — Section 1" (the label format, its first letter upper-cased;
+%          `|` is an em dash in OT1)
+% engines: rust 57ah2 "X: <ref labelref="LABEL:a"/> — ??", 0 diagnostics
+% expect:  0 errors; `\Ref{a}` a reference to LABEL:a whose text starts upper-case, as `\ref{a}` is one
+% status:  RED (57ah2)
+\documentclass{article}
+\labelformat{section}{section~#1}
+\begin{document}
+\section{A}\label{a}
+X: \ref{a} | \Ref{a}
+\end{document}

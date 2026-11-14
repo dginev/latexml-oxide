@@ -41,7 +41,7 @@ use crate::{
   digested::Digested,
   document::{Document, get_node_qname, with_node_qname},
   gullet::{self, ExpansionLevel},
-  mouth::Mouth,
+  mouth::{Mouth, MouthOptions},
   state::*,
   stomach::*,
   token::Catcode,
@@ -104,6 +104,17 @@ pub struct AlignmentConfig {
   pub is_math:         bool,
 }
 
+/// What becomes of the row being built at its end, asked by a binding from inside the row (longtable's `\kill`, its
+/// `\caption`'s row); the alignment carries it so a nested one cannot take it.
+#[derive(Clone, Copy, Debug)]
+pub enum RowDisposition {
+  /// Removed at its end.
+  Drop,
+  /// Removed at its end and handed to the function; a column ended after the request (`&`) withdraws it, the row
+  /// being more than the requesting cell.
+  Route(fn(&Row)),
+}
+
 #[derive(Clone)]
 pub struct Alignment {
   in_column:         bool,
@@ -136,6 +147,7 @@ pub struct Alignment {
   // Longtable: stored head/foot rows for reinsertion
   pub head_rows:     Vec<Row>,
   pub foot_rows:     Vec<Row>,
+  row_disposition:   Option<RowDisposition>,
 }
 impl Alignment {
   /// Create a new Alignment.
@@ -186,10 +198,12 @@ impl Alignment {
       row_depths: Vec::new(),
       head_rows: Vec::new(),
       foot_rows: Vec::new(),
+      row_disposition: None,
     }
   }
 
   pub fn get_template(&self) -> &Template { &self.template }
+  pub fn get_template_mut(&mut self) -> &mut Template { &mut self.template }
 
   pub fn current_row(&self) -> Option<&Row> {
     match self.current_row {
@@ -214,6 +228,33 @@ impl Alignment {
 
   pub fn remove_row(&mut self) -> Option<Row> { self.rows.pop_back() }
 
+  /// Ask for the current row's disposition at its end ([`RowDisposition`]).
+  pub fn set_row_disposition(&mut self, disposition: RowDisposition) {
+    self.row_disposition = Some(disposition);
+  }
+
+  /// A column ended (`&`): a [`RowDisposition::Route`] is withdrawn.
+  pub fn column_ended(&mut self) {
+    if matches!(self.row_disposition, Some(RowDisposition::Route(_))) {
+      self.row_disposition = None;
+    }
+  }
+
+  /// The row just ended, removed if its disposition says so.
+  pub fn dispose_ended_row(&mut self) {
+    match self.row_disposition.take() {
+      Some(RowDisposition::Drop) => {
+        self.remove_row();
+      },
+      Some(RowDisposition::Route(to)) => {
+        if let Some(row) = self.remove_row() {
+          to(&row);
+        }
+      },
+      None => {},
+    }
+  }
+
   pub fn prepend_rows(&mut self, new_rows: Vec<Row>) {
     for new_row in new_rows.into_iter().rev() {
       self.rows.push_front(new_row)
@@ -227,6 +268,43 @@ impl Alignment {
   }
 
   pub fn rows(&self) -> &VecDeque<Row> { &self.rows }
+  pub fn rows_mut(&mut self) -> &mut VecDeque<Row> { &mut self.rows }
+
+  /// Turns the rows read into the table's columns: `\valign`'s body is read as `\halign`'s is, but each line its `\cr`
+  /// ends is a column of the table, its `&`-separated entries stacked from the top (tex.web §768, §785), and a span
+  /// covers rows. A column shorter than the longest ends in empty cells; the material a `\noalign` put between
+  /// columns opens the first row.
+  pub fn transpose(&mut self) {
+    let columns: Vec<Row> = self.rows.drain(..).collect();
+    let height = columns
+      .iter()
+      .map(|column| column.get_columns().len())
+      .max()
+      .unwrap_or(0);
+    let mut rows: Vec<Row> = (0..height)
+      .map(|_| {
+        let mut row = self.template.clone();
+        row.get_columns_mut().clear();
+        row
+      })
+      .collect();
+    for mut column in columns {
+      if let Some(first) = rows.first_mut() {
+        first.before.append(&mut column.before);
+        first.before.append(&mut column.after);
+      }
+      let mut cells = std::mem::take(column.get_columns_mut()).into_iter();
+      for row in &mut rows {
+        let mut cell = cells
+          .next()
+          .unwrap_or_else(|| Cell { empty: true, ..Cell::default() });
+        std::mem::swap(&mut cell.colspan, &mut cell.rowspan);
+        std::mem::swap(&mut cell.colspanned, &mut cell.rowspanned);
+        row.get_columns_mut().push(cell);
+      }
+    }
+    self.rows = rows.into();
+  }
   pub fn get_cached_height(&self) -> Option<Dimension> { self.cached_height }
   pub fn get_cached_depth(&self) -> Option<Dimension> { self.cached_depth }
   pub fn get_row_heights(&self) -> &[Dimension] { &self.row_heights }
@@ -375,6 +453,17 @@ impl Alignment {
     }
   }
 
+  /// [`Self::omit_next_column`], the cell's material boxed as text ([`Cell::omit_text_box`]).
+  pub fn omit_next_column_as_text(&mut self) {
+    if let Some(cw) = self.current_row
+      && let Some(row) = self.rows.get_mut(cw)
+      && let Some(column) = row.get_column_mut(self.current_column + 1)
+    {
+      column.omitted = true;
+      column.omit_text_box = true;
+    }
+  }
+
   pub fn get_column_before(&mut self) -> Tokens {
     if let Some(column) = self.current_column() {
       if !column.omitted {
@@ -382,6 +471,10 @@ impl Alignment {
           T_CS!("\\lx@alignment@column@before"),
           column.before.clone().unwrap_or_default().unlist()
         )
+      } else if column.omit_text_box {
+        // the cell's own group, explicit braces: the before-column marker that follows resets the ledger; its leading
+        // and trailing fills are the cell's (tex_tables.rs `hoist_omit_text_box_fills`)
+        Tokens!(T_CS!("\\hbox"), T_BEGIN!())
       } else {
         Tokens!()
       }
@@ -398,6 +491,8 @@ impl Alignment {
           column.after.clone().unwrap_or_default().unlist(),
           T_CS!("\\lx@alignment@column@after")
         )
+      } else if column.omit_text_box {
+        Tokens!(T_END!())
       } else {
         Tokens!()
       }
@@ -414,6 +509,9 @@ impl Alignment {
   //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   // Support for building an alignment's Rows & Columns
   pub fn is_in_row(&self) -> bool { self.in_row }
+
+  /// A math alignment (`array`, amsmath's environments), not a text one (`tabular`).
+  pub fn is_math(&self) -> bool { self.is_math }
   pub fn is_in_column(&self) -> bool { self.in_column }
   pub fn start_row(&mut self, pseudorow: bool) -> Result<()> {
     self.new_row();
@@ -457,6 +555,17 @@ impl Alignment {
     // `&` storm in a malformed alignment, paper 1112.6246) actually
     // aborts rather than getting silently swallowed by `let _ =`.
     let _colspec = self.next_column()?;
+    // Mark the cell frame: its `\aftergroup` tokens are run at the cell's
+    // end (see `end_column`).
+    assign_frame_value_sym(crate::pin!("alignCellGroup"), true);
+    // The cell frame is the template's brace pair (latex.ltx:16666 `\@tabclassz`'s `\@preamble{…\@sharp…}`, see
+    // `end_column`), so it carries the template-brace mark: a cell's stray `}` closes that `{` and leaves the frame
+    // (`stomach::close_template_brace`); the column end then meets the count −1 (tex.web §1127 `align_error`, "Missing {
+    // inserted"), and the inserted `{` is closed at the cell's end as the template's `}` would close it. Before, the `}`
+    // popped the cell frame and the column bookkeeping bound in it, and a `{a & b}` or `a & b}` row lost its first cell
+    // to a spanning second one (`colspan="2"`). Guard
+    // `perfect_kernel_batch70b::tabular_stray_close_brace_keeps_its_cells`.
+    assign_value(TEMPLATE_BRACE_OPEN, true, None);
     set_align_group_count(1000000);
     self.in_column = true;
     Ok(())
@@ -464,6 +573,54 @@ impl Alignment {
 
   pub fn end_column(&mut self) -> Result<()> {
     if self.in_column {
+      // The template's `}` (see `start_column`): when the cell's own `}` closed the template's `{` and a `{` was
+      // inserted after it (tex.web §1127 `align_error`), that `{` is the group open at the cell's end, and this `}`
+      // closes it. Then the cell frame is popped as itself, never taken for a template brace again.
+      if !is_value_bound("alignCellGroup", Some(0))
+        && !lookup_bool(TEMPLATE_BRACE_OPEN)
+        && off_save_closer().is_some_and(|closer| closer == T_END!())
+      {
+        egroup()?;
+      }
+      if is_value_bound("alignCellGroup", Some(0)) {
+        assign_value(TEMPLATE_BRACE_OPEN, false, None);
+      }
+      // `\aftergroup` IN A CELL FIRES INSIDE THE CELL. LaTeX's tabular/array
+      // entry template wraps every entry in a brace group (latex.ltx
+      // `\@classz`: `{\hfil\hskip1sp\ignorespaces\@sharp\unskip\hfil}`), so an
+      // `\aftergroup` in the entry binds to THAT group and its tokens run at
+      // the entry's `}` — while the cell is still open, before `&`/`\cr` is
+      // acted on (tex.web §282 `unsave` back-inputs them; a bare `\halign`
+      // has no such group and the tokens would start the next cell/row).
+      // The cell frame here is that group, but `egroup` unread its tokens
+      // AFTER the column had ended, so they were read as the NEXT cell — and
+      // after the last cell they opened a spurious one: babel.def:738-742
+      // `\selectlanguage` = `\aftergroup\bbl@pop@language…` in a tabular
+      // cell (uantwerpenexam.cls:426 `\engdut`, uantwerpenexam-example2 41;
+      // derivative 101; Perl identical) ended with "`\@end@tabular` Attempt
+      // to close boxing group". So run the cell frame's `\aftergroup` list
+      // now, inside the cell. Guard:
+      // `perfect_kernel_batch54::aftergroup_in_a_tabular_cell_fires_inside_the_cell`.
+      if is_value_bound("alignCellGroup", Some(0))
+        && let Some(Stored::VecDequeStored(after)) = lookup_value("afterGroup")
+        && !after.is_empty()
+      {
+        assign_value(
+          "afterGroup",
+          Stored::VecDequeStored(VecDeque::new()),
+          Some(Scope::Local),
+        );
+        let mut toks: Vec<crate::token::Token> = Vec::new();
+        for entry in after {
+          match entry {
+            Stored::Tokens(t) => toks.extend(t.unlist()),
+            Stored::Token(t) => toks.push(t),
+            _ => {},
+          }
+        }
+        let digested = digest(Tokens::new(toks))?;
+        push_box_list(digested);
+      }
       egroup()?; // Grouping around CELL!
       self.in_column = false;
     }
@@ -556,12 +713,11 @@ impl BoxOps for Alignment {
       return Ok(Vec::new());
     }
 
-    // Guard via the absorb limit to avoid infinite loops (Perl L478-483)
-    let absorb_limit = lookup_int("absorb_limit");
+    // Guard via the absorb limit to avoid infinite loops (Perl L478-483);
+    // the counter and its limit are typed State fields (`State::absorb_count`).
+    let absorb_limit = absorb_limit();
     if absorb_limit > 0 {
-      let mut absorb_count = lookup_int("absorb_count");
-      absorb_count += 1;
-      assign_value("absorb_count", absorb_count, Some(Scope::Global));
+      let absorb_count = next_absorb_id();
       if absorb_count > absorb_limit {
         fatal!(
           Timeout,
@@ -589,11 +745,31 @@ impl BoxOps for Alignment {
     if let Some(d) = self.cached_depth {
       attrs.insert("cdepth".to_string(), format!("{}", d.px_value(None)));
     }
+    // Perl Alignment.pm L321-323: rowheights / rowdepths / columnwidths, as comma-separated px
+    // values (openTikzAlignment reads the last row depth).
+    for (key, dims) in [
+      ("rowheights", &self.row_heights),
+      ("rowdepths", &self.row_depths),
+      ("columnwidths", &self.column_widths),
+    ] {
+      if !dims.is_empty() {
+        let px: Vec<String> = dims
+          .iter()
+          .map(|d| format!("{}", d.px_value(None)))
+          .collect();
+        attrs.insert(key.to_string(), px.join(","));
+      }
+    }
     let open_container_fn = &self.open_container;
     // token-locators: stamp the `tabular` with the table span before it opens.
     #[cfg(feature = "token-locators")]
     document.set_current_box_locator(table_span);
-    open_container_fn(document, attrs)?;
+    // an alignment is a TeX box: the container it opens is marked, its cells' text no body text for a field's print
+    // outside it (OXIDIZED_DESIGN #715)
+    document.arm_field_box();
+    let opened = open_container_fn(document, attrs);
+    document.disarm_field_box();
+    opened?;
 
     for row in rows {
       // token-locators: stamp this `tr` with the row's span before it opens.
@@ -604,6 +780,12 @@ impl BoxOps for Alignment {
       let mut open_row_attrs = HashMap::default();
       for (k, v) in &row.properties {
         open_row_attrs.insert(k.clone(), v.clone());
+      }
+      if row.has_explicit_tags() {
+        open_row_attrs.insert(
+          template::TAGGED_ROW_ATTRIBUTE.to_string(),
+          Stored::from("true"),
+        );
       }
       if let Some(x) = row.x {
         open_row_attrs.insert("x".to_string(), Stored::Dimension(x));
@@ -833,8 +1015,9 @@ impl BoxOps for Alignment {
           let wrap_xmarg =
             ismath && !crate::common::arena::with(cur_qname, |s| s.ends_with("_Capture_"));
           if wrap_xmarg {
-            // Hacky!
-            document.open_element("ltx:XMArg", Some(string_map!("rule" => "Anything")), None)?;
+            // Hacky! Perl Alignment.pm:372 `rule => 'Anything,'`: the trailing comma lets
+            // parse_single set a cell's closing punctuation aside as presentation.
+            document.open_element("ltx:XMArg", Some(string_map!("rule" => "Anything,")), None)?;
           }
           // Perl L365: absorb pre-spacing (lspaces > 1.5em)
           if let Some(ref pre) = pre_absorb {
@@ -951,40 +1134,98 @@ pub fn read_alignment_template() -> Result<Template> {
   gullet::skip_spaces()?;
   local_build_template(Template::default());
   let mut tokens = vec![T_BEGIN!()];
-  let mut nopens = 0;
-  while let Some(open) = gullet::read_token()? {
-    if open.get_catcode() == Catcode::BEGIN {
-      nopens += 1;
-    } else {
-      gullet::unread_one(open);
-      break;
-    }
+  // The template is its argument: a balanced group (latex.ltx `\@mkpream`
+  // takes `#1`; tex.web's preamble ends at its `}`), or a single token,
+  // parsed in a mouth of its own. A column type that takes an argument at
+  // the template's end (`{cp}`, `{c@}`) then finds that end, not the document
+  // after it (Perl reads the template from the document, Alignment.pm:895-921,
+  // KNOWN_PERL_ERRORS #292; pdflatex "Missing p-arg in array arg"). Repro
+  // `kernel-alignment/tabular_template_missing_argument.tex`.
+  let template = match gullet::read_token()? {
+    Some(open) if open.get_catcode() == Catcode::BEGIN => {
+      gullet::read_balanced(ExpansionLevel::Off, false, false)?
+    },
+    Some(single) => Tokens::new(vec![single]),
+    None => Tokens::default(),
+  };
+  // A sourceless mouth, which the locator walk passes over (Perl getLocator
+  // skips a mouth with no source, Gullet.pm:150-157), so the template's
+  // diagnostics point into the document. The template's braces, read above,
+  // still enclose it: TeX scans the preamble as a macro argument inside
+  // `\@mkpream`'s `\edef` (latex.ltx:16632), so an `&` in it never ends an
+  // enclosing alignment's cell.
+  empty_column_rewrite_accumulator()?;
+  increment_align_group_count();
+  let parsed = gullet::reading_from_mouth(Mouth::create("", MouthOptions::default())?, || {
+    gullet::unread(template);
+    parse_alignment_template_tokens()
+  });
+  decrement_align_group_count();
+  parsed?;
+  tokens.push(T_END!());
+  with_current_build_template(|template_opt| {
+    let t = template_opt.unwrap();
+    t.set_reversion(Tokens::new(tokens));
+    // Perl Alignment.pm:923: $BUILD_TEMPLATE->finish
+    t.finish();
+  });
+  Ok(take_build_template().unwrap())
+}
+
+/// Empties `\@temptokena`, the accumulator array.sty's column-type search
+/// rewrites the preamble into: `\NC@do` empties it before every search
+/// (array.sty:361), `\NC@` appends the preamble read before the column type
+/// (array.sty:351-352), and a package's own `\NC@rewrite@<c>` reads it back
+/// (rccol.sty `\rc@rewrite@@@`: `\edef…{\the\@temptokena>{…}c<{…}}`). This
+/// reader has already taken that prefix as columns, so the faithful value is
+/// empty — not what a package left there at load time: natbib's `\appdef`
+/// (natbib.sty:163-166) leaves its last argument, which `\the\@temptokena`
+/// spliced into rccol's `R` column, its `\@bibibid@` swallowing the `>` and the
+/// cell code then expanded here until `Fatal:Timeout:PushbackLimit` (1101.1265,
+/// 0812.2309, 2609.37147). A local assignment: the environment's group bounds
+/// it, as `\@mkpream`'s `\@temptokena{#1}` (array.sty:393) is bounded.
+fn empty_column_rewrite_accumulator() -> Result<()> {
+  let cs = T_CS!("\\@temptokena");
+  if let Some(defn) = lookup_definition(&cs)?
+    && defn.is_register()
+    && matches!(defn.value_of(Vec::new()), Some(crate::definition::register::RegisterValue::Tokens(ref toks)) if !toks.is_empty())
+  {
+    defn.set_value(
+      crate::definition::register::RegisterValue::Tokens(Tokens::default()),
+      None,
+      Vec::new(),
+    );
   }
+  Ok(())
+}
+
+/// The column-type loop of [`read_alignment_template`], reading the template
+/// from the mouth it was given until that mouth is empty.
+fn parse_alignment_template_tokens() -> Result<()> {
   while let Some(op) = gullet::read_token()? {
     let cc = op.get_catcode();
-    if cc == Catcode::SPACE {
-    } else if cc == Catcode::END {
-      let mut last_op = op;
-      nopens -= 1;
-      while nopens > 0 {
-        if let Some(next_op) = gullet::read_token()? {
-          last_op = next_op;
-          if last_op.get_catcode() != Catcode::END {
-            break;
-          }
-        } else {
-          break;
-        }
-        nopens -= 1;
-      }
-      if nopens <= 0 {
-        break;
-      }
-      gullet::unread_one(last_op);
+    if cc == Catcode::SPACE || cc == Catcode::END {
     } else {
       match lookup_expandable(&T_CS!(s!("\\NC@rewrite@{op}")), None)? {
+        Some(defn) if takes_required_argument(defn.as_ref()) && template_is_exhausted()? => {
+          // The template ended where the column type wanted its argument:
+          // latex.ltx `\@mkpream` ends on class 2/3, "Missing @-exp/p-arg in
+          // array arg" (latex.ltx:16643-16644, `\@preamerr` 8997-9003); array
+          // "Missing arg: token ignored" (array.sty:331, 414). The column is
+          // dropped, as array drops it.
+          Error!(
+            "expected",
+            op,
+            s!(
+              "Missing argument of the column type '{op}' at the end of the tabular template; token ignored"
+            )
+          );
+        },
         Some(defn) => {
-          let invoked = defn.invoke(true)?;
+          let invoked =
+            crate::parameter::dropping_argument_tails(crate::parameter::IN_EVERY_CELL, || {
+              defn.invoke(true)
+            })?;
           gullet::unread(invoked);
         },
         _ => {
@@ -993,24 +1234,65 @@ pub fn read_alignment_template() -> Result<Template> {
             if !balanced_arg.is_empty() {
               gullet::unread(balanced_arg);
             }
+          } else if cc.is_active_or_cs()
+            && let Some(defn) = lookup_expandable(&op, Some(false))?
+            // Everything `\edef` expands, EXCEPT the three that reorder or
+            // scan for a terminator: a `\csname`/`\expandafter`/`\noexpand`
+            // reached here is almost always the "safety valve" below having
+            // over-read past an unknown column's `{arg}` (Perl Alignment.pm:906
+            // shares the over-read); invoking `\csname` then scanned for an
+            // `\endcsname` far outside the template (its own mouth now ends
+            // the scan there) — nicematrix/nicematrix
+            // 109 → 1002 errors + Fatal (`V{3cm}` before the binding
+            // registered `V`). Bounded primitives (`\string`, `\number`,
+            // `\romannumeral`, `\the`, `\meaning`) are what a class's
+            // `\edef\pt@format{\string#1}` (aguplus.cls:314) relies on.
+            && !op.with_str(|s| matches!(s, "\\csname" | "\\expandafter" | "\\noexpand"))
+          {
+            // Macro-valued column specs: real `\@mkpream` FULLY edef-expands
+            // the preamble before classification (latex.ltx L16610-16644,
+            // `\@xexpast`'s `\edef\reserved@a{#1}` under
+            // `\let\protect\@unexpandable@protect`), so
+            // `\begin{tabular}{|l|\mycol|}` with `\def\mycol{c|}` is valid
+            // LaTeX. `Some(false)` filters protected defs — the exact
+            // analogue of the `\@unexpandable@protect` shield. Perl's
+            // ReadAlignmentTemplate (Alignment.pm L895-921) reads unexpanded
+            // and drops the CS (shared failure; pdflatex clean). Witness:
+            // dijkstra-fr `\dijk_last_col_type` (noexpand-protected by
+            // design in dijkstra.sty's `\edef\dijk_tab`, L245-258) — 7
+            // extra-`&` errors. Iterated re-read = full edef semantics.
+            gullet::unread(defn.invoke(true)?);
           } else {
             Warn!("unexpected", op, s!("Unrecognized tabular template {op:?}"));
           }
         },
       }
     }
-    if nopens <= 0 {
-      break;
-    }
   }
-  tokens.push(T_END!());
-  with_current_build_template(|template_opt| {
-    let t = template_opt.unwrap();
-    t.set_reversion(Tokens::new(tokens));
-    // Perl Alignment.pm L912: $BUILD_TEMPLATE->finish
-    t.finish();
-  });
-  Ok(take_build_template().unwrap())
+  Ok(())
+}
+
+/// Whether `defn` reads an argument it cannot do without (any parameter that
+/// is neither optional nor valueless).
+fn takes_required_argument(defn: &dyn crate::definition::Definition) -> bool {
+  defn.get_parameters().is_some_and(|params| {
+    params
+      .get_parameters()
+      .iter()
+      .any(|p| !p.optional && !p.novalue)
+  })
+}
+
+/// Whether the template's mouth has nothing left but spaces (which a template
+/// ignores).
+fn template_is_exhausted() -> Result<bool> {
+  match gullet::read_non_space()? {
+    Some(token) => {
+      gullet::unread_one(token);
+      Ok(false)
+    },
+    None => Ok(true),
+  }
 }
 
 pub fn parse_alignment_template(spec: &str) -> Result<Template> {
@@ -1224,8 +1506,7 @@ fn alignment_regroup_rows(document: &mut Document, table: &Node) -> Result<()> {
   if maxreach > heads.len() {
     // rowspan crossed over thead boundary! Put head rows back at the FRONT of body rows.
     heads.append(&mut rows);
-    rows = heads;
-    heads = Vec::new();
+    rows = std::mem::take(&mut heads);
   }
   // scan trailing rows as potential tfoot
   let mut foots = VecDeque::new();

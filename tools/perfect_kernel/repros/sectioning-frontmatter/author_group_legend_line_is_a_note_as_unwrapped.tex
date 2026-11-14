@@ -1,0 +1,20 @@
+% GREEN (brief 107g, mechanism 5; the legend asymmetry): `{*Corresponding author}` in a group is a note, as it is unwrapped,
+%   beside a wrapper over plain lines, which stays one entry.
+% witness: 2405.20895
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 4 `Missing` errors, inherent to the witness's shape (`\\` in a group in article's
+%   tabular `\@author`); it prints every line
+% engines: int138a: one affiliation and the note; int139a: the wrapper's lines cut, the legend an affiliation, the name keeps `*`
+% expect:  0 errors; each author one affiliation; the note on Ann Able
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{Ann Able$^*$\\
+{1. Department of Statistics, \\Faculty of Sciences, Utrecht University}\\
+{*Corresponding author}\\
+\texttt{ann@x.org}
+\and Bob Baker\\
+{1. Department of Statistics, \\Faculty of Sciences, Utrecht University}\\
+\texttt{bob@x.org}}
+\maketitle
+Body.
+\end{document}

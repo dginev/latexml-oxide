@@ -131,6 +131,7 @@ impl Server {
 
     let opts = make_config(uri);
     let mut converter = Converter::from_config(opts.clone());
+    converter.note_main_source(&format!("literal:{text}"));
     if let Err(e) = converter.prepare_session(&opts) {
       return ConvertOutput::error(format!("Fatal: prepare_session failed: {e}"));
     }
@@ -140,15 +141,17 @@ impl Server {
     // locators here too, matching the warm-fork path.
     let resp = converter.convert_content_with_provenance(&get_file_path(uri), text.to_string());
     let sources = collect_sources(uri);
-    let status_code = resp.status_code as i64;
-    let status = if resp.status.is_empty() {
+    let post = post_process_html(&resp.result.unwrap_or_default(), uri);
+    // A post Fatal (#782) raises the status and its diagnostic joins the log.
+    let status_code = (resp.status_code as i64).max(post.status_code as i64);
+    let status = if resp.status.is_empty() || status_code > resp.status_code as i64 {
       status_label(status_code).to_string()
     } else {
       resp.status
     };
-    let log = resp.log;
+    let log = resp.log + post.log.as_str();
     let diags = parse_log_diagnostics(&log);
-    let html = post_process_html(&resp.result.unwrap_or_default(), uri);
+    let html = post.html;
     ConvertOutput {
       html,
       log,

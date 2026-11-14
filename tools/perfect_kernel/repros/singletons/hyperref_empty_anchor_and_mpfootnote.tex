@@ -1,0 +1,20 @@
+% hyperref's anchor with an empty name typesets only its text (hyperref.sty:5122-5124), a name that
+% expands to nothing included (an `ltx:anchor` without an id is no destination); footnotehyper's
+% minipage note text (`\H@@mpfootnotetext`, hyperref.sty:7147) is the kernel's note (latex.ltx's raw
+% `\@mpfootnotetext` filled a box nothing outputs — our minipage does not output `\@mpfootins`).
+% witness: 57cn.1 re-review findings 1 and 4. Guard:
+%   perfect_kernel_batch57::hyperref_empty_anchor_and_mpfootnote.
+% status:  GREEN (57cp)
+% oracle:  pdflatex 0 errors: "Start Kept text. Also kept. End.", "Box text." with the note "a Minipage note."
+%          at the minipage foot.
+% engines: rust 57cn2: an id-less anchor around the text; the mp note text lost.
+% expect:  0 errors, 0 warnings; no <anchor> without xml:id; "Minipage note." in a note.
+\documentclass{article}
+\usepackage{hyperref}
+\makeatletter
+\def\emptyname{}
+\begin{document}
+Start \hypertarget{}{Kept text.} \hyper@@anchor{\emptyname}{Also kept.} End.
+\begin{minipage}{5cm}Box text.\gdef\@thefnmark{a}\H@@mpfootnotetext{Minipage note.}\end{minipage}
+\makeatother
+\end{document}

@@ -1,0 +1,20 @@
+% mechanism: a list of local parts sharing the domain holds parts with letters only (brief 95c r2 B3): a digit run
+%   glued before an address by a comma — a telephone number, an ORCID iD — is no local part, so the list begins at its
+%   first part with a letter; the address alone comes out (a list boundary: the comma), the digits stay as printed.
+% witness: the reviewer's probes s2, s7 (rev95c)
+% oracle:  pdflatex 0 errors: "1 Univ X, Tel:5551234,info@x.org", "2 Univ Y, ORCID 0000-0002-1825-0097,zq@y.org"
+% engines: rust 95c: an invented `5551234@x.org` e-mail, the affiliation "Univ X, Tel"; rust int123a: both lines whole
+%   in their affiliations; perl: the same
+% expect:  0 errors, 0 warnings; Ann Able "Univ X, Tel:5551234", info@x.org; Bob Baker "Univ Y, ORCID
+%   0000-0002-1825-0097", zq@y.org
+% status:  RED (95c) -> GREEN (95c-r2)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{Ann Able$^1$, Bob Baker$^2$ \\
+$^1$ Univ X, Tel:5551234,info@x.org \\
+$^2$ Univ Y, ORCID 0000-0002-1825-0097,zq@y.org}
+\maketitle
+Text.
+\end{document}

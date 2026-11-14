@@ -1,0 +1,15 @@
+% witness: review of batch 56kl: arXiv 2605.18608 `$t\xrightarrow{\makebox[\dimexpr 32\width][c]{\quad}}$`
+% oracle:  pdflatex [332.76276pt] [10.00002pt] [10.00002pt]
+% engines: rust 56kl [265.26112pt] [7.97224pt] [10.00002pt]: a `\makebox` in script-style math measures its text at
+%          the script size; before 56kl the arrow was close only by accident (`32\width` read as the text `320pt`)
+% expect:  a box in math sets its text in the current text font, not the math style's size (an `\hbox` in math,
+%          tex.web §1076: `\mbox`/`\makebox` content is horizontal mode, not scaled with `\scriptstyle`)
+% status:  RED
+\documentclass{article}
+\usepackage{amsmath}
+\def\M#1{\setbox0\hbox{#1}[\the\wd0]\par}
+\begin{document}
+\M{$t\xrightarrow{\makebox[\dimexpr 32\width][c]{\quad}}$}
+\M{$\scriptstyle\makebox{\quad}$}
+\M{$\makebox{\quad}$}
+\end{document}

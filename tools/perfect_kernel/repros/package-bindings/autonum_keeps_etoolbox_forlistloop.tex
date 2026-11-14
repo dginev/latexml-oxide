@@ -1,0 +1,13 @@
+% witness: simpler-wick/simpler-wick (:130), tikz-feynman (siunitx's translations hook under autonum's etextools); 1905.00606, 2211.09537, 1405.2249 (the binding)
+% oracle:  pdflatex (TL 2025) 0 errors, both chunks run (autonum.sty:20-22 puts etoolbox's `\forlistloop` back after etextools).
+% engines: int141a: 1 error, "Didn't expect a \fi", the next chunk eaten.
+% expect:  0 errors; both chunks run
+% status:  GREEN
+\documentclass{article}
+\usepackage{siunitx}
+\usepackage{autonum}
+\AtBeginDocument{\typeout{NEXT CHUNK RUNS}}
+\AtBeginDocument{\typeout{THIRD CHUNK RUNS}}
+\begin{document}
+Word.
+\end{document}

@@ -1,0 +1,15 @@
+% mechanism: a glued mark of letters and digits parted into a used entry number and a sub-letter no entry answers
+%   (`part_glued_labels`) shows the whole mark (`RCreator::whole_marks` -> `_refmarkshown`), never the letter alone.
+% witness: 1705.11109 (BESIII "50A,50C" written "A,C" at =2); 2204.09614, 2103.16779, 1512.08197, 1507.02068
+% oracle:  pdflatex 0 errors: "A. Amoroso2A,2C , B. Bee1 , C. Cee2B"
+% engines: off "2A,2C" / "2B" with entry 2; int153z =2 "A,C" / "B"; CL8 =2 "2A,2C" / "2B"
+% expect:  0 errors; Amoroso sup "2A,2C" and affiliation 2; Bee affiliation 1, no sup; Cee sup "2B" and affiliation 2
+\documentclass{article}
+\title{Title}
+\author{A.~Amoroso$^{2A,2C}$, B.~Bee$^{1}$, C.~Cee$^{2B}$\\
+$^{1}$ Institute One, City One\\
+$^{2}$ (A)University of Turin, Turin; (B)University of Piedmont, Alessandria; (C)INFN, Turin}
+\begin{document}
+\maketitle
+Body.
+\end{document}

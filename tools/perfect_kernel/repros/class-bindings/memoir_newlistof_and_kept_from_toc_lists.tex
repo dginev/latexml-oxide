@@ -1,0 +1,24 @@
+% memoir's `\newlistof` for a document's own list, `\KeepFromToc`, an unstarred `\tableofcontents` under a renamed
+% `\contentsname`, and a list hook's text (memoir.cls:7074-7114, :7120 `\KeepFromToc`, `\cft<ext>afterlisthook`).
+% witness: synthetic (memman's `\newlistof` examples; TOC0 root A)
+% oracle:  pdflatex 0 `!`: "Inhalt" (listing "Inhalt", "List of Examples", "1 Intro"), "List of Tables" listing
+%          "1.1 A table" then "After the tables.", "List of Examples" listing "An example".
+% engines: rust int170a E=0 W=1, no `<TOC>`, three styled paragraphs; Perl 0.8.8 (OmniBus) E=5 (undefined `\memfontenc`,
+%          `\newlistof`, `\newlistentry`, …), `<TOC>` for toc and lot only.
+% expect:  `<TOC lists="toc">` titled "Inhalt", `<TOC lists="lot">` "List of Tables", "After the tables." after it,
+%          `<TOC lists="loe">` "List of Examples"; W=1 the raw load's `misdefined:\@iffirstamp`.
+% status:  RED (int170a) -> GREEN (MEM1)
+\documentclass{memoir}
+\newlistof{listofexamples}{loe}{List of Examples}
+\newlistentry{example}{loe}{0}
+\renewcommand{\contentsname}{Inhalt}
+\renewcommand{\cftlotafterlisthook}{After the tables.}
+\begin{document}
+\tableofcontents
+{\KeepFromToc\listoftables}
+\listofexamples
+\chapter{Intro}
+Text.
+\begin{table}\caption{A table}\end{table}
+\addcontentsline{loe}{example}{An example}
+\end{document}

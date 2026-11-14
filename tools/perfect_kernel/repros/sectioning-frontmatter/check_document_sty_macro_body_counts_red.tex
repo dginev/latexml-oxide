@@ -1,0 +1,28 @@
+% A macro the document defines in its own `.sty` (`\newcommand\mycorr{ann.able@lunar.org}` in mydefs.sty, used as
+% `\corr{\mycorr}`): pdflatex prints the address and the output loses it, but the check files it under the class_text
+% Info, not a Warning — definition bodies of the author's files are left out (`Definer`, title_page_check.rs; review
+% rev106s2 S4).
+% witness: synthetic (rev106s2 s4a)
+% oracle:  pdflatex 0 errors: "A Title / Ann Able1" + footnote "1 Corresponding author: ann.able@lunar.org"
+% engines: rust 106s r2: Info:frontmatter:class_text naming the address words; no Warning
+% expect:  1 Warning naming "lunar org" (keep a definition's body when a content file uses the defined control sequence)
+% status: RED (106s residual)
+\begin{filecontents*}[overwrite]{mydefs.sty}
+\ProvidesPackage{mydefs}
+\newcommand\mycorr{ann.able@lunar.org}
+\end{filecontents*}
+\begin{filecontents*}[overwrite]{netcsname.cls}
+\ProvidesClass{netcsname}\LoadClass{article}
+\newcommand\corr[1]{\expandafter\gdef\csname nc@corr\endcsname{#1}}
+\renewcommand\maketitle{\par\begingroup\centering{\Large\@title\par}%
+  {\@author\thanks{Corresponding author: \csname nc@corr\endcsname}\par}\@thanks\endgroup}
+\end{filecontents*}
+\documentclass{netcsname}
+\usepackage{mydefs}
+\begin{document}
+\title{A Title}
+\author{Ann Able}
+\corr{\mycorr}
+\maketitle
+Text.
+\end{document}

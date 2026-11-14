@@ -1,0 +1,34 @@
+% A raw class's run-in `\affil` legend opening with "Deceased" and naming an institution after it (`$^\dagger$Deceased 3
+% March 2021; formerly at Univ C` under `Bob Baker$^{2,\dagger}$`): the text reads as an affiliation, but the word opens
+% it, so it is Bob Baker's deceased note (`opens_with_deceased`, queue_digest.rs `legend_note_kind`); only a text naming
+% an institution with the word inside it (`Department of Deceased Estates`) is an affiliation
+% (`run_in_deceased_named_institution_is_an_affiliation`; review rev100a S2).
+% witness: review rev100a probe p/d9 (synthetic; 1003.2628's `Deceased on …` family)
+% oracle:  pdflatex 0 errors: "Ann Able1, Bob Baker2,†", "1Univ A, Town", "2Univ B, City", "†Deceased 3 March 2021;
+%          formerly at Univ C"
+% engines: rust int127a = Bob Baker's affiliation contact; rust 100a r1 = his deceased note; perl = no raw class load
+%          (OmniBus `\affil`)
+% expect:  0 errors, 0 warnings; Ann Able holds "1Univ A, Town"; Bob Baker "2Univ B, City" and <note
+%          class="ltx_note_frontmatter ltx_thanks_deceased" mark="†" role="thanks">†Deceased 3 March 2021; formerly at
+%          Univ C</note>; the body "Text."
+% status:  GREEN (100a r2)
+% preload: ar5iv.sty
+\begin{filecontents*}[overwrite]{ridfor.cls}
+\ProvidesClass{ridfor}\LoadClass{article}
+\renewcommand{\author}[1]{{\raggedright #1\par}}
+\newcommand{\affil}[1]{{\small\raggedright #1}}
+\end{filecontents*}
+\documentclass{ridfor}
+\begin{document}
+\title{A Title}
+\author{Ann Able$^{1}$, Bob Baker$^{2,\dagger}$}
+
+\affil{$^1$Univ A, Town}
+
+\affil{$^2$Univ B, City}
+
+\affil{$^\dagger$Deceased 3 March 2021; formerly at Univ C}
+
+\maketitle
+Text.
+\end{document}

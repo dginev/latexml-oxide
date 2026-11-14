@@ -1,0 +1,16 @@
+% witness: 2606.28166; the r7 re-review of batch 77p (finding 1, probe g1)
+% oracle:  pdflatex 0 errors: the row of marked names, the two symbol-labelled institutions centred on one line in a
+%          {\small …} group, the starred contact line under them
+% engines: rust 77p r10 = 0 errors; "† Univ A ‡ Univ B" one affiliation of every name of the row (the group hid the
+%          marks: the line read as unmarked)
+% expect:  0 errors, 0 warnings; Univ A on Ann Able and Cat Cole, Univ B on Bob Baker, each without its mark; the
+%          starred contact line (no e-mail label) an affiliation of the two names carrying ∗
+% status:  RED (77p r10) -> GREEN (77p r11)
+\documentclass{article}
+\usepackage{hyperref}
+\title{T}
+\author{Ann Able\,$^{\dagger *}$ \quad Bob Baker\,$^{\ddagger}$ \quad Cat Cole\,$^{\dagger *}$ \\[6pt] {\small $^{\dagger}$\,Univ A \qquad $^{\ddagger}$\,Univ B} \\[2pt] {\small $^{*}$\,Contact: \texttt{\{aable, ccole\}@x.edu}}}
+\begin{document}
+\maketitle
+Text.
+\end{document}

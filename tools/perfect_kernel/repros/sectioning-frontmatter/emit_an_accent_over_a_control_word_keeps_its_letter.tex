@@ -1,0 +1,34 @@
+% mechanism: the emitter's `past_what_it_set` (`observer/emitter/emit.rs`): the cover of an accent's box stops short of what
+%   the accent sets, so the writer reads on past the accent's argument as TeX reads an undelimited one: one token or a
+%   balanced group. A control word (`\i`, `\j`) was not taken as one token, so under `=2` a name ending in
+%   `\`\i`, `\^\j` or `\"\i` lost its letter ("Chiriv`"); one Warning pair from the content check, off unchanged
+% witness: 1709.03335 (amsart, "Rocco Chiriv\`\i": "Chiriv`" at =2, "Chirivì" off and in the PDF); w56's report
+%   (agent_reports/2026-11-08_w56_report.md); the grouped `\'{\i}`, `\`{\i}` and the letter cases already held
+% oracle:  pdflatex 0 errors: "ROCCO CHIRIVÌ, ANA MARÍ, BO MAĴ, LU FAÏ, OLE HANSØ, EVA PETRIČ, AL TIÌ, AND DI NIÀB",
+%   Univ A..H
+% engines: rust CL1base at =2 = "Chiriv`", "Maˆ", "Fa¨" + 2 content-check Warnings; off and Perl print the letters
+% expect:  eight creators, each name whole with its accent (Niàb: the accent takes the group's first letter), its address
+% status:  RED (CL1base, =2) -> GREEN (CL1)
+% preload: ar5iv.sty
+\documentclass{amsart}
+\begin{document}
+\title{T}
+\author{Rocco Chiriv\`\i}
+\address{Univ A}
+\author{Ana Mar\'{\i}}
+\address{Univ B}
+\author{Bo Ma\^\j}
+\address{Univ C}
+\author{Lu Fa\"\i}
+\address{Univ D}
+\author{Ole Hans\o}
+\address{Univ E}
+\author{Eva Petri\v{c}}
+\address{Univ F}
+\author{Al Ti\`{\i}}
+\address{Univ G}
+\author{Di Ni\`{ab}}
+\address{Univ H}
+\maketitle
+x
+\end{document}

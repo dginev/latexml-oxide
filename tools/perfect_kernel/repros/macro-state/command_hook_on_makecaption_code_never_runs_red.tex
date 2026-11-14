@@ -1,0 +1,24 @@
+% mechanism: LaTeXML's `\caption` builds the caption through its own constructor, never calling `\@makecaption`, so code
+%   added to `cmd/@makecaption/before|after` (patched into `\@makecaption` at `\begin{document}`, QA47A; CAP1 for caption)
+%   never runs and nothing counts the loss (QA47A's Warning covers only a command LaTeXML binds); pdflatex runs it once per caption
+% witness: synthetic (revCAP1 pre-existing 1); asmeconf.cls:598-604's hooks (a font change, nothing printed)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 `!`: "Before: 2. After: 2."
+% engines: rust int163a = CAP1: "Before: 0. After: 0.", 0 errors, 0 warnings
+% expect:  0 errors; "Before: 2. After: 2." (or, short of running the code, the loss counted: a Warning)
+% status:  RED (int163a, CAP1) — moves: post-merge (QAHK)
+\documentclass{article}
+\usepackage{caption}
+\newcounter{hk}\newcounter{ha}
+\AddToHook{cmd/@makecaption/before}{\stepcounter{hk}}
+\AddToHook{cmd/@makecaption/after}{\stepcounter{ha}}
+\begin{document}
+\begin{figure}\centering
+\rule{1cm}{1cm}
+\caption{One.}
+\end{figure}
+\begin{table}\centering
+\caption{Two.}
+\rule{1cm}{1cm}
+\end{table}
+Before: \thehk. After: \theha.
+\end{document}

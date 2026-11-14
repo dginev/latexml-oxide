@@ -1,0 +1,12 @@
+% witness: 2404.02905, 2412.05271, 2408.13296, 2404.00511 (`\textbf{A, B, C} \vspace{…}`)
+% oracle:  pdflatex 0 errors: three names
+% engines: rust 64b3 = one creator holding 3 names + Error:frontmatter:merged_creators (the `\vspace` after the wrapper was read as its tail); Perl the same (SplitTokens passes over groups, Base_Utility.pool.ltxml:152-165)
+% expect:  0 errors; 3 creators, one name each
+% status:  RED (64b3) -> GREEN (64b)
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{\textbf{Ann Able$^{1}$,\quad Bob Baker$^{2}$,\quad Cat Cole$^{1}$}\vspace{3pt} \\
+$^1$Univ A \quad $^2$Univ B}
+\maketitle
+\end{document}

@@ -1,0 +1,19 @@
+% mechanism: the content check's word matching where a block's rehearsal left a group open: an accent opening a word
+%            (`\'Ecole`) is read past as inside one (`ledger::content_text` records its place before the first letter),
+%            so `ecole` reads as the printed `école` by its base letters (`resolver::placed::reads_as`); the sibling of
+%            author_raw_tabular_juggle_accented_word
+% witness: 1401.6981 (the sig-alternate juggle's shape); synthetic, review revH3 finding 2 (probe r1)
+% shape:   the tie juggle (`\end{tabular}~\begin{tabular}{c}`), the affiliation line opening with an accent
+% oracle:  pdflatex: 0 errors; "A One École Normale Dept"
+% engines: rust int150a `=2`: E=0, one content-check Warning `c Dept Ecole tabular` ("Ecole" a false count)
+% expect:  "A One", affiliation "École Normale"; at `=2` one content-check Warning, `Dept`
+% status:  RED (int150a) -> GREEN (perfect_kernel_batchfs1::an_open_group_rehearsals_word_matching, CK1)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage[utf8]{inputenc}
+\begin{document}
+\title{T}
+\author{A One \\ \'Ecole Normale \end{tabular}~\begin{tabular}{c} Dept}
+\maketitle
+Text.
+\end{document}

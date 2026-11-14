@@ -1,0 +1,16 @@
+% witness: 2103.16561, 2004.14103 (`\ULforem`), 2411.10835, 2109.10013 (`\UL@setULdepth`), 0709.1684,
+%   2001.10689 (`\ULset`); run 340: 109 + 16 + 6 first errors
+% oracle:  pdflatex 0 errors; "under" underlined (\ULforem), "back" italic (\normalem), "red" struck in red
+% engines: rust 65int7 = 3 errors (`\ULforem`, `\UL@setULdepth`, `\ULset` undefined)
+% expect:  0 errors; "under" in an ltx_ulem_uline text, "back" italic, "red" kept
+% status:  RED (65int7) -> GREEN (65z)
+\documentclass{article}
+\usepackage{xcolor}
+\usepackage[normalem]{ulem}
+\renewcommand\sout{\bgroup\color{red}\ULdepth=-.5ex \ULset}
+\makeatletter
+\newcommand{\myline}{\bgroup\UL@setULdepth\markoverwith{\rule[-.5ex]{2pt}{.4pt}}\ULon}
+\makeatother
+\begin{document}
+\ULforem \emph{under} \normalem \emph{back} \sout{red} \myline{mine}.
+\end{document}

@@ -1,0 +1,28 @@
+% witness: review 73a r3 finding 2 (probe a7_lbl; 1010.4329, 1903.10014 keep such captions)
+% oracle:  pdflatex (TL 2025 aastex701.cls, clean): the kept caption is never printed and its `\label` never runs:
+%          "See ?? and 1."; the second deluxetable "Table 1. Numbered."
+% engines: rust 73a r3 = `tab:k` on the section (`<section labels>`), "See 1 and 1." with tab:k linking to Section 1;
+%          Perl = 1 error (deluxetable.sty.ltxml:77)
+% expect:  0 errors, 0 warnings; the kept caption unnumbered with an id step (main-session call 2026-10-18): `tab:k`
+%          on its table, no labels on the section; the second table Table 1 with `tab:n`
+% status:  RED (73a r3) -> GREEN (73a r4)
+% preload: ar5iv.sty
+\documentclass{aastex701}
+\begin{document}
+\section{Intro}
+\tablecaption{Kept caption.\label{tab:k}}
+\begin{deluxetable}{cc}
+\tablehead{\colhead{A} & \colhead{B}}
+\startdata
+1 & 2 \\
+\enddata
+\end{deluxetable}
+\begin{deluxetable}{cc}
+\tablecaption{Numbered.\label{tab:n}}
+\tablehead{\colhead{C} & \colhead{D}}
+\startdata
+3 & 4 \\
+\enddata
+\end{deluxetable}
+See \ref{tab:k} and \ref{tab:n}.
+\end{document}

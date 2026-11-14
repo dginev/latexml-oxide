@@ -1,0 +1,15 @@
+% witness: icml2020.sty, whose copies disagree on the proceedings line (PMLR 108 in 2006.00731 and 2006.00866,
+%          119 in 2006.00706, empty in 2006.00937 and 2009.02479); 68c review B1
+% oracle:  pdflatex (with 2009.02479's icml2020.sty, `\newcommand{\ICML@appearing}{}`) 0 errors, "Notice: ."
+% engines: rust 68c r1 = "Notice: Preliminary work. Under review by the International Conference on Machine
+%          Learning (ICML). Do not distribute.."
+% expect:  0 errors, 0 warnings; an empty notice: neither the review notice nor an invented proceedings line
+% status:  RED (68c r1) -> GREEN (68c r2); guard perfect_kernel_batch68c::icml2020_accepted_notice_unknown_is_empty
+\documentclass{article}
+\usepackage[accepted]{icml2020}
+\makeatletter
+\newcommand{\shownotice}{\Notice@String}
+\makeatother
+\begin{document}
+Notice: \shownotice.
+\end{document}

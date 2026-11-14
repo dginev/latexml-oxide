@@ -1,0 +1,18 @@
+% witness: math0004102 (`\def \span { {\mathrm{span}} }`, used in `eqnarray` cells)
+% oracle:  pdflatex 0 errors: one equation, "g^v_1 = span{h, g^alpha}" in its first cell, "x" in the third; a
+%          `\def\span` makes `\span` a macro call, not tex.web's tab_mark (§342/§789 insert the v-template by
+%          command code)
+% engines: rust 64ze = 1 error (`Script ^ can only appear in math mode`) + 1 warning: the redefined `\span` still
+%          matched the CURRENT meaning of `\span` (gullet.rs `is_column_end`), ended the cell and set "span" in
+%          text; Perl 0.8.8 the same (Gullet.pm:266-277 `isColumnEnd`)
+% expect:  0 errors, 0 warnings; the first cell's Math reads `g^{v}_{1}={\mathrm{span}}\{h,g^{\alpha}\}`
+% status:  RED (64ze) -> GREEN (65b); guard perfect_kernel_batch65::redefined_span_is_a_macro_not_a_column_end
+% preload: ar5iv.sty
+\documentclass{article}
+\def \span { {\mathrm{span}} }
+\begin{document}
+\begin{eqnarray}
+g^{v}_1 = \span \{ h, g^\alpha \} && x \nonumber\\
+&& y
+\end{eqnarray}
+\end{document}

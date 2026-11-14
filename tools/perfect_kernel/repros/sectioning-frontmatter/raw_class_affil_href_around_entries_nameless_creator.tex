@@ -1,0 +1,26 @@
+% mechanism: an `\href` around the block's entries (with or without a font command round it) is not cut: the
+%   contact lands on a creator with no name, and the names merge ("Bob Baker Cy Cole" in one personname). Pre-existing
+%   (94a r9, 94b r6, r7 identical).
+% witness: review rev94b r7 P3, probes p/x/href, p/z/ihref
+% oracle:  pdflatex 0 errors: Ann Able,1 Bob Baker2 Cy Cole3 / 1Univ A, Town / 2Univ B, City (linked, italic)
+% engines: rust 94b r7, 94a r9: a nameless creator holding the contact; Bob Baker and Cy Cole one personname
+% expect:  0 errors, 0 warnings; three creators, Ann Univ A, Bob Univ B, Cy nothing; the link kept
+% status:  RED (catalog, no guard)
+% preload: ar5iv.sty
+\begin{filecontents*}[overwrite]{affilinauthor.cls}
+\ProvidesClass{affilinauthor}
+\LoadClass{article}
+\def\affilfont{\small}
+\def\affil#1{\par{\reset@font\affilfont#1\par}}
+\def\address#1{\par{\reset@font\affilfont#1\par}}
+\def\@maketitle{\newpage{\Large\bfseries\@title\par}\vskip1em\noindent{\bfseries\@author\par}\vskip1em}
+\end{filecontents*}
+\documentclass{affilinauthor}
+\usepackage{hyperref}
+\begin{document}
+\title{A Title}
+\author{Ann Able,$^1$ Bob Baker$^2$ Cy Cole$^3$
+\affil{\textit{\href{http://x.org}{$^1$Univ A, Town\\ $^2$Univ B, City}}}}
+\maketitle
+Body.
+\end{document}

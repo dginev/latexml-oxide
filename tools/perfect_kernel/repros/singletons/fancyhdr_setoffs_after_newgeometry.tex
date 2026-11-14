@@ -1,0 +1,18 @@
+% A document re-running fancyhdr's header offsets after `\newgeometry` (`\f@nch@setoffs`,
+% fancyhdr.sty:668) reaches an internal the binding lacks: `Error:undefined:\f@nch@setoffs`
+% (Perl's binding lacks it too). The offsets only size running heads, which are not converted.
+% witness: wheelchart manual (wheelchart.tex:2743).
+% status:  GREEN (59e)
+% oracle:  pdflatex 0 errors.
+% expect:  0 errors, 0 warnings; "Body." kept.
+\documentclass{article}
+\usepackage{geometry}
+\usepackage{fancyhdr}
+\pagestyle{fancy}
+\begin{document}
+\newgeometry{left=2pt,right=2pt}
+\makeatletter
+\f@nch@setoffs
+\makeatother
+Body.
+\end{document}

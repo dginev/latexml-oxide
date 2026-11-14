@@ -1,0 +1,24 @@
+% witness: 2605.18420 (`\orcidID`, `\ethics`, the boxes, `\biblstarthook`); run 340 ~350 svmult papers' first error
+% oracle:  pdflatex with svmult.cls (2605.18420's :2192, :2497-2525, :2575-2577, :2029): 0 errors
+% engines: rust 65w = errors (each undefined)
+% expect:  0 errors; the author's ORCID contact; the box title bold over its text; the ethics title bold; the hook's
+%   text under the bibliography heading; the subsubheading
+% status:  RED (65w) -> GREEN (65x)
+\documentclass{svmult}
+\begin{document}
+\title*{A Chapter}
+\author{Ann Able\orcidID{0000-0001-2345-6789}}
+\maketitle
+\begin{important}{Key Point}
+The text of the box.
+\end{important}
+\subsubruninhead{Detail} More.
+\ethics{Competing Interests}{The authors declare none.}
+\biblstarthook{References are listed alphabetically.}
+\begin{thebibliography}{9}
+\bibitem{a} A. Able, A book.
+\end{thebibliography}
+\begin{thebibliography}{9}
+\bibitem{b} B. Baker, Another book.
+\end{thebibliography}
+\end{document}

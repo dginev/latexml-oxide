@@ -1,0 +1,12 @@
+% witness: the IEEE conference template (IEEEtran.cls:6270 swallows `\IEEEmembership` in conference mode)
+% oracle:  pdflatex 0 errors: "Ann Able, , and Bob Baker," (no grade printed)
+% engines: rust P5abase = two creators, no grade
+% expect:  0 errors, 0 warnings; two creators, no membership contact
+% status:  GREEN (P5abase) -> GREEN (P5a)
+\documentclass[conference]{IEEEtran}
+\begin{document}
+\title{T}
+\author{Ann~Able,~\IEEEmembership{Member,~IEEE}, and~Bob~Baker,~\IEEEmembership{Fellow,~IEEE}}
+\maketitle
+Text.
+\end{document}

@@ -1,0 +1,18 @@
+% witness: 0705.1240 (R. Ouyed et al., one `\institute{…\thanks{…}}` under four unmarked names); review rev92c r2 B-2
+% oracle:  pdflatex with 1707.06238's aa.cls: "Ann Able and Bob Baker", "Univ A, City A⋆" unnumbered under the row, the
+%          footnote "⋆ email: ann@a.org"
+% engines: perl 0.8.8 = 0 errors; rust 93a and 92c r2 (int 94a) = the institute on a nameless creator (the note's
+%          address read as an address on the institute's line, which left the institute the block's; llncs the same)
+% expect:  0 errors, 0 warnings; the institute every author's (the note prints in the footer, no line of the
+%          institute: `shared_row::holds_raw_address` passes over a note's text); the note a publication note
+% status:  RED (92c r2) -> GREEN (92c r3) — perfect_kernel_batch92c::aa_sole_institute_reads_as_llncss
+% preload: ar5iv.sty
+\documentclass{aa}
+\begin{document}
+\title{T}
+\author{Ann Able \and Bob Baker}
+\institute{Univ A, City A\thanks{email: ann@a.org}}
+\abstract{A}{B}{C}{D}{E}
+\maketitle
+Text.
+\end{document}

@@ -1,0 +1,27 @@
+% figbib's figure-source list beside a regular bibliography. bibtex runs twice on separate `.aux` files: the
+% document's `\citation{zed}` reaches only `\bibliography`, the figures' `\citation{alpha}` only the figbib list
+% (figbib.sty:271 writes to its private aux). The binding cites each figure where it stands in a citation list of the
+% figures' own, which the figbib list reads (figbib_sty.rs, 60h); but every citation also reaches the main list (post
+% scan.rs, Perl Scan.pm:379-380: a unit's citation is the main bibliography's too), so the main bibliography misses
+% the figure key and warns — or, when the two share a `.bib`, lists the figure entry too.
+% status:  RED (open; needs a citation list the main bibliography does not read)
+% oracle:  pdflatex + bibtex <job> + bibtex <job>.figbib + pdflatex ×3, 0 errors: "Text [1]." / "List of Figures" /
+%          "Fig. 1 (p. 1): Golf hotel." / "References" / "[1] Zulu."
+% engines: rust 60h r4: the lists as the oracle, and "Missing bibkeys: alpha" (the main list)
+% expect:  0 errors, 1 warning (figbib's "Figure `alpha' on page 1 undefined"); no "Missing bibkeys"
+\begin{filecontents*}{\jobname-fig.bib}
+@fig{alpha, main = {Golf hotel}, file = {none}}
+\end{filecontents*}
+\begin{filecontents*}{\jobname-ref.bib}
+@misc{zed, title = {Zulu}}
+@misc{yak, title = {Yankee}}
+\end{filecontents*}
+\documentclass{article}
+\usepackage[nopics]{figbib}
+\begin{document}
+Text \cite{zed}.
+\fbEpsfig{alpha}{2cm}{h}
+\fbList{\jobname-fig}
+\bibliographystyle{unsrt}
+\bibliography{\jobname-ref}
+\end{document}

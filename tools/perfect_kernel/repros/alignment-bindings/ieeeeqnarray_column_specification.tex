@@ -1,0 +1,27 @@
+% witness: 2508.03314, 2011.14178, 1309.2819 (~1,000 of run 336's papers: `&`/`_`/`^` in an `{IEEEeqnarray}`)
+% oracle:  pdflatex 0 errors (IEEEtrantools.sty:1996 builds the preamble from the column specification, :1512-1539)
+% engines: rust 64h4 = 11 errors (every spec a 3-column eqnarray: "Extra alignment tab", "Script _ can only appear in
+%          math mode"; `s` no column of the box), 1 warning; Perl 25 errors, 2 warnings
+% expect:  0 errors, 0 warnings; rows of 5, 6 and 4 cells (the `s` column text), the box's `s` cells text
+% status:  RED (64h4) -> GREEN (64ra)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{IEEEtrantools}
+\begin{document}
+\begin{IEEEeqnarray}{rCCCl}
+a & = & b_1 & = & c^2
+\end{IEEEeqnarray}
+\begin{IEEEeqnarray}{rClrCl}
+a &=& b, & d &=& e_1
+\end{IEEEeqnarray}
+\begin{IEEEeqnarray}{rCl"s}
+a &=& b_1 & (by definition)\\
+&& {+}\: c^2 \nonumber
+\end{IEEEeqnarray}
+\begin{equation}
+x=\left\{\begin{IEEEeqnarraybox}[\relax][c]{l?s}
+1,&if $y_1>0$;\\
+0,&otherwise.
+\end{IEEEeqnarraybox}\right.
+\end{equation}
+\end{document}

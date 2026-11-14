@@ -1,0 +1,27 @@
+% mechanism: the rehearsals the content check makes for itself (a call its block's own expansion made,
+%   `ApiCall::inside_events`, under `=2`) read from the check's own allowance
+%   (`rehearsal::for_the_check`, one rehearsal's reads for the conversion), never from the conversion's budget the
+%   output's rehearsals share: a later call keeps its rehearsal, and what is written doesn't move
+% witness: review revRC1 finding 4 (agent_reports/2026-11-08_revRC1_report.md, SUSPECTED; confirmed here); revtex's
+%   `\collaboration` after an `\author`, 2009.10691's shape
+% oracle:  pdflatex 0 errors; "Ann Able1", "(On behalf of the Big Collaboration)", "Bob Baker2", …, "Cat Cole"
+% engines: rust =2 under `LATEXML_REHEARSAL_READ_BUDGET=6000` (RC1, b3d4ddc508): Cat Cole loses `Univ Gamma`
+%   (its rehearsal over the budget the two collaborations' check rehearsals spent), 2 warnings (the budget's, the
+%   content check's `Gamma Univ`); MV1base (3189c464d9) writes it, 0 warnings
+% expect:  =2 under that budget: 0 errors, 0 warnings, three creators each with its affiliation and the two
+%   collaborations
+% status:  RED (RC1) -> GREEN (perfect_kernel_batchrc1::the_checks_rehearsals_leave_the_budget)
+% preload: ar5iv.sty
+\documentclass[aps,prd,superscriptaddress]{revtex4-1}
+\newcommand\slow{\count255=0 \loop\ifnum\count255<200 \advance\count255 by 1 \repeat}
+\begin{document}
+\title{T}
+\author{Ann Able}\affiliation{Univ Alpha}
+\collaboration{On behalf of the Big Collaboration\slow}
+\author{Bob Baker}\affiliation{Univ Beta}
+\collaboration{On behalf of the Bigger Collaboration\slow}
+\author{Cat Cole}\affiliation{Univ Gamma}
+\begin{abstract}A.\end{abstract}
+\maketitle
+Text.
+\end{document}

@@ -1,0 +1,21 @@
+% An author who already holds a correspondence \thanks note, and a "Corresponding author: x@y" line under the block:
+%   the author keeps that note, and the e-mail its label as printed — `write_role_notes` checks for the note before it
+%   strips the label phrase, so the phrase is never lost (rev107c2 finding 1, introduced by 107c's N4; 107f C).
+% witness: none (synthetic; no A/B paper changed its unclaimed count) — rev107c2 probe p2/n3
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "Ann Able∗ and Bob Baker / Univ A, Town / Corresponding
+%   author: aable@a.edu", footnote "∗To whom correspondence should be addressed."
+% engines: rust 107c (473dfa036d) = Ann's note kept, aable@a.edu on Ann with name="Email: ", 1 unclaimed Warning
+% expect:  0 errors, 0 warnings; Ann Able: the thanks note, Univ A, Town, aable@a.edu with name="Corresponding author: ";
+%   Bob Baker: Univ A, Town
+% status:  RED (107c r2) -> GREEN (107f)
+% preload: ar5iv.sty
+\documentclass{article}
+\title{T}
+\author{Ann Able\thanks{To whom correspondence should be addressed.} and Bob Baker\\
+Univ A, Town\\
+Corresponding author: aable@a.edu}
+\date{}
+\begin{document}
+\maketitle
+Text.
+\end{document}

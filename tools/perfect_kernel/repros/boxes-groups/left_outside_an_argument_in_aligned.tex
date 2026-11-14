@@ -1,0 +1,18 @@
+% witness: 2606.01486 (approxHFsym_dualities_v1.tex:446 `\expval{\del D \over \del\Phi}_F` in aligned), sandbox 2606 regression C5
+% oracle:  pdflatex 0 errors
+% engines: rust 65d..66e = 1 error ("\lx@hidden@egroup Attempt to close boxing group"), 1 warning ("Missing \right. inserted"), the equation
+%          lost: the end of the `\expval` argument closed the binding's own `\left\langle` group, and its `\right\rangle` met the aligned
+%          row's `\begingroup`; 65c and perl 0
+% mechanism: stomach.rs `close_left_group_at_input_end` closes only a `\left` group opened in the input that ran out; OXIDIZED_DESIGN_DIVERGENCES #530
+% expect:  0 errors, 0 warnings; both rows kept, the first row's XMDual presentation a FRACOP between `⟨` and `⟩`
+% preload: ar5iv.sty
+% status:  GREEN (66g)
+\documentclass{article}
+\usepackage{physics}
+\usepackage{braket}
+\begin{document}
+\begin{equation}\begin{aligned}
+a & = b - \expval{\delta D \over \delta \Phi}_F \\
+ & = c
+\end{aligned}\end{equation}
+\end{document}

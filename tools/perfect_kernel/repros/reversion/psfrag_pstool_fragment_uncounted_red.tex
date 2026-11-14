@@ -1,0 +1,21 @@
+% witness: 1608.03745 (`\usepackage[process=auto]{pstool}`, `\pstool[width=…]{Fig/TransReceive/TransReceive.eps}{\psfrag{T}…}`
+%          and `\psfragfig{Fig/ISI/ISI}`; pstool loaded by 11 of the 30k uniform sample, `\pstool`/`\psfragfig` used by 1 each)
+% oracle:  latex + dvips, 0 `!`, prints α in place of the figure's "A" (pstool in DVI mode includes the EPS under psfrag)
+% engines: rust PSF1 = raw pstool takes the pdfTeX path: `<graphics graphic="./pstoolfig">`, 3 Errors (catchfile
+%          `./pstool-statusfile.txt' not found), 4 Warnings, none for the fragment; perl 0.8.8 has no pstool binding either
+% expect:  the replacement reaches the output, or at least one Warning counts the dropped fragment
+% status:  RED (PSF1): the fragment is not counted (the graphic is no EPS on that path; the loss shows only as Errors)
+% moves:   post-merge (pstool's `\pstool`/`\psfragfig` through psfrag_sty::psfrag_graphic; reach below ~500)
+\documentclass{article}
+\usepackage{graphicx,psfrag}
+\usepackage{pstool}
+\begin{filecontents*}{pstoolfig.eps}
+%!PS-Adobe-3.0 EPSF-3.0
+%%BoundingBox: 0 0 72 36
+/Times-Roman findfont 12 scalefont setfont
+10 10 moveto (A) show
+showpage
+\end{filecontents*}
+\begin{document}
+\pstool{pstoolfig}{\psfrag{A}{$\alpha$}}
+\end{document}

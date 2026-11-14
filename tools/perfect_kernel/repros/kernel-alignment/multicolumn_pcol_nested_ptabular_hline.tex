@@ -1,0 +1,18 @@
+% witness: 1808.05579 (a `\multicolumn{2}{p{..}|}` cell: text, then a nested p-column tabular with \hline)
+% oracle:  pdflatex 0 errors; pdftotext shows u v / w z as two rows after "text"
+% engines: rust base=1 (65int2), rust 65p=0, perl=0 (2026-10-12)
+% expect:  0 errors; the inner //ltx:tabular has 2 tr (u v, w z)
+% status:  GREEN (batch 65p, 2026-10-12)
+% mechanism: as multicolumn_pcol_nested_tabular_rows (the inner \hline came after a collapsed row).
+\documentclass{article}
+\begin{document}
+\begin{tabular}{l|p{2cm}|p{3cm}|}
+a & b & c \\
+x & \multicolumn{2}{p{4.8cm}|}{\raggedright text
+\begin{tabular}[c]{p{2.5cm} |p{2.3cm}}
+\hline
+u & v \\
+w & z \\
+\end{tabular}}
+\end{tabular}
+\end{document}

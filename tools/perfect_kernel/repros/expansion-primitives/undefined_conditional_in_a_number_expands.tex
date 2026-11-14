@@ -1,0 +1,11 @@
+% An undefined conditional where a number is scanned is expanded as its error stub (`\iffalse`,
+% State.pm:537-545): the read that meets it installs the stub, and the scan reads it again.
+% witness: none (probe; the draft-toggle idiom with `\ifdraft` undefined).
+% status:  GREEN (59a)
+% oracle:  Perl LaTeXML: 1 error (the undefined \ifdraft), then "yes." (pdflatex differs: TeX drops an
+%          undefined token, 5 errors and "0=0 yesno.").
+% expect:  1 error (undefined \ifdraft), 0 warnings.
+\documentclass{article}
+\begin{document}
+\ifnum\ifdraft 1\else 0\fi=0 yes\else no\fi.
+\end{document}

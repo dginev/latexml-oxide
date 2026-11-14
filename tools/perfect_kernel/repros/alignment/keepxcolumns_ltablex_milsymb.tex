@@ -1,0 +1,21 @@
+% witness: milsymb/milsymb (milsymb.tex:18)
+% oracle:  pdflatex 0 errors
+% engines: rust=1 perl=0 (2026-09-03)   <- RUST-ONLY (Perl raw-loads ltablex; stub binding does not)
+% expect:  0 errors; tabularx body cell contains "c"
+% status:  GREEN (b54t, batch 54o)
+% mechanism: ltablex.sty:149 defines \keepXColumns (\TX@convertX@false) and
+%   \convertXColumns (:153). They only toggle the print-width measurement bool
+%   \TX@convertX@; X columns render identically in LaTeXML either way. The Rust
+%   ltablex binding (latexml_contrib/src/ltablex_sty.rs) is a warn-only stub that
+%   RequirePackages tabularx+longtable but defines neither toggle, so \keepXColumns
+%   is undefined. Perl has no ltablex.ltxml -> raw-loads ltablex.sty -> both defined.
+%   Fix site: latexml_contrib/src/ltablex_sty.rs (define the two toggles as no-ops).
+\documentclass{article}
+\usepackage{ltablex}
+\keepXColumns
+\begin{document}
+\begin{tabularx}{\textwidth}{|c|l|X|}
+ a & b & c \\ \hline
+ d & e & f \\ \hline
+\end{tabularx}
+\end{document}

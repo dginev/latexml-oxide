@@ -1,0 +1,19 @@
+% mechanism: the entries of one block line a name requests, which the old reader left to the block, written onto the
+%   name in the order the line prints them (the writer's print-order pass, `apply::place` by `plan::Place`: one
+%   block's entries by their spans), not in the order of their texts.
+% witness: 1910.02344 (`\textbf{Christopher Pal}$^{1234}$`: Element AI, Mila, Université de Montréal, Polytechnique
+%   Montréal), 2002.09131 (Jiahao Su$^{12}$: University of Maryland before NVIDIA)
+% oracle:  pdflatex 0 errors: "Ann Able1 , Bob Baker1 , Cat Cole1234" over "1 Zeta University, 2 Beta Institute,
+%   3 Alpha College, 4 Delta Lab"
+% engines: rust 92c: Cat Cole none, Beta, Alpha and Delta the block's; rust 93a: Cat Cole Zeta, Alpha, Beta, Delta
+% expect:  0 errors, 0 warnings; Cat Cole Zeta University, Beta Institute, Alpha College, Delta Lab, in that order
+% status:  GREEN (93a r2; fixed on the tip by 92c r2/r3's print-order pass)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{A Title}
+\author{Ann Able$^{1}$, Bob Baker$^{1}$, Cat Cole$^{1234}$ \\
+$^1$Zeta University, $^2$Beta Institute, $^3$Alpha College, $^4$Delta Lab}
+\maketitle
+Text.
+\end{document}

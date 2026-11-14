@@ -1,0 +1,26 @@
+% Under hyperref and cleveref `\refstepcounter` is a wrapper around the kernel's, so a step made through its current
+% meaning (`ref_step_counter_planned`, 58h) must still continue a float, make a shared-counter theorem's tags for its own
+% type and pass the counter as LaTeX does (`\refstepcounter{thm}` for a `lem`; cleveref reads `#1` as a counter). A
+% first cut skipped caption's continuation and hook for every non-kernel meaning ("Continued 'figure' after '??'",
+% 2605.17685's sub-figures renumbered) and passed the type (7,680 `Warning:undefined` across the arXiv A/B).
+% witness: 2605.17685 (continued figures), 2605.02998, 2605.06791 (cleveref theorems).
+% Guard: perfect_kernel_batch58::steps_keep_their_type_and_continuation_through_a_wrapper.
+% status:  GREEN (58h)
+% oracle:  pdflatex 0 errors; Figure 1, Figure 1 (continued), Figure 2; Theorem 1, Lemma 2, Theorem 3; "value 2".
+% engines: rust 58h first cut: a continuation error, Figure 2/3; a cleveref `Warning:undefined`.
+% expect:  0 errors, 0 warnings.
+\documentclass{article}
+\usepackage{caption}
+\usepackage{hyperref}
+\usepackage{cleveref}
+\newtheorem{thm}{Theorem}
+\newtheorem{lem}[thm]{Lemma}
+\begin{document}
+\begin{figure}\caption{A}\label{fa}\end{figure}
+\begin{figure}\ContinuedFloat\caption{A cont}\label{fb}\end{figure}
+\begin{figure}\caption{B}\label{fc}\end{figure}
+\begin{thm}\label{t1}A\end{thm}
+\begin{lem}\label{l1}B\end{lem}
+\begin{thm}\label{t2}C\end{thm}
+Refs: \ref{fa} \ref{fb} \ref{fc} \ref{t1} \ref{l1} \ref{t2}; value \the\value{figure}.
+\end{document}

@@ -1,0 +1,36 @@
+% mechanism: a raw class's title notes on the authors (sigkddExp.cls:1250-1275 `\titlenote`: the counter's symbol
+%   raised beside the name, the text kept in `\tntoks`, `\tntokstwo`), printed only by its refused `{abstract}` begin
+%   code (sigkddExp.cls:658-706). Here the registers are set only when `\maketitle` typesets `\@author`, after the
+%   unclaimed-text net read its candidates (frontmatter_stores.rs `net_candidates`: "net candidates: []"), so both
+%   notes are lost uncounted. 2601.20031's registers hold their text before `\maketitle` and are handed on (its note
+%   stays the block's: the marks the names print, SR1c).
+% witness: synthetic, the 2601.20031 (sigkddExp) shape with `\tntokstwo`
+% oracle:  pdflatex 0 errors: "A Title", "Ann Able∗", "Bob Baker†", footnotes "∗Ann holds a visiting post." and
+%          "†Bob is on leave.", "Abstract", "An abstract."
+% engines: rust int160b, SR1b, SR1c, int162a = 0 errors, 0 warnings, both notes lost, no Warning;
+%          perl = 0 errors (the raw class is not loaded: OmniBus)
+% expect:  both notes kept (the block's nameless creator), or their loss counted by a Warning
+% status:  RED (int160b, SR1b, SR1c, int162a)
+% moves:   post-merge (SR5)
+% preload: ar5iv.sty
+\begin{filecontents*}[overwrite]{nettna.cls}
+\ProvidesClass{nettna}\LoadClass{article}
+\newcount\titlenotecount \newtoks\tntoks \newtoks\tntokstwo
+\def\titlenote#1{\global\advance\titlenotecount by 1
+  \ifnum\titlenotecount=1 \raisebox{9pt}{$\ast$}\global\tntoks={#1}\fi
+  \ifnum\titlenotecount=2 \raisebox{9pt}{$\dagger$}\global\tntokstwo={#1}\fi}
+\renewenvironment{abstract}{\ifnum\titlenotecount>0 \insert\footins{\footnotesize
+  \raisebox{4pt}{$\ast$}\the\tntoks\par
+  \ifnum\titlenotecount>1 \raisebox{4pt}{$\dagger$}\the\tntokstwo\par\fi}\fi
+  \section*{Abstract}}{\par}
+\end{filecontents*}
+\documentclass{nettna}
+\title{A Title}
+\author{Ann Able\titlenote{Ann holds a visiting post.} \and Bob Baker\titlenote{Bob is on leave.}}
+\begin{document}
+\maketitle
+\begin{abstract}
+An abstract.
+\end{abstract}
+Text.
+\end{document}

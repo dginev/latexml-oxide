@@ -1,0 +1,31 @@
+% A raw class's abstract and keywords stores, named by the labels its title page prints ("Resumen:", "KW:"), are read
+% where LaTeX reads them: at `\maketitle`, which expands the stores. A value using a macro and a package defined later
+% in the preamble (`\foo`, xcolor's `\textcolor`) therefore reads as pdflatex reads it — the setter only stores
+% (`labelled_api`, `\lx@store@hand`) and `\maketitle` queues the entries (`harvest_stores`, frontmatter_stores.rs).
+% witness: none (synthetic; review probe `early` of 77i r2, whose `\lx@add@frontmatter@now` digested the values in the
+%          preamble: 1309.6905, 1704.03582, 1911.00899, 1910.07185 take their labelled keywords this way).
+% oracle:  pdflatex 0 errors: "Resumen: Uses bar and red." and "KW: kw bar".
+% engines: rust 77i r2: 2 errors (undefined `\foo`, `\textcolor`), "Uses \foo and redred."; rust 67int35: the
+%          values right, but orphan "Resumen:" and "KW:" paragraphs before "Text.".
+% expect:  0 errors, 0 warnings; `<abstract name="Resumen:">` "Uses bar and red." (red text), `<keywords name="KW:">kw
+%          bar</keywords>`; no label in the body.
+% status:  RED (77i r2) -> GREEN (77i r3)
+\begin{filecontents*}[overwrite]{rcearly.cls}
+\ProvidesClass{rcearly}
+\LoadClass{article}
+\newcommand*\resumen[1]{\gdef\@resumen{#1}}
+\def\@resumen{}
+\newcommand*{\keywords}[1]{\def\@keywords{#1}}
+\def\@keywords{}
+\def\@maketitle{\@title\par\@author\par Resumen: \@resumen\par KW: \@keywords\par}
+\end{filecontents*}
+\documentclass{rcearly}
+\title{T}\author{Anton}
+\resumen{Uses \foo{} and \textcolor{red}{red}.}
+\keywords{kw \foo}
+\newcommand\foo{bar}
+\usepackage{xcolor}
+\begin{document}
+\maketitle
+Text.
+\end{document}

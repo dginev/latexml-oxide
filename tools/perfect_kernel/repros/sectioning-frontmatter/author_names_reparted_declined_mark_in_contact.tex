@@ -1,0 +1,21 @@
+% mechanism: the writer's re-part (OD #928) with an `\affil{$^1$…}` inside `\author`: one Contact event, its leading
+%   Mark its label and its span its content from the mark on (OD #937); before 94b its text kept the mark's ink
+%   ("1Department of Physics, Univ X"), the re-part did not read as the reading and was taken back (the fail-safe)
+% witness: 2405.08158, 1602.05576 (ar-1col `\affil{$^1$…; email: …}` in `\author`: the affiliations in the last name)
+% oracle:  pdflatex 0 errors: "Ann Able1 and Bob Baker2" / "1 Department of Physics, Univ X" / "2 Department of Physics,
+%   Univ Y"
+% engines: rust 94a: Bob Baker's name holds both lines (the re-part declined); perl: the same
+% expect:  0 errors, 0 warnings; writer "written": Ann Able "Department of Physics, Univ X", Bob Baker "Department of
+%   Physics, Univ Y", each requested by its name's mark, the mark out of the made affiliation (94a r2, review rev94a S3)
+% status:  RED (94a: declined by the fail-safe) -> GREEN (94b)
+% preload: ar5iv.sty
+\documentclass{article}
+\newcommand{\affil}[1]{\\{\footnotesize #1}}
+\begin{document}
+\title{A Title}
+\author{Ann Able$^1$ and Bob Baker$^2$
+\affil{$^1$Department of Physics, Univ X}
+\affil{$^2$Department of Physics, Univ Y}}
+\maketitle
+Body.
+\end{document}

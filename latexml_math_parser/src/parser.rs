@@ -14,7 +14,7 @@ use latexml_core::{
     xml::*,
   },
   document::{Document, get_node_qname, sym_can_have_attribute, with_node_qname},
-  fatal, map, pin, s, static_map, sym_map,
+  fatal, map, pin, s, state, static_map, sym_map,
 };
 use libxml::tree::{Node, NodeType};
 use marpa::{
@@ -30,6 +30,53 @@ use crate::{
   semantics::*,
   util::{filter_hints, node_to_grammar_lexemes_from},
 };
+
+/// A formula's distinct parse trees in arrival order — what `Vec::contains` then `push` keeps,
+/// with each tree's hash (`XM: Hash`, consistent with its `Eq`) indexing the trees that may equal
+/// it, so a new tree is compared deeply only against those. The scans compared every new tree with
+/// every kept one: 1509.06364's 29,183 parses spent most of its 149 s in `XM`'s `eq`.
+#[derive(Default)]
+struct UniqueTrees {
+  trees:   Vec<XM>,
+  by_hash: HashMap<u64, Vec<usize>>,
+}
+
+impl UniqueTrees {
+  fn hash_of(tree: &XM) -> u64 {
+    let mut hasher = rustc_hash::FxHasher::default();
+    tree.hash(&mut hasher);
+    hasher.finish()
+  }
+
+  /// Keeps `tree` unless an equal one is kept; true when it was kept.
+  fn insert(&mut self, tree: XM) -> bool {
+    let bucket = self.by_hash.entry(Self::hash_of(&tree)).or_default();
+    if bucket.iter().any(|&i| self.trees[i] == tree) {
+      return false;
+    }
+    bucket.push(self.trees.len());
+    self.trees.push(tree);
+    true
+  }
+
+  /// Keeps `tree` whether or not an equal one is kept (`Vec::push`).
+  fn push(&mut self, tree: XM) {
+    self
+      .by_hash
+      .entry(Self::hash_of(&tree))
+      .or_default()
+      .push(self.trees.len());
+    self.trees.push(tree);
+  }
+
+  fn into_vec(self) -> Vec<XM> { self.trees }
+}
+
+impl std::ops::Deref for UniqueTrees {
+  type Target = [XM];
+
+  fn deref(&self) -> &[XM] { &self.trees }
+}
 
 thread_local! {
   /// Conversion-wide ordinal behind the `[N]` math-progress markers.
@@ -59,7 +106,7 @@ static TEX_TEXT_FALLBACK: Lazy<HashMap<&'static str, &'static str>> = Lazy::new(
     r"ds^{2}=h(z)|dz|^{2}" => "d * s ^ 2 = h * z * (absolute-value@(d * z)) ^ 2",
     r"\mathbf{D}_{r}" => "D _ r",
     r"h\in C^{2}(\mathbf{D}_{r})" => "h element-of C ^ 2 * D _ r",
-    r"(1,1)" => "open-interval@(1, 1)",
+    r"(1,1)" => "vector@(1, 1)",
     r"\omega\leq\omega_{r}" => "omega <= omega _ r",
     r"ds^{2}\leq ds_{r}^{2}" => "d * s ^ 2 <= d * (s _ r) ^ 2",
     r"\omega^{1}" => "omega ^ 1",
@@ -154,7 +201,7 @@ static PARSE_HYBRID_AUDIT_PARITY: Lazy<bool> =
 // raw-ambiguous fraction (12.7%–40% across corpus papers).
 //
 // Escape hatches:
-//   * `LATEXML_MARPA_LEGACY=1`  → pure Tree-iteration with the 6 convergence caps. Useful for
+//   * `LATEXML_MARPA_LEGACY=1`  → pure Tree-iteration with the convergence caps. Useful for
 //     engine-divergence debugging.
 //   * `LATEXML_MARPA_ASF_ONLY=1` → pure ASF (no hybrid dispatch). Useful for measuring ASF-only
 //     cost or debugging ASF behaviour in isolation.
@@ -177,8 +224,18 @@ static PARSE_VIA_HYBRID: Lazy<bool> = Lazy::new(|| !*PARSE_VIA_LEGACY && !*PARSE
 // parses per formula — beyond a few hundred and-nodes the
 // `dispatch_action` Cartesian product produces alternatives that
 // will be dropped or collapsed anyway. Bigger bocages route through
-// the Tree iterator's 6 convergence caps (max_unique=10, etc.)
-// which already match what semantic selection can use. Override via
+// the Tree iterator's convergence caps (max_unique=10, max_trees=5000,
+// max_since_unique=256). The iterator varies the ROOT choice last
+// (libmarpa `marpa_t_next`), so a formula's top-level reading — how
+// its bars pair up — can come after many trees that differ only
+// inside: a short run of repeats is no convergence (#146: the correct
+// `|…| = a|…| \le c` pairing was tree 19 of 27, tree 165 of 192 in
+// 2605.13278). Once a parse exists the caps are counts (short of the
+// 30 s limit), so which trees are seen does not depend on machine load;
+// before one, the 2 s pruned-only budget and the 30 s limit are
+// time-based safety nets. A sample that finds no parse, or stops at
+// `max_unique` with trees to come, gets a second, work-bounded chance
+// through ASF (`ASF_SECOND_CHANCE_*`). Override via
 // `LATEXML_MARPA_HYBRID_AND_NODE_LIMIT`; set `=0` (or `none`) to
 // disable the cap and force pure ASF on every ambiguous formula.
 static HYBRID_AND_NODE_LIMIT: Lazy<Option<usize>> =
@@ -195,6 +252,80 @@ static HYBRID_AND_NODE_LIMIT: Lazy<Option<usize>> =
       Err(_) => Some(500),
     },
   );
+
+thread_local! {
+  /// In-process override of the hybrid AND-node limit, consulted before
+  /// `LATEXML_MARPA_HYBRID_AND_NODE_LIMIT`. The environment is READ-ONLY for this code base: a
+  /// test that needs a formula parsed through the tree-iterator fallback (`Some(Some(n))`) or
+  /// through pure ASF (`Some(None)`) sets this knob in the conversion's thread instead.
+  static HYBRID_AND_NODE_LIMIT_OVERRIDE: std::cell::Cell<Option<Option<usize>>> =
+    const { std::cell::Cell::new(None) };
+}
+
+/// See `HYBRID_AND_NODE_LIMIT_OVERRIDE`; `None` restores the env/default policy.
+pub fn set_hybrid_and_node_limit_override(limit: Option<Option<usize>>) {
+  HYBRID_AND_NODE_LIMIT_OVERRIDE.with(|c| c.set(limit));
+}
+
+/// The AND-node count past which a bocage is read by the tree iterator instead of ASF.
+fn hybrid_and_node_limit() -> Option<usize> {
+  HYBRID_AND_NODE_LIMIT_OVERRIDE
+    .with(|c| c.get())
+    .unwrap_or(*HYBRID_AND_NODE_LIMIT)
+}
+
+/// The second chance's bounds (`parse_marpa`: ASF over a bocage the tree iterator sampled without
+/// finding a parse, or cut short at `max_unique`). Its cost follows the readings that survive at
+/// each glade, so the traversal counts the actions it attempts and the alternatives it produces
+/// (`asf_traverser::AsfBudget`): a 20-term `\log` chain spends 1,264 alternatives at 8,146
+/// AND-nodes, the 3,003-paper arXiv A/B's rescued formulas 290–7,133 (57am). Eleven bar pairs beside
+/// three logs (`|a||b|…|k| + \log a\,\log b\,\log c`, ~100 KB an alternative) spent all 10,000 and
+/// stayed unparsed while bar fences nested without Perl's `MAX_ABS_DEPTH` — uncapped they passed
+/// 8 GB; they now take 674. The attempts cap is a backstop (≤ 8,500 used), the AND-node gate
+/// bounds ASF's up-front glade view, and the deadline is a safety net.
+const ASF_SECOND_CHANCE_AND_NODE_LIMIT: usize = 20_000;
+const ASF_SECOND_CHANCE_ATTEMPTS: usize = 200_000;
+const ASF_SECOND_CHANCE_ALTERNATIVES: usize = 10_000;
+
+thread_local! {
+  /// In-process override of `ASF_SECOND_CHANCE_ALTERNATIVES`, for a test that needs the budget
+  /// spent on a formula the second chance would otherwise read (set in the conversion's thread).
+  static ASF_SECOND_CHANCE_ALTERNATIVES_OVERRIDE: std::cell::Cell<Option<usize>> =
+    const { std::cell::Cell::new(None) };
+}
+
+/// See `ASF_SECOND_CHANCE_ALTERNATIVES_OVERRIDE`; `None` restores the default.
+pub fn set_asf_second_chance_alternatives_override(alternatives: Option<usize>) {
+  ASF_SECOND_CHANCE_ALTERNATIVES_OVERRIDE.with(|c| c.set(alternatives));
+}
+
+/// The second chance's alternatives budget.
+fn asf_second_chance_alternatives() -> usize {
+  ASF_SECOND_CHANCE_ALTERNATIVES_OVERRIDE
+    .with(|c| c.get())
+    .unwrap_or(ASF_SECOND_CHANCE_ALTERNATIVES)
+}
+const ASF_SECOND_CHANCE_TIME: std::time::Duration = std::time::Duration::from_secs(5);
+
+thread_local! {
+  /// In-process override of every wall-clock limit of a formula's parse (the tree sample's 30 s and
+  /// 2 s pruned-only budget, the second chance's 5 s), for a test whose outcome must follow the
+  /// count budgets alone, whatever the machine's load (set in the conversion's thread).
+  static PARSE_DEADLINES_OVERRIDE: std::cell::Cell<Option<std::time::Duration>> =
+    const { std::cell::Cell::new(None) };
+}
+
+/// See `PARSE_DEADLINES_OVERRIDE`; `None` restores the defaults.
+pub fn set_parse_deadlines_override(limit: Option<std::time::Duration>) {
+  PARSE_DEADLINES_OVERRIDE.with(|c| c.set(limit));
+}
+
+/// A wall-clock limit of the parse: `default`, unless a test overrides them all.
+fn parse_deadline(default: std::time::Duration) -> std::time::Duration {
+  PARSE_DEADLINES_OVERRIDE
+    .with(|c| c.get())
+    .unwrap_or(default)
+}
 
 // Maximum number of grammar lexemes in a single formula before we skip the
 // full Marpa grammar parse and fall through to the kludge parser (the same
@@ -441,7 +572,10 @@ pub struct MathParser {
   passed:                    SymHashMap<usize>,
   failed:                    SymHashMap<usize>,
   unknowns:                  SymHashMap<usize>,
-  // punctuation: HashMap<String, usize>,
+  /// Perl `%$LaTeXML::MathParser::PUNCTUATION` (MathParser.pm:256, :665-667): whether this
+  /// formula's `parse_single` set aside an XMRef'd punctuation mark (marked `SET_ASIDE`), whose
+  /// XMRefs `parse` replaces by a copy (:281-286).
+  punctuation:               bool,
   // lostnodes: HashMap<String, Node>,
   // idrefs: Vec<(String, Node)>,
   maybe_functions:           SymHashMap<usize>,
@@ -460,9 +594,71 @@ pub struct MathParser {
   /// `balance_null_delimiters` retry. Without it the log would carry an
   /// `unparsed_math` warning for a formula that ends up fully parsed.
   suppress_unparsed_warning: bool,
-  // strict: bool,
+  /// Set while an attempt of `parse_lexemes` may still be retried with bar fences nesting deeper
+  /// (Perl `MAX_ABS_DEPTH`): its `unparsed_math` warning waits in `deferred_unparsed_warning`
+  /// (the formula, the message) and is logged only if no retry parses.
+  defer_unparsed_warning:    bool,
+  deferred_unparsed_warning: Option<(String, String)>,
+  /// The ASF second chance's budget left for the formula `parse_lexemes` is parsing: one budget
+  /// across its `MAX_ABS_DEPTH` attempts, so a deeper attempt goes on where the last one stopped
+  /// and a formula that never parses costs one budget, not three (57am review round 7).
+  second_chance_budget:      Option<crate::asf_traverser::AsfBudget>,
+  /// Perl `$LaTeXML::MathParser::STRICT`: 1 while a formula is parsed (MathParser.pm:252), 0
+  /// while an XMWrap inside it is (:387). A failed parse is reported only under it (:864).
+  strict:                    bool,
+  /// Perl `$LaTeXML::MathParser::UNPARSED` (MathParser.pm:254, :691): set when any parse inside
+  /// the current formula fails; `parse` then flags the formula by `is_genuinely_unparsed`.
+  unparsed:                  bool,
   // xnode: Option<Node>,
 }
+/// Perl `is_genuinely_unparsed` (MathParser.pm:997-1027): an unparsed fragment — an XMWrap or
+/// XMArg left standing, or a node marked `_unparsed` — anywhere but in an XMDual's presentation
+/// branch (only its content branch is descended); an XMRef is followed to its target, through a
+/// node the parse absorbed (its pending LOSTNODES entry, which Perl has resolved by then,
+/// :280-297), and one that points nowhere or back along its own path counts as unparsed.
+fn is_genuinely_unparsed(node: &Node, document: &Document) -> bool {
+  genuinely_unparsed_rec(node, document, &mut Vec::new())
+}
+
+fn genuinely_unparsed_rec(node: &Node, document: &Document, refs: &mut Vec<String>) -> bool {
+  let tag = get_node_qname(node);
+  if tag == pin!("ltx:XMWrap") || tag == pin!("ltx:XMArg") || node.has_attribute("_unparsed") {
+    true
+  } else if tag == pin!("ltx:XMTok") || tag == pin!("ltx:XMText") || tag == pin!("ltx:XMHint") {
+    false
+  } else if tag == pin!("ltx:XMRef") {
+    let Some(mut id) = node.get_attribute("idref") else {
+      return true;
+    };
+    if document.lookup_id(&id).is_none() {
+      match crate::data::pending_lost_node(&id) {
+        Some(crate::data::LostNode::ReplacedBy(replacement)) => id = replacement,
+        // Absorbed with no replacement: the rewrite drops the reference.
+        Some(crate::data::LostNode::Dropped) => return false,
+        None => return true,
+      }
+    }
+    if refs.contains(&id) {
+      return true;
+    }
+    let Some(target) = document.lookup_id(&id) else {
+      return true;
+    };
+    refs.push(id);
+    let unparsed = genuinely_unparsed_rec(target, document, refs);
+    refs.pop();
+    unparsed
+  } else if tag == pin!("ltx:XMDual") {
+    element_nodes(node)
+      .first()
+      .is_some_and(|content| genuinely_unparsed_rec(content, document, refs))
+  } else {
+    element_nodes(node)
+      .iter()
+      .any(|child| genuinely_unparsed_rec(child, document, refs))
+  }
+}
+
 impl Default for MathParser {
   fn default() -> Self {
     let (grammar, actions, builder) = init_grammar().unwrap();
@@ -480,13 +676,17 @@ impl Default for MathParser {
       unknowns: SymHashMap::default(),
       maybe_functions: SymHashMap::default(),
       failed_xmath_ids: Vec::new(),
-      // punctuation: HashMap::default(),
+      punctuation: false,
       // lostnodes: HashMap::default(),
       // idrefs: Vec::new(),
       last_parsetrees_count: 0,
       warned_formulas: HashSet::new(),
       suppress_unparsed_warning: false,
-      // strict: true,
+      defer_unparsed_warning: false,
+      deferred_unparsed_warning: None,
+      second_chance_budget: None,
+      strict: false,
+      unparsed: false,
       // xnode: None,
     }
   }
@@ -526,11 +726,11 @@ fn resource_fatal_from_message(msg: &str) -> Option<Error> {
   } else {
     return None;
   };
-  Some(Error {
+  Some(Error::from(latexml_core::common::error::ErrorData {
     target: ErrorTarget::Timeout,
     category,
     message: msg.to_string(),
-  })
+  }))
 }
 
 impl MathParser {
@@ -556,6 +756,9 @@ impl MathParser {
       nodes,
       document,
       pruned_count: 0,
+      budget: None,
+      letter_readings: holds_letter_readings(input),
+      differential_letters: holds_differential_letters(input),
     };
     let mut asf_outcome = match parser.parse_and_traverse_forest(
       ByteScanner::new(Cursor::new(input)),
@@ -726,6 +929,11 @@ impl MathParser {
       // Populate the thread-local idstore for XMRef resolution during parsing.
       // Perl uses $doc->lookupID which accesses the document's idstore directly.
       crate::data::set_math_idstore(document.get_idstore_clone());
+      // The document's `d`-token evidence, read from the formulas before any is parsed (user rulings 2026-10-01d/e);
+      // the converter's, gathered over the whole document, when it read one.
+      crate::data::begin_parse_differential_map(|| {
+        crate::util::DifferentialMap::of(&xmath_nodes, document)
+      });
       // Reset the per-document LOSTNODES map. The map accumulates as
       // semantics rules absorb operator nodes; it's drained at the end of
       // this call. A leftover from a previous document on the same thread
@@ -757,6 +965,7 @@ impl MathParser {
           // persistent --server / test-harness thread.
           drain_pending_discards(document, &rustc_hash::FxHashSet::default());
           crate::data::clear_math_idstore();
+          crate::data::end_parse_differential_map();
           note_end("Math Parsing");
           return Err(e);
         }
@@ -780,6 +989,7 @@ impl MathParser {
         drain_pending_discards(document, &queued);
       }
       crate::data::clear_math_idstore();
+      crate::data::end_parse_differential_map();
 
       // Run parse_kludge on unparsed XMath nodes with direct OPEN/CLOSE children.
       // Collect first, then process (avoid modifying tree during XPath iteration).
@@ -832,39 +1042,9 @@ impl MathParser {
       // ($$self{maybe_functions}{$_}/$$self{unknowns}{$_} usages)" }
       // sort @funcs) . "\n"); }
 
-      // Perl DecorateOperator: propagate operator role from base to scripted XMApp.
-      // When SCRIPTOP wraps an operator-like base (MULOP, ADDOP, etc.), the
-      // resulting XMApp should carry the base's role. Done as post-parse DOM
-      // walk to avoid affecting parse tree selection semantics.
-      for mut xmapp in document.findnodes("//ltx:XMApp", None) {
-        if xmapp.get_attribute("role").is_some() {
-          continue; // already has a role
-        }
-        let children: Vec<Node> = xmapp.get_child_elements();
-        if children.len() >= 2 {
-          let op_role = children[0].get_attribute("role");
-          if matches!(
-            op_role.as_deref(),
-            Some("SUPERSCRIPTOP") | Some("SUBSCRIPTOP")
-          ) && let Some(base_role) = children[1].get_attribute("role")
-            && matches!(
-              base_role.as_str(),
-              "MULOP"
-                | "ADDOP"
-                | "BINOP"
-                | "RELOP"
-                | "ARROW"
-                | "METARELOP"
-                | "MODIFIER"
-                | "MODIFIEROP"
-                | "OPERATOR"
-                | "DIFFOP"
-            )
-          {
-            let _ = xmapp.set_attribute("role", &base_role);
-          }
-        }
-      }
+      // Perl DecorateOperator (MathParser.pm:1649-1654) is the parse's `decorate_operator`
+      // action: only a decorated relop/arrow/addop/mulop/binop keeps its operator's role; a
+      // scripted OPERATOR, METARELOP, MODIFIER or DIFFOP is a plain script (`addScripts`).
 
       // Resolve LOSTNODES: rewrite XMRef[@idref=lost_id] -> kept_id via
       // transitive chase, OR unlink the XMRef entirely if the lost node
@@ -878,44 +1058,19 @@ impl MathParser {
       // second-500K stages.
       let lost = crate::data::take_lost_nodes();
       if !lost.is_empty() {
-        // Resolve transitively. Returns:
-        //   None         — start not in lost map
-        //   Some("")     — start is in lost map but maps to sentinel
-        //                  (orphan with no replacement → drop XMRef)
-        //   Some(id)     — start maps (transitively) to surviving id
-        const SENTINEL: &str = "__LOSTNODE__";
-        let resolve = |start: &str| -> Option<String> {
-          let mut id = start;
-          let mut hops = 0usize;
-          while let Some(next) = lost.get(id) {
-            if next == SENTINEL {
-              return Some(String::new());
-            }
-            if next == start || hops > lost.len() {
-              return None; // cycle or pathological depth — bail
-            }
-            id = next.as_str();
-            hops += 1;
-          }
-          if id == start {
-            None
-          } else {
-            Some(id.to_string())
-          }
-        };
         let mut rewrites = 0usize;
         let mut unlinks = 0usize;
         for mut xmref in document.findnodes("//ltx:XMRef[@idref]", None) {
           if let Some(idref) = xmref.get_attribute("idref") {
-            match resolve(&idref) {
-              Some(new_id) if new_id.is_empty() => {
+            match crate::data::chase_lost_node(&lost, &idref) {
+              Some(crate::data::LostNode::Dropped) => {
                 // Dropped for good — unrecord any id it carries, then free
                 // (an unlinked doc-owned node otherwise leaks).
                 document.unrecord_node_ids(&xmref);
                 crate::data::defer_discard(xmref);
                 unlinks += 1;
               },
-              Some(new_id) => {
+              Some(crate::data::LostNode::ReplacedBy(new_id)) => {
                 let _ = xmref.set_attribute("idref", &new_id);
                 rewrites += 1;
               },
@@ -947,9 +1102,8 @@ impl MathParser {
         );
       }
 
-      // Note: ltx_math_unparsed class is NOT applied here because any DOM
-      // manipulation (findnodes/set_attribute) after parse_math breaks Marpa
-      // grammar precomputation for subsequent test runs. Applied in caller instead.
+      // A formula whose whole XMath failed is marked `ltx_math_unparsed` by the caller
+      // (`failed_xmath_ids`); one that parsed around a genuine failure is marked in `parse`.
       note_end("Math Parsing");
     }
     // Whatever the kludge pass discarded (it runs after the loop), plus any
@@ -1095,8 +1249,8 @@ impl MathParser {
           let _ = xmref.set_namespace(ns);
         }
         let _ = new_app.add_child(&mut xmref);
-        // replace_tree_free: new_app is a standalone built tree — copied
-        // into place, then both it and the replaced XMRef are freed.
+        // new_app is a standalone built tree — copied into place, then both
+        // it and the replaced XMRef are freed (`replace_tree_deferred`).
         let _ = replace_tree_deferred(document, new_app, ref_node);
       }
     }
@@ -1189,7 +1343,40 @@ impl MathParser {
   // Then, this information could be used when parsing the parent.
   // In fact, this could work the other way too; parsing the parent could tell
   // us something about what the child must be....
+  /// Perl MathParser.pm:252 `local $LaTeXML::MathParser::STRICT = 1` for the whole formula.
   fn parse(&mut self, xnode: Node, document: &mut Document) -> Result<()> {
+    let outer_strict = std::mem::replace(&mut self.strict, true);
+    let outer_punctuation = std::mem::take(&mut self.punctuation);
+    let outer_unparsed = std::mem::take(&mut self.unparsed);
+    let math = xnode.get_parent();
+    let result = self.parse_formula(xnode.clone(), document);
+    // Perl MathParser.pm:300-303: a formula any of whose parses failed is `ltx_math_unparsed`
+    // when the failure is genuine — not only in an XMDual's presentation branch (an author's
+    // ungrammatical display form), but anywhere its content reaches: a gathered/split row's
+    // content branch that did not parse (2605.06394, 2605.09779, 2605.09802, 2605.13374; repro
+    // math-parse/unparsed_content_branch_is_flagged). Marked here, as Perl does, so a formula
+    // nested in `\mbox{$…$}` keeps its class when the outer parse copies it.
+    if std::mem::replace(&mut self.unparsed, outer_unparsed)
+      && let Some(mut math) = math.clone()
+      && get_node_qname(&math) == pin!("ltx:Math")
+      && is_genuinely_unparsed(&xnode, document)
+    {
+      document.add_class(&mut math, "ltx_math_unparsed")?;
+    }
+    // Perl's `local` ends with the formula, parsed or not: a failed parse leaves its marks.
+    if std::mem::take(&mut self.punctuation)
+      && let Some(math) = math
+    {
+      for mut mark in document.findnodes("descendant-or-self::*[@_setaside]", Some(&math)) {
+        let _ = mark.remove_attribute(SET_ASIDE);
+      }
+    }
+    self.strict = outer_strict;
+    self.punctuation = outer_punctuation;
+    result
+  }
+
+  fn parse_formula(&mut self, xnode: Node, document: &mut Document) -> Result<()> {
     // This bit for debugging....
     // foreach my $n ($document->findnodes("descendant-or-self::*[\@xml:id]",
     // $xnode)) {     my $id = $n->getAttribute('xml:id');
@@ -1240,12 +1427,7 @@ impl MathParser {
             // xnode,
           }
         }
-        // HACK: replace XMRef's to stray trailing punctution
-        //     foreach my $id (keys %$LaTeXML::MathParser::PUNCTUATION) {
-        //       my $r = $$LaTeXML::MathParser::PUNCTUATION{$id}->cloneNode;
-        //       $r->removeAttribute('xml:id');
-        // foreach my $n ($document->findnodes("descendant-or-self::ltx:XMRef[\@idref='$id']",
-        // $p)) {         $document->replaceTree($r, $n); } }
+        self.replace_stray_punctuation_refs(&p, document)?;
         //     foreach my $id (keys %$LaTeXML::MathParser::LOSTNODES) {
         //       my $repid = $$LaTeXML::MathParser::LOSTNODES{$id};
         //       # but the replacement my have been replaced as well!
@@ -1270,6 +1452,41 @@ impl MathParser {
           p.set_attribute("text", text)?;
         }
       },
+    }
+    Ok(())
+  }
+
+  /// Perl MathParser.pm:281-286 "HACK: replace XMRef's to stray trailing punctution": a
+  /// punctuation mark `parse_single` set aside is presentation only, so an XMRef to it (a
+  /// gathered row's `,` referenced from the content branch) becomes a bare copy of the mark
+  /// (`<XMTok role="PUNCT"/>`). Golden:
+  /// tests/parse/aligned_content_branch.tex#stray_punctuation_ref_is_replaced.
+  fn replace_stray_punctuation_refs(&mut self, math: &Node, document: &mut Document) -> Result<()> {
+    // The flag and the marks are cleared by `parse` once the formula is done, error or not.
+    if !self.punctuation {
+      return Ok(());
+    }
+    for xmref in document.findnodes("descendant-or-self::ltx:XMRef[@idref]", Some(math)) {
+      let Some(mark) = xmref
+        .get_attribute("idref")
+        .and_then(|id| document.lookup_id(&id).cloned())
+        .filter(|mark| mark.get_attribute(SET_ASIDE).is_some())
+      else {
+        continue;
+      };
+      if let Some(mut copy) = replace_tree_deferred(document, mark.clone(), xmref)? {
+        // append_tree recorded the mark's ids (its own and any descendant's) for the copy: take
+        // them back, or a later (re)assignment of an id finds it taken and renames its node.
+        document.unrecord_node_ids(&copy);
+        let _ = copy.remove_attribute_ns("id", XML_NS);
+        let _ = copy.remove_attribute(SET_ASIDE);
+        // Perl's `cloneNode` is shallow: the copy is the bare mark, whose text would otherwise
+        // join an enclosing `\text{…}`'s `text=`.
+        for child in copy.get_child_nodes() {
+          crate::data::defer_discard(child);
+        }
+      }
+      document.record_node_ids(&mark)?;
     }
     Ok(())
   }
@@ -1391,7 +1608,7 @@ impl MathParser {
             if let Some(r) = replace_tree_deferred(document, result.clone(), node)? {
               result = r;
             }
-            // If replace_tree_free returns None, node was already detached
+            // If replace_tree_deferred returns None, node was already detached
             // (nothing copied, nothing freed); keep result as-is.
             // Danger: the above code replaced the id on the parsed result with the one from
             // XMArg,.. If there are any references to `resultid`, we need to point them
@@ -1410,6 +1627,7 @@ impl MathParser {
         _ => {
           // Parse failed — run kludge to wrap OPEN/CLOSE delimiters
           *self.failed.entry_sym(tag).or_insert(0) += 1;
+          self.unparsed = true;
           if tag == pin!("ltx:XMath") {
             self.failed_xmath_ids.push(node.to_hashable());
             // Kludge (OPEN/CLOSE wrapping) runs post-parse in core_interface.rs
@@ -1454,7 +1672,11 @@ impl MathParser {
         if saved_role.is_some() {
           c.remove_attribute("role").ok();
         }
-        match self.parse_rec(child, "Anything", document)? {
+        // Perl MathParser.pm:387 `local $LaTeXML::MathParser::STRICT = 0`.
+        let outer_strict = std::mem::replace(&mut self.strict, false);
+        let parsed = self.parse_rec(child, "Anything", document);
+        self.strict = outer_strict;
+        match parsed? {
           Some(mut result) => {
             if let Some(ref role) = saved_role {
               result.set_attribute("role", role).ok();
@@ -1658,14 +1880,26 @@ impl MathParser {
   ) -> Result<Option<Node>> {
     let mut idx = 0;
     let mut content_nodes = filter_hints(mathnode.get_child_nodes());
+    let expectation_operators = expectation_operators(&content_nodes, document);
 
     // Extract trailing PUNCT/PERIOD nodes if rule ends with ',' (Perl: $rule =~ s/,$// )
     let mut punct_nodes: Vec<Node> = Vec::new();
     if rule.ends_with(',') {
+      // Perl L661 tests the REALIZED node: a row of gathered/split/multline is an XMRef to
+      // its `,`/`.` (golden
+      // tests/parse/aligned_content_branch.tex#gathered_rows_set_their_punctuation_aside).
       while let Some(last) = content_nodes.last() {
-        let role = last.get_attribute("role").unwrap_or_default();
+        let role = realize_xmnode(last, document)
+          .get_attribute("role")
+          .unwrap_or_default();
         if role == "PUNCT" || role == "PERIOD" {
           let mut p = content_nodes.pop().unwrap();
+          // Perl L665-667: "in case this thing is XMRef'd". Marked, not recorded by id: the
+          // parse re-ids tokens, so an id kept from here may name another node by the end.
+          if p.get_attribute_ns("id", XML_NS).is_some() {
+            p.set_attribute(SET_ASIDE, "1").ok();
+            self.punctuation = true;
+          }
           p.unlink(); // detach from mathnode's children
           punct_nodes.insert(0, p);
         } else {
@@ -1680,8 +1914,19 @@ impl MathParser {
       let mut absent_tok = document.open_element_at(mathnode, "ltx:XMTok", None, None)?;
       document.set_attribute(&mut absent_tok, "meaning", "absent")?;
       document.close_element_at(&mut absent_tok)?;
-      absent_tok.unlink();
-      Ok(Some(absent_tok))
+      if punct_nodes.is_empty() {
+        absent_tok.unlink();
+        Ok(Some(absent_tok))
+      } else {
+        // All punctuation (a `...` cell): Perl L696-699 still wraps the absent result with
+        // it, so the punctuation stays in the presentation.
+        Ok(Some(self.wrap_with_punct(
+          absent_tok,
+          punct_nodes,
+          mathnode,
+          document,
+        )?))
+      }
     } else if content_nodes.len() == 1 && punct_nodes.is_empty() {
       // single node, nothing to wrap
       Ok(Some(content_nodes.remove(0)))
@@ -1698,11 +1943,18 @@ impl MathParser {
       // Use pre-filtered content_nodes to avoid double-filtering (filter_hints already called
       // above)
       let (mut lexemes, mut nodes) =
-        node_to_grammar_lexemes_from(mathnode, content_nodes, &mut idx);
+        node_to_grammar_lexemes_from(mathnode, content_nodes, &mut idx, Some(document));
+      type_expectation_lexemes(&mut lexemes, &nodes, &expectation_operators);
+      // Does the stream hold an expectation, which a letter retry (below) may read as its letter?
+      let expectations = lexemes
+        .iter()
+        .any(|lexeme| lexeme.starts_with("EXPECTATION:"));
       // Skip the full grammar parse for a pathologically huge formula —
       // Marpa's Earley recognizer would exhaust memory and `abort()`
       // (uncatchable). Fall through to the kludge parser instead (the
       // `Ok(None)` branch). See MAX_GRAMMAR_LEXEMES (witness 1706.06621).
+      // A formula past the lexeme cap takes no retry either: it would hand Marpa the same stream (57ch review).
+      let too_big = matches!(*MAX_GRAMMAR_LEXEMES, Some(cap) if lexemes.len() > cap);
       let parse_outcome = match *MAX_GRAMMAR_LEXEMES {
         Some(cap) if lexemes.len() > cap => {
           // Emit a real Warning (not just a progress tick) so a human — or a
@@ -1744,7 +1996,7 @@ impl MathParser {
           // rescue, so keep this attempt's expected failure out of the log —
           // and keep the lexemes, which the retry needs. Balanced formulae (the
           // overwhelming majority) hand theirs over and pay no copy.
-          let retryable = Self::fence_imbalance(&lexemes).is_some();
+          let retryable = Self::fence_imbalance(&lexemes).is_some() || expectations;
           self.suppress_unparsed_warning = retryable;
           let attempt = if retryable {
             lexemes.clone()
@@ -1771,16 +2023,81 @@ impl MathParser {
       // parses is never touched, so no working formula can be re-interpreted.
       // (An earlier unconditional version did exactly that: it read the `⟩` of
       // a ket `|f⟩` as an unmatched CLOSE and prepended a bogus `(`, breaking
-      // formulae that had been fine.)
-      let parse_outcome = match parse_outcome {
-        Ok(None) | Err(_)
-          if Self::balance_null_delimiters(&mut lexemes, &mut nodes, mathnode, document)? =>
-        {
-          self.parse_lexemes(lexemes, &nodes, document)
-        },
-        other => other,
-      };
+      // formulae that had been fine.) An expectation keeps its typing here: an alignment cell's
+      // `\mathbb{E}\Big[X\Big|Y` is 𝔼 applied (57cg review; 2605.07939, 2605.24070).
+      let mut parse_outcome = parse_outcome;
+      // The typed stream before its null delimiters, while the letter retry may still want it.
+      let mut unbalanced = None;
+      if matches!(parse_outcome, Ok(None) | Err(_)) && !too_big {
+        let lexed = expectations.then(|| lexemes.clone());
+        if Self::balance_null_delimiters(&mut lexemes, &mut nodes, mathnode, document)? {
+          unbalanced = lexed;
+          self.suppress_unparsed_warning = expectations;
+          let attempt = if expectations {
+            lexemes.clone()
+          } else {
+            std::mem::take(&mut lexemes)
+          };
+          let out = self.parse_lexemes(attempt, &nodes, document);
+          self.suppress_unparsed_warning = false;
+          parse_outcome = match out {
+            Err(e) if matches!(e.target, latexml_core::common::error::ErrorTarget::Timeout) => {
+              return Err(e);
+            },
+            other => other,
+          };
+        }
+      }
+      // A formula with an expectation or probability no typed stream parses — one before a big operator in a
+      // trig function's argument or after a closed nest, `\sin\mathbb{E}\sum_i X_i`, `\nabla\log\mathbb{E}\sum_i X_i`,
+      // `\log x\cdot\mathbb{E}\sum_i X_i` (57cf review), `\nabla\mathbb{E}(\to x)` — is parsed again with every
+      // expectation also read as the letter Perl reads (`spell_letter_readings`, the grammar's `expectation_letter`,
+      // M3), the readings with the fewest letters kept, one expectation at a time (`ExpectationLettersAreFallbacks`:
+      // `\sin\mathbb{E}\sum_i X_i+\mathbb{E}Y` keeps 𝔼@(Y)); as lexed first (a ket's `|0⟩` is no unbalanced fence:
+      // `\sin\mathbb{E}\sum_i X_i|0\rangle`, 57ch review), then with the null delimiters the fence retry supplied. A
+      // stream a typed reading parses takes no letter twin: offered in every formula, the twin doubles the tree
+      // iterator's trees per expectation (probed: `\nabla\mathbb{E}[X]+…+\nabla\mathbb{E}[W]` 16 trees); offered only
+      // before a big operator (M3 as committed), it still added 7 ambiguous_math in the delta A/B (2605.02116,
+      // 2605.03300, 2605.13204, 2605.29267) and lost the retry's parse elsewhere (M3 review). Exact, not only
+      // cheaper: the fewest-letter prune ranks before every other (`ExpectationLettersAreFallbacks`, below), so a
+      // typed reading beats every letter reading whenever one exists.
+      if matches!(parse_outcome, Ok(None) | Err(_)) && expectations && !too_big {
+        let mut attempts = Vec::with_capacity(2);
+        if let Some(mut unbalanced) = unbalanced {
+          spell_letter_readings(&mut unbalanced);
+          attempts.push(unbalanced);
+        }
+        spell_letter_readings(&mut lexemes);
+        attempts.push(lexemes);
+        let last = attempts.len() - 1;
+        for (i, attempt) in attempts.into_iter().enumerate() {
+          self.suppress_unparsed_warning = i < last;
+          let out = self.parse_lexemes(attempt, &nodes, document);
+          self.suppress_unparsed_warning = false;
+          parse_outcome = match out {
+            Err(e) if matches!(e.target, latexml_core::common::error::ErrorTarget::Timeout) => {
+              return Err(e);
+            },
+            other => other,
+          };
+          if matches!(parse_outcome, Ok(Some(_))) {
+            break;
+          }
+        }
+      }
       if let Ok(Some(parse_tree)) = parse_outcome {
+        // A Leibniz numerator's last differential operator takes the factors after it:
+        // `\frac{\partial\rho u}{\partial t}` ∂(ρu)/∂t, as `\partial\rho u/\partial t` (divergence #374).
+        let parse_tree = if is_leibniz_numerator_arg(mathnode, document) {
+          regroup_leibniz_numerator(parse_tree)
+        } else if is_leibniz_denominator_arg(mathnode, document) {
+          regroup_leibniz_denominator(parse_tree, &ActionContext {
+            nodes:    &nodes,
+            document: &mut *document,
+          })
+        } else {
+          parse_tree
+        };
         //START reparent: the reparenting used to be in `parse_rec` in Perl. Is this a good place?
         // Replace the content of XMath with parsed result
         // unbindNode followed by (append|replace)Tree (which removes ID's) should be safe
@@ -1819,7 +2136,7 @@ impl MathParser {
         // replacement as "drop the XMRef").
         for pre_id in &pre_replacement_ids {
           if document.lookup_id(pre_id).is_none() {
-            crate::data::record_replacement(pre_id, "__LOSTNODE__");
+            crate::data::record_replacement(pre_id, crate::data::LOST_WITHOUT_REPLACEMENT);
           }
         }
         // Free the sources: after the copy above, the pre-parse content and
@@ -1916,6 +2233,20 @@ impl MathParser {
       }
       min_depth = min_depth.min(depth);
     }
+    // A stream of only fences and blank tokens has nothing to fence: no null-delimited fence.
+    // `\bordermatrix`'s delimiter cells hold `(` or `)` and a blank strut, which Perl leaves
+    // unparsed (tests/alignment/plainmath; the repair read `list@() * ␣`), as `)(` and `((`
+    // (were `list@() * list@()`, `delimited-(@(list@())`; 57bm).
+    let blank_or_fence = |lex: &String| {
+      let mut parts = lex.split(':');
+      matches!(
+        parts.next().unwrap_or(""),
+        "OPEN" | "OTHER_OPEN" | "CLOSE" | "OTHER_CLOSE"
+      ) || parts.next() == Some(crate::util::BLANK_LEXEME_TEXT)
+    };
+    if lexemes.iter().all(blank_or_fence) {
+      return None;
+    }
     let unmatched_closes = -min_depth;
     let unmatched_opens = depth - min_depth;
     let lopsided =
@@ -1982,6 +2313,28 @@ impl MathParser {
     Ok(true)
   }
 
+  /// Perl MathParser.pm:864 `failureReport`: a failed parse is reported under STRICT (not for an
+  /// XMWrap's sub-parse, :387) or at a verbosity above 1.
+  fn reports_failures(&self) -> bool { self.strict || state::current_verbosity() > 1 }
+
+  /// The `unparsed_math` warning for a formula the recognizer rejects before its last token: the
+  /// grammar has no derivation spanning it (Perl MathParser.pm:891 `not_parsed`). Once per
+  /// distinct formula per document, and not while a retry may still rescue it — the same rule as
+  /// the no-parse warning after enumeration, which this early return skipped.
+  fn warn_unspanned(&mut self, input: &str) {
+    if self.suppress_unparsed_warning || !self.reports_failures() {
+      return;
+    }
+    if warn_formula_once(&mut self.warned_formulas, input.trim()) {
+      log_math_warn!(
+        "unparsed_math",
+        token_type_footprint(input.trim()),
+        "Unparsed math: no parse spans all input tokens for: {}",
+        input.trim()
+      );
+    }
+  }
+
   pub fn parse_marpa(
     &mut self,
     input: &str,
@@ -1996,11 +2349,12 @@ impl MathParser {
     if *PARSE_LEXEMES_DBG {
       eprintln!("PARSE_LEXEMES_BEGIN: {}", input.trim());
     }
-    let mut parses: Vec<XM> = Vec::new();
+    let mut parses = UniqueTrees::default();
     let mut ok_trees = 0;
     let mut pruned_trees = 0;
     let mut deduped = 0usize;
-    let mut consecutive_dupes = 0usize;
+    // How the tree iterator's second chance through ASF ended, if it ran (`ASF_SECOND_CHANCE_*`).
+    let mut second_chance: Option<String> = None;
     let start = std::time::Instant::now();
     // Capture pragma-rejection reasons when LATEXML_PARSE_PRUNE_REASONS=1.
     // Bounded HashMap keyed by error-message string; on a zero-OK failure
@@ -2024,8 +2378,15 @@ impl MathParser {
         nodes,
         document,
         pruned_count: 0,
+        budget: None,
+        letter_readings: holds_letter_readings(input),
+        differential_letters: holds_differential_letters(input),
       };
       let consumed = std::rc::Rc::new(std::cell::Cell::new(0usize));
+      // The AND-node count of a bocage read by the tree iterator (`AmbiguousTree`), if it was.
+      let mut sampled_and_nodes: Option<usize> = None;
+      // The tree iterator stopped at `max_unique` distinct readings with trees still to come.
+      let mut sample_cut_short = false;
       let hybrid_result = self.engine.parse_hybrid_with_and_node_limit(
         CountingTokens {
           inner: ByteScanner::new(Cursor::new(input)),
@@ -2033,7 +2394,7 @@ impl MathParser {
         },
         (),
         &mut traverser,
-        *HYBRID_AND_NODE_LIMIT,
+        hybrid_and_node_limit(),
       );
       if *PARSE_LEXEMES_DBG {
         eprintln!("PARSE_LEXEMES_RECOGNIZED");
@@ -2053,6 +2414,7 @@ impl MathParser {
       // falls to the token-preserving kludge / ltx_math_unparsed, matching
       // Perl's no-silent-loss behaviour (witness `+ - a` → was `list@(+, -)`).
       if consumed.get() < input.trim_end().len() {
+        self.warn_unspanned(input);
         return Err("Failed to find a parse spanning all input tokens".into());
       }
       match hybrid_result {
@@ -2112,19 +2474,19 @@ impl MathParser {
           }
           let alts_vec = std::rc::Rc::try_unwrap(alts).unwrap_or_else(|rc| (*rc).clone());
           for tree in alts_vec.into_iter().flatten() {
-            if parses.contains(&tree) {
-              deduped += 1;
-            } else {
+            if parses.insert(tree) {
               ok_trees += 1;
-              parses.push(tree);
+            } else {
+              deduped += 1;
             }
           }
         },
         Ok(HybridParseResult::AmbiguousTree(tree_iter, stats)) => {
+          sampled_and_nodes = Some(stats.and_node_count);
           // Large-bocage fallback: codex's marpa commit 5f6a19e routes
           // bocages whose `and_node_count` exceeds `*HYBRID_AND_NODE_LIMIT`
           // through the ordinary `Tree` iterator instead of constructing
-          // the ASF. Walk it with the same 6 convergence caps that the
+          // the ASF. Walk it with the same convergence caps that the
           // legacy path uses — those caps are exactly what makes
           // Tree-iteration tractable on highly-ambiguous forests.
           // Release `traverser`'s borrow before re-borrowing below.
@@ -2141,23 +2503,22 @@ impl MathParser {
             );
           }
           let max_trees = 5000;
-          let max_time = std::time::Duration::from_secs(30);
-          let max_consecutive_dupes = 16;
-          let converge_budget = std::time::Duration::from_millis(200);
-          let pruned_only_time_budget = std::time::Duration::from_secs(2);
+          let max_time = parse_deadline(std::time::Duration::from_secs(30));
+          let pruned_only_time_budget = parse_deadline(std::time::Duration::from_secs(2));
           let pruned_only_count_threshold: usize = 200;
           let max_unique = 10;
+          let max_since_unique = 256;
+          let mut since_unique = 0usize;
           for val in tree_iter {
+            // First, so a sample whose tenth reading arrives as another cap runs out is known cut.
+            if parses.len() >= max_unique {
+              sample_cut_short = true;
+              break;
+            }
             if ok_trees + pruned_trees >= max_trees || start.elapsed() > max_time {
               break;
             }
-            if consecutive_dupes >= max_consecutive_dupes && !parses.is_empty() {
-              break;
-            }
-            if parses.len() >= max_unique {
-              break;
-            }
-            if !parses.is_empty() && start.elapsed() > converge_budget {
+            if !parses.is_empty() && since_unique >= max_since_unique {
               break;
             }
             if parses.is_empty()
@@ -2174,12 +2535,11 @@ impl MathParser {
             ) {
               Ok(Some(tree)) => {
                 ok_trees += 1;
-                if parses.contains(&tree) {
-                  deduped += 1;
-                  consecutive_dupes += 1;
+                if parses.insert(tree) {
+                  since_unique = 0;
                 } else {
-                  parses.push(tree);
-                  consecutive_dupes /= 2;
+                  deduped += 1;
+                  since_unique += 1;
                 }
               },
               Ok(None) => {},
@@ -2190,9 +2550,7 @@ impl MathParser {
                   let trimmed = msg.chars().take(140).collect::<String>();
                   *prune_reasons.entry(trimmed).or_insert(0) += 1;
                 }
-                if !parses.is_empty() {
-                  consecutive_dupes += 1;
-                }
+                since_unique += 1;
               },
             }
           }
@@ -2220,6 +2578,142 @@ impl MathParser {
           }
         },
       }
+      // The tree iterator samples a bocage: every tree is built whole before the semantic actions
+      // may reject it, so where the rejected readings multiply — a chain of OPFUNCTIONs taking
+      // bare arguments, `\log x\,\log y\,…\,\log t`, has one greedy reading (Perl's `barearg`,
+      // MathGrammar:321-337) among ~4ⁿ trees — its caps run out before the parse. ASF rejects a
+      // reading once, where it is built, and shares what survives, so it reads such a bocage
+      // exactly (repro math-parse/opfunction_chain_parses_past_the_tree_sampler). A sample cut
+      // short at `max_unique` is a part of the readings, not all of them: the iterator varies the
+      // leftmost choice fastest, so the reading the ranking wants — every big operator taking its
+      // whole operand, Perl's greedy `addOpArgs` (MathGrammar:603-617) — can come after the first
+      // ten (`\int dt\,a/t=\int dt\,b/t`, eleventh of 16; 2605.16034, 2605.22940; 2605.19037
+      // S4.E47, none of the ten). A second chance, when the sample found no parse or was cut short,
+      // and bounded (`ASF_SECOND_CHANCE_*`): what ASF costs is what the tree route exists to cap.
+      let second_chance_due = (parses.is_empty() || sample_cut_short)
+        && sampled_and_nodes.is_some_and(|and_nodes| and_nodes <= ASF_SECOND_CHANCE_AND_NODE_LIMIT);
+      if second_chance_due
+        && self
+          .second_chance_budget
+          .as_ref()
+          .is_some_and(|b| b.exhausted)
+      {
+        // An earlier `MAX_ABS_DEPTH` attempt spent the formula's budget.
+        second_chance = Some("budget spent".to_string());
+      } else if second_chance_due {
+        // The counts carry over from an earlier attempt; the deadline, a safety net, is the
+        // attempt's own, so the tree samples between attempts do not spend it (review round 8).
+        let deadline = std::time::Instant::now() + parse_deadline(ASF_SECOND_CHANCE_TIME);
+        let budget = match self.second_chance_budget.take() {
+          Some(budget) => crate::asf_traverser::AsfBudget { deadline, ..budget },
+          None => crate::asf_traverser::AsfBudget {
+            attempts: ASF_SECOND_CHANCE_ATTEMPTS,
+            alternatives: asf_second_chance_alternatives(),
+            deadline,
+            exhausted: false,
+          },
+        };
+        let alternatives_before = budget.alternatives;
+        let mut traverser = crate::asf_traverser::MathTraverser {
+          actions: &self.actions,
+          pragmas: self.expert_pragmatics.as_slice(),
+          builder: &self.builder,
+          nodes,
+          document,
+          pruned_count: 0,
+          budget: Some(budget),
+          letter_readings: holds_letter_readings(input),
+          differential_letters: holds_differential_letters(input),
+        };
+        let consumed = std::rc::Rc::new(std::cell::Cell::new(0usize));
+        let second_chance_result = self.engine.parse_hybrid_with_and_node_limit(
+          CountingTokens {
+            inner: ByteScanner::new(Cursor::new(input)),
+            count: consumed,
+          },
+          (),
+          &mut traverser,
+          None,
+        );
+        if std::env::var("LATEXML_MARPA_ASF_AUDIT").is_ok() {
+          eprintln!(
+            "ASF_SECOND_CHANCE: and_nodes={:?} attempts_left={:?} alternatives_left={:?} spent={} in {:?}",
+            sampled_and_nodes,
+            traverser.budget.as_ref().map(|b| b.attempts),
+            traverser.budget.as_ref().map(|b| b.alternatives),
+            traverser.budget_spent(),
+            start.elapsed(),
+          );
+        }
+        let spent = traverser.budget_spent();
+        let second_pruned = traverser.pruned_count;
+        let budget_left = traverser.budget.take();
+        let used =
+          alternatives_before - budget_left.as_ref().map_or(0, |budget| budget.alternatives);
+        self.second_chance_budget = budget_left;
+        match second_chance_result {
+          // Cut short, the readings are an arbitrary part of the whole: none is kept (a cut sample
+          // stays the answer).
+          Ok(HybridParseResult::Ambiguous(..)) if spent => {
+            second_chance = Some("budget spent".to_string())
+          },
+          Ok(HybridParseResult::Ambiguous(alts, _state)) => {
+            let alts_vec = std::rc::Rc::try_unwrap(alts).unwrap_or_else(|rc| (*rc).clone());
+            // ASF read the whole bocage: the readings the sample missed join it, after the
+            // sample's own and in ASF's order, and the counts are ASF's, so the formula reports as
+            // through ASF alone. The sample's order stays first: where the student pragmas leave
+            // several readings (`soft_prune_choices` keeps ties) the first is the one taken, and
+            // ASF's order is not the iterator's — before 57av's ranking ASF first read
+            // `\left(f(X)-f(X')\right)\left(h(X)-h(X')\right)` as f·X, not f@(X) (#18; 2605.18798,
+            // ≈2,550 formulas of the train A/B moved by ASF's order alone).
+            let completes_sample = sample_cut_short && alts_vec.iter().any(Option::is_some);
+            if completes_sample {
+              ok_trees = 0;
+              deduped = 0;
+              pruned_trees = second_pruned;
+              let mut readings = UniqueTrees::default();
+              for tree in alts_vec.into_iter().flatten() {
+                if readings.insert(tree) {
+                  ok_trees += 1;
+                } else {
+                  deduped += 1;
+                }
+              }
+              for tree in readings.into_vec() {
+                parses.insert(tree);
+              }
+            } else {
+              for tree in alts_vec.into_iter().flatten() {
+                if parses.insert(tree) {
+                  ok_trees += 1;
+                } else {
+                  deduped += 1;
+                }
+              }
+            }
+            second_chance = Some(if completes_sample {
+              format!("parsed, {used} alternatives")
+            } else if sample_cut_short {
+              format!("no parse (sample kept), {used} alternatives")
+            } else if parses.is_empty() {
+              format!("no parse, {used} alternatives")
+            } else {
+              format!("parsed, {used} alternatives")
+            });
+          },
+          // The same ambiguous bocage, now with no AND-node limit: ASF's is the only answer.
+          Ok(HybridParseResult::Unambiguous(_) | HybridParseResult::AmbiguousTree(..)) => {},
+          Err(e) => {
+            second_chance = Some(if spent { "budget spent" } else { "no parse" }.to_string());
+            // A resource fatal propagates, as from the first pass.
+            if let Some(err) = latexml_core::common::error::take_last_resource_fatal()
+              .or_else(|| resource_fatal_from_message(&e.to_string()))
+            {
+              return Err(err);
+            }
+          },
+        }
+      }
     } else if *PARSE_VIA_ASF {
       // ASF path: one post-order memoized callback per glade.
       // `MathTraverser` accumulates all alternative XM parse trees
@@ -2234,6 +2728,9 @@ impl MathParser {
         nodes,
         document,
         pruned_count: 0,
+        budget: None,
+        letter_readings: holds_letter_readings(input),
+        differential_letters: holds_differential_letters(input),
       };
       let consumed = std::rc::Rc::new(std::cell::Cell::new(0usize));
       let asf_result = self.engine.parse_and_traverse_forest(
@@ -2250,6 +2747,7 @@ impl MathParser {
       // Coverage guard (see CountingTokens / the hybrid path above): reject an
       // exhausted-early prefix parse so the tail isn't silently dropped.
       if consumed.get() < input.trim_end().len() {
+        self.warn_unspanned(input);
         return Err("Failed to find a parse spanning all input tokens".into());
       }
       match asf_result {
@@ -2276,11 +2774,10 @@ impl MathParser {
           // deep clone on the cold path.
           let alts_vec = std::rc::Rc::try_unwrap(alts).unwrap_or_else(|rc| (*rc).clone());
           for tree in alts_vec.into_iter().flatten() {
-            if parses.contains(&tree) {
-              deduped += 1;
-            } else {
+            if parses.insert(tree) {
               ok_trees += 1;
-              parses.push(tree);
+            } else {
+              deduped += 1;
             }
           }
         },
@@ -2301,16 +2798,28 @@ impl MathParser {
         },
       }
     } else {
-      // Legacy path: Tree iteration with the 6 convergence caps.
+      // Legacy path: Tree iteration with the convergence caps.
+      // The marpa error is converted HERE (not by a `From` impl in
+      // latexml_core): the only marpa reference core had was that impl, and
+      // dropping it frees core/engine/package/contrib/post/codegen from
+      // compiling libmarpa when built or tested in isolation (WASM audit
+      // phase 4.0). The orphan rule forbids the impl in this crate, so the
+      // core `Error` is constructed directly.
       let parse_result = self
         .engine
-        .run_recognizer(ByteScanner::new(Cursor::new(input)))?;
+        .run_recognizer(ByteScanner::new(Cursor::new(input)))
+        .map_err(|e| {
+          Error::from(latexml_core::common::error::ErrorData {
+            target:   latexml_core::ErrorTarget::MathParser,
+            category: latexml_core::ErrorCategory::FailedParse,
+            message:  e.to_string(),
+          })
+        })?;
       if *PARSE_LEXEMES_DBG {
         eprintln!("PARSE_LEXEMES_RECOGNIZED");
       }
-      // The six caps below (max_trees, max_time, max_consecutive_dupes,
-      // converge_budget, pruned_only_time_budget+_count_threshold,
-      // max_unique) exist because Tree-iteration evaluates per-tree
+      // The caps below (max_trees, max_time, pruned_only_time_budget+_count_threshold,
+      // max_unique, max_since_unique) exist because Tree-iteration evaluates per-tree
       // actions O(trees × occurrences) times — defensive bandages
       // against the paradigm cost.
       //
@@ -2329,22 +2838,21 @@ impl MathParser {
       // sidesteps these caps via per-glade memoization. See
       // docs/math/MATH_PARSER_AND_ASF.md.
       let max_trees = 5000; // Hard limit on parse tree enumeration
-      let max_time = std::time::Duration::from_secs(30); // 30 second timeout
-      // Convergence: if we've seen enough consecutive duplicates without
-      // a new unique tree, the grammar ambiguity is purely structural
-      // (script attachment ordering). Stop early.
-      let max_consecutive_dupes = 16;
-      // Time-budget convergence: once we have unique parses, stop after
-      // this budget. For formulas where all trees are pruned (no unique
-      // parse yet), use a longer budget before giving up.
-      let converge_budget = std::time::Duration::from_millis(200);
+      let max_time = parse_deadline(std::time::Duration::from_secs(30)); // 30 second timeout
+      // A short run of repeats is no convergence: the iterator varies the root
+      // choice last, so a new top-level reading can follow many repeats (#146,
+      // see HYBRID_AND_NODE_LIMIT); `max_since_unique` trees without a new
+      // parse is. No time budget once a parse is found: which trees are seen
+      // must not depend on machine load.
+      let max_since_unique = 256;
+      let mut since_unique = 0usize;
       // Pruned-only fast-fail: if we've spent significant time and seen
       // many trees without finding a single semantic-acceptable parse,
       // the grammar is exploring a combinatorial dead end. Bail before
       // exhausting `max_time` (30s). Empirical: 0804.1730 case had 4536
       // pruned trees over 28s before timeout. After 2s with >200 prunes
       // the marginal probability of finding a unique drops sharply.
-      let pruned_only_time_budget = std::time::Duration::from_secs(2);
+      let pruned_only_time_budget = parse_deadline(std::time::Duration::from_secs(2));
       let pruned_only_count_threshold: usize = 200;
       // Unique-tree cap: the pragmatics/selection step only needs a handful
       // of distinct parses. Beyond this, additional unique trees are almost
@@ -2358,19 +2866,11 @@ impl MathParser {
         if ok_trees + pruned_trees >= max_trees || start.elapsed() > max_time {
           break;
         }
-        // Early convergence: stop if we keep seeing only duplicates.
-        // The grammar produces 2^N duplicates from script attachment ordering.
-        // Once we've found all unique parses, every new tree is a duplicate.
-        if consecutive_dupes >= max_consecutive_dupes && !parses.is_empty() {
-          break;
-        }
         // Unique-tree cap: stop once we have enough distinct parses.
         if parses.len() >= max_unique {
           break;
         }
-        // Time-budget convergence: if we have unique parses and have spent
-        // >200ms, stop — the remaining trees are overwhelmingly duplicates.
-        if !parses.is_empty() && start.elapsed() > converge_budget {
+        if !parses.is_empty() && since_unique >= max_since_unique {
           break;
         }
         // Pruned-only fast-fail: bail when we have NO unique parses, have
@@ -2398,18 +2898,11 @@ impl MathParser {
             if let Some(tree) = tree_opt {
               ok_trees += 1;
               // Online deduplication: check if this tree is already in our unique set
-              if parses.contains(&tree) {
-                deduped += 1;
-                consecutive_dupes += 1;
+              if parses.insert(tree) {
+                since_unique = 0;
               } else {
-                parses.push(tree);
-                // Half-decay (not full reset) on new unique. This lets us bail
-                // on cases where uniques are sparse among a sea of dupes/prunes —
-                // e.g. sin[XY] produces 10 unique parses among 1022 grammar
-                // derivations; without decay the unique trees keep resetting the
-                // dupe counter and we never converge. Half-decay means each new
-                // unique halves the accumulated dupe budget instead of clearing it.
-                consecutive_dupes /= 2;
+                deduped += 1;
+                since_unique += 1;
               }
             }
           },
@@ -2420,10 +2913,7 @@ impl MathParser {
               let trimmed = msg.chars().take(140).collect::<String>();
               *prune_reasons.entry(trimmed).or_insert(0) += 1;
             }
-            // Pruned trees also count toward convergence if we have unique parses
-            if !parses.is_empty() {
-              consecutive_dupes += 1;
-            }
+            since_unique += 1;
           },
         }
       }
@@ -2433,7 +2923,8 @@ impl MathParser {
     if std::env::var("LATEXML_PARSE_DUMP_ORDER").is_ok() && parses.len() > 1 {
       eprintln!("PARSE_ORDER: {} unique for {}", parses.len(), input.trim());
       for (i, p) in parses.iter().enumerate() {
-        eprintln!("  [{}] {}", i, p.text_summary());
+        let letters = expectation_letter_count(p);
+        eprintln!("  [{i}] (letters {letters}) {}", p.text_summary());
       }
     }
     // Store count for \ltx@count@parses diagnostic macro
@@ -2447,7 +2938,7 @@ impl MathParser {
     // The `what` field is a structural FOOTPRINT of the token stream (see `token_type_footprint`),
     // so the dashboard buckets formulas by shape instead of one unique token dump per paper.
     let diagnostic_category = if parses.is_empty() {
-      Some("unparsed_math")
+      self.reports_failures().then_some("unparsed_math")
     } else if ok_trees + pruned_trees > 10 {
       Some("ambiguous_math")
     } else {
@@ -2462,19 +2953,23 @@ impl MathParser {
       // Warn once per DISTINCT formula per document (Perl LaTeXML's rule): a formula repeated N
       // times in one document emits a single warning. Keyed on the exact token stream — true only
       // the first time this document sees it; repeats are silently skipped.
-      if warn_formula_once(&mut self.warned_formulas, input.trim()) {
-        log_math_warn!(
-          category,
-          token_type_footprint(input.trim()),
-          "Ambiguous math: {} enumerated ({} semantic, {} pruned, {} deduped→{} unique) in {:?} for: {}",
-          ok_trees + pruned_trees + deduped,
-          ok_trees + deduped,
-          pruned_trees,
-          deduped,
-          parses.len(),
-          start.elapsed(),
-          input.trim()
-        );
+      let message = format!(
+        "Ambiguous math: {} enumerated ({} semantic, {} pruned, {} deduped→{} unique{}) in {:?} for: {}",
+        ok_trees + pruned_trees + deduped,
+        ok_trees + deduped,
+        pruned_trees,
+        deduped,
+        parses.len(),
+        second_chance
+          .map(|outcome| format!("; ASF second chance: {outcome}"))
+          .unwrap_or_default(),
+        start.elapsed(),
+        input.trim()
+      );
+      if category == "unparsed_math" && self.defer_unparsed_warning {
+        self.deferred_unparsed_warning = Some((input.trim().to_owned(), message));
+      } else if warn_formula_once(&mut self.warned_formulas, input.trim()) {
+        log_math_warn!(category, token_type_footprint(input.trim()), message);
       }
     }
     // Diagnostic: report parse counts when LATEXML_PARSE_AUDIT is set.
@@ -2511,10 +3006,23 @@ impl MathParser {
 
     match parses.len() {
       0 => Err("Failed to find any parse".into()),
-      1 => Ok(parses.into_iter().next().unwrap()),
+      1 => Ok(parses.into_vec().into_iter().next().unwrap()),
       _more => {
+        // An expectation reads as a letter only where no reading takes it as an operator (M3,
+        // `ExpectationLettersAreFallbacks`), before any other ranking — which makes the letter retry above
+        // exact: moved after another pragma, or softened, a letter reading could beat a typed one that a typed
+        // stream would have given alone. Then Perl's rule (divergence #350): the fewest evaluation bars
+        // inside single-bar pairs.
+        let mut reduced_forest = XM::Choices(parses.into_vec())
+          .soft_prune_choices(ValidationPragmatics::ExpectationLettersAreFallbacks)
+          .prefer_fewest_evaluation_bars_inside();
+        // A specific Dirac reading beats a fence around the same bars before the student pragmas
+        // rank the rest: they judge products (`HigherOrderInvisibleOpsAreExceptions` fails `p*xi`)
+        // and would drop `\mathbb{E}\langle p\xi|a|p\xi\rangle`'s operator product for a fence
+        // around `|a|` (57bp; 2605.21982, 2605.28949, 2605.03773; Perl's grammar reads the bracket
+        // first, `maybeBra`, MathGrammar:373-379).
+        reduced_forest = reduced_forest.prefer_qm_specific_semantics();
         // Loop over the various soft pruning algorithms available, until we have 1 tree
-        let mut reduced_forest = XM::Choices(parses);
         for pragma in self.student_pragmatics.iter() {
           reduced_forest = reduced_forest.soft_prune_choices(*pragma);
           match reduced_forest {
@@ -2540,6 +3048,10 @@ impl MathParser {
         // non-self-wrapping alternative exists in the forest.
         reduced_forest = reduced_forest.prefer_non_self_wrapping_root();
 
+        // Multi-tree pragma: `a,b \in A` is the distributed relation, not `list@(a, b∈A)`,
+        // whichever order the route enumerated them in.
+        reduced_forest = reduced_forest.prefer_distributed_relation_at_root();
+
         // Multi-tree pragma: drop `multirelation@(..., absent, ...)`
         // chains when a non-multirelation alternative exists.
         // Handles `x>=0` parsed as `(x > absent = 0)` vs `>=@(x, 0)`.
@@ -2556,15 +3068,9 @@ impl MathParser {
         // See commit history (the new commit) and
         // `docs/math/MATH_PARSER_ASF_TIEBREAKING.md`.
 
-        // Multi-tree pragma: a *specific* QM semantic
-        // (`quantum-operator-product@(a, f, b)`, `inner-product@(a, b)`)
-        // beats a generic `delimited-⟨⟩` wrapper for the same input.
-        // Specific semantic recognition reflects author intent more
-        // closely than a structural fence wrapper. Must run BEFORE
-        // `prefer_more_delimited_wrappers`, because the latter would
-        // otherwise filter out the qm_bracket candidate (which has
-        // zero `delimited-` wrappers).
-        reduced_forest = reduced_forest.prefer_qm_specific_semantics();
+        // (`prefer_qm_specific_semantics`, a specific QM semantic over a generic `delimited-⟨⟩`
+        // wrapper, runs first, above; it must precede `prefer_more_delimited_wrappers`, which
+        // would otherwise filter out the qm_bracket candidate, zero `delimited-` wrappers.)
 
         // Multi-tree pragma: prefer candidates with FEWER nested
         // same-meaning fences (`norm` inside `norm`, etc.). Encodes
@@ -2650,7 +3156,42 @@ impl MathParser {
     // this - counterintuitively- allows a simple macro definition AND a simple parse tree.
     input_string.push(' ');
 
-    match self.parse_marpa(&input_string, nodes, document) {
+    // Perl `parse_internal` (MathParser.pm:813-836): bar fences nest at most `MAX_ABS_DEPTH` deep
+    // (`semantics::mark_bar_fence`) — 1, then 2 and 3 while the parse fails having tried deeper
+    // (`AbsFail`) — so a formula's bars pair as shallowly as they can: `\log|a|+\log|b|` is
+    // log@(|a|) + log@(|b|), not log@(|a · |+log| · b|); `||x|+|y||` nests on the retry.
+    let outer_depth = set_max_abs_depth(1);
+    let outer_defer = self.defer_unparsed_warning;
+    let outer_budget = self.second_chance_budget.take();
+    let mut depth = 1;
+    let outcome = loop {
+      self.defer_unparsed_warning = outer_defer || depth < MAX_ABS_DEPTH_RETRY;
+      match self.parse_marpa(&input_string, nodes, document) {
+        Err(e)
+          if depth < MAX_ABS_DEPTH_RETRY
+            && abs_fail()
+            && !matches!(e.target, latexml_core::common::error::ErrorTarget::Timeout) =>
+        {
+          self.reset_engine();
+          self.deferred_unparsed_warning = None;
+          depth += 1;
+          set_max_abs_depth(depth);
+        },
+        outcome => break outcome,
+      }
+    };
+    self.defer_unparsed_warning = outer_defer;
+    self.second_chance_budget = outer_budget;
+    set_max_abs_depth(outer_depth);
+    if let Some((formula, message)) = self.deferred_unparsed_warning.take() {
+      if outer_defer {
+        self.deferred_unparsed_warning = Some((formula, message));
+      } else if warn_formula_once(&mut self.warned_formulas, &formula) {
+        log_math_warn!("unparsed_math", token_type_footprint(&formula), message);
+      }
+    }
+
+    match outcome {
       Ok(mut parse_tree) => {
         // Perf: after successful parse, Marpa engine is in state T. The next
         // run_recognizer call will naturally advance T → GReady → R (fresh
@@ -2659,8 +3200,19 @@ impl MathParser {
         // Restructure flat formulae with \quad separators to right-recursive nesting
         // (matching Perl's moreRHS/maybeColRHS right-recursive structure)
         restructure_formulae_right(&mut parse_tree)?;
+        // A missing comma beside an ellipsis is supplied, then an enumeration attaches to its
+        // relation (the #37 ellipsis exception)
+        separate_ellipsis_items(&mut parse_tree, &mut ActionContext {
+          nodes,
+          document: &mut *document,
+        })?;
+        // An enumeration attaches to its relation (the #37 ellipsis exception)
+        attach_enumerations(&mut parse_tree, &mut ActionContext {
+          nodes,
+          document: &mut *document,
+        })?;
         // Rename `list` to `vector`/`set` when delimiters wrap the list (Perl encloseN)
-        rename_fenced_lists(&mut parse_tree, nodes)?;
+        rename_fenced_lists(&mut parse_tree, &ActionContext { nodes, document })?;
         // Combine adjacent SUPOP tokens (prime+prime → prime2)
         combine_supop_post(&mut parse_tree, nodes)?;
         Ok(Some(parse_tree))
@@ -3117,14 +3669,12 @@ fn textrec(
   }
 }
 
-/// Structural footprint of a formula's token stream — the `what` field of the `ambiguous_math` /
-/// `unparsed_math` math-parser diagnostics. Joins the token *types* (the segment before the first
-/// `:` of each `TYPE:value:position` triple) with `_`, bounded to fit CorTeX's `what` column, and
-/// appends `_cntd` when the stream is truncated. Space-free, so it slots into CorTeX's
-/// `severity:category:what` log parser as a groupable frequency key — collapsing a per-formula
-/// token dump into a shape signature the dashboard can bucket (the full token stream stays in the
-/// message `details`). E.g. arXiv 0708.2155's `UNKNOWN:rho:1 OPEN:(:2 UNKNOWN:p:3 …` →
-/// `UNKNOWN_OPEN_UNKNOWN_CLOSE_RELOP_…` (truncated with `_cntd` once it would pass the budget).
+/// Marks a punctuation mark `parse_single` set aside (see `MathParser::punctuation`).
+const SET_ASIDE: &str = "_setaside";
+
+/// Perl's deepest `MAX_ABS_DEPTH` retry (MathParser.pm:833, `< 3`).
+const MAX_ABS_DEPTH_RETRY: u8 = 3;
+
 /// Records `formula` in the per-document `seen` set and returns whether this is its FIRST sighting
 /// — the gate for Perl LaTeXML's "warn once per distinct formula per document" rule. The token
 /// stream is hashed (SipHash) so the set stays 8 bytes per distinct formula no matter how long the
@@ -3135,6 +3685,14 @@ fn warn_formula_once(seen: &mut HashSet<u64>, formula: &str) -> bool {
   seen.insert(hasher.finish())
 }
 
+/// Structural footprint of a formula's token stream — the `what` field of the `ambiguous_math` /
+/// `unparsed_math` math-parser diagnostics. Joins the token *types* (the segment before the first
+/// `:` of each `TYPE:value:position` triple) with `_`, bounded to fit CorTeX's `what` column, and
+/// appends `_cntd` when the stream is truncated. Space-free, so it slots into CorTeX's
+/// `severity:category:what` log parser as a groupable frequency key — collapsing a per-formula
+/// token dump into a shape signature the dashboard can bucket (the full token stream stays in the
+/// message `details`). E.g. arXiv 0708.2155's `UNKNOWN:rho:1 OPEN:(:2 UNKNOWN:p:3 …` →
+/// `UNKNOWN_OPEN_UNKNOWN_CLOSE_RELOP_…` (truncated with `_cntd` once it would pass the budget).
 fn token_type_footprint(tokens: &str) -> String {
   // CorTeX's log `what` column is varchar(200) and a btree index key (category, what, task_id), so
   // bound the footprint to fit by construction: append token types until the next would pass the
@@ -3146,7 +3704,8 @@ fn token_type_footprint(tokens: &str) -> String {
   let mut out = String::new();
   let mut truncated = false;
   for token in tokens.split_whitespace() {
-    let ty = token.split(':').next().unwrap_or(token);
+    // (an EXPECTATION keys as the OPFUNCTION it is, `semantics::lexeme_category`: stable CorTeX buckets)
+    let ty = lexeme_category(token.split(':').next().unwrap_or(token));
     // First type always lands (a lone >budget type is backstopped by CorTeX's 200-char cap); every
     // subsequent one must fit the budget WITH its separator, else we stop and mark `_cntd`.
     if !out.is_empty() && out.len() + 1 + ty.len() > BUDGET {
@@ -3326,6 +3885,94 @@ pub fn p_get_value(node: &Node) -> String {
 
 //================================================================================
 
+/// Is `node` the numerator of a Leibniz fraction — the first argument of a fraction (`FRACOP`) whose
+/// denominator starts with a differential operator (`\frac{\partial\rho u}{\partial t}`, `\frac{\partial\Delta W}
+/// {\partial B}` 2605.05995; the denominator is parsed after it, so its first token is still the `\partial`)?
+fn is_leibniz_numerator_arg(node: &Node, document: &Document) -> bool {
+  if get_node_qname(node) != pin!("ltx:XMArg") {
+    return false;
+  }
+  let Some(parent) = node.get_parent() else {
+    return false;
+  };
+  let role = |xm: &Node| realize_xmnode(xm, document).get_attribute("role");
+  matches!(element_nodes(&parent).as_slice(), [op, numerator, denominator]
+    if role(op).as_deref() == Some("FRACOP")
+      && numerator == node
+      && starts_with_a_variable_s_differential(denominator, document))
+}
+
+/// Does a `\frac` denominator start with a differential operator that names its variable, and is none of its
+/// differential operators a derivative — a ∂ with a subscript of its own and an operand right after its scripts
+/// (57cj.1–57cj.5 reviews: `\frac{\partial_t u\,v}{\partial_x u\,w}` is ((∂_t u)·v)/((∂_x u)·w), neither argument
+/// regrouped; `\frac{\partial fg}{\partial x\,\partial_y u}` no more)? A subscripted ∂ before another ∂ or at the end
+/// names no operand: `\frac{\partial fg}{\partial_x}`, `\frac{\partial^2 fg}{\partial_x\partial_y}`, `\frac{\partial fg}{\partial_x\partial y}`
+/// regroup the numerator ∂(fg), as Perl, in either script order.
+fn starts_with_a_variable_s_differential(denominator: &Node, document: &Document) -> bool {
+  let role = |xm: &Node| realize_xmnode(xm, document).get_attribute("role");
+  let items: Vec<Node> = element_nodes(denominator)
+    .into_iter()
+    .filter(|item| get_node_qname(item) != pin!("ltx:XMHint"))
+    .collect();
+  let is_differential_operator = |item: &Node| role(item).as_deref() == Some("DIFFOP");
+  if !items.first().is_some_and(is_differential_operator) {
+    return false;
+  }
+  let mut at = 0;
+  while at < items.len() {
+    if !is_differential_operator(&items[at]) {
+      at += 1;
+      continue;
+    }
+    at += 1;
+    let mut subscripted = false;
+    while let Some(script) = items
+      .get(at)
+      .map(role)
+      .filter(|script| matches!(script.as_deref(), Some("POSTSUBSCRIPT" | "POSTSUPERSCRIPT")))
+    {
+      subscripted |= script.as_deref() == Some("POSTSUBSCRIPT");
+      at += 1;
+    }
+    if subscripted
+      && items
+        .get(at)
+        .is_some_and(|next| !is_differential_operator(next))
+    {
+      return false;
+    }
+  }
+  true
+}
+
+/// Is `node` the denominator of a Leibniz fraction — the second argument of a fraction (`FRACOP`) that
+/// starts with a differential operator, under a numerator that holds one (`\frac{\partial L}{\partial\Delta W}`;
+/// the numerator is parsed first, so it is looked for anywhere in it)? 57cj review (2605.23203, 2605.28495,
+/// 2605.05995): `regroup_leibniz_denominator`.
+fn is_leibniz_denominator_arg(node: &Node, document: &Document) -> bool {
+  if get_node_qname(node) != pin!("ltx:XMArg") {
+    return false;
+  }
+  let Some(parent) = node.get_parent() else {
+    return false;
+  };
+  let role = |xm: &Node| realize_xmnode(xm, document).get_attribute("role");
+  fn holds_a_differential_operator(node: &Node, document: &Document) -> bool {
+    realize_xmnode(node, document)
+      .get_attribute("role")
+      .as_deref()
+      == Some("DIFFOP")
+      || element_nodes(node)
+        .iter()
+        .any(|child| holds_a_differential_operator(child, document))
+  }
+  matches!(element_nodes(&parent).as_slice(), [op, numerator, denominator]
+  if role(op).as_deref() == Some("FRACOP")
+    && denominator == node
+    && holds_a_differential_operator(numerator, document)
+    && starts_with_a_variable_s_differential(denominator, document))
+}
+
 pub fn realize_xmnode<'a>(node: &'a Node, document: &'a Document) -> Cow<'a, Node> {
   if with_node_qname(node, |name| name == "ltx:XMRef")
     && let Some(idref) = node.get_attribute("idref")
@@ -3340,7 +3987,7 @@ pub fn realize_xmnode<'a>(node: &'a Node, document: &'a Document) -> Cow<'a, Nod
     // c + dc + d", regressing choose/declare/sampler): callers here rely on
     // an unresolved ref returning the XMRef itself. The warnings are benign
     // (WARN-level, targets resolve in the final tree); do not "fix" them by
-    // swapping the resolver. See docs/parity/diagnostics/EXPECTED_ID_XMREF_DESIGN_2026-06-08.md.
+    // swapping the resolver. See docs/archive/EXPECTED_ID_XMREF_DESIGN_2026-06-08.md.
     // Can it happen that the target is itself an XMRef? Then recurse.
     if let Some(realnode) = document.lookup_id(&idref) {
       return Cow::Borrowed(realnode);
@@ -3357,7 +4004,7 @@ pub fn realize_xmnode<'a>(node: &'a Node, document: &'a Document) -> Cow<'a, Nod
     // Callers rely on an unresolved ref returning the XMRef itself; do NOT "fix"
     // by swapping in `resolve_xmref` — that DUPLICATES content (\choose →
     // "a + ba + b binomial c + dc + d"; regresses choose/declare/sampler). See
-    // docs/parity/diagnostics/EXPECTED_ID_XMREF_DESIGN_2026-06-08.md §3b.
+    // docs/archive/EXPECTED_ID_XMREF_DESIGN_2026-06-08.md §3b.
     // The AUTHORITATIVE dangling-ref check is the faithful post-processing pass
     // (Perl Post.pm:1444/1456 → latexml_post `realize_xm_node` /
     // `mark_xm_node_visibility_aux`, Error severity) plus core
@@ -3369,8 +4016,8 @@ pub fn realize_xmnode<'a>(node: &'a Node, document: &'a Document) -> Cow<'a, Nod
 
 /// Resolve _xmkey and _pxmkey references after parse tree installation.
 /// Matches XMRef[@_xmkey] to elements with same _xmkey, generates xml:id and sets idref.
-/// _pxmkey is used by parser-generated XMDual (apply_delimited) to avoid
-/// conflicting with base_xmath's \lx@dual afterConstruct resolver.
+/// _pxmkey marks the parser's own keys (the `pxm` prefix, `semantics/tree.rs`), so they do not
+/// conflict with base_xmath's \lx@dual afterConstruct resolver.
 fn resolve_xmkeys(
   mathnode: &Node,
   document: &mut Document,
@@ -3481,15 +4128,17 @@ fn drain_pending_discards(document: &mut Document, queued: &rustc_hash::FxHashSe
   }
 }
 
-/// `Document::replace_tree_free`, with the FREE deferred to the end of math
-/// parsing — see [`crate::data::defer_discard`] for why freeing mid-parse is a
-/// use-after-free. The tree ends up identical; only the moment of `xmlFreeNode`
-/// moves.
+/// `Document::replace_tree`, with the FREE of both trees deferred to the end
+/// of math parsing — see [`crate::data::defer_discard`] for why freeing
+/// mid-parse is a use-after-free (a later formula queued up front may sit
+/// inside `old`: nested `\text{…$x$…}`). The tree ends up identical; only the
+/// moment of `xmlFreeNode` moves. Hence `replace_tree_detach`, never the
+/// freeing `replace_tree`.
 fn replace_tree_deferred(document: &mut Document, new: Node, old: Node) -> Result<Option<Node>> {
-  // Resolve new's standalone root BEFORE the swap, exactly as
-  // `replace_tree_free` does — afterwards the chain may no longer be walkable.
+  // Resolve new's standalone root BEFORE the swap — afterwards the chain may
+  // no longer be walkable.
   let new_root = detached_root(&new);
-  let inserted = document.replace_tree(new, old.clone())?;
+  let inserted = document.replace_tree_detach(new, old.clone())?;
   if inserted.is_some() {
     crate::data::defer_discard(old);
     if let Some(root) = new_root {
@@ -3497,6 +4146,245 @@ fn replace_tree_deferred(document: &mut Document, new: Node, old: Node) -> Resul
     }
   }
   Ok(inserted)
+}
+
+/// A blackboard E or P — `\mathbb{E}`, `\mathbb P`, or the glyphs 𝔼 and ℙ — is an operator function,
+/// expectation or probability (user ruling 2026-09-29): it lexes as an EXPECTATION, an OPFUNCTION of its
+/// own category (`type_expectation_lexemes`), so it nests as the first item of a bare argument,
+/// `\log\mathbb E_y\exp(x)` log@(𝔼_y@(exp(x))) (57cb; 2605.02116, 2605.27137, 2605.06977, 2605.02768),
+/// and 𝔼 takes its argument bare or in a group, `\mathbb E X`, `\mathbb{E}[X]`; ℙ only a group (57cd, below). The font is the document's (`_font`), which the lexer cannot decode, so the typing
+/// is here, for both spellings. Only the lexeme is typed: the token keeps its role, so a set
+/// (`x\in\mathbb{E}^3`) or a lone letter is no function in the output, and the application alone says
+/// what took an argument. A numeric power among its scripts names a space — `\mathbb{P}^2`,
+/// `\mathbb{P}_{\mathbb C}^2`, `\mathbb{E}^3`, projective and Euclidean — and stays a letter (57cb review).
+fn expectation_operators(nodes: &[Node], document: &Document) -> Vec<Node> {
+  let mut operators = Vec::new();
+  // (computed once, only for a `d` before ℙ)
+  let levels = std::cell::OnceCell::new();
+  for (index, node) in nodes.iter().enumerate() {
+    let token = crate::data::resolve_xmref(node).unwrap_or_else(|| node.clone());
+    if token.get_name() != "XMTok"
+      || !matches!(
+        token.get_attribute("role").as_deref(),
+        None | Some("UNKNOWN")
+      )
+    {
+      continue;
+    }
+    let operator = match token.get_content().as_str() {
+      "\u{1D53C}" | "\u{2119}" => true,
+      // the digestion font (`_font`), or, in a finalized document, which keeps no `_font`, the
+      // serialized one (`latexmlmath_oxide` lexes such a document)
+      "E" | "P" => match token.get_attribute("_font") {
+        Some(hash) => document
+          .decode_font(&hash)
+          .and_then(|font| font.get_family().map(|family| family == "blackboard"))
+          .unwrap_or(false),
+        None => token
+          .get_attribute("font")
+          .is_some_and(|font| font.split_whitespace().any(|word| word == "blackboard")),
+      },
+      _ => false,
+    };
+    if !operator {
+      continue;
+    }
+    let realized = |node: &Node| crate::data::resolve_xmref(node).unwrap_or_else(|| node.clone());
+    let role = |node: &Node| node.get_attribute("role");
+    let is_script = |node: &Node| {
+      node.get_name() == "XMApp"
+        && matches!(
+          role(node).as_deref(),
+          Some("POSTSUBSCRIPT" | "POSTSUPERSCRIPT")
+        )
+    };
+    // What it takes, past its scripts.
+    let argument = nodes[index + 1..]
+      .iter()
+      .map(realized)
+      .find(|next| !is_script(next));
+    if matches!(token.get_content().as_str(), "P" | "\u{2119}") {
+      // ℙ is an operator only where it is applied — a group after it, past its scripts (user ruling
+      // 2026-09-30): `\mathbb{P}(A)`, `\mathbb{P}_x[…]`, `\mathbb{P}\{…\}`; otherwise a named matrix or
+      // space, `\mathbb{P}^{-1}\mathbb{Q}` (2605.04101), `\mathbb{P}_1^\intercal\mathbb{P}_1` (2605.01199),
+      // `\mathbb{P}\text{-a.s.}` (2605.20593).
+      let applied = argument.as_ref().is_some_and(opens_a_group);
+      // A measure after a differential is its variable: `\int u\,\mathrm{d}\mathbb{P}(\omega)`
+      // (2605.24620). A `d` is a differential in an integral's operand only (`util::in_an_integral_operand`, as the
+      // lexer's XDIFFUNK): `d\,\mathbb{P}(A)` is d·ℙ@(A), and so is `\int f\,dx\le d\,\mathbb{P}(A)` (SYNC (17)). Not ∂,
+      // an operator: `\partial\mathbb{P}(A)`.
+      let after_a_differential = index
+        .checked_sub(1)
+        .and_then(|before| nodes.get(before))
+        .map(realized)
+        .is_some_and(
+          |before| match crate::data::get_grammatical_role(&before).as_str() {
+            // a token or a built one (physics `\dd`, an XMDual)
+            "DIFFOP" => before.get_content() != "\u{2202}",
+            // (an ID too: the lexer's XDIFFID, util.rs; 57cd review)
+            "UNKNOWN" | "ID" => {
+              before.get_content() == "d"
+                && crate::util::in_an_integral_operand(
+                  nodes,
+                  levels.get_or_init(|| crate::util::operand_levels(nodes, false)),
+                  index - 1,
+                  false,
+                )
+            },
+            _ => false,
+          },
+        );
+      if !applied || after_a_differential {
+        continue;
+      }
+    } else if !argument.as_ref().is_some_and(|argument| {
+      is_an_argument(argument)
+        // (an expectation takes a derivative after it, user ruling 2026-10-01: `\mathbb{E}\partial_\theta\log p`)
+        || crate::data::get_grammatical_role(argument) == "DIFFOP"
+    }) {
+      // 𝔼 with nothing to take is a name (57cd review): `\nabla\mathbb{E}=0`, `(\nabla\mathbb{E})`,
+      // `\mathbb{E}^\top`
+      continue;
+    }
+    let names_a_space = nodes[index + 1..]
+      .iter()
+      .map(realized)
+      .take_while(is_script)
+      .any(|script| is_numeric_superscript(&script));
+    if !names_a_space {
+      operators.push(node.clone());
+    }
+  }
+  operators
+}
+
+/// A superscript whose argument holds numbers only: `^2`, `^{3}`.
+fn is_numeric_superscript(script: &Node) -> bool {
+  if script.get_attribute("role").as_deref() != Some("POSTSUPERSCRIPT") {
+    return false;
+  }
+  let mut tokens = Vec::new();
+  collect_tokens(script, &mut tokens);
+  tokens
+    .iter()
+    .any(|token| token.get_attribute("role").as_deref() == Some("NUMBER"))
+    && tokens.iter().all(|token| {
+      token
+        .get_attribute("role")
+        .as_deref()
+        .is_some_and(|role| role == "NUMBER" || role.ends_with("SCRIPTOP"))
+    })
+}
+
+/// An OPEN, or a group built whole whose presentation starts with one (physics `\qty(A)`, XMDuals over
+/// its XMWrap).
+fn opens_a_group(node: &Node) -> bool {
+  match node.get_name().as_str() {
+    "XMTok" => node.get_attribute("role").as_deref() == Some("OPEN"),
+    "XMDual" => node.get_child_elements().get(1).is_some_and(opens_a_group),
+    "XMWrap" => node
+      .get_first_element_child()
+      .is_some_and(|first| opens_a_group(&first)),
+    _ => false,
+  }
+}
+
+/// Can an expectation take `next` as its argument, or its argument's start: anything but a
+/// relation, punctuation, a close or an infix operator (57cd review), or an operator, which an
+/// OPFUNCTION's bare argument does not take (`aBarearg`, MathGrammar:323-331): `\mathbb{E}\nabla f`
+/// E·∇@(f). A big operator it takes (57cf, `semantics::expectation_takes_the_big_operator`). Not a derivative:
+/// its bare argument would end at the first (`\mathbb{E}\partial_\theta\log p\,\partial_\theta\log p^\top`, the Fisher
+/// information, read 𝔼@(∂_θ log p)·∂_θ log p^⊤ when it took one; 57cj.2 review), so `\mathbb{E}\partial_t u` stays E·∂_t u.
+fn is_an_argument(next: &Node) -> bool {
+  !matches!(
+    crate::data::get_grammatical_role(next).as_str(),
+    "RELOP"
+      | "METARELOP"
+      | "ARROW"
+      | "PUNCT"
+      | "PERIOD"
+      | "CLOSE"
+      | "ADDOP"
+      | "MULOP"
+      | "BINOP"
+      | "COMPOSEOP"
+      | "OPERATOR"
+      | "DIFFOP"
+  )
+}
+
+fn collect_tokens(node: &Node, tokens: &mut Vec<Node>) {
+  for child in node.get_child_elements() {
+    if child.get_name() == "XMTok" {
+      tokens.push(child);
+    } else {
+      collect_tokens(&child, tokens);
+    }
+  }
+}
+
+/// Types the 𝔼/ℙ lexemes of a formula its caller lexed itself (`node_to_grammar_lexemes`), as
+/// `parse_single` does: `latexmlmath_oxide`'s `lex_single_tex_formula` (57cb review).
+pub fn type_expectation_operators(
+  mathnode: &Node,
+  lexemes: &mut [String],
+  nodes: &[Node],
+  document: &Document,
+) {
+  let operators = expectation_operators(&filter_hints(mathnode.get_child_nodes()), document);
+  type_expectation_lexemes(lexemes, nodes, &operators);
+}
+
+/// The lexemes of `expectation_operators`' tokens are EXPECTATIONs spelled by their glyph
+/// (`UNKNOWN:E:3` → `EXPECTATION:𝔼:3`): an OPFUNCTION of its own category, which the grammar's
+/// operator nests leave out (`plain_opfunction`) and the actions read as an OPFUNCTION
+/// (`semantics::lexeme_category`); the node keeps its content and role.
+fn type_expectation_lexemes(lexemes: &mut [String], nodes: &[Node], operators: &[Node]) {
+  if operators.is_empty() {
+    return;
+  }
+  for (lexeme, node) in lexemes.iter_mut().zip(nodes) {
+    if operators.contains(node)
+      && let Some(rest) = lexeme.strip_prefix("UNKNOWN:")
+      && let Some((_, index)) = rest.rsplit_once(':')
+    {
+      // by the token's content, which `expectation_operators` read, never the lexeme text: a
+      // `meaning` or `name` spells that (`\lxDefMath{\EE}{𝔼}[meaning=expectation]`, 57cd review)
+      let token = crate::data::resolve_xmref(node).unwrap_or_else(|| node.clone());
+      let glyph = match token.get_content().as_str() {
+        "E" | "\u{1D53C}" => "\u{1D53C}",
+        _ => "\u{2119}",
+      };
+      *lexeme = format!("EXPECTATION:{glyph}:{index}");
+    }
+  }
+}
+
+/// Spells every expectation lexeme as one that also reads as the letter it was lexed as
+/// (`EXPECTATION:𝔼:3` → `EXPECTATION:𝔼.letter:3`, grammar `expectation_letter`, M3): the stream of the letter
+/// retry, for a formula no typed stream parses.
+fn spell_letter_readings(lexemes: &mut [String]) {
+  for lexeme in lexemes.iter_mut() {
+    if let Some(rest) = lexeme.strip_prefix("EXPECTATION:")
+      && let Some((glyph, index)) = rest.rsplit_once(':')
+      && !glyph.ends_with(".letter")
+    {
+      *lexeme = format!("EXPECTATION:{glyph}.letter:{index}");
+    }
+  }
+}
+
+/// Does a lexeme stream hold an integral's letter `d` (the lexer's `XDIFFUNK`/`XDIFFID`, only in an integral's
+/// operand, `util::in_an_integral_operand`)? Its ASF glades then keep their alternatives with the fewest letter `d`s before a variable
+/// (`MathTraverser::differential_letters`, 57cj.20).
+fn holds_differential_letters(input: &str) -> bool {
+  input.contains("XDIFFUNK:d:") || input.contains("XDIFFID:d:")
+}
+
+/// Does a lexeme stream hold an expectation that also reads as a letter (`spell_letter_readings`)? Its ASF
+/// glades then keep their fewest-letter alternatives (`MathTraverser::letter_readings`).
+fn holds_letter_readings(input: &str) -> bool {
+  input.contains("EXPECTATION:\u{1D53C}.letter:") || input.contains("EXPECTATION:\u{2119}.letter:")
 }
 
 #[cfg(test)]

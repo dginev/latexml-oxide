@@ -1,0 +1,30 @@
+% mechanism: two people set as two nested `tabular`s in ONE cell of a boxed block (the document's
+%   `\FormatAuthor{name}{e-mail}{institution}`, each a `tabular{c}` of three rows). The observer's reading names the
+%   first person only and continues his institution row over the second person's rows ("EPFL Zihan Hu" …), so the
+%   re-part, once it could make e-mail items (OD #958), made "EPFL Bob Bell EPFL" Ann's affiliation: a person lost into
+%   a contact. The re-part now declines an item one of whose joined block rows may on its own name a person (repart.rs
+%   `joined_rows`, the counterpart of `joined_across_cells`), and today's one creator stays. Right: two creators.
+% witness: 2609.37429 (review rev100c B1)
+% oracle:  pdflatex 0 errors; prints side by side "Ann Able" / "ann.able@epfl.ch" / "EPFL" and "Bob Bell" /
+%   "bob.bell@epfl.ch" / "EPFL"
+% engines: rust int127a: one creator holding both tables; 100c r1: Ann + affiliation "EPFL Bob Bell bob.bell@epfl.ch
+%   EPFL"; 100c r2: as int127a; perl one creator holding both tables
+% expect:  0 errors; Ann (ann.able@epfl.ch, EPFL), Bob (bob.bell@epfl.ch, EPFL)
+% status:  RED (the fail-safe GREEN: no person inside a contact)
+\documentclass{article}
+\newcommand{\FormatAuthor}[3]{
+\begin{tabular}{c}
+#1 \\ {\small\texttt{#2}} \\ {\small #3}
+\end{tabular}
+}
+\title{T}
+\author{
+\begin{tabular}[h!]{ccc}
+\FormatAuthor{Ann Able}{ann.able@epfl.ch}{EPFL}
+\FormatAuthor{Bob Bell}{bob.bell@epfl.ch}{EPFL}
+\end{tabular}
+}
+\begin{document}
+\maketitle
+Text.
+\end{document}

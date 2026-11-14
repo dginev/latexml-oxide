@@ -1,0 +1,29 @@
+% witness: 1305.6441, 1306.0018, 1404.3867 (`\email`); 1411.2181, 2103.08145 (`{nomenclature}`); 1811.08269, 1303.2653
+%          (`{deflist}`, `\defitem`, `\defterm`); 2404.00783 (`\normalMode`); 2509.10728 (its own
+%          `\NewDocumentEnvironment{nomenclature}` over the release's); all ship elsarticle.cls v1.21 (2010/06/11)
+% oracle:  pdflatex with 1404.3867's elsarticle.cls v1.21: 0 errors ("E-mail address: a@b.org"; "Nomenclature" boxed;
+%          "x : the unknown"; "Corresponding author"; section 1 after the appendix's A)
+% engines: rust 67u2 = 7 errors (the release's commands undefined: TL's v3.4c has none of them); Perl 7 errors, the same commands
+% expect:  0 errors, 0 warnings; the e-mail an author contact; the corresponding-author note; the definition list's text
+% status:  RED (67u2) -> GREEN (67y)
+% preload: ar5iv.sty
+\documentclass[preprint]{elsarticle}
+\begin{document}
+\begin{frontmatter}
+\title{Old release}
+\author{A. Author}
+\email{a@b.org}
+\correspondingauthor[*]{Corresponding author}
+\end{frontmatter}
+\begin{nomenclature}
+\begin{deflist}[A]
+\defitem{$x$}\defterm{the unknown}
+\end{deflist}
+\end{nomenclature}
+\appendix
+\section{Appendix}
+Text.
+\normalMode
+\section{Back}
+More.
+\end{document}

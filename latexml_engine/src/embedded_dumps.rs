@@ -47,7 +47,7 @@ use std::{
   path::PathBuf,
 };
 
-use latexml_core::common::error::emit_warn;
+use latexml_core::{common::error::emit_warn, util::private_files};
 use once_cell::sync::Lazy;
 use rustc_hash::FxHashMap as HashMap;
 
@@ -75,17 +75,21 @@ thread_local! {
 /// * Cleared at the OS's discretion (reboot on Linux/macOS, possibly never on Windows) — natural
 ///   cache invalidation when stale, with the per-build content hash giving stable cross-process
 ///   reuse for the same binary version.
+///
+/// One per user, and read only when this user wrote it (`private_files`): the temp dir is shared,
+/// and a dump another local user put there first would be loaded as the format.
 static CACHE_DIR: Lazy<PathBuf> = Lazy::new(|| {
   std::env::temp_dir().join(format!(
-    "latexml-oxide-dumps-{}",
-    EMBEDDED_DUMPS_CONTENT_HASH
+    "latexml-oxide-dumps-{}-{}",
+    EMBEDDED_DUMPS_CONTENT_HASH,
+    private_files::user_id()
   ))
 });
 
 /// Pick the embedded entry that best matches `prefer` (typically the
 /// ambient TL year). Returns `(entry, exact_match)`.
 pub(crate) fn select_embedded(prefer: Option<u32>) -> Option<(&'static EmbeddedDumpYear, bool)> {
-  if *NO_EMBEDDED {
+  if *NO_EMBEDDED || crate::dump_paths::dump_dir_only() {
     return None;
   }
   let entries = non_empty_entries();
@@ -137,7 +141,10 @@ fn decompressed_dump(year: u32, kind: &'static str, gz: &[u8]) -> Option<&'stati
     let cache_path = CACHE_DIR.join(format!("{kind}.{year}.dump.txt"));
 
     // Tier 1: try disk cache.
-    if let Ok(disk_text) = std::fs::read_to_string(&cache_path) {
+    if let Ok(disk_text) = std::fs::read_to_string(&cache_path)
+      && private_files::trusted_dir(&CACHE_DIR)
+      && private_files::private_to_user(&cache_path)
+    {
       log::debug!(
         "[embedded_dumps] {kind} TL{year} loaded from disk cache {}",
         cache_path.display()
@@ -192,7 +199,7 @@ fn decompressed_dump(year: u32, kind: &'static str, gz: &[u8]) -> Option<&'stati
 /// REPLACE_EXISTING). The second rename simply overwrites the first
 /// — file content is identical so either outcome is correct.
 fn write_cache_atomic(target: &std::path::Path, content: &str) -> std::io::Result<()> {
-  std::fs::create_dir_all(&*CACHE_DIR)?;
+  private_files::private_dir(&CACHE_DIR).map_err(std::io::Error::other)?;
   let temp_path = target.with_file_name(format!(
     "{}.tmp.{}",
     target
@@ -206,6 +213,7 @@ fn write_cache_atomic(target: &std::path::Path, content: &str) -> std::io::Resul
     fh.write_all(content.as_bytes())?;
     fh.sync_data().ok(); // best-effort durability; not critical
   }
+  private_files::publish_read_only(&temp_path)?;
   std::fs::rename(&temp_path, target)
 }
 
@@ -214,9 +222,13 @@ fn write_cache_atomic(target: &std::path::Path, content: &str) -> std::io::Resul
 /// is set. First call per machine-boot decompresses + caches to
 /// `/tmp`; subsequent calls in this AND future processes load the
 /// decompressed file directly from the disk cache.
+///
+/// A bundled dump built from another TeX tree than the one this process reads is not offered
+/// ([`crate::dump_paths::dump_matches_tree`]).
 pub fn embedded_plain_dump(prefer: Option<u32>) -> Option<&'static str> {
   let (entry, _) = select_embedded(prefer)?;
   decompressed_dump(entry.year, "plain", entry.plain_gz)
+    .filter(|text| matches_this_tree(entry.year, "plain", text))
 }
 
 /// Bundled `latex.YYYY.dump.txt` content for the year that best matches
@@ -226,6 +238,15 @@ pub fn embedded_plain_dump(prefer: Option<u32>) -> Option<&'static str> {
 pub fn embedded_latex_dump(prefer: Option<u32>) -> Option<&'static str> {
   let (entry, _) = select_embedded(prefer)?;
   decompressed_dump(entry.year, "latex", entry.latex_gz)
+    .filter(|text| matches_this_tree(entry.year, "latex", text))
+}
+
+fn matches_this_tree(year: u32, kind: &str, text: &str) -> bool {
+  let matches = crate::dump_paths::dump_matches_tree(kind, text);
+  if !matches {
+    crate::dump_paths::note_other_tree_dump(&format!("<embedded TL{year}>"), kind, text);
+  }
+  matches
 }
 
 /// First line of the bundled `texlive.YYYY.version` stamp for the chosen

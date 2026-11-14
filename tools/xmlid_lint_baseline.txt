@@ -12,9 +12,9 @@ latexml_engine/src/base_xmath.rs	.or_else(|| eq.get_attribute("xml:id"))
 latexml_engine/src/base_xmath.rs	.or_else(|| eq.get_attribute("xml:id"))
 latexml_engine/src/base_xmath.rs	.or_else(|| eq.get_attribute("xml:id"));
 latexml_engine/src/base_xmath.rs	with(qname, |qstr| qstr.starts_with("ltx:XM")) && !node.has_attribute("xml:id") {
-latexml_engine/src/latex_constructs.rs	.get_attribute("xml:id")
-latexml_engine/src/latex_constructs.rs	float.remove_attribute("xml:id").ok();
-latexml_engine/src/latex_constructs.rs	if node.has_attribute("labels") && !node.has_attribute("xml:id") {
+latexml_engine/src/latex_constructs/mod.rs	.get_attribute("xml:id")
+latexml_engine/src/latex_constructs/mod.rs	float.remove_attribute("xml:id").ok();
+latexml_engine/src/latex_constructs/sect11.rs	if node.has_attribute("labels") && !node.has_attribute("xml:id") {
 latexml_math_parser/src/data.rs	if child.get_attribute("xml:id").as_deref() == Some(id) {
 latexml_math_parser/src/parser.rs	.get_attribute("xml:id")
 latexml_math_parser/src/parser.rs	.get_attribute("xml:id")

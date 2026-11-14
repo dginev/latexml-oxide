@@ -1,0 +1,17 @@
+% mechanism: `\rotatebox` (graphicx), `\turnbox` (rotating), `\scalebox`, `\resizebox` are
+%   `\leavevmode` then an `\hbox`: at a paragraph start the box begins the paragraph and the text
+%   after it runs on (graphicx.sty/graphics.sty `\Grot@box`, rotating.sty:100-107). Their
+%   constructors (`restricted_horizontal`, `enter_horizontal`) build an `ltx:inline-block` that
+%   the Document places before the paragraph it opens: `<inline-block/><p>of paragraph.</p>`.
+%   Same family as KPE #309 (`\parbox`/minipage, fixed 57d/57f via `in_paragraph` +
+%   `insert_block_in_paragraph`, base_utilities.rs), which is the likely mechanism for all of them.
+% witness: 57s review (probe; shared with Perl)
+% oracle:  pdflatex 0 errors; one paragraph "[start] of paragraph."
+% engines: rust 57s and perl: <para><inline-block>…start…</inline-block><p>of paragraph.</p></para>
+% expect:  0 errors; one <p> holding the inline-block and " of paragraph."
+% status:  RED (57s)
+\documentclass{article}
+\usepackage{graphicx}
+\begin{document}
+\rotatebox{90}{start} of paragraph.
+\end{document}

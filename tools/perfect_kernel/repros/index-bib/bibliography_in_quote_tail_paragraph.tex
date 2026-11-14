@@ -1,0 +1,18 @@
+% mechanism: a bibliography closes the `{quote}` it is begun in (OXIDIZED_DESIGN_DIVERGENCES #677); the quote's end
+%   then acts on the quote it opened, found closed, and ends only the paragraph of the text after the bibliography
+%   (latex.ltx `\endlist` → `\@endparenv`), so that text and the text after the quote are two paragraphs' text
+% witness: review probe b_quote_text (69a round 1: "Tail text still in quote.After quote." merged)
+% oracle:  pdflatex 0 errors: "Lead text in quote." indented, the References list, "Tail text still in quote."
+%   indented, then "After quote." at the margin
+% engines: rust 67int17b = Error:malformed:ltx:section, Error:malformed:ltx:bibliography (in <ltx:p>); 69a r1 merged
+%   the two texts in one <ltx:p>; Perl errs as 67int17b
+% expect:  0 errors, 0 warnings; the lead in the quote; the bibliography in the back matter; "Tail text still in
+%   quote." and "After quote." two <ltx:p>
+% status:  RED (69a r1) -> GREEN (69a r2)
+% preload: ar5iv.sty
+\documentclass{article}\begin{document}\section{Intro}Text \cite{a} and \cite{b}.
+\begin{quote}Lead text in quote.
+\begin{thebibliography}{9}\bibitem{a} {\em Alpha} entry one.\bibitem{b} Beta entry two.\end{thebibliography}
+Tail text still in quote.\end{quote}
+After quote.
+\end{document}

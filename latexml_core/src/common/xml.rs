@@ -2,7 +2,7 @@ use std::borrow::Cow;
 
 use libxml::{
   tree::{Document, Node, NodeType},
-  xpath::Context,
+  xpath::{Context, Expression},
 };
 use rustc_hash::FxHashMap as HashMap;
 
@@ -187,14 +187,40 @@ impl ParsedFragment {
 }
 
 pub struct XPath {
-  context: Context,
+  context:  Context,
+  /// Each expression compiled once: a document asks some 60 distinct expressions 15k–32k times, and libxml2's string
+  /// evaluators compile on every call (docs/performance/PERFORMANCE.md P10).
+  compiled: HashMap<Box<str>, Expression>,
+}
+
+/// How many compiled expressions an [`XPath`] keeps: an expression built from data (an id, a label) past it is
+/// evaluated from its string, as before.
+const COMPILED_XPATH_LIMIT: usize = 1024;
+
+/// `xpath` compiled, from `compiled` or compiled now; `None` when it does not compile (its string evaluation then
+/// reports it as before — compiling it a second time, so libxml2's stderr line prints twice: PERFORMANCE.md P10) or
+/// `compiled` is full.
+pub fn compiled_xpath<'a>(
+  compiled: &'a mut HashMap<Box<str>, Expression>,
+  xpath: &str,
+) -> Option<&'a Expression> {
+  if !compiled.contains_key(xpath) {
+    if compiled.len() >= COMPILED_XPATH_LIMIT {
+      return None;
+    }
+    compiled.insert(xpath.into(), Expression::compile(xpath).ok()?);
+  }
+  compiled.get(xpath)
 }
 
 // pub type XPathClosure = Rc<Fn(&mut Gullet, Tokens) -> bool>;
 impl XPath {
   pub fn new(doc: &Document, _mappings: HashMap<String, String>) -> Self {
     let context = Context::new(doc).unwrap();
-    XPath { context }
+    XPath {
+      context,
+      compiled: HashMap::default(),
+    }
   }
 
   pub fn register_namespace(&mut self, codeprefix: &str, namespace: &str) -> Result<()> {
@@ -213,9 +239,29 @@ impl XPath {
   }
 
   pub fn findnodes(&mut self, xpath: &str, node: Option<&Node>) -> Vec<Node> {
-    match self.context.findnodes(xpath, node) {
+    let found = match compiled_xpath(&mut self.compiled, xpath) {
+      Some(expression) => self
+        .context
+        .findnodes_compiled(expression, node)
+        .map_err(|_| ()),
+      None => self.context.findnodes(xpath, node),
+    };
+    match found {
       Ok(nodes) => nodes,
       Err(e) => {
+        // A relative query whose context node has been detached from the tree
+        // reaches here with a NULL node pointer — e.g. a stale `ltx:_Capture_`
+        // cell wrapper left by eqnarray/MathFork row surgery (base_xmath.rs
+        // `equationgroup_join_rows` counting `ltx:Math` per cell). The null is
+        // the known detached-wrapper hazard (a handle captured live, then freed
+        // while still held; see `Node::node_ptr_mut`). Such a node has no
+        // descendants, so the empty result is correct and NOT an error: Perl
+        // never logs it (its wrappers stay live). Recover silently. Keep the
+        // diagnostic for a genuine failure (malformed expression, growth limit)
+        // on a live context node.
+        if node.is_some_and(|n| n.is_null()) {
+          return Vec::new();
+        }
         let message = s!(
           "XPath {xpath:?} failed (context node: {}): {e:?}",
           node.is_some()
@@ -236,9 +282,21 @@ impl XPath {
   }
 
   pub fn findvalues(&mut self, xpath: &str, node: Option<&Node>) -> Vec<String> {
-    match self.context.findvalues(xpath, node) {
+    let found = match compiled_xpath(&mut self.compiled, xpath) {
+      Some(expression) => self
+        .context
+        .findvalues_compiled(expression, node)
+        .map_err(|_| ()),
+      None => self.context.findvalues(xpath, node),
+    };
+    match found {
       Ok(vals) => vals,
       Err(e) => {
+        // A null (detached) context node has no descendants: empty, not an
+        // error (see `findnodes`).
+        if node.is_some_and(|n| n.is_null()) {
+          return Vec::new();
+        }
         let message = s!(
           "XPath {xpath:?} failed (context node: {}): {e:?}",
           node.is_some()
@@ -254,7 +312,11 @@ impl XPath {
   }
 
   pub fn findvalue(&mut self, xpath: &str, node: Option<&Node>) -> String {
-    self.context.findvalue(xpath, node).unwrap_or_default()
+    match compiled_xpath(&mut self.compiled, xpath) {
+      Some(expression) => self.context.findvalue_compiled(expression, node).ok(),
+      None => self.context.findvalue(xpath, node).ok(),
+    }
+    .unwrap_or_default()
   }
 }
 
@@ -502,6 +564,35 @@ mod tests {
     assert!(
       !is_descendant_or_self(&kids[0], &kids[1]),
       "a is not a descendant of b"
+    );
+  }
+
+  /// A relative XPath query whose context node is a detached (null-pointer)
+  /// wrapper — as eqnarray/MathFork row surgery leaves stale `ltx:_Capture_`
+  /// cells (base_xmath.rs `equationgroup_join_rows`; the A&A `aa.cls` cluster,
+  /// witness 2605.02723) — must recover as an empty result WITHOUT logging an
+  /// `Error`: a null node has no descendants, so the empty result is correct
+  /// and Perl never reports it. Without the null-context arm this errors and
+  /// bumps `REPORT.error`.
+  #[test]
+  fn findnodes_on_a_null_context_node_recovers_without_an_error() {
+    use crate::common::error::snapshot_report_counts;
+    let doc = Document::new().unwrap();
+    let mut xpath = XPath::new(&doc, HashMap::default());
+    let null_node = Node::null();
+    assert!(
+      null_node.is_null(),
+      "precondition: the context node is null"
+    );
+
+    let before = snapshot_report_counts().error;
+    let found = xpath.findnodes("ltx:Math", Some(&null_node));
+    let after = snapshot_report_counts().error;
+
+    assert!(found.is_empty(), "a null-context query yields no nodes");
+    assert_eq!(
+      after, before,
+      "the null context node must be recovered silently, not logged as an Error"
     );
   }
 }

@@ -1,0 +1,21 @@
+% witness: pnas-new.cls:402-428 (`\showmatmethods` prints the stored Materials and Methods under its heading,
+%          `\showacknow` the acknowledgments); 2304.12786 ships the class
+% oracle:  pdflatex 0 errors with the arXiv-shipped pnas-new.cls (2304.12786; not in TeX Live)
+% engines: rust 65k round 1 = 0 errors
+% expect:  0 errors; a section "Materials and Methods" with "Methods text."; acknowledgements "Thanks."
+% status:  GREEN (65k)
+% preload: ar5iv.sty
+\documentclass{pnas-new}
+\title{T}
+\author[a]{A. Author}
+\affil[a]{U}
+\matmethods{Methods text.}
+\acknow{Thanks.}
+\additionalelement{}
+\begin{abstract}Abstract.\end{abstract}
+\begin{document}
+\maketitle
+Body.
+\showmatmethods
+\showacknow
+\end{document}

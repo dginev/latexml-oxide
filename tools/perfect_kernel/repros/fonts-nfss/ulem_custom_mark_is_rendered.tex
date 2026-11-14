@@ -1,0 +1,21 @@
+% mechanism: ulem builds its marks from a rule or glyph repeated over the words:
+%   `\bgroup\markoverwith{…}\ULon` (ulem.sty:232-233) is how `\sout`, `\xout` and authors' own
+%   marks are made. The binding renders its named marks as `ltx_ulem_*` classes (`\sout` →
+%   `<text class="ltx_ulem_sout">`) but `\markoverwith` is a no-op and `\ULon` passes its text
+%   through, so an author's mark — revision markup, deleted text — reads as ordinary text. How a
+%   custom mark maps to a class (a raised rule as a strike, a lowered one as an underline, a glyph
+%   as a wave?) is a design decision.
+% witness: 41 of 30,079 2605 papers define such a command: 2605.15048 `\redout`, 2605.16437
+%   `\Erase`, 2605.02048 `\redsout`, 2605.00092 `\soutPC`
+% oracle:  pdflatex 0 errors; "struck" with a red rule through it
+% engines: rust 57s: <p>Before struck after.</p> (no mark); perl: 2 errors (`\ULon`, `\markoverwith`
+%          undefined)
+% expect:  0 errors; "struck" in a <text class="ltx_ulem_…"> as `\sout` gives, the spaces kept
+% status:  RED (57s)
+\documentclass{article}
+\usepackage[normalem]{ulem}
+\usepackage{xcolor}
+\newcommand\redout{\bgroup\markoverwith{\textcolor{red}{\rule[0.5ex]{2pt}{0.8pt}}}\ULon}
+\begin{document}
+Before \redout{struck} after.
+\end{document}

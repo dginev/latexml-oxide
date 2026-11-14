@@ -1,0 +1,43 @@
+% A non-\long macro's argument that holds a `\par` and then runs off its file: TeX stops at the
+% `\par` (tex.web §392, §399), "Paragraph ended before \red was complete", puts the `\par` back
+% (§396 `back_error`) and abandons the call, so the text after the blank line is kept. The file
+% then ends at normal status. A `\long` macro reads on to the file's end: "File ended while
+% scanning use of \lred", and the call is dropped with all of it. Delimited arguments alike.
+% witness: reviewer of batch W9 (color.sty:104 `\textcolor` is not \long; color_sty.rs:435)
+% oracle:  pdflatex 4 errors ("Paragraph ended before" \red, \@textcolor, \bar; "File ended while
+%          scanning use of \lred"), paragraphs "A" / "DEF B" / "JKL C D" / "b E"
+% engines: rust=3 errors "readBalanced ran out" (none for \bar), every argument kept to the
+%          file's end: "A [abc" / "DEF ]B ghi" / "JKL C [mno" / "PQR ]D <>a" / "b E"
+%          (56ja-rel, 2026-09-25); W9 (6d51d0d3f4) dropped DEF, JKL and b with their calls
+% expect:  4 errors, "A" / "DEF B" / "JKL C D" / "b E"
+% status:  GREEN (W9 follow-up: gullet::abandon_runaway_call; guard
+%          scanner_status::a_par_in_a_runaway_argument_ends_a_non_long_call)
+\documentclass{article}
+\usepackage{color}
+\def\red#1{[#1]}
+\long\def\lred#1{[#1]}
+\def\bar#1.{<#1>}
+\begin{filecontents*}{file_end_matching_par_red.tex}
+\red{abc
+
+DEF
+\end{filecontents*}
+\begin{filecontents*}{file_end_matching_par_color.tex}
+\textcolor{red}{ghi
+
+JKL
+\end{filecontents*}
+\begin{filecontents*}{file_end_matching_par_long.tex}
+\lred{mno
+
+PQR
+\end{filecontents*}
+\begin{filecontents*}{file_end_matching_par_delimited.tex}
+\bar a
+
+b
+\end{filecontents*}
+\begin{document}
+A \input file_end_matching_par_red.tex B \input file_end_matching_par_color.tex C
+\input file_end_matching_par_long.tex D \input file_end_matching_par_delimited.tex E
+\end{document}

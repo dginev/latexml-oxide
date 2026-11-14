@@ -1,0 +1,27 @@
+% A sealed supplement `\abstract{…}` (after a section) followed by two French `{abstract}`s: the command form is a
+% property of its own call (`\lx@begin@abstract[command_form=true]`), so nothing outlives the sealed one's early return
+% to mark the next abstract (86i r1's global flag marked "Premier", which "Second" then removed).
+% witness: review probes q13 (with the sealed command form) and q14 (its control, without).
+% Guard: perfect_kernel_batch86i::abstract_command_form_twice_before_maketitle_keeps_the_last.
+% oracle:  pdflatex 0 errors: "Abstract English abstract words. 1 Intro Body. Abstract Supplement command words.
+%          Résumé Premier résumé mots. Résumé Second résumé mots."
+% engines: perl: English, Premier, Second at the head; the supplement dequeued.
+%          rust int117a and 86i r1: English, Second (Premier lost); the supplement in place.
+% expect:  0 errors, 0 warnings; title, creator, abstract (English), abstract (Premier), abstract (Second), section
+%          (holding "Supplement command words.").
+% status:  RED (int117a, 86i r1) -> GREEN (86i r2)
+\documentclass{article}
+\usepackage[french,english]{babel}
+\begin{document}
+\title{Probe}\author{Ann}
+\maketitle
+\begin{abstract}English abstract words.\end{abstract}
+\section{Intro}
+Body.
+\abstract{Supplement command words.}
+
+\begin{otherlanguage}{french}
+\begin{abstract}Premier résumé mots.\end{abstract}
+\begin{abstract}Second résumé mots.\end{abstract}
+\end{otherlanguage}
+\end{document}

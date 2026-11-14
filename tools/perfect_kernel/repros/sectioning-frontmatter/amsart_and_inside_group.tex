@@ -1,0 +1,11 @@
+% witness: 2401.03555 (amsart `{\bf {\large A \and B}}`)
+% oracle:  pdflatex 0 errors: "Ann Able and Bob Baker"
+% engines: rust 64b3 = one creator + Error:frontmatter:merged_creators; Perl the same (amsart's `\author` is one author, the `\and` in its group unread)
+% expect:  0 errors; 2 creators, one name each
+% status:  RED (64b3) -> GREEN (64b)
+\documentclass{amsart}
+\begin{document}
+\title{T}
+\author{{\bf {\large Ann Able \and Bob Baker}}\\{\normalfont Univ A}}
+\maketitle
+\end{document}

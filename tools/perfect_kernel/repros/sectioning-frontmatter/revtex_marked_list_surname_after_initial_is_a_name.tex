@@ -1,0 +1,20 @@
+% revtex4-1 one `\author{…}` list of names each with its mark after the comma, one surname an institution's word
+% (`Centers`) after a middle initial: a person's name in a list by its marks.
+% witness: 1901.10843 (`\author{Teng Wu,$^{1,*}$ John W. Blanchard,$^{1}$ Gary P. Centers,$^{1}$ …\\ … and Dmitry
+%          Budker$^{1,4,6}$}`, 12 names)
+% oracle:  pdflatex 0 errors: "Ann Able,1,∗ Bob Baker,1 Gary P. Centers,1", "Dan Dee,2 and Eve Eden1,2"
+% engines: rust int138a = one creator holding the five names, Error:frontmatter:merged_creators; Perl one creator
+% expect:  0 errors, 0 warnings; five creators, each with the affiliations its marks name
+% status:  RED (int138a) -> GREEN (107b)
+% preload: ar5iv.sty
+\documentclass[reprint,amsmath,amssymb,aps]{revtex4-1}
+\begin{document}
+\title{T}
+\author{Ann Able,$^{1,*}$ Bob Baker,$^{1}$ Gary P. Centers,$^{1}$\\  Dan Dee,$^{2}$ and Eve Eden$^{1,2}$}
+\affiliation{$^{1}$University of Alpha\\
+  $^{2}$University of Beta}
+\begin{abstract}
+Text.
+\end{abstract}
+\maketitle
+\end{document}

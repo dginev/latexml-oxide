@@ -1,0 +1,18 @@
+% mechanism: two taken creator calls no API call recorded (the dmtcs-episciences binding's `\affiliation`, a
+%   `\@add@to@frontmatter{ltx:creator}`) in one flush are written as queued in queue order, each where the switch off
+%   writes it (review revCL9b finding 2: `after.insert(0, …)` wrote them reversed)
+% witness: 1810.10099, 2402.10676 (one call each; this shape is synthetic)
+% oracle:  pdflatex 0 errors with 1810.10099's class: "Dun Qiu1 Jeffrey Remmel2 / Department of Mathematics, University of
+%   California San Diego" — the class's `\affiliation` is a `\gdef`, the last call wins; the binding queues each call
+% engines: off one affiliation on each creator, Beijing on Qiu; CL9b =2 the two swapped; int153w =2 both lost, counted
+% expect:  =2 0 errors, 2 unrecorded-call Warnings, the creators exactly as off
+% status:  RED (CL9b) -> GREEN (perfect_kernel_batchcl9::two_unrecorded_calls_keep_their_order)
+\documentclass{dmtcs-episciences}
+\author{Dun Qiu\affiliationmark{1} \and Jeffrey Remmel\affiliationmark{2}}
+\title{T}
+\affiliation{Department of Mathematics, Beijing Jiaotong University}
+\affiliation{Department of Mathematics, University of California San Diego}
+\begin{document}
+\maketitle
+Body.
+\end{document}

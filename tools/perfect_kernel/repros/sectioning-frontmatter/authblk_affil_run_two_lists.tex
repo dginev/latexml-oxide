@@ -1,0 +1,21 @@
+% mechanism: authblk's unlabelled `\affil` after two list calls, `\author{Ann Able, Bob Baker}\author{Cy Cole \and Dee
+%   Dunn}`: the run counts the two calls (`annotate=run:2`, `authblk_sty.rs` `affil_run`), each of them two names the
+%   reading parts (a comma, a kernel `\and`), so all four print under Univ X; a cap counting names ended the run after
+%   the second call's two and gave Ann Able and Bob Baker none, silently (`resolver/api.rs` `record_run`: the cap counts
+%   calls). The sibling of `authblk_affil_run_name_before_a_list.tex` with a list before the list
+% witness: P27 probe t1 (scratch_P27/probes)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "Ann Able, Bob Baker and Cy Cole", "Dee Dunn", "Univ X"
+% engines: Perl 0.8.8 (authblk.sty.ltxml:52-55, read, not run): the comma list one creator, the `\and` list split;
+%   int158a: Ann Able, Bob Baker (none), Cy Cole, Dee Dunn (Univ X), 0 errors, 0 warnings
+% expect:  0 errors, 0 warnings; Ann Able, Bob Baker, Cy Cole, Dee Dunn, each Univ X
+% status:  RED (int158a) -> GREEN (P27; guard perfect_kernel_batchp27::authblk_affil_run_counts_author_calls)
+\documentclass{article}
+\usepackage{authblk}
+\title{T}
+\author{Ann Able, Bob Baker}
+\author{Cy Cole \and Dee Dunn}
+\affil{Univ X}
+\begin{document}
+\maketitle
+Text.
+\end{document}

@@ -1,0 +1,19 @@
+% authblk `\affil[1]{Univ X\authorcr $^\dagger$Email: zq@x.org, ab@x.org}` under two authors, neither carrying `†`:
+% the line leaves the entry, `ab@` its spelled Ann Bee's, `zq@` (spelling no one, its mark answered by no name) the
+% block's — never the only-carrier or order step's — and the `†` no name shows stays printed, on the first e-mail of its
+% line (review rev106a S1; OD #966).
+% witness: (synthetic; the unanswered-mark sibling of gr-qc0207058's mark-led line)
+% oracle:  pdflatex 0 errors: "Ann Bee1 and Carl Dee1", "1Univ X", "†Email: zq@x.org, ab@x.org"
+% engines: rust 106a r1 = the `†` gone; int133a = "Univ X †Email: zq@x.org, ab@x.org" an affiliation of both
+% expect:  0 errors, 0 warnings; Ann Bee: Univ X, e-mail ab@x.org; Carl Dee: Univ X; the block: e-mail `†`zq@x.org;
+%          each e-mail named "Email: "
+\documentclass{article}
+\usepackage{authblk}
+\title{T}
+\author[1]{Ann Bee}
+\author[1]{Carl Dee}
+\affil[1]{Univ X\authorcr $^\dagger$Email: zq@x.org, ab@x.org}
+\begin{document}
+\maketitle
+Hello.
+\end{document}

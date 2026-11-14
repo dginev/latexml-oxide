@@ -1,0 +1,18 @@
+% witness: 1604.06452, 2004.00518, 2106.04856 (and the algorithm2e-float form, 1203.4481, 2410.01553, 2510.14887; 112
+%          TooManyErrors papers of run 336)
+% oracle:  pdflatex 0 errors
+% engines: rust 64g = 2× `ltx:break` and 2× #PCDATA isn't allowed in `ltx:listing` (open_algorithmicx_line walked past
+%          the inner listing to the outer line); Perl 1 error (listing in listingline)
+% expect:  0 errors; the inner listing holds its two lines, no ltx:break
+% status:  RED (64g) -> GREEN (64h)
+\documentclass{article}
+\usepackage{algpseudocode}
+\begin{document}
+\begin{algorithmic}
+\State outer
+\begin{algorithmic}
+\State inner one
+\State inner two
+\end{algorithmic}
+\end{algorithmic}
+\end{document}

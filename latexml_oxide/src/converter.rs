@@ -1,7 +1,7 @@
 use std::rc::Rc;
 
 use latexml_core::{
-  Core, CoreOptions, Debug, Error, Fatal, Info, Note,
+  Core, CoreOptions, Debug, Error, Fatal, Info, Note, Warn,
   common::{
     BindingDispatcher, BindingSource, Config, DataSize, DigestionMode, OutputFormat, arena,
     error::*, object::Object,
@@ -10,9 +10,13 @@ use latexml_core::{
   document::Document,
   list::List,
   report_mut, s,
-  state::{add_binding_names, set_bindings_dispatch, source_map_enabled, source_table_snapshot},
+  state::{
+    self, add_binding_names, set_bindings_dispatch, source_map_enabled, source_table_snapshot,
+  },
   telemetry::{self, Phase},
 };
+use once_cell::sync::Lazy;
+use regex::Regex;
 
 use crate::core_interface::DigestionAPI;
 
@@ -75,6 +79,372 @@ fn rhai_dispatch(request: &str, scope: RhaiScope) -> Option<Result<BindingSource
   Some(latexml_contrib::script_bindings::load_file(&path).map(|_| Some(path)))
 }
 
+/// The DVI drivers a class option can name (graphics.cfg / the `*.def` drivers that write DVI specials).
+const DVI_DRIVER_OPTIONS: [&str; 15] = [
+  "dvips",
+  "dvipdfm",
+  "dvipdfmx",
+  "dvisvgm",
+  "xdvi",
+  "dvipsone",
+  "dviwindo",
+  "emtex",
+  "dvitops",
+  "dvitoln03",
+  "pctexps",
+  "pctexwin",
+  "pctexhp",
+  "pctex32",
+  "truetex",
+];
+
+/// `text` as TeX reads its code: each line (ended by CR, LF or CRLF, as the Mouth splits them) up to its first `%`
+/// that an even run of backslashes precedes (`\%` is a character, `\\%` a control symbol then a comment), without the
+/// files its `filecontents` environments write (a shipped `.sty` ends with its own `\endinput`), up to the first
+/// `\endinput` control word (TeX reads no further of the file).
+fn uncommented_code(text: &str) -> String {
+  static FILECONTENTS: Lazy<Regex> = Lazy::new(|| {
+    Regex::new(r"(?s)\\begin\s*\{\s*filecontents\*?\s*\}.*?\\end\s*\{\s*filecontents\*?\s*\}")
+      .unwrap()
+  });
+  static ENDINPUT: Lazy<Regex> = Lazy::new(|| Regex::new(r"\\endinput(?:[^A-Za-z@]|$)").unwrap());
+  let mut code = String::with_capacity(text.len());
+  for line in text.split(['\n', '\r']) {
+    let bytes = line.as_bytes();
+    let mut backslashes = 0;
+    let mut end = bytes.len();
+    for (i, &b) in bytes.iter().enumerate() {
+      match b {
+        b'\\' => backslashes += 1,
+        b'%' if backslashes % 2 == 0 => {
+          end = i;
+          break;
+        },
+        _ => backslashes = 0,
+      }
+    }
+    code.push_str(&line[..end]);
+    code.push('\n');
+  }
+  let mut code = FILECONTENTS.replace_all(&code, "").into_owned();
+  if let Some(at) = ENDINPUT.find(&code) {
+    code.truncate(at.start());
+  }
+  code
+}
+
+/// Whether `code` names a LaTeX document's cue: `\documentclass`, `\documentstyle` or `\begin{document}`, or a
+/// command plain TeX cannot run (`\usepackage`, `\RequirePackage`, `\include`).
+fn has_latex_cue(code: &str) -> bool {
+  static LATEX_CUE: Lazy<Regex> = Lazy::new(|| {
+    Regex::new(
+      r"\\document(?:class|style)|\\begin\s*\{\s*document\s*\}|\\(?:usepackage|RequirePackage|include)(?:[^A-Za-z@]|$)",
+    )
+    .unwrap()
+  });
+  LATEX_CUE.is_match(code)
+}
+
+/// The text of `path.tex` or, failing that, of `path` (TeX tries the `.tex` name first): a regular file of at most
+/// 4 MB, so a device or a FIFO named by an `\input` is never read.
+fn read_source_file(path: &std::path::Path) -> Option<String> {
+  const MAX_SOURCE_BYTES: u64 = 4 * 1024 * 1024;
+  [
+    std::path::PathBuf::from(format!("{}.tex", path.display())),
+    path.to_path_buf(),
+  ]
+  .into_iter()
+  .find(|candidate| {
+    std::fs::metadata(candidate).is_ok_and(|m| m.is_file() && m.len() <= MAX_SOURCE_BYTES)
+  })
+  .and_then(|candidate| std::fs::read(candidate).ok())
+  .map(|bytes| String::from_utf8_lossy(&bytes).into_owned())
+}
+
+/// How arXiv's AutoTeX compiles a main file: with plain TeX or LaTeX (which format a session preloads), and to DVI
+/// (latex+dvips) or PDF (`\pdfoutput`, `core_interface::establish_pdf_output_mode`).
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub struct CompileRoute {
+  /// A plain TeX document: latexml.sty's preload must not load the LaTeX format for it.
+  pub plain_tex: bool,
+  /// A latex+dvips document by its class options.
+  pub dvi:       bool,
+  /// A pdflatex document by its class options (`pdftex`).
+  pub pdf:       bool,
+  /// What the figures the source includes say of its output mode (`figure_output_cue`).
+  pub figures:   state::FigureOutputCue,
+}
+
+/// The [`CompileRoute`] of the main file `source` (a path, `.tex` resolved as the Mouth does, or `literal:` content).
+/// A LaTeX document names `\documentclass` or `\documentstyle` outside a comment
+/// (AutoTeX's tex-vs-latex test) or `\begin{document}` (a main file `\input`ting its preamble), in the main file or,
+/// when it names none, in a file it `\input`s or `\include`s (a wrapper naming its preamble and body). AMSTeX's own
+/// `\documentstyle{amsppt}` (after `\input amstex`) still counts as LaTeX, though Perl reads it plain: kept plain, 64
+/// sampled 1996-99 amsppt papers went 192 → 319 errors (math9806005 0 → TooManyErrors), AMSTeX's plain-mode gaps. The
+/// first `\documentclass`, its options naming a DVI driver, in a file setting no `\pdfoutput=1`, makes it a latex+dvips one:
+/// 0908.4150's `\documentclass[12pt,dvips]{article}` (stopped full-arXiv run 329), which pdflatex stops on with
+/// l3backend's "Backend request inconsistent with engine" for `dvips`, `dvipdfmx` and `dvisvgm` (expl3-code.tex's
+/// backend options) and whose specials it drops for the other graphics drivers. An unreadable source counts as
+/// LaTeX, PDF.
+fn compile_route(source: &str) -> CompileRoute {
+  static PDFOUTPUT_ONE: Lazy<Regex> =
+    Lazy::new(|| Regex::new(r"\\pdfoutput\s*=?\s*1(?:[^0-9]|$)").unwrap());
+  static INPUT: Lazy<Regex> = Lazy::new(|| {
+    Regex::new(r"\\(?:input|include)(?:\s*\{\s*([^}]+?)\s*\}|\s+([^\s{}\\]+))").unwrap()
+  });
+  static IFFALSE: Lazy<Regex> =
+    Lazy::new(|| Regex::new(r"(?s)\\iffalse\b.*?\\(?:else|fi)\b").unwrap());
+  // A followed file's class cue must be one in use, not a dual-mode test (`\ifx\documentclass\undefined`).
+  static CLASS_IN_USE: Lazy<Regex> = Lazy::new(|| {
+    Regex::new(r"\\document(?:class|style)\s*[\[{]|\\begin\s*\{\s*document\s*\}").unwrap()
+  });
+  const MAX_INPUT_DEPTH: usize = 3;
+  let (text, dir) = match source.strip_prefix("literal:") {
+    Some(content) => (content.to_string(), None),
+    None => {
+      let path = std::path::Path::new(source);
+      match read_source_file(path) {
+        Some(text) => (text, path.parent().map(std::path::Path::to_path_buf)),
+        None => return CompileRoute::default(),
+      }
+    },
+  };
+  let mut code = uncommented_code(&text);
+  let figures = figure_output_cue(&code, dir.as_deref());
+  let mut latex = has_latex_cue(&code);
+  // A main file naming no class: the files it inputs (not in `\iffalse … \fi`), breadth first, a few levels deep,
+  // until one names the class; each using a LaTeX cue joins the main file's code for the DVI test.
+  if !code.contains("\\documentclass")
+    && let Some(dir) = dir
+  {
+    let mut visited = std::collections::HashSet::new();
+    let mut level = vec![IFFALSE.replace_all(&code, "").into_owned()];
+    'levels: for _ in 0..MAX_INPUT_DEPTH {
+      let mut next_level = Vec::new();
+      for parent in &level {
+        for captures in INPUT.captures_iter(parent) {
+          let Some(name) = captures.get(1).or_else(|| captures.get(2)) else {
+            continue;
+          };
+          // A name only TeX can resolve (`\input{\pre}`) may be the preamble: lean to LaTeX, the previous default. A `#`
+          // name is a macro's call-time argument (hep-ph9210212 `\def\inputrefs#1{…\input #1…}`, hep-th0703274
+          // `\input #1.aux`), no preamble: leaning to LaTeX there read a plain paper as LaTeX, whose locked `\chapter`
+          // refused its own (`\thechapter` undefined).
+          if name.as_str().contains('#') {
+            continue;
+          }
+          if name.as_str().contains('\\') {
+            latex = true;
+            continue;
+          }
+          if !visited.insert(name.as_str().to_string()) {
+            continue;
+          }
+          let Some(input) = read_source_file(&dir.join(name.as_str())) else {
+            continue;
+          };
+          let input_code = IFFALSE
+            .replace_all(&uncommented_code(&input), "")
+            .into_owned();
+          if CLASS_IN_USE.is_match(&input_code) {
+            latex = true;
+            code = format!("{code}\n{input_code}");
+            if input_code.contains("\\documentclass") {
+              break 'levels;
+            }
+          }
+          next_level.push(input_code);
+        }
+      }
+      level = next_level;
+    }
+  }
+  let class_option = |driver: &dyn Fn(&str) -> bool| {
+    code.find("\\documentclass").is_some_and(|at| {
+      let rest = code[at + "\\documentclass".len()..].trim_start();
+      rest
+        .strip_prefix('[')
+        .and_then(|r| r.split_once(']'))
+        .is_some_and(|(options, _)| options.split(',').any(|o| driver(o.trim())))
+    })
+  };
+  let dvi = !PDFOUTPUT_ONE.is_match(&code) && class_option(&|o| DVI_DRIVER_OPTIONS.contains(&o));
+  // the `pdftex` driver option: a pdflatex document whatever PostScript it also ships (MDPI templates' `logo-*.eps`
+  // beside PNG figures, 2210.04612: expl3's backend check, expl3-code.tex:8036-8041, errs under DVI output)
+  let pdf = !dvi && class_option(&|o| o == "pdftex");
+  CompileRoute {
+    plain_tex: !latex,
+    dvi,
+    pdf,
+    figures,
+  }
+}
+
+/// The output mode the figures a source includes call for (the K6 ruling's figure cue, OXIDIZED_DESIGN_DIVERGENCES
+/// #537): the targets of `\includegraphics`, `\epsfig`/`\psfig`, `\epsfbox`/`\epsffile` and AASTeX's
+/// `\plotone`/`\plottwo` in the main file's code `main_code` and the files it inputs (not in `\iffalse … \fi`, a few
+/// levels deep), each resolved in the source directory `dir` and the `\graphicspath` directories, as the name stands
+/// and with the extensions pdfTeX and dvips try.
+/// - PDF: a figure that exists only as PDF/PNG/JPEG (latex+dvips cannot include it).
+/// - DVI: a pstricks load (pstricks draws with PostScript specials; pst-pdf, auto-pst-pdf and pdftricks are its
+///   pdflatex front ends), or every included figure resolved and each PostScript only — whatever epstopdf
+///   conversions (`<stem>-eps-converted-to.pdf`) or epstopdf load the source also carries: arXiv compiled 1806.00093,
+///   1806.00188, 1806.00370, 1804.02991, 2104.01314, 1209.6096, 2210.10273 and 1701.08490 with latex+dvips (their
+///   PDFs' Producer is "dvips + GPL Ghostscript"), and 1806.00284 (Producer "GPL Ghostscript", Creator dvips(k)).
+/// - Otherwise undecided, and the tree's files decide: a figure that does not resolve (a name TeX builds at run time,
+///   `\figdir/a`, `#1`; a missing file), or one held in both forms.
+///
+/// A file the source never includes decides nothing: 1012.0815's EPS figures beside an IEEEtran manual PDF are a
+/// latex+dvips document whose `\ifCLASSINFOpdf` (unclosed) swallowed the whole text in PDF mode, and 1002.1751 loads
+/// pstricks only in its `\ifpdf` false branch, its tree's stale PDFs included by nothing.
+fn figure_output_cue(main_code: &str, dir: Option<&std::path::Path>) -> state::FigureOutputCue {
+  use state::FigureOutputCue;
+  static IFFALSE: Lazy<Regex> =
+    Lazy::new(|| Regex::new(r"(?s)\\iffalse\b.*?\\(?:else|fi)\b").unwrap());
+  static INPUT: Lazy<Regex> = Lazy::new(|| {
+    Regex::new(r"\\(?:input|include|subfile)(?:\s*\{\s*([^}]+?)\s*\}|\s+([^\s{}\\]+))").unwrap()
+  });
+  static FIGURE: Lazy<Regex> = Lazy::new(|| {
+    Regex::new(concat!(
+      r"\\includegraphics\*?\s*(?:<[^>]*>\s*)?(?:\[[^\]]*\]\s*){0,2}\{\s*([^}]+?)\s*\}",
+      r"|\\(?:epsfig|psfig)\s*\{[^}]*?\b(?:file|figure)\s*=\s*([^,}\s]+)",
+      r"|\\(?:epsfbox|epsffile)\s*(?:\[[^\]]*\]\s*)?\{\s*([^}]+?)\s*\}",
+      r"|\\plotone\s*\{\s*([^}]+?)\s*\}",
+      r"|\\plottwo\s*\{\s*([^}]+?)\s*\}\s*\{\s*([^}]+?)\s*\}",
+    ))
+    .unwrap()
+  });
+  static GRAPHICSPATH: Lazy<Regex> =
+    Lazy::new(|| Regex::new(r"\\graphicspath\s*\{((?:\s*\{[^{}]*\})+)\s*\}").unwrap());
+  static BRACED: Lazy<Regex> = Lazy::new(|| Regex::new(r"\{([^{}]*)\}").unwrap());
+  static PACKAGES: Lazy<Regex> = Lazy::new(|| {
+    Regex::new(r"\\(?:usepackage|RequirePackage)\s*(?:\[[^\]]*\]\s*)?\{([^}]*)\}|\\input\s*\{?\s*(pstricks)\b").unwrap()
+  });
+  const MAX_INPUT_DEPTH: usize = 4;
+  const MAX_FILES: usize = 200;
+  // A name TeX resolves at run time (`#1`, `\figdir`), or one outside the source tree (absolute, `..`), is not read.
+  let outside_the_tree = |name: &str| {
+    name.contains(['#', '\\']) || name.starts_with('/') || name.split('/').any(|part| part == "..")
+  };
+  const POSTSCRIPT: [&str; 6] = ["eps", "ps", "epsf", "epsi", "eps.gz", "ps.gz"];
+  const NOT_POSTSCRIPT: [&str; 4] = ["pdf", "png", "jpg", "jpeg"];
+  // The source's code: the main file's and that of the files it inputs, breadth first.
+  let mut codes = vec![IFFALSE.replace_all(main_code, "").into_owned()];
+  if let Some(dir) = dir {
+    let mut visited = std::collections::HashSet::new();
+    let mut level = 0..1;
+    for _ in 0..MAX_INPUT_DEPTH {
+      let mut names = Vec::new();
+      for code in &codes[level.clone()] {
+        for captures in INPUT.captures_iter(code) {
+          if let Some(name) = captures.get(1).or_else(|| captures.get(2)) {
+            names.push(name.as_str().to_string());
+          }
+        }
+      }
+      let start = codes.len();
+      for name in names {
+        if codes.len() >= MAX_FILES {
+          break;
+        }
+        if outside_the_tree(&name) || !visited.insert(name.clone()) {
+          continue;
+        }
+        if let Some(input) = read_source_file(&dir.join(&name)) {
+          codes.push(
+            IFFALSE
+              .replace_all(&uncommented_code(&input), "")
+              .into_owned(),
+          );
+        }
+      }
+      level = start..codes.len();
+      if level.is_empty() {
+        break;
+      }
+    }
+  }
+  let mut pstricks = false;
+  let mut pstricks_for_pdf = false;
+  for captures in codes.iter().flat_map(|code| PACKAGES.captures_iter(code)) {
+    if captures.get(2).is_some() {
+      pstricks = true;
+    }
+    for package in captures
+      .get(1)
+      .map_or("", |m| m.as_str())
+      .split(',')
+      .map(str::trim)
+    {
+      match package {
+        "pst-pdf" | "auto-pst-pdf" | "pdftricks" => pstricks_for_pdf = true,
+        _ if package == "pstricks" || package.starts_with("pst-") => pstricks = true,
+        _ => {},
+      }
+    }
+  }
+  // Every included figure, resolved: how many, how many PostScript only, and whether one did not resolve.
+  let (mut figures, mut postscript_only, mut unresolved) = (0usize, 0usize, false);
+  if let Some(dir) = dir {
+    let mut search = vec![dir.to_path_buf()];
+    for captures in codes
+      .iter()
+      .flat_map(|code| GRAPHICSPATH.captures_iter(code))
+    {
+      for path in BRACED.captures_iter(&captures[1]) {
+        let path = path[1].trim();
+        if !path.is_empty() && !outside_the_tree(path) {
+          search.push(dir.join(path));
+        }
+      }
+    }
+    let is_file = |name: &str| search.iter().any(|base| base.join(name).is_file());
+    for captures in codes.iter().flat_map(|code| FIGURE.captures_iter(code)) {
+      for name in captures.iter().skip(1).flatten() {
+        let name = name.as_str().trim_matches('"');
+        if name.is_empty() {
+          continue;
+        }
+        if outside_the_tree(name) {
+          unresolved = true;
+          continue;
+        }
+        figures += 1;
+        let exists = |ext: &str| {
+          is_file(&format!("{name}.{ext}"))
+            || is_file(&format!("{name}.{}", ext.to_ascii_uppercase()))
+        };
+        let named = name.to_ascii_lowercase();
+        let named_ext = POSTSCRIPT
+          .iter()
+          .chain(NOT_POSTSCRIPT.iter())
+          .find(|ext| named.ends_with(&format!(".{ext}")));
+        let (ps, other) = match named_ext {
+          // A name with its extension is that file (graphicx, `\epsfbox`).
+          Some(ext) if is_file(name) => (POSTSCRIPT.contains(ext), NOT_POSTSCRIPT.contains(ext)),
+          Some(_) => (false, false),
+          None => (
+            POSTSCRIPT.iter().any(|ext| exists(ext)),
+            NOT_POSTSCRIPT.iter().any(|ext| exists(ext)),
+          ),
+        };
+        if other && !ps {
+          return FigureOutputCue::Pdf;
+        }
+        if ps && !other {
+          postscript_only += 1;
+        }
+        unresolved |= !ps && !other;
+      }
+    }
+  }
+  if (pstricks && !pstricks_for_pdf) || (figures > 0 && !unresolved && postscript_only == figures) {
+    FigureOutputCue::Dvi
+  } else {
+    FigureOutputCue::Undecided
+  }
+}
+
 /// Install the binding-resolution **priority chain** as the single dispatcher
 /// and register the `latexml_package` binding-name registry.
 ///
@@ -92,6 +462,11 @@ fn rhai_dispatch(request: &str, scope: RhaiScope) -> Option<Result<BindingSource
 ///   2. the `extra` dispatcher (`latexml_contrib` for our binaries) — consulted
 ///      before `latexml_package` to preserve the prior external-before-internal
 ///      order; the two registries are disjoint, so the order is immaterial.
+///      Compiled `.rs` bindings keep precedence even under the raw-
+///      interpretation preloads (`rawstyles`/`rawclasses`) — user directive
+///      2026-08-31 (perfect-kernel mission): raw mode governs what happens for
+///      names with NO binding (raw-load instead of the OmniBus fallback), it
+///      never demotes an existing binding.
 ///   3. `latexml_package` — core compiled engine bindings.
 ///   4. a `<request>.rhai` on the host TeX tree (`$TEXINPUTS`, via kpsewhich) —
 ///      a binding *distributed* with a package, so it FILLS A GAP rather than
@@ -131,6 +506,39 @@ pub(crate) fn install_binding_dispatch(extra: Option<BindingDispatcher>) {
   add_binding_names(latexml_package::binding_names());
 }
 
+/// Everything a fresh `Core` needs before its first `input_definitions`:
+/// the resolution chain above plus contrib's (name, ext) pairs. `Core::new`
+/// resets the State, which starts with NO dispatch, so every site that
+/// constructs an engine and loads pools must call this — the converter's
+/// `initialize_session` and the post-only recursive bibliography session
+/// (`bib_session::ensure_session`); omitting it there once left `TeX.pool`
+/// "missing" and every post-only bibliography empty.
+///
+/// contrib (memoir / siamltex / scrbook / etc.) is registered unconditionally
+/// because the canonical setup for both `latexml_oxide` and `cortex_worker`
+/// loads it — downstream embedders that replace the dispatchers can register
+/// their own (name, ext) slice the same way via `add_binding_names`.
+pub(crate) fn install_default_binding_chain(extra: Option<BindingDispatcher>) {
+  install_binding_dispatch(extra);
+  add_binding_names(latexml_contrib::binding_names());
+}
+
+/// Warns, in the conversion's log, that the format loaded from the engine's own definitions because
+/// no dump matching this TeX tree could be built (`format_dumps`): format loading precedes the log,
+/// so each conversion says so where its status is counted.
+pub fn note_format_build_failure() {
+  if let Some(reason) = latexml_engine::dump_paths::format_build_failure() {
+    Warn!(
+      "dump",
+      "build_failed",
+      s!(
+        "No format dump matches this TeX tree and none could be built ({reason}); the format was \
+         loaded from the engine's own definitions"
+      )
+    );
+  }
+}
+
 pub struct ConversionResponse {
   pub result:      Option<String>,
   pub log:         String,
@@ -142,10 +550,13 @@ pub struct Runtime {
   pub status_code: usize,
 }
 pub struct Converter {
-  runtime: Runtime,
-  ready:   bool,
-  opts:    Config,
-  core:    Core,
+  runtime:       Runtime,
+  ready:         bool,
+  opts:          Config,
+  core:          Core,
+  /// How arXiv compiles the main source ([`Converter::note_main_source`]); a session applies it before its preloads,
+  /// and a converter never told its source is a LaTeX, PDF one.
+  compile_route: CompileRoute,
 }
 
 impl Converter {
@@ -172,20 +583,39 @@ impl Converter {
       ready: false,
       opts,
       core,
+      compile_route: CompileRoute::default(),
     }
   }
+
+  /// Records, before a session's preloads load, whether `source` (a path or `literal:` content) is a plain TeX
+  /// document: arXiv AutoTeX's tex-vs-latex test (`compile_route`'s cues). latexml.sty's preload registers an
+  /// `\AddToHook`, which autoloads the LaTeX format; for a plain document that rebound `\end`, so the document's own
+  /// `\end` raised "`\endgroup` Attempt to close a group that switched to mode vertical" (stopped full-arXiv run 329:
+  /// 27 of 16,333 papers, 0911.4241, 1001.3079, hep-th9310069), and pstricks.tex took its LaTeX branch (repro
+  /// loader/latexml_preload_keeps_plain.tex). A LaTeX document keeps the format at preload time, pdflatex's order.
+  /// Also records a DVI driver class option. Every caller that prepares a session first tells it its source; a
+  /// streaming restart or a supplement is a converter of its own and is told again.
+  pub fn note_main_source(&mut self, source: &str) { self.compile_route = compile_route(source); }
   pub fn initialize_session(&mut self) -> Result<()> {
+    // The engine crate's per-conversion state (the core's is `latexml_core::reset_conversion_state`, run by
+    // `initialize_singletons`): the frontmatter observer's ledger (OXIDIZED_DESIGN_DIVERGENCES #837)
+    latexml_engine::base_utilities::reset_fm_reading();
+    // …and the title-page check's spill notes (OXIDIZED_DESIGN_DIVERGENCES #953)
+    latexml_engine::base_utilities::reset_title_page_check();
+    latexml_engine::pdftex::reset_pdftex_random();
+    // The main source's kind, for the preloads below and the document's PDF mode
+    // (`core_interface::establish_pdf_output_mode`).
+    state::set_plain_tex_document(self.compile_route.plain_tex);
+    state::set_dvi_driver_option(self.compile_route.dvi);
+    state::set_pdf_driver_option(self.compile_route.pdf);
+    state::set_figure_output_cue(self.compile_route.figures);
+    // The source bundle's date, ar5iv's archival clock — reset every session, so a persistent worker thread never
+    // carries one paper's date into the next.
+    state::set_source_date_epoch(self.opts.source_date_epoch);
     // Install the binding-resolution priority chain (rhai > contrib > package)
     // — the single source of resolution policy, shared with the integration-test
     // harness via `install_binding_dispatch`.
-    install_binding_dispatch(self.opts.extra_bindings_dispatch.clone());
-    // Also expose contrib's bindings (memoir / siamltex / scrbook / etc.)
-    // so they participate in the same resolution pool. We unconditionally
-    // register latexml_contrib here because the canonical setup for both
-    // `latexml_oxide` and `cortex_worker` binaries loads it — downstream
-    // embedders that replace the dispatchers can register their own
-    // (name, ext) slice the same way via `add_binding_names`.
-    add_binding_names(latexml_contrib::binding_names());
+    install_default_binding_chain(self.opts.extra_bindings_dispatch.clone());
     // Prepare LaTeXML object — load mode-specific pool + user preloads.
     // Perl: $self->initializeState($mode.".pool", @{$$self{preload} || []})
     // For `--bibtex` (mode = BibTeX), Perl `Common/Config.pm:406`
@@ -193,6 +623,9 @@ impl Converter {
     // list. `BibTeX.pool` already begins with `LoadPool('LaTeX')` (and
     // LaTeX with TeX), so we only need the BibTeX entry — the transitive
     // chain handles the rest, and pool loads are idempotent.
+    // The format's dump must be built from the TeX tree this process reads packages from; one is
+    // built when none is (`format_dumps`), before the first format loads.
+    crate::format_dumps::ensure_format_dumps();
     let mut preloads = match self.opts.mode {
       Some(DigestionMode::BibTeX) => vec![s!("TeX.pool"), s!("BibTeX.pool")],
       _ => vec![s!("TeX.pool")],
@@ -232,6 +665,7 @@ impl Converter {
     // 1 Prepare for conversion
     // 1.1 Initialize session if needed:
     if !self.ready {
+      self.note_main_source(&source);
       let _g_bootstrap = telemetry::phase(Phase::Bootstrap);
       if let Err(e) = self.initialize_session() {
         // We can't initialize, return error:
@@ -256,6 +690,7 @@ impl Converter {
     // the banner reaches `.latexml.log` even under `--quiet` (issue #763) while
     // still being muted on the console — no verbosity guard here.
     Note!(crate::identity::identity_banner());
+    note_format_build_failure();
     // info!( "invoked as [$0 " . join(' ', @ARGV) . "]\n" if $$opts{verbosity} >= 1;
 
     // 1.3 Prepare for What's IN:
@@ -339,12 +774,18 @@ impl Converter {
       };
       let serialized = match dom_result {
         Ok(dom) => {
+          note_rootless_document(&dom);
           let _g = telemetry::phase(Phase::Serialize);
           dom.serialize_to_string()
         },
         Err(e) => {
           // Same resource-fatal surfacing as the eager DOM arm below.
-          if matches!(e.target, ErrorTarget::Timeout) {
+          if matches!(e.category, ErrorCategory::StreamingRestart) {
+            // Not a failure: the CLI reruns this document under --streaming
+            // (the watermark crossed during the build; the digest arm above
+            // handles the common digestion crossing).
+            emit_info("streaming", "restart_watermark", &e.message);
+          } else if matches!(e.target, ErrorTarget::Timeout) {
             e.log_fatal();
           } else {
             let message = s!("{:?}", e);
@@ -367,17 +808,45 @@ impl Converter {
       return self.finish_response(serialized);
     }
 
+    // Adaptive digestion (single pass): eager, until an RSS-driven yield seam
+    // says the process is over the spill watermark — then the accumulated
+    // bodies become streaming fragment 1 and digestion CONTINUES as pass 1,
+    // instead of the from-scratch `StreamingRestart` (kept as the no-seam
+    // fallback). A document that never crosses the watermark is built whole,
+    // exactly as before.
     let digest_result = {
       let _g = telemetry::phase(Phase::Digest);
-      self.core.digest(
+      self.core.digest_adaptive(
         source,
         current_preamble,
         current_postamble,
         self.opts.mode.clone(),
-        true,
+        crate::streaming_restart::transition_budget(),
       )
     };
+    let digest_result = match digest_result {
+      Ok(crate::core_interface::AdaptiveOutcome::Streamed(dom)) => {
+        let dom = *dom;
+        note_rootless_document(&dom);
+        // Pass 1 + pass 2 + finalize already ran; serialize like the
+        // `--streaming` branch above.
+        let serialized = {
+          let _g = telemetry::phase(Phase::Serialize);
+          dom.serialize_to_string()
+        };
+        return self.finish_response(serialized);
+      },
+      Ok(crate::core_interface::AdaptiveOutcome::Eager(d)) => Ok(d),
+      Err(e) => Err(e),
+    };
     let digested = match digest_result {
+      Err(e) if matches!(e.category, ErrorCategory::StreamingRestart) => {
+        // Not a failure: eager digestion stopped at the streaming-restart
+        // watermark and the CLI reruns this document under --streaming. No
+        // salvage (that would digest on), no Fatal line, no status change.
+        emit_info("streaming", "restart_watermark", &e.message);
+        return self.finish_response(String::new());
+      },
       Err(e) => {
         report_mut!().status_code = 3;
         e.log_fatal();
@@ -429,6 +898,7 @@ impl Converter {
         };
         match dom_result {
           Ok(dom) => {
+            note_rootless_document(&dom);
             let _g = telemetry::phase(Phase::Serialize);
             dom.serialize_to_string()
           },
@@ -437,7 +907,10 @@ impl Converter {
             // propagated out of math parsing, P1-4) must surface as the
             // standard `Fatal:` log line, not a generic document error;
             // otherwise the summary counts a fatal the log never shows.
-            if matches!(e.target, ErrorTarget::Timeout) {
+            if matches!(e.category, ErrorCategory::StreamingRestart) {
+              // Not a failure: the CLI reruns this document under --streaming.
+              emit_info("streaming", "restart_watermark", &e.message);
+            } else if matches!(e.target, ErrorTarget::Timeout) {
               e.log_fatal();
             } else {
               let message = s!("{:?}", e);
@@ -546,7 +1019,7 @@ impl Converter {
       // and `CYCLE_GUARD_ACTIVATE` (the read-checkpoint accounting changed
       // in PR #249 — read_x_token/read_balanced now count too — so limits
       // must be recalibrated against THIS metric, not historical figures).
-      Debug!("gullet", "progress", latexml_core::gullet::final_progress());
+      Debug!("gullet", "progress", latexml_core::gullet::token_progress());
     }
     // MARPA_ASF_STATS=1: emit ASF instrumentation counters once
     // per converted document. Codex instrumentation plan, see
@@ -623,13 +1096,13 @@ impl Converter {
       },
     };
 
-    self.runtime.status = get_status_message();
-    self.runtime.status_code = get_status_code();
-
     let serialized = {
       let _g = telemetry::phase(Phase::Build);
       match self.core.convert_document(digested) {
         Ok(dom) => {
+          // No `note_rootless_document` here: this in-process entry is also
+          // the editor's fallback for a fragment without `\begin{document}`
+          // (lsp_server/server.rs), a legitimate transient state.
           let _g = telemetry::phase(Phase::Serialize);
           dom.serialize_to_string()
         },
@@ -638,7 +1111,12 @@ impl Converter {
           // same way `convert` does so it composes in this `-> ConversionResponse` fn.
           // Timeout-target resource fatals get the standard `Fatal:` line
           // (see the sibling handler in `convert` — P1-4).
-          if matches!(e.target, ErrorTarget::Timeout) {
+          if matches!(e.category, ErrorCategory::StreamingRestart) {
+            // Not a failure: the CLI reruns this document under --streaming
+            // (the watermark crossed during the build; the digest arm above
+            // handles the common digestion crossing).
+            emit_info("streaming", "restart_watermark", &e.message);
+          } else if matches!(e.target, ErrorTarget::Timeout) {
             e.log_fatal();
           } else {
             let message = s!("{:?}", e);
@@ -653,6 +1131,11 @@ impl Converter {
       }
     };
 
+    // The verdict counts what building the document raised too — its own diagnostics, and the deferred ones replayed
+    // once every reference is built (ruling 7e) — as `finish_response` recomputes it for `convert`; read after
+    // digestion alone, a construction-time error left the status "No obvious problems".
+    self.runtime.status = get_status_message();
+    self.runtime.status_code = get_status_code();
     let log = self.flush_log();
     ConversionResponse {
       result: Some(serialized),
@@ -666,9 +1149,6 @@ impl Converter {
     &'preplifetime mut self,
     _opts: &'preplifetime Config,
   ) -> Result<()> {
-    // Per-conversion cache hygiene: a persistent worker converts many papers
-    // per thread; cwd-relative kpsewhich results must not leak across them.
-    latexml_core::util::pathname::clear_kpsewhich_memo();
     if !self.ready {
       self.initialize_session()?
     }
@@ -702,6 +1182,7 @@ impl Converter {
       self.initialize_session()?;
     }
     self.bind_log();
+    note_format_build_failure();
     // Top-level document load: establish the source context (SOURCEFILE,
     // SOURCEDIRECTORY, SEARCHPATHS, GRAPHICSPATHS, \jobname) so sibling
     // \usepackage/\input/\includegraphics of local files resolve. Shared with
@@ -775,6 +1256,43 @@ pub(crate) fn resolve_amble(
   }
 }
 
+/// A built document with no root element — `\begin{document}` was never
+/// digested, typically because an unbalanced `\ifX` (an undefined conditional
+/// auto-`\newif`ed to `\iffalse`) skipped it through EOF — is a FATAL, not
+/// an output. Both engines write the bare XML declaration for it (Perl too:
+/// xwatermark-guide), but reporting it as status 2 with "output" hid a whole-
+/// document loss behind an `Error:expected:\fi` line (skeyval-pokayoke2,
+/// thesis-sample, xwatermark-guide in sweeps s109/s110). The messages are the
+/// success signal, so the loss is named here — on the full-document `convert`
+/// path (CLI, corpus harness, cortex_worker); the editor's in-process
+/// fragment fallback is exempt. `Fatal!` logs and latches the sticky fatal at
+/// the raise; the `Err` is not needed — serialization of the empty document
+/// proceeds as before. Only a LaTeX document — one whose `\documentclass`
+/// loaded a class (`document_class_filename`) — has a `\begin{document}` to
+/// miss: a source that is all comments (arXiv's `%auto-ignore` placeholders,
+/// 53 papers of sandbox 2605, e.g. 2605.00131; 28 of 2606) or a plain-TeX
+/// file that typesets nothing lost no content, and stays clean as in Perl.
+/// Guards
+/// `perfect_kernel_batch56::document_without_a_root_is_a_fatal`,
+/// `perfect_kernel_batch56::comment_only_source_is_not_a_fatal`.
+fn note_rootless_document(dom: &Document) {
+  // A Fatal already on record (TooManyErrors, a resource fuse) explains the
+  // loss; do not add a second line for the same event.
+  if dom.get_document().get_root_element().is_none()
+    && get_status_code() < 3
+    && state::has_value("document_class_filename")
+  {
+    let _: Result<()> = (|| {
+      Fatal!(
+        Document,
+        Malformed,
+        "The conversion built a document with no root element: \\begin{document} was never \
+         reached (an unbalanced conditional skipped it?); the output is empty"
+      );
+    })();
+  }
+}
+
 #[cfg(test)]
 mod tests {
   use super::*;
@@ -820,6 +1338,231 @@ mod tests {
     assert_eq!(
       resolve_amble(&DataSize::Archive, &None, &None),
       (None, None)
+    );
+  }
+
+  /// `compile_route`'s tex-vs-latex and DVI cues (62a, stopped full-arXiv run 329; reviewer probes): a LaTeX
+  /// document must never read as plain, which drops the preload-time format (ar5iv's locked `\today`).
+  #[test]
+  fn compile_route_of_main_sources() {
+    const PLAIN_TEX: CompileRoute = CompileRoute {
+      plain_tex: true,
+      dvi:       false,
+      pdf:       false,
+      figures:   state::FigureOutputCue::Undecided,
+    };
+    const LATEX_PDF: CompileRoute = CompileRoute {
+      plain_tex: false,
+      dvi:       false,
+      pdf:       false,
+      figures:   state::FigureOutputCue::Undecided,
+    };
+    const LATEX_DVI: CompileRoute = CompileRoute {
+      plain_tex: false,
+      dvi:       true,
+      pdf:       false,
+      figures:   state::FigureOutputCue::Undecided,
+    };
+    const LATEX_PDF_OPTION: CompileRoute = CompileRoute {
+      plain_tex: false,
+      dvi:       false,
+      pdf:       true,
+      figures:   state::FigureOutputCue::Undecided,
+    };
+    let route_of = |code: &str| compile_route(&format!("literal:{code}"));
+    assert_eq!(route_of("Hello.\n\\bye\n"), PLAIN_TEX);
+    assert_eq!(route_of("\\documentclass{article}\n"), LATEX_PDF);
+    assert_eq!(route_of("\\documentstyle{article}\n"), LATEX_PDF);
+    // CR-only (old Mac) and CRLF line ends: a comment line does not swallow the class.
+    assert_eq!(
+      route_of("% Mac file\r\\documentclass{article}\r"),
+      LATEX_PDF
+    );
+    assert_eq!(
+      route_of("% PC file\r\n\\documentclass{article}\r\n"),
+      LATEX_PDF
+    );
+    // A commented class is no class; `\%` is a character, `\\%` a control symbol before a comment.
+    assert_eq!(route_of("% \\documentclass{article}\nHello.\n"), PLAIN_TEX);
+    assert_eq!(route_of("100\\% \\documentclass{article}\n"), LATEX_PDF);
+    assert_eq!(route_of("x\\\\% \\documentclass{article}\n"), PLAIN_TEX);
+    // A main file that `\input`s its preamble.
+    assert_eq!(
+      route_of("\\input pre\n\\begin{document}\nX\n\\end{document}\n"),
+      LATEX_PDF
+    );
+    // A `.sty` a `filecontents` writes ends with its own `\endinput`; `\endinputs` is no `\endinput`.
+    assert_eq!(
+      route_of(
+        "\\begin{filecontents*}{x.sty}\n\\def\\x{}\n\\endinput\n\\end{filecontents*}\n\\documentclass[dvips]{article}\n"
+      ),
+      LATEX_DVI
+    );
+    assert_eq!(
+      route_of("\\def\\endinputs{}\n\\documentclass{article}\n"),
+      LATEX_PDF
+    );
+    assert_eq!(route_of("\\begin {document}\nX\n"), LATEX_PDF);
+    // TeX reads no further than `\endinput`.
+    assert_eq!(
+      route_of("Hello.\n\\endinput\n\\documentclass{article}\n"),
+      PLAIN_TEX
+    );
+    // AMSTeX's own `\documentstyle` counts as LaTeX (plain AMSTeX measured worse; see `compile_route`).
+    assert_eq!(
+      route_of("\\input amstex\n\\documentstyle{amsppt}\n\\document\nX\n\\enddocument\n"),
+      LATEX_PDF
+    );
+    // A DVI driver class option, unless the file sets `\pdfoutput=1` (exactly 1).
+    assert_eq!(
+      route_of("\\documentclass[12pt,dvips]{article}\n"),
+      LATEX_DVI
+    );
+    assert_eq!(
+      route_of("\\pdfoutput=1\n\\documentclass[dvips]{article}\n"),
+      LATEX_PDF
+    );
+    assert_eq!(
+      route_of("\\pdfoutput = 1\n\\documentclass[dvips]{article}\n"),
+      LATEX_PDF
+    );
+    assert_eq!(
+      route_of("\\pdfoutput=10\n\\documentclass[dvips]{article}\n"),
+      LATEX_DVI
+    );
+    // The `pdftex` driver option: a pdflatex document (2210.04612's MDPI template, `logo-*.eps` beside PNG figures).
+    assert_eq!(
+      route_of("\\documentclass[journal,article,pdftex]{Definitions/mdpi}\n"),
+      LATEX_PDF_OPTION
+    );
+    // A `#` name is a macro's call-time argument, no preamble: plain TeX stays plain (hep-ph9210212's
+    // `\def\inputrefs#1{…\input #1…}`, hep-th0703274's `\input #1.aux`).
+    assert_eq!(
+      route_of("\\def\\inputrefs#1{\\input #1 }\n\\inputrefs{refs}\n\\bye\n"),
+      PLAIN_TEX
+    );
+    // A wrapper main file naming only its preamble and body (one level of `\input`/`\include`).
+    let dir = tempfile::tempdir().expect("tempdir");
+    std::fs::write(
+      dir.path().join("wpre.tex"),
+      "\\documentclass[dvips]{article}\n",
+    )
+    .unwrap();
+    std::fs::write(
+      dir.path().join("wbody.tex"),
+      "\\begin{document}X\\end{document}\n",
+    )
+    .unwrap();
+    let main = dir.path().join("w.tex");
+    std::fs::write(&main, "\\input{wpre}\n\\include{wbody}\n").unwrap();
+    assert_eq!(compile_route(&main.to_string_lossy()), LATEX_DVI);
+    std::fs::write(dir.path().join("wplain.tex"), "Hello.\n").unwrap();
+    std::fs::write(&main, "\\input wplain\n\\bye\n").unwrap();
+    assert_eq!(compile_route(&main.to_string_lossy()), PLAIN_TEX);
+    // Two levels: main → setup → preamble.
+    std::fs::write(dir.path().join("setup.tex"), "\\input wpre\n").unwrap();
+    std::fs::write(&main, "\\input setup\n\\input wbody\n").unwrap();
+    assert_eq!(compile_route(&main.to_string_lossy()), LATEX_DVI);
+    // An input in `\iffalse … \fi` is not read; a dual-mode macro file's `\ifx\documentclass\undefined` is no class.
+    std::fs::write(
+      dir.path().join("dual.tex"),
+      "\\ifx\\documentclass\\undefined\\def\\x{}\\fi\n",
+    )
+    .unwrap();
+    std::fs::write(
+      &main,
+      "\\iffalse\\input{wpre}\\fi\n\\input dual\nHello.\n\\bye\n",
+    )
+    .unwrap();
+    assert_eq!(compile_route(&main.to_string_lossy()), PLAIN_TEX);
+    // An input name only TeX resolves leans LaTeX; `\iffalse … \else` keeps its `\else` branch.
+    std::fs::write(&main, "\\def\\pre{wpre}\\input{\\pre}\nX \\today\n\\bye\n").unwrap();
+    assert_eq!(compile_route(&main.to_string_lossy()), LATEX_PDF);
+    std::fs::write(
+      &main,
+      "\\iffalse\\input{dual}\\else\\input{wpre}\\fi\n\\input wbody\n",
+    )
+    .unwrap();
+    assert_eq!(compile_route(&main.to_string_lossy()), LATEX_DVI);
+    // Commands plain TeX cannot run.
+    assert_eq!(route_of("\\usepackage{amsmath}\nX\n"), LATEX_PDF);
+    assert_eq!(route_of("\\include{chap}\n"), LATEX_PDF);
+    assert_eq!(route_of("\\includegraphics{x}\n\\bye\n"), PLAIN_TEX);
+    // The main file's `\pdfoutput=1` holds against a followed file's `[dvips]`.
+    std::fs::write(&main, "\\pdfoutput=1\n\\input{wpre}\n\\include{wbody}\n").unwrap();
+    assert_eq!(compile_route(&main.to_string_lossy()), LATEX_PDF);
+  }
+
+  /// `figure_output_cue`: the figures a source includes, resolved in its tree, and a pstricks load (65f; 1012.0815's
+  /// EPS figures beside an unincluded PDF, 1002.1751's pstricks).
+  #[test]
+  fn figure_output_cue_of_sources() {
+    use state::FigureOutputCue::{Dvi, Pdf, Undecided};
+    let dir = tempfile::tempdir().expect("tempdir");
+    let write = |name: &str, content: &str| {
+      let path = dir.path().join(name);
+      std::fs::create_dir_all(path.parent().unwrap()).unwrap();
+      std::fs::write(path, content).unwrap();
+    };
+    let cue = |code: &str| figure_output_cue(&uncommented_code(code), Some(dir.path()));
+    write("figs/a.eps", "");
+    write("figs/b.png", "");
+    write("figs/c.eps", "");
+    write("figs/c.pdf", "");
+    write("doc/manual.pdf", "");
+    write("img/d.EPS", "");
+    // An EPS-only figure, by name or extension-less; one that is PNG only; one in both forms decides nothing.
+    assert_eq!(cue("\\includegraphics[width=1cm]{figs/a.eps}"), Dvi);
+    assert_eq!(cue("\\includegraphics{figs/a}"), Dvi);
+    assert_eq!(
+      cue("\\includegraphics{figs/a}\\includegraphics{figs/b}"),
+      Pdf
+    );
+    assert_eq!(cue("\\includegraphics{figs/c}"), Undecided);
+    // A missing figure, a macro argument, a commented or `\iffalse`d include: nothing.
+    assert_eq!(cue("\\includegraphics{figs/none}"), Undecided);
+    assert_eq!(cue("\\includegraphics{../figs/a}"), Undecided);
+    assert_eq!(cue("\\def\\f#1{\\includegraphics{#1}}"), Undecided);
+    assert_eq!(cue("% \\includegraphics{figs/a}\n"), Undecided);
+    assert_eq!(cue("\\iffalse\\includegraphics{figs/a}\\fi"), Undecided);
+    // `\graphicspath`, an upper-case extension, the epsf/psfig family, AASTeX's `\plotone`.
+    assert_eq!(cue("\\graphicspath{{img/}}\\includegraphics{d}"), Dvi);
+    assert_eq!(cue("\\epsfig{file=figs/a.eps,width=3cm}"), Dvi);
+    assert_eq!(cue("\\psfig{figure=figs/b.png}"), Pdf);
+    assert_eq!(cue("\\epsfbox{figs/a.eps}"), Dvi);
+    assert_eq!(cue("\\plotone{figs/a.eps}"), Dvi);
+    // pstricks; its pdflatex front ends.
+    assert_eq!(cue("\\usepackage{pstricks,pst-node}"), Dvi);
+    assert_eq!(cue("\\usepackage{pst-plot}"), Dvi);
+    assert_eq!(cue("\\input pstricks"), Dvi);
+    assert_eq!(
+      cue("\\usepackage{pstricks}\\usepackage{auto-pst-pdf}"),
+      Undecided
+    );
+    assert_eq!(cue("\\usepackage{pstricks}\\includegraphics{figs/b}"), Pdf);
+    // Only when every included figure resolves: a missing or run-time-named one leaves the tree's files to decide.
+    assert_eq!(
+      cue("\\includegraphics{figs/a}\\includegraphics{figs/none}"),
+      Undecided
+    );
+    assert_eq!(
+      cue("\\includegraphics{figs/a}\\includegraphics{\\figdir/b}"),
+      Undecided
+    );
+    // epstopdf's conversions beside an EPS figure, or an epstopdf load, are no PDF cue: arXiv compiled such sources
+    // with latex+dvips (1806.00093, 1804.02991: Producer "dvips + GPL Ghostscript").
+    write("figs/e.eps", "");
+    write("figs/e-eps-converted-to.pdf", "");
+    assert_eq!(cue("\\includegraphics{figs/e}"), Dvi);
+    assert_eq!(cue("\\includegraphics{figs/e.eps}"), Dvi);
+    assert_eq!(cue("\\usepackage{epstopdf}\\includegraphics{figs/a}"), Dvi);
+    // A file the main file inputs.
+    write("sec.tex", "\\includegraphics{figs/b.png}\n");
+    assert_eq!(cue("\\input{sec}"), Pdf);
+    // No directory: nothing resolves.
+    assert_eq!(
+      figure_output_cue("\\includegraphics{figs/a}", None),
+      Undecided
     );
   }
 }

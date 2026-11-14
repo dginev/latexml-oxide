@@ -1,0 +1,17 @@
+% A cover line printing `\@title` before `\maketitle`: pdflatex prints the title twice (the line, then `\maketitle`'s
+% block); the frontmatter placed at `\maketitle` (`\lx@frontmatterhere`) is the header, and the marked print before it
+% is the field's ink (`\lx@field@mark`, OXIDIZED_DESIGN #715). The text-matching dedup never ran here (it is the
+% fallback's, and `\maketitle` relaxes the fallback).
+% status:  RED (67int19b: the centered copy stays above the structured title, shown twice) → GREEN (fms1).
+% oracle:  pdflatex 0 errors: page 1 "Cover Then Maketitle"; page 2 "Cover Then Maketitle", "Max Author", the date.
+% expect:  0 errors, 0 warnings; one Info `field_ink`; "Cover Then Maketitle" only in `<title>`.
+\documentclass{article}
+\makeatletter
+\title{Cover Then Maketitle}
+\author{Max Author}
+\begin{document}
+\begin{center}{\Huge \@title\par}\end{center}
+\maketitle
+\section{Intro}
+Text.
+\end{document}

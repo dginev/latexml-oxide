@@ -1,0 +1,18 @@
+% RED (review rev97cd C3, synthetic; no corpus witness among 97c's 70 changed A/B papers): 97c's in-word digit-mark
+% glue (events/lexer.rs:313-316 `glue_in_word_marks` + `glued_in_source`, added so `NLP$^2$CT` stays a word,
+% perfect_kernel_batch77n::digit_superscript_inside_a_word_stays) also glues a mark that is one of the names'
+% requested labels, written against the entry before it: `$^{1}$Peking University$^{2}$Microsoft Research` reads as
+% one entry, and Bob Baker keeps his mark and gets nothing.
+% fix:     do not glue a digit mark the names request, as the old reader's "no mark list" condition did.
+% oracle:  pdflatex 0 errors: "Ann Able1, Bob Baker2 / 1Peking University2Microsoft Research"
+% engines: rust 97b = right (Ann: Peking University; Bob: Microsoft Research); rust 97c-97e = Ann holds
+%          "Peking University 2 Microsoft Research", "Bob Baker 2" nothing
+% expect:  0 errors, 0 warnings; Ann Able holds Peking University, Bob Baker holds Microsoft Research, no mark in a name
+\documentclass{article}
+
+\begin{document}
+\title{T}
+\author{Ann Able$^{1}$, Bob Baker$^{2}$ \\ $^{1}$Peking University$^{2}$Microsoft Research}
+\maketitle
+Text.
+\end{document}

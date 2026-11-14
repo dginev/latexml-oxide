@@ -1,0 +1,17 @@
+% mechanism: reading.rs `unfold_held_names` (OD #1018), the contact path (`emit.rs` "a macro's span"): a document macro
+%   holding two names, each with a line under it, an e-mail in `\texttt` and an affiliation: the Contact events share the
+%   macro's position with the names, so the block is read unfolded and the e-mail written from its tokens, its font kept
+% witness: synthetic
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "Ann Able ann@a.edu Bob Baker Univ B"
+% engines: int167a: 0 errors, 3 warnings (the names and the e-mail by their text), the typewriter lost
+% expect:  0 errors, 0 warnings; creators Ann Able (e-mail ann@a.edu in typewriter), Bob Baker (Univ B)
+% status:  RED (int167a) -> GREEN (AUT1; guard perfect_kernel_batchaut1)
+% preload: ar5iv.sty
+\documentclass{article}
+\def\aut{Ann Able\\ \texttt{ann@a.edu} \and Bob Baker\\ Univ B}
+\begin{document}
+\title{T}
+\author{\aut}
+\maketitle
+Text.
+\end{document}

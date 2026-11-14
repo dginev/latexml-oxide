@@ -1,0 +1,19 @@
+% RED (review rev101c finding 4, synthetic; pre-existing, base too): a marked affiliation whose first row reads as a
+% person's name ("John Smith Laboratory") merges the names line: one creator "Ann Able , Bob Baker" and a
+% `merged_creators` Error. 101c exempts a labelled item's first row in the re-part's person check, but this shape is
+% decided before it (the names re-part declines).
+% fix:     a mark-led row is the entry's own line wherever the person check runs, as `lines_of` already reads it.
+% oracle:  pdflatex 0 errors: "Ann Able a, Bob Baker b / a John Smith Laboratory / Univ X, City / b Univ Y / Other City"
+% engines: rust 101c = one creator "Ann Able , Bob Baker" holding both affiliations, 1 error (merged_creators)
+% expect:  0 errors; Ann Able holds John Smith Laboratory / Univ X, City; Bob Baker holds Univ Y / Other City
+% status:  RED
+\documentclass[conference]{IEEEtran}
+\title{T}
+\author{{Ann Able{\small $~^{a}$}, Bob Baker{\small $~^{b}$} }
+{}\vspace{1.6mm}\\ \itshape
+$^{a}$\,John Smith Laboratory\\ Univ X, City\\ \,\\
+$^{b}$\,Univ Y\\ Other City\\}
+\begin{document}
+\maketitle
+Text.
+\end{document}

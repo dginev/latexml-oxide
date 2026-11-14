@@ -2,6 +2,17 @@ use crate::prelude::*;
 
 #[rustfmt::skip]
 LoadDefinitions!({
+  // Load the real fancybox.sty first (pure LaTeX/TeX box code: \shadowsize,
+  // \VerbBox, the B-environments {Bcenter}…{Beqnarray*}, \boxput, \fancyoval,
+  // \fancypage/\fancyput/\Landscape, and its verbatim layer \Verb/{Verbatim}/
+  // \SaveVerb/\UseVerb…). Perl's fancybox.sty.ltxml covers only the four
+  // frame boxes + {Sbox}; the TL doc corpus witness fancybox/fancybox-doc
+  // exercises the whole API in {example} demos (which write \jobname.tmp
+  // through {VerbatimOut} and re-input it), so every unbound command was an
+  // `undefined` error once those demos actually executed. The Perl-shaped
+  // overrides below are applied AFTER the raw load, so they win.
+  InputDefinitions!("fancybox", noltxml => true, extension => Some(Cow::Borrowed("sty")));
+
   // These could be made to depend on \fboxsep, \fboxrule, \cornersize
   DefMacro!("\\cornersize OptionalMatch:* {}", None);
 
@@ -31,7 +42,9 @@ LoadDefinitions!({
       if let Ok(Some(body)) = whatsit.get_body() {
         assign_value("Sbox", Stored::Digested(body), Some(Scope::Global));
       }
-    });
+    },
+    // The begin code opens a TeX group of its own: fancybox.sty:167 `\global\setbox\@Sbox\hbox\bgroup`.
+    tex_group => { TexGroup::Box });
   DefPrimitive!("\\TheSbox", {
     let stashed = lookup_value("Sbox");
     assign_value("Sbox", Stored::None, Some(Scope::Global));
@@ -39,4 +52,9 @@ LoadDefinitions!({
       return Ok(vec![body]);
     }
   });
+
+  // OXIDIZED_DESIGN #192: the raw package's swap cannot displace the locked
+  // LaTeXML footnote constructors. Route the package-scoped command to the
+  // kernel's live-body implementation.
+  DefMacro!("\\VerbatimFootnotes", "\\lx@VerbatimFootnotes");
 });

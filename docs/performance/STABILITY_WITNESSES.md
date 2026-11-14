@@ -81,7 +81,10 @@ defect.** Engine verdict: healthy and surpassing Perl on these.
 **Landed (faithful, verified `cargo test` rc=0, identical output):**
 - **`xsltMaxDepth = 1000`** (hypothesis 3) — faithful port of Perl
   `XML::LibXSLT->max_depth(1000)`; graceful abort instead of stack-overflow OOM
-  on pathological recursion. `latexml_post/src/xslt.rs`.
+  on pathological recursion. `latexml_post/src/xslt.rs`. Effective in the
+  statically linked (`LIBXSLT_STATIC`) release binaries only since 2026-09-26:
+  until then the write went through `dlsym`, which does not see a statically
+  linked global, so they ran at libxslt's 3000 (WISDOM #56).
 - **`dup()` → Rc `clone()`** (hypothesis 1) — drops the transform-time deep DOM
   copy; measured **−120–130 MB/paper** (3.06→2.93, 2.89→2.76, 2.54→2.42 GB) with
   byte-identical output. `latexml_post/src/xslt.rs`.
@@ -429,7 +432,7 @@ runaway trips says nothing about its cause.
    simply never this witness's problem.
 2. **`\halign`-in-math cascade** (2605.23849) — ✅ **FIXED 2026-07-20**, and it was
    **not** deep alignment surgery. Full record:
-   [`../known_crashes/kbordermatrix_halign_math/`](../known_crashes/kbordermatrix_halign_math/README.md).
+   [`../archive/known_crashes/kbordermatrix_halign_math/`](../archive/known_crashes/kbordermatrix_halign_math/README.md).
    Root: an **inherited-kernel-macro leak**, the `\+`-retraction class — Rust's dump
    carries the real `\@arraycr` (latex.ltx L16583-16585), Perl has no such macro at
    all. Fix = `Let!("\\@arraycr", "\\lx@alignment@newline")` in `latex_constructs.rs`,
@@ -448,7 +451,7 @@ runaway trips says nothing about its cause.
    `arxiv.cls` reaches the same stale-trigger state. Measured 43.1s → 0.203s by
    the item-1 change alone, with no `\ifX`-specific work.
 
-**Side finding (2026-07-10, NOT the witness fix, unshipped).** Chasing 2605.23849 via
+**Side finding (2026-07-10, NOT the witness fix; later SHIPPED as the one-frame hbox reader, batch 54n, OXIDIZED_DESIGN #188, guard `perfect_kernel_batch54::hbox_reader_is_one_frame`).** Chasing 2605.23849 via
 a synthetic `\lastbox` box-peel repro surfaced a *real but orthogonal* faithfulness
 divergence: Rust's **hbox** content carries spurious `{`/`}` brace-marker `Box`es that
 Perl's `readBoxContents` (TeX_Box.pool.ltxml L181-183) does not — the horizontal path
@@ -460,8 +463,7 @@ invoking it. **VBox was already migrated off this** (VBoxContents carries a `{}`
 explicit stop-at-`T_END` loop + add the HBoxContents reversion) makes hbox content
 byte-match Perl and passes local box tests, but it does **not** fix 2605.23849 (the
 witness fails earlier, in `\halign`-in-math) and is a hot-path change needing corpus
-output-neutrality validation — so it was **reverted, not shipped**. Recorded here as a
-candidate future consistency fix.
+output-neutrality validation — so it was reverted then; the one-frame hbox reader shipped it later (batch 54n).
 Re-measure with the current binary first (sweep records go stale).
 
 ## Cluster I — a `.bib` LIBRARY digested whole → timeout + memory budget — ✅ FIXED 2026-07-27
@@ -494,6 +496,86 @@ faithfulness argument and guards: OXIDIZED_DESIGN **#80**.
 **Note for anyone re-measuring an older reliability row here:** an error or cost
 attributable to an *uncited* entry disappears with this change. Re-measure rather
 than reading a drop as a separate fix.
+
+## Cluster J — start-up `getenv`/`putenv` race in the CLI (GENUINE Rust-only) — ✅ FIXED 2026-09-03
+
+**Witness**: perfect-kernel sweep #35 (release build, 2,374 docs), pstool/pstool:
+exit 139 at 1.1 s, `traps: latexml_oxide.s[1711120] general protection fault
+ip:7f4b57448806 … in libc.so.6` = `getenv+0x56`; unreproducible in 9 reruns
+with the identical command — a race, not a document.
+
+**Cause**: `bin/latexml_oxide.rs` spawned the kpathsea prewarm thread
+(`prewarm_kpathsea`) before the `KPSE` handle existed, so that thread ran
+`Kpaths::new` → libkpathsea `kpathsea_set_program_name` → `putenv` ×4
+(`SELFAUTOLOC`/`DIR`/`PARENT`/`GRANDPARENT`) while the worker thread parsed
+options, initialised the logger and stamped the banner — `std::env::var`,
+`NO_COLOR`, chrono's `TZ` inside `localtime_r`, all `getenv`. glibc's `putenv`
+of a new name reallocates `environ` and frees the old array; `getenv` is
+lock-free by contract and walks it. `cortex_worker` had the same shape.
+
+**Fix**: `latexml_core::util::pathname::init_kpathsea()` forces the handle on
+the calling thread before either binary spawns its prewarm thread; the prewarm
+now only performs read-only lookups (`kpathsea_init_db`). Cost ≈ the two
+memoised `kpsewhich` probes (`--version`, `-var-value=SELFAUTOPARENT`), a few
+ms, no longer overlapped with option parsing. Library callers (`latexml::api`)
+run construction on the single worker thread they spawn; a multi-threaded host
+should call `init_kpathsea()` once at start-up before converting concurrently.
+
+**Second writer, `--init` only (fixed 2026-10-14)**: `real_main` set
+`LATEXML_INI_MODE` *after* spawning the prewarm thread, whose
+`kpathsea_init_format` reads `getenv("TEXMF_kpsewhich")`; `setenv` of the new
+name reallocated `environ` under it. Witness: `--init=latex.ltx` exited 139 in
+7 of 200 runs on Linux aarch64 (Ubuntu 24.04, TL2023 apt, `ci` profile), gdb
+`__GI_getenv` ← `kpathsea_var_expand` ← `kpathsea_init_format` on thread
+`kpathsea-prewarm`; it failed `tools/make_formats.sh` and
+`dump_gate_init::latex_ltx_init_has_zero_errors`. Fix: the `set_var` moved to
+just after `Cli::parse()`, before `init_kpathsea()` and the spawn. Rule: every
+environment write in the binaries precedes the prewarm spawn.
+
+**Independent witness (PR 823, an external contributor)**: six 2–27 KB documents
+converted 90 times each by a shell loop on the 0.7.5 release binary (x86_64 Linux,
+glibc 2.39, TL 2023 libkpathsea): 9 SIGSEGV in 540 by default, 0 in 540 with
+`LATEXML_NO_KPATHSEA_PREWARM=1`; the core showed the worker thread in
+`__GI_getenv("HOME")` on a freed chunk while the prewarm thread was just past
+`kpathsea_set_program_name`'s `putenv`s. On the post-fix tree (`862de44e59`,
+release build): gdb breakpoints on `putenv`/`setenv`/`unsetenv`/`pthread_create`
+show all six writes (`TEXMFROOT`, then the five `putenv`s) on the converting
+thread before its first spawn, and 3000 conversions of a small article exited 0
+every time; under `--init` with the second-writer fix (PR 812), `LATEXML_INI_MODE`
+joins them, still before the first spawn.
+
+**Guard**: `tools/lint_env_writes.sh` (run by `tools/lint.sh`, so by CI's lint job
+and the pre-push hook) fails on any `set_var`/`remove_var` or libc
+`setenv`/`putenv`/`unsetenv` in the workspace's library and binary sources outside
+an allowlist of (file, variable) pairs, each a start-up write that precedes every
+spawn or test-only code. The C library's own writes are kept ahead of the spawn
+by `init_kpathsea()`'s placement in both binaries.
+
+## Cluster K — fleet runaways reach `RLIMIT_AS` before any memory fuse (`oom:alloc_failed`) — dominant loop FIXED 2026-10-16 (68q); address-space fuse PARKED
+
+**Symptom.** 448 fleet `Fatal:oom:alloc_failed` in the 2026-10-16 study (agent_reports/2026-10-16_perf_ram_study.md),
+with only the harness's exit report returned. Standalone (no `RLIMIT_AS`) the same papers end in a located
+`Fatal:Timeout:MemoryBudget`.
+
+**Cause.** The harness caps a child at 5632 MiB of address space and sets the cooperative fuse (`LATEXML_RSS_CAP_BYTES`)
+and the watchdog's guard to 5376 MiB of **RSS**; the allocators reserve address space 0.5–2.7 GB above what is resident,
+so children hit the cap at 4.2–5.1 GB RSS, before either fires. 324 of the 448 load `semantic`: its `\inference`
+`\lastbox` peel loop never ended because `\unvbox` returned the box itself (tex.web §1110; KNOWN_PERL_ERRORS #840) —
+FIXED by 68q: 1603.01635, 2506.05832, 1401.6227, 1709.02440, 2311.14452, 2205.02590, 1010.5572, 1011.6429, 1104.1738
+complete at Status 1 in 1–10 s at fleet caps.
+
+**Settled dead-end: an address-space fuse** (68p item 5, rounds 1-2, branch pk/68p2 e78ea52da6, not landed): firing
+256 MiB under `RLIMIT_AS` turns a crash into a named Fatal (1107.2000, 1111.6657, 0804.3328: rc 137 → Status 3) — a
+Fatal either way, retried alike by CorTeX — while it cost a paper that completes: 0804.1983 completes 9/9 runs on
+e839db2fc3, 4/9 with the fuse (dies in Finalizing on one 195 MiB `Vec<u8>` doubling at the cap; round 1, fusing in
+streaming pass 1 too, stopped it 3/3). At the moment the fuse would fire, RSS and VmSize of runaways and of 0804.1983
+look alike (RSS 4.1–4.2 GB, VmSize 5.4–5.6 GB), so no threshold separates them. Measured at fleet caps (`ulimit -v
+5767168`, `--max-rss-mb 5376`, standalone `cortex_worker`), agent_reports/2026-10-16_68p_review.md and
+2026-10-16_68p_r2_report.md.
+
+**Open.** physics0504062: one formula's math-parse spike (RSS 2.5 → 5.2 GB in 0.2 s, ASF traversal) where no
+cooperative check polls (math-parse stream, parked). 0804.2004, 0804.2001, 0804.2002 reach the cap after
+`streaming:transition`; 1009.2640 `Fatal:Document` "failed to create element" (libxml2 `malloc` at the cap).
 
 ## Method notes
 

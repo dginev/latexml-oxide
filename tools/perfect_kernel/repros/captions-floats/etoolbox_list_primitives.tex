@@ -1,0 +1,17 @@
+% guard: etoolbox list primitives correctness (isolation) — NOT the quantumview bug.
+% oracle: pdflatex CLEAN
+% engines: pdflatex
+% expect: 0 Error; Rust output == pdflatex (both clean). Proves the list primitives work.
+% status: GREEN with b54x (proves \csdef/\ifcsdef/\listadd/\listxadd/\forlistloop/\ifinlist work);
+%   the quantumview \@authorgroup failure is NOT here — it is the locked \author (see NOTES).
+\documentclass{article}
+\usepackage{etoolbox}
+\makeatletter
+\csdef{L}{}%
+\begin{document}
+\ifcsdef{L}{Y}{N}\space
+\listcsadd{L}{a}\listcsgadd{L}{b}%
+\def\pr#1{#1}\expandafter\forlistloop\expandafter{\expandafter\pr\expandafter}\expandafter{\csname L\endcsname}\space
+\expandafter\ifinlist\expandafter{\expandafter a\expandafter}\expandafter{\csname L\endcsname}{ab}{--}\space
+\ifinlist{a}{L}{in}{out}%
+\end{document}

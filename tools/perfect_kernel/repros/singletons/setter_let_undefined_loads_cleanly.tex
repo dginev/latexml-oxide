@@ -1,0 +1,12 @@
+% A title-page setter `\let` to an undefined control sequence (the `\let\doi\undefined` before
+% `\usepackage{doi}` idiom) is no definition: a package loaded after it logs nothing.
+% witness: none (probe).
+% status:  GREEN (58q)
+% oracle:  pdflatex 0 errors: "Hello."
+% expect:  0 errors, 0 warnings.
+\documentclass{article}
+\makeatletter\let\keywords\@undefined\let\email\@undefined\makeatother
+\usepackage{amssymb}
+\begin{document}
+Hello.
+\end{document}

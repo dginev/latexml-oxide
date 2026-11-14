@@ -1,0 +1,34 @@
+% witness: ar-1col.cls's `\affil` inside `\author{}` (1602.05576, 2405.08158); review rev94b r6 B2 (its probes `p/y`
+%          ebrk, eqb, bfn: fc.cls)
+% oracle:  pdflatex 0 errors: "A Title", "Ann Able,1 Bob Baker,2 … Hal Hart8", the emphasized "1Univ A, Town2 Univ B,
+%          City" after its line break, "3Lab C, Place4 Lab D, Place" after its quad, the bold emphasized "5Inst E,
+%          Town6 Inst F, City", the emphasized "7Dept G, Town8 Dept H, City" (each underlined, one line: the `\\`
+%          inside the underline's box), "Body."
+% engines: rust 94b r6 = 0 errors, 0 warnings: the `\newline` and the `\quad` between the two containers copied into
+%          every entry (a `<break/>`, a leading space in each contact; the space between `\emph{ \underline` too); 94a
+%          r9 (the tip) = each entry cut plain
+% expect:  0 errors, 0 warnings; between nested containers only font declarations (`\bfseries`) and spaces let each
+%          entry be wrapped in both (`plan::container_wrap`, `events::font_declaration`: the declaration copied, the
+%          spaces left out); anything else between prints or acts once — the base's cut: Univ A … Lab D plain, Inst E
+%          and Inst F bold emphasized and underlined, Dept G and Dept H emphasized and underlined, no break and no
+%          space in a contact; each name its own line; eager and --streaming the same
+% status:  RED (94b r6) -> GREEN (94b r7)
+% preload: ar5iv.sty
+\begin{filecontents*}[overwrite]{affilbetween.cls}
+\ProvidesClass{affilbetween}
+\LoadClass{article}
+\def\affilfont{\small}
+\def\affil#1{\par{\reset@font\affilfont#1\par}}
+\def\@maketitle{\newpage{\Large\bfseries\@title\par}\vskip1em\noindent{\bfseries\@author\par}\vskip1em}
+\end{filecontents*}
+\documentclass{affilbetween}
+\begin{document}
+\title{A Title}
+\author{Ann Able,$^1$ Bob Baker,$^2$ Cy Cole,$^3$ Dan Doe,$^4$ Eve Ern,$^5$ Fay Fox,$^6$ Gil Gray,$^7$ Hal Hart$^8$
+\affil{\emph{\newline\underline{$^1$Univ A, Town\\ $^2$Univ B, City}}}
+\affil{\emph{\quad\underline{$^3$Lab C, Place\\ $^4$Lab D, Place}}}
+\affil{\emph{\bfseries\underline{$^5$Inst E, Town\\ $^6$Inst F, City}}}
+\affil{\emph{ \underline{$^7$Dept G, Town\\ $^8$Dept H, City}}}}
+\maketitle
+Body.
+\end{document}

@@ -1,0 +1,18 @@
+% witness: 2405.01480, 2405.02221, 2405.02462, 2405.03285, incgraph-doc; shipped template unused by the main file in
+%   1912.06298, 2105.06630, 2301.07825, 2302.14514, 2410.04867 (the shipped docsiamonline/docsiamart `\examplefile[label={ex:header},…]`)
+% oracle:  pdflatex 0 errors: "See Example 1.", the box "Example 1: Header" over "z = 3"
+% engines: rust 77m r1 = 0 errors, the label dropped (a dangling `\ref`, only a post `Warning:expected:ids`); perl: raw tcblistings
+% expect:  0 errors, 0 warnings; the label on the listing's first line, the caption "Example 1: Header"
+% status:  RED (77m r1) -> GREEN (77m r2: tcblistingscore_code_tex.rs `\newtcbinputlisting` → `tcb_resolve_listing_mode`)
+\documentclass{article}
+\usepackage[listings]{tcolorbox}
+\begin{filecontents*}[overwrite]{tcblabel.txt}
+z = 3
+\end{filecontents*}
+\newcounter{example}
+\newtcbinputlisting[use counter=example]{\examplefile}[3][]{title={Example~\thetcbcounter: #2},listing file={#3},listing only,#1}
+\begin{document}
+\section{Intro}
+See Example~\ref{ex:header}.
+\examplefile[label={ex:header}]{Header}{tcblabel.txt}
+\end{document}

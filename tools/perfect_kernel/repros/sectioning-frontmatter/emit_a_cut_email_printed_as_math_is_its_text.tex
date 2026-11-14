@@ -1,0 +1,22 @@
+% mechanism: an address the cut takes out of an entry at `=2` that prints as a formula (`a$@$b`) is its owner's
+%   e-mail written as its text, never its printed math tokens, as off writes it (`emitter::address_cut::cut_at`; OD #980 KB2)
+% witness: 1409.0847 (mn2e: `$^1$Department of Physics, University of Wyoming, …, USA; dcook12$@$uwyo.edu` under Cook, Dale
+%   and Staudaher)
+% oracle:  pdflatex 0 errors (the arXiv copy of mn2e.cls); "David O. Cook,1 Daniel A. Dale,1 and Benjamin D. Johnson2";
+%   "1Department of Physics, University of Wyoming, WY 82071, USA; dcook12@uwyo.edu"; "2UPMC-CNRS, Institut
+%   d'Astrophysique de Paris, France; bjohnson@iap.fr"
+% engines: rust int149a-int151a `=2`: Cook's and Johnson's e-mails holding `<Math>@</Math>`; off: plain text
+% expect:  0 errors, 0 warnings; `=2` Cook's and Johnson's e-mails `dcook12@uwyo.edu`, `bjohnson@iap.fr` as text
+% open:    Dale's copy of the shared line loses the address (P1b's cut; int147a `=2` kept the line whole on all three):
+%   RED, not asserted — giving a shared entry back whole loses e-mails elsewhere (KB2 report: 1103.3532, 2604.06805)
+% status:  RED (int151a) -> GREEN (perfect_kernel_batchkb2::a_cut_email_printed_as_math_is_its_text)
+% preload: ar5iv.sty
+\documentclass{mn2e}
+\begin{document}
+\title{T}
+\author[D. Cook et al.]{David O. Cook,$^1$ Daniel A. Dale,$^1$ and Benjamin D. Johnson$^2$\\
+$^1$Department of Physics, University of Wyoming, WY 82071, USA; dcook12$@$uwyo.edu\\
+$^2$UPMC-CNRS, Institut d'Astrophysique de Paris, France; bjohnson$@$iap.fr}
+\maketitle
+Text.
+\end{document}

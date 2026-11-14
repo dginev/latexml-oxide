@@ -1,0 +1,30 @@
+% esapub2005.cls's `\normalsize` ends `\let\@listi\@listI` as size10.clo:53 does, and authblk's `\affil` writes
+% `\normalsize Space…` through `\protected@xdef`, where this non-robust `\normalsize` expands. In pdflatex `\@listi` and
+% `\@listI` expand to size10.clo:216's body (`\let\leftmargin\leftmargini\parsep…`, harmless); our empty `\@listi`
+% (latex_constructs_rust_only.rs) left `\let` with the next letter as its name: Error "Missing control sequence inserted",
+% and the word printed as "pace". So the macros carry size10.clo's bodies. `\small`'s copy
+% (`\def\@listi{…}`, size10.clo:63) is the same path through `\def`.
+% witness: 2310.07393 (esapub2005: "ampus" for "Campus", 2 Errors)
+% oracle:  pdflatex 0 errors (TL 2025, -no-shell-escape): "A Title", "Space Robotics", "Campus Kirchberg", "Body text."
+% engines: rust int139c = 3 errors, "pace Robotics", "ampus Kirchberg"; perl = 0 errors, the words kept (`\@listi` undefined
+%          there: it stays in the expansion)
+% expect:  0 errors, 0 warnings; "Space Robotics", "Campus Kirchberg" and "Small Word" in the output
+% status:  RED (int139c) -> GREEN (108b)
+% preload: ar5iv.sty
+\begin{filecontents*}[force]{listicls.cls}
+\LoadClass{article}
+\renewcommand\normalsize{\@setfontsize\normalsize\@xpt\@xipt\let\@listi\@listI}
+\newcommand\smalllist{\@setfontsize\small\@ixpt{11}\def\@listi{\leftmargin\leftmargini}}
+\end{filecontents*}
+\documentclass{listicls}
+\makeatletter
+\protected@xdef\storedA{\normalsize Space Robotics}
+\protected@xdef\storedB{\normalsize Campus Kirchberg}
+\protected@xdef\storedC{\smalllist Small Word}
+\makeatother
+\title{A Title}\author{Ann Able}
+\begin{document}\maketitle
+\storedA, \storedB. {\storedC.}
+
+Body text.
+\end{document}

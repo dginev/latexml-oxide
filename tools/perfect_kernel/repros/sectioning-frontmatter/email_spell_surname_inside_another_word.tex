@@ -1,0 +1,29 @@
+% An e-mail's local part spells a surname only as a run of its words (`.` `_` `-` and digits part them; its start and
+% end bound them): REVTeX's `\author{Lay Kee Ang}\email{ricky\_ang@…}` is Ang's own address, not Shengyuan A. Yang's
+% because "ang" ends "rickyang"; Bo Li's `bangkok@` spells no one ("ang" strictly inside the word), so his own call
+% keeps it (census138 EMAILSPELL, brief 107f B; FIDELITY_CHARTER §4 #420).
+% witness: 2604.02636 (`\author{Lay Kee Ang}\email{ricky\_ang@sutd.edu.sg}` after `\author{Shengyuan A. Yang}`)
+% oracle:  pdflatex 0 errors: "Shengyuan A. Yang,1, ∗ Lay Kee Ang,2, † and Bo Li3, ‡", each mark its own \email's
+%   footnote (REVTeX's endnotes, printed after a BibTeX run)
+% engines: rust int139a3 = ricky_ang@ and bangkok@ both on another author (Yang, Ang)
+% expect:  0 errors, 0 warnings; each author holds the e-mail of their own \email call, then the affiliation
+% status:  RED (int139a3) -> GREEN (107f)
+% preload: ar5iv.sty
+\documentclass[aps,prl,superscriptaddress]{revtex4-2}
+\begin{document}
+\title{T}
+\author{Shengyuan A. Yang}
+\email{shengyuan.yang@x.edu}
+\affiliation{Univ X, Town}
+\author{Lay Kee Ang}
+\email{ricky\_ang@y.edu}
+\affiliation{Univ Y, City}
+\author{Bo Li}
+\email{bangkok@z.org}
+\affiliation{Univ Z, Place}
+\begin{abstract}
+A.
+\end{abstract}
+\maketitle
+Text.
+\end{document}

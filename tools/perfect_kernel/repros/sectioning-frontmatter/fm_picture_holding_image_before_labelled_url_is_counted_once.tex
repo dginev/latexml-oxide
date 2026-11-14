@@ -1,0 +1,20 @@
+% witness: review revIMG1b finding 3: a LaTeX picture holding an image between a link's label and the link, the label
+%          pass's count of what it strips
+% oracle:  pdflatex 0 errors: "Ann Able", "Zebra University", "Web: [image]", "https://example.org/x" (the link set on
+%          the next line, past the picture's box)
+% engines: rust int157a2 = the picture dropped, 0 warnings; IMG1b = 1 warning "drops 2 picture(s)" (the `ltx:picture`
+%          and the `ltx:graphics` inside it counted apart)
+% expect:  0 errors, 1 warning (the link label pass drops 1 picture printed between the label 'Web:' and its link);
+%          Ann Able, her affiliation, the url contact named "Web: "; the picture lost, counted once
+%          (`insert::kind_link_and_grade_contacts` counts a `ltx:graphics` inside a `ltx:picture` as its picture's)
+% status:  RED (int157a2: silent; IMG1b: counted twice) -> GREEN (IMG1c: counted once)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{graphicx}\usepackage{url}\usepackage{hyperref}
+\title{T}
+\author{Ann Able \\ Zebra University \\
+Web: \begin{picture}(10,10)\put(0,0){\includegraphics[width=0.3cm]{example-image}}\end{picture} \url{https://example.org/x}}
+\begin{document}
+\maketitle
+Body.
+\end{document}

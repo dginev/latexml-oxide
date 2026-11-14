@@ -1,0 +1,23 @@
+% mechanism: the control of the binding lists' cutter showing marks where the names show theirs (OD #1009): IJCAI's
+%   `\affiliations` inside `\author` answer the names' marks from the block's own lines, so the names hide their marks
+%   (`per_author_marks` false) and the cut entries hide theirs too, both sides as Perl
+% witness: 1905.10069, 1906.09694 (census P4fC: ijcai ~5k with epl, both sides hidden; showing them is AUMK, post-merge)
+% oracle:  pdflatex (TL 2025, -no-shell-escape, with 1902.09835's ijcai19.sty) 0 errors: "Ann Able1 and Bob Baker2",
+%   "1Univ A, Town A", "2Univ B, Town B", "ann@a.org, bob@b.org"
+% engines: int164a: Ann Able "Univ A, Town A" ann@a.org; Bob Baker "Univ B, Town B" bob@b.org (marks hidden on both)
+% expect:  0 errors, 0 warnings; the same (unchanged by P4f)
+% status:  GREEN (control; guard perfect_kernel_batchc1::marked_list_cut_as_its_binding_declares)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{ijcai19}
+\begin{document}
+\title{T}
+\author{Ann Able$^{1}$ \and Bob Baker$^{2}$
+\affiliations
+$^{1}$Univ A, Town A\\
+$^{2}$Univ B, Town B
+\emails
+ann@a.org, bob@b.org}
+\maketitle
+Text.
+\end{document}

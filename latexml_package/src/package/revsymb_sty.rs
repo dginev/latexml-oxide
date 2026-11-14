@@ -9,28 +9,26 @@ LoadDefinitions!({
     font => {family => "blackboard", series => "medium", shape => "upright"});
   DefMacro!("\\Bbb{}", "\\mathbb{#1}");
 
-  // Bold delimiter constructors — stubbed as simple pass-through.
-  // Perl: DefConstructor('\biglb TeXDelimiter', '#1', ...) uses the
-  // TeXDelimiter parameter type that Rust doesn't have yet (see WISDOM #41).
-  // All 8 \biglb/\bigrb/\Biglb/\Bigrb/\bigglb/\biggrb/\Bigglb/\Biggrb
-  // entries are DefConstructor↔DefMacro DP mismatches from this root cause;
-  // porting TeXDelimiter as a ParameterType would collapse them back to
-  // audit-clean shape. Current forwarding to \mathopen/\mathclose + \big/\Big
-  // preserves the visible delimiter rendering.
-  //
-  // Intentional divergence (WISDOM #44 class: blocked-on-parameter-type):
-  // these 8 DefConstructor → DefMacro flips are a single-root-cause cluster
-  // — porting TeXDelimiter closes all 8 at once. Meanwhile the \big/\Big
-  // expansion keeps delimiter sizing authentic even if emission is not
-  // <ltx:XMWrap open=.../>. Audit counts 8 flips; all 8 share this root.
-  DefMacro!("\\biglb", "\\mathopen\\big");
-  DefMacro!("\\bigrb", "\\mathclose\\big");
-  DefMacro!("\\Biglb", "\\mathopen\\Big");
-  DefMacro!("\\Bigrb", "\\mathclose\\Big");
-  DefMacro!("\\bigglb", "\\mathopen\\bigg");
-  DefMacro!("\\biggrb", "\\mathclose\\bigg");
-  DefMacro!("\\Bigglb", "\\mathopen\\Bigg");
-  DefMacro!("\\Biggrb", "\\mathclose\\Bigg");
+  // revsymb4-2.sty:136-154 `\biglb` … `\Biggrb`: `\REV@boldopen`/`\REV@boldclose` set the sized
+  // delimiter that follows in poor-man's bold (`\REV@pmb`) as an opening or closing atom. Perl
+  // (revsymb.sty.ltxml:31-54): a bounded constructor over the delimiter in the big sizes, bold,
+  // with the delimiter's role. Guard: `perfect_kernel_batch56::revsymb_delimiters_are_bold`.
+  DefConstructor!("\\biglb TeXDelimiter", "#1", bounded => true, font => sub[_f] { Ok(bold_delimiter_font("big")) },
+    after_construct => sub[document, _whatsit] { augment_delimiter_properties(document, "OPEN")?; });
+  DefConstructor!("\\bigrb TeXDelimiter", "#1", bounded => true, font => sub[_f] { Ok(bold_delimiter_font("big")) },
+    after_construct => sub[document, _whatsit] { augment_delimiter_properties(document, "CLOSE")?; });
+  DefConstructor!("\\Biglb TeXDelimiter", "#1", bounded => true, font => sub[_f] { Ok(bold_delimiter_font("Big")) },
+    after_construct => sub[document, _whatsit] { augment_delimiter_properties(document, "OPEN")?; });
+  DefConstructor!("\\Bigrb TeXDelimiter", "#1", bounded => true, font => sub[_f] { Ok(bold_delimiter_font("Big")) },
+    after_construct => sub[document, _whatsit] { augment_delimiter_properties(document, "CLOSE")?; });
+  DefConstructor!("\\bigglb TeXDelimiter", "#1", bounded => true, font => sub[_f] { Ok(bold_delimiter_font("bigg")) },
+    after_construct => sub[document, _whatsit] { augment_delimiter_properties(document, "OPEN")?; });
+  DefConstructor!("\\biggrb TeXDelimiter", "#1", bounded => true, font => sub[_f] { Ok(bold_delimiter_font("bigg")) },
+    after_construct => sub[document, _whatsit] { augment_delimiter_properties(document, "CLOSE")?; });
+  DefConstructor!("\\Bigglb TeXDelimiter", "#1", bounded => true, font => sub[_f] { Ok(bold_delimiter_font("Bigg")) },
+    after_construct => sub[document, _whatsit] { augment_delimiter_properties(document, "OPEN")?; });
+  DefConstructor!("\\Biggrb TeXDelimiter", "#1", bounded => true, font => sub[_f] { Ok(bold_delimiter_font("Bigg")) },
+    after_construct => sub[document, _whatsit] { augment_delimiter_properties(document, "CLOSE")?; });
 
   DefMath!("\\gtrsim", "\u{2273}", role => "RELOP", meaning => "greater-than-or-equivalent-to");
   DefMath!("\\lesssim", "\u{2272}", role => "RELOP", meaning => "less-than-or-similar-to");
@@ -69,3 +67,13 @@ LoadDefinitions!({
   DefMath!("\\overstar{}", "\u{0359}", operator_role => "OVERACCENT");
   DefMath!("\\tensor{}", "\u{20E1}", operator_role => "OVERACCENT");
 });
+
+/// Perl's `font => { size => $size, series => 'bold', forcebold => 1 }`: the symbolic size read at
+/// digestion, against the document's nominal size (as `math_common`'s `\big`).
+fn bold_delimiter_font(size: &str) -> Font {
+  Font {
+    series: Some(Cow::Borrowed("bold")),
+    forcebold: Some(true),
+    ..symbolic_font_size(size)
+  }
+}

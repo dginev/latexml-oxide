@@ -12,6 +12,53 @@ use crate::{
 
 pub mod declare;
 
+/// Perl `getLabelID`'s error for a scope label no element carries (Rewrite.pm:49-55), reported once
+/// per conversion (OXIDIZED_DESIGN #357): the flag is conversion state, which a streaming
+/// conversion's fragments share.
+fn report_missing_rewrite_label(label: &str) -> Result<()> {
+  let flag = format!("rewrite_missing_label:{label}");
+  if crate::state::lookup_value(&flag).is_none() {
+    crate::state::assign_value(&flag, true, Some(Scope::Global));
+    Error!(
+      "misdefined",
+      "<rewrite>",
+      format!("No id for label {label} in Rewrite")
+    );
+  }
+  Ok(())
+}
+
+/// Perl's error for a scope pattern that is neither `label:` nor `id:` (Rewrite.pm:308-311), once
+/// per conversion (OXIDIZED_DESIGN #357), as `report_missing_rewrite_label`.
+fn report_unrecognized_rewrite_scope(scope: &str) -> Result<()> {
+  let flag = format!("rewrite_unrecognized_scope:{scope}");
+  if crate::state::lookup_value(&flag).is_none() {
+    crate::state::assign_value(&flag, true, Some(Scope::Global));
+    Error!(
+      "misdefined",
+      "<rewrite>",
+      format!("Unrecognized scope pattern in Rewrite clause: \"{scope}\"; Ignoring it.")
+    );
+  }
+  Ok(())
+}
+
+/// Is `node` in `document`'s tree: its root is the document's root element (an id store entry
+/// can outlive a node an earlier pass unlinked).
+fn node_in_document(document: &Document, node: &Node) -> bool {
+  let Some(root) = document.get_document().get_root_element() else {
+    return false;
+  };
+  let mut current = Some(node.clone());
+  while let Some(ancestor) = current {
+    if ancestor == root {
+      return true;
+    }
+    current = ancestor.get_parent();
+  }
+  false
+}
+
 pub type RewriteReplaceClosure = Rc<dyn Fn(&mut Document, Vec<&mut Node>) -> Result<()>>;
 /// Test closure: Perl signature is ($document, $node) → $nnodes (0/undef = skip).
 pub type RewriteTestClosure = Rc<dyn Fn(&mut Document, &Node) -> Result<usize>>;
@@ -148,21 +195,14 @@ impl Rewrite {
         pattern:  RewritePattern::String(label),
       });
     }
-    if let Some(scope) = options.scope.take() {
-      // Convert Scope to string for compile_clause:
-      // Perl uses strings like "label:sec:restricted" or "id:S1"
-      let scope_str = match scope {
-        crate::state::Scope::Named(s) => arena::with(s, |r| r.to_string()),
-        crate::state::Scope::Global => String::from("global"),
-        crate::state::Scope::Local => String::from("local"),
-        // Rewrite rules never carry an in-place scope, but keep the match total
-        // (Perl's scope string for `assign_internal`'s 'inplace' branch).
-        crate::state::Scope::InPlace => String::from("inplace"),
-      };
+    // A named scope is a Perl scope pattern ("label:sec:restricted", "id:S1", or one Perl does
+    // not recognize); the assignment scopes (`Global`, `Local`, `InPlace`) never are, and select
+    // nothing to scope by.
+    if let Some(crate::state::Scope::Named(s)) = options.scope.take() {
       clauses.push(RewriteClause {
         compiled: false,
         op:       Scope,
-        pattern:  RewritePattern::String(scope_str),
+        pattern:  RewritePattern::String(arena::with(s, |r| r.to_string())),
       });
     }
     if let Some(xpath) = options.xpath.take() {
@@ -319,40 +359,47 @@ impl Rewrite {
             pattern:  RewritePattern::String(xpath),
           };
         }
-        // Label not found. Perl continues with the remaining clauses
-        // unscoped; under streaming that would apply the rule everywhere
-        // (the label usually lives in another fragment), so strict mode
-        // makes the rule inert via an empty scope selection.
-        if document.scoped_rules_strict {
-          return RewriteClause {
-            compiled: true,
-            op:       RewriteOperator::Select,
-            pattern:  RewritePattern::NodeList(Vec::new()),
-          };
-        }
+        // Label not found. Perl's `getLabelID` errors and returns undef, and the
+        // scope compiles to `descendant-or-self::*[@xml:id='']`, which selects
+        // nothing (Rewrite.pm:49-55, :300-302): the rule applies nowhere. The
+        // error is reported once per conversion (a streaming conversion compiles
+        // its rules once per fragment; the shared labels resolve across them).
+        // (A too-many-errors Fatal is logged and latched where `Error!` raises it.)
+        let _ = report_missing_rewrite_label(label_part);
         return RewriteClause {
           compiled: true,
-          op:       RewriteOperator::Ignore,
-          pattern:  RewritePattern::String(String::new()),
+          op:       RewriteOperator::Select,
+          pattern:  RewritePattern::NodeList(Vec::new()),
         };
       } else if let Some(id_part) = scope_str.strip_prefix("id:") {
         if self.options.select_count.is_none() {
           self.options.select_count = Some(1);
         }
-        // Use get_property("id") for xml:id lookup (L2 workaround)
-        // findnodes with @xml:id='...' fails in rust-libxml
         let target_id = id_part.to_string();
         if document.fragment_ancestor_ids.contains(&target_id) {
           return whole_fragment_scope(document);
         }
-        let scope_nodes: Vec<Node> = document
-          .findnodes("descendant-or-self::*", None)
-          .into_iter()
-          .filter(|n| {
-            n.get_property("id").as_deref() == Some(&target_id)
-              || n.get_attribute("xml:id").as_deref() == Some(&target_id)
-          })
-          .collect();
+        // The id store answers in O(1) — every unscoped `\lxDeclare` after the first
+        // unit carries an `id:` scope (57aq), so a walk of every node per rule cost
+        // 50% in a 300-section document. A missing or detached entry falls back to
+        // the walk (get_property("id") for xml:id: findnodes with @xml:id='...'
+        // fails in rust-libxml).
+        let scope_nodes: Vec<Node> = match document.idstore.get(&target_id) {
+          Some(node)
+            if node.get_attribute("id").as_deref() == Some(target_id.as_str())
+              && node_in_document(document, node) =>
+          {
+            vec![node.clone()]
+          },
+          _ => document
+            .findnodes("descendant-or-self::*", None)
+            .into_iter()
+            .filter(|n| {
+              n.get_property("id").as_deref() == Some(&target_id)
+                || n.get_attribute("xml:id").as_deref() == Some(&target_id)
+            })
+            .collect(),
+        };
         if !scope_nodes.is_empty() {
           // Found the scoped element — use it as the tree root for subsequent clauses
           return RewriteClause {
@@ -361,20 +408,22 @@ impl Rewrite {
             pattern:  RewritePattern::NodeList(scope_nodes),
           };
         }
-        // Scope not found — same strict-mode reasoning as the label branch.
-        if document.scoped_rules_strict {
-          return RewriteClause {
-            compiled: true,
-            op:       RewriteOperator::Select,
-            pattern:  RewritePattern::NodeList(Vec::new()),
-          };
-        }
+        // No element carries the id: Perl's `descendant-or-self::*[@xml:id='…']`
+        // selects nothing (Rewrite.pm:303-304), so the rule applies nowhere — in
+        // a streaming fragment too, where "not here" means "in another fragment"
+        // (continuing unscoped once stamped section-7 declarations on section-1
+        // math; sweep witness tests/math/declare.tex).
         return RewriteClause {
           compiled: true,
-          op:       RewriteOperator::Ignore,
-          pattern:  RewritePattern::String(String::new()),
+          op:       RewriteOperator::Select,
+          pattern:  RewritePattern::NodeList(Vec::new()),
         };
       }
+      // Any other scope: Perl errors and ignores the clause, so the rule applies
+      // unscoped (Rewrite.pm:308-311) — `\lxDeclare[scope=bogus]`, `scope=chapter`
+      // in a class without chapters, `scope=global`.
+      // (A too-many-errors Fatal is logged and latched where `Error!` raises it.)
+      let _ = report_unrecognized_rewrite_scope(scope_str);
       return RewriteClause {
         compiled: true,
         op:       RewriteOperator::Ignore,
@@ -1266,12 +1315,10 @@ mod tests {
     assert_eq!(rule.options.select_count, Some(1));
   }
 
-  /// An UNKNOWN label falls through to `Ignore`, so the remaining clauses
-  /// still apply to the current tree — preserving the pre-lowering behavior
-  /// on a miss (Perl errors and yields an empty-id xpath, which selects
-  /// nothing; the strict streaming path mirrors that with an empty NodeList).
+  /// An UNKNOWN label selects nothing, as Perl's empty-id xpath does (Rewrite.pm:49-55,
+  /// :300-302): the rule applies nowhere, in the eager and the streaming path alike (57aq).
   #[test]
-  fn unknown_label_falls_through_to_ignore() {
+  fn unknown_label_selects_nothing() {
     let mut document = Document::new();
     let mut rule = Rewrite::new("text", RewriteOptions {
       label: Some("nope".to_string()),
@@ -1280,10 +1327,50 @@ mod tests {
     rule.compile_clauses(&mut document);
     assert!(
       matches!(
-        rule.clauses.first().map(|c| c.op),
-        Some(RewriteOperator::Ignore)
+        rule.clauses.first(),
+        Some(RewriteClause {
+          op: RewriteOperator::Select,
+          pattern: RewritePattern::NodeList(nodes),
+          ..
+        }) if nodes.is_empty()
       ),
-      "an unresolvable label must not silently restrict the rule"
+      "an unresolvable label must select nothing"
     );
+  }
+
+  /// The id store answers an `id:` scope only while its entry still carries the id: an id moved to
+  /// another node (a stale entry) falls back to the walk, which finds the node that carries it now
+  /// (57as).
+  #[test]
+  fn id_scope_skips_a_stale_idstore_entry() {
+    let mut document = Document::new();
+    let xml = document.get_document_mut();
+    let mut root = Node::new("root", None, xml).unwrap();
+    xml.set_root_element(&root);
+    let mut first = Node::new("first", None, xml).unwrap();
+    let mut second = Node::new("second", None, xml).unwrap();
+    root.add_child(&mut first).unwrap();
+    root.add_child(&mut second).unwrap();
+    first.set_attribute("xml:id", "X").unwrap();
+    document.idstore.insert("X".to_string(), first.clone());
+    // The id moves on; the store is not told.
+    first
+      .remove_attribute_ns("id", crate::common::xml::XML_NS)
+      .unwrap();
+    second.set_attribute("xml:id", "X").unwrap();
+
+    let mut rule = Rewrite::new("text", RewriteOptions {
+      scope: Some(Scope::Named(crate::pin!("id:X"))),
+      ..RewriteOptions::default()
+    });
+    rule.compile_clauses(&mut document);
+    match rule.clauses.first() {
+      Some(RewriteClause {
+        op: RewriteOperator::Select,
+        pattern: RewritePattern::NodeList(nodes),
+        ..
+      }) => assert_eq!(nodes, &vec![second]),
+      other => panic!("an id scope must select the node carrying the id, got {other:?}"),
+    }
   }
 }

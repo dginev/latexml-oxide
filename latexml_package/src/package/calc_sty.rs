@@ -35,12 +35,99 @@ impl CalcValue {
   }
 }
 
-fn read_expression(expr_type: &str, tokens: Tokens) -> Result<RegisterValue> {
-  let reader_mouth = Mouth::new("", None)?;
-  reading_from_mouth(reader_mouth, move || {
-    unread(tokens);
-    read_expression_body(expr_type)
+/// calc.sty:51-56 `\calc@assign@generic`: evaluate `expression` as `kind` and
+/// assign it to the register `variable` names (silently nothing when it names
+/// none, as `\setlength` here). What calc could not parse (after it reported
+/// the first token) stays in the input, read after the assignment.
+fn calc_assign(variable: ArgWrap, expression: Tokens, kind: &str) -> Result<()> {
+  if let ArgWrap::RegisterDefinition(dbox) = variable {
+    let (rtoken, params) = *dbox;
+    if let Some(defn) = rtoken.to_register() {
+      let stated = expression.clone();
+      let (value, tail) = evaluate(kind, expression)?;
+      // What a length's assignment states, for a float's width read through the register (the panel grid rule,
+      // `note_setlength`).
+      if kind != "Number" && params.is_empty() {
+        engine::latex_constructs::note_setlength(
+          &defn.get_cs_name(),
+          &stated,
+          value.clone().value_of(),
+        );
+      }
+      defn.set_value(value, None, params);
+      unread_vec(tail);
+    }
+  }
+  Ok(())
+}
+
+/// Evaluate the calc expression `tokens` as `expr_type` — calc.sty:51-53
+/// `\calc@open(#4!`, the whole argument — and return the value with whatever
+/// followed the expression. A token that is not an operator, `)`, `\relax` or
+/// the end is reported by [`calc_post_scan`] and consumed; the rest is the
+/// returned tail, which calc leaves in the input (OXIDIZED_DESIGN #317).
+fn evaluate(expr_type: &str, tokens: Tokens) -> Result<(RegisterValue, Vec<Token>)> {
+  read_braced(tokens, || {
+    let value = read_expression_body(expr_type)?;
+    calc_post_scan()?;
+    Ok(value)
   })
+}
+
+/// A nested calc expression (`\ratio`, `\minof`/`\maxof` operands, a
+/// parenthesized group): its unparsable rest was reported by [`calc_post_scan`]
+/// and has no input to return to.
+fn read_expression(expr_type: &str, tokens: Tokens) -> Result<RegisterValue> {
+  Ok(evaluate(expr_type, tokens)?.0)
+}
+
+/// calc.sty:144-160 `\calc@post@scan`: after a term calc expects `+ - * / )`,
+/// `\relax` (skipped) or the expression's end; anything else goes to
+/// calc.sty:281-284 `\calc@error`, which reports "`x' invalid at this point"
+/// and consumes it (its `#1`). `A\hspace{1em\foo}B` with `\def\foo{x}` and
+/// calc: pdflatex reports the `x`.
+///
+/// A package may take calc's error over: picture.sty:79-120 `\let`s
+/// `\calc@error` to a handler that accepts the `\unitlength` after a LENGTH
+/// (`\setlength\dimen@{#1\unitlength}`, so a picture coordinate may be `1cm`),
+/// gobbling the rest of the expression to calc's `!`, and passes any other
+/// token to calc's own (`\PcOrg@calc@error`, :88-107). That handler runs on
+/// calc.sty's internals, which this binding does not have, so its decision is
+/// taken here: under a redefined `\calc@error` a `\unitlength` ends the
+/// expression silently (circledsteps' `\oval(\csteps@XLength,…)` under
+/// picture.sty: 2605.09094, 2605.10684); anything else is reported.
+fn calc_post_scan() -> Result<()> {
+  while let Some(token) = read_x_token(None, false, None)? {
+    // An undefined control sequence was reported and stubbed as it was
+    // expanded; TeX discards it (tex.web §370) and calc never sees it:
+    // `\hspace{6\@p@t}` with USG.cls's `\@p@t` missing (2605.25073, 10 → 242
+    // errors in the first cut), `\setlength{\itemsep}{\bibitemsep}` (2605.08378).
+    if token.get_catcode() == Catcode::SPACE
+      || token.defined_as(&TOKEN_RELAX)
+      || is_error_stub(&token)
+    {
+      continue;
+    }
+    let own = x_equals(&T_CS!("\\calc@error"), &T_CS!("\\lx@calc@error"));
+    if !own && x_equals(&token, &T_CS!("\\unitlength")) {
+      take_rest_of_mouth();
+    } else {
+      report_invalid(&token)?;
+    }
+    break;
+  }
+  Ok(())
+}
+
+/// calc.sty:281-284 `\calc@error`'s report.
+fn report_invalid(token: &Token) -> Result<()> {
+  Error!(
+    "unexpected",
+    token.stringify(),
+    s!("`{}' invalid at this point", Tokens!(*token)),
+    "calc expected to see one of: + - * / )"
+  );
+  Ok(())
 }
 
 /// The calc `<expression> -> <term> ((+|-) <term>)*` loop, reading from the
@@ -241,9 +328,42 @@ mod tests {
   }
 }
 
+/// Perl calc.sty.ltxml:140-155 measures every `\widthof`/`\heightof`/
+/// `\depthof`/`\totalheightof` argument via
+/// `readBoxContents($gullet, undef, 'restricted_horizontal')` — a fresh
+/// box mode. The mode matters: mhchem's `\mhchem@minispace` (mhchem.sty:
+/// 2898-2904) runs `\setlength{…}{…\widthof{${}^8_8$}…}` INSIDE an open
+/// `\ensuremath` (:2781, prescripts `\ce{^{227}Th}`), and a bare `digest`
+/// inherits the ambient `IN_MATH`, so the argument's own `$` tried to close
+/// the ENCLOSING math frame (`\lx@end@inline@math … Attempt to end mode
+/// math`, ×54 in mhchem/mhchem). Witness: mhchem/mhchem 67 → 13; guard
+/// `perfect_kernel_batch50::calc_widthof_in_math_measures_own_box`.
+fn digest_measured_box(arg: Tokens) -> Result<Digested> {
+  with_own_adjust_queue(|| {
+    begin_mode("restricted_horizontal")?;
+    let result = digest(arg);
+    end_mode("restricted_horizontal")?;
+    result
+  })
+}
+
 fn read_value(expr_type: &str) -> Result<CalcValue> {
   skip_spaces()?;
   let peek = read_x_token(None, false, None)?;
+  // A braced group is calc.sty:88-89 `\calc@pre@scan#1`'s undelimited argument
+  // after `\romannumeral` expanded the first token: one level of braces goes
+  // and the content is tested as written (`\ifx(#1`, `\ifx\widthof#1`), then
+  // read — `\def\a{{\a}}` ends in "Missing number", as in TeX, not a loop.
+  // mhchem.sty:1020 `\__mhchem_arrow_options_minLength:n` = `{2em}` reaches
+  // `\makebox[#7]` (:1239) and `\__mhchem_arrow_base:` as `{2em}-1em`.
+  let peek = match peek {
+    Some(open) if open.get_catcode() == Catcode::BEGIN => {
+      let group = read_balanced(ExpansionLevel::Off, false, false)?;
+      unread(group);
+      read_token()?
+    },
+    other => other,
+  };
   let peek = match peek {
     Some(t) => t,
     None => {
@@ -257,7 +377,7 @@ fn read_value(expr_type: &str) -> Result<CalcValue> {
   // \widthof{...} — Perl calc.sty.ltxml L139-143
   if peek == T_CS!("\\widthof") {
     let arg = read_arg(ExpansionLevel::Off)?;
-    let box_result = digest(arg)?;
+    let box_result = digest_measured_box(arg)?;
     if expr_type == "Number" {
       Error!(
         "unexpected",
@@ -273,7 +393,7 @@ fn read_value(expr_type: &str) -> Result<CalcValue> {
   // \heightof{...} — Perl calc.sty.ltxml L144-148
   if peek == T_CS!("\\heightof") {
     let arg = read_arg(ExpansionLevel::Off)?;
-    let box_result = digest(arg)?;
+    let box_result = digest_measured_box(arg)?;
     if expr_type == "Number" {
       Error!(
         "unexpected",
@@ -289,7 +409,7 @@ fn read_value(expr_type: &str) -> Result<CalcValue> {
   // \depthof{...} — Perl calc.sty.ltxml L149-153
   if peek == T_CS!("\\depthof") {
     let arg = read_arg(ExpansionLevel::Off)?;
-    let box_result = digest(arg)?;
+    let box_result = digest_measured_box(arg)?;
     if expr_type == "Number" {
       Error!(
         "unexpected",
@@ -305,7 +425,7 @@ fn read_value(expr_type: &str) -> Result<CalcValue> {
   // \totalheightof{...} — Perl calc.sty.ltxml L154-158
   if peek == T_CS!("\\totalheightof") {
     let arg = read_arg(ExpansionLevel::Off)?;
-    let box_result = digest(arg)?;
+    let box_result = digest_measured_box(arg)?;
     if expr_type == "Number" {
       Error!(
         "unexpected",
@@ -359,13 +479,29 @@ fn read_value(expr_type: &str) -> Result<CalcValue> {
     let y = read_expression(expr_type, arg_y)?;
     return Ok(CalcValue::Reg(x.larger(y)));
   }
-  // Parenthesized subexpression: ( <expression> )
+  // Parenthesized subexpression: ( <expression> ) — calc.sty:106-108
+  // `\calc@open(` opens a group that its matching `)` (`\calc@close`) ends, so
+  // the expression is read in place and parentheses nest. Perl (calc.sty.ltxml
+  // :183-184) and this port read up to the FIRST `)`: hexgame.sty:77
+  // `1.5\halfhexwidth*((\value{modulocounter})-1)` lost its `-1)`, silently while
+  // an argument's rest was dropped.
   if peek == T_OTHER!("(") {
-    let inner = read_until(&Tokens!(T_OTHER!(")")));
-    return Ok(CalcValue::Reg(read_expression(expr_type, inner?)?));
+    let value = read_expression_body(expr_type)?;
+    skip_spaces()?;
+    match read_x_token(None, false, None)? {
+      Some(close) if close == T_OTHER!(")") => {},
+      // Not a `)`: `calc_post_scan` reports it where the expression ends.
+      Some(other) => unread_one(other),
+      None => {},
+    }
+    return Ok(CalcValue::Reg(value));
   }
-  // Else: literal value — put back token and read normally
-  unread_one(peek);
+  // Else: literal value — put back token and read normally. calc.sty:110 reads it by assigning to a register
+  // (`\calc@numeric` = `\afterassignment\calc@post@scan \global\calc@A`), whose `<optional equals>` (tex.web
+  // §1224) takes one `=`: `\resizebox{=0.93\textwidth}{!}{…}` (2606.05909).
+  if peek != T_OTHER!("=") {
+    unread_one(peek);
+  }
   if expr_type == "Number" {
     Ok(CalcValue::Reg(RegisterValue::Number(read_number()?)))
   } else {
@@ -394,7 +530,10 @@ enum BoxDim {
 /// Surpass-perl: OXIDIZED_DESIGN #115.
 fn measure_box_dim(toks: Tokens, kind: BoxDim) -> RegisterValue {
   let zero = || RegisterValue::Dimension(Dimension::new(0));
-  let box_result = match digest(toks) {
+  // Measured in its own box mode, like `digest_measured_box` above: from a
+  // `<dimen>` read inside `align*` (mathtools `\mathmakebox[\widthof{$x$}]`,
+  // optidef) a bare digest's `$` closed the ENCLOSING math.
+  let box_result = match digest_measured_box(toks) {
     Ok(b) => b,
     Err(_) => return zero(),
   };
@@ -426,6 +565,15 @@ LoadDefinitions!({
   def_primitive_noop("\\totalheightof")?;
   def_primitive_noop("\\ratio")?;
   def_primitive_noop("\\real")?;
+  // calc.sty:281-284; `\lx@calc@error` keeps calc's own for `calc_post_scan`
+  // to tell a package's redefinition (picture.sty:82) from it.
+  DefPrimitive!("\\calc@error{}", sub[(token)] {
+    let token: Tokens = token;
+    if let Some(first) = token.unlist_ref().first() {
+      report_invalid(first)?;
+    }
+  });
+  Let!("\\lx@calc@error", "\\calc@error");
 
   // Resolve `\widthof`/`\heightof`/`\depthof`/`\totalheightof` to the measured
   // box size in EVERY dimension context, not only inside a calc expression.
@@ -439,6 +587,18 @@ LoadDefinitions!({
   // is unchanged (`\mathmakebox[\widthof{…}]` parity is preserved); the hook
   // fires ONLY when the dimension reader — not digestion — meets the token.
   // Surpass-perl: OXIDIZED_DESIGN #115. html_feedback#6869; witness 2603.23669.
+  // A binding's braced length argument (`{Dimension}`/`{Glue}`, `[Dimension]`)
+  // is the operand latex.ltx hands to `\setlength` (`\@imakebox`, `\@rule`,
+  // `\@hspace`, …), which calc evaluates as a whole expression (calc.sty:86,
+  // :51-53): `\makebox[\widthof{ab}+\widthof{cdefgh}]{M}` is 38.6pt wide in
+  // pdflatex, where the base reader stopped after the first term (10.6pt) and
+  // dropped the rest. OXIDIZED_DESIGN #317; guard `braced_quantity_tail`.
+  set_braced_length_fn(Rc::new(|_kind| {
+    let value = read_expression_body("Glue")?;
+    calc_post_scan()?;
+    Ok(value)
+  }));
+
   set_internal_dimension_fn(Rc::new(|tok: &Token| {
     // calc infix expression opening with `(` — the base dimension reader
     // (read_dimension/read_glue) cannot parse it and would warn "Missing number
@@ -486,31 +646,61 @@ LoadDefinitions!({
   }));
 
   // \setcounter{<ctr>}{<integer expression>}
-  DefPrimitive!("\\setcounter{}{}", sub[(ctr, arg)] {
+  // calc.sty:60-63: an undefined counter's expression is not evaluated
+  // (`\@ifundefined{c@#1}{\@nocounterr{#1}}`); see the engine's `\setcounter`. Macros around
+  // the assignments, as calc.sty's own, so they stay patchable (KNOWN_PERL_ERRORS #399).
+  DefMacro!("\\setcounter{}{}", "\\lx@calc@setcounter{#1}{#2}");
+  DefMacro!("\\addtocounter{}{}", "\\lx@calc@addtocounter{#1}{#2}");
+  // calc.sty:64-69: its `\stepcounter` advances the counter itself rather than through
+  // `\addtocounter`, then resets the counters within (reledmac.sty:6645 patches it for that reason).
+  DefMacro!(
+    "\\stepcounter{}",
+    "\\lx@addtocounter{#1}\\@ne\\lx@stepcounter@within{#1}"
+  );
+  DefPrimitive!("\\lx@calc@setcounter{}{}", sub[(ctr, arg)] {
     let ctr_str = Expand!(ctr).to_string();
-    let value = read_expression("Number", arg)?;
+    if !counter_is_defined(&ctr_str) {
+      SetCounter!(&ctr_str, Number::new(0));
+      return Ok(Vec::new());
+    }
+    let (value, tail) = evaluate("Number", arg)?;
     let num = Number::new(value.value_of());
     SetCounter!(&ctr_str, num);
+    unread_vec(tail);
   });
 
   // \addtocounter{<ctr>}{<integer expression>}
-  DefPrimitive!("\\addtocounter{}{}", sub[(ctr, arg)] {
+  DefPrimitive!("\\lx@calc@addtocounter{}{}", sub[(ctr, arg)] {
     let ctr_str = Expand!(ctr).to_string();
-    let value = read_expression("Number", arg)?;
+    if !counter_is_defined(&ctr_str) {
+      AddToCounter!(&ctr_str, Number::new(0));
+      return Ok(Vec::new());
+    }
+    let (value, tail) = evaluate("Number", arg)?;
     let num = Number::new(value.value_of());
     AddToCounter!(&ctr_str, num);
+    unread_vec(tail);
   });
 
   // \setlength{Variable}{} — Perl parity: silently no-op on undefined variable
   // (Perl: `return unless $defn && ($defn ne 'missing');`).
   DefPrimitive!("\\setlength{Variable}{}", sub[(variable, arg)] {
-    if let ArgWrap::RegisterDefinition(dbox) = variable {
-      let (rtoken, params) = *dbox;
-      if let Some(defn) = rtoken.to_register() {
-        let value = read_expression("Glue", arg)?;
-        defn.set_value(value, None, params);
-      }
-    }
+    calc_assign(variable, arg, "Glue")?;
+  });
+
+  // calc.sty:54-56 `\calc@assign@count`/`@dimen`/`@skip<register>{<expression>}`,
+  // the assignments behind `\setcounter`/`\setlength`, which packages call
+  // directly: xifthen.sty:41-42/76-77 `\numtest`/`\dimtest` evaluate their
+  // operands into `\@tempcnta`/`\@tempskipa` with them (novel's layout sanity
+  // check, novel-CalculateLayout.sty:289; TeX Live class census 2026-09-24).
+  DefPrimitive!("\\calc@assign@count{Variable}{}", sub[(variable, arg)] {
+    calc_assign(variable, arg, "Number")?;
+  });
+  DefPrimitive!("\\calc@assign@dimen{Variable}{}", sub[(variable, arg)] {
+    calc_assign(variable, arg, "Dimension")?;
+  });
+  DefPrimitive!("\\calc@assign@skip{Variable}{}", sub[(variable, arg)] {
+    calc_assign(variable, arg, "Glue")?;
   });
 
   // \addtolength{Variable}{} — Perl parity: silently no-op on undefined variable.
@@ -519,8 +709,9 @@ LoadDefinitions!({
       let (rtoken, params) = *dbox;
       if let Some(defn) = rtoken.to_register() {
         let old_value = defn.value_of(params.clone()).unwrap_or_default();
-        let delta = read_expression("Glue", arg)?;
+        let (delta, tail) = evaluate("Glue", arg)?;
         defn.set_value(old_value.add(delta), None, params);
+        unread_vec(tail);
       }
     }
   });

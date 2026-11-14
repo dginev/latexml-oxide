@@ -13,13 +13,6 @@ LoadDefinitions!({
   // Same diagram environments as feynmf (see feynmf_sty.rs): drop the graphics
   // body (no MetaPost in our pipeline) but keep the env so surrounding context
   // parses cleanly.
-  DefEnvironment!("{fmfgraph}{}{}",
-    "<ltx:note role='feynman-diagram'>(Feynman diagram, #1x#2)</ltx:note>",
-    mode => "internal_vertical");
-  DefEnvironment!("{fmfgraph*}{}{}",
-    "<ltx:note role='feynman-diagram'>(Feynman diagram, #1x#2)</ltx:note>",
-    mode => "internal_vertical");
-  DefEnvironment!("{fmffile}{}", "#body", mode => "internal_vertical");
-
+  feynmf_sty::feynmf_graph_environments()?;
   feynmf_sty::feynmf_diagram_stubs()?;
 });

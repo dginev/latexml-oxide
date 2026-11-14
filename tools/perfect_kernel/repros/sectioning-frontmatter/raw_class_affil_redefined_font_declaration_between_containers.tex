@@ -1,0 +1,28 @@
+% mechanism: `events/fonts.rs` `font_declaration` matches a declaration between nested containers by NAME, not by
+%   meaning: a `\bfseries` redefined to print `\quad` is copied into every entry's wrap (the B2 class: what prints
+%   once copied into each entry). Synthetic (triage 2026-10-31: RED catalog). Fix: compare the meaning with the kernel's
+%   (the S3 `x_equals` pattern) or accept only a token the rehearsal shows printed nothing.
+% witness: review rev94b r7 SHOULD-FIX 2, probe p/z/rds
+% oracle:  pdflatex 0 errors: one quad before the underlined italic block
+% engines: rust 94b r7: each contact `<emph> <text class="ltx_underline">…` (the quad's space in every entry);
+%          94a r9: the plain cut
+% expect:  0 errors, 0 warnings; no space copied into the entries (the plain cut, or the space once)
+% status:  RED (catalog, no guard)
+% preload: ar5iv.sty
+\begin{filecontents*}[overwrite]{affilinauthor.cls}
+\ProvidesClass{affilinauthor}
+\LoadClass{article}
+\def\affilfont{\small}
+\def\affil#1{\par{\reset@font\affilfont#1\par}}
+\def\address#1{\par{\reset@font\affilfont#1\par}}
+\def\@maketitle{\newpage{\Large\bfseries\@title\par}\vskip1em\noindent{\bfseries\@author\par}\vskip1em}
+\end{filecontents*}
+\documentclass{affilinauthor}
+\renewcommand\bfseries{\quad}
+\begin{document}
+\title{A Title}
+\author{Ann Able,$^1$ Bob Baker$^2$ Cy Cole$^3$
+\affil{\emph{\bfseries\underline{$^1$Univ A, Town\\ $^2$Univ B, City}}}}
+\maketitle
+Body.
+\end{document}

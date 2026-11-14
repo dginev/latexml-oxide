@@ -1,0 +1,17 @@
+% witness: the mark sibling of 2503.08161's image before a URL (review revCR8b finding 1): an image leading a mark-led
+%          affiliation line
+% oracle:  pdflatex 0 errors: "Ann Able1", "[image] 1Zebra University"
+% engines: rust int157a2 = the image dropped, 0 warnings (a Layout event no writer writes; a note for it in place made the
+%          affiliation its plain text, its markup lost, +2 warnings: not taken)
+% expect:  0 errors, 1 warning (the emitter's reading holds no place for 1 picture); Ann Able with her mark and her
+%          affiliation "Zebra University"; the image lost, counted (`resolver::words::Written::unwritten_pictures`)
+% status:  RED (int157a2: silent) -> GREEN (IMG1: counted)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{graphicx}\usepackage{url}\usepackage{hyperref}
+\title{T}
+\author{Ann Able$^{1}$ \\ \includegraphics[width=0.36cm]{example-image} $^{1}$Zebra University}
+\begin{document}
+\maketitle
+Body.
+\end{document}

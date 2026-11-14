@@ -1,0 +1,18 @@
+% witness: review 89c r1 (N5, open question 2): a letter `\DeclareMathSymbol` puts in an upright symbol font — the
+%          kernel's `operators` (fontmath.ltx:59 `{OT1}{cmr}{m}{n}`), Euler Roman (amsfonts ueur.fd, `{U}{eur}{m}{n}`;
+%          program.sty:834, sansmath, statex, beilstein.cls) — is set upright; generic, before 89c (operators alike)
+% oracle:  pdflatex 0 errors; \showbox: \myA OT1/cmr/m/n, \eualpha U/eur/m/n (upright), A and \alpha OML/cmm/m/it
+% engines: rust 89c r2 = 0 errors, 0 warnings; `font="italic"` on \myA and \eualpha, as on A and \alpha
+% expect:  0 errors, 0 warnings; \myA and \eualpha upright (no `font="italic"`; MathML `mathvariant="normal"`), A
+%          and \alpha italic (SYNC_STATUS Font-Selection residual 9; deferred: styling, no content lost)
+% status:  RED (89c r2)
+% preload: ar5iv.sty
+\documentclass{article}
+\DeclareFontFamily{U}{eur}{\skewchar\font'177}
+\DeclareFontShape{U}{eur}{m}{n}{<-6> eurm5 <6-8> eurm7 <8-> eurm10}{}
+\DeclareSymbolFont{eu}{U}{eur}{m}{n}
+\DeclareMathSymbol{\myA}{\mathalpha}{operators}{"41}
+\DeclareMathSymbol{\eualpha}{\mathord}{eu}{"0B}
+\begin{document}
+$\myA\eualpha A\alpha$
+\end{document}

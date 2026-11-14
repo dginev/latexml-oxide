@@ -1,0 +1,27 @@
+% mechanism: imsart.sty's `\ead[label=u1,url]{…}` reads its address as a TeX argument (`\DeclareRobustCommand\ead[2]`,
+%   `\protected@edef\@currentlabel{#2}`, imsart.sty:493-498 of 1301.1466's copy), so `$\sim$` in a URL prints `∼`. The
+%   binding's `\ead` (latexml_contrib imsart_cls.rs `imsart_sty_markup`) and the API's `\lx@add@url`/`\lx@add@email` it
+%   calls (frontmatter_fields.rs) read it Semiverbatim, which made the shifts other, so the dollars printed. The API now
+%   reads every binding's e-mail and URL as TeX prints them (`contacts::address_as_printed`: a formula of glyphs its
+%   glyphs, `math_glyphs_as_printed`, beside the brace sets of `math_braces_as_printed`; OXIDIZED_DESIGN_DIVERGENCES #972).
+% witness: 1301.1466 (`\ead[label=u2,url]{http://www.math.duke.edu/$\sim$omer}`), math0608476
+%          (`\ead[label=u2,url]{www.math.wisc.edu/$\sim$swanson}`); here as a minimal stand-in of the shipped imsart.sty
+% oracle:  pdflatex 0 errors: "Ann Able http://www.zebra.edu/∼ann ann@zebra.edu" (the stand-in prints the addresses
+%          where `\ead` stands; the real imsart.sty prints them through `\printead`)
+% engines: CR3, CR3b: the URL contact reads "http://www.zebra.edu/$∼$ann" (int154x lost it: imsart.sty read raw); CR4:
+%          "http://www.zebra.edu/∼ann", one text
+% expect:  0 errors, 0 warnings; Ann Able: url "http://www.zebra.edu/∼ann" (no dollar signs), then email ann@zebra.edu
+% status:  RED (CR3b) -> GREEN (CR4; guard perfect_kernel_batchcr4::imsart_ead_url_prints_its_formula)
+\begin{filecontents*}{imsart.sty}
+\NeedsTeXFormat{LaTeX2e}\ProvidesFile{imsart.sty}[2012/01/01 IMS article style, shortened and modified]
+\DeclareRobustCommand\ead[2][label= ,email]{ {\ttfamily #2}}
+\def\author{\@ifnextchar[{\author@fmt}{\author@fmt[]}}
+\def\author@fmt[#1]#2{\bgroup\def\fnms##1{##1}\def\snm##1{##1}\noindent#2\egroup\par}
+\end{filecontents*}
+\documentclass{article}
+\usepackage{imsart}
+\begin{document}
+\title{A Title}
+\author{\fnms{Ann} \snm{Able}\ead[label=u1,url]{http://www.zebra.edu/$\sim$ann}\ead[label=e1]{ann@zebra.edu}}
+Body.
+\end{document}

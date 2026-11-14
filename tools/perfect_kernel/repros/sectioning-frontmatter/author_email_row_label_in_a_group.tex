@@ -1,0 +1,19 @@
+% witness: 2603.19228 (its author block, shortened); the r5 re-review of batch 77p (residual 9)
+% oracle:  pdflatex 0 errors: the names, the institutions, "Project Page: …", "Email Address: songyuxinbb@outlook.com"
+% engines: rust 77p r8 = 0 errors; the address an affiliation of the last name, Jingdong Wang
+% expect:  0 errors, 0 warnings; the address Yuxin Song's e-mail, named "Email Address:"; the project page a URL
+%          contact of the block
+% status:  RED (77p r8) -> GREEN (77p r9)
+\documentclass{article}
+\usepackage{hyperref}
+\title{T}
+\author{%
+  Xinyao Zhang$^{1}$, Yuxin Song$^{1}$, Jingdong Wang$^{2}$ \\
+  $^1$Baidu \quad $^2$Tsinghua University \\
+  \tt\small {Project Page: \url{https://example.github.io/SAMA}} \\
+  \tt\small {Email Address: songyuxinbb@outlook.com} \\
+}
+\begin{document}
+\maketitle
+Text.
+\end{document}

@@ -1,0 +1,18 @@
+% witness: none in the corpus (the 77w r2 re-review's finding 6): a paper shipping a self-named article.cls beside
+%          its derivative (aip-cp.cls `\ProvidesClass{article}`, 1506.04050) — `find_file` found the paper's article.cls,
+%          so the derivative was taken for a renamed copy (77w r1's provides mode)
+% oracle:  pdflatex 0 errors: "A Paper / M. Bruemmer^aff1, S. Sekula^aff1 / ^aff1 Department of Physics, SMU"
+% engines: rust 69e78f9511 (77w r2) = the derivative read as the article binding's stand-in copy: one creator
+%          (S. Sekula), the affiliation lost
+% expect:  0 errors, 0 warnings; both authors, the affiliation kept (as standard_class_derivative_authors.tex)
+% status:  RED (69e78f9511) -> GREEN (77w r3: the base class is looked up in the TeX tree)
+% preload: ar5iv.sty
+\documentclass{aipcopy}
+\title{A Paper}
+\author[aff1]{M. Bruemmer}
+\author[aff1]{S. Sekula}
+\affil[aff1]{Department of Physics, SMU}
+\begin{document}
+\maketitle
+Body text.
+\end{document}

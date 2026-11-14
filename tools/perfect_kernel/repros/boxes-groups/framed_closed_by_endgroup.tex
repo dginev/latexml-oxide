@@ -1,0 +1,13 @@
+% witness: review 64y round 2 (n7: framed was unmarked)
+% oracle:  pdflatex 1 error (\MakeFramed's \begingroup / \vbox\bgroup, framed.sty:289-326)
+% engines: rust 64w 1E+1W -> 64y r2 0E (Info) -> 64y 1E 0W; Perl 3E
+% expect:  1 Error
+% status:  GREEN (64y r3); guard perfect_kernel_batch64y::framed_closed_by_endgroup_is_an_error
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{framed}
+\begin{document}
+Intro.
+\begin{framed} Framed text \endgroup
+After.
+\end{document}

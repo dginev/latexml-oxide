@@ -1,0 +1,29 @@
+% A raw class prints text after a date's store inside the store's own `\else` branch —
+% `Received: \if@twocolumn\else\@received\ (preprint version)\fi` —: 95d r3's whole-test removal (frontmatter_stores.rs
+% `line_label_before`'s `\else`/`\or` arm ~:5302-5315, `end = past` ~:5349-5353, `enclosing_conditional` ~:5492) takes
+% the test from the label to `\fi` out of the title page, checking only that nothing precedes the store in its branch, so
+% the trailing "(preprint version)" is printed nowhere (review rev95d-r3 S1). A sibling base already loses: an emptiness
+% test whose branch prints text after the store (`\else\@received\ (first version)\fi`).
+% witness: none (static scan of the 9,502 class-shipping census zips: no "store alone after \else/\or, then printed text
+%          before \fi" shape; review scratch rev95d3/tools/scan_else.py)
+% oracle:  pdflatex 0 errors: "T", "Ann Able", "Received: 1 May 2020 (preprint version)", "Text."
+% engines: rust 95d-r2base, 95d-r2 = "Received: (preprint version)" kept in the body; rust 95d-r3 = <date name="Received:"
+%          role="received">1 May 2020</date>, "(preprint version)" nowhere (content loss)
+% expect:  0 errors, 0 warnings; the date named "Received:" AND "(preprint version)" kept (fix: take the whole test only
+%          when the store's branch holds just the store and layout up to its \else/\or/\fi and the test is the store's own
+%          emptiness test; else the r2 path; cover the \ifcase/\or variant too)
+% status:  RED (95d-r3)
+% preload: ar5iv.sty
+\begin{filecontents*}[overwrite]{qf.cls}
+\LoadClass{article}
+\let\@received\@empty
+\def\received#1{\gdef\@received{#1}}
+\def\@maketitle{\begin{center}{\Large\bfseries \@title\par}{\large\bfseries \@author\par}%
+  \par\vskip 2.5mm{\footnotesize Received: \if@twocolumn\else\@received\ (preprint version)\fi}\end{center}}
+\end{filecontents*}
+\documentclass{qf}
+\title{T}\author{Ann Able}
+\received{1 May 2020}
+\begin{document}\maketitle
+Text.
+\end{document}

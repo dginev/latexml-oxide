@@ -1,0 +1,17 @@
+% witness: base/source2e + guitar (doc.sty \changes -> \glossary); reduced to \index
+% oracle:  pdflatex 0 errors (\def{...} in the arg is written inertly to the .idx file)
+% engines: rust=1 perl=1 (2026-09-05)   [SHARED / PERL-ORIGIN]
+% expect:  0 errors; document has a <ltx:p> containing "INDEXOK"
+% status:  RED
+% mechanism: SanitizedVerbatim (base_parameter_types.rs:692-716) reads \index's arg
+%   with \ made catcode-OTHER, then RETOKENIZES the sanitized string with normal
+%   catcodes (line 715 tokenize_internal, for the \TIKZ@-splitting case). A primitive
+%   CS such as \def is thereby re-formed as a LIVE control sequence and EXECUTED when
+%   the phrase is digested (\def sees '{' -> "Expected opening '{'"). Real LaTeX's
+%   \index=\@bsphack\begingroup\@sanitize\@wrindex writes \def{...} to the .idx file
+%   as inert catcode-12 text and never re-executes it (latex.ltx \@sanitize).
+\documentclass{article}
+\begin{document}
+\index{a\def{b}c}
+INDEXOK
+\end{document}

@@ -1,0 +1,25 @@
+% witness: none (77m review: listings_sty.rs `\lx@lstenv@body` returned for a diverted body before taking the execute flag)
+% oracle:  pdflatex 0 errors: "AAA" (the box's text; its listing went to the file), then "BBB" as code only, "After."
+% engines: rust 77m r1 = 0 errors, "AAA" lost and "BBB" typeset a second time as text; perl: raw tcblistings
+% expect:  0 errors, 0 warnings; "AAA" as text, "BBB" only in the listing
+% status:  RED (77m r1) -> GREEN (77m r2: `\lx@lstenv@body` takes the flag first and runs a diverted box's text)
+\documentclass{article}
+\usepackage[writefile]{listings}
+\usepackage[listings]{tcolorbox}
+\newtcblisting{demo}{}
+\lstnewenvironment{plain}{}{}
+\begin{document}
+\makeatletter
+\lst@BeginWriteFile{\jobname.dv}
+\makeatother
+\begin{demo}
+AAA
+\end{demo}
+\makeatletter
+\lst@EndWriteFile
+\makeatother
+\begin{plain}
+BBB
+\end{plain}
+After.
+\end{document}

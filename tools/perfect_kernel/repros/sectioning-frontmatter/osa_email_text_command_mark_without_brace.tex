@@ -1,0 +1,20 @@
+% witness: 65e review round 5 (dst2: `\email{\textasteriskcentered able@x.edu}` under opex3)
+% oracle:  pdflatex: opex3.sty is not in TL (the OSA style, shipped by papers); pdflatex (article control,
+%          review5/p/tac.tex) prints `∗able@x.edu`; our ASCII `*` is Perl's textcomp mapping
+%          (LaTeXML/lib/LaTeXML/Package/textcomp.sty.ltxml:128), so the guard's pin of it is Perl parity
+% engines: rust 65a and 65e r4 = Fatal:panic ("slice index starts at 2 but ends at 1": a `\text…` command without a
+%          braced argument read as a mark inside a font command, osa_journal_sty.rs)
+% expect:  0 errors, no Fatal; A. Able's email "*able@x.edu" (Perl parity: textcomp's ASCII `*`), her `∗` shown
+% status:  RED (65e r4) -> GREEN (65e)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{opex3}
+\begin{document}
+\title{T}
+\author{A. Able,$^{\bf{1},*}$ B. Baker,$^{\bf{1}}$}
+\address{$^1$Univ X\\
+}
+\email{\textasteriskcentered able@x.edu}
+\begin{abstract}A.\end{abstract}
+Text.
+\end{document}

@@ -1,0 +1,26 @@
+% witness: the API change of 92g (OXIDIZED_DESIGN_DIVERGENCES #921: an empty `name=` is no label): REVTeX's `\email`,
+%          `\homepage`, `\thanks`, `\altaffiliation` forward their optional label as `name={#1}`, empty when none is
+%          given — they keep the role's label then, as before; an empty option (`\email[]{…}`) prints no label, and
+%          has none
+% oracle:  pdflatex (TL 2025, revtex4-2): 0 errors; the footnotes "∗ a@x.org; http://x.org/˜a; Funded.; Also at
+%          Univ Y.; a2@x.org" and "† Electronic mail: b@x.org" (the optional label printed before its address)
+% engines: rust 3a90791 = the contacts named "Email: ", "URL: ", "Thanks: ", "Alternate Affiliation: ", and the given
+%          label "Electronic mail: "; Perl the same
+% expect:  0 errors, 0 warnings; the same five names, and no name on a2@x.org (rust 3a90791: "Email: ")
+% status:  RED (3a90791) -> GREEN (92g)
+% preload: ar5iv.sty
+\documentclass{revtex4-2}
+\begin{document}
+\title{A Study}
+\author{Ann Able}
+\email{a@x.org}
+\homepage{http://x.org/~a}
+\thanks{Funded.}
+\altaffiliation{Also at Univ Y.}
+\email[]{a2@x.org}
+\author{Bob Baker}
+\email[Electronic mail: ]{b@x.org}
+\affiliation{Univ X}
+\maketitle
+Text.
+\end{document}

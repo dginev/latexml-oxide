@@ -1,0 +1,3 @@
+% A plain TeX macro package that guards against LaTeX use, as mtexsis.tex:1857 does.
+\def\LaTeXwarning{\message{This is a plain TeX document}}
+\def\documentstyle{\LaTeXwarning}

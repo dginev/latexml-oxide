@@ -1,0 +1,17 @@
+% witness: manuals enumitem, colorspace, mathador-doc (bera.sty:10-23 \let\TeX=\fveTeX, a \def; \let\LaTeX=\fveLaTeX, robust)
+% oracle:  pdflatex 0 errors: "A LaTeX and TeX logo." (the package's own logo boxes)
+% engines: rust 66c r4 = \LaTeX is the package's typeset boxes (L, a small A, T, a lowered E, X); 66cr3 / 65int8f / 66d r3 = ltx_LaTeX_logo kept, \TeX the package's (plain \let path, as Perl's Let)
+% expect:  0 errors; one ltx_LaTeX_logo
+% status:  GREEN (66d r3)
+\begin{filecontents*}[overwrite]{zqlogo.sty}
+\ProvidesPackage{zqlogo}
+\def\zqTeX{T\kern-.1667em\lower.5ex\hbox{E}\kern-.125emX}
+\DeclareRobustCommand{\zqLaTeX}{L\kern-.3em{\sbox\z@ T\vbox to\ht\z@{\hbox{\scriptsize A}\vss}}\kern-.1em\zqTeX}
+\let\TeX=\zqTeX
+\let\LaTeX=\zqLaTeX
+\end{filecontents*}
+\documentclass{article}
+\usepackage{zqlogo}
+\begin{document}
+A \LaTeX{} and \TeX{} logo.
+\end{document}

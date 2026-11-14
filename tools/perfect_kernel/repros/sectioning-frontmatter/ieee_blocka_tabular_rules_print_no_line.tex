@@ -1,0 +1,18 @@
+% mechanism: a one-column tabular's rows are the list's lines (`relocate::tabular_rows`, OXIDIZED_DESIGN_DIVERGENCES
+%   #964); its rules (`\hline`) print no text and drop out with the tabular, never left in a line outside an alignment
+%   (review rev104c S3)
+% witness: none (review rev104c probe p11; the reading's witness 2606.28962)
+% oracle:  pdflatex (TL 2025) 0 errors: "Ann Able1 , Bob Baker2 / 1 Univ A, Town / 2 Univ B, City"
+% engines: rust int131a0: Ann "Univ A, Town 2 Univ B, City", Bob none; 104c r1: each author their row, 2 Errors
+%   "\noalign cannot be used here"
+% expect:  0 errors, 0 warnings; Ann "Univ A, Town", Bob "Univ B, City"
+% status:  RED (104c r1) -> GREEN (104c r2) — perfect_kernel_batch104c::tabular_rows_are_marked_entries
+% preload: ar5iv.sty
+\documentclass[conference]{IEEEtran}
+\begin{document}
+\title{T}
+\author{\IEEEauthorblockN{Ann Able$^{1}$, Bob Baker$^{2}$}
+\IEEEauthorblockA{\begin{tabular}{c}\hline $^{1}$Univ A, Town\\[2pt] $^{2}$Univ B, City\\ \hline\end{tabular}}}
+\maketitle
+Text.
+\end{document}

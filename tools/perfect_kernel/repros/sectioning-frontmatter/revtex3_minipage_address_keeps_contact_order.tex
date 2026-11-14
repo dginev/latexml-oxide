@@ -1,0 +1,34 @@
+% mechanism: a call a frontmatter setter ran inside, written as queued at the flush (REVTeX 3's abstract and `\pacs` in
+%   an `\address`'s minipage, of which the reading writes nothing), goes back at its ledger position among the item
+%   calls, labelled for its run's creators (`emitter::emit::recover_queued`, `run_labels`; OXIDIZED_DESIGN_DIVERGENCES
+%   #985): appended unlabelled, the insertion put its contact in each creator before the items' moved contacts, and the
+%   e-mails cut from the first address landed after the Physical Review Letters line (review revCR2 finding 1).
+% witness: cond-mat9809277
+% oracle:  no pdflatex (TL 2025 has no revtex.sty); REVTeX 3 prints the e-mails inside the first address, before the
+%   journal line; Perl: one whole-block creator, the e-mails inside the first address, then the journal line, the
+%   abstract and the PACS classification, 0 errors
+% engines: rust int154a: Address, Email, Address(PRL) per creator, no abstract, no PACS; CR2: Address, Address(PRL),
+%   Email, with the abstract and PACS; old engine (int153m, LATEXML_FM_EMIT=0): Address, Email, Address(PRL), with both
+% expect:  each creator's contacts Address, Email, Address(PRL); one <abstract> ("zebraword"), one PACS classification;
+%   0 errors, 0 warnings
+% status:  RED (int154a, CR2) -> GREEN (CR2b)
+% preload: ar5iv.sty
+\documentstyle[twocolumn,aps]{revtex}
+\begin{document}
+\title{A Title}
+\author{Ann Able$^*$ and Bob Baker$^\dagger$}
+\address{Department of Zebrawords, Univ A, Budapest, Hungary \\
+  {\tt $^*$ann@zebra.hu} {\rm ~~and~~}
+  {\tt $^\dagger$bob@zebra.hu} }
+\address{~\\ \large \rm Physical Review Letters {\bf 75}, 374-377 (1995)}
+\address{
+\begin{minipage}{5.55in}
+\begin{abstract}
+We study an extended Hubbard zebraword model.
+\end{abstract}
+\pacs{PACS numbers: 05.40.+j}
+\end{minipage}
+}
+\maketitle
+Body.
+\end{document}

@@ -1,0 +1,22 @@
+% `\edef` copies of two `\title` calls' values printed in both orders: a copy of the earlier call's value is joined
+% with nothing and stays; each copy of the current value is a whole print and lifted (fms1 round-3 review finding 2,
+% probe r13; sibling: the copies printed in reverse order).
+% status:  RED (fms1 round 3: `\xa` then `\xb` joined, "A Title" lifted) → GREEN (fms1 round 4).
+% oracle:  pdflatex 0 errors: "A Title", "B Title", "B Title", "A Title", then the title block "B Title / Ann
+%          Author / <date>".
+% expect:  0 errors, 0 warnings; `field_ink` Info ×2; both "A Title" copies kept.
+\documentclass{article}
+\makeatletter
+\title{A Title}\author{Ann Author}
+\edef\xa{\@title}
+\title{B Title}
+\edef\xb{\@title}
+\begin{document}
+\begin{center}\xa\end{center}
+\begin{center}\xb\end{center}
+\begin{center}\xb\end{center}
+\begin{center}\xa\end{center}
+\maketitle
+\section{Intro}
+Text.
+\end{document}

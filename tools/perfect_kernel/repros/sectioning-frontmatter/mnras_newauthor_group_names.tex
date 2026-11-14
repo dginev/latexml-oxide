@@ -1,0 +1,13 @@
+% witness: 2409.07518 (mnras `\newauthor{…}` holding a name list), 2312.07625
+% oracle:  pdflatex 0 errors: four names over their affiliations
+% engines: rust 64b3 = the group's names one creator + Error:frontmatter:merged_creators; Perl the same (SplitTokens passes over groups, Base_Utility.pool.ltxml:152-165)
+% expect:  0 errors; 4 creators, one name each
+% status:  RED (64b3) -> GREEN (64b)
+\documentclass{mnras}
+\begin{document}
+\title{T}
+\author[A. Able et al.]{Ann Able$^{1}$, Bob Baker$^{1}$,
+\newauthor{Cat Cole$^{1}$, Dan Dorn$^{2}$}
+\\ $^{1}$Univ A\\ $^{2}$Univ B}
+\maketitle
+\end{document}

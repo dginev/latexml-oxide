@@ -1,0 +1,30 @@
+% mechanism: a name making its creator itself (PoS's `\speaker`, `\lx@add@creator[role=speaker]`) takes the marks after
+%   it into that creator (`marks_into_own_creator`, author_block/line_kinds.rs), and as the call's one name its
+%   addresses by a label of its own, in print order: the speaker's affiliation and e-mail are his, no nameless
+%   creator's; the collaboration he speaks for his contact; the line the collaboration's mark labels, no author's, the
+%   block's (OXIDIZED_DESIGN_DIVERGENCES #946). Review rev97cd D6.
+% witness: 1508.03930 (PoS, `\speaker{Lukas Nellen}$^a$ for the HAWC collaboration$^b$\\ \llap{$^a$}I.\ de Ciencias
+%   Nucleares, UNAM, México\\ \llap{$^b$}For a complete author list, see \href{…}{…}.\\ E-mail: \email{…}`: 97b the
+%   pseudo-creator "for the HAWC collaboration" held the affiliations and e-mail, 97d r1 a nameless one)
+% oracle:  pdflatex (TL 2025) with the paper's PoS.cls: 3 errors, the old class against TL 2025's color (harness
+%   limit); prints "Lukas Nellen*a for the HAWC collaborationb", "a I. de Ciencias Nucleares, UNAM, Mexico", "b For a
+%   complete author list, see the web.", "E-mail: lukas@nucleares.unam.mx"
+% engines: rust 97d r1: Lukas Nellen with the collaboration, a nameless creator with the affiliations and e-mail; perl:
+%   a nameless author and the speaker, no contacts
+% expect:  0 errors, 0 warnings; the speaker Lukas Nellen with the collaboration, his affiliation and e-mail in that
+%   order; the "complete author list" line the block's
+% status:  RED (97d r1) -> GREEN (97d r2)
+% preload: ar5iv.sty
+\documentclass{PoS}
+\title{T}
+\ShortTitle{T}
+\author{\speaker{Lukas Nellen}$^a$ for the HAWC collaboration$^b$\\
+    \llap{$^a$}I.\ de Ciencias Nucleares, UNAM, Mexico\\
+    \llap{$^b$}For a complete author list, see the web.\\
+    E-mail: \email{lukas@nucleares.unam.mx}}
+\abstract{Abs.}
+\FullConference{Conf}
+\begin{document}
+\maketitle
+Text.
+\end{document}

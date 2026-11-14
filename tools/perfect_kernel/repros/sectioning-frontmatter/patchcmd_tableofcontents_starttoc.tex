@@ -1,0 +1,23 @@
+% witness: TL class census 2026-09-24 — exam-zh (exam-zh.cls:272-278 \patchcmd{\tableofcontents}
+%          {\@starttoc{toc}}{\thispagestyle{empty}\pagestyle{empty}\@starttoc{toc}}{}{\fail}; the
+%          failure branch runs an undefined \fail)
+% oracle:  pdflatex 0 errors; the ToC
+% engines: rust (56hy) and Perl 0.8.8 = "\fail undefined": \tableofcontents' body held no
+%          \@starttoc{toc} (Perl's is a constructor, patchcmd fails outright)
+% expect:  0 errors; one <ltx:TOC lists="toc">, [P-ok]
+% status:  RED (56hy) -> GREEN (56ia)
+% mechanism: book.cls/article.cls \tableofcontents typeset the list with \@starttoc{toc}; the body
+%   carries it as the argument of \lx@kernel@listbody, which discards it (the TOC is built in
+%   post-processing, and \@starttoc would read a stale \jobname.toc).
+\documentclass{article}
+\usepackage{etoolbox}
+\makeatletter
+\patchcmd{\tableofcontents}{\@starttoc{toc}}{\thispagestyle{empty}\@starttoc{toc}}{\def\patched{P-ok}}{\fail}
+\patchcmd{\listoffigures}{\@starttoc{lof}}{\@starttoc{lof}}{}{\fail}
+\patchcmd{\listoftables}{\@starttoc{lot}}{\@starttoc{lot}}{}{\fail}
+\makeatother
+\begin{document}
+\tableofcontents
+\section{One}
+[\patched]
+\end{document}

@@ -1,0 +1,13 @@
+% mechanism: calc's `\setlength{\d}{10000pt+10000pt}` sums its terms through its scratch registers; TeX reports
+%   "Dimension too large" at `\calc@B` (pdflatex's log: `<recently read> \calc@B`) and keeps `\maxdimen`. Our calc
+%   binding sums natively with no bound check (Perl the same)
+% witness: synthetic (revDTL1d P1)
+% oracle:  pdflatex (TL 2025, -no-shell-escape): 1 `!` ("Dimension too large."), [16383.99998pt]
+% engines: rust DTL1d = int162a: 0 errors, [20000.0pt]; Perl: 0 errors, [20000.0pt]
+% expect:  1 error; [16383.99998pt]
+% status:  RED (DTL1d, int162a) — moves: post-merge (DTLR)
+\documentclass{article}
+\usepackage{calc}
+\begin{document}
+\newdimen\d \setlength{\d}{10000pt+10000pt}[\the\d]
+\end{document}

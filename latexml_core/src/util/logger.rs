@@ -1,6 +1,6 @@
 use std::{
-  cell::RefCell,
-  sync::atomic::{AtomicBool, AtomicUsize, Ordering},
+  cell::{Cell, RefCell},
+  sync::atomic::{AtomicBool, AtomicI32, AtomicU64, AtomicUsize, Ordering},
 };
 
 use log::{Level, LevelFilter, Metadata, Record, SetLoggerError, max_level};
@@ -39,11 +39,19 @@ fn stderr_use_color() -> bool {
 /// (`Common/Error.pm` `_printline`). `--quiet` lowers THIS (to `Warn`) without
 /// lowering what the log keeps — so `(Loading …)` progress notes and `Info:`
 /// records still reach `.latexml.log`, which is what BookML's makefile dependency
-/// tracking reads (issue #763). `--verbose`/`--debug` raise it (to `Debug`).
+/// tracking reads (issue #763). `--verbose` raises it (to `Debug`).
 ///
 /// Stored as the `LevelFilter` discriminant (`Off`=0 … `Trace`=5). Process-global
 /// like `max_level`: one shared stderr descriptor across `cortex_worker`'s pool.
 static STDERR_LEVEL: AtomicUsize = AtomicUsize::new(LevelFilter::Info as usize);
+
+/// Un-featured `Debug` records are admitted (`--verbose`). Without it a `Debug` record passes only when its target
+/// is a `--debug` feature: Perl guards its trace `Debug()` calls `if $LaTeXML::DEBUG{feature}` (`Common/Error.pm` L467).
+static DEBUG_ALL: AtomicBool = AtomicBool::new(false);
+
+/// Whether un-featured `Debug` records are logged (`--verbose`; see `DEBUG_ALL`).
+#[inline]
+pub fn debug_all() -> bool { DEBUG_ALL.load(Ordering::Relaxed) }
 
 /// The current STDERR verbosity (see [`STDERR_LEVEL`]).
 fn stderr_level() -> LevelFilter {
@@ -75,6 +83,79 @@ static LOGGER: LatexmlLogger = LatexmlLogger;
 /// appended here (without ANSI colors) in addition to stderr.
 #[thread_local]
 static LOG_BUFFER: RefCell<Option<String>> = RefCell::new(None);
+
+/// A file descriptor that receives a copy of every text appended to a bound [`LOG_BUFFER`] (`-1` =
+/// none): the log of a conversion, kept on disk as it is written, for a process whose log buffer
+/// dies with it. `cortex_worker`'s harness children set it so the harness can return the partial
+/// log of a conversion the watchdog, an allocation failure or a signal ended. Process-global
+/// because those exits are taken from other threads than the converting one.
+static LOG_MIRROR_FD: AtomicI32 = AtomicI32::new(-1);
+/// Bytes written to [`LOG_MIRROR_FD`] since it was last emptied.
+static LOG_MIRROR_BYTES: AtomicU64 = AtomicU64::new(0);
+/// The size at which the mirror file is emptied and restarted, so it keeps the most recent text
+/// of a runaway log within this bound.
+static LOG_MIRROR_CAP: AtomicU64 = AtomicU64::new(0);
+
+/// Mirror the captured log into `fd` (a file opened for appending), emptying it whenever it
+/// would grow past `cap_bytes`; `None` stops mirroring. The caller owns the descriptor and keeps
+/// it open while it is set.
+pub fn set_log_mirror(fd: Option<i32>, cap_bytes: u64) {
+  LOG_MIRROR_CAP.store(cap_bytes, Ordering::Release);
+  LOG_MIRROR_BYTES.store(0, Ordering::Release);
+  LOG_MIRROR_FD.store(fd.unwrap_or(-1), Ordering::Release);
+}
+
+/// Empty the log mirror (a new conversion begins).
+pub fn reset_log_mirror() {
+  let fd = LOG_MIRROR_FD.load(Ordering::Acquire);
+  if fd >= 0 {
+    truncate_fd(fd);
+    LOG_MIRROR_BYTES.store(0, Ordering::Release);
+  }
+}
+
+/// Copy `text` (just appended to a bound log buffer) to the log mirror, if one is set.
+fn mirror_log_text(text: &str) {
+  let fd = LOG_MIRROR_FD.load(Ordering::Acquire);
+  if fd < 0 || text.is_empty() {
+    return;
+  }
+  let len = text.len() as u64;
+  let cap = LOG_MIRROR_CAP.load(Ordering::Acquire);
+  if cap > 0 && LOG_MIRROR_BYTES.fetch_add(len, Ordering::AcqRel) + len > cap {
+    truncate_fd(fd);
+    LOG_MIRROR_BYTES.store(len, Ordering::Release);
+  }
+  write_fd(fd, text.as_bytes());
+}
+
+#[cfg(unix)]
+fn truncate_fd(fd: i32) {
+  // SAFETY: `ftruncate` on a descriptor the mirror's owner keeps open; a failure is ignored (the
+  // mirror is best-effort and must never disturb the conversion).
+  unsafe {
+    libc::ftruncate(fd, 0);
+  }
+}
+#[cfg(not(unix))]
+fn truncate_fd(_fd: i32) {}
+
+#[cfg(unix)]
+fn write_fd(fd: i32, mut bytes: &[u8]) {
+  while !bytes.is_empty() {
+    // SAFETY: writes from a live slice to a descriptor the mirror's owner keeps open.
+    let n = unsafe { libc::write(fd, bytes.as_ptr().cast(), bytes.len()) };
+    if n < 0 && std::io::Error::last_os_error().kind() == std::io::ErrorKind::Interrupted {
+      continue;
+    }
+    if n <= 0 {
+      return;
+    }
+    bytes = &bytes[n as usize..];
+  }
+}
+#[cfg(not(unix))]
+fn write_fd(_fd: i32, _bytes: &[u8]) {}
 
 /// Does stderr currently sit at the start of a line?
 ///
@@ -111,6 +192,19 @@ static STDERR_AT_LINE_START: AtomicBool = AtomicBool::new(true);
 /// could emit a spurious leading newline.
 pub fn mark_stderr_at_line_start() { STDERR_AT_LINE_START.store(true, Ordering::Release); }
 
+/// Perl `print STDERR _freshline(\*STDERR), $text`: a direct STDERR write at any verbosity, on a fresh line. One write
+/// under the (reentrant) stderr lock, so a capture buffer shared by a test's threads never splits a line.
+pub fn stderr_fresh_line(text: &str) {
+  let _stderr = std::io::stderr().lock();
+  let lead = if STDERR_AT_LINE_START.load(Ordering::Acquire) {
+    ""
+  } else {
+    "\n"
+  };
+  stderr_echo(&format!("{lead}{text}"));
+  STDERR_AT_LINE_START.store(text.ends_with('\n'), Ordering::Release);
+}
+
 /// Start capturing log output into the buffer (Perl: bind_log).
 pub fn bind_log() { *LOG_BUFFER.borrow_mut() = Some(String::new()); }
 
@@ -133,6 +227,7 @@ pub fn note_to_log(msg: &str) {
     && let Some(ref mut log) = *buf
   {
     let clean = strip_ansi(msg);
+    let start = log.len();
     if !log.is_empty() && !log.ends_with('\n') {
       log.push('\n');
     }
@@ -140,6 +235,7 @@ pub fn note_to_log(msg: &str) {
     if !log.ends_with('\n') {
       log.push('\n');
     }
+    mirror_log_text(&log[start..]);
   }
 }
 
@@ -204,6 +300,8 @@ pub fn replay_captured(d: CapturedDiagnostics) {
   {
     // The captured text is already per-record newline-terminated; just make
     // sure it starts on a fresh line so it can't glue onto an in-flight note.
+    // Not mirrored: a worker thread's own buffer already mirrored this text as it was written
+    // (a render worker *process*'s replayed log, `render_workers.rs`, is not in the mirror).
     if !log.is_empty() && !log.ends_with('\n') {
       log.push('\n');
     }
@@ -249,32 +347,41 @@ fn append_note(buf: &mut String, note: &str) {
   }
 }
 
-/// prints a single line to STDERR
+/// prints a single line to STDERR. Through `eprintln!`, as `stderr_echo`, so a test harness's
+/// output capture receives it.
 #[macro_export]
 macro_rules! println_stderr(
     ($($arg:tt)*) => ({
-      use std::io::Write;
-      match writeln!(&mut ::std::io::stderr(), $($arg)* ) {
-        Ok(_) => {},
-        Err(x) => panic!("Unable to write to stderr: {}", x),
-      }
+      ::std::eprintln!($($arg)*);
     })
 );
 
-/// prints a to STDERR without a line break
+/// prints a to STDERR without a line break, through `eprint!` like `println_stderr!`.
 #[macro_export]
 macro_rules! print_stderr(
     ($($arg:tt)*) => ({
-      use std::io::Write;
-      match write!(&mut ::std::io::stderr(), $($arg)* ) {
-        Ok(_) => {},
-        Err(x) => panic!("Unable to write to stderr: {}", x),
-      }
+      ::std::eprint!($($arg)*);
     })
 );
 
+/// The console echo of a log line: `eprint!`, the standard library's capture-aware stderr path.
+/// Under libtest (`cargo test`) a test thread's `eprint!` output is captured with the test and
+/// shown only when it fails; a direct `std::io::stderr()` write bypasses that capture, so every
+/// passing test's `Info:`/`Warning:`/`Error:` lines interleaved on the terminal. Threads spawned
+/// by a test (the conversion helpers' big-stack threads) inherit its capture. Outside a test
+/// harness this is the plain stderr write it replaced, apart from `eprint!`'s panic on a failed
+/// write (a closed pipe), which `println_stderr!` already had.
+fn stderr_echo(text: &str) {
+  ::std::eprint!("{text}");
+}
+
 impl log::Log for LatexmlLogger {
-  fn enabled(&self, metadata: &Metadata) -> bool { metadata.level() <= max_level() }
+  fn enabled(&self, metadata: &Metadata) -> bool {
+    metadata.level() <= max_level()
+      && (metadata.level() <= Level::Info
+        || debug_all()
+        || crate::common::error::debug_enabled(metadata.target()))
+  }
 
   fn log(&self, record: &Record) {
     if self.enabled(record.metadata()) {
@@ -292,7 +399,9 @@ impl log::Log for LatexmlLogger {
         if let Ok(mut buf) = LOG_BUFFER.try_borrow_mut()
           && let Some(ref mut log) = *buf
         {
+          let start = log.len();
           append_note(log, &strip_ansi(&note));
+          mirror_log_text(&log[start..]);
         }
         // The LOG append above is the log-file record (Perl `$LOG` write, always).
         // The STDERR echo is the live console indicator and is gated on the
@@ -301,10 +410,8 @@ impl log::Log for LatexmlLogger {
         // `$VERBOSITY >= 0`). Write and publish the cursor state under ONE stderr
         // lock, so a concurrent diagnostic record cannot observe a stale flag.
         if stderr_admits(record.level()) {
-          use std::io::Write;
-          let mut err = std::io::stderr().lock();
-          let _ = err.write_all(note.as_bytes());
-          let _ = err.flush();
+          let _stderr = std::io::stderr().lock();
+          stderr_echo(&note);
           // A note carries no trailing newline of its own unless its text ends
           // in one (`note_begin` opens with a leading '\n'), so record where it
           // left the cursor for the next diagnostic record.
@@ -375,71 +482,8 @@ impl log::Log for LatexmlLogger {
         _ => paint(ANSI_WHITE, &message),
       } + &details.to_string();
 
-      // Capture to log buffer if active (strip ANSI for clean log text).
-      // A diagnostic record (Info/Warning/Error/Fatal) must start on a fresh
-      // line so CorTeX's line-anchored parser (^Error:/^Warning:/^Info:)
-      // matches and the record never glues onto an in-flight progress note
-      // (notes no longer force a trailing newline — see append_note).
-      if let Ok(mut buf) = LOG_BUFFER.try_borrow_mut()
-        && let Some(ref mut log) = *buf
-      {
-        if !log.is_empty() && !log.ends_with('\n') {
-          log.push('\n');
-        }
-        log.push_str(&strip_ansi(&painted_message));
-        // Exactly one trailing newline — a multi-detail message (e.g.
-        // `Info:…loaded …\n\tat …\n\tIn …`) already ends with '\n', so an
-        // unconditional push would double it into a blank line before the next
-        // `(Loading …` note.
-        if !log.ends_with('\n') {
-          log.push('\n');
-        }
-      }
-
-      // Use `\n` (not `\r`) to guarantee each log line starts on a fresh
-      // line in both TTY and file output. The previous `\r` prefix made
-      // log lines visually overlay any in-flight progress indicator like
-      // `(Loading "foo.sty" definitions... )` — convenient in a terminal
-      // but produced `(...)<CR>Error:...` byte sequences in log files,
-      // breaking line-anchored counts in canvas harnesses
-      // (`grep -cE '^...Error:'` silently returned 0 even when errors
-      // were present). Trade-off: progress indicators in a TTY no longer
-      // get overwritten, but they were not really self-erasing anyway
-      // (they always emitted ` )` to close their parens), so the visual
-      // change is small.
-      // Colorize for an interactive terminal only; when stderr is redirected
-      // to a file/pipe, emit the ANSI-stripped text so on-disk logs stay
-      // grep-clean (matches the captured `.latexml.log` buffer above).
-      // Break onto a fresh line ONLY when a note left the cursor mid-line —
-      // an unconditional leading '\n' was 45.8% of the witness's log (see
-      // STDERR_AT_LINE_START). One critical section: read the flag, write, and
-      // republish it while holding the stderr lock, so the "record starts at
-      // line start" guarantee survives concurrent loggers.
-      //
-      // The LOG_BUFFER append above is the log-file record (Perl `$LOG`, always,
-      // subject only to the Info floor). The STDERR echo is gated on the decoupled
-      // console verbosity so `--quiet` reduces the console without touching the log
-      // (issue #763) — EXCEPT `Error`/`Fatal`, which always reach STDERR (the
-      // project's deliberate always-emit-errors divergence, since cortex aggregates
-      // success rates from `Error:`/`Fatal:` lines). `Error` is the lowest `Level`
-      // value and Fatal records are emitted at `Level::Error`, so `<= Error`
-      // captures both.
-      let to_stderr = record.level() <= Level::Error || stderr_admits(record.level());
-      if to_stderr {
-        use std::io::Write;
-        let text = if stderr_use_color() {
-          painted_message
-        } else {
-          strip_ansi(&painted_message)
-        };
-        let mut err = std::io::stderr().lock();
-        if !STDERR_AT_LINE_START.load(Ordering::Acquire) {
-          let _ = err.write_all(b"\n");
-        }
-        let _ = err.write_all(text.as_bytes());
-        let _ = err.write_all(b"\n");
-        let _ = err.flush();
-        STDERR_AT_LINE_START.store(true, Ordering::Release);
+      if !hold_record(record.level(), &painted_message) {
+        write_record(record.level(), painted_message);
       }
     }
   }
@@ -447,10 +491,498 @@ impl log::Log for LatexmlLogger {
   fn flush(&self) {}
 }
 
+/// Write one formatted diagnostic record: the log-file buffer (always) and the
+/// STDERR echo (gated). The tail of [`LatexmlLogger::log`], shared with
+/// [`DiagnosticsHold::commit`], which writes records it held back.
+fn write_record(level: Level, painted_message: String) {
+  // Capture to log buffer if active (strip ANSI for clean log text).
+  // A diagnostic record (Info/Warning/Error/Fatal) must start on a fresh
+  // line so CorTeX's line-anchored parser (^Error:/^Warning:/^Info:)
+  // matches and the record never glues onto an in-flight progress note
+  // (notes no longer force a trailing newline — see append_note).
+  if let Ok(mut buf) = LOG_BUFFER.try_borrow_mut()
+    && let Some(ref mut log) = *buf
+  {
+    let start = log.len();
+    if !log.is_empty() && !log.ends_with('\n') {
+      log.push('\n');
+    }
+    log.push_str(&strip_ansi(&painted_message));
+    // Exactly one trailing newline — a multi-detail message (e.g.
+    // `Info:…loaded …\n\tat …\n\tIn …`) already ends with '\n', so an
+    // unconditional push would double it into a blank line before the next
+    // `(Loading …` note.
+    if !log.ends_with('\n') {
+      log.push('\n');
+    }
+    mirror_log_text(&log[start..]);
+  }
+
+  // Use `\n` (not `\r`) to guarantee each log line starts on a fresh
+  // line in both TTY and file output. The previous `\r` prefix made
+  // log lines visually overlay any in-flight progress indicator like
+  // `(Loading "foo.sty" definitions... )` — convenient in a terminal
+  // but produced `(...)<CR>Error:...` byte sequences in log files,
+  // breaking line-anchored counts in canvas harnesses
+  // (`grep -cE '^...Error:'` silently returned 0 even when errors
+  // were present). Trade-off: progress indicators in a TTY no longer
+  // get overwritten, but they were not really self-erasing anyway
+  // (they always emitted ` )` to close their parens), so the visual
+  // change is small.
+  // Colorize for an interactive terminal only; when stderr is redirected
+  // to a file/pipe, emit the ANSI-stripped text so on-disk logs stay
+  // grep-clean (matches the captured `.latexml.log` buffer above).
+  // Break onto a fresh line ONLY when a note left the cursor mid-line —
+  // an unconditional leading '\n' was 45.8% of the witness's log (see
+  // STDERR_AT_LINE_START). One critical section: read the flag, write, and
+  // republish it while holding the stderr lock, so the "record starts at
+  // line start" guarantee survives concurrent loggers.
+  //
+  // The LOG_BUFFER append above is the log-file record (Perl `$LOG`, always,
+  // subject only to the Info floor). The STDERR echo is gated on the decoupled
+  // console verbosity so `--quiet` reduces the console without touching the log
+  // (issue #763) — EXCEPT `Error`/`Fatal`, which always reach STDERR (the
+  // project's deliberate always-emit-errors divergence, since cortex aggregates
+  // success rates from `Error:`/`Fatal:` lines). `Error` is the lowest `Level`
+  // value and Fatal records are emitted at `Level::Error`, so `<= Error`
+  // captures both.
+  // A `Debug` record that got here is wanted (`--verbose` or its feature); it prints at Perl's `$VERBOSITY >= 0`.
+  let to_stderr = level <= Level::Error || stderr_admits(level.min(Level::Info));
+  if to_stderr {
+    let text = if stderr_use_color() {
+      painted_message
+    } else {
+      strip_ansi(&painted_message)
+    };
+    stderr_fresh_line(&format!("{text}\n"));
+  }
+}
+
+/// Diagnostic records held back by an active [`DiagnosticsHold`], in order.
+#[thread_local]
+static HELD: RefCell<Option<Vec<(Level, String)>>> = RefCell::new(None);
+
+/// The control sequences an active [`DiagnosticsHold`]'s scope stubbed as undefined
+/// ([`crate::state::generate_error_stub`]): the stub stands in for the error, so it goes with it.
+#[thread_local]
+static HELD_STUBS: RefCell<Option<Vec<crate::token::Token>>> = RefCell::new(None);
+
+/// Record that `token` was just stubbed as undefined, when a [`DiagnosticsHold`] is active.
+pub fn note_held_stub(token: crate::token::Token) {
+  if let Ok(mut stubs) = HELD_STUBS.try_borrow_mut()
+    && let Some(stubs) = stubs.as_mut()
+  {
+    stubs.push(token);
+  }
+}
+
+/// Hold a formatted record when a [`DiagnosticsHold`] is active on this
+/// thread; `false` means "write it now".
+fn hold_record(level: Level, painted_message: &str) -> bool {
+  match HELD.try_borrow_mut() {
+    Ok(mut held) => match held.as_mut() {
+      Some(records) => {
+        records.push((level, painted_message.to_string()));
+        true
+      },
+      None => false,
+    },
+    // Never lose a record to a contended cell: write it.
+    Err(_) => false,
+  }
+}
+
+/// A speculative scope's diagnostics, held until the caller decides whether
+/// the scope's RESULT is kept. For work the engine runs on its own initiative
+/// in a state the document never produces — the `\maketitle` deposit replays
+/// a class's dropped title body with the title fields emptied — so that its
+/// diagnostics are the document's exactly when its output is:
+///
+/// * [`commit`](Self::commit) writes the held records, in order, as if never
+///   held (the counts were taken at raise time and stand);
+/// * [`discard`](Self::discard) drops them AND restores the report counts —
+///   and the runaway guards beside them — to the snapshot, so the log and the
+///   status agree that nothing was raised (the whole-diagnostic rule of
+///   `set_ignore_diagnostics`). Only diagnostics are rolled back, with the
+///   error stubs that stand in for them (an undefined control sequence's
+///   `<ltx:ERROR/>` definition, installed globally: kept, it would turn the
+///   document's own later use of that command into an uncounted error). The
+///   scope's other side effects (a global assignment it made) stay.
+///
+/// Holds nest (a commit writes into the enclosing hold). Dropping an
+/// unresolved hold commits it, so a panic or an early return cannot lose a
+/// diagnostic. Progress notes (`(Loading …)`) are never held.
+#[must_use = "resolve the hold with commit() or discard()"]
+pub struct DiagnosticsHold {
+  outer:       Option<Vec<(Level, String)>>,
+  outer_stubs: Option<Vec<crate::token::Token>>,
+  snapshot:    crate::common::error::DiagnosticGates,
+  resolved:    bool,
+}
+
+impl DiagnosticsHold {
+  /// Start holding this thread's diagnostic records.
+  pub fn begin() -> Self {
+    let snapshot = crate::common::error::save_diagnostic_gates();
+    let outer = HELD.borrow_mut().replace(Vec::new());
+    let outer_stubs = HELD_STUBS.borrow_mut().replace(Vec::new());
+    DiagnosticsHold {
+      outer,
+      outer_stubs,
+      snapshot,
+      resolved: false,
+    }
+  }
+
+  /// Errors (a Fatal counts as one) raised since [`begin`](Self::begin).
+  pub fn errors_raised(&self) -> usize {
+    let now = crate::common::error::REPORT.borrow();
+    let then = &self.snapshot.report;
+    now.error.saturating_sub(then.error) + usize::from(now.fatal && !then.fatal)
+  }
+
+  /// Whether a Fatal was raised since [`begin`](Self::begin): counted (the report's flag set) or held as a record — what
+  /// [`defer`](Self::defer) never sets aside, and a caller taking back its work must not [`discard`](Self::discard).
+  pub fn fatal_raised(&self) -> bool {
+    let fatal_now = {
+      let now = crate::common::error::REPORT.borrow();
+      now.fatal && !self.snapshot.report.fatal
+    };
+    fatal_now
+      || HELD.borrow().as_ref().is_some_and(|records| {
+        records
+          .iter()
+          .any(|(_, m)| strip_ansi(m).starts_with("Fatal:"))
+      })
+  }
+
+  /// Warnings raised since [`begin`](Self::begin) (a suppressed one counted too).
+  pub fn warnings_raised(&self) -> usize {
+    let now = crate::common::error::REPORT.borrow();
+    now.warning.saturating_sub(self.snapshot.report.warning)
+  }
+
+  /// The errors held since [`begin`](Self::begin), in order: each record's first line, without its colors.
+  pub fn held_errors(&self) -> Vec<String> {
+    HELD.borrow().as_ref().map_or_else(Vec::new, |records| {
+      records
+        .iter()
+        .map(|(_, message)| strip_ansi(message))
+        .filter(|message| message.starts_with("Error:"))
+        .map(|message| message.lines().next().unwrap_or("").to_string())
+        .collect()
+    })
+  }
+
+  fn take_held(&mut self) -> Vec<(Level, String)> {
+    self.resolved = true;
+    let mut held = HELD.borrow_mut();
+    let records = held.take().unwrap_or_default();
+    *held = self.outer.take();
+    records
+  }
+
+  /// The scope's stubs; the enclosing hold's list is current again.
+  fn take_stubs(&mut self) -> Vec<crate::token::Token> {
+    let mut stubs = HELD_STUBS.borrow_mut();
+    let own = stubs.take().unwrap_or_default();
+    *stubs = self.outer_stubs.take();
+    own
+  }
+
+  /// The scope raised no diagnostic since [`begin`](Self::begin): nothing held, nothing counted (a suppressed
+  /// Warning is counted without a record).
+  pub fn is_empty(&self) -> bool {
+    let report = crate::common::error::REPORT.borrow();
+    let then = &self.snapshot.report;
+    HELD.borrow().as_ref().is_none_or(Vec::is_empty)
+      && (
+        report.debug,
+        report.info,
+        report.warning,
+        report.error,
+        report.fatal,
+      ) == (then.debug, then.info, then.warning, then.error, then.fatal)
+  }
+
+  /// The scope raised nothing but Debug messages (counted, never written): [`is_empty`](Self::is_empty) but for those.
+  /// A held tag whose typesetting only traced itself holds nothing to defer (latexml_engine tags_refnums.rs
+  /// `\lx@tag@intags@held`).
+  pub fn is_empty_but_debug(&self) -> bool {
+    let report = crate::common::error::REPORT.borrow();
+    let then = &self.snapshot.report;
+    HELD.borrow().as_ref().is_none_or(Vec::is_empty)
+      && (report.info, report.warning, report.error, report.fatal)
+        == (then.info, then.warning, then.error, then.fatal)
+  }
+
+  /// Keep the scope's diagnostics: write the held records.
+  pub fn commit(mut self) { self.commit_records(); }
+
+  /// Set the scope's diagnostics aside until their use ([`DeferredDiagnostics`]): records and counts are taken back as
+  /// [`discard`](Self::discard) takes them — the error stubs too, so a later use of the command raises its own error
+  /// — and kept to be replayed ([`replay_shown_deferred`]). A Fatal is never deferred: it is committed (`None`).
+  pub fn defer(mut self) -> Option<DeferredDiagnostics> {
+    let (counts, missing, undefined) = {
+      let now = crate::common::error::REPORT.borrow();
+      let then = &self.snapshot.report;
+      let held_fatal = HELD.borrow().as_ref().is_some_and(|records| {
+        records
+          .iter()
+          .any(|(_, m)| strip_ansi(m).starts_with("Fatal:"))
+      });
+      if (now.fatal && !then.fatal) || held_fatal {
+        drop(now);
+        self.commit_records();
+        return None;
+      }
+      // The undefined names the scope's errors recorded (not every `Error:undefined:` does: `\csname` and keyval
+      // errors count no name), for replay to record exactly those.
+      let undefined: Vec<(String, usize)> = now
+        .undefined
+        .0
+        .iter()
+        .filter_map(|(key, &n)| {
+          let added = n.saturating_sub(then.undefined.get_sym(*key).copied().unwrap_or(0));
+          (added > 0).then(|| (crate::common::arena::to_string(*key), added))
+        })
+        .collect();
+      let missing: Vec<_> = now
+        .missing
+        .0
+        .iter()
+        .filter_map(|(key, &n)| {
+          let added = n.saturating_sub(then.missing.get_sym(*key).copied().unwrap_or(0));
+          (added > 0).then_some((*key, added))
+        })
+        .collect();
+      // Errors (and the undefined names they report) are counted per replayed record; the rest by count, as a
+      // suppressed Warning or Info leaves no record.
+      let counts = crate::common::error::ReportCounts {
+        debug:   now.debug.saturating_sub(then.debug),
+        info:    now.info.saturating_sub(then.info),
+        warning: now.warning.saturating_sub(then.warning),
+        error:   0,
+        fatal:   false,
+      };
+      (counts, missing, undefined)
+    };
+    for stub in self.take_stubs() {
+      crate::state::remove_error_stub(&stub);
+    }
+    let records = self.take_held();
+    crate::common::error::restore_diagnostic_gates(self.snapshot.clone());
+    Some(DeferredDiagnostics {
+      records,
+      counts,
+      missing,
+      undefined,
+    })
+  }
+
+  fn commit_records(&mut self) {
+    // An enclosing hold now answers for the scope's stubs.
+    for stub in self.take_stubs() {
+      note_held_stub(stub);
+    }
+    for (level, message) in self.take_held() {
+      if !hold_record(level, &message) {
+        write_record(level, message);
+      }
+    }
+  }
+
+  /// Drop the scope's diagnostics, records and counts alike — with the
+  /// runaway gates beside the counts ([`DiagnosticGates`]). Returns how many
+  /// records were dropped.
+  ///
+  /// [`DiagnosticGates`]: crate::common::error::DiagnosticGates
+  pub fn discard(mut self) -> usize {
+    for stub in self.take_stubs() {
+      crate::state::remove_error_stub(&stub);
+    }
+    let dropped = self.take_held().len();
+    crate::common::error::restore_diagnostic_gates(self.snapshot.clone());
+    dropped
+  }
+}
+
+impl Drop for DiagnosticsHold {
+  fn drop(&mut self) {
+    if !self.resolved {
+      self.commit_records();
+    }
+  }
+}
+
+/// Diagnostics a [`DiagnosticsHold`] set aside ([`DiagnosticsHold::defer`]) for work done ahead of its use: written and
+/// counted only when replayed. An `\autoref` name is built at its target but typeset — and its errors
+/// raised, in TeX — only where an `\autoref` prints it (ruling 7e; [`replay_shown_deferred`]; witness
+/// biblatex-gost-examples, hyperref's Russian `\cyr…` names under TU).
+pub struct DeferredDiagnostics {
+  records:   Vec<(Level, String)>,
+  counts:    crate::common::error::ReportCounts,
+  missing:   Vec<(crate::common::arena::SymStr, usize)>,
+  undefined: Vec<(String, usize)>,
+}
+
+impl DeferredDiagnostics {
+  /// Write the records as if raised now, through the accounting of a live diagnostic: an Error is dropped once the
+  /// error cap or a resource Fatal has latched, counted, and checked against the cap; an undefined command is
+  /// reported once per document (`undefined` names already replayed, as its error stub makes it in LaTeXML). The
+  /// records keep the target's location.
+  fn replay(mut self, undefined_seen: &mut rustc_hash::FxHashSet<String>) {
+    use crate::common::error::{
+      LogStatus, note_error_cap, note_status, resource_fatal_latched, too_many_errors_latched,
+    };
+    for (level, message) in self.records {
+      let plain = strip_ansi(&message);
+      let key = plain.split_whitespace().next().unwrap_or("");
+      let mut parts = key.splitn(3, ':');
+      let (_, category, object) = (
+        parts.next(),
+        parts.next().unwrap_or(""),
+        parts.next().unwrap_or(""),
+      );
+      if level == Level::Error {
+        if too_many_errors_latched() || resource_fatal_latched() {
+          continue;
+        }
+        if category == "undefined" && !undefined_seen.insert(object.to_string()) {
+          continue;
+        }
+      }
+      if !hold_record(level, &message) {
+        write_record(level, message);
+      }
+      if level == Level::Error {
+        note_status(LogStatus::Error, None);
+        // As the live raise recorded it: only a name the scope's errors put on the undefined list.
+        if category == "undefined"
+          && let Some((_, n)) = self
+            .undefined
+            .iter_mut()
+            .find(|(name, n)| name == object && *n > 0)
+        {
+          *n -= 1;
+          note_status(LogStatus::Undefined, Some(object));
+        }
+        note_error_cap(&format!("{category}:{object}"));
+      }
+    }
+    crate::common::error::merge_report_counts(self.counts);
+    let mut report = crate::common::error::REPORT.borrow_mut();
+    for (key, n) in self.missing {
+      *report.missing.0.entry(key).or_default() += n;
+    }
+  }
+}
+
+/// The job's deferred diagnostics by id, until replayed or dropped.
+#[thread_local]
+static DEFERRED: RefCell<Vec<Option<DeferredDiagnostics>>> = RefCell::new(Vec::new());
+/// Label → (role of the held tag, deferred id) its target answers for.
+type HeldByLabel = rustc_hash::FxHashMap<String, Vec<(String, usize)>>;
+/// The deferred diagnostics each label's target answers for.
+#[thread_local]
+static DEFERRED_AT_LABEL: RefCell<Option<HeldByLabel>> = RefCell::new(None);
+/// Every reference to a label, with the `show` that prints its target's tags.
+#[thread_local]
+static LABEL_USES: RefCell<Vec<(String, String)>> = RefCell::new(Vec::new());
+
+/// Keep deferred diagnostics; their id.
+pub fn keep_deferred(deferred: DeferredDiagnostics) -> usize {
+  let mut kept = DEFERRED.borrow_mut();
+  kept.push(Some(deferred));
+  kept.len() - 1
+}
+
+/// The target of `label` answers for deferred diagnostics `id`, raised by its (or its ancestor's) tag of `role`.
+pub fn defer_to_label(label: &str, role: &str, id: usize) {
+  DEFERRED_AT_LABEL
+    .borrow_mut()
+    .get_or_insert_with(Default::default)
+    .entry(label.to_string())
+    .or_default()
+    .push((role.to_string(), id));
+}
+
+/// A reference to `label` prints its target's tags as `show` names them.
+pub fn note_label_use(label: &str, show: &str) {
+  LABEL_USES
+    .borrow_mut()
+    .push((label.to_string(), show.to_string()));
+}
+
+/// Replay the deferred diagnostics of every tag a reference prints — a held tag of role R answering for a label,
+/// referenced with a `show` naming R (a word of it: CrossRef's show words, `autoref`, `typerefnum`…; a looser split
+/// than CrossRef's, so it can only replay more) — once each; the rest are dropped unraised, as TeX never typesets them.
+/// Run once the document is built (forward references included); empties the job's registries.
+pub fn replay_shown_deferred() {
+  let uses = std::mem::take(&mut *LABEL_USES.borrow_mut());
+  let at_label = DEFERRED_AT_LABEL.borrow_mut().take().unwrap_or_default();
+  let mut deferred = std::mem::take(&mut *DEFERRED.borrow_mut());
+  // A command the document already reported undefined (a later live use, once the deferral had taken its stub back)
+  // is not reported again: once per document.
+  let mut undefined_seen: rustc_hash::FxHashSet<String> = crate::common::error::REPORT
+    .borrow()
+    .undefined
+    .0
+    .keys()
+    .map(|key| crate::common::arena::to_string(*key))
+    .collect();
+  for (label, show) in &uses {
+    let Some(held) = at_label.get(label) else {
+      continue;
+    };
+    for (role, id) in held {
+      let shown = show
+        .split(|c: char| !c.is_ascii_alphanumeric())
+        .any(|word| word.eq_ignore_ascii_case(role));
+      if shown && let Some(diagnostics) = deferred.get_mut(*id).and_then(Option::take) {
+        diagnostics.replay(&mut undefined_seen);
+      }
+    }
+  }
+}
+
+/// Forget the job's deferred diagnostics (each conversion's `initialize_report`), the empty held tags it was waiting
+/// on too: a persistent worker's next paper starts at none.
+pub fn reset_deferred_diagnostics() {
+  DEFERRED.borrow_mut().clear();
+  DEFERRED_AT_LABEL.borrow_mut().take();
+  LABEL_USES.borrow_mut().clear();
+  EMPTY_HELD_TAGS.set(0);
+}
+
+/// How many empty held tags are kept in the document, waiting for their target to settle them
+/// ([`note_empty_held_tag`]).
+#[thread_local]
+static EMPTY_HELD_TAGS: Cell<usize> = Cell::new(0);
+
+/// A held tag (`\lx@tag@intags@held`, latexml_engine tags_refnums.rs) that typeset nothing but holds diagnostics
+/// (`_deferred`) is kept, empty, until its target closes, which ties them to its labels (latex_constructs sect11.rs
+/// `tie_held_tags`) and then removes it ([`take_empty_held_tag`]); one no target closed over (a caption's tags folded
+/// into a minipage panel) is settled once the document is built (sect11.rs `settle_empty_held_tags`, tied to its
+/// owner's labels only: an unlabelled owner drops it with its diagnostics). A form that errs
+/// gives no content, and its errors are raised where a reference prints its role (cleveref_sty.rs
+/// `\lx@cref@docformat`; 2008.12750, 2604.24399).
+pub fn note_empty_held_tag() { EMPTY_HELD_TAGS.set(EMPTY_HELD_TAGS.get() + 1); }
+
+/// Whether an empty held tag is waiting for its target to settle it ([`note_empty_held_tag`]).
+pub fn empty_held_tags_pending() -> bool { EMPTY_HELD_TAGS.get() > 0 }
+
+/// One empty held tag ([`note_empty_held_tag`]) was removed.
+pub fn take_empty_held_tag() { EMPTY_HELD_TAGS.set(EMPTY_HELD_TAGS.get().saturating_sub(1)); }
+
+/// The document is built: every empty held tag is settled ([`note_empty_held_tag`]).
+pub fn settled_empty_held_tags() { EMPTY_HELD_TAGS.set(0); }
+
 /// initialize the logger at a given STDERR verbosity `level`
 ///
 /// `level` is the **console** verbosity (`--quiet` ⇒ `Warn`, default ⇒ `Info`,
-/// `--verbose`/`--debug` ⇒ `Debug`). Perl decouples this from the log-file floor:
+/// `--verbose` ⇒ `Debug`, which also admits un-featured `Debug` records; a `--debug`
+/// feature raises only the `max_level` floor, [`crate::common::error::enable_debug_feature`]). Perl decouples this from the log-file floor:
 /// the `.latexml.log` keeps a minimum of `Info` regardless of `--quiet`, while
 /// STDERR follows `level` (`Common/Error.pm` `_printline`; issue #763). So the
 /// global `log` `max_level` is set to the MORE verbose of `level` and `Info` (the
@@ -467,13 +999,90 @@ pub fn init(level: LevelFilter) -> Result<(), SetLoggerError> {
   // reflect the requested verbosity even if the logger was already installed (a
   // second `init` in-process returns `Err` from `set_logger`, which callers `.ok()`).
   STDERR_LEVEL.store(level as usize, Ordering::Relaxed);
-  log::set_max_level(level.max(LevelFilter::Info));
+  DEBUG_ALL.store(level >= LevelFilter::Debug, Ordering::Relaxed);
+  let floor = if crate::common::error::any_debug_feature_enabled() {
+    LevelFilter::Debug
+  } else {
+    LevelFilter::Info
+  };
+  log::set_max_level(level.max(floor));
   log::set_logger(&LOGGER)
 }
 
 #[cfg(test)]
 mod tests {
   use super::*;
+
+  /// A conversion's deferred diagnostics die with it: a persistent worker (cortex_worker) re-initializes the report
+  /// per paper (`initialize_report`), so a paper that stopped before `finish_document` cannot replay its held errors
+  /// into the next paper's log and status (60o review, ruling 7e). Each registry is guarded on its own: a stale
+  /// use, a stale tie and a stale deferred set each meet a next paper reusing id 0 and `LABEL:a`.
+  #[test]
+  fn deferred_diagnostics_die_with_the_conversion() {
+    use crate::common::error::{LogStatus, get_status, initialize_report};
+    let held = || DeferredDiagnostics {
+      records:   vec![(
+        Level::Error,
+        "Error:undefined:\\stale left by an earlier paper".to_string(),
+      )],
+      counts:    crate::common::error::ReportCounts::default(),
+      missing:   Vec::new(),
+      undefined: vec![("\\stale".to_string(), 1)],
+    };
+    // A stale use: the next paper ties its own held tag to `LABEL:a` but never references it.
+    initialize_report();
+    let id = keep_deferred(held());
+    defer_to_label("LABEL:a", "autoref", id);
+    note_label_use("LABEL:a", "autoref");
+    initialize_report();
+    let id = keep_deferred(held());
+    defer_to_label("LABEL:a", "autoref", id);
+    replay_shown_deferred();
+    assert_eq!(get_status(LogStatus::Error), 0, "stale use");
+    // A stale tie: the next paper references `LABEL:a`, whose target holds nothing.
+    initialize_report();
+    let id = keep_deferred(held());
+    defer_to_label("LABEL:a", "autoref", id);
+    initialize_report();
+    keep_deferred(held());
+    note_label_use("LABEL:a", "autoref");
+    replay_shown_deferred();
+    assert_eq!(get_status(LogStatus::Error), 0, "stale tie");
+    // A stale deferred set: the next paper ties and references id 0 without holding anything.
+    initialize_report();
+    keep_deferred(held());
+    initialize_report();
+    defer_to_label("LABEL:a", "autoref", 0);
+    note_label_use("LABEL:a", "autoref");
+    replay_shown_deferred();
+    assert_eq!(get_status(LogStatus::Error), 0, "stale deferred set");
+  }
+
+  /// A hold tells a Fatal raised in its scope (`fatal_raised`), which a caller taking its work back commits rather
+  /// than discards — Fatal stays Fatal (review rev94a r5, the writer's re-part take-back); an Error alone is no Fatal.
+  #[test]
+  fn a_hold_tells_a_fatal_raised_in_it() {
+    use crate::common::error::{LogStatus, get_status, initialize_report, note_status_from_logger};
+    initialize_report();
+    let hold = DiagnosticsHold::begin();
+    note_status_from_logger(LogStatus::Error);
+    assert!(!hold.fatal_raised(), "an Error is no Fatal");
+    note_status_from_logger(LogStatus::Fatal);
+    assert!(hold.fatal_raised());
+    hold.commit();
+    assert_eq!(
+      get_status(LogStatus::Fatal),
+      1,
+      "committed, the Fatal stays"
+    );
+    let hold = DiagnosticsHold::begin();
+    assert!(
+      !hold.fatal_raised(),
+      "one raised before the hold is not its own"
+    );
+    hold.discard();
+    initialize_report();
+  }
 
   #[test]
   fn append_note_inline_and_no_blank_lines() {

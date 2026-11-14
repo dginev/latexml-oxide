@@ -1,0 +1,17 @@
+% witness: aguplus/aguplus (aguplus.cls:314 \pt@format=\string#1)
+% oracle:  pdflatex 0 errors
+% engines: rust=0err+1warn perl=0err (2026-09-06)
+% expect:  0 errors AND no "Unrecognized tabular template" warning; 3-col tabular
+% status:  GREEN (batch 56z, 2026-09-06)
+% mechanism: real \@mkpream \edef-expands the preamble (latex.ltx:16610-16637) so
+%   \string lcc -> l(12)cc. ReadAlignmentTemplate (alignment.rs:1040-1061) expands
+%   token-macros but excludes the fully-expandable primitive \string -> warning.
+\documentclass{article}
+\makeatletter
+\def\pt@format{\string lcc}
+\begin{document}
+\begin{tabular}{\pt@format}
+A & $45^\circ$ & $90^\circ$\\
+B & $56^\circ$ & $124^\circ$
+\end{tabular}
+\end{document}

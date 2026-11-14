@@ -1,0 +1,22 @@
+% LGR slots decode to the glyph the font carries: the CB fonts' encoding
+% vector (fonts/enc/dvips/cbfonts/CB.enc) names slot 85 `U` /Upsilon (Υ, not
+% ϒ), 106/107 `j`/`k` /theta /kappa (θ κ, not ϑ ϰ), 223 /Upsilondieresis (Ϋ,
+% lgrenc.def:861 `\accdialytika` U; not ϔ) and 184 omegatonos (ώ, not ὼ);
+% lgrenc.def declares 6/18/21/22/26 as ϛ ϟ Ϙ Ϛ ə; a lone `>` is the psili ᾿
+% (CB.enc uni1FBF), not the quotation mark ’. Perl's lgr.fontmap.ltxml
+% carries the variants (KPE), and its ligature table lists the omicron and
+% upsilon accent slots with a stray `|` (iota subscript), so `'o` stayed `´ο`.
+% witness: teubner/teubner-doc (pdflatex; ΑϔΛΟΣ vs ΑΫΛΟΣ), greek-fontenc
+%          test-lgrenc, char-list; arXiv 2605.01889 (`\DeclareSymbolFont
+%          {sfgreek}{LGR}{cmss}`, math θ came out ϑ)
+% oracle:  pdflatex 0 errors: [Υ] [θκ] [ώ] [Ϋ] [λόγου] [ὔ] [ὁ] [᾿Εν] [ϛ ϟ Ϙ Ϛ ə]
+% engines: rust (56jd) = [ϒ] [ϑϰ] [ὼ] [ϔ] [λ´ογου] [῎υ] [‛ο] [’Εν] [Ϛ Ϟ Ϛ  Ə]
+% expect:  0 errors, 0 warnings; the pdflatex text
+% guard:   greek_text::lgr_slots_decode_to_the_font_glyphs
+% status:  GREEN (W11, 2026-09-25; was RED)
+\documentclass{article}
+\usepackage[LGR,T1]{fontenc}
+\begin{document}
+{\fontencoding{LGR}\selectfont [U] [jk] ['w] [\accdialytika U] [l'ogou] [>'u] [<o] [>En]
+[\textstigma\ \textkoppa\ \textQoppa\ \textStigma\ \textschwa]}
+\end{document}

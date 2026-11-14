@@ -1,0 +1,11 @@
+% witness: rev77x finding 7 (ot4enc.def:82 and ly1enc.def:42 `\DeclareTextSymbol{\j}{…}{17}`)
+% oracle:  pdflatex 0 errors; slot 17 of the OT4 and LY1 fonts is the dotless j ȷ U+0237
+% engines: rust int36a = dropped silently; 77x r1 = dropped with a Warning each ("has no Unicode glyph for it"); Perl
+%          dropped (ot4.fontmap.ltxml and ly1.fontmap.ltxml leave slot 17 undef)
+% expect:  0 errors, 0 warnings; "OT4 ȷ, LY1 ȷ."
+% status:  GREEN (77x r2, ot4_fontmap.rs, ly1_fontmap.rs)
+\documentclass{article}
+\usepackage[OT4,LY1,T1]{fontenc}
+\begin{document}
+OT4 {\fontencoding{OT4}\selectfont\j}, LY1 {\fontencoding{LY1}\selectfont\j}.
+\end{document}

@@ -1,0 +1,18 @@
+% witness: run-367 E->F C14: 1812.09490 (its program.sty then made the opened math a Fatal)
+% oracle:  pdflatex: minted's own errors only (no Pygments here, a harness limit); minted's options are its own
+%          (minted.sty:1005 `mathescape=false`, :1013 `texcl=false`, :1019 `escapeinside=`), never `\lstset`'s
+% engines: rust int32a = 1 error (the document's `mathescape`/`escapechar` reached the minted body: `$` opened math,
+%          `|` escaped), perl = no minted binding (5 errors)
+% expect:  0 errors, 0 warnings; the listing line reads `sed "s/$/ -a 127/" | bash`
+% status:  RED (int32a) -> GREEN (77q: minted_sty.rs `MINTED_LST_RESET`)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage[draft=true]{minted}
+\usepackage{listings}
+\lstset{mathescape=true,escapechar=|}
+\begin{document}
+\begin{minted}{bash}
+sed "s/$/ -a 127/" | bash
+\end{minted}
+After.
+\end{document}

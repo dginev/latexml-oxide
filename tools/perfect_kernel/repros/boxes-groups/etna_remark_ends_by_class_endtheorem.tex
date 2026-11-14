@@ -1,0 +1,23 @@
+% witness: 2409.06465, 2603.20879 (etna.cls:288-326: `\remark` = `{\refstepcounter…\@begintheorem{…}{…}\upshape
+%   \ignorespaces}`, `\endremark` = `\endtheorem`, the class's `\@endtheorem` = `\egroup\ignorespacesafterend`) — the
+%   rc_struct4 E4 shape (agent_reports/2026-10-17_rc_struct4.md)
+% oracle:  pdflatex 0 errors: `\remark`'s `}` closes `\@begintheorem`'s `\bgroup`, leaving its own `{` open; `\end{remark}`
+%   runs latex.ltx's `\endtheorem` = `\@endtheorem` (the class's), whose `\egroup` closes that `{`; "Remark 1. A remark.
+%   After."
+% engines: rust 67int19 = 1 ("\endgroup Attempt to close non-boxing group": the native `\endtheorem` of the
+%   theorem binding never runs the class's `\@endtheorem`), perl = 2 (SHARED)
+% expect:  0 errors; "Remark 1. A remark." then "After." outside it
+% status:  RED (70b: not local — the theorem environments are native constructs whose end does not consult a class's
+%   `\@endtheorem`; SYNC_STATUS "Perfect-kernel RED repros")
+\documentclass{article}
+\makeatletter
+\newtheorem{theorem}{Theorem}
+\def\@begintheorem#1#2{\par\bgroup{\scshape #1\ #2. }\itshape\ignorespaces}
+\def\@endtheorem{\egroup\ignorespacesafterend}
+\def\remark{{\refstepcounter{theorem}\@begintheorem{Remark}{\thetheorem}\upshape\ignorespaces}}
+\def\endremark{\endtheorem}
+\makeatother
+\begin{document}
+\begin{remark} A remark. \end{remark}
+After.
+\end{document}

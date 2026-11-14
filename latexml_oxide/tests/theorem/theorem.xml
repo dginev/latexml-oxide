@@ -86,7 +86,7 @@
       </tags>
       <title class="ltx_runin"><tag><text font="smallcaps">Definition 1.1</text></tag></title>
       <para xml:id="S1.Thmdefinition1.p1">
-        <p>A definition</p>
+        <p><text font="italic">A definition</text></p>
       </para>
     </theorem>
   </section>

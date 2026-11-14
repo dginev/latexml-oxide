@@ -1,0 +1,19 @@
+% mechanism: a compound legend label is given to a name carrying only one of its symbols (OD #928 round 9, Known
+%   residual, the compound-mark class; OD #927 `Resolver::compound`): `$^{*\dagger}$Corresponding author` under
+%   `Ann Able$^{1,*\dagger}$ and Bob Baker$^{1,*}$` is Ann Able's alone by OD #927's rule (one mark printing distinct
+%   symbols together names the names carrying them all, 2602.19190), but the API's legend also reaches Bob Baker,
+%   who carries only `*` — since 93a.
+% witness: 2602.19190; review rev94a r8 w/w10
+% oracle:  pdflatex 0 errors: "Ann Able1,∗† and Bob Baker1,∗ / 1Univ X / ∗†Corresponding author"
+% engines: rust 93a, 94a r8, r9: the note on both names (mark=∗, its text "∗†Corresponding author"); perl: not run
+% expect:  0 errors, 0 warnings; the note Ann Able's alone, its mark ∗†; Univ X both names'
+% status:  RED (catalog, no guard)
+% preload: ar5iv.sty
+\documentclass{revtex4-2}
+\begin{document}
+\title{A Title}
+\author{Ann Able$^{1,*\dagger}$ and Bob Baker$^{1,*}$}
+\affiliation{$^1$Univ X\\ $^{*\dagger}$Corresponding author}
+\maketitle
+Body.
+\end{document}

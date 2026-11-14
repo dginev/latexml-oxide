@@ -1,0 +1,13 @@
+% witness: 57t review; bm.sty `\bmdefine{}{y}` defines nothing (\bm@define's `\xdef#1` of an empty argument)
+% oracle:  pdflatex 4 errors, the first "! LaTeX Error: Missing \begin{document}." (the empty `\xdef` leaves `y` to be
+%          typeset in the preamble)
+% engines: rust 57s 0 errors (silently nothing), 57t 1 error; perl 1 error "Error:expected:DefToken Missing argument DefToken"
+%          (bm.sty.ltxml `\newcommand{}{...}`)
+% expect:  1 error, "Missing the command to define"
+% status:  GREEN (57t; guard 57u)
+\documentclass{article}
+\usepackage{bm}
+\bmdefine{}{y}
+\begin{document}
+$x$
+\end{document}

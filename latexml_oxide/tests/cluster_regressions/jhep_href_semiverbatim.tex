@@ -13,7 +13,12 @@
 % mode. The Rust port had omitted this override, leaving `\href`
 % bound to hyperref's `HyperVerbatim {}` (BODY arg retains SUPER
 % catcode), and the trailing `^` errored in math mode.
-\documentclass{PoS}
+%
+% The witness is a PoS-hep paper (read with the PoS binding) that defines its own
+% `\newcommand{\am}{…}` (Pallis.tex:175). Since 64x, PoS no longer loads JHEP's journal
+% macros (PoS.cls defines none), so the paper's `\am` stands there. The JHEP
+% mechanism this fixture guards is exercised with JHEP itself.
+\documentclass{JHEP}
 \newcommand{\ld}{\ensuremath{\lambda}}
 \newcommand{\mgr}{\ensuremath{m_{3/2}}}
 \begin{document}

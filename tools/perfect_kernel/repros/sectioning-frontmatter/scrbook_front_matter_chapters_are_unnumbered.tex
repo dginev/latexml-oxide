@@ -1,0 +1,25 @@
+% witness: 2506.17485 (scrbook thesis: `\frontmatter` … Abstract, `\mainmatter` 1 Introduction …, `\backmatter`)
+% oracle:  pdflatex 0 errors, 0 warnings: "Pre" (unnumbered), "1 One", "1.1 S", "Figure 1.1: F", "A App", "A.1 T"
+% engines: Perl no KOMA binding (OmniBus→article: no chapters); rust 72a r10 (the int23 base the same) = "Chapter 1
+%          Pre", "Chapter 2 One", "2.1 S" (KOMA's `\frontmatter` switches only `\if@mainmatter`, which LaTeXML's
+%          sectioning does not read); 67int22 the same with counter-named ids (chapter1)
+% expect:  0 errors, 0 warnings; the front-matter chapter Chx1 "Pre" unnumbered, Ch1 "Chapter 1 One", Ch1.S1 "1.1 S",
+%          the appendix A1 "Appendix A App" with A1.S1 "A.1 T"
+% status:  RED (int23 base) -> GREEN (int23 fix, 72a review r7 SHOULD 1)
+% preload: ar5iv.sty
+\documentclass{scrbook}
+\RedeclareSectionCommand[afterskip=1em,beforeskip=1em]{chapter}
+\begin{document}
+\frontmatter
+\chapter{Pre}
+Pre.
+\mainmatter
+\chapter{One}
+\section{S}
+Text.
+\begin{figure}x\caption{F}\end{figure}
+\appendix
+\chapter{App}
+\section{T}
+More.
+\end{document}

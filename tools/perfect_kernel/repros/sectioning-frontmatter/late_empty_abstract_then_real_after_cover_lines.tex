@@ -1,0 +1,22 @@
+% An empty late `{abstract}` before the real one, a cover line before each (2404.04417's shape): the empty one adds no
+% entry, so its marker places nothing (`LATE_MARK_ORDINAL`, cover_order.rs), and the real abstract follows both cover
+% lines, as pdflatex prints it. Counted markers placed it behind the first line only.
+% witness: review probe q09 (86i r1); 2404.04417 (elsarticle).
+% Guard: perfect_kernel_batch86i::second_late_abstract_follows_its_own_cover_line.
+% oracle:  pdflatex 0 errors: "Cover line one Abstract Cover line two Abstract Real late abstract. 1 Intro".
+% engines: perl: an empty abstract and the real one at the head, then the cover lines.
+%          rust int117a and 86i r1: titlepage (one), the real abstract, para (two).
+% expect:  0 errors, 0 warnings; title, creator, titlepage (one, two), abstract, section.
+% status:  RED (int117a, 86i r1) -> GREEN (86i r2)
+\documentclass{article}
+\title{Probe Title}\author{Ann Author}
+\begin{document}
+\maketitle
+\begin{center}Cover line one\end{center}
+\begin{abstract}
+\end{abstract}
+\begin{center}Cover line two\end{center}
+\begin{abstract}Real late abstract.\end{abstract}
+\section{Intro}
+Intro text.
+\end{document}

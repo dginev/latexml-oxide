@@ -1,0 +1,22 @@
+% mechanism: e-TeX's `\readline` is an unexpandable assignment of `\read`'s class (etex.ch
+%   `read_to_cs`), so the number scan of `\endlinechar=-1%` + a newline + `\readline` (tex.web
+%   §445) ends at it and the line is read with `\endlinechar` already -1. Perl's `DefMacro`
+%   (eTeX.pool.ltxml:233, etex.rs) read the line as it expanded, inside the scan's look-ahead: the
+%   macro got a trailing `^^M`.
+% witness: batch 56jw audit (latexgit.sty:53-54, shdoc.sty:210-211 use the idiom)
+% oracle:  pdflatex 0 errors: "RLSAME"
+% engines: rust (56js) = "RLDIFF", 0 errors; perl = "RLDIFF"
+% expect:  0 errors, 0 warnings; <p>RLSAME</p>
+% status:  RED (56jw) -> GREEN (56jw)
+\begin{filecontents*}[overwrite]{\jobname.txt}
+abc
+\end{filecontents*}
+\documentclass{article}
+\newread\rl
+\begin{document}
+\openin\rl=\jobname.txt
+{\endlinechar=-1%
+\readline\rl to \y
+\edef\z{\detokenize{abc}}\ifx\y\z RLSAME\else RLDIFF\fi}
+\closein\rl
+\end{document}

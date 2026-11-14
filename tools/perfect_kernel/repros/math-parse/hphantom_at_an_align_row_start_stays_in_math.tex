@@ -1,0 +1,19 @@
+% witness: 57n A/B, arXiv 2605.21158 (`\hphantom{\hspace{1.8cm}(\C\, \hat \nabla u )}` opening an align
+%          row). At a row start the alignment expands ahead for `\omit`/`\noalign` (tex.web §785); Perl's
+%          `\hphantom` begins with `\protect` (math_common.pool.ltxml:655), which stops that scan, so
+%          `\ifmmode` is read after the template's `$`; the Rust brace-guarded `\hphantom`
+%          (math_common.rs, `\@ifnextchar\bgroup…`) expanded to `\ifmmode` in the scan, took the text
+%          branch, and digested the argument outside math (57n's requireMath then warns `\hat`)
+% oracle:  pdflatex 0 errors; perl 0 diagnostics, the phantom as math spacing
+% engines: rust 57n first cut: `Warning:unexpected:\hat \hat should only appear in math mode`, an
+%          `ltx_phantom` text inside the formula
+% expect:  0 errors, 0 warnings; the phantom as the math hint (lpadding on y)
+% status:  RED (57n first cut) -> GREEN (57n)
+\documentclass{article}
+\usepackage{amsmath}
+\begin{document}
+\begin{align}
+A &= 0,\\
+\hphantom{(\hat x)} y &= 1.
+\end{align}
+\end{document}

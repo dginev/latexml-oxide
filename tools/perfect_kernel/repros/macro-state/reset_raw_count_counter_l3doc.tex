@@ -1,0 +1,16 @@
+% witness: ltx-talk/ltx-talk-code (\RenewDocumentCommand\maketitle{}{\clearpage\part{\@title}}, run per
+%   \DocInput; any doc.sty/l3doc document with \part)
+% oracle:  lualatex 0 warnings
+% engines: rust=2 Warning:expected:register (\c@UNCodelineNo is not a register) perl=same (SHARED)
+% expect:  0 warnings; two parts
+% status:  GREEN (batch 56gm)
+% mechanism: l3doc.cls:463 \@addtoreset{CodelineNo}{part}; doc.sty:870 allocates \c@CodelineNo with a
+%   raw \newcount, so LaTeXML's \c@UNCodelineNo companion never exists; ResetCounter assigned it
+%   unconditionally (Perl Package.pm:886 too). Now only an existing companion is reset (#268).
+\documentclass{l3doc}
+\begin{document}
+\part{Alpha}
+Body one.
+\part{Beta}
+Body two.
+\end{document}

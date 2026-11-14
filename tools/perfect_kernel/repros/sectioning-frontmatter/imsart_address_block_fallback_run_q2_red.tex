@@ -1,0 +1,35 @@
+% mechanism: an imsart address block is given to the authors whose `\ead` labels its `\printead{eN}` cites, with
+%   `annotate=run` as the fallback (`imsart_cls.rs` `citing_authors`); the fallback's run does not end at the
+%   `author:N`-labelled contacts an earlier cited block made. OXIDIZED_DESIGN_DIVERGENCES #986 (known RED)
+% witness: review revCR4b finding 2, probe q2 (synthetic; none of the 1,721 byte-diff papers has the shape)
+% oracle:  pdflatex prints each block under the authors it names
+% engines: CR4b: a block naming all three authors but citing only e2 goes to Bob alone
+% expect:  each block on the authors it names; no word lost either way
+% status:  RED (CR4b)
+\begin{filecontents*}{imsart.sty}
+\NeedsTeXFormat{LaTeX2e}\ProvidesFile{imsart.sty}[2012/01/01 IMS article style, shortened and modified]
+\DeclareRobustCommand\ead[2][label= ,email]{\expandafter\gdef\csname ead@\detokenize{#1}\endcsname{#2}}
+\def\printead#1{e-mail: \texttt{\csname ead@label=#1\endcsname}}
+\newenvironment{aug}{}{\par}
+\newenvironment{frontmatter}{\begin{center}}{\end{center}}
+\def\and{\unskip~and~}
+\def\author{\@ifnextchar[{\author@fmt}{\author@fmt[]}}
+\def\author@fmt[#1]#2{\bgroup\def\fnms##1{##1}\def\snm##1{##1}#2\egroup}
+\def\address{\@ifnextchar[{\address@fmt}{\address@fmt[]}}
+\def\address@fmt[#1]#2{\par\begin{tabular}[t]{@{}l@{}}#2\end{tabular}\par}
+\end{filecontents*}
+\documentclass{article}
+\usepackage{imsart}
+\begin{document}
+\begin{frontmatter}
+\title{A Title}
+\begin{aug}
+\author{\fnms{Ann} \snm{Able}\ead[label=e1]{ann@x.edu},}
+\author{\fnms{Bob} \snm{Baker}\ead[label=e2]{bob@y.org}}
+\and
+\author{\fnms{Carl} \snm{Cole}\ead[label=e3]{carl@z.edu}}
+\address{A. Able, B. Baker and C. Cole\\ Univ ABC\\ \printead{e2}}
+\end{aug}
+\end{frontmatter}
+Body.
+\end{document}

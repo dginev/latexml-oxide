@@ -1,0 +1,7 @@
+% mechanism: siunitx's `S` cell read stops at the `\end` token by name (siunitx_sty.rs:1815), so a last row with no `\\` ended by a frozen copy of `\end` reads on; siunitx.sty:5647 stops at the token's meaning.
+% witness: review revM3r2P1
+% oracle:  pdflatex 0 errors
+% engines: rust int141a 0 errors; M3r2 5 errors, "After." and the next table lost
+% expect:  0 errors; the tables and "After." kept
+% status:  RED
+\documentclass{article}\usepackage{siunitx}\usepackage{booktabs}\usepackage{array}\let\oldend\end\begin{document}\begin{tabular}{S}1.5\\2.5\oldend{tabular} After.\begin{tabular}{S}7\end{tabular}\end{document}

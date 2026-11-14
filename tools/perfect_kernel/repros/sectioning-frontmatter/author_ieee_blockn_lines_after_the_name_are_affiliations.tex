@@ -1,0 +1,11 @@
+% witness: 63e review r1 finding 3 (an \IEEEauthorblockN holding its affiliation lines)
+% oracle:  pdflatex 0 errors: "Ann Able" over "University of X, City, Country"
+% engines: rust (63e r1) = four authors (each line, each comma piece); rust 63d and Perl one personname
+% expect:  1 creator, Ann Able, with the line as its affiliation; 0 errors
+% status:  RED (63e r1) -> GREEN (63e)
+\documentclass[conference]{IEEEtran}
+\author{\IEEEauthorblockN{Ann Able\\ University of X, City, Country}}
+\title{T}
+\begin{document}
+\maketitle
+\end{document}

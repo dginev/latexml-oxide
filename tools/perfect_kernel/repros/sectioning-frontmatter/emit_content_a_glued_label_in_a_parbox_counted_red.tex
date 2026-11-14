@@ -1,0 +1,17 @@
+% mechanism: 2204.02412's glued repeated label (`(CAP$^3$)`) inside a `\parbox`: the writer cuts the line there as in
+%   the plain block, and the content check counts the "3" (`resolver::placed::retold_words`, CT1ar)
+% witness: synthetic (CT1ar sibling of 2204.02412)
+% oracle:  pdflatex (TL 2025) 0 errors: "Ann Able1 , Bob Baker2,3 / 1Univ X, Town / 2Univ Y, City / 3Center for Astro
+%   (CAP3 ), Univ Z"
+% engines: rust CT1arbase: Bob "Center for Astro (CAP" and ", Univ Z", 0 warnings; CT1ar: the same, 1 Warning naming "3"
+% expect:  0 errors, 0 warnings; Bob "Univ Y, City", "Center for Astro (CAP3), Univ Z"
+% status:  RED (the cut) — the loss counted since CT1ar (perfect_kernel_batchn2::a_glued_label_cut_as_an_entry_is_counted);
+%   moves: post-merge (the events-side cutter's S1 rule, SYNC row 99a)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{\parbox{10cm}{\centering Ann Able$^{1}$, Bob Baker$^{2,3}$ \\ $^1$Univ X, Town \\ $^2$Univ Y, City \\ $^3$Center for Astro (CAP$^3$), Univ Z}}
+\maketitle
+Text.
+\end{document}

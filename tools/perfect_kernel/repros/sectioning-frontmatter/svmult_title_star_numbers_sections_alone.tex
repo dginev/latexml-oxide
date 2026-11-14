@@ -1,0 +1,17 @@
+% witness: sel78c item 7; svmult.cls (v5.4) :2069 \title* is \ds@numart (:1034-1042, sections "1"), :2149-2151 the
+%          chapter stepped and stepped back, :713 the main-matter \appendix is \par
+% oracle:  pdflatex 0 errors (svmult.cls v5.4): "1 First", "Text 1.", "2 Proofs"
+% engines: rust int43a = "1 First", the appendix an ltx:appendix "2" (A0.S2)
+% expect:  0 errors; sections "1" and "2", the second a section
+% status:  RED (int43a) -> GREEN (78c)
+\documentclass{svmult}
+\begin{document}
+\title*{Contribution}
+\author{Ann}
+\maketitle
+\section{First}\label{f}
+Text \ref{f}.
+\appendix
+\section{Proofs}
+Proof.
+\end{document}

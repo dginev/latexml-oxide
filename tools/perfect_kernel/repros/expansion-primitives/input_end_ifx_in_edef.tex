@@ -1,0 +1,25 @@
+% mechanism: \ifx and \ifdefined read their tokens at `normal` scanner status whatever the
+%   enclosing scan (tex.web §507 saves the status and sets normal; eTeX's if_def_code alike),
+%   so inside an \edef body they cross the end of an \input file instead of meeting the
+%   definition's runaway (§338).
+% witness: batch 56jj review (reviewer probes ifxmain.tex / ifdmain.tex)
+% oracle:  pdflatex 0 errors, "I [macro:->YES]", "J [macro:->YES]"
+% engines: rust (56jj before the fix) = "File ended while scanning definition" twice, the
+%          inserted } taken as \ifx's second token: \y = NO and the body ran on
+% expect:  0 errors, "I [macro:->YES]", "J [macro:->YES]"
+% status:  GREEN (56jj: the NormalToken parameter; guard
+%          token_kernel_gaps::ifx_reads_at_normal_status_in_a_definition)
+\documentclass{article}
+\begin{filecontents*}{input_end_ifx_in_edef_x.tex}
+\edef\y{\ifx\foo
+\end{filecontents*}
+\begin{filecontents*}{input_end_ifx_in_edef_d.tex}
+\edef\z{\ifdefined
+\end{filecontents*}
+\def\foo{F}
+\makeatletter
+\begin{document}
+I \@@input input_end_ifx_in_edef_x.tex \foo YES\else NO\fi}[\meaning\y]
+
+J \@@input input_end_ifx_in_edef_d.tex \foo YES\else NO\fi}[\meaning\z]
+\end{document}

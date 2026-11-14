@@ -1,0 +1,16 @@
+% witness: 1503.06772, 1305.7403 (acm_proc_article-sp), 1502.04662, 1505.00875 (sig-alternate.cls:283 `\def\alignauthor{\end{tabular}\hfil\begin{tabular}[t]{c}}`), 1304.2617; 68 of the census's 30k papers
+% oracle:  pdflatex 0 errors: three columns, each a name over its lines
+% engines: Perl: raw, one tabular's end per call, an error; ours before Z14: the rehearsal ran the juggle outside any tabular: four errors held on the block, the writer out, the columns one name's lines
+% expect:  0 errors, nothing held; each column its creator with its own lines (perfect_kernel_batchz14::alignauthor_is_a_column_of_the_rehearsal)
+% status:  GREEN (Z14)
+\documentclass{article}
+\newcommand\alignauthor{\end{tabular}\hfil\begin{tabular}[t]{c}}
+\newcommand\affaddr[1]{{\small #1}}
+\begin{document}
+\title{T}
+\author{\alignauthor Ann Able\\ \affaddr{Univ A}\\ \affaddr{ann.able@a.org}
+\alignauthor Bob Baker\\ \affaddr{Univ B}\\ \affaddr{bob.baker@b.org}
+\alignauthor Cat Cole\\ \affaddr{Univ C}\\ \affaddr{Lab C}\\ \affaddr{cat.cole@c.org}}
+\maketitle
+Body.
+\end{document}

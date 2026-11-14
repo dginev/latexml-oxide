@@ -1,0 +1,22 @@
+% mechanism: REVTeX's `\affiliation` with an unmarked first entry over lines marks lead: the first entry is the one
+%   mark the names request that no line prints (superscriptaddress numbers it 1 and prints it once, after the call's last
+%   name), so it is the names' showing that mark; the marked lines the names' showing theirs
+%   (`revtex4_support_sty::unmarked_head_over_marked_lines`, `relocate::requested_marks_unprinted`); before, the
+%   fail-safe sent the whole block to a nameless creator
+% witness: 2109.01501 (revtex4-2 `\affiliation{Institute of Materials …, Japan \\ $^2$Waseda … \\ $^3$Toyota …}`), 1903.07834
+% oracle:  pdflatex (TL 2025) 0 errors: "Ann Able1,2 , Bob Baker2,3 and Cy Cole1 / 1 Univ A, Nagoya, Japan / 2 Univ B, Tokyo, Japan / 3 Inst C, Nagakute, Japan"
+% engines: rust int139a: a nameless creator holding the whole block, no author an affiliation
+% expect:  0 errors, 0 warnings; Ann Univ A + Univ B, Bob Univ B + Inst C; no nameless creator
+%   (residual: Cy, whose "1" is revtex's own number after the last name, holds nothing, as before)
+% status:  RED (int139a) -> GREEN (107e) — perfect_kernel_batch107e::an_unmarked_first_entry_is_its_unprinted_marks
+% preload: ar5iv.sty
+\documentclass[reprint,superscriptaddress,prr]{revtex4-2}
+\begin{document}
+\title{T}
+\author{Ann Able$^{1,2}$, Bob Baker$^{2,3}$ and Cy Cole}
+\affiliation{Univ A, Nagoya, Japan \\
+$^2$Univ B, Tokyo, Japan \\
+$^3$Inst C, Nagakute, Japan}
+\maketitle
+Text.
+\end{document}

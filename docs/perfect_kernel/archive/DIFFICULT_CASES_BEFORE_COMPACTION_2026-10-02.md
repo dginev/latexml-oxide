@@ -1,0 +1,473 @@
+# Perfect Kernel — difficult / open-ended cases (catalog)
+
+Cases where "perfect conversion" is not a mechanical kernel fix but a design
+question. Each entry: what the construct is, why it is hard under raw
+interpretation, and the current plan. Add cases as sweeps surface them; move
+an entry to the ledger's fix log when it stops being open-ended.
+
+## D1. PGF/TikZ drawing layer
+
+Most modern package manuals draw their own figures with TikZ. Raw-interpreting
+`tikz.sty` means emulating the pgf driver layer (`\pgfsysdriver`), specials,
+and box measurements. LaTeXML(-oxide) has a curated tikz path producing SVG;
+under `rawstyles` the curated binding still wins (bindings outrank raw — same
+as Perl), so TikZ figures ride the existing support. **Open**: tikz *libraries*
+loaded via `\usetikzlibrary{…}` raw-load pgf module files of very different
+quality; catalog per-library breakage as it appears.
+
+## D2. Alignment-preamble dialects (nicematrix, tabularray, …)
+
+Packages that extend the `array` column language (`w{c}{1cm}`, custom column
+letters, bracketed first-row/last-col options) feed preambles through their own
+parsers built on `\@mkpream`/`\newcolumntype`. LaTeXML replaces the whole
+alignment pipeline with its own template reader (`latexml_core/alignment.rs`),
+so raw-defined column machinery is bypassed and unknown template letters spray
+`Unrecognized tabular template` warnings (nicematrix baseline: ~79k warnings on
+one manual). **Plan**: make the template reader honor raw `\newcolumntype`
+definitions and unknown-letter recovery without per-package bindings; measure
+on nicematrix + tabularray manuals.
+
+## D3. Verbatim-adjacent scanners (fancyvrb, shortvrb, listings, minted, piton)
+
+Manuals demonstrate their own syntax inside verbatim variants with custom
+catcode regimes, inline short-verb (`\MakeShortVerb{\|}`), and "example +
+rendered result" environments that read the same body twice. Catcode-faithful
+mouth behavior is kernel work and in scope; packages that shell out (minted,
+piton with Python) can at best degrade to plain verbatim. **Open**: define the
+degradation contract (content preserved, highlighting dropped).
+
+## D4. Unsupported graphics backends / specials
+
+Raw code that emits driver specials (`\special`, pdfTeX primitives like
+`\pdfliteral`/`\pdfximage`, LuaTeX callbacks) has no meaning in XML. The
+kernel should parse and no-op them *silently* where they are pure rendering,
+and record a difficult-case entry where content is carried (e.g. annotations).
+
+## D5. Placement semantics (floats, marginpar, side-notes, wrapfig)
+
+PDF golden shows exact placement; XML deliberately abstracts it. "Perfect"
+here = content present, order sensible, placement hints preserved as
+attributes — not pixel parity. Audit rule for S3: every float/marginnote body
+must exist in the XML; where it lands is not a defect.
+
+## D6. LuaLaTeX-only manuals — REVISED 2026-08-31 (user directive)
+
+A Lua interpreter (`texlua`) may be assumed wherever TeX Live is installed,
+so LuaTeX ESCAPES are now in scope: `latexml_engine::lua_bridge` runs a
+persistent per-conversion texlua; `\lx@directlua` evaluates chunks with
+LuaTeX-manual semantics (job-persistent state, `tex.print`/`tex.sprint`
+re-entering the input with current catcodes), and the luacode.sty binding
+maps `\luadirect`/`\luaexec`/`\luastring*`/`{luacode}`(`*`) onto it.
+The strategy question — native emulation vs rebinding into our XML model —
+is settled in [`LUA_REBINDING.md`](LUA_REBINDING.md) (2026-08-31): texlua has
+no engine, so every `tex.*` touchpoint is our shim by construction; shims are
+tiered translate / mirror / absorb. `tex.count`/`tex.dimen` reads AND writes
+now mirror the live Rust State over the pipe (no more stub zeros); `require`
+resolves texmf Lua modules via kpse + lualibs. Out of scope remains only the
+node/font/callback layer (typesetter internals — binding territory when a
+package's node output carries content). The engine deliberately does NOT
+define `\directlua` itself: that name is the LuaTeX-detection probe for
+babel & friends, and claiming it flips whole package ecosystems onto luatex
+code paths (26 suite tests red). fontspec-style font selection remains
+absorbable presentation (see fontspec cluster).
+
+**The last non-policy oracle-clean residue is this family (scoped 2026-09-09; seven pdflatex-clean manuals: cjk-ko-doc, oblivoir-simpledoc, kotex-doc, kotex-utf-doc, sample-bxcjkjatype-beamer, bxcoloremoji-shortnames, gentombow).** All SHARED (same-host Perl errors on every one, five of them at its 100-error cap). Two mechanisms: (A) the pdfTeX BYTE mouth — cjkutf8-josa.sty:176-194 `\DeclareRobustCommand*\^^ea[2]` defines a control SYMBOL over the first UTF-8 byte of a hangul syllable and reads the next two bytes as arguments, and dhucs-trivcj.sty:18 `\ifx 가가` probes the engine by comparing two BYTES; our Unicode mouth tokenizes a syllable as one codepoint, so `\를`/`\은`/`\japanese` are undefined (kotex-utf-doc 27, the others 1-4). The only faithful mechanism is a pdfTeX byte-mouth mode in `latexml_core::mouth` (when the persona is pdfTeX and a package makes the high bytes catcode 12 — kotexutf.sty:40-41, CJK's `.bdg` — tokenize multibyte UTF-8 as catcode-12 bytes): a kernel program, MED-HIGH risk, no Perl to port from (Perl has no kotex/CJK binding), no hangul-keyed special case allowed. (B) the `\pdfoutput=0` persona (`pdftex.rs:11`, K6): gentombow.sty:582's driver branch and bxcoloremoji.sty:461's `\ifnum\pdfoutput>0` graphicx gate — the corpus-wide backend decision, not a local fix. Micro-gaps found on the way: `\nopagecolor` (color.sty:110, a no-op driver info) and beamer's `\trans…` transitions (beamerbaseoverlay.sty:755-772) — landed as batch 56bj; neither zeroes a doc alone. Notes `~/data/pk_agents/w22/cjk-residue/NOTES.md`.
+
+## D9. pTeX/upTeX (Japanese) class ecosystem
+
+`jsarticle.cls`/jsclasses raw-load under rawclasses and immediately hit the
+pLaTeX kernel surface: `\hour`/`\minute` (plcore time registers, jsarticle.cls
+L106 — sweep-11 first-error in 33 docs, witness bxbase/bxbase-ja), then
+`\kanjiskip`, `\prebreakpenalty`, kanji character classes. This is the
+same out-of-scope engine family as the CJK/luatexja cluster (pTeX primitives
+outside the pdfTeX model): defining `\hour` alone just moves the failure one
+primitive deeper. Catalog per bundle; a pLaTeX profile would be its own
+mission-level decision.
+
+Sweep-13 confirmation (2026-08-31): `\hour` remains rank-4 by bundles (16
+bundles / 32 docs, bxbase/bxjaprnind…); `\epTeXinputencoding` (6 bundles,
+asternote = jlreq class, 94 errors deep) and `\newXeTeXintercharclass`
+(datetime2-* xe/lua test files, D6-adjacent) join the same catalog. Policy
+unchanged: don't chase single primitives.
+
+## D7. Documents needing shell-escape or external tools at author time
+
+Manuals that `\input` files generated by their own build (e.g. piton's
+`.pyluatex` caches, minted `frozencache`) fail on missing files. That is not a
+kernel defect; catalog per bundle, mark the missing-file error expected.
+
+**Development-tree `\input` paths (sweep 62, 2026-09-07).** tikz-ladder-doc,
+tikz-relay-doc, tikz-sfc-doc and tikz-karnaugh-doc (293/292/172/130 errors, all
+`pgfkeys` "I do not know the key '/tikz/…'") load their library with a bare
+`\input ../tex/tikzlibrary<name>.code` (tikz-relay-doc.tex:148, the
+`\usetikzlibrary` line above it commented out). `../tex/` exists only in the
+authors' source tree, so pdflatex/lualatex abort on the same missing file (oracle
+exit 1) and every later key is unknown. Not a kernel defect; a basename fallback
+for a missing relative `\input` path would be a beyond-oracle divergence
+(surpass-perl escalation, not taken). mercatormap (459) is shell-escape
+(`shell_escape_excluded.tsv`).
+
+**tcolorbox `compilable listing` / `pdf comment` (sweep 66: beamertheme-rainbow/-spectrum/-tcolorbox docs, didec; root-caused 2026-09-09).** Every `Package tcolorbox Error` is one cascade from tcblistingscore.code.tex:167-181 `\__tcbox_run_system_command:n` refusing without shell escape ("You must invoke LaTeX with the -shell-escape flag"), then tcbskins.code.tex:1684-1706's missing sub-PDF and the undefined `\pdfpages`. pdflatex without `-shell-escape` fails identically; Perl explodes earlier on raw minted v3. Three bundles were already in `shell_escape_excluded.tsv`; didec added.
+
+## D8. expl3-heavy packages
+
+Raw interpretation of l3-programming-layer packages exercises expl3 the
+hardest (regex VM, intarray, fp). Known open expl3 gaps are tracked in the
+main memory/SYNC docs; entries here should reference the specific manual +
+first error rather than duplicating that tracking.
+
+## D10. forest.sty — full support is a standing side goal (user directive 2026-09-05)
+
+**Status:** `latexml_contrib/src/forest_sty.rs` is a discard stub (batch 56k made
+its diagnostic a Warn: the `{forest}` body is dropped, nothing is drawn). Not a
+perfect-kernel target row, but the user asked that complete support be recorded
+and not forgotten: forest is heavily used on arXiv (linguistics trees, decision
+and proof trees), and three TL manuals (forest-quickstart, fragoli, milsymb) plus
+forest-doc/forest-libs exercise it end to end.
+
+**What "complete" means.** forest.sty (9,259 lines, expl3 + pgfkeys) parses a
+bracket notation into a tree, lays it out (its own packing algorithm,
+`forest-lib-edges.sty` edge styles, `forest-lib-linguistics.sty` presets) and
+draws it with TikZ. Faithful support has two candidate shapes, to be decided when
+it is taken up:
+1. **Overlay binding (K1 shape):** raw-load forest.sty and let its bracket
+   parser, keys and layout run on our TikZ layer (D1) — the layout uses
+   `\pgfmath` and pgf coordinates throughout, so this is gated on D1's fidelity
+   and on the expl3/pgfkeys machinery already in place. Perl raw-loads forest
+   and dies on `\forestversion` (misdefined), so this is beyond-Perl.
+2. **Native tree model:** parse the bracket notation natively (it is a small
+   grammar: `[label, keys [child] …]`) into an `<ltx:picture>`-free structural
+   tree (nested lists or a dedicated tree element with a CSS renderer), which
+   is what an accessible web rendering of a syntax tree wants anyway. Drawing
+   fidelity is lower; structure fidelity and accessibility are higher.
+
+**Evidence to keep:** the discard stub's witnesses (forest-quickstart,
+fragoli_doc, milsymb; sweep #41), the forest-doc `\DocInput` example environment
+(fixed in 56i for the listings side, the trees themselves still discarded),
+arXiv usage counts to be measured with the corpus scanner before choosing the
+shape. Guards to keep green while touching it: `perfect_kernel_batch54::forest_bare_cs_form_discards_body`,
+`perfect_kernel_batch56::{forest_stub_is_a_warning, forest_docinput_lstenv_writefile_gobbles_doc_percent}`.
+
+Audit note (K1 step 3 pass two, 2026-09-07): `latexml_contrib/src/forest_sty.rs`
+discards the whole `{forest}` body into an `<ltx:ERROR>` (mirrors ar5iv's
+`discard_env_body`; Rust emits no `Error:` line, so the 3 oracle-clean forest
+manuals read "clean" while every tree is lost — the highest content-risk stub
+in the corpus). A raw load needs forest.sty:49-61's tikz (+`shapes`,`fit`,`calc`),
+`pgfopts`, `elocalloc`, `environ`, `xparse`, `inlinedef` (catcode-`#` tricks) and
+forest's own bracket parser; the bracket parser and `inlinedef` are the hard
+blockers, the rest exists. A real port = the bracket grammar as a Rust reader
+producing the tree as nested `ltx:para`/lists plus tikz for the drawing.
+
+
+## D11. Quick-failure registry — fast fatals that still owe a root cause (user directive 2026-09-05)
+
+"Failing quickly is better UX and DX than failing with a huge performance
+regression" — so a conversion that cannot succeed says so in seconds instead of
+grinding to a cap. Every such bail is recorded here with its witnesses and the
+work that would turn it into a conversion; none is a final answer.
+
+| Bail (site) | Witnesses | Time before → after | What would remove the bail |
+|---|---|---|---|
+| Global-timeout Fatal (`Fatal:Timeout:Convert`, the sweep cap) — wheelchart's multiline `arc data` under `arc around text` (wheelchart.sty:2938 `\seq_set_split` on `\\`, :2942 per-line `text along path` decoration walk over the full slice arc three times: measure :2968-2973, place :2990-3014, half-split :3058-3105) degenerates the arc-split step to a vanishing advance, so the decoration automaton spins in interpreted pgfmath/l3fp; **pathological for every engine**: pdflatex produces no PDF in 120 s on the 10-line repro (`~/data/pk_agents/w23/perf_pgf/wheelchart/min5/min5.tex`; the manual's pdflatex run sticks at page 20/56), Perl 0.8.8 aborts in 9 s with 100 l3fp `Missing argument` errors before reaching the loop, Rust runs the raw code faithfully and hangs. The 10 GB is transient interpreter working set inside the never-closing chart's group, not DOM (39-byte output) and not a leak (completable charts scale linearly: 1 → 238 MB, 16 → 449 MB). Single-line `arc data`, `arc around text` alone, and the `\WCmidangle` ternary each convert clean in ~0.8 s. Root-caused 2026-09-19 (agent); the cited `\regex_replace_all` at :2347-2351 is ~5 % of self-time, not the cause. | wheelchart manual (charts at wheelchart.tex:705-725, 2806, 2873) | 420 s timeout (unchanged) | nothing per-construct: a native l3fp/pgfmath evaluator would not rescue a chart pdfTeX cannot finish; the timeout Fatal is the correct behavior. Corpus reach 0 (manual-only stress case). |
+| `ajmacros.sty` Fatal (`ajmacros_sty.rs`, batch 56l) — japanese-otf's ISO-2022-JP-named recursive kanji scanners loop aperiodically without pTeX's kanji token model | platexsheet-jsclasses, sample-jsclasses, wtref-ja, jpneduenumerate | 250–264 s → < 1 s | §D9: a kanji token model (`\kcatcode`, JIS/UTF-8 kanji as single tokens) in the mouth; then ajmacros runs raw |
+| Unbalanced-expansion Fatal (`Expandable::new`, batch 56l; Perl parity) — jarticle.cls:94-97 `\ds@tate`'s ISO-2022-JP byte pair whose `%` eats a brace | platexcheat sample, platexsheet | 253–259 s → ~2 s | the same kanji source model (the `%` is the second byte of a kanji) |
+| Runaway cap `TooManyErrors` (500 identical errors) — csvsimple's Java CSV-Sorter, `\file_input:n` of shell-escape products | csvsimple-l3, mercatormap | minutes → seconds after the cap | K8: degrade the offending construct instead of discarding the document; shell-escape emulation is a user decision |
+| Sweep-57 fatal-class tally (2026-09-06, 111 status-3 docs, 2 oracle-clean = bibarts, chessboard): `TooManyErrors:MaxLimit(100)` 35 · **`oom:alloc_failed` of exactly 3,288,334,336 bytes 23 docs** (LANDED batch 56ak: the `\batchmode\read -1` halt idiom was a no-op, so XeTeX-only packages looped on `\XeTeXcharclass` until the log buffer's next doubling failed; now one Fatal in seconds, KPE #213) · `Timeout:PushbackLimit` 10 · `Mouth:EoF` 9 · `Timeout:MemoryBudget` 8 (source2e, datatool-user, glossaries-extra…) · `Timeout:Recursion` 3 · the D9 pTeX bails 5 · rest singles | as listed | — | the alloc cluster is a kernel defect (an identical size across unrelated docs); MemoryBudget docs are the largest manuals (a real memory/perf lever, PERFORMANCE.md); the rest are the D6/D9/D7 families |
+| Sweep-58 fatal residue after 56ak, grouped by first error (2026-09-07; excludes the D9 pTeX bails and the memory-fuse docs): `\epTeXinputencoding` undefined → `PushbackLimit` **6 docs** (gckanbun, asternote, hideanswer, inlinelabel, jpnedumathsymbols, jpneduenumerate — all `jlreq`; lualatex oracle exit 1 for every one, so they run under the pdfTeX identity and jlreq.cls:492 correctly takes its (u)pLaTeX branch = D9 pTeX primitives. PARKED 2026-09-07; the runaway afterwards is an unreduced l3keys `\keys_set` re-unread loop (`\__kernel_tl_set:Nx` of the choice/finally save-restore) confined to jlreq's platex path, repro `~/data/pk_agents/w22/eptex-pushback/repro.tex`; no in-scope lever short of giving lualatex-authored-but-failing docs the luatex identity, which still needs luatexja) · class-requires-XeLaTeX/LuaLaTeX → `Recursion` 2 (thuthesis, nxuthesis: `\directlua` detection, D6 policy) · tikzpingus (`\lxSVG@sh@defs` — our own name — → PushbackLimit) · tikzviolinplots (`Extra \else` → Recursion) · neoschool-fr (`[cmyk]{…}` taken as a colour NAME → EoF) · ualberta (non-boxing `\endgroup` → PushbackLimit) · xytree (`\ex` undefined → Recursion) · singles typog, tikz-optics (`../` library path), pldocverb (`\hour`, D9), pas-crosswords (`\lstset` undefined), dmlb-template (`\mya`), stex-doc (archive), fixdif-zh-cn (xelatex-only); out of scope: resolsysteme ×2, robust-externalize, tikzfxgraph (shell-escape). Oracle-clean among them: bibarts, chessboard (recorded verdicts). | as listed | — | root-causers on the epTeX chain, the pgf pair, and neoschool/ualberta in flight (2026-09-07) |
+| `Timeout:MemoryBudget` in 13 s — tikz-among-us/tikz-among-us: NOT a loop or a wrong unit; `\begin{animateinline}…\multiframe{180}{rt=0+1}{<tikzpicture>}` (tex:756-765, animate.sty:2369-2394 bounded `\whiledo`) materializes 180 SVG frames in the document tree (~39 MB each; pdflatex ships each frame as a Form XObject and frees it). SHARED: Perl has no animate binding either. Repro `~/data/pk_agents/w22/among-us/repro.tex` (1 character, fuse at ~150 frames under `--max-memory=1536`). The `_ in math mode` errors are the doc's missing local FHZ-* packages (`\href` undefined). The other fuse docs (source2e/source3, glossaries ×3, datatool-user, tcolorbox, pgf-spectra) are genuine big manuals (≤ 4 MB logs, no repeated line) = the memory lever for a quiet machine (PERFORMANCE.md), not loops. A root-causer's side claim that ifthen `\whiledo`/`\equal` break under the `luatex` preload did NOT reproduce (ifthen, xifthen, animate+xifthen all clean under both preloads, 2026-09-07). | tikz-among-us (oracle lualatex exit 1) | beyond-Perl binding: an `animate` binding emitting ONE representative frame (guard `animate_multiframe_single_frame`: 0 errors, `count(//svg:svg)=1`) | registered 2026-09-07; value = fleet stability, not a clean doc |
+| `\end{minipage} Attempt to end mode internal_vertical` ×84 — yquant/yquant-doc (shell-escape-EXCLUDED): the doc's `option` environment opens a `\begingroup` that only minted's real inline processor (`\RobustMintInlineProcess@ii`, patched by the doc via `\patch@mintinline`) closes; the `minted` stub (`latexml_contrib/src/minted_sty.rs`, `\tex`→`\lstinline`) never runs it, so every `\end{minipage}` meets the open group. Perl (raw minted2) has no minipage error. Fix would be a patchable stub processor — version-specific; deferred (excluded doc). Repro `~/data/pk_agents/w22/yquant/repros/minipage_minted_group.tex`. | yquant-doc | minted stub processor hook | registered 2026-09-09 |
+| `Fatal:Timeout:Recursion` "Infinite expansion loop: a window of 2 token(s) repeated 100+ times" — yquant/yquant-doc (shell-escape-EXCLUDED), sweep 67, surfaced once batch 56bd defined `\gundef` and yquant's register-group cleanup ran further. The doc's `minipage`/minted imbalance (row above) still precedes it. Root not isolated; yquant's own language parser (`yquant-lang.sty`) is arXiv-relevant, so worth a bounded root-cause when a yquant arXiv witness appears. | yquant-doc | — | registered 2026-09-09 |
+
+**chemexec ×2 / quickreaction (lualatex fallback, 3 oracle errors; root-causer 2026-09-17) — SHARED broken documents, "oracle-incomplete".** Both `\usepackage` packages REMOVED from TL2025 (chemexec: slashbox, scrpage2; quickreaction: mol2chemfig — `kpsewhich` empty), so real pdflatex/lualatex Emergency-stop at the missing file after ~3 errors and never reach the molecules; we have bindings for slashbox/scrpage2 and continue into genuinely broken chemfig use. chemexec.sty:922 `\edef\empty#1{#1}` (under its `exercise` option) clobbers the kernel `\empty` that chemfig uses as its atom sentinel (chemfig.tex:1877/1930, 169-175), so `\CF_hookatomnumber` (chemfig.tex:1751-1768) references `n<g>-0` that was never created → pgf `No shape named` (pdflatex shows the same `No shape named 'n-0'` after an `extra }` cascade our engine suppresses); quickreaction's `dlh`/`dbl`/`dlr` bond styles are mol2chemfig's, undefined. No fix (defining them or special-casing `\empty` would diverge from the oracle). The sweep-75 25→202 delta is a MEASUREMENT artifact of 56bt drawing more of a document whose oracle never finished loading. Repro `~/data/pk_agents/w22/chemfig-nodes/repros/min_node.tex` (RED in pdflatex too). Method: a doc whose oracle stops at a missing `\usepackage`d file is oracle-incomplete — error-count deltas against it are not regressions; the tally's Δerr flag should exclude that class (`oracle_verdicts.tsv` has no column for it yet — TODO when the harness is next touched).
+
+**kaytannollista-latexia (lualatex oracle itself times out; root-causer 2026-09-17) — the runaway is a unicode-math gap, queued (56bu).** hanging.sty:85/101 makes `'` active and `\gdef'{\futurelet\next\h@ngrqtest}` globally; its `\h@ngrquote` (hanging.sty:73) re-emits a catcode-12 `'` which under mathcode "8000 is math-active again → unbounded pushback recursion on a bare math prime (`$f'(x)$`, luku-rakenne.tex:7392). Without unicode-math this is SHARED (pdflatex `TeX capacity exceeded`, Perl 124); with unicode-math real lualatex is fine because unicode-math-luatex.sty:3405/3426 re-binds the active `'` to its prime scanner at `\AtBeginDocument`, after hanging — ours (`unicode_math_sty.rs`) never does. Fix: `at_begin_document` re-let of `T_ACTIVE!('\'')` to `\active@math@prime` (math_common.rs:436-461), validated by the agent's green variant; repro `~/data/pk_agents/w22/kaytannollista/repros/prime_hanging_unicodemath.tex`. The doc stays a lualatex-timeout non-target; the win is the removed multi-minute runaway.
+
+**bibleref-parse/bibleref-parse (lualatex fallback, 2 oracle errors; root-causer 2026-09-17) — SHARED infinite loop, registered.** bibleref-parse.sty:481-508 `\brp@ifcs` asks whether a token is a control sequence via `` `<first char of \detokenize{#1}> `` = 92; for an accent like `\"` in the doc's silent-name lists (bibleref-parse.tex:347 `IK\"onige`) that is TRUE in real TeX (tex.web §442), and `\brp@@expandcs` then `\expandafter`-expands the unexpandable `\"` forever — **real pdflatex hangs on `\pbibleverse{\"o}` too**. Perl terminates (2 errors) only because Gullet.pm:923-928 strips the backslash unconditionally, giving `` `\ `` = 0 — the quirk KNOWN_PERL_ERRORS #123 / batch 54 deliberately did NOT copy (it re-breaks l3fp's `\if_case:w` on `` `\token_to_str:N``, guards `fpeval_register_right_operand_of_comparison`, `backquote_charcode_of_other_backslash`). Bounded by `--timeout` (fires ~5 s past it); no code change. Repro `~/data/pk_agents/w22/bibleref-parse/repros/accent_in_brp_ifcs.tex`. A generalized no-progress guard (an expansion consuming 0 net tokens at the same mouth position over K≫1 iterations → fail fast) is the only kernel-level option, MED-HIGH risk, not pursued.
+
+## D12. Deferred shared roots with a high-risk fix (wave 18, 2026-09-06)
+
+Each is pdflatex/lualatex-clean, fails identically (or worse) in same-host Perl,
+and has a root-cause report + red repro on disk; the fix is a mechanism change
+whose blast radius outweighs the docs it frees today. Re-open when the mechanism
+comes up for another reason.
+
+| Root | Witnesses | Repro | What the fix is |
+|---|---|---|---|
+| pgf SVG driver group accounting: `pgfsys-latexml.def.ltxml:561-586` maps `\pgfsys@beginscope`/`@endscope` to real `\begingroup`/`\endgroup` (the pdf driver opens none); through `\pgfnode`/`\pgfmultipartnode` + `\pgfsys@begin@idscope` (pgfsys.code.tex:572-611) inside `\foreach` + `pgfscope` the count drifts and a `{` boxing frame stays open, so every later `\endgroup` reports "close non-boxing group" (the LaTeXML authors note the class at pgfsys-latexml.def.ltxml:887-890). SHARED: Perl 25 errors on the repro, Rust 24. | msc/msc (29 + PushbackLimit fatal from `codeexample` re-execution); modernposter/demo (16: the poster body is one document-spanning overlay `tikzpicture`, modernposter.cls:102-112, and `\maketitle`'s filled nodes replay their `\hbox` box with a scope `\begingroup` on top — `base_utilities.rs:3610` `predigest_box_contents_in_mode` → `end_mode` fails; Perl identical first error, 31 errors) | `tools/perfect_kernel/repros/graphics-tikz/msc_declinst_tikz_scope_desync.tex` (one `\declinst` inside `{msc}`), `graphics-tikz/modernposter_maketitle_hbox_mode.tex` | PARTIAL → msc LANDED batch 56ac: the msc "crossing" was `\globaldefs=1` (msc.sty:2616 `\msc@global@set`) globalizing our save-frame bookkeeping, so a closed `{` group stayed "current" (KPE #209, DIVERGENCES #215; msc 21→0, 10 `<svg:g>`). modernposter LANDED batch 56ad: its root was the document HOOKS digested in isolated mouths — the `\AfterEndPreamble` opener and the `\AtEndDocument{\end{tikzpicture}}` closer never met the galley's box reader (latex.ltx:15255-15259, etoolbox.sty:1774-1776 run them inline; KPE #211, DIVERGENCES #217; 14→0). Still open: psmatrix/dsptricks (the `\halign` cell template family, K9 Stage 3). Settled dead end: inserting the missing `}` at `\endgroup` (§1064 off_save) reaches the nested consumer, not the owning box reader — doubles the count. Sweep 54: modernposter/demo 15→1; the residual `No shape named `sep'` (demo.tex:53 `\node[...inner sep=...]`? a pgfkeys parse in our tikz binding) is a separate small root. |
+| `\halign` inside display math whose `$#$` cells open `\hbox` (an active `<…>` that does `\ifhmode\else\expandafter\hbox\fi\bgroup…$\langle$…$\rangle$…\egroup`, abntexto.tex:79-81) with inline math inside the box: the mode-switch frames (`stomach.rs:753` "close a group that switched to mode", `:1112` "Attempt to end mode") never reconcile the nesting; the `\halign`, the display-math group and the enclosing list stay open and every later section lands inside the trapped `<ltx:inline-block>` (the 15 `<ltx:section> in <ltx:section>` errors are this collateral, not sectioning). Reached only through the manual's self-documentation trick (`\catcode\`\%=9 \input{abntexto.cls}`, :1037) that turns the class's commented `$$\offinterlineskip\halign{$#$\cr…}$$` (cls:727-736) live. SHARED: Perl 4 × "Attempt to end mode math". | abntexto/abntexto (~22 of 25 errors; the other root, amsmath's missing `\@saveprimitive\over\@@over`, landed in batch 56w) | `tools/perfect_kernel/repros/boxes-groups/reinput_display_halign.{tex,snippet}` | LANDED batch 56ab: the cell-head peek runs in internal vertical mode (tex.web §15510 `align_peek` before `init_row`), so the `\ifhmode\else\hbox` head keeps its box (DIVERGENCES #211). |
+| zx-calculus self-loop wires — RE-ROOTED: not the intersections library (never loaded; a bare `\pgfintersectionofpaths` converges). A tikz-cd self-arrow on a `rounded rectangle` node queries the corner border → pgf `\pgfmathpointintersectionoflineandarc` (pgfmathcalc.code.tex:366-468) bisects until `\ifdim\x pt=\q pt` (:447) — exact only in pgf's fixed-point trig; our float trig (pgfmath_code_tex.rs) stays ~0.0005° off, 2 empty boxes per iteration → the 50,000-box cycle fatal. SHARED (Perl float trig, spins to its wall clock). | zx-calculus/zx-calculus (Fatal); arXiv 2201.09268 class (callout nodes) | `tools/perfect_kernel/repros/graphics-tikz/zx_roundedrect_selfloop_arc_bisection.tex` (rectangle control in the guard) | LANDED batch 56ac: closed-form binding (KPE #210, DIVERGENCES #216; guard `line_and_arc_intersection_is_closed_form`). Sweep 53: the fatal is gone; 49 errors remain — `\lx@begin@alignment`/`\endgroup`/`\hbox`/`\vbox` mode-frame mismatches in "Anonymous String" mouths around `\zx{…}` inside `$…$` (a tikz-cd matrix built in isolated digests): the K9 family, next root-causer. RE-ROOTED again (wave 22 residual): not an isolated mouth — a tikz-cd matrix inside an amsmath cell; `\lxSVG@halign` (pgfsys_latexml_def.rs) decremented the align-group count UNCONDITIONALLY where the standard `\halign` does so only for a `{` opener, and pgf matrices open `\halign\bgroup`, so the enclosing `align` lost a level and its cell's closing hidden `$` was never recognized (RUST-ONLY: Perl 41 on the repro, worse). LANDED batch 56ae: conditional decrement; repro `repros/kernel-alignment/tikzcd_in_amsmath_cell_align_state.tex`, guard `tikzcd_matrix_inside_an_amsmath_cell_closes_its_math`; the manual's remaining 3 = `\got@maxcolwd` (amsmath gather), separate. |
+| ribbonproofs ribbon lists — RE-ROOTED: the `\fi`/`\iffalse` cascade was a downstream symptom. Root = native pgfmath `min()`/`max()` were BINARY (`pgfmath_code_tex.rs` `pgfmath_apply_fn` dropped `args[2..]`, `min(x)` read as `min(x,0)`) where pgfmathfunctions.misc.code.tex:292-336 folds the whole list (`\pgfmathmin@@`, sentinel ±16383pt); ribbonproofs.sty:1213 `min(\@leftPositions)` gave a wrong `\@stepLeft`, a ribbon re-started "already active" and the `\PackageError` inside the tikz `\foreach` cascaded into `expected:\fi`. etextools' conditional-tokens-as-data scan is handled correctly (verified). RUST-ONLY (Perl dies earlier on `\globcount`, 3). | ribbonproofs/ribbonproofsmanual (3) | `tools/perfect_kernel/repros/graphics-tikz/ribbonproofs_pgfmath_min_variadic.tex` | LANDED batch 56ac: variadic fold (unit test `min_max_fold_over_every_argument`, guard `pgfmath_min_max_fold_over_every_argument`). |
+| mhequ single-line `{equ}`: `\@saveMHComms` `\let\\=\@MHcr` (mhequ.sty:181) with `\@MHcr` undefined in the `equ` path, restored by `\@restoreMHComms` (:184) which sits AFTER `\eqno{…}` — our `\eqno` (tex_math.rs:1790, = Perl TeX_Math.pool.ltxml:1239) gullet-scans the tag to `$$` and collects the `\let` instead of executing it, so `\\` stays undefined (3 errors; Perl 8). | mhequ/mhequ-example (3) | `kernel-alignment/mhequ_equ_cr.tex` | LANDED batch 56ab: `\eqno`/`\leqno` digest the tag as a bounded math sub-body (tex.web §21745; DIVERGENCES #213). |
+| psmatrix cell template: with the real `\psset` (batch 56x) pst-node's `\psm@endnode` runs and the `\halign` cell template's `\begingroup…\endgroup` pairs desync ("close a group that switched to mode restricted_horizontal" ×4, `\endgroup` non-boxing ×4); pstricks-add's colour keys also read `\pst@getcolor` = xcolor's `\XC@getcolor` (pstricks.sty:155), missing from `xcolor_sty.rs`. | dsptricks/dspTricksManual (100+, capped), pst-eucl-docBG | `graphics-tikz/psmatrix_psk_mnodesize_dsptricks.tex` (psk internals now defined) | LANDED batch 56af — the Stage-3 diagnosis was WRONG: the u-part never opened its node box because `pstricks_support_sty.rs` stubbed `\pst@object{}` as `#1` (typeset the object NAME; pstricks.tex:1453-1461 dispatches to `\<name>@i` — no Perl counterpart to the stub), so `\psm@beginnode`'s `\pst@object{psm@beginnode}` produced text and the v-part `\psm@endnode@i` closers popped the alignment's own cell frame. Stub removed: single-cell and dsptricks repros 0 errors (4 cells). Guard `pst_object_dispatches_to_the_object_body`. The row/column boxing frames are FINE for a properly nested template (tex.web nest levels vs our frames only matter for real straddles, none seen). |
+| geometry global write-back: `elzcards.sty:396-397` reads `\textwidth`/`\textheight` into counters and fits 5in cards (:700) into the page box; our geometry binding sizes the SVG canvas only (OXIDIZED_DESIGN #99) and never writes the body box back to the global dims (`geometry_sty.rs:100-125` region; real geometry.sty assigns `\textwidth=\Gm@tw` etc.), so the article default 345pt < 5in and `\elzc@CalculaMatriz` (:281-305) raises "No space to print at least one card". SHARED: Perl no-ops geometry, 3 errors. | elzcards/elzcards-examples (1) | `layout-singles/geometry_noop_textwidth_elzcards.tex` (`~/data/pk_agents/w20/layout-singles/repros`) | overturn #99: geometry writes the computed body box to the global `\textwidth`/`\textheight`/paper dims — a flow-sizing policy change touching every geometry doc's width attributes; user decision, own branch. (Secondary, non-decisive: package-option splitting does not honour a brace-protected comma, `vmargin={0mm,0mm}` → 4 "Missing number" warnings.) |
+| PDF persona for graphics extensions: `upmethodology-fmt.sty:460-463` picks `.pdftex_t/.pdf_tex` under `\ifpdf`, else `.pstex_t/.ps_tex`; both engines are DVI (`\pdfoutput=0`, `\ifpdf` false under the pdflatex profile), the doc ships only `figure_and_tex.pdftex_t`, so `\includefigurewtex` (:507-509) errmessages "File not found". `\IfFileExists`/`\filename@parse` are correct. SHARED (Perl fails differently: undefined `\@autolatex@wtfig@exttmp`). | upmethodology/upmethodology-doc (1) | `layout-singles/ifpdf_persona_graphics_ext_upmethodology.tex` | the K6 PDF-mode persona decision (KERNEL_CAPABILITIES 2026-09-05 K6 row; PLANS P16-vii) — a direct witness for "graphics extensions keyed on `\pdfoutput`". No `\ifpdf` stub. |
+| pgfplots `scatter` markers leak one boxing `{` frame each: `\aftergroup\pgfplots@scatter@plot@mark` (pgfplots.markers.code.tex:178-214, an xdef'd `\begingroup…\endgroup` body deferred out of the marker box) — `LXML_TRACE_FRAMES` shows the `{` pushed in restricted_horizontal never popped; `\end{axis}`'s `\endgroup` cascade underflows ("close non-boxing group"), a second axis hits "nested axis" and error recovery re-unreads past the pushback cap. Inline repro `~/data/pk_agents/w22/color-group/repro_b.tex` (`\addplot+[scatter,mark=*] coordinates {…}`, ≥32 errors; non-scatter plots clean). | ualberta/ualberta (oracle lualatex exit 1) | RUST-ONLY engine (`\aftergroup` vs box reader) | OPEN 2026-09-07 — needs a token-level trace of the marker box; also the pushback runaway on an unclosable `\endgroup` is a robustness cap worth its own guard |
+| stringstrings' encoded blank space is the robust `\protect\OE` (stringstrings.sty:82-94 `\SaveOEthel`); its non-`\edef` byte machinery (`\@rotate`/`\@treatleadingspaces` :1580+, `\@gobblearg`/`\@DiscardNextChar` :1546-1560, `\isnextbyte` :915) must see that multi-token unit as one byte; here `\OE`'s decomposition leaks `O`,`E`,`\else`,`\fi` into `\edef\@x{\if\SignalChar\@x F\else T\fi}` → "Extra `\else`" ×2 → expansion runaway. Trigger = a leading space (a newline inside `\violinsetoptions[…]{…}`'s option list, tikzviolinplots.sty:201-228 `\noblanks[e]`+`\whereisword[q]`). **SHARED**: Perl fails identically (2 Error + `Fatal:terminate`). Repro `~/data/pk_agents/w22/pgf-pair/probe_ba.tex` (the inline-options twin is clean). | tikzviolinplots/tikzviolinplots (oracle lualatex, renders) | SHARED kernel — `\protect` must freeze to `\relax` on the non-`\edef` discard path so one encoded byte = one `\@gobble` (latex.ltx robust-command semantics) | OPEN 2026-09-07, surpass-tier (1 doc); design the `\protect` rule first, MED risk |
+| pgf shading regenerated at use time (`\pgfuseshading` → `\pgfshadepath`, pgfcoreshade.code.tex:769-810) fails to reinstall `\@pgfshading<xname>!`, so `\pgfsys@shadinginsidepgfpicture{\relax}` runs our `\lxSVG@sh@defs`/`@pos`/`@sh` trio undefined (pgfsys_latexml_def.rs:1616-1760, Perl pgfsys-latexml.def.ltxml:672-724) and the stream derails into a PushbackLimit; fingerprint = three "Illegal unit of measure (pt inserted) at Anonymous String" just before. Candidates: the global `\@pgfshading<xname>!` lost across `\pgfmath@smuggleone` on our opaque primitive (:794-802), or the malformed-spec dimension math in `\lxSVG@sh@create`. 12 isolation probes clean — fires only in the full manual's showcase+tcolorbox+tikzducks context. | tikzpingus/tikzpingus-doc (oracle lualatex, renders) | not isolated; likely SHARED (faithful Perl translation) | OPEN 2026-09-07 — needs bisection of the full doc (notes `~/data/pk_agents/w22/pgf-pair/NOTES.md`) |
+
+## D13. Manuals broken by their own class on TL2025 (SHARED with pdflatex)
+
+**cnltx-doc `{multicols}` undefined (sweep 62: 35 manuals, 21 as first error;
+root-caused 2026-09-09).** cnltx-doc.cls:728 defers `\RequirePackage{multicol,ragged2e}`
+with scrlfile's deprecated `\AfterPackage!{hyperref}{…}` (scrlfile-hook.sty:209), and
+hyperref only loads from `\AtEndPreamble` (cls:879), so the body runs from the
+`file/hyperref.sty/after` hook at `\currentgrouplevel>0`; latex.ltx:18699-18703
+`\@fileswithoptions` refuses a grouped load ("Loading a class or package in a group"),
+multicol never loads, and `\begin{multicols}` (cls:796) is undefined. pdflatex on the real
+class stops at cls:736 with exactly those two errors; Perl LaTeXML and oxide both load the
+binding inside the group and lose the local `{multicols}` at the pop (same end state,
+Perl 2 errors, oxide 1). Members: bohr_en, cnltx_en, cntformats_en, currency_doc,
+dashrulex, easybook, elements-manual, embrac_en, enotez_en, fnpct-manual,
+guitarchordschemes_en, idxcmds_en, leadsheets_en, passopt, schule, snotez-manual,
+spbmark, syntaxdi, tasks-manual, translations-manual, utfsym (first error), plus the
+chemmacros/acro family where another cnltx-doc root fires first (carbohydrates_en,
+chemformula-manual, chemnum_en, chemgreek_en, endiagram_en, ghsystem-manual,
+modiagram_en, substances_en, exsheets_en, xsim-manual, scaletextbullet, thalie, pixelart,
+convert-jpfonts). No faithful fix produces the environment (a global package definition
+inside a group would diverge from both oracles); expected gain 0. Repro
+`tools/perfect_kernel/repros/loader/multicols_afterpackage_group.tex` (RED by design).
+Settled dead ends: the multicol binding does load (log `Loading multicol_sty.rs`); the
+`!`/label parse and `\@ifpackageloaded` are not the discriminator; raw
+`\AddToHook{file/*/after}` bodies persist.
+
+**`#` (catcode PARAM) reaching the stomach (sweep 62: 31 manuals, 12 as the dominant
+class; root-caused 2026-09-09) — SHARED, no action.** The emitter
+(`stomach.rs:2119-2133`) is the faithful port of Perl Stomach.pm:192-201 and of tex.web
+§1049 ("You can't use macro parameter character #"): a `#` at digestion is always the
+symptom of an upstream failure that pdflatex hits too. Roots: ltxmdf.cls:46
+`\pdftex_if_engine:TF` (removed from l3kernel in TL2025 → its branches run as bare groups,
+refcount's `\rc@RobustDefOne` never defined; mdframed-example ×4, fullwidth), classes and
+packages absent from TeX Live (amltxdoc.cls: keyval2e-guide, storecmd-guide; packagedoc.cls:
+underoverlap; noweb.sty: biocon; pas-doc.sty: pas-cv), a companion file not co-located
+(tagpdf-code's `tagpdf-docelements.tex`), cnltx-doc (translations-manual, above), and
+broken sources where pdflatex reports as much or more (changelayout-guide 102 vs our 101,
+xwatermark-examples2 96 vs 25). The one pdflatex-clean member, l2tabu (2 errors), takes
+scrbase.sty:1424-1444 `\ifpdfoutput`'s FALSE branch because both latexml engines set
+`\pdfoutput=0` (pdfTeX.pool.ltxml:23, `pdftex.rs:11`) and that branch holds the document's
+own buggy `\newcommand` — a K6 persona question (PDF-mode identity), not a cluster fix.
+Repros and oracle logs: `~/data/pk_agents/w22/param-hash/`.
+
+**Text-mode `_` from an "Anonymous String" (sweep 62: 16 manuals dominant, 237 errors;
+root-caused 2026-09-09) — five shapes, one landed.** The message site is
+`tex_math.rs:261` (a cat-8 `_` digested in text mode); the locator names the string
+mouth, not the source. (1) chemfig re-scans molecules with `\everyeof{\_nil}…\scantokens`
+(chemfig.tex:1051-1053) and our `\scantokens` (`etex.rs:465`) never inserts `\everyeof` at
+the pseudo-file end, so the `\_nil`-delimited capture runs on and the molecule leaks to text
+digestion — Perl shares it (eTeX.pool.ltxml:251-258, `\everyeof` "NOT used anywhere");
+the wiring exists but both prior attempts regressed the l3doc family (see the `etex.rs`
+comment; prerequisite = stop expandable `\verb` scanning inside edef-style bodies) — PARKED,
+witnesses chemexec ×2, carbohydrates_en, quickreaction; repro
+`~/data/pk_agents/w22/text-underscore/repros/shape1_chemfig_everyeof.tex`. (2) `\fcolorbox`
+digested its color-name arguments (hobete_doc, 30) — landed as batch 56at. (3) the source's
+own `_`/`^` in text (tikz-among-us, pst-eucl-docBG, resolsysteme-doc, egpeirce's document
+positions) — SHARED with pdflatex. (4) LuaTeX-detection halts and Lua-as-TeX (fontscale's
+beery.cls:29 `\sys_if_engine_luatex:F`, responsive's linebreaker.sty, pyluatex docs) —
+persona/parked. (5) name re-scans through `digest()` in dun19expl3, paracol-man,
+regulatory ×2 — confounded by a source-tree `.dtx` FindFile that Perl skips; deferred
+per doc. Settled: `\DeclareRobustCommand\0` works (dun19expl3's `\0` is a
+`\loadglsentries` context issue).
+
+**frankenstein self-documenting manuals (sweep 66: attrib 54, dialogue 9, lgreekuse,
+blkcntrl/lips/slemph `missing_file:\aftergroup` ×2, achicago/abbrevs csname leaks;
+root-caused 2026-09-09) — SHARED with pdflatex, content kept.** Every driver is
+`ltxdoc` + `\ProcessDTXFile{X.sty}` + `\DocInput{X.sty}`, i.e. the package's own
+`%`-prose executes as LaTeX (doc.sty:895-897 `\MakePercentIgnore`). That prose is
+`\cs\FOO` throughout, and compsci.sty:998-1003 `\cs@cmd@ungrouped` wraps
+`\code{\FOO}` in `\begingroup…\aftergroup…\endgroup`; `\code` should be compsci's
+url-verbatim (compsci.sty:510 `\newcommand*\code`) but doc.sty:622 already defines
+`\code` as the identity, so the `\newcommand*` is refused (pdflatex: "Command \code
+already defined", 21 errors on slemph) and every `\FOO` in the prose EXECUTES:
+`\ProcessDTXFile` swallows the trailing `\aftergroup` as its file name, `\usepackage`
+runs in the body, `\attrib` opens a box the `\endgroup` cannot close, moredefs'
+`\futurelet` star parser leaks into a `\csname`. Perl reports 0 errors only because
+its raw-`.sty` `\input` is reload-protected (Package.pm:2289-2291) and the whole
+documentation body is DROPPED; our content re-read (PLANS P66, `content.rs:1712-1734`)
+executes it as pdflatex does. The `\aftergroup`/`\futurelet`/`\code`-verbatim primitives
+are clean (probe 0 errors). No faithful fix; an Error→Warning downgrade of a nested
+missing `\input` inside a definitions re-read would save 2 lines per doc and nothing
+else. Repros `~/data/pk_agents/w22/frankenstein/repros/` (`frank_docbody_reinput.tex`).
+
+**schule (sweep 68, 4 errors) is the same cnltx root (root-causer 2026-09-09).** Three of its four errors share it: cnltx-doc.cls:728 `\AfterPackage!{hyperref}{…}` — with scrlfile raw-loaded without `withdeprecated` (scrlfile.sty:64-92), xparse's `\AfterPackage` reads `!` as the package name and the block runs at once as a plain group, so cls:729 `\newrobustcmd*\cnltx@tableofcontents` and cls:736 `\RequirePackage{multicol,ragged2e}` are group-local (latex.ltx:18699 loads anyway; the `\ver@ragged2e.sty` flag is set GLOBAL at latex.ltx:18482, mirrored by `binding/content.rs:748-948` and Perl Package.pm:2326) and the top-level cls:805 `\RequirePackage{marginnote,ragged2e}` is refused as already loaded → `\RaggedRight` undefined too. General rule: **a grouped package load sets a global loaded-flag that blocks the top-level reload, so the group-local macros are never restored** — faithful to both engines, no non-divergent fix. The fourth error, `\draw` undefined inside the `[siunitx,european]` circuitikz example of fachPhysik.tex:27 (a cnltx `example` re-`\input`), did not shrink in budget: plain `\begin{circuitikz}\draw…` is clean, and the tikzpicture examples of the same manual keep `\draw`; likely RUST-ONLY, one diagram, open. Notes `~/data/pk_agents/w22/schule/NOTES.md`.
+
+**manyind/mindsample (oracle pdflatex-clean, 3 errors; root-causer 2026-09-09).** mindsample.tex:200-208 index entries `\index{\"N@\protect\nxtletre \protect\def \nwletre {\"O}\gobblepageref}` and `\index{\AB@\relax\gobblepageref}`: real LaTeX reads `\index` under `\@sanitize` (backslash catcode 12) and writes the string to `.idx`; the control sequences only run at `\printindex` read-back. Our `process_index_phrases` (latex_constructs/mod.rs:2956-2977) pre-expands the phrase with `\protect`=`\@unexpandable@protect`, which `\noexpand`s the `\def` and force-expands the bare `\nwletre` → undefined (RUST-ONLY; Perl latex_constructs.pool:4326 only splits on `!@|"` and digests in order, so its `\def\nwletre` runs). `\A` and `\AB@` are undefined-by-design sort keys both engines digest (SHARED; Perl 15 errors on the manual, ours 3). Fix shape (batch 56bo, MED — core index machinery): the pre-expansion passes undefined control words through inert instead of auto-defining `<ltx:ERROR/>`, keeping separator revelation (`\idx@actual`) and the `\noexpand` freezing (guards `index_entry_defers_protected_macros`, `index_sanitized_backslash_symbol_stays_literal`, KPE #83); surpass tier for the sort key = treat text before `@` as an inert makeindex string (`@` catcode OTHER in the re-tokenize). Repro `repros/index/manyind_index_expands_sortkey_and_def.tex`. **Landed (batch 56bp):** undefined control words pass the pre-expansion inert, an undefined word in the sort key is literal text, and an undefined control word still carrying `@` after the `\protected@write` expansion is re-read with the document table (`@` OTHER) — OXIDIZED_DESIGN_DIVERGENCES #222; 3 → 0 (debug probe).
+
+**chinesechess/chinesechess (oracle lualatex, 2 errors; root-causers 2026-09-09 ×3).** The sweep-70 `\CJK@next@token` Fatal is batch 56bp (option lists are stored, not digested). The two remaining errors, `\draw_linewidth:n`/`\draw_dash_pattern:nn` (chinesechess.sty:855-1956), are PACKAGE VERSION SKEW: l3draw renamed them `\draw_set_linewidth:n`/`\draw_set_dash_pattern:nn` (l3experimental CHANGELOG 2025-06-30; TL2025 l3draw.sty:1823/1828), pdflatex/lualatex emit the same two "Undefined control sequence" — SHARED, at parity, no fix (aliases would be more lenient than the oracle; `l3draw_sty.rs:93-98` binds the current names). Beside it a RUST-ONLY kernel gap: chinesechess.sty:2016-2020 `\coffin_scale:cnn{\dim_ratio:nn{\l_tmpa_dim}{\l_tmpb_dim}}` with a 0 box dim divides to a huge ratio and our dimension arithmetic WRAPS — `numeric_ops.rs:134-137` `multiply` (`f64→i64` saturates to i64::MIN/MAX) and `numeric_ops.rs:78-81` `fixpoint_unit` (`i128→i64` truncates) — where TeX raises `arith_error` (tex.web §101/§105-108/§460: "Arithmetic overflow" → 0 in `\dimexpr`, "Dimension too large" → `max_dimen` in scan_dimen). Fix shape (56bq, LOW risk, conservative): clamp ONLY on i64 overflow to ±`MAX_DIMEN` (0x3FFFFFFF sp) with the TeX warning at `read_dimension`, `\dimexpr`'s multiply, and `fixpoint_unit` — keep LaTeXML's i64 headroom above max_dimen for pgf; the `fixedformat` `saturating_neg` stays as the last line. Repros `~/data/pk_agents/w22/chinesechess/repros/item2{a,b}_*.tex` (garbage `-140737488355327.99998pt` / `100899720527872.0pt` today; oracle 0pt / 16383.99998pt).
+
+**xebaposter/poster (oracle pdflatex-clean, 1 error; root-causer 2026-09-09).** poster.tex:312-338 `\headerbox{References}` holds `thebibliography`; xebaposter.cls:820-1021 typesets the box body in a minipage and places it as a pgf NODE → `svg:foreignObject` inside `svg:g`. `ltx:bibliography` is BackMatter (LaTeXML-structure.rnc:677), legal only under sectional bodies/`document`/`sidebar`, never in Flow; Perl's `adjustBackmatterElement` (latex_constructs.pool:3934-4011, `find_insertion_point('ltx:section')`) cannot cross the drawing boundary either — SHARED, Perl 1 error byte-identical. Our `insert_block` hoist (base_utilities.rs:4102-4170) already floats a bibliography out of a plain minipage to `ltx:document` (green repro `bib_in_minipage.tex`), but its `flow()` gate stops at `svg:g` so box content is never stranded. Surpass shape (56bq, MED): let the climb continue past a drawing ancestor ONLY when every kept (non-hoisted) node is empty/whitespace — "backmatter trapped in a drawing floats to the enclosing flow exactly as from a plain box, never at the cost of stranding real box content"; guards `mdframed_block_bibliography_juradiss`/`caption_in_inline_parbox_floats_to_figure` unaffected (flow), biblatex-ext/Gemini J3 keep Perl's verdict (`kept` non-empty). Repro `~/data/pk_agents/w22/xebaposter/repros/bib_in_tikz_node.tex` (RED both engines); guard: `//ltx:bibliography` under `ltx:document`, none under `svg:*`, `bibitem[@key='a']` survives. Dead ends: renaming the capture to `ltx:sidebar` (structural, not Flow); widening `sectional-block` (leading empty `ltx:p` invalid).
+
+**elzcards/elzcards-examples (oracle pdflatex-clean, 1 error → empty document; root-causer 2026-09-09) — PARKED under OXIDIZED_DESIGN_DIVERGENCES #99.** elzcards.sty:396-397 seeds its print grid from `\textwidth`/`\textheight` and elzcards.sty:280-306 `\elzc@CalculaMatriz` counts how many 5in×3in cards fit (elzcards.sty:700-701); with the doc's `[landscape,letterpaper,vmargin={0mm,0mm},hmargin={0mm,0mm}]{geometry}` real geometry.sty:764-765 makes `\textwidth` 11in, while #99 keeps the flow at article's 345pt < 5in → NumX=0 → elzcards.sty:302 `\PKGERROR{No space…}\stop` (the whole body is lost). SHARED (Perl's geometry.sty.ltxml is a no-op, 3 errors on the repro). No #99-compatible fix: the SVG-scope injector fires inside pictures, elzcards reads `\textwidth` before its `picture` opens; a doc-keyed binding is out. Repro `~/data/pk_agents/w22/elzcards/repros/elzcards_nospace.tex`. Two RUST-ONLY defects found beside it, OPEN: (a) `geometry_sty.rs:65` `landscape` swaps the KERNEL paper registers eagerly, so it is order-dependent (`landscape,a4paper` → portrait a4; `landscape,letterpaper` → the paper key clobbers the swap, `\Gm@tw` 8.5in not 11in) — real geometry.sty:41 sets `\ifGm@landscape` and swaps in `\Gm@recalc`; (b) the PACKAGE-OPTION path loses brace-protected commas — `\usepackage[vmargin={0mm,0mm}]{geometry}` yields four "Missing number (Dimension)" warnings while `\geometry{vmargin={3mm,7mm}}` is right — an engine `\ProcessOptions*`/`\CurrentOption` splitting bug (content.rs), to localize (check whether batch 56bp's undigested `PackageOptions` already keeps the braces).
+
+**etoolbox environment hooks (audit package-B1, recorded 2026-09-09).** Real etoolbox.sty:1803-1830 `\AtBeginEnvironment{X}` = `\csgappto{@begin@X@hook}` and patches `\begin` to run `\csuse{@begin@#1@hook}` before `\csname#1\endcsname` — its own store, not lthooks (`\AddToHook{env/X/begin}` is only what etoolbox.sty:1743-1746 uses for the DOCUMENT hooks). Perl etoolbox.sty.ltxml:1729-1736 mirrors it with `PushValue('@environment@X@atbegin')`, read by `\begin`. Ours (`etoolbox_sty.rs:1426,1935,1954`) routes to lthooks when `\AddToHook` exists and pushes the value store only for `starts_with("verbatim")` names — a name predicate covering the one constructor that reads the store (latex_constructs/mod.rs:792) instead of lthooks. Faithful shape: one store (`@environment@X@atbegin`, Perl's), pushed for EVERY name, read at `\begin` (sect01.rs:344) — after checking that the verbatim constructor and `\begin{verbatim}` do not both read it (double fire) and that `\RemoveFromHook`-style expectations (Rust-only `[label]` argument) have no corpus witness. Own batch; witnesses to find first (fancyvrb `Verbatim`, alltt hooks under expl3). **Closed 2026-09-10 (root-causer, corpus grep + 2 probes): the proposed one-store shape is a DOUBLE-FIRE — the magic `\begin{X}` constructor (dialect.rs:1244-1247) digests `@environment@X@atbegin` AND fires `\UseHook{env/X/begin}`, so pushing the store for every name would run each hook twice; the `verbatim` predicate feeds the one value-store-only constructor (`before_digest_verbatim`, mod.rs:788-799) and the BeforeBegin/AtBegin/AtEnd/AfterEnd order matches etoolbox.sty:1803-1880. Zero hook errors across the 14 non-verbatim witnesses (hep-* `macrocode`, recorder-fingering `music`, tikz-optics, chemformula-ru, tikz-dimline). The only error witness, cora-macs-doc (28× `Can't close environment quote`, `\begin{quote}` split across a verbatim by the hooks), produces byte-identical XML in Perl, which merely swallows the mismatch — recorded, not pursued.**
+
+## D14. beamer overlays are one pass here, many passes in beamer
+
+**Witness:** chessboard/chessboard_and_beamer (oracle pdflatex-clean; sweep 69: `\errmessage mainline: black, not white, to move (e4)`, then `1 is not the correct move number`, then a `Until:.` runaway to EoF, 3 errors + Fatal). The frame (chessboard_and_beamer.tex:19-24) is `\newgame … \only<1>{\mainline{1.e4}} \only<2>{\hidemoves{1.e4}\mainline{1... e5}} \only<3>{\hidemoves{1.e4 e5}\mainline{2. Nf3}}`. Real beamer typesets a frame ONCE PER OVERLAY SLIDE (beamerbaseframe.sty `\beamer@@@@frame`/`\beamer@checkframetitle` loop: the frame body is re-read for slide 1, 2, 3, `\newgame` resetting skak's game state each pass), so each `\only` branch sees a fresh game. Our beamer binding (and Perl beamer.cls.ltxml:793-834) take every `\only`/`\onslide` branch in ONE pass — the reader-facing "all overlays as a continuous document" contract — so skak replays 1.e4 on a game that already advanced. SHARED with Perl; the faithful alternative (re-executing the frame body per overlay and emitting N slides) is a design decision for the beamer binding, not a kernel gap. Recorded, not pursued: the single-pass contract is what every other beamer manual in the corpus relies on. **User decision 2026-09-10: keep Perl parity (single pass); chessboard_and_beamer stays documented residue.**
+
+## D15. Content-preservation audit findings (stage 2, from 2026-09-17)
+
+The S3 recall audit (`tools/perfect_kernel/s3_sweep.sh` over the S0∧S1 slice) and the
+markup census expose losses that the error-free stage could not see. Each row names
+the mechanism, its witnesses, and the disposition.
+
+- **Measurement artifacts, not loss — do not re-chase** (sweep #104 recall triage, archived as
+  `archive/CONTENT_RECALL_TRIAGE_2026-09-19.md`): a golden that is not the `.tex`'s own PDF (geradwp,
+  modular, jacow A4/Letter); a non-Latin golden that `pdftotext` garbles while the XML has the text
+  (montex/zanabazr, greek-fontenc/test-tuenc-greek, litetable zh-cn/zh-hk; NOT arabi/samplebook, whose XML
+  has no text — a genuine loss, in PERFECT_KERNEL.md's open residuals); content that
+  is graphics (bookcover, tkz-grapheur, chessboard-skakps, writeongrid, pgf-spectra, tikz-kalender);
+  listing identifiers counted as missing (dinbrief, timeop, showexpl, pygmentex); embedded external PDFs
+  (newpax/doc-use-pax, doc-use-newpax); scrlttr2copy, whose `\blindtext` is English under `ngerman`
+  (a blindtext/babel language bug, content present).
+
+- **`\renewenvironment{document}` cannot bypass the magic `\end{document}` (SHARED with Perl, surpass candidate awaiting the user's call).**
+  `base/ltnews` concatenates 42 issue files, each a full document, by re-defining the
+  `document` environment around a `\loop … \input{ltnews\theissue} \repeat`
+  (ltnews.tex ~239). LaTeXML dispatches `\begin{document}`/`\end{document}` to the
+  magic constructor CS whenever it is defined (Perl latex_constructs.pool.ltxml:199/224;
+  Rust sect01.rs:386/459) and the magic `\end{document}` flushes the gullet
+  (Perl :387; Rust sect02.rs:526), so `\renewenvironment{document}` — which only re-lets
+  `\document`/`\enddocument` — never takes effect: the first inner `\end{document}`
+  discards issues 02–42 (recall 3.9%). Perl produces the same single issue with zero
+  errors. Repro (`~/data/pk_agents/w22/ltnews/repro/docenv.tex`): a document that
+  `\renewenvironment{document}{\clearpage}{\clearpage}` and nests a second
+  `\begin{document}…\end{document}` loses everything after the inner `\end`.
+  Faithful fix = prefer the magic CS only while `\document`/`\enddocument` still `\ifx`
+  the kernel's aliases (latex.ltx `\begin`/`\end` dynamic `\csname` dispatch), gated on
+  `ltx:document` already being open; HIGH-risk core dispatch, two witnesses
+  (`base/ltnews`, `base/l3news`). Parked as a surpass-Perl candidate.
+- **A class `\maketitle` built from private fields loses its title page (SHARED, surpass candidate, parked 2026-09-18).**
+  exam-n.cls:609-764 renews `\maketitle` to typeset the exam banner, course title, date,
+  rubric and the base-rubric paragraph from its own `\exambanner`/`\coursetitle`/`\rubric`
+  fields (exam-n.cls:139, :404-424), never `\title`/`\author`. Both engines lock
+  `\maketitle` (Perl latex_constructs.pool.ltxml:1099-1113; Rust state.rs:1320, sect02.rs)
+  — correct, it prevents double titles — so LaTeXML's own `\maketitle` runs on empty
+  frontmatter and every title-page word is lost: exam-n/template-master 0 errors, 36.5 %
+  recall, identical in Perl (root-causer `~/data/pk_agents/w23/regr83/exam-n-recall/NOTES.md`;
+  repro there, 6 lines). Same family as uni-titlepage's `\TitlePageStyle` above. The only
+  fix is a per-class frontmatter binding (`\exambanner`→title, `\coursetitle`→subtitle,
+  date/time/codes→pubnotes, rubric→note via `\lx@add@*`), one class, tiny gain: parked.
+- **jacow/JACoW_LaTeX_A4 and _Letter at 49 % recall are a golden mismatch, not a loss (2026-09-18).**
+  The template comments out its annex (`JACoW_LaTeX_A4.tex:499-501` `%===\include{annexes-A4}`)
+  while the shipped PDF is the complete build with ANNEX A: 484 of the 485 "missing" words are
+  the annex; body-only recall is 469/471 (the two left are the `\LaTeX` logos, which pdftotext
+  reads as one word and the HTML as kerned letters). Rust: 0 errors, 0 warnings; Perl loses the
+  document's `Itemize` list and reports 3 errors. Root-causer `~/data/pk_agents/w23/regr83/jacow/NOTES.md`.
+- **The German letter classes are measurement artifacts, not losses (2026-09-18).**
+  dinbrief/dinbrief (34.8 %): the `.tex` is the `.dtx`'s documentation extraction, its example
+  letters in `verbatim`, while the golden PDF is the full `.dtx` build with the 1,094-line
+  implementation listing and typeset letters — only 1,087 of the PDF's 3,051 words exist in the
+  source and 1,063 are recalled (97.8 % of the ceiling). g-brief/beispiel2 (55.4 %): g-brief2.cls
+  typesets the sender, recipient and bank blocks ONLY in `\thispagestyle{firstpage}`'s
+  `\@oddhead`/`\@oddfoot` (g-brief2.cls:252-253, :310-427), page furniture this engine never puts
+  in the flow (sect05.rs:731-732, the elsart rule) — the letter body itself is complete at 0
+  errors; Perl's higher number is 52 `undefined` errors leaking field arguments as text (OmniBus
+  loads babel before the class, `\sprache` breaks it). The only improvement is a per-class
+  g-brief contrib binding placing those blocks in the flow: gain ≈ 0 on arXiv, parked.
+  Root-causer `~/data/pk_agents/w23/regr83/letters/NOTES.md`.
+- **wrapstuff's wrapped box was dropped whole at 0 errors (RUST content loss, fixed batch 56cr).**
+  `\begin{wrapstuff}[type=table,width=3cm]\caption{X}\begin{tabular}…\end{wrapstuff}` yields
+  nothing — no caption, no tabular — while the surrounding text survives (probe
+  `~/data/pk_agents/w23/regr83/lve/wrap.tex`). wrapstuff.sty builds the box with `\vbox`/`\setbox`
+  and places it through `\parshape` machinery this engine does not carry into the flow; Perl
+  cannot load the package at all. wrapstuff-doc-en still reaches 90.7 % (its examples are small);
+  latex-via-exemplos ex15 lost its wrapped table. Root cause (`~/data/pk_agents/w23/regr85/
+  wrapstuff/NOTES.md`): the box is placed from the LaTeX2e paragraph hooks `para/begin`/
+  `para/end` (wrapstuff.sty:334, :539-552, :1905-1939), which neither engine models
+  (`\everypar` inert, `\par` runs no hooks). Fixed as a wrapfig-style inline-float binding
+  (`wrapstuff_sty.rs`; README exception list).
+- **The recall audit's "uncategorized" 45–60 % family, classified (2026-09-18;
+  `~/data/pk_agents/w23/regr85/other_recall/NOTES.md`).** pecha and showexpl are PDF-font /
+  verbatim-tokenization artifacts; figbib is a bibtex multipass (`.fig` aux, SHARED — its
+  figure-source list now renders via the `\fbList` binding, batch 56dc); quotchap
+  and fbithesis are Perl error-dumps (undefined environments leaking their arguments as text
+  inflate Perl's recall; both engines lose the epigraph / title page); timeop was already fixed.
+  ONE current RUST-ONLY loss: a picture nested in a scaled box inside a picture was never
+  SVG-converted (fixed batch 56ct; simplecd). The sim-os-menus terminal skins (TermWin/TermUnix/
+  TermMac) render in full since batch 56cv (45 listings in the sweep XML, 0 errors; Perl loses
+  them entirely — its raw xintexpr load collapses at 108 errors); the manual's remaining 76 %
+  recall is SHARED and unrecoverable: 142 of its 143 missing words are French text inside
+  `\includegraphics[page=…]{ProfLycee-doc.pdf}` pages (sim-os-menus-doc.tex:362-369), which
+  pdftotext reads off the embedded PDF and no HTML conversion can. Closed 2026-09-18
+  (`~/data/pk_agents/w23/regr90/sim_os_menus/`).
+- **S2: dangling `\hyperlink` targets (SHARED; RULED 2026-09-18: keep them, as pdflatex does).**
+  26 documents / 1,058 jing lines of `idref` mismatch (biblatex-gost-examples, biblatex-chicago,
+  elsdoc, Malva, europecv, …): `\hyperlink{name}{text}` emits `<ref idref="name">`
+  unconditionally (hyperref.sty.ltxml:231-234 = hyperref_sty.rs:712) while the matching
+  `\hypertarget` never reaches the core XML — biblatex's `begentry` hook inside the deferred
+  `\printbibliography` (gost's `\hypertarget{back:\thefield{entrykey}}`), endnote anchors typeset
+  at `\theendnotes`, or a target inside `{comment}` (elsdoc.tex:831). Perl's core XML is
+  byte-identical and its post reports the same RelaxNG failure. User ruling: stay
+  consistent with pdflatex — the link is kept with its `idref` (a dangling link may be
+  rebound in JavaScript and has a use); the schema lines are accepted, not fixed. Root-causer
+  `~/data/pk_agents/w23/regr87/s2_idref/NOTES.md`. (nath's 12 dangling `XMRef`s are a separate
+  math-structure defect.)
+- **S2: `class` values that are not NMTOKENs (33 docs, 3,488 lines) and two documents with
+  invalid `xml:id`s (RULED 2026-09-18: surpass — our class values must be NMTOKENs).**
+  Root-causer `regr87/s2_attrs/NOTES.md`: the breaking characters are `\ { } @ * +` from
+  listings' language literals (`ltx_lst_language_{TeX}_LaTeX`, `C++`, an unexpanded lexer
+  macro name), raw `\lx@add@class` with `@` names, fontawesome's `fa-*`, and a stray `\par`
+  leaking into a class argument (csvsimple-legacy); Perl emits the same invalid values. Fix =
+  emitter cleaners in `Document::set_attribute` (class tokens reduced to NameChar; `xml:id`
+  through `clean_id` before dedup). manptp's `xml:id=".1"` (`X.1` after `clean_id`) was NOT an
+  ancestor loss but the equation counter's own `\theequation@ID` formatter missing under a
+  binding-less class loaded raw: fixed at the root in batch 56dh (locked `\@definecounter`
+  alias + token-body counter formatters, regenerated dumps; Perl parity `equation1`/
+  `equation1.1`). manptp's three jing lines were a second RUST-ONLY root, fixed in batch 56di: the
+  kernel's beyond-Perl `\providecommand\inst` fallback (#201) pre-existed, so ptptex.cls:616's
+  `\newcommand\inst[1]{\gdef\@inst{#1}}` (the affiliation STORE) was silently refused and the
+  kernel superscript typeset the affiliation into the body ahead of `\maketitle`; `\inst` is now
+  provided around author content only and as an affiliation-link request (56di), and K11
+  (56dj) reroutes every raw class's store-shaped title-page setters to the frontmatter API
+  by kind — ptptex and jpsj2 need no binding (`~/data/pk_agents/w23/regr90/manptp_frontmatter/`,
+  survey `~/data/pk_agents/w23/frontmatter_stores/`).
+- **Post-only `.bib` conversion had no binding dispatch (RUST-ONLY, fixed batch 56bw).**
+  `latexml_oxide --whatsin=xml <core.xml> --dest=<html> --sourcedirectory=<bundle>` ran the
+  recursive MakeBibliography session on a fresh `Core` with no bindings chain, so
+  `TeX.pool`/`BibTeX.pool` were "missing", the preloaded class was read raw against an
+  empty kernel (100 errors → TooManyErrors) and every bibtex/biblatex-fallback
+  bibliography came back empty. Witness aomart/aomsample (24 references).
+- **Empty-body XML while "No obvious problems" (157 docs under 3,000 bytes) — root-caused, no RUST-ONLY drop.**
+  Classifier (`~/data/pk_agents/w22/empty_xml/NOTES.md`): 76 docs are complete and simply short
+  (ltx-talk, xassoccnt, tagpdf, babybeamer, ltnews18 …); 36 have a PDF with fewer than 30 words;
+  13 = uni-titlepage's `\TitlePageStyle` re-`\renewcommand`s `\maketitle` from the document body,
+  which both engines refuse for a locked binding CS (Perl State.pm:511-517; Rust state.rs:1290-1307)
+  so `[author=…]` typesets as text (SHARED, byte-identical repro `probes/mt.tex`);
+  13 render through an external resource LaTeXML cannot see (frontespizio's separately compiled
+  `\jobname-frn.eps`, arabi `\special{ps:}`, textpos/eso-pic absolute boxes, newpax PDF overlays,
+  pygmentex shell-out, nomencl `.nls`); 7 are bibliography-only bodies; tools/tools-overview
+  accumulates its content in `\toks@` and emits it from a user-redefined `\enddocument`, which the
+  magic `\end{document}` never calls — the SAME mechanism as ltnews above (SHARED, repro
+  `probes/toks.tex`). Disposition: the `\enddocument`/`\document` redefinition family is the one
+  surpass candidate (three witnesses now: ltnews, l3news, tools-overview); the rest are not losses
+  or are out of scope (D4/D7).
+- **Bibliography-only bodies (shipunov/rusnat-ex1-ru, bookshelf/spines, biblatex-* samples): not a core-XML loss.**
+  The body is `\nocite{*}` + `\bibliography{…}`; the core XML carries the `<bibliography files=…>`
+  placeholder and the reference list is a POST product — judge these on the HTML root
+  (`post_sweep.sh`, batch 56bw), never on the core XML.
+- **`\DocInput{<file>.sty}` of a package with a compiled binding typesets nothing (frankenstein ×11, SHARED).**
+  A body-level input of a `.sty` routes to `input_definitions(notex)` (content.rs:1706) and the
+  loaded binding short-circuits the raw typeset (:1723); Perl `loadTeXDefinitions` drops the doc
+  body the same way (Package.pm:2298). Rust already typesets an UNBOUND `.sty`'s prose
+  (probe `~/data/pk_agents/w22/empty2/probes/docinput_min.tex`), so the gap is the bound case
+  only; forcing raw content for bound files was litigated at content.rs:1725-1740 (HIGH risk).
+  Parked; frankenstein is the only bundle in the corpus that `\DocInput`s a `.sty`.
+- **Not losses (agent-verified, `~/data/pk_agents/w22/recall_mid3/NOTES.md`):** geradwp (the shipped
+  PDF is the class documentation, the `.tex` is a 2-page template); milsymb (symbol tables are
+  PythonTeX `\pyc` output — D7); skeldoc (enotez endnote bodies come back from the `.aux` on a
+  second run; Perl caches `\write` by filename and never re-inputs the aux either — SHARED,
+  needs a two-pass or an enotez binding); pdfreview (overlaid source PDF pages); elsdoc
+  (`\includeclip` of sample-manuscript PDFs; only rvdtx's `\setbox\topbox` title block is a
+  real ~1% loss).
+- **Not losses (s125 tail, root-causers 2026-09-26, `~/data/pk_agents/w70/scratch-streamA126/`):** modular
+  (TL flattened the bundle; the shipped `content.tex` is the example's, pdflatex on the TL tree gives
+  our output); beamertheme-mirage-doc (text of 14 embedded PDF pages; xeCJK CJK/Latin spacing and
+  hologo's inline-block `\HoLogo@La` split words for the audit only); matapli, webquiz
+  (`\includepdf` links the pages, Perl-parity); bibarts (its register is the external `bibsort`
+  program's `.prr`, TL ships no binary — SHARED, like D7); abntex2cite(-alf) (the ABNT `.bst`
+  prints the references — DEFERRED_FAMILIES `.bib`+`.bst` with no `.bbl`).
+- **blindtext is English where the PDF is Latin (assoccnt/xassoccnt examples, Perl-origin, fixed 56bx, #228).**
+- **Structure-loss signals (131 clean docs, markup audit): no general drop.** ~90% are displayed
+  source code or macro bodies; the rest are element-name mismatches the check must accept —
+  a footnote in `\title` is `<pubnote>`, in `\author` `<contact role="note">` (byte-identical
+  to Perl); minipage footnotes emit `<note>`; grid's `gridenv` is the shared `\box0`+`\vadjust`
+  path. Notes `~/data/pk_agents/w22/structure_loss/NOTES.md`.

@@ -10,6 +10,10 @@ LoadDefinitions!({
   // calc get \widthof undefined. Load calc explicitly first (faithful — adjustbox
   // requires it). Witness 2401.06320. RUST-ONLY (Perl loads calc via adjustbox).
   RequirePackage!("calc");
+  // Its trimclip reads the clipping driver graphics chose (`\Gin@driver`, graphics_sty.rs; trimclip.sty:24, :252-258):
+  // tc-pdftex.def for PDF output, as pdflatex, and no pgf. With the driver empty it read its fall-back, tc-pgf.def,
+  // and pgf, whose code a class leaving `|` active broke (sn-jnl's program.sty:521; 2202.10115, 2306.09847,
+  // 2507.09618, 6 errors each): that load read `|` as other here before the driver was given.
   InputDefinitions!("adjustbox", noltxml => true, extension => Some(Cow::Borrowed("sty")));
 
   // Some strategic redefinitions

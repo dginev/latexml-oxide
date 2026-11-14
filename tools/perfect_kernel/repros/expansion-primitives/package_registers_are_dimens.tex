@@ -1,0 +1,17 @@
+% status: RED (56jr) -> GREEN (56jr)
+% expect: 0
+% Package registers the .sty declares with \newdimen are dimens: lineno.sty:1549-1552
+% (\linenumbersep=10pt), :2852-2853 (\quotelinenumbersep=\linenumbersep), floatflt.sty:35
+% (\htdone). Perl's bindings (lineno.sty.ltxml:46, :64; floatflt/floatfig.sty.ltxml) declare
+% them Number(0), so \the printed 0 and \setlength{\linenumbersep}{2.5pt} assigned 2 and
+% printed ".5pt" once batch 56jr stopped dropping a braced value's tail (arXiv 2605.07149:
+% one new warning).
+% pdflatex: [10.0pt][10.0pt][0.0pt] / [2.5pt][1.5pt]
+\documentclass{article}
+\usepackage{lineno}
+\usepackage{floatflt}
+\begin{document}
+[\the\linenumbersep][\the\quotelinenumbersep][\the\htdone]
+
+\setlength{\linenumbersep}{2.5pt}\setlength{\htdone}{1.5pt}[\the\linenumbersep][\the\htdone]
+\end{document}

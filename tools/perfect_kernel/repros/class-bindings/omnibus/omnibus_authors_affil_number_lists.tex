@@ -1,0 +1,21 @@
+% mechanism: OmniBus's `\authors{…}` list (AGU's agujournal2019) goes whole to the reading (`\lx@add@author@split`), each
+%   `\affil{…}` of numbers (`\affil{1}`, `\affil{1,2}`) the request of those numbered `\affiliation{n}{…}`, read as
+%   llncs's `\inst` mark (omnibus_cls.rs `numbered_affil_marks`; OXIDIZED_DESIGN_DIVERGENCES #991)
+% witness: 1810.04324, 2512.09915 (`\affil{7,8}`), 2003.03010, 2103.05990, 2209.10103
+% oracle:  pdflatex with the stand-in `pdflatex/aguauthors.cls` (`TEXINPUTS=pdflatex//: pdflatex <this>`, from
+%   `omnibus/`; it is kept apart so the conversion reads the class as unknown, OmniBus): 0 errors; "Ann Able^{1,2}, Bob Baker^{2}, and Cy Cole^{1}" over
+%   "^1 Univ One" and "^2 Lab Two"
+% engines: rust int155a0 = Ann Able's affiliation the text "1,2" (Bob Baker and Cy Cole right), 2 warnings
+% expect:  0 errors, 1 warning (the unknown class's, OmniBus); Ann Able: Univ One, Lab Two; Bob Baker: Lab Two; Cy Cole:
+%   Univ One
+% status:  RED (int155a0) -> GREEN (Z18k2)
+% preload: ar5iv.sty
+\documentclass{aguauthors}
+\title{T}
+\authors{Ann Able\affil{1,2}, Bob Baker\affil{2}, and Cy Cole\affil{1}}
+\affiliation{1}{Univ One}
+\affiliation{2}{Lab Two}
+\begin{document}
+\maketitle
+Text.
+\end{document}

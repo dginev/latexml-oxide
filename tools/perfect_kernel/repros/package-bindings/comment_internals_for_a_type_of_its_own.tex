@@ -1,0 +1,45 @@
+% witness: tikz-trackschematic, tikz-trackschematic-snippets (lwarp.sty:1349-1363 `\CommentEndDef`, `\ProcessComment`, `\SetUpCutFile`)
+% oracle:  pdflatex (TL 2025) 0 errors: "Before. Middle. Shown bold. Then. General text. Next. Processed text. Also. After."
+% engines: int141a: 9 errors, each internal and `\generalcomment` undefined, the hidden text shown. Perl's binding has none of them.
+% expect:  0 errors; the paragraph whole, no "Hidden", "Gone"
+% status:  GREEN
+\documentclass{article}
+\usepackage{comment}
+\makeatletter
+\def\myexclude#1{\csarg\def{#1}{\endgroup\begingroup\def\CommentCutFile{c.cut}\def\ProcessCutFile{}%
+  \def\ThisComment####1{}\ProcessComment{#1}}%
+ \csarg\def{After#1Comment}{\CloseAndInputCutFile\endgroup}\CommentEndDef{#1}}
+\myexclude{noprint}
+\def\myinclude#1{\csarg\def{#1}{\endgroup\def\CommentCutFile{c2.cut}\SetUpCutFile\ProcessComment{#1}}%
+ \csarg\def{After#1Comment}{\CloseAndInputCutFile}\CommentEndDef{#1}}
+\myinclude{doprint}
+\generalcomment{gen}{\def\CommentCutFile{c3.cut}\begingroup}{\endgroup}
+\processcomment{proc}{}{}{}
+\makeatother
+\excludecomment{oldex}
+\begin{document}
+Before.
+\begin{noprint}
+Hidden.
+\end{noprint}
+Middle.
+\begin{doprint}
+Shown \textbf{bold}.
+\end{doprint}
+Then.
+\begin{gen}
+General \emph{text}.
+\end{gen}
+Next.
+\begin{proc}
+Processed text.
+\end{proc}
+Also.
+\begin{oldex}
+Gone.
+\end{oldex}
+\begin{comment}
+Gone too.
+\end{comment}
+After.
+\end{document}

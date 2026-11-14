@@ -1,0 +1,10 @@
+% witness: K13 r3 (57p) pifont \dingline LEAVEH / \dingfill ENTERH rows; pifont.sty:30-34 \Pifill (\leavevmode\leaders..\hfill), \Piline (\par\noindent..\par), :57-58
+% oracle:  pdflatex 0 errors; "Text" / a line of U+261E / "more <U+2713 fill> end." in three paragraphs
+% engines: rust 57p=0 errors, one <p>"Text  more  end."</p> (both commands dropped); perl=0 errors, same
+% expect:  0 errors; an ltx:text class="ltx_leader" holding U+261E stands in its own paragraph
+% status:  RED (57p) -> GREEN (57s)
+\documentclass{article}
+\usepackage{pifont}
+\begin{document}
+Text \dingline{43} more \dingfill{51} end.
+\end{document}

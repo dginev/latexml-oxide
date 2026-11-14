@@ -1,0 +1,21 @@
+% witness: review of 68z (probes l1/l2: `\def\nn{\nonumber}`, the hep idiom); 2411.17699, 2210.09695 (carried)
+% oracle:  pdflatex 0 errors; the \lefteqn LHS flush left over the row, the y^2 after \quad a script
+% expect:  0 errors; a first-column \lefteqn is the whole cell when the token after it (past spaces and spacing
+%          commands) ends the cell by MEANING, through the macros it starts (\nn -> \nonumber, \eeq -> \end): 65o's one
+%          left-aligned span; else latex.ltx:15800 \rlap{$\displaystyle#1$} in the cell's math
+% status:  GREEN (batch 68z round 2, perfect_kernel_batch68z::a_lefteqn_before_a_row_end_macro_is_the_whole_cell);
+%          68z round 1 put `\lefteqn{F(x)} \nn \\` in the right-aligned math cell (a zero-width box at the row's right
+%          edge) and erred "Script ^" on `\lefteqn{X}\quad y^2`
+\documentclass{article}
+\def\nn{\nonumber}
+\def\eeq{\end{eqnarray}}
+\begin{document}
+\begin{eqnarray}
+\lefteqn{F(x)+G(x)} \nn \\
+&=& b \\
+\lefteqn{X}\quad y^2 &=& c \\
+\lefteqn{P(x)} \hspace*{2em} \nn \\
+&=& q \\
+\lefteqn{Z}
+\eeq
+\end{document}

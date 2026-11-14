@@ -1,0 +1,20 @@
+% witness: 2605.02715 (Interspeech.cls:66-81 requires siunitx, xcolor, bm, caption, enumitem, …; the binding loaded none)
+% oracle:  pdflatex 0 errors (with the paper's Interspeech.cls)
+% engines: rust 63v4 = `Error:undefined:\color`, `Warning:unexpected:S Unrecognized tabular template`, `Error:unexpected:&`
+% expect:  0 errors, 0 warnings; the coloured x, the `S` cell a number
+% status:  RED (63v4) -> GREEN (63w)
+\documentclass[cameraready]{Interspeech}
+\title{T}
+\author{Ada}{Byron}
+\address{University A}
+\email{ada@x.org}
+\begin{document}
+\maketitle
+\begin{abstract}
+Abs.
+\end{abstract}
+{\color{red} x}
+\begin{tabular}{l S}
+a & 1.5\\
+\end{tabular}
+\end{document}

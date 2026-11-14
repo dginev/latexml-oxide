@@ -1,0 +1,15 @@
+% witness: arXiv 0708.0012 (labels in rows ended by \cr); the review's probe e1
+% oracle:  pdflatex 0 errors; "Refs 1, 2, 2." (latex.ltx:15757-15797: \@currentlabel is \theequation, stepped by \@@eqncr only after it prints the number)
+% engines: rust (78n r1) = "Refs 1, 2, 1." (the \cr row's label joins the numbered equation above); int51a \cr rows numbered, "Refs 2, 4, 3."; Perl 0.8.8 numbers every row
+% expect:  0 errors; l1 on (1), l2 and l3 (in a \cr row) on (2)
+% status:  RED (78n r1) -> GREEN (78n r2, OXIDIZED_DESIGN_DIVERGENCES #847)
+\documentclass{article}
+\begin{document}
+\begin{eqnarray}
+\lefteqn{x = y} \cr
+&=& z \label{l1}\\
+&=& w \label{l3} \cr
+&=& v \label{l2}
+\end{eqnarray}
+Refs \ref{l1}, \ref{l2}, \ref{l3}.
+\end{document}

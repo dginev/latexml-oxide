@@ -1,0 +1,21 @@
+% witness: 2008.12867 (`\institute{\begin{acknowledgements} This work was partly funded … \end{acknowledgements}
+%          T. Ara\'ujo Lima (\Letter) \at \email{…} \and …}`): an environment written whole in the text before `\at`
+% oracle:  pdflatex (TL 2025, 2007.09912's svjour3.cls) 0 errors: the institute footnote prints "Acknowledgements This
+%          work was funded by X.", "Ann Able", "ann@x.edu", "Bob Baker", "University of Y"
+% engines: rust int126a, 98b = the acknowledgements' text lost (the text before `\at` only the owner's label; 98b keeps
+%          that text as the affiliation's first line, but not an environment written whole there, whose
+%          `<ltx:acknowledgements>` inside a contact is malformed — an Error in 98b's first A/B build); Perl 0.8.8 the same
+% expect:  0 errors, 0 warnings; the acknowledgements kept (as the document's acknowledgements, or as a note)
+% status:  RED (int126a, 98b) — pathological authoring, deferred (brief 98b): an acknowledgements environment inside
+%          `\institute`
+% preload: ar5iv.sty
+\documentclass{svjour3}
+\begin{document}
+\title{A Title}
+\author{Ann Able \and Bob Baker}
+\institute{\begin{acknowledgements} This work was funded by X. \end{acknowledgements}
+  Ann Able \at \email{ann@x.edu}
+  \and Bob Baker \at University of Y}
+\maketitle
+Text.
+\end{document}

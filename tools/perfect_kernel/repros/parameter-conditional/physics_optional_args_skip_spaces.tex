@@ -1,0 +1,12 @@
+% witness: 2605.08402 (`\rho \equiv \sum_i p_i \ketbra{\psi_i} {\psi_i}.` → `|ψi⟩⟨ψi| ψi`)
+% oracle:  pdflatex 0 errors; ⟨a|b⟩, ⟨ψ|A|ψ⟩, |a⟩⟨b|, df/dx — ltcmd's g/t/s grabbers peek past spaces
+%          (xparse.sty:161-165 `\__cmd_grab_G:w` → `\__cmd_peek_nonspace:NTF`, latex.ltx:3816-3817, 4474-4482)
+% engines: rust 57p 0 errors: ⟨a| |b⟩ (meaning bra + ket), ⟨A⟩ψ, |a⟩⟨a| b, d/df x;
+%          perl 0 errors, identical (SHARED; physics.sty.ltxml:85-89 phys_readArg, :495 readMatch(\ket))
+% expect:  0 errors; the first product is an XMDual whose content applies meaning="inner-product" (no meaning="bra")
+% status:  RED (57p) -> GREEN (57t)
+\documentclass{article}
+\usepackage{physics}
+\begin{document}
+\[ \bra{a} \ket{b} \quad \ev{A} {\psi} \quad \ketbra{a} {b} \quad \dv{f} {x} \]
+\end{document}

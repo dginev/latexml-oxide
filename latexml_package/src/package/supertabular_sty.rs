@@ -16,9 +16,11 @@ LoadDefinitions!({
     Ok(())
   });
 
-  // Environment \begin{supertabular}{pattern} ... \end{supertabular}
-  DefMacro!("\\supertabular{}",
-    r"\@supertabular@start\@supertabular@bindings{#1}\@@supertabular{#1}\lx@begin@alignment\@supertabular@head");
+  // Environment \begin{supertabular}[pos]{pattern} ... \end{supertabular}. Every variant reads
+  // a `[pos]` it does not use (supertabular.sty:352-400); Perl's (L24, :40, :60, :70) read none, so the
+  // `[t]` became the column template (KPE #371).
+  DefMacro!("\\supertabular[]{}",
+    r"\@supertabular@start\@supertabular@bindings{#2}\@@supertabular{#2}\lx@begin@alignment\@supertabular@head");
   DefMacro!("\\endsupertabular",
     r"\@supertabular@tail\lx@end@alignment\@end@tabular\@supertabular@finish");
 
@@ -29,8 +31,8 @@ LoadDefinitions!({
     mode => "restricted_horizontal");
 
   // Environment \begin{supertabular*}{width}{pattern} ... \end{supertabular*}
-  DefMacro!("\\csname supertabular*\\endcsname {Dimension}{}",
-    r"\@supertabular@start\@supertabular@bindings[#1]{#2}\@@supertabular@{#1}{#2}\lx@begin@alignment\@supertabular@head");
+  DefMacro!("\\csname supertabular*\\endcsname {Dimension}[]{}",
+    r"\@supertabular@start\@supertabular@bindings[#1]{#3}\@@supertabular@{#1}{#3}\lx@begin@alignment\@supertabular@head");
   DefMacro!("\\csname endsupertabular*\\endcsname",
     r"\@supertabular@tail\lx@end@alignment\@end@tabular\@supertabular@finish");
 
@@ -41,13 +43,13 @@ LoadDefinitions!({
     mode => "restricted_horizontal");
 
   // mpsupertabular variants
-  DefMacro!("\\mpsupertabular{}",
-    r"\@supertabular@start\@supertabular@bindings{#1}\@@supertabular{#1}\lx@begin@alignment\@supertabular@head");
+  DefMacro!("\\mpsupertabular[]{}",
+    r"\@supertabular@start\@supertabular@bindings{#2}\@@supertabular{#2}\lx@begin@alignment\@supertabular@head");
   DefMacro!("\\endmpsupertabular",
     r"\@supertabular@tail\lx@end@alignment\@end@tabular\@supertabular@finish");
 
-  DefMacro!("\\csname mpsupertabular*\\endcsname {Dimension}{}",
-    r"\@supertabular@start\@supertabular@bindings[#1]{#2}\@@supertabular@{#1}{#2}\lx@begin@alignment\@supertabular@head");
+  DefMacro!("\\csname mpsupertabular*\\endcsname {Dimension}[]{}",
+    r"\@supertabular@start\@supertabular@bindings[#1]{#3}\@@supertabular@{#1}{#3}\lx@begin@alignment\@supertabular@head");
   DefMacro!("\\csname endmpsupertabular*\\endcsname",
     r"\@supertabular@tail\lx@end@alignment\@end@tabular\@supertabular@finish");
 
@@ -124,12 +126,17 @@ LoadDefinitions!({
       let mut result: Vec<Token> = vec![T_CS!("\\@caption"), T_BEGIN!()];
       result.extend(Explode!("table"));
       result.push(T_END!());
-      if let Some(Stored::Tokens(ref tc)) = toccap
-        && !tc.is_empty() {
-          result.push(T_OTHER!("["));
-          result.extend_from_slice(tc.unlist_ref());
-          result.push(T_OTHER!("]"));
-        }
+      // The short caption is the caption itself when none is given (supertabular.sty's
+      // `\@dblarg`; KNOWN_PERL_ERRORS #468): a `#1[#2]#3` `\@caption` finds its `[`. Braced,
+      // as `\@xdblarg`'s `[{#2}]`, so a `]` in it ("Dimensions [mm]") does not end it.
+      result.push(T_OTHER!("["));
+      result.push(T_BEGIN!());
+      match toccap {
+        Some(Stored::Tokens(ref tc)) if !tc.is_empty() => result.extend_from_slice(tc.unlist_ref()),
+        _ => result.extend_from_slice(c.unlist_ref()),
+      }
+      result.push(T_END!());
+      result.push(T_OTHER!("]"));
       result.push(T_BEGIN!());
       result.extend_from_slice(c.unlist_ref());
       result.push(T_END!());
@@ -147,8 +154,47 @@ LoadDefinitions!({
     Ok(())
   });
 
-  DefMacro!("\\@supertabular@start",  r"\begin{table}\@supertabular@topcaption");
+  // supertabular.sty:75 resets only its caption's size: the table keeps the surrounding size
+  // (witness 2605.21625, 2605.00163 A2.T2).
+  DefMacro!("\\@supertabular@start",  r"\lx@float@keepsize\begin{table}\@supertabular@topcaption");
   DefMacro!("\\@supertabular@finish", r"\@supertabular@bottomcaption\end{table}\@supertabular@clear");
 
   DefMacro!("\\shrinkheight{Dimension}", None);
+
+  // supertabular.sty:62-63, :515-543 (v4.2c, TL 2025): the page-break step `\ST@newpage` (close the tabular,
+  // `\newpage`, reopen it under the head). The binding sets a supertabular as one table and never breaks it, so
+  // nothing here calls it, but a style that patches the step reads it: dgruyter.sty:1704-1706
+  // `\let\bareST@newpage\ST@newpage` `\expandafter\def\expandafter\ST@newpage\expandafter{\ST@newpage\noalign{…}}`
+  // (176 papers shipping dgruyter.sty; 1503.04650, 1711.03341).
+  RawTeX!(r"\newif\ifST@star
+\newif\ifST@mp
+\def\ST@newpage{%
+  \noalign{\ST@trace\tw@{Starting new page, writing tail}}%
+  \@tabletail
+  \ifST@star
+    \csname endtabular*\endcsname
+  \else
+    \endtabular
+  \fi
+  \ifST@mp
+    \endminipage
+  \fi
+  \global\let\ST@skippage\ST@newpage
+  \newpage\@calnextpageht
+  \let\ST@next\@tablehead
+  \ST@trace\tw@{writing head}%
+  \ifST@mp
+    \noindent\minipage{\columnwidth}%
+    \parfillskip\ST@parfillskip
+    \rightskip \ST@rightskip
+    \leftskip \ST@leftskip
+  \fi
+  \noindent
+  \ifST@star
+    \expandafter\csname org@tabular*\expandafter\endcsname
+    \expandafter{\expandafter\ST@wd\expandafter}%
+    \expandafter{\ST@tableformat}%
+  \else
+    \expandafter\org@tabular\expandafter{\ST@tableformat}%
+  \fi}");
 });

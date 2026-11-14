@@ -1,0 +1,30 @@
+% A raw class's `\author` that both stores and prints, called after the document body began (a collection whose own
+% `\maketitle` leaves `\author` defined), prints its author line where it stands in pdflatex. The seal (OD #154) keeps a
+% late setter out of the frontmatter; the class's own `\author` now runs in place (`sealed_storing_run`, sect05.rs):
+% its printed text stays, the stores the frontmatter owns (the kernel's fields, the K11 stores) are put back, so the
+% paper's frontmatter is not replaced (user ruling 2026-10-09; OD #526). One that only stores is still dropped whole
+% (`perfect_kernel_batch65a::storing_class_title_after_the_body_prints_in_place`, its non-printing direction).
+% witness: none (synthetic; the 65a residual "a late class \author that both stores and prints is dropped";
+%          silent-loss inventory #8)
+% oracle:  pdflatex 0 errors: "Guest Writer" and "Second Writer" in italics, each opening its section.
+% engines: rust 65a-67int35: both lost, 0 errors, 0 warnings; rust 77i r1: both lost, 2 Warnings naming them.
+% expect:  0 errors, 0 warnings; each author an italic paragraph at the head of its section; one document creator.
+% status:  RED (67int35, 77i r1) -> GREEN (77i r2)
+\begin{filecontents*}[overwrite]{rclate.cls}
+\ProvidesClass{rclate}
+\LoadClass{article}
+\newif\if@rcbody \AtBeginDocument{\@rcbodytrue}
+\renewcommand\author[1]{\gdef\@author{#1}\if@rcbody\par\noindent\textit{#1}\par\fi}
+\renewcommand\maketitle{\begin{center}\Large\@title\end{center}}
+\end{filecontents*}
+\documentclass{rclate}
+\title{Collected Notes}\author{The Editor}
+\begin{document}
+\maketitle
+\section{One}
+\author{Guest Writer}
+Text.
+\section{Two}
+\author{Second Writer}
+More text.
+\end{document}

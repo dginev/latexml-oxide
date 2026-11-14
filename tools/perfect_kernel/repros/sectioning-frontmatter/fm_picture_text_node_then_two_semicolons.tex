@@ -1,0 +1,16 @@
+% witness: review revCR8b finding 5 (a sibling of 2404.13552): a text node's picture, its path's `;`, then a second
+%          `;` before the next name
+% oracle:  pdflatex 0 errors: "Ann Able Zebraword ; Bob Baker" (the second `;` printed)
+% engines: rust CR8b and int154r = the second `;` written inside the note as its text (the box of a text node reaches
+%          past its path's `;`, so the tail's one `;` took the printed one)
+% expect:  0 errors, 0 warnings; creators Ann Able, with a note holding the picture alone, and Bob Baker
+% status:  RED (CR8b) -> GREEN (CR8c) — perfect_kernel_batchcr8::a_text_node_picture_takes_one_semicolon
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{tikz}
+\title{T}
+\author{Ann Able \tikz\node{Zebraword};; Bob Baker}
+\begin{document}
+\maketitle
+Body.
+\end{document}

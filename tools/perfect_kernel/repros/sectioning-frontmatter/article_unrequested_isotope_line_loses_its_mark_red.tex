@@ -1,0 +1,18 @@
+% mechanism: an affiliation line led by a mark no name requests (an isotope, `$^{3}$He Facility`) is the block's affiliation,
+%   its mark consumed as a label: the printed "3" is lost
+% witness: synthetic
+% oracle:  pdflatex (-no-shell-escape, TL 2025) 0 errors: "… / 3 He Facility"
+% engines: int169a (54ccc986ef) and MLN1: the block's affiliation "He Facility", 0 warnings (silent)
+% expect:  0 errors; "³He Facility" kept whole (or its loss counted by a Warning)
+% status:  RED (int169a (54ccc986ef), MLN1): catalog only, no guard
+% moves:   post-merge
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{$^1$Ann Able \and $^2$Bob Baker\\
+$^1$Zhipu AI \quad $^2$Deep Seek\\
+$^{3}$He Facility}
+\maketitle
+Text.
+\end{document}

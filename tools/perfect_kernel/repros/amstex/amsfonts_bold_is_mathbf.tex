@@ -1,0 +1,11 @@
+% witness: 1611.03179 (\renewcommand{\mathbb}{\bold} under amsfonts)
+% oracle:  pdflatex 0 errors; amsfonts.sty:115-116 \DeclareRobustCommand{\bold}[1]{…\mathbf{#1}}
+% engines: rust 66b1 = Fatal:Timeout:Recursion (\bold{}→\mathbb{#1}, amsfonts_sty.rs:39); perl loops (amsfonts.sty.ltxml:23)
+% expect:  0 errors; a bold Q
+% status:  GREEN (66d)
+\documentclass{article}
+\usepackage{amsfonts}
+\renewcommand{\mathbb}{\bold}
+\begin{document}
+$\mathbb{Q}$
+\end{document}

@@ -200,6 +200,9 @@ LoadDefinitions!({
     let Some(command) = read_non_space()? else {
       return Ok(Tokens!());
     };
+    // `command` was read (brace-counted) and re-enters via our expansion:
+    // retract (tex.web back_input flavor).
+    retract_scanned_brace(&command);
     let mut out = vec![command];
     for arg_kind in argsig.chars() {
       match arg_kind {
@@ -219,7 +222,11 @@ LoadDefinitions!({
           Some(token) if token.get_catcode() == Catcode::BEGIN => {
             out.extend(scantokens_group(read_protected_group()?));
           },
-          Some(token) => out.push(token),
+          Some(token) => {
+            // Same back_input retraction: a read `}` may be passed through.
+            retract_scanned_brace(&token);
+            out.push(token);
+          },
           None => break,
         },
         // cprotect also knows `d`, a user-chosen delimiter pair whose two
@@ -262,4 +269,9 @@ LoadDefinitions!({
   // `\begin{env}` in place, which is that same net effect.
   DefMacro!(T_CS!("\\cprotEnv"), None, Tokens!());
   Let!("\\CPTbegin", "\\begin");
+  // cprotect.sty:133 `\outer\long\def\cprotect{\icprotect}`: the user-level
+  // worker is `\icprotect` and documents call it directly
+  // (LaTeX_RefSheet.tex:66 `\outer\def\sectionbox{\icprotect\oldsectionbox}`).
+  // Guard: `perfect_kernel_batch56::sweep45_single_name_gaps`.
+  Let!("\\icprotect", "\\cprotect");
 });

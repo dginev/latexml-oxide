@@ -35,9 +35,13 @@ pub mod prelude;
 pub mod base; // Perl: Base.pool.ltxml (LoadPool('Base_Schema'), ..., 'Base_Deprecated')
 mod base_deprecated;
 mod base_parameter_types; // Perl: Base_ParameterTypes.pool.ltxml
+pub use base_parameter_types::with_unexpandable_protect;
 mod base_schema; // Perl: Base_Schema.pool.ltxml
 pub mod base_utilities; // Perl: Base_Utility.pool.ltxml
-pub mod base_xmath; // Perl: Base_XMath.pool.ltxml // Perl: Base_Deprecated.pool.ltxml
+pub mod base_xmath;
+pub mod frontmatter_stores; // K11: raw classes' title-page stores → frontmatter API // Perl: Base_XMath.pool.ltxml // Perl: Base_Deprecated.pool.ltxml
+// The native answer of l3fp's doors, OXIDIZED_DESIGN_DIVERGENCES #977
+pub mod l3fp_native;
 
 // TeX_*.pool.ltxml
 pub mod tex_box; // Perl: TeX_Box.pool.ltxml
@@ -48,7 +52,7 @@ mod tex_fonts; // Perl: TeX_Fonts.pool.ltxml
 mod tex_glue; // Perl: TeX_Glue.pool.ltxml
 mod tex_hyphenation; // Perl: TeX_Hyphenation.pool.ltxml
 mod tex_inserts; // Perl: TeX_Inserts.pool.ltxml
-mod tex_job; // Perl: TeX_Job.pool.ltxml
+pub mod tex_job; // Perl: TeX_Job.pool.ltxml
 mod tex_kern; // Perl: TeX_Kern.pool.ltxml
 mod tex_logic; // Perl: TeX_Logic.pool.ltxml
 mod tex_macro; // Perl: TeX_Macro.pool.ltxml
@@ -62,6 +66,7 @@ pub mod tex_tables; // Perl: TeX_Tables.pool.ltxml
 
 // eTeX + pdfTeX extensions
 pub mod etex; // Perl: eTeX.pool.ltxml
+pub mod lua_bridge;
 pub mod pdftex; // Perl: pdfTeX.pool.ltxml
 
 // plain TeX format — LoadFormat('plain') chain called by tex.rs

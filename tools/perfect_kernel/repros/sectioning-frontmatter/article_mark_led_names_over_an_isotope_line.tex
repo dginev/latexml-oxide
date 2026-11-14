@@ -1,0 +1,19 @@
+% mechanism: risk: an isotope line `$^{3}$He Facility` under a name-shaped affiliation row: the number 3 no mark requests
+%   keeps the row from being a setter, and the affiliation lines stay affiliations
+% witness: synthetic (the MLN study's isotope risk)
+% oracle:  pdflatex (-no-shell-escape, TL 2025) 0 errors: "1 2 / Ann Able Bob Baker / 1 Zhipu AI 2 Deep Seek / 3 He
+%   Facility"
+% engines: int169a (54ccc986ef): Ann Able with Zhipu AI, a nameless creator holding "Bob Baker", Deep Seek and He Facility
+% expect:  0 errors, 0 warnings; Ann Able: Zhipu AI; Bob Baker: Deep Seek; He Facility the block's (its "3" lost:
+%   article_unrequested_isotope_line_loses_its_mark_red)
+% status:  RED (int169a (54ccc986ef), Bob lost) -> GREEN (MLN1)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{$^1$Ann Able \and $^2$Bob Baker\\
+$^1$Zhipu AI \quad $^2$Deep Seek\\
+$^{3}$He Facility}
+\maketitle
+Text.
+\end{document}

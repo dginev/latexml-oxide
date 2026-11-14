@@ -1,0 +1,32 @@
+% A `\parbox` of names parted by `\quad` over two lines (`\\` inside the box), then the marked affiliations line
+% and a project-link line: the box's lines are the block's lines.
+% witness: 2306.04988 (neurips_2023: `\parbox{\linewidth}{\centering Jianfei Guo$^{1}$ \quad … \quad Botian Shi$^{1}$
+%          \\ Chiyu Wang$^{2}$ \quad …} \vspace{8pt}\\ $^{1}$… \qquad $^{2}$… \vspace{8pt}\\ \href{…}{…}`)
+% oracle:  pdflatex 0 errors: "Ann Able1 Bob Baker1 Cat Cole1", "Dan Dee2 Eve Eden1*", "1 University of Alpha", "2
+%          University of Beta", "https://x.org"
+% engines: rust int138a = Cat Cole and Dan Dee one creator ("Cat Cole <break/>Dan Dee") holding both universities,
+%          0 errors (silent); Perl one creator for all
+% expect:  0 errors, 0 warnings; five creators, each with its university, Eve Eden's note; the link the block's
+% status:  RED (int138a) -> GREEN (107b)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{hyperref}
+\begin{document}
+\title{T}
+\author{
+\parbox{\linewidth}{
+	\centering
+	Ann Able$^{1}$ % \thanks{These authors contributed equally to this work.}
+	\quad Bob Baker$^{1}$ %\footnotemark[1]
+	\quad Cat Cole$^{1}$ \\
+	Dan Dee$^{2}$ 
+	\quad Eve Eden$^{1}$\thanks{Corresponding author} %: \texttt{liyikang@pjlab.org.cn}}
+}
+\vspace{8pt}\\
+$^{1}$University of Alpha \qquad 
+$^{2}$University of Beta
+\vspace{8pt}\\
+\href{https://x.org/}{https://x.org}
+}
+\maketitle
+\end{document}

@@ -1,0 +1,26 @@
+% An off-table store the class's title page puts only in page furniture — a running head (`\markboth`) or a box it
+% measures and never uses there (`\setbox`) — is not handed on: the page-furniture ruling (running heads dropped), and
+% TeX decides (`before_title_page_runs`, frontmatter_stores.rs: neither sentinel reaches the speculative run).
+% degruyter-journal-a.cls:574-586, 620 `\global\setbox\shorttitrun=\hbox{…\@headlinetitle…}` (1704.03582);
+% acmlarge.cls:1021 `\def\@firstfoot{…\@acmVolume…}` (1508.03599).
+% witness: 1704.03582, 1508.03599 (the shapes; 77i review finding 7).
+% oracle:  pdflatex 0 errors: "Widgets Text." (no running head on the title page, the box unused).
+% engines: rust 77i r1 = r2 (r1: `executed_code` skipped them in its static walk).
+% expect:  0 errors, 0 warnings; no "Short Widgets", no "Vol. 12".
+% status:  GREEN (77i r1, r2)
+\begin{filecontents*}[overwrite]{rchead.cls}
+\ProvidesClass{rchead}
+\LoadClass{article}
+\def\rc@short{}
+\newcommand\shorttitlerun[1]{\def\rc@short{#1}}
+\def\rc@vol{}
+\newcommand\volnum[1]{\def\rc@vol{#1}}
+\newsavebox\rc@headbox
+\renewcommand\maketitle{\markboth{\rc@short}{\rc@short}\global\setbox\rc@headbox=\hbox{Vol. \rc@vol}\begin{center}\Large\@title\end{center}}
+\end{filecontents*}
+\documentclass{rchead}
+\title{Widgets}\shorttitlerun{Short Widgets}\volnum{12}
+\begin{document}
+\maketitle
+Text.
+\end{document}

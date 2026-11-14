@@ -1,0 +1,19 @@
+% mechanism: reading.rs `unfold_held_names`: a document macro holding several names and their `\and`s (`\author{\aut}`):
+%   every event the expansion digests to shares the one position of `\aut`, so the block is read again with the
+%   expansion the rehearsal recorded (core `FieldInvocation::Expanded`, `field_notes::HeldExpansion`) in its place, and
+%   each name is written from its own tokens, as the inline `\author{Ann Able \and Bob Baker}` is (OD #1018)
+% witness: synthetic (bindsplit ar1; AUT0 a1)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "Ann Able Bob Baker"
+% engines: int159a, P3, int167a: 0 errors, 2 warnings (each name written as its plain text, "a name its events don't
+%   spell"); creators Ann Able, Bob Baker; perl not run
+% expect:  0 errors, 0 warnings; creators Ann Able, Bob Baker, each written from the expansion's tokens
+% status:  RED (int159a, P3, int167a) -> GREEN (AUT1; guard perfect_kernel_batchaut1)
+% preload: ar5iv.sty
+\documentclass{article}
+\newcommand\aut{Ann Able \and Bob Baker}
+\begin{document}
+\title{T}
+\author{\aut}
+\maketitle
+Text.
+\end{document}

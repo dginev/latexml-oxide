@@ -1,0 +1,30 @@
+% A raw class's displaced `\address` store whose title page redefines `\\` where it prints the store, to number the
+% line after it (`\def\\{\par\stepcounter{adr}\noindent$^{\theadr}$\enspace}`): the lines are the class's numbered
+% entries, which the kernel's `\\` does not number, so the call is in doubt and stays the class's text
+% (`ClassReaders::separators_redefined`, `displaced_argument_in_doubt`; review rev99b B2). A separator still only a line
+% break (`\def\\{, }`) separates the kernel's lines as before.
+% witness: astro-ph9805069 (caosp's `\and`, the same numbering by a separator)
+% oracle:  pdflatex 0 errors: "Ann Able1 and Bob Baker2", "1Univ A, Town", "2Univ B, City"
+% engines: rust 99b0 = 0 errors, 0 warnings, the lines body paragraphs; rust 99b r1 = both lines one address of both
+%          authors; perl = no raw class load (OmniBus `\address`)
+% expect:  0 errors, 0 warnings; no contact; "1 Univ A, Town" and "2 Univ B, City" body paragraphs
+% status:  RED (99b r1) -> GREEN (99b r2)
+% preload: ar5iv.sty
+\begin{filecontents*}[overwrite]{nmadr.cls}
+\ProvidesClass{nmadr}\LoadClass{article}
+\newcounter{adr}
+\def\address#1{\gdef\@address{\it #1}}
+\def\printaddress{\begingroup\setcounter{adr}{1}%
+  \def\\{\par\stepcounter{adr}\noindent$^{\theadr}$\enspace}%
+  \noindent$^{1}$\enspace\@address\par\endgroup}
+\def\@maketitle{\begin{center}{\LARGE\@title\par}\vskip1em{\large\@author\par}\end{center}
+  {\small\printaddress}\vskip1em}
+\end{filecontents*}
+\documentclass{nmadr}
+\begin{document}
+\title{A Title}
+\author{Ann Able$^{1}$ and Bob Baker$^{2}$}
+\address{Univ A, Town \\ Univ B, City}
+\maketitle
+Text.
+\end{document}

@@ -1,0 +1,18 @@
+% An equation steps its counter with `\refstepcounter{equation}` (latex.ltx:15737-15738), so floatrow's measuring
+% passes (`\FR@loc@`, floatrow.sty:543-556: `\refstepcounter` a local `\advance`) leave it as it was. The native step
+% (`before_equation`) went straight to the counter: (2) for pdflatex's (1), and (3) for the next.
+% witness: none (synthesized; sibling of kaytannollista-latexia's floatbox numbering).
+% Guard: perfect_kernel_batch58::floatbox_steps_its_equation_once.
+% status:  GREEN (58h)
+% oracle:  pdflatex 0 errors; "(1)" in the floatbox, "After: eq=1.", then "(2)".
+% engines: rust 58g: (2), "eq=2", (3); Perl the same.
+% expect:  0 errors, 0 warnings.
+\documentclass{article}
+\usepackage{floatrow}
+\begin{document}
+\begin{table}
+\floatbox{table}{\caption{One}}{\begin{equation}x=1\end{equation}}
+\end{table}
+After: eq=\the\value{equation}.
+\begin{equation}y=2\end{equation}
+\end{document}

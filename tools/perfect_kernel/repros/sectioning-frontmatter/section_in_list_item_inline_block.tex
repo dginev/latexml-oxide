@@ -1,0 +1,24 @@
+% witness: 2304.10050, 2312.11556, 2406.02069, 2411.15124, 2412.04099, 2501.07868, 2501.07938, 2511.00839 (a sectioning unit
+%          inside an open list item)
+% oracle:  pdflatex 0 errors: TOC 1, 1.1 Mathematics, 1.2 Later, 2 Next; "1.1 Mathematics" set in the list indent, then
+%          "Beta ... see 1.1"; after the list "1.2 Later", "See 1.1 and 1.2", "2 Next"
+% engines: rust 64f3 = Error:malformed:ltx:subsection isn't allowed in <ltx:item> (Perl the same)
+% expect:  0 errors; item S1.I1.i1 > para > inline-sectional-block > subsection S1.SS1 (1.1, labels mg); item S1.I1.i2 in
+%          the same itemize; S1.SS2 (1.2) and S2 (2) after the list (user ruling 2026-10-09, OD #189)
+% status:  RED (64f3) -> GREEN (64d)
+\documentclass{article}
+\begin{document}
+\tableofcontents
+\section{Basics}\label{s1}
+\begin{itemize}
+\item \textbf{Alpha} first term.
+\subsection{Mathematics}\label{mg}
+Intro text of the subsection.
+\item \textbf{Beta} second term, see \ref{mg}.
+\end{itemize}
+After the list.
+\subsection{Later}\label{lt}
+See \ref{mg} and \ref{lt}.
+\section{Next}\label{s2}
+Text \ref{s2}.
+\end{document}

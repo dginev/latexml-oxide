@@ -1,0 +1,19 @@
+% The tblr binding reads the table's body ahead (`tblr_scan_body`) from inside the outer table's cell. At that cell's
+% `align_state` 0 an inner `&` ended the cell, inserting its column's v-part (tex.web §342), whose `}` closes the `p` box:
+% -1, "Missing { inserted", a cascade. ltcmd reads tabularray's `+b` body align-safe (`\group_align_safe_begin:`,
+% latex.ltx:2103-2110). All three readers: the width read of `tblr`, the shape of a `talltblr`'s held body, a nested tblr.
+% witness: profsio/ProfSio-doc-fr (10 errors; awesomebox's `{tipblock}` is the `p` cell), tikz3d-fr-doc, membranecomputing.
+% oracle:  pdflatex (TL 2025) 0 errors: A B / C D / E F / G H.
+% engines: perl 4 errors 1 Fatal (raw tabularray). int140a: 8 errors, "Missing { inserted".
+% expect:  0 errors; every inner cell kept.
+\documentclass{article}
+\usepackage{tabularray}
+\begin{document}
+\begin{tabular}{p{1in}p{1in}}
+x & \begin{tblr}{ll}A & B\\ \end{tblr} \\
+\multicolumn{2}{p{2in}}{\begin{tblr}{ll}C & D\\ \end{tblr}} \\
+\begin{talltblr}{ll}E & F\\ \end{talltblr} & \begin{tblr}{ll}{\begin{tblr}{ll}G & H\\ \end{tblr}} & I\\ \end{tblr} \\
+\end{tabular}
+
+After.
+\end{document}

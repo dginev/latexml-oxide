@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?latexml class="article"?>
+<?latexml package="amsmath,amssymb"?>
+<?latexml RelaxNGSchema="LaTeXML"?>
+<document xmlns="http://dlmf.nist.gov/LaTeXML">
+  <resource src="LaTeXML.css" type="text/css"/>
+  <resource src="ltx-article.css" type="text/css"/>
+  <para xml:id="p1">
+    <p><Math mode="inline" tex="\int_{\Sigma}f\,\mathrm{d}S" text="(integral _ Sigma)@(f * differential-d@(S))" xml:id="p1.m1">
+        <XMath>
+          <XMApp>
+            <XMApp>
+              <XMTok role="SUBSCRIPTOP" scriptpos="post1"/>
+              <XMTok mathstyle="text" meaning="integral" name="int" role="INTOP">∫</XMTok>
+              <XMTok fontsize="70%" name="Sigma" role="UNKNOWN">Σ</XMTok>
+            </XMApp>
+            <XMApp>
+              <XMTok meaning="times" role="MULOP">⁢</XMTok>
+              <XMTok font="italic" role="UNKNOWN" rpadding="1.7pt">f</XMTok>
+              <XMApp>
+                <XMTok meaning="differential-d" role="DIFFOP">d</XMTok>
+                <XMTok font="italic" role="UNKNOWN">S</XMTok>
+              </XMApp>
+            </XMApp>
+          </XMApp>
+        </XMath>
+      </Math> <Math mode="inline" tex="\mathrm{d}S" text="differential-d@(S)" xml:id="p1.m2">
+        <XMath>
+          <XMApp>
+            <XMTok meaning="differential-d" role="DIFFOP">d</XMTok>
+            <XMTok font="italic" role="UNKNOWN">S</XMTok>
+          </XMApp>
+        </XMath>
+      </Math> <Math mode="inline" tex="\sqrt{\mathrm{d}t}" text="square-root@(d * t)" xml:id="p1.m3">
+        <XMath>
+          <XMApp>
+            <XMTok meaning="square-root"/>
+            <XMApp>
+              <XMTok meaning="times" role="MULOP">⁢</XMTok>
+              <XMTok role="UNKNOWN">d</XMTok>
+              <XMTok font="italic" role="UNKNOWN">t</XMTok>
+            </XMApp>
+          </XMApp>
+        </XMath>
+      </Math> <Math mode="inline" tex="\mathrm{d}t" text="d * t" xml:id="p1.m4">
+        <XMath>
+          <XMApp>
+            <XMTok meaning="times" role="MULOP">⁢</XMTok>
+            <XMTok role="UNKNOWN">d</XMTok>
+            <XMTok font="italic" role="UNKNOWN">t</XMTok>
+          </XMApp>
+        </XMath>
+      </Math></p>
+  </para>
+</document>

@@ -1,0 +1,22 @@
+% witness: 2606.24824 (`\intern{}`, its copy :598-601 `\newcommand{\intern}[1][\@interntxt]`, the default "Work done
+%          as an intern at Westlake University.", printed at :770), 2504.21788 (a bare `\equalcont`, its copy :615-617
+%          `\newcommand{\equalcont}[1][\@equalconttxt]`, "These authors contributed equally to this work.")
+% oracle:  pdflatex with 2606.24824's sn-jnl.cls and 2504.21788's `\equalcont` (:615-617) (clean): under the addresses
+%          "†These authors contributed equally to this work." and "‡Work done as a visitor." (the last `\intern`'s)
+% engines: rust 68d2 = 2 errors (undefined `\nomail`, `\intern`); rust 67z = 0 errors, every note empty, `\equalcont`
+%          reading the `\intern` after it as its text and `\intern` the `{}` or `[` after it
+% expect:  0 errors, 0 warnings; the copies' default texts, and the optional argument where one is given
+% status:  RED (67z) -> GREEN (67z r2)
+% files:   sn-jnl.cls here, the lines of the two copies the binding reads
+% preload: ar5iv.sty
+\documentclass{sn-jnl}
+\usepackage{amsmath}
+\begin{document}
+\title{A Title}
+\author*[1]{\fnm{Ann} \sur{Author}}\email{ann@example.org}\equalcont\intern{}
+\author[1]{\fnm{Bob} \sur{Writer}}\nomail\equalcont\intern[Work done as a visitor.]
+\affil[1]{\orgname{Some University}}
+\abstract{The abstract.}
+\maketitle
+Text.
+\end{document}

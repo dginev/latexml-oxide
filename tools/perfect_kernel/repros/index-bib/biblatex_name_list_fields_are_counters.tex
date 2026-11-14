@@ -1,0 +1,15 @@
+% witness: 2606.16762, 2606.26281 (a document's own `\author` storing each name under `\the\c@author`, biblatex loaded:
+%   1,000 errors and Fatal:TooManyErrors in the 2606 sandbox rerun)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "Authors: 2 (2); Ann Able and Bob Baker." — biblatex.sty:7660-7680
+%   makes every name and list field a counter (`\abx@donames`, `\abx@dornames`, `\abx@dolists`)
+% engines: int169b (862de44e59) = 2 Errors (`\c@author` undefined, `\the\c@author`), 1 Warning, "Authors: 0 (0);  and ."
+% expect:  0 errors; "Authors: 2 (2); Ann Able and Bob Baker."
+% status:  RED (int169b) -> GREEN (CAU1)
+\documentclass{article}
+\usepackage{biblatex}
+\makeatletter
+\renewcommand*\author[1]{\stepcounter{author}\csgdef{author@\the\c@author}{#1}}
+\begin{document}
+\author{Ann Able}\author{Bob Baker}
+Authors: \arabic{author} (\the\c@author); \csuse{author@1} and \csuse{author@2}.
+\end{document}

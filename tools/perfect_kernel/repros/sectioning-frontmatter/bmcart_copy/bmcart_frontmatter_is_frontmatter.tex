@@ -1,0 +1,37 @@
+% BioMed Central's bmcart.cls (this directory's bmcart.cls is a minimal stand-in) lets `\title`, `\author` and
+% `\address` to its printers in `{frontmatter}` (:966-984): the title typeset in the `{fmbox}`, each name with its
+% address numbers, the addresses stored for the "Author details" that `\thebibliography` prints (:1708-1712), which
+% the kernel's bibliography constructor never runs. The binding reads the class raw, then makes the printers the
+% frontmatter: the title, each author a creator requesting its `addressref` ids and the article notes its `noteref`
+% names, with its `email`, each address an affiliation labelled by its `id`, each `{artnotes}` `\note[id=…]{…}` a note
+% contact labelled `note:<id>` (the class prints it under the title block, :1440-1447 `\printartnotes`).
+% witness: 1711.01177 (int50a: no title, no creator, no address; the title page as boxes, the marks "??"); the
+%          artnote: 1507.06515 ("Corresponding author"), 2007.00437, 2112.10068 (dropped at 78m r1)
+% oracle:  pdflatex 0 errors; "The Title", "Jeremie Kim, Ann Able", "n1 Corresponding author", then "Author
+%          details", "1 Carnegie Mellon University, Pittsburgh, USA.", "2 ETH Zurich, Zurich, Switzerland."; the real
+%          class (1711.01177's copy) prints "Jeremie Kim^{1*}, and Ann Able^{1,2}" and "Correspondence: j@x.org" too
+% engines: perl (no binding: OmniBus) one creator "[" with the address, 7 errors; rust int50a no title, no creator,
+%          the title and the names in a `titlepage` of boxes, the addresses lost
+% expect:  0 errors; the title, two creators, Jeremie with the e-mail, Carnegie Mellon and the note "Corresponding
+%          author", Ann with both addresses
+% status:  RED (int50a) -> GREEN (78m: bmcart_cls.rs; the note RED at 78m r1 -> GREEN at r2: `\@bmcartnote`)
+% preload: ar5iv.sty
+\documentclass{bmcart}
+\begin{document}
+\begin{frontmatter}
+\begin{fmbox}
+\title{The Title}
+\author[addressref={aff1},noteref={n1},email={j@x.org}]{\inits{JK}\fnm{Jeremie} \snm{Kim}}
+\author[addressref={aff1,aff2}]{\inits{AA}\fnm{Ann} \snm{Able}}
+\address[id=aff1]{\orgname{Carnegie Mellon University}, \city{Pittsburgh}, \cny{USA}}
+\address[id=aff2]{\orgname{ETH Zurich}, \city{Zurich}, \cny{Switzerland}}
+\begin{artnotes}
+\note[id=n1]{Corresponding author}
+\end{artnotes}
+\end{fmbox}
+\end{frontmatter}
+\section{Intro} Body.
+\begin{backmatter}
+\begin{thebibliography}{1}\bibitem{a} A. Ref.\end{thebibliography}
+\end{backmatter}
+\end{document}

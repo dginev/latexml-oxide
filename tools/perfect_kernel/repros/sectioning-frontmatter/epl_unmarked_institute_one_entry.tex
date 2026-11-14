@@ -1,0 +1,18 @@
+% mechanism: an unmarked EPL `\institute` is one institution, its `\\` a break in the title block's lines
+%   (epl2.cls:682, :684-687); split at each `\\`, every author got each line as an affiliation of its own.
+% witness: 0802.1166, 0704.3325 (46 of 740 EPL papers)
+% oracle:  pdflatex (with epl2.cls v1.1 from 1201.0004) 0 errors; one institution over two lines
+% engines: rust 64u round 1: two affiliations per author; base: the institute on an empty creator
+% expect:  0 errors; each author with the one institution
+% status:  RED (64u round 1) -> GREEN (64u)
+% preload: ar5iv.sty
+\documentclass{epl2}
+\title{Fluids}
+\author{Ann Able \and Bob Baker}
+\institute{Laboratoire de Physique, CNRS UMR 8550,\\ 24 rue Lhomond, 75005 Paris, France}
+\abstract{We study fluids.}
+\begin{document}
+\maketitle
+\section{Introduction}
+Text.
+\end{document}

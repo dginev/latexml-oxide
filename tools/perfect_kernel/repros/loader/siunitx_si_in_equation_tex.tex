@@ -1,0 +1,13 @@
+% witness: review of 63t: `\SI` in display math reverts with the `$…$` of its text-mode form, so the formula's `tex=`
+%          (the alt text) holds literal dollar signs
+% oracle:  pdflatex 0 errors: (1) E = 5 J
+% engines: rust 63t6 (and 63s4) = `tex="E=$5\text{\,}\mathrm{J}$"`
+% expect:  0 errors; a `tex=` with no `$`, the quantity as math (`E=5\,\mathrm{J}` or the source `E=\SI{5}{\joule}`)
+% status:  RED (63t6)
+\documentclass{article}
+\usepackage{siunitx}
+\begin{document}
+\begin{equation}
+E=\SI{5}{\joule}
+\end{equation}
+\end{document}

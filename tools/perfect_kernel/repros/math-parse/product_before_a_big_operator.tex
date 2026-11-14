@@ -1,0 +1,13 @@
+% witness: 57bx review (probe shapes; none in the 57bx A/B)
+% oracle:  pdflatex 0 errors; Perl `(a cdot b) * (sum _ i)@(c _ i)`
+% engines: rust 57bv1c/57bx: ltx_math_unparsed — a visible MulOp product before a big operator, and a big operator's
+%          application after a fraction's product (`\frac1n\sum_i x_i\cdot\frac1m\sum_j y_j`)
+% cause:   not root-caused; the bigop pragma's wide/narrow readings or a missing `term mulop term bigop_application`
+%          path (pragmatics.rs `pragma_bigop_prefer_wider_absorption`, builder.rs bigop rules)
+% expect:  0 errors, 0 warnings; Perl's readings; `\frac1n\sum_i x_i\cdot\frac1m\sum_j y_j` the first sum taking
+%          x_i·(1/m)·∑_j y_j as Perl's greedy operand
+% status:  RED
+\documentclass{article}
+\begin{document}
+$a\cdot b\sum_i c_i$ $a\cdot 2\sum_i c_i\cdot d$ $\frac1n\sum_i x_i\cdot\frac1m\sum_j y_j$ $\frac12\int_0^1 f\,dx\cdot\frac12\int_0^1 g\,dy$
+\end{document}

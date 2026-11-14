@@ -1,0 +1,16 @@
+% witness: 2312.13144 (siamltex.cls:459-476: the theorems share one counter within the section; `{remark}` among them)
+% oracle:  pdflatex 0 errors (with the shipped siamltex.cls); "Remark 1.1", "Theorem 1.2"; with `onethmnum`
+%          "Remark 1", "Theorem 2"
+% engines: rust 65e r2 = "Remark 1", "Theorem 2" (the binding declared `{theorem}` unnumbered by section and no
+%          `{remark}`, which the OmniBus theorem set no longer re-declares, OXIDIZED_DESIGN #533); 65a "Remark 1.1",
+%          "Theorem 1.2", "Proof 1.3" (the set re-declared them all, the proof a numbered theorem)
+% expect:  0 errors; "Remark 1.1", "Theorem 1.2"; the proof amsthm's, unnumbered
+% status:  RED (65e r2) -> GREEN (65e)
+% preload: ar5iv.sty
+\documentclass{siamltex}
+\begin{document}
+\section{One}
+\begin{remark}A remark.\end{remark}
+\begin{theorem}A theorem.\end{theorem}
+\begin{proof}A proof.\end{proof}
+\end{document}

@@ -1,0 +1,21 @@
+% mechanism: a bare e-mail label word (no colon) mid-line is the address's label when a list's separator or a period
+%   stands before it and the address ends the line: it goes with the address and names its contact, the entry keeps
+%   no fragment (brief 95c r3 F4); `\texttt{mail ann@x.org now}` stays whole (a plain word after it, review rev95c S4).
+% witness: synthetic (review rev95c_r2 probe e1); the label shape of 1909.06145, 1911.11406
+% oracle:  pdflatex 0 errors: "1 Univ X, E-mail ann@x.org", "2 Univ Y. Email bob@y.org", "3 Univ Z, e-mail cole@z.org"
+% engines: rust 95c-r2: the affiliations "Univ X, E-mail", "Univ Y. Email", "Univ Z, <text>e-mail</text>"; rust
+%   int123a: the addresses inside the affiliations; perl: not run
+% expect:  0 errors, 0 warnings; affiliations "Univ X", "Univ Y.", "Univ Z"; the e-mails named "E-mail ", "Email ",
+%   "e-mail "
+% status:  RED (95c-r2) -> GREEN (95c-r3)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{Ann Able$^1$, Bob Baker$^2$, Cat Cole$^3$ \\
+$^1$ Univ X, E-mail ann@x.org \\
+$^2$ Univ Y. Email bob@y.org \\
+$^3$ Univ Z, \textit{e-mail} cole@z.org}
+\maketitle
+Text.
+\end{document}

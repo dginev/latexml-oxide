@@ -1,0 +1,32 @@
+% witness: hep-ph0610439 (8 `\psfig{figure=*.epsi}` graphics, 13 fragments); revPSF1 blocker (p1/epsi, epsfext, noext)
+% oracle:  latex + dvips, 0 `!`, each of the four graphics prints α for "A" (dvips.def's `\Gin@rule@*` reads an `.epsi`
+%          as EPS; epsf's `\epsfbox` reads any file as EPS)
+% engines: rust PSF1b = four plain `<graphics>`, 0 errors, 0 warnings (EPS only by a `.eps`/`.ps` extension)
+% expect:  four Warnings, one per graphic, each naming "A" and the graphic; 0 errors
+% status:  GREEN (PSF1c: a file is EPS by its PostScript header); rendering moves to PSFR (post-merge)
+\documentclass{article}
+\usepackage{graphicx,epsfig,psfrag}
+\begin{filecontents*}{psfragi.epsi}
+%!PS-Adobe-3.0 EPSF-3.0
+%%BoundingBox: 0 0 72 36
+/Times-Roman findfont 12 scalefont setfont
+10 10 moveto (A) show
+showpage
+\end{filecontents*}
+\begin{filecontents*}{psfragf.epsf}
+%!PS-Adobe-3.0 EPSF-3.0
+%%BoundingBox: 0 0 72 36
+/Times-Roman findfont 12 scalefont setfont
+10 10 moveto (A) show
+showpage
+\end{filecontents*}
+\begin{document}
+\psfrag{A}{$\alpha$}
+\includegraphics{psfragi.epsi}
+
+\psfig{figure=psfragi.epsi}
+
+\epsfbox{psfragf.epsf}
+
+\epsffile{psfragf.epsf}
+\end{document}

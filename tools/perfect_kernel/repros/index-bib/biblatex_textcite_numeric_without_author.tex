@@ -1,0 +1,20 @@
+% witness: rev78a probe (numeric.cbx:23-41 `textcite`: an entry without `labelname` prints its `labeltitle`, then the
+%          bracketed number); 2402.17192, 2410.22329 (the named form, OD #786)
+% oracle:  pdflatex+biber 0 errors: "No Author Misc [2] said it." and "Hampe [1] showed it."
+% engines: rust 78a r1 = "2 said it." (CrossRef.pm:541 turns a nameless entry's whole show to `refnum`, the brackets
+%          lost; Perl the same); int40c = "[2] said it." (the plain `\cite` fallback)
+% expect:  0 errors; "[2] said it." (the brackets kept; the labeltitle is OD #786's residual), "Hampe [1] showed it."
+% status:  GREEN (78a r2)
+% preload: ar5iv.sty
+\begin{filecontents*}{biblatex_textcite_numeric_without_author.bib}
+@article{Hampe_2017, author={Hampe, Simon}, title={T}, journal={J}, year={2017}}
+@misc{noauthor, title={No Author Misc}, year={2020}}
+\end{filecontents*}
+\documentclass{article}
+\usepackage[style=numeric]{biblatex}
+\addbibresource{biblatex_textcite_numeric_without_author.bib}
+\begin{document}
+\textcite{Hampe_2017} showed it.
+\textcite{noauthor} said it.
+\printbibliography
+\end{document}

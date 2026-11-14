@@ -1,0 +1,25 @@
+% witness: pythonimmediate/pythonimmediate (12 "Missing control sequence inserted" under W17's
+%   get_r_token check, T_LETTER[c]: the stored `\edef cmr{cmtt}\selectfont` at \DescribeOption),
+%   tikz-network/tikz-network (1, same signature)
+% oracle:  pdflatex 0 errors; "A B C D" with B and D in typewriter
+% engines: rust 56ji-rel 0 errors, B upright (the letter c silently defined as a macro);
+%          with W17's get_r_token check alone 1 error ("Missing control sequence
+%          inserted"), B upright (2026-09-25); Perl plain macros too
+% expect:  0 errors; <p>A <text font="typewriter">B</text> C <text font="typewriter">D</text></p>
+% status:  GREEN (56jp, W17: robust NFSS switches, sect13.rs/sect08.rs; guard
+%          rtoken_patchcmd::font_switches_are_robust_in_protected_edef)
+% mechanism: latex.ltx declares \ttfamily (:13993), \rmfamily (:13983), \bfseries (:13923),
+%   \normalfont (:14113), \fontfamily (:14139), \fontseries (:12259) and \fontshape (:12436) with
+%   \DeclareRobustCommand, so \protected@edef keeps them. Rust (sect13.rs `\fontfamily{}` =
+%   `\edef\f@family{#1}`, `\ttfamily` a plain DefMacro) and Perl (latex_constructs.pool.ltxml:
+%   5170-5172, 5185-5187) define plain macros: inside \protected@edef \ttfamily expands to
+%   `\edef\f@family{\ttdefault}`, whose \f@family and \ttdefault expand in turn, so the stored
+%   text is `\edef cmr{cmtt}\selectfont` — a definition of the letter c. SHARED with Perl;
+%   fixed by `robust => true` on those DefMacros (the Perl `robust` / \DeclareRobustCommand shape).
+\documentclass{article}
+\makeatletter
+\protected@edef\x{\ttfamily B}
+\makeatother
+\begin{document}
+A {\x} C \texttt{D}
+\end{document}

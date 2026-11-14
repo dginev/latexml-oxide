@@ -1,0 +1,44 @@
+% mechanism: a control sequence whose name is no letters run (`\csname pal@data#1\endcsname` → `\pal@data1H`,
+%   `\pal@data1-2WR`; an expl3 `\l_x_dim`) is ONE token in what `\pgfmathparse` receives; the parser's text round trip
+%   split it (`\pal@data` + `1H`), bare (a wrong value, silent) and in a `\dimexpr`/`\numexpr` operand re-read by TeX
+%   (an Error). Its name is the token's: bare, scaled, after `\wd`, in an e-TeX expression, before one, in a function,
+%   a ternary, `\pgfmathsetmacro` and `\pgfmathsetlength`.
+% witness: pagelayout's manuals example-grid (165 E), pagelayout-manual-layout-guides (9 E) (pagelayout.cls:237-252,
+%   :850 `\dimexpr\pal@get{#2HR} sp\relax` from `\posy` in a `\draw` coordinate, :2382-2392); pgf-interference
+% oracle:  pdflatex 0 `!`: [6-][6-][1-][3.0u][6.0u][7.0u] / [1.0u][19.0u][12-][-2.0u] / [6.0pt][2.0pt][9.0pt] /
+%          [4.0u][3.0u] / [6.0u][6.0-][a-][1.5]
+% engines: rust int163a (60ea9068db): [0.0u]×6 / [0.0u][0.0u][0.0u][3.0u] / [0.0pt]×3 / [0.0-][3.0u] /
+%          [0.0u][0.0u][b-][0.0], 2 errors ("Missing close parenthesis in Dimension expr. Got T_CS[\pal@data]",
+%          "\pal@data is not defined"), 15 warnings;
+%          Perl: [0u]×5[16383.99998u] / [0u][0u][0u][3u] / [0.0pt]×3 / [0u][0u] / [0u][0u][0u][0], 24 errors, 82 warnings
+%          ("\pal@data is not a register"; KNOWN_PERL_ERRORS #1226)
+% expect:  the pdflatex values, 0 errors, 0 warnings
+% status:  GREEN (PGR1b)
+\documentclass{article}
+\usepackage{pgf}
+\makeatletter
+\expandafter\newcount\csname pal@data1H\endcsname \csname pal@data1H\endcsname=6
+\expandafter\newcount\csname pal@data1-2WR\endcsname \csname pal@data1-2WR\endcsname=65536
+\expandafter\newdimen\csname pal@dim1\endcsname \csname pal@dim1\endcsname=3pt
+\expandafter\newbox\csname pal@box2\endcsname \setbox\csname pal@box2\endcsname=\hbox to 7pt{}
+\def\get#1{\csname pal@data#1\endcsname}
+\newdimen\len
+\def\u{\ifpgfmathunitsdeclared u\else -\fi}
+\def\t#1{\pgfmathparse{#1}[\pgfmathresult\u]}
+\def\l#1{\pgfmathsetlength\len{#1}[\the\len]}
+\makeatother
+\ExplSyntaxOn
+\dim_new:N \l_x_dim \dim_set:Nn \l_x_dim {2pt}
+\cs_new:Npn \showx {\t{\dimexpr\l_x_dim*2\relax}\t{\l_x_dim+1pt}}
+\ExplSyntaxOff
+\begin{document}
+\t{\get{1H}}\t{2\get{1H}}\t{\get{1H}>2}\t{\csname pal@dim1\endcsname}\t{2\csname pal@dim1\endcsname}\t{\wd\csname pal@box2\endcsname}
+
+\t{\dimexpr\get{1-2WR} sp\relax}\t{\dimexpr(\get{1H}pt+\csname pal@dim1\endcsname)*2\relax+1}\t{\numexpr\get{1H}*2\relax}\t{3-\dimexpr\get{1-2WR} sp*\numexpr\get{1H}-1\relax\relax}
+
+\l{\get{1H}*1pt}\l{\dimexpr\get{1-2WR} sp\relax*2}\l{\csname pal@dim1\endcsname+\dimexpr\get{1H}pt\relax}
+
+\showx
+
+\t{\dimexpr 1pt\relax*\get{1H}}\t{max(\get{1H},2)}\t{\get{1H}==6?"a":"b"}\pgfmathsetmacro\m{\get{1H}/4}[\m]
+\end{document}

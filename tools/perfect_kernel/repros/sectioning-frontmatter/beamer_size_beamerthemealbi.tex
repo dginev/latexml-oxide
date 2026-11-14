@@ -1,0 +1,21 @@
+% witness: beamer-theme-albi/beamer-theme-albi-doc (residue rust=57) — \beamer@size expanded by the Albi theme
+% oracle:  pdflatex 0 errors
+% engines: rust=1 perl=1 (2026-09-03) — SHARED (both bindings omit \beamer@size)
+% expect:  0 errors; body \texttt contains the class font-size clo token (size9.clo)
+% status:  GREEN (b54w, batch 54p)
+% mechanism: beamer.cls:144 `\def\beamer@size{{size11.clo}}` + option handlers :148-160
+%   (`\DeclareOptionBeamer{9pt}{\def\beamer@size{{size9.clo}}}`) set a preamble-only class
+%   internal. beamerthemeAlbi.sty:192 `size/.expanded=\beamer@size` feeds it to a pgfkeys
+%   choice key. The Rust beamer binding (beamer_cls.rs) rewrites \DeclareOptionBeamer into
+%   \define@key (beamer_cls.rs:504) and never runs the `\def\beamer@size{...}` body nor the
+%   :144 default, so \beamer@size is undefined -> the theme's choice key fails, cascading 57.
+%   Fix in the BINDING (bindings outrank raw): define \beamer@size default {size11.clo} and
+%   honour the 8pt..20pt/bigger/smaller options. Reference is PREAMBLE-only (\begin{document}
+%   consumes it at beamer.cls:363 `\expandafter\input\beamer@size`).
+\documentclass[9pt]{beamer}
+\makeatletter
+\edef\x{\beamer@size}%
+\makeatother
+\begin{document}
+Size: \texttt{\x}
+\end{document}

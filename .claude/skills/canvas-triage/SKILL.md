@@ -8,10 +8,7 @@ description: >
   comes out malformed or laid out differently than LaTeX, or any "is this a real
   bug vs. parity?" question. This is the classification GATE before the
   min-repro → perl-port fix chain. Pairs with tools/parity_check.sh,
-  triage_failure.sh, first_error.sh and the cortex document/<id> API. Invoke for
-  "triage this paper", "is 1234.5678 a regression", "classify this failure vs
-  Perl", "why does this render differently from LaTeX", "is this our bug or
-  Perl's", "/canvas-triage".
+  triage_failure.sh, first_error.sh and the cortex document/<id> API.
 ---
 
 The output of this skill is a **classification**, not a fix. Only one verdict —
@@ -19,6 +16,10 @@ GENUINE-RUST-ONLY, confirmed same-host — justifies code changes. Reach for the
 `perl-port` skill once you get there.
 
 ## Golden rules (non-negotiable — violating these has burned us repeatedly)
+
+0. **An upstream `t/` golden is a spec only for the feature its test targets** (BM, the Bruce Miller Q&A 2026-11-05,
+   Q1.3: "they are always snapshots; but with aspirations to be specifications"). A difference outside the tested
+   feature is judged by TeX and the semantics, not by the golden.
 
 1. **Never downgrade errors to cheat the task.** A change that makes Rust emit
    *fewer* `Error:`/`Fatal:` than Perl on the same paper is a **divergence**, not
@@ -30,11 +31,11 @@ GENUINE-RUST-ONLY, confirmed same-host — justifies code changes. Reach for the
    be treated as success. False positives (flagging a clean run) are acceptable;
    false negatives (missing real errors) are forbidden. When in doubt, count it
    as a failure to investigate.
-3. **Classify Perl with VERBOSE, never `--quiet`.** `/usr/local/bin/latexml
-   --quiet` prints "0 errors" / exits 0 *even when the conversion has errors* — it
-   suppresses both the `Error:` lines and the final count. This trap has bitten us
-   ≥3 times (babel-russian, collcell, francais). Run `latexml <paper>.tex` plain
-   and read the `Conversion complete: … N errors; … undefined macros[…]` summary.
+3. **Classify Perl with VERBOSE, never `--quiet`.** `latexml --quiet` prints
+   "0 errors" / exits 0 *even when the conversion has errors* — it suppresses both
+   the `Error:` lines and the final count (witnesses: babel-russian, collcell,
+   francais). Run `latexml <paper>.tex` plain — the same-host Perl on PATH — and
+   read the `Conversion complete: … N errors; … undefined macros[…]` summary.
 4. **ANSI-strip before grepping.** Logs may carry color codes
    (`\x1b[31mError:`), so a naive `grep '^Error:'` silently matches **zero** on a
    paper with hundreds. Always: `sed 's/\x1b\[[0-9;]*m//g' | grep -acE
@@ -71,7 +72,7 @@ preserves the extracted dir). To see the *first* non-cascade error class with
 source context: `tools/first_error.sh <paper.log>`.
 
 **2 — Reproduce Perl on the SAME host** (verbose, never `--quiet`):
-`/usr/local/bin/latexml paper.tex` → read the `Conversion complete: … N errors`
+`latexml paper.tex` (the same-host Perl on PATH) → read the `Conversion complete: … N errors`
 line. This is the parity ground truth.
 
 **3 — Or run the automated verdict:** `tools/parity_check.sh <arxiv_id>` emits
@@ -90,8 +91,8 @@ Perl-timeout (reads `SANDBOX_DIR`, `TIMEOUT_SECS=180`).
 
 **5 — Only GENUINE-RUST-ONLY (same-host-confirmed) is a fix candidate.** Read the
 Perl source for the construct and port faithfully via the `perl-port` skill;
-reduce to a fixture via `min-repro`; validate with `cargo test --tests
---no-fail-fast` + clippy + Perl parity on the witness.
+reduce to a fixture via `min-repro`; validate with `cargo nextest run
+--workspace` + clippy + Perl parity on the witness.
 
 ## cortex API (candidate discovery only — open reads, no token)
 

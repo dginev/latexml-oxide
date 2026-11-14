@@ -1,0 +1,12 @@
+% witness: ffslides/ffslides-doc (TeX Live doc/latex/ffslides/ffslides-doc.tex)
+% oracle: lualatex exit 0, 0 errors (pdflatex also clean)
+% engines: pdflatex/lualatex clean; same-host Perl 0 errors (its raw pstricks.sty load wins over the dead .ltxml line) — RUST-ONLY
+% expect: \deepblue defined as a color switch by \newrgbcolor (real pstricks.sty:191)
+% status: GREEN (batch 56bh, 2026-09-09)
+% mechanism: pstricks_support_sty.rs \newrgbcolor drops \gdef\csname#1\endcsname{\color{#1}}
+\documentclass{article}
+\usepackage{pstricks}
+\newrgbcolor{deepblue}{.2 .2 .5}
+\begin{document}
+{\deepblue text is blue}
+\end{document}

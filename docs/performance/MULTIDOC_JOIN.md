@@ -31,7 +31,7 @@ we detect and join them, what has landed, and the queued streaming extension.
 ## Why streaming needs a different join
 
 A large document streams precisely so its whole DOM never sits in RAM
-([`STREAMING_POST_DESIGN_2026-07-06.md`](STREAMING_POST_DESIGN_2026-07-06.md)).
+([`STREAMING_POST_DESIGN_2026-07-06.md`](../archive/STREAMING_POST_DESIGN_2026-07-06.md)).
 An in-memory join of two full DOMs defeats exactly that. So at scale the join must
 be **per-document independent** on the convert side and assembled on the **post**
 side, where the streaming machinery already lives.

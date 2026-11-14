@@ -1,0 +1,23 @@
+% mechanism: `insert::respell_emails` picks the author an e-mail call moves to by the names as printed; base letters
+%   only keep an address on the author it spells so (brief 95c r2 B1). Anna Smith's own `\email{muller-group@x.de}`
+%   spells Jörg Müller only by base letters, so it stays on her (FIDELITY_CHARTER §4 #420: a call's own author is
+%   evidence; a base-letter spelling moves nothing).
+% witness: the charter example (#420); 2410.00275 (the base-letter reading the veto keeps)
+% oracle:  pdflatex 0 errors: "ANNA SMITH AND JÖRG MÜLLER", "Univ X  Email address: muller-group@x.de", "Univ Y
+%   Email address: jm@y.de"
+% engines: rust 95c: muller-group@x.de moved onto Jörg Müller; rust int123a: on Anna Smith; perl: on Anna Smith
+% expect:  0 errors, 0 warnings; Anna Smith "Univ X", muller-group@x.de; Jörg Müller "Univ Y", jm@y.de
+% status:  RED (95c) -> GREEN (95c-r2)
+% preload: ar5iv.sty
+\documentclass{amsart}
+\begin{document}
+\title{T}
+\author{Anna Smith}
+\address{Univ X}
+\email{muller-group@x.de}
+\author{J\"org M\"uller}
+\address{Univ Y}
+\email{jm@y.de}
+\maketitle
+Text.
+\end{document}

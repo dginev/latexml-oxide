@@ -1,0 +1,14 @@
+% witness: review 64y round 1 (m11_math: math-mode exclusion)
+% oracle:  pdflatex 3 errors (\equation's $$ opened a math_shift_group: tex.web 1069)
+% engines: rust 64ra 2E, 64y 2E; Perl 5E
+% expect:  2 Errors (Missing $ inserted; Can't close environment equation): not recovered as an environment frame
+% status:  GREEN (64y); guard perfect_kernel_batch64y::bare_equation_closed_by_brace_stays_an_error
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+Intro.
+
+{\equation x=1} After.
+
+Next.
+\end{document}

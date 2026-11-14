@@ -1,0 +1,17 @@
+% witness: mathfixs.sty:139 `\let\sqrt=\mafx@sqrt` (body reaches `\radical\z@{#2}` :109 and
+%   `\sqrtsign` :117, :130); review of the dump-gate `\radical` primitive
+% oracle:  pdflatex 0 errors; three square roots
+% engines: rust=1 perl=1 (2026-09-25; undefined \radical); a \radical handing off to the
+%   public \sqrt looped here to Fatal:Timeout
+% expect:  0 errors; \sqrt{x} (= \sqrtsign), \radical"270370\mathchar"178 and \radical0{z}
+%   are square roots
+% status:  GREEN (guard dump_gate_init::radical_survives_a_let_sqrt)
+% mechanism: `\let` ignores the lock on the `\sqrt` constructor, so \radical must build its
+%   radical through the private math_common.rs `\lx@radical@sqrt`, not through `\sqrt`
+%   (\sqrt -> \sqrtsign -> \radical -> \sqrt ...). tex.web §1151: a `\mathchar` math field
+%   carries its number.
+\documentclass{article}
+\let\sqrt\sqrtsign
+\begin{document}
+$\sqrt{x}+\radical"270370\mathchar"178+\radical0{z}$
+\end{document}

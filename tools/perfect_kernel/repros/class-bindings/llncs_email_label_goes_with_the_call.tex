@@ -1,0 +1,24 @@
+% mechanism: a label of an `\email` call's own on llncs's shared `\institute` that the rule recognises — before it, one
+%   to four words ending in a colon, read as printed, the first a contact's word (`Corresponding author:`,
+%   `\textit{Corresponding author:}`, `Corresponding~author:`), or a parenthetical after it (`(Corresponding author)`)
+%   — goes with the call, to the address's owner, or with it to the block (`row_email_calls`, `call_label`). Other text
+%   on the call's line stays the institute's (`… Rouen, France. \email{…}`, 2609.24668; `Dept. of CS:`, no contact
+%   word, the 85b r3 re-review's n09, n10, n12, n35), and so does a label of another form (a residual, OD #901).
+% witness: 2410.06985 (this replica); 2609.00838; 2509.05139 (`Contact:`); 2608.24697 (`\email{…} (Corresponding
+%   author),`); the 85b re-review's s23 (`Corresponding author email: \email{zz@x.edu}`, no name spells it: the block's)
+% oracle:  pdflatex 0 errors; six names over "Unity Technologies" and "Corresponding author: donnesimon@gmail.com"
+% engines: rust int114a = all on a nameless creator; 85b r2 = "Corresponding author:" in every author's affiliation
+% expect:  0 errors, 0 warnings; the institute on the six; "Corresponding author: donnesimon@gmail.com" Simon Donné's
+% status:  RED (85b r2; r3 for the printed forms, n14-n16) -> GREEN (85b r4)
+% preload: ar5iv.sty
+\documentclass{llncs}
+\begin{document}
+\title{A Title}
+\author{Shimon Vainer \and Konstantin Kutsy \and Dante De Nigris \and Ciara Rowles \and Slava Elizarov \and
+Simon Donn\'e}
+\institute{Unity Technologies\\
+Corresponding author: \email{donnesimon@gmail.com}}
+\maketitle
+\begin{abstract}Text.\end{abstract}
+Body.
+\end{document}

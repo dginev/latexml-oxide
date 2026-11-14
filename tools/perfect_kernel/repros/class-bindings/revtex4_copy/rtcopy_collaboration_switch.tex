@@ -1,0 +1,16 @@
+% witness: 0805.2253, 0806.0481, 0805.4759 (qm2008_abs.cls, snp.cls, jasatex.cls: revtex4.cls copies whose
+%          `\@author@def` sets `\@booleanfalse\collaboration@sw`, which `\affiliation`'s `\move@AU` tests)
+% oracle:  pdflatex with rtcopy.cls (beside): "T October 16, 2026 Text." (the cut-down class prints no authors); 0 errors
+% engines: rust 67int15 = 1 error (undefined `\collaboration@sw`: the refused `\author`'s replay ran in a group, which
+%          undid its `\let`)
+% expect:  0 errors, 0 warnings; the author the frontmatter's creator
+% status:  RED (67int15) -> GREEN (68v)
+% preload: ar5iv.sty
+\documentclass{rtcopy}
+\begin{document}
+\title{T}
+\author{Takeshi Osada}
+\affiliation{Musashi Institute}
+\maketitle
+Text.
+\end{document}

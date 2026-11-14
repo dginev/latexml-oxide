@@ -1,0 +1,20 @@
+% mechanism: two `\email` calls on a line of llncs's shared `\institute` with a connective between them (`and`, `or`,
+%   `\&`): each address goes to its owner, but the connective is no call separator (`is_call_separator` is one token
+%   of spacing or punctuation; `and`/`or` are words), so it stays the institute's, in every author's affiliation
+%   ("Univ X and"). Not fixed in 85b: not a line or two in `is_call_separator`; a residual, OXIDIZED_DESIGN_DIVERGENCES
+%   #901.
+% witness: the 85b r4 re-review's finding 3 (q08 `and`, q28 `\&`); no census paper
+% oracle:  pdflatex 0 errors; "Ann Able and Bob Baker" over "Univ X" and "able@x.edu and baker@x.edu"
+% engines: rust int114a = "Univ X and" and able@ on a nameless creator, baker@ Bob's; 85b r3-r5 = "Univ X and" on
+%   both, each address its owner's
+% expect:  0 errors, 0 warnings; "Univ X" on both, no connective in it; able@x.edu Ann's, baker@x.edu Bob's
+% status:  RED (85b r5)
+% preload: ar5iv.sty
+\documentclass{llncs}
+\begin{document}
+\title{T}
+\author{Ann Able \and Bob Baker}
+\institute{Univ X\\ \email{able@x.edu} and \email{baker@x.edu}}
+\maketitle
+Body.
+\end{document}

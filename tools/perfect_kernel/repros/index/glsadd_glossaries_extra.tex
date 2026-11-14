@@ -1,0 +1,21 @@
+% mechanism: glossaries-extra replaces \@gls@link (glossaries-extra.sty:3465) and
+%   \glsadd (:3571, via its \@glsadd :3581, also reached by \glsaddeach :3605),
+%   so the binding's reference wraps are lost once it loads: no entry of a
+%   glossaries-extra document is listed. A preamble \glsadd is listed too
+%   (its location is the document start, glossaries-user.tex:25585-25590).
+% witness: glossaries-extra \gls/\glsadd documents (stream A, sweep #124)
+% oracle:  pdflatex+makeglossaries 0 errors; lists Dexterity, Strength, Wisdom
+% engines: rust=0 errors, empty glossary; perl identical (base 0d10215663, 2026-09-26)
+% expect:  0 errors; glossary lists Dexterity, Strength and Wisdom
+% status:  RED (56jt) -> GREEN (56jt)
+\documentclass{article}
+\usepackage{glossaries-extra}
+\makeglossaries
+\newglossaryentry{str}{name={Strength},description={Physical power}}
+\newglossaryentry{dex}{name={Dexterity},description={Agility and accuracy}}
+\newglossaryentry{wis}{name={Wisdom},description={Common sense}}
+\glsadd{wis}
+\begin{document}
+Text about \gls{dex}. \glsaddeach{str}
+\printglossary
+\end{document}

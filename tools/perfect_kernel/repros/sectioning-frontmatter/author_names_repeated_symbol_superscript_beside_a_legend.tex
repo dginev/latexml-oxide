@@ -1,0 +1,19 @@
+% mechanism: the superscript path's reading of a repeated symbol beside a legend (OD #928 round 9, review rev94a r8
+%   P1; `apply::show_legend_mark`'s `ltx:sup` loop parts marks at commas): `$^{\dagger\dagger}$` under a
+%   `$^{\dagger}$` legend is a mark of its own and stays shown, the legend's note showing its †, as the formula path
+%   now reads `$^{1,\dagger\dagger}$` (`author_names_repeated_dagger_beside_a_legend_is_its_own_mark`).
+% witness: review rev94a r8 w/w17
+% oracle:  pdflatex 0 errors: "Ann Able†† and Bob Baker1 / 1Univ X / †Corresponding author"
+% engines: rust 93a, 94a r8: as expected; perl: not run
+% expect:  0 errors, 0 warnings; Ann Able `<sup>††</sup>`, Univ X (revtex's group) and the note mark=†
+%   "Corresponding author"; Bob Baker `<sup>1</sup>`, Univ X; eager and --streaming the same
+% status:  GREEN (93a; pinned 94a r9)
+% preload: ar5iv.sty
+\documentclass{revtex4-2}
+\begin{document}
+\title{A Title}
+\author{Ann Able$^{\dagger\dagger}$ and Bob Baker$^{1}$}
+\affiliation{$^1$Univ X\\ $^{\dagger}$Corresponding author}
+\maketitle
+Body.
+\end{document}

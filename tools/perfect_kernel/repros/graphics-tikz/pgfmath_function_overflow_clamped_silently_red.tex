@@ -1,0 +1,13 @@
+% A pgfmath function's result past ±16383.99998 (`\pgfmathmultiply`, the `@` functions' `pgfmath_result_str`) is
+% clamped with no diagnostic, where pgf's `\pgfmath@x` stops on "Dimension too large" (tex.web §460); the parser's
+% own result errs (pgfmath_overflow_errs, DTL1d).
+% witness: synthetic (DTL1d sibling sweep).
+% status:  RED. Ours (DTL1d): [16383.99998], 0 errors, 0 warnings.
+% oracle:  pdflatex 1 `!` (Dimension too large), [16383.99998]; Perl 0 errors, [40000].
+% expect:  1 error, [16383.99998].
+% moves:   post-merge (the function results and pgfmath_sp's input clamp are a second site).
+\documentclass{article}
+\usepackage{pgf}
+\begin{document}
+\pgfmathmultiply{200}{200}[\pgfmathresult]
+\end{document}

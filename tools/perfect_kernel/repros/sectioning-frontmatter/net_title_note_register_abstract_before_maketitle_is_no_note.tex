@@ -1,0 +1,26 @@
+% The A2 run's sibling (review rev98c S1): the document opens `{abstract}` before `\maketitle`, so the class's begin code
+% printed `\the\tntoks` while it was still empty — the title note is set when `\maketitle` prints the title — and pdflatex
+% prints an empty footnote. No note: the begin code's candidates wait for an abstract opened after `\maketitle`
+% (frontmatter_stores.rs `hand_net_begin_code_stores`).
+% witness: 1206.6940, cs0405006 (sig-alternate; the positive shape)
+% oracle:  pdflatex 0 errors: "Abstract", "An abstract.", an empty "∗" footnote, "A Title∗", "Ann Able"
+% engines: rust 98c = 0 errors, 1 warning (frontmatter:unclaimed, \tntoks), a note; perl = OmniBus pubnote
+% expect:  0 errors, 0 warnings; no ltx:note; the abstract kept
+% status:  RED (98c) -> GREEN (99b)
+% preload: ar5iv.sty
+\begin{filecontents*}[overwrite]{nettn.cls}
+\ProvidesClass{nettn}\LoadClass{article}
+\newtoks\tntoks
+\def\titlenote#1{$^{\ast}$\global\tntoks={#1}}
+\renewenvironment{abstract}{\insert\footins{\footnotesize$^{\ast}$\the\tntoks\par}\section*{Abstract}}{\par}
+\end{filecontents*}
+\documentclass{nettn}
+\begin{document}
+\title{A Title\titlenote{Supported by the Danish Council for Independent Research.}}
+\author{Ann Able}
+\begin{abstract}
+An abstract.
+\end{abstract}
+\maketitle
+Text.
+\end{document}

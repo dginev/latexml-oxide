@@ -1,0 +1,31 @@
+% \MakeUppercase/\MakeLowercase/\MakeTitlecase on commands that carry l3text
+% case-change declarations, checked BEFORE the changer expands them:
+% - the letter-like table from \@uclclist (textalpha's greek-fontenc.def:332-406
+%   pairs; l3text builds it from fixed \AA\aa... constants plus \@uclclist,
+%   FIRST-wins, expl3-code.tex:37926-37988), so \textalpha -> \textAlpha,
+%   \aa -> \AA, and \textEpsilon -> \textepsilon (not the later \textvarepsilon);
+% - a \DeclareCaseChangeEquivalent reached through a macro (\foo -> \>, whose
+%   equivalent is textalpha.sty:213-214 \CaseSwitch{\>}{\LGR@hiatus}{\>}{\>});
+% - \CaseSwitch in title case takes the <title> branch and leaves the rest of
+%   the word as is (expl3-code.tex:36713-36717);
+% - the exclusion list: \label keeps its key (\l_text_case_exclude_arg_tl,
+%   expl3-code.tex:36002-36007).
+% Run with the luatex profile.
+% witness: greek-fontenc char-list, textalpha-doc (lualatex)
+% oracle:  lualatex 0 errors: [Α] [α] [ε] [Å] [Αβ] [Ὰ] [ἀ] [ἀ] [A] [ABC DEF GHI]
+%          [abc def]; the \label key stays `ab` (l3text never cases it)
+% engines: rust (56ja) = 1 warning, [α] [Α] [Ε] [å] [αβ] [`”0313Α] [Ἀ] [ἀ] [A],
+%          labels="LABEL:AB"
+% expect:  0 warnings, lualatex's text, labels="LABEL:ab"
+% guard:   case_change_equivalents::letterlike_table_and_title_case_switch
+% status:  GREEN (W10, 2026-09-25; was RED)
+\documentclass{article}
+\usepackage{fontspec}
+\usepackage{textalpha}
+\begin{document}
+[\MakeUppercase{\textalpha{}}] [\MakeLowercase{\textAlpha{}}] [\MakeLowercase{\textEpsilon}]
+[\MakeUppercase{\aa}] [\MakeTitlecase{\textalpha\textbeta}]
+[\def\foo{\>\`α}\MakeUppercase{\foo}] [\MakeTitlecase{\>α}] [\MakeLowercase{\>Α}]
+[\MakeUppercase{a\label{ab}}]
+[\MakeUppercase{abc \emph{def} ghi}] [\MakeLowercase{ABC \emph{DEF}}]
+\end{document}

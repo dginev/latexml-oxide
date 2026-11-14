@@ -1,0 +1,13 @@
+% witness: 63e review r2 finding 1 (astro-ph0302534 shape wrapped in a bold group: marks after the commas inside it)
+% oracle:  pdflatex 0 errors: "Todd M. Tripp,^2 Bart P. Wakker,^4" in bold
+% engines: rust (63e r3) = Tripp without his mark, Wakker with mark 2, a nameless author with mark 4
+% expect:  2 creators, Tripp (2) and Wakker (4), each with its \altaffiltext; 0 errors
+% status:  RED (63e r3) -> GREEN (63e)
+\documentclass{emulateapj}
+\begin{document}
+\title{T}
+\author{{\bf Todd M. Tripp,\altaffilmark{2} Bart P. Wakker,\altaffilmark{4}}}
+\altaffiltext{2}{Princeton University Observatory, Princeton, NJ}
+\altaffiltext{4}{Department of Astronomy, University of Wisconsin, Madison, WI}
+\maketitle
+\end{document}

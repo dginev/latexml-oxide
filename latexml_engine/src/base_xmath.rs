@@ -698,9 +698,17 @@ LoadDefinitions!({
      if font.is_sticky() {
        let mut n      = 0;
        let mut text = String::new();
-       loop {
+       // (count of nodes read, text read) after each token, for the leading-digit case below.
+       let mut read: Vec<(usize, String)> = Vec::new();
+       // Perl Base_XMath.pool.ltxml:443-458: letters join only while the text read so far is
+       // ASCII `/^[0-9a-zA-Z]+$/`, and a comment between them is stepped over (and counted); the
+       // fonts compare as Perl's `equals` (`Font::perl_equals`), so a digit before `\mathrm{…}`
+       // letters is read too. Goldens tests/parse/math_lexemes.tex#letters_ligature_is_ascii,
+       // #letters_ligature_reads_back_through_a_digit; guard
+       // `perfect_kernel_batch56::letters_ligature_joins_across_a_comment`; witness 2605.31599.
+       'tokens: loop {
          if model::with_node_qname(node_mut, |qname| qname != "ltx:XMTok")
-          || document.get_node_font(node_mut) != font
+          || !document.get_node_font(node_mut).perl_equals(font)
           || node_mut.has_attribute("name") {
             break;
           }
@@ -708,23 +716,38 @@ LoadDefinitions!({
            Some(role) if role != "UNKNOWN" && role != "NUMBER" => break,
            _ => {}
          };
-         let node_text = node_mut.get_content();
-         if !node_text.chars().all(|c| c.is_alphanumeric()) {
+         let joined = node_mut.get_content() + &text;
+         if joined.is_empty() || !joined.bytes().all(|b| b.is_ascii_alphanumeric()) {
            break;
          }
-         n+=1;
-         text = node_text + &text;
-         match node_mut.get_prev_sibling() { Some(sibling) => {
-           this_node = sibling;
-           node_mut = &mut this_node;
-         } _ => {
-           break;
-         }}
+         text = joined;
+         read.push((n + 1, text.clone()));
+         loop {
+           n += 1;
+           match node_mut.get_prev_sibling() {
+             Some(sibling) => {
+               this_node = sibling;
+               node_mut = &mut this_node;
+               if node_mut.get_type() != Some(NodeType::CommentNode) {
+                 break;
+               }
+             },
+             None => break 'tokens,
+           }
+         }
        }
-       let has_leading_letter = match text.chars().next() {
-         Some(fc) => fc.is_alphabetic(),
-         None => false
-       };
+       // Perl joins the run only when it starts with a letter, so the digits of `10\mathrm{log}`
+       // or `2\mathrm{KL}` left the letters apart (`l * o * g`; KNOWN_PERL_ERRORS #364). Here the
+       // letters after the leading digits join, the digits staying a number (OXIDIZED_DESIGN
+       // #348); a run starting with a letter joins whole, as Perl.
+       if !text.starts_with(|c: char| c.is_ascii_alphabetic())
+         && let Some((count, letters)) =
+           read.into_iter().rev().find(|(_, t)| t.starts_with(|c: char| c.is_ascii_alphabetic()))
+       {
+         n = count;
+         text = letters;
+       }
+       let has_leading_letter = text.starts_with(|c: char| c.is_ascii_alphabetic());
        if has_leading_letter && n > 1 {
          Ok(Some((n, text, MathLigatureOptions {
            role: Some("UNKNOWN".to_string()),
@@ -767,7 +790,8 @@ LoadDefinitions!({
   let thou    = THOUSANDS_SEP.get(lang).unwrap_or(&",");
   let decrole = if dec == &"." { "PERIOD" } else { "" };
   // let mut chars : Vec<char> = Vec::new();
-  let (mut n, mut combined, mut number, _w, mut font) = (0, String::new(), String::new(), 0, None);
+  let (mut n, mut combined, mut number, _w) = (0, String::new(), String::new(), 0);
+  let mut font: Option<&Font> = None;
   //     NOTE: We're scanning chars from END!
   let mut node_ref = node;
   let mut current;
@@ -778,7 +802,9 @@ LoadDefinitions!({
       let f    = document.get_node_font(node_ref);
       let text = node_ref.get_content();
       //  A number in same font?
-      if r=="NUMBER" && (font.is_none() || font.as_ref().unwrap() == &f) {
+      // Perl `$f->equals($font)` (Base_XMath.pool.ltxml:500): `Font::perl_equals`, so `1\mathrm{2}`
+      // is the number 12 as Perl.
+      if r=="NUMBER" && (font.is_none() || font.as_ref().unwrap().perl_equals(f)) {
         font = Some(f);
         combined = text + &combined;
         if let Some(m) = node_ref.get_attribute("meaning") {
@@ -801,7 +827,11 @@ LoadDefinitions!({
     // OR if XMHint with 0 <= width <= thickmuskip (5mu == ?)
     } else if qn == pin!("ltx:XMHint") {
       if let Some(s_name) = node_ref.get_attribute("name") {
-        if let Some(s_char) = NAMED_SPACE_CHARS.get(s_name.as_str()) {
+        // Perl `($s = $space_chars{$s})` is false for `\!`'s empty string, so a negative thin space ends the scan:
+        // taken as a separator, `2\!x` made a "number" of the 2 and the hint, which the parser drops with the hint
+        // (`$2\!x$` read "x"; 2609.36534 `$+5.9\!\cdot\!10^{-7}$`, 2608.02769 `\mathbf 1\!\left(`, 2603.03017; guard
+        // `perfect_kernel_batch77x::number_before_negative_thin_space_kept`).
+        if let Some(s_char) = NAMED_SPACE_CHARS.get(s_name.as_str()).filter(|c| !c.is_empty()) {
           combined = s_char.to_string() + &combined;
         } else {
           break;
@@ -969,7 +999,7 @@ LoadDefinitions!({
   DefPrimitive!("\\lx@gen@matrix@bindings RequiredKeyVals:lx@GEN", sub[(kv)] {
     use latexml_core::alignment::cell::Cell;
     use latexml_core::alignment::template::TemplateConfig;
-    use crate::tex_tables::alignment_bindings;
+    use crate::tex_tables::{alignment_bindings, array_strut};
 
     bgroup();
     // style defaults to \textstyle
@@ -1034,7 +1064,8 @@ LoadDefinitions!({
       xml_attributes.insert(String::from("rowsep"), rowsep.to_string());
     }
 
-    let properties = SymHashMap::default();
+    // amsmath's matrices are `\array`s: rows of `\@arstrutbox` height (KNOWN_PERL_ERRORS #445)
+    let properties = array_strut().map(|strut| stored_map!("strut" => strut)).unwrap_or_default();
     alignment_bindings(template, String::from("math"), properties, xml_attributes);
     let_i(&T_CS!("\\\\"), &T_CS!("\\lx@alignment@newline"), None);
     let_i(&T_CS!("\\lx@intercol"), &T_CS!("\\lx@math@intercol"), None);
@@ -1277,7 +1308,7 @@ LoadDefinitions!({
   DefPrimitive!("\\lx@gen@cases@bindings RequiredKeyVals:lx@GEN", sub[(kv)] {
     use latexml_core::alignment::cell::Cell;
     use latexml_core::alignment::template::TemplateConfig;
-    use crate::tex_tables::alignment_bindings;
+    use crate::tex_tables::{alignment_bindings, array_strut};
 
     bgroup();
     let style_tok = kv.get_value("style")
@@ -1319,7 +1350,8 @@ LoadDefinitions!({
       ..TemplateConfig::default()
     });
 
-    let properties = SymHashMap::default();
+    // amsmath's `cases` is an `\array`: rows of `\@arstrutbox` height (KNOWN_PERL_ERRORS #445)
+    let properties = array_strut().map(|strut| stored_map!("strut" => strut)).unwrap_or_default();
     alignment_bindings(template, String::from("math"), properties, HashMap::default());
     let_i(&T_CS!("\\\\"), &T_CS!("\\lx@alignment@newline"), None);
     let_i(&T_CS!("\\lx@intercol"), &T_CS!("\\lx@math@intercol"), None);
@@ -1734,6 +1766,11 @@ pub fn add_column_to_math_fork(
       }
     } else if node.get_type() == Some(NodeType::CommentNode) {
       // Skip comments
+    } else if with(qname, |t| META_CLASS.contains(&t)) {
+      // A footnote/index/glossary marker the cell's Math floated out
+      // (`float_meta_out_of_math`, OXIDIZED_DESIGN #272) has no math reading. Perl
+      // clones it into the main branch's `XMText` like any other element, so the
+      // fork held it twice (a `.mf` duplicate). It stays in the td only.
     } else {
       if let Some(mut mainfork_xmath) = first_child_element(mainfork) {
         assign_value("ID_SUFFIX", Stored::String(pin!(".mf")), None);
@@ -1810,7 +1847,9 @@ fn fixup_xmref_idrefs(_document: &mut Document, root: &Node) {
   // `.mf`, collapsing every `.mf` id under one key (last-write-wins).
   // Driver paper: arXiv:1811.12184 — 60+ "No node found" warnings on
   // S3.E22 align/equation cluster (cloned to MathFork main branch).
-  let trailing_num_re = Regex::new(r"\.(\d+)(?:\.[A-Za-z]\w*)?$").unwrap();
+  static TRAILING_NUM_RE: std::sync::LazyLock<Regex> =
+    std::sync::LazyLock::new(|| Regex::new(r"\.(\d+)(?:\.[A-Za-z]\w*)?$").unwrap());
+  let trailing_num_re = &*TRAILING_NUM_RE;
   let mut id_by_suffix: HashMap<String, String> = HashMap::default();
   for id in &all_ids {
     if let Some(caps) = trailing_num_re.captures(id) {
@@ -1984,10 +2023,19 @@ pub fn equationgroup_join_rows(
     }
     eq.unlink_node();
     let mut tr = document.open_element_at(&mut branch_node, "ltx:tr", None, None)?;
-    // Note: Perl also checks for lefteqn class on first _Capture_ to add ltx_eqn_lefteqn
-    // to <tr>, but in practice the class is on a child td (via \multicolumn), not on
-    // _Capture_ itself, so the condition never fires in Perl output.
     let cells: Vec<Node> = document.findnodes("ltx:_Capture_", Some(&eq));
+    // Perl Base_XMath.pool.ltxml:956-957: a row led by a `\lefteqn` is classed `ltx_eqn_lefteqn`. In Perl it never
+    // fires: `\lx@add@cssclass` cannot class the `_Capture_` (not in the schema), and `/\blefteqn\b/` misses
+    // `ltx_eqn_lefteqn` (`_` is a word character). The cell carries the class now (`\lx@alignment@cell@overprint`,
+    // OXIDIZED_DESIGN_DIVERGENCES #556). The class is in the XML only: LaTeXML-block-xhtml.xsl writes the HTML row's
+    // own class (:703, :883), so LaTeXML.css's `tr.ltx_eqn_lefteqn + tr` rule never meets it.
+    if cells
+      .first()
+      .and_then(|c| c.get_attribute("class"))
+      .is_some_and(|class| class.split_whitespace().any(|c| c == "ltx_eqn_lefteqn"))
+    {
+      document.set_attribute(&mut tr, "class", "ltx_eqn_lefteqn")?;
+    }
     for mut cell in cells {
       add_column_to_math_fork(document, &mut mainfork, &mut tr, &mut cell)?;
     }

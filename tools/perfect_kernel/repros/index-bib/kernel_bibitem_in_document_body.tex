@@ -1,0 +1,16 @@
+% witness: none on arXiv yet (64x review round 8: kbody); the kernel's twin of natbib_bibitem_in_document_body
+% oracle:  pdflatex 6 errors: "Lonely \item" for each \bibitem and the label's follow-on errors
+% engines: rust 64x = 0 errors (the kernel's \bibitem rebuilds a bibliography silently); Perl 0.8.8 0 (the same:
+%          latex_constructs.pool.ltxml:4074-4076); base 0
+% expect:  2 Error:malformed:ltx:bibitem (LaTeX's Lonely \item), the entries recovered into a bibliography
+% status:  RED (64x): pre-existing silence, left to the diagnostics audit
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\section{Summary}
+Text \cite{a}.
+
+\bibitem{a} Able, A. 2011, ApJ.
+
+\bibitem{b} Baker, B. 2012, ApJ.
+\end{document}

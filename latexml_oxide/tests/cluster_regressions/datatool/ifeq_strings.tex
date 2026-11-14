@@ -1,0 +1,10 @@
+\documentclass{article}
+\usepackage{datatool}
+\begin{document}
+% `\DTLifeq` on strings (datatool-base.sty:9075, :9052): exact, spaces kept,
+% case-folded under `*`; `\DTLifstringeq` never goes numeric. The shape
+% tikz-network's `\Vertices` runs per key (tikz-network.sty:804-816).
+\DTLloaddb{t}{tests/cluster_regressions/datatool/contract.csv}
+A:\DTLifeq{ab}{ab}{Y}{N}\DTLifeq{ab}{ AB }{Y}{N}\DTLifeq*{ab}{AB}{Y}{N}\DTLifeq{a b}{a  b}{Y}{N}\DTLifeq{5}{5x}{Y}{N}\DTLifstringeq{5}{05}{Y}{N}\DTLifeq{a~b}{a b}{Y}{N}.
+B:\DTLforeach*{t}{\n=name,\q=qty}{\DTLifeq{\n}{Doe}{[hit:\q]}{}\DTLforeachkeyinrow{\v}{\DTLifeq{\dtlkey}{qty}{(\v)}{}}}.
+\end{document}

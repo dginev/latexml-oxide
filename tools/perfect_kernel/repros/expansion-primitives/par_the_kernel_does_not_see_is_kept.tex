@@ -1,0 +1,12 @@
+% Negative controls for tex.web §392: only the token `\par` read into a non-\long macro's argument
+% ends the call — not a `\long` macro's, not a macro or `\let` copy that means `\par`, not a `\par`
+% the delimiter matches, or one that continues a partial match of it (tex.web §397).
+% witness: user ruling 2026-10-04 (implement §392)
+% oracle:  pdftex 0 errors, "A[a" / "b]C[a" / "b]D[a" / "b]E¡a" / "b¿F¡ax" / "b¿G" (OT1 < and >)
+% engines: rust (62f1-rel) and perl as pdftex
+% expect:  0 errors, paragraphs A[a / b]C[a / b]D[a / b]E¡a / b¿F¡ax / b¿G
+% status:  GREEN (62h; guard scanner_status::a_par_the_kernel_does_not_see_is_kept)
+\long\def\l#1{[#1]}\def\x#1{[#1]}\def\p{\par}\let\endgraf\par
+\def\q#1\par!{<#1>}\def\r#1x\par!{<#1>}
+A\l{a\par b}C\x{a\p b}D\x{a\endgraf b}E\q a\par b\par!F\r ax\par bx\par!G
+\bye

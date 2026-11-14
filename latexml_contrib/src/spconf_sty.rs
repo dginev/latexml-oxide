@@ -1,5 +1,5 @@
-//! spconf.sty / INTERSPEECH2021.sty — the ICASSP/older-Interspeech frontmatter
-//! package (loaded on top of `\documentclass{article}`).
+//! spconf.sty — the ICASSP frontmatter package (loaded on top of `\documentclass{article}`), whose
+//! conventions INTERSPEECH2021-2023.sty share (bound in `interspeech_sty`, which loads this binding).
 //!
 //! Both define the single-argument conference convention
 //!   `\name{Author1$^1$, Author2$^2$, …}`  `\address{$^1$Inst … $^2$ …}`
@@ -23,6 +23,9 @@ LoadDefinitions!({
   // (→ `\lx@add@authors`), which splits the comma / superscript-marked list into
   // individual creators and links their affiliation superscripts.
   DefMacro!("\\name{}", "\\author{#1}");
+  // spconf.sty:181 `\def\sthanks#1{\gdef\thefootnote{\fnsymbol{footnote}}\@@savethanks{#1}}`: a `\thanks` marked
+  // with a symbol, after a name in `\name` (45 2609 papers, 2609.05884, 2609.09883).
+  DefMacro!("\\sthanks{}", "\\thanks{#1}");
   // `\address{affils}` — the (superscript-numbered) affiliation block. Preserve
   // as a frontmatter note so the numbered institutions are kept.
   DefMacro!(
@@ -42,6 +45,28 @@ LoadDefinitions!({
   DefMacro!(
     "\\twoauthors{}{}{}{}",
     "\\author{#1 \\\\ #2 \\and #3 \\\\ #4}"
+  );
+  // The spconf.sty variant most papers ship (2006-2007 Cotton/Braumann revision with two- and three-line author
+  // blocks; 80 of the 84 papers using `\secondlinename` define it identically, 2016-2025: 1701.07847, 1710.09338)
+  // typesets further lines of names under `\name`, each `{\em #1}\\` (spconf.sty :172 `\def\secondlinename#1{…}`,
+  // :165 `\@name \\[-1em] \@secondlinename\\ \@address`); the `\nameplus` copies (15 papers, 1309.1501) and the
+  // `\thirdlinename`, `\nameplusplus`, `\secondname` ones do the same. Each line adds its names to the authors
+  // `\name` gave (`\lx@add@authors@append`), their superscripts linked to the `\address` block as `\name`'s are.
+  DefMacro!("\\secondlinename{}", "\\lx@add@authors@append{#1}");
+  DefMacro!("\\thirdlinename{}", "\\lx@add@authors@append{#1}");
+  DefMacro!("\\nameplus{}", "\\lx@add@authors@append{#1}");
+  DefMacro!("\\nameplusplus{}", "\\lx@add@authors@append{#1}");
+  DefMacro!("\\secondname{}", "\\lx@add@authors@append{#1}");
+  // `\threeauthors{names1}{affil1}{names2}{affil2}{names3}{affil3}` and the 8-argument `\fourauthors`, `\twoauthors`
+  // widened in the same copies (18 of 21 papers define `\threeauthors` with six arguments, 0708.3022; 5 papers
+  // `\fourauthors`, 2403.02059): side-by-side `tabular`s replacing `\@name`, read as `\twoauthors` is.
+  DefMacro!(
+    "\\threeauthors{}{}{}{}{}{}",
+    "\\author{#1 \\\\ #2 \\and #3 \\\\ #4 \\and #5 \\\\ #6}"
+  );
+  DefMacro!(
+    "\\fourauthors{}{}{}{}{}{}{}{}",
+    "\\author{#1 \\\\ #2 \\and #3 \\\\ #4 \\and #5 \\\\ #6 \\and #7 \\\\ #8}"
   );
   // The "Index Terms" block (spconf.sty L211-214):
   //   \def\keywords{\vspace{.5em}{\bfseries\textit{Index Terms}---\,\relax}}

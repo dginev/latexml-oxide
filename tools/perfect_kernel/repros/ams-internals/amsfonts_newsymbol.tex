@@ -1,0 +1,13 @@
+% witness: 1302.6049, 2112.15557; amsfonts.sty:117-138
+% oracle:  pdflatex 0 errors, 2 "Obsolete command \newsymbol" warnings
+% engines: rust 65int2 = 3 errors (`\newsymbol` undefined); Perl lacks it (KNOWN_PERL_ERRORS #632)
+% expect:  0 errors, 2 warnings (amsfonts' obsolete-command notice); \mylneqq U+2268, \mylesssim U+2272
+% status:  RED (65int2) -> GREEN (65s)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{amsfonts}
+\newsymbol\mylneqq 2308
+\newsymbol\mylesssim 132E
+\begin{document}
+$a \mylneqq b \mylesssim c$
+\end{document}

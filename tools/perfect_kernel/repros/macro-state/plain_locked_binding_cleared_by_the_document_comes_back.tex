@@ -1,0 +1,18 @@
+% mechanism: the document's own `\let` clearing a plain-locked kernel binding, then its `\DeclareMathAlphabet` of the
+%   name, which the plain lock refuses as it refuses a file's: the binding is kept aside at every origin, the
+%   document's too, and put back on the refusal (state.rs `let_i`, `restore_cleared_binding`; OXIDIZED_DESIGN #569).
+%   68x r1 kept it aside only for a file's `\let` (eulerpx), so `\mathcal` stayed undefined and `\mathscr` lost its
+%   script font.
+% witness: review 68x probe p6 (the eulerpx shape of 2311.14793, 2501.10505, 2510.26876 written in a document)
+% oracle:  pdflatex: 0 errors; "Text L and M end." — a calligraphic L, a script M
+% engines: rust 67int16 and 68x r1: Error:undefined:\mathcal, the M italic; perl: the same refusal
+% expect:  0 errors, 0 warnings; L font="caligraphic", M font="script"
+% status:  RED (68x r1) -> GREEN (68x r2)
+\documentclass{article}
+\let\mathcal\undefined
+\DeclareMathAlphabet{\mathcal}{OMS}{cmsy}{m}{n}
+\let\mathscr\relax
+\DeclareMathAlphabet{\mathscr}{U}{rsfs}{m}{n}
+\begin{document}
+Text $\mathcal{L}$ and $\mathscr{M}$ end.
+\end{document}

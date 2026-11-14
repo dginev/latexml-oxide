@@ -1,0 +1,14 @@
+% mathabx's box product □ `\square` and its MULOP ⊕ `\pluscirc` are large product operators (user ruling, Q11 scope,
+% 2026-10-01; divergence #396): they keep their juxtaposed operand whole, as ⊗ does (product_chains.tex). `\oplus` stays an
+% ADDOP, which a juxtaposition binds tighter anyway.
+\documentclass{article}
+\usepackage{amsmath,mathabx}
+\begin{document}
+
+% witness: the Q11 scope ruling (user, 2026-10-01; 2605.11552, 2605.12221, 2605.15276, 2605.27086 for the class)
+% engines: rust m45: (a□b)·c, (a⊕b)·c (Perl's one factor)
+% expect:  0 errors; a□(b c), a⊕(b c); before an integral's differentials the integrand's factors
+\section{The box product and pluscirc}
+$a\square b c$ $a\pluscirc b c$ $a\oplus b c$ $\int f\square g h\,dx$ $A\square 2B$ $x\pluscirc y\pluscirc z w$
+
+\end{document}

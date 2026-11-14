@@ -1,0 +1,20 @@
+% mechanism: tex.web §342 inserts the column's v-part when a tab mark is read at `align_state` 0, and the door of TL 2025's l3fp has no
+%   `\group_align_safe_begin:` (that of 2026-01-19 has). So a `&` read at brace level 0 of a cell is the macro's, Errors included; the native
+%   path declines it (`l3fp_native::parse::tab_mark_ends_cell`) by the gullet's own count, so on the 2026 door it stays native. `\fp_compare:nTF` in a user macro.
+% witness: review of batch P2r2, no arXiv paper
+% oracle:  pdflatex: 20 `!`, the first `You can't use \unskip after \the`
+% engines: rust: native and raw byte-identical (Perl has no native path)
+% expect:  TL 2025: 3 Errors, 0 Warnings (P2r2 native: 0 Errors)
+% status:  GREEN
+\documentclass{article}
+\ExplSyntaxOn
+\cs_new:Npn \ifboth #1#2 { \fp_compare:nTF { #1 && #2 } {yes} {no} }
+\ExplSyntaxOff
+\begin{document}
+\ifboth{1>0}{2>1}
+\begin{tabular}{cc}
+{\ifboth{1>0}{2>1}} & b \\
+x\ifboth{1>0}{2>1} & b \\
+\end{tabular}
+\[\begin{array}{c} \ifboth{1>0}{2>1} \end{array}\]
+\end{document}

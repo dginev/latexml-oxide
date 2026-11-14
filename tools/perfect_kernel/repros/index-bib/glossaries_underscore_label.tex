@@ -1,0 +1,17 @@
+% witness: arXiv 2605.01773 (ieeetj; tex/notations.tex: 122 of 133 \newglossaryentry labels
+%          contain _, e.g. beat_frequency, start_freq)
+% oracle:  pdflatex 0 errors (the label only builds \csname glo@<label>@…\endcsname)
+% engines: rust (56hu) = one "_ can only appear in math mode" per entry (the paper: Fatal);
+%          Perl: the same on this repro (on the paper it dies earlier, in the xindy quote check)
+% expect:  0 errors; key="beat_frequency" on the definition and the reference
+% status:  RED (56hu) -> GREEN (56hv, KNOWN_PERL_ERRORS #233)
+% mechanism: the binding digested the label (\glslabel, catcode-8 _) as a {} argument only to
+%   build key=; it is read ExpandedSemiverbatim now, like \label.
+\documentclass{article}
+\usepackage{glossaries}
+\makeglossaries
+\newglossaryentry{beat_frequency}{name={$f_b$},description={Beat frequency}}
+\begin{document}
+The \gls{beat_frequency}.
+\printglossaries
+\end{document}

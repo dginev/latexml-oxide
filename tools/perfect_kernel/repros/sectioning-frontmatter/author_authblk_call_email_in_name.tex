@@ -1,0 +1,19 @@
+% witness: review revG5 2 (synthetic): a document-defined `\email` inside an authblk `\author` call
+% oracle:  pdflatex 0 errors: "Craig Rae craig@x.org and Ann Able1*" — the address printed in the name line
+% engines: off and Perl (`\lx@add@author` digests the whole call into the personname): the address in the name only;
+%          IO1 at =2: the name holds it and a `<contact role="email">` too, 1 Warning (the address placed twice)
+% expect:  0 errors, 0 warnings on both switches; =2 writes the creators off writes, the address once
+% status:  RED (IO1) -> GREEN (IO2: the creator call's contacts are its name's text, `api.rs`)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{authblk}
+\providecommand\email[1]{\texttt{#1}}
+\begin{document}
+\title{T}
+\author{Craig Rae \email{craig@x.org}}
+\author{Ann Able$^{1}$\thanks{Note y.}}
+\affil{$^1$Univ X}
+\affil{Univ Y}
+\maketitle
+x
+\end{document}

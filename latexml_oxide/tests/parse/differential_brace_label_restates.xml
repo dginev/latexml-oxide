@@ -1,0 +1,113 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?latexml class="article"?>
+<?latexml package="amsmath,amssymb"?>
+<?latexml RelaxNGSchema="LaTeXML"?>
+<document xmlns="http://dlmf.nist.gov/LaTeXML">
+  <resource src="LaTeXML.css" type="text/css"/>
+  <resource src="ltx-article.css" type="text/css"/>
+  <para xml:id="p1">
+    <p><Math mode="inline" tex="\mathrm{d}s^{2}\approx r^{2}\mathrm{d}\Omega^{2}+\underbrace{f\,\mathrm{d}r^{2}+g\,\mathrm{d}\theta^{2}}_{h_{\alpha\beta}\mathrm{d}y^{\alpha}\mathrm{d}y^{\beta}}" text="(differential-d@(s)) ^ 2 approximately-equals r ^ 2 * (differential-d@(Omega)) ^ 2 + (underbrace@(f * (differential-d@(r)) ^ 2 + g * (differential-d@(theta)) ^ 2)) _ (h _ (alpha * beta) * differential-d@(y ^ alpha) * differential-d@(y ^ beta))" xml:id="p1.m1">
+        <XMath>
+          <XMApp>
+            <XMTok meaning="approximately-equals" name="approx" role="RELOP">≈</XMTok>
+            <XMApp>
+              <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
+              <XMApp>
+                <XMTok meaning="differential-d" role="DIFFOP">d</XMTok>
+                <XMTok font="italic" role="UNKNOWN">s</XMTok>
+              </XMApp>
+              <XMTok fontsize="70%" meaning="2" role="NUMBER">2</XMTok>
+            </XMApp>
+            <XMApp>
+              <XMTok meaning="plus" role="ADDOP">+</XMTok>
+              <XMApp>
+                <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                <XMApp>
+                  <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
+                  <XMTok font="italic" role="UNKNOWN">r</XMTok>
+                  <XMTok fontsize="70%" meaning="2" role="NUMBER">2</XMTok>
+                </XMApp>
+                <XMApp>
+                  <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/>
+                  <XMApp>
+                    <XMTok meaning="differential-d" role="DIFFOP">d</XMTok>
+                    <XMTok name="Omega" role="UNKNOWN">Ω</XMTok>
+                  </XMApp>
+                  <XMTok fontsize="70%" meaning="2" role="NUMBER">2</XMTok>
+                </XMApp>
+              </XMApp>
+              <XMApp>
+                <XMTok role="SUBSCRIPTOP" scriptpos="mid1"/>
+                <XMApp scriptpos="mid">
+                  <XMTok name="underbrace" role="UNDERACCENT" stretchy="true">⏟</XMTok>
+                  <XMApp>
+                    <XMTok meaning="plus" role="ADDOP">+</XMTok>
+                    <XMApp>
+                      <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                      <XMTok font="italic" role="UNKNOWN" rpadding="1.7pt">f</XMTok>
+                      <XMApp>
+                        <XMTok role="SUPERSCRIPTOP" scriptpos="post2"/>
+                        <XMApp>
+                          <XMTok meaning="differential-d" role="DIFFOP">d</XMTok>
+                          <XMTok font="italic" role="UNKNOWN">r</XMTok>
+                        </XMApp>
+                        <XMTok fontsize="70%" meaning="2" role="NUMBER">2</XMTok>
+                      </XMApp>
+                    </XMApp>
+                    <XMApp>
+                      <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                      <XMTok font="italic" role="UNKNOWN" rpadding="1.7pt">g</XMTok>
+                      <XMApp>
+                        <XMTok role="SUPERSCRIPTOP" scriptpos="post2"/>
+                        <XMApp>
+                          <XMTok meaning="differential-d" role="DIFFOP">d</XMTok>
+                          <XMTok font="italic" name="theta" role="UNKNOWN">θ</XMTok>
+                        </XMApp>
+                        <XMTok fontsize="70%" meaning="2" role="NUMBER">2</XMTok>
+                      </XMApp>
+                    </XMApp>
+                  </XMApp>
+                </XMApp>
+                <XMApp>
+                  <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                  <XMApp>
+                    <XMTok role="SUBSCRIPTOP" scriptpos="post2"/>
+                    <XMTok font="italic" fontsize="70%" role="UNKNOWN">h</XMTok>
+                    <XMApp>
+                      <XMTok meaning="times" role="MULOP">⁢</XMTok>
+                      <XMTok font="italic" fontsize="50%" name="alpha" role="UNKNOWN">α</XMTok>
+                      <XMTok font="italic" fontsize="50%" name="beta" role="UNKNOWN">β</XMTok>
+                    </XMApp>
+                  </XMApp>
+                  <XMApp>
+                    <XMTok fontsize="70%" meaning="differential-d" role="DIFFOP">d</XMTok>
+                    <XMApp>
+                      <XMTok role="SUPERSCRIPTOP" scriptpos="post2"/>
+                      <XMTok font="italic" fontsize="70%" role="UNKNOWN">y</XMTok>
+                      <XMTok font="italic" fontsize="50%" name="alpha" role="UNKNOWN">α</XMTok>
+                    </XMApp>
+                  </XMApp>
+                  <XMApp>
+                    <XMTok fontsize="70%" meaning="differential-d" role="DIFFOP">d</XMTok>
+                    <XMApp>
+                      <XMTok role="SUPERSCRIPTOP" scriptpos="post2"/>
+                      <XMTok font="italic" fontsize="70%" role="UNKNOWN">y</XMTok>
+                      <XMTok font="italic" fontsize="50%" name="beta" role="UNKNOWN">β</XMTok>
+                    </XMApp>
+                  </XMApp>
+                </XMApp>
+              </XMApp>
+            </XMApp>
+          </XMApp>
+        </XMath>
+      </Math>
+<Math mode="inline" tex="\mathrm{d}A" text="differential-d@(A)" xml:id="p1.m2">
+        <XMath>
+          <XMApp>
+            <XMTok meaning="differential-d" role="DIFFOP">d</XMTok>
+            <XMTok font="italic" role="UNKNOWN">A</XMTok>
+          </XMApp>
+        </XMath>
+      </Math></p>
+  </para>
+</document>

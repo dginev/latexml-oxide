@@ -1,0 +1,17 @@
+% witness: 2409.01900 (svproc, `\institute{IRIDIA…\\\email{alexandre.melo.pacheco@ulb.be, mdorigo@ulb.ac.be, …}}`),
+%          2101.04527, 2206.03859, 1911.11805 (an institute's e-mails each its speller's)
+% oracle:  pdflatex (TL 2025, 2409.01900's svproc.cls): "Ann Able1 , Bob Baker1 , and Cy Cole2", "1 Univ A, Town A
+%          ann.able@a.org, baker@a.org", "2 Univ B, Town B cy@b.org"
+% engines: rust 97c = the reading right, not written (sv_support's `written: false`): Ann Able and Bob Baker each both
+%          addresses as one e-mail
+% expect:  0 errors, 0 warnings; sv_support written (brief 97e): each address its speller's
+% status:  RED (97c) -> GREEN (97e) — perfect_kernel_batch97e::sv_support_is_written
+% preload: ar5iv.sty
+\documentclass{svproc}
+\begin{document}
+\title{T}
+\author{Ann Able\inst{1} \and Bob Baker\inst{1} \and Cy Cole\inst{2}}
+\institute{Univ A, Town A\\\email{ann.able@a.org, baker@a.org} \and Univ B, Town B\\\email{cy@b.org}}
+\maketitle
+Body.
+\end{document}

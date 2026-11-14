@@ -1,0 +1,29 @@
+% witness: 2604.07983 (aastex631.cls), 2508.14467 (aastex63.cls), 2604.22347 (aastex62.cls), 1609.08711 (aastex6.cls),
+%   2103.02219 (`\AuthorCallLimit`), 2103.07688 (`\maps`); run 340 ~1,700 papers whose own AASTeX 6.x class our binding
+%   shadows
+% oracle:  pdflatex with a paper's aastex631.cls: 0 errors; "LIGO-P2000001" and "Accepted to ApJ" on the first page
+% engines: rust 65int4 = 11 errors (each command undefined); Perl's aas_support.sty.ltxml lacks them too
+%   (KNOWN_PERL_ERRORS #633)
+% expect:  0 errors; pubnote elements role=preprint "LIGO-P2000001", role=journal "Accepted to ApJ" and "ApJ"; the journal
+%   names M&PS, JAAVSO, AAS Meeting Abstracts, AAS/DPS Meeting Abstracts in the text; a barred lambda in the formula
+% status:  RED (65int4) -> GREEN (65t)
+\documentclass{aastex631}
+\turnoffedit
+\turnoffeditone
+\suppressAffiliations
+\NewPageAfterKeywords
+\setwatermarkfontsize{50pt}
+\AuthorCallLimit=1
+\setlength{\abovedeluxetableskip}{2pt}
+\reportnum{LIGO-P2000001}
+\journalinfo{Accepted to ApJ}
+\submitted{ApJ}
+\fullcollaborationName{The XYZ Collaboration}
+\begin{document}
+\title{Title}
+\author{Author}
+\begin{abstract}Abstract.\end{abstract}
+Text $\lambdabar$ in \maps, \jaavso, \aas{} and \dps.
+\tablefontsize{\small}
+\listofchanges
+\end{document}

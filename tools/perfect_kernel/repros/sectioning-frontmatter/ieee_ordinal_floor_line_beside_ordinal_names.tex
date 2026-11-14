@@ -1,0 +1,19 @@
+% mechanism: a bare ordinal-led run before the block's `\IEEEauthorblockA`, where the names lead with ordinals, is a
+%   name line only when the text after the ordinal reads as a name (relocate.rs `ordinal_name_line`); an address line
+%   ("2nd Floor, Bldg 5", `3\textsuperscript{rd} Floor, Bldg 6`) stays an affiliation (ieeetran_cls.rs
+%   `wrap_bare_author_block_text`)
+% witness: synthetic (review revP4cR2 S1, probes o7, o8); the name line 1806.11431
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "1st Ann Able", "2nd Floor, Bldg 5", "Univ A", "Town"; "2nd Bob Baker", "3rd Floor, Bldg 6", "Univ B", "City"
+% engines: P4b2: as expected; P4cR2 ea6a435433: "2nd Floor, Bldg 5" and "3 rd Floor, Bldg 6" invented creators
+% expect:  0 errors, 2 warnings (the content check's pair for the `\textsuperscript` ordinal in an affiliation, the
+%   base's: the words are kept); two creators, each its floor line and its block
+% status:  RED (P4cR2 ea6a435433) -> GREEN (P4cR2b)
+% preload: ar5iv.sty
+\documentclass[conference]{IEEEtran}
+\begin{document}
+\title{T}
+\author{\IEEEauthorblockN{1\textsuperscript{st} Ann Able} 2nd Floor, Bldg 5 \IEEEauthorblockA{Univ A\\ Town}
+\and \IEEEauthorblockN{2\textsuperscript{nd} Bob Baker} 3\textsuperscript{rd} Floor, Bldg 6 \IEEEauthorblockA{Univ B\\ City}}
+\maketitle
+Body.
+\end{document}

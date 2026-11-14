@@ -1,0 +1,13 @@
+% witness: 64e review r1 side finding — AASTeX 5.x `{plate}` (aastex.cls:1685-1704 `\newenvironment{plate}{\@float{plate}}`,
+%          `\def\ext@plate{lof}`; the class bundled in 0908.0069 and other 2009-era papers; aastex 6+ dropped it)
+% oracle:  pdflatex 0 errors WITH aastex.cls 5.x (not TL's aastex701, which has no plate): "Plate 1. A plate."
+% engines: rust 64e3 = Error:undefined:\ext@plate, inlist="\ext@plate"; 64c7 the same
+% expect:  0 errors; <float class="ltx_float_plate" inlist="lof"> tagged Plate 1
+% status:  RED (64e3) -> GREEN (64e)
+\documentclass{aastex}
+\begin{document}
+\begin{plate}
+\plotone{figs/a.eps}
+\caption{A plate.}
+\end{plate}
+\end{document}

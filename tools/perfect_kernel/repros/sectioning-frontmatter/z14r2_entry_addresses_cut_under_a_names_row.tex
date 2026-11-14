@@ -1,0 +1,15 @@
+% witness: 2310.19837 (`\IEEEauthorblockN{… Deniz G\"{u}nd\"{u}z$^\ddagger$, … \IEEEauthorblockA{\\ $^\dagger$Division … \\ $^\ddagger$Dept. … London\\ Email: \protect amizam@kth.se, …}}`, its addresses spelling no one kept as today's)
+% oracle:  pdflatex 0 errors: the names, the two marked lines, then a line of addresses
+% engines: Perl: one creator, the block one affiliation; ours before Z14r2: the reading parts the lines and takes the spelled addresses out as e-mails, which the writer gave back: the e-mail contacts dropped, the addresses left in the last affiliation's text (review revZ14 blocker 1)
+% expect:  0 errors; each person their own affiliation and the address that spells them (perfect_kernel_batchz14::an_entrys_addresses_are_cut_where_its_line_is_made)
+% status:  GREEN (Z14r2)
+\documentclass[conference]{IEEEtran}
+\begin{document}
+\title{T}
+\author{\IEEEauthorblockN{Ann Able$^\dagger$, Bob Baker$^\ddagger$
+\IEEEauthorblockA{$^\dagger$Univ A\\
+$^\ddagger$Univ B\\
+Email: ann@a.org, bob@b.org}}}
+\maketitle
+Body.
+\end{document}

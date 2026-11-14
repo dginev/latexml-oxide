@@ -1,13 +1,14 @@
 % comment.sty's `\end{comment}` with content BEFORE it on the same line.
 % Witness arXiv:2606.11493.
 %
-% comment.sty / pdflatex detect `\end{comment}` mid-line and drop the rest of
-% that line. Perl comment.sty.ltxml (and our prior port) matched only a whole
-% `\end{comment}` line, so `…text.\end{comment}` overran to EOF and silently
-% swallowed everything after it — in 2606.11493 a 31-`\bibitem`
-% thebibliography, leaving 0 entries with no diagnostic. Both LaTeXML engines
-% lose it; pdflatex keeps it. Surpass-Perl (OXIDIZED_DESIGN #133).
-% Guard: comment_midline_end_keeps_bibliography.
+% comment.sty (comment.sty:186-193) ends a comment only on a WHOLE
+% `\end{comment}` line (trailing spaces stripped by TeX's line reader);
+% `…text.\end{comment}` is not an end, the comment runs to EOF and pdflatex
+% aborts: "File ended while scanning use of \next", no PDF (verified
+% 2026-09-05). Perl comment.sty.ltxml swallows silently; the earlier Rust
+% mid-line detection (OXIDIZED_DESIGN #133, retracted) showed more than
+% pdflatex. Now: TeX's error is reported, nothing after the open comment is
+% kept. Guard: comment_midline_end_runs_to_eof_like_pdflatex.
 \documentclass{article}
 \usepackage{comment}
 \begin{document}

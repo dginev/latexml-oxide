@@ -1,0 +1,23 @@
+% mechanism: one `\email` call printing several addresses — a list sharing the domain written with spaces, after the
+%   last `\author` — is no evidence of one owner (FIDELITY_CHARTER §4, #420): each address the author's it spells
+%   (`ruling3:written-out`; the writer's group write-out, `plan::listed_addresses`). G3 of brief 95c.
+% witness: 0812.3572 (`\email{seracre, hanaki, jimliu, pszepiet@umich.edu}`), 0901.1641 (`\email{tuhin@…;rajib@…;…}`)
+% oracle:  pdflatex 0 errors: "Ann Able, Bob Baker, and Cid Cole∗" over "Univ X", the footnote "∗ aable, bbaker, ccole@x.org"
+% engines: rust 94b-r7: the whole list one e-mail of Cid Cole; perl: the same
+% expect:  0 errors, 0 warnings; each author Univ X and its own address (aable@x.org, bbaker@x.org, ccole@x.org)
+% status:  RED (94b-r7) -> GREEN (95c)
+% preload: ar5iv.sty
+\documentclass{revtex4-2}
+\begin{document}
+\title{T}
+\author{Ann Able}
+\author{Bob Baker}
+\author{Cid Cole}
+\email{aable, bbaker, ccole@x.org}
+\affiliation{Univ X}
+\begin{abstract}
+A.
+\end{abstract}
+\maketitle
+Text.
+\end{document}

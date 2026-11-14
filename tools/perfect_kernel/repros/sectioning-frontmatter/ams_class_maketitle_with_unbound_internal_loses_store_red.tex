@@ -1,0 +1,34 @@
+% mechanism: a raw class's refused `\maketitle` is replayed only when every control sequence it runs is defined here
+%   (sect05.rs `body_vocabulary_is_defined`); amsart.cls:723 `\@setcopyright`, which our amsart binding does not define,
+%   refuses the replay, so the title-page reading runs article.cls's stand-in, which never prints `\@course`, and the
+%   off-table store is neither typeset nor handed on: "Course: MATH 410" is lost, counted by the check's Warning
+% witness: synthetic (BM's Q3.13 probe `ams`, QA60; resphilosophica.cls:331 is the same shape: `\@setcopyright`,
+%   `\andify`, `\@maketitle@hook`)
+% oracle:  pdflatex 0 errors (TL 2025, -no-shell-escape): "Lecture Notes on Topology", "Course: MATH 410", "Text."
+% engines: int168a (TP3base): 0 errors, 1 warning (frontmatter:unclaimed_store "math 410"), no "MATH 410" in the XML;
+%   perl not run
+% expect:  "Course: MATH 410" kept (in the body, as the deposit keeps a raw class's title-page text, or as a note); 0 errors
+% status:  RED (counted loss)
+% moves:   post-merge (AMSV: the ams binding's vocabulary, `\@setcopyright` and its siblings; not the title-page reading)
+% preload: ar5iv.sty
+\begin{filecontents*}[overwrite]{amsnotesred.cls}
+\NeedsTeXFormat{LaTeX2e}
+\ProvidesClass{amsnotesred}
+\LoadClass{amsart}
+\newcommand\course[1]{\gdef\@course{#1}}
+\renewcommand\maketitle{%
+  \begin{center}
+    {\LARGE \@title \par}
+    {\large Course: \@course \par}
+  \end{center}\par
+  \@setcopyright}
+\end{filecontents*}
+\documentclass{amsnotesred}
+\title{Lecture Notes on Topology}
+\author{A. Author}
+\date{2024}
+\course{MATH 410}
+\begin{document}
+\maketitle
+Text.
+\end{document}

@@ -1,0 +1,22 @@
+% mechanism: a store holding an unclosed `\begingroup` (`\institute{\begingroup Univ A, …}`) under a class numbering
+%   the `\and` entries (llncs's `\institutename`, numinst.cls): TeX's `\endgroup` of `\institutename` closes the
+%   store's group, leaving the class's open at `\end{document}` (a log note, no `!`). Ours raises an Error ("Attempt
+%   to close boxing group", stomach.rs) on reading the store; the creators are right (revP4d P3, probe u1). For the
+%   error-boundary batch EB1: a safe side erring. Pre-existing.
+% witness: synthetic (revP4d P3)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 `!` ("(\end occurred inside a group at level 1)"):
+%          "Ann Able1 and Bob Baker2", "1 Univ A, Town A", "2 Univ B, Town B"
+% engines: rust int161a, F0, P4d, int162a: 1 error (Error:unexpected:\egroup), 0 W, Ann Able "Univ A, Town A", Bob
+%          Baker "Univ B, Town B"; perl: no binding for the class (its `\institute` raw)
+% expect:  0 errors, 0 warnings; Ann Able "Univ A, Town A", Bob Baker "Univ B, Town B"
+% status:  RED (int161a, F0, P4d, int162a)
+% moves:   post-merge
+% preload: ar5iv.sty
+\documentclass{numinst}
+\begin{document}
+\title{T}
+\author{Ann Able$^{1}$ and Bob Baker$^{2}$}
+\institute{\begingroup Univ A, Town A \and Univ B, Town B}
+\maketitle
+Text.
+\end{document}

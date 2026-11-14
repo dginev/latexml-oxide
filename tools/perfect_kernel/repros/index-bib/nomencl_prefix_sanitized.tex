@@ -1,0 +1,12 @@
+% witness: 12 of run 336's papers (`\nomenclature[R_alpha]{…}{…}`)
+% oracle:  pdflatex 0 errors (nomencl.sty:216-221 reads the prefix under `\@sanitize`)
+% engines: rust 64g = Error "Script _ can only appear in math mode" (the prefix digested with live catcodes)
+% expect:  0 errors; the entry kept (its sort phrase prints the `_` as OT1's slot 95, a hidden sort key)
+% status:  RED (64g) -> GREEN (64h)
+\documentclass{article}
+\usepackage{nomencl}
+\makenomenclature
+\begin{document}
+Text \nomenclature[R_alpha]{$x_{\beta}$}{the transformation} more.
+\printnomenclature
+\end{document}

@@ -1,0 +1,18 @@
+% A character of a raw `\font` is as wide as its TFM says. Its family (graphic) has no standard metric, so the
+% width came from the Unicode character a fontmap decodes it to, found in some other font: line10's char 45 (the
+% right arrowhead, latex.ltx:16914) mapped to ╲ measured 8.8889pt (msbm10's `\diagdown`), mapped to → it measures
+% 5pt (cmmi's `\vec`), where line10.tfm gives 10pt. Perl measures the same way (Font.pm:535-548, :587-614) and has
+% no line fontmap ("[0.0pt]"). In 2605.02221 diagrams.sty's `\rTo{\pi}` spacing follows the arrowhead's width.
+% witness: 2605.02221.
+% Guard: perfect_kernel_batch58::line_font_char_has_its_tfm_width.
+% status:  GREEN (58f)
+% oracle:  pdflatex 0 errors; "[10.0pt] [10.0pt] [10.0pt]".
+% engines: rust 58e: "[8.8889pt] [10.00002pt] [8.8889pt]"; perl "[0.0pt] [0.0pt] [0.0pt]".
+% expect:  0 errors, 0 warnings.
+\documentclass{article}
+\begin{document}
+\font\tenln=line10 \font\tenlnw=linew10
+\setbox0\hbox{\tenln\char45}[\the\wd0]
+\setbox0\hbox{\tenln\char'33}[\the\wd0]
+\setbox0\hbox{\tenlnw\char45}[\the\wd0]
+\end{document}

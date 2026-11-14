@@ -1,0 +1,17 @@
+% witness: 1804.00021 (`\author{ %\authorblockN{…}⏎ \authorblockA{Center of Excellence … \\ Prairie View A\&M … \\ …
+%          \\ Email: …}}`, the names commented out; its own IEEEtran.cls defines `\authorblockA`, TL 2025's only
+%          `\IEEEauthorblockA`), 2203.14581 (`\author{~\IEEEmembership{Shasha Mei}\thanks{}…}`, the
+%          name written as a grade): a block with no name, only lines a nameless creator carries
+% oracle:  pdflatex 0 errors: the title, then "Center for Data Science (CDS)", "University of X", "Email: ann@x.edu"
+% engines: rust int126a = no creator and no Warning (`coalesce_empty_creators` found no named author for the nameless
+%          creator's contacts and dropped them with it); Perl 0.8.8 = an empty personname and the lines
+% expect:  0 errors, 0 warnings; one creator with an empty name holding the block's lines, as Perl
+% status:  RED (int126a) -> GREEN (98b) — perfect_kernel_batch98b::nameless_block_keeps_its_lines
+% preload: ar5iv.sty
+\documentclass[conference]{IEEEtran}
+\begin{document}
+\title{T}
+\author{\IEEEauthorblockA{Center for Data Science (CDS)\\ University of X\\ Email: ann@x.edu}}
+\maketitle
+Text.
+\end{document}

@@ -1,0 +1,20 @@
+% witness: review 68v (synthetic): the refused-environment search took a `\def` from an environment whose own begin code
+%          ran, from an untaken `\if…\fi` branch
+% oracle:  pdflatex: "Undefined control sequence" for `\foo` in {myenv} and for `\barx` in the caption (twice: the
+%          caption is set twice); "Text end."
+%          "Figure 1: Lead: ."; 3 errors
+% engines: rust 68v round 1 = 1 error (`\foo` printed FOO-INVENTED); rust 67int15 = 2 errors
+% expect:  2 errors (`\foo`, `\barx`), no invented text
+% status:  RED (68v round 1) -> GREEN (68v round 2)
+% preload: ar5iv.sty
+\documentclass{article}
+\newif\ifshowfoo
+\newenvironment{myenv}{\ifshowfoo\def\foo{FOO-INVENTED}\fi}{}
+\makeatletter
+\def\figure{\@ifnextchar[{\my@fig}{\my@fig[tbp]}}
+\def\my@fig[#1]{\@float{figure}[#1]\ifshowfoo\def\barx{BAR-INVENTED}\fi}
+\makeatother
+\begin{document}
+\begin{myenv}Text \foo\ end.\end{myenv}
+\begin{figure}\caption{Lead: \barx.}\end{figure}
+\end{document}

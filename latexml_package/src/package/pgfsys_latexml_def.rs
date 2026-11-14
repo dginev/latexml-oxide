@@ -41,7 +41,12 @@ fn svg_next_object() -> i64 {
   n
 }
 
-/// Perl: sub addToSVGPath — accumulates path data in state
+/// Perl: sub addToSVGPath — appends one segment to the path in state. Perl
+/// concatenates (`$currentPath . ' ' . $newPath`, pgfsys-latexml.def.ltxml:225-232);
+/// here the segments are pushed and joined when the path is used
+/// ([`svg_path`]): a concatenation stored as an interned string kept every
+/// prefix of the path in the arena, quadratic in its length (tkz-grapheur's
+/// 11000-point plot: a 3 GB allocation, where Perl stays linear).
 fn add_to_svg_path(operation: &str, points: &[Dimension]) {
   let new_path = if points.is_empty() {
     operation.to_string()
@@ -52,13 +57,21 @@ fn add_to_svg_path(operation: &str, points: &[Dimension]) {
       .collect();
     format!("{} {}", operation, pts.join(" "))
   };
-  let current = lookup_string("pgf_SVGpath");
-  let combined = if current.is_empty() {
-    new_path
-  } else {
-    format!("{} {}", current, new_path)
-  };
-  assign_value("pgf_SVGpath", Stored::String(pin(&combined)), Scope::Global);
+  // `pgf_SVGpath` is only ever assigned globally, so the push extends its one value.
+  let _ = push_value("pgf_SVGpath", Stored::String(pin(&new_path)));
+}
+
+/// The current SVG path ([`add_to_svg_path`]): its segments joined by spaces,
+/// empty after `\lxSVG@clearpath`.
+fn svg_path() -> String {
+  match lookup_value("pgf_SVGpath") {
+    Some(Stored::VecDequeStored(segments)) => segments
+      .iter()
+      .map(String::from)
+      .collect::<Vec<_>>()
+      .join(" "),
+    _ => String::new(),
+  }
 }
 
 /// Look up a pgf register as a Dimension
@@ -98,6 +111,35 @@ fn color_to_hex_tokens(r: f64, g: f64, b: f64) -> Vec<Token> {
 // Perl L149-157: DefParameterType('SVGMoveableBox', ...)
 // Defined in Perl but never used as a parameter type anywhere in the codebase.
 // Omitted from Rust; add if a use site is discovered.
+
+/// Perl L392-398 (`\lxSVG@begingroup@`): when pgf output lands while the
+/// current node is an `ltx:` element inside a picture — a
+/// `\phantom`/`\hbox`/node-label `svg:foreignObject` — open a self-contained
+/// `svg:svg` (`_autoopened`, `_autoclose`) so the content nests there and
+/// unwinds with the box, instead of auto-relocating up to the picture's main
+/// group and desyncing every later close. Perl guards only the group opener;
+/// a BARE-style `\draw`/`\fill` (no dash/color → no `\lxSVG@begingroup`)
+/// reaches `\lxSVG@drawpath@*` unguarded and both engines cascade (`Closing
+/// tag "ltx:text" whose open descendents do not auto-close` … `svg:g isn't
+/// allowed in ltx:block`). The same guard on the path emitters closes that
+/// gap — pmdraw manual (`vertices top phantom`, pmdraw.sty:56-66
+/// `\phantom{\draw …}`): 64 errors → 0. The opened `svg:svg` is not closed
+/// by the caller (`_autoclose`).
+fn ensure_svg_context(document: &mut Document) -> Result<()> {
+  let current = document.get_node().clone();
+  let qname = document::get_node_qname(&current);
+  if with(qname, |s| s.starts_with("ltx:")) {
+    document.open_element(
+      "svg:svg",
+      Some(string_map!(
+        "_autoopened" => "1".to_string(),
+        "_autoclose" => "1".to_string()
+      )),
+      None,
+    )?;
+  }
+  Ok(())
+}
 
 /// Perl L161-169: foreignObjectCheck
 /// Check whether an svg:foreignObject is open in the ancestor chain,
@@ -174,7 +216,7 @@ fn tikz_alignment_bindings(
 
   let alignment = Alignment::new(AlignmentConfig {
     template: Some(template),
-    // Perl L947-969: openTikzAlignment — creates container <svg:g> with Y-flip transform
+    // Perl L952-975: openTikzAlignment — creates container <svg:g> with Y-flip transform
     open_container: Rc::new(|document, props| {
       let mut attrs = props;
       attrs.insert("class".to_string(), "ltx_tikzmatrix".to_string());
@@ -192,7 +234,14 @@ fn tikz_alignment_bindings(
         .remove("cwidth")
         .and_then(|s| s.parse().ok())
         .unwrap_or(0.0);
-      let y = h + d;
+      // Perl: @rowdepths defaults to (Dimension(0)); only the last row's depth is used.
+      let last_row_depth: f64 = attrs
+        .remove("rowdepths")
+        .and_then(|s| s.rsplit(',').next().and_then(|v| v.parse().ok()))
+        .unwrap_or(0.0);
+      attrs.remove("rowheights");
+      attrs.remove("columnwidths");
+      let y = (h + d) - last_row_depth; // Baseline of LAST row
       attrs
         .entry("transform".to_string())
         .or_insert_with(|| format!("matrix(1 0 0 -1 0 {})", fmt_px(y)));
@@ -281,6 +330,7 @@ fn tikz_alignment_bindings(
   });
 
   assign_alignment(alignment, None);
+  engine::tex_tables::clear_alignment_row_hooks();
   let_i(
     &T_MATH!(),
     &if is_math {
@@ -296,6 +346,15 @@ fn tikz_alignment_bindings(
 LoadDefinitions!({
   // (protocol fix is applied at \pgfsys@invoke below)
 
+  // gnuplot-lua-tikz-common.tex:17-32 (gnuplot's lua terminal, shipped beside papers' plots) keys its output mode by the
+  // pgf driver file (`\gnuplot@select@driver@\pgfsysdriver`) and stops with "The driver pgfsys-latexml.def is not
+  // supported" (`\errmessage`) for one its table lacks. This driver's entry is `html`, the mode of
+  // pgfsys-tex4ht.def, the other driver writing SVG for the web: a plot's image file is `\pgfimage` (`\gploadimage`,
+  // :88-90), an inline raw image gnuplot's own "not implemented" warning (:79-83) — never the PDF/PostScript image
+  // operators of the `pdf`/`ps` modes (:50-77), which no SVG renders. The table's own `\def`s leave the entry alone
+  // (OXIDIZED_DESIGN_DIVERGENCES #702). Witness 2501.11366. Guard: `perfect_kernel_batch70a::gnuplot_lua_tikz_driver_mode`.
+  RawTeX!(r"\expandafter\def\csname gnuplot@select@driver@pgfsys-latexml.def\endcsname{html}");
+
   // Perl L29-31: image suffix list
   DefMacro!("\\pgfsys@imagesuffixlist",
     ".svg:.png:.gif:.jpg:.jpeg:.eps:.ps:.postscript:.ai:.pdf:");
@@ -310,14 +369,18 @@ LoadDefinitions!({
     let_i(&T_CS!("\\ignorespaces"), &T_CS!("\\lx@inpgf@ignorespaces"), None);
   });
 
-  // Perl L63: redefine ignorespaces inside PGF context
-  DefPrimitive!("\\lx@inpgf@ignorespaces SkipSpaces", None);
+  // Perl L63 `sub { (); }`: a body returning nothing, so no box reverts to the name in a node's `tex=`
+  // (1301.4725, 1305.4700, 1504.00121).
+  DefPrimitive!("\\lx@inpgf@ignorespaces SkipSpaces", {});
 
   // Perl L892-918: \lxSVG@halign — SVG matrix layout for tikz-cd and pgf matrix
   // Replaces \halign inside pgf/tikz contexts to produce <svg:g> elements
   // with transform matrices instead of <ltx:tabular/tr/td>.
   DefConstructor!("\\lxSVG@halign BoxSpecification",
     "#alignment",
+    // It takes the primitive's place (`\lxSVG@installcommands` lets `\halign` to it), so a document's `\halign` macro
+    // saved inside a picture ends with it (tex_tables.rs `run_halign_redefinition_prelude`; witness 2107.05054).
+    halign_primitive => true,
     bounded => true, leave_horizontal => true,
     sizer => sub[whatsit] {
       match whatsit.get_property("alignment").as_deref() { Some(Stored::Digested(alignment_d)) => {
@@ -328,44 +391,21 @@ LoadDefinitions!({
       }}
     },
     after_digest => sub[whatsit] {
-      use crate::engine::tex_tables::{
-        parse_halign_template, digest_alignment_body,
-      };
-      whatsit.set_property("mode", Stored::from("internal_vertical"));
-      begin_mode("restricted_horizontal")?;
-      let template = parse_halign_template(whatsit)?;
-      // NOTE: a 0-column template (parse couldn't catcode-1-`{`-delimit it,
-      // e.g. young.sty's `\halign\bgroup &\setbox…`) is NOT special-cased
-      // here — exactly like the standard `\halign` (tex_tables.rs). The body
-      // is still digested under the restricted_horizontal frame begun above
-      // and the SINGLE `end_mode` at the bottom balances it. A prior
-      // half-implemented "bail" ran an early `end_mode` here WITHOUT a
-      // `return`, so the body was digested anyway and `end_mode` ran a SECOND
-      // time at the bottom — popping past the already-closed
-      // restricted_horizontal frame into the enclosing `\vbox`'s
-      // `internal_vertical` → "Attempt to end mode restricted_horizontal in
-      // horizontal" (driver 1902.11165: `\node {\begin{young}…\end{young}}`,
-      // Perl=0). Conversely, `return`ing early left the body's `&`/`\cr`
-      // unconsumed → "Stray alignment &". Matching the standard `\halign`
-      // (digest body, end once) fixes both.
-      // Get width from BoxSpecification 'to' key
-      let width_attr: Option<String> = {
-        let spec = whatsit.get_arg(1);
-        if let Some(ArgWrap::Dimension(w)) = GetKeyVal!(spec, "to") {
-          Some(w.to_attribute())
-        } else {
-          None
-        }
-      };
+      // One implementation with the tabular `\halign` (tex_tables.rs
+      // `halign_after_digest`): the SVG variant differs only in its bindings
+      // and the `vattach` attribute. pgf's matrices open `\halign\bgroup`
+      // (`\pgf@matrix@cont`, pgfmodulematrix.code.tex:191-193, reached from
+      // `\pgfmatrix` :160 via `\afterassignment`; tikz-cd's `\matrix`
+      // likewise), so the align-state balance for a `{` opener never fires
+      // for them — an unconditional decrement here left the ENCLOSING
+      // amsmath alignment one level off and its cell's closing hidden `$`
+      // unrecognized ("`\lx@begin@alignment` Attempt to close a group that
+      // switched to mode math"; tikz-cd inside `align`, zx-calculus 46).
+      // Guard: `perfect_kernel_batch56::tikzcd_matrix_inside_an_amsmath_cell_closes_its_math`.
+      use crate::engine::tex_tables::halign_after_digest;
       let mut xml_attrs = HashMap::default();
-      if let Some(w) = width_attr {
-        xml_attrs.insert(String::from("width"), w);
-      }
       xml_attrs.insert(String::from("vattach"), String::from("bottom"));
-      tikz_alignment_bindings(template, xml_attrs);
-      digest_alignment_body(whatsit)?;
-      end_mode("restricted_horizontal")?;
-      decrement_align_group_count(); // Balance the opening { OUTSIDE of the masking of ALIGN_STATE
+      halign_after_digest(whatsit, xml_attrs, tikz_alignment_bindings)?;
     });
 
   // Perl L65-69: \lxSVG@picture — wraps pgfpicture with SVG setup
@@ -396,7 +436,7 @@ LoadDefinitions!({
         let tx = if minx == 0.0 { 0.0 } else { -minx };
         let ty = if miny == 0.0 { 0.0 } else { -miny };
         let transform = format!("matrix(1 0 0 1 {} {})", tx, ty);
-        document.open_element("svg:g", Some(string_map!(
+        let group = document.open_element("svg:g", Some(string_map!(
           "transform" => transform,
           "_scopebegin" => "1".to_string(),
           "class" => "ltx_nestedsvg".to_string()
@@ -404,7 +444,11 @@ LoadDefinitions!({
         if let Some(Stored::Digested(content)) = props.get("content_box") {
           document.absorb(content, None)?;
         }
-        document.close_element("svg:g")?;
+        // The content ends in `\lxSVG@closescope`, which has closed this group already; Perl's `closeElement('svg:g')`
+        // (pgfsys-latexml.def.ltxml:85) then closed the one around it — a TikZ matrix column when the picture sits in
+        // an `align=` node's `\halign` line (tikz.code.tex:4252-4256), cascading up to the `\vbox`'s capture block
+        // (KNOWN_PERL_ERRORS #440; codeanatomy.usage, causets_example2, mercatormap). Close it only if still open.
+        document.maybe_close_node(&group)?;
       } else {
         // Not in SVG — create full picture + svg:svg wrapper
         let pxwidth = match props.get("pxwidth") {
@@ -454,7 +498,7 @@ LoadDefinitions!({
         let x0 = if x0 == 0.0 { 0.0 } else { x0 };
         let y0 = if y0 == 0.0 { 0.0 } else { y0 };
         let transform = format!("translate({},{}) matrix(1 0 0 -1 0 0)", x0, y0);
-        document.open_element("svg:g", Some(string_map!(
+        let group = document.open_element("svg:g", Some(string_map!(
           "transform" => transform,
           "_scopebegin" => "1".to_string()
         )), None)?;
@@ -463,10 +507,16 @@ LoadDefinitions!({
           document.absorb(content, None)?;
         }
 
-        // Close all svg:g's
-        while let Ok(Some(_)) = document.maybe_close_element("svg:g") {}
-        document.close_element("svg:svg")?;
-        document.close_element("ltx:picture")?;
+        // Close this picture's group and whatever is still open in it. Perl's `while (maybeCloseElement('svg:g'))`
+        // (pgfsys-latexml.def.ltxml:105) closes every `svg:g` it finds above, so a picture inside a TikZ node's text
+        // closed the matrix column around that text too: the rest of the line left its column (KNOWN_PERL_ERRORS
+        // #440).
+        document.maybe_close_node(&group)?;
+        // Content that the picture could not hold (a tcolorbox placed
+        // directly in a `{picture}`: pagelayout, xebaposter) auto-closed
+        // them already — close only what is still open, as for the `svg:g`s.
+        document.close_element_if_open("svg:svg")?;
+        document.close_element_if_open("ltx:picture")?;
       }
     },
     reversion => sub[whatsit, _args] {
@@ -555,7 +605,16 @@ LoadDefinitions!({
   RawTeX!(r"\def\pgfsys@typesetpicturebox#1{\pgf@ya=\pgf@shift@baseline\relax\advance\pgf@ya by-\pgf@picminy\relax\advance\pgf@picmaxy by-\pgf@picminy\relax\advance\pgf@picmaxx by-\pgf@picminx\relax\setbox#1=\hbox{\hskip-\pgf@picminx\lower\pgf@picminy\box#1}\ht#1=\pgf@picmaxy\wd#1=\pgf@picmaxx\dp#1=0pt\leavevmode\lxSVG@insertpicture{\box#1\lxSVG@closescope}}");
 
   def_macro_noop("\\pgfsys@beginpicture")?;
-  def_macro_noop("\\pgfsys@endpicture")?;
+  // The end of a picture is a streaming seam request: its boxes reach the
+  // document body as one box, invisible to the fragment budget's count
+  // (`stomach::request_fragment_yield`). pgf also calls this from
+  // `\pgfsys@pictureboxsynced` (pgfsys.code.tex:1552), `\pgfsys@endpurepicture`
+  // (:1599) and every `\matrix` (pgfmodulematrix.code.tex:397) — the request
+  // is an idempotent flag honored only at the next legal top-level seam, so
+  // extra calls change nothing (output verified byte-identical).
+  DefPrimitive!("\\pgfsys@endpicture", {
+    request_fragment_yield();
+  });
 
 
   // Perl L197-210: \pgfsys@hbox — inserts a box in SVG context
@@ -595,7 +654,7 @@ LoadDefinitions!({
   //===================================================================
 
   DefPrimitive!("\\lxSVG@clearpath", {
-    assign_value("pgf_SVGpath", Stored::String(pin("")), Scope::Global);
+    assign_value("pgf_SVGpath", Stored::None, Scope::Global);
   });
   DefPrimitive!("\\lxSVG@clearclip", {
     assign_value("pgf_clipnext", Stored::Int(0), None);
@@ -701,7 +760,7 @@ LoadDefinitions!({
   // Perl L321-334: \lxSVG@drawpath
   DefMacro!("\\lxSVG@drawpath{}", sub[(arg)] {
     let arg_str = arg.to_string();
-    let path = lookup_string("pgf_SVGpath");
+    let path = svg_path();
     let clip = lookup_int("pgf_clipnext") != 0;
     if clip {
       let clip_cmd = format!("\\lxSVG@clearpath\\lxSVG@clearclip\\pgfsysprotocol@literal{{\\lxSVG@drawpath@clipped{{{}}}{{{}}}}}", path, arg_str);
@@ -717,6 +776,7 @@ LoadDefinitions!({
     sub[document, args, props] {
       let d = args.first().and_then(|a| a.as_ref()).map(|a| a.to_string()).unwrap_or_default();
       if !d.is_empty() {
+        ensure_svg_context(document)?;
         let style = args.get(1).and_then(|a| a.as_ref()).map(|a| a.to_string()).unwrap_or_default();
 
         // Read per-path colors from properties (captured during digestion via properties closure)
@@ -785,21 +845,32 @@ LoadDefinitions!({
       let d = args.first().and_then(|a| a.as_ref()).map(|a| a.to_string()).unwrap_or_default();
       let style = args.get(1).and_then(|a| a.as_ref()).map(|a| a.to_string()).unwrap_or_default();
       let obj = props.get("obj").map(|v| v.to_string()).unwrap_or_default();
+      ensure_svg_context(document)?;
       document.open_element("svg:clipPath", Some(string_map!(
         "id" => format!("pgfcp{}", obj)
       )), None)?;
-      document.insert_element("svg:path", Vec::new(), Some(string_map!(
-        "id" => format!("pgfpath{}", obj),
-        "d" => d
-      )))?;
-      document.close_element("svg:clipPath")?;
-      let mut use_attrs = string_map!(
-        "xlink:href" => format!("#pgfpath{}", obj)
-      );
-      if !style.is_empty() {
-        use_attrs.insert("style".to_string(), style);
+      // A degenerate clip (`\path[clip];` — no path operations) has nothing to
+      // draw or reference: `set_attribute` drops an empty `d` (Perl too,
+      // Document.pm:1381), which left a `<svg:path>` without its required `d`
+      // (circuitikzmanual, xytree-doc-en — SHARED with Perl). An EMPTY
+      // <clipPath> clips everything away, as the empty PDF clip does, so the
+      // clip group below stays and only the path/use pair is omitted.
+      if !d.is_empty() {
+        document.insert_element("svg:path", Vec::new(), Some(string_map!(
+          "id" => format!("pgfpath{}", obj),
+          "d" => d
+        )))?;
       }
-      document.insert_element("svg:use", Vec::new(), Some(use_attrs))?;
+      document.close_element("svg:clipPath")?;
+      if !d.is_empty() {
+        let mut use_attrs = string_map!(
+          "xlink:href" => format!("#pgfpath{}", obj)
+        );
+        if !style.is_empty() {
+          use_attrs.insert("style".to_string(), style);
+        }
+        document.insert_element("svg:use", Vec::new(), Some(use_attrs))?;
+      }
       document.open_element("svg:g", Some(string_map!(
         "clip-path" => format!("url(#pgfcp{})", obj),
         "_autoclose" => "1".to_string()
@@ -816,7 +887,7 @@ LoadDefinitions!({
   DefConstructor!("\\lxSVG@discardpath", "");
 
   DefMacro!("\\lxSVG@@discardpath", sub[_args] {
-    let path = lookup_string("pgf_SVGpath");
+    let path = svg_path();
     let clip = lookup_int("pgf_clipnext") != 0;
     if clip {
       let clip_cmd = format!("\\lxSVG@clearpath\\lxSVG@clearclip\\pgfsysprotocol@literal{{\\lxSVG@discardpath@clipped{{{}}}}}", path);
@@ -830,10 +901,14 @@ LoadDefinitions!({
     sub[document, args, props] {
       let d = args.first().and_then(|a| a.as_ref()).map(|a| a.to_string()).unwrap_or_default();
       let obj = props.get("obj").map(|v| v.to_string()).unwrap_or_default();
+      ensure_svg_context(document)?;
       document.open_element("svg:clipPath", Some(string_map!(
         "id" => format!("pgfcp{}", obj)
       )), None)?;
-      document.insert_element("svg:path", Vec::new(), Some(string_map!("d" => d)))?;
+      // Same degenerate-clip guard as `\lxSVG@drawpath@clipped`: no path, no `<svg:path>`.
+      if !d.is_empty() {
+        document.insert_element("svg:path", Vec::new(), Some(string_map!("d" => d)))?;
+      }
       document.close_element("svg:clipPath")?;
       document.open_element("svg:g", Some(string_map!(
         "clip-path" => format!("url(#pgfcp{})", obj),
@@ -858,15 +933,7 @@ LoadDefinitions!({
   // Perl L387-395: \lxSVG@begingroup@ — opens svg:g with RequiredKeyVals
   DefConstructor!("\\lxSVG@begingroup@ RequiredKeyVals",
     sub[document, args, _props] {
-      let current = document.get_node().clone();
-      let qname = document::get_node_qname(&current);
-      let is_ltx = with(qname, |s| s.starts_with("ltx:"));
-      if is_ltx {
-        document.open_element("svg:svg", Some(string_map!(
-          "_autoopened" => "1".to_string(),
-          "_autoclose" => "1".to_string()
-        )), None)?;
-      }
+      ensure_svg_context(document)?;
       let mut attrs = string_map!("_autoclose" => "1".to_string());
       if let Some(Some(kv_arg)) = args.first() {
         // Perl: $doc->openElement('svg:g', $kv->getHash, _autoclose => 1);
@@ -878,6 +945,17 @@ LoadDefinitions!({
         }
       }
       document.open_element("svg:g", Some(attrs), None)?;
+    },
+    // A colored pattern's fill (`\pgfsys@setpatterncolored`, a `fill=url(…)`
+    // group) is the fill a path inherits, as the uncolored one's
+    // (`\lxSVG@setpatternuncolored@`).
+    after_digest => sub[whatsit] {
+      if let Some(DigestedData::KeyVals(kv)) = whatsit.get_arg(1).map(|arg| arg.data())
+        && let Some(fill) = kv.get_hash().get("fill")
+        && fill.starts_with("url(")
+      {
+        assign_value("pgf@svg@fillcolor", Stored::String(pin(fill)), None);
+      }
     }
   );
 
@@ -891,8 +969,13 @@ LoadDefinitions!({
     "\\lxSVG@buttcap\\lxSVG@begingroup{stroke-linecap=butt}");
   DefMacro!("\\pgfsys@roundcap",
     "\\lxSVG@roundcap\\lxSVG@begingroup{stroke-linecap=round}");
+  // pgf's `rect` cap is SVG's `square` (`stroke-linecap` admits only
+  // butt|round|square|inherit): Perl's pgfsys-latexml.def.ltxml:411-412 emits
+  // the pgf name verbatim and every `line cap=rect` drawing is schema-invalid
+  // (6,733 lines in 21 sweep-78 manuals; PERL-ORIGIN). Guard:
+  // `cluster_schema::rect_line_cap_is_square`.
   DefMacro!("\\pgfsys@rectcap",
-    "\\lxSVG@rectcap\\lxSVG@begingroup{stroke-linecap=rect}");
+    "\\lxSVG@rectcap\\lxSVG@begingroup{stroke-linecap=square}");
   DefMacro!("\\pgfsys@miterjoin",
     "\\lxSVG@miterjoin\\lxSVG@begingroup{stroke-linejoin=miter}");
   DefMacro!("\\pgfsys@setmiterlimit{}",
@@ -918,56 +1001,48 @@ LoadDefinitions!({
   // evaluation. Perl doesn't override \pgfsetdash (raw TeX works there),
   // but we override it following the same pattern as \pgfmathsetlength.
   DefPrimitive!("\\pgfsetdash{}{}", sub[(pattern_toks, offset_toks)] {
-    use crate::package::pgfmath_code_tex::pgfmathparse_eval_with_units;
+    use crate::package::pgfmath_code_tex::{pgfmathparse, pgfmathparse_expanded};
     // Step 1: Parse the dash pattern.
-    // #1 is like {{3pt}{1.2pt}{0.6pt}} or {} (empty for solid).
-    // Extract brace groups and convert each to a dimension via pgfmathparse.
-    let pattern_str = pattern_toks.to_string();
-    let pattern_str = pattern_str.trim();
+    // #1 is like {{3pt}{1.2pt}{0.6pt}} or {} (empty for solid). Each top-level brace group is one
+    // dimension, expanded as tokens (a group may hold a macro, `{\dl}`, which a string round-trip
+    // left for pgfmath to misread as a register name) and evaluated via pgfmathparse.
     let mut dash_parts: Vec<String> = Vec::new();
-
-    if !pattern_str.is_empty() {
-      // Extract brace-group contents: {3pt}{1.2pt} → ["3pt", "1.2pt"]
-      let mut depth = 0;
-      let mut current = String::new();
-      for ch in pattern_str.chars() {
-        match ch {
-          '{' => {
-            if depth > 0 { current.push(ch); }
-            depth += 1;
-          },
-          '}' => {
-            depth -= 1;
-            if depth == 0 && !current.is_empty() {
-              // Evaluate this dimension via pgfmathparse
-              let toks = Tokens::new(Explode!(&current));
-              let expanded = do_expand(toks).unwrap_or_default();
-              let input = expanded.to_string();
-              let (result_str, _units) = pgfmathparse_eval_with_units(&input);
+    let mut depth = 0;
+    let mut group: Vec<Token> = Vec::new();
+    for t in pattern_toks.unlist() {
+      match t.get_catcode() {
+        Catcode::BEGIN => {
+          if depth > 0 {
+            group.push(t);
+          }
+          depth += 1;
+        },
+        Catcode::END => {
+          depth -= 1;
+          if depth == 0 {
+            if !group.is_empty() {
+              let (result_str, _units) = pgfmathparse(Tokens::new(std::mem::take(&mut group)))?;
               let value: f64 = result_str.parse().unwrap_or(0.0);
               // Convert to sp then format as pt dimension (matching \the\pgf@x)
               let dim = Dimension((value * 65536.0).round() as i64);
               dash_parts.push(dim.to_string());
-              current.clear();
-            } else if depth > 0 {
-              current.push(ch);
             }
-          },
-          _ => {
-            if depth > 0 { current.push(ch); }
-          },
-        }
+          } else if depth > 0 {
+            group.push(t);
+          }
+        },
+        _ if depth > 0 => group.push(t),
+        _ => {},
       }
     }
 
-    // Step 2: Evaluate the offset #2 via pgfmathsetlength → \pgf@x
-    let offset_str = offset_toks.to_string();
-    let offset_str = offset_str.trim().to_string();
-    if !offset_str.is_empty() {
-      let toks = Tokens::new(Explode!(&offset_str));
-      let expanded = do_expand(toks).unwrap_or_default();
-      let input = expanded.to_string();
-      let (result_str, _units) = pgfmathparse_eval_with_units(&input);
+    // Step 2: Evaluate the offset #2 via pgfmathsetlength → \pgf@x. The argument is expanded as
+    // tokens: tikz passes the macro `\tikz@dashphase` (tikz.code.tex:119-137), which a string
+    // round-trip turned into characters that pgfmath then read as a register name
+    // ("\tikz@dashphase is not a register"; beautybook, 4,304× over the 3,003-paper A/B).
+    let expanded = do_expand(offset_toks)?;
+    if expanded.unlist_ref().iter().any(|t| t.get_catcode() != Catcode::SPACE) {
+      let (result_str, _units) = pgfmathparse_expanded(expanded)?;
       let value: f64 = result_str.parse().unwrap_or(0.0);
       let dim = Dimension((value * 65536.0).round() as i64);
       assign_register("\\pgf@x", dim.into(), None, vec![])?;
@@ -1032,6 +1107,18 @@ LoadDefinitions!({
   DefMacro!("\\pgfsys@color@cmy{}{}{}",
     "\\ifpgfpicture\\pgfsys@color@cmy@stroke{#1}{#2}{#3}\\pgfsys@color@cmy@fill{#1}{#2}{#3}\\fi",
     locked => true);
+  // `hsb` is a driver CORE model for xcolor: `\XC@coremodel` (xcolor.sty
+  // L1121-1132) folds Hsb/HSB/tHsb/wave to it and passes it to pgf unchanged,
+  // and LaTeXML routes EVERY `\color` through `\pgfsetcolor{.}` (the
+  // `\XC@mcolor` hook, pgf_sty.rs; Perl pgf.sty.ltxml L43) → real pgf's
+  // `\pgf@setcolor` (pgfcoregraphicstate.code.tex L195-202) looks up
+  // `\pgfsys@color@hsb` and errors "Unsupported color model" when absent.
+  // tikz-3dplot.sty L731/787 `\definecolor{tdplotfillcolor}{hsb}{…}` hit the
+  // 500-error cap on tikz-3dplot_documentation (Perl SHARED). Only hsb is
+  // needed; every other xcolor model reaches pgf as rgb/gray/cmy/cmyk/hsb.
+  DefMacro!("\\pgfsys@color@hsb{}{}{}",
+    "\\ifpgfpicture\\pgfsys@color@hsb@stroke{#1}{#2}{#3}\\pgfsys@color@hsb@fill{#1}{#2}{#3}\\fi",
+    locked => true);
 
   // Perl: DefMacro('\lxSVG@RGB{}{}{}', sub { Explode(Color('rgb', $_[1], $_[2], $_[3])->toHex); });
   // Use plain {} parameters (not {Float}) so these macros expand correctly
@@ -1058,6 +1145,14 @@ LoadDefinitions!({
     color_to_hex_tokens((1.0-c)*(1.0-k), (1.0-m)*(1.0-k), (1.0-y)*(1.0-k))
   });
 
+  DefMacro!("\\lxSVG@HSB{}{}{}", sub[args] {
+    let h: f64 = args.first().map(|a| a.revert().unwrap_or_default().to_string().trim().parse().unwrap_or(0.0)).unwrap_or(0.0);
+    let s: f64 = args.get(1).map(|a| a.revert().unwrap_or_default().to_string().trim().parse().unwrap_or(0.0)).unwrap_or(0.0);
+    let b: f64 = args.get(2).map(|a| a.revert().unwrap_or_default().to_string().trim().parse().unwrap_or(0.0)).unwrap_or(0.0);
+    let c = common::color::Color::Hsb(h, s, b).to_rgb().components();
+    color_to_hex_tokens(c[0], c[1], c[2])
+  });
+
   DefMacro!("\\lxSVG@CMY{}{}{}", sub[args] {
     let c: f64 = args.first().map(|a| a.revert().unwrap_or_default().to_string().trim().parse().unwrap_or(0.0)).unwrap_or(0.0);
     let m: f64 = args.get(1).map(|a| a.revert().unwrap_or_default().to_string().trim().parse().unwrap_or(0.0)).unwrap_or(0.0);
@@ -1080,6 +1175,10 @@ LoadDefinitions!({
     "\\lxSVG@color@cmy@stroke{#1}{#2}{#3}\\lxSVG@begingroup{stroke=\\lxSVG@CMY{#1}{#2}{#3}}", locked => true);
   DefMacro!("\\pgfsys@color@cmy@fill{}{}{}",
     "\\lxSVG@color@cmy@fill{#1}{#2}{#3}\\lxSVG@begingroup{fill=\\lxSVG@CMY{#1}{#2}{#3}}", locked => true);
+  DefMacro!("\\pgfsys@color@hsb@stroke{}{}{}",
+    "\\lxSVG@color@hsb@stroke{#1}{#2}{#3}\\lxSVG@begingroup{stroke=\\lxSVG@HSB{#1}{#2}{#3}}", locked => true);
+  DefMacro!("\\pgfsys@color@hsb@fill{}{}{}",
+    "\\lxSVG@color@hsb@fill{#1}{#2}{#3}\\lxSVG@begingroup{fill=\\lxSVG@HSB{#1}{#2}{#3}}", locked => true);
   DefMacro!("\\pgfsys@color@gray@stroke{}",
     "\\lxSVG@color@gray@stroke{#1}\\lxSVG@begingroup{stroke=\\lxSVG@GRAY{#1}}", locked => true);
   DefMacro!("\\pgfsys@color@gray@fill{}",
@@ -1111,6 +1210,13 @@ LoadDefinitions!({
     let k: f64 = args[3].to_string().trim().parse().unwrap_or(0.0);
     format!("#{:02X}{:02X}{:02X}",
       channel_to_u8((1.0-c)*(1.0-k)), channel_to_u8((1.0-m)*(1.0-k)), channel_to_u8((1.0-y)*(1.0-k)))
+  }
+  fn hsb_hex(args: &[&ArgWrap]) -> String {
+    let h: f64 = args[0].to_string().trim().parse().unwrap_or(0.0);
+    let s: f64 = args[1].to_string().trim().parse().unwrap_or(0.0);
+    let b: f64 = args[2].to_string().trim().parse().unwrap_or(0.0);
+    let c = common::color::Color::Hsb(h, s, b).to_rgb().components();
+    format!("#{:02X}{:02X}{:02X}", channel_to_u8(c[0]), channel_to_u8(c[1]), channel_to_u8(c[2]))
   }
   fn cmy_hex(args: &[&ArgWrap]) -> String {
     let c: f64 = args[0].to_string().trim().parse().unwrap_or(0.0);
@@ -1149,6 +1255,14 @@ LoadDefinitions!({
     let hex = cmy_hex(&[&args[0], &args[1], &args[2]]);
     assign_value("pgf@svg@fillcolor", Stored::String(pin(hex)), None);
   });
+  DefPrimitive!("\\lxSVG@color@hsb@stroke{}{}{}", sub[args] {
+    let hex = hsb_hex(&[&args[0], &args[1], &args[2]]);
+    assign_value("pgf@svg@strokecolor", Stored::String(pin(hex)), None);
+  });
+  DefPrimitive!("\\lxSVG@color@hsb@fill{}{}{}", sub[args] {
+    let hex = hsb_hex(&[&args[0], &args[1], &args[2]]);
+    assign_value("pgf@svg@fillcolor", Stored::String(pin(hex)), None);
+  });
   DefPrimitive!("\\lxSVG@color@gray@stroke{}", sub[args] {
     let hex = gray_hex(&[&args[0]]);
     assign_value("pgf@svg@strokecolor", Stored::String(pin(hex)), None);
@@ -1164,7 +1278,14 @@ LoadDefinitions!({
 
   // Perl L487-492: \pgfsys@declarepattern{name}{x1}{y1}{x2}{y2}{x step}{y step}{code}{flag}
   // Expands to \pgfsysprotocol@literal{\lxSVG@setpattern{...}}\lxSVG@(un)coloredpattern{...}
-  DefMacro!("\\pgfsys@declarepattern{} {}{}{}{}{}{} {}{Number}", sub[args] {
+  // pgf 3.1 inserts the six-entry transformation matrix before the code:
+  // pgfcorepatterns.code.tex:159-164 passes `\pgfsys@patternmatrix` (:126,
+  // `{1.0}{0.0}{0.0}{1.0}{0.0pt}{0.0pt}`), which the svg driver reads as the
+  // first six arguments of `\pgfsys@@declarepattern` (pgfsys-common-svg.def:677-690).
+  // Perl's nine arguments took the matrix's first entry for the code and its
+  // second (`0.0`) for the flag; the rest of the call was left in the input. The
+  // matrix is read and not applied (the identity, except for patterns.meta).
+  DefMacro!("\\pgfsys@declarepattern{} {}{}{}{}{}{} {}{}{}{}{}{} {}{Number}", sub[args] {
     let name = args.first().map(|a| a.revert().unwrap_or_default()).unwrap_or_default();
     let x1 = args.get(1).map(|a| a.revert().unwrap_or_default()).unwrap_or_default();
     let y1 = args.get(2).map(|a| a.revert().unwrap_or_default()).unwrap_or_default();
@@ -1172,8 +1293,8 @@ LoadDefinitions!({
     let y2 = args.get(4).map(|a| a.revert().unwrap_or_default()).unwrap_or_default();
     let x_step = args.get(5).map(|a| a.revert().unwrap_or_default()).unwrap_or_default();
     let y_step = args.get(6).map(|a| a.revert().unwrap_or_default()).unwrap_or_default();
-    let code = args.get(7).map(|a| a.revert().unwrap_or_default()).unwrap_or_default();
-    let flag: i64 = args.get(8).map(|a| a.value_of()).unwrap_or(0);
+    let code = args.get(13).map(|a| a.revert().unwrap_or_default()).unwrap_or_default();
+    let flag: i64 = args.get(14).map(|a| a.value_of()).unwrap_or(0);
     let op = if flag == 1 {
       T_CS!("\\lxSVG@coloredpattern")
     } else {
@@ -1262,7 +1383,14 @@ LoadDefinitions!({
         "width" => x_step,
         "height" => y_step
       )), None)?;
-      // #4 — the pattern code content is absorbed by the constructor framework
+      // #4, the pattern code (Perl `#4` in the template). It was left open for
+      // the code to fill, which only the old nine-argument read supplied: the
+      // call's unread rest ran the code after this constructor.
+      if let Some(code) = args.get(3).and_then(|a| a.as_ref()) {
+        document.absorb(code, None)?;
+      }
+      document.close_element("svg:pattern")?;
+      document.close_element("svg:defs")?;
     },
     properties => sub[args] {
       let x_step = args.get(1).and_then(|a| a.as_ref()).and_then(|a| a.get_dimension())
@@ -1294,8 +1422,14 @@ LoadDefinitions!({
       document.open_element("svg:symbol", Some(string_map!(
         "id" => format!("pgfsym{}", name)
       )), None)?;
-      // #4 — the pattern code content is absorbed by the constructor framework
-      // The svg:symbol, svg:pattern, and svg:defs will be auto-closed
+      // #4, the pattern code (Perl `<svg:symbol …>#4</svg:symbol>`); see
+      // `\lxSVG@coloredpattern`.
+      if let Some(code) = args.get(3).and_then(|a| a.as_ref()) {
+        document.absorb(code, None)?;
+      }
+      document.close_element("svg:symbol")?;
+      document.close_element("svg:pattern")?;
+      document.close_element("svg:defs")?;
     },
     properties => sub[args] {
       let x_step = args.get(1).and_then(|a| a.as_ref()).and_then(|a| a.get_dimension())
@@ -1354,6 +1488,11 @@ LoadDefinitions!({
         (r * 255.0).round().clamp(0.0, 255.0) as u8,
         (g * 255.0).round().clamp(0.0, 255.0) as u8,
         (b * 255.0).round().clamp(0.0, 255.0) as u8);
+      // The pattern is now the fill a path inherits: `\lxSVG@drawpath@unclipped`
+      // wraps a path whose `pgf@svg@fillcolor` differs from the enclosing fill in
+      // a group of that colour, which painted a pattern-filled path solid (the
+      // colour pgf set before the pattern; tikz/unit_tests_by_silviu).
+      assign_value("pgf@svg@fillcolor", Stored::String(pin(format!("url(#pgfupat{obj})"))), None);
       Ok(stored_map!("obj" => obj, "color" => color))
     },
     sizer => 0
@@ -1378,17 +1517,23 @@ LoadDefinitions!({
     }
   );
 
-  // Scope bindings — same WISDOM #44 intentional divergence as the
-  // path-op / color blocks above: Perl `DefConstructor` with empty
-  // template + afterDigest side-effect; Rust `DefPrimitive` with the
-  // side-effect in the body.
-  DefPrimitive!("\\lxSVG@beginscope", {
-    begingroup();
-  });
-
-  DefPrimitive!("\\lxSVG@endscope", {
-    let _ = endgroup();
-  });
+  // A graphics-state scope is NOT a TeX group: pgfsys-common-pdf.def:37-38
+  // `\pgfsys@beginscope` = `q`, `\pgfsys@endscope` = `Q` — output literals
+  // that pgf freely interleaves with its own box/group machinery (a `q`
+  // before a `\setbox…\hbox` whose matching `Q` sits inside the box:
+  // `\pgfsys@begin@idscope`/`\pgfsys@hbox`, pgfsys.code.tex:572-611/1524).
+  // pgf supplies the TeX grouping itself where it needs it (`{pgfscope}`,
+  // pgfcorescopes.code.tex:48-61). Perl pgfsys-latexml.def.ltxml:576-586
+  // mapped the scope to a real `\begingroup`/`\endgroup` — a scope
+  // straddling a box boundary then interleaved with the box's frame and
+  // every later `\endgroup` hit "close non-boxing group" / "end mode"
+  // (the authors' note at :887-890; msc/msc 24 errors and an empty chart,
+  // modernposter/demo 15; Perl 25/31 — SHARED). Here the scope is the
+  // `<svg:g _scopebegin>` element only (opened by `\lxSVG@begingroup`, closed
+  // back to its marker by `\lxSVG@closescope`); driver state is global and
+  // per-path. Guard: `perfect_kernel_batch56::pgf_scope_straddling_a_box_is_not_a_tex_group`.
+  DefPrimitive!("\\lxSVG@beginscope", None);
+  DefPrimitive!("\\lxSVG@endscope", None);
 
   //===================================================================
   // 9. Image
@@ -1399,11 +1544,17 @@ LoadDefinitions!({
   DefMacro!("\\pgfsys@defineimage",
     "\\edef\\pgf@image{\\lxSVG@includegraphics{\\pgf@imagewidth}{\\pgf@imageheight}{\\pgf@filename}}");
 
-  // Perl L597-623: \lxSVG@includegraphics — simplified
-  // The full Perl version has complex beforeConstruct/afterConstruct for foreignObject
-  // wrapping. For now, just emit the graphics element.
+  // Perl L597-628: \lxSVG@includegraphics, pgf's image — `\pgfimage`, and the file tikz's `external` library
+  // includes for a picture (`mode=graphics if exists`, tikzlibraryexternal_code_tex.rs). Its candidates are the files
+  // the graphics search finds (Perl `pathname_findall($graphic, types => ['*'], paths => GRAPHICSPATHS)` relative to
+  // the source directory: `image_candidates`), and its box is the file's size under the width/height keys (`sizer =>
+  // \&image_graphicx_sizer`). Red (int83a): no candidates, so post had no file to render and every externalized
+  // figure was an `ltx_missing_image` (2302.00752: 18 figures shipped as `SFTforPDE-figure<N>.pdf`; 1905.03839,
+  // 1506.05333). Perl's beforeConstruct/afterConstruct open an svg:foreignObject when none is open; here the
+  // document auto-opens one inside a picture, and outside a picture none is wanted (Perl's errs: "<svg:foreignObject>
+  // isn't allowed in <ltx:p>"). Guard: `perfect_kernel_batch79k::an_externalized_tikz_figure_finds_its_file`.
   DefConstructor!("\\lxSVG@includegraphics{}{} Semiverbatim",
-    "<ltx:graphics graphic='#3' options='#options'/>",
+    "<ltx:graphics graphic='#graphic' candidates='#candidates' options='#options'/>",
     properties => sub[args] {
       let w = args.first().and_then(|a| a.as_ref()).map(|a| a.to_string()).unwrap_or_default();
       let h = args.get(1).and_then(|a| a.as_ref()).map(|a| a.to_string()).unwrap_or_default();
@@ -1412,9 +1563,13 @@ LoadDefinitions!({
       if !w.is_empty() { options_parts.push(format!("width={}", w)); }
       if !h.is_empty() { options_parts.push(format!("height={}", h)); }
       let options = options_parts.join(",");
-      let candidates = graphic.clone();
+      let candidates = util::image::image_candidates(&graphic);
       Ok(stored_map!("graphic" => graphic, "candidates" => candidates, "options" => options))
-    }
+    },
+    after_digest => sub[whatsit] {
+      util::image::image_graphicx_sizer(whatsit);
+    },
+    alias => "\\includegraphics"
   );
 
   //===================================================================
@@ -1826,11 +1981,22 @@ LoadDefinitions!({
   });
 
   // Perl L792-796: \pgfsys@functionalshading — not implementable (PostScript functions)
-  DefMacro!("\\pgfsys@functionalshading{}{}{}{}", sub[_args] {
-
-    mouth::tokenize_internal(
-      "\\let\\lxSVG@sh@defs\\relax\\let\\lxSVG@sh\\relax\\let\\lxSVG@pos\\relax").unlist()
-  });
+  // PGF system layer fallback for unsupported shadings (e.g. functional shadings with PostScript code).
+  // In PGF, \pgfsys@functionalshading calls \pgf@sys@noshading{#1}, which defaults to \pgfutil@empty.
+  // But LaTeXML's \pgfsys@shadinginsidepgfpicture expects \@pgfshading<name>! to define
+  // \lxSVG@sh@defs, \lxSVG@sh, and \lxSVG@pos. If not defined, Gullet encounters undefined tokens.
+  // Defining \pgf@sys@noshading and \pgfsys@functionalshading to install a no-op \@pgfshading<name>!
+  // ensures unsupported shadings expand cleanly without undefined-CS errors.
+  RawTeX!(r"
+\def\pgf@sys@noshading#1{%
+  \expandafter\gdef\csname @pgfshading#1!\endcsname{%
+    \let\lxSVG@sh@defs\relax
+    \let\lxSVG@sh\relax
+    \def\lxSVG@pos{\pgfpointorigin}%
+  }%
+}
+\def\pgfsys@functionalshading#1#2#3#4{\pgf@sys@noshading{#1}}
+");
 
   //===================================================================
   // PGF sentinel tokens — make non-expandable

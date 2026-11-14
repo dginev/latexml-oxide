@@ -1,0 +1,11 @@
+% witness: none (a stray `\hline` in body text: `\noalign{\@@alignment@hline}` off any alignment)
+% oracle:  pdflatex 1 error (`Misplaced \noalign`), then latex.ltx's body draws an `\hrule`, ending the paragraph
+% engines: rust 64ze/65b r2 = 1 error, body dropped; rust 65b r3 = 1 error, the body runs as a group and
+%          `\@@alignment@hline` is inert off an alignment (no rule, no junk)
+% expect:  1 error; one paragraph "Some text more text."
+% status:  CONTROL; guard perfect_kernel_batch65::stray_hline_in_a_paragraph_is_one_error
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+Some text \hline more text.
+\end{document}

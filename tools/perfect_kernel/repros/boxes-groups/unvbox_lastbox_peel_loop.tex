@@ -1,0 +1,37 @@
+% witness: semantic.sty `\inference` (infernce.sty `\@adjustPremises`: `\loop \setbox\@@pBox=\vbox{\unvbox\@@pBox
+%          \global\setbox\@@aLineBox=\lastbox}\ifvoid\@@aLineBox … \repeat`) — ~315 arXiv `oom:alloc_failed` Fatals, among
+%          them 1603.01635, 2506.05832 (study 2026-10-16_perf_ram_study.md (b); its other `\lastbox` users
+%          1209.2208 and math0301370 fail elsewhere, unchanged)
+% oracle:  pdflatex 0 errors: [1:h,2] | [1:h,2:h,3] | [1:h,2:h,3] | [1] | [1:v,2:h,3] | [L2/full] | Para one. / Para
+%          two. / More. (three lines) | Para one. / Para two. / X (three lines) | P1 / P2 / PAfter. (three lines)
+%          (tex.web §1110 `unpackage`: `\unvbox` puts the box's list back, so `\lastbox`, §1080, takes its last box;
+%          §1086 `vbox_group`: the box's end finishes its paragraph)
+% engines: rust (67int10b) [1:v,2:v,3:v,4:v,5:v,6:v,6] in every peel (the whole vbox put back and taken, then the empty
+%          `\vbox{}` left, for ever); Perl alike (TeX_Box.pool.ltxml:725-742 `unlist` returns the whatsit, :596-597
+%          `\lastbox` pops it; KNOWN_PERL_ERRORS #840)
+% expect:  0 errors; p2-p6 as pdflatex; p7-p9 one `ltx:p` per line; p1 [1:h,2:h,3] (RED R7: LaTeXML's vertical lists
+%          carry no interline glue, so the second round finds the first box, not the `\baselineskip` glue before it)
+% status:  GREEN 68q (p2-p9); p1 RED R7. Guard perfect_kernel_batch68q::unvbox_lastbox_peel_loop
+\documentclass{article}
+\newcount\n \newbox\pb \newbox\lb
+\newif\ifmore
+\def\peel{\global\n=0
+  \loop
+    \setbox\pb=\vbox{\unvbox\pb \global\setbox\lb=\lastbox}%
+    \global\advance\n by 1
+    \ifvoid\lb \morefalse\else
+      \xdef\seen{\seen\the\n:\ifhbox\lb h\else v\fi,}%
+      \ifnum\n<6 \moretrue\else\morefalse\fi
+    \fi
+  \ifmore\repeat}
+\begin{document}
+\gdef\seen{}\setbox\pb=\vbox{\hbox{a}\hbox{b}}\peel[\seen\the\n]\par
+\gdef\seen{}\setbox\pb=\vbox{\hbox{a}\nointerlineskip\hbox{b}}\peel[\seen\the\n]\par
+\gdef\seen{}\setbox0\hbox{a}\setbox\pb\vbox{\box0}\setbox0\hbox{b}\setbox\pb=\vbox{\box0\unvbox\pb}\peel[\seen\the\n]\par
+\gdef\seen{}\setbox\pb=\vbox{}\peel[\seen\the\n]\par
+\gdef\seen{}\setbox\pb=\vtop{\hbox{a}\nointerlineskip\vbox{\hbox{b}}}\peel[\seen\the\n]\par
+\setbox0\vbox{\offinterlineskip\hbox{L1}\hbox{L2}}\setbox1\vbox{\unvcopy0\global\setbox2\lastbox}[\box2/\ifvoid0 void\else full\fi]\par
+\setbox0\vbox{Para one.\par Para two.}\setbox1\vbox{\unvbox0 More.}\box1\par
+\setbox0\vbox{Para one.\par Para two.}\setbox1\vbox{\unvbox0\hbox{X}}\box1\par
+\parbox{3cm}{\setbox0\vbox{\hbox{P1}\hbox{P2}}\unvbox0 PAfter.}\par
+\end{document}

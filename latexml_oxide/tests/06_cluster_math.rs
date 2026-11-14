@@ -12,7 +12,7 @@ use cluster::convert_to_xml;
 /// `apply(probability)` with no operand (silent content-MathML corruption).
 /// The operand-protection guard keeps the ref (dangling rather than dropped,
 /// closer to Perl which resolves it). See
-/// docs/parity/diagnostics/EXPECTED_ID_XMREF_DESIGN_2026-06-08.md (2026-06-26m/o).
+/// docs/archive/EXPECTED_ID_XMREF_DESIGN_2026-06-08.md (2026-06-26m/o).
 /// A comma-list LEFT of a conditional bar parses with `|` binding to the LAST
 /// item (Perl): `a,b|c` → `list@(a, conditional@(b, c))`, `a,b,c|d` →
 /// `list@(a, b, conditional@(c, d))`, `x|y,z` → `conditional@(x, list@(y, z))`.
@@ -40,7 +40,7 @@ fn cluster_comma_list_conditional() {
 /// keyless bare `<XMRef/>` when a further `\quad` formula extends it. This was the
 /// dominant `expected:id` "Missing idref" cluster (~370 papers). The Wrap-
 /// presentation guard on the formulae/list extend paths fixes it. See
-/// docs/parity/diagnostics/EXPECTED_ID_XMREF_DESIGN_2026-06-08.md (2026-06-26v).
+/// docs/archive/EXPECTED_ID_XMREF_DESIGN_2026-06-08.md (2026-06-26v).
 #[test]
 fn cluster_formulae_distribute_no_bare_ref() {
   let xml = convert_to_xml("tests/cluster_regressions/formulae_distribute_no_bare_ref.tex");
@@ -156,10 +156,10 @@ fn cluster_thousands_separator_us_default() {
   // US rule declines); the rest would each be a real corruption.
   for (tex, want) in [
     ("3,14", "list@(3, 14)"),
-    ("50,0001", "list@(50, 0001)"),          // 4-digit group
-    ("f(x,000)", "f@(vector@(x, 000))"),     // no NUMBER left of the comma
-    ("(1,2024)", "open-interval@(1, 2024)"), // the pair the ligature corrupted
-    ("(12,3456)", "open-interval@(12, 3456)"),
+    ("50,0001", "list@(50, 0001)"),      // 4-digit group
+    ("f(x,000)", "f@(vector@(x, 000))"), // no NUMBER left of the comma
+    ("(1,2024)", "vector@(1, 2024)"),    // the pair the ligature corrupted
+    ("(12,3456)", "vector@(12, 3456)"),
     ("a,b", "list@(a, b)"),
   ] {
     assert_eq!(text_of(tex), want, "{tex} must stay unmerged");
@@ -204,9 +204,12 @@ fn cluster_fenced_bare_operator() {
     r#"text="g@(vector@(cdot, cdot))""#,
     r#"text="f@(vector@(cdot, x))""#,
     r#"text="delimited-⟨⟩@(list@(cdot, cdot))""#,
-    // The mixed relation/plain comma list, inside a conditional and bare.
-    r#"text="P@(conditional@(x, open-interval@(y &gt;= 0, z)))""#,
-    r#"text="f@(vector@(a &gt;= 0, b))""#,
+    // The mixed relation/plain comma list, inside a conditional and bare; the condition is a list,
+    // not the parens' open interval (57bd), and holding a relation it is Perl's `formulae` (57bh;
+    // Perl garbles this one, `P * (conditional@(x, y) >= list@(0, z))`).
+    r#"text="P@(conditional@(x, formulae@(y &gt;= 0, z)))""#,
+    // A paren list holding a relation is one `formulae` item (57bk; Perl `f * (a >= list@(0, b))`).
+    r#"text="f@(formulae@(a &gt;= 0, b))""#,
   ] {
     assert!(x.contains(want), "missing {want} in:\n{x}");
   }
@@ -249,17 +252,22 @@ fn cluster_hdotsfor_columns() {
 /// which defines no `\ext@arrow` at all, reports 258 errors; we ran into the
 /// 1000-error cap). Red without the fix: `Error:unexpected:} Attempt to close a
 /// group that switched to mode display_math`, and the `\simeq` above-label is
-/// replaced by a `0` SUBscript scavenged from the leaked `{40}`.
+/// replaced by a `0` SUBscript scavenged from the leaked `{40}`. The label
+/// decorates the arrow (Perl `relop : RELOP addOpDecoration`, 57ag), so the
+/// formula parses as `A to ^ similar-to-or-equals B`.
 #[test]
 fn cluster_ext_arrow_braced_mkern() {
   let x = convert_to_xml("tests/cluster_regressions/ext_arrow_braced_mkern.tex");
-  assert!(
-    x.contains(r#"<XMApp role="POSTSUPERSCRIPT""#) && x.contains(r#"name="simeq""#),
-    "the \\ext@arrow above-label must survive as a superscript on the arrow:\n{x}"
-  );
-  assert!(
-    !x.contains(r#"<XMApp role="POSTSUBSCRIPT""#),
-    "a POSTSUBSCRIPT here means the braced `{{40}}` mkern amount leaked into the math:\n{x}"
+  latexml::util::test::assert_element(
+    &x,
+    "Math",
+    &[r#"xml:id="S0.Ex1.m1""#],
+    concat!(
+      r#"<Math mode="display" tex="A{\mathrel{\to}^{\simeq}}B" text="A to ^ similar-to-or-equals B" xml:id="S0.Ex1.m1"><XMath><XMApp>"#,
+      r#"<XMApp role="RELOP"><XMTok role="SUPERSCRIPTOP" scriptpos="post2"/><XMTok name="to" role="RELOP">→</XMTok>"#,
+      r#"<XMTok fontsize="70%" meaning="similar-to-or-equals" name="simeq" role="RELOP">≃</XMTok></XMApp>"#,
+      r#"<XMTok font="italic" role="UNKNOWN">A</XMTok><XMTok font="italic" role="UNKNOWN">B</XMTok></XMApp></XMath></Math>"#
+    ),
   );
   assert!(
     x.contains("<p>Text after the display must survive.</p>"),

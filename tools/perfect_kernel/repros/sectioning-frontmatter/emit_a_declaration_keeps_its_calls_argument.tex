@@ -1,0 +1,24 @@
+% mechanism: the reading's Declaration spans (`observer/field_notes.rs` `balanced_reach`): a macro whose expansion defines
+%   something after reading its undelimited argument (icrc2009's raw `\IEEEauthorblockN#1{...\gdef...#1\crcr}`) left a
+%   span ending at the argument's opening brace, the cover seen so far; under `=2` the emitter replayed it
+%   as `\blockN{` cut from its argument: `readBalanced ran out` Errors (Anonymous String) the document does not raise. The
+%   reach now runs to the brace's match, as TeX reads the argument, so the box the call prints takes the declaration back
+%   (`field_invocation`) and an argument printing nothing is replayed whole (`\setx{unused}`); off unchanged
+% witness: 1111.2718 (icrc2009, `\IEEEauthorblockN{J.K. de Jong \IEEEauthorrefmark{1}...}`: 3 readBalanced Errors and a
+%   `\noalign` Error at =2, none off); w56's report (agent_reports/2026-11-08_w56_report.md)
+% oracle:  pdflatex 0 errors: "Ann Able", "Bob Baker", "Cy Dee Ewe"; "Space 0pt, set."
+% engines: rust E1base at =2 = 1 Error (readBalanced ran out), the names kept; off and Perl 0 Errors
+% expect:  three creators "Ann Able", "Bob Baker", "Cy Dee Ewe"; the definitions kept ("Space 0pt, set."); 0 E / 0 W
+% status:  RED (E1base, =2) -> GREEN (E1)
+% preload: ar5iv.sty
+\documentclass{article}
+\makeatletter
+\def\blockN#1{\gdef\@blockspace{0pt}#1\relax}
+\def\setx#1{\gdef\@setx{set}}
+\makeatother
+\begin{document}
+\title{A Title}
+\author{\setx{unused}Ann Able \and \blockN{Bob Baker} \and \blockN{Cy {Dee} Ewe}}
+\maketitle
+Space \csname @blockspace\endcsname, \csname @setx\endcsname.
+\end{document}

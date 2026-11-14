@@ -1,0 +1,18 @@
+% witness: 2605.11124 (`\affil{\vspace{-1.05em}$^2$\normalsize{…}}`; 77n r5 review)
+% oracle:  pdflatex 0 errors: "Ann Able1, Bob Baker2 and Cat Cole3 / 1Univ X / 2Univ Y / 3Univ W"
+% engines: rust int32a = Univ X on all three, Univ Y and Univ W on Cat; 77n r5 = Univ Y and Univ W on every author (the
+%          `\vspace` before the mark hid it, so each line went to the run)
+% expect:  0 errors, 0 warnings; 3 creators, each with the affiliation its mark picks
+% status:  RED (77n r4) -> GREEN (77n r6)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{authblk}
+\begin{document}
+\title{T}
+\author{Ann Able$^{1}$, Bob Baker$^{2}$ and Cat Cole$^{3}$}
+\affil{$^1$\normalsize Univ X}
+\affil{\vspace{-1.05em}$^2$\normalsize{Univ Y}}
+\affil{\vspace{-1.05em}$^3$\normalsize{Univ W}}
+\maketitle
+x
+\end{document}

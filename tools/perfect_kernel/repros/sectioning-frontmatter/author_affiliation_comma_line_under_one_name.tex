@@ -1,0 +1,14 @@
+% witness: review of 63m (a comma line of two name-shaped parts under one name read as more names:
+%          `Jane Doe\\ Carnegie Mellon, Pittsburgh PA`); the names-line witnesses 2308.07107, 2312.11514, 2406.10513
+%          continue a list of names
+% oracle:  pdflatex 0 errors: "Jane Doe" / "Carnegie Mellon, Pittsburgh PA"
+% engines: rust 63m6 = three authors (Jane Doe, Carnegie Mellon, Pittsburgh PA); Perl splits the comma too
+% expect:  0 errors; 1 author with the affiliation "Carnegie Mellon, Pittsburgh PA"
+% status:  RED (63m6) -> GREEN (63m)
+\documentclass{article}
+\title{T}
+\author{Jane Doe\\ Carnegie Mellon, Pittsburgh PA}
+\begin{document}
+\maketitle
+Body.
+\end{document}

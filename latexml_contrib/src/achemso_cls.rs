@@ -8,7 +8,13 @@ use latexml_package::prelude::*;
 
 LoadDefinitions!({
   LoadClass!("OmniBus");
-  RequirePackage!("amsmath");
+  // achemso.cls (TeX Live's) loads no amsmath: amsmath's commands for papers that use them unloaded, its "Old form"
+  // error once the paper loads it; the paper's copy decides (`amsmath_sty::require_amsmath_beyond_original`,
+  // KNOWN_PERL_ERRORS #993).
+  amsmath_sty::require_amsmath_beyond_original(
+    latexml_package::shipped_class::shipped_copy_loads("cls", "amsmath")?,
+    &[],
+  )?;
   RequirePackage!("amsthm");
   // Eager xcolor preload removed for Perl parity: it makes a later document
   // xcolor[table] load a no-op, so colortbl/array never load and array m{}/b{}
@@ -16,7 +22,10 @@ LoadDefinitions!({
   // document loads xcolor itself; color/definecolor stay via hyperref->color.
   // See ifacconf_cls.rs and SYNC_STATUS (eager-xcolor cluster).
   RequirePackage!("hyperref");
-  RequirePackage!("natbib");
+  // achemso.cls:1396-1398 `\RequirePackage[sort&compress,numbers,super]{natbib}` (`round` for a non-superscript
+  // journal): a citation's numbers sorted and compressed ("1–3"; natbib_sty.rs, KNOWN_PERL_ERRORS #1072). The
+  // numeric styles are not passed: the binding's citations stay as before.
+  RequirePackage!("natbib", options => vec![s!("sort&compress")]);
   // achemso uses setspace internally; user papers also call
   // \singlespacing / \doublespacing in preambles. Witness 2503.21357.
   RequirePackage!("setspace");
@@ -27,6 +36,39 @@ LoadDefinitions!({
   // moot in the XML/HTML paradigm, but the CS must exist. Witness 2407.02650
   // (`\geometry{voffset=10pt,...}` → undefined without this; Perl: 0 errors).
   RequirePackage!("geometry");
+  // achemso.cls:311 `\RequirePackage{...,float,...}` and :1022-1030 — the
+  // class's own float types; without them `\begin{scheme}` is undefined and
+  // its `\caption` cascades into "outside any known float" (achemso-demo;
+  // Perl raw-loads the class). Guard:
+  // `perfect_kernel_batch54::achemso_declares_its_scheme_floats`.
+  RequirePackage!("float");
+  // achemso.cls:35 xkeyval and :309-315 the rest of the class's package list, caption, graphicx and url: documents
+  // use `\captionsetup`/`\captionof` without loading caption (witness 2202.05883).
+  RequirePackage!("xkeyval");
+  RequirePackage!("caption");
+  RequirePackage!("graphicx");
+  RequirePackage!("url");
+  // achemso.cls:1413-1414 loads mciteplus when installed (`\mciteSubRef`).
+  RequirePackage!("mciteplus");
+  // achemso.cls:144-165 (its embedded notes2bib): `\bibnote[label]{text}` files
+  // the text as a bibliography entry `Note-N` and cites it; the bibliography
+  // is bibtex's, so the note is rendered here as a numbered note in place
+  // (`\lx@note{bibnote}`), the mark/text halves as the footnote pair;
+  // `\printbibnotes` is the .bbl step (achemso-demo). Guard:
+  // `perfect_kernel_batch54::achemso_bibnote_is_a_numbered_note`.
+  RawTeX!(
+    r"\newcounter{bibnote}\def\thebibnote{Note-\the\value{bibnote}}
+\newcommand*\bibnote[2][\thebibnote]{\stepcounter{bibnote}\lx@note{bibnote}[\thebibnote]{#2}}
+\newcommand*\bibnotemark[1][\thebibnote]{\stepcounter{bibnote}\lx@notemark{bibnote}[\thebibnote]}
+\newcommand*\bibnotetext[2][\thebibnote]{\lx@notetext{bibnote}[\thebibnote]{#2}}
+\newcommand*\printbibnotes{}\def\bibnotetyperefname{note}\def\ext@bibnote{}"
+  );
+  RawTeX!(
+    r"\newfloat{scheme}{htbp}{los}\floatname{scheme}{Scheme}
+\newfloat{chart}{htbp}{loc}\floatname{chart}{Chart}
+\newfloat{graph}{htbp}{loh}\floatname{graph}{Graph}
+\newcommand*\schemename{Scheme}\newcommand*\chartname{Chart}\newcommand*\graphname{Graph}"
+  );
 
   // ACS authorship primitives — preserve author content as ltx:note
   // frontmatter entries.
@@ -42,13 +84,22 @@ LoadDefinitions!({
     "\\altaffiliation[]{}",
     "\\@add@frontmatter{ltx:note}[role=affiliation]{#2}"
   );
-  DefMacro!("\\email{}", "\\@add@frontmatter{ltx:note}[role=email]{#1}");
+  // achemso.cls:513-520 `\email` stores the address for the author's footnote (`\@email@<n>`): an address, read as
+  // the other classes' are (`\lx@address@textfont`, revtex4_support_sty.rs), so `ranojoy_bose@apple.com` is no
+  // subscript ("Script _ can only appear in math mode", 1803.03591; OXIDIZED_DESIGN #551). Guard
+  // `perfect_kernel_batch65m::file_arguments_are_not_typeset`.
+  DefMacro!(
+    "\\email Semiverbatim",
+    "\\lx@add@email{\\lx@address@textfont{#1}}"
+  );
   DefMacro!("\\phone{}", "\\@add@frontmatter{ltx:note}[role=phone]{#1}");
   DefMacro!("\\fax{}", "\\@add@frontmatter{ltx:note}[role=fax]{#1}");
-  DefMacro!(
-    "\\suppinfo{}",
-    "\\@add@frontmatter{ltx:note}[role=suppinfo]{#1}"
-  );
+  // achemso.cls:1115-1124: `suppinfo` is an environment that opens an unnumbered "Supporting Information Available"
+  // section (`\acs@section*{\suppinfoname}`), not a one-argument frontmatter command — which took the `\begin` of
+  // the environment's first list as its argument (2609.03387, 2609.10829).
+  DefMacro!("\\suppinfoname", "Supporting Information Available");
+  DefMacro!("\\suppinfo", "\\section*{\\suppinfoname}");
+  DefMacro!("\\endsuppinfo", "");
   DefMacro!(
     "\\manuscript{}",
     "\\@add@frontmatter{ltx:note}[role=manuscript]{#1}"
@@ -128,5 +179,17 @@ LoadDefinitions!({
   // wrapper for italicized Latin abbreviations. Witness 2312.12737.
   DefMacro!("\\SectionNumbersOn", None);
   DefMacro!("\\SectionNumbersOff", None);
+  // achemso.cls:1091-1102 `\SectionsOff`/`\SectionsOn` and :1160-1169 `\AbstractOff`/`\AbstractOn` switch the
+  // section headings and the abstract per manuscript type (preamble only); the content is kept either way, so
+  // both are no-ops here. :1266-1269 the TOC graphic's box size, which documents set (`{tocentry}` is skipped).
+  // Witnesses 1710.02414 (`\AbstractOn`), 2006.15922 and 2112.07721 (`\acs@tocentry@height`).
+  DefMacro!("\\SectionsOn", None);
+  DefMacro!("\\SectionsOff", None);
+  DefMacro!("\\AbstractOn", None);
+  DefMacro!("\\AbstractOff", None);
+  RawTeX!(
+    r"\newlength{\acs@tocentry@height}\newlength{\acs@tocentry@width}
+\setlength{\acs@tocentry@height}{1.75in}\setlength{\acs@tocentry@width}{3.25in}"
+  );
   DefMacro!("\\latin{}", "#1");
 });

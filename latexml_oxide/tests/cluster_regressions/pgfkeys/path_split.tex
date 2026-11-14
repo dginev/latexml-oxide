@@ -1,0 +1,16 @@
+\documentclass{article}
+\usepackage{pgfkeys}
+\begin{document}
+% `\pgfkeys@split@path` (pgfkeys.code.tex:547-570) names the first segment
+% followed by an empty one and leaves the surplus text of a key with an empty
+% segment in the stream, typeset before the handler runs (pdflatex prints it).
+\pgfkeys{/handlers/.unknown/.code={[U:\pgfkeyscurrentpath|\pgfkeyscurrentname]}}
+\pgfkeys{/p/q/}
+\pgfkeys{/p/q/=1}
+\pgfkeys{/p/.cd, q/}
+\pgfkeys{/p//r}
+% A segment that is exactly a brace group loses its braces as a delimited
+% argument and, re-supplied to the splitter, splits again on the `/` it hid.
+\pgfkeys{/a/{x/y}/c}
+\pgfkeys{/a/{x,y}/}
+\end{document}

@@ -1,0 +1,18 @@
+% witness: 2605.25123 (main.tex:497)
+% oracle: pdflatex (clean); engine: pdflatex
+% expect: 0 errors
+% mechanism: nicematrix.sty:5605-5616 reads a \CodeBefore color's [..] as keys: opacity= sets the fill opacity, the
+%   rest is the model; ours read "opacity=0.2" as the model (Error:unexpected "Unrecognized color model"). Fixed:
+%   nicematrix_sty.rs nice_color (opacity mixes the color with white; text tabulars paint no fills).
+% status:  GREEN
+\documentclass{article}
+\usepackage{nicematrix}
+\begin{document}
+\begin{NiceTabular}{lcc}
+\CodeBefore
+  \columncolor[opacity=0.2]{blue}{3}
+\Body
+a & b & c \\
+d & e & f \\
+\end{NiceTabular}
+\end{document}

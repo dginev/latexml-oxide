@@ -1,0 +1,15 @@
+% witness: synthetic (revVARW S2, `sc1.tex` rows A, F, H)
+% oracle:  pdflatex 0 errors; [62.1833pt] [62.1833pt] [33.45276pt]: the box and the text beside it are one line
+% engines: rust VARWb = 0 errors: [56.9055pt] [56.9055pt] [28.45274pt] (the line measured as the inline box alone);
+%          rust int164a [284.52756pt] each row; perl: varwidth = minipage
+% expect:  0 errors; pdflatex's widths
+% status:  RED (moves: post-merge)
+\documentclass{article}
+\usepackage{varwidth}
+\begin{document}
+\setbox0\hbox{\begin{varwidth}{10cm}\begin{minipage}{2cm}x\end{minipage}y\end{varwidth}}[\the\wd0]
+
+\setbox0\hbox{\begin{varwidth}{10cm}\parbox{2cm}{x}y\end{varwidth}}[\the\wd0]
+
+\setbox0\hbox{\begin{varwidth}{10cm}a\begin{minipage}{1cm}x\end{minipage}\end{varwidth}}[\the\wd0]
+\end{document}

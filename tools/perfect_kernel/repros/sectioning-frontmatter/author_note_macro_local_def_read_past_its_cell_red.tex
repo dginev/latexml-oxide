@@ -1,0 +1,13 @@
+% mechanism: a note macro's local `\def\lab{#1}` read past the `\and` that ends its author's cell
+%   (`\ifdefined\lab (\lab)\fi`): pdflatex prints nothing there, but the rehearsal reads the block in no cell group, so
+%   its events print "(a)" after Bob Two and the emitter's reading moves the call's argument into the next name
+% witness: synthetic (review FNR1b; the local sibling of author_note_macro_defines_what_a_later_author_reads)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 `!`: "Ann One ∗", "Bob Two"; ∗ Lab Alpha.
+% engines: rust e6a6c93a18, FNR1b 0 errors, 3 warnings, a creator "aLab Alpha. and Bob Two" (FNR1's decline gave Bob Two)
+% expect:  0 errors; Ann One with the note, Bob Two
+% status:  RED (e6a6c93a18, FNR1b)
+% moves:   post-merge (the rehearsal's model of the author's cell group)
+\documentclass{article}
+\newcommand{\footremember}[2]{ \footnote{#2} \def\lab{#1} }
+\title{T}\author{Ann One\footremember{a}{Lab Alpha.} \and Bob Two\ifdefined\lab{} (\lab)\fi}
+\begin{document}\maketitle Body.\end{document}

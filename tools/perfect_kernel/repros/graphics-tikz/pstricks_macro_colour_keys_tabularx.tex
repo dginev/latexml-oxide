@@ -1,0 +1,28 @@
+% witness: sesamanuel/sesamath-doc-fr (:444-465, `\afterpage{…\newcommand\C[2]
+%   {\begin{pspicture}…\psframe[fillcolor=##1]…}…\begin{tabularx}…\C{A1}{…}…}`)
+% oracle:  latex 0 errors with afterpage loaded: each cell a frame filled with
+%   its colour. (sesamath-doc-fr itself is a Fatal for pdflatex: it loads
+%   `sesamath-doc.sty`, which TeX Live does not ship, so `\afterpage` is
+%   undefined, its argument runs at once and `##1` stays a parameter token:
+%   `latex` then logs "Undefined color `##1'" and "Illegal parameter number in
+%   definition of \pst@par" for every `\C`, as rust logs "Can't find color
+%   named '#1'": pstricks.tex:1080/:1203 resolve the colour at `\psset`
+%   time, `\pst@getcolor{#1}` → xcolor.sty:1373 `\XC@getcolor`.)
+% engines: rust(52affa7218)=0 errors, fills #008080 and #FF0000;
+%   rust(56ir)=0 errors, the frames not drawn
+% expect:  0 errors, 0 warnings; the two filled frames with their labels
+% status:  GREEN (w1-pstricks, P1 review 2): a guard, no change
+% mechanism: the object's `[fillcolor=…]` goes through the raw `\psset`
+%   inside its `\begingroup`, once per typeset cell.
+\documentclass{article}
+\usepackage{pstricks,tabularx,afterpage}
+\definecolor{A1}{cmyk}{1,0,0,0.5}
+\begin{document}
+\afterpage{%
+\newcommand\C[2]{%
+  \begin{pspicture}(0,0)(2,1.5)\psframe[fillstyle=solid,fillcolor=##1](0,0.5)(2,1.5)\rput[B](1,0){##1: ##2}\end{pspicture}}
+\begin{tabularx}{\linewidth}{XX}
+\C{A1}{x} & \C{red}{y}\\
+\end{tabularx}}
+Text.
+\end{document}

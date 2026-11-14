@@ -1,0 +1,13 @@
+% witness: 2605.21082 (`\newtcblisting{pythoncode}[2][]{…title={\textbf{code~\thetcbcounter}: #2}…}`, no counter)
+% oracle:  pdflatex 0 errors: the title bar prints "code : Initial code" (`no counter`: `\thetcbcounter` is empty, tcolorbox.sty:2329-2331)
+% engines: rust 77j3 = 0 errors, the title lost; a 77m draft = 1 error (undefined:\thetcbcounter once the title was typeset); perl: raw tcblistings
+% expect:  0 errors, 0 warnings; the listing's caption is "code : Initial code"
+% status:  RED (77j3) -> GREEN (77m: tcolorbox_sty.rs `tcb_counter_step_code`)
+\documentclass{article}
+\usepackage[listings]{tcolorbox}
+\newtcblisting{pythoncode}[2][]{listing only,title={\textbf{code~\thetcbcounter}: #2},#1}
+\begin{document}
+\begin{pythoncode}{Initial code}
+x = 1
+\end{pythoncode}
+\end{document}

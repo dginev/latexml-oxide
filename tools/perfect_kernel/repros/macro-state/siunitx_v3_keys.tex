@@ -1,0 +1,19 @@
+% witness: sweep #121: 39 manuals warn "unknown KeyVals key … 'SIX'" on siunitx v3 keys
+%          (locale 23, reset-text-series 13, text-series-to-math 12, …; beamerthemeCelestia locale=DE)
+% oracle:  pdflatex (siunitx 3.4.14): A 3,14  B 1,5·10³  C 3.14  D 1  E 2  F 1.50  G 1.50  H 5.00
+%          I 1.00×10³  J 12.3 ± 0.4  K 12.0(4)  L 5  M 10³  N 12.3(4)  O 12.30(45)  P (1.23 ± 0.04)×10³
+% engines: rust (56im) = one Warning per key, 3.14 for locale=DE, 1.0/1.5 unformatted, "12.3 ± 4",
+%          "123(\pm 2)"; Perl: no warnings (Info), 3.14 for locale=DE, uncertainty correct
+% expect:  0 errors, 0 warnings; the formulae's tex as in the oracle
+% status:  RED (56im) -> GREEN (56in)
+\documentclass{article}
+\usepackage{siunitx}
+\begin{document}
+A \num[locale=DE]{3.14} B \num[locale=DE]{1.5e3} C \num[locale=US]{3.14}
+D \num[drop-zero-decimal]{1.0} E \num[zero-decimal-to-integer]{2.0} F \num[drop-zero-decimal]{1.50}
+G \num[minimum-decimal-digits=2]{1.5} H \num[minimum-decimal-digits=2]{5} I \num[minimum-decimal-digits=2]{1e3}
+J \num[uncertainty-mode=separate]{12.3(4)} K \num[drop-zero-decimal]{12.0(4)}
+L \sisetup{reset-text-series,text-series-to-math,propagate-math-font,reset-math-version}\num{5}
+M \num[print-unity-mantissa=false]{1e3} N \num{12.3 +- 0.4} O \num{12.3 +- 0.45}
+P \num[separate-uncertainty]{1.23(4)e3}
+\end{document}

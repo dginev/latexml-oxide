@@ -1,0 +1,16 @@
+% mechanism: xcolor.sty:519-522 `\XC@definec@lor[#1]#2[#3]#4#5`: `\definecolor{name}[prefix]
+%   {model}{spec}`, the prefix defaulting to `\colornameprefix` (so :594-597 `\providecolor`,
+%   :638-641 `\preparecolor`, :593 `\xdefinecolor`). Perl's `\definecolor[]{}{}{}`
+%   (xcolor.sty.ltxml:412, 418) read the `[` as the model.
+% witness: K13 stage-2 audit (57h) xcolor rows (0 of 3,003 A/B papers)
+% oracle:  pdflatex 0 errors, "A red and blue." (red "red", blue "blue")
+% engines: rust 57p: 0 errors, the preamble's "C@]rgb1,0,0" typeset; perl: 4 errors (2 per line)
+% expect:  0 errors; <p>A <text color="#FF0000">red</text> and <text color="#0000FF">blue</text>.</p>
+% status:  GREEN (57r)
+\documentclass{article}
+\usepackage{xcolor}
+\definecolor{myred}[XC@]{rgb}{1,0,0}
+\providecolor{myblue}[XC@]{rgb}{0,0,1}
+\begin{document}
+A \textcolor{myred}{red} and \textcolor{myblue}{blue}.
+\end{document}

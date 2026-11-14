@@ -1,0 +1,22 @@
+% witness: synthetic (review probe q6_args of batch 65p: `\multicolumn{2}{>{\two}p{3cm}}{xy}`)
+% oracle:  pdflatex 0 errors; pdftotext "[|]xy q", "[|]uv", "[|gh]" (OT1 renders `|` as an em dash)
+% engines: rust base=0 (65int2) and rust 65p=0 errors, 0 warnings: "[|x]y", "[|u]v", "[|g]h"; perl=0 (2026-10-12;
+%   "[x|y]", "[|u]v", "[|g]h")
+% expect:  0 errors, 0 warnings; the three cells read "[|]xy", "[|]uv", "[|gh]"
+% status:  RED (batch 65p, 2026-10-12; pre-existing, the base reads the same)
+% mechanism: array.sty:106-110 `\insert@pcolumn` puts `\relax` between a p/m/b column's `>{…}` tokens and
+%   `\ignorespaces`, so a prefix macro taking two arguments takes `\relax` and `\ignorespaces`; our
+%   `Template::add_column` (latexml_core alignment/template.rs) appends the `\insert@column` form (`\ignorespaces`
+%   only, array.sty:97-101) for every column. And array.sty:267-278 `\multicolumn` reads the body as one `\@sharp`
+%   token, so `\two`'s second argument in the l column is the whole body "gh"; `\lx@alignment@multicolumn` splices
+%   the body's tokens.
+\documentclass{article}
+\usepackage{array}
+\newcommand\two[2]{[#1|#2]}
+\begin{document}
+\begin{tabular}{>{\two}p{3cm}l}
+xy & q \\
+\multicolumn{2}{>{\two}p{3cm}}{uv} \\
+\multicolumn{2}{>{\two}l}{gh} \\
+\end{tabular}
+\end{document}

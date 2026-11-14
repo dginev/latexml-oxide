@@ -1,0 +1,21 @@
+% mechanism: the content check's word matching where a block's rehearsal left a group open: the content text reads a
+%            dotless `\i` as nothing (`F\'{\i}sica` → `Fsica`, no name spelled), and that word is the same ink as the
+%            events' `física`, its base letters with an `i` dropped (`resolver::placed::reads_as`, shared with the
+%            reconcile of a call no rehearsal read and of a stand-in copy's unrecorded call, `Ledger::unrecorded`)
+% witness: 1401.6981 (the sig-alternate juggle's shape); synthetic, review revG2 finding 2 (probe j2)
+% shape:   the juggle with a tie between (`\end{tabular}~\begin{tabular}{c}`), which the reading takes as written, not as
+%          a column (`rehearsal::inline_juggles_as_columns` steps over spaces and commands only; `~` is an active
+%          character), so the rehearsal still leaves the tabular open at `=2` (FS2: the plain juggle is a column since
+%          FB2b4-FB2b6, its words kept, `author_raw_tabular_juggle_is_a_column`)
+% oracle:  pdflatex: 0 errors; "A One", "Física", "Dept"
+% engines: rust FS1 `=2`: E=0, one content-check Warning `c Dept Fsica tabular` ("Fsica" a false count)
+% expect:  "A One Física" kept; at `=2` one content-check Warning, `Dept`
+% status:  RED (FS1) -> GREEN (perfect_kernel_batchfs1::an_open_group_rehearsals_word_matching, RC1e)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{A One \\ F\'{\i}sica \end{tabular}~\begin{tabular}{c} Dept}
+\maketitle
+Text.
+\end{document}

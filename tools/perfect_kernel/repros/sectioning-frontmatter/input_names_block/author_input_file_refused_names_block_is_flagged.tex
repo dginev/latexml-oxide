@@ -1,0 +1,17 @@
+% `\author{\input{…}}` whose file changes how it is read (`\makeatletter`): left to `\input`, its names stay one
+% author — a line of three names above a line naming no one, flagged though the whole text reads as no names list.
+% witness: 2609.38746 (before 107b: one creator of 7 names over two lines and the affiliations' line, silent);
+%          2311.03613, 2401.12049 (a names paragraph above "(DES Collaboration)")
+% oracle:  pdflatex 0 errors: "Ann Able1 , Bob Baker1 , Cat Cole2", "1 University of Alpha 2 University of Beta"
+% engines: rust int138a = one creator, 0 errors (silent); Perl one creator, silent
+% expect:  1 error (Error:frontmatter:merged_creators, 3 names), 0 warnings; one creator
+% status:  RED (int138a) -> GREEN (107b)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{%
+  \input{author_grid_at.tex}
+}
+\maketitle
+\end{document}

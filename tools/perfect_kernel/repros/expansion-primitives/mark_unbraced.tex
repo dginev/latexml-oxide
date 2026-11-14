@@ -1,0 +1,18 @@
+% mechanism: scan_toks' scan_left_brace (tex.web §403) requires a left brace after
+%   expansion: an unbraced `\mark x` / `\message y` is "Missing { inserted". TeX then puts the
+%   token back behind an inserted `{` and absorbs up to the next unmatched `}` (here the
+%   group's); Rust keeps Perl's recovery for a text without its brace (Gullet.pm readBalanced,
+%   "Expected opening '{'"): the token is put back and the text is empty, so `x` and `y` are
+%   typeset and the groups close.
+% witness: batch 56jj (TL has no unbraced use: its `\mark\x`/`\message\x` are `\let`s
+%   or `\expandafter` chains)
+% oracle:  pdflatex 2 errors ("Missing { inserted" twice), "AB", "CD"
+% engines: rust=0 errors, "AB", "CD": a `{}` argument took the one token (56jg-rel, 2026-09-25)
+% expect:  2 errors (Error:expected:{), "AxB", "CyD"
+% status:  GREEN (56jj: XGeneralText; guard token_kernel_gaps::an_unbraced_mark_is_an_error)
+\documentclass{article}
+\begin{document}
+A{\mark x}B
+
+C{\message y}D
+\end{document}

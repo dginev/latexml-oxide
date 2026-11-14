@@ -1,0 +1,12 @@
+% witness: 2604.19440; user ruling R11 2026-10-20 (an empty mark is no mark)
+% oracle:  pdflatex 0 errors: two names, the institution with an empty superscript before it, printed with no mark
+% engines: rust 77p r9 = 0 errors; the institution on Bob Baker alone (the empty mark made the block a marked one)
+% expect:  0 errors, 0 warnings; the institution on both names, as an unmarked block's line
+% status:  RED (77p r9) -> GREEN (77p r10)
+\documentclass{article}
+\title{T}
+\author{Ann Able, Bob Baker \\ \textsuperscript{}Univ A}
+\begin{document}
+\maketitle
+Text.
+\end{document}

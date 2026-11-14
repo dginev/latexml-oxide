@@ -1,0 +1,25 @@
+% witness: re-review of batch 57g: settling a paragraph at its close freed nodes `{center}` still
+%          held, dropping the alignment of the commonest `\captionof` shape (arXiv 2605.03276 A2.F8-F10,
+%          `\begin{center}\begin{minipage}…\captionof{figure}…`)
+% oracle:  pdflatex 0 errors; X centred; Y and Z centred side by side; W flush right; V centred
+% engines: rust 57f=0: <p align="center"> (and right) around inline float-boxes; rust 57g final=0:
+%          <figure align="center" class="ltx_minipage">, a centred row <figure align="center">, the
+%          right-aligned figure, the \centering one — the settle runs once the document is built
+%          (`settle_float_paragraphs`), after every alignment has been stamped
+% expect:  0 errors; each figure or row keeps its line's alignment
+% status:  GREEN (57g)
+\documentclass{article}
+\usepackage{graphicx,caption}
+\begin{document}
+Before.
+
+\begin{center}\begin{minipage}{.5\linewidth}\includegraphics{x}\captionof{figure}{X}\end{minipage}\end{center}
+
+\begin{center}\begin{minipage}{.3\linewidth}\includegraphics{y}\captionof{figure}{Y}\end{minipage}\hfill\begin{minipage}{.3\linewidth}\includegraphics{z}\captionof{figure}{Z}\end{minipage}\end{center}
+
+\begin{flushright}\begin{minipage}{.5\linewidth}\includegraphics{w}\captionof{figure}{W}\end{minipage}\end{flushright}
+
+{\noindent\centering\begin{minipage}{.5\linewidth}\includegraphics{v}\captionof{figure}{V}\end{minipage}\par}
+
+After.
+\end{document}

@@ -1,0 +1,13 @@
+% witness: TL class census 2026-09-24 — novel (novel-CalculateLayout.sty:289 \ifthenelse{\dimtest…});
+%          xifthen.sty:41-42/76-77 \cnttest/\dimtest evaluate operands with calc's \calc@assign@count /
+%          \calc@assign@skip; xifthen has no binding: run with --preload=[rawstyles,rawclasses]latexml.sty
+% oracle:  pdflatex 0 errors; [yes][yes][no]
+% engines: rust (56ia) = "\calc@assign@skip undefined" (the calc binding replaces calc.sty and
+%          lacked its assignment internals)
+% expect:  0 errors; <p>[yes][yes][no]</p>
+% status:  RED (56ia) -> GREEN (56ic)
+\documentclass{article}
+\usepackage{xifthen}
+\begin{document}
+[\ifthenelse{\dimtest{2pt+1pt}{>}{2pt}}{yes}{no}][\ifthenelse{\cnttest{3*2}{=}{6}}{yes}{no}][\ifthenelse{\lengthtest{1pt>2pt}}{yes}{no}]
+\end{document}

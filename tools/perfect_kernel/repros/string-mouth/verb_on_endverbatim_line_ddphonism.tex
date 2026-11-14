@@ -1,0 +1,29 @@
+% witness: ddphonism/ddphonism (ddphonism.tex:87,116,148 "\end{verbatim} produces the same as \verb|\dmatrix{...}|.")
+% oracle:  pdflatex 0 errors (prints "same z y." normally)
+% engines: rust=0 err STRUCT-WRONG  perl=0 err STRUCT-WRONG (2026-09-03, b54t)  -> SHARED / PERL-ORIGIN
+% expect:  <ltx:verbatim> in the <p> contains "z"; text "same z y." + "next line." intact; \end{document} NOT leaked
+% status:  GREEN (b54w, batch 54p)
+% mechanism: \begin{verbatim} runs bgroup+\dospecials (\ { } -> catcode 12). after_digest_verbatim
+%   (latex_constructs.rs:801) reads the body with read_raw_line; on the line holding \end{verbatim}
+%   it EAGERLY Tokenize!s the line remainder " same \verb|z| y." at latex_constructs.rs:819
+%   (faithful port of Perl afterDigestVerbatim latex_constructs.pool.ltxml:1777
+%   `$gullet->unread(Tokenize($remaining), T_CR)`). \verb (read_verb_invocation
+%   latex_constructs.rs:12776) reads its delimiter+body as RAW chars: it makes the delimiter
+%   char active (:12809) and read_until it (:12811). That only works on a lazy raw-char mouth;
+%   on the pre-made tokens the active-| never matches the frozen |(cc12), so read_until runs off
+%   and re-tokenizes the RAW rest of the document under \verb's own \dospecials (verbatim catcodes)
+%   -> empty body + \ { } leak for the whole doc (\end{document} typeset literally).
+%   Real TeX: \@xverbatim (latex.ltx:15438) is a delimited macro over the literal cc12 string
+%   \end{verbatim}; it re-emits \end{verbatim} with NORMAL catcodes; \end runs \endgroup and
+%   RESTORES catcodes, and only THEN does TeX tokenize the (still-raw) line remainder (lazy
+%   tokenization, tex.web get_next). So \verb re-scans raw chars with restored catcodes.
+% fix: latex_constructs.rs:819 -- re-inject `remaining` as a LAZY raw source, not eager tokens:
+%   `open_mouth(Mouth::new(remaining, None)?, true)` (Mouth::new mouth.rs:286; open_mouth
+%   gullet.rs:535) instead of `unread(Tokenize!(...))`. egroup() (:847) already runs before the
+%   opened mouth is digested, so catcodes are restored in time and \verb char-scans correctly.
+\documentclass{article}\begin{document}
+\begin{verbatim}
+x
+\end{verbatim} same \verb|z| y.
+next line.
+\end{document}

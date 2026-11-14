@@ -44,26 +44,59 @@ LoadDefinitions!({
       Tokens!()
     };
     let cs_expanded = &Expand!(cs).to_string();
+    // latex.ltx:10147-10155 `\@definecounter`: a `\the<ctr>` already defined (not `\relax`) is kept, "Command
+    // `\the<ctr>' already defined -- not changed" — llncs's `\let\c@case\relax\newcounter{case}` over its alias keeps
+    // `\thecase` = `\thetheorem` (2303.08726; pdflatex "Lemma 1, Case 1, Case 1, Lemma 2"). Perl's `NewCounter` always
+    // defines it (Package.pm:686). Guard `perfect_kernel_batch77v::llncs_alias_newcounter`.
+    // Not kept: a counter whose register exists already (LaTeX's "Command \c@<ctr> already defined" comes before
+    // `\@definecounter`; `NewCounter` redefines it as before), a fallback class's or stub's guess at `\the<ctr>`, which
+    // the real file's definitions replace (OmniBus's `\thechapter` under informs.cls's `\newcounter{chapter}`:
+    // 2310.17392), and a stand-in's copy read over its binding, whose counters are the binding's
+    // (`copy_provides_keeps_counter`; elsart_support's `\theaddress` under arxbj's: 1205.2947).
+    let the_cs = T_CS!(s!("\\the{cs_expanded}"));
+    let is_new = !lookup_definition(&T_CS!(s!("\\c@{cs_expanded}")))?.is_some_and(|defn| defn.is_register());
+    let kept = lookup_meaning(&the_cs).filter(|meaning| {
+      is_new
+        && Some(meaning) != lookup_meaning(&T_RELAX!()).as_ref()
+        && !is_fallback_meaning(&the_cs)
+        && definition::origin::copy_provides() == 0
+    });
     NewCounter!(cs_expanded, &default.to_string());
+    if let Some(meaning) = kept {
+      assign_meaning(&the_cs, meaning, Some(Scope::Global));
+      if has_meaning(&T_CS!("\\@latex@warning")) {
+        Digest!(mouth::tokenize_internal(TeXString::assembled(s!(
+          "\\@latex@warning{{Command `\\string\\the{cs_expanded}' already defined -- not changed}}"
+        ))))?;
+      }
+    }
   }, locked => true);
-  // Perl uses `DefMacro` here, but the dump overwrites `\newcounter` with
-  // the raw latex.ltx Expandable body that expands to `\@definecounter`.
-  // If `\@definecounter` is a macro that re-expands to `\newcounter`, we
-  // get an infinite loop after dump load. Perl's `DefMacro` is fine
-  // because Perl's Token-list expansion of `\newcounter` is a Token, and
-  // Perl's `installDefinition` would skip the dump-overwrite if our
-  // `\newcounter` were locked (it's not — Perl bypasses lock too). The
-  // working semantics in Perl actually rely on `\@definecounter`
-  // resolving to the bootstrap Primitive at substitution time: by the
-  // time `\@definecounter` is invoked (inside the dump-loaded
-  // `\newcounter` body), the active `\newcounter` is the dump
-  // Expandable — same loop. The Perl loop test shows it doesn't
-  // actually loop in user code because... TODO investigate. For now,
-  // use `Let!` to snapshot the Primitive at bootstrap time, breaking
-  // the cycle. Token-stream-equivalent for downstream callers that
-  // simply invoke `\@definecounter{...}`.
-  Let!("\\@definecounter", "\\newcounter");
-  DefMacro!("\\try@load@fontshape", "", locked => true);
+  // Perl latex_bootstrap.pool.ltxml:54: `\@definecounter` is the LOCKED
+  // macro `\newcounter`, so latex.ltx:15736's raw `\def\@definecounter` is
+  // refused during the format build and every kernel counter it creates
+  // (`equation`, `footnote`, `enumi`…, and any package's `\@definecounter`
+  // later) goes through `NewCounter`, which always defines the counter's
+  // `\the<ctr>@ID` formatter (Package.pm:695-703, prefix = the counter
+  // name). An unlocked `Let!` snapshot here was overwritten by the raw
+  // definition: the dump then carried latex.ltx's `\@definecounter` and
+  // no `@ID` formatter at all, so under a class with no binding loaded raw
+  // (ptptex's manptp) `\theequation@ID` was undefined and `subequations`
+  // ids degenerated to `.1` (`X.1` after `clean_id`), colliding across
+  // groups; Perl gives `equation1`/`equation1.1`. No loop is possible:
+  // `\newcounter` is the locked primitive, never latex.ltx's macro.
+  DefMacro!("\\@definecounter", "\\newcounter", locked => true);
+  // Perl defines `\try@load@fontshape` empty (latex_bootstrap.pool.ltxml:62, "different font handling"). Ours is
+  // latex.ltx:10605-10620: when the family is not known (`\<enc>+<family>`), remember it and input
+  // `<enc><family>.fd`, lowercased, else as written — the .fd's `\DeclareFontFamily`/`\DeclareFontShape`
+  // (sect08.rs) declare `\<enc>/<family>/<series>/<shape>`, which is what amsart-derived classes test to decide
+  // whether to load amsfonts (amsart.cls:377-391 `\fontencoding{U}\fontfamily{msa}\try@load@fontshape`
+  // `\@ifundefined{U/msa/m/n}`; nyjm.cls 2401.06615, cedram.cls 2105.03188, myart.cls 1506.02470: with it empty
+  // the class skipped amsfonts and `\symAMSb` was undefined). OXIDIZED_DESIGN_DIVERGENCES #645. The kernel's
+  // `\@font@info` note and `\@input@`'s "No file" typeout are left out (neither is in the dumpless base).
+  // Locked as in Perl, so latex.ltx's raw copy does not replace it in the format build.
+  DefMacro!("\\try@load@fontshape",
+    r"\expandafter\ifx\csname\f@encoding+\f@family\endcsname\relax\global\expandafter\let\csname\f@encoding+\f@family\endcsname\@empty\nfss@catcodes\let\nfss@catcodes\relax\edef\reserved@a{\lowercase{\noexpand\InputIfFileExists{\f@encoding\f@family.fd}}}\reserved@a\relax{\InputIfFileExists{\f@encoding\f@family.fd}{}{}}\fi",
+    locked => true);
   DefMacro!("\\define@newfont", "", locked => true);
 
   //======================================================================
@@ -81,11 +114,16 @@ LoadDefinitions!({
   // load — which is what probes them — runs BEFORE constructs.
   //
   // \tracingstacklevels: TeX primitive added in TL 2021/06/01.
-  // \@nil: kernel pattern-boundary marker some shims dereference.
   // \@expl@str@if@eq@@nnTF: expl3 internal predicate used in compat
   //   rollback (4-arg gobble matches \str_if_eq:nnTF semantics).
   // Witness 2408.00879, 2408.02823, 2406.00475.
+  // `\@nil` is NOT predefined: latex.ltx never defines it (a delimiter /
+  // `\ifx\@nil#1\@nil` sentinel only, e.g. latexrelease.sty:144), and an
+  // empty-macro stand-in makes `\ifx\@nil\<any empty macro>` true —
+  // polynom.sty:1695 `\pld@MeasureCells@` then stops at an empty
+  // `\pld@resultstyle` and leaks its `&\@nil&` (polynom/polydemo "Stray
+  // alignment"). The dump-replay `undefined:\@nil` the shim once silenced
+  // must be fixed where the `\@parse@version …\@nil` scan runs, never here.
   DefRegister!("\\tracingstacklevels" => Number::new(0));
-  def_macro_noop("\\@nil")?;
   def_macro_noop("\\@expl@str@if@eq@@nnTF{}{}{}{}")?;
 });

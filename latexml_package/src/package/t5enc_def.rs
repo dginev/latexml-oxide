@@ -28,4 +28,7 @@ LoadDefinitions!({
   // (`\usepackage[vietnamese,english]{babel}`).
   DefMacro!("\\textviet{}", "#1");
   InputDefinitions!("t5enc", extension => Some("def".into()), noltxml => true);
+  // t5enc.def / vntex: the dot-below text command, the named form of `\d`
+  // (amsldoc-vi's `\DeclareTextAccent` setup consumed it as a slot).
+  DefAccent!("\\textdotbelow", '\u{0323}', ".");
 });

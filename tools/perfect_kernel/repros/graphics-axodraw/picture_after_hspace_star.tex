@@ -1,0 +1,14 @@
+% witness: hep-ph0509118 (`\hspace*{3cm}\begin{picture}…` with labels at negative x): the space before the picture
+%          is not kept, so the left labels fall off the page edge in the HTML
+% oracle:  pdflatex 0 errors: the picture begins 3cm from the margin, its label at x=-20 inside the text block
+% engines: rust 64w = the picture at the margin, no 3cm space before it; Perl not run
+% expect:  0 errors; the 3cm space kept before the picture
+% status:  RED (64w)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\hspace*{3cm}\begin{picture}(60,20)(0,0)
+\put(-20,10){\makebox(0,0)[r]{left}}
+\put(0,10){\line(1,0){60}}
+\end{picture}
+\end{document}

@@ -1,0 +1,16 @@
+% witness: 64w review round 3 probe c3_dvips_before.tex — `\usepackage[dvips]{color}` read dvipsnam.def first, so
+%          colordvi's own read (which defines `\Red`, `\textRed`, …) was skipped as already done; TeX's colordvi
+%          defines them from its own table
+% oracle:  pdflatex 0 errors (with a v1 axodraw.sty): blue text, red text, a red line
+% engines: rust 64w r3 and e1ec58c24e = Error:undefined:\Red; Perl: the same skip
+% expect:  0 errors, 0 warnings; `\Red` defined and "red text" kept (its colour is still unset — colordvi's text
+%          commands set no colour, RED `fonts-nfss/colordvi_named_text_color`), "blue text" #0000FF
+% status:  RED (64w r3) -> GREEN (64w)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage[dvips]{color}
+\usepackage{axodraw}
+\begin{document}
+Plain {\color[named]{Blue} blue text} and \Red{red text} here.
+\begin{picture}(40,20)(0,0)\SetColor{Red}\Line(0,0)(40,20)\end{picture}
+\end{document}

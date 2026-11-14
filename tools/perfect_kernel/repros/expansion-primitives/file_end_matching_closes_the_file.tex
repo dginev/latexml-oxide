@@ -1,0 +1,27 @@
+% After a macro argument runs off its file, TeX has already closed the file (tex.web §362 runs
+% `end_file_reading` before `check_outer_validity`), so what comes next is read from the
+% enclosing input: `\expandafter\a\foo{abc` gives `\a` the next token after `\input`, and an
+% `\edef` around the `\input` ends at its own `}` with an empty body.
+% witness: reviewer of batch W9 (the ended file stayed current after the dropped call)
+% oracle:  pdflatex 2 errors ("File ended while scanning use of \foo" twice),
+%          "A <X>Y B C [macro:->]"
+% engines: rust=4 errors ("readBalanced ran out" ×2, "File ended while scanning definition",
+%          a stray `}`), "A <[>abc ]XY B C [macro:->[def ]]" (56ja-rel, 2026-09-25); W9
+%          (6d51d0d3f4) added a runaway for `\a` and ended the `\edef` at the file's end
+% expect:  2 errors, "A <X>Y B C [macro:->]"
+% status:  GREEN (W9 follow-up: abandon_runaway_call closes the ended file; guard
+%          scanner_status::a_dropped_call_reads_on_in_the_enclosing_input)
+\documentclass{article}
+\def\foo#1{[#1]}
+\def\a#1{<#1>}
+\begin{filecontents*}{file_end_matching_closes_expandafter.tex}
+\expandafter\a\foo{abc
+\end{filecontents*}
+\begin{filecontents*}{file_end_matching_closes_edef.tex}
+\foo{def
+\end{filecontents*}
+\begin{document}
+\makeatletter
+A \input file_end_matching_closes_expandafter.tex XY B
+\edef\x{\@@input file_end_matching_closes_edef.tex }C [\meaning\x]
+\end{document}

@@ -1,0 +1,15 @@
+% witness: mathtools.sty:677-688, 795-812 — each of `{multlined}`'s two optionals is the position when it is
+%          t/b/c and the width otherwise (`\MT_test_for_tcb_other:nnnnn`), in either order (0/3003 sample uses)
+% oracle:  pdflatex 0 errors; a 4cm-wide bottom-attached multlined
+% engines: rust 57p 0 errors, vattach="4cm" and "Warning:expected:<number> Missing number (Dimension)";
+%          perl 0 errors, same warning (PERL-ORIGIN mathtools.sty.ltxml:581-585 `\multlined [][]`)
+% expect:  0 errors, 0 warnings; the multlined alignment has vattach="bottom" (not "4cm")
+%          `\MH_if:w t#1` expands the option, so a macro holding `t` is the position (57t review)
+% status:  RED (57p) -> GREEN (57t)
+\documentclass{article}
+\usepackage{mathtools}
+\newcommand\mypos{t}
+\begin{document}
+\[ \begin{multlined}[4cm][b] a+b+c \\ +d+e \end{multlined} = x \]
+\[ \begin{multlined}[\mypos][3cm] a+b \\ +c \end{multlined} = y \]
+\end{document}

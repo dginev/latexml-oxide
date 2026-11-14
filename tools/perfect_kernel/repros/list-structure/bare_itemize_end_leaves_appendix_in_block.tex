@@ -1,0 +1,30 @@
+% witness: 1805.06896 (a bare `\itemize` inside an itemize, the bibliography and `\appendix` after it), and 5 of the
+%          6 cluster-C witnesses of the run-338 triage (2304.12197, 2307.13461, 2511.04367, 0705.0894)
+% oracle:  pdflatex 0 errors: "Acknowledgments", "References", then "A Extra" as an appendix at the document level
+% engines: rust 65e = 1 error (`ltx:appendix isn't allowed in ltx:inline-sectional-block`): the `\end{itemize}`
+%          ends the bare `\itemize` only, the outer list stays open, so the unnumbered section, the bibliography and
+%          the appendix nest in its item's inline sectional block (OXIDIZED_DESIGN #189); 65a the same
+%          65i = 0 errors: the outer list never ends, so the unnumbered section closes it (OXIDIZED_DESIGN #542)
+% expect:  0 errors; the appendix a child of the document, outside every list
+% status:  GREEN (65i)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\section{Conclusions}
+\begin{itemize}
+\item One.
+\itemize
+\item Two.
+\end{itemize}
+\section*{Acknowledgments}
+First paragraph.
+
+Second paragraph.
+\begin{thebibliography}{9}
+\bibitem{a} A.
+\bibitem{b} B.
+\end{thebibliography}
+\appendix
+\section{Extra}
+Appendix text.
+\end{document}

@@ -145,6 +145,10 @@ LoadDefinitions!({
         Some(Stored::Font(f)) => Some(Rc::clone(f)),
         _ => None,
       };
+      // Between a float's panels, the glue counts towards their row (the panel grid rule, `note_panel_separator`).
+      if length.value_of() != 0 {
+        crate::latex_constructs::note_panel_separator(document, "glue", Some(length.value_of()))?;
+      }
       let spaces = dimension_to_spaces(length, font.as_deref());
       document.absorb_string(&spaces, &SymHashMap::default())?;
     }
@@ -167,21 +171,31 @@ LoadDefinitions!({
       DigestedData::RegisterValue(v) => v.into(),
       _ => Dimension::default()
     };
+    // Perl `attributeForm => sub { DimensionToSpaces($_[1]) }` (TeX_Glue.pool.ltxml:85): in an attribute value
+    // the skip is its spaces (a caption tag's `close` from w-art.cls's `\captionlabeldelim{\enskip}`, 1012.0703).
+    let spaces = dimension_to_spaces(width, None);
     Ok(stored_map!(
-      "width" => width, "isSpace" => true, "isSkip" => true))
+      "width" => width, "isSpace" => true, "isSkip" => true,
+      "attributeForm" => Stored::String(pin(&spaces))))
   });
 
   //======================================================================
   // If this is the right solution...
   // then we also should put the desired spacing on a style attribute?!?!?!
-  DefConstructor!("\\vskip Glue", sub[document, args, _props] {
+  DefConstructor!("\\vskip Glue", sub[document, args, props] {
     unref!(args => length);
+    // Between a float's panels a `\vskip` ends their row (the panel grid rule, `note_panel_separator`).
+    if prop_bool!(props, "panel_row_break") {
+      crate::latex_constructs::note_panel_separator(document, "vskip", None)?;
+    }
     let pt = length.pt_value(None);
     if pt <= 0.0 {
       // Negative or zero skip: do nothing
     } else if pt < 4.0 && document.is_closeable("ltx:p").is_some() {
       document.close_element("ltx:p")?;
-    } else if document.is_closeable("ltx:para").is_some() {
+    } else if !document::helpers::list_or_block_open_inside_para(document) && document.is_closeable("ltx:para").is_some() {
+      // As `\par` (`\lx@normal@par`): a skip ends a paragraph, never a list or an inline sectional block open
+      // inside it (`\preitem@par`'s `\vskip\itemsep` between two items of a `\trivlist`; KNOWN_PERL_ERRORS #456).
       document.close_element("ltx:para")?;
     }},
     // Perl: leaveHorizontal => 1
@@ -202,29 +216,22 @@ LoadDefinitions!({
         },
         None => Stored::None,
       };
+      // A `\vskip` in a float, not a `\vspace`'s (`\lx@vspace@mark`, latex_constructs sect12.rs), is a row break
+      // between its panels.
+      let vspace = lookup_bool("lx@vspace@mark");
+      if vspace {
+        assign_value("lx@vspace@mark", false, None);
+      }
+      let row_break = !vspace && lookup_bool("lx@in@float");
       Ok(stored_map!("isSpace" => true, "isSkip" => true,
         "isVerticalSpace" => true, "isBreak" => true,
-        "height" => height))
+        "height" => height, "panel_row_break" => row_break))
     }
   );
-  // Remove skip, if last on LIST
+  // Remove skip, if last on LIST — never below the paragraph's start (tex.web §1105, `peek_own_box`).
   DefPrimitive!("\\unskip", {
-    let mut comments = Vec::new();
-    while let Some(last_box) = pop_box_list() {
-      // Scan past any Comment boxes
-      if matches!(last_box.data(), DigestedData::Comment(_)) {
-        comments.push(last_box);
-      } else if last_box.get_property_bool("isSkip") {
-        break;
-      } else {
-        // return a non-skip box to the list.
-        push_box_list(last_box);
-        break;
-      }
-    }
-    // Restore any comment boxes that were scanned past
-    for comment in comments.into_iter().rev() {
-      push_box_list(comment);
+    if peek_own_box().is_some_and(|item| item.get_property_bool("isSkip")) {
+      pop_own_box();
     }
   });
 
@@ -246,7 +253,8 @@ LoadDefinitions!({
       None,
       None,
       Tokens!(T_CS!("\\hfil")),
-      stored_map!("isSpace" => true, "isFill" => true),
+      // Glue (tex.web §1058): `\unskip` removes it.
+      stored_map!("isSpace" => true, "isFill" => true, "isSkip" => true),
     )
   });
   DefPrimitive!("\\hfill", {
@@ -256,7 +264,7 @@ LoadDefinitions!({
       None,
       None,
       Tokens!(T_CS!("\\hfill")),
-      stored_map!("isSpace" => true, "isFill" => true),
+      stored_map!("isSpace" => true, "isFill" => true, "isSkip" => true),
     )
   });
 
@@ -281,13 +289,25 @@ LoadDefinitions!({
   // \lastskip         iq is 0.0 pt or the last glue or muglue on the current list.
 
   DefRegister!("\\lastskip", Dimension::new(0), readonly => true, getter => {
-    with_box_list(|stomach_box_list| {
+    with_own_box_list(|stomach_box_list| {
       let box_iter = stomach_box_list.iter().rev();
       for box_in_list in box_iter {
-        if !matches!(box_in_list.data(), DigestedData::Comment(_)) {
+        if !is_list_tail_transparent(box_in_list) {
           if box_in_list.get_property_bool("isSkip") {
-            let Some(width_stored) = box_in_list.get_property("width") else {
-              break;
+            // A vertical skip's size is its height (tex.web §424, as `\lastkern`): `\vskip3pt\par` read 0pt.
+            let vertical = box_in_list.get_property_bool("isVerticalSpace");
+            let key = if vertical { "height" } else { "width" };
+            // An interword space has no width property: its width is the space's (`get_width`); fill glue
+            // (`\hfil`, `\hfill`) has natural width 0 (tex.web §1058).
+            let Some(width_stored) = box_in_list.get_property(key) else {
+              return match box_in_list.get_width(None) {
+                Ok(Some(RegisterValue::Dimension(width)))
+                  if !vertical && !box_in_list.get_property_bool("isFill") =>
+                {
+                  width
+                },
+                _ => Dimension::new(0),
+              };
             };
             if let Stored::Dimension(ref width_d) = *width_stored {
               return *width_d;
@@ -295,7 +315,7 @@ LoadDefinitions!({
               emit_warn(
                 "internal",
                 "state",
-                &format!("Unexpected type of \"width\" value in State: {width_stored:?}"),
+                &format!("Unexpected type of \"{key}\" value in State: {width_stored:?}"),
               );
               break;
             }

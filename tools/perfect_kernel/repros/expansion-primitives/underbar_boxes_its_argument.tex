@@ -1,0 +1,13 @@
+% witness: 2308.06669 (6 `_` errors): latex.ltx:619 `\def\underbar#1{\underline{\sbox\tw@{#1}\dp\tw@\z@\box\tw@}}`
+%          boxes its argument, in text mode, so `\underbar{$\psi$}` is legal in math; Perl lets it to `\underline`
+%          (math_common.pool.ltxml:541), where the inner `$` leaves math
+% oracle:  pdflatex 0 errors: "Let ψ ∈ P and then c1 + c2, with x."
+% engines: rust 63s4 and Perl 0.8.8 = `Error:unexpected:_` (the `_` after it read outside math)
+% expect:  0 errors, 0 warnings; the formula `\underline{\hbox{$\psi$}}\in P`; `$\underbar{x}$` an underlined
+%          variable, as in Perl (TeX sets it as upright text; the semantic reading is kept)
+% status:  RED (63s4) -> GREEN (63t)
+\documentclass{article}
+\newcommand{\pj}[1]{\underbar{$#1$}}
+\begin{document}
+Let $\pj{\psi} \in P$ and then $c_1 + c_2$, with $\underbar{x}$.
+\end{document}

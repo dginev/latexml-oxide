@@ -1,0 +1,14 @@
+% witness: review of batch 62zd (the box capture's backmatter lift, base_utilities.rs `insert_block`)
+% oracle:  pdflatex: "Q1.", the bibliography inside the quote's minipage, "Q2 in quote." still in the quote, then "After."
+%          outside it; perl: the bibliography stays in the block with one error, "Q2 in quote." stays in the quote
+% engines: rust 62zd: the lift moves the insertion point past the open `ltx:quote` (`set_node(&ancestor)`), so the
+%          bibliography leaves the quote and "Q2 in quote." escapes it, merging with "After." into one paragraph; no
+%          diagnostic. The climb has three per-tag stops now (list, alignment, float); consolidate them — Perl's
+%          `floatToElement` restores the insertion point after floating past an open container.
+% expect:  the quote keeps "Q2 in quote."; the bibliography either stays in the box (Perl's error) or is placed without
+%          moving the insertion point out of the quote
+% status:  RED (filed from the 62zd review)
+\documentclass{article}
+\begin{document}
+\begin{quote}Q1. \begin{minipage}{\textwidth}\begin{thebibliography}{9}\bibitem{a} A.\end{thebibliography}\end{minipage} Q2 in quote.\end{quote} After.
+\end{document}

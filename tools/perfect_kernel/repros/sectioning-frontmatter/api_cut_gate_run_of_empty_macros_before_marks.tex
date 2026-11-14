@@ -1,0 +1,18 @@
+% mechanism: the marks gates' one walk (`argument_marks::walk`) reads a parameterless body in its place, 8 macros deep
+%   by nesting: a run of nine `\x` (each `\empty` inside) before the list's first mark is read on to that mark, the list
+%   rehearsed and cut once (P6e D5: the API Cut's gate counted every body it spliced, so the run spent its depth)
+% witness: synthetic (P6e)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "ANN ABLE1 AND BOB BAKER2", "1 Univ A, Town A, 2 Univ B, Town B"
+% engines: P6ebase: the creators below, one cut (the spent depth answers "may open with a mark" too); P6e: the same
+% expect:  0 errors, 0 warnings; Ann Able 1 "1 Univ A, Town A", Bob Baker 2 "2 Univ B, Town B"; one cut
+% status:  GREEN (guard perfect_kernel_batchc1::api_cut_gate_reads_past_empty_bodies)
+\documentclass{amsart}
+\def\x{\empty}
+\begin{document}
+\title{T}
+\author{Ann Able$^{1}$}
+\author{Bob Baker$^{2}$}
+\address{\x\x\x\x\x\x\x\x\x $^{1}$Univ A, Town A\\ $^{2}$Univ B, Town B}
+\maketitle
+Text.
+\end{document}

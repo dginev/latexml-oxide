@@ -1,0 +1,20 @@
+% mechanism: the emitter's block decline (`emit::emit_commands`, `across_cells`): an item whose entry (`repart::entry_span`,
+%   over the lines it continues) runs on from one alignment column into another (`repart::crosses_columns`: a cell of a
+%   later column, or a row end after one, between its first and last ink) makes the block Perl's whole-block creator
+% witness: 1304.3138, 2511.14288, 2605.30319, 1711.10325, 1802.06894, 1704.06967 (a multi-column affiliation tabular,
+%   the contact read on through later rows or columns; NE1's root cause, agent_reports/2026-11-09_NE1_report.md)
+% oracle:  pdflatex 0 errors; "Ann Able⋆, Bob Baker†" over two columns "⋆Univ X / Dept A" and "†Univ Y / Dept B"
+% engines: perl: 0 errors, one creator of the whole block; rust off: the same; rust =2 (int152c): 1 error (Stray
+%   alignment "&"), Bob Baker's affiliation "Univ Y Dept A Dept B" (Dept A is ⋆'s)
+% expect:  =2 as off: one creator holding the whole block, 0 errors, 1 warning (the block written whole)
+\documentclass{article}
+\title{A Title}
+\author{Ann Able$^\star$, Bob Baker$^\dagger$\\
+\begin{tabular}{cc}
+$^\star$Univ X & $^\dagger$Univ Y\\
+Dept A & Dept B
+\end{tabular}}
+\begin{document}
+\maketitle
+Text.
+\end{document}

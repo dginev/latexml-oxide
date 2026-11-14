@@ -1,0 +1,19 @@
+% mechanism: llncs's numbered `\institute` list under authblk's `\author` calls, each name picking its institute by
+%   `\inst{n}`: a no-block flush (each call one `\lx@add@creator`) whose queue holds the class's `_share` contact
+%   (OXIDIZED_DESIGN_DIVERGENCES #901), written by the emitter (`emit.rs` `stays_out`); the marks pick, so nothing is
+%   shared: Univ A and its e-mail Ann Able's, Univ B Bob Baker's
+% witness: synthetic (P27b's sibling of `llncs_authblk_calls_share_the_sole_institute.tex`, the picked path)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: prints "Bob Baker2" alone (llncs's `\maketitle` sets the
+%   last `\author`; Ann Able's name is in the source, kept), "1 Univ A ann.able@x.edu", "2 Univ B"
+% engines: int159a1 (base): Ann Able (Univ A, ann.able@x.edu), Bob Baker (Univ B), 0 errors, 0 warnings
+% expect:  0 errors, 0 warnings; Ann Able (Univ A, ann.able@x.edu), Bob Baker (Univ B)
+% status:  GREEN (int159a1 and P27b; guard perfect_kernel_batchp27b::llncs_authblk_calls_inst_marks_pick_the_institutes)
+\documentclass{llncs}
+\usepackage{authblk}
+\begin{document}
+\title{A Title}
+\author{Ann Able\inst{1}}
+\author{Bob Baker\inst{2}}
+\institute{Univ A \email{ann.able@x.edu} \and Univ B}
+\maketitle
+\end{document}

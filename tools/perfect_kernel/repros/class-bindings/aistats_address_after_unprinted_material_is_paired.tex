@@ -1,0 +1,46 @@
+% mechanism: aistats's `\aistatsauthor` row and the `\aistatsaddress` with as many columns under it are paired column
+%   by column (column i under author i, as the PDF prints them) also when material that prints nothing stands between
+%   the setters — `\runningauthor`, `\vspace`, `\medskip`, `\newcommand`, `{\fontsize…\selectfont` — which the binding
+%   reads ahead through and runs first (so a macro it defines is read in place); a printed paragraph between them
+%   keeps the address unpaired, each column an affiliation of the row.
+% witness: 29 of the 2,843 papers with `\aistatsauthor` (77o r2 review scan): 2003.03080, 2402.12508, 2602.12181,
+%   2305.16147, 1804.04378, 1302.5348, 1902.01239, 1603.09584, 2501.00988
+% oracle:  pdflatex 0 errors; "A Title / Ann Able Bob Baker / Univ A Univ M / Cat Cole Dan Dorn / Univ C Univ D /
+%   Eve East Fay Fox / Equal contribution. / Univ E Univ F"
+% engines: rust 77o r2: every author of the first two rows has both columns of the row's address; rust int32a: no
+%   title, no creators; perl: no aistats binding
+% expect:  0 errors; Ann: Univ A, Bob: Univ M, Cat: Univ C, Dan: Univ D; Eve and Fay: Univ E and Univ F
+% status:  RED (77o r2) -> GREEN (77o r3)
+\begin{filecontents*}{aistats2027.sty}
+\ProvidesPackage{aistats2027}
+\DeclareOption{accepted}{\renewcommand{\statePaper}{\acceptedPaper}}
+\newcommand{\statePaper}{0}\newcommand{\acceptedPaper}{1}
+\ProcessOptions\relax
+\def\runningauthor#1{\gdef\@runningauthor{#1}}
+\long\def\aistatstitle#1{{\centering{\Large\bfseries #1\par}}\vskip 0.25in}
+\long\def\aistatsauthor#1{\ifnum\statePaper=0 {\begin{tabular}[t]{c}\bfseries Anonymous Author\end{tabular}}\else
+  {\def\And{\end{tabular}\hskip 1in\begin{tabular}[t]{c}\bfseries}\begin{tabular}[t]{c}\bfseries #1\end{tabular}}\fi\par}
+\long\def\aistatsaddress#1{\ifnum\statePaper=0 {\begin{tabular}[t]{c}Anonymous Institution\end{tabular}}\else
+  {\def\And{\end{tabular}\hskip 1in\begin{tabular}[t]{c}}\begin{tabular}[t]{c}#1\end{tabular}}\fi\par}
+\end{filecontents*}
+\documentclass[twoside]{article}
+\usepackage[accepted]{aistats2027}
+\begin{document}
+\twocolumn[\aistatstitle{A Title}
+
+\aistatsauthor{Ann Able \And Bob Baker}
+\runningauthor{Able, Baker}
+\vspace{-0.1in}
+\newcommand{\Addr}{Univ M}
+\aistatsaddress{Univ A \And \Addr}
+
+\aistatsauthor{Cat Cole \And Dan Dorn}
+{\fontsize{9.6pt}{12pt}\selectfont
+\aistatsaddress{Univ C \And Univ D}}
+
+\aistatsauthor{Eve East \And Fay Fox}
+\textbf{Equal contribution.}
+
+\aistatsaddress{Univ E \And Univ F}]
+\section{Intro} Body.
+\end{document}

@@ -1,0 +1,13 @@
+% A framed cover minipage printing `\@title`: the frame is the author's own ink around the print, never emptied (as the
+% dedup's rule, perfect_kernel_batch68s::title_ink_dedup_framed_cover_keeps_its_frame).
+% status:  GREEN at 67int19b → GREEN (fms1), guarding the frame.
+% oracle:  pdflatex 0 errors: a framed "Framed Store Title", "1 Intro Text."
+% expect:  0 errors, 0 warnings; no `field_ink` Info; the framed minipage keeps the title.
+\documentclass{article}
+\makeatletter
+\title{Framed Store Title}
+\begin{document}
+\noindent\fbox{\begin{minipage}{\textwidth}\centering{\Huge \@title\par}\end{minipage}}
+\section{Intro}
+Text.
+\end{document}

@@ -1,0 +1,19 @@
+% witness: 57ak re-review (NO-SHIP): sums of operator terms — the score-function and policy-gradient
+%          sums of ML papers — lost every parse on the hybrid route's tree-iterator fallback (bocages over
+%          500 and-nodes): each operator term carried 5-7 derivations pruned only after the tree was built
+%          (a scripted operator as a factor, a bare nest as a `tight_term` before its argument, a fenced
+%          group offered as a bare argument), and they multiplied across the terms: 7, 49, 343, 2,401
+%          trees for 1-4 terms, none of the first 5,000 parsed for 5 (57aj parsed them, 17 trees)
+% oracle:  Perl 0 errors: `g = ((nabla _ theta)@(logarithm))@(p _ theta) * x _ 1 + …` (five terms) and
+%          `eta * ((nabla _ theta)@(logarithm))@(pi _ theta) * conditional@(a _ 1, s _ 1) * A _ 1 + …`
+% engines: rust 57ak (first cut) both `ltx_math_unparsed` on the fallback route; 57aj2 the first as Perl,
+%          the second `eta * nabla _ theta * logarithm * pi _ theta * …` (flat)
+% expect:  0 errors; Perl's text on both routes
+% status:  RED (57ak first cut) -> GREEN (57ak: an argument-less operator is a `bare_op_term`, never
+%          followed by a factor; a scripted operator is no `factor`; `op_bare_item` built from bare shapes)
+\documentclass{article}
+\begin{document}
+$g=\nabla_\theta\log p_\theta(x_1)+\nabla_\theta\log p_\theta(x_2)+\nabla_\theta\log p_\theta(x_3)+\nabla_\theta\log p_\theta(x_4)+\nabla_\theta\log p_\theta(x_5)$
+
+$\eta\nabla_\theta\log\pi_\theta(a_1|s_1)A_1+\eta\nabla_\theta\log\pi_\theta(a_2|s_2)A_2+\eta\nabla_\theta\log\pi_\theta(a_3|s_3)A_3+\eta\nabla_\theta\log\pi_\theta(a_4|s_4)A_4$
+\end{document}

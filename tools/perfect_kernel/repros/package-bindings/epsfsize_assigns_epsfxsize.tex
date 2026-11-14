@@ -1,0 +1,17 @@
+% witness: nucl-th0009090 (15 Errors undefined:\epsfsize; "=0.6" printed in every figure)
+% oracle:  pdflatex 0 errors (a missing x.eps aside, see below); no "=0.6" text
+% engines: rust (int57a) = 1 Error + 1 Warning, "=0.6" printed; perl = 1 Error
+% expect:  0 errors; <graphics graphic="x.eps" options="width=207.0pt"/>, no "=0.6"
+% mechanism: epsf.sty:648 `\def\epsfsize#1#2{\epsfxsize}`, so `\epsfsize=0.6\textwidth` is
+%   `\epsfxsize.6\textwidth`; epsf_sty.rs had none, epsfig_sty.rs a no-op (Perl epsfig.sty.ltxml:80). KPE #1117.
+% note:    pdflatex needs an x.eps; with a bounding-box-only x.eps it is clean.
+% status:  GREEN (78s)
+\documentclass{article}
+\usepackage{epsf}
+\begin{document}
+\begin{figure}
+\epsfsize=0.6\textwidth
+\epsfbox{x.eps}
+\caption{C.}
+\end{figure}
+\end{document}

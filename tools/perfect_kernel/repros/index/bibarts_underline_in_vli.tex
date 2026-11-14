@@ -1,0 +1,18 @@
+% witness: bibarts/ba-short (ba-short.tex:127-128 \vli{..}{..}{The \ktit{..}, ..}[Pg])
+% oracle:  pdflatex 0 errors (verified 2026-09-03)
+% engines: rust=0 perl=? (2026-09-03, after \underline protected fix b54o) — GREEN
+% expect:  0 errors; <ltx:text class="ltx_underline"> containing Systeme
+% status:  GREEN
+% guard:   perfect_kernel_batch54::underline_is_robust_in_an_edef_write
+% note: REPLACES the invalid seed edef_write_ifmmode_bibarts.tex (that seed nested a
+%   bare \vli inside another \vli's last arg WITHOUT \ktit — pdflatex itself rejects it,
+%   "! Missing \ktit{...} in *inner* ...vli-cmd", 2 bangs; not an oracle-clean target).
+%   Real ba-short puts \ktit INSIDE the vli title. This guards the \underline-robust fix
+%   (Checkpoint N#2) at the bibarts \edef\write integration level: the title's
+%   \underline{Systeme} rides frozen through \@initaddtovli's \edef and renders.
+\documentclass{article}
+\usepackage{bibarts}
+\begin{document}
+\vli{Niklas}{Luhmann}{\ktit{Soziale \underline{Systeme}}, Frankfurt 1984}[15]
+\printvli
+\end{document}

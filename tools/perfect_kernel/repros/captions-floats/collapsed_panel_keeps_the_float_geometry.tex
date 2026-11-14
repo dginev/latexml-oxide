@@ -1,0 +1,44 @@
+% witness: 2605.03502 S3.F3 (a side caption's 0.3\linewidth minipage: the figure claimed width="103.5pt"),
+%          2605.15932 S4.F3 (subfigures of a 0.05\linewidth caption minipage and a 0.86\linewidth panel claimed
+%          17.3pt, so two \linewidth subfigures shared one row), 2605.17037 (a lone-minipage algorithm lost
+%          ltx_float_algorithm); 59 papers of the 57by delta A/B
+% oracle:  pdflatex sets each figure at \textwidth: the side caption beside the panel; each \linewidth subfigure
+%          on a row of its own; three 0.4\linewidth subfigures two to a row
+% engines: perl and rust 57bz copy every attribute of the one inner float — the caption minipage's figure —
+%          onto the outer (collapseFloat, latex_constructs.pool.ltxml:3447-3449; KNOWN_PERL_ERRORS #388): the
+%          figure claims width="103.5pt" class="ltx_figure_panel ltx_minipage" vattach="middle" around a wider
+%          panel, each subfigure width="34.5pt", so the three share one row; the algorithm float's
+%          `ltx_float_algorithm` class is overwritten by the minipage's
+% expect:  0 errors; the collapsed floats keep their labels, ids and captions but take no width, vattach or
+%          box/panel class from a panel that stood beside other content, so the third subfigure starts a new
+%          row; a lone inner float gives its float its geometry and its classes merge (divergence #375)
+% status:  GREEN (57by, perfect_kernel_batch57::collapsed_panel_keeps_the_float_geometry)
+\documentclass{article}
+\usepackage{subcaption,algorithm}
+\begin{document}
+\begin{figure}
+\begin{minipage}{0.65\linewidth}Wide panel.\end{minipage}\hfill
+\begin{minipage}{0.3\linewidth}\caption{Side caption.}\label{f}\end{minipage}
+\end{figure}
+
+\begin{figure}
+\begin{subfigure}{0.4\linewidth}
+\begin{minipage}[c]{0.1\linewidth}\caption{}\label{a}\end{minipage}
+\begin{minipage}[c]{0.8\linewidth}One.\end{minipage}
+\end{subfigure}
+\begin{subfigure}{0.4\linewidth}
+\begin{minipage}[c]{0.1\linewidth}\caption{}\label{b}\end{minipage}
+\begin{minipage}[c]{0.8\linewidth}Two.\end{minipage}
+\end{subfigure}
+\begin{subfigure}{0.4\linewidth}
+\begin{minipage}[c]{0.1\linewidth}\caption{}\label{c}\end{minipage}
+\begin{minipage}[c]{0.8\linewidth}Three.\end{minipage}
+\end{subfigure}
+\caption{Rows.}
+\end{figure}
+
+\begin{algorithm}
+\begin{minipage}{\linewidth}\caption{Alg}\label{alg}Step.\end{minipage}
+\end{algorithm}
+See Figures~\ref{f}, \ref{a}, and Algorithm~\ref{alg}.
+\end{document}

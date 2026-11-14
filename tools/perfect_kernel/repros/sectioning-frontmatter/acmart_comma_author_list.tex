@@ -1,0 +1,14 @@
+% witness: 2604.12138 (+26 html_feedback acmart papers, HF2): acmart wants one `\author` per person (acmart.cls:1620
+%          warns "Do not put several authors in the same \author macro!") but prints a name list as written
+% oracle:  pdflatex 0 errors: "Aditya Agrawal, Alwarappan Nakkiran, Darshan Fofadiya" over "Amazon.com, USA"
+% engines: rust 63w15 = one personname holding the three names + Error:frontmatter:merged_creators; Perl the same creator
+% expect:  0 errors; three creators, each with the Amazon.com affiliation
+% status:  RED (63w15) -> GREEN (63x)
+\documentclass[sigconf,nonacm]{acmart}
+\begin{document}
+\title{T}
+\author{Aditya Agrawal, Alwarappan Nakkiran, Darshan Fofadiya}
+\affiliation{\institution{Amazon.com}\country{USA}}
+\maketitle
+x
+\end{document}

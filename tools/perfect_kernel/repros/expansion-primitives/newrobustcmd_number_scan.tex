@@ -1,0 +1,25 @@
+% mechanism: etoolbox's `\newrobustcmd` (etoolbox.sty:57-58, `\protected\def\newrobustcmd
+%   {\@star@or@long\etb@new@command}`) peeks for its star by `\futurelet`, so the number scan of
+%   `\ifnum0=4%` + a newline + `\newrobustcmd` (tex.web §445) ends there and the definition waits
+%   for the `\ifnum`'s branch. The binding (Perl etoolbox.sty.ltxml:39-50) defines as it expands:
+%   it defined `\foo` in the scan's look-ahead, and the \else branch's definition was ignored. The
+%   real command is `\protected`, so an `\edef` keeps it too.
+% witness: synthslant/synthslant-gauge (synthslant.sty:277 `\ifnum\synthslant@engine=4%`)
+% oracle:  pdflatex 0 errors: "xBy", "EC"
+% engines: rust (56js) = "xAy", 1 error (\baz undefined: the \edef ran the definition);
+%          perl = "xAy"
+% expect:  0 errors, 0 warnings; <p>xBy</p>, <p>EC</p>
+% status:  RED (56jw) -> GREEN (56jw)
+\documentclass{article}
+\usepackage{etoolbox}
+\ifnum0=4%
+  \newrobustcmd*{\foo}{A}%
+\else
+  \newrobustcmd*{\foo}{B}%
+\fi
+\edef\x{\newrobustcmd*{\noexpand\baz}{C}}
+\begin{document}
+x\foo y
+
+\ifdefined\baz D\else E\fi\x\baz
+\end{document}

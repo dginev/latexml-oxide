@@ -1,4 +1,8 @@
-use std::{fmt, rc::Rc};
+use std::{
+  cell::{Cell, RefCell},
+  fmt,
+  rc::Rc,
+};
 
 use once_cell::sync::Lazy;
 #[cfg(feature = "codegen")]
@@ -8,14 +12,17 @@ use quote::{ToTokens, quote};
 use regex::Regex;
 
 use crate::{
-  Digested,
+  BoxOps, Digested,
   common::{
     arena::{self, SymStr},
     error::{emit_warn, *},
     object::Object,
   },
   definition::{
-    BeforeDigestClosure, Definition, DigestionClosure, argument::ArgWrap, constructor::Constructor,
+    BeforeDigestClosure, Definition, DigestionClosure,
+    argument::ArgWrap,
+    constructor::Constructor,
+    register::{RegisterType, RegisterValue},
   },
   gullet,
   mouth::Mouth,
@@ -47,12 +54,31 @@ pub type ReversionClosure =
 /// Perl equivalent: the `reversion` option on DefParameterType, which receives the raw value.
 pub type DigestedReversionClosure = Rc<dyn Fn(&Digested) -> Result<Tokens>>;
 
+/// `LXML_TRACE_ARGS=\cs`, read ONCE: both argument readers below run on every
+/// macro, primitive, conditional and constructor invocation, and
+/// `std::env::var` takes the process environment lock and byte-scans the
+/// environment each call — 14 % of a pgf/TikZ conversion (tikz-network's
+/// 887 M token reads per picture; symbolized profile
+/// `~/data/pk_agents/w23/perf_pgf/NOTES.md`), the same trap gullet.rs's
+/// `TRACE_GROUP_END` records. A debug switch set before launch never changes.
+static TRACE_ARGS: Lazy<Option<String>> = Lazy::new(|| std::env::var("LXML_TRACE_ARGS").ok());
+
 static LAST_WCHAR_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"\w$").unwrap());
 static FIRST_WCHAR_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"^\w").unwrap());
 
 #[derive(Clone)]
 pub struct Parameter {
   pub novalue:            bool,
+  /// A `\newcommand`-family optional argument: latex.ltx reads it through
+  /// `\@protected@testopt` → `\@testopt` → `\kernel@ifnextchar[` (1249, 1261,
+  /// 1259-1260), a futurelet peek, so its macro
+  /// [`peeks_by_futurelet`](crate::definition::Definition::peeks_by_futurelet).
+  pub testopt:            bool,
+  /// A size argument latex.ltx evaluates with the box already set, so that
+  /// `\width`/`\height`/`\depth`/`\totalheight` measure it (`\@begin@tempboxa`,
+  /// latex.ltx:16085-16094): `TempboxaDimension`. See
+  /// [`Parameters::read_arguments_and_digest`].
+  pub after_box:          bool,
   pub semiverbatim:       Option<Vec<char>>,
   pub optional:           bool,
   pub name:               SymStr,
@@ -68,11 +94,42 @@ pub struct Parameter {
   pub digested_reversion: Option<DigestedReversionClosure>,
   pub before_digest:      Vec<BeforeDigestClosure>,
   pub after_digest:       Vec<DigestionClosure>,
+  /// `(OptionalMatch…, Until…)` of `name`, worked out on the first read (lazily: `name` is set
+  /// by struct update after `Default`), so a read pays no interner lookup.
+  pub name_kind:          Cell<Option<(bool, bool)>>,
+  /// A braced or bracketed argument's tokens as the source states them (`{0.48\textwidth}`), kept for the reader that
+  /// asked for them ([`Parameters::read_arguments_and_digest`] under [`KEEP_STATED_LENGTHS`]): `Some` while asked
+  /// for, holding them once [`Parameters::reparse_argument`] has read them.
+  pub stated:             RefCell<Option<Tokens>>,
 }
+
+/// The state value that asks a constructor to keep the tokens its braced or bracketed typed arguments state
+/// (`{Dimension}`, `[TempboxaDimension]`, `{SetlengthDimension}`, …) on its whatsit ([`STATED_LENGTHS`]), and a
+/// `KeyVals` the tokens of its typed length values (`KeyVals::stated_entry`): what the source states, which a reader
+/// may evaluate again under other register values (latexml_engine's panel rows, a float's panels set against the
+/// class's real line; OXIDIZED_DESIGN_DIVERGENCES #885). Assigned in a group (a float's), so it ends with it.
+pub const KEEP_STATED_LENGTHS: &str = "lx@keep@stated@lengths";
+
+/// The whatsit property holding the tokens its typed arguments state ([`KEEP_STATED_LENGTHS`]): a
+/// `Stored::VecDequeStored` aligned with the whatsit's arguments, `Stored::Tokens` for a kept one, else `Stored::None`.
+pub const STATED_LENGTHS: &str = "stated_lengths";
+
+/// The state value with which a binding that sizes a box of its own accord withholds the tokens of the lengths it
+/// gives a constructor ([`KEEP_STATED_LENGTHS`] off in its group; latexml_engine's `\lx@panel@unstated`, subcaption's
+/// `\subfloat`): the source states no such length, which differs from one given where none are kept (a box built
+/// outside a float). Assigned in a group, so it ends with it.
+pub const WITHHOLD_STATED_LENGTHS: &str = "lx@withhold@stated@lengths";
+
+/// The whatsit property marking a constructor whose length arguments' tokens were withheld
+/// ([`WITHHOLD_STATED_LENGTHS`]): it states none.
+pub const STATED_LENGTHS_WITHHELD: &str = "stated_lengths_withheld";
+
 impl Default for Parameter {
   fn default() -> Self {
     Parameter {
       novalue:            false,
+      testopt:            false,
+      after_box:          false,
       semiverbatim:       None,
       optional:           false,
       name:               pin!("parameter_default"),
@@ -92,6 +149,8 @@ impl Default for Parameter {
       digested_reversion: None,
       before_digest:      Vec::new(),
       after_digest:       Vec::new(),
+      name_kind:          Cell::new(None),
+      stated:             RefCell::new(None),
     }
   }
 }
@@ -129,6 +188,21 @@ impl Object for Parameter {
 
 static OPTIONAL_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"^Optional(.+)$").unwrap());
 static SKIP_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"^Skip(.+)$").unwrap());
+
+/// A `{}` argument that is exactly one token whose MEANING is `{` (an
+/// implicit begin-group such as `\bgroup`, not a literal brace): the `{}`
+/// reader takes the single token, so the group body is still in the gullet.
+fn is_implicit_begin_group(arg: &ArgWrap) -> bool {
+  match arg {
+    ArgWrap::Tokens(toks) => {
+      let list = toks.unlist_ref();
+      list.len() == 1
+        && list[0].get_catcode() != Catcode::BEGIN
+        && list[0].defined_as(&crate::T_BEGIN!())
+    },
+    _ => false,
+  }
+}
 
 impl Parameter {
   pub fn new<T: AsRef<str>>(name: T, spec: T, extra: Option<Vec<Tokens>>) -> Result<Self> {
@@ -248,6 +322,9 @@ impl Parameter {
         if descriptor.novalue {
           self.novalue = true;
         }
+        if descriptor.after_box {
+          self.after_box = true;
+        }
         self.semiverbatim.clone_from(&descriptor.semiverbatim);
         // Also doing optional setting on the fly, so don't override unless true
         // self.optional = descriptor.optional;
@@ -301,20 +378,68 @@ impl Parameter {
     })
   }
 
+  /// ExpandedSemiverbatim wants the semiverbatim DIGESTION protection
+  /// (Parameter::digest's neutralize-under-ASCII branch — without it an
+  /// OTHER `_` font-decodes to the OT1 dot-above in the constructor's
+  /// output) but must NOT flip catcodes at READ time: its whole point is
+  /// tokenizing the argument at the CALLER's catcodes so an expl3
+  /// `\l_..._tl` file name stays one control sequence.
+  #[inline]
+  fn semiverbatim_read_setup(&self) -> bool {
+    self.semiverbatim.is_some() && self.semiverbatim_set_up_at_read()
+  }
+
+  /// [`Self::semiverbatim_read_setup`] of a semiverbatim parameter, apart: this runs twice per argument of every macro.
+  #[inline(never)]
+  fn semiverbatim_set_up_at_read(&self) -> bool {
+    !arena::with(self.name, |n| n == "ExpandedSemiverbatim")
+  }
+
+  /// Whether a semiverbatim argument is expanded before it is digested (Perl Parameter.pm:124-132, "Expand (before
+  /// digest), so tokens can be neutralized"): every one but the Rust-only `UnexpandedSemiverbatim`, whose tokens are
+  /// neutralized as read and digested in order, as a macro's `#1` is — `\afterassignment\remove@to@nnil`, the kernel
+  /// `\fontsize`'s `\@defaultunits` (latex.ltx:10537), expanded ahead of its assignment missed its `\@nnil` delimiter
+  /// and `\@nil` ran undefined (1802.01191's `\email{\fontsize{11pt}{12pt}\selectfont …}`).
+  #[inline(never)]
+  fn semiverbatim_expands_before_digest(&self) -> bool {
+    !arena::with(self.name, |n| n == "UnexpandedSemiverbatim")
+  }
+
+  #[inline]
   pub fn setup_catcodes(&self) {
-    if self.semiverbatim.is_some() {
+    if self.semiverbatim_read_setup() {
       begin_semiverbatim(self.semiverbatim.as_deref());
     }
   }
 
+  #[inline]
   pub fn revert_catcodes(&self) -> Result<()> {
-    if self.semiverbatim.is_some() {
+    if self.semiverbatim_read_setup() {
       end_semiverbatim()?;
     }
     Ok(())
   }
 
   pub fn read(&self, fordefn: Option<&dyn Definition>) -> Result<ArgWrap> {
+    self.read_with(self.inner.as_ref(), fordefn)
+  }
+
+  /// A braced or bracketed argument whose one inner parameter is read with the
+  /// box already set (`after_box`): see [`Parameters::read_arguments_and_digest`].
+  fn measures_the_box(&self) -> bool {
+    self
+      .inner
+      .as_ref()
+      .is_some_and(|inner| matches!(inner.0.as_slice(), [only] if only.after_box))
+  }
+
+  /// [`Self::read`] with `inner` for the reader: `None` reads a braced or
+  /// bracketed argument's raw tokens, to be re-parsed later.
+  fn read_with(
+    &self,
+    inner: Option<&Parameters>,
+    fordefn: Option<&dyn Definition>,
+  ) -> Result<ArgWrap> {
     // For semiverbatim, I had messed with catcodes, but there are cases
     // (eg. \caption(...\label{badchars}}) where you really need to
     // cleanup after the fact!
@@ -322,7 +447,7 @@ impl Parameter {
     self.setup_catcodes();
 
     let closure = &self.reader;
-    let value_from_reader: ArgWrap = closure(self.inner.as_ref(), &self.extra)?;
+    let value_from_reader: ArgWrap = closure(inner, &self.extra)?;
     // Direct enum destructure: was `is_tokens() then owned_tokens()`
     // which matched twice (once for the is_tokens check, again for
     // the owned_tokens dispatch over all ArgWrap variants). This
@@ -331,7 +456,7 @@ impl Parameter {
     let value_arg = match value_from_reader {
       ArgWrap::Tokens(mut value) => {
         if let Some(ref semi_chars) = self.semiverbatim {
-          value = value.neutralize(semi_chars);
+          value = neutralize_keeping_definition_names(value, semi_chars);
         }
         ArgWrap::Tokens(value)
       },
@@ -339,39 +464,109 @@ impl Parameter {
     };
     self.revert_catcodes()?;
 
-    // Single arena borrow to compute both name-prefix checks that
-    // this function needs — was two separate `arena::with` calls
-    // (each a RefCell borrow + interner resolve), now a single
-    // closure that returns the pair.
-    let (is_optional_match, is_until) = arena::with(self.name, |name| {
-      (name.starts_with("OptionalMatch"), name.starts_with("Until"))
-    });
-
     // Perl: experiment: skip spaces after a successful OptionalMatch read
-    if !value_arg.is_none() && self.optional && is_optional_match {
+    // (not when the call is being abandoned: nothing more is read).
+    if self.optional && !value_arg.is_none() && self.name_kind_of().0 && !gullet::argument_runaway()
+    {
       gullet::skip_spaces()?;
     }
 
-    let checked_value =
-      if !self.optional && !self.novalue && (value_arg.is_none() && self.predigest.is_none()) {
-        // Deyan: Special exception, which may motivate switching the reader type to Option<Tokens>
-        // in the long-run        Until *may* have a value, but it also may *not*, both OK.
-        // So... except it from the error message here
-        if !is_until {
-          let fordefn_str = fordefn.map(|fdefn| fdefn.stringify()).unwrap_or_default();
-          Error!(
-            "expected",
-            self,
-            s!("Missing argument {} for {}", self.stringify(), fordefn_str)
-          );
-          ArgWrap::Tokens(Tokens!(T_OTHER!("missing")))
+    // A `\def` parameter text's leading delimiter (`\def\lp\x{…}`) is a
+    // value-less required `Match`: its miss IS an improper macro call (below).
+    if value_arg.is_none()
+      && !self.optional
+      && (!self.novalue || self.is_macro_delimiter())
+      && self.predigest.is_none()
+      // A call being abandoned (tex.web §392) has nothing more to report.
+      && !gullet::argument_runaway()
+    {
+      self.read_missing_value(value_arg, fordefn)
+    } else {
+      Ok(value_arg)
+    }
+  }
+
+  /// Whether this parameter's name is an `OptionalMatch` and an `Until` one, found once.
+  #[inline]
+  fn name_kind_of(&self) -> (bool, bool) {
+    match self.name_kind.get() {
+      Some(kind) => kind,
+      None => {
+        let kind = arena::with(self.name, |name| {
+          (name.starts_with("OptionalMatch"), name.starts_with("Until"))
+        });
+        self.name_kind.set(Some(kind));
+        kind
+      },
+    }
+  }
+
+  /// [`Self::read_with`] of a required parameter that read no value.
+  #[cold]
+  #[inline(never)]
+  fn read_missing_value(
+    &self,
+    value_arg: ArgWrap,
+    fordefn: Option<&dyn Definition>,
+  ) -> Result<ArgWrap> {
+    let is_until = self.name_kind_of().1;
+    Ok({
+      // `Until:` readers return a DISTINGUISHABLE EOF (read_until → None
+      // when the delimiter never appeared; a matched-but-empty arg is
+      // Some(empty)). Real TeX's runaway-argument ERROR applies to REAL
+      // file ends — but many of our mouth ends are ARTIFICIAL (isolated
+      // constructor-argument mouths, reading_from_mouth), where real TeX
+      // would keep scanning the enclosing stream and find the delimiter
+      // (l3tl replace sentinels: spath3/litetable/zref-check — a
+      // per-iteration Error here regressed 63 corpus docs, sweep 23).
+      // So: stay QUIET for Until misses; zero-progress delimited-scan
+      // loops terminate via the stomach cycle guard instead. Perl errors
+      // here (Parameter.pm L93-97) and equally mis-fires on the
+      // artificial-EOF shapes. (The `Until` reader itself never yields
+      // None — it maps a miss to an empty argument, and reports the one
+      // REAL runaway, a miss at `gullet::at_end_of_all_input`, itself.)
+      // A `\def` delimiter missed because an ISOLATED token list ran out (an
+      // index phrase digested at `\index` time, a constructor argument) is the
+      // same artificial end: real TeX would read on — manyind.sty:98
+      // `\def\mgobblepgeref, #1 {}` eats makeindex's `, <page>`, which never
+      // follows here. Quiet, and the call proceeds as before. Only a present,
+      // different token is TeX's improper call (tex.web §398).
+      let ran_out = self.is_macro_delimiter()
+        && match gullet::read_token()? {
+          Some(next) => {
+            gullet::unread_one(next);
+            false
+          },
+          None => true,
+        };
+      if ran_out && gullet::argument_ran_off_a_file()? {
+        // At a file's end the call is abandoned instead (tex.web §392).
+        value_arg
+      } else if ran_out {
+        ArgWrap::Tokens(Tokens::new(Vec::new()))
+      } else if !is_until {
+        let fordefn_str = fordefn.map(|fdefn| fdefn.stringify()).unwrap_or_default();
+        Error!(
+          "expected",
+          self,
+          s!("Missing argument {} for {}", self.stringify(), fordefn_str)
+        );
+        if self.novalue {
+          ArgWrap::None
         } else {
-          value_arg
+          ArgWrap::Tokens(Tokens!(T_OTHER!("missing")))
         }
       } else {
         value_arg
-      };
-    Ok(checked_value)
+      }
+    })
+  }
+
+  /// The leading delimiter of a `\def` parameter text (`\def\lp\x{…}`,
+  /// base_utilities.rs `parse_def_parameters`): a required `Match` that carries
+  /// no value. Binding `Match:to`-style parameters carry their value.
+  fn is_macro_delimiter(&self) -> bool {
+    self.novalue && !self.optional && self.name == crate::pin!("Match")
   }
 
   pub fn digest(
@@ -383,25 +578,58 @@ impl Parameter {
     let mode = lookup_string_from_sym(crate::pin!("MODE"));
     // If semiverbatim, Expand (before digest), so tokens can be neutralized; BLECH!!!!
     if self.semiverbatim.is_some() {
-      self.setup_catcodes();
-      if value_arg.is_tokens() {
+      // Digest-time protection applies to ExpandedSemiverbatim too (its
+      // read-time carve-out lives in semiverbatim_read_setup) — use the
+      // raw begin, not setup_catcodes.
+      begin_semiverbatim(self.semiverbatim.as_deref());
+      if value_arg.is_tokens() && !self.semiverbatim_expands_before_digest() {
+        value_arg = value_arg
+          .owned_tokens()
+          .map_or_else(ArgWrap::default, |value| {
+            ArgWrap::Tokens(Tokens::new(
+              value
+                .unlist()
+                .into_iter()
+                .map(|t| t.neutralize(&[]))
+                .collect(),
+            ))
+          });
+      } else if value_arg.is_tokens() {
         if let Some(value) = value_arg.owned_tokens() {
           let neutralized = gullet::reading_from_mouth(Mouth::default(), move || {
             gullet::unread(value);
-            let mut tokens = Vec::new();
+            // Each token with whether it is neutralized: the name a definition primitive reads is
+            // read unexpanded and kept as it is (tex.web §1215 `get_r_token`), as are a definition's
+            // parameter text and a `\def`'s body (§473), `\let`'s `=` and target (§1221) and the token
+            // `\afterassignment`/`\aftergroup` save; `\futurelet`'s two peeked tokens TeX puts back, to
+            // be read (and expanded) as usual. Expanded, a font switch in the
+            // argument (`\textbf` → `\fontseries` → `\edef\f@series{…}`) defined the letter `m`,
+            // and a `\def~{…}` had its active `~` neutralized ("Missing control sequence
+            // inserted"; stopped full-arXiv run 329: 1212.6174 natbib `\cite` notes, 1303.4395 and
+            // 1711.09355 JHEP `\href` link text, 1011.4121 amsart `\urladdr{\def~…}`).
+            let mut tokens: Vec<(Token, bool)> = Vec::new();
             loop {
               match gullet::get_pending_comment() {
-                Some(token) => tokens.push(token),
+                Some(token) => tokens.push((token, true)),
                 None => match gullet::read_x_token(Some(true), false, None) {
                   Ok(token_opt) => match token_opt {
-                    Some(token) => tokens.push(token),
+                    Some(token) => {
+                      let kind = definition_reads_names(&token);
+                      tokens.push((token, true));
+                      read_definition_names(kind, &mut tokens)?;
+                    },
                     None => break,
                   },
                   Err(x) => return Err(x),
                 },
               }
             }
-            Ok(Tokens::new(tokens).neutralize(&[]))
+            Ok(Tokens::new(
+              tokens
+                .into_iter()
+                .map(|(t, neutralize)| if neutralize { t.neutralize(&[]) } else { t })
+                .collect(),
+            ))
           })?;
           value_arg = ArgWrap::Tokens(neutralized);
         } else {
@@ -428,6 +656,22 @@ impl Parameter {
       // "\foo" will use the default value for the Optional.
       if self.optional && value_arg.is_none() {
         None
+      } else if self.reads_plain() && is_implicit_begin_group(&value_arg) {
+        // `\mbox\bgroup A … B\egroup` (syntax.sty:158 `\syn@assist`, whose
+        // `\egroup` is even inserted by `\readupto`'s `\aftergroup`; the
+        // newcommand manual): TeX hands `\bgroup` to `\mbox#1` as its one-token
+        // argument, and the `\hbox{` that `\mbox` opens is then closed by the
+        // `\egroup`, its own `}` having closed the `\bgroup` — so the box runs to
+        // the `\egroup`. A `\bgroup`-only argument therefore reads its group by
+        // DIGESTION from the live gullet until the frame closes (the `{`
+        // primitive: `bgroup` + `digest_next_body`), tex.web §1063/§1068 pairing
+        // an implicit brace with whatever closes the group. Perl reads the lone
+        // `\bgroup`, opens a boxing frame inside the constructor's mode frame,
+        // and errors at `end_mode` (SHARED; pdflatex clean). Guard:
+        // `perfect_kernel_batch54::implicit_bgroup_argument_reads_its_group`.
+        crate::stomach::invoke_token(&crate::T_BEGIN!())?
+          .into_iter()
+          .next()
       } else {
         Some(value_arg.be_digested()?)
       }
@@ -438,7 +682,10 @@ impl Parameter {
       post(&mut w)?; // maybe pass extras?
     }
 
-    self.revert_catcodes()?;
+    // Pairs with the raw begin_semiverbatim at the top of digest().
+    if self.semiverbatim.is_some() {
+      end_semiverbatim()?;
+    }
 
     // Perl Parameter.pm lines 139-141: avoid mode change leaking out of parameter digestion
     let newmode = lookup_string_from_sym(crate::pin!("MODE"));
@@ -467,6 +714,10 @@ impl Parameter {
     }
   }
 
+  /// Whether this parameter reads a plain braced argument: `Plain` (`{}`), or `Position`, a box's position keyword
+  /// read as `{}` is (base_parameter_types.rs).
+  fn reads_plain(&self) -> bool { self.name == pin!("Plain") || self.name == pin!("Position") }
+
   /// This is needed by structured parameter types like KeyVals
   /// where the argument may already have been tokenized before the KeyVals
   /// (and the parameter types for the keys) had a chance to properly parse.
@@ -474,7 +725,7 @@ impl Parameter {
   pub fn reparse(&self, tokens: Tokens) -> Result<ArgWrap> {
     // Needs neutralization, since the keyvals may have been tokenized already???
     // perhaps a better test would involve whether $tokens is, in fact, Tokens?
-    if self.name == pin!("Plain") || self.predigest.is_some() {
+    if self.reads_plain() || self.predigest.is_some() {
       // Gack!
       Ok(ArgWrap::Tokens(tokens))
     } else if self.semiverbatim.is_some() {
@@ -489,7 +740,8 @@ impl Parameter {
         let mut tokens = tokens.unlist();
         if !tokens.is_empty() // Strip outer braces from dimensions & friends
           && arena::with(self.name,|name|
-              matches!(name, "Number"|"Dimension"|"Glue"|"MuDimension"|"MuGlue"))
+              matches!(name, "Number"|"Dimension"|"Glue"|"MuDimension"|"MuGlue"
+                |"SetlengthDimension"|"SetlengthGlue"|"TempboxaDimension"))
           && tokens.first().map(|t| t.get_catcode() == Catcode::BEGIN)
               .unwrap_or(false)
           && tokens.last().map(|t| t.get_catcode() == Catcode::END).unwrap_or(false)
@@ -534,17 +786,42 @@ impl Object for Parameters {
   }
 }
 
+/// `LXML_TRACE_ARGS=\\cs`: whether `definition` is the one traced.
+#[cold]
+#[inline(never)]
+fn traced_definition(definition: &dyn Definition) -> bool {
+  TRACE_ARGS
+    .as_deref()
+    .is_some_and(|want| definition.get_cs().to_string() == want)
+}
+
+/// `LXML_TRACE_ARGS=\\cs`: print one argument.
+#[cold]
+#[inline(never)]
+fn trace_argument(definition: &dyn Definition, parameter: &Parameter, values: &ArgWrap) {
+  let shown = values.revert().map(|t| t.to_string()).unwrap_or_default();
+  eprintln!(
+    "ARGS {}: {} = {shown}",
+    definition.get_cs(),
+    parameter.stringify()
+  );
+}
+
 impl Parameters {
   pub fn new(params: Vec<Parameter>) -> Self { Parameters(params) }
   pub fn get_num_args(&self) -> usize { self.0.iter().filter(|&p| !p.novalue).count() }
   pub fn get_parameters(&self) -> Vec<&Parameter> { self.0.iter().collect() }
   pub fn take_parameters(self) -> Vec<Parameter> { self.0 }
+  /// Revert `args`, one per valued parameter: a novalue parameter (an
+  /// environment's leading `SkipSpaces`, a `Match` delimiter) stored no
+  /// argument and takes none here. Perl `Parameters::revertArguments`
+  /// (Parameters.pm:51-57) skips it before shifting an argument; pairing every
+  /// parameter with an argument shifted each one a slot left and dropped the
+  /// last (`\begin{minipage}[t]{3cm}` reverted as `\begin{minipage}[85.35826pt]`).
   pub fn revert_arguments(&self, args: Vec<Option<Tokens>>) -> Result<Vec<Token>> {
     let mut tokens = Vec::new();
-    for (parameter, arg) in self.0.iter().zip(args) {
-      if !parameter.novalue
-        && let Some(reverted_tks) = parameter.revert(arg)?
-      {
+    for (parameter, arg) in self.0.iter().filter(|p| !p.novalue).zip(args) {
+      if let Some(reverted_tks) = parameter.revert(arg)? {
         tokens.extend(reverted_tks.unlist());
       }
     }
@@ -554,31 +831,30 @@ impl Parameters {
   /// Revert arguments from their digested form, using `digested_reversion` when available.
   /// This allows parameter types (like BoxSpecification) to control reversion formatting
   /// based on the structured digested data rather than token-level reversion.
-  /// Perl equivalent: `$parameters->revertArguments($self->getArgs)`
+  /// Perl equivalent: `$parameters->revertArguments($self->getArgs)`; one
+  /// argument per valued parameter, as [`Self::revert_arguments`].
   pub fn revert_digested_arguments(
     &self,
     digested_args: &[Option<Digested>],
   ) -> Result<Vec<Token>> {
     let mut tokens = Vec::new();
-    for (parameter, arg_opt) in self.0.iter().zip(digested_args) {
-      if !parameter.novalue {
-        let reverted = if let Some(ref digested_rev) = parameter.digested_reversion {
-          // Use digested_reversion: operates on the raw Digested value
-          match arg_opt {
-            Some(arg) => Some(digested_rev(arg)?),
-            None => None,
-          }
-        } else {
-          // Fall back to standard reversion: Digested → Tokens → Parameter::revert
-          let token_reverted = match arg_opt {
-            Some(arg) => Some(arg.revert()?),
-            None => None,
-          };
-          parameter.revert(token_reverted)?
-        };
-        if let Some(tks) = reverted {
-          tokens.extend(tks.unlist());
+    for (parameter, arg_opt) in self.0.iter().filter(|p| !p.novalue).zip(digested_args) {
+      let reverted = if let Some(ref digested_rev) = parameter.digested_reversion {
+        // Use digested_reversion: operates on the raw Digested value
+        match arg_opt {
+          Some(arg) => Some(digested_rev(arg)?),
+          None => None,
         }
+      } else {
+        // Fall back to standard reversion: Digested → Tokens → Parameter::revert
+        let token_reverted = match arg_opt {
+          Some(arg) => Some(arg.revert()?),
+          None => None,
+        };
+        parameter.revert(token_reverted)?
+      };
+      if let Some(tks) = reverted {
+        tokens.extend(tks.unlist());
       }
     }
     Ok(tokens)
@@ -594,9 +870,54 @@ impl Parameters {
   }
 
   pub fn read_arguments(&self, fordefn: Option<&dyn Definition>) -> Result<Vec<ArgWrap>> {
+    Ok(
+      self
+        .read_parameter_list(fordefn, false)?
+        .unwrap_or_default(),
+    )
+  }
+
+  /// `read_arguments` for a macro call: `None` when the call does not match its
+  /// definition — a `\def` parameter text's leading delimiter is not there
+  /// (tex.web §397-398 "Use of \x doesn't match its definition": reported, the
+  /// token backed up, the macro IGNORED). Perl reports it and expands the macro
+  /// anyway, so a self-calling `\def\lp\x{\lp}` met with `\lp\y` re-reports to
+  /// its error cap; the expansion loop has no cap and ran to the digestion fuse.
+  /// Arguments after the miss are not read (TeX stops at the mismatch).
+  /// OXIDIZED_DESIGN #295; guard
+  /// `perfect_kernel_batch56::macro_delimiter_mismatch_ignores_the_call`.
+  ///
+  /// `None` too when an argument ran off the end of a file
+  /// ([`gullet::argument_runaway`]): tex.web §392 "Report a runaway argument
+  /// and abort" abandons the call and drops the arguments read so far; the
+  /// caller that set the `matching` status consumes the mark
+  /// (`Expandable::read_call_arguments`). Guards: `scanner_status::*`.
+  pub fn read_macro_arguments(
+    &self,
+    fordefn: Option<&dyn Definition>,
+  ) -> Result<Option<Vec<ArgWrap>>> {
+    self.read_parameter_list(fordefn, true)
+  }
+
+  /// The parameter loop of [`Self::read_macro_arguments`] (`macro_call`) and
+  /// [`Self::read_arguments`]. Only a macro call stops at a runaway argument:
+  /// a nested re-parse of an argument already read (`reparse_argument`) must
+  /// deliver its values.
+  fn read_parameter_list(
+    &self,
+    fordefn: Option<&dyn Definition>,
+    macro_call: bool,
+  ) -> Result<Option<Vec<ArgWrap>>> {
     let mut args = Vec::with_capacity(self.0.len());
+    // `LXML_TRACE_ARGS=\cs`: see `read_arguments_and_digest` (macros and
+    // primitives read their parameters here).
+    let traced = TRACE_ARGS.is_some() && fordefn.is_some_and(traced_definition);
+    let tails = self.may_defer_tails().then(ArgumentTails::open);
     for parameter in &self.0 {
       let values = parameter.read(fordefn)?;
+      if traced && let Some(d) = fordefn {
+        trace_argument(d, parameter, &values);
+      }
       if parameter.predigest.is_some() {
         // TODO: Sometimes we legitimately want to use e.g. Number parameters without the predigest
         // closure... so this shouldn't be an error, not even an info -- but leaving it here
@@ -605,42 +926,596 @@ impl Parameters {
         //   "parameter with predigest closure was invoked in an expandable context. Parameter
         // digestion won't execute." );
       }
+      if macro_call && gullet::argument_runaway() {
+        return Ok(None);
+      }
+      if parameter.is_macro_delimiter() && values.is_none() {
+        return Ok(None);
+      }
       if !parameter.novalue {
         args.push(values);
       }
     }
-    Ok(args)
-  }
-
-  pub fn read_arguments_and_digest(&self, fordefn: &Constructor) -> Result<Vec<Option<Digested>>> {
-    let mut args = Vec::with_capacity(self.0.len());
-    for parameter in &self.0 {
-      let value = parameter.read(Some(fordefn))?;
-      if !parameter.novalue {
-        let digested_value = parameter.digest(value, Some(fordefn))?;
-        args.push(digested_value);
-      }
+    if let Some(tails) = tails {
+      tails.hand_back(fordefn);
     }
+    Ok(Some(args))
+  }
+
+  /// The tokens its one parameter reads ([`Parameter::stated`]), when this is the inner spec of a braced or bracketed
+  /// argument (`{Dimension}`, `[TempboxaDimension]`, `{GraphixDimension}`).
+  fn stated_argument_cell(&self) -> Option<&RefCell<Option<Tokens>>> {
+    match self.0.as_slice() {
+      [only] => Some(&only.stated),
+      _ => None,
+    }
+  }
+
+  /// Read and digest a constructor's arguments. Under [`KEEP_STATED_LENGTHS`], `stated` receives the tokens each
+  /// braced or bracketed typed argument states (a length's `{0.48\textwidth}`), with its index among the returned
+  /// arguments; `withheld` is set when it has such an argument and a binding withheld their tokens
+  /// ([`WITHHOLD_STATED_LENGTHS`]).
+  pub fn read_arguments_and_digest(
+    &self,
+    fordefn: &Constructor,
+    stated: &mut Vec<(usize, Tokens)>,
+    withheld: &mut bool,
+  ) -> Result<Vec<Option<Digested>>> {
+    let mut args = Vec::with_capacity(self.0.len());
+    // `LXML_TRACE_ARGS=\cs` prints every argument this constructor reads, as
+    // reverted tokens, before it is digested — a bisect aid for "which tokens
+    // did the `{}` scan swallow" questions (examdesign's version-loop
+    // re-execution; wave 14). Off by default.
+    let traced = TRACE_ARGS
+      .as_deref()
+      .is_some_and(|want| fordefn.get_cs().to_string() == want);
+    let tails = self.may_defer_tails().then(ArgumentTails::open);
+    // Size arguments read with the box set (`after_box`): their raw tokens wait
+    // in their slot until the box, the last argument, is digested.
+    let mut after_box: Vec<(usize, &Parameter, ArgWrap)> = Vec::new();
+    let last = self.0.len().saturating_sub(1);
+    // whether the lengths' stated tokens are kept, looked up at the first such parameter
+    let mut keep: Option<bool> = None;
+    for (index, parameter) in self.0.iter().enumerate() {
+      let measures = parameter.measures_the_box();
+      let stated_cell = parameter
+        .inner
+        .as_ref()
+        .and_then(Parameters::stated_argument_cell)
+        .filter(|_| *keep.get_or_insert_with(|| lookup_bool(KEEP_STATED_LENGTHS)));
+      if let Some(cell) = stated_cell {
+        cell.replace(Some(Tokens::new(Vec::new())));
+      }
+      let value = if measures {
+        parameter.read_with(None, Some(fordefn))?
+      } else {
+        parameter.read(Some(fordefn))?
+      };
+      // (a size read with the box set is re-parsed below, and its tokens taken there)
+      if !measures
+        && let Some(tokens) = stated_cell.and_then(|cell| cell.take())
+        && !tokens.is_empty()
+        && !parameter.novalue
+      {
+        stated.push((args.len(), tokens));
+      }
+      if traced {
+        let shown = value.revert().map(|t| t.to_string()).unwrap_or_default();
+        eprintln!(
+          "ARGS {}: {} = {shown}",
+          fordefn.get_cs(),
+          parameter.stringify()
+        );
+      }
+      if parameter.novalue {
+        continue;
+      }
+      if measures {
+        after_box.push((args.len(), parameter, value));
+        args.push(None);
+        continue;
+      }
+      // TeX sets the box in a group (`\hbox{`), before the sizes are read: its
+      // font changes do not reach them (`\resizebox{2em}{!}{\Large x}`).
+      let digested_value =
+        if index == last && !after_box.is_empty() && parameter.name == pin!("Plain") {
+          crate::stomach::begingroup();
+          let digested = parameter.digest(value, Some(fordefn));
+          crate::stomach::endgroup()?;
+          digested?
+        } else {
+          parameter.digest(value, Some(fordefn))?
+        };
+      args.push(digested_value);
+    }
+    debug_assert!(
+      after_box.is_empty() || self.0.last().is_some_and(|last| !last.measures_the_box()),
+      "{}: a size argument read after the box needs the box as the last argument",
+      fordefn.get_cs()
+    );
+    if after_box.iter().any(|(_, _, raw)| !raw.is_none()) {
+      let content = args.last().cloned().flatten();
+      within_tempboxa(content.as_ref(), || {
+        for (slot, parameter, raw) in after_box {
+          let inner = parameter.inner.as_ref().expect("measures_the_box");
+          let cell = inner.stated_argument_cell().filter(|_| keep == Some(true));
+          if let Some(cell) = cell {
+            cell.replace(Some(Tokens::new(Vec::new())));
+          }
+          let mut values = inner.reparse_argument(raw)?;
+          if let Some(tokens) = cell.and_then(|cell| cell.take())
+            && !tokens.is_empty()
+          {
+            stated.push((slot, tokens));
+          }
+          let value = if values.is_empty() {
+            ArgWrap::None
+          } else {
+            values.remove(0)
+          };
+          args[slot] = parameter.digest(value, Some(fordefn))?;
+        }
+        Ok(())
+      })?;
+    }
+    if let Some(tails) = tails {
+      tails.hand_back(Some(fordefn));
+    }
+    // (looked up only for a constructor with a length argument whose tokens were not kept)
+    *withheld = keep == Some(false) && lookup_bool(WITHHOLD_STATED_LENGTHS);
     Ok(args)
   }
 
+  /// Re-read an argument already read as tokens (`{Dimension}`, `[Number]`,
+  /// `CommaList:Number`: a braced or bracketed argument whose inner spec gives
+  /// its type). Perl `Parameters::reparseArgument` (Parameters.pm:78-85).
+  ///
+  /// What follows the value inside the braces is NOT dropped (Perl's
+  /// `readingFromMouth` closes the argument's mouth unread, Gullet.pm:131-135;
+  /// KNOWN_PERL_ERRORS #275): TeX leaves it in the input — `\setlength#1#2{#1
+  /// #2\relax}` (latex.ltx:10253), through which latex.ltx passes every such
+  /// length — so `A\hspace{1em\foo}B` typesets the `x` of `\def\foo{x}`. The
+  /// tail is handed back at the end of the command's argument list
+  /// (`ArgumentTails`). With calc loaded, a length is evaluated as a whole
+  /// expression ([`gullet::braced_length_evaluator`]). OXIDIZED_DESIGN #317.
   pub fn reparse_argument(&self, value: ArgWrap) -> Result<Vec<ArgWrap>> {
     if value.is_none() {
       return Ok(Vec::new());
     }
-    let value_tokens = value.revert()?;
-    // start with empty mouth
-    let reader_mouth = Mouth::new("", None)?;
-    gullet::reading_from_mouth(reader_mouth, || {
-      gullet::unread(value_tokens); // but put back tokens to be read
-      let values = self.read_arguments(None)?;
-      gullet::skip_spaces()?;
-      Ok(values)
-    })
+    let length = self.braced_length_type();
+    let calc = length.and_then(|_| gullet::braced_length_evaluator());
+    let tokens = value.revert()?;
+    // the tokens the source states, for a reader that asked for them (`Parameter::stated`)
+    if let [only] = self.0.as_slice()
+      && let Ok(mut stated) = only.stated.try_borrow_mut()
+      && stated.is_some()
+    {
+      *stated = Some(tokens.clone());
+    }
+    let (values, tail) = read_braced(tokens, || {
+      if let Some((kind, true)) = length
+        && let Some(value) = read_through_redefined_setlength(kind)?
+      {
+        return Ok(vec![ArgWrap::from(value)]);
+      }
+      match (length, calc) {
+        (Some((kind, _)), Some(evaluate)) => {
+          Ok(vec![ArgWrap::from(coerce_length(evaluate(kind)?, kind))])
+        },
+        _ => self.read_arguments(None),
+      }
+    })?;
+    ArgumentTails::defer(tail);
+    Ok(values)
+  }
+
+  /// Whether reading these parameters can defer a tail: only a parameter with
+  /// an inner spec re-parses its argument ([`Self::reparse_argument`]). The
+  /// others open no `ArgumentTails` scope, which every macro call would pay for.
+  fn may_defer_tails(&self) -> bool { self.0.iter().any(|parameter| parameter.inner.is_some()) }
+
+  /// The register type of a lone `Dimension`/`Glue` inner spec, the braced
+  /// lengths calc evaluates whole (see [`gullet::BracedLengthFn`]), and whether
+  /// it is declared a `\setlength` operand (`SetlengthDimension`/`SetlengthGlue`,
+  /// read through a redefined `\setlength`: [`read_through_redefined_setlength`]).
+  fn braced_length_type(&self) -> Option<(RegisterType, bool)> {
+    let [only] = self.0.as_slice() else {
+      return None;
+    };
+    let name = only.name;
+    if name == pin!("Dimension") {
+      Some((RegisterType::Dimension, false))
+    } else if name == pin!("Glue") {
+      Some((RegisterType::Glue, false))
+    } else if name == pin!("SetlengthDimension") || name == pin!("TempboxaDimension") {
+      Some((RegisterType::Dimension, true))
+    } else if name == pin!("SetlengthGlue") {
+      Some((RegisterType::Glue, true))
+    } else {
+      None
+    }
   }
 
   pub fn as_keysets(&self) -> Vec<String> { self.0.iter().map(|p| p.stringify()).collect() }
 }
+
+/// latex.ltx's `\@begin@tempboxa` … `\@end@tempboxa` (16085-16094) around a
+/// box command's size arguments: in a group, `\@tempboxa` holds `content` and
+/// `\width`/`\height`/`\depth`/`\totalheight` measure it (`\lx@tempboxa@sizes`,
+/// latex.ltx:16088-16093; internal dimensions, so `-.5\height` is exact to the
+/// sp, tex.web §455), then `evaluate` reads the sizes. Without `\@tempboxa`
+/// (plain TeX) `evaluate` runs unbound.
+pub fn within_tempboxa<R>(
+  content: Option<&Digested>,
+  evaluate: impl FnOnce() -> Result<R>,
+) -> Result<R> {
+  let tempboxa = crate::T_CS!("\\@tempboxa");
+  let sizes = crate::T_CS!("\\lx@tempboxa@sizes");
+  if lookup_definition(&tempboxa)?.is_none() || lookup_definition(&sizes)?.is_none() {
+    return evaluate();
+  }
+  crate::stomach::begingroup();
+  let result = (|| {
+    let number = gullet::reading_from_mouth(Mouth::default(), || {
+      gullet::unread_one(tempboxa);
+      gullet::read_number()
+    })?;
+    let stored = content.map_or(Stored::None, |content| Stored::Digested(content.clone()));
+    assign_value(
+      &format!(
+        "box{}",
+        crate::common::numeric_ops::NumericOps::value_of(number)
+      ),
+      stored,
+      None,
+    );
+    crate::stomach::digest(Tokens::new(vec![sizes]))?;
+    evaluate()
+  })();
+  crate::stomach::endgroup()?;
+  result
+}
+
+/// Read a value from a braced argument's `tokens`, in a mouth of their own,
+/// and return it with the argument's TAIL: whatever `read` left unread — what
+/// an expanding scan looked ahead at and put back, and the rest of the
+/// argument. Perl `readingFromMouth` (Gullet.pm:108-146) drops the tail; TeX
+/// has never seen braces here and leaves it in the input, so every caller hands
+/// it back (`ArgumentTails`, or [`read_braced_value`]'s callers).
+pub fn read_braced<R>(tokens: Tokens, read: impl FnOnce() -> Result<R>) -> Result<(R, Vec<Token>)> {
+  let init_if_depth = crate::definition::conditional::if_stack_depth();
+  gullet::reading_from_mouth(Mouth::new("", None)?, || {
+    gullet::unread(tokens);
+    let value = {
+      let _braced = BracedRead::enter();
+      read()?
+    };
+    // A conditional opened inside the argument and cut by the scan
+    // (`\hspace{\ifx\a\b\Lreg\else\a\U\fi}`, read_dimension stops at `\U`)
+    // is expanded to its `\fi` HERE, as TeX's `get_x_token` after `scan_dimen`
+    // (tex.web §448/§461) meets it next — the conditional must not outlive the
+    // argument's mouth (OXIDIZED_DESIGN #193; witness typog-example,
+    // `parbox_dimen_conditional_double.tex`). What the taken branch still
+    // holds heads the tail. One expansion at a time, stopping as the frame
+    // closes: what follows the `\fi` is expanded where TeX expands it, after
+    // the command (`\setlength\x{\ifx…\U\fi\the\x}` reads `\x`'s new value).
+    let mut tail = Vec::new();
+    while crate::definition::conditional::if_stack_depth() > init_if_depth {
+      match gullet::read_token()? {
+        Some(token) => {
+          if !gullet::expand_once_partial(token)? {
+            tail.push(token);
+          }
+        },
+        None => {
+          if crate::definition::conditional::if_stack_depth() > init_if_depth {
+            // A genuinely unbalanced argument (`\hspace{\iftrue 3pt}`):
+            // pdflatex reports "\iftrue … was incomplete", Perl warns at
+            // `\end{document}`; say so here, then drop the orphaned frames so
+            // they cannot leak outward.
+            Warn!(
+              "expected",
+              "\\fi",
+              "Missing \\fi: conditional opened inside an argument fell off its end"
+            );
+            while crate::definition::conditional::if_stack_depth() > init_if_depth {
+              pop_if_frame();
+            }
+          }
+          break;
+        },
+      }
+    }
+    if tail.is_empty() {
+      gullet::skip_spaces()?;
+    }
+    tail.extend(gullet::take_rest_of_mouth());
+    strip_scanned_error_stubs(&mut tail);
+    Ok((value, tail))
+  })
+}
+
+/// Read a `kind` value from a braced argument's `tokens` the way LaTeX's
+/// assignments scan it — `\setlength#1#2{#1 #2\relax}`, `\addtolength`,
+/// `\setcounter`, `\addtocounter` (latex.ltx:10253-10254, 10115-10122): by
+/// the register's own type, a length through calc when it is loaded (see
+/// [`gullet::BracedLengthFn`]). Returns the value and the argument's tail; the
+/// caller assigns, then puts the tail back (`gullet::unread_vec`) — exactly
+/// where TeX leaves it, after the assignment.
+pub fn read_braced_value(
+  tokens: Tokens,
+  kind: RegisterType,
+) -> Result<(RegisterValue, Vec<Token>)> {
+  read_braced(tokens, || read_length_value(kind))
+}
+
+/// A register value of type `kind` from the current mouth, as [`read_braced_value`] reads one: a length through
+/// calc's evaluator when calc is loaded ([`gullet::braced_length_evaluator`]), else by TeX's scan for the type.
+pub fn read_length_value(kind: RegisterType) -> Result<RegisterValue> {
+  let calc = if matches!(kind, RegisterType::Dimension | RegisterType::Glue) {
+    gullet::braced_length_evaluator()
+  } else {
+    None
+  };
+  match calc {
+    Some(evaluate) => Ok(coerce_length(evaluate(kind)?, kind)),
+    None => gullet::read_value(kind),
+  }
+}
+
+thread_local! {
+  /// Set while [`read_through_redefined_setlength`] runs a redefined
+  /// `\setlength`: a braced length read inside it takes the direct path.
+  static THROUGH_SETLENGTH: Cell<bool> = const { Cell::new(false) };
+}
+
+/// A `SetlengthDimension`/`SetlengthGlue` argument is the operand latex.ltx
+/// hands to `\setlength` (see [`gullet::BracedLengthFn`]), so a package that
+/// redefines `\setlength` as a macro changes how it reads. bxcalcux.sty's
+/// `\bxcx@decl@patch\setlength` parses custom units (`\newcalcunit{tm}{0.05em}`
+/// makes `\hspace{6tm}` 3pt; bxcalc manual), and pgf's pictures swap in
+/// `\pgf@setlength` (pgfcorescopes.code.tex:238-242, 311-317). Then the length
+/// is assigned as latex.ltx assigns it, `\setlength<register>{<argument>}`
+/// digested (`\@hspace`, latex.ltx:9425; a dimen register for a `Dimension`, as
+/// `\@tempdima` is, so a scan stops before `plus`), and the register read back.
+/// Whatever the assignment left in the input is typeset there, before the
+/// command's own output, as TeX typesets it for the boxes and `\hspace`; for
+/// `\\[..]` TeX typesets it after the break (inside `\vadjust`, latex.ltx:9260).
+/// `None` when `\setlength` is a primitive (the kernel's or calc's binding) or
+/// is undefined (plain TeX: the registers are LaTeX-only). OXIDIZED_DESIGN #325.
+///
+/// Precondition: called directly inside [`read_braced`]'s reader, whose mouth
+/// holds exactly the rest of the argument: the whole mouth is taken as the
+/// operand. The reentrancy flag covers the whole digestion, the tail's included.
+pub fn read_through_redefined_setlength(kind: RegisterType) -> Result<Option<RegisterValue>> {
+  if THROUGH_SETLENGTH.with(Cell::get) || !in_braced_read() {
+    return Ok(None);
+  }
+  let setlength = crate::T_CS!("\\setlength");
+  let register = if matches!(kind, RegisterType::Glue) {
+    crate::T_CS!("\\lx@braced@skip")
+  } else {
+    crate::T_CS!("\\lx@braced@dimen")
+  };
+  if !lookup_definition(&setlength)?.is_some_and(|defn| defn.is_expandable())
+    || lookup_definition(&register)?.is_none()
+  {
+    return Ok(None);
+  }
+  struct Through;
+  impl Drop for Through {
+    fn drop(&mut self) { THROUGH_SETLENGTH.with(|through| through.set(false)); }
+  }
+  THROUGH_SETLENGTH.with(|through| through.set(true));
+  let _through = Through;
+  let mut call = vec![setlength, register, crate::T_BEGIN!()];
+  call.extend(gullet::take_rest_of_mouth());
+  call.push(crate::T_END!());
+  let typeset = crate::stomach::digest(Tokens::new(call))?;
+  crate::stomach::extend_box_list(typeset.unlist());
+  let value = lookup_register_token(&register, Vec::new())?.unwrap_or_default();
+  Ok(Some(coerce_length(value, kind)))
+}
+
+/// A calc result (always a skip, calc.sty:56) as the `kind` of length read.
+fn coerce_length(value: RegisterValue, kind: RegisterType) -> RegisterValue {
+  match kind {
+    RegisterType::Dimension => RegisterValue::Dimension(value.into()),
+    RegisterType::Glue => RegisterValue::Glue(value.into()),
+    _ => value,
+  }
+}
+
+thread_local! {
+  /// Braced-argument tails ([`read_braced`]) waiting for their command's
+  /// argument list to end, in reading order. See [`ArgumentTails`].
+  static ARGUMENT_TAILS: RefCell<Vec<Token>> = const { RefCell::new(Vec::new()) };
+  /// How many [`ArgumentTails`] scopes are open.
+  static TAIL_SCOPES: Cell<usize> = const { Cell::new(0) };
+  /// How many [`read_braced`] reads are running, for [`in_braced_read`].
+  static BRACED_READS: Cell<usize> = const { Cell::new(0) };
+  /// Why tails are dropped instead of handed back, innermost last
+  /// ([`dropping_argument_tails`]).
+  static DROPPING_TAILS: RefCell<Vec<&'static str>> = const { RefCell::new(Vec::new()) };
+}
+
+/// One running [`read_braced`], counted for [`in_braced_read`]; the count is
+/// restored on every exit, a caught panic included (cortex_worker reuses the
+/// thread for the next paper).
+struct BracedRead;
+impl BracedRead {
+  fn enter() -> Self {
+    BRACED_READS.with(|reads| reads.set(reads.get() + 1));
+    BracedRead
+  }
+}
+impl Drop for BracedRead {
+  fn drop(&mut self) { BRACED_READS.with(|reads| reads.set(reads.get().saturating_sub(1))); }
+}
+
+/// Where a handed-back tail would be misread, so `invoke` runs with the tails
+/// its commands leave DROPPED, and warned about, `why` naming what TeX does
+/// with the text:
+/// - a column type (`\NC@rewrite@p`, alignment.rs): the template reader would
+///   read a tail as more column letters (`p{\textwidth-1pt}c` a second `p`
+///   column of width `t`); TeX typesets it in every cell (array.sty:189-191
+///   `\@startpbox` → `\setlength\hsize{#1}`);
+/// - the head of an alignment row, between rows (tex_tables.rs
+///   `digest_alignment_column`): a tail would open the next row with a cell
+///   of its own, where `\noalign` then fails (`\cmidrule[lr]{1-2}
+///   \cmidrule[lr]{3-4}` for `(lr)`: 2605.27476, 2605.25272; pdflatex prints
+///   the `lr` between the rows, with 2 errors).
+///
+/// The drop scope is restored on every exit, a caught panic included.
+/// OXIDIZED_DESIGN #317.
+pub fn dropping_argument_tails<R>(
+  why: &'static str,
+  invoke: impl FnOnce() -> Result<R>,
+) -> Result<R> {
+  struct Dropping;
+  impl Drop for Dropping {
+    fn drop(&mut self) {
+      DROPPING_TAILS.with(|stack| {
+        stack.borrow_mut().pop();
+      });
+    }
+  }
+  DROPPING_TAILS.with(|stack| stack.borrow_mut().push(why));
+  let _dropping = Dropping;
+  invoke()
+}
+
+/// TeX's treatment of a tail dropped between the rows of an alignment.
+pub const BETWEEN_ALIGNMENT_ROWS: &str = "TeX typesets it between the rows";
+/// TeX's treatment of a column type's tail.
+pub const IN_EVERY_CELL: &str = "TeX typesets it in every cell of the column";
+
+/// Drop `tail`, the rest of an argument of `cs` that has no place to go,
+/// with the warning `ArgumentTails` gives when it holds more than spaces and
+/// `\relax`.
+pub fn drop_argument_tail(cs: &Token, tail: Vec<Token>, why: &str) {
+  if let Some(first) = tail.iter().find(|token| !is_inert_tail_token(token)) {
+    Warn!(
+      "unexpected",
+      first.stringify(),
+      s!(
+        "Unexpected text after the value in an argument of {} ('{}'); it is dropped ({why})",
+        cs,
+        Tokens::new(tail.clone())
+      )
+    );
+  }
+}
+
+/// Whether a parameter reader runs on a braced argument's own mouth
+/// ([`read_braced`]), where the rest of the current mouth is the rest of that
+/// argument (`DefaultUnits`, base_parameter_types.rs).
+pub fn in_braced_read() -> bool { BRACED_READS.with(|reads| reads.get() > 0) }
+
+/// One argument list's share of the deferred braced-argument tails.
+///
+/// TeX grabs a macro's arguments as token lists and scans a quantity out of one
+/// only afterwards (`\@rule[#1]#2#3{… \setlength\@tempdimb{#2}…}`,
+/// latex.ltx:16360-16366), so what follows the quantity never meets the next
+/// argument. A binding reads each typed argument as it goes, so a tail waits
+/// here until the list is complete and is then put back in the input: read
+/// next, after the command. For an assignment that is TeX's place (those read
+/// their value with [`read_braced_value`] instead, without a warning); a command
+/// that outputs a box or space (`\hspace`, `\makebox`, `\parbox`, `\rule`,
+/// `minipage`) scans its length BEFORE that output in TeX, so there the tail
+/// lands one step late. Either way a tail with more than spaces and `\relax` is
+/// almost always an authoring slip (a length expression without calc), and a
+/// warning names it. OXIDIZED_DESIGN #317.
+struct ArgumentTails {
+  mark: usize,
+}
+
+impl ArgumentTails {
+  fn open() -> Self {
+    TAIL_SCOPES.with(|scopes| scopes.set(scopes.get() + 1));
+    ArgumentTails {
+      mark: ARGUMENT_TAILS.with(|tails| tails.borrow().len()),
+    }
+  }
+
+  /// Hold `tail` for the argument list being read; with none open (a re-parse
+  /// outside a definition's arguments) it goes back in the input at once.
+  fn defer(tail: Vec<Token>) {
+    if tail.is_empty() {
+    } else if TAIL_SCOPES.with(|scopes| scopes.get()) == 0 {
+      gullet::unread_vec(tail);
+    } else {
+      ARGUMENT_TAILS.with(|tails| tails.borrow_mut().extend(tail));
+    }
+  }
+
+  /// Put the tails deferred since [`Self::open`] back in the input. `fordefn`
+  /// is the command whose output the tail now follows, and is warned about;
+  /// None for a nested re-parse, whose tail travels on with its enclosing
+  /// argument's.
+  fn hand_back(self, fordefn: Option<&dyn Definition>) {
+    let tail = ARGUMENT_TAILS.with(|tails| tails.borrow_mut().split_off(self.mark));
+    if tail.is_empty() {
+      return;
+    }
+    let Some(defn) = fordefn else {
+      // A nested re-parse: the tail travels on with its enclosing argument's.
+      gullet::unread_vec(tail);
+      return;
+    };
+    if let Some(why) = DROPPING_TAILS.with(|stack| stack.borrow().last().copied()) {
+      drop_argument_tail(&defn.get_cs(), tail, why);
+      return;
+    }
+    if let Some(first) = tail.iter().find(|token| !is_inert_tail_token(token)) {
+      Warn!(
+        "unexpected",
+        first.stringify(),
+        s!(
+          "Unexpected text after the value in an argument of {} ('{}'); it is read after {0}",
+          defn.get_cs(),
+          Tokens::new(tail.clone())
+        )
+      );
+    }
+    gullet::unread_vec(tail);
+  }
+}
+
+impl Drop for ArgumentTails {
+  /// An argument list abandoned by an error or a mismatched macro call (tex.web
+  /// §392/§398 drop its arguments) takes its tails with it.
+  fn drop(&mut self) {
+    ARGUMENT_TAILS.with(|tails| tails.borrow_mut().truncate(self.mark));
+    TAIL_SCOPES.with(|scopes| scopes.set(scopes.get().saturating_sub(1)));
+  }
+}
+
+/// Drop the undefined control sequences at the head of `tail`: the scan's
+/// look-ahead expanded them, which reported them and stubbed them as
+/// `<ltx:ERROR>` (`generate_error_stub`), and TeX discards an undefined control
+/// sequence it expands (tex.web §370) — it must not come back as text.
+/// `\hspace{6\@p@t}` with USG.cls's `\@p@t` missing (2605.25073). Spaces the
+/// look-ahead passed on the way go with them.
+fn strip_scanned_error_stubs(tail: &mut Vec<Token>) {
+  loop {
+    let Some(first) = tail.iter().position(|t| t.get_catcode() != Catcode::SPACE) else {
+      return;
+    };
+    if !is_error_stub(&tail[first]) {
+      return;
+    }
+    tail.drain(..=first);
+  }
+}
+
+/// A tail token that does nothing when read: a space or `\relax` (`\stretch{1}`
+/// = `0pt plus 1fill\relax` leaves its `\relax`, which TeX's own `\relax` after
+/// `#2` would have ended the scan with).
+fn is_inert_tail_token(token: &Token) -> bool {
+  token.get_catcode() == Catcode::SPACE || token.defined_as(&crate::token::TOKEN_RELAX)
+}
+
 impl fmt::Display for Parameters {
   fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
     let mut content = String::new();
@@ -691,6 +1566,226 @@ impl ToTokens for Parameter {
       }
     });
   }
+}
+
+/// What a definition primitive reads unexpanded after itself (tex.web §1215 `get_r_token`).
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum DefinitionNames {
+  /// Not a definition primitive.
+  None,
+  /// One token: the name of the `\chardef` family and `\font` (§1257), the token `\afterassignment` and
+  /// `\aftergroup` save (§1269, §1271), the name of `\futurelet`, whose two peeked tokens TeX puts back to be read as
+  /// usual (§1221 `back_input`).
+  Name,
+  /// `\def`, `\gdef`: the name, the parameter text and the body, all unexpanded (§473 `scan_toks(true,false)`).
+  Def,
+  /// `\edef`, `\xdef`: the name and the parameter text unexpanded; the body is expanded (§473 `scan_toks(true,true)`).
+  Edef,
+  /// LaTeX's `\newcommand`, `\renewcommand`, `\providecommand`, `\DeclareRobustCommand` (`OptionalMatch:* DefToken
+  /// [Number][]{}`): the star, the name, both options and the body, macro arguments TeX reads unexpanded.
+  LatexDef,
+  /// `\let`: a name, spaces, an optional `=` with one optional space, the target (§1221).
+  Let,
+  /// `\read`/`\readline`: a number, the keyword `to`, a name (§1225).
+  ReadTo,
+}
+
+/// The names `token` reads as a definition primitive: its meaning's own name, so a `\let` copy of `\def` reads as
+/// `\def`, and a macro or an undefined name as none (one meaning lookup per token).
+fn definition_reads_names(token: &Token) -> DefinitionNames {
+  if !token.get_catcode().is_active_or_cs() {
+    return DefinitionNames::None;
+  }
+  with_meaning(token, |meaning| match meaning {
+    Some(Stored::Primitive(primitive)) => primitive.cs.with_cs_name(|name| match name {
+      "\\def" | "\\gdef" => DefinitionNames::Def,
+      "\\edef" | "\\xdef" => DefinitionNames::Edef,
+      "\\newcommand" | "\\renewcommand" | "\\providecommand" | "\\DeclareRobustCommand" => {
+        DefinitionNames::LatexDef
+      },
+      "\\chardef" | "\\mathchardef" | "\\countdef" | "\\dimendef" | "\\skipdef" | "\\muskipdef"
+      | "\\toksdef" | "\\font" | "\\futurelet" | "\\afterassignment" | "\\aftergroup" => {
+        DefinitionNames::Name
+      },
+      "\\let" => DefinitionNames::Let,
+      "\\read" | "\\readline" => DefinitionNames::ReadTo,
+      _ => DefinitionNames::None,
+    }),
+    _ => DefinitionNames::None,
+  })
+}
+
+/// Reads, unexpanded and kept from neutralizing, the tokens `kind` names as a definition's names, from the gullet.
+fn read_definition_names(kind: DefinitionNames, tokens: &mut Vec<(Token, bool)>) -> Result<()> {
+  take_definition_names(kind, &mut || gullet::read_token(), tokens)
+}
+
+/// Takes from `next`, kept from neutralizing, the tokens `kind` names as a definition's names.
+fn take_definition_names(
+  kind: DefinitionNames,
+  next: &mut dyn FnMut() -> Result<Option<Token>>,
+  tokens: &mut Vec<(Token, bool)>,
+) -> Result<()> {
+  // The next token, kept as it is (`keep`) or left to neutralizing.
+  let mut take = |tokens: &mut Vec<(Token, bool)>, keep: bool| -> Result<Option<Token>> {
+    let token = next()?;
+    if let Some(t) = token {
+      tokens.push((t, !keep));
+    }
+    Ok(token)
+  };
+  let is_space = |t: &Option<Token>| t.is_some_and(|t| t.get_catcode() == Catcode::SPACE);
+  match kind {
+    DefinitionNames::None => {},
+    DefinitionNames::Name => {
+      take(tokens, true)?;
+    },
+    DefinitionNames::Def | DefinitionNames::Edef => {
+      take(tokens, true)?;
+      // The parameter text, through the body's `{` (not past the end of a malformed group).
+      let mut token = take(tokens, true)?;
+      while token.is_some_and(|t| !matches!(t.get_catcode(), Catcode::BEGIN | Catcode::END)) {
+        token = take(tokens, true)?;
+      }
+      let token = token.filter(|t| t.get_catcode() == Catcode::BEGIN);
+      // `\def`'s body, balanced; `\edef`'s is left to the expanding reader.
+      if kind == DefinitionNames::Def && token.is_some() {
+        take_rest_of_group(&mut take, tokens)?;
+      }
+    },
+    DefinitionNames::LatexDef => {
+      let mut token = take(tokens, true)?;
+      while is_space(&token) {
+        token = take(tokens, true)?;
+      }
+      if is_other_char(&token, "*") {
+        token = take(tokens, true)?;
+        while is_space(&token) {
+          token = take(tokens, true)?;
+        }
+      }
+      // The name: a token or a braced one.
+      if is_begin(&token) {
+        take_rest_of_group(&mut take, tokens)?;
+      }
+      token = take(tokens, true)?;
+      while is_space(&token) {
+        token = take(tokens, true)?;
+      }
+      // `[n]` and `[default]`, each through its `]` outside braces.
+      for _ in 0..2 {
+        if !is_other_char(&token, "[") {
+          break;
+        }
+        let mut depth = 0;
+        loop {
+          match take(tokens, true)? {
+            Some(t) if t.get_catcode() == Catcode::BEGIN => depth += 1,
+            Some(t) if t.get_catcode() == Catcode::END => {
+              depth -= 1;
+              if depth < 0 {
+                break;
+              }
+            },
+            Some(t) if depth == 0 && is_other_char(&Some(t), "]") => break,
+            Some(_) => {},
+            None => break,
+          }
+        }
+        token = take(tokens, true)?;
+        while is_space(&token) {
+          token = take(tokens, true)?;
+        }
+      }
+      // The body.
+      if is_begin(&token) {
+        take_rest_of_group(&mut take, tokens)?;
+      }
+    },
+    DefinitionNames::Let => {
+      take(tokens, true)?;
+      // Spaces, the optional `=` and one optional space, then the target.
+      let mut token = take(tokens, true)?;
+      while is_space(&token) {
+        token = take(tokens, true)?;
+      }
+      if token.is_some_and(|t| t.get_catcode() == Catcode::OTHER && t.with_str(|s| s == "=")) {
+        token = take(tokens, true)?;
+        if is_space(&token) {
+          take(tokens, true)?;
+        }
+      }
+    },
+    DefinitionNames::ReadTo => {
+      // The number and the keyword pass through unexpanded and neutralizable; the name after `to` is kept.
+      let mut previous_t = false;
+      while let Some(token) = take(tokens, false)? {
+        let letter = token.get_catcode() == Catcode::LETTER;
+        let o = letter && token.with_str(|s| s.eq_ignore_ascii_case("o"));
+        if previous_t && o {
+          let mut name = take(tokens, true)?;
+          while is_space(&name) {
+            name = take(tokens, true)?;
+          }
+          break;
+        }
+        previous_t = letter && token.with_str(|s| s.eq_ignore_ascii_case("t"));
+      }
+    },
+  }
+  Ok(())
+}
+
+/// A reader taking the next token into a Semiverbatim argument's tokens, kept as it is (`true`) or left to
+/// neutralizing.
+type TakeToken<'a> = dyn FnMut(&mut Vec<(Token, bool)>, bool) -> Result<Option<Token>> + 'a;
+
+/// Takes, kept as they are, the rest of a balanced group whose `{` was just taken.
+fn take_rest_of_group(take: &mut TakeToken<'_>, tokens: &mut Vec<(Token, bool)>) -> Result<()> {
+  let mut depth = 1;
+  while depth > 0 {
+    match take(tokens, true)? {
+      Some(t) if t.get_catcode() == Catcode::BEGIN => depth += 1,
+      Some(t) if t.get_catcode() == Catcode::END => depth -= 1,
+      Some(_) => {},
+      None => break,
+    }
+  }
+  Ok(())
+}
+
+fn is_other_char(token: &Option<Token>, c: &str) -> bool {
+  token.is_some_and(|t| t.get_catcode() == Catcode::OTHER && t.with_str(|s| s == c))
+}
+
+fn is_begin(token: &Option<Token>) -> bool {
+  token.is_some_and(|t| t.get_catcode() == Catcode::BEGIN)
+}
+
+/// A Semiverbatim argument's tokens neutralized as it is read, but for the names its definition primitives read
+/// ([`take_definition_names`]): `\urladdr{\def~{…}…}` (amsart) keeps its active `~` (1011.4121).
+fn neutralize_keeping_definition_names(value: Tokens, extraspecials: &[char]) -> Tokens {
+  let mut source = value.unlist().into_iter();
+  let mut tokens: Vec<(Token, bool)> = Vec::new();
+  while let Some(token) = source.next() {
+    let kind = definition_reads_names(&token);
+    tokens.push((token, true));
+    if kind != DefinitionNames::None {
+      let _ = take_definition_names(kind, &mut || Ok(source.next()), &mut tokens);
+    }
+  }
+  Tokens::new(
+    tokens
+      .into_iter()
+      .map(|(t, neutralize)| {
+        if neutralize {
+          t.neutralize(extraspecials)
+        } else {
+          t
+        }
+      })
+      .collect(),
+  )
 }
 
 #[cfg(test)]
@@ -764,6 +1859,33 @@ mod tests {
     c.novalue = false;
     let ps = Parameters::new(vec![a, b, c]);
     assert_eq!(ps.get_num_args(), 2);
+  }
+
+  #[test]
+  fn revert_arguments_skips_novalue_parameters() {
+    // Perl Parameters.pm:51-57: a novalue parameter (an environment's leading SkipSpaces)
+    // stores no argument, so the arguments pair with the valued parameters only.
+    // Before, each argument moved a slot left: "a[b]" (the last one dropped).
+    let wrapped = |open: &'static str, close: &'static str| Parameter {
+      reversion: Some(Rc::new(
+        move |tks: Vec<Token>, _: Option<&Parameters>, _: &[Tokens]| {
+          let mut out = vec![T_OTHER!(open)];
+          out.extend(tks);
+          out.push(T_OTHER!(close));
+          Ok(Tokens::new(out))
+        },
+      ) as ReversionClosure),
+      ..Parameter::default()
+    };
+    let skip = Parameter {
+      novalue: true,
+      ..Parameter::default()
+    };
+    let ps = Parameters::new(vec![skip, wrapped("[", "]"), wrapped("(", ")")]);
+    let args = vec![Some(Tokens!(T_OTHER!("a"))), Some(Tokens!(T_OTHER!("b")))];
+    let reverted = ps.revert_arguments(args).unwrap();
+    let expected = ["[", "a", "]", "(", "b", ")"].map(|s| T_OTHER!(s));
+    assert_eq!(reverted, expected.to_vec());
   }
 
   #[test]

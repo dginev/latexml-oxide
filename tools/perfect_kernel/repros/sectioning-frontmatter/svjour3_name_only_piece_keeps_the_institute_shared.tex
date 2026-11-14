@@ -1,0 +1,15 @@
+% witness: 1406.4834, 1603.00632, 1709.00485, 2311.02489, 2208.03119 (svjour3 `\institute{A \and B \at X}`; 63h review r2)
+% oracle:  pdflatex (svjour3.cls) 0 errors: "A. Able · B. Baker" over "Univ A", "ann@a.org"
+% engines: rust 63g = Univ A and the e-mail shared, "A. Able" (the name-only piece) an affiliation of the last author;
+%          63h r2 = paired by position: "A. Able" on Ann, Univ A and the e-mail on Bob alone
+% expect:  as 63g: no position pairing when a name-only piece is among the institutes (the faithful link, both authors
+%          at Univ A, is RED svjour3_name_only_piece_shares_the_next_institute); 0 errors
+% status:  RED (63h r2) -> GREEN (63h)
+\documentclass{svjour3}
+\begin{document}
+\title{T}
+\author{Ann Able \and Bob Baker}
+\institute{A. Able \and B. Baker \at Univ A \\ \email{ann@a.org}}
+\maketitle
+Body.
+\end{document}

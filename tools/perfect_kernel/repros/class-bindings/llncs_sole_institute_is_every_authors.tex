@@ -1,0 +1,24 @@
+% mechanism: llncs's one `\institute` (no `\and` in it) is printed unnumbered under the whole author row
+%   (llncs.cls:868-886, `\c@@inst=1`), so with no `\inst` mark picking it, it is every author's; its `\email` calls are
+%   lines under the row, each address the author it spells (a brace list of local parts each apart), FIDELITY_CHARTER §4
+%   (`share_row_contacts`, OXIDIZED_DESIGN_DIVERGENCES #901).
+% witness: 1002.2793 (`\{A.Egri-Nagy,C.L.Nehaniv\}@herts.ac.uk`), 1405.1167, 2106.04289 (three `\email`s), 2207.11464,
+%   2205.06740, 2306.03360, 2405.11276, 2502.08785, 2511.12796, 2603.26486, 2101.06781, 2011.00616, 1307.8067,
+%   1509.00818, 1809.11127, 1910.11599
+% oracle:  pdflatex 0 errors; "Ann Able, Bob Baker, and Cat Cole" over "University of Somewhere, Town" and
+%   "{able,baker}@x.edu, cole@y.edu"
+% engines: rust int114a = a nameless creator holding the institute and the brace list, `cole@y.edu` on Cat Cole, no
+%   author affiliated; perl = the institute and the brace list on Ann Able (its numeric `affiliation:1`/`author:1`
+%   fallback), `cole@y.edu` on Cat Cole
+% expect:  0 errors, 0 warnings; each author the institute and the address its name spells
+% status:  RED (int114a) -> GREEN (85b)
+% preload: ar5iv.sty
+\documentclass{llncs}
+\begin{document}
+\title{A Title}
+\author{Ann Able \and Bob Baker \and Cat Cole}
+\institute{University of Somewhere, Town\\ \email{\{able,baker\}@x.edu}, \email{cole@y.edu}}
+\maketitle
+\begin{abstract}Text.\end{abstract}
+Body.
+\end{document}

@@ -1,0 +1,23 @@
+% mechanism: a wordless REVTeX `\thanks` written after `\author` (`\thanks{$\dagger$}`, `\thanks{\dots}`) goes the binding's contact
+%   route, which never enters the reading, so UNC's count (`emit.rs::unwritten_notes`, the reading's author-block notes) misses it:
+%   lost with no Warning. `\thanks{Hello}` is kept as `<contact role="thanks">`. Siblings: every binding whose `\thanks` is a
+%   separate command needs the same count.
+% witness: synthetic (revUNC q1_revtex)
+% oracle:  pdflatex (TL 2025, revtex4-2, -no-shell-escape) 0 `!`; pdftotext "∗ †" and "† b@x.org; . . ."
+% engines: rust UNCbase and UNC: 0 E, 0 W, neither note kept
+% expect:  each note kept (its ink) or one Warning per lost note naming it
+% status:  RED (revUNC, int168a) — moves: post-merge (UNCR)
+\documentclass{revtex4-2}
+\begin{document}
+\title{T}
+\author{Ann Able}
+\thanks{$\dagger$}
+\affiliation{Univ A}
+\author{Bob Baker}
+\email{b@x.org}
+\thanks{\dots}
+\affiliation{Univ A}
+\begin{abstract}A\end{abstract}
+\maketitle
+x
+\end{document}

@@ -1,0 +1,12 @@
+% witness: 1505.02369, 1901.01055 (run-336 AMS-TeX `\end` cluster; the body without `\document`)
+% oracle:  amstex (AMS-TeX format) 0 errors; pdflatex n/a (plain AMS-TeX)
+% engines: rust 64s = 1 Error:unexpected:\endgroup; Perl 0.8.8 0
+% expect:  0 errors; one paragraph "Some text." ("Never typeset." after `\end` is not)
+% status:  RED (64s) -> GREEN (64x)
+% preload: ar5iv.sty
+% engine:  amstex
+\input amstex
+\documentstyle{amsppt}
+Some text.
+\end
+Never typeset.

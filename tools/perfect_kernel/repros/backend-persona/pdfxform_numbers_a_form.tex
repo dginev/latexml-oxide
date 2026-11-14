@@ -1,0 +1,15 @@
+% witness: arXiv 2605.10543 (cortex run 320, 56id PDF output): media9's pdfbase takes its pdftex
+%          branch and calls \pdfxform (pdfbase.sty:426)
+% oracle:  pdflatex 0 errors; Hello.
+% engines: rust (56id) = "\pdfxform undefined", then pdfbase's dictionary text leaks into the page;
+%          Perl lacks \pdfxform too (pdfTeX.pool.ltxml:96 has only \pdfxformname)
+% expect:  0 errors; <p>Hello. [void](2)</p> (the form's box is made void, as \box does)
+% status:  RED (56id) -> GREEN (56if)
+\documentclass{article}
+\usepackage{pdfbase}
+\ExplSyntaxOn
+\pbs_pdfxform:nnnnn{}{1}{1}{}{0}
+\ExplSyntaxOff
+\begin{document}
+Hello. \setbox0=\hbox{Z}\pdfxform attr{/A 1} 0 [\ifvoid0 void\else full\fi](\the\pdflastxform)
+\end{document}

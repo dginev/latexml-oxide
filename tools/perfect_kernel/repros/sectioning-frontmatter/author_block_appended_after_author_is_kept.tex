@@ -1,0 +1,21 @@
+% What code appends to `\@author` after `\author` stored it (a template's `\address`, `\email` rows,
+% `\g@addto@macro\@author{\\…}`) is the author block `\@maketitle` prints with the names (article.cls:247);
+% it is handed to the creators at `\maketitle` as affiliation rows. Perl drops it.
+% witness: hindawi manual (hindawi_latex_template.tex:57-62, ~27 words: affiliations, correspondence,
+%          e-mails); cjs-rcs-article.cls:361 `\affil`.
+% status:  GREEN (59d)
+% oracle:  pdflatex 0 errors: "A. Author1", "1Affiliation one", "Emails: a@b.c".
+% expect:  0 errors, 0 warnings.
+\documentclass{article}
+\makeatletter
+\def\address[#1]#2{\g@addto@macro\@author{\\\textsuperscript{#1}#2}}
+\def\email#1{\g@addto@macro\@author{\\Emails: #1}}
+\makeatother
+\begin{document}
+\title{T}
+\author{A. Author\textsuperscript{1}}
+\address[1]{Affiliation one}
+\email{a@b.c}
+\maketitle
+Body.
+\end{document}

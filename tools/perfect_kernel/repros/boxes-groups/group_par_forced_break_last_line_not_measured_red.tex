@@ -1,0 +1,12 @@
+% mechanism: `x{\\ \par}` in a `\vbox`: the forced break ends x's line and TeX's `\par` sets an empty last line (latex.ltx's
+%   `\\` is `\newline`: `\hfil\break`), measured as a second line; ours keeps the `<break/>` in x's paragraph and measures
+%   one line (rg1b measured two; RG1c's blank rule measures one again, as int162a)
+% witness: synthetic (revRG1c PE3; revRG1b listed rg1b's 16.31pt as corrected)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 `!`: B1=16.30554pt, E4=0.0pt
+% engines: rust int162a = rg1c: B1=4.30554pt, E4=0.0pt
+% expect:  0 errors; the oracle's values; the `<break/>` kept
+% status:  RED. moves: post-merge
+\documentclass{article}
+\begin{document}
+\setbox0\vbox{x{\\ \par}}B1=\the\ht0, E4=\the\dp0.
+\end{document}

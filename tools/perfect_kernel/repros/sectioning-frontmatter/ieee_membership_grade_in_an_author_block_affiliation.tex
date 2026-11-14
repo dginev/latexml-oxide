@@ -1,0 +1,13 @@
+% witness: synthetic (review revP5a B1 sibling a9: a grade inside `\IEEEauthorblockA`)
+% oracle:  pdflatex 0 errors: "Ann Able, Member, IEEE, and Bob Baker Dept of X, IEEE Region 8" then "Univ A"
+% engines: rust P5abase = Ann's grade; "IEEE Region 8" dropped silently; rust P5a = "IEEE Region 8" a membership of both
+% expect:  0 errors, 0 warnings; Ann's grade; "Dept of X, IEEE Region 8 Univ A" both authors' affiliation
+% status:  RED (P5a) -> GREEN (P5a2)
+\documentclass[journal]{IEEEtran}
+\begin{document}
+\title{T}
+\author{\IEEEauthorblockN{Ann Able,~\IEEEmembership{Member,~IEEE}, and Bob Baker}
+\IEEEauthorblockA{Dept of X, \IEEEmembership{IEEE Region 8}\\ Univ A}}
+\maketitle
+Body.
+\end{document}

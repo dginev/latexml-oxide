@@ -1,0 +1,14 @@
+% witness: 2606.05909 (template.tex:146 \resizebox{=0.93\textwidth}{!}{...})
+% oracle: pdflatex (clean); engine: pdflatex
+% expect: 0 errors; \the\mylen prints 172.5pt
+% mechanism: calc.sty:110 reads a numeric term by assigning to a register (\calc@numeric), whose <optional equals>
+%   (tex.web §1224) takes a leading `=`; ours reported "`=' invalid at this point". Fixed: calc_sty.rs read_value.
+% status:  GREEN
+\documentclass{article}
+\usepackage{calc}
+\usepackage{graphicx}
+\newlength\mylen
+\begin{document}
+\setlength{\mylen}{=0.5\textwidth}\the\mylen
+\resizebox{=0.93\textwidth}{!}{Box}
+\end{document}

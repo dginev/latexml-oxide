@@ -1,0 +1,5 @@
+% A raw package's institute store, printed by its own \maketitle, and its mark command (as mem.cls:277, :300, :318 do).
+\def\inst#1{\unskip$^{#1}$}
+\def\institute#1{\gdef\@institute{#1}}
+\gdef\@institute{}
+\def\maketitle{\begin{center}{\Large\@title\par}\vskip1em{\@author\par}\vskip.5em{\small\@institute\par}\end{center}}

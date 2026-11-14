@@ -1,0 +1,48 @@
+% witness: 1701.02349, 1705.09846, 1712.08341 (`\presentaddress`, WileyNJD-v2.cls:1781); 1701.02349, 1712.08341
+%          (`\abstract[Summary]`, :1857); 1803.11411, 1806.09518, 1904.09923 (`{assumption}`, `{eexample}`,
+%          `{property}`, :2923-3030); 1808.05540, 1808.09739 (`{tablenotes}`, `\tnote`, :2816-2828); 1811.09505,
+%          2012.13740 (`{boxtext}` opened by `\section*`, :466); 2205.06045 (`{ack}[…]`, :3393); 1705.00674,
+%          1812.10266 (`{biography}`, :3445); 1803.06134, 2306.05470 (`\doiheadtext`, :1820)
+% oracle:  pdflatex with 1712.08341's WileyNJD-v2.cls: 2 errors before \begin{document} (etex's \reserveinserts,
+%          a TL 2025 harness limit); "Summary … The abstract. Present Address 400 Main Street, Minneapolis …
+%          Assumption 1. Data are iid. Example 1. An example. Property 1. A property. BOX TITLE Boxed text.
+%          ACKNOWLEDGEMENTS We thank everyone. Ann Author is a professor. … B† †A dagger note."
+% engines: rust 67int3 = 10 errors (undefined \presentaddress, \doiheadtext, \tnote, {assumption}, {eexample},
+%          {property}, {tablenotes}, {boxtext}, {ack}, {biography}), the abstract reading "[Summary]The abstract."
+% expect:  0 errors, 0 warnings; the abstract named "Summary"; a present-address and a DOI note; the three theorems;
+%          the table notes one item; the box a framed block with a bold head; named acknowledgements; a biography
+%          float
+% status:  RED (67int3) -> GREEN (67w)
+% preload: ar5iv.sty
+\documentclass[AMA,STIX1COL]{WileyNJD-v2}
+\begin{document}
+\title{A Wiley paper}
+\author[1]{Ann Author}
+\address[1]{\orgdiv{Dept}, \orgname{Univ}}
+\presentaddress{400 Main Street, Minneapolis}
+\doiheadtext{DOI: 10.1002/xyz.123}
+\abstract[Summary]{The abstract.}
+\maketitle
+\section{Intro}
+\begin{assumption}Data are iid.\end{assumption}
+\begin{eexample}An example.\end{eexample}
+\begin{property}A property.\end{property}
+\begin{table}
+\caption{Results}
+\begin{tabular}{ll}
+A & B\tnote{$\dagger$} \\
+\end{tabular}
+\begin{tablenotes}
+\item[$\dagger$] A dagger note.
+\end{tablenotes}
+\end{table}
+\begin{boxtext}
+\section*{Box title}
+Boxed text.
+\end{boxtext}
+\begin{ack}[Acknowledgements]
+We thank everyone.
+\end{ack}
+\begin{biography}{}{\textbf{Ann Author} is a professor.}
+\end{biography}
+\end{document}

@@ -1,0 +1,29 @@
+% witness: 2606.19241 (compositio.cls:117-189; 182 of run 336's papers), 1109.5540 (alggeom, 34), math0409234 (hha, 3),
+%          0805.3030 (jhrs), quant-ph0412067 (jcm), 2111.06381 (moduli) — the Foundation Compositio class family
+% oracle:  pdflatex 0 errors (the class's own compositio.cls; this excerpt keeps its frontmatter commands)
+% engines: rust 64h = Error "\email should come after corresponding \author" + "\address with no \author" per call (the
+%          kernel lock refused the class's \author, so \@curr@author stayed \CPM@gobble); the contacts, keywords, MSC
+%          and \thanks lost or printed as end-of-document text; Perl the same under --includestyles
+% expect:  0 errors; each author's address, current address and email as contacts; keywords, MSC classification and
+%          the \thanks note, received date and dedication in the frontmatter; the class's \maketitle, which lays out
+%          only those, not deposited (no second author line in the body) (side file compositio.cls — the guard writes it)
+% status:  RED (64h) -> GREEN (64k)
+% preload: ar5iv.sty
+\documentclass{compositio}
+\title{A title}
+\author{Ann Author}
+\email{ann@uni.edu}
+\address{Dept. of Mathematics, Uni A}
+\curraddr{Institute B}
+\author{Bob Writer}
+\email{bob@uni.edu}
+\address{Uni C}
+\classification{14J60}
+\keywords{moduli, sheaves}
+\thanks{Supported by a grant.}
+\received{1 May 2020}
+\dedication{To C.}
+\begin{document}
+\maketitle
+Text.
+\end{document}

@@ -1,0 +1,15 @@
+% The third source reads the setters of a raw class and of the document's own directory (`Expandable::made_in_own_file`),
+% not a raw TeX Live package's: llncsconf.sty:42 `\def\conference#1{\gdef\@conference{#1}}`, whose store only llncs's
+% page foot prints. A TeX Live package's stores are page furniture far more often than lost title-page text.
+% oracle:  pdflatex 0 errors (TL 2025, -no-shell-escape): "A Title", "Ann Able", "Body text.", no "Lunar"
+% engines: rust int139c = 0 errors, 0 warnings; perl = 0 errors
+% expect:  0 errors, 0 warnings
+% status:  GREEN (negative)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{llncsconf}
+\conference{Lunar Meeting}
+\title{A Title}\author{Ann Able}
+\begin{document}\maketitle
+Body text.
+\end{document}

@@ -1,0 +1,16 @@
+% mechanism: Option C P4b: IEEEtran's stop after a grade (`without_stop_after_grade`) reads the names' marks and a
+%   note's leading label as digested (`prints_marks_and_labels`, `leads_with_label`): a document macro's `$^{1}$`
+% witness: synthetic (2405.17600's both-marked shape, its marks by macro)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "Ann Able1 , Bob Baker1 , Member, IEEE." and the footnote
+%          "1 Univ A, Town A."
+% engines: P4bbase and P4b: the creators below (the names' marks not shown: the plain-author path's, unchanged)
+% expect:  0 errors, 0 warnings; the creators below
+% status:  GREEN (guard perfect_kernel_batchc1::marks_lead_as_digested)
+\documentclass{IEEEtran}
+\newcommand\ua{$^{1}$}
+\begin{document}
+\title{T}
+\author{Ann Able\ua, Bob Baker\ua,~\IEEEmembership{Member,~IEEE}.\thanks{\ua Univ A, Town A.}}
+\maketitle
+Text.
+\end{document}

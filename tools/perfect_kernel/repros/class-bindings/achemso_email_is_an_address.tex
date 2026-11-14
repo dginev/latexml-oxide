@@ -1,0 +1,14 @@
+% witness: 1803.03591 (`\email{ranojoy_bose@apple.com}`)
+% oracle:  pdflatex 0 errors: achemso.cls:513-520 `\email` stores the address for the author's footnote
+% engines: rust 65i = 1 Error:unexpected:_ (achemso_cls.rs digested it as note text); Perl 0.8.8 = 0 (raw class)
+% expect:  0 errors, 1 Warning (mciteplus stub); the author's <contact role="email">ranojoy_bose@apple.com</contact>
+% status:  RED (65i) -> GREEN (65m)
+% preload: ar5iv.sty
+\documentclass{achemso}
+\author{Ranojoy Bose}
+\email{ranojoy_bose@apple.com}
+\affiliation{Apple}
+\title{T}
+\begin{document}
+Text.
+\end{document}

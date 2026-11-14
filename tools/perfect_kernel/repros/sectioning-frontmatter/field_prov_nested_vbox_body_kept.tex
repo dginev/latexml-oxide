@@ -1,0 +1,17 @@
+% A `\vbox` nested in a `\vbox` at a paragraph's start, then body text in that paragraph, before the document's own
+% title block: the outer `\vbox` absorbs the inner one straight into the paragraph, which is no box (it opened none);
+% the text after it is body text, so the print after it is not in the title block and stays (fms1 round-5 review
+% finding 1, probe b2: a box marks only the element its own constructor opened).
+% status:  RED (fms1 round 5: the empty paragraph marked as a box, the title block lifted) → GREEN (fms1 round 6).
+% oracle:  pdflatex 0 errors: "X Lorem ipsum dolor body text.", "Header Title / Ann Author", "1 Intro Text.".
+% expect:  0 errors, 0 warnings; no `field_ink` Info; the title block kept.
+\documentclass{article}
+\makeatletter
+\title{Header Title}\author{Ann Author}
+\begin{document}
+\noindent\vbox{\vbox{\hbox{X}}} Lorem ipsum dolor body text.
+
+\begin{center}{\Large\@title}\\[1em]\@author\end{center}
+\section{Intro}
+Text.
+\end{document}

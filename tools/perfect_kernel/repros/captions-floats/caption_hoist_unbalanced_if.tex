@@ -1,0 +1,14 @@
+% witness: 0807.3034 (\def\arcs{\ifmmode ^{\prime\prime} \else $^{\prime\prime}$} with no \fi, in a \caption)
+% oracle:  pdflatex 0 errors (the conditional stays open to the end of the job)
+% engines: rust 66b1 = Fatal:Mouth:EoF (the open \ifmmode took the hoist's \else); perl 101E+F
+% expect:  0 errors; one caption "The 3″ fiber." with the figure's label
+% status:  GREEN (66d)
+\documentclass{article}
+\def\arcs{\ifmmode ^{\prime\prime} \else $^{\prime\prime}$}
+\begin{document}
+\begin{figure}
+\caption{The 3\arcs\ fiber.}
+\label{f:a}
+\end{figure}
+Text.
+\end{document}

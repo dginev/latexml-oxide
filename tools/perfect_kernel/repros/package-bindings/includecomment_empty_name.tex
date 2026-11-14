@@ -1,0 +1,21 @@
+% witness: 2508.09827 (main.tex:687 `\includecomment{}{{\bm x}}(t) = …`, a mistyped line: 7 more errors, the rest of
+%          the paper's environments unended, 2,800 words lost under 79k r1)
+% oracle:  pdflatex: comment.sty's `\includecomment{}` defines `\csname\endcsname`, not `\\`; both rows print
+% engines: rust 79k r1 = the empty name's `\<name>` was a control sequence named by nothing, read as `\\`: every
+%          later line break read the rest of its line raw
+% expect:  0 errors, 0 warnings; the list and the two tabular rows after it
+% status:  RED (79k r1) -> GREEN (79k r2)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{comment}
+\includecomment{}
+\begin{document}
+\begin{itemize}
+\item One.
+\end{itemize}
+\begin{tabular}{l}
+a \\
+b
+\end{tabular}
+After.
+\end{document}

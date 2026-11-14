@@ -1,0 +1,17 @@
+% mechanism: the footnote counter's steps of an author block's notes run where each note prints: the `=2` emitter writes a
+%   note apart (`note_call`), digested after every creator, and the step it carried ran after a later name's
+%   `\addtocounter{footnote}{-2}\footnotemark`, at the counter's 0 ("Counter too large", `\fnsymbol{-1}`); the step is now
+%   the creator's where the note prints (`emit.rs` `note_steps`)
+% witness: 1507.05018, 2505.07115 (5 x "Counter too large" each at =2, none off)
+% oracle:  pdflatex 0 errors; "Ann Able†∗", "Bob Baker∗"
+% engines: rust off: 0 errors, Bob Baker's footnotemark mark="*"; rust =2 (int152c): 5 errors, the mark empty
+% expect:  =2 as off: 0 errors, 0 warnings, the footnotemark's mark "*"
+% status:  RED (int152c) -> GREEN (perfect_kernel_batchne2::a_notes_footnote_step_runs_where_it_prints)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{Ann Able\thanks{Univ X.}\thanks{Univ Y.} \and Bob Baker\addtocounter{footnote}{-2}\footnotemark}
+\maketitle
+Text.
+\end{document}

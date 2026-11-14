@@ -1,0 +1,184 @@
+//! Lever B — single-pass eager→streaming continuation (batch 56fk).
+//!
+//! The eager loop yields at legal seams once the fragment-yield knobs are
+//! armed; when a yield is RSS-driven (the process is over the spill
+//! watermark), `digest_adaptive` hands the accumulated bodies to streaming
+//! pass 1 as fragment 1 and keeps digesting from the same gullet position —
+//! no from-scratch `StreamingRestart`, which re-read the whole source (the
+//! >180 s component on source2e/source3/datatool/glossaries/pgf-spectra LSE).
+//!
+//! What this pins:
+//!   * the transition happens ONCE and digestion runs ONCE (`digest_setup_count`
+//!     == 1; a restart would make it 2), engaging the spill (segments staged);
+//!   * every picture survives the hand-off (all 40 `svg:path`), 0 errors;
+//!   * a document that never crosses the watermark (control: no knobs) is
+//!     built whole — no yields, no segments, identical XML.
+use std::sync::Mutex;
+
+use latexml::converter::Converter;
+use latexml_core::common::{Config, OutputFormat};
+
+static SERIAL: Mutex<()> = Mutex::new(());
+
+/// (xml, yields, digest_setups, spilled_segments, warnings)
+fn convert(source: &str, force_rss_yield: bool) -> (String, usize, usize, usize, usize) {
+  convert_preloaded(source, force_rss_yield, None)
+}
+
+/// [`convert`] with the CLI's `--preload` (ar5iv.sty: `latexml.sty`'s `ids`, every element's id minted at finalize).
+fn convert_preloaded(
+  source: &str,
+  force_rss_yield: bool,
+  preload: Option<Vec<String>>,
+) -> (String, usize, usize, usize, usize) {
+  let source = source.to_string();
+  std::thread::Builder::new()
+    .stack_size(64 * 1024 * 1024)
+    .spawn(move || {
+      latexml::util::test::init_test_rss_cap();
+      let _ = latexml_core::util::logger::init(log::LevelFilter::Warn);
+      let cfg = Config {
+        format: OutputFormat::XML,
+        extra_bindings_dispatch: Some(std::rc::Rc::new(latexml_contrib::dispatch)),
+        preload,
+        ..Config::default()
+      };
+      let mut c = Converter::from_config(cfg);
+      c.initialize_session().expect("initialize");
+      if force_rss_yield {
+        // A zero spill watermark (every seam is over it) with a
+        // one-box floor: the first legal seam after `\begin{document}` is an
+        // RSS-driven yield and transitions. The yield knobs are NOT pre-armed —
+        // the adaptive path arms them itself, exactly as a production run does.
+        // The watermark is an in-process override, never the process env
+        // (read-only for us).
+        latexml_core::stomach::set_spill_watermark_override(Some(0));
+        latexml_core::stomach::set_soft_yield_min_boxes(1);
+      }
+      let r = c.convert(source.clone());
+      let errors = latexml::util::test::error_count(&r.log);
+      assert_eq!(
+        errors, 0,
+        "{source}: {errors} errors (force_rss_yield={force_rss_yield}):\n{}",
+        r.log
+      );
+      // Inline `Warning:<class>:` markers, as `error_count` counts errors.
+      let warnings = r
+        .log
+        .match_indices("Warning:")
+        .filter(|(i, _)| {
+          let tail = &r.log.as_bytes()[*i + 8..];
+          let n_class = tail
+            .iter()
+            .take_while(|b| b.is_ascii_alphabetic() || **b == b'_')
+            .count();
+          n_class > 0 && tail.get(n_class) == Some(&b':')
+        })
+        .count();
+      let out = (
+        r.result.expect("conversion produced XML"),
+        latexml_core::stomach::fragment_yield_count(),
+        latexml::core_interface::digest_setup_count(),
+        latexml_core::document::spilled_segment_count(),
+        warnings,
+      );
+      latexml_core::stomach::set_spill_watermark_override(None);
+      latexml_core::reset_thread_engine();
+      out
+    })
+    .expect("spawn conversion thread")
+    .join()
+    .expect("conversion thread panicked")
+}
+
+#[test]
+fn rss_driven_yield_transitions_to_streaming_in_a_single_digest() {
+  let _serial = SERIAL.lock().unwrap_or_else(|e| e.into_inner());
+  let source = "tests/streaming/adaptive_pictures.tex";
+  let (eager_xml, eager_yields, eager_setups, eager_segments, _) = convert(source, false);
+  assert_eq!(eager_yields, 0, "control: no knobs => no yields");
+  assert_eq!(eager_segments, 0, "control: nothing spilled");
+  assert_eq!(eager_setups, 1);
+  assert_eq!(eager_xml.matches("<svg:path").count(), 40, "{eager_xml}");
+
+  let (streamed_xml, yields, setups, segments, _) = convert(source, true);
+  assert!(yields > 0, "the RSS-driven seam fired");
+  assert!(segments > 0, "streaming pass 1 engaged (segments staged)");
+  assert_eq!(
+    setups, 1,
+    "ONE digestion — the transition is a continuation, not a restart"
+  );
+  assert_eq!(
+    streamed_xml.matches("<svg:path").count(),
+    40,
+    "every picture survived the hand-off:\n{streamed_xml}"
+  );
+  assert!(streamed_xml.contains("Done."), "{streamed_xml}");
+  assert_eq!(
+    streamed_xml, eager_xml,
+    "eager and adaptive-streamed output are identical"
+  );
+}
+
+/// 57g review: a line of float-boxes settles into a row once the document is built — per spilled
+/// segment when streaming. The row takes over its paragraph's id (minted during construction), so
+/// a section's row is `S1.p2` in both modes; minting the row's own id at settle time numbered it
+/// under the segment's wrapper (`fig2`) instead.
+#[test]
+fn figure_box_rows_settle_alike_when_streamed() {
+  let _serial = SERIAL.lock().unwrap_or_else(|e| e.into_inner());
+  let source =
+    "../tools/perfect_kernel/repros/captions-floats/figure_box_rows_settle_alike_when_streamed.tex";
+  let (eager_xml, _, _, eager_segments, eager_warnings) = convert(source, false);
+  assert_eq!(eager_segments, 0, "control: nothing spilled");
+  assert_eq!(eager_warnings, 0, "the fixture converts clean");
+  let (streamed_xml, _, _, segments, warnings) = convert(source, true);
+  assert!(segments > 0, "streaming pass 1 engaged (segments staged)");
+  assert_eq!(warnings, 0, "the fixture converts clean when streamed");
+  for row in [
+    r#"<figure class="ltx_panels_gallery" panelcols="2" panelrows="1" xml:id="p2">"#,
+    r#"<figure class="ltx_panels_gallery" panelcols="2" panelrows="1" xml:id="S1.p2">"#,
+    r#"<figure class="ltx_panels_gallery" panelcols="2" panelrows="1" xml:id="S2.p2">"#,
+  ] {
+    assert!(eager_xml.contains(row), "{row}:\n{eager_xml}");
+  }
+  assert_eq!(
+    streamed_xml, eager_xml,
+    "eager and streamed output are identical"
+  );
+}
+
+/// STRM: a conversion switched to streaming writes the eager XML. Each row is a state the spilled segments must
+/// continue from the spine: the font context finalize declares above them (babel's `xml:lang` on the root, not on
+/// every streamed section: 2507.13358), and the id counters of the element their ids are minted under (`S1.p1.1`
+/// under `<para xml:id="S1.p1">`, not `id1`).
+#[test]
+fn switched_conversion_writes_the_eager_xml() {
+  let _serial = SERIAL.lock().unwrap_or_else(|e| e.into_inner());
+  for name in [
+    "babel_language_marks_each_streamed_section_red",
+    "streamed_paragraph_ids_renumber_red",
+    // a language switched mid-document, a sans document font, a `quote` minted under an open paragraph
+    "streamed_context_siblings",
+  ] {
+    let source = format!("../tools/perfect_kernel/repros/streaming/{name}.tex");
+    let ar5iv = || Some(vec!["ar5iv.sty".to_string()]);
+    let (eager_xml, _, _, eager_segments, eager_warnings) =
+      convert_preloaded(&source, false, ar5iv());
+    assert_eq!(eager_segments, 0, "{name}: control, nothing spilled");
+    assert_eq!(eager_warnings, 0, "{name}: the fixture converts clean");
+    let (streamed_xml, _, _, segments, warnings) = convert_preloaded(&source, true, ar5iv());
+    assert!(
+      segments > 0,
+      "{name}: streaming pass 1 engaged (segments staged)"
+    );
+    assert_eq!(
+      warnings, 0,
+      "{name}: the fixture converts clean when switched"
+    );
+    assert_eq!(
+      streamed_xml, eager_xml,
+      "{name}: switched and eager output are identical"
+    );
+  }
+}

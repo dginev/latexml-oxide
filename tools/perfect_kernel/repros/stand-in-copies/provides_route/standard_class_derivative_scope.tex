@@ -1,0 +1,12 @@
+% witness: none in the corpus (the 77w r2 re-review's finding 4); the names a standard-class derivative may define
+%          over its binding are the standard binding's own (aip-cp.cls:875 `\newcommand\refname`, 1506.04050)
+% oracle:  pdflatex 0 errors: "Published in JHEP."
+% engines: rust 69e78f9511 (77w r2) = the rule read every stand-in binding's names (`State::stand_in_meanings`): the
+%          derivative's `\providecommand\jname` replaced the jheppub binding's, "J. High Energy Phys."
+% expect:  0 errors, 0 warnings; "JHEP" (the style's definition is the first, `\providecommand` keeps it)
+% status:  RED (69e78f9511) -> GREEN (77w r3: only the standard class binding's own names yield)
+% preload: ar5iv.sty
+\documentclass{scopederiv}
+\begin{document}
+Published in \jname.
+\end{document}

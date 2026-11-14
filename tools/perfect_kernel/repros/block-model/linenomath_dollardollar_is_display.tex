@@ -1,0 +1,19 @@
+% witness: 2307.10980, 2301.10600 (~110 of run 336's papers with a `$$` in `{linenomath}`)
+% oracle:  pdflatex 0 errors (lineno.sty:1219-1271: `\linenomath`/`\endlinenomath` are macros)
+% engines: rust 64h4 = 3 errors "Script _/^ can only appear in math mode"; Perl 3 errors
+% expect:  0 errors, 0 warnings; each `$$` an `ltx:equation`
+% status:  RED (64h4) -> GREEN (64ra)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{lineno}
+\begin{document}
+Text
+\begin{linenomath*}
+$$
+W = x_1^2
+$$
+\end{linenomath*}
+\begin{linenomath}
+$$ V = y_2 $$
+\end{linenomath}
+\end{document}

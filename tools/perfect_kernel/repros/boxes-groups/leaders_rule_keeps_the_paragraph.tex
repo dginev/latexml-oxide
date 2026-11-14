@@ -1,0 +1,31 @@
+% tex.web §1084 `scan_box`/§1078: after `\leaders` the next token after expansion that is neither a spacer nor
+% `\relax` decides; an `\hrule` or `\vrule` there is read as a rule specification, never executed, so it ends no
+% paragraph (`\hrule`, §1094 `head_for_vmode`) and starts none (`\vrule` in vertical mode, §1090): "A", the leader
+% and "B" are one line. A box filler's own `\hrule` executes as usual and ends the box's paragraph. A `\protected`
+% or robust rule macro is the rule too. Perl digests the rule as an argument whose afterDigest
+% `leaveHorizontal`/`enterHorizontal` changes mode, and skips only a literal `\relax` before it, so a robust rule
+% is lost (TeX_Box.pool.ltxml:838, :803; KPE #405).
+% witness: 2605.00332 (`$z$ (…) \hrulefill` split a figure panel).
+% Guard: perfect_kernel_batch58::leaders_rule_keeps_the_paragraph.
+% status:  GREEN (58d)
+% oracle:  pdflatex 0 errors; one line "A", rule, "B"; "Y" and the 2pt rule stacked in the filler; "[4]" (A, X,
+%          the filler's Y, "["); "P", rule, "Q" and "R", rule, "S" on one line each.
+% engines: rust 58c: `<p>A</p><p><text class="ltx_leader">…</text>B</p>`, "[7]", the robust rule lost
+%          (`<text class="ltx_leader"/>`); Perl `<p>A</p><p><rule class="ltx_filled_leader" …/>B</p>`.
+% expect:  0 errors, 0 warnings.
+\documentclass{article}
+\newcount\pc
+\begin{document}
+\everypar{\global\advance\pc1 }%
+A\leaders\hrule\hfill B
+
+X\leaders\vbox{Y\hrule width 2pt}\hfill Z
+
+\leaders\relax\vrule\vskip 1cm
+[\the\pc]
+
+\protected\def\prule{\hrule}\DeclareRobustCommand\rrule{\hrule}%
+P\leaders\prule\hfill Q
+
+R\leaders\rrule\hfill S
+\end{document}

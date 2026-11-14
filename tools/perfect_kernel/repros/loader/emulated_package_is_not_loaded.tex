@@ -1,0 +1,14 @@
+% LaTeX's `\@ifl@aded`/`\RequirePackage` skip a package whose `\ver@<name>.sty` is defined: memoir declares the packages
+% it emulates (`\EmulatedPackage{setspace}`, memoir.cls:12243, `\@namedef{ver@#1.sty}`), so `\usepackage{setspace}` loads
+% nothing and memoir's own `\OnehalfSpacing` family is the interface. The loader ignores `\ver@<name>.sty` and loads the
+% setspace binding anyway (its `\onehalfspacing` is then defined where pdflatex has none).
+% witness: none (58c review; memoir emulates ~20 packages).
+% status:  RED (open)
+% oracle:  pdflatex 0 errors; "[undefined]".
+% engines: rust 58c: "[defined]".
+% expect:  0 errors; "[undefined]".
+\documentclass{memoir}
+\usepackage{setspace}
+\begin{document}
+[\ifdefined\onehalfspacing defined\else undefined\fi]
+\end{document}

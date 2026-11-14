@@ -7,10 +7,7 @@ description: >
   Use after canvas-triage confirms a GENUINE-RUST-ONLY failure, whenever you need
   the smallest .tex that still triggers a specific error/crash, or to pinpoint the
   culprit token behind a Rust-vs-Perl divergence and turn it into the red test.
-  Pairs with tools/bisect_repro.sh and first_error.sh. Invoke for "minimize this
-  paper", "make a reproducer for X", "shrink to a failing case", "which
-  token/construct causes X", "isolate the cause", "make a standalone repro",
-  "/min-repro".
+  Pairs with tools/bisect_repro.sh and first_error.sh.
 ---
 
 Goal: the smallest `.tex` that still emits the **canary** (the exact error
@@ -38,7 +35,7 @@ paper; `canary` optional and defaults to the first error).
   cut loses the canary.
 
 **4 — Confirm parity intent.** Re-run the *reduced* case through Perl
-(`/usr/local/bin/latexml repro.tex`, verbose — never `--quiet`) on the same host.
+(`latexml repro.tex`, verbose — never `--quiet`) on the same host.
 A faithful reproducer should still show the Rust-only delta; if Perl now errors
 too, the reduction changed the semantics — back off the last cut.
 
@@ -71,4 +68,4 @@ a compile-time plugin discovers test files, so a new pair is invisible until a
 clean rebuild. Generate the expected `.xml` from the *fixed* binary, strip the
 intentional-divergence artifacts before committing (no `%&#10;`; `--nocomments`
 to drop `<!-- … -->` source-comment lines — see CLAUDE.md "Intentional
-divergences"), and confirm `cargo test --tests --no-fail-fast` stays green.
+divergences"), and confirm `cargo nextest run --workspace` stays green.

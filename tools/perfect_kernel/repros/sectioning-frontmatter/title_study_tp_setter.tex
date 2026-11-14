@@ -1,0 +1,21 @@
+% The title-print study's repro tp_setter (2026-10-16), verbatim below this header: the document's own printing
+% `\def\title#1{\begin{center}{\large #1}\end{center}}` called inside `{titlepage}` (0904.2708, gr-qc9404034). The lock
+% refuses the definition; inside the titlepage the class's own printing call runs there too (68t, OXIDIZED_DESIGN #629),
+% so the cover shows the title and the kernel keeps the structured copy (unmarked: the kernel's own store is not printed).
+% status:  RED (67int13: the title absent from the titlepage, 0 visible) → GREEN (68t) → GREEN (fms1, unchanged).
+% oracle:  pdflatex 0 errors: "TIT/HEP-253", "Static axisymmetric spacetimes", "Abstract", "The conditions are
+%          presented.", "1 Intro Text."
+% expect:  0 errors, 0 warnings; the titlepage's centered "Static axisymmetric spacetimes"; `<title>` beside it.
+\documentclass{article}
+\def\title#1{\begin{center}{\large #1}\end{center}}
+\begin{document}
+\begin{titlepage}
+\hfill TIT/HEP-253
+\title{Static axisymmetric spacetimes}
+\begin{abstract}
+The conditions are presented.
+\end{abstract}
+\end{titlepage}
+\section{Intro}
+Text.
+\end{document}

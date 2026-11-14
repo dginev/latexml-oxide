@@ -1,0 +1,23 @@
+% witness: 77a r2 review probe p3; gztarticle.cls:2580-2581 (\bibbycategory)
+% oracle:  pdflatex + biber 0 errors: My Books {goossens, knuth}, My Papers {lamport, mittelbach} (the
+%          \defbibheading titles), the void category 'empty' skipped, Other {web} (notcategory twice, ANDed)
+% engines: rust 77a r1 titled both category lists References and applied only the last notcategory (Other {web,
+%          goossens, knuth}); before 77a one unfiltered list
+% expect:  clean (0 errors, 0 warnings); three bibliographies with the oracle's titles and keys
+% status:  GREEN (77a r2)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage[backend=biber]{biblatex}
+\addbibresource{refs.bib}
+\DeclareBibliographyCategory{books}
+\DeclareBibliographyCategory{papers}
+\DeclareBibliographyCategory{empty}
+\addtocategory{books}{knuth,goossens}
+\addtocategory{papers}{lamport, mittelbach}
+\defbibheading{books}{\section*{My Books}}
+\defbibheading{papers}{\section*{My Papers}}
+\begin{document}
+X \cite{knuth,lamport,goossens,mittelbach,web}.
+\bibbycategory
+\printbibliography[notcategory=books,notcategory=papers,title={Other}]
+\end{document}

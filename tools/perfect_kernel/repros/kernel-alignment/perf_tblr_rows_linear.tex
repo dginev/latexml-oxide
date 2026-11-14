@@ -1,0 +1,21 @@
+% witness: tabularray/tabularray (218s, 1.9MB, 141 tabulars, 90 sections, 9 KB/s).
+% oracle:  pdflatex fast.
+% engines: Perl LaTeXML: TIMES OUT >300s + fatal / Rust 218s.
+% status:  PERF — SHARED (Rust already FASTER than Perl). RULE-OUT repro.
+% Rules out the task's prime suspect "alignment/tabular digestion cost per cell /
+% \lx@tblr@env re-scan per row". tblr maps to classic \tabular in the binding
+% (tabularray_sty.rs translate_tblr_colspec), and the classic alignment path is
+% CHEAP and LINEAR (release sweep42):
+%   * N identical 3x3 tblr tables:  N=20/40/80 = 2.32/2.47/2.45s (flat).
+%   * ONE tblr with N rows:         N=100/200/400 = 2.06/2.19/2.15s (flat).
+% So tabularray's 218s is NOT table structure; it is the doc's tikz-in-tables
+% examples (\draw, tblrtikzabove/below) + complex key specs + double rendering
+% (code listing + rendered table) + the ~14.6s tikz load. All SHARED with Perl,
+% which cannot even finish. No Rust-only lever here.
+\documentclass{article}
+\usepackage{tabularray}
+\begin{document}
+\begin{tblr}{colspec={ccc}}
+a & b & c \\ d & e & f \\ g & h & i \\
+\end{tblr}
+\end{document}

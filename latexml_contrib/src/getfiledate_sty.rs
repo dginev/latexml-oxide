@@ -21,6 +21,8 @@
 use latexml_package::prelude::*;
 
 LoadDefinitions!({
+  // getfiledate.sty:74 reads its options with `\ProcessOptionsX`, which marks them processed: `\@curroptions` stays as it was.
+  key_options_processed()?;
   // getfiledate.sty L22 does `\RequirePackage[table]{xcolor}` (guarded by
   // \@ifpackageloaded). Perl's deps-scan loads xcolor too, so a paper
   // relying on getfiledate to transitively provide \textcolor/\color

@@ -1,0 +1,15 @@
+% witness: synthetic (GA0 finding 6's drift witness, jurunsrt)
+% oracle: pdflatex+bibtex (clean, 0 `!` lines); engine: pdflatex
+% expect: the list in citation order, as jurunsrt.bst writes it: Gamma, Alpha, Beta (cited "Gamma", "Alpha", "Beta")
+% mechanism: the node says sort="false" (GA3), but post orders by citation only a numeric list (make_bibliography.rs
+%   `is_numeric`): an author-year list under an unsorted .bst is alphabetized. Same for natbib author-year + unsrtnat.
+% ours (GA3base and GA3): Alpha, Beta, Gamma
+% status: RED
+% moves: post-merge (drop the numeric gate: post orders by `sort` alone; reclass the natbib_ay_ieeetr control)
+\documentclass{article}
+\usepackage{jurabib}
+\bibliographystyle{jurunsrt}
+\begin{document}
+We cite \cite{gamma}, then \cite{alpha}, and finally \cite{beta}.
+\bibliography{jurunsrt_lists_by_citation_red}
+\end{document}

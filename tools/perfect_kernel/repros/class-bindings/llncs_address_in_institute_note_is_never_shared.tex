@@ -1,0 +1,23 @@
+% mechanism: an address in a note of llncs's shared `\institute` is never every author's. A raw `@` in the note
+%   (`\thanks{Mail me at able@x.edu, …}`) makes its line an e-mail line no reader parts: the institute's own first line,
+%   so the whole institute is the block's, as written (int114a's placement; `holds_raw_address`, `row_email_calls`). An
+%   `\email` alone in the note (`\thanks{Contact \email{baker@x.edu}}`, the guard's variant) keeps the institute shared
+%   and is given its owner's label in place (`\lx@annotate@frontmatter@now`, `SHARED_ROW_LABEL`). Known residual (int114a
+%   too): an `\email` digested in a note becomes a contact and leaves the note's sentence.
+% witness: the 85b review's p19 and re-review's finding 3 (85b r2 kept "Mail me at able@x.edu," in the note every
+%   author's affiliation carried); s06 (the variant's shape)
+% oracle:  pdflatex 0 errors; "Ann Able and Bob Baker" over "Univ X⋆", the note "Mail me at able@x.edu, baker@x.edu"
+% engines: rust 85b r1 = `baker@x.edu` on Ann Able and Bob Baker; 85b r2 = the institute and the note with `able@x.edu`
+%   on both, `baker@x.edu` Bob Baker's; int114a = on a nameless creator with the institute
+% expect:  0 errors, 0 warnings; the institute and its note on the author block, `baker@x.edu` with them
+% status:  RED (85b r1, r2) -> GREEN (85b r3)
+% preload: ar5iv.sty
+\documentclass{llncs}
+\begin{document}
+\title{A Title}
+\author{Ann Able \and Bob Baker}
+\institute{Univ X\thanks{Mail me at able@x.edu, \email{baker@x.edu}}}
+\maketitle
+\begin{abstract}Text.\end{abstract}
+Body.
+\end{document}

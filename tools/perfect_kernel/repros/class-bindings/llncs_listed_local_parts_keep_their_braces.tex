@@ -1,0 +1,22 @@
+% mechanism: an e-mail call split by owner under llncs's shared `\institute` sets each address apart; a list of local
+%   parts the reader cannot part (`{stomforde|bsick}@…`, `lists_local_parts`) keeps its printed braces
+%   (`row_email_calls`, OXIDIZED_DESIGN_DIVERGENCES #901).
+% witness: 1701.08125 (this shape, its names and addresses)
+% oracle:  pdflatex 0 errors; "Sven Tomforde, Bernhard Sick, and Christian Müller-Schloer" over the two lines and
+%   "{stomforde|bsick}@uni-kassel.de; cms@sra.uni-hanover.de"
+% engines: rust 85b r1 = `stomforde|bsick@uni-kassel.de` (braces lost) on the block; int114a = the raw `${$…$}$`
+% expect:  0 errors, 0 warnings; the institute on the three; cms@ Christian Müller-Schloer's; `{stomforde|bsick}@…`
+%   the author block's
+% status:  RED (85b r1) -> GREEN (85b r2)
+% preload: ar5iv.sty
+\documentclass{llncs}
+\begin{document}
+\title{A Title}
+\author{Sven Tomforde, Bernhard Sick, and Christian M\"uller-Schloer}
+\institute{Intelligent Embedded Systems Lab, University of Kassel, Germany\\
+	Institute for Systems Engineering, Leibniz University of Hannover\\
+\email{$\{$stomforde$|$bsick$\}$@uni-kassel.de;~cms@sra.uni-hanover.de}}
+\maketitle
+\begin{abstract}Text.\end{abstract}
+Body.
+\end{document}

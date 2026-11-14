@@ -1,0 +1,20 @@
+% witness: 2003.07967, 2306.17386, 0806.0831 (not 0801.2349: its `\noindent{REFERENCES}` is unstyled; 64x review: natbib's out-of-bibliography \bibitem guard)
+% oracle:  pdflatex 0 errors: the bold "Literature" line, then the numbered entries 1. and 2. (one heading)
+% engines: rust 64x round 1 = 0 errors, but the munged <bibliography> carries its own <title>References</title> after
+%          the author's bold heading paragraph (two headings); Perl 0.8.8 2 Error:malformed (no bibliography)
+% expect:  0 errors; the author's bold line is the bibliography's title, once: <bibliography><title>Literature</title>,
+%          no "Literature" paragraph before it, no `\refname` "References" (user ruling 2026-10-10)
+% status:  RED (64x round 1) -> GREEN (64x round 2)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage[numbers]{natbib}
+\begin{document}
+Text \cite{a}.
+
+\vspace{0.4cm}
+\noindent {\bf Literature}
+\begin{enumerate}
+\bibitem{a} Able, A title.
+\bibitem{b} Baker, B title.
+\end{enumerate}
+\end{document}

@@ -1,0 +1,13 @@
+% tabularray's `tblr` builds its own alignment, which never zeroes the interline values (pdflatex: 12pt in a `tblr`
+% cell, and `\\[\baselineskip]` a 12pt gap). The binding sets a `tblr` as a `\tabular`, so 60l's `\@array` zero
+% reached it and the gap was gone (`padding-bottom: 0.0pt`; review 60l r2 finding 1). Now the mapping marks its table
+% `\lx@array@keeps@interline` (tex_tables.rs `array_zeroes_interline`).
+% status:  GREEN 60l; guard perfect_kernel_batch60::tblr_keeps_its_interline_values
+% oracle:  pdflatex 0 errors: the row gap 12pt (with/without `\\[\baselineskip]`: 24.9+19.9 vs 18.9+13.9pt)
+% engines: rust 60l3: `padding-bottom: 0.0pt`; 60m: 12.0pt
+% expect:  0 errors; the first row's cells `padding-bottom: 12.0pt`
+\documentclass{article}
+\usepackage{tabularray}
+\begin{document}
+\begin{tblr}{|l|l|}\hline a & b\\[\baselineskip] c & d\\\hline\end{tblr}
+\end{document}

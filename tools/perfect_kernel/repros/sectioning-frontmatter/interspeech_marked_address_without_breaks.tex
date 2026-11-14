@@ -1,0 +1,21 @@
+% witness: 2406.04683: an `\address` block whose marked lines (`\small $^2$…`, `\small $^3$…`) have no `\\` between them
+% oracle:  pdflatex 0 errors: the lines run on, each affiliation led by its mark
+% engines: rust 63w = the second line onward is one affiliation "University B 3University C", Bo's (marked 2); Cy
+%          (marked 3) has none (in 2406.04683 the run of five reaches the authors marked 2 alone)
+% expect:  0 errors; each mark-led line an affiliation of its own, linked to the authors it names
+% status:  RED (63w)
+\documentclass{Interspeech}
+\interspeechcameraready
+\title{T}
+\author[affiliation={1}]{Ada}{Byron}
+\author[affiliation={2}]{Bo}{Li}
+\author[affiliation={3}]{Cy}{Dee}
+\address{
+  \small $^1$University A\\
+  \small $^2$University B
+  \small $^3$University C
+  }
+\begin{document}
+\maketitle
+Text.
+\end{document}

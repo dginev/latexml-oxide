@@ -1,0 +1,11 @@
+% witness: synthetic (m5study d2: `\let` then `\def`)
+% oracle: pdflatex clean; PDF text: [v] a and b 1 
+% engines: rust base 64w-rel (8542e1b1a5; the lock code is unchanged through 72cefe8821) E/F/W=0/0/0; 64zb E/F/W=0/0/0; Perl refuses every :locked redefinition (State.pm:502-517)
+% expect: as today under D1 (ruling 5): \let bypasses the lock, as in Perl, and the later \def is refused (the binding is no longer the meaning)
+% status: RED (base) -> RED, deferred (ruling 5)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{amsmath}
+\begin{document}
+{\let\text\relax\def\text{v}[\text]} $a\text{ and }b$
+\end{document}

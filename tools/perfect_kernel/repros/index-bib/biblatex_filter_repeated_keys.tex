@@ -1,0 +1,19 @@
+% witness: arXiv 2406.11014 (keyword=author,keyword=latent); 77a r2 review probe p4
+% oracle:  pdflatex + biber: OldPrimary {knuth}, Neither {web, goossens}, PlainArticles {lamport}; errors "'type' used
+%          multiple times" and "'subtype' used multiple times" (type and subtype share blx@tempb,
+%          biblatex.sty:9532-9566), each list empty with "Empty bibliography"
+% engines: rust 77a r1 applied only the last value of a repeated key (5 lists, 0 errors)
+% expect:  exactly 2 errors and 2 warnings (Empty bibliography); three bibliographies with the oracle's keys
+% status:  GREEN (77a r2)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage[backend=biber]{biblatex}
+\addbibresource{refs.bib}
+\begin{document}
+X \nocite{knuth,lamport,goossens,mittelbach,web}.
+\printbibliography[keyword=old,keyword=primary,title={OldPrimary}]
+\printbibliography[notkeyword=old,notkeyword=primary,title={Neither}]
+\printbibliography[type=book,type=article,title={Twice}]
+\printbibliography[type=article,subtype=magazine,title={TypeSub}]
+\printbibliography[notsubtype=magazine,type=article,title={PlainArticles}]
+\end{document}

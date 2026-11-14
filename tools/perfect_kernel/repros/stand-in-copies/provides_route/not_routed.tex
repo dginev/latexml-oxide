@@ -1,0 +1,14 @@
+% witness: the rule's exclusions (user ruling 2026-10-20, 77w brief): a copy declaring its own name (selfnamed.sty,
+%          `\ProvidesPackage{selfnamed}`), one declaring a name no binding answers (`\ProvidesPackage{nosuchfile}`), a
+%          `.sty` declaring a bound class (`\ProvidesClass{revtex4}`: another kind), and a request with its own binding
+%          (a shipped url.sty that `\ProvidesPackage{natbib}`: the url binding)
+% oracle:  pdflatex 0 errors, "SELF" for each shipped selfnamed.sty variant
+% engines: rust 529dc1b543 = the copy read raw, "SELF"
+% expect:  0 errors, 0 warnings; "SELF", read raw; no declaration route ("declares itself" Info absent)
+% status:  GREEN (529dc1b543) -> GREEN (77w)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{selfnamed}
+\begin{document}
+\selfextra
+\end{document}

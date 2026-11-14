@@ -1,0 +1,16 @@
+% witness: bookcover/bookcover-example1 (recall 49.3 %: spine title and both flaps' \kant text lost);
+%          bookcover.cls:188-191 \geometry{paperwidth=2\marklength+2\bleedwidth+…+\spinewidth}
+% oracle:  pdflatex: FLAPKEPT SPINEKEPT (geometry.sty:369,461 sets the length with calc's \setlength)
+% engines: rust (56in) = "Missing number" warning, \spinewidth 0, only FLAPKEPT; Perl: both
+%          (its \geometry is a no-op, geometry.sty.ltxml:47)
+% expect:  0 errors, 0 warnings; <p>FLAPKEPTSPINEKEPT</p>
+% status:  RED (56in) -> GREEN (56io)
+\documentclass{article}
+\usepackage{calc}\usepackage{geometry}
+\newlength\flapwidth \setlength\flapwidth{6cm}
+\newlength\spinewidth \setlength\spinewidth{25mm}
+\geometry{paperwidth=2\flapwidth+\spinewidth}
+\begin{document}
+\ifdim\flapwidth>2cm FLAPKEPT\fi
+\ifdim\spinewidth>1cm SPINEKEPT\fi
+\end{document}

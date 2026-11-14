@@ -1,0 +1,18 @@
+% witness: review rev92a_r2 B2 (probe q5: `\offprints{the editor of Bob Baker, \email{ed@z.org}}`)
+% oracle:  pdflatex with 1707.06238's aa.cls: "Send offprint requests to: the editor of Bob Baker, e-mail: ed@z.org"
+% engines: perl 0.8.8 = 0 errors, the address lost; rust 90a = 0 errors, ed@z.org on a nameless creator, the shadow
+%          without it; rust 92a r2 = the shadow gives it to Bob Baker (the piece's last word his surname)
+% expect:  0 errors, 0 warnings; a piece holding words no name has names no one: the shadow's block
+% status:  RED (92a r2) -> GREEN (92a r3)
+% preload: ar5iv.sty
+\documentclass{aa}
+\usepackage{hyperref}
+\begin{document}
+\title{T}
+\offprints{the editor of Bob Baker, \email{ed@z.org}}
+\author{Ann Able\inst{1} \and Bob Baker\inst{2}}
+\institute{Univ X \and Univ Y}
+\abstract{A}{B}{C}{D}{E}
+\maketitle
+Text.
+\end{document}

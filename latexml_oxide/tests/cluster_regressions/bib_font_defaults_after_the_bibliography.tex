@@ -1,0 +1,11 @@
+\documentclass{article}
+\begin{filecontents}{fd_after.bib}
+@book{a, author={Alpha Author}, title={Serif Title}, publisher={P}, year={2001}}
+\end{filecontents}
+\begin{document}
+Text \cite{a}.
+\bibliography{fd_after}
+\bibliographystyle{plain}
+\renewcommand\familydefault{\sfdefault}\normalfont
+Sans part.
+\end{document}

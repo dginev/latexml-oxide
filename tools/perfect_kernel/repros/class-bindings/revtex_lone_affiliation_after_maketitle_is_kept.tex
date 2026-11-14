@@ -1,0 +1,19 @@
+% mechanism: REVTeX's `\maketitle` switches the author block off only for a block the document repeats after it, which
+%   starts with `\author` (revtex4_cls.rs `switch_off_author_block_after_maketitle`); an `\affiliation` the document
+%   gives only after `\maketitle` stays the live setter, its text kept (FIDELITY_CHARTER §2: authored text is kept)
+% witness: 1309.4768 (78 words, 6 contacts), 1106.2389 (Chungku Kim's only affiliation), 2304.09163; study WR160
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "T / Ann Able and Bob Baker / Text." (revtex4-1.cls:2654
+%   `\let\affiliation\@gobble`: no affiliation printed)
+% engines: rust int159b: 0 errors, Ann and Bob each hold "Univ X, Town"; perl the same; int160b (RB1): 0 errors, no
+%   affiliation (lost silently). RB1c: as expected
+% expect:  0 errors, 0 warnings; Ann Able (Univ X, Town); Bob Baker (Univ X, Town); the body "Text."
+% status:  GREEN
+\documentclass[aps,prl]{revtex4-1}
+\begin{document}
+\title{T}
+\author{Ann Able}
+\author{Bob Baker}
+\maketitle
+\affiliation{Univ X, Town}
+Text.
+\end{document}

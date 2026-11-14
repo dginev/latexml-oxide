@@ -1,0 +1,13 @@
+% witness: 68r review finding 4 (`\input amstex \input amsppt.sty` and a later LaTeX-pool autoload retracted plain's `\+` again); math0103164
+% oracle:  amstex (TL 2025 amstex.fmt) 3 errors (`\newcommand` is undefined there, and so `\foo`, twice; LaTeXML autoloads the LaTeX pool for it); one tabbed row "a b c"
+% engines: rust 68r round 1 = 2 Errors (undefined:\+, unexpected:& "Stray alignment"); rust 67int12 the same
+% expect:  0 errors; a tabular row with the cells a, b, c
+% status:  GREEN (68r round 2)
+\input amstex
+\input amsppt.sty
+\newcommand{\foo}{x}
+\document
+\settabs 3\columns
+\+ a & b & c\cr
+\foo
+\enddocument

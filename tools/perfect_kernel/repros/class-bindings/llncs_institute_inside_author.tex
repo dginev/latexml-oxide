@@ -1,0 +1,18 @@
+% mechanism: an `\institute` written inside `\author` is llncs's store all the same (`\gdef\@institute`, llncs.cls:868),
+%   printed under the names by `\institutename` (:1036): an institute after the names, every author's, not part of the
+%   last name.
+% witness: 1609.01220 (`\author{Christoph-Simon Senjak and Martin Hofmann \email{…} \institute{…}}`)
+% oracle:  pdflatex 0 errors; "Ann Able and Bob Baker" over "University of Somewhere" and "Town"
+% engines: rust int114a = a nameless creator holding the institute; perl = one creator "Ann Able and Bob Baker" holding
+%   it
+% expect:  0 errors, 0 warnings; both authors the institute
+% status:  RED (int114a) -> GREEN (85b)
+% preload: ar5iv.sty
+\documentclass{llncs}
+\begin{document}
+\title{A Title}
+\author{Ann Able and Bob Baker \institute{University of Somewhere\\ Town}}
+\maketitle
+\begin{abstract}Text.\end{abstract}
+Body.
+\end{document}

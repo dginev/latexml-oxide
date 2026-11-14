@@ -1,0 +1,13 @@
+% witness: the rev77t2 re-review (finding 1, probe s1)
+% oracle:  pdflatex 0 errors: "Ann Able†, Bob Baker‡" over "The Hong Kong University of Science and Technology" over "Hong Kong SAR"
+% engines: rust 77t r2 = 0 errors; a creator "Hong Kong SAR" (the names-row push read the place as names); 77t r1 its
+%          institution's second line, on both names; base int41a welded into Bob Baker's name
+% expect:  0 errors, 0 warnings; two authors, each holding the two-line institution
+% status:  RED (77t r2) -> GREEN (int44 follow-up)
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{Ann Able$^{\dag}$, Bob Baker$^{\ddag}$\\ The Hong Kong University of Science and Technology\\ Hong Kong SAR}
+\maketitle
+Text.
+\end{document}

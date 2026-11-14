@@ -1,0 +1,10 @@
+% witness: 2008.07007 (`\widebar`), 2604.11906 (`\Angstrom`), 2407.15192 (`\bigtimes`); run 340: 400 papers' first error in newtxmath's own symbols
+% oracle:  pdflatex with newtxmath.sty: 0 errors
+% engines: rust 65x = error (`\widebar`, `\Angstrom`, `\bigtimes`, `\vv`, `\transp` undefined)
+% expect:  0 errors; each name its glyph (\vv as the arrow accent; \vv*{x}{i} the arrow over x, subscript i)
+% status:  RED (65x) -> GREEN (65y)
+\documentclass{article}
+\usepackage{newtxmath}
+\begin{document}
+$\widebar{x}$, $1\,\Angstrom$, $\bigtimes_{i} A_i$, $\vv{AB}$, $\vv*{x}{i}$, $a \mapsfrom b$, $A^{\transp}$, $\lBrack x \rBrack$, $\uppartial f$.
+\end{document}

@@ -1,0 +1,20 @@
+% witness: 2009.01991, 2003.06860, 1610.04387 (~428 of run 336's papers): aipproc `\tablehead{n}{align}{b}{text}`
+% oracle:  pdflatex 0 errors (aipproc.cls:668-672 sets the head in a `tabular[#3]`)
+% engines: rust 64g = Error "`b' invalid at this point" ×2 (Perl's `\parbox{#3}{#4}`, aipproc.cls.ltxml:112, read
+%          `b` as a width through calc); Perl 2 warnings "Missing number"
+% expect:  0 errors, 0 warnings; the head cell a nested tabular
+% status:  RED (64g) -> GREEN (64h)
+\documentclass{aipproc}
+\layoutstyle{6x9}
+\begin{document}
+\begin{table}
+\begin{tabular}{rr}
+\hline
+\tablehead{1}{r}{b}{First\\head} & \tablehead{1}{r}{b}{Second}\\
+\hline
+1 & 2\\
+\hline
+\end{tabular}
+\caption{A table.}
+\end{table}
+\end{document}

@@ -1,0 +1,20 @@
+% witness: 2303.00352 ("Enrique García-Macíascor1"); review of 88b r3, P1, probe c1
+% oracle:  pdflatex 0 errors (two runs): "Ann Able^a , Bob Baker^a / a Univ X, / * Corresponding author / ** Second
+%          corresponding author"; `\corref{…}` (cas-common.sty:224 `\NewDocumentCommand \corref { m }`) prints
+%          nothing, inside the name (the witness's shape) or after the `\author`
+% engines: rust 88b r3 = 0 errors, "Ann Ablecor1" and `<p>cor2</p>` in the body (the binding's `\corref[]` took no
+%          argument); rust int117a = the same; Perl: not run
+% expect:  0 errors, 0 warnings; both authors Univ X; no `cor1`/`cor2` in any name or paragraph; both
+%          corresponding-author notes on the title block (the `\corref`/`\cortext` link is not built)
+% status:  RED (88b r3) -> GREEN (88b r4)
+% preload: ar5iv.sty
+\documentclass{cas-sc}
+\begin{document}
+\title [mode = title]{T}
+\author[a]{Ann Able\corref{cor1}}
+\author[a]{Bob Baker}\corref{cor2}
+\affiliation[a]{organization={Univ X}}
+\cortext[cor1]{Corresponding author}
+\cortext[cor2]{Second corresponding author}
+\maketitle
+\end{document}

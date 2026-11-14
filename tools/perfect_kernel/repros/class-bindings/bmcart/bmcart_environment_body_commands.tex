@@ -1,0 +1,20 @@
+% witness: 2305.08284, 1611.01327, 1909.07026 (`\csentence`), 2007.07886, 1907.07303, 2106.01700 (`\parttitle`):
+%          bmcart.cls:712-717 defines `\csentence` in its `\figure`, :1505-1510 `\parttitle` in its `\abstract`
+% oracle:  pdflatex with bmcmini.cls (beside): "Abstract Background: Some background. Methods: Some methods. Text.
+%          Figure 1: Lead sentence. The rest of the caption." (the lead sentence and the headings bold); 0 errors
+% engines: rust 67int15 = 3 errors (undefined `\parttitle` twice, `\csentence`: the kernel's figure and abstract
+%          never run the class's)
+% expect:  0 errors, 0 warnings; the headings bold run-ins of the abstract, the lead sentence bold in the caption
+% status:  RED (67int15) -> GREEN (68v)
+% preload: ar5iv.sty
+\documentclass{bmcmini}
+\begin{document}
+\begin{abstract}
+\parttitle{Background} Some background.
+\parttitle{Methods} Some methods.
+\end{abstract}
+Text.
+\begin{figure}[h]
+\caption{\csentence{Lead sentence.} The rest of the caption.}
+\end{figure}
+\end{document}

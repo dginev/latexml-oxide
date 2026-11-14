@@ -1,0 +1,18 @@
+% The kernel's `\author` block holding marked affiliation lines and a `$^\dagger$Deceased` legend line under `Ann
+% Able$^{1,\dagger}$`: the frontmatter observer reads the line as a legend (resolver/labels.rs `is_legend_text`, the shared
+% `classify_thanks` reading "Deceased" as its `deceased` kind), so it is Ann Able's note, not her affiliation
+% (FIDELITY_CHARTER §4, user ruling 2026-11-02: an annotation on the author, as "Corresponding author" is).
+% witness: synthetic (the observer's sibling of review rev99b2 probe q4e)
+% oracle:  pdflatex 0 errors: "Ann Able1,†", "Bob Baker2", "1Univ A, Town", "2Univ B, City", "†Deceased"
+% engines: rust int127a = "Deceased" Ann Able's affiliation contact; perl = the whole block in the personnames
+% expect:  0 errors, 0 warnings; Ann Able holds "Univ A, Town" and <note class="ltx_note_frontmatter
+%          ltx_thanks_deceased" role="thanks">…Deceased</note>; Bob Baker "Univ B, City"
+% status:  RED (int127a) -> GREEN (100a)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{A Title}
+\author{Ann Able$^{1,\dagger}$ \and Bob Baker$^{2}$\\ $^1$Univ A, Town\\ $^2$Univ B, City\\ $^\dagger$Deceased}
+\maketitle
+Text.
+\end{document}

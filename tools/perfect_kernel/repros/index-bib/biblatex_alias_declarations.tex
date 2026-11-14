@@ -1,0 +1,17 @@
+% witness: chicago-notes.bbx:2261-2265 (`\DeclareBibliographyAlias{legal}{cite:legal}` — driver names, not entry types); arXiv papers ship biber's .bbl
+% oracle:  biblatex: an alias to an entry type retypes the entry; a style's aliases to its own drivers do not reach the data
+% engines: rust=0 errors (56kb): the .bbl's @review/@customa/@software/@bookinbook formatted as books (journal, pages, host lost)
+% expect:  0 errors; review and customa as articles (Atlantic Monthly, pp. 12–14), bookinbook "In Complete Works"
+% status:  RED (56kb) -> GREEN (56kc)
+% Reads biber's .bbl (biblatex_alias_declarations.bbl, copied to the job's name): the document session's own
+% \DeclareBibliographyAlias calls apply there. `{review}{cite:review}` names a driver, so it is ignored and
+% review keeps standard.bbx's article; `{customa}{article}` retypes customa.
+\documentclass{article}
+\usepackage[style=authoryear]{biblatex}
+\addbibresource{blxalias.bib}
+\DeclareBibliographyAlias{review}{cite:review}
+\DeclareBibliographyAlias{customa}{article}
+\begin{document}
+\cite{rev} \cite{cus}
+\printbibliography
+\end{document}

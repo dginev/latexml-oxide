@@ -1,0 +1,28 @@
+% witness: 1805.06896 (a bare `\itemize`), 2304.12197, 2307.13461, hep-ex0406049, 0705.0894, 2511.04367 (a list
+%          left open before the bibliography)
+% oracle:  pdflatex 0 errors (an unclosed list is reported only at `\end{document}`)
+% engines: rust 65a = 3 errors (`ltx:bibitem isn't allowed in ltx:bibblock`: the blank line's `\par` closed the
+%          paragraph holding the item's inline sectional block, and the section and bibliography with it); 64c 1;
+%          Perl 4
+%          65i = 0 errors: the outer list never ends, so the section closes it (OXIDIZED_DESIGN #542) and the
+%          unnumbered section and the bibliography follow the list; 65e's shape inside a list that ends is
+%          bib_blank_lines_in_closed_list
+% expect:  0 errors, 1 warning; one biblist of 4 bibitems, the section and the bibliography children of the document
+% status:  RED (65a) -> GREEN (65e; this shape 65i)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\section{Conclusions}
+\begin{itemize}\item a \itemize \item b \end{itemize}
+\section*{Acknowledgments}
+Thanks.
+\begin{thebibliography}{9}
+\bibitem{a} A.
+
+\bibitem{b} B.
+
+\bibitem{c} C.
+
+\bibitem{d} D.
+\end{thebibliography}
+\end{document}

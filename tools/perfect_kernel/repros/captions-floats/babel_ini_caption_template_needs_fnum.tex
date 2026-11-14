@@ -1,0 +1,15 @@
+% witness: 2605.29738 (main.tex:159, then the first \caption)
+% oracle: pdflatex (clean); engine: pdflatex
+% expect: 0 errors; the table caption tagged "Table 1"
+% mechanism: \foreignlanguage{lithuanian} loads babel-lt.ini on demand; its figure/table caption templates make babel
+%   (babel.sty:2959-2965) \gdef \fnum@table over the current body (`\[fnum@table]`). article.cls:457/469 defines
+%   \fnum@figure/\fnum@table; our kernel (and Perl's) does not, so the capture is the token \fnum@table itself and the
+%   new \fnum@table calls itself: the caption's \refstepcounter{table} loops (Fatal; Perl loops too, terminated).
+%   Fixed: article/report/book bindings define \fnum@figure/\fnum@table as \lx@@fnum@@{figure}/{table}, the composed tag.
+% status:  GREEN
+\documentclass{article}
+\usepackage[english]{babel}
+\begin{document}
+\foreignlanguage{lithuanian}{x}
+\begin{table}\caption{A caption.}\end{table}
+\end{document}

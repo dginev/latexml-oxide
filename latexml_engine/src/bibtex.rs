@@ -29,6 +29,7 @@
 use std::{cell::RefCell, rc::Rc};
 
 use latexml_core::tokens::Tokens;
+use rustc_hash::FxHashSet;
 
 use crate::prelude::*;
 
@@ -207,11 +208,10 @@ pub fn current_entry() -> Option<Rc<RefCell<BibEntry>>> {
 /// Divergence B1 (see `docs/archive/BIBTEX_PORT_PLAN_2026-06-20.md`): Perl stores this
 /// as a State Value `CURRENT@BIBKEY` (group-scoped via Perl
 /// `\bgroup`/`\egroup`); Rust stores it as a thread-local, which
-/// does NOT auto-pop on group exit. The current Phase 1-3 code never
-/// nests `\bib{...}` calls so this divergence is latent; will need
-/// to be revisited when Phase 4's `\bibentry@prepare` DefPrimitive
-/// ports the `$stomach->bgroup; AssignValue; ...; $stomach->egroup`
-/// dance from Perl L126-132.
+/// does NOT auto-pop on group exit. `\bibentry@prepare` runs the
+/// preparers in a group as Perl L126-132 does, and the key stays set after
+/// its `\egroup`: latent, since `\bibentry@create`'s `{bib@entry}` sets it
+/// again and entries never nest.
 pub fn current_bib_key() -> Option<String> { CURRENT_ENTRY_KEY.with(|k| k.borrow().clone()) }
 
 /// Look up a *registered* entry by raw (un-normalized) key. Perl
@@ -222,6 +222,40 @@ pub fn lookup_entry(key: &str) -> Option<Rc<RefCell<BibEntry>>> {
   use latexml_core::common::cleaners::normalize_bib_key;
   let normkey = normalize_bib_key(key);
   BIB_ENTRIES.with(|m| m.borrow().get(&normkey).cloned())
+}
+
+/// Resolve an entry type through its alias: `\bib@entry@<type>@alias`, when
+/// defined, expands to the type the entry is processed as (Perl L119-122,
+/// L139-142). Most aliases are pure-text macros ("thesis"), so one expansion
+/// is enough.
+pub fn resolve_entry_type(origtype: &str) -> Result<String> {
+  let alias_tok = T_CS!(format!("\\bib@entry@{origtype}@alias").as_str());
+  Ok(match lookup_definition(&alias_tok)? {
+    Some(_) => match do_expand(alias_tok) {
+      Ok(toks) => toks.to_string(),
+      Err(_) => origtype.to_string(),
+    },
+    None => origtype.to_string(),
+  })
+}
+
+/// The defined `\bib@entry@<type>@<phase>` hooks for `phase` "prepare" or
+/// "complete", in Perl's order: the resolved type, the original type when an
+/// alias changed it, then `default` (Perl L127-130, L158-164).
+fn entry_hooks(resolved_type: &str, origtype: &str, phase: &str) -> Result<Vec<String>> {
+  let mut types = vec![resolved_type];
+  if origtype != resolved_type {
+    types.push(origtype);
+  }
+  types.push("default");
+  let mut defined = Vec::new();
+  for t in types {
+    let cs_name = format!("\\bib@entry@{t}@{phase}");
+    if lookup_definition(&T_CS!(cs_name.as_str()))?.is_some() {
+      defined.push(cs_name);
+    }
+  }
+  Ok(defined)
 }
 
 /// Perl: `currentBibEntryField('fieldname')` — get the *processed*
@@ -562,15 +596,43 @@ fn copy_balanced_group(chars: &mut std::iter::Peekable<std::str::Chars>, out: &m
 /// and this reads that declaration back off the definition instead of keeping a
 /// second copy of the list that could drift from it.
 fn bib_field_source(value: &str, handler: &Rc<dyn Definition>) -> String {
-  let reads_raw = handler
+  let first = handler
     .get_parameters()
-    .and_then(|params| params.get_parameters().first().map(|p| reads_field_raw(p)))
-    .unwrap_or(false);
-  if reads_raw {
-    value.to_string()
-  } else {
-    escape_bib_data_specials(value)
+    .and_then(|params| params.get_parameters().first().cloned());
+  match first {
+    Some(p) if reads_field_raw(p) && with(p.name, |name| name != "Verbatim") => {
+      identifier_data(value)
+    },
+    Some(p) if reads_field_raw(p) => value.to_string(),
+    _ => escape_bib_data_specials(value),
   }
+}
+
+/// An identifier field's value (`doi`, `isbn`, `issn`, `lccn`, `pii`, `crossref`: the `Semiverbatim` handlers) as
+/// the identifier itself: TeX's escapes and grouping braces are not part of it. BibTeX counts every brace, escaped or
+/// not, so MathSciNet's DOI `10.1007/978-3-642-29849-3\{_}10` (its `url` reads `…3_10`) is balanced for BibTeX — but
+/// the `Semiverbatim` reader takes `\{` for a control symbol, and the `}` after `_` ended the argument, a stray `}`
+/// in the entry (2601.01900, 2511.01040, 2601.01772; 74 papers, all 2511+). An escape's backslash (`\_`, `\{`, `\&`)
+/// and every brace are dropped, so `\{_}`, `{\_}` and `\_` all read `_`. A value holding a control word is markup
+/// around the identifier (`\href{https://doi.org/…}{…}`, `\url{…}`; `href_semiverbatim_loop`) and is passed as it is.
+/// `url` (`Verbatim`) keeps its characters. Guard: `06_cluster_bibliography::bib_doi_with_escaped_brace`.
+fn identifier_data(value: &str) -> String {
+  let mut rest = value.chars().peekable();
+  while let Some(c) = rest.next() {
+    if c == '\\' && rest.peek().is_some_and(|next| next.is_ascii_alphabetic()) {
+      return value.to_string();
+    }
+  }
+  let mut out = String::with_capacity(value.len());
+  let mut chars = value.chars().peekable();
+  while let Some(c) = chars.next() {
+    match c {
+      '\\' if chars.peek().is_some_and(|next| !next.is_ascii_alphabetic()) => {},
+      '{' | '}' => {},
+      _ => out.push(c),
+    }
+  }
+  out
 }
 
 /// Whether `p` consumes its argument's characters as data rather than as TeX.
@@ -714,6 +776,368 @@ pub fn current_entry_raw_field(name: &str) -> Option<String> {
     .borrow()
     .get_raw_field(name)
     .map(str::to_string)
+}
+
+/// `\bib@@names{<role>}` for a biblatex `editora`/`editorb`/`editorc` list, the
+/// role read from its `type_field` (`editoratype = {compiler}`), `editor` when
+/// unset (biblatex.def:3002). The name list itself follows in the input.
+pub fn bib_typed_names(type_field: &str) -> Tokens {
+  let role = current_entry_raw_field(type_field)
+    .map(|t| t.trim().to_string())
+    .filter(|t| !t.is_empty())
+    .unwrap_or_else(|| "editor".to_string());
+  let mut tokens = vec![T_CS!("\\bib@@names"), T_BEGIN!()];
+  tokens.extend(Explode!(&role));
+  tokens.push(T_END!());
+  Tokens::new(tokens)
+}
+
+/// The handlers of biblatex's own field names (biblatex manual §2.2.2), each `\bib@field@<type>@<field>` that
+/// files its value in the entry's structure. `declared`: `None` for every field — the biblatex binding's, on both of
+/// biblatex's routes (a `.bbl`'s entries, a `.bib` rendered without biber: `\printbibliography` falls back to
+/// `\bibliography{…}`, biblatex_sty.rs `\biblatex@printbibliography`) —, else only the fields the document's `.bst`
+/// declares in its `ENTRY` list ([`bst_declared_fields`]), which are the fields bibtex(1) passes to the style.
+///
+/// The classic reader filed them as unprinted `ltx:bib-data`, losing about 7,000 words of reference text in 78
+/// manuals of sweep 120 (publisher locations, journal names, access dates, addenda). Rust-only: Perl has no biblatex
+/// binding and prints no bibliography without a `.bbl`. Defined for every route (batches 56ie-57), they printed under
+/// natbib/BibTeX what the style never prints — "Accessed: 2025-08-15", "Note: ⟨addendum⟩" where plainnat and apsrev4-1
+/// declare neither field (arXiv 2602.10008, 2606.11822), and a `journaltitle={\undefinedmacro Jt}` raised
+/// `Error:undefined` —, where Perl keeps them as `\bib@field@default@default`'s raw `bib-data`; a style that declares
+/// one prints it (ACM-Reference-Format.bst:38 `location`, sn-mathphys.bst and mdpi.bst `urldate`), as
+/// here (OXIDIZED_DESIGN_DIVERGENCES #823). Guards `perfect_kernel_batch78i::{natbib_biblatex_only_fields_are_raw_data,
+/// biblatex_prints_its_own_fields, bst_declared_biblatex_field_is_printed}`. An entry giving both `journal` and
+/// `journaltitle` (or `subtitle` and `titleaddon`) gets both; biber rejects such entries.
+pub fn define_biblatex_fields(declared: Option<&FxHashSet<String>>) -> Result<()> {
+  let want = |field: &str| declared.is_none_or(|fields| fields.contains(field));
+  if want("journaltitle") {
+    DefMacro!(
+      "\\bib@field@default@journaltitle",
+      "\\bib@addto@related{journal}{host}\\bib@@field{ltx:bib-title}"
+    );
+  }
+  if want("location") {
+    DefMacro!(
+      "\\bib@field@default@location",
+      "\\bib@@field{ltx:bib-place}"
+    );
+    DefMacro!(
+      "\\bib@field@inbook@location",
+      "\\bib@addto@related{book}{host}\\bib@@field{ltx:bib-place}"
+    );
+    DefMacro!(
+      "\\bib@field@incollection@location",
+      "\\bib@addto@related{book}{host}\\bib@@field{ltx:bib-place}"
+    );
+  }
+  if want("urldate") {
+    DefMacro!(
+      "\\bib@field@default@urldate",
+      "\\bib@@field{ltx:bib-date}[role=accessed]"
+    );
+  }
+  if want("titleaddon") {
+    DefMacro!(
+      "\\bib@field@default@titleaddon",
+      "\\bib@@field{ltx:bib-subtitle}"
+    );
+  }
+  if want("addendum") {
+    DefMacro!(
+      "\\bib@field@default@addendum",
+      "\\bib@@field{ltx:bib-note}[role=addendum]"
+    );
+  }
+  // biblatex's second-tier fields, which its standard styles print too
+  // (standard.bbx:211/260/309/311/578/710; biblatex.def:2999-3017 `byeditorx`,
+  // :3173-3185 `booktitle`, :3230-3240 `issue`): unprinted `ltx:bib-data` lost
+  // ~305-636 words over 19-31 manuals of sweep 123 (biblatex-chicago
+  // cms-trad/dates/notes-sample, biblatex-fiwi ×4, biblatex-apa-test).
+  // Rust-only, as above. They keep their place in the entry's structure:
+  // - the main title is the multi-volume work, the HOST of a volume: nested in
+  //   the part's book (proceedings) host, else the entry's own host;
+  if want("maintitle") {
+    DefMacro!(
+      "\\bib@field@default@maintitle",
+      "\\bib@addto@related{mvbook}{host}\\bib@@field{ltx:bib-title}"
+    );
+  }
+  if want("mainsubtitle") {
+    DefMacro!(
+      "\\bib@field@default@mainsubtitle",
+      "\\bib@addto@related{mvbook}{host}\\bib@@field{ltx:bib-subtitle}"
+    );
+  }
+  if want("maintitleaddon") {
+    DefMacro!(
+      "\\bib@field@default@maintitleaddon",
+      "\\bib@addto@related{mvbook}{host}\\bib@@field{ltx:bib-subtitle}"
+    );
+  }
+  if want("maintitle") {
+    DefMacro!(
+      "\\bib@field@inbook@maintitle",
+      "\\bib@addto@related{book}{host}\\bib@addto@related{mvbook}{host}\\bib@@field{ltx:bib-title}"
+    );
+  }
+  if want("mainsubtitle") {
+    DefMacro!(
+      "\\bib@field@inbook@mainsubtitle",
+      "\\bib@addto@related{book}{host}\\bib@addto@related{mvbook}{host}\\bib@@field{ltx:bib-subtitle}"
+    );
+  }
+  if want("maintitleaddon") {
+    DefMacro!(
+      "\\bib@field@inbook@maintitleaddon",
+      "\\bib@addto@related{book}{host}\\bib@addto@related{mvbook}{host}\\bib@@field{ltx:bib-subtitle}"
+    );
+  }
+  if want("maintitle") {
+    DefMacro!(
+      "\\bib@field@incollection@maintitle",
+      "\\bib@addto@related{book}{host}\\bib@addto@related{mvbook}{host}\\bib@@field{ltx:bib-title}"
+    );
+  }
+  if want("mainsubtitle") {
+    DefMacro!(
+      "\\bib@field@incollection@mainsubtitle",
+      "\\bib@addto@related{book}{host}\\bib@addto@related{mvbook}{host}\\bib@@field{ltx:bib-subtitle}"
+    );
+  }
+  if want("maintitleaddon") {
+    DefMacro!(
+      "\\bib@field@incollection@maintitleaddon",
+      "\\bib@addto@related{book}{host}\\bib@addto@related{mvbook}{host}\\bib@@field{ltx:bib-subtitle}"
+    );
+  }
+  if want("maintitle") {
+    DefMacro!(
+      "\\bib@field@inproceedings@maintitle",
+      "\\bib@addto@related{proceedings}{host}\\bib@addto@related{mvproceedings}{host}\\bib@@field{ltx:bib-title}"
+    );
+  }
+  if want("mainsubtitle") {
+    DefMacro!(
+      "\\bib@field@inproceedings@mainsubtitle",
+      "\\bib@addto@related{proceedings}{host}\\bib@addto@related{mvproceedings}{host}\\bib@@field{ltx:bib-subtitle}"
+    );
+  }
+  if want("maintitleaddon") {
+    DefMacro!(
+      "\\bib@field@inproceedings@maintitleaddon",
+      "\\bib@addto@related{proceedings}{host}\\bib@addto@related{mvproceedings}{host}\\bib@@field{ltx:bib-subtitle}"
+    );
+  }
+  // - the book subtitle and addon belong to the host book (proceedings);
+  if want("booksubtitle") {
+    DefMacro!(
+      "\\bib@field@default@booksubtitle",
+      "\\bib@addto@related{book}{host}\\bib@@field{ltx:bib-subtitle}"
+    );
+  }
+  if want("booktitleaddon") {
+    DefMacro!(
+      "\\bib@field@default@booktitleaddon",
+      "\\bib@addto@related{book}{host}\\bib@@field{ltx:bib-subtitle}"
+    );
+  }
+  if want("booksubtitle") {
+    DefMacro!(
+      "\\bib@field@inproceedings@booksubtitle",
+      "\\bib@addto@related{proceedings}{host}\\bib@@field{ltx:bib-subtitle}"
+    );
+  }
+  if want("booktitleaddon") {
+    DefMacro!(
+      "\\bib@field@inproceedings@booktitleaddon",
+      "\\bib@addto@related{proceedings}{host}\\bib@@field{ltx:bib-subtitle}"
+    );
+  }
+  // - the issue is a PART of the journal: nested in an article's journal host,
+  //   directly in a `@periodical` (which is the journal);
+  if want("issuetitle") {
+    DefMacro!(
+      "\\bib@field@default@issuetitle",
+      "\\bib@addto@related{journal}{host}\\bib@addto@related{issue}{part}\\bib@@field{ltx:bib-title}"
+    );
+  }
+  if want("issuesubtitle") {
+    DefMacro!(
+      "\\bib@field@default@issuesubtitle",
+      "\\bib@addto@related{journal}{host}\\bib@addto@related{issue}{part}\\bib@@field{ltx:bib-subtitle}"
+    );
+  }
+  if want("issuetitle") {
+    DefMacro!(
+      "\\bib@field@periodical@issuetitle",
+      "\\bib@addto@related{issue}{part}\\bib@@field{ltx:bib-title}"
+    );
+  }
+  if want("issuesubtitle") {
+    DefMacro!(
+      "\\bib@field@periodical@issuesubtitle",
+      "\\bib@addto@related{issue}{part}\\bib@@field{ltx:bib-subtitle}"
+    );
+  }
+  // - the event (a conference, a performance, a screening) is its own object,
+  //   the proceedings' event for an `@inproceedings`;
+  if want("eventtitle") {
+    DefMacro!(
+      "\\bib@field@default@eventtitle",
+      "\\bib@addto@related{event}{event}\\bib@@field{ltx:bib-title}"
+    );
+  }
+  if want("eventtitleaddon") {
+    DefMacro!(
+      "\\bib@field@default@eventtitleaddon",
+      "\\bib@addto@related{event}{event}\\bib@@field{ltx:bib-subtitle}"
+    );
+  }
+  if want("venue") {
+    DefMacro!(
+      "\\bib@field@default@venue",
+      "\\bib@addto@related{event}{event}\\bib@@field{ltx:bib-place}"
+    );
+  }
+  if want("eventdate") {
+    DefMacro!(
+      "\\bib@field@default@eventdate",
+      "\\bib@addto@related{event}{event}\\bib@@field{ltx:bib-date}"
+    );
+  }
+  if want("eventtitle") {
+    DefMacro!(
+      "\\bib@field@inproceedings@eventtitle",
+      "\\bib@addto@related{proceedings}{host}\\bib@addto@related{event}{event}\\bib@@field{ltx:bib-title}"
+    );
+  }
+  if want("eventtitleaddon") {
+    DefMacro!(
+      "\\bib@field@inproceedings@eventtitleaddon",
+      "\\bib@addto@related{proceedings}{host}\\bib@addto@related{event}{event}\\bib@@field{ltx:bib-subtitle}"
+    );
+  }
+  if want("venue") {
+    DefMacro!(
+      "\\bib@field@inproceedings@venue",
+      "\\bib@addto@related{proceedings}{host}\\bib@addto@related{event}{event}\\bib@@field{ltx:bib-place}"
+    );
+  }
+  if want("eventdate") {
+    DefMacro!(
+      "\\bib@field@inproceedings@eventdate",
+      "\\bib@addto@related{proceedings}{host}\\bib@addto@related{event}{event}\\bib@@field{ltx:bib-date}"
+    );
+  }
+  // In a part of a book the event nests in the book host too, so the "In" rows
+  // (make_bibliography.rs, the `incollection` spec: `ltx:bib-related[@type]/
+  // ltx:bib-title`, `ltx:bib-related/ltx:bib-place`) do not print it as the
+  // book's title and place before the event rows print it again. (biblatex's
+  // standard drivers print an event for `@inproceedings`, `@proceedings` and
+  // `@unpublished` only, standard.bbx:311/578/710; sbl.bbx:293 prints the
+  // event of an `@incollection`.) Witnesses: biblatex-chicago cms-*-sample;
+  // repro index-bib/biblatex_title_units_events (guard
+  // `bibliography_names_fields::biblatex_title_units_and_events_print_once`).
+  if want("eventtitle") {
+    DefMacro!(
+      "\\bib@field@incollection@eventtitle",
+      "\\bib@addto@related{book}{host}\\bib@addto@related{event}{event}\\bib@@field{ltx:bib-title}"
+    );
+  }
+  if want("eventtitleaddon") {
+    DefMacro!(
+      "\\bib@field@incollection@eventtitleaddon",
+      "\\bib@addto@related{book}{host}\\bib@addto@related{event}{event}\\bib@@field{ltx:bib-subtitle}"
+    );
+  }
+  if want("venue") {
+    DefMacro!(
+      "\\bib@field@incollection@venue",
+      "\\bib@addto@related{book}{host}\\bib@addto@related{event}{event}\\bib@@field{ltx:bib-place}"
+    );
+  }
+  if want("eventdate") {
+    DefMacro!(
+      "\\bib@field@incollection@eventdate",
+      "\\bib@addto@related{book}{host}\\bib@addto@related{event}{event}\\bib@@field{ltx:bib-date}"
+    );
+  }
+  if want("eventtitle") {
+    DefMacro!(
+      "\\bib@field@inbook@eventtitle",
+      "\\bib@addto@related{book}{host}\\bib@addto@related{event}{event}\\bib@@field{ltx:bib-title}"
+    );
+  }
+  if want("eventtitleaddon") {
+    DefMacro!(
+      "\\bib@field@inbook@eventtitleaddon",
+      "\\bib@addto@related{book}{host}\\bib@addto@related{event}{event}\\bib@@field{ltx:bib-subtitle}"
+    );
+  }
+  if want("venue") {
+    DefMacro!(
+      "\\bib@field@inbook@venue",
+      "\\bib@addto@related{book}{host}\\bib@addto@related{event}{event}\\bib@@field{ltx:bib-place}"
+    );
+  }
+  if want("eventdate") {
+    DefMacro!(
+      "\\bib@field@inbook@eventdate",
+      "\\bib@addto@related{book}{host}\\bib@addto@related{event}{event}\\bib@@field{ltx:bib-date}"
+    );
+  }
+  // - `editora`-`editorc` are name lists whose role is `editor[abc]type`
+  //   (`compiler`, `director`, …; biblatex.def:3002 `bytypestrg{editora}{editor}`
+  //   defaults it to `editor`).
+  if want("editora") {
+    DefMacro!("\\bib@field@default@editora", sub[_args] { Ok(bib_typed_names("editoratype")) });
+  }
+  if want("editorb") {
+    DefMacro!("\\bib@field@default@editorb", sub[_args] { Ok(bib_typed_names("editorbtype")) });
+  }
+  if want("editorc") {
+    DefMacro!("\\bib@field@default@editorc", sub[_args] { Ok(bib_typed_names("editorctype")) });
+  }
+  // biblatex's name for BibTeX's `annote` (biblatex manual §2.2.2 "annotation";
+  // `annote` is its alias there): docsurvey's 126 annotated entries were read
+  // and dropped (OXIDIZED_DESIGN_DIVERGENCES #289).
+  if want("annotation") {
+    DefMacro!(
+      "\\bib@field@default@annotation",
+      "\\bib@@field{ltx:bib-note}[role=annotation]"
+    );
+  }
+  Ok(())
+}
+
+/// The fields the document's bibliography style declares (`\bibliographystyle{<style>}`, the `BIBSTYLE` value): the
+/// `ENTRY { … }` field list of `<style>.bst`, lowercased, which is what bibtex(1) copies from a `.bib` entry for the
+/// style to print. `None` without a style or a `.bst` on the search path.
+pub fn bst_declared_fields() -> Option<FxHashSet<String>> {
+  static ENTRY: Lazy<Regex> = Lazy::new(|| Regex::new(r"(?i)\bENTRY\s*\{([^}]*)\}").unwrap());
+  let style = lookup_string("BIBSTYLE");
+  // (`\bibliographystyle{myalpha.bst}`, 2511.23185: kpathsea takes a name already ending in `.bst` as it is)
+  let style = style.trim();
+  let style = style.strip_suffix(".bst").unwrap_or(style);
+  if style.is_empty() {
+    return None;
+  }
+  let path = find_file(&s!("{style}.bst"), None)?;
+  let bytes = std::fs::read(path).ok()?;
+  let text = String::from_utf8_lossy(&bytes);
+  // `%` comments outside the list's words are BibTeX's too (a field list may carry them)
+  let code: String = text
+    .lines()
+    .map(|line| line.split('%').next().unwrap_or_default())
+    .collect::<Vec<_>>()
+    .join("\n");
+  let fields = ENTRY.captures(&code)?;
+  Some(
+    fields[1]
+      .split_whitespace()
+      .map(str::to_lowercase)
+      .collect(),
+  )
 }
 
 /// Perl: `copyCrossrefFields(@fields)` — for each named field, if
@@ -1082,6 +1506,60 @@ impl TitleCaseMode {
 /// `Capitalize1` mode capitalise the FIRST word and lowercase the
 /// rest, while `Capitalize` uppercases every word.
 pub fn recase_title(title: &str, mode: TitleCaseMode) -> String {
+  recase_title_with(title, mode, |_| true)
+}
+
+/// [`recase_title`], re-casing a control word `\name` of a word only when
+/// `recased_cs_defined` accepts the re-cased name. BibTeX's `change.case$`
+/// re-cases a bare control word too (it spares only braces), and Perl's
+/// `lc($1)` over `\\(?:\w+|.)` does the same; the command then has to exist
+/// under the new name. When it does not, pdflatex would stop on the undefined
+/// `\latexe`, so a document that compiles clean either braces the word or uses
+/// a style that keeps the title's case (unsrtdin): the name as written is right
+/// in both. `\O` still becomes `\o` (defined); `\LaTeXe`, `\TeX` stay.
+/// Witness lshort-german/l2kurz (`title = {… \LaTeXe}` under unsrtdin: three
+/// "undefined \latexe/\latex/\tex" once its bibliography was read, batch 56jt).
+pub fn recase_title_with(
+  title: &str,
+  mode: TitleCaseMode,
+  recased_cs_defined: impl Fn(&str) -> bool,
+) -> String {
+  // Re-case `word` with `f`, keeping each control word whose re-cased name
+  // `recased_cs_defined` rejects.
+  let recase_word = |word: &str, f: fn(&str) -> String| -> String {
+    let mut out = String::with_capacity(word.len());
+    let mut rest = word;
+    while !rest.is_empty() {
+      if let Some(after) = rest.strip_prefix('\\') {
+        out.push('\\');
+        let n = after.chars().take_while(char::is_ascii_alphabetic).count();
+        if n > 0 {
+          // ASCII letters: `n` bytes.
+          let (name, tail) = after.split_at(n);
+          let recased = f(name);
+          out.push_str(if recased == name || recased_cs_defined(&recased) {
+            &recased
+          } else {
+            name
+          });
+          rest = tail;
+        } else if let Some(symbol) = after.chars().next() {
+          // A control symbol (`\"`, `\\`): the character after the
+          // backslash is its name, never the start of the next control word.
+          out.push_str(&f(&after[..symbol.len_utf8()]));
+          rest = &after[symbol.len_utf8()..];
+        } else {
+          rest = after;
+        }
+        continue;
+      }
+      // `rest` does not start with `\`, so the next one is past its first char.
+      let end = rest.find('\\').unwrap_or(rest.len());
+      out.push_str(&f(&rest[..end]));
+      rest = &rest[end..];
+    }
+    out
+  };
   // Scanned through `char_indices`, NOT `as_bytes()` + a hand-rolled index.
   //
   // Every index this yields is a char boundary by construction, so the
@@ -1171,12 +1649,12 @@ pub fn recase_title(title: &str, mode: TitleCaseMode) -> String {
       let word = cur.slice_from(word_start);
       let recased = match mode {
         TitleCaseMode::AsIs => word.to_string(),
-        TitleCaseMode::Uppercase => word.to_uppercase(),
+        TitleCaseMode::Uppercase => recase_word(word, str::to_uppercase),
         _ if !wb
           || (mode == TitleCaseMode::Capitalize1 && wc > 0)
           || mode == TitleCaseMode::Lowercase =>
         {
-          word.to_lowercase()
+          recase_word(word, str::to_lowercase)
         },
         TitleCaseMode::Capitalize | TitleCaseMode::Capitalize1 => ucfirst(word),
         _ => word.to_string(),
@@ -1491,7 +1969,9 @@ LoadDefinitions!({
     let raw = escape_bib_data_specials(&undouble_escaped_ampersand(
       &current_entry_raw_field(&field_name).unwrap_or_default(),
     ));
-    let recased = recase_title(&raw, mode);
+    let recased = recase_title_with(&raw, mode, |name| {
+      lookup_meaning(&T_CS!(&*format!("\\{name}"))).is_some()
+    });
     // Emit `\bib@@field{tag}{}{<recased>}`. The empty `{}` slot
     // is the OptionalKeyVals arg (absent → no attributes).
     // Perl L333: Tokenize($recap) — catcode-aware, so TeX macros in
@@ -1828,6 +2308,13 @@ LoadDefinitions!({
     "\\bib@@field{ltx:bib-edition}"
   );
   DefMacro!("\\bib@field@default@address", "\\bib@@field{ltx:bib-place}");
+  // biblatex's own field names (journaltitle, location, urldate, titleaddon, addendum, maintitle, the event and
+  // issue titles, editora-c, annotation, …) are read by the biblatex binding (biblatex_sty.rs, after its
+  // `LoadPool!("BibTeX")`) and, on the BibTeX route, only where the document's `.bst` declares them; elsewhere they
+  // stay `\bib@field@default@default`'s raw `bib-data`, as in Perl (OXIDIZED_DESIGN_DIVERGENCES #823).
+  if let Some(declared) = bst_declared_fields() {
+    define_biblatex_fields(Some(&declared))?;
+  }
   DefMacro!(
     "\\bib@field@default@publisher",
     "\\bib@@field{ltx:bib-publisher}"
@@ -2317,23 +2804,50 @@ LoadDefinitions!({
   });
 
   // -------- Phase 6: orchestration (Perl L111-190) --------
-  // `\ProcessBibTeXEntry{key}` drives the per-entry pipeline:
-  //   1. resolve type alias chain
-  //   2. dispatch prepare macros (type → alias → default)
-  //   3. open `<ltx:bibentry>` (via the `{bib@entry}` environment)
-  //   4. dispatch each field via the most specific handler
-  //   5. dispatch complete macros (type → alias → default)
-  //   6. close `<ltx:bibentry>`
+  // `\ProcessBibTeXEntry{key}` drives the per-entry pipeline in Perl's two
+  // steps (L111-112):
+  //   `\bibentry@prepare` — resolve the type alias; run ALL entry preparers
+  //     (type → alias → default) in a group, now;
+  //   `\bibentry@create` — open `<ltx:bibentry>` (the `{bib@entry}`
+  //     environment), dispatch each field via its most specific handler, run
+  //     the completers, close.
+  // The order is load-bearing: a preparer's `copyCrossrefFields` adds the
+  // fields a crossref'd entry inherits (a child `@incollection`'s `year`,
+  // `publisher`, `booktitle`), and `\bibentry@create` must read the field list
+  // AFTER that, or the inherited fields get no handler (they reached only
+  // `<bib-data>`). Guard: `bibliography_crossref::crossref_child_inherits_its_fields`.
   //
-  // The Perl pool splits this across two DefPrimitives
-  // (`\bibentry@prepare` + `\bibentry@create`) with a `\stomach->bgroup;
-  // AssignValue('CURRENT@BIBKEY' => $key); ...; egroup` dance that
-  // gives the per-entry state automatic group-scope restore. The
-  // Rust port does it all in one DefMacro returning a Tokens stream,
-  // since our gullet handles the tokens-back path natively (no
-  // openMouth needed). Divergence is documented under audit B1
-  // (`current_bib_key` rustdoc + `docs/archive/BIBTEX_PORT_PLAN_2026-06-20.md`).
-  DefMacro!("\\ProcessBibTeXEntry Semiverbatim", sub[args] {
+  // CURRENT@BIBKEY is a thread-local here, not a group-scoped state value:
+  // audit divergence B1 (`current_bib_key` rustdoc +
+  // `docs/archive/BIBTEX_PORT_PLAN_2026-06-20.md`).
+  DefMacro!(
+    "\\ProcessBibTeXEntry Semiverbatim",
+    "\\bibentry@prepare{#1}\\bibentry@create{#1}"
+  );
+
+  // Perl L114-132.
+  DefPrimitive!("\\bibentry@prepare Semiverbatim", sub[args] {
+    let key = args[0].to_string();
+    let Some(entry_rc) = lookup_entry(&key) else {
+      return Ok(Vec::new());
+    };
+    let origtype = entry_rc.borrow().entry_type.clone();
+    let resolved_type = resolve_entry_type(&origtype)?;
+    let preparers: Vec<Token> = entry_hooks(&resolved_type, &origtype, "prepare")?
+      .iter()
+      .map(|cs| T_CS!(cs.as_str()))
+      .collect();
+    bgroup();
+    set_current_entry(&key);
+    // `egroup` before propagating, so a failing preparer does not leak the frame.
+    let digested = digest(Tokens::from(preparers));
+    egroup()?;
+    digested?;
+    Ok(Vec::new())
+  });
+
+  // Perl L134-167.
+  DefMacro!("\\bibentry@create Semiverbatim", sub[args] {
     let key = if args[0].is_some() { args[0].to_string() } else {
       return Ok(Tokens!());
     };
@@ -2344,22 +2858,7 @@ LoadDefinitions!({
     let entry = entry_rc.borrow();
     let origtype = entry.entry_type.clone();
 
-    // Alias resolution: if `\bib@entry@<origtype>@alias` is defined,
-    // its expansion is the resolved type. Otherwise resolved == orig.
-    let alias_cs_name = format!("\\bib@entry@{}@alias", origtype);
-    let alias_tok = T_CS!(alias_cs_name.as_str());
-    let resolved_type = match lookup_definition(&alias_tok)? {
-      Some(_) => {
-        // Expand the alias CS via the gullet to get the target type
-        // name. Most aliases are pure-text DefMacros (e.g. "thesis"),
-        // so a single do_expand is enough.
-        match do_expand(alias_tok) {
-          Ok(toks) => toks.to_string(),
-          Err(_) => origtype.clone(),
-        }
-      },
-      None => origtype.clone(),
-    };
+    let resolved_type = resolve_entry_type(&origtype)?;
 
     // Set the current bib key so the per-field handlers (which call
     // `current_entry_field` etc.) see the right entry.
@@ -2382,20 +2881,6 @@ LoadDefinitions!({
     let mut lines: Vec<String> = Vec::new();
     // `\begin{bib@entry}{<type>}{<key>}`
     lines.push(format!("\\begin{{bib@entry}}{{{}}}{{{}}}", resolved_type, key));
-
-    // Dispatch prepare macros. Perl L128-131: prepare for the
-    // resolved type, then the orig type if different, then default.
-    let prepare_csnames = [
-      format!("\\bib@entry@{}@prepare", resolved_type),
-      if origtype != resolved_type { format!("\\bib@entry@{}@prepare", origtype) } else { String::new() },
-      "\\bib@entry@default@prepare".to_string(),
-    ];
-    for cs_name in &prepare_csnames {
-      if cs_name.is_empty() { continue; }
-      if lookup_definition(&T_CS!(cs_name.as_str()))?.is_some() {
-        lines.push(format!("\\csname {}\\endcsname", &cs_name[1..]));
-      }
-    }
 
     // Dispatch each field via the most specific handler. Perl L147-157.
     for (field, value) in entry.raw_fields.iter() {
@@ -2430,16 +2915,8 @@ LoadDefinitions!({
     }
 
     // Dispatch complete macros (Perl L158-164).
-    let complete_csnames = [
-      format!("\\bib@entry@{}@complete", resolved_type),
-      if origtype != resolved_type { format!("\\bib@entry@{}@complete", origtype) } else { String::new() },
-      "\\bib@entry@default@complete".to_string(),
-    ];
-    for cs_name in &complete_csnames {
-      if cs_name.is_empty() { continue; }
-      if lookup_definition(&T_CS!(cs_name.as_str()))?.is_some() {
-        lines.push(format!("\\csname {}\\endcsname", &cs_name[1..]));
-      }
+    for cs_name in entry_hooks(&resolved_type, &origtype, "complete")? {
+      lines.push(format!("\\csname {}\\endcsname", &cs_name[1..]));
     }
 
     // `\end{bib@entry}`
@@ -2504,11 +2981,16 @@ LoadDefinitions!({
   // see audit divergence B1 (Rust uses a thread-local already set by
   // `\ProcessBibTeXEntry`).
   DefEnvironment!("{bib@entry} Semiverbatim Semiverbatim",
-  "<ltx:bibentry type='#1' key='#key' xml:id='#id'>#body</ltx:bibentry>",
+  "<ltx:bibentry type='#1' key='#key' class='#class' xml:id='#id'>#body</ltx:bibentry>",
   after_digest_begin => sub[whatsit] {
     let key_arg = whatsit.get_arg(2).map(|a| a.to_string()).unwrap_or_default();
     set_current_entry(&key_arg);
     whatsit.set_property("key", Stored::String(pin(&key_arg)));
+    // An entry read from an amsrefs database by `\bibselect` (amsrefs_sty.rs) is a library entry: the
+    // bibliography prints it when cited, as an entry of a `.bib` (latexml_post make_bibliography).
+    if lookup_bool(&s!("BIBENTRY_LIBRARY:{}", key_arg.to_lowercase())) {
+      whatsit.set_property("class", Stored::String(pin("ltx_bib_library")));
+    }
     // Merge in the {id, refnum, ...} from the @bibitem counter step.
     let id_props = RefStepCounter!("@bibitem")?;
     whatsit.set_properties(id_props);
@@ -2545,11 +3027,40 @@ LoadDefinitions!({
    </ltx:bibliography>",
   before_digest => sub {
     crate::latex_constructs::before_digest_bibliography()?;
+    provide_mathscinet_export_macros()?;
   },
   after_digest_begin => sub[whatsit] {
     crate::latex_constructs::begin_bibliography_clean(whatsit)?;
   });
 });
+
+/// The macros MathSciNet's `.bib` export defines in its `@preamble` (`\def\cprime{$'$}`, the Vietnamese double
+/// accent `\cftil`) and its fields use — `MRREVIEWER = {A.\ A.\ Arsen\cprime ev}`, `FJOURNAL =
+/// {Differentsial\cprime nye Uravneniya}`, `MRREVIEWER = {Nguy\cftil en Qu\^oc Th\'ang}` — for a `.bib` whose
+/// entries were copied without it (2609.00627, 2609.11266; 15 2609 papers erred). Provided while the bibliography's
+/// entries are digested only, each where it is free (an `@preamble`, `mathscinet.sty` or the document's own definition
+/// wins), never always-on (the stub `latex_constructs_rust_only.rs` retracted; user ruling 2026-10-06). The letters
+/// are `mathscinet_sty`'s (ʹ, ʺ); `\cftil{e}` is ễ, a tilde over the circumflex, as the export's box construction draws.
+fn provide_mathscinet_export_macros() -> Result<()> {
+  for (proto, body) in [
+    ("\\cprime", "\u{02B9}"),
+    ("\\Cprime", "\u{02B9}"),
+    ("\\cdprime", "\u{02BA}"),
+    ("\\Cdprime", "\u{02BA}"),
+    ("\\cftil{}", "\\~{\\^{#1}}"),
+  ] {
+    let (cs, params) = parse_prototype(proto, true)?;
+    if lookup_meaning(&cs).is_none() {
+      def_macro(
+        cs,
+        params,
+        ExpansionBody::Tokens(mouth::tokenize_internal(body)),
+        None,
+      )?;
+    }
+  }
+  Ok(())
+}
 
 #[cfg(test)]
 mod tests {
@@ -3105,6 +3616,22 @@ mod tests {
     );
   }
 
+  /// A bare control word is re-cased only when the re-cased command exists:
+  /// `\O` becomes `\o` as BibTeX's `change.case$` makes it, `\LaTeXe` stays
+  /// (an undefined `\latexe` stops pdflatex). Witness lshort-german/l2kurz.
+  #[test]
+  fn recase_keeps_a_control_word_whose_recased_name_is_undefined() {
+    let defined = |name: &str| name == "o";
+    assert_eq!(
+      recase_title_with(
+        "Imported Graphics in \\LaTeXe, \\TeX and \\O Stergaard \\\"Ost \\\\Line",
+        TitleCaseMode::Capitalize1,
+        defined
+      ),
+      "Imported graphics in \\LaTeXe, \\TeX and \\o stergaard \\\"ost \\\\line"
+    );
+  }
+
   /// `recase_title` must survive EVERY character width at every scanner
   /// position — the deterministic stand-in for a property test.
   ///
@@ -3262,6 +3789,21 @@ mod tests {
   }
 
   // --- process_identifier (Perl L784) ---
+
+  #[test]
+  fn identifier_data_drops_tex_escapes_and_braces() {
+    assert_eq!(
+      identifier_data(r"10.1007/978-3-642-29849-3\{_}10"),
+      "10.1007/978-3-642-29849-3_10"
+    );
+    assert_eq!(identifier_data(r"10.1000/a{\_}b"), "10.1000/a_b");
+    assert_eq!(identifier_data(r"10.1000/c\_d"), "10.1000/c_d");
+    // Markup around the identifier is left for the field's reader.
+    assert_eq!(
+      identifier_data(r"\href{https://doi.org/10.1/x}{10.1/x}"),
+      r"\href{https://doi.org/10.1/x}{10.1/x}"
+    );
+  }
 
   #[test]
   fn process_identifier_trims_whitespace() {

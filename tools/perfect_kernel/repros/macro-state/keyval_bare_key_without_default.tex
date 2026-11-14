@@ -1,0 +1,14 @@
+% witness: run 336's 5 csquotes papers with `\usepackage[english]{babel,csquotes}` (k2 shape)
+% oracle:  pdflatex 1 error, "Package keyval Error: No value specified for english." (keyval.sty:52-56
+%          \KV@default), the key not run
+% engines: rust 64qb = Fatal IfLimit (the bare key run with an empty value: csquotes.sty:2093
+%          \DeclareQuoteAlias[]{english}{english}, an alias to itself); rust 64p = the same; Perl 0.8.8 = 0
+% expect:  keyval's error for a key given without a value that has no default, the key's code not run
+%          (latexml_core keyvals.rs `set_keys_expansion` runs it with an empty value instead)
+% status:  RED (64qb) -> RED (64p)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage[english]{babel,csquotes}
+\begin{document}
+Text.
+\end{document}

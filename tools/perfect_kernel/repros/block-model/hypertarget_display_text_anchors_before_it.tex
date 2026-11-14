@@ -1,0 +1,17 @@
+% witness: philex/philexmanual (philexmanual.tex:124 `\lb[c]{compo}{\[\mu(\sigma(…))=…\]}` → philex.sty:136
+%   `\parbox{\centro}{\centering \hypertarget{#2}{#3}\philpunct}`: the display sits inside \hypertarget's text)
+% oracle:  pdflatex 0 errors; hyperref's default \Hy@nestingfalse (hyperref.sty:323) makes \hypertarget
+%   `\hyper@@anchor{#1}{\relax}#2` (:4805-4810): a point destination, then the text
+% engines: rust 59l = 0 errors, jing 2 x `element "anchor" not allowed here`: <equation><anchor xml:id="compo"><Math/>
+%   </anchor></equation> (localized_anchor wrapped the display's ltx:Math; Perl the same plus 2 Error:malformed)
+% expect:  0 errors; jing-valid: p2's anchor before its equation, the parbox's anchor in an ltx:p of the inline-block
+% status:  RED (59l) -> GREEN (59m)
+\documentclass{article}
+\usepackage{hyperref}
+\begin{document}
+\parbox{5cm}{\centering \hypertarget{compo}{\[ x=1 \]}.}
+
+A \hypertarget{d}{\[ y=2 \]} b.
+
+See \hyperlink{compo}{here} and \hyperlink{d}{there}.
+\end{document}

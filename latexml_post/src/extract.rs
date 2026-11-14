@@ -174,10 +174,8 @@ pub fn get_math(doc: &PostDocument) -> Option<Node> {
   if math_count > 1 {
     // Walk up until the subtree under `math` contains every math node.
     // Perl re-runs the same XPath relative to the current candidate
-    // and adds 1 when the candidate itself is a math node. We use
-    // `findnodes_at` (libxml's `node_evaluate`) for context-scoped
-    // XPath — `findnodes_foreign` falls back to a manual traverser
-    // that doesn't support `local-name()` predicates.
+    // and adds 1 when the candidate itself is a math node, with
+    // context-scoped XPath (`findnodes_at`).
     let descendant_math_xpath = format!(".{MATH_XPATH}");
     let mut found = 0;
     while found != math_count {

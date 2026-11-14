@@ -1,0 +1,28 @@
+% witness: circledtext/circledtext (circledtext.sty:1269 \draw_begin: .. :1276 \draw_coffin_use:Nnn);
+%   tabular2/tabular2-sample (tabular2.sty:1491 \draw_box_use:Nn, :1681 \draw_box_use:N);
+%   suanpan-l3/suanpan-l3 (\draw_coffin_use:Nnnn/:Nnn)
+% oracle:  lualatex 0 errors
+% preload: [rawstyles,rawclasses,luatex]latexml.sty
+% engines: rust=4(min repro) perl=N/A(no luatex profile) (2026-09-03)
+% expect:  0 errors; the box content ("INSIDE-BOX") survives in the body
+% status:  GREEN (b54x, batch 54q)
+% mechanism: all 3 packages \RequirePackage{l3draw}; the binding latexml_contrib/src/l3draw_sty.rs
+%   is an INCOMPLETE/OUTDATED no-op stub — it has \draw_linewidth:n (renamed \draw_set_linewidth:n)
+%   and \draw_scope_begin:/_end: but LACKS \draw_set_linewidth:n, \draw_path_scope_begin:/_end:,
+%   and the CONTENT-BEARING \draw_box_use:N/:Nn (l3draw.sty:40/45 = place a box) and
+%   \draw_coffin_use:Nnn/:Nnnn (:98/103 = \coffin_typeset:Nnnnn). No-op'ing box/coffin_use DROPS
+%   the wrapped text/cells. CAVEAT: all 3 residue witnesses are ctex/luatexja CJK docs (ctexart /
+%   ctex scheme=chinese) = PARKED family; the \draw_* errors are 2-4 of 100-1000 => corpus gain 0.
+%   This repro is the ISOLATED (non-CJK) l3draw binding gap.
+\documentclass{article}
+\usepackage{l3draw}
+\ExplSyntaxOn
+\box_new:N \l_tmp_box \hbox_set:Nn \l_tmp_box { INSIDE-BOX }
+\NewDocumentCommand \mydraw { } {
+  \draw_begin:
+    \draw_set_linewidth:n { 1pt }
+    \draw_path_scope_begin: \draw_path_circle:nn {0pt,0pt}{5pt} \draw_path_scope_end:
+    \draw_box_use:N \l_tmp_box
+  \draw_end: }
+\ExplSyntaxOff
+\begin{document}Before \mydraw{} After\end{document}

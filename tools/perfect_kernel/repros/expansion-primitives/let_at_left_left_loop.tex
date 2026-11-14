@@ -1,0 +1,19 @@
+% witness: arXiv 2605.21750 (shortcuts-bare.sty:43-46, the mathtools-style \left/\right wrap)
+% oracle:  pdflatex 0 errors; Perl 0 errors (its \left is one TeXDelimiter constructor; no \@left)
+% engines: rust (56hr) = Fatal:Timeout:PushbackLimit (endless \lx@hidden@bgroup push)
+% expect:  0 errors; the formula's ( and ) as OPEN/CLOSE tokens
+% status:  RED (56hr) -> GREEN (56hs)
+% mechanism: our \left XToken trampoline re-emitted the constructor \@left; the paper's
+%   \let\@left\left made that token the trampoline itself. The constructors are private
+%   (\lx@delim@left/\lx@delim@right) now, and \@left/\@right undefined as in TeX.
+\documentclass{article}
+\usepackage{amsmath}
+\makeatletter
+\let\@left\left
+\let\@right\right
+\renewcommand{\left}{\mathopen{}\mathclose\bgroup\@left}
+\renewcommand{\right}{\aftergroup\egroup\@right}
+\makeatother
+\begin{document}
+$\left( x \right)$
+\end{document}

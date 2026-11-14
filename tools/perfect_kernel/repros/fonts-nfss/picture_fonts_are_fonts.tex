@@ -1,0 +1,18 @@
+% preload.ltx:42-43 loads the picture fonts: `\font\tenln=line10 \font\tenlnw=linew10 \font\tencirc=lcircle10
+% \font\tencircw=lcirclew10`; `\thinlines`/`\thicklines` and diagrams.sty use them as fonts (`\@linefnt`,
+% `\fontdimen8\tenln`). The constructs replaced them with family stubs (Perl latex_constructs.pool.ltxml:2751-2754),
+% which left the font OT1: `\tenln\char45` (diagrams.sty's right arrowhead, latex.ltx:16914) decoded as a hyphen and
+% measured 3.33pt where line10.tfm gives 10pt, and 2605.02221's `\rTo{\pi}` spacing split its exact sequences into
+% fragments.
+% witness: 2605.02221.
+% Guard: perfect_kernel_batch58::picture_fonts_are_fonts.
+% status:  GREEN (58f)
+% oracle:  pdflatex 0 errors; "[line10][linew10][lcircle10][lcirclew10] [select font line10]", then the line10
+%          arrowhead.
+% engines: rust 58e (and Perl): `\tenln\char45` a `-` in the text font (`<text font="line10">-</text>`), 3.33pt.
+% expect:  0 errors, 0 warnings.
+\documentclass{article}
+\begin{document}
+[\fontname\tenln][\fontname\tenlnw][\fontname\tencirc][\fontname\tencircw] [\meaning\tenln]
+{\tenln\char45}
+\end{document}

@@ -1,0 +1,50 @@
+% A letter `d` before a variable is a differential inside an integral's operand, and outside it by the evidence of the
+% formula or the document (57cj.22-57cj.23.6). Its own document since 57cj.23.6: in the omnibus the document evidence
+% of other sections (`\int f\,d\pi(x,y)`, the italic `d=3`) decided these rows.
+\documentclass{article}
+\usepackage{amsmath,amssymb}
+\begin{document}
+% witness: user ruling (17), 2026-10-01: a letter `d` before a variable is a differential only inside an integral's operand
+%          (as the raised `d` of #395), not anywhere in a formula holding an integral — 2605.03853 (and 2605.17001,
+%          2605.15207, 2605.17850, 2605.24758, 2605.19415, 2605.21567, 2605.02034, 2605.22468, 2605.13204, 2605.20593,
+%          2605.28078, 2605.15451, 2605.31254, 2605.26800 below)
+%          `\int_{[-1,1]^{d}}f(x)^{2}\omega(x)dx\leq d\pi^{d}`, a sum's bound `d` (`\sum_{d=1}^D d\,w_d`, the 57cj.20 review),
+%          2605.26800 `\tilde{L}_{f}dh^{3/2}\sum\int…`; outside an integral an SDE's or a measure's `d` is a differential by
+%          evidence (57cj.22, the next section)
+% oracle:  Perl 0 errors: `diffd` only among an INTOP's arguments (`moreIntOpArgFactors`, MathGrammar:633-638)
+% engines: rust m58i: `<= differential-d@(pi ^ d)`, `((sum _ (d = 1)) ^ D)@(differential-d@(w _ d))` (an INTOP anywhere in the
+%          formula made every letter `d` before a variable a differential)
+% expect:  0 errors; inside the operand — after the INTOP at its level, through groups enclosing the `d` (a measure's
+%          argument), past groups closed before it — a differential; after a relation, an arrow or punctuation at the
+%          integral's level, before the integral sign, after a group holding the integral, or in a script, the letter —
+%          unless the document integrates over the same `d<var>` elsewhere (`ds=z` beside `\int_0^t b\,ds`; user ruling
+%          2026-10-01e), a differential; a `d<var>` the walk alone reaches past a sign, punctuation or a plain bar is no
+%          such evidence (`\int f\,dx;\,d\pi`, `|\int f\,dx|\,d\pi`)
+\section{A letter d is a differential only inside an integral's operand}
+$\int_{[-1,1]^d}f\,dx\leq d\pi^{d}$ $\int_0^1 f\,dx=\sum_{d=1}^D d\,w_d$ $\int f\,dx\le d\,\mathbb{P}(A)$ $d\pi\int f\,dx$
+$(\int_0^1 f\,dx)\,d\pi$ $\left(\int f\,dx\right) d\pi$ $\int_0^1 f\,dx,\quad d\pi$ $\int f\,dx\to d x$ $\int f\,dx\le d^2 n$
+$dX_t=b\,dt+\sigma\,dW_t+\int_0^t\tau\,dW_s$ $\mathrm{d}U(z)=\int_0^1 f\,dz$
+% kept: the integrand's differentials, an SDE's and a measure's inside the operand, groups enclosing the `d` or closed before it
+$\int f\,dx$ $\int_0^t\tau\,dW_t$ $X_t=X_0+\int_0^t b\,ds+\int_0^t\sigma\,dW_s$ $\int f(x')P(dx')$ $\int f\,P(y,dx')$
+$\int_0^1(f\,dx+g\,dy)$ $\int\mathbb{1}\{x\le y\}\,dx$ $\int\mathbb{1}\{x\le y\}\,d^2x$ $\int f\,\langle g, dx\rangle$ $\int C_3\wedge\mathrm{d}C_3$
+$\int f-g\,dx$ $\int e^{-d x}\,dx$ $\int_0^{d x} f\,dy$
+% (57cj.21 design review, the 3,003 A/B sources; divergence #398) a `d` keeps its differential reading past a sign (697
+% sum-integrand sites in 129 papers; where Perl's integrand ends), a colon (a product: the Frobenius `A:B`) and narrow
+% punctuation (mostly a comma typed for `\,`) — even where the grammar ends the integral's tree before it; wide punctuation
+% ends it; a big operator binding `d` (the letter, a list item, a relation's or condition's operand other than the last;
+% a split row's content branch too) makes it its index until a sign ends that operand; a `\left|…\right|` pair is a group.
+% A bracketed sum of integrals is one since 57cj.22 (2605.15451; the section "A closed group holding only integrals is an
+% integral", below). Residuals, pinned as read:
+% Pearl's `do(` inside an integrand (2605.31254), a second `dh` after the first integral (2605.26800), a `d` after a plain
+% `|…|` holding the integral (plain bars do not pair by position)
+$\int_{\bar M}Q_t(w-1)+Qw_t\,\mathrm{d}V_{0,0}$ $\int|\mathrm{d}P-\mathrm{d}Q|$ $\int_s^t-V\,\mathrm{d}W_\tau-\frac12V^2\,\mathrm{d}\tau$
+$\int_\Omega\mathbf{H}:\mathbf{Q}_t\,d\mathbf{x}$ $\int_\Omega\nabla\varphi\colon\nabla\varphi\,\mathrm{d}\mathbf{x}$ $\frac1L\int_0^L\mathbf u\cdot\mathbf e_x,dx$
+$\int_0^{2\pi}f\,dt<\infty,\qquad ds=z$ $\int f\,dx\iff d\pi$ $\int f\,dx+\sum_{d=1}^D d\,w_d$
+$\int f\,dx\sum_{d} d\,w_d$ $\int f\,dx\,\lim_{d\to\infty}d\,w_d$ $\int f\,dx\sum_{i=1}^{d} d\,w_i$ $\int f\,dx+\sum_{d=1}^D d\,w_d+d\pi$
+$\frac1D\sum_{d=1}^D\int_{f\in b}\mathrm{PSD}_d(f)\,df$ $\mathrm{d}X(s)=u(s)\,\mathrm{d}s+\int_Z u(s)\,\widetilde N(\mathrm{d}s,\mathrm{d}z)$
+$\int_E K\,\nu(de)\,ds+\int_E K\tilde\mu(ds,de)$ $\int\left[\int f\,\mathrm{d}x\right]\mathrm{d}t$ $I=\left[\int_G+\sum_{i=1}^6\int_{a_i}^{b_i}\right]f(\theta)\,\mathrm{d}\theta$
+$\int f\,dx\sum_{0<d<D} d\,w_d$ $\int f\,dx\sum_{1\le d\le D} d\,w_d$ $\int f\,dx\sum_{d\mid n} d\,w_d$ $\int f\,dx\sum_{d,e} d\,w_d$
+$\int f\,dx\sum_{i\le d} d\,w_i$ $\left|\int f\,dx\right|d\pi$ $\int\left|\mathrm{d}P-\mathrm{d}Q\right|$ $\int f\,dx;\,d\pi$ $|\int f\,dx|\,d\pi$
+\[\begin{split}\int f\,dx\,\sum_{d=1}^{D} d\,w_d &= 0\end{split}\]
+$P(B=1\mid do(B_2=0))=\int P(Z\geq z\mid do(Y=y'))p(y')\,dy'$ $\tilde L_f dh^{3/2}\sum_i\int_0^1 g\,\mathrm{d}u+\tilde L_f dh\int_0^1 g\,\mathrm{d}u$
+\end{document}

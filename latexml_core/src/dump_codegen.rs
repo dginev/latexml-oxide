@@ -15,8 +15,6 @@ use std::{io::Write, path::Path};
 /// Value entries to skip (runtime-specific or cause regressions).
 const SKIP_VALUES: &[&str] = &[
   "INTERPRETING_DEFINITIONS",
-  "if_count",
-  "absorb_count",
   "_loaded",
   "INCLUDE_COMMENTS",
   "INCLUDE_STYLES",
@@ -124,7 +122,7 @@ struct TokenListEntry {
 struct ExpandEntry {
   cs:        String,
   nargs:     u8,
-  flags:     u8, // bit 0=long, bit 1=protected
+  flags:     u8, // bit 0=long, bit 1=protected, bit 2=checks_par
   tok_start: u32,
   tok_count: u16,
 }
@@ -399,6 +397,9 @@ fn parse_meaning(data: &mut DumpData, key: &str, rest: &str) {
       if flags_str.contains('P') {
         flags |= 2;
       }
+      if flags_str.contains('T') {
+        flags |= 4;
+      }
 
       let start = data.expand_tokens.len() as u32;
       let mut count = 0u16;
@@ -533,7 +534,7 @@ pub fn generate_rs(dump_path: &Path, output_path: &Path) -> Result<usize, String
     "struct ExpandDef {{\n\
      {s}cs: &'static str,\n\
      {s}nargs: u8,\n\
-     {s}flags: u8, // bit 0 = long, bit 1 = protected\n\
+     {s}flags: u8, // bit 0 = long, bit 1 = protected, bit 2 = checks_par\n\
      {s}tok_start: u32,\n\
      {s}tok_count: u16,\n\
      }}\n",
@@ -905,7 +906,7 @@ fn emit_load_fn(out: &mut std::fs::File, data: &DumpData) -> Result<(), String> 
     writeln!(
       out,
       "{s}for &(key, cc, text) in SINGLE_TOKEN_VALUES {{\n\
-       {s}{s}let tok = Token {{ text: arena::pin(text), code: Catcode::from(cc) }};\n\
+       {s}{s}let tok = Token {{ text: arena::pin(text), code: Catcode::from(cc), prov: 0 }};\n\
        {s}{s}state::assign_value(key, Stored::Token(tok), Some(Scope::Global));\n\
        {s}}}"
     )
@@ -919,7 +920,7 @@ fn emit_load_fn(out: &mut std::fs::File, data: &DumpData) -> Result<(), String> 
       "{s}for &(key, tok_start, tok_count) in TOKEN_LIST_VALUES {{\n\
        {s}{s}let toks: Vec<Token> = VALUE_TOKENS[tok_start as usize..][..tok_count as usize]\n\
        {s}{s}{s}.iter()\n\
-       {s}{s}{s}.map(|&(cc, text)| Token {{ text: arena::pin(text), code: Catcode::from(cc) }})\n\
+       {s}{s}{s}.map(|&(cc, text)| Token {{ text: arena::pin(text), code: Catcode::from(cc), prov: 0 }})\n\
        {s}{s}{s}.collect();\n\
        {s}{s}state::assign_value(key, Stored::Tokens(Tokens::from(toks)), Some(Scope::Global));\n\
        {s}}}"
@@ -996,9 +997,9 @@ fn emit_load_fn(out: &mut std::fs::File, data: &DumpData) -> Result<(), String> 
     writeln!(
       out,
       "{s}for &(cs_name, cc, text) in LET_DEFINITIONS {{\n\
-       {s}{s}let cs = Token {{ text: arena::pin(cs_name), code: Catcode::CS }};\n\
+       {s}{s}let cs = Token {{ text: arena::pin(cs_name), code: Catcode::CS, prov: 0 }};\n\
        {s}{s}if !state::has_meaning(&cs) {{\n\
-       {s}{s}{s}let tok = Token {{ text: arena::pin(text), code: Catcode::from(cc) }};\n\
+       {s}{s}{s}let tok = Token {{ text: arena::pin(text), code: Catcode::from(cc), prov: 0 }};\n\
        {s}{s}{s}state::assign_meaning(&cs, tok, Some(Scope::Global));\n\
        {s}{s}}}\n\
        {s}}}"
@@ -1008,14 +1009,16 @@ fn emit_load_fn(out: &mut std::fs::File, data: &DumpData) -> Result<(), String> 
 
   // Expandable definitions (M/E) — the bulk (77% of entries)
   if !data.expandables.is_empty() {
+    // Lossy for a delimited macro: its parameters come back as `{}`×nargs, so a flagged one (`checks_par`, bit 4)
+    // would check at the wrong places — as its delimiters were already lost here. `dump_reader` restores both.
     writeln!(
       out,
       "{s}for def in EXPANDABLE_DEFS {{\n\
-       {s}{s}let cs = Token {{ text: arena::pin(def.cs), code: Catcode::CS }};\n\
+       {s}{s}let cs = Token {{ text: arena::pin(def.cs), code: Catcode::CS, prov: 0 }};\n\
        {s}{s}if state::has_meaning(&cs) {{ continue; }}\n\
        {s}{s}let toks: Vec<Token> = EXPAND_TOKENS[def.tok_start as usize..][..def.tok_count as usize]\n\
        {s}{s}{s}.iter()\n\
-       {s}{s}{s}.map(|&(cc, text)| Token {{ text: arena::pin(text), code: Catcode::from(cc) }})\n\
+       {s}{s}{s}.map(|&(cc, text)| Token {{ text: arena::pin(text), code: Catcode::from(cc), prov: 0 }})\n\
        {s}{s}{s}.collect();\n\
        {s}{s}let params = if def.nargs > 0 {{\n\
        {s}{s}{s}let proto = \"{{}}\".repeat(def.nargs as usize);\n\
@@ -1031,7 +1034,8 @@ fn emit_load_fn(out: &mut std::fs::File, data: &DumpData) -> Result<(), String> 
        {s}{s}{s}nopack_parameters: true,\n\
        {s}{s}{s}..ExpandableOptions::default()\n\
        {s}{s}}});\n\
-       {s}{s}if let Ok(exp) = Expandable::new(cs, params, Some(Tokens::from(toks).into()), opts) {{\n\
+       {s}{s}if let Ok(mut exp) = Expandable::new(cs, params, Some(Tokens::from(toks).into()), opts) {{\n\
+       {s}{s}{s}exp.checks_par = def.flags & 4 != 0;\n\
        {s}{s}{s}state::install_definition(exp, Some(Scope::Global));\n\
        {s}{s}}}\n\
        {s}}}"
@@ -1048,9 +1052,9 @@ fn emit_load_fn(out: &mut std::fs::File, data: &DumpData) -> Result<(), String> 
       out,
       "{s}for &(key_s, target_s) in LET_ALIAS_DEFS {{\n\
        {s}{s}if key_s == target_s {{ continue; }}\n\
-       {s}{s}let key_tok = Token {{ text: arena::pin(key_s), code: Catcode::CS }};\n\
+       {s}{s}let key_tok = Token {{ text: arena::pin(key_s), code: Catcode::CS, prov: 0 }};\n\
        {s}{s}if state::has_meaning(&key_tok) {{ continue; }}\n\
-       {s}{s}let target_tok = Token {{ text: arena::pin(target_s), code: Catcode::CS }};\n\
+       {s}{s}let target_tok = Token {{ text: arena::pin(target_s), code: Catcode::CS, prov: 0 }};\n\
        {s}{s}if !state::has_meaning(&target_tok) {{ continue; }}\n\
        {s}{s}state::let_i(&key_tok, &target_tok, Some(Scope::Global));\n\
        {s}}}"

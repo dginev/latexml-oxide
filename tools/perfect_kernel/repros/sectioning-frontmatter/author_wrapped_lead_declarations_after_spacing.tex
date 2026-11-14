@@ -1,0 +1,12 @@
+% witness: 2407.15815 (64d review r3 nit: a wrapped lead whose declarations follow the spacing)
+% oracle:  pdflatex 0 errors: both institutions italic, small
+% engines: rust 64d8 = Univ A italic small, Univ B small only (`\it` after the `\vspace` not repeated)
+% expect:  0 errors; Ann (Univ A), Bob (Univ B), both italic and small
+% status:  RED (64d8) -> GREEN (64d)
+\documentclass{article}
+\title{T}
+\author{Ann$^{1}$ and Bob$^{2}$ \\ {\small\vspace{1mm}\noindent\it $^{1}$Univ A, $^{2}$Univ B}}
+\begin{document}
+\maketitle
+Text.
+\end{document}

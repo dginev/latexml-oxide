@@ -1,0 +1,14 @@
+% The luatex/xetex profiles are OpenType engines: \sys_if_engine_opentype (expl3-code.tex:7863-7865,
+% \cs_if_exist_p:N \tex_Umathcode:D) froze false at format time, so l3doc.cls:436-453 took its
+% T1 + lmodern branch under a Unicode-engine profile.
+% witness: broydensolve, joinbox, ltx-talk, precattl, saveenv, emotion, prettytok, zref-clever (l3doc).
+%   Guard: perfect_kernel_batch61::unicode_profiles_are_opentype_engines.
+% oracle:  lualatex, xelatex 0 errors: "Unicode engine"; pdflatex: "Eightbit engine".
+%          perl: no engine profiles.
+% engines: rust 61c1: 0 errors; luatex and xetex profiles "Unicode engine", default "Eightbit engine".
+\documentclass{article}
+\begin{document}
+\ExplSyntaxOn
+\sys_if_engine_opentype:TF {Unicode~engine} {Eightbit~engine}
+\ExplSyntaxOff
+\end{document}

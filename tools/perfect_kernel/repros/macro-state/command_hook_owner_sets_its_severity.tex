@@ -1,0 +1,31 @@
+% mechanism: a hook on a command LaTeXML binds does not run (`\__hook_patch_command:Nnn`, latex.ltx:6888): the
+%   document's code on it (a top-level hook, an own label, `\AddToHookNext`'s unlabelled code, a hook added in the
+%   body, the hook of a `\newtheorem` command) is a Warning; a class's or package's alone an Info, as their redefinition of a locked command (state.rs).
+% witness: synthetic (QA47A); memoir.cls:5832-5833 (`cmd/end@float/before`, 2607.15091), projlib-author.sty
+% oracle:  pdflatex 0 `!`; "1 One A1 Xb c Y1. • Text. Theorem 1 T." (the `\relax` hooks print nothing; "X" and "Y"
+%   are the document's words on `\emph` and `\arabic`, lost and counted); Perl: `\AddToHook` a no-op (latex_base.pool.ltxml:833), 0 errors 0 warnings.
+% engines: rust QA47Abase: 0 warnings, "X" lost silently; QA47A r1: 5 Warnings (the package's `cmd/section/before` too,
+%   each message repeating its hook name, `\thm` "LaTeXML's binding of"); QA47A r2: 5 Warnings, 1 Info (`\AddToHookNext`'s an Info,
+%   uncounted, until its code counted as the document's).
+% expect:  0 errors, 5 warnings (`cmd/emph/before`, `cmd/arabic/before`, `cmd/item/before`, `cmd/thm/before` worded
+%   "\thm takes no generic hook", `cmd/footnote/before`); Info:hook `cmd/section/before`.
+% status:  GREEN (QA47A r2)
+\begin{filecontents*}[overwrite]{qahookpkg.sty}
+\ProvidesPackage{qahookpkg}
+\AddToHook{cmd/section/before}{\relax}
+\AddToHook{cmd/emph/before}[qahookpkg/x]{\relax}
+\end{filecontents*}
+\documentclass{article}
+\usepackage{qahookpkg}
+\newtheorem{thm}{Theorem}
+\AddToHook{cmd/emph/before}{X}
+\AddToHookNext{cmd/arabic/before}{Y}
+\AddToHook{cmd/item/before}[mine]{\relax}
+\AddToHook{cmd/thm/before}{\relax}
+\begin{document}
+\section{One}
+\AddToHook{cmd/footnote/before}{\relax}
+A\footnote{N} \emph{b} c \arabic{section}.
+\begin{itemize}\item Text.\end{itemize}
+\begin{thm}T.\end{thm}
+\end{document}

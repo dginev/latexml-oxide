@@ -1,0 +1,10 @@
+% An equation between differentials stays differentials although the document assigns the same `d<var>` a number
+% (user ruling 2026-10-01e; 2605.09717's SDE with `\mathrm dt=1/12`).
+% witness: 2605.09717
+% oracle:  Perl 0 errors: letters
+% expect:  0 errors; the SDE's `d`s differentials, the assignment's a letter
+\documentclass{article}
+\usepackage{amsmath,amssymb}
+\begin{document}
+$\mathrm{d}t=1/12$ $\mathrm{d}X=\mu X\,\mathrm{d}t+\sigma X\,\mathrm{d}W$
+\end{document}

@@ -1,0 +1,23 @@
+% mechanism: webofc sets its `\author` list as a paragraph whose lines are names (webofc.cls:497-552): a `\\` the
+%   spelling never showed — held in a macro (`\collab`) — parts the names as a literal one does, a collaboration line
+%   a creator of its own; the binding's `break_parts_names` declaration (webofc_cls.rs, scoped to the class read) has the
+%   reading take every `\\` line of the block as names (Option C P2-1, OD #993)
+% witness: synthetic (the template's `\\The SND Collaboration`, 1609.01040, and 2610.23498's `\\ for the NA61/SHINE
+%   Collaboration` are literal)
+% oracle:  pdflatex (TL 2025, -no-shell-escape, the cut-down class-bindings/webofc/webofc.cls) 0 errors: "Ann Able1,
+%   Bob Baker2" then "The X Collaboration" on a line of its own, above the institutes
+% engines: Perl 0.8.8 has no webofc binding (OmniBus); int157a: "The X Collaboration" a collaboration contact of Bob
+%   Baker (the spelling split at `\\` missed it, the reading read the line under the kernel's conventions); P21 a creator
+% expect:  0 errors, 0 warnings; creators Ann Able (Univ A), Bob Baker (Univ B), The X Collaboration
+% status:  RED (int157a) -> GREEN (P21; guard perfect_kernel_batchp21)
+% preload: ar5iv.sty
+\documentclass{webofc}
+\newcommand\collab{\\ The X Collaboration}
+\begin{document}
+\title{T}
+\author{Ann Able\inst{1} \and Bob Baker\inst{2}\collab}
+\institute{Univ A \and Univ B}
+\abstract{A.}
+\maketitle
+Text.
+\end{document}

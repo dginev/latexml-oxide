@@ -1,0 +1,27 @@
+% witness: astro-ph9712155, astro-ph9512088, astro-ph9605141, astro-ph9909358 (~860 run-336 papers, first error `\affil`)
+% oracle:  pdflatex 0 errors with the shipped paspconf.sty v1.6 (astro-ph9512088): italic affiliation with mark 1,
+%          "Abstract. We observe at 30° …", References "Kent, S. M. 1988, AJ, 96, 1570" / "Østensen, R. …",
+%          "Discussion" with "B. Asker : Why?" / "A. Author : Because.", footnote 1 "Visiting astronomer."
+% engines: rust 64h4 = 8 Error:undefined (\affil, \altaffilmark, \altaffiltext, \aj, {references}, \reference,
+%          {question}, {answer}: the name was mapped to the ICASSP spconf binding); Perl 0.8.8 = 6 errors: the unmet
+%          option loads OmniBus, whose `\reference`=`\bibitem` takes "K" and "$" as keys (math left open, a theorem
+%          in XMath), {answer} undefined
+% expect:  paspconf.sty:72 `\affil`, :77-78 `\altaffil*` (aaspp/aas_support), :188 keyless `\reference`, :163-170
+%          question/answer, :228 `\deg`; keywords (gobbled, :121) as RDFa
+% status:  RED (64h4) -> GREEN (64qb)
+% preload: ar5iv.sty
+\documentstyle[11pt,paspconf]{article}
+\begin{document}
+\title{Star Formation in the Disk}
+\author{A. Author\altaffilmark{1}}
+\affil{Some Institute, Some City}
+\altaffiltext{1}{Visiting astronomer.}
+\begin{abstract}We observe at $30\deg$ inclination.\end{abstract}
+\keywords{stars, disks}
+\begin{references}
+\reference Kent, S. M. 1988, \aj, 96, 1570
+\reference $\O$stensen, R. et al. 1996, A\&A, 309, 59
+\end{references}
+\begin{question}{B. Asker}Why?\end{question}
+\begin{answer}{A. Author}Because.\end{answer}
+\end{document}

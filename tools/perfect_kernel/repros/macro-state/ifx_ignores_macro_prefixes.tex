@@ -1,0 +1,16 @@
+% witness: W17 final review (probe h1); pre-existing, shared with Perl
+% oracle:  pdflatex 0 errors, "A: FF."
+% engines: rust 0 errors, "A: TT." (W17, 2026-09-26); Perl 0.8.8 "A: TT."
+% expect:  0 errors; <p>A: FF.</p>
+% status:  RED (latexml_core definition/expandable.rs PartialEq; not fixed on W17's branch)
+% mechanism: tex.web §507 \ifx of two macros compares cur_cmd (call, long_call, outer_call,
+%   long_outer_call) and the token lists, whose first token is protected_token for a
+%   \protected macro (eTeX): \def\a{x} and \protected\def\b{x} or \long\def\c{x} differ.
+%   Expandable's PartialEq (expandable.rs:107-110) compares only the parameters and the
+%   expansion, as Perl's Expandable::equals (Core/Definition/Expandable.pm:116-120) does, so the
+%   prefixes are ignored.
+\documentclass{article}
+\begin{document}
+\def\a{x}\protected\def\b{x}\long\def\c{x}
+A: \ifx\a\b T\else F\fi\ifx\a\c T\else F\fi.
+\end{document}

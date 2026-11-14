@@ -1,0 +1,18 @@
+% witness: 0710.1676, 0809.3379 (wiley2sp: w2sp-pss.clo:444 renews {thebibliography} in \AtEndOfClass; 100 of run
+%          336's PushbackLimit papers), 0706.0316 (ptptex; 15)
+% oracle:  pdflatex 0 errors; References [1] [2]
+% engines: rust 64qb = 4 errors (the class's list reopened per \bibitem: bibitem in itemize, section in bibblock);
+%          rust 64p = 0; Perl 0.8.8 --includestyles = 0 (its \renewenvironment reads the lock as a value)
+% expect:  one bibliography with both items: a class's \renewenvironment of the locked {thebibliography} is refused
+%          also when a binding's hook runs it unlocked (Perl latex_constructs.pool.ltxml:2796-2803)
+% status:  RED (64qb) -> GREEN (64p)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{bibhook}
+\begin{document}
+Text \cite{a}.
+\begin{thebibliography}{9}
+\bibitem{a} A. Author, Title A.
+\bibitem{b} B. Author, Title B.
+\end{thebibliography}
+\end{document}

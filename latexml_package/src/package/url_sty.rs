@@ -17,7 +17,7 @@ LoadDefinitions!({
     "\\urlstyle{}",
     r#"\expandafter\protect\csname url@#1style\endcsname"#
   );
-  // `\fontencoding{ASCII}` (OXIDIZED_DESIGN #144, issue #723): the DISPLAYED url
+  // `\lx@fontencoding{ASCII}` (OXIDIZED_DESIGN #144, issue #723): the DISPLAYED url
   // text (`\lx@url@url@nolink`'s `#5`, a `\UrlFont`-wrapped plain arg) is literal
   // catcode-12 characters, so under T1 a `~`/`^` decodes through the fontmap to
   // Bruce Miller's accent glyphs U+02DC/U+02C6 (LaTeXML #2435). A verbatim `\url`/
@@ -27,21 +27,27 @@ LoadDefinitions!({
   // `ASCII` fontmap itself — `\selectfont` merges only family/series/shape, so the
   // encoding survives the following `\ttfamily`, keeping the typewriter styling.
   // This is exactly the treatment `\verbatim@font` / `Verbatim` / `HyperVerbatim`
-  // already apply; Perl loses ASCII here too (SHARED-FAILURE).
+  // already apply; Perl loses ASCII here too (SHARED-FAILURE). The encoding is
+  // set by `\lx@fontencoding`, the digest primitive `\fontencoding` stands for
+  // (Perl TeX_Fonts.pool.ltxml:169), never the public name: a package that
+  // re-installs the kernel's checking `\fontencoding` (latex.ltx:10490-10492;
+  // luatexja, lltjfont.sty:549-551/573-574) knows no `\T@ASCII` — qworld's 7
+  // "Encoding scheme `ASCII' unknown", one per `\url`, and the name leaked as text.
+  // Guard: `perfect_kernel_batch59::url_font_survives_a_checking_fontencoding`.
   DefMacro!(
     "\\url@ttstyle",
-    "\\def\\UrlFont{\\fontencoding{ASCII}\\ttfamily}"
+    "\\def\\UrlFont{\\lx@fontencoding{ASCII}\\ttfamily}"
   );
   DefMacro!(
     "\\url@rmstyle",
-    "\\def\\UrlFont{\\fontencoding{ASCII}\\rmfamily}"
+    "\\def\\UrlFont{\\lx@fontencoding{ASCII}\\rmfamily}"
   );
   DefMacro!(
     "\\url@sfstyle",
-    "\\def\\UrlFont{\\fontencoding{ASCII}\\sffamily}"
+    "\\def\\UrlFont{\\lx@fontencoding{ASCII}\\sffamily}"
   );
   def_macro_noop("\\url@samestyle")?;
-  DefMacro!("\\UrlFont", "\\fontencoding{ASCII}\\ttfamily");
+  DefMacro!("\\UrlFont", "\\lx@fontencoding{ASCII}\\ttfamily");
 
   // Bracketting.
   Let!("\\UrlLeft", "\\@empty");
@@ -49,9 +55,11 @@ LoadDefinitions!({
 
   // \DeclareUrlCommand\cmd{settings}
   // Have this expand into \lx@url@url w/ the declared cmd as arg, so it gets reflected in XML.
+  // `\protected`, as `\url` below: every url command keeps whole in a moving
+  // argument (url.sty:166 `\Url@unmove`).
   DefMacro!(
     "\\DeclareUrlCommand{}{}",
-    r#"\def#1{\begingroup #2\lx@url@url#1}"#
+    r#"\protected\def#1{\begingroup #2\lx@url@url#1}"#
   );
 
   // This is an extended version of \Url that takes an extra token as 1st arg.
@@ -59,8 +67,15 @@ LoadDefinitions!({
   // as well as used to generate the reversion.
   // In any case, we read the verbatim arg, and build a Whatsit for @@Url
   DefMacro!("\\lx@url@url Token", sub[(cmd)] {
-    let perc = vec!['%'];
-   begin_semiverbatim(Some(&perc));
+    // url.sty:84 `\let\do\@makeother\dospecials` — every special, `\` first,
+    // is literal inside a url (only `{`/`}` stay delimiters, :85). Perl's
+    // `StartSemiverbatim('%')` (url.sty.ltxml:50) left `\` an escape, so
+    // `\path{C:\localtexmf\tex\}` read `\}` as a control symbol and the
+    // balanced read ran to the END OF THE FILE — latex4wp.tex:451 swallowed
+    // 87% of the manual into one url. Guard:
+    // `perfect_kernel_batch54::url_backslash_is_literal`.
+    let specials = vec!['%', '\\', '$', '&', '#', '^', '_', '~'];
+    begin_semiverbatim(Some(&specials));
     // `\url`/`\path` requires a following delimiter/argument token; on
     // input-exhaustion `read_token_required` emits the parity "file ended while
     // scanning use of \url" error. Don't panic — unwind the semiverbatim frame
@@ -149,13 +164,36 @@ LoadDefinitions!({
     reversion => "#1#2#4#3");
 
   // These are the expansions of \DeclareUrlCommand
-  DefMacro!("\\path", r"\begingroup\urlstyle{tt}\lx@url@url\path");
-  DefMacro!("\\url", r"\begingroup\lx@url@url\url", locked => true);
+  // Only when undefined, as url.sty:204-205 (`\@ifundefined{path}{\DeclareUrlCommand\path…}{}`: picTeX's, or a
+  // document's own `\path`, stays; Perl url.sty.ltxml:85 redefines it, KNOWN_PERL_ERRORS #644). Witness 2605.13185:
+  // its `\newcommand{\path}{\rho}` was replaced when orcidlink loaded hyperref and so url ("Missing $").
+  if !IsDefined!(&T_CS!("\\path")) {
+    DefMacro!("\\path", r"\begingroup\urlstyle{tt}\lx@url@url\path", protected => true);
+  }
+  // `protected`: a `\url` in a moving argument must reach the typeset text
+  // whole, as url.sty's own `\Url@unmove` (url.sty:166) writes `\protect\Url`
+  // (and hyperref's `\url` is `\DeclareRobustCommand*`, hyperref.sty:4801).
+  // Expanded by doc.sty's `\changes` `\protected@edef` (doc.sty:627), ltsect.dtx's
+  // `\changes{v1.1b}{…}{Prevent protrusion (\url{https://…})}` reached the
+  // glossary entry as `\begingroup` + the reader's internals — mode errors and
+  // a runaway that ended source2e early. Same flag as `\href` (hyperref_sty.rs).
+  DefMacro!("\\url", r"\begingroup\lx@url@url\url", locked => true, protected => true);
 
   // \urldef{newcmd}\cmd{arg}
   // Kinda tricky, since we need to get the expansion of \cmd as the value of \newcmd
   // Along with the annoying \endgroup that must balance the one always preceding \Url!
   DefRegister!("\\Urlmuskip", MuGlue::default());
+  // 68b (binding gaps G3): url.sty internals documents call. `\UrlTildeSpecial` (:63; 0907.0729 writes it for a
+  // `~` in a bibliography URL, pdflatex prints "∼"). `\Url@FormatString` (:127-133) typesets the url string a
+  // `\Url` has read into `\Url@String`; a document that sets `\Url@String` and calls it formats its own text as a
+  // url (the JOSS/pandoc template's `\href@Urllike`, 1902.08702, 1905.04294, 1905.04768, 1908.01711, 1908.10377,
+  // 1910.08562). url.sty sets the string in math with the url font so that it may break at its `\Url…Breaks`
+  // characters; here, as this binding's `\url` does, it is the url font's text.
+  RawTeX!(
+    r"\def\UrlTildeSpecial{\do\~{\raise.45ex\hbox{\m@th$\scriptstyle\sim$}}}\let\Url@force@Tilde\relax
+\let\Url@String\@empty
+\def\Url@FormatString{\UrlFont\expandafter\UrlLeft\Url@String\UrlRight}"
+  );
 
   // Perl L91-99: \urldef{newcmd}{arg} — takes TWO brace args. The second
   // `{}` lets TeX parse a balanced brace group without expansion, then
@@ -166,7 +204,42 @@ LoadDefinitions!({
     let cmd = cmd.to_string();
     unread(start);
     let expansion : Vec<Digested> = digest_next_body(Some(T_CS!("\\endgroup")))?;
+    // Rust-only (OXIDIZED_DESIGN_DIVERGENCES #901): what the command prints, as text, kept beside it — a primitive's
+    // boxes are no expansion a reader of the frontmatter can look into. A `\urldef`'d address in llncs's shared
+    // `\institute` (`\urldef{\mailsa}\path|{mkelly, …}@cs.odu.edu|`, 1307.8067; `\mailk, \mailt`, 1408.0384) is an
+    // e-mail line of the row (the reading's, OD #901), not every author's affiliation.
+    let text: String = expansion.iter().map(ToString::to_string).collect();
+    assign_value(&s!("lx@urldef@text@{cmd}"), url_printed_text(&text), None);
     DefPrimitive!(&cmd, { Ok(expansion.clone()) });
     Ok(vec![])
   });
 });
+
+/// The string a `\url`/`\path` call as written prints (`\path|{a,b}@x.edu|`, `\url{a@x.edu}`): what stands between its
+/// delimiters, or the whole of `written` when it is no such call.
+fn url_printed_text(written: &str) -> String {
+  let Some(rest) = written.strip_prefix('\\') else {
+    return written.to_string();
+  };
+  let rest = rest
+    .trim_start_matches(|c: char| c.is_ascii_alphabetic())
+    .trim_start();
+  let mut chars = rest.chars();
+  let Some(open) = chars.next() else {
+    return written.to_string();
+  };
+  let close = if open == '{' { '}' } else { open };
+  let inner: &str = chars.as_str();
+  let mut depth = 0usize;
+  for (at, c) in inner.char_indices() {
+    if open == '{' && c == '{' {
+      depth += 1;
+    } else if c == close {
+      if depth == 0 {
+        return inner[..at].to_string();
+      }
+      depth -= 1;
+    }
+  }
+  written.to_string()
+}

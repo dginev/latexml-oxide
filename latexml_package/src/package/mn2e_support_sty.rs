@@ -2,8 +2,27 @@
 //! Perl: mn2e_support.sty.ltxml — 252 lines
 use crate::prelude::*;
 
+/// This binding's frontmatter conventions (the observer's, OXIDIZED_DESIGN_DIVERGENCES #837), declared at its load
+/// (`declare_frontmatter_conventions`, user ruling 2026-10-28: each binding declares its own): the MNRAS family's
+/// `\author` (mn2e.cls, mnras.cls, mn.cls: this file's, below) holds the names with their marks and, after `\\`, the
+/// marked address lines (`$^{1}$Dept…`) — the kernel's reading. `written`: the observer's writer writes the family's
+/// creators (brief 95b, OD #942: 0810.2791; a paper whose reading it cannot apply keeps today's output).
+pub const FRONTMATTER_CONVENTIONS: FmConventions = FmConventions {
+  name: "mn2e",
+  binding: "mn2e_support.sty",
+  // (mnras.cls's `\maketitle` runs `\@maketitle`: mnras.cls:1055-1062; a document's own is the page in force, TP1b)
+  title_page: FmTitlePageDecl {
+    maketitle_runs: &[("mnras.cls", FmMaketitleRuns::Always, "mnras.cls:1055-1062")],
+    ..FM_KERNEL_CONVENTIONS.title_page
+  },
+  cite: "mnras.cls:1072-1079 (`\\newauthor`: the one author tabular); OD #942 (0810.2791)",
+  ..FM_KERNEL_CONVENTIONS
+};
+
 #[rustfmt::skip]
 LoadDefinitions!({
+  // (this binding's frontmatter conventions, first: OXIDIZED_DESIGN_DIVERGENCES #837)
+  declare_frontmatter_conventions(&FRONTMATTER_CONVENTIONS);
   // Dependencies — Perl mn2e_support.sty.ltxml L18-23 conditionally loads
   // only dcolumn/natbib/graphicx based on the matching option flags.
   // NOTE: Perl does NOT load amsmath even when @useAMS is set — the
@@ -26,28 +45,57 @@ LoadDefinitions!({
   }
 
   // Frontmatter — Perl mn2e_support.sty.ltxml (PR #2767)
+  // 68t: a call inside the document's `{titlepage}` also runs a refused printing `\title` there (sect05.rs
+  // `titlepage_class_call`, as revtex4_support's: gr-qc9404034).
+  // The class's refused `\title` runs first for its side effects, as under the kernel's (sect05.rs `\title`,
+  // OXIDIZED_DESIGN #482: the cvpr template's `\thetitle`; no witness of this binding's own).
   DefMacro!("\\title[]{}",
-    r"\gdef\@shorttitle{#1}\gdef\@title{#2}\ifx.#1.\else\lx@add@toctitle{#1}\fi\lx@add@title{#2}");
-  DefMacro!("\\author[]{}", "\\def\\@author{#2}\\lx@add@authors{#2}", locked => true);
+    r"\lx@titlepage@class@call{title}{#1}{#2}{\lx@replay@class@setter{title}{#1}{#2}\gdef\@shorttitle{#1}\gdef\@title{#2}\ifx.#1.\else\lx@add@toctitle{#1}\fi\lx@add@title{#2}}");
+  DefMacro!("\\author[]{}", "\\def\\@author{#2}\\lx@mn@authors{#2}", locked => true);
+  // mnras.cls:1072-1079: `\newauthor` starts a new row of the one author tabular, the addresses printed after all the
+  // rows: within `\author` it separates two names as a comma does, not two author groups (Perl's
+  // mn2e_support.sty.ltxml:33 makes it empty, so the names around it were one author; 2401.11878, 2409.07518)
+  DefMacro!("\\lx@mn@authors{}", sub[(names)] {
+    let mut list: Vec<Token> = Vec::new();
+    for t in names.unlist() {
+      if t == T_CS!("\\newauthor") {
+        list.extend([T_OTHER!(","), T_SPACE!()]);
+      } else {
+        list.push(t);
+      }
+    }
+    Ok(Invocation!(T_CS!("\\lx@add@authors"), vec![Some(Tokens::new(list))]))
+  });
   def_macro_noop("\\newauthor")?;
-  DefMacro!("\\journal{}", "\\lx@add@pubnote[role=journal]{#1}");
-  DefMacro!("\\volume{}", "\\lx@add@pubnote[role=volume]{#1}");
+  // mn2e.cls:1072-1080 (astro-ph0702128's copy): `\journal` replaces the head line "Mon. Not. R. Astron. Soc.
+  // {\bf V}, pages (year)", `\volume` its bold number — no label (FIDELITY_CHARTER §4, user ruling 2026-10-30; OXIDIZED_DESIGN_DIVERGENCES #921).
+  DefMacro!("\\journal{}", "\\lx@add@pubnote[role=journal,name={}]{#1}");
+  DefMacro!("\\volume{}", "\\lx@add@pubnote[role=volume,name={}]{#1}");
   DefMacro!("\\pubyear{}", "\\lx@add@pubnote[role=pubyear]{#1}");
   DefMacro!("\\microfiche{}", "\\lx@add@pubnote[role=microfiche]{#1}");
   DefMacro!("\\pagerange{}", "\\lx@add@pubnote[role=pages]{#1}");
 
   // Editorial queries — Perl L42-46
-  DefConstructor!("\\BSLquery{}", "<ltx:note role='query'>#1</ltx:note>");
-  DefConstructor!("\\aquery{}", "<ltx:note role='query'>#1</ltx:note>");
-  DefConstructor!("\\tquery{}", "<ltx:note role='query'>#1</ltx:note>");
+  DefConstructor!("\\BSLquery{}", "<ltx:note role='query'>#1</ltx:note>", sizer => sub[_whatsit] { Ok(out_of_line_size()) });
+  DefConstructor!("\\aquery{}", "<ltx:note role='query'>#1</ltx:note>", sizer => sub[_whatsit] { Ok(out_of_line_size()) });
+  DefConstructor!("\\tquery{}", "<ltx:note role='query'>#1</ltx:note>", sizer => sub[_whatsit] { Ok(out_of_line_size()) });
   DefEnvironment!("{query}", "<ltx:note role='query'>#body</ltx:note>",
     mode => "internal_vertical");
-  DefConstructor!("\\authorquery{}{}", "<ltx:note role='query'>#1: #2</ltx:note>");
+  DefConstructor!("\\authorquery{}{}", "<ltx:note role='query'>#1: #2</ltx:note>", sizer => sub[_whatsit] { Ok(out_of_line_size()) });
 
   // Perl (PR #2767): Keywords is an environment!
   // (\nokeywords no-op is defined further below in this file.)
   DefMacro!("\\keywords", "\\lx@begin@keywords");
   DefMacro!("\\endkeywords", "\\lx@end@keywords");
+  // The begin half reads the body up to its end (`\lx@begin@keywords`), so the pair is locked against the class and
+  // package files (`:locked@files`, as the kernel minipage's, sect12.rs): mn2e-breakabs.sty:87-95 (shipped by MNRAS
+  // papers) redefines `\endkeywords` alone as mn2e.cls:1004-1012's `\endlist`, which then met no list (1403.3615,
+  // 1607.03149), and a file redefining both halves (`\renewenvironment{keywords}{\begin{list}…}{\end{list}}`) would
+  // have its begin half taken and its end half refused. mn2e.cls:992 `\ifSFB@keywords`, which that package's end half
+  // and `\nokeywords` set and read. Guards `perfect_kernel_batch66b::mn2e_*`.
+  AssignValue!("\\keywords:locked@files" => true, Some(Scope::Global));
+  AssignValue!("\\endkeywords:locked@files" => true, Some(Scope::Global));
+  RawTeX!(r"\newif\ifSFB@keywords");
 
   // Perl L186: `\bsp` is a no-op DefMacro (not DefConstructor).
   def_macro_noop("\\bsp")?;
@@ -78,9 +126,11 @@ LoadDefinitions!({
   DefMacro!("\\fdg", "\\aas@fstack{\\circ}");
   DefMacro!("\\farcm", "\\aas@fstack{\\prime}");
   DefMacro!("\\farcs", "\\aas@fstack{\\prime\\prime}");
-  // Perl mn2e_support.sty.ltxml L151: \text wrapper switches mode out of math,
-  // so the second arg can contain inline-math toggles like `$\beta$`.
-  DefMacro!("\\ion{}{}", "\\text{#1\\,\\textsc{\\lowercase{#2}}}");
+  // No `\ion`: mn2e.cls (v2.2, TL's doc/latex/mnras/LEGACY/mn2e.cls, every copy papers ship) defines none, so an
+  // author's `\newcommand{\ion}` is the document's (a binding's definition would make it a no-op,
+  // latex_constructs.pool.ltxml:2512-2525 isDefinableLaTeX). mnras.cls:488 has it (mnras_cls.rs). Perl
+  // mn2e_support.sty.ltxml:147 defines it for every class of the family (KNOWN_PERL_ERRORS #940). Witnesses 0908.0351,
+  // 1112.1796, astro-ph0501147, 0909.3906, 1206.2419; guard `perfect_kernel_batch71a::mn2e_author_ion_wins`.
 
   // Journal abbreviations (\mnras, \nat, \apj, \prd, ...) are NOT defined
   // in Perl mn2e_support.sty.ltxml. They live in aas_macros.sty.ltxml
@@ -156,9 +206,11 @@ LoadDefinitions!({
   DefMath!("\\cor", "\u{2258}", role => "RELOP", meaning => "corresonds-to");
   DefPrimitive!("\\micron", "\u{00B5}m");
 
-  // Perl L122-125: quod erat demonstrandum marker
+  // Perl L122-125: quod erat demonstrandum marker, sized as mn2e.cls:410 `\hbox{\rlap{$\sqcap$}$\sqcup$}` (a glyph
+  // box), so a cell or `\mbox` holding only it is not dropped as empty (Perl Alignment.pm:458-470).
   DefConstructor!("\\squareforqed",
-    "?#isMath(<ltx:XMTok role='PUNCT'>\u{220E}</ltx:XMTok>)(\u{220E})");
+    "?#isMath(<ltx:XMTok role='PUNCT'>\u{220E}</ltx:XMTok>)(\u{220E})",
+    sizer => sub[whatsit] { Ok(engine::latex_constructs::sqcup_qed_size(whatsit)) });
   Let!("\\sq", "\\squareforqed");
   Let!("\\proofbox", "\\squareforqed");
 
@@ -199,7 +251,9 @@ LoadDefinitions!({
     properties => sub[_args] {
       let title = Expand!(Tokens!(T_CS!("\\proofname"))).to_string();
       Ok(stored_map!("title" => title))
-    }
+    },
+    // mn2e.cls:864 and mnras.cls:993 `\proof` is a `\trivlist`: it runs `\@trivlist`'s additions.
+    before_digest => { run_trivlist_hook()?; }
   );
   DefEnvironment!("{lquote}", "<ltx:quote>#body</ltx:quote>");
 
@@ -245,14 +299,16 @@ LoadDefinitions!({
   // raised Error:expected:$ Missing $ closing display math at every
   // occurrence. Matches the identical port in aa_support_sty.
   use crate::engine::latex_constructs::{
-    after_equation, before_equation, prepare_equation_counter,
+    after_equation, before_equation, prepare_equation_counter, prepare_latex_equation_counter,
   };
   DefEnvironment!(
     "{equation}",
     "<ltx:equation xml:id='#id'>#tags<ltx:Math mode='display'><ltx:XMath>#body</ltx:XMath></ltx:Math></ltx:equation>",
     mode => "display_math",
     before_digest => {
-      prepare_equation_counter(stored_map!("numbered" => true, "preset" => true));
+      // LaTeX's numbering: a `\nonumber` removes the number only where amsmath is loaded (OXIDIZED_DESIGN_DIVERGENCES #865;
+      // witnesses 1210.2963, astro-ph0503435, astro-ph9901366).
+      prepare_latex_equation_counter();
       before_equation()?;
       Let!(T_MATH!(), "\\lx@dollar@in@mathmode");
     },
@@ -281,4 +337,18 @@ LoadDefinitions!({
   // astro-ph9907099 hit `\ifCUPmtlplainloaded` undefined.
   RawTeX!(r"\newif\ifCUPmtlplainloaded");
   RawTeX!(r"\newif\iffirstta");
+
+  // mn2e.cls:690-704 (v2.2, every copy papers ship; 0705.0429's), mnras.cls:818-833 (TL 2025 v3.2, every copy alike)
+  // `\appendix`: the appendix sections "A", their subsections "A1", and the equations, figures and tables numbered
+  // within each appendix, "A1" (reset by each appendix section). The kernel's `\appendix` (article_cls.rs
+  // `\@appendix`) runs first for the `ltx:appendix` units. Perl's mn2e/mnras bindings leave the kernel's (equation 4,
+  // figure 2; 2608.17430: figures 12, 13, 14 where the PDF prints B1, C1, C2): KNOWN_PERL_ERRORS #1098. Guard
+  // `perfect_kernel_batch78q::appendix_counters_mn_family`.
+  RawTeX!(r"\newif\ifSFB@appendix
+\def\appendix{\@appendix\par\SFB@appendixtrue
+ \@addtoreset{equation}{section}\@addtoreset{table}{section}\@addtoreset{figure}{section}%
+ \setcounter{section}{0}\setcounter{equation}{0}\setcounter{figure}{0}\setcounter{table}{0}%
+ \def\thesection{\Alph{section}}\renewcommand\thesubsection{\thesection\arabic{subsection}}%
+ \renewcommand\theequation{\thesection\arabic{equation}}%
+ \renewcommand\thefigure{\thesection\@arabic\c@figure}\renewcommand\thetable{\thesection\@arabic\c@table}}");
 });

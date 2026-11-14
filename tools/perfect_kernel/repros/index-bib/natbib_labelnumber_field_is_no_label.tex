@@ -1,0 +1,15 @@
+% witness: 77a r3 review probe nonblx/n1
+% oracle:  pdflatex + bibtex (plainnat) 0 errors: "Text [2, 3, 1]."; References [1] goossens [2] knuth [3] lamport
+%          — a .bib field `labelnumber` is no label outside biblatex
+% engines: rust 77a r3 printed lamport as [9] (its `labelnumber={9}` read as biblatex's label number); Perl numbers
+%          in list order
+% expect:  clean (0 errors, 0 warnings); the oracle's labels
+% status:  GREEN (77a r4: MakeBibliography reads `labelnumber` only in a biblatex bibliography)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage[numbers]{natbib}
+\begin{document}
+Text \cite{knuth,lamport,goossens}.
+\bibliographystyle{plainnat}
+\bibliography{natbib_labelnumber_field_is_no_label}
+\end{document}

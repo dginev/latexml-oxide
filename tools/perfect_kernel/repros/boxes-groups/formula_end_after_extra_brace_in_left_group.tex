@@ -1,0 +1,14 @@
+% witness: synthetic (65j side finding, while probing `\bm{\left(}`); no corpus witness yet
+% oracle:  pdflatex 3 errors: "Extra }, or forgotten \right." (the } deleted, tex.web §1069), then at the `$`
+%          "Missing \right. inserted" and "Missing } inserted" (§1065 off_save); PDF "A (x . After." / "Next paragraph."
+% engines: rust 65a, 65bundle and 65j = the formula does not end at its `$`: it runs to \end{document} and takes
+%          "After." and the next paragraph as math (tex="{\left(x$.After.\par Nextparagraph.\par}")
+% expect:  the formula ends at its `$`; "After." and "Next paragraph." stay text
+% status:  RED (65j)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+A ${\left( } x$. After.
+
+Next paragraph.
+\end{document}

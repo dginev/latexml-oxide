@@ -1,0 +1,20 @@
+% mechanism: the list cutter (`classify::entry_starts` `line_at_starts`, `box_body`): a line set wholly in a box, here a
+%   `\parbox` with its position optional, whose body holds two entry starts is cut in the body, the box dropped — what
+%   pdflatex prints are its lines, each piece cut alike (the `[t]` sibling of revtex_parbox_affiliation_lines_land_once)
+% witness: synthetic (P4b4a2 sibling probe s1; the class of hep-ex0409040)
+% oracle:  pdflatex (TL 2025, revtex4-1, -no-shell-escape) 0 errors: "Ann Able1 and Bob Baker2 / 1 Univ A, Town /
+%   2 Univ B, City"
+% engines: rust P4b4abase = P4b4a2 = 0 errors, 0 warnings: Ann Able 1 "1 Univ A, Town", Bob Baker 2 "2 Univ B, City",
+%   no box on either; Bob Baker's before="  " loses the printed "and" (RED author_marked_list_keeps_its_printed_separators_red)
+% expect:  0 errors, 0 warnings; each name its mark and the line its mark labels, no box
+% status:  GREEN (P4b4a2), guard perfect_kernel_batchhg1::marked_blocks_restored_read_as_printed
+% preload: ar5iv.sty
+\documentclass[aps,prl]{revtex4-1}
+\begin{document}
+\title{T}
+\author{Ann Able$^{1}$ and Bob Baker$^{2}$}
+\affiliation{\parbox[t]{\linewidth}{$^{1}$Univ A, Town\\ $^{2}$Univ B, City}}
+\begin{abstract}Abs.\end{abstract}
+\maketitle
+Body.
+\end{document}

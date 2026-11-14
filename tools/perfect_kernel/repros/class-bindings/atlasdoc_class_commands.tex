@@ -1,0 +1,24 @@
+% witness: 2508.20929 (`\AtlasRefCode`), 2103.01029 (`\PreprintIdNumber`), 1904.03536 (`\AtlasJournalRef`),
+%   2407.10879 (`\AtlasVersion`); run 340 ~1,000 atlasdoc papers
+% oracle:  pdflatex with atlasdoc.cls: 0 errors; the CERN preprint title page (`preprint`, as 64 of 67 sampled papers)
+%   with the journal reference, DOI, preprint number, date
+% engines: rust 65v = errors (each setter undefined)
+% expect:  0 errors; pubnotes role=preprint (the last call's), journalref, doi, once each; no "Submitted to:" (the
+%   class prints it only without a journal reference, :835-841); the paper webpage URL ends with the reference code
+% status:  RED (65v) -> GREEN (65w)
+\documentclass[PAPER,preprint]{atlasdoc}
+\AtlasTitle{A Measurement}
+\AtlasRefCode{STDM-2018-01}
+\PreprintIdNumber{CERN-EP-2024-999}
+\PreprintIdNumber{CERN-EP-2025-001}
+\AtlasJournal{Phys. Lett. B}
+\AtlasJournalRef{Phys. Lett. B 800 (2025) 1}
+\AtlasDOI{10.1016/j.physletb.2025.1}
+\AtlasVersion{1.0}
+\AtlasDate{\today}
+\AtlasCoverSupportingNote{Note}{https://cds.cern.ch}
+\AtlasCoverEditor{A. Editor}{a.editor@cern.ch}
+\begin{document}
+\maketitle
+See \AtlasPaperWebpage.
+\end{document}

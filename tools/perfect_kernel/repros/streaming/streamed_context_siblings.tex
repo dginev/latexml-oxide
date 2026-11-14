@@ -1,0 +1,30 @@
+% A conversion switched from eager to streaming (STRM) writes the eager XML where the spilled runs' context varies:
+% babel's language switched mid-document (`xml:lang="fr"` on the second section only, against the root's "en"), a
+% sans-serif document font, and a `quote` spilled inside an open paragraph (its id minted at finalize under the
+% paragraph's, `S1.p1.3`, the ids under it `S1.p1.3.1`).
+% witness: synthetic (siblings of babel_language_marks_each_streamed_section_red, streamed_paragraph_ids_renumber_red;
+%          2507.13358)
+% oracle:  pdflatex (TL 2025) 0 errors: "1 One", "First words", "x=1", "and last words.", "A quoted start", "y",
+%          "and its end.", "A second quoted paragraph.", "2 Deux", "Texte deux", "z", "fin."
+% engines: ST3b (e2f4fe7e79), `LATEXML_SPILL_AT_MIB=1 LATEXML_SOFT_YIELD_MIN_BOXES=1`: `<section … xml:lang="en">`,
+%          `<quote xml:lang="en" xml:id="id3">`, `<p xml:id="id3.1">`, `<p xml:lang="fr" xml:id="id4">`; eager:
+%          `<quote xml:id="S1.p1.3">`, `<p xml:id="S1.p1.3.1">`, `<p xml:id="S2.p1.1">`
+% expect:  0 errors, 0 warnings; switched XML == eager XML (`116_adaptive_streaming::switched_conversion_writes_the_eager_xml`)
+% status:  GREEN
+\documentclass{article}
+\renewcommand{\familydefault}{\sfdefault}
+\usepackage[french,english]{babel}
+\begin{document}
+\section{One}
+First words \[ x = 1 \] and \textbf{last} words.
+\begin{quote}
+A quoted start
+\[ y \]
+and its end.
+
+A second quoted paragraph.
+\end{quote}
+\selectlanguage{french}
+\section{Deux}
+Texte deux \[ z \] fin.
+\end{document}

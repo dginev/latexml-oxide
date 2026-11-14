@@ -1,0 +1,19 @@
+
+% A title `{Alpha}\\` whose first group is printed, its closing `\\` in a `tabular` inside an unused `\setbox`: the
+% row-end marker that alignment consumed is taken only when the alignment is absorbed, so the print's cover does not
+% extend over it, the print is no whole one and stays (fms1 round-4 review finding 2, probe s28; control s29, the
+% print alone, stays too).
+% status:  RED (fms1 round 4: the trailing `\\` of the unused tabular completed the print, lifted) → GREEN (fms1
+%          round 5).
+% oracle:  pdflatex 0 errors: "Alpha", then the title block "Alpha / Ann", "1 Intro Text.".
+% expect:  0 errors, 0 warnings; no `field_ink` Info; the print kept.
+\documentclass{article}
+\title{{Alpha}\\}\author{Ann}
+\makeatletter
+\def\lxhead#1#2\relax{#1}\def\lxtail#1#2\relax{#2}
+\begin{document}
+\begin{center}\expandafter\lxhead\@title\relax\setbox0\hbox{\begin{tabular}{c}x\expandafter\lxtail\@title\relax y\end{tabular}}\end{center}
+\maketitle
+\section{Intro}
+Text.
+\end{document}

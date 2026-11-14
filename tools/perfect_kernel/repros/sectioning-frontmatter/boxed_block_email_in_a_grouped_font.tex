@@ -1,0 +1,19 @@
+% mechanism: boxed_block_emails_written_out_of_a_brace_list.tex with the address in a group's fonts in a `minipage`
+%   (`\small` before it, then `{\scriptsize\ttfamily …}`: no alignment, so a `\\` resets neither).
+% witness: 2609.39183 (`{\scriptsize\ttfamily \{pengzhan,ayao\}@comp.nus.edu.sg, …}`)
+% oracle:  pdflatex 0 errors
+% engines: rust int127a: one creator holding the minipage's text; perl the same
+% expect:  0 errors; three creators, each e-mail typewriter at 70%
+% status:  GREEN (100c)
+\documentclass{article}
+\title{T}
+\author{\begin{minipage}{0.9\textwidth}
+\centering
+Ann Able$^{1}$, Bob Baker$^{2}$, Cat Cole$^{1}$\\
+\small $^{1}$Univ A \quad $^{2}$Univ B\\
+{\scriptsize\ttfamily \{ann,cat\}@a.edu, bob@b.edu}
+\end{minipage}}
+\begin{document}
+\maketitle
+Text.
+\end{document}

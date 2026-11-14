@@ -1,0 +1,17 @@
+% revtex4-1.cls:2516-2519 `\preprint` stores the number; the title page prints the store (aps4-1.rtx:216-221) only
+% under `\preprint@sw` (`preprint` style or `preprintnumbers`), and `\frontmatter@init` empties it at the document's
+% start, so a preamble `\preprint` is never printed. Unprinted, the number is `ltx:rdf` metadata, an identifier read as
+% written (Perl digested it, KNOWN_PERL_ERRORS #990); printed, a pubnote read as TeX reads it (Perl's).
+% witness: 2408.13616, 1912.04576, 2110.00437, 1207.6705 (unprinted), 1205.1463 (preamble + printed)
+% oracle:  pdflatex 0 errors (the reprint style prints no number)
+% engines: rust int29c = 3 x `Error:unexpected:_ Script _ can only appear in math mode`
+% expect:  0 errors, 0 warnings; two `ltx:rdf property="dcterms:identifier"`, no pubnote
+% status:  RED (int29c) -> GREEN (77k)
+\documentclass[aps,prl,reprint]{revtex4-1}
+\preprint{PRE_AMBLE}
+\begin{document}
+\preprint{DMRG_Sampled_Variance}
+\title{T}\author{Daniel F.}
+\affiliation{Inst}\begin{abstract}Abs\end{abstract}\maketitle
+Text.
+\end{document}

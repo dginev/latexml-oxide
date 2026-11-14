@@ -1,0 +1,26 @@
+% A raw class's in-place `\address` line holding the kernel's `\and`, written: the kernel separator invents the word
+% " and " in an API contact (pdflatex sets two columns), so the call is the class's line where it is called
+% (`frontmatter_stores.rs` `kernel_and_list`, by the separators' meaning since P2-6, `argument_separators`, OD #995).
+% A pin of the gate's literal shape, the same on int158a and P26.
+% witness: synthetic (the gate's kernel shape; its class-meaning sibling is 2508.07946's, the repro
+%          `inplace_contact_class_and_line_is_the_apis`)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "Univ A, Town   Univ B, City" in two columns, then "A Title",
+%          "Ann Able", "Body."
+% engines: rust int158a = P26 = 0 errors, 0 warnings, the class's line (a tabular cell "Univ A, Town and Univ B, City");
+%          perl = no raw class load (OmniBus `\address`)
+% expect:  0 errors, 0 warnings; Ann Able with no contact; the line a body paragraph's tabular
+% status:  GREEN (pin, P26; guard perfect_kernel_batchp26::an_in_place_line_is_the_classs_where_a_separator_means_the_kernels)
+% preload: ar5iv.sty
+\begin{filecontents*}[overwrite]{ipand.cls}
+\ProvidesClass{ipand}
+\LoadClass{article}
+\newcommand\address[1]{\par{\small\begin{tabular}[t]{c}#1\end{tabular}}\par}
+\end{filecontents*}
+\documentclass{ipand}
+\begin{document}
+\title{A Title}
+\author{Ann Able}
+\address{Univ A, Town \and Univ B, City}
+\maketitle
+Body.
+\end{document}

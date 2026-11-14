@@ -1,0 +1,13 @@
+\documentclass{article}
+\usepackage{datatool}
+\begin{document}
+% The default CSV load (datatool.sty:12798): a quoted field with an embedded
+% separator, an empty field, an interior quote, a blank line, spaces trimmed
+% inside and outside quotes; `types.tex` checks the column typing.
+\DTLloaddb{t}{tests/cluster_regressions/datatool/contract.csv}
+M:\the\csname dtlrows@t\endcsname/\the\csname dtlcols@t\endcsname/\csname dtl@ci@t@qty\endcsname/\dtllastloadeddb.
+R:\DTLrowcount{t}. \DTLforeach{t}{\n=name,\q=qty,\o=note}{[\n|\q|\o]}
+% Field content keeps the document's catcodes: `%` other, `~`, a macro.
+\DTLloaddb{c}{tests/cluster_regressions/datatool/cats.csv}
+\DTLforeach{c}{\k=k,\v=v}{[\k:\v]}
+\end{document}

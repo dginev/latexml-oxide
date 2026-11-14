@@ -1,0 +1,20 @@
+% mechanism: an affiliation block led by an author reference mark set in `\textsuperscript`
+%   (`\textsuperscript{\IEEEauthorrefmark{2}}`) is cut as a mark the names do not request: its entry goes to a nameless
+%   creator, the marked author gets none (the Cut's mark reading, not ieeetran_cls.rs's block preprocessing; nested,
+%   `\IEEEauthorblockA{\textsuperscript{…}\IEEEauthorblockA{…}}`, the same)
+% witness: synthetic (P4cR2b's sibling sweep of review revP4cR2 B2)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "Ann Able∗ , Bob Baker†", "∗ Univ A, Town", "†", "Univ B, City"
+% engines: P4b2, P4cR2b: Bob Baker no affiliation, a nameless creator "† Univ B, City"
+% expect:  0 errors, 0 warnings; Ann Able "* Univ A, Town", Bob Baker "† Univ B, City", no nameless creator
+% status:  RED (P4cR2b)
+% moves:   post-merge
+% preload: ar5iv.sty
+\documentclass[conference]{IEEEtran}
+\begin{document}
+\title{T}
+\author{\IEEEauthorblockN{Ann Able\IEEEauthorrefmark{1}, Bob Baker\IEEEauthorrefmark{2}}
+\IEEEauthorblockA{\IEEEauthorrefmark{1}Univ A, Town}
+\IEEEauthorblockA{\textsuperscript{\IEEEauthorrefmark{2}}Univ B, City}}
+\maketitle
+Body.
+\end{document}

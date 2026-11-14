@@ -1,0 +1,22 @@
+% mechanism: \glsadd (glossaries.sty:5280-5292) writes its entry through
+%   \@@do@wrglossary (:6299), as \gls does (:3813 -> :6246); \glsaddall (:5295)
+%   \glsadd-s every entry. LaTeXML lists an entry only when an ltx:glossaryref
+%   refers to it (MakeIndex.pm:468), and only \@gls@link is wrapped
+%   (glossaries.sty.ltxml:26-37), so an entry added by \glsadd alone is dropped.
+% witness: ualberta/ualberta (\glsaddall: the Glossary and List of Acronyms, 243 words)
+% oracle:  pdflatex+makeglossaries 0 errors; lists Dexterity, Strength and AC
+% engines: rust=0 errors, Strength and AC missing; perl identical (56jm-rel, 2026-09-25)
+% expect:  0 errors; glossary lists Strength, acronyms list AC
+% status:  RED (56jt) -> GREEN (56jt)
+\documentclass{article}
+\usepackage[acronym]{glossaries}
+\makeglossaries
+\newglossaryentry{str}{name={Strength},description={Physical power of a character}}
+\newacronym{ac}{AC}{Armor Class}
+\newglossaryentry{dex}{name={Dexterity},description={Agility and accuracy}}
+\begin{document}
+Text about \gls{dex}.
+\glsaddall
+\printglossary
+\printglossary[type=\acronymtype]
+\end{document}

@@ -1,0 +1,9 @@
+\documentclass{article}
+\usepackage{datatool}
+\begin{document}
+% Options restating the defaults stay native (tikz-network's `noheader=false`);
+% any other option, and a second load of the same name, go to the raw `\DTLread`.
+\DTLloaddb[noheader=false]{t}{tests/cluster_regressions/datatool/tiny.csv}
+\DTLloaddb[noheader,keys={k1,k2,k3}]{u}{tests/cluster_regressions/datatool/tiny.csv}
+A:\DTLrowcount{t}/\DTLrowcount{u}. \DTLforeach{u}{\a=k1,\b=k2}{[\a|\b]}
+\end{document}

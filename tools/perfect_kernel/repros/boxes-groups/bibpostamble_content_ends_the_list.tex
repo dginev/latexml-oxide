@@ -1,0 +1,16 @@
+% witness: review 64y round 3 (bp2)
+% oracle:  pdflatex 0 errors; 'Postamble note.' printed after the last entry (natbib.sty:1079-1086 runs \bibpostamble before \endlist)
+% engines: rust 64w 0/0 without the note -> 64y 0/0 with it; Perl 0E without it
+% expect:  0 errors; the note ends the last bibblock
+% status:  GREEN (64y r3); guard perfect_kernel_batch64y::bibpostamble_content_ends_the_list
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{natbib}
+\renewcommand{\bibpostamble}{\par Postamble note.}
+\begin{document}
+Text \citep{a}.
+\begin{thebibliography}{1}
+\bibitem[A(2000)]{a} A. Author, A paper.
+\end{thebibliography}
+After.
+\end{document}

@@ -1,0 +1,16 @@
+% witness: 2605.20339 `\Gamma^{2m-2}=\sigma^{3}\otimes\sigma^{3}\cdots\otimes\sigma^{3}\otimes\sigma^{2}` (57bs A/B;
+%          57bu.2 re-review)
+% oracle:  pdflatex prints the operators as written: `σ³ ⊗ σ³ ⋯ ⊗ σ³ ⊗ σ²`, `b₁ + b₂ ⋯ + b_j`
+% engines: rust 57bs: content one n-ary tensor-product (`sigma ^ 3 tensor-product sigma ^ 3 tensor-product cdots …`),
+%          correct; the presentation MathML is regenerated from that content and shows `σ³ ⊗ σ³ ⊗ ⋯ ⊗ σ³ ⊗ σ²` — a
+%          `<mo>⊗</mo>` before `⋯` the author did not write; `b_1+b_2\cdots+b_j` gains a `+` the same way
+% cause:   the n-ary regrouping (`infix_apply_nary`) folds an operand elided by juxtaposition into the operator's
+%          operands without keeping the source presentation (no XMDual), so the presentation serializer repeats the
+%          operator between every operand
+% expect:  the same content; a presentation with only the source operators (`σ³ ⊗ σ³ ⋯ ⊗ …`), e.g. an XMDual whose
+%          presentation branch keeps the tokens as written; 0 errors
+% status:  RED (tests/parse/ellipsis_products pins today's markup)
+\documentclass{article}
+\begin{document}
+$\sigma^{3}\otimes\sigma^{3}\cdots\otimes\sigma^{3}\otimes\sigma^{2}$ $b_1+b_2\cdots+b_j$
+\end{document}

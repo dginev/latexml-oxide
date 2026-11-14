@@ -1,0 +1,18 @@
+% RED — the text after a trivlist environment a run-in heading ended joins the heading's paragraph.
+% witness: 61p round-3 review (reviewer probe v1.tex): a raw `{pf}` proof with a `\paragraph` inside.
+% oracle:  pdflatex 0 errors: "Proof. Intro text." / "Step. beta" / "After one." — a new paragraph: latex.ltx:15915
+%          `\endtrivlist` runs `\ifhmode\unskip\par\fi` whether or not the list is still open.
+% engines: rust 61o9 and 61p6: `<p>beta After one.</p>` in the `\paragraph`'s para (the `\endtrivlist`'s `\par` closes
+%          nothing there); perl not run.
+% expect:  0 errors; "After one." in a paragraph of its own after "beta".
+% status:  RED (61p6)
+\documentclass{article}
+\newenvironment{pf}{\trivlist\item[\textbf{Proof.}]}{\endtrivlist}
+\begin{document}
+\section{A}
+\begin{pf}
+Intro text.
+\paragraph{Step.} beta
+\end{pf}
+After one.
+\end{document}

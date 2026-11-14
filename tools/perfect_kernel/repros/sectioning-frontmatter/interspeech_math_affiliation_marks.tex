@@ -1,0 +1,19 @@
+% witness: 2406.08931 (`\name[affiliation={1{^\dagger}{^\#}}]`), 2605.04749 (`\author[affiliation={1^{\star}, 2}]`),
+%          2406.07909 (`affiliation={2\dagger}`), 2409.15974 (`affiliation={*1}`): the class sets the value in math,
+%          `$^{\author@affiliation}$` (2026 :146-209); the 2026 class's `\ifcameraready` (:52-54)
+% oracle:  pdflatex 0 errors: "Ada Byron 1†,2 , Bo Li 1†#, Cy Dee 2*", "Thanks to the reviewers."
+% engines: rust 63w3 = `Error:unexpected:^ Script ^ can only appear in math mode` (3) and
+%          `Error:undefined:\ifcameraready`
+% expect:  0 errors, 0 warnings; each author linked to the affiliations of the numbers in its marks
+% status:  RED (63w3) -> GREEN (63w)
+\documentclass[cameraready]{Interspeech}
+\title{T}
+\author[affiliation={1^{\dagger}, 2}]{Ada}{Byron}
+\author[affiliation={1{^\dagger}{^\#}}]{Bo}{Li}
+\author[affiliation={2*}]{Cy}{Dee}
+\address{$^1$ University A\\ $^2$ University B}
+\begin{document}
+\maketitle
+Text.
+\ifcameraready Thanks to the reviewers.\fi
+\end{document}

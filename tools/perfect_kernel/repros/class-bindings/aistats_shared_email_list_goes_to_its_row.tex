@@ -1,0 +1,34 @@
+% mechanism: a shared address's e-mail list is placed by the row it is printed under: one address for each author of
+%   the row goes to them in order (the authors queued after the last affiliation, as `annotate=run` attaches one); any
+%   other list is one block contact an address — never the raw line, whose `$\,$` a Semiverbatim contact printed as
+%   `$ $`.
+% witness: 2302.10910 (four e-mails on an authorless creator), 1710.05101, 2006.04012; 1802.07182
+%   (`\{jrr41,$\,$wct23,…\}@cam.ac.uk` shown as `{jrr41,$ $wct23,…}`); 17 papers with a later row's shared e-mails
+% oracle:  pdflatex 0 errors; "Cat Cole Dan Dorn Eve East / Univ C / {cat, dan, eve}@c.edu"
+% engines: rust 77o r2: the row's e-mails on the block's creator, the second list raw with `$ $`; perl: no aistats
+%   binding
+% expect:  0 errors; cat@, dan@, eve@ on Cat, Dan, Eve; gil@ and hal@ two contacts on the block's creator
+% status:  RED (77o r2) -> GREEN (77o r3)
+\begin{filecontents*}{aistats2027.sty}
+\ProvidesPackage{aistats2027}
+\DeclareOption{accepted}{\renewcommand{\statePaper}{\acceptedPaper}}
+\newcommand{\statePaper}{0}\newcommand{\acceptedPaper}{1}
+\ProcessOptions\relax
+\long\def\aistatstitle#1{{\centering{\Large\bfseries #1\par}}\vskip 0.25in}
+\long\def\aistatsauthor#1{\ifnum\statePaper=0 {\begin{tabular}[t]{c}\bfseries Anonymous Author\end{tabular}}\else
+  {\def\And{\end{tabular}\hskip 1in\begin{tabular}[t]{c}\bfseries}\begin{tabular}[t]{c}\bfseries #1\end{tabular}}\fi\par}
+\long\def\aistatsaddress#1{\ifnum\statePaper=0 {\begin{tabular}[t]{c}Anonymous Institution\end{tabular}}\else
+  {\def\And{\end{tabular}\hskip 1in\begin{tabular}[t]{c}}\begin{tabular}[t]{c}#1\end{tabular}}\fi\par}
+\end{filecontents*}
+\documentclass[twoside]{article}
+\usepackage[accepted]{aistats2027}
+\begin{document}
+\twocolumn[\aistatstitle{A Title}
+\aistatsauthor{Ann Able \And Bob Baker}
+\aistatsaddress{Univ A \\ ann@a.edu \And Univ B \\ bob@b.edu}
+\aistatsauthor{Cat Cole \And Dan Dorn \And Eve East}
+\aistatsaddress{Univ C \\ \texttt{\{cat,$\,$dan,$\,$eve\}@c.edu}}
+\aistatsauthor{Gil Gray \And Hal Hunt \And Ida Irwin}
+\aistatsaddress{Univ G \\ \texttt{\{gil,$\,$hal\}@g.edu}}]
+\section{Intro} Body.
+\end{document}

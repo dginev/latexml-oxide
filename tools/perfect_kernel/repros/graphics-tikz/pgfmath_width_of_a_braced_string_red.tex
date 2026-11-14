@@ -1,0 +1,14 @@
+% mechanism: `width`, `height` and `depth` read a quoted string (`quoted_argument`, pgfmath_code_tex.rs:1567), and since M3r2 a brace layer inside the parens isn't taken off: the box's dimension reads 0.0 with no Error.
+% witness: review revM3r2P1, no use in TL's pgf, tikz or circuitikz trees and none known on arXiv
+% oracle:  pdflatex 0 errors: 5.00002, 6.83331, 1.94444, 5.00002
+% engines: rust int141a, M3: the first three right; M3r2: 0.0 for all, no Error; `width(("a"))` 0.0 on every binary
+% expect:  0 errors; the four values above
+% status:  RED
+\documentclass{article}
+\usepackage{pgfmath}
+\begin{document}
+\pgfmathparse{width({"a"})}\pgfmathresult\par
+\pgfmathparse{height({"Q"})}\pgfmathresult\par
+\pgfmathparse{depth({"Q"})}\pgfmathresult\par
+\pgfmathparse{width(("a"))}\pgfmathresult\par
+\end{document}

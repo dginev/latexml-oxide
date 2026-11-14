@@ -1,0 +1,24 @@
+% An optional argument a raw setter stores and its class prints: `\newcommand[2][]`'s, and one set in brackets by a
+% `\def`'s parameter text. An optional argument is most often a key (`\cortext[cor1]{…}`), so its words are not counted;
+% they go to the Info, so they have a record.
+% oracle:  pdflatex 0 errors (TL 2025, -no-shell-escape): "Lunar Institute Gravel Road Solar Works Sandy Lane"
+% engines: rust int139c = 0 errors, 0 warnings; rust 108b = 1 warning "gravel road sandy lane", no record of the rest; perl = not run
+% expect:  0 errors, 1 warning (frontmatter:unclaimed_store) "gravel road sandy lane"; the Info names "lunar institute
+%          solar works"
+% status:  RED (108b) -> GREEN (108b2)
+% preload: ar5iv.sty
+\begin{filecontents*}[force]{checkstoreoptionalcls.cls}
+\LoadClass{article}
+\newcount\aucount
+\def\author#1{\advance\aucount by 1 \gdef\@author{#1}}
+\def\auaddr{}\newcommand{\address}[2][]{\g@addto@macro\auaddr{#1 #2\par}}
+\def\place[#1]#2{\g@addto@macro\auaddr{#1 #2\par}}
+\renewcommand\maketitle{\par{\@title\par}\ifnum\aucount>0 {\@author\par}{\auaddr}\fi}
+\end{filecontents*}
+\documentclass{checkstoreoptionalcls}
+\title{A Title}\author{Ann Able}
+\address[Lunar Institute]{Gravel Road}
+\place[Solar Works]{Sandy Lane}
+\begin{document}\maketitle
+Body text.
+\end{document}

@@ -1,0 +1,19 @@
+% mechanism: tex.web §1268 \afterassignment reads its token with get_token; at `normal` status
+%   the read crosses the end of an \input file (§362), so a file ending in \afterassignment
+%   saves the first token after the file, here run after the \def that follows it.
+% witness: SYNC_STATUS "Other `get_token` reads do not cross an input end either"
+% oracle:  pdflatex 0 errors, "G BAR"
+% engines: rust=0 errors, "G FOO": \afterassignment saved \relax and \foo ran at once
+%          (56jg-rel, 2026-09-25)
+% expect:  0 errors, "G BAR"
+% status:  GREEN (56jj: the `Token` parameter reads with read_primitive_token; guard
+%          token_kernel_gaps::afterassignment_crosses_a_file_end)
+\documentclass{article}
+\begin{filecontents*}{input_end_afterassignment_in.tex}
+\afterassignment
+\end{filecontents*}
+\def\foo{FOO}
+\makeatletter
+\begin{document}
+G \@@input input_end_afterassignment_in.tex \foo\def\foo{BAR}
+\end{document}

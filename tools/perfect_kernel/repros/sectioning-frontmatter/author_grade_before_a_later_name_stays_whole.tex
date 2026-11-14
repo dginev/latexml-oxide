@@ -1,0 +1,19 @@
+% mechanism: `\lx@add@author` takes a written membership grade out of the name (name_text.rs `written_membership_out`,
+%   OXIDIZED_DESIGN_DIVERGENCES #967) only when the names line before it prints no grade (`holds_grade`): a grade
+%   before a later name — here inside a bold group the kernel's split does not enter — means the line holds several
+%   names, and taking the last grade out alone left "Ann Able, Member, IEEE; Bob Baker" one creator. Every grade stays,
+%   as before #967, and the names part as on the base.
+% witness: none (synthetic, the writer-side sibling of 1510.03162 and 2507.19818's merges)
+% oracle:  pdflatex (TL 2025) 0 errors: "Ann Able, Member, IEEE ; Bob Baker, Fellow, IEEE"
+% engines: rust int135e: two creators, each grade in its name; 106c r1: one creator "Ann Able, Member, IEEE; Bob
+%   Baker" and the contact "Fellow, IEEE"
+% expect:  0 errors, 0 warnings; two creators, as int135e
+% status:  RED (106c r1) -> GREEN (106c r2)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{\textbf{Ann Able, \textit{Member, IEEE}; Bob Baker}, \textit{Fellow, IEEE}}
+\maketitle
+Text.
+\end{document}

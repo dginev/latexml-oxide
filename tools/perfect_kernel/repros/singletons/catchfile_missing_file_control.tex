@@ -1,0 +1,14 @@
+% witness: control for catchfile_jobname_vfs.tex (catchfile.sty:240-245)
+% oracle:  pdflatex 1 error: ! Package catchfile Error: File `nonexistent-file.txt'
+%   not found; [macro:->]
+% engines: rust=0 (56ir-rel2, 2026-09-25): a missing_file warning only
+% expect:  1 error (the package's \@PackageError), 0 warnings; the macro is
+%   defined empty
+% status:  GREEN (guard binding_singletons_56, 2026-09-25; was RED)
+% mechanism: catchfile.sty:240-245 \CatchFile@NotFound defines the macro empty
+%   and raises infwarerr's \@PackageError; the binding only warned.
+\documentclass{article}
+\usepackage{catchfile}
+\begin{document}
+\CatchFileDef\miss{nonexistent-file.txt}{}[\meaning\miss]
+\end{document}

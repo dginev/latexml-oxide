@@ -1,0 +1,20 @@
+% witness: review rev92b_r4 S2 (a math accent in a mark, `$^{\bar{\dag}}$` beside a `$^{\dag}$`; `$^{\hat a}$` beside
+%          `$^{a}$`); the text accents' sibling `author_mark_combining_accent_is_its_letter`
+% oracle:  pdflatex: "Ann Able† and Bob Baker†̄ and Cid Colea and Dee Dunnâ and Eve Essex⃗" / † Univ One / †̄ Univ
+%          Two / a Univ Three / â Univ Four (pdftotext: †̄ a "¯" over "†", x⃗ "#»x")
+% engines: perl 0.8.8 = 0 errors, each line its name's (keyed by spelling); rust 92b r1-r4: the accent read as no part
+%          of the label — `\bar{\dag}` the label †, `\hat a` the label a: Univ One and Univ Two on Ann Able and Bob
+%          Baker, Univ Three and Univ Four on Cid Cole and Dee Dunn (the shadow alike), Eve Esse's unanswered mark x
+%          (92b0: each line its name's, keyed by spelling)
+% expect:  0 errors, 0 warnings; Univ One Ann Able's, Univ Two Bob Baker's, Univ Three Cid Cole's, Univ Four Dee
+%          Dunn's, Eve Esse's unanswered x⃗ shown whole
+% status:  RED (92b r4) -> GREEN (92b r5)
+% preload: ar5iv.sty
+\documentclass{article}
+\title{T}
+\author{Ann Able$^{\dag}$ \and Bob Baker$^{\bar{\dag}}$ \and Cid Cole$^{a}$ \and Dee Dunn$^{\hat a}$
+  \and Eve Esse$^{\vec x}$\\ $^{\dag}$Univ One\\ $^{\bar{\dag}}$Univ Two\\ $^{a}$Univ Three\\ $^{\hat a}$Univ Four}
+\begin{document}
+\maketitle
+Text.
+\end{document}

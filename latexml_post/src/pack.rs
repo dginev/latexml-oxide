@@ -256,7 +256,14 @@ mod tests {
     let f = File::open(zip_path).expect("open zip");
     let mut archive = zip::ZipArchive::new(f).expect("parse zip");
     (0..archive.len())
-      .map(|i| archive.by_index(i).expect("entry").name().to_string())
+      .map(|i| {
+        archive
+          .by_index(i)
+          .expect("entry")
+          .name()
+          .expect("entry name")
+          .to_string()
+      })
       .collect()
   }
 

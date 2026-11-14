@@ -1,0 +1,21 @@
+% 106c's "for X" rule (collaborations.rs `speaks_for_after_notes`, OD #967) reads a remark after a name's marks as the
+% collaboration the author speaks for when it is at most six capitalised words with no address: webofc's
+% `… \thanks{…} for CAPP/IBS` (1702.03664). A funding remark or a company is no collaboration: pdflatex prints "Ann
+% Able1 for NSF Grant 123" and "Cy Coe2 for ACME Corp" as the name lines, and the base (int134b) keeps both in the
+% personname; 106c makes each a `<contact role="collaboration">` (text kept, wrong role). Review rev106c SHOULD-FIX
+% (probes p1, webofc p-series). A real one stays a contact: `Di Dee$^{3}$ for the ATLAS Collaboration`.
+% witness: none (synthetic; review rev106c)
+% oracle:  pdflatex 0 errors (TL 2025, -no-shell-escape): "Ann Able1 for NSF Grant 123", "Cy Coe2 for ACME Corp",
+%          "Di Dee3 for the ATLAS Collaboration", "Text."
+% engines: rust 106c r1 = "for NSF Grant 123" and "for ACME Corp" collaboration contacts
+% expect:  0 errors, 0 warnings; the two remarks in their personnames as on the base; the ATLAS remark the
+%          collaboration contact
+% status:  RED (106c r1) -> GREEN (106c r2: a group's words, acronyms or slashed names or a team's word)
+% preload: ar5iv.sty
+\documentclass{article}
+\title{A Title}
+\author{Ann Able$^{1}$ for NSF Grant 123 \and Cy Coe$^{2}$ for ACME Corp \and Di Dee$^{3}$ for the ATLAS Collaboration}
+\begin{document}
+\maketitle
+Text.
+\end{document}

@@ -1,0 +1,21 @@
+% witness: 1901.05553, 1907.00310 (the template's `\AddSpotColor` lines), 1712.00216, 1902.03817 (`\textcolor`):
+%          ieeeaccess.cls:121-131 `\RequirePackage{color}`, then spotcolor unless the `jtehm` option
+% oracle:  pdflatex (clean) with this cut of the class ("Received today, revised.")
+% engines: rust 67o1 = 4 errors (`\NewSpotColorSpace`, `\AddSpotColor`, `\SetPageColorSpace`, `\textcolor` undefined:
+%          ieeeaccess_cls.rs loaded neither); Perl: no binding, OmniBus scans the class and loads color
+% expect:  0 errors, 0 warnings; the coloured text kept, #FF0000
+% status:  RED (67o1) -> GREEN (67u)
+% preload: ar5iv.sty
+\begin{filecontents*}[overwrite]{ieeeaccess.cls}
+\ProvidesClass{ieeeaccess}
+\LoadClass{IEEEtran}
+\RequirePackage{color}
+\RequirePackage{spotcolor}
+\end{filecontents*}
+\documentclass{ieeeaccess}
+\NewSpotColorSpace{PANTONE}
+\AddSpotColor{PANTONE} {PANTONE3015C} {PANTONE\SpotSpace 3015\SpotSpace C} {1 0.3 0 0.2}
+\SetPageColorSpace{PANTONE}
+\begin{document}
+Received today, \textcolor{red}{revised}.
+\end{document}

@@ -1,0 +1,10 @@
+% witness: KNOWN_PERL_ERRORS #1004 trigger; latex.ltx:9958-9965 `\UseTextAccent`, :9906-9912 `\add@accent`
+% oracle:  pdflatex 0 errors; "A é B.": `\accent19 \fontencoding{OT1}\selectfont e` — the font switch between the
+%          accent number and the letter is a run of assignments (tex.web §1123 make_accent, §1270 do_assignments)
+% engines: rust int36a = "A ´e B."; 77x r1 = "A ´e B."; Perl "A ´e B."
+% expect:  0 errors, 0 warnings; "A é B."
+% status:  GREEN (77x r2, math_common.rs `\accent` assignments)
+\documentclass{article}
+\begin{document}
+A \UseTextAccent{OT1}{\'}{e} B.
+\end{document}

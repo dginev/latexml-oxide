@@ -1,0 +1,25 @@
+% witness: 1803.00457, 1903.07205 (`{linenomath*}`), 1902.01137, 2101.01063 (`\justifying`), 1812.02692 (`\textcolor`):
+%          agujournal2019.cls:91-112 `\RequirePackage{xcolor}`, `{url}`, `{lineno}`, `{indentfirst}`, `{ragged2e}`
+% oracle:  pdflatex (clean) with this cut of the class ("Plain text. x = 1 Blue.")
+% engines: rust 67o1 = 3 errors (`{linenomath*}`, `\justifying`, `\textcolor` undefined); Perl: no binding, OmniBus
+%          scans the class and loads the three
+% expect:  0 errors, 0 warnings; the equation and the blue text kept
+% status:  RED (67o1) -> GREEN (67u)
+% preload: ar5iv.sty
+\begin{filecontents*}[overwrite]{agujournal2019.cls}
+\ProvidesClass{agujournal2019}
+\LoadClass{article}
+\RequirePackage{xcolor}
+\RequirePackage{url}
+\RequirePackage{lineno}
+\RequirePackage{indentfirst}
+\RequirePackage{ragged2e}
+\end{filecontents*}
+\documentclass{agujournal2019}
+\begin{document}
+\justifying Plain text.
+\begin{linenomath*}
+\begin{equation} x = 1 \end{equation}
+\end{linenomath*}
+\textcolor{blue}{Blue.}
+\end{document}

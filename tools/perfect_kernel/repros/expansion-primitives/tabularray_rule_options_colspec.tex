@@ -1,0 +1,19 @@
+% mechanism: tabularray's `|` column type takes `O{}` rule options (tabularray.sty:3172-3181:
+%   `|[1pt]`, `|[dashed]`), `>`/`<` a separation (`O{} m`, :3194, :3234), and `j`, `t`, `h`, `f` are
+%   predefined types (:3336-3346). The colspec translation bailed on them, so the whole inner spec
+%   became the template: its key text read as columns, `m` (of "width") took `=` as its width, which
+%   calc reports since 56jr ("`e' invalid at this point").
+% witness: TL manual logoetalab-doc (0 -> 2 errors in 56jr; logoetalab-doc.tex:143
+%   `\begin{tblr}{width=15cm,colspec={|[1pt]X[j]},cells={font=\footnotesize}}`)
+% oracle:  pdflatex 0 errors; a 2-column table
+% engines: rust 56jr = 2 errors, 42 warnings
+% expect:  0 errors, 0 warnings
+% status:  RED (56ju) -> GREEN (56ju)
+\documentclass{article}
+\usepackage{calc,tabularray}
+\begin{document}
+\begin{tblr}{width=8cm,colspec={|[1pt]X[j]|[dashed]t{2cm}},cells={font=\footnotesize}}
+alpha & beta \\
+gamma & delta \\
+\end{tblr}
+\end{document}

@@ -1,0 +1,22 @@
+% mechanism: an entry whose cut would strand a phrase is given back whole at `=2` only where its holders are
+%   exactly its address's owners (`emitter::address_cut::held_by_its_owners`, OD #980 KB2): an authblk `\affil` two authors
+%   hold, one address, keeps its cut on both, the address its owner's e-mail; `=2` only
+% witness: synthetic (review revJ2 kb/k7; the class of 2004.11812)
+% oracle:  pdflatex 0 errors; "Ann Able1, Bob Bell1, Cy Cole2"; "1Univ. Alpha, USA. Correspondence to: ann@alpha.edu";
+%   "2Univ. Beta, Spain; cy@beta.es"
+% engines: rust KB2 `=2`: the entry whole on Ann and on Bob, Ann no e-mail apart; KB2base `=2`: the cut; off: the cut
+% expect:  0 errors, 0 warnings; `=2` Ann's e-mail hers, no address in Bob's affiliation
+% status:  RED (KB2) -> GREEN (perfect_kernel_batchkb2::a_shared_entry_keeps_its_cut)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{authblk}
+\begin{document}
+\title{T}
+\author[1]{Ann Able}
+\author[1]{Bob Bell}
+\author[2]{Cy Cole}
+\affil[1]{Univ. Alpha, USA. Correspondence to: ann@alpha.edu}
+\affil[2]{Univ. Beta, Spain; cy@beta.es}
+\maketitle
+Text.
+\end{document}

@@ -1,0 +1,20 @@
+% witness: astro-ph0611258 (PoS.cls, three \author calls, only the last kept); JHEP.cls:513, JHEP3.cls:764,
+%          PoS.cls:666 `\renewcommand\author[1]{... \xdef\@author{\the\prev@t\the\cur@t}}` append each author
+% oracle:  pdflatex (with the shipped JHEP3.cls) 0 errors: "Ann Able / Dept. of Physics, Univ. A / E-mail:
+%          ann@a.edu", then "Bob Baker / ... / E-mail: bob@b.edu"
+% engines: rust 63j = only Bob Baker kept, with an affiliation "E-mail: " beside his email; Perl alike (the kernel
+%          \author replaces)
+% expect:  0 errors; two creators, each with its affiliation and an email named by its label ("E-mail: ")
+% status:  RED (63j) -> GREEN (63k)
+\documentclass{JHEP3}
+\title{T}
+\author{Ann Able\\
+  Dept.\ of Physics, Univ.\ A\\
+  E-mail: \email{ann@a.edu}}
+\author{Bob Baker\\
+  Dept.\ of Physics, Univ.\ B\\
+  E-mail: \email{bob@b.edu}}
+\abstract{The abstract.}
+\begin{document}
+Body.
+\end{document}

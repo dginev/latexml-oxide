@@ -1,0 +1,26 @@
+% witness: 1811.10830 (`Ali Farhadi$^{\spadesuit\heartsuit}$` over `$^\spadesuit$Paul G. Allen School … \\
+%          $^\heartsuit$Allen Institute for Artificial Intelligence`: two symbols, two labels), 2604.24532
+%          (`\textbf{Ying-Tu Chen\textsuperscript{\normalfont{1},}\footnotemark[2]}\ \ \ \textbf{ Wei Hung…}`: a font
+%          switch inside the mark is no part of its label), 2009.12421 (a blank line's `\par` between two names of one
+%          row, `Ehsan Shareghi$^\spadesuit$$^\clubsuit$ <blank line> \ \ Nigel Collier$^\clubsuit$`: in the `c`
+%          column the author block is set in it prints nothing, tex.web §1094/§1096)
+% oracle:  pdflatex 0 errors (the `\author` made `\long`, as the witness's needs): "Ann Able♠ Bob Baker♠♡ Cat Cole1,
+%          Dan Dorn2 Eve Eads♣ Fay Fox♣" on one row, then "♠Univ S", "♡Univ H", "1Univ One", "2Univ Two", "♣Univ C"
+% engines: rust 77p r2 = 0 errors; Bob Baker without Univ H and a nameless creator holding it; Cat Cole and Dan Dorn
+%          without their affiliations, a nameless creator holding both; "Eve Eads Fay Fox" one creator
+% expect:  0 errors, 0 warnings; six creators, each with the affiliations its marks name
+% status:  RED (77p r2) -> GREEN (77p r3)
+\documentclass{article}
+\makeatletter\long\def\author#1{\gdef\@author{#1}}\makeatother
+\title{T}
+\author{Ann Able$^\spadesuit$ \: \: Bob Baker$^{\spadesuit\heartsuit}$ \: \:
+\textbf{Cat Cole\textsuperscript{\normalfont{1},}}\ \ \ \textbf{Dan Dorn\textsuperscript{\normalfont{2}}} \ \
+Eve Eads$^\clubsuit$
+
+\ \ Fay Fox$^\clubsuit$\\
+$^\spadesuit$Univ S \\ $^\heartsuit$Univ H \\ \textsuperscript{1}Univ One \\ \textsuperscript{2}Univ Two \\
+$^\clubsuit$Univ C}
+\begin{document}
+\maketitle
+Text.
+\end{document}

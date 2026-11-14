@@ -1,0 +1,24 @@
+% witness: 1511.03982 (IEEEtran journal: `\author{\authorblockN{\authorblockN{Adrià Gusi-Amigó,
+%          \IEEEmembership{Student Member,~IEEE}, Pau Closas, \IEEEmembership{Senior Member,~IEEE} \\ and Luc
+%          Vandendorpe, \IEEEmembership{Fellow,~IEEE}.} \\ \thanks{…}\thanks{…}…}}`)
+% oracle:  pdflatex 0 errors: "Ann Able, Member, IEEE, Bob Baker, Senior Member, IEEE and Cy Coe, Fellow, IEEE.",
+%          the note at the foot
+% engines: rust int154q = no creator, 0 warnings (the inner names block, an author call inside the outer's argument,
+%          printed nothing there; `\authorblockN`'s grades were not read as its names'); Perl 0.8.8 = 0 errors, one
+%          creator holding every name, no grade
+% expect:  0 errors, 0 warnings; three creators, each with its grade as a membership contact; the note the last
+%          author's, as in the same block written once
+% status:  RED (int154q) -> GREEN (CR10a) — perfect_kernel_batchcr10a::nested_names_block_keeps_every_author
+% preload: ar5iv.sty
+\documentclass{IEEEtran}
+% (the class's old alias, which IEEEtran.cls 1.8 no longer defines; the binding's `\authorblockN`)
+\providecommand{\authorblockN}{\IEEEauthorblockN}
+\title{T}
+\author{\authorblockN{
+\IEEEauthorblockN{Ann Able, \IEEEmembership{Member,~IEEE}, Bob Baker, \IEEEmembership{Senior Member,~IEEE} \\
+and Cy Coe, \IEEEmembership{Fellow,~IEEE}.} \\
+\thanks{Zebra funded this.}}}
+\begin{document}
+\maketitle
+x
+\end{document}

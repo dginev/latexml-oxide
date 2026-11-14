@@ -1,0 +1,21 @@
+% mechanism: an address printed through `\href{mailto:…}{…}` inside an affiliation entry comes out with its link: the
+%   outermost wrapper the cut takes whole (`ltx:ref` with its `href` and `class`, a font `ltx:text` inside it) is the
+%   e-mail contact's content, and no link printing nothing is left in the affiliation (brief 95c r2 B4).
+% witness: 2111.14566, 1804.04123 (`\href{mailto:…}{…}` after the institution in the affiliation line)
+% oracle:  pdflatex 0 errors: "1 Univ X, ann@x.org", "2 Univ Y, bob@y.org"
+% engines: rust 95c: "Univ Y<ref href=mailto:…></ref>" and a plain-text e-mail; rust int123a: the link inside the
+%   affiliation; perl: the same
+% expect:  0 errors, 0 warnings; Ann Able "Univ X", e-mail `<ref href="mailto:ann@x.org"><text font=typewriter>`;
+%   Bob Baker "Univ Y", e-mail `<ref href="mailto:bob@y.org">bob@y.org</ref>`
+% status:  RED (95c) -> GREEN (95c-r2)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{hyperref}
+\begin{document}
+\title{T}
+\author{Ann Able$^1$, Bob Baker$^2$ \\
+$^1$ Univ X, \href{mailto:ann@x.org}{\texttt{ann@x.org}} \\
+$^2$ Univ Y, \href{mailto:bob@y.org}{bob@y.org}}
+\maketitle
+Text.
+\end{document}

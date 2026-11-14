@@ -1,0 +1,16 @@
+% A report number in a `\parbox` before the document's own title block: a box's text is set apart from the page's
+% flow (it does not hold the print), so the title block after it is the title block and lifted, the header kept
+% (0706.0979's preprint-number `\parbox` header; fms1 round-3 review finding 3: only boxes are exempt).
+% status:  GREEN (rounds 3 and 4).
+% oracle:  pdflatex 0 errors: "LA-UR-12-3456", "Header Title / Ann Author", "1 Intro Text.".
+% expect:  0 errors, 0 warnings; `field_ink` Info ×2; the header kept.
+\documentclass{article}
+\makeatletter
+\title{Header Title}\author{Ann Author}
+\begin{document}
+\noindent\parbox[t]{5cm}{LA-UR-12-3456}
+\vspace{1cm}
+\begin{center}{\Large\@title}\\[1em]\@author\end{center}
+\section{Intro}
+Text.
+\end{document}

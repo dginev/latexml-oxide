@@ -1,0 +1,18 @@
+% A marked names row over an unmarked line that reads as a name (`Carnegie Mellon`, no institution word): welded into
+% the last name, as Perl welds a marker-less line (Base_Utility.pool.ltxml:701). The detector counts the personname by
+% its lines and says so — the names a line break parts, or a name and its affiliation — not "2 names".
+% witness: synthetic (review rev107b N2, probes r02, q05); the R12 controls keep a line reading as an institution the
+%          block's
+% oracle:  pdflatex 0 errors: "Ann Able1 , Bob Baker2", "Carnegie Mellon"
+% engines: rust int138a = Bob Baker's personname "Bob Baker <break/>Carnegie Mellon" (silent); 107b r1 = the same, 1
+%          merged_creators Error "One author holds 2 names"; Perl the line welded into Bob Baker
+% expect:  1 error (frontmatter:merged_creators, worded by its lines), 0 warnings; two creators as written
+% status:  RED (107b r1, the wording) -> GREEN (107b r2)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{Ann Able$^{1}$, Bob Baker$^{2}$ \\ Carnegie Mellon}
+\maketitle
+Body.
+\end{document}

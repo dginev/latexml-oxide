@@ -1,0 +1,88 @@
+% The BESIII author block of 1202.2048 (elsarticle): 340 names over `\begin{small} … {\it $^{1}$ … \\ … $^{e}$ …}
+% \end{small}`, sub-lettered marks (`E.~Boger$^{18a}$`, `I.~Denysenko$^{18b}$`, `S.~P.~Pacetti$^{17c}$`,
+% `A.~Sarantsev$^{18d}$`, `C.~P.~Shen$^{36e}$`) and two names with a space before a tie (`N.~B. ~Li$^{22}$`,
+% `W.~L. ~Yuan$^{22}$`): the block's lines go by their marks, the legends to the names requesting them, no legend a
+% creator (`marker_leads` through the line's two wrappers), and the spaced tie one word space (the lexer).
+% witness: 1202.2048 (the author block as written; its macros and abstract dropped); review rev107b B2
+% oracle:  pdflatex 0 errors (TL 2025, elsarticle): the 340 names, "(BESIII Collaboration)", the 44 institutes and
+%          the legends a-e
+% engines: rust int138a = one creator; 107b r1 = 342 creators, the `$^{a}$` legend a creator, a nameless creator
+%          holding the b-e legends, the sub-lettered names without the institute 18 (17, 36), 0 errors (silent);
+%          Perl one creator
+% expect:  0 errors, 0 warnings; 340 creators, every one named; each sub-lettered name its number's institute and its
+%          letter's legend
+% status:  RED (107b r1) -> GREEN (107b r2)
+% preload: ar5iv.sty
+\documentclass[preprint,11pt]{elsarticle}
+\begin{document}
+\begin{frontmatter}
+\title{T}
+\author{
+\begin{small}
+%\begin{center}
+M.~Ablikim$^{1}$, M.~N.~Achasov$^{5}$, D.~Alberto$^{41}$, D.J.~Ambrose$^{38}$, F.~F.~An$^{1}$, Q.~An$^{39}$, Z.~H.~An$^{1}$, J.~Z.~Bai$^{1}$, R.~B.~F.~Baldini Ferroli$^{17}$, Y.~Ban$^{25}$, J.~Becker$^{2}$, N.~Berger$^{1}$, M.~B.~Bertani$^{17}$, J.~M.~Bian$^{37}$, E.~Boger$^{18a}$, O.~Bondarenko$^{19}$, I.~Boyko$^{18}$, R.~A.~Briere$^{3}$, V.~Bytev$^{18}$, X.~Cai$^{1}$, A.~C.~Calcaterra$^{17}$, G.~F.~Cao$^{1}$, J.~F.~Chang$^{1}$, G.~Chelkov$^{18a}$, G.~Chen$^{1}$, H.~S.~Chen$^{1}$, J.~C.~Chen$^{1}$, M.~L.~Chen$^{1}$, S.~J.~Chen$^{23}$, Y.~Chen$^{1}$, Y.~B.~Chen$^{1}$, H.~P.~Cheng$^{13}$, Y.~P.~Chu$^{1}$, D.~Cronin-Hennessy$^{37}$, H.~L.~Dai$^{1}$, J.~P.~Dai$^{1}$, D.~Dedovich$^{18}$, Z.~Y.~Deng$^{1}$, I.~Denysenko$^{18b}$, M.~Destefanis$^{41}$, W.~L. Ding~Ding$^{27}$, Y.~Ding$^{21}$, L.~Y.~Dong$^{1}$, M.~Y.~Dong$^{1}$, S.~X.~Du$^{44}$, J.~Fang$^{1}$, S.~S.~Fang$^{1}$, C.~Q.~Feng$^{39}$, C.~D.~Fu$^{1}$, J.~L.~Fu$^{23}$, Y.~Gao$^{34}$, C.~Geng$^{39}$, K.~Goetzen$^{7}$, W.~X.~Gong$^{1}$, M.~Greco$^{41}$, M.~H.~Gu$^{1}$, Y.~T.~Gu$^{9}$, Y.~H.~Guan$^{6}$, A.~Q.~Guo$^{24}$, L.~B.~Guo$^{22}$, Y.P.~Guo$^{24}$, Y.~L.~Han$^{1}$, X.~Q.~Hao$^{1}$, F.~A.~Harris$^{36}$, K.~L.~He$^{1}$, M.~He$^{1}$, Z.~Y.~He$^{24}$, Y.~K.~Heng$^{1}$, Z.~L.~Hou$^{1}$, H.~M.~Hu$^{1}$, J.~F.~Hu$^{6}$, T.~Hu$^{1}$, B.~Huang$^{1}$, G.~M.~Huang$^{14}$, J.~S.~Huang$^{11}$, X.~T.~Huang$^{27}$, Y.~P.~Huang$^{1}$, T.~Hussain$^{40}$, C.~S.~Ji$^{39}$, Q.~Ji$^{1}$, X.~B.~Ji$^{1}$, X.~L.~Ji$^{1}$, L.~K.~Jia$^{1}$, L.~L.~Jiang$^{1}$, X.~S.~Jiang$^{1}$, J.~B.~Jiao$^{27}$, Z.~Jiao$^{13}$, D.~P.~Jin$^{1}$, S.~Jin$^{1}$, F.~F.~Jing$^{34}$, N.~Kalantar-Nayestanaki$^{19}$, M.~Kavatsyuk$^{19}$, W.~Kuehn$^{35}$, W.~Lai$^{1}$, J.~S.~Lange$^{35}$, J.~K.~C.~Leung$^{33}$, C.~H.~Li$^{1}$, Cheng~Li$^{39}$, Cui~Li$^{39}$, D.~M.~Li$^{44}$, F.~Li$^{1}$, G.~Li$^{1}$, H.~B.~Li$^{1}$, J.~C.~Li$^{1}$, K.~Li$^{10}$, Lei~Li$^{1}$, N.~B. ~Li$^{22}$, Q.~J.~Li$^{1}$, S.~L.~Li$^{1}$, W.~D.~Li$^{1}$, W.~G.~Li$^{1}$, X.~L.~Li$^{27}$, X.~N.~Li$^{1}$, X.~Q.~Li$^{24}$, X.~R.~Li$^{26}$, Z.~B.~Li$^{31}$, H.~Liang$^{39}$, Y.~F.~Liang$^{29}$, Y.~T.~Liang$^{35}$, G.~R.~Liao$^{34}$, X.~T.~Liao$^{1}$, B.~J.~Liu$^{1}$, B.~J.~Liu$^{32}$, C.~L.~Liu$^{3}$, C.~X.~Liu$^{1}$, C.~Y.~Liu$^{1}$, F.~H.~Liu$^{28}$, Fang~Liu$^{1}$, Feng~Liu$^{14}$, H.~Liu$^{1}$, H.~B.~Liu$^{6}$, H.~H.~Liu$^{12}$, H.~M.~Liu$^{1}$, H.~W.~Liu$^{1}$, J.~P.~Liu$^{42}$, K.~Liu$^{6}$, K.~Liu$^{25}$, K.~Y.~Liu$^{21}$, Q.~Liu$^{36}$, S.~B.~Liu$^{39}$, X.~Liu$^{20}$, X.~H.~Liu$^{1}$, Y.~B.~Liu$^{24}$, Yong~Liu$^{1}$, Z.~A.~Liu$^{1}$, Zhiqiang~Liu$^{1}$, Zhiqing~Liu$^{1}$, H.~Loehner$^{19}$, G.~R.~Lu$^{11}$, H.~J.~Lu$^{13}$, J.~G.~Lu$^{1}$, Q.~W.~Lu$^{28}$, X.~R.~Lu$^{6}$, Y.~P.~Lu$^{1}$, C.~L.~Luo$^{22}$, M.~X.~Luo$^{43}$, T.~Luo$^{36}$, X.~L.~Luo$^{1}$, M.~Lv$^{1}$, C.~L.~Ma$^{6}$, F.~C.~Ma$^{21}$, H.~L.~Ma$^{1}$, Q.~M.~Ma$^{1}$, S.~Ma$^{1}$, T.~Ma$^{1}$, X.~Y.~Ma$^{1}$, M.~Maggiora$^{41}$, Q.~A.~Malik$^{40}$, H.~Mao$^{1}$, Y.~J.~Mao$^{25}$, Z.~P.~Mao$^{1}$, J.~G.~Messchendorp$^{19}$, J.~Min$^{1}$, T.~J.~Min$^{1}$, R.~E.~Mitchell$^{16}$, X.~H.~Mo$^{1}$, N.~Yu.~Muchnoi$^{5}$, Y.~Nefedov$^{18}$, I.~B..~Nikolaev$^{5}$, Z.~Ning$^{1}$, S.~L.~Olsen$^{26}$, Q.~Ouyang$^{1}$, S.~P.~Pacetti$^{17c}$, J.~W.~Park$^{26}$, M.~Pelizaeus$^{36}$, K.~Peters$^{7}$, J.~L.~Ping$^{22}$, R.~G.~Ping$^{1}$, R.~Poling$^{37}$, C.~S.~J.~Pun$^{33}$, M.~Qi$^{23}$, S.~Qian$^{1}$, C.~F.~Qiao$^{6}$, X.~S.~Qin$^{1}$, Z.~H.~Qin$^{1}$, J.~F.~Qiu$^{1}$, K.~H.~Rashid$^{40}$, G.~Rong$^{1}$, X.~D.~Ruan$^{9}$, A.~Sarantsev$^{18d}$, J.~Schulze$^{2}$, M.~Shao$^{39}$, C.~P.~Shen$^{36e}$, X.~Y.~Shen$^{1}$, H.~Y.~Sheng$^{1}$, M.~R.~Shepherd$^{16}$, X.~Y.~Song$^{1}$, S.~Spataro$^{41}$, B.~Spruck$^{35}$, D.~H.~Sun$^{1}$, G.~X.~Sun$^{1}$, J.~F.~Sun$^{11}$, S.~S.~Sun$^{1}$, X.~D.~Sun$^{1}$, Y.~J.~Sun$^{39}$, Y.~Z.~Sun$^{1}$, Z.~J.~Sun$^{1}$, Z.~T.~Sun$^{39}$, C.~J.~Tang$^{29}$, X.~Tang$^{1}$, E.~H.~Thorndike$^{38}$, H.~L.~Tian$^{1}$, D.~Toth$^{37}$, M.~U.~Ulrich$^{35}$, G.~S.~Varner$^{36}$, B.~Wang$^{9}$, B.~Q.~Wang$^{25}$, K.~Wang$^{1}$, L.~L.~Wang$^{4}$, L.~S.~Wang$^{1}$, M.~Wang$^{27}$, P.~Wang$^{1}$, P.~L.~Wang$^{1}$, Q.~Wang$^{1}$, Q.~J.~Wang$^{1}$, S.~G.~Wang$^{25}$, X.~F.~Wang$^{11}$, X.~L.~Wang$^{39}$, Y.~D.~Wang$^{39}$, Y.~F.~Wang$^{1}$, Y.~Q.~Wang$^{27}$, Z.~Wang$^{1}$, Z.~G.~Wang$^{1}$, Z.~Y.~Wang$^{1}$, D.~H.~Wei$^{8}$, Q.~G.~Wen$^{39}$, S.~P.~Wen$^{1}$, M..~W.~Werner$^{35}$,
+U.~Wiedner$^{2}$, L.~H.~Wu$^{1}$, N.~Wu$^{1}$, W.~Wu$^{24}$, Z.~Wu$^{1}$, L.~G.~Xia$^{34}$, Z.~J.~Xiao$^{22}$, Y.~G.~Xie$^{1}$, Q.~L.~Xiu$^{1}$, G.~F.~Xu$^{1}$, G.~M.~Xu$^{25}$, H.~Xu$^{1}$, Q.~J.~Xu$^{10}$, X.~P.~Xu$^{30}$, Y.~Xu$^{24}$, Z.~R.~Xu$^{39}$, F.~Xue$^{14}$, Z.~Xue$^{1}$, L.~Yan$^{39}$, W.~B.~Yan$^{39}$, Y.~H.~Yan$^{15}$, H.~X.~Yang$^{1}$, T.~Yang$^{9}$, Y.~Yang$^{14}$, Y.~X.~Yang$^{8}$, H.~Ye$^{1}$, M.~Ye$^{1}$, M.~H.~Ye$^{4}$, B.~X.~Yu$^{1}$, C.~X.~Yu$^{24}$, S.~P.~Yu$^{27}$, C.~Z.~Yuan$^{1}$, W.~L. ~Yuan$^{22}$, Y.~Yuan$^{1}$, A.~A.~Zafar$^{40}$, A.~Z.~Zallo$^{17}$, Y.~Zeng$^{15}$, B.~X.~Zhang$^{1}$, B.~Y.~Zhang$^{1}$, C.~C.~Zhang$^{1}$, D.~H.~Zhang$^{1}$, H.~H.~Zhang$^{31}$, H.~Y.~Zhang$^{1}$, J.~Zhang$^{22}$, J.~Q.~Zhang$^{1}$, J.~W.~Zhang$^{1}$, J.~Y.~Zhang$^{1}$, J.~Z.~Zhang$^{1}$, L.~Zhang$^{23}$, S.~H.~Zhang$^{1}$, T.~R.~Zhang$^{22}$, X.~J.~Zhang$^{1}$, X.~Y.~Zhang$^{27}$, Y.~Zhang$^{1}$, Y.~H.~Zhang$^{1}$, Y.~S.~Zhang$^{9}$, Z.~P.~Zhang$^{39}$, Z.~Y.~Zhang$^{42}$, G.~Zhao$^{1}$, H.~S.~Zhao$^{1}$, Jingwei~Zhao$^{1}$, Lei~Zhao$^{39}$, Ling~Zhao$^{1}$, M.~G.~Zhao$^{24}$, Q.~Zhao$^{1}$, S.~J.~Zhao$^{44}$, T.~C.~Zhao$^{1}$, X.~H.~Zhao$^{23}$, Y.~B.~Zhao$^{1}$, Z.~G.~Zhao$^{39}$, A.~Zhemchugov$^{18a}$, B.~Zheng$^{1}$, J.~P.~Zheng$^{1}$, Y.~H.~Zheng$^{6}$, Z.~P.~Zheng$^{1}$, B.~Zhong$^{1}$, J.~Zhong$^{2}$, L.~Zhou$^{1}$, X.~K.~Zhou$^{6}$, X.~R.~Zhou$^{39}$, C.~Zhu$^{1}$, K.~Zhu$^{1}$, K.~J.~Zhu$^{1}$, S.~H.~Zhu$^{1}$, X.~L.~Zhu$^{34}$, X.~W.~Zhu$^{1}$, Y.~S.~Zhu$^{1}$, Z.~A.~Zhu$^{1}$, J.~Zhuang$^{1}$, B.~S.~Zou$^{1}$, J.~H.~Zou$^{1}$, J.~X.~Zuo$^{1}$
+\\
+\vspace{0.2cm}
+(BESIII Collaboration)\\
+\vspace{0.2cm} {\it
+$^{1}$ Institute of High Energy Physics, Beijing 100049, P. R. China\\
+$^{2}$ Bochum Ruhr-University, 44780 Bochum, Germany\\
+$^{3}$ Carnegie Mellon University, Pittsburgh, PA 15213, USA\\
+$^{4}$ China Center of Advanced Science and Technology, \\Beijing 100190, P. R. China\\
+$^{5}$ G.I. Budker Institute of Nuclear Physics SB RAS (BINP), \\Novosibirsk 630090, Russia\\
+$^{6}$ Graduate University of Chinese Academy of Sciences, \\Beijing 100049, P. R. China\\
+$^{7}$ GSI Helmholtzcentre for Heavy Ion Research GmbH, \\D-64291 Darmstadt, Germany\\
+$^{8}$ Guangxi Normal University, Guilin 541004, P. R. China\\
+$^{9}$ GuangXi University, Nanning 530004,P.R.China\\
+$^{10}$ Hangzhou Normal University, XueLin Jie 16,\\ Xiasha Higher Education Zone Hangzhou, 310036, P. R. China\\
+$^{11}$ Henan Normal University, Xinxiang 453007, P. R. China\\
+$^{12}$ Henan University of Science and Technology, \\
+$^{13}$ Huangshan College, Huangshan 245000, P. R. China\\
+$^{14}$ Huazhong Normal University, Wuhan 430079, P. R. China\\
+$^{15}$ Hunan University, Changsha 410082, P. R. China\\
+$^{16}$ Indiana University, Bloomington, Indiana 47405, USA\\
+$^{17}$ INFN Laboratori Nazionali di Frascati , Frascati, Italy\\
+$^{18}$ Joint Institute for Nuclear Research, 141980 Dubna, Russia\\
+$^{19}$ KVI/University of Groningen, 9747 AA Groningen, The Netherlands\\
+$^{20}$ Lanzhou University, Lanzhou 730000, P. R. China\\
+$^{21}$ Liaoning University, Shenyang 110036, P. R. China\\
+$^{22}$ Nanjing Normal University, Nanjing 210046, P. R. China\\
+$^{23}$ Nanjing University, Nanjing 210093, P. R. China\\
+$^{24}$ Nankai University, Tianjin 300071, P. R. China\\
+$^{25}$ Peking University, Beijing 100871, P. R. China\\
+$^{26}$ Seoul National University, Seoul, 151-747 Korea\\
+$^{27}$ Shandong University, Jinan 250100, P. R. China\\
+$^{28}$ Shanxi University, Taiyuan 030006, P. R. China\\
+$^{29}$ Sichuan University, Chengdu 610064, P. R. China\\
+$^{30}$ Soochow University, Suzhou 215006, China\\
+$^{31}$ Sun Yat-Sen University, Guangzhou 510275, P. R. China\\
+$^{32}$ The Chinese University of Hong Kong, Shatin, N.T., Hong Kong.\\
+$^{33}$ The University of Hong Kong, Pokfulam, Hong Kong\\
+$^{34}$ Tsinghua University, Beijing 100084, P. R. China\\
+$^{35}$ Universitaet Giessen, 35392 Giessen, Germany\\
+$^{36}$ University of Hawaii, Honolulu, Hawaii 96822, USA\\
+$^{37}$ University of Minnesota, Minneapolis, MN 55455, USA\\
+$^{38}$ University of Rochester, Rochester, New York 14627, USA\\
+$^{39}$ University of Science and Technology of China, Hefei 230026, P. R. China\\
+$^{40}$ University of the Punjab, Lahore-54590, Pakistan\\
+$^{41}$ University of Turin and INFN, Turin, Italy\\
+$^{42}$ Wuhan University, Wuhan 430072, P. R. China\\
+$^{43}$ Zhejiang University, Hangzhou 310027, P. R. China\\
+$^{44}$ Zhengzhou University, Zhengzhou 450001, P. R. China\\
+\vspace{0.2cm}
+$^{a}$ also at the Moscow Institute of Physics and Technology, Moscow, Russia\\
+$^{b}$ on leave from the Bogolyubov Institute for Theoretical Physics, Kiev, Ukraine\\
+$^{c}$ Currently at University of Perugia and INFN, Perugia, Italy\\
+$^{d}$ also at the PNPI, Gatchina, Russia\\
+$^{e}$ now at Nagoya University, Nagoya, Japan\\
+\vspace{7cm}
+}
+\end{small}
+}
+\begin{abstract}
+A.
+\end{abstract}
+\end{frontmatter}
+Body.
+\end{document}

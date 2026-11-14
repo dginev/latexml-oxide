@@ -197,6 +197,365 @@ fn parse_tree_count_limits() {
   // (name, lexemes, max_allowed_raw_trees)
   // Raw tree counts annotated with first-principles analysis of correct parse count.
   let cases: Vec<(&str, &str, usize)> = vec![
+    // 57bw: a postfix takes the factor before it (`postfixed`), so `k!(n-k)!` is k!·(n−k)! alone.
+    (
+      "postfix_factors",
+      "UNKNOWN:k:1 POSTFIX:factorial:2 OPEN:(:3 UNKNOWN:n:4 ADDOP:minus:5 UNKNOWN:k:6 CLOSE:):7 \
+      POSTFIX:factorial:8 ",
+      1,
+    ),
+    // 57bw review: one derivation where the grammar has one reading — after a coefficient `2n(n-1)!` is
+    // 2·n·(n−1)! only (`letter_postfixed` stands first or after an application), `\log n!` log@(n!) only
+    // (an OPFUNCTION's application is no `postfix_operand`), `\log(n)!` log@(n!) only (a one-formula
+    // group's postfix is the argument's), `\max(a,b)!` (max@(a, b))! only (a list application takes it
+    // whole), a script after the postfix, 1. #18's own
+    // choices stay for the fenced-letters pragma: `f(n)g(n)!` f@(n)·(g@(n))! among 3, `x(n+1)!` among 2.
+    (
+      "postfix_after_an_application",
+      "UNKNOWN:f:1 OPEN:(:2 UNKNOWN:n:3 CLOSE:):4 UNKNOWN:g:5 OPEN:(:6 UNKNOWN:n:7 CLOSE:):8 \
+      POSTFIX:factorial:9 ",
+      3,
+    ),
+    (
+      "postfix_letter_first",
+      "UNKNOWN:x:1 OPEN:(:2 UNKNOWN:n:3 ADDOP:plus:4 NUMBER:1:5 CLOSE:):6 POSTFIX:factorial:7 ",
+      2,
+    ),
+    (
+      "postfix_after_a_coefficient",
+      "NUMBER:2:1 UNKNOWN:n:2 OPEN:(:3 UNKNOWN:n:4 ADDOP:minus:5 NUMBER:1:6 CLOSE:):7 \
+      POSTFIX:factorial:8 ",
+      1,
+    ),
+    (
+      "postfix_then_script",
+      "UNKNOWN:k:1 POSTFIX:factorial:2 start_POSTSUPERSCRIPT:start:3 ADDOP:minus:4 NUMBER:1:5 \
+      end_POSTSUPERSCRIPT:end:6 NUMBER:2:7 start_POSTSUPERSCRIPT:start:8 ADDOP:minus:9 UNKNOWN:k:10 \
+      end_POSTSUPERSCRIPT:end:11 ",
+      1,
+    ),
+    (
+      "postfix_in_a_bare_argument",
+      "OPFUNCTION:logarithm:1 UNKNOWN:n:2 POSTFIX:factorial:3 ",
+      1,
+    ),
+    (
+      "postfix_in_a_group_argument",
+      "OPFUNCTION:logarithm:1 OPEN:(:2 UNKNOWN:n:3 CLOSE:):4 POSTFIX:factorial:5 ",
+      1,
+    ),
+    (
+      "postfix_after_a_list_application",
+      "OPFUNCTION:maximum:1 OPEN:(:2 UNKNOWN:a:3 PUNCT:,:4 UNKNOWN:b:5 CLOSE:):6 \
+      POSTFIX:factorial:7 ",
+      1,
+    ),
+    // 57ca: a trig function's and an operator's argument take the postfix (user ruling
+    // 2026-09-29), an application's one operand takes it, a list's application the whole; a
+    // postfix after a bare function head. One derivation each; a chain's twin is refused as
+    // without the postfix.
+    (
+      "postfix_in_a_trig_argument",
+      "TRIGFUNCTION:sine:1 UNKNOWN:x:2 POSTFIX:factorial:3 ",
+      1,
+    ),
+    (
+      "postfix_in_a_trig_group",
+      "TRIGFUNCTION:sine:1 OPEN:(:2 UNKNOWN:n:3 CLOSE:):4 POSTFIX:factorial:5 ",
+      1,
+    ),
+    (
+      "postfix_in_a_trig_chain",
+      "TRIGFUNCTION:sine:1 UNKNOWN:x:2 UNKNOWN:y:3 POSTFIX:factorial:4 ",
+      2,
+    ),
+    (
+      "postfix_in_an_operator_argument",
+      "OPERATOR:nabla:1 UNKNOWN:f:2 POSTFIX:factorial:3 ",
+      1,
+    ),
+    (
+      "postfix_in_an_operator_group",
+      "OPERATOR:nabla:1 OPEN:(:2 UNKNOWN:f:3 CLOSE:):4 POSTFIX:factorial:5 ",
+      1,
+    ),
+    (
+      "postfix_in_an_operator_chain",
+      "OPERATOR:nabla:1 UNKNOWN:u:2 MULOP:cdot:3 UNKNOWN:v:4 POSTFIX:factorial:5 ",
+      2,
+    ),
+    (
+      "postfix_in_a_floor_operand",
+      "OPFUNCTION:logarithm:1 OTHER_OPEN:lfloor:2 UNKNOWN:n:3 MULOP:divide:4 NUMBER:2:5 \
+      OTHER_CLOSE:rfloor:6 POSTFIX:factorial:7 ",
+      1,
+    ),
+    (
+      "postfix_after_a_conditional",
+      "OPFUNCTION:Pr:1 OPEN:(:2 UNKNOWN:A:3 VERTBAR:|:4 UNKNOWN:B:5 CLOSE:):6 POSTFIX:factorial:7 ",
+      1,
+    ),
+    (
+      "postfix_after_a_bare_function_head",
+      "OPFUNCTION:logarithm:1 OPERATOR:nabla:2 start_POSTSUPERSCRIPT:start:3 NUMBER:2:4 \
+      end_POSTSUPERSCRIPT:end:5 POSTFIX:factorial:6 ",
+      1,
+    ),
+    (
+      "postfix_in_two_trig_arguments",
+      "TRIGFUNCTION:sine:1 UNKNOWN:x:2 POSTFIX:factorial:3 TRIGFUNCTION:cosine:4 UNKNOWN:y:5 \
+      POSTFIX:factorial:6 ",
+      1,
+    ),
+    // 57cb: juxtaposed OPFUNCTIONs are separate factors (user ruling 2026-09-29): one derivation
+    // each, where Perl's greedy `barearg` chain enumerated 14 / 17,442 trees for three / seven logs.
+    // 57cc: a bare conditional's two readings complement each other — the statement-level bar
+    // (an event condition) and the factor-level `conditional_formula` (a relation that is no event
+    // relates the conditional) — one tree kept, one refused: `y|x\sim N`, `Y|X=x`, and the mixed
+    // `WT|W=w\sim V` (the factor-level head's event condition). Correct parse: 1.
+    (
+      "conditional_before_a_relation",
+      "UNKNOWN:y:1 VERTBAR:|:2 UNKNOWN:x:3 RELOP:similar-to:4 UNKNOWN:N:5 ",
+      2,
+    ),
+    (
+      "conditional_with_an_event",
+      "UNKNOWN:Y:1 VERTBAR:|:2 UNKNOWN:X:3 RELOP:equals:4 UNKNOWN:x:5 ",
+      2,
+    ),
+    (
+      "conditional_event_then_a_relation",
+      "UNKNOWN:W:1 UNKNOWN:T:2 VERTBAR:|:3 UNKNOWN:W:4 RELOP:equals:5 UNKNOWN:w:6 \
+      RELOP:similar-to:7 UNKNOWN:V:8 ",
+      3,
+    ),
+    // 57cd: an operator, or a nest of operators only, takes an expectation's application
+    // (`open_op_head expectation_application`) — its nests take a `plain_opfunction`, so there is no
+    // nest over 𝔼 to refuse, and a nest over a function takes it as any application, so no closed
+    // nest is refused; before a factor the bare-argument route is a refused twin (the open nest's
+    // refusal), and a scripted group's bare-item reading is, as for any OPFUNCTION (`\log[X]^2` 2).
+    // Correct parse: 1, one tree per site in a sum (57cd reviews: 16 with a refused nest per site).
+    (
+      "operator_before_an_expectation_group",
+      "OPERATOR:nabla:1 EXPECTATION:\u{1D53C}:2 OPEN:[:3 UNKNOWN:X:4 CLOSE:]:5 ",
+      1,
+    ),
+    (
+      "operator_before_an_expectation_bare",
+      "OPERATOR:nabla:1 EXPECTATION:\u{1D53C}:2 UNKNOWN:X:3 ",
+      1,
+    ),
+    (
+      "operator_before_an_expectation_then_a_factor",
+      "OPERATOR:nabla:1 EXPECTATION:\u{1D53C}:2 OPEN:[:3 UNKNOWN:X:4 CLOSE:]:5 UNKNOWN:Y:6 ",
+      2,
+    ),
+    (
+      "operator_before_an_expectation_scripted_group",
+      "OPERATOR:nabla:1 EXPECTATION:\u{1D53C}:2 OPEN:[:3 UNKNOWN:X:4 CLOSE:]:5 \
+      start_POSTSUPERSCRIPT:start:6 NUMBER:2:7 end_POSTSUPERSCRIPT:end:8 ",
+      2,
+    ),
+    (
+      "closed_nest_before_an_expectation",
+      "OPERATOR:nabla:1 OPFUNCTION:logarithm:2 EXPECTATION:\u{1D53C}:3 OPEN:[:4 UNKNOWN:X:5 \
+      CLOSE:]:6 ",
+      1,
+    ),
+    (
+      "operator_before_expectations_in_a_sum",
+      "OPERATOR:nabla:1 EXPECTATION:\u{1D53C}:2 OPEN:[:3 UNKNOWN:X:4 CLOSE:]:5 ADDOP:plus:6 \
+      OPERATOR:nabla:7 EXPECTATION:\u{1D53C}:8 OPEN:[:9 UNKNOWN:Y:10 CLOSE:]:11 ADDOP:plus:12 \
+      OPERATOR:nabla:13 EXPECTATION:\u{1D53C}:14 OPEN:[:15 UNKNOWN:Z:16 CLOSE:]:17 ",
+      1,
+    ),
+    (
+      "three_logs",
+      "OPFUNCTION:logarithm:1 UNKNOWN:x:2 OPFUNCTION:logarithm:3 UNKNOWN:y:4 \
+      OPFUNCTION:logarithm:5 UNKNOWN:z:6 ",
+      1,
+    ),
+    (
+      "seven_logs",
+      "OPFUNCTION:logarithm:1 UNKNOWN:a:2 OPFUNCTION:logarithm:3 UNKNOWN:b:4 \
+      OPFUNCTION:logarithm:5 UNKNOWN:c:6 OPFUNCTION:logarithm:7 UNKNOWN:d:8 \
+      OPFUNCTION:logarithm:9 UNKNOWN:e:10 OPFUNCTION:logarithm:11 UNKNOWN:f:12 \
+      OPFUNCTION:logarithm:13 UNKNOWN:g:14 ",
+      1,
+    ),
+    // 57cg: a limits head's bound variable (user ruling 2026-09-30): after `\max_i a_i` each later
+    // OPFUNCTION's application is one more derivation, the head's argument taking it or not — the
+    // actions keep one (`bound_argument_extends` when it mentions i, the split otherwise) — so a
+    // chain after the head is linear, `\max_i a_i\log b_i\log c_i\log d_i` 4; heads whose scripts are
+    // no limits add none (`\log_2`, `\log x\log y\log z` above); limits heads in a row compound
+    // (Catalan: 3 heads 5, 4 heads 14; none with three in one product in the 57cd A/B's 3,003 papers).
+    // Correct parse: 1 each.
+    (
+      "scripted_max_then_log",
+      "OPFUNCTION:maximum:1 start_POSTSUBSCRIPT:start:2 UNKNOWN:i:3 end_POSTSUBSCRIPT:end:4 \
+      UNKNOWN:a:5 start_POSTSUBSCRIPT:start:6 UNKNOWN:i:7 end_POSTSUBSCRIPT:end:8 \
+      OPFUNCTION:logarithm:9 UNKNOWN:b:10 start_POSTSUBSCRIPT:start:11 UNKNOWN:i:12 \
+      end_POSTSUBSCRIPT:end:13 ",
+      2,
+    ),
+    (
+      "bound_variable_not_mentioned",
+      "OPFUNCTION:maximum:1 start_POSTSUBSCRIPT:start:2 UNKNOWN:x:3 end_POSTSUBSCRIPT:end:4 \
+      UNKNOWN:f:5 OPEN:(:6 UNKNOWN:x:7 CLOSE:):8 OPFUNCTION:logarithm:9 UNKNOWN:y:10 ",
+      3,
+    ),
+    (
+      "bound_variable_of_a_relation",
+      "OPFUNCTION:minimum:1 start_POSTSUBSCRIPT:start:2 ATOM:>\u{3B7}0:3 end_POSTSUBSCRIPT:end:4 \
+      UNKNOWN:eta:5 OPFUNCTION:natural-logarithm:6 UNKNOWN:eta:7 ",
+      2,
+    ),
+    (
+      "bound_witness_min_mu",
+      "OPFUNCTION:minimum:1 start_POSTSUBSCRIPT:start:2 ATOM:\u{2208}\u{3BC}R:3 \
+      end_POSTSUBSCRIPT:end:4 UNKNOWN:tau:5 EXPECTATION:\u{1D53C}:6 start_POSTSUBSCRIPT:start:7 \
+      UNKNOWN:z:8 end_POSTSUBSCRIPT:end:9 UNKNOWN:phi:10 OPEN:(:11 OPEN:(:12 UNKNOWN:z:13 \
+      ADDOP:minus:14 UNKNOWN:mu:15 CLOSE:):16 MULOP:divide:17 UNKNOWN:tau:18 CLOSE:):19 \
+      ADDOP:plus:20 UNKNOWN:mu:21 ",
+      4,
+    ),
+    (
+      "limits_head_then_three_logs",
+      "OPFUNCTION:maximum:1 start_POSTSUBSCRIPT:start:2 UNKNOWN:i:3 end_POSTSUBSCRIPT:end:4 \
+      UNKNOWN:a:5 start_POSTSUBSCRIPT:start:6 UNKNOWN:i:7 end_POSTSUBSCRIPT:end:8 \
+      OPFUNCTION:logarithm:9 UNKNOWN:b:10 start_POSTSUBSCRIPT:start:11 UNKNOWN:i:12 \
+      end_POSTSUBSCRIPT:end:13 OPFUNCTION:logarithm:14 UNKNOWN:c:15 start_POSTSUBSCRIPT:start:16 \
+      UNKNOWN:i:17 end_POSTSUBSCRIPT:end:18 OPFUNCTION:logarithm:19 UNKNOWN:d:20 \
+      start_POSTSUBSCRIPT:start:21 UNKNOWN:i:22 end_POSTSUBSCRIPT:end:23 ",
+      4,
+    ),
+    (
+      "nolimits_scripted_chain",
+      "OPFUNCTION:logarithm:1 start_POSTSUBSCRIPT:start:2 NUMBER:2:3 end_POSTSUBSCRIPT:end:4 \
+      UNKNOWN:x:5 OPFUNCTION:logarithm:6 start_POSTSUBSCRIPT:start:7 NUMBER:2:8 \
+      end_POSTSUBSCRIPT:end:9 UNKNOWN:y:10 OPFUNCTION:logarithm:11 start_POSTSUBSCRIPT:start:12 \
+      NUMBER:2:13 end_POSTSUBSCRIPT:end:14 UNKNOWN:z:15 ",
+      1,
+    ),
+    (
+      "limits_head_chain",
+      "OPFUNCTION:maximum:1 start_POSTSUBSCRIPT:start:2 UNKNOWN:i:3 end_POSTSUBSCRIPT:end:4 \
+      UNKNOWN:a:5 start_POSTSUBSCRIPT:start:6 UNKNOWN:i:7 end_POSTSUBSCRIPT:end:8 \
+      OPFUNCTION:maximum:9 start_POSTSUBSCRIPT:start:10 UNKNOWN:j:11 end_POSTSUBSCRIPT:end:12 \
+      UNKNOWN:b:13 start_POSTSUBSCRIPT:start:14 UNKNOWN:j:15 end_POSTSUBSCRIPT:end:16 \
+      OPFUNCTION:maximum:17 start_POSTSUBSCRIPT:start:18 UNKNOWN:k:19 end_POSTSUBSCRIPT:end:20 \
+      UNKNOWN:c:21 start_POSTSUBSCRIPT:start:22 UNKNOWN:k:23 end_POSTSUBSCRIPT:end:24 ",
+      5,
+    ),
+    (
+      "starred_operator_bound",
+      "OPERATOR:argmin:1 start_POSTSUBSCRIPT:start:2 UNKNOWN:w:3 end_POSTSUBSCRIPT:end:4 \
+      UNKNOWN:a:5 start_POSTSUBSCRIPT:start:6 UNKNOWN:w:7 end_POSTSUBSCRIPT:end:8 \
+      OPFUNCTION:logarithm:9 UNKNOWN:b:10 start_POSTSUBSCRIPT:start:11 UNKNOWN:w:12 \
+      end_POSTSUBSCRIPT:end:13 ",
+      2,
+    ),
+    (
+      "bound_head_as_a_first_item",
+      "OPFUNCTION:argument:1 OPFUNCTION:maximum:2 start_POSTSUBSCRIPT:start:3 UNKNOWN:theta:4 \
+      end_POSTSUBSCRIPT:end:5 UNKNOWN:p:6 start_POSTSUBSCRIPT:start:7 UNKNOWN:theta:8 \
+      end_POSTSUBSCRIPT:end:9 OPFUNCTION:logarithm:10 UNKNOWN:q:11 start_POSTSUBSCRIPT:start:12 \
+      UNKNOWN:theta:13 end_POSTSUBSCRIPT:end:14 ",
+      3,
+    ),
+    (
+      "nested_bound_heads",
+      "OPFUNCTION:maximum:1 start_POSTSUBSCRIPT:start:2 UNKNOWN:i:3 end_POSTSUBSCRIPT:end:4 \
+      OPFUNCTION:minimum:5 start_POSTSUBSCRIPT:start:6 UNKNOWN:j:7 end_POSTSUBSCRIPT:end:8 \
+      UNKNOWN:a:9 start_POSTSUBSCRIPT:start:10 UNKNOWN:j:11 end_POSTSUBSCRIPT:end:12 \
+      OPFUNCTION:logarithm:13 UNKNOWN:b:14 start_POSTSUBSCRIPT:start:15 UNKNOWN:j:16 \
+      end_POSTSUBSCRIPT:end:17 ",
+      4,
+    ),
+    (
+      "logs_across_an_ellipsis",
+      "OPFUNCTION:logarithm:1 UNKNOWN:x:2 start_POSTSUBSCRIPT:start:3 NUMBER:1:4 \
+      end_POSTSUBSCRIPT:end:5 ELIDEOP:cdots:6 OPFUNCTION:logarithm:7 UNKNOWN:x:8 \
+      start_POSTSUBSCRIPT:start:9 UNKNOWN:n:10 end_POSTSUBSCRIPT:end:11 ",
+      1,
+    ),
+    // 57ag: a scripted OPFUNCTION mid-term before a bigop, `\alpha\max_\theta\sum_i\ell_i`: one
+    // derivation, through `bare_opfunction_term bigop_operand` since 57cb (the mid-term
+    // `function_factor` rule must not derive it a second time). Correct parse: 1.
+    (
+      "scripted_opfunction_midterm",
+      "UNKNOWN:alpha:1 OPFUNCTION:max:2 start_POSTSUBSCRIPT:start:3 UNKNOWN:theta:4 \
+      end_POSTSUBSCRIPT:end:5 SUMOP:sum:6 start_BIGOPSUB:start:7 UNKNOWN:i:8 end_BIGOPSUB:end:9 \
+      UNKNOWN:ell:10 start_POSTSUBSCRIPT:start:11 UNKNOWN:i:12 end_POSTSUBSCRIPT:end:13 ",
+      1,
+    ),
+    // 57ag: an OPFUNCTION mid-term before a bigop, `a\log\int f`: derivable without the mid-term
+    // `function_factor` rule, which must not add a second derivation. Correct parse: 1.
+    (
+      "opfunction_midterm",
+      "UNKNOWN:a:1 OPFUNCTION:logarithm:2 INTOP:integral:3 UNKNOWN:f:4 ",
+      1,
+    ),
+    // An expectation takes the big operator after it (user ruling 2026-09-30) in the product's own
+    // derivation (`expectation_takes_the_big_operator` reads it), so no rule adds a tree:
+    // `\mathbb{E}\sum_i X_i`, `\mathbb{E}\frac1n\sum_i X_i` (2605.02116),
+    // `\eta\mathbb{E}_x\gamma\sum_a r_a` (2605.06977), `\max_\pi\mathbb{E}_\tau\sum_t r_t`
+    // (2605.11975). Correct parse: 1 each.
+    (
+      "expectation_before_a_big_operator",
+      "EXPECTATION:\u{1D53C}:1 SUMOP:sum:2 start_BIGOPSUB:start:3 UNKNOWN:i:4 end_BIGOPSUB:end:5 \
+      UNKNOWN:X:6 start_POSTSUBSCRIPT:start:7 UNKNOWN:i:8 end_POSTSUBSCRIPT:end:9 ",
+      1,
+    ),
+    (
+      "expectation_coefficient_before_a_big_operator",
+      "EXPECTATION:\u{1D53C}:1 ATOM:1n:2 SUMOP:sum:3 start_BIGOPSUB:start:4 UNKNOWN:i:5 \
+      end_BIGOPSUB:end:6 UNKNOWN:X:7 start_POSTSUBSCRIPT:start:8 UNKNOWN:i:9 \
+      end_POSTSUBSCRIPT:end:10 ",
+      1,
+    ),
+    (
+      "expectation_midterm_before_a_big_operator",
+      "UNKNOWN:eta:1 EXPECTATION:\u{1D53C}:2 start_POSTSUBSCRIPT:start:3 UNKNOWN:x:4 \
+      end_POSTSUBSCRIPT:end:5 UNKNOWN:gamma:6 SUMOP:sum:7 start_BIGOPSUB:start:8 UNKNOWN:a:9 \
+      end_BIGOPSUB:end:10 UNKNOWN:r:11 start_POSTSUBSCRIPT:start:12 UNKNOWN:a:13 \
+      end_POSTSUBSCRIPT:end:14 ",
+      1,
+    ),
+    (
+      "operator_before_an_expectation_before_a_big_operator",
+      "OPERATOR:nabla:1 start_POSTSUBSCRIPT:start:2 UNKNOWN:theta:3 end_POSTSUBSCRIPT:end:4 \
+      EXPECTATION:\u{1D53C}:5 start_POSTSUBSCRIPT:start:6 UNKNOWN:x:7 end_POSTSUBSCRIPT:end:8 \
+      SUMOP:sum:9 start_BIGOPSUB:start:10 UNKNOWN:i:11 end_BIGOPSUB:end:12 UNKNOWN:f:13 \
+      start_POSTSUBSCRIPT:start:14 UNKNOWN:i:15 end_POSTSUBSCRIPT:end:16 ",
+      1,
+    ),
+    // 57cf review: after an operator the big operator's operand runs over the term (a term-level
+    // rule), not split at every factor as a tight-term form did (1 → 3, 6 → 21 trees).
+    (
+      "operator_before_an_expectation_before_a_long_sum",
+      "OPERATOR:nabla:1 EXPECTATION:\u{1D53C}:2 SUMOP:sum:3 start_BIGOPSUB:start:4 UNKNOWN:i:5 \
+      end_BIGOPSUB:end:6 UNKNOWN:X:7 start_POSTSUBSCRIPT:start:8 UNKNOWN:i:9 end_POSTSUBSCRIPT:end:10 \
+      UNKNOWN:Y:11 UNKNOWN:Z:12 ",
+      1,
+    ),
+    (
+      "expectation_nested_before_a_big_operator",
+      "OPFUNCTION:maximum:1 start_POSTSUBSCRIPT:start:2 UNKNOWN:pi:3 end_POSTSUBSCRIPT:end:4 \
+      EXPECTATION:\u{1D53C}:5 start_POSTSUBSCRIPT:start:6 UNKNOWN:tau:7 end_POSTSUBSCRIPT:end:8 \
+      SUMOP:sum:9 start_BIGOPSUB:start:10 UNKNOWN:t:11 end_BIGOPSUB:end:12 UNKNOWN:r:13 \
+      start_POSTSUBSCRIPT:start:14 UNKNOWN:t:15 end_POSTSUBSCRIPT:end:16 ",
+      1,
+    ),
+    // 57ag: a chain of decorated relations, `a \leq_k b \leq_k c`: each `leq` takes its script
+    // (Perl `relop : RELOP addOpDecoration`), one multirelation. Correct parse: 1.
+    (
+      "decorated_relation_chain",
+      "UNKNOWN:a:1 RELOP:less-than-or-equals:2 start_POSTSUBSCRIPT:start:3 UNKNOWN:k:4 \
+      end_POSTSUBSCRIPT:end:5 UNKNOWN:b:6 RELOP:less-than-or-equals:7 \
+      start_POSTSUBSCRIPT:start:8 UNKNOWN:k:9 end_POSTSUBSCRIPT:end:10 UNKNOWN:c:11 ",
+      1,
+    ),
     // mathtools: 4-equation bigop formula with \quad separators
     // Correct parse: 1 (each equation unambiguous, \quad separates formulae)
     // Remaining 15 raw: PUNCT list_apply vs formulae_apply (3 separators × ~2x)
@@ -374,7 +733,136 @@ fn parse_tree_count_limits() {
       "INTOP:integral:1 start_BIGOPSUB:start:2 ID:a:3 end_BIGOPSUB:end:4 \
       start_BIGOPSUP:start:5 ID:b:6 end_BIGOPSUP:end:7 FUNCTION:f:8 \
       OPEN:(:9 UNKNOWN:x:10 CLOSE:):11 OPFUNCTION:d:12 UNKNOWN:x:13 ",
-      14,
+      2,
+    ),
+    // Divergence #374: a differential operator takes one factor (`diffop_application`), so each reading has
+    // one derivation — the greedy `bigop_application` gave `\partial_x u\cdot v` and `\partial\Omega\times(0,T]`
+    // two, `T\,\partial F/\partial T` two (the coefficient twin); a Leibniz quotient is regrouped in
+    // `infix_apply_nary`, no derivation of its own. A letter after the operator's application to an
+    // application keeps #18's chain (`diffop_group_application`): the chain, the refused twin, the product.
+    (
+      "diffop_takes_one_factor",
+      "DIFFOP:partial-differential:1 start_BIGOPSUB:start:2 UNKNOWN:x:3 end_BIGOPSUB:end:4 UNKNOWN:u:5 \
+      MULOP:cdot:6 UNKNOWN:v:7 ",
+      1,
+    ),
+    (
+      "diffop_boundary_times_interval",
+      "DIFFOP:partial-differential:1 UNKNOWN:Omega:2 MULOP:times:3 OPEN:(:4 NUMBER:0:5 PUNCT:,:6 \
+      UNKNOWN:T:7 CLOSE:]:8 ",
+      1,
+    ),
+    (
+      "diffop_product_of_derivatives",
+      "DIFFOP:partial-differential:1 start_BIGOPSUB:start:2 UNKNOWN:mu:3 end_BIGOPSUB:end:4 UNKNOWN:phi:5 \
+      DIFFOP:partial-differential:6 start_BIGOPSUP:start:7 UNKNOWN:mu:8 end_BIGOPSUP:end:9 UNKNOWN:phi:10 ",
+      1,
+    ),
+    (
+      "leibniz_quotient_after_a_coefficient",
+      "UNKNOWN:T:1 DIFFOP:partial-differential:2 UNKNOWN:F:3 MULOP:divide:4 \
+      DIFFOP:partial-differential:5 UNKNOWN:T:6 ",
+      1,
+    ),
+    (
+      "leibniz_quotient_of_second_order",
+      "DIFFOP:partial-differential:1 start_BIGOPSUP:start:2 NUMBER:2:3 end_BIGOPSUP:end:4 UNKNOWN:f:5 \
+      MULOP:divide:6 DIFFOP:partial-differential:7 UNKNOWN:x:8 DIFFOP:partial-differential:9 UNKNOWN:y:10 ",
+      1,
+    ),
+    (
+      "diffop_chain_after_an_application",
+      "DIFFOP:partial-differential:1 start_BIGOPSUP:start:2 UNKNOWN:rho:3 end_BIGOPSUP:end:4 UNKNOWN:G:5 \
+      OPEN:(:6 UNKNOWN:x:7 ADDOP:minus:8 UNKNOWN:y:9 CLOSE:):10 UNKNOWN:c:11 OPEN:(:12 UNKNOWN:y:13 \
+      CLOSE:):14 ",
+      3,
+    ),
+    // 57cj review: what no factor follows a differential operator it takes at term level (`diffop_term`) — a
+    // bare chain, a bare operator, a big operator's application, whose integrand no factor-level operand splits
+    // (57cj: 42 trees for the integral); a nested operator's application before a letter's (`diffop_group_application`);
+    // a number and the factors after it (`numeric_monomial`, the product refused); an operator's bare argument (the
+    // product leaving `v` outside it refused). The integral's 8 are 57ci's (the integrand's own readings).
+    (
+      "diffop_bare_chain",
+      "DIFFOP:partial-differential:1 start_BIGOPSUB:start:2 UNKNOWN:x:3 end_BIGOPSUB:end:4 \
+      DIFFOP:partial-differential:5 start_BIGOPSUB:start:6 UNKNOWN:y:7 end_BIGOPSUB:end:8 ",
+      1,
+    ),
+    (
+      "diffop_nested_before_a_letter_application",
+      "DIFFOP:partial-differential:1 start_BIGOPSUB:start:2 UNKNOWN:x:3 end_BIGOPSUB:end:4 \
+      DIFFOP:partial-differential:5 start_BIGOPSUB:start:6 UNKNOWN:y:7 end_BIGOPSUB:end:8 UNKNOWN:f:9 \
+      OPEN:(:10 UNKNOWN:x:11 CLOSE:):12 UNKNOWN:g:13 OPEN:(:14 UNKNOWN:x:15 CLOSE:):16 ",
+      3,
+    ),
+    (
+      "diffop_over_an_integral",
+      "DIFFOP:partial-differential:1 start_BIGOPSUB:start:2 UNKNOWN:t:3 end_BIGOPSUB:end:4 INTOP:integral:5 \
+      UNKNOWN:u:6 OPEN:(:7 UNKNOWN:y:8 CLOSE:):9 UNKNOWN:v:10 OPEN:(:11 UNKNOWN:y:12 CLOSE:):13 \
+      UNKNOWN:w:14 OPEN:(:15 UNKNOWN:y:16 CLOSE:):17 XDIFFUNK:d:18 UNKNOWN:y:19 ",
+      8,
+    ),
+    // (57cj.22.e: the derivative takes the divergence, ∂_t(∇·u); the twin that differentiates the bare head, (∂_t∇)·u,
+    // is refused, `divergence_or_curl`)
+    (
+      "diffop_over_a_bare_operator",
+      "DIFFOP:partial-differential:1 start_BIGOPSUB:start:2 UNKNOWN:t:3 end_BIGOPSUB:end:4 OPERATOR:nabla:5 \
+      MULOP:cdot:6 UNKNOWN:u:7 ",
+      2,
+    ),
+    (
+      "diffop_over_a_numeric_monomial",
+      "DIFFOP:partial-differential:1 start_BIGOPSUB:start:2 UNKNOWN:x:3 end_BIGOPSUB:end:4 NUMBER:2:5 \
+      UNKNOWN:u:6 ",
+      2,
+    ),
+    (
+      "operator_over_a_derivative",
+      "OPERATOR:nabla:1 DIFFOP:partial-differential:2 start_BIGOPSUB:start:3 UNKNOWN:x:4 end_BIGOPSUB:end:5 \
+      UNKNOWN:u:6 MULOP:cdot:7 UNKNOWN:v:8 ",
+      2,
+    ),
+    // 57cj.1 review: a fraction of numbers lexes ATOM_NUMBER, so another atom after a differential operator is
+    // no `numeric_monomial` lead (an `atom` lead gave `\partial_x\hat u v w` 3 trees, 2 refused); a number before a big
+    // operator leads the operand at term level (`numeric_big_operand`; the product with it refused: 2).
+    (
+      "diffop_over_an_atom_then_factors",
+      "DIFFOP:partial-differential:1 start_BIGOPSUB:start:2 UNKNOWN:x:3 end_BIGOPSUB:end:4 ATOM:hatu:5 \
+      UNKNOWN:v:6 UNKNOWN:w:7 ",
+      1,
+    ),
+    (
+      "diffop_over_a_number_before_a_big_operator",
+      "DIFFOP:partial-differential:1 start_BIGOPSUB:start:2 UNKNOWN:w:3 end_BIGOPSUB:end:4 ATOM_NUMBER:12:5 \
+      SUMOP:sum:6 start_BIGOPSUB:start:7 UNKNOWN:i:8 end_BIGOPSUB:end:9 UNKNOWN:a:10 start_POSTSUBSCRIPT:start:11 \
+      UNKNOWN:i:12 end_POSTSUBSCRIPT:end:13 ",
+      2,
+    ),
+    // 57cj.3 review: a number before a function before a big operator leads the operand (`numeric_big_operand`), the
+    // product with the number alone kept, ranked below it (`DifferentiatedNumbersTakeTheirFactors`).
+    (
+      "diffop_over_a_number_before_a_function_before_a_big_operator",
+      "DIFFOP:partial-differential:1 start_BIGOPSUB:start:2 UNKNOWN:x:3 end_BIGOPSUB:end:4 NUMBER:2:5 \
+      TRIGFUNCTION:sine:6 SUMOP:sum:7 start_BIGOPSUB:start:8 UNKNOWN:i:9 end_BIGOPSUB:end:10 UNKNOWN:a:11 \
+      start_POSTSUBSCRIPT:start:12 UNKNOWN:i:13 end_POSTSUBSCRIPT:end:14 ",
+      2,
+    ),
+    // M3: the letter retry's stream (`spell_letter_readings`): each expectation also reads as its letter
+    // (`expectation_letter`), one more derivation per expectation, pruned per ASF glade and at the root: no typed
+    // reading of `\sin\mathbb{E}\sum_i X_i` (1), a letter twin for each later one (`+\mathbb{E}Y+\mathbb{E}[Z]`, 2×2).
+    (
+      "letter_retry_trig_before_a_big_operator",
+      "TRIGFUNCTION:sine:1 EXPECTATION:\u{1D53C}.letter:2 SUMOP:sum:3 start_BIGOPSUB:start:4 UNKNOWN:i:5 \
+      end_BIGOPSUB:end:6 UNKNOWN:X:7 start_POSTSUBSCRIPT:start:8 UNKNOWN:i:9 end_POSTSUBSCRIPT:end:10 ",
+      1,
+    ),
+    (
+      "letter_retry_expectations_in_a_sum",
+      "TRIGFUNCTION:sine:1 EXPECTATION:\u{1D53C}.letter:2 SUMOP:sum:3 start_BIGOPSUB:start:4 UNKNOWN:i:5 \
+      end_BIGOPSUB:end:6 UNKNOWN:X:7 start_POSTSUBSCRIPT:start:8 UNKNOWN:i:9 end_POSTSUBSCRIPT:end:10 \
+      ADDOP:plus:11 EXPECTATION:\u{1D53C}.letter:12 UNKNOWN:Y:13 ADDOP:plus:14 \
+      EXPECTATION:\u{1D53C}.letter:15 OPEN:[:16 UNKNOWN:Z:17 CLOSE:]:18 ",
+      4,
     ),
     // --- Top-ambiguity formulas from test suite (unique parse count tracking) ---
     // All produce ≤10 unique parses (M10 target achieved).
@@ -391,7 +879,7 @@ fn parse_tree_count_limits() {
     (
       "opfunc_chain_3",
       "OPFUNCTION:F:1 OPFUNCTION:G:2 OPFUNCTION:H:3 ID:a:4 ",
-      54,
+      4,
     ),
     // Double vertbar norms: ||x|| a ||y||  (9 unique, 13 raw)
     (
@@ -407,14 +895,150 @@ fn parse_tree_count_limits() {
       OPFUNCTION:Tr:6 UNKNOWN:rho:7 PUNCT:qquad:8 OPFUNCTION:rank:9 UNKNOWN:M:10 \
       PUNCT:qquad:11 UNKNOWN:erf(x):12 PUNCT:qquad:13 OPFUNCTION:Res:14 OPEN:[:15 \
       UNKNOWN:f:16 OPEN:(:17 UNKNOWN:z:18 CLOSE:):19 CLOSE:]:20 ",
-      5000,
+      4,
     ),
-    // Trig chain: sin πx cos 2πy  (6 unique, 12 raw)
+    // 57bi: one derivation per delimited application — the `lparen formula rparen =>
+    // apply_delimited` twins of `prefix_apply` over a group built each tree twice (the twin audit:
+    // four `\log(x)` gave 31 enumerated trees). `\log(x)`, `\nabla_x(a)`, `\log\max_i`,
+    // `\langle a,b\rangle`: 1 each; `\max_i(a_i)` and a FUNCTION `f(x)` keep one pruned reading
+    // (the head as a factor before a group); `\sin^2(x)` kept a load-bearing `apply_delimited` rule
+    // (57bi review) until 57bo gave the scripted head the bare head's arguments.
+    (
+      "opfunction_paren",
+      "OPFUNCTION:logarithm:1 OPEN:(:2 UNKNOWN:x:3 CLOSE:):4 ",
+      1,
+    ),
+    (
+      "scripted_trig_paren",
+      "TRIGFUNCTION:sine:1 start_POSTSUPERSCRIPT:start:2 NUMBER:2:3 end_POSTSUPERSCRIPT:end:4 \
+      OPEN:(:5 UNKNOWN:x:6 CLOSE:):7 ",
+      1,
+    ),
+    (
+      "scripted_operator_paren",
+      "OPERATOR:nabla:1 start_POSTSUBSCRIPT:start:2 UNKNOWN:x:3 end_POSTSUBSCRIPT:end:4 \
+      OPEN:(:5 UNKNOWN:a:6 CLOSE:):7 ",
+      1,
+    ),
+    (
+      "opfunction_scripted_opfunction",
+      "OPFUNCTION:logarithm:1 OPFUNCTION:maximum:2 start_POSTSUBSCRIPT:start:3 UNKNOWN:i:4 \
+      end_POSTSUBSCRIPT:end:5 ",
+      1,
+    ),
+    (
+      "angle_pair",
+      "OPEN:langle:1 UNKNOWN:a:2 PUNCT:,:3 UNKNOWN:b:4 CLOSE:rangle:5 ",
+      1,
+    ),
+    (
+      "scripted_opfunction_paren",
+      "OPFUNCTION:maximum:1 start_POSTSUBSCRIPT:start:2 UNKNOWN:i:3 end_POSTSUBSCRIPT:end:4 \
+      OPEN:(:5 UNKNOWN:a:6 start_POSTSUBSCRIPT:start:7 UNKNOWN:i:8 end_POSTSUBSCRIPT:end:9 \
+      CLOSE:):10 ",
+      1,
+    ),
+    (
+      "function_paren",
+      "FUNCTION:f:1 OPEN:(:2 UNKNOWN:x:3 CLOSE:):4 ",
+      2,
+    ),
+    // 57bo: a scripted trig head takes the bare head's arguments (`trig_arg`, `trig_factor_arg`), no
+    // longer any `tight_term` (which also read sin²@(x·cos²@(y))) nor a twin paren rule: 57bi counted
+    // 10 enumerated trees for `\sin^2(x)\cos^2(y)`.
+    (
+      "scripted_trig_pair",
+      "TRIGFUNCTION:sine:1 start_POSTSUPERSCRIPT:start:2 NUMBER:2:3 end_POSTSUPERSCRIPT:end:4 \
+      OPEN:(:5 UNKNOWN:x:6 CLOSE:):7 TRIGFUNCTION:cosine:8 start_POSTSUPERSCRIPT:start:9 NUMBER:2:10 \
+      end_POSTSUPERSCRIPT:end:11 OPEN:(:12 UNKNOWN:y:13 CLOSE:):14 ",
+      1,
+    ),
+    // Trig chain: sin πx cos 2πy (6 unique, 6 raw at 57bo; the limit was 12)
     (
       "trig_chain",
       "TRIGFUNCTION:sine:1 UNKNOWN:pi:2 MULOP:times:3 UNKNOWN:x:4 \
       TRIGFUNCTION:cosine:5 NUMBER:2:6 UNKNOWN:pi:7 MULOP:times:8 UNKNOWN:y:9 ",
-      12,
+      6,
+    ),
+    // 57cj.10 (57cj.9 review): a trig argument's OPFUNCTION takes no trig function in its bare chain
+    // (`trig_op_bare_arg`), so no tree derives log@(x·cos y) to refuse it — 57cj.9 enumerated 4, and two sites
+    // multiplied to 25 (an `ambiguous_math` warning), eight hit the 5,001-tree cap
+    (
+      "trig_argument_opfunction_before_a_trig_function",
+      "TRIGFUNCTION:sine:1 OPFUNCTION:logarithm:2 UNKNOWN:x:3 TRIGFUNCTION:cosine:4 UNKNOWN:y:5 ",
+      1,
+    ),
+    (
+      "trig_argument_opfunction_sites_in_a_sum",
+      "TRIGFUNCTION:sine:1 OPFUNCTION:logarithm:2 UNKNOWN:x:3 TRIGFUNCTION:cosine:4 UNKNOWN:y:5 \
+      ADDOP:plus:6 TRIGFUNCTION:cosine:7 OPFUNCTION:logarithm:8 UNKNOWN:x:9 TRIGFUNCTION:sine:10 UNKNOWN:y:11 ",
+      1,
+    ),
+    // … and a scripted head keeps its unapplied twin (`trig_factor_arg`: `\sin\max_i`, `\sin\log_2=3` alone), which
+    // the application's argument refuses (`leaves_a_trig_bare_argument`): 2
+    (
+      "trig_argument_opfunction_scripted_head",
+      "TRIGFUNCTION:sine:1 OPFUNCTION:logarithm:2 start_POSTSUBSCRIPT:start:3 NUMBER:2:4 \
+      end_POSTSUBSCRIPT:end:5 UNKNOWN:x:6 TRIGFUNCTION:cosine:7 UNKNOWN:y:8 ",
+      2,
+    ),
+    // 57cj.11 (57cj.10 review): the chain's first item is built the same way when nested
+    // (`trig_op_bare_item`), so `\sin\log\log x\cos y` derives no log@(x·cos y): 7 → 3 trees, the 3 of
+    // `\sin\log\log x` alone (a nested OPFUNCTION keeps its twins, `\log\log x` 2); four sites 3,182 → 81
+    (
+      "trig_argument_nested_opfunction_before_a_trig_function",
+      "TRIGFUNCTION:sine:1 OPFUNCTION:logarithm:2 OPFUNCTION:logarithm:3 UNKNOWN:x:4 TRIGFUNCTION:cosine:5 \
+      UNKNOWN:y:6 ",
+      3,
+    ),
+    (
+      "trig_argument_nested_opfunction_sites_in_a_sum",
+      "TRIGFUNCTION:sine:1 OPFUNCTION:logarithm:2 OPFUNCTION:logarithm:3 UNKNOWN:x:4 TRIGFUNCTION:cosine:5 \
+      UNKNOWN:y:6 ADDOP:plus:7 TRIGFUNCTION:sine:8 OPFUNCTION:logarithm:9 OPFUNCTION:logarithm:10 \
+      UNKNOWN:x:11 TRIGFUNCTION:cosine:12 UNKNOWN:y:13 ADDOP:plus:14 TRIGFUNCTION:sine:15 \
+      OPFUNCTION:logarithm:16 OPFUNCTION:logarithm:17 UNKNOWN:x:18 TRIGFUNCTION:cosine:19 UNKNOWN:y:20 \
+      ADDOP:plus:21 TRIGFUNCTION:sine:22 OPFUNCTION:logarithm:23 OPFUNCTION:logarithm:24 UNKNOWN:x:25 \
+      TRIGFUNCTION:cosine:26 UNKNOWN:y:27 ",
+      81,
+    ),
+    // … and a trig function's argument composes another's application (`trig_composed_arg`; Rust-only unparsed
+    // before): `\sin\cos x\cos y` sin@(cos@(x))·cos@(y), `\sin\cos\det A` sin@(cos@(det A)), one tree each
+    (
+      "trig_composition",
+      "TRIGFUNCTION:sine:1 TRIGFUNCTION:cosine:2 UNKNOWN:x:3 TRIGFUNCTION:cosine:4 UNKNOWN:y:5 ",
+      1,
+    ),
+    (
+      "trig_composition_before_a_limit_operator",
+      "TRIGFUNCTION:sine:1 TRIGFUNCTION:cosine:2 LIMITOP:determinant:3 UNKNOWN:A:4 ",
+      1,
+    ),
+    // 57cj.12 review: an ellipsis opens a trig argument (`trig_ellipses`), which goes on after it; the lone-ellipsis
+    // application's twin cos@(⋯)·x is a raw tree the action refuses (`leaves_a_trig_bare_argument`), as `\cos a x`'s
+    // cos@(a)·x — two trees alone, 2^n at n sites (one unique reading)
+    (
+      "trig_argument_opened_by_an_ellipsis",
+      "TRIGFUNCTION:cosine:1 ELIDEOP:cdots:2 UNKNOWN:x:3 ",
+      2,
+    ),
+    (
+      "trig_argument_opened_by_an_ellipsis_run",
+      "TRIGFUNCTION:sine:1 ELIDEOP:cdots:2 ELIDEOP:cdots:3 UNKNOWN:x:4 ",
+      3,
+    ),
+    (
+      "trig_argument_opened_by_an_ellipsis_sites_in_a_sum",
+      "TRIGFUNCTION:cosine:1 ELIDEOP:cdots:2 UNKNOWN:x:3 ADDOP:plus:4 TRIGFUNCTION:cosine:5 ELIDEOP:cdots:6 \
+      UNKNOWN:y:7 ADDOP:plus:8 TRIGFUNCTION:cosine:9 ELIDEOP:cdots:10 UNKNOWN:z:11 ADDOP:plus:12 \
+      TRIGFUNCTION:cosine:13 ELIDEOP:cdots:14 UNKNOWN:w:15 ",
+      16,
+    ),
+    // … and after an addop the ellipsis is the head's argument, not an elided sum's operand (`infix_apply_and_elide`
+    // refuses a bare head, the second raw tree): `a+\cos\cdots` a + cos@(⋯)
+    (
+      "ellipsis_after_a_trig_head_in_a_sum",
+      "UNKNOWN:a:1 ADDOP:plus:2 TRIGFUNCTION:cosine:3 ELIDEOP:cdots:4 ",
+      2,
     ),
   ];
 
@@ -424,6 +1048,8 @@ fn parse_tree_count_limits() {
     let elapsed = start.elapsed();
     let n = count.unwrap_or(0);
     eprintln!("{name}: {n} raw trees in {elapsed:?} (limit: {max_allowed})");
+    // A formula that stops parsing counts 0 trees and would pass the limit (57bi review).
+    assert!(n >= 1, "{name}: no parse");
     assert!(
       n <= *max_allowed,
       "{name}: {n} raw trees exceeds limit of {max_allowed}. \

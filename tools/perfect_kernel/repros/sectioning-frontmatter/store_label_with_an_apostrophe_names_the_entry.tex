@@ -1,0 +1,23 @@
+% A raw class's keywords store its title page prints after a label with an apostrophe, `Author's keywords: \@keywords`:
+% TeX typesets the label's `'` as ’, and the label check (`printed_right_before`, frontmatter_stores.rs) compares the
+% letters and digits only (`alphanumerics`), so the label is the entry's name and leaves the title page with the store —
+% no orphan "Author’s keywords:" paragraph.
+% witness: none (synthetic; review probe `ap` of 77i r4).
+% oracle:  pdflatex 0 errors: "Author’s keywords: alpha, beta".
+% engines: rust 77i r4: `<keywords name="Keywords: ">` and an orphan "Author’s keywords:" paragraph (base int29a too).
+% expect:  0 errors, 0 warnings; `<keywords name="Author’s keywords:">alpha, beta</keywords>`; no orphan paragraph.
+% status:  RED (77i r4) -> GREEN (77i r5)
+\begin{filecontents*}[overwrite]{rcapos.cls}
+\ProvidesClass{rcapos}
+\LoadClass{article}
+\newcommand*\keywords[1]{\gdef\@keywords{#1}}
+\def\@keywords{}
+\def\@maketitle{\begin{center}{\Large\@title\par}\@author\par\end{center}\par\noindent Author's keywords: \@keywords\par}
+\end{filecontents*}
+\documentclass{rcapos}
+\title{T}\author{Anton}
+\keywords{alpha, beta}
+\begin{document}
+\maketitle
+Text.
+\end{document}

@@ -1,0 +1,17 @@
+% witness: 1509.06343, quant-ph0609144, 0807.1243 (537 of run 336's papers): tcilatex + an appendix in a chapterless
+%          class
+% oracle:  pdflatex 0 errors ("Appendix A")
+% engines: rust 64g = Error:undefined:\thechapter (tcilatex's `\newcount\c@chapter` read as "has chapters" since
+%          OXIDIZED_DESIGN #179); Perl 0 errors
+% expect:  0 errors; the appendix tagged "A", no ltx:ERROR
+% status:  RED (64g) -> GREEN (64h)
+\documentclass{article}
+\makeatletter
+\@ifundefined{chapter}{\def\chapter#1{\par(Chapter head:)#1\par }%
+ \newcount\c@chapter}{}%
+\makeatother
+\begin{document}
+\section{Intro} Text.
+\appendix
+\section{App} More.
+\end{document}

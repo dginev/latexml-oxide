@@ -1,0 +1,22 @@
+% mechanism: under `\documentstyle[myjunkx]{elsart}` provide-only OmniBus's required inst_support replaced elsart's
+%   labelled `\author[a]` (inst_support_sty.rs `\author[]{}`), so `\address[a]` found no labelled author: no contacts and
+%   a nameless third creator with both addresses. Every definition of a name defined before the guard is declined now.
+% witness: review 64zd round 1 (p1/el.tex)
+% oracle:  pdflatex with elsart.cls/elsart.sty from astro-ph9901093 and an empty myjunkx.sty: 0 errors; "Ann Able a Bob
+%   Baker b", "a Univ X, City", "b Univ Y, Town"
+% engines: rust 64zd-base (44ff2ac956, OmniBus whole): Ann with Univ X, Bob with Univ Y; rust 64zd r1: no contacts and
+%   a third creator; perl: personname "[" and both addresses
+% expect:  0 errors; Ann Able with Univ X, City; Bob Baker with Univ Y, Town
+% status:  RED (64zd r1) -> GREEN (64zd)
+% preload: ar5iv.sty
+\documentstyle[myjunkx]{elsart}
+\begin{document}
+\begin{frontmatter}
+\title{T}
+\author[a]{Ann Able}
+\author[b]{Bob Baker}
+\address[a]{Univ X, City}
+\address[b]{Univ Y, Town}
+\end{frontmatter}
+Text.
+\end{document}

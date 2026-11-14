@@ -1,0 +1,16 @@
+% preload: [luatex,rawstyles,rawclasses]latexml.sty
+% witness: toptesi/toptesi-example-luatex (topcoman.sty:76 \mathup{\mu}); also toptesi-example-xetex
+% oracle:  lualatex 0 errors
+% engines: rust=RED perl=? (2026-09-03)
+% expect:  0 errors; math contains upright "x" (XMTok font=... not italic)
+% status:  GREEN (batch 54m, 2026-09-03)
+% guard:   perfect_kernel_batch54::l3sys_engine_identity_under_luatex_profile
+% mechanism: unicode-math-luatex.sty:2306 \cs_set_protected:Npn \mathup{\mathrm};
+%   the contrib stub unicode_math_sty.rs never loads the engine file and only
+%   defines the \sym* family, so \mathup is undefined.
+\documentclass{article}
+\usepackage{amsmath}
+\usepackage{unicode-math}
+\begin{document}
+\( \mathup{x} + \symup{y} \)
+\end{document}

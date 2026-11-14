@@ -1,0 +1,18 @@
+% mechanism: the native l3fp answers only while l3fp's own names mean what it ports: an assignment that changes one, however local, leaves
+%   every later expression to the macros (`state::watch_meanings`). A word (`pi`, a function), an operator, an arithmetic macro, a constant,
+%   the door `\__fp_parse:n`, the marks `\s__fp`, `\__fp_chk:w`, `\__fp_sep:`. perfect_kernel_batchp2 swaps this file's marked line for its other rows
+% witness: review of batch P2, no arXiv paper
+% oracle:  pdflatex: [2] [4]
+% engines: rust: native and raw byte-identical (Perl has no native path); `1+1` answered natively, `pi+1` left to the macro
+% expect:  0 Errors, 0 Warnings, [2] [4]
+% status:  GREEN
+\documentclass{article}
+\ExplSyntaxOn
+\cs_new_protected:Npn \T #1 { [ \fp_to_tl:n {#1} ] ~ }
+\ExplSyntaxOff
+\begin{document}
+\ExplSyntaxOn
+\T{1+1}
+\fp_clear_variable:n{pi}\fp_set_variable:nn{pi}{3}\T{pi+1}
+\ExplSyntaxOff
+\end{document}

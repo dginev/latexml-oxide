@@ -102,23 +102,97 @@ fn phys_close(no_stretch: bool, size_tok: &Option<Token>, delim: Tokens) -> Toke
   }
 }
 
-/// Perl: phys_readArg — read TeX {} arg or delimited arg.
+/// physics.sty:309-350: the commands built on `\trigbraces{ m o d() }` (no `{…}` argument).
+const PHYS_TRIGBRACES: &[&str] = &[
+  "sin", "cos", "tan", "csc", "sec", "cot", "arcsin", "arccos", "arctan", "arccsc", "arcsec",
+  "arccot", "asin", "acos", "atan", "acsc", "asec", "acot", "sinh", "cosh", "tanh", "csch", "sech",
+  "coth", "log", "ln",
+];
+
+/// physics.sty:348-355: the commands built on `\opbraces{ m g o d() }`, whose `{…}` argument
+/// prints between braces.
+const PHYS_OPBRACES: &[&str] = &["exp", "det", "Pr", "tr", "Tr", "Res"];
+
+/// The spaces before the next token, read off the input.
+fn phys_skip_spaces() -> Result<Vec<Token>> {
+  let mut spaces = Vec::new();
+  while let Some(t) = read_token()? {
+    if t.get_catcode() == Catcode::SPACE {
+      spaces.push(t);
+    } else {
+      unread_one(t);
+      break;
+    }
+  }
+  Ok(spaces)
+}
+
+/// physics.sty's optional arguments are ltcmd's `s`, `t`, `g` and `d` (`\quantity` too:
+/// `\@quantity{ t\big t\Big t\bigg t\Bigg g o d() d|| }`, physics.sty:36), which look for the
+/// argument past spaces and put the spaces back when it is absent (xparse.sty:161-165
+/// `\__cmd_peek_nonspace:NTF`). Perl's
+/// `phys_readArg` and `readMatch` read the next token (physics.sty.ltxml:85-89, :495): `\bra{a}
+/// \ket{b}` was a bra and a ket, `\ketbra{a} {b}` an outer product of `a` and `a` (witness
+/// 2605.08402; KPE #345).
+fn phys_after_spaces<T>(read: impl FnOnce() -> Result<Option<T>>) -> Result<Option<T>> {
+  let spaces = phys_skip_spaces()?;
+  let found = read()?;
+  if found.is_none() {
+    for space in spaces.into_iter().rev() {
+      unread_one(space);
+    }
+  }
+  Ok(found)
+}
+
+/// An ltcmd `s` argument: a `*`, looked for past spaces.
+fn phys_read_star() -> Result<bool> {
+  Ok(phys_after_spaces(|| read_match(&[&Tokenize!("*")]))?.is_some())
+}
+
+/// Perl: phys_readArg — read TeX {} arg or delimited arg, past spaces (see `phys_after_spaces`).
+/// `braced`: a `{…}` group is the argument, as for an ltcmd `g`; physics.sty's trig family
+/// (`\trigbraces{ m o d() }`, :300) takes only `(…)`, so `\sin{y}` is `\sin` then `{y}` and
+/// `\sin[\ell] {e}^x` keeps its brackets. Perl's phys_readArg took `{` for every caller.
 /// Returns (arg, open_token, close_token).
 fn phys_read_arg(
   required: bool,
+  braced: bool,
   delimiters: fn(&str) -> Option<&'static str>,
 ) -> Result<(Option<Tokens>, Option<Token>, Option<Token>)> {
-  // tex.web §394: tab marks are disabled while a macro's argument is scanned.
-  // This reads the fenced `(…)`/`[…]` body of `\mqty` and friends straight from
-  // the input, so without the guard an inner `&` reaches an enclosing alignment
-  // as a cell break — `\mqty( b_0 &0 \\ 0 &b_1 )` in an `eqnarray` splits the
-  // row mid-argument and the alignment cannot close its group (witnesses
-  // 2605.05903, 2007.06211). `Parameters::read_arguments` arms the same guard
-  // for declared parameters, but this is a custom delimited read.
+  let read = phys_after_spaces(|| {
+    let (arg, open, close) = phys_read_arg_here(required, braced, delimiters)?;
+    Ok(arg.map(|arg| (arg, open, close)))
+  })?;
+  Ok(read.map_or((None, None, None), |(arg, open, close)| {
+    (Some(arg), open, close)
+  }))
+}
+
+/// A physics macro's optional `[…]` argument, read align-safe as ltcmd reads an `o` argument (latex.ltx:2103-2110):
+/// `\exp[ - \frac14 \begin{matrix} a & b \end{matrix} ]` inside an `align` (2606.03447, physics.sty:279 `\opbraces{ m
+/// g o d() }`) kept the matrix's `&` from reaching the row as a cell break, as in pdflatex. Perl reads it bare
+/// (physics.sty.ltxml:283 `readOptional`): 11 Errors and the rest of the alignment lost (KNOWN_PERL_ERRORS #981).
+fn phys_read_optional() -> Result<Option<Tokens>> {
+  let _tabs = SuppressedTabMarks::for_argument_scan();
+  read_optional(None)
+}
+
+fn phys_read_arg_here(
+  required: bool,
+  braced: bool,
+  delimiters: fn(&str) -> Option<&'static str>,
+) -> Result<(Option<Tokens>, Option<Token>, Option<Token>)> {
+  // physics.sty reads its fenced arguments align-safe (`{\ifnum\z@=`}\fi`, physics.sty:35/74/141; ltcmd's
+  // `\group_align_safe_begin:` around its `o`/`d()` arguments, latex.ltx:2103-2110), so a tab mark inside one is an
+  // ordinary token. This reads the fenced `(…)`/`[…]` body of `\mqty` and friends straight from the input, so without
+  // the guard an inner `&` reaches an enclosing alignment as a cell break — `\mqty( b_0 &0 \\ 0 &b_1 )` in an
+  // `eqnarray` splits the row mid-argument and the alignment cannot close its group (witnesses 2605.05903,
+  // 2007.06211). The optional `[…]` reads take it too ([`phys_read_optional`]).
   let _tabs = SuppressedTabMarks::for_argument_scan();
   let next = read_token()?;
   if let Some(ref t) = next {
-    if t.get_catcode() == Catcode::BEGIN {
+    if braced && t.get_catcode() == Catcode::BEGIN {
       unread_one(*t);
       let arg = read_arg(ExpansionLevel::Off)?;
       return Ok((Some(arg), None, None));
@@ -168,13 +242,18 @@ fn phys_read_arg(
     unread_one(*t);
   }
   if required {
-    // Error: expected open delimiter
+    // No error when a "required" body is absent: physics.sty's arguments are all ltcmd
+    // optionals (`\@matrixquantity{ s g o d() d|| }`, `\@quantity{ t\big … g o d() d|| }`), so a
+    // bare `\mqty` prints `()` and pdflatex is clean. Perl's `phys_readArg` reports "Expected an
+    // open delimiter" here (physics.sty.ltxml:116-118; KPE #352).
   }
   Ok((None, None, None))
 }
 
-/// Perl: phys_readArg with no delimiters — just TeX {} arg
-fn phys_read_arg_tex() -> Result<Option<Tokens>> {
+/// Perl: phys_readArg with no delimiters — just TeX {} arg (an ltcmd `g`, looked for past spaces).
+fn phys_read_arg_tex() -> Result<Option<Tokens>> { phys_after_spaces(phys_read_arg_tex_here) }
+
+fn phys_read_arg_tex_here() -> Result<Option<Tokens>> {
   let next = read_token()?;
   if let Some(ref t) = next {
     if t.get_catcode() == Catcode::BEGIN {
@@ -198,6 +277,11 @@ fn phys_rev_arg(arg_ref: Tokens, open: &Option<Token>, close: &Option<Token>) ->
 
 #[rustfmt::skip]
 LoadDefinitions!({
+  // physics.sty:15-16 `\RequirePackage{xparse}` then amsmath: a document's `\DeclareDocumentCommand` with
+  // xparse's deprecated `g` argument type (`{ o g }`) needs xparse, which the kernel's own command parser does
+  // not cover (2603.20157; Perl physics.sty.ltxml:19 loads amsmath alone, KNOWN_PERL_ERRORS #917). Guard:
+  // `perfect_kernel_batch70a::physics_loads_xparse`.
+  RequirePackage!("xparse");
   RequirePackage!("amsmath");
 
   //======================================================================
@@ -242,8 +326,11 @@ LoadDefinitions!({
   // fixed for `\mqty` and `\lx@physics@operatorP`). Return the dual.
   DefMacro!("\\quantity", {
     let (no_stretch, size_tok) = phys_read_size()?;
-    let (arg, open, close) = phys_read_arg(true, physics_delimiters)?;
-    let arg = arg.unwrap_or_default();
+    let (arg, open, close) = phys_read_arg(true, true, physics_delimiters)?;
+    // physics.sty:48-53: with no argument at all `\quantity` prints `()` (KPE #352).
+    let Some(arg) = arg else {
+      return Ok(Tokenize!("()"));
+    };
     let arg1 = Tokens::new(vec![i_arg("1")]);
 
     // Build reversion
@@ -341,7 +428,7 @@ LoadDefinitions!({
   DefMacro!("\\evaluated", {
     let (no_stretch, size_tok) = phys_read_size()?;
     let _c = Token::from("|");
-    let (arg, open, close) = phys_read_arg(true, |s| {
+    let (arg, open, close) = phys_read_arg(true, true, |s| {
       match s {
         "(" | "[" => Some("|"),
         _ => None,
@@ -504,7 +591,7 @@ LoadDefinitions!({
     let function_tks = function;
     let cfunc = i_symbol(&[("meaning", Tokenize!(semantic_tex))], None);
     let (no_stretch, size_tok) = phys_read_size()?;
-    let (arg, open, close) = phys_read_arg(false, physics_delimiters)?;
+    let (arg, open, close) = phys_read_arg(false, true, physics_delimiters)?;
 
     if let Some(arg_tks) = arg {
       let a1 = Tokens::new(vec![i_arg("1")]);
@@ -570,9 +657,18 @@ LoadDefinitions!({
     let function_tks = function;
     let cfunc = i_symbol(&[("meaning", Tokenize!(semantic_tex))], None);
     let pfunc = function_tks;
-    let (no_stretch, size_tok) = phys_read_size()?;
-    let power = read_optional(None)?;
-    let (arg, open, close) = phys_read_arg(false, |s| {
+    // physics.sty:279-304 `\opbraces{ m g o d() }`/`\trigbraces{ m o d() }` read no size and no star: a following
+    // `\Bigg[` is the paper's own sized bracket, which the size read took and then read `[…]` across a row break as the
+    // power (2609.12812, 39468; Perl physics.sty.ltxml:282 alike, KNOWN_PERL_ERRORS #503).
+    let (no_stretch, size_tok) = (false, None);
+    // physics.sty:300-360: the trig family (and `\log`, `\ln`) is `\trigbraces{ m o d() }`, the rest
+    // `\opbraces{ m g o d() }`: only the latter takes a `{…}` argument (witness 2605.20398
+    // `\sin[\ell \varphi] {\mathrm e}`; KPE #356).
+    let cs_name = cs_tks.to_string();
+    let cs_name = cs_name.trim_start_matches('\\');
+    let trig = PHYS_TRIGBRACES.contains(&cs_name);
+    let power = phys_read_optional()?;
+    let (arg, open, close) = phys_read_arg(false, !trig, |s| {
       if s == "(" { Some(")") } else { None }
     })?;
 
@@ -618,8 +714,12 @@ LoadDefinitions!({
       let reversion = Tokens::new(rev);
       let content = i_apply(&[], content_op, vec![a1]);
 
-      let open_tks = open.map(|t| Tokenize!(phys_delim_tex(t))).unwrap_or_else(|| Tokenize!("("));
-      let close_tks = close.map(|t| Tokenize!(phys_delim_tex(t))).unwrap_or_else(|| Tokenize!(")"));
+      // physics.sty:279-298 `\opbraces`: a `{…}` argument prints between braces (KPE #356)
+      // (`\fbraces{\lbrace}{\rbrace}`, `\det{M}` is "det{M}"); a `(…)` one between its own fences.
+      let braced = open.is_none() && PHYS_OPBRACES.contains(&cs_name);
+      let (default_open, default_close) = if braced { ("\\{", "\\}") } else { ("(", ")") };
+      let open_tks = open.map(|t| Tokenize!(phys_delim_tex(t))).unwrap_or_else(|| Tokenize!(default_open));
+      let close_tks = close.map(|t| Tokenize!(phys_delim_tex(t))).unwrap_or_else(|| Tokenize!(default_close));
       let mut pres = Vec::new();
       pres.extend(pres_func.unlist());
       pres.extend(phys_open(no_stretch, &size_tok, open_tks).unlist());
@@ -762,7 +862,7 @@ LoadDefinitions!({
   // Perl: OptionalMatch:* — * means no leading \quad
   // \mbox is used instead of \text for proper text mode handling
   DefPrimitive!("\\qqtext", {
-    let star = read_match(&[&Tokenize!("*")])?.is_some();
+    let star = phys_read_star()?;
     let arg = read_arg(ExpansionLevel::Off)?;
     let mut tks = Vec::new();
     if !star { tks.push(T_CS!("\\quad")); }
@@ -776,7 +876,7 @@ LoadDefinitions!({
   });
   DefMacro!("\\qcomma", r",\quad");
   DefPrimitive!("\\qcc", {
-    let star = read_match(&[&Tokenize!("*")])?.is_some();
+    let star = phys_read_star()?;
     let mut tks = Vec::new();
     if !star { tks.push(T_CS!("\\quad")); }
     tks.push(T_CS!("\\mbox"));
@@ -788,26 +888,37 @@ LoadDefinitions!({
   });
   Let!("\\qq", "\\qqtext");
   Let!("\\qc", "\\qcomma");
-  // Perl: foreach word, DefMacroI('\q'.$word, 'OptionalMatch:*', '\mbox{\ifx.#1.\quad\fi'.$word.'\quad}')
-  DefMacro!("\\qif", r"\mbox{\quad if\quad}");
-  DefMacro!("\\qthen", r"\mbox{\quad then\quad}");
-  DefMacro!("\\qelse", r"\mbox{\quad else\quad}");
-  DefMacro!("\\qotherwise", r"\mbox{\quad otherwise\quad}");
-  DefMacro!("\\qunless", r"\mbox{\quad unless\quad}");
-  DefMacro!("\\qgiven", r"\mbox{\quad given\quad}");
-  DefMacro!("\\qusing", r"\mbox{\quad using\quad}");
-  DefMacro!("\\qassume", r"\mbox{\quad assume\quad}");
-  DefMacro!("\\qsince", r"\mbox{\quad since\quad}");
-  DefMacro!("\\qlet", r"\mbox{\quad let\quad}");
-  DefMacro!("\\qfor", r"\mbox{\quad for\quad}");
-  DefMacro!("\\qall", r"\mbox{\quad all\quad}");
-  DefMacro!("\\qeven", r"\mbox{\quad even\quad}");
-  DefMacro!("\\qodd", r"\mbox{\quad odd\quad}");
-  DefMacro!("\\qinteger", r"\mbox{\quad integer\quad}");
-  DefMacro!("\\qand", r"\mbox{\quad and\quad}");
-  DefMacro!("\\qor", r"\mbox{\quad or\quad}");
-  DefMacro!("\\qas", r"\mbox{\quad as\quad}");
-  DefMacro!("\\qin", r"\mbox{\quad in\quad}");
+  // physics.sty:383-401: each `\q<word>` is ltcmd `s`, `\mbox{<\quad unless starred><word>\quad}`;
+  // the star is looked for past spaces (`phys_read_star`), as for `\qqtext`/`\qcc` above. Perl's
+  // `OptionalMatch:*` (physics.sty.ltxml, foreach word) reads only the next token.
+  DefMacro!("\\lx@physics@qword{}", sub[(word)] {
+    let mut tks = vec![T_CS!("\\mbox"), T_BEGIN!()];
+    if !phys_read_star()? {
+      tks.push(T_CS!("\\quad"));
+    }
+    tks.extend(word.unlist());
+    tks.extend([T_CS!("\\quad"), T_END!()]);
+    Ok(Tokens::new(tks))
+  });
+  DefMacro!("\\qif", "\\lx@physics@qword{if}");
+  DefMacro!("\\qthen", "\\lx@physics@qword{then}");
+  DefMacro!("\\qelse", "\\lx@physics@qword{else}");
+  DefMacro!("\\qotherwise", "\\lx@physics@qword{otherwise}");
+  DefMacro!("\\qunless", "\\lx@physics@qword{unless}");
+  DefMacro!("\\qgiven", "\\lx@physics@qword{given}");
+  DefMacro!("\\qusing", "\\lx@physics@qword{using}");
+  DefMacro!("\\qassume", "\\lx@physics@qword{assume}");
+  DefMacro!("\\qsince", "\\lx@physics@qword{since}");
+  DefMacro!("\\qlet", "\\lx@physics@qword{let}");
+  DefMacro!("\\qfor", "\\lx@physics@qword{for}");
+  DefMacro!("\\qall", "\\lx@physics@qword{all}");
+  DefMacro!("\\qeven", "\\lx@physics@qword{even}");
+  DefMacro!("\\qodd", "\\lx@physics@qword{odd}");
+  DefMacro!("\\qinteger", "\\lx@physics@qword{integer}");
+  DefMacro!("\\qand", "\\lx@physics@qword{and}");
+  DefMacro!("\\qor", "\\lx@physics@qword{or}");
+  DefMacro!("\\qas", "\\lx@physics@qword{as}");
+  DefMacro!("\\qin", "\\lx@physics@qword{in}");
 
   //======================================================================
   // Derivatives
@@ -823,8 +934,8 @@ LoadDefinitions!({
     let diff_tks = diff;
     let cfunc = i_symbol(&[("meaning", Tokenize!(semantic_tex))], None);
     let pfunc = i_wrap(Some(Tokenize!("role=DIFFOP")), diff_tks);
-    let degree = read_optional(None)?;
-    let (arg, open, close) = phys_read_arg(false, |s| {
+    let degree = phys_read_optional()?;
+    let (arg, open, close) = phys_read_arg(false, true, |s| {
       if s == "(" { Some(")") } else { None }
     })?;
 
@@ -873,6 +984,8 @@ LoadDefinitions!({
       Ok(result)
     } else if let Some(deg) = degree {
       let a2 = Tokens::new(vec![i_arg("2")]);
+      // Perl passes `$arg, $degree` (physics.sty.ltxml:388): the degree is `#2` with no `#1`.
+      all_args.push(Tokens::new(Vec::new()));
       all_args.push(deg);
       content = i_apply(&[], i_symbol(&[("meaning", Tokenize!("functional-power"))], None),
         vec![cfunc, a2.clone()]);
@@ -907,10 +1020,10 @@ LoadDefinitions!({
     let cfunc = i_symbol(&[("meaning", Tokenize!(semantic_tex.clone()))], None);
     let pfunc = i_wrap(Some(Tokenize!("role=DIFFOP")), diff_tks);
 
-    let inline = read_match(&[&Tokenize!("*")])?.is_some();
-    let degree = read_optional(None)?;
+    let inline = phys_read_star()?;
+    let degree = phys_read_optional()?;
     let tmp1 = read_arg(ExpansionLevel::Off)?; // 1st required: var1 or expr
-    let (tmp2, open, close) = phys_read_arg(false, |s| {
+    let (tmp2, open, close) = phys_read_arg(false, true, |s| {
       if s == "(" { Some(")") } else { None }
     })?;
 
@@ -920,7 +1033,7 @@ LoadDefinitions!({
       && let Some(ref _t2) = tmp2
         && open.is_none() {
           // tmp2 was a {} arg, try for 3rd
-          let (t3, o3, _c3) = phys_read_arg(false, |s| {
+          let (t3, o3, _c3) = phys_read_arg(false, true, |s| {
             if s == "(" { Some(")") } else { None }
           })?;
           if o3.is_none() { // only accept {} arg, not (arg)
@@ -1128,13 +1241,13 @@ LoadDefinitions!({
 
   // Perl: \bra{} — ⟨arg| with meaning=bra, auto-joins to \braket
   DefPrimitive!("\\bra", {
-    let no_stretch = read_match(&[&Tokenize!("*")])?.is_some();
+    let no_stretch = phys_read_star()?;
     let arg = read_arg(ExpansionLevel::Off)?;
     let a1 = Tokens::new(vec![i_arg("1")]);
 
     // Check if followed by \ket → join to braket
-    if read_match(&[&Tokenize!("\\ket")])?.is_some() {
-      let no_stretch2 = read_match(&[&Tokenize!("*")])?.is_some();
+    if phys_after_spaces(|| read_match(&[&Tokenize!("\\ket")]))?.is_some() {
+      let no_stretch2 = phys_read_star()?;
       let arg2 = read_arg(ExpansionLevel::Off)?;
       let a2 = Tokens::new(vec![i_arg("2")]);
       let final_stretch = !no_stretch && !no_stretch2;
@@ -1191,7 +1304,7 @@ LoadDefinitions!({
     let open_tks = open;
     let middle_tks = middle;
     let close_tks = close;
-    let no_stretch = read_match(&[&Tokenize!("*")])?.is_some();
+    let no_stretch = phys_read_star()?;
     let arg0 = read_arg(ExpansionLevel::Off)?;
     let argx = phys_read_arg_tex()?;
     let arg1 = argx.unwrap_or_else(|| arg0.clone());
@@ -1233,8 +1346,8 @@ LoadDefinitions!({
   DefPrimitive!("\\expectationvalue", {
     let cfunc = i_symbol(&[("meaning", Tokenize!("expectation-value"))], None);
     // ** means stretchy (default), * means no stretch, plain means stretchy
-    let size = if read_match(&[&Tokenize!("*")])?.is_some() {
-      read_match(&[&Tokenize!("*")])?.is_some()
+    let size = if phys_read_star()? {
+      phys_read_star()?
     } else { true };
     let no_stretch = !size;
     let open_tks = phys_open(no_stretch, &None, Tokenize!("\\langle"));
@@ -1287,8 +1400,8 @@ LoadDefinitions!({
   // Perl: \matrixelement — ⟨arg1|arg2|arg3⟩
   DefPrimitive!("\\matrixelement", {
     let cfunc = i_symbol(&[("meaning", Tokenize!("expectation-value"))], None);
-    let no_stretch = if read_match(&[&Tokenize!("*")])?.is_some() {
-      read_match(&[&Tokenize!("*")])?.is_none()
+    let no_stretch = if phys_read_star()? {
+      !phys_read_star()?
     } else { false };
     // Default (no `*`) is stretchy (`\left…\middle…\right`), matching Perl's
     // physics.sty.ltxml (all bra-ket delimiters default stretchy="true"). The
@@ -1362,23 +1475,52 @@ LoadDefinitions!({
   // Intentional — WISDOM #44, see physics umbrella L178.
   });
 
-  // Perl: \xmatrix *{item}{n}{m}
-  DefPrimitive!("\\xmatrix{}{}{}", sub[(_item, n, m)] {
-    let item_tks = _item;
-    let n_val: usize = n.to_string().parse().unwrap_or(2);
-    let m_val: usize = m.to_string().parse().unwrap_or(2);
-    let mut tks = Vec::new();
-    for i in 0..n_val {
-      if i > 0 { tks.push(T_CS!("\\\\")); }
-      for j in 0..m_val {
-        if j > 0 { tks.push(T_ALIGN!()); }
-        tks.extend_from_slice(item_tks.unlist_ref());
+  // physics.sty:636 `\DeclareDocumentCommand\xmatrix{ s m m m }` (Perl physics.sty.ltxml:600-615):
+  // the item repeated n×m as alignment material; starred, each copy subscripted by its one-based
+  // index, the row when there is more than one row and the column when there is more than one
+  // column (physics.sty:647 `\ifnum #3 > 1 …\fi \ifnum #4 > 1 …\fi`), joined as Perl does by an
+  // invisible comma; a 1×1 matrix has no subscript (Perl's `x_1` is not in the PDF, KPE #314). A
+  // size is read as an integer; anything else reads as 0 (Perl's numeric context would take a
+  // leading number, `2x` as 2).
+  DefMacro!("\\xmatrix OptionalMatch:* {}{}{}", sub[(star, item, n, m)] {
+    let size = |tokens: &Tokens| tokens.to_string().trim().parse::<usize>().unwrap_or(0);
+    let (n, m) = (size(&n), size(&m));
+    let mut tokens = Vec::new();
+    for i in 0..n {
+      if i > 0 {
+        tokens.push(T_CS!("\\\\"));
+      }
+      for j in 0..m {
+        if j > 0 {
+          tokens.push(T_ALIGN!());
+        }
+        tokens.extend_from_slice(item.unlist_ref());
+        if star.is_some() {
+          let mut index = Vec::new();
+          if n > 1 {
+            index.push(T_OTHER!(&(i + 1).to_string()));
+          }
+          if m > 1 {
+            if n > 1 {
+              index.push(T_CS!("\\lx@InvisibleComma"));
+            }
+            index.push(T_OTHER!(&(j + 1).to_string()));
+          }
+          if !index.is_empty() {
+            let subscript = Invocation!(T_CS!("\\lx@post@subscript"), vec![Some(Tokens::new(index))]);
+            tokens.extend_from_slice(subscript.unlist_ref());
+          }
+        }
       }
     }
-    unread(Tokens::new(tks));
+    Ok(Tokens::new(tokens))
   });
 
-  DefMacro!("\\zeromatrix{}{}", "\\xmatrix{0}{#1}{#2}");
+  // physics.sty:662 `\zeromatrix{ m g }`: the column count is an optional braced argument that
+  // defaults to the row count (`\zmat{3}` is 3×3); Perl's `{}{}` (physics.sty.ltxml:619, KPE #314)
+  // took the next token, `\end` in `\begin{pmatrix}\zmat{3}\end{pmatrix}`.
+  DefMacro!("\\zeromatrix{}",
+    "\\@ifnextchar\\bgroup{\\xmatrix{0}{#1}}{\\xmatrix{0}{#1}{#1}}");
 
   // Perl physics.sty.ltxml L622: `alias => 'i'` — reversion emits `i` rather
   // than the internal `\lx@physics@iunit` CS name. Without it, MathML `name=`
@@ -1482,24 +1624,39 @@ LoadDefinitions!({
     let env_str = env.to_string();
     let defopen_tks = defopen;
     let defclose_tks = defclose;
-    let _alt = read_match(&[&Tokenize!("*")])?.is_some();
+    let alt = phys_read_star()?;
 
     let cfunc = semantic_opt.map(|s| i_symbol(&[("meaning", Tokenize!(s))], None));
 
     // Read the body: either {} or delimiter-fenced
-    let (body, open, close) = phys_read_arg(true, physics_delimiters)?;
-    let body = body.unwrap_or_default();
+    let (body, open, close) = phys_read_arg(true, true, physics_delimiters)?;
+    // physics.sty:74-101, 109-132: `\matrixquantity`/`\smallmatrixquantity` with no argument at
+    // all print `()` (the innermost `\IfNoValueTF{#5}{()}`); only they have no default fences
+    // (KPE #352).
+    let Some(body) = body.or_else(|| (!defopen_tks.is_empty()).then(Tokens::default)) else {
+      return Ok(Tokenize!("()"));
+    };
 
-    // Wrap body in matrix environment tokens
-    let mut matrix_tks = vec![T_CS!(&format!("\\{env_str}"))];
-    matrix_tks.extend(body.unlist());
-    matrix_tks.push(T_CS!(&format!("\\end{env_str}")));
+    // The body in its matrix environment, `\begin{matrix}…\end{matrix}` as physics.sty:70-102 writes it (`\mdet{…}` is
+    // `\vmqty{…}`): amsmath's `\matrix` called outside `{matrix}` is its Plain-TeX old form (amsmath.sty:1068-1082
+    // `\matrix@check`, amsmath_sty.rs `\lx@ams@matrix@check`).
+    let mut matrix_tks = TokenizeInternal!(TeXString::assembled(format!("\\begin{{{env_str}}}"))).unlist();
+    matrix_tks.extend(body.unlist_ref().iter().copied());
+    matrix_tks.extend(TokenizeInternal!(TeXString::assembled(format!("\\end{{{env_str}}}"))).unlist());
     let matrix = Tokens::new(matrix_tks);
 
     let a1 = Tokens::new(vec![i_arg("1")]);
+    // The reversion is the source body: Perl's `I_arg(1)` reverted through the digested matrix,
+    // whose reversion is its body, where the raw `#1` here would carry the
+    // `\lx@physics@matrix` wrapper into `tex=`.
+    // (`body` is read from the gullet, so it holds no ARG tokens for `i_dual`'s
+    // `substitute_parameters` to replace.) Perl physics.sty.ltxml:686 keeps the star.
     let mut rev = Vec::new();
     rev.extend(cs_tks.unlist());
-    rev.extend(phys_rev_arg(a1.clone(), &open, &close).unlist());
+    if alt {
+      rev.push(T_OTHER!("*"));
+    }
+    rev.extend(phys_rev_arg(body, &open, &close).unlist());
     let reversion = Tokens::new(rev);
 
     let content = if let Some(cf) = cfunc {
@@ -1532,15 +1689,18 @@ LoadDefinitions!({
   DefMacro!("\\endlx@physics@smallmatrix", "\\lx@end@ams@matrix");
 
   DefMacro!("\\matrixquantity", "\\lx@physics@mat{\\matrixquantity}{}{lx@physics@matrix}{}{}");
-  DefMacro!("\\pmqty{}", "\\lx@physics@mat{\\pmqty}{}{lx@physics@matrix}{(}{)}");
-  DefMacro!("\\Pmqty{}", "\\lx@physics@mat{\\Pmqty}{}{lx@physics@matrix}{(}{)}");
-  DefMacro!("\\bmqty{}", "\\lx@physics@mat{\\bmqty}{}{lx@physics@matrix}{[}{]}");
-  DefMacro!("\\vmqty{}", "\\lx@physics@mat{\\vmqty}{}{lx@physics@matrix}{\\vert}{\\vert}");
+  // physics.sty:70-73, 105-108: `\pmqty{m}` and its kin put their argument in the matrix;
+  // physics.sty.ltxml:701-710 read it as `{}` and dropped it, so `\lx@physics@mat` read the
+  // next group or none (`\pmqty{a & b}` was an empty matrix). The body is handed on as a group.
+  DefMacro!("\\pmqty{}", "\\lx@physics@mat{\\pmqty}{}{lx@physics@matrix}{(}{)}{#1}");
+  DefMacro!("\\Pmqty{}", "\\lx@physics@mat{\\Pmqty}{}{lx@physics@matrix}{(}{)}{#1}");
+  DefMacro!("\\bmqty{}", "\\lx@physics@mat{\\bmqty}{}{lx@physics@matrix}{[}{]}{#1}");
+  DefMacro!("\\vmqty{}", "\\lx@physics@mat{\\vmqty}{}{lx@physics@matrix}{\\vert}{\\vert}{#1}");
   DefMacro!("\\smallmatrixquantity", "\\lx@physics@mat{\\smallmatrixquantity}{}{lx@physics@smallmatrix}{}{}");
-  DefMacro!("\\spmqty{}", "\\lx@physics@mat{\\spmqty}{}{lx@physics@smallmatrix}{(}{)}");
-  DefMacro!("\\sPmqty{}", "\\lx@physics@mat{\\sPmqty}{}{lx@physics@smallmatrix}{(}{)}");
-  DefMacro!("\\sbmqty{}", "\\lx@physics@mat{\\sbmqty}{}{lx@physics@smallmatrix}{[}{]}");
-  DefMacro!("\\svmqty{}", "\\lx@physics@mat{\\svmqty}{}{lx@physics@smallmatrix}{\\vert}{\\vert}");
+  DefMacro!("\\spmqty{}", "\\lx@physics@mat{\\spmqty}{}{lx@physics@smallmatrix}{(}{)}{#1}");
+  DefMacro!("\\sPmqty{}", "\\lx@physics@mat{\\sPmqty}{}{lx@physics@smallmatrix}{(}{)}{#1}");
+  DefMacro!("\\sbmqty{}", "\\lx@physics@mat{\\sbmqty}{}{lx@physics@smallmatrix}{[}{]}{#1}");
+  DefMacro!("\\svmqty{}", "\\lx@physics@mat{\\svmqty}{}{lx@physics@smallmatrix}{\\vert}{\\vert}{#1}");
   DefMacro!("\\matrixdeterminant", "\\lx@physics@mat{\\matrixdeterminant}{determinant}{matrix}{\\vert}{\\vert}");
   DefMacro!("\\smallmatrixdeterminant", "\\lx@physics@mat{\\smallmatrixdeterminant}{determinant}{smallmatrix}{\\vert}{\\vert}");
 
@@ -1554,4 +1714,7 @@ LoadDefinitions!({
   Let!("\\smqty", "\\smallmatrixquantity");
   Let!("\\mdet", "\\matrixdeterminant");
   Let!("\\smdet", "\\smallmatrixdeterminant");
+  // physics.sty:23/25 — `bolddel` is a default option, so `\vnabla` exists
+  // (physics manual; Perl's binding lacks it).
+  DefMacro!("\\vnabla", "\\boldsymbol\\nabla");
 });

@@ -1,0 +1,22 @@
+% mechanism: field_notes.rs `field_invocation`: a `\begin` redefined as a macro (atbeginend's, in openjournal.cls)
+%   declares (`\let\SaveBegEnd`) and then runs the kernel `\begin{CJK*}`, which digests its arguments and body while its
+%   own invocation runs (`stomach::field_position_encloses`): their boxes are inside the call, so they take the
+%   declaration back, not the one span `\begin{CJK*}` the emitter replayed, opening a group no one closed
+% witness: 2606.12938 (`\author{Bonny Y.~Wang ({\begin{CJK*}{UTF8}{bsmi}汪玥\end{CJK*}})}`)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "Bonny Y. Wang (汪玥)1 / Leander Thiele2"
+% engines: CAU1 1 error ("\lx@frontmatterhere Attempt to close a group that switched to mode internal_vertical"),
+%   2 warnings; perl not run
+% expect:  0 errors, 1 warning (the CJK name written as its plain text, as on CAU1); creators Bonny Y. Wang (汪玥),
+%   Leander Thiele
+% status:  RED (CAU1) -> GREEN (GRP1; guard perfect_kernel_batchaut1)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{CJK}
+\let\BeginEnvironment=\begin
+\def\begin#1{\let\SaveBegEnd=\BeginEnvironment\SaveBegEnd{#1}}
+\begin{document}
+\title{T}
+\author{Bonny Y.~Wang ({\begin{CJK*}{UTF8}{bsmi}汪玥\end{CJK*}})$^{1}$ \and Leander Thiele$^{2}$}
+\maketitle
+Hi.
+\end{document}

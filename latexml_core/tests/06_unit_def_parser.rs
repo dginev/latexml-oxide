@@ -193,13 +193,17 @@ fn parse_parameters_mixed_optional_then_plain() {
 fn parse_parameters_bare_delimiter_falls_back_to_literal_token() {
   setup();
   // A lone '+' doesn't match any named spec — the fallback produces a
-  // Token parameter with the '+' stored as OTHER in `extra`.
+  // Match parameter with the '+' stored as OTHER in `extra`, so the
+  // reader consumes that LITERAL (or yields None). It was previously a
+  // "Token" parameter, whose reader ignores `extra` and swallows one
+  // ARBITRARY token — `\mode<>{}` then ate `<pr` of `<presentation>`
+  // (beamerswitch witness).
   let cs = T_CS!("\\foo");
   let ps = parse_parameters("+", &cs, false).unwrap().unwrap();
   let params = ps.get_parameters();
   assert_eq!(params.len(), 1);
-  assert_eq!(sym_str(params[0].name), "Token");
-  assert_eq!(sym_str(params[0].spec), "Token");
+  assert_eq!(sym_str(params[0].name), "Match");
+  assert_eq!(sym_str(params[0].spec), "Match");
   assert!(!params[0].extra.is_empty());
 }
 

@@ -4,7 +4,6 @@ version = "0.7.6"
 edition = "2024"
 authors = ["Deyan Ginev <deyan.ginev@gmail.com>"]
 license = "CC0-1.0"
-homepage = "https://github.com/dginev/latexml-oxide"
 repository = "https://github.com/dginev/latexml-oxide"
 # Point crates.io at the self-hosted rustdoc (deployed by .github/workflows/
 # rustdoc.yml to gh-pages) so the crate page always links to working docs,
@@ -73,8 +72,24 @@ name = "genschema_oxide"
 path = "bin/genschema_oxide.rs"
 
 [[bin]]
+name = "binding_audit"
+path = "bin/binding_audit.rs"
+required-features = ["test-utils"]
+
+[[bin]]
+name = "ab_audit"
+path = "bin/ab_audit/main.rs"
+required-features = ["test-utils"]
+
+[[bin]]
 name = "cortex_worker"
 path = "bin/cortex_worker.rs"
+required-features = ["cortex"]
+
+# The harness's exit reports, end to end: spawns `cortex_worker --harness` against an in-test
+# dispatcher, so it needs the `cortex` feature (`cargo test -p latexml --features cortex`).
+[[test]]
+name = "cortex_worker_exit_reports"
 required-features = ["cortex"]
 
 [features]
@@ -83,7 +98,7 @@ default = ["test-utils", "runtime-bindings"]
 # Off by default because pericortex pulls in zmq + zeromq-src (C library build),
 # rand, chrono, tempdir, walkdir — ~15 minutes of CI compile time we don't pay
 # for the core latexml_oxide / latexmlmath_oxide / latexmlpost_oxide binaries.
-cortex = ["dep:pericortex", "dep:hostname"]
+cortex = ["dep:pericortex", "dep:hostname", "dep:zmq"]
 # Use jemalloc instead of mimalloc as the global allocator in `cortex_worker`.
 # jemalloc returns freed memory to the OS via background decay, keeping a
 # long-lived worker's RSS bounded to the current paper (see the `tikv-jemallocator`
@@ -97,11 +112,11 @@ dhat-heap = ["dep:dhat"]
 # Compile the integration-test harness in `src/util/test.rs`. On by default
 # so `cargo test` and `cargo build` (no flags) work as expected. Distribution
 # builds should pass `--no-default-features` (or `--no-default-features
-# --features cortex` for the worker) to drop `glob` and `phf` from the
-# binary's dependency graph (audit DEP-02, 2026-05-18). Saves the compile
-# cost of `phf` + `phf_macros` (proc-macro) + their `phf_generator` /
-# `phf_shared` build-deps, plus a small `.text` footprint.
-test-utils = ["dep:glob", "dep:phf"]
+# --features cortex` for the worker) to drop `glob` from the binary's
+# dependency graph (audit DEP-02, 2026-05-18). `roxmltree` and `similar`
+# serve only the `ab_audit` A/B comparator (`bin/ab_audit/`): a pure-Rust XML reader
+# per worker thread (rust-libxml is not shared across threads) and its line diff.
+test-utils = ["dep:glob", "dep:roxmltree", "dep:similar"]
 # Source-map precision build (docs/performance/SOURCE_PROVENANCE.md §3.1.1): widen `Token`
 # with a per-token origin handle (8→12) so each token carries its exact source
 # start through expansion to digestion. OFF by default. Propagates to every
@@ -142,7 +157,7 @@ tar = { version = "0.4", default-features = false }
 # Only deflate is actually used (CompressionMethod::Deflated). Disabling the
 # default features drops aes, bzip2, zstd, lzma-rust2, ppmd-rust, pbkdf2,
 # sha1, sha2, hmac, cipher, password-hash — a big CI compile-time win.
-zip = { version = "8", default-features = false, features = ["deflate-flate2", "time"] }
+zip = { version = "9.0.5", default-features = false, features = ["deflate-flate2", "time"] }
 # DEP-06 (2026-05-22): bumped to indexmap 2.14.0 (#234). Earlier we pinned
 # 2.13.1 to keep hashbrown unified at 0.16.x across the workspace, since
 # 2.14.0 had moved to hashbrown 0.17 and duplicated against string-
@@ -151,11 +166,12 @@ zip = { version = "8", default-features = false, features = ["deflate-flate2", "
 indexmap = "=2.14.2"
 tempfile = "3"
 log = "0.4"
-libxml = "0.3.21"
+libxml = "0.3.23"
 once_cell = "1.17.0"
 regex = { version = "1.7.1", default-features = false, features = ["std", "perf", "unicode-case", "unicode-gencat", "unicode-perl", "unicode-script"] }  # DEP-10
 glob = { version = "0.3", optional = true }
-phf = { version = "0.14.0", features = ["macros"], optional = true }
+roxmltree = { version = "0.21", optional = true }
+similar = { version = "3", optional = true }
 rustc-hash = "2.0.0"
 latexml_codegen = {path = "../latexml_codegen", version = "0.4.2"}
 latexml_core = {path = "../latexml_core", version = "0.6.0"}
@@ -166,6 +182,9 @@ latexml_math_parser = {path = "../latexml_math_parser", version = "0.4.1"}
 latexml_post = {path = "../latexml_post", version = "0.5.0"}
 pericortex = { version = "0.2.8", optional = true }
 hostname = { version = "0.4", optional = true }
+# The harness's exit reporter returns a dead child's task to the CorTeX sink itself (the same
+# PUSH socket pericortex's workers use; 0.10 is pericortex's own version, so no second build).
+zmq = { version = "0.10", optional = true }
 # Replaces glibc malloc. glibc's per-arena mutex is a hard scaling bottleneck
 # for multi-process workloads like cortex_worker (arena contention via futex).
 # mimalloc gives each thread a private heap with lock-free fast paths.

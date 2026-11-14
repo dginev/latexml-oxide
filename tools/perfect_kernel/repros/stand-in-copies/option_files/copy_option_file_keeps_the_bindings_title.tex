@@ -1,0 +1,17 @@
+% witness: 0901.1015 (svepj.clo:280-284 `\AtEndOfClass{\let\maketitle=\epj@maketitle}`), 1111.3868, 1512.01957
+%          (svepjc3.clo:57/:71 `\def\maketitle`, re-read by its own `\AtEndOfClass{\@input{svepjc3.clo}}`), 1012.5412,
+%          2411.18962, 2107.02119; svjour3.cls:86 `\DeclareOption*{\InputIfFileExists{sv\CurrentOption.clo}…}`
+% oracle:  pdflatex 0 errors (the option file's title page: "Noname"; "EPJ EXTRA")
+% engines: rust int23 (288e861078) = the option file's `\maketitle` replaces the binding's: a "Noname" paragraph
+% expect:  0 errors, 0 warnings; the binding's title, creator and affiliation "Inst X, Town"; the option file's extra
+%          \epjextra works
+% status:  RED (int23 288e861078) -> GREEN (int23 fix2)
+% preload: ar5iv.sty
+\documentclass[epjc3]{svjour3}
+\begin{document}
+\title{The Title}
+\author{A. Author}
+\institute{Inst X, Town}
+\maketitle
+\epjextra
+\end{document}

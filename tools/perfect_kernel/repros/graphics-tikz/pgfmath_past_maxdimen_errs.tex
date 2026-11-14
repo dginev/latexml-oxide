@@ -1,0 +1,19 @@
+% Past `\maxdimen` after TeX's rounding pgf stops on "Dimension too large" (tex.web §460): a literal (16383.999993pt
+% rounds to 2^30 sp), a sum outside the fpu, each unit'd operand pgf scans into `\pgfmath@x` (twice for 20000pt+1,
+% the operand and the sum), and in the fpu a unit'd operand, through `\pgfmathparse` and `\pgfmathsetmacro`.
+% witness: synthetic (the error side of pgfmath_maxdimen_spelling_and_fpu_in_range).
+% status:  GREEN (DTL1h; int164a: 6 errors, [10000.0], the fpu's -20000 erred and printed −16,384).
+% oracle:  pdflatex 7 `!` (Dimension too large), [16383.99998] [16383.99998] [6383.99998] [16383.99998]
+%          [16,384][16,384] [−20,000]; Perl 5 errors.
+% expect:  7 errors, 0 warnings, the pdflatex values.
+\documentclass{article}
+\usepackage{pgf}
+\usepgflibrary{fpu}
+\begin{document}
+\pgfmathparse{16383.999993pt}[\pgfmathresult] \pgfmathparse{12319.0+4442}[\pgfmathresult]
+
+\pgfmathparse{20000pt-10000pt}[\pgfmathresult] \pgfmathparse{20000pt+1}[\pgfmathresult]
+
+\pgfkeys{/pgf/fpu}\pgfmathparse{20000pt}[\pgfmathprintnumber[fixed]{\pgfmathresult}]\pgfmathsetmacro\x{20000pt}%
+\pgfmathsetmacro\y{-20000}\pgfkeys{/pgf/fpu=false}[\pgfmathprintnumber[fixed]{\x}] [\pgfmathprintnumber[fixed]{\y}]
+\end{document}

@@ -1,0 +1,22 @@
+% witness: synthetic (siblings of aa_copy/aa_copy_loads_amsmath_one_answer.tex): revtex4-2.cls never loads hyperref
+%          (revtex4_support_sty.rs preloads it and marks it unloaded, 2207.13707), fontenc.sty's tail
+%          `\global\let\ver@fontenc.sty\relax`, a class asked by `\@ifclassloaded`
+% oracle:  pdflatex 0 errors: "hyperref not loaded. fontenc not loaded. revtex4-2 loaded. hyperref loaded."
+% engines: rust int166a = 0 errors, the same
+% expect:  0 errors, 0 warnings; the same four answers
+% status:  GREEN (int166a, GA2)
+% preload: ar5iv.sty
+\documentclass{revtex4-2}
+\usepackage[T1]{fontenc}
+\makeatletter
+\newcommand\pkgstate[1]{#1 \@ifpackageloaded{#1}{loaded}{not loaded}.}
+\newcommand\clsstate[1]{#1 \@ifclassloaded{#1}{loaded}{not loaded}.}
+\edef\before{\pkgstate{hyperref} \pkgstate{fontenc} \clsstate{revtex4-2}}
+\makeatother
+\usepackage{hyperref}
+\makeatletter
+\edef\after{\pkgstate{hyperref}}
+\makeatother
+\begin{document}
+\before{} \after
+\end{document}

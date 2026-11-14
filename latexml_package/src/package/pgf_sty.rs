@@ -8,7 +8,7 @@ LoadDefinitions!({
   // pgf/tikz expand 100M+ tokens on real documents (measured: math0402448
   // ~100M, 1805.03265 ~155M), far above the default 20M cycle-guard floor — so
   // a healthy pgf stream would otherwise pay the per-token loop-fingerprint cost
-  // for >100M tokens. Lift the floor for this engine; the 400M token_limit
+  // for >100M tokens. Lift the floor for this engine; the 1G token_limit
   // remains the hard runaway backstop. (Reset per-conversion in initialize_gullet.)
   raise_cycle_guard_activate(CYCLE_GUARD_ACTIVATE_GRAPHICS);
   DefMacro!("\\pgfsysdriver", "pgfsys-latexml.def");
@@ -44,6 +44,18 @@ LoadDefinitions!({
   // In LaTeX, this checks if the graphic should be externalized. We just process inline.
   def_macro_noop("\\beginpgfgraphicnamed{}")?;
   def_macro_noop("\\endpgfgraphicnamed")?;
+
+  // pgfcorelayers.code.tex: \pgfsetlayers passes its argument unexpanded to \pgf@dosetlayer,
+  // matching delimited argument `#1,#2,\relax`. When a package (e.g. pgf-PeriodicTable:
+  // \pgfsetlayers{\@pgfPT@layers}) passes a macro containing the comma-list, raw TeX's
+  // \romannumeral expansion trick in \pgfutil@trimspaces relies on integer scanning expansion.
+  // In latexml-oxide, expanding #1 under \expanded ensures \pgf@dosetlayer sees the comma-delimited
+  // tokens, correctly building \pgf@layerlist and preventing "layer not part of the layer list"
+  // and \setbox undefined box register floods (WITNESS: pgf-PeriodicTableManual).
+  RawTeX!(
+    r"\def\pgfsetlayers#1{\let\pgf@layerlist\pgfutil@empty\expandafter\pgf@dosetlayer\expanded{#1},,\relax}"
+  );
+
 
   // Perl L46-48: wrap pgfpicture/endpgfpicture with lxSVG@picture
   at_begin_document(TokenizeInternal!(

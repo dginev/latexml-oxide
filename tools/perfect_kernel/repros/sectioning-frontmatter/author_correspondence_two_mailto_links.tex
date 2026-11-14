@@ -1,0 +1,15 @@
+% witness: 2604.25444 (`Correspondence:` before two mailto links); the r8 re-review of batch 77p (§B, probe t6; int34a
+%          the same)
+% oracle:  pdflatex 0 errors: three names, Univ A, then "Correspondence: aable@x.edu, ccole@x.edu", two links
+% engines: rust int38 (77p r11) = 0 errors; the whole line one affiliation of every name
+% expect:  0 errors, 0 warnings; aable@ the e-mail of Ann Able, ccole@ of Cat Cole, each named "Correspondence:" and a
+%          link to its mailbox
+% status:  RED (int38) -> GREEN (77y)
+\documentclass{article}
+\usepackage{hyperref}
+\title{T}
+\author{Ann Able, Bob Baker, Cat Cole \\ Univ A \\ \textbf{Correspondence:} \href{mailto:aable@x.edu}{aable@x.edu}, \href{mailto:ccole@x.edu}{ccole@x.edu}}
+\begin{document}
+\maketitle
+Text.
+\end{document}

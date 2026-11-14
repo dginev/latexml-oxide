@@ -1,0 +1,30 @@
+% witness: 1007.3192 (`\@journal`), 2209.12222 (`\myfooter`), 2204.07076 (`\abstracttitle`), 2203.02441
+%          (`\tnotemark`), 2407.02308 (`\resetTitleCounters`), 1311.6418 (`\absbox`), 2011.11672 (`\elsRef`); 2401.05905 (`\comma`); 1212.6083 (`\@journal`)
+% oracle:  pdflatex 0 errors (the title with its ⋆ note; "Summary" over the abstract; "Journal: Physics Letters B. Ref
+%          [0]."; the footer)
+% engines: rust 67u2 = 7 errors, 2 warnings (each command undefined); Perl 7 errors, the same commands
+%          (KNOWN_PERL_ERRORS #723)
+% expect:  0 errors, 0 warnings; the abstract named "Summary"; the journal kept as a note and in `\@journal`
+% status:  RED (67u2) -> GREEN (67y)
+% preload: ar5iv.sty
+\documentclass[preprint]{elsarticle}
+\journal{Physics Letters B}
+\myfooter[L]{Footer text}
+\abstracttitle{Summary}
+\makeatletter
+\newcommand\showjournal{Journal: \@journal.}
+\newcommand\showref{Ref [\elsRef{none}].}
+\makeatother
+\begin{document}
+\begin{frontmatter}
+\title{A title\tnotemark[t1]}
+\tnotetext[t1]{A title note.}
+\author{A. Author}
+\begin{abstract}
+The abstract.
+\end{abstract}
+\end{frontmatter}
+\resetTitleCounters
+\showjournal{} \showref
+\makeatletter\setbox\absbox\hbox{x}\makeatother
+\end{document}

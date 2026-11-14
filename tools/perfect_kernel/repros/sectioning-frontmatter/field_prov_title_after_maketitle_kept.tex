@@ -1,0 +1,17 @@
+% `\title{A Title}` printed before `\maketitle`, then `\title{B Title}` given and printed after it: the placement lifts
+% the first (the frontmatter displays "A Title") and settles the field ink, so the later print stays (fms1 round-3
+% review finding 2 sibling).
+% status:  GREEN (fms1 round 3 and round 4).
+% oracle:  pdflatex 0 errors: "A Title", the title block "A Title / Ann Author / <date>", then "B Title".
+% expect:  0 errors, 0 warnings; `field_ink` Info ×1; "B Title" kept.
+\documentclass{article}
+\makeatletter
+\title{A Title}\author{Ann Author}
+\begin{document}
+\begin{center}\@title\end{center}
+\maketitle
+\title{B Title}
+\begin{center}\@title\end{center}
+\section{Intro}
+Text.
+\end{document}

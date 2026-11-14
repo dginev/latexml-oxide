@@ -1,0 +1,15 @@
+% witness: 62zp review side finding (q3: `$^*$Corresponding author` as the last line of an article `\author`)
+% oracle:  pdflatex 0 errors: "Ann Able1,∗, Bob Baker2", "1 Univ A", "2 Univ B", "∗ Corresponding author"
+% engines: rust (62zp) = 0 errors: Bob Baker holds "Univ B<break/><sup>*</sup>Corresponding author" and Ann Able only
+%          "Univ A": `rewrite_symbol_superscripts` turns the line's `$^*$` into a visible superscript before the
+%          lines are split, so the line has no mark and continues the affiliation before it (Rust-only); Perl 0.8.8
+%          links it: Ann Able holds "Univ A" and "Corresponding author"
+% expect:  0 errors; Ann Able's creator holds <contact role="affiliation">Corresponding author</contact> (with its
+%          `*` shown), Bob Baker's only Univ B
+% status:  RED
+\documentclass{article}
+\begin{document}
+\title{T}\author{Ann Able$^{1,*}$, Bob Baker$^{2}$\\ $^1$Univ A\\ $^2$Univ B\\ $^*$Corresponding author}
+\maketitle
+Text.
+\end{document}

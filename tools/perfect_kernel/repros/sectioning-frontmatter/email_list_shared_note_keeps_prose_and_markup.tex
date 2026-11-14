@@ -1,0 +1,30 @@
+% A shared corresponding-author note whose addresses are distributed keeps every other node as printed: only the
+%   address spans and the separators next to them are cut, in place — its words ("and", "or" too, which go only
+%   between two addresses), its math, links and breaks stay (`distribute_address_lists`' `cut_printed`, OD #972;
+%   review rev107f B2).
+% witness: 2311.15476 (`\cortext` "Corresponding authors:" + addresses + "DOI: \href{https://doi.org/…}": its doi.org
+%   links 16 as on int139a4, and its breaks)
+% oracle:  pdflatex 0 errors (TL 2025): the authors, "a Univ X, Town", "b Univ Y, City", "∗ Corresponding authors:
+%   cole.c@x.org; q77@y.org. Funded by NSF and DOE or ERC, grant N^2."
+% engines: rust 107f r1 (2afa80e78b) = "Corresponding authors: . Funded by NSF DOE ERC, grant N2." (no Math);
+%   int139a4 = the whole note copied to Cat Cole and Dan Dee
+% expect:  0 errors, 0 warnings; Ann Able: Univ X; Cat Cole: the note "Corresponding authors: Funded by NSF and DOE or
+%   ERC, grant N^2." with its Math, cole.c@x.org, Univ X; Dan Dee: the same note, q77@y.org, Univ Y
+% status:  RED (107f r1) -> GREEN (107f r2)
+% preload: ar5iv.sty
+\documentclass{elsarticle}
+\begin{document}
+\begin{frontmatter}
+\title{T}
+\author[1]{Ann Able}
+\author[1]{Cat Cole\corref{cor1}}
+\author[2]{Dan Dee\corref{cor1}}
+\cortext[cor1]{Corresponding authors: cole.c@x.org; q77@y.org. Funded by NSF and DOE or ERC, grant $N^{2}$.}
+\address[1]{Univ X, Town}
+\address[2]{Univ Y, City}
+\begin{abstract}
+A.
+\end{abstract}
+\end{frontmatter}
+Text.
+\end{document}

@@ -1,0 +1,20 @@
+% mechanism: the content check (`resolver::placed`) counts nothing for a mark label repeated legitimately — two authors requesting label 1 of revtex's `\affiliation` cut by the binding (its calls one
+%   `_cutlist`)
+%   —: the other direction any rule reading a repeated label as entry text must keep (CT1a's proposed rule did not
+%   land: it counted 23 guarded shapes falsely)
+% witness: synthetic (CT1a)
+% oracle:  pdflatex (TL 2025, revtex4) 0 errors
+% engines: rust int160a0 and CT1a's variants: 0 warnings; Ann and Bob "Dept of Physics, Univ X", Cat "Lab Y"
+% expect:  0 errors, 0 warnings; Ann and Bob "Dept of Physics, Univ X", Cat "Lab Y"
+% status:  GREEN (perfect_kernel_batchn2::a_clean_block_counts_nothing)
+% preload: ar5iv.sty
+\documentclass[aps,superscriptaddress]{revtex4}
+\begin{document}
+\title{T}
+\author{Ann Able $^1$}
+\author{Bob Baker $^1$}
+\author{Cat Cole $^2$}
+\affiliation{${}^1$Dept of Physics, Univ X\\ ${}^2$Lab Y}
+\maketitle
+Text.
+\end{document}

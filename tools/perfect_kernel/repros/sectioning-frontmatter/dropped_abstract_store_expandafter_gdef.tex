@@ -1,0 +1,19 @@
+% witness: 2104.09383 (rmmcart.cls:418 `\expandafter\gdef\expandafter\abstracts@ve\expandafter{\@grabstract}`)
+% oracle:  pdflatex 0 errors; "Result: OK; [\expandafter]"
+% engines: rust 67int4 = Error:undefined:\foo (the dropped {abstract} recorded `\let\expandafter\@empty`, which the
+%          \maketitle deposit ran); Perl 0 errors
+% expect:  0 errors, 0 warnings; "Result: OK"; \meaning\expandafter is \expandafter
+% status:  RED (67int4) -> GREEN (68f)
+\begin{filecontents*}[overwrite]{rcx.cls}
+\ProvidesClass{rcx}
+\LoadClass{article}
+\renewenvironment{abstract}{\expandafter\gdef\expandafter\abs@ve\expandafter{x}}{}
+\def\@maketitle{\let\@thefnmark\relax\@footnotetext{Note}}
+\end{filecontents*}
+\documentclass{rcx}
+\title{T}
+\begin{document}
+\maketitle
+\expandafter\def\csname foo\endcsname{OK}
+Result: \foo; [\meaning\expandafter]
+\end{document}

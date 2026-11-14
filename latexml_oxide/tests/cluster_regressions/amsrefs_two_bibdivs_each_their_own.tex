@@ -1,0 +1,22 @@
+% witness: 63g review (two amsrefs bibliographies, each citing one of its two entries)
+% oracle:  pdflatex 0 errors: first References Able, Baker; second References Cole, Dunn
+% engines: rust (63g r1) = both lists all four entries; HEAD each the two cited ones
+% expect:  2 bibliographies — Able, Baker; Cole, Dunn; 0 errors, 0 warnings
+% status:  RED (63g r1) -> GREEN (63g)
+\documentclass{amsart}
+\usepackage{amsrefs}
+\begin{document}
+Text \cite{Able} and \cite{Dunn}.
+\begin{bibdiv}
+\begin{biblist}
+\bib{Able}{article}{author={Able, Ann}, title={First}, journal={J. One}, year={2001}}
+\bib{Baker}{article}{author={Baker, Bob}, title={Second}, journal={J. Two}, year={2002}}
+\end{biblist}
+\end{bibdiv}
+\begin{bibdiv}
+\begin{biblist}
+\bib{Cole}{article}{author={Cole, Cat}, title={Third}, journal={J. Three}, year={2003}}
+\bib{Dunn}{article}{author={Dunn, Dan}, title={Fourth}, journal={J. Four}, year={2004}}
+\end{biblist}
+\end{bibdiv}
+\end{document}

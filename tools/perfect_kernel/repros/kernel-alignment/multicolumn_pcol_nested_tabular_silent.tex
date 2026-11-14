@@ -1,0 +1,14 @@
+% witness: 2607.14806 (silent variant: a one-column nested tabular has no `&` to overflow)
+% oracle:  pdflatex 0 errors; pdftotext shows x / z on two lines inside the merged cell
+% engines: rust base=0 (65int2), rust 65p=0, perl=0 (2026-10-12) -- rust base lost the inner rows silently (x<break/>z in one td)
+% expect:  0 errors; the inner //ltx:tabular has 2 tr (x, z)
+% status:  GREEN (batch 65p, 2026-10-12)
+% mechanism: as multicolumn_pcol_nested_tabular_rows: the depth-0 `\\` rewrite of the multicolumn body
+%   collapsed the nested tabular's rows into one cell with a <break/>, with no diagnostic.
+\documentclass{article}
+\begin{document}
+\begin{tabular}{ll}
+a & b \\
+\multicolumn{2}{p{4cm}}{\begin{tabular}{l} x \\ z \end{tabular}} \\
+\end{tabular}
+\end{document}

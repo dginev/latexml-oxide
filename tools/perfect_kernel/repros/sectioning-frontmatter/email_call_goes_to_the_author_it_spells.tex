@@ -1,0 +1,20 @@
+% mechanism: an `\email` call after a one-call author list is placed by its `annotate=last`, the last author, though its
+%   address spells another author (FIDELITY_CHARTER §4: an e-mail goes to the author whose name it spells, never by bare
+%   position); Perl the same.
+% witness: 0911.3506 (`bourouaine@mps.mpg.de` on Eckart Marsch), 1506.04035 (`yiming.hu@aei.mpg.de` on Ik Siong Heng),
+%   1203.1317, 0904.0560 — 92 of the 688 aas census papers
+% oracle:  pdflatex 0 errors; the address prints once, under the author block
+% expect:  0 errors; Ann Able holds the e-mail able@x.org, Bob Baker none
+% status:  RED (int110y) -> GREEN (82x)
+% preload: ar5iv.sty
+\documentclass{aastex}
+\begin{document}
+\title{T}
+\author{Ann Able and Bob Baker}
+\affil{Univ A}
+\email{able@x.org}
+\begin{abstract}
+Abstract.
+\end{abstract}
+Text.
+\end{document}

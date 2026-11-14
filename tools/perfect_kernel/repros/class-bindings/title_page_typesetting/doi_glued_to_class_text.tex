@@ -1,0 +1,24 @@
+% mechanism: K11 (raw-class title-page stores, frontmatter_stores.rs `ClassReaders::store_lines`,
+%   `glued_to_class_text`). A store whose occurrence is glued to the class's printed text — the character token right
+%   before or after it a letter, digit, `.`, `/` or `-` — prints one word with it, a value the frontmatter does not
+%   carry: the line stays the class's. zzfme.cls is piparticle-final.cls:272's `\if\@doi\relax\else{DOI:
+%   10.4279/PIP.\@doi}\fi`; 79a r1 cut the line at its group and handed `\@doi` on, so the pubnote read "020001", a DOI
+%   that does not exist, and "10.4279/PIP." was lost. Its `{\itshape\hskip.5em\@address\par}`: the letters before the
+%   address are the skip's dimension, no printed text, so the address is the frontmatter's.
+% witness: 1002.3829, 1012.4507, 1503.03445, 1503.07722, 1510.06950 (piparticle-final); the same rule keeps ar-1col.cls:335
+%   `https://doi.org/\@doi\endgraf` (1903.12215, 2004.12182, 2603.20393)
+% oracle:  pdflatex: 0 errors; "The Title" / "An Author" / "Dept of Probes, Somewhere" (italic) / "DOI:
+%   10.4279/PIP.020001"
+% engines: rust int68a: the line whole, no doi pubnote; 79a r1: <pubnote name="DOI: " role="doi">020001</pubnote>, the
+%   line gone
+% expect:  0 errors, 0 warnings; the address contact; no doi pubnote; the body line "DOI: 10.4279/PIP.020001"
+% status:  RED (79a r1) -> GREEN (79a r2)
+% preload: ar5iv.sty
+\documentclass{zzfme}
+\title{The Title}\author{An Author}
+\address{Dept of Probes, Somewhere}
+\doi{020001}
+\begin{document}
+\maketitle
+Body text.
+\end{document}

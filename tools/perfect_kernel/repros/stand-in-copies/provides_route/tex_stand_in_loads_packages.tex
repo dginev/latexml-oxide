@@ -1,0 +1,13 @@
+% witness: none in the corpus (the 77w r2 re-review's finding 3): a `.tex` stand-in binding (mssymb_tex.rs loads amsfonts
+%          and amssymb) records itself as the loader of the packages its load loads first, as a package or class
+%          stand-in does (`<file>:loaded_by_stand_in`; a renamed elsarticle.cls copy's natbib, 1811.10063)
+% oracle:  pdflatex 0 errors: "The reals R."
+% engines: rust 69e78f9511 (77w r2) = `amsfonts.sty:loaded_by_stand_in` empty: no stand-in name pushed for a `.tex`
+% expect:  0 errors, 0 warnings; `amsfonts.sty:loaded_by_stand_in` = "mssymb"
+% status:  RED (69e78f9511) -> GREEN (77w r3: `StandInBindingName` entered for a `.tex` stand-in too)
+% preload: ar5iv.sty
+\documentclass{article}
+\input{mssymb}
+\begin{document}
+The reals $\mathbb{R}$.
+\end{document}

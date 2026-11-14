@@ -1,0 +1,21 @@
+% witness: 2207.06713 (the MNRAS shape: an entry numbered 15 no name is marked with); IEEEtran's sibling, review
+%          rev95b p3
+% oracle:  pdflatex (TL 2025): "Ann Able1, Bob Baker5, Cid Cole10", "1University One, Town", "5University Five, Town",
+%          "10University Ten, Town", "15University Fifteen, Town"
+% engines: rust int124b = right (IEEEtran unwritten: entry 15 on a nameless creator, the block);
+%          rust 95b = wrong: `15` parted into `1` and `5`, University Fifteen given to Ann Able and Bob Baker
+% expect:  0 errors, 0 warnings; Ann Able University One, Bob Baker University Five, Cid Cole University Ten, entry 15
+%          in the block
+% status:  RED (95b) -> GREEN (95b r2) — perfect_kernel_batch95b::an_entry_number_no_name_shows_stays_in_the_block
+% preload: ar5iv.sty
+\documentclass[conference]{IEEEtran}
+\begin{document}
+\title{A title}
+\author{\IEEEauthorblockN{Ann Able\textsuperscript{1}, Bob Baker\textsuperscript{5}, Cid Cole\textsuperscript{10}}
+\IEEEauthorblockA{\textsuperscript{1}University One, Town\\
+\textsuperscript{5}University Five, Town\\
+\textsuperscript{10}University Ten, Town\\
+\textsuperscript{15}University Fifteen, Town}}
+\maketitle
+Text.
+\end{document}

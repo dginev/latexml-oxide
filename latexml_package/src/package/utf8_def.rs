@@ -233,9 +233,15 @@ const UPPER_HALF_PLANE_CODES: [u32; 155] = [
 
 LoadDefinitions!({
   // Undo disabling all the upper half plane (ascii) chars
-  for code in UPPER_HALF_PLANE_CODES {
-    let thischar = char::from_u32(code).unwrap();
-    AssignCatcode!(thischar, Catcode::OTHER);
+  // Under the pdfTeX byte mouth (K10) the bytes really arrive: install
+  // utf8.def:174-190's activation instead of the native-code-point reset.
+  if lookup_bool("PDFTEX_BYTE_MOUTH") {
+    inputenc_sty::install_utf8_byte_activation()?;
+  } else {
+    for code in UPPER_HALF_PLANE_CODES {
+      let thischar = char::from_u32(code).unwrap();
+      AssignCatcode!(thischar, Catcode::OTHER);
+    }
   }
   AssignValue!("INPUT_ENCODING" => Stored::None);
 

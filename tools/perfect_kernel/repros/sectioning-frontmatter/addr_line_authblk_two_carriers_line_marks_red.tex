@@ -1,0 +1,22 @@
+% authblk `\affil[2]{Univ Y\authorcr Emails: $^1$zq@x.org, $^2$lab@y.org}` with TWO carriers of [2] (Carl Dee, Eve Fox):
+% the entry has as many carriers as addresses, so the older route splits the line before `kind_address_lines` sees it and
+% `entry_address_owners` (email_owners.rs) places by order — the line's marks never reach the chain (review rev106a2 S1).
+% The marks say `zq@` is Ann Bee's (mark 1) and `lab@` the [2] carriers'.
+% witness: synthetic (rev106a2 q19b); sibling q14r (revtex4, unmarked names, `$^\dagger$ email: zq@x.org, ann@x.org` →
+%   the dagger lost, zq@ by order)
+% oracle:  pdflatex 0 errors: "Ann Bee1, Carl Dee2, and Eve Fox2" / "1Univ X" / "2Univ Y" / "Emails: 1zq@x.org, 2lab@y.org"
+% engines: rust int133a and 106a r2 alike: zq@ → Carl Dee, lab@ → Eve Fox (by order)
+% expect:  0 errors, 0 warnings; zq@x.org on Ann Bee; lab@y.org on the [2] carriers (or the block)
+% status: RED (pre-existing; Bundle 4 residual — carry line marks into the observer route's call to the chain)
+\documentclass{article}
+\usepackage{authblk}
+\title{T}
+\author[1]{Ann Bee}
+\author[2]{Carl Dee}
+\author[2]{Eve Fox}
+\affil[1]{Univ X}
+\affil[2]{Univ Y\authorcr Emails: $^1$zq@x.org, $^2$lab@y.org}
+\begin{document}
+\maketitle
+Hello.
+\end{document}

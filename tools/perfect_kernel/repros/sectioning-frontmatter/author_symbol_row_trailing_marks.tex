@@ -1,0 +1,14 @@
+% witness: 2109.13296; the r7 re-review of batch 77p (finding 1, probes p7, p8)
+% oracle:  pdflatex 0 errors: the row of marked names, then "Univ A†" and "Univ B‡" on lines of their own, each mark
+%          after its institution
+% engines: rust 77p r10 = 0 errors; both lines affiliations of every name of the row
+% expect:  0 errors, 0 warnings; Univ A on Ann Able and Cat Cole, Univ B on Bob Baker, each without its mark
+% status:  RED (77p r10) -> GREEN (77p r11)
+\documentclass{article}
+\usepackage{hyperref}
+\title{T}
+\author{Ann Able$^{\dagger}$ \ \ \ \ Bob Baker$^{\ddagger}$ \ \ \ \ Cat Cole$^{\dagger}$ \\ Univ A$^{\dagger}$ \\ Univ B$^{\ddagger}$}
+\begin{document}
+\maketitle
+Text.
+\end{document}

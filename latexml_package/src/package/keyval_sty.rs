@@ -10,7 +10,8 @@ LoadDefinitions!({
   DefPrimitive!("\\define@key{}{}[]{}", sub[(keyset_tks, key_tks, default_opt, code)] {
     let keyset = do_expand(keyset_tks)?.to_string();
     let key = do_expand(key_tks)?.to_string();
-    let default = default_opt.map(|d: Tokens| d.to_string());
+    let default_tks_cfg: Option<Tokens> = default_opt;
+    let default = default_tks_cfg.clone().map(|d| d.to_string());
 
     keyval::define(KeyvalConfig {
       prefix: "KV",
@@ -18,6 +19,7 @@ LoadDefinitions!({
       key: &key,
       vtype: "",
       default: default.as_deref(),
+      default_tks: default_tks_cfg.clone(),
       code: Some(ExpansionBody::Tokens(code)),
       ..KeyvalConfig::default()
     })?;
@@ -36,9 +38,10 @@ LoadDefinitions!({
   // reads the following `{keyvals}` group.
   fn setkeys_body(keyset_tks: Tokens, skip_missing: keyvals::SkipMissing) -> Result<Tokens> {
     let keyset = do_expand(keyset_tks)?.to_string();
+    // An explicit empty family stays the empty family (`\KV@@k` in keyval.sty,
+    // the header rule of `keyval_qname` here); see DIVERGENCES #219.
     let keysets: Vec<String> = keyset.split(',')
       .map(|s| s.trim().to_string())
-      .filter(|s| !s.is_empty())
       .collect();
 
     let mut keyvals = KeyVals::new(KeyvalsConfig {

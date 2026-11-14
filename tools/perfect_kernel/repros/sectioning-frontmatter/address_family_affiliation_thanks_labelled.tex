@@ -1,0 +1,19 @@
+% A `\thanks` of a labelled address inside an affiliation (`Corresponding author e-mail: …`): the entry's e-mail, named
+% by the label (`note_addresses`).
+% witness: cond-mat0202268
+% oracle:  pdflatex 0 errors: "Univ A, Town*", "* Corresponding author e-mail: aable@a.edu"
+% engines: rust int127a = 0 errors; the note's text nowhere in the frontmatter; perl = not run
+% expect:  0 errors, 0 warnings; Ann: Univ A, Town + aable@ (name "Corresponding author e-mail: "); Bob: Univ A, Town
+% status:  RED (int127a) -> GREEN (100b)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{authblk}
+\title{T}
+\author{Ann Able}
+\author{Bob Baker}
+\affil{Univ A, Town\thanks{Corresponding author e-mail: aable@a.edu}}
+\date{}
+\begin{document}
+\maketitle
+Text.
+\end{document}

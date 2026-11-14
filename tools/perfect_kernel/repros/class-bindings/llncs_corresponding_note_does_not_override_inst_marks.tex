@@ -1,0 +1,20 @@
+% mechanism: on llncs's `\inst`-picked path the marks decide whose institute an address in it is (85b's consolidated
+%   rule, OXIDIZED_DESIGN_DIVERGENCES #901). The corresponding-author step (`marked_corresponding_author`,
+%   shared_row/emails.rs) still runs there with no limit to the picked authors, so a "Corresponding author" note on an
+%   author with no mark takes an unspelled address out of the picked authors' institute. FIDELITY_CHARTER §4's step is
+%   for the one address left on the block; here the marks gave it to Ann's institute. Fix: limit the step to the
+%   picked authors (`within = Some(picked)`), or skip it when the institute is picked.
+% witness: the 85b r5 re-review's finding 1 (s17); no census paper (no address moves between named authors)
+% oracle:  pdflatex 0 errors; "zed@y.org" printed in the institute under mark 1, which only Ann carries
+% engines: rust int114a = Univ X and zed@y.org on Ann; 85b r5 = Univ X on Ann, zed@y.org on Bob
+% expect:  0 errors, 0 warnings; Univ X and zed@y.org on Ann; Bob holds only his note
+% status:  RED (85b r5)
+% preload: ar5iv.sty
+\documentclass{llncs}
+\begin{document}
+\title{T}
+\author{Ann Able\inst{1} \and Bob Baker\thanks{Corresponding author}}
+\institute{Univ X\\ \email{zed@y.org}}
+\maketitle
+Text.
+\end{document}

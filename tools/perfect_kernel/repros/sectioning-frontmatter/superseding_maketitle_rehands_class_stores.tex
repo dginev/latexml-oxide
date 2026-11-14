@@ -1,0 +1,24 @@
+% A superseding `\maketitle` hands the class's stores to its authors again: the second title prints
+% `\@address` and `\@email` as they stand ("Shared Inst", and "max@m.org", set once), so Alice
+% carries them. A first cut (59e round 2) dropped them with Max: the stores are handed once.
+% witness: none (review of 59e, probe ad1).
+% status:  GREEN (59e)
+% oracle:  pdflatex 0 errors: the second title block prints "Alice A", "Shared Inst", "max@m.org".
+% expect:  0 errors, 0 warnings; one creator, "Alice A", with the address and the email.
+\begin{filecontents*}[overwrite]{lxaddr.cls}
+\NeedsTeXFormat{LaTeX2e}
+\ProvidesClass{lxaddr}
+\LoadClass{article}
+\def\address#1{\gdef\@address{#1}}
+\def\email#1{\gdef\@email{#1}}
+\let\@address\@empty
+\renewcommand\maketitle{\par{\centering\@title\par\@author\par\@address\par\@email\par}}
+\end{filecontents*}
+\documentclass{lxaddr}
+\address{Shared Inst}
+\begin{document}
+\title{T0}\author{Max M}\email{max@m.org}\maketitle
+Text.
+\title{T}\author{Alice A}\maketitle
+Body.
+\end{document}

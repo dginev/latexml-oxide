@@ -1,0 +1,16 @@
+% witness: 1811.05851 (`\item[] \today` gives "November 14, 2018"); ruling 2026-10-10 (ar5iv `\today` = the paper's date)
+% oracle:  pdflatex 0 errors: the title block prints the compile day
+% engines: rust 64k22 = <date role="creation"/> empty (ar5iv's `\today` is `\relax`); rust 64s = the source's date;
+%          Perl ar5iv (2026-10-10) = <date role="creation"/> empty as 64k22
+% expect:  0 errors; <date role="creation"> holds the source's date (the file's modification day, "Month D, YYYY";
+%          a zip: its newest TeX source entry's)
+% status:  RED (64k22) -> GREEN (64s)
+% preload: ar5iv.sty
+\documentclass{article}
+\title{On Dates}
+\author{A. Author}
+\date{\today}
+\begin{document}
+\maketitle
+Body.
+\end{document}

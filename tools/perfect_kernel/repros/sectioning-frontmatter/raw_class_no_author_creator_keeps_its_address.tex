@@ -1,0 +1,22 @@
+% witness: osameet2.sty:49 `\let\author\MEETauthor`, saj.cls's `\authors` (1710.05603, 2110.09949, 2212.09079): names
+%          that never become creators, the class's `\address` printing its line under them
+% oracle:  pdflatex 0 errors: "A Title", "Ann Able and Bob Baker", "Univ A, Town", "Body."
+% engines: rust 94b = as expected (the class's own `\address` runs: no creator to carry it)
+% expect:  0 errors, 0 warnings; no creator; the address line where the class prints it, not on a nameless creator;
+%          eager and --streaming the same
+% status:  GREEN (94b) -> GREEN (94b r2), the no-creator branch of `\lx@class@contact`
+% preload: ar5iv.sty
+\begin{filecontents*}[overwrite]{meetstand.cls}
+\ProvidesClass{meetstand}
+\LoadClass{article}
+\def\MEETauthor#1{\par{\bfseries #1}\par}
+\let\author\MEETauthor
+\newcommand{\address}[1]{\par{\itshape #1}\par}
+\end{filecontents*}
+\documentclass{meetstand}
+\begin{document}
+{\Large A Title\par}
+\author{Ann Able and Bob Baker}
+\address{Univ A, Town}
+Body.
+\end{document}

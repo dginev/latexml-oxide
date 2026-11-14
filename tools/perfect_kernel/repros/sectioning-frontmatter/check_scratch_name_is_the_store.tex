@@ -1,0 +1,24 @@
+% (rev108b2 finding 3, synthetic): a parameter that only ever reaches a scratch name has no record.
+% witness: none (scratch names holding a setter's text globally occur only in non-frontmatter code in dev3's classes)
+% engines: 108b no Warning and no Info; "Lunar Institute" absent from the XML; pdflatex prints it
+% expect:  0 errors; "Lunar Institute" kept, or named by the `unread_store` Info if lost
+% engines: int159a (ST1): INVALID as committed: `cscratch_tmp.cls` was never committed (pdflatex: "File `cscratch_tmp.cls' not found"), so OmniBus reads \address itself and "Lunar Institute" is kept; the mechanism is not exercised. RED until its class is restored
+% engines: rust int160a (HG1) = 0 errors, 0 warnings, the class now written by `filecontents*` (rev108b2 finding 3's
+%          `\gdef\tmp{#1}`, the title page printing `\tmp`): "Lunar Institute" kept, Ann Able's address contact; nothing
+%          lost, so nothing to count
+% oracle:  pdflatex 0 errors (TL 2025, -no-shell-escape): "A Title", "Ann Able", "Lunar Institute"
+% status:  RED (rev108b2) -> INVALID (ST1, the class never committed) -> GREEN (HG1; perfect_kernel_batchhg1::hollow_guards_restored_read_as_printed)
+% preload: ar5iv.sty
+\begin{filecontents*}[overwrite]{cscratch_tmp.cls}
+\ProvidesClass{cscratch_tmp}\LoadClass{article}
+\def\tmp{}
+\newcommand\address[1]{\gdef\tmp{#1}}
+\def\@maketitle{\newpage\null\vskip 2em\begin{center}{\LARGE\@title\par}\vskip 1.5em
+  {\large\@author\par}\vskip 1em{\tmp\par}\end{center}\par\vskip 1.5em}
+\end{filecontents*}
+\documentclass{cscratch_tmp}
+\title{A Title}\author{Ann Able}
+\address{Lunar Institute}
+\begin{document}\maketitle
+Body text.
+\end{document}

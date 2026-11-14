@@ -1,0 +1,27 @@
+% A math ligature merges number tokens (2 . 414 -> 2.414) into one XMTok, whose box becomes the list
+% of the merged tokens' boxes (Document.pm:1186-1204 applyMathLigature). Perl's removeNode of each
+% merged token runs removeNodeBox on its parent (Document.pm:1788-1789), which takes the token's box
+% out of an aligned cell's box list — the list whose reversion is the cell Math's tex=. Perl (and
+% Rust from batch 56jo, which ported removeNodeBox) then write tex="\displaystyle=414\times 0^{-3}"
+% for "= 2.414 \times 10^{-3}", and "UA" for the Math of \mathsf{CUA} in \hyperref's text.
+% witness: 2605.02288 (sec/X_suppl.tex:106), 2605.00812 (macros.sty:86 \CUA), 2605.05619 (1,486
+%   tex= values); 56jo arXiv A/B: 153/3,003 papers changed tex=
+% oracle:  pdflatex typesets 2.414 and 10; 56jk tex="\displaystyle=2.414\times 10^{-3}"
+% engines: perl = tex="\displaystyle=414\times 0^{-3}" (KNOWN_PERL_ERRORS #272); rust 56jo the same,
+%          "UA" for the \CUA Math (56jk "C")
+% expect:  0 errors; every tex= complete; the \CUA Math tex="CUA"
+% status:  GREEN (56jq, W12 fixup; guard node_box_append::math_ligatures_keep_their_boxes)
+\documentclass{article}
+\usepackage{amsmath}
+\usepackage{hyperref}
+\newcommand\CUA{\hypersetup{hidelinks}\hyperref[defn:cu]{\mathsf{CUA}}}
+\begin{document}
+\section{S}\label{defn:cu}
+\[
+\begin{aligned}
+\text{Long}   &= 2.414 \times 10^{-3} \\
+\text{Height} &= 2.351 \times 10^{-3}
+\end{aligned}
+\]
+Then \(\CUA_\mathrm{U}\) holds.
+\end{document}

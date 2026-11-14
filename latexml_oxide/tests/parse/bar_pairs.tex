@@ -1,0 +1,283 @@
+% Vertical bars: which bars pair into absolute values and norms (stretchy, kerned, named, nested),
+% and which divide a conditional or an evaluation.
+\documentclass{article}
+\usepackage{amsmath,amssymb}
+\begin{document}
+
+% formerly repro math-parse/left_double_bar_is_a_bar_pair
+% witness: 57am review (reviewer, round 6): `\exp\left\|x\right\|^2`, `\log\left\|x\right\|\,y`,
+%          `\max\left\|x\right\|^2 y`, `\log\left\lVert x\right\rVert^2 y`, `\nabla\left\|u\right\|^2 v` — 57am's
+%          group application (divergence #351) read the `\left` double bar as a group the function applies to
+% oracle:  Perl: `augmentDelimiterProperties` re-roles a `\left`/`\right` ∥ a VERTBAR (DELIMITER_MAP,
+%          TeX_Math.pool.ltxml:755, :813-816), so `VERTBAR absExpression VERTBAR` (MathGrammar:329-330) is an
+%          `aBarearg`: `exponential@((norm@(x)) ^ 2)`, `logarithm@(norm@(x) * y)`, `maximum@((norm@(x)) ^ 2 * y)`,
+%          `logarithm@((norm@(x)) ^ 2 * y)`, `nabla@((norm@(u)) ^ 2 * v)`, `(maximum _ i)@(norm@(x _ i) * y _ i)`
+% engines: rust 57am (pre-fix): `(exponential@(norm@(x))) ^ 2`, `logarithm@(norm@(x)) * y`,
+%          `(maximum@(norm@(x))) ^ 2 * y`, `(logarithm@(norm@(x))) ^ 2 * y` (RUST-ONLY); 57al: Perl's readings
+%          57am review round 7: in a kerned stack, `\left|\!\left\|A\right\|\!\right|` became `norm@(A)`, its two
+%          `|` dropped from the markup (the kerned-norm rules took the `\left\|` bars for single ones)
+% expect:  0 errors, 0 warnings; each formula Perl's reading but two: `\log\left|\left|x\right|\right|_2^2` is a bare
+%          argument (divergence #353; Perl log·(‖x‖_2)²) and a `\left\lvert` stack is a norm too (#354; Perl nests
+%          absolute values, the name `lvert` being no SINGLEVERTBAR); a split row reads its `\left\|` as inline
+%          (Perl names the split row's pair `delimited-∥∥`, inline `norm`); the markup keeps the OPEN/CLOSE `‖`;
+%          the kerned `|‖A‖|` is `absolute-value@(norm@(A))` with all four bars (Perl, 57al); two `\left|`
+%          bars around two `\right|`, kerned or not, are one norm, as Perl's `SINGLEVERTBAR SINGLEVERTBAR`
+%          (MathGrammar:294): `\left|\left|x\right|\right|` is norm@(x) (57al and 57am8 required the kern and
+%          read absolute-value@(absolute-value@(x)); 57am review round 8)
+\section{A stretchy double bar is a bar pair}
+\[ \exp\left\|x\right\|^2 \]
+\[ \log\left\|x\right\|\,y \]
+\[ \max\left\|x\right\|^2 y \]
+\[ \log\left\lVert x\right\rVert^2 y \]
+\[ \nabla\left\|u\right\|^2 v \]
+\[ \max_i\left\|x_i\right\|y_i \]
+\[ \left|\!\left\|A\right\|\!\right| \]
+\[ \left|\left|x\right|\right| \]
+\[ \log\left|\left|x\right|\right|_{2}^{2} \]
+\[ \left\lvert\left\lvert x\right\rvert\right\rvert \]
+\begin{equation}\begin{split}x&=\exp\left\|y\right\|^2\end{split}\end{equation}
+
+% formerly repro math-parse/named_vertbar_parses_as_absolute_value
+% witness: 57n root-cause side finding: a VERTBAR token that carries a `name` (`\arrowvert`, amsmath's
+%          `\lvert`/`\rvert` after `\bigl`/`\bigr`) does not parse; 7 papers of the 3,003-paper A/B
+%          (arXiv 2605.02713 `\arrowvert\psi_n\arrowvert^2` and `\bigg\Arrowvert`, 2605.19292
+%          `\bigl\lvert a_{ij}\bigr\rvert`); in a gathered row the bar is an XMRef, read through its target
+% oracle:  pdflatex 0 errors; perl: absolute-value@(y) for `\arrowvert` (twice), `\vert`, `\lvert` (twice),
+%          norm@(y) for `\|`, `\lVert`, `\Arrowvert`, and absolute-value@(y) = 1 in the gathered row
+% expect:  0 errors; absolute-value@(y) ×5, norm@(y) ×3, absolute-value@(y) = 1, as Perl
+% Perl: the content-agnostic `VERTBAR` terminal (MathGrammar:797) and content-keyed fences (MathParser.pm:1361)
+\section{A named vertical bar parses as a bar}
+$\bigl\arrowvert y \bigr\arrowvert$ $\arrowvert y \arrowvert$ $\bigl\vert y \bigr\vert$ $\big\lvert y \big\rvert$ $\bigl\| y \bigr\|$ $\bigl\lvert y\bigr\rvert$ $\bigl\lVert y\bigr\rVert$ $\Arrowvert y\Arrowvert$
+\[\begin{gathered}\bigl\lvert y\bigr\rvert=1\end{gathered}\]
+
+% repro: math-parse/bars_pair_across_the_whole_formula
+% witness: 2605.13278 A4.Ex64; bocages over 500 and-nodes take the tree-iterator fallback route
+% oracle: Perl `absolute-value@(logarithm@(x) - logarithm@(y)) = a * absolute-value@(u) <= c`; divergence #18 (`\pi(x)`)
+\section{Bars pair across the whole formula}
+$|\log x-\log y|=a|u|\leq c$ $\|\nabla_{x}\log\pi(x)-\nabla_{x}\log\rho(x)\|=a\|\mu-u\|\leq c$
+
+% formerly repro math-parse/stretchy_bars_around_a_placeholder
+% witness: 57am7 A/B (78 formulas, 30 papers): 2605.00709, 2605.03186 `\left\|\cdot\right\|_{\infty}`, 2605.05619
+%          `\left\|\cdot\right\|_{H}`, 2605.05645 `\left\|\cdot\right\|_{H^{m}}:=\left\|\cdot\right\|_{H_{per}^{m}}`,
+%          2605.07463 `\left\lVert\cdot\right\rVert_{2}`, 2605.01053 `(\mathrm{Aff}(\mathrm{T}(A)),\left\|\cdot\right\|_{\infty})`
+% oracle:  Perl leaves them unparsed (`absExpression` needs a term; MathGrammar:410-412); 57al read
+%          `(norm@(cdot)) _ infinity` through the OPEN/CLOSE placeholder rule (`open placeholder close`), which
+%          no longer sees a `\left\|` pair once the lexer reads it as bars (57am round 6)
+% expect:  0 errors, 0 warnings; the norm (or absolute value) of the placeholder (divergence #355); a kerned
+%          stack of two bars norm@(cdot), of three operator-norm@(cdot) (#354); `\|\cdot\|`
+%          and `|\cdot|` stay unparsed, as Perl and 57al (between unsided bars a `|\cdot|` rule would offer a
+%          reading inside `|x|\cdot|y|`); kerned stacks around the slot: 2605.25146, 2605.24620, 2605.13146
+\section{Stretchy bars around a placeholder}
+\[ \left\|\cdot\right\|_{\infty} \]
+\[ \left\lVert\cdot\right\rVert_{2} \]
+\[ (A,\left\|\cdot\right\|_{\infty}) \]
+\[ \left\|\cdot\right\|_{H^m}:=\left\|\cdot\right\|_{H_{per}^m} \]
+\[ \left|\cdot\right| \]
+\[ \left|\kern-1pt\left|\cdot\right|\kern-1pt\right| \]
+\[ \left|\kern-1pt\left|\kern-1pt\left|\cdot\right|\kern-1pt\right|\kern-1pt\right|_{\infty} \]
+
+% repro: math-parse/bar_pairs_nest_as_shallow_as_they_can
+% witness: 57am review round 6 (no arXiv id)
+% oracle: Perl `parse_internal` (MathParser.pm:813-836) parses at `MAX_ABS_DEPTH` 1 (`absExpression`,
+%         MathGrammar:410-412), retrying deeper only on `AbsFail`; guard-only: the four `\log|a|`/`\max_i||a_i||` sums
+\section{Bar pairs nest as shallow as they can}
+\[ ||x|+|y|| \]
+\[ \log||x|+|y||\,z \]
+
+% repro: math-parse/evaluated_at_stays_outside_absolute_bars
+% witness: 2605.12082 A2.Ex48, 2605.04766 S6.Ex145, 2605.01526, 2605.07463
+% oracle: Perl `absExpression` sets `$forbidEvalAt` (MathGrammar:410; evalAt alternatives :259-262); divergence #350
+%         guard-only: `|\nabla a|_{L}|\nabla b|_{L}+|f(x)|_{0}^{1}|`
+\section{An evaluation bar stays outside absolute-value bars}
+$|\nabla a|_{L}|\nabla b|_{L}$ $|a|_{L}|b|_{L}$ $(|u|_{H}+|\nabla\times u|_{H})$ $f(x)|_{0}^{1}$ $\|a\|_{2}\|b\|_{2}$
+$\|u|_{\Gamma}\|$ $\left|M|_{S}\right|$ $|g(f|_{x=0})|$ $|f(x)|_{0}^{1}|$
+
+% repro: math-parse/conditional_bar_takes_no_bare_relation
+% witness: 2605.26054, 2605.02499, 2605.01526, 2605.12082
+% oracle: Perl `conditional` is `Term | ExpressionsNoBars` (MathGrammar:261-268); divergence #350
+%         guard-only: `\leq|a|\,|b|_{L}|c|_{L}`
+\section{A conditional bar takes no bare relation}
+\[ \bigg|g\big|_{t=1}-h\bigg|\leq C \]
+\[ \lim_{N\to\infty}|Nf\big|_{N}(n)-g(n)|=0 \]
+\[ \delta(\xi)\asymp|\xi-\phi(x)|\asymp r \]
+\[ p(x|y)+P(A|B=b) \]
+
+% formerly repro math-parse/stretchy_bar_divides_a_conditional
+% witness: 57am delta A/B 57am8 -> 57am9 (review round 8's split-row fix, withdrawn): 2605.11264 S2.Ex24, S2.Ex42,
+%          S2.E27, S2.Ex82, S2.E33 (`\mathbb{E}\left[\left.g_{k,t}\right|\ \mathscr{F}_t\right]`,
+%          `\mathbb{P}\left(\left.\mathcal{P}\right|\tau<\epsilon,\ldots\right)`), 2605.20326 A6.E111, A6.E123
+%          (`\left<\Psi\right|\rho\left|\Psi\right>`); 57ap root-causer: unparsed `\left|…\right\rangle` kets,
+%          `\left\langle…\right|` bras and bare `\right|` dividers in 4,967 formulas of 371 papers of 2605 (a ceiling)
+% oracle:  Perl: `\right|` and `\left|` are VERTBARs (DELIMITER_MAP, TeX_Math.pool.ltxml:754, :813-816) and its bar
+%          terminal is side-agnostic (`/VERTBAR:\S*:\d+/`, MathGrammar:797; `MIDBAR` :774-776); `\left.` is an empty
+%          XMHint, dropped before lexing (TeX_Math.pool.ltxml:721-729; MathParser.pm:440-455):
+%          `delimited-[]@(conditional@(g _ k, F _ t))`, `P * conditional@(A, list@(B, C))`,
+%          `quantum-operator-product@(Psi, rho, Psi)`; `ket@(psi)`, `bra@(psi)`, `inner-product@(phi, psi)` (both),
+%          `P * conditional@(A, B)` (both), `conditional-set@(x, x > 0)` (both),
+%          `E * delimited-[]@(conditional@(absolute-value@(X), Y))`; the rows under "must not change" read as before
+% expect:  0 errors, 0 warnings; Perl's readings, with an unknown applied to its group (`E@`, `P@`, divergence #18) and
+%          `open-interval@(B, C)` for a list sharing its group (`rename_fenced_lists`; the Fence port,
+%          docs/parity/DEFERRED_FAMILIES.md);
+%          a sided bra and ket around an operator are one `quantum-operator-product` (divergence #356; Perl's
+%          `ketExpression` forbids bars, MathGrammar:401: `bra@(a) * b * absolute-value@(c) * d * ket@(e)`, and
+%          `delimited-⟨⟩@(Psi * norm@(Phi) * Psi)`)
+\section{A stretchy bar divides a conditional, closes a bra and opens a ket}
+$\mathbb{E}\left[\left.g_{k}\right|\ F_{t}\right]=a$ $P\left(\left.A\right|B,C\right)=b$
+$S=\left<\Psi\right|\rho\left|\Psi\right>$
+
+$\left|\psi\right\rangle$ $\left\langle\psi\right|$ $\left\langle\phi\right|\left.\psi\right\rangle$
+$\left\langle\phi\right.\left|\psi\right\rangle$ $P\left(\left.A\right|B\right)$ $P\left(A\left|B\right.\right)$
+$\left\{x\left|x>0\right.\right\}$ $\left\{x\right|\left.x>0\right\}$ $\mathbb{E}\left[\left.\left|X\right|\right|Y\right]$
+$\left\langle\Psi\right|\rho|\Psi\rangle$ $\left|a\right|\left|\psi\right\rangle$ $P_{i}=\left|i\right\rangle\left\langle i\right|$
+$\left|\left\langle\psi\right|\left.\phi\right\rangle\right|^{2}$ $\left(\left.a\right|b\right)\left(\left.c\right|d\right)$
+
+% must not change: bar pairs, evaluation bars and `\middle|` read as before (Perl leaves the `\middle|` conditionals
+% unparsed: divergence #359)
+$\left|a\right|\left|b\right|$ $P\left(\left|a\right|\left|b\right|\right)$ $P\left(\left|A\right|\middle|B\right)$
+$\left(a\left|f\right|_{x=0}\right)$ $\left.f\right|_{x=0}^{1}+\left.g\right|_{0}$ $\left|\left.a\right|_{x=0}\right|$
+$\left\langle\phi\middle|\psi\right\rangle$
+
+% a `\left|` whose partner `\right|` is an evaluation bar pairs it, even beside another conditional (57ap review:
+% the divider reading had won there; Perl `exponential@(- c * ((absolute-value@(x)) _ 2) ^ 2)` after
+% `P * conditional@(A, B)`, `epsilon * (absolute-value@(nabla@(u))) _ (L ^ 2)`,
+% `delimited-[]@(a * (absolute-value@(f)) _ (x = 0))`, `delimited-⟨⟩@(f * (absolute-value@(g)) _ (L ^ 2))`)
+$P(A|B)\exp\left(-c\left|x\right|_{2}^{2}\right)$ $P(A|B)\left(\epsilon\left|\nabla u\right|_{L^{2}}\right)$
+$P(A|B)\left[a\left|f\right|_{x=0}\right]$ $P\left(A\middle|B\right)\left(a\left|f\right|_{x=0}\right)$
+$\langle f\left|g\right|_{L^{2}}\rangle$
+% in braces too, where Perl reads the set-builder bar: `conditional-set@(a, evaluated-at@(f, x = 0))` (divergence #358)
+$\left\{a\left|f\right|_{x=0}\right\}$
+
+% two sided brackets side by side are two quantum-operator-products, as Perl (2605.03120 shape); a sum of outer
+% products with a coefficient reads Perl's `ket * quantum-operator-product@(0, + (1 - p), 1) * bra`
+% (KNOWN_PERL_ERRORS #377; 2605.00091, 2605.02774, 2605.03468)
+$\left\langle a\right|b\left|c\right\rangle\left\langle d\right|e\left|f\right\rangle$
+$\rho=p\left|0\right\rangle\left\langle 0\right|+(1-p)\left|1\right\rangle\left\langle 1\right|$
+
+% divergence #356
+$\left\langle a\right|b\left|c\right|d\left|e\right\rangle$ $\left\langle\Psi\right|\left|\Phi\right|\left|\Psi\right\rangle$
+
+% formerly repro math-parse/conditional_bar_keeps_its_token
+% witness: 57ba review (the WISDOM #94 audit of tokens built in semantic actions)
+% oracle:  Perl 0 errors: each `conditional@(…)`, its operator the source token annotated (`Annotate($item[2], role =>
+%          'MODIFIEROP', meaning => 'conditional')`, MathGrammar:263): `\mid` keeps `∣` and `name="mid"`, `\big|` keeps
+%          `fontsize="120%"` and its `rpadding`
+% cause:   `vertbar_modifier` built a new `|` token, so `\mid` rendered `|` and `\big|` lost its size (57bc); in a
+%          gathered row's content branch the bar is an `XMRef`, annotated as one (Perl `<XMRef idref role meaning/>`;
+%          57bc review: it had become an empty `<XMTok meaning="conditional"/>`)
+$a\mid b$ $a\,\big|\,b$ $n\mid m$
+
+\begin{equation}\begin{gathered}p\mid q\end{gathered}\end{equation}
+
+% witness: RED-drain survey (read-only root-causer): ≤3,964 formulas in 511 papers of the 57bb A/B, counted as a
+%          conditional whose argument is headed `open-interval`/`vector` (2605.00161 `q(x_s\mid x_t,x_0)`)
+% oracle:  Perl 0 errors: `p * conditional@(x, list@(y, z))`, `p * open-interval@(x, conditional@(y, z))` (the bar
+%          binding the last item only; divergence #364), `q * conditional@(x _ s, list@(x _ t, x _ 0))`
+% cause:   `rename_fenced_lists` renamed any bare comma list among a delimited wrap's items by the delimiters, the
+%          conditional's condition too; it now renames only a wrap that is exactly `open, list, close` (57bd)
+% expect:  0 errors, 0 warnings; each list the conditional's own
+\section{A list beside a conditional bar is the conditional's}
+$p(x|y,z)$ $p(x,y|z)$ $q(x_s\mid x_t,x_0)$
+
+% formerly repro math-parse/conditional_lists_on_both_sides_of_the_bar
+% witness: 57be review (probes; divergence #364's open line); RED-drain survey P4/P6 (2605.05890)
+% oracle:  Perl 0 errors: `p * open-interval@(x, conditional@(y, list@(z, w)))` (#364: the joint given both is meant),
+%          `conditional-set@(list@(x, y), z)`, `conditional-set@(x, formulae@(a < 1, b < 2))`,
+%          `delimited-[]@(conditional@(x, list@(y, z)))`, a garbled `\mathbb{E}[Y\mid A=1,X]`,
+%          `conditional-set@(list@(x, y), list@(z, w))`, `conditional-set@(list@(x, y), x < y)`, and
+%          `set@(Gamma proves list@(A, B))` — a colon only is a set-builder's (`suchThatOp`, MathGrammar:499-501);
+%          another metarelation is one relation, the set of it (57bk; golden `fenced_lists.tex`, "A fenced
+%          metarelation is one relation")
+% cause:   the paren, brace and bracket conditional rules took a list on one side at most, and none in a bracket or
+%          a set-builder's condition (57bh); a list holding a relation is Perl's `formulae` beside the bar
+$p(x,y|z,w)$ $\{x,y|z\}$ $\{x : a<1, b<2\}$ $[x|y,z]$ $\mathbb{E}[Y\mid A=1,X]$
+$\{x,y|z,w\}$ $\{x,y : x<y\}$ $[a,b|c]$ $\Pr[X=1,Y=1|Z=0]$ $\Pr(X=1,Y=2|Z=3)$
+
+% A Dirac label reads no ket, open bra, evaluation bar or conditional, and an angle fence holds no open bra (57bp;
+% Perl `ketExpression` and `maybeBra` read under `$forbidVertBar`, MathGrammar:300-302, :373-379, :401-403, and
+% `maybeBra` tries a braket before a bra): the crossing readings `delimited-⟨⟩@(H * x * ket@(x) = bra@(x) * H * x)`
+% become `inner-product@(H * x, x) = inner-product@(x, H * x)`, `inner-product@(A * x, y) * inner-product@(x, A * y)`,
+% `(sum _ b)@((quantum-operator-product@(b, psi, b)) _ A * ket@(b) * (bra@(b)) _ Z)`, `inner-product@(a, b) * ket@(c)`
+% (2605.02840, 2605.28949, 2605.30176, 2605.16417). A bra ending a factor stays, as Perl: `delimited-⟨⟩@(ket@(psi) *
+% bra@(psi))`, `ket@(c * bra@(u))`, `inner-product@(v, c * bra@(u))`, `quantum-operator-product@(a, bra@(b), c)` (the
+% list fence of 2605.21982; 57bp review). A scripted bra is closed (`(bra@(0)) _ Z * ket@(0)`); a pair of single bars
+% holds no ket (`|a\rangle\langle a||b\rangle\langle b|…` a product of projectors); a specific Dirac reading ranks
+% before the student pragmas (`E * quantum-operator-product@(p * xi, a, p * xi)`, 2605.21982, 2605.03773); a letter
+% before a Dirac bracket multiplies it (#18 skips them, user ruling 2026-09-29: `c * inner-product@(u, u)`,
+% `H * ket@(psi)`); a nested group keeps its own bars (#368: `quantum-operator-product@(a, 1 - ket@(u) * bra@(u), b)`,
+% Perl `bra@(a) * (…) * ket@(b)`)
+\section{A bra that a bracket closes is the bracket's}
+$\langle Hx|x\rangle=\langle x|Hx\rangle$ $\langle Tx|y\rangle=\langle x|T^{*}y\rangle$ $\langle Ax|y\rangle\langle x|Ay\rangle$
+$\langle Au|u\rangle\geq c\langle u|u\rangle$ $\sum_b\left\langle b\right|\psi\left|b\right\rangle_{A}|b\rangle\langle b|_Z$
+$\langle a|b\rangle|c\rangle$ $\langle|\psi\rangle\langle\psi|\rangle$ $\langle a,|b\rangle\langle c|\rangle$
+$\langle|a\rangle\langle a|+|b\rangle\langle b|\rangle$ $|c\langle u|\rangle$ $\langle v|c\langle u|\rangle$ $\langle a\langle b||c\rangle$
+$\langle a|\langle b||c\rangle$ $\langle\psi|_A|\phi\rangle_B$ $\langle 0|_Z|0\rangle$ $|a\rangle\langle a||b\rangle\langle b||c\rangle\langle c|$
+$\mathbb{E}\langle p\xi|a|p\xi\rangle$ $\langle a|(1-|u\rangle\langle u|)|b\rangle$ $H|\psi\rangle$ $p|0\rangle$
+
+
+% witness: 57cc (user ruling 2026-09-29); 2605.03594 `X\mid\theta\sim\mathrm{Poi}(\theta)`, 2605.05396, 2605.13128,
+%          2605.19519, 2605.03152 (conditional then an index list), 2605.18724 `U\mid A=a,B=b\sim\mathrm{Unif}(0,1)`
+% A bare bar binds the expression before it and the bar-free run after it (Perl's `moreFactors : evalAtOp ExpressionsNoBars`,
+% MathGrammar:261-268): a relation that is no event relates the whole conditional, "conditional@(y, x) similar-to
+% N@(vector@(0, 1))"; an event (`=`, `<`, `∈`, `⊂`) stays in the condition, "conditional@(Y, X = x)", as the statement-level
+% bar reads it (Perl reads conditional@(Y, X) = x). Controls: a condition list, a fence, a set-builder, a range.
+\section{A bare bar binds its adjacent factors}
+$y|x\sim N(0,1)$ $\theta|y\propto p(y|\theta)p(\theta)$ $\gamma_g\mid\theta\stackrel{\mathrm{iid}}{\sim}\mathrm{Bernoulli}(\theta)$
+$WT\mid W=w\sim\mathrm{Gamma}(a,b)$ $U\mid A=a,B=b\sim V$ $y_i\mid\mu,\sigma^2\sim\mathcal N(\mu,\sigma^2)$ $x|y\to 0$
+$y|x\sim N,\ z|w\sim M$ $Y\mid X=x$ $T-s\mid T>s$ $x|x>0$ $A|B=b$ $\sum_{j|j=1,\ldots,n}a_j$
+$X_{n+1}=j\mid X_n=i,\ldots,X_0=i_0$ $P(A|B=b,C=c)$ $p\mid b_0$ $x|y,z,t$ $\{x\mid x>0\}$ $y|x_1=a_1,\ldots,x_n=a_n$
+% 57cc review: a METARELOP after a conditional, a sum as the conditioned, a mixed or elided condition list, a conditional
+% on each side of a relation (Perl's readings, all 57cc3-unparsed)
+$\Gamma\mid\Delta\vdash e:\tau$ $a\mid b\iff a\leq b$ $W_t-W_s\mid\mathcal F_s\sim\mathcal N(0,t-s)$ $-x|y\sim z$
+$Y\mid X_1=x_1,\ldots,X_p=x_p\sim N$ $Y\mid Z,X=x\sim N$ $x|y\sim z|w$ $3\mid n^2\Rightarrow 3\mid n$
+% round 2: the chain goes on through any relation; an event or METARELOP between two conditionals; a list before a
+% relation over a conditional keeps the list
+$X_n\mid\mathcal F\sim\mu_n\to\mu$ $x|y\sim z<=w$ $a|b=c|d$ $a\mid b\iff c\mid d$ $\Delta;\Gamma\mid\Phi\vdash P$
+
+% witness: 2605.08402 `|m=-1\rangle` (~24 formulas), 2605.07372 `|F=1,m_{F}=1\rangle`, 2605.16135 `|2,0\rangle`, 2605.18350,
+%          2605.11552 `\langle a,b|a^{-1}ba=b^{n}\rangle` (and the presentations of 2605.27982, 2605.18952), 2605.16150,
+%          2605.03441 `\langle 1_A,1_B|U|0_A,0_B\rangle` (also 2605.15280, 2605.16034), 2605.09161 `\langle p_\alpha\mid\alpha<\gamma\rangle`;
+%          ~120 formulas in ~30 papers of the 57bp7 output unparsed, 4 misread as an angle fence
+% oracle:  Perl `ketExpression : Formulae` (MathGrammar:401-404, `$forbidVertBar`/`$forbidLRAngle`): `ket@(list@(n, l))`,
+%          `inner-product@(list@(n, l), m)`, `ket@(m = - 1)`, `ket@(formulae@(F = 1, m _ F = 1))`, `inner-product@(a = b, c)`,
+%          `ket@(list@(N _ L, N _ R))`, `inner-product@(list@(a, b), a ^ (- 1) * b * a = b ^ n)`,
+%          `quantum-operator-product@(list@(1 _ A, 1 _ B), U, list@(0 _ A, 0 _ B))`, `ket@(a to b)`; Perl reads
+%          `bra@(p _ alpha) * alpha * delimited-<⟩@(gamma)` (its `$forbidLRAngle`) and `inner-product@(a _ F = list@(…), …)`
+% expect:  0 errors, 0 warnings; Perl's readings, a list label holding a relation `formulae@` (as a fenced one,
+%          `f(a_F=\sqrt{3},t_F)`); a plain `<` relation is no label's, as Perl's `$forbidLRAngle` — `\langle p_\alpha\mid
+%          \alpha<\gamma\rangle` (an ordinal-indexed sequence, 2605.09161) stays unparsed (57ch review; a sequence-builder
+%          reading, delimited-⟨⟩@(conditional@(…)), is open in SYNC_STATUS); a group presentation `\langle a,b|…\rangle`
+%          reads Perl's inner-product (open question in SYNC_STATUS)
+\section{A Dirac label is a formula or a list}
+$|n,l\rangle$ $\langle n,l|m\rangle$ $\langle i,j|k\rangle$ $|m=-1\rangle$ $|F=1,m_{F}=1\rangle$ $\langle a=b|c\rangle$
+$\left|N_{L},N_{R}\right>$ $\langle a,b|a^{-1}ba=b^{n}\rangle$ $\langle a_{F}=\sqrt{3},t_{F}|a_{I}=0,t_{I}=0\rangle$
+$\langle 1_{A},1_{B}|U|0_{A},0_{B}\rangle$ $\langle r,s\mid r^{m}=s^{2}=(rs)^{2}=1\rangle$
+$\langle x,r|x^{n}\,,r^{2}\,,rxrx\rangle$ $\langle a|b,c|d\rangle$ $|a\to b\rangle$ $|a,b\rangle|c\rangle$
+
+% witness: 2605.29622 `\frac{\langle ij||ab\rangle}{\epsilon_i+\epsilon_j-\epsilon_a-\epsilon_b}` (MP2 amplitudes, 2 formulas);
+%          `\left\langle\phi\right|\left|\psi\right\rangle`, `\langle\phi|\,|\psi\rangle`
+% oracle:  Perl `maybeBra` falls back to the bra when no `ketExpression` follows its bar (MathGrammar:373-379; a label
+%          cannot start at a bar, `$forbidVertBar`, :301), and the ket is the next factor: `bra@(x) * ket@(y)`,
+%          `bra@(i * j) * ket@(a * b)`, `bra@(phi) * ket@(psi)`, `bra@(x) * ket@(y) * c`, `bra@(a) * ket@(b) * ket@(c)`,
+%          `bra@(a) * ket@(b) * bra@(c) * ket@(d)`, `bra@(x) * ket@(y) * bra@(z)`
+% cause:   `apply_invisible_times` refuted every product whose first factor was a bra and whose right side ended in a
+%          ket, an empty middle too (unparsed: `Ambiguous math: 1 enumerated (0 semantic, 1 pruned…)`); only the first
+%          factor was looked at, so `c\langle x||y\rangle` parsed and `\langle x||y\rangle c` did not
+% expect:  0 errors, 0 warnings; Perl's readings; the brackets above read as before
+\section{A bra directly before a ket stays a bra}
+$\langle x||y\rangle$ $\langle ij||ab\rangle$ $\left\langle\phi\right|\left|\psi\right\rangle$ $\langle\phi|\,|\psi\rangle$
+$\langle x||y\rangle c$ $c\langle x||y\rangle$ $\langle a||b\rangle|c\rangle$ $\langle a||b\rangle\langle c||d\rangle$
+$\langle x||y\rangle\langle z|$ $\frac{\langle ij||ab\rangle}{\epsilon_{i}+\epsilon_{j}-\epsilon_{a}-\epsilon_{b}}$
+$c\langle a|H|b\rangle$ $\langle a|H|b\rangle_{A}$ $\langle a||b\rangle_{A}$
+
+% witness: 2605.02211 (`\lvert\psi\rangle`, `\langle\psi\rvert H\lvert\psi\rangle`, ~49 formulas)
+% oracle:  amsmath.sty.ltxml:1150-1152: `\lvert`/`\rvert` are an OPEN and a CLOSE, so Perl reads a group,
+%          `delimited-|⟩@(psi)`, `delimited-⟨|@(psi)`, and leaves `\lvert 01\rangle-\lvert 10\rangle` and the operator
+%          product unparsed; Rust unparsed them all
+% expect:  0 errors, 0 warnings; the bar a ket opens and a bra closes (divergence #382): `ket@(psi)`,
+%          `ket@(01) - ket@(10)`, `bra@(psi)`, `quantum-operator-product@(psi, H, psi)`, `inner-product@(phi, psi)`,
+%          `ket@(psi) * bra@(psi)`; `\lvert x\rvert` stays `absolute-value@(x)`
+\section{A ket opens and a bra closes at an amsmath bar}
+$\lvert\psi\rangle$ $\lvert 01\rangle-\lvert 10\rangle$ $\langle\psi\rvert$ $\langle\psi\rvert H\lvert\psi\rangle$
+$\langle\phi\rvert\psi\rangle$ $\lvert\psi\rangle\langle\psi\rvert$ $\lvert x\rvert\lvert y\rvert$
+
+\end{document}

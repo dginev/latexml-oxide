@@ -1,0 +1,16 @@
+% witness: TL class census 2026-09-24 — dtk (dtk.cls:235-241 loads biblatex with style=dtk;
+%          dtk.cbx:12 \ProvidesFile{dtk.cbx}[\abx@cbxid])
+% oracle:  pdflatex 0 errors; Hello. [3.21]
+% engines: rust (56ia) = "\abx@cbxid undefined": the biblatex binding replaces biblatex.sty and
+%          lacked its version strings; Perl raw-loads biblatex.sty (0 errors)
+% expect:  0 errors; <p>Hello. [3.21]</p>
+% status:  RED (56ia) -> GREEN (56ib)
+% mechanism: biblatex.sty:15-21 \abx@date, \abx@version, \abx@bbxid, \abx@cbxid, \abx@lbxid,
+%   \abx@cptid, \abx@dmid.
+\documentclass{article}
+\usepackage[style=dtk,backend=biber]{biblatex}
+\begin{document}
+\makeatletter
+Hello. [\abx@version]
+\makeatother
+\end{document}

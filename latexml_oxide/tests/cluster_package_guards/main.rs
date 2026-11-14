@@ -1,0 +1,655 @@
+//! Single-shot package / engine regression guards.
+//!
+//! One test binary (one link unit, for CI economy) whose modules live one
+//! per file beside this root: `cluster_package_guards/<module>.rs`. Test
+//! paths are `<module>::<test>`, as when the modules were inline. All
+//! members are subprocess- or few-conversion tests, so co-locating them in
+//! one process stays far under the RSS fuse.
+
+#[path = "../cluster/mod.rs"]
+mod cluster;
+#[path = "../common/mod.rs"]
+mod common;
+
+#[allow(unused_imports)]
+pub(crate) use perfect_kernel_batch46::{
+  convert, convert_files, convert_files_with, convert_with, convert_with_budget, error_count,
+};
+
+mod aastex_contribution_appendix;
+mod accent_meaning_robust_shape;
+mod acmart_description_aria;
+mod aligned_overset_includestyles;
+mod amsrefs_case_distinct_keys;
+mod bib_field_digest_once;
+mod biblatex_fallback_no_cite_loop;
+mod bibliography_crossref;
+mod bibliography_names_fields;
+mod bibref_show;
+mod binding_conformance;
+mod binding_singletons_56;
+mod box_primitives;
+mod braced_quantity_tail;
+mod case_change_equivalents;
+mod cleveref_class_stubs;
+mod currsize_default;
+mod deferred_load_retry;
+mod defplain_skips_blanks_before_brace;
+mod doc_changes_index;
+mod document_indirection;
+mod dump_gate_init;
+/// EB1: the shared Error-boundary table, both sides (TeX or Perl errs / the safe twin), each row with its oracle.
+mod error_boundary;
+mod expanded_protected_brace_hunt;
+mod expl3_nested_raw_load_catcodes;
+mod fatal_salvages_partial_document;
+mod filelist_letter_catcodes;
+mod forest_chemnum;
+mod frontespizio_inline;
+mod graphics_asset_memo;
+mod graphics_kpsewhich;
+mod graphicx_internals;
+mod greek_text;
+mod href_edef_loop;
+mod href_semiverbatim_loop;
+mod hyperlink_bounded;
+mod hyperref_colorlinks;
+mod ifnextchar_scans;
+mod lstinputlisting_range_crlf;
+mod lua_state_mirror;
+mod luacode_bridge;
+mod luatex_babel_api;
+mod luatex_direction_scan;
+mod luatex_profile;
+mod makeindex_allocates_indexfile;
+mod memoir_output_streams;
+mod natbib_label_dotless_i;
+mod neurips_anonymous;
+mod newtcblisting_verbatim;
+mod nfss_font_state;
+mod nicetabular_binding;
+mod node_box_append;
+mod noexpand_input_ends;
+mod nul_byte_input;
+mod openright_kernel_contract;
+mod package_leads_56;
+mod picture_makebox_offset;
+mod picture_sizing;
+mod preclass_kernel_autoload;
+mod process_key_options_sees_load_options;
+mod pstricks_drawing;
+mod raw_classoptionslist_recorded;
+mod raw_provides_version_survives;
+mod rawclasses_binding_precedence_and_no_omnibus;
+mod shipout_parskip;
+mod silence_keeps_diagnostics;
+mod stex_raw_ltxml;
+mod subdir_dispatch_no_strip;
+mod texinputs_usepackage;
+mod unicode_caret_notation;
+
+/// Regression: minted's `\newmintinline`/`\newminted`/`\newmint` take an optional
+/// `[env-name]` before the two mandatory `{language}{options}` args (real
+/// minted.sty: `\newcommand{..}[3][]`). The Rust binding declared them with a
+/// two-mandatory `#1#2` signature, so `\newminted[leancode]{lean4}{...}` captured
+/// `#1 = "["` and ran `\expandafter\def\csname [\endcsname{...}` — and `\csname
+/// [\endcsname` IS the control sequence `\[`, silently redefining display-math open
+/// to `\begin{lstlisting}`. Every later `\[` then opened a listing that ran to
+/// end-of-file, swallowing the body and `\bibliography` with no `Error:` — a silent
+/// bibliography loss. Witness `arXiv:2606.05629` (issue #520). The reporter's first
+/// hypothesis (the comment-wrapped `leancode` env runs away) is not the cause: that
+/// block sits inside `\begin{comment}` and is discarded; the runaway starts at the
+/// first `\[` far earlier.
+mod minted_newminted_optional_env_name;
+
+mod alignment_ledger_expansion_pushback;
+mod autoload_trigger_identity;
+mod expl3_state_and_param_replay;
+mod input_routing_and_bbx;
+mod kernel_language_and_part_contracts;
+mod math_text_font_restore;
+/// minted binding quality (follow-up to #520): the inline `\mintinline{lang}{code}`
+/// brace form must render without erroring or swallowing following content, and
+/// `\begin{minted}{language}` must activate listings' syntax highlighting.
+mod minted_inline_and_highlighting;
+mod overpic_renders_graphic_and_overlays;
+mod perfect_kernel_batch40_43;
+pub(crate) mod perfect_kernel_batch46;
+mod perfect_kernel_batch47;
+mod perfect_kernel_batch48;
+mod perfect_kernel_batch49;
+mod rtoken_patchcmd;
+mod scanner_status;
+mod token_kernel_gaps;
+mod unicode_format_encoding;
+mod vfs_file_end;
+mod xkeyval_internals;
+
+mod accent_composite_expansion;
+mod beamer_includegraphics_overlay;
+/// Issues #772, #760, #801, #787, #773, #779: the bindings batch of 2026-11-13.
+mod bindings_batch1;
+mod counter_id_formatters_from_the_dump;
+mod datatool_native_load;
+mod etex_logo;
+mod glossary_refs_post;
+mod kernel_fallbacks_never_block_newcommand;
+mod latex_via_exemplos_residue;
+mod listings_virtual_file;
+mod mbox_argument_is_bounded;
+mod noexpand_marker_texweb;
+mod nomencl_inline;
+mod nomencl_nomentbl;
+mod perfect_kernel_batch100a;
+mod perfect_kernel_batch100b;
+mod perfect_kernel_batch100c;
+mod perfect_kernel_batch101a;
+mod perfect_kernel_batch101b;
+mod perfect_kernel_batch101c;
+mod perfect_kernel_batch102a;
+mod perfect_kernel_batch103a;
+mod perfect_kernel_batch103b;
+mod perfect_kernel_batch103c;
+mod perfect_kernel_batch104a;
+mod perfect_kernel_batch104b;
+mod perfect_kernel_batch104c;
+mod perfect_kernel_batch104d;
+mod perfect_kernel_batch105a;
+mod perfect_kernel_batch106a;
+mod perfect_kernel_batch106b;
+mod perfect_kernel_batch106c;
+mod perfect_kernel_batch106s;
+mod perfect_kernel_batch106t;
+mod perfect_kernel_batch107a;
+mod perfect_kernel_batch107b;
+mod perfect_kernel_batch107c;
+mod perfect_kernel_batch107d;
+mod perfect_kernel_batch107e;
+mod perfect_kernel_batch107f;
+mod perfect_kernel_batch107g;
+mod perfect_kernel_batch108a;
+mod perfect_kernel_batch108b;
+mod perfect_kernel_batch131fix;
+/// Red/green guards for perfect-kernel batch 50 (PLANS P50 …).
+mod perfect_kernel_batch50;
+mod perfect_kernel_batch51;
+mod perfect_kernel_batch52;
+mod perfect_kernel_batch53;
+mod perfect_kernel_batch54;
+mod perfect_kernel_batch55;
+mod perfect_kernel_batch56;
+mod perfect_kernel_batch57;
+mod perfect_kernel_batch58;
+mod perfect_kernel_batch59;
+mod perfect_kernel_batch60;
+mod perfect_kernel_batch61;
+mod perfect_kernel_batch63;
+mod perfect_kernel_batch64;
+mod perfect_kernel_batch64p;
+mod perfect_kernel_batch64qa;
+mod perfect_kernel_batch64qb;
+mod perfect_kernel_batch64ra;
+mod perfect_kernel_batch64s;
+mod perfect_kernel_batch64u;
+mod perfect_kernel_batch64w;
+mod perfect_kernel_batch64x;
+mod perfect_kernel_batch64y;
+mod perfect_kernel_batch64zb;
+mod perfect_kernel_batch64zc;
+mod perfect_kernel_batch64zd;
+mod perfect_kernel_batch64ze;
+mod perfect_kernel_batch64zf;
+mod perfect_kernel_batch65;
+mod perfect_kernel_batch65a;
+mod perfect_kernel_batch65c;
+mod perfect_kernel_batch65d;
+mod perfect_kernel_batch65e;
+mod perfect_kernel_batch65f;
+mod perfect_kernel_batch65h;
+mod perfect_kernel_batch65i;
+mod perfect_kernel_batch65j;
+mod perfect_kernel_batch65k;
+mod perfect_kernel_batch65l;
+mod perfect_kernel_batch65m;
+mod perfect_kernel_batch65n;
+mod perfect_kernel_batch65o;
+mod perfect_kernel_batch65p;
+mod perfect_kernel_batch65r;
+mod perfect_kernel_batch65s;
+mod perfect_kernel_batch65t;
+mod perfect_kernel_batch65v;
+mod perfect_kernel_batch65w;
+mod perfect_kernel_batch65x;
+mod perfect_kernel_batch65y;
+mod perfect_kernel_batch65z;
+mod perfect_kernel_batch66b;
+mod perfect_kernel_batch66d;
+mod perfect_kernel_batch66e;
+mod perfect_kernel_batch66f;
+mod perfect_kernel_batch66g;
+mod perfect_kernel_batch66h;
+mod perfect_kernel_batch66j;
+mod perfect_kernel_batch66k;
+mod perfect_kernel_batch66l;
+mod perfect_kernel_batch66m;
+mod perfect_kernel_batch66n;
+mod perfect_kernel_batch66o;
+mod perfect_kernel_batch66q;
+mod perfect_kernel_batch66r;
+mod perfect_kernel_batch66t;
+mod perfect_kernel_batch66v;
+mod perfect_kernel_batch66w;
+mod perfect_kernel_batch66x;
+mod perfect_kernel_batch66y;
+mod perfect_kernel_batch67a;
+mod perfect_kernel_batch67b;
+mod perfect_kernel_batch67d;
+mod perfect_kernel_batch67g;
+mod perfect_kernel_batch67j;
+mod perfect_kernel_batch67l;
+mod perfect_kernel_batch67n;
+mod perfect_kernel_batch67p;
+mod perfect_kernel_batch67ps;
+mod perfect_kernel_batch67q;
+mod perfect_kernel_batch67r;
+mod perfect_kernel_batch67s;
+mod perfect_kernel_batch67u;
+mod perfect_kernel_batch67v;
+mod perfect_kernel_batch67w;
+mod perfect_kernel_batch67x;
+mod perfect_kernel_batch67y;
+mod perfect_kernel_batch67z;
+mod perfect_kernel_batch68a;
+mod perfect_kernel_batch68b;
+mod perfect_kernel_batch68c;
+mod perfect_kernel_batch68d;
+mod perfect_kernel_batch68f;
+mod perfect_kernel_batch68g;
+mod perfect_kernel_batch68h;
+mod perfect_kernel_batch68i;
+mod perfect_kernel_batch68j;
+mod perfect_kernel_batch68k;
+mod perfect_kernel_batch68n;
+mod perfect_kernel_batch68q;
+mod perfect_kernel_batch68r;
+mod perfect_kernel_batch68s;
+mod perfect_kernel_batch68t;
+mod perfect_kernel_batch68u;
+mod perfect_kernel_batch68v;
+mod perfect_kernel_batch68w;
+mod perfect_kernel_batch68x;
+mod perfect_kernel_batch68y;
+mod perfect_kernel_batch68z;
+mod perfect_kernel_batch69a;
+mod perfect_kernel_batch69b;
+mod perfect_kernel_batch69c;
+mod perfect_kernel_batch70a;
+mod perfect_kernel_batch70b;
+mod perfect_kernel_batch70c;
+mod perfect_kernel_batch71a;
+mod perfect_kernel_batch72a;
+mod perfect_kernel_batch72b;
+mod perfect_kernel_batch73a;
+mod perfect_kernel_batch73b;
+mod perfect_kernel_batch74a;
+mod perfect_kernel_batch74b;
+mod perfect_kernel_batch75a;
+mod perfect_kernel_batch76a;
+mod perfect_kernel_batch77c;
+mod perfect_kernel_batch77d;
+mod perfect_kernel_batch77f;
+mod perfect_kernel_batch77g;
+mod perfect_kernel_batch77h;
+mod perfect_kernel_batch77i;
+mod perfect_kernel_batch77j;
+mod perfect_kernel_batch77k;
+mod perfect_kernel_batch77m;
+mod perfect_kernel_batch77n;
+mod perfect_kernel_batch77o;
+mod perfect_kernel_batch77p;
+mod perfect_kernel_batch77q;
+mod perfect_kernel_batch77r;
+mod perfect_kernel_batch77s;
+mod perfect_kernel_batch77t;
+mod perfect_kernel_batch77u;
+mod perfect_kernel_batch77v;
+mod perfect_kernel_batch77w;
+mod perfect_kernel_batch77x;
+mod perfect_kernel_batch77y;
+mod perfect_kernel_batch78a;
+mod perfect_kernel_batch78b;
+mod perfect_kernel_batch78c;
+mod perfect_kernel_batch78d;
+mod perfect_kernel_batch78e;
+mod perfect_kernel_batch78f;
+mod perfect_kernel_batch78g;
+mod perfect_kernel_batch78h;
+mod perfect_kernel_batch78i;
+mod perfect_kernel_batch78j;
+mod perfect_kernel_batch78k;
+mod perfect_kernel_batch78l;
+mod perfect_kernel_batch78m;
+mod perfect_kernel_batch78n;
+mod perfect_kernel_batch78o;
+mod perfect_kernel_batch78p;
+mod perfect_kernel_batch78q;
+mod perfect_kernel_batch78r;
+mod perfect_kernel_batch78s;
+mod perfect_kernel_batch78t;
+mod perfect_kernel_batch78u;
+mod perfect_kernel_batch78v;
+mod perfect_kernel_batch78w;
+mod perfect_kernel_batch78x;
+mod perfect_kernel_batch78y;
+mod perfect_kernel_batch78z;
+mod perfect_kernel_batch79a;
+mod perfect_kernel_batch79b;
+mod perfect_kernel_batch79c;
+mod perfect_kernel_batch79d;
+mod perfect_kernel_batch79e;
+mod perfect_kernel_batch79f;
+mod perfect_kernel_batch79g;
+mod perfect_kernel_batch79h;
+mod perfect_kernel_batch79i;
+mod perfect_kernel_batch79j;
+mod perfect_kernel_batch79k;
+mod perfect_kernel_batch79l;
+mod perfect_kernel_batch79m;
+mod perfect_kernel_batch79n;
+mod perfect_kernel_batch79o;
+mod perfect_kernel_batch79p;
+mod perfect_kernel_batch79q;
+mod perfect_kernel_batch79r;
+mod perfect_kernel_batch79s;
+mod perfect_kernel_batch79t;
+mod perfect_kernel_batch79u;
+mod perfect_kernel_batch79v;
+mod perfect_kernel_batch79w;
+mod perfect_kernel_batch79x;
+mod perfect_kernel_batch79z;
+mod perfect_kernel_batch80a;
+mod perfect_kernel_batch81;
+mod perfect_kernel_batch84a;
+mod perfect_kernel_batch84b;
+mod perfect_kernel_batch84c;
+mod perfect_kernel_batch85a;
+mod perfect_kernel_batch85b;
+mod perfect_kernel_batch86a;
+mod perfect_kernel_batch86c;
+mod perfect_kernel_batch86d;
+mod perfect_kernel_batch86g;
+mod perfect_kernel_batch86i;
+mod perfect_kernel_batch87a;
+mod perfect_kernel_batch88b;
+mod perfect_kernel_batch89a;
+mod perfect_kernel_batch89b;
+mod perfect_kernel_batch89c;
+mod perfect_kernel_batch89d;
+mod perfect_kernel_batch90a;
+mod perfect_kernel_batch91a;
+mod perfect_kernel_batch92a;
+mod perfect_kernel_batch92b;
+mod perfect_kernel_batch92c;
+mod perfect_kernel_batch92e;
+mod perfect_kernel_batch92f;
+mod perfect_kernel_batch92g;
+mod perfect_kernel_batch93a;
+mod perfect_kernel_batch94a;
+mod perfect_kernel_batch94b;
+mod perfect_kernel_batch95b;
+mod perfect_kernel_batch95c;
+mod perfect_kernel_batch95d;
+mod perfect_kernel_batch95e;
+mod perfect_kernel_batch97b;
+mod perfect_kernel_batch97c;
+mod perfect_kernel_batch97d;
+mod perfect_kernel_batch97e;
+mod perfect_kernel_batch97f;
+mod perfect_kernel_batch98a;
+mod perfect_kernel_batch98b;
+mod perfect_kernel_batch98c;
+mod perfect_kernel_batch98d;
+mod perfect_kernel_batch98e;
+mod perfect_kernel_batch99b;
+mod perfect_kernel_batchaut1;
+mod perfect_kernel_batchbc1;
+mod perfect_kernel_batchc1;
+mod perfect_kernel_batchcau1;
+mod perfect_kernel_batchck2b;
+mod perfect_kernel_batchcl1;
+mod perfect_kernel_batchcl2;
+mod perfect_kernel_batchcl3;
+mod perfect_kernel_batchcl4;
+mod perfect_kernel_batchcl6;
+mod perfect_kernel_batchcl7;
+mod perfect_kernel_batchcl8;
+mod perfect_kernel_batchcl9;
+/// CMPJ1: cmpj's `\refaddr` marks resolve as TeX's second run (`cmpj_sty.rs`).
+mod perfect_kernel_batchcmpj1;
+mod perfect_kernel_batchcr10a;
+mod perfect_kernel_batchcr10b;
+mod perfect_kernel_batchcr10c;
+mod perfect_kernel_batchcr2;
+mod perfect_kernel_batchcr3;
+mod perfect_kernel_batchcr4;
+mod perfect_kernel_batchcr4b;
+mod perfect_kernel_batchcr6;
+mod perfect_kernel_batchcr7;
+mod perfect_kernel_batchcr8;
+mod perfect_kernel_batchdel3;
+mod perfect_kernel_batchdtl1;
+mod perfect_kernel_batche0;
+mod perfect_kernel_batche1x;
+/// EJ1: a frontmatter setter inside an emitted item of an author block writes its entry once — ejpecp's `\EMAIL` in a
+/// `\footnote` or `\thanks` of `\AUTHORS` (1406.5876, 1904.02213, 1904.07135, 2206.01959; OD #993).
+mod perfect_kernel_batchej1;
+mod perfect_kernel_batcherr2;
+mod perfect_kernel_batchf1;
+mod perfect_kernel_batchfb2a;
+mod perfect_kernel_batchfb2b2;
+mod perfect_kernel_batchfb2b3;
+mod perfect_kernel_batchfmp2;
+mod perfect_kernel_batchfms1;
+mod perfect_kernel_batchfms2a1;
+mod perfect_kernel_batchfms2a2;
+mod perfect_kernel_batchfms2a2r4;
+mod perfect_kernel_batchfms2a2r5;
+mod perfect_kernel_batchfms2a2r6;
+mod perfect_kernel_batchfms2a2r7;
+mod perfect_kernel_batchfms2a2r8;
+mod perfect_kernel_batchfms2b;
+mod perfect_kernel_batchfn1;
+mod perfect_kernel_batchfs1;
+mod perfect_kernel_batchfx24;
+mod perfect_kernel_batchfx25;
+mod perfect_kernel_batchfx3;
+mod perfect_kernel_batchfx4;
+mod perfect_kernel_batchfx5;
+/// GL1: an e-mail label glued to its address names the line's contact, the address its content; OD #956.
+mod perfect_kernel_batchga1;
+mod perfect_kernel_batchga2;
+mod perfect_kernel_batchga5;
+mod perfect_kernel_batchgl1;
+/// HG1: the guards DEL1 left hollow asserting again — rows of one table, the wrong ones `_red.tex` catalog repros.
+mod perfect_kernel_batchhg1;
+mod perfect_kernel_batchimg1;
+mod perfect_kernel_batchint19;
+mod perfect_kernel_batchint20;
+mod perfect_kernel_batchint23;
+mod perfect_kernel_batchio1;
+mod perfect_kernel_batchio3b;
+mod perfect_kernel_batchkb1;
+mod perfect_kernel_batchkb2;
+mod perfect_kernel_batchkey1;
+mod perfect_kernel_batchlo1;
+mod perfect_kernel_batchlo2;
+mod perfect_kernel_batchlo3;
+mod perfect_kernel_batchlo4;
+/// LOGO1: what a constructor prints of its own (`\LaTeX`, `\TeX`) is ink of the name or line it is in (amsldoc).
+mod perfect_kernel_batchlogo1;
+mod perfect_kernel_batchm1;
+mod perfect_kernel_batchm3;
+/// MB1: the one label rule of the Kind step's lines — a labelled line named after the class's name of the entry, a
+/// mailbox link line's as an e-mail label's; OD #992.
+mod perfect_kernel_batchmb1;
+/// MB2: the entry-name join — aa's name as aa.cls prints it ("Correspondence to: ", one space before a label), a
+/// glued-label line named by the class; OD #944, #992.
+mod perfect_kernel_batchmb2;
+/// MEM1: memoir's (and oblivoir's) `\newlistof` lists are the kernel's list element.
+mod perfect_kernel_batchmem1;
+/// MLN1: names led by their marks read as names (`names_led_by_marks`); OD #1019.
+mod perfect_kernel_batchmln1;
+mod perfect_kernel_batchn1;
+mod perfect_kernel_batchn2;
+mod perfect_kernel_batchn2r2;
+mod perfect_kernel_batchn2r3;
+mod perfect_kernel_batchne1;
+mod perfect_kernel_batchne2;
+mod perfect_kernel_batchne3;
+mod perfect_kernel_batchne4;
+mod perfect_kernel_batchne5;
+mod perfect_kernel_batchne6;
+mod perfect_kernel_batchne7;
+mod perfect_kernel_batchne8;
+mod perfect_kernel_batchnl1;
+/// OC1: an author call parts at the `\and` its spelling hides (a macro, a wrapper, a `\csname`), the reading cutting
+/// the rehearsed block at its `Sep(And)` events, on each class route (Option C's P1, green before OC1).
+mod perfect_kernel_batchoc1;
+/// OC1c: an API creator call parts at its own `\and` (acmart's `\author` with no comma, authblk's spelling-test
+/// fallback), the reading cutting it inside its `\lx@personname` and the emitter writing a call per piece (OD #993).
+mod perfect_kernel_batchoc1c;
+mod perfect_kernel_batchp1;
+mod perfect_kernel_batchp1c;
+mod perfect_kernel_batchp1e;
+mod perfect_kernel_batchp2;
+/// P20: Option C P2-0's mechanisms, called by no binding yet — the separator query by meaning
+/// (`argument_separators`, `\lx@fm@separators`) and the emitter's cut of a numbered contact call (OD #995).
+mod perfect_kernel_batchp20;
+/// P21: Option C P2-1 — OmniBus's (inst_support), ptephy's and webofc's `\author` hand the whole list to the reading,
+/// which cuts it at its `\and` (webofc: at its `\\` too, the binding's `break_parts_names`); no split by spelling (OD #993).
+mod perfect_kernel_batchp21;
+mod perfect_kernel_batchp21b;
+mod perfect_kernel_batchp21c;
+/// P21d: P21's regression on the one-block lists — the reading's shared column read on the column's own ink, not a
+/// contact call's text (`\and Bob Baker\institute{Univ B}`, nucl-th0308018; OD #993).
+mod perfect_kernel_batchp21d;
+/// P21e: P21c's paragraph rule scoped to the block's own level — a paragraph in a box's body (a minipage, a `\parbox`)
+/// stays a group (2608.17538, 2402.02104, 2601.03873; OD #993).
+mod perfect_kernel_batchp21e;
+/// P22: Option C P2-2's pins — OmniBus's (inst_support) and aa's `\institute` lists as their split gives them at the
+/// shapes the spelling cuts, kept by P22b's cut by meaning (OD #993/#995).
+mod perfect_kernel_batchp22;
+/// P22b, P22c: Option C P2-2 by the binding — OmniBus's and aa's `\institute` lists cut first at the kernel's `\and` by
+/// meaning, then by spelling, no token rewritten (`split_at_kernel_separators`, the cut eptcs's cells share), one contact
+/// call per piece (OD #995).
+mod perfect_kernel_batchp22b;
+/// P23b: Option C P2-3b — the queue's `author:N` positions count names by the reading's cut at the `\and` family, read by
+/// every consumer and the resolver: a whole-list `\author`'s e-mail line one address a name (OD #995).
+mod perfect_kernel_batchp23b;
+/// P24: Option C P2-4 — eptcs's author block cut where its separators are by meaning (`argument_separators`), not by
+/// spelling (OD #991, #995).
+mod perfect_kernel_batchp24;
+/// P24b: P24's fix round — a separator's own tokens (`ArgSeparator::span`) leave a glued `\end{tabular}` to the table;
+/// one field for eptcs's cells and the queue's name reader (OD #991 (8), #993, #995).
+mod perfect_kernel_batchp24b;
+mod perfect_kernel_batchp25;
+/// P26: Option C P2-6 — the stores' `\and` gates read an argument's separators by meaning (`argument_separators`), not
+/// by spelling: a rerouted in-place line, a displaced store's list, the numbered store route (OD #995).
+mod perfect_kernel_batchp26;
+/// P27: Option C P2-7 — authblk's `\author` gates ask the separator query for a kernel `\and` by meaning, and the
+/// reading's `annotate=run:<cap>` counts `\author` calls (OD #993, #995).
+mod perfect_kernel_batchp27;
+/// P27b: Option C P2-7's S8 half — a no-block flush holding a class's row contact (`_share`) is written by the emitter;
+/// `share_row_contacts` deleted (OD #901).
+mod perfect_kernel_batchp27b;
+/// P28: Option C P2-8a — IEEEtran's `\author` reads the body by meaning before its route and grid: a document macro
+/// holding names blocks, `\and` or `\\` expanded (`blocks_as_printed`), a block command's `\let` copy, the grid's
+/// columns by the separator query (OD #128, #995).
+mod perfect_kernel_batchp28;
+/// P3: Option C P3 — a name a macro call prints with its marks is written as the call whole (its expansion), never by
+/// text nor from inside the call with the marks argument as the name's text (OD #993).
+mod perfect_kernel_batchp3;
+/// P5a: an `\IEEEmembership` grade is the reading's contact event, its owner the name it follows, however spelled
+/// (OD #1016).
+mod perfect_kernel_batchp5a;
+/// P5b: a call or column printing only a collaboration framed for the names before it is their contact, its framing
+/// read from the digested line (OD #967).
+mod perfect_kernel_batchp5b;
+/// P5c: `placed_contact_owner`'s surname match reads the queued names as they print, the rehearsal's words (OD #495).
+mod perfect_kernel_batchp5c;
+/// P6b: one collaboration vocabulary, one remark predicate (`collaboration_remark`): a name's remark speaks for a group
+/// in any of its spellings.
+mod perfect_kernel_batchp6b;
+mod perfect_kernel_batchp6e2;
+mod perfect_kernel_batchpb;
+/// PC3: two false undefined-command Errors of the frontmatter rehearsal — a title-code command after an e-mail
+/// keeps its argument (pazh), a class's own `\email` reads its argument unexpanded (1802.01191); OD #983.
+mod perfect_kernel_batchpc3;
+mod perfect_kernel_batchpsf1;
+/// QA47A: `\begin{document}` runs the kernel's begin-document lists, so `cmd/<name>/<hook>` hooks patch TeX macros;
+/// a binding's hook is a counted Warning (BM Q3.3).
+mod perfect_kernel_batchqa47a;
+mod perfect_kernel_batchr1;
+/// RA0: a title-code definee declared with no parameters (`\newcommand`'s `[0]`) is taken by the name it follows;
+/// OD #983.
+mod perfect_kernel_batchra0;
+/// RB1, RB1c: REVTeX's `\maketitle` switches off an author block the document repeats after it, from its first
+/// `\author` on (revtex4_cls.rs `switch_off_author_block_after_maketitle`).
+mod perfect_kernel_batchrb1;
+mod perfect_kernel_batchrc1;
+/// RG1: a `\par` in a text group opened mid-paragraph keeps the paragraph, as Perl's open-brace box.
+mod perfect_kernel_batchrg1;
+mod perfect_kernel_batchrv1;
+mod perfect_kernel_batchs5;
+/// SBX1: the 2605/2606 sandbox reruns' regressions — linenoaa's `{multline}`, fairmeta's one `\author{}`, group authors.
+mod perfect_kernel_batchsbx1;
+/// SEP1: the rehearsal binds a `\let` copy of `\and`, `\\`, `\thanks` or `\footnote` by its meaning, as the command it
+/// copies (`\let\nx\and` parts the names; OD #994).
+mod perfect_kernel_batchsep1;
+/// ST1: RED catalog repros already matching their `expect` on int159a, green rows of two concern tables.
+mod perfect_kernel_batchst1;
+/// ST3: a document converted after others on one thread (a persistent cortex_worker's papers) is the document alone.
+mod perfect_kernel_batchst3;
+mod perfect_kernel_batchta1;
+mod perfect_kernel_batchunc;
+/// VARW: a varwidth box measures its widest line (algxpar-doc, 2401.12710); KNOWN_PERL_ERRORS #1234.
+mod perfect_kernel_batchvarw;
+mod perfect_kernel_batchz1;
+mod perfect_kernel_batchz14;
+mod perfect_kernel_batchz18c;
+mod perfect_kernel_batchz18d;
+mod perfect_kernel_batchz18e;
+mod perfect_kernel_batchz18g;
+mod perfect_kernel_batchz18h;
+mod perfect_kernel_batchz18i;
+mod perfect_kernel_batchz18k;
+mod perfect_kernel_batchz18l;
+/// Z18o: bundle int155a's REDs — an unmarked line's stopgap carrier no e-mail owner, a mailbox link line an e-mail, a
+/// marked whole-bracket piece no name, the own `\email`'s runaway; OD #992, #991, #983.
+mod perfect_kernel_batchz18o;
+/// Z18o2: the stopgap tag's scope — a run that is a whole group in print keeps its owner, the flush's Link step reads the
+/// tag; OD #992.
+mod perfect_kernel_batchz18o2;
+mod perfect_kernel_batchz2;
+mod perfect_kernel_batchz3;
+mod perfect_kernel_batchz4;
+mod perfect_kernel_batchz4b;
+mod perfect_kernel_gemini;
+mod pgfkeys_native_accessors;
+mod raw_class_stores_reroute_to_frontmatter;
+mod stream_a_recall;
+mod svg_nested_picture;
+mod sweep125_roots;
+mod wrapstuff_inline_float;
+
+/// Guards for the sandbox-arxiv-2605 rerun regression clusters (2026-09-19).
+/// Each reproduces a cluster of arXiv papers that regressed against the
+/// 2026-08-23 baseline and asserts the fix. Root-cause notes:
+/// `~/data/pk_agents/w23/regress_2605/CLUSTERS.md`.
+#[cfg(test)]
+mod regress_2605_clusters;
+
+/// The TeX Live 2025 class census (2026-09-24, `docs/perfect_kernel/archive/LEDGER_PHASE56_2026-09-27.md`):
+/// every TL class in a hello-world document, raw-loaded. Each guard is the
+/// minimal repro of one failure cluster among the usable classes.
+mod class_census;

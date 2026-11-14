@@ -1,0 +1,11 @@
+% A published class whose name a binding's name prefixes is a class of its own, read raw: `bookest` is no `book`.
+% witness: bookest/bookestdoc-en, gtrcrd/gtrcrd-doc, subsupscripts/SubSupScripts (`\setoddheadtext`, `\setleftmark`,
+%          `\setbibname`), bookcover/bookcover-example1 and -2, beamerswitch/beamerswitch-example; sweep #150
+% oracle:  pdflatex (TL 2025) clean
+% engines: int140a under `rawclasses` takes `book`: `\setoddheadtext` undefined; sweep #149 read the class raw
+% expect:  0 errors; bookest.cls processed, no "Can't find binding"
+\documentclass{bookest}
+\setoddheadtext{Head}
+\begin{document}
+Body.
+\end{document}

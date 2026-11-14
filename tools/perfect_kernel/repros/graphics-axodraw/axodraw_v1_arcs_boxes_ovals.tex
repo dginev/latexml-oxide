@@ -1,0 +1,26 @@
+% witness: run 336 `\Text` undefined (axodraw v1): `\CArc` 0904.3241, 0808.1380; `\ArrowArc` 0802.1498,
+%          0809.0800; `\DashCArc` 0709.2086, 0910.5957; `\GCirc` 0901.2926; `\GBox` hep-ph0504246;
+%          `\GOval`/`\Oval` hep-ph0206226
+% oracle:  latex + dvips with the v1 axodraw.sty hep-ph9702393 ships: 0 errors; a full circle, a half arc
+%          with its mid-arrow pointing anticlockwise, a dashed three-quarter arc, a 0.7-gray disc, a gray
+%          box, a rotated ellipse, a line; pdflatex with that file: 0 errors, nothing drawn
+% engines: rust 64qb = Error:undefined:\CArc …, nothing drawn; Perl = the same (no axodraw binding)
+% expect:  0 errors; `ltx:circle` (the 360-degree arc), `ltx:arc` angle1=0 angle2=180, a dashed `ltx:arc`,
+%          `ltx:circle fill=#b3b3b3`, `ltx:rect fill=#808080`, `ltx:ellipse` rotated, an `ltx:line`
+% status:  RED (64qb) -> GREEN (64w)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{axodraw}
+\begin{document}
+\begin{picture}(300,100)(0,0)
+\SetWidth{1}
+\CArc(30,70)(20,0,360)
+\ArrowArc(90,70)(20,0,180)
+\DashCArc(150,70)(20,0,270){3}
+\SetWidth{0.5}
+\GCirc(30,20){15}{0.7}
+\GBox(60,5)(100,35){0.5}
+\Oval(150,20)(10,25)(30)
+\Line(200,10)(280,90)
+\end{picture}
+\end{document}

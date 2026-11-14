@@ -1,0 +1,17 @@
+% witness: 2010.00445, cond-mat0406419, 0708.1700, hep-ph0612159 (367 of run 336's papers): an esl.dtx wrapper class
+%          (phbauth, phc-proc4-auth, LT23auth, PHYEAUTH, cpcauth…) on elsart; side file eslwrap-auth.cls
+% oracle:  pdflatex 0 errors (elsart.cls:35, :50, :90 declare `\if@TwoColumn`, `\if@ussrhead`, `\@frontmatterwidth`)
+% engines: rust 64g = Error:undefined \if@ussrhead, \if@TwoColumn, \@frontmatterwidth (the elsart binding, a copy of
+%          Perl's elsart.cls.ltxml, never declares them; the wrapper raw since 62k); Perl --includestyles the same
+% expect:  0 errors; title, author, abstract and section kept
+% status:  RED (64g) -> GREEN (64h)
+\documentclass{eslwrap-auth}
+\begin{document}
+\begin{frontmatter}
+\title{A title}
+\author{A. Author}
+\begin{abstract}Some abstract.\end{abstract}
+\end{frontmatter}
+\section{Intro}
+Text.
+\end{document}

@@ -1,0 +1,27 @@
+% witness: 0706.4410 Figs 3, 5 (`\hspace{1in}` between two 0.45\textwidth panels: two rows in the PDF, one in int65a);
+%          1312.0675 Figs 5, 7 (negative `\hspace` between `0.45\columnwidth` sub-figures); 1809.02562 (`\quad`)
+% oracle:  pdflatex 0 errors; Figure 1 one panel per row, Figures 2 and 3 one row of three
+% engines: rust int65a = one row in all three (the glue between panels is digested in vertical mode and leaves
+%          nothing in the tree); Perl 0.8.8 the same
+% expect:  0 errors, 0 warnings; Figure 1 an `ltx:break` between its panels, Figures 2 and 3 none
+% status:  RED (int65a) -> GREEN (78x, OXIDIZED_DESIGN_DIVERGENCES #885: the stated glue counts towards the row,
+%          `\hfill` and plain spaces count nothing)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\begin{figure}
+\centering
+\rule{0.45\textwidth}{1cm}\hspace{1in}\rule{0.45\textwidth}{1cm}
+\caption{Stated glue past the line.}
+\end{figure}
+\begin{figure}
+\centering
+\rule{0.3\textwidth}{1cm}\hfill\rule{0.3\textwidth}{1cm}\hfill\rule{0.3\textwidth}{1cm}
+\caption{Fill glue counts nothing.}
+\end{figure}
+\begin{figure}
+\centering
+\rule{0.3\textwidth}{1cm}\quad\rule{0.3\textwidth}{1cm}\quad\rule{0.3\textwidth}{1cm}
+\caption{Quads within the line.}
+\end{figure}
+\end{document}

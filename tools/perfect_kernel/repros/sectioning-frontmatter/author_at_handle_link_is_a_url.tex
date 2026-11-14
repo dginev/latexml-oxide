@@ -1,0 +1,13 @@
+% witness: the r6 re-review of batch 77p (finding 6, probe w21)
+% oracle:  pdflatex 0 errors: two names, the institution, "Contact: @aable" linked to a profile page
+% engines: rust 77p r9 = 0 errors; "@aable" an e-mail contact of Ann Able
+% expect:  0 errors, 0 warnings; the line a URL contact of the block, no e-mail
+% status:  RED (77p r9) -> GREEN (77p r10)
+\documentclass{article}
+\usepackage{hyperref}
+\title{T}
+\author{Ann Able$^1$, Bob Baker$^1$ \\ $^1$Univ A \\ Contact: \href{https://x.com/aable}{@aable}}
+\begin{document}
+\maketitle
+Text.
+\end{document}

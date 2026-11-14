@@ -1,0 +1,25 @@
+% witness: 2310.07652, 2406.17962 (soul `\hl{… \\ …}` in a `p{}` table cell; brk86)
+% oracle:  pdflatex 0 errors: soul.sty:263/348 sets a `\\` in its argument as a line break
+%          (`\unskip\nobreak\hfil\break`), never a row end; both lines of each highlight print, "Table 1" resolves
+% engines: rust int88a = 10 errors ("\lx@texthl@color Attempt to close a group that switched to mode horizontal",
+%          "\lx@tabular@p@ Attempt to end mode internal_vertical"), the second lines and the table lost
+% expect:  0 errors, 0 warnings; both lines of each highlight, a break between them, the reference resolved
+% status:  RED (int88a) -> GREEN (79q)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{xcolor,soul,booktabs}
+\begin{document}
+\begin{table}
+\begin{tabular}{p{\linewidth}}
+\toprule
+\textbf{Prompt:} \\
+\sethlcolor{lightgray} \hl{First line of the prompt. \\
+Second line of the prompt.}\\
+\textasciigrave\textasciigrave\textasciigrave \ul{Single-column perspective. \\
+Under the line.}\\
+\bottomrule
+\end{tabular}
+\caption{A prompt.}\label{tab:prompt}
+\end{table}
+See Table~\ref{tab:prompt}.
+\end{document}

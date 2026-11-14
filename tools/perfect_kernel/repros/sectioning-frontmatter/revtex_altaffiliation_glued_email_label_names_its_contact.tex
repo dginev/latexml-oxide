@@ -1,0 +1,31 @@
+% mechanism: the entry-name join's glued-label path under REVTeX (defs/frontmatter_api/kind.rs, the `(Some((label,
+%   rest)), name)` arm; the sibling of aa_mail_glued_email_label_joins_the_class_name.tex): an
+%   `\altaffiliation[Corresponding author: ]{Email:zz@x.org}` whose label is glued to its address has the label split
+%   off by `email_line_label`, joined after the class's name, its optional argument, which the role-note step makes
+%   Ann's correspondence note, leaving "Email: " the contact's name and the address its content, as the spaced
+%   `Email: zz@x.org` gives. Before MB1 the line fell to the unnamed address call and "Corresponding author" was
+%   printed nowhere; until GL1 the label stayed in the content beside the name, "Email: Email:zz@x.org" in HTML. Perl
+%   reads no e-mail in an `\altaffiliation`
+% witness: none in the corpus (synthetic, review revMB1 S1, probe p/r2; the glued shape's witnesses hep-ph9606235,
+%          astro-ph0001190, hep-ph0411269, 2206.00543)
+% oracle:  pdflatex (TL 2025) 0 errors: "Ann Able and Bob Baker", "Univ A∗", footnote "∗ Corresponding author:
+%          Email:zz@x.org"
+% engines: rust int156a (27ca6acecc) = Ann's <contact name="Email: " role="email">, "Corresponding author" lost;
+%          rust int157a (d86f58e8e2) = the note, then <contact name="Email: " role="email">Email:zz@x.org</contact>
+% expect:  0 errors, 0 warnings; Ann Able: Univ A, <note role="thanks">Corresponding author</note> and the e-mail
+%          contact zz@x.org named "Email: "; Bob Baker: Univ A
+% status:  RED (int157a) -> GREEN (GL1) — perfect_kernel_batchmb2::glued_label_line_names_its_contacts
+% preload: ar5iv.sty
+\documentclass{revtex4-2}
+\usepackage{hyperref}
+\begin{document}
+\title{T}
+\author{Ann Able}
+\affiliation{Univ A}
+\altaffiliation[Corresponding author: ]{Email:zz@x.org}
+\author{Bob Baker}
+\affiliation{Univ A}
+\begin{abstract}A.\end{abstract}
+\maketitle
+Text.
+\end{document}

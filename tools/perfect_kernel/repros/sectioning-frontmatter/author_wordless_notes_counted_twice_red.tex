@@ -1,0 +1,15 @@
+% mechanism: UNC's `emit.rs::unwritten_notes` lists a wordless note once per reader that meets it: a `\footnote{\dots}` on one name
+%   and a marked `\thanks{$^{*}$}` on another give "3 notes … \footnote{\dots} \thanks{$^{*}$} \thanks{$^{*}$}" for 2 notes (either
+%   alone counts right). Over-count, the safe side. Fix: deduplicate by the note's source (index, span).
+% witness: synthetic (revUNC q4_footnote; r4, r5 the singles)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 `!`
+% engines: rust UNC: the Warning names 3 notes; UNCbase: none counted
+% expect:  one Warning naming 2 notes
+% status:  RED (revUNC, int168a) — moves: post-merge (UNCD)
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{Ann Able\footnote{\dots} \and Bob Baker$^{*}$\thanks{$^{*}$}}
+\maketitle
+x
+\end{document}

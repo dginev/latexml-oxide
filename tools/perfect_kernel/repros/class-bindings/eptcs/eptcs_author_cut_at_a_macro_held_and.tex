@@ -1,0 +1,18 @@
+% mechanism: an eptcs `\author` with an `\institute` under each name and a macro (`\nx`) for the `\and` between them:
+%   the binding's cells (`eptcs_cls.rs` `eptcs_author_calls`) see one cell; the block goes whole to the reading
+%   (OD #991), which cuts it at the rehearsed `Sep(And)`, each institute its own author's
+% witness: bindsplit probe ep1 (int143b: the reading wrong too)
+% oracle:  pdflatex with eptcs.cls beside it (TL 2025, -no-shell-escape) 0 errors: "Ann Able" over "Univ A", "Bob
+%   Baker" over "Univ B"
+% engines: perl has no eptcs binding (OmniBus); int156a (MB1): Ann Able (Univ A), Bob Baker (Univ B)
+% expect:  0 errors, 0 warnings; creators Ann Able (Univ A), Bob Baker (Univ B)
+% status:  GREEN (int156a, before OC1; guard perfect_kernel_batchoc1)
+% preload: ar5iv.sty
+\documentclass{eptcs}
+\newcommand\nx{\and}
+\title{T}
+\author{Ann Able \institute{Univ A} \nx Bob Baker \institute{Univ B}}
+\begin{document}
+\maketitle
+Text.
+\end{document}

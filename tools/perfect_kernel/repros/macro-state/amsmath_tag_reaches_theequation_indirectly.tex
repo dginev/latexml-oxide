@@ -1,0 +1,18 @@
+% witness: 1208.5957, 1209.0051 (`\tag{\thesubeqn}`, \thesubeqn = \theequation\alph{subeqn}; 74 of run 336's
+%          PushbackLimit papers)
+% oracle:  pdflatex 0 errors; tags (0a) (0b)
+% engines: rust 64qb = Fatal PushbackLimit (\theequation redefined in terms of itself through \thesubeqn);
+%          rust 64p = 0; Perl 0.8.8 = 4 errors
+% expect:  tags (0a) and (0b): the tag text is typeset with \theequation the counter's (amsmath.sty:1224-1227)
+% status:  RED (64qb) -> GREEN (64p)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{amsmath}
+\newcounter{subeqn}\renewcommand{\thesubeqn}{\theequation\alph{subeqn}}
+\newcommand{\subeqn}{\refstepcounter{subeqn}\tag{\thesubeqn}}
+\begin{document}
+\begin{align}
+a&=b \subeqn\\
+c&=d \subeqn
+\end{align}
+\end{document}

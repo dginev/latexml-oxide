@@ -1,0 +1,25 @@
+% witness: schule/schule (2 malformed:ltx:item), base/source2e (6, same signature)
+% oracle: pdflatex schule.tex -> exit 0 (structure valid; the trivlist-in-list is legal LaTeX)
+% engines: pdflatex clean; latexml_oxide.sweep66 = RED; Perl same-host = SAME red on this kernel-only MWE
+% expect: 0 malformed:ltx:item; the outer <ltx:itemize> keeps items i3/i4 (never a section child)
+% status: GREEN (batch 56be, 2026-09-09)
+% mechanism: \trivlist opens <ltx:itemize _autoclose='1'>; a leading \par inside its item runs
+%   \lx@normal@par -> maybe_close_element("ltx:para") whose is_closeable climb crosses the
+%   _autoclose trivlist itemize (can_auto_close true) + its item and closes the OUTER list-item's
+%   <ltx:para>, collapsing the trivlist itemize; then \endtrivlist's maybe_close_element("ltx:itemize")
+%   finds the OUTER \list itemize and closes it -> later \item orphan.
+%   Perl-shared: latex_constructs.pool.ltxml:1662 (trivlist _autoclose) + :1666 (\endtrivlist
+%   maybeCloseElement('ltx:itemize')).  Real doc: cnltx-example {example}[outside=true] ->
+%   \cnltx@example@input = \begingroup\trivlist\item\relax ... \par ... \endtrivlist\endgroup
+%   (cnltx-example.sty:628-651) between low-level \list items (cnltx-doc.cls:487 \cnltxlist=\list).
+\documentclass{article}
+\makeatletter
+\begin{document}
+\subsubsection*{T}
+\begin{list}{}{}
+\item Kosy
+\begingroup\trivlist\item\relax\par\endtrivlist\endgroup
+\item LGS
+\item third
+\end{list}
+\end{document}

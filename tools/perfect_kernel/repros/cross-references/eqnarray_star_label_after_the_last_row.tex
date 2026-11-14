@@ -1,0 +1,16 @@
+% witness: 1206.1393 (imsart: `… <+\infty.\nonumber\\ \label{c} \end{eqnarray*}`, `(\ref{c})` twice dangling)
+% oracle:  pdflatex: `\eqnarray` steps the counter and sets `\@currentlabel` at its start, starred or not
+%          (latex.ltx:15750-15753, :15798): "See 1." — the label after the final `\\` resolves
+% engines: rust int100c = the label's `\lx@hidden@noalign` after the last row had no next cell to carry it and was
+%          dropped at the alignment's end (Perl TeX_Tables.pool.ltxml:396-401 alike, KNOWN_PERL_ERRORS #1182)
+% expect:  0 errors, 0 warnings; the eqnarray*'s row labelled c, its \ref resolved
+% status:  RED (int100c) -> GREEN (80l: tex_tables.rs keeps trailing preserved material on the last row)
+\documentclass{article}
+\begin{document}
+\section{One}
+\begin{eqnarray*}
+z &=& 3 \\
+  \label{c}
+\end{eqnarray*}
+See \ref{c}.
+\end{document}

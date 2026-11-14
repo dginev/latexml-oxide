@@ -1,0 +1,12 @@
+% witness: 1105.4905, 0909.2464 (\newcommand{\shorttitle}{…} then \title[\shorttitle]{…})
+% oracle:  pdflatex 0 errors (latex.ltx has no \shorttitle)
+% engines: rust 66b1 = Fatal:Timeout:Recursion (the kernel's \shorttitle→\@shorttitle alias refused the document's \newcommand); perl 0
+% expect:  0 errors; the title "A long title"
+% status:  GREEN (66d)
+\documentclass{article}
+\newcommand{\shorttitle}{Short title}
+\begin{document}
+\title[\shorttitle]{A long title}
+\maketitle
+Text.
+\end{document}

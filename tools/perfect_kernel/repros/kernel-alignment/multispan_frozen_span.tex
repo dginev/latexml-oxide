@@ -1,0 +1,16 @@
+% witness: none (latex.ltx:16749-16753 `\multispan` → `\sp@n`, the dump's raw definition)
+% oracle:  pdflatex 3 errors (`\sp@n` runs the author's `\span`); ruling 2026-10-11: the span is kept
+% engines: rust 65b r1 = 1 error (`\omit cannot be used here`)
+% expect:  0 errors, 1 warning; "Joint head" colspan=2 (no template, as `\omit` gives) | "Solo"
+% status:  RED (65b r1) -> GREEN (65b r2); guard perfect_kernel_batch65::multispan_spans_with_the_frozen_span
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{amsmath}
+\renewcommand{\span}{\operatorname{span}}
+\begin{document}
+Let $V=\span\{v_1,v_2\}$.
+\begin{tabular}{|c|c|c|}
+\multispan{2}\hfil Joint head\hfil & Solo \\
+alpha & beta & gamma \\
+\end{tabular}
+\end{document}

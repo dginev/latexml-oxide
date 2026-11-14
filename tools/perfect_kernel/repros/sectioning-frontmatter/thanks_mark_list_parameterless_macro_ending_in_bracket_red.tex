@@ -1,0 +1,15 @@
+% `notes::takes_arguments` reads "hands on an optional argument" from the spelling: a parameterless macro whose body
+%   ends in `]` (`\newcommand\univ{Univ [Main]}`) counts as taking arguments, so a piece ending on it would take a `[…]` or
+%   `{…}` after it as its argument. No harm today: the piece ending on `\univ` here takes nothing after it. Fix: read
+%   whether the expansion's tail is in call position (tcolorbox's `\tcbox[…]`), by meaning (TKAR)
+% witness: synthetic (revSBX2 p/e_bracket_macro.tex)
+% oracle:  pdflatex 0 `!`: footnote "∗1 Univ [Main] Lab 2 Univ [Main]"
+% engines: rust CAU1 = SBX2: 0 E 0 W, Bob Baker's note "1 Univ [Main] Lab 2 Univ [Main]" (the decision unread)
+% expect:  0 errors, 0 warnings; `takes_arguments(\univ)` false
+% status:  RED (SBX2: the predicate) — moves: post-merge (TKAR)
+% preload: ar5iv.sty
+\documentclass{article}
+\newcommand\univ{Univ [Main]}
+\title{T}
+\author{Ann Able$^{1}$, Bob Baker$^{2}$\thanks{$^{1}$\univ{} Lab $^{2}$\univ}}
+\begin{document}\maketitle Hi.\end{document}

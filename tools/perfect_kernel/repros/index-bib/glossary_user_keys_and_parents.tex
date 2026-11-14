@@ -1,0 +1,33 @@
+% glossaries' `\glsaddkey` adds display keys (glossaries.sty:2748; glosmathtools.sty:185 `descseclang`, a
+% second-language description its glossary style prints) that the binding's fixed field list (Perl
+% glossaries.sty.ltxml:56-82) never recorded, and makeglossaries lists the parent of every listed entry with its
+% children under it (`parent=`, `\subglossentry`), where the glossary listed the referenced entries only, flat (Perl
+% MakeIndex.pm:467-468): the "Latin symbols (Symboles latins)" heading and every French description were lost
+% (glosmathtools sample recall 89 %). PERL-ORIGIN (KNOWN_PERL_ERRORS #442). Now the display keys are recorded (the
+% `\glsaddstoragekey` data keys not: glosmathtools' `dot`, glossaries-extra's `category`), parents listed, children
+% nested (`ltx_glossary_level_1`) even when they sort before their parent (`mu`, sort 12, under `greek`, sort 2),
+% display-key phrases set as classed text (`ltx_glossary_descseclang`).
+% status:  GREEN 60i; guard glossary_refs_post::glossary_user_keys_and_parents
+% oracle:  pdflatex → makeglossaries → pdflatex, 0 errors: "Latin symbols (Symboles latins)" / "d diameter (diametre)"
+%          / "m mass (masse)" / "Greek symbols (Symboles grecs)" / "µ viscosity (viscosite)" / "Vectors (Vecteurs)" /
+%          "v velocity (vitesse)"; no operator entries
+% engines: rust 60h, Perl 0.8.8: "d diameter" / "m mass" / "µ viscosity" / "v velocity" only
+% expect:  0 errors, 0 warnings; latin, d, m, greek, mu, vectors, v, each child classed ltx_glossary_level_1 and each
+%          entry with its descseclang text; no operator or op.dot entry, no `dot` phrase
+\documentclass{article}
+\usepackage{glosmathtools}
+\makeglossaries
+\setglossarystyle{nomencl-L1L2}
+\newglossaryentry{latin}{name={latin},description={Latin symbols},descseclang={Symboles latins},sort=1}
+\newglosentrymath{m}{m}{description={mass},descseclang={masse},sort=m,parent=latin}
+\newglosentrymath{d}{d}{description={diameter},descseclang={diametre},sort=d,parent=latin}
+\newglossaryentry{greek}{name={greek},description={Greek symbols},descseclang={Symboles grecs},sort=2}
+\newglosentrymath{mu}{\mu}{description={viscosity},descseclang={viscosite},sort=12,parent=greek}
+\newglossaryentry{vectors}{name={vectors},description={Vectors},descseclang={Vecteurs},sort=3}
+\newglosentrymath{v}{v}{description={velocity},descseclang={vitesse},sort=v,parent=vectors}
+\newglossaryentry{operator}{name={operator},description={Operators},descseclang={Operateurs},sort=5}
+\newglosentrymath{op.dot}{\dot{\bullet}}{description={flow rate},descseclang={debit},parent=operator}
+\begin{document}
+Symbols \gls{m}, \gls{d}, \gls{mu} and \gls{v}.
+\printglossary[title=Nomenclature]
+\end{document}

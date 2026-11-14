@@ -1,0 +1,17 @@
+% witness: cond-mat9607130 (REVTeX 3 \figure{N} caption lines)
+% oracle:  pdflatex 0 errors with the REVTeX 3.1 files shipped in arXiv zips (aps.sty:614-630: without `floats`, \figure opens no group)
+% engines: rust 64w 1E+1W -> 64y r2 1E -> 64y 0/0 (Info); Perl 3E
+% expect:  0 errors 0 warnings
+% status:  GREEN (64y r3); guard perfect_kernel_batch64y::revtex3_figure_list_entry_closed_by_endgroup
+% preload: ar5iv.sty
+\documentstyle[aps,preprint]{revtex}
+\begin{document}
+Text.
+\begin{references}
+\bibitem{a} A reference.
+\end{references}
+\begingroup
+\figure{1} The first figure caption.
+\endgroup
+After.
+\end{document}

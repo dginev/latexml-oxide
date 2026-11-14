@@ -1,0 +1,30 @@
+% mechanism: latexdemo.sty:97-101's {DefineCode} wraps {filecontents*}[overwrite]{democode}
+%   (through \csname), and :159/:167 test \IfFileExists{democode.tex} before
+%   \lstinputlisting{democode} and \input{democode.tex}. \openout names the file
+%   democode.tex (tex.web §1374), so both tests are true; the store held the bare name,
+%   and every example was dropped at 0 errors. latexdemo itself loads mdframed (a stub,
+%   one warning) and kvoptions-patch (pdflatex's own warning), so this is its
+%   0-warning form (openout_latexdemo_printdemo.tex).
+% witness: latex4wp/latex4wp (52 DefineCode blocks)
+% oracle:  pdflatex 0 errors; "Code: Delta \emph{Echo} Result: Delta Echo", then Foxtrot/Golf
+% engines: rust=0 errors, an empty page (base 0d10215663, 2026-09-26)
+% expect:  0 errors, 0 warnings; each example's listing and result
+% status:  RED (56jt) -> GREEN (56jt)
+\documentclass{article}
+\usepackage{listings}
+\newenvironment{DefineCode}{\csname filecontents*\endcsname[overwrite]{democode}}%
+  {\csname endfilecontents*\endcsname}
+\newcommand\PrintDemo{%
+  \IfFileExists{democode.tex}{Code:\lstinputlisting{democode}}{}%
+  \IfFileExists{democode.tex}{Result: \input{democode.tex}}{}}
+\begin{document}
+\begin{DefineCode}
+Delta \emph{Echo}
+\end{DefineCode}
+\PrintDemo
+
+\begin{DefineCode}
+Foxtrot \textbf{Golf}
+\end{DefineCode}
+\PrintDemo
+\end{document}

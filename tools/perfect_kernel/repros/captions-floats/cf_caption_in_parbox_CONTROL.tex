@@ -1,0 +1,13 @@
+% CONTROL for cf_caption_in_box_panel: a \parbox holding ONLY the \caption and
+% being the float's SOLE panel collapses into the figure (figure retyped
+% "ltx_figure_panel ltx_parbox"), so the caption becomes a direct <ltx:figure>
+% child and floats cleanly. Legitimately CLEAN in b56d, pdflatex and Perl.
+% The malformed error appears only when the box is NOT the sole panel
+% (an \mbox/\framebox/second minipage precedes it) — see cf_caption_in_box_panel.
+% status: GREEN (b56d) — 0 errors.
+\documentclass{article}
+\begin{document}
+\begin{figure}
+\parbox{5cm}{\caption{Test caption}}
+\end{figure}
+\end{document}

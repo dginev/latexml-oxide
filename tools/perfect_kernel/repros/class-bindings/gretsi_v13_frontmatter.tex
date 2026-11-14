@@ -1,0 +1,24 @@
+% witness: 2304.10248, 2310.15635 (`\auteurs{\auteur{first}{last}{email}{mark}…}`, `\affils`, `\resume`, `\abstract`)
+% oracle:  pdflatex with 2304.10248's gretsi.cls (v1.3): "Mohamed SEDDIK1", "Maxime GUILLAUD2", "1 Technology Innovation
+%          Institute, Abu Dhabi", "2 Inria, Villeurbanne", "Résumé – Cet article…", "Abstract – This paper…"; 0 errors
+% engines: rust 67int10 = 1 error (undefined `\titre`; `\auteur` read as a four-argument name+notes, the surnames lost)
+% expect:  0 errors, 0 warnings; two authors with surname, e-mail and affiliation, the French abstract `xml:lang="fr"`
+% status:  RED (67int10) -> GREEN (68k)
+% preload: ar5iv.sty
+\documentclass[english]{gretsi}
+\titre{Hotelling Deflation}
+\auteurs{
+  \auteur{Mohamed}{Seddik}{mohamed.seddik@tii.ae}{1}
+  \auteur{Maxime}{Guillaud}{maxime.guillaud@inria.fr}{2}
+}
+\affils{
+  \affil{1}{Technology Innovation Institute, Abu Dhabi}
+  \affil{2}{Inria, Villeurbanne}
+}
+\resume{Cet article \'etudie la d\'eflation.}
+\abstract{This paper studies deflation.}
+\begin{document}
+\maketitle
+\section{Introduction}
+Body text.
+\end{document}

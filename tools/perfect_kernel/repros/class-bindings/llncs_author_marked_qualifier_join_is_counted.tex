@@ -1,0 +1,18 @@
+% mechanism: the reading joins a qualifier after a comma to the name before it (`Bob Baker, Jr.`); where both pieces
+%   carry a mark of their own the join is the safety net's counted Warning (`net::merged_names`: a separator its author
+%   block prints between names parts no creators), not a silent merge (OXIDIZED_DESIGN_DIVERGENCES #991)
+% witness: 2308.02720 (the class of review revZ18k B1: two marked pieces joined silently)
+% oracle:  pdflatex 0 errors; "Ann Able1, Bob Baker2, Jr.1" over "1 Univ One" and "2 Lab Two"
+% engines: rust int155a0, Z18k2 = "Bob Baker, Jr." with both affiliations, 0 warnings
+% expect:  0 errors, 1 warning (the safety net's, "Bob Baker | Jr."); Ann Able: Univ One; Bob Baker, Jr.: Univ One,
+%   Lab Two
+% status:  RED (int155a0, Z18k2: silent) -> GREEN (Z18k3)
+% preload: ar5iv.sty
+\documentclass{llncs}
+\begin{document}
+\title{T}
+\author{Ann Able\inst{1}, Bob Baker\inst{2}, Jr.\inst{1}}
+\institute{Univ One \and Lab Two}
+\maketitle
+Text.
+\end{document}

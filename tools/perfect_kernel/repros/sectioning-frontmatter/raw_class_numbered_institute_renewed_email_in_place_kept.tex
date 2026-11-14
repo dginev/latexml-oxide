@@ -1,0 +1,64 @@
+% mechanism: an e-mail line under a raw class's numbered `\institute` store entry two names request, the class's
+%   `\email` renewed by the document to print in place (`E-mail: \texttt{#1}`): the document's meaning, no longer the
+%   class's rerouted setter, prints the addresses in place (`classify::unprinted_email_unwrapped`), so the line goes back
+%   whole and its label is kept in the contacts, counted where placed twice
+% witness: synthetic (review revP23c's B1 on the numbered store)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "1 Univ A, Town", "E-mail: whgao@x.org, dwei@x.org", "2 Univ B"
+% engines: P23b: as expected; P23c (093cd11411): the label dropped, 1 warning; P23d: as expected
+% expect:  0 errors, 2 warnings (the plain text, words placed twice); each author's e-mail contact "E-mail: <address>"
+% status:  GREEN (P23d; guard perfect_kernel_batchp23b::a_raw_class_store_email_line_goes_to_the_authors_it_spells)
+% preload: ar5iv.sty
+\begin{filecontents*}[overwrite]{cjaainst.cls}
+\ProvidesClass{cjaainst}\LoadClass{article}
+\newcounter{inst}
+\newdimen\instindent
+\def\institute#1{\gdef\@institute{#1}}
+\def\institutename{\par
+ \begin{flushleft}
+ \begingroup
+ \parindent=0pt
+ \parskip=0pt
+ \setcounter{inst}{1}%
+ \def\and{\par\stepcounter{inst}%
+ \hangindent\instindent
+ \noindent
+ \hbox to\instindent{\hss$^{\theinst}$\enspace}\ignorespaces}%
+ \setbox0=\vbox{\def\thanks##1{}\@institute}
+ \ifnum\value{inst}>9\relax\setbox0=\hbox{$^{88}$\enspace}%
+                 \else\setbox0=\hbox{$^{8}$\enspace}\fi
+ \instindent=\wd0\relax
+ \ifnum\value{inst}=1\relax
+ \else
+   \parindent=0pt
+   \setcounter{inst}{1}%
+   \hangindent\instindent
+   \noindent
+   \hbox to\instindent{\hss$^{\theinst}$\enspace}\ignorespaces
+ \fi
+ \normalsize
+ \ignorespaces
+ \@institute\par
+ \end{flushleft}
+ \endgroup}
+\def\email#1{ \begingroup
+    \def\protect{\noexpand\protect\noexpand}
+    \xdef\@thanks {
+    \protect\footnotetext[0]{\unskip\hskip-1.5em{ $\star$ E-mail: \tt#1} }
+                  }
+    \endgroup\ignorespaces
+                }
+\def\@thanks{}
+\def\inst#1{\unskip$^{#1}$}
+\def\@maketitle{\newpage\noindent{\Large\@title\par}\vskip6pt
+  {\large\noindent\def\and{\unskip, }\ignorespaces\@author\par}\vskip6pt
+  \institutename}
+\end{filecontents*}
+\documentclass{cjaainst}
+\renewcommand{\email}[1]{E-mail: \texttt{#1}}
+\begin{document}
+\title{T}
+\author{Wei Gao\inst{1,2} \and Dan Wei\inst{1,2}}
+\institute{Univ A, Town\\ \email{whgao@x.org, dwei@x.org} \and Univ B}
+\maketitle
+Text.
+\end{document}

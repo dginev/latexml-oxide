@@ -1,0 +1,15 @@
+% mechanism: an entry's line of addresses goes with its call and its Kind step, the call whole (`kind_entry_addresses`, `\\lx@add@email[name=…]`): name and font kept
+% witness: 1312.4509, 0709.2122, 1202.0961
+% oracle:  pdflatex 0 errors; "Ann Able Univ A", "Town", "Email: ann@a.edu"
+% engines: rust S0: text items, "Email: " for a printed label; perl: no such step
+% expect:  0 errors, 0 warnings; entry with its break, e-mail contact
+% status:  GREEN (perfect_kernel_batchz4)
+% preload: ar5iv.sty
+\documentclass{IEEEtran}
+\begin{document}
+\title{T}
+\author{\IEEEauthorblockN{Ann Able}
+\IEEEauthorblockA{Univ A\\Town\\Email: ann@a.edu}}
+\maketitle
+Body.
+\end{document}

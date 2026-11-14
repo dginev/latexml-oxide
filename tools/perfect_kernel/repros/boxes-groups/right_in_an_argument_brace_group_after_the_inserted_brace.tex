@@ -1,0 +1,18 @@
+% witness: 65d review r3 probe b4 (round 4: not covered by the frame-debt rule, reported to the main session)
+% oracle:  pdflatex 2 errors ("Missing } inserted", "Extra }, or forgotten \endgroup" — \frac is
+%          {\begingroup#1\endgroup\over#2}, so the author's `}` meets the \begingroup group and is deleted)
+% engines: rust 65a 0 diagnostics, Math tex "\frac{\left({a\right)}{b}c}"; 65d round 4: "Missing } inserted" Warning,
+%          then the author's `}` closes the \frac argument's bounded frame (K9 group code \frac, a frame `}` cannot
+%          close in TeX terms) and \frac's own closer errs "Attempt to close a group that switched to mode math";
+%          Math tex "{\frac{\left({a}\right)}}{b}c"
+% expect:  the fraction a/b kept whole; one Warning pair as for a plain `{` group, no Error
+% preload: ar5iv.sty
+% status:  GREEN (65d round 5: the argument group carries a group code, so the `}` is deleted, "Extra }, or forgotten
+%          \endgroup"; guard perfect_kernel_batch65d::argument_group_owes_the_brace)
+\documentclass{article}
+\usepackage{amsmath}
+\begin{document}
+Before $\frac{\left( {a \right)}}{b} c$ d e.
+
+After para.
+\end{document}

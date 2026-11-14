@@ -1,0 +1,26 @@
+% mechanism: an unmarked `\affil` the `annotate=new` walk gives the last author while every author it reaches holds an
+%   affiliation already is its run's stopgap (`RUN_LEFTOVER`, OXIDIZED_DESIGN_DIVERGENCES #992) — except where the run is
+%   the whole group of names printed since the role's last call (`Resolver::print_group`): emulateapj prints each
+%   `\author` call's names with the `\affil`s after it, so Bob Baker's own call and `\affil` are a block of their own and
+%   the line after them is in it — the place ties the entry to him (Perl's `new`, Base_Utility.pool.ltxml:520-536)
+% witness: none in the corpus (synthetic; review revZ18o R-A, introduced by Z18o; 0 of the 1,166 aas census papers)
+% oracle:  pdflatex (TL 2025, emulateapj) 0 errors: "Ann Able1 / 1 Univ A / Bob Baker2 / 2 Univ B and / Email: zz@x.org",
+%          the address in Bob Baker's own block
+% engines: rust int155a4 = Bob Baker's e-mail; int156a0 (Z18o) = a nameless creator's, 0 warnings (silent)
+% expect:  0 errors, 0 warnings; Ann Able: 1 Univ A; Bob Baker: 2 Univ B, the e-mail zz@x.org named "Email:"
+% status:  RED (int156a0) -> GREEN (Z18o2)
+% preload: ar5iv.sty
+\documentclass{emulateapj}
+\usepackage{hyperref}
+\begin{document}
+\title{T}
+\author{Ann Able$^{1}$}
+\affil{$^1$Univ A}
+\author{Bob Baker$^{2}$}
+\affil{$^2$Univ B}
+\affil{Email: zz@x.org}
+\begin{abstract}A.\end{abstract}
+\maketitle
+\section{Intro}
+Text.
+\end{document}

@@ -1,0 +1,19 @@
+% status: GREEN
+% ROOT of typog-example's Fatal `Extra \else already saw \else for \ifmmode`
+% (typog.sty:480-481 \kernedhyphen: \raisebox{\ifx\typog@@optarg\typog@@auto
+% \typog@config@raisecapitalhyphen\else\typog@@optarg\typog@dim@unit\fi}
+% {\typog@hyphen} inside \ifmmode-else, used in \parbox at typog-example:720/722).
+% Reduced (no typog, no \ifmmode needed): a \ifx...\else...\fi inside a DIMENSION
+% argument within a \parbox body is processed TWICE for the same if_frame ->
+% "Extra \else already saw \else for \ifx" (conditional.rs:382). Requires all of:
+%  (a) \parbox (VBoxContents re-digestion) — \vbox and \mbox are CLEAN;
+%  (b) a DIMENSION scan of the conditional (\hspace/\raisebox/\setlength) — a
+%      bare \ifx (not in a dimen) is CLEAN;
+%  (c) the conditional has a \else — a single-branch \ifx...\fi is CLEAN.
+\documentclass{article}
+\makeatletter
+\newlength{\Lreg}\newlength{\U}\setlength{\U}{.001em}\def\a{0}\def\b{*}
+\makeatother
+\begin{document}
+\parbox[t]{0pt}{s\hspace{\ifx\a\b\Lreg\else\a\U\fi}e}
+\end{document}

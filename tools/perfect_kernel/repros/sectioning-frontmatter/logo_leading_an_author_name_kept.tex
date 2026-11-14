@@ -1,0 +1,14 @@
+% mechanism: a constructor printing text of its own (`\LaTeX`, sect03.rs) read as no ink by the observer's walkers, so a
+%   name it leads lost it silently; its template's text is ink (util_text.rs `printed_own_text`).
+% witness: amsldoc (TL manual, `\author{American Mathematical Society, \LaTeX\ Project}`); QA75S row 1 (v1)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 `!`: "LATEX Project"
+% engines: rust int171a base (4ce7fb16e7) 0 E 0 W: <personname>Project</personname>; audit1031 kept the logo (the reading declined)
+% expect:  0 E, 0 W; one creator, its personname the logo element and " Project"
+% status:  RED -> GREEN (LOGO1)
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{\LaTeX\ Project}
+\maketitle
+Body.
+\end{document}

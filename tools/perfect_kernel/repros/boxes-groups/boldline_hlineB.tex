@@ -1,0 +1,12 @@
+% witness: shipunov/boldline-ex-en (boldline.sty:13-21 \hlineB). oracle pdflatex 0.
+% status: GREEN (batch 55o: \noalign body executed to group end)
+% \hlineB=\noalign{\ifnum0=`}\fi\hrule\@height#1\arrayrulewidth\futurelet\reserved@a\@xhlineB{#1}} —
+% the real latex.ltx \hline brace-hack. See bl_rawhline_bracehack for the isolated kernel trigger.
+% V{} column and \clineB are CLEAN; only \hlineB (the brace-hack \noalign) breaks.
+\documentclass{article}\usepackage{array,boldline}
+\begin{document}
+\begin{tabular}{c|c|c}\hlineB{2.7}
+1st &First  &I  \\\hline
+2nd &Second &II \\\hlineB{2.7}
+\end{tabular}
+\end{document}

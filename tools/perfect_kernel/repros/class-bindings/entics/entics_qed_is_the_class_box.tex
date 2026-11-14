@@ -1,0 +1,13 @@
+% witness: 2204.12376 (entics.cls), 1905.09181 (entcs.cls): `\qed` after a proof (the class beside is a stand-in written
+%          for this repro: entics.cls may not be redistributed; its `\qed` is entics.cls:449's)
+% oracle:  pdflatex 0 errors: "By induction. □" (the class's `$\Box$`, an open box)
+% engines: rust int43a = the class's `$\Box$` (a formula); int44a (77t's entics binding) = "∎", elsart_support_core's
+%          `\qed` (\ltx@qed) loaded after the raw class replaced the class's
+% expect:  0 errors, 0 warnings; the open box, as a formula `\Box`
+% status:  RED (int44a) -> GREEN (int44 follow-up)
+% preload: ar5iv.sty
+\documentclass{entics}
+\usepackage{amssymb}
+\begin{document}
+By induction.\qed
+\end{document}

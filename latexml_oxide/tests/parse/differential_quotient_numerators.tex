@@ -1,0 +1,12 @@
+% A Leibniz numerator `d` may stand before an accented letter, a function or a group holding no `d`
+% (`numerator_of_a_quotient`): its quotient's denominator is a differential (the numerator's own reading, an operator
+% applied, is Open). Its own document: each row's pair is the others' document evidence (the 57cj.23.6 review).
+% witness: none (review probe L).
+% oracle:  Perl 0 errors: letters
+% expect:  0 errors; every denominator a differential
+\documentclass{article}
+\usepackage{amsmath,amssymb}
+\begin{document}
+$\frac{d(uv)}{dz}$ $\frac{d\left(q^2\right)}{dq}$ $\frac{d\vec r}{d\tau}$ $\frac{d^2\vec R}{dn^2}$ $\frac{d\langle A\rangle}{dw}$
+$\frac{d|\psi\rangle}{dh}$ $\frac{d\ln Z}{d\beta}$ $\frac{d\sin\phi}{d\phi}$
+\end{document}

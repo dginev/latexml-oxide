@@ -1,0 +1,19 @@
+% witness: jourcl/jourcl (jourcl.cls:145 \RecommendedPerson via \showreviewers, jourcl.tex:130)
+% oracle:  pdflatex 0 errors (jourcl.cls's unbalanced \ifx is only an "incomplete \if" WARNING)
+% engines: rust=1 perl=1 (2026-09-06)  -- SHARED (surpass approved: pdflatex clean)
+% expect:  0 errors; the \parbox emits an <ltx:inline-block> containing "N:Reviewer"
+% status:  GREEN (batch 56x, 2026-09-06)
+% mechanism: \RecommendedPerson opens \ifempty->\ifx but closes only its 2 nested \ifdim
+%   (3 \if, 3 \else, 2 \fi) -> \ifx DANGLES. Inside \lx@parbox the body #5 is digested
+%   (predigest_box_contents_in_mode), leaving that \ifx frame on the shared if_stack;
+%   the parbox wrapper's own \ifx.#2.\...\else\...\fi (sect12.rs:410) then has its \else
+%   mis-attributed to the leaked \ifx -> "Extra \else already saw \else for \ifx".
+%   Only \parbox triggers it (bare group / \mbox / center are clean).
+\documentclass{article}
+\makeatletter
+\def\ifempty#1{\def\temp{#1} \ifx\temp\empty }
+\def\RP#1{ \ifempty{#1} \else \sbox0{#1}\ifdim\wd0=0pt {} \else \ifdim0pt=\dimexpr\ht0+\dp0\relax {} \else {N:#1} \fi \fi }
+\makeatother
+\begin{document}
+\parbox{3cm}{ \RP{Reviewer} }
+\end{document}

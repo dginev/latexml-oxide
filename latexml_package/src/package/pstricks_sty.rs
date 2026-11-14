@@ -1,9 +1,17 @@
 //! pstricks.sty — PSTricks graphics package
-//! PSTricks requires DVI backend; we raw-load real pstricks.sty to set
-//! up internal state (\ifpst@useCalc, \ifpst@psfonts, …) then override
-//! user-facing drawing commands as HTML-friendly no-ops.
+//! We raw-load the real pstricks.sty to set up its internal state
+//! (\ifpst@useCalc, \ifpst@psfonts, the `\psset` keys, …), then
+//! pstricks_support (pstricks_support_sty.rs) overrides the drawing objects
+//! with `ltx:picture` constructors and defines `{pspicture}` and the
+//! placement commands, as Perl's does; this file the framing commands.
 //! Perl: pstricks.sty.ltxml (44L) + pstricks_support.sty.ltxml (1057L)
 use crate::prelude::*;
+
+/// Whether a framed box is drawn inside a `{pspicture}` (set locally by its
+/// `before_digest`), where the frame is a picture group.
+fn ps_frame_properties() -> Result<SymHashMap<Stored>> {
+  Ok(stored_map!("inpicture" => Stored::Bool(lookup_bool("lx_in_pspicture"))))
+}
 
 #[rustfmt::skip]
 LoadDefinitions!({
@@ -25,8 +33,15 @@ LoadDefinitions!({
   // `\tikzpicture{\node{\blue{…}}}`. Without it those CSes are undefined.
   RequirePackage!("pstricks_support");
 
-  // Core PSTricks parameter setting
-  def_macro_noop("\\psset{}")?;
+  // `\psset` is the real family-aware xkeyval one from the raw load above
+  // (pst-xkey.tex:60-63 `\def\psset{\@testopt\pss@t{\pst@famlist}}`,
+  // `\setkeys+[psset]{#1}{#2}`). A no-op here lost every key BODY: raw
+  // pst-node.tex:1248-1257 defines its `\psk@mnodesize`/`\psk@mnode`/
+  // `\psk@mcol` internals only as the side effect of `\psset[pst-node]
+  // {mnodesize=-1pt,…}`, and `\psm@endnode` (:1224) then read them —
+  // `{psmatrix}` under pstricks-add (dsptricks 101 errors, pst-eucl,
+  // egpeirce; Perl fails the same way with its constructor `\psset`).
+  // Guard: `perfect_kernel_batch56::psset_dispatches_family_key_bodies`.
 
   // Perl pstricks_support.sty.ltxml L849-861: `\newpsobject{name}{oldname}{keyval}`
   // dynamically defines `\<name>` to forward to `\<oldname>` with the saved
@@ -40,48 +55,57 @@ LoadDefinitions!({
   //   \newpsobject{PST@Border}{psline}{linewidth=.0015,linestyle=solid}
   // then later calls `\PST@Border(...)`. With the prior no-op stub
   // `\PST@Border` stayed undefined and Rust errored; Perl recovered.
+  //
+  // The key list is kept as TOKENS: Perl's `Explode(ToString(...))` (:850,
+  // :857) spelled a macro value out as characters, and pstricks.tex:1462-1466
+  // stores `#3` itself (`\addbefore@par{#3}`). egameps.sty:62-63
+  // `\newpsobject{branchline}{psline}{linecolor=\@branchcolor,…}` then set
+  // `linecolor` to the characters `\@branchcolor` (egameps 101 errors and a
+  // Fatal once `\psline` passes its keys to `\psset`).
   DefPrimitive!("\\newpsobject{}{}{}", sub[(newname, oldname, keyval)] {
     let newcs    = s!("\\{}", newname.to_string());
     let oldcs    = s!("\\{}", oldname.to_string());
-    let keystr   = keyval.to_string();
     let new_tok  = T_CS!(newcs);
     let params   = parse_parameters("OptionalMatch:* []", &new_tok, true)?;
     // Generated forwarder closure: read OptionalMatch:* and []; emit
     //   \<old>(*)([combined-key])
     // combined-key = saved-key + ',' + user-key (Perl L855).
     let oldcs_owned = oldcs;
-    let key_owned   = keystr;
+    let key_owned   = keyval.unlist_ref().clone();
     let body_closure: ExpansionBody = ExpansionBody::Closure(Rc::new(move |args| {
       let star = args.first().map(|a| !a.is_none()).unwrap_or(false);
-      let usr  = args.get(1)
-        .and_then(|a| match a.as_tokens() { Ok(Some(t)) => Some(t.to_string()), _ => None })
+      let usr: Vec<Token> = args.get(1)
+        .and_then(|a| match a.as_tokens() { Ok(Some(t)) => Some(t.unlist_ref().clone()), _ => None })
         .unwrap_or_default();
-      let combined = match (key_owned.is_empty(), usr.is_empty()) {
-        (false, false) => s!("{},{}", key_owned, usr),
-        (false, true)  => key_owned.clone(),
-        (true,  false) => usr,
-        (true,  true)  => String::new(),
-      };
+      let mut combined = key_owned.clone();
+      if !combined.is_empty() && !usr.is_empty() { combined.push(T_OTHER!(",")); }
+      combined.extend(usr);
       let mut out = vec![T_CS!(oldcs_owned.clone())];
       if star { out.push(T_OTHER!("*")); }
       if !combined.is_empty() {
         out.push(T_OTHER!("["));
-        out.extend(Explode!(combined));
+        out.extend(combined);
         out.push(T_OTHER!("]"));
       }
       // Perl L856 — emit the suffix only; the paren-coords tuple is
-      // consumed by the resolved \psline (or sibling) macro's own
-      // `\lx@psgobble@parens` chain.
+      // read by the resolved \psline (or sibling) object's own
+      // `PSCoordList` (pstricks_support_sty.rs).
       Ok(Tokens::new(out))
     }));
     def_macro(new_tok, params, Some(body_closure), None)?;
   });
 
-  def_macro_noop("\\newpsstyle{}{}")?;
+  // `\newpsstyle` stays the RAW pstricks.tex:638-645 definition (`\@namedef
+  // {pscs@<name>}{…}`): the raw `style` key (pstricks.tex:633-636) consults
+  // `\pscs@<name>` and raises "Custom style '<name>' undefined" otherwise. A
+  // noop stub here hid every `\newpsstyle` from the real `\psset` (a stub over
+  // a pure value computer is a bug; pst-calendar-doc 15→101 once `\rput`
+  // bodies were digested in batch 56ao; Perl's own `\newpsstyle` binding stores
+  // the style for its own `setGraphParams`). Batch 56as.
 
-  // PSCoordList-emulator. Perl's pstricks_support.sty.ltxml uses parameter
-  // type `PSCoordList` (variable-arity `(x,y)(x,y)...`) to absorb the paren
-  // tuples that follow most pstricks drawing commands. Without it those
+  // PSCoordList-emulator for objects that are not drawn (`\psaxes`,
+  // pst_plot_sty.rs); the pstricks objects themselves read Perl's
+  // `PSCoordList` (pstricks_support_sty.rs). Without it the `(x,y)(x,y)...`
   // tuples leak as raw text into the document — opening an `<ltx:p>` that
   // doesn't auto-close before subsequent block content (witness:
   // hep-ph0102192 minipage-in-figure failure). Recursive `\@ifnextchar`
@@ -101,114 +125,49 @@ LoadDefinitions!({
   RawTeX!("\\def\\lx@psgobble@shape{\\@ifnextchar\\bgroup{\\lx@psgobble@arrows}{\\lx@psgobble@parens}}");
   RawTeX!("\\def\\lx@psgobble@arrows#1{\\lx@psgobble@parens}");
 
-  // Drawing commands — all no-ops for HTML, but MUST consume their
-  // optional `{arrows}` + trailing `(x,y)…` coordinate tuples so nothing
-  // leaks as text. Open curves use `\lx@psgobble@shape` (optional arrows);
-  // closed shapes have no arrows so `\lx@psgobble@parens` (coords only)
-  // suffices and is equally arrow-tolerant via the peek.
-  DefMacro!("\\psline OptionalMatch:* []", "\\lx@psgobble@shape");
-  DefMacro!("\\psframe OptionalMatch:* []", "\\lx@psgobble@shape");
-  // \pscircle[par](x,y){radius}: one coord pair + braced radius (real pstricks
-  // `\def\pscircle(#1){#2}` style). Pair reads `(x,y)`, `{}` the radius.
-  DefMacro!("\\pscircle OptionalMatch:* [] Pair {}", "\\lx@psgobble@parens");
-  DefMacro!("\\psarc OptionalMatch:* []{}{}{}{}", "\\lx@psgobble@parens");
-  DefMacro!("\\psbezier OptionalMatch:* []", "\\lx@psgobble@shape");
-  DefMacro!("\\pscurve OptionalMatch:* []", "\\lx@psgobble@shape");
-  DefMacro!("\\psecurve OptionalMatch:* []", "\\lx@psgobble@shape");
-  DefMacro!("\\psccurve OptionalMatch:* []", "\\lx@psgobble@shape");
-  DefMacro!("\\parabola OptionalMatch:* []", "\\lx@psgobble@shape");
-  DefMacro!("\\pspolygon OptionalMatch:* []", "\\lx@psgobble@shape");
-  DefMacro!("\\psdots OptionalMatch:* []", "\\lx@psgobble@shape");
-  DefMacro!("\\psdot OptionalMatch:* []", "\\lx@psgobble@shape");
-  // \qline(x1,y1)(x2,y2) — two coordinate pairs, real pstricks
-  // `\def\qline(#1)(#2){…}` (pstricks.tex L2150). The `{}{}` signature read
-  // two brace/single-token args instead of the parenthesised coordinate
-  // pairs, so `\qline(0,0)(1,1)` mis-parsed (consumed `\qline` + `(` + `0`)
-  // and dumped the remainder `,0)(1,1)` as stray picture text.
-  def_macro_noop("\\qline Pair Pair")?;
-
-  // \Rput[refpoint](x,y){body} — placement at coords (real pstricks
-  // defines this in pstricks.tex / pst-code-put.tex, raw-loaded by
-  // Perl's `InputDefinitions('pstricks', noltxml=>1)`. Our Rust binding
-  // doesn't raw-load pstricks.sty, so define a HTML-shrug stub here:
-  // emit just the body, dropping placement. Witness: 0905.1885
-  // (`\Rput[t](0,0){$H_1$}`).
-  DefMacro!("\\Rput OptionalMatch:* [] Pair {}", "#4");
-  DefMacro!("\\rput OptionalMatch:* [] Pair {}", "#4");
-  DefMacro!("\\uput OptionalMatch:* {} [] Pair {}", "#5");
-  // \qdisk(x0,y0){radius} — coordinate pair + braced radius, real pstricks
-  // `\def\qdisk(#1)#2{…}` (pstricks.tex L3411). The old `{}{}` signature read
-  // two brace/single-token args instead of `(coord){radius}`, so
-  // `\qdisk(3,2.5){2.5pt}` consumed only `\qdisk` + `(` + `3` and left the
-  // remainder `,2.5){2.5pt}` as stray picture text. Following a `\put{…}`
-  // (whose `<ltx:text>` was still open), that stray text trapped every
-  // subsequent block (proof/theorem/section/bibliography) inside an
-  // un-closeable `<ltx:text>` → "ltx:* isn't allowed in <ltx:text>" cascade.
-  // Witness: arXiv:1112.2096 (`\put(2.5,1.4){$a$}` then `\qdisk(3,2.5){2.5pt}`
-  // inside `\mbox{\scalebox{\begin{pspicture}…}}`).
-  def_macro_noop("\\qdisk Pair {}")?;
-
-  // Text placement — drop both coords AND the text body. Perl's
-  // `DefPSConstructor` would wrap the labelled text inside a
-  // `<ltx:picture>`, so the picture auto-closes cleanly when block
-  // content (e.g. `\begin{minipage}` inside a figure) follows. Rust's
-  // pstricks port doesn't yet generate `<ltx:picture>`; emitting the
-  // text into the surrounding paragraph traps later block content
-  // inside an `<ltx:p>` (witness: hep-ph0102192 minipage-in-figure
-  // schema errors). Dropping the text body is a fidelity regression —
-  // visible labels like "cocktail"/"thermal" placed via `\rput` are
-  // lost — but it eliminates the cascading schema errors. TODO: port
-  // `DefPSConstructor` framework so pstricks output lives in
-  // `<ltx:picture>` and labels survive.
-  // Runaway-safe placement gobbler shared by \rput/\cput. Consumes (and
-  // drops) optional [refpoint], optional {angle}, optional (coords), and the
-  // mandatory {body}. The PREVIOUS def used a *delimited* `(#1)` parameter
-  // (`\def\lx@rput@parens(#1)#2{}`): for the braced-angle / no-coords form
-  // `\rput{angle}{body}` there is no `(`, so TeX scanned FORWARD eating
-  // tokens — including `\end{pspicture}` — until the next `(` anywhere
-  // later. That swallowed the env end, so pspicture's `end_mode` never fired
-  // and its mode-switch frame leaked, tripping `\endgroup Attempt to close a
-  // group that switched to mode restricted_horizontal` (witness 1505.07999 +
-  // the ~17-paper `\endgroup` mode-leak cluster). Perl avoids this with
-  // `OptionalBracketed`+`ZeroPSCoord` (coords optional); we PEEK for `(`
-  // instead of requiring it. (Body still dropped — see the <ltx:p>-cascade
-  // note above; faithful `<ltx:g>`-with-body is the separate TODO.)
-  RawTeX!("\\def\\lx@put@cb(#1)#2{}");      // (coords){body} -> drop
-  RawTeX!("\\def\\lx@put@bb#1{}");          // {body} -> drop (no coords)
-  RawTeX!("\\def\\lx@put@b#1{\\@ifnextchar(\\lx@put@cb\\lx@put@bb}"); // {angle}; then (coords)? body
-  RawTeX!("\\def\\lx@put@s{\\@ifnextchar(\\lx@put@cb\\lx@put@b}");    // ( -> coords; else {angle}|{body}
-  RawTeX!("\\def\\lx@put@opt[#1]{\\lx@put@s}");                       // [refpoint] -> continue
-  RawTeX!("\\def\\lx@put@start{\\@ifnextchar[\\lx@put@opt\\lx@put@s}");
-  RawTeX!("\\def\\rput{\\@ifstar\\lx@put@start\\lx@put@start}");
-  RawTeX!("\\def\\lx@uput@parens#1(#2)#3{}"); // {dist}(coord){text} → drop
-  RawTeX!("\\def\\lx@uput@bracket[#1]{\\lx@uput@parens}");
-  RawTeX!("\\def\\uput{\\@ifstar\\lx@uput@i\\lx@uput@i}");
-  RawTeX!("\\def\\lx@uput@i{\\@ifnextchar[\\lx@uput@bracket{\\lx@uput@parens}}");
-  // \cput shares the runaway-safe gobbler (same delimited-`(` hazard).
-  RawTeX!("\\def\\cput{\\@ifstar\\lx@put@start\\lx@put@start}");
-
   // Box commands
-  DefMacro!("\\psframebox OptionalMatch:* []{}", "#2");
-  DefMacro!("\\psshadowbox OptionalMatch:* []{}", "#2");
-  DefMacro!("\\pscirclebox OptionalMatch:* []{}", "#2");
-  DefMacro!("\\psovalbox OptionalMatch:* []{}", "#2");
-  DefMacro!("\\psdblframebox OptionalMatch:* []{}", "#2");
-
-  // Environment
-  DefEnvironment!("{pspicture} OptionalMatch:* []{}", "#body");
-  DefEnvironment!("{pspicture*} OptionalMatch:* []{}", "#body");
-
-  // Grid
-  def_macro_noop("\\psgrid OptionalMatch:* []{}")?;
+  // Framed boxes (Perl pstricks_support.sty.ltxml:955-980, `DefPSConstructor`):
+  // the `[<params>]` are set locally (only when given, Perl :501) and the BODY
+  // is framed. The former `#2` expansion printed the params and dropped the
+  // body (ffslides.cls:262-275 `\btext` via `\newpsobject{btextbox}{psframebox}`;
+  // pst-poker-doc, sesamath-doc-fr). Inside a `{pspicture}` the frame is a
+  // `framed` `ltx:g`, as in Perl. In running text it is an inline framed
+  // `ltx:text`, as pdflatex draws it: Perl's `ltx:g` there auto-opens an
+  // `ltx:picture` that swallows the rest of the paragraph, and the unsized SVG
+  // overprints it (DIVERGENCES #297). Fill and stroke colours are not modelled
+  // (no PS parameter state), hence no `fillframe` (its SVG filter is not ported).
+  // Guard: `perfect_kernel_batch56::psframebox_keeps_its_body`.
+  RawTeX!(r"\def\lx@ps@set#1{\if\relax\detokenize{#1}\relax\else\psset{#1}\fi}");
+  DefMacro!("\\psframebox OptionalMatch:* []{}", "{\\lx@ps@set{#2}\\lx@ps@mathflag\\lx@ps@framebox{#3}{\\lx@ps@mathbox{#3}}}");
+  DefMacro!("\\psdblframebox OptionalMatch:* []{}", "{\\lx@ps@set{#2}\\lx@ps@mathflag\\lx@ps@dblframebox{#3}{\\lx@ps@mathbox{#3}}}");
+  DefMacro!("\\psshadowbox OptionalMatch:* []{}", "{\\lx@ps@set{#2}\\lx@ps@mathflag\\lx@ps@shadowbox{#3}{\\lx@ps@mathbox{#3}}}");
+  DefMacro!("\\pscirclebox OptionalMatch:* []{}", "{\\lx@ps@set{#2}\\lx@ps@mathflag\\lx@ps@circlebox{#3}{\\lx@ps@mathbox{#3}}}");
+  DefMacro!("\\psovalbox OptionalMatch:* []{}", "{\\lx@ps@set{#2}\\lx@ps@mathflag\\lx@ps@ovalbox{#3}{\\lx@ps@mathbox{#3}}}");
+  DefConstructor!("\\lx@ps@framebox Undigested {}",
+    "?#inpicture(<ltx:g framed='true'>#2</ltx:g>)(<ltx:text framed='rectangle'>#2</ltx:text>)",
+    reversion => "\\psframebox{#1}", mode => "restricted_horizontal",
+    properties => sub[_args] { ps_frame_properties() });
+  DefConstructor!("\\lx@ps@dblframebox Undigested {}",
+    "?#inpicture(<ltx:g framed='true' doubleline='true'>#2</ltx:g>)(<ltx:text framed='rectangle'>#2</ltx:text>)",
+    reversion => "\\psdblframebox{#1}", mode => "restricted_horizontal",
+    properties => sub[_args] { ps_frame_properties() });
+  DefConstructor!("\\lx@ps@shadowbox Undigested {}",
+    "?#inpicture(<ltx:g framed='true' shadowbox='true'>#2</ltx:g>)(<ltx:text framed='rectangle'>#2</ltx:text>)",
+    reversion => "\\psshadowbox{#1}", mode => "restricted_horizontal",
+    properties => sub[_args] { ps_frame_properties() });
+  DefConstructor!("\\lx@ps@circlebox Undigested {}",
+    "?#inpicture(<ltx:g framed='true' frametype='circle'>#2</ltx:g>)(<ltx:text framed='rectangle'>#2</ltx:text>)",
+    reversion => "\\pscirclebox{#1}", mode => "restricted_horizontal",
+    properties => sub[_args] { ps_frame_properties() });
+  DefConstructor!("\\lx@ps@ovalbox Undigested {}",
+    "?#inpicture(<ltx:g framed='true' frametype='oval'>#2</ltx:g>)(<ltx:text framed='rectangle'>#2</ltx:text>)",
+    reversion => "\\psovalbox{#1}", mode => "restricted_horizontal",
+    properties => sub[_args] { ps_frame_properties() });
 
   // Misc
   def_macro_noop("\\pscustom OptionalMatch:* []{}")?;
   def_macro_noop("\\psclip{}")?;
   def_macro_noop("\\endpsclip")?;
-  def_macro_noop("\\SpecialCoor")?;
-  def_macro_noop("\\NormalCoor")?;
-  def_macro_noop("\\degrees[]")?;
-  def_macro_noop("\\radians")?;
 
   // \multips(rotation)(translation){n}{stuff} — pstricks "multiple put"
   // for drawing N copies of an object along a translated step. Rust port

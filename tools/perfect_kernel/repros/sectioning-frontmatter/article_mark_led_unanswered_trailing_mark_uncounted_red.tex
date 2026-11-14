@@ -1,0 +1,17 @@
+% mechanism: MLN1 reads a mark-led names line above the first setter; a name whose mark no line sets keeps the mark's
+%   text as the name's `<sup>` and the safety net does not count it (no word changes)
+% witness: synthetic (revMLN1 finding 1; body corrected by CL170: probes/redtrail2.tex)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "¹Ann Able, ²Bob Baker, ³Cat Cole" over "¹Sterrewacht
+%   Leiden", "²Zhipu AI"
+% engines: int169a: all three names lost into affiliations, silent; MLN1: three creators, Cat Cole's name holds
+%   `<sup>3</sup>`, 0 warnings
+% expect:  0 errors; three creators; Cat Cole's unanswered "3" counted by a Warning (or kept as her mark, not in the name)
+% status:  RED (MLN1): catalog only, no guard
+% moves:   post-merge (id MARKTXT, the mark-text batch)
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{$^1$Ann Able, $^2$Bob Baker, $^3$Cat Cole\\ $^1$Sterrewacht Leiden\\ $^2$Zhipu AI}
+\maketitle
+Text.
+\end{document}

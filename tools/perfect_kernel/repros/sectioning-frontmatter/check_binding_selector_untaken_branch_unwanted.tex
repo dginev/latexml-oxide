@@ -1,0 +1,16 @@
+% RED (review rev106t2 S1, synthetic): a binding selector that prints one branch and drops the other, its drop not
+% declared (`drops => [n]`), is counted by the title-page check as a loss of the branch pdflatex drops as well —
+% fancyhdr_sty.rs `\iffloatpage{}{}` → `#2`. pdflatex prints "∗ Quagga note."; the check warns "zebrafloat". The XML is
+% the base's. OD #953 (only a binding's undeclared drop is a loss); SYNC row 106t lists the sibling selectors.
+% witness: none (synthetic; no corpus witness found)
+% oracle:  pdflatex 0 errors (TL 2025, -no-shell-escape): "A Title", "Ann Able∗", "Body.", "∗ Quagga note."
+% engines: rust int135e = 0 warnings; rust 106t r3 = 1 Warning:frontmatter:unclaimed ("zebrafloat")
+% expect:  0 warnings (the selector declares its untaken branch dropped by design)
+\documentclass{article}
+\usepackage{fancyhdr}
+\title{A Title\thanks{\iffloatpage{Zebrafloat}{Quagga} note.}}
+\author{Ann Able}
+\begin{document}
+\maketitle
+Body.
+\end{document}

@@ -1,0 +1,17 @@
+% mechanism: the control of the robust-mark rows: a `\protected\def` mark (as etoolbox's `\newrobustcmd`) takes its
+%   parameters itself, its call read with its argument before PMK1 as after
+% witness: synthetic (PMK1's sibling sweep)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "Ann Lee∗ , Bob Ray∗ and Cy Dee†", "∗Univ of X", "†Univ of Y"
+% engines: int164a = PMK1: Ann Lee ∗, Bob Ray ∗, Cy Dee †, 0 errors, 0 warnings
+% expect:  0 errors, 0 warnings; Ann Lee ∗ and Bob Ray ∗ "∗ Univ of X", Cy Dee † "† Univ of Y"
+% status:  GREEN (guard perfect_kernel_batchc1::authblk_names_show_their_printed_marks)
+\documentclass{article}
+\usepackage{authblk}
+\protected\def\mk#1{\raisebox{0pt}[0pt][0pt]{\textsuperscript{\footnotesize\ensuremath{\ifcase#1\or *\or \dagger\else c\fi}}}}
+\begin{document}
+\title{T}
+\author{Ann Lee\mk{1}, Bob Ray\mk{1} and Cy Dee\mk{2}}
+\affil{\mk{1}Univ of X}
+\affil{\mk{2}Univ of Y}
+\maketitle
+\end{document}

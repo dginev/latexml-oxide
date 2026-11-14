@@ -67,6 +67,18 @@ pub struct MouthOptions {
   pub at_letter:      bool,
   pub notes:          bool,
   pub content:        Option<String>,
+  /// The string IS a document source (a file handed over as content: the
+  /// cortex/in-process API, filecontents, an `\openin` overlay): keep its
+  /// bytes and decode each line lazily under the encoding current when the
+  /// line is read, exactly like a file mouth — so the pdfTeX byte mouth (K10)
+  /// switched on by a package mid-document reaches the document's own text.
+  /// Internal strings (`Tokenize!` bodies, `\scantokens`) stay pre-decoded.
+  pub lazy_decode:    bool,
+  /// The mouth reads a FILE — on disk or held in memory (filecontents, an
+  /// `\openout` file): tex.web's `name>17` input level. Its end is an end of
+  /// file for a balanced read (runaway, §338-339), whatever `foodtype` says
+  /// about how it is read. Set by [`Mouth::create`]'s file paths.
+  pub file_level:     bool,
   pub foodtype:       Option<FoodType>,
   pub source:         Option<String>,
   pub shortsource:    Option<String>,
@@ -97,6 +109,10 @@ pub struct Mouth {
   /// separate object and keeps TeX's meanings, which a State-level assignment
   /// could not guarantee.
   bib_data_literals:      bool,
+  /// See [`MouthOptions::lazy_decode`].
+  lazy_decode:            bool,
+  /// See [`MouthOptions::file_level`].
+  file_level:             bool,
   saved_at_cc:            Option<Catcode>,
   saved_include_comments: Option<bool>,
   note_message:           Option<String>,
@@ -113,10 +129,68 @@ pub struct Mouth {
   buffer:                 VecDeque<String>,
   raw_buffer:             VecDeque<Vec<u8>>,
   reader:                 Option<BufReader<File>>,
+  /// This mouth reads input BYTES (a file, or a document handed over as content),
+  /// not an engine string: see [`eight_bit_input_char`].
+  reads_input_bytes:      bool,
+  /// The line in `buffer` was decoded as the Latin-1 image of its bytes (it is
+  /// not UTF-8, or the input encoding is a byte encoding) — see `line_is_bytes`.
+  buffered_line_is_bytes: bool,
+  /// The current line's characters in U+0080..U+00FF ARE its input bytes, not
+  /// UTF-8-decoded characters: only those reach [`eight_bit_input_char`].
+  line_is_bytes:          bool,
+  /// Positions in `chars` of the current line where a `^^xx` / `^^X` code was
+  /// reduced to its byte (tex.web §355) — bytes even on a UTF-8 line, and still
+  /// bytes when the reduced character is read again after a peek.
+  caret_bytes:            Vec<usize>,
 }
 
 impl PartialEq for Mouth {
   fn eq(&self, other: &Mouth) -> bool { self.source == other.source }
+}
+
+impl Mouth {
+  /// A copy of this mouth, to read on while this one stays where it is (`state::input_stream_to_change`): a file it reads from
+  /// disk is opened again at the same offset; one that cannot be ends where the lines it holds end, enough for a run about to
+  /// be undone.
+  pub fn copy_for_a_rollback(&mut self) -> Mouth {
+    use std::io::{Seek, SeekFrom};
+    let source = self.source.clone();
+    let reader = self.reader.as_mut().and_then(|reader| {
+      let at = reader.stream_position().ok()?;
+      let mut file = File::open(&source).ok()?;
+      file.seek(SeekFrom::Start(at)).ok()?;
+      Some(BufReader::new(file))
+    });
+    Mouth {
+      fordefinitions: self.fordefinitions,
+      at_letter: self.at_letter,
+      notes: self.notes,
+      at_eof: self.at_eof,
+      nchars: self.nchars,
+      colno: self.colno,
+      lineno: self.lineno,
+      last_token_start: self.last_token_start,
+      foodtype: self.foodtype,
+      bib_data_literals: self.bib_data_literals,
+      lazy_decode: self.lazy_decode,
+      file_level: self.file_level,
+      saved_at_cc: self.saved_at_cc,
+      saved_include_comments: self.saved_include_comments,
+      note_message: self.note_message.clone(),
+      source,
+      source_sym: self.source_sym,
+      shortsource: self.shortsource.clone(),
+      skipping_spaces: self.skipping_spaces,
+      chars: self.chars.clone(),
+      buffer: self.buffer.clone(),
+      raw_buffer: self.raw_buffer.clone(),
+      reader,
+      reads_input_bytes: self.reads_input_bytes,
+      buffered_line_is_bytes: self.buffered_line_is_bytes,
+      line_is_bytes: self.line_is_bytes,
+      caret_bytes: self.caret_bytes.clone(),
+    }
+  }
 }
 
 impl Default for Mouth {
@@ -150,11 +224,17 @@ impl Default for Mouth {
       // handle : None,
       foodtype:               FoodType::File,
       bib_data_literals:      false,
+      lazy_decode:            false,
+      file_level:             false,
       saved_at_cc:            None,
       saved_include_comments: None,
       buffer:                 VecDeque::new(),
       raw_buffer:             VecDeque::new(),
       reader:                 None,
+      reads_input_bytes:      false,
+      buffered_line_is_bytes: false,
+      line_is_bytes:          false,
+      caret_bytes:            Vec::new(),
     }
   }
 }
@@ -214,6 +294,98 @@ impl Object for Mouth {
 /// keeps the damage to the offending line and matches the Mouth's own
 /// granularity. The all-valid-UTF-8 case (the overwhelming majority) still
 /// costs exactly one `from_utf8` SIMD validation of the whole buffer.
+/// KERNEL_CAPABILITIES K10: under the pdfTeX byte mouth a non-ASCII string
+/// has two spellings — the bytes (a run of chars in U+0080..U+00FF, from
+/// `\string`/`\detokenize`/`\csname` of the active bytes, or a stringified
+/// token list) and the character the octet readers emit. pdfTeX knows only
+/// the bytes, so the two never meet there; here they meet at every string
+/// boundary (a color name defined from a detokenized list and used from the
+/// text — cncolours.sty:21 vs pgfornament-han-doc; hyperref's `pdftitle`;
+/// a theorem tag). Decode every maximal byte run that is valid UTF-8 back
+/// into its characters; anything else stays as it is. A no-op unless the
+/// byte mouth is on.
+pub fn decode_byte_mouth_runs(s: &str) -> std::borrow::Cow<'_, str> {
+  if !s.chars().any(is_byte_spelling) || !lookup_bool_sym(crate::pin!("PDFTEX_BYTE_MOUTH")) {
+    return std::borrow::Cow::Borrowed(s);
+  }
+  let mut out = String::with_capacity(s.len());
+  let mut run: Vec<u8> = Vec::new();
+  for c in s.chars() {
+    if is_byte_spelling(c) {
+      run.push(c as u32 as u8);
+    } else {
+      decode_byte_run(&mut run, &mut out);
+      out.push(c);
+    }
+  }
+  decode_byte_run(&mut run, &mut out);
+  std::borrow::Cow::Owned(out)
+}
+
+/// A char that spells a byte under the byte mouth: the Latin-1 image of
+/// 0x80..0xFF (`decode_bytes` "bytes" branch).
+fn is_byte_spelling(c: char) -> bool { ('\u{80}'..='\u{FF}').contains(&c) }
+
+/// Decode one maximal byte run SEQUENCE by sequence: every valid UTF-8
+/// sequence becomes its character, an invalid byte stays its Latin-1 image,
+/// and a trailing INCOMPLETE sequence stays as bytes — it is still being
+/// assembled when the run is a text node the bytes reach one token at a time
+/// (`byte_mouth_pending_tail`). An all-or-nothing `from_utf8` of the run
+/// mis-read a decoded Latin-1 character (é = U+00E9, a 3-byte lead's image)
+/// next to a fresh CJK sequence as one invalid run and left both undecoded.
+fn decode_byte_run(run: &mut Vec<u8>, out: &mut String) {
+  let mut rest: &[u8] = run;
+  while !rest.is_empty() {
+    match str::from_utf8(rest) {
+      Ok(text) => {
+        out.push_str(text);
+        break;
+      },
+      Err(e) => {
+        let (valid, bad) = rest.split_at(e.valid_up_to());
+        out.push_str(str::from_utf8(valid).unwrap_or_default());
+        let n = e.error_len().unwrap_or(bad.len());
+        out.extend(bad[..n].iter().map(|&b| b as char));
+        rest = &bad[n..];
+      },
+    }
+  }
+  run.clear();
+}
+
+/// Byte offset in `s` where a trailing INCOMPLETE UTF-8 sequence in the byte
+/// spelling begins (`s.len()` when there is none). The text-run merge in
+/// `Document::open_text_internal` re-decodes only from there: the bytes of
+/// one character arrive one token at a time (tex.web §1034: one char node per
+/// byte), so a run is complete only once its last continuation byte is on,
+/// and everything before the pending lead byte is already decoded (or
+/// invalid and final). Invariant relied on: a decoded character in
+/// U+00C2..U+00F4 (é, Ã) is never followed by raw continuation bytes without
+/// their own lead — well-formed input never produces that shape, so the one
+/// preceding character this looks back at is only ever re-merged when it IS
+/// the pending lead byte.
+pub fn byte_mouth_pending_tail(s: &str) -> usize {
+  let mut continuations = 0usize;
+  for (i, c) in s.char_indices().rev() {
+    let u = c as u32;
+    if (0x80..=0xBF).contains(&u) {
+      continuations += 1;
+      if continuations > 3 {
+        return s.len();
+      }
+      continue;
+    }
+    let needed = match u {
+      0xC2..=0xDF => 1,
+      0xE0..=0xEF => 2,
+      0xF0..=0xF4 => 3,
+      _ => return s.len(),
+    };
+    return if continuations < needed { i } else { s.len() };
+  }
+  s.len()
+}
+
 pub fn decode_input_bytes(raw: &[u8]) -> String {
   match str::from_utf8(raw) {
     Ok(s) => s.to_string(),
@@ -230,6 +402,101 @@ pub fn decode_input_bytes(raw: &[u8]) -> String {
       }
       out
     },
+  }
+}
+
+/// The character an 8-bit input byte stands for, when it reaches the tokenizer as a
+/// plain letter or other character instead of through its active inputenc
+/// definition.
+///
+/// inputenc makes every upper byte active (`\DeclareInputText{199}{\CYRZ}`,
+/// cp1251.def:54), and the active definition yields the character. A package that
+/// hands the bytes back to the letter class (russ.sty:58-63 `\catcode…=11`, so
+/// Cyrillic words can form control-sequence names) bypasses that definition: in TeX
+/// the byte then goes straight to the font as a slot, and T2A's letter block is laid
+/// out like cp1251, so the glyph is still the letter the author typed. LaTeXML is
+/// Unicode-native — a byte is decoded where it enters, as utf8 input already is — so
+/// the byte becomes the character its own inputenc declaration produces: the active
+/// definition followed through single-token macros (`\IeC{…}` unwrapped) to one
+/// character (`\CYRZ` → `З`, fontenc_sty.rs). Only for a genuine input byte — a
+/// character of a file line that is not UTF-8 (decoded as its bytes), or a `^^xx`
+/// code — under a declared 8-bit input encoding, outside the pdfTeX byte mouth (K10);
+/// a valid UTF-8 line keeps its characters (é stays é in an `\input` UTF-8 file). The
+/// catcode stays the byte's. Everything downstream is then Unicode, so the font map
+/// never has to guess whether a code in 128–255 is a slot or a character.
+/// `None` keeps the byte (no declaration, or one that is not a single character).
+/// OXIDIZED_DESIGN #266.
+fn eight_bit_input_char(byte: char) -> Option<char> {
+  use crate::definition::Definition;
+  if lookup_bool_sym(crate::pin!("PDFTEX_BYTE_MOUTH")) {
+    return None;
+  }
+  let encoding = lookup_string_from_sym(crate::pin!("INPUT_ENCODING"));
+  if encoding.is_empty() || encoding == "utf8" {
+    return None;
+  }
+  let mut meaning = lookup_meaning(&T_ACTIVE!(byte))?;
+  for _ in 0..6 {
+    let Stored::Expandable(ref defn) = meaning else {
+      return None;
+    };
+    let Some(crate::definition::ExpansionBody::Tokens(body)) = defn.get_expansion() else {
+      return None;
+    };
+    let toks: Vec<Token> = body
+      .unlist_ref()
+      .iter()
+      .copied()
+      .filter(|t| {
+        !matches!(t.get_catcode(), Catcode::BEGIN | Catcode::END) && !t.with_str(|s| s == "\\IeC")
+      })
+      .collect();
+    let [t] = toks.as_slice() else {
+      return None;
+    };
+    match t.get_catcode() {
+      Catcode::LETTER | Catcode::OTHER => {
+        let mut it = t.with_str(|s| s.chars().collect::<Vec<char>>()).into_iter();
+        return match (it.next(), it.next()) {
+          (Some(c), None) if c != byte => Some(c),
+          _ => None,
+        };
+      },
+      Catcode::CS => {
+        // A LaTeX text command (`\CYRZ` = the `\cf@encoding` dispatch,
+        // latex.ltx `\DeclareTextSymbol`): its glyph is `\<encoding>\CYRZ` for
+        // the font encoding current when the byte is READ (TeX resolves it when
+        // the letter is typeset), a one-character primitive decoded from that
+        // encoding's font map (sect08.rs) — T2A slot 199 → `З`.
+        if let Some(c) = text_symbol_char(t) {
+          return Some(c);
+        }
+        meaning = lookup_meaning(t)?;
+      },
+      Catcode::ACTIVE => meaning = lookup_meaning(t)?,
+      _ => return None,
+    }
+  }
+  None
+}
+
+/// The single character `\<current encoding><cs>` typesets, if it is a
+/// `\DeclareTextSymbol` glyph (a primitive with a one-character string body).
+pub fn text_symbol_char(cs: &Token) -> Option<char> {
+  use crate::definition::PrimitiveBody;
+  // `\cf@encoding` is the current font's encoding (a computed macro here).
+  let encoding = lookup_font()?.get_encoding()?.to_string();
+  let glyph_cs = T_CS!(format!("\\{}{}", encoding.trim(), cs.to_string()));
+  let Some(Stored::Primitive(prim)) = lookup_meaning(&glyph_cs) else {
+    return None;
+  };
+  let Some(PrimitiveBody::String(sym)) = prim.replacement else {
+    return None;
+  };
+  let mut it = crate::common::arena::with(sym, |s| s.chars().collect::<Vec<char>>()).into_iter();
+  match (it.next(), it.next()) {
+    (Some(c), None) => Some(c),
+    _ => None,
   }
 }
 
@@ -250,6 +517,8 @@ impl Mouth {
       let (_dir, name, ext) = pathname::split(source);
       options.source = Some(source.to_string());
       options.shortsource = Some(s!("{}.{}", name, ext));
+      options.lazy_decode = true;
+      options.file_level = true;
       // Read-log: a named cached-content open (filecontents / LSP overlay).
       record_opened_source(crate::common::arena::pin(source));
       Mouth::new(&content, Some(options))
@@ -264,6 +533,7 @@ impl Mouth {
     } else {
       let (_dir, name, ext) = pathname::split(source);
       options.foodtype = FoodType::opt_from_str(&pathname::protocol(source));
+      options.file_level = true;
       options.source = Some(source.to_string());
       if options.shortsource.is_none() {
         options.shortsource = Some(if ext.is_empty() {
@@ -283,6 +553,13 @@ impl Mouth {
   /// What kind of source feeds this mouth (file vs literal/string injection).
   pub fn foodtype(&self) -> FoodType { self.foodtype }
 
+  /// Whether this mouth reads a file (see [`MouthOptions::file_level`]).
+  pub fn is_file_level(&self) -> bool { self.file_level }
+
+  /// Whether this mouth reads the document's own text: a content file (`binding::content::load_tex_content`, the
+  /// converter's in-memory source), its notes on and not read for definitions — no package's, class's or binding's.
+  pub fn is_document_text(&self) -> bool { self.notes && !self.fordefinitions }
+
   pub fn new(text: &str, options: Option<MouthOptions>) -> Result<Self> {
     let mut mouth = match options {
       None => Mouth {
@@ -297,6 +574,8 @@ impl Mouth {
           fordefinitions: opts.fordefinitions,
           at_letter: opts.at_letter,
           notes: opts.notes,
+          lazy_decode: opts.lazy_decode,
+          file_level: opts.file_level,
           source_sym: crate::common::arena::pin(&source),
           source,
           shortsource,
@@ -370,7 +649,19 @@ impl Mouth {
       let metadata = std::fs::metadata(pathname);
       match &metadata {
         Err(e) if e.kind() == io::ErrorKind::NotFound => {
-          fatal!(Mouth, MissingFile, s!("Can't find file {}", pathname));
+          // Perl Mouth/file.pm:32-41 `openFile`: an unreadable/unopenable file
+          // is a recoverable `Error('I/O', …)` and the mouth stays empty —
+          // callers pre-check with FindFile, so this is a race or a stale
+          // path, not a reason to abort the document. (It was a `fatal!`
+          // here, which since 56fc logs at the raise: a probing `\openin`
+          // then surfaced `Fatal:Mouth:MissingFile` — s108, four docs.)
+          Error!(
+            "I/O",
+            pathname,
+            s!("Can't find file {}", pathname),
+            "Reading it as empty"
+          );
+          return Ok(());
         },
         Err(e) if e.kind() == io::ErrorKind::PermissionDenied => {
           Error!(
@@ -387,6 +678,9 @@ impl Mouth {
           return Err(io::Error::new(e.kind(), e.to_string()).into());
         },
         Ok(meta) => {
+          // Every opened source file raises the runaway-token backstop in
+          // proportion (see `gullet::scale_token_limit_to_source`).
+          crate::gullet::scale_token_limit_to_source(meta.len() as usize);
           // Check for binary file (non-empty and appears binary)
           // Perl's -B heuristic: check first block for high proportion of non-text bytes
           if meta.len() > 0
@@ -434,12 +728,22 @@ impl Mouth {
       };
       let reader = BufReader::new(f);
       self.reader = Some(reader);
+      self.reads_input_bytes = true;
       self.buffer = VecDeque::new();
       self.raw_buffer = VecDeque::new();
     }
     Ok(())
   }
-  fn open_literal(&mut self, content: &str) { self.buffer = Mouth::split_lines(content); }
+  fn open_literal(&mut self, content: &str) {
+    if self.lazy_decode {
+      // A document handed over as content: bytes, decoded per line on read
+      // (`get_next_line`), like a file.
+      self.raw_buffer = Mouth::split_raw_lines(content.as_bytes());
+      self.reads_input_bytes = true;
+    } else {
+      self.buffer = Mouth::split_lines(content);
+    }
+  }
   fn open_http(&mut self, url: &str) {
     emit_warn(
       "unsupported",
@@ -483,11 +787,18 @@ impl Mouth {
     if let Some(ref msg) = self.note_message {
       note_begin(msg);
     }
-    // Perl: at_letter saves/restores @ catcode independently of fordefinitions.
-    // Use Scope::Global to ensure it persists across scope frame pops during file loading.
+    // Perl Mouth.pm:98-100: at_letter saves/restores `@`'s catcode with a
+    // LOCAL assignment (no scope argument), independently of fordefinitions.
+    // It was global here (2121a02d09, "persist across scope frame pops"),
+    // which erased the enclosing group's undo entry for `@`: a package that
+    // `\input`s a file inside `\bgroup\catcode`\@0 … \egroup` (CoverPage.sty:
+    // 60-70 reading a BibTeX-keyword file) then kept `@` as an escape after
+    // the group, and every later `\CP@…`/`\define@key` split (coverpage
+    // SimpleSample, ~20 errors; RUST-ONLY, Perl 0).
+    // Guard: `perfect_kernel_batch56::at_letter_mouth_keeps_group_catcode_undo`.
     if self.at_letter {
       self.saved_at_cc = lookup_catcode('@');
-      assign_catcode('@', Catcode::LETTER, Some(Scope::Global));
+      assign_catcode('@', Catcode::LETTER, None);
     }
     // Perl: fordefinitions saves/restores INCLUDE_COMMENTS
     if self.fordefinitions {
@@ -505,6 +816,8 @@ impl Mouth {
     self.buffer = VecDeque::new();
     self.raw_buffer = VecDeque::new();
     self.chars = VecDeque::new();
+    self.line_is_bytes = false;
+    self.caret_bytes.clear();
     self.lineno = 0;
     self.colno = 0;
     self.nchars = 0;
@@ -515,11 +828,11 @@ impl Mouth {
   /// Called by close_mouth when the mouth is popped from the stack.
   pub fn finish(&mut self) {
     self.stop_reading();
-    // Perl: at_letter restores @ catcode (independent of fordefinitions).
-    // Use Scope::Global to ensure it takes effect regardless of scope frame state.
+    // Perl Mouth.pm:117: at_letter restores `@`'s catcode locally (see
+    // `initialize`).
     if self.at_letter {
       let cc = self.saved_at_cc.take().unwrap_or(Catcode::OTHER);
-      assign_catcode('@', cc, Some(Scope::Global));
+      assign_catcode('@', cc, None);
     }
     // Perl: fordefinitions restores INCLUDE_COMMENTS
     if let Some(sic) = self.saved_include_comments.take() {
@@ -572,17 +885,31 @@ impl Mouth {
   }
 
   /// Decode a raw byte line using the current encoding setting.
-  /// Matches Perl's per-line decode behavior.
-  fn decode_bytes(raw_line: &[u8], location: String) -> String {
+  /// Matches Perl's per-line decode behavior. The flag says whether the line's
+  /// characters are the Latin-1 image of its bytes (a byte encoding, or a line
+  /// that is not UTF-8) rather than UTF-8-decoded characters.
+  fn decode_bytes(raw_line: &[u8], location: impl FnOnce() -> String) -> (String, bool) {
     if let Some(ref encoding_sym) = get_input_encoding() {
       // Probe the encoding without allocating — this fires per input
       // line, so even a small heap alloc per call adds up on large
       // documents. Only resolve the symbol to an owned String when we
       // actually need it for the misdefined-encoding Info! message.
+      // `bytes` is the pdfTeX byte mouth (KERNEL_CAPABILITIES K10): pdfTeX
+      // reads a file byte by byte (tex.web §30-31 `buffer: array of
+      // ASCII_code`, §341 `cur_chr:=buffer[loc]`) against a 256-entry
+      // `\catcode` table, so a UTF-8 syllable is three char tokens whose codes
+      // are its bytes — the model cjkutf8-josa.sty:176 (`\DeclareRobustCommand*
+      // \^^ea[2]`, a control symbol over the lead byte) and dhucs.sty:44
+      // (`\ifx 가가`, two different bytes) are built on. Byte→char over
+      // U+0000..U+00FF is exactly the Latin-1 decode, and the catcode table's
+      // U+0000..U+00FF entries ARE that 256-entry table (`\catcode"EA` and a
+      // `^^ea` both address U+00EA). Enabled package-scoped by
+      // `inputenc_sty::enable_pdftex_byte_mouth`, never globally.
       let is_latin1 = crate::common::arena::with(*encoding_sym, |s| {
         s.eq_ignore_ascii_case("iso-8859-1")
           || s.eq_ignore_ascii_case("latin1")
           || s.eq_ignore_ascii_case("latin-1")
+          || s.eq_ignore_ascii_case("bytes")
       });
       let file_str = if is_latin1 {
         raw_line.iter().map(|&b| b as char).collect::<String>()
@@ -605,7 +932,7 @@ impl Mouth {
       // explicit `contains` is cheaper and lets us avoid the
       // unconditional `replace` walk on every input line.
       let has_fffd = file_str.contains('\u{FFFD}');
-      if has_fffd {
+      let file_str = if has_fffd {
         let encoding_name = crate::common::arena::to_string(*encoding_sym);
         Info!(
           "misdefined",
@@ -613,18 +940,49 @@ impl Mouth {
           s!("input isn't valid under encoding {}", &encoding_name),
           "",
           "",
-          location
+          location()
         );
         file_str.replace('\u{FFFD}', " ")
       } else {
         file_str
-      }
+      };
+      (file_str, is_latin1)
     } else {
       // No encoding set — interpret as UTF-8, falling back to a Latin-1
       // passthrough for non-UTF-8 bytes. This happens after inputenc
       // disables PERL_INPUT_ENCODING and the remaining file lines contain
-      // high bytes.
-      decode_input_bytes(raw_line)
+      // high bytes. (`decode_input_bytes` for one line.)
+      //
+      // The decode stays the Latin-1 passthrough (OXIDIZED_DESIGN_DIVERGENCES
+      // #481: the bytes are kept as text, where Perl blanks them), but the
+      // report is Perl's: with no `inputenc` declaring a non-UTF-8 encoding,
+      // the file is read as UTF-8 and an undecodable line raises
+      // `Info:misdefined` "input isn't valid under encoding utf-8"
+      // (Core/Mouth/file.pm:72-77). An Info, as in Perl; pdflatex's own
+      // "Invalid UTF-8 byte" Error (utf8.def:113) is not raised here.
+      match str::from_utf8(raw_line) {
+        Ok(s) => (s.to_string(), false),
+        Err(_) => {
+          let declared = lookup_string("lx@inputenc@encoding");
+          if declared.is_empty() || declared.starts_with("utf8") {
+            let encoding_name = lookup_string("PERL_INPUT_ENCODING");
+            let encoding_name = if encoding_name.is_empty() {
+              s!("utf-8")
+            } else {
+              encoding_name
+            };
+            Info!(
+              "misdefined",
+              &encoding_name,
+              s!("input isn't valid under encoding {}", &encoding_name),
+              "",
+              "",
+              location()
+            );
+          }
+          (raw_line.iter().map(|&b| b as char).collect(), true)
+        },
+      }
     }
   }
 
@@ -642,7 +1000,8 @@ impl Mouth {
       // that is active at the time the line is read, allowing inputenc to
       // change encoding mid-file.
       if let Some(raw_line) = self.raw_buffer.pop_front() {
-        let decoded = Mouth::decode_bytes(&raw_line, self.get_location());
+        let (decoded, is_bytes) = Mouth::decode_bytes(&raw_line, || self.get_location());
+        self.buffered_line_is_bytes = is_bytes;
         self.buffer.push_back(decoded);
       }
     }
@@ -666,10 +1025,15 @@ impl Mouth {
       self.raw_buffer = Mouth::split_raw_lines(&file_bytes);
       // Decode the first line now
       if let Some(raw_line) = self.raw_buffer.pop_front() {
-        let decoded = Mouth::decode_bytes(&raw_line, self.get_location());
+        let (decoded, is_bytes) = Mouth::decode_bytes(&raw_line, || self.get_location());
+        self.buffered_line_is_bytes = is_bytes;
         self.buffer.push_back(decoded);
       }
     }
+    // A raw line is decoded into an empty `buffer` and popped here at once, so
+    // the flag set by the decode belongs to this line.
+    self.line_is_bytes = std::mem::take(&mut self.buffered_line_is_bytes);
+    self.caret_bytes.clear();
     self.buffer.pop_front()
   }
 
@@ -692,6 +1056,41 @@ impl Mouth {
         && self.colno + 1 < self.nchars
         && Some(&ch) == self.chars.get(self.colno)
       {
+        // XeTeX/LuaTeX extended caret notation, longest-match-first:
+        // ^^^^^^hhhhhh (6 hex) and ^^^^hhhh (4 hex) produce one Unicode
+        // scalar. This engine is Unicode-native (same precedent as
+        // providing \Ucharcat despite pdfTeX lacking it), and packages
+        // PROBE for a Unicode engine with exactly this notation —
+        // newunicodechar.sty L52-56 `\edef\next{\@gobble^^^^0021}` takes
+        // its broken 8-bit branch without it (9-doc corpus cluster,
+        // witnesses eigo, verifica, tikz-trackschematic, uspace).
+        let is_lowerhex_c = |c: char| -> bool { matches!(c, '0'..='9' | 'a'..='f') };
+        for (extra_carets, ndigits) in [(4usize, 6usize), (2, 4)] {
+          // self.colno-1 is the first ^; require extra ^s then ndigits hex.
+          let carets_ok =
+            (0..extra_carets).all(|k| self.chars.get(self.colno + 1 + k) == Some(&ch));
+          let dig_start = self.colno + 1 + extra_carets;
+          if carets_ok
+            && dig_start + ndigits <= self.nchars
+            && (0..ndigits).all(|k| {
+              self
+                .chars
+                .get(dig_start + k)
+                .is_some_and(|c| is_lowerhex_c(*c))
+            })
+          {
+            let hex: String = (0..ndigits)
+              .filter_map(|k| self.chars.get(dig_start + k))
+              .collect();
+            if let Some(newch) = u32::from_str_radix(&hex, 16).ok().and_then(char::from_u32) {
+              let removed = 2 + extra_carets + ndigits;
+              self.splice(self.colno - 1..self.colno - 1 + removed, &[newch]);
+              self.nchars -= removed - 1;
+              let cc2 = self.catcode_of(newch);
+              return Some((newch, cc2));
+            }
+          }
+        }
         let c1_opt = self.chars.get(self.colno + 1);
         let c2_opt = self.chars.get(self.colno + 2);
         let mut two_hex = false;
@@ -722,6 +1121,17 @@ impl Mouth {
           self.nchars -= 2;
         }
         cc = self.catcode_of(ch);
+        self.caret_bytes.push(self.colno - 1);
+      }
+      // Only an input byte: a character of a byte-decoded line, or a `^^xx` /
+      // `^^X` code (tex.web §355 — a byte even on a UTF-8 line).
+      if self.reads_input_bytes
+        && ('\u{80}'..='\u{FF}').contains(&ch)
+        && (self.line_is_bytes || self.caret_bytes.contains(&(self.colno - 1)))
+        && matches!(cc, Catcode::LETTER | Catcode::OTHER)
+        && let Some(decoded) = eight_bit_input_char(ch)
+      {
+        return Some((decoded, cc));
       }
       Some((ch, cc))
     } else {
@@ -742,6 +1152,18 @@ impl Mouth {
       (Catcode::COMMENT, '%') | (Catcode::ALIGN, '&') | (Catcode::PARAM, '#') => Catcode::OTHER,
       _ => cc,
     }
+  }
+
+  /// How far this mouth has read: its line, its column, the characters of the line still to read, and the lines still
+  /// buffered. Only compared with an earlier reading of the same mouth (`gullet::input_unread_since`): it changes
+  /// whenever a character or a line is read.
+  pub fn read_position(&self) -> (usize, usize, usize, usize) {
+    (
+      self.lineno,
+      self.colno,
+      self.chars.len(),
+      self.buffer.len() + self.raw_buffer.len(),
+    )
   }
 
   /// Checks if there is more input to process.
@@ -775,26 +1197,7 @@ impl Mouth {
         let line_opt = self.get_next_line();
         // For \read, we have to return something for EOL, and handle implicit final newline
         let read_mode = lookup_int("PRESERVE_NEWLINES") > 1;
-        let eolch = match lookup_definition(&T_CS!("\\endlinechar")).unwrap() {
-          Some(defn) => {
-            if defn.is_register() {
-              if let Some(eol) = defn.value_of(Vec::new()) {
-                let eol = eol.value_of() as i16;
-                if eol > 0 && eol <= 255 {
-                  let mch = (eol as u8) as char;
-                  Some(mch)
-                } else {
-                  None
-                }
-              } else {
-                None
-              }
-            } else {
-              None
-            }
-          },
-          _ => Some('\r'),
-        };
+        let eolch = endline_char();
         if line_opt.is_none() {
           // Exhausted the input.
           let eolcc = if let Some(ch) = eolch {
@@ -804,10 +1207,20 @@ impl Mouth {
           };
           let eoftoken = if let Some(eolch_content) = eolch {
             if read_mode && !self.at_eof && !self.source.is_empty() {
-              if eolcc == Catcode::EOL {
-                Some(T_CS!("\\par"))
-              } else {
-                Some(CharToken!(eolch_content, eolcc))
+              // The synthetic final line is empty + `\endlinechar`, read in
+              // state N like any other line (tex.web §345-349): an EOL char
+              // is `\par`, a SPACE or IGNORE char is dropped (§349 "goto
+              // switch" — it can never become a token), anything else is a
+              // char token. Perl Mouth.pm:303-307 emits the IGNORE char and
+              // it reaches the Stomach as `misdefined` (KNOWN_PERL_ERRORS
+              // #125); witness liftarm (pgfmanual `codeexample` sets
+              // `\catcode`\^^M=9` around `\scantokens`, and animate.sty's
+              // `\@anim@buildtmln` `\read`s the timeline to EOF inside it —
+              // 501 errors capped).
+              match eolcc {
+                Catcode::EOL => Some(T_CS!("\\par")),
+                Catcode::SPACE | Catcode::IGNORE => None,
+                _ => Some(CharToken!(eolch_content, eolcc)),
               }
             } else {
               None
@@ -866,7 +1279,10 @@ impl Mouth {
           )));
         }
       }
-      // In state::S, skip spaces
+      // In state::S, skip spaces — and ignored characters, which leave the state as it is (tex.web §344
+      // `any_state_plus(ignore)`): under `\ExplSyntaxOn` the (ignored) space of `\foo ~` kept TeX skipping, so the
+      // `~` (a spacer) is skipped too, where stopping at the ignored character made it a space token
+      // (`\str_if_eq:nnTF { \foo ~ } { \foo }` false). Perl Mouth.pm skips CC_SPACE only (KNOWN_PERL_ERRORS #1177).
       if self.skipping_spaces {
         let mut cc = None;
         // This is very awkward as a loop,
@@ -874,11 +1290,14 @@ impl Mouth {
         // tokenizer/verb.tex depends on it.
         while let Some((_, ncc)) = self.get_next_char() {
           cc = Some(ncc);
-          if ncc != Catcode::SPACE {
+          if !matches!(ncc, Catcode::SPACE | Catcode::IGNORE) {
             break;
           }
         }
-        if self.colno <= self.nchars && cc.is_some() && cc != Some(Catcode::SPACE) {
+        if self.colno <= self.nchars
+          && cc.is_some()
+          && !matches!(cc, Some(Catcode::SPACE | Catcode::IGNORE))
+        {
           self.colno -= 1;
         }
         if cc == Some(Catcode::EOL) {
@@ -941,6 +1360,114 @@ impl Mouth {
   // Alas: $noread true means NOT to read a new line, but only return
   // the remainder of the current line, if any. This is useful when combining
   // with previously peeked tokens from the Gullet.
+  /// The WHOLE current line as raw text, from column 0 — including the part
+  /// already tokenized — and consume the rest of it. `None` when no line is
+  /// loaded. Used by the listings raw-line reader when an optional-argument
+  /// probe has already tokenized the body's first token (OXIDIZED_DESIGN #162).
+  pub fn read_raw_line_from_start(&mut self) -> Option<String> {
+    if self.nchars == 0 && self.colno == 0 {
+      return None;
+    }
+    let mut line: String = self.chars.iter().collect();
+    if line.ends_with('\r') {
+      line.pop();
+    }
+    self.colno = self.nchars;
+    Some(line)
+  }
+
+  /// [`read_raw_line`](Self::read_raw_line) with the line's input bytes turned
+  /// into the characters the declared input encoding makes of them
+  /// (`eight_bit_input_char`, as the tokenizer does for a byte line). For a
+  /// consumer that parses raw lines itself: a `.bib`, whose bytes real `bibtex`
+  /// copies into the `.bbl` for the document's inputenc to decode. A cp1251
+  /// `.bib` under `\usepackage[cp1251]{inputenc}` read `Ò. Ñ. Ãåéäåìàí` for
+  /// "Т. С. Гейдеман" (shipunov/rusnat-ex1-ru, sweep #121).
+  pub fn read_raw_line_decoded(&mut self, noread: bool) -> Option<String> {
+    let line = self.read_raw_line(noread)?;
+    Some(self.decode_eight_bit(line))
+  }
+
+  /// `text` with its upper-half bytes (read as U+0080..U+00FF) turned into
+  /// the characters the declared input encoding makes of them, when this
+  /// mouth reads a byte line; unchanged otherwise.
+  pub fn decode_eight_bit(&self, text: String) -> String {
+    if !self.line_is_bytes {
+      return text;
+    }
+    text
+      .chars()
+      .map(|c| {
+        if ('\u{80}'..='\u{ff}').contains(&c) {
+          eight_bit_input_char(c).unwrap_or(c)
+        } else {
+          c
+        }
+      })
+      .collect()
+  }
+
+  /// Make `rest` — the end of the line a raw read just took — the current line again, with the `\endlinechar` a
+  /// line is read with ([`Self::read_token`]), so tokens and raw lines are read from it before the next line. Its
+  /// columns count from the start of `rest` (the line number is the line's).
+  pub fn restore_line_rest(&mut self, rest: &str) {
+    let mut line = rest.to_string();
+    if let Some(ch) = endline_char() {
+      line.push(ch);
+    }
+    self.chars = line.chars().collect();
+    self.nchars = self.chars.len();
+    self.colno = 0;
+    self.caret_bytes.clear();
+  }
+
+  /// The source text this mouth will read next — the rest of the current line, then up to `max_lines` lines after it,
+  /// joined by `\n`, at most `max_chars` characters in all — without reading it: nothing is consumed, tokenized or
+  /// decoded in place. A look-ahead for a decision about what follows (stomach.rs `formula_continues_past_par`,
+  /// OXIDIZED_DESIGN #553); `max_chars` keeps its cost bounded on a source whose current line is the whole document.
+  /// Lines not yet decoded are read as UTF-8, lossily; their structure (`$`, `\int`, `_`) is all a look-ahead needs.
+  /// A current line read to its end contributes nothing: its end-of-line character is read already, and an empty line
+  /// in its place would tokenize as one more (a `\par`, or under `\obeylines` an active `^^M`; hep-ph9809328).
+  pub fn peek_text(&self, max_lines: usize, max_chars: usize) -> String {
+    // Whether a line is begun in `text` that the next must be joined to.
+    let mut joined = self.colno < self.nchars;
+    let mut text = String::new();
+    let mut room = max_chars;
+    for ch in self.chars.iter().skip(self.colno).take(max_chars) {
+      text.push(*ch);
+      room -= 1;
+    }
+    if room == 0 {
+      return text;
+    }
+    if let Some(eol) = endline_char()
+      && text.ends_with(eol)
+    {
+      text.pop();
+    }
+    let decoded = self
+      .buffer
+      .iter()
+      .map(|line| std::borrow::Cow::Borrowed(line.as_str()));
+    let raw = self
+      .raw_buffer
+      .iter()
+      .map(|line| String::from_utf8_lossy(line));
+    for line in decoded.chain(raw).take(max_lines) {
+      if room == 0 {
+        break;
+      }
+      if joined {
+        text.push('\n');
+      }
+      joined = true;
+      let mut count = 0;
+      text.extend(line.chars().take(room).inspect(|_| count += 1));
+      room = room.saturating_sub(count + 1);
+    }
+    text
+  }
+
   pub fn read_raw_line(&mut self, noread: bool) -> Option<String> {
     let mut line = String::new();
     if self.colno < self.nchars {
@@ -1126,6 +1653,16 @@ impl Mouth {
   /// Careful:
   /// used BOTH for flushing input for `\endinput`
   /// and for detecting line end for `\read`
+  /// tex.web §485-486: a `\read` consumes the WHOLE physical line
+  /// (`input_ln`); the catcode regime only decides which tokens the line
+  /// yields. Called by `\read` after its token loop so a residual
+  /// `\endlinechar` character left behind under one regime (an IGNORE-catcode
+  /// space under `\ExplSyntaxOn`) is never re-read as a spurious empty line by
+  /// a later `\read` under another (l3prefixes: header `\ior_get` in the
+  /// preamble, `\ior_map_inline` in the body → an empty first row →
+  /// `Until:,` runaway).
+  pub fn finish_physical_line(&mut self) { self.colno = self.nchars; }
+
   pub fn is_eol(&mut self) -> bool {
     let savecolno = self.colno;
     // We have to peek past any ignored tokens & also spaces, if skipping
@@ -1151,6 +1688,12 @@ impl Mouth {
   }
 
   pub fn at_eof(&self) -> bool { self.at_eof }
+
+  /// The number of the line the Mouth is reading (1-based once the first line is fetched).
+  pub fn line_number(&self) -> usize { self.lineno }
+
+  /// Where the most recently begun token starts: (line, 0-based column).
+  pub fn last_token_start(&self) -> (usize, usize) { self.last_token_start }
 
   /// §1 accurate-start locator (docs/performance/SOURCE_PROVENANCE.md): `from` = the captured
   /// start of the most recently *begun* token (`last_token_start`), `to` = the
@@ -1258,6 +1801,24 @@ pub fn tokenize_internal(text: impl Into<TeXString>) -> Tokens {
   let result = Mouth::new(text.as_str(), None).unwrap().read_tokens();
   use_main_state();
   result
+}
+
+/// The character `\endlinechar` ends each input line with (tex.web §362: none when it is outside 0..255).
+fn endline_char() -> Option<char> {
+  match lookup_definition(&T_CS!("\\endlinechar")).unwrap() {
+    Some(defn) => {
+      if defn.is_register()
+        && let Some(eol) = defn.value_of(Vec::new())
+      {
+        let eol = eol.value_of() as i16;
+        if eol > 0 && eol <= 255 {
+          return Some((eol as u8) as char);
+        }
+      }
+      None
+    },
+    _ => Some('\r'),
+  }
 }
 
 #[cfg(test)]

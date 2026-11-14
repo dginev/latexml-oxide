@@ -1,0 +1,25 @@
+% mechanism: a mark in a box of its own (a document's `\IEEEauthorrefmark` redefined as
+%   `\raisebox{0pt}[0pt][0pt]{\textsuperscript{#1}}`) sits one level deeper than the words beside it; the marks query
+%   (`argument_marks::at_own_level`) counts it, a box holding no word, so the names request their marks and the
+%   `\IEEEauthorblockA` lists are marked (`affiliation_is_marked`): the e-mail line is the names' run, one address each
+% witness: 2307.12121, 2311.01786 (also 1802.03497, 1903.09916, 1910.06271, 2304.07838, 2409.10792, 2410.09414,
+%   2503.19390: the same `\raisebox` refmark)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "Ann Able1 , Bob Baker2,1 , and Cy Cole1", "1Univ A, Town",
+%   "2Univ B, City", "ann@x.org, lj1994@y.org, cole@z.org"
+% engines: int162a: the three creators, each its address (marks hidden in the contacts); P4b2b (= int163a's P4c):
+%   lj1994@y.org on a fourth, nameless creator, Bob Baker no address
+% expect:  0 errors, 0 warnings; Ann Able "1 Univ A, Town" ann@x.org; Bob Baker "1 Univ A, Town", "2 Univ B, City"
+%   lj1994@y.org; Cy Cole "1 Univ A, Town" cole@z.org
+% status:  RED (P4b2b) -> GREEN (P4cR1; guard perfect_kernel_batchc1::marked_list_cut_as_its_binding_declares)
+% preload: ar5iv.sty
+\documentclass[conference]{IEEEtran}
+\DeclareRobustCommand*{\IEEEauthorrefmark}[1]{\raisebox{0pt}[0pt][0pt]{\textsuperscript{#1}}}
+\begin{document}
+\title{T}
+\author{\IEEEauthorblockN{Ann Able\IEEEauthorrefmark{1}, Bob Baker\IEEEauthorrefmark{2,1}, and Cy Cole\IEEEauthorrefmark{1}}
+\IEEEauthorblockA{\IEEEauthorrefmark{1}Univ A, Town}
+\IEEEauthorblockA{\IEEEauthorrefmark{2}Univ B, City}
+\IEEEauthorblockA{ann@x.org, lj1994@y.org, cole@z.org}}
+\maketitle
+Body.
+\end{document}

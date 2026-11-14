@@ -1,0 +1,27 @@
+% An anchor whose text opens a paragraph drops the space after it: `\hypertarget{x}{O.} P.` gives
+% `<anchor>O.</anchor>P.` (also an empty name, `\hyper@@anchor`). The constructor is digested in vertical
+% mode, so the space after it is skipped there; in TeX the anchor's text starts the paragraph first
+% (hyperref.sty:4805-4811 → `\hyper@@anchor` typesets #2 in horizontal mode) and the space follows in the
+% paragraph. `\mbox{Q.} R.` keeps its space (enter_horizontal). Pre-existing (57co2 identical).
+% witness: 57cp fix-round-3 probe sp3.tex. Guard: none (RED).
+% status:  RED
+% oracle:  pdflatex 0 errors: "K. L.", "M. N.", "O. P.".
+% engines: rust 57co2/57cpf: "K.L.", "M.N.", "O.P.".
+% expect:  0 errors; each paragraph keeps its space. An anchor with empty text between paragraphs must
+%          still open no paragraph (TeX: a whatsit in vertical mode).
+\documentclass{article}
+\usepackage{hyperref}
+\makeatletter
+\def\emptyname{}
+\begin{document}
+\hypertarget{}{K.} L.
+
+\hyper@@anchor{\emptyname}{M.} N.
+
+\hypertarget{x}{O.} P.
+
+\hypertarget{y}{}
+
+\mbox{Q.} R.
+\makeatother
+\end{document}

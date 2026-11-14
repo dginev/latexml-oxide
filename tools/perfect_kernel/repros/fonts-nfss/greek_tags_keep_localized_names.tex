@@ -1,0 +1,15 @@
+% In a Greek-main document (`\encodingdefault` LGR) LaTeX sets a caption's label in LGR: babel greek's `\tablename`
+% (greek.ldf, LGR text symbols) prints Πίνακας. LaTeXML's tags reset to the document's encoding (`neutralize_font`),
+% so it stays Greek (in OT1 it was lost), while LaTeXML's own English reference names (`\footnotetyperefname`) are set
+% in babel's `\latinencoding` (`\lx@latin@name`) — through LGR they read `φοοτνοτε`.
+% status:  GREEN 60r; guard perfect_kernel_batch60::greek_tags_keep_localized_names
+% oracle:  pdflatex 0 errors: "Πίνακας 1: Κατι" / "ξ1"
+% engines: rust 60r7 (tags in the document's encoding): "φοοτνοτε 1"; Perl: OT1 tags
+% expect:  0 errors; caption tag "Πίνακας 1"; the note's reference name "footnote 1"
+\documentclass{article}
+\usepackage[LGR,T1]{fontenc}
+\usepackage[english,greek]{babel}
+\begin{document}
+\begin{table}\caption{Kati}\end{table}
+x\footnote{s}
+\end{document}

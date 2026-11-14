@@ -1,0 +1,26 @@
+% A `\maketitle` that leaves `\author` live (a class with its own `\maketitle`, as KOMA >= 3.12's,
+% which disables the setters only for compatibility < 3.12, scrbook.cls:3263-3290) digests its
+% authors; a later `\author` replaces them, as LaTeX's `\def\@author{#2}` does (latest `\maketitle`
+% wins, as for the title). Was: the first author stayed a phantom creator, the second got
+% `before="  "`.
+% witness: udesoftec.cls (`\author{Max Mustermann}` default, :266; `\maketitle` from
+%          `\AfterEndPreamble`, :1230-1241).
+% status:  GREEN (59e)
+% oracle:  pdflatex 0 errors (this class's `\maketitle` typesets nothing); semantic target: the
+%          last title and author, as under KOMA, where both title blocks print.
+% expect:  0 errors, 0 warnings; one creator, "Alice A"; the title "T".
+\begin{filecontents*}[overwrite]{lxmaketitle.cls}
+\NeedsTeXFormat{LaTeX2e}
+\ProvidesClass{lxmaketitle}
+\LoadClass{article}
+% (a class's own `\maketitle`, as KOMA's: the binding's stays, and leaves the setters live)
+\renewcommand\maketitle{\par}
+\end{filecontents*}
+\documentclass{lxmaketitle}
+\begin{document}
+\title{T0}\author{Max Mustermann}\maketitle
+\title{T}
+\author{Alice A}
+\maketitle
+Body.
+\end{document}

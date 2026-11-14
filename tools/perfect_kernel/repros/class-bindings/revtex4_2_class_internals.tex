@@ -1,0 +1,41 @@
+% witness: 2010.08759, 1805.10530, 2109.10305, 2302.01688 (`\doi`); 2301.10789 (`\href{\doibase …}`); 2311.06373,
+%          2104.14555 (`\onecolumngrid@push`); 1101.2683 (`\let@environment`); 2006.03287 (`\frontmatter@title@format`);
+%          2101.04636 (`\widetext@top`); 1509.02329 (`\altaddress`); 2202.11665 (`\REV@text`); 2402.07499
+%          (`\clo@groupedaddress`); 2609.36113 (`\onecolumn@grid@setup`)
+% oracle:  pdflatex 0 errors ("See doi:10.1103/PhysRevLett.80.1373 and JHEP 07 (2018) 156."; "Second title"; "Wide. t = R(t) mod 1 Set: Kept."; the alternative address a footnote
+%          of the affiliation)
+% engines: rust 67u2 = 14 errors, 1 warning (each command undefined); Perl 16 errors (none of them defined)
+%          (KNOWN_PERL_ERRORS #722)
+% expect:  0 errors, 0 warnings; the DOI linked, the second title kept as text
+% status:  RED (67u2) -> GREEN (67y)
+% preload: ar5iv.sty
+\documentclass[aps,prl]{revtex4-2}
+\makeatletter
+\newenvironment{myset}{Set: }{.}
+\let@environment{kept}{myset}
+\@ifxundefined\groupauthors@sw{\clo@groupedaddress}{}
+\makeatother
+\begin{document}
+\title{Main title}
+\author{A. Author}
+\affiliation{Univ}
+\altaddress{Elsewhere}
+\maketitle
+See \doi{10.1103/PhysRevLett.80.1373} and \href{\doibase 10.1007/JHEP07(2018)156}{JHEP 07 (2018) 156}.
+\makeatletter
+\begingroup
+\frontmatter@title@above
+\frontmatter@title@format
+Second title
+\par
+\frontmatter@title@below
+\endgroup
+\onecolumngrid@push
+\onecolumn@grid@setup
+\setbox\widetext@top\vbox{\hrule}
+Wide.
+\onecolumngrid@pop
+$t=R(t)\protect\REV@text{ mod }1$
+\makeatother
+\begin{kept}Kept\end{kept}
+\end{document}

@@ -1,0 +1,16 @@
+% witness: synthetic (64p review): a class {thebibliography} \let to a section and an {enumerate}; no corpus case
+% oracle:  pdflatex 0 errors; References 1. 2.
+% engines: rust 64qb = Fatal PushbackLimit; rust 64p = 0 errors, 1 warning (an open group at \end{document}: the
+%          class's \end{enumerate} inside its own end never runs, the kernel's end closing the bibliography);
+%          Perl 0.8.8 --includestyles = Fatal (timeout)
+% expect:  one bibliography with both items and no open group
+% status:  RED (64qb) -> RED (64p)
+% preload: ar5iv.sty
+\documentclass{bibenum}
+\begin{document}
+Text \cite{a}.
+\begin{thebibliography}{9}
+\bibitem{a} A. Author, Title A.
+\bibitem{b} B. Author, Title B.
+\end{thebibliography}
+\end{document}

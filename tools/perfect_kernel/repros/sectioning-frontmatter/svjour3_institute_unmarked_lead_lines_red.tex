@@ -1,0 +1,25 @@
+% mechanism: the frontmatter API's Cut decision (`affiliations::requested_entry_marks`): a list whose first printed line
+%   no mark leads stays whole — here svjour3's correspondence lines (`\Letter~~ Name \\ $~\quad~~$ e-mail`) above the
+%   marked institutes; a `\\[5pt]` row break's length also leads the next line once those lines are read
+% witness: 2205.14113 (census129 cluster 4: `\institute{\Letter~~ Connor E. Bray \\ $~\quad~~$ cbray@mines.edu \\[5pt]
+%   $^1\quad$ Colorado School of Mines, …\\[3pt] $^2\quad$ Lawrence Livermore National Lab, …}`; the `$^1\quad$` marks
+%   themselves are read already)
+% oracle:  pdflatex (svjour3.cls of 2205.14113, marvosym) 0 errors: "Ann Able1 · Bob Baker2 · Cat Cole1", the institute
+%   "B Ann Able / ann@a.edu / 1 Univ A, Town / 2 Univ B, City" in the footer
+% engines: rust int131a0 and 104c: a nameless creator holds "🖂 Ann Able 1 Univ A, Town 2 Univ B, City", Ann the e-mail
+%   "$˜ ˜˜$ ann@a.edu"; int159a: Ann and Cat each the whole block "🖂 Ann Able 1 Univ A, Town 2 Univ B, City", Ann the
+%   e-mail "$˜ ˜˜$ ann@a.edu"; IV1: the same, Ann's e-mail "ann@a.edu" (the spacing formula glue, IV1's
+%   svjour3_institute_spacing_formula_before_address_is_no_text); perl: one affiliation
+% expect:  0 errors, 0 warnings; Ann and Cat "Univ A, Town", Bob "Univ B, City", the correspondence line the block's
+% status:  RED (104c) — one paper's shape (the unmarked lead lines' owner is no mark's: a block note or Ann's), deferred
+%   (SYNC_STATUS row 104c); no guard
+% preload: ar5iv.sty
+\documentclass{svjour3}
+\usepackage{marvosym}
+\begin{document}
+\title{T}
+\author{Ann Able$^1$ \and Bob Baker$^2$ \and Cat Cole$^1$}
+\institute{\Letter~~ Ann Able \\ $~\quad~~$ ann@a.edu \\[5pt] $^1\quad$ Univ A, Town\\[3pt] $^2\quad$ Univ B, City}
+\maketitle
+Text.
+\end{document}

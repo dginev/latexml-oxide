@@ -1,0 +1,18 @@
+% witness: synthetic (66e r4 review: an enclosing group's `}` cleared r4's records, so the tag read past \endalign and $$; a \par or row end recorded in a nested group that closed survived it)
+% oracle:  pdftex (\input amstex) this file: 14 errors, "Paragraph ended before \align  was complete" 3 times, each alignment dropped; each shape alone: {\it …} 3 errors ("Paragraph ended before \align  was complete", "Missing $ inserted", "Display math should end with $$"), the align dropped; \vbox{…}: 4 errors (the same three, then "You can't use `\end' in internal vertical mode"), then Emergency stop; Fatal, no PDF; \tag{{3\par}5\\: 9 errors, the align dropped (amstex.tex:667/:687 \align reads its body as a non-\long argument)
+% engines: rust 66e r4 = this file 18 errors; {\it …} alone 5 errors, \vbox{…} 7 ("\lx@newline undefined", 4 "Attempt to close a group"), the alignment and the later paragraphs read into the tag; \tag{{3\par}5\\ 2 errors (a false "Paragraph ended", a stray } put back); 66d6 \let\tag\eqno
+% expect:  3 errors ("Missing } inserted before the row's end in \tag", one per display); each first row tagged "(5)" / "(35)" with a=b, each second row c=d untagged; "inside" italic in the {\it} group, "inside" in the \vbox; "after." and both later paragraphs kept (OXIDIZED_DESIGN_DIVERGENCES #575)
+% status:  GREEN (66e r5)
+\input amstex
+\input amsppt.sty
+\document
+{\it Before $$\align a&=b\tag{5\\ c&=d\endalign$$ inside} after.
+
+\vbox{Before $$\align a&=b\tag{5\\ c&=d\endalign$$ inside} after.
+
+$$\align a&=b\tag{{3\par}5\\ c&=d\endalign$$
+
+Later {para}graph.
+
+Last paragraph.
+\enddocument

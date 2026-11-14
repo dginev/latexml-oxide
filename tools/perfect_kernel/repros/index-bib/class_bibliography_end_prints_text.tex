@@ -1,0 +1,16 @@
+% witness: synthetic (64p review): a class bibliography whose end prints text after its list; the corpus classes
+%          (ajour/cjour \endreferences) end with \endlist alone
+% oracle:  pdflatex 0 errors; [1] [2], then "End of references."
+% engines: rust 64qb = 4 errors; rust 64p = 0 errors, "End of references." before the entries (the class's end runs at
+%          the first \bibitem, closing its list); Perl 0.8.8 --includestyles = 2 Fatal
+% expect:  the text after the bibliography's entries
+% status:  RED (64qb) -> RED (64p)
+% preload: ar5iv.sty
+\documentclass{bibmore}
+\begin{document}
+Text \cite{a}.
+\begin{thebibliography}{9}
+\bibitem{a} A. Author, Title A.
+\bibitem{b} B. Author, Title B.
+\end{thebibliography}
+\end{document}

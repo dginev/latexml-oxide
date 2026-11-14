@@ -1,0 +1,3011 @@
+//! Guards for batch E0 / Z0 of the old frontmatter engine's removal (`docs/parity/FRONTMATTER_SINGLE_ENGINE_PLAN.md`, the
+//! user's ruling 2026-11-06: the old engine's code is deleted before the merge). Nothing here changes a conversion:
+//! the fence and the token-read count read the source. Each pinned count is a debt on the way to the floor, not a
+//! permanent allowance: it may only fall, and a fall lowers its pin (the failure message prints the table to paste), so
+//! what was paid stays paid. The S2b writer and the census's read-back are deleted (DEL4; their witnesses 2012.14750,
+//! 2201.02056 (overflow positions), 2606.18623, 1507.02068); the pass list after them is re-anchored where the writer
+//! ran, after the emitter's placement (`passes_after_the_emitter_are_an_allow_list`; its debts 2511.18438, 2608.22772).
+use std::{collections::BTreeMap, fs, path::Path};
+
+use regex::Regex;
+
+const BASE: &str = "latexml_engine/src/base_utilities";
+
+fn repo_path(path: &str) -> std::path::PathBuf {
+  Path::new(env!("CARGO_MANIFEST_DIR")).join("..").join(path)
+}
+
+/// Every `.rs` file under `path` (a file: itself), repo-relative, sorted.
+fn rust_files(path: &str) -> Vec<String> {
+  let full = repo_path(path);
+  if full.is_file() {
+    return vec![path.to_string()];
+  }
+  let mut out = Vec::new();
+  for entry in fs::read_dir(&full).unwrap_or_else(|e| panic!("{path}: {e}")) {
+    let entry = entry.expect("a directory entry");
+    let name = format!("{path}/{}", entry.file_name().to_string_lossy());
+    if entry.path().is_dir() {
+      out.extend(rust_files(&name));
+    } else if name.ends_with(".rs") {
+      out.push(name);
+    }
+  }
+  out.sort();
+  out
+}
+
+/// `path`'s lines, each up to its first `//`: over-approximate on code, since a string holding `//` is cut there too, and
+/// never counts a comment.
+fn code_lines(path: &str) -> Vec<String> {
+  fs::read_to_string(repo_path(path))
+    .unwrap_or_else(|e| panic!("{path}: {e}"))
+    .lines()
+    .map(|line| line.split("//").next().unwrap_or("").to_string())
+    .collect()
+}
+
+/// A Rust source as the compiler reads it: no comments, each literal a string or a character, a raw one too, one literal `"<n>"`
+/// in `code` ([`RustSource::literals`]'s index), so a guard's pattern reads across lines and nothing in a literal looks like code.
+struct RustSource {
+  code:     String,
+  literals: Vec<String>,
+}
+
+/// What a string's or a character's source says, its escapes read; `\` and a line's end join the lines.
+fn unescape(body: &str) -> String {
+  let mut out = String::new();
+  let mut chars = body.chars().peekable();
+  while let Some(c) = chars.next() {
+    if c != '\\' {
+      out.push(c);
+      continue;
+    }
+    match chars.next() {
+      Some('n') => out.push('\n'),
+      Some('t') => out.push('\t'),
+      Some('r') => out.push('\r'),
+      Some('0') => out.push('\0'),
+      Some('x') => {
+        let hex: String = chars.by_ref().take(2).collect();
+        out.extend(u8::from_str_radix(&hex, 16).ok().map(char::from));
+      },
+      Some('u') => {
+        let hex: String = chars
+          .by_ref()
+          .take_while(|c| *c != '}')
+          .filter(|c| *c != '{' && *c != '_')
+          .collect();
+        out.extend(u32::from_str_radix(&hex, 16).ok().and_then(char::from_u32));
+      },
+      Some('\n') => {
+        while chars.peek().is_some_and(|c| c.is_whitespace()) {
+          chars.next();
+        }
+      },
+      Some(other) => out.push(other),
+      None => {},
+    }
+  }
+  out
+}
+
+/// Read `text` ([`RustSource`]); what `#[cfg(test)]` holds is no code of the engine's, so it goes (a fixture spells what it likes).
+fn lex_rust(text: &str) -> RustSource {
+  let chars: Vec<char> = text.chars().collect();
+  let at = |i: usize| chars.get(i).copied();
+  let (mut code, mut literals, mut i) = (String::new(), Vec::new(), 0);
+  let push = |code: &mut String, literals: &mut Vec<String>, literal: String| {
+    code.push_str(&format!("\"{}\"", literals.len()));
+    literals.push(literal);
+  };
+  while let Some(c) = at(i) {
+    if c == '/' && at(i + 1) == Some('/') {
+      while at(i).is_some_and(|c| c != '\n') {
+        i += 1;
+      }
+    } else if c == '/' && at(i + 1) == Some('*') {
+      let (mut depth, mut j) = (1, i + 2);
+      while depth > 0 && j < chars.len() {
+        if at(j) == Some('/') && at(j + 1) == Some('*') {
+          depth += 1;
+          j += 2;
+        } else if at(j) == Some('*') && at(j + 1) == Some('/') {
+          depth -= 1;
+          j += 2;
+        } else {
+          j += 1;
+        }
+      }
+      i = j;
+    } else if c == '"' {
+      let mut j = i + 1;
+      while at(j).is_some_and(|c| c != '"') {
+        j += if at(j) == Some('\\') { 2 } else { 1 };
+      }
+      push(
+        &mut code,
+        &mut literals,
+        unescape(&chars[i + 1..j.min(chars.len())].iter().collect::<String>()),
+      );
+      i = j + 1;
+    } else if c == '\'' && (at(i + 1) == Some('\\') || at(i + 2) == Some('\'')) {
+      let mut j = i + 1;
+      while at(j).is_some_and(|c| c != '\'') {
+        j += if at(j) == Some('\\') { 2 } else { 1 };
+      }
+      push(
+        &mut code,
+        &mut literals,
+        unescape(&chars[i + 1..j.min(chars.len())].iter().collect::<String>()),
+      );
+      i = j + 1;
+    } else if c.is_alphanumeric() || c == '_' {
+      // (a word whole, so that the `r` ending a name opens no raw string)
+      let start = i;
+      while at(i).is_some_and(|c| c.is_alphanumeric() || c == '_') {
+        i += 1;
+      }
+      let word: String = chars[start..i].iter().collect();
+      let mut hashes = 0;
+      while at(i + hashes) == Some('#') {
+        hashes += 1;
+      }
+      if matches!(word.as_str(), "r" | "br" | "cr") && at(i + hashes) == Some('"') {
+        let body = i + hashes + 1;
+        let mut j = body;
+        while j < chars.len()
+          && !(at(j) == Some('"') && (1..=hashes).all(|n| at(j + n) == Some('#')))
+        {
+          j += 1;
+        }
+        push(
+          &mut code,
+          &mut literals,
+          chars[body..j.min(chars.len())].iter().collect(),
+        );
+        i = j + hashes + 1;
+      } else if matches!(word.as_str(), "b" | "c") && matches!(at(i), Some('"' | '\'')) {
+        // (its prefix: the literal comes next round)
+      } else {
+        code.push_str(&word);
+      }
+    } else {
+      code.push(c);
+      i += 1;
+    }
+  }
+  // (the literals' text is out of the code, so a brace here is a brace)
+  while let Some(start) = code.find("#[cfg(test)]") {
+    let tail = &code[start..];
+    let ends = match (tail.find('{'), tail.find(';')) {
+      (Some(brace), semi) if semi.is_none_or(|semi| brace < semi) => {
+        let mut depth = 0usize;
+        tail[brace..]
+          .char_indices()
+          .find_map(|(n, c)| {
+            depth += usize::from(c == '{');
+            depth -= usize::from(c == '}');
+            (depth == 0).then_some(brace + n + 1)
+          })
+          .unwrap_or(tail.len())
+      },
+      (_, Some(semi)) => semi + 1,
+      _ => tail.len(),
+    };
+    code.replace_range(start..start + ends, "");
+  }
+  RustSource { code, literals }
+}
+
+fn read_rust(path: &str) -> RustSource {
+  lex_rust(&fs::read_to_string(repo_path(path)).unwrap_or_else(|e| panic!("{path}: {e}")))
+}
+
+/// Compare the counts with their pins, a debt each: `why` when one rises, a request to lower the pin when one falls. A
+/// pin raised shows only in this file's diff, so the rule is in the message: what raises one states its reason, in the
+/// commit and in the batch's report, and the reviewer reads it.
+fn assert_debts(name: &str, pins: &[(&str, usize)], counts: &BTreeMap<String, usize>, why: &str) {
+  let table: String = counts.iter().fold(String::new(), |out, (key, n)| {
+    format!("{out}  (\"{key}\", {n}),\n")
+  });
+  let pinned: BTreeMap<String, usize> = pins.iter().map(|(k, n)| (k.to_string(), *n)).collect();
+  let rose: Vec<String> = counts
+    .iter()
+    .filter(|(key, n)| **n > pinned.get(*key).copied().unwrap_or(0))
+    .map(|(key, n)| format!("{key}: {} -> {n}", pinned.get(key).copied().unwrap_or(0)))
+    .collect();
+  assert!(
+    rose.is_empty(),
+    "{name} rose: {rose:?}. {why} A raised pin is the exception: the commit and the batch's report state its reason, and \
+     the review reads it. The table now:\n{table}"
+  );
+  assert_eq!(
+    pinned, *counts,
+    "{name} fell: a debt paid. Lower its pin so it stays paid; the table now:\n{table}"
+  );
+}
+
+/// What the old reader emits into the API, per file: `\lx@add@`, `\lx@annotate@frontmatter` and `queue_front_matter(`
+/// occurrences, and `annotate=` literals. Each is a decision the old engine takes, on the way to deleting it (the first and
+/// the last 42 + 4 at int140a; the study's 41 counted otherwise).
+/// Stopgaps inside these counts: 97f r2's F1 and F3 (its `\lx@add@contact@placed` in `email_block_calls.rs`,
+/// `placed_email_line_calls` and `take_placed_line_emails` of rev126a N2, deleted at Z18l). 108a's six rules (`rows::own_marks_end`,
+/// `lines_under_names_read_as_names`, `line_breaks_as_name_separators`, `separators::has_author_block_separator`,
+/// `symbols::glued_marks`, `email_lines::address_row_pieces`) added no emission: they feed the existing ones, so only
+/// [`OLD_READER_CODE_LINES`] sees that kind of growth.
+const OLD_READER_EMISSIONS: &[(&str, usize)] = &[
+  // (Z18a, `affiliations.rs lx@annotate@frontmatter` 2 -> 0: the API's own Cut moved unchanged to `defs/frontmatter_api/cut.rs`;
+  // Z18j, `affiliations.rs lx@add@` 2 -> 0: the API's entry cutter moved unchanged, the whole file, to
+  // `defs/frontmatter_api/affiliations.rs`, where [`MOVED_CUT_KIND_EMISSIONS`] counts them)
+  // (DEL2, 2 -> 1: `split_author_calls` deleted with the old driver; `dispatch.rs` (2 + 9) and `line_kinds.rs` (1 + 4) deleted whole;
+  // Z18a, `collaborations.rs annotate=` 1 -> 0 and `lx@add@` 1 -> 0, `name_text.rs lx@add@` 2 -> 0: `\lx@add@author`'s own
+  // collaboration and membership readouts moved unchanged to `defs/frontmatter_fields/names.rs`)
+  // (the "Knowledge in, driver out, one pass" move, 6 -> 5, and `notes.rs`' 2 -> 0: `is_email_command` and `document_note_call`, `note_call_end` moved to the emitter,
+  // `emitter/calls.rs`, which writes Perl's calls; no emission added; DEL2, 5 -> 1: `block_email_calls` and its siblings deleted with the old driver)
+  // (Z18l, 1 -> 0: `email_block_calls.rs` deleted, 97f r2's stopgap `placed_email_line_calls` and `take_placed_line_emails`
+  // with it, once aas's `\affil` e-mail lines went to the API's Kind and Link steps, OD #992)
+  // (DEL2, 7 -> 6: the dead `AddressPlacement::Marked` arm; Z18j, 6 -> 0: the e-mail line readers moved unchanged to
+  // `defs/frontmatter_api/email_lines.rs`, where [`MOVED_CUT_KIND_EMISSIONS`] counts them)
+  // (the "Knowledge in, driver out, one pass" move, 3 -> 2 and 8 -> 2: the token primitives that recognize the API's commands in a note (`NAME_ANNOTATIONS`, `name_text`)
+  // moved to `classify/`; they read, emit nothing)
+  // (Z18m moved the rest of `author_block/` unchanged into files of their own, `frontmatter/classify/old_reader/`, which
+  // emit nothing; `classify/name_text.rs`' 1 and `notes.rs`' 6 are the one engine's library's, `NAME_ANNOTATIONS`' rows and
+  // the tests by name of the API's `\lx@add@` commands a name or a note may hold, read, not written: review revZ18m B2)
+];
+
+/// The old reader's non-blank code lines at int140a: a pin, for the growth its emissions don't show (108a's +703
+/// lines, no new emission). Exact since E0h (review revZ18m2 S1; a ceiling before): **a batch that deletes from the
+/// reader, or moves an item out of its files, lowers it to the new count** in the same commit and says what left, so
+/// what was deleted cannot grow back and what moved cannot leave unseen. A sibling directory is no
+/// escape from the rest of this fence's reach: its token reads count in `token_reads_only_fall_toward_the_floor`'s
+/// catch-all, and its API names and keys in `the_frontmatter_api_stays_perls`.
+/// The "Knowledge in, driver out, one pass" move (2026-11-08) lowered it from 15,404 to 9,275: the knowledge the one engine reached moved into its own library,
+/// what is left is the token driver. DEL2 (2026-11-09) lowered it to 5,079: the driver deleted, what is left the items the bindings,
+/// `frontmatter_stores` and the API's Cut and Kind still call. Z18a (2026-11-09) lowered it to 3,631: the API's own Cut and Kind
+/// moved to `defs/frontmatter_api/`, the field readers to `defs/frontmatter_fields/`, `frontmatter/queue_reading.rs` and
+/// `classify/marks.rs`, unchanged; what is left the items the bindings and `frontmatter_stores` call (with the five the Cut
+/// shares with them made visible to it, `entry_calls`, `cut_list_key`, …). Z18j (2026-11-10) lowered it to 2,665: the
+/// API's entry cutter, its e-mail line and mark readers (`affiliations.rs` whole, `email_lines.rs`' readers, `affil_splits`,
+/// `line_notes`, `starts_with_footnote_symbol`, …) moved unchanged to `defs/frontmatter_api/`, the readers the field
+/// readouts share (`only_marks_and_notes`, `collaboration_line_reading`, `queued_author_name_keys`) to
+/// `defs/frontmatter_fields/`; [`MOVED_CUT_KIND_CODE_LINES`] took them. Z18l (2026-11-10) lowered it to 1,656: Z18k's
+/// deletion (`split_author_line`'s closure, `row_emails.rs`) and Z18l's (aas's e-mail line readers, `email_block_calls.rs`,
+/// `email_owners.rs` and `links.rs` whole), the ceiling left at 2,665 by the first. Z18m (2026-11-10) moved the rest of
+/// `author_block/` unchanged to files of their own, `defs/author_macros/ijcai.rs` and `frontmatter/classify/old_reader/`,
+/// and deleted the directory; the ceiling counts those files ([`old_reader_homes`]), the old reader's code alone (review
+/// revZ18m B2: not the one engine's library beside it), 1,702 = the 1,656 moved + 23 of the IJCAI split moved with them
+/// from `defs/author_macros.rs` + 23 of the new files' own (7 `use super::*;`, 16 of `old_reader/mod.rs`'s module
+/// declarations and re-exports) — no line of an item added.
+/// P5a lowered it to 1,544: `names_split.rs` and `names_continue`, `names_list_continues`, `notes_only_line` deleted, their
+/// last caller IEEEtran's `name_memberships` gone (OD #1016). P6c to 1,541: its `LAYOUT` and name-text reads call the one
+/// font-declaration reader (`frontmatter_stores::layout`, `rows::name_text_command`). P6f2 to 1,528: `old_reader::separators`'
+/// parenthesis span is the split's rule (`tokens::paren_close_offset`).
+const OLD_READER_CODE_LINES: usize = 1_528;
+
+/// What the fence counts in the old reader's code: its ways into the API's queue, and a convention's mode.
+const OLD_READER_NEEDLES: [&str; 4] = [
+  "lx@add@",
+  "lx@annotate@frontmatter",
+  "queue_front_matter(",
+  "annotate=",
+];
+
+/// The fence: the old reader takes no new ownership rule.
+#[test]
+fn the_old_reader_takes_no_new_decision() {
+  const WHY: &str = "A new ownership rule lands in `observer/resolver/`, not in the old reader, which is deleted before \
+                     the merge: docs/parity/FRONTMATTER_SINGLE_ENGINE_PLAN.md.";
+  // (Z18m: `author_block/` deleted, its code moved unchanged to its owners; the fence follows it there — every file of
+  // [`MOVED_OLD_READER_FILES`] outside the moved Cut and Kind's directories, which their own fence counts)
+  let files: Vec<String> = old_reader_homes()
+    .map(|file| format!("{BASE}/{file}"))
+    .collect();
+  let (counts, lines) = emissions(&files, |file| {
+    file
+      .strip_prefix(&format!("{BASE}/"))
+      .unwrap_or(file)
+      .to_string()
+  });
+  assert_debts(
+    "the old reader's emissions",
+    OLD_READER_EMISSIONS,
+    &counts,
+    WHY,
+  );
+  assert!(
+    lines <= OLD_READER_CODE_LINES,
+    "the old reader grew to {lines} code lines, over {OLD_READER_CODE_LINES}. {WHY} Raising this ceiling needs the main \
+     session's decision."
+  );
+  // (exact, review revZ18m2 S1: a fall frees headroom a later batch could grow back into, and is how an item moved out of
+  // the old reader's files into a library file shows)
+  assert_eq!(
+    lines, OLD_READER_CODE_LINES,
+    "the old reader fell to {lines} code lines, under {OLD_READER_CODE_LINES}: lower the ceiling to it, and state in the \
+     commit what left (deleted, or moved to which file)."
+  );
+}
+
+/// The files of [`MOVED_OLD_READER_FILES`] the old reader's own fence counts: those outside the directories
+/// [`the_moved_cut_and_kind_take_no_new_decision`] counts.
+fn old_reader_homes() -> impl Iterator<Item = &'static str> {
+  MOVED_OLD_READER_FILES.iter().copied().filter(|file| {
+    !file.starts_with("defs/frontmatter_api/") && !file.starts_with("defs/frontmatter_fields/")
+  })
+}
+
+/// What `dirs`' code emits into the API ([`OLD_READER_NEEDLES`], each file keyed by `key`) and its non-blank code lines.
+fn emissions(dirs: &[String], key: impl Fn(&str) -> String) -> (BTreeMap<String, usize>, usize) {
+  let mut counts: BTreeMap<String, usize> = BTreeMap::new();
+  let mut lines = 0;
+  for file in dirs.iter().flat_map(|dir| rust_files(dir)) {
+    let short = key(&file);
+    for code in code_lines(&file) {
+      lines += usize::from(!code.trim().is_empty());
+      for needle in OLD_READER_NEEDLES {
+        let n = code.matches(needle).count();
+        if n > 0 {
+          *counts.entry(format!("{short} {needle}")).or_default() += n;
+        }
+      }
+    }
+  }
+  (counts, lines)
+}
+
+/// What the API's own Cut and Kind and the field readers Z18a moved out of `author_block/` unchanged
+/// (`defs/frontmatter_api/`, `defs/frontmatter_fields/`) emit into the API, per file (review revZ18a check 3: the four
+/// [`OLD_READER_EMISSIONS`] rows the move paid, `affiliations.rs lx@annotate@frontmatter` 2, `collaborations.rs annotate=` 1
+/// and `lx@add@` 1, `name_text.rs lx@add@` 2, now these): each a debt, as there.
+const MOVED_CUT_KIND_EMISSIONS: &[(&str, usize)] = &[
+  // (Z18j: moved from [`OLD_READER_EMISSIONS`]' `affiliations.rs lx@add@` 2 and `email_lines.rs lx@add@` 6, with their code)
+  ("frontmatter_api/affiliations.rs lx@add@", 2),
+  ("frontmatter_api/cut.rs lx@annotate@frontmatter", 2),
+  ("frontmatter_api/email_lines.rs lx@add@", 6),
+  // (P5b: names.rs's collaboration contact call, `annotate=new`, deleted with `whole_name_collaboration`)
+  ("frontmatter_fields/names.rs lx@add@", 2),
+];
+
+/// The moved code's non-blank code lines at Z18a: a ceiling, as [`OLD_READER_CODE_LINES`] (what moved may shrink, never
+/// grow back into a reader of its own). Z18j raised it from 1,393 to 2,346 with the code it moved here from
+/// `author_block/` unchanged, which lowered [`OLD_READER_CODE_LINES`] from 3,631 to 2,665 (no line added but the moved
+/// files' headers and imports).
+/// PB raised it to 2,404 and PBb lowered it to 2,383 (+37 over Z18j, all in `names.rs`, OD #983's definition replay, which
+/// lives there; review revPB S3): the title code's raw statements apart from the replayed ones (`title_code_author_statements`,
+/// `replayable`), the macro readers of `\@author` (aaai2026's `\theauthors`, 2508.08170), the copy's kept `\@maketitle`
+/// merged (neurips_2022, 2205.14141) and its `\newcounter`s (2508.04047). The juggle reader, a split decision, moved to
+/// `fallback.rs` (`title_code_juggle`). Z18m lowered it to 2,192: the title-code reader (`title_code_author_statements`,
+/// `replayable`, `statements_at_author`, …), the class's code read, moved unchanged to `frontmatter/classify/title_code.rs`.
+/// Z18o raised it by 19 (all in `kind.rs`; the main session's decision on review revZ18o's reading that the lines choose no
+/// owner): the Kind step's mailbox link line (review revZ18l F2, homed in the Kind step, user ruling 2026-10-20), its line
+/// recognized by `classify/links.rs` `mailbox_link_line` and written by the Kind step's existing e-mail call writer
+/// (`email_line_calls`, no new emission). MB1 lowered it to 2,188: the naming of a labelled line — the class's name of
+/// the entry before the line's own label, and an e-mail label's line — moved to the label rule's file,
+/// `frontmatter/classify/email_block_calls.rs` (`entry_line_label`, `email_line_label`), one match for both readers of the
+/// Kind step (review revZ18o N1). IV1 raised it by 54, accepted as debt by the main session (2026-11-11) and retired
+/// by the P4 port of these readers onto the digested reading (the brief's sites, study IV0): `email_lines.rs` `spacing_formulas_as_space` and `formula_prints_spacing_alone` (a formula of spacing alone is
+/// glue, no text of an address: 2205.14113, 2302.05182; OD #972), applied at the head of `email_line_calls`, in the Kind
+/// step's address lines and in `math_glyphs_as_printed` — how an address prints, no owner decided. F0 lowered it to
+/// 2,241: `cut.rs` `place_uncut_copies` takes the marks its caller read (`requested_entry_marks`). F0's fix round (review
+/// revF0 B1) to 2,220: it asks the queue's printed-text requests (`queued_requesters`), its token loop and
+/// `requesting_authors` deleted. P4d to 2,219: `class_numbered_institutes` reads its store by meaning, the marks query
+/// in `observer/argument_marks.rs` (`prints_marks`), the lead of each numbered entry tokenized whole, and
+/// `numbered_marks_requested`'s empty-piece test (no alphanumeric covers it) deleted. P4c raised it to 2,236 (+17,
+/// pending the main session's decision): the Cut a binding's marked list calls with its declaration (`cut_list`, split
+/// from `cut_marked_contact`; DG's "declared cut", OD #1009), its parameter reads and the one-entry stop, net of
+/// `binding_cut_list_attr` deleted. P4b2 lowered it to 2,210: the Cut's "marked" decision and its copy rule read the
+/// marks query (`argument_marks::requested_entry_labels`); `requested_marked_entries_in` and `requested_entry_marks`
+/// deleted. Then 2,211 (+1, pending the main session's decision): the uncut copies give way only once the list is cut,
+/// `place_uncut_copies` called after `cut_list`'s stops and in the already-cut branch. P4f to 2,209: the Cut's `_markshown`
+/// test one helper the binding lists' cutter calls too (`cut.rs` `mark_shown_attr`), each key append in `cut.rs` one
+/// private `with_key` (its three copies deleted). P4b4a raised it to 2,223 (+14, the main session's decision): the list
+/// cutter reads where entries start as digested (`list_marks`), its callers carry each line's starts and each entry's
+/// opening mark, and the Cut's opening declarations end at the first start; the cut itself is in `classify/entry_starts.rs`.
+/// P4b4a3 to 2,217: the Cut's opening declarations (`cut.rs` `notes_lead_declarations`) moved to `classify/notes.rs`
+/// (`list_lead_declarations`), the cutter's pieces their reader too. P5c to 2,203: `queued_author_name_keys` (the queued
+/// names' token keys) deleted from `contacts.rs`, its successor the digested reading's in `queue_reading.rs`; P5b by 225 more:
+/// `defs/frontmatter_fields/names.rs`'s collaboration readers (`whole_name_collaboration`, `wrapped_collaboration_out`,
+/// `name_and_remark` and their helpers) deleted, the reading's. P6's compaction lowers it: P6a to 1,884, `cut_list` and
+/// `CUT_COPY_PLACE` moved unchanged to `defs/frontmatter_api.rs`, `kind.rs`' `balanced` deleted (core's `Tokens::is_balanced`);
+/// P6c to 1,878, `email_lines.rs`' and `kind.rs`' font reads the one reader's (`rows::name_text_command`, `mark_switch`);
+/// P6d to 1,867, `line_marks.rs`' `affil_splits` deleted (`classify::author_affil_splits` spelled again); P6f to 1,863,
+/// the cutter's `\and` test the line cut's (`classify::parts_entries`). P28m3 to 1,862: `place_address_runs` reads the mark's
+/// label once (`queue_reading::mark_set_label`), its address calls carrying it, the resolver deciding (`entry_owners`);
+/// back to 1,863 by rustfmt alone: its key renamed `_placedbymark` (revP28m3), the line wraps (int169a's push).
+const MOVED_CUT_KIND_CODE_LINES: usize = 1_863;
+
+/// The fence on the moved Cut and Kind: they take no new decision either (review revZ18a check 3).
+#[test]
+fn the_moved_cut_and_kind_take_no_new_decision() {
+  const WHY: &str = "The API's own Cut and Kind and the field readers moved out of `author_block/` unchanged (Z18a); a new \
+                     ownership rule lands in `observer/resolver/`, on the digested events, not here.";
+  let dirs = [
+    format!("{BASE}/defs/frontmatter_api"),
+    format!("{BASE}/defs/frontmatter_fields"),
+  ];
+  let (counts, lines) = emissions(&dirs, |file| {
+    file
+      .strip_prefix(&format!("{BASE}/defs/"))
+      .unwrap_or(file)
+      .to_string()
+  });
+  assert_debts(
+    "the moved Cut and Kind's emissions",
+    MOVED_CUT_KIND_EMISSIONS,
+    &counts,
+    WHY,
+  );
+  assert!(
+    lines <= MOVED_CUT_KIND_CODE_LINES,
+    "the moved Cut and Kind grew to {lines} code lines, over {MOVED_CUT_KIND_CODE_LINES}. {WHY} Raising this ceiling \
+     needs the main session's decision."
+  );
+  // (exact, review revE0h B1: the export pin sees only `pub` items, so a non-exported item moved out of these files
+  // into a library file shows only as this count's fall — `kind.rs`' `pub(super) fn within_inst` to `classify/marks.rs`)
+  assert_eq!(
+    lines, MOVED_CUT_KIND_CODE_LINES,
+    "the moved Cut and Kind fell to {lines} code lines, under {MOVED_CUT_KIND_CODE_LINES}: lower the ceiling to it, and \
+     state in the commit what left (deleted, or moved to which file)."
+  );
+}
+
+/// The one engine's reach into the old reader, per file and name (user 2026-11-08: "stay focused on having only one engine
+/// for frontmatter"). Until Z18m deleted it, `author_block/mod.rs` re-exported each of its submodules (`pub use
+/// names_split::*`, …) and `base_utilities/mod.rs` re-exported it all (`pub use author_block::*`), so a frontmatter file's
+/// `use super::*` reached every name the old reader exported without spelling a path; the moved files' names
+/// ([`MOVED_OLD_READER_FILES`]) still reach it through the globs of their new homes, so the fence counts those names, and
+/// reads the one engine's files alone: the old reader's own files, `classify/old_reader/` among them, are no source of
+/// its and export none of its names ([`one_engine_files`], [`old_reader_names_owned`]; review revZ18m B1, where 22 moved
+/// names sat in `classify/`'s library files and went uncounted). A use is a call (`name(`), a
+/// path (`::name`, `name::`), a name in a `use` list, a function passed as a value (`.with_str(name)`, `.map(name)`), or any
+/// occurrence of a constant or type name (upper case first); a name is the one engine's own where `frontmatter/` exports it
+/// (a visible item at a one-engine file's top level) or the file itself defines it (a nested function, a method, a
+/// closure). Each
+/// pair is a debt: it may only fall. A new one is a decision the old engine takes for the new one; it lands in
+/// `observer/resolver/`, on the digested events, instead. The "Knowledge in, driver out, one pass" move (2026-11-08) moved every name the one engine reached, 138
+/// pairs at int149a, into its own library (docs/parity/FRONTMATTER_SINGLE_ENGINE_PLAN.md, row "Knowledge in, driver out, one
+/// pass"): text rules and token primitives to `frontmatter/classify/`, owner logic to `observer/resolver/owners.rs`, Perl's
+/// API-call writers to `observer/emitter/calls.rs`, Perl's whole-block fallback with its preparation to `frontmatter/fallback.rs`,
+/// the API's attribute names to `defs/frontmatter_api.rs`. None is left: what `author_block/` held then was the token
+/// driver, deleted at DEL2; its last items Z18m moved to the old reader's files of their own and deleted the directory.
+/// (revZ18j S1: the names [`MOVED_OLD_READER_FILES`] export count too, so a move out of `author_block/` leaves no name
+/// unfenced; `relocate.rs`'s `s!("{CUT_COPY_PLACE}{key}:{label}")` is revZ18a's capture, unfenced since Z18a moved
+/// `CUT_COPY_PLACE` to `cut.rs`). `fallback.rs title_code_author_statements` (int155a, the main session's decision): PBb's
+/// juggle reader reads the class's title-code statements, which ERR2 (OD #983) put in `names.rs` beside the moved field
+/// readers — the class's code read, not the old reader's; Z18m moved that reader to `frontmatter/classify/title_code.rs`,
+/// paying it. `observer/emitter/content.rs title_code_author_definitions` (PC3, the brief's mechanism): `Field::held_undefined_at`
+/// leaves out a held undefined command the class's title code defines reading arguments — the same class code, which
+/// the flush's net already spares (1108.4222, 2607.07582); paid with that reader's move (Z18m, its `reads_arguments` with it).
+const ONE_ENGINE_REACH: &[(&str, usize)] = &[
+  // (P4b4f, 0 -> 2: a line of addresses keeps its token reading in the cutter, `line_addresses`'s, as `entry_calls` read
+  // it before P4b4a — its marks label addresses, a start may stand inside one, 1506.02349; P6d 2 -> 0: the line's
+  // reading decides, `resolver::prints_only_addresses` on its events' text, the blocks' one reader)
+  // (Z18m's three, `collaboration_line`'s, `notes_only_line`'s and `space_parted_names`' uses of the moved field and line
+  // readers, are the old reader's uses of its own code: their files, `classify/old_reader/`, are no source of the one
+  // engine's (review revZ18m B1))
+  // (P6a, `relocate.rs CUT_COPY_PLACE` 1 -> 0: the state key moved to `defs/frontmatter_api.rs`, whose
+  // `\lx@cut@copy@place` writes it)
+  // (P4b4a4, revP4b4a2 B3: llncs's shape choice and the cutter read one fact, whether a start stands inside an
+  // environment the list opens; `starts_inside_environment` splits the list into its lines as `entry_calls` does; P6d
+  // 2 -> 0: `affil_splits` was `classify::author_affil_splits` spelled twice, folded into it, every caller its)
+];
+
+/// Every file that holds the old reader's code moved out of `author_block/` unchanged, whose exports
+/// [`old_reader_exports`] counts as the old reader's (revZ18j S1): Z18a's Cut, Kind and field readers, Z18j's entry cutter
+/// and its e-mail line and mark readers, and Z18m's rest — the IJCAI chain, the authblk and IEEEtran readers, the shared
+/// mark readers — after which `author_block/` was deleted. The ones outside the moved Cut and Kind's directories are
+/// [`the_old_reader_takes_no_new_decision`]'s ([`old_reader_homes`]): their emissions pinned, their lines under
+/// [`OLD_READER_CODE_LINES`], so a later batch cannot grow them unseen. Each is deleted or rerouted by Option C (P2-P4).
+const MOVED_OLD_READER_FILES: &[&str] = &[
+  "defs/frontmatter_api/cut.rs",
+  "defs/frontmatter_api/kind.rs",
+  "defs/frontmatter_fields/names.rs",
+  "defs/frontmatter_fields/contacts.rs",
+  "defs/frontmatter_api/affiliations.rs",
+  "defs/frontmatter_api/email_lines.rs",
+  "defs/frontmatter_api/line_marks.rs",
+  // (Z18m: the IJCAI chain, from `defs/author_macros.rs` and `author_block/{names_split,preprocess,separators}.rs`)
+  "defs/author_macros/ijcai.rs",
+  // (Z18m: the rest of `author_block/`, in files of their own under `classify/old_reader/` (review revZ18m B1: not beside
+  // the one engine's library in `classify/`'s other files, which this list would count as the old reader's, nor among
+  // the one engine's own names, which [`the_one_engine_reaches_the_old_reader_only_through_its_survivors`] leaves out))
+  "frontmatter/classify/old_reader/collaborations.rs",
+  "frontmatter/classify/old_reader/marks.rs",
+  "frontmatter/classify/old_reader/mod.rs",
+  "frontmatter/classify/old_reader/name_text.rs",
+  "frontmatter/classify/old_reader/notes.rs",
+  "frontmatter/classify/old_reader/rows.rs",
+  "frontmatter/classify/old_reader/separators.rs",
+  "frontmatter/classify/old_reader/space_parted.rs",
+];
+
+/// The names the old reader exports into `base_utilities`: the `pub`, `pub(crate)` and `pub(in …)` items of each of
+/// [`MOVED_OLD_READER_FILES`] (until Z18m also `author_block/mod.rs` and each submodule it re-exported), at a file's
+/// top level: a method is no name the glob
+/// exports, its type is (a gap closed 2026-11-08: the driver's `Collaborations::author` read every `author` argument as a use).
+fn old_reader_exports() -> std::collections::BTreeSet<String> {
+  let item = Regex::new(
+    r"(?m)^pub(?:\((?:crate|in [^)]*)\))?\s+(?:fn|const|static|struct|enum|type|trait)\s+([A-Za-z_][A-Za-z0-9_]*)",
+  )
+  .expect("a regex");
+  let files = MOVED_OLD_READER_FILES
+    .iter()
+    .map(|file| format!("{BASE}/{file}"));
+  let mut names = std::collections::BTreeSet::new();
+  for file in files {
+    for found in item.captures_iter(&read_rust(&file).code) {
+      names.insert(found[1].to_string());
+    }
+  }
+  names
+}
+
+/// Every name the old reader's files export ([`old_reader_exports`] over [`MOVED_OLD_READER_FILES`]), an exact pin (review
+/// revZ18m2 S1): the fence decides by file whether a name is the old reader's, so an item moved out of those files into
+/// one of the one engine's (`mark_prints_nothing` from `ijcai.rs` into `classify/marks.rs`) would stop counting with no
+/// test edited. A name that leaves this list was deleted, or moved with its uses rerouted: the commit that lowers the pin
+/// says which, and the review reads it. A name added is a new item of the old reader's, which takes none. 81 at E0h.
+/// IV1 added one, accepted as debt by the main session (2026-11-11) and retired by the P4 port of these readers onto
+/// the digested reading (the brief's site, study IV0): `email_lines.rs` `spacing_formulas_as_space`, how an address line
+/// prints (a formula of spacing alone is glue, no text of an address: 2205.14113, 2302.05182; OD #972), no owner decided;
+/// its predicate `formula_prints_spacing_alone` is private (revIV1 NIT 1). P4c (pending the main session's decision):
+/// `binding_cut_list_attr` deleted, `cut_list` added — the Cut's body, which a binding's marked list calls with its
+/// declaration (OD #1009). P5a: `names_continue`, `names_list_continues`, `notes_only_line` and `hoist_wrapped_separators` (with
+/// `names_split.rs`) deleted — IEEEtran's `name_memberships` was their last caller; the grade is the reading's (OD #1016).
+/// P5b: `whole_name_collaboration` and `wrapped_collaboration_out` deleted — a collaboration a creator call prints is the
+/// reading's (`frames_the_names`, OD #967). P6a: `cut_list` (the declared cut's body, OD #1009) and `CUT_COPY_PLACE`
+/// moved unchanged to `defs/frontmatter_api.rs`, beside `CutParameters` and `\lx@cut@copy@place`. P6d: `affil_splits`
+/// deleted, the same list as `classify::author_affil_splits`, which its callers read.
+const OLD_READER_EXPORTS: &[&str] = &[
+  "AddressPlacement",
+  "ContactOwner",
+  "ENTRY_DIGESTING",
+  "ENTRY_KEY_COUNTER",
+  "EntryCall",
+  "address_line_notes",
+  "addresses_in_order",
+  "affiliation_calls",
+  "affiliation_is_marked",
+  "answered_symbol_key",
+  "author_group_splits",
+  "author_label_marks",
+  "author_marks_end_name",
+  "blank_line_marks_dropped",
+  "class_numbered_institutes",
+  "collaboration_line",
+  "collaboration_line_reading",
+  "cut_list_key",
+  "cut_marked_contact",
+  "document_notes",
+  "drop_empty_marks",
+  "email_line_calls",
+  "entry_calls",
+  "expand_separator_macros",
+  "expand_sole_author_macro",
+  "frontmatter_group_first",
+  "has_author_block_separator",
+  "has_ijcai_section_marker",
+  "holds_a_macro_printing_a_link",
+  "holds_requested_marked_entries",
+  "inst_prints_its_mark",
+  "inst_takes_back_space",
+  "is_membership_grade",
+  "kind_entry_addresses",
+  "leading_markup",
+  "led_by_footnote_symbol",
+  "line_addresses",
+  "line_breaks_as_name_separators",
+  "line_is_email_list",
+  "line_notes",
+  "lines_under_names_read_as_names",
+  "mark_prints_nothing",
+  "math_braces_as_printed",
+  "membership_read_out",
+  "name_line_span",
+  "name_marks_end",
+  "named_email_calls",
+  "notes_line_joins_names",
+  "notes_out_of_marks",
+  "numbered_marks_requested",
+  "only_marks_and_notes",
+  "optioned_email_calls",
+  "placed_contact_owner",
+  "printed_marks_as_marks",
+  "queued_row_start",
+  "run_in_author_order",
+  "shared_affiliation_calls",
+  "space_parted_name_line",
+  "space_parted_names",
+  "space_parted_rows_joined",
+  "spaced_name_separators",
+  "spacing_formulas_as_space",
+  "starts_with_footnote_symbol",
+  "take_author_annotations",
+  "text_tokens",
+  "unalias_mark_commands",
+  "whole_line_group",
+  "wide_space_end",
+  "written_membership_out",
+];
+
+/// How often `source` uses the old reader's `name`: in its code ([`uses_of`]), and as an inline capture of a format string,
+/// `{name}` or `{name:…}` in a literal (`s!("{CUT_COPY_PLACE}{key}:{label}")`; review revZ18a, a blind spot of the lexing,
+/// which lifts every literal out of the code); `imports` are the byte ranges of its code's `use` statements.
+fn uses_in(source: &RustSource, imports: &[std::ops::Range<usize>], name: &str) -> usize {
+  let open = format!("{{{name}");
+  let captures = |literal: &String| {
+    literal
+      .match_indices(&open)
+      .filter(|(at, _)| {
+        literal[at + open.len()..].starts_with(['}', ':']) && !literal[..*at].ends_with('{')
+      })
+      .count()
+  };
+  uses_of(&source.code, imports, name) + source.literals.iter().map(captures).sum::<usize>()
+}
+
+/// How often `code` uses the old reader's `name` (see [`ONE_ENGINE_REACH`] for what counts as a use); `imports` are the byte
+/// ranges of `code`'s `use` statements.
+fn uses_of(code: &str, imports: &[std::ops::Range<usize>], name: &str) -> usize {
+  let word = Regex::new(&format!(r"\b{name}\b")).expect("a regex");
+  let constant_or_type = name.chars().next().is_some_and(|c| c.is_ascii_uppercase());
+  word
+    .find_iter(code)
+    .filter(|found| {
+      let before = code[..found.start()].trim_end();
+      let after = code[found.end()..].trim_start();
+      if before.ends_with('.') {
+        return false;
+      }
+      constant_or_type
+        || before.ends_with("::")
+        || after.starts_with("::")
+        || after.starts_with('(')
+        // (a function passed as a value: `.with_str(name)`, `.map(name)`, `f(a, name)`)
+        || (before.ends_with(['(', ',']) && after.starts_with([')', ',']))
+        || imports.iter().any(|range| range.contains(&found.start()))
+    })
+    .count()
+}
+
+/// A visible item at a file's top level, its name captured: what a file exports into `base_utilities` (not a method nor a
+/// nested function, which are indented).
+fn exported_items() -> Regex {
+  Regex::new(
+    r"(?m)^pub(?:\([^)]*\))?\s+(?:fn|const|static|struct|enum|type|trait|mod)\s+([A-Za-z_][A-Za-z0-9_]*)",
+  )
+  .expect("a regex")
+}
+
+/// The one engine's files among `files` (each under `frontmatter/`), with their paths under it: all but the old reader's,
+/// [`MOVED_OLD_READER_FILES`] (review revZ18m B1: the old reader's code moved into `frontmatter/` is still the old
+/// reader's; its names count as the old reader's exports, and its own uses of them are no reach of the one engine's).
+fn one_engine_files(files: &[String]) -> Vec<(String, String)> {
+  let dir = format!("{BASE}/frontmatter/");
+  files
+    .iter()
+    .filter(|file| {
+      !MOVED_OLD_READER_FILES
+        .iter()
+        .any(|moved| **file == format!("{BASE}/{moved}"))
+    })
+    .map(|file| {
+      let short = file.strip_prefix(&dir).unwrap_or(file).to_string();
+      (short, file.clone())
+    })
+    .collect()
+}
+
+/// The one engine's own names: what one of its files exports, a visible item at its top level ([`exported_items`]); what a
+/// file defines for itself at any depth — a private item, a nested function, a method, a closure — is its own in that file
+/// only.
+fn one_engine_names(sources: &[(String, RustSource)]) -> std::collections::BTreeSet<String> {
+  let exported = exported_items();
+  sources
+    .iter()
+    .flat_map(|(_, source)| {
+      exported
+        .captures_iter(&source.code)
+        .map(|found| found[1].to_string())
+        .collect::<Vec<_>>()
+    })
+    .collect()
+}
+
+/// The old reader's exported names that `ours` counts as the one engine's own, so that the reverse fence would count no
+/// use of them, since it cannot tell which item a use names: none may be (review revZ18m B1). No name is shared since
+/// E0h, so none is exempt (review revZ18m2 N1): the one exemption, `text_tokens`, three items (`defs/frontmatter_fields/contacts.rs`'
+/// keyval-text tokens, Z18a's field readers, beside the one engine's `pub(super)` helpers), went when the one engine's
+/// two were renamed `observer/resolver/labels.rs` `text_as_tokens` and `observer/emitter/emit.rs` `printed_text_tokens`.
+fn old_reader_names_owned(
+  exports: &std::collections::BTreeSet<String>,
+  ours: &std::collections::BTreeSet<String>,
+) -> Vec<String> {
+  exports.intersection(ours).cloned().collect()
+}
+
+/// The reverse fence: the one engine reaches into the old reader only through the names it reaches today, each a debt.
+#[test]
+fn the_one_engine_reaches_the_old_reader_only_through_its_survivors() {
+  const WHY: &str = "The one engine decides on the digested events (`observer/resolver/`); the old reader \
+                     (`MOVED_OLD_READER_FILES`, what Z18m moved out of the deleted `author_block/`) is deleted or \
+                     rerouted by Option C, and each name `frontmatter/` still uses moves or is translated: \
+                     docs/parity/FRONTMATTER_SINGLE_ENGINE_PLAN.md, row \"`author_block/`'s survivors\".";
+  // (closed 2026-11-08: the two shapes the count missed — a function passed as a value, `relocate.rs`'s
+  // `t.with_str(is_name_note_command)`, and a name hidden everywhere by a method or a nested function of one file, `skip_group`
+  // by `title_page_check.rs`'s method and `resolver/labels.rs`'s nested function)
+  assert_eq!(
+    uses_of(
+      "t.with_str(is_name_note_command)",
+      &[],
+      "is_name_note_command"
+    ),
+    1
+  );
+  assert_eq!(uses_of("let x = is_note; f(a, is_note)", &[], "is_note"), 1);
+  assert_eq!(
+    uses_in(&lex_rust(r#"s!("{X}{X}{{X}}{X:?}{XY}")"#), &[], "X"),
+    3
+  );
+  let exported = exported_items();
+  let local = Regex::new(concat!(
+    r"\b(?:fn|const|static|struct|enum|type|trait|mod)\s+([A-Za-z_][A-Za-z0-9_]*)",
+    r"|\blet\s+(?:mut\s+)?([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(?:move\s*)?\|",
+  ))
+  .expect("a regex");
+  assert!(
+    !exported
+      .is_match("impl Page {\n  pub fn skip_group(&self) {}\n}\nfn f() {\n  fn skip_group() {}\n}")
+  );
+  let sources: Vec<(String, RustSource)> =
+    one_engine_files(&rust_files(&format!("{BASE}/frontmatter")))
+      .into_iter()
+      .map(|(short, file)| (short, read_rust(&file)))
+      .collect();
+  let ours = one_engine_names(&sources);
+  // (no name the old reader exports is the one engine's own, so every one is counted: review revZ18m B1, where 22 moved
+  // names sat in the one engine's directory, counted as its own, and a new call to them passed)
+  let owned = old_reader_names_owned(&old_reader_exports(), &ours);
+  assert!(
+    owned.is_empty(),
+    "the old reader's names {owned:?} count as the one engine's own, so no use of them is counted: a file that exports \
+     them is the old reader's, listed in MOVED_OLD_READER_FILES (and under `classify/old_reader/` if it moved there), or \
+     the name is defined twice. {WHY}"
+  );
+  let names: Vec<String> = old_reader_exports()
+    .into_iter()
+    .filter(|name| !ours.contains(name))
+    .collect();
+  let import = Regex::new(r"\b(?:pub(?:\([^)]*\))?\s+)?use\s+[^;]*;").expect("a regex");
+  let mut counts: BTreeMap<String, usize> = BTreeMap::new();
+  for (short, source) in &sources {
+    let own: std::collections::BTreeSet<&str> = local
+      .captures_iter(&source.code)
+      .filter_map(|found| found.get(1).or_else(|| found.get(2)))
+      .map(|name| name.as_str())
+      .collect();
+    let imports: Vec<_> = import
+      .find_iter(&source.code)
+      .map(|found| found.range())
+      .collect();
+    for name in names.iter().filter(|name| !own.contains(name.as_str())) {
+      let n = uses_in(source, &imports, name);
+      if n > 0 {
+        counts.insert(format!("{short} {name}"), n);
+      }
+    }
+  }
+  assert_debts(
+    "the one engine's reach into the old reader",
+    ONE_ENGINE_REACH,
+    &counts,
+    WHY,
+  );
+}
+
+/// The reverse fence counts every name the old reader exports (review revZ18m B1): a file under `classify/old_reader/` is
+/// the old reader's, listed in [`MOVED_OLD_READER_FILES`]; none of those is a source of the one engine's; and the names
+/// Z18m moved into `frontmatter/` (the 22 revZ18m found uncounted) are the old reader's exports, none the one engine's own.
+/// Since E0h every export is pinned by name ([`OLD_READER_EXPORTS`], review revZ18m2 S1), so none leaves those files unseen.
+#[test]
+fn the_old_readers_names_never_count_as_the_one_engines_own() {
+  let old_reader_dir = format!("{BASE}/frontmatter/classify/old_reader");
+  let listed: Vec<String> = MOVED_OLD_READER_FILES
+    .iter()
+    .map(|file| format!("{BASE}/{file}"))
+    .collect();
+  let unlisted: Vec<String> = rust_files(&old_reader_dir)
+    .into_iter()
+    .filter(|file| !listed.contains(file))
+    .collect();
+  assert!(
+    unlisted.is_empty(),
+    "{unlisted:?}: old-reader files missing from MOVED_OLD_READER_FILES"
+  );
+  // (the filter itself: an old-reader file under `frontmatter/` is no source of the one engine's, a library file is)
+  let library = format!("{BASE}/frontmatter/classify/marks.rs");
+  let moved = format!("{BASE}/frontmatter/classify/old_reader/marks.rs");
+  assert_eq!(one_engine_files(&[library, moved]), vec![(
+    "classify/marks.rs".to_string(),
+    format!("{BASE}/frontmatter/classify/marks.rs")
+  )]);
+  let sources: Vec<(String, RustSource)> =
+    one_engine_files(&rust_files(&format!("{BASE}/frontmatter")))
+      .into_iter()
+      .map(|(short, file)| (short, read_rust(&file)))
+      .collect();
+  assert!(
+    sources
+      .iter()
+      .all(|(short, _)| !short.starts_with("classify/old_reader/"))
+  );
+  let ours = one_engine_names(&sources);
+  let exports = old_reader_exports();
+  // (the one engine's side is read, so the check below cannot pass on an empty set — review revE0h N1; and the rename
+  // stands)
+  assert!(
+    ours.contains("text_as_tokens") && ours.contains("printed_text_tokens"),
+    "the one engine's names were not read (or the `text_tokens` rename was undone)"
+  );
+  // (no name both sides export, none exempt: review revZ18m2 N1, the namesake `text_tokens` renamed on the one engine's
+  // side at E0h)
+  assert_eq!(
+    old_reader_names_owned(&exports, &ours),
+    Vec::<String>::new(),
+    "names both the old reader's files and the one engine's export: rename the one engine's"
+  );
+  // (the check bites: a name both export is flagged)
+  let both: std::collections::BTreeSet<String> = ["has_author_block_separator".to_string()].into();
+  assert_eq!(old_reader_names_owned(&both, &both), vec![
+    "has_author_block_separator".to_string()
+  ]);
+  // (every export pinned, review revZ18m2 S1: the 22 names revZ18m B1 found sitting in `classify/` uncounted among them,
+  // `author_group_splits` … `wide_space_end`; none left the old reader's files unseen, none is the one engine's own)
+  let pinned: std::collections::BTreeSet<String> = OLD_READER_EXPORTS
+    .iter()
+    .map(|name| name.to_string())
+    .collect();
+  let left: Vec<&String> = pinned.difference(&exports).collect();
+  let added: Vec<&String> = exports.difference(&pinned).collect();
+  assert!(
+    left.is_empty(),
+    "{left:?} no longer exported by the old reader's files (MOVED_OLD_READER_FILES): deleted, or moved out of them, \
+     where the reverse fence no longer counts its uses. Lower OLD_READER_EXPORTS (and OLD_READER_CODE_LINES) and state \
+     in the commit which, and where it went."
+  );
+  assert!(
+    added.is_empty(),
+    "{added:?}: new exports of the old reader's files. The old reader takes no new item: a new rule lands in \
+     `observer/resolver/`."
+  );
+}
+
+/// Perl LaTeXML's Frontmatter API names, generated once from `LaTeXML/lib/LaTeXML` (absent in worktrees and CI, so hard-coded
+/// here): `\lx@add@…`, `\lx@annotate@…`, `\lx@clear@…`. Not `\lx@address@…`, `\lx@addtocounter` or `\lx@addframing`,
+/// which only share the prefix, nor the bare prefix `\lx@add@`, which Perl builds names from.
+const PERL_FRONTMATTER_API: &[&str] = &[
+  "lx@add@Preamble@PI",
+  "lx@add@abstract",
+  "lx@add@address",
+  "lx@add@affiliation",
+  "lx@add@affiliations",
+  "lx@add@altaddress",
+  "lx@add@altaffiliation",
+  "lx@add@author",
+  "lx@add@authors",
+  "lx@add@classification",
+  "lx@add@contact",
+  "lx@add@copyright",
+  "lx@add@copyrightholder",
+  "lx@add@copyrightyear",
+  "lx@add@creator",
+  "lx@add@cssclass",
+  "lx@add@currentaddress",
+  "lx@add@date",
+  "lx@add@editor",
+  "lx@add@email",
+  "lx@add@frontmatter",
+  "lx@add@frontmatter@now",
+  "lx@add@frontmatter@until",
+  "lx@add@keywords",
+  "lx@add@note",
+  "lx@add@orcid",
+  "lx@add@pubnote",
+  "lx@add@pubnote@thanks",
+  "lx@add@subtitle",
+  "lx@add@thanks",
+  "lx@add@title",
+  "lx@add@toctitle",
+  "lx@add@translator",
+  "lx@add@url",
+  "lx@annotate@frontmatter",
+  "lx@annotate@frontmatter@now",
+  "lx@clear@creators",
+  "lx@clear@frontmatter",
+];
+
+/// The API's names outside Perl's: the exceptions, a list that only shrinks. Each retires with the old reader, becomes a
+/// key on Perl's own call, or stays with its reason recorded (the classification comes at Z4, Z20-Z22 move the bindings).
+const API_EXTENSIONS: &[&str] = &[
+  "lx@add@aas@email",
+  "lx@add@affiliation@marked",
+  "lx@add@affiliation@shared",
+  "lx@add@author@keyvals",
+  "lx@add@author@split",
+  "lx@add@authors@adaptive",
+  "lx@add@authors@append",
+  "lx@add@authors@list",
+  "lx@add@contact@list",
+  "lx@add@contact@placed",
+  "lx@add@creator@rdf",
+  "lx@add@date@halved",
+  "lx@add@email@metadata",
+  "lx@add@frontmatter@container",
+  "lx@add@store@affiliations",
+  "lx@add@store@authorblock",
+];
+
+/// The keys of `\\lx@add@…[…]` calls Perl has too: its `DefKeyVal('Frontmatter', …)` (`Base_Utility.pool.ltxml:247-254`), what its own
+/// calls pass besides (`name=`, `scheme=`, `keys=`: every literal of `LaTeXML/lib/LaTeXML`), and the attributes of the element, as every
+/// option reaches `openElement` (`Base_Utility.pool.ltxml:851-852`): `property=` and `content=` on `ltx:rdf` (`lxRDFa.sty.ltxml:190`),
+/// `xml:lang=`.
+const PERL_DECLARED_KEYS: &[&str] = &[
+  "annotate",
+  "annotations",
+  "class",
+  "content",
+  "graphic",
+  "keys",
+  "label",
+  "labelref",
+  "labelseq",
+  "name",
+  "property",
+  "role",
+  "scheme",
+  "xml:lang",
+];
+
+/// The keys Perl's own code sets on a queued entry's options behind the call (`Base_Utility.pool.ltxml`): what a Rust setter may
+/// insert without a row in [`API_KEYS_OUTSIDE_PERLS`].
+const PERL_INTERNAL_KEYS: &[&str] = &[
+  "_annotation",
+  "_annotations",
+  "_force_font",
+  "_label",
+  "_num",
+];
+
+/// The API's keys outside Perl's, per key and file: each `_word=` a literal holds (and `owner=`, the one without the `_`), each
+/// string constant naming such a key (`CUT_LIST`, which `s!("{CUT_LIST}={key}")` sets: `const _cutlist`), and each key declared in
+/// `Frontmatter` that Perl does not declare; since Z2 also every other key of a call's literal options (`[mark]`) and each key a
+/// Rust setter inserts into an entry's options outside Perl's own (`insert`, `entry`: pinned with their shape, so the few XML
+/// attributes that share it, `_noautoclose`, `_qname`, stay in the count whole). Z2r2 parses them ([`read_api_speech`]), which
+/// found what a call passes through its tags (`\lx@add@frontmatter{ltx:rdf}[property=…]`, `[accumulate=true]`, `[xml:lang=#1]`,
+/// the rows the old pattern missed): 74 rows, 95 uses became 82, 105, no code changed. A debt like the names. Not a constructor's
+/// XML attribute in a template, which is quoted (`_noautoclose='true'`), unless a call's literal options hold it, nor a constant
+/// in `latex_constructs/` or `tex_box.rs` (the kernel's own attributes). `_scopebegin=` is pgfsys's own keyval: it shares the
+/// shape, and stays pinned so that the count stays whole; so do `_font`, `_xmkey`, `_split_ref` and `_nowrap`, attributes a setter
+/// inserts, and the constants naming a DOM mark (`_deposit`, `_inserted`, `_titlepage`, `_preamble`, `_paragraph_break`): this reads
+/// the shape, and telling them apart would be a list of exceptions in the reader, not a shorter one here.
+const API_KEYS_OUTSIDE_PERLS: &[(&str, usize)] = &[
+  ("[accumulate] package/acmart_cls.rs", 2),
+  ("[accumulate] package/ieeetran_cls.rs", 1),
+  ("[accumulate] package/ims_support_sty.rs", 1),
+  ("[mark] lmcs_cls.rs", 1),
+  ("[mark] package/iopart_support_sty.rs", 1),
+  ("_answers= base_utilities/defs/frontmatter_fields.rs", 1),
+  // (P28m3: a new key, distinct from `\lx@sup@setlabel@affiliation`'s `_bymark` (revP28m3): the mark an address under a
+  // marked affiliation was placed by, for a names call the reading parts; 2510.10414)
+  (
+    "_placedbymark= base_utilities/defs/frontmatter_api/affiliations.rs",
+    1,
+  ),
+  ("_group= base_utilities/defs/frontmatter_fields.rs", 1),
+  ("_grouped= package/revtex4_support_sty.rs", 1),
+  ("_labelprints= cas_dc_cls.rs", 1),
+  ("_labelprints= package/authblk_sty.rs", 1),
+  ("_labelprints= package/jheppub_sty.rs", 1),
+  ("_mark= package/jheppub_sty.rs", 1),
+  ("_markpiece= package/llncs_cls.rs", 1),
+  ("_marks= base_utilities/defs/frontmatter_fields.rs", 1),
+  // (Z18a: moved with the Cut from `author_block/affiliations.rs`)
+  ("_markshown= base_utilities/defs/frontmatter_api/cut.rs", 1),
+  // (Z4b: `flag_merged_creators`' own mark of a creator it checked, on a block written whole, Perl's fallback, whose merge its Warning
+  // counts: a tabular block is kept whole on purpose alike, OD #980; Z4br2: `author_macros::KEPT_WHOLE`, the `=2` queued entry's and the
+  // emitter's)
+  ("_merged_checked= base_utilities/defs/author_macros.rs", 1),
+  ("_net= frontmatter_stores.rs", 1),
+  // (CL8, 0 -> 1: the whole printed mark a glued sub-lettered request was parted from, `whole_marks_key` — Perl's own
+  // `_refmarkshown` display, written by the emitter as `author_macros.rs` writes it; 1705.11109)
+  (
+    "_refmarkshown= base_utilities/frontmatter/observer/emitter/emit.rs",
+    1,
+  ),
+  ("_scopebegin= package/pgfsys_latexml_def.rs", 1),
+  ("_sequence= base_utilities/defs/frontmatter_fields.rs", 1),
+  ("_share= cas_dc_cls.rs", 1),
+  // (Z18k: a line under eptcs's whole table of names is every name's entry, `labelseq={affiliation},_share={authors}` —
+  // the key llncs's, aa's and cas-dc's shared institute already uses, no new one: 1407.7928's institute lines)
+  ("_share= eptcs_cls.rs", 1),
+  ("_share= package/aa_cls.rs", 1),
+  ("_share= package/llncs_cls.rs", 2),
+  ("_store= frontmatter_stores.rs", 11),
+  ("_unmarked= base_utilities/defs/frontmatter_fields.rs", 1),
+  ("_unsplit= frontmatter_stores.rs", 1),
+  ("_unsplit= package/revtex4_support_sty.rs", 1),
+  ("_withsup= base_utilities/frontmatter/observer/ledger.rs", 2),
+  ("_zone= package/aa_support_sty.rs", 2),
+  ("_zone= package/elsarticle_cls.rs", 2),
+  ("_zone= package/revtex4_support_sty.rs", 2),
+  // (BC1, raised with its reason: the author block's own creator the emitter writes, `BLOCK_CREATOR`, takes no place in its
+  // role's count — Perl's `\lx@add@frontmatter@now` counts every creator with a role, and the nameless creator relocate's
+  // orphan-sharing branch made, which this one replaces, was counted by nothing: no key of Perl's says uncounted)
+  (
+    "const _blockcreator base_utilities/defs/frontmatter_api.rs",
+    1,
+  ),
+  (
+    "const _command_form base_utilities/frontmatter/queue_digest.rs",
+    1,
+  ),
+  // (the "Knowledge in, driver out, one pass" move: `_cutlist`, `_entry`, `_entrysymbol`, `_kinded`, `_seqlabel` moved unchanged from `author_block/affiliations.rs` to the
+  // API that reads them, `CUT_LIST`, `ENTRY_KEY`, `ENTRY_SYMBOL`, `ENTRY_KINDED`, `SEQUENCE_LABEL`: no key added)
+  // (S5, raised with its reason: the reading's one fact of who the corresponding author is, by a note or a legend
+  // (`Resolver::corresponding`), on the creator the emitter writes, which the Link step of an entry's addresses reads in place
+  // of its own scan of the DOM's notes (revZ18d S5) — Perl's API has no key for it; internal, never written out)
+  (
+    "const _corresponding base_utilities/defs/frontmatter_api.rs",
+    1,
+  ),
+  ("const _cutlist base_utilities/defs/frontmatter_api.rs", 1),
+  (
+    "const _deposit base_utilities/frontmatter/cover_order.rs",
+    1,
+  ),
+  ("const _entry base_utilities/defs/frontmatter_api.rs", 1),
+  (
+    "const _entrysymbol base_utilities/defs/frontmatter_api.rs",
+    1,
+  ),
+  (
+    "const _inserted base_utilities/frontmatter/cover_order.rs",
+    1,
+  ),
+  ("const _kinded base_utilities/defs/frontmatter_api.rs", 1),
+  // (OD #961's key, with the API that declares it since P2r2, which `author_block/`, `frontmatter/` and the emitter import)
+  (
+    "const _labelprints base_utilities/defs/frontmatter_api.rs",
+    1,
+  ),
+  ("const _late base_utilities/frontmatter/cover_order.rs", 1),
+  (
+    "const _late_mark base_utilities/frontmatter/cover_order.rs",
+    1,
+  ),
+  ("const _latecall base_utilities/frontmatter/insert.rs", 1),
+  ("const _linefirst base_utilities/frontmatter/insert.rs", 1),
+  ("const _linelist base_utilities/frontmatter/insert.rs", 1),
+  ("const _linemark base_utilities/frontmatter/insert.rs", 1),
+  (
+    "const _linemarkshown base_utilities/frontmatter/insert.rs",
+    1,
+  ),
+  ("const _linklabel base_utilities/frontmatter/insert.rs", 1),
+  // (LO2, 0 -> 1: an emitted entry's first mark read, a fact kept on its pending entry as Perl keeps its labels there
+  // (Base_Utility.pool.ltxml:502-508), where LO1 kept a State flag; internal, never written out)
+  ("const _markread base_utilities/defs/author_macros.rs", 1),
+  // (CL10, 0 -> 1: an e-mail item the emitter writes as the class's own call, whose content prints the label its `name`
+  // holds, read off that print: the content drops it once as it is placed, `insert::drop_printed_name` — label text
+  // printed once, review revX2 2. Perl's API has no key for "the content prints the name"; internal, never written out)
+  ("const _nameprinted base_utilities/frontmatter/insert.rs", 1),
+  (
+    "const _paragraph_break base_utilities/frontmatter/queue.rs",
+    1,
+  ),
+  ("const _preamble base_utilities/frontmatter/place.rs", 1),
+  ("const _queued base_utilities/frontmatter/relocate.rs", 1),
+  // (Z18g, raised with its reason: an entry the reading shares among every author (`_share=authors`, llncs's sole
+  // `\institute`) says so on the entry the emitter writes, `insert::ROW_SHARED`, so the Kind step for an address line sends
+  // a later line holding an address no reader reads to the block, once, as the old split's `row_email_calls` did — `_share`
+  // itself would make the token-level Kind step pass the entry over, which reads its address lines; 1103.2027's shape)
+  ("const _rowshared base_utilities/frontmatter/insert.rs", 1),
+  (
+    "const _released_store base_utilities/frontmatter/queue_digest.rs",
+    1,
+  ),
+  // (P2r2: the label that prints, of an entry the emitter wrote — `_labelprints` held it beside its flag `true`, a flag and
+  // data in one key; an entry's fact in its own key, as Perl keeps `_label` and `_annotations`; OD #980)
+  (
+    "const _printedlabel base_utilities/defs/frontmatter_api.rs",
+    1,
+  ),
+  ("const _seqlabel base_utilities/defs/frontmatter_api.rs", 1),
+  ("const _source base_utilities/frontmatter/insert.rs", 1),
+  // (Z18o2, raised with its reason: the reading's stopgap fact of an entry (`resolver::RUN_LEFTOVER`, an `annotate=new`
+  // walk reaching only authors that held the role, no group in print of their own), on the entry the emitter writes, which
+  // the flush's Link step of the address its Kind step takes out of the entry reads — `\affil{Univ C; zz@x.org}` under
+  // `$^N$` names, the block's (OD #992; review revZ18o). Perl's API has no key for it; internal, never written out)
+  ("const _stopgap base_utilities/defs/frontmatter_api.rs", 1),
+  (
+    "const _titlepage base_utilities/frontmatter/cover_order.rs",
+    1,
+  ),
+  (
+    "declared _labelprints base_utilities/defs/frontmatter_api.rs",
+    1,
+  ),
+  (
+    "declared _blockcreator base_utilities/defs/frontmatter_api.rs",
+    1,
+  ),
+  // (S5: the key of `const _corresponding`, declared so that its use reports no unknown key — the report changed the
+  // paragraphs after 1512.06325's title page)
+  (
+    "declared _corresponding base_utilities/defs/frontmatter_api.rs",
+    1,
+  ),
+  ("declared _net base_utilities/defs/frontmatter_api.rs", 1),
+  (
+    "declared _printedlabel base_utilities/defs/frontmatter_api.rs",
+    1,
+  ),
+  // (Z18o2: the key of `const _stopgap`, declared as `_corresponding` is)
+  (
+    "declared _stopgap base_utilities/defs/frontmatter_api.rs",
+    1,
+  ),
+  (
+    "declared accumulate base_utilities/defs/frontmatter_api.rs",
+    1,
+  ),
+  (
+    "declared command_form base_utilities/defs/frontmatter_api.rs",
+    1,
+  ),
+  ("insert _bymark base_utilities/defs/author_macros.rs", 1),
+  ("insert _font base_utilities/frontmatter/insert.rs", 2),
+  ("insert _for base_utilities/defs/frontmatter_api.rs", 1),
+  (
+    "insert _mergednames base_utilities/defs/author_macros.rs",
+    1,
+  ),
+  // (CL8b, 0 -> 1 each: the name an entry's call gives, which a contact of its kind and role digested inside it and naming
+  // none takes, as it takes the entry's labels — the label JHEP3's block prints before its `\email`, 0812.0465)
+  ("insert _name base_utilities/defs/frontmatter_api.rs", 1),
+  ("insert _noautoclose algpseudocodex_sty.rs", 1),
+  ("insert _nowrap package/latexml_sty/declare.rs", 1),
+  (
+    "insert _printedbefore base_utilities/defs/author_macros.rs",
+    1,
+  ),
+  ("insert _qname package/axodraw_sty.rs", 1),
+  (
+    "insert _refmarkshown base_utilities/defs/author_macros.rs",
+    1,
+  ),
+  ("insert _role base_utilities/defs/frontmatter_api.rs", 1),
+  ("insert _scopebegin package/pgfsys_latexml_def.rs", 3),
+  ("insert _split_ref package/amsmath_sty.rs", 1),
+  ("insert _textmarks base_utilities/frontmatter/insert.rs", 1),
+  ("insert _xmkey package/amsmath_sty.rs", 1),
+  ("owner= base_utilities/defs/author_macros.rs", 1),
+  ("owner= base_utilities/defs/frontmatter_fields.rs", 4),
+  ("owner= lmcs_cls.rs", 1),
+  ("owner= package/aas_support_sty.rs", 1),
+  ("owner= package/iopart_support_sty.rs", 1),
+  ("owner= package/jheppub_sty.rs", 1),
+];
+
+/// The crates that may speak the API.
+const API_SPEAKERS: [&str; 3] = [
+  "latexml_engine/src",
+  "latexml_package/src",
+  "latexml_contrib/src",
+];
+
+/// The keys of `options`, what a call's options hold from its `[` on: to the `]` at its brace depth (`[mark={a]b},foo=1]`), or to
+/// the literal's end, an open one, its value made by the code after it (`\lx@add@contact[role=note,mark=`). A key with no value is
+/// one (`[role=note,flag]`); a parameter (`#1`) or a format's placeholder standing for keys names none.
+fn option_keys(options: &str) -> Vec<String> {
+  let (mut keys, mut depth, mut piece) = (Vec::new(), 0usize, String::new());
+  let mut take = |piece: &mut String| {
+    let key = piece.split('=').next().unwrap_or("").trim().to_string();
+    if !key.is_empty() && !key.starts_with(['#', '{']) {
+      keys.push(key);
+    }
+    piece.clear();
+  };
+  for c in options.chars() {
+    match c {
+      ']' if depth == 0 => break,
+      ',' if depth == 0 => {
+        take(&mut piece);
+        continue;
+      },
+      '{' => depth += 1,
+      '}' => depth = depth.saturating_sub(1),
+      _ => {},
+    }
+    piece.push(c);
+  }
+  take(&mut piece);
+  keys
+}
+
+/// Where a call's options start in `after`, what follows its name, if it has any: right after it, or, for the commands whose first
+/// arguments are the tags (`\lx@add@frontmatter{ltx:creator}[…]`, `\lx@annotate@frontmatter{a}{b}[…]`), after those.
+fn options_start(name: &str, after: &str) -> Option<usize> {
+  let mut at = 0;
+  if name.contains("frontmatter") {
+    while after[at..].trim_start().starts_with('{') {
+      at = after.len() - after[at..].trim_start().len();
+      let mut depth = 0usize;
+      at += after[at..].char_indices().find_map(|(n, c)| {
+        depth += usize::from(c == '{');
+        depth = depth.saturating_sub(usize::from(c == '}'));
+        (depth == 0).then_some(n + 1)
+      })?;
+    }
+  }
+  let trimmed = after[at..].trim_start();
+  trimmed
+    .starts_with('[')
+    .then(|| after.len() - trimmed.len() + 1)
+}
+
+/// What one crate source says of the API: the names and the keys outside Perl's.
+#[derive(Default)]
+struct ApiSpeech {
+  names: Vec<String>,
+  keys:  BTreeMap<String, usize>,
+}
+
+/// Read one source's literals and code for what they say of the API, `short` naming it in a key's row: a call's name and each of
+/// its literal options, a `_word=` wherever a literal holds it, a literal of keyvals handed to a call by the code (`role=…`), a
+/// setter (`insert(⏎"_foo"`, `entry("_foo")`), a constant, a declaration.
+fn read_api_speech(source: &RustSource, short: &str, speech: &mut ApiSpeech) {
+  let call = Regex::new(r"\\(lx@(?:add|annotate|clear)@[A-Za-z@]*)").expect("the regex");
+  // (each key's own: what follows the `=` is read apart, so `_a=,_b=1`'s second is seen)
+  let word = Regex::new(r"(?:^|[^A-Za-z0-9_])(_[a-z][a-z0-9_]*|owner)=").expect("the regex");
+  let keyvals =
+    Regex::new(r"^(?:annotate|annotations|class|label|labelseq|role)=").expect("the regex");
+  let is_key = Regex::new(r"^_[a-z][a-z0-9_]*$").expect("the regex");
+  let setter = Regex::new(r#"\b(insert|entry)\(\s*"([0-9]+)""#).expect("the regex");
+  let constant =
+    Regex::new(r#"\bconst [A-Z][A-Z_0-9]*: &(?:'static )?str = "([0-9]+)""#).expect("the regex");
+  let declared = Regex::new(r#"DefKeyVal!\(\s*"([0-9]+)",\s*"([0-9]+)""#).expect("the regex");
+  // (a `#[cfg(test)]` module's literals are not the code's)
+  let used = Regex::new(r#""([0-9]+)""#).expect("the regex");
+  let literal_of =
+    |capture: &str| source.literals[capture.parse::<usize>().expect("an index")].as_str();
+  for found in used.captures_iter(&source.code) {
+    let literal = literal_of(&found[1]);
+    let mut options: Vec<&str> = Vec::new();
+    for name in call.captures_iter(literal) {
+      let whole = name.get(0).expect("the match");
+      let found = &name[1];
+      // (a bare prefix, as a call test reads it, is no name)
+      if !found.ends_with('@') && !PERL_FRONTMATTER_API.contains(&found) {
+        speech.names.push(found.to_string());
+      }
+      let after = &literal[whole.end()..];
+      if let Some(start) = options_start(found, after) {
+        options.push(&after[start..]);
+      }
+    }
+    if keyvals.is_match(literal) {
+      options.push(literal);
+    }
+    for found in word.captures_iter(literal) {
+      let end = found.get(0).expect("the match").end();
+      if !matches!(literal[end..].chars().next(), Some('\'' | '=')) {
+        *speech
+          .keys
+          .entry(format!("{}= {short}", &found[1]))
+          .or_default() += 1;
+      }
+    }
+    for option in options.into_iter().flat_map(option_keys) {
+      if !PERL_DECLARED_KEYS.contains(&option.as_str()) && !seen_as_word_key(&option, literal) {
+        *speech
+          .keys
+          .entry(format!("[{option}] {short}"))
+          .or_default() += 1;
+      }
+    }
+  }
+  for found in setter.captures_iter(&source.code) {
+    let key = literal_of(&found[2]);
+    if is_key.is_match(key) && !PERL_INTERNAL_KEYS.contains(&key) {
+      *speech
+        .keys
+        .entry(format!("{} {key} {short}", &found[1]))
+        .or_default() += 1;
+    }
+  }
+  if !short.starts_with("latex_constructs/") && short != "tex_box.rs" {
+    for found in constant.captures_iter(&source.code) {
+      let key = literal_of(&found[1]);
+      if is_key.is_match(key) {
+        *speech
+          .keys
+          .entry(format!("const {key} {short}"))
+          .or_default() += 1;
+      }
+    }
+  }
+  for found in declared.captures_iter(&source.code) {
+    let key = literal_of(&found[2]);
+    if literal_of(&found[1]) == "Frontmatter" && !PERL_DECLARED_KEYS.contains(&key) {
+      *speech
+        .keys
+        .entry(format!("declared {key} {short}"))
+        .or_default() += 1;
+    }
+  }
+}
+
+/// Whether the `_word=` count sees this literal's key already: only a key it takes, which a quote or another `=` does not end.
+fn seen_as_word_key(key: &str, literal: &str) -> bool {
+  (key.starts_with('_') || key == "owner")
+    && literal.contains(&format!("{key}="))
+    && literal
+      .split(&format!("{key}="))
+      .skip(1)
+      .all(|after| !matches!(after.chars().next(), Some('\'' | '=')))
+}
+
+/// The boundary is Perl's Frontmatter API: a name or a key outside Perl's is the exception, and the list only shrinks. A
+/// name built at run time (`\lx@add@{role}`) is not seen: this reads the literals. Parsed, not pattern-matched
+/// ([`lex_rust`], [`option_keys`]): the shapes an earlier count missed are `every_shape_of_a_key_is_seen`'s.
+#[test]
+fn the_frontmatter_api_stays_perls() {
+  const WHY: &str = "The engine relies on Perl LaTeXML's Frontmatter API and its macro dialect, and an extension is the \
+                     exception, stated with its reason: docs/parity/FRONTMATTER_SINGLE_ENGINE_PLAN.md, \"The boundary is \
+                     Perl's Frontmatter API\". Answer with Perl's macros and keys (`\\lx@add@creator`, `\\lx@add@contact`, \
+                     `label=`, `annotations=`).";
+  let mut speech = ApiSpeech::default();
+  for file in API_SPEAKERS
+    .iter()
+    .flat_map(|crate_src| rust_files(crate_src))
+  {
+    let short = file
+      .split_once("/src/")
+      .map_or(file.as_str(), |(_, inner)| inner);
+    read_api_speech(&read_rust(&file), short, &mut speech);
+  }
+  let ApiSpeech { names: mut extensions, keys } = speech;
+  extensions.sort();
+  extensions.dedup();
+  let new: Vec<&String> = extensions
+    .iter()
+    .filter(|name| !API_EXTENSIONS.contains(&name.as_str()))
+    .collect();
+  assert!(
+    new.is_empty(),
+    "a Frontmatter API name outside Perl's: {new:?}. {WHY}"
+  );
+  assert_eq!(
+    extensions, API_EXTENSIONS,
+    "an extension is gone from the code: take it from `API_EXTENSIONS` too, so the list only shrinks"
+  );
+  assert_debts(
+    "the API's keys outside Perl's",
+    API_KEYS_OUTSIDE_PERLS,
+    &keys,
+    WHY,
+  );
+}
+
+/// Every shape of a key revZ2 found the count blind to, read as the API guard reads a file: an open literal up to its end, a
+/// valueless key, a bracket inside a brace, a call's options past its tags, a raw literal, a line joined by `\`, rustfmt's setter,
+/// `entry`; and what is no key: a parameter, a comment, a test module. Nothing of a source's real text decides it.
+#[test]
+fn every_shape_of_a_key_is_seen() {
+  let keys_of = |code: &str| {
+    let mut speech = ApiSpeech::default();
+    read_api_speech(&lex_rust(code), "f.rs", &mut speech);
+    speech.keys.into_keys().collect::<Vec<_>>().join(" ")
+  };
+  for (code, seen) in [
+    (
+      r#"TokenizeInternal!("\\lx@add@contact[role=note,mark=")"#,
+      "[mark] f.rs",
+    ),
+    (r#"T("\\lx@add@contact[role=note,flag]{x}")"#, "[flag] f.rs"),
+    (
+      r#"T("\\lx@add@contact[mark={a]b},foo=1]")"#,
+      "[foo] f.rs [mark] f.rs",
+    ),
+    (
+      r#"T("\\lx@add@frontmatter{ltx:creator}[role=author,foo=1]{x}")"#,
+      "[foo] f.rs",
+    ),
+    (
+      r#"T("\\lx@annotate@frontmatter{a}{b}[foo=1]{x}")"#,
+      "[foo] f.rs",
+    ),
+    (r##"T(r#"\lx@add@contact[foo=1]"#)"##, "[foo] f.rs"),
+    (
+      "T(\"\\\\lx@add@contact[role=note,\\\n    foo=1]\")",
+      "[foo] f.rs",
+    ),
+    (r#"T("\\lx@add@contact[_foo='1']")"#, "[_foo] f.rs"),
+    (r#"T("\\lx@add@contact[_a=,_b=1]")"#, "_a= f.rs _b= f.rs"),
+    (r#"T("label={x},foo=1")"#, "[foo] f.rs"),
+    (
+      "attr.insert(\n  \"_foo\".to_string(), v)",
+      "insert _foo f.rs",
+    ),
+    (r#"attr.entry("_foo").or_default()"#, "entry _foo f.rs"),
+    (r#"const FOO: &'static str = "_foo";"#, "const _foo f.rs"),
+    (
+      r#"DefKeyVal!("Frontmatter", "foo", "")"#,
+      "declared foo f.rs",
+    ),
+    (r#"T("\\lx@add@contact[role=note,#1]")"#, ""),
+    (r#"T("\\lx@add@contact[role={x}]")"#, ""),
+    ("// T(\"\\\\lx@add@contact[foo=1]\")", ""),
+    ("/* T(\"\\\\lx@add@contact[foo=1]\") */", ""),
+    (
+      "#[cfg(test)]\nmod tests { const F: &str = \"\\\\lx@add@contact[foo=1]\"; }",
+      "",
+    ),
+    (r#"attr.insert("_label".to_string(), v)"#, ""),
+  ] {
+    assert_eq!(keys_of(code), seen, "{code}");
+  }
+  let mut names = ApiSpeech::default();
+  read_api_speech(
+    &lex_rust(r#"T("\\lx@add@foo\\lx@add@")"#),
+    "f.rs",
+    &mut names,
+  );
+  assert_eq!(names.names, ["lx@add@foo"]);
+}
+
+/// Token-spelling reads per area, and in the listed bindings: `bin/tokreads.py`'s count of the removal study plus the shapes
+/// it missed, **an over-approximation** (a line of code matching a read's shape, whatever it decides; a string holding `//`
+/// is cut there). Debts on the way to the floor: about 60 in the engine (the rehearsal's table, the ledger's stamping, the
+/// Perl API boundary), `resolver/` 0, decision code elsewhere 0. Raised at Z2, by the shapes revz01 found the pins blind to and
+/// no new read: a name's prefix or suffix, a `TOKEN_…` constant compared, a table of names or tokens (once each), a method on a
+/// `to_string()`. The engine's total was 2,264 at Z01: the study's 1,962, plus
+/// `title_page_check.rs`, which its list left out (14), plus the helpers' shapes the study did not count (`with_str(`,
+/// `cs_in(`, `text_tokens(` (and the one engine's two of that shape, `text_as_tokens(`, `printed_text_tokens(`, so
+/// named since E0h), `to_string() ==`, a comparison or a match arm on a quoted `\\…`); and 85 in the rest of
+/// `base_utilities/`. `frontmatter (rest)` holds any new file under `frontmatter/`, and a `rest <file>` row each file under
+/// `base_utilities/` no area lists, a new one or a sibling directory's too, so a read moved there is no debt paid.
+/// Bindings are the study's list, so a binding outside it is not watched. Raised at CR7 (main session 2026-11-10, "follow
+/// Perl"): the footnote-counter and definition declines write Perl's `\lx@add@authors` (Base_Utility.pool.ltxml:686-720),
+/// token-level by definition — its branch test and `positionOf` in `fallback` (+2), `literal_and`/`position_of` moved from
+/// `author_block/` into `classify` (+1, `author_block` -1). Raised at P21b (`frontmatter (rest)` 29 -> 30,
+/// `observer/separators.rs` `printing_token`): a `Sep(And)` event whose span is the family's command itself, which the
+/// rehearsal binds by its name whatever it means (`ALWAYS_BOUND`), gets its position even where a macro defines that
+/// command (a document's `\renewcommand\and`), told from a macro holding a separator (`\aut`) by that name, so the queue's
+/// name reader parts an sv author list there as the reading cuts it (repro
+/// `svjour3_institute_list_names_a_whole_author_block_document_and`). Back to 29 at P24b: that arm and the position went
+/// with `ArgSeparator::position`; the queue's name reader parts at the separator's span (`ArgSeparator::span`, no read
+/// of a token by name), which a document's macro `\and` has too (its call, no ink), so the repro keeps its output.
+const TOKEN_READS: &[(&str, usize)] = &[
+  ("aa_cls.rs", 5),
+  ("aas_support_sty.rs", 17),
+  ("acmart_cls.rs", 20),
+  ("address_lists", 0),
+  ("aistats_sty.rs", 53),
+  ("ams_support_sty.rs", 16),
+  ("apa7_cls.rs", 7),
+  // (P27, 23 -> 22: authblk's two `\author` gates ask the separator query for a kernel `\and` by meaning, `separated_by_and`;
+  // its two scans of `\and`/`\And`/`,` are one comma test, `holds_a_comma`, and the query's unread fallback)
+  ("authblk_sty.rs", 22),
+  // (F1r2, 1288 -> 1285: the membership readout finds its commas by `Token::group_step`, no catcode match)
+  // (PF3, 628 -> 626: the layout-box and line-break membership tests read the token's own name, `frontmatter_stores::cs_in`)
+  // (DEL2, 626 -> 484: the old driver deleted; Z18a, 484 -> 338: the API's Cut and Kind and the field readers moved unchanged to
+  // `defs/frontmatter_api/` (63) and `defs/frontmatter_fields/` (83), 484 = 338 + 63 + 83; none added)
+  // (Z18j, 337 -> 279: the API's entry cutter and its line readers moved unchanged to `defs/frontmatter_api/` (+46), the
+  // readers the field readouts share to `defs/frontmatter_fields/` (+12), 337 = 279 + 46 + 12; none added)
+  // (Z18k2, 279 -> 236: `split_author_line`'s closure and `row_email_owners` deleted, unreached once eptcs and OmniBus's
+  // `\authors` went to the reading; Z18l, 236 -> 195: aas's e-mail line readers deleted, `labelled_email_line`,
+  // `placed_email_line_calls`, `take_placed_line_emails`, `labelled_emails`, `mailto_line` and what only they reached)
+  // (Z18m, 195 -> 0, the row gone with the directory: its code moved unchanged, to `classify` (+131) and the IJCAI chain's
+  // `defs/author_macros/` (+64), 195 = 131 + 64; none added)
+  // (the "Knowledge in, driver out, one pass" move: from `author_block` with the text rules and token primitives, 1285 = 938 + 347; none added)
+  // (Z18m, 349 -> 514: moved from `author_block` with its code (+131), and ERR2's title-code reader from
+  // `defs/frontmatter_fields/` (+34, `classify/title_code.rs`), 514 = 349 + 131 + 34; none added; then 514 -> 515: PC3's
+  // `reads_arguments` moved with that reader from `emitter/content.rs`, as its row says)
+  // (E0h, 515 -> 384: the old reader's own `classify/old_reader/` split off into a row of its own, review revZ18m2 S1's
+  // sibling, so a read the library takes cannot hide behind one the old reader drops; 515 = 384 + 131, none added)
+  // (RA0, 384 -> 386: `title_code::reads_arguments` tells a `\newcommand`/`\providecommand` statement from a `\def` and
+  // reads its `[n]` count, so `[0]` declares no parameters (revPC3 finding 2): a class statement's own tokens, never a
+  // document's, as PC3's read it — the head's table and the count's chain beside the one parameter test it had)
+  // (MB1, 386 -> 387: the class's name of an entry before a line's own label moved unchanged from `kind.rs` to
+  // `email_block_calls.rs` `entry_line_label`, beside the label rule, `split_email_label`; `defs/frontmatter_api/` 109 ->
+  // 108, none added)
+  // (P27b, 387 -> 443: `shared_row/`'s survivors moved unchanged to `classify/entry_emails.rs` (+56) — the emitter's entry
+  // e-mail cut (`entry_email_cut`, `shared_call_item`) and the reader, unit cut and reassembly it shares since Z18d
+  // (`read_call`, `unit_cut`, `kept_without`, review revZ18c S1); the rows `shared_row` (13) and `shared_row/emails` (65)
+  // gone, 78 = 56 + 22 deleted with `share_row_contacts` and `row_email_calls`; none added)
+  // (P4b4a, 443 -> 458: the list cutter's token surgery, `classify/entry_starts.rs` — where each line stands in the list,
+  // the braces, `\protect` and formula a cut closes and reopens, the box a cut line is set in — and the unread fallback
+  // moved from `defs/frontmatter_api/affiliations.rs`; where entries start is read as digested, `list_marks`)
+  // (P4b4a3, 458 -> 461: the `\begin`/`\end` an environment the list opens is spelled by, no cut inside it (revP4b4a
+  // B1), and the Cut's opening declarations' leading spaces, moved from `defs/frontmatter_api/cut.rs`)
+  // (P4b4a4, 461 -> 471: a cut piece carries only declarations meaning a font, size or colour, with their argument
+  // groups, never an alignment (`notes::font_settings`, `sets_font`, `aligns`, revP4b4a2 B1/B2); a start inside an
+  // environment leaves the list to its tokens (`entry_starts::starts_inside_environment`, B3). Each test is the
+  // token's meaning (`x_equals`) or a group's braces, no spelling)
+  // (P4b4f, 471 -> 473: the cut line's last piece trimmed inside the groups it closes, its closing braces and spaces read
+  // by catcode, 2511.20671 — a group's braces, no spelling; P5b, 473 -> 471: `marked_after_name` deleted with its last
+  // caller, `\lx@add@author`'s collaboration readers; P6a, 471 -> 468: `name_text::skip_group`'s brace walk is
+  // `tokens_group_end`'s, in `rest /tokens.rs`)
+  // (P6c: LaTeX's no-argument font declarations one table read by meaning, `frontmatter_stores::font_declaration`,
+  // `means_one_of`, `layout`; `rows::name_text_command`, `relocate::mark_switch`: classify 468 -> 462, old_reader
+  // 113 -> 109, defs/frontmatter_api/ 106 -> 105, events 61 -> 60, fallback 159 -> 157, relocate 135 -> 133)
+  // (P23e, 462 -> 464, the main session's ruling: `email_lines::unprinted_email_unwrapped` names the reroute's key and the
+  // class's own setter (`\lx@class@contact@rerouted@<name>`, `\lx@class@contact@<name>`, OD #936) to digest the meaning TeX
+  // runs, as `\lx@class@contact@dispatch` does — a meaning asked, no spelling decides)
+  // (SBX2, 464 -> 479: `whole_run` (now `content::Field::whole`) and `takes_arguments`, a cut piece made whole as TeX reads it — its braces,
+  // a leading `\end{…}`, a command's arguments — and `entry_starts::cut_at_starts` keeping a command with its argument:
+  // structure of the cut, decided by no spelling; 2605.00634, 2605.27539, 2606.14188, 2606.27043, 2605.07722; SBX2F,
+  // 479 -> 470: the piece made whole is `content::Field::whole`, its environments the digestion's frames, one reopen
+  // helper for both cutters, `notes::reopened`)
+  ("classify", 470),
+  // (E0h: the rest of `author_block/` Z18m moved unchanged to `classify/old_reader/`, split off from `classify`'s row;
+  // P5a, 131 -> 113: `names_continue`, `names_list_continues`, `notes_only_line`, `hoist_wrapped_separators` deleted with
+  // their last caller, IEEEtran's `name_memberships`; P6f2, 109 -> 107: `line_parts`' parenthesis span, the split's rule
+  // `tokens::paren_close_offset`)
+  ("old_reader", 107),
+  ("defs/author_macros", 20),
+  // (Z18m, a new directory: the IJCAI chain moved from `author_block` with its code, as that row says)
+  ("defs/author_macros/", 64),
+  // (Z4a, 7 -> 8: `\lx@frontmatter@itemnone` reads its tag argument, an element's name: an `ltx:rdf` passes through, the rest goes)
+  // (P6a, 8 -> 10: `cut_list` moved unchanged from `defs/frontmatter_api/cut.rs`, its two reads with it)
+  ("defs/frontmatter_api", 10),
+  // (Z18j, 63 -> 109: moved from `author_block` with its code, as that row says; MB1, 109 -> 108: one moved to `classify`, as
+  // that row says)
+  // (IV1, 108 -> 114, accepted as debt by the main session (2026-11-11) and retired by the P4 port of these readers
+  // onto the digested reading: `email_lines.rs` `spacing_formulas_as_space` and
+  // `formula_prints_spacing_alone` — how an address line prints, a formula of spacing alone glue, no text of an address
+  // (2205.14113's `$~\quad~~$`, 2302.05182's `a@x $\quad$ b@y`; OD #972), no owner decided; the shifts and spacing it
+  // reads are the line's tokens, before any digestion, as `math_glyphs_as_printed`'s)
+  // (F0, 114 -> 113: `numbered_marks_requested` reads the queue's printed marks, `queued_author_marks`, no operand's spelling)
+  // (P4b4a3, 113 -> 112: the Cut's opening declarations moved to `classify/notes.rs`)
+  // (P6a, 112 -> 106: `cut_list` moved to `defs/frontmatter_api.rs` (2); `kind.rs`' brace count is core's
+  // `Tokens::is_balanced` (4))
+  ("defs/frontmatter_api/", 105),
+  // (CR4, 21 -> 28: `address_as_printed`'s `math_glyphs_as_printed`, the API's e-mail/URL reading — how an address prints,
+  // `$\sim$` its glyph "∼" (1301.1466, math0608476; OD #972), no owner decided: a sibling of `math_braces_as_printed`, whose
+  // reads `defs/frontmatter_fields/` holds; it reads the Semiverbatim argument's tokens, which no event says)
+  // (CR4b, 28 -> 30: `text_glyph`, a character command in an address's formula prints its character — `$\{a,b\}$@w.edu`
+  // the brace list, `p$\_$r` "p_r" (review revCR4 finding 4; OD #972): its table of commands, one row, and the one
+  // compare; how an address prints, no owner decided)
+  ("defs/frontmatter_fields", 30),
+  // (Z18j, 83 -> 95: moved from `author_block` with its code, as that row says)
+  // (PB 95 -> 102, PBb 102 -> 100: `names.rs`' definition replay of a class's title code (OD #983) reads the class's macro
+  // bodies, TeX definitions no event says. +1 the copy's kept `\@maketitle` read beside the live one (2205.14141); +1 a macro
+  // whose statement holds `\@author` is a reader of it (2508.08170); +3 a `\newcounter{x}` replayed by its `\c@x` (its arm,
+  // its `{x}`, its definee: 2508.04047). The juggle reader moved to `fallback`, review revPB S3)
+  // (Z18m, 100 -> 66: the title-code reader moved unchanged to `classify/title_code.rs`, as the `classify` row says)
+  // (P5b, 66 -> 34: `whole_name_collaboration`, `wrapped_collaboration_out`, `name_and_remark` and their helpers deleted —
+  // a collaboration a creator call prints is the reading's, `frames_the_names`)
+  ("defs/frontmatter_fields/", 34),
+  ("defs/general", 8),
+  ("epl_cls.rs", 43),
+  // (P22b, 28 -> 18: its unit scanners — a group, an environment, a macro's argument — moved unchanged to `tokens.rs`
+  // with the cut its cells and the `\institute` lists share, as that row says; none added)
+  ("eptcs_cls.rs", 18),
+  // (raised by one at Z14: the lexer's own constructor, `\lx@fm@obs@affil@marked`, as the row's others; nothing a document spells;
+  // by one at N2r2: `raw_lines`' break arm holding the `\and` family too, two lines, the whatsits' definitions, 2106.06418;
+  // by one at IO3b: the lexer's arm for the rehearsal's own constructor `\lx@fm@obs@creatorcall`, as the row's others — a
+  // binding's own definition, no name a document spells, 0807.4720; by one at CMPJ2: the walker's arm for an enumerate
+  // item's whatsit, `\enumerate@item@`, by its definition — where an item starts, `item_led_pieces`, 1212.6367)
+  ("events", 60),
+  // (the "Knowledge in, driver out, one pass" move: from `author_block` with Perl's whole-block fallback and its preparation, kept as its own, 826 = 629 + 197; none added)
+  // (raised by one at PF1: `tabular_close_rest` reads the `\end` its copy of the body read, before the copy — no read added)
+  // (DEL2, 197 -> 151: the old driver's raw-token preparation deleted)
+  // (PBb, 153 -> 159: +2 the title code's tabular juggle read by its `\def` and body group, moved from `names.rs` with
+  // the shared body test `tabular_close_rest_of_body` (2205.14141; review revPB S3); +4 `without_optional_line_breaks`, a
+  // `\linebreak[n<4]` between a juggle's columns no row break (latex.ltx:9235-9270; review revPB S2))
+  ("fallback", 157),
+  // (raised from none: moved out of core `token.rs`, unwatched there, for the hot path; a rehearsal's own reads)
+  // (Z4a, 4 -> 8: an environment step by its meaning, a CS whose definition is `\begin` or `\end`, a `\let` copy too, what no frame
+  // says for a raw environment; the definition's name, not the token's spelling)
+  // (LO1: a creator call's `annotations` read as its labels, `FieldCreator::labels` — a keyval's value, argument passing; LO2,
+  // 9 -> 8: read by the API's own label cleaning, `clean_frontmatter_labels`, Perl's `cleanFrontmatterLabels`)
+  ("field_notes", 8),
+  // (26: C1's `queue_reading.rs` keeps a cache of what `author_block`'s readers read off the queue's tokens, and goes with them;
+  // P20, 26 -> 29: `observer/separators.rs`, the one engine's separator query, reads a separator's *meaning* — its event's
+  // printing token's definition, whether it is the kernel layer's `\and` constructor (`get_cs()` against `KERNEL_SEPARATOR`),
+  // the trap-T8 test `frontmatter_stores::kernel_and_list` makes —, never its spelling: a decision by definition, OD #995)
+  // (F0, 29 -> 28: `queue_reading.rs`' meaning tracking, `seen`/`seen_symbols`, deleted: a name keeps its first reading)
+  // (P4b2, 28 -> 33, pending the main session's decision: `argument_marks::may_open_with_mark`, the API Cut's cost gate
+  // before its rehearsal — a list whose first token, through parameterless macros' bodies, is a letter or digit prints
+  // that first and opens with no mark, as TeX reads it; 2103.04797's 1,161 `\affiliation{\Amsterdam}` +13.6 % without it)
+  // (CST2, 33 -> 39, the cost gate of int165a's rehearsals: `argument_marks::may_mark`, the marks queries' gate before
+  // their rehearsal, reads a whole argument through parameterless macros' bodies as `may_open_with_mark` reads its first
+  // token — catcodes, a body character a mark as the lexer reads one, an accent's inner definition by its kernel name;
+  // 2103.04797's `\affiliation{\Amsterdam}`, 1901.01540's `M.~Soares-Santos` −9.7 % and −4.7 % against int165a, byte-identical)
+  // (P5c, 39 -> 43, pending the main session's decision: `argument_marks::typed_text`, the name-text query's cost gate
+  // before its rehearsal — a name of characters and groups alone prints its characters (`queued_author_name_keys`); the
+  // token keys it replaces, `contacts.rs` `queued_author_name_keys`, read every name's spelling)
+  // (P6e, 43 -> 35: those three gates are one walk, `argument_marks::walk`, its catcodes read once, each gate a predicate
+  // on what it meets)
+  // (P6f2, 35 -> 37: `observer::may_hold_kernel_separator`, the affiliation lines' cost gate before the separator query's
+  // rehearsal — a command or active character no spelled separator matches, by meaning: a macro no binding made or a copy
+  // of the kernel's `\and`; c1_cost's 200 `\affil`s +2.0 % on P6f without it, revP6f S2)
+  ("frontmatter (rest)", 37),
+  // (P26, 527 -> 526: the stores' `\and` gates ask the separator query by meaning, `and_separators`, OD #995 P2-6; the
+  // spelling read only where the query answers `None`: one spelled read fewer)
+  // (FX24b, 526 -> 527: `title_page_prints_author` walks the title page a raw file or the document defined for a read of
+  // `\@author` — the class's code, not a document's spelling (procdoc2.cls:77, 2511.15315) — and compares a reached
+  // meaning with LaTeX's `\maketitle`/`\@maketitle` (a `\let` copy the body calls): one read; FX24's two (the `\@empty`-or-
+  // blank test on the recorded `\@author`, now the binding's declaration `Policy::author_tail`, and the search for the
+  // `\@author` token in a File-origin `\@maketitle`, now the walk) are gone; OD #996)
+  // (TP1, 527 -> 528: `own_title_page_prints_author`'s walk took the kernel's marker of LaTeX's own `\@maketitle`
+  // (`\lx@kernel@maketitle`), reached directly or in a `\let` copy, for the class's page; TP1b, 528 -> 527: it reads it
+  // by definition identity, sect05.rs `is_latex_maketitle`, review revTP1 N2)
+  // (P4d, 527 -> 526: `displaced_entries` asks `class_numbered_institutes` with no spelled `\and` gate; the entries cut by
+  // meaning, `split_at_kernel_separators`)
+  // (P4b4f, 526 -> 527: `FONT_DECLARATIONS`, LaTeX's whole set of no-argument font declarations, one table that
+  // `fonts::font_declaration` (by name, as it read `LAYOUT`'s head) and `notes::sets_font` (by meaning) share — the
+  // head lacked `\tt`, `\LARGE`, `\huge`, `\Huge`, 2508.08560; `events` drops its `\selectfont` read, 62 -> 61)
+  // (P6a, 527 -> 520: its `group_end` is `tokens_group_end` (4, in `rest /tokens.rs`), its `balanced` core's
+  // `Tokens::slice_is_balanced` (3))
+  ("frontmatter_stores", 520),
+  ("gretsi_cls.rs", 14),
+  // (CR10a, 119 -> 128: the class's author body is read as tokens before it is digested, as `author_block_body` reads it —
+  // a names block nested in another's spliced in (`unnested_name_blocks`, 1511.03982), the alias `\authorblockN`'s grades,
+  // and a stop after an italic grade group, `{\em …}.`, `\emph{…}.` (`without_stop_after_grade`, `grade_text`, 1810.08035);
+  // CR10c, 128 -> 126: the old block names read once as the ones they mean (`with_block_names`), so the block test reads
+  // one name each (-3), and an outer block's own affiliation block found before an inner names block
+  // (`affiliation_before_names`, 2605.20445, +1); P4cR2, 126 -> 131: the body is still tokens when `\author` reads it, so
+  // an affiliation block nested in another is found by the class's own command and its braces, an unmarked one spliced at
+  // its line breaks (`unnested_affiliation_blocks`; its lead of marks read by the binding's mark reader since P4cR2b,
+  // `prints_marks_alone`; 1710.07993, 2605.02682) and a names block led by an ordinal by the number and suffix it prints
+  // (`ordinal_names`, 1806.11431); no name a document spells; P5a, 131 -> 103: `name_memberships` and `grade_only_line`
+  // deleted, the grade the reading's contact event, OD #1016; P28, 103 -> 104: the body read by meaning before the
+  // route (Option C P2-8a, OD #995) — the two spelled route tests `contains("authorblockN")` deleted (-2) for one test of
+  // the command after `with_block_names` writes every `\let` copy as it (`calls_names_block`, +1; its table of the two
+  // block commands, +1), and the table of the structure a document macro's definition may hold
+  // (`holds_author_structure`: `\IEEEauthorblockN`, `\and`, `\\`, each read with `defined_as`, +1), which decides the
+  // calls `blocks_as_printed` expands; the brace reading moved into one `brace_level`, which `grid_columns` shares (0))
+  ("ieeetran_cls.rs", 104),
+  ("insert", 14),
+  // (from `frontmatter (rest)`, 24 -> 23, at Z2r2: `\alignauthor`, out of the kernel's conventions into the binding's own table; no read)
+  ("inst_support_sty.rs", 1),
+  ("interspeech_cls.rs", 29),
+  // (P25 13 -> 12: the `\institute` gate's spelled `\and`/`\And` test, now `and_by_meaning::and_runs`, Option C P2-5)
+  ("l_aa_cls.rs", 12),
+  // (RC1, 24 -> 26: `ledger::content_text`, the text of a call the rehearsal gave up on or no call recorded, read at the API
+  // boundary that records its content so the content check counts what TeX printed of it, a count and no decision; the
+  // check itself reads text alone, `resolver/` unchanged; RC1r2, 26 -> 32: its words parted as an ink's, by catcodes and a
+  // control sequence's length — a control symbol or a group inside a word parts nothing, `Universit\"at` one word, not
+  // `Universit at` (review revRC1 finding 3) — no name spelled, a count and no decision; RC1e, 32 -> 33: a word reads on
+  // past a one-letter control word only, by its letter's catcode (`ledger::letter_cs`), so a control symbol parts it,
+  // `Smith\,\\Univ` two words (review revG2 finding 3) — no name spelled, a count and no decision)
+  // (CK1b 33 -> 34: `ledger::symbol`, a control symbol's character, so the content text reads past an accent's before a
+  // word's first letter (`\'Ecole`) and parts at a spacing one (`Dept,\\Muller`), review revCK1 2-3: what the ink's
+  // words are, never a decision's)
+  // (CL2b 34 -> 35: `ledger::LIST_CLEAR`, the API's `\lx@clear@frontmatter` a binding's list setter's definition holds
+  // (`list_setter_called`: sv_support's `\institute` in an author's group, cond-mat0605195) — a binding's definition read,
+  // no name a document spells; it decides only that the emitter stays out, the output then today's)
+  ("ledger", 35),
+  // (Z18e 32 -> 31: the unmarked `\author` split `\lx@llncs@author` gone, the block read whole)
+  ("llncs_cls.rs", 31),
+  ("osa_journal_sty.rs", 77),
+  // (the "Knowledge in, driver out, one pass" move: from `author_block` with the owner logic, 938 = 924 + 14; none added)
+  ("owners", 14),
+  ("place", 6),
+  ("ptephy_cls.rs", 115),
+  ("queue", 1),
+  // (P23e, 16 -> 17, the main session's ruling: `label_ink` tells a note's ink (`\lx@note…`, set at the page's foot) from
+  // what prints in place, `printed_ink`'s `outside_notes`; cjaa.cls's `\email` sibling, OD #995)
+  ("queue_digest", 17),
+  // (raised by one at Z14: the rehearsal's `BOUND_IN_A_BLOCK` table, `\lx@add@affiliation@marked`, `\lx@add@creator` read as digested instead of cut by spelling at
+  // the frozen API: the kind of table `FRONTMATTER_SINGLE_ENGINE_PLAN.md` "What already exists" keeps, as Perl's `@authorsplits`;
+  // FB2b4 6 -> 13: `inline_juggles_as_columns`, the tabular juggle written inline, `\end{tabular}\begin{tabular}[t]{…}` — written
+  // text, no macro whose meaning could be read, its spaces, groups and `[…]` read by catcode, as the macro form's body is in
+  // `fallback::tabular_juggle_between`: 1401.6981; FB2b5 none added: the reopen's scan over a command's `[…]`/`{…}` arguments;
+  // IO3b 13 -> 14: `\lx@fm@obs@add` reads its tag argument, an element's name (`ltx:creator`), as `\lx@frontmatter@itemnone`
+  // does — the rehearsal binding's own definition, no name spelled, 0807.4720; FB2b8 14 -> 15: the reopen's scan reads a
+  // glue spec written out after `\hskip` as TeX's `scan_glue` does, its signs and digits by catcode, `past_dimen`: the
+  // juggle's column after `\hskip 1em`, h3e; FB2b9 15 -> 16: a `\vskip` between a juggle's close and reopen is the
+  // row break it prints, the paragraph's end, `prints_a_row_break` — TeX's vertical command, no name a document spells:
+  // review revI1 finding 3, g09; CK3 16 -> 17: `past_line_break`, the reopen's `\\` and its `*`/`[…]` read once for the
+  // reopen and the content check (`ledger::content_text`: `\\[2mm]` read "2mm" lost, review revCK1b finding 5), the
+  // comparison with `\\` now one line of its own, no new name; CK3b 17 -> 19: `spec_printed`, a column spec's grammar
+  // read as latex.ltx/array.sty `\@mkpream` reads it, its `@`/`!`/`>`/`<`/`*` and their groups, so the content check
+  // reads the text `@{Inst }` prints, review revI3 finding 1 — TeX syntax, no name a document spells)
+  // (CL8b 19 -> 21: `own_email_properties` digests a class's own `\email` on the call's address to read the label it prints
+  // before it — what it prints, no name spelled; 2603.18265)
+  ("rehearsal", 21),
+  // (P4cR2 134 -> 136: `leads_with_ordinal`, a number and its suffix past spaces, for IEEEtran's `\author`, which reads
+  // tokens before digestion; it shares `ordinal_suffix_end`, the suffix rule this file already reads, as P4cR2b's
+  // `ordinal_name_line` does; 1806.11431)
+  // (P4b3 136 -> 135: REVTeX's group rule reads the marks a block prints and the names' requests as digested
+  // (`requested_marks`, `content_mark_labels`, `run_names_show_a_mark`, `group_shares_the_mark`); the token readers stay
+  // only as the counted fallback of an unread argument)
+  ("relocate", 133),
+  // (Z2r2: not the study's lines but what `resolver_reads` counts, a shape no reason to raise it: `text_tokens` (`text_as_tokens`
+  // since E0h, its name no longer the old reader's), printed text read
+  // as tokens by `is_institution` and `NameKeys` (5 with their definitions), a `'\\'` read of a label (2), a call's hook (1).
+  // Z14r2: 18, not 9 — the count now sees `is_institution(`, review revZ14: Z14's fall from 15 was the seven `text_tokens` sites
+  // it moved behind that name; counted again, with the name's definition and Z14's one new call (`carried`); none of Z14r2's.
+  // FB2b5 18 -> 19: `blocks.rs`'s shared column, a column after the last name opening with an institution, every name's
+  // affiliation — `is_institution` on the line's printed text (the events' text, no token), so a person whose name does
+  // not read as one (`reads_as_names` alone) never becomes an institution: 0712.1016, 1704.03168, review revG3 Q3)
+  // Z18e 19 -> 20: llncs's `\author` lines (`Policy::author_lines`), a line over the next line of its column reading as
+  // an institution starts a row — the `reads_as_affiliation` per line moved from the binding's split it replaces
+  // (`\lx@llncs@author`, whose reads leave llncs_cls.rs), one `is_institution` on the lines' printed text)
+  // OC1c 20 -> 21: `api::creator_call_level`, the Layout of the API's own `\lx@personname` wrapper by its role — the
+  // container `\lx@add@author` writes around every creator call's argument (`{\lx@personname{#2}}`,
+  // Base_Utility.pool.ltxml:585-589), no name a document spells — whose inside is the call's own level for a `Sep(And)`
+  // (OD #993, the API route); also among `OBSERVER_BACKSLASH_LITERALS`' `resolver`
+  ("resolver", 21),
+  // (DEL1 24 -> 20: the old driver's unit tests of `name_and_trailing_email`, `leading_symbol_labels`, `weldable_line`,
+  // `continues_the_line`, `person_over_institution` and `strip_linebreak_options_keeping_gaps` deleted)
+  // (Z18l, 19 -> 18: the tests of the deleted `labelled_emails` and `mailto_line` deleted with them)
+  ("rest /author_split_tests.rs", 18),
+  ("rest /block_insertion.rs", 0),
+  ("rest /blocks.rs", 2),
+  ("rest /boxes_lists.rs", 0),
+  ("rest /defs/mod.rs", 0),
+  ("rest /defs/tags_refnums.rs", 0),
+  ("rest /fonts_defs.rs", 12),
+  ("rest /math_cleanup.rs", 0),
+  ("rest /misc.rs", 14),
+  ("rest /mod.rs", 0),
+  // (P22b, 26 -> 36: `tokens_top_level_units`, `tokens_unit_end`, `tokens_read_argument`, `tokens_environment_end`
+  // moved unchanged from `eptcs_cls.rs` (28 -> 18), beside `split_tokens`, whose brace and environment units they are:
+  // `kernel_separator_runs` keeps the query's cuts at whole units, for eptcs's cells and the `\institute` lists of
+  // inst_support and aa (Option C P2-2, OD #995); 28 + 26 = 18 + 36, none added)
+  // (P6a, 36 -> 40: `tokens_group_end`, `frontmatter_stores`' `group_end` moved here, which `name_text::skip_group`
+  // calls too; P6f2, 40 -> 39: the split's parentheses rule one function, `paren_close_offset`, which
+  // `inside_balanced_parens` and `old_reader::separators` share)
+  ("rest /tokens.rs", 39),
+  // (TP1, 25 -> 26: `ink_word_text` read the title-page reading's own marks by their constructors' names; TP1b, 26 -> 25:
+  // by definition identity, sect05.rs `title_page_mark`, review revTP1 N2)
+  ("rest /util_text.rs", 25),
+  // (P4b3 12 -> 9: `marks_lead_every_line`'s scan of each group for a mark replaced by the digested reading,
+  // `marks_as_printed`'s `own_level`: no mark in a box beside words)
+  ("revtex4_support_sty.rs", 9),
+  ("sv_support_sty.rs", 35),
+  ("webofc_cls.rs", 0),
+  // (the "Knowledge in, driver out, one pass" move: from `author_block` with the emitter's vocabulary, 924 = 826 + 98; none added)
+  ("emitter/calls", 98),
+  // (a new file, what is left of `emitter/plan`'s walk-backs: brace balance and a formula's shifts; the two rows together fell by 25, Z3;
+  // NE3 7 -> 11: a call cut between its arguments, by its meaning now (`reads_past`, 2209.12410), and a script character its
+  // rehearsal erred at written as its character (2204.01080) — what the digestion read, the token's catcode only finding it;
+  // NE6 11 -> 13: `arguments_end` reads an option's `[` and `]` as TeX reads the call's arguments, a mark macro written
+  // with them and a call whose `\href` or `\author` reads past the run refused — 1505.07844, 2503.21719, 2603.11001;
+  // NE8 13 -> 14: `past_closing_fis` reads the spaces between a run and the `\fi` closing a conditional it opens by their
+  // catcode, as `balanced` reads closing braces — the `\fi` itself by its meaning, no name spelled; PC3 14 -> 15:
+  // `reads_arguments` reads a title-code statement's parameter text — the class's own `\def`, never a document token —
+  // for whether its definee takes arguments, so a held undefined title-code command is not cut from them, 1108.4222;
+  // Z18m 15 -> 14: `reads_arguments` moved with the title-code reader to `classify/title_code.rs`, its read with it;
+  // PMK1 14 -> 16: `tail_call` reads a parameterless macro's expansion — its definition, no document token — for its last
+  // command, whose parameters the call reads (a robust `\protect \cs␣`, IEEEtran's `\authorrefmark`), 0912.0896, 2609.25589)
+  // FNR1c 16 -> 22: `reads_definition` reads whether a later token of the block reads what a printing call defined — its
+  // control sequence, a counter's name as an argument, one level into a document's macro — the read no rehearsal event
+  // says (2407.13730, 2606.19583; the rehearsal's own read is post-merge, FNRR); SBX2F 22 -> 25: `Field::whole` moved
+  // from `classify/notes.rs` (its leading `\end`, its spaces, a command's arguments), `classify` 479 -> 470 with it)
+  ("emitter/content", 25),
+  // (Z4a, a new file: the emitter builds Perl's calls from the reading, its reads a call's own keys and pieces, `text_tokens` (`printed_text_tokens` since E0h) and the
+  // catcodes of a cut: where a slice's edge falls past an option, a group or an accent's letter, OD #980; Z4ar2, 30 -> 28: an address
+  // list's `@` no longer read, its inks are; NE3 28 -> 36: `key_tokens`' table of the specials a key value holds as characters,
+  // a legend's `mark={#}`, 2607.18332 — what it writes, no decision)
+  // (CL8 36 -> 39: `whole_marks_key`, a key's tokens as `key_tokens` writes them (1705.11109); `note_argument` /
+  // `brace_argument`, a note span's brace argument taken only where its text prints the note's, 2608.08994 — what it writes,
+  // no decision on a name)
+  // (NE4 39 -> 43: `annotations_tokens`, the `annotations` value of a block's keyvals cut from the call's tokens at its top-level
+  // `,` and `=`, so the writer hands on the call's tokens, never their text retokenized (`\and Jonathan` read back
+  // `\andJonathan`, 2205.13776) — what it writes; whether to carry them stays `block_annotations`' text decision)
+  // (Z18c 43 -> 48: not the unit cut but `one_address`'s catcode reads, a list's address written as text — `separators`, the
+  // spaces, `,` and `;` a list's argument opens or ends with (1908.05750), `plain`, a list of characters and control symbols
+  // writing no Warning (2501.11774), and a control-symbol test of its own — what it writes, no name spelled; Z18d 48 -> 46: the
+  // control-symbol test is the content text's `ledger::symbol`, review revZ18c S4; Z18f 46 -> 45: `plain`'s catcode test on one
+  // line, a math shift and a group's brace admitted, the list's separators by the row's `is_call_separator`; Z18h 45 -> 44: an
+  // e-mail item of what prints several is written by `by_text`, a joined run's lost links counted, review revZ18g B1; Z18i 44
+  // -> 58: `joined_run_link` WRITES a joined run's link as printed — the `\url`/`\href` call it finds in the run's tokens,
+  // the text font commands and declaration groups still open there, the run's own tokens being what is written, as
+  // `span_tokens_of` and `plan::container_wrap` write theirs —, the decision whether an address is linked made on the
+  // events' targets (`linkable`), review revZ18h S-a and B1r; CR8b 58 -> 68: `past_unprinted_tail`'s reads of what a
+  // picture's call read past its last box and printed nothing of — spaces, one `;`, the `\end{name}` of an environment the
+  // span opens, a closing brace —, which no box or event records; it decides only where the picture's own tokens end,
+  // stopping at any other token, never what anything is, review revCR8 finding 1; CR8c 68 -> 69: whether the span's own last
+  // token is already its path's `;` — a text node's box reaches past it — so the tail takes no second, printed one, the same
+  // read as the tail's `;`, which pgf consumes in expansion and no cover records, review revCR8b finding 5)
+  // (merged with the CR7 line, whose own raises follow: 58 + 11 + 3 = 72)
+  // events' targets (`linkable`), review revZ18h S-a and B1r)
+  // (CR7b, 58 -> 59: `perl_block_pieces`' text of Perl's split creators — Perl's `\lx@add@authors` cuts tokens, and its
+  // creators exist as nothing else before digestion — that `perl_piece_of` matches the reading's names against, so an item
+  // goes to the creator holding its name, not the one at its count, review revCR67 S4; CR7c, 59 -> 61: `words_parted`'s
+  // reads of where a word of those names ends unprinted, after a formula and before a command's argument — the same
+  // tokens' words, matched whole now ("li" no word of "Blinn", review revS5CR7b S1; 1404.5602's "robicheauxcurrent"), no
+  // owner decided by a spelling)
+  // (UNC, 72 -> 73: `unwritten_notes` names a note it counts lost (`\thanks{\dots}`) by its source tokens in the content
+  // check's Warning — a diagnostic, no decision)
+  ("emitter/emit", 73),
+  // (P1b, 0 -> 1: `emitter/address_cut.rs`'s e-mail of an address taken out of an entry, its text in the font of the ink printing
+  // it, `text_tokens` (`printed_text_tokens` since E0h) — RP1's `EntryCut::mail`, row 56's wrapper; the cut itself reads positions, no token)
+  ("emitter/dom+mod", 1),
+  ("emitter/plan", 72),
+  // (LO2r2, 0 -> 4: a row line's cut ends at its address's own first token, which the letters check finds; the tokens between the
+  // last letter it keeps and that one print no letter, so their kinds say which it keeps — the spacing, separators, commands and
+  // bracket opening the address out, a bracket the cut leaves open closed by its own token: `prefix_tokens`, review revLO2 2)
+  ("emitter/repart", 4),
+];
+
+/// The areas under `frontmatter/`, by path; the first that holds a file takes it.
+const FRONTMATTER_AREAS: &[(&str, &str)] = &[
+  // (the "Knowledge in, driver out, one pass" move: the old reader's text rules and token primitives, moved unchanged from `author_block/`, their reads with them)
+  // (E0h: the old reader's own files under `classify/`, Z18m's move of the rest of `author_block/`, a row of their own)
+  ("old_reader", "classify/old_reader/"),
+  ("classify", "classify/"),
+  // (the "Knowledge in, driver out, one pass" move: Perl's whole-block fallback and its own preparation, moved unchanged from `author_block/`)
+  ("fallback", "fallback.rs"),
+  ("owners", "observer/resolver/owners.rs"),
+  ("relocate", "relocate.rs"),
+  ("place", "place.rs"),
+  ("queue_digest", "queue_digest.rs"),
+  ("queue", "queue.rs"),
+  ("insert", "insert.rs"),
+  ("address_lists", "address_lists.rs"),
+  ("emitter/plan", "observer/emitter/plan.rs"),
+  ("emitter/content", "observer/emitter/content.rs"),
+  ("emitter/calls", "observer/emitter/calls.rs"),
+  ("emitter/emit", "observer/emitter/emit.rs"),
+  ("emitter/repart", "observer/emitter/repart.rs"),
+  ("emitter/dom+mod", "observer/emitter/"),
+  ("resolver", "observer/resolver/"),
+  ("events", "observer/events/"),
+  ("field_notes", "observer/field_notes.rs"),
+  ("rehearsal", "observer/rehearsal.rs"),
+  ("ledger", "observer/ledger.rs"),
+];
+
+/// The count's areas outside `frontmatter/`, and the bindings.
+const OTHER_AREAS: &[(&str, &str)] = &[
+  (
+    "defs/frontmatter_api",
+    "latexml_engine/src/base_utilities/defs/frontmatter_api.rs",
+  ),
+  (
+    "defs/frontmatter_api/",
+    "latexml_engine/src/base_utilities/defs/frontmatter_api",
+  ),
+  (
+    "defs/frontmatter_fields",
+    "latexml_engine/src/base_utilities/defs/frontmatter_fields.rs",
+  ),
+  (
+    "defs/frontmatter_fields/",
+    "latexml_engine/src/base_utilities/defs/frontmatter_fields",
+  ),
+  (
+    "defs/author_macros",
+    "latexml_engine/src/base_utilities/defs/author_macros.rs",
+  ),
+  // (Z18m: the IJCAI chain, moved from `defs/author_macros.rs` and `author_block/`)
+  (
+    "defs/author_macros/",
+    "latexml_engine/src/base_utilities/defs/author_macros",
+  ),
+  (
+    "defs/general",
+    "latexml_engine/src/base_utilities/defs/general.rs",
+  ),
+  (
+    "frontmatter_stores",
+    "latexml_engine/src/frontmatter_stores.rs",
+  ),
+  ("llncs_cls.rs", "latexml_package/src/package/llncs_cls.rs"),
+  ("aa_cls.rs", "latexml_package/src/package/aa_cls.rs"),
+  (
+    "sv_support_sty.rs",
+    "latexml_package/src/package/sv_support_sty.rs",
+  ),
+  (
+    "inst_support_sty.rs",
+    "latexml_package/src/package/inst_support_sty.rs",
+  ),
+  ("webofc_cls.rs", "latexml_contrib/src/webofc_cls.rs"),
+  (
+    "revtex4_support_sty.rs",
+    "latexml_package/src/package/revtex4_support_sty.rs",
+  ),
+  (
+    "aas_support_sty.rs",
+    "latexml_package/src/package/aas_support_sty.rs",
+  ),
+  (
+    "ieeetran_cls.rs",
+    "latexml_package/src/package/ieeetran_cls.rs",
+  ),
+  (
+    "authblk_sty.rs",
+    "latexml_package/src/package/authblk_sty.rs",
+  ),
+  ("acmart_cls.rs", "latexml_package/src/package/acmart_cls.rs"),
+  (
+    "ams_support_sty.rs",
+    "latexml_package/src/package/ams_support_sty.rs",
+  ),
+  ("ptephy_cls.rs", "latexml_contrib/src/ptephy_cls.rs"),
+  (
+    "osa_journal_sty.rs",
+    "latexml_contrib/src/osa_journal_sty.rs",
+  ),
+  ("epl_cls.rs", "latexml_contrib/src/epl_cls.rs"),
+  ("eptcs_cls.rs", "latexml_contrib/src/eptcs_cls.rs"),
+  ("aistats_sty.rs", "latexml_contrib/src/aistats_sty.rs"),
+  (
+    "interspeech_cls.rs",
+    "latexml_contrib/src/interspeech_cls.rs",
+  ),
+  ("gretsi_cls.rs", "latexml_contrib/src/gretsi_cls.rs"),
+  ("l_aa_cls.rs", "latexml_contrib/src/l_aa_cls.rs"),
+  ("apa7_cls.rs", "latexml_contrib/src/apa7_cls.rs"),
+];
+
+/// How `resolver/`'s code may read a token's spelling, counted whatever its shape, so that a new spelling rule there goes red: every
+/// literal holding a backslash (`name == r"\foo"`, `.contains("\\foo")`, `.eq`, `matches!`, a `const`, an array, a `'\\'`), every
+/// token made or named (`T_CS!`, any `T_…!`, `TOKEN_…`, the types, a block's `.tokens`), every method on a `to_string()` (`.chars()`,
+/// `.to_lowercase()`: its text is a token list's or a value's, and which is the reader's to say) and every comparison on one, a call's
+/// `.content` (`ApiCall::content`, its tokens, reachable from here whatever is done with them), and the engine's own patterns on the
+/// code. Not the study's lines but what it holds, each once: the floor is 0, so a shape is no reason to raise it.
+fn resolver_reads(source: &RustSource) -> usize {
+  let shapes = Regex::new(concat!(
+    r"\bT_[A-Z]+!|\bTOKEN_[A-Z_]+|\bTokens?\b|\.tokens\b|\.to_string\(\)\s*\.\s*[a-z_]",
+    r"|\.content\b|to_string\(\)\s*(?:==|!=)",
+    r"|\.get_cs\(\)|\.cs_name\(\)|\.with_cs_name\(|\.get_string\(\)|\.get_catcode\(\)|\bCatcode::|\bToString\b",
+    r"|\bposition_of\(|\bis_cs\(|\.as_cs\(|\bmeaning\(|\bwith_str\(|\bcs_in\(|\b(?:text|text_as|printed_text)_tokens\(",
+    // (Z14r2: `is_institution`, `text_tokens` behind a name, review revZ14 — Z14's six sites moved behind it read as fewer)
+    r"|\bis_institution\(",
+  ))
+  .expect("the regex");
+  backslash_literals(source) + shapes.find_iter(&source.code).count()
+}
+
+/// The literals of a source holding a backslash, whatever their shape (a call's argument, a `const`, a table, a `'\\'`, raw or escaped).
+fn backslash_literals(source: &RustSource) -> usize {
+  let held = Regex::new(r#""([0-9]+)""#).expect("the regex");
+  held
+    .captures_iter(&source.code)
+    .filter(|found| source.literals[found[1].parse::<usize>().expect("an index")].contains('\\'))
+    .count()
+}
+
+/// Every shape revZ2 found the study's count blind to goes red in `resolver/`, whatever its spelling, and what reads events does not.
+#[test]
+fn a_spelling_rule_in_the_resolver_counts_however_it_is_written() {
+  for rule in [
+    r##"if name == r"\foo" {}"##,
+    r##"if name == r#"\foo"# {}"##,
+    r#"if name.contains("\\foo") {}"#,
+    r#"if name.eq("\\foo") {}"#,
+    r#"if matches!(x, "\\foo") {}"#,
+    r#"const FOO: &str = "\\foo";"#,
+    r#"let foo = T_CS!("foo");"#,
+    r#"const NAMES: [&str; 2] = ["foo", "\\bar"];"#,
+    r#"if x.to_string().chars().next() == None {}"#,
+    r#"if x.to_string().to_lowercase() == "foo" {}"#,
+    "if x\n  .to_string()\n  .to_lowercase() == \"foo\" {}",
+    r"if x == '\\' {}",
+    r#"if x == "\x5cfoo" {}"#,
+    r#"if x == concat!("\\", "foo") {}"#,
+    r"fn f(t: &Token) {}",
+    r"let t = block.tokens.len();",
+    r#"t.with_cs_name(|n| n == "foo");"#,
+    r"if t == *TOKEN_RELAX {}",
+    r"if t.get_catcode() == Catcode::Other {}",
+    r#"if call.content.to_string() == "foo" {}"#,
+    r#"if call.content.iter().any(|t| t.to_string() == "foo") {}"#,
+    r#"let s = call.content.to_string(); if s.contains("foo") {}"#,
+    r"for t in call.content.unlist() {}",
+    r#"if x.to_string() == "foo" {}"#,
+    r#"if x.to_string() != "foo" {}"#,
+  ] {
+    assert!(resolver_reads(&lex_rust(rule)) > 0, "unseen: {rule}");
+  }
+  for clean in [
+    r#"if event.kind == EventKind::Name && event.text.contains("and") {}"#,
+    r#"let line = format!("a\nb");"#,
+    r"let c = 'x';",
+    r"fn f<'a>(x: &'a str) -> &'a str { x }",
+    "// if name == \"\\\\foo\" {}",
+    "#[cfg(test)]\nmod tests { const A: &str = \"\\\\foo\"; }",
+  ] {
+    assert_eq!(resolver_reads(&lex_rust(clean)), 0, "{clean}");
+  }
+}
+
+/// The old reader's knowledge moved under `observer/` unchanged (the "Knowledge in, driver out, one pass" move): its owner logic and the emitter's vocabulary, each
+/// counted as its own area by the fences, so that the resolver's and the writer's own counts stay what they were.
+const MOVED_UNDER_OBSERVER: [&str; 2] = ["resolver/owners.rs", "emitter/calls.rs"];
+
+/// Backslash literals under `observer/`, per file or directory: the part of it that may spell a token's name, whatever the code around
+/// them does (the regexes of [`token_reads_only_fall_toward_the_floor`] see a comparison, not `fn spelled(x) { x.contains("\\foo") }`).
+/// Debts of what names the kernel's tokens today (the rehearsal's table, the writer's and the events' readers, the ledger's stamping);
+/// the zeros stay zero: `policy`, `marks` and `mod` decide, and a decision spells no token; `field_notes` names two kernel definitions
+/// (`\begin`, `\end`), not a token's spelling (Z4a, ruled at Z4ar2).
+const OBSERVER_BACKSLASH_LITERALS: &[(&str, usize)] = &[
+  // (CST2, 0 -> 3: `may_mark`'s kernel primitives that print no mark, by their definition's own name (`\relax`, a robust
+  // command's `\protect`; the tie `\lx@NBSP`, `\lx@nobreakspace`), which a `\let` copy keeps — kernel definitions, as
+  // `field_notes`' two, no token a document spells)
+  ("argument_marks", 3),
+  // (Z14: 84 and 109, the lexer's own constructor and the rehearsal's table rows for `\lx@add@affiliation@marked`, `\lx@add@creator` and `\alignauthor`, as in `TOKEN_READS`;
+  // Z4a +2: a note's kind, `\lx@fm@obs@fnnote`, the rehearsal's own name for a footnote it heard; N2r2 +3: `raw_lines` reads the
+  // `\and` family's whatsits as it reads a break's, by their definition, 2106.06418; IO3b +1: the arm for the rehearsal's
+  // own `\lx@fm@obs@creatorcall`, a binding's definition, no name spelled, 0807.4720)
+  // (CL8b +2: the arm and the meaning of the rehearsal's own `\lx@fm@obs@emailAdd@own`, a binding's definition, no name a
+  // document spells; CMPJ2 +1: the walker's arm for an enumerate item's whatsit, `\enumerate@item@`, its definition's name,
+  // no name a document spells — the item's start, `item_led_pieces`, 1212.6367)
+  ("events", 92),
+  // (Z4a, 0 -> 2, ruled at Z4ar2: names two kernel definitions (`\begin`, `\end`), not a token's spelling: an environment step by its
+  // meaning, a `\let` copy too, what no frame says for a raw environment)
+  ("field_notes", 2),
+  // (CK1b 29 -> 30: `ledger::spacing_symbol`'s `'\\'`, a line break parting a word in the content text, review revCK1 3;
+  // CL2b 30 -> 31: `LIST_CLEAR`, the API clear in a binding's list setter's definition, cond-mat0605195, as in `TOKEN_READS`;
+  // DEL5 31 -> 22: `OWNED_COMMANDS` keeps `\author`, `\email`, `\emailAdd`, the nine setters' owners went with `setter_binding`)
+  ("ledger", 22),
+  ("marks", 0),
+  ("mod", 0),
+  ("policy", 0),
+  // (P20, 0 -> 2: the query's own TeX front-end `\lx@fm@separators` defined, and `KERNEL_SEPARATOR`, the kernel definition a
+  // separator's meaning is compared with (a definition named, not a token's spelling), OD #995)
+  ("separators", 2),
+  // (Z14 101 -> 109, the table rows above; Z4a +3: the rehearsal's `\lx@fm@obs@footnote`, the footnote a note step hears, defined and named;
+  // N2r2 +7: the bound constructors' `alias`es, the commands they revert as — what a text made of an argument prints, never
+  // the rehearsal's name: 2106.06418, 1401.5951, 2106.11154; FB2a 119 -> 117: the row break's constructor named once, `ROW_BREAK`,
+  // for `\\`, `\newline`, `\linebreak` and a tabular juggle; FB2b4 +1: `\end` and `\begin` of the juggle written inline,
+  // `inline_juggles_as_columns`, its separator named once, `AUTHOR_AND`; IO3b +6: the binding `\lx@fm@obs@add` a call
+  // outside a block is rehearsed with, its definition and its constructor `\lx@fm@obs@creatorcall`, the sink and the name
+  // its meaning is kept under, each named once (`SINK`, `SINK_MEANING`, `CREATOR_CALL`) — the binding's own definition, no
+  // name a document spells, 0807.4720; FB2b8 +4: the commands whose arguments the reopen's scan reads past spaces as TeX
+  // reads them, `\\`'s `*` and `[…]` and the glue or dimen spec of `\hskip`, `\vskip`, `\kern` — what the
+  // command reads in TeX, no decision on a name: h3g `\\ [2mm]`, h3e `\hskip 1em`, review revH4 finding 1)
+  // (CL8b +8: `OWN_EMAIL`, the two e-mail commands the rehearsal binds, their bindings and where each keeps the class's
+  // meaning to print it (6); the `\emailAdd` binding's constructor (1); `calls_the_api`, a digested whatsit by its definition,
+  // the rehearsal's own `\lx@fm@obs@annotate` (1) — no decision on a name a document spells)
+  // (CST2, 136 -> 133: `\thefootnote`, named five times, is one constant, `THEFOOTNOTE`, which `rebinds` reads too)
+  ("rehearsal", 133),
+  // (also among `resolver`'s 18 in `TOKEN_READS`: a `'\\'` read of a label, a call's hook; OC1c 3 -> 4: the API's own
+  // `\lx@personname` wrapper's Layout role, `api::creator_call_level`, as `TOKEN_READS` says)
+  ("resolver", 4),
+  // (the "Knowledge in, driver out, one pass" move: the old reader's owner logic, moved unchanged from `author_block/`, its literals with it; none added)
+  ("resolver/owners", 4),
+  ("reading", 7),
+  // (Z4a, 81 -> 107: `emitter/emit.rs`, the calls it builds: Perl's `\lx@add@authors`, `\lx@annotate@frontmatter@now`, the
+  // queue's own `\lx@frontmatter@item*`; it writes them, no decision reads them; NE3 +1: `\lx@fm@script@char`, written for a script
+  // character its rehearsal erred at, 2204.01080; CL7 +1: `block_annotations`' `'\\'`, whether an author block's keyvals
+  // annotations hold a command (a note, authblk's `\author[1\thanks{…}]`, 2308.08363), which the ledger keeps as text alone, so
+  // that its creators carry them as off digests them — a label's `_` retokenized errs, 2201.04449; int154a +1: `one_address`'
+  // `'\\'` (with `'~'`), whether the text it WRITES for an address of a plain list holds a control sequence's name or a tie —
+  // an output check, no reading decision: `\email{\{a,b\}@x\footnote{…}}` writes `a@x\lx@fm@obs@fnnote`, counted "markup
+  // lost", while `\{a,b\}@x\_y.org`'s `a@x_y.org` is all it prints, review revZ18d finding 1)
+  // (Z18i 61 -> 63: `joined_run_link`'s `"\\url"` and `"\\href"`, the calls it writes again as printed — no reading
+  // decision, which the events' targets make; review revZ18h S-a and B1r; CR8b 63 -> 66: `past_unprinted_tail`'s
+  // `"\\begin"`, `"\\end"` twice, pairing an environment the picture's span opens with the `\end{…}` its call read after
+  // its last box, `\end{tikzpicture}` — no box holds it — never a reading decision, review revCR8 finding 1; EJ1 66 -> 67:
+  // `"\\lx@frontmatter@setters@of"`, the command it writes before an item of a block whose setters' entries the recovery
+  // writes as queued, beside `\lx@frontmatter@queued` — it writes it, no decision reads it; 1406.5876; FNR1b 67 -> 68:
+  // `"\\c@"`, the prefix of a counter's register among a printing call's definees, whose name a later
+  // `\footnoterecall{uni}` reads, `reads_definition`; 2407.13730; CMPJ2 68 -> 70: `\lx@frontmatter@item`, the wrapper it
+  // writes a list's item in as the whole call is written, and `\expandafter\addtocounter\expandafter{\@listctr}`, which
+  // it writes before an item to step the counter past the items before it — it writes them, no decision reads them;
+  // the list's opening and close are the digestion's frames, `Field::environments`; 1212.6367; SBX2F 70 -> 71: `\end`,
+  // a cut piece's leading close moved with `Field::whole` from `classify/notes.rs`, whose count falls by it; 2606.27043)
+  ("emitter", 71),
+  // (the "Knowledge in, driver out, one pass" move: the emitter's vocabulary, moved unchanged from `author_block/`, its literals with it: the API's calls it writes, the
+  // mark and note commands it reads; none added)
+  ("emitter/calls", 44),
+];
+
+/// revZ2r2: the token-read count's regexes are blind outside `resolver/` to a spelling not written as a comparison. This counts what such
+/// a rule cannot do without: a literal holding a backslash, in any file under `observer/`, a new file a row of its own.
+#[test]
+fn the_observers_spellings_are_counted_however_they_read() {
+  for rule in [
+    r#"fn spelled(x: &str) -> bool { x.contains("\\foo") }"#,
+    r#"const FOO: &str = "\\foo";"#,
+    r#"if x.eq("\\foo") {}"#,
+    r##"if x == r#"\foo"# {}"##,
+    r"if x == '\\' {}",
+  ] {
+    assert_eq!(backslash_literals(&lex_rust(rule)), 1, "unseen: {rule}");
+  }
+  for clean in [
+    r#"if x.contains("foo") {}"#,
+    r#"let line = format!("a\nb");"#,
+    "// x.contains(\"\\\\foo\")",
+    "#[cfg(test)]\nmod tests { const A: &str = \"\\\\foo\"; }",
+  ] {
+    assert_eq!(backslash_literals(&lex_rust(clean)), 0, "{clean}");
+  }
+  let observer = format!("{BASE}/frontmatter/observer");
+  let mut counts: BTreeMap<String, usize> = BTreeMap::new();
+  for file in rust_files(&observer) {
+    let inner = file
+      .strip_prefix(&format!("{observer}/"))
+      .expect("under observer/");
+    // (the "Knowledge in, driver out, one pass" move: the old reader's files moved under `observer/`, an area each, apart from the resolver's and the writer's own)
+    let area = if MOVED_UNDER_OBSERVER.contains(&inner) {
+      inner
+    } else {
+      inner.split('/').next().expect("a path")
+    };
+    *counts
+      .entry(area.trim_end_matches(".rs").to_string())
+      .or_default() += backslash_literals(&read_rust(&file));
+  }
+  assert_debts(
+    "the backslash literals under observer/",
+    OBSERVER_BACKSLASH_LITERALS,
+    &counts,
+    "A decision reads events or digested XML, never a token's spelling: docs/parity/FRONTMATTER_SINGLE_ENGINE_PLAN.md \"The principle\".",
+  );
+}
+
+/// A read of a token's spelling, on a line: a comparison with a token or a name, a catcode, a name's text, a table of names.
+fn token_read() -> Regex {
+  Regex::new(concat!(
+  r"(?:(?:==|!=)\s*&?\*?\s*T_[A-Z]+!)|(?:T_[A-Z]+!\([^)]*\)\s*(?:==|!=))|(?:contains\(&?T_[A-Z]+!)",
+  r"|(?:matches!\([^)]*T_[A-Z]+!)|(?:position_of\()|(?:get_catcode\(\))|(?:Catcode::[A-Z]+)|(?:\.get_cs\(\))",
+  r"|(?:\.cs_name\(\))|(?:\.get_string\(\))|(?:tokens?\.to_string\(\))|(?:content\.to_string\(\))|(?:\bToString\b)",
+  r"|(?:\|\s*T_[A-Z]+!)|(?:Some\(&?T_[A-Z]+!)|(?:\bis_cs\()|(?:\.as_cs\()|(?:meaning\()",
+  r"|(?:\bwith_str\()|(?:\bcs_in\()|(?:\b(?:text|text_as|printed_text)_tokens\()|(?:to_string\(\)\s*(?:==|!=))",
+  r#"|(?:(?:==|!=)\s*&?\*?\s*"\\\\)|(?:"\\\\[^"]*"\s*(?:==|!=|\||=>))"#,
+  // (a name's prefix or suffix; a `TOKEN_…` constant compared; a table of names or of tokens, `.contains` read off it; a
+  // method on a token list's text)
+  r#"|(?:\.(?:starts_with|ends_with|strip_prefix|strip_suffix)\(\s*"\\\\)"#,
+  r"|(?:(?:==|!=)\s*&?\*?\s*TOKEN_[A-Z_]+)|(?:TOKEN_[A-Z_]+\s*(?:==|!=))",
+  r#"|(?:\[\s*\(?"\\\\)|(?:=\s*&?\[\s*&?T_[A-Z]+!)|(?:\[\s*&?T_[A-Z]+![^\]]*\]\s*\.)"#,
+  r"|(?:to_string\(\)\s*\.\s*(?:as_str|contains|ends_with|eq|find|matches|split|starts_with|strip_prefix|strip_suffix|trim))",
+))
+.expect("the regex")
+}
+
+/// Lines as reads count them: what rustfmt moves to lines of its own joined to its line, a chained call
+/// (`.to_string()⏎.contains(…)`) and a table's first row (`&[⏎"\\a",`), so that a table counts once.
+fn logical_lines(lines: Vec<String>) -> Vec<String> {
+  let mut logical: Vec<String> = Vec::new();
+  for line in lines {
+    match logical.last_mut() {
+      Some(last) if line.trim_start().starts_with('.') || last.trim_end().ends_with('[') => {
+        last.push_str(line.trim_start())
+      },
+      _ => logical.push(line),
+    }
+  }
+  logical
+}
+
+/// The token-read check: a decision reads events or digested XML, never a token's spelling.
+#[test]
+fn token_reads_only_fall_toward_the_floor() {
+  const WHY: &str = "Frontmatter decisions read events or digested XML, never token or source spelling: \
+                     docs/parity/FRONTMATTER_SINGLE_ENGINE_PLAN.md \"The principle\". The count is over-approximate, as the study's script \
+                     is: a line that only looks like a read counts until it is reworded or the code is gone.";
+  let read = token_read();
+  let reads = |file: &str| {
+    logical_lines(code_lines(file))
+      .iter()
+      .filter(|line| read.is_match(line))
+      .count()
+  };
+  let mut counts: BTreeMap<String, usize> = BTreeMap::new();
+  let mut listed: Vec<String> = Vec::new();
+  for (area, path) in OTHER_AREAS {
+    let files = rust_files(path);
+    let n: usize = files.iter().map(|file| reads(file)).sum();
+    counts.insert(area.to_string(), n);
+    listed.extend(files);
+  }
+  let frontmatter = format!("{BASE}/frontmatter/");
+  for file in rust_files(&format!("{BASE}/frontmatter")) {
+    let inner = file.strip_prefix(&frontmatter).expect("under frontmatter/");
+    let area = FRONTMATTER_AREAS
+      .iter()
+      .find(|(_, path)| inner.starts_with(path))
+      .map_or("frontmatter (rest)", |(area, _)| area);
+    // (`resolver/` is at its floor but for a few: what it holds is counted, in any shape, not what looks like a read)
+    *counts.entry(area.to_string()).or_default() += if area == "resolver" {
+      resolver_reads(&read_rust(&file))
+    } else {
+      reads(&file)
+    };
+    listed.push(file);
+  }
+  // (the catch-all: a read moved out of an area to a file none lists is still counted)
+  for file in rust_files(BASE) {
+    if !listed.contains(&file) {
+      let rest = file.strip_prefix(BASE).expect("under base_utilities/");
+      counts.insert(format!("rest {rest}"), reads(&file));
+    }
+  }
+  assert_debts("the token reads", TOKEN_READS, &counts, WHY);
+}
+
+/// What a pass after the emitter may change, on the way to deleting the old layers: passes may change kind and text,
+/// never who holds an item (the plan's definition of done, item 5). `OwnerDebt` is what breaks that today: the plan's
+/// Z8, Z9 pay each one down.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum PassMay {
+  /// nothing: counts, flags or reads
+  ChangeNothing,
+  /// an item's kind (and with it the words a Kind step takes out)
+  ChangeKind,
+  /// an item's printed text
+  ChangeText,
+  /// drop an empty or repeated item, or a line of a note
+  Drop,
+  /// **moves items between owners**: a debt, witnesses 2511.18438, 2608.22772
+  OwnerDebt,
+}
+
+/// The passes after `drop_repeated_orcids` in `insert_frontmatter`, in order, each classed: what runs once the emitter's
+/// entries are placed (the S2b writer's old spot, deleted in DEL4; its witnesses 2012.14750, 2201.02056, 2606.18623,
+/// 1507.02068). An allow-list and a debt: the three owner-moving ones go before the merge.
+const PASSES_AFTER_THE_EMITTER: &[(&str, PassMay)] = &[
+  ("count_lost_marks", PassMay::ChangeNothing),
+  ("join_split_address_contacts", PassMay::ChangeText),
+  ("kind_address_lines", PassMay::ChangeKind),
+  ("link_entry_addresses", PassMay::OwnerDebt),
+  ("drop_empty_contacts", PassMay::Drop),
+  ("distribute_address_lists", PassMay::OwnerDebt),
+  ("write_role_notes", PassMay::ChangeKind),
+  ("show_line_marks", PassMay::ChangeText),
+  ("kind_dedication_lines", PassMay::ChangeKind),
+  ("kind_legend_contacts", PassMay::ChangeKind),
+  // (the URL part moves a link to the block: Z9's; the grade part is a kind)
+  ("kind_link_and_grade_contacts", PassMay::OwnerDebt),
+  ("drop_repeated_contacts", PassMay::Drop),
+  ("flag_merged_creators", PassMay::ChangeNothing),
+  ("keep_unclaimed_net_notes", PassMay::Drop),
+  // (the content invariant on the placed output, under `=2`: it counts, N2)
+  ("check_placed_content", PassMay::ChangeNothing),
+];
+
+/// The calls after `drop_repeated_orcids` in `insert_frontmatter`'s body, in order, by the path they are written with:
+/// any call of a lower-case name that is no method, so a pass taking other arguments, or in another module
+/// (`relocate::new_pass(document)?`), is seen too.
+fn calls_after_the_emitter() -> Vec<String> {
+  let lines = code_lines(&format!("{BASE}/frontmatter/insert.rs"));
+  let start = lines
+    .iter()
+    .position(|l| l.starts_with("pub fn insert_frontmatter("))
+    .expect("insert_frontmatter");
+  let end = start
+    + lines[start..]
+      .iter()
+      .position(|l| l.starts_with('}'))
+      .expect("its end");
+  let anchor = start
+    + lines[start..end]
+      .iter()
+      .position(|l| l.contains("drop_repeated_orcids(document);"))
+      .expect("the anchor, `drop_repeated_orcids(document);`");
+  let call =
+    Regex::new(r"(?:^|[^.:\w])((?:[A-Za-z_]\w*::)*[a-z_][a-z_0-9]*)\(").expect("the regex");
+  lines[anchor + 1..end]
+    .iter()
+    .flat_map(|line| call.captures_iter(line))
+    .map(|c| c[1].to_string())
+    .collect()
+}
+
+/// The pass-list guard: a new pass after the emitter's placement fails until classed, and the owner-moving ones stay
+/// named as debts.
+#[test]
+fn passes_after_the_emitter_are_an_allow_list() {
+  let calls = calls_after_the_emitter();
+  // (a pass running twice — after the Kind step reads address lines — is one entry)
+  let mut once: Vec<&str> = Vec::new();
+  for call in &calls {
+    if !once.contains(&call.as_str()) {
+      once.push(call);
+    }
+  }
+  let listed: Vec<&str> = PASSES_AFTER_THE_EMITTER
+    .iter()
+    .map(|(name, _)| *name)
+    .collect();
+  assert_eq!(
+    once, listed,
+    "a pass after `drop_repeated_orcids` is classed in `PASSES_AFTER_THE_EMITTER` by what it may change: kind and \
+     text, never who holds an item (docs/parity/FRONTMATTER_SINGLE_ENGINE_PLAN.md, definition of done item 5). An \
+     ownership rule lands in `observer/resolver/`."
+  );
+  assert_eq!(
+    PASSES_AFTER_THE_EMITTER
+      .iter()
+      .filter(|(_, may)| *may == PassMay::OwnerDebt)
+      .map(|(name, _)| *name)
+      .collect::<Vec<_>>(),
+    [
+      "link_entry_addresses",
+      "distribute_address_lists",
+      "kind_link_and_grade_contacts"
+    ],
+    "a debt paid goes from the list; no pass joins it"
+  );
+  assert_eq!(
+    calls.last().map(String::as_str),
+    Some("check_placed_content"),
+    "the content check reads the final placed document"
+  );
+}
+
+/// The homes of the load records: the loader that writes and reads them (`binding/content.rs`) and the helpers every other
+/// reader asks (`state.rs`: `file_loaded`, `package_loaded`, `class_loaded` — LaTeX's `\@ifl@aded` — and `load_recorded`,
+/// `binding_loaded`, `raw_loaded`, the loader's own records). `author_files.rs` is a data table.
+const LOADED_QUERY_HOMES: [&str; 3] = [
+  "latexml_core/src/state.rs",
+  "latexml_core/src/binding/content.rs",
+  "latexml_core/src/binding/author_files.rs",
+];
+
+/// A load record looked up outside its homes, per file: a literal naming one (`"amsmath.sty_loaded"`,
+/// `"{pkg}.sty_raw_loaded"`, `"{base}.cls.ltxml_loaded"`) that no `assign_value`/`AssignValue!` writes.
+fn record_lookups(source: &RustSource) -> usize {
+  let held = Regex::new(r#""([0-9]+)""#).expect("the regex");
+  let record =
+    Regex::new(r"(\.(sty|cls|def|ltx|tex)|\})(\.ltxml)?_(raw_)?loaded$").expect("the regex");
+  let write =
+    Regex::new(r"(AssignValue!\(|assign_value\(\s*(&\s*(s!|format!)\(\s*)?)$").expect("the regex");
+  held
+    .captures_iter(&source.code)
+    .filter(|found| record.is_match(&source.literals[found[1].parse::<usize>().expect("an index")]))
+    .filter(|found| {
+      !write.is_match(source.code[..found.get(0).expect("the match").start()].trim_end())
+    })
+    .count()
+}
+
+/// F2 `one_loaded_query` (GA2, finding 5 of GA0): "is this package loaded" has one answer, `state::file_loaded`
+/// (`\ver@<file>`, latex.ltx `\@ifl@aded`), and the loader's records one set of readers; a record looked up anywhere
+/// else is a debt. Floor 0.
+const ONE_LOADED_QUERY: &[(&str, usize)] = &[];
+
+#[test]
+fn one_loaded_query() {
+  const WHY: &str = "Ask `state::package_loaded`/`class_loaded`/`file_loaded` (LaTeX's `\\@ifpackageloaded`), or, for the \
+                     loader's own question, `state::load_recorded`/`binding_loaded`/`raw_loaded`.";
+  let mut counts = BTreeMap::new();
+  for dir in [
+    "latexml_core/src",
+    "latexml_engine/src",
+    "latexml_package/src",
+    "latexml_contrib/src",
+    "latexml_post/src",
+  ] {
+    for file in rust_files(dir) {
+      if LOADED_QUERY_HOMES.contains(&file.as_str()) {
+        continue;
+      }
+      let n = record_lookups(&read_rust(&file));
+      if n > 0 {
+        counts.insert(file, n);
+      }
+    }
+  }
+  assert_debts("the load-record lookups", ONE_LOADED_QUERY, &counts, WHY);
+}
+
+/// Every shape of a record lookup counts, and a record's write does not.
+#[test]
+fn a_record_lookup_counts_however_it_is_written() {
+  for (rule, n) in [
+    (r#"fn f() { lookup_bool("amsmath.sty_loaded"); }"#, 1),
+    (
+      r#"fn f(p: &str) { lookup_bool(&s!("{p}.sty_raw_loaded")) || lookup_bool(&s!("{}_loaded", p)); }"#,
+      2,
+    ),
+    (
+      r#"fn f(b: &str) { let key = format!("{b}.cls.ltxml_loaded"); lookup_bool(&key); }"#,
+      1,
+    ),
+    (
+      r#"fn f() { ["dvipsnam.def_raw_loaded"].map(|f| lookup_bool(f)); }"#,
+      1,
+    ),
+    (
+      r#"fn f() { AssignValue!("float.sty_loaded" => true); assign_value("a.sty_loaded", true, None); }"#,
+      0,
+    ),
+    (
+      r#"fn f(p: &str) { assign_value(&s!("{p}_loaded"), true, None); lookup_bool("LaTeX.pool_loaded"); }"#,
+      0,
+    ),
+  ] {
+    assert_eq!(record_lookups(&lex_rust(rule)), n, "{rule}");
+  }
+}
+
+/// F1 (GA4, findings 2 and 4 of GA0): the kernel's alignment and `\verb` keep no package's state; longtable drives the
+/// alignment's `RowDisposition`, tabularx lets `\verb` to its own `\TX@verb`. A literal naming a package's key
+/// (`"LONGTABLE_…"`, `"lx@tabularx@…"`) in core, engine or post is a debt (the frontmatter's environment lists name no
+/// key). Floor 0.
+const KERNEL_HOLDS_NO_TABLE_PACKAGE_KEY: &[(&str, usize)] = &[];
+
+/// The literals naming a table package's key in `source`.
+fn table_package_keys(source: &RustSource) -> usize {
+  let key = Regex::new(r"^(LONGTABLE_|lx@tabularx@)").expect("a pattern");
+  source
+    .literals
+    .iter()
+    .filter(|literal| key.is_match(literal))
+    .count()
+}
+
+#[test]
+fn kernel_holds_no_table_package_key() {
+  const WHY: &str = "Keep a package's state in its binding and give the kernel a neutral facility the binding drives.";
+  let mut counts = BTreeMap::new();
+  for dir in ["latexml_core/src", "latexml_engine/src", "latexml_post/src"] {
+    for file in rust_files(dir) {
+      let n = table_package_keys(&read_rust(&file));
+      if n > 0 {
+        counts.insert(file, n);
+      }
+    }
+  }
+  assert_debts(
+    "the table package keys in the kernel",
+    KERNEL_HOLDS_NO_TABLE_PACKAGE_KEY,
+    &counts,
+    WHY,
+  );
+}
+
+/// The style names post may spell, per file: the engine's bibstyle table (`lookup_bibstyle_params`) is the one home of a
+/// style's facts. The sort fact left post (GA3: it reads the node's `sort`); what is left is a debt, the url fact
+/// (`make_bibliography.rs` `style_prints_urls`, 5 names).
+const POST_BIBSTYLE_NAMES: &[(&str, usize)] = &[("latexml_post/src/make_bibliography.rs", 5)];
+
+/// The fence: no copy of the engine's bibstyle table grows in `latexml_post/src` (GA0 finding 6: post's citation-order
+/// list had drifted from it, `jurunsrt`).
+#[test]
+fn post_keeps_no_copy_of_the_bibstyle_table() {
+  let engine = read_rust("latexml_engine/src/latex_constructs/mod.rs");
+  let start = engine
+    .code
+    .find("fn lookup_bibstyle_params")
+    .expect("the engine's bibstyle table");
+  let body = &engine.code[start..];
+  let body = &body[..body.find("_ => None").expect("the table's end")];
+  let arm = Regex::new(r#""(\d+)"\s*(=>|\|)"#).expect("arm pattern");
+  let names: std::collections::BTreeSet<String> = arm
+    .captures_iter(body)
+    .map(|c| engine.literals[c[1].parse::<usize>().expect("a literal index")].clone())
+    .collect();
+  assert!(
+    names.contains("unsrt") && names.contains("jurunsrt"),
+    "the table read: {names:?}"
+  );
+  // (a name in a list: an alternative, a match arm or a comparison; not a value, `'\u{03B1}' => "alpha"`)
+  let literal = Regex::new(r#""(\d+)""#).expect("literal pattern");
+  let mut counts = BTreeMap::new();
+  for file in rust_files("latexml_post/src") {
+    let source = read_rust(&file);
+    let n = literal
+      .captures_iter(&source.code)
+      .filter(|c| {
+        let (whole, before) = (
+          c.get(0).expect("a match"),
+          &source.code[..c.get(0).expect("a match").start()],
+        );
+        let after = source.code[whole.end()..].trim_start();
+        let listed = before.trim_end().ends_with(['|', '='])
+          || ["|", "=>", "=="].iter().any(|op| after.starts_with(op));
+        listed && names.contains(&source.literals[c[1].parse::<usize>().expect("an index")])
+      })
+      .count();
+    if n > 0 {
+      counts.insert(file, n);
+    }
+  }
+  assert_debts(
+    "the bibstyle names post spells",
+    POST_BIBSTYLE_NAMES,
+    &counts,
+    "A style's fact is written by the engine (`lookup_bibstyle_params`) onto `ltx:bibliography` and read there by \
+     post, as `sort` is (OXIDIZED_DESIGN_DIVERGENCES #116).",
+  );
+}
+
+/// The kernel's crates, where GA0's fences F1, F3 and F4 look (F14).
+const KERNEL_DIRS: [&str; 3] = ["latexml_core/src", "latexml_engine/src", "latexml_post/src"];
+
+/// The frontmatter areas GA0's audit left to batche0's own fences.
+const FRONTMATTER_HOMES: [&str; 3] = [
+  "latexml_engine/src/base_utilities/frontmatter/",
+  "latexml_engine/src/frontmatter_stores.rs",
+  "latexml_engine/src/base_utilities/defs/frontmatter_api",
+];
+
+/// The literal indices of `source` with the code's offset of each.
+fn held_literals(source: &RustSource) -> impl Iterator<Item = (usize, &str)> {
+  let held = Regex::new(r#""([0-9]+)""#).expect("the regex");
+  held
+    .captures_iter(&source.code)
+    .map(|c| {
+      (
+        c.get(0).expect("a match").start(),
+        source.literals[c[1].parse::<usize>().expect("an index")].as_str(),
+      )
+    })
+    .collect::<Vec<_>>()
+    .into_iter()
+}
+
+/// What F1 counts in `source` (`file` its path): a literal naming a package or class file (`"array.sty"`, `"x.cls_loaded"`,
+/// `"\\ver@x.sty"`) or asking for one (`package_loaded("array")`), a state key named for a package with a binding
+/// (`stems`; `"FONTSPEC_…"`, `"lx@array@…"`), a package's internal command (`"\\NAT@…"`). Not GA4's table keys
+/// (`kernel_holds_no_table_package_key`), not the OmniBus fallback (Package.pm:2724), not an `INTERPRETABLE_SOURCES` table.
+fn package_names(source: &RustSource, file: &str, stems: &[String]) -> usize {
+  let named = Regex::new(r"^(?:\\ver@)?[A-Za-z0-9-]+\.(?:sty|cls)(?:_loaded|_raw_loaded)?$")
+    .expect("the regex");
+  let internal = Regex::new(r"^\\(?:NAT|Hy|pgf|tcb)@").expect("the regex");
+  let query = Regex::new(r"\b(?:package|class)_loaded\(\s*&?\s*$").expect("the regex");
+  let table =
+    Regex::new(r#"\bfor\s+\w+\s+in\s+\[([^\]]*)\]\s*\{[^}]*AssignMapping!\(\s*"([0-9]+)""#)
+      .expect("the regex");
+  let tables: Vec<std::ops::Range<usize>> = table
+    .captures_iter(&source.code)
+    .filter(|c| {
+      source.literals[c[2].parse::<usize>().expect("an index")] == "INTERPRETABLE_SOURCES"
+    })
+    .map(|c| c.get(1).expect("the list").range())
+    .collect();
+  let key = |literal: &str| {
+    let lower = literal.to_lowercase();
+    let (keyed, rest) = match lower.strip_prefix("lx@") {
+      Some(rest) => (true, rest.to_string()),
+      None => (
+        literal.starts_with(|c: char| c.is_ascii_uppercase()),
+        lower.clone(),
+      ),
+    };
+    keyed
+      && !literal.starts_with("LONGTABLE_")
+      && !literal.starts_with("lx@tabularx@")
+      && stems.iter().any(|stem| {
+        rest
+          .strip_prefix(stem.as_str())
+          .is_some_and(|after| after.starts_with(['_', '@']))
+      })
+  };
+  let fallback = [
+    "latexml_core/src/binding/content.rs",
+    "latexml_core/src/state.rs",
+    "latexml_engine/src/latex_constructs/sect01.rs",
+  ];
+  held_literals(source)
+    .filter(|(at, _)| !tables.iter().any(|range| range.contains(at)))
+    .filter(|(at, literal)| {
+      if literal.starts_with("OmniBus.cls") && fallback.contains(&file) {
+        return false;
+      }
+      named.is_match(literal)
+        || internal.is_match(literal)
+        || key(literal)
+        || (query.is_match(&source.code[..*at]) && !literal.contains('{'))
+    })
+    .count()
+}
+
+/// The package names with a binding, lower case: a key prefixed by one is that package's, but the LaTeX kernel's own
+/// concepts that share a binding's name (`lx@float@`, `CITE_`, `THEOREM_`, `KEYVAL@`, …).
+fn binding_stems() -> Vec<String> {
+  const KERNEL_CONCEPTS: [&str; 10] = [
+    "float", "caption", "cite", "theorem", "eqnarray", "keyval", "inputenc", "amstex", "trace",
+    "bibentry",
+  ];
+  let stem = Regex::new(r"/([A-Za-z0-9_]+)_(?:sty|cls)\.rs$").expect("the regex");
+  let mut stems: Vec<String> = ["latexml_package/src/package", "latexml_contrib/src"]
+    .iter()
+    .flat_map(|dir| rust_files(dir))
+    .filter_map(|file| stem.captures(&file).map(|c| c[1].to_lowercase()))
+    .filter(|stem| stem.len() > 2 && !KERNEL_CONCEPTS.contains(&stem.as_str()))
+    .collect();
+  stems.sort();
+  stems.dedup();
+  stems
+}
+
+/// F1 `shared_code_names_no_package` (GA0 finding 5's literals, finding 7's `\NAT@ifcmd`): what the kernel decides for a
+/// package, per file, a debt each; the floor is 0. `author_files.rs` is a data table of file names, not a decision.
+const SHARED_CODE_PACKAGE_NAMES: &[(&str, usize)] = &[
+  // (`XKVVIEW_TRACKING`, xkvview's)
+  ("latexml_core/src/keyval.rs", 1),
+  // (`FONTSPEC_FONTFILE`, fontspec's font file read by `\font`'s coverage)
+  ("latexml_engine/src/etex.rs", 1),
+  // (`amsmath_nonumber`: `package_loaded("amsmath") || load_recorded("amsmath.sty")`)
+  ("latexml_engine/src/latex_constructs/sect07.rs", 2),
+  // (`\NAT@ifcmd`, GA0 finding 7: the kernel `\bibitem` keyed to natbib; witness 1003.3017)
+  ("latexml_engine/src/latex_constructs/sect11.rs", 1),
+  // (`package_loaded("biblatex")`)
+  ("latexml_engine/src/pre_bibtex.rs", 1),
+  // (`package_loaded("array")` in the `\noalign\\` rule, `lx@array@keeps@interline` ×3: GA0 finding 3)
+  ("latexml_engine/src/tex_tables.rs", 4),
+];
+
+#[test]
+fn shared_code_names_no_package() {
+  const WHY: &str =
+    "A package's decision goes to its binding, or reads what TeX reads (a meaning, `\\@ifl@aded`).";
+  let stems = binding_stems();
+  assert!(
+    stems.iter().any(|i| i == "natbib") && !stems.iter().any(|i| i == "float"),
+    "{stems:?}"
+  );
+  let mut counts = BTreeMap::new();
+  for dir in KERNEL_DIRS {
+    for file in rust_files(dir) {
+      if FRONTMATTER_HOMES.iter().any(|home| file.starts_with(home))
+        || file.ends_with("/binding/author_files.rs")
+      {
+        continue;
+      }
+      let n = package_names(&read_rust(&file), &file, &stems);
+      if n > 0 {
+        counts.insert(file, n);
+      }
+    }
+  }
+  assert_debts(
+    "the package names in shared code",
+    SHARED_CODE_PACKAGE_NAMES,
+    &counts,
+    WHY,
+  );
+}
+
+/// Every shape F1 names counts, and the kernel's own names and the allowed tables do not.
+#[test]
+fn a_package_name_in_shared_code_counts_however_it_is_written() {
+  let stems = vec!["natbib".to_string(), "fontspec".to_string()];
+  for (rule, n) in [
+    (
+      r#"fn f() { lookup_bool("array.sty_loaded"); file_loaded("aa.cls"); }"#,
+      2,
+    ),
+    (
+      r#"fn f() { lookup_meaning(&T_CS!("\\ver@amsmath.sty")); package_loaded("array"); class_loaded(r"revtex4"); }"#,
+      3,
+    ),
+    (
+      r#"fn f() { lookup_meaning(&T_CS!("\\NAT@ifcmd")); lookup_string("FONTSPEC_FONTFILE"); lookup_bool("lx@natbib@x"); }"#,
+      3,
+    ),
+    (
+      r#"fn f(p: &str) { package_loaded(&s!("{p}")); lookup_bool("CITE_SORT"); lookup_bool("lx@float@main"); }"#,
+      0,
+    ),
+    (
+      r#"fn f() { lookup_bool("LONGTABLE_KILL_NEXT"); lookup_bool("lx@tabularx@verb"); load_recorded("OmniBus.cls"); }"#,
+      0,
+    ),
+    (
+      r#"fn f() { for name in ["phy-ab.sty", "physics2.sty"] { AssignMapping!("INTERPRETABLE_SOURCES", name => 1); } }"#,
+      0,
+    ),
+    (
+      "#[cfg(test)]\nmod tests { const A: &str = \"array.sty\"; }",
+      0,
+    ),
+  ] {
+    assert_eq!(
+      package_names(&lex_rust(rule), "latexml_core/src/state.rs", &stems),
+      n,
+      "{rule}"
+    );
+  }
+  assert_eq!(
+    package_names(
+      &lex_rust(r#"fn f() { load_recorded("OmniBus.cls"); }"#),
+      "x.rs",
+      &stems
+    ),
+    1
+  );
+}
+
+/// A read of a `\ver@<file>` meaning in `source`: `lookup_meaning`, `lookup_definition`, `has_meaning` or `is_defined_token`
+/// on a `T_CS!` of a `\ver@` literal, or on a name bound to one.
+fn ver_reads(source: &RustSource) -> usize {
+  const READERS: &str =
+    r"\b(?:lookup_meaning|lookup_definition|has_meaning|is_defined_token)\(\s*&?\s*";
+  const CS: &str = r#"(?:[\w:]+::)?T_CS!\(\s*&?\s*(?:s!\(|format!\()?\s*"([0-9]+)""#;
+  let ver = |c: &regex::Captures| {
+    source.literals[c[1].parse::<usize>().expect("an index")].starts_with("\\ver@")
+  };
+  let direct = Regex::new(&format!("{READERS}{CS}")).expect("the regex");
+  let bound = Regex::new(&format!(
+    r"\blet\s+(?:mut\s+)?(\w+)\s*=\s*{}",
+    CS.replace("([0-9]+)", "(?P<n>[0-9]+)")
+  ))
+  .expect("the regex");
+  let mut names: Vec<String> = bound
+    .captures_iter(&source.code)
+    .filter(|c| source.literals[c["n"].parse::<usize>().expect("an index")].starts_with("\\ver@"))
+    .map(|c| c[1].to_string())
+    .collect();
+  names.sort();
+  names.dedup();
+  direct
+    .captures_iter(&source.code)
+    .filter(|c| ver(c))
+    .count()
+    + names
+      .iter()
+      .map(|name| {
+        Regex::new(&format!(r"{READERS}{name}\b"))
+          .expect("the regex")
+          .find_iter(&source.code)
+          .count()
+      })
+      .sum::<usize>()
+}
+
+/// F2's extension (GA2b): a `\ver@` read outside `state.rs` asks what `state::file_loaded` answers, and may read a query's
+/// `\relax` as a load (latex.ltx `\@ifl@aded`). `binding/content.rs`: the loader's mark (`mark_loading`, `still_loading_mark`,
+/// the read's before/after compare) and the dependency scan's test (`is_defined_token`); the rest are tests.
+const VER_READS_OUTSIDE_STATE: &[(&str, usize)] = &[
+  // (a class test each, `has_meaning(\ver@<class>.cls)`: a query's `\relax` reads as loaded; `class_loaded` answers)
+  ("latexml_contrib/src/dgruyter_sty.rs", 1),
+  ("latexml_contrib/src/njdnatbib_sty.rs", 1),
+  ("latexml_contrib/src/ws_rv_har_sty.rs", 1),
+  // (the loader: `mark_loading`'s save and mark, `still_loading_mark`, `load_tex_definitions`' before/after compare (2), and
+  // `marked_loaded_unrecorded`'s `is_defined_token`, the dependency scan's test)
+  ("latexml_core/src/binding/content.rs", 6),
+  // (`\lx@record@provided`'s `lookup_definition(\ver@<file>).is_none()`: a query's `\relax` keeps the version out; F14
+  // moved `document_hook_code`'s test to `file_loaded`, 2 -> 1)
+  ("latexml_engine/src/latex_constructs_rust_only.rs", 1),
+];
+
+#[test]
+fn ver_reads_ask_file_loaded() {
+  const WHY: &str = "Ask `state::file_loaded`/`package_loaded`/`class_loaded` (latex.ltx `\\@ifl@aded`: defined and not `\\relax`).";
+  let mut counts = BTreeMap::new();
+  for dir in [
+    "latexml_core/src",
+    "latexml_engine/src",
+    "latexml_package/src",
+    "latexml_contrib/src",
+    "latexml_post/src",
+  ] {
+    for file in rust_files(dir) {
+      if file == "latexml_core/src/state.rs" {
+        continue;
+      }
+      let n = ver_reads(&read_rust(&file));
+      if n > 0 {
+        counts.insert(file, n);
+      }
+    }
+  }
+  assert_debts(
+    "the `\\ver@` reads outside state.rs",
+    VER_READS_OUTSIDE_STATE,
+    &counts,
+    WHY,
+  );
+  for (rule, n) in [
+    (
+      r#"fn f(o: &str) { lookup_meaning(&T_CS!(&s!("\\ver@{o}.sty"))).is_none(); }"#,
+      1,
+    ),
+    (r#"fn f() { has_meaning(&T_CS!("\\ver@article.cls")); }"#, 1),
+    (
+      r#"fn f(x: &str) { let ver_cs = crate::T_CS!(s!("\\ver@{x}")); lookup_definition(&ver_cs)?.is_none(); }"#,
+      1,
+    ),
+    (
+      r#"fn f(x: &str) { let ver_cs = T_CS!(s!("\\ver@{x}")); let_i(&ver_cs, &T_CS!("\\relax"), None); }"#,
+      0,
+    ),
+    (r#"fn f() { lookup_meaning(&T_CS!("\\foo")); }"#, 0),
+  ] {
+    assert_eq!(ver_reads(&lex_rust(rule)), n, "{rule}");
+  }
+}
+
+/// `source`'s code as lines with each literal back in a `"…"` of its own, backslashes doubled: F3's lines, read as
+/// `token_reads_only_fall_toward_the_floor` reads them, with no comment and no `#[cfg(test)]` code.
+fn lexed_lines(source: &RustSource) -> Vec<String> {
+  let held = Regex::new(r#""([0-9]+)""#).expect("the regex");
+  held
+    .replace_all(&source.code, |c: &regex::Captures| {
+      let literal = &source.literals[c[1].parse::<usize>().expect("an index")];
+      format!(
+        "\"{}\"",
+        literal
+          .replace('\\', "\\\\")
+          .replace('\n', "\\n")
+          .replace('"', "\\\"")
+      )
+    })
+    .lines()
+    .map(str::to_string)
+    .collect()
+}
+
+/// F3 `kernel_token_spellings_only_fall` (GA0 category 2): `token_reads_only_fall_toward_the_floor`'s reads per file of core
+/// and engine; its `TOKEN_READS` is this fence for `base_utilities/` and `frontmatter_stores.rs`, so F3 counts the rest. A definition's row
+/// (`DefRegister!`, `DefMacro!`) and an `@generated` file are no read.
+const KERNEL_TOKEN_SPELLINGS: &[(&str, usize)] = &[
+  // (F14: today's counts, over-approximate as `TOKEN_READS`'s; GA0 read ~60 sites by hand, 12 of them decisions where TeX
+  // acts on the meaning, finding 10)
+  ("latexml_core/src/alignment.rs", 15),
+  ("latexml_core/src/alignment/cell.rs", 1),
+  ("latexml_core/src/alignment/normalize.rs", 1),
+  ("latexml_core/src/binding/content.rs", 45),
+  // TABU2b +1: `run_trivlist_hook` names the kernel's own `\lx@trivlist@hook` to read its meaning (empty: skipped).
+  ("latexml_core/src/binding/counter/dialect.rs", 32),
+  ("latexml_core/src/binding/def/dialect.rs", 41),
+  ("latexml_core/src/binding/def/replacement.rs", 3),
+  ("latexml_core/src/binding/virtual_files.rs", 1),
+  ("latexml_core/src/common/def_parser.rs", 1),
+  ("latexml_core/src/common/font.rs", 3),
+  ("latexml_core/src/common/font/standard_metrics.rs", 18),
+  ("latexml_core/src/common/glue.rs", 1),
+  ("latexml_core/src/common/mathchar.rs", 2),
+  ("latexml_core/src/common/model.rs", 1),
+  ("latexml_core/src/common/pair.rs", 3),
+  ("latexml_core/src/common/store.rs", 7),
+  ("latexml_core/src/definition.rs", 5),
+  ("latexml_core/src/definition/argument.rs", 4),
+  ("latexml_core/src/definition/conditional.rs", 9),
+  ("latexml_core/src/definition/constructor.rs", 2),
+  ("latexml_core/src/definition/expandable.rs", 49),
+  ("latexml_core/src/definition/math_primitive.rs", 1),
+  ("latexml_core/src/definition/primitive.rs", 1),
+  ("latexml_core/src/definition/register.rs", 2),
+  ("latexml_core/src/digested.rs", 9),
+  ("latexml_core/src/document.rs", 2),
+  ("latexml_core/src/dump_codegen.rs", 7),
+  ("latexml_core/src/dump_reader.rs", 7),
+  ("latexml_core/src/dump_writer.rs", 17),
+  ("latexml_core/src/gullet.rs", 155),
+  ("latexml_core/src/keyval.rs", 1),
+  ("latexml_core/src/keyvals.rs", 22),
+  ("latexml_core/src/mouth.rs", 47),
+  ("latexml_core/src/parameter.rs", 34),
+  ("latexml_core/src/rewrite/declare.rs", 7),
+  ("latexml_core/src/state.rs", 160),
+  ("latexml_core/src/stomach.rs", 84),
+  ("latexml_core/src/tbox.rs", 3),
+  ("latexml_core/src/telemetry.rs", 1),
+  ("latexml_core/src/token.rs", 77),
+  ("latexml_core/src/tokens.rs", 49),
+  ("latexml_core/src/util/image.rs", 2),
+  ("latexml_core/src/whatsit.rs", 4),
+  ("latexml_engine/src/amstex.rs", 30),
+  ("latexml_engine/src/base_parameter_types.rs", 56),
+  ("latexml_engine/src/base_xmath.rs", 13),
+  ("latexml_engine/src/bibtex.rs", 9),
+  ("latexml_engine/src/etex.rs", 16),
+  ("latexml_engine/src/l3fp_native/mod.rs", 17),
+  ("latexml_engine/src/l3fp_native/parse.rs", 73),
+  ("latexml_engine/src/latex.rs", 2),
+  ("latexml_engine/src/latex_base.rs", 1),
+  ("latexml_engine/src/latex_bootstrap.rs", 5),
+  ("latexml_engine/src/latex_constructs/mod.rs", 160),
+  ("latexml_engine/src/latex_constructs/sect01.rs", 8),
+  ("latexml_engine/src/latex_constructs/sect02.rs", 9),
+  ("latexml_engine/src/latex_constructs/sect04.rs", 4),
+  ("latexml_engine/src/latex_constructs/sect05.rs", 266),
+  ("latexml_engine/src/latex_constructs/sect06.rs", 9),
+  ("latexml_engine/src/latex_constructs/sect07.rs", 29),
+  ("latexml_engine/src/latex_constructs/sect08.rs", 69),
+  ("latexml_engine/src/latex_constructs/sect09.rs", 1),
+  ("latexml_engine/src/latex_constructs/sect10.rs", 3),
+  ("latexml_engine/src/latex_constructs/sect11.rs", 28),
+  ("latexml_engine/src/latex_constructs/sect12.rs", 4),
+  ("latexml_engine/src/latex_constructs/sect13.rs", 34),
+  (
+    "latexml_engine/src/latex_constructs/title_page_reading.rs",
+    5,
+  ),
+  ("latexml_engine/src/latex_constructs_rust_only.rs", 17),
+  ("latexml_engine/src/latex_kernel.rs", 3),
+  ("latexml_engine/src/math_common.rs", 11),
+  ("latexml_engine/src/pdftex.rs", 3),
+  ("latexml_engine/src/plain_base.rs", 3),
+  ("latexml_engine/src/plain_constructs.rs", 2),
+  ("latexml_engine/src/pre_bibtex.rs", 2),
+  ("latexml_engine/src/setup_binding_language.rs", 15),
+  ("latexml_engine/src/tex.rs", 8),
+  ("latexml_engine/src/tex_box.rs", 11),
+  ("latexml_engine/src/tex_character.rs", 10),
+  ("latexml_engine/src/tex_debugging.rs", 19),
+  ("latexml_engine/src/tex_file_io.rs", 4),
+  ("latexml_engine/src/tex_fonts.rs", 16),
+  ("latexml_engine/src/tex_inserts.rs", 4),
+  ("latexml_engine/src/tex_job.rs", 2),
+  ("latexml_engine/src/tex_logic.rs", 5),
+  ("latexml_engine/src/tex_macro.rs", 15),
+  ("latexml_engine/src/tex_math.rs", 80),
+  ("latexml_engine/src/tex_paragraph.rs", 2),
+  ("latexml_engine/src/tex_registers.rs", 5),
+  // (GA4, 38 -> 34: the longtable keys and the `\noalign\\` spelling left the kernel alignment)
+  ("latexml_engine/src/tex_tables.rs", 34),
+];
+
+#[test]
+fn kernel_token_spellings_only_fall() {
+  const WHY: &str = "A decision reads a token's meaning (`defined_as`, `lookup_meaning`), as TeX does, not its spelling.";
+  let read = token_read();
+  let mut counts = BTreeMap::new();
+  for dir in ["latexml_core/src", "latexml_engine/src"] {
+    for file in rust_files(dir) {
+      let text = fs::read_to_string(repo_path(&file)).unwrap_or_else(|e| panic!("{file}: {e}"));
+      let counted =
+        file.starts_with(BASE) || OTHER_AREAS.iter().any(|(_, path)| file.starts_with(path));
+      if counted || text.lines().take(5).any(|l| l.contains("@generated")) {
+        continue;
+      }
+      let lines = lexed_lines(&lex_rust(&text));
+      let n = logical_lines(lines)
+        .iter()
+        .filter(|line| {
+          let row = line.trim_start();
+          !row.starts_with("DefRegister!") && !row.starts_with("DefMacro!") && read.is_match(line)
+        })
+        .count();
+      if n > 0 {
+        counts.insert(file, n);
+      }
+    }
+  }
+  assert_debts(
+    "the kernel's token spellings",
+    KERNEL_TOKEN_SPELLINGS,
+    &counts,
+    WHY,
+  );
+}
+
+/// F4 `error_stub_never_downgrades` (GA1, GA0 finding 1): `generate_error_stub` reports an undefined control sequence
+/// as Perl's `generateErrorStub` does (State.pm:532-553), an Error; a Warning or an Info there silences what TeX raises.
+/// GA1's repro is `perfect_kernel_batchga1`'s first row (2 errors, 0 warnings, `<p>Value: 0.</p>`).
+#[test]
+fn error_stub_never_downgrades() {
+  let downgrades = |source: &RustSource| {
+    let start = source
+      .code
+      .find("fn generate_error_stub")
+      .expect("generate_error_stub");
+    let body = &source.code[start..];
+    let open = body.find('{').expect("its body");
+    let mut depth = 0usize;
+    let end = body[open..]
+      .char_indices()
+      .find_map(|(n, c)| {
+        depth += usize::from(c == '{');
+        depth -= usize::from(c == '}');
+        (depth == 0).then_some(open + n + 1)
+      })
+      .expect("its end");
+    Regex::new(r"\b(?:Warn|Info)!")
+      .expect("the regex")
+      .find_iter(&body[..end])
+      .count()
+  };
+  assert_eq!(
+    downgrades(&lex_rust(
+      r#"pub fn generate_error_stub(t: &Token) { if x { Warn!("a", t, "b"); } } fn g() { Info!(); }"#
+    )),
+    1
+  );
+  assert_eq!(
+    downgrades(&read_rust("latexml_core/src/state.rs")),
+    0,
+    "an undefined control sequence is an Error (Perl generateErrorStub, State.pm:532-553); a reader's leniency lives in \
+     the reader (`counter::dialect::counter_value`, Package.pm:712)"
+  );
+}

@@ -1,0 +1,17 @@
+% witness: 2410.20575 (manuscript_arxiv.tex:223-231, MnSymbol's `\Decl@Mn@Open` after `\usepackage{MnSymbol}`)
+% oracle:  pdflatex 0 errors (MnSymbol.sty:104-105 `\Decl@Mn@Open`/`\Decl@Mn@Close` → `\DeclareMathDelimiter`)
+% engines: rust 65bundle = 4 errors (`\Decl@Mn@Open`, `\Decl@Mn@Close`, `\lsem`, `\rsem` undefined)
+% expect:  0 errors, 0 warnings; `\lsem`/`\rsem` keep the binding's ⟦ ⟧
+% status:  RED (65bundle) -> GREEN (65l); guard perfect_kernel_batch65l::mnsymbol_own_declarators_keep_the_binding
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{MnSymbol}
+\makeatletter
+\DeclareSymbolFont{MNlargesymbols}{OMX}{MnSymbolE}{m}{n}
+\Decl@Mn@Open {\lsem}{MNlargesymbols}{'102}
+\Decl@Mn@Close{\rsem}{MNlargesymbols}{'107}
+\makeatother
+\newcommand{\cipher}[1]{\lsem {#1}\rsem}
+\begin{document}
+$\cipher{m}$ and $\left\lsem m \right\rsem$.
+\end{document}

@@ -1,0 +1,18 @@
+% witness: prompt/listing appendices in a `breakable` tcolorbox of > ~1365 lines (2605.05949 2605.19136 2605.24941
+%          2605.28003 2605.30434 2606.07718): TeX breaks the box across pages; we set it as one box (Perl
+%          tcolorbox.sty.ltxml:21, tcolorbox_sty.rs), whose measure passes \maxdimen
+% oracle:  pdflatex 0 `!` (the box broken over 40 pages); Perl 0 errors
+% engines: rust (CAU1) 4 errors (Arithmetic overflow, 3 Dimension too large) at \end{prompt}
+% expect:  0 errors, 1 warning naming the box ("in the breakable box {prompt} (box 1)"), the cascade Info; all 40 lines kept
+% status:  RED (CAU1) -> GREEN (SBX1; error_boundary::perfect_kernel_error_boundary, DG 2026-11-13)
+\documentclass{article}
+\usepackage[most]{tcolorbox}
+\newtcolorbox{prompt}{breakable,title=Prompt}
+\newcommand\tall{Line \rule{1pt}{450pt}\par}
+\newcommand\ten{\tall\tall\tall\tall\tall\tall\tall\tall\tall\tall}
+\begin{document}
+\begin{prompt}
+\ten\ten\ten\ten
+\end{prompt}
+After.
+\end{document}

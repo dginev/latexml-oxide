@@ -1,0 +1,18 @@
+% witness: review of batch 56kf (a Dimension operand assigned to a skip register)
+% oracle:  pdflatex 0 errors; "Aplus 1pt xB", "Cplus 2pt D", "Eplus 1pt F": latex.ltx assigns these operands to dimen
+%          registers (`\@imakebox` 16101 `\@tempdima`, `\@rule` 16363-16365, graphics.sty:555-568), whose scan stops
+%          before `plus`, and the kernel `\setlength` (`#1 #2\relax`) leaves the rest to be typeset there
+% engines: rust 56ke keeps the text with a warning; 56kf's first cut (a skip register) swallowed it without one
+% expect:  0 errors; the three "plus" tails typeset before their boxes
+% status:  RED (56kf first cut) -> GREEN (56kf: `\lx@braced@dimen`)
+\documentclass{article}
+\usepackage{graphicx}
+\let\oldsl\setlength
+\renewcommand*\setlength[2]{\oldsl{#1}{#2}}
+\begin{document}
+A\makebox[20pt plus 1pt][r]{x}B
+
+C\rule{3pt plus 2pt}{1pt}D
+
+E\resizebox{10pt plus 1pt}{!}{y}F
+\end{document}

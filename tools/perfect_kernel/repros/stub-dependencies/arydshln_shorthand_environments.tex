@@ -1,0 +1,11 @@
+% witness: arydshln.sty:697-715 (`{Array}`, `{Tabular}`, `{Tabular*}` defined when the names are free)
+% oracle:  pdflatex 0 errors
+% engines: rust 65bundle = 1 error (`{Tabular}` undefined)
+% expect:  0 errors; a tabular with cells "a" "b"
+% status:  RED (65bundle) -> GREEN (65k)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{arydshln}
+\begin{document}
+\begin{Tabular}{c:c}a & b\\\hdashline\end{Tabular}
+\end{document}

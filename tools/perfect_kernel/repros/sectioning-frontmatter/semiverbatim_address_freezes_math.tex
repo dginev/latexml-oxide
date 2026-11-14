@@ -1,0 +1,25 @@
+% mechanism: a binding reads a class's address argument Semiverbatim (Perl Base_Utility.pool.ltxml:655-659, every
+%   class binding's `\email`/`\urladdr`), which makes `$` and `^` other characters: the address's math prints as
+%   text, "$^†$ ann@a.edu", and its HTML link holds the `$`s. The class reads it with `$` and `^` as they stand
+%   (amsart.cls:508), and pdflatex prints "† ann@a.edu", "http://b.edu/∼bob". The class of KNOWN_PERL_ERRORS #515
+%   (Semiverbatim `\thanks`).
+% witness: 1601.02576 (`\urladdr{http://www.math.ucla.edu/$\sim$balmer}`), 1601.02586 (`$^\dagger$` before an
+%   address), 1601.00888 (`\email{$^1$Taghavi@…, $^2$…}`)
+% oracle:  pdflatex 0 errors; "Email address: † ann@a.edu", "URL: http://b.edu/∼bob"
+% engines: rust 64zc: "$^†$ ann@a.edu", "http://b.edu/$∼$bob"; perl: "$ˆ†$ ann@a.edu", "http://b.edu/$∼$bob"
+% expect:  0 errors; "† ann@a.edu" (the mark as math), "http://b.edu/∼bob"; links "mailto:ann@a.edu",
+%   "http://b.edu/~bob"
+% status:  RED (64zc)
+% preload: ar5iv.sty
+\documentclass{amsart}
+\begin{document}
+\title{Title}
+\author{Ann Able}
+\address{University of A}
+\email{$^\dagger$ ann@a.edu}
+\author{Bob Bee}
+\address{University of B}
+\urladdr{http://b.edu/$\sim$bob}
+\maketitle
+Text.
+\end{document}

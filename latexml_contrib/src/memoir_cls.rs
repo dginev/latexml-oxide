@@ -1,31 +1,198 @@
 use latexml_package::prelude::*;
 
+// memoir.cls is raw-interpreted through the engine (tlp/czjphys precedent).
+//
+// The former stub (`LoadClass!("book")` + ~40 page-geometry no-ops, kept at
+// git history e5a46e1443^) hid the real class, whose command surface is
+// enormous — `\onelineskip` (memoir.cls L62), `{vplace}` (L11305),
+// `\cftbeforechapterskip` (L7429), `\HUGE`, `\setsecnumdepth`,
+// `\chapterstyle`, `\xpretocmd`, `\makeoddhead`, the output-stream family
+// (L10965-11063, content-bearing) … — so 22 of 24 oracle-clean memoir manuals
+// in the perfect-kernel corpus errored on `undefined:\<memoir-CS>`
+// (witnesses: titlepages 4→0, dlfltxbmarkup 3→0, memexsupp, the dlfltxb*
+// family, biblatex-oxref oxalph/oxnum/oxyear-doc). The real class raw-loads
+// with zero errors and yields the correct <chapter>/<section> structure, so
+// the complete class beats the stub (policy: complete support over stubs).
+// Keeping a binding — rather than deleting the file — makes memoir raw-load
+// under BOTH `[rawclasses]` and the default (arXiv) configuration, where a
+// bindingless class would otherwise fall to the OmniBus article base.
+// Perl LaTeXML ships no memoir.cls.ltxml.
 LoadDefinitions!({
-  Warn!(
-    "missing_file",
-    "memoir.cls",
-    "memoir.cls is only minimally stubbed and will not be interpreted raw."
+  // memoir.cls:8811 redefines ONLY `\endminipage` (the classic latex.ltx box closer plus minipage-footnote flushing),
+  // which the kernel's lock against class and package files drops (sect12.rs, OXIDIZED_DESIGN_DIVERGENCES #453): the
+  // raw closer would `\egroup` the native mode frame and hand the dump's `\@iiiparbox` (latex.ltx:16309) an undefined
+  // `\@mpargs`, whose `Until:[` scan swallows the next `[…]` (biblatex-oxref/oxalph-doc). Guard:
+  // `perfect_kernel_batch54::memoir_keeps_native_endminipage`.
+  InputDefinitions!("memoir", noltxml => true, extension => Some(Cow::Borrowed("cls")));
+  // memoir's `\ch@ngetext` (memoir.cls:11237-11245), which its `\changetext`/`\changepage` end
+  // with, halves `\columnwidth` for two columns; LaTeXML sets one (changepage_sty.rs).
+  RawTeX!(crate::changepage_sty::ONE_COLUMN_CH_NGETEXT);
+  // memoir.cls:7074-7116 `\newlistof`: each list's heading `\@<ext>maketitle` becomes the kernel's list, titled by
+  // memoir's default printer (a document's own runs as written, the list untitled: 2505.14933, 2212.04510); its
+  // `\@starttoc` reads a `.toc` LaTeXML never writes, whoever defines it (notoccite 2209.14824, old memoir 0907.3132).
+  // ob-toclof.sty:31 (oblivoir) renews `\newlistof`. Witnesses oxnum-doc, memman, 1306.4853, 1807.06345, 2107.04315.
+  RawTeX!(
+    r"\def\lx@memoir@listof#1#2{\@namedef{#1headstart}{}\@namedef{print#1nonum}{}\@namedef{after#1title}{}%
+  \@namedef{print#1title}##1{\gdef\lx@memoir@listtitle{##1}}%
+  \@namedef{@#1maketitle}{\global\let\lx@memoir@listtitle\@empty\@nameuse{#1headstart}%
+    {\@nameuse{print#1nonum}\@nameuse{print#1title}{#2}\@nameuse{#1mark}\@nameuse{after#1title}}%
+    \ifx\lx@memoir@listtitle\@empty\lx@kernel@listof{#1}{}\else\lx@kernel@listof{#1}{\lx@memoir@listtitle}\fi}}
+\def\lx@memoir@wrap@newlistof{\let\lx@memoir@newlistof\newlistof
+  \renewcommand{\newlistof}[3]{\lx@memoir@newlistof{##1}{##2}{##3}\lx@memoir@listof{##2}{##3}}%
+  \lx@memoir@listof{toc}{\contentsname}\lx@memoir@listof{lof}{\listfigurename}\lx@memoir@listof{lot}{\listtablename}}
+\lx@memoir@wrap@newlistof
+\AddToHook{package/ob-toclof/after}{\lx@memoir@wrap@newlistof}"
   );
-  LoadClass!("OmniBus");
-  RequirePackage!("iftex");
-  RequirePackage!("array");
-  RequirePackage!("dcolumn");
-  RequirePackage!("tabularx");
-  RequirePackage!("textcase");
-  // These are originally \EmulatedPackage directives
-  RequirePackage!("appendix");
-  RequirePackage!("booktabs");
-  RequirePackage!("changepage");
-  RequirePackage!("chngcntr");
-  RequirePackage!("chngpage");
-  RequirePackage!("crop");
-  RequirePackage!("enumerate");
-  RequirePackage!("epigraph");
-  RequirePackage!("makeidx");
-  RequirePackage!("needspace");
-  RequirePackage!("parskip");
-  RequirePackage!("setspace");
-  RequirePackage!("titling");
-  RequirePackage!("tocbibind");
-  RequirePackage!("verbatim");
+
+  // memoir's auto-table family (memoir.cls:5477-5719; manual §"Automatic
+  // tables", memman.tex:20627-20886). All four build low-level alignments the
+  // engine cannot intercept: `\autocols` does `\let\@sharp ##` + `\valign`
+  // (:5654-5657; our `\valign` is a no-op — Perl TeX_Tables.pool:555 — so the
+  // PARAM tokens reach the Stomach), `\autorows` the `\halign` analogue
+  // (:5677), `\ctabular` (:5491) runs `\@mkpream` on array.sty internals
+  // (`\@classz`/`\@acol`/`\col@sep`, deliberately absent — TeX_Tables.pool:627)
+  // and borrows tabularx's `\TX@cols`/`\TX@col@width` scratch registers.
+  // Reduce them to `\tabular`, the way tabularx_sty.rs reduces tabularx:
+  //   * `\ctabular[pos]{fmt}` — a tabular that may break across pages; `pos`
+  //     is HORIZONTAL (l/c/r), not tabular's vertical slot → dropped;
+  //   * `\autorows[width]{pos}{num}{style}{items}` — `num` COLUMNS, filled
+  //     row-major (memman.tex:1761-1765), last row short;
+  //   * `\autocols[width]{pos}{num}{style}{items}` — `num` COLUMNS, filled
+  //     column-major with `\linespercol` heights (:5665-5675: greedy
+  //     `ceil(remaining / cols_left)` per column — column 0 tallest), then
+  //     transposed to rows; `width` only sizes the columns.
+  // Items are a brace-aware comma list (a literal comma needs `\comma`,
+  // memman.tex:20852). Witnesses: memman (4 `\autorows`, 2 `\autocols`,
+  // 2 `{ctabular}` → ~157 of its errors), AroundTheBend. Guards
+  // `perfect_kernel_batch54::memoir_auto_tables_reduce_to_tabular`.
+  DefMacro!("\\ctabular[Default:c]{}", "\\tabular{#2}");
+  DefMacro!("\\endctabular", "\\endtabular");
+  DefMacro!(
+    T_CS!("\\ctabular*"),
+    "[Default:c]{}{}",
+    "\\csname tabular*\\endcsname{#2}{#3}"
+  );
+  DefMacro!(
+    T_CS!("\\endctabular*"),
+    None,
+    "\\csname endtabular*\\endcsname"
+  );
+  DefMacro!("\\autorows[Default:0pt]{}{Number}{}{}", sub[(_width, _pos, num, style, items)] {
+    let cols = (num.value_of().max(1)) as usize;
+    let items = split_top_level_commas(items.into_tokens_result()?);
+    let rows: Vec<Vec<Tokens>> = items.chunks(cols).map(|c| c.to_vec()).collect();
+    Ok(auto_table(cols, style.into_tokens_result()?, rows))
+  });
+  DefMacro!("\\autocols[Default:0pt]{}{Number}{}{}", sub[(_width, _pos, num, style, items)] {
+    let cols = (num.value_of().max(1)) as usize;
+    let items = split_top_level_commas(items.into_tokens_result()?);
+    // memoir.cls:5665-5675 `\linespercol`: column heights are assigned
+    // greedily left to right, ceil(remaining / columns left).
+    let mut heights = Vec::with_capacity(cols);
+    let mut remaining = items.len();
+    for left in (1..=cols).rev() {
+      let h = if remaining > 0 { remaining.div_ceil(left) } else { 0 };
+      heights.push(h);
+      remaining -= h;
+    }
+    let mut offsets = Vec::with_capacity(cols);
+    let mut acc = 0;
+    for h in &heights {
+      offsets.push(acc);
+      acc += h;
+    }
+    let nrows = heights.first().copied().unwrap_or(0);
+    let rows: Vec<Vec<Tokens>> = (0..nrows)
+      .map(|r| {
+        (0..cols)
+          .map(|c| {
+            if r < heights[c] {
+              items[offsets[c] + r].clone()
+            } else {
+              Tokens::new(Vec::new())
+            }
+          })
+          .collect()
+      })
+      .collect();
+    Ok(auto_table(cols, style.into_tokens_result()?, rows))
+  });
+
+  // memoir.cls:2640-2672 `\xapptocmd\title{…\protected@xdef\thetitle{#1}…}` and
+  // the `\author`/`\theauthor` twin: the patches target LaTeX's plain `\def`
+  // `\title`, but ours is a locked frontmatter macro, so they failed silently
+  // ("patch 2 to \title failed") and a title page that typesets `\thetitle`
+  // / `\theauthor` itself (biblatex-oxref oxnum/oxalph/oxyear/oxnotes-doc:272)
+  // erred `undefined`. Wrap the locked macros the way the patches do, with the
+  // same thanks-stripping group. Guard:
+  // `perfect_kernel_batch54::memoir_title_defines_thetitle`.
+  Let!("\\lx@memoir@title", "\\title");
+  Let!("\\lx@memoir@author", "\\author");
+  DefMacro!(
+    "\\title[]{}",
+    r"\lx@memoir@title[#1]{#2}\begingroup\let\footnote\@gobble\renewcommand{\thanks}[1]{}%
+      \renewcommand{\thanksmark}[1]{}\renewcommand{\thanksgap}[1]{}%
+      \protected@xdef\thetitle{#2}\endgroup"
+  );
+  DefMacro!(
+    "\\author[]{}",
+    r"\lx@memoir@author[#1]{#2}\begingroup\let\footnote\@gobble\renewcommand{\thanks}[1]{}%
+      \renewcommand{\and}{\unskip, }\renewcommand{\andnext}{\unskip, }%
+      \renewcommand{\thanksmark}[1]{}\renewcommand{\thanksgap}[1]{}%
+      \protected@xdef\theauthor{#2}\endgroup"
+  );
 });
+
+/// Split a brace-aware comma list into its items (top-level catcode-OTHER
+/// commas only; a trailing whitespace-only item is dropped, as memoir's
+/// `\@for` would yield an empty entry there).
+fn split_top_level_commas(arg: Tokens) -> Vec<Tokens> {
+  let comma = T_OTHER!(",");
+  let mut parts: Vec<Tokens> = Vec::new();
+  let mut current: Vec<Token> = Vec::new();
+  let mut depth: i32 = 0;
+  for t in arg.unlist() {
+    match t.get_catcode() {
+      Catcode::BEGIN => depth += 1,
+      Catcode::END => depth -= 1,
+      _ => {},
+    }
+    if depth == 0 && t == comma {
+      parts.push(Tokens::new(std::mem::take(&mut current)));
+    } else {
+      current.push(t);
+    }
+  }
+  if !current.iter().all(|t| t.get_catcode() == Catcode::SPACE) {
+    parts.push(Tokens::new(current));
+  }
+  parts
+}
+
+/// `\tabular{<style>×cols} row & … \\ … \endtabular`, splicing the raw item
+/// tokens (never a re-tokenized string, so `\cmd{\footnote}`-style items
+/// survive).
+fn auto_table(cols: usize, style: Tokens, rows: Vec<Vec<Tokens>>) -> Tokens {
+  let style_tok = style
+    .unlist()
+    .into_iter()
+    .find(|t| t.get_catcode() != Catcode::SPACE)
+    .unwrap_or_else(|| T_LETTER!("l"));
+  let mut out = vec![T_CS!("\\par"), T_CS!("\\tabular"), T_BEGIN!()];
+  out.extend(std::iter::repeat_n(style_tok, cols));
+  out.push(T_END!());
+  for (i, row) in rows.iter().enumerate() {
+    if i > 0 {
+      out.push(T_CS!("\\\\"));
+    }
+    for (j, cell) in row.iter().enumerate() {
+      if j > 0 {
+        out.push(T_ALIGN!());
+      }
+      out.extend(cell.clone().unlist());
+    }
+  }
+  out.push(T_CS!("\\endtabular"));
+  out.push(T_CS!("\\par"));
+  Tokens::new(out)
+}

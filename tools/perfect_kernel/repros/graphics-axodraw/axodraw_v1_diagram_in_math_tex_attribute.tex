@@ -1,0 +1,13 @@
+% witness: 64w review round 2 — 9 of 64 sampled 2008 axodraw papers set diagrams inside math
+%          (`\[ A = \parbox{40pt}{\begin{picture}…\Photon…\end{picture}} + B \]`); 1701.01554 (PostScript arguments)
+% oracle:  pdflatex 0 errors (with a v1 axodraw.sty: the labels; latex + dvips: the photon)
+% engines: rust 64w r2 = the Math `tex` (HTML `alttext`) carries `\lx@axo@draw{photon}{0,10,40,10,2,3}`; rust
+%          e1ec58c24e (no binding) = `\put(0.0,0.0){}` there; Perl = undefined commands
+% expect:  0 errors, 0 warnings; the Math `tex` keeps the `\put` without the internal drawing command
+% status:  RED (64w r2) -> GREEN (64w)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{axodraw}
+\begin{document}
+\[ A = \parbox{40pt}{\begin{picture}(40,20)\Photon(0,10)(40,10){2}{3}\end{picture}} + B \]
+\end{document}

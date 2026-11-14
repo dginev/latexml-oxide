@@ -1,0 +1,26 @@
+% witness: 1805.06896, 2304.12197 (65e's `\par`-in-a-list-item bibliography), here in a list that ends: since 65i a
+%          list never closed (bib_blank_lines_in_open_list) gives way to the section, so this is the shape that keeps
+%          the bibliography in the item's inline sectional block (OXIDIZED_DESIGN #189)
+% oracle:  pdflatex 0 errors
+% engines: rust 65a = 3 errors (`ltx:bibitem isn't allowed in ltx:item`/`ltx:bibblock`: the blank line's `\par` closed
+%          the paragraph holding the block); 65e, 65i = 0 errors
+% expect:  0 errors; one biblist of 4 bibitems inside the item's inline sectional block
+% status:  GREEN (65e; this shape 65i)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\section{Conclusions}
+\begin{itemize}\item a
+\section*{Acknowledgments}
+Thanks.
+\begin{thebibliography}{9}
+\bibitem{a} A.
+
+\bibitem{b} B.
+
+\bibitem{c} C.
+
+\bibitem{d} D.
+\end{thebibliography}
+\end{itemize}
+\end{document}

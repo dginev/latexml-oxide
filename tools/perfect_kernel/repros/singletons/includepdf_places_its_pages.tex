@@ -1,0 +1,15 @@
+% witness: sel78i rider 9 (112/30k papers \includepdf; TL's mwe example-image-a4-numbered.pdf has 12 pages)
+% oracle:  pdflatex 0 errors: 7 pages: before, the PDF's pages 2, 3, 4, its last (12), its page 1 (the default), after
+% engines: rust int50a = "See pages 2-4 of ⟨link⟩", "See pages last of ⟨link⟩", "See ⟨link⟩" (Perl
+%          pdfpages.sty.ltxml:30-36 alike)
+% expect:  0 errors; one graphics a page, options page=2, 3, 4, 12, 1
+% status:  RED (int50a) -> GREEN (78j)
+\documentclass{article}
+\usepackage{pdfpages}
+\begin{document}
+Before.
+\includepdf[pages=2-4]{example-image-a4-numbered.pdf}
+\includepdf[pages=last]{example-image-a4-numbered.pdf}
+\includepdf{example-image-a4-numbered.pdf}
+After.
+\end{document}

@@ -1,0 +1,30 @@
+% A raw class's title page prints its three history dates in one line, one clause each, `Received \@received; revised
+% \@revised; accepted \@accepted` (pazha2.cls:166-167, there with `\@submitted` first): each date is named by its own
+% clause's label — a label phrase ends at a `;` or a `,` as at a sentence's end (frontmatter_stores.rs
+% `line_label_before`) —, and the `;` joining a clause to the one before leaves the title page with it, so no "; ;" is
+% left in the body. Before, only the first clause's label was read and the others had their role's default
+% ("Revised ", "Accepted "), then none (95d-r2, review rev95d-r2 B: the class prints "revised", "accepted").
+% witness: 2408.01858, 2607.07582 (pazha2.cls)
+% oracle:  pdflatex 0 errors: "T", "Ann Able", "Received 15 December 2022; revised 18 April 2023; accepted 2 June 2023",
+%          "Text."
+% engines: rust 95d-r2base = 0 errors, "Revised " and "Accepted " (the defaults) before "Received", "; revised ;
+%          accepted" left in the body; rust 95d-r2 = 0 errors, the two unnamed
+% expect:  0 errors, 0 warnings; three <ltx:date> in the line's order, named "Received", "revised", "accepted"; the body
+%          only "Text."
+% status:  RED (95d-r2base, 95d-r2) -> GREEN (95d-r3)
+% preload: ar5iv.sty
+\begin{filecontents*}[overwrite]{histline.cls}
+\LoadClass{article}
+\def\received#1{\gdef\@received{#1}}
+\def\revised#1{\gdef\@revised{#1}}
+\def\accepted#1{\gdef\@accepted{#1}}
+\def\@maketitle{\begin{center}{\Large\bfseries \@title\par}{\large\bfseries \@author\par}%
+  \par\vskip 2.5mm{\footnotesize Received \@received; revised
+  \@revised; accepted \@accepted}\end{center}}
+\end{filecontents*}
+\documentclass{histline}
+\title{T}\author{Ann Able}
+\received{15 December 2022}\revised{18 April 2023}\accepted{2 June 2023}
+\begin{document}\maketitle
+Text.
+\end{document}

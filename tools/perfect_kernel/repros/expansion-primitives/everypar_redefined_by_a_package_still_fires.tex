@@ -1,0 +1,19 @@
+% A package that redefines `\everypar` as a macro (rlbicig.sty:62-64, loaded by montex/mls) still
+% gets its paragraph list run: TeX's new_graf reads the every_par slot (tex.web §1091) and LaTeX's
+% para hook names the user list by the register allocated at latex.ltx:9070 (`\newtoks\everypar`,
+% added to `\g__para_standard_everypar_tl` by number, :9072-9077), not by `\everypar`'s current
+% meaning. Read by name, every paragraph warned "'\everypar' is not a register" and fired nothing.
+% witness: montex manual (2,031 warnings), mlsquick (276), zanabazr (9).
+% status:  GREEN (58k)
+% oracle:  pdflatex 0 errors: "[EP]XHello world." and "[EP]XSecond."
+% engines: rust m58i: 7 warnings, "Hello world."; Perl: 1 warning (never fires \everypar).
+% expect:  0 errors, 0 warnings.
+\documentclass{article}
+\let\oldeverypar\everypar
+\def\everypar#1{\oldeverypar{[EP]#1}}
+\begin{document}
+\everypar{X}
+Hello world.
+
+Second.
+\end{document}

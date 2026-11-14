@@ -1,0 +1,32 @@
+% mechanism: scan_toks (tex.web §473) sets scanner_status:=absorbing BEFORE scan_left_brace
+%   (§403-404) hunts the `{` with get_x_token, so a file that ends right after \uppercase (or
+%   \lowercase, \detokenize, \message …) is a runaway, "File ended while scanning text of
+%   \uppercase" (§338): TeX inserts `}` (§339), which is then "Missing { inserted", the text is
+%   empty and the parent's `{abc}` is an ordinary group. A \toks assignment hunts its brace at
+%   `normal` status first (§1226) and so crosses the file end: "C D [abc]".
+%   Rust hunts the brace before entering `absorbing` (GeneralText: skip_filler, then
+%   read_balanced_text), and read_x_token drains every autoclose input at any status, so it
+%   crosses silently and uppercases the parent's text. A faithful fix needs read_x_token's
+%   drain to call recover_at_file_end at a non-normal status, which first needs the
+%   expandable primitives with parameters (\csname CSName, \number Number, …) to stop reading
+%   at `matching` (definition/expandable.rs read_call_arguments), a status TeX never gives a
+%   primitive's reads.
+% witness: batch 56jj (does a GeneralText brace hunt cross a file end?)
+% oracle:  pdflatex 2 errors ("File ended while scanning text of \uppercase", "Missing {
+%          inserted"), "A abc B", "C D [abc]"
+% engines: rust=0 errors, "A ABC B", "C D [abc]" (56jj, 2026-09-25); Perl alike
+% expect:  2 errors, "A abc B", "C D [abc]"
+% status:  RED (kernel root: latexml_core read_x_token + expandable.rs; not fixed by 56jj)
+\documentclass{article}
+\begin{filecontents*}{uppercase_brace_hunt_in.tex}
+\uppercase
+\end{filecontents*}
+\begin{filecontents*}{toks_brace_hunt_in.tex}
+\toks0=
+\end{filecontents*}
+\makeatletter
+\begin{document}
+A \@@input uppercase_brace_hunt_in.tex {abc} B
+
+C \@@input toks_brace_hunt_in.tex {abc} D [\the\toks0]
+\end{document}

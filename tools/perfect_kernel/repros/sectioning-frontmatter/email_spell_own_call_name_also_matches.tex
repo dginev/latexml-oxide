@@ -1,0 +1,22 @@
+% An author's own `\email` call keeps the address its own name spells, though another author's name spells it better:
+% amsart's `\author{Yang Zhang}…\email{yang91@…}` beside `\author{Hengyun Yang}` is Yang Zhang's (his given name opens
+% the local part; Hengyun Yang's surname is all of it) — FIDELITY_CHARTER §4 #420, census138 EMAILSPELL (brief 107f B).
+% witness: 1707.09730 (`\author[Y Zhang]{Yang Zhang}…\email{yang91@mail.ustc.edu.cn}`)
+% oracle:  pdflatex 0 errors: the addresses "Univ A, Town / Email address: hyyang@a.edu" and "Univ B, City / Email
+%   address: yang91@b.edu"
+% engines: rust int139a3 = yang91@b.edu moved to Hengyun Yang
+% expect:  0 errors, 0 warnings; Hengyun Yang: Univ A, Town + hyyang@a.edu; Yang Zhang: Univ B, City + yang91@b.edu
+% status:  RED (int139a3) -> GREEN (107f)
+% preload: ar5iv.sty
+\documentclass{amsart}
+\begin{document}
+\title{T}
+\author{Hengyun Yang}
+\address{Univ A, Town}
+\email{hyyang@a.edu}
+\author{Yang Zhang}
+\address{Univ B, City}
+\email{yang91@b.edu}
+\maketitle
+Text.
+\end{document}

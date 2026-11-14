@@ -1,0 +1,154 @@
+% $ biblatex auxiliary file $
+% $ biblatex bbl format version 3.3 $
+% Do not modify the above lines!
+%
+% This is an auxiliary file used by the 'biblatex' package.
+% This file may safely be deleted. It will be recreated by
+% biber as required.
+%
+\begingroup
+\makeatletter
+\@ifundefined{ver@biblatex.sty}
+  {\@latex@error
+     {Missing 'biblatex' package}
+     {The bibliography requires the 'biblatex' package.}
+      \aftergroup\endinput}
+  {}
+\endgroup
+
+
+\refsection{0}
+  \datalist[entry]{anyt/global//global/global/global}
+    \entry{a1}{article}{}{}
+      \name{author}{4}{}{%
+        {{hash=4af4cfbe312650284afd806e0b65e87a}{%
+           family={Adams},
+           familyi={A\bibinitperiod},
+           given={Alice},
+           giveni={A\bibinitperiod}}}%
+        {{hash=68daf6a0f5044b721bd1b19645b725d7}{%
+           family={Brown},
+           familyi={B\bibinitperiod},
+           given={Bob},
+           giveni={B\bibinitperiod}}}%
+        {{hash=4bd477a9a578e868059673fc26ab8007}{%
+           family={Cole},
+           familyi={C\bibinitperiod},
+           given={Carl},
+           giveni={C\bibinitperiod}}}%
+        {{hash=2d6aee529012b8009e9b3d18309d4e2a}{%
+           family={Dunn},
+           familyi={D\bibinitperiod},
+           given={Dora},
+           giveni={D\bibinitperiod}}}%
+      }
+      \strng{namehash}{f0f81b13bab6c1b94f4943c76562b465}
+      \strng{fullhash}{912eef37598b1eb9dbfa5983d86cb8c1}
+      \strng{fullhashraw}{912eef37598b1eb9dbfa5983d86cb8c1}
+      \strng{bibnamehash}{f0f81b13bab6c1b94f4943c76562b465}
+      \strng{authorbibnamehash}{f0f81b13bab6c1b94f4943c76562b465}
+      \strng{authornamehash}{f0f81b13bab6c1b94f4943c76562b465}
+      \strng{authorfullhash}{912eef37598b1eb9dbfa5983d86cb8c1}
+      \strng{authorfullhashraw}{912eef37598b1eb9dbfa5983d86cb8c1}
+      \field{labelalpha}{Ada+01}
+      \field{sortinit}{A}
+      \field{sortinithash}{2f401846e2029bad6b3ecc16d50031e2}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{journaltitle}{Journal of Y}
+      \field{title}{On Many Authors}
+      \field{year}{2001}
+      \field{dateera}{ce}
+    \endentry
+    \entry{b1}{book}{}{}
+      \name{author}{1}{}{%
+        {{hash=2f8b5d1197c68ea81b15220f03c509bf}{%
+           family={B\"{o}hm},
+           familyi={B\bibinitperiod},
+           given={Corrado},
+           giveni={C\bibinitperiod}}}%
+      }
+      \list{publisher}{1}{%
+        {Pub}%
+      }
+      \strng{namehash}{2f8b5d1197c68ea81b15220f03c509bf}
+      \strng{fullhash}{2f8b5d1197c68ea81b15220f03c509bf}
+      \strng{fullhashraw}{2f8b5d1197c68ea81b15220f03c509bf}
+      \strng{bibnamehash}{2f8b5d1197c68ea81b15220f03c509bf}
+      \strng{authorbibnamehash}{2f8b5d1197c68ea81b15220f03c509bf}
+      \strng{authornamehash}{2f8b5d1197c68ea81b15220f03c509bf}
+      \strng{authorfullhash}{2f8b5d1197c68ea81b15220f03c509bf}
+      \strng{authorfullhashraw}{2f8b5d1197c68ea81b15220f03c509bf}
+      \field{labelalpha}{B\"{o}h66}
+      \field{sortinit}{B}
+      \field{sortinithash}{d7095fff47cda75ca2589920aae98399}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{title}{Flow Diagrams}
+      \field{year}{1966}
+      \field{dateera}{ce}
+    \endentry
+    \entry{k2}{book}{}{}
+      \name{author}{1}{}{%
+        {{hash=ec08e6f01da5f3814f28a70c89c64656}{%
+           family={Knuth},
+           familyi={K\bibinitperiod},
+           given={Donald\bibnamedelima E.},
+           giveni={D\bibinitperiod\bibinitdelim E\bibinitperiod}}}%
+      }
+      \list{publisher}{1}{%
+        {Addison-Wesley}%
+      }
+      \strng{namehash}{ec08e6f01da5f3814f28a70c89c64656}
+      \strng{fullhash}{ec08e6f01da5f3814f28a70c89c64656}
+      \strng{fullhashraw}{ec08e6f01da5f3814f28a70c89c64656}
+      \strng{bibnamehash}{ec08e6f01da5f3814f28a70c89c64656}
+      \strng{authorbibnamehash}{ec08e6f01da5f3814f28a70c89c64656}
+      \strng{authornamehash}{ec08e6f01da5f3814f28a70c89c64656}
+      \strng{authorfullhash}{ec08e6f01da5f3814f28a70c89c64656}
+      \strng{authorfullhashraw}{ec08e6f01da5f3814f28a70c89c64656}
+      \field{extraname}{1}
+      \field{labelalpha}{Knu84}
+      \field{sortinit}{K}
+      \field{sortinithash}{c02bf6bff1c488450c352b40f5d853ab}
+      \field{extraalpha}{1}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{title}{Fundamental Algorithms}
+      \field{year}{1984}
+      \field{dateera}{ce}
+    \endentry
+    \entry{k1}{book}{}{}
+      \name{author}{1}{}{%
+        {{hash=ec08e6f01da5f3814f28a70c89c64656}{%
+           family={Knuth},
+           familyi={K\bibinitperiod},
+           given={Donald\bibnamedelima E.},
+           giveni={D\bibinitperiod\bibinitdelim E\bibinitperiod}}}%
+      }
+      \list{publisher}{1}{%
+        {Addison-Wesley}%
+      }
+      \strng{namehash}{ec08e6f01da5f3814f28a70c89c64656}
+      \strng{fullhash}{ec08e6f01da5f3814f28a70c89c64656}
+      \strng{fullhashraw}{ec08e6f01da5f3814f28a70c89c64656}
+      \strng{bibnamehash}{ec08e6f01da5f3814f28a70c89c64656}
+      \strng{authorbibnamehash}{ec08e6f01da5f3814f28a70c89c64656}
+      \strng{authornamehash}{ec08e6f01da5f3814f28a70c89c64656}
+      \strng{authorfullhash}{ec08e6f01da5f3814f28a70c89c64656}
+      \strng{authorfullhashraw}{ec08e6f01da5f3814f28a70c89c64656}
+      \field{extraname}{2}
+      \field{labelalpha}{Knu84}
+      \field{sortinit}{K}
+      \field{sortinithash}{c02bf6bff1c488450c352b40f5d853ab}
+      \field{extraalpha}{2}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{title}{Seminumerical Algorithms}
+      \field{year}{1984}
+      \field{dateera}{ce}
+    \endentry
+  \enddatalist
+\endrefsection
+\endinput
+

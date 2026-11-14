@@ -1,0 +1,17 @@
+% witness: 2606.03745; the r7 re-review of batch 77p (finding 2)
+% oracle:  pdflatex 0 errors: authblk: two names linked to their ORCID pages ("T.J.C. Bezerra"), the one institution
+%          under them
+% engines: rust 77p r10 = 0 errors; "T.J.C. Bezerra" a URL contact of L. Asquith, no author
+% expect:  0 errors, 0 warnings; two authors, T.J.C. Bezerra and L. Asquith, each with the Sussex affiliation
+% status:  RED (77p r10) -> GREEN (77p r11)
+\documentclass{article}
+\usepackage{authblk}
+\usepackage{hyperref}
+\title{T}
+\author[1]{\href{https://orcid.org/0000-0002-0424-7903}{T.J.C. Bezerra}}
+\author[1]{\href{https://orcid.org/0000-0001-8035-7162}{L. Asquith}}
+\affil[1]{Department of Physics and Astronomy, University of Sussex, Brighton, United Kingdom}
+\begin{document}
+\maketitle
+Text.
+\end{document}

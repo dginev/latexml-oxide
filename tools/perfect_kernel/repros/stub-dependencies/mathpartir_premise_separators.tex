@@ -1,0 +1,12 @@
+% witness: 2304.05276 (ottalt.sty:33/90 separates premises with `\mpr@andcr`; mathpartir.sty:62-68)
+% oracle:  pdflatex 0 errors
+% engines: rust 65bundle = 1 error (`\mpr@andcr` undefined)
+% expect:  0 errors; one inference rule Math with premises a and b
+% status:  RED (65bundle) -> GREEN (65k)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{mathpartir}
+\makeatletter\newcommand\premsep{\mpr@andcr}\makeatother
+\begin{document}
+\[ \inferrule{a \premsep b}{c} \]
+\end{document}

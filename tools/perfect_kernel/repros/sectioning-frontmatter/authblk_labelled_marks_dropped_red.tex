@@ -1,0 +1,22 @@
+% mechanism: authblk's own labels (`\author[1]`, `\affil[1]`) print a mark on the name and on the affiliation
+%   (`\AB@authnote`, `\AB@affilnote`); the binding passes them as annotations (`\lx@add@authors@append[annotations=…]`,
+%   `\lx@add@affiliation[label=…]`), which print nothing, so both marks are dropped, as Perl drops them
+%   (authblk.sty.ltxml). The names' hand-typed marks are shown (P4b2b); these generated ones are not
+% witness: synthetic (reviewer revP4b2 q2)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "Ann Able1 and Bob Baker2", "1Univ A, Town A", "2Univ B, Town B"
+% engines: P4b2 and P4b2b: Ann Able "Univ A, Town A", Bob Baker "Univ B, Town B" (no mark on either side)
+% expect:  0 errors, 0 warnings; Ann Able 1 "1 Univ A, Town A", Bob Baker 2 "2 Univ B, Town B"
+% status:  RED (Perl's output)
+% moves:   post-merge (authblk's generated marks shown on both sides)
+\documentclass{article}
+\usepackage{authblk}
+\title{T}
+\author[1]{Ann Able}
+\author[2]{Bob Baker}
+\affil[1]{Univ A, Town A}
+\affil[2]{Univ B, Town B}
+\date{}
+\begin{document}
+\maketitle
+Body.
+\end{document}

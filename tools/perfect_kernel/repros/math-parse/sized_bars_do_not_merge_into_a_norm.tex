@@ -1,0 +1,14 @@
+% witness: review of batch 62z (mathtools' `\abs[\bigg]{\abs[\big]{y}}` is now `\biggl\lvert\bigl\lvert …`, as the
+%          package sizes it, which reaches this pre-existing merge)
+% oracle:  pdflatex: two nested absolute-value bars on each side, the outer larger; perl: not checked
+% engines: rust 62z: `text="norm@(y)"` for both formulas — two adjacent sized bars of different sizes are read as one
+%          `‖` (the opening at the outer size, the closing at the inner), the inner absolute value lost; unsized
+%          `\lvert\lvert` and `\big\lvert\big\lvert` do not merge
+% expect:  nested absolute values, `absolute-value@(absolute-value@(y))`, 0 errors
+% status:  RED (math parse parked, user 2026-10-02; filed from the 62z review)
+\documentclass{article}
+\usepackage{mathtools}
+\DeclarePairedDelimiter{\abs}{\lvert}{\rvert}
+\begin{document}
+$\Bigl\lvert\bigl\lvert y\bigr\rvert\Bigr\rvert$ and $\abs[\bigg]{\abs[\big]{y}}$
+\end{document}

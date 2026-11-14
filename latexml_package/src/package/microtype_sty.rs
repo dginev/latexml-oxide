@@ -3,6 +3,8 @@
 use crate::prelude::*;
 
 LoadDefinitions!({
+  // microtype.sty:189-190; etoolbox is sometimes used as implied (Perl's binding, arXiv:2507.04590).
+  RequirePackage!("keyval");
   RequirePackage!("etoolbox");
 
   // All microtypography macros are no-ops.
@@ -44,8 +46,75 @@ LoadDefinitions!({
   // `\microtypecontext{…}` resolves to the harmless declaration while
   // `\begin{microtypecontext}` still finds the environment (env lookup
   // is independent of the `\microtypecontext` CS). Witness 2007.06927.
-  DefEnvironment!("{microtypecontext}", "#body");
+  // No `{microtypecontext}` ENVIRONMENT: real microtype.sty:80 only defines
+  // the `\microtypecontext{…}` declaration, so `\endmicrotypecontext` stays
+  // undefined until a `\begin{microtypecontext}` resolves it on the fly —
+  // synthslant.sty:302 probes `\ifcsdef{endmicrotypecontext}` and calls it
+  // when TRUE (a live env-end here → "Attempt to end mode
+  // restricted_horizontal", 101 errors in synthslant-gauge). The generic
+  // `\begin`/`\end` path still handles the env form through the no-op
+  // declaration (2007.06927 `\begingroup\microtypecontext{…}\endgroup`).
   def_macro_noop("\\microtypecontext{}")?;
   DefMacro!("\\textmicrotypecontext{}{}", "#2");
   def_macro_noop("\\DeclareMicrotypeBabelHook{}{}")?;
+  // microtype.sty:36-37 `\def\MT@MT{microtype}` — the marker typog.sty:68
+  // tests with `\ifdefined\MT@MT` (else "package microtype not (pre-)loaded"
+  // under `trackingttspacing`; typog-example) — and the package's `\ifMT@*`
+  // switches (microtype.sty:194-205,233) a client may test.
+  RawTeX!(
+    r"\def\MT@MT{microtype}
+\newif\ifMT@protrusion \newif\ifMT@expansion \newif\ifMT@auto \newif\ifMT@selected
+\newif\ifMT@noligatures \newif\ifMT@draft \newif\ifMT@disable \newif\ifMT@spacing
+\newif\ifMT@kerning \newif\ifMT@tracking \newif\ifMT@babel \newif\ifMT@document \newif\ifMT@fontspec"
+  );
+  // microtype.sty:3162-3195: with `babel` and `kerning` both on (default off)
+  // and babel loaded, microtype's setup switches off French babel's active
+  // `:;!?` (Turkish: `:!=`) at `\begin{document}`, since its own kerning does
+  // that job. Code written in the preamble relies on it: cahierprof.sty:366-388
+  // freezes a `\tikzmath{…; …}` whose `;` must stay other-catcode when its
+  // `\AtBeginDocument` hook runs (:671-676), or tikzmath picks the active-`;`
+  // delimiter and the statements leak (cahierprof-doc, -exemple; SHARED with
+  // Perl's stub). Registered at load, so it runs before a later package's hook.
+  if let Some(opts) = lookup_vecdeque("opt@microtype.sty") {
+    for opt in opts.iter() {
+      let opt = opt.to_string();
+      let (key, value) = opt
+        .split_once('=')
+        .map_or((opt.trim(), "true"), |(k, v)| (k.trim(), v.trim()));
+      if matches!(key, "babel" | "kerning") {
+        RawTeX!(&s!(
+          "\\MT@{key}{}",
+          if value == "false" { "false" } else { "true" }
+        ));
+      }
+    }
+  }
+  DefMacro!("\\lx@MT@babel@shorthandoff", {
+    // `\ifMT@babel`/`\ifMT@kerning` true and babel loaded; a switch that is gone
+    // (microtype loaded inside a group: fullwidth) counts as off.
+    let on = |cs: &str| x_equals(&T_CS!(cs), &T_CS!("\\iftrue"));
+    if !on("\\ifMT@babel") || !on("\\ifMT@kerning") || !package_loaded("babel") {
+      return Ok(Tokens::default());
+    }
+    let listed = |name: &str| -> Result<bool> {
+      let opts = do_expand(TokenizeInternal!(
+        r"\csname opt@babel.sty\endcsname,\@classoptionslist"
+      ))?
+      .to_string();
+      Ok(opts.split(',').any(|o| o.trim() == name))
+    };
+    let mut out = Tokens::default();
+    if ["french", "frenchb", "francais", "canadien", "acadian"]
+      .iter()
+      .map(|n| listed(n))
+      .collect::<Result<Vec<_>>>()?
+      .contains(&true)
+    {
+      out = Tokenize!(r"\shorthandoff{:;!?}");
+    } else if listed("turkish")? {
+      out = Tokenize!(r"\shorthandoff{:!=}");
+    }
+    Ok(out)
+  });
+  RawTeX!(r"\AtBeginDocument{\lx@MT@babel@shorthandoff}");
 });

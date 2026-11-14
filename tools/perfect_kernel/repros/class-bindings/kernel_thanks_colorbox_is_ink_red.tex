@@ -1,0 +1,24 @@
+% witness: review rev92e r2 B2' (`\hbox` counted as a transparent wrapper, so `\colorbox{c}{…}` =
+%          `\leavevmode\hbox{\pagecolor{c}…}` over blank material dropped its note, though pdflatex prints the coloured
+%          block and our own HTML shows it)
+% oracle:  pdflatex (article + xcolor): 0 errors; the footnotes of Ann, Bob, Cat, Dan and Eve each a coloured block
+%          (red, yellow, yellow, gray, yellow); Fay's (`\textcolor{red}{}`) a bare mark
+% engines: rust 92e r2 (b1ed75e) = no note for any of the six; rust 92a5 keeps all six (Dan's
+%          `<text backgroundcolor="#D9D9D9"> </text>`, Fay's empty)
+% expect:  0 errors, 0 warnings; the notes of Ann to Eve, kept; no note for Fay. (Ann's `\colorbox{red}{}` and Eve's
+%          `\mbox{\colorbox{yellow}{\strut}}` construct an empty `ltx:text` with no `backgroundcolor`: the colour of a
+%          box with no text is lost in the XML, as in the base — a rendering gap, not this test's)
+% engines: rust int160a (HG1) = 0 errors, 0 warnings: the notes of Ann to Eve (colour boxes) dropped, none counted; 92e's guard kept only the counts after DEL1
+% engines: rust UNC = 0 errors, 1 warning: the notes still dropped (no item is keyed by a text of no letter or
+%          digit, emitter/plan.rs `creator_items`), now counted: the content check's "5 notes … \thanks{\colorbox{red}{}} … \thanks{\mbox{\colorbox{yellow}{\strut}}}"
+% status:  RED (92e r2) -> GREEN (92e r3) -> RED (int160a, HG1) -> counted (UNC)
+% moves:   post-merge (the notes written: key a wordless note by its place, as a picture's)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{xcolor}
+\begin{document}
+\title{T}
+\author{Ann Able\thanks{\colorbox{red}{}} \and Bob Baker\thanks{\colorbox{yellow}{\hspace{2em}}} \and Cat Cole\thanks{\colorbox{yellow}{\phantom{XX}}} \and Dan Doe\thanks{\colorbox{gray!30}{\strut\hspace{1em}}} \and Eve Ell\thanks{\mbox{\colorbox{yellow}{\strut}}} \and Fay Fox\thanks{\textcolor{red}{}}}
+\maketitle
+Text.
+\end{document}

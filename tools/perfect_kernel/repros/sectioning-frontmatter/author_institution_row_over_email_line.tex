@@ -1,0 +1,20 @@
+% witness: the 77p r4 re-review's probes v1 (`Ann Able~~~~Bob Baker \\ Carnegie Mellon~~~~Johns Hopkins \\
+%          \texttt{\{aa,bb\}@x.edu}`), v3 (three over three over one address); rows of names over an e-mail line that
+%          spells a name of the row (`\{ffox,hhunt\}@x.edu`) or lists an address for every name of both rows
+% oracle:  pdflatex 0 errors: the rows as written
+% engines: rust 77p r4 = 0 errors; "Carnegie Mellon", "Johns Hopkins", "Google DeepMind" creators (a line of entries
+%          other than the row's count under the row read as names going on); int34a every row one creator
+% expect:  0 errors, 0 warnings; the institution rows affiliations of the names above them; Hal Hunt, Ivy Ives and
+%          Lee Lowe, Max Moss names (the addresses spell one of them, or are four for four names)
+% status:  RED (77p r4) -> GREEN (77p r5)
+\documentclass{article}
+\usepackage{hyperref}
+\title{T}
+\author{Ann Able~~~~Bob Baker \\ Carnegie Mellon~~~~Johns Hopkins \\ \texttt{\{aa,bb\}@x.edu}
+\and Cat Cole~~~~Dan Dorn~~~~Eve Eads \\ Carnegie Mellon~~~~Johns Hopkins~~~~Google DeepMind \\ \texttt{cat@x.edu}
+\and Fay Fox~~~~Gil Gray \\ Hal Hunt~~~~Ivy Ives \\ \texttt{\{ffox,hhunt\}@x.edu}
+\and Jon Jay~~~~Kim Kerr \\ Lee Lowe~~~~Max Moss \\ \texttt{\{p1,p2,p3,p4\}@x.edu}}
+\begin{document}
+\maketitle
+Text.
+\end{document}

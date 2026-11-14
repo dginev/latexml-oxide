@@ -1,0 +1,20 @@
+% witness: 1212.6177, 1710.00867 (vldb.cls:1118), rc_struct3 L1 (8 of 25 sampled `\endlx@list` first-error papers;
+%          est. 252 run-365 papers: sig-alternate*.cls, acm_proc_article-sp.cls, acmtrans2m.cls)
+% oracle:  pdflatex 0 errors: one bulleted item "One."
+% engines: rust 67int18b = 1 Error:unexpected:\endlx@list "Attempt to end mode internal_vertical"; Perl 0.8.8 0
+%          (latex_constructs.pool.ltxml:1673 `\@trivlist` locked)
+% expect:  the class's spacing-only `\def\@trivlist` leaves the kernel's locked `\@trivlist`, so `\list` opens its
+%          list and `\endlist` closes it
+% status:  RED (67int18b) -> GREEN (69b)
+% preload: ar5iv.sty
+\documentclass{article}
+% sig-alternate.cls / vldb.cls (ACM 1.8 family) redefine latex.ltx's \@trivlist (spacing only)
+\makeatletter
+\def\@trivlist{\@topsepadd\topsep\ifvmode\advance\@topsepadd\partopsep\else\unskip\par\fi
+  \leftskip\z@skip\rightskip\@rightskip\parfillskip\@flushglue\global\@newlisttrue}
+\makeatother
+\begin{document}
+\begin{list}{$\bullet$}{\setlength{\leftmargin}{5mm}}
+\item One.
+\end{list}
+\end{document}

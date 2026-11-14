@@ -1,0 +1,18 @@
+% mechanism: the one `\institute` is every author's wherever it is written among the authors' calls (the frontmatter's
+%   flush reads them all, `share_row_contacts`); an `\inst{*}` and an empty `\inst{}` pick no institute (llncs numbers
+%   its institutes); an address no name spells, by no order, is the author block's (FIDELITY_CHARTER §4).
+% witness: 2207.04574 (`Mehmet Saygın Seyfioğlu\inst{*}`), 2604.20229 (`\inst{}` on both names)
+% oracle:  pdflatex 0 errors; "Ann Able∗ and Bob Baker" over "University of Somewhere, Town" and "info@x.edu"
+% engines: rust int114a = a nameless creator holding the institute and the address; perl = both on Ann Able
+% expect:  0 errors, 0 warnings; both authors the institute, Ann Able's mark shown; `info@x.edu` on a nameless creator
+% status:  RED (int114a) -> GREEN (85b)
+% preload: ar5iv.sty
+\documentclass{llncs}
+\begin{document}
+\title{A Title}
+\institute{University of Somewhere, Town\\ \email{info@x.edu}}
+\author{Ann Able\inst{*} \and Bob Baker\inst{}}
+\maketitle
+\begin{abstract}Text.\end{abstract}
+Body.
+\end{document}

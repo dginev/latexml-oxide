@@ -1,0 +1,12 @@
+% witness: 2210.15345 (main.tex:41 `\let\vec\undefined % place it before MnSymbol to prevent an error`)
+% oracle:  pdflatex 0 errors (MnSymbol.sty:1848 `\DeclareMathAccent{\vec}{\mathord}{largesymbols}{'321}`)
+% engines: rust 65bundle = 1 error (`\vec` undefined)
+% expect:  0 errors, 0 warnings; `\vec{0}` an OVERACCENT → over 0
+% status:  RED (65bundle) -> GREEN (65l); guard perfect_kernel_batch65l::mnsymbol_declares_an_undefined_vec
+% preload: ar5iv.sty
+\documentclass{article}
+\let\vec\undefined % place it before MnSymbol to prevent an error
+\usepackage{MnSymbol}
+\begin{document}
+$\theta_0=\vec{0}$.
+\end{document}

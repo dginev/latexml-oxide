@@ -1,0 +1,15 @@
+% witness: main-session finding (68w r2 item 6b; natbib author-year `\cite[]{k}`, `\cite[][]{k}`)
+% oracle:  pdflatex 0 errors: "A Rigden (2017). B (Rigden, 2017, p. 5). C (Rigden, 2017). D (Rigden, 2017). E (see
+%          Rigden, 2017)."
+% engines: rust 68w r1 = C and D textual "Rigden (2017)"; Perl 0.8.8 the same (KNOWN_PERL_ERRORS #867)
+% expect:  0 errors; only A textual, B-E parenthetical
+% status:  FIXED (68w r2)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{natbib}
+\begin{document}
+A \cite{k}. B \cite[p.~5]{k}. C \cite[]{k}. D \cite[][]{k}. E \cite[see][]{k}.
+\begin{thebibliography}{1}
+\bibitem[Rigden(2017)]{k} J. Rigden, Title, 2017.
+\end{thebibliography}
+\end{document}

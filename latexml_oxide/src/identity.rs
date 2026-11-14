@@ -30,6 +30,18 @@ pub const VERSION: &str = env!("CARGO_PKG_VERSION");
 /// `LATEXML_GIT_SHA` override). Perl's `$LaTeXML::Version::REVISION`.
 pub const GIT_REVISION: &str = env!("LATEXML_GIT_SHA");
 
+/// `--version`'s text: the crate version and the [`GIT_REVISION`] stamp,
+/// `0.7.6 (revision a1b2c3d)`. The stamp is the one the conversion banner logs;
+/// printing it here lets a harness check which source built a binary without
+/// running a conversion (`ab_audit run` refuses a binary whose stamp is not the
+/// expected commit).
+pub const VERSION_WITH_REVISION: &str = concat!(
+  env!("CARGO_PKG_VERSION"),
+  " (revision ",
+  env!("LATEXML_GIT_SHA"),
+  ")"
+);
+
 /// Basename of the invoked executable — Perl's `$FindBin::Script`
 /// (`latexml_oxide`, `cortex_worker`, `latexmlmath_oxide`, …). Read from
 /// `argv[0]` so each binary self-identifies; `"latexml-oxide"` when argv is
@@ -101,6 +113,16 @@ mod tests {
     assert!(
       !executable_name().is_empty(),
       "executable name must be non-empty"
+    );
+  }
+
+  /// `--version` names the revision stamp in the shape `ab_audit` reads:
+  /// `<version> (revision <stamp>)`.
+  #[test]
+  fn version_text_names_the_revision() {
+    assert_eq!(
+      VERSION_WITH_REVISION,
+      format!("{VERSION} (revision {GIT_REVISION})")
     );
   }
 

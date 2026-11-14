@@ -1,0 +1,23 @@
+% mechanism: a line of an `\author` block printing an address list through `\url` pieces (one printing no `@`) inside
+%   font groups, a whole `\url` address first: the run is joined (`resolver::joined_address_pieces`); the address a link
+%   of the run targets exactly is that link, written in the text fonts and declarations around it; the others are their
+%   text in those fonts, each lost link counted (the emitter's "markup lost" Warning).
+% witness: 1710.01968 (`\small \textit{\url{robin.andre@ira.uka.de}, \{\url{sebastian.schlag, christian.schulz}}\}
+%   \url{@kit.edu}`)
+% oracle:  pdflatex 0 errors; "Robin Andre, Sebastian Schlag and Christian Schulz" over "Univ X" and
+%   "robin.andre@ira.uka.de, {sebastian.schlag, christian.schulz}@kit.edu" small, typewriter italic
+% engines: rust Z18h = all three addresses plain text in 90% size, the url links and typewriter italic lost with no
+%   Warning (review revZ18h B1r); int154x = 5 `ltx_url` refs in typewriter italic on bogus creators
+% expect:  0 errors, 2 warnings (sebastian.schlag@ and christian.schulz@ written as text); robin.andre@ an `ltx_url`
+%   link in typewriter italic, 90%
+% status:  RED (Z18h) -> GREEN (Z18i)
+\documentclass{llncs}
+\usepackage{hyperref}
+\begin{document}
+\title{T}
+\author{Robin Andre, Sebastian Schlag and Christian Schulz \\
+\textit{Univ X} \\
+\small \textit{\url{robin.andre@ira.uka.de}, \{\url{sebastian.schlag, christian.schulz}}\}\url{@kit.edu}}
+\institute{}
+\maketitle
+\end{document}

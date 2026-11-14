@@ -1,0 +1,24 @@
+% A raw package's date setters store their own `\@received`/`\@accepted`, which no title page reads: a macro of the
+% package's the document calls in its body prints them (`\printhistory`). K11 reroutes a store, the setter's own too,
+% only when the title page alone reads it (frontmatter_stores.rs `store_setter_body`, `read_only_by_the_title_page`):
+% these stay the package's, printed once, where the body prints them.
+% witness: 2605.31044's shape (rlj.sty under article; review rev95d B1, probe p7)
+% oracle:  pdflatex 0 errors: "T", "Ann Able", "Text.", "Received 1 May 2020; accepted 2 June 2020."
+% engines: rust int124a = 0 errors, the history one body paragraph; rust 95d = 0 errors, two <ltx:date> and the body
+%          paragraph (printed twice); perl = 0 errors, the body paragraph
+% expect:  0 errors, 0 warnings; no <ltx:date> of the package's; "Received 1 May 2020; accepted 2 June 2020." one body
+%          paragraph after "Text."
+% status:  RED (95d) -> GREEN (95d-r2)
+% preload: ar5iv.sty
+\begin{filecontents*}[overwrite]{histprint.sty}
+\def\received#1{\gdef\@received{#1}}
+\def\accepted#1{\gdef\@accepted{#1}}
+\def\printhistory{\par\noindent Received \@received; accepted \@accepted.\par}
+\end{filecontents*}
+\documentclass{article}
+\usepackage{histprint}
+\title{T}\author{Ann Able}\received{1 May 2020}\accepted{2 June 2020}
+\begin{document}\maketitle
+Text.
+\printhistory
+\end{document}

@@ -1,0 +1,12 @@
+% The document's pair evidence keys a `d<var>` by its variable's own token, scripts or not: `\sigma\,dW_t` and
+% `\sigma\,dW` read the `\int_0^T g\,dW_t` of the document; `dt_k` the `\int_0^T f\,dt` (the 57cj.23.6 review: the key was
+% the script's marker, `t`, so `dW_t` borrowed the `dt` pair and `dW` missed its own). The italic `d` is a scalar here
+% (`d=3`), so only the pairs decide.
+% witness: none (review probes b2, s_mix).
+% oracle:  Perl 0 errors: letters
+% expect:  0 errors; `dW_t`, `dW`, `dt_k` differentials, `dh` a letter
+\documentclass{article}
+\usepackage{amsmath,amssymb}
+\begin{document}
+$d=3$ $\int_0^T f\,dt$ $\int_0^T g\,dW_t$ $\sigma\,dW_t$ $\sigma\,dW$ $\sigma\,dt_k$ $\sigma\,dh$
+\end{document}

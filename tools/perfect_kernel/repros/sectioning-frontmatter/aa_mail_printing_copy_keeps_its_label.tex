@@ -1,0 +1,34 @@
+% aa's `\mail{x}` under a copy of aa.cls that prints it (v4.03-v7.0: `\def\mailname{{\it Correspondence to\/}:}`,
+% `\footnotetext[0]{\kern-\bibindent\mailname\ \ignorespaces\@mail}`; this file's stand-in, which the binding reads
+% only as text) is `\lx@add@address[name={\mailname}]` (aa_support_sty.rs, Perl aa_support.sty.ltxml:118-119); 95c's
+% take-out of an affiliation entry holding an e-mail alone (emitter/plan.rs `cut_entry_addresses`) made it an e-mail
+% contact named "Email: ", and "Correspondence to" was printed nowhere. A take-out that empties its entry keeps the
+% entry's own printed label on the contacts it makes (`holder_label`).
+% witness: 1005.3784 (v7.0 :272, :466-468), 0805.1001 (v6.1, "Correspondence to: e-mail: …"), 1102.1556, 1505.05452,
+%          astro-ph0107266, astro-ph0108379, astro-ph0609025, astro-ph9907206; no copy shipped: 1209.2606
+% oracle:  pdflatex 0 errors: "T", "A. Smith", "Univ. X, Y", "Body.", footnote "Correspondence to: smith@x.org"
+% engines: rust int123a = <contact name="Correspondence to " role="address">; rust int124b-int125b = <contact
+%          name="Email: " role="email">, "Correspondence" nowhere; perl = the int123a contact; rust 97b-MB1 =
+%          <contact name="Correspondence to " role="email">, the copy's colon lost (review revMB1 P2)
+% expect:  0 errors, 0 warnings; one contact holding smith@x.org, <contact name="Correspondence to: " role="email">,
+%          no italic on it or the date (`\mailname` aa.cls's `{\it Correspondence to\/}:`, its `\it` in a group; the
+%          space after it `\mail`'s `name={\mailname\ }`)
+% status:  RED (int125b) -> GREEN (97b); RED (MB1) -> GREEN (MB2) —
+%          perfect_kernel_batch97b::aa_mail_is_labelled_as_its_copy_prints_it
+% preload: ar5iv.sty
+\begin{filecontents*}[overwrite]{aa.cls}
+\NeedsTeXFormat{LaTeX2e}\ProvidesClass{aa}[2010/01/01 v7.0 stand-in]
+\LoadClass{article}
+\def\mailname{{\it Correspondence to\/}:}
+\def\email#1{{e-mail: \tt#1}}
+\def\institute#1{\gdef\@institute{#1}}\def\@institute{}
+\def\mail#1{\gdef\@mail{#1}}\def\@mail{}
+\def\@maketitle{{\Large\@title\par}\@author\par\@institute\par
+  \if!\@mail!\else\footnotetext[0]{\mailname\ \ignorespaces\@mail}\fi}
+\end{filecontents*}
+\documentclass{aa}
+\begin{document}
+\title{T}\author{A. Smith}\institute{Univ. X, Y}\mail{smith@x.org}\date{Received 2010}
+\maketitle
+Body.
+\end{document}

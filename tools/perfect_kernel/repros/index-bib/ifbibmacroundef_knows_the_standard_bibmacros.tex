@@ -1,0 +1,12 @@
+% witness: review of batch 62zi (acmauthoryear.bbx:22-27 on 2609.32652)
+% oracle:  pdflatex 0 errors, 0 biblatex warnings: "defined"
+% engines: rust 62zi: "undefined" — the binding's `\ifbibmacroundef{}{}{}` always takes its first branch, where
+%          authoryear.bbx:20 provides `date+extradate`, so acmauthoryear.bbx prints a "bibmacro … is missing" warning
+%          pdflatex does not; perl (ar5iv bindings) not compared
+% expect:  0 errors, 0 warnings; "defined"
+% status:  RED (filed from the 62zi review)
+\documentclass{article}
+\usepackage[style=authoryear]{biblatex}
+\begin{document}
+\ifbibmacroundef{date+extradate}{undefined}{defined}
+\end{document}

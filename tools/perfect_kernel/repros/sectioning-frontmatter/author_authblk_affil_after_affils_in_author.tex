@@ -1,0 +1,20 @@
+% witness: 77n r3 review — authblk `\affil`s inside a comma list of names, then a top-level `\affil` (2605.01689 `\author{
+%          Khalid Mahmud Labib\affil{1}, Saad Waheed\affil{1}, …}` then `\affil{Dynamical Systems and Signals Lab (DSSL)\\ …}`)
+% oracle:  pdflatex 0 errors: "Ann Able, Bob Baker / Lab X / Univ Y", no "1" (the `\affil{1}`s inside `\author` print
+%          nothing); the "1" contacts and the Lab X block on Bob Baker follow int32a and Perl's `annotate=new`
+%          (authblk.sty.ltxml:57), not TeX
+% engines: rust int32a = each author with "1", the last also with "Lab X Univ Y" (Perl's `annotate=new`); 77n r3 = no
+%          affiliation on anyone (`annotate=run:0`)
+% expect:  0 errors, 0 warnings; 2 creators, each with "1", Bob Baker also with the Lab X block (int32a's)
+% status:  RED (77n r3) -> GREEN (77n r4)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{authblk}
+\title{T}
+\author{Ann Able\affil{1},
+  Bob Baker\affil{1}}
+\affil{Lab X\\ Univ Y}
+\begin{document}
+\maketitle
+x
+\end{document}

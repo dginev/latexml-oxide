@@ -1,0 +1,190 @@
+# Ruled residuals of in-scope manuals: a sweep counts the manual as meeting the goal bar's G1 (kind `errors`: status 2;
+# kind `fatal`: status 3, its error lines), G2 (kind `jing`) or G3 (kind `recall`: missing S3 words classified as no
+# conversion loss) while its count is at most the one recorded here; a higher count is open again.
+# Read by tools/perfect_kernel/scoreboard.py (goal-bar block). docs/PERFECT_KERNEL.md "Goal bar and ranked path".
+# Columns: bundle, name, kind, count, ruling, basis.
+biblatex-ext	biblatex-ext	errors	1	2026-10-02	bibliography inside a tcolorbox (out of scope): <ltx:bibliography> in the ltx:block of an svg:foreignObject
+biblatex-ext	biblatex-ext	jing	1	2026-10-02	the same bibliography in the foreignObject's ltx:block
+biblatex-gost	biblatex-gost-examples	jing	770	D15 2026-09-18	dangling \hyperlink{back:<key>}: the target is the document's own begentry bibmacro, run only from a biber .bbl (agent_reports/2026-10-02_biblatex_idref_rootcause.md)
+biblatex-chicago	cms-dates-intro	jing	80	D15 2026-09-18	dangling cmsdocs \adlnbackref \hyperlink{cite.0@<key>}: biblatex makes the anchor only from a .bbl (biblatex.sty:10239-10245)
+biblatex-chicago	cms-trad-appendix	jing	4	D15 2026-09-18	as cms-dates-intro
+elsarticle	elsdoc	jing	2	D15 2026-09-18	\hyperlink targets inside {comment}, dangling in pdflatex too
+europecv	europecv	jing	3	D15 2026-09-18	\hyperlink to \label names, dangling in pdflatex too
+crossreftools	crossreftools_driver	jing	1	D15 2026-09-18	link to an undefined target in the source
+iodhbwm	iodhbwm	jing	1	D15 2026-09-18	the document's URL used as a link target
+jsonparse	jsonparse-doc	jing	1	D15 2026-09-18	macro:arrayuse has no target in the source (after 59i)
+philex	philexmanual	jing	6	D15 2026-09-18	\lbz/\lba default [@] branch emits only \label (philex.sty:687-709, :817-840); pdfTeX warns the 4 names missing (agent_reports/2026-10-02_philex_rootcause.md); the 7th line (anchor in equation) is open
+biblatex	biblatex	jing	2	section-in-item 2026-09-22	a sectioning unit inside a list item (Perl parity)
+keytheorems	keytheorems-doc	jing	5	section-in-item 2026-09-22	as biblatex
+pdfmarginpar	pdfmarginpar	jing	1	section-in-item 2026-09-22	as biblatex
+phonrule	phonrule-doc	jing	1	section-in-item 2026-09-22	as biblatex
+srdp-mathematik	srdp-mathematik	jing	3	section-in-item 2026-09-22	as biblatex
+zx-calculus	zx-calculus	jing	8	section-in-item 2026-09-22	as biblatex
+chessboard	chessboard_and_beamer	errors	4	D14 2026-09-10	beamer overlays run in one pass (user: keep Perl's single pass); skak's game state leaks between \only<n> branches: since sweep 149 status 2, two skak \errmessage mainline errors, \EatNumberA runaway, \end{frame} mode error; the document is valid (DIFFICULT_CASES §D14)
+prerex	prerex	jing	1	section-in-item 2026-09-22	a sectioning unit the source puts inside a figure (prerex.tex:31-85, \paragraph at :70; Perl parity, OXIDIZED_DESIGN_DIVERGENCES #189)
+beamerappendixnote	example-basic	recall	1	s132 class S (sweep132_analysis/recall_tail_clusters.tsv; agent-classified, not verified per manual)	slides furniture/overlays
+beamertheme-gotham	gotham-exampleSimple	recall	1	s132 class D (sweep132_analysis/recall_tail_clusters.tsv; agent-classified, not verified per manual)	date words (golden typeset on another date)
+beamertheme-phnompenh	beamerthemePhnomPenh	recall	3	s132 class S (sweep132_analysis/recall_tail_clusters.tsv; agent-classified, not verified per manual)	slides furniture/overlays
+beamerthemeamurmaple	beamer-amurmaple-doc	recall	33	s132 class O1 (sweep132_analysis/recall_tail_clusters.tsv; agent-classified, not verified per manual)	reference-side: text inside included PDFs/images
+beamerthemeconcrete	demo-cbernoulli	recall	3	s132 class S (sweep132_analysis/recall_tail_clusters.tsv; agent-classified, not verified per manual)	slides furniture/overlays
+beamerthemeconcrete	demo-cdirichlet	recall	1	s132 class D (sweep132_analysis/recall_tail_clusters.tsv; agent-classified, not verified per manual)	date words (golden typeset on another date)
+beamerthemeconcrete	demo-cfermat	recall	1	s132 class D (sweep132_analysis/recall_tail_clusters.tsv; agent-classified, not verified per manual)	date words (golden typeset on another date)
+beamerthemeconcrete	demo-cgauss	recall	1	s132 class D (sweep132_analysis/recall_tail_clusters.tsv; agent-classified, not verified per manual)	date words (golden typeset on another date)
+beamerthemeconcrete	demo-clagrange	recall	3	s132 class S (sweep132_analysis/recall_tail_clusters.tsv; agent-classified, not verified per manual)	slides furniture/overlays
+beamerthemeconcrete	demo-cmobius	recall	1	s132 class D (sweep132_analysis/recall_tail_clusters.tsv; agent-classified, not verified per manual)	date words (golden typeset on another date)
+beamerthemeconcrete	demo-criemann	recall	3	s132 class S (sweep132_analysis/recall_tail_clusters.tsv; agent-classified, not verified per manual)	slides furniture/overlays
+beamerthemelalic	beamerthemelalic-exemplo	recall	8	s132 class O1 (sweep132_analysis/recall_tail_clusters.tsv; agent-classified, not verified per manual)	reference-side: text inside included PDFs/images
+bfh-ci	DEMO-BFHBeamer	recall	12	s132 class O1 (sweep132_analysis/recall_tail_clusters.tsv; agent-classified, not verified per manual)	reference-side: text inside included PDFs/images
+bfh-ci	DEMO-BFHBeamer-Sidebar	recall	13	s132 class O1 (sweep132_analysis/recall_tail_clusters.tsv; agent-classified, not verified per manual)	reference-side: text inside included PDFs/images
+bibarts	bibarts	recall	236	s132 class O2 (sweep132_analysis/recall_tail_clusters.tsv; agent-classified, not verified per manual)	reference-side: PDF text-extraction garble
+classics	classics	recall	25	s132 class O2 (sweep132_analysis/recall_tail_clusters.tsv; agent-classified, not verified per manual)	reference-side: PDF text-extraction garble
+cnbwp	cnbpaper	recall	32	s132 class O1 (sweep132_analysis/recall_tail_clusters.tsv; agent-classified, not verified per manual)	reference-side: text inside included PDFs/images
+comicneue	comicneue	recall	6	s132 class O1 (sweep132_analysis/recall_tail_clusters.tsv; agent-classified, not verified per manual)	reference-side: text inside included PDFs/images
+datetime2-french	datetime2-french-test-pdftex	recall	3	s132 class D (sweep132_analysis/recall_tail_clusters.tsv; agent-classified, not verified per manual)	date words (golden typeset on another date)
+datetime2-romanian	datetime2-romanian-test-pdftex	recall	3	s132 class D (sweep132_analysis/recall_tail_clusters.tsv; agent-classified, not verified per manual)	date words (golden typeset on another date)
+elsarticle	elsdoc	recall	325	s132 class O1 (sweep132_analysis/recall_tail_clusters.tsv; agent-classified, not verified per manual)	reference-side: text inside included PDFs/images
+fillwith	fillwith-example	recall	1	s132 class D (sweep132_analysis/recall_tail_clusters.tsv; agent-classified, not verified per manual)	date words (golden typeset on another date)
+fontsetup	fontsetup-doc	recall	51	s132 class O1 (sweep132_analysis/recall_tail_clusters.tsv; agent-classified, not verified per manual)	reference-side: text inside included PDFs/images
+fragoli	fragoli_doc	recall	110	s132 class O2 (sweep132_analysis/recall_tail_clusters.tsv; agent-classified, not verified per manual)	reference-side: PDF text-extraction garble
+fullminipage	fullminipage_test	recall	1	s132 class O2 (sweep132_analysis/recall_tail_clusters.tsv; agent-classified, not verified per manual)	reference-side: PDF text-extraction garble
+glossaries	glossary2glossaries	recall	37	s132 class O2 (sweep132_analysis/recall_tail_clusters.tsv; agent-classified, not verified per manual)	reference-side: PDF text-extraction garble
+greek-fontenc	char-list	recall	141	s132 class O2 (sweep132_analysis/recall_tail_clusters.tsv; agent-classified, not verified per manual)	reference-side: PDF text-extraction garble
+greek-fontenc	char-list-alphabeta	recall	82	s132 class O2 (sweep132_analysis/recall_tail_clusters.tsv; agent-classified, not verified per manual)	reference-side: PDF text-extraction garble
+handin	handin-doc	recall	62	s132 class O2 (sweep132_analysis/recall_tail_clusters.tsv; agent-classified, not verified per manual)	reference-side: PDF text-extraction garble
+hereapplies	hereapplies-example	recall	1	s132 class D (sweep132_analysis/recall_tail_clusters.tsv; agent-classified, not verified per manual)	date words (golden typeset on another date)
+hvfloat	odd1s2c	recall	7	s132 class O1 (sweep132_analysis/recall_tail_clusters.tsv; agent-classified, not verified per manual)	reference-side: text inside included PDFs/images
+hvfloat	right1s2c	recall	8	s132 class O1 (sweep132_analysis/recall_tail_clusters.tsv; agent-classified, not verified per manual)	reference-side: text inside included PDFs/images
+hvfloat	sub-default1s2c	recall	6	s132 class O1 (sweep132_analysis/recall_tail_clusters.tsv; agent-classified, not verified per manual)	reference-side: text inside included PDFs/images
+hvfloat	sub-default2s2c	recall	6	s132 class O1 (sweep132_analysis/recall_tail_clusters.tsv; agent-classified, not verified per manual)	reference-side: text inside included PDFs/images
+interval	interval	recall	8	s132 class O2 (sweep132_analysis/recall_tail_clusters.tsv; agent-classified, not verified per manual)	reference-side: PDF text-extraction garble
+jumplines	jumplines_example	recall	32	s132 class O1 (sweep132_analysis/recall_tail_clusters.tsv; agent-classified, not verified per manual)	reference-side: text inside included PDFs/images
+keytheorems	keytheorems-doc	recall	67	s132 class O2 (sweep132_analysis/recall_tail_clusters.tsv; agent-classified, not verified per manual)	reference-side: PDF text-extraction garble
+leporello	leporello-doc	recall	122	s132 class O1 (sweep132_analysis/recall_tail_clusters.tsv; agent-classified, not verified per manual)	reference-side: text inside included PDFs/images
+liftarm	liftarm	recall	29	s132 class O2 (sweep132_analysis/recall_tail_clusters.tsv; agent-classified, not verified per manual)	reference-side: PDF text-extraction garble
+ltx-talk	footer-text	recall	3	s132 class S (sweep132_analysis/recall_tail_clusters.tsv; agent-classified, not verified per manual)	slides furniture/overlays
+ltx-talk	header-footer-color	recall	1	s132 class S (sweep132_analysis/recall_tail_clusters.tsv; agent-classified, not verified per manual)	slides furniture/overlays
+ltx-talk	titlepage-styling	recall	3	s132 class S (sweep132_analysis/recall_tail_clusters.tsv; agent-classified, not verified per manual)	slides furniture/overlays
+ltx-talk	verbatim-alt-env	recall	2	s132 class S (sweep132_analysis/recall_tail_clusters.tsv; agent-classified, not verified per manual)	slides furniture/overlays
+movie15	overlay-example	recall	1	s132 class S (sweep132_analysis/recall_tail_clusters.tsv; agent-classified, not verified per manual)	slides furniture/overlays
+newpax	doc-use-newpax	recall	68	s132 class O1 (sweep132_analysis/recall_tail_clusters.tsv; agent-classified, not verified per manual)	reference-side: text inside included PDFs/images
+newpax	doc-use-pax	recall	68	s132 class O1 (sweep132_analysis/recall_tail_clusters.tsv; agent-classified, not verified per manual)	reference-side: text inside included PDFs/images
+newpax	newpax	recall	43	s132 class O1 (sweep132_analysis/recall_tail_clusters.tsv; agent-classified, not verified per manual)	reference-side: text inside included PDFs/images
+pdfreview	sample	recall	68	s132 class O1 (sweep132_analysis/recall_tail_clusters.tsv; agent-classified, not verified per manual)	reference-side: text inside included PDFs/images
+polski	sample-polski	recall	83	s132 class O1 (sweep132_analysis/recall_tail_clusters.tsv; agent-classified, not verified per manual)	reference-side: text inside included PDFs/images
+profsio	ProfSio-doc-fr	recall	125	s132 class O1 (sweep132_analysis/recall_tail_clusters.tsv; agent-classified, not verified per manual)	reference-side: text inside included PDFs/images
+pygmentex	pygmentex_demo	recall	74	s132 class X (sweep132_analysis/recall_tail_clusters.tsv; agent-classified, not verified per manual)	external tool output (PythonTeX/pygmentex)
+pygmentex	pygmentex_demo_2	recall	10	s132 class X (sweep132_analysis/recall_tail_clusters.tsv; agent-classified, not verified per manual)	external tool output (PythonTeX/pygmentex)
+pythontex	pythontex_quickstart	recall	25	s132 class X (sweep132_analysis/recall_tail_clusters.tsv; agent-classified, not verified per manual)	external tool output (PythonTeX/pygmentex)
+sfee	SFEE_author	recall	30	s132 class O1 (sweep132_analysis/recall_tail_clusters.tsv; agent-classified, not verified per manual)	reference-side: text inside included PDFs/images
+ticket	ex_file	recall	1	s132 class O1 (sweep132_analysis/recall_tail_clusters.tsv; agent-classified, not verified per manual)	reference-side: text inside included PDFs/images
+tikz-kalender	tikz-kalender-example2	recall	7	s132 class D (sweep132_analysis/recall_tail_clusters.tsv; agent-classified, not verified per manual)	date words (golden typeset on another date)
+tram	tram-doc	recall	36	s132 class O2 (sweep132_analysis/recall_tail_clusters.tsv; agent-classified, not verified per manual)	reference-side: PDF text-extraction garble
+tufte-latex	sample-book	recall	101	s132 class O1 (sweep132_analysis/recall_tail_clusters.tsv; agent-classified, not verified per manual)	reference-side: text inside included PDFs/images
+updatemarks	updatemarks	recall	25	s132 class O2 (sweep132_analysis/recall_tail_clusters.tsv; agent-classified, not verified per manual)	reference-side: PDF text-extraction garble
+xassoccnt	xassoccnt_doc	recall	128	s132 class O2 (sweep132_analysis/recall_tail_clusters.tsv; agent-classified, not verified per manual)	reference-side: PDF text-extraction garble
+xskak	xskak_and_beamer	recall	9	s132 class O2 (sweep132_analysis/recall_tail_clusters.tsv; agent-classified, not verified per manual)	reference-side: PDF text-extraction garble
+montex	montex	recall	398	2026-10-02 root cause (agent_reports/*_af9bdae3853d05323.md); +27 at 60b (sweep #136)	reference-side: the golden is typeset in Type 3 bitmap fonts without a Unicode map; its text layer is font slot codes (80 % script-font glyph codes, 11 % LMC slot letters, 9 % ligature/spacing splits); since 60b our LMC text is the Cyrillic the fonts draw (KNOWN_PERL_ERRORS #438) where the text layer has its Latin transliteration (Oglawlenie, Predislowie)
+montex	mlsquick	recall	250	2026-10-02 root cause (as montex); +2 at 60b (sweep #136)	as montex
+montex	zanabazr	recall	197	2026-10-02 root cause (as montex)	as montex: the bicig vertical-script glyph codes; our XML keeps the source romanization
+biblatex2bibitem	biblatex2bibitem-hyperref-result	jing	5	D15 2026-10-03 (ruling 7c)	hyperref page anchors (`page.1`): the HTML has no pages to link to
+biblatex-apa6	biblatex-apa6-test	recall	78	7b 2026-10-03 (s139; ~/data/g3r6/bib_class.tsv, words checked per manual)	bibliography rendering: the style's reference list (76) and in-text citation output (nimh, spring)
+biblatex-fiwi	example-biblatex-fiwi	recall	39	7b 2026-10-03 (s139; ~/data/g3r6/bib_class.tsv, words checked per manual)	bibliography rendering: reference list (37) and in-text citation output (atheling, juni)
+biblatex-fiwi	example-biblatex-fiwi-options	recall	41	7b 2026-10-03 (s139; ~/data/g3r6/bib_class.tsv, words checked per manual)	bibliography rendering: reference list (39) and in-text citation output (atheling, juni)
+biblatex-fiwi	example-biblatex-fiwi2-options	recall	41	7b 2026-10-03 (s139; ~/data/g3r6/bib_class.tsv, words checked per manual)	bibliography rendering: reference list (39) and in-text citation output (atheling, juni)
+biblatex-software	sample-use-sty	recall	27	7b 2026-10-03 (s139; ~/data/g3r6/bib_class.tsv, words checked per manual)	bibliography rendering (26) and the title's typeset date (december)
+biblatex2bibitem	biblatex2bibitem-hyperref	recall	15	7b 2026-10-03 (s139; ~/data/g3r6/bib_class.tsv, words checked per manual)	\printbibitembibliography: the style's output typeset as \bibitem source
+biblatex2bibitem	biblatex2bibitem-mwe	recall	11	7b 2026-10-03 (s139; ~/data/g3r6/bib_class.tsv, words checked per manual)	\printbibitembibliography: the style's output typeset as \bibitem source
+issuulinks	sample	recall	15	7b 2026-10-03 (s139; ~/data/g3r6/bib_class.tsv, words checked per manual)	bibliography rendering: reference list
+munich	example_munich_Bibtex_style	recall	4	7b 2026-10-03 (s139; ~/data/g3r6/bib_class.tsv, words checked per manual)	bibliography rendering: reference list (munich.bst)
+nmbib	nmbib-sample	recall	12	7b 2026-10-03 (s139; ~/data/g3r6/bib_class.tsv, words checked per manual)	bibliography rendering: nmbib's chronological and sequential reference lists
+quantumarticle	quantumview-template	recall	13	7b 2026-10-03 (s139; ~/data/g3r6/bib_class.tsv, words checked per manual)	bibliography rendering (12) and the title's typeset date (january)
+shortmathj	shortmathj-biblatex-mwe	recall	8	7b 2026-10-03 (s139; ~/data/g3r6/bib_class.tsv, words checked per manual)	bibliography rendering: reference list (journal abbreviations)
+ribbonproofs	ribbonproofsmanual	recall	31	reference-side 2026-10-03 (s139)	the golden's reference list comes from a .bib the bundle does not ship (only ribbonproofsmanual.tex)
+biblatex-chicago	cms-noteref-demo	recall	117	7b 2026-10-03 (s139; G3 slice 6, agent_reports/2026-10-03_g3_residual_slice6.md)	citation rendering: notes-style full citations in footnotes (the binding sets [key])
+biblatex-chicago	cms-notes-sample	recall	126	7b 2026-10-03 (s139; G3 slice 6, agent_reports/2026-10-03_g3_residual_slice6.md)	citation rendering: notes-style full citations in footnotes (the binding sets [key])
+biblatex-true-citepages-omit	biblatex-true-citepages-omit-example	recall	26	7b 2026-10-03 (s139; G3 slice 6, agent_reports/2026-10-03_g3_residual_slice6.md)	citation rendering: verbose full citations, no printed bibliography
+quantumarticle	quantum-bibliographystyle-demo	recall	34	7b 2026-10-03 (s139; G3 slice 6, agent_reports/2026-10-03_g3_residual_slice6.md)	bibliography rendering: entries present, first names shortened to initials by the style
+biblatex-chicago	cms-dates-sample	recall	122	7b 2026-10-03 (s139; G3 slice 7a, agent_reports/2026-10-03_g3_residual_slice7a.md)	bibliography rendering: reference list and author-date citation output (months, Brit./Dict./Metaph. abbreviations); forth-coming hyphen split
+abntex2	abntex2cite-alf	recall	101	7b 2026-10-03 (s139; G3 slice 7a, agent_reports/2026-10-03_g3_residual_slice7a.md)	bibliography rendering: abnt-verbatim-entry=yes .bst prints each entry's .bib source, \footciteref full references, citation output; \today date; <key> meta-args as h…i
+biblatex-cv	cv	recall	16	7b 2026-10-03 (s139; G3 slice 7a, agent_reports/2026-10-03_g3_residual_slice7a.md)	bibliography rendering: biblatex-cv datamodel entry types and seven \printbibliography[check=…] filtered lists
+beamerdarkthemes	beamerdarkthemesuserguide	recall	58	reference-side 2026-10-03 (s139; G3 slices 6/7a)	French text inside \pgfimage'd example PDFs (guide :162-185)
+postit	postit-doc-en	recall	54	reference-side 2026-10-03 (s139; G3 slices 6/7a)	clipped lorem fragments in the golden; whole words present
+postit	postit-doc-fr	recall	52	reference-side 2026-10-03 (s139; G3 slices 6/7a)	clipped lorem fragments in the golden; whole words present
+onepgnote	onepgnote-example	recall	41	reference-side 2026-10-03 (s139; G3 slices 4/6/7a)	hyphenation and column splits in the golden's text layer; math glyphs
+uantwerpendocs	uantwerpenbamathesis-example	recall	22	reference-side 2026-10-03 (s139; G3 slices 5/7a)	two-column/hyphenation splits; source-literal performantie-⏎ruimtemodellering re-joined by the scorer
+pgf-umlcd	pgf-umlcd-manual	recall	15	reference-side 2026-10-03 (s139; G3 slices 5/7a)	listing code split mid-identifier in the golden (Cre ateProd uctA)
+writeongrid	WriteOnGrid-Seyes-A5	recall	14	reference-side 2026-10-03 (s139; G3 slices 6/7a)	frcursive font without ToUnicode; lipsum text present
+writeongrid	WriteOnGrid-Ruled-A5	recall	13	reference-side 2026-10-03 (s139; G3 slices 6/7a)	frcursive font without ToUnicode; LaTeX logo split
+writeongrid	WriteOnGrid-5x5-A5	recall	12	reference-side 2026-10-03 (s139; G3 slices 6/7a)	frcursive font without ToUnicode; LaTeX logo split
+writeongrid	WriteOnGrid-5x5-A4	recall	12	reference-side 2026-10-03 (s139; G3 slice 7a)	frcursive font without ToUnicode; LaTeX logo split
+topletter	ExampleLetter	recall	13	furniture 2026-10-03 (s139; G3 slices 5/7a)	letterhead: role, department and address only in fancyhdr head/foot (TOPletter.cls:49-73); \today date
+topletter	EsempioLettera	recall	13	furniture 2026-10-03 (s139; G3 slices 5/7a)	as ExampleLetter
+rescansync	rescansync	recall	12	reference-side 2026-10-03 (s139; G3 slice 7a)	<meta> args as h…i, LuaTeX/LaTeX logo splits, makeindex group headings ("commands:")
+precattl	precattl	recall	12	reference-side 2026-10-03 (s139; G3 slice 7a)	<meta> args as h…i, logo, index group heading ("edef", the T1 ^ decode, fixed by 61c/61d)
+synthslant	synthslant-gauge	recall	11	reference-side 2026-10-03 (s139; G3 slice 7a)	overlaid gauge samples glued in the text layer; Å split; \fontname file name
+sourceserifpro	sourceserifpro	recall	11	reference-side 2026-10-03 (s139; G3 slices 2/7a)	specimen is an included PDF; \today date; XeLaTeX/LuaLaTeX logos; hyphen splits
+modeles-factures-belges-assocs	facture-basique	recall	10	furniture 2026-10-03 (s139; G3 slices 2/7a)	package credit line in \fancyfoot (modeles-factures-belges-associations.sty:102)
+modeles-factures-belges-assocs	facture-banlieues	recall	10	furniture 2026-10-03 (s139; G3 slices 2/7a)	as facture-basique
+annee-scolaire	annee-scolaire-eng	recall	10	reference-side 2026-10-03 (s139; G3 slice 7a)	<meta> args as h…i, \today-dependent date and roman year (mmxx), verbatim line split
+scrlttr2copy	letter-copy-test	recall	9	reference-side 2026-10-03 (s139; G3 slice 7a)	hyphenation splits in the golden; "Seite 2" page foot
+pdfscreen	slide	recall	9	furniture 2026-10-03 (s139; G3 slice 7a)	pdfscreen navigation panel buttons (First/Prev/…/Quit)
+zwpagelayout	adjusthead	recall	6	reference-side 2026-10-03 (s139; G3 slice 7b, agent_reports/2026-10-03_g3_residual_slice7b.md)	running head (\markboth "Sample page"), croptitle label, pdftotext hyphen splits (lestie, sadipsc)
+zwpagelayout	adjustfoot	recall	6	reference-side 2026-10-03 (s139; G3 slice 7b, agent_reports/2026-10-03_g3_residual_slice7b.md)	running head (\markboth "Sample page"), croptitle label, pdftotext hyphen splits (lestie, sadipsc)
+lion-msc	minimal	recall	6	reference-side 2026-10-03 (s139; G3 slice 7b, agent_reports/2026-10-03_g3_residual_slice7b.md)	small-caps extraction splits (B ACHELOR, S CIENCE, T HESIS, P HYSICS) and the fancyfoot version/created line
+hvindex	hvindex-doc	recall	6	reference-side 2026-10-03 (s139; G3 slice 7b, agent_reports/2026-10-03_g3_residual_slice7b.md)	longtable \endhead/\endfoot continuation lines and makeindex's "Symbols" group heading
+seminar	semsamp1	recall	5	reference-side 2026-10-03 (s139; G3 slice 7b, agent_reports/2026-10-03_g3_residual_slice7b.md)	running head (Economics 327 / Choice under uncertainty) and "Slide N" margin labels
+guitlogo	guittest	recall	5	reference-side 2026-10-03 (s139, recounted 5 at s142; G3 slice 7b, agent_reports/2026-10-03_g3_residual_slice7b.md)	rotated/spiral logo glyphs garbled by text extraction
+multiple-choice	multiple-choice-doc	recall	4	reference-side 2026-10-03 (s139; G3 slice 7b, agent_reports/2026-10-03_g3_residual_slice7b.md)	stale golden (current doc.sty \cs prints \usepackagemultiple-choice, verified pdflatex) and engine logos split at tags
+exsol	example-local	recall	4	reference-side 2026-10-03 (s139; G3 slice 7b, agent_reports/2026-10-03_g3_residual_slice7b.md)	hyphenation splits across breaks (Dreifa-chen, Stun-den) and the \today date
+datetime2-en-fulltext	sample-en-fulltext	recall	4	reference-side 2026-10-03 (s139; G3 slice 7b, agent_reports/2026-10-03_g3_residual_slice7b.md)	\today written out on the golden's build date
+chessboard	chessboard-skakps	recall	4	reference-side 2026-10-03 (s139; G3 slice 7b, agent_reports/2026-10-03_g3_residual_slice7b.md)	chess-font glyph letters of the board, one box per square
+randexam	randexam-a-answer	recall	3	reference-side 2026-10-03 (s139; G3 slice 7b, agent_reports/2026-10-03_g3_residual_slice7b.md)	page footer (date, Page N of M, Version A)
+pgf-spectra	pgf-spectraPreviewDataNIST	recall	3	reference-side 2026-10-03 (s139; G3 slice 7b, agent_reports/2026-10-03_g3_residual_slice7b.md)	stale golden (captions "singly ionized" not in the current source) and running head "pgf-spectra"
+flipbook	flipbook-ex	recall	3	reference-side 2026-10-03 (s139; G3 slice 7b, agent_reports/2026-10-03_g3_residual_slice7b.md)	header/footer furniture (top/bottom left/right) and the \today date
+trajan	trytrajan	recall	2	reference-side 2026-10-03 (s139; G3 slice 7b, agent_reports/2026-10-03_g3_residual_slice7b.md)	Trajan font's narrow spaces glue the alphabet into one extracted word
+gauss	gauss-ex	recall	2	reference-side 2026-10-03 (s139; G3 slice 7b, agent_reports/2026-10-03_g3_residual_slice7b.md)	golden text layer drops the "c" glyph (Con lusion, pa kage)
+substr	testsubstr	recall	1	reference-side 2026-10-03 (s139; G3 slice 7b, agent_reports/2026-10-03_g3_residual_slice7b.md)	scorer splits h<emph>ell</emph>ohello at the tag
+nomencl	sample01	recall	1	reference-side 2026-10-03 (s139; G3 slice 7b, agent_reports/2026-10-03_g3_residual_slice7b.md)	\nomrefpage page number ("page 1"); no pages in HTML
+extarrows	extarrows-test	recall	1	reference-side 2026-10-03 (s139; G3 slice 7b, agent_reports/2026-10-03_g3_residual_slice7b.md)	"(amsmath)" typed in math: one <mi> per letter
+bxcalc	sample-bxcalc	recall	1	reference-side 2026-10-03 (s139; G3 slice 7b, agent_reports/2026-10-03_g3_residual_slice7b.md)	overlapping lines garbled by text extraction (ovdog)
+arabi	samplebook	recall	153	reference-side 2026-10-03 (s140; G3 slice 6, agent_reports/2026-10-03_g3_residual_slice6.md)	golden ToUnicode is partial (Latin garbage words, lam-alef splits); the HTML carries the full Arabic text
+aurical	aurical	recall	44	reference-side 2026-10-03 (s140; G3 slice 4, agent_reports/2026-10-03_g3_residual_slice4.md)	Type 3 calligraphic fonts: the golden text layer is word fragments (alligraphi, Matthia$ Mühli)
+ctib	ctib4tex	recall	42	reference-side 2026-10-03 (s140; G3 slice 4, agent_reports/2026-10-03_g3_residual_slice4.md)	Tibetan fonts without ToUnicode; fi/fl ligatures dropped from the text layer (sucient, inexibility); "continued" set in math
+superiors	superiors-doc	recall	40	reference-side 2026-10-03 (s140; G3 slice 4, agent_reports/2026-10-03_g3_residual_slice4.md)	all 40 words are inside the included *-crop.pdf snippets (superiors-doc.tex:204-285)
+beautynote	beautynote	recall	35	reference-side 2026-10-03 (s140; G3 slice 3, agent_reports/2026-10-03_g3_residual_slice3.md)	stale golden: its reference list comes from a \printbibliography the source comments out (beautynote.tex:159); small-caps splits, running heads, \today
+checklistings	example	recall	9	external-tool 2026-10-03 (s140; G3 slice 3, agent_reports/2026-10-03_g3_residual_slice3.md)	ocamlc command line and compiler messages written by checklistings.sh (\chklistingcmd, \chklistingmsg)
+etoolbox-de	etoolbox-DE	recall	74	reference-side 2026-10-03 (s140; G3 slice 4, agent_reports/2026-10-03_g3_residual_slice4.md)	meta brackets extracted as h…i glued to the argument name (hBefehli); compound-hyphenation splits (normaler/weise, both whole in the HTML)
+latex-refsheet	LaTeX_RefSheet	recall	75	reference-side 2026-10-03 (s140; G3 slice 4, agent_reports/2026-10-03_g3_residual_slice4.md), 75 since 78j (agent_reports/2026-11-06_manuals_rc1_report.md)	64 words inside included PDFs (layout.pdf; \includepdfmerge of thesis.pdf + acknowledgements.pdf, LaTeX_RefSheet.tex:1245,1395; `acknowledgements` matched only the old fallback text "See pages - of acknowledgements.pdf", now real <graphics>); listing identifiers split at tags; E_kin glued
+kblocks	kblocks-doc	recall	17	reference-side 2026-10-03 (s140; G3 slice 2, agent_reports/2026-10-02_g3_residual_slice2.md)	small-caps splits (D EPARTMENT); math subscripts glued (fMFC, Vout); \markboth running head (version, february)
+principia	List-of-Definitions	recall	13	reference-side 2026-10-03 (s140; G3 slice 2, agent_reports/2026-10-02_g3_residual_slice2.md)	subscripts and the bold backquote glued to operator names (limaxP; trs`P read as trsp)
+sourcecodepro	sourcecodepro	recall	17	reference-side 2026-10-03 (s140; G3 slice 2, agent_reports/2026-10-02_g3_residual_slice2.md)	specimen PDFs (abcde, normal, capitals); U+2011 line-break hyphens (alter-natives, docu-mentation); LuaLaTeX logo split at an inline-block; \today
+sourcesanspro	sourcesanspro	recall	12	reference-side 2026-10-03 (s140; G3 slice 2, agent_reports/2026-10-02_g3_residual_slice2.md)	as sourcecodepro: specimen PDFs, U+2011 line-break hyphens, reversed-E logo, \today
+sepfootnotes	sepfootnotes	recall	18	reference-side 2026-10-03 (s140; G3 slice 2, agent_reports/2026-10-02_g3_residual_slice2.md)	<prefix> meta brackets extracted as h…i (hprefix, inotecontent)
+pecha	example	recall	14	reference-side 2026-10-03 (s140; G3 slice 3, agent_reports/2026-10-03_g3_residual_slice3.md)	dtib Tibetan font without ToUnicode; "continued" set in math; running head "page"
+tensind	tensind	recall	15	reference-side 2026-10-03 (s140; G3 slice 5, agent_reports/2026-10-03_g3_residual_slice5.md)	meta brackets as h…i; tensor indices glued (Rijk, Rijkl)
+undergradmath	undergradmath	recall	51	reference-side 2026-10-03 (s140; G3 slice 4, agent_reports/2026-10-03_g3_residual_slice4.md)	golden text layer carries command-name ActualText (\scrA, \BbbC, \bfitB, \textbackslash) instead of glyph text
+msc	msc	recall	57	reference-side 2026-10-03 (s140; G3 slice 4, agent_reports/2026-10-03_g3_residual_slice4.md)	meta brackets as h…i (56); reference-list month "December" (7b)
+xebaposter	poster	recall	18	reference-side 2026-10-03 (s140; G3 slice 2, agent_reports/2026-10-02_g3_residual_slice2.md)	text inside images/fig*.pdf (captions commented out in poster.tex); wrapfig interleave (re-gions)
+nih	example-nih-cls	recall	12	furniture 2026-10-03 (s140; G3 slice 2, agent_reports/2026-10-02_g3_residual_slice2.md)	fancyhdr head/foot of nih.cls:80-112 (default PI name, "Continuation Format Page")
+abntex2	abntex2cite	recall	413	7b 2026-10-03 (s140; G3 slice 1 M7 and the abntex2cite-alf precedent, agent_reports/2026-10-03_g3_residual_slice7a.md)	abnt-verbatim-entry=yes .bst prints each entry's .bib source (fragments at {\c c}\~a), citation output; body words present
+gridslides	example	recall	2	reference-side 2026-10-03 (s140; per-manual check, no prior report)	"QSHE" is inside figures/qshe.pdf; \today date
+iwonamath	sample	recall	7	7b 2026-10-03 (s140; per-manual check, no prior report)	reference list renders first names as initials and the url as Link; ZZZZ is the text layer of multiple-integral glyphs
+jamtimes	textsample	recall	30	reference-side 2026-10-03 (s140; G3 slice 5, agent_reports/2026-10-03_g3_residual_slice5.md)	small-caps splits (M AECENAS, T IMES), Œ split (uvres), hyphenation in condensed faces; the whole words are in the HTML
+mathexam	sample	recall	3	furniture 2026-10-03 (s140; per-manual check, no prior report)	fancyhdr head/foot (mathexam.sty:46-48: Page N of M, Cont.) and \ExamHead{\today}
+revquantum	example	recall	11	reference-side 2026-10-03 (s140; per-manual check, no prior report)	golden reference list comes from example.bib, which the bundle does not ship; \today (March)
+jurabib	jbtest	recall	7	7b 2026-10-03 (s142; after 61b)	bibliography rendering: jurabib.bst's ⟨URL: …⟩ (hURL, htmli, docs, english, jbendoc) and "Volume 1, 9th edition"
+knittingpattern	template	recall	1	date 2026-10-03 (s142; after 61f)	"February" of the golden's \today in \cpyrght
+exam-n	template-question	recall	4	furniture 2026-10-03 (s142; after 61g)	compose-mode annotations: the "SHOWING SOLUTIONS" exam header and the "Author:" comment label (the name itself is in the author block)
+vhistory	vh_set_example	recall	4	ruled 2026-10-03 (s143; user: vhistory accepted)	version and author list read back from \jobname.hst, written at the end of a run (vhistory.sty:258-261, :408-417): a first LaTeX run prints N/A too
+bfh-ci	DEMO-BFHFactsheet	recall	12	reference-side 2026-10-03 (s143 + 61m)	the trilingual name in the BFH logo graphic (Bern University of Applied Sciences / Berner Fachhochschule / Haute école spécialisée bernoise), example-image text, the \today date
+bfh-ci	DEMO-BFHProjektProposal	recall	12	reference-side 2026-10-03 (s143 + 61m)	the trilingual name in the BFH logo graphic, example-image text, the LaTeX logo
+resphilosophica	rpsample	recall	34	7b 2026-10-03 (s143 + 61m; G3 slice 4)	bibliography rendering (resphilosophica.bst initials, editors, URLs, months) and the journal running head; "Acknowledgments" restored by 61m
+biblatex-sbl	biblatex-sbl	recall	49	7b 2026-10-03 (s143 + 61m; G3 slice 2)	bibliography rendering (editors, translators, series, months of the SBL style) and meta brackets extracted as h…i; the author index printed by 61m
+biblatex-chicago	cms-legal-sample	recall	34	7b 2026-10-03 (s143 + 61m; G3 slice 6)	legal citation and bibliography rendering (reporters, statutes, supra/hereinafter, editors, months); the \printbiblist heading and prenote printed by 61m
+wheelchart	wheelchart	recall	68	user 2026-10-03 (no pages in HTML; s144)	the table of contents drawn as a wheel chart and its code, guarded by totalcount's \iftotalpages (a page total, undefined without pages: the first-run reading skips it, wheelchart.tex:169-235); words split across PDF lines (apric/ot, datai), \meta brackets extracted as h…i
+rvwrite	rvwrite-doc	recall	18	user 2026-10-03 (s145)	the QUICK LINKS box reads tmp.out, made by the shipped Makefile (cp rvwrite-doc.out tmp.out; sed BOOKMARK->dtxmark), no LaTeX pass makes it; contact/address lines of that box
+short-math-guide	short-math-guide	recall	191	user 2026-10-03 (s145)	the superscript availability marks (a = amssymb, b = stmaryrd, ...) chosen by a \meaning comparison, a typographic annotation; pdftotext glues each mark to its symbol name (alepha, approxeqb)
+xurl	xurl	recall	7	reference-side + 7b 2026-10-03 (61o)	URLs broken across PDF lines (ques/tions, urland, Emp/fehlungen, hinweise-emp) and one bibliography date word (january); the second list printed by 61o
+biblatex-apa	biblatex-apa-test	recall	124	7b 2026-10-03 (s145)	APA bibliography rendering (entry types and roles: album, amendment, apparatus; months, seasons, usernames) and its 33 refsection subbibliographies, which the .bib route cannot scope by refsection (each printed list would repeat the whole bibliography)
+webquiz	webquiz	recall	79	reference-side 2026-10-03 (s145 + 61p)	text inside the online manual embedded as PDF pages (\includepdf, webquiz.tex:2305); listing words split into per-character spans (d’inéquation, kořeny) and logo index entries (MiKTeX, TeXShop); the six heading labels restored by 61p (trivlist)
+serbian-def-cyr	proba	recall	19	reference-side 2026-11-06 (agent_reports/2026-11-06_manuals_rc1_report.md)	cp1251 0xBC is Cyrillic j (U+0458), 35 in our XML since OD #776 (77s); the 19 misses are pdftotext's Latin j in T2A, the golden PDF's text layer

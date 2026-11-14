@@ -1,0 +1,18 @@
+% mechanism: the frontmatter emitter (OXIDIZED_DESIGN_DIVERGENCES #980) places an author block from its rehearsal's
+%   reading (#837), which rolls back the block's assignments; a `\stepcounter` in an author field is a global
+%   assignment the real digestion of the field must still make once
+% witness: the revDEL4 review's probe `reh_counter` (pre-existing since the flip; no arXiv witness yet)
+% oracle:  pdflatex 0 errors: "Value ONE and 1."
+% engines: perl: "Value ONE and 1."; rust int152c at `=0`: "1"; at =2 (int152c, DEL3b, DEL4): "Value ONE
+%   and 0." (the `\gdef` kept, the counter step lost), 0 errors 0 warnings
+% expect:  0 errors; <p>Value ONE and 1.</p>
+% status:  RED (SYNC item 39; pinned as today's "0" in perfect_kernel_batchfms2a1::the_rehearsal_leaves_nothing_behind)
+% preload: ar5iv.sty
+\documentclass{article}
+\newcounter{probe}
+\title{T}
+\author{Ann Able\stepcounter{probe}\ifx\foo\undefined\gdef\foo{ONE}\else\gdef\foo{TWO}\fi \and Bob}
+\begin{document}
+\maketitle
+Value \foo{} and \theprobe.
+\end{document}

@@ -1,0 +1,28 @@
+% witness: TL class census 2026-09-24 — each raw class calls an internal of a package or class
+%          that our binding reimplements and had dropped:
+%          utexasthesis \@chapapp (report.cls:277), willowtreebook \env@matrix (amsmath.sty:1073),
+%          unbtex \HyLang@addto (hyperref.sty:3106), ascelike \linenumberdisplaymath (lineno.sty:1254),
+%          imsproc \symAMSb (amsfonts.sty:60), acmart-tagged \NAT@find@eq (natbib.sty:344),
+%          univie-ling-* \vref@addto (varioref.sty:58), rbt-mathnotes \mdtheorem (mdframed.sty:616),
+%          jurabook/hausarbeit-jura \if@titlepage (book.cls:51 \@titlepagetrue)
+% oracle:  pdflatex 0 errors
+% engines: rust (56hx) = one undefined control sequence per line below; Perl the same (its
+%          bindings drop them too) or worse
+% expect:  0 errors; <p>Chapter Appendix yes X a=b Y T</p> and a theorem "Theorem 1"
+% status:  RED (56hx) -> GREEN (56hy, KNOWN_PERL_ERRORS #235)
+\documentclass{report}
+\usepackage{amsmath,amsfonts,hyperref,lineno,natbib,varioref,mdframed}
+\makeatletter
+\renewcommand\env@matrix{\hskip-\arraycolsep\array{*\c@MaxMatrixCols c}}
+\linenumberdisplaymath
+\edef\lxams{\ifx\symAMSb\undefined no\else yes\fi}
+\HyLang@addto\extrasfoo{\def\lxx{X}}
+\NAT@find@eq a=b\@nil
+\vref@addto\extrasbar{\def\lxy{Y}}
+\edef\lxtp{\if@titlepage T\else F\fi}
+\mdtheorem{thm}{Theorem}
+\begin{document}
+\@chapapp{} \appendix\@chapapp{} \lxams{} \lxx{} \@tempa=\@tempc{} \lxy{} \lxtp
+\begin{thm}Body.\end{thm}
+\begin{thm*}Star.\end{thm*}
+\end{document}

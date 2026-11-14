@@ -1,0 +1,17 @@
+% witness:  cjk-ko/cjk-ko-doc (TL2025 doc/latex/cjk-ko/cjk-ko-doc.tex), \dotemph uses
+% oracle:   pdflatex (clean)
+% engines:  pdflatex
+% expect:   0 errors; the dotemph mark U+02D9 (CJKutf8 \Unicode{"02}{"D9})
+% status:   GREEN (batch 56z, 2026-09-06)
+% mechanism: CJK.sty:232 \DeclareRobustCommand{\Unicode}[2]{...} produces the
+%   Unicode char at codepoint #1*256+#2. cjkutf8-ko.sty:65,134 set
+%   \dotemphchar -> \Unicode{"02}{"D9}; the doc's usedotemph option + \dotemph
+%   invoke it. Our native binding latexml_contrib/src/cjk_sty.rs (the "CJK"
+%   package, lib.rs:373) reimplements CJK's UTF-8 octet decoding but never
+%   defines \Unicode, so \dotemph hits an undefined \Unicode. Bindings outrank
+%   raw, so the fix is to complete the cjk_sty binding.
+\documentclass{article}
+\usepackage[cjk,hangul,usedotemph]{kotex}
+\begin{document}
+\dotemph{ABC}
+\end{document}

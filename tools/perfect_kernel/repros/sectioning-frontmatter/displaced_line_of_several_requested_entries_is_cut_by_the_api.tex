@@ -1,0 +1,30 @@
+% A displaced store's one line holding several entries led by marks the names request (`\institute{$^{1}$Univ A, Town,
+% $^{2}$Univ B, City}`), the names holding ORCID links, over which the frontmatter observer declines to re-part them: the
+% line goes to the API bare (frontmatter_stores.rs `contact_line_call`, `holds_requested_marked_entries`), whose Cut
+% (`cut_marked_contact`, OD #954) cuts it at its marks, each entry its requesters'. Labelled `_unsplit` at the block, it
+% was one nameless creator's whole list (SYNC row "99b" (e), review rev99b2 answer 5).
+% witness: 1812.07638 (subdepth.sty `\institute`, 64 institutes under 200 names), nlin0310001
+% oracle:  pdflatex 0 errors: "Ann Able1 (iD), Bob Baker2 (iD), Dan Dole2 and Cy Cole1", "1 Univ A, Town, 2 Univ B, City"
+% engines: rust int127a = the names keep their marks, a fourth, nameless creator holds the whole line; perl = no raw
+%          class load
+% expect:  0 errors, 0 warnings; Ann Able and Cy Cole hold "1Univ A, Town", Bob Baker's creator "2Univ B, City"; three
+%          creators; the body holds only "Text."
+% status:  RED (int127a) -> GREEN (100a)
+% preload: ar5iv.sty
+\begin{filecontents*}[overwrite]{dsorc.cls}
+\ProvidesClass{dsorc}\LoadClass{article}
+\RequirePackage{hyperref}
+\newcommand{\institute}[1]{\gdef\ds@inst{{\itshape #1}}}
+\newcommand{\orcid}[1]{\href{https://orcid.org/#1}{(iD)}}
+\let\ds@inst\empty
+\def\@maketitle{\begin{center}{\LARGE\@title\par}\vskip1em{\large\@author\par}\vskip1em
+  {\small\ds@inst\par}\end{center}}
+\end{filecontents*}
+\documentclass{dsorc}
+\begin{document}
+\title{A Title}
+\author{Ann Able$^{1}$\orcid{0000-0000-0000-0001}, Bob Baker$^{2}$\orcid{0000-0000-0000-0002}, Dan Dole$^{2}$ and Cy Cole$^{1}$}
+\institute{$^{1}$Univ A, Town, $^{2}$Univ B, City}
+\maketitle
+Text.
+\end{document}

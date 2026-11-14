@@ -1,0 +1,16 @@
+% An unspaced list whose last mailbox is one letter (`ann,bob,c@x.org`) is never written out: an initial ends no list
+% (`ends_a_listed_run`, review rev103a S1: `smith,j@x.org`), so the line stays whole on the last author, as on base
+% (review rev103a2, probe m3). The print reads three mailboxes at x.org; telling `c@` a mailbox from an initial needs
+% a reading beyond the letter count (the parts before it, an author's spelling), not taken.
+% witness: none (synthetic)
+% oracle:  pdflatex 0 errors: "Univ X / ann,bob,c@x.org"
+% engines: rust int130a = 0 errors, the output below; rust 103a r2 alike
+% expect:  0 errors, 0 warnings; Ann Able: ann@x.org; Bob Baker: Univ X + bob@x.org; c@x.org kept
+% status:  RED (int130a, 103a r2, 103a r3: Ann Able nothing; Bob Baker: Univ X + email "ann,bob,c@x.org")
+% preload: ar5iv.sty
+\documentclass{article}
+\title{T}\author{Ann Able \and Bob Baker\\ Univ X\\ ann,bob,c@x.org}
+\begin{document}
+\maketitle
+Text.
+\end{document}

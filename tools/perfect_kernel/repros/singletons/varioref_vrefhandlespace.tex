@@ -1,0 +1,14 @@
+% witness: tikz-cookingsymbols/tikz-cookingsymbols-doc (zref-vario \zvref)
+% oracle:  pdflatex 0 errors
+% engines: rust=1 perl=1 (Perl varioref.sty.ltxml lacks it too)
+% expect:  0 errors; the switch exists, default true (option `space`)
+% status:  GREEN (guard binding_singletons_56, 2026-09-25; was RED)
+% mechanism: varioref.sty:799-802 `\newif\if@vrefhandlespace` (default
+%   `space` through \ExecuteOptions) is missing from the varioref binding;
+%   zref-vario.sty:486 `\@vrefhandlespacefalse` in its varioref setup.
+\documentclass{article}
+\usepackage{varioref}
+\makeatletter
+\begin{document}
+[\if@vrefhandlespace yes\else no\fi]\@vrefhandlespacefalse[\if@vrefhandlespace yes\else no\fi]
+\end{document}

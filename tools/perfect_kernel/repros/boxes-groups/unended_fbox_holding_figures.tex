@@ -1,0 +1,30 @@
+% witness: cs0009011 (`\protect\verb` inside `\fbox{\begin{minipage}…` figures: the box and its figure left open;
+%          64ze 13 errors, 65c+ `Fatal:Document:Generic("add_child encountered NULL pointer")` after "Closing tag
+%          ltx:text whose open descendents do not auto-close", the rest of the paper lost)
+% oracle:  pdflatex stops: "File ended while scanning use of \fbox" (ill-formed on purpose: the shape the defect
+%          leaves; the paper's own `\fbox` is closed); a crash guard
+% engines: rust 65bundle = 8 errors + Fatal add_child; 65i = 5 errors, 1 warning, every word
+% mechanism: the document ended inside the `\@framebox`: its `ltx:text` (`_noautoclose` in a box that ends) and the
+%          capture block it opens auto-close (`lx@unended`, OXIDIZED_DESIGN #542), so the figure after them builds
+% expect:  5 errors, 1 warning, no Fatal, no malformed; "First", "Second", "Heuristic rules." kept
+% status:  GREEN (65i)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\begin{figure}[p]
+\fbox{
+\begin{minipage}[c]{13cm}
+\begin{center}
+\end{minipage}
+\begin{minipage}[c]{13cm}
+\caption{First}
+\end{minipage}
+\end{figure}
+
+\begin{figure}[t]
+\fbox{\begin{minipage}[c]{13cm}
+\caption{Second}
+\end{minipage}}
+\end{figure}
+Heuristic rules.
+\end{document}

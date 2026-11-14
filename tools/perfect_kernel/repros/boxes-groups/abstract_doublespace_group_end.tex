@@ -1,0 +1,19 @@
+% mechanism: `\doublespace` inside `{abstract}` is setspace.sty:542-547's `\begingroup`, which the abstract's `\end`
+%   closes in place of the abstract's own group (pdflatex: "\begin{abstract} on input line 15 ended by \end{document}").
+%   setspace_sty.rs `\lx@setspace@check`, run before the group the switch opened in pops, reports it; the abstract keeps
+%   its text. The abstract binding captures its body in a frame of its own (`\lx@add@frontmatter@until`) that names no
+%   environment, so the report reads "Extra }, or forgotten \endgroup" rather than LaTeX's "ended by".
+% witness: review of 64zf (setspace probe; reported there as an under-report of the `\begingroup` cut)
+% oracle:  pdflatex 1 error, the abstract and the body typeset
+% engines: rust 64zf (`\begingroup` cut) = 0 errors; 64zf (checked switch) = 1 error; Perl = 1 error
+% expect:  1 error; the abstract text kept
+% status:  RED (64zf review) -> GREEN (64zf)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{setspace}
+\begin{document}
+\begin{abstract}\doublespace
+An abstract.
+\end{abstract}
+Body.
+\end{document}
