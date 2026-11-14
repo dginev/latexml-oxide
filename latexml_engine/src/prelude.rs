@@ -192,23 +192,13 @@ pub fn substitute_in_macro(cs: &str, from: &str, to: &str) -> Result<bool> {
     .iter()
     .map(|t| if *t == from { to } else { *t })
     .collect();
-  let options = ExpandableOptions {
-    protected: macro_.is_protected,
-    long: macro_.is_long,
-    outer: macro_.is_outer,
-    tex_declared: macro_.checks_par,
-    nopack_parameters: true,
-    ..Default::default()
-  };
-  install_definition(
-    Expandable::new(
-      cs,
-      macro_.get_parameters().cloned(),
-      Some(ExpansionBody::Tokens(Tokens::new(tokens))),
-      Some(options),
-    )?,
-    None,
-  );
+  // (the same definition — its flags, origin and locator — with the new body, in the scope it was made in)
+  let mut patched = (*macro_).clone();
+  patched.expansion = Some(ExpansionBody::Tokens(Tokens::new(tokens)));
+  patched.plan = Default::default();
+  patched.stored = Default::default();
+  let scope = (!meaning_is_group_local(&cs)).then_some(Scope::Global);
+  install_definition(Stored::Expandable(Rc::new(patched)), scope);
   Ok(true)
 }
 

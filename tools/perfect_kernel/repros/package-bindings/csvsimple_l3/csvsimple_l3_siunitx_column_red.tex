@@ -1,0 +1,21 @@
+% witness: 2108.13640's shape under csvsimple 3.0 (TL 2026), whose default is the l3 code (csvsimple-l3.sty); revWIN1gh
+% oracle:  pdflatex TL 2026: "! TeX capacity exceeded, sorry [main memory size=5000000]", no PDF; TL 2025 (csvsimple
+%          2.x, legacy default): 0 errors, the three rows IN 5.1 / PV 4.4 / MEAN 9.6
+% engines: rust WIN1ghF on TL 2026 = 4 errors (`Extra alignment tab '&'`, 3x `Missing argument Match:?`), the rows lost;
+%          TL 2025 0 errors (guard perfect_kernel_batch61::csvsimple_rows_in_a_siunitx_column_end_at_the_relax, which
+%          loads [legacy]); Perl not run (no csvsimple 3.0 tree)
+% expect:  on TL 2026 one Error that names the cause (csvsimple-l3's loop in an siunitx S column), not four unrelated
+%          ones; the rows kept where the l3 code can be read through
+% status:  RED (WIN1ghF, TL 2026)
+% moves:   post-merge
+% preload: ar5iv.sty
+% files:   summary.csv (model,mae,texmodel / imagenet,5.1,\imagenet / pvpower,4.4,\pvpower / mean,9.6,\mean)
+\documentclass{article}
+\usepackage{siunitx}
+\usepackage{csvsimple}
+\def\imagenet{IN}\def\pvpower{PV}\def\mean{MEAN}
+\begin{document}
+\csvloop{file=summary.csv, head to column names=false,
+ column names={model=\model,mae=\mae,texmodel=\texmodel},
+ tabular={lS}, command=\texmodel & \mae}
+\end{document}
