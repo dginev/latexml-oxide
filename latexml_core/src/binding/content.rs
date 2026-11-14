@@ -15,7 +15,7 @@ use crate::{
     font::{self, Font, Fontmap},
     model,
   },
-  definition::{Definition, ExpansionBody, expandable::ExpandableOptions},
+  definition::{Definition, ExpansionBody, argument::ArgWrap, expandable::ExpandableOptions},
   document::{
     resource::*,
     tag::{TagOptionName, TagOptions},
@@ -5216,74 +5216,14 @@ static FALLBACK_PREFIX: std::sync::LazyLock<Regex> =
 /// option-pass-through machinery had a chance to enqueue `epsfig` into
 /// `opt@article.cls`).
 pub fn find_file_fallback_exists(name: &str, ext_type: &str) -> bool {
-  use crate::state::binding_exists;
-  // Mirror find_file_fallback's regex set exactly.
-  let (suffix_rx, glued_rx, prefix_rx) = (&*FALLBACK_SUFFIX, &*FALLBACK_GLUED, &*FALLBACK_PREFIX);
-  let basename = pathname::file_name(name);
-  let mut base = if basename.is_empty() {
-    name.to_string()
-  } else {
-    basename
-  };
-  // Mirror find_file_fallback: a directory strip ALONE must not qualify (a `subdir/<name>` is a
-  // path, not a version — it must not name-match `<name>`'s binding). Only a real version
-  // suffix/prefix strip counts; guard the `^`-anchored prefix strip behind `!dir_stripped` so
-  // `sty/myunits` doesn't become `units`.
-  let dir_stripped = base != name;
-  let mut suffix_stripped = false;
-  loop {
-    if let Some(m) = suffix_rx.find(&base) {
-      base = base[..m.start()].to_string();
-      suffix_stripped = true;
-      continue;
-    }
-    if let Some(m) = glued_rx.find(&base) {
-      base = base[..m.start()].to_string();
-      suffix_stripped = true;
-      continue;
-    }
-    if !dir_stripped && let Some(m) = prefix_rx.find(&base) {
-      base = base[m.end()..].to_string();
-      suffix_stripped = true;
-      continue;
-    }
-    break;
-  }
-  if !suffix_stripped || base.is_empty() || base == name {
-    return false;
-  }
-  binding_exists(&base, ext_type)
+  version_stripped_name(name).is_some_and(|base| binding_exists(&base, ext_type))
 }
 
-/// Kind of fallback that matched, returned by [`find_file_fallback`].
-///
-/// `Versioned` — suffix/prefix stripping changed the basename (Perl
-/// FindFile_fallback's core function). Drivers: 1206.0536 (mysvjour3
-/// → svjour3), astro-ph0005021 (./aaspp4 → ./aaspp).
-///
-/// `BasenameOnly` — the *only* change was directory-prefix removal,
-/// matching the binding registry by leaf name. This is a Rust-specific
-/// extension on top of Perl's FindFile_fallback that exists because
-/// our contrib-binding registry is keyed by basename. Drivers:
-/// 2105.02087 (misc/ieeetran → IEEEtran binding); 2405.18387
-/// (assets/equations → equations binding).
-///
-/// Both kinds win unconditionally over local raw `.sty`/`.cls` files
-/// at the call site (see `input_definitions` Step 3): the `.rs`
-/// bindings are hand-tuned for the conversion, so a binding match
-/// always supersedes a co-located vendored copy. The variant is
-/// preserved for diagnostics and potential future policy tweaks.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum FallbackKind {
-  Versioned,
-  BasenameOnly,
-}
-
-/// Strip version/arxiv suffixes from package names to find existing bindings.
-/// Returns the fallback filename (with extension) and which kind of fallback fired.
-pub fn find_file_fallback(name: &str, ext_type: &str) -> Option<(String, FallbackKind)> {
+/// The generic name Perl's `FindFile_fallback` asks for (Package.pm:2191-2226): `name`'s basename with its version
+/// suffixes, glued suffixes and `rw`/`my`/`preprint` prefixes stripped, or `None` when nothing was stripped
+/// (`aastex631` → `aastex`, `neurips_2026` → `neurips`, `mysvjour3` → `svjour3`).
+pub fn version_stripped_name(name: &str) -> Option<String> {
   let (suffix_rx, glued_rx, prefix_rx) = (&*FALLBACK_SUFFIX, &*FALLBACK_GLUED, &*FALLBACK_PREFIX);
-
   // Strip a leading directory path (Perl Package.pm L2167-2170: FindFile_fallback
   // calls `pathname_name($name)` first, so e.g. `\documentclass{./sty/IEEEtran}`
   // routes the basename `IEEEtran` through the binding-name registry. Without
@@ -5336,13 +5276,40 @@ pub fn find_file_fallback(name: &str, ext_type: &str) -> Option<(String, Fallbac
   // (neurips_2026->neurips, mysvjour3->svjour3) qualifies, matching Perl's FindFile_fallback
   // (which never strips a directory). The retired `BasenameOnly` convenience (2105.02087
   // misc/ieeetran, 2405.18387 assets/equations) now falls to raw-load/OmniBus like Perl.
-  if !suffix_stripped {
+  if !suffix_stripped || base.is_empty() || base == name {
     return None;
   }
-  if base.is_empty() || base == name {
-    return None;
-  }
+  Some(base)
+}
 
+/// Kind of fallback that matched, returned by [`find_file_fallback`].
+///
+/// `Versioned` — suffix/prefix stripping changed the basename (Perl
+/// FindFile_fallback's core function). Drivers: 1206.0536 (mysvjour3
+/// → svjour3), astro-ph0005021 (./aaspp4 → ./aaspp).
+///
+/// `BasenameOnly` — the *only* change was directory-prefix removal,
+/// matching the binding registry by leaf name. This is a Rust-specific
+/// extension on top of Perl's FindFile_fallback that exists because
+/// our contrib-binding registry is keyed by basename. Drivers:
+/// 2105.02087 (misc/ieeetran → IEEEtran binding); 2405.18387
+/// (assets/equations → equations binding).
+///
+/// Both kinds win unconditionally over local raw `.sty`/`.cls` files
+/// at the call site (see `input_definitions` Step 3): the `.rs`
+/// bindings are hand-tuned for the conversion, so a binding match
+/// always supersedes a co-located vendored copy. The variant is
+/// preserved for diagnostics and potential future policy tweaks.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum FallbackKind {
+  Versioned,
+  BasenameOnly,
+}
+
+/// Strip version/arxiv suffixes from package names to find existing bindings.
+/// Returns the fallback filename (with extension) and which kind of fallback fired.
+pub fn find_file_fallback(name: &str, ext_type: &str) -> Option<(String, FallbackKind)> {
+  let base = version_stripped_name(name)?;
   let kind = FallbackKind::Versioned;
 
   let fallback_filename = format!("{base}.{ext_type}");
@@ -6002,18 +5969,18 @@ pub fn digest_in_group_if(token: Token) -> Result<Option<Digested>> {
 }
 
 /// Test a conditional `\ifXXX` and return its boolean result (Perl: IfCondition).
-/// Looks up the conditional's test closure and invokes it.
 pub fn if_condition(if_token: &Token) -> Result<Option<bool>> {
+  if_condition_args(if_token, Vec::new())
+}
+
+/// Perl's `IfCondition($if, @args)` (Package.pm:1238): the test runs on the caller's arguments, never reading the
+/// input; an argument not given is Perl's undef.
+pub fn if_condition_args(if_token: &Token, args: Vec<ArgWrap>) -> Result<Option<bool>> {
   use crate::definition::conditional::ConditionalType;
   if let Some(defn) = lookup_definition(if_token)?
     && defn.get_conditional_type() == Some(ConditionalType::If)
     && let Some(test) = defn.get_test()
   {
-    // Read arguments for the conditional test
-    let args = match defn.get_parameters() {
-      Some(params) => params.read_arguments(Some(defn.as_ref()))?,
-      None => Vec::new(),
-    };
     return Ok(Some(test(args)?));
   }
   if x_equals(if_token, &T_CS!("\\iftrue")) {
@@ -6025,15 +5992,17 @@ pub fn if_condition(if_token: &Token) -> Result<Option<bool>> {
   Error!(
     "expected",
     "conditional",
-    s!("Expected a conditional, got '{}'", if_token.stringify())
+    s!("Expected a conditional, got '{}'", if_token) // Perl's ToString($if), Package.pm:1251
   );
   Ok(None)
 }
 
-/// Set the boolean value of a `\newif`-type conditional (Perl: SetCondition).
+/// Set the boolean value of a `\newif`-type conditional (Perl: SetCondition, Package.pm:1256).
 /// This is only for simple conditionals taking no arguments.
 pub fn set_condition(if_token: &Token, value: bool, scope: Option<Scope>) {
+  use crate::definition::conditional::ConditionalType;
   if let Ok(Some(defn)) = lookup_definition(if_token)
+    && defn.get_conditional_type() == Some(ConditionalType::If)
     && defn.get_parameters().is_none()
   {
     let target = if value {
@@ -6046,11 +6015,8 @@ pub fn set_condition(if_token: &Token, value: bool, scope: Option<Scope>) {
   }
   emit_error(
     "expected",
-    "newif",
-    &format!(
-      "Expected a conditional defined by \\newif, got '{}'",
-      if_token.stringify()
-    ),
+    "conditional",
+    &format!("Expected a conditional defined by \\newif, got '{if_token}'"),
   );
 }
 

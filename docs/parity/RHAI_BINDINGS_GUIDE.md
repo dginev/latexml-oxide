@@ -2,7 +2,14 @@
 
 [← docs/README.md](../README.md) · Reference: [`API.md`](../../latexml_contrib/src/script_bindings/API.md) (every call) ·
 [`CHEATSHEET.md`](../../latexml_contrib/src/script_bindings/CHEATSHEET.md) (Perl | Rust macro | Rhai) · Design:
-[`script_bindings_plan.md`](script_bindings_plan.md)
+[`script_bindings_plan.md`](script_bindings_plan.md) · Examples: [`docs/examples/`](../examples/) · On the rustdoc site:
+[interface](https://dginev.github.io/latexml-oxide/latexml_contrib/script_bindings/interface/index.html),
+[cheat sheet](https://dginev.github.io/latexml-oxide/latexml_contrib/script_bindings/cheatsheet/index.html)
+
+`API.md` is generated from the live engine and re-checked on every test run (`api_reference_is_up_to_date`), so it
+cannot drift from what is registered; `cargo doc --workspace --open` renders it as
+`latexml_contrib::script_bindings::interface` and the cheat sheet as `…::cheatsheet`, beside the Rust API. The cheat
+sheet's empty cells are the dialect's gaps.
 
 A **binding** tells latexml-oxide what a LaTeX package or class means: which macros expand to what, which commands
 build which XML. Perl LaTeXML writes them in Perl (`foo.sty.ltxml`); latexml-oxide compiles its own in Rust, and you
@@ -18,7 +25,18 @@ Name the file after the package or class it binds, plus `.rhai`: `mypkg.sty.rhai
 - Put it beside the document (or in a directory given with `--path=DIR`): `\usepackage{mypkg}` loads it. The `.rhai`
   file is searched **first**, so `article.cls.rhai` overrides the built-in `article` binding.
 - Or load it for every document: `--preload=mypkg.sty` finds `mypkg.sty.rhai` the same way.
-- A `.rhai` file is code: treat one that ships with a source tree as you would any untrusted program.
+- A `.rhai` file is code: treat one that ships with a source tree as you would any untrusted program
+  ([`../release/SAFETY.md`](../release/SAFETY.md) §H). Builds that want the capability gone entirely can use
+  `--no-default-features` without `--features runtime-bindings`.
+
+> **Coming from Perl LaTeXML?** A Perl `.sty.ltxml` / `.cls.ltxml` binding is
+> **not** loaded — latexml-oxide has no Perl interpreter. Rewrite it as a
+> `.sty.rhai` / `.cls.rhai` file: the common `Def…` entry points (`DefMacro`,
+> `DefEnvironment`, `DefConstructor`, `DefPrimitive`, …) keep the same names and
+> signatures, in Rhai syntax (doubled backslashes). For example, Perl
+> `DefEnvironment('{nowrap}', "<ltx:block class='nowrap'>#body</ltx:block>")`
+> becomes, verbatim minus the `use`/`1;` boilerplate,
+> `DefEnvironment("{nowrap}", "<ltx:block class='nowrap'>#body</ltx:block>");`.
 
 ## The shape of a file
 
@@ -35,6 +53,10 @@ DefConstructor("\\term{}", "<ltx:text class=\"term\">#1</ltx:text>");
 - **Option hashes are maps:** Perl's `DefMath('\sum', "∑", role => 'SUMOP')` is
   `DefMath("\\sum", "∑", #{ role: "SUMOP" })`. A key Perl does not accept is an `Error:misdefined`.
 - **Scopes** are strings, as Perl's: `AssignValue("k", v, "global")`; no scope means local.
+- **The I-forms** take the control sequence apart from its parameters, as Perl's: `DefMacroI`, `DefPrimitiveI` and
+  `DefConstructorI` take a `Token` or a name (`"\\csname x y\\endcsname"`, or one character for an active one), a
+  parameter spec (`"{}[]"`) or `()`, the body or `()`, then the option map:
+  `DefMacroI(T_CS("\\foo"), "{}", |gullet, x| Tokens(x, x))`.
 
 ## Values
 
@@ -46,7 +68,10 @@ DefConstructor("\\term{}", "<ltx:text class=\"term\">#1</ltx:text>");
 | string, int, bool, array, map | Perl's scalars, lists and hashes | Rhai literals |
 | `()` | `undef` | a missing value: an absent optional argument, an unset `LookupValue` |
 
-`T_CS` and every `T_*` return one `Token`; `Tokens` only where Perl builds a list. `ToString(v)` is Perl's
+`T_CS` and every `T_*` return one `Token`; `Tokens` only where Perl builds a list. Perl's accessors are methods: `tokens.unlist()` (an array of
+`Token`s), `token.getCatcode()`, `token.getString()`, `token.getCSName()`. `Box("text")` and `List([box, box])` build
+boxes for a primitive to return, `box.getFont()` and a hook's `whatsit.getFont()` read a `Font`; `IfCondition("\\iffoo")`
+is a conditional's truth. `ToString(v)` is Perl's
 `ToString`: the TeX source of Tokens, the text of a value (`"3.0pt"`). The value handles carry Perl's methods and
 arithmetic (`d * 2`, `g.add(Glue("1pt"))`, `d > Dimension("5pt")`); `LookupRegister("\\parskip")` returns one. Glue
 arithmetic is TeX's `\advance` (the higher fill order wins), where Perl's Glue.pm differs

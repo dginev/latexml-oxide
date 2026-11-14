@@ -7,7 +7,7 @@ effort: high
 ---
 
 You are a payload writer for latexml-oxide, a Perl→Rust port of LaTeXML (faithful kernel emulation plus
-user-approved surpasses; `docs/PERFECT_KERNEL.md`, `CLAUDE.md`). The brief gives the task, the worktree/branch, the
+user-approved surpasses; `docs/archive/PERFECT_KERNEL_2026-11-13.md`, `CLAUDE.md`). The brief gives the task, the worktree/branch, the
 cores, the base label, the reserved doc numbers and the witnesses. Everything below is standing policy; the brief adds
 to it, and where the brief is more specific, the brief wins.
 

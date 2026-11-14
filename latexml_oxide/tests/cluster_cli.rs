@@ -1183,6 +1183,52 @@ mod whatsinout {
     );
   }
 
+  /// Upstream #2855 (Perl latexmlc:111-134 `$keep_log_file`): an archive output keeps an existing external log of the
+  /// log's name — a `.zip` packs its log as the `--log` basename (Perl t/932_zip.t); EPUB writes it outside the
+  /// container, never over an existing file (OXIDIZED_DESIGN_DIVERGENCES #1037).
+  #[test]
+  fn archive_output_keeps_an_existing_log() {
+    let work = tempfile::tempdir().expect("tempdir");
+    std::fs::write(work.path().join("hello.tex"), HELLO_TEX).unwrap();
+    let existing = "pre-existing external log\n";
+    std::fs::write(work.path().join("ext.log"), existing).unwrap();
+    let out = run(work.path(), &["hello.tex", "--dest=t.zip", "--log=ext.log"]);
+    assert!(out.status.success(), "stderr:\n{}", stderr_of(&out));
+    assert_eq!(
+      std::fs::read_to_string(work.path().join("ext.log")).unwrap(),
+      existing
+    );
+    let mut archive =
+      zip::ZipArchive::new(std::fs::File::open(work.path().join("t.zip")).unwrap()).unwrap();
+    let mut log = String::new();
+    archive
+      .by_name("ext.log")
+      .expect("the log member")
+      .read_to_string(&mut log)
+      .unwrap();
+    assert!(log.contains("Status:conversion:0"), "{log}");
+
+    std::fs::write(work.path().join("hello.latexml.log"), existing).unwrap();
+    let out = run(work.path(), &["hello.tex", "--dest=t.epub"]);
+    let stderr = stderr_of(&out);
+    assert!(out.status.success(), "stderr:\n{stderr}");
+    assert!(
+      stderr.contains("Log not written: 'hello.latexml.log' exists and is kept"),
+      "{stderr}"
+    );
+    assert_eq!(
+      std::fs::read_to_string(work.path().join("hello.latexml.log")).unwrap(),
+      existing
+    );
+    let archive =
+      zip::ZipArchive::new(std::fs::File::open(work.path().join("t.epub")).unwrap()).unwrap();
+    assert!(
+      archive
+        .file_names()
+        .all(|name| name.is_ok_and(|n| !n.ends_with(".log")))
+    );
+  }
+
   /// Issue 807: `--format=epub` writes the EPUB 3 container Perl `latexmlc --dest=x.epub` does (Manifest::Epub,
   /// Pack/Zip.pm), not one bare XHTML file — `mimetype` first and STORED, the content and its CSS under `OPS/`.
   #[test]
@@ -2571,6 +2617,12 @@ mod browser_render_aligned_math_spacing {
                      y(x) &= C_1 y(x) + C_2 y(x) \\\\\n\
                      g(x) &= C_1 y_1 + C_2 y_2\n\
                      \\end{aligned}\n\\end{gather*}\n\
+                     {\\renewcommand\\arraystretch{2}\n\
+                     \\[\\begin{array}{cc}a&b\\\\c&d\\end{array}\\]}\n\
+                     {\\setlength\\jot{6pt}\n\
+                     \\begin{gather*}\n\\begin{aligned}\n\
+                     p &= q\\\\ r &= s\n\
+                     \\end{aligned}\n\\end{gather*}}\n\
                      \\end{document}\n";
 
   #[test]
@@ -2736,17 +2788,59 @@ mod aligned_mtable_columnspacing_zero {
   //! needs a browser — this guards the CSS/XML contract the browser test above
   //! renders. If the presentation MathML ever stopped emitting `columnspacing="0pt"`
   //! for `aligned`, the reset would silently no-op and the relation over-space
-  //! again; if the CSS rule were dropped, likewise.
+  //! again; if the CSS rule were dropped, likewise. Issue 695: no `<mtable>` carries
+  //! the default `rowspacing="0pt"` (Firefox and MathJax honour it: the rows touch);
+  //! an author's `\arraystretch`/`\jot` gap stays, as Perl writes it.
 
   use std::{fs, path::Path, process::Command};
 
   const DOC: &str = "\\documentclass[12pt]{book}\n\
                      \\usepackage{amsmath}\n\
+                     \\usepackage{array}\n\
                      \\begin{document}\n\
+                     \\[\\begin{array}{>{\\displaystyle}r @{\\;} >{\\displaystyle}l}\n\
+                     y^{\\prime}+y&=\\sin \\left(x \\right)\\\\\n\
+                     y \\left(0\\right)&=1\\\\\n\
+                     \\end{array}\\]\n\
                      \\begin{gather*}\n\\begin{aligned}\n\
                      y(x) &= C_1 y(x)\\\\ g(x) &= C_1 y_1\n\
                      \\end{aligned}\n\\end{gather*}\n\
+                     {\\renewcommand\\arraystretch{2}\n\
+                     \\[\\begin{array}{cc}a&b\\\\c&d\\end{array}\\]}\n\
+                     {\\setlength\\jot{6pt}\n\
+                     \\begin{gather*}\n\\begin{aligned}\n\
+                     p &= q\\\\ r &= s\n\
+                     \\end{aligned}\n\\end{gather*}}\n\
                      \\end{document}\n";
+
+  /// Issue 695's `array` MWE and the `aligned` (default rowsep: no `rowspacing`), then the
+  /// `\arraystretch{2}` array and the `\jot=6pt` aligned (their rowsep kept, as Perl).
+  const MTABLES: [&str; 4] = [
+    "<mtable columnspacing=\"5pt\" displaystyle=\"true\"><mtr><mtd class=\"ltx_align_right\" \
+     columnalign=\"right\"><mrow><msup><mi>y</mi><mo>\u{2032}</mo></msup><mo>+</mo><mi>y</mi></mrow></mtd>\
+     <mtd class=\"ltx_align_left\" columnalign=\"left\"><mrow><mphantom></mphantom><mo>=</mo><mrow><mi>sin</mi>\
+     <mo>\u{2061}</mo><mrow><mo>(</mo><mi>x</mi><mo>)</mo></mrow></mrow></mrow></mtd></mtr><mtr>\
+     <mtd class=\"ltx_align_right\" columnalign=\"right\"><mrow><mi>y</mi><mo>\u{2061}</mo><mrow><mo>(</mo>\
+     <mn>0</mn><mo>)</mo></mrow></mrow></mtd><mtd class=\"ltx_align_left\" columnalign=\"left\"><mrow>\
+     <mphantom></mphantom><mo>=</mo><mn>1</mn></mrow></mtd></mtr></mtable>",
+    "<mtable columnspacing=\"0pt\" displaystyle=\"true\"><mtr><mtd class=\"ltx_align_right\" \
+     columnalign=\"right\"><mrow><mi>y</mi><mo>\u{2061}</mo><mrow><mo stretchy=\"false\">(</mo><mi>x</mi>\
+     <mo stretchy=\"false\">)</mo></mrow></mrow></mtd><mtd class=\"ltx_align_left\" columnalign=\"left\"><mrow>\
+     <mphantom></mphantom><mo>=</mo><mrow><msub><mi>C</mi><mn>1</mn></msub><mo>\u{2062}</mo><mi>y</mi>\
+     <mo>\u{2062}</mo><mrow><mo stretchy=\"false\">(</mo><mi>x</mi><mo stretchy=\"false\">)</mo></mrow></mrow>\
+     </mrow></mtd></mtr><mtr><mtd class=\"ltx_align_right\" columnalign=\"right\"><mrow><mi>g</mi>\
+     <mo>\u{2061}</mo><mrow><mo stretchy=\"false\">(</mo><mi>x</mi><mo stretchy=\"false\">)</mo></mrow></mrow>\
+     </mtd><mtd class=\"ltx_align_left\" columnalign=\"left\"><mrow><mphantom></mphantom><mo>=</mo><mrow>\
+     <msub><mi>C</mi><mn>1</mn></msub><mo>\u{2062}</mo><msub><mi>y</mi><mn>1</mn></msub></mrow></mrow></mtd>\
+     </mtr></mtable>",
+    "<mtable columnspacing=\"5pt\" displaystyle=\"true\" rowspacing=\"10.0pt\"><mtr><mtd><mi>a</mi></mtd>\
+     <mtd><mi>b</mi></mtd></mtr><mtr><mtd><mi>c</mi></mtd><mtd><mi>d</mi></mtd></mtr></mtable>",
+    "<mtable columnspacing=\"0pt\" displaystyle=\"true\" rowspacing=\"6.0pt\"><mtr><mtd class=\"ltx_align_right\" \
+     columnalign=\"right\"><mi>p</mi></mtd><mtd class=\"ltx_align_left\" columnalign=\"left\"><mrow><mphantom>\
+     </mphantom><mo>=</mo><mi>q</mi></mrow></mtd></mtr><mtr><mtd class=\"ltx_align_right\" columnalign=\"right\">\
+     <mi>r</mi></mtd><mtd class=\"ltx_align_left\" columnalign=\"left\"><mrow><mphantom></mphantom><mo>=</mo>\
+     <mi>s</mi></mrow></mtd></mtr></mtable>",
+  ];
 
   #[test]
   fn aligned_emits_zero_columnspacing_and_css_resets_mtd_padding() {
@@ -2766,6 +2860,24 @@ mod aligned_mtable_columnspacing_zero {
         String::from_utf8_lossy(&out.stderr).replace('\u{1b}', "")
       )
     });
+
+    let mtables: Vec<&str> = html
+      .match_indices("<mtable")
+      .map(|(i, _)| &html[i..i + html[i..].find("</mtable>").unwrap() + "</mtable>".len()])
+      .collect();
+    assert_eq!(
+      mtables, MTABLES,
+      "issue 695: the <mtable> elements moved:\n{html}"
+    );
+    let stderr = String::from_utf8_lossy(&out.stderr);
+    assert_eq!(
+      (
+        stderr.matches("Error:").count(),
+        stderr.matches("Warning:").count()
+      ),
+      (0, 0),
+      "the fixture errs or warns:\n{stderr}"
+    );
 
     // The `aligned` renders as ONE native `<math>` with a tight mtable — the
     // attribute the CSS reset keys on. (An HTML `ltx_eqn_table` display would NOT

@@ -368,7 +368,7 @@ All landed. Numbered in discovery order; **F4 is the standing gate**.
   code review, not a gate. F7 fixed the tarballs and `.zip` but missed the `.deb`:
   `cargo deb` builds from `latexml_oxide/Cargo.toml`'s asset list
   (`["../THIRD-PARTY-NOTICES", …]`) — the **committed** §1-4 file — so `apt install`,
-  the path the README calls the easiest way in, installed notices with no §5/§6/§7.
+  the path `docs/INSTALL.md` calls the easiest way in, installed notices with no §5/§6/§7.
   Fixed in `make_release.sh`: swap the path `cargo deb` reads for the build, restore
   after, then **read the notices back out of the built `.deb`** (`dpkg-deb
   --fsys-tarfile`) asserting §5/§6/§7 — the failure is invisible from outside, since

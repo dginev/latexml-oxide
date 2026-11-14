@@ -1,0 +1,18 @@
+% mechanism: a `.bib` `url` is Verbatim (BibTeX.pool.ltxml:740), so TeX's escapes reached the link's href
+%   (`href="https://example.org/a\_b…"`); the bibliography link builder (make_bibliography.rs `format_links`, Perl
+%   MakeBibliography.pm do_links) drops them from the href; the printed URL keeps them as TeX prints it.
+% witness: issue 808 (`doi`/`url` = `10.1162/tacl\_a\_00276`); synthetic
+% oracle:  pdflatex + bibtex (plainnat): 0 errors; prints "URL https://example.org/a\_b\%20c\#frag\&q=1\~{}x"
+% engines: rust base: href="https://example.org/a\_b\%20c\#frag\&q=1\~{}x"; perl: the same href (it shows "Link")
+% expect:  0 errors; href="https://example.org/a_b%20c#frag&q=1~x", text "https://example.org/a\_b\%20c\#frag\&q=1\~{}x";
+%   the doi href https://doi.org/10.1162/tacl%5Fa%5F00276; the plain url unchanged
+% status:  RED (base) -> GREEN (BIBURL)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{natbib}
+\usepackage{url}
+\begin{document}
+See \cite{esc,doiesc,plain}.
+\bibliographystyle{plainnat}
+\bibliography{bib_url_escapes_leave_the_href}
+\end{document}

@@ -188,7 +188,7 @@ Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor 
       </disp-formula>
       <disp-formula id="S2.E2">
         <mml:math xmlns:mml="http://www.w3.org/1998/Math/MathML" id="S2.E2.m1" alttext="\begin{split}a&amp;=b+c-d\\&#10;&amp;\quad+e-f\\&#10;&amp;=g+h\\&#10;&amp;=i\end{split}" display="block">
-          <mml:mtable columnspacing="0pt" displaystyle="true" rowspacing="0pt">
+          <mml:mtable columnspacing="0pt" displaystyle="true">
             <mml:mtr>
               <mml:mtd columnalign="right">
                 <mml:mi>a</mml:mi>
@@ -251,7 +251,7 @@ Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor 
       </disp-formula>
       <disp-formula id="S2.E3">
         <mml:math xmlns:mml="http://www.w3.org/1998/Math/MathML" id="S2.E3.m1" alttext="a+b+c+d+e+f\\&#10;+i+j+k+l+m+n" display="block">
-          <mml:mtable displaystyle="true" rowspacing="0pt">
+          <mml:mtable displaystyle="true">
             <mml:mtr>
               <mml:mtd columnalign="left">
                 <mml:mrow>
