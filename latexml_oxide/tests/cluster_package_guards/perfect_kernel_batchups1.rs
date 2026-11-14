@@ -2,7 +2,7 @@
 //! (`docs/parity/UPSTREAM_SYNC_2833_to_0db6f47e.md`). Item 1 (#2820): `\fcolorbox`, amsmath's text `\boxed` and a
 //! listing's frame are padded as TeX draws them — `\fboxsep` (the `\fbox` frame they are), a listing's `framesep` —
 //! and a listing's `frame=` letters (`tb`, `trBL`) frame those sides. Item 3 (#2875): `<mtable align>` of a top or
-//! bottom array is its first or last row's baseline.
+//! bottom array is its first or last row's baseline. Item 4 (#2845): the regenerated metrics size the lozenges.
 //!
 //! Every repro is checked against pdflatex (its header holds the oracle).
 use latexml::util::test::{assert_element, convert_with, error_count, warning_count};
@@ -88,4 +88,20 @@ fn mtable_align_is_the_first_or_last_baseline() {
     ],
     "{html}"
   );
+}
+
+/// fonts-nfss/lozenge_widths_are_msam_glyph_widths (#2845): amssymb's `\lozenge` (U+25CA) and `\blacklozenge`
+/// (U+29EB) are msam10's glyphs, sized by its metrics (pdflatex 6.66669pt); before, no metric held those code points
+/// and the cmr fallback gave 7.5pt.
+#[test]
+fn lozenge_widths_are_msam_glyph_widths() {
+  let (stderr, xml) = convert_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/fonts-nfss/lozenge_widths_are_msam_glyph_widths.tex"
+    ),
+    None,
+  );
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  assert_element(&xml, "p", &[], "<p>6.66669pt 6.66669pt</p>");
 }

@@ -1,0 +1,13 @@
+% witness: synthetic (upstream LaTeXML #2845, 27db0d96: StandardMetrics regenerated after amssymb's \lozenge became
+%          U+25CA and \blacklozenge U+29EB)
+% oracle:  pdflatex 0 errors: "6.66669pt 6.66669pt" — msam10's lozenges (TFM width 43690.8125/65536 of the 10pt size)
+% engines: rust 0340aff82e0 = 0 errors, "7.5pt 7.5pt": no metric holds U+25CA/U+29EB, the cmr fallback sizes them;
+%          perl master = msam10's widths
+% expect:  0 errors, 0 warnings; "6.66669pt 6.66669pt"
+% status:  RED (0340aff82e0) -> GREEN (UPS1: standard_metrics.rs msam5-10 keys U+25CA/U+29EB, ifgeo10 added)
+\documentclass{article}
+\usepackage{amssymb}
+\newlength\lw
+\begin{document}
+\settowidth\lw{$\lozenge$}\the\lw\ \settowidth\lw{$\blacklozenge$}\the\lw
+\end{document}
