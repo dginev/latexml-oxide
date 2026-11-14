@@ -217,4 +217,12 @@ $\sin\cos\det A$ $\sin\cos\sum_i x_i$ $\sin\sin\sup_x f$ $\sin\tan\lim_n a_n$ $\
 $\sin\cos\det A\,y$ $\sin\cosh\sup_t u$ $\sin\cos\max_i x_i$
 $\sin\log\nabla u$ $\sin\cos\nabla u$ $\sin\log\log x\cos y$ $\sin\log\log\log x\cos y$ $\sin^2\log\log x\,dy$
 
+\section{A prescript wraps its base's post-scripts}
+% (issue 824, arXiv 2611.12926) as Perl's `preScripted` (MathGrammar:430-439): `{}^{95}MoO_4` ^95 (MoO _4), not a
+% pre-subscript 4 (pre2); `{}^a x_b y`, `{}^n X_i^2` the same; a fenced base `{}^a (x)^b` too (was unparsed)
+${}^{95}\mathrm{MoO}_4$ ${}^a x_b y$ $a+{}^{n}\!X_{i}^{2}=b$ ${}^a(x)^b$
+% … and a scripted OPFUNCTION or trig function, applied (Perl `preScripted['OPFUNCTION']`, `['TRIGFUNCTION']`):
+% (^a log _2)@(x), was `_ 2 ^ a log * x`; (^a sin _b)@(x), was unparsed
+${}^a\log_2 x$ ${}_c{}^a\log_2 x$ ${}^a\sin_b x$ ${}^a\sin^2_b x\cos y$
+
 \end{document}
