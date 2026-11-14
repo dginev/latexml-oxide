@@ -36342,7 +36342,7 @@ letters, the counter calls, variadic Push/UnshiftValue, `ptValue`'s clamp, Looku
 unknown key), `perfect_kernel_batchw3rg::rhai_perl_names_review_rows` (no colour package, the kept definition, the
 mixed comparisons, `roman(Number)`, `Number(string)`).
 
-### 1041. An equation's tag is its own column in LaTeXML.css (issue #810)
+### 1042. An equation's tag is its own column in LaTeXML.css (issue #810)
 
 **Perl.** LaTeXML.css gives the tag cell `.ltx_eqn_eqno { max-width:0em; overflow:visible }`: the column takes no
 width and the tag overlays the right centring pad (`min-width:2em`), so a formula wider than the line less 2em runs
@@ -36356,7 +36356,7 @@ gap falls under twice the tag's width. Offered upstream as the same one-line cha
 `cluster_cli::browser_render_eqn_tags_and_authors::equation_tags_stay_beside_and_author_lines_show` (Chrome, local),
 `xslt::witnessed_css_delta::equation_tag_mathjax_and_author_line_deltas_stay_present`.
 
-### 1042. MathJax's display margin is zeroed inside an equation cell (issue #475)
+### 1043. MathJax's display margin is zeroed inside an equation cell (issue #475)
 
 **Perl.** A display equation is a `table.ltx_eqn_table` (our #473 delta adds its 1em block margins). MathJax
 renders a display `<math>` as a block with a 1em block margin (v3/v4 `mjx-container[display="true"]`, v2
@@ -36367,7 +36367,7 @@ container's block margins in an equation cell, as the table already carries the 
 native rendering unchanged. MathJax 3/4 was not loadable offline; its selector is from MathJax's CHTML stylesheet.
 Offered upstream. **Guard**: `xslt::witnessed_css_delta::equation_tag_mathjax_and_author_line_deltas_stay_present`.
 
-### 1043. An author's affiliation lines print under the name in the default author layout (issue #783)
+### 1044. An author's affiliation lines print under the name in the default author layout (issue #783)
 
 **Perl.** `\author{name\\school\\dept}` makes each line after `\\` an affiliation contact (Base_Utility.pool.ltxml:722,
 kept); LaTeXML.css shows an author's contacts only in a hover pop-up behind a blue star unless the document carries
