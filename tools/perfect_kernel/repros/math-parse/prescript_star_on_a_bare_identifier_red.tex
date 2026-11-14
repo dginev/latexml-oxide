@@ -1,0 +1,12 @@
+% witness: synthetic (review revI824, issue 824's sibling sweep)
+% oracle:  pdflatex 0 errors; a raised star before x
+% engines: Perl 0.8.8 = 0 errors, `x` with the prescript `*` (scriptpos pre); rust 85a1bd780e7 and 37bc6c924c4 = 0 errors,
+%          1 Warning (`unparsed_math`): unparsed (base and candidate alike — pre-existing)
+% expect:  0 errors, 0 warnings; `x` carrying the prescript `*`, as Perl's preScripted reads it
+% status:  RED
+% moves:   post-merge (a `{}^*` prescript of a bare identifier is not a prescript rule in our grammar)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+$ {}^*x $
+\end{document}
