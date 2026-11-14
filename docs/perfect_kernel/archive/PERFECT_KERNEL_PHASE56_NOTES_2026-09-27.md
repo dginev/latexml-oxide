@@ -3,7 +3,7 @@
 Sections of `docs/PERFECT_KERNEL.md` superseded when phase 56 closed, kept verbatim: the state as of
 2026-09-25, the ranked open-leads list (after sweep 118 and batches 56gw-56hd, most of it landed since),
 and the healthy-subset projection audited on sweep #110. What stayed open is the "Open residuals" list
-in [`../../PERFECT_KERNEL.md`](../../PERFECT_KERNEL.md); batch ids resolve in
+in [`../../PERFECT_KERNEL.md`](../../archive/PERFECT_KERNEL_2026-11-13.md); batch ids resolve in
 [`LEDGER_PHASE56_2026-09-27.md`](LEDGER_PHASE56_2026-09-27.md).
 
 **State 2026-09-25:**
