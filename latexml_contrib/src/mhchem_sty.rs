@@ -16,6 +16,10 @@
 //! still reads `\ce`; only its output layer's formula hook is bound
 //! (`semantic_formula`): elements, isotopes, counts and charges (OXIDIZED_DESIGN_DIVERGENCES #1040).
 //! Arrows, `+` between species, bonds, states and amounts keep mhchem's output (stage 2).
+//! A formula's elements are juxtaposed (no U+2062) and a charge sign is tight (DG 2026-11-14).
+//!
+//! This stage-1 markup follows DG's TENTATIVE rulings of 2026-11-14 and awaits Bruce Miller's feedback and
+//! refinements; stage 2 adds MathML `intent`. DG: "We expect further improvements are both possible and needed."
 //!
 //! Known edge-case residuals under raw-load (tracked in docs/SYNC_STATUS.md):
 //! `\ce` used inside an amsmath `align*` alignment, and a few `$`-toggle /
@@ -173,6 +177,7 @@ fn semantic_formula(result: &[Token]) -> Option<Vec<Token>> {
   let mut body = Vec::new();
   let mut species = 0;
   let mut before = Before::Nothing;
+  let mut run = Run::default();
   for (i, item) in items.into_iter().enumerate() {
     if i == start {
       species = body.len();
@@ -180,15 +185,18 @@ fn semantic_formula(result: &[Token]) -> Option<Vec<Token>> {
     match item {
       FormulaItem::Raw(t) => {
         if t.get_catcode() != Catcode::SPACE {
+          run.close(&mut body);
           before = Before::Atom;
         }
         body.push(t);
       },
       FormulaItem::Amount(a) => {
+        run.close(&mut body);
         body.extend(call("\\__mhchem_output_amount:n", a));
         before = Before::Nothing;
       },
       FormulaItem::Text(text) => {
+        run.open(body.len(), 1);
         body.extend(math_mode(font(text)));
         before = Before::Atom;
       },
@@ -199,14 +207,21 @@ fn semantic_formula(result: &[Token]) -> Option<Vec<Token>> {
         // A unit with no element scripts the bracket or text it follows (`Fe(CN)6`, 2602.09975 `\textit{LnPn}2`),
         // after a unit the species so far (`\ce{H2_{(g)}}`; `\ce{SO4^{2-}_{(aq)}}`, the state after the charge).
         if u.element.is_empty() && before == Before::Unit {
+          run.close(&mut body);
           let formula = body.split_off(species);
           body.extend(call("\\mathord", formula));
+          run.open(species, 1);
+        }
+        // A count on raw text (2407.15836 `\ce{\textit{R}2Ir2Al20}`) stays on it, outside the run.
+        if !u.element.is_empty() || run.start.is_some() {
+          run.open(body.len(), element_items(&u.element).len());
         }
         unit_tokens(&mut body, u, before != Before::Nothing);
         before = Before::Unit;
       },
     }
   }
+  run.close(&mut body);
   match lifted {
     Some(charge) => {
       let formula = body.split_off(species);
@@ -218,6 +233,33 @@ fn semantic_formula(result: &[Token]) -> Option<Vec<Token>> {
     None => Some(body),
   }
 }
+
+/// A formula's elements and brackets are juxtaposed, not multiplied (DG 2026-11-14): a run of them is
+/// `\lx@kludged{…}`, the unparsed row Perl uses for adjacency (Base_XMath.pool.ltxml:193, MathParser.pm:530).
+#[derive(Default)]
+struct Run {
+  start: Option<usize>,
+  atoms: usize,
+}
+
+impl Run {
+  fn open(&mut self, at: usize, atoms: usize) {
+    self.start.get_or_insert(at);
+    self.atoms += atoms;
+  }
+
+  fn close(&mut self, body: &mut Vec<Token>) {
+    if let Some(start) = self.start.take()
+      && self.atoms > 1
+    {
+      let run = body.split_off(start);
+      body.extend(kludged(run));
+    }
+    self.atoms = 0;
+  }
+}
+
+fn kludged(body: Vec<Token>) -> Vec<Token> { call("\\lx@kludged", body) }
 
 /// What a unit with no element follows.
 #[derive(PartialEq)]
@@ -293,7 +335,7 @@ fn unit_tokens(out: &mut Vec<Token>, u: CoreFive, scripts_previous: bool) {
     scripted(&mut unit, T_SUPER!(), sup);
   }
   if unit_charge {
-    unit = call("\\mathord", unit);
+    unit = call("\\mathord", kludged(unit));
     scripted(&mut unit, T_SUPER!(), u.charge);
   }
   out.extend(math_mode(unit));

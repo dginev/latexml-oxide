@@ -36364,12 +36364,22 @@ element (mhchem's count or state on an empty base) scripts the bracket or text i
 `\ce{H2_{(g)}}` is `\mathord{H_2}_{(g)}` and `\ce{SO4^{2-}_{(aq)}}` `\mathord{\mathord{SO_4}^{2-}}_{(aq)}`, the state after
 the charge as pdflatex prints it (an empty `{}` base would leave a floating subscript the math grammar does not parse). A text-mode
 `\ce` sets the formula in the text font math was entered from (`savedfont`, Stomach.pm:518; mhchem.sty:2760 prints it
-in the text font), as nicefrac's `\nf@mathcopytextfont`; a math-mode `\ce` keeps `\mhchem@option@mathFont`. MathML:
-`<msup><mrow><mmultiscripts><mi>Mo</mi><mprescripts/><mrow/><mn>95</mn></mmultiscripts><mo>⁢</mo><msub><mi
-mathvariant="normal">O</mi><mn>4</mn></msub></mrow><mrow><mn>2</mn><mo>−</mo></mrow></msup>` for `\ce{^{95}MoO4^{2-}}`.
+in the text font), as nicefrac's `\nf@mathcopytextfont`; a math-mode `\ce` keeps `\mhchem@option@mathFont`. A formula's
+elements and brackets are juxtaposed, not multiplied (DG 2026-11-14): each run of them between amounts and mhchem's own
+operators is `\lx@kludged{…}`, the unparsed row Perl uses for adjacency (Base_XMath.pool.ltxml:193, MathParser.pm:530),
+so no U+2062 `<mo>` sits between two elements (Firefox spaced it ~0.17em; copy gave "H2⁢O"); the amount's thin space
+before its species stays a U+2062 `<mo lspace="0.170em">`. A charge's sign is tight: a `limit-from`'s direction (`2-`,
+also `0+` in any math) is a Bin with no right operand, which TeX makes an Ord (tex.web §728-729), while MathML Core gives
+a trailing `<mo>` the postfix form and, `−` having no postfix entry, the infix 0.2222em (§3.2.4.2, B.1); the MathML
+says `lspace="0em" rspace="0em"` (`presentation.rs`). A lone sign (`e^-`, `Th+`) keeps a bare `<mo>`. MathML:
+`<msup><mrow><mmultiscripts><mi>Mo</mi><mprescripts/><mrow/><mn>95</mn></mmultiscripts><msub><mi
+mathvariant="normal">O</mi><mn>4</mn></msub></mrow><mrow><mn>2</mn><mo lspace="0em" rspace="0em">−</mo></mrow></msup>`
+for `\ce{^{95}MoO4^{2-}}`. This first markup is TENTATIVE (DG's rulings of 2026-11-14) and awaits Bruce Miller's
+feedback and refinements; stage 2 adds MathML `intent` on these presentation elements (formula, element, count and
+charge each their own element). DG: "We expect further improvements are both possible and needed."
 Arrows, `+` between species, bonds, states and amounts keep mhchem's output (stage 2, SYNC row MHCHEM), and the
 formula's `tex=` is the rewritten math, not `\ce{…}`. Cost (instructions:u): −0.55 % on 2307.12991 (589 `\ce` in its sources),
 −0.04 % on 300 synthetic `\ce`, +0.13 % on 2405.01836 (167; with `--nomathparse` −0.08 %: the formulas'
 parse is the price). **Guard**: `mhchem_formula::mhchem_formula_units_are_chemistry` (repros
 `package-bindings/mhchem_formula_units.tex`, `mhchem_formula_text_font.tex`, `mhchem_formula_state.tex`,
-`mhchem_formula_amount.tex`; witnesses issue 824, 2206.12015).
+`mhchem_formula_amount.tex`, `mhchem_formula_juxtaposed.tex`; witnesses issue 824, 2206.12015).

@@ -1,6 +1,7 @@
 //! mhchem's formula output as chemistry math (issue 824; OXIDIZED_DESIGN_DIVERGENCES #1040): mhchem's own parser reads
 //! `\ce`, and its output hook (`\__mhchem_output_begin_cf:`, mhchem.sty:1424) turns each `\__mhchem_output_coreFive:nnnnnnn`
-//! unit (mhchem.sty:2774) into element atoms with their isotope, count and charge scripts. Repros
+//! unit (mhchem.sty:2774) into element atoms with their isotope, count and charge scripts, a formula's atoms juxtaposed
+//! (no U+2062) and a charge sign tight (DG 2026-11-14). Repros
 //! `tools/perfect_kernel/repros/package-bindings/mhchem_formula_*.tex`.
 use latexml::util::test::{convert_bytes_files_then, kpse_has};
 
@@ -17,13 +18,13 @@ const ROWS: &[Row] = &[
     ),
     &[
       "<math id=\"p1.m1\" class=\"ltx_Math\" alttext=\"{}^{\\mathrm{95}}\\mathord{\\mathrm{Mo}}\" display=\"inline\" intent=\":literal\"><mmultiscripts><mi>Mo</mi><mprescripts></mprescripts><mrow></mrow><mn>95</mn></mmultiscripts></math>",
-      "<math id=\"p2.m1\" class=\"ltx_Math\" alttext=\"\\mathord{{}^{\\mathrm{95}}\\mathord{\\mathrm{Mo}}\\mathord{\\mathrm{O}}_{\\mathrm{4}}}^{\\mathrm{2-}}\" display=\"inline\" intent=\":literal\"><msup><mrow><mmultiscripts><mi>Mo</mi><mprescripts></mprescripts><mrow></mrow><mn>95</mn></mmultiscripts><mo>\u{2062}</mo><msub><mi mathvariant=\"normal\">O</mi><mn>4</mn></msub></mrow><mrow><mn>2</mn><mo>−</mo></mrow></msup></math>",
-      "<math id=\"p3.m1\" class=\"ltx_Math\" alttext=\"\\mathord{\\mathrm{H}}_{\\mathrm{2}}\\mathord{\\mathrm{O}}\" display=\"inline\" intent=\":literal\"><mrow><msub><mi mathvariant=\"normal\">H</mi><mn>2</mn></msub><mo>\u{2062}</mo><mi mathvariant=\"normal\">O</mi></mrow></math>",
-      "<math id=\"p4.m1\" class=\"ltx_Math\" alttext=\"\\mathord{\\mathord{\\mathrm{S}}\\mathord{\\mathrm{O}}_{\\mathrm{4}}}^{\\mathrm{2-}}\" display=\"inline\" intent=\":literal\"><msup><mrow><mi mathvariant=\"normal\">S</mi><mo>\u{2062}</mo><msub><mi mathvariant=\"normal\">O</mi><mn>4</mn></msub></mrow><mrow><mn>2</mn><mo>−</mo></mrow></msup></math>",
+      "<math id=\"p2.m1\" class=\"ltx_Math\" alttext=\"\\mathord{{}^{\\mathrm{95}}\\mathord{\\mathrm{Mo}}\\mathord{\\mathrm{O}}_{\\mathrm{4}}}^{\\mathrm{2-}}\" display=\"inline\" intent=\":literal\"><msup><mrow><mmultiscripts><mi>Mo</mi><mprescripts></mprescripts><mrow></mrow><mn>95</mn></mmultiscripts><msub><mi mathvariant=\"normal\">O</mi><mn>4</mn></msub></mrow><mrow><mn>2</mn><mo lspace=\"0em\" rspace=\"0em\">−</mo></mrow></msup></math>",
+      "<math id=\"p3.m1\" class=\"ltx_Math\" alttext=\"\\mathord{\\mathrm{H}}_{\\mathrm{2}}\\mathord{\\mathrm{O}}\" display=\"inline\" intent=\":literal\"><mrow><msub><mi mathvariant=\"normal\">H</mi><mn>2</mn></msub><mi mathvariant=\"normal\">O</mi></mrow></math>",
+      "<math id=\"p4.m1\" class=\"ltx_Math\" alttext=\"\\mathord{\\mathord{\\mathrm{S}}\\mathord{\\mathrm{O}}_{\\mathrm{4}}}^{\\mathrm{2-}}\" display=\"inline\" intent=\":literal\"><msup><mrow><mi mathvariant=\"normal\">S</mi><msub><mi mathvariant=\"normal\">O</mi><mn>4</mn></msub></mrow><mrow><mn>2</mn><mo lspace=\"0em\" rspace=\"0em\">−</mo></mrow></msup></math>",
       "<math id=\"p5.m1\" class=\"ltx_Math\" alttext=\"{}^{\\mathrm{227}}_{\\mathrm{90}}\\mathord{\\mathrm{Th}}^{\\mathrm{+}}\" display=\"inline\" intent=\":literal\"><mmultiscripts><mi>Th</mi><mrow></mrow><mo>+</mo><mprescripts></mprescripts><mn>90</mn><mn>227</mn></mmultiscripts></math>",
-      "<math id=\"p6.m1\" class=\"ltx_Math\" alttext=\"\\mathord{\\mathord{\\mathrm{Fe}}\\mathrm{(}\\mathord{\\mathrm{C}}\\mathord{\\mathrm{N}}\\mathrm{)}_{\\mathrm{6}}}^{\\mathrm{3-}}\" display=\"inline\" intent=\":literal\"><msup><mrow><mi>Fe</mi><mo>\u{2062}</mo><msub><mrow><mo stretchy=\"false\">(</mo><mrow><mi mathvariant=\"normal\">C</mi><mo>\u{2062}</mo><mi mathvariant=\"normal\">N</mi></mrow><mo stretchy=\"false\">)</mo></mrow><mn>6</mn></msub></mrow><mrow><mn>3</mn><mo>−</mo></mrow></msup></math>",
-      "<math id=\"p7.m1\" class=\"ltx_Math\" alttext=\"x={}\\mathord{\\mathord{\\mathrm{S}}\\mathord{\\mathrm{O}}_{\\mathrm{4}}}^{\\mathrm{2-}}\" display=\"inline\" intent=\":literal\"><mrow><mi>x</mi><mo>=</mo><msup><mrow><mi mathvariant=\"normal\">S</mi><mo>\u{2062}</mo><msub><mi mathvariant=\"normal\">O</mi><mn>4</mn></msub></mrow><mrow><mn>2</mn><mo>−</mo></mrow></msup></mrow></math>",
-      "<math id=\"p8.m1\" class=\"ltx_Math\" alttext=\"\\mathord{\\mathord{\\mathrm{O}}\\mathord{\\mathrm{H}}}^{\\mathrm{-}}\\mathrm{(}\\mathord{\\mathrm{H}}_{\\mathrm{2}}\\mathord{\\mathrm{O}}\\mathrm{)}\" display=\"inline\" intent=\":literal\"><mrow><msup><mrow><mi mathvariant=\"normal\">O</mi><mo>\u{2062}</mo><mi mathvariant=\"normal\">H</mi></mrow><mo>−</mo></msup><mo>\u{2062}</mo><mrow><mo stretchy=\"false\">(</mo><mrow><msub><mi mathvariant=\"normal\">H</mi><mn>2</mn></msub><mo>\u{2062}</mo><mi mathvariant=\"normal\">O</mi></mrow><mo stretchy=\"false\">)</mo></mrow></mrow></math>",
+      "<math id=\"p6.m1\" class=\"ltx_Math\" alttext=\"\\mathord{\\mathord{\\mathrm{Fe}}\\mathrm{(}\\mathord{\\mathrm{C}}\\mathord{\\mathrm{N}}\\mathrm{)}_{\\mathrm{6}}}^{\\mathrm{3-}}\" display=\"inline\" intent=\":literal\"><msup><mrow><mi>Fe</mi><msub><mrow><mo stretchy=\"false\">(</mo><mi mathvariant=\"normal\">C</mi><mi mathvariant=\"normal\">N</mi><mo stretchy=\"false\">)</mo></mrow><mn>6</mn></msub></mrow><mrow><mn>3</mn><mo lspace=\"0em\" rspace=\"0em\">−</mo></mrow></msup></math>",
+      "<math id=\"p7.m1\" class=\"ltx_Math\" alttext=\"x={}\\mathord{\\mathord{\\mathrm{S}}\\mathord{\\mathrm{O}}_{\\mathrm{4}}}^{\\mathrm{2-}}\" display=\"inline\" intent=\":literal\"><mrow><mi>x</mi><mo>=</mo><msup><mrow><mi mathvariant=\"normal\">S</mi><msub><mi mathvariant=\"normal\">O</mi><mn>4</mn></msub></mrow><mrow><mn>2</mn><mo lspace=\"0em\" rspace=\"0em\">−</mo></mrow></msup></mrow></math>",
+      "<math id=\"p8.m1\" class=\"ltx_Math\" alttext=\"\\mathord{\\mathord{\\mathrm{O}}\\mathord{\\mathrm{H}}}^{\\mathrm{-}}\\mathrm{(}\\mathord{\\mathrm{H}}_{\\mathrm{2}}\\mathord{\\mathrm{O}}\\mathrm{)}\" display=\"inline\" intent=\":literal\"><mrow><msup><mrow><mi mathvariant=\"normal\">O</mi><mi mathvariant=\"normal\">H</mi></mrow><mo>−</mo></msup><mrow><mo stretchy=\"false\">(</mo><msub><mi mathvariant=\"normal\">H</mi><mn>2</mn></msub><mi mathvariant=\"normal\">O</mi><mo stretchy=\"false\">)</mo></mrow></mrow></math>",
     ],
   ),
   (
@@ -32,10 +33,10 @@ const ROWS: &[Row] = &[
       "../../../tools/perfect_kernel/repros/package-bindings/mhchem_formula_text_font.tex"
     ),
     &[
-      "<math id=\"p1.m1\" class=\"ltx_Math\" alttext=\"\\mathord{\\mathrm{N}}\\mathord{\\mathrm{O}}\" display=\"inline\" intent=\":literal\"><mrow><mi>𝐍</mi><mo>\u{2062}</mo><mi>𝐎</mi></mrow></math>",
-      "<math id=\"p1.m2\" class=\"ltx_Math\" alttext=\"\\mathord{\\mathord{\\mathrm{S}}\\mathord{\\mathrm{O}}_{\\mathrm{4}}}^{\\mathrm{2-}}\" display=\"inline\" intent=\":literal\"><msup><mrow><mi>𝖲</mi><mo>\u{2062}</mo><msub><mi>𝖮</mi><mn>𝟦</mn></msub></mrow><mrow><mn>𝟤</mn><mo>−</mo></mrow></msup></math>",
-      "<math id=\"p1.m3\" class=\"ltx_Math\" alttext=\"\\mathord{\\mathrm{H}}_{\\mathrm{2}}\\mathord{\\mathrm{O}}\" display=\"inline\" intent=\":literal\"><mrow><msub><mi>H</mi><mn class=\"ltx_mathvariant_italic\" mathvariant=\"italic\">2</mn></msub><mo>\u{2062}</mo><mi>O</mi></mrow></math>",
-      "<math id=\"p2.m1\" class=\"ltx_Math\" alttext=\"{}{}\\mathord{\\mathrm{H}}_{\\mathrm{2}}\\mathord{\\mathrm{O}}\" display=\"inline\" intent=\":literal\"><mrow><msub><mi mathvariant=\"normal\">H</mi><mn>2</mn></msub><mo>\u{2062}</mo><mi mathvariant=\"normal\">O</mi></mrow></math>",
+      "<math id=\"p1.m1\" class=\"ltx_Math\" alttext=\"\\mathord{\\mathrm{N}}\\mathord{\\mathrm{O}}\" display=\"inline\" intent=\":literal\"><mrow><mi>𝐍</mi><mi>𝐎</mi></mrow></math>",
+      "<math id=\"p1.m2\" class=\"ltx_Math\" alttext=\"\\mathord{\\mathord{\\mathrm{S}}\\mathord{\\mathrm{O}}_{\\mathrm{4}}}^{\\mathrm{2-}}\" display=\"inline\" intent=\":literal\"><msup><mrow><mi>𝖲</mi><msub><mi>𝖮</mi><mn>𝟦</mn></msub></mrow><mrow><mn>𝟤</mn><mo lspace=\"0em\" rspace=\"0em\">−</mo></mrow></msup></math>",
+      "<math id=\"p1.m3\" class=\"ltx_Math\" alttext=\"\\mathord{\\mathrm{H}}_{\\mathrm{2}}\\mathord{\\mathrm{O}}\" display=\"inline\" intent=\":literal\"><mrow><msub><mi>H</mi><mn class=\"ltx_mathvariant_italic\" mathvariant=\"italic\">2</mn></msub><mi>O</mi></mrow></math>",
+      "<math id=\"p2.m1\" class=\"ltx_Math\" alttext=\"{}{}\\mathord{\\mathrm{H}}_{\\mathrm{2}}\\mathord{\\mathrm{O}}\" display=\"inline\" intent=\":literal\"><mrow><msub><mi mathvariant=\"normal\">H</mi><mn>2</mn></msub><mi mathvariant=\"normal\">O</mi></mrow></math>",
     ],
   ),
   (
@@ -45,9 +46,9 @@ const ROWS: &[Row] = &[
     ),
     &[
       "<math id=\"p1.m1\" class=\"ltx_Math\" alttext=\"\\mathord{\\mathord{\\mathrm{H}}_{\\mathrm{2}}}_{\\mathrm{(g)}}\" display=\"inline\" intent=\":literal\"><mmultiscripts><mi mathvariant=\"normal\">H</mi><mn>2</mn><mrow></mrow><mrow><mo stretchy=\"false\">(</mo><mi mathvariant=\"normal\">g</mi><mo stretchy=\"false\">)</mo></mrow><mrow></mrow></mmultiscripts></math>",
-      "<math id=\"p2.m1\" class=\"ltx_Math\" alttext=\"\\mathord{\\mathord{\\mathrm{C}}\\mathord{\\mathrm{O}}_{\\mathrm{2}}}_{\\mathrm{(aq)}}\" display=\"inline\" intent=\":literal\"><msub><mrow><mi mathvariant=\"normal\">C</mi><mo>\u{2062}</mo><msub><mi mathvariant=\"normal\">O</mi><mn>2</mn></msub></mrow><mrow><mo stretchy=\"false\">(</mo><mi>aq</mi><mo stretchy=\"false\">)</mo></mrow></msub></math>",
-      "<math id=\"p3.m1\" class=\"ltx_Math\" alttext=\"\\mathord{\\mathord{\\mathord{\\mathrm{S}}\\mathord{\\mathrm{O}}_{\\mathrm{4}}}^{\\mathrm{2-}}}_{\\mathrm{(aq)}}\" display=\"inline\" intent=\":literal\"><mmultiscripts><mrow><mi mathvariant=\"normal\">S</mi><mo>\u{2062}</mo><msub><mi mathvariant=\"normal\">O</mi><mn>4</mn></msub></mrow><mrow></mrow><mrow><mn>2</mn><mo>−</mo></mrow><mrow><mo stretchy=\"false\">(</mo><mi>aq</mi><mo stretchy=\"false\">)</mo></mrow><mrow></mrow></mmultiscripts></math>",
-      "<math id=\"p4.m1\" class=\"ltx_Math\" alttext=\"\\mathord{\\mathord{\\mathrm{Ca}}\\mathrm{(}\\mathord{\\mathrm{O}}\\mathord{\\mathrm{H}}\\mathrm{)}_{\\mathrm{2}}}_{\\mathrm{(aq)}}\" display=\"inline\" intent=\":literal\"><msub><mrow><mi>Ca</mi><mo>\u{2062}</mo><msub><mrow><mo stretchy=\"false\">(</mo><mrow><mi mathvariant=\"normal\">O</mi><mo>\u{2062}</mo><mi mathvariant=\"normal\">H</mi></mrow><mo stretchy=\"false\">)</mo></mrow><mn>2</mn></msub></mrow><mrow><mo stretchy=\"false\">(</mo><mi>aq</mi><mo stretchy=\"false\">)</mo></mrow></msub></math>",
+      "<math id=\"p2.m1\" class=\"ltx_Math\" alttext=\"\\mathord{\\mathord{\\mathrm{C}}\\mathord{\\mathrm{O}}_{\\mathrm{2}}}_{\\mathrm{(aq)}}\" display=\"inline\" intent=\":literal\"><msub><mrow><mi mathvariant=\"normal\">C</mi><msub><mi mathvariant=\"normal\">O</mi><mn>2</mn></msub></mrow><mrow><mo stretchy=\"false\">(</mo><mi>aq</mi><mo stretchy=\"false\">)</mo></mrow></msub></math>",
+      "<math id=\"p3.m1\" class=\"ltx_Math\" alttext=\"\\mathord{\\mathord{\\mathord{\\mathrm{S}}\\mathord{\\mathrm{O}}_{\\mathrm{4}}}^{\\mathrm{2-}}}_{\\mathrm{(aq)}}\" display=\"inline\" intent=\":literal\"><msub><msup><mrow><mi mathvariant=\"normal\">S</mi><msub><mi mathvariant=\"normal\">O</mi><mn>4</mn></msub></mrow><mrow><mn>2</mn><mo lspace=\"0em\" rspace=\"0em\">−</mo></mrow></msup><mrow><mo stretchy=\"false\">(</mo><mi>aq</mi><mo stretchy=\"false\">)</mo></mrow></msub></math>",
+      "<math id=\"p4.m1\" class=\"ltx_Math\" alttext=\"\\mathord{\\mathord{\\mathrm{Ca}}\\mathrm{(}\\mathord{\\mathrm{O}}\\mathord{\\mathrm{H}}\\mathrm{)}_{\\mathrm{2}}}_{\\mathrm{(aq)}}\" display=\"inline\" intent=\":literal\"><msub><mrow><mi>Ca</mi><msub><mrow><mo stretchy=\"false\">(</mo><mi mathvariant=\"normal\">O</mi><mi mathvariant=\"normal\">H</mi><mo stretchy=\"false\">)</mo></mrow><mn>2</mn></msub></mrow><mrow><mo stretchy=\"false\">(</mo><mi>aq</mi><mo stretchy=\"false\">)</mo></mrow></msub></math>",
     ],
   ),
   (
@@ -58,7 +59,18 @@ const ROWS: &[Row] = &[
     &[
       "<math id=\"p1.m1\" class=\"ltx_Math\" alttext=\"\\text{2}\\,\\mathord{\\mathrm{e}}^{\\mathrm{-}}\" display=\"inline\" intent=\":literal\"><mrow><mtext>2</mtext><mo lspace=\"0.170em\">\u{2062}</mo><msup><mi mathvariant=\"normal\">e</mi><mo>−</mo></msup></mrow></math>",
       "<math id=\"p2.m1\" class=\"ltx_Math\" alttext=\"\\text{2}\\,\\mathord{\\mathrm{Na}}^{\\mathrm{+}}\" display=\"inline\" intent=\":literal\"><mrow><mtext>2</mtext><mo lspace=\"0.170em\">\u{2062}</mo><msup><mi>Na</mi><mo>+</mo></msup></mrow></math>",
-      "<math id=\"p3.m1\" class=\"ltx_Math\" alttext=\"\\text{3}\\,\\mathord{\\mathord{\\mathrm{S}}\\mathord{\\mathrm{O}}_{\\mathrm{4}}}^{\\mathrm{2-}}\" display=\"inline\" intent=\":literal\"><mrow><mtext>3</mtext><mo lspace=\"0.170em\">\u{2062}</mo><msup><mrow><mi mathvariant=\"normal\">S</mi><mo>\u{2062}</mo><msub><mi mathvariant=\"normal\">O</mi><mn>4</mn></msub></mrow><mrow><mn>2</mn><mo>−</mo></mrow></msup></mrow></math>",
+      "<math id=\"p3.m1\" class=\"ltx_Math\" alttext=\"\\text{3}\\,\\mathord{\\mathord{\\mathrm{S}}\\mathord{\\mathrm{O}}_{\\mathrm{4}}}^{\\mathrm{2-}}\" display=\"inline\" intent=\":literal\"><mrow><mtext>3</mtext><mo lspace=\"0.170em\">\u{2062}</mo><msup><mrow><mi mathvariant=\"normal\">S</mi><msub><mi mathvariant=\"normal\">O</mi><mn>4</mn></msub></mrow><mrow><mn>2</mn><mo lspace=\"0em\" rspace=\"0em\">−</mo></mrow></msup></mrow></math>",
+    ],
+  ),
+  (
+    "mhchem_formula_juxtaposed",
+    include_bytes!(
+      "../../../tools/perfect_kernel/repros/package-bindings/mhchem_formula_juxtaposed.tex"
+    ),
+    &[
+      "<math id=\"p1.m1\" class=\"ltx_Math\" alttext=\"\\mathord{\\mathrm{Cu}}\\mathord{\\mathrm{S}}\\mathord{\\mathrm{O}}_{\\mathrm{4}}\\,{\\cdot}\\,\\text{5}\\,\\mathord{\\mathrm{H}}_{\\mathrm{2}}\\mathord{\\mathrm{O}}\" display=\"inline\" intent=\":literal\"><mrow><mrow><mrow><mi>Cu</mi><mi mathvariant=\"normal\">S</mi><msub><mi mathvariant=\"normal\">O</mi><mn>4</mn></msub></mrow><mo lspace=\"0.222em\" rspace=\"0.392em\">⋅</mo><mtext>5</mtext></mrow><mo lspace=\"0.170em\">\u{2062}</mo><mrow><msub><mi mathvariant=\"normal\">H</mi><mn>2</mn></msub><mi mathvariant=\"normal\">O</mi></mrow></mrow></math>",
+      "<math id=\"p2.m1\" class=\"ltx_Math\" alttext=\"\\mathord{\\mathrm{[}\\mathord{\\mathrm{Fe}}\\mathrm{(}\\mathord{\\mathrm{C}}\\mathord{\\mathrm{N}}\\mathrm{)}_{\\mathrm{6}}\\mathrm{]}}^{\\mathrm{3-}}\" display=\"inline\" intent=\":literal\"><msup><mrow><mo stretchy=\"false\">[</mo><mi>Fe</mi><msub><mrow><mo stretchy=\"false\">(</mo><mi mathvariant=\"normal\">C</mi><mi mathvariant=\"normal\">N</mi><mo stretchy=\"false\">)</mo></mrow><mn>6</mn></msub><mo stretchy=\"false\">]</mo></mrow><mrow><mn>3</mn><mo lspace=\"0em\" rspace=\"0em\">−</mo></mrow></msup></math>",
+      "<math id=\"p3.m1\" class=\"ltx_Math\" alttext=\"\\textit{R}_{\\mathrm{2}}\\mathord{\\mathrm{Ir}}_{\\mathrm{2}}\\mathord{\\mathrm{Al}}_{\\mathrm{20}}\" display=\"inline\" intent=\":literal\"><mrow><msub><mtext class=\"ltx_mathvariant_italic\">R</mtext><mn>2</mn></msub><mo>\u{2062}</mo><mrow><msub><mi>Ir</mi><mn>2</mn></msub><msub><mi>Al</mi><mn>20</mn></msub></mrow></mrow></math>",
     ],
   ),
 ];

@@ -969,7 +969,20 @@ fn pmml_apply_dispatch(
       // Default: function application
       if meaning == "limit-from" && !args.is_empty() {
         // limit-from: base followed by direction
-        let items: Vec<NodeData> = args.iter().map(|a| pmml(doc, a)).collect();
+        let mut items: Vec<NodeData> = args.iter().map(|a| pmml(doc, a)).collect();
+        // The direction is a Bin with no right operand, which TeX makes an Ord (tex.web §728-729), so `0+`, the
+        // charge `2-` (issue 824) are tight; a trailing `<mo>` is postfix, which Core spaces as infix (§3.2.4.2).
+        if let Some(sign) = items.last_mut().filter(|n| get_node_tag(n) == "m:mo") {
+          for (key, value) in [
+            ("lspace", "0em"),
+            ("rspace", "0em"),
+            ("_lspace", "0em"),
+            ("_rspace", "0em"),
+          ] {
+            set_node_attr(sign, key, value);
+          }
+          set_node_attr(sign, "_role", "ATOM");
+        }
         pmml_row(items)
       } else if meaning == "annotated" && args.len() >= 2 {
         // annotated: variable with annotation (e.g. "x modulo p")

@@ -77,7 +77,10 @@
     `<mpadded>`. mhchem still parses `\ce`; its formula output hook now makes each element an
     `<mi>` (`Mo`, `O`), the isotope and atomic number prescripts of the first element, the count a
     subscript of the last, and a closing charge (minus U+2212) a superscript of the whole formula:
-    `<msup><mrow><mmultiscripts><mi>Mo</mi>…<mn>95</mn></mmultiscripts>…<msub><mi>O</mi><mn>4</mn></msub></mrow><mrow><mn>2</mn><mo>−</mo></mrow></msup>`.
+    `<msup><mrow><mmultiscripts><mi>Mo</mi>…<mn>95</mn></mmultiscripts><msub><mi>O</mi><mn>4</mn></msub></mrow><mrow><mn>2</mn><mo lspace="0em" rspace="0em">−</mo></mrow></msup>`:
+    the elements side by side (no invisible times), the charge sign tight as in the PDF. This first
+    markup is tentative and awaits Bruce Miller's feedback; stage 2 adds MathML `intent`. DG: "We
+    expect further improvements are both possible and needed."
     A text-mode `\ce` keeps its text font (bold in `\textbf`). Arrows, `+`, bonds, states and
     amounts are unchanged. Guard `mhchem_formula::mhchem_formula_units_are_chemistry`
     (OXIDIZED_DESIGN_DIVERGENCES #1040).
