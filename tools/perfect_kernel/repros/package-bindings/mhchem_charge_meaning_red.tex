@@ -1,0 +1,14 @@
+% witness: 2608.29898 (36 charges), 2312.03687 (14), 2408.11595 (6), 2111.12452 (2)
+% oracle:  pdflatex 0 errors: SO4 with the charge 2- after the 4; Fe with 3+
+% engines: rust MHCHEM1 = 0 errors, MathML `<mrow><mn>2</mn><mo>−</mo></mrow>` (right), but the XML reads the charge as
+%          the math parser's one-sided limit, `text="… ^ (limit-from@(2, -))"`, `meaning="limit-from"`; f8c1150cf96 had
+%          no meaning (an `<mtext>2 – </mtext>`); Perl hangs on raw mhchem
+% expect:  a charge is a charge: no `limit-from` reading of mhchem's charge slot (mhchem.sty:2774 #7)
+% status:  RED (MHCHEM1)
+% moves:   MHCHEM2 (stage 2 of the semantic mhchem binding)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage[version=4]{mhchem}
+\begin{document}
+\ce{SO4^{2-}} and \ce{Fe^{3+}}
+\end{document}

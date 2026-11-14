@@ -35,12 +35,19 @@ const ROWS: &[Row] = &[
     "mhchem_arrows",
     include_str!("../../../tools/perfect_kernel/repros/arrowfill/mhchem_arrows.tex"),
     &["mhchem.sty"],
+    // The species `A`, `B` are formulas since mhchem's formula hook (OXIDIZED_DESIGN_DIVERGENCES #1039; were text).
     &[
+      "A",
       "[⇀↽]",
       "rightharpoonup",
       "leftharpoondown",
+      "B",
+      "A",
       "rightarrow",
+      "B",
+      "A",
       "leftrightarrow",
+      "B",
     ],
     &[
       r#"<XMTok align="center" name="rightharpoonup" role="RELOP" scriptpos="mid3" width="20.0pt">⇀</XMTok>"#,

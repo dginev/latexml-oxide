@@ -1,0 +1,15 @@
+% witness: 2206.12015 (`\textbf{\ce{NO} production pathway}`, a table head)
+% oracle:  pdflatex 0 errors: NO in bold (CMBX10), SO4 2- in sans (CMSS10), H2O in italic (CMTI10); $\ce{H2O}$ upright
+% engines: rust f8c1150cf96 = 0 errors, `<mtext class="ltx_mathvariant_bold">` (the run text, no elements); MHCHEM1 before
+%          its text-font route = the elements upright medium (`\mathrm`), the bold lost; Perl hangs on raw mhchem
+% expect:  a text-mode `\ce` sets its formula in the text font (mhchem.sty:2760 `\mhchem@option@textFont`): bold, sans and
+%          italic elements; a math-mode `\ce` stays upright (`\mhchem@option@mathFont`)
+% status:  RED (MHCHEM1 draft) -> GREEN (MHCHEM1, OXIDIZED_DESIGN_DIVERGENCES #1039)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage[version=4]{mhchem}
+\begin{document}
+\textbf{\ce{NO} production} and \textsf{\ce{SO4^{2-}}} and \textit{\ce{H2O}}
+
+\textbf{$\ce{H2O}$}
+\end{document}

@@ -1,0 +1,30 @@
+% witness: issue 824 (`\ce{^{95}MoO4^{2-}}`, arXiv 2611.12926, not in the local /data copy); 2405.01836 (`\ce{OH^-(H2O)}`),
+%          2307.12991
+% oracle:  pdflatex 0 errors: 95Mo; 95MoO4 2- (2- after the 4); H2O; SO4 2-; 227 over 90 before Th, + after; Fe(CN)6 3-;
+%          x = SO4 2-; OH - (H2O)
+% engines: rust f8c1150cf96 = 0 errors, every element run one `<mtext>` (`MoO`, `SO`), the charge `<mtext>2 – </mtext>` on
+%          the run, the isotope in an `<mpadded>`; Perl hangs on raw mhchem (no oracle)
+% expect:  one `<math>` each: elements `<mi>` (`Mo`, `O`), the isotope and atomic number prescripts of the first element, the
+%          count a subscript of the last, a closing charge (minus U+2212) a superscript of the whole formula, an inner
+%          charge of its unit (`OH`)
+% status:  RED (f8c1150cf96) -> GREEN (MHCHEM1, OXIDIZED_DESIGN_DIVERGENCES #1039)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage[version=4]{mhchem}
+\begin{document}
+\ce{^{95}Mo}
+
+\ce{^{95}MoO4^{2-}}
+
+\ce{H2O}
+
+\ce{SO4^{2-}}
+
+\ce{^{227}_{90}Th+}
+
+\ce{Fe(CN)6^{3-}}
+
+$x = \ce{SO4^{2-}}$
+
+\ce{OH^-(H2O)}
+\end{document}

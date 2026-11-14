@@ -1,0 +1,15 @@
+% witness: synthetic (every `\ce` of the 30k census; issue 824)
+% oracle:  pdflatex 0 errors: H2O
+% engines: rust f8c1150cf96 = `tex="\text{H}{\vphantom{\text{X}}}_{\smash[t]{\text{2}}}\text{O}"` (mhchem's expansion);
+%          MHCHEM1 = `tex="\mathord{\mathrm{H}}_{\mathrm{2}}\mathord{\mathrm{O}}"` (the rewritten units, `\mathrm` in a bold
+%          `\textbf{\ce{NO}}` too);
+%          Perl hangs on raw mhchem
+% expect:  the formula's `tex=` (and the HTML `alttext`) is the author's `\ce{H2O}`
+% status:  RED (MHCHEM1)
+% moves:   post-merge (the macro-face design: a user macro's reversion over the internal constructors it calls)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage[version=4]{mhchem}
+\begin{document}
+\ce{H2O}
+\end{document}

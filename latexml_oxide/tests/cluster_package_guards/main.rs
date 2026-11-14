@@ -139,6 +139,8 @@ mod kernel_fallbacks_never_block_newcommand;
 mod latex_via_exemplos_residue;
 mod listings_virtual_file;
 mod mbox_argument_is_bounded;
+/// Issue #824: mhchem formulas as chemistry math.
+mod mhchem_formula;
 mod noexpand_marker_texweb;
 mod nomencl_inline;
 mod nomencl_nomentbl;
