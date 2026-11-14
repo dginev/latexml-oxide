@@ -251,7 +251,11 @@ fn end_environment_tokens(env: Tokens) -> Result<Tokens> {
     // the begin took LaTeX's indirection (see `\begin`): `\endX`, then the begin's group closes
     out_tokens = end_environment_by_macro(&name);
   } else if is_defined_token(&t) {
-    // Magic CS! (its constructor fires `env/NAME/end` inside the group)
+    // Magic CS! (its constructor fires `env/NAME/end` inside the group; the document's, a macro, does not: latex.ltx
+    // :15386 runs it before `\enddocument`, QA47B)
+    if name == "document" {
+      out_tokens.extend(use_hook("end"));
+    }
     out_tokens.push(t);
     out_tokens.extend(use_hook("after"));
     if let Some(afterend_toks) = after {

@@ -571,6 +571,9 @@ LoadDefinitions!({
   // siamart_copy_loads_hypdvips_in_dvi_mode}`.
   RawTeX!(&hyperref_driver_tex());
   RawTeX!(r"\let\Hy@PutCatalog\@gobble");
+  // hyperref.sty:6317 the page count of the shipped pages, which stays 0 here: hypdvips.sty:3042's
+  // `\BeforeClearDocument{\setcounter{pp@PL@pagenum}{\Hy@abspage}…}` reads it (QA47B; 2605.04427, 2606.08053).
+  RawTeX!(r"\newcount\Hy@abspage");
   def_macro_noop("\\HyPsd@UTFviii")?;
   // hyperref.sty:1185 `\let\HyPsd@AMSclassfix\relax` and the PDF-string
   // conversion routines pdfnotiz.sty:251-351 calls raw (dvdcoll).

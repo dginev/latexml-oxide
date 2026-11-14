@@ -1883,15 +1883,27 @@ fn apply_dospecials() {
   }
 }
 
-fn before_digest_verbatim() -> Result<Vec<Digested>> {
+fn before_digest_verbatim(starred: bool) -> Result<Vec<Digested>> {
   bgroup();
-  apply_dospecials();
+  let name = if starred { "verbatim*" } else { "verbatim" };
+  AssignValue!("current_environment", "verbatim");
+  def_macro(
+    T_CS!("\\@currenvir"),
+    None,
+    mouth::tokenize_internal(TeXString::assembled(name.into())),
+    None,
+  )?;
   let mut stuff = Vec::new();
   if let Some(b) = lookup_tokens("@environment@verbatim@atbegin") {
     stuff.push(digest(b.unlist())?);
   }
-  AssignValue!("current_environment", "verbatim");
-  DefMacro!("\\@currenvir", "verbatim");
+  // latex.ltx:15350-15352 `\UseHook{env/verbatim/begin}` after `\def\@currenvir`, before `\verbatim`'s `\dospecials` and
+  // font: this constructor is no DefEnvironment, whose closure fires it (dialect.rs), so it fires it itself (QA47B).
+  let begin_hook = env_hook_tokens(name, "begin");
+  if !begin_hook.is_empty() {
+    stuff.push(digest(begin_hook)?);
+  }
+  apply_dospecials();
   MergeFont!(family => "typewriter");
   Ok(stuff)
 }
@@ -1996,6 +2008,11 @@ fn after_digest_verbatim(starred: bool, whatsit: &mut Whatsit) -> Result<()> {
   // Note last line ends up as Whatsit's "trailer"
   if let Some(b) = lookup_tokens("@environment@verbatim@atend") {
     lines.push(pin(digest(b)?.to_string()));
+  }
+  // latex.ltx:15386 `env/verbatim/end`, inside the group, as the store above (QA47B).
+  let end_hook = env_hook_tokens(if starred { "verbatim*" } else { "verbatim" }, "end");
+  if !end_hook.is_empty() {
+    lines.push(pin(digest(end_hook)?.to_string()));
   }
   egroup()?;
   lines.push(pin_static(end));

@@ -6,19 +6,24 @@
 //! oracle (pdflatex `!` count and text, Perl's) is in its repro header; the RED shapes stay catalog repros
 //! (`command_hook_on_an_optional_argument_command_red`, `command_hook_on_a_tex_primitive_red`,
 //! `command_hook_on_makecaption_caption_repeat_without_options_red`).
+//! QA47B adds the kernel hooks LaTeX runs where LaTeXML's bindings stand in for its macros: `env/document/end` and the
+//! late `enddocument/*` hooks, `env/verbatim/begin|end`, `label`, `\include`'s file hooks (RED catalog:
+//! `enddocument_info_hook_red`, `label_hook_sets_the_reference_text_red`, `currenvline_is_never_set_red`,
+//! `environment_begin_hook_reads_its_environment_red`).
 use latexml::util::test::{
   RequirementTable, Requirements, assert_element, check_table, convert_with, current_test_name,
 };
 
 use super::perfect_kernel_batch46::{error_count, warning_count};
 
-/// One repro: its source, its exact (errors, warnings), whole diagnostic lines it prints, and whole elements
-/// `(tag, attributes, element)`.
+/// One repro: its source, its exact (errors, warnings), whole diagnostic lines it prints, lines it must not print, and
+/// whole elements `(tag, attributes, element)`.
 struct Row {
   name:     &'static str,
   tex:      &'static str,
   counts:   (usize, usize),
   messages: &'static [&'static str],
+  absent:   &'static [&'static str],
   elements: &'static [(&'static str, &'static str, &'static str)],
 }
 
@@ -31,6 +36,7 @@ const ROWS: &[Row] = &[
     ),
     counts:   (0, 0),
     messages: &[],
+    absent:   &[],
     elements: &[("p", "xml:id=\"p1.1\"", r#"<p xml:id="p1.1">X¡1¿[bar].</p>"#)],
   },
   // Every kind of TeX macro the kernel patches: robust, `\NewDocumentCommand` (its prefixes read under
@@ -42,6 +48,7 @@ const ROWS: &[Row] = &[
     ),
     counts:   (0, 0),
     messages: &[],
+    absent:   &[],
     elements: &[
       (
         "p",
@@ -71,6 +78,7 @@ const ROWS: &[Row] = &[
       r"Warning:hook:cmd/item/before LaTeXML's binding of \item takes no generic hook; its code does not run",
       r"Warning:hook:cmd/arabic/before LaTeXML's binding of \arabic takes no generic hook; its code does not run",
     ],
+    absent:   &[],
     elements: &[
       (
         "p",
@@ -102,6 +110,7 @@ const ROWS: &[Row] = &[
       r"Warning:hook:cmd/thm/before \thm takes no generic hook; its code does not run",
       r"Warning:hook:cmd/footnote/before LaTeXML's binding of \footnote takes no generic hook; its code does not run",
     ],
+    absent:   &[],
     elements: &[
       (
         "p",
@@ -127,6 +136,7 @@ const ROWS: &[Row] = &[
       r"Error:errmessage:\errmessage LaTeX hooks Error: Generic hooks cannot be added to '\mylen'.",
       r"Error:errmessage:\errmessage LaTeX hooks Error: Generic hooks cannot be added to '\mycnt'.",
     ],
+    absent:   &[],
     elements: &[(
       "p",
       "xml:id=\"p1.1\"",
@@ -142,6 +152,7 @@ const ROWS: &[Row] = &[
     ),
     counts:   (0, 0),
     messages: &[],
+    absent:   &[],
     elements: &[
       (
         "text",
@@ -164,6 +175,7 @@ const ROWS: &[Row] = &[
     ),
     counts:   (0, 0),
     messages: &[],
+    absent:   &[],
     elements: &[(
       "caption",
       "class=\"ltx_centering\"",
@@ -181,6 +193,7 @@ const ROWS: &[Row] = &[
     messages: &[
       r"Error:errmessage:\errmessage LaTeX hooks Error: Generic hooks cannot be added to '\@makecaption'.",
     ],
+    absent:   &[],
     elements: &[(
       "caption",
       "class=\"ltx_centering\"",
@@ -196,6 +209,7 @@ const ROWS: &[Row] = &[
     messages: &[
       r"Error:errmessage:\errmessage LaTeX hooks Error: Generic hooks cannot be added to '\@makecaption'.",
     ],
+    absent:   &[],
     elements: &[(
       "caption",
       "class=\"ltx_centering\"",
@@ -211,6 +225,7 @@ const ROWS: &[Row] = &[
     ),
     counts:   (0, 0),
     messages: &[],
+    absent:   &[],
     elements: &[(
       "p",
       "xml:id=\"p1.1\"",
@@ -225,6 +240,7 @@ const ROWS: &[Row] = &[
     ),
     counts:   (0, 0),
     messages: &[],
+    absent:   &[],
     elements: &[(
       "text",
       "xml:id=\"p1.1.1\"",
@@ -244,6 +260,7 @@ const ROWS: &[Row] = &[
       r"Warning:hook:cmd/arabic/before LaTeXML's binding of \arabic takes no generic hook; its code does not run",
       r"Warning:hook:cmd/footnote/before LaTeXML's binding of \footnote takes no generic hook; its code does not run",
     ],
+    absent:   &[],
     elements: &[(
       "p",
       "xml:id=\"p1.1\"",
@@ -265,6 +282,7 @@ const ROWS: &[Row] = &[
       r"Warning:hook:cmd/emph/before LaTeXML's binding of \emph takes no generic hook; its code does not run",
       r"Info:hook:cmd/footnote/before LaTeXML's binding of \footnote takes no generic hook; its code does not run",
     ],
+    absent:   &[],
     elements: &[(
       "p",
       "xml:id=\"S1.p1.1\"",
@@ -284,6 +302,7 @@ const ROWS: &[Row] = &[
       r"Info:hook:cmd/footnote/before LaTeXML's binding of \footnote takes no generic hook; its code does not run",
       r"Warning:hook:cmd/footnote/before LaTeXML's binding of \footnote takes no generic hook; its code does not run",
     ],
+    absent:   &[],
     elements: &[(
       "p",
       "xml:id=\"p1.1\"",
@@ -301,10 +320,161 @@ const ROWS: &[Row] = &[
     messages: &[
       r"Info:hook:cmd/emph/before LaTeXML's binding of \emph takes no generic hook; its code does not run",
     ],
+    absent:   &[],
     elements: &[(
       "p",
       "xml:id=\"p1.1\"",
       r#"<p xml:id="p1.1">A <emph font="italic" xml:id="p1.1.1">b</emph>.</p>"#,
+    )],
+  },
+  // QA47B: `\end{document}` runs `env/document/end` before `\enddocument`, its text printed; the late hooks run for
+  // their side effects only (red: "[DE]" lost, 0 warnings).
+  Row {
+    name:     "enddocument_hooks_run",
+    tex:      include_str!(
+      "../../../tools/perfect_kernel/repros/macro-state/enddocument_hooks_run.tex"
+    ),
+    counts:   (0, 3),
+    messages: &[
+      "Warning:latex:(qab) Package qab Warning: afterlastpage    ",
+      "Warning:latex:(qab) Package qab Warning: afteraux    ",
+      "Warning:latex:(qab) Package qab Warning: end    ",
+    ],
+    absent:   &[],
+    elements: &[(
+      "p",
+      "xml:id=\"p1.1\"",
+      "<p xml:id=\"p1.1\">Text.\n[DE][AED]</p>",
+    )],
+  },
+  // QA47B: etoolbox's and atveryend's commands onto those hooks, their own bindings (red: "[BCD]" lost, 0 warnings).
+  Row {
+    name:     "enddocument_hook_commands_run",
+    tex:      include_str!(
+      "../../../tools/perfect_kernel/repros/macro-state/enddocument_hook_commands_run.tex"
+    ),
+    counts:   (0, 4),
+    messages: &[
+      "Warning:latex:(qab) Package qab Warning: AfterLastShipout    ",
+      "Warning:latex:(qab) Package qab Warning: AtVeryEndDocument    ",
+      "Warning:latex:(qab) Package qab Warning: AtVeryVeryEnd    ",
+      "Warning:latex:(qab) Package qab Warning: AfterEndDocument    ",
+    ],
+    absent:   &[],
+    elements: &[(
+      "p",
+      "xml:id=\"p1.1\"",
+      "<p xml:id=\"p1.1\">Text.\n[BCD]</p>",
+    )],
+  },
+  // QA47B: the verbatim constructor fires `env/verbatim[*]/begin|end`; etoolbox's code runs once (red: "[tt].").
+  Row {
+    name:     "verbatim_env_hooks_run",
+    tex:      include_str!(
+      "../../../tools/perfect_kernel/repros/macro-state/verbatim_env_hooks_run.tex"
+    ),
+    counts:   (0, 0),
+    messages: &[],
+    absent:   &[],
+    elements: &[("p", "xml:id=\"p1.3\"", r#"<p xml:id="p1.3">[bteBE].</p>"#)],
+  },
+  // QAB1c: the verbatim hooks read `\@currenvir` as `verbatim`/`verbatim*` (revQAB1 p/vb.tex; red: "[[quote]+quote+…").
+  Row {
+    name:     "verbatim_begin_hook_reads_its_environment",
+    tex:      include_str!(
+      "../../../tools/perfect_kernel/repros/macro-state/verbatim_begin_hook_reads_its_environment.tex"
+    ),
+    counts:   (0, 0),
+    messages: &[],
+    absent:   &[],
+    elements: &[(
+      "p",
+      "xml:id=\"p1.2\"",
+      r#"<p xml:id="p1.2">[[verbatim]+verbatim+(verbatim)[verbatim*]].</p>"#,
+    )],
+  },
+  // QA47B: `\label`'s hook prints in place, its definitions local (red: "Text. OUT.", "Cap.").
+  Row {
+    name:     "label_hook_runs",
+    tex:      include_str!("../../../tools/perfect_kernel/repros/macro-state/label_hook_runs.tex"),
+    counts:   (0, 0),
+    messages: &[],
+    absent:   &[],
+    elements: &[
+      (
+        "p",
+        "xml:id=\"p1.1\"",
+        r#"<p xml:id="p1.1">Text.[L:a] OUT.</p>"#,
+      ),
+      (
+        "caption",
+        "",
+        r#"<caption><tag close=": ">Figure 1</tag>Cap.[L:fig:a]</caption>"#,
+      ),
+    ],
+  },
+  // QAB1b: a label hook that prints nothing leaves no box: 2501.00173's `\label{…}` + `\ ` before a list opens no paragraph
+  // (red on QAB1: an empty `<p><text font="italic"></text></p>` before the itemize).
+  Row {
+    name:     "label_hook_opens_no_paragraph",
+    tex:      include_str!(
+      "../../../tools/perfect_kernel/repros/macro-state/label_hook_opens_no_paragraph.tex"
+    ),
+    counts:   (0, 0),
+    messages: &[],
+    absent:   &[],
+    elements: &[(
+      "para",
+      "xml:id=\"Thmremark1.p1\"",
+      r#"<para xml:id="Thmremark1.p1"><itemize xml:id="S0.I1"><item xml:id="S0.I1.i1"><tags><tag>•</tag>
+<tag role="typerefnum">1st item</tag></tags><para xml:id="S0.I1.i1.p1">
+<p xml:id="S0.I1.i1.p1.1"><text font="italic" xml:id="S0.I1.i1.p1.1.1">a</text></p></para></item></itemize></para>"#,
+    )],
+  },
+  // QAB1b: cleveref's binding does not register the kernel's first aid for the raw cleveref.sty (DG 2026-11-14), so the
+  // `label` hook holds none of it; the document's own label code still runs (red on QAB1: "[code]").
+  Row {
+    name:     "cleveref_firstaid_not_registered",
+    tex:      include_str!(
+      "../../../tools/perfect_kernel/repros/macro-state/cleveref_firstaid_not_registered.tex"
+    ),
+    counts:   (0, 0),
+    messages: &[],
+    absent:   &[],
+    elements: &[(
+      "p",
+      "xml:id=\"S1.p1.1\"",
+      r#"<p xml:id="S1.p1.1">[mine][L:s:a] See <ref labelref="LABEL:s:a" show="creftype~creflabel"/>.</p>"#,
+    )],
+  },
+  // QAB1c: no first-aid chunk, nothing removed: lthooks' "Cannot remove chunk" (a pre-2023-06 kernel; red: that line).
+  Row {
+    name:     "cleveref_firstaid_absent_removes_nothing",
+    tex:      include_str!(
+      "../../../tools/perfect_kernel/repros/macro-state/cleveref_firstaid_absent_removes_nothing.tex"
+    ),
+    counts:   (0, 0),
+    messages: &[],
+    absent:   &["LaTeX hooks Warning: Cannot remove chunk"],
+    elements: &[(
+      "p",
+      "xml:id=\"S1.p1.1\"",
+      r#"<p xml:id="S1.p1.1">See <ref labelref="LABEL:s:a" show="creftype~creflabel"/>.</p>"#,
+    )],
+  },
+  // QA47B: `\include`'s hooks around the file, and the excluded ones (red: "Text.\nChapter text.\nMore.").
+  Row {
+    name:     "include_hooks_run",
+    tex:      include_str!(
+      "../../../tools/perfect_kernel/repros/macro-state/include_hooks_run.tex"
+    ),
+    counts:   (0, 0),
+    messages: &[],
+    absent:   &[],
+    elements: &[(
+      "p",
+      "xml:id=\"p1.1\"",
+      "<p xml:id=\"p1.1\">Text.\n[EX][OX]\n[IB][ICB]Chapter text.\n[ICE][IE][ICA][IA]\nMore.</p>",
     )],
   },
 ];
@@ -330,6 +500,12 @@ fn batchqa47a_command_hook_rows() {
       assert!(
         log.lines().any(|l| l == *message),
         "{name}: no line {message:?}\n{log}"
+      );
+    }
+    for line in row.absent {
+      assert!(
+        !log.lines().any(|l| l.starts_with(line)),
+        "{name}: a line {line:?}\n{log}"
       );
     }
     for (tag, attrs, element) in row.elements {

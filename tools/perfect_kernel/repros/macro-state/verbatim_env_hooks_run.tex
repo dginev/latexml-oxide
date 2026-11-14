@@ -1,0 +1,25 @@
+% `\begin{verbatim}`/`{verbatim*}` run latex.ltx:15362 `env/<name>/begin` and :15386 `env/<name>/end`: the
+%   verbatim constructor is no DefEnvironment, so it fires them itself; etoolbox's `\AtBeginEnvironment{verbatim}`
+%   adds to the same hook and runs once.
+% witness: QATRI probe p47/hk.tex (BM Q3.3, QA47B); synthetic.
+% status:  GREEN (QA47B; RED before: "[tt]": the kernel hooks never ran, etoolbox's code ran in verbatim* too)
+% oracle:  pdflatex 0 errors; "v w [bteBE]."
+% engines: rust I824base: "[tt]."; QA47B: "[bteBE]."; Perl: `\AddToHook` a no-op.
+% expect:  0 errors, 0 warnings; <p>[bteBE].</p>
+\documentclass{article}
+\usepackage{etoolbox}
+\newcommand\hits{}
+\AddToHook{env/verbatim/begin}{\xdef\hits{\hits b}}
+\AddToHook{env/verbatim/end}{\xdef\hits{\hits e}}
+\AddToHook{env/verbatim*/begin}{\xdef\hits{\hits B}}
+\AddToHook{env/verbatim*/end}{\xdef\hits{\hits E}}
+\AtBeginEnvironment{verbatim}{\xdef\hits{\hits t}}
+\begin{document}
+\begin{verbatim}
+v
+\end{verbatim}
+\begin{verbatim*}
+w
+\end{verbatim*}
+[\hits].
+\end{document}

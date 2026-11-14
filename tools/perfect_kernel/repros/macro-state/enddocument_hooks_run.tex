@@ -1,0 +1,17 @@
+% latex.ltx:15384-15388 `\end{document}` runs `env/document/end` before `\enddocument` (its text prints, before the
+%   `\AtEndDocument` code); :15261-15277 run `enddocument/afterlastpage`, `/afteraux` and `/end` after the last page,
+%   where what they typeset goes nowhere: only their side effects (a warning here) remain.
+% witness: QATRI probe p47/hk.tex (BM Q3.3, QA47B); synthetic.
+% status:  GREEN (QA47B; RED before: "[DE]" lost, the three late hooks never ran, 0 warnings)
+% oracle:  pdflatex 0 errors; "Text. [DE] [AED]"; three "Package qab Warning"s; "[ALP]" not printed.
+% engines: rust I824base: "Text. [AED]", 0 warnings; QA47B: "Text. [DE][AED]", 3 warnings; Perl: `\AddToHook` a no-op.
+% expect:  0 errors, 3 warnings; <p>Text.\n[DE][AED]</p>
+\documentclass{article}
+\AddToHook{env/document/end}{[DE]}
+\AtEndDocument{[AED]}
+\AddToHook{enddocument/afterlastpage}{\PackageWarningNoLine{qab}{afterlastpage}[ALP]}
+\AddToHook{enddocument/afteraux}{\PackageWarningNoLine{qab}{afteraux}}
+\AddToHook{enddocument/end}{\PackageWarningNoLine{qab}{end}}
+\begin{document}
+Text.
+\end{document}

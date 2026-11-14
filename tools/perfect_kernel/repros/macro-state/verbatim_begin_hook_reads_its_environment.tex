@@ -1,0 +1,27 @@
+% latex.ltx:15350-15352 `\begin` defines `\@currenvir` (verbatim, verbatim*) before `\UseHook{env/<name>/begin}`; the
+%   verbatim constructor ran the hook first, so a hook read the enclosing environment's name.
+% witness: revQAB1 probe p/vb.tex (QAB1c); synthetic.
+% status:  GREEN (QAB1c; RED before: "[[quote]+quote+(verbatim)[quote]].")
+% oracle:  pdflatex 0 errors; "[[verbatim]+verbatim+(verbatim)[verbatim*]]."
+% engines: rust QAB1b: "[[quote]+quote+(verbatim)[quote]]."; QAB1c: as pdflatex; Perl: `\AddToHook` a no-op.
+% expect:  0 errors, 0 warnings; <p>[[verbatim]+verbatim+(verbatim)[verbatim*]].</p>
+\documentclass{article}
+\usepackage{etoolbox}
+\makeatletter
+\newcommand\hits{}
+\AddToHook{env/verbatim/begin}{\xdef\hits{\hits[\@currenvir]}}
+\AddToHook{env/verbatim/end}{\xdef\hits{\hits(\@currenvir)}}
+\AtBeginEnvironment{verbatim}{\xdef\hits{\hits+\@currenvir+}}
+\AddToHook{env/verbatim*/begin}{\xdef\hits{\hits[\@currenvir]}}
+\makeatother
+\begin{document}
+\begin{quote}
+\begin{verbatim}
+v
+\end{verbatim}
+\begin{verbatim*}
+w
+\end{verbatim*}
+\end{quote}
+[\hits].
+\end{document}

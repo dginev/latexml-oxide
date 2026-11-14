@@ -1,0 +1,18 @@
+% latex.ltx:14941-14946 `\label`'s hook runs in a group, a whatsit of no width: code that prints nothing leaves
+%   nothing, so a control space after the label and a list (2501.00173's remarks) open no paragraph of their own.
+% witness: 2501.00173 (`\begin{remark}\label{…}` + `\ ` + itemize, its cleveref first aid in the label hook); synthetic.
+% status:  GREEN (QAB1b; RED on QAB1: an empty <p><text font="italic"></text></p> before the list)
+% oracle:  pdflatex 0 errors; "Remark 1. • a X1"
+% engines: rust I824base: no <p> before the list; QAB1: the empty <p>; QAB1b: none; Perl: `\AddToHook…` no-ops.
+% expect:  0 errors, 0 warnings; <para xml:id="Thmremark1.p1"> holding the itemize only
+\documentclass{article}
+\usepackage{amsthm}
+\AddToHookWithArguments{label}{\def\lastlabel{#1}}
+\newtheorem{remark}{Remark}
+\begin{document}
+\begin{remark}\label{r}
+	\ 
+	\begin{itemize}\item a\end{itemize}
+\end{remark}
+X \ref{r}
+\end{document}
