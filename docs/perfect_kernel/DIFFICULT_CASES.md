@@ -70,7 +70,7 @@ absorbable presentation (see fontspec cluster).
 **Residue closed (2026-10-02).** The seven pdflatex-clean CJK manuals named 2026-09-09 (cjk-ko-doc, oblivoir-simpledoc,
 kotex-doc, kotex-utf-doc, sample-bxcjkjatype-beamer, bxcoloremoji-shortnames, gentombow) convert with 0 errors at s134
 (K10 pdfTeX byte mouth, 56bl; K6 `\pdfoutput` persona, 56id; `\nopagecolor` and beamer `\trans…`, 56bj). Japanese,
-Chinese and Korean manuals are out of scope since 2026-10-01 (PERFECT_KERNEL.md → Scope).
+Chinese and Korean manuals are out of scope since 2026-10-01 (PERFECT_KERNEL_2026-11-13.md → Scope).
 
 ## D9. pTeX/upTeX (Japanese) class ecosystem — out of scope (CJK, user 2026-10-01)
 
@@ -165,7 +165,7 @@ Every witness below except xebaposter and elzcards is lualatex/pdflatex-unclean 
   (`numeric_ops.rs` `MAX_DIMEN`, tex.web §101/§460).
 - **xebaposter/poster** — resolved: 0 errors, schema-valid at s134. Dead ends kept: renaming the capture to `ltx:sidebar`
   (structural, not Flow); widening `sectional-block` (leading empty `ltx:p` invalid).
-- **elzcards/elzcards-examples** — OUT OF SCOPE (user 2026-10-02; PERFECT_KERNEL.md → Scope; geometry #99). The
+- **elzcards/elzcards-examples** — OUT OF SCOPE (user 2026-10-02; PERFECT_KERNEL_2026-11-13.md → Scope; geometry #99). The
   `landscape` order dependence is fixed (geometry_sty.rs:44-52); open side findings (`\stop` = `\endinput`, kernel paper
   swap) are SYNC rows (agent_reports/2026-10-02_elzcards_geometry_rootcause.md); unverified since 56bp: `\usepackage[vmargin={0mm,0mm}]{geometry}` losing brace-protected commas.
 - **etoolbox environment hooks** — settled dead end: one `@environment@X@atbegin` store for every name DOUBLE-FIRES (the

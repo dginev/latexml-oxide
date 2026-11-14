@@ -25,6 +25,10 @@ citations are why the file is kept.
 - `MALFORMED_CLOSE_NUMBERED_2026-06-10.md` — cited by `latexml_oxide/src/util/test.rs`; lesson in WISDOM #90.
 - `known_crashes/` — resolved crash records: `1804.01117_xint_stack_overflow_2026-06-20.md`, `kbordermatrix_halign_math/`, `blkarray_halign_math/`. Cited by sect10.rs, blkarray_sty.rs, arraycr_halign.tex, blkarray.tex, KNOWN_PERL_ERRORS, STABILITY_WITNESSES, WISDOM.
 
+- `PERFECT_KERNEL_2026-11-13.md` — the perfect-kernel brief, quality axes, scope, goal bar and close status; goal
+  met 2026-11-13, merged into main `6df4632fb1`. Live residual in `../SYNC_STATUS.md` row R; the rows' detail stays
+  in `../perfect_kernel/`. Cited by `beamer_cls.rs`, `tools/perfect_kernel/{scoreboard.py,*.tsv}`, `.claude/agents/`.
+
 - `PERL_LOADFORMAT_AUDIT.md` — strict-`LoadFormat` dump-parity audit; mission
   complete (zero-error `--init`, dumps match Perl). Cited by `CLAUDE.md`,
   `dump_writer.rs`, `../parity/{DUMP_DESIGN,ORGANIZATION}.md`.

@@ -1,6 +1,6 @@
 # TeX Live manuals: regressions to recover before the merge (living worklist)
 
-**Why.** The user, 2026-11-06: "all regressions on the perfect_kernel texlive manuals need to be addressed before merge to main. This remains the primary goal of this branch." The bar is in [`../PERFECT_KERNEL.md`](../PERFECT_KERNEL.md) "Goal bar"; it was met at sweeps #146-148 and nearly at #149, and no sweep ran for 25 days and many bundles after that.
+**Why.** The user, 2026-11-06: "all regressions on the perfect_kernel texlive manuals need to be addressed before merge to main. This remains the primary goal of this branch." The bar is in [`../archive/PERFECT_KERNEL_2026-11-13.md`](../archive/PERFECT_KERNEL_2026-11-13.md) "Goal bar"; it was met at sweeps #146-148 and nearly at #149, and no sweep ran for 25 days and many bundles after that.
 
 **How to run it.** `~/data/pk_agents/main/chain/manual_sweep.sh <N> <label> [cores] [jobs]`, then `tools/perfect_kernel/scoreboard.py <prev> <N>` and `--open <N>`. It now joins every bundle's checks, because the arXiv A/B and the binding nets do not see these regressions.
 

@@ -431,7 +431,7 @@ Each entry's body (defect, cause, fix, guards, witnesses) is verbatim in [`archi
 
 ## Current status
 
-The corpus measure is the perfect-kernel scoreboard ([`PERFECT_KERNEL.md`](PERFECT_KERNEL.md), sweeps of the 2,374
+The corpus measure is the perfect-kernel scoreboard ([`PERFECT_KERNEL_2026-11-13.md`](archive/PERFECT_KERNEL_2026-11-13.md), sweeps of the 2,374
 TL manuals) and the per-batch arXiv A/B; the cortex reruns of sandboxes 2605/2606 (runs 325-328, 2026-10-04) and run 329's validations are in
 `archive/SYNC_SESSIONS_2026-10.md`; the last full sandbox rerun before them (2026-08-02, 60,505 docs) in
 `archive/SYNC_SESSIONS_2026-09.md`.

@@ -238,7 +238,7 @@ here is open unless its status says otherwise; when a row closes, delete it here
 ### Perfect-kernel RED repros without a row elsewhere
 
 The open RED repros of `tools/perfect_kernel/repros/` that no other row names; headers re-checked 2026-10-02 (scope:
-PERFECT_KERNEL.md → Scope; a witness whose oracle is unclean is a crash canary). Each row: defect, classification, repro path.
+archive/PERFECT_KERNEL_2026-11-13.md → Scope; a witness whose oracle is unclean is a crash canary). Each row: defect, classification, repro path.
 
 - **Tabular cell braces: a kernel `{tabular}` cell's `}` before a macro argument whose `{` the `&` meets** (RUST-ONLY
   model gap, opened 79y; Perl's templates have no braces either, KPE #908): latex.ltx:16666-16675 `\@tabclassz`
@@ -1079,7 +1079,7 @@ Moved whole from `docs/SYNC_STATUS.md` when its ranked rows folded into row R's 
   - Ruled 2026-10-10 (queued 64t-64w): `&` as text in stored-but-untypeset metadata, bindings for l-aa/laa, epl2, OSA opex3/ol2/osajnl2 and REVTeX 2 `{instit}` (plus a generic raw-loading improvement), `\left`/`\right`/`\middle` unexpandable (62 IfLimit in xymatrix), an axodraw v1 SVG binding (1,507).
   - Ruled later 2026-10-10: an environment frame closed by a plain `}`/`\endgroup` recovers as tex.web `off_save` does (M1, ~2,060, unparked: 64y); a locked binding yields only to a redefinition with a different number of mandatory arguments, after minimal repros show the rule well-founded (forwarding 0-argument redefinitions such as `\renewcommand\section{\@startsection…}` excluded; M5, ~160); a heading between `\bibitem`s is an inline sectional block inside the one bibliography (~750); a missing `\usepackage` file gets no OmniBus fallback, only `Warning:missing_file` (pdflatex fails too: 1210.7592 `opex3.sty` not found; shipped copies raw-load); REVTeX 3.0's real options declared in revtex3_support; an implicitly opened bibliography takes a preceding heading-like line as its title, else none (no `\refname`)
 - Size: program
-- Detail: [`PERFECT_KERNEL.md`](../PERFECT_KERNEL.md) close status
+- Detail: [`PERFECT_KERNEL_2026-11-13.md`](../archive/PERFECT_KERNEL_2026-11-13.md) close status
 
 ### KC — Kernel capability program
 

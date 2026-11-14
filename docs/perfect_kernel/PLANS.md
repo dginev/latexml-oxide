@@ -1,6 +1,6 @@
 # Perfect Kernel — improvement-plans ledger (living)
 
-Execution-ready plans with file:line root causes. Ranking is not done here: `docs/PERFECT_KERNEL.md` "Goal bar and
+Execution-ready plans with file:line root causes. Ranking is not done here: `docs/archive/PERFECT_KERNEL_2026-11-13.md` "Goal bar and
 ranked path" and the sweep scoreboard (S3 missing words → schema-invalid → timeouts, user 2026-10-01) pick the next
 batch; a plan here is taken when an in-scope manual needs it. A row leaves for the archive when it lands or its
 witnesses are clean or out of scope (closed rows: [`archive/PLANS_DONE_PHASE56_2026-09-27.md`](archive/PLANS_DONE_PHASE56_2026-09-27.md),
@@ -68,7 +68,7 @@ witnesses are clean or out of scope (closed rows: [`archive/PLANS_DONE_PHASE56_2
     pgf-PeriodicTableManual; LOW). Dead ends: fewer `svg:g` (already 0.34× pdflatex), draining during Build, a leaner
     `Whatsit` (#361 M4).
 11a. **Sandbox reruns 2605/2606 as the regression oracle** — DONE 2026-09-19 (baselines 2605: 30,079 docs, fatal 258;
-    2606: 30,426, fatal 237; its regressions became item 13); recurring as gate L6 (PERFECT_KERNEL.md).
+    2606: 30,426, fatal 237; its regressions became item 13); recurring as gate L6 (PERFECT_KERNEL_2026-11-13.md).
 12. **High-performance raw interpretation (user 2026-09-19).** pdfTeX's advantage is tex.web's data model (packed
     tokens, in-place input levels, `eqtb` + save stack). Candidate costs here: interned-symbol lookups, expansion that
     clones token vectors, ~2.4 KB per `Rc<DigestedData>` box (Perl 0.7 KB). 59a (number scanning per tex.web
