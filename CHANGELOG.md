@@ -107,6 +107,27 @@
     errors the issue reports no longer occur since batch 50's calc `\widthof` fix. Guards
     `perfect_kernel_batch50::calc_widthof_in_math_measures_own_box` and
     `rust_parse_additions_test`; `sampler_test` and `mathtools_test` now match Perl's goldens.
+  - **mhchem formulas are chemistry math** (issue 824, stage 1). `\ce{^{95}MoO4^{2-}}` was one
+    `<mtext>MoO</mtext>` with text scripts, an en dash for the minus and the isotope in an
+    `<mpadded>`. mhchem still parses `\ce`; its formula output hook now makes each element an
+    `<mi>` (`Mo`, `O`), the isotope and atomic number prescripts of the first element, the count a
+    subscript of the last, and a closing charge (minus U+2212) a superscript of the whole formula:
+    `<msup><mrow><mmultiscripts><mi>Mo</mi>…<mn>95</mn></mmultiscripts><msub><mi>O</mi><mn>4</mn></msub></mrow><mrow><mn>2</mn><mo lspace="0em" rspace="0em">−</mo></mrow></msup>`:
+    the elements side by side (no invisible times), the charge sign tight as in the PDF. This first
+    markup is tentative and awaits Bruce Miller's feedback; stage 2 adds MathML `intent`. DG: "We
+    expect further improvements are both possible and needed."
+    A text-mode `\ce` keeps its text font (bold in `\textbf`). Arrows, `+`, bonds, states and
+    amounts are unchanged. Guard `mhchem_formula::mhchem_formula_units_are_chemistry`
+    (OXIDIZED_DESIGN_DIVERGENCES #1040).
+  - **A sign TeX sets as an ordinary atom is tight in MathML** (issue 824). TeX makes a binary
+    operator an Ord when it starts a list, follows another operator, relation, opening or
+    punctuation, or precedes a relation, closing or punctuation, or ends the list (tex.web
+    §728-729): `f(0+)`, `a+b+`, `x^{2+}`, a charge `2-`, the `−` of `a+-b` have no space around the
+    sign. A browser spaced each as an infix operator (0.222em each side: MathML Core gives a trailing
+    `+` or `−` the infix spacing). The MathML space walk now applies TeX's Bin-to-Ord rule to signs and marks such a
+    sign `lspace="0em" rspace="0em"`; a sign that stays binary (the `+` of `a+-b`) and a leading one
+    (Core's prefix form) are unchanged. Guard
+    `perfect_kernel_batchmml2::core_k_operators_have_no_operator_space` (OXIDIZED_DESIGN_DIVERGENCES #1033).
   - **amsmath's arrow fills keep their heads** (issue 824's sibling). `\arrowfill@` and
     `\ext@arrow`'s fill were a plain `\to`, so mhchem's `\ce{A <=> B}` read "→→" and every
     chemarr, extarrows and extpfeil arrow was →. The relation is now the heads amsmath.sty draws
