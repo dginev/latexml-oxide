@@ -1,0 +1,16 @@
+% issue #773: colortbl colours only a `|` (`\@arrayrule` = `{\CT@arc@\vline}`, colortbl.sty:166); a `!{\vrule}`,
+% `!{\vrule width 1pt}` and a `\vline` typed at a cell's edge keep the default ink, the `\hline`s take the colour.
+% witness: synthetic (the review of fix/arrayrulecolor b8a67fad06: probe bang)
+% oracle:  pdflatex 0 errors: every vertical rule black but the right `|`, red; the `\hline`s red
+% engines: rust b8a67fad06 = 0 errors, the `!{\vrule}` and typed `\vline` sides red too; Perl = no colour
+% expect:  0 errors; the left sides uncoloured, the right `|` and the tops red
+% status:  RED (b8a67fad06) -> GREEN (fix/arrayrulecolor); guard perfect_kernel_batchw4::arrayrulecolor_colours_the_rules_drawn_under_it
+\documentclass{article}
+\usepackage{colortbl}
+\begin{document}
+\arrayrulecolor{red}
+\begin{tabular}{!{\vrule}l!{\vrule width 1pt}r|}\hline
+\vline\ a & b\ \vline\\\hline
+c & d\\
+\end{tabular}
+\end{document}
