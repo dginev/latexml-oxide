@@ -751,11 +751,16 @@ impl PostDocument {
     // Copy processing instructions (Perl Post.pm L766-767).
     // ABSOLUTE `//…`: `findnodes` with no context node can't evaluate a relative
     // axis (see `findnodes_at`) — a `.//processing-instruction(...)` here matched
-    // nothing and split children lost the `<?latexml …?>` PIs (#341).
-    for mut pi in self.findnodes("//processing-instruction('latexml')") {
-      if let Ok(mut pi_clone) = subdoc.document.import_node(&mut pi) {
-        if let Some(mut doc_node) = subdoc.document.get_root_element() {
-          doc_node.add_prev_sibling(&mut pi_clone).ok();
+    // nothing and split children lost the `<?latexml …?>` PIs (#341). Made afresh, not
+    // `import_node`d: that refuses a linked node, so every page lost them again (#795).
+    // Before the root, as on the main page; Perl appends them after it (`appendChild`).
+    if let Some(mut root) = subdoc.document.get_root_element() {
+      for pi in self.findnodes("//processing-instruction('latexml')") {
+        if let Ok(mut copy) = subdoc
+          .document
+          .create_processing_instruction(&pi.get_name(), &pi.get_content())
+        {
+          root.add_prev_sibling(&mut copy).ok();
         }
       }
     }
@@ -2750,6 +2755,29 @@ mod tests {
       );
     }
     assert!(doc.find_node_by_id("nope").is_none());
+  }
+
+  /// #795: every split page carries the parent's `<?latexml …?>` PIs (Perl Post.pm L766-767),
+  /// before its root, as the main page does, so a custom XSLT sees them on each page.
+  #[test]
+  fn split_pages_carry_the_document_pis() {
+    let doc = make_test_doc(
+      "<?latexml class=\"article\"?><?latexml RelaxNGSchema=\"LaTeXML\"?>\
+       <document xmlns='http://dlmf.nist.gov/LaTeXML'><section xml:id='S1'/><section xml:id='S2'/></document>",
+    );
+    for id in ["S1", "S2"] {
+      let page = doc.new_document(
+        doc.find_node_by_id(id).unwrap().clone(),
+        &format!("{id}.html"),
+      );
+      let xml = page.to_xml_string();
+      assert!(
+        xml.contains(
+          "<?latexml class=\"article\"?>\n<?latexml RelaxNGSchema=\"LaTeXML\"?>\n<section"
+        ),
+        "{xml}"
+      );
+    }
   }
 
   /// A document-level `<?latexml searchpaths=…?>` PI (a sibling of the root

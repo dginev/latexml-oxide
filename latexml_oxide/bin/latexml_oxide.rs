@@ -29,9 +29,19 @@ static GLOBAL: mimalloc::MiMalloc = mimalloc::MiMalloc;
 #[global_allocator]
 static GLOBAL: dhat::Alloc = dhat::Alloc;
 
+/// `--xsltparameter` is checked as it is read, as bin/latexmlpost L354-356 fails on a malformed one (#803).
+fn xslt_parameter_arg(param: &str) -> Result<String, String> {
+  match latexml::post::parse_xslt_parameter(param) {
+    Some(_) => Ok(param.to_string()),
+    None => Err("not in recognized format: 'name:value' (or 'name=value')".to_string()),
+  }
+}
+
 /// LaTeXML-oxide: convert TeX/LaTeX documents to XML/HTML/MathML
 #[derive(Parser, Debug)]
+// `args_override_self`: an option given twice keeps its last value, as GetOpt::Long does (#530).
 #[command(name = "latexml_oxide", version = latexml::identity::VERSION_WITH_REVISION, about)]
+#[command(args_override_self = true)]
 struct Cli {
   /// The TeX/LaTeX source file(s) to convert (overridden by --source). A `.bib`,
   /// a `.zip`/`.tar.gz` archive, or a directory is auto-detected. Several files
@@ -422,8 +432,8 @@ struct Cli {
   #[arg(long, value_name = "DIR")]
   sourcedirectory: Option<String>,
 
-  /// Additional XSLT parameters (repeatable, key=value)
-  #[arg(long = "xsltparameter", value_name = "KEY=VALUE")]
+  /// Additional XSLT parameters (repeatable; Perl's name:value, or name=value)
+  #[arg(long = "xsltparameter", value_name = "NAME:VALUE", value_parser = xslt_parameter_arg)]
   xslt_parameters: Vec<String>,
 
   // === Dev/internal flags ===
@@ -777,6 +787,33 @@ fn real_main() -> Result<(), Box<dyn Error>> {
   // rather than re-deciding at each site.
   let resolved = ResolvedOptions::from_cli(&cli);
 
+  // CRITICAL: must be set BEFORE `prepare_session`. `tex.rs` /
+  // `latex.rs`'s LoadFormat split (plain_bootstrap → plain_dump|base
+  // → plain_constructs and the latex equivalent) reads
+  // `LATEXML_INI_MODE` to decide whether to fully load the format
+  // or stop after the bootstrap pool. If it's not set yet,
+  // `prepare_session` pre-loads `plain_base` / `latex_base`, which
+  // pollutes the snapshot taken later in `ini_tex::dump_format` and
+  // silences the diff for everything raw plain.tex / latex.ltx defines
+  // (the `\countdef\allocationnumber=21` → `Stored::Register{...}`
+  // problem from 2026-04-26).
+  //
+  // It must also be set before the kpathsea-prewarm thread below exists. Set
+  // after it, glibc's `setenv` reallocates `environ` while that thread's
+  // `kpathsea_init_format` walks it in `getenv`: `--init` segfaulted in
+  // `getenv("TEXMF_kpsewhich")` in ~3.5% of runs (7/200, Linux aarch64,
+  // TL2023), failing `tools/make_formats.sh` and `dump_gate_init`. The same
+  // use-after-free as the `init_kpathsea` ordering below.
+  if cli.init.is_some() {
+    // SAFETY: no other thread reads the environment yet: the only other
+    // thread, `main`, is blocked joining this one, and the prewarm thread is
+    // spawned below. `prepare_session` and `ini_tex::dump_format` read the var
+    // but never mutate the environment.
+    unsafe {
+      std::env::set_var("LATEXML_INI_MODE", "1");
+    }
+  }
+
   // Kick off kpathsea pre-init in a background thread. Force-runs
   // `kpathsea_init_db` + per-format `kpathsea_init_format` so the
   // first real `find_file` from digest sees the fast post-init path
@@ -1087,24 +1124,6 @@ fn real_main() -> Result<(), Box<dyn Error>> {
     streaming: resolve_streaming(cli.streaming, resolve_max_memory(cli.max_memory), &source),
     source_date_epoch,
   };
-  // CRITICAL: must be set BEFORE `prepare_session`. `tex.rs` /
-  // `latex.rs`'s LoadFormat split (plain_bootstrap → plain_dump|base
-  // → plain_constructs and the latex equivalent) reads
-  // `LATEXML_INI_MODE` to decide whether to fully load the format
-  // or stop after the bootstrap pool. If it's not set yet,
-  // `prepare_session` pre-loads `plain_base` / `latex_base`, which
-  // pollutes the snapshot taken later in `ini_tex::dump_format` and
-  // silences the diff for everything raw plain.tex / latex.ltx defines
-  // (the `\countdef\allocationnumber=21` → `Stored::Register{...}`
-  // problem from 2026-04-26).
-  if cli.init.is_some() {
-    // SAFETY: setting the var before any thread is spawned. `prepare_session`
-    // and `ini_tex::dump_format` both read it but neither mutates env.
-    unsafe {
-      std::env::set_var("LATEXML_INI_MODE", "1");
-    }
-  }
-
   let mut converter = Converter::from_config(opts.clone());
   // `--whatsin=xml` forces the already-converted-XML input path regardless of the
   // file's extension (Perl-style: the input analog of `--format` for output),
@@ -1610,7 +1629,8 @@ fn real_main() -> Result<(), Box<dyn Error>> {
             source_date_epoch,
           })?;
           eprintln!("Output written to {}", zip_dest);
-        } else {
+        } else if !(output.is_empty() && post.status_code >= 3) {
+          // A post-processing Fatal leaves no output, and nothing is written (#782).
           latexml_post::writer::write_output(&output, target.as_deref())?;
         }
         // resource_tempdir is dropped here (after pack_archive has copied
@@ -2424,5 +2444,53 @@ mod boolean_flag_last_wins_tests {
 
     // --hackplane1 forces plane1 on even against a later --noplane1 (Perl MathML.pm L70).
     assert!(ResolvedOptions::from_cli(&cli(&["--noplane1", "--hackplane1"])).plane1);
+  }
+
+  /// #530: a value option or flag given twice keeps its last value (GetOpt::Long), and is not a
+  /// usage error; a repeatable option still accumulates.
+  #[test]
+  fn repeated_options_are_last_wins() {
+    let c = cli(&["--urlstyle=file", "--urlstyle=server"]);
+    assert_eq!(c.urlstyle.as_deref(), Some("server"));
+    let c = cli(&["--dest", "a.html", "--dest=b.html", "--split", "--split"]);
+    assert_eq!(c.dest.as_deref(), Some("b.html"));
+    assert!(c.split);
+    let c = cli(&["--css", "a.css", "--css", "b.css"]);
+    assert_eq!(c.css_files, ["a.css", "b.css"]);
+  }
+}
+
+#[cfg(test)]
+mod xsltparameter_tests {
+  use super::*;
+
+  fn params(flags: &[&str]) -> Result<Vec<String>, clap::Error> {
+    let mut argv = vec!["latexml_oxide"];
+    argv.extend_from_slice(flags);
+    argv.push("src.tex");
+    Cli::try_parse_from(argv).map(|c| c.xslt_parameters)
+  }
+
+  /// #803: Perl's `--xsltparameter=name:value` (LaTeXML.pm L574-578) and our `KEY=VALUE` both
+  /// pass a parameter; a value with neither separator is a usage error, not a silent no-op.
+  #[test]
+  fn xsltparameter_accepts_perls_form_and_rejects_a_malformed_one() {
+    use latexml::post::parse_xslt_parameter as parse;
+    let pair = |k: &str, v: &str| Some((k.to_string(), v.to_string()));
+    assert_eq!(parse("FOO:bar"), pair("FOO", "bar"));
+    assert_eq!(parse(" FOO : bar baz"), pair("FOO", "bar baz"));
+    assert_eq!(
+      parse("URL:http://x.org/?a=b"),
+      pair("URL", "http://x.org/?a=b")
+    );
+    assert_eq!(parse("FOO=bar"), pair("FOO", "bar"));
+    assert_eq!(parse("FOO=a:b"), pair("FOO", "a:b"));
+    assert_eq!(parse("{http://x.org}p=v"), pair("{http://x.org}p", "v"));
+    assert_eq!(parse("FOO"), None);
+    assert_eq!(parse("=bar"), None);
+    assert_eq!(parse(":bar"), None);
+    assert!(params(&["--xsltparameter=FOO:bar", "--xsltparameter", "X=y"]).is_ok());
+    let err = params(&["--xsltparameter=FOO"]).expect_err("malformed");
+    assert_eq!(err.kind(), clap::error::ErrorKind::ValueValidation);
   }
 }

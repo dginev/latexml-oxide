@@ -661,7 +661,7 @@ fn tabular_template_missing_argument_stays_in_the_template() {
     assert!(
       stderr.contains(&format!(
         "Error:expected:{column} Missing argument of the column type '{column}' at the end of \
-         the tabular template; token ignored\n\tat t; line {line} col 1"
+         the tabular template; token ignored\n\tat t.tex; line {line} col 1"
       )),
       "{column}: {stderr}"
     );

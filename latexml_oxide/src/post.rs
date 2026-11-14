@@ -6,7 +6,7 @@
 
 use latexml_core::{
   Info, Warn,
-  common::error::{emit_error, note_progress},
+  common::error::{emit_error, emit_fatal, note_progress},
   s,
   telemetry::{self, Phase},
 };
@@ -113,9 +113,9 @@ pub struct PostOptions<'a> {
   pub whatsout:                  latexml_post::extract::Whatsout,
 }
 
-/// The built-in XSLT stylesheet for an output format (logical embedded-resource
-/// name; Perl `Config.pm` L543-551). Returns `None` for a format with no
-/// default (e.g. `xml`), so a caller keeps `--stylesheet` / no post.
+/// The built-in XSLT stylesheet for an output format (Perl `Config.pm` L543-551), as the
+/// `embed:///` name served from the binary, never a copy on disk (#806). Returns `None` for a
+/// format with no default (e.g. `xml`), so a caller keeps `--stylesheet` / no post.
 ///
 /// SINGLE SOURCE OF TRUTH shared by the CLI (`bin/latexml_oxide.rs` picks
 /// `effective_stylesheet` when `--stylesheet` is unset) and the library
@@ -123,9 +123,31 @@ pub struct PostOptions<'a> {
 /// sheet an `html5`/`xhtml`/`epub` job gets.
 pub fn default_stylesheet(format: Option<&str>) -> Option<&'static str> {
   match format {
-    Some("html5") => Some("resources/XSLT/LaTeXML-html5.xsl"),
-    Some("html") | Some("xhtml") => Some("resources/XSLT/LaTeXML-all-xhtml.xsl"),
-    Some("epub") | Some("epub3") => Some("resources/XSLT/LaTeXML-epub3.xsl"),
+    Some("html5") => Some("embed:///LaTeXML-html5.xsl"),
+    Some("html") | Some("xhtml") => Some("embed:///LaTeXML-all-xhtml.xsl"),
+    Some("epub") | Some("epub3") => Some("embed:///LaTeXML-epub3.xsl"),
+    _ => None,
+  }
+}
+
+/// Split one `--xsltparameter` into `(name, value)`: Perl's `name:value` (LaTeXML.pm L575
+/// `/^\s*(\w+)\s*:\s*(.*)$/`, bin/latexmlpost L354) first, else our `name=value`; `None` when
+/// it is neither (#803).
+pub fn parse_xslt_parameter(param: &str) -> Option<(String, String)> {
+  let trimmed = param.trim_start();
+  let name_len = trimmed
+    .find(|c: char| !(c.is_alphanumeric() || c == '_'))
+    .unwrap_or(trimmed.len());
+  if name_len > 0
+    && let Some(value) = trimmed[name_len..].trim_start().strip_prefix(':')
+  {
+    return Some((
+      trimmed[..name_len].to_string(),
+      value.trim_start().to_string(),
+    ));
+  }
+  match param.split_once('=') {
+    Some((name, value)) if !name.is_empty() => Some((name.to_string(), value.to_string())),
     _ => None,
   }
 }
@@ -1022,8 +1044,14 @@ fn run_post_processing_inner(input: PostInput, opts: &PostOptions) -> String {
       format!("\"{}\"", crate::core_interface::LATEXML_VERSION),
     );
     for param in xslt_parameters {
-      if let Some((key, value)) = param.split_once('=') {
-        xslt_params.insert(key.to_string(), format!("\"{}\"", value));
+      match parse_xslt_parameter(param) {
+        Some((key, value)) => {
+          xslt_params.insert(key, format!("\"{}\"", value));
+        },
+        None => post_error(
+          "xsltparameter",
+          &format!("xsltparameter not in recognized format: 'name:value' got: '{param}'"),
+        ),
       }
     }
     manifest_xslt_params = xslt_params
@@ -1203,6 +1231,10 @@ fn run_post_processing_inner(input: PostInput, opts: &PostOptions) -> String {
         )
       );
       drop(page_spill);
+      // A worker's post Fatal leaves no output, as the serial render's does (#782).
+      if result.discarded {
+        return String::new();
+      }
       return result.main_output.unwrap_or_else(fallback);
     }
     // Setup failed BEFORE any worker spawned (already reported): fall through
@@ -1226,6 +1258,7 @@ fn run_post_processing_inner(input: PostInput, opts: &PostOptions) -> String {
   let mut main_output: Option<String> = None;
   let t_pages = audit_start("render_pages");
   let mut pages_rendered = 0usize;
+  let mut written: Vec<String> = Vec::new();
   for SpilledPage {
     path,
     destination: dest,
@@ -1301,7 +1334,11 @@ fn run_post_processing_inner(input: PostInput, opts: &PostOptions) -> String {
     }
     let outputs = match render_spilled_page(&path, &mut procs, &ctx, dest, dest_dir) {
       Ok(o) => o,
-      Err(()) => return fallback(),
+      Err(PageFailure::Fatal) => {
+        remove_pages(&written);
+        return String::new();
+      },
+      Err(PageFailure::Error) => return fallback(),
     };
     for (dest, output) in outputs {
       if let Some(path) = dest.as_deref() {
@@ -1314,6 +1351,7 @@ fn run_post_processing_inner(input: PostInput, opts: &PostOptions) -> String {
         if let Err(e) = std::fs::write(path, &output) {
           post_error("write", &format!("failed to write page {path}: {e}"));
         }
+        written.push(path.to_string());
       }
       if main_output.is_none() {
         main_output = Some(output);
@@ -1378,7 +1416,7 @@ pub(crate) fn render_spilled_page(
   ctx: &PageRenderCtx,
   destination: Option<String>,
   destination_directory: Option<String>,
-) -> Result<Vec<(Option<String>, String)>, ()> {
+) -> Result<Vec<(Option<String>, String)>, PageFailure> {
   let path_str = path.to_string_lossy().into_owned();
   let page = match PostDocument::new_from_file(&path_str, ctx.page_opts.clone()) {
     Ok(mut d) => {
@@ -1388,7 +1426,7 @@ pub(crate) fn render_spilled_page(
     },
     Err(e) => {
       post_error("post", &format!("cannot re-read a disk-staged page: {e}"));
-      return Err(());
+      return Err(PageFailure::Error);
     },
   };
   // Free the spill as soon as it is parsed: for a 40k-page document the
@@ -1403,7 +1441,7 @@ pub(crate) fn render_spilled_page(
   let xref = run_page_phase(page, &mut procs.crossref, "CrossRef");
   audit_end(t_xref);
   telemetry::phase_exit();
-  let mut staged = xref?;
+  let mut staged = xref.map_err(|()| PageFailure::Error)?;
   if let Some(gfx) = procs.graphics.as_mut() {
     telemetry::phase_enter(Phase::Graphics);
     let t_gfx = audit_start("Graphics");
@@ -1421,7 +1459,7 @@ pub(crate) fn render_spilled_page(
     audit_end(t_gfx);
     telemetry::phase_exit();
     if failed {
-      return Err(());
+      return Err(PageFailure::Error);
     }
     staged = next;
   }
@@ -1429,8 +1467,8 @@ pub(crate) fn render_spilled_page(
   let rendered = match procs.post.process_chain(staged, &mut procs.processors) {
     Ok(r) => r,
     Err(e) => {
-      post_error("convert", &format!("Post-processing failed: {e}"));
-      return Err(());
+      emit_fatal("post", "convert", &format!("Post-processing failed: {e}"));
+      return Err(PageFailure::Fatal);
     },
   };
 
@@ -1452,6 +1490,22 @@ pub(crate) fn render_spilled_page(
     // `doc` drops here — the whole point.
   }
   Ok(outputs)
+}
+
+/// Remove the pages a render wrote before a Fatal: Perl runs each processor over every page
+/// before its writer, so a die in ProcessChain leaves none (LaTeXML.pm L605-614, #782).
+pub(crate) fn remove_pages<S: AsRef<str>>(pages: &[S]) {
+  for page in pages {
+    let _ = std::fs::remove_file(page.as_ref());
+  }
+}
+
+/// Why a page did not render (already reported). `Fatal`: a MathML/XSLT step failed, which stops
+/// post-processing with no output, as a die in Perl's ProcessChain does (LaTeXML.pm L605-614, #782).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum PageFailure {
+  Error,
+  Fatal,
 }
 
 /// One page spilled between the post pipeline's two passes: where its XML

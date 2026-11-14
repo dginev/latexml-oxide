@@ -629,7 +629,7 @@ fn cleveref_document_format_errors_wait_for_a_reference() {
   assert_eq!(log.matches("Stray alignment \"&\"").count(), 1, "{log}");
   assert_eq!(
     log
-      .matches("The cleveref format of the table (at t; line 18 col 36 - line 18 col 36) leaves 1 group(s) open")
+      .matches("The cleveref format of the table (at t.tex; line 18 col 36 - line 18 col 36) leaves 1 group(s) open")
       .count(),
     1,
     "{log}"
@@ -736,7 +736,7 @@ fn cleveref_format_form_keeps_an_alignment_row_end() {
   );
   assert_eq!(
     log
-      .matches("The cleveref format of the enumi (at t; line 18 col 54 - line 18 col 54) leaves 1 group(s) open")
+      .matches("The cleveref format of the enumi (at t.tex; line 18 col 54 - line 18 col 54) leaves 1 group(s) open")
       .count(),
     1,
     "{log}"
@@ -814,7 +814,7 @@ fn cleveref_format_closing_a_group_it_did_not_open() {
   );
   assert_eq!(
     log
-      .matches("The cleveref format of the figure (at t; line 12 col 54 - line 12 col 54) closes a group it did not open")
+      .matches("The cleveref format of the figure (at t.tex; line 12 col 54 - line 12 col 54) closes a group it did not open")
       .count(),
     1,
     "{log}"
@@ -898,7 +898,7 @@ fn cleveref_format_of_an_unlabelled_panel_raises_nothing() {
   let (log, html) = html_with_errors(tex, 1);
   assert_eq!(
     log
-      .matches("The cleveref format of the figure (at t; line 22 col 1 - line 22 col 26) leaves 1 group(s) open")
+      .matches("The cleveref format of the figure (at t.tex; line 22 col 1 - line 22 col 26) leaves 1 group(s) open")
       .count(),
     1,
     "{log}"
