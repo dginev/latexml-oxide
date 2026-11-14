@@ -249,6 +249,13 @@
     provide-only binding load declines it. Guards `script_bindings::tests::let_takes_a_scope`,
     `script_bindings::tests::let_takes_any_token`.
 
+  - **The Perl binding names Rhai lacked** (Rhai round H, AUDNAME). `DefMacroI`, `DefPrimitiveI` and
+    `DefConstructorI` take Perl's I-form arguments (a `Token` or a name read as `coerceCS`, a parameter spec or `()`,
+    each body kind, the option map) and lower to the core calls their prototype forms make; `IfCondition`, `Box`,
+    `List`, `tokens.unlist`, `token.getCatcode`/`getString`/`getCSName` and `box.getFont`/`whatsit.getFont` are
+    registered. `IfCondition` of a non-conditional reads its Error as Perl's (`got '\relax'`, was `T_CS[\relax]`).
+    Guard `perfect_kernel_batchw3rg::rhai_perl_i_forms_and_accessors`.
+
   - **A Rhai name that is a Perl API name behaves as Perl's** (PR #829 round G). A `DefPrimitive`
     body's returned box, or array of boxes, is the primitive's output, as a Perl primitive's
     (`|| Digest(T_LETTER("A"))` printed nothing before); another returned value is dropped with a

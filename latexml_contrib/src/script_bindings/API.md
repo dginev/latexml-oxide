@@ -39,7 +39,7 @@ sets each call beside its Perl spelling and its compile-time macro.
 
 Called at the top level of a binding file, or from inside any body.
 
-220 functions, 533 calls.
+226 functions, 546 calls.
 
 | call | documentation |
 |---|---|
@@ -79,6 +79,7 @@ Called at the top level of a binding file, or from inside any body.
 | `AtBeginDocument(Fn)`<br>`AtBeginDocument(Token)`<br>`AtBeginDocument(Tokens)`<br>`AtBeginDocument(string)` | Queue TeX source, a `Tokens`/`Token` value, or a closure (installed as a macro) to run at `\begin{document}`. ([`push_value`](latexml_core::state::push_value)) |
 | `AtEndDocument(Fn)`<br>`AtEndDocument(Token)`<br>`AtEndDocument(Tokens)`<br>`AtEndDocument(string)` | Queue TeX source, a `Tokens`/`Token` value, or a closure (installed as a macro) to run at `\end{document}`. ([`push_value`](latexml_core::state::push_value)) |
 | `BeginItemize(string, string) -> map`<br>`BeginItemize(string, string, map) -> map` | Open a list level: the `properties` map numbering its items (Perl `beginItemize`). ([`begin_itemize`](latexml_core::binding::counter::dialect::begin_itemize)) |
+| `Box(string) -> Digested`<br>`Box(string, ?) -> Digested`<br>`Box(string, ?, (), ?) -> Digested`<br>`Box(string, ?, (), ?, map) -> Digested` | A text box: `Box(string)`, `Box(string, font)`, `Box(string, font, (), tokens)` and a trailing properties map (Perl's `Box($string, $font, $locator, $tokens, %properties)`; a script has no locator, so `()`). The current font for `()`, its tokens `T_OTHER(string)` for `()`. ([`Tbox::new`](latexml_core::tbox::Tbox::new)) |
 | `CC_ACTIVE() -> int` | The catcode constant `CC_ACTIVE` (13), for `Token(string, catcode)`. |
 | `CC_ALIGN() -> int` | The catcode constant `CC_ALIGN` (4), for `Token(string, catcode)`. |
 | `CC_ARG() -> int` | The catcode constant `CC_ARG` (18), for `Token(string, catcode)`. |
@@ -109,15 +110,18 @@ Called at the top level of a binding file, or from inside any body.
 | `DefColumnType(string, Fn)` | Define a tabular column type, as its rewrite expansion. ([`def_macro`](latexml_core::binding::def::dialect::def_macro)) |
 | `DefConditional(string)`<br>`DefConditional(string, (), map)`<br>`DefConditional(string, Fn)`<br>`DefConditional(string, Fn, map)` | Define a conditional control sequence. ([`def_conditional`](latexml_core::binding::def::dialect::def_conditional)) |
 | `DefConstructor(string, Fn)`<br>`DefConstructor(string, Fn, map)`<br>`DefConstructor(string, string)`<br>`DefConstructor(string, string, map)` | Define a control sequence that constructs XML. ([`def_constructor`](latexml_core::binding::def::dialect::def_constructor)) |
+| `DefConstructorI(?, ?, ?)`<br>`DefConstructorI(?, ?, ?, map)` | `DefConstructor` for a control sequence in hand: a `Token` or a name (`coerceCS`), a parameter-spec string or `()`, a template string, a closure or `()`, then the option bag. ([`def_constructor`](latexml_core::binding::def::dialect::def_constructor)) |
 | `DefEnvironment(string, Fn)`<br>`DefEnvironment(string, Fn, map)`<br>`DefEnvironment(string, string)`<br>`DefEnvironment(string, string, map)` | Define an environment that constructs XML. ([`def_environment`](latexml_core::binding::def::dialect::def_environment)) |
 | `DefKeyVal(string, string, string)`<br>`DefKeyVal(string, string, string, string)`<br>`DefKeyVal(string, string, string, string, map)` | Declare one key of a keyval family. ([`define`](latexml_core::keyval::define)) |
 | `DefLigature(string, string)`<br>`DefLigature(string, string, map)` | Register a text ligature pattern; `#{fontTest: |font| …}` limits it to the fonts the closure accepts. |
 | `DefMacro(string, Fn)`<br>`DefMacro(string, Fn, map)`<br>`DefMacro(string, string)`<br>`DefMacro(string, string, map)` | Define a macro's expansion; a closure body is Perl's `|gullet, args|`, each argument Tokens (or a `KeyVals`). A Perl-form closure declares its handle and every argument, `|gullet, x|`; fewer parameters is the old form, with a Warning naming the fix. ([`def_macro`](latexml_core::binding::def::dialect::def_macro)) |
+| `DefMacroI(?, ?, ?)`<br>`DefMacroI(?, ?, ?, map)` | `DefMacro` for a control sequence in hand: a `Token` or a name (`coerceCS`: `\csname x\endcsname`, a single character is active), a parameter-spec string or `()`, the expansion (a closure, TeX source, `Tokens`, a `Token`, `()` for none), then the option bag. ([`def_macro`](latexml_core::binding::def::dialect::def_macro)) |
 | `DefMath(string, string)`<br>`DefMath(string, string, map)` | Define a mathematical symbol or function. ([`def_math`](latexml_core::binding::def::dialect::def_math)) |
 | `DefMathLigature(Fn)`<br>`DefMathLigature(string, string, map)` | Register a math ligature, as a pattern or a matcher closure. |
 | `DefMathRewrite(map)`<br>`DefMathRewrite(map, Fn)` | As `DefRewrite`, scoped to math. |
 | `DefParameterType(string, Fn)`<br>`DefParameterType(string, Fn, map)` | Define a parameter type: the reader `|gullet, extra…|` returns its value (Tokens, a Token, `()` for none), with Perl's options `optional`, `novalue`, `semiverbatim`, `undigested`, `reversion`, `beforeDigest`, `afterDigest`, and `nargs` accepted unread, as Perl's. ([`Parameter`](latexml_core::parameter::Parameter)) |
 | `DefPrimitive(string, Fn)`<br>`DefPrimitive(string, Fn, map)` | Define a primitive: it runs at digestion, after expansion; a closure body is Perl's `|stomach, args|`. A Perl-form closure declares its handle and every argument, `|stomach, x|`; fewer parameters is the old form, with a Warning naming the fix. ([`def_primitive`](latexml_core::binding::def::dialect::def_primitive)) |
+| `DefPrimitiveI(?, ?, ?)`<br>`DefPrimitiveI(?, ?, ?, map)` | `DefPrimitive` for a control sequence in hand: a `Token` or a name (`coerceCS`), a parameter-spec string or `()`, a closure or `()` (digests to nothing), then the option bag. ([`def_primitive`](latexml_core::binding::def::dialect::def_primitive)) |
 | `DefRegister(string, ?)`<br>`DefRegister(string, ?, map)` | Perl's `DefRegister(cs, value[, #{readonly, getter, setter, address, allocate}])`: the value's type (Number, Dimension, Glue, MuGlue, Tokens) is the register's; a string is read for the type `cs` already has, else by its form (a `mu` unit MuGlue, `plus`/`minus` Glue, another unit Dimension; no unit is an Error and 0). `getter` is `|params…|`, `setter` `|value, scope, params…|`. ([`def_register`](latexml_core::binding::def::dialect::def_register)) |
 | `DefRewrite(map)`<br>`DefRewrite(map, Fn)` | Register a document rewrite rule (data form, or a replace closure). |
 | `Digest(Token) -> Digested`<br>`Digest(Tokens) -> Digested`<br>`Digest(string) -> Digested` | Digest TeX source (a string, TokenizeInternal'd), a `Token` or `Tokens`, returning the digested handle. ([`digest`](latexml_core::stomach::digest)) |
@@ -137,6 +141,7 @@ Called at the top level of a binding file, or from inside any body.
 | `GetKeyVal(?, string) -> ?` | One value of a keyval set, as Perl's: Tokens as read, a box once digested, `()` when missing; a repeated key's last value. Test it as Perl's `if ($v)` with `!!v`, or `defined(v)`. |
 | `GetKeyVals(?) -> map` | A whole keyval set as a map of `GetKeyVal`'s values, a repeated key's as an array. Accepts a `KeyVals` argument (read, or digested in a constructor) or its `k=v,…` source string. |
 | `Glue(int) -> Glue`<br>`Glue(int, int, ?, int, ?) -> Glue`<br>`Glue(string) -> Glue` | Perl's `Glue(spec)`: `"1pt plus 2fil minus 1pt"`, an int of sp, or `Glue(sp, plus, pfill, minus, mfill)` with fill orders as names or 0-3; an unreadable spec is an Error and 0. |
+| `IfCondition(string\|Token) -> bool?` | The truth of a conditional (`\iffoo` after `\newif`, `\iftrue`); `()` with an Error for a control sequence that is not one. ([`if_condition`](latexml_core::binding::content::if_condition)) |
 | `Info(string, string, ?, ?)`<br>`Info(string, string, ?, ?, ?)`<br>`Info(string, string, ?, ?, ?, ?)`<br>`Info(string, string, string)` | Log an `Info:` line, plus optional details. |
 | `Input(string)` | Input a TeX file (`\input`'s core). ([`input`](latexml_core::binding::content::input)) |
 | `InputDefinitions(string)`<br>`InputDefinitions(string, map)` | Find and load the definitions for a package or class. ([`input_definitions`](latexml_core::binding::content::input_definitions)) |
@@ -145,6 +150,7 @@ Called at the top level of a binding file, or from inside any body.
 | `IsEmpty(?) -> bool` | Perl's `IsEmpty`: true when nothing but spaces, braces and other non-printing tokens (or empty digested content). |
 | `LaTeXMLVersion() -> string` | The engine version string — the `LATEXML_VERSION` value ([`lookup_string`](latexml_core::state::lookup_string)). |
 | `Let(string\|Token, string\|Token)`<br>`Let(string\|Token, string\|Token, string)` | TeX's `\let`: copy one token's meaning onto another, with an optional scope (`"global"` is `\global\let`). Each token is a CS name string or a `Token`. ([`let_definition`](latexml_core::state::let_definition)) |
+| `List(array) -> Digested`<br>`List(array, map) -> Digested` | Perl's `List(@boxes, mode => $mode)` (List.pm:31) as `List([boxes])` or `List([boxes], #{mode: m})`: `()`s dropped, one box (of the asked mode) is itself, else a list in the mode (the current one by default). |
 | `LoadClass(string)`<br>`LoadClass(string, array)`<br>`LoadClass(string, map)` | Load a document class, falling back to a prefix match then OmniBus. ([`load_class`](latexml_core::binding::content::load_class)) |
 | `LoadPool(string)` | Load a pool (`<name>.pool`). ([`input_definitions`](latexml_core::binding::content::input_definitions)) |
 | `LookupBool(string) -> bool` | Read a value as a boolean. ([`lookup_bool`](latexml_core::state::lookup_bool)) |
@@ -330,12 +336,13 @@ An XML node: one returned by `ParseXML`, or one handed to a rewrite / ligature-m
 
 The whatsit a hook receives positionally, as Perl passes `$whatsit` (Whatsit.pm).
 
-7 functions, 7 calls.
+8 functions, 8 calls.
 
 | call | documentation |
 |---|---|
 | `argString(int) -> string` | **Deprecated** (Warns once per binding load): use `whatsit.getArg(n)`. The whatsit's nth argument, reverted to source text. |
 | `getArg(int) -> ?` | The nth argument (from 1), as a constructor body receives it: a `Digested` handle, `Tokens` for an undigested one, `()` when absent. ([`Whatsit::get_arg`](latexml_core::whatsit::Whatsit::get_arg)) |
+| `getFont() -> ?` | The whatsit's `Font` handle, inside a hook. ([`BoxOps::get_font`](latexml_core::BoxOps::get_font)) |
 | `getProperties() -> map` | The whole property map (a Rhai object map), each value typed. ([`BoxOps::get_properties`](latexml_core::BoxOps::get_properties)) |
 | `getProperty(string) -> ?` | One property by name, its typed value (string / int / bool / `Tokens` / `Digested` handle / …); `()` when absent. ([`BoxOps::get_property`](latexml_core::BoxOps::get_property)) |
 | `propertyString(string) -> string` | **Deprecated** (Warns once per binding load): use `whatsit.getProperty(key)`. One property of the whatsit, as a string. |

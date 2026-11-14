@@ -101,6 +101,7 @@ const TOKEN_ARG_FNS: &[&str] = &[
   "AddToMacro",
   "AssignMeaning",
   "DigestIf",
+  "IfCondition",
   "IsDefined",
   "Let",
   "LookupDefinition",
@@ -115,6 +116,7 @@ const TOKEN_ARG_FNS: &[&str] = &[
 /// [`overrides_all_exist`] fails if a name here is no longer registered, and any
 /// function NOT listed keeps its honest `?`.
 const RETURN_OVERRIDES: &[(&str, &str)] = &[
+  ("IfCondition", "bool?"),
   ("LookupDefinition", "Definition?"),
   ("children", "array"),
   ("findnode", "Node?"),
@@ -180,7 +182,6 @@ struct Mirror(&'static str, &'static str);
 /// register yet, with their macro: the cheat sheet's empty Rhai cells. [`stale_gaps`] fails when one gets registered.
 const PERL_GAPS: &[(&str, &str)] = &[
   ("AfterAssignment", ""),
-  ("Box", ""),
   ("CheckOptions", ""),
   ("CleanBibKey", ""),
   ("CleanClassName", ""),
@@ -193,12 +194,9 @@ const PERL_GAPS: &[(&str, &str)] = &[
   ("DefColor", ""),
   ("DefColorModel", ""),
   ("DefConditionalI", ""),
-  ("DefConstructorI", ""),
   ("DefEnvironmentI", ""),
   ("DefExpandable", ""),
-  ("DefMacroI", ""),
   ("DefMathI", ""),
-  ("DefPrimitiveI", ""),
   ("DefRegisterI", ""),
   ("Deprecated", ""),
   ("DigestLiteral", ""),
@@ -209,10 +207,8 @@ const PERL_GAPS: &[(&str, &str)] = &[
   ("FontDecodeString", ""),
   ("GenerateID", ""),
   ("HasKeyVal", ""),
-  ("IfCondition", ""),
   ("InputContent", ""),
   ("InstallDefinition", "InstallDefinition!"),
-  ("List", ""),
   ("LoadFontMap", ""),
   ("LoadFormat", ""),
   ("LookupColor", "LookupColor!"),
@@ -638,6 +634,61 @@ const DOCS: &[(&str, Mirror, Doc)] = &[
     Doc::Rust(
       "Define a tabular column type, as its rewrite expansion.",
       "latexml_core::binding::def::dialect::def_macro",
+    ),
+  ),
+  (
+    "Box",
+    Mirror("Box", ""),
+    Doc::Rust(
+      "A text box: `Box(string)`, `Box(string, font)`, `Box(string, font, (), tokens)` and a trailing properties map \
+       (Perl's `Box($string, $font, $locator, $tokens, %properties)`; a script has no locator, so `()`). The current \
+       font for `()`, its tokens `T_OTHER(string)` for `()`.",
+      "latexml_core::tbox::Tbox::new",
+    ),
+  ),
+  (
+    "IfCondition",
+    Mirror("IfCondition", ""),
+    Doc::Rust(
+      "The truth of a conditional (`\\iffoo` after `\\newif`, `\\iftrue`); `()` with an Error for a control \
+       sequence that is not one.",
+      "latexml_core::binding::content::if_condition",
+    ),
+  ),
+  (
+    "List",
+    Mirror("List", ""),
+    Doc::Note(
+      "Perl's `List(@boxes, mode => $mode)` (List.pm:31) as `List([boxes])` or `List([boxes], #{mode: m})`: `()`s \
+       dropped, one box (of the asked mode) is itself, else a list in the mode (the current one by default).",
+    ),
+  ),
+  (
+    "DefConstructorI",
+    Mirror("DefConstructorI", ""),
+    Doc::Rust(
+      "`DefConstructor` for a control sequence in hand: a `Token` or a name (`coerceCS`), a parameter-spec string or \
+       `()`, a template string, a closure or `()`, then the option bag.",
+      "latexml_core::binding::def::dialect::def_constructor",
+    ),
+  ),
+  (
+    "DefMacroI",
+    Mirror("DefMacroI", ""),
+    Doc::Rust(
+      "`DefMacro` for a control sequence in hand: a `Token` or a name (`coerceCS`: `\\csname x\\endcsname`, a single \
+       character is active), a parameter-spec string or `()`, the expansion (a closure, TeX source, `Tokens`, a \
+       `Token`, `()` for none), then the option bag.",
+      "latexml_core::binding::def::dialect::def_macro",
+    ),
+  ),
+  (
+    "DefPrimitiveI",
+    Mirror("DefPrimitiveI", ""),
+    Doc::Rust(
+      "`DefPrimitive` for a control sequence in hand: a `Token` or a name (`coerceCS`), a parameter-spec string or \
+       `()`, a closure or `()` (digests to nothing), then the option bag.",
+      "latexml_core::binding::def::dialect::def_primitive",
     ),
   ),
   (
@@ -1711,6 +1762,23 @@ const DOCS: &[(&str, Mirror, Doc)] = &[
     ),
   ),
   (
+    "getCSName",
+    Mirror("$token->getCSName", ""),
+    Doc::Rust(
+      "The name a `Token`'s definition is stored under: a control sequence's or active character's text, a \
+       catcode's primitive name otherwise (`T_BEGIN().getCSName()` is `Begin`).",
+      "latexml_core::token::Token::get_cs_name",
+    ),
+  ),
+  (
+    "getCatcode",
+    Mirror("$token->getCatcode", ""),
+    Doc::Rust(
+      "A `Token`'s catcode, as the int the `CC_*` constants give.",
+      "latexml_core::token::Token::get_catcode",
+    ),
+  ),
+  (
     "getArg",
     Mirror("$whatsit->getArg", ""),
     Doc::Rust(
@@ -1727,6 +1795,11 @@ const DOCS: &[(&str, Mirror, Doc)] = &[
     "getShrinkOrder",
     Mirror("$v->getShrinkOrder", ""),
     Doc::Note("A Glue's shrink fill order as a Number, 0 (finite) to 3 (filll)."),
+  ),
+  (
+    "getString",
+    Mirror("$token->getString", ""),
+    Doc::Note("A `Token`'s text (`\\foo` for a control sequence)."),
   ),
   (
     "getStretch",
@@ -2289,6 +2362,39 @@ const DOCS: &[(&str, Mirror, Doc)] = &[
 /// [`ambiguous_names`] enforces the rule: a name that appears under more than
 /// one handle must have an entry here for EACH of them.
 const HANDLE_DOCS: &[(&str, &str, Mirror, Doc)] = &[
+  (
+    "Digested",
+    "getFont",
+    Mirror("$box->getFont", ""),
+    Doc::Rust(
+      "The box's `Font` handle, `()` for a box without one.",
+      "latexml_core::BoxOps::get_font",
+    ),
+  ),
+  (
+    "Token",
+    "unlist",
+    Mirror("$token->unlist", ""),
+    Doc::Note("An array of the one `Token`, so a Token and Tokens unlist alike (Token.pm)."),
+  ),
+  (
+    "Tokens",
+    "unlist",
+    Mirror("$tokens->unlist", ""),
+    Doc::Rust(
+      "The tokens, as an array of `Token`s.",
+      "latexml_core::tokens::Tokens::unlist",
+    ),
+  ),
+  (
+    "Whatsit",
+    "getFont",
+    Mirror("$whatsit->getFont", ""),
+    Doc::Rust(
+      "The whatsit's `Font` handle, inside a hook.",
+      "latexml_core::BoxOps::get_font",
+    ),
+  ),
   (
     "Document",
     "getProperties",

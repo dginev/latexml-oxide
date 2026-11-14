@@ -153,3 +153,71 @@ fn rhai_perl_names_review_rows() {
     assert_element(&xml, "para", &[&format!("xml:id=\"{id}\"")], para);
   }
 }
+
+/// W3RH part 1 (AUDNAME "Perl API binding authors use that Rhai lacks"): the I-forms (`coerceCS` names, a Token, a
+/// `\csname` name, an active character; a parameter spec or `()`; each body kind), `IfCondition`, `Box`, `List`,
+/// `unlist`, `getCatcode`, `getString`, `getCSName`, `whatsit.getFont`. Each row was Function not found on 17a64c0415a;
+/// Perl's `.ltxml` twin gives these paragraphs and the one Error (`IfCondition('\relax')`).
+const LXI: &str = r#"DefMacroI("\\mA", (), "MA");
+DefMacroI(T_CS("\\mB"), "{}", |gullet, x| Tokens(x, x));
+DefMacroI("\\mC", "[]{}", Tokens(T_LETTER("c")), #{locked: false});
+DefMacroI("\\csname m D\\endcsname", (), "MD");
+DefMacroI("~", (), "TILDE");
+DefPrimitiveI("\\pA", "{}", |stomach, x| Box("P" + ToString(x)));
+DefPrimitiveI("\\pB", (), ());
+DefPrimitiveI("\\pL", (), |stomach| List([Box("x"), Box("y")]));
+DefConstructorI("\\cA", "{}", "<ltx:text class='ca'>#1</ltx:text>");
+DefConstructorI(T_CS("\\cB"), (), |document| { document.absorbString("CB"); });
+DefConstructorI("\\cC", "{}", "<ltx:text class='cc'>#1</ltx:text>", #{
+  afterDigest: |whatsit| { AssignValue("lx:shape", whatsit.getFont().getShape(), "global"); }
+});
+DefMacro("\\rows", || {
+  let r = [];
+  r.push(Tokenize("ab\\c").unlist().len());
+  r.push(T_LETTER("a").getCatcode());
+  r.push(if T_CS("\\foo").getString() == "\\foo" { "S" } else { "N" });
+  r.push(T_BEGIN().getCSName());
+  r.push(if T_CS("\\foo").getCSName() == "\\foo" { "C" } else { "N" });
+  r.push(if IfCondition("\\iffoo") { "T" } else { "F" });
+  r.push(if IfCondition(T_CS("\\iftrue")) { "T" } else { "F" });
+  r.push(if defined(IfCondition("\\relax")) { "D" } else { "U" });
+  r.push(LookupValue("lx:shape"));
+  r.reduce(|s, v| if s == "" { `${v}` } else { s + " " + v }, "")
+});
+"#;
+
+const LXI_TEX: &str = r"\documentclass{article}
+\usepackage{lxi}
+\newif\iffoo\footrue
+\begin{document}
+A~B \mA \mB{b} \mC[o]{z} \csname m D\endcsname
+
+\pA{q} \pB \pL \cA{a} \cB \textit{\cC{s}}
+
+\rows
+\end{document}
+";
+
+#[test]
+fn rhai_perl_i_forms_and_accessors() {
+  let (log, xml) = convert_files_with(LXI_TEX, &[("lxi.sty.rhai", LXI)], None);
+  assert_eq!(error_count(&log), 1, "{log}");
+  assert_eq!(warning_count(&log), 0, "{log}");
+  assert!(
+    log.contains("Error:expected:conditional Expected a conditional, got '\\relax'"),
+    "{log}"
+  );
+  for (id, para) in [
+    ("p1", r#"<para xml:id="p1"><p>ATILDEB MAbb c MD</p></para>"#),
+    (
+      "p2",
+      r#"<para xml:id="p2"><p>Pqxy<text class="ca">a</text>CB<text class="cc" font="italic">s</text></p></para>"#,
+    ),
+    (
+      "p3",
+      r#"<para xml:id="p3"><p>3 11 S Begin C T T U italic</p></para>"#,
+    ),
+  ] {
+    assert_element(&xml, "para", &[&format!("xml:id=\"{id}\"")], para);
+  }
+}

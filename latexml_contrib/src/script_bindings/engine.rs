@@ -68,6 +68,99 @@ pub(super) fn make_engine() -> Engine {
       })
     },
   );
+  // Perl's I-forms (Package.pm:1157, :1291, :1453): a CS (a Token, or a string `coerceCS` reads) and a parameter-spec
+  // string or `()`, no prototype parsing; each lowers to the core call its prototype form makes.
+  engine.register_fn(
+    "DefMacroI",
+    |cs: Dynamic, params: Dynamic, body: Dynamic| -> RhaiResult<()> {
+      let cs = coerce_cs("DefMacroI", cs)?;
+      wire_now(|e, a| {
+        wire_macro_i(
+          e,
+          a,
+          cs,
+          i_form_params("DefMacroI", &cs, params)?,
+          body,
+          None,
+        )
+      })
+    },
+  );
+  engine.register_fn(
+    "DefMacroI",
+    |cs: Dynamic, params: Dynamic, body: Dynamic, opts: Map| -> RhaiResult<()> {
+      let cs = coerce_cs("DefMacroI", cs)?;
+      wire_now(|e, a| {
+        wire_macro_i(
+          e,
+          a,
+          cs,
+          i_form_params("DefMacroI", &cs, params)?,
+          body,
+          Some(opts),
+        )
+      })
+    },
+  );
+  let primitive_i = |cs: Dynamic, params: Dynamic, body: Dynamic, opts: Map| -> RhaiResult<()> {
+    let cs = coerce_cs("DefPrimitiveI", cs)?;
+    let body = match body.clone().try_cast::<FnPtr>() {
+      Some(fp) => Some(fp),
+      None if body.is_unit() => None,
+      None => {
+        return Err(
+          format!(
+            "DefPrimitiveI: the replacement is a closure or (), got {}",
+            body.type_name()
+          )
+          .into(),
+        );
+      },
+    };
+    wire_now(|e, a| {
+      let options = primitive_options_from_map(&cs.to_string(), opts, e, a)?;
+      wire_primitive_i(
+        e,
+        a,
+        cs,
+        i_form_params("DefPrimitiveI", &cs, params)?,
+        body,
+        options,
+      )
+    })
+  };
+  engine.register_fn(
+    "DefPrimitiveI",
+    move |cs: Dynamic, params: Dynamic, body: Dynamic| primitive_i(cs, params, body, Map::new()),
+  );
+  engine.register_fn("DefPrimitiveI", primitive_i);
+  let constructor_i = |cs: Dynamic, params: Dynamic, repl: Dynamic, opts: Map| -> RhaiResult<()> {
+    let cs = coerce_cs("DefConstructorI", cs)?;
+    wire_now(|e, a| {
+      wire_constructor_i(
+        e,
+        a,
+        cs,
+        i_form_params("DefConstructorI", &cs, params)?,
+        repl,
+        opts,
+      )
+    })
+  };
+  engine.register_fn(
+    "DefConstructorI",
+    move |cs: Dynamic, params: Dynamic, repl: Dynamic| constructor_i(cs, params, repl, Map::new()),
+  );
+  engine.register_fn("DefConstructorI", constructor_i);
+  // Perl's `IfCondition($if)` (Package.pm:1238): the conditional's truth, `()` (with its Error) when not one.
+  engine.register_fn("IfCondition", |cs: Dynamic| -> RhaiResult<Dynamic> {
+    let cs = coerce_cs("IfCondition", cs)?;
+    Ok(
+      latexml_core::binding::content::if_condition(&cs)
+        .map_err(rhai_err)?
+        .map_or(Dynamic::UNIT, Dynamic::from),
+    )
+  });
   // Class/package option. Mirrors the `DeclareOption!` macro's lowering
   // (setup_binding_language.rs): push the name onto `@declaredoptions` and
   // define a `\ds@<opt>` primitive carrying the body. Installed immediately,
@@ -155,6 +248,17 @@ pub(super) fn make_engine() -> Engine {
   // A token value in a string context (`"(" + ReadArg() + ")"`, `${…}`) is its TeX source, as `UnTeX` gives it.
   engine.register_fn("to_string", |t: &mut Token| Tokens::new(vec![*t]).untex());
   engine.register_fn("to_string", |t: &mut Tokens| t.clone().untex());
+  // Token.pm's and Tokens.pm's accessors: `unlist` the list's tokens (a Token's is itself), `getString` the text,
+  // `getCSName` the name a definition is stored under (`{` of any spelling is `{`), `getCatcode` the catcode's int.
+  engine.register_fn("unlist", |t: &mut Tokens| -> rhai::Array {
+    t.clone().unlist().into_iter().map(Dynamic::from).collect()
+  });
+  engine.register_fn("unlist", |t: &mut Token| -> rhai::Array {
+    vec![Dynamic::from(*t)]
+  });
+  engine.register_fn("getString", |t: &mut Token| t.with_str(str::to_string));
+  engine.register_fn("getCSName", |t: &mut Token| t.with_cs_name(str::to_string));
+  engine.register_fn("getCatcode", |t: &mut Token| t.get_catcode() as i64);
   engine.register_fn("T_CS", |name: &str| -> Token { latexml_core::T_CS!(name) });
   engine.register_fn("T_LETTER", |c: &str| -> Token {
     Token::new(c, Catcode::LETTER)
@@ -667,6 +771,43 @@ pub(super) fn make_engine() -> Engine {
   engine.register_fn("defined", |v: Dynamic| !v.is_unit());
   engine.register_fn("ToString", |_w: WhatsitProxy| whatsit_string());
   engine.register_fn("ToAttribute", |d: Digested| -> String { d.to_attribute() });
+  // Perl's `Box($string, $font, $locator, $tokens, %properties)` (Box.pm:29): a text box, in the current font when
+  // `font` is `()`, at the gullet's locator (a script has no locator: `()`), its tokens `T_OTHER($string)` when `()`.
+  engine.register_fn("Box", |s: &str| {
+    text_box(s, Dynamic::UNIT, Dynamic::UNIT, Map::new())
+  });
+  engine.register_fn("Box", |s: &str, font: Dynamic| {
+    text_box(s, font, Dynamic::UNIT, Map::new())
+  });
+  engine.register_fn(
+    "Box",
+    |s: &str, font: Dynamic, _loc: (), tokens: Dynamic| text_box(s, font, tokens, Map::new()),
+  );
+  engine.register_fn(
+    "Box",
+    |s: &str, font: Dynamic, _loc: (), tokens: Dynamic, props: Map| {
+      text_box(s, font, tokens, props)
+    },
+  );
+  // Perl's `List(@boxes, mode => $mode)` (List.pm:31): one box (of the asked mode) is itself, else a List in the mode.
+  engine.register_fn("List", |boxes: rhai::Array| list_of(boxes, None));
+  engine.register_fn(
+    "List",
+    |boxes: rhai::Array, opts: Map| -> RhaiResult<Digested> {
+      let mode = match opts.get("mode") {
+        Some(m) if opts.len() == 1 => m.to_string(),
+        _ => return Err("List: the one option is mode".into()),
+      };
+      list_of(boxes, Some(mode))
+    },
+  );
+  // Perl's `$box->getFont` (Box.pm, Whatsit.pm): a `Font` handle, `()` for a box without one.
+  engine.register_fn("getFont", |d: &mut Digested| -> RhaiResult<Dynamic> {
+    Ok(font_handle(d.get_font().map_err(rhai_err)?))
+  });
+  engine.register_fn("getFont", |_w: &mut WhatsitProxy| -> RhaiResult<Dynamic> {
+    with_whatsit(|w| w.get_font().map(font_handle).map_err(rhai_err))?
+  });
   engine.register_fn(
     "Revert",
     |d: Digested| -> std::result::Result<Tokens, Box<EvalAltResult>> {
@@ -2684,6 +2825,87 @@ fn tokens_of(items: rhai::Array) -> std::result::Result<Tokens, Box<EvalAltResul
 }
 
 /// The char of a 1-char string argument (Perl passes the char itself).
+fn font_handle(font: Option<Rc<latexml_core::common::font::Font>>) -> Dynamic {
+  font.map_or(Dynamic::UNIT, |f| Dynamic::from((*f).clone()))
+}
+
+fn text_box(s: &str, font: Dynamic, tokens: Dynamic, props: Map) -> RhaiResult<Digested> {
+  let font = match font.clone().try_cast::<latexml_core::common::font::Font>() {
+    Some(f) => Some(Rc::new(f)),
+    None if font.is_unit() => None,
+    None => return Err(format!("Box: the font is a Font or (), got {}", font.type_name()).into()),
+  };
+  let tokens = if tokens.is_unit() {
+    Tokens::default()
+  } else {
+    dynamic_to_tokens(tokens)
+  };
+  let mut properties = SymHashMap::default();
+  for (k, v) in props {
+    properties.insert(k.as_str(), dynamic_to_stored(v));
+  }
+  Ok(Digested::from(latexml_core::tbox::Tbox::new(
+    arena::pin(s),
+    font,
+    None,
+    tokens,
+    properties,
+  )))
+}
+
+fn list_of(boxes: rhai::Array, reqmode: Option<String>) -> RhaiResult<Digested> {
+  let mut items = Vec::with_capacity(boxes.len());
+  for b in boxes.into_iter().filter(|b| !b.is_unit()) {
+    match b.clone().try_cast::<Digested>() {
+      Some(d) => items.push(d),
+      None => return Err(format!("List: expected boxes, got {}", b.type_name()).into()),
+    }
+  }
+  if items.len() == 1
+    && reqmode.as_ref().is_none_or(|m| {
+      items[0]
+        .get_property("mode")
+        .is_some_and(|p| p.to_string() == *m)
+    })
+  {
+    return Ok(items.remove(0));
+  }
+  let mode = reqmode.unwrap_or_else(|| latexml_core::state::lookup_string("MODE"));
+  if mode == "horizontal" {
+    items = items
+      .into_iter()
+      .flat_map(|d| match d.data() {
+        latexml_core::digested::DigestedData::List(l)
+          if d
+            .get_property("mode")
+            .is_some_and(|p| p.to_string() == "horizontal") =>
+        {
+          l.borrow().boxes.clone()
+        },
+        _ => vec![d],
+      })
+      .collect();
+  }
+  let mut list = latexml_core::list::List::new(items);
+  list.mode = Some(if mode.ends_with("math") {
+    latexml_core::TexMode::Math
+  } else {
+    latexml_core::TexMode::Text
+  });
+  list
+    .properties
+    .insert("mode", Stored::String(arena::pin(&mode)));
+  if !list.boxes.is_empty()
+    && mode.ends_with("vertical")
+    && let Some(baseline) = latexml_core::state::lookup_dimension("\\baselineskip")
+  {
+    list
+      .properties
+      .insert("baseline", Stored::Dimension(baseline));
+  }
+  Ok(Digested::from(list))
+}
+
 fn char_of(c: &str) -> Option<char> { c.chars().next() }
 
 /// A char-code table's entry as a Rhai int, or `()` for an entry the table does not hold (Perl undef).

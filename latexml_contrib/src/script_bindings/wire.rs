@@ -70,11 +70,21 @@ pub(super) fn wire_macro_token(
   paramlist: Option<latexml_core::parameter::Parameters>,
   body: FnPtr,
 ) -> Result<()> {
-  let cs_name = cs.to_string();
+  let closure = macro_closure(engine, ast, cs.to_string(), body);
+  def_macro(cs, paramlist, ExpansionBody::Closure(closure), None)?;
+  Ok(())
+}
+
+/// A closure macro body: Perl's `($gullet, @args)` in, its value as the expansion.
+fn macro_closure(
+  engine: &Rc<Engine>,
+  ast: &Rc<AST>,
+  cs_name: String,
+  body: FnPtr,
+) -> ExpansionClosure {
   let engine = engine.clone();
   let ast = ast.clone();
-
-  let closure: ExpansionClosure = Rc::new(move |args: Vec<ArgWrap>| -> Result<Tokens> {
+  Rc::new(move |args: Vec<ArgWrap>| -> Result<Tokens> {
     let dyn_args = perl_body_args(
       &ast,
       &body,
@@ -87,9 +97,88 @@ pub(super) fn wire_macro_token(
       Err(e) => return contain(&format!("macro {cs_name}"), e, Tokens::default()),
     };
     Ok(dynamic_to_tokens(ret))
-  });
+  })
+}
 
-  def_macro(cs, paramlist, ExpansionBody::Closure(closure), None)?;
+/// Perl's `coerceCS` (Package.pm:160): a Token as is; a string names a control sequence, `\csname X\endcsname`
+/// as `\X`, and a single character is TokenizeInternal'd (an active character).
+pub(super) fn coerce_cs(call: &str, v: Dynamic) -> std::result::Result<Token, Box<EvalAltResult>> {
+  if let Some(t) = v.clone().try_cast::<Token>() {
+    return Ok(t);
+  }
+  let Some(s) = v.clone().into_string().ok() else {
+    return Err(
+      format!(
+        "{call}: expected a control-sequence name or a Token, got {}",
+        v.type_name()
+      )
+      .into(),
+    );
+  };
+  if let Some(name) = s
+    .strip_prefix("\\csname")
+    .and_then(|r| r.trim_start().strip_suffix("\\endcsname"))
+  {
+    Ok(latexml_core::T_CS!(format!("\\{name}").as_str()))
+  } else if s.chars().count() == 1 {
+    let mut tokens = mouth::tokenize_internal(TeXString::assembled(s)).unlist();
+    Ok(tokens.remove(0))
+  } else {
+    Ok(latexml_core::T_CS!(s.as_str()))
+  }
+}
+
+/// An I-form's parameter list (Package.pm:1164): `()` for none, else a parameter-spec string parsed for `cs`.
+pub(super) fn i_form_params(
+  call: &str,
+  cs: &Token,
+  spec: Dynamic,
+) -> Result<Option<latexml_core::parameter::Parameters>> {
+  if spec.is_unit() {
+    Ok(None)
+  } else if let Ok(spec) = spec.clone().into_string() {
+    latexml_core::common::def_parser::parse_parameters(&spec, cs, true)
+  } else {
+    Err(Error::from(format!(
+      "{call}: the parameter list is a string or (), got {}",
+      spec.type_name()
+    )))
+  }
+}
+
+/// Perl's `DefMacroI($cs, $paramlist, $expansion, %options)` (Package.pm:1157): the expansion a closure, TeX source,
+/// `Tokens` or a `Token`, `()` for none; lowers to `def_macro` as `DefMacro` does.
+pub(super) fn wire_macro_i(
+  engine: &Rc<Engine>,
+  ast: &Rc<AST>,
+  cs: Token,
+  paramlist: Option<latexml_core::parameter::Parameters>,
+  body: Dynamic,
+  opts: Option<Map>,
+) -> Result<()> {
+  let cs_name = cs.to_string();
+  let body = if let Some(fp) = body.clone().try_cast::<FnPtr>() {
+    ExpansionBody::Closure(macro_closure(engine, ast, cs_name.clone(), fp))
+  } else if body.is_unit() {
+    ExpansionBody::Tokens(Tokens::default())
+  } else if body.is_string() {
+    ExpansionBody::Tokens(mouth::tokenize_internal(TeXString::assembled(
+      body.into_string().unwrap_or_default(),
+    )))
+  } else if let Some(t) = body.clone().try_cast::<Tokens>() {
+    ExpansionBody::Tokens(t)
+  } else if let Some(t) = body.clone().try_cast::<Token>() {
+    ExpansionBody::Tokens(Tokens::new(vec![t]))
+  } else {
+    return Err(Error::from(format!(
+      "DefMacroI ({cs_name}): the expansion is a closure, a string, Tokens, a Token or (), got {}",
+      body.type_name()
+    )));
+  };
+  let options = opts
+    .map(|o| expandable_options_from_map(&cs_name, o))
+    .transpose()?;
+  def_macro(cs, paramlist, body, options)?;
   Ok(())
 }
 
@@ -216,11 +305,60 @@ pub(super) fn wire_constructor_opts(
   repl: ConstructorRepl,
   opts: Map,
 ) -> Result<()> {
+  wire_constructor_built(
+    engine,
+    ast,
+    ConstructorBuilder::new(proto)?,
+    proto,
+    Some(repl),
+    opts,
+  )
+}
+
+/// Perl's `DefConstructorI($cs, $paramlist, $replacement, %options)` (Package.pm:1453): the replacement a template
+/// string or a closure, `()` for none.
+pub(super) fn wire_constructor_i(
+  engine: &Rc<Engine>,
+  ast: &Rc<AST>,
+  cs: Token,
+  paramlist: Option<latexml_core::parameter::Parameters>,
+  repl: Dynamic,
+  opts: Map,
+) -> Result<()> {
+  let name = cs.to_string();
+  let repl = if repl.is_unit() {
+    None
+  } else if let Some(fp) = repl.clone().try_cast::<FnPtr>() {
+    Some(ConstructorRepl::Closure(fp))
+  } else if let Ok(t) = repl.clone().into_string() {
+    Some(ConstructorRepl::Template(t))
+  } else {
+    return Err(Error::from(format!(
+      "DefConstructorI ({name}): the replacement is a template string, a closure or (), got {}",
+      repl.type_name()
+    )));
+  };
+  let builder = ConstructorBuilder::from_cs(cs, paramlist);
+  wire_constructor_built(engine, ast, builder, &name, repl, opts)
+}
+
+fn wire_constructor_built(
+  engine: &Rc<Engine>,
+  ast: &Rc<AST>,
+  builder: ConstructorBuilder,
+  proto: &str,
+  repl: Option<ConstructorRepl>,
+  opts: Map,
+) -> Result<()> {
   let replacement = match repl {
-    ConstructorRepl::Template(t) => template_replacement(&t)?,
-    ConstructorRepl::Closure(b) => {
-      closure_replacement(b, engine.clone(), ast.clone(), proto.to_string())
-    },
+    Some(ConstructorRepl::Template(t)) => Some(template_replacement(&t)?),
+    Some(ConstructorRepl::Closure(b)) => Some(closure_replacement(
+      b,
+      engine.clone(),
+      ast.clone(),
+      proto.to_string(),
+    )),
+    None => None,
   };
   let operation = format!("DefConstructor ({proto})");
   let opts = checked_opts(
@@ -229,7 +367,10 @@ pub(super) fn wire_constructor_opts(
     &["outer", "long", "attributeForm"],
     opts,
   )?;
-  let builder = ConstructorBuilder::new(proto)?.replacement(replacement);
+  let builder = match replacement {
+    Some(r) => builder.replacement(r),
+    None => builder,
+  };
   apply_opts(&operation, builder, opts, engine, ast)?.install()
 }
 
@@ -759,29 +900,37 @@ pub(super) fn wire_primitive(
   options: PrimitiveOptions,
 ) -> Result<()> {
   let (cs, paramlist) = parse_prototype(proto, true)?;
+  wire_primitive_i(engine, ast, cs, paramlist, Some(body), options)
+}
+
+/// Perl's `DefPrimitiveI($cs, $paramlist, $replacement, %options)` (Package.pm:1291): [`wire_primitive`] for a
+/// control sequence and parameters in hand; no replacement (`()`) digests to nothing.
+pub(super) fn wire_primitive_i(
+  engine: &Rc<Engine>,
+  ast: &Rc<AST>,
+  cs: Token,
+  paramlist: Option<latexml_core::parameter::Parameters>,
+  body: Option<FnPtr>,
+  options: PrimitiveOptions,
+) -> Result<()> {
   let cs_name = cs.to_string();
   let engine = engine.clone();
   let ast = ast.clone();
-
-  let closure: PrimitiveClosure = Rc::new(move |args: Vec<ArgWrap>| -> Result<Vec<Digested>> {
-    let dyn_args = perl_body_args(
-      &ast,
-      &body,
-      Dynamic::from(StomachHandle),
-      args,
-      "DefPrimitive |args|",
-    );
-    let result: Dynamic = call_deferred_body(&engine, &ast, &body, dyn_args)
-      .or_else(|e| contain(&format!("primitive {cs_name}"), e, Dynamic::UNIT))?;
-    Ok(primitive_boxes(result))
+  let closure = body.map(|body| -> PrimitiveClosure {
+    Rc::new(move |args: Vec<ArgWrap>| -> Result<Vec<Digested>> {
+      let dyn_args = perl_body_args(
+        &ast,
+        &body,
+        Dynamic::from(StomachHandle),
+        args,
+        "DefPrimitive |args|",
+      );
+      let result: Dynamic = call_deferred_body(&engine, &ast, &body, dyn_args)
+        .or_else(|e| contain(&format!("primitive {cs_name}"), e, Dynamic::UNIT))?;
+      Ok(primitive_boxes(result))
+    })
   });
-
-  def_primitive(
-    cs,
-    paramlist,
-    Some(PrimitiveBody::Closure(closure)),
-    options,
-  )?;
+  def_primitive(cs, paramlist, closure.map(PrimitiveBody::Closure), options)?;
   Ok(())
 }
 
@@ -794,21 +943,7 @@ pub(super) fn wire_macro_opts(
   opts: Map,
 ) -> Result<()> {
   let (cs, paramlist) = parse_prototype(proto, true)?;
-  let cs_name = cs.to_string();
-  let engine = engine.clone();
-  let ast = ast.clone();
-  let closure: ExpansionClosure = Rc::new(move |args: Vec<ArgWrap>| -> Result<Tokens> {
-    let dyn_args = perl_body_args(
-      &ast,
-      &body,
-      Dynamic::from(GulletHandle),
-      args,
-      "DefMacro |args|",
-    );
-    let ret: Dynamic = call_deferred_body(&engine, &ast, &body, dyn_args)
-      .or_else(|e| contain(&format!("macro {cs_name}"), e, Dynamic::UNIT))?;
-    Ok(dynamic_to_tokens(ret))
-  });
+  let closure = macro_closure(engine, ast, cs.to_string(), body);
   def_macro(
     cs,
     paramlist,

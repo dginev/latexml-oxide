@@ -6025,7 +6025,7 @@ pub fn if_condition(if_token: &Token) -> Result<Option<bool>> {
   Error!(
     "expected",
     "conditional",
-    s!("Expected a conditional, got '{}'", if_token.stringify())
+    s!("Expected a conditional, got '{}'", if_token) // Perl's ToString($if), Package.pm:1251
   );
   Ok(None)
 }

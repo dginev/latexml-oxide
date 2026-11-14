@@ -158,6 +158,16 @@ impl ConstructorBuilder {
     })
   }
 
+  /// A control sequence and parameters already in hand (Perl's `DefConstructorI`, Package.pm:1453).
+  pub fn from_cs(cs: Token, paramlist: Option<Parameters>) -> Self {
+    Self {
+      cs,
+      paramlist,
+      replacement: None,
+      options: ConstructorOptions::default(),
+    }
+  }
+
   /// Set the XML replacement (template- or closure-derived; built by the caller).
   pub fn replacement(mut self, repl: ReplacementClosure) -> Self {
     self.replacement = Some(repl);
