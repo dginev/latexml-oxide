@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+  - **The bundled CSS follows upstream LaTeXML master (`0db6f47e`).** A listings line
+    number is `user-select: none` (upstream `95a77fc0`, #2850), so copying a numbered
+    `lstlisting` copies the code without its numbers; dark mode colours `body`, not
+    `:root` (upstream `ee4b3640`). `ltx-cv.css`, which the moderncv binding requests
+    (Perl `moderncv.cls.ltxml:25`), and the opt-in `LaTeXML-epub.css`
+    (`--css=LaTeXML-epub.css`, `\newpage` as a page break) are embedded byte-identical to
+    Perl's: both were `missing_file` Warnings with a dangling `<link>`. Mirrored in
+    ar5iv-css. Guard `single_binary_smoke::class_and_opt_in_stylesheets_are_served_embedded`.
   - **An fvextra `breaklines` Verbatim wraps and fits a phone** (issue 431, issue 702).
     The bundled CSS's verbatim `white-space:pre` also reached a breaklines line's
     `\parbox`, so its markup newlines rendered as blank rows (a one-row line 60 px, now

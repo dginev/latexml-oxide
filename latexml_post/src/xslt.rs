@@ -1134,6 +1134,10 @@ mod embedded_resources {
       include_str!("../resources/CSS/LaTeXML-blue.css"),
     ),
     (
+      "LaTeXML-epub.css",
+      include_str!("../resources/CSS/LaTeXML-epub.css"),
+    ),
+    (
       "LaTeXML-marginpar.css",
       include_str!("../resources/CSS/LaTeXML-marginpar.css"),
     ),
@@ -1159,6 +1163,7 @@ mod embedded_resources {
       "ltx-book.css",
       include_str!("../resources/CSS/ltx-book.css"),
     ),
+    ("ltx-cv.css", include_str!("../resources/CSS/ltx-cv.css")),
     (
       "ltx-listings.css",
       include_str!("../resources/CSS/ltx-listings.css"),

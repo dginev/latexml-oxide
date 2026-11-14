@@ -1,0 +1,17 @@
+% mechanism: the moderncv binding (Perl moderncv.cls.ltxml, ours moderncv_cls.rs) predates moderncv 2.x's interface:
+%   `\moderncvstyle` is a 0-argument no-op (Perl :94), so its `{classic}` prints; `\name{first}{last}`
+%   (moderncv.cls:221) and `\makecvtitle` (:540) are undefined
+% witness: synthetic (CSSVc, the ltx-cv.css probe)
+% oracle:  pdflatex (TL 2025, -no-shell-escape): 0 `!`; a title "Jane Doe", no "classic"
+% engines: rust CSSVc: 2 errors (undefined \name, \makecvtitle), body text "classic \name JaneDoe \makecvtitle";
+%   Perl: the same three defects by its binding (no \name, no \makecvtitle, \moderncvstyle without an argument)
+% expect:  0 errors; "Jane Doe" as the cv creator's name, no "classic" in the text
+% status:  RED (CSSVc) — a binding update, outside the CSS sync — moves: post-merge
+\documentclass{moderncv}
+\moderncvstyle{classic}
+\name{Jane}{Doe}
+\begin{document}
+\makecvtitle
+\section{Education}
+\cventry{2020}{PhD}{Uni}{City}{}{}
+\end{document}

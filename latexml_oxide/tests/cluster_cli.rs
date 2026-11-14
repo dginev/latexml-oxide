@@ -147,6 +147,49 @@ mod single_binary_smoke {
       "LaTeXML.css looks empty or invalid",
     );
   }
+
+  #[test]
+  fn class_and_opt_in_stylesheets_are_served_embedded() {
+    // moderncv's binding requests ltx-cv.css (Perl moderncv.cls.ltxml:25) and `--css=LaTeXML-epub.css`
+    // opts into Perl's epub page breaks: both were `missing_file` until embedded.
+    let bin = env!("CARGO_BIN_EXE_latexml_oxide");
+    let workdir = tempfile::tempdir().expect("create tempdir");
+    std::fs::write(
+      workdir.path().join("cv.tex"),
+      "\\documentclass{moderncv}\n\\firstname{Jane}\n\\familyname{Doe}\n\\begin{document}\n\
+       \\section{Education}\n\\cventry{2020}{PhD}{Uni}{City}{}{}\n\\newpage\nMore.\n\\end{document}\n",
+    )
+    .expect("write cv.tex");
+    let output = Command::new(bin)
+      .args(["cv.tex", "--css=LaTeXML-epub.css", "--dest", "cv.html"])
+      .current_dir(workdir.path())
+      .output()
+      .expect("spawn latexml_oxide");
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    let count = |p: &str| stderr.lines().filter(|l| l.starts_with(p)).count();
+    assert_eq!(
+      (count("Warning:"), count("Error:")),
+      (0, 0),
+      "no Warning/Error:\n{stderr}"
+    );
+    let html = std::fs::read_to_string(workdir.path().join("cv.html")).expect("read cv.html");
+    for css in ["ltx-cv.css", "LaTeXML-epub.css"] {
+      assert!(
+        html.contains(&format!(
+          "<link rel=\"stylesheet\" href=\"{css}\" type=\"text/css\">"
+        )),
+        "{css} linked:\n{html}"
+      );
+      let bundled = Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("../latexml_post/resources/CSS")
+        .join(css);
+      assert_eq!(
+        std::fs::read(workdir.path().join(css)).expect("copied css"),
+        std::fs::read(bundled).expect("bundled css"),
+        "{css} copied byte for byte"
+      );
+    }
+  }
 }
 
 mod telemetry {

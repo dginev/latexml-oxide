@@ -6,6 +6,8 @@
 % oracle:  pdflatex (TL 2025, -no-shell-escape): 0 `!`; "1" and "2" in the left margin, the code at the text's edge
 % engines: rust CSSVb: 0 errors; HTML number and code start at the same x (overlap); Perl: not run (a CSS layout)
 % expect:  0 errors; each line number ends left of its line's code in the rendered HTML
+% also:    the number carries no class of its own, so it cannot take listings' `user-select: none` (upstream 95a77fc0):
+%          a select-all of the frame copies "1 for i in range(3):\n2 print(i)" (Chrome, CSSVc)
 % status:  RED (CSSVb, fix/verbatim-css-scoping) — moves: post-merge
 \documentclass{article}
 \usepackage{fancyvrb}
