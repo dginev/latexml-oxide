@@ -54,7 +54,7 @@ Text \fooA{x}.
 \end{document}
 ";
 
-/// Rows red on 72b3971e4ca (round F), Perl's output beside each (OD #1032). Perl: 3 W plus the Error; ours 1 W more.
+/// Rows red on 72b3971e4ca (round F), Perl's output beside each (OD #1035). Perl: 3 W plus the Error; ours 1 W more.
 #[test]
 fn rhai_perl_names_behave_as_perl() {
   let (log, xml) = convert_files_with(LXRG_TEX, &[("lxrg.sty.rhai", LXRG)], None);
@@ -93,7 +93,7 @@ fn rhai_perl_names_behave_as_perl() {
 /// W3RH, no colour package loaded: rows red on 02ce42ad5dc (revW3RFG). p1: a `LookupDefinition` handle keeps the
 /// definition it found, also stored as a value (`A:NEW:NEW`, `B:` an undefined `\baz`, before; Perl `A:OLD:NEW`). p2: a base colour name in `MergeFont` and a `font:` option
 /// without color.sty (dvipsnam.def read first: 4 Errors, Black; Perl 0 E; the `font:` colour outlives `\fC`, as Perl's). p3: `int ⊕ Number` and float pairs compare
-/// as ints (`0 < n` was `false` silently), `roman(Number)` (Function not found), Perl's `int()` of a string (OD #1032).
+/// as ints (`0 < n` was `false` silently), `roman(Number)` (Function not found), Perl's `int()` of a string (OD #1035).
 const LXRH: &str = r#"DefMacro("\\foo", "OLD");
 DefMacro("\\swap", || { let d = LookupDefinition(T_CS("\\foo")); DefMacro("\\foo", "NEW"); AssignMeaning(T_CS("\\bar"), d); });
 DefMacro("\\saveit", || { AssignValue("saved", LookupDefinition(T_CS("\\foo"))); });

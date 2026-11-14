@@ -36203,7 +36203,7 @@ fresh register's unitless string (`DefRegister("\\c", "5")`) is the same Error, 
 `\the`, while an existing register's declared type still reads it (`"5"` for a Number register is 5). A wrong value
 read silently is the likelier wrong output (BM, 2026-11-05). **Guard**: `perfect_kernel_batchw3rc::rhai_typed_registers_error_side`.
 
-### 1032. Rhai's Perl-named calls: where they keep our core's behaviour, and the transitions (PR #829 rounds G-H)
+### 1035. Rhai's Perl-named calls: where they keep our core's behaviour, and the transitions (PR #829 rounds G-H)
 
 **Perl.** `MergeFont(color => 'red')` keeps the name (`color="red"`) with or without a colour package, and Font.pm
 `merge` ignores an unknown key; `Number($s)` is `int($s)` (Number.pm:31-34; `"12abc"` Warns `isn't numeric`);
