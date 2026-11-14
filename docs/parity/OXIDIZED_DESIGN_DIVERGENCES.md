@@ -4674,7 +4674,12 @@ newlines as blank rows (a one-row line 60 px, 2605.00468's 849 lines 41,496 →
 13,650 px at 1280 px), and its paragraph's text `pre-wrap`, which wraps and keeps
 the source's spaces (`normal` rendered `        return   x` as `return x`). A
 line, and xleftmargin's wrapper box around it (2605.01024), is capped at
-`max-width:100%`, and a line with a `.ltx_parbox` child is a flex row whose
+`max-width:100%`. The wrapper is a flex row (the line `min-width:0`), as TeX's
+`\hbox to\hsize{\kern\leftmargin\hbox to\linewidth{…}}` (fancyvrb.sty
+`\FV@ListProcessLine`) is: its margin arrives as U+2003 text, which a block
+wrapper put in an anonymous block above the block line — a blank row under every
+line, the margin lost (issue 853: row 30 → 15 px, text x 40 → 56 px, Chrome and
+Firefox alike). A line with a `.ltx_parbox` child is a flex row whose
 parbox shrinks beside the fixed break-indent boxes; an `ltx_text` an id keeps
 around them (a numbered indented line) is `display:contents`. The parbox's
 parent line carries an inline `width`, so the earlier
