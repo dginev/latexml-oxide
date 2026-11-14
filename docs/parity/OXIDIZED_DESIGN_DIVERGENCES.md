@@ -22362,7 +22362,9 @@ listings (tcolorbox reads the body back `nolol`, KNOWN_PERL_ERRORS #988). The bo
 (2409.11413's `\lstset{title=\lstname}` had emptied all 13 "Listing N: …" titles; a raw box's read-back runs with
 `\lst@MakeCaption` = `\@gobble`, which `lst_process_display_with` reads as such). The box frame and colours are not
 drawn; a box with `detach title` (title not in the bar) keeps none. `\newtcbinputlisting`'s `[init]` options go through
-tcolorbox's own init processor under the command's name (`\tcb@proc@options@init`, tcblistingscore.code.tex:374-377), so
+tcolorbox's own init processor under the command's name (`\__tcobox_process_newtcolorbox:nn`, tcblistingscore.code.tex:359; a
+tcolorbox without it, `\tcb@proc@options@init`: `tcolorbox_sty::tcb_process_init`), and each use runs the counter `code=` it left
+in `\tcb@opt@<name>` (tcolorbox 6.10 moved it to expl3, tcolorbox.sty:2428-2444), so
 `use counter=` gives each use `\thetcbcounter`, and a box without a counter has an empty `\thetcbcounter`
 (tcolorbox.sty:2335-2337 `\tcb@proc@counter@no`, key `no counter` :2258; 2605.21082's `title={\textbf{code~\thetcbcounter}: #2}` prints "code : …",
 `tcolorbox_sty::tcb_counter_step_code`). `\newtcbinputlisting` also carries the box's phantom code (a per-use `label=` /

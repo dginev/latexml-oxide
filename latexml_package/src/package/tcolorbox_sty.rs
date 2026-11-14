@@ -386,6 +386,14 @@ LoadDefinitions!({
   // listings' raw reader reads the begin line instead (`tcb_grab_begin_line`).
   // Guard: `perfect_kernel_batch56::tcb_bang_leading_optional_reaches_options`.
   RawTeX!(r"\expandafter\let\expandafter\lxtcbnovalue\csname c_novalue_tl\endcsname");
+  // A listing box's per-use counter code is the package's own `code=` in `\tcb@opt@<name>` (`tcb_process_init`),
+  // run alone, its phantom refstep at once: 6.10 moved it to expl3 (tcolorbox.sty:2428-2444; ≤ 6.9 :2311).
+  // The keys are set at use: tcolorbox 2.80 (1606.02242) loads no pgfkeys.
+  RawTeX!(r"\def\lx@tcb@runcolopt#1{\pgfqkeys{/lx@tcb@colopt}{code/.code={##1},.unknown/.code={},#1}}
+    \def\lxtcbusecounter#1{\let\lx@tcb@savedphantom\kvtcb@phantom\let\kvtcb@phantom\@empty
+      \expandafter\expandafter\expandafter\lx@tcb@runcolopt\expandafter\expandafter\expandafter
+        {\csname tcb@opt@#1\endcsname}%
+      \kvtcb@phantom\let\kvtcb@phantom\lx@tcb@savedphantom}");
   DefPrimitive!("\\lxtcbdropphantom", {
     AssignValue!("tcb_pending_phantom" => Stored::None, Scope::Global);
     AssignValue!("tcb_pending_title" => Stored::None, Scope::Global);
@@ -848,16 +856,38 @@ fn xparse_signature_specs_defaults(sig: &str) -> Vec<(char, String, String, bool
   out
 }
 
-/// A tcb listing box's per-use counter code, as `\tcb@proc@counter@autoanduse` / `…@from` / `…@no` append it
-/// to the box options (tcolorbox.sty:2297-2331): with a counter recorded for `name` by tcolorbox's init processor
-/// (`\tcb@cnt@<name>`), step it and expose `\thetcbcounter`; without one, `\tcbcounter` and `\thetcbcounter` are
-/// empty. Read at the user's catcodes (no `@` letters outside the `\csname` texts).
+/// A tcb listing box's per-use counter code, as tcolorbox's `options@for=<name>` runs it (tcolorbox.sty
+/// :937): the `code=` its init processor appended to `\tcb@opt@<name>` (`\lxtcbusecounter`) steps the box's
+/// counter and sets `\tcbcounter`/`\thetcbcounter` (both empty for `no counter`); without a processed
+/// init, both are empty. Read at the user's catcodes (no `@` letters outside the `\csname` texts).
 pub(crate) fn tcb_counter_step_code(name: &str) -> String {
   format!(
-    "\\ifcsdef{{tcb@cnt@{name}}}{{\\letcs\\tcbcounter{{tcb@cnt@{name}}}\
-     \\letcs\\thetcbcounter{{thetcb@cnt@{name}}}\\refstepcounter{{\\tcbcounter}}}}\
+    "\\ifcsdef{{tcb@opt@{name}}}{{\\lxtcbusecounter{{{name}}}}}\
      {{\\let\\tcbcounter\\empty\\let\\thetcbcounter\\empty}}"
   )
+}
+
+/// Run tcolorbox's own init processor for the box `name`, as `\newtcblisting` and its family do
+/// (tcblistingscore.code.tex:301-303 `\__tcobox_process_newtcolorbox:nn`): the counter keys define
+/// `\tcb@cnt@<name>`, and `\tcb@opt@<name>` keeps the per-use options (`tcb_counter_step_code`). The
+/// call is the loaded package's: 6.10 renamed `\tcb@proc@options@init` (tcolorbox.sty:2472), and a
+/// tcolorbox before `\__tcobox_process_newtcolorbox:nn` (2.80, shipped by 1606.02242) has only the old one.
+pub(crate) fn tcb_process_init(init_src: &str, name: &str) {
+  let call = if lookup_meaning(&T_CS!("\\__tcobox_process_newtcolorbox:nn")).is_some() {
+    // (the binding re-runs the init on a redefinition, as `\renewtcolorbox` does: overwrite allowed)
+    format!(
+      "\\csname bool_set_false:N\\expandafter\\endcsname\\csname l__tcobox_prevent_init_overwrite_bool\\endcsname\
+       \\csname __tcobox_process_newtcolorbox:nn\\endcsname{{{init_src}}}{{{name}}}"
+    )
+  } else if lookup_meaning(&T_CS!("\\tcb@proc@options@init")).is_some() {
+    format!(
+      "\\def\\tcb@new@colopt{{}}\\tcb@proc@options@init{{{init_src}}}{{{name}}}\
+       \\expandafter\\let\\csname tcb@opt@{name}\\endcsname\\tcb@new@colopt"
+    )
+  } else {
+    return;
+  };
+  let _ = digest(mouth::tokenize_internal(TeXString::assembled(call)));
 }
 
 /// Distill the per-use side effects a tcb listing environment owes from its
@@ -883,21 +913,15 @@ pub(crate) fn tcb_listing_startend(
     init.map(|t| t.to_string()).unwrap_or_default(),
     opts
   );
-  // The counter keys run through tcolorbox's OWN init processor
-  // (tcolorbox.sty:2339 `\tcb@proc@options@init{init}{env}` → `auto counter`
+  // The counter keys run through tcolorbox's OWN init processor (`tcb_process_init`;
+  // tcolorbox.sty:2339 `\tcb@proc@options@init{init}{env}` → `auto counter`
   // / `use counter` / `use counter from` / `number within` …, :2254-2262 and
   // :2297-2333), so `\tcb@cnt@<env>` and `\thetcb@cnt@<env>` exist for a
   // later `\newtcolorbox[use counter from=<env>]` (tcolorbox manual's
   // preamble D: `texexptitledspec` from `texexptitled` — "Extra \endcsname"
   // + `\the\tcb@cnt@texexptitled` undefined when the native listing env
-  // dropped its init). Each use then steps the recorded counter the way
-  // `\tcb@new@colopt`'s `code=` does (:2311).
-  if init.is_some_and(|t| !t.to_string().trim().is_empty()) {
-    let init_src = init.map(|t| t.to_string()).unwrap_or_default();
-    let _ = digest(mouth::tokenize_internal(TeXString::assembled(format!(
-      "\\tcb@proc@options@init{{{init_src}}}{{{env_name}}}"
-    ))));
-  }
+  // dropped its init). Each use then runs that `\tcb@new@colopt` `code=` (`tcb_counter_step_code`).
+  tcb_process_init(&init.map(|t| t.to_string()).unwrap_or_default(), env_name);
   // A box without a counter has an empty `\thetcbcounter` (`no counter`, the `reset@new` default,
   // tcolorbox.sty:2335-2337 `\tcb@proc@counter@no` `\let\thetcbcounter=\@empty`, key `no counter` :2258): 2605.21082's `title={\textbf{code~\thetcbcounter}:
   // #2}` with no counter prints "code : …" (it was undefined:\thetcbcounter once the title was typeset).

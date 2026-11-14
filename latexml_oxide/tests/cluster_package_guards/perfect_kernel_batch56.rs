@@ -14536,6 +14536,17 @@ fn counter_reset_lists_are_global() {
     &[r#"xml:id="p1""#],
     "<para xml:id=\"p1\"><p>[0]\n[3]</p></para>",
   );
+  // WIN1b: latex.ltx's `[format]` optional (`{sO{\arabic}mm}`), braced or not; read as the counter
+  // before ("]foosection]barsection", 2 Errors), which tcolorbox 6.10's `number within` reaches.
+  let (stderr, xml) = convert_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/macro-state/counterwithin_takes_a_format_optional.tex"
+    ),
+    None,
+  );
+  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  assert!(xml.contains("<p>[1.iii][B]</p>"), "{xml}");
 }
 
 /// Assert each float's whole `<tags>` element, found after its `xml:id` and before any nested
