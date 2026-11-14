@@ -1378,41 +1378,68 @@
 <a href=#1378 id=1378 data-nosnippet>1378</a>  }
 <a href=#1379 id=1379 data-nosnippet>1379</a>
 <a href=#1380 id=1380 data-nosnippet>1380</a>  <span class="attr">#[test]
-<a href=#1381 id=1381 data-nosnippet>1381</a>  </span><span class="kw">fn </span>framed_verbatim_responsive_delta_stays_present() {
-<a href=#1382 id=1382 data-nosnippet>1382</a>    <span class="kw">let </span>css = bundled_latexml_css();
-<a href=#1383 id=1383 data-nosnippet>1383</a>    <span class="macro">assert!</span>(
-<a href=#1384 id=1384 data-nosnippet>1384</a>      css.contains(<span class="string">"#525"</span>)
-<a href=#1385 id=1385 data-nosnippet>1385</a>        &amp;&amp; css.contains(
-<a href=#1386 id=1386 data-nosnippet>1386</a>          <span class="string">".ltx_framed_verbatim { max-width:100%; overflow-x:auto; box-sizing:border-box; }"
-<a href=#1387 id=1387 data-nosnippet>1387</a>        </span>),
-<a href=#1388 id=1388 data-nosnippet>1388</a>      <span class="string">"the framed-verbatim responsive-containment delta (issue #525) is missing from \
-<a href=#1389 id=1389 data-nosnippet>1389</a>       LaTeXML.css: a fancyvrb frame=single box spans the print \\linewidth and would push \
-<a href=#1390 id=1390 data-nosnippet>1390</a>       its border off-screen and scroll the whole page on a phone"</span>,
-<a href=#1391 id=1391 data-nosnippet>1391</a>    );
-<a href=#1392 id=1392 data-nosnippet>1392</a>  }
-<a href=#1393 id=1393 data-nosnippet>1393</a>
-<a href=#1394 id=1394 data-nosnippet>1394</a>  <span class="attr">#[test]
-<a href=#1395 id=1395 data-nosnippet>1395</a>  </span><span class="kw">fn </span>title_pubnote_content_stays_collapsed() {
-<a href=#1396 id=1396 data-nosnippet>1396</a>    <span class="comment">// arXiv/html_feedback#6888 (+ #6886): a title footnote (`\thanks`/`\titlenote`,
-<a href=#1397 id=1397 data-nosnippet>1397</a>    // role=note/thanks) stays in the `&lt;h1&gt;` as a `.ltx_pubnotes` block. The bundled
-<a href=#1398 id=1398 data-nosnippet>1398</a>    // CSS must render ONLY the dagger MARK and keep the footnote CONTENT hidden by
-<a href=#1399 id=1399 data-nosnippet>1399</a>    // default, so the title text is the sole rendered language — the reporter saw the
-<a href=#1400 id=1400 data-nosnippet>1400</a>    // footnote text rendered inline in the title (an older deployed build). Guard both
-<a href=#1401 id=1401 data-nosnippet>1401</a>    // halves so a re-vanilla / cleanup sweep cannot silently drop the collapse.
-<a href=#1402 id=1402 data-nosnippet>1402</a>    </span><span class="kw">let </span>css = bundled_latexml_css();
-<a href=#1403 id=1403 data-nosnippet>1403</a>    <span class="macro">assert!</span>(
-<a href=#1404 id=1404 data-nosnippet>1404</a>      css.contains(<span class="string">".ltx_pubnotes:before"</span>) &amp;&amp; css.contains(<span class="string">r#"content:"\002020""#</span>),
-<a href=#1405 id=1405 data-nosnippet>1405</a>      <span class="string">"the title-footnote MARK rule (.ltx_pubnotes:before dagger) is missing from \
-<a href=#1406 id=1406 data-nosnippet>1406</a>       LaTeXML.css (arXiv/html_feedback#6888)"</span>,
-<a href=#1407 id=1407 data-nosnippet>1407</a>    );
-<a href=#1408 id=1408 data-nosnippet>1408</a>    <span class="macro">assert!</span>(
-<a href=#1409 id=1409 data-nosnippet>1409</a>      css.contains(<span class="string">".ltx_pubnotes .ltx_pubnotes_content"</span>)
-<a href=#1410 id=1410 data-nosnippet>1410</a>        &amp;&amp; css.contains(<span class="string">"visibility:hidden; opacity:0"</span>),
-<a href=#1411 id=1411 data-nosnippet>1411</a>      <span class="string">"the title-footnote CONTENT-hidden rule (.ltx_pubnotes .ltx_pubnotes_content \
-<a href=#1412 id=1412 data-nosnippet>1412</a>       {{ visibility:hidden }}) is missing from LaTeXML.css: the `\\thanks` text would \
-<a href=#1413 id=1413 data-nosnippet>1413</a>       render inline in the title instead of collapsing to the dagger \
-<a href=#1414 id=1414 data-nosnippet>1414</a>       (arXiv/html_feedback#6888)"</span>,
-<a href=#1415 id=1415 data-nosnippet>1415</a>    );
-<a href=#1416 id=1416 data-nosnippet>1416</a>  }
-<a href=#1417 id=1417 data-nosnippet>1417</a>}
+<a href=#1381 id=1381 data-nosnippet>1381</a>  </span><span class="kw">fn </span>equation_tag_and_mathjax_deltas_stay_present() {
+<a href=#1382 id=1382 data-nosnippet>1382</a>    <span class="comment">// Issues #810 (a one-row equation centred in the full line, its tag beside it: Chrome/Firefox at
+<a href=#1383 id=1383 data-nosnippet>1383</a>    // 375 px, the long `\tag` over its formula -&gt; beside it; multi-row tables keep a tag column) and
+<a href=#1384 id=1384 data-nosnippet>1384</a>    // #475 (MathJax 2.1 offline: consecutive displays 53 -&gt; 21 px apart, native 18, in a table or a
+<a href=#1385 id=1385 data-nosnippet>1385</a>    // minipage); the browser half is `cluster_cli::browser_render_eqn_tags`.
+<a href=#1386 id=1386 data-nosnippet>1386</a>    </span><span class="kw">let </span>css = bundled_latexml_css();
+<a href=#1387 id=1387 data-nosnippet>1387</a>    <span class="kw">for </span>(issue, rule) <span class="kw">in </span>[
+<a href=#1388 id=1388 data-nosnippet>1388</a>      (<span class="string">"#810"</span>, <span class="string">".ltx_eqn_eqno { max-width:none; }"</span>),
+<a href=#1389 id=1389 data-nosnippet>1389</a>      (
+<a href=#1390 id=1390 data-nosnippet>1390</a>        <span class="string">"#810"</span>,
+<a href=#1391 id=1391 data-nosnippet>1391</a>        <span class="string">".ltx_equation.ltx_eqn_table &gt; * &gt; .ltx_eqn_row:only-child:has(&gt; .ltx_eqn_center_padleft) {\n  \
+<a href=#1392 id=1392 data-nosnippet>1392</a>         display:grid; grid-template-columns:minmax(2em,1fr) auto 1fr; align-items:center; }"</span>,
+<a href=#1393 id=1393 data-nosnippet>1393</a>      ),
+<a href=#1394 id=1394 data-nosnippet>1394</a>      (
+<a href=#1395 id=1395 data-nosnippet>1395</a>        <span class="string">"#475"</span>,
+<a href=#1396 id=1396 data-nosnippet>1396</a>        <span class="string">".ltx_eqn_table .ltx_eqn_cell &gt; mjx-container[display=\"true\"],\n\
+<a href=#1397 id=1397 data-nosnippet>1397</a>         .ltx_eqn_table .ltx_eqn_cell &gt; .MathJax_Display { margin-top:0; margin-bottom:0; }"</span>,
+<a href=#1398 id=1398 data-nosnippet>1398</a>      ),
+<a href=#1399 id=1399 data-nosnippet>1399</a>    ] {
+<a href=#1400 id=1400 data-nosnippet>1400</a>      <span class="macro">assert!</span>(
+<a href=#1401 id=1401 data-nosnippet>1401</a>        css.contains(issue) &amp;&amp; css.contains(rule),
+<a href=#1402 id=1402 data-nosnippet>1402</a>        <span class="string">"LaTeXML.css lost the issue {issue} rule `{rule}`"
+<a href=#1403 id=1403 data-nosnippet>1403</a>      </span>);
+<a href=#1404 id=1404 data-nosnippet>1404</a>    }
+<a href=#1405 id=1405 data-nosnippet>1405</a>  }
+<a href=#1406 id=1406 data-nosnippet>1406</a>
+<a href=#1407 id=1407 data-nosnippet>1407</a>  <span class="attr">#[test]
+<a href=#1408 id=1408 data-nosnippet>1408</a>  </span><span class="kw">fn </span>framed_verbatim_responsive_delta_stays_present() {
+<a href=#1409 id=1409 data-nosnippet>1409</a>    <span class="kw">let </span>css = bundled_latexml_css();
+<a href=#1410 id=1410 data-nosnippet>1410</a>    <span class="macro">assert!</span>(
+<a href=#1411 id=1411 data-nosnippet>1411</a>      css.contains(<span class="string">"#525"</span>)
+<a href=#1412 id=1412 data-nosnippet>1412</a>        &amp;&amp; css.contains(
+<a href=#1413 id=1413 data-nosnippet>1413</a>          <span class="string">".ltx_framed_verbatim { max-width:100%; overflow-x:auto; box-sizing:border-box; }"
+<a href=#1414 id=1414 data-nosnippet>1414</a>        </span>),
+<a href=#1415 id=1415 data-nosnippet>1415</a>      <span class="string">"the framed-verbatim responsive-containment delta (issue #525) is missing from \
+<a href=#1416 id=1416 data-nosnippet>1416</a>       LaTeXML.css: a fancyvrb frame=single box spans the print \\linewidth and would push \
+<a href=#1417 id=1417 data-nosnippet>1417</a>       its border off-screen and scroll the whole page on a phone"</span>,
+<a href=#1418 id=1418 data-nosnippet>1418</a>    );
+<a href=#1419 id=1419 data-nosnippet>1419</a>  }
+<a href=#1420 id=1420 data-nosnippet>1420</a>
+<a href=#1421 id=1421 data-nosnippet>1421</a>  <span class="attr">#[test]
+<a href=#1422 id=1422 data-nosnippet>1422</a>  </span><span class="kw">fn </span>title_pubnote_content_stays_collapsed() {
+<a href=#1423 id=1423 data-nosnippet>1423</a>    <span class="comment">// arXiv/html_feedback#6888 (+ #6886): a title footnote (`\thanks`/`\titlenote`,
+<a href=#1424 id=1424 data-nosnippet>1424</a>    // role=note/thanks) stays in the `&lt;h1&gt;` as a `.ltx_pubnotes` block. The bundled
+<a href=#1425 id=1425 data-nosnippet>1425</a>    // CSS must render ONLY the dagger MARK and keep the footnote CONTENT hidden by
+<a href=#1426 id=1426 data-nosnippet>1426</a>    // default, so the title text is the sole rendered language — the reporter saw the
+<a href=#1427 id=1427 data-nosnippet>1427</a>    // footnote text rendered inline in the title (an older deployed build). Guard both
+<a href=#1428 id=1428 data-nosnippet>1428</a>    // halves so a re-vanilla / cleanup sweep cannot silently drop the collapse.
+<a href=#1429 id=1429 data-nosnippet>1429</a>    </span><span class="kw">let </span>css = bundled_latexml_css();
+<a href=#1430 id=1430 data-nosnippet>1430</a>    <span class="macro">assert!</span>(
+<a href=#1431 id=1431 data-nosnippet>1431</a>      css.contains(<span class="string">".ltx_pubnotes:before"</span>) &amp;&amp; css.contains(<span class="string">r#"content:"\002020""#</span>),
+<a href=#1432 id=1432 data-nosnippet>1432</a>      <span class="string">"the title-footnote MARK rule (.ltx_pubnotes:before dagger) is missing from \
+<a href=#1433 id=1433 data-nosnippet>1433</a>       LaTeXML.css (arXiv/html_feedback#6888)"</span>,
+<a href=#1434 id=1434 data-nosnippet>1434</a>    );
+<a href=#1435 id=1435 data-nosnippet>1435</a>    <span class="macro">assert!</span>(
+<a href=#1436 id=1436 data-nosnippet>1436</a>      css.contains(<span class="string">".ltx_pubnotes .ltx_pubnotes_content"</span>)
+<a href=#1437 id=1437 data-nosnippet>1437</a>        &amp;&amp; css.contains(<span class="string">"visibility:hidden; opacity:0"</span>),
+<a href=#1438 id=1438 data-nosnippet>1438</a>      <span class="string">"the title-footnote CONTENT-hidden rule (.ltx_pubnotes .ltx_pubnotes_content \
+<a href=#1439 id=1439 data-nosnippet>1439</a>       {{ visibility:hidden }}) is missing from LaTeXML.css: the `\\thanks` text would \
+<a href=#1440 id=1440 data-nosnippet>1440</a>       render inline in the title instead of collapsing to the dagger \
+<a href=#1441 id=1441 data-nosnippet>1441</a>       (arXiv/html_feedback#6888)"</span>,
+<a href=#1442 id=1442 data-nosnippet>1442</a>    );
+<a href=#1443 id=1443 data-nosnippet>1443</a>  }
+<a href=#1444 id=1444 data-nosnippet>1444</a>}
 </code></pre></div></section></main></body></html>
