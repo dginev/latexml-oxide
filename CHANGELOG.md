@@ -16,6 +16,16 @@
     are lost under `--nodefaultresources` without a stylesheet carrying the rule, and in readers
     that ignore our CSS or lack `var()`/`:where()`. OXIDIZED_DESIGN #1045; guard
     `perfect_kernel_batchqab57::section_in_a_box_keeps_the_box_width`.
+  - **Under the OmniBus fallback, the document's own definitions win over its guesses** (Bruce
+    Miller Q3.12, DG 2026-11-14: "the document wins"). A `\newcommand`, `\renewcommand`, `\def`,
+    `\DeclareRobustCommand`, `\let` or `\NewDocumentCommand` of a name OmniBus had guessed
+    (`\doi`, `\corref`, `\etal`) replaces the guess, as in pdflatex; `\providecommand` keeps it.
+    OXIDIZED_DESIGN #408 (extended); guard
+    `perfect_kernel_batchqab57::omnibus_guesses_yield_to_the_document`.
+  - **latexml.sty takes `pdfoutput` and `nopdfoutput` options** (Bruce Miller Q4.2). They set
+    `\pdfoutput` to 1 or 0 over the mode LaTeXML guesses from the source's cues, e.g.
+    `--preload=[nopdfoutput]latexml.sty` for a latex+dvips paper. Default output is unchanged.
+    OXIDIZED_DESIGN #1046; guard `perfect_kernel_batchqab57::latexml_pdfoutput_options_override_the_mode`.
   - **No default `rowspacing="0pt"` on a MathML table** (issue 695). An `array`, `aligned` or
     other multi-row table carried `rowspacing="0pt"`, which MathML Core does not have (Chrome
     ignores it) but Firefox and MathJax honour, setting the rows touching. It is no longer
