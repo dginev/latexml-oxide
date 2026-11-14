@@ -157,7 +157,8 @@ pub(crate) fn load() -> Result<()> {
     // there. See [[project_newenvironment_autoload_clobber]].
     // (a semantic command OmniBus guessed and locked is the class's own, which `\providecommand` defers to: the
     // document's `\providecommand{\keywords}` keeps it, user ruling 2026-10-01, where its `\newcommand` replaces it)
-    let locked_guess = is_fallback_meaning(&cs) && lookup_bool(&s!("{}:locked", cs.to_string()));
+    let locked_guess = fallback_meaning_origin(&cs) == Some(definition::origin::DefinitionOrigin::Fallback)
+      && lookup_bool(&s!("{}:locked", cs.to_string()));
     if !locked_guess && is_definable_latex(&cs)?.0 {
       let nargs = nargs.value_of() as usize;
       if opt.is_some() {
