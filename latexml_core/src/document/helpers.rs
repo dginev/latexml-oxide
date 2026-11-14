@@ -10,18 +10,20 @@ use crate::common::{error::*, xml::XML_NS};
 /// — a signal robust to how many stray `\par`s fired before it (which varies by
 /// TeX Live year / dump vs no-dump).
 pub fn preceding_para_sibling(node: &Node) -> bool {
-  match node.get_prev_element_sibling() {
-    None => false,
-    Some(prev) => {
-      if prev.get_name() == "_spilled_" {
-        // Streaming pass 1: earlier siblings were spilled; the placeholder
-        // records the LAST spilled node's qname (see `spill_run`) so this
-        // test matches what the eager walk would have seen.
-        prev.get_attribute("last").as_deref() == Some("ltx:para")
-      } else {
-        get_node_qname(&prev) == crate::pin!("ltx:para")
-      }
-    },
+  node
+    .get_prev_element_sibling()
+    .is_some_and(|prev| is_para(&prev))
+}
+
+/// Is `node` an `ltx:para`, or the streaming placeholder of a run that ends with one?
+pub fn is_para(node: &Node) -> bool {
+  if node.get_name() == "_spilled_" {
+    // Streaming pass 1: earlier siblings were spilled; the placeholder
+    // records the LAST spilled node's qname (see `spill_run`) so this
+    // test matches what the eager walk would have seen.
+    node.get_attribute("last").as_deref() == Some("ltx:para")
+  } else {
+    get_node_qname(node) == crate::pin!("ltx:para")
   }
 }
 

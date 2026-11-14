@@ -1,0 +1,21 @@
+% witness: 2512.08710 (a `minipage` holding a `figure[H]` and paragraphs, `\vspace{0.5cm}` between them)
+% oracle:  pdflatex 0 errors; 0.5cm before "Mini third"
+% engines: rust QAB8b (the second A/B binary): S1.p1.p3 `--ltx-skip-before:14.2pt` (the box's paragraphs are built in
+%          `insert_block`'s capture, then moved into its `inline-logical-block`); perl: no skip
+% expect:  0 errors; the minipage's paragraphs bare (boxes keep no skip, QA26 ruling)
+% status:  RED (QAB8b) -> GREEN (QAB8: tex_glue.rs `in_unspaced_container`, the capture block)
+\documentclass{article}
+\usepackage{float}
+\begin{document}
+\section{Box}
+\noindent\begin{minipage}{\columnwidth}
+\noindent\hspace{8pt} Mini first.
+
+\begin{figure}[H]\centering\rule{1cm}{1cm}\caption{A figure.}\end{figure}
+
+\noindent\hspace{8pt} Mini second.
+\vspace{0.5cm}
+
+\noindent\hspace{8pt} Mini third.
+\end{minipage}
+\end{document}

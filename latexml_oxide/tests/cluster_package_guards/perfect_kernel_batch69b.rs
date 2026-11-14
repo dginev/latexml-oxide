@@ -73,6 +73,7 @@ fn class_redefining_trivlist_keeps_the_list() {
 /// Errors "Attempt to end mode internal_vertical" (Perl the same).
 #[test]
 fn endlist_with_no_list_open_does_nothing() {
+  // (QAB8: myproof's end code `\par\bigskip` before "After." is kept on it, `--ltx-skip-before`, OD #1050)
   let (stderr, xml) = convert_with(
     include_str!(
       "../../../tools/perfect_kernel/repros/list-structure/endlist_with_no_list_open_does_nothing.tex"
@@ -91,7 +92,7 @@ fn endlist_with_no_list_open_does_nothing() {
     &xml,
     "para",
     &["xml:id=\"p3\""],
-    r#"<para xml:id="p3"><p>After.</p><itemize xml:id="S0.I1"><item xml:id="S0.I1.i1"><tags><tag>•</tag><tag role="typerefnum">1st item</tag></tags><para xml:id="S0.I1.i1.p1"><p>A list still closes.</p></para></item></itemize></para>"#,
+    r#"<para cssstyle="--ltx-skip-before:12.0pt" xml:id="p3"><p>After.</p><itemize xml:id="S0.I1"><item xml:id="S0.I1.i1"><tags><tag>•</tag><tag role="typerefnum">1st item</tag></tags><para xml:id="S0.I1.i1.p1"><p>A list still closes.</p></para></item></itemize></para>"#,
   );
 }
 

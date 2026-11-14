@@ -1,0 +1,14 @@
+% witness: revMHCHEM4 (synthetic; common in physics: `\nabla\cdot`, `\nabla\times`); the space walk types an atom by
+%          LaTeXML's role where TeX's class differs: ∇ (role OPERATOR-like Op) is TeX's Ord, ¬ (BIGOP) is TeX's Ord, \mid
+%          (VERTBAR) is TeX's Rel; only pairs touching a sign the §729 pass converted read TeX's types
+% oracle:  pdflatex 0 errors (TL 2025) \showbox: `\nabla\cdot B` and `\nabla\times B` \medmuskip both sides of the
+%          operator; `\neg -p` \medmuskip both sides of −; `a\mid b` \thickmuskip both sides of ∣
+% engines: rust MHCHEM4 568e7ae12f8: `<mo>∇</mo><mo lspace="0em" rspace="0.222em">⋅</mo>` (no space before ⋅);
+%          `\neg -p` the − tight on the left only; `\mid` no thick space
+% expect:  0 errors; ⋅ and × with 0.222em each side after ∇; − of `\neg -p` 0.222em each side; ∣ 0.278em each side
+% status:  RED
+% moves:   post-merge (the walk's atom types follow TeX's class by glyph/meaning: OD #1033's extension)
+\documentclass{article}
+\begin{document}
+$\nabla\cdot B$ $\nabla\times B$ $\neg -p$ $a\mid b$
+\end{document}

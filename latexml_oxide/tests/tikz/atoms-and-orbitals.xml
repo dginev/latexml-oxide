@@ -407,7 +407,7 @@
       </svg:svg>
     </picture>
   </para>
-  <para xml:id="p2">
+  <para cssstyle="--ltx-skip-before:6.0pt" xml:id="p2">
     <picture height="124.26" width="163.08" xml:id="p2.pic1">
       <svg:svg height="124.26" overflow="visible" version="1.1" viewBox="0 0 163.08 124.26" width="163.08">
         <svg:g transform="translate(0,124.26) matrix(1 0 0 -1 0 0) translate(62.13,0) translate(0,62.13)">
@@ -606,7 +606,7 @@
       </svg:svg>
     </picture>
   </para>
-  <para xml:id="p3">
+  <para cssstyle="--ltx-skip-before:6.0pt" xml:id="p3">
     <picture height="121.6" width="460.18" xml:id="p3.pic1">
       <svg:svg height="121.6" overflow="visible" version="1.1" viewBox="0 0 460.18 121.6" width="460.18">
         <svg:g transform="translate(0,121.6) matrix(1 0 0 -1 0 0) translate(60.8,0) translate(0,60.8)">
