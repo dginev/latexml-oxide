@@ -157,7 +157,7 @@ fn a_tblr_in_a_p_cell_reads_its_tab_marks_safely() {
 /// key's theorem takes its style on both.
 #[test]
 fn the_block_instances_of_the_file_are_declared() {
-  let november = latexml::util::test::kpse_text("latex-lab-testphase-block.sty")
+  let november = kpse_text("latex-lab-testphase-block.sty")
     .is_some_and(|text| text.contains(r"\NewTemplateType{thmstyle}"));
   let tl2025 = manual_repro!("package-bindings/keytheorems_block_instances_are_the_files.tex");
   let tl2026 = manual_repro!("package-bindings/keytheorems_on_the_november_block_code.tex");
