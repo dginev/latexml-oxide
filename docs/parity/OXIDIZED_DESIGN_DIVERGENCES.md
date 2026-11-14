@@ -36491,11 +36491,17 @@ Cost: a box's width now needs LaTeXML.css or ar5iv-css. It is lost under `--node
 carrying the rule, in a reader that does not apply our CSS, and in an EPUB reader without `var()` or `:where()` (the
 EPUB ships LaTeXML.css).
 
-Measured (QAB57b, rerun on QAB57c): every body element's box is identical before and after in Chrome and Firefox at
-1280 and 375 px, under LaTeXML.css and under ar5iv.css, and the screenshot ink where it was compared (Chrome; Firefox
-only on the pages short enough to shoot). That holds for the repro shapes (side-by-side, figure, nested and over-wide
-minipages, `\parbox` in text, `p{}` cells, `tabular*`, `\makebox`, scaled/resized/rotated boxes, varwidth, wrapfigure,
-framed verbatim, lifted sections) and for the 63 arXiv papers whose HTML moved (QAB57b A/B). Guards
+Measured (QAB57c): each page of the 63 arXiv papers whose HTML moved (QAB57b A/B), rendered once with inline
+`width:` and once with the property under the same stylesheet, has every body element's box identical in Chrome at
+1280 and 375 px and in Firefox at 1280 px, under LaTeXML.css and under ar5iv.css; in Firefox at 375 px too, except
+six `∙` glyph boxes in 2512.16386's bibliography under ar5iv.css, 2 px shorter, nothing moved. Screenshot ink is
+identical where it was compared (every page in Chrome; in Firefox only the pages short enough to shoot). The repro
+shapes (side-by-side, figure, nested and over-wide minipages, `\parbox` in text, `p{}` cells, `tabular*`,
+`\makebox`, scaled/resized/rotated boxes, varwidth, wrapfigure, framed verbatim, lifted sections) were measured so on
+QAB57b; on QAB57c the varwidth section is 131 px wide in Chrome as before QAB57 (QAB57b: 85 px, its heading wrapped)
+and the nested one 114 px (85.4pt; QAB57b: 303 px). Not reached, as before QAB57: a framed box holding a section
+draws its frame as an empty 2 px box above it (RED `block-model/framed_box_section_frame_collapses_red`, post-merge).
+Guards
 `perfect_kernel_batchqab57::section_in_a_box_keeps_the_box_width` (repros `block-model/section_in_a_box_keeps_the_box_width`,
 `section_in_varwidth_keeps_its_own_width`, `section_in_nested_boxes_keeps_the_inner_width`,
 `box_widths_ride_the_custom_property`).
