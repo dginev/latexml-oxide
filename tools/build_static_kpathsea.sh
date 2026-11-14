@@ -28,6 +28,8 @@ echo "[build_static_kpathsea] fetching kpathsea source @ ${KPSE_REF} (sparse, sh
 rm -rf "$SRC_DIR"
 mkdir -p "$SRC_DIR"
 cd "$SRC_DIR"
+# An inherited GIT_DIR (a hook's, a linked worktree's) would make the scratch `git init` act on that repo.
+unset $(git rev-parse --local-env-vars)
 git init -q
 git remote add origin https://github.com/TeX-Live/texlive-source.git
 git sparse-checkout init --cone
