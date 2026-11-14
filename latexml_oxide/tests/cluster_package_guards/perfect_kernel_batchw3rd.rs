@@ -286,6 +286,10 @@ DefMacro("\\lxv", || lookup_value("lx:a") + lookup_value("lx:b") + LookupValue("
   + LookupBool("lx:t"));
 DefAccent("\\lxacc", "́", "´", false);
 DefAccent("\\lxbad", "́", "´", #{bogus: true});
+DefMacro("\\lxom{}", |x| "(" + x + x.len() + ")");
+DefPrimitive("\\lxop{}", |v| AssignValue("lx:op", v + "!", "global"));
+DefMacro("\\lxopv", || LookupValue("lx:op"));
+DefMath("\\lxor{}", "R", #{reversion: |x| "\\lxor{" + x + "}"});
 "#;
 
 const LXRD2_OLD_TEX: &str = r"\documentclass{article}
@@ -294,18 +298,22 @@ const LXRD2_OLD_TEX: &str = r"\documentclass{article}
 \lxa{a}\lxa{b} \lxb{c}\lxb{d}
 
 \lxs\lxs\lxv{} \ifx\lxm\relax R\fi{} \lxacc{e}
+
+\lxom{ab}\lxom{c} \lxop{v}\lxopv{} $\lxor{q}$
 \end{document}
 ";
 
 /// W3RD2a: the names #716 replaces stay one release as aliases; each Warns `deprecated` once per binding load, naming
-/// its replacement, however often it runs (here twice), and keeps its old result. A `DefAccent` option outside Perl's
-/// table is an Error (as round A's definers). Red on a1b6c0b827d: no Warning (W=0), and `#{bogus: true}` "Function not
-/// found". The space before `\lxb` is dropped as Perl drops it before an imperative constructor's `openElement`.
+/// its replacement, however often it runs (here twice), and keeps its old result. `DefAccent` reads no option, as Perl's (TeX_Character.pool.ltxml:92-100). Red on a1b6c0b827d: no
+/// Warning (W=0), and `#{bogus: true}` "Function not found". The space before `\lxb` is dropped as Perl drops it before
+/// an imperative constructor's `openElement` (RED `rhai-bindings/imperative_constructor_drops_space_red.tex`). W3RD2b: a macro
+/// or primitive body declaring no leading gullet/stomach gets its arguments as strings, Warned; an old-form
+/// reversion `|x|` holds the whatsit, which prints as the first argument's TeX, Warned (red on 8ee92a55a49: W=13, the
+/// reversion `tex="\lxor{Whatsit}"`-garbage; on a1b6c0b827d E=1 for `#{bogus: true}`).
 #[test]
 fn rhai_deprecated_aliases_warn_once() {
   let (log, xml) = convert_files_with(LXRD2_OLD_TEX, &[("lxrdold.sty.rhai", LXRD2_OLD)], None);
-  assert_eq!(error_count(&log), 1, "{log}");
-  assert!(log.contains("Error:misdefined:DefAccent"), "{log}");
+  assert_eq!(error_count(&log), 0, "{log}");
   let deprecated = [
     ("whatsit", "the hook's whatsit argument"),
     ("whatsit.argString", "whatsit.getArg(n)"),
@@ -329,6 +337,12 @@ fn rhai_deprecated_aliases_warn_once() {
       "DefAccent",
       "DefAccent(accent, combining, standalone, #{below: true})",
     ),
+    ("DefMacro |args|", "|gullet, args|, the arguments as Tokens"),
+    (
+      "DefPrimitive |args|",
+      "|stomach, args|, the arguments as Tokens",
+    ),
+    ("reversion |args|", "|whatsit, args|"),
   ];
   assert_eq!(warning_count(&log), deprecated.len(), "{log}");
   for (old, new) in deprecated {
@@ -347,4 +361,85 @@ fn rhai_deprecated_aliases_warn_once() {
     &["xml:id=\"p2\""],
     "<para xml:id=\"p2\"><p>ABS3true R \u{e9}</p></para>",
   );
+  assert!(xml.contains("<p>(ab2)(c1) v! <Math"), "{xml}");
+  assert!(xml.contains(r#"tex="\lxor{q}""#), "{xml}");
+}
+
+const LXRD3: &str = r#"DefMacro("\\lxpt{}", |gullet, a| type_of(a) + "/" + type_of(gullet));
+DefMacro("\\lxpa{}{}", |gullet, a, b| Tokens(b, a));
+DefMacro("\\lxpg", |gullet| Tokens(T_CS("\\textbf"), T_BEGIN(), gullet.readArg(), T_END()));
+DefPrimitive("\\lxpp{}", |stomach, a| AssignValue("lx:pp", Tokens(a, stomach.getGullet().readArg()), "global"));
+DefMacro("\\lxppv", || LookupValue("lx:pp"));
+DefKeyVal("LXK", "k", "");
+DefMacro("\\lxkv OptionalKeyVals:LXK {}", |gullet, kv, body|
+  "(" + GetKeyVal(kv, "k") + "/" + GetKeyVals(kv).k.len() + "/" + type_of(kv) + "/" + GetKeyVal(kv, "z") + ")" + body);
+DefConstructor("\\lxkc RequiredKeyVals:LXK", |document, kv| {
+  document.absorbString(GetKeyVal(kv, "k")); document.absorbString("/" + type_of(GetKeyVal(kv, "k")));
+  document.absorbString(GetKeyVal(kv, "z")); });
+DefParameterType("LxUntil", |gullet, delim| gullet.readUntil(delim));
+DefMacro("\\lxpu LxUntil:!", |gullet, a| "[" + a + "]");
+DefParameterType("LxNone", |gullet| (), #{optional: true});
+DefMacro("\\lxpn LxNone", |gullet, a| if a == () { "N" } else { "Y" });
+DefParameterType("LxSemi", |gullet| gullet.readArg(), #{semiverbatim: true});
+DefMacro("\\lxps LxSemi", |gullet, a| Tokens(T_CS("\\texttt"), T_BEGIN(), a, T_END()));
+DefParameterType("LxUnd", |gullet| gullet.readArg(), #{undigested: true});
+DefConstructor("\\lxpc LxUnd", |document, a| document.absorbString(type_of(a)));
+"#;
+
+const LXRD3_TEX: &str = r"\documentclass{article}
+\usepackage{lxrdthree}
+\begin{document}
+\lxpt{a} \lxpa{x}{y} \lxpg{B} \lxpp{P}{Q}\lxppv
+
+\lxkv[k=v1,k=v2]{b} \lxkc{k=w}
+
+\lxpu ab!c \lxpn{} \lxps{a_b} \lxpc{u}
+\end{document}
+";
+
+const LXRD3_ERR: &str = r#"DefParameterType("LxReq", |gullet| ());
+DefMacro("\\lxpr LxReq", |gullet, a| "R");
+DefParameterType("LxBad", |gullet| gullet.readArg(), #{bogus: 1});
+"#;
+
+/// W3RD2b: a body gets Perl's arguments — a macro `($gullet, @args)` (Expandable.pm:74), a primitive `($stomach,
+/// @args)` (Primitive.pm:78), each argument Tokens or a `KeyVals`; `GetKeyVal`/`GetKeyVals` return the value (Tokens
+/// read, a box digested; `()` missing; KeyVals.pm:31-37); `DefParameterType`'s reader gets the gullet and the type's
+/// extra (Parameter.pm:88) with Perl's options. Red on 8ee92a55a49: arguments were strings, `Stomach`/`getGullet`,
+/// `DefParameterType` "Function not found". Error side: a required type whose reader returns `()` (Perl
+/// Parameter.pm:94 `Error:expected`) and an option outside `$parameter_options` (`Error:misdefined`), 1 each in Perl.
+#[test]
+fn rhai_closure_args_and_parameter_types() {
+  let (log, xml) = convert_files_with(LXRD3_TEX, &[("lxrdthree.sty.rhai", LXRD3)], None);
+  assert_eq!(error_count(&log), 0, "{log}");
+  assert_eq!(warning_count(&log), 0, "{log}");
+  for (id, para) in [
+    (
+      "p1",
+      r#"<para xml:id="p1"><p>Tokens/Gullet yx <text font="bold">B</text> PQ</p></para>"#,
+    ),
+    (
+      "p2",
+      r#"<para xml:id="p2"><p>(v2/2/KeyVals/)b w/Digested</p></para>"#,
+    ),
+    (
+      "p3",
+      r#"<para xml:id="p3"><p>[ab]c N <text font="typewriter">a_b</text> Tokens</p></para>"#,
+    ),
+  ] {
+    assert_element(&xml, "para", &[&format!("xml:id=\"{id}\"")], para);
+  }
+  let (log, xml) = convert_files_with(
+    "\\documentclass{article}\\usepackage{lxrderr}\\begin{document}\\lxpr\\end{document}",
+    &[("lxrderr.sty.rhai", LXRD3_ERR)],
+    None,
+  );
+  assert_eq!(error_count(&log), 2, "{log}");
+  assert_eq!(warning_count(&log), 0, "{log}");
+  assert!(log.contains("Error:expected:LxReq"), "{log}");
+  assert!(
+    log.contains("Error:misdefined:DefParameterType LxBad"),
+    "{log}"
+  );
+  assert!(xml.contains("<p>R</p>"), "{xml}");
 }

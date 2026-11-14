@@ -53,9 +53,9 @@ fn pool_surface_state_counters_tokens() {
 
       AssignMapping("wsmap", "alpha", "A1");
       AssignValue("ws:map", LookupMapping("wsmap", "alpha"), "global");
-      AssignValue("ws:kv1", GetKeyVal("lang=rust, size={1, 2}", "size"), "global");
+      AssignValue("ws:kv1", ToString(GetKeyVal("lang=rust, size={1, 2}", "size")), "global");
       let kvm = GetKeyVals("lang=rust, size={1, 2}");
-      AssignValue("ws:kv2", kvm.lang, "global");
+      AssignValue("ws:kv2", ToString(kvm.lang), "global");
     "##,
   )
   .expect("wave-A surface script should load cleanly");
@@ -491,7 +491,7 @@ fn pool_surface_definition_forms() {
       DefLigature("ff", "F");
       DefMath("\\wbsum", "∑", #{ role: "SUMOP", meaning: "sum" });
       DefConditional("\\ifwb{}", |x| UnTeX(x) == "on"); // the test is given Tokens, as Perl's
-      DefMacro("\\wbprobe{}", |x| "\\ifwb{" + x + "}YES\\else NO\\fi");
+      DefMacro("\\wbprobe{}", |gullet, x| "\\ifwb{" + x + "}YES\\else NO\\fi");
     "##,
   )
   .expect("wave-B surface script should load cleanly");
@@ -629,8 +629,8 @@ fn m1_script_macro_expands_through_real_gullet() {
   fresh_state();
   let n = load_script(
     r#"
-        DefMacro("\\twice{}", |x| x + x);
-        DefMacro("\\greet{}", |name| "Hello, " + name + "!");
+        DefMacro("\\twice{}", |gullet, x| Tokens(x, x));
+        DefMacro("\\greet{}", |gullet, name| "Hello, " + name + "!");
       "#,
   )
   .expect("load_script");
@@ -648,7 +648,7 @@ fn m1_script_macro_expands_through_real_gullet() {
 #[test]
 fn m1_expansion_to_control_sequence_is_faithful() {
   fresh_state();
-  load_script(r#"DefMacro("\\emphx{}", |x| "\\textit{" + x + "}");"#).expect("load");
+  load_script(r#"DefMacro("\\emphx{}", |gullet, x| "\\textit{" + x + "}");"#).expect("load");
   let out = gullet::do_expand(mouth::tokenize_internal(r"\emphx{hi}")).expect("expand");
   assert_eq!(out.to_string(), r"\textit{hi}");
   latexml_core::reset_thread_engine();
@@ -657,7 +657,7 @@ fn m1_expansion_to_control_sequence_is_faithful() {
 #[test]
 fn cache_reuses_compiled_script_and_still_wires() {
   fresh_state();
-  let src = r#"DefMacro("\\dup{}", |x| x + x);"#;
+  let src = r#"DefMacro("\\dup{}", |gullet, x| Tokens(x, x));"#;
   assert_eq!(load_script(src).expect("first load"), 1);
   // Second load is a cache hit (no recompile) but still installs the binding.
   assert_eq!(load_script(src).expect("second load"), 1);
@@ -670,7 +670,11 @@ fn cache_reuses_compiled_script_and_still_wires() {
 fn load_file_reads_and_installs() {
   fresh_state();
   let path = std::env::temp_dir().join("lx_script_bindings_load_file_test.sty.rhai");
-  std::fs::write(&path, r#"DefMacro("\\trip{}", |x| x + x + x);"#).expect("write temp");
+  std::fs::write(
+    &path,
+    r#"DefMacro("\\trip{}", |gullet, x| Tokens(x, x, x));"#,
+  )
+  .expect("write temp");
   let n = load_file(path.to_str().unwrap()).expect("load_file");
   assert_eq!(n, 1);
   let out = gullet::do_expand(mouth::tokenize_internal(r"\trip{ab}")).expect("expand");
@@ -1090,7 +1094,7 @@ fn lookup_definition_construct_hook_on_primitive_errors() {
   fresh_state();
   let r = load_script(
     r#"
-      DefPrimitive("\\dprim{}", |x| { });
+      DefPrimitive("\\dprim{}", |stomach, x| { });
       LookupDefinition("\\dprim").pushAfterConstruct(|document| { });
     "#,
   );
@@ -1132,7 +1136,7 @@ fn m1_errors_are_clean() {
   // `Err`: there the package simply never installs.
   fresh_state();
   use latexml_core::common::error::{LogStatus, get_status};
-  load_script(r#"DefMacro("\\boom{}", |x| { throw "kaboom"; });"#).expect("load");
+  load_script(r#"DefMacro("\\boom{}", |gullet, x| { throw "kaboom"; });"#).expect("load");
   let before = get_status(LogStatus::Error);
   let expanded = gullet::do_expand(mouth::tokenize_internal(r"\boom{x}"))
     .expect("a throwing body must not abort the expansion");

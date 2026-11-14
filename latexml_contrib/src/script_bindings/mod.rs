@@ -17,9 +17,8 @@
 //!
 //! ## Seams implemented
 //!
-//! * **`DefMacro`** (expandable) — body receives args as strings, returns a string of TeX,
-//!   re-tokenized via `mouth::tokenize_internal` so an expansion to `\textit{x}` faithfully yields
-//!   a control-sequence token.
+//! * **`DefMacro`** (expandable) — body receives Perl's `($gullet, @args)`, the arguments as Tokens, and returns
+//!   Tokens or TeX source (re-tokenized via `mouth::tokenize_internal`, so `\textit{x}` yields a control sequence).
 //! * **`DefConstructor`** (construction) — two forms. A string XML template, or an imperative body
 //!   that reads like the Perl original: it receives a `Document` **proxy** as its first argument
 //!   (Perl's `$_[0]`), each digested argument as an opaque handle, then Perl's `%props` as one map, e.g. `|document, x| {
@@ -176,6 +175,16 @@ pub(super) const DEPRECATED_ALIASES: &[(&str, &str)] = &[
     "DefAccent",
     "DefAccent(accent, combining, standalone, #{below: true})",
   ),
+  ("DefMacro |args|", "|gullet, args|, the arguments as Tokens"),
+  (
+    "DefPrimitive |args|",
+    "|stomach, args|, the arguments as Tokens",
+  ),
+  (
+    "DefColumnType |args|",
+    "|gullet, args|, the arguments as Tokens",
+  ),
+  ("reversion |args|", "|whatsit, args|"),
 ];
 
 /// One `Warning:deprecated:<old>` per binding load for a deprecated alias, naming its replacement.
@@ -629,6 +638,8 @@ pub fn load_script(src: &str) -> Result<usize> {
   let before = WIRED_COUNT.with(|c| *c.borrow());
   let script = Rc::as_ptr(&cached.ast) as usize;
   DEPRECATED_WARNED.with(|w| w.borrow_mut().retain(|(s, _)| *s != script));
+  // A dropped script's closure arities go with it.
+  ARITY_CACHE.with(|c| c.borrow_mut().retain(|_, (ast, _)| ast.strong_count() > 0));
   let run = {
     let _script_guard = ScriptCtxGuard::new((cached.engine.clone(), cached.ast.clone()));
     cached.engine.run_ast(&cached.ast).map_err(|e| {
@@ -840,8 +851,7 @@ fn dynamic_to_tokens(d: Dynamic) -> Tokens {
   }
 }
 
-/// Marshal a digested macro argument into a Rhai value. Every argument is passed
-/// as its TeX-source string (authors parse it in-script as needed).
+/// An argument as its TeX-source string: an old-form body's (deprecated), a `properties` closure's.
 fn arg_to_dynamic(arg: ArgWrap) -> Dynamic { Dynamic::from(arg.to_string()) }
 
 /// Read a Rhai value back as a string, Perl's `ToString` (Object.pm:59): a `Token`/`Tokens` as `Tokens->toString`

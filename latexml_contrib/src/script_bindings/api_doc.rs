@@ -50,7 +50,12 @@ const GROUPS: &[(Option<&str>, &str, &str)] = &[
   (
     Some("Gullet"),
     "`Gullet` methods",
-    "Perl's `$gullet->read…`: the gullet handle a parameter-type reader receives.",
+    "Perl's `$gullet->read…`: the gullet handle a macro body or a parameter-type reader receives first.",
+  ),
+  (
+    Some("Stomach"),
+    "`Stomach` methods",
+    "Perl's `$stomach`: the handle a primitive body receives first (Primitive.pm:78).",
   ),
   (
     Some("Font"),
@@ -382,6 +387,15 @@ const DOCS: &[(&str, Doc)] = &[
     ),
   ),
   (
+    "DefParameterType",
+    Doc::Rust(
+      "Define a parameter type: the reader `|gullet, extra…|` returns its value (Tokens, a Token, `()` for none), \
+       with Perl's options `optional`, `novalue`, `semiverbatim`, `undigested`, `reversion`, `beforeDigest`, \
+       `afterDigest` (`nargs` Warns unsupported).",
+      "latexml_core::parameter::Parameter",
+    ),
+  ),
+  (
     "DefConditional",
     Doc::Rust(
       "Define a conditional control sequence.",
@@ -418,7 +432,7 @@ const DOCS: &[(&str, Doc)] = &[
   (
     "DefMacro",
     Doc::Rust(
-      "Define a macro's expansion.",
+      "Define a macro's expansion; a closure body is Perl's `|gullet, args|`, each argument Tokens (or a `KeyVals`).",
       "latexml_core::binding::def::dialect::def_macro",
     ),
   ),
@@ -440,7 +454,7 @@ const DOCS: &[(&str, Doc)] = &[
   (
     "DefPrimitive",
     Doc::Rust(
-      "Define a primitive: it runs at digestion, after expansion.",
+      "Define a primitive: it runs at digestion, after expansion; a closure body is Perl's `|stomach, args|`.",
       "latexml_core::binding::def::dialect::def_primitive",
     ),
   ),
@@ -509,14 +523,16 @@ const DOCS: &[(&str, Doc)] = &[
   ),
   (
     "GetKeyVal",
-    Doc::Note("One value out of a parsed keyval set."),
+    Doc::Note(
+      "One value of a keyval set, as Perl's: Tokens as read, a box once digested, `()` when missing; a repeated \
+       key's last value.",
+    ),
   ),
   (
     "GetKeyVals",
     Doc::Note(
-      "A whole parsed keyval set as a map. Accepts a digested `KeyVals` argument \
-       (as `KeyVals`/`OptionalKeyVals` params deliver to a constructor) or its \
-       `k=v,…` source string.",
+      "A whole keyval set as a map of `GetKeyVal`'s values, a repeated key's as an array. Accepts a `KeyVals` \
+       argument (read, or digested in a constructor) or its `k=v,…` source string.",
     ),
   ),
   (
@@ -1486,7 +1502,8 @@ const DOCS: &[(&str, Doc)] = &[
   (
     "AddToMacro",
     Doc::Rust(
-      "Append tokens (or TeX source) to a macro's expansion, as Perl's `AddToMacro`.",
+      "Append tokens (or TeX source) to a macro's expansion, keeping its lock, as Perl's `AddToMacro`; a \
+       non-expandable `cs` Warns and is ignored, an undefined one is defined with the tokens.",
       "latexml_core::binding::content::add_to_macro",
     ),
   ),
@@ -1660,6 +1677,35 @@ const HANDLE_DOCS: &[(&str, &str, Doc)] = &[
     Doc::Rust(
       "The token as TeX source (what a string context shows).",
       "latexml_core::tokens::Tokens::untex",
+    ),
+  ),
+  (
+    "Digested",
+    "to_string",
+    Doc::Rust(
+      "The box's `ToString` (what a string context shows).",
+      "latexml_core::digested::Digested",
+    ),
+  ),
+  (
+    "KeyVals",
+    "to_string",
+    Doc::Rust(
+      "The keyval set as `k=v,…` TeX (what a string context shows).",
+      "latexml_core::keyvals::KeyVals",
+    ),
+  ),
+  (
+    "Stomach",
+    "getGullet",
+    Doc::Note("`stomach.getGullet()`: the `Gullet` handle, Perl's `$stomach->getGullet`."),
+  ),
+  (
+    "Whatsit",
+    "to_string",
+    Doc::Note(
+      "**Deprecated** (Warns once per binding load): an old-form reversion `|x|` holds the whatsit; it prints as the \
+       first argument's TeX. Use `|whatsit, args|`.",
     ),
   ),
   (

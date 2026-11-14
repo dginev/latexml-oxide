@@ -16,7 +16,7 @@ use latexml_core::{Core, CoreOptions, common::error::Result, state};
 /// A sample contrib binding, authored in Rhai (no Rust toolchain, no recompile).
 const SAMPLE: &str = r##"
   // Expandable macro: \twicex{X} -> XX
-  DefMacro("\\twicex{}", |x| x + x);
+  DefMacro("\\twicex{}", |gullet, x| Tokens(x, x));
 
   // Constructor (imperative, proxy syntax close to Perl's $document->method):
   // \myemph{X} -> <ltx:emph>X</ltx:emph>. `x` is a digested `{}` arg — an opaque
@@ -91,7 +91,7 @@ const SAMPLE: &str = r##"
 
   // Primitive: digestion-time side-effect into State (global, so it survives the
   // document group for the post-conversion assertion).
-  DefPrimitive("\\setx{}", |v| { AssignValue("script:x", v, "global"); });
+  DefPrimitive("\\setx{}", |stomach, v| { AssignValue("script:x", v, "global"); });
 
   // Corpus-shaped template constructor exercising a top-level CONDITIONAL with
   // `#n` rendering through the real Document pipeline (the #171 template AST):
@@ -231,7 +231,7 @@ const SAMPLE: &str = r##"
 
   // natbib \cite-style parameter types: star match + two optionals +
   // Semiverbatim keys — the prototype dialect is shared with the macros.
-  DefMacro("\\rcite OptionalMatch:* [][] Semiverbatim", |star, pre, post, keys| {
+  DefMacro("\\rcite OptionalMatch:* [][] Semiverbatim", |gullet, star, pre, post, keys| {
     "[" + pre + ";" + post + ";" + keys + ";" + star + "]"
   });
 
@@ -242,11 +242,11 @@ const SAMPLE: &str = r##"
     properties: |xs, ys, unused_box| #{ xscale: xs, yscale: ys }
   });
 
-  // listings/siunitx-style OptionalKeyVals: the keyval dict arrives as the
-  // macro's first argument (its TeX-source form).
+  // listings/siunitx-style OptionalKeyVals: the keyval set arrives as the
+  // macro's first argument after the gullet (a `KeyVals`, printing as its TeX form).
   DefKeyVal("RH", "lang", "");
   DefKeyVal("RH", "size", "");
-  DefMacro("\\kvprobe OptionalKeyVals:RH {}", |kv, body| {
+  DefMacro("\\kvprobe OptionalKeyVals:RH {}", |gullet, kv, body| {
     "(" + kv + ")" + body
   });
 
@@ -662,12 +662,11 @@ fn script_binding_macro_and_constructor_convert() {
     "the internal fragment wrapper reached the document; xml=\n{xml}"
   );
 
-  // Primitive seam: the digestion-time side-effect persisted into State.
+  // Primitive seam: the digestion-time side-effect persisted into State — the argument's Tokens, as Perl's
+  // `($stomach, @args)` stores them (W3RD2b; a string before).
   let stored = state::lookup_value("script:x");
   let val = match stored {
-    Some(latexml_core::common::store::Stored::String(s)) => {
-      Some(latexml_core::common::arena::to_string(s))
-    },
+    Some(latexml_core::common::store::Stored::Tokens(t)) => Some(t.to_string()),
     _ => None,
   };
   assert_eq!(

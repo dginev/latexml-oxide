@@ -1,0 +1,7 @@
+# Perl stand-in for lximp.sty.rhai (the Perl run).
+package LaTeXML::Package::Pool;
+use LaTeXML::Package;
+DefConstructor('\lxa{}', "<ltx:text class='a'>#1</ltx:text>");
+DefConstructor('\lxb{}', sub { my ($document, $x) = @_;
+  $document->openElement('ltx:text', class => 'b'); $document->absorb($x); $document->closeElement('ltx:text'); });
+1;

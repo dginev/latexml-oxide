@@ -14,6 +14,18 @@ pub const MACRO_OPTIONS: &[&str] = &[
   "nopackParameters",
 ];
 
+/// `DefParameterType` (Package.pm:581-584, `$parameter_options`).
+pub const PARAMETER_OPTIONS: &[&str] = &[
+  "nargs",
+  "reversion",
+  "optional",
+  "novalue",
+  "beforeDigest",
+  "afterDigest",
+  "semiverbatim",
+  "undigested",
+];
+
 /// `DefConditional` (Package.pm:1185, `$conditional_options`).
 pub const CONDITIONAL_OPTIONS: &[&str] = &["scope", "locked", "skipper"];
 

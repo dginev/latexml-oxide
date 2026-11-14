@@ -4000,10 +4000,13 @@ pub fn add_to_macro_scope() -> Scope {
 /// [`add_to_macro_scope`]; an undefined `cs` is defined with the tokens (Perl relies on InputDefinitions'
 /// pre-defined hooks, which not every path makes).
 pub fn add_to_macro(cs: Token, tokens: Tokens) -> Result<()> {
+  // Package.pm:2547 `locked => $$defn{locked}`: the addition keeps the macro's lock.
+  let locked = lookup_bool(&format!("{cs}:locked"));
   let options = || {
     Some(ExpandableOptions {
       scope: Some(add_to_macro_scope()),
       nopack_parameters: true,
+      locked,
       ..ExpandableOptions::default()
     })
   };

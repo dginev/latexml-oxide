@@ -10,13 +10,14 @@
 // write "\\foo", not "\foo".
 
 // ── Expandable macros (DefMacro) ──
-// Body receives each argument as its TeX-source string and returns a string of
-// TeX, which is re-tokenized faithfully (an expansion to \textit yields a real
-// control sequence, not letters).
+// Body receives Perl's ($gullet, @args): the gullet handle, then each argument as
+// Tokens (printing as its TeX in a string). It returns Tokens, or a string of TeX,
+// which is re-tokenized faithfully (an expansion to \textit yields a real control
+// sequence, not letters).
 
-DefMacro("\\twicex{}", |x| x + x);                       // \twicex{ab} -> abab
-DefMacro("\\greet{}",  |name| "Hello, " + name + "!");   // \greet{World} -> Hello, World!
-DefMacro("\\emphx{}",  |x| "\\textit{" + x + "}");       // expands to a real \textit
+DefMacro("\\twicex{}", |gullet, x| Tokens(x, x));                // \twicex{ab} -> abab
+DefMacro("\\greet{}",  |gullet, name| "Hello, " + name + "!");   // \greet{World} -> Hello, World!
+DefMacro("\\emphx{}",  |gullet, x| "\\textit{" + x + "}");       // expands to a real \textit
 
 // ── Constructors (DefConstructor) — two forms ──
 
@@ -69,7 +70,7 @@ DeclareOption("eqsecnum", || {
 
 // ── Primitives (DefPrimitive) — digestion-time side-effects ──
 // State is shared through Perl's AssignValue(key, value[, scope]) / LookupValue(key).
-DefPrimitive("\\setx{}", |v| { AssignValue("script:x", v, "global"); });
+DefPrimitive("\\setx{}", |stomach, v| { AssignValue("script:x", v, "global"); });
 DefMacro("\\getx", || LookupValue("script:x"));
 
 // ── Environments (DefEnvironment) — template (#body) and imperative forms ──
@@ -107,7 +108,7 @@ DefConstructor("\\exhibit{}", "<ltx:text class=\"exhibit\">#tags #1</ltx:text>",
 
 // ── KeyVals ──
 DefKeyVal("EX", "lang", "");
-DefMacro("\\exkv OptionalKeyVals:EX {}", |kv, body| {
+DefMacro("\\exkv OptionalKeyVals:EX {}", |gullet, kv, body| {
   "(" + GetKeyVal(kv, "lang") + ")" + body
 });
 
@@ -128,7 +129,7 @@ DefMacro("\\exread", || {
 });
 
 // ── State & pool helpers (same names as the native macros) ──
-DefPrimitive("\\exset{}", |v| {
+DefPrimitive("\\exset{}", |stomach, v| {
   AssignValue("ex:k", v, "global");
   StepCounter("exhibit");
 });

@@ -35,12 +35,12 @@ closure-registered functions; only the accepted types are.
 
 Called at the top level of a binding file, or from inside any body.
 
-174 functions, 258 calls.
+175 functions, 260 calls.
 
 | call | documentation |
 |---|---|
 | `AddToCounter(string, int)` | Add a number to a counter. ([`add_to_counter`](latexml_core::binding::counter::dialect::add_to_counter)) |
-| `AddToMacro(string\|Token, string\|Token)` | Append tokens (or TeX source) to a macro's expansion, as Perl's `AddToMacro`. ([`add_to_macro`](latexml_core::binding::content::add_to_macro)) |
+| `AddToMacro(string\|Token, string\|Token)` | Append tokens (or TeX source) to a macro's expansion, keeping its lock, as Perl's `AddToMacro`; a non-expandable `cs` Warns and is ignored, an undefined one is defined with the tokens. ([`add_to_macro`](latexml_core::binding::content::add_to_macro)) |
 | `AppendSearchPath(string)` | Append a directory to the input search path (searched after existing paths). ([`add_search_path`](latexml_core::state::add_search_path)) |
 | `AssignBool(string, ?)`<br>`AssignBool(string, ?, string)` | **Deprecated** (Warns once per binding load): use `AssignValue(key, value[, scope])`. Bind a key to a value, as `AssignValue`. ([`assign_value`](latexml_core::state::assign_value)) |
 | `AssignCatcode(string, int)`<br>`AssignCatcode(string, int, string)` | Set a character's category code, with an optional scope. ([`assign_catcode`](latexml_core::state::assign_catcode)) |
@@ -91,11 +91,12 @@ Called at the top level of a binding file, or from inside any body.
 | `DefEnvironment(string, Fn)`<br>`DefEnvironment(string, Fn, map)`<br>`DefEnvironment(string, string)`<br>`DefEnvironment(string, string, map)` | Define an environment that constructs XML. ([`def_environment`](latexml_core::binding::def::dialect::def_environment)) |
 | `DefKeyVal(string, string, string)`<br>`DefKeyVal(string, string, string, string)`<br>`DefKeyVal(string, string, string, string, map)` | Declare one key of a keyval family. ([`define`](latexml_core::keyval::define)) |
 | `DefLigature(string, string)`<br>`DefLigature(string, string, map)` | Register a text ligature pattern; `#{fontTest: |font| …}` limits it to the fonts the closure accepts. |
-| `DefMacro(string, Fn)`<br>`DefMacro(string, Fn, map)`<br>`DefMacro(string, string)`<br>`DefMacro(string, string, map)` | Define a macro's expansion. ([`def_macro`](latexml_core::binding::def::dialect::def_macro)) |
+| `DefMacro(string, Fn)`<br>`DefMacro(string, Fn, map)`<br>`DefMacro(string, string)`<br>`DefMacro(string, string, map)` | Define a macro's expansion; a closure body is Perl's `|gullet, args|`, each argument Tokens (or a `KeyVals`). ([`def_macro`](latexml_core::binding::def::dialect::def_macro)) |
 | `DefMath(string, string)`<br>`DefMath(string, string, map)` | Define a mathematical symbol or function. ([`def_math`](latexml_core::binding::def::dialect::def_math)) |
 | `DefMathLigature(Fn)`<br>`DefMathLigature(string, string, map)` | Register a math ligature, as a pattern or a matcher closure. |
 | `DefMathRewrite(map)`<br>`DefMathRewrite(map, Fn)` | As `DefRewrite`, scoped to math. |
-| `DefPrimitive(string, Fn)`<br>`DefPrimitive(string, Fn, map)` | Define a primitive: it runs at digestion, after expansion. ([`def_primitive`](latexml_core::binding::def::dialect::def_primitive)) |
+| `DefParameterType(string, Fn)`<br>`DefParameterType(string, Fn, map)` | Define a parameter type: the reader `|gullet, extra…|` returns its value (Tokens, a Token, `()` for none), with Perl's options `optional`, `novalue`, `semiverbatim`, `undigested`, `reversion`, `beforeDigest`, `afterDigest` (`nargs` Warns unsupported). ([`Parameter`](latexml_core::parameter::Parameter)) |
+| `DefPrimitive(string, Fn)`<br>`DefPrimitive(string, Fn, map)` | Define a primitive: it runs at digestion, after expansion; a closure body is Perl's `|stomach, args|`. ([`def_primitive`](latexml_core::binding::def::dialect::def_primitive)) |
 | `DefRegister(string, int)`<br>`DefRegister(string, string)` | Define a register with an initial value. ([`def_register`](latexml_core::binding::def::dialect::def_register)) |
 | `DefRewrite(map)`<br>`DefRewrite(map, Fn)` | Register a document rewrite rule (data form, or a replace closure). |
 | `Digest(Token) -> Digested`<br>`Digest(Tokens) -> Digested`<br>`Digest(string) -> Digested` | Digest TeX source (a string, TokenizeInternal'd), a `Token` or `Tokens`, returning the digested handle. ([`digest`](latexml_core::stomach::digest)) |
@@ -111,8 +112,8 @@ Called at the top level of a binding file, or from inside any body.
 | `ExplodeText(string) -> Tokens` | A string's characters as `Tokens`, letters LETTER and the rest OTHER. |
 | `Fatal(string, string, string)`<br>`Fatal(string, string, string, ?)` | End the conversion with `Fatal:<cat>:<obj>`, plus optional details. |
 | `FindFile(string) -> ?`<br>`FindFile(string, map) -> ?` | The path of a file on the search paths (Perl's `type`/`notex`/`noltxml`/`searchpaths_only`), or `()`. ([`find_file`](latexml_core::binding::content::find_file)) |
-| `GetKeyVal(?, string) -> string` | One value out of a parsed keyval set. |
-| `GetKeyVals(?) -> map` | A whole parsed keyval set as a map. Accepts a digested `KeyVals` argument (as `KeyVals`/`OptionalKeyVals` params deliver to a constructor) or its `k=v,…` source string. |
+| `GetKeyVal(?, string) -> ?` | One value of a keyval set, as Perl's: Tokens as read, a box once digested, `()` when missing; a repeated key's last value. |
+| `GetKeyVals(?) -> map` | A whole keyval set as a map of `GetKeyVal`'s values, a repeated key's as an array. Accepts a `KeyVals` argument (read, or digested in a constructor) or its `k=v,…` source string. |
 | `Info(string, string, string)`<br>`Info(string, string, string, ?)` | Log an `Info:` line, plus optional details. |
 | `Input(string)` | Input a TeX file (`\input`'s core). ([`input`](latexml_core::binding::content::input)) |
 | `InputDefinitions(string)`<br>`InputDefinitions(string, map)` | Find and load the definitions for a package or class. ([`input_definitions`](latexml_core::binding::content::input_definitions)) |
@@ -196,7 +197,7 @@ Called at the top level of a binding file, or from inside any body.
 | `Tag(string, map)` | Declare document-model properties for one element tag: `autoOpen`, `autoClose`, the `afterOpen`/`afterClose` hooks. ([`install_tag`](latexml_core::binding::content::install_tag)) |
 | `TeX(string)` | Tokenize a TeX source string (style catcodes) and digest it. ([`digest`](latexml_core::stomach::digest)) |
 | `ToAttribute(Digested) -> string` | The digested value as a string fit for an XML attribute. ([`Digested::to_attribute`](latexml_core::digested::Digested::to_attribute)) |
-| `ToString(Digested) -> string` | The digested value as plain text (its `Display`). |
+| `ToString(?) -> string` | The digested value as plain text (its `Display`). |
 | `Today() -> string` | Today's date, as `\today` renders it. ([`today`](latexml_engine::base_utilities::today)) |
 | `Token(string) -> Token`<br>`Token(string, int) -> Token` | Perl's `Token(string, catcode)`: one `Token`; the catcode is a `CC_*` value, `CC_OTHER()` if omitted. |
 | `Tokenize(string) -> Tokens` | Tokenize a string under the standard catcode table. ([`tokenize`](latexml_core::mouth::tokenize)) |
@@ -224,7 +225,7 @@ Reached through the `document` handle a constructor body receives as its first a
 |---|---|
 | `absorb(Digested)`<br>`absorb(Token)`<br>`absorb(Tokens)` | Absorb a digested value at the current insertion point. ([`Document::absorb`](latexml_core::document::Document::absorb)) |
 | `absorbProperty(string)` | Absorb one of the whatsit's properties, by name. ([`Document::absorb`](latexml_core::document::Document::absorb)) |
-| `absorbString(string)` | Absorb a plain string at the current insertion point. ([`Document::absorb_string`](latexml_core::document::Document::absorb_string)) |
+| `absorbString(?)` | Absorb a plain string at the current insertion point. ([`Document::absorb_string`](latexml_core::document::Document::absorb_string)) |
 | `addClass(Node, string)` | Add CSS classes to a node, keeping those it already has. ([`Document::add_class`](latexml_core::document::Document::add_class)) |
 | `appendClone(Node, array)` | Append COPIES of nodes, with fresh ids. ([`Document::append_clone`](latexml_core::document::Document::append_clone)) |
 | `canContain(Node, string) -> bool`<br>`canContain(string, string) -> bool` | May an element (a node or a qname) contain a child qname? — the schema query before opening an element. ([`can_contain`](latexml_core::document::can_contain)) |
@@ -280,7 +281,7 @@ An XML node: one returned by `ParseXML`, or one handed to a rewrite / ligature-m
 
 The whatsit a hook receives positionally, as Perl passes `$whatsit` (Whatsit.pm).
 
-6 functions, 6 calls.
+7 functions, 7 calls.
 
 | call | documentation |
 |---|---|
@@ -290,6 +291,7 @@ The whatsit a hook receives positionally, as Perl passes `$whatsit` (Whatsit.pm)
 | `getProperty(string) -> ?` | One property by name, its typed value (string / int / bool / `Tokens` / `Digested` handle / …); `()` when absent. ([`BoxOps::get_property`](latexml_core::BoxOps::get_property)) |
 | `propertyString(string) -> string` | **Deprecated** (Warns once per binding load): use `whatsit.getProperty(key)`. One property of the whatsit, as a string. |
 | `setProperty(string, ?)` | Set a property (any value) on the whatsit. Only a DIGEST hook may: in a construction hook the whatsit is already read-only, and this is a clean script error. |
+| `to_string() -> string` | **Deprecated** (Warns once per binding load): an old-form reversion `|x|` holds the whatsit; it prints as the first argument's TeX. Use `|whatsit, args|`. |
 
 ## `LookupDefinition()` methods
 
@@ -312,7 +314,7 @@ An already-installed definition, for pushing hooks onto it.
 
 ## `Gullet` methods
 
-Perl's `$gullet->read…`: the gullet handle a parameter-type reader receives.
+Perl's `$gullet->read…`: the gullet handle a macro body or a parameter-type reader receives first.
 
 5 functions, 5 calls.
 
@@ -323,6 +325,16 @@ Perl's `$gullet->read…`: the gullet handle a parameter-type reader receives.
 | `readToken() -> ?` | `gullet.readToken()`: `ReadToken` on a `Gullet` handle. ([`read_token`](latexml_core::gullet::read_token)) |
 | `readUntil(?) -> Tokens` | `gullet.readUntil(delim)`: `ReadUntil` on a `Gullet` handle. ([`read_until`](latexml_core::gullet::read_until)) |
 | `skipSpaces()` | `gullet.skipSpaces()`: `SkipSpaces` on a `Gullet` handle. ([`skip_spaces`](latexml_core::gullet::skip_spaces)) |
+
+## `Stomach` methods
+
+Perl's `$stomach`: the handle a primitive body receives first (Primitive.pm:78).
+
+1 function, 1 call.
+
+| call | documentation |
+|---|---|
+| `getGullet() -> Gullet` | `stomach.getGullet()`: the `Gullet` handle, Perl's `$stomach->getGullet`. |
 
 ## `Font` methods
 

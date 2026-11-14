@@ -632,7 +632,14 @@ pub(super) fn make_engine() -> Engine {
     },
   );
   // ToString/ToAttribute/Revert on a Digested handle (Perl ToString/Revert).
-  engine.register_fn("ToString", |d: Digested| -> String { d.to_string() });
+  // Perl's `ToString` of anything (Object.pm:59): a box, Tokens, a Token, a string; `()` as "".
+  engine.register_fn("ToString", |d: Dynamic| -> String {
+    if d.is_unit() {
+      String::new()
+    } else {
+      dynamic_to_string(d)
+    }
+  });
   engine.register_fn("ToAttribute", |d: Digested| -> String { d.to_attribute() });
   engine.register_fn(
     "Revert",
@@ -907,56 +914,33 @@ pub(super) fn make_engine() -> Engine {
     keys.into_iter().map(Dynamic::from).collect()
   });
 
-  // GetKeyVal / GetKeyVals over a keyval argument. A `KeyVals`/`OptionalKeyVals`
-  // argument reaches a constructor *closure* body as a digested `KeyVals` handle
-  // (or unit `()` when an optional set was omitted); it reaches other contexts
-  // as its TeX-source string ("k=v,k2={v2}"). `GetKeyVal` accepts both — plus
-  // unit — so a script body can `GetKeyVal(#1, "width")` uniformly. Missing key
-  // (or unit) → "".
-  engine.register_fn("GetKeyVal", |kv: Dynamic, key: &str| -> String {
-    if let Some(d) = kv.clone().try_cast::<Digested>() {
-      return match d.data() {
-        latexml_core::digested::DigestedData::KeyVals(keyval) => keyval
-          .get_value_digested(key)
-          .map(|v| v.to_string())
-          .unwrap_or_default(),
-        _ => String::new(),
-      };
-    }
-    if kv.is_string() {
-      let s = kv.into_string().unwrap_or_default();
-      return latexml_core::keyval::split_keyval_source(&s)
-        .into_iter()
-        .find(|(k, _)| k == key)
-        .map(|(_, v)| v)
-        .unwrap_or_default();
-    }
-    String::new()
+  // GetKeyVal / GetKeyVals (KeyVals.pm:31-37): the value as stored — Tokens as read, a digested box once the set is
+  // digested (a constructor's argument), `()` for a missing key; a repeated key's last value, its values as an array
+  // in GetKeyVals. A `k=v,…` TeX string (an old-form macro's argument) is read as its values' Tokens.
+  engine.register_type_with_name::<latexml_core::keyvals::KeyVals>("KeyVals");
+  engine.register_fn("to_string", |kv: &mut latexml_core::keyvals::KeyVals| {
+    kv.to_string()
   });
-  // `GetKeyVals` mirrors `GetKeyVal`: a `RequiredKeyVals`/`OptionalKeyVals`
-  // argument reaches a constructor closure as a digested `KeyVals` handle, and
-  // reaches other contexts as its `k=v,…` source string. Accept both (plus unit
-  // for an omitted optional set) so a script can `GetKeyVals(#1)` uniformly and
-  // turn the arg into a Rhai map (issue #627). Values are the digested value's
-  // string form (falling back to the raw value pre-digestion).
+  engine.register_fn("GetKeyVal", |kv: Dynamic, key: &str| -> Dynamic {
+    keyval_values(kv)
+      .into_iter()
+      .rev()
+      .find(|(k, _)| k == key)
+      .map_or(Dynamic::UNIT, |(_, v)| v)
+  });
   engine.register_fn("GetKeyVals", |kv: Dynamic| -> Map {
     let mut m = Map::new();
-    if let Some(d) = kv.clone().try_cast::<Digested>() {
-      if let latexml_core::digested::DigestedData::KeyVals(keyval) = d.data() {
-        let mut hash = keyval.get_hash_digested();
-        if hash.is_empty() {
-          hash = keyval.get_hash();
-        }
-        for (k, v) in hash {
-          m.insert(k.into(), Dynamic::from(v));
-        }
-      }
-      return m;
-    }
-    if kv.is_string() {
-      let s = kv.into_string().unwrap_or_default();
-      for (k, v) in latexml_core::keyval::split_keyval_source(&s) {
-        m.insert(k.into(), Dynamic::from(v));
+    for (k, v) in keyval_values(kv) {
+      match m.get_mut(k.as_str()) {
+        None => {
+          m.insert(k.into(), v);
+        },
+        Some(prev) if prev.is_array() => {
+          let mut list = std::mem::take(prev).cast::<rhai::Array>();
+          list.push(v);
+          *prev = Dynamic::from_array(list);
+        },
+        Some(prev) => *prev = Dynamic::from_array(vec![std::mem::take(prev), v]),
       }
     }
     m
@@ -1039,7 +1023,7 @@ pub(super) fn make_engine() -> Engine {
     )
     .map_err(rhai_err)
   });
-  // IsEmpty (Package.pm:1034): spaces are NOT empty; a list of things is empty when each is.
+  // IsEmpty (Package.pm:1034): spaces, braces and other non-printing tokens are empty; a list when each item is.
   engine.register_fn("IsEmpty", |thing: Dynamic| -> RhaiResult<bool> {
     is_empty_thing(&thing)
   });
@@ -1325,7 +1309,8 @@ pub(super) fn make_engine() -> Engine {
       def_accent_impl(accent, combining, standalone, false).map_err(rhai_err)
     },
   );
-  // Perl's option form `DefAccent($accent, $comb, $standalone, below => 1)` (TeX_Character.pool.ltxml:92).
+  // Perl's option form `DefAccent($accent, $comb, $standalone, %options)` (TeX_Character.pool.ltxml:92), which reads
+  // no option, so none is checked; the Rust definer reads `below`.
   engine.register_fn(
     "DefAccent",
     |accent: &str,
@@ -1333,12 +1318,6 @@ pub(super) fn make_engine() -> Engine {
      standalone: &str,
      opts: Map|
      -> std::result::Result<(), Box<EvalAltResult>> {
-      check_options(
-        &format!("DefAccent ({accent})"),
-        &["below"],
-        opts.keys().map(|k| k.as_str()),
-      )
-      .map_err(rhai_err)?;
       let below = opts.get("below").is_some_and(dynamic_to_bool);
       def_accent_impl(accent, combining, standalone, below).map_err(rhai_err)
     },
@@ -1537,6 +1516,21 @@ pub(super) fn make_engine() -> Engine {
   engine.register_fn("skipSpaces", |_g: &mut GulletHandle| {
     latexml_core::gullet::skip_spaces().map_err(rhai_err)
   });
+  // DefParameterType (Package.pm:586): the reader gets the gullet handle and the type's extra arguments.
+  engine.register_fn(
+    "DefParameterType",
+    |name: &str, reader: FnPtr| -> RhaiResult<()> {
+      wire_now(|e, a| wire_parameter_type(e, a, name, reader, Map::new()))
+    },
+  );
+  engine.register_fn(
+    "DefParameterType",
+    |name: &str, reader: FnPtr, opts: Map| -> RhaiResult<()> {
+      wire_now(|e, a| wire_parameter_type(e, a, name, reader, opts))
+    },
+  );
+  engine.register_type_with_name::<StomachHandle>("Stomach");
+  engine.register_fn("getGullet", |_s: &mut StomachHandle| GulletHandle);
 
   // ── package/class machinery (content.rs, the RequirePackage!/… family) ──
   engine.register_fn(
@@ -1908,6 +1902,8 @@ pub(super) fn make_engine() -> Engine {
   // argument as an opaque `Digested` handle it can pass back to `document.absorb`.
   engine.register_type_with_name::<DocProxy>("Document");
   engine.register_type_with_name::<Digested>("Digested");
+  // A box in a string context is its `ToString` (Perl's), as `absorbString` reads it.
+  engine.register_fn("to_string", |d: &mut Digested| d.to_string());
 
   // Perl's `openElement($qname, %attributes)` returns the new node, `closeElement`/`maybeCloseElement` the node
   // closed or undef (Document.pm:787-866; #716 §2).
@@ -1963,11 +1959,16 @@ pub(super) fn make_engine() -> Engine {
       })
     },
   );
+  // Any value as its string (Perl's `absorb` of a string; a `GetKeyVal` value, Tokens, a box), `()` as nothing.
   engine.register_fn(
     "absorbString",
-    |_d: &mut DocProxy, s: &str| -> std::result::Result<(), Box<EvalAltResult>> {
+    |_d: &mut DocProxy, s: Dynamic| -> std::result::Result<(), Box<EvalAltResult>> {
+      if s.is_unit() {
+        return Ok(());
+      }
+      let s = dynamic_to_string(s);
       with_doc(|doc, props| {
-        doc.absorb_string(s, props).map_err(rhai_err)?;
+        doc.absorb_string(&s, props).map_err(rhai_err)?;
         Ok(())
       })
     },
@@ -2486,6 +2487,19 @@ pub(super) fn make_engine() -> Engine {
       with_whatsit(|w| ctor_arg_to_dynamic(&n.and_then(|n| w.get_arg(n)).cloned()))
     },
   );
+  // An old-form reversion `|x| "\\foo{" + x + "}"` holds the whatsit in `x`: Warned, it prints the first
+  // argument's TeX, as `x` did (Perl's `ToString($whatsit)` is `ToString`, not this).
+  engine.register_fn(
+    "to_string",
+    |_w: &mut WhatsitProxy| -> std::result::Result<String, Box<EvalAltResult>> {
+      warn_deprecated("reversion |args|");
+      with_whatsit(|w| {
+        w.get_arg(1)
+          .and_then(|d| d.untex().ok())
+          .unwrap_or_default()
+      })
+    },
+  );
   // Perl `getProperty($key)` (Whatsit.pm:55): the typed value, `()` when absent.
   engine.register_fn(
     "getProperty",
@@ -2666,6 +2680,10 @@ fn assign_code(
 #[derive(Clone, Copy, Debug, Default)]
 pub(super) struct GulletHandle;
 
+/// A handle on the stomach, a primitive body's first argument (Primitive.pm:78); `getGullet` reaches the gullet.
+#[derive(Clone, Copy, Debug, Default)]
+pub(super) struct StomachHandle;
+
 type RhaiResult<T> = std::result::Result<T, Box<EvalAltResult>>;
 
 /// One balanced argument off the stream, unexpanded (Perl `readArg`).
@@ -2840,12 +2858,15 @@ fn declare_font_map(name: &str, map: rhai::Array, opts: Map) -> RhaiResult<()> {
     "lowercase_mathstyle",
     "digit_mathstyle",
   ] {
-    if let Some(value) = opts.get(style) {
-      latexml_core::state::assign_value(
+    // A font map, stored as the `Font` the glyphs take on in math (tex_fonts.rs's `OMS_uppercase_mathstyle`).
+    match opts.get(style).map(|v| v.clone().try_cast::<Map>()) {
+      Some(Some(font)) => latexml_core::state::assign_value(
         &format!("{encname}_{style}"),
-        dynamic_to_stored(value.clone()),
+        Stored::Font(Rc::new(font_from_rhai_map(font))),
         Some(Scope::Global),
-      );
+      ),
+      Some(None) => unsupported_option("DeclareFontMap", &format!("{style} other than a font map")),
+      None => {},
     }
   }
   Ok(())
@@ -2858,6 +2879,43 @@ fn font_map_multichar(mapname: String, map: Map) {
     .map(|(pos, s)| (pos.to_string(), dynamic_to_string(s)))
     .collect();
   latexml_core::state::assign_value(&mapname, map, Some(Scope::Global));
+}
+
+/// A keyval set's (key, value) pairs in the order given (`GetKeyVal`'s reading): a `KeyVals` argument's values, a
+/// digested set's digested values (its read values before digestion), a `k=v,…` string's values TokenizeInternal'd.
+fn keyval_values(kv: Dynamic) -> Vec<(String, Dynamic)> {
+  let from_set = |set: &latexml_core::keyvals::KeyVals, digested: bool| {
+    let mut out = Vec::new();
+    let mut seen: rustc_hash::FxHashMap<&str, usize> = rustc_hash::FxHashMap::default();
+    for (key, value) in set.get_pairs() {
+      let n = seen.entry(key.as_str()).or_insert(0);
+      let value = match set.get_values_digested(key).and_then(|vs| vs.get(*n)) {
+        Some(d) if digested => Dynamic::from(d.clone()),
+        _ => arg_value(value.clone()),
+      };
+      *n += 1;
+      out.push((key.clone(), value));
+    }
+    out
+  };
+  if let Some(set) = kv.clone().try_cast::<latexml_core::keyvals::KeyVals>() {
+    from_set(&set, false)
+  } else if let Some(d) = kv.clone().try_cast::<Digested>() {
+    match d.data() {
+      latexml_core::digested::DigestedData::KeyVals(set) => from_set(set, true),
+      _ => Vec::new(),
+    }
+  } else if kv.is_string() {
+    latexml_core::keyval::split_keyval_source(&kv.into_string().unwrap_or_default())
+      .into_iter()
+      .map(|(k, v)| {
+        let v = mouth::tokenize_internal(TeXString::assembled(v));
+        (k, Dynamic::from(v))
+      })
+      .collect()
+  } else {
+    Vec::new()
+  }
 }
 
 /// Perl `IsEmpty` (Package.pm:1034): a token is empty unless a letter, other, active or control sequence; TeX
@@ -2903,6 +2961,15 @@ fn find_file(name: &str, opts: Map) -> RhaiResult<Dynamic> {
     "installation_subdir",
   ];
   let operation = format!("FindFile ({name})");
+  let mut opts = opts;
+  // Package.pm:2079-2082: `raw` is deprecated and dropped.
+  if opts.remove("raw").is_some() {
+    latexml_core::Warn!(
+      "deprecated",
+      "raw",
+      "FindFile option raw is deprecated; it is not needed"
+    );
+  }
   check_options(
     &operation,
     FINDFILE_OPTIONS,

@@ -328,9 +328,10 @@ Backslashes in TeX control sequences must be doubled in Rhai strings (`"\\foo"`)
 cached by source (`SCRIPT_CACHE`).
 
 **Registration (script side):**
-- `DefMacro("\\cs{}", |args…| -> string)` — expandable; body returns TeX source
-  (faithfully re-tokenized). Args arrive as TeX-source strings.
-- `DefPrimitive("\\cs{}", |args…| { … })` — digestion-time side-effects.
+- `DefMacro("\\cs{}", |gullet, args…| …)` — expandable; Perl's `($gullet, @args)`, each argument
+  Tokens; the body returns Tokens or TeX source (faithfully re-tokenized). A body declaring no
+  leading `gullet` gets TeX strings, Warned deprecated (round D2b).
+- `DefPrimitive("\\cs{}", |stomach, args…| { … })` — digestion-time side-effects; Perl's `($stomach, @args)`.
 - `DefConstructor("\\cs{}", "<ltx:tag a=\"#1\">#2</ltx:tag>")` — template form.
   Since #171 landed, the template is parsed once into the shared `ReplacementOp`
   AST (`latexml_core::binding::def::replacement`) — the *same* parser the

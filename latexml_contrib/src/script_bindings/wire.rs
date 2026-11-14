@@ -7,7 +7,10 @@ use latexml_core::{
   state::{install_definition, lookup_definition_stored},
 };
 
-use super::*;
+use super::{
+  engine::{GulletHandle, StomachHandle},
+  *,
+};
 
 /// Contain a failure inside a script BODY: report it as an ordinary `Error:` and
 /// fall back to `neutral`, instead of propagating an `Err` that aborts the whole
@@ -72,7 +75,13 @@ pub(super) fn wire_macro_token(
   let ast = ast.clone();
 
   let closure: ExpansionClosure = Rc::new(move |args: Vec<ArgWrap>| -> Result<Tokens> {
-    let dyn_args: Vec<Dynamic> = args.into_iter().map(arg_to_dynamic).collect();
+    let dyn_args = perl_body_args(
+      &ast,
+      &body,
+      Dynamic::from(GulletHandle),
+      args,
+      "DefMacro |args|",
+    );
     let ret: Dynamic = match call_deferred_body(&engine, &ast, &body, dyn_args) {
       Ok(v) => v,
       Err(e) => return contain(&format!("macro {cs_name}"), e, Tokens::default()),
@@ -715,7 +724,7 @@ pub(super) fn dynamic_to_bool(v: &Dynamic) -> bool {
 
 /// Install one `DefPrimitive` registration as a native primitive whose body
 /// runs at digestion time for side-effects (state assignments, etc.). The body
-/// receives args as strings and its return value is ignored (pure side-effect);
+/// receives Perl's `($stomach, @args)` ([`perl_body_args`]) and its return value is ignored (pure side-effect);
 /// the primitive contributes no boxes.
 pub(super) fn wire_primitive(
   engine: &Rc<Engine>,
@@ -730,7 +739,13 @@ pub(super) fn wire_primitive(
   let ast = ast.clone();
 
   let closure: PrimitiveClosure = Rc::new(move |args: Vec<ArgWrap>| -> Result<Vec<Digested>> {
-    let dyn_args: Vec<Dynamic> = args.into_iter().map(arg_to_dynamic).collect();
+    let dyn_args = perl_body_args(
+      &ast,
+      &body,
+      Dynamic::from(StomachHandle),
+      args,
+      "DefPrimitive |args|",
+    );
     let _: Dynamic = call_deferred_body(&engine, &ast, &body, dyn_args)
       .or_else(|e| contain(&format!("primitive {cs_name}"), e, Dynamic::UNIT))?;
     Ok(Vec::new())
@@ -758,7 +773,13 @@ pub(super) fn wire_macro_opts(
   let engine = engine.clone();
   let ast = ast.clone();
   let closure: ExpansionClosure = Rc::new(move |args: Vec<ArgWrap>| -> Result<Tokens> {
-    let dyn_args: Vec<Dynamic> = args.into_iter().map(arg_to_dynamic).collect();
+    let dyn_args = perl_body_args(
+      &ast,
+      &body,
+      Dynamic::from(GulletHandle),
+      args,
+      "DefMacro |args|",
+    );
     let ret: Dynamic = call_deferred_body(&engine, &ast, &body, dyn_args)
       .or_else(|e| contain(&format!("macro {cs_name}"), e, Dynamic::UNIT))?;
     Ok(dynamic_to_tokens(ret))
@@ -867,7 +888,13 @@ pub(super) fn wire_conditional(
   let ast = ast.clone();
   let closure = test.map(|test| -> ConditionalClosure {
     Rc::new(move |args: Vec<ArgWrap>| -> Result<bool> {
-      let dyn_args: Vec<Dynamic> = args.into_iter().map(arg_to_tokens_dynamic).collect();
+      // Perl's `&$test($gullet, @args)` (Conditional.pm) when the test declares the gullet; else the arguments alone.
+      let nargs = args.len();
+      let mut dyn_args: Vec<Dynamic> = Vec::with_capacity(nargs + 1);
+      if declares_lead(&ast, &test, nargs) {
+        dyn_args.push(Dynamic::from(GulletHandle));
+      }
+      dyn_args.extend(args.into_iter().map(arg_value));
       let ret: Dynamic = call_deferred_body(&engine, &ast, &test, dyn_args)
         .or_else(|e| contain(&format!("conditional {cs_name}"), e, Dynamic::FALSE))?;
       Ok(ret.as_bool().unwrap_or(false))
@@ -876,12 +903,43 @@ pub(super) fn wire_conditional(
   def_conditional(cs, paramlist, closure, options)
 }
 
-/// A conditional's argument as Perl hands it to the test: a token argument as `Tokens`/`Token`.
-fn arg_to_tokens_dynamic(arg: ArgWrap) -> Dynamic {
+/// An argument as Perl hands it to a body: a token argument as `Tokens`/`Token`, a keyval set as `KeyVals`, an
+/// omitted optional as `()`; a number or dimension its TeX string until round C's typed handles.
+pub(super) fn arg_value(arg: ArgWrap) -> Dynamic {
   match arg {
     ArgWrap::Tokens(tokens) => Dynamic::from(tokens),
     ArgWrap::Token(token) => Dynamic::from(token),
+    ArgWrap::KV(kv) => Dynamic::from(*kv),
+    ArgWrap::None => Dynamic::UNIT,
     other => arg_to_dynamic(other),
+  }
+}
+
+/// Whether `body` declares a leading handle before the definition's `nargs` arguments (Perl's `$_[0]`): it declares
+/// more parameters than there are arguments, or there are none.
+fn declares_lead(ast: &Rc<AST>, body: &FnPtr, nargs: usize) -> bool {
+  nargs == 0
+    || closure_arity(ast, body.fn_name())
+      .is_none_or(|params| params.saturating_sub(body.curry().len()) > nargs)
+}
+
+/// A macro or primitive body's arguments as Perl passes them (Expandable.pm:74, Primitive.pm:78): `lead` (the gullet
+/// or stomach handle), then each argument's value. A body declaring no lead is the old form, given TeX strings and
+/// Warned `deprecated` (`what`) once per binding load.
+fn perl_body_args(
+  ast: &Rc<AST>,
+  body: &FnPtr,
+  lead: Dynamic,
+  args: Vec<ArgWrap>,
+  what: &'static str,
+) -> Vec<Dynamic> {
+  if declares_lead(ast, body, args.len()) {
+    std::iter::once(lead)
+      .chain(args.into_iter().map(arg_value))
+      .collect()
+  } else {
+    warn_deprecated(what);
+    args.into_iter().map(arg_to_dynamic).collect()
   }
 }
 
@@ -911,7 +969,13 @@ pub(super) fn wire_columntype(
   let engine = engine.clone();
   let ast = ast.clone();
   let closure: ExpansionClosure = Rc::new(move |args: Vec<ArgWrap>| -> Result<Tokens> {
-    let dyn_args: Vec<Dynamic> = args.into_iter().map(arg_to_dynamic).collect();
+    let dyn_args = perl_body_args(
+      &ast,
+      &body,
+      Dynamic::from(GulletHandle),
+      args,
+      "DefColumnType |args|",
+    );
     let ret: Dynamic = call_deferred_body(&engine, &ast, &body, dyn_args)
       .or_else(|e| contain(&format!("column type {cs_name}"), e, Dynamic::UNIT))?;
     Ok(dynamic_to_tokens(ret))
@@ -1473,4 +1537,122 @@ pub(super) fn tag_trampoline(
       Ok(())
     },
   )
+}
+
+/// Install a `DefParameterType(name, reader, options)` (Package.pm:586-590): the reader is called as Perl's
+/// `&$reader($gullet, @extra)` (Parameter.pm:88) and returns the value (Tokens, a Token, `()` for none); the options
+/// are Perl's `$parameter_options` (`nargs` has no Rust reading yet: Warned unsupported).
+pub(super) fn wire_parameter_type(
+  engine: &Rc<Engine>,
+  ast: &Rc<AST>,
+  name: &str,
+  reader: FnPtr,
+  opts: Map,
+) -> Result<()> {
+  let operation = format!("DefParameterType {name}");
+  let opts = checked_opts(
+    &operation,
+    latexml_core::binding::def::options::PARAMETER_OPTIONS,
+    &["nargs"],
+    opts,
+  )?;
+  let (engine, ast) = (engine.clone(), ast.clone());
+  let what = format!("parameter type {name}");
+  let read_engine = engine.clone();
+  let read_ast = ast.clone();
+  let mut param = latexml_core::parameter::Parameter {
+    name: arena::pin(name),
+    reader: Rc::new(move |_inner, extra: &[Tokens]| {
+      let args: Vec<Dynamic> = std::iter::once(Dynamic::from(GulletHandle))
+        .chain(extra.iter().cloned().map(Dynamic::from))
+        .collect();
+      match call_deferred_body(&read_engine, &read_ast, &reader, args) {
+        Ok(value) => Ok(dynamic_to_arg(value)),
+        Err(e) => contain(&what, e, ArgWrap::None),
+      }
+    }),
+    ..latexml_core::parameter::Parameter::default()
+  };
+  for (key, val) in opts {
+    match key.as_str() {
+      "optional" => param.optional = dynamic_to_bool(&val),
+      "novalue" => param.novalue = dynamic_to_bool(&val),
+      // Perl's `semiverbatim => [chars]`, or a true value for none extra.
+      "semiverbatim" => {
+        param.semiverbatim = if val.is_array() {
+          Some(string_chars(val))
+        } else {
+          dynamic_to_bool(&val).then(Vec::new)
+        }
+      },
+      "undigested" if dynamic_to_bool(&val) => {
+        param.predigest = Some(Rc::new(|arg: ArgWrap, _extra: &[Tokens]| {
+          Ok(arg.undigested())
+        }));
+      },
+      // Perl's `&$reversion($value, @extra)`: the value as Tokens, each extra as Tokens.
+      "reversion" => match val.try_cast::<FnPtr>() {
+        Some(fp) => {
+          let (engine, ast) = (engine.clone(), ast.clone());
+          let what = format!("{operation} reversion");
+          param.reversion = Some(Rc::new(
+            move |value: Vec<Token>, _inner, extra: &[Tokens]| {
+              let args: Vec<Dynamic> = std::iter::once(Dynamic::from(Tokens::new(value)))
+                .chain(extra.iter().cloned().map(Dynamic::from))
+                .collect();
+              match call_deferred_body(&engine, &ast, &fp, args) {
+                Ok(ret) => Ok(dynamic_to_tokens(ret)),
+                Err(e) => contain(&what, e, Tokens::default()),
+              }
+            },
+          ));
+        },
+        None => unsupported_option(&operation, "reversion as tokens"),
+      },
+      "beforeDigest" => {
+        for fp in hooks_of(val).filter_map(|v| v.try_cast::<FnPtr>()) {
+          param
+            .before_digest
+            .push(before_digest_trampoline(fp, engine.clone(), ast.clone()));
+        }
+      },
+      "afterDigest" => {
+        for fp in hooks_of(val).filter_map(|v| v.try_cast::<FnPtr>()) {
+          param
+            .after_digest
+            .push(after_digest_trampoline(fp, engine.clone(), ast.clone()));
+        }
+      },
+      _ => {},
+    }
+  }
+  latexml_core::state::assign_mapping(
+    "PARAMETER_TYPES",
+    name,
+    Some(Stored::Parameter(Rc::new(param))),
+  );
+  Ok(())
+}
+
+/// A reader's returned value as an argument: Tokens, a Token or a keyval set as itself, `()` as none (Perl undef),
+/// TeX source TokenizeInternal'd.
+fn dynamic_to_arg(value: Dynamic) -> ArgWrap {
+  if value.is_unit() {
+    ArgWrap::None
+  } else if let Some(token) = value.clone().try_cast::<Token>() {
+    ArgWrap::Token(token)
+  } else if let Some(kv) = value.clone().try_cast::<latexml_core::keyvals::KeyVals>() {
+    ArgWrap::KV(Box::new(kv))
+  } else {
+    ArgWrap::Tokens(dynamic_to_tokens(value))
+  }
+}
+
+/// The chars of an array of 1-char strings (Perl's `semiverbatim` list).
+fn string_chars(val: Dynamic) -> Vec<char> {
+  val
+    .cast::<rhai::Array>()
+    .into_iter()
+    .filter_map(|c| dynamic_to_string(c).chars().next())
+    .collect()
 }
