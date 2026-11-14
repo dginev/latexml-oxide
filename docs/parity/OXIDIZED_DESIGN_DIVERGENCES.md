@@ -36062,3 +36062,20 @@ path argument is typeset ("X ZY", KNOWN_PERL_ERRORS #1239), and `\import@path` i
 carry no space; `\import@path` is defined and kept as import.sty keeps it, a nested `\import` restoring it to empty.
 **Guards**: `bindings_batch1::import_path_is_the_package_macro` (repros `package-bindings/import_path_is_the_package_macro.tex`,
 `import_nested_import_empties_the_path.tex`).
+
+### 1029. A file `\input` under a set `\everyeof` is read as a token list, never answered by a binding (WIN1, WIN1F)
+
+**TeX.** An `\input` made while `\everyeof` holds tokens feeds the reader that set them: the file's tokens, then the
+`\everyeof` list (etex.web §362), end a delimited scan opened across the `\input` — expl3's `\file_get:nnN`
+(`\__file_get_aux:nnN`: `\tex_everyeof:D` the marker, `\__file_get_do:Nw`, `\tex_input:D`). The LaTeX kernel of
+November 2026 reads `glyphtounicode.tex` this way while the format is built (latex.ltx:22952-22957). **Perl.** Such an
+`\input` met while definitions are read goes to `InputDefinitions` (Package.pm:2287-2288), its own loop; `\everyeof` is
+a bare register never inserted (eTeX.pool.ltxml:258); a binding answers where one exists. **Rust.** Under a set
+`\everyeof`, `content::input` reads the file on disk in both modes: during definitions `read_as_token_list` opens a mouth
+under the current catcodes ending with the `\everyeof` mark (no definitions loop, no loaded mark, no content-file
+entry); in a document the binding dispatch is skipped and the content path reads it. Before, `--init=latex.ltx` on that
+kernel raised 137 errors (the scan ran on through latex.ltx under `\ExplSyntaxOff`), and in a document
+`\file_get:nnN{ltluatex}` / `{pstricks}` / `{glyphtounicode}` / `{xspace.sty}` raised 7 / 16 / 7 / 7 Errors with `[read] [empty]` where
+pdflatex prints `[read][42]Tail.` (0 `!`). An ordinary `\input` keeps its binding: the empty `glyphtounicode.tex`
+binding answers `\input glyphtounicode` (`\pdfglyphtounicode` a no-op, the raw read's output the same, at fewer
+instructions). **Guards**: `perfect_kernel_batch51::file_get_reads_the_file_whole`, the format build's zero-error gate.

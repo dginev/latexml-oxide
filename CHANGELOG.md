@@ -61,10 +61,10 @@
     the file in its own loop, so the reader that set `\everyeof` never got the
     file's tokens: it scanned on through latex.ltx with expl3 syntax off, and
     `--init=latex.ltx` raised 137 errors. Such an `\input` now joins the reader's
-    input stream with the `\everyeof` tokens at its end, as TeX's does. The
-    Rust-only, empty `glyphtounicode.tex` binding is gone (Perl has none; the file
-    is raw-read, `\pdfglyphtounicode` a no-op), so the same call in a document reads
-    the file too. Guard `perfect_kernel_batch51::file_get_reads_glyphtounicode_whole`.
+    input stream with the `\everyeof` tokens at its end, as TeX's does, and in a
+    document no binding answers an `\input` under `\everyeof` either:
+    `\file_get:nnN{ltluatex}` and `{pstricks}` read the files (7 and 16 Errors
+    before). Guard `perfect_kernel_batch51::file_get_reads_the_file_whole`.
   - **`tools/make_formats.ps1` gates the dumps as `make_formats.sh` does.** The
     Windows mirror had drifted: it now fails on any `Error:`/`Fatal:` of an
     `--init` run (`LATEXML_INIT_DEBUG=1`), pins `TEXMFROOT` to the detected TeX Live
@@ -78,7 +78,7 @@
     them. Guard `path_is_under_compares_as_the_file_system_does`.
   - **Windows diagnostics name their source file.** A location's source was taken
     for a URL whenever it held a `:`, which every Windows path does, so messages
-    read `at C:\…\t.tex.index.tex; line 3` where Linux says `at t; line 3`. Perl's
+    read `at C:\…\t.tex.index.tex; line 3` where Linux says `at t.tex; line 3`. Perl's
     rule is restored (`Locator.pm:55`: a protocol is more than one character).
     Guard `a_windows_path_is_no_url`.
   - **Windows keeps the input's directory in its plain form.** The input was

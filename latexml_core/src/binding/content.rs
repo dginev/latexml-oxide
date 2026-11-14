@@ -2118,14 +2118,8 @@ pub fn input(request: &str, options: InputOptions) -> Result<()> {
     return input_definitions(&clean_req, InputDefinitionOptions::default());
   }
   if lookup_bool_sym(crate::pin!("INTERPRETING_DEFINITIONS")) {
-    // A reader that set `\everyeof` takes the file as a token list: the eTeX §362 terminator ends a delimited scan
-    // opened across the `\input`, so the file must enter the reader's input stream as TeX's `\input` puts it, not be
-    // digested by the definitions loop below. expl3's `\file_get:nnN` (`\__file_get_aux:nnN`: `\tex_everyeof:D`
-    // the marker, `\__file_get_do:Nw` ... `\tex_input:D`), which the LaTeX kernel of November 2026 calls on
-    // `glyphtounicode.tex` while the format is built (latex.ltx:22952-22957): the nested read handed the delimited
-    // macro nothing, it scanned the rest of latex.ltx under the call's `\ExplSyntaxOff`, and `--init=latex.ltx` raised
-    // 137 errors. Perl never inserts `\everyeof` (eTeX.pool.ltxml:258, a bare register). Guard:
-    // `perfect_kernel_batch51::file_get_reads_glyphtounicode_whole`, and the format build's zero-error gate.
+    // A reader that set `\everyeof` takes the file as a token list (eTeX §362; expl3's `\file_get:nnN`), not a
+    // definitions load: OXIDIZED_DESIGN_DIVERGENCES #1029 (the TL 2026 format build's glyphtounicode.tex).
     if everyeof_is_set()
       && let Some(path) = find_file(&clean_req, None)
     {
@@ -2205,7 +2199,8 @@ pub fn input(request: &str, options: InputOptions) -> Result<()> {
   // load it (matching `\input harvmac` → `harvmac.tex.ltxml` preference
   // over a local `harvmac.tex`). Skip when the request carries a directory
   // (explicit local path).
-  let binding_loaded = {
+  // Under `\everyeof` the file itself is read, never a binding (#1029; `\file_get:nnN{ltluatex}`, revWIN1).
+  let binding_loaded = !everyeof_is_set() && {
     let has_dir = clean_req.contains('/') || clean_req.contains('\\');
     // Perl Package.pm:2109-2113 + 2255-2270: when `\input{name}` or
     // `\input{name.<ext>}` resolves to a known binding extension AND a
@@ -3208,7 +3203,8 @@ fn note_content_file(path: &str) {
   assign_value(CONTENT_FILES, files, Some(Scope::Global));
 }
 
-/// Whether `\everyeof` holds tokens: an `\input` under it feeds a reader of the file's tokens (see [`input`]).
+/// Whether `\everyeof` holds tokens: an `\input` under it feeds a reader of the file's tokens, so no binding answers
+/// it (see [`input`]).
 fn everyeof_is_set() -> bool {
   matches!(
     lookup_register("\\everyeof", Vec::new()),

@@ -6,7 +6,7 @@
 
 use latexml::util::test::check_requirements;
 
-use super::perfect_kernel_batch46::{convert, error_count};
+use super::perfect_kernel_batch46::{convert, error_count, warning_count};
 
 /// Like [`convert`] (raw preload), but first drops extra `(name, content)`
 /// files into the tempdir so the snippet can `\input` them.
@@ -14,36 +14,40 @@ pub(super) fn convert_with_files(tex: &str, files: &[(&str, &str)]) -> (String, 
   super::perfect_kernel_batch46::convert_files(tex, files)
 }
 
-/// expl3's `\file_get:nnN` (expl3-code.tex `\__file_get_aux:nnN`) reads a file whole: `\tex_input:D` inside a
-/// group, then `\__file_get_do:Nw` delimited by the `\everyeof` marker, then `\group_end:`. The LaTeX kernel of
-/// November 2026 reads `glyphtounicode.tex` this way when it builds the format (latex.ltx:22952-22957, under its
-/// setup `\ExplSyntaxOff`). pdflatex oracle: the list holds the file's `\pdfglyphtounicode` lines and expl3 syntax
-/// is back on after the call. RED: a Rust-only, empty `glyphtounicode.tex` contrib binding (Perl has none; it raw-loads
-/// the file, `\pdfglyphtounicode` a no-op, pdfTeX.pool.ltxml:283) answered the `\input` without reading the file, so
-/// no marker came; the scan ran into the source after the call under `\ExplSyntaxOff` and `--init=latex.ltx` raised
-/// 137 errors (every later `\ExplSyntaxOn` block of latex.ltx, `\keys_define:nn`, `\@@text@case@aux`, ...).
+/// expl3's `\file_get:nnN` reads the file, never its binding: OXIDIZED_DESIGN_DIVERGENCES #1029. pdflatex prints
+/// `[read][42]Tail.` (0 `!`); red without the gate (revWIN1): 7, 7, 16 and 7 Errors, `[read] [empty]`.
 #[test]
-fn file_get_reads_glyphtounicode_whole() {
-  if !check_requirements(&["glyphtounicode.tex"]) {
-    return;
-  }
-  let (stderr, xml) = convert(
-    r"\documentclass{article}
-\begin{document}
+fn file_get_reads_the_file_whole() {
+  for (file, needle) in [
+    ("glyphtounicode.tex", r"\pdfglyphtounicode"),
+    ("ltluatex.tex", "def"),
+    ("pstricks.tex", "def"),
+    // a binding extension takes the other dispatch branch
+    ("xspace.sty", r"\ProvidesPackage"),
+  ] {
+    if !check_requirements(&[file]) {
+      continue;
+    }
+    let tex = format!(
+      r"\documentclass{{article}}
+\begin{{document}}
 \ExplSyntaxOn
-\file_get:nnN { glyphtounicode } { \ExplSyntaxOff } \l_tmpa_tl
-\tl_if_in:NnTF \l_tmpa_tl { \pdfglyphtounicode } { [read] } { [empty] }
-~[\int_eval:n { 40 + 2 }]
+\file_get:nnN {{ {file} }} {{ \ExplSyntaxOff }} \l_tmpa_tl
+\tl_if_in:NnTF \l_tmpa_tl {{ {needle} }} {{ [read] }} {{ [empty] }}
+~[\int_eval:n {{ 40 + 2 }}]
 \ExplSyntaxOff
 Tail.
-\end{document}
-",
-    true,
-  );
-  assert_eq!(error_count(&stderr), 0, "{stderr}");
-  assert!(xml.contains("[read]"), "{xml}");
-  assert!(xml.contains("[42]"), "{xml}");
-  assert!(xml.contains("Tail."), "{xml}");
+\end{{document}}
+"
+    );
+    let (stderr, xml) = convert(&tex, false);
+    assert_eq!(
+      (file, error_count(&stderr), warning_count(&stderr)),
+      (file, 0, 0),
+      "{stderr}"
+    );
+    assert!(xml.contains("<p>[read][42]Tail.</p>"), "{file}: {xml}");
+  }
 }
 
 /// P15 (file side): eTeX §362 begins the `\everyeof` token list at the end

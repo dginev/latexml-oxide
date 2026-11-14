@@ -156,6 +156,7 @@ pub mod fullname_sty;
 pub mod g_brief2_cls;
 pub mod g_brief_cls;
 pub mod getfiledate_sty;
+pub mod glyphtounicode_tex;
 pub mod gretsi_cls;
 pub mod harvmac_tex;
 pub mod hepnames_sty;
@@ -465,6 +466,11 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("fontawesome5", "sty", fontawesome5_sty::load_definitions),
   ("fp", "sty", fp_sty::load_definitions),
   ("fullname", "sty", fullname_sty::load_definitions),
+  (
+    "glyphtounicode",
+    "tex",
+    glyphtounicode_tex::load_definitions,
+  ),
   ("hepnames", "sty", hepnames_sty::load_definitions),
   ("hepparticles", "sty", hepparticles_sty::load_definitions),
   ("jpc", "sty", jpc_sty::load_definitions),

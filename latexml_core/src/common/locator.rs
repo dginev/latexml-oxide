@@ -350,16 +350,16 @@ mod tests {
   /// like any path (#794), with or without the verbatim prefix.
   #[test]
   fn a_windows_path_is_no_url() {
-    for source in [
-      "C:/Users/x/t.tex",
-      "//?/C:/Users/x/t.tex",
-      "c:/texlive/2026/texmf-dist/tex/latex/base/latex.ltx",
+    for (source, name) in [
+      ("C:/Users/x/t.tex", "t.tex"),
+      ("//?/C:/Users/x/t.tex", "t.tex"),
+      (
+        "c:/texlive/2026/texmf-dist/tex/latex/base/latex.ltx",
+        "latex.ltx",
+      ),
     ] {
       let short = Locator::new(source, 1, 1, 0, 0).get_short_source("");
-      assert!(
-        short == "t.tex" || short == "latex.ltx",
-        "{source} → {short}"
-      );
+      assert_eq!(short, name, "{source}");
     }
   }
 
