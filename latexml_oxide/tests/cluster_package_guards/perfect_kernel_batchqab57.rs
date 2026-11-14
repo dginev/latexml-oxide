@@ -1,5 +1,6 @@
 //! Guards for batch QAB57 (three Bruce Q&A residuals): under OmniBus the document's definitions win over its guesses
-//! (QA58); a section lifted out of a box keeps the box's width as `--ltx-box-width` (QA24).
+//! (QA58); a section lifted out of a box keeps the box's width as `--ltx-box-width` (QA24); latexml.sty's
+//! `pdfoutput`/`nopdfoutput` options override the guessed output mode (QA64).
 use super::perfect_kernel_batch46::{error_count, warning_count};
 
 fn convert_counted(tex: &str) -> (String, String) {
@@ -67,4 +68,37 @@ fn section_in_a_box_keeps_the_box_width() {
     css.contains("[style*=\"--ltx-box-width:\"] {\n  width: var(--ltx-box-width, auto);\n}"),
     "LaTeXML.css applies --ltx-box-width"
   );
+}
+
+/// latexml.sty's `nopdfoutput`/`pdfoutput` options set the output mode over the guess from the source (OD #1046; BM
+/// Q4.2). The drivers read `\pdfoutput` as they load: given after graphicx, the driver graphicx chose stays; preloaded
+/// (`[pdfoutput]ar5iv.sty`) it overrides the `dvips` class option's DVI cue, whose driver option graphicx still takes.
+#[test]
+fn latexml_pdfoutput_options_override_the_mode() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/backend-persona/latexml_nopdfoutput_option.tex"
+  );
+  let option = "\\usepackage[nopdfoutput]{latexml}\n";
+  let after_graphicx = tex.replace(option, "").replace(
+    "\\usepackage{ifpdf}\n",
+    &format!("\\usepackage{{ifpdf}}\n{option}"),
+  );
+  let dvi_cue = tex.replace(option, "").replace(
+    "\\documentclass{article}",
+    "\\documentclass[dvips]{article}",
+  );
+  for (source, preload, mode) in [
+    (tex.to_string(), None, "Mode: DVI, 0, dvips.def."),
+    (after_graphicx, None, "Mode: DVI, 0, pdftex.def."),
+    (dvi_cue.clone(), None, "Mode: DVI, 0, dvips.def."),
+    (
+      dvi_cue,
+      Some("[pdfoutput]ar5iv.sty"),
+      "Mode: PDF, 1, dvips.def.",
+    ),
+  ] {
+    let (log, xml) = latexml::util::test::convert_with(&source, preload);
+    assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+    assert!(xml.contains(&format!(">{mode}</p>")), "{mode}\n{xml}");
+  }
 }

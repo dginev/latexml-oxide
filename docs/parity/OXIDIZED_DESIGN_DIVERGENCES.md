@@ -36379,3 +36379,18 @@ and LaTeXML.css applies it (`[style*="--ltx-box-width:"] { width: var(--ltx-box-
 `\parbox`), hence not `--ltx-minipage-width`. An element that admits `width` keeps the attribute: a plain minipage's
 `<inline-block width=…>` is unchanged (rendered as `style="width:…"`; moving it to the property is a corpus-wide
 markup change left to a ruling). Guard `perfect_kernel_batchqab57::section_in_a_box_keeps_the_box_width`.
+
+### 1046. latexml.sty's `pdfoutput`/`nopdfoutput` options set the output mode over the guess (Perl: no such options)
+
+We present `\pdfoutput=1` unless the source's cues say latex+dvips (#285, #537); Perl presents 0. BM (Q4.2): presenting
+a mode "may often be desirable … And/Or possibly that should be an additional latexml.sty switch". **Rust** (QAB57, DG
+2026-11-14): latexml.sty's options `pdfoutput` (1, pdflatex) and `nopdfoutput` (0, latex+dvips) — latexml.sty's X/noX
+pairs, named for the register they set — assign `\pdfoutput` globally and record `PDFOUTPUT_OPTION`, which
+`establish_pdf_output_mode` (core_interface.rs) takes over every cue when the option was preloaded
+(`--preload=[nopdfoutput]latexml.sty`; under ar5iv `--preload=[nopdfoutput]ar5iv.sty`, which passes it on). Drivers
+read `\pdfoutput` as they load, so the option comes first in the preamble: given after graphicx, graphicx keeps the
+driver it chose, as TeX's load order decides. Under a preload of latexml.sty a document's own
+`\usepackage[nopdfoutput]{latexml}` is a repeat load whose options are dropped, as for every latexml.sty option (RED
+`backend-persona/latexml_option_after_ar5iv_preload_red`, post-merge). Default output unchanged. Perl patch prepared
+(`bruce_qa/patches/qa64.patch`: the two options, and TeX's latexml.sty declaring them). Guard
+`perfect_kernel_batchqab57::latexml_pdfoutput_options_override_the_mode`.
