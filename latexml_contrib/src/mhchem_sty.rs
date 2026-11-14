@@ -92,6 +92,8 @@ enum FormulaItem {
   Unit(CoreFive),
   /// `\__mhchem_output_withFont:n {…}`: the formula's own text, its brackets (`Fe(CN)6`).
   Text(Vec<Token>),
+  /// `\__mhchem_output_amount:n {…}` (mhchem.sty:2769): a stoichiometric amount, before its species.
+  Amount(Vec<Token>),
   Raw(Token),
 }
 
@@ -126,11 +128,14 @@ fn braced(tokens: &mut impl Iterator<Item = Token>) -> Option<Vec<Token>> {
 fn semantic_formula(result: &[Token]) -> Option<Vec<Token>> {
   let core_five = T_CS!("\\__mhchem_output_coreFive:nnnnnnn");
   let with_font = T_CS!("\\__mhchem_output_withFont:n");
+  let amount = T_CS!("\\__mhchem_output_amount:n");
   let mut items = Vec::new();
   let mut tokens = result.iter().copied();
   while let Some(t) = tokens.next() {
     if t == with_font {
       items.push(FormulaItem::Text(braced(&mut tokens)?));
+    } else if t == amount {
+      items.push(FormulaItem::Amount(braced(&mut tokens)?));
     } else if t == core_five {
       items.push(FormulaItem::Unit(CoreFive {
         presup:  braced(&mut tokens)?,
@@ -148,41 +153,78 @@ fn semantic_formula(result: &[Token]) -> Option<Vec<Token>> {
   let last_unit = items
     .iter()
     .rposition(|i| matches!(i, FormulaItem::Unit(_)))?;
-  // A closing charge belongs to the formula when the formula is more than one element.
+  // The species: the items after the last amount (`\ce{2e-}`, `\ce{3SO4^{2-}}`).
+  let start = items
+    .iter()
+    .rposition(|i| matches!(i, FormulaItem::Amount(_)))
+    .map_or(0, |a| a + 1);
+  let space =
+    |i: &FormulaItem| matches!(i, FormulaItem::Raw(t) if t.get_catcode() == Catcode::SPACE);
+  let more = items[start.min(last_unit)..last_unit]
+    .iter()
+    .any(|i| !space(i));
+  // A closing charge belongs to the species when it is more than one element (`\ce{\textit{Ln}O^{2-}}`).
   let lifted = match &items[last_unit] {
-    FormulaItem::Unit(u)
-      if !u.charge.is_empty()
-        && items[last_unit + 1..]
-          .iter()
-          .all(|i| matches!(i, FormulaItem::Raw(t) if t.get_catcode() == Catcode::SPACE)) =>
-    {
-      (last_unit > 0 || element_items(&u.element).len() != 1).then(|| u.charge.clone())
+    FormulaItem::Unit(u) if !u.charge.is_empty() && items[last_unit + 1..].iter().all(space) => {
+      (more || element_items(&u.element).len() != 1).then(|| u.charge.clone())
     },
     _ => None,
   };
   let mut body = Vec::new();
+  let mut species = 0;
+  let mut before = Before::Nothing;
   for (i, item) in items.into_iter().enumerate() {
+    if i == start {
+      species = body.len();
+    }
     match item {
-      FormulaItem::Raw(t) => body.push(t),
-      FormulaItem::Text(text) => body.extend(math_mode(font(text))),
+      FormulaItem::Raw(t) => {
+        if t.get_catcode() != Catcode::SPACE {
+          before = Before::Atom;
+        }
+        body.push(t);
+      },
+      FormulaItem::Amount(a) => {
+        body.extend(call("\\__mhchem_output_amount:n", a));
+        before = Before::Nothing;
+      },
+      FormulaItem::Text(text) => {
+        body.extend(math_mode(font(text)));
+        before = Before::Atom;
+      },
       FormulaItem::Unit(mut u) => {
         if i == last_unit && lifted.is_some() {
           u.charge.clear();
         }
-        let first = body.is_empty();
-        unit_tokens(&mut body, u, first);
+        // A unit with no element scripts the bracket or text it follows (`Fe(CN)6`, 2602.09975 `\textit{LnPn}2`),
+        // after a unit the species so far (`\ce{H2_{(g)}}`; `\ce{SO4^{2-}_{(aq)}}`, the state after the charge).
+        if u.element.is_empty() && before == Before::Unit {
+          let formula = body.split_off(species);
+          body.extend(call("\\mathord", formula));
+        }
+        unit_tokens(&mut body, u, before != Before::Nothing);
+        before = Before::Unit;
       },
     }
   }
   match lifted {
     Some(charge) => {
-      let mut out = call("\\mathord", body);
-      out.push(T_SUPER!());
-      out.extend(call("", math_mode(script(charge))));
-      Some(out)
+      let formula = body.split_off(species);
+      body.extend(call("\\mathord", formula));
+      body.push(T_SUPER!());
+      body.extend(call("", math_mode(script(charge))));
+      Some(body)
     },
     None => Some(body),
   }
+}
+
+/// What a unit with no element follows.
+#[derive(PartialEq)]
+enum Before {
+  Nothing,
+  Atom,
+  Unit,
 }
 
 fn is_letter(t: &Token) -> bool {
@@ -212,8 +254,9 @@ fn element_items(element: &[Token]) -> Vec<&[Token]> {
 
 /// One unit, in a group where mhchem's output takes its math-mode branch (`\ensuremath` holds the formula):
 /// `{}^{mass}_{number}\mathord{El}…\mathord{El}_{count}^{ox charge}`; the charge of a unit of several elements
-/// is the unit's (`\ce{OH^-(H2O)}`, 2405.01836).
-fn unit_tokens(out: &mut Vec<Token>, u: CoreFive, first: bool) {
+/// is the unit's (`\ce{OH^-(H2O)}`, 2405.01836). A unit with no element scripts what precedes it when
+/// `scripts_previous`, else an empty base.
+fn unit_tokens(out: &mut Vec<Token>, u: CoreFive, scripts_previous: bool) {
   let mut unit = Vec::new();
   if !u.presup.is_empty() || !u.presub.is_empty() {
     unit.extend([T_BEGIN!(), T_END!()]);
@@ -236,7 +279,7 @@ fn unit_tokens(out: &mut Vec<Token>, u: CoreFive, first: bool) {
       unit.extend(font);
     }
   }
-  if empty && first {
+  if empty && !scripts_previous {
     unit.extend([T_BEGIN!(), T_END!()]);
   }
   if !u.count.is_empty() {

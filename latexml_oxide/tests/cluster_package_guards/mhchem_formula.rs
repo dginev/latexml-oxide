@@ -38,6 +38,29 @@ const ROWS: &[Row] = &[
       "<math id=\"p2.m1\" class=\"ltx_Math\" alttext=\"{}{}\\mathord{\\mathrm{H}}_{\\mathrm{2}}\\mathord{\\mathrm{O}}\" display=\"inline\" intent=\":literal\"><mrow><msub><mi mathvariant=\"normal\">H</mi><mn>2</mn></msub><mo>\u{2062}</mo><mi mathvariant=\"normal\">O</mi></mrow></math>",
     ],
   ),
+  (
+    "mhchem_formula_state",
+    include_bytes!(
+      "../../../tools/perfect_kernel/repros/package-bindings/mhchem_formula_state.tex"
+    ),
+    &[
+      "<math id=\"p1.m1\" class=\"ltx_Math\" alttext=\"\\mathord{\\mathord{\\mathrm{H}}_{\\mathrm{2}}}_{\\mathrm{(g)}}\" display=\"inline\" intent=\":literal\"><mmultiscripts><mi mathvariant=\"normal\">H</mi><mn>2</mn><mrow></mrow><mrow><mo stretchy=\"false\">(</mo><mi mathvariant=\"normal\">g</mi><mo stretchy=\"false\">)</mo></mrow><mrow></mrow></mmultiscripts></math>",
+      "<math id=\"p2.m1\" class=\"ltx_Math\" alttext=\"\\mathord{\\mathord{\\mathrm{C}}\\mathord{\\mathrm{O}}_{\\mathrm{2}}}_{\\mathrm{(aq)}}\" display=\"inline\" intent=\":literal\"><msub><mrow><mi mathvariant=\"normal\">C</mi><mo>\u{2062}</mo><msub><mi mathvariant=\"normal\">O</mi><mn>2</mn></msub></mrow><mrow><mo stretchy=\"false\">(</mo><mi>aq</mi><mo stretchy=\"false\">)</mo></mrow></msub></math>",
+      "<math id=\"p3.m1\" class=\"ltx_Math\" alttext=\"\\mathord{\\mathord{\\mathord{\\mathrm{S}}\\mathord{\\mathrm{O}}_{\\mathrm{4}}}^{\\mathrm{2-}}}_{\\mathrm{(aq)}}\" display=\"inline\" intent=\":literal\"><mmultiscripts><mrow><mi mathvariant=\"normal\">S</mi><mo>\u{2062}</mo><msub><mi mathvariant=\"normal\">O</mi><mn>4</mn></msub></mrow><mrow></mrow><mrow><mn>2</mn><mo>−</mo></mrow><mrow><mo stretchy=\"false\">(</mo><mi>aq</mi><mo stretchy=\"false\">)</mo></mrow><mrow></mrow></mmultiscripts></math>",
+      "<math id=\"p4.m1\" class=\"ltx_Math\" alttext=\"\\mathord{\\mathord{\\mathrm{Ca}}\\mathrm{(}\\mathord{\\mathrm{O}}\\mathord{\\mathrm{H}}\\mathrm{)}_{\\mathrm{2}}}_{\\mathrm{(aq)}}\" display=\"inline\" intent=\":literal\"><msub><mrow><mi>Ca</mi><mo>\u{2062}</mo><msub><mrow><mo stretchy=\"false\">(</mo><mrow><mi mathvariant=\"normal\">O</mi><mo>\u{2062}</mo><mi mathvariant=\"normal\">H</mi></mrow><mo stretchy=\"false\">)</mo></mrow><mn>2</mn></msub></mrow><mrow><mo stretchy=\"false\">(</mo><mi>aq</mi><mo stretchy=\"false\">)</mo></mrow></msub></math>",
+    ],
+  ),
+  (
+    "mhchem_formula_amount",
+    include_bytes!(
+      "../../../tools/perfect_kernel/repros/package-bindings/mhchem_formula_amount.tex"
+    ),
+    &[
+      "<math id=\"p1.m1\" class=\"ltx_Math\" alttext=\"\\text{2}\\,\\mathord{\\mathrm{e}}^{\\mathrm{-}}\" display=\"inline\" intent=\":literal\"><mrow><mtext>2</mtext><mo lspace=\"0.170em\">\u{2062}</mo><msup><mi mathvariant=\"normal\">e</mi><mo>−</mo></msup></mrow></math>",
+      "<math id=\"p2.m1\" class=\"ltx_Math\" alttext=\"\\text{2}\\,\\mathord{\\mathrm{Na}}^{\\mathrm{+}}\" display=\"inline\" intent=\":literal\"><mrow><mtext>2</mtext><mo lspace=\"0.170em\">\u{2062}</mo><msup><mi>Na</mi><mo>+</mo></msup></mrow></math>",
+      "<math id=\"p3.m1\" class=\"ltx_Math\" alttext=\"\\text{3}\\,\\mathord{\\mathord{\\mathrm{S}}\\mathord{\\mathrm{O}}_{\\mathrm{4}}}^{\\mathrm{2-}}\" display=\"inline\" intent=\":literal\"><mrow><mtext>3</mtext><mo lspace=\"0.170em\">\u{2062}</mo><msup><mrow><mi mathvariant=\"normal\">S</mi><mo>\u{2062}</mo><msub><mi mathvariant=\"normal\">O</mi><mn>4</mn></msub></mrow><mrow><mn>2</mn><mo>−</mo></mrow></msup></mrow></math>",
+    ],
+  ),
 ];
 
 #[test]

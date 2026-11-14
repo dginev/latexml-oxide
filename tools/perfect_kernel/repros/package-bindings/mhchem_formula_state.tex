@@ -1,0 +1,19 @@
+% witness: synthetic (revMHCHEM1 probe e.tex: `H2_{(g)}`, `CO2_{(aq)}` are common in chemistry papers)
+% oracle:  pdflatex 0 errors: H2(g); CO2(aq); SO4 2- (aq) (the state after the charge); Ca(OH)2(aq)
+% engines: rust dc27284332e = 3 "Double subscript" Errors + 3 unparsed-math Warnings (the state's subscript on the count's
+%          base: `H_{2}_{(g)}`), `SO4^{2-}_{(aq)}` an msubsup reading "(aq) 2-"; Perl hangs on raw mhchem (no oracle)
+% expect:  a unit with no element scripts the formula before it (`\mathord{...}_{(g)}`), unless it follows a bracket
+%          (`Fe(CN)6`); 0 errors, 0 warnings
+% status:  RED (dc27284332e) -> GREEN (MHCHEM1b, OXIDIZED_DESIGN_DIVERGENCES #1040)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage[version=4]{mhchem}
+\begin{document}
+\ce{H2_{(g)}}
+
+\ce{CO2_{(aq)}}
+
+\ce{SO4^{2-}_{(aq)}}
+
+\ce{Ca(OH)2_{(aq)}}
+\end{document}

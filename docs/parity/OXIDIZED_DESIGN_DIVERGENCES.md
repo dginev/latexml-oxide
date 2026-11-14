@@ -36355,8 +36355,14 @@ at its capitals when it is letters only, each element an ordinary atom (`\mathor
 merge `Mo` and `O`; Base_XMath.pool.ltxml:443); the isotope's mass and atomic number prescripts (`{}^{95}_{42}`) on
 its first element; the count a subscript and an oxidation state a superscript of its last; the formula's brackets
 (`\__mhchem_output_withFont:n {(}`) math fences. A charge on the formula's last unit is a superscript of the whole
-formula (`\mathord{…}^{2-}`, minus U+2212) unless the formula is one element (`Li+`, `^{227}_{90}Th+`); an inner
-unit's charge is the unit's when the unit is several elements (`\ce{OH^-(H2O)}`, 2405.01836). A text-mode
+formula (`\mathord{…}^{2-}`, minus U+2212) unless the formula is one element (`Li+`, `^{227}_{90}Th+`, `2Na+`); an
+amount (`\__mhchem_output_amount:n`, mhchem.sty:2769) is not part of the formula after it (`\ce{3SO4^{2-}}` is
+`3\,\mathord{SO_4}^{2-}`, `\ce{2e-}` is `2\,e^-`); an
+inner unit's charge is the unit's when the unit is several elements (`\ce{OH^-(H2O)}`, 2405.01836). A unit with no
+element (mhchem's count or state on an empty base) scripts the bracket or text it follows (`Fe(CN)6`,
+`\ce{\textit{LnPn}2}`, 2602.09975), after a unit the formula so far:
+`\ce{H2_{(g)}}` is `\mathord{H_2}_{(g)}` and `\ce{SO4^{2-}_{(aq)}}` `\mathord{\mathord{SO_4}^{2-}}_{(aq)}`, the state after
+the charge as pdflatex prints it (an empty `{}` base would leave a floating subscript the math grammar does not parse). A text-mode
 `\ce` sets the formula in the text font math was entered from (`savedfont`, Stomach.pm:518; mhchem.sty:2760 prints it
 in the text font), as nicefrac's `\nf@mathcopytextfont`; a math-mode `\ce` keeps `\mhchem@option@mathFont`. MathML:
 `<msup><mrow><mmultiscripts><mi>Mo</mi><mprescripts/><mrow/><mn>95</mn></mmultiscripts><mo>⁢</mo><msub><mi
@@ -36365,4 +36371,5 @@ Arrows, `+` between species, bonds, states and amounts keep mhchem's output (sta
 formula's `tex=` is the rewritten math, not `\ce{…}`. Cost (instructions:u): −0.55 % on 2307.12991 (589 `\ce` in its sources),
 −0.04 % on 300 synthetic `\ce`, +0.13 % on 2405.01836 (167; with `--nomathparse` −0.08 %: the formulas'
 parse is the price). **Guard**: `mhchem_formula::mhchem_formula_units_are_chemistry` (repros
-`package-bindings/mhchem_formula_units.tex`, `mhchem_formula_text_font.tex`; witnesses issue 824, 2206.12015).
+`package-bindings/mhchem_formula_units.tex`, `mhchem_formula_text_font.tex`, `mhchem_formula_state.tex`,
+`mhchem_formula_amount.tex`; witnesses issue 824, 2206.12015).
