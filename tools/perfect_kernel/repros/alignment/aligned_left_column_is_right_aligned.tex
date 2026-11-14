@@ -1,7 +1,7 @@
 % witness: issues 809 (inline aligned) and 755 (gather* around aligned), synthetic
 % oracle:  pdflatex 0 errors; every row's left column ends flush against its `=`
 % engines: perl 0.8.8 and rust fc5211bb491 emit `<mtd columnalign="right">`, which MathML Core dropped; Chrome 155
-%          centres the cell's anonymous mrow: last glyph→`=` 25.4/19.2/21.5/5.4 px at 16 px (the `=`'s lspace is 4.4)
+%          sets the cell flush left (start): last glyph→`=` 25.4/19.2/21.5/5.4 px at 16 px (the `=`'s lspace is 4.4)
 % expect:  0 errors; in Chrome every row's gap is 0.278em ± 1.2 px (LaTeXML.css `mtd[columnalign]` → justify-items)
 % status:  RED (fc5211bb491) -> GREEN (MML2: LaTeXML.css); guard
 %          cluster_cli::browser_render_aligned_math_spacing::aligned_left_column_is_right_aligned_against_the_relation

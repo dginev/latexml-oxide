@@ -285,8 +285,8 @@ table.ltx_eqn_eqnarray tr.ltx_eqn_lefteqn + tr td.ltx_align_right { min-width:2e
    `columnspacing` — which some browsers under-honor, leaning on this padding for
    column separation) are left untouched. */
 math mtable[columnspacing="0pt"] mtd { padding-left:0; padding-right:0; }
-/* MathML Core dropped `columnalign` and centres the cell's content, so in Chrome an
-   aligned left column (`columnalign="right"`) did not meet its relation (issues #809, #755). */
+/* MathML Core dropped `columnalign`, and Chrome sets a `columnalign="right"` cell flush left, so
+   an aligned left column did not meet its relation (issues #809, #755). */
 math mtd[columnalign="right"] { justify-items:end; }
 math mtd[columnalign="left"]  { justify-items:start; }
 

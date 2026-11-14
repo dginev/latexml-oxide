@@ -3,16 +3,18 @@
 ## Unreleased
 
   - **An aligned left column meets its relation in Chrome** (issues 809, 755). MathML Core
-    dropped `columnalign`, so Chrome centred the left column of an `aligned` (inline, or in
-    `gather*`) and the `=` came up to 21 px late. LaTeXML.css now right- or left-aligns a
-    cell by its `columnalign` (`justify-items`); the markup is unchanged. Guard
+    dropped `columnalign`, and Chrome set the left column of an `aligned` (inline, or in
+    `gather*`) flush left in its cell, so the `=` came up to 21 px late. LaTeXML.css now
+    right- or left-aligns a cell by its `columnalign` (`justify-items`); the markup is
+    unchanged. Guard
     `browser_render_aligned_math_spacing::aligned_left_column_is_right_aligned_against_the_relation`
     (Chrome, local).
   - **`/` has no operator space** (issue 789). TeX's `/` is an Ord, and MathML Core puts it in
     category K (zero space), but our dictionary (Perl's) had it in B and Chrome spaces it
     0.222 em each side. A visible Core-K operator (`/`, `\backslash`, `_`) is now
     `<mo lspace="0em" rspace="0em">` and an Ord to the space walk, so `\backslash` loses its
-    0.222 em too; a kept `\mathrel{/}` or `\mathpunct{/}` keeps TeX's Rel or Punct space. Guard `perfect_kernel_batchmml2::core_k_operators_have_no_operator_space`.
+    0.222 em too; a kept `\mathrel{/}` or `\mathpunct{/}` keeps TeX's Rel or Punct space.
+    Guard `perfect_kernel_batchmml2::core_k_operators_have_no_operator_space`.
   - **`\linewidth` in a `p`/`m`/`b` table cell is the column's width** (issue 778). A
     cell of a paragraph column set `\hsize` to the column's width but kept the page's
     `\linewidth`, so `\includegraphics[width=\linewidth]` in a `m{0.3\textwidth}` cell was
