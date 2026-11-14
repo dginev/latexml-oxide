@@ -36196,3 +36196,35 @@ Bin/Rel class at digestion and get zero space too (RED `math-parse/mathbin_slash
 post-merge). Offer upstream. **Guards**:
 `perfect_kernel_batchmml2::core_k_operators_have_no_operator_space` (repro
 `math-parse/slash_is_an_ord_without_operator_space.tex`), `operator_dictionary::tests::test_opdict_category_k_is_infix_only`.
+
+### 1034. A small PDF figure is converted to SVG, raster-bearing ones too, unless it draws a raster enlarged (after PR 816)
+
+**Perl.** Every PDF graphic is rasterized to PNG (`Post/Graphics.pm:62`, `pdf => { destination_type => 'png' }`).
+**Rust.** Beyond Perl, a PDF at most 500 KiB (the auto default, `--graphics-svg-threshold-kb 0`; an explicit `N`
+bounds it at `N` KB) first tries the vector converters, `mutool convert -F svg`, then `pdftocairo -svg`
+(`Graphics::convert_image_svg`); every failure falls back to the PNG path: neither tool on PATH, a non-zero exit, the
+15 s timeout, an SVG over 8 MB, an SVG whose `trim`/`viewport` crop cannot be read. Labels, axes and curves stay
+vector, and an embedded raster keeps its own pixels (PERF816, 673 arXiv figures: mutool's SVG -8 ms CPU median per
+figure against the PNG, 70 vs 157 MB gzipped; 23 % of the PNGs lost raster resolution). Until PR 816 (amachino) an
+image XObject in the first 256 KB gated a PDF off the path; DG ruled on 2026-11-14 that size alone gates it (mutool
+first, pdftocairo the fallback; MuPDF, AGPL, only as an unmodified CLI subprocess).
+
+**Enlarged rasters take the PNG path** (DG 2026-11-14, "PNG for enlarged rasters"): an SVG that draws any raster larger
+than its own pixels is discarded and the figure takes main's PNG path, with an `Info`, no Warning and no error count;
+every other figure keeps the SVG. (A raster drawn at its pixel size or smaller inside the figure stays SVG even when the
+page then enlarges the whole figure, e.g. `width=\textwidth`; the browser smooths it then, as it smooths main's PNG of
+that figure.) Neither tool marks a raster's rendering, so a
+browser smooths an enlarged raster into a blur where the PDF (no `/Interpolate`, as pdflatex writes it) shows hard
+pixel blocks, and no static `image-rendering` suits every display size: `pixelated` aliases a raster the page or a phone
+shows smaller. `svg_enlarged_raster` reads every placement, inline, under nested `<g transform>`, through `<use>` and
+through a soft mask's `<mask>` (both tools draw an alpha channel there), and calls a raster enlarged when it is drawn at
+more than 1.01 SVG user units per pixel on either axis on any placement (user units are the PDF's bp, which both tools
+keep; 1.01 absorbs the tools' float rounding, pdftocairo drawing images about 2 % smaller than mutool). A 1×1 raster never counts, however it is drawn: a browser cannot blur a single pixel (DG 2026-11-14;
+10 of the 21 PNG fallbacks in the 60-paper sample were 1×1 rasters in 1503.05958). A placement it
+cannot read counts as enlarged: an image in a `<pattern>` or `<symbol>`, under a `skewX`/`skewY` or a nested `<svg>` viewBox (a shear written as `matrix()` is measured by its axis lengths), past
+8 nested `<use>`, or with a size or pixel count it cannot read. The decision runs on every render after the graphics
+cache, so a cached SVG is judged too (the cache stores the converter's output, not the decision). `/Interpolate true` no
+longer matters (the PNG path renders such a raster as main does). **Guards**:
+`graphics::tests::small_raster_pdf_keeps_vector_labels_unless_enlarged` (each converter present, then the pipeline:
+`native_raster_vector.tex`, a 64×64 PNG at 48 bp, stays SVG; `mixed_raster_vector.tex`, a 4×4 tile at 1 cm, takes the
+PNG path), `graphics::tests::svg_enlarged_raster_reads_every_placement`, `graphics::tests::should_try_svg_path_auto_detect`.
