@@ -488,7 +488,7 @@ static OPERAND_VALUES: RefCell<Vec<(Token, Tokens)>> = RefCell::new(Vec::new());
 #[thread_local]
 static READING_OPERAND: Cell<bool> = Cell::new(false);
 
-/// RAII marker for the read of a quantity's operand head ([`READING_OPERAND`]): [`scan_optional_signs`]'s, and the
+/// RAII marker for the read of a quantity's operand head (`READING_OPERAND`): `scan_optional_signs`'s, and the
 /// eTeX expression's factor (etex.ch `scan_expr`).
 pub struct OperandRead(bool);
 impl OperandRead {
@@ -500,7 +500,7 @@ impl Drop for OperandRead {
   fn drop(&mut self) { READING_OPERAND.set(self.0); }
 }
 
-/// Give the control sequences [`OPERAND_VALUES`] holds, returning the ones given before.
+/// Give the control sequences `OPERAND_VALUES` holds, returning the ones given before.
 pub fn set_operand_values(values: Vec<(Token, Tokens)>) -> Vec<(Token, Tokens)> {
   OPERAND_VALUES.replace(values)
 }
