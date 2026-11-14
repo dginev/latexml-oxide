@@ -1,0 +1,21 @@
+% mechanism: fancyvrb sets each line as \hbox to\hsize{\kern\leftmargin\hbox to\linewidth{<line>}}, `xleftmargin`
+%   added to \leftmargin (fancyvrb.sty \FV@SetLineWidth, \FV@ListProcessLine). In a vertical box (minipage, a p{}
+%   cell) only the first line keeps that box as an ltx_inline-block wrapper; each later line comes out as its own
+%   ltx_p holding a plain ltx_text with the U+2003 margin and then the block line, so the margin takes a row of its
+%   own and the line starts unindented
+% witness: synthetic (issue 853's measurement round)
+% oracle:  pdflatex (TL 2025, -no-shell-escape): 0 `!`; both lines indented 2em, single-spaced
+% engines: rust fix/issue-853: 0 errors; Chrome/Firefox (1280 and 375 px): `mini():` indented by the margin, then a
+%          blank row (33/38 px pitch against 15), `    pass` at the unindented line's x; Perl: not run (a CSS layout)
+% expect:  0 errors; every line keeps the margin box (as the first does), so each renders indented, single-spaced
+% status:  RED (fix/issue-853) — moves: post-merge (the fancyvrb line box in a vertical box, not the CSS)
+\documentclass{article}
+\usepackage{fancyvrb}
+\begin{document}
+\begin{minipage}{0.5\linewidth}
+\begin{Verbatim}[xleftmargin=2em]
+mini():
+    pass
+\end{Verbatim}
+\end{minipage}
+\end{document}
