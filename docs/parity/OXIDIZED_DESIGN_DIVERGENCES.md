@@ -36342,19 +36342,31 @@ letters, the counter calls, variadic Push/UnshiftValue, `ptValue`'s clamp, Looku
 unknown key), `perfect_kernel_batchw3rg::rhai_perl_names_review_rows` (no colour package, the kept definition, the
 mixed comparisons, `roman(Number)`, `Number(string)`).
 
-### 1042. An equation's tag is its own column in LaTeXML.css (issue #810)
+### 1042. An equation's tag stays beside its formula in LaTeXML.css (issue #810)
 
 **Perl.** LaTeXML.css gives the tag cell `.ltx_eqn_eqno { max-width:0em; overflow:visible }`: the column takes no
 width and the tag overlays the right centring pad (`min-width:2em`), so a formula wider than the line less 2em runs
 under its tag (reporter nasser1's `align` with `\tag{C.8.1}`: in Chrome the tag sits on the fraction bar at 768 and
-375 px; `(C.8.2)` at 375 px). TeX never overlaps them: tex.web §1202-1205 moves the formula left, or sets the number on
-a line of its own. **Rust.** A local delta `.ltx_eqn_eqno { max-width:none; }`: the tag is a real column, beside the
-formula at every width, and an overlong formula widens the page (it scrolls) instead of reaching the tag; leqno,
-`eqnarray` and multi-row `align` keep their tags beside their rows. The cost: a formula is centred in the line less
-its tag (half the tag's width to the left, 10 px for `(1)` at 16 px), where TeX centres it in the full line until the
-gap falls under twice the tag's width. Offered upstream as the same one-line change to LaTeXML.css. **Guards**:
-`cluster_cli::browser_render_eqn_tags_and_authors::equation_tags_stay_beside_and_author_lines_show` (Chrome, local),
-`xslt::witnessed_css_delta::equation_tag_mathjax_and_author_line_deltas_stay_present`.
+375 px; `(C.8.2)` at 375 px; a long `\tag` over `z=1` at 375 px in Firefox). TeX never overlaps them: tex.web
+§1202-1205 centres the display in the full line, recentres it in the line less the number when the gap falls under
+twice the number's width, and sets the number on a line of its own when even that does not fit. **Rust.** Two local
+deltas. (1) `.ltx_eqn_eqno { max-width:none; }`: the tag is a real column. (2) A one-row centred equation
+(`.ltx_equation.ltx_eqn_table`, its row the only child) is a grid `minmax(2em,1fr) auto 1fr` (leqno mirrored), the tag
+laid over the pad on its side with a 1em quad: the formula is centred in the full line while the tag fits, and moves
+only as far as the tag needs when it does not, a continuous form of TeX's two-step rule (a long `\tag` at 375 px:
+4 px left in Chrome, 27 px in Firefox, where TeX's rule gives 75/86); under a minipage or a table cell
+(`.ltx_inline-block`, `.ltx_td`) the 2em minimum is 0. The other pad's `width:100vw; max-width:100%` keeps the
+shrink-to-fit width the old 50% table columns gave (an equation in a list item is centred in the item's line, now in
+Firefox too). Measured in Chrome and Firefox at 1280/768/375 px: a one-row equation 0 px off the line's centre (was
+-10 px for `(1)`, -68/-79 px for the long `\tag` at 1280 with (1) alone); a `p{4cm}` cell's `q=r+s+t (14)` fits its
+152 px without scrolling, the tag visible (was 179 px, the tag behind the scroll); the accessibility tree is
+unchanged (playwright `ariaSnapshot`, Chrome's `LayoutTable` roles). A multi-row table (`align`, `gather`,
+`eqnarray`, `subequations`) keeps (1) alone, since its rows share columns: its rows are centred in the line less the
+tag column (-10 to -24 px at 16 px). Not reached: a formula plus its tag wider than a narrow box in the browser scrolls
+with the tag behind the scroll, where TeX would set the number on its own line (repro
+`alignment/equation_tag_hidden_in_a_narrow_minipage_red.tex`). Offered upstream. **Guards**:
+`cluster_cli::browser_render_eqn_tags::equation_tags_stay_beside` (Chrome, Firefox with `LATEXML_FIREFOX`; local),
+`xslt::witnessed_css_delta::equation_tag_and_mathjax_deltas_stay_present`.
 
 ### 1043. MathJax's display margin is zeroed inside an equation cell (issue #475)
 
@@ -36364,5 +36376,6 @@ renders a display `<math>` as a block with a 1em block margin (v3/v4 `mjx-contai
 about three times as far apart as without MathJax (reporter nasser1; measured with MathJax 2.1 offline in Chrome: the
 formulas 53 px apart, natively 18 px; ar5iv.css likewise 54 against 20). **Rust.** A local delta zeroes that
 container's block margins in an equation cell, as the table already carries the display skip: 21 px under MathJax 2.1,
-native rendering unchanged. MathJax 3/4 was not loadable offline; its selector is from MathJax's CHTML stylesheet.
-Offered upstream. **Guard**: `xslt::witnessed_css_delta::equation_tag_mathjax_and_author_line_deltas_stay_present`.
+native rendering unchanged. The rule matches `.ltx_eqn_table .ltx_eqn_cell`, so it holds for the span-built equation
+of a minipage or a tabular cell too. MathJax 3/4 was not loadable offline; its selector is from MathJax's CHTML
+stylesheet. Offered upstream. **Guard**: `xslt::witnessed_css_delta::equation_tag_and_mathjax_deltas_stay_present`.

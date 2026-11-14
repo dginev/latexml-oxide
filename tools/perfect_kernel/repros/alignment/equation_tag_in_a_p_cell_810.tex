@@ -1,0 +1,13 @@
+% witness: review revCSSI of issue 810's tag column (S0.E14), synthetic
+% oracle:  pdflatex 0 errors, no Overfull; "a=b (1)" centred, "q =r+s+t (2)" inside the 4cm cell
+% engines: rust cc410d6f78b (the tag column alone), Chrome/Firefox at 1280 px: (1) 10/11 px left of the line's
+%          centre; the cell's equation scrolls 171 px in 152, (2) behind the scroll
+% expect:  0 errors; (1) 0 px off centre; the cell does not scroll and (2) is visible (OD #1042, the one-row grid)
+% status:  RED (cc410d6f78b) -> GREEN (CSSIb: LaTeXML.css); guard
+%          cluster_cli::browser_render_eqn_tags::equation_tags_stay_beside
+\documentclass{article}
+\usepackage{amsmath}
+\begin{document}
+\begin{equation}a=b\end{equation}
+\begin{tabular}{p{4cm}}cell: \begin{equation}q=r+s+t\end{equation}\end{tabular}
+\end{document}
