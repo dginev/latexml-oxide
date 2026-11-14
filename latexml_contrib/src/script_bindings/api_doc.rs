@@ -180,7 +180,8 @@ const DOCS: &[(&str, Doc)] = &[
     Doc::Note(
       "**Deprecated** (Warns once per binding load): a Tokens, Token or box against a string compares its string \
        form (use `ToString(v) == s`); `()` against a string, either way round, is `\"\"`, as Perl's `undef eq ''` \
-       (use `defined(v)` or `!v`).",
+       (use `defined(v)` or `!v`). Rhai's `switch` does not use this rule: it matches by value and type, so a `\"\" =>` \
+       case never matches `()` — test `if defined(v)` or `!v` instead.",
     ),
   ),
   (
