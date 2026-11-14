@@ -2,6 +2,23 @@
 
 ## Unreleased
 
+  - **An equation's number stays beside its formula at any page width** (issue 810). LaTeXML.css
+    gave the tag column no width, so on a narrow page a long formula ran under its number. A
+    one-row equation is now centred in the full line, as TeX centres it, and moves aside only as
+    far as its number needs; a multi-row table (`align`, `gather`, `eqnarray`) gives its numbers a
+    column of their own, centring its rows in the line less that column (10-24 px left at 16 px).
+    An overlong formula scrolls with the page instead. In a box narrower than formula and number
+    (a `p{2cm}` cell, a narrow minipage) the number still sits behind the box's scroll, where pdflatex
+    sets it beside the formula, as before this change (red repro
+    `equation_tag_hidden_in_a_narrow_minipage_red.tex`). Offered upstream. Guards
+    `browser_render_eqn_tags::equation_tags_stay_beside` (Chrome and Firefox, local) and
+    `witnessed_css_delta::equation_tag_and_mathjax_deltas_stay_present`.
+  - **Consecutive display equations are not spread apart under MathJax** (issue 475). MathJax
+    gives its display container a 1em margin, which inside our equation table cannot collapse
+    with the table's own display skip, so two displays sat about three times as far apart as
+    natively (MathJax 2.1 in Chrome: 53 px against 18). LaTeXML.css now zeroes that margin in
+    an equation cell, in a page's table or a minipage's (21 px). Offered upstream. Guard
+    `witnessed_css_delta::equation_tag_and_mathjax_deltas_stay_present`.
   - **An aligned left column meets its relation in Chrome** (issues 809, 755). MathML Core
     dropped `columnalign`, and Chrome set the left column of an `aligned` (inline, or in
     `gather*`) flush left in its cell, so the `=` came up to 21 px late. LaTeXML.css now

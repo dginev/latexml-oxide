@@ -1378,6 +1378,33 @@ mod witnessed_css_delta {
   }
 
   #[test]
+  fn equation_tag_and_mathjax_deltas_stay_present() {
+    // Issues #810 (a one-row equation centred in the full line, its tag beside it: Chrome/Firefox at
+    // 375 px, the long `\tag` over its formula -> beside it; multi-row tables keep a tag column) and
+    // #475 (MathJax 2.1 offline: consecutive displays 53 -> 21 px apart, native 18, in a table or a
+    // minipage); the browser half is `cluster_cli::browser_render_eqn_tags`.
+    let css = bundled_latexml_css();
+    for (issue, rule) in [
+      ("#810", ".ltx_eqn_eqno { max-width:none; }"),
+      (
+        "#810",
+        ".ltx_equation.ltx_eqn_table > * > .ltx_eqn_row:only-child:has(> .ltx_eqn_center_padleft) {\n  \
+         display:grid; grid-template-columns:minmax(2em,1fr) auto 1fr; align-items:center; }",
+      ),
+      (
+        "#475",
+        ".ltx_eqn_table .ltx_eqn_cell > mjx-container[display=\"true\"],\n\
+         .ltx_eqn_table .ltx_eqn_cell > .MathJax_Display { margin-top:0; margin-bottom:0; }",
+      ),
+    ] {
+      assert!(
+        css.contains(issue) && css.contains(rule),
+        "LaTeXML.css lost the issue {issue} rule `{rule}`"
+      );
+    }
+  }
+
+  #[test]
   fn framed_verbatim_responsive_delta_stays_present() {
     let css = bundled_latexml_css();
     assert!(

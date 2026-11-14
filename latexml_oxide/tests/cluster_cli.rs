@@ -2728,6 +2728,74 @@ mod browser_render_verbatim_narrow {
   }
 }
 
+mod browser_render_eqn_tags {
+  //! Issue #810 rendered at 1280/768/375 px (reporter nasser1's MWEs, a short equation, a `p{}`
+  //! cell): a tag stays beside its formula however narrow the page, a one-row equation is centred in
+  //! the full line (tex.web §1202), and a tag in a `p{}` cell is not pushed behind a scroll. Opt-in
+  //! and LOCAL like the guards above (Firefox too with `LATEXML_FIREFOX`); the CI half is
+  //! `witnessed_css_delta::equation_tag_and_mathjax_deltas_stay_present`.
+
+  const DOC: &str = "\\documentclass{article}\n\\usepackage{amsmath}\n\\begin{document}\n\
+     \\begin{equation}a=b\\end{equation}\n\
+     \\begin{align}\n\
+     &=\\frac{\\frac{d}{dX}\\left(-Y^{-1}e^{-XY^{-1}}+XY^{-2}e^{-XY^{-1}}U\\right)\
+     \\left(Y^{-2}e^{-Y^{-1}}U\\right)-\\left(-Y^{-1}e^{-XY^{-1}}+XY^{-2}e^{-XY^{-1}}U\\right)\
+     \\frac{d}{dX}\\left(Y^{-2}e^{-Y^{-1}}U\\right)}{\\left(Y^{-2}e^{-Y^{-1}}U\\right)^{2}}\\tag{C.8.1}\n\
+     \\end{align}\nBut\n\\begin{equation}\n\
+     \\frac{d}{dX}\\left(-Y^{-1}e^{-XY^{-1}}+XY^{-2}e^{-XY^{-1}}U\\right)=\\frac{d}{dX}\
+     \\left(-Y^{-1}e^{-XY^{-1}}\\right)+\\frac{d}{dX}\\left(XY^{-2}e^{-XY^{-1}}U\\right)\\tag{C.8.2}\n\
+     \\end{equation}\n\
+     \\begin{tabular}{p{4cm}}cell: \\begin{equation}q=r+s+t\\end{equation}\\end{tabular}\n\
+     \\end{document}\n";
+
+  #[test]
+  fn equation_tags_stay_beside() {
+    let Some(stdout) =
+      super::browser_harness::render_and_measure("#810", DOC, "measure_eqn_tags.js")
+    else {
+      return;
+    };
+    let v: serde_json::Value = serde_json::from_str(stdout.trim()).expect("parse JSON");
+    // Before: (C.8.1) over its formula at 768 and 375 px, (C.8.2) at 375 (Chrome); with the tag
+    // column alone, (1) 10 px left of the line's centre and the p{} cell scrolling 179 px in 152
+    // with (2) behind the scroll (pdflatex: "q =r+s+t (2)", no Overfull).
+    for (key, run) in v.as_object().expect("engines x widths") {
+      let eqns = run["eqns"].as_array().expect("eqns");
+      let rows: Vec<_> = eqns
+        .iter()
+        .flat_map(|e| e["rows"].as_array().unwrap().iter())
+        .collect();
+      let tags: Vec<_> = rows
+        .iter()
+        .map(|r| (r["tag"].as_str().unwrap(), r["overlaps"].as_bool().unwrap()))
+        .collect();
+      assert_eq!(
+        tags,
+        [
+          ("(1)", false),
+          ("(C.8.1)", false),
+          ("(C.8.2)", false),
+          ("(2)", false)
+        ],
+        "a tag runs into its formula ({key}): {stdout}"
+      );
+      let cell = eqns.last().unwrap();
+      assert!(
+        cell["rows"][0]["visible"].as_bool().unwrap()
+          && cell["scrollWidth"].as_i64() <= cell["clientWidth"].as_i64(),
+        "the p{{}} cell's tag is hidden or the cell scrolls ({key}): {stdout}"
+      );
+      if key.ends_with("/1280") {
+        let off = rows[0]["offset"].as_i64().unwrap();
+        assert!(
+          off.abs() <= 2,
+          "(1) is {off} px off the line's centre ({key}): {stdout}"
+        );
+      }
+    }
+  }
+}
+
 mod aligned_mtable_columnspacing_zero {
   //! #755, the platform-independent (CI-enforced) half: the native-MathML mtd
   //! padding reset in `LaTeXML.css` keys on `mtable[columnspacing="0pt"]`, so it
