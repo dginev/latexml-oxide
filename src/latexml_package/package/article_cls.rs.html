@@ -63,7 +63,7 @@
 <a href=#63 id=63 data-nosnippet>63</a>  // columns, as its size file sets it for the paper and size options (`standard_class_twocolumn_page`: 229.5pt
 <a href=#64 id=64 data-nosnippet>64</a>  // columns of a 469pt text on letter paper, 221/452pt on A4), when article is the document's class (review rev79c2
 <a href=#65 id=65 data-nosnippet>65</a>  // finding 1: a `figure*` stated 2 columns where the PDF gives 2.044). One column is the registers' page.
-<a href=#66 id=66 data-nosnippet>66</a>  </span>declare_standard_class_page(<span class="string">"article"</span>);
+<a href=#66 id=66 data-nosnippet>66</a>  </span>declare_standard_class_page(<span class="string">"article"</span>)<span class="question-mark">?</span>;
 <a href=#67 id=67 data-nosnippet>67</a>
 <a href=#68 id=68 data-nosnippet>68</a>  <span class="comment">//**********************************************************************
 <a href=#69 id=69 data-nosnippet>69</a>  // Document structure.
@@ -78,8 +78,8 @@
 <a href=#78 id=78 data-nosnippet>78</a>  // counter, when article is the document's class.
 <a href=#79 id=79 data-nosnippet>79</a>  </span>engine::latex_constructs::declare_fnsymbol_title_block(<span class="string">"article"</span>, <span class="prelude-val">Some</span>(<span class="bool-val">false</span>))<span class="question-mark">?</span>;
 <a href=#80 id=80 data-nosnippet>80</a>
-<a href=#81 id=81 data-nosnippet>81</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\@ptsize"</span>, <span class="string">"0"</span>); <span class="comment">// should depend on options...
-<a href=#82 id=82 data-nosnippet>82</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\@pnumwidth"</span>, <span class="string">"1.55em"</span>);
+<a href=#81 id=81 data-nosnippet>81</a>  def_macro(<span class="macro">T_CS!</span>(<span class="string">"\\@ptsize"</span>), <span class="prelude-val">None</span>, Tokens::new(<span class="macro">ExplodeText!</span>(standard_class_ptsize(<span class="string">"article"</span>).to_string())), <span class="prelude-val">None</span>)<span class="question-mark">?</span>;
+<a href=#82 id=82 data-nosnippet>82</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\@pnumwidth"</span>, <span class="string">"1.55em"</span>);
 <a href=#83 id=83 data-nosnippet>83</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\@tocrmarg"</span>, <span class="string">"2.55em"</span>);
 <a href=#84 id=84 data-nosnippet>84</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\@dotsep"</span>, <span class="string">"4.5"</span>);
 <a href=#85 id=85 data-nosnippet>85</a>  <span class="macro">DefRegister!</span>(<span class="string">"\\abovecaptionskip" </span>=&gt; Glue::new(<span class="number">0</span>));

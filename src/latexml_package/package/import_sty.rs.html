@@ -13,152 +13,173 @@
 <a href=#13 id=13 data-nosnippet>13</a>  }
 <a href=#14 id=14 data-nosnippet>14</a>}
 <a href=#15 id=15 data-nosnippet>15</a>
-<a href=#16 id=16 data-nosnippet>16</a><span class="doccomment">/// The current `\import@path` (import.sty:142, empty outside any import).
-<a href=#17 id=17 data-nosnippet>17</a></span><span class="kw">fn </span>import_path() -&gt; String { lookup_string(<span class="string">"lx@import@path"</span>) }
-<a href=#18 id=18 data-nosnippet>18</a>
-<a href=#19 id=19 data-nosnippet>19</a><span class="doccomment">/// import.sty:82-85 `\@import`: `\import@path` becomes `path`, and `\input@path` gets it in front of the enclosing
-<a href=#20 id=20 data-nosnippet>20</a>/// entries (TeX resolves each entry against the working directory, here the source directory). The `*` forms are
-<a href=#21 id=21 data-nosnippet>21</a>/// the same (import.sty:60-62 "Consume now-meaningless `*`"); Perl's `*` searched only the import's directory, which
-<a href=#22 id=22 data-nosnippet>22</a>/// loses the source directory the joined name is relative to (`\subimport*{nested/}{outer.tex}` reads
-<a href=#23 id=23 data-nosnippet>23</a>/// `nested/outer.tex`).
-<a href=#24 id=24 data-nosnippet>24</a></span><span class="kw">fn </span>enter_import_path(path: String) {
-<a href=#25 id=25 data-nosnippet>25</a>  assign_value(<span class="string">"lx@import@path"</span>, Stored::String(pin(<span class="kw-2">&amp;</span>path)), <span class="prelude-val">None</span>);
-<a href=#26 id=26 data-nosnippet>26</a>  <span class="kw">let </span><span class="kw-2">mut </span>new_paths = Vec::new();
-<a href=#27 id=27 data-nosnippet>27</a>  <span class="kw">if </span>!path.is_empty() {
-<a href=#28 id=28 data-nosnippet>28</a>    <span class="kw">let </span>dir = <span class="kw">if </span>pathname::is_absolute(<span class="kw-2">&amp;</span>path) {
-<a href=#29 id=29 data-nosnippet>29</a>      path.clone()
-<a href=#30 id=30 data-nosnippet>30</a>    } <span class="kw">else </span>{
-<a href=#31 id=31 data-nosnippet>31</a>      <span class="kw">let </span>source_dir = lookup_string(<span class="string">"SOURCEDIRECTORY"</span>);
-<a href=#32 id=32 data-nosnippet>32</a>      <span class="kw">if </span>source_dir.is_empty() {
-<a href=#33 id=33 data-nosnippet>33</a>        path.clone()
-<a href=#34 id=34 data-nosnippet>34</a>      } <span class="kw">else </span>{
-<a href=#35 id=35 data-nosnippet>35</a>        pathname::concat(<span class="kw-2">&amp;</span>source_dir, <span class="kw-2">&amp;</span>path)
-<a href=#36 id=36 data-nosnippet>36</a>      }
-<a href=#37 id=37 data-nosnippet>37</a>    };
-<a href=#38 id=38 data-nosnippet>38</a>    new_paths.push(pathname::canonical(<span class="kw-2">&amp;</span>dir));
-<a href=#39 id=39 data-nosnippet>39</a>  }
-<a href=#40 id=40 data-nosnippet>40</a>  new_paths.extend(get_search_paths());
-<a href=#41 id=41 data-nosnippet>41</a>  set_search_paths_local(new_paths);
-<a href=#42 id=42 data-nosnippet>42</a>}
-<a href=#43 id=43 data-nosnippet>43</a>
-<a href=#44 id=44 data-nosnippet>44</a><span class="attr">#[rustfmt::skip]
-<a href=#45 id=45 data-nosnippet>45</a></span><span class="macro">LoadDefinitions!</span>({
-<a href=#46 id=46 data-nosnippet>46</a>  <span class="comment">// Perl: import.sty.ltxml — `AssignValue(SEARCHPATHS =&gt; …)`, local-by-default.
-<a href=#47 id=47 data-nosnippet>47</a>  // The paths are saved before and restored after each import's input
-<a href=#48 id=48 data-nosnippet>48</a>  // (`\lx@import@save`/`\lx@import@restore` below), so sibling
-<a href=#49 id=49 data-nosnippet>49</a>  // `\subimport{Chapter/}{File}` calls each start from the base paths (the
-<a href=#50 id=50 data-nosnippet>50</a>  // second must NOT concat Chapter/ onto the first call's Chapter/). Witnesses:
-<a href=#51 id=51 data-nosnippet>51</a>  // arXiv:2604.09744, 2603.04457.
-<a href=#52 id=52 data-nosnippet>52</a>  //
-<a href=#53 id=53 data-nosnippet>53</a>  // The import's file is found as import.sty finds it (:82-88): `\import@path` is the directory, reset by `\import`
-<a href=#54 id=54 data-nosnippet>54</a>  // (:49) and extended by `\subimport` (:55, `\import@path#3`), and the file read is `\import@path #7`, with
-<a href=#55 id=55 data-nosnippet>55</a>  // `\input@path` = `{\import@path}` + the enclosing import's entries. A nested `\import{intro}{intro}` inside
-<a href=#56 id=56 data-nosnippet>56</a>  // `\import{chapters/}{chapters}` reads `intro/intro`, found under the enclosing entry as
-<a href=#57 id=57 data-nosnippet>57</a>  // `chapters/intro/intro.tex`, and a `\subimport{}{statements/x.tex}` there reads `intro/statements/x.tex`
-<a href=#58 id=58 data-nosnippet>58</a>  // (2408.09583: its chapters, then its statement files). Perl's `\input{#3}` against a search path made of the
-<a href=#59 id=59 data-nosnippet>59</a>  // first entry and the new directory (import.sty.ltxml:20-47) found neither (KPE #1171).
-<a href=#60 id=60 data-nosnippet>60</a>
-<a href=#61 id=61 data-nosnippet>61</a>  // Perl import.sty.ltxml L20-29: \lx@set@path OptionalMatch:* {} — `\import`'s directory, relative to the source
-<a href=#62 id=62 data-nosnippet>62</a>  // directory unless absolute.
-<a href=#63 id=63 data-nosnippet>63</a>  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\lx@set@path OptionalMatch:* {}"</span>, sub[(_star, path_tks)] {
-<a href=#64 id=64 data-nosnippet>64</a>    <span class="kw">let </span>path = import_path_fix(<span class="kw-2">&amp;</span><span class="macro">Expand!</span>(path_tks).to_string());
-<a href=#65 id=65 data-nosnippet>65</a>    enter_import_path(path);
-<a href=#66 id=66 data-nosnippet>66</a>  });
-<a href=#67 id=67 data-nosnippet>67</a>
-<a href=#68 id=68 data-nosnippet>68</a>  <span class="comment">// Perl import.sty.ltxml L31-42: \lx@append@path OptionalMatch:* {} — `\subimport`'s directory, appended to the
-<a href=#69 id=69 data-nosnippet>69</a>  // current `\import@path`.
-<a href=#70 id=70 data-nosnippet>70</a>  //   DIVERGENCE (OXIDIZED_DESIGN #137): an absolute `path` is used verbatim
-<a href=#71 id=71 data-nosnippet>71</a>  //   rather than concatenated, to match real LaTeX — see the body.
-<a href=#72 id=72 data-nosnippet>72</a>  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\lx@append@path OptionalMatch:* {}"</span>, sub[(_star, path_tks)] {
-<a href=#73 id=73 data-nosnippet>73</a>    <span class="kw">let </span>raw = <span class="macro">Expand!</span>(path_tks).to_string();
-<a href=#74 id=74 data-nosnippet>74</a>    <span class="kw">let </span>raw = raw.trim();
-<a href=#75 id=75 data-nosnippet>75</a>    <span class="comment">// OXIDIZED_DESIGN #137 — surpass Perl to match real LaTeX (pdflatex,
-<a href=#76 id=76 data-nosnippet>76</a>    // verified): an ABSOLUTE directory arg is used verbatim, not concatenated
-<a href=#77 id=77 data-nosnippet>77</a>    // onto the current import path (which yields an unresolvable `&lt;lead&gt;//abs/…`).
-<a href=#78 id=78 data-nosnippet>78</a>    // Perl's \lx@append@path (import.sty.ltxml L31-42) ALWAYS concats, so both
-<a href=#79 id=79 data-nosnippet>79</a>    // engines fail `\subimport*{/abs/}{file}` where pdflatex succeeds — issue
-<a href=#80 id=80 data-nosnippet>80</a>    // #697. \lx@set@path already special-cases absolute; mirror it here.
-<a href=#81 id=81 data-nosnippet>81</a>    </span><span class="kw">let </span>path = <span class="kw">if </span>pathname::is_absolute(raw) {
-<a href=#82 id=82 data-nosnippet>82</a>      import_path_fix(raw)
-<a href=#83 id=83 data-nosnippet>83</a>    } <span class="kw">else </span>{
-<a href=#84 id=84 data-nosnippet>84</a>      import_path_fix(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">"{}{raw}"</span>, import_path()))
-<a href=#85 id=85 data-nosnippet>85</a>    };
-<a href=#86 id=86 data-nosnippet>86</a>    enter_import_path(path);
-<a href=#87 id=87 data-nosnippet>87</a>  });
-<a href=#88 id=88 data-nosnippet>88</a>
-<a href=#89 id=89 data-nosnippet>89</a>  <span class="comment">// `\@import`'s read (import.sty:86-88): `&lt;command&gt;{\import@path &lt;file&gt;}`. Where that file does not exist but the
-<a href=#90 id=90 data-nosnippet>90</a>  // bare name does, the bare name, as import.sty before v6 read it (`#1{#7}` with `\import@path` first on
-<a href=#91 id=91 data-nosnippet>91</a>  // `\input@path`; TeX tries the working directory first): an archive whose `\import{pictures/}{cantor.pdf_tex}`
-<a href=#92 id=92 data-nosnippet>92</a>  // ships `cantor.pdf_tex` at its top (1409.7023) or whose `\subimport{SM_quarkgluon/}{quarkgluon_main}` ships the
-<a href=#93 id=93 data-nosnippet>93</a>  // chapter beside the main file (1605.04692) compiled so on arXiv; TL 2025's v6.2 stops ("File not found").
-<a href=#94 id=94 data-nosnippet>94</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\lx@import@input{}{}"</span>, sub[(command, file)] {
-<a href=#95 id=95 data-nosnippet>95</a>    <span class="kw">let </span><span class="kw-2">mut </span>toks = command.unlist();
-<a href=#96 id=96 data-nosnippet>96</a>    toks.push(<span class="macro">T_BEGIN!</span>());
-<a href=#97 id=97 data-nosnippet>97</a>    <span class="kw">let </span>path = import_path();
-<a href=#98 id=98 data-nosnippet>98</a>    <span class="kw">let </span>name = <span class="macro">Expand!</span>(file.clone()).to_string();
-<a href=#99 id=99 data-nosnippet>99</a>    <span class="kw">let </span>name = name.trim();
-<a href=#100 id=100 data-nosnippet>100</a>    <span class="kw">if </span>!path.is_empty()
-<a href=#101 id=101 data-nosnippet>101</a>      &amp;&amp; (find_file(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">"{path}{name}"</span>), <span class="prelude-val">None</span>).is_some() || find_file(name, <span class="prelude-val">None</span>).is_none())
-<a href=#102 id=102 data-nosnippet>102</a>    {
-<a href=#103 id=103 data-nosnippet>103</a>      toks.extend(<span class="macro">ExplodeText!</span>(path));
-<a href=#104 id=104 data-nosnippet>104</a>    }
-<a href=#105 id=105 data-nosnippet>105</a>    toks.extend(file.unlist());
-<a href=#106 id=106 data-nosnippet>106</a>    toks.push(<span class="macro">T_END!</span>());
-<a href=#107 id=107 data-nosnippet>107</a>    <span class="prelude-val">Ok</span>(Tokens::new(toks))
-<a href=#108 id=108 data-nosnippet>108</a>  });
-<a href=#109 id=109 data-nosnippet>109</a>
-<a href=#110 id=110 data-nosnippet>110</a>  <span class="comment">// No group around the input (import.sty:65-92): `\@sub@import` closes its own
-<a href=#111 id=111 data-nosnippet>111</a>  // group before `\@import` runs the `\input`/`\include` at the caller's level,
-<a href=#112 id=112 data-nosnippet>112</a>  // then restores `\input@path`/`\Ginput@path` by plain `\def`. Perl's binding
-<a href=#113 id=113 data-nosnippet>113</a>  // (import.sty.ltxml L44-47) wraps the input in `{…}`, so every definition the
-<a href=#114 id=114 data-nosnippet>114</a>  // imported file makes — its `\newcommand`s, and the packages it loads, whose
-<a href=#115 id=115 data-nosnippet>115</a>  // loaded-flags are global — was popped at the `}`: `\subimport{}{macros}` left
-<a href=#116 id=116 data-nosnippet>116</a>  // the paper's macros undefined, and a package loaded there (hyperref → etoolbox)
-<a href=#117 id=117 data-nosnippet>117</a>  // was "already loaded" but gone when biblatex asked for `\newbool` (arXiv
-<a href=#118 id=118 data-nosnippet>118</a>  // 2605.20598, `Fatal:TooManyErrors`). The search paths and `\import@path` are
-<a href=#119 id=119 data-nosnippet>119</a>  // saved before and restored after the input instead (import.sty:92-95), so each
-<a href=#120 id=120 data-nosnippet>120</a>  // sibling `\subimport{Chapter/}{…}` still starts from the base paths (witnesses
-<a href=#121 id=121 data-nosnippet>121</a>  // 2604.09744, 2603.04457).
-<a href=#122 id=122 data-nosnippet>122</a>  // OXIDIZED_DESIGN #280.
-<a href=#123 id=123 data-nosnippet>123</a>  //
-<a href=#124 id=124 data-nosnippet>124</a>  // KNOWN_PERL_ERRORS #56: `\includefrom`/`\subincludefrom` take TWO arguments
-<a href=#125 id=125 data-nosnippet>125</a>  // after the star — `\includefrom{dir/}{file}` — but Perl's prototypes declare
-<a href=#126 id=126 data-nosnippet>126</a>  // only one while their bodies reference `#3` (import.sty.ltxml L45/L47). The
-<a href=#127 id=127 data-nosnippet>127</a>  // undeclared `#3` expands to nothing, so `\include{}` includes nothing and the
-<a href=#128 id=128 data-nosnippet>128</a>  // file is dropped in silence: no error, no warning, no content. Real
-<a href=#129 id=129 data-nosnippet>129</a>  // `import.sty` takes both for all four (L57/L58 route `\includefrom` /
-<a href=#130 id=130 data-nosnippet>130</a>  // `\subincludefrom` through the same `\@doimport` as `\import`/`\subimport`;
-<a href=#131 id=131 data-nosnippet>131</a>  // `\@sub@import` L65 consumes the directory as #3 and `\@import` L82 the file
-<a href=#132 id=132 data-nosnippet>132</a>  // name as #7), so the arity below is the real package's, not Perl's typo.
-<a href=#133 id=133 data-nosnippet>133</a>  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\lx@import@save"</span>, {
-<a href=#134 id=134 data-nosnippet>134</a>    <span class="kw">let </span>saved = lookup_value(<span class="string">"SEARCHPATHS"</span>).unwrap_or(Stored::None);
-<a href=#135 id=135 data-nosnippet>135</a>    <span class="kw">let </span><span class="kw-2">mut </span>stack = <span class="kw">match </span>lookup_value(<span class="string">"lx@import@saved@paths"</span>) {
-<a href=#136 id=136 data-nosnippet>136</a>      <span class="prelude-val">Some</span>(Stored::VecDequeStored(stack)) =&gt; stack,
-<a href=#137 id=137 data-nosnippet>137</a>      <span class="kw">_ </span>=&gt; VecDeque::new(),
-<a href=#138 id=138 data-nosnippet>138</a>    };
-<a href=#139 id=139 data-nosnippet>139</a>    stack.push_front(saved);
-<a href=#140 id=140 data-nosnippet>140</a>    stack.push_front(Stored::String(pin(import_path())));
-<a href=#141 id=141 data-nosnippet>141</a>    assign_value(<span class="string">"lx@import@saved@paths"</span>, Stored::VecDequeStored(stack), <span class="prelude-val">Some</span>(Scope::Global));
-<a href=#142 id=142 data-nosnippet>142</a>  });
-<a href=#143 id=143 data-nosnippet>143</a>  <span class="macro">DefPrimitive!</span>(<span class="string">"\\lx@import@restore"</span>, {
-<a href=#144 id=144 data-nosnippet>144</a>    <span class="kw">if let </span><span class="prelude-val">Some</span>(Stored::VecDequeStored(<span class="kw-2">mut </span>stack)) = lookup_value(<span class="string">"lx@import@saved@paths"</span>)
-<a href=#145 id=145 data-nosnippet>145</a>      &amp;&amp; <span class="kw">let </span><span class="prelude-val">Some</span>(saved_import_path) = stack.pop_front()
-<a href=#146 id=146 data-nosnippet>146</a>      &amp;&amp; <span class="kw">let </span><span class="prelude-val">Some</span>(saved) = stack.pop_front()
-<a href=#147 id=147 data-nosnippet>147</a>    {
-<a href=#148 id=148 data-nosnippet>148</a>      assign_value(<span class="string">"lx@import@saved@paths"</span>, Stored::VecDequeStored(stack), <span class="prelude-val">Some</span>(Scope::Global));
-<a href=#149 id=149 data-nosnippet>149</a>      assign_value(<span class="string">"SEARCHPATHS"</span>, saved, <span class="prelude-val">Some</span>(Scope::Local));
-<a href=#150 id=150 data-nosnippet>150</a>      assign_value(<span class="string">"lx@import@path"</span>, saved_import_path, <span class="prelude-val">None</span>);
-<a href=#151 id=151 data-nosnippet>151</a>    }
-<a href=#152 id=152 data-nosnippet>152</a>  });
-<a href=#153 id=153 data-nosnippet>153</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\import OptionalMatch:* {}{}"</span>,
-<a href=#154 id=154 data-nosnippet>154</a>    <span class="string">"\\lx@import@save\\lx@set@path #1{#2} \\lx@import@input{\\input}{#3}\\lx@import@restore"</span>);
-<a href=#155 id=155 data-nosnippet>155</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\includefrom OptionalMatch:* {}{}"</span>,
-<a href=#156 id=156 data-nosnippet>156</a>    <span class="string">"\\lx@import@save\\lx@set@path #1{#2} \\lx@import@input{\\include}{#3}\\lx@import@restore"</span>);
-<a href=#157 id=157 data-nosnippet>157</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\subimport OptionalMatch:* {}{}"</span>,
-<a href=#158 id=158 data-nosnippet>158</a>    <span class="string">"\\lx@import@save\\lx@append@path #1{#2} \\lx@import@input{\\input}{#3}\\lx@import@restore"</span>);
-<a href=#159 id=159 data-nosnippet>159</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\subincludefrom OptionalMatch:* {}{}"</span>,
-<a href=#160 id=160 data-nosnippet>160</a>    <span class="string">"\\lx@import@save\\lx@append@path #1{#2} \\lx@import@input{\\include}{#3}\\lx@import@restore"</span>);
-<a href=#161 id=161 data-nosnippet>161</a>  <span class="macro">Let!</span>(<span class="string">"\\inputfrom"</span>, <span class="string">"\\import"</span>);
-<a href=#162 id=162 data-nosnippet>162</a>  <span class="macro">Let!</span>(<span class="string">"\\subinputfrom"</span>, <span class="string">"\\subimport"</span>);
-<a href=#163 id=163 data-nosnippet>163</a>});
+<a href=#16 id=16 data-nosnippet>16</a><span class="doccomment">/// The current `\import@path` (import.sty:142, empty outside any import), the package's own macro: a document reads it
+<a href=#17 id=17 data-nosnippet>17</a>/// (`\newcommand{\currentimportpath}{\import@path}`, issue #772).
+<a href=#18 id=18 data-nosnippet>18</a></span><span class="kw">fn </span>import_path() -&gt; <span class="prelude-ty">Result</span>&lt;String&gt; { <span class="prelude-val">Ok</span>(<span class="macro">Expand!</span>(<span class="macro">Tokens!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\import@path"</span>))).to_string()) }
+<a href=#19 id=19 data-nosnippet>19</a>
+<a href=#20 id=20 data-nosnippet>20</a><span class="doccomment">/// import.sty:83 `\protected@xdef\import@path{…}` and :93 `\gdef\import@path{#5}`: global, as the package's.
+<a href=#21 id=21 data-nosnippet>21</a></span><span class="kw">fn </span>set_import_path(path: <span class="kw-2">&amp;</span>str) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
+<a href=#22 id=22 data-nosnippet>22</a>  def_macro(
+<a href=#23 id=23 data-nosnippet>23</a>    <span class="macro">T_CS!</span>(<span class="string">"\\import@path"</span>),
+<a href=#24 id=24 data-nosnippet>24</a>    <span class="prelude-val">None</span>,
+<a href=#25 id=25 data-nosnippet>25</a>    Tokens::new(<span class="macro">ExplodeText!</span>(path)),
+<a href=#26 id=26 data-nosnippet>26</a>    <span class="prelude-val">Some</span>(ExpandableOptions {
+<a href=#27 id=27 data-nosnippet>27</a>      scope: <span class="prelude-val">Some</span>(Scope::Global),
+<a href=#28 id=28 data-nosnippet>28</a>      ..Default::default()
+<a href=#29 id=29 data-nosnippet>29</a>    }),
+<a href=#30 id=30 data-nosnippet>30</a>  )
+<a href=#31 id=31 data-nosnippet>31</a>}
+<a href=#32 id=32 data-nosnippet>32</a>
+<a href=#33 id=33 data-nosnippet>33</a><span class="doccomment">/// import.sty:82-85 `\@import`: `\import@path` becomes `path`, and `\input@path` gets it in front of the enclosing
+<a href=#34 id=34 data-nosnippet>34</a>/// entries (TeX resolves each entry against the working directory, here the source directory). The `*` forms are
+<a href=#35 id=35 data-nosnippet>35</a>/// the same (import.sty:60-62 "Consume now-meaningless `*`"); Perl's `*` searched only the import's directory, which
+<a href=#36 id=36 data-nosnippet>36</a>/// loses the source directory the joined name is relative to (`\subimport*{nested/}{outer.tex}` reads
+<a href=#37 id=37 data-nosnippet>37</a>/// `nested/outer.tex`).
+<a href=#38 id=38 data-nosnippet>38</a></span><span class="kw">fn </span>enter_import_path(path: String) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
+<a href=#39 id=39 data-nosnippet>39</a>  set_import_path(<span class="kw-2">&amp;</span>path)<span class="question-mark">?</span>;
+<a href=#40 id=40 data-nosnippet>40</a>  <span class="kw">let </span><span class="kw-2">mut </span>new_paths = Vec::new();
+<a href=#41 id=41 data-nosnippet>41</a>  <span class="kw">if </span>!path.is_empty() {
+<a href=#42 id=42 data-nosnippet>42</a>    <span class="kw">let </span>dir = <span class="kw">if </span>pathname::is_absolute(<span class="kw-2">&amp;</span>path) {
+<a href=#43 id=43 data-nosnippet>43</a>      path.clone()
+<a href=#44 id=44 data-nosnippet>44</a>    } <span class="kw">else </span>{
+<a href=#45 id=45 data-nosnippet>45</a>      <span class="kw">let </span>source_dir = lookup_string(<span class="string">"SOURCEDIRECTORY"</span>);
+<a href=#46 id=46 data-nosnippet>46</a>      <span class="kw">if </span>source_dir.is_empty() {
+<a href=#47 id=47 data-nosnippet>47</a>        path.clone()
+<a href=#48 id=48 data-nosnippet>48</a>      } <span class="kw">else </span>{
+<a href=#49 id=49 data-nosnippet>49</a>        pathname::concat(<span class="kw-2">&amp;</span>source_dir, <span class="kw-2">&amp;</span>path)
+<a href=#50 id=50 data-nosnippet>50</a>      }
+<a href=#51 id=51 data-nosnippet>51</a>    };
+<a href=#52 id=52 data-nosnippet>52</a>    new_paths.push(pathname::canonical(<span class="kw-2">&amp;</span>dir));
+<a href=#53 id=53 data-nosnippet>53</a>  }
+<a href=#54 id=54 data-nosnippet>54</a>  new_paths.extend(get_search_paths());
+<a href=#55 id=55 data-nosnippet>55</a>  set_search_paths_local(new_paths);
+<a href=#56 id=56 data-nosnippet>56</a>  <span class="prelude-val">Ok</span>(())
+<a href=#57 id=57 data-nosnippet>57</a>}
+<a href=#58 id=58 data-nosnippet>58</a>
+<a href=#59 id=59 data-nosnippet>59</a><span class="attr">#[rustfmt::skip]
+<a href=#60 id=60 data-nosnippet>60</a></span><span class="macro">LoadDefinitions!</span>({
+<a href=#61 id=61 data-nosnippet>61</a>  <span class="comment">// Perl: import.sty.ltxml — `AssignValue(SEARCHPATHS =&gt; …)`, local-by-default.
+<a href=#62 id=62 data-nosnippet>62</a>  // The paths are saved before and restored after each import's input
+<a href=#63 id=63 data-nosnippet>63</a>  // (`\lx@import@save`/`\lx@import@restore` below), so sibling
+<a href=#64 id=64 data-nosnippet>64</a>  // `\subimport{Chapter/}{File}` calls each start from the base paths (the
+<a href=#65 id=65 data-nosnippet>65</a>  // second must NOT concat Chapter/ onto the first call's Chapter/). Witnesses:
+<a href=#66 id=66 data-nosnippet>66</a>  // arXiv:2604.09744, 2603.04457.
+<a href=#67 id=67 data-nosnippet>67</a>  //
+<a href=#68 id=68 data-nosnippet>68</a>  // The import's file is found as import.sty finds it (:82-88): `\import@path` is the directory, reset by `\import`
+<a href=#69 id=69 data-nosnippet>69</a>  // (:49) and extended by `\subimport` (:55, `\import@path#3`), and the file read is `\import@path #7`, with
+<a href=#70 id=70 data-nosnippet>70</a>  // `\input@path` = `{\import@path}` + the enclosing import's entries. A nested `\import{intro}{intro}` inside
+<a href=#71 id=71 data-nosnippet>71</a>  // `\import{chapters/}{chapters}` reads `intro/intro`, found under the enclosing entry as
+<a href=#72 id=72 data-nosnippet>72</a>  // `chapters/intro/intro.tex`, and a `\subimport{}{statements/x.tex}` there reads `intro/statements/x.tex`
+<a href=#73 id=73 data-nosnippet>73</a>  // (2408.09583: its chapters, then its statement files). Perl's `\input{#3}` against a search path made of the
+<a href=#74 id=74 data-nosnippet>74</a>  // first entry and the new directory (import.sty.ltxml:20-47) found neither (KPE #1171).
+<a href=#75 id=75 data-nosnippet>75</a>
+<a href=#76 id=76 data-nosnippet>76</a>  // import.sty:142 `\gdef\import@path{}`.
+<a href=#77 id=77 data-nosnippet>77</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\import@path"</span>, <span class="string">""</span>);
+<a href=#78 id=78 data-nosnippet>78</a>
+<a href=#79 id=79 data-nosnippet>79</a>  <span class="comment">// Perl import.sty.ltxml L20-29: \lx@set@path OptionalMatch:* {} — `\import`'s directory, relative to the source
+<a href=#80 id=80 data-nosnippet>80</a>  // directory unless absolute.
+<a href=#81 id=81 data-nosnippet>81</a>  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\lx@set@path OptionalMatch:* {}"</span>, sub[(_star, path_tks)] {
+<a href=#82 id=82 data-nosnippet>82</a>    <span class="kw">let </span>path = import_path_fix(<span class="kw-2">&amp;</span><span class="macro">Expand!</span>(path_tks).to_string());
+<a href=#83 id=83 data-nosnippet>83</a>    enter_import_path(path)<span class="question-mark">?</span>;
+<a href=#84 id=84 data-nosnippet>84</a>  });
+<a href=#85 id=85 data-nosnippet>85</a>
+<a href=#86 id=86 data-nosnippet>86</a>  <span class="comment">// Perl import.sty.ltxml L31-42: \lx@append@path OptionalMatch:* {} — `\subimport`'s directory, appended to the
+<a href=#87 id=87 data-nosnippet>87</a>  // current `\import@path`.
+<a href=#88 id=88 data-nosnippet>88</a>  //   DIVERGENCE (OXIDIZED_DESIGN #137): an absolute `path` is used verbatim
+<a href=#89 id=89 data-nosnippet>89</a>  //   rather than concatenated, to match real LaTeX — see the body.
+<a href=#90 id=90 data-nosnippet>90</a>  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\lx@append@path OptionalMatch:* {}"</span>, sub[(_star, path_tks)] {
+<a href=#91 id=91 data-nosnippet>91</a>    <span class="kw">let </span>raw = <span class="macro">Expand!</span>(path_tks).to_string();
+<a href=#92 id=92 data-nosnippet>92</a>    <span class="kw">let </span>raw = raw.trim();
+<a href=#93 id=93 data-nosnippet>93</a>    <span class="comment">// OXIDIZED_DESIGN #137 — surpass Perl to match real LaTeX (pdflatex,
+<a href=#94 id=94 data-nosnippet>94</a>    // verified): an ABSOLUTE directory arg is used verbatim, not concatenated
+<a href=#95 id=95 data-nosnippet>95</a>    // onto the current import path (which yields an unresolvable `&lt;lead&gt;//abs/…`).
+<a href=#96 id=96 data-nosnippet>96</a>    // Perl's \lx@append@path (import.sty.ltxml L31-42) ALWAYS concats, so both
+<a href=#97 id=97 data-nosnippet>97</a>    // engines fail `\subimport*{/abs/}{file}` where pdflatex succeeds — issue
+<a href=#98 id=98 data-nosnippet>98</a>    // #697. \lx@set@path already special-cases absolute; mirror it here.
+<a href=#99 id=99 data-nosnippet>99</a>    </span><span class="kw">let </span>path = <span class="kw">if </span>pathname::is_absolute(raw) {
+<a href=#100 id=100 data-nosnippet>100</a>      import_path_fix(raw)
+<a href=#101 id=101 data-nosnippet>101</a>    } <span class="kw">else </span>{
+<a href=#102 id=102 data-nosnippet>102</a>      import_path_fix(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">"{}{raw}"</span>, import_path()<span class="question-mark">?</span>))
+<a href=#103 id=103 data-nosnippet>103</a>    };
+<a href=#104 id=104 data-nosnippet>104</a>    enter_import_path(path)<span class="question-mark">?</span>;
+<a href=#105 id=105 data-nosnippet>105</a>  });
+<a href=#106 id=106 data-nosnippet>106</a>
+<a href=#107 id=107 data-nosnippet>107</a>  <span class="comment">// `\@import`'s read (import.sty:86-88): `&lt;command&gt;{\import@path &lt;file&gt;}`. Where that file does not exist but the
+<a href=#108 id=108 data-nosnippet>108</a>  // bare name does, the bare name, as import.sty before v6 read it (`#1{#7}` with `\import@path` first on
+<a href=#109 id=109 data-nosnippet>109</a>  // `\input@path`; TeX tries the working directory first): an archive whose `\import{pictures/}{cantor.pdf_tex}`
+<a href=#110 id=110 data-nosnippet>110</a>  // ships `cantor.pdf_tex` at its top (1409.7023) or whose `\subimport{SM_quarkgluon/}{quarkgluon_main}` ships the
+<a href=#111 id=111 data-nosnippet>111</a>  // chapter beside the main file (1605.04692) compiled so on arXiv; TL 2025's v6.2 stops ("File not found").
+<a href=#112 id=112 data-nosnippet>112</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\lx@import@input{}{}"</span>, sub[(command, file)] {
+<a href=#113 id=113 data-nosnippet>113</a>    <span class="kw">let </span><span class="kw-2">mut </span>toks = command.unlist();
+<a href=#114 id=114 data-nosnippet>114</a>    toks.push(<span class="macro">T_BEGIN!</span>());
+<a href=#115 id=115 data-nosnippet>115</a>    <span class="kw">let </span>path = import_path()<span class="question-mark">?</span>;
+<a href=#116 id=116 data-nosnippet>116</a>    <span class="kw">let </span>name = <span class="macro">Expand!</span>(file.clone()).to_string();
+<a href=#117 id=117 data-nosnippet>117</a>    <span class="kw">let </span>name = name.trim();
+<a href=#118 id=118 data-nosnippet>118</a>    <span class="kw">if </span>!path.is_empty()
+<a href=#119 id=119 data-nosnippet>119</a>      &amp;&amp; (find_file(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">"{path}{name}"</span>), <span class="prelude-val">None</span>).is_some() || find_file(name, <span class="prelude-val">None</span>).is_none())
+<a href=#120 id=120 data-nosnippet>120</a>    {
+<a href=#121 id=121 data-nosnippet>121</a>      toks.extend(<span class="macro">ExplodeText!</span>(path));
+<a href=#122 id=122 data-nosnippet>122</a>    }
+<a href=#123 id=123 data-nosnippet>123</a>    toks.extend(file.unlist());
+<a href=#124 id=124 data-nosnippet>124</a>    toks.push(<span class="macro">T_END!</span>());
+<a href=#125 id=125 data-nosnippet>125</a>    <span class="prelude-val">Ok</span>(Tokens::new(toks))
+<a href=#126 id=126 data-nosnippet>126</a>  });
+<a href=#127 id=127 data-nosnippet>127</a>
+<a href=#128 id=128 data-nosnippet>128</a>  <span class="comment">// No group around the input (import.sty:65-92): `\@sub@import` closes its own
+<a href=#129 id=129 data-nosnippet>129</a>  // group before `\@import` runs the `\input`/`\include` at the caller's level,
+<a href=#130 id=130 data-nosnippet>130</a>  // then restores `\input@path`/`\Ginput@path` by plain `\def`. Perl's binding
+<a href=#131 id=131 data-nosnippet>131</a>  // (import.sty.ltxml L44-47) wraps the input in `{…}`, so every definition the
+<a href=#132 id=132 data-nosnippet>132</a>  // imported file makes — its `\newcommand`s, and the packages it loads, whose
+<a href=#133 id=133 data-nosnippet>133</a>  // loaded-flags are global — was popped at the `}`: `\subimport{}{macros}` left
+<a href=#134 id=134 data-nosnippet>134</a>  // the paper's macros undefined, and a package loaded there (hyperref → etoolbox)
+<a href=#135 id=135 data-nosnippet>135</a>  // was "already loaded" but gone when biblatex asked for `\newbool` (arXiv
+<a href=#136 id=136 data-nosnippet>136</a>  // 2605.20598, `Fatal:TooManyErrors`). The search paths and `\import@path` are
+<a href=#137 id=137 data-nosnippet>137</a>  // saved before and restored after the input instead (import.sty:92-95), so each
+<a href=#138 id=138 data-nosnippet>138</a>  // sibling `\subimport{Chapter/}{…}` still starts from the base paths (witnesses
+<a href=#139 id=139 data-nosnippet>139</a>  // 2604.09744, 2603.04457).
+<a href=#140 id=140 data-nosnippet>140</a>  // OXIDIZED_DESIGN #280.
+<a href=#141 id=141 data-nosnippet>141</a>  //
+<a href=#142 id=142 data-nosnippet>142</a>  // KNOWN_PERL_ERRORS #56: `\includefrom`/`\subincludefrom` take TWO arguments
+<a href=#143 id=143 data-nosnippet>143</a>  // after the star — `\includefrom{dir/}{file}` — but Perl's prototypes declare
+<a href=#144 id=144 data-nosnippet>144</a>  // only one while their bodies reference `#3` (import.sty.ltxml L45/L47). The
+<a href=#145 id=145 data-nosnippet>145</a>  // undeclared `#3` expands to nothing, so `\include{}` includes nothing and the
+<a href=#146 id=146 data-nosnippet>146</a>  // file is dropped in silence: no error, no warning, no content. Real
+<a href=#147 id=147 data-nosnippet>147</a>  // `import.sty` takes both for all four (L57/L58 route `\includefrom` /
+<a href=#148 id=148 data-nosnippet>148</a>  // `\subincludefrom` through the same `\@doimport` as `\import`/`\subimport`;
+<a href=#149 id=149 data-nosnippet>149</a>  // `\@sub@import` L65 consumes the directory as #3 and `\@import` L82 the file
+<a href=#150 id=150 data-nosnippet>150</a>  // name as #7), so the arity below is the real package's, not Perl's typo.
+<a href=#151 id=151 data-nosnippet>151</a>  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\lx@import@save"</span>, {
+<a href=#152 id=152 data-nosnippet>152</a>    <span class="kw">let </span>saved = lookup_value(<span class="string">"SEARCHPATHS"</span>).unwrap_or(Stored::None);
+<a href=#153 id=153 data-nosnippet>153</a>    <span class="kw">let </span><span class="kw-2">mut </span>stack = <span class="kw">match </span>lookup_value(<span class="string">"lx@import@saved@paths"</span>) {
+<a href=#154 id=154 data-nosnippet>154</a>      <span class="prelude-val">Some</span>(Stored::VecDequeStored(stack)) =&gt; stack,
+<a href=#155 id=155 data-nosnippet>155</a>      <span class="kw">_ </span>=&gt; VecDeque::new(),
+<a href=#156 id=156 data-nosnippet>156</a>    };
+<a href=#157 id=157 data-nosnippet>157</a>    stack.push_front(saved);
+<a href=#158 id=158 data-nosnippet>158</a>    stack.push_front(Stored::String(pin(import_path()<span class="question-mark">?</span>)));
+<a href=#159 id=159 data-nosnippet>159</a>    assign_value(<span class="string">"lx@import@saved@paths"</span>, Stored::VecDequeStored(stack), <span class="prelude-val">Some</span>(Scope::Global));
+<a href=#160 id=160 data-nosnippet>160</a>  });
+<a href=#161 id=161 data-nosnippet>161</a>  <span class="macro">DefPrimitive!</span>(<span class="string">"\\lx@import@restore"</span>, {
+<a href=#162 id=162 data-nosnippet>162</a>    <span class="kw">if let </span><span class="prelude-val">Some</span>(Stored::VecDequeStored(<span class="kw-2">mut </span>stack)) = lookup_value(<span class="string">"lx@import@saved@paths"</span>)
+<a href=#163 id=163 data-nosnippet>163</a>      &amp;&amp; <span class="kw">let </span><span class="prelude-val">Some</span>(saved_import_path) = stack.pop_front()
+<a href=#164 id=164 data-nosnippet>164</a>      &amp;&amp; <span class="kw">let </span><span class="prelude-val">Some</span>(saved) = stack.pop_front()
+<a href=#165 id=165 data-nosnippet>165</a>    {
+<a href=#166 id=166 data-nosnippet>166</a>      assign_value(<span class="string">"lx@import@saved@paths"</span>, Stored::VecDequeStored(stack), <span class="prelude-val">Some</span>(Scope::Global));
+<a href=#167 id=167 data-nosnippet>167</a>      assign_value(<span class="string">"SEARCHPATHS"</span>, saved, <span class="prelude-val">Some</span>(Scope::Local));
+<a href=#168 id=168 data-nosnippet>168</a>      <span class="kw">let </span>saved_import_path: String = (<span class="kw-2">&amp;</span>saved_import_path).into();
+<a href=#169 id=169 data-nosnippet>169</a>      set_import_path(<span class="kw-2">&amp;</span>saved_import_path)<span class="question-mark">?</span>;
+<a href=#170 id=170 data-nosnippet>170</a>    }
+<a href=#171 id=171 data-nosnippet>171</a>  });
+<a href=#172 id=172 data-nosnippet>172</a>  <span class="comment">// import.sty:53-58: `\import`, `\inputfrom` and `\includefrom` empty `\import@path` globally before `\@sub@import`
+<a href=#173 id=173 data-nosnippet>173</a>  // saves it, so a nested `\import` restores it to empty, not to the enclosing directory.
+<a href=#174 id=174 data-nosnippet>174</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\import OptionalMatch:* {}{}"</span>,
+<a href=#175 id=175 data-nosnippet>175</a>    <span class="string">"\\global\\let\\import@path\\@empty\\lx@import@save\\lx@set@path #1{#2}\\lx@import@input{\\input}{#3}\\lx@import@restore"</span>);
+<a href=#176 id=176 data-nosnippet>176</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\includefrom OptionalMatch:* {}{}"</span>,
+<a href=#177 id=177 data-nosnippet>177</a>    <span class="string">"\\global\\let\\import@path\\@empty\\lx@import@save\\lx@set@path #1{#2}\\lx@import@input{\\include}{#3}\\lx@import@restore"</span>);
+<a href=#178 id=178 data-nosnippet>178</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\subimport OptionalMatch:* {}{}"</span>,
+<a href=#179 id=179 data-nosnippet>179</a>    <span class="string">"\\lx@import@save\\lx@append@path #1{#2}\\lx@import@input{\\input}{#3}\\lx@import@restore"</span>);
+<a href=#180 id=180 data-nosnippet>180</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\subincludefrom OptionalMatch:* {}{}"</span>,
+<a href=#181 id=181 data-nosnippet>181</a>    <span class="string">"\\lx@import@save\\lx@append@path #1{#2}\\lx@import@input{\\include}{#3}\\lx@import@restore"</span>);
+<a href=#182 id=182 data-nosnippet>182</a>  <span class="macro">Let!</span>(<span class="string">"\\inputfrom"</span>, <span class="string">"\\import"</span>);
+<a href=#183 id=183 data-nosnippet>183</a>  <span class="macro">Let!</span>(<span class="string">"\\subinputfrom"</span>, <span class="string">"\\subimport"</span>);
+<a href=#184 id=184 data-nosnippet>184</a>});
 </code></pre></div></section></main></body></html>
