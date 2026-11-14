@@ -296,7 +296,7 @@ Rules that keep this file honest and mergeable:
   - CORERES — latexml_core residue (`2026-11-13_CORE0_report.md`): uncalled `dump_frame_bindings` (stomach.rs), `merge_selected_font` (content.rs; sect13.rs:2568's stale comment), `memory_fatal_seen` (watchdog.rs; check MEMORY_FATAL_SEEN's reader first); cache `LXML_TRACE_NODE_BOXES` / `LATEXML_EXPL_TRACE`; arena.rs `first_bytes` aliasing → through `with`; pathname.rs `set_var("TEXMFROOT")` — its thread context unverified (the prewarm may run on a background thread); one frame-id counter (`NEXT_FRAME_ID` / `FRAME_SERIAL`); 2
   - CMTLEN — comment length: 4.8k lines of latexml_core sit in 6+-line comment blocks (BM's "short comments"); the narrative to OD entries, every witness id kept (`2026-11-13_CORE0_report.md`); 2
   - MATHAB — A/B analysis: skip parsed-math-only changes when the `tex=` attributes are equal — the math parser's limits are wall-clock, 25 of int171a's 81 changed papers flipped under load (`2026-11-13_CL171b_report.md`); 1
-  - WIN1 — the suite on the CURRENT TeX Live (tlnet r81108; Windows CI installs the latest, Linux CI's apt TL is a 2026-01 snapshot): 67 red, all package drift (babel, tcolorbox, fontspec, latex-lab, aliascnt, …), detail and install recipe in "WIN1" below; 5
+  - WIN1 — the suite on the CURRENT TeX Live (TL 2026, tlnet r81108): DONE on `ci/windows-latest-texlive` — every handoff row fixed so it holds on TL 2025, the distro TL and TL 2026 ("WIN1" below, Resolution); its post-merge residuals are listed there; 5
 
 ### WIN1 — the suite on the current TeX Live (found by the Windows CI bring-up, 2026-11-13)
 
@@ -338,6 +338,33 @@ Rules that keep this file honest and mergeable:
 - **WIN1f, biblatex r80368:** `undefined:\DeclareDatafieldSet` — batch54 biblatex_style_internal_surface, style_def_printbibliography_override.
 - **WIN1g, fancyvrb r80718 (4.8, 2026/10/20):** every `Verbatim` line ends with a space (`TEST 1  ABC ` for `TEST 1  ABC`): `00_tokenize fancyvrb_test`, `fancyvrb_frame_test`. fancyvrb_sty.rs raw-loads the .sty (`InputDefinitions!(noltxml)`); see what 4.8 changed in its line read (`\FV@PreProcessLine`, fancyvrb.sty:200-300).
 - **WIN1h, single rows:** `86_tikz unit_tests_by_silviu_test` — S14's second picture opens a new paragraph (golden line 1867; pgf r79866); batch56 polyglossia_script_check (`The current main roman font, cmr10, does not …`, polyglossia r80238); batch61 csvsimple_rows_in_a_siunitx_column (`Extra alignment tab '&'`); batch68d author_file_stand_ins — `ieeeconf.cls` is now a TeX Live file (r79618): drop it from `AUTHOR_FILE_STAND_INS` or move it to `FORMER_TEX_LIVE`'s opposite.
+- **Resolution (2026-11-14; reproduced on Linux with an opt-in TL 2026 at `/opt/texlive-win1/2026`, 68 red; every fix keyed on what the installed
+  file defines, never a year; full suite green on TL 2025 and TL 2026):**
+  - WIN1a: `\lx@babel@activate@mainlang` also `\let`s `\mainlocalename` (babel.sty TL 2025 :1140, 26.16 :1190); the 1901-german Warning count
+    reads the installed `babel-german.tex`.
+  - WIN1b: listing boxes call `\__tcobox_process_newtcolorbox:nn` (6.8, 6.10), else `\tcb@proc@options@init` (2.80, `savedelimiter` set); the
+    stored counter `code=` runs per use; `\counterwithin`/`\counterwithout` take latex.ltx's `[format]` (KNOWN_PERL_ERRORS #1242).
+  - WIN1c/f: fontspec's `tuenc.def` load sees `\XeTeXversion` and `\tex_Umathcode:D` too (v2.2a), restored after; biblatex stands in for
+    biblatex-sbl's `\DeclareDatafieldSet`, `\DeclarePageCommands*`, `blx@trackfloats`. ijsra skips visibly where KOMA-Script 3.50 has no `\ifstr`
+    (the class fails in TeX too).
+  - WIN1d: the testphase minipage sockets are declared under `\IfSocketExistsF` (the November kernel declares them, latex.ltx:22533-22536);
+    asmejour's `\setlist` and babel's `cyrl2uni.def` guards follow the installed files.
+  - WIN1e: `warning_count` does not credit a package's own obsolescence notice (aliascnt v1.7 on a 2026-06+ kernel).
+  - WIN1g: fancyvrb 4.8's line-end `\hfil` is swapped back to `\hss` (`prelude::substitute_in_macro`).
+  - WIN1h: polyglossia 2.13's script check; csvsimple fixture `[legacy]`; pasa holds the era `\@p@pfilename` (latex.ltx:19091); the l3fp doors guard
+    reads `\exp_after`'s spelling; stand-ins decided by the binding list (a paper's copy read first, TeX's document-directory rule);
+    `Requirements::golden_variant` picks `unit_tests_by_silviu.pgf-r79866.xml` and `ac-drive-components.circuitikz-1.8.6.xml` by the installed file.
+  - WIN1i (found on the way): the latex-lab block binding reads the installed `latex-lab-testphase-block.sty` (TL 2025 and the November block
+    code, keytheorems' `thmstyle`); amsthm's `\theoremstyle` expands its argument (KNOWN_PERL_ERRORS #1243).
+  - Review fix (WIN1F): a file read as a token list (`\everyeof` set, `\file_get:nnN`) is never answered by a binding (OD #1020); the
+    glyphtounicode binding is back for ordinary `\input`.
+- **Post-merge rows found on the way (each with a `_red.tex` where named):** `\pdftexrevision` is Perl's 19 (pdfTeX 1.40.19) where TL 2025 runs
+  1.40.28, so latex.ltx takes the `\everyjob` glyphtounicode branch (needs a full A/B); an undefined `\if…` recovery swallows the rest
+  (`parameter-conditional/undefined_if_name_swallows_the_rest_red.tex`); biblatex's `\blx@blxinit` hooks never run (sbl's `\lno` …);
+  `\Umathcode` defined under the pdfTeX persona; asmejour's `\arabic*` "Missing number" is our Warning, TeX's Error; a fill glue at a box's end
+  prints a space (`boxes-groups/fill_glue_at_box_end_prints_a_space_red.tex`); csvsimple 3.0's l3 code in an siunitx column
+  (`package-bindings/csvsimple_l3/…_red.tex`); keytheorems custom `thmstyle` → `\newtheoremstyle`; Verbatim `numbers=left` trailing spaces;
+  `latexml_tests_internal` ignores `golden_variant`; the circuitikz predicate could key on `transistors/rounded caps`.
 
 ### The road — conclusions (row R; its history in the archive's SYNC3 section)
 
