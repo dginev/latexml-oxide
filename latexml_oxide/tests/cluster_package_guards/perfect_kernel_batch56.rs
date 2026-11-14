@@ -6392,8 +6392,8 @@ fn flat(xml: &str) -> String {
 /// title printed with `\@title` before it, which the field-ink lift takes first (shown once, in `<title>`); a
 /// `\maketitle` in a minipage, whose paragraph is never wrapped; blank lines and `\vspace*` only, no titlepage; a class
 /// printing the title at its setters (raw, and iopart's binding declaring it), whose text before `\maketitle` follows
-/// the title block (red on QAB4 round 2: wrapped above it), and a raw class printing it at `\maketitle`. Red
-/// (QAB4base): the text after the title block.
+/// the title block (red on QAB4 round 2: wrapped above it), and a raw class printing it at `\maketitle`; a run printing
+/// no word, which keeps the base placement (red on QAB4c). Red (QAB4base): the text after the title block.
 #[test]
 fn text_before_maketitle_stays_before_the_title() {
   let before = |id: &str, p: &str| {
@@ -6463,6 +6463,13 @@ fn text_before_maketitle_stays_before_the_title() {
         r#"{}Dated May 14th.</p></block></titlepage><title>The Title</title><creator role="author"><personname>A. Author</personname></creator><para xml:id="p2"><p xml:id="p2.1">Body.</p></para>"#,
         before("p1", "")
       ),
+    ),
+    // (revQAB4b finding 1, red on QAB4c: a run printing no word, a stray `]`, keeps the base placement; 2209.03353)
+    (
+      include_str!(
+        "../../../tools/perfect_kernel/repros/sectioning-frontmatter/text_before_maketitle_without_a_word_keeps_its_place.tex"
+      ),
+      r#"<title>The Title</title><creator role="author"><personname>A. Author</personname></creator><para xml:id="p1"><p xml:id="p1.1">]</p></para><para xml:id="p2"><p xml:id="p2.1">Body.</p></para>"#.to_string(),
     ),
   ] {
     let (log, xml) = convert_with(tex, Some("ar5iv.sty"));

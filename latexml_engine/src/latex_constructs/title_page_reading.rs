@@ -8,11 +8,12 @@
 //! - whether that appended tail prints, which decides whether the frontmatter reads it (frontmatter_stores.rs
 //!   `author_tail_calls`).
 //!
-//! The run marks where `\@title` and `\@author` begin and where `\@author`'s tail begins and ends (sect05.rs `title_page_mark`), records the
-//! `\and` family where `\@author` first prints (for the separator query, TP2), and whether article.cls's stand-in ran
-//! (the kernel's `\@maketitle`, `\lx@kernel@maketitle`). Its tail answer is its own only where code a raw file or the
-//! document wrote ran and the stand-in did not; else the binding's declaration answers
-//! (`fm_author_tail_declared`, `Policy::title_page`). Perl reads no title page (latex_constructs.pool.ltxml:1099-1113).
+//! The run marks where `\@title` and `\@author` begin and where `\@author`'s tail begins and ends (sect05.rs
+//! `title_page_mark`), records the `\and` family where `\@author` first prints (for the separator query, TP2), and
+//! whether article.cls's stand-in ran (the kernel's `\@maketitle`, `\lx@kernel@maketitle`). Its tail answer is its own
+//! only where code a raw file or the document wrote ran and the stand-in did not; else the binding's declaration
+//! answers (`fm_author_tail_declared`, `Policy::title_page`). Perl reads no title page
+//! (latex_constructs.pool.ltxml:1099-1113).
 
 use std::cell::{Cell, RefCell};
 

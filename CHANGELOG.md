@@ -7,7 +7,8 @@
     `\maketitle` came out after the title, the authors and the abstract; it now stays ahead of
     them, as the PDF prints it, wherever the class's title page prints the title at
     `\maketitle`. A class that prints the title and the authors where they are set (iopart)
-    keeps its order: text between them and `\maketitle` still follows them. Guard
+    keeps its order: text between them and `\maketitle` still follows them, and so does a
+    leftover mark that prints no word (a stray `]`, an affiliation mark `*1`). Guard
     `perfect_kernel_batch56::text_before_maketitle_stays_before_the_title`
     (OXIDIZED_DESIGN_DIVERGENCES #262).
   - **A class's title page reads the date or the title as a number** (DEPN, Bruce Miller's

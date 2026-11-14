@@ -1159,7 +1159,9 @@ pub fn wrap_text_before_title(document: &mut Document, lead: TextBeforeTitle) ->
     .filter(|k| k.get_parent().as_ref() == Some(&root))
     .take_while(|k| !is_ancestor_or_self(k, &point))
     .collect();
-  if run.iter().all(node_is_content_free) {
+  // (a run printing no word, a graphic or a rule keeps the base placement: a mark left of an author line, `]` `*1`;
+  // 2209.03353, 0905.0312, 2305.09250, 2309.09081, revQAB4b)
+  if !run.iter().any(prints_a_word_or_ink) {
     return Ok(());
   }
   let mut titlepage = wrap_as_titlepage(document, &root, &run)?;
@@ -1168,6 +1170,24 @@ pub fn wrap_text_before_title(document: &mut Document, lead: TextBeforeTitle) ->
   let mut title_block = lead.title_block;
   title_block.add_prev_sibling(&mut titlepage)?;
   Ok(())
+}
+
+/// Does `node` print a content word (the title-page check's, [`net_content_words`]) or ink of an element of its own (a
+/// childless element besides an empty paragraph or a `<break/>`: a graphic, a rule)?
+fn prints_a_word_or_ink(node: &Node) -> bool {
+  fn ink(node: &Node) -> bool {
+    node.get_child_nodes().iter().any(|c| {
+      c.get_type() == Some(NodeType::ElementNode)
+        && if c.get_first_child().is_none() {
+          !with(document::get_node_qname(c), |q| {
+            matches!(q, "ltx:break" | "ltx:p" | "ltx:para")
+          })
+        } else {
+          ink(c)
+        }
+    })
+  }
+  !net_content_words(&node.get_content()).is_empty() || ink(node)
 }
 
 /// True when `node` is `inner` or one of its ancestors.

@@ -1277,9 +1277,10 @@ pub(crate) fn load() -> Result<()> {
   // `\@maketitle`, or a `\let` copy of it, runs as written around it (TP1, OXIDIZED_DESIGN_DIVERGENCES #953).
   DefMacro!("\\lx@kernel@maketitle", "");
   DefMacro!("\\@maketitle", "\\lx@kernel@maketitle");
-  // The title-page reading's marks (`title_page_reading`), each printing nothing: where `\@title` and `\@author` begin, where what a
-  // document appended to `\@author` begins and ends (read where they stand, by their definitions: [`title_page_mark`]); the
-  // `\and` family where `\@author` prints, and article.cls's stand-in running, noted as they are digested.
+  // The title-page reading's marks (`title_page_reading`), each printing nothing: where `\@title` and `\@author`
+  // begin, where what a document appended to `\@author` begins and ends (read where they stand, by their definitions:
+  // [`title_page_mark`]); the `\and` family where `\@author` prints, and article.cls's stand-in running, noted as they
+  // are digested.
   DefConstructor!("\\lx@title@page@title", "");
   DefConstructor!("\\lx@title@page@author", "");
   DefConstructor!("\\lx@title@page@tail", "");

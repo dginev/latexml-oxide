@@ -10169,11 +10169,17 @@ preceded `\maketitle`" and, like #903's `ltx_titlepage_continued`, stands for no
 template still shows the title and creators beside it, and every engine reader of "a titlepage replacing the title"
 excludes both (`title_standing_titlepage`: `settle_cover_title_ink`, `lift_marked_field_ink`,
 `maybe_dedup_leading_title_ink`). Not wrapped: blank lines and `\vspace` (content-free), preamble residue (and the
-body words that share its paragraph, as in TeX), the paragraph holding a boxed `\maketitle`, and whatever follows the
-first section, TOC or float. A `{titlepage}` or `\section` flush before `\maketitle` places the frontmatter first,
-and the text before `\maketitle` still follows the title (RED `text_before_maketitle_after_an_earlier_flush_red`).
-Guard `perfect_kernel_batch56::text_before_maketitle_stays_before_the_title` (the setter-printing raw class, the
-iopart binding, the `\maketitle`-printing control); golden revtex4_endpage.
+body words that share its paragraph, as in TeX), the paragraph holding a boxed `\maketitle`, whatever follows the
+first section, TOC or float, and a run printing no word (`net_content_words`), graphic or rule: a mark a class left of
+an author line (`]`, `,`, `*1`, `1`: 2209.03353, 0905.0312, 2305.09250, 2309.09081, 2407.04435, 2409.17131, 2506.23765)
+keeps the base placement, though pdflatex prints it first. A `{titlepage}` or `\section` flush before `\maketitle`
+places the frontmatter first, and the text before `\maketitle` still follows the title (RED
+`text_before_maketitle_after_an_earlier_flush_red`). The decision reads the `\@title`/`\@author` marks, one answer for
+the whole block, not the printed title's words per field: REDs `text_before_maketitle_where_a_class_prints_its_own_title_store_red`
+(a class's own `\my@title` printed at `\maketitle`: not wrapped) and
+`text_before_maketitle_where_title_and_authors_print_apart_red` (the title at `\title`, the authors at `\maketitle`:
+wrapped above both). Guard `perfect_kernel_batch56::text_before_maketitle_stays_before_the_title` (the setter-printing
+raw class, the iopart binding, the `\maketitle`-printing control, the word-less run); golden revtex4_endpage.
 
 ### 263. `\unwind@titlepage` re-homes what it unwraps through the content model (Perl: children spliced in place)
 
