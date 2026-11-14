@@ -1,6 +1,6 @@
 //! Red/green guards for perfect-kernel phase-58 batches: the reledmac and floatrow kernel roots
 //! (58a) found in the 57cp review.
-use latexml::util::test::{assert_element, check_requirements, loads};
+use latexml::util::test::{assert_element, check_requirements, kpse_text, loads};
 
 use super::{
   perfect_kernel_batch46::{error_count, warning_count},
@@ -1501,13 +1501,9 @@ fn today_follows_the_babel_language() {
   let tex = include_str!(
     "../../../tools/perfect_kernel/repros/babel-lang/today_follows_the_babel_language.tex"
   );
-  let kpsewhich = std::env::var("KPSEWHICH").unwrap_or_else(|_| "kpsewhich".to_string());
-  let warns_1901 = std::process::Command::new(kpsewhich)
-    .arg("babel-german.tex")
-    .output()
-    .ok()
-    .and_then(|out| std::fs::read_to_string(String::from_utf8_lossy(&out.stdout).trim()).ok())
-    .is_some_and(|ini| ini.contains(r"\PackageWarning"));
+  // The 1901 notice is in babel 25.x's `babel-german.tex`, not 26.16's; no such file means no warning, as in pdflatex.
+  let warns_1901 = kpse_text("babel-german.tex")
+    .is_some_and(|ini| ini.contains("The name 'german' with the 'ldf' mechanism is"));
   let warning: &[&str] = if warns_1901 {
     &["The name 'german' with the 'ldf' mechanism is"]
   } else {
