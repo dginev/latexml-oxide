@@ -2635,11 +2635,11 @@ mod browser_render_aligned_math_spacing {
 
     let v: serde_json::Value = serde_json::from_str(stdout.trim()).expect("parse JSON");
     let cells = v["cells"].as_array().expect("cells array");
-    // The `aligned` has 2 rows x 2 columns → 4 native alignment cells.
+    // Two `aligned`s (the reporter's, and #848's `\jot` one), each 2 rows x 2 columns → 8 native alignment cells.
     assert_eq!(
       cells.len(),
-      4,
-      "expected 4 aligned <mtd> cells, got {}: {stdout}",
+      8,
+      "expected 8 aligned <mtd> cells, got {}: {stdout}",
       cells.len()
     );
     // The FIX: the browser's default 0.4em (6.4px) mtd padding is reset to 0 on
