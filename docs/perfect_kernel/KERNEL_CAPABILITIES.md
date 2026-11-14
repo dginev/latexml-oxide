@@ -646,7 +646,8 @@ one-character mailto links, 63w4's orcid slot), it flags each. **Risk:** LOW (to
   Regression flags include lost text by element class (single characters and inter-word spaces kept), lost
   elements per qname, creator/contact loss in the frontmatter tuples, `geometry-collapsed`, `leaked-dimension`;
   review flags include `attrs-changed:<qname@attr>`, `space-lost`, `moved-text`, `text-jitter`, `gained-number`.
-- `tools/perfect_kernel/next_entry_numbers.sh [--renumber report.md]` prints the next free OD/KPE numbers and maps
-  `OD #NEWk`/`KPE #NEWk` placeholders at integration, refusing a report with leftover placeholders.
+- `tools/perfect_kernel/next_entry_numbers.sh [--renumber report.md] [--local-only]` prints the next free OD/KPE numbers
+  over the working tree and every open PR's head (the numbers each PR holds, and `CLASH` for a number two branches
+  define), and maps `OD #NEWk`/`KPE #NEWk` placeholders at integration, refusing a report with leftover placeholders.
 Measured: `audit` ≈ 3,400 docs/s and `compare` ≈ 2,400 pairs/s at `-j 16`; s147 → s148 = 73 regression / 7 review /
 43 change / 2,251 identical, every sampled regression genuine. Report: `agent_reports/2026-10-11_payload_p0.md`.
