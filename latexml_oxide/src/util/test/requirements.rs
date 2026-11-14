@@ -11,16 +11,27 @@ use latexml_core::util::pathname;
 #[derive(Debug, Clone, Copy, Default)]
 pub struct Requirements<'a> {
   /// Files found through the engine's own kpathsea lookup, else a find from the working directory.
-  pub packages:    &'a [&'a str],
+  pub packages:       &'a [&'a str],
   /// Programs found on `PATH`.
-  pub programs:    &'a [&'a str],
+  pub programs:       &'a [&'a str],
   /// The minimal TeX Live year (0: any); the host year is `LATEXML_TEST_TEXLIVE` or the engine's detected year.
-  pub texlive_min: u32,
+  pub texlive_min:    u32,
   /// An environment variable that must be set (Perl's CI-only tests, `env => 'CI'`).
-  pub env:         Option<&'a str>,
+  pub env:            Option<&'a str>,
   /// A latex kernel dump on disk ([`super::dump_available`]): without one the engine raw-loads the kernel and the
   /// error landscape is the raw load's, not the test's.
-  pub format_dump: bool,
+  pub format_dump:    bool,
+  /// The fixture's golden for a newer package ([`GoldenVariant`]).
+  pub golden_variant: Option<GoldenVariant<'a>>,
+}
+
+/// A fixture's golden `<name>.<variant>.xml`, compared instead of `<name>.xml` where the installed `file`'s text
+/// satisfies `applies`: a package release whose output really changed (pdflatex agrees), not a code divergence.
+#[derive(Debug, Clone, Copy)]
+pub struct GoldenVariant<'a> {
+  pub variant: &'a str,
+  pub file:    &'a str,
+  pub applies: fn(&str) -> bool,
 }
 
 impl<'a> Requirements<'a> {
@@ -32,6 +43,7 @@ impl<'a> Requirements<'a> {
       texlive_min: 0,
       env: None,
       format_dump: false,
+      golden_variant: None,
     }
   }
   /// Also require the programs `programs` on `PATH`.
@@ -42,6 +54,18 @@ impl<'a> Requirements<'a> {
   pub const fn env(self, var: &'a str) -> Self { Requirements { env: Some(var), ..self } }
   /// Also require a latex kernel dump on disk.
   pub const fn format_dump(self) -> Self { Requirements { format_dump: true, ..self } }
+  /// Compare the golden `<name>.<variant>.xml` where the installed `file`'s text satisfies `applies`.
+  pub const fn golden_variant(
+    self,
+    variant: &'a str,
+    file: &'a str,
+    applies: fn(&str) -> bool,
+  ) -> Self {
+    Requirements {
+      golden_variant: Some(GoldenVariant { variant, file, applies }),
+      ..self
+    }
+  }
 
   /// Why `test` cannot run here, in Perl's words; `None` when every requirement is met. Perl's order: the packages,
   /// (the programs,) then `texlive_min`, then `env`.
@@ -259,6 +283,17 @@ pub fn current_test_name() -> String {
 /// The fixture harness's table: Perl's `requires => {name => …, '*' => …}`, a test's own key and `'*'` (every
 /// test of the directory).
 pub type RequirementTable = [(&'static str, Requirements<'static>)];
+
+/// The golden variant fixture `name` of `table` compares here ([`Requirements::golden_variant`]), if any.
+pub fn golden_variant(name: &str, table: Option<&RequirementTable>) -> Option<&'static str> {
+  table
+    .into_iter()
+    .flatten()
+    .filter(|(key, _)| *key == "*" || *key == name)
+    .filter_map(|(_, reqs)| reqs.golden_variant)
+    .find(|golden| super::kpse_text(golden.file).is_some_and(|text| (golden.applies)(&text)))
+    .map(|golden| golden.variant)
+}
 
 /// Perl's `check_requirements($test, 1, $$requires{'*'}, $$requires{$name})` for fixture `name` of `dirpath`.
 pub fn check_table(dirpath: &str, name: &str, table: Option<&RequirementTable>) -> bool {

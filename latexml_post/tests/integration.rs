@@ -151,22 +151,24 @@ fn test_namespace_registration() {
   );
 }
 
-/// True if a vector-SVG converter (`mutool` or `pdftocairo`) is on PATH.
-/// The Graphics vector-SVG path tries mutool first, then pdftocairo; if
-/// neither is installed the path can't fire and these tests self-skip.
-///
-/// Presence is detected by whether the binary *spawns* (`output().is_ok()`),
-/// NOT by exit status: unlike inkscape, `mutool`/`pdftocairo` exit non-zero
-/// on `--version` (unknown/usage), so a `status.success()` gate would
-/// silently skip even when the tool is installed — a false-negative that
-/// would mask the coverage entirely.
-fn svg_converter_available() -> bool {
-  ["mutool", "pdftocairo"].iter().any(|tool| {
+/// Whether a vector-SVG converter (`mutool`, then `pdftocairo`) spawns. Without one the test
+/// prints a visible SKIP, or fails where `LATEXML_SVG_TESTS` is set (CI installs both).
+fn svg_converter_or_skip(test: &str) -> bool {
+  // Spawning is the signal, not the exit status: both tools exit non-zero on `--version`.
+  let found = ["mutool", "pdftocairo"].iter().any(|tool| {
     std::process::Command::new(tool)
       .arg("--version")
       .output()
       .is_ok()
-  })
+  });
+  if !found {
+    assert!(
+      std::env::var_os("LATEXML_SVG_TESTS").is_none(),
+      "LATEXML_SVG_TESTS is set but neither mutool nor pdftocairo is on PATH ({test})"
+    );
+    eprintln!("SKIP {test}: neither mutool nor pdftocairo on PATH");
+  }
+  found
 }
 
 /// Regression test for the vector-SVG graphics path (opt-in via
@@ -176,20 +178,13 @@ fn svg_converter_available() -> bool {
 /// vector-SVG converters (mutool → pdftocairo) that preserve vectors
 /// rather than rasterizing via ImageMagick.
 ///
-/// Test behaviour:
-/// - If no vector converter (mutool/pdftocairo) is on PATH, the test exits silently. This keeps the
-///   suite green on minimal runners; CI installs poppler/mupdf so the branch is covered on GH Actions.
-/// - Otherwise, exercise the Graphics processor with `svg_threshold_kb = 200` and assert the output
-///   is a real SVG file.
+/// Exercises the Graphics processor with `svg_threshold_kb = 200` and asserts the output is a real
+/// SVG file. Skipped visibly where neither converter is on PATH.
 #[test]
 fn test_vector_svg_graphics_path() {
-  if !svg_converter_available() {
-    eprintln!(
-      "no vector-SVG converter (mutool/pdftocairo) on PATH; skipping vector-SVG regression test"
-    );
+  if !svg_converter_or_skip("test_vector_svg_graphics_path") {
     return;
   }
-
   let fixture = concat!(
     env!("CARGO_MANIFEST_DIR"),
     "/tests/fixtures/cifar10_vector.pdf"
@@ -260,16 +255,12 @@ fn test_vector_svg_graphics_path() {
 ///
 /// This test asserts the vector-SVG path *completes* fast (doesn't time
 /// out) and does NOT exercise the slow convert path (would blow the suite
-/// runtime). Silent skip if no vector converter is installed.
+/// runtime). Skipped visibly where no vector converter is installed.
 #[test]
 fn test_vector_svg_pathological_convert_case() {
-  if !svg_converter_available() {
-    eprintln!(
-      "no vector-SVG converter (mutool/pdftocairo) on PATH; skipping pathological-PDF regression test"
-    );
+  if !svg_converter_or_skip("test_vector_svg_pathological_convert_case") {
     return;
   }
-
   let fixture = concat!(
     env!("CARGO_MANIFEST_DIR"),
     "/tests/fixtures/pathological_vector.pdf"

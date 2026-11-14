@@ -1,0 +1,12 @@
+% witness: synthetic (revWIN1gh's rasti probe: a paper shipping TeX Live 2026's rasti.cls with an extra command)
+% oracle:  pdflatex 0 errors ("Hello EXTRAWORD.") on TL 2025 and TL 2026 — TeX reads the document's directory first
+% engines: rust WIN1gh 7af00f424b8 on TL 2026, cwd outside the source dir = 1 error (\myextra undefined: kpsewhich
+%          found the tree's rasti.cls, so the binding stood in for no file and the copy was never read); Perl never
+%          reads the copy (Package.pm:2113-2133 prefers the .ltxml)
+% expect:  0 errors, 0 warnings; "Hello EXTRAWORD." on every TeX Live
+% status:  RED (WIN1gh on TL 2026) -> GREEN (WIN1ghF)
+% preload: ar5iv.sty
+\documentclass{rasti}
+\begin{document}
+Hello \myextra.
+\end{document}

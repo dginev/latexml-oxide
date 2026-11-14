@@ -1031,12 +1031,22 @@ pub fn def_math_constructor(
     cs
   };
   if options.reversion.is_none() && nargs == 0 && options.alias.is_none() {
-    if options.revert_as.is_none()
-      || options.revert_as == Some(Cow::Borrowed("content"))
-      || options.revert_as == Some(Cow::Borrowed("context"))
-    {
-      // TODO :&& (($LaTeXML::DUAL_BRANCH || 'content') eq 'content'))
+    if options.revert_as.is_none() || options.revert_as == Some(Cow::Borrowed("content")) {
       options.reversion = Some(Reversion::Tokens(Tokens!(cs)));
+    } else if options.revert_as == Some(Cow::Borrowed("context")) {
+      // Perl decides at reversion time,
+      //   ($LaTeXML::DUAL_BRANCH || 'content') eq 'content' ? $cs : $presentation
+      // so that the `tex` attribute of ltx:Math (presentation branch) gets the
+      // presentation and `content-tex` (content branch) the user's CS.
+      let content_toks = Tokens!(cs);
+      let presentation_toks = Tokens::new(Explode!(presentation));
+      options.reversion = Some(Reversion::Closure(Rc::new(move |_whatsit, _args| {
+        Ok(if get_dual_branch().unwrap_or("content") == "content" {
+          content_toks.clone()
+        } else {
+          presentation_toks.clone()
+        })
+      })));
     } else {
       // TODO: This differs from the Perl, where `presentation` comes in as Tokens
       //       we have it come in as a `String`,

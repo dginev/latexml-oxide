@@ -9,7 +9,7 @@
 //! test of a known xcolor model (`xcolor_sty.rs`), a `<titlepage>` for a later late abstract's cover line
 //! (`cover_order.rs`), `\selectfont` out of `\nullfont` (`sect13.rs`), a template's own text in `typesets_content`
 //! (`util_text.rs`), multibib's style (`multibib_sty.rs`), and ijsra's slots and abstract (`ijsra_cls.rs`).
-use latexml::util::test::{check_requirements, convert_with, rng_error_count};
+use latexml::util::test::{check_requirements, convert_with, kpse_text, rng_error_count, skip};
 
 use super::{
   perfect_kernel_batch46::{error_count, warning_count},
@@ -150,19 +150,52 @@ fn a_tblr_in_a_p_cell_reads_its_tab_marks_safely() {
   assert!(xml.contains("<p>After.</p>"), "{xml}");
 }
 
-/// C3: the latex-lab block binding declares the file's `block` instances: keytheorems edits `theoremblock-0` and
-/// `listblock-1` for a theorem with margins (keytheorems-doc's 4 errors).
+/// C3: the latex-lab block binding declares what the installed block.sty declares. keytheorems edits `theoremblock-0` and
+/// `listblock-1` for a theorem with margins on TL 2025's block code (keytheorems-doc's 4 errors), and `thm-<style>-1`
+/// and `std-list-1` on the November 2026 one (`thmstyle`, keytheorems.sty:3828-3850). The other version's instance names
+/// err as pdflatex does on this TL (each error an unknown-instance one; how many follows the latex-lab release). A `style=`
+/// key's theorem takes its style on both.
 #[test]
 fn the_block_instances_of_the_file_are_declared() {
-  let (log, xml) = converted(manual_repro!(
-    "package-bindings/keytheorems_block_instances_are_the_files.tex"
-  ));
+  let november = kpse_text("latex-lab-testphase-block.sty")
+    .is_some_and(|text| text.contains(r"\NewTemplateType{thmstyle}"));
+  let tl2025 = manual_repro!("package-bindings/keytheorems_block_instances_are_the_files.tex");
+  let tl2026 = manual_repro!("package-bindings/keytheorems_on_the_november_block_code.tex");
+  let (own, other) = if november {
+    (tl2026, tl2025)
+  } else {
+    (tl2025, tl2026)
+  };
+  let (log, xml) = converted(own);
   assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  let xml = plain(&xml);
   assert!(
-    plain(&xml).contains(
+    xml.contains(
       r#"<para><p><text font="italic">There are infinitely many primes.</text></p></para></theorem>"#
     ),
     "{xml}"
+  );
+  // `style=definition`: keytheorems passes `\theoremstyle` its unexpanded key variable
+  assert!(
+    xml.contains(
+      r#"<title class="ltx_runin"><tag><text font="bold">Lemma 1</text></tag><text font="bold">.</text></title><para><p>Every prime is odd or two.</p></para></theorem>"#
+    ),
+    "{xml}"
+  );
+  assert!(
+    !november
+      || xml.contains(
+        r#"<title class="ltx_runin"><tag><text font="italic">Note 1</text></tag><text font="italic">.</text></title><para><p>Two is even.</p></para></theorem>"#
+      ),
+    "{xml}"
+  );
+  let (log, _) = converted(other);
+  let errors = error_count(&log);
+  assert!(errors > 0 && warning_count(&log) == 0, "{log}");
+  assert_eq!(
+    log.matches("LaTeX template Error: The instance '").count(),
+    errors,
+    "{log}"
   );
 }
 
@@ -410,6 +443,14 @@ fn the_ijsra_abstract_is_semantic() {
   assert!(log.contains(r"\endlx@list"), "{log}");
   assert!(!xml.contains("the abstract text"), "{xml}");
   if !check_requirements(&["ijsra.cls"]) {
+    return;
+  }
+  // ijsra.cls:296 calls KOMA's `\ifstr`, which KOMA-Script 3.50 (TL 2026) dropped from scrbase.sty: the class fails in TeX too.
+  if !kpse_text("scrbase.sty").is_some_and(|sty| sty.contains(r"\providecommand*{\ifstr}")) {
+    skip(
+      "the_ijsra_abstract_is_semantic",
+      "this KOMA-Script has no \\ifstr, which ijsra.cls needs",
+    );
     return;
   }
   let (log, xml) = cli_conversion(
