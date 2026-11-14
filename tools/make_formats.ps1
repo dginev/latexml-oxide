@@ -37,7 +37,9 @@ switch ($BuildProfile) {
 Write-Host "[make_formats] building latexml_oxide ($BuildProfile)..."
 cargo build @CargoFlags --bin latexml_oxide
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-$Bin = Join-Path "target\$BuildProfile" 'latexml_oxide.exe'
+# Honour CARGO_TARGET_DIR, as the .sh does.
+$TargetDir = if ($env:CARGO_TARGET_DIR) { $env:CARGO_TARGET_DIR } else { 'target' }
+$Bin = Join-Path (Join-Path $TargetDir $BuildProfile) 'latexml_oxide.exe'
 
 # TL-year detection, mirroring the .sh (and the runtime's
 # dump_paths::detect_ambient_texlive_year two-step strategy):
@@ -64,13 +66,46 @@ if (-not $TlYear) {
   exit 3
 }
 
+# Pin the binary's kpathsea to the SAME TeX Live the year was detected from
+# (the .sh's dual-TL guard: a linked libkpathsea anchors on its compile-time
+# tree, so a host with two TeX distributions could otherwise detect one year
+# and raw-load latex.ltx / expl3-code.tex from the other tree).
+$TlRoot = cmd /c "kpsewhich -var-value=SELFAUTOPARENT 2>nul"
+if ($TlRoot) {
+  $TlRoot = "$TlRoot".Trim()
+  if (Test-Path (Join-Path $TlRoot 'texmf-dist') -PathType Container) {
+    $env:TEXMFROOT = $TlRoot
+    $env:TEXMFDIST = "$TlRoot/texmf-dist"
+    $env:TEXMFCNF = "$TlRoot/texmf-dist/web2c"
+    Write-Host "[make_formats] pinned TEXMFROOT=$TlRoot (dual-TL guard)"
+  }
+}
+
+# The .sh's run_init: the --init run is gated on ZERO `Error:`/`Fatal:` lines
+# (LATEXML_INIT_DEBUG=1 keeps them visible; without it init suppresses them,
+# so a broken dump would pass silently). A non-zero exit fails too.
+function Invoke-Init([string]$Init) {
+  $Log = [System.IO.Path]::GetTempFileName()
+  $env:LATEXML_INIT_DEBUG = '1'
+  cmd /c "`"$Bin`" --init=$Init > `"$Log`" 2>&1"
+  $Status = $LASTEXITCODE
+  Remove-Item Env:LATEXML_INIT_DEBUG
+  $Bad = @(Get-Content -LiteralPath $Log -Encoding UTF8 |
+    ForEach-Object { $_ -replace "$([char]27)\[[0-9;]*m", '' } |
+    Where-Object { $_ -match '^(Error|Fatal):' })
+  Remove-Item -LiteralPath $Log
+  if ($Status -ne 0 -or $Bad.Count -ne 0) {
+    Write-Host "[make_formats] --init=${Init}: exit=$Status errors=$($Bad.Count)"
+    $Bad | Select-Object -First 20 | ForEach-Object { Write-Host $_ }
+    exit 4
+  }
+}
+
 Write-Host "[make_formats] generating plain.$TlYear.dump.txt (--init=plain.tex)..."
-& $Bin --init=plain.tex
-if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+Invoke-Init 'plain.tex'
 
 Write-Host "[make_formats] generating latex.$TlYear.dump.txt (--init=latex.ltx)..."
-& $Bin --init=latex.ltx
-if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+Invoke-Init 'latex.ltx'
 
 if ($env:LATEXML_DUMP_DIR) {
   New-Item -ItemType Directory -Force $env:LATEXML_DUMP_DIR | Out-Null

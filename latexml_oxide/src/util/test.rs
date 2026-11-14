@@ -8,8 +8,9 @@ use crate::core_interface::DigestionAPI;
 
 mod requirements;
 pub use requirements::{
-  JING, RequirementTable, Requirements, check_all_requirements, check_requirements, check_table,
-  current_test_name, file_available, fixtures, loads, skip, skip_log_path, texlive_version,
+  GoldenVariant, JING, RequirementTable, Requirements, check_all_requirements, check_requirements,
+  check_table, current_test_name, file_available, fixtures, loads, skip, skip_log_path,
+  texlive_version,
 };
 
 // Process-once cached env vars (see WISDOM #56 — getenv hot-path race).
@@ -282,28 +283,6 @@ pub fn latexml_test_single(
   if !check_table(dirpath, name, requires) {
     return;
   }
-  // Platform-skipped golden fixtures: kept live (and compared) on the
-  // platforms whose TeX distribution matches the committed golden, but
-  // skipped where an UNPINNABLE upstream package version differs. This is
-  // a Linux↔Windows portability difference, not a code divergence — the
-  // engine faithfully renders whatever the package emits. See SYNC_STATUS.md.
-  #[cfg(windows)]
-  {
-    // circuitikz ≥ 1.8.0 lengthens drawn capacitor plates (12.4 → 12.68 in
-    // our SVG space). The Windows TeX (setup-texlive net-install / a fresh
-    // `install-tl`) ships the NEWEST circuitikz; Linux/macOS apt/brew ship
-    // an older one that matches the golden. circuitikz can't be version-
-    // pinned in the fixture (Perl/Rust both version-strip the request), so
-    // skip on Windows only; Linux + macOS still run and compare it.
-    const WINDOWS_GOLDEN_SKIP: &[&str] = &["ac-drive-components"];
-    if WINDOWS_GOLDEN_SKIP.contains(&name) {
-      eprintln!(
-        "SKIP (Windows): {name} — circuitikz-version-nondeterministic golden; \
-         kept live on Linux/macOS. See docs/SYNC_STATUS.md."
-      );
-      return;
-    }
-  }
   // Suppress log output for any test expected to emit errors (both categories)
   // so single-test runs stay readable; the gate still counts + classifies them.
   let suppress = INTENTIONALLY_FAILING.iter().any(|(n, ..)| *n == name)
@@ -313,7 +292,21 @@ pub fn latexml_test_single(
   }
   let tex_file = PathBuf::from(tex_file_str);
   let xml_file = tex_file.with_extension("xml");
-  if matches!(xml_file.try_exists(), Ok(true)) {
+  // (a newer package's golden, where the installed file is that release: `Requirements::golden_variant`)
+  let variant = requirements::golden_variant(name, requires);
+  let xml_file = match variant {
+    Some(variant) => {
+      let variant_file = tex_file.with_extension(format!("{variant}.xml"));
+      assert!(
+        *BLESS || variant_file.is_file(),
+        "{name}: no golden {} for the installed package",
+        variant_file.display()
+      );
+      variant_file
+    },
+    None => xml_file,
+  };
+  if variant.is_some() || matches!(xml_file.try_exists(), Ok(true)) {
     latexml_ok_internal(
       tex_file_str,
       &xml_file.to_string_lossy(),
@@ -1292,10 +1285,13 @@ fn assert_fixtures_not_shadowed(fixtures: &[String], log: &str) {
 }
 
 /// Count of lines carrying a `Warning:<category>:` diagnostic anywhere in the line (WISDOM 85: a diagnostic can
-/// follow other output on the same line), whatever its category spells.
+/// follow other output on the same line), whatever its category spells. A package's own notice that it is obsolete
+/// (aliascnt v1.7 on a 2026-06+ kernel, as pdflatex prints it) follows the installed TeX Live, not the document, so it
+/// is not counted: a guard's count then holds on every TeX Live (portable tests, DG 2026-11-13).
 pub fn warning_count(log: &str) -> usize {
   log
     .lines()
+    .filter(|line| !line.contains("Warning: The package is obsolete."))
     .filter(|line| {
       line.match_indices("Warning:").any(|(i, _)| {
         let tail = &line.as_bytes()[i + 8..];

@@ -2478,13 +2478,14 @@ fn hphantom_in_plain_tex_loads_no_latex() {
 /// stops (siunitx.sty:5641-5664) — the rest of the cell runs as it comes. csvsimple ends every row's command with one
 /// (csvsimple-legacy.sty:289-293 `\csv@body\relax`); the binding read the cell on with expansion, unrolling csvsimple's
 /// next-line loop without end — its `\read` never ran (2108.13640, `PushbackLimit`; Perl reads alike, KPE #474).
-/// pdflatex: the three rows IN 5.1 / PV 4.4 / MEAN 9.6. Under the production preload, as the witness.
+/// pdflatex: the three rows IN 5.1 / PV 4.4 / MEAN 9.6. Under the production preload, as the witness. `[legacy]`, the
+/// default of the witness's csvsimple 2.x: under 3.0's default l3 (TL 2026) pdflatex itself exhausts its main memory.
 #[test]
 fn csvsimple_rows_in_a_siunitx_column_end_at_the_relax() {
   let (log, xml) = convert_files_with(
     r"\documentclass{article}
 \usepackage{siunitx}
-\usepackage{csvsimple}
+\usepackage[legacy]{csvsimple}
 \def\imagenet{IN}\def\pvpower{PV}\def\mean{MEAN}
 \begin{document}
 \csvloop{file=summary.csv, head to column names=false,

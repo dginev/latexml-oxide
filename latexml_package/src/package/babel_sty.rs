@@ -175,6 +175,9 @@ LoadDefinitions!({
     def_macro(T_CS!("\\bbl@main@language"), None,
       Tokens!(Explode!(lang.clone())),
       Some(ExpandableOptions { scope: Some(Scope::Global), ..ExpandableOptions::default() }))?;
+    // babel.sty `\main@language` (TL 2025 :1140, 26.16 :1190) `\let\mainlocalename\bbl@main@language`;
+    // our `.ldf` bindings never run it, and babel 26.16's begindocument/end info (:4492) reads it.
+    Let!("\\mainlocalename", "\\bbl@main@language", Scope::Global);
     // babel.sty L1136-1142 (\main@language) → L828 (\bbl@patterns):
     // real babel assigns `\language=\l@<main>` DURING package load, so a
     // preamble `\iflanguage{english}{..}{..}` under `[italian]` takes the

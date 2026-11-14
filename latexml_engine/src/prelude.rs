@@ -173,6 +173,35 @@ pub fn counter_is_defined(name: &str) -> bool {
   lookup_register_definition(&T_CS!(s!("\\c@{name}"))).is_some()
 }
 
+/// A raw-loaded package's macro `cs` with every `from` token of its body `to` (a binding's patch of the package's own
+/// code, held to the version that has it): false, nothing changed, where `cs` is no token-bodied macro or lacks `from`.
+pub fn substitute_in_macro(cs: &str, from: &str, to: &str) -> Result<bool> {
+  let cs = T_CS!(cs);
+  let Some(Stored::Expandable(macro_)) = lookup_definition_stored(&cs)? else {
+    return Ok(false);
+  };
+  let Some(ExpansionBody::Tokens(body)) = macro_.get_expansion() else {
+    return Ok(false);
+  };
+  let (from, to) = (T_CS!(from), T_CS!(to));
+  if !body.unlist_ref().contains(&from) {
+    return Ok(false);
+  }
+  let tokens = body
+    .unlist_ref()
+    .iter()
+    .map(|t| if *t == from { to } else { *t })
+    .collect();
+  // (the same definition — its flags, origin and locator — with the new body, in the scope it was made in)
+  let mut patched = (*macro_).clone();
+  patched.expansion = Some(ExpansionBody::Tokens(Tokens::new(tokens)));
+  patched.plan = Default::default();
+  patched.stored = Default::default();
+  let scope = (!meaning_is_group_local(&cs)).then_some(Scope::Global);
+  install_definition(Stored::Expandable(Rc::new(patched)), scope);
+  Ok(true)
+}
+
 /// Empty-body `DefMacro!("\\cs[opt-spec]", "")` stub via runtime call.
 pub fn def_macro_noop(proto: &str) -> Result<()> {
   let (cs_tok, params) = parse_prototype(proto, true)?;
