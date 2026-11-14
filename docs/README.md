@@ -40,6 +40,16 @@ The live worklists and the ship contract. Read these first when resuming.
 | [`perfect_kernel/README.md`](perfect_kernel/README.md) | **Perfect-kernel mission — COMPLETE** (goal met 2026-11-13, merged into main `6df4632fb1`; brief, goal bar and close status archived in [`archive/PERFECT_KERNEL_2026-11-13.md`](archive/PERFECT_KERNEL_2026-11-13.md); the live residual is `SYNC_STATUS.md` row R): raw-interpretation (`--preload=[rawstyles,rawclasses]latexml.sty`, no new bindings, no OmniBus) conversion of the ~2,400-manual TeX Live doc corpus; protocol + quality bars, with the living [ledger](perfect_kernel/LEDGER.md) (phases 56-58 in [`perfect_kernel/archive/`](perfect_kernel/archive/)), the goal bar and ranked path in [`archive/PERFECT_KERNEL_2026-11-13.md`](archive/PERFECT_KERNEL_2026-11-13.md#goal-bar-and-ranked-path-2026-10-02), [improvement-plans ledger](perfect_kernel/PLANS.md), [difficult-cases catalog](perfect_kernel/DIFFICULT_CASES.md), the [Lua rebinding strategy](perfect_kernel/LUA_REBINDING.md), the **[arXiv html_feedback subgoal](perfect_kernel/HTML_FEEDBACK.md)** (reader reports → problem classes verified on head → ranked rows HF1-HF13, user 2026-10-08), the [architecture-themes design brief](perfect_kernel/ARCHITECTURE_THEMES.md), the **[generalized kernel-capability program](perfect_kernel/KERNEL_CAPABILITIES.md)** (approved 2026-09-05: K1 provenance/overlay bindings, K2 nest vs save stack, K3 lthooks store, K4 templates/sockets, K5 raw-line reader, K6 font model, K7 file model, K8 runaway cap; K9–K18 added since: group codes, byte mouth, frontmatter stores, pTeX letters, binding conformance, typed parameters, the horizontal list, bibliography programs, the manual net, typed box sizes; K20–K24 added 2026-10-11 from the [capability-gaps study](perfect_kernel/KERNEL_CAPABILITY_GAPS_2026-10-11.md): gullet expansion fidelity, environments as TeX does them, binding provenance and ownership, the author-block event model, the audited A/B comparator). |
 | [`THERMALS.md`](THERMALS.md) | **Read before any parallel workload on the dev laptop** (the laptop budget; work since 2026-09-29 runs on the cortex host, whose cores split 0-63 sweeps / 64-127 gates) (sweeps, `cargo nextest`, oracle/validate runs): the CPU/memory budget (20 threads, 31 GB + 8 GB swap), the 2026-09-02 throttling incident (sweep + suite at once), `JOBS`/`-j` ceilings alone vs. combined, and the commands to check package temperature, throttle events and swap. |
 
+## 👤 Using and building latexml-oxide
+
+The user-facing guides behind the root [`README.md`](../README.md), which is the short entry point.
+
+| Doc | What it is |
+|-----|------------|
+| [`INSTALL.md`](INSTALL.md) | Installing: prebuilt binaries per platform (Ubuntu/Debian, macOS, Windows), Docker, the system dependencies, `cargo install`, use as a library. |
+| [`USAGE.md`](USAGE.md) | The two binaries, the output formats, running from a checkout. |
+| [`BUILDING.md`](BUILDING.md) | Building from source per platform, the format dumps, build profiles, development tips (hooks, test requirements and skips), Cargo features. |
+
 ## 🎯 Target 1 — faithful Perl translation (`parity/`)
 
 Strict parity at the dump/format boundary plus corpus-driven parity mining.

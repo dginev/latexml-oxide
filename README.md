@@ -30,8 +30,6 @@ The project is in active public **beta** as of July 2026, approaching mainline L
 **Try it first — no install: [latexml.rs/editor](https://latexml.rs/editor)** — type LaTeX,
 see the converted document live.
 
-Two binaries: `latexml_oxide` for documents, `latexmlmath_oxide` for a single formula.
-
 ```bash
 # A document → HTML5, with MathML for the math (format inferred from the extension)
 $ latexml_oxide paper.tex --destination=paper.html
@@ -40,283 +38,20 @@ $ latexml_oxide paper.tex --destination=paper.html
 $ latexmlmath_oxide 'a^2+b^2=c^2'
 ```
 
-`--format` takes `html5`, `html`, `xhtml`, `xml`, or `epub` (a zipped EPUB 3) — inferred from the
-`--destination` extension when omitted. `--help` lists every option.
-Working from a checkout instead of an installed binary? Prefix with
-`cargo run --bin latexml_oxide --`.
+More in [docs/USAGE.md](docs/USAGE.md); `--help` lists every option.
 
-## Install (prebuilt binaries)
+## Install
 
-The [Releases page](https://github.com/dginev/latexml-oxide/releases) has prebuilt binaries for Linux, macOS and Windows,
-each a single, fully self-contained executable.
+Prebuilt, self-contained binaries for Linux, macOS and Windows are on the
+[Releases page](https://github.com/dginev/latexml-oxide/releases); Homebrew, a `.deb`, Docker and
+`cargo install latexml` work too. A TeX installation (TeX Live or MiKTeX) is needed at runtime.
+Per-platform steps and the system dependencies: [docs/INSTALL.md](docs/INSTALL.md).
 
-You still need a working TeX installation, **TeX Live or MiKTeX**, at runtime, to resolve TeX packages, classes and fonts.
-A few external tools are called as subprocesses, mainly to convert graphics files.
-The binaries embed TeX format dumps for the TeX Live releases they were built with; with any
-other TeX tree (a Linux distribution's TeX Live, or one updated since), the first conversion
-builds the formats once (about 10 s) into a per-user cache.
+## Extending: runtime bindings (Rhai)
 
-The steps below use a version variable — set it to the release you want:
-```
-$ VERSION=0.7.6
-```
-
-### Ubuntu / Debian
-
-The `.deb` declares its runtime apt dependencies (libraries + TeX Live + the graphics tools), so it is the easiest way in.
-Built on Ubuntu 22.04 (glibc 2.35), so it runs on Ubuntu 22.04+ and Debian 12+.
-
-```
-$ curl -LO https://github.com/dginev/latexml-oxide/releases/download/$VERSION/latexml-oxide_${VERSION}-1_amd64.deb
-$ sudo apt install ./latexml-oxide_${VERSION}-1_amd64.deb
-```
-
-If you prefer the portable tarball, the binary is statically linked against libxml2/libxslt/libkpathsea, so you only need the external tools + TeX Live:
-
-```
-$ curl -LO https://github.com/dginev/latexml-oxide/releases/download/$VERSION/latexml-oxide-$VERSION-x86_64-unknown-linux-gnu.tar.gz
-$ tar xzf latexml-oxide-$VERSION-x86_64-unknown-linux-gnu.tar.gz
-$ sudo cp latexml-oxide-$VERSION-x86_64-unknown-linux-gnu/latexml_oxide /usr/local/bin/
-$ sudo apt install imagemagick mupdf-tools poppler-utils ghostscript dvipng dvisvgm \
-                   texlive-latex-base texlive-latex-extra texlive-science
-```
-
-On **64-bit ARM** (AWS Graviton, Ampere, Raspberry Pi OS 64-bit) swap `amd64` → `arm64` in the `.deb` name
-and `x86_64-unknown-linux-gnu` → `aarch64-unknown-linux-gnu` in the tarball name; everything else is identical.
-
-### macOS (Apple Silicon / arm64 + Intel / x86_64)
-
-**Recommended — Homebrew.** Installs the right binary for your Mac, and pulls the graphics tools it needs:
-
-```
-$ brew install dginev/tap/latexml-oxide
-```
-
-You still need a TeX distribution (`brew info latexml-oxide` repeats this):
-
-```
-$ brew install texlive          # Homebrew's full TeX Live (~5 GB)
-# …or MacTeX / BasicTeX — https://tug.org/mactex/  (put /Library/TeX/texbin on PATH)
-```
-
-**Alternative — download the tarball directly.** Pick the one matching your Mac (`uname -m` prints `arm64` or `x86_64`):
-
-```
-# Apple Silicon
-$ curl -LO https://github.com/dginev/latexml-oxide/releases/download/$VERSION/latexml-oxide-$VERSION-aarch64-apple-darwin.tar.gz
-$ tar xzf latexml-oxide-$VERSION-aarch64-apple-darwin.tar.gz
-$ sudo cp latexml-oxide-$VERSION-aarch64-apple-darwin/latexml_oxide /usr/local/bin/
-
-# Intel (built with a macOS 10.13 deployment target, so it runs on older Intel Macs)
-$ curl -LO https://github.com/dginev/latexml-oxide/releases/download/$VERSION/latexml-oxide-$VERSION-x86_64-apple-darwin.tar.gz
-$ tar xzf latexml-oxide-$VERSION-x86_64-apple-darwin.tar.gz
-$ sudo cp latexml-oxide-$VERSION-x86_64-apple-darwin/latexml_oxide /usr/local/bin/
-
-$ brew install imagemagick mupdf-tools poppler ghostscript dvisvgm
-$ brew install texlive          # or install MacTeX / BasicTeX (provides dvipng)
-```
-
-The prebuilt binary links `libkpathsea` statically, so it finds your TeX files in-process on either
-Homebrew's `texlive` or MacTeX/BasicTeX — just make sure the TeX binaries are on `PATH`
-(`/Library/TeX/texbin` for MacTeX).
-
-> **Gatekeeper / "unidentified developer" (tarball, browser downloads).**
-> The `curl` + `tar xzf` install above is warning-free: terminal downloads and command-line `tar`
-> don't set macOS's `com.apple.quarantine` flag. But if you download the tarball in a **browser**
-> and unpack it by double-clicking in Finder, macOS may refuse to run the binary as "from an
-> unidentified developer" — the binaries are ad-hoc signed, not Apple-notarized. Clear it once with
-> `xattr -d com.apple.quarantine /usr/local/bin/latexml_oxide`, or right-click the binary in
-> Finder → **Open**. The **Homebrew install above avoids this entirely**, since `brew` strips the flag.
-
-### Windows (x86_64)
-
-*(From `0.7.4`.)* A single self-contained `latexml_oxide.exe` (fully static: no VC++ redistributable needed),
-shipped in a `.zip`. In PowerShell run:
-
-```
-> $VERSION = "0.7.6"
-> curl.exe -LO "https://github.com/dginev/latexml-oxide/releases/download/$VERSION/latexml-oxide-$VERSION-x86_64-pc-windows-msvc.zip"
-> Expand-Archive "latexml-oxide-$VERSION-x86_64-pc-windows-msvc.zip" -DestinationPath .
-> .\latexml-oxide-$VERSION-x86_64-pc-windows-msvc\latexml_oxide.exe --version
-```
-
-Put `latexml_oxide.exe` somewhere on your `PATH`.
-A TeX distribution (**TeX Live for Windows or MiKTeX**) must be on `PATH` for host TeX resolution;
-the binary auto-selects the fast in-process backend on TeX Live, and falls back to subprocess `kpsewhich` on MiKTeX.
-ImageMagick (`magick`), Ghostscript (`gswin64c` / MiKTeX `mgs`) and MuPDF (`mutool`)
-are optional, for figure conversion.
-
-### Docker
-
-A batteries-included image (`latexml_oxide` + a reproducible TeX Live + the graphics tools)
-is published to the GitHub Container Registry for both amd64 and arm64.
-No local TeX Live needed — bind-mount your document tree and convert:
-
-```
-$ docker run --rm -v "$PWD:/work" ghcr.io/dginev/latexml-oxide:$VERSION paper.tex
-```
-
-`:latest` tracks the most recent release. The container builds its own binary against the image's TeX Live,
-so the embedded kernel dumps match the bundled texmf tree exactly.
-
-### System dependencies
-
-The binary is self-contained (libxml2/libxslt/kpathsea are linked in), but at runtime it **shells out**
-to external tools for graphics conversion, and reads TeX assets from your TeX Live tree.
-None are bundled — install the ones your documents need.
-When a required tool is missing, the conversion log names it **and the package to install**.
-The `.deb` declares all of these, so `apt install ./latexml-oxide_*.deb` pulls them automatically.
-
-| Tool (`command`) | apt package | Homebrew | Used for |
-|---|---|---|---|
-| `convert` | `imagemagick` | `imagemagick` | raster image conversion |
-| `mutool` | `mupdf-tools` | `mupdf-tools` | primary PDF graphics (fast) |
-| `pdftocairo` | `poppler-utils` | `poppler` | vector-SVG from PDF |
-| `gs`, `ps2pdf` | `ghostscript` | `ghostscript` | PDF/PostScript conversion |
-| `dvipng` | `dvipng` | TeX Live | raster LaTeX-image output |
-| `dvisvgm` | `dvisvgm` | TeX Live | vector-SVG LaTeX-image output |
-| `kpsewhich`, `latex`, `pdflatex`, `tftopl` | `texlive-latex-base` (+`-extra`, `-science`) | `texlive` / MacTeX | TeX package/class/font resolution |
-
-### From crates.io (`cargo install`)
-
-```
-$ cargo +nightly install latexml
-```
-
-This builds the `latexml_oxide` CLI from source, so it needs the prerequisites under
-[Build from source](#build-from-source) below, and a TeX distribution at runtime.
-The crate ships no TeX format dumps: the first conversion builds them for your TeX Live
-(about 10 s) into a per-user cache directory (`LATEXML_FORMAT_CACHE` to choose it), and
-later runs reuse them until TeX Live changes.
-
-**As a library:**
-
-```toml
-[dependencies]
-latexml = "0.7"
-```
-
-```rust
-let xml  = latexml::api::convert_to_xml(tex)?;   // TeX → LaTeXML XML
-let html = latexml::api::convert_to_html(tex)?;  // TeX → HTML5 + Presentation MathML
-```
-
-For finer control (preloads, search paths, `--whatsin`, split, encoding, …), drive
-`latexml::converter::Converter` and `latexml::post` directly.
-
-### Build from source
-
-**1. Prerequisites.** Rust via [rustup](https://rustup.rs) — the checked-in
-`rust-toolchain.toml` selects the nightly toolchain (with rustfmt and clippy) the project
-needs — plus libxml2, libxslt and a TeX Live installation:
-
-* **Ubuntu / Debian**
-  ```
-  $ sudo apt install pkg-config libxml2-dev libxslt1-dev libkpathsea-dev mold \
-                     texlive texlive-latex-extra texlive-science texlive-bibtex-extra \
-                     texlive-publishers imagemagick ghostscript poppler-utils
-  ```
-  On x86_64 Linux the build links with `mold` (`.cargo/config.toml`), so install it on
-  any distribution.
-* **macOS** (Homebrew)
-  ```
-  $ brew install pkgconf libxml2 libxslt texlive
-  $ export PKG_CONFIG_PATH="$(brew --prefix libxml2)/lib/pkgconfig:$(brew --prefix libxslt)/lib/pkgconfig"
-  ```
-  libxml2 and libxslt are keg-only, hence the export (put it in your shell profile).
-  MacTeX/BasicTeX works too: it ships no `libkpathsea`, so the build falls back to its
-  `kpsewhich` (`/Library/TeX/texbin` on `PATH`), with slightly slower cold file lookups.
-* **Windows** (MSVC toolchain, PowerShell)
-  ```
-  > vcpkg install libxml2:x64-windows-static-md libxslt:x64-windows-static-md
-  > $env:VCPKG_ROOT = "<your vcpkg directory>"
-  > $env:VCPKGRS_TRIPLET = "x64-windows-static-md"
-  ```
-  plus TeX Live for Windows, and LLVM for `bindgen` (set `LIBCLANG_PATH` if it is not
-  found) — as in `.github/workflows/windows-ci-manual-trigger.yml`.
-
-**2. Build and test**, from the repository root:
-
-```
-cargo build
-tools/make_formats.sh          # Windows: tools\make_formats.ps1
-cargo build
-cargo test
-```
-
-`make_formats` runs the new binary with `--init=plain.tex` and `--init=latex.ltx` against
-your TeX Live, writing the kernel format dumps to `resources/dumps/`; the second
-`cargo build` embeds them in the binary. **Rerun the last three steps after updating TeX
-Live:** a dump is used only with the TeX files it was built from, and without one every
-executable — each test binary included — first builds its own format into a per-user
-cache, which is slow.
-
-[`cargo-nextest`](https://nexte.st) (`cargo install cargo-nextest`) runs the same suite
-several times faster: `cargo nextest run --workspace`.
-
-With [EPUBCheck](https://www.w3.org/publishing/epubcheck/) installed (`apt install epubcheck`), the EPUB tests
-also validate the `.epub` they write; without it they print `SKIP epubcheck …`, and
-`LATEXML_EPUBCHECK_TESTS=1` turns that skip into a failure.
-
-### Build profiles
-
-`Cargo.toml` defines named profiles for day-to-day development (`test`), the
-RAM-bounded CI runner (`ci`), local perf measurement (`release`), and the shipped
-distribution binaries (`maxperf` / `maxperf-cortex`). Use the default profile
-(`cargo build` / `cargo test`, no flag) for everyday work; see
-[CLAUDE.md](CLAUDE.md) for the full profile table.
-
-### Development Tips
-
-The first build points this checkout's `core.hooksPath` at `.githooks/`; its pre-push
-hook runs `tools/lint.sh` — rustfmt, clippy with `-D warnings`, rustdoc and the other
-checks CI's `lint` job runs — and blocks the push on a failure. Run it directly to check
-before pushing.
-
-This workspace is heavy for rust-analyzer (large proc-macro bodies); the checked-in `.vscode/settings.json`
-ships a stability profile that keeps the IDE responsive.
-Terminal `cargo build` / `cargo test` are unaffected.
-
-To generate the project documentation locally, run:
-```bash
-$ cargo doc --workspace --no-deps --open
-```
-
-Test fixtures (`[name].tex` + `[name].xml` pairs) are discovered at compile time: after
-adding one, run `cargo clean` so the build finds it.
-
-A test that needs something outside the base TeX Live set — a package or class that some
-TeX Live installs lack (a distro's partial package set, an older year), a minimal TeX Live
-year, a program such as `jing` — declares it, and is skipped where it is not met. This is
-Perl LaTeXML's `requires` (`LaTeXML/Util/Test.pm`, `check_requirements`): a fixture
-directory's `tex_tests!` takes a table of `(test, Requirements)` rows (`"*"` for every
-test), and a guard starts with `if !check_requirements(&["tcolorbox.sty"]) { return; }`, listing
-every file of its load set a TeX Live may lack (or with
-`Requirements::packages(…).texlive_min(2021).programs(&["jing"]).met()`). Files are looked
-up the way the conversion finds them. A skip prints `Skip: <reason>` and appends
-`<test>\t<reason>` to `test-skips.log` in the cargo target directory (or
-`$LATEXML_TEST_SKIP_LOG`), which CI lists after the tests; a met requirement runs the test.
-
-### Build features
-
-Cargo features, and what the shipped binary turns on. The releases are built with
-`--no-default-features --features runtime-bindings` — that drops `test-utils` but
-deliberately **keeps** the Rhai runtime bindings below.
-
-| Feature | Crate | In releases? | What it does |
-|---|---|---|---|
-| `runtime-bindings` | `latexml` → `latexml_contrib` | **yes** (also a default) | Embeds the [Rhai](https://rhai.rs) interpreter so you can add or override TeX package/class bindings **at runtime** — no Rust toolchain, no recompile. See below. |
-| `kpathsea` | `latexml_core` | **yes** (a default) | Resolves `.sty`/`.cls`/`.tfm` from your TeX tree via libkpathsea in-process, falling back to the `kpsewhich` subprocess when the library is absent (e.g. MacTeX). |
-| `test-utils` | `latexml` | no (dropped) | Test-suite discovery helpers; drops `glob` and the A/B comparator's `roxmltree` + `similar` from the distribution build. |
-| `token-locators` | `latexml` (+4 crates) | no | Widens `Token` from 8 to 12 bytes so each token carries its exact source offset through expansion into digestion — the precision build behind `--source-map`. Off everywhere else so normal conversions don't pay. |
-| `cortex` | `latexml` | no (worker image only) | The `cortex_worker` binary for the arXiv-scale fleet. |
-| `jemalloc`, `dhat-heap` | `latexml` | no | Allocator swap / heap profiling, for performance work. |
-
-### Runtime bindings (Rhai) — add TeX bindings without recompiling
-
-`runtime-bindings` is on in every released binary, so this works out of the box.
-Drop a file named `<pkg>.sty.rhai` (or `<class>.cls.rhai`) **next to your
-document**, and `\usepackage{<pkg>}` finds and loads it:
+Every released binary reads TeX bindings written in [Rhai](https://rhai.rs) — no Rust toolchain, no recompile.
+Drop a file named `<pkg>.sty.rhai` (or `<class>.cls.rhai`) **next to your document**, and `\usepackage{<pkg>}` finds
+and loads it:
 
 ```rust
 // mypkg.sty.rhai  —  note: backslashes are doubled in Rhai strings
@@ -324,34 +59,25 @@ DefMacro("\\greet{}", |name| "Hello, " + name + "!");
 DefConstructor("\\mytext{}", "<ltx:text class=\"rhai\">#1</ltx:text>");
 ```
 
-> **Coming from Perl LaTeXML?** A Perl `.sty.ltxml` / `.cls.ltxml` binding is
-> **not** loaded — latexml-oxide has no Perl interpreter. Rewrite it as a
-> `.sty.rhai` / `.cls.rhai` file: the common `Def…` entry points (`DefMacro`,
-> `DefEnvironment`, `DefConstructor`, `DefPrimitive`, …) keep the same names and
-> signatures, in Rhai syntax (doubled backslashes). For example, Perl
-> `DefEnvironment('{nowrap}', "<ltx:block class='nowrap'>#body</ltx:block>")`
-> becomes, verbatim minus the `use`/`1;` boilerplate,
-> `DefEnvironment("{nowrap}", "<ltx:block class='nowrap'>#body</ltx:block>");`.
-> See the worked example and interface reference below for the full surface.
+Start with the [Rhai guide](docs/parity/RHAI_BINDINGS_GUIDE.md).
 
-Discovery rides the ordinary search paths (the document's own directory, plus any
-`--path DIR`), and the `.rhai` tier is consulted **first** — so a
-`article.cls.rhai` deliberately *overrides* the built-in `article` binding, which
-is how you patch a class without touching the binary.
+## Documentation
 
-- **Start here:** [`docs/parity/RHAI_BINDINGS_GUIDE.md`](docs/parity/RHAI_BINDINGS_GUIDE.md) — the dialect for newcomers: loading a binding, values, the Perl closure form, truthiness and `defined`, diagnostics, migrating from the deprecated names.
-- **Worked examples:** [`docs/examples/`](docs/examples/) — short bindings (macros, constructors, registers) and [`sample.sty.rhai`](docs/examples/sample.sty.rhai), a tour of the wider surface. CI converts each with its document, error- and warning-free, so they never rot.
-- **Cheat sheet:** [`CHEATSHEET.md`](latexml_contrib/src/script_bindings/CHEATSHEET.md) — every call as Perl | Rust macro | Rhai, generated and checked with the interface reference; its empty cells are the dialect's gaps.
-- **Interface reference:** [`latexml_contrib/src/script_bindings/API.md`](latexml_contrib/src/script_bindings/API.md) — every function you can call, grouped by handle (global, `document`, `Node`, `whatsit`, `LookupDefinition()`, `Command`). It is **generated from the live engine** and re-checked on every test run, so it cannot drift from what is actually registered. It also renders into `cargo doc` as `latexml_contrib::script_bindings::interface`, so `cargo doc --workspace --open` (and docs.rs) show it beside the Rust API.
-- **Semantics and design notes:** [`docs/parity/script_bindings_plan.md`](docs/parity/script_bindings_plan.md) — what the calls *mean*, the namespace rules, and what a failing binding degrades to.
+| Topic | Where |
+|---|---|
+| All internal docs, by theme | [docs/README.md](docs/README.md) |
+| Installing (per platform, Docker, system dependencies, crates.io, as a library) | [docs/INSTALL.md](docs/INSTALL.md) |
+| Usage and the command line | [docs/USAGE.md](docs/USAGE.md) |
+| Building from source, build profiles, development tips, Cargo features | [docs/BUILDING.md](docs/BUILDING.md) |
+| Writing a Rhai binding | [docs/parity/RHAI_BINDINGS_GUIDE.md](docs/parity/RHAI_BINDINGS_GUIDE.md), [worked examples](docs/examples/) |
+| Rhai API reference · Perl \| Rust macro \| Rhai cheat sheet | [interface](https://dginev.github.io/latexml-oxide/latexml_contrib/script_bindings/interface/index.html) · [cheat sheet](https://dginev.github.io/latexml-oxide/latexml_contrib/script_bindings/cheatsheet/index.html) |
+| Rust API (rustdoc) | [dginev.github.io/latexml-oxide/latexml/](https://dginev.github.io/latexml-oxide/latexml/) |
+| Changes per release | [CHANGELOG.md](CHANGELOG.md) |
+| How and where we differ from Perl LaTeXML | [OXIDIZED_DESIGN](docs/parity/OXIDIZED_DESIGN.md), [divergences](docs/parity/OXIDIZED_DESIGN_DIVERGENCES.md), [known Perl errors](docs/parity/KNOWN_PERL_ERRORS.md), [fidelity charter](docs/parity/FIDELITY_CHARTER.md) |
+| Performance | [docs/performance/PERFORMANCE.md](docs/performance/PERFORMANCE.md) |
+| Releases and licensing | [RELEASING](docs/release/RELEASING.md), [THIRD-PARTY-NOTICES](THIRD-PARTY-NOTICES), [LICENSE_INVENTORY](docs/release/LICENSE_INVENTORY.md) |
 
-Because a `.rhai` beside a document is executed by a plain conversion, treat it as
-you would any code shipped with an untrusted source tree — see
-[`docs/release/SAFETY.md`](docs/release/SAFETY.md) §H. Builds that want the
-capability gone entirely can use `--no-default-features` without
-`--features runtime-bindings`.
-
-### License
+## License
 
 latexml-oxide's source code and original resources are dedicated to the public
 domain under [CC0 1.0 Universal](LICENSE).

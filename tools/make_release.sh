@@ -211,7 +211,7 @@ if [[ "${os_family}" == "linux" ]]; then
   # payload from the asset list in latexml_oxide/Cargo.toml, which points at
   # `../THIRD-PARTY-NOTICES` -- the COMMITTED repo-root file (hand-authored
   # sections 1-4 only). Staging the assembled file into ${stage_dir} above does
-  # nothing for it, so the .deb -- the install path the README calls the easiest
+  # nothing for it, so the .deb -- the install path docs/INSTALL.md calls the easiest
   # way in -- would ship with no Rust-crate appendix (§5), none of the copyleft
   # texts the static libkpathsea/libmarpa links oblige (§6), and no relink
   # provenance (§7). Point the path cargo-deb actually reads at the assembled
@@ -298,7 +298,7 @@ fi
 # macOS leg uploads its tarball as a CI artifact that the Linux `release` job
 # collects before publishing; set RELEASE_MACOS_TARBALL to that filename to
 # list it among the downloadable assets here. Step-by-step install commands
-# live in the README (linked from the notes), not on the release page.
+# live in docs/INSTALL.md (linked from the notes), not on the release page.
 release_body="${artifacts_dir}/RELEASE_BODY.md"
 if [[ "${os_family}" == "linux" ]]; then
 {
@@ -309,7 +309,7 @@ latexml-oxide ships as a single self-contained executable. It also calls a few e
  - a TeX distribution (TeX Live, MacTeX, or MiKTeX) — for the packages, classes, and fonts your documents load.
  - graphics tools (ImageMagick, Ghostscript, MuPDF, Poppler, dvipng, dvisvgm) — to convert figures.
 
-Per-platform install instructions are in the [README Installation guide](https://github.com/dginev/latexml-oxide#install-prebuilt-binaries).
+Per-platform install instructions are in the [installation guide](https://github.com/dginev/latexml-oxide/blob/main/docs/INSTALL.md).
 
 Download the asset for your platform (each has a matching \`.sha256\` to verify file integrity):
 

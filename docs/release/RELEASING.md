@@ -46,7 +46,7 @@ tag X.Y.Z  →  release.yml ─┬─→ GitHub Release (public)
 Also automatic, no action needed: `rustdoc.yml` republishes the gh-pages rustdoc on
 every push to `main` — that is what crates.io's `documentation` link points at.
 
-**Don't forget the tap.** The README tells macOS users `brew install
+**Don't forget the tap.** `docs/INSTALL.md` tells macOS users `brew install
 dginev/tap/latexml-oxide`. If the formula isn't bumped, every Homebrew user silently
 keeps getting the *previous* version while the release page advertises the new one.
 
@@ -121,7 +121,7 @@ Release object can change any of that.
 **No — cut a fresh `X.Y.Z` tag.** The version string is baked into the *artifacts*, not
 just the Release object, so flipping draft→published re-labels nothing:
 
-* assets are named `…-X.Y.Z-rcN-…`; the README's `VERSION=X.Y.Z` instructions 404,
+* assets are named `…-X.Y.Z-rcN-…`; `docs/INSTALL.md`'s `VERSION=X.Y.Z` instructions 404,
 * the `.deb` carries `X.Y.Z-rcN-1`, so a later real `X.Y.Z` is a *newer* apt version,
 * the binary reports `X.Y.Z-rcN` from `--version` — which **fails the Homebrew
   formula's** `assert_match version.to_s, shell_output("#{bin}/latexml_oxide --version")`,
@@ -379,7 +379,7 @@ on-PATH, auto-upgradeable install with the graphics runtime already wired up —
 the "easy start" the plain tarball can't match. Path to the front door
 (`brew install latexml-oxide`, no tap): submit to **homebrew-core** once the
 project clears its notability bar; until then the personal tap is the
-pragmatic channel and README should lead with it on macOS.
+pragmatic channel and the install guide should lead with it on macOS.
 
 **If browser downloads ever become a support burden**, the upgrade is a
 Developer ID sign + `xcrun notarytool submit --wait` job (needs the $99/yr
