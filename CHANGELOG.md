@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+  - **`\linewidth` in a `p`/`m`/`b` table cell is the column's width** (issue 778). A
+    cell of a paragraph column set `\hsize` to the column's width but kept the page's
+    `\linewidth`, so `\includegraphics[width=\linewidth]` in a `m{0.3\textwidth}` cell was
+    as wide as the page. The cell now sets `\linewidth\hsize`, as array's `\@startpbox` /
+    `\@arrayparboxrestore` do (a `\multicolumn` over such a column and longtable's `p`
+    columns alike); Perl sets `\hsize` alone. Guard
+    `perfect_kernel_batch60::paragraph_cell_linewidth_is_the_column_width`.
   - **amsmath's arrow fills keep their heads** (issue 824's sibling). `\arrowfill@` and
     `\ext@arrow`'s fill were a plain `\to`, so mhchem's `\ce{A <=> B}` read "→→" and every
     chemarr, extarrows and extpfeil arrow was →. The relation is now the heads amsmath.sty draws

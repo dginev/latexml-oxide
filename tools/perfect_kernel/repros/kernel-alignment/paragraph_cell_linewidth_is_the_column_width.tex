@@ -1,0 +1,17 @@
+% A `p`/`m`/`b` cell is a box of the column's width: `\@startpbox` sets `\hsize` and `\@arrayparboxrestore` makes
+% `\linewidth\hsize` (latex.ltx:16755, :16280), so `width=\linewidth` in a cell is the column's (issue 778).
+% A `\multicolumn` over a paragraph column is one too; an l/c cell and the text after the table keep the page's.
+% status:  GREEN (issue 778); guard perfect_kernel_batch60::paragraph_cell_linewidth_is_the_column_width
+% oracle:  pdflatex 0 errors: "P 100.0pt M 50.0pt B 30.0pt C 345.0pt MC 80.0pt After 345.0pt"
+% engines: rust 85a1bd780e7: 345.0pt everywhere (the page's \linewidth in every cell)
+% expect:  0 errors; the pdflatex widths
+\documentclass{article}
+\usepackage{array}
+\begin{document}
+\begin{tabular}{p{100pt}m{50pt}b{30pt}c}
+P \the\linewidth & M \the\linewidth & B \the\linewidth & C \the\linewidth\\
+\multicolumn{1}{p{80pt}}{MC \the\linewidth}
+\end{tabular}
+
+After \the\linewidth
+\end{document}
