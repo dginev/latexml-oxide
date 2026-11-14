@@ -153,8 +153,8 @@ else
   cp "${bin_path}" "${stage_dir}/latexml_oxide"
 fi
 cp README.md "${stage_dir}/README.md"
-# README.md links the install steps at docs/INSTALL.md; ship that file at the
-# same relative path so the link resolves inside the unpacked archive.
+# The install steps README.md links (online, absolute URLs for crates.io), shipped
+# offline at the path the repo has them.
 mkdir -p "${stage_dir}/docs"
 cp docs/INSTALL.md "${stage_dir}/docs/INSTALL.md"
 cp CHANGELOG.md "${stage_dir}/CHANGELOG.md"

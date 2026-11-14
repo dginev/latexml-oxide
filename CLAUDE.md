@@ -10,8 +10,8 @@ Two co-equal targets drive current work:
    format/dump and package-loading boundary is maintained — the strict-`LoadFormat`
    dump-parity mission is **complete** (zero-error inits, dumps match Perl; audit
    archived at [`docs/archive/PERL_LOADFORMAT_AUDIT.md`](docs/archive/PERL_LOADFORMAT_AUDIT.md),
-   the ~72-CS Perl-only long-tail residual is demand-driven, described in that audit's
-   banner). Ongoing parity work is corpus-driven: mine fatal/error clusters from
+   the ~72-CS Perl-only long-tail residual is demand-driven, `SYNC_STATUS.md` row R
+   LOADFMT). Ongoing parity work is corpus-driven: mine fatal/error clusters from
    live runs, classify vs same-host Perl (`canvas-triage` skill), fix
    GENUINE-RUST-ONLY divergences faithfully.
 2. **Beyond-Perl improvement runs over arXiv.** The production `cortex_worker` fleet

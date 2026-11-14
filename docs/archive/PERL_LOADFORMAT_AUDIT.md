@@ -10,9 +10,8 @@
 >
 > **The single live residual** — a ~72-CS Perl-only long tail (the 58
 > "misc atomics" + investigate bucket, *minus* the now-ported `\bib@*`
-> family) — moved to `../SYNC_STATUS.md` "Engine file open gaps (MINOR)"
-> as the active item. It is demand-driven and bounded by the corpus
-> success gate, not a release blocker.
+> family) — is the live row LOADFMT in `../SYNC_STATUS.md` row R. It is
+> demand-driven and bounded by the corpus success gate, not a release blocker.
 
 Tracks the Rust→Perl translation gap exposed by the strict
 `LoadFormat` split (commit `0c4d609ad`). Each entry maps a Perl

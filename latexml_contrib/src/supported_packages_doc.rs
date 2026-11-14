@@ -6,16 +6,53 @@
 //! UPDATE_SUPPORTED_PACKAGES=1 cargo test -p latexml_contrib --lib supported_packages_doc_is_up_to_date
 //! ```
 use std::{
-  collections::HashMap,
+  collections::{HashMap, HashSet},
   path::{Path, PathBuf},
 };
 
 /// One row of a `BINDINGS` table as written in its `lib.rs`: the name, the extension and the
-/// loader's module path (`package::amsmath_sty`, `keytheorems_sty`).
+/// loader's path (`package::amsmath_sty::load_definitions`).
 struct Entry {
   name:   String,
   ext:    String,
-  module: String,
+  loader: String,
+}
+
+impl Entry {
+  /// The loader's module (`package::amsmath_sty`), whose file holds the binding's doc comment.
+  fn module(&self) -> &str {
+    &self.loader[..self.loader.rfind("::").expect("a `module::fn` loader")]
+  }
+}
+
+/// The index of the `)` closing the `(` at `open`, skipping string literals.
+fn balanced_close(text: &str, open: usize) -> Option<usize> {
+  let (mut depth, mut in_str, mut escaped) = (0usize, false, false);
+  for (at, c) in text[open..].char_indices() {
+    match (in_str, c) {
+      (true, _) if escaped => escaped = false,
+      (true, '\\') => escaped = true,
+      (true, '"') | (false, '"') => in_str = !in_str,
+      (false, '(') => depth += 1,
+      (false, ')') => {
+        depth -= 1;
+        if depth == 0 {
+          return Some(open + at);
+        }
+      },
+      _ => {},
+    }
+  }
+  None
+}
+
+/// A source with its whole-line `//` comments dropped.
+fn code_of(source: &str) -> String {
+  source
+    .lines()
+    .filter(|line| !line.trim_start().starts_with("//"))
+    .collect::<Vec<_>>()
+    .join("\n")
 }
 
 /// The `BINDINGS` table of a `lib.rs`, read from its source text: the loaders are fn pointers, so
@@ -34,14 +71,13 @@ fn table_entries(lib_rs: &str) -> Vec<Entry> {
   let mut entries = Vec::new();
   let mut rest = body.as_str();
   while let Some(open) = rest.find('(') {
-    let close = open + rest[open..].find(')').expect("a closing `)` for each row");
+    let close = balanced_close(rest, open).expect("a closing `)` for each row");
     let fields: Vec<&str> = rest[open + 1..close].split(',').map(str::trim).collect();
     let unquote = |s: &str| s.trim_matches('"').to_string();
-    let loader = fields[2];
     entries.push(Entry {
       name:   unquote(fields[0]),
       ext:    unquote(fields[1]),
-      module: loader[..loader.rfind("::").expect("a `module::fn` loader")].to_string(),
+      loader: fields[2].to_string(),
     });
     rest = &rest[close + 1..];
   }
@@ -60,27 +96,121 @@ fn module_file(src: &Path, module: &str) -> Option<PathBuf> {
   })
 }
 
-/// What a binding's source says about itself: its module doc's first line naming it a stub or a
-/// partial binding, and whether it reads its own TeX file raw (`InputDefinitions!("<name>"…noltxml`).
-fn describe(source: &str, name: &str) -> (Option<String>, bool) {
-  // The module doc, one paragraph per entry, lines joined.
+/// A source's raw loads, `InputDefinitions!(…)` and `input_definitions(…)` calls with `noltxml` on:
+/// (first argument, all arguments unspaced). A variable bound by a local `let` to a literal is read
+/// as the literal.
+fn raw_load_targets(code: &str) -> Vec<(String, String)> {
+  let mut targets = Vec::new();
+  for call in ["InputDefinitions!(", "input_definitions("] {
+    for (at, _) in code.match_indices(call) {
+      let open = at + call.len() - 1;
+      let Some(close) = balanced_close(code, open) else {
+        continue;
+      };
+      let args: String = code[open + 1..close].split_whitespace().collect();
+      if !args.contains("noltxml=>true") && !args.contains("noltxml:true") {
+        continue;
+      }
+      let first = args.split(',').next().unwrap_or("").trim_start_matches('&');
+      let literal = (!first.starts_with('"'))
+        .then(|| {
+          [
+            format!("let {first} = \""),
+            format!("let {first}: &str = \""),
+          ]
+          .iter()
+          .find_map(|binding| code.find(binding.as_str()).map(|at| at + binding.len()))
+          .and_then(|at| code[at..].split('"').next().map(|lit| format!("\"{lit}\"")))
+        })
+        .flatten();
+      targets.push((literal.unwrap_or_else(|| first.to_string()), args.clone()));
+    }
+  }
+  targets
+}
+
+/// Whether a binding reads its own TeX file raw: a raw load of `"<name>"`, or of a variable (the
+/// name a shared loader is called with) as a `"<ext>"` file, in its module or in a
+/// `<module>::<fn>("<name>"…)` it calls.
+fn reads_raw(code: &str, file: &Path, name: &str, ext: &str) -> bool {
+  let own = |targets: Vec<(String, String)>| {
+    targets
+      .iter()
+      .any(|(first, args)| match first.strip_prefix('"') {
+        // `"tikzlibraryexternal.code"` for `tikzlibraryexternal.code.tex`
+        Some(literal) => format!("{name}.{ext}").to_lowercase().starts_with(&format!(
+          "{}.",
+          literal.trim_end_matches('"').to_lowercase()
+        )),
+        None => args.contains(&format!("\"{ext}\"")),
+      })
+  };
+  if own(raw_load_targets(code)) {
+    return true;
+  }
+  let call = format!("(\"{name}\"");
+  code.match_indices(&call).any(|(at, _)| {
+    let path: String = code[..at]
+      .chars()
+      .rev()
+      .take_while(|c| c.is_alphanumeric() || *c == '_' || *c == ':')
+      .collect::<Vec<_>>()
+      .into_iter()
+      .rev()
+      .collect();
+    let Some((module, _)) = path.rsplit_once("::") else {
+      return false;
+    };
+    let dir = file.parent().expect("a module's directory");
+    module_file(dir, module).is_some_and(|other| {
+      std::fs::read_to_string(other).is_ok_and(|source| own(raw_load_targets(&code_of(&source))))
+    })
+  })
+}
+
+/// The module doc's sentence calling the binding itself a stub or a partial binding: its first
+/// sentence, or one starting "Stub"/"No-op stub" — never a sentence about its history.
+fn stub_note(source: &str) -> Option<String> {
   let doc: Vec<&str> = source
     .lines()
     .take_while(|line| line.trim_start().starts_with("//!") || line.trim().is_empty())
     .map(|line| line.trim_start().trim_start_matches("//!").trim())
     .collect();
-  let note = doc
+  let words = |s: &str| -> Vec<String> {
+    s.split(|c: char| !c.is_alphanumeric() && c != '-' && c != '_')
+      .filter(|w| !w.is_empty())
+      .map(str::to_lowercase)
+      .collect()
+  };
+  let sentences: Vec<String> = doc
     .split(|line| line.is_empty())
-    .map(|paragraph| paragraph.join(" "))
-    .find_map(|paragraph| {
+    .flat_map(|paragraph| {
+      let paragraph = paragraph.join(" ");
       paragraph
         .split_inclusive(". ")
-        .find(|sentence| {
-          let lower = sentence.to_lowercase();
-          lower.contains("stub") || lower.contains("partial")
-        })
         .map(str::to_string)
+        .collect::<Vec<_>>()
     })
+    .collect();
+  sentences
+    .iter()
+    .enumerate()
+    .find(|(at, sentence)| {
+      let w = words(sentence);
+      let starts_stub = w.first().is_some_and(|f| f == "stub")
+        || (w.first().is_some_and(|f| f == "no-op") && w.get(1).is_some_and(|s| s == "stub"));
+      let stub = w.iter().any(|x| x == "stub" || x == "stubs")
+        || w.windows(2).any(|p| p[0] == "partial" && p[1] == "binding");
+      let history = w.iter().any(|x| {
+        [
+          "former", "formerly", "earlier", "replaced", "replaces", "retired",
+        ]
+        .contains(&x.as_str())
+          || x.starts_with("supersede")
+      });
+      (starts_stub || (*at == 0 && stub)) && !history
+    })
+    .map(|(_, sentence)| sentence.clone())
     .map(|sentence| {
       // A long sentence is cut at a word before 200 characters; the source keeps it whole.
       let sentence = sentence.trim();
@@ -89,13 +219,63 @@ fn describe(source: &str, name: &str) -> (Option<String>, bool) {
         None => sentence.to_string(),
       };
       cut.replace('|', "\\|")
-    });
-  let call = format!("InputDefinitions!(\"{name}\"");
-  let raw = source.match_indices(&call).any(|(at, _)| {
-    let args = &source[at..];
-    args[..args.find(')').unwrap_or(args.len())].contains("noltxml")
-  });
-  (note, raw)
+    })
+}
+
+/// Perl LaTeXML's binding names (`<name>.<ext>` of every `.ltxml` under `lib/LaTeXML/{Package,Engine}`),
+/// from the committed snapshot `docs/parity/perl_bindings.txt` — `LaTeXML/` is gitignored, so CI has
+/// no Perl tree. Where the Perl tree is present (`<repo>/LaTeXML`, or `LATEXML_PERL_LIB` naming its
+/// `lib/LaTeXML`), the snapshot is checked against it and `UPDATE_SUPPORTED_PACKAGES=1` rewrites it.
+fn perl_bindings(repo: &Path) -> HashSet<String> {
+  let snapshot_path = repo.join("docs/parity/perl_bindings.txt");
+  let snapshot = std::fs::read_to_string(&snapshot_path).unwrap_or_default();
+  let perl_lib = std::env::var("LATEXML_PERL_LIB")
+    .map(PathBuf::from)
+    .unwrap_or_else(|_| repo.join("LaTeXML/lib/LaTeXML"));
+  if perl_lib.join("Package").is_dir() {
+    let mut names: Vec<String> = ["Package", "Engine"]
+      .iter()
+      .flat_map(|dir| std::fs::read_dir(perl_lib.join(dir)).expect("a Perl binding directory"))
+      .filter_map(|entry| {
+        let file = entry.ok()?.file_name().into_string().ok()?;
+        file.strip_suffix(".ltxml").map(str::to_string)
+      })
+      .collect();
+    names.sort();
+    let current = format!(
+      "# Perl LaTeXML's bindings: every lib/LaTeXML/{{Package,Engine}}/*.ltxml, without `.ltxml`. Generated; refresh \
+       with each upstream sync:\n# LATEXML_PERL_LIB=<LaTeXML>/lib/LaTeXML UPDATE_SUPPORTED_PACKAGES=1 cargo test -p \
+       latexml_contrib --lib supported_packages_doc_is_up_to_date\n{}\n",
+      names.join("\n")
+    );
+    if current != snapshot {
+      assert!(
+        std::env::var("UPDATE_SUPPORTED_PACKAGES").is_ok(),
+        "docs/parity/perl_bindings.txt is stale against {}; regenerate with UPDATE_SUPPORTED_PACKAGES=1",
+        perl_lib.display()
+      );
+      std::fs::write(&snapshot_path, &current).expect("write docs/parity/perl_bindings.txt");
+    }
+    return names.into_iter().collect();
+  }
+  snapshot
+    .lines()
+    .filter(|line| !line.starts_with('#') && !line.is_empty())
+    .map(str::to_string)
+    .collect()
+}
+
+/// Whether Perl LaTeXML loads a binding for `name.ext`: its own `.ltxml` (matched case-insensitively,
+/// as `pathname_find` falls back to, Pathname.pm:381-391) or the generic one its `FindFile_fallback` strips a
+/// version to (Package.pm:2191-2226: `aastex631` → `aastex`).
+fn perl_has(perl: &HashSet<String>, name: &str, ext: &str) -> bool {
+  let has = |n: &str| {
+    let want = format!("{n}.{ext}").to_lowercase();
+    perl.iter().any(|p| p.to_lowercase() == want)
+  };
+  has(name)
+    || (matches!(ext, "sty" | "cls")
+      && latexml_core::binding::content::version_stripped_name(name).is_some_and(|base| has(&base)))
 }
 
 const PREAMBLE: &str = "# Supported packages and classes
@@ -105,13 +285,20 @@ const PREAMBLE: &str = "# Supported packages and classes
 run (`supported_packages_doc_is_up_to_date`); regenerate with
 `UPDATE_SUPPORTED_PACKAGES=1 cargo test -p latexml_contrib --lib supported_packages_doc_is_up_to_date`.
 
-- **ported** — a compiled binding in `latexml_package`, the tree that ports Perl LaTeXML's `.ltxml` bindings (a few
-  of its rows are Rust-only support files or version aliases).
-- **contributed** — a compiled binding in `latexml_contrib`, beyond Perl LaTeXML's set.
-- **raw + overrides** — the binding reads the package's own TeX file raw (`InputDefinitions!(\"<name>\", noltxml …)`)
-  and defines only what carries semantics around it.
-- *alias of* — the row loads the same binding as the one named (a version or a renamed copy).
+- **ported** — a compiled binding in `latexml_package` for a package Perl LaTeXML binds too: Perl ships a `.ltxml`
+  for the name, or for the generic name its versioned-name fallback strips it to (`docs/parity/perl_bindings.txt`,
+  the snapshot of Perl's binding names, refreshed with each upstream sync).
+- **beyond Perl** — a compiled binding in `latexml_package` for a name Perl LaTeXML has no binding for.
+- **contributed** — a compiled binding in `latexml_contrib`, the contributed bindings beyond Perl LaTeXML's tree.
+- **raw + overrides** — the binding reads the package's own TeX file raw (`InputDefinitions!(\"<name>\", noltxml …)`
+  or `input_definitions(…, noltxml: true …)`) and defines only what carries semantics around it.
+- *alias of* — the row runs the same loader as the one named (a version or a renamed copy).
 - A note quotes the binding's own module doc where it calls itself a stub or a partial binding.
+
+**Name matching.** A request matches a row by exact name first, then case-insensitively (`ieeetran` finds `IEEEtran.cls`). A
+versioned name with no row of its own falls back to the generic row, as Perl's `FindFile_fallback` does
+(`Package.pm:2191-2226`): version suffixes (`aastex701` → `aastex`, `neurips_2026` → `neurips`, `-arxiv`, `_final`,
+`_v2`…) and the prefixes `rw`, `my`, `preprint` (`mysvjour3` → `svjour3`) are stripped.
 
 **Anything not listed.** A `<name>.sty.rhai` / `<name>.cls.rhai` runtime binding beside the document (or under
 `--path`) is read first and overrides any row here; one on the TeX tree fills a name no row has
@@ -125,9 +312,10 @@ compiled binding is never displaced by raw mode.
 
 /// Render the page.
 fn generate(repo: &Path) -> String {
+  let perl = perl_bindings(repo);
   let tables = [
     (
-      "ported",
+      "latexml_package",
       repo.join("latexml_package/src"),
       latexml_package::BINDINGS
         .iter()
@@ -135,14 +323,17 @@ fn generate(repo: &Path) -> String {
         .collect::<Vec<_>>(),
     ),
     (
-      "contributed",
+      "latexml_contrib",
       repo.join("latexml_contrib/src"),
       crate::BINDINGS.iter().map(|(n, e, _)| (*n, *e)).collect(),
     ),
   ];
   // (kind, name, support, note), in table order within each table.
   let mut rows: Vec<(String, String, String, String)> = Vec::new();
-  for (support, src, live) in &tables {
+  // `dispatch` answers a name+extension with its first row (the two tables are disjoint).
+  let mut seen: HashSet<(String, String)> = HashSet::new();
+  let mut first_of: HashMap<String, (String, bool)> = HashMap::new();
+  for (crate_name, src, live) in &tables {
     let lib_rs = std::fs::read_to_string(src.join("lib.rs")).expect("the crate's lib.rs");
     let entries = table_entries(&lib_rs);
     let parsed: Vec<(&str, &str)> = entries
@@ -151,36 +342,46 @@ fn generate(repo: &Path) -> String {
       .collect();
     assert_eq!(
       &parsed, live,
-      "the {support} BINDINGS table as read from its source differs from the compiled one"
+      "the {crate_name} BINDINGS table as read from its source differs from the compiled one"
     );
     // The engine's modules live in latexml_engine (`engine::` re-exports it).
     let engine_src = repo.join("latexml_engine/src");
-    let mut first_of: HashMap<&str, String> = HashMap::new();
     for entry in &entries {
-      let (base, module) = match entry.module.strip_prefix("engine::") {
+      if !seen.insert((entry.name.clone(), entry.ext.clone())) {
+        continue;
+      }
+      let (base, module) = match entry.module().strip_prefix("engine::") {
         Some(rest) => (&engine_src, rest),
-        None => (src, entry.module.as_str()),
+        None => (src, entry.module()),
       };
       let file = module_file(base, module)
-        .unwrap_or_else(|| panic!("no source file for the binding module `{}`", entry.module));
+        .unwrap_or_else(|| panic!("no source file for the binding module `{}`", entry.module()));
       let source = std::fs::read_to_string(&file).expect("the binding's source");
-      let (note, raw) = describe(&source, &entry.name);
       let label = format!("{}.{}", entry.name, entry.ext);
       let mut notes = Vec::new();
-      match first_of.get(entry.module.as_str()) {
-        Some(first) => notes.push(format!("*alias of* `{first}`")),
-        None => {
-          first_of.insert(&entry.module, label.clone());
+      let loader = format!("{crate_name}::{}", entry.loader);
+      // An alias runs its first row's loader, so it reads what that row reads.
+      let raw = match first_of.get(&loader) {
+        Some((first, raw)) => {
+          notes.push(format!("*alias of* `{first}`"));
+          *raw
         },
-      }
-      if let Some(note) = note {
-        notes.push(note);
-      }
-      let support = if raw {
-        format!("{support}, raw + overrides")
-      } else {
-        support.to_string()
+        None => {
+          let raw = reads_raw(&code_of(&source), &file, &entry.name, &entry.ext);
+          first_of.insert(loader, (label.clone(), raw));
+          raw
+        },
       };
+      notes.extend(stub_note(&source));
+      let mut support = match *crate_name {
+        "latexml_contrib" => "contributed",
+        _ if perl_has(&perl, &entry.name, &entry.ext) => "ported",
+        _ => "beyond Perl",
+      }
+      .to_string();
+      if raw {
+        support.push_str(", raw + overrides");
+      }
       rows.push((
         entry.ext.clone(),
         entry.name.clone(),
