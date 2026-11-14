@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+  - **The Rhai cheat sheet is a three-way API: Perl | Rust | Rhai, every Perl and Rust cell filled.**
+    `CHEATSHEET.md`'s middle column, formerly the compile-time macro alone, names the Rust a compiled
+    binding uses for each call: the macro where there is one, then the function, method, type, field or
+    trait item the Rhai call itself reaches, each a rustdoc intra-doc link (the sheet is now also rendered as
+    `script_bindings::cheatsheet`, so `cargo doc` fails on a renamed item). The Rhai helpers Perl has no single
+    call for show the Perl that does the same; four Perl calls point at the Rhai expression that already does
+    them (`DefExpandable`, `Float`, `GenerateID`, `TokensI`). The 43 Perl calls the dialect still lacks are
+    listed at the end. Gate `script_bindings::tests::api_reference_is_up_to_date` (no empty Perl or Rust cell).
   - **No default `rowspacing="0pt"` on a MathML table** (issue 695). An `array`, `aligned` or
     other multi-row table carried `rowspacing="0pt"`, which MathML Core does not have (Chrome
     ignores it) but Firefox and MathJax honour, setting the rows touching. It is no longer

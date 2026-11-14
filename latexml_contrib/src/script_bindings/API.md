@@ -33,7 +33,7 @@ closure-registered functions; only the accepted types are.
 
 New to the dialect? Start with the guide, [`RHAI_BINDINGS_GUIDE.md`](https://github.com/dginev/latexml-oxide/blob/main/docs/parity/RHAI_BINDINGS_GUIDE.md);
 [`CHEATSHEET.md`](https://github.com/dginev/latexml-oxide/blob/main/latexml_contrib/src/script_bindings/CHEATSHEET.md)
-sets each call beside its Perl spelling and its compile-time macro.
+sets each call beside its Perl spelling and the Rust a compiled binding uses.
 
 ## Global functions
 

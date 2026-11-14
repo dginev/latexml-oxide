@@ -1219,27 +1219,41 @@ fn api_reference_is_up_to_date() {
     "api_doc::PERL_GAPS lists calls the engine now registers — move each to its DOCS entry's Mirror: \
      {stale_gaps:?}"
   );
-  // The cheat sheet's macro column names real macros: each must still be defined in the workspace.
-  let sources = macro_sources();
+  // The cheat sheet's Rust column names real macros: each must still be defined in the workspace.
+  let defined = api_doc::workspace_macros();
   let undefined: Vec<&str> = api_doc::named_macros()
     .into_iter()
-    .filter(|cell| {
-      cell.strip_suffix('!').is_none_or(|mac| {
-        !sources.contains(&format!("macro_rules! {mac} "))
-          && !sources.contains(&format!("macro_rules! {mac}("))
-      })
+    .filter(|item| {
+      !defined
+        .iter()
+        .any(|m| m.is_named(item.trim_end_matches('!')))
     })
     .collect();
   assert!(
     undefined.is_empty(),
-    "api_doc's Mirror/PERL_GAPS macro cells that are no `name!` a workspace crate defines: {undefined:?}"
+    "api_doc's Mirror/PERL_GAPS Rust cells name macros no workspace crate defines: {undefined:?}"
   );
+  // Every row fills its Perl and Rust cells: only a Rhai cell may be empty (a Perl call the dialect lacks).
+  let cheatsheet = api_doc::generate_cheatsheet(&engine);
+  let half_empty: Vec<&str> = cheatsheet
+    .lines()
+    .filter(|line| line.starts_with("| ") && !line.starts_with("| Perl |"))
+    .filter(|line| {
+      let unescaped = line.replace("\\|", "");
+      let cells: Vec<&str> = unescaped.split('|').map(str::trim).collect();
+      cells.get(1).is_none_or(|c| c.is_empty()) || cells.get(2).is_none_or(|c| c.is_empty())
+    })
+    .collect();
   for (file, generated) in [
     ("API.md", api_doc::generate(&engine)),
-    ("CHEATSHEET.md", api_doc::generate_cheatsheet(&engine)),
+    ("CHEATSHEET.md", cheatsheet.clone()),
   ] {
     check_generated(file, &generated);
   }
+  assert!(
+    half_empty.is_empty(),
+    "CHEATSHEET.md rows with an empty Perl or Rust cell (fill the Mirror): {half_empty:#?}"
+  );
 }
 
 /// Every row of the checked-in API.md and CHEATSHEET.md tables has its header's columns: a `|` in a description
@@ -1269,36 +1283,6 @@ fn api_tables_keep_their_columns() {
       "{file}: rows with a different column count: {bad:#?}"
     );
   }
-}
-
-/// Every non-comment `macro_rules!` line of the crates that define the binding macros, for the cheat-sheet check.
-fn macro_sources() -> String {
-  fn walk(dir: &std::path::Path, out: &mut String) {
-    for entry in std::fs::read_dir(dir).into_iter().flatten().flatten() {
-      let path = entry.path();
-      if path.is_dir() {
-        walk(&path, out);
-      } else if path.extension().is_some_and(|e| e == "rs") {
-        for line in std::fs::read_to_string(&path).unwrap_or_default().lines() {
-          if line.trim_start().starts_with("macro_rules!") {
-            out.push_str(line.trim_start());
-            out.push('\n');
-          }
-        }
-      }
-    }
-  }
-  let mut out = String::new();
-  for krate in ["latexml_core", "latexml_engine", "latexml_package"] {
-    walk(
-      &std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
-        .join("..")
-        .join(krate)
-        .join("src"),
-      &mut out,
-    );
-  }
-  out
 }
 
 /// Compare a generated reference with its file beside `API.md`; `UPDATE_API_DOC=1` rewrites it.

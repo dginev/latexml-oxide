@@ -1,7 +1,7 @@
 # Writing a Rhai binding: a guide for newcomers
 
 [← docs/README.md](../README.md) · Reference: [`API.md`](../../latexml_contrib/src/script_bindings/API.md) (every call) ·
-[`CHEATSHEET.md`](../../latexml_contrib/src/script_bindings/CHEATSHEET.md) (Perl | Rust macro | Rhai) · Design:
+[`CHEATSHEET.md`](../../latexml_contrib/src/script_bindings/CHEATSHEET.md) (Perl | Rust | Rhai) · Design:
 [`script_bindings_plan.md`](script_bindings_plan.md)
 
 A **binding** tells latexml-oxide what a LaTeX package or class means: which macros expand to what, which commands
