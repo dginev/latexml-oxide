@@ -470,7 +470,7 @@ macro_rules! AssignRegister {
   };
 }
 
-/// The token of [`AssignRegister!`]'s and [`LookupRegister!`]'s `$cs` (Perl `T_CS($cs) unless ref $cs`).
+/// The token of [`AssignRegister!`]'s and `LookupRegister!`'s (latexml_engine) `$cs` (Perl `T_CS($cs) unless ref $cs`).
 pub fn register_cs(cs: impl RegisterCs) -> crate::token::Token { cs.register_cs() }
 
 /// A register's name as the binding macros take it: a cs name, or the Token itself.
