@@ -1,0 +1,12 @@
+% A `\multicolumn` cell of a math array reverts as its template's material, not as `\multicolumn{1}{|c|}{y}`: the
+% reversion trims the column's own template (tex_tables.rs `trim_column_template`), not the `\multicolumn`'s.
+% witness: synthetic (the review of fix/arrayrulecolor 7942f6bb7a: the `\multicolumn` sibling of probe arr)
+% oracle:  pdflatex 0 errors
+% engines: rust int171b and fix/arrayrulecolor = 0 errors, `tex="…x&\vrule\lx@intercol\hfil y\hfil\lx@intercol\vrule\lx@intercol\\…"`
+% expect:  0 errors; `tex="\begin{array}[]{|c|c|}\hline\cr x&\multicolumn{1}{|c|}{y}\\ \hline\cr\end{array}"`
+% status:  RED
+% moves:   post-merge (kernel alignment reversion; not colortbl's: the same without it)
+\documentclass{article}
+\begin{document}
+$\begin{array}{|c|c|}\hline x & \multicolumn{1}{|c|}{y}\\\hline\end{array}$
+\end{document}

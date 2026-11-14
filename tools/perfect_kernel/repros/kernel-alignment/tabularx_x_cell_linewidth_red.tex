@@ -1,0 +1,14 @@
+% tabularx's X column is `p{\TX@col@width}` (tabularx.sty:157-158), the width its trial runs settle, so `\linewidth`
+% in an X cell is that width. Our X cell is a `\vtop` with no width (tabularx_sty.rs), so it keeps the page's.
+% status:  RED (open; moves: post-merge — needs the X width computed, a mechanism of its own)
+% witness: synthetic (issue 778's sibling)
+% oracle:  pdflatex 0 errors: "TX 170.72218pt"
+% engines: rust I778: TX 345.0pt
+% expect:  0 errors; the pdflatex width
+\documentclass{article}
+\usepackage{tabularx}
+\begin{document}
+\begin{tabularx}{200pt}{lX}
+x & TX \the\linewidth
+\end{tabularx}
+\end{document}

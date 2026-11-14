@@ -166,12 +166,14 @@ fn multirow_text_is_strut_delimited() {
 
 /// `\arrayrulecolor\hhline{---~~~}` (1910.02206): the argument runs to the first brace and takes that group
 /// (colortbl.sty:156-164), so no row of the spec's text appears between the two rows; `\doublerulesepcolor[rgb]{…}` too.
+/// The rules drawn after `\arrayrulecolor{blue}` are blue (#773, OD #1025); the unbraced colour is never drawn.
 #[test]
 fn arrayrulecolor_reads_to_the_brace() {
   let xml = clean!("package-bindings/colortbl_arrayrulecolor_unbraced.tex");
   assert_eq!(xml.matches("<tr ").count(), 2, "{xml}");
   assert_all(&xml, &[
-    r#"<td align="center" xml:id="p1.1.1.6">f</td> </tr> <tr xml:id="p1.1.2"> <td align="center" border="b" thead="row" xml:id="p1.1.2.1">g</td>"#,
+    r#"<td align="center" xml:id="p1.1.1.6">f</td> </tr> <tr xml:id="p1.1.2"> <td align="center" border="b" cssstyle="border-bottom-color:#0000FF" thead="row" xml:id="p1.1.2.1">g</td>"#,
+    r#"<td align="center" border="b t" cssstyle="border-top-color:#0000FF;border-bottom-color:#0000FF" xml:id="p1.1.2.4">j</td>"#,
   ]);
   assert!(!xml.contains("---"), "{xml}");
 }

@@ -1,0 +1,12 @@
+% witness: synthetic (issue 824's sibling sweep: a hand-written ion, `{}^{95}_{42}\mathrm{Mo}{}^{+}`)
+% oracle:  pdflatex 0 errors; 95 and 42 before Mo, + after it
+% engines: Perl 0.8.8 = 0 errors, `^ 95 _ 42 Mo` parsed, the trailing `{}^{+}` a lone FLOATSUPERSCRIPT beside it;
+%          rust 85a1bd780e7 and after issue 824 = 0 errors, 2 Warnings (`unparsed_math`): both formulae unparsed
+% expect:  the prescripted Mo parsed as in Perl; the trailing float script beside it (or attached as a post-script)
+% status:  RED
+% moves:   post-merge (a trailing float script after a factor: a grammar rule of its own, not the prescript order)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+${}^{95}_{42}\mathrm{Mo}{}^{+}$ and ${}^{95}\mathrm{MoO}{}_4$
+\end{document}

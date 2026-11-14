@@ -1,0 +1,16 @@
+% issue #773: a `!{}` rule drawn in a colour of its own (`!{\color{blue}\vrule}`) is that colour in pdflatex; the
+% border reads a colour only from colortbl's `|` (the rule box's `border_color`), so this side has none.
+% witness: synthetic (the review of fix/arrayrulecolor b8a67fad06: probe pre, its second table)
+% oracle:  pdflatex 0 errors: the left rule blue, the right `|` and the `\hline`s green
+% engines: rust b8a67fad06 = 0 errors, the left side green; fix/arrayrulecolor = the left side uncoloured; Perl = no colour
+% expect:  `border-left-color:#0000FF` on e's cell
+% status:  RED
+% moves:   post-merge (a `!{}` rule's own colour, apart from the ambient text colour the borders do not take, OD #1025)
+\documentclass{article}
+\usepackage{colortbl}
+\begin{document}
+\arrayrulecolor{green}
+\begin{tabular}{!{\color{blue}\vrule}c|}\hline
+e\\\hline
+\end{tabular}
+\end{document}

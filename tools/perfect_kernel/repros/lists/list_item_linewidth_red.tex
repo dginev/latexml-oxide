@@ -1,0 +1,14 @@
+% A list item's `\linewidth` is the text width less the list's margins (latex.ltx `\list`: `\linewidth\linewidth
+% \advance\linewidth-\leftmargin \advance\linewidth-\rightmargin`), so `width=\linewidth` in an item is narrower.
+% Ours keeps the page's \linewidth in a list (as Perl does).
+% status:  RED (open; moves: post-merge)
+% witness: synthetic (issue 778's sibling)
+% oracle:  pdflatex 0 errors: "IL 319.99997pt EL 297.99997pt"
+% engines: rust I778: IL 345.0pt EL 345.0pt
+% expect:  0 errors; the pdflatex widths
+\documentclass{article}
+\begin{document}
+\begin{itemize}\item IL \the\linewidth
+\begin{enumerate}\item EL \the\linewidth\end{enumerate}
+\end{itemize}
+\end{document}

@@ -1,0 +1,15 @@
+% witness: 2405.01836 (its displayed `\ce{<=>}`); 5 of the 133 `\ce` papers of the 30k census use `<=>`
+% oracle:  pdflatex 0 errors: A over-harpoon-right/under-harpoon-left B; A right-arrow B; A left-right-arrow B
+% engines: rust b272cfa = 0 errors, `<=>` two `→` (mhchem.sty:1251-1254 `\arrowfill@` heads lost); Perl hangs on `\ce`
+% expect:  `<=>` carries both ⇀ and ↽; `->` one →, `<->` one ↔, no stray `\displaystyle`
+% status:  RED (b272cfa) -> GREEN (AFH)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage[version=4]{mhchem}
+\begin{document}
+\ce{A <=> B}
+
+\ce{A -> B}
+
+\ce{A <-> B}
+\end{document}

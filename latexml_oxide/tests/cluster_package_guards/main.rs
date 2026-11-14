@@ -28,6 +28,7 @@ mod bibliography_names_fields;
 mod bibref_show;
 mod binding_conformance;
 mod binding_singletons_56;
+mod bindings_batch2;
 mod box_primitives;
 mod braced_quantity_tail;
 mod case_change_equivalents;
@@ -126,6 +127,7 @@ mod vfs_file_end;
 mod xkeyval_internals;
 
 mod accent_composite_expansion;
+mod arrowfill_heads;
 mod beamer_includegraphics_overlay;
 /// Issues #772, #760, #801, #787, #773, #779: the bindings batch of 2026-11-13.
 mod bindings_batch1;
@@ -614,6 +616,8 @@ mod perfect_kernel_batchta1;
 mod perfect_kernel_batchunc;
 /// VARW: a varwidth box measures its widest line (algxpar-doc, 2401.12710); KNOWN_PERL_ERRORS #1234.
 mod perfect_kernel_batchvarw;
+/// W4: colortbl's `\arrayrulecolor` colours each border side as the rule is drawn (#773); OD #1025.
+mod perfect_kernel_batchw4;
 mod perfect_kernel_batchz1;
 mod perfect_kernel_batchz14;
 mod perfect_kernel_batchz18c;

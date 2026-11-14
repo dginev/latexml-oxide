@@ -1,0 +1,12 @@
+% review revAFH (pre-existing): mathtools' `\xLongleftarrow` is undefined here — pdflatex is clean.
+% witness: synthetic
+% oracle:  pdflatex 0 errors; a long double left arrow with "above"
+% engines: rust b272cfa535a and f17a2968760 alike: `Error:undefined:\xLongleftarrow`
+% expect:  0 errors, 0 warnings; a ⟸ relation with the label as a script
+% status:  RED
+% moves:   post-merge (mathtools' extensible-arrow family)
+\documentclass{article}
+\usepackage{mathtools}
+\begin{document}
+$A \xLongleftarrow{\text{above}} B$
+\end{document}

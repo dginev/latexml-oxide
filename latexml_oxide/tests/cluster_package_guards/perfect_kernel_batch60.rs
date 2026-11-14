@@ -336,7 +336,8 @@ fn amsart_raw_addresses_are_set() {
 /// 60l: `\@array` zeroes `\lineskip` and `\baselineskip` for the alignment's body (latex.ltx:16580), so colortbl's
 /// `\ifdim\baselineskip=\z@\noalign\fi{…}` (colortbl.sty:158, :163; tabu.sty:2159) is a `\noalign` between rows: the
 /// table keeps its three rows and rules, as pdflatex, where the group became a cell ("\noalign cannot be used here",
-/// two "Extra alignment tab"). Repro kernel-alignment/colortbl_noalign_idiom.
+/// two "Extra alignment tab"). Repro kernel-alignment/colortbl_noalign_idiom. The rules drawn after each colour are
+/// in it, as pdflatex draws them: red from `\arrayrulecolor{red}`, blue from the raw `\gdef\CT@arc@` (#773, OD #1025).
 #[test]
 fn colortbl_noalign_idiom() {
   assert_elements_with(
@@ -350,7 +351,7 @@ fn colortbl_noalign_idiom() {
       (
         "para",
         "p1",
-        r##"<para xml:id="p1"><tabular class="ltx_guessed_headers" vattach="middle"><thead><tr><td align="left" border="l r t" thead="column">a</td><td align="left" border="r t" thead="column">b</td></tr></thead><tbody><tr><td align="left" border="l r t">c</td><td align="left" border="r t">d</td></tr><tr><td align="left" border="b l r t">e</td><td align="left" border="b r t">f</td></tr></tbody></tabular></para>"##,
+        r##"<para xml:id="p1"><tabular class="ltx_guessed_headers" vattach="middle"><thead><tr><td align="left" border="l r t" thead="column">a</td><td align="left" border="r t" thead="column">b</td></tr></thead><tbody><tr><td align="left" border="l r t" cssstyle="border-top-color:#FF0000;border-left-color:#FF0000;border-right-color:#FF0000">c</td><td align="left" border="r t" cssstyle="border-top-color:#FF0000;border-right-color:#FF0000">d</td></tr><tr><td align="left" border="b l r t" cssstyle="border-top-color:#0000FF;border-bottom-color:#0000FF;border-left-color:#0000FF;border-right-color:#0000FF">e</td><td align="left" border="b r t" cssstyle="border-top-color:#0000FF;border-bottom-color:#0000FF;border-right-color:#0000FF">f</td></tr></tbody></tabular></para>"##,
       ),
       ("para", "p2", r##"<para xml:id="p2"><p>Final.</p></para>"##),
     ],
@@ -428,6 +429,43 @@ fn array_cells_restore_their_interline_values() {
       "cc[N]"
     ],
     "{xml}"
+  );
+}
+
+/// Issue 778: a `p`/`m`/`b` cell, and a `\multicolumn` over one, is set with `\linewidth` its column's width
+/// (`\@arrayparboxrestore`, latex.ltx:16280), so `width=\linewidth` there fits the column; an l/c cell and the text
+/// after the table keep the page's (the base gave 345pt in every cell). Repro
+/// kernel-alignment/paragraph_cell_linewidth_is_the_column_width.
+#[test]
+fn paragraph_cell_linewidth_is_the_column_width() {
+  let (stderr, xml) = super::perfect_kernel_batch46::convert_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/kernel-alignment/paragraph_cell_linewidth_is_the_column_width.tex"
+    ),
+    None,
+  );
+  assert_eq!(
+    (error_count(&stderr), warning_count(&stderr)),
+    (0, 0),
+    "{stderr}"
+  );
+  assert_element(
+    &xml,
+    "tabular",
+    &[],
+    r#"<tabular vattach="middle"><tbody><tr>
+      <td align="left" vattach="top"><inline-block vattach="top" width="100.0pt"><p>P 100.0pt</p></inline-block></td>
+      <td align="left" vattach="middle"><inline-block vattach="middle" width="50.0pt"><p>M 50.0pt</p></inline-block></td>
+      <td align="left" vattach="bottom"><inline-block vattach="bottom" width="30.0pt"><p>B 30.0pt</p></inline-block></td>
+      <td align="center">C 345.0pt</td></tr><tr>
+      <td align="left" vattach="top"><inline-block vattach="top" width="80.0pt"><p>MC 80.0pt</p></inline-block></td>
+      <td vattach="middle"/><td vattach="bottom"/><td/></tr></tbody></tabular>"#,
+  );
+  assert_element(
+    &xml,
+    "para",
+    &["xml:id=\"p2\""],
+    r#"<para xml:id="p2"><p>After 345.0pt</p></para>"#,
   );
 }
 
