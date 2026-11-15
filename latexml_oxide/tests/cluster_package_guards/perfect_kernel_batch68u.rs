@@ -328,8 +328,29 @@ fn beilstein_authors_carry_their_numbered_affiliations() {
 /// class-bindings/lni_author_email_orcid_affil: `\author[mark]{name}{e-mail}{ORCID}` is authblk's author with its
 /// e-mail and ORCID, `\affil[mark]` authblk's (pdflatex: the footnotes "1 First University, Street 1, Town,
 /// ann@example.org, …" and "2 Second Institute, Town, bob@example.org"). Before 68u r2 no affiliation, e-mail or ORCID.
+/// A paper's own pre-2.0 lni.cls (no authblk) keeps the kernel's `\author[]{}` (LXAB; red on QAB4 round 2: 1 Error, the
+/// block again in p1, an invented ORCID `https://orcid.org/1`).
 #[test]
 fn lni_authors_carry_email_orcid_and_affiliation() {
+  let xml = assert_elements(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/class-bindings/lni_old_author_shape_keeps_the_kernels_author.tex"
+    ),
+    RAW,
+    (0, 0),
+    &[],
+  );
+  assert_eq!(
+    front_block(&xml),
+    normalize_markup(
+      r#"<title>A Title</title><creator role="author"><personname>Ann Able</personname><contact name="Note: " role="note">Univ X</contact></creator><creator before="  " role="author"><personname>Bob Baker</personname><contact name="Note: " role="note">Univ Y</contact></creator>"#
+    ),
+    "{xml}"
+  );
+  assert!(
+    normalize_markup(&xml).contains(r#"<para xml:id="p1"><p>Body text.</p></para></document>"#),
+    "{xml}"
+  );
   if !check_requirements(&["lni.cls", "newtxtt.sty"]) {
     return;
   }

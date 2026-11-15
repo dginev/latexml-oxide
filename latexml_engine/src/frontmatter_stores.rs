@@ -4017,6 +4017,36 @@ fn store_api(name: &str) -> Option<String> {
 /// replay read as empty (`\lx@deposit@maketitle`, sect05.rs).
 const KERNEL_FIELDS: [&str; 4] = ["\\@title", "\\@author", "\\@date", "\\@thanks"];
 
+/// What the title-page deposit empties of what the frontmatter carries, with the values it holds: the kernel's fields
+/// and the stores handed on (`\lx@captured@stores`). They read as empty where the title page prints them, and as these
+/// values where it reads a number from them (`gullet::set_operand_values`): a class's `\@tempcnta=\@date\relax` reads
+/// the document's year (BM's probe `session`, QA60).
+pub(crate) fn deposit_operand_values() -> Result<Vec<(Token, Tokens)>> {
+  let handed = lookup_string("lx_rerouted_stores");
+  let stores = handed
+    .split(',')
+    .filter(|name| !name.is_empty() && lookup_bool(&s!("lx_store_handed_{name}")))
+    .map(|name| s!("\\{}", store_of(name)));
+  let mut values = Vec::new();
+  for cs in KERNEL_FIELDS
+    .iter()
+    .map(|cs| String::from(*cs))
+    .chain(stores)
+  {
+    let token = T_CS!(&cs);
+    if let Some(defn) = lookup_definition(&token)?
+      && defn
+        .get_parameters()
+        .is_none_or(|p| p.get_parameters().is_empty())
+      && let Some(ExpansionBody::Tokens(body)) = defn.get_expansion()
+      && !body.unlist_ref().is_empty()
+    {
+      values.push((token, body.clone()));
+    }
+  }
+  Ok(values)
+}
+
 /// Silent-loss #5 (a), the generic rule for the class's off-table stores (75a row (a)): a one-argument setter the raw
 /// class defined, not in the table (`STORE_SETTERS`) and not one of its commands with an `@`, whose body is a pure store
 /// of its argument ([`setter_stores`]) in one control sequence of the class's that only its title-page code reads

@@ -18,6 +18,23 @@ const DEPOSIT_BEGIN: &str = "ltx:_TitlePageDeposit_Capture_";
 /// beside it (`settle_cover_title_ink`).
 pub const CONTINUED_TITLEPAGE: &str = "ltx_titlepage_continued";
 
+/// The class of a `<titlepage>` holding the body text a document set before `\maketitle`, kept ahead of the title block
+/// as the PDF prints it (QA91, [`wrap_text_before_title`]): like [`CONTINUED_TITLEPAGE`], it stands for no title.
+pub const BEFORE_TITLEPAGE: &str = "ltx_titlepage_before";
+
+/// A top-level `<titlepage>` standing for the document's title, which the HTML shows in place of `<ltx:title>` and its
+/// creators (LaTeXML-structure-xhtml.xsl, the `ltx:title` template): neither [`CONTINUED_TITLEPAGE`] nor
+/// [`BEFORE_TITLEPAGE`].
+pub(in crate::base_utilities) fn title_standing_titlepage(document: &mut Document) -> Option<Node> {
+  document.findnode(
+    &s!(
+      "/ltx:document/ltx:titlepage[not(contains(concat(' ', @class, ' '), ' {CONTINUED_TITLEPAGE} ')) and \
+       not(contains(concat(' ', @class, ' '), ' {BEFORE_TITLEPAGE} '))]"
+    ),
+    None,
+  )
+}
+
 /// A frontmatter element set after `\maketitle` placed the frontmatter (`frontmatter_push`): queued after
 /// `\lx@frontmatterhere`'s flush or digested in place after it. A late abstract's cover is followed by the first late
 /// abstract and its run, save what was printed before the cover (`printed_before_the_cover`: smfart's `{abstract}`

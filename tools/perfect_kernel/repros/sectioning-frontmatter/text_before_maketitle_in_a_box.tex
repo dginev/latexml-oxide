@@ -1,0 +1,19 @@
+% mechanism: the before-titlepage wrap (`wrap_text_before_title`, QA91) never takes the element holding the insertion
+%   point: a `\maketitle` inside a minipage leaves its paragraph open (`close_auto_closable_to_root`), and only the text
+%   before that paragraph moves ahead of the title block
+% witness: synthetic (QA91 round 2; OXIDIZED_DESIGN #262's `maketitle_inside_a_box_goes_to_the_head`)
+% oracle:  pdflatex 0 errors: "Opening words.", "The Title", "A. Author", the date, "Body."
+% engines: QAB4base: title, creator, "Opening words.", "Body."; 0 errors, 0 warnings
+% expect:  `<titlepage class="ltx_titlepage_before">` with "Opening words.", then `<title>`, `<creator>`, "Body."; 0
+%   errors, 0 warnings
+% status:  GREEN (QAB4 round 2); guard perfect_kernel_batch56::text_before_maketitle_stays_before_the_title
+\documentclass{article}
+\title{The Title}
+\author{A. Author}
+\begin{document}
+Opening words.
+
+\noindent\begin{minipage}{\textwidth}\maketitle\end{minipage}
+
+Body.
+\end{document}

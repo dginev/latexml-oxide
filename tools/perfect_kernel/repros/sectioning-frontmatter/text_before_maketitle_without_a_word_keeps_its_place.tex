@@ -1,0 +1,19 @@
+% A run before `\maketitle` that prints no word — a stray `]` (2209.03353's `\author[1]{ Feng Liang}[orcid=…]]`),
+% a `,`, a mark `*1` or `1` (0905.0312, 2305.09250, 2309.09081, 2407.04435, 2409.17131, 2506.23765) — is not wrapped
+% above the title block (QA91's wrap needs a word, `net_content_words`): it keeps the base placement, after the block,
+% though pdflatex prints it first (most such runs are marks a class left of an author line, not text of the page).
+% witness: 2209.03353 (revQAB4b finding 1), 0905.0312, 2305.09250, 2309.09081, 2407.04435, 2409.17131, 2506.23765
+% oracle:  pdflatex 0 errors (TL 2025, -no-shell-escape): "]" on page 1, then (article.cls `\maketitle`'s `\newpage`)
+%   "The Title", "A. Author", "Body."
+% engines: QAB4c: the `]` in a before-titlepage above `<title>`
+% expect:  `<title>`, the creator, then the `]` paragraph and "Body."; 0 errors, 0 warnings
+% status:  GREEN (QAB4d); guard perfect_kernel_batch56::text_before_maketitle_stays_before_the_title
+% preload: ar5iv.sty
+\documentclass{article}
+\title{The Title}
+\author{A. Author}
+\begin{document}
+]
+\maketitle
+Body.
+\end{document}
