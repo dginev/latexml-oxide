@@ -1,0 +1,18 @@
+% witness: synthetic (author_lines_783_declined_block.tex with an address line: a block the reading declines)
+% mechanism: issue #783 — Perl's split of a declined block (fallback.rs) gives each `\\` line ltx_author_line, but the
+%   address line's e-mail contact is made by no Kind step that is handed the class, so it has none and the author's
+%   lines fall back to the starred pop-up (LaTeXML.css shows them under the name only when every contact is a line)
+% oracle:  pdflatex 0 errors; "Ann Able1 / Dept. of B / ann@b.edu" beside "Bob Baker / Univ. of C"
+% engines: fix/issue-783 r3 (and r1/r2) = 1 warning (the decline); Dept. of B class="ltx_author_line", the e-mail
+%          `<contact name="Email: " role="email">ann@b.edu</contact>` none
+% expect:  the e-mail contact class="ltx_author_line" too
+% status:  RED (fix/issue-783 r3); moves: post-merge
+% preload: ar5iv.sty
+\documentclass{article}
+\newcommand{\footremember}[2]{\footnote{#2}\newcounter{#1}\setcounter{#1}{\value{footnote}}}
+\title{T}
+\author{Ann Able\footremember{zz}{Zebra University.} \\ Dept.\ of B \\ ann@b.edu \and Bob Baker \\ Univ.\ of C}
+\begin{document}
+\maketitle
+Body.
+\end{document}

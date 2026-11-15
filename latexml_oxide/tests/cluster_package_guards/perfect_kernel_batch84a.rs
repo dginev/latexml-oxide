@@ -108,9 +108,9 @@ fn author_braced_quad_separates_names() {
     "<creator role=\"author\"><personname>Ann Able</personname><contact class=\"ltx_author_line\" name=\"Affiliation:\u{a0}\" \
      role=\"affiliation\">Univ A</contact></creator>",
     "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker</personname><contact class=\"ltx_author_line\" \
-     name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A</contact><contact name=\"Affiliation:\u{a0}\" \
+     name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A</contact><contact class=\"ltx_author_line\" name=\"Affiliation:\u{a0}\" \
      role=\"affiliation\">Univ B</contact></creator>",
-    "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Cat Cole</personname><contact \
+    "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Cat Cole</personname><contact class=\"ltx_author_line\" \
      name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ C</contact></creator>",
   ]);
 }

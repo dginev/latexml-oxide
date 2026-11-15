@@ -200,8 +200,8 @@ fn a_numbered_footnote_legend_is_a_note() {
 fn a_name_and_its_note_are_written_once() {
   let two = both(repro!("emit_name_in_wrapper_mark_and_thanks_apart"));
   assert_eq!(two[..2], vec![
-    "<creator role=\"author\">\n    <personname>Ann Able</personname>\n    <contact class=\"ltx_author_line\" name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A</contact>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ B</contact>\n  </creator>",
-    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Bob Baker</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ B</contact>\n  </creator>"
+    "<creator role=\"author\">\n    <personname>Ann Able</personname>\n    <contact class=\"ltx_author_line\" name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A</contact>\n    <contact class=\"ltx_author_line\" name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ B</contact>\n  </creator>",
+    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Bob Baker</personname>\n    <contact class=\"ltx_author_line\" name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ B</contact>\n  </creator>"
   ]);
   assert!(
     two[2].contains("<personname>Cat Cole</personname>"),

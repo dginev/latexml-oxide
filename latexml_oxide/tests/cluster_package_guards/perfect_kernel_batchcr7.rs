@@ -449,7 +449,7 @@ fn a_definition_its_call_prints_takes_effect_in_order() {
     // (the base's reading kept: the marks on the names as affiliations and the content check's "1 2" are its own)
     (repro!("footremember_unread_on_a_marked_names_line"), 2, false, &row(&[
       "<creator role=\"author\"><personname>Ann Able</personname>\
-       <contact class=\"ltx_author_line\" name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id1\"><text font=\"italic\" \
+       <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id1\"><text font=\"italic\" \
        xml:id=\"id1.1\">1</text></sup></contact>\
        <contact class=\"ltx_author_line\" name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id2\"><text font=\"italic\" \
        xml:id=\"id2.1\">1</text></sup> Univ X</contact>\

@@ -36582,10 +36582,13 @@ document's `\AtEndAfterFileList` is lost (`enddocument_info_hook_red`). **Guard*
 **Perl.** Each `\\` line is `\lx@add@affiliation{line}` (Base_Utility.pool.ltxml:722-726), and since #2767 (`23f3acfa`)
 LaTeXML.css shows every author's contacts only in a hover pop-up behind a blue star unless the document is
 `ltx_authors_multiline` (KNOWN_PERL_ERRORS #1248); the XML cannot tell the line from a setter's `\affiliation{}`.
-**Rust.** A contact the emitter writes from the block's own text, where the last line break, name or column before
-it is a line break and no note holds it (`emit.rs` `on_an_author_line`), carries `class=ltx_author_line`; so does an
-e-mail the Kind step splits out of such a line (`kind_entry_addresses`) and each `\\` line of Perl's split when the
-reading declines (`fallback.rs`). A setter's contact (REVTeX `\affiliation`, `\email`) and a note get none; `\\`
+**Rust.** A contact the emitter writes from the block's own text, where the last line break or column before it is a
+line break and no note holds it (`emit.rs` `on_an_author_line`; a printed line holds across its text and its word
+"and", and resets only at `\\`, an `\and` command or a column break such as `\alignauthor`: 1602.06359, 2605.17295),
+carries `class=ltx_author_line`; so does an e-mail the Kind step splits out of such a line (`kind_entry_addresses`,
+the class handed to it by the emitter as `\lx@frontmatter@itemkinded`'s e-mail keys, never read back) and each `\\`
+line of Perl's split when the reading declines (`fallback.rs`; its address line's e-mail gets none,
+`author_lines_783_declined_email_red.tex`). A setter's contact (REVTeX `\affiliation`, `\email`) and a note get none; `\\`
 lines inside a per-author class's own `\author{Name\\line}` (REVTeX, amsart) are marked too. LaTeXML.css (local
 delta after the multiline rules): outside `ltx_authors_multiline`, an author whose contacts are all such lines is an
 `inline-block` card with them under the name, their labels hidden and no star; an author with any other contact keeps

@@ -195,7 +195,7 @@ fn a_split_address_list_left_unread_is_a_counted_warning() {
     format!(
       concat!(
         r#"<creator role="author"> <personname>Ann Able</personname> {0} "#,
-        r#"<contact name="Email: " role="email"><text font="typewriter">ann.able@alpha.edu</text></contact> "#,
+        r#"<contact class="ltx_author_line" name="Email: " role="email"><text font="typewriter">ann.able@alpha.edu</text></contact> "#,
         r#"</creator> "#,
         r#"<creator before=" " role="author"> <personname>Bo Baker</personname> {0} </creator>"#
       ),

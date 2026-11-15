@@ -103,11 +103,11 @@ fn author_spacing_math_between_names_separates() {
   assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
   assert_creators(&xml, &[
     "<creator role=\"author\"><personname>Ann Able</personname><contact class=\"ltx_author_line\" name=\"Affiliation:\u{a0}\" \
-     role=\"affiliation\"> Univ A</contact><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"> Univ \
+     role=\"affiliation\"> Univ A</contact><contact class=\"ltx_author_line\" name=\"Affiliation:\u{a0}\" role=\"affiliation\"> Univ \
      B</contact></creator>",
     "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker</personname><contact class=\"ltx_author_line\" \
      name=\"Affiliation:\u{a0}\" role=\"affiliation\"> Univ A</contact></creator>",
-    "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Cat Cole</personname><contact \
+    "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Cat Cole</personname><contact class=\"ltx_author_line\" \
      name=\"Affiliation:\u{a0}\" role=\"affiliation\"> Univ B</contact></creator>",
   ]);
 }
@@ -132,11 +132,11 @@ fn author_tie_after_entry_mark_is_the_entry() {
      role=\"affiliation\">{tie}Univ A</contact></creator>"
     ),
     &format!(
-      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker</personname><contact \
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker</personname><contact class=\"ltx_author_line\" \
      name=\"Affiliation:\u{a0}\" role=\"affiliation\">{tie}Univ B</contact></creator>"
     ),
     &format!(
-      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Cat Cole</personname><contact \
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Cat Cole</personname><contact class=\"ltx_author_line\" \
      name=\"Affiliation:\u{a0}\" role=\"affiliation\">{sp}Univ C</contact></creator>"
     ),
   ]);

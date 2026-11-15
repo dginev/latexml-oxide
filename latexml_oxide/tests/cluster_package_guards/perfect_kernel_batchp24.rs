@@ -175,13 +175,13 @@ fn eptcs_todays_shapes_keep_their_creator_elements() {
 <creator before="  " role="author">
     <personname>Bob Baker</personname>
     <contact name="Affiliation: " role="affiliation">Univ B</contact>
-    <contact name="Affiliation: " role="affiliation">Dept B</contact>
+    <contact class="ltx_author_line" name="Affiliation: " role="affiliation">Dept B</contact>
     <contact name="Email: " role="email"><text font="typewriter">bob@b.edu</text></contact>
   </creator>
 == eptcs_row_of_names
 <creator role="author">
     <personname>Carl Cole</personname>
-    <contact name="Affiliation: " role="affiliation">Univ C</contact>
+    <contact class="ltx_author_line" name="Affiliation: " role="affiliation">Univ C</contact>
     <contact class="ltx_author_line" name="Email: " role="email"><text font="typewriter">cole@c.edu</text></contact>
     <contact name="Affiliation: " role="affiliation">Lab D</contact>
   </creator>

@@ -3,10 +3,7 @@
 //! in a minipage beside an `{adjustbox}`.
 use latexml::util::test::assert_element;
 
-use super::{
-  perfect_kernel_batch46::{error_count, warning_count},
-  perfect_kernel_batch77d::author_line,
-};
+use super::perfect_kernel_batch46::{error_count, warning_count};
 
 /// The XML of `tex` converted under ar5iv, which must give no error and no warning.
 fn convert_clean(tex: &str) -> String {
@@ -222,7 +219,7 @@ fn author_bare_group_marked_names() {
   );
   assert_eq!(creators(&convert_clean(tex)), vec![
     "<creator role=\"author\">\n    <personname>Ann Able</personname>\n    <note class=\"ltx_note_frontmatter ltx_thanks_note\" role=\"thanks\" xml:id=\"id1\">Intern.</note>\n    <contact class=\"ltx_author_line\" name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A</contact>\n  </creator>",
-    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Bob Baker</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ B</contact>\n  </creator>",
+    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Bob Baker</personname>\n    <contact class=\"ltx_author_line\" name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ B</contact>\n  </creator>",
     "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Cat Cole</personname>\n    <contact class=\"ltx_author_line\" name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A</contact>\n  </creator>",
   ]);
 }
@@ -251,7 +248,7 @@ fn author_vspace_after_wrapper_names() {
   );
   assert_eq!(creators(&convert_clean(tex)), vec![
     "<creator role=\"author\">\n    <personname>Ann Able</personname>\n    <contact class=\"ltx_author_line\" name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A</contact>\n  </creator>",
-    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Bob Baker</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ B</contact>\n  </creator>",
+    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Bob Baker</personname>\n    <contact class=\"ltx_author_line\" name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ B</contact>\n  </creator>",
     "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Cat Cole</personname>\n    <contact class=\"ltx_author_line\" name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A</contact>\n  </creator>",
   ]);
 }
@@ -265,9 +262,9 @@ fn author_vspace_before_wrapper_names() {
   );
   assert_eq!(creators(&convert_clean(tex)), vec![
     "<creator role=\"author\">\n    <personname>Ann Able</personname>\n    <contact class=\"ltx_author_line\" name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A</contact>\n  </creator>",
-    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Bob Baker</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ B</contact>\n  </creator>",
+    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Bob Baker</personname>\n    <contact class=\"ltx_author_line\" name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ B</contact>\n  </creator>",
     "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Cat Cole</personname>\n    <contact class=\"ltx_author_line\" name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A</contact>\n  </creator>",
-    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Dan Dorn</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ B</contact>\n  </creator>",
+    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Dan Dorn</personname>\n    <contact class=\"ltx_author_line\" name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ B</contact>\n  </creator>",
   ]);
 }
 
@@ -280,9 +277,9 @@ fn author_quad_at_wrapper_edge() {
   );
   assert_eq!(creators(&convert_clean(tex)), vec![
     "<creator role=\"author\">\n    <personname>Ann Able</personname>\n    <contact class=\"ltx_author_line\" name=\"Affiliation:\u{a0}\" role=\"affiliation\"> Univ A</contact>\n  </creator>",
-    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Bob Baker</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"> Univ B</contact>\n  </creator>",
+    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Bob Baker</personname>\n    <contact class=\"ltx_author_line\" name=\"Affiliation:\u{a0}\" role=\"affiliation\"> Univ B</contact>\n  </creator>",
     "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Cat Cole</personname>\n    <contact class=\"ltx_author_line\" name=\"Affiliation:\u{a0}\" role=\"affiliation\"> Univ A</contact>\n  </creator>",
-    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Dan Dorn</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"> Univ B</contact>\n  </creator>",
+    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Dan Dorn</personname>\n    <contact class=\"ltx_author_line\" name=\"Affiliation:\u{a0}\" role=\"affiliation\"> Univ B</contact>\n  </creator>",
   ]);
 }
 
@@ -308,7 +305,7 @@ fn author_separator_macro_comma() {
   );
   assert_eq!(creators(&convert_clean(tex)), vec![
     "<creator role=\"author\">\n    <personname>Ann Able</personname>\n    <contact class=\"ltx_author_line\" name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A</contact>\n  </creator>",
-    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Bob Baker</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ B</contact>\n  </creator>",
+    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Bob Baker</personname>\n    <contact class=\"ltx_author_line\" name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ B</contact>\n  </creator>",
     "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Cat Cole</personname>\n    <contact class=\"ltx_author_line\" name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A</contact>\n  </creator>",
   ]);
 }
@@ -1145,7 +1142,7 @@ fn author_bold_row_after_marked_names() {
   let xml = convert_clean(tex);
   assert_eq!(creators(&xml), vec![
     "<creator role=\"author\">\n    <personname>Ann Able</personname>\n    <contact class=\"ltx_author_line\" name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A</contact>\n  </creator>",
-    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Bob Baker</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ B</contact>\n  </creator>",
+    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Bob Baker</personname>\n    <contact class=\"ltx_author_line\" name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ B</contact>\n  </creator>",
     "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Cat Cole<sup xml:id=\"id1\">†</sup></personname>\n  </creator>",
     "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Dan Dee<sup xml:id=\"id2\">†</sup></personname>\n  </creator>",
   ]);
@@ -1191,8 +1188,8 @@ fn author_vspace_led_marked_affiliation_line() {
   );
   let xml = convert_clean(tex);
   assert_eq!(creators(&xml), vec![
-    "<creator role=\"author\">\n    <personname>Ann Able</personname>\n    <contact class=\"ltx_author_line\" name=\"Affiliation:\u{a0}\" role=\"affiliation\"> Univ A</contact>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"> Univ B</contact>\n  </creator>",
-    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Bob Baker</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"> Univ B</contact>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"> Univ C</contact>\n  </creator>",
+    "<creator role=\"author\">\n    <personname>Ann Able</personname>\n    <contact class=\"ltx_author_line\" name=\"Affiliation:\u{a0}\" role=\"affiliation\"> Univ A</contact>\n    <contact class=\"ltx_author_line\" name=\"Affiliation:\u{a0}\" role=\"affiliation\"> Univ B</contact>\n  </creator>",
+    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Bob Baker</personname>\n    <contact class=\"ltx_author_line\" name=\"Affiliation:\u{a0}\" role=\"affiliation\"> Univ B</contact>\n    <contact class=\"ltx_author_line\" name=\"Affiliation:\u{a0}\" role=\"affiliation\"> Univ C</contact>\n  </creator>",
   ]);
 }
 
@@ -1218,7 +1215,7 @@ fn author_group_declaration_vspace_affiliation_line() {
   let xml = convert_clean(tex);
   assert_eq!(creators(&xml), vec![
     "<creator role=\"author\">\n    <personname>Ann Able</personname>\n    <contact class=\"ltx_author_line\" name=\"Affiliation:\u{a0}\" role=\"affiliation\"><text fontsize=\"90%\" xml:id=\"id1\">Univ A</text></contact>\n  </creator>",
-    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Bob Baker</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><text fontsize=\"90%\" xml:id=\"id2\">Univ B</text></contact>\n  </creator>",
+    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Bob Baker</personname>\n    <contact class=\"ltx_author_line\" name=\"Affiliation:\u{a0}\" role=\"affiliation\"><text fontsize=\"90%\" xml:id=\"id2\">Univ B</text></contact>\n  </creator>",
   ]);
 }
 
@@ -1231,7 +1228,7 @@ fn author_kern_led_affiliation_line() {
   let xml = convert_clean(tex);
   assert_eq!(creators(&xml), vec![
     "<creator role=\"author\">\n    <personname>Ann Able</personname>\n    <contact class=\"ltx_author_line\" name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A</contact>\n  </creator>",
-    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Bob Baker</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ B</contact>\n  </creator>",
+    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Bob Baker</personname>\n    <contact class=\"ltx_author_line\" name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ B</contact>\n  </creator>",
   ]);
 }
 
@@ -1302,7 +1299,7 @@ fn author_wrapped_lead_declarations_after_spacing() {
   let xml = convert_clean(tex);
   assert_eq!(creators(&xml), vec![
     "<creator role=\"author\">\n    <personname>Ann</personname>\n    <contact class=\"ltx_author_line\" name=\"Affiliation:\u{a0}\" role=\"affiliation\"><text font=\"italic\" fontsize=\"90%\" xml:id=\"id1\">Univ A</text></contact>\n  </creator>",
-    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Bob</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><text font=\"italic\" fontsize=\"90%\" xml:id=\"id2\">Univ B</text></contact>\n  </creator>",
+    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Bob</personname>\n    <contact class=\"ltx_author_line\" name=\"Affiliation:\u{a0}\" role=\"affiliation\"><text font=\"italic\" fontsize=\"90%\" xml:id=\"id2\">Univ B</text></contact>\n  </creator>",
   ]);
 }
 
@@ -1317,8 +1314,8 @@ fn author_spacing_after_wrapped_affiliation_list() {
   let xml = convert_clean(tex);
   assert_eq!(creators(&xml), vec![
     "<creator role=\"author\">\n    <personname>Ann</personname>\n    <contact class=\"ltx_author_line\" name=\"Affiliation:\u{a0}\" role=\"affiliation\"><text fontsize=\"90%\" xml:id=\"id1\">Univ A</text></contact>\n  </creator>",
-    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Bob</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><text fontsize=\"90%\" xml:id=\"id2\">Univ B</text></contact>\n  </creator>",
-    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Cat</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ C</contact>\n  </creator>",
+    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Bob</personname>\n    <contact class=\"ltx_author_line\" name=\"Affiliation:\u{a0}\" role=\"affiliation\"><text fontsize=\"90%\" xml:id=\"id2\">Univ B</text></contact>\n  </creator>",
+    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Cat</personname>\n    <contact class=\"ltx_author_line\" name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ C</contact>\n  </creator>",
   ]);
 }
 

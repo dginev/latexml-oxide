@@ -137,8 +137,8 @@ fn team_words_and_company_surnames_name_no_collaboration() {
                 $^1$Univ A\\\\ $^2$The ATLAS Collaboration Office, CERN}\n\\maketitle\nBody.\n\\end{document}\n";
   let xml = both_ways(office);
   assert_eq!(creators(&xml), [
-    r#"<creator role="author"> <personname>Ann Able</personname> <contact name="Affiliation: " role="affiliation">Univ A</contact> </creator>"#,
-    r#"<creator before=" " role="author"> <personname>Bob Baker</personname> <contact name="Affiliation: " role="affiliation">The ATLAS Collaboration Office, CERN</contact> </creator>"#,
+    r#"<creator role="author"> <personname>Ann Able</personname> <contact class="ltx_author_line" name="Affiliation: " role="affiliation">Univ A</contact> </creator>"#,
+    r#"<creator before=" " role="author"> <personname>Bob Baker</personname> <contact class="ltx_author_line" name="Affiliation: " role="affiliation">The ATLAS Collaboration Office, CERN</contact> </creator>"#,
   ]);
   let company = "\\documentclass{aastex}\n\\begin{document}\n\\title{T}\n\\author{M.~Huertas-Company\\altaffilmark{1}, \
                  B.~Baker\\altaffilmark{2}}\n\\altaffiltext{1}{Univ A}\n\\altaffiltext{2}{Univ B}\n\\maketitle\nBody.\n\

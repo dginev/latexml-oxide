@@ -102,7 +102,7 @@ fn a_line_under_a_name_is_its_line() {
   );
   assert_eq!(
     converted(repro!("authblk_email_line_under_name"), 0),
-    r##"<title>T</title> <creator role="author"> <personname>Bob Baker</personname> <contact name="Affiliation: " role="affiliation"><text fontsize="90%" xml:id="id1">Univ X</text></contact> <contact name="Email: " role="email"><text font="typewriter" fontsize="90%" xml:id="id2">bob.baker@x.org</text></contact> </creator> <para xml:id="p1"> <p xml:id="p1.1">Text.</p> </para>"##
+    r##"<title>T</title> <creator role="author"> <personname>Bob Baker</personname> <contact class="ltx_author_line" name="Affiliation: " role="affiliation"><text fontsize="90%" xml:id="id1">Univ X</text></contact> <contact class="ltx_author_line" name="Email: " role="email"><text font="typewriter" fontsize="90%" xml:id="id2">bob.baker@x.org</text></contact> </creator> <para xml:id="p1"> <p xml:id="p1.1">Text.</p> </para>"##
   );
 }
 
@@ -245,7 +245,7 @@ fn a_row_of_addresses_reads_each_clean() {
   );
   assert_eq!(
     converted(repro!("author_address_row_comma_before_the_space"), 0),
-    r##"<title>T</title> <creator role="author"> <personname>Ann Able</personname> <contact name="e-mail: " role="email">ann@x.org</contact> </creator> <creator before=" " role="author"> <personname>Bob Baker</personname> <contact name="e-mail: " role="email">bob@y.org</contact> </creator> <para xml:id="p1"> <p xml:id="p1.1">Text.</p> </para>"##
+    r##"<title>T</title> <creator role="author"> <personname>Ann Able</personname> <contact class="ltx_author_line" name="e-mail: " role="email">ann@x.org</contact> </creator> <creator before=" " role="author"> <personname>Bob Baker</personname> <contact class="ltx_author_line" name="e-mail: " role="email">bob@y.org</contact> </creator> <para xml:id="p1"> <p xml:id="p1.1">Text.</p> </para>"##
   );
 }
 

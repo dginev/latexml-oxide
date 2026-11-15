@@ -2163,8 +2163,8 @@ fn ieee_membership_outside_the_names_stays_dropped() {
   assert_eq!(super::perfect_kernel_batch61::creators_of(&xml), [
     "<creator role=\"author\"><personname>Wenming\u{a0}Li</personname></creator>",
     "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Xiaochun\u{a0}Ye</personname></creator>",
-    "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Dongrui\u{a0}Fan</personname><contact role=\"membership\">Senior\u{a0}Member,\u{a0}IEEE</contact></creator>",
-    "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Yuan\u{a0}Xie</personname><contact role=\"membership\">Fellow,\u{a0}IEEE</contact></creator>",
+    "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Dongrui\u{a0}Fan</personname><contact class=\"ltx_author_line\" role=\"membership\">Senior\u{a0}Member,\u{a0}IEEE</contact></creator>",
+    "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Yuan\u{a0}Xie</personname><contact class=\"ltx_author_line\" role=\"membership\">Fellow,\u{a0}IEEE</contact></creator>",
   ]);
 }
 
@@ -3981,7 +3981,7 @@ fn interact_author_name_list() {
   );
   assert_eq!(creators_63x(tex), vec![
     "<creator role=\"author\">\n    <personname>Ann Able</personname>\n    <contact class=\"ltx_author_line\" name=\"Affiliation: \" role=\"affiliation\">Univ A</contact>\n  </creator>",
-    "<creator before=\"  \" role=\"author\">\n    <personname>Bob Baker</personname>\n    <contact name=\"Affiliation: \" role=\"affiliation\">Univ B</contact>\n  </creator>",
+    "<creator before=\"  \" role=\"author\">\n    <personname>Bob Baker</personname>\n    <contact class=\"ltx_author_line\" name=\"Affiliation: \" role=\"affiliation\">Univ B</contact>\n  </creator>",
     "<creator before=\"  \" role=\"author\">\n    <personname>Cat Cole</personname>\n    <contact class=\"ltx_author_line\" name=\"Affiliation: \" role=\"affiliation\">Univ A</contact>\n  </creator>",
   ]);
 }

@@ -137,11 +137,11 @@ fn a_collaboration_line_in_a_raw_name_block_is_the_names_contact() {
         .to_string(),
       r#"<creator before=" " role="author"> <personname>Bob Baker</personname> "#.to_string(),
       collaboration(2),
-      r#"<contact name="Affiliation: " role="affiliation">Univ B, Italy</contact> </creator> "#
+      r#"<contact class="ltx_author_line" name="Affiliation: " role="affiliation">Univ B, Italy</contact> </creator> "#
         .to_string(),
       r#"<creator before=" " role="author"> <personname>Cat Cole</personname> "#.to_string(),
       collaboration(3),
-      r#"<contact name="Affiliation: " role="affiliation">Univ B, Italy</contact> </creator>"#
+      r#"<contact class="ltx_author_line" name="Affiliation: " role="affiliation">Univ B, Italy</contact> </creator>"#
         .to_string(),
     ]
     .concat()
@@ -163,7 +163,7 @@ fn a_collaboration_remark_in_a_raw_name_block_is_the_authors_contact() {
       r#"<creator role="author"> <personname>A.B. de Able</personname> "#,
       r#"<contact role="collaboration">for the XYZ collaboration.</contact> "#,
       r#"<contact class="ltx_author_line" name="Affiliation: " role="affiliation">Univ A, USA</contact> "#,
-      r#"<contact name="Affiliation: " role="affiliation">now at Univ B, UK</contact> </creator>"#,
+      r#"<contact class="ltx_author_line" name="Affiliation: " role="affiliation">now at Univ B, UK</contact> </creator>"#,
     )
   );
 }

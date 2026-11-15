@@ -73,7 +73,7 @@ fn ieee_group_names_keep_their_memberships() {
       "Dan Dorn",
       &format!(
         "{} {}",
-        membership("Fellow, IEEE"),
+        author_line(membership("Fellow, IEEE")),
         thanks("note", "id1", "Ann Able is with Univ A.")
       )
     ),
@@ -164,9 +164,9 @@ fn note_macro_among_names_is_the_names_note() {
     creator(
       false,
       "Bob Baker",
-      &format!("{} {}", mark("1", "*"), affiliation("Univ B"))
+      &format!("{} {}", mark("1", "*"), author_line(affiliation("Univ B")))
     ),
-    creator(false, "Cat Cole", &affiliation("Univ C")),
+    creator(false, "Cat Cole", &author_line(affiliation("Univ C"))),
     creator(
       false,
       "Dan Dorn",
@@ -179,7 +179,7 @@ fn note_macro_among_names_is_the_names_note() {
     creator(
       false,
       "Eve Ess",
-      &format!("{} {}", mark("2", "†"), affiliation("Univ B"))
+      &format!("{} {}", mark("2", "†"), author_line(affiliation("Univ B")))
     ),
   ]);
 }
@@ -908,7 +908,7 @@ fn authblk_glued_symbols_in_one_author_block() {
   let xml = squash(&xml);
   assert_eq!(creators(&xml), [
     r#"<creator role="author"> <personname>Ann Able</personname> <contact class="ltx_author_line" name="Affiliation: " role="affiliation">Univ X</contact> <note class="ltx_note_frontmatter ltx_thanks_contribution" mark="∗" role="thanks" xml:id="id1"><sup xml:id="id1.1"><text font="italic" xml:id="id1.1.1">∗</text></sup> Equal contribution</note> </creator>"#,
-    r#"<creator before=" " role="author"> <personname>Bob Baker</personname> <contact name="Affiliation: " role="affiliation">Univ Y</contact> <note class="ltx_note_frontmatter ltx_thanks_contribution" mark="∗" role="thanks" xml:id="id2"><sup xml:id="id2.1"><text font="italic" xml:id="id2.1.1">∗</text></sup> Equal contribution</note> </creator>"#,
+    r#"<creator before=" " role="author"> <personname>Bob Baker</personname> <contact class="ltx_author_line" name="Affiliation: " role="affiliation">Univ Y</contact> <note class="ltx_note_frontmatter ltx_thanks_contribution" mark="∗" role="thanks" xml:id="id2"><sup xml:id="id2.1"><text font="italic" xml:id="id2.1.1">∗</text></sup> Equal contribution</note> </creator>"#,
     r#"<creator before=" " role="author"> <personname>Cat Cole</personname> <contact class="ltx_author_line" name="Affiliation: " role="affiliation">Univ X</contact> <note class="ltx_note_frontmatter ltx_thanks_correspondence" mark="†" role="thanks" xml:id="id3"><sup xml:id="id3.1">†</sup> Corresponding author</note> </creator>"#,
   ]);
 }

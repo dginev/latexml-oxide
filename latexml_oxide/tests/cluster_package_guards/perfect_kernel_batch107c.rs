@@ -44,7 +44,7 @@ fn an_address_tail_after_a_boundary_leaves_its_affiliation() {
 fn a_list_in_its_other_printed_forms_leaves_its_affiliation() {
   assert_eq!(
     converted(repro!("addr_line_ieee_bracket_list"), 0),
-    r##"<title>T</title> <creator role="author"> <personname>Ann Able</personname> <contact class="ltx_author_line" name="Affiliation: " role="affiliation">Univ A, Town, Italy</contact> <contact name="Email: " role="email">ann.able@a.it</contact> </creator> <creator before=" " role="author"> <personname>Bob Baker</personname> <contact class="ltx_author_line" name="Affiliation: " role="affiliation">Univ A, Town, Italy</contact> <contact name="Email: " role="email">bob.baker@a.it</contact> </creator> <creator before=" " role="author"> <personname>Cat Cole</personname> <contact name="Affiliation: " role="affiliation">Univ A, Town, Italy</contact> <contact name="Email: " role="email">cat.cole@a.it</contact> </creator> <para xml:id="p1"> <p xml:id="p1.1">Text.</p> </para>"##
+    r##"<title>T</title> <creator role="author"> <personname>Ann Able</personname> <contact class="ltx_author_line" name="Affiliation: " role="affiliation">Univ A, Town, Italy</contact> <contact name="Email: " role="email">ann.able@a.it</contact> </creator> <creator before=" " role="author"> <personname>Bob Baker</personname> <contact class="ltx_author_line" name="Affiliation: " role="affiliation">Univ A, Town, Italy</contact> <contact name="Email: " role="email">bob.baker@a.it</contact> </creator> <creator before=" " role="author"> <personname>Cat Cole</personname> <contact class="ltx_author_line" name="Affiliation: " role="affiliation">Univ A, Town, Italy</contact> <contact name="Email: " role="email">cat.cole@a.it</contact> </creator> <para xml:id="p1"> <p xml:id="p1.1">Text.</p> </para>"##
   );
   assert_eq!(
     converted(repro!("addr_line_group_domain_after_brace"), 0),
@@ -102,6 +102,6 @@ fn a_dedication_is_the_papers_pubnote() {
   );
   assert_eq!(
     converted(repro!("legend_kind_marked_dedication_line"), 0),
-    r##"<title>T</title> <creator role="author"> <personname>Ann Able</personname> <contact name="Affiliation: " role="affiliation">Univ A, Town</contact> </creator> <creator before=" " role="author"> <personname>Bob Baker</personname> <contact name="Affiliation: " role="affiliation">Univ A, Town</contact> <note class="ltx_note_frontmatter ltx_thanks_note" mark="†" role="thanks" xml:id="id1"><sup xml:id="id1.1">†</sup>In memory of Bob Baker, who passed away during this work</note> </creator> <para xml:id="p1"> <p xml:id="p1.1">Text.</p> </para>"##
+    r##"<title>T</title> <creator role="author"> <personname>Ann Able</personname> <contact class="ltx_author_line" name="Affiliation: " role="affiliation">Univ A, Town</contact> </creator> <creator before=" " role="author"> <personname>Bob Baker</personname> <contact class="ltx_author_line" name="Affiliation: " role="affiliation">Univ A, Town</contact> <note class="ltx_note_frontmatter ltx_thanks_note" mark="†" role="thanks" xml:id="id1"><sup xml:id="id1.1">†</sup>In memory of Bob Baker, who passed away during this work</note> </creator> <para xml:id="p1"> <p xml:id="p1.1">Text.</p> </para>"##
   );
 }

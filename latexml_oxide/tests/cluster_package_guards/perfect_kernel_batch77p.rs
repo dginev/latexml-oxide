@@ -65,7 +65,7 @@ fn thin_space_run_separates_names() {
   assert_no_merged_names(&xml);
   assert_eq!(creators(&xml), [
     creator(true, "Ann Able", &author_line(affiliation("Univ A"))),
-    creator(false, "Bob Baker", &affiliation("Univ B")),
+    creator(false, "Bob Baker", &author_line(affiliation("Univ B"))),
   ]);
 }
 
@@ -77,7 +77,7 @@ fn control_space_run_separates_names() {
   assert_no_merged_names(&xml);
   assert_eq!(creators(&xml), [
     creator(true, "Ann Able", &author_line(affiliation("Univ A"))),
-    creator(false, "Bob Baker", &affiliation("Univ B")),
+    creator(false, "Bob Baker", &author_line(affiliation("Univ B"))),
     creator(false, "Cat Cole", &author_line(affiliation("Univ A"))),
   ]);
 }
@@ -90,7 +90,7 @@ fn tie_run_separates_names() {
   assert_no_merged_names(&xml);
   assert_eq!(creators(&xml), [
     creator(true, "Ann Able", &author_line(affiliation("Univ A"))),
-    creator(false, "Bob Baker", &affiliation("Univ B")),
+    creator(false, "Bob Baker", &author_line(affiliation("Univ B"))),
     creator(false, "Cat Cole", &author_line(affiliation("Univ A"))),
   ]);
 }
@@ -134,7 +134,7 @@ fn let_alias_mark_is_a_mark() {
       &format!(
         "{} {}",
         author_line(affiliation("Univ A")),
-        affiliation("Univ B")
+        author_line(affiliation("Univ B"))
       )
     ),
   ]);
@@ -415,7 +415,10 @@ fn email_owner_by_given_name() {
   let email = |address: &str| {
     format!(r#"<contact class="ltx_author_line" name="Email: " role="email">{address}</contact>"#)
   };
-  let (univ_b, _) = (author_line(affiliation("Univ B")), affiliation("MIT "));
+  let (univ_b, _) = (
+    author_line(affiliation("Univ B")),
+    author_line(affiliation("MIT ")),
+  );
   assert_eq!(creators(&xml), vec![
     creator(
       true,
@@ -427,7 +430,7 @@ fn email_owner_by_given_name() {
       "Vasha DuTell",
       &format!(
         "{univ_b} {} {} {}",
-        affiliation("MIT"),
+        author_line(affiliation("MIT")),
         email("vasha@berkeley.edu"),
         email("vasha@mit.edu")
       )
@@ -440,7 +443,11 @@ fn email_owner_by_given_name() {
     creator(
       false,
       "Jen E. Corbett",
-      &format!("{} {}", affiliation("MIT"), email("j8675309@mit.edu"))
+      &format!(
+        "{} {}",
+        author_line(affiliation("MIT")),
+        email("j8675309@mit.edu")
+      )
     ),
   ]);
 }
@@ -731,7 +738,7 @@ fn and_run_between_marked_entries() {
   assert_no_merged_names(&xml);
   assert_eq!(creators(&xml), [
     creator(true, "Ann Able", &author_line(affiliation("Univ A"))),
-    creator(false, "Bob Baker", &affiliation("Univ B")),
+    creator(false, "Bob Baker", &author_line(affiliation("Univ B"))),
   ]);
 }
 
@@ -1909,7 +1916,7 @@ fn line_break_optional_after_spaces_prints_nothing() {
       "Bob Baker",
       &format!(
         "{univ_a} {} {}",
-        affiliation("Univ B"),
+        author_line(affiliation("Univ B")),
         author_line(typewriter_email("bbaker@x.edu", "id2"))
       )
     ),
@@ -2009,7 +2016,7 @@ fn symbol_institution_row_parted_by_space() {
   let univ_a = author_line(affiliation("Univ A"));
   assert_eq!(creators(&xml), vec![
     creator(true, "Ann Able", &univ_a),
-    creator(false, "Bob Baker", &affiliation("Univ B")),
+    creator(false, "Bob Baker", &author_line(affiliation("Univ B"))),
     creator(false, "Cat Cole", &univ_a),
   ]);
 }

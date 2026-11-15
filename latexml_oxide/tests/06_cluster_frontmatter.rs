@@ -1578,7 +1578,7 @@ fn frontmatter_author_lines_783() {
       ))
     };
   }
-  let rows: [(&str, &str, usize, Vec<String>); 11] = [
+  let rows: [(&str, &str, usize, Vec<String>); 12] = [
     ("book", repro!("book"), 0, vec![format!(
       "<creator role=\"author\"><personname>name</personname>{L}school name</contact>{L}dept. \
        name</contact></creator>"
@@ -1639,6 +1639,16 @@ fn frontmatter_author_lines_783() {
       "<creator role=\"author\"><personname>Ann Able</personname>{L}Univ. of A<break/>Dept. of \
        B</contact></creator>"
     )]),
+    // (a printed line holds across its text and its word "and": both entries of the second line are lines)
+    ("and_on_a_line", repro!("and_on_a_line"), 0, vec![
+      format!(
+        "<creator role=\"author\"><personname>Ann Able</personname>{L}Univ A</contact></creator>"
+      ),
+      format!(
+        "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker</personname>{L}Univ \
+         B</contact></creator>"
+      ),
+    ]),
     // (a block the reading declines, written as Perl's `\lx@add@authors` splits it: fallback.rs)
     ("declined_block", repro!("declined_block"), 1, vec![
       format!(

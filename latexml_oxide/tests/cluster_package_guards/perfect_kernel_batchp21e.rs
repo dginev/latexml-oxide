@@ -101,7 +101,7 @@ fn a_paragraph_in_a_box_keeps_a_contacts_markup() {
         &["Bob Baker 2"],
         &["Cy Cole 3"],
       ]),
-      "<contact class=\"ltx_author_line\" name=\"Email:\u{a0}\" role=\"email\"><ref class=\"ltx_href\" href=\"mailto:team@x.org\">team@x.org</ref></contact>",
+      "<contact name=\"Email:\u{a0}\" role=\"email\"><ref class=\"ltx_href\" href=\"mailto:team@x.org\">team@x.org</ref></contact>",
     ),
   ];
   for (name, tex, counts, expected, contact) in cases {

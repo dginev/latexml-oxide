@@ -30,6 +30,7 @@ pub(in crate::base_utilities) fn kind_entry_addresses(
   tag: &Tokens,
   kv: Option<&KeyVals>,
   content: &Tokens,
+  email_keys: &str,
 ) -> Result<Option<Tokens>> {
   if tag.to_string() != "ltx:contact"
     || !content
@@ -165,21 +166,9 @@ pub(in crate::base_utilities) fn kind_entry_addresses(
         })
     });
   // (each e-mail the Kind step made says so, `ENTRY_KINDED`: an e-mail command the author wrote inside the entry is
-  // placed by its own call where it holds one address, `insert::link_entry_addresses`)
-  // (and an entry of the author block's lines, its class: its e-mails print on that line, issue #783)
-  let line = kv
-    .and_then(|kv| kv.get_value("class"))
-    .is_some_and(|class| {
-      class
-        .to_string()
-        .split_whitespace()
-        .any(|c| c == "ltx_author_line")
-    });
-  let kinded_keys = if line {
-    s!("{ENTRY_KINDED}=true,class=ltx_author_line")
-  } else {
-    s!("{ENTRY_KINDED}=true")
-  };
+  // placed by its own call where it holds one address, `insert::link_entry_addresses`; and the keys its writer gives them,
+  // `email_keys`: the class of the author block's line it decided, issue #783)
+  let kinded_keys = s!("{ENTRY_KINDED}=true{email_keys}");
   let kinded = mouth::tokenize_internal(TeXString::assembled(kinded_keys.clone())).unlist();
   // (a line printed before every line the entry keeps, its e-mails placed before the entry: user ruling R8,
   // `\IEEEauthorblockA{\href{mailto:ann@a.org}{ann@a.org}\\ \url{https://orcid.org/…}\\ …}`, 2206.10577 — review
