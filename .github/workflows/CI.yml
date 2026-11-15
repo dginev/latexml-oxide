@@ -11,6 +11,15 @@ on:
     - cron: '23 4 * * *'
   # Manual: the macOS leg alone on the chosen ref (Actions → CI → Run workflow).
   workflow_dispatch:
+  # The release (release.yml) calls this workflow with `full: true`: every job
+  # runs, macOS included, whatever the diff — all platforms are checked before
+  # a release is published (DG 2026-11-14).
+  workflow_call:
+    inputs:
+      full:
+        description: run every job, bypassing the path filter (release)
+        type: boolean
+        default: false
 
 name: CI
 
@@ -59,9 +68,11 @@ jobs:
     name: detect changes
     runs-on: ubuntu-latest
     timeout-minutes: 5
+    # `inputs.full` (a release's call) forces both true; `inputs` is empty on
+    # the workflow's own events, so the filter decides there.
     outputs:
-      not_docs: ${{ steps.filter.outputs.not_docs }}
-      macos: ${{ steps.filter.outputs.macos }}
+      not_docs: ${{ inputs.full && 'true' || steps.filter.outputs.not_docs }}
+      macos: ${{ inputs.full && 'true' || steps.filter.outputs.macos }}
     steps:
       - uses: actions/checkout@v6
       # On `schedule`/`workflow_dispatch` there is no diff to filter: the step
@@ -69,7 +80,7 @@ jobs:
       # the macos job runs on its event test alone.
       - uses: dorny/paths-filter@v3
         id: filter
-        if: github.event_name == 'pull_request' || github.event_name == 'push'
+        if: (github.event_name == 'pull_request' || github.event_name == 'push') && !inputs.full
         with:
           # micromatch semantics: a file matches when it matches a positive
           # pattern and none of the `!` negations. `!*.md` is top-level only
