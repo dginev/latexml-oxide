@@ -424,7 +424,7 @@ fn define_command(qname: &str, code: Option<ExpansionBody>, macroname: &str) -> 
     // the stray PARAM token reaches the stomach: `Error:misdefined:#` on every
     // \define@cmdkey use, and `#1` in the code body never sees the value.
     // Real xkeyval (xkeyval.tex `\XKV@define@cmdkey`) runs the code with `#1`
-    // = the bare value — KNOWN_PERL_ERRORS #80; witness
+    // = the bare value — KNOWN_PERL_ERRORS #1275; witness
     // doc/latex/xkeymask/xkeymask.tex. Emit the bare value.
     Ok(Tokens!(
       T_CS!("\\def"),

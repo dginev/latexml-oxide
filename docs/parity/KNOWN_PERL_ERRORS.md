@@ -4,11 +4,10 @@ This file documents issues in the original Perl LaTeXML codebase.
 These are upstream behaviors or design quirks — NOT bugs introduced by the Rust port.
 For Rust-specific error bookkeeping, see `docs/SYNC_STATUS.md`.
 
-> **Numbers #80–#86 occur twice** (a historical merge; the `## N` numbers are cited from code, so neither series is
-> renumbered). The first series runs from `pdfcol.sty` (#80) to `\@ifundefined{r@LABEL}` forward references (#86);
-> the second from `\define@cmdkey` (#80) to `\maketitle` inside box captures (#86). Code comments citing #80, #82
-> and #83 (keyval, the locked `\newtheorem`, the `\index` phrase splitter) mean the second series. Cite these by
-> number *and* title. New entries take the next free number from
+> **Numbers #80–#86 occurred twice** (a historical merge). The first series, `pdfcol.sty` (#80) to `\@ifundefined{r@LABEL}`
+> forward references (#86), keeps its numbers; the second, `\define@cmdkey` (#80) to `\maketitle` inside box captures
+> (#86), is #1275–#1281 since 2026-11-15 (OD rationalization C21), each heading naming its old number, and every citation
+> of it was moved with it. Cite an entry by number *and* title. New entries take the next free number from
 > `tools/perfect_kernel/next_entry_numbers.sh` (it counts open PR heads too), allocated at integration.
 
 ---
@@ -3276,7 +3275,7 @@ contains it. Reported in review on brucemiller/LaTeXML#430 (`r3674103638`);
 Rust now puts the text on the lone `ltx:graphics` as `@alt` and never emits a
 name relation (`OXIDIZED_DESIGN_DIVERGENCES.md` #83).
 
-Two further problems do stand:
+Two further problems:
 
 1. **`ltx:note` carries footnote decoration.** `LaTeXML-meta-xhtml.xsl` wraps a
    note in a `†` mark plus a `<role>: ` type prefix, and because the note is the
@@ -3289,21 +3288,21 @@ Two further problems do stand:
    inside it. Digesting therefore manufactures errors invisible in the normal
    workflow: 2607.21760 writes `\D1 … \D5` inside `\Description` (a copy-paste
    slip from the adjacent `alt=` text, which has plain `D1 … D5`) and both
-   engines report `Error:undefined:\D` — for content they then discard.
+   engines report `Error:undefined:\D` — Perl for content it then discards.
 
-**Fixed in Rust, deliberately diverging** (`latexml_package/src/package/acmart_cls.rs`;
-see `OXIDIZED_DESIGN_DIVERGENCES.md` #83): the description is read `Undigested`
-so nothing inside it expands; where the float holds a lone image the short form
-becomes that image's `@alt` and the long form an `aria:describedby` block, and
-where it holds none or several (an empty float, a table, a multi-panel figure)
-both stay referenced from the float itself — never as a name relation, so the
-caption is always what names the float. A dedicated XSLT template strips the
-footnote scaffolding. `acm_aria.xml` was re-blessed — it previously matched Perl
-byte-for-byte and so certified the defect.
+**Fixed in Rust, deliberately diverging** (`latexml_package/src/package/acmart_cls.rs`,
+`latexml_package/src/float_description.rs`; see `OXIDIZED_DESIGN_DIVERGENCES.md` #83): the long description is
+emitted; where the float holds a lone image the short form becomes that image's `@alt` and the long form an
+`aria:describedby` block, and where it holds none or several (an empty float, a table, a multi-panel figure) both
+stay referenced from the float itself — never as a name relation, so the caption is always what names the float.
+A dedicated XSLT template strips the footnote scaffolding (point 1). `acm_aria.xml` was re-blessed — it previously
+matched Perl byte-for-byte and so certified the defect.
 
-Candidate to upstream: swapping `#1`→`#2` is a one-token fix; the
-note-decoration and undigested-reading parts need the XSLT and parameter-type
-changes too.
+**Point 2 is not fixed:** Rust digests the description as Perl does (read undigested, its markup had printed as raw
+TeX: 2403.09168), so 2607.21760's `\D` is an Error in both engines. Whether it should be is an open question for DG
+(OD #83).
+
+Candidate to upstream: swapping `#1`→`#2` is a one-token fix; the note decoration needs the XSLT template too.
 
 ## 67. `do_year`'s bibliography disambiguation suffix is dead code — a sigil mismatch
 
@@ -5044,7 +5043,7 @@ bibitem with no non-empty `key` and only whitespace `<ltx:bibblock>`s — the ph
 `\bibitem` always has a key, so citeable references are untouched. A surpass (OXIDIZED_DESIGN
 #155). Guard `06_cluster_regressions::cluster_bib_preamble_no_phantom_entry`.
 
-## 80. `\define@cmdkey` code never sees its value; stray `#` reaches the stomach (Rust fixes)
+## 1275. `\define@cmdkey` code never sees its value; stray `#` reaches the stomach (Rust fixes) (renumbered from the second #80, 2026-11-15)
 
 Perl `Core/KeyVal.pm:defineCommand` L124-133 emits the key code's invocation as
 `\ltxml@orig@<qname>{#<value>}` — a literal `T_PARAM` before the value, flagged by the
@@ -5067,7 +5066,7 @@ unreported upstream. Rust fixes: `latexml_core/src/keyval.rs:define_command` emi
 bare value (guard `cluster_package_guards::xkeyval_internals`; witness
 `doc/latex/xkeymask/xkeymask.tex`, perfect-kernel sweep 12).
 
-## 81. ALIGN_STATE drifts on expl3 brace-tricks; l3doc manuals emit stray-`&` (Rust fixes)
+## 1276. ALIGN_STATE drifts on expl3 brace-tricks; l3doc manuals emit stray-`&` (Rust fixes) (renumbered from the second #81, 2026-11-15)
 
 Perl's `$LaTeXML::ALIGN_STATE` retracts braces on every `unread`
 (Gullet.pm L343-358) including expansion output that was never scanned, and
@@ -5103,7 +5102,7 @@ Rust fix: tex.web align_state protocol (scan-count §342/§357, back_input
 retract §325, begin_token_list no-adjust; scan_toks doesn't localize) — see
 OXIDIZED_DESIGN #172.
 
-## 82. Locked `\newtheorem` mis-parses class-provided leading optional; `\[` clobbered (Rust fixes)
+## 1277. Locked `\newtheorem` mis-parses class-provided leading optional; `\[` clobbered (Rust fixes) (renumbered from the second #82, 2026-11-15)
 
 aomart.cls L676-679 wraps `\newtheorem` to accept-and-discard a leading style
 optional (`\newtheorem[{}\it]{thm}{Theorem}[section]`). Both engines lock
@@ -5115,7 +5114,7 @@ signature with a discarded leading `[]` (the class's own semantics).
 
 Minimal trigger: `\documentclass{aomart}` + `\newtheorem[{}\it]{thm}{Theorem}[section]` + `\[ x \]`.
 
-## 83. `\index` phrase splitter ignores brace depth; separators inside groups shred the token stream (Rust fixes)
+## 1278. `\index` phrase splitter ignores brace depth; separators inside groups shred the token stream (Rust fixes) (renumbered from the second #83, 2026-11-15)
 
 Perl `process_index_phrases` (latex_constructs.pool.ltxml L4326-4350) splits
 on `@`/`!`/`|`/`"` with a flat scan. packdoc.sty L328/L331 writes
@@ -5138,10 +5137,10 @@ Minimal trigger: `\newcommand{\myInd}[1]{\index{#1@\mbox{#1}\csuse{r@e@m}}}` + `
 
 **Perl behavior**: `process_index_phrases` emits `\@indexphrase[<sortas>]{<phrase>}` with the sort key raw between `[`/`]` (latex_constructs.pool.ltxml L4351-4353); a `]` INSIDE the sort key (examdoc `\indc{gradetable[v]}` → `\index{gradetable[v]@…}`) truncates the constructor's optional-arg re-parse at the first `]` — key attribute cut short and the display phrase spilled as illegal `<ltx:indexmark>` children (`malformed:ltx:text`).
 **Rust behavior**: the emitted expansion wraps the sort key in a brace group (`[{<sortas>}]`), which the optional reader treats as opaque; `clean_index_key` strips exactly one whole-span outer pair.
-**Why**: KNOWN_PERL_ERRORS #83 sibling — real makeindex splits the out-of-band `.idx` string where a `]` is harmless.
+**Why**: KNOWN_PERL_ERRORS #1278 sibling — real makeindex splits the out-of-band `.idx` string where a `]` is harmless.
 **Witnesses**: exam/examdoc 39-error family → 0; pgfornament docs.
 
-## 84. glossaries: `\gls` inside math emits bare XM* under `ltx:glossaryref` (schema-invalid)
+## 1279. glossaries: `\gls` inside math emits bare XM* under `ltx:glossaryref` (schema-invalid) (renumbered from the second #84, 2026-11-15)
 
 Perl's glossaries.sty.ltxml (L26-37) rewires `\@gls@link` through a text-level
 `ltx:glossaryref` wrapper that is not math-mode aware: fired inside math
@@ -5166,7 +5165,7 @@ Minimal trigger:
 Fix would be a math-aware `\lx@glossaries@gls@link` (drop the wrapper in math
 mode) — a surpass needing its own approval (PLANS P16).
 
-## 85. lstlisting inside tabular cells rejected by `td_model = Inline.model`
+## 1280. lstlisting inside tabular cells rejected by `td_model = Inline.model` (renumbered from the second #85, 2026-11-15)
 
 Legal LaTeX (lexref.tex L305-320, engtlc, expex-glossonly) puts
 `\lstnewenvironment` environments inside tabular cells; the schema's
@@ -5176,7 +5175,7 @@ survives in the output). Upstream schema question — admit a small Block
 subset into td — tracked, not patched locally (two-load-path rule:
 LaTeXML.model would need the same edit).
 
-## 86. `\maketitle` inside box captures scatters frontmatter into `_CaptureBlock_`
+## 1281. `\maketitle` inside box captures scatters frontmatter into `_CaptureBlock_` (renumbered from the second #86, 2026-11-15)
 
 `insertFrontMatter` (Base_Utility.pool.ltxml L824/L918) opens
 `ltx:title`/`ltx:creator` at the CURRENT insertion point; inside a
@@ -7606,7 +7605,12 @@ Perl: 5 errors (`readBalanced ran out of input`, missing `\NAT@wrout` arguments)
 **Rust (FIXED, batch 56il):** `\lx@NAT@parselabel` splits the unexpanded label, as `\NAT@bare`
 does. This replaces two lists of commands that the binding had already been exempting from the
 expansion: `\cite`/`\href`/`\bibinfo` (2404.06289) and the T1 text symbols `\i`, `\ss`, …
-(2111.00584). Guard `perfect_kernel_batch56::fontenc_keeps_preloaded_encoding`.
+(2111.00584, revtex4-1 + mathptmx, `M{\'\i}guez`: under T1 `\i` is `\T1-cmd \i \T1\i`, which re-expanded itself
+through `\csname\cf@encoding\string\i\endcsname` to a PushbackLimit Fatal). Guards
+`perfect_kernel_batch56::fontenc_keeps_preloaded_encoding`,
+`cluster_package_guards::natbib_label_dotless_i::natbib_dotless_i_label_does_not_loop` (formerly
+`tests/59_natbib_label_dotless_i.rs`). OD #31's stopgap (the text-symbol exemption list, pending a fix of the
+encoding dispatcher's loop, SYNC_STATUS "natbib dispatcher") is retired: the unexpanded split never expands the label.
 
 ## 253. `\afterassignment` is lost when `\setbox` takes `\box`/`\copy` (FIXED in Rust)
 
@@ -18546,6 +18550,13 @@ keep the kernel's "." (latex_constructs.pool.ltxml:2832). Minimal trigger:
 — pdflatex "11", Perl 0.8.8 "1.1". Fixed in Rust (78q r2, llncs_cls.rs and svjour_cls.rs define the class's separator).
 Review 78q finding 8. Repros cross-references/{llncs,svjour3}_own_theorem_separator{,_envcountsect}; guard
 `perfect_kernel_batch78q::theorem_counter_separator_is_the_class_s`.
+
+**Open for DG: 78q r2 overrode a ruling.** OD #615 recorded the main session's ruling of 2026-10-16 for "X 1.1", the
+kernel's "." as Perl prints it: semantics over the PDF, since "11" reads as the eleventh theorem, and a `\ref` to it
+too. 78q r2 replaced it with the class's empty separator, so the code prints "X 11" (llncs_cls.rs:474-478,
+svjour_cls.rs:89-96). Reach: 5 of 374 sampled llncs papers with a main file (batch 68g round 1). OD #615's trigger:
+`\documentclass{llncs}` `\newtheorem{x}{X}[section]` `\section{A}\begin{x}a\end{x}` — pdflatex "X 11 a", Perl "X 1.1",
+ours "X 11" (tag and `\ref`). Which reading stands is DG's ruling to make.
 
 ## 1115. amsmath's `\genfrac` is not robust
 
