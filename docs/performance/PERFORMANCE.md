@@ -349,6 +349,43 @@ code on AMD (skid), so the figures are counts × stepped instructions.
 
 ## Audit log (periodic passes; newest first)
 
+### 2026-11-15 — libmarpa's obstack chunks: 16 KiB, recycled per thread (PERF2 R8, batch PERFJ)
+
+Defect: libmarpa 8.6.2's `marpa_obs.c` gives every obstack it begins (one per earleme in `marpa_r_earleme_complete`,
+one per recognizer, bocage, order and value) a fresh 4 KiB `malloc`, adds a fresh chunk each time one fills, gives an
+object over 4 KiB a chunk of its own, and frees every chunk to glibc (4 KiB requests miss its tcache). Counted on b250:
+696 k obstacks, 979 k further chunks, 92 k of them oversize. Fix, in `~/git/marpa` (`libmarpa-asf-sys`, branch
+`perf/obstack-reuse`; consumed through the root `Cargo.toml`'s TEMP `[patch.crates-io]` until a release):
+`marpa_obs.c` is built from the crate's modified copy `libmarpa-sys/c/marpa_obs.c`. Its chunks are 16 KiB (b250: 239 k
+further chunks, 7 oversize), and a freed default-size chunk goes onto a per-thread LIFO list of at most 64 (1 MiB) that
+the next obstack takes from. A pthread key destructor frees the list at thread exit; Windows and wasm keep plain
+`malloc`/`free`. Allocation only: no grammar, recognizer or value change. Each half alone on b250: the cache (4 KiB
+chunks) −1.23 %, 16 KiB chunks −1.01 %; caps of 64, 128 and 256 chunks measure the same. Guard: the marpa crate's
+`tests/obstack_chunk_cache.rs` (one input parsed 20 times on each of 4 threads that exit with full caches, every
+result equal; heaptrack: no chunk leaked).
+
+Basis: release, `kit/perf_ab_cycles.sh` (base and candidate interleaved, best of 3, one core each); the mix in XML
+(`ar5iv.sty`; amsldoc `[rawstyles,rawclasses]latexml.sty`), the book and the typical papers (`ab_66bundle/popPERFBs.tsv`)
+in cortex's HTML recipe. The output was byte-identical in every run (XML, or the whole HTML destination directory).
+Cycles spread 2-60 % on a shared host; instructions spread ≤ 0.2 %.
+
+| Document | instructions (G) | Δ | cycles (G) | Δ |
+|---|---:|---:|---:|---:|
+| b500 | 73.291 → 71.727 | −2.13 % | 41.685 → 40.652 | −2.48 % |
+| b250 | 37.161 → 36.383 | −2.09 % | 20.428 → 20.038 | −1.91 % |
+| the issue-790 book (HTML) | 800.748 → 791.440 | −1.16 % | 480.451 → 473.779 | −1.39 % |
+| 2308.04512 | 259.005 → 256.946 | −0.80 % | 100.888 → 97.511 | −3.35 % |
+| 10 typical papers (HTML) | | −0.02 to −1.46 % (median −1.0 %) | | −14.6 to +5.9 % |
+| amsldoc (control) | 5.743 → 5.698 | −0.77 % | 2.984 → 2.947 | −1.23 % |
+| 2010.05701 (control) | 266.987 → 266.978 | −0.00 % | 87.364 → 87.243 | −0.14 % |
+
+1106.3601 (+2.26 %) stays out: its instructions vary by 2-24 % between runs of one binary (ASF wall deadlines).
+Peak RSS (KB; run-to-run noise ±4 MB), measured with a 256-chunk cap: the book 6,883,028 → 6,870,500, b1000
+1,419,068 → 1,423,544, b250 458,304-461,216 → 463,416-467,520 (464,684 with the 64 kept), b500 792,568 → 785,968 (64). A/B (`popPERFI`: 130 math-heavy
+papers, 3 witnesses, 60 controls; `AB_XMLSIG=raw`): base against base 0 of 193 changed; base against candidate
+0 of 193 changed, E/F/W equal (2311.05131 lost one parse in an earlier run under load: alone, both binaries give the same
+XML twice).
+
 ### 2026-11-15 — post's whole-document queries wrap only their matches (PERFD, PERF1 lever L5)
 
 Defect: every whole-document `//NAME[pred]` query post answers by traversal (`PostDocument::findnodes`, ≈20 per HTML

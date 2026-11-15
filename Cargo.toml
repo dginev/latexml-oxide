@@ -43,6 +43,11 @@ unused_qualifications = "warn"
 # [patch.crates-io]
 # marpa-asf = { path = "/home/deyan/git/marpa/marpa" }
 
+# TEMP until marpa-asf / libmarpa-asf-sys are released: libmarpa's per-thread
+# obstack chunk cache (dginev/marpa branch perf/obstack-reuse; allocation only).
+[patch.crates-io]
+libmarpa-asf-sys = { path = "/home/deyan/data/pk_wt/PERFJ_marpa/libmarpa-sys" }
+
 [profile.release]
 # Local benchmark/sandbox/canvas profile. Tuned for the 32 GB / 20-thread
 # laptop used to rebuild the sandbox corpus: keep strong optimized binaries
