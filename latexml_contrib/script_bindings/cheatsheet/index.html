@@ -1,387 +1,402 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Perl | Rust macro | Rhai: the binding dialects side by side"><title>latexml_contrib::script_bindings::cheatsheet - Rust</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../../static.files/rustdoc-1f5a765c.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="latexml_contrib" data-themes="" data-resource-suffix="" data-rustdoc-version="1.102.0-nightly (5f4effd57 2026-11-13)" data-channel="nightly" data-search-js="search-69faa2c4.js" data-stringdex-js="stringdex-b5109af9.js" data-settings-js="settings-9b351432.js" ><script src="../../../static.files/storage-41dd4d93.js"></script><script defer src="../sidebar-items.js"></script><script defer src="../../../static.files/main-419f3a3f.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-101b5a15.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-044be391.svg"></head><body class="rustdoc mod"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><rustdoc-topbar><h2><a href="#">Module cheatsheet</a></h2></rustdoc-topbar><nav class="sidebar"><div class="sidebar-crate"><h2><a href="../../../latexml_contrib/index.html">latexml_<wbr>contrib</a><span class="version">0.5.0</span></h2></div><div class="sidebar-elems"><section id="rustdoc-toc"><h2 class="location"><a href="#">Module cheatsheet</a></h2><h3><a href="#">Sections</a></h3><ul class="block top-toc"><li><a href="#perl--rust-macro--rhai-the-binding-dialects-side-by-side" title="Perl | Rust macro | Rhai: the binding dialects side by side">Perl | Rust macro | Rhai: the binding dialects side by side</a><ul><li><a href="#perl-calls-the-dialect-lacks-an-empty-rhai-cell" title="Perl calls the dialect lacks (an empty Rhai cell)">Perl calls the dialect lacks (an empty Rhai cell)</a></li><li><a href="#rhai-calls-with-no-perl-counterpart-an-empty-perl-cell" title="Rhai calls with no Perl counterpart (an empty Perl cell)">Rhai calls with no Perl counterpart (an empty Perl cell)</a></li><li><a href="#perl-functions-with-no-macro-compiled-bindings-call-the-rust-function-named" title="Perl functions with no macro (compiled bindings call the Rust function named)">Perl functions with no macro (compiled bindings call the Rust function named)</a></li></ul></li></ul></section><div id="rustdoc-modnav"><h2><a href="../index.html">In latexml_<wbr>contrib::<wbr>script_<wbr>bindings</a></h2></div></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><div class="width-limiter"><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><div class="rustdoc-breadcrumbs"><a href="../../index.html">latexml_contrib</a>::<wbr><a href="../index.html">script_bindings</a></div><h1>Module <span>cheatsheet</span>&nbsp;<button id="copy-path" title="Copy item path to clipboard">Copy item path</button></h1><rustdoc-toolbar></rustdoc-toolbar><span class="sub-heading"><a class="src" href="../../../src/latexml_contrib/script_bindings/mod.rs.html#1076">Source</a> </span></div><details class="toggle top-doc" open><summary class="hideme"><span>Expand description</span></summary><div class="docblock"><h2 id="perl--rust-macro--rhai-the-binding-dialects-side-by-side"><a class="doc-anchor" href="#perl--rust-macro--rhai-the-binding-dialects-side-by-side">§</a>Perl | Rust macro | Rhai: the binding dialects side by side</h2>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Perl | Rust | Rhai: the binding dialects side by side"><title>latexml_contrib::script_bindings::cheatsheet - Rust</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../../static.files/rustdoc-1f5a765c.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="latexml_contrib" data-themes="" data-resource-suffix="" data-rustdoc-version="1.102.0-nightly (5f4effd57 2026-11-13)" data-channel="nightly" data-search-js="search-69faa2c4.js" data-stringdex-js="stringdex-b5109af9.js" data-settings-js="settings-9b351432.js" ><script src="../../../static.files/storage-41dd4d93.js"></script><script defer src="../sidebar-items.js"></script><script defer src="../../../static.files/main-419f3a3f.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-101b5a15.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-044be391.svg"></head><body class="rustdoc mod"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><rustdoc-topbar><h2><a href="#">Module cheatsheet</a></h2></rustdoc-topbar><nav class="sidebar"><div class="sidebar-crate"><h2><a href="../../../latexml_contrib/index.html">latexml_<wbr>contrib</a><span class="version">0.5.0</span></h2></div><div class="sidebar-elems"><section id="rustdoc-toc"><h2 class="location"><a href="#">Module cheatsheet</a></h2><h3><a href="#">Sections</a></h3><ul class="block top-toc"><li><a href="#perl--rust--rhai-the-binding-dialects-side-by-side" title="Perl | Rust | Rhai: the binding dialects side by side">Perl | Rust | Rhai: the binding dialects side by side</a><ul><li><a href="#perl-calls-the-dialect-lacks-an-empty-rhai-cell" title="Perl calls the dialect lacks (an empty Rhai cell)">Perl calls the dialect lacks (an empty Rhai cell)</a></li></ul></li></ul></section><div id="rustdoc-modnav"><h2><a href="../index.html">In latexml_<wbr>contrib::<wbr>script_<wbr>bindings</a></h2></div></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><div class="width-limiter"><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><div class="rustdoc-breadcrumbs"><a href="../../index.html">latexml_contrib</a>::<wbr><a href="../index.html">script_bindings</a></div><h1>Module <span>cheatsheet</span>&nbsp;<button id="copy-path" title="Copy item path to clipboard">Copy item path</button></h1><rustdoc-toolbar></rustdoc-toolbar><span class="sub-heading"><a class="src" href="../../../src/latexml_contrib/script_bindings/mod.rs.html#1076">Source</a> </span></div><details class="toggle top-doc" open><summary class="hideme"><span>Expand description</span></summary><div class="docblock"><h2 id="perl--rust--rhai-the-binding-dialects-side-by-side"><a class="doc-anchor" href="#perl--rust--rhai-the-binding-dialects-side-by-side">§</a>Perl | Rust | Rhai: the binding dialects side by side</h2>
 <p>One row per call: its Perl LaTeXML spelling (a <code>Package.pm</code> function, or the Perl method or expression that does the
-same), the compile-time Rust macro that lowers to the same core call, and the runtime <code>.rhai</code> call. <strong>Generated</strong> from
+same), the Rust a compiled binding uses for it (the macro where there is one, then the function, method, type or
+trait item the call reaches — the one the Rhai call itself calls), and the runtime <code>.rhai</code> call. <strong>Generated</strong> from
 <code>api_doc.rs</code> with <a href="https://github.com/dginev/latexml-oxide/blob/main/latexml_contrib/src/script_bindings/API.md"><code>API.md</code></a>, and checked with it on every test run (<code>api_reference_is_up_to_date</code>); regenerate
 with <code>UPDATE_API_DOC=1 cargo test -p latexml_contrib --lib api_reference_is_up_to_date</code>.</p>
-<p>An empty cell is a gap, listed at the end: a Perl call the dialect lacks, a Rhai call Perl has no counterpart for (a
-Rhai-only helper), or a Perl function the macros do not spell. Methods (<code>document.openElement</code>) have no macro: a
-compiled binding calls the Rust method. A deprecated alias follows the call that replaces it, marked <code>(deprecated: …)</code>
-(the aliases of <code>mod.rs</code>’s <code>DEPRECATED_ALIASES</code>). Each Rhai call’s arguments and meaning are in <a href="https://github.com/dginev/latexml-oxide/blob/main/latexml_contrib/src/script_bindings/API.md"><code>API.md</code></a>; the
+<p>Every Rust name is a rustdoc intra-doc link, so <code>cargo doc</code> fails on a renamed one; a private item is named with its
+file. A Rhai helper Perl has no single call for shows the Perl that does the same, as “(Rhai helper; Perl: …)”. A
+deprecated alias follows the call that replaces it, marked <code>(deprecated: …)</code> (the aliases of <code>mod.rs</code>’s
+<code>DEPRECATED_ALIASES</code>). An empty Rhai cell is a Perl call the dialect lacks, listed at the end. Each Rhai call’s
+arguments and meaning are in <a href="https://github.com/dginev/latexml-oxide/blob/main/latexml_contrib/src/script_bindings/API.md"><code>API.md</code></a>; the
 newcomer guide is <a href="https://github.com/dginev/latexml-oxide/blob/main/docs/parity/RHAI_BINDINGS_GUIDE.md"><code>RHAI_BINDINGS_GUIDE.md</code></a>.</p>
-<div class="table"><table><thead><tr><th>Perl</th><th>Rust macro</th><th>Rhai</th></tr></thead><tbody>
-<tr><td><code>!$v</code></td><td></td><td><code>!</code></td></tr>
-<tr><td><code>$a ne $b</code></td><td></td><td><code>!=</code></td></tr>
-<tr><td><code>$n-&gt;valueOf % $m</code></td><td></td><td><code>%</code></td></tr>
-<tr><td><code>$n-&gt;valueOf &amp; $m</code></td><td></td><td><code>&amp;</code></td></tr>
-<tr><td><code>$v-&gt;multiply($n)</code></td><td></td><td><code>*</code></td></tr>
-<tr><td><code>$n-&gt;valueOf ** $m</code></td><td></td><td><code>**</code></td></tr>
-<tr><td><code>$v-&gt;add($w)</code></td><td></td><td><code>+</code></td></tr>
-<tr><td><code>$v-&gt;subtract($w)</code></td><td></td><td><code>-</code></td></tr>
-<tr><td><code>$v-&gt;divide($n)</code></td><td></td><td><code>/</code></td></tr>
-<tr><td><code>$v-&gt;valueOf &lt; $w-&gt;valueOf</code></td><td></td><td><code>&lt;</code></td></tr>
-<tr><td><code>$n-&gt;valueOf &lt;&lt; $m</code></td><td></td><td><code>&lt;&lt;</code></td></tr>
-<tr><td><code>$v-&gt;valueOf &lt;= $w-&gt;valueOf</code></td><td></td><td><code>&lt;=</code></td></tr>
-<tr><td><code>$a eq $b</code></td><td></td><td><code>==</code></td></tr>
-<tr><td><code>$v-&gt;valueOf &gt; $w-&gt;valueOf</code></td><td></td><td><code>&gt;</code></td></tr>
-<tr><td><code>$v-&gt;valueOf &gt;= $w-&gt;valueOf</code></td><td></td><td><code>&gt;=</code></td></tr>
-<tr><td><code>$n-&gt;valueOf &gt;&gt; $m</code></td><td></td><td><code>&gt;&gt;</code></td></tr>
-<tr><td><code>AddToCounter</code></td><td><code>AddToCounter!</code></td><td><code>AddToCounter</code></td></tr>
-<tr><td><code>AddToMacro</code></td><td><code>AddToMacro!</code></td><td><code>AddToMacro</code></td></tr>
-<tr><td></td><td></td><td><code>AppendSearchPath</code></td></tr>
-<tr><td><code>AssignCatcode</code></td><td><code>AssignCatcode!</code></td><td><code>AssignCatcode</code></td></tr>
-<tr><td><code>AssignDelcode</code></td><td></td><td><code>AssignDelcode</code></td></tr>
-<tr><td><code>AssignValue</code></td><td></td><td><code>AssignFloat</code></td></tr>
-<tr><td><code>AssignLCcode</code></td><td></td><td><code>AssignLCcode</code></td></tr>
-<tr><td><code>AssignMapping</code></td><td><code>AssignMapping!</code></td><td><code>AssignMapping</code></td></tr>
-<tr><td><code>AssignMathcode</code></td><td></td><td><code>AssignMathcode</code></td></tr>
-<tr><td><code>$STATE-&gt;assignMeaning</code></td><td><code>AssignMeaning!</code></td><td><code>AssignMeaning</code></td></tr>
-<tr><td><code>AssignRegister</code></td><td><code>AssignRegister!</code></td><td><code>AssignRegister</code></td></tr>
-<tr><td><code>AssignSFcode</code></td><td></td><td><code>AssignSFcode</code></td></tr>
-<tr><td><code>AssignUCcode</code></td><td></td><td><code>AssignUCcode</code></td></tr>
-<tr><td><code>AssignValue</code></td><td><code>AssignValue!</code></td><td><code>AssignValue</code></td></tr>
-<tr><td><code>AssignValue</code></td><td></td><td><code>AssignBool</code> (deprecated: <code>AssignValue(key, value[, scope])</code>)</td></tr>
-<tr><td><code>AssignValue</code></td><td></td><td><code>AssignNumber</code> (deprecated: <code>AssignValue(key, value[, scope])</code>)</td></tr>
-<tr><td><code>AssignValue</code></td><td></td><td><code>AssignString</code> (deprecated: <code>AssignValue(key, value[, scope])</code>)</td></tr>
-<tr><td><code>AssignValue</code></td><td></td><td><code>assign_global</code> (deprecated: <code>AssignValue(key, value, "global")</code>)</td></tr>
-<tr><td><code>AssignValue</code></td><td></td><td><code>assign_value</code> (deprecated: <code>AssignValue(key, value, "local")</code>)</td></tr>
-<tr><td><code>AtBeginDocument</code></td><td></td><td><code>AtBeginDocument</code></td></tr>
-<tr><td><code>AtEndDocument</code></td><td></td><td><code>AtEndDocument</code></td></tr>
-<tr><td><code>beginItemize</code></td><td><code>BeginItemize!</code></td><td><code>BeginItemize</code></td></tr>
-<tr><td><code>Box</code></td><td></td><td><code>Box</code></td></tr>
-<tr><td><code>CC_ACTIVE</code></td><td></td><td><code>CC_ACTIVE</code></td></tr>
-<tr><td><code>CC_ALIGN</code></td><td></td><td><code>CC_ALIGN</code></td></tr>
-<tr><td><code>CC_ARG</code></td><td></td><td><code>CC_ARG</code></td></tr>
-<tr><td><code>CC_BEGIN</code></td><td></td><td><code>CC_BEGIN</code></td></tr>
-<tr><td><code>CC_COMMENT</code></td><td></td><td><code>CC_COMMENT</code></td></tr>
-<tr><td><code>CC_CS</code></td><td></td><td><code>CC_CS</code></td></tr>
-<tr><td><code>CC_END</code></td><td></td><td><code>CC_END</code></td></tr>
-<tr><td><code>CC_EOL</code></td><td></td><td><code>CC_EOL</code></td></tr>
-<tr><td><code>CC_ESCAPE</code></td><td></td><td><code>CC_ESCAPE</code></td></tr>
-<tr><td><code>CC_IGNORE</code></td><td></td><td><code>CC_IGNORE</code></td></tr>
-<tr><td><code>CC_INVALID</code></td><td></td><td><code>CC_INVALID</code></td></tr>
-<tr><td><code>CC_LETTER</code></td><td></td><td><code>CC_LETTER</code></td></tr>
-<tr><td><code>CC_MARKER</code></td><td></td><td><code>CC_MARKER</code></td></tr>
-<tr><td><code>CC_MATH</code></td><td></td><td><code>CC_MATH</code></td></tr>
-<tr><td><code>CC_OTHER</code></td><td></td><td><code>CC_OTHER</code></td></tr>
-<tr><td><code>CC_PARAM</code></td><td></td><td><code>CC_PARAM</code></td></tr>
-<tr><td><code>CC_SPACE</code></td><td></td><td><code>CC_SPACE</code></td></tr>
-<tr><td><code>CC_SUB</code></td><td></td><td><code>CC_SUB</code></td></tr>
-<tr><td><code>CC_SUPER</code></td><td></td><td><code>CC_SUPER</code></td></tr>
-<tr><td><code>CleanID</code></td><td></td><td><code>CleanID</code></td></tr>
-<tr><td><code>CleanLabel</code></td><td></td><td><code>CleanLabel</code></td></tr>
-<tr><td></td><td></td><td><code>Command</code></td></tr>
-<tr><td><code>CounterValue</code></td><td><code>CounterValue!</code></td><td><code>CounterValue</code></td></tr>
-<tr><td><code>DeclareFontMap</code></td><td><code>DeclareFontMap!</code></td><td><code>DeclareFontMap</code></td></tr>
-<tr><td></td><td><code>DeclareFontMapMultichar!</code></td><td><code>DeclareFontMapMultichar</code></td></tr>
-<tr><td><code>DeclareOption</code></td><td><code>DeclareOption!</code></td><td><code>DeclareOption</code></td></tr>
-<tr><td><code>DefAccent</code></td><td><code>DefAccent!</code></td><td><code>DefAccent</code></td></tr>
-<tr><td><code>DefColumnType</code></td><td><code>DefColumnType!</code></td><td><code>DefColumnType</code></td></tr>
-<tr><td><code>DefConditional</code></td><td><code>DefConditional!</code></td><td><code>DefConditional</code></td></tr>
-<tr><td><code>DefConstructor</code></td><td><code>DefConstructor!</code></td><td><code>DefConstructor</code></td></tr>
-<tr><td><code>DefConstructorI</code></td><td></td><td><code>DefConstructorI</code></td></tr>
-<tr><td><code>DefEnvironment</code></td><td><code>DefEnvironment!</code></td><td><code>DefEnvironment</code></td></tr>
-<tr><td><code>DefKeyVal</code></td><td><code>DefKeyVal!</code></td><td><code>DefKeyVal</code></td></tr>
-<tr><td><code>DefLigature</code></td><td><code>DefLigature!</code></td><td><code>DefLigature</code></td></tr>
-<tr><td><code>DefMacro</code></td><td><code>DefMacro!</code></td><td><code>DefMacro</code></td></tr>
-<tr><td><code>DefMacroI</code></td><td></td><td><code>DefMacroI</code></td></tr>
-<tr><td><code>DefMath</code></td><td><code>DefMath!</code></td><td><code>DefMath</code></td></tr>
-<tr><td><code>DefMathLigature</code></td><td><code>DefMathLigature!</code></td><td><code>DefMathLigature</code></td></tr>
-<tr><td><code>DefMathRewrite</code></td><td><code>DefMathRewrite!</code></td><td><code>DefMathRewrite</code></td></tr>
-<tr><td><code>DefParameterType</code></td><td><code>DefParameterType!</code></td><td><code>DefParameterType</code></td></tr>
-<tr><td><code>DefPrimitive</code></td><td><code>DefPrimitive!</code></td><td><code>DefPrimitive</code></td></tr>
-<tr><td><code>DefPrimitiveI</code></td><td></td><td><code>DefPrimitiveI</code></td></tr>
-<tr><td><code>DefRegister</code></td><td><code>DefRegister!</code></td><td><code>DefRegister</code></td></tr>
-<tr><td><code>DefRewrite</code></td><td><code>DefRewrite!</code></td><td><code>DefRewrite</code></td></tr>
-<tr><td><code>Digest</code></td><td><code>Digest!</code></td><td><code>Digest</code></td></tr>
-<tr><td><code>DigestIf</code></td><td><code>DigestIf!</code></td><td><code>DigestIf</code></td></tr>
-<tr><td><code>DigestText</code></td><td><code>DigestText!</code></td><td><code>DigestText</code></td></tr>
-<tr><td><code>Dimension</code></td><td><code>Dimension!</code></td><td><code>Dimension</code></td></tr>
-<tr><td><code>EndSemiverbatim</code></td><td></td><td><code>EndSemiverbatim</code></td></tr>
-<tr><td><code>Equals</code></td><td></td><td><code>Equals</code></td></tr>
-<tr><td><code>Error</code></td><td><code>Error!</code></td><td><code>Error</code></td></tr>
-<tr><td><code>ExecuteOptions</code></td><td></td><td><code>ExecuteOptions</code></td></tr>
-<tr><td><code>Expand</code></td><td><code>Expand!</code></td><td><code>Expand</code></td></tr>
-<tr><td><code>ExpandPartially</code></td><td></td><td><code>ExpandPartially</code></td></tr>
-<tr><td><code>Explode</code></td><td><code>Explode!</code></td><td><code>Explode</code></td></tr>
-<tr><td><code>ExplodeText</code></td><td><code>ExplodeText!</code></td><td><code>ExplodeText</code></td></tr>
-<tr><td><code>Fatal</code></td><td><code>Fatal!</code></td><td><code>Fatal</code></td></tr>
-<tr><td><code>FindFile</code></td><td><code>FindFile!</code></td><td><code>FindFile</code></td></tr>
-<tr><td><code>GetKeyVal</code></td><td><code>GetKeyVal!</code></td><td><code>GetKeyVal</code></td></tr>
-<tr><td><code>GetKeyVals</code></td><td><code>GetKeyVals!</code></td><td><code>GetKeyVals</code></td></tr>
-<tr><td><code>Glue</code></td><td><code>Glue!</code></td><td><code>Glue</code></td></tr>
-<tr><td><code>IfCondition</code></td><td></td><td><code>IfCondition</code></td></tr>
-<tr><td><code>Info</code></td><td><code>Info!</code></td><td><code>Info</code></td></tr>
-<tr><td><code>Input</code></td><td><code>Input!</code></td><td><code>Input</code></td></tr>
-<tr><td><code>InputDefinitions</code></td><td><code>InputDefinitions!</code></td><td><code>InputDefinitions</code></td></tr>
-<tr><td><code>Invocation</code></td><td><code>Invocation!</code></td><td><code>Invocation</code></td></tr>
-<tr><td><code>IsDefined</code></td><td><code>IsDefined!</code></td><td><code>IsDefined</code></td></tr>
-<tr><td><code>IsEmpty</code></td><td></td><td><code>IsEmpty</code></td></tr>
-<tr><td><code>$LaTeXML::VERSION</code></td><td></td><td><code>LaTeXMLVersion</code></td></tr>
-<tr><td><code>Let</code></td><td><code>Let!</code></td><td><code>Let</code></td></tr>
-<tr><td><code>List</code></td><td></td><td><code>List</code></td></tr>
-<tr><td><code>LoadClass</code></td><td><code>LoadClass!</code></td><td><code>LoadClass</code></td></tr>
-<tr><td><code>LoadPool</code></td><td><code>LoadPool!</code></td><td><code>LoadPool</code></td></tr>
-<tr><td><code>LookupValue</code></td><td><code>LookupBool!</code></td><td><code>LookupBool</code></td></tr>
-<tr><td><code>LookupCatcode</code></td><td><code>LookupCatcode!</code></td><td><code>LookupCatcode</code></td></tr>
-<tr><td><code>LookupDefinition</code></td><td><code>LookupDefinition!</code></td><td><code>LookupDefinition</code></td></tr>
-<tr><td><code>LookupDelcode</code></td><td></td><td><code>LookupDelcode</code></td></tr>
-<tr><td><code>LookupDimension</code></td><td></td><td><code>LookupDimension</code></td></tr>
-<tr><td><code>LookupValue</code></td><td></td><td><code>LookupFloat</code></td></tr>
-<tr><td><code>LookupLCcode</code></td><td></td><td><code>LookupLCcode</code></td></tr>
-<tr><td><code>LookupMapping</code></td><td></td><td><code>LookupMapping</code></td></tr>
-<tr><td><code>LookupMappingKeys</code></td><td></td><td><code>LookupMappingKeys</code></td></tr>
-<tr><td><code>LookupMathcode</code></td><td></td><td><code>LookupMathcode</code></td></tr>
-<tr><td><code>LookupMeaning</code></td><td><code>LookupMeaning!</code></td><td><code>LookupMeaning</code></td></tr>
-<tr><td><code>LookupValue</code></td><td><code>LookupNumber!</code></td><td><code>LookupNumber</code></td></tr>
-<tr><td><code>LookupRegister</code></td><td><code>LookupRegister!</code></td><td><code>LookupRegister</code></td></tr>
-<tr><td></td><td><code>LookupRegisterOrDefault!</code></td><td><code>LookupRegisterOrDefault</code></td></tr>
-<tr><td><code>LookupSFcode</code></td><td></td><td><code>LookupSFcode</code></td></tr>
-<tr><td><code>LookupValue</code></td><td><code>LookupString!</code></td><td><code>LookupString</code></td></tr>
-<tr><td><code>LookupValue</code></td><td><code>LookupTokens!</code></td><td><code>LookupTokens</code></td></tr>
-<tr><td><code>LookupUCcode</code></td><td></td><td><code>LookupUCcode</code></td></tr>
-<tr><td><code>LookupValue</code></td><td></td><td><code>LookupValue</code></td></tr>
-<tr><td><code>LookupValue</code></td><td></td><td><code>lookup_value</code> (deprecated: <code>LookupValue(key)</code>)</td></tr>
-<tr><td><code>MergeFont</code></td><td><code>MergeFont!</code></td><td><code>MergeFont</code></td></tr>
-<tr><td><code>MuGlue</code></td><td><code>MuGlue!</code></td><td><code>MuGlue</code></td></tr>
-<tr><td><code>NewCounter</code></td><td><code>NewCounter!</code></td><td><code>NewCounter</code></td></tr>
-<tr><td><code>Note</code></td><td><code>Note!</code></td><td><code>Note</code></td></tr>
-<tr><td><code>NoteLog</code></td><td><code>NoteLog!</code></td><td><code>NoteLog</code></td></tr>
-<tr><td><code>NoteSTDERR</code></td><td><code>NoteSTDERR!</code></td><td><code>NoteSTDERR</code></td></tr>
-<tr><td><code>Number</code></td><td><code>Number!</code></td><td><code>Number</code></td></tr>
-<tr><td></td><td></td><td><code>ParseXML</code></td></tr>
-<tr><td><code>PassOptions</code></td><td></td><td><code>PassOptions</code></td></tr>
-<tr><td><code>PopValue</code></td><td></td><td><code>PopValue</code></td></tr>
-<tr><td></td><td></td><td><code>PrependSearchPath</code></td></tr>
-<tr><td></td><td><code>ProcessKeyOptions!</code></td><td><code>ProcessKeyOptions</code></td></tr>
-<tr><td><code>ProcessOptions</code></td><td><code>ProcessOptions!</code></td><td><code>ProcessOptions</code></td></tr>
-<tr><td><code>ProgressSpindown</code></td><td></td><td><code>ProgressSpindown</code></td></tr>
-<tr><td><code>ProgressSpinup</code></td><td></td><td><code>ProgressSpinup</code></td></tr>
-<tr><td><code>ProgressStep</code></td><td></td><td><code>ProgressStep</code></td></tr>
-<tr><td><code>PushValue</code></td><td></td><td><code>PushValue</code></td></tr>
-<tr><td><code>RawTeX</code></td><td><code>RawTeX!</code></td><td><code>RawTeX</code></td></tr>
-<tr><td><code>$gullet-&gt;readArg</code></td><td></td><td><code>ReadArg</code></td></tr>
-<tr><td><code>$gullet-&gt;readOptional</code></td><td></td><td><code>ReadOptional</code></td></tr>
-<tr><td><code>$gullet-&gt;readToken</code></td><td></td><td><code>ReadToken</code></td></tr>
-<tr><td><code>$gullet-&gt;readUntil</code></td><td></td><td><code>ReadUntil</code></td></tr>
-<tr><td><code>RefCurrentID</code></td><td><code>RefCurrentID!</code></td><td><code>RefCurrentID</code></td></tr>
-<tr><td><code>RefStepCounter</code></td><td><code>RefStepCounter!</code></td><td><code>RefStepCounter</code></td></tr>
-<tr><td><code>RefStepID</code></td><td><code>RefStepID!</code></td><td><code>RefStepID</code></td></tr>
-<tr><td><code>RegisterDocumentNamespace</code></td><td><code>RegisterDocumentNamespace!</code></td><td><code>RegisterDocumentNamespace</code></td></tr>
-<tr><td><code>RegisterNamespace</code></td><td><code>RegisterNamespace!</code></td><td><code>RegisterNamespace</code></td></tr>
-<tr><td><code>RelaxNGSchema</code></td><td><code>RelaxNGSchema!</code></td><td><code>RelaxNGSchema</code></td></tr>
-<tr><td><code>RequirePackage</code></td><td><code>RequirePackage!</code></td><td><code>RequirePackage</code></td></tr>
-<tr><td><code>RequireResource</code></td><td><code>RequireResource!</code></td><td><code>RequireResource</code></td></tr>
-<tr><td><code>ResetCounter</code></td><td><code>ResetCounter!</code></td><td><code>ResetCounter</code></td></tr>
-<tr><td><code>Revert</code></td><td><code>Revert!</code></td><td><code>Revert</code></td></tr>
-<tr><td><code>Roman</code></td><td><code>Roman!</code></td><td><code>Roman</code></td></tr>
-<tr><td><code>SetCondition</code></td><td></td><td><code>SetCondition</code></td></tr>
-<tr><td><code>SetCounter</code></td><td><code>SetCounter!</code></td><td><code>SetCounter</code></td></tr>
-<tr><td><code>ShiftValue</code></td><td></td><td><code>ShiftValue</code></td></tr>
-<tr><td><code>$gullet-&gt;skipSpaces</code></td><td></td><td><code>SkipSpaces</code></td></tr>
-<tr><td><code>StartSemiverbatim</code></td><td></td><td><code>StartSemiverbatim</code></td></tr>
-<tr><td><code>StepCounter</code></td><td><code>StepCounter!</code></td><td><code>StepCounter</code></td></tr>
-<tr><td><code>T_ACTIVE</code></td><td><code>T_ACTIVE!</code></td><td><code>T_ACTIVE</code></td></tr>
-<tr><td><code>T_ALIGN</code></td><td><code>T_ALIGN!</code></td><td><code>T_ALIGN</code></td></tr>
-<tr><td><code>T_ARG</code></td><td><code>T_ARG!</code></td><td><code>T_ARG</code></td></tr>
-<tr><td><code>T_BEGIN</code></td><td><code>T_BEGIN!</code></td><td><code>T_BEGIN</code></td></tr>
-<tr><td><code>T_COMMENT</code></td><td><code>T_COMMENT!</code></td><td><code>T_COMMENT</code></td></tr>
-<tr><td><code>T_CR</code></td><td><code>T_CR!</code></td><td><code>T_CR</code></td></tr>
-<tr><td><code>T_CS</code></td><td><code>T_CS!</code></td><td><code>T_CS</code></td></tr>
-<tr><td><code>T_END</code></td><td><code>T_END!</code></td><td><code>T_END</code></td></tr>
-<tr><td><code>T_LETTER</code></td><td><code>T_LETTER!</code></td><td><code>T_LETTER</code></td></tr>
-<tr><td><code>T_MARKER</code></td><td><code>T_MARKER!</code></td><td><code>T_MARKER</code></td></tr>
-<tr><td><code>T_MATH</code></td><td><code>T_MATH!</code></td><td><code>T_MATH</code></td></tr>
-<tr><td><code>T_OTHER</code></td><td><code>T_OTHER!</code></td><td><code>T_OTHER</code></td></tr>
-<tr><td><code>T_PARAM</code></td><td><code>T_PARAM!</code></td><td><code>T_PARAM</code></td></tr>
-<tr><td><code>T_SPACE</code></td><td><code>T_SPACE!</code></td><td><code>T_SPACE</code></td></tr>
-<tr><td><code>T_SUB</code></td><td><code>T_SUB!</code></td><td><code>T_SUB</code></td></tr>
-<tr><td><code>T_SUPER</code></td><td><code>T_SUPER!</code></td><td><code>T_SUPER</code></td></tr>
-<tr><td><code>Tag</code></td><td><code>Tag!</code></td><td><code>Tag</code></td></tr>
-<tr><td><code>Digest(TokenizeInternal($tex))</code></td><td><code>TeX!</code></td><td><code>TeX</code></td></tr>
-<tr><td><code>$box-&gt;toAttribute</code></td><td></td><td><code>ToAttribute</code></td></tr>
-<tr><td><code>ToString</code></td><td></td><td><code>ToString</code></td></tr>
-<tr><td></td><td><code>Today!</code></td><td><code>Today</code></td></tr>
-<tr><td><code>Token</code></td><td><code>Token!</code></td><td><code>Token</code></td></tr>
-<tr><td><code>Tokenize</code></td><td><code>Tokenize!</code></td><td><code>Tokenize</code></td></tr>
-<tr><td><code>TokenizeInternal</code></td><td><code>TokenizeInternal!</code></td><td><code>TokenizeInternal</code></td></tr>
-<tr><td><code>Tokens</code></td><td><code>Tokens!</code></td><td><code>Tokens</code></td></tr>
-<tr><td><code>UTF</code></td><td></td><td><code>UTF</code></td></tr>
-<tr><td><code>UnTeX</code></td><td></td><td><code>UnTeX</code></td></tr>
-<tr><td><code>UnshiftValue</code></td><td></td><td><code>UnshiftValue</code></td></tr>
-<tr><td><code>Warn</code></td><td><code>Warn!</code></td><td><code>Warn</code></td></tr>
-<tr><td><code>XEquals</code></td><td><code>XEquals!</code></td><td><code>XEquals</code></td></tr>
-<tr><td><code>$n-&gt;valueOf ^ $m</code></td><td></td><td><code>^</code></td></tr>
-<tr><td><code>$v-&gt;absolute</code></td><td></td><td><code>absolute</code></td></tr>
-<tr><td><code>$v-&gt;add</code></td><td></td><td><code>add</code></td></tr>
-<tr><td><code>defined $v</code></td><td></td><td><code>defined</code></td></tr>
-<tr><td><code>$v-&gt;divide</code></td><td></td><td><code>divide</code></td></tr>
-<tr><td><code>$v-&gt;divideround</code></td><td></td><td><code>divideround</code></td></tr>
-<tr><td><code>$v-&gt;getShrink</code></td><td></td><td><code>getShrink</code></td></tr>
-<tr><td><code>$v-&gt;getShrinkOrder</code></td><td></td><td><code>getShrinkOrder</code></td></tr>
-<tr><td><code>$v-&gt;getStretch</code></td><td></td><td><code>getStretch</code></td></tr>
-<tr><td><code>$v-&gt;getStretchOrder</code></td><td></td><td><code>getStretchOrder</code></td></tr>
-<tr><td><code>$v-&gt;larger</code></td><td></td><td><code>larger</code></td></tr>
-<tr><td><code>$v-&gt;multiply</code></td><td></td><td><code>multiply</code></td></tr>
-<tr><td><code>$v-&gt;negate</code></td><td></td><td><code>negate</code></td></tr>
-<tr><td></td><td></td><td><code>neutralize_font</code></td></tr>
-<tr><td><code>$v-&gt;ptValue</code></td><td></td><td><code>ptValue</code></td></tr>
-<tr><td><code>$v-&gt;pxValue</code></td><td></td><td><code>pxValue</code></td></tr>
-<tr><td><code>roman</code></td><td><code>roman!</code></td><td><code>roman</code></td></tr>
-<tr><td><code>$v-&gt;sign</code></td><td></td><td><code>sign</code></td></tr>
-<tr><td><code>$v-&gt;smaller</code></td><td></td><td><code>smaller</code></td></tr>
-<tr><td><code>$v-&gt;spValue</code></td><td></td><td><code>spValue</code></td></tr>
-<tr><td><code>$v-&gt;subtract</code></td><td></td><td><code>subtract</code></td></tr>
-<tr><td><code>$v-&gt;toAttribute</code></td><td></td><td><code>toAttribute</code></td></tr>
-<tr><td><code>$v-&gt;valueOf</code></td><td></td><td><code>valueOf</code></td></tr>
-<tr><td><code>$whatsit</code></td><td></td><td><code>whatsit</code> (deprecated: the hook’s whatsit argument)</td></tr>
-<tr><td><code>$n-&gt;valueOf | $m</code></td><td></td><td><code>|</code></td></tr>
-<tr><td><code>$document-&gt;absorb</code></td><td></td><td><code>document.absorb</code></td></tr>
-<tr><td></td><td></td><td><code>document.absorbProperty</code></td></tr>
-<tr><td><code>$document-&gt;absorb</code></td><td></td><td><code>document.absorbString</code></td></tr>
-<tr><td><code>$document-&gt;addClass</code></td><td></td><td><code>document.addClass</code></td></tr>
-<tr><td><code>$document-&gt;appendClone</code></td><td></td><td><code>document.appendClone</code></td></tr>
-<tr><td><code>$document-&gt;canContain</code></td><td></td><td><code>document.canContain</code></td></tr>
-<tr><td><code>$document-&gt;closeElement</code></td><td></td><td><code>document.closeElement</code></td></tr>
-<tr><td><code>$document-&gt;closeElementAt</code></td><td></td><td><code>document.closeElementAt</code></td></tr>
-<tr><td><code>$document-&gt;findnode</code></td><td></td><td><code>document.findnode</code></td></tr>
-<tr><td><code>$document-&gt;findnodes</code></td><td></td><td><code>document.findnodes</code></td></tr>
-<tr><td><code>$document-&gt;floatToElement</code></td><td></td><td><code>document.floatToElement</code></td></tr>
-<tr><td></td><td></td><td><code>document.generateID</code></td></tr>
-<tr><td><code>$document-&gt;getElement</code></td><td></td><td><code>document.getElement</code></td></tr>
-<tr><td><code>$document-&gt;getNode</code></td><td></td><td><code>document.getNode</code></td></tr>
-<tr><td><code>$whatsit-&gt;getProperties</code></td><td></td><td><code>document.getProperties</code> (deprecated: the constructor body’s trailing properties map)</td></tr>
-<tr><td><code>$whatsit-&gt;getProperty</code></td><td></td><td><code>document.getProperty</code> (deprecated: the constructor body’s trailing properties map)</td></tr>
-<tr><td><code>$document-&gt;insertElement</code></td><td></td><td><code>document.insertElement</code></td></tr>
-<tr><td><code>$document-&gt;insertPI</code></td><td></td><td><code>document.insertPI</code></td></tr>
-<tr><td></td><td></td><td><code>document.insertXML</code></td></tr>
-<tr><td><code>$document-&gt;maybeCloseElement</code></td><td></td><td><code>document.maybeCloseElement</code></td></tr>
-<tr><td><code>$document-&gt;openElement</code></td><td></td><td><code>document.openElement</code></td></tr>
-<tr><td><code>$document-&gt;openElementAt</code></td><td></td><td><code>document.openElementAt</code></td></tr>
-<tr><td><code>$document-&gt;removeNode</code></td><td></td><td><code>document.removeNode</code></td></tr>
-<tr><td><code>$document-&gt;renameNode</code></td><td></td><td><code>document.renameNode</code></td></tr>
-<tr><td><code>$document-&gt;replaceNode</code></td><td></td><td><code>document.replaceNode</code></td></tr>
-<tr><td><code>$document-&gt;setAttribute</code></td><td></td><td><code>document.setAttribute</code></td></tr>
-<tr><td><code>$document-&gt;setNode</code></td><td></td><td><code>document.setNode</code></td></tr>
-<tr><td><code>$document-&gt;unwrapNodes</code></td><td></td><td><code>document.unwrapNodes</code></td></tr>
-<tr><td><code>$document-&gt;wrapNodes</code></td><td></td><td><code>document.wrapNodes</code></td></tr>
-<tr><td><code>$node-&gt;childNodes</code></td><td></td><td><code>node.children</code></td></tr>
-<tr><td><code>$node-&gt;textContent</code></td><td></td><td><code>node.content</code></td></tr>
-<tr><td><code>$node-&gt;firstChild</code></td><td></td><td><code>node.firstChild</code></td></tr>
-<tr><td><code>$node-&gt;getAttribute</code></td><td></td><td><code>node.getAttribute</code></td></tr>
-<tr><td><code>$node-&gt;hasAttribute</code></td><td></td><td><code>node.hasAttribute</code></td></tr>
-<tr><td><code>$node-&gt;localname</code></td><td></td><td><code>node.name</code></td></tr>
-<tr><td><code>$node-&gt;nextSibling</code></td><td></td><td><code>node.nextSibling</code></td></tr>
-<tr><td><code>$node-&gt;parentNode</code></td><td></td><td><code>node.parent</code></td></tr>
-<tr><td><code>$node-&gt;previousSibling</code></td><td></td><td><code>node.prevSibling</code></td></tr>
-<tr><td><code>$document-&gt;getNodeQName($node)</code></td><td></td><td><code>node.qname</code></td></tr>
-<tr><td><code>$node-&gt;removeAttribute</code></td><td></td><td><code>node.removeAttribute</code></td></tr>
-<tr><td><code>$node-&gt;setAttribute</code></td><td></td><td><code>node.setAttribute</code></td></tr>
-<tr><td></td><td></td><td><code>node.setContent</code></td></tr>
-<tr><td><code>$node-&gt;toString</code></td><td></td><td><code>node.toString</code></td></tr>
-<tr><td><code>$node-&gt;unbindNode</code></td><td></td><td><code>node.unlink</code></td></tr>
-<tr><td><code>$whatsit-&gt;getArg</code></td><td></td><td><code>whatsit.getArg</code></td></tr>
-<tr><td><code>$whatsit-&gt;getArg</code></td><td></td><td><code>whatsit.argString</code> (deprecated: <code>whatsit.getArg(n)</code>)</td></tr>
-<tr><td><code>$whatsit-&gt;getFont</code></td><td></td><td><code>whatsit.getFont</code></td></tr>
-<tr><td><code>$whatsit-&gt;getProperties</code></td><td></td><td><code>whatsit.getProperties</code></td></tr>
-<tr><td><code>$whatsit-&gt;getProperty</code></td><td></td><td><code>whatsit.getProperty</code></td></tr>
-<tr><td><code>$whatsit-&gt;getProperty</code></td><td></td><td><code>whatsit.propertyString</code> (deprecated: <code>whatsit.getProperty(key)</code>)</td></tr>
-<tr><td><code>$whatsit-&gt;setProperty</code></td><td></td><td><code>whatsit.setProperty</code></td></tr>
-<tr><td><code>ToString($whatsit)</code></td><td></td><td><code>whatsit.to_string</code></td></tr>
-<tr><td></td><td></td><td><code>definition.is_empty</code></td></tr>
-<tr><td></td><td></td><td><code>definition.len</code></td></tr>
-<tr><td><code>push(@{$$defn{afterConstruct}}, …)</code></td><td></td><td><code>definition.pushAfterConstruct</code></td></tr>
-<tr><td><code>push(@{$$defn{afterDigest}}, …)</code></td><td></td><td><code>definition.pushAfterDigest</code></td></tr>
-<tr><td><code>push(@{$$defn{afterDigestBody}}, …)</code></td><td></td><td><code>definition.pushAfterDigestBody</code></td></tr>
-<tr><td><code>push(@{$$defn{beforeConstruct}}, …)</code></td><td></td><td><code>definition.pushBeforeConstruct</code></td></tr>
-<tr><td><code>push(@{$$defn{beforeDigest}}, …)</code></td><td></td><td><code>definition.pushBeforeDigest</code></td></tr>
-<tr><td></td><td></td><td><code>definition.to_debug</code></td></tr>
-<tr><td><code>ToString($definition)</code></td><td></td><td><code>definition.to_string</code></td></tr>
-<tr><td><code>unshift(@{$$defn{afterConstruct}}, …)</code></td><td></td><td><code>definition.unshiftAfterConstruct</code></td></tr>
-<tr><td><code>unshift(@{$$defn{afterDigest}}, …)</code></td><td></td><td><code>definition.unshiftAfterDigest</code></td></tr>
-<tr><td><code>unshift(@{$$defn{afterDigestBody}}, …)</code></td><td></td><td><code>definition.unshiftAfterDigestBody</code></td></tr>
-<tr><td><code>unshift(@{$$defn{beforeConstruct}}, …)</code></td><td></td><td><code>definition.unshiftBeforeConstruct</code></td></tr>
-<tr><td><code>unshift(@{$$defn{beforeDigest}}, …)</code></td><td></td><td><code>definition.unshiftBeforeDigest</code></td></tr>
-<tr><td><code>$gullet-&gt;readArg</code></td><td></td><td><code>gullet.readArg</code></td></tr>
-<tr><td><code>$gullet-&gt;readOptional</code></td><td></td><td><code>gullet.readOptional</code></td></tr>
-<tr><td><code>$gullet-&gt;readToken</code></td><td></td><td><code>gullet.readToken</code></td></tr>
-<tr><td><code>$gullet-&gt;readUntil</code></td><td></td><td><code>gullet.readUntil</code></td></tr>
-<tr><td><code>$gullet-&gt;skipSpaces</code></td><td></td><td><code>gullet.skipSpaces</code></td></tr>
-<tr><td><code>$stomach-&gt;getGullet</code></td><td></td><td><code>stomach.getGullet</code></td></tr>
-<tr><td><code>$font-&gt;getEncoding</code></td><td></td><td><code>font.getEncoding</code></td></tr>
-<tr><td><code>$font-&gt;getFamily</code></td><td></td><td><code>font.getFamily</code></td></tr>
-<tr><td><code>$font-&gt;getLanguage</code></td><td></td><td><code>font.getLanguage</code></td></tr>
-<tr><td><code>$font-&gt;getSeries</code></td><td></td><td><code>font.getSeries</code></td></tr>
-<tr><td><code>$font-&gt;getShape</code></td><td></td><td><code>font.getShape</code></td></tr>
-<tr><td><code>$font-&gt;getSize</code></td><td></td><td><code>font.getSize</code></td></tr>
-<tr><td><code>$v-&gt;toString</code></td><td></td><td><code>number.toString</code></td></tr>
-<tr><td></td><td></td><td><code>number.to_debug</code></td></tr>
-<tr><td><code>$v-&gt;toString</code></td><td></td><td><code>number.to_string</code></td></tr>
-<tr><td><code>$v-&gt;toString</code></td><td></td><td><code>dimension.toString</code></td></tr>
-<tr><td></td><td></td><td><code>dimension.to_debug</code></td></tr>
-<tr><td><code>$v-&gt;toString</code></td><td></td><td><code>dimension.to_string</code></td></tr>
-<tr><td><code>$v-&gt;toString</code></td><td></td><td><code>glue.toString</code></td></tr>
-<tr><td></td><td></td><td><code>glue.to_debug</code></td></tr>
-<tr><td><code>$v-&gt;toString</code></td><td></td><td><code>glue.to_string</code></td></tr>
-<tr><td><code>$v-&gt;toString</code></td><td></td><td><code>muglue.toString</code></td></tr>
-<tr><td></td><td></td><td><code>muglue.to_debug</code></td></tr>
-<tr><td><code>$v-&gt;toString</code></td><td></td><td><code>muglue.to_string</code></td></tr>
-<tr><td></td><td></td><td><code>command.arg</code></td></tr>
-<tr><td></td><td></td><td><code>command.args</code></td></tr>
-<tr><td></td><td></td><td><code>command.current_dir</code></td></tr>
-<tr><td></td><td></td><td><code>command.env</code></td></tr>
-<tr><td></td><td></td><td><code>command.output</code></td></tr>
-<tr><td><code>AfterAssignment</code></td><td></td><td></td></tr>
-<tr><td><code>CheckOptions</code></td><td></td><td></td></tr>
-<tr><td><code>CleanBibKey</code></td><td></td><td></td></tr>
-<tr><td><code>CleanClassName</code></td><td></td><td></td></tr>
-<tr><td><code>CleanIndexKey</code></td><td></td><td></td></tr>
-<tr><td><code>CleanURL</code></td><td></td><td></td></tr>
-<tr><td><code>Color</code></td><td></td><td></td></tr>
-<tr><td><code>ComposeURL</code></td><td></td><td></td></tr>
-<tr><td><code>Debug</code></td><td><code>Debug!</code></td><td></td></tr>
-<tr><td><code>DefAutoload</code></td><td></td><td></td></tr>
-<tr><td><code>DefColor</code></td><td></td><td></td></tr>
-<tr><td><code>DefColorModel</code></td><td></td><td></td></tr>
-<tr><td><code>DefConditionalI</code></td><td></td><td></td></tr>
-<tr><td><code>DefEnvironmentI</code></td><td></td><td></td></tr>
-<tr><td><code>DefExpandable</code></td><td></td><td></td></tr>
-<tr><td><code>DefMathI</code></td><td></td><td></td></tr>
-<tr><td><code>DefRegisterI</code></td><td></td><td></td></tr>
-<tr><td><code>Deprecated</code></td><td></td><td></td></tr>
-<tr><td><code>DigestLiteral</code></td><td></td><td></td></tr>
-<tr><td><code>DisableKeyVal</code></td><td></td><td></td></tr>
-<tr><td><code>DocType</code></td><td></td><td></td></tr>
-<tr><td><code>Float</code></td><td></td><td></td></tr>
-<tr><td><code>FontDecode</code></td><td></td><td></td></tr>
-<tr><td><code>FontDecodeString</code></td><td></td><td></td></tr>
-<tr><td><code>GenerateID</code></td><td></td><td></td></tr>
-<tr><td><code>HasKeyVal</code></td><td></td><td></td></tr>
-<tr><td><code>InputContent</code></td><td></td><td></td></tr>
-<tr><td><code>InstallDefinition</code></td><td><code>InstallDefinition!</code></td><td></td></tr>
-<tr><td><code>LoadFontMap</code></td><td></td><td></td></tr>
-<tr><td><code>LoadFormat</code></td><td></td><td></td></tr>
-<tr><td><code>LookupColor</code></td><td><code>LookupColor!</code></td><td></td></tr>
-<tr><td><code>MaybeNoteLabel</code></td><td></td><td></td></tr>
-<tr><td><code>MaybePeekLabel</code></td><td></td><td></td></tr>
-<tr><td><code>MuDimension</code></td><td></td><td></td></tr>
-<tr><td><code>NormalizeBibKey</code></td><td></td><td></td></tr>
-<tr><td><code>Pair</code></td><td></td><td></td></tr>
-<tr><td><code>PairList</code></td><td></td><td></td></tr>
-<tr><td><code>ProcessPendingResources</code></td><td></td><td></td></tr>
-<tr><td><code>ReadAlignmentTemplate</code></td><td></td><td></td></tr>
-<tr><td><code>ReadParameters</code></td><td></td><td></td></tr>
-<tr><td><code>Stringify</code></td><td></td><td></td></tr>
-<tr><td><code>TokensI</code></td><td></td><td></td></tr>
-<tr><td><code>TrimmedCommaList</code></td><td></td><td></td></tr>
-<tr><td><code>convertLaTeXArgs</code></td><td></td><td></td></tr>
-<tr><td><code>createXMRefs</code></td><td></td><td></td></tr>
-<tr><td><code>decodeMathChar</code></td><td></td><td></td></tr>
-<tr><td><code>dualize_arglist</code></td><td></td><td></td></tr>
+<div class="table"><table><thead><tr><th>Perl</th><th>Rust</th><th>Rhai</th></tr></thead><tbody>
+<tr><td><code>!$v</code></td><td><code>perl_truthy</code> (<code>latexml_contrib/src/script_bindings/mod.rs</code>)</td><td><code>!</code></td></tr>
+<tr><td><code>$a ne $b</code></td><td><a href="https://doc.rust-lang.org/nightly/std/primitive.str.html" title="primitive str"><code>impl PartialEq for str</code></a> / <code>register_string_tests</code> (<code>latexml_contrib/src/script_bindings/engine.rs</code>)</td><td><code>!=</code></td></tr>
+<tr><td><code>$n-&gt;valueOf % $m</code></td><td><a href="../../../latexml_core/common/numeric_ops/trait.NumericOps.html#tymethod.value_of" title="method latexml_core::common::numeric_ops::NumericOps::value_of"><code>NumericOps::value_of</code></a> / <code>register_number_int_transition</code> (<code>latexml_contrib/src/script_bindings/values.rs</code>)</td><td><code>%</code></td></tr>
+<tr><td><code>$n-&gt;valueOf &amp; $m</code></td><td><a href="../../../latexml_core/common/numeric_ops/trait.NumericOps.html#tymethod.value_of" title="method latexml_core::common::numeric_ops::NumericOps::value_of"><code>NumericOps::value_of</code></a> / <code>register_number_int_transition</code> (<code>latexml_contrib/src/script_bindings/values.rs</code>)</td><td><code>&amp;</code></td></tr>
+<tr><td><code>$v-&gt;multiply($n)</code></td><td><a href="../../../latexml_core/common/numeric_ops/trait.NumericOps.html#method.multiply" title="method latexml_core::common::numeric_ops::NumericOps::multiply"><code>NumericOps::multiply</code></a></td><td><code>*</code></td></tr>
+<tr><td><code>$n-&gt;valueOf ** $m</code></td><td><a href="../../../latexml_core/common/numeric_ops/trait.NumericOps.html#tymethod.value_of" title="method latexml_core::common::numeric_ops::NumericOps::value_of"><code>NumericOps::value_of</code></a> / <code>register_number_int_transition</code> (<code>latexml_contrib/src/script_bindings/values.rs</code>)</td><td><code>**</code></td></tr>
+<tr><td><code>$v-&gt;add($w)</code></td><td><a href="../../../latexml_core/common/numeric_ops/trait.NumericOps.html#method.add" title="method latexml_core::common::numeric_ops::NumericOps::add"><code>NumericOps::add</code></a> / <a href="../../../latexml_core/common/glue/struct.Glue.html#method.add_glue" title="method latexml_core::common::glue::Glue::add_glue"><code>Glue::add_glue</code></a></td><td><code>+</code></td></tr>
+<tr><td><code>$v-&gt;subtract($w)</code></td><td><a href="../../../latexml_core/common/numeric_ops/trait.NumericOps.html#method.subtract" title="method latexml_core::common::numeric_ops::NumericOps::subtract"><code>NumericOps::subtract</code></a> / <a href="../../../latexml_core/common/numeric_ops/trait.NumericOps.html#method.negate" title="method latexml_core::common::numeric_ops::NumericOps::negate"><code>NumericOps::negate</code></a></td><td><code>-</code></td></tr>
+<tr><td><code>$v-&gt;divide($n)</code></td><td><a href="../../../latexml_core/common/numeric_ops/trait.NumericOps.html#method.divide" title="method latexml_core::common::numeric_ops::NumericOps::divide"><code>NumericOps::divide</code></a></td><td><code>/</code></td></tr>
+<tr><td><code>$v-&gt;valueOf &lt; $w-&gt;valueOf</code></td><td><a href="../../../latexml_core/common/numeric_ops/trait.NumericOps.html#tymethod.value_of" title="method latexml_core::common::numeric_ops::NumericOps::value_of"><code>NumericOps::value_of</code></a></td><td><code>&lt;</code></td></tr>
+<tr><td><code>$n-&gt;valueOf &lt;&lt; $m</code></td><td><a href="../../../latexml_core/common/numeric_ops/trait.NumericOps.html#tymethod.value_of" title="method latexml_core::common::numeric_ops::NumericOps::value_of"><code>NumericOps::value_of</code></a> / <code>register_number_int_transition</code> (<code>latexml_contrib/src/script_bindings/values.rs</code>)</td><td><code>&lt;&lt;</code></td></tr>
+<tr><td><code>$v-&gt;valueOf &lt;= $w-&gt;valueOf</code></td><td><a href="../../../latexml_core/common/numeric_ops/trait.NumericOps.html#tymethod.value_of" title="method latexml_core::common::numeric_ops::NumericOps::value_of"><code>NumericOps::value_of</code></a></td><td><code>&lt;=</code></td></tr>
+<tr><td><code>$a eq $b</code></td><td><a href="https://doc.rust-lang.org/nightly/std/primitive.str.html" title="primitive str"><code>impl PartialEq for str</code></a> / <code>register_string_tests</code> (<code>latexml_contrib/src/script_bindings/engine.rs</code>)</td><td><code>==</code></td></tr>
+<tr><td><code>$v-&gt;valueOf &gt; $w-&gt;valueOf</code></td><td><a href="../../../latexml_core/common/numeric_ops/trait.NumericOps.html#tymethod.value_of" title="method latexml_core::common::numeric_ops::NumericOps::value_of"><code>NumericOps::value_of</code></a></td><td><code>&gt;</code></td></tr>
+<tr><td><code>$v-&gt;valueOf &gt;= $w-&gt;valueOf</code></td><td><a href="../../../latexml_core/common/numeric_ops/trait.NumericOps.html#tymethod.value_of" title="method latexml_core::common::numeric_ops::NumericOps::value_of"><code>NumericOps::value_of</code></a></td><td><code>&gt;=</code></td></tr>
+<tr><td><code>$n-&gt;valueOf &gt;&gt; $m</code></td><td><a href="../../../latexml_core/common/numeric_ops/trait.NumericOps.html#tymethod.value_of" title="method latexml_core::common::numeric_ops::NumericOps::value_of"><code>NumericOps::value_of</code></a> / <code>register_number_int_transition</code> (<code>latexml_contrib/src/script_bindings/values.rs</code>)</td><td><code>&gt;&gt;</code></td></tr>
+<tr><td><code>AddToCounter</code></td><td><a href="../../../latexml_engine/macro.AddToCounter.html" title="macro latexml_engine::AddToCounter"><code>AddToCounter!</code></a> / <a href="../../../latexml_core/binding/counter/dialect/fn.add_to_counter.html" title="fn latexml_core::binding::counter::dialect::add_to_counter"><code>add_to_counter</code></a></td><td><code>AddToCounter</code></td></tr>
+<tr><td><code>AddToMacro</code></td><td><a href="../../../latexml_engine/macro.AddToMacro.html" title="macro latexml_engine::AddToMacro"><code>AddToMacro!</code></a> / <a href="../../../latexml_core/binding/content/fn.add_to_macro.html" title="fn latexml_core::binding::content::add_to_macro"><code>add_to_macro</code></a></td><td><code>AddToMacro</code></td></tr>
+<tr><td><code>AfterAssignment</code></td><td><a href="../../../latexml_core/state/fn.after_assignment.html" title="fn latexml_core::state::after_assignment"><code>after_assignment</code></a></td><td><code>AfterAssignment</code></td></tr>
+<tr><td>(Rhai helper; Perl: <code>PushValue(SEARCHPATHS =&gt; $dir)</code>)</td><td><a href="../../../latexml_core/state/fn.add_search_path.html" title="fn latexml_core::state::add_search_path"><code>add_search_path</code></a></td><td><code>AppendSearchPath</code></td></tr>
+<tr><td><code>AssignCatcode</code></td><td><a href="../../../latexml_engine/macro.AssignCatcode.html" title="macro latexml_engine::AssignCatcode"><code>AssignCatcode!</code></a> / <a href="../../../latexml_core/state/fn.assign_catcode.html" title="fn latexml_core::state::assign_catcode"><code>assign_catcode</code></a></td><td><code>AssignCatcode</code></td></tr>
+<tr><td><code>AssignDelcode</code></td><td><a href="../../../latexml_core/state/fn.assign_delcode.html" title="fn latexml_core::state::assign_delcode"><code>assign_delcode</code></a></td><td><code>AssignDelcode</code></td></tr>
+<tr><td><code>AssignValue</code></td><td><a href="../../../latexml_engine/macro.AssignValue.html" title="macro latexml_engine::AssignValue"><code>AssignValue!</code></a> / <a href="../../../latexml_core/state/fn.assign_value.html" title="fn latexml_core::state::assign_value"><code>assign_value</code></a></td><td><code>AssignFloat</code></td></tr>
+<tr><td><code>AssignLCcode</code></td><td><a href="../../../latexml_core/state/fn.assign_lccode.html" title="fn latexml_core::state::assign_lccode"><code>assign_lccode</code></a></td><td><code>AssignLCcode</code></td></tr>
+<tr><td><code>AssignMapping</code></td><td><a href="../../../latexml_engine/macro.AssignMapping.html" title="macro latexml_engine::AssignMapping"><code>AssignMapping!</code></a> / <a href="../../../latexml_core/state/fn.assign_mapping.html" title="fn latexml_core::state::assign_mapping"><code>assign_mapping</code></a></td><td><code>AssignMapping</code></td></tr>
+<tr><td><code>AssignMathcode</code></td><td><a href="../../../latexml_core/state/fn.assign_mathcode.html" title="fn latexml_core::state::assign_mathcode"><code>assign_mathcode</code></a></td><td><code>AssignMathcode</code></td></tr>
+<tr><td><code>$STATE-&gt;assignMeaning</code></td><td><a href="../../../latexml_engine/macro.AssignMeaning.html" title="macro latexml_engine::AssignMeaning"><code>AssignMeaning!</code></a> / <a href="../../../latexml_core/state/fn.assign_meaning.html" title="fn latexml_core::state::assign_meaning"><code>assign_meaning</code></a></td><td><code>AssignMeaning</code></td></tr>
+<tr><td><code>AssignRegister</code></td><td><a href="../../../latexml_core/macro.AssignRegister.html" title="macro latexml_core::AssignRegister"><code>AssignRegister!</code></a> / <a href="../../../latexml_core/state/fn.assign_register_token.html" title="fn latexml_core::state::assign_register_token"><code>assign_register_token</code></a></td><td><code>AssignRegister</code></td></tr>
+<tr><td><code>AssignSFcode</code></td><td><a href="../../../latexml_core/state/fn.assign_sfcode.html" title="fn latexml_core::state::assign_sfcode"><code>assign_sfcode</code></a></td><td><code>AssignSFcode</code></td></tr>
+<tr><td><code>AssignUCcode</code></td><td><a href="../../../latexml_core/state/fn.assign_uccode.html" title="fn latexml_core::state::assign_uccode"><code>assign_uccode</code></a></td><td><code>AssignUCcode</code></td></tr>
+<tr><td><code>AssignValue</code></td><td><a href="../../../latexml_engine/macro.AssignValue.html" title="macro latexml_engine::AssignValue"><code>AssignValue!</code></a> / <a href="../../../latexml_core/state/fn.assign_value.html" title="fn latexml_core::state::assign_value"><code>assign_value</code></a></td><td><code>AssignValue</code></td></tr>
+<tr><td><code>AssignValue</code></td><td><a href="../../../latexml_engine/macro.AssignValue.html" title="macro latexml_engine::AssignValue"><code>AssignValue!</code></a> / <a href="../../../latexml_core/state/fn.assign_value.html" title="fn latexml_core::state::assign_value"><code>assign_value</code></a></td><td><code>AssignBool</code> (deprecated: <code>AssignValue(key, value[, scope])</code>)</td></tr>
+<tr><td><code>AssignValue</code></td><td><a href="../../../latexml_engine/macro.AssignValue.html" title="macro latexml_engine::AssignValue"><code>AssignValue!</code></a> / <a href="../../../latexml_core/state/fn.assign_value.html" title="fn latexml_core::state::assign_value"><code>assign_value</code></a></td><td><code>AssignNumber</code> (deprecated: <code>AssignValue(key, value[, scope])</code>)</td></tr>
+<tr><td><code>AssignValue</code></td><td><a href="../../../latexml_engine/macro.AssignValue.html" title="macro latexml_engine::AssignValue"><code>AssignValue!</code></a> / <a href="../../../latexml_core/state/fn.assign_value.html" title="fn latexml_core::state::assign_value"><code>assign_value</code></a></td><td><code>AssignString</code> (deprecated: <code>AssignValue(key, value[, scope])</code>)</td></tr>
+<tr><td><code>AssignValue</code></td><td><a href="../../../latexml_engine/macro.AssignValue.html" title="macro latexml_engine::AssignValue"><code>AssignValue!</code></a> / <a href="../../../latexml_core/state/fn.assign_value.html" title="fn latexml_core::state::assign_value"><code>assign_value</code></a></td><td><code>assign_global</code> (deprecated: <code>AssignValue(key, value, "global")</code>)</td></tr>
+<tr><td><code>AssignValue</code></td><td><a href="../../../latexml_engine/macro.AssignValue.html" title="macro latexml_engine::AssignValue"><code>AssignValue!</code></a> / <a href="../../../latexml_core/state/fn.assign_value.html" title="fn latexml_core::state::assign_value"><code>assign_value</code></a></td><td><code>assign_value</code> (deprecated: <code>AssignValue(key, value, "local")</code>)</td></tr>
+<tr><td><code>AtBeginDocument</code></td><td><a href="../../../latexml_package/prelude/fn.at_begin_document.html" title="fn latexml_package::prelude::at_begin_document"><code>at_begin_document</code></a></td><td><code>AtBeginDocument</code></td></tr>
+<tr><td><code>AtEndDocument</code></td><td><a href="../../../latexml_package/prelude/fn.at_end_document.html" title="fn latexml_package::prelude::at_end_document"><code>at_end_document</code></a></td><td><code>AtEndDocument</code></td></tr>
+<tr><td><code>beginItemize</code></td><td><a href="../../../latexml_engine/macro.BeginItemize.html" title="macro latexml_engine::BeginItemize"><code>BeginItemize!</code></a> / <a href="../../../latexml_core/binding/counter/dialect/fn.begin_itemize.html" title="fn latexml_core::binding::counter::dialect::begin_itemize"><code>begin_itemize</code></a></td><td><code>BeginItemize</code></td></tr>
+<tr><td><code>Box</code></td><td><a href="../../../latexml_core/tbox/struct.Tbox.html#method.new" title="associated function latexml_core::tbox::Tbox::new"><code>Tbox::new</code></a></td><td><code>Box</code></td></tr>
+<tr><td><code>CC_ACTIVE</code></td><td><a href="../../../latexml_core/token/enum.Catcode.html#variant.ACTIVE" title="variant latexml_core::token::Catcode::ACTIVE"><code>Catcode::ACTIVE</code></a></td><td><code>CC_ACTIVE</code></td></tr>
+<tr><td><code>CC_ALIGN</code></td><td><a href="../../../latexml_core/token/enum.Catcode.html#variant.ALIGN" title="variant latexml_core::token::Catcode::ALIGN"><code>Catcode::ALIGN</code></a></td><td><code>CC_ALIGN</code></td></tr>
+<tr><td><code>CC_ARG</code></td><td><a href="../../../latexml_core/token/enum.Catcode.html#variant.ARG" title="variant latexml_core::token::Catcode::ARG"><code>Catcode::ARG</code></a></td><td><code>CC_ARG</code></td></tr>
+<tr><td><code>CC_BEGIN</code></td><td><a href="../../../latexml_core/token/enum.Catcode.html#variant.BEGIN" title="variant latexml_core::token::Catcode::BEGIN"><code>Catcode::BEGIN</code></a></td><td><code>CC_BEGIN</code></td></tr>
+<tr><td><code>CC_COMMENT</code></td><td><a href="../../../latexml_core/token/enum.Catcode.html#variant.COMMENT" title="variant latexml_core::token::Catcode::COMMENT"><code>Catcode::COMMENT</code></a></td><td><code>CC_COMMENT</code></td></tr>
+<tr><td><code>CC_CS</code></td><td><a href="../../../latexml_core/token/enum.Catcode.html#variant.CS" title="variant latexml_core::token::Catcode::CS"><code>Catcode::CS</code></a></td><td><code>CC_CS</code></td></tr>
+<tr><td><code>CC_END</code></td><td><a href="../../../latexml_core/token/enum.Catcode.html#variant.END" title="variant latexml_core::token::Catcode::END"><code>Catcode::END</code></a></td><td><code>CC_END</code></td></tr>
+<tr><td><code>CC_EOL</code></td><td><a href="../../../latexml_core/token/enum.Catcode.html#variant.EOL" title="variant latexml_core::token::Catcode::EOL"><code>Catcode::EOL</code></a></td><td><code>CC_EOL</code></td></tr>
+<tr><td><code>CC_ESCAPE</code></td><td><a href="../../../latexml_core/token/enum.Catcode.html#variant.ESCAPE" title="variant latexml_core::token::Catcode::ESCAPE"><code>Catcode::ESCAPE</code></a></td><td><code>CC_ESCAPE</code></td></tr>
+<tr><td><code>CC_IGNORE</code></td><td><a href="../../../latexml_core/token/enum.Catcode.html#variant.IGNORE" title="variant latexml_core::token::Catcode::IGNORE"><code>Catcode::IGNORE</code></a></td><td><code>CC_IGNORE</code></td></tr>
+<tr><td><code>CC_INVALID</code></td><td><a href="../../../latexml_core/token/enum.Catcode.html#variant.INVALID" title="variant latexml_core::token::Catcode::INVALID"><code>Catcode::INVALID</code></a></td><td><code>CC_INVALID</code></td></tr>
+<tr><td><code>CC_LETTER</code></td><td><a href="../../../latexml_core/token/enum.Catcode.html#variant.LETTER" title="variant latexml_core::token::Catcode::LETTER"><code>Catcode::LETTER</code></a></td><td><code>CC_LETTER</code></td></tr>
+<tr><td><code>CC_MARKER</code></td><td><a href="../../../latexml_core/token/enum.Catcode.html#variant.MARKER" title="variant latexml_core::token::Catcode::MARKER"><code>Catcode::MARKER</code></a></td><td><code>CC_MARKER</code></td></tr>
+<tr><td><code>CC_MATH</code></td><td><a href="../../../latexml_core/token/enum.Catcode.html#variant.MATH" title="variant latexml_core::token::Catcode::MATH"><code>Catcode::MATH</code></a></td><td><code>CC_MATH</code></td></tr>
+<tr><td><code>CC_OTHER</code></td><td><a href="../../../latexml_core/token/enum.Catcode.html#variant.OTHER" title="variant latexml_core::token::Catcode::OTHER"><code>Catcode::OTHER</code></a></td><td><code>CC_OTHER</code></td></tr>
+<tr><td><code>CC_PARAM</code></td><td><a href="../../../latexml_core/token/enum.Catcode.html#variant.PARAM" title="variant latexml_core::token::Catcode::PARAM"><code>Catcode::PARAM</code></a></td><td><code>CC_PARAM</code></td></tr>
+<tr><td><code>CC_SPACE</code></td><td><a href="../../../latexml_core/token/enum.Catcode.html#variant.SPACE" title="variant latexml_core::token::Catcode::SPACE"><code>Catcode::SPACE</code></a></td><td><code>CC_SPACE</code></td></tr>
+<tr><td><code>CC_SUB</code></td><td><a href="../../../latexml_core/token/enum.Catcode.html#variant.SUB" title="variant latexml_core::token::Catcode::SUB"><code>Catcode::SUB</code></a></td><td><code>CC_SUB</code></td></tr>
+<tr><td><code>CC_SUPER</code></td><td><a href="../../../latexml_core/token/enum.Catcode.html#variant.SUPER" title="variant latexml_core::token::Catcode::SUPER"><code>Catcode::SUPER</code></a></td><td><code>CC_SUPER</code></td></tr>
+<tr><td><code>CheckOptions</code></td><td><a href="../../../latexml_core/binding/def/options/fn.check_options.html" title="fn latexml_core::binding::def::options::check_options"><code>check_options</code></a></td><td><code>CheckOptions</code></td></tr>
+<tr><td><code>CleanBibKey</code></td><td><a href="../../../latexml_core/common/cleaners/fn.clean_bib_key.html" title="fn latexml_core::common::cleaners::clean_bib_key"><code>clean_bib_key</code></a></td><td><code>CleanBibKey</code></td></tr>
+<tr><td><code>CleanClassName</code></td><td><a href="../../../latexml_core/common/cleaners/fn.clean_class_name.html" title="fn latexml_core::common::cleaners::clean_class_name"><code>clean_class_name</code></a></td><td><code>CleanClassName</code></td></tr>
+<tr><td><code>CleanID</code></td><td><a href="../../../latexml_core/common/cleaners/fn.clean_id.html" title="fn latexml_core::common::cleaners::clean_id"><code>clean_id</code></a></td><td><code>CleanID</code></td></tr>
+<tr><td><code>CleanIndexKey</code></td><td><a href="../../../latexml_core/common/cleaners/fn.clean_index_key.html" title="fn latexml_core::common::cleaners::clean_index_key"><code>clean_index_key</code></a></td><td><code>CleanIndexKey</code></td></tr>
+<tr><td><code>CleanLabel</code></td><td><a href="../../../latexml_core/common/cleaners/fn.clean_label.html" title="fn latexml_core::common::cleaners::clean_label"><code>clean_label</code></a></td><td><code>CleanLabel</code></td></tr>
+<tr><td><code>CleanURL</code></td><td><a href="../../../latexml_core/common/cleaners/fn.clean_url.html" title="fn latexml_core::common::cleaners::clean_url"><code>clean_url</code></a></td><td><code>CleanURL</code></td></tr>
+<tr><td>(Rhai helper; Perl: <code>system($program, @args)</code>)</td><td><a href="https://doc.rust-lang.org/nightly/std/process/struct.Command.html#method.new" title="associated function std::process::Command::new"><code>Command::new</code></a></td><td><code>Command</code></td></tr>
+<tr><td><code>ComposeURL</code></td><td><a href="../../../latexml_core/common/cleaners/fn.compose_url.html" title="fn latexml_core::common::cleaners::compose_url"><code>compose_url</code></a></td><td><code>ComposeURL</code></td></tr>
+<tr><td><code>CounterValue</code></td><td><a href="../../../latexml_engine/macro.CounterValue.html" title="macro latexml_engine::CounterValue"><code>CounterValue!</code></a> / <a href="../../../latexml_core/binding/counter/dialect/fn.counter_value.html" title="fn latexml_core::binding::counter::dialect::counter_value"><code>counter_value</code></a></td><td><code>CounterValue</code></td></tr>
+<tr><td><code>Debug</code></td><td><a href="../../../latexml_core/macro.Debug.html" title="macro latexml_core::Debug"><code>Debug!</code></a> / <a href="../../../latexml_core/common/error/fn.emit_record.html" title="fn latexml_core::common::error::emit_record"><code>emit_record</code></a></td><td><code>Debug</code></td></tr>
+<tr><td><code>DeclareFontMap</code></td><td><a href="../../../latexml_engine/macro.DeclareFontMap.html" title="macro latexml_engine::DeclareFontMap"><code>DeclareFontMap!</code></a></td><td><code>DeclareFontMap</code></td></tr>
+<tr><td>(Rhai helper; Perl: <code>DeclareFontMap($name, [..., "ffi", ...])</code>)</td><td><a href="../../../latexml_engine/macro.DeclareFontMapMultichar.html" title="macro latexml_engine::DeclareFontMapMultichar"><code>DeclareFontMapMultichar!</code></a> / <a href="../../../latexml_core/binding/content/fn.load_font_map.html" title="fn latexml_core::binding::content::load_font_map"><code>load_font_map</code></a></td><td><code>DeclareFontMapMultichar</code></td></tr>
+<tr><td><code>DeclareOption</code></td><td><a href="../../../latexml_engine/macro.DeclareOption.html" title="macro latexml_engine::DeclareOption"><code>DeclareOption!</code></a></td><td><code>DeclareOption</code></td></tr>
+<tr><td><code>DefAccent</code></td><td><a href="../../../latexml_engine/macro.DefAccent.html" title="macro latexml_engine::DefAccent"><code>DefAccent!</code></a></td><td><code>DefAccent</code></td></tr>
+<tr><td><code>DefAutoload</code></td><td><a href="../../../latexml_engine/tex/fn.def_autoload_file.html" title="fn latexml_engine::tex::def_autoload_file"><code>def_autoload_file</code></a></td><td><code>DefAutoload</code></td></tr>
+<tr><td><code>DefColumnType</code></td><td><a href="../../../latexml_engine/macro.DefColumnType.html" title="macro latexml_engine::DefColumnType"><code>DefColumnType!</code></a> / <a href="../../../latexml_core/binding/def/dialect/fn.def_macro.html" title="fn latexml_core::binding::def::dialect::def_macro"><code>def_macro</code></a></td><td><code>DefColumnType</code></td></tr>
+<tr><td><code>DefConditional</code></td><td><a href="../../../latexml_engine/macro.DefConditional.html" title="macro latexml_engine::DefConditional"><code>DefConditional!</code></a> / <a href="../../../latexml_core/binding/def/dialect/fn.def_conditional.html" title="fn latexml_core::binding::def::dialect::def_conditional"><code>def_conditional</code></a></td><td><code>DefConditional</code></td></tr>
+<tr><td><code>DefConditionalI</code></td><td><a href="../../../latexml_core/binding/def/dialect/fn.def_conditional.html" title="fn latexml_core::binding::def::dialect::def_conditional"><code>def_conditional</code></a></td><td><code>DefConditionalI</code></td></tr>
+<tr><td><code>DefConstructor</code></td><td><a href="../../../latexml_engine/macro.DefConstructor.html" title="macro latexml_engine::DefConstructor"><code>DefConstructor!</code></a> / <a href="../../../latexml_core/binding/def/dialect/fn.def_constructor.html" title="fn latexml_core::binding::def::dialect::def_constructor"><code>def_constructor</code></a></td><td><code>DefConstructor</code></td></tr>
+<tr><td><code>DefConstructorI</code></td><td><a href="../../../latexml_core/binding/def/dialect/fn.def_constructor.html" title="fn latexml_core::binding::def::dialect::def_constructor"><code>def_constructor</code></a></td><td><code>DefConstructorI</code></td></tr>
+<tr><td><code>DefEnvironment</code></td><td><a href="../../../latexml_engine/macro.DefEnvironment.html" title="macro latexml_engine::DefEnvironment"><code>DefEnvironment!</code></a> / <a href="../../../latexml_core/binding/def/dialect/fn.def_environment.html" title="fn latexml_core::binding::def::dialect::def_environment"><code>def_environment</code></a></td><td><code>DefEnvironment</code></td></tr>
+<tr><td><code>DefEnvironmentI</code></td><td><a href="../../../latexml_core/binding/def/dialect/fn.def_environment.html" title="fn latexml_core::binding::def::dialect::def_environment"><code>def_environment</code></a></td><td><code>DefEnvironmentI</code></td></tr>
+<tr><td><code>DefKeyVal</code></td><td><a href="../../../latexml_engine/macro.DefKeyVal.html" title="macro latexml_engine::DefKeyVal"><code>DefKeyVal!</code></a> / <a href="../../../latexml_core/keyval/fn.define.html" title="fn latexml_core::keyval::define"><code>define</code></a></td><td><code>DefKeyVal</code></td></tr>
+<tr><td><code>DefLigature</code></td><td><a href="../../../latexml_engine/macro.DefLigature.html" title="macro latexml_engine::DefLigature"><code>DefLigature!</code></a></td><td><code>DefLigature</code></td></tr>
+<tr><td><code>DefMacro</code></td><td><a href="../../../latexml_engine/macro.DefMacro.html" title="macro latexml_engine::DefMacro"><code>DefMacro!</code></a> / <a href="../../../latexml_core/binding/def/dialect/fn.def_macro.html" title="fn latexml_core::binding::def::dialect::def_macro"><code>def_macro</code></a></td><td><code>DefMacro</code></td></tr>
+<tr><td><code>DefMacroI</code></td><td><a href="../../../latexml_core/binding/def/dialect/fn.def_macro.html" title="fn latexml_core::binding::def::dialect::def_macro"><code>def_macro</code></a></td><td><code>DefMacroI</code></td></tr>
+<tr><td><code>DefMath</code></td><td><a href="../../../latexml_engine/macro.DefMath.html" title="macro latexml_engine::DefMath"><code>DefMath!</code></a> / <a href="../../../latexml_core/binding/def/dialect/fn.def_math.html" title="fn latexml_core::binding::def::dialect::def_math"><code>def_math</code></a></td><td><code>DefMath</code></td></tr>
+<tr><td><code>DefMathI</code></td><td><a href="../../../latexml_core/binding/def/dialect/fn.def_math.html" title="fn latexml_core::binding::def::dialect::def_math"><code>def_math</code></a></td><td><code>DefMathI</code></td></tr>
+<tr><td><code>DefMathLigature</code></td><td><code>DefMathLigature!</code> (<code>latexml_engine/src/setup_binding_language.rs</code>)</td><td><code>DefMathLigature</code></td></tr>
+<tr><td><code>DefMathRewrite</code></td><td><a href="../../../latexml_engine/macro.DefMathRewrite.html" title="macro latexml_engine::DefMathRewrite"><code>DefMathRewrite!</code></a></td><td><code>DefMathRewrite</code></td></tr>
+<tr><td><code>DefParameterType</code></td><td><a href="../../../latexml_engine/macro.DefParameterType.html" title="macro latexml_engine::DefParameterType"><code>DefParameterType!</code></a> / <a href="../../../latexml_core/parameter/struct.Parameter.html" title="struct latexml_core::parameter::Parameter"><code>Parameter</code></a></td><td><code>DefParameterType</code></td></tr>
+<tr><td><code>DefPrimitive</code></td><td><a href="../../../latexml_engine/macro.DefPrimitive.html" title="macro latexml_engine::DefPrimitive"><code>DefPrimitive!</code></a> / <a href="../../../latexml_core/binding/def/dialect/fn.def_primitive.html" title="fn latexml_core::binding::def::dialect::def_primitive"><code>def_primitive</code></a></td><td><code>DefPrimitive</code></td></tr>
+<tr><td><code>DefPrimitiveI</code></td><td><a href="../../../latexml_core/binding/def/dialect/fn.def_primitive.html" title="fn latexml_core::binding::def::dialect::def_primitive"><code>def_primitive</code></a></td><td><code>DefPrimitiveI</code></td></tr>
+<tr><td><code>DefRegister</code></td><td><a href="../../../latexml_engine/macro.DefRegister.html" title="macro latexml_engine::DefRegister"><code>DefRegister!</code></a> / <a href="../../../latexml_core/binding/def/dialect/fn.def_register.html" title="fn latexml_core::binding::def::dialect::def_register"><code>def_register</code></a></td><td><code>DefRegister</code></td></tr>
+<tr><td><code>DefRegisterI</code></td><td><a href="../../../latexml_core/binding/def/dialect/fn.def_register.html" title="fn latexml_core::binding::def::dialect::def_register"><code>def_register</code></a></td><td><code>DefRegisterI</code></td></tr>
+<tr><td><code>DefRewrite</code></td><td><a href="../../../latexml_engine/macro.DefRewrite.html" title="macro latexml_engine::DefRewrite"><code>DefRewrite!</code></a></td><td><code>DefRewrite</code></td></tr>
+<tr><td><code>Deprecated</code></td><td><a href="../../../latexml_core/macro.Warn.html" title="macro latexml_core::Warn"><code>Warn!</code></a></td><td><code>Deprecated</code></td></tr>
+<tr><td><code>Digest</code></td><td><a href="../../../latexml_engine/macro.Digest.html" title="macro latexml_engine::Digest"><code>Digest!</code></a> / <a href="../../../latexml_core/stomach/fn.digest.html" title="fn latexml_core::stomach::digest"><code>digest</code></a></td><td><code>Digest</code></td></tr>
+<tr><td><code>DigestIf</code></td><td><a href="../../../latexml_engine/macro.DigestIf.html" title="macro latexml_engine::DigestIf"><code>DigestIf!</code></a> / <a href="../../../latexml_core/binding/content/fn.digest_if.html" title="fn latexml_core::binding::content::digest_if"><code>digest_if</code></a></td><td><code>DigestIf</code></td></tr>
+<tr><td><code>DigestLiteral</code></td><td><a href="../../../latexml_core/binding/content/fn.digest_literal.html" title="fn latexml_core::binding::content::digest_literal"><code>digest_literal</code></a></td><td><code>DigestLiteral</code></td></tr>
+<tr><td><code>DigestText</code></td><td><a href="../../../latexml_engine/macro.DigestText.html" title="macro latexml_engine::DigestText"><code>DigestText!</code></a> / <a href="../../../latexml_core/binding/content/fn.digest_text.html" title="fn latexml_core::binding::content::digest_text"><code>digest_text</code></a></td><td><code>DigestText</code></td></tr>
+<tr><td><code>Dimension</code></td><td><a href="../../../latexml_engine/macro.Dimension.html" title="macro latexml_engine::Dimension"><code>Dimension!</code></a></td><td><code>Dimension</code></td></tr>
+<tr><td><code>DisableKeyVal</code></td><td><a href="../../../latexml_core/keyval/fn.disable_keyval.html" title="fn latexml_core::keyval::disable_keyval"><code>disable_keyval</code></a></td><td><code>DisableKeyVal</code></td></tr>
+<tr><td><code>DocType</code></td><td><a href="../../../latexml_engine/macro.RegisterDocumentNamespaces.html" title="macro latexml_engine::RegisterDocumentNamespaces"><code>RegisterDocumentNamespaces!</code></a> / <a href="../../../latexml_core/common/model/fn.register_document_namespace.html" title="fn latexml_core::common::model::register_document_namespace"><code>register_document_namespace</code></a></td><td><code>DocType</code></td></tr>
+<tr><td><code>EndSemiverbatim</code></td><td><a href="../../../latexml_core/state/fn.end_semiverbatim.html" title="fn latexml_core::state::end_semiverbatim"><code>end_semiverbatim</code></a></td><td><code>EndSemiverbatim</code></td></tr>
+<tr><td><code>Equals</code></td><td><a href="../../../latexml_core/tokens/struct.Tokens.html#method.equals" title="method latexml_core::tokens::Tokens::equals"><code>Tokens::equals</code></a> / <code>equals</code> (<code>latexml_contrib/src/script_bindings/engine.rs</code>)</td><td><code>Equals</code></td></tr>
+<tr><td><code>Error</code></td><td><a href="../../../latexml_core/macro.Error.html" title="macro latexml_core::Error"><code>Error!</code></a></td><td><code>Error</code></td></tr>
+<tr><td><code>ExecuteOptions</code></td><td><a href="../../../latexml_core/binding/content/fn.execute_options.html" title="fn latexml_core::binding::content::execute_options"><code>execute_options</code></a></td><td><code>ExecuteOptions</code></td></tr>
+<tr><td><code>Expand</code></td><td><a href="../../../latexml_engine/macro.Expand.html" title="macro latexml_engine::Expand"><code>Expand!</code></a> / <a href="../../../latexml_core/gullet/fn.do_expand.html" title="fn latexml_core::gullet::do_expand"><code>do_expand</code></a></td><td><code>Expand</code></td></tr>
+<tr><td><code>ExpandPartially</code></td><td><a href="../../../latexml_core/gullet/fn.do_expand_partially.html" title="fn latexml_core::gullet::do_expand_partially"><code>do_expand_partially</code></a></td><td><code>ExpandPartially</code></td></tr>
+<tr><td><code>Explode</code></td><td><a href="../../../latexml_core/macro.Explode.html" title="macro latexml_core::Explode"><code>Explode!</code></a></td><td><code>Explode</code></td></tr>
+<tr><td><code>ExplodeText</code></td><td><a href="../../../latexml_core/macro.ExplodeText.html" title="macro latexml_core::ExplodeText"><code>ExplodeText!</code></a></td><td><code>ExplodeText</code></td></tr>
+<tr><td><code>Fatal</code></td><td><a href="../../../latexml_core/macro.Fatal.html" title="macro latexml_core::Fatal"><code>Fatal!</code></a></td><td><code>Fatal</code></td></tr>
+<tr><td><code>FindFile</code></td><td><a href="../../../latexml_engine/macro.FindFile.html" title="macro latexml_engine::FindFile"><code>FindFile!</code></a> / <a href="../../../latexml_core/binding/content/fn.find_file.html" title="fn latexml_core::binding::content::find_file"><code>find_file</code></a></td><td><code>FindFile</code></td></tr>
+<tr><td><code>FontDecode</code></td><td><a href="../../../latexml_core/binding/content/fn.font_decode.html" title="fn latexml_core::binding::content::font_decode"><code>font_decode</code></a></td><td><code>FontDecode</code></td></tr>
+<tr><td><code>FontDecodeString</code></td><td><a href="../../../latexml_core/binding/content/fn.font_decode_string.html" title="fn latexml_core::binding::content::font_decode_string"><code>font_decode_string</code></a></td><td><code>FontDecodeString</code></td></tr>
+<tr><td><code>GetKeyVal</code></td><td><a href="../../../latexml_engine/macro.GetKeyVal.html" title="macro latexml_engine::GetKeyVal"><code>GetKeyVal!</code></a></td><td><code>GetKeyVal</code></td></tr>
+<tr><td><code>GetKeyVals</code></td><td><a href="../../../latexml_engine/macro.GetKeyVals.html" title="macro latexml_engine::GetKeyVals"><code>GetKeyVals!</code></a></td><td><code>GetKeyVals</code></td></tr>
+<tr><td><code>Glue</code></td><td><a href="../../../latexml_engine/macro.Glue.html" title="macro latexml_engine::Glue"><code>Glue!</code></a></td><td><code>Glue</code></td></tr>
+<tr><td><code>HasKeyVal</code></td><td><a href="../../../latexml_core/keyval/fn.has_keyval.html" title="fn latexml_core::keyval::has_keyval"><code>has_keyval</code></a></td><td><code>HasKeyVal</code></td></tr>
+<tr><td><code>IfCondition</code></td><td><a href="../../../latexml_core/binding/content/fn.if_condition_args.html" title="fn latexml_core::binding::content::if_condition_args"><code>if_condition_args</code></a></td><td><code>IfCondition</code></td></tr>
+<tr><td><code>Info</code></td><td><a href="../../../latexml_core/macro.Info.html" title="macro latexml_core::Info"><code>Info!</code></a></td><td><code>Info</code></td></tr>
+<tr><td><code>Input</code></td><td><a href="../../../latexml_engine/macro.Input.html" title="macro latexml_engine::Input"><code>Input!</code></a> / <a href="../../../latexml_core/binding/content/fn.input.html" title="fn latexml_core::binding::content::input"><code>input</code></a></td><td><code>Input</code></td></tr>
+<tr><td><code>InputDefinitions</code></td><td><a href="../../../latexml_engine/macro.InputDefinitions.html" title="macro latexml_engine::InputDefinitions"><code>InputDefinitions!</code></a> / <a href="../../../latexml_core/binding/content/fn.input_definitions.html" title="fn latexml_core::binding::content::input_definitions"><code>input_definitions</code></a></td><td><code>InputDefinitions</code></td></tr>
+<tr><td><code>Invocation</code></td><td><a href="../../../latexml_engine/macro.Invocation.html" title="macro latexml_engine::Invocation"><code>Invocation!</code></a> / <a href="../../../latexml_core/binding/content/fn.build_invocation.html" title="fn latexml_core::binding::content::build_invocation"><code>build_invocation</code></a></td><td><code>Invocation</code></td></tr>
+<tr><td><code>IsDefined</code></td><td><a href="../../../latexml_engine/macro.IsDefined.html" title="macro latexml_engine::IsDefined"><code>IsDefined!</code></a> / <a href="../../../latexml_core/binding/def/dialect/fn.is_defined_token.html" title="fn latexml_core::binding::def::dialect::is_defined_token"><code>is_defined_token</code></a></td><td><code>IsDefined</code></td></tr>
+<tr><td><code>IsEmpty</code></td><td><code>is_empty_thing</code> (<code>latexml_contrib/src/script_bindings/engine.rs</code>)</td><td><code>IsEmpty</code></td></tr>
+<tr><td><code>$LaTeXML::VERSION</code></td><td><a href="../../../latexml_core/state/fn.lookup_string.html" title="fn latexml_core::state::lookup_string"><code>lookup_string</code></a></td><td><code>LaTeXMLVersion</code></td></tr>
+<tr><td><code>Let</code></td><td><a href="../../../latexml_engine/macro.Let.html" title="macro latexml_engine::Let"><code>Let!</code></a> / <a href="../../../latexml_core/state/fn.let_definition.html" title="fn latexml_core::state::let_definition"><code>let_definition</code></a></td><td><code>Let</code></td></tr>
+<tr><td><code>List</code></td><td><a href="../../../latexml_core/list/struct.List.html" title="struct latexml_core::list::List"><code>List</code></a> / <code>list_of</code> (<code>latexml_contrib/src/script_bindings/engine.rs</code>)</td><td><code>List</code></td></tr>
+<tr><td><code>LoadClass</code></td><td><a href="../../../latexml_engine/macro.LoadClass.html" title="macro latexml_engine::LoadClass"><code>LoadClass!</code></a> / <a href="../../../latexml_core/binding/content/fn.load_class.html" title="fn latexml_core::binding::content::load_class"><code>load_class</code></a></td><td><code>LoadClass</code></td></tr>
+<tr><td><code>LoadFontMap</code></td><td><a href="../../../latexml_core/binding/content/fn.load_font_map.html" title="fn latexml_core::binding::content::load_font_map"><code>load_font_map</code></a></td><td><code>LoadFontMap</code></td></tr>
+<tr><td><code>LoadFormat</code></td><td><code>plain_dump_available</code> (<code>latexml_engine/src/tex.rs</code>) / <code>latex_dump_available</code> (<code>latexml_engine/src/latex.rs</code>)</td><td><code>LoadFormat</code></td></tr>
+<tr><td><code>LoadPool</code></td><td><a href="../../../latexml_engine/macro.LoadPool.html" title="macro latexml_engine::LoadPool"><code>LoadPool!</code></a> / <a href="../../../latexml_core/binding/content/fn.input_definitions.html" title="fn latexml_core::binding::content::input_definitions"><code>input_definitions</code></a></td><td><code>LoadPool</code></td></tr>
+<tr><td><code>LookupValue</code></td><td><a href="../../../latexml_engine/macro.LookupBool.html" title="macro latexml_engine::LookupBool"><code>LookupBool!</code></a> / <a href="../../../latexml_core/state/fn.lookup_bool.html" title="fn latexml_core::state::lookup_bool"><code>lookup_bool</code></a></td><td><code>LookupBool</code></td></tr>
+<tr><td><code>LookupCatcode</code></td><td><a href="../../../latexml_engine/macro.LookupCatcode.html" title="macro latexml_engine::LookupCatcode"><code>LookupCatcode!</code></a> / <a href="../../../latexml_core/state/fn.lookup_catcode.html" title="fn latexml_core::state::lookup_catcode"><code>lookup_catcode</code></a></td><td><code>LookupCatcode</code></td></tr>
+<tr><td><code>LookupDefinition</code></td><td><a href="../../../latexml_engine/macro.LookupDefinition.html" title="macro latexml_engine::LookupDefinition"><code>LookupDefinition!</code></a></td><td><code>LookupDefinition</code></td></tr>
+<tr><td><code>LookupDelcode</code></td><td><a href="../../../latexml_core/state/fn.lookup_delcode.html" title="fn latexml_core::state::lookup_delcode"><code>lookup_delcode</code></a></td><td><code>LookupDelcode</code></td></tr>
+<tr><td><code>LookupDimension</code></td><td><a href="../../../latexml_core/state/fn.lookup_dimension_cs.html" title="fn latexml_core::state::lookup_dimension_cs"><code>lookup_dimension_cs</code></a></td><td><code>LookupDimension</code></td></tr>
+<tr><td><code>LookupValue</code></td><td><a href="../../../latexml_core/state/fn.lookup_float.html" title="fn latexml_core::state::lookup_float"><code>lookup_float</code></a></td><td><code>LookupFloat</code></td></tr>
+<tr><td><code>LookupLCcode</code></td><td><a href="../../../latexml_core/state/fn.lookup_lccode.html" title="fn latexml_core::state::lookup_lccode"><code>lookup_lccode</code></a></td><td><code>LookupLCcode</code></td></tr>
+<tr><td><code>LookupMapping</code></td><td><a href="../../../latexml_core/state/fn.lookup_mapping.html" title="fn latexml_core::state::lookup_mapping"><code>lookup_mapping</code></a></td><td><code>LookupMapping</code></td></tr>
+<tr><td><code>LookupMappingKeys</code></td><td><a href="../../../latexml_core/state/fn.with_mapping_keys.html" title="fn latexml_core::state::with_mapping_keys"><code>with_mapping_keys</code></a></td><td><code>LookupMappingKeys</code></td></tr>
+<tr><td><code>LookupMathcode</code></td><td><a href="../../../latexml_core/state/fn.lookup_mathcode.html" title="fn latexml_core::state::lookup_mathcode"><code>lookup_mathcode</code></a></td><td><code>LookupMathcode</code></td></tr>
+<tr><td><code>LookupMeaning</code></td><td><a href="../../../latexml_engine/macro.LookupMeaning.html" title="macro latexml_engine::LookupMeaning"><code>LookupMeaning!</code></a> / <a href="../../../latexml_core/state/fn.lookup_meaning.html" title="fn latexml_core::state::lookup_meaning"><code>lookup_meaning</code></a></td><td><code>LookupMeaning</code></td></tr>
+<tr><td><code>LookupValue</code></td><td><a href="../../../latexml_engine/macro.LookupNumber.html" title="macro latexml_engine::LookupNumber"><code>LookupNumber!</code></a> / <a href="../../../latexml_core/state/fn.lookup_number.html" title="fn latexml_core::state::lookup_number"><code>lookup_number</code></a></td><td><code>LookupNumber</code></td></tr>
+<tr><td><code>LookupRegister</code></td><td><a href="../../../latexml_engine/macro.LookupRegister.html" title="macro latexml_engine::LookupRegister"><code>LookupRegister!</code></a> / <a href="../../../latexml_core/state/fn.lookup_register_definition.html" title="fn latexml_core::state::lookup_register_definition"><code>lookup_register_definition</code></a></td><td><code>LookupRegister</code></td></tr>
+<tr><td>(Rhai helper; Perl: <code>IsDefined($cs) ? LookupRegister($cs) : Number(0)</code>)</td><td><a href="../../../latexml_engine/macro.LookupRegisterOrDefault.html" title="macro latexml_engine::LookupRegisterOrDefault"><code>LookupRegisterOrDefault!</code></a> / <a href="../../../latexml_core/state/fn.lookup_register.html" title="fn latexml_core::state::lookup_register"><code>lookup_register</code></a></td><td><code>LookupRegisterOrDefault</code></td></tr>
+<tr><td><code>LookupSFcode</code></td><td><a href="../../../latexml_core/state/fn.lookup_sfcode.html" title="fn latexml_core::state::lookup_sfcode"><code>lookup_sfcode</code></a></td><td><code>LookupSFcode</code></td></tr>
+<tr><td><code>LookupValue</code></td><td><a href="../../../latexml_engine/macro.LookupString.html" title="macro latexml_engine::LookupString"><code>LookupString!</code></a> / <a href="../../../latexml_core/state/fn.lookup_string.html" title="fn latexml_core::state::lookup_string"><code>lookup_string</code></a></td><td><code>LookupString</code></td></tr>
+<tr><td><code>LookupValue</code></td><td><a href="../../../latexml_engine/macro.LookupTokens.html" title="macro latexml_engine::LookupTokens"><code>LookupTokens!</code></a> / <a href="../../../latexml_core/state/fn.lookup_tokens.html" title="fn latexml_core::state::lookup_tokens"><code>lookup_tokens</code></a></td><td><code>LookupTokens</code></td></tr>
+<tr><td><code>LookupUCcode</code></td><td><a href="../../../latexml_core/state/fn.lookup_uccode.html" title="fn latexml_core::state::lookup_uccode"><code>lookup_uccode</code></a></td><td><code>LookupUCcode</code></td></tr>
+<tr><td><code>LookupValue</code></td><td><a href="../../../latexml_core/state/fn.lookup_value.html" title="fn latexml_core::state::lookup_value"><code>lookup_value</code></a></td><td><code>LookupValue</code></td></tr>
+<tr><td><code>LookupValue</code></td><td><a href="../../../latexml_core/state/fn.lookup_value.html" title="fn latexml_core::state::lookup_value"><code>lookup_value</code></a></td><td><code>lookup_value</code> (deprecated: <code>LookupValue(key)</code>)</td></tr>
+<tr><td><code>MaybeNoteLabel</code></td><td><a href="../../../latexml_core/binding/counter/dialect/fn.maybe_note_label.html" title="fn latexml_core::binding::counter::dialect::maybe_note_label"><code>maybe_note_label</code></a></td><td><code>MaybeNoteLabel</code></td></tr>
+<tr><td><code>MaybePeekLabel</code></td><td><a href="../../../latexml_core/binding/counter/dialect/fn.maybe_peek_label.html" title="fn latexml_core::binding::counter::dialect::maybe_peek_label"><code>maybe_peek_label</code></a></td><td><code>MaybePeekLabel</code></td></tr>
+<tr><td><code>MergeFont</code></td><td><a href="../../../latexml_engine/macro.MergeFont.html" title="macro latexml_engine::MergeFont"><code>MergeFont!</code></a> / <a href="../../../latexml_core/binding/content/fn.merge_font.html" title="fn latexml_core::binding::content::merge_font"><code>merge_font</code></a></td><td><code>MergeFont</code></td></tr>
+<tr><td><code>MuGlue</code></td><td><a href="../../../latexml_engine/macro.MuGlue.html" title="macro latexml_engine::MuGlue"><code>MuGlue!</code></a></td><td><code>MuGlue</code></td></tr>
+<tr><td><code>NewCounter</code></td><td><a href="../../../latexml_engine/macro.NewCounter.html" title="macro latexml_engine::NewCounter"><code>NewCounter!</code></a> / <a href="../../../latexml_core/binding/counter/dialect/fn.new_counter.html" title="fn latexml_core::binding::counter::dialect::new_counter"><code>new_counter</code></a></td><td><code>NewCounter</code></td></tr>
+<tr><td><code>NormalizeBibKey</code></td><td><a href="../../../latexml_core/common/cleaners/fn.normalize_bib_key.html" title="fn latexml_core::common::cleaners::normalize_bib_key"><code>normalize_bib_key</code></a></td><td><code>NormalizeBibKey</code></td></tr>
+<tr><td><code>Note</code></td><td><a href="../../../latexml_core/macro.Note.html" title="macro latexml_core::Note"><code>Note!</code></a></td><td><code>Note</code></td></tr>
+<tr><td><code>NoteLog</code></td><td><a href="../../../latexml_core/macro.NoteLog.html" title="macro latexml_core::NoteLog"><code>NoteLog!</code></a></td><td><code>NoteLog</code></td></tr>
+<tr><td><code>NoteSTDERR</code></td><td><a href="../../../latexml_core/macro.NoteSTDERR.html" title="macro latexml_core::NoteSTDERR"><code>NoteSTDERR!</code></a></td><td><code>NoteSTDERR</code></td></tr>
+<tr><td><code>Number</code></td><td><a href="../../../latexml_core/macro.Number.html" title="macro latexml_core::Number"><code>Number!</code></a></td><td><code>Number</code></td></tr>
+<tr><td>(Rhai helper; Perl: <code>LaTeXML::Common::XML::Parser-&gt;new-&gt;parseChunk($xml)</code>)</td><td><a href="../../../latexml_core/common/xml/fn.parse_fragment.html" title="fn latexml_core::common::xml::parse_fragment"><code>parse_fragment</code></a></td><td><code>ParseXML</code></td></tr>
+<tr><td><code>PassOptions</code></td><td><a href="../../../latexml_core/binding/content/fn.pass_options.html" title="fn latexml_core::binding::content::pass_options"><code>pass_options</code></a></td><td><code>PassOptions</code></td></tr>
+<tr><td><code>PopValue</code></td><td><a href="../../../latexml_core/state/fn.pop_value.html" title="fn latexml_core::state::pop_value"><code>pop_value</code></a></td><td><code>PopValue</code></td></tr>
+<tr><td>(Rhai helper; Perl: <code>UnshiftValue(SEARCHPATHS =&gt; $dir)</code>)</td><td><a href="../../../latexml_core/state/fn.search_paths_push_front.html" title="fn latexml_core::state::search_paths_push_front"><code>search_paths_push_front</code></a></td><td><code>PrependSearchPath</code></td></tr>
+<tr><td>(Rhai helper; Perl: <code>ProcessOptions(keysets =&gt; [$keyset])</code>)</td><td><a href="../../../latexml_engine/macro.ProcessKeyOptions.html" title="macro latexml_engine::ProcessKeyOptions"><code>ProcessKeyOptions!</code></a> / <a href="../../../latexml_core/binding/content/fn.process_key_options.html" title="fn latexml_core::binding::content::process_key_options"><code>process_key_options</code></a></td><td><code>ProcessKeyOptions</code></td></tr>
+<tr><td><code>ProcessOptions</code></td><td><a href="../../../latexml_engine/macro.ProcessOptions.html" title="macro latexml_engine::ProcessOptions"><code>ProcessOptions!</code></a> / <a href="../../../latexml_core/binding/content/fn.process_options.html" title="fn latexml_core::binding::content::process_options"><code>process_options</code></a></td><td><code>ProcessOptions</code></td></tr>
+<tr><td><code>ProgressSpindown</code></td><td><a href="../../../latexml_core/common/error/fn.note_end.html" title="fn latexml_core::common::error::note_end"><code>note_end</code></a></td><td><code>ProgressSpindown</code></td></tr>
+<tr><td><code>ProgressSpinup</code></td><td><a href="../../../latexml_core/common/error/fn.note_begin.html" title="fn latexml_core::common::error::note_begin"><code>note_begin</code></a></td><td><code>ProgressSpinup</code></td></tr>
+<tr><td><code>ProgressStep</code></td><td><a href="../../../latexml_core/common/error/fn.progress_step.html" title="fn latexml_core::common::error::progress_step"><code>progress_step</code></a></td><td><code>ProgressStep</code></td></tr>
+<tr><td><code>PushValue</code></td><td><a href="../../../latexml_core/state/fn.push_value.html" title="fn latexml_core::state::push_value"><code>push_value</code></a></td><td><code>PushValue</code></td></tr>
+<tr><td><code>RawTeX</code></td><td><a href="../../../latexml_engine/macro.RawTeX.html" title="macro latexml_engine::RawTeX"><code>RawTeX!</code></a> / <a href="../../../latexml_core/stomach/fn.raw_tex.html" title="fn latexml_core::stomach::raw_tex"><code>raw_tex</code></a></td><td><code>RawTeX</code></td></tr>
+<tr><td><code>$gullet-&gt;readArg</code></td><td><a href="../../../latexml_core/gullet/fn.read_arg.html" title="fn latexml_core::gullet::read_arg"><code>read_arg</code></a></td><td><code>ReadArg</code></td></tr>
+<tr><td><code>$gullet-&gt;readOptional</code></td><td><a href="../../../latexml_core/gullet/fn.read_optional.html" title="fn latexml_core::gullet::read_optional"><code>read_optional</code></a></td><td><code>ReadOptional</code></td></tr>
+<tr><td><code>$gullet-&gt;readToken</code></td><td><a href="../../../latexml_core/gullet/fn.read_token.html" title="fn latexml_core::gullet::read_token"><code>read_token</code></a></td><td><code>ReadToken</code></td></tr>
+<tr><td><code>$gullet-&gt;readUntil</code></td><td><a href="../../../latexml_core/gullet/fn.read_until.html" title="fn latexml_core::gullet::read_until"><code>read_until</code></a></td><td><code>ReadUntil</code></td></tr>
+<tr><td><code>RefCurrentID</code></td><td><a href="../../../latexml_engine/macro.RefCurrentID.html" title="macro latexml_engine::RefCurrentID"><code>RefCurrentID!</code></a> / <a href="../../../latexml_core/binding/counter/dialect/fn.ref_current_id.html" title="fn latexml_core::binding::counter::dialect::ref_current_id"><code>ref_current_id</code></a></td><td><code>RefCurrentID</code></td></tr>
+<tr><td><code>RefStepCounter</code></td><td><a href="../../../latexml_engine/macro.RefStepCounter.html" title="macro latexml_engine::RefStepCounter"><code>RefStepCounter!</code></a> / <a href="../../../latexml_core/binding/counter/dialect/fn.ref_step_counter_by_meaning.html" title="fn latexml_core::binding::counter::dialect::ref_step_counter_by_meaning"><code>ref_step_counter_by_meaning</code></a></td><td><code>RefStepCounter</code></td></tr>
+<tr><td><code>RefStepID</code></td><td><a href="../../../latexml_engine/macro.RefStepID.html" title="macro latexml_engine::RefStepID"><code>RefStepID!</code></a> / <a href="../../../latexml_core/binding/counter/dialect/fn.ref_step_id.html" title="fn latexml_core::binding::counter::dialect::ref_step_id"><code>ref_step_id</code></a></td><td><code>RefStepID</code></td></tr>
+<tr><td><code>RegisterDocumentNamespace</code></td><td><a href="../../../latexml_engine/macro.RegisterDocumentNamespace.html" title="macro latexml_engine::RegisterDocumentNamespace"><code>RegisterDocumentNamespace!</code></a> / <a href="../../../latexml_core/common/model/fn.register_document_namespace.html" title="fn latexml_core::common::model::register_document_namespace"><code>register_document_namespace</code></a></td><td><code>RegisterDocumentNamespace</code></td></tr>
+<tr><td><code>RegisterNamespace</code></td><td><a href="../../../latexml_engine/macro.RegisterNamespace.html" title="macro latexml_engine::RegisterNamespace"><code>RegisterNamespace!</code></a> / <a href="../../../latexml_core/common/model/fn.register_namespace.html" title="fn latexml_core::common::model::register_namespace"><code>register_namespace</code></a></td><td><code>RegisterNamespace</code></td></tr>
+<tr><td><code>RelaxNGSchema</code></td><td><a href="../../../latexml_engine/macro.RelaxNGSchema.html" title="macro latexml_engine::RelaxNGSchema"><code>RelaxNGSchema!</code></a> / <a href="../../../latexml_core/binding/content/fn.select_relaxng_schema.html" title="fn latexml_core::binding::content::select_relaxng_schema"><code>select_relaxng_schema</code></a></td><td><code>RelaxNGSchema</code></td></tr>
+<tr><td><code>RequirePackage</code></td><td><a href="../../../latexml_engine/macro.RequirePackage.html" title="macro latexml_engine::RequirePackage"><code>RequirePackage!</code></a> / <a href="../../../latexml_core/binding/content/fn.require_package.html" title="fn latexml_core::binding::content::require_package"><code>require_package</code></a></td><td><code>RequirePackage</code></td></tr>
+<tr><td><code>RequireResource</code></td><td><a href="../../../latexml_engine/macro.RequireResource.html" title="macro latexml_engine::RequireResource"><code>RequireResource!</code></a> / <a href="../../../latexml_core/binding/content/fn.require_resource.html" title="fn latexml_core::binding::content::require_resource"><code>require_resource</code></a></td><td><code>RequireResource</code></td></tr>
+<tr><td><code>ResetCounter</code></td><td><a href="../../../latexml_engine/macro.ResetCounter.html" title="macro latexml_engine::ResetCounter"><code>ResetCounter!</code></a> / <a href="../../../latexml_core/binding/counter/dialect/fn.reset_counter.html" title="fn latexml_core::binding::counter::dialect::reset_counter"><code>reset_counter</code></a></td><td><code>ResetCounter</code></td></tr>
+<tr><td><code>Revert</code></td><td><a href="../../../latexml_engine/macro.Revert.html" title="macro latexml_engine::Revert"><code>Revert!</code></a> / <a href="../../../latexml_core/digested/struct.Digested.html#method.revert" title="method latexml_core::digested::Digested::revert"><code>Digested::revert</code></a></td><td><code>Revert</code></td></tr>
+<tr><td><code>Roman</code></td><td><a href="../../../latexml_core/macro.Roman.html" title="macro latexml_core::Roman"><code>Roman!</code></a></td><td><code>Roman</code></td></tr>
+<tr><td><code>SetCondition</code></td><td><a href="../../../latexml_core/binding/content/fn.set_condition.html" title="fn latexml_core::binding::content::set_condition"><code>set_condition</code></a></td><td><code>SetCondition</code></td></tr>
+<tr><td><code>SetCounter</code></td><td><a href="../../../latexml_core/macro.SetCounter.html" title="macro latexml_core::SetCounter"><code>SetCounter!</code></a> / <a href="../../../latexml_core/binding/counter/dialect/fn.set_counter.html" title="fn latexml_core::binding::counter::dialect::set_counter"><code>set_counter</code></a></td><td><code>SetCounter</code></td></tr>
+<tr><td><code>ShiftValue</code></td><td><a href="../../../latexml_core/state/fn.shift_value.html" title="fn latexml_core::state::shift_value"><code>shift_value</code></a></td><td><code>ShiftValue</code></td></tr>
+<tr><td><code>$gullet-&gt;skipSpaces</code></td><td><a href="../../../latexml_core/gullet/fn.skip_spaces.html" title="fn latexml_core::gullet::skip_spaces"><code>skip_spaces</code></a></td><td><code>SkipSpaces</code></td></tr>
+<tr><td><code>StartSemiverbatim</code></td><td><a href="../../../latexml_core/state/fn.begin_semiverbatim.html" title="fn latexml_core::state::begin_semiverbatim"><code>begin_semiverbatim</code></a></td><td><code>StartSemiverbatim</code></td></tr>
+<tr><td><code>StepCounter</code></td><td><a href="../../../latexml_engine/macro.StepCounter.html" title="macro latexml_engine::StepCounter"><code>StepCounter!</code></a> / <a href="../../../latexml_core/binding/counter/dialect/fn.step_counter.html" title="fn latexml_core::binding::counter::dialect::step_counter"><code>step_counter</code></a></td><td><code>StepCounter</code></td></tr>
+<tr><td><code>Stringify</code></td><td><a href="../../../latexml_core/common/object/trait.Object.html#method.stringify" title="method latexml_core::common::object::Object::stringify"><code>Object::stringify</code></a></td><td><code>Stringify</code></td></tr>
+<tr><td><code>T_ACTIVE</code></td><td><a href="../../../latexml_core/macro.T_ACTIVE.html" title="macro latexml_core::T_ACTIVE"><code>T_ACTIVE!</code></a></td><td><code>T_ACTIVE</code></td></tr>
+<tr><td><code>T_ALIGN</code></td><td><a href="../../../latexml_core/macro.T_ALIGN.html" title="macro latexml_core::T_ALIGN"><code>T_ALIGN!</code></a></td><td><code>T_ALIGN</code></td></tr>
+<tr><td><code>T_ARG</code></td><td><a href="../../../latexml_core/macro.T_ARG.html" title="macro latexml_core::T_ARG"><code>T_ARG!</code></a></td><td><code>T_ARG</code></td></tr>
+<tr><td><code>T_BEGIN</code></td><td><a href="../../../latexml_core/macro.T_BEGIN.html" title="macro latexml_core::T_BEGIN"><code>T_BEGIN!</code></a></td><td><code>T_BEGIN</code></td></tr>
+<tr><td><code>T_COMMENT</code></td><td><a href="../../../latexml_core/macro.T_COMMENT.html" title="macro latexml_core::T_COMMENT"><code>T_COMMENT!</code></a></td><td><code>T_COMMENT</code></td></tr>
+<tr><td><code>T_CR</code></td><td><a href="../../../latexml_core/macro.T_CR.html" title="macro latexml_core::T_CR"><code>T_CR!</code></a></td><td><code>T_CR</code></td></tr>
+<tr><td><code>T_CS</code></td><td><a href="../../../latexml_core/macro.T_CS.html" title="macro latexml_core::T_CS"><code>T_CS!</code></a></td><td><code>T_CS</code></td></tr>
+<tr><td><code>T_END</code></td><td><a href="../../../latexml_core/macro.T_END.html" title="macro latexml_core::T_END"><code>T_END!</code></a></td><td><code>T_END</code></td></tr>
+<tr><td><code>T_LETTER</code></td><td><a href="../../../latexml_core/macro.T_LETTER.html" title="macro latexml_core::T_LETTER"><code>T_LETTER!</code></a></td><td><code>T_LETTER</code></td></tr>
+<tr><td><code>T_MARKER</code></td><td><a href="../../../latexml_core/macro.T_MARKER.html" title="macro latexml_core::T_MARKER"><code>T_MARKER!</code></a></td><td><code>T_MARKER</code></td></tr>
+<tr><td><code>T_MATH</code></td><td><a href="../../../latexml_core/macro.T_MATH.html" title="macro latexml_core::T_MATH"><code>T_MATH!</code></a></td><td><code>T_MATH</code></td></tr>
+<tr><td><code>T_OTHER</code></td><td><a href="../../../latexml_core/macro.T_OTHER.html" title="macro latexml_core::T_OTHER"><code>T_OTHER!</code></a></td><td><code>T_OTHER</code></td></tr>
+<tr><td><code>T_PARAM</code></td><td><a href="../../../latexml_core/macro.T_PARAM.html" title="macro latexml_core::T_PARAM"><code>T_PARAM!</code></a></td><td><code>T_PARAM</code></td></tr>
+<tr><td><code>T_SPACE</code></td><td><a href="../../../latexml_core/macro.T_SPACE.html" title="macro latexml_core::T_SPACE"><code>T_SPACE!</code></a></td><td><code>T_SPACE</code></td></tr>
+<tr><td><code>T_SUB</code></td><td><a href="../../../latexml_core/macro.T_SUB.html" title="macro latexml_core::T_SUB"><code>T_SUB!</code></a></td><td><code>T_SUB</code></td></tr>
+<tr><td><code>T_SUPER</code></td><td><a href="../../../latexml_core/macro.T_SUPER.html" title="macro latexml_core::T_SUPER"><code>T_SUPER!</code></a></td><td><code>T_SUPER</code></td></tr>
+<tr><td><code>Tag</code></td><td><a href="../../../latexml_engine/macro.Tag.html" title="macro latexml_engine::Tag"><code>Tag!</code></a> / <a href="../../../latexml_core/binding/content/fn.install_tag.html" title="fn latexml_core::binding::content::install_tag"><code>install_tag</code></a></td><td><code>Tag</code></td></tr>
+<tr><td><code>Digest(TokenizeInternal($tex))</code></td><td><a href="../../../latexml_engine/macro.TeX.html" title="macro latexml_engine::TeX"><code>TeX!</code></a> / <a href="../../../latexml_core/stomach/fn.digest.html" title="fn latexml_core::stomach::digest"><code>digest</code></a></td><td><code>TeX</code></td></tr>
+<tr><td><code>$box-&gt;toAttribute</code></td><td><a href="../../../latexml_core/digested/struct.Digested.html#method.to_attribute" title="method latexml_core::digested::Digested::to_attribute"><code>Digested::to_attribute</code></a></td><td><code>ToAttribute</code></td></tr>
+<tr><td><code>ToString</code></td><td><a href="../../../latexml_core/digested/struct.Digested.html" title="struct latexml_core::digested::Digested"><code>impl Display for Digested</code></a> / <code>dynamic_to_string</code> (<code>latexml_contrib/src/script_bindings/mod.rs</code>)</td><td><code>ToString</code></td></tr>
+<tr><td>(Rhai helper; Perl: <code>Expand(T_CS('\\today'))</code>)</td><td><a href="../../../latexml_engine/macro.Today.html" title="macro latexml_engine::Today"><code>Today!</code></a> / <a href="../../../latexml_engine/base_utilities/fonts_defs/fn.today.html" title="fn latexml_engine::base_utilities::fonts_defs::today"><code>today</code></a></td><td><code>Today</code></td></tr>
+<tr><td><code>Token</code></td><td><a href="../../../latexml_core/macro.Token.html" title="macro latexml_core::Token"><code>Token!</code></a></td><td><code>Token</code></td></tr>
+<tr><td><code>Tokenize</code></td><td><a href="../../../latexml_engine/macro.Tokenize.html" title="macro latexml_engine::Tokenize"><code>Tokenize!</code></a> / <a href="../../../latexml_core/mouth/fn.tokenize.html" title="fn latexml_core::mouth::tokenize"><code>tokenize</code></a></td><td><code>Tokenize</code></td></tr>
+<tr><td><code>TokenizeInternal</code></td><td><a href="../../../latexml_engine/macro.TokenizeInternal.html" title="macro latexml_engine::TokenizeInternal"><code>TokenizeInternal!</code></a> / <a href="../../../latexml_core/mouth/fn.tokenize_internal.html" title="fn latexml_core::mouth::tokenize_internal"><code>tokenize_internal</code></a></td><td><code>TokenizeInternal</code></td></tr>
+<tr><td><code>Tokens</code></td><td><a href="../../../latexml_core/macro.Tokens.html" title="macro latexml_core::Tokens"><code>Tokens!</code></a></td><td><code>Tokens</code></td></tr>
+<tr><td><code>TrimmedCommaList</code></td><td><a href="../../../latexml_core/common/cleaners/fn.trimmed_comma_list.html" title="fn latexml_core::common::cleaners::trimmed_comma_list"><code>trimmed_comma_list</code></a></td><td><code>TrimmedCommaList</code></td></tr>
+<tr><td><code>UTF</code></td><td><a href="https://doc.rust-lang.org/nightly/std/primitive.char.html#method.from_u32" title="associated function char::from_u32"><code>from_u32</code></a></td><td><code>UTF</code></td></tr>
+<tr><td><code>UnTeX</code></td><td><a href="../../../latexml_core/tokens/struct.Tokens.html#method.untex" title="method latexml_core::tokens::Tokens::untex"><code>Tokens::untex</code></a></td><td><code>UnTeX</code></td></tr>
+<tr><td><code>UnshiftValue</code></td><td><a href="../../../latexml_core/state/fn.unshift_value.html" title="fn latexml_core::state::unshift_value"><code>unshift_value</code></a></td><td><code>UnshiftValue</code></td></tr>
+<tr><td><code>Warn</code></td><td><a href="../../../latexml_core/macro.Warn.html" title="macro latexml_core::Warn"><code>Warn!</code></a></td><td><code>Warn</code></td></tr>
+<tr><td><code>XEquals</code></td><td><a href="../../../latexml_engine/macro.XEquals.html" title="macro latexml_engine::XEquals"><code>XEquals!</code></a> / <a href="../../../latexml_core/state/fn.x_equals.html" title="fn latexml_core::state::x_equals"><code>x_equals</code></a></td><td><code>XEquals</code></td></tr>
+<tr><td><code>$n-&gt;valueOf ^ $m</code></td><td><a href="../../../latexml_core/common/numeric_ops/trait.NumericOps.html#tymethod.value_of" title="method latexml_core::common::numeric_ops::NumericOps::value_of"><code>NumericOps::value_of</code></a> / <code>register_number_int_transition</code> (<code>latexml_contrib/src/script_bindings/values.rs</code>)</td><td><code>^</code></td></tr>
+<tr><td><code>$v-&gt;absolute</code></td><td><a href="../../../latexml_core/common/numeric_ops/trait.NumericOps.html#method.absolute" title="method latexml_core::common::numeric_ops::NumericOps::absolute"><code>NumericOps::absolute</code></a></td><td><code>absolute</code></td></tr>
+<tr><td><code>$v-&gt;add</code></td><td><a href="../../../latexml_core/common/numeric_ops/trait.NumericOps.html#method.add" title="method latexml_core::common::numeric_ops::NumericOps::add"><code>NumericOps::add</code></a> / <a href="../../../latexml_core/common/glue/struct.Glue.html#method.add_glue" title="method latexml_core::common::glue::Glue::add_glue"><code>Glue::add_glue</code></a></td><td><code>add</code></td></tr>
+<tr><td><code>defined $v</code></td><td><a href="rhai::Dynamic::is_unit"><code>Dynamic::is_unit</code></a></td><td><code>defined</code></td></tr>
+<tr><td><code>$v-&gt;divide</code></td><td><a href="../../../latexml_core/common/numeric_ops/trait.NumericOps.html#method.divide" title="method latexml_core::common::numeric_ops::NumericOps::divide"><code>NumericOps::divide</code></a></td><td><code>divide</code></td></tr>
+<tr><td><code>$v-&gt;divideround</code></td><td><a href="../../../latexml_core/common/numeric_ops/trait.NumericOps.html#method.divideround" title="method latexml_core::common::numeric_ops::NumericOps::divideround"><code>NumericOps::divideround</code></a></td><td><code>divideround</code></td></tr>
+<tr><td><code>$v-&gt;getShrink</code></td><td><a href="../../../latexml_core/common/glue/struct.Glue.html#structfield.minus" title="field latexml_core::common::glue::Glue::minus"><code>Glue::minus</code></a></td><td><code>getShrink</code></td></tr>
+<tr><td><code>$v-&gt;getShrinkOrder</code></td><td><a href="../../../latexml_core/common/glue/struct.Glue.html#structfield.mfill" title="field latexml_core::common::glue::Glue::mfill"><code>Glue::mfill</code></a></td><td><code>getShrinkOrder</code></td></tr>
+<tr><td><code>$v-&gt;getStretch</code></td><td><a href="../../../latexml_core/common/glue/struct.Glue.html#structfield.plus" title="field latexml_core::common::glue::Glue::plus"><code>Glue::plus</code></a></td><td><code>getStretch</code></td></tr>
+<tr><td><code>$v-&gt;getStretchOrder</code></td><td><a href="../../../latexml_core/common/glue/struct.Glue.html#structfield.pfill" title="field latexml_core::common::glue::Glue::pfill"><code>Glue::pfill</code></a></td><td><code>getStretchOrder</code></td></tr>
+<tr><td><code>$v-&gt;larger</code></td><td><a href="../../../latexml_core/common/numeric_ops/trait.NumericOps.html#method.larger" title="method latexml_core::common::numeric_ops::NumericOps::larger"><code>NumericOps::larger</code></a></td><td><code>larger</code></td></tr>
+<tr><td><code>$v-&gt;multiply</code></td><td><a href="../../../latexml_core/common/numeric_ops/trait.NumericOps.html#method.multiply" title="method latexml_core::common::numeric_ops::NumericOps::multiply"><code>NumericOps::multiply</code></a></td><td><code>multiply</code></td></tr>
+<tr><td><code>$v-&gt;negate</code></td><td><a href="../../../latexml_core/common/numeric_ops/trait.NumericOps.html#method.negate" title="method latexml_core::common::numeric_ops::NumericOps::negate"><code>NumericOps::negate</code></a></td><td><code>negate</code></td></tr>
+<tr><td>(Rhai helper; Perl: <code>neutralizeFont()</code>)</td><td><a href="../../../latexml_engine/base_utilities/fonts_defs/fn.neutralize_font.html" title="fn latexml_engine::base_utilities::fonts_defs::neutralize_font"><code>neutralize_font</code></a></td><td><code>neutralize_font</code></td></tr>
+<tr><td><code>$v-&gt;ptValue</code></td><td><a href="../../../latexml_core/common/numeric_ops/trait.NumericOps.html#method.pt_value" title="method latexml_core::common::numeric_ops::NumericOps::pt_value"><code>NumericOps::pt_value</code></a></td><td><code>ptValue</code></td></tr>
+<tr><td><code>$v-&gt;pxValue</code></td><td><a href="../../../latexml_core/common/numeric_ops/trait.NumericOps.html#method.px_value" title="method latexml_core::common::numeric_ops::NumericOps::px_value"><code>NumericOps::px_value</code></a></td><td><code>pxValue</code></td></tr>
+<tr><td><code>roman</code></td><td><a href="../../../latexml_core/macro.roman.html" title="macro latexml_core::roman"><code>roman!</code></a></td><td><code>roman</code></td></tr>
+<tr><td><code>$v-&gt;sign</code></td><td><a href="../../../latexml_core/common/numeric_ops/trait.NumericOps.html#method.sign" title="method latexml_core::common::numeric_ops::NumericOps::sign"><code>NumericOps::sign</code></a></td><td><code>sign</code></td></tr>
+<tr><td><code>$v-&gt;smaller</code></td><td><a href="../../../latexml_core/common/numeric_ops/trait.NumericOps.html#method.smaller" title="method latexml_core::common::numeric_ops::NumericOps::smaller"><code>NumericOps::smaller</code></a></td><td><code>smaller</code></td></tr>
+<tr><td><code>$v-&gt;spValue</code></td><td><a href="../../../latexml_core/common/numeric_ops/trait.NumericOps.html#tymethod.value_of" title="method latexml_core::common::numeric_ops::NumericOps::value_of"><code>NumericOps::value_of</code></a></td><td><code>spValue</code></td></tr>
+<tr><td><code>$v-&gt;subtract</code></td><td><a href="../../../latexml_core/common/numeric_ops/trait.NumericOps.html#method.subtract" title="method latexml_core::common::numeric_ops::NumericOps::subtract"><code>NumericOps::subtract</code></a></td><td><code>subtract</code></td></tr>
+<tr><td><code>$v-&gt;toAttribute</code></td><td><a href="../../../latexml_core/common/numeric_ops/trait.NumericOps.html#method.to_attribute" title="method latexml_core::common::numeric_ops::NumericOps::to_attribute"><code>NumericOps::to_attribute</code></a></td><td><code>toAttribute</code></td></tr>
+<tr><td><code>$v-&gt;valueOf</code></td><td><a href="../../../latexml_core/common/numeric_ops/trait.NumericOps.html#tymethod.value_of" title="method latexml_core::common::numeric_ops::NumericOps::value_of"><code>NumericOps::value_of</code></a></td><td><code>valueOf</code></td></tr>
+<tr><td><code>$whatsit</code></td><td><a href="../../../latexml_core/whatsit/struct.Whatsit.html" title="struct latexml_core::whatsit::Whatsit"><code>Whatsit</code></a></td><td><code>whatsit</code> (deprecated: the hook’s whatsit argument)</td></tr>
+<tr><td><code>$n-&gt;valueOf | $m</code></td><td><a href="../../../latexml_core/common/numeric_ops/trait.NumericOps.html#tymethod.value_of" title="method latexml_core::common::numeric_ops::NumericOps::value_of"><code>NumericOps::value_of</code></a> / <code>register_number_int_transition</code> (<code>latexml_contrib/src/script_bindings/values.rs</code>)</td><td><code>|</code></td></tr>
+<tr><td><code>$document-&gt;absorb</code></td><td><a href="../../../latexml_core/document/struct.Document.html#method.absorb" title="method latexml_core::document::Document::absorb"><code>Document::absorb</code></a></td><td><code>document.absorb</code></td></tr>
+<tr><td>(Rhai helper; Perl: <code>$document-&gt;absorb($props{$key})</code>)</td><td><a href="../../../latexml_core/document/struct.Document.html#method.absorb" title="method latexml_core::document::Document::absorb"><code>Document::absorb</code></a></td><td><code>document.absorbProperty</code></td></tr>
+<tr><td><code>$document-&gt;absorb</code></td><td><a href="../../../latexml_core/document/struct.Document.html#method.absorb_string" title="method latexml_core::document::Document::absorb_string"><code>Document::absorb_string</code></a></td><td><code>document.absorbString</code></td></tr>
+<tr><td><code>$document-&gt;addClass</code></td><td><a href="../../../latexml_core/document/struct.Document.html#method.add_class" title="method latexml_core::document::Document::add_class"><code>Document::add_class</code></a></td><td><code>document.addClass</code></td></tr>
+<tr><td><code>$document-&gt;appendClone</code></td><td><a href="../../../latexml_core/document/struct.Document.html#method.append_clone" title="method latexml_core::document::Document::append_clone"><code>Document::append_clone</code></a></td><td><code>document.appendClone</code></td></tr>
+<tr><td><code>$document-&gt;canContain</code></td><td><a href="../../../latexml_core/document/fn.can_contain.html" title="fn latexml_core::document::can_contain"><code>can_contain</code></a></td><td><code>document.canContain</code></td></tr>
+<tr><td><code>$document-&gt;closeElement</code></td><td><a href="../../../latexml_core/document/struct.Document.html#method.close_element" title="method latexml_core::document::Document::close_element"><code>Document::close_element</code></a></td><td><code>document.closeElement</code></td></tr>
+<tr><td><code>$document-&gt;closeElementAt</code></td><td><a href="../../../latexml_core/document/struct.Document.html#method.close_element_at" title="method latexml_core::document::Document::close_element_at"><code>Document::close_element_at</code></a></td><td><code>document.closeElementAt</code></td></tr>
+<tr><td><code>$document-&gt;findnode</code></td><td><a href="../../../latexml_core/document/struct.Document.html#method.findnode" title="method latexml_core::document::Document::findnode"><code>Document::findnode</code></a></td><td><code>document.findnode</code></td></tr>
+<tr><td><code>$document-&gt;findnodes</code></td><td><a href="../../../latexml_core/document/struct.Document.html#method.findnodes" title="method latexml_core::document::Document::findnodes"><code>Document::findnodes</code></a></td><td><code>document.findnodes</code></td></tr>
+<tr><td><code>$document-&gt;floatToElement</code></td><td><a href="../../../latexml_core/document/struct.Document.html#method.float_to_element" title="method latexml_core::document::Document::float_to_element"><code>Document::float_to_element</code></a></td><td><code>document.floatToElement</code></td></tr>
+<tr><td><code>GenerateID($document, $node, undef, $prefix)</code></td><td><a href="../../../latexml_core/document/struct.Document.html#method.generate_id" title="method latexml_core::document::Document::generate_id"><code>Document::generate_id</code></a></td><td><code>document.generateID</code></td></tr>
+<tr><td><code>$document-&gt;getElement</code></td><td><a href="../../../latexml_core/document/struct.Document.html#method.get_element" title="method latexml_core::document::Document::get_element"><code>Document::get_element</code></a></td><td><code>document.getElement</code></td></tr>
+<tr><td><code>$document-&gt;getNode</code></td><td><a href="../../../latexml_core/document/struct.Document.html#method.get_node" title="method latexml_core::document::Document::get_node"><code>Document::get_node</code></a></td><td><code>document.getNode</code></td></tr>
+<tr><td><code>$whatsit-&gt;getProperties</code></td><td><a href="../../../latexml_core/trait.BoxOps.html#method.get_properties" title="method latexml_core::BoxOps::get_properties"><code>BoxOps::get_properties</code></a></td><td><code>document.getProperties</code> (deprecated: the constructor body’s trailing properties map)</td></tr>
+<tr><td><code>$whatsit-&gt;getProperty</code></td><td><a href="../../../latexml_core/trait.BoxOps.html#method.get_property" title="method latexml_core::BoxOps::get_property"><code>BoxOps::get_property</code></a></td><td><code>document.getProperty</code> (deprecated: the constructor body’s trailing properties map)</td></tr>
+<tr><td><code>$document-&gt;insertElement</code></td><td><a href="../../../latexml_core/document/struct.Document.html#method.insert_element" title="method latexml_core::document::Document::insert_element"><code>Document::insert_element</code></a></td><td><code>document.insertElement</code></td></tr>
+<tr><td><code>$document-&gt;insertPI</code></td><td><a href="../../../latexml_core/document/struct.Document.html#method.insert_pi" title="method latexml_core::document::Document::insert_pi"><code>Document::insert_pi</code></a></td><td><code>document.insertPI</code></td></tr>
+<tr><td>(Rhai helper; Perl: <code>$document-&gt;appendClone($document-&gt;getNode, @nodes)</code>)</td><td><a href="../../../latexml_core/document/struct.Document.html#method.insert_nodes" title="method latexml_core::document::Document::insert_nodes"><code>Document::insert_nodes</code></a></td><td><code>document.insertXML</code></td></tr>
+<tr><td><code>$document-&gt;maybeCloseElement</code></td><td><a href="../../../latexml_core/document/struct.Document.html#method.maybe_close_element" title="method latexml_core::document::Document::maybe_close_element"><code>Document::maybe_close_element</code></a></td><td><code>document.maybeCloseElement</code></td></tr>
+<tr><td><code>$document-&gt;openElement</code></td><td><a href="../../../latexml_core/document/struct.Document.html#method.open_element" title="method latexml_core::document::Document::open_element"><code>Document::open_element</code></a></td><td><code>document.openElement</code></td></tr>
+<tr><td><code>$document-&gt;openElementAt</code></td><td><a href="../../../latexml_core/document/struct.Document.html#method.open_element_at" title="method latexml_core::document::Document::open_element_at"><code>Document::open_element_at</code></a></td><td><code>document.openElementAt</code></td></tr>
+<tr><td><code>$document-&gt;removeNode</code></td><td><a href="../../../latexml_core/document/struct.Document.html#method.remove_node" title="method latexml_core::document::Document::remove_node"><code>Document::remove_node</code></a></td><td><code>document.removeNode</code></td></tr>
+<tr><td><code>$document-&gt;renameNode</code></td><td><a href="../../../latexml_core/document/struct.Document.html#method.rename_node" title="method latexml_core::document::Document::rename_node"><code>Document::rename_node</code></a></td><td><code>document.renameNode</code></td></tr>
+<tr><td><code>$document-&gt;replaceNode</code></td><td><a href="../../../latexml_core/document/struct.Document.html#method.replace_node" title="method latexml_core::document::Document::replace_node"><code>Document::replace_node</code></a></td><td><code>document.replaceNode</code></td></tr>
+<tr><td><code>$document-&gt;setAttribute</code></td><td><a href="../../../latexml_core/document/struct.Document.html#method.set_attribute" title="method latexml_core::document::Document::set_attribute"><code>Document::set_attribute</code></a></td><td><code>document.setAttribute</code></td></tr>
+<tr><td><code>$document-&gt;setNode</code></td><td><a href="../../../latexml_core/document/struct.Document.html#method.set_node" title="method latexml_core::document::Document::set_node"><code>Document::set_node</code></a></td><td><code>document.setNode</code></td></tr>
+<tr><td><code>$document-&gt;unwrapNodes</code></td><td><a href="../../../latexml_core/document/struct.Document.html#method.unwrap_nodes" title="method latexml_core::document::Document::unwrap_nodes"><code>Document::unwrap_nodes</code></a></td><td><code>document.unwrapNodes</code></td></tr>
+<tr><td><code>$document-&gt;wrapNodes</code></td><td><a href="../../../latexml_core/document/struct.Document.html#method.wrap_nodes" title="method latexml_core::document::Document::wrap_nodes"><code>Document::wrap_nodes</code></a></td><td><code>document.wrapNodes</code></td></tr>
+<tr><td><code>$node-&gt;childNodes</code></td><td><a href="libxml::tree::Node::get_child_nodes"><code>Node::get_child_nodes</code></a></td><td><code>node.children</code></td></tr>
+<tr><td><code>$node-&gt;textContent</code></td><td><a href="libxml::tree::Node::get_content"><code>Node::get_content</code></a></td><td><code>node.content</code></td></tr>
+<tr><td><code>$node-&gt;firstChild</code></td><td><a href="libxml::tree::Node::get_first_child"><code>Node::get_first_child</code></a></td><td><code>node.firstChild</code></td></tr>
+<tr><td><code>$node-&gt;getAttribute</code></td><td><a href="../../../latexml_core/common/model/fn.get_node_attribute.html" title="fn latexml_core::common::model::get_node_attribute"><code>get_node_attribute</code></a></td><td><code>node.getAttribute</code></td></tr>
+<tr><td><code>$node-&gt;hasAttribute</code></td><td><a href="../../../latexml_core/common/model/fn.get_node_attribute.html" title="fn latexml_core::common::model::get_node_attribute"><code>get_node_attribute</code></a></td><td><code>node.hasAttribute</code></td></tr>
+<tr><td><code>$node-&gt;localname</code></td><td><a href="libxml::tree::Node::get_name"><code>Node::get_name</code></a></td><td><code>node.name</code></td></tr>
+<tr><td><code>$node-&gt;nextSibling</code></td><td><a href="libxml::tree::Node::get_next_sibling"><code>Node::get_next_sibling</code></a></td><td><code>node.nextSibling</code></td></tr>
+<tr><td><code>$node-&gt;parentNode</code></td><td><a href="libxml::tree::Node::get_parent"><code>Node::get_parent</code></a></td><td><code>node.parent</code></td></tr>
+<tr><td><code>$node-&gt;previousSibling</code></td><td><a href="libxml::tree::Node::get_prev_sibling"><code>Node::get_prev_sibling</code></a></td><td><code>node.prevSibling</code></td></tr>
+<tr><td><code>$document-&gt;getNodeQName($node)</code></td><td><a href="../../../latexml_core/common/model/fn.with_node_qname.html" title="fn latexml_core::common::model::with_node_qname"><code>with_node_qname</code></a></td><td><code>node.qname</code></td></tr>
+<tr><td><code>$node-&gt;removeAttribute</code></td><td><a href="../../../latexml_core/common/model/fn.remove_node_attribute.html" title="fn latexml_core::common::model::remove_node_attribute"><code>remove_node_attribute</code></a></td><td><code>node.removeAttribute</code></td></tr>
+<tr><td><code>$node-&gt;setAttribute</code></td><td><a href="libxml::tree::Node::set_attribute"><code>Node::set_attribute</code></a></td><td><code>node.setAttribute</code></td></tr>
+<tr><td>(Rhai helper; Perl: <code>$node-&gt;removeChildNodes; $node-&gt;appendText($text)</code>)</td><td><a href="libxml::tree::Node::set_content"><code>Node::set_content</code></a></td><td><code>node.setContent</code></td></tr>
+<tr><td><code>$node-&gt;toString</code></td><td><a href="libxml::tree::Document::node_to_string"><code>Document::node_to_string</code></a></td><td><code>node.toString</code></td></tr>
+<tr><td><code>$node-&gt;unbindNode</code></td><td><a href="libxml::tree::Node::unlink"><code>Node::unlink</code></a></td><td><code>node.unlink</code></td></tr>
+<tr><td><code>$whatsit-&gt;getArg</code></td><td><a href="../../../latexml_core/whatsit/struct.Whatsit.html#method.get_arg" title="method latexml_core::whatsit::Whatsit::get_arg"><code>Whatsit::get_arg</code></a></td><td><code>whatsit.getArg</code></td></tr>
+<tr><td><code>$whatsit-&gt;getArg</code></td><td><a href="../../../latexml_core/whatsit/struct.Whatsit.html#method.get_arg" title="method latexml_core::whatsit::Whatsit::get_arg"><code>Whatsit::get_arg</code></a> / <a href="../../../latexml_core/digested/struct.Digested.html#method.untex" title="method latexml_core::digested::Digested::untex"><code>Digested::untex</code></a></td><td><code>whatsit.argString</code> (deprecated: <code>whatsit.getArg(n)</code>)</td></tr>
+<tr><td><code>$whatsit-&gt;getFont</code></td><td><a href="../../../latexml_core/trait.BoxOps.html#tymethod.get_font" title="method latexml_core::BoxOps::get_font"><code>BoxOps::get_font</code></a></td><td><code>whatsit.getFont</code></td></tr>
+<tr><td><code>$whatsit-&gt;getProperties</code></td><td><a href="../../../latexml_core/trait.BoxOps.html#method.get_properties" title="method latexml_core::BoxOps::get_properties"><code>BoxOps::get_properties</code></a></td><td><code>whatsit.getProperties</code></td></tr>
+<tr><td><code>$whatsit-&gt;getProperty</code></td><td><a href="../../../latexml_core/trait.BoxOps.html#method.get_property" title="method latexml_core::BoxOps::get_property"><code>BoxOps::get_property</code></a></td><td><code>whatsit.getProperty</code></td></tr>
+<tr><td><code>$whatsit-&gt;getProperty</code></td><td><a href="../../../latexml_core/trait.BoxOps.html#method.get_property_string" title="method latexml_core::BoxOps::get_property_string"><code>BoxOps::get_property_string</code></a></td><td><code>whatsit.propertyString</code> (deprecated: <code>whatsit.getProperty(key)</code>)</td></tr>
+<tr><td><code>$whatsit-&gt;setProperty</code></td><td><a href="../../../latexml_core/trait.BoxOps.html#method.set_property" title="method latexml_core::BoxOps::set_property"><code>BoxOps::set_property</code></a></td><td><code>whatsit.setProperty</code></td></tr>
+<tr><td><code>ToString($whatsit)</code></td><td><a href="../../../latexml_core/whatsit/struct.Whatsit.html#method.revert" title="method latexml_core::whatsit::Whatsit::revert"><code>Whatsit::revert</code></a> / <code>whatsit_string</code> (<code>latexml_contrib/src/script_bindings/mod.rs</code>)</td><td><code>whatsit.to_string</code></td></tr>
+<tr><td>(Rhai helper; Perl: <code>ToString($definition) eq ''</code>)</td><td><code>register_string_length</code> (<code>latexml_contrib/src/script_bindings/engine.rs</code>)</td><td><code>definition.is_empty</code></td></tr>
+<tr><td>(Rhai helper; Perl: <code>length(ToString($definition))</code>)</td><td><code>register_string_length</code> (<code>latexml_contrib/src/script_bindings/engine.rs</code>)</td><td><code>definition.len</code></td></tr>
+<tr><td><code>push(@{$$defn{afterConstruct}}, …)</code></td><td><a href="../../../latexml_core/definition/constructor/struct.Constructor.html#structfield.after_construct" title="field latexml_core::definition::constructor::Constructor::after_construct"><code>Constructor::after_construct</code></a> / <code>push_definition_hook</code> (<code>latexml_contrib/src/script_bindings/wire.rs</code>)</td><td><code>definition.pushAfterConstruct</code></td></tr>
+<tr><td><code>push(@{$$defn{afterDigest}}, …)</code></td><td><a href="../../../latexml_core/definition/constructor/struct.Constructor.html#structfield.after_digest" title="field latexml_core::definition::constructor::Constructor::after_digest"><code>Constructor::after_digest</code></a> / <code>push_definition_hook</code> (<code>latexml_contrib/src/script_bindings/wire.rs</code>)</td><td><code>definition.pushAfterDigest</code></td></tr>
+<tr><td><code>push(@{$$defn{afterDigestBody}}, …)</code></td><td><a href="../../../latexml_core/definition/constructor/struct.Constructor.html#structfield.after_digest_body" title="field latexml_core::definition::constructor::Constructor::after_digest_body"><code>Constructor::after_digest_body</code></a> / <code>push_definition_hook</code> (<code>latexml_contrib/src/script_bindings/wire.rs</code>)</td><td><code>definition.pushAfterDigestBody</code></td></tr>
+<tr><td><code>push(@{$$defn{beforeConstruct}}, …)</code></td><td><a href="../../../latexml_core/definition/constructor/struct.Constructor.html#structfield.before_construct" title="field latexml_core::definition::constructor::Constructor::before_construct"><code>Constructor::before_construct</code></a> / <code>push_definition_hook</code> (<code>latexml_contrib/src/script_bindings/wire.rs</code>)</td><td><code>definition.pushBeforeConstruct</code></td></tr>
+<tr><td><code>push(@{$$defn{beforeDigest}}, …)</code></td><td><a href="../../../latexml_core/definition/constructor/struct.Constructor.html#structfield.before_digest" title="field latexml_core::definition::constructor::Constructor::before_digest"><code>Constructor::before_digest</code></a> / <code>push_definition_hook</code> (<code>latexml_contrib/src/script_bindings/wire.rs</code>)</td><td><code>definition.pushBeforeDigest</code></td></tr>
+<tr><td>(Rhai helper; Perl: <code>ToString($definition)</code>)</td><td><code>definition_string</code> (<code>latexml_contrib/src/script_bindings/mod.rs</code>)</td><td><code>definition.to_debug</code></td></tr>
+<tr><td><code>ToString($definition)</code></td><td><code>definition_string</code> (<code>latexml_contrib/src/script_bindings/mod.rs</code>)</td><td><code>definition.to_string</code></td></tr>
+<tr><td><code>unshift(@{$$defn{afterConstruct}}, …)</code></td><td><a href="../../../latexml_core/definition/constructor/struct.Constructor.html#structfield.after_construct" title="field latexml_core::definition::constructor::Constructor::after_construct"><code>Constructor::after_construct</code></a> / <code>push_definition_hook</code> (<code>latexml_contrib/src/script_bindings/wire.rs</code>)</td><td><code>definition.unshiftAfterConstruct</code></td></tr>
+<tr><td><code>unshift(@{$$defn{afterDigest}}, …)</code></td><td><a href="../../../latexml_core/definition/constructor/struct.Constructor.html#structfield.after_digest" title="field latexml_core::definition::constructor::Constructor::after_digest"><code>Constructor::after_digest</code></a> / <code>push_definition_hook</code> (<code>latexml_contrib/src/script_bindings/wire.rs</code>)</td><td><code>definition.unshiftAfterDigest</code></td></tr>
+<tr><td><code>unshift(@{$$defn{afterDigestBody}}, …)</code></td><td><a href="../../../latexml_core/definition/constructor/struct.Constructor.html#structfield.after_digest_body" title="field latexml_core::definition::constructor::Constructor::after_digest_body"><code>Constructor::after_digest_body</code></a> / <code>push_definition_hook</code> (<code>latexml_contrib/src/script_bindings/wire.rs</code>)</td><td><code>definition.unshiftAfterDigestBody</code></td></tr>
+<tr><td><code>unshift(@{$$defn{beforeConstruct}}, …)</code></td><td><a href="../../../latexml_core/definition/constructor/struct.Constructor.html#structfield.before_construct" title="field latexml_core::definition::constructor::Constructor::before_construct"><code>Constructor::before_construct</code></a> / <code>push_definition_hook</code> (<code>latexml_contrib/src/script_bindings/wire.rs</code>)</td><td><code>definition.unshiftBeforeConstruct</code></td></tr>
+<tr><td><code>unshift(@{$$defn{beforeDigest}}, …)</code></td><td><a href="../../../latexml_core/definition/constructor/struct.Constructor.html#structfield.before_digest" title="field latexml_core::definition::constructor::Constructor::before_digest"><code>Constructor::before_digest</code></a> / <code>push_definition_hook</code> (<code>latexml_contrib/src/script_bindings/wire.rs</code>)</td><td><code>definition.unshiftBeforeDigest</code></td></tr>
+<tr><td><code>ReadParameters($gullet, $spec)</code></td><td><a href="../../../latexml_core/common/def_parser/fn.parse_parameters.html" title="fn latexml_core::common::def_parser::parse_parameters"><code>parse_parameters</code></a> / <a href="../../../latexml_core/parameter/struct.Parameters.html#method.read_arguments" title="method latexml_core::parameter::Parameters::read_arguments"><code>Parameters::read_arguments</code></a></td><td><code>gullet.ReadParameters</code></td></tr>
+<tr><td><code>$gullet-&gt;readArg</code></td><td><a href="../../../latexml_core/gullet/fn.read_arg.html" title="fn latexml_core::gullet::read_arg"><code>read_arg</code></a></td><td><code>gullet.readArg</code></td></tr>
+<tr><td><code>$gullet-&gt;readOptional</code></td><td><a href="../../../latexml_core/gullet/fn.read_optional.html" title="fn latexml_core::gullet::read_optional"><code>read_optional</code></a></td><td><code>gullet.readOptional</code></td></tr>
+<tr><td><code>$gullet-&gt;readToken</code></td><td><a href="../../../latexml_core/gullet/fn.read_token.html" title="fn latexml_core::gullet::read_token"><code>read_token</code></a></td><td><code>gullet.readToken</code></td></tr>
+<tr><td><code>$gullet-&gt;readUntil</code></td><td><a href="../../../latexml_core/gullet/fn.read_until.html" title="fn latexml_core::gullet::read_until"><code>read_until</code></a></td><td><code>gullet.readUntil</code></td></tr>
+<tr><td><code>$gullet-&gt;skipSpaces</code></td><td><a href="../../../latexml_core/gullet/fn.skip_spaces.html" title="fn latexml_core::gullet::skip_spaces"><code>skip_spaces</code></a></td><td><code>gullet.skipSpaces</code></td></tr>
+<tr><td><code>$stomach-&gt;getGullet</code></td><td><a href="../../../latexml_core/gullet/index.html" title="mod latexml_core::gullet"><code>gullet</code></a></td><td><code>stomach.getGullet</code></td></tr>
+<tr><td><code>$font-&gt;getEncoding</code></td><td><a href="../../../latexml_core/common/font/struct.Font.html#method.get_encoding" title="method latexml_core::common::font::Font::get_encoding"><code>Font::get_encoding</code></a></td><td><code>font.getEncoding</code></td></tr>
+<tr><td><code>$font-&gt;getFamily</code></td><td><a href="../../../latexml_core/common/font/struct.Font.html#method.get_family" title="method latexml_core::common::font::Font::get_family"><code>Font::get_family</code></a></td><td><code>font.getFamily</code></td></tr>
+<tr><td><code>$font-&gt;getLanguage</code></td><td><a href="../../../latexml_core/common/font/struct.Font.html#method.get_language" title="method latexml_core::common::font::Font::get_language"><code>Font::get_language</code></a></td><td><code>font.getLanguage</code></td></tr>
+<tr><td><code>$font-&gt;getSeries</code></td><td><a href="../../../latexml_core/common/font/struct.Font.html#method.get_series" title="method latexml_core::common::font::Font::get_series"><code>Font::get_series</code></a></td><td><code>font.getSeries</code></td></tr>
+<tr><td><code>$font-&gt;getShape</code></td><td><a href="../../../latexml_core/common/font/struct.Font.html#method.get_shape" title="method latexml_core::common::font::Font::get_shape"><code>Font::get_shape</code></a></td><td><code>font.getShape</code></td></tr>
+<tr><td><code>$font-&gt;getSize</code></td><td><a href="../../../latexml_core/common/font/struct.Font.html#method.get_size" title="method latexml_core::common::font::Font::get_size"><code>Font::get_size</code></a></td><td><code>font.getSize</code></td></tr>
+<tr><td><code>$v-&gt;toString</code></td><td><a href="../../../latexml_core/common/number/struct.Number.html" title="struct latexml_core::common::number::Number"><code>impl Display for Number</code></a></td><td><code>number.toString</code></td></tr>
+<tr><td>(Rhai helper; Perl: <code>$v-&gt;toString</code>)</td><td><a href="../../../latexml_core/common/number/struct.Number.html" title="struct latexml_core::common::number::Number"><code>impl Display for Number</code></a></td><td><code>number.to_debug</code></td></tr>
+<tr><td><code>$v-&gt;toString</code></td><td><a href="../../../latexml_core/common/number/struct.Number.html" title="struct latexml_core::common::number::Number"><code>impl Display for Number</code></a></td><td><code>number.to_string</code></td></tr>
+<tr><td><code>$v-&gt;toString</code></td><td><a href="../../../latexml_core/common/dimension/struct.Dimension.html" title="struct latexml_core::common::dimension::Dimension"><code>impl Display for Dimension</code></a></td><td><code>dimension.toString</code></td></tr>
+<tr><td>(Rhai helper; Perl: <code>$v-&gt;toString</code>)</td><td><a href="../../../latexml_core/common/dimension/struct.Dimension.html" title="struct latexml_core::common::dimension::Dimension"><code>impl Display for Dimension</code></a></td><td><code>dimension.to_debug</code></td></tr>
+<tr><td><code>$v-&gt;toString</code></td><td><a href="../../../latexml_core/common/dimension/struct.Dimension.html" title="struct latexml_core::common::dimension::Dimension"><code>impl Display for Dimension</code></a></td><td><code>dimension.to_string</code></td></tr>
+<tr><td><code>$v-&gt;toString</code></td><td><a href="../../../latexml_core/common/glue/struct.Glue.html" title="struct latexml_core::common::glue::Glue"><code>impl Display for Glue</code></a></td><td><code>glue.toString</code></td></tr>
+<tr><td>(Rhai helper; Perl: <code>$v-&gt;toString</code>)</td><td><a href="../../../latexml_core/common/glue/struct.Glue.html" title="struct latexml_core::common::glue::Glue"><code>impl Display for Glue</code></a></td><td><code>glue.to_debug</code></td></tr>
+<tr><td><code>$v-&gt;toString</code></td><td><a href="../../../latexml_core/common/glue/struct.Glue.html" title="struct latexml_core::common::glue::Glue"><code>impl Display for Glue</code></a></td><td><code>glue.to_string</code></td></tr>
+<tr><td><code>$v-&gt;toString</code></td><td><a href="../../../latexml_core/common/muglue/struct.MuGlue.html" title="struct latexml_core::common::muglue::MuGlue"><code>impl Display for MuGlue</code></a></td><td><code>muglue.toString</code></td></tr>
+<tr><td>(Rhai helper; Perl: <code>$v-&gt;toString</code>)</td><td><a href="../../../latexml_core/common/muglue/struct.MuGlue.html" title="struct latexml_core::common::muglue::MuGlue"><code>impl Display for MuGlue</code></a></td><td><code>muglue.to_debug</code></td></tr>
+<tr><td><code>$v-&gt;toString</code></td><td><a href="../../../latexml_core/common/muglue/struct.MuGlue.html" title="struct latexml_core::common::muglue::MuGlue"><code>impl Display for MuGlue</code></a></td><td><code>muglue.to_string</code></td></tr>
+<tr><td>(Rhai helper; Perl: <code>push(@command, $arg)</code>)</td><td><a href="https://doc.rust-lang.org/nightly/std/process/struct.Command.html#method.arg" title="method std::process::Command::arg"><code>Command::arg</code></a></td><td><code>command.arg</code></td></tr>
+<tr><td>(Rhai helper; Perl: <code>push(@command, @args)</code>)</td><td><a href="https://doc.rust-lang.org/nightly/std/process/struct.Command.html#method.args" title="method std::process::Command::args"><code>Command::args</code></a></td><td><code>command.args</code></td></tr>
+<tr><td>(Rhai helper; Perl: <code>chdir($dir)</code>)</td><td><a href="https://doc.rust-lang.org/nightly/std/process/struct.Command.html#method.current_dir" title="method std::process::Command::current_dir"><code>Command::current_dir</code></a></td><td><code>command.current_dir</code></td></tr>
+<tr><td>(Rhai helper; Perl: <code>local $ENV{$key} = $value</code>)</td><td><a href="https://doc.rust-lang.org/nightly/std/process/struct.Command.html#method.env" title="method std::process::Command::env"><code>Command::env</code></a></td><td><code>command.env</code></td></tr>
+<tr><td>(Rhai helper; Perl: <code>qx($command)</code>)</td><td><a href="https://doc.rust-lang.org/nightly/std/process/struct.Command.html#method.output" title="method std::process::Command::output"><code>Command::output</code></a></td><td><code>command.output</code></td></tr>
+<tr><td><code>Color</code></td><td><a href="../../../latexml_core/common/color/enum.Color.html" title="enum latexml_core::common::color::Color"><code>Color</code></a></td><td></td></tr>
+<tr><td><code>DefColor</code></td><td><a href="../../../latexml_core/binding/content/fn.def_color.html" title="fn latexml_core::binding::content::def_color"><code>def_color</code></a></td><td></td></tr>
+<tr><td><code>DefColorModel</code></td><td><a href="../../../latexml_core/binding/content/fn.def_color_model.html" title="fn latexml_core::binding::content::def_color_model"><code>def_color_model</code></a></td><td></td></tr>
+<tr><td><code>DefExpandable</code></td><td><a href="../../../latexml_engine/macro.DefMacro.html" title="macro latexml_engine::DefMacro"><code>DefMacro!</code></a> / <a href="../../../latexml_core/binding/def/dialect/fn.def_macro.html" title="fn latexml_core::binding::def::dialect::def_macro"><code>def_macro</code></a></td><td><code>DefMacro(proto, expansion, opts)</code></td></tr>
+<tr><td><code>Float</code></td><td><a href="../../../latexml_core/common/float/struct.Float.html" title="struct latexml_core::common::float::Float"><code>Float</code></a></td><td>a Rhai float (<code>1.5</code>)</td></tr>
+<tr><td><code>GenerateID</code></td><td><a href="../../../latexml_core/document/struct.Document.html#method.generate_id" title="method latexml_core::document::Document::generate_id"><code>Document::generate_id</code></a></td><td><code>document.generateID(node, prefix)</code></td></tr>
+<tr><td><code>InputContent</code></td><td><a href="../../../latexml_core/binding/content/fn.input_content.html" title="fn latexml_core::binding::content::input_content"><code>input_content</code></a></td><td></td></tr>
+<tr><td><code>InstallDefinition</code></td><td><a href="../../../latexml_engine/macro.InstallDefinition.html" title="macro latexml_engine::InstallDefinition"><code>InstallDefinition!</code></a> / <a href="../../../latexml_core/state/fn.install_definition.html" title="fn latexml_core::state::install_definition"><code>install_definition</code></a></td><td></td></tr>
+<tr><td><code>LookupColor</code></td><td><a href="../../../latexml_engine/macro.LookupColor.html" title="macro latexml_engine::LookupColor"><code>LookupColor!</code></a> / <a href="../../../latexml_package/package/color_sty/fn.lookup_color.html" title="fn latexml_package::package::color_sty::lookup_color"><code>lookup_color</code></a></td><td></td></tr>
+<tr><td><code>MuDimension</code></td><td><a href="../../../latexml_core/common/mudimension/struct.MuDimension.html" title="struct latexml_core::common::mudimension::MuDimension"><code>MuDimension</code></a></td><td></td></tr>
+<tr><td><code>Pair</code></td><td><a href="../../../latexml_core/common/pair/struct.Pair.html#method.new" title="associated function latexml_core::common::pair::Pair::new"><code>Pair::new</code></a></td><td></td></tr>
+<tr><td><code>PairList</code></td><td><a href="../../../latexml_core/common/pair/struct.Pair.html" title="struct latexml_core::common::pair::Pair"><code>Vec&lt;Pair&gt;</code></a></td><td></td></tr>
+<tr><td><code>ProcessPendingResources</code></td><td><a href="../../../latexml_core/document/struct.Document.html#method.process_pending_resources" title="method latexml_core::document::Document::process_pending_resources"><code>Document::process_pending_resources</code></a></td><td></td></tr>
+<tr><td><code>ReadAlignmentTemplate</code></td><td><a href="../../../latexml_core/alignment/fn.read_alignment_template.html" title="fn latexml_core::alignment::read_alignment_template"><code>read_alignment_template</code></a></td><td></td></tr>
+<tr><td><code>TokensI</code></td><td><a href="../../../latexml_core/tokens/struct.Tokens.html#method.new" title="associated function latexml_core::tokens::Tokens::new"><code>Tokens::new</code></a></td><td><code>Tokens(t1, t2, …)</code></td></tr>
+<tr><td><code>convertLaTeXArgs</code></td><td><a href="../../../latexml_core/binding/content/fn.convert_latex_args.html" title="fn latexml_core::binding::content::convert_latex_args"><code>convert_latex_args</code></a></td><td></td></tr>
+<tr><td><code>createXMRefs</code></td><td><a href="../../../latexml_package/xmath_helpers/fn.i_xmref.html" title="fn latexml_package::xmath_helpers::i_xmref"><code>i_xmref</code></a> / <code>rearrange_ams_split</code> (<code>latexml_package/src/package/amsmath_sty.rs</code>)</td><td></td></tr>
+<tr><td><code>decodeMathChar</code></td><td><a href="../../../latexml_core/common/mathchar/fn.decode_math_char.html" title="fn latexml_core::common::mathchar::decode_math_char"><code>decode_math_char</code></a></td><td></td></tr>
+<tr><td><code>dualize_arglist</code></td><td><a href="../../../latexml_core/binding/def/dialect/fn.dualize_arglist.html" title="fn latexml_core::binding::def::dialect::dualize_arglist"><code>dualize_arglist</code></a></td><td></td></tr>
 </tbody></table>
 </div><h3 id="perl-calls-the-dialect-lacks-an-empty-rhai-cell"><a class="doc-anchor" href="#perl-calls-the-dialect-lacks-an-empty-rhai-cell">§</a>Perl calls the dialect lacks (an empty Rhai cell)</h3>
-<p>47 calls: <code>AfterAssignment</code>, <code>CheckOptions</code>, <code>CleanBibKey</code>, <code>CleanClassName</code>, <code>CleanIndexKey</code>, <code>CleanURL</code>, <code>Color</code>, <code>ComposeURL</code>, <code>Debug</code>, <code>DefAutoload</code>, <code>DefColor</code>, <code>DefColorModel</code>, <code>DefConditionalI</code>, <code>DefEnvironmentI</code>, <code>DefExpandable</code>, <code>DefMathI</code>, <code>DefRegisterI</code>, <code>Deprecated</code>, <code>DigestLiteral</code>, <code>DisableKeyVal</code>, <code>DocType</code>, <code>Float</code>, <code>FontDecode</code>, <code>FontDecodeString</code>, <code>GenerateID</code>, <code>HasKeyVal</code>, <code>InputContent</code>, <code>InstallDefinition</code>, <code>LoadFontMap</code>, <code>LoadFormat</code>, <code>LookupColor</code>, <code>MaybeNoteLabel</code>, <code>MaybePeekLabel</code>, <code>MuDimension</code>, <code>NormalizeBibKey</code>, <code>Pair</code>, <code>PairList</code>, <code>ProcessPendingResources</code>, <code>ReadAlignmentTemplate</code>, <code>ReadParameters</code>, <code>Stringify</code>, <code>TokensI</code>, <code>TrimmedCommaList</code>, <code>convertLaTeXArgs</code>, <code>createXMRefs</code>, <code>decodeMathChar</code>, <code>dualize_arglist</code>.</p>
-<h3 id="rhai-calls-with-no-perl-counterpart-an-empty-perl-cell"><a class="doc-anchor" href="#rhai-calls-with-no-perl-counterpart-an-empty-perl-cell">§</a>Rhai calls with no Perl counterpart (an empty Perl cell)</h3>
-<p>25 calls: <code>AppendSearchPath</code>, <code>Command</code>, <code>DeclareFontMapMultichar</code>, <code>LookupRegisterOrDefault</code>, <code>ParseXML</code>, <code>PrependSearchPath</code>, <code>ProcessKeyOptions</code>, <code>Today</code>, <code>neutralize_font</code>, <code>document.absorbProperty</code>, <code>document.generateID</code>, <code>document.insertXML</code>, <code>node.setContent</code>, <code>definition.is_empty</code>, <code>definition.len</code>, <code>definition.to_debug</code>, <code>number.to_debug</code>, <code>dimension.to_debug</code>, <code>glue.to_debug</code>, <code>muglue.to_debug</code>, <code>command.arg</code>, <code>command.args</code>, <code>command.current_dir</code>, <code>command.env</code>, <code>command.output</code>.</p>
-<h3 id="perl-functions-with-no-macro-compiled-bindings-call-the-rust-function-named"><a class="doc-anchor" href="#perl-functions-with-no-macro-compiled-bindings-call-the-rust-function-named">§</a>Perl functions with no macro (compiled bindings call the Rust function named)</h3>
-<p>63 calls: <code>AssignDelcode</code> (<code>assign_delcode</code>), <code>AssignFloat</code> (<code>assign_value</code>), <code>AssignLCcode</code> (<code>assign_lccode</code>), <code>AssignMathcode</code> (<code>assign_mathcode</code>), <code>AssignSFcode</code> (<code>assign_sfcode</code>), <code>AssignUCcode</code> (<code>assign_uccode</code>), <code>AtBeginDocument</code> (<code>push_value</code>), <code>AtEndDocument</code> (<code>push_value</code>), <code>Box</code> (<code>Tbox::new</code>), <code>CC_ACTIVE</code>, <code>CC_ALIGN</code>, <code>CC_ARG</code>, <code>CC_BEGIN</code>, <code>CC_COMMENT</code>, <code>CC_CS</code>, <code>CC_END</code>, <code>CC_EOL</code>, <code>CC_ESCAPE</code>, <code>CC_IGNORE</code>, <code>CC_INVALID</code>, <code>CC_LETTER</code>, <code>CC_MARKER</code>, <code>CC_MATH</code>, <code>CC_OTHER</code>, <code>CC_PARAM</code>, <code>CC_SPACE</code>, <code>CC_SUB</code>, <code>CC_SUPER</code>, <code>CleanID</code> (<code>clean_id</code>), <code>CleanLabel</code> (<code>clean_label</code>), <code>DefConstructorI</code> (<code>def_constructor</code>), <code>DefMacroI</code> (<code>def_macro</code>), <code>DefPrimitiveI</code> (<code>def_primitive</code>), <code>EndSemiverbatim</code> (<code>end_semiverbatim</code>), <code>Equals</code>, <code>ExecuteOptions</code> (<code>execute_options</code>), <code>ExpandPartially</code> (<code>do_expand_partially</code>), <code>IfCondition</code> (<code>if_condition_args</code>), <code>IsEmpty</code>, <code>List</code>, <code>LookupDelcode</code> (<code>lookup_delcode</code>), <code>LookupDimension</code> (<code>lookup_dimension_cs</code>), <code>LookupFloat</code> (<code>lookup_float</code>), <code>LookupLCcode</code> (<code>lookup_lccode</code>), <code>LookupMapping</code> (<code>lookup_mapping</code>), <code>LookupMappingKeys</code> (<code>with_mapping_keys</code>), <code>LookupMathcode</code> (<code>lookup_mathcode</code>), <code>LookupSFcode</code> (<code>lookup_sfcode</code>), <code>LookupUCcode</code> (<code>lookup_uccode</code>), <code>LookupValue</code> (<code>lookup_value</code>), <code>PassOptions</code> (<code>pass_options</code>), <code>PopValue</code> (<code>pop_value</code>), <code>ProgressSpindown</code> (<code>note_end</code>), <code>ProgressSpinup</code> (<code>note_begin</code>), <code>ProgressStep</code> (<code>progress_step</code>), <code>PushValue</code> (<code>push_value</code>), <code>SetCondition</code> (<code>set_condition</code>), <code>ShiftValue</code> (<code>shift_value</code>), <code>StartSemiverbatim</code> (<code>begin_semiverbatim</code>), <code>ToString</code>, <code>UTF</code>, <code>UnTeX</code> (<code>Tokens::untex</code>), <code>UnshiftValue</code> (<code>unshift_value</code>).</p>
+<p>15 calls, each with the reason:</p>
+<ul>
+<li><code>Color</code>: a Color value handle the dialect lacks.</li>
+<li><code>DefColor</code>: takes a Color value handle the dialect lacks.</li>
+<li><code>DefColorModel</code>: its conversion closures take Color value handles the dialect lacks.</li>
+<li><code>InputContent</code>: not yet exposed; a binding reaches it as <code>RawTeX("\\input{file}")</code>.</li>
+<li><code>InstallDefinition</code>: needs a Definition object; the dialect’s definers install their own.</li>
+<li><code>LookupColor</code>: returns a Color value handle the dialect lacks.</li>
+<li><code>MuDimension</code>: a MuDimension value handle the dialect lacks.</li>
+<li><code>Pair</code>: a Pair value handle the dialect lacks.</li>
+<li><code>PairList</code>: a PairList value handle the dialect lacks.</li>
+<li><code>ProcessPendingResources</code>: run by the schema as <code>ltx:document</code> opens (Base_Schema.pool.ltxml:61, <code>afterOpen</code>); no binding calls it.</li>
+<li><code>ReadAlignmentTemplate</code>: returns an alignment template, a handle the dialect lacks.</li>
+<li><code>convertLaTeXArgs</code>: internal to <code>\newcommand</code>’s definers; a binding writes its parameter spec itself.</li>
+<li><code>createXMRefs</code>: an XMRef per math node or argument, inside <code>DefMath</code>’s XMDual (Package.pm:1544), which the dialect’s <code>DefMath</code> builds.</li>
+<li><code>decodeMathChar</code>: returns Perl’s list (glyph, font, reversion, properties); not yet exposed as a Rhai value.</li>
+<li><code>dualize_arglist</code>: internal to <code>DefMath</code>’s XMDual, which the dialect’s <code>DefMath</code> builds.</li>
+</ul>
 </div></details></section></div></main></body></html>

@@ -127,7 +127,7 @@
 <a href=#127 id=127 data-nosnippet>127</a>    // at a later assignment; pstricks' raw `\psaddtolength` depends on it
 <a href=#128 id=128 data-nosnippet>128</a>    // (lsc). Perl never fires it (KNOWN_PERL_ERRORS #257). Guard:
 <a href=#129 id=129 data-nosnippet>129</a>    // `perfect_kernel_batch56::afterassignment_fires_after_arithmetic`.
-<a href=#130 id=130 data-nosnippet>130</a>    </span>after_assignment();
+<a href=#130 id=130 data-nosnippet>130</a>    </span>after_assignment()<span class="question-mark">?</span>;
 <a href=#131 id=131 data-nosnippet>131</a>  });
 <a href=#132 id=132 data-nosnippet>132</a>
 <a href=#133 id=133 data-nosnippet>133</a>  <span class="macro">DefPrimitive!</span>(<span class="string">"\\multiply Variable"</span>, sub[(var)] {
@@ -146,7 +146,7 @@
 <a href=#146 id=146 data-nosnippet>146</a>        <span class="macro">Error!</span>(<span class="string">"expected"</span>,<span class="string">"definition"</span>, message);
 <a href=#147 id=147 data-nosnippet>147</a>      }}
 <a href=#148 id=148 data-nosnippet>148</a>    }
-<a href=#149 id=149 data-nosnippet>149</a>    after_assignment(); <span class="comment">// tex.web §1269, as for `\advance`
+<a href=#149 id=149 data-nosnippet>149</a>    after_assignment()<span class="question-mark">?</span>; <span class="comment">// tex.web §1269, as for `\advance`
 <a href=#150 id=150 data-nosnippet>150</a>  </span>});
 <a href=#151 id=151 data-nosnippet>151</a>
 <a href=#152 id=152 data-nosnippet>152</a>  <span class="macro">DefPrimitive!</span>(<span class="string">"\\divide Variable"</span>, sub[(var)] {
@@ -170,7 +170,7 @@
 <a href=#170 id=170 data-nosnippet>170</a>        <span class="macro">Error!</span>(<span class="string">"expected"</span>,<span class="string">"definition"</span>, message);
 <a href=#171 id=171 data-nosnippet>171</a>      }}
 <a href=#172 id=172 data-nosnippet>172</a>    }
-<a href=#173 id=173 data-nosnippet>173</a>    after_assignment(); <span class="comment">// tex.web §1269, as for `\advance`
+<a href=#173 id=173 data-nosnippet>173</a>    after_assignment()<span class="question-mark">?</span>; <span class="comment">// tex.web §1269, as for `\advance`
 <a href=#174 id=174 data-nosnippet>174</a>  </span>});
 <a href=#175 id=175 data-nosnippet>175</a>});
 <a href=#176 id=176 data-nosnippet>176</a>
@@ -199,7 +199,7 @@
 <a href=#199 id=199 data-nosnippet>199</a>    ..RegisterOptions::default()
 <a href=#200 id=200 data-nosnippet>200</a>  });
 <a href=#201 id=201 data-nosnippet>201</a>  def_register(cs, <span class="prelude-val">None</span>, init, options)<span class="question-mark">?</span>;
-<a href=#202 id=202 data-nosnippet>202</a>  after_assignment();
+<a href=#202 id=202 data-nosnippet>202</a>  after_assignment()<span class="question-mark">?</span>;
 <a href=#203 id=203 data-nosnippet>203</a>  <span class="prelude-val">Ok</span>(())
 <a href=#204 id=204 data-nosnippet>204</a>}
 </code></pre></div></section></main></body></html>

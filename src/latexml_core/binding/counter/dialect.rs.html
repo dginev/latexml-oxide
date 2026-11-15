@@ -222,7 +222,7 @@
 <a href=#222 id=222 data-nosnippet>222</a>    assign_mapping::&lt;Stored&gt;(<span class="string">"counter_for_type"</span>, ctr, <span class="prelude-val">None</span>);
 <a href=#223 id=223 data-nosnippet>223</a>    assign_mapping::&lt;Stored&gt;(<span class="string">"counter_alias"</span>, ctr, <span class="prelude-val">None</span>);
 <a href=#224 id=224 data-nosnippet>224</a>  }
-<a href=#225 id=225 data-nosnippet>225</a>  after_assignment();
+<a href=#225 id=225 data-nosnippet>225</a>  after_assignment()<span class="question-mark">?</span>;
 <a href=#226 id=226 data-nosnippet>226</a>  <span class="kw">if </span>!has_value(<span class="kw-2">&amp;</span>clctr) {
 <a href=#227 id=227 data-nosnippet>227</a>    assign_value(<span class="kw-2">&amp;</span>clctr, <span class="macro">Tokens!</span>(), <span class="prelude-val">Some</span>(Scope::Global));
 <a href=#228 id=228 data-nosnippet>228</a>  }
@@ -476,7 +476,7 @@
 <a href=#476 id=476 data-nosnippet>476</a>    <span class="prelude-val">Some</span>(Scope::Global),
 <a href=#477 id=477 data-nosnippet>477</a>    Vec::new(),
 <a href=#478 id=478 data-nosnippet>478</a>  )<span class="question-mark">?</span>;
-<a href=#479 id=479 data-nosnippet>479</a>  after_assignment();
+<a href=#479 id=479 data-nosnippet>479</a>  after_assignment()<span class="question-mark">?</span>;
 <a href=#480 id=480 data-nosnippet>480</a>  def_macro(
 <a href=#481 id=481 data-nosnippet>481</a>    <span class="macro">T_CS!</span>(<span class="macro">s!</span>(<span class="string">"\\@{ctr}@ID"</span>)),
 <a href=#482 id=482 data-nosnippet>482</a>    <span class="prelude-val">None</span>,
@@ -491,7 +491,7 @@
 <a href=#491 id=491 data-nosnippet>491</a></span><span class="kw">pub fn </span>add_to_counter(ctr: <span class="kw-2">&amp;</span>str, value: Number) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
 <a href=#492 id=492 data-nosnippet>492</a>  <span class="kw">let </span>v = counter_value(ctr)<span class="question-mark">?</span>.add(value);
 <a href=#493 id=493 data-nosnippet>493</a>  assign_register(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">"\\c@{ctr}"</span>), v.into(), <span class="prelude-val">Some</span>(Scope::Global), Vec::new())<span class="question-mark">?</span>;
-<a href=#494 id=494 data-nosnippet>494</a>  after_assignment();
+<a href=#494 id=494 data-nosnippet>494</a>  after_assignment()<span class="question-mark">?</span>;
 <a href=#495 id=495 data-nosnippet>495</a>  <span class="kw">let </span>id_cs = <span class="macro">T_CS!</span>(<span class="macro">s!</span>(<span class="string">"\\@{ctr}@ID"</span>));
 <a href=#496 id=496 data-nosnippet>496</a>  def_macro(
 <a href=#497 id=497 data-nosnippet>497</a>    id_cs,
@@ -511,7 +511,7 @@
 <a href=#511 id=511 data-nosnippet>511</a>  <span class="kw">let </span>newvalue = value.add(Number::new(<span class="number">1</span>));
 <a href=#512 id=512 data-nosnippet>512</a>  <span class="kw">let </span>c_ctr = <span class="macro">s!</span>(<span class="string">"\\c@{ctr}"</span>);
 <a href=#513 id=513 data-nosnippet>513</a>  assign_register(<span class="kw-2">&amp;</span>c_ctr, newvalue.into(), <span class="prelude-val">Some</span>(Scope::Global), Vec::new())<span class="question-mark">?</span>;
-<a href=#514 id=514 data-nosnippet>514</a>  after_assignment();
+<a href=#514 id=514 data-nosnippet>514</a>  after_assignment()<span class="question-mark">?</span>;
 <a href=#515 id=515 data-nosnippet>515</a>  <span class="kw">let </span>token_value = Tokens::new(<span class="macro">Explode!</span>(newvalue.value_of()));
 <a href=#516 id=516 data-nosnippet>516</a>  def_macro(
 <a href=#517 id=517 data-nosnippet>517</a>    <span class="macro">T_CS!</span>(<span class="macro">s!</span>(<span class="string">"\\@{ctr}@ID"</span>)),
