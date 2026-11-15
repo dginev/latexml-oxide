@@ -231,34 +231,63 @@ pub struct CachedDims {
   pub height: u32,
 }
 
+/// A source file's SHA-256 state after its bytes: its content identity (the graphics pass's dedupe key) and, extended
+/// by a [`RenderKey`], its cache key, from one read of the file.
+#[derive(Clone)]
+pub struct SourceDigest(Sha256);
+
+impl SourceDigest {
+  /// Hash the file at `source_path`; `None` if it can't be opened or read.
+  pub fn of_file(source_path: &Path) -> Option<Self> {
+    let mut file = fs::File::open(source_path).ok()?;
+    let mut hasher = Sha256::new();
+    // 64 KB scratch buffer; large enough to dwarf syscall overhead, small
+    // enough to keep stack/heap pressure low under high concurrency.
+    let mut buf = [0u8; 64 * 1024];
+    loop {
+      match file.read(&mut buf) {
+        Ok(0) => break,
+        Ok(n) => hasher.update(&buf[..n]),
+        Err(_) => return None,
+      }
+    }
+    Some(SourceDigest(hasher))
+  }
+
+  /// The SHA-256 of the file's bytes.
+  pub fn content(&self) -> [u8; 32] { self.0.clone().finalize().into() }
+
+  /// The cache-key hash of `(source bytes, key)`, as lowercase hex.
+  fn key_hash(&self, key: RenderKey) -> String {
+    let mut hasher = self.0.clone();
+    hasher.update(key.page.unwrap_or(0).to_le_bytes());
+    hasher.update(key.density.to_le_bytes());
+    hasher.update(key.ext.as_bytes());
+    // sha2 0.11 returns a `hybrid_array::Array`, which (unlike 0.10's
+    // `GenericArray`) does not implement `LowerHex`, so `format!("{:x}", _)`
+    // no longer compiles. Render the digest to lowercase hex by hand — same
+    // output as the old `{:x}`, and version-agnostic.
+    use std::fmt::Write as _;
+    let digest = hasher.finalize();
+    let mut hash = String::with_capacity(digest.len() * 2);
+    for byte in digest.iter() {
+      let _ = write!(hash, "{byte:02x}");
+    }
+    hash
+  }
+}
+
 /// Compute the cache-key hash for `(source_bytes, render_key)`.
 fn hash_key(source_path: &Path, key: RenderKey) -> Option<String> {
-  let mut file = fs::File::open(source_path).ok()?;
-  let mut hasher = Sha256::new();
-  // 64 KB scratch buffer; large enough to dwarf syscall overhead, small
-  // enough to keep stack/heap pressure low under high concurrency.
-  let mut buf = [0u8; 64 * 1024];
-  loop {
-    match file.read(&mut buf) {
-      Ok(0) => break,
-      Ok(n) => hasher.update(&buf[..n]),
-      Err(_) => return None,
-    }
+  Some(SourceDigest::of_file(source_path)?.key_hash(key))
+}
+
+/// The cache key of `(source, key)`: from `digest`, the source already read, or else from the file.
+fn source_key(source: &str, digest: Option<&SourceDigest>, key: RenderKey) -> Option<String> {
+  match digest {
+    Some(digest) => Some(digest.key_hash(key)),
+    None => hash_key(Path::new(source), key),
   }
-  hasher.update(key.page.unwrap_or(0).to_le_bytes());
-  hasher.update(key.density.to_le_bytes());
-  hasher.update(key.ext.as_bytes());
-  // sha2 0.11 returns a `hybrid_array::Array`, which (unlike 0.10's
-  // `GenericArray`) does not implement `LowerHex`, so `format!("{:x}", _)`
-  // no longer compiles. Render the digest to lowercase hex by hand — same
-  // output as the old `{:x}`, and version-agnostic.
-  use std::fmt::Write as _;
-  let digest = hasher.finalize();
-  let mut hash = String::with_capacity(digest.len() * 2);
-  for byte in digest.iter() {
-    let _ = write!(hash, "{byte:02x}");
-  }
-  Some(hash)
 }
 
 /// Build the cache file path for a given hash + extension.
@@ -349,11 +378,21 @@ pub struct CacheHit {
 /// I/O hiccup, return `None` so the caller falls through to a real
 /// conversion.
 pub fn lookup(source: &str, dest: &str, key: RenderKey) -> Option<CacheHit> {
+  lookup_digest(source, None, dest, key)
+}
+
+/// [`lookup`], with the source's [`SourceDigest`] when the caller has it.
+fn lookup_digest(
+  source: &str,
+  digest: Option<&SourceDigest>,
+  dest: &str,
+  key: RenderKey,
+) -> Option<CacheHit> {
   if disabled() {
     return None;
   }
   let root = cache_root()?;
-  let hash = hash_key(Path::new(source), key)?;
+  let hash = source_key(source, digest, key)?;
   let cached = cache_path(&root, &hash, key.ext);
   if !cached.exists() {
     MISSES.fetch_add(1, Ordering::Relaxed);
@@ -375,11 +414,22 @@ pub fn lookup(source: &str, dest: &str, key: RenderKey) -> Option<CacheHit> {
 /// `(source, key)`. Idempotent and best-effort: any I/O failure leaves
 /// the cache unchanged.
 pub fn store(source: &str, dest: &str, key: RenderKey, dims: Option<CachedDims>) {
+  store_digest(source, None, dest, key, dims)
+}
+
+/// [`store`], with the source's [`SourceDigest`] when the caller has it.
+fn store_digest(
+  source: &str,
+  digest: Option<&SourceDigest>,
+  dest: &str,
+  key: RenderKey,
+  dims: Option<CachedDims>,
+) {
   if disabled() {
     return;
   }
   let Some(root) = cache_root() else { return };
-  let Some(hash) = hash_key(Path::new(source), key) else {
+  let Some(hash) = source_key(source, digest, key) else {
     return;
   };
   let cached = cache_path(&root, &hash, key.ext);
@@ -567,6 +617,7 @@ impl ConvertResult {
 pub fn with_cache_dims<F, M>(
   policy: CachePolicy,
   source: &str,
+  digest: Option<&SourceDigest>,
   dest: &str,
   key: RenderKey,
   convert: F,
@@ -582,7 +633,7 @@ where
     }
     return ConvertResult::Ok { dims: measure() };
   }
-  if let Some(hit) = lookup(source, dest, key) {
+  if let Some(hit) = lookup_digest(source, digest, dest, key) {
     if let Some(d) = hit.dims {
       return ConvertResult::Ok { dims: Some(d) };
     }
@@ -590,7 +641,7 @@ where
     // attach so future hits get it for free.
     let m = measure();
     if let Some(d) = m {
-      if let (Some(root), Some(hash)) = (cache_root(), hash_key(Path::new(source), key)) {
+      if let (Some(root), Some(hash)) = (cache_root(), source_key(source, digest, key)) {
         let cached = cache_path(&root, &hash, key.ext);
         if cached.exists() {
           write_dims_sidecar(&dims_sidecar(&cached), d);
@@ -603,7 +654,7 @@ where
     return ConvertResult::Failed;
   }
   let dims = measure();
-  store(source, dest, key, dims);
+  store_digest(source, digest, dest, key, dims);
   ConvertResult::Ok { dims }
 }
 
@@ -810,6 +861,7 @@ mod tests {
     let dims1 = with_cache_dims(
       CachePolicy::Shared,
       src.to_str().unwrap(),
+      None,
       dest1.to_str().unwrap(),
       key,
       || {
@@ -830,6 +882,7 @@ mod tests {
     let dims2 = with_cache_dims(
       CachePolicy::Shared,
       src.to_str().unwrap(),
+      Some(&SourceDigest::of_file(&src).unwrap()),
       dest2.to_str().unwrap(),
       key,
       || {
@@ -1057,6 +1110,7 @@ mod tests {
     let result = with_cache_dims(
       CachePolicy::Shared,
       src.to_str().unwrap(),
+      None,
       dest.to_str().unwrap(),
       key,
       || {

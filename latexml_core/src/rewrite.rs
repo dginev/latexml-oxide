@@ -43,6 +43,18 @@ fn report_unrecognized_rewrite_scope(scope: &str) -> Result<()> {
   Ok(())
 }
 
+/// Is `node` `root` or one of its descendants.
+fn node_within(node: &Node, root: &Node) -> bool {
+  let mut current = Some(node.clone());
+  while let Some(ancestor) = current {
+    if ancestor == *root {
+      return true;
+    }
+    current = ancestor.get_parent();
+  }
+  false
+}
+
 /// Is `node` in `document`'s tree: its root is the document's root element (an id store entry
 /// can outlive a node an earlier pass unlinked).
 fn node_in_document(document: &Document, node: &Node) -> bool {
@@ -96,6 +108,9 @@ pub struct RewriteOptions {
   /// verification (`declare::declare_node_matches`) on every Select match.
   /// Set by BOTH attribute and replace registrations.
   pub declare_filter: Option<declare::DeclarePattern>,
+  /// Rust-only: run the rule up to this many times, each later pass on the nodes the previous one inserted.
+  /// For a rule whose select can match only what its replacement inserts (`base_xmath`'s thousands separator).
+  pub passes:         Option<usize>,
 }
 impl fmt::Debug for RewriteOptions {
   fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result { write!(f, "<RewriteOptions>") }
@@ -170,6 +185,8 @@ impl RewriteClause {
 pub struct Rewrite {
   pub options: RewriteOptions,
   pub clauses: Vec<RewriteClause>,
+  /// The nodes the current pass of a multi-pass rule inserted (`RewriteOptions::passes`).
+  inserted:    std::cell::RefCell<Option<Vec<Node>>>,
 }
 impl PartialEq for Rewrite {
   fn eq(&self, other: &Rewrite) -> bool { self.options == other.options }
@@ -257,7 +274,20 @@ impl Rewrite {
         pattern:  RewritePattern::String(String::new()), // attributes stored in options
       });
     }
-    Rewrite { options, clauses }
+    Rewrite {
+      options,
+      clauses,
+      inserted: Default::default(),
+    }
+  }
+
+  /// A rule from already-built clauses (`\lxDeclare`'s registration).
+  pub fn from_clauses(options: RewriteOptions, clauses: Vec<RewriteClause>) -> Self {
+    Rewrite {
+      options,
+      clauses,
+      inserted: Default::default(),
+    }
   }
 
   pub fn compile_clauses(&mut self, document: &mut Document) {
@@ -471,8 +501,39 @@ impl Rewrite {
   }
 
   pub fn invoke(&mut self, document: &mut Document, root: &Node) -> Result<()> {
-    let clauses = self.clauses.iter().collect();
-    self.apply_clause(document, root, 0, clauses)?;
+    let clauses: VecDeque<&RewriteClause> = self.clauses.iter().collect();
+    let passes = self.options.passes.unwrap_or(1);
+    if passes > 1 {
+      *self.inserted.borrow_mut() = Some(Vec::new());
+    }
+    self.apply_clause(document, root, 0, clauses.clone())?;
+    // A later pass over the whole tree could only select what the previous pass inserted (the rule's
+    // contract), so it evaluates the select on those nodes alone, in the same (document) order.
+    if let Some(RewriteClause {
+      op: RewriteOperator::Select,
+      pattern: RewritePattern::String(xpath),
+      ..
+    }) = self.clauses.first()
+    {
+      for _pass in 1..passes {
+        let fresh = self
+          .inserted
+          .borrow_mut()
+          .replace(Vec::new())
+          .unwrap_or_default();
+        if fresh.is_empty() {
+          break;
+        }
+        let rest: VecDeque<&RewriteClause> = clauses.iter().skip(1).copied().collect();
+        for node in fresh {
+          if node_within(&node, root) {
+            let matches = document.findnodes(xpath, Some(&node));
+            self.apply_select_matches(document, xpath, matches, &rest)?;
+          }
+        }
+      }
+    }
+    *self.inserted.borrow_mut() = None;
     Ok(())
   }
   // Rewrite spec as input
@@ -495,6 +556,57 @@ impl Rewrite {
   //   replace=> $code   : removes the current $nnodes, calls $code on them.
   //   action => $code   : invoke $code on current $node, without removing them.
   //   regexp  => $string: apply regexp (subst) to all text nodes in/under the current node.
+
+  /// Apply the clauses after a Select to each of its `matches`.
+  fn apply_select_matches(
+    &self,
+    document: &mut Document,
+    xpath: &str,
+    matches: Vec<Node>,
+    clauses: &VecDeque<&RewriteClause>,
+  ) -> Result<()> {
+    // Only apply wildcard filtering on content Selects, not scope Selects
+    let is_content_select = !xpath.contains("xml:id") && !xpath.contains("@id=");
+    let wilds = if is_content_select {
+      self.options.wildcard_paths.clone()
+    } else {
+      None
+    };
+    // Declare-side structural filter (content Selects only, not
+    // scope Selects): verify each broad-XPath match against the
+    // compiled pattern.
+    let pattern_filter = if is_content_select {
+      self.options.declare_filter.as_ref()
+    } else {
+      None
+    };
+    for node in matches {
+      if node.has_attribute("_matched") {
+        continue;
+      }
+      if let Some(pat) = pattern_filter
+        && !declare::declare_node_matches(document, &node, pat)
+      {
+        continue;
+      }
+      let marked = if let Some(ref wpaths) = wilds {
+        mark_wildcards(&node, wpaths)
+      } else {
+        vec![]
+      };
+      // Scope Selects always pass nmatched=1; content Selects use select_count
+      let nmatched_for_clause = if is_content_select {
+        self.options.select_count.unwrap_or(1)
+      } else {
+        1
+      };
+      self.apply_clause(document, &node, nmatched_for_clause, clauses.clone())?;
+      if !marked.is_empty() {
+        unmark_wildcards(&marked);
+      }
+    }
+    Ok(())
+  }
 
   fn apply_clause(
     &self,
@@ -538,46 +650,7 @@ impl Rewrite {
                   .collect();
               }
             }
-            // Only apply wildcard filtering on content Selects, not scope Selects
-            let is_content_select = !xpath.contains("xml:id") && !xpath.contains("@id=");
-            let wilds = if is_content_select {
-              self.options.wildcard_paths.clone()
-            } else {
-              None
-            };
-            // Declare-side structural filter (content Selects only, not
-            // scope Selects): verify each broad-XPath match against the
-            // compiled pattern.
-            let pattern_filter = if is_content_select {
-              self.options.declare_filter.as_ref()
-            } else {
-              None
-            };
-            for node in matches {
-              if node.has_attribute("_matched") {
-                continue;
-              }
-              if let Some(pat) = pattern_filter
-                && !declare::declare_node_matches(document, &node, pat)
-              {
-                continue;
-              }
-              let marked = if let Some(ref wpaths) = wilds {
-                mark_wildcards(&node, wpaths)
-              } else {
-                vec![]
-              };
-              // Scope Selects always pass nmatched=1; content Selects use select_count
-              let nmatched_for_clause = if is_content_select {
-                self.options.select_count.unwrap_or(1)
-              } else {
-                1
-              };
-              self.apply_clause(document, &node, nmatched_for_clause, clauses.clone())?;
-              if !marked.is_empty() {
-                unmark_wildcards(&marked);
-              }
-            }
+            self.apply_select_matches(document, xpath, matches, &clauses)?;
           }
         },
         Replace => {
@@ -642,6 +715,9 @@ impl Rewrite {
           // Now make any adjustments to the new nodes
           for ins in inserted.iter() {
             document.record_node_ids(ins)?;
+          }
+          if let Some(sink) = self.inserted.borrow_mut().as_mut() {
+            sink.extend(inserted.iter().cloned());
           }
           // TODO: Can we avoid this clone?
           let font = document.get_node_font(tree).clone();

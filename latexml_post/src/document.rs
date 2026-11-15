@@ -55,9 +55,13 @@ pub fn get_xml_id(node: &Node) -> Option<String> {
     .get_attribute_ns("id", XML_NS)
     .or_else(|| node.get_attribute("xml:id"))
     .or_else(|| {
-      // Fallback: check properties hash for "id" key
-      let props = node.get_properties();
-      props.get("id").cloned()
+      // Fallback: the properties map's "id" key (any namespace, the last such wins), built only when `xmlHasProp`
+      // finds an `id` at all: most nodes have none, and the map copied every attribute of each.
+      if node.has_property("id") {
+        node.get_properties().get("id").cloned()
+      } else {
+        None
+      }
     })
 }
 

@@ -243,7 +243,7 @@ binding raw-load its own same-named file after its flag is set (`babel_sty.rs` â
 ### 24. Graphics Content-Hash Deduplication
 
 **Decision:** The graphics post-processor (`latexml_post::Graphics`)
-deduplicates conversion and copy work by the SipHash of the source
+deduplicates conversion and copy work by the SHA-256 of the source
 file's bytes (paired with the graphicx `options=` string), not by
 source path. Byte-identical sources with the same options produce a
 single conversion job and a single output file in the bundle; every
@@ -259,7 +259,8 @@ producing two output files in the bundle (`foo-1.png`, `foo-2.png` or
 similar).
 
 **Rust behavior:** Source bytes are hashed once
-(`std::hash::DefaultHasher` / SipHash, 64-bit). The key
+(`graphics_cache::SourceDigest`, SHA-256; the same state, extended by the
+render key, is the conversion cache's key). The key
 `(content_hash, options)` indexes a `HashMap<JobKey, usize>` for the
 parallel-conversion path and a `HashMap<CopyKey, String>` for the
 raster-copy path. On hit, the existing dest is reused and the node's
