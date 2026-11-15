@@ -140,7 +140,13 @@ definitions in `.claude/agents/` pin this (`model: claude-opus-5-5`, `effort: hi
 `math-diagnose` (one math-parse phenomenon → red golden rows + fix plan + open
 questions), `payload-writer` (one payload batch on its own `pk/<batch>` branch and
 `~/data/pk_wt/<batch>` worktree; commits, never pushes), `general-purpose` (fallback
-only). **Subagents are narrow and bounded** (user directives 2026-10-01, 2026-10-10,
+only). One exception to the model pin: `advisor` runs on **Fable 5.2 at high effort**
+(`model: claude-fable-5-2`; user 2026-11-15) — a read-only senior analyst for the hardest
+questions (architecture and design decisions, cross-subsystem root causes, performance
+architecture, parity-vs-TeX dilemmas, crate API design), combining first-principles
+derivation from the ground truth with codebase breadth and current primary sources on the
+web; it returns a recommendation with confidence, options, evidence and its own
+falsification attempts. **Subagents are narrow and bounded** (user directives 2026-10-01, 2026-10-10,
 2026-10-12): one question or one mechanism, a fixed deliverable, then stop. Analysis
 agents are read-only. The only writers are `payload-writer` agents, whose fix rounds
 run targeted checks only; the main checkout's tree, integration, the bundle-level full
