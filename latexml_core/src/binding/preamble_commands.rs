@@ -17,22 +17,23 @@ const DISABLED: &str = "lx@preamble@disabled";
 /// Set while the disabled commands are reopened (a body load or a sub-file preamble), so a nested one leaves them.
 const REOPENED: &str = "lx@preamble@reopened";
 
-fn saved_meaning_cs(cs: &Token) -> Token {
+fn saved_cs(cs: &Token) -> Token {
   let name = cs.to_string();
   T_CS!(s!("\\lx@onlypreamble@{}", name.trim_start_matches('\\')))
 }
 
+/// `\global\let<to><from>`, the engine's own write: no file's lock applies to the kernel's walk.
+fn global_let(to: &Token, from: &Token) {
+  assign_meaning(
+    to,
+    lookup_meaning(from).unwrap_or(Stored::None),
+    Some(Scope::Global),
+  );
+}
+
 fn let_notprerr(cs: &Token) {
-  assign_meaning(
-    &saved_meaning_cs(cs),
-    lookup_meaning(cs).unwrap_or(Stored::None),
-    Some(Scope::Global),
-  );
-  assign_meaning(
-    cs,
-    lookup_meaning(&T_CS!("\\@notprerr")).unwrap_or(Stored::None),
-    Some(Scope::Global),
-  );
+  global_let(&saved_cs(cs), cs);
+  global_let(cs, &T_CS!("\\@notprerr"));
 }
 
 /// The walk's `\global\let<cs>\@notprerr`, its meaning kept for a later [`reopen_preamble_commands`].
@@ -59,11 +60,7 @@ pub fn reopen_preamble_commands() -> bool {
     return false;
   };
   for cs in list.unlist_ref() {
-    assign_meaning(
-      cs,
-      lookup_meaning(&saved_meaning_cs(cs)).unwrap_or(Stored::None),
-      Some(Scope::Global),
-    );
+    global_let(cs, &saved_cs(cs));
   }
   assign_value(REOPENED, true, Some(Scope::Global));
   true

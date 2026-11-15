@@ -135,9 +135,9 @@ fn robust_kernel_cite_owns_its_calls() {
   assert_eq!(warning_count(&log), 0, "{log}");
   assert!(owns);
   assert_eq!(openers, ["["]);
+  // (`\DeclareTextAccentDefault` is `\@notprerr` after `\begin{document}`, latex.ltx:9521: OD #226)
   assert_eq!(owners, [
     r"\DeclareLowercaseMapping",
-    r"\DeclareTextAccentDefault",
     r"\DeclareTitlecaseMapping",
     r"\DeclareUppercaseMapping",
     r"\author",
