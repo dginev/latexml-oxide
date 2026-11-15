@@ -11208,6 +11208,21 @@ string "0" as false (a key, title or year suffix of "0") is not copied.
 
 **Guards**: `bibref_show::*` (6), `bibliography_crossref::crossref_child_sees_its_parent_and_skips_the_host_title`.
 
+**Extension (issue #857): the citation's form is a class on its `<ltx:cite>`.** Rule: an `ltx:cite` whose every
+bibref (at any depth, e.g. natbib `[super]`'s `<sup>`) printed only `refnum`/`number`/`super` with phrases and literals
+gets `ltx_cite_numeric`; one with any `author`/`fullauthor`/`title`/`year`/`fullentry` or preformatted text gets none.
+- Perl: CrossRef.pm:486-493 `fill_in_bibrefs` replaces each bibref and drops its `show`, so
+  `<cite class="ltx_citemacro_citep">` covers `[40]` and `(Bekki, 2013; …)` alike. Principle: Perl's own intent, the form
+  the core records as `show` and the show walk settles per entry (CrossRef.pm:505-507 the force-numeric collapse, :542
+  the nameless fallback, refined by #786; the walk :566-640); a missing entry counts neither way.
+- Classed: `[1]`, `[1, 2]`, `[1, Section 7]`, `[Kho00]`, a superscript `\cite`/`\citep`; not: `Bekki (2013)`,
+  `Smith [2]`, a mixed `Smith [2], [1]`. A biblatex `\textcite` of a nameless entry prints "[2]" and is classed numeric
+  where the PDF prints "No Author Misc [2]" (#786's `labeltitle` residual); the guard pins that output.
+- Consumer: ar5iv-css keeps a numeric cite's refs inline where `text-justify` is missing (WebKit). Offered to Perl:
+  `make_bibcite` returning the form beside its nodes, `fill_in_bibrefs` calling `$doc->addClass($cite,'ltx_cite_numeric')`.
+- Guards: `bibref_show::*` (the class on every pinned cite), `bibref_show::cite_numeric_class_rows` (`thebibliography`,
+  biblatex numeric and authoryear, natbib `[super]`).
+
 ### 309. NFSS text-font state follows every font switch; `\the\font` names the current font (Perl: codes only from `\fontfamily`…; `\the\font` = the last `\font` identifier or cmr10)
 
 Perl keeps LaTeX's NFSS codes (`\f@family`, `\f@series`, `\f@shape`) only where `\fontfamily` and

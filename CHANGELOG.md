@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+  - **A numeric citation says so** (issue 857). A `<cite>` that shows only numbers or labels
+    (`[1]`, `[3, 4]`, `[1, Section 7]`, `[Kho00]`, a superscript citation) carries the class
+    `ltx_cite_numeric`; an author-year or textual one (`Bekki (2013)`, `Smith [2]`) does not, so a
+    stylesheet can keep a numeric citation on one line without doing so for long author-year
+    ones. The form is the one the citation printed, after the bibliography is read (a numeric
+    `.bbl` under natbib, an entry with no author). Guard `bibref_show::cite_numeric_class_rows`
+    (OXIDIZED_DESIGN_DIVERGENCES #307).
   - **LaTeX's kernel hooks run where LaTeX runs them** (QA47B). Code a document or package adds
     with `\AddToHook` to the hooks of `\end{document}` (`env/document/end`, and the document's own
     code in `enddocument/afterlastpage`, `/afteraux`, `/end`), of `verbatim`/`verbatim*`

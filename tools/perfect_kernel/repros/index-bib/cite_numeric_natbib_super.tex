@@ -1,0 +1,16 @@
+% witness: issue #857 review revI857 (natbib `[super]` sets the bibrefs of a `\cite{a,b,c}` in a `<sup>` inside the
+%          `<cite>`: the class goes on the nearest `ltx:cite` ancestor, not only a direct parent); synthetic
+% oracle:  pdflatex 0 errors: "A^{1–3}. C^{2}." (superscripts)
+% engines: fix/issue-857 8c11e515cce = `A<cite class="ltx_cite ltx_citemacro_cite"><sup>1–3</sup></cite>` (no class)
+% expect:  0 errors 0 warnings; the `\cite` and the `\citep` carry `ltx_cite_numeric`
+% status:  GREEN
+\documentclass{article}
+\usepackage[super,sort&compress]{natbib}
+\begin{document}
+A\cite{a,b,c}. C\citep{b}.
+\begin{thebibliography}{9}
+\bibitem{a} J. Smith, Paper, 2000.
+\bibitem{b} K. Jones, Other, 2001.
+\bibitem{c} L. Lee, Third, 2002.
+\end{thebibliography}
+\end{document}

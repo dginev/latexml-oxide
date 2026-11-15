@@ -466,7 +466,7 @@ fn biblatex_numeric_textcite_without_author_keeps_its_brackets() {
     "p",
     &["id=\"p1.1\""],
     "<p class=\"ltx_p\" id=\"p1.1\"><cite class=\"ltx_cite ltx_citemacro_citet\">Hampe [<a class=\"ltx_ref\" \
-     href=\"#bib.bib1\" title=\"T\">1</a>]</cite> showed it.\n<cite class=\"ltx_cite ltx_citemacro_citet\">[<a \
+     href=\"#bib.bib1\" title=\"T\">1</a>]</cite> showed it.\n<cite class=\"ltx_cite ltx_cite_numeric ltx_citemacro_citet\">[<a \
      class=\"ltx_ref\" href=\"#bib.bib2\" title=\"No Author Misc\">2</a>]</cite> said it.</p>",
   );
 }
