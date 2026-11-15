@@ -5,13 +5,19 @@ use super::perfect_kernel_batch57::assert_elements;
 
 const AR5IV: &str = "ar5iv.sty";
 
+/// A repro and its whole elements: (tag, id, markup).
+type Row = (
+  &'static str,
+  &'static [(&'static str, &'static str, &'static str)],
+);
+
 /// Each repro converts once, 0 errors / 0 warnings; the unit holding its body and blocks is asserted whole. Rows: a
 /// `\proclaim` of two paragraphs in its section (math9201249); every head (`\head`, `\subhead`, `\subsubhead`,
 /// `\subheading{}`, `\specialhead`) holding its body and the lower units; the five block kinds numbered by one counter;
 /// `\Refs` as back matter after the open heads, and a `\specialhead References` heading the bibliography (math0304264).
 #[test]
 fn amsppt_heads_and_theorems() {
-  let rows: &[(&str, &[(&str, &str, &str)])] = &[
+  let rows: &[Row] = &[
     (
       include_str!("../../../tools/perfect_kernel/repros/amstex/amsppt_proclaim_has_its_id.tex"),
       &[(
