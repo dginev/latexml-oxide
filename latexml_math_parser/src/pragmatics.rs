@@ -1833,7 +1833,7 @@ mod tests {
 
     use crate::semantics::{
       metadata::Meta,
-      tree::{Args, Operator, XProps},
+      tree::{Args, Operator, Shared, XProps},
     };
 
     let op_props = XProps {
@@ -1842,7 +1842,7 @@ mod tests {
       content: Some(Cow::Borrowed("\u{2062}")),
       ..XProps::default()
     };
-    let op = Operator(Box::new(XM::Token(op_props, Meta::default())));
+    let op = Operator(Shared::new(XM::Token(op_props, Meta::default())));
     let args = Args(
       letter_names
         .iter()
@@ -1921,7 +1921,7 @@ mod tests {
 
     use crate::semantics::{
       metadata::Meta,
-      tree::{Args, Operator, XProps},
+      tree::{Args, Operator, Shared, XProps},
     };
 
     let op_props = XProps {
@@ -1930,8 +1930,8 @@ mod tests {
       content: Some(Cow::Borrowed("\u{2062}")),
       ..XProps::default()
     };
-    let op = Operator(Box::new(XM::Token(op_props, Meta::default())));
-    let args = Args(vec![lhs, rhs]);
+    let op = Operator(Shared::new(XM::Token(op_props, Meta::default())));
+    let args = Args(Shared::new(vec![lhs, rhs]));
     XM::Apply(op, args, XProps::default(), Meta::default())
   }
 
@@ -2049,7 +2049,7 @@ mod tests {
 
     use crate::semantics::{
       metadata::Meta,
-      tree::{Args, Operator, XProps},
+      tree::{Args, Operator, Shared, XProps},
     };
 
     let op_props = XProps {
@@ -2058,11 +2058,11 @@ mod tests {
       content: Some(Cow::Borrowed("+")),
       ..XProps::default()
     };
-    let op = Operator(Box::new(XM::Token(op_props, Meta::default())));
-    let args = Args(vec![
+    let op = Operator(Shared::new(XM::Token(op_props, Meta::default())));
+    let args = Args(Shared::new(vec![
       Some(letter_lexeme("UNKNOWN:italic-f", Some("parens"))),
       Some(letter_lexeme("UNKNOWN:italic-x", Some("parens"))),
-    ]);
+    ]));
     let tree = XM::Apply(op, args, XProps::default(), Meta::default());
     assert!(
       ValidationPragmatics::FencedLettersAreFunctionArguments
@@ -2295,7 +2295,7 @@ mod tests {
 
     use crate::semantics::{
       metadata::Meta,
-      tree::{Args, Operator, XProps},
+      tree::{Args, Operator, Shared, XProps},
     };
 
     assert!(letter_names.len() >= 2, "need at least 2 operands");
@@ -2307,11 +2307,11 @@ mod tests {
         content: Some(Cow::Borrowed("\u{2062}")),
         ..XProps::default()
       };
-      let op = Operator(Box::new(XM::Token(op_props, Meta::default())));
-      let args = Args(vec![
+      let op = Operator(Shared::new(XM::Token(op_props, Meta::default())));
+      let args = Args(Shared::new(vec![
         Some(XM::Lexeme(Rc::from(*name), Meta::default())),
         Some(acc),
-      ]);
+      ]));
       acc = XM::Apply(op, args, XProps::default(), Meta::default());
     }
     acc

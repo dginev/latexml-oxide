@@ -348,6 +348,33 @@ code on AMD (skid), so the figures are counts × stepped instructions.
 
 ## Audit log (periodic passes; newest first)
 
+### 2026-11-15 — the ASF traversal's readings share their subtrees (PERFI, PERF2 lever R10)
+
+Defect: `MathTraverser` (`latexml_math_parser/src/asf_traverser.rs`) clones each child glade's readings into every
+combination its parent tries (the passthrough's `alt.clone()`, `dispatch_action`'s combos), and an XM tree owned its
+children (`Box<XM>`, `Vec`), so each clone copied the whole subtree: a formula paid its size times its depth, and every
+reading the glade cache holds kept a private copy. Fix (`semantics/tree.rs`): the children of `Operator`, `Args`,
+`Dual`, `Wrap`, `Arg` and `Choices` are `Shared<…>`, an `Rc` that a clone shares and a write (`DerefMut` =
+`Rc::make_mut`) copies one level first, so each combination's changes stay its own; moves out of a subtree are
+`into_inner()` (`Rc::unwrap_or_clone`). Equality, hashing and `Debug` are the value's, as before, so the parse-tree
+dedup and the pragmas see the same trees. No grammar, semantics or lexing change (DG 2026-11-15, math PARKED exception).
+Guard: `latexml_math_parser` `semantics::tree::tests::a_shared_subtree_takes_writes_privately`.
+Measured (release, best of 3 interleaved against INTPERF `95042553f8b`, cortex's ar5iv HTML recipe unless XML):
+
+| Document | instructions:u | cycles:u | peak RSS |
+|---|---:|---:|---:|
+| t_1109.6643 html | 32.02 → 27.12 G (−15.3 %) | 28.44 → 16.52 G (−41.9 %) | 1.95 → 0.34 GB |
+| the issue-790 book html | 795.3 → 764.7 G (−3.8 %) | 572.7 → 475.7 G (−16.9 %) | 6.37-6.87 → 4.53-4.58 GB |
+| 1106.3601 html | −1.1 % (its own spread ±2-20 %) | −1.0 % | 428 → 376 MB |
+| 2308.04512 html, b1000 html, b250 xml | −0.2 %, −0.03 %, −0.01 % | −0.3 %, −3.5 %, −3.4 % | unchanged |
+| controls amsldoc xml, 2010.05701 html | −0.1 %, +0.1 % | −0.2 %, −1.0 % | unchanged |
+
+Nine typical papers (popPERFBs.tsv): instructions −0.95 to +0.12 %; their cycles (1-16 G) move ±10 % between runs either
+way. Output byte-identical on the 17 documents (every run) and on 193 arXiv papers (130 with the most math in a 10k
+sample, the three witnesses, 60 controls), raw XML and the HTML recipe with every auxiliary file; the base agrees with
+itself on all 193 (XML). One HTML run (2607.14668) left eight MuPDF temporary SVGs beside identical outputs under load;
+alone, twice, its files are identical.
+
 ### 2026-11-15 — one read-only XPath walk for core and post (PERFE, PERF2 levers R1 + R3)
 
 Defect: after PERFD, post still sent its subtree and path shapes to libxml2 (`//ltx:ref//*[@fragid]`, the cref

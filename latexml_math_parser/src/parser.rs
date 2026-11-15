@@ -3074,7 +3074,7 @@ impl MathParser {
         // exact: moved after another pragma, or softened, a letter reading could beat a typed one that a typed
         // stream would have given alone. Then Perl's rule (divergence #350): the fewest evaluation bars
         // inside single-bar pairs.
-        let mut reduced_forest = XM::Choices(parses.into_vec())
+        let mut reduced_forest = XM::Choices(Shared::new(parses.into_vec()))
           .soft_prune_choices(ValidationPragmatics::ExpectationLettersAreFallbacks)
           .prefer_fewest_evaluation_bars_inside();
         // A specific Dirac reading beats a fence around the same bars before the student pragmas
