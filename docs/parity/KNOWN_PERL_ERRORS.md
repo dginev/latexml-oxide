@@ -977,6 +977,39 @@ pre-clears the queue, so the nested invocation terminates and the
 paper converts with zero errors (intentional divergence,
 `OXIDIZED_DESIGN.md` #33). Worth reporting upstream.
 
+**The Rust fix, moved from OXIDIZED_DESIGN_DIVERGENCES #33** ("Frontmatter Queue Pre-Cleared Before Deferred Digestion", 2026-11-14):
+
+**Decision:** `digest_front_matter` snapshots **and clears**
+`frontmatter_raw` before digesting the queued commands. Perl
+(post-PR-2767 `digestFrontMatter`) digests from the live queue and
+wipes it only after the loop.
+
+**Perl behavior:** when a queued entry's own content re-triggers
+`digestFrontMatter` — which genuinely happens when a class binding's
+greedy argument capture swallows the document's `\maketitle` into
+queued frontmatter content — the nested invocation re-reads the
+still-live queue and re-digests it, unboundedly. PR-head Perl dies
+with `Fatal:perl:deep_recursion … Stomach::invokeToken` and produces
+**no output** (verified against `LaTeXML@23f3acfa`, 2026-06-04). See
+`KNOWN_PERL_ERRORS.md` #30 for the Perl-origin record.
+
+**Rust behavior:** the nested invocation sees an empty queue and
+terminates; the digest still happens at exactly the PR's deferred
+moments (`\maketitle` / document-begin / end-of-document fallback),
+in the PR's order, with late `\let`/`\def` redefinitions honored —
+the divergence is *only* the termination guard. Entries queued
+*during* a digest survive for the next invocation or the fallback
+(Perl's post-loop wipe silently deletes them).
+
+**Witness:** arXiv:0907.0384 (A&A, aa.cls): `\abstract{…}{}` makes
+the binding dispatch the 5-arg `\abstract@new`, whose greedy `{}`
+parameters swallow `\keywords` (#3, #4) and `\maketitle` (#5); the
+queued abstract therefore contains `\maketitle` →
+`\lx@frontmatterhere` → afterDigest re-entry. Perl: fatal, 0 bytes.
+Rust: 0 errors, correct title/creator/affiliation/email joins.
+(pdflatex also compiles this paper — robust behavior is the
+LaTeX-like one.)
+
 ## 31. `cleanFrontmatterLabels` prefixes empty fields → contentless `"prefix:"` labels
 
 **Perl source:** `LaTeXML/Engine/Base_Utility.pool.ltxml`
@@ -998,9 +1031,37 @@ unrelated contentless labels can spuriously match each other during
 second field is empty but still prefixed).
 
 **Rust:** drops fields with no real content before prefixing
-(intentional divergence, `OXIDIZED_DESIGN.md` #34; plan decisions
+(the fix below, moved from OXIDIZED_DESIGN_DIVERGENCES #34, now a stub; plan decisions
 log #5). Perl's trailing-empty `split` semantics is otherwise
 preserved byte-exactly.
+
+**The Rust fix, moved from OXIDIZED_DESIGN_DIVERGENCES #34** ("Contentless Frontmatter Annotation Labels Are Dropped", 2026-11-14):
+
+**Decision:** `clean_frontmatter_labels` skips fields with no real
+content. Perl `cleanFrontmatterLabels` prefixes empty fields too, so
+a doubled comma, a trailing-comma-plus-interior-empty, or an empty
+keyval (`label={a,,b}`) yields a contentless `"prefix:"` label.
+
+**Perl behavior:** `split(',')` + unconditional `$prefix . ':' . $label`
+emits `affiliation:`-style labels with no payload; these enter the
+`_annotations`/`_label` matching tables and can spuriously match
+*another* contentless label during `relocateAnnotations`, attaching
+an annotation to an unrelated parent.
+
+**Rust behavior:** empty fields (after trim; including `\ref{}` with
+empty referent) are dropped before prefixing. Perl's `split`-drops-
+trailing-empties semantics is otherwise preserved exactly.
+
+**Witness:** none in the corpus (defensive); decided at plan time —
+`docs/archive/frontmatter_api_refactor.md` decisions log #5.
+
+**Font switches (64u):** Perl strips only `\rm` from the labels
+(`$labels =~ s/\\rm//g`, Base_Utility.pool.ltxml:365); Rust strips the
+font switches `\rm`, `\bf`, `\it`, `\mathbf`, `\mathrm`, `\textbf`,
+`\textrm` alike (keeping the character after), so a mark set in bold
+(`Hui Cao$^{\bf{1,4},*}$`, 1109.3726) labels the affiliations 1 and 4
+its plain twin labels. Guard
+`perfect_kernel_batch64u::osa_mark_font_switch_is_no_label`.
 
 ## `catoptions.sty` raw-load fails in Perl too (SHARED, not Rust-only)
 
@@ -1619,6 +1680,26 @@ margin note — e.g. the mhchem package manual's `\marginpar{\Large !}` rendered
 `bounded => true` (mirrors `\mbox`), scoping the note's font/catcode changes. Output-
 neutral across the suite (1487/0). See `OXIDIZED_DESIGN.md` #39. Candidate to upstream.
 
+**The Rust fix, moved from OXIDIZED_DESIGN_DIVERGENCES #39** ("`\marginpar` font/catcode changes are scoped (`bounded`)", 2026-11-14):
+
+**Decision:** `\marginpar[]{}` (`latex_constructs.rs`) now carries `bounded => true`,
+so font/catcode switches inside the margin note are local to the note. Mirrors
+`\mbox`'s `bounded => true`.
+
+**Perl behavior:** upstream Perl LaTeXML's `\marginpar` is NOT bounded, so a
+`\marginpar{\Large …}` **leaks** the `\Large` (or any switch) into the body text that
+follows. Verified parity bug — Perl LaTeXML 0.8.8 reproduces it identically
+(`\marginpar{\Large !} X` renders `X` at 144%); real pdflatex scopes the note to its
+margin box, so the leak is a LaTeXML-engine bug shared by both ports, NOT a Rust
+regression.
+
+**Rationale:** the margin note's content is conceptually a separate box; its size/font
+changes must not affect the main galley. **Witness:** the mhchem manual's
+`\marginpar{\Large !}` (line 120) leaked `\Large` document-wide, rendering the ENTIRE
+manual at 144% (1388 `fontsize="144%"` nodes → 4 after the fix). Output-neutral across
+the suite (1487/0): no golden test relies on the leak. Surpass-Perl; candidate to
+upstream. See `KNOWN_PERL_ERRORS.md`.
+
 ## 39. booktabs `\cmidrule` defined via `\cline` → infinite loop under `\let\cline\cmidrule`
 
 `booktabs.sty.ltxml` defines `\cmidrule` to draw its partial rule by expanding to
@@ -1902,6 +1983,55 @@ and match pdfTeX. Candidate to upstream (one-char fix). Strictly monotone: the
 change can only *split* a merged equation whose row was numbered AND `\label`-ed;
 it never merges. Marked `OXIDIZED_DESIGN divergence` at the call site.
 
+**The Rust fix, moved from OXIDIZED_DESIGN_DIVERGENCES #54** ("`eqnarray` keeps distinctly-`\label`-ed continuation rows separately numbered", 2026-11-14):
+
+**Decision:** `rearrange_eqnarray` (`latexml_engine/src/latex_constructs.rs`
+L1085) reads the real **plural `labels`** attribute when deciding whether a
+continuation row is "labelled". Perl's `rearrangeEqnarray` checks
+`hasAttribute('label')` (**singular**) — an attribute LaTeXML never sets
+(`LaTeXML-common.rnc` L134 defines only `labels`) — so its own documented
+safeguard *"Separately numbered AND labeled? … must keep separate"* is dead code.
+This is a **surpass-Perl divergence** under the PDF-fidelity policy that honors
+the Perl author's stated intent.
+
+**The shared bug.** An `eqnarray` (or any environment mapped onto it, e.g.
+IEEEeqnarray) merges continuation rows — empty first *and* second column — into
+the previous equation. When several such rows each carry their **own** automatic
+number **and** their own `\label`, they should stay separate; the safeguard that
+would keep them separate never fires because of the `label`/`labels` typo, so they
+collapse onto one number and the middle labels pile onto the last row's `labels`
+attribute (rendering no number). Witness arXiv Problem-𝒫1 (`ieee_eqn_bug`): four
+constraint rows render `(28a),(28d)` instead of `(28a),(28b),(28c),(28d)`;
+pdfTeX numbers all four. Perl and Rust-before emit the identical collapse.
+
+**The fix** reads `labels` (not `label`), so the R-column classifier's
+`numbered && row.numbered && row.labelled` → keep-separate branch fires as
+intended. Strictly monotone — it can only *split* a merged equation whose row
+was both numbered and `\label`-ed, never merge — so `\nonumber` continuations and
+unlabelled multi-line RHSs are untouched (`subnumcases`/`ncases` builds its own
+alignment and is unaffected). Regression fixture
+`latexml_oxide/tests/structure/eqnarray_labelled_rows.tex`; full record in
+[`KNOWN_PERL_ERRORS.md`](KNOWN_PERL_ERRORS.md) #46. Verified: 𝒫1 now numbers all
+four; full suite 1541/0.
+
+**The Rust fix, moved from OXIDIZED_DESIGN_DIVERGENCES #888** ("An eqnarray continuation row that prints a number of its own is its own equation", 2026-11-14):
+
+latex.ltx:15789-15797: `\@@eqncr` prints the number of every row it ends while `\if@eqnsw` holds (#847), whatever the
+row holds. Perl's `rearrangeEqnarray` (latex_constructs.pool.ltxml:2357-2364) joins a row with only its third column
+(`&&+ 2,`, a continued right-hand side) to the equation above: its rule keeps the row separate when both are numbered
+*and* the row is labelled, but that label test reads `hasAttribute('label')`, which LaTeXML never sets (#54,
+KNOWN_PERL_ERRORS #46), so Perl always joins these rows; and `equationgroupJoinRows` keeps the last row's tags: so in
+`\log &&\frac{a}{b} = … \\ &&+ 0.8184(\log c)^2,` both rows' numbers become one equation with the second's, the first's
+is lost, and a `\label` on the first names the second's (1310.2253 `eqn:zg`: PDF 11, ours and Perl 12). Ours (79d): a
+third-column-only row that is numbered under a numbered equation stands as its own equation, as a numbered
+relation-column continuation (`&=& z`) already does in Perl's rule (:2353-2354), so each row keeps its number and a
+label the row that states it. A continuation under an unnumbered row, or itself unnumbered (`\nonumber`, a `\cr` row),
+still joins. The single-column relation join (:2333-2335) is unchanged (its RELOP test reads a cell's first child, the
+`Math` wrapper in the repro's `p = q \\ = r` cells, and did not fire). The split costs the joined formula of each such
+pair (two equations, the second its right-hand side alone), as #847's split of a labelled continuation does. Repro
+cross-references/eqnarray_numbered_continuation_row_keeps_its_number; guard
+`perfect_kernel_batch79d::eqnarray_numbered_continuation_row_keeps_its_number`.
+
 ## 47. Author-local `\def\name`/`\email`/`\addr` inside a redefined `\@maketitle` never take effect
 
 A JMLR-style `article` paper redefines `\@maketitle` to *locally* `\def\name`,
@@ -2035,6 +2165,63 @@ candidate** — the upstream fix is one extra source document in the
 `getBibEntries` loop. How the Rust port prints the collected entries (all of
 them, each in its own bibliography) is OXIDIZED_DESIGN_DIVERGENCES #57.
 
+**The Rust fix, moved from OXIDIZED_DESIGN_DIVERGENCES #57** ("amsrefs inline bibliographies are collected (upstream drops them whole)", 2026-11-14):
+
+**Decision:** `MakeBibliography::get_bib_entries`
+(`latexml_post/src/make_bibliography.rs`) scans the **main document** for inline
+`ltx:bibentry` elements in addition to the external bibliography documents
+returned by `get_bibliographies`. Perl's `getBibEntries`
+(`LaTeXML/lib/LaTeXML/Post/MakeBibliography.pm`) only ever iterates
+`getBibliographies($doc)`. This is a **surpass-Perl divergence** under the
+PDF-fidelity policy: the references are unambiguously present in the source and
+in the author's PDF.
+
+**The shared bug.** `amsrefs` writes the bibliography *into the document* —
+
+```latex
+\begin{bibdiv}\begin{biblist}
+\bib{Bei87}{article}{ author={Be\u{\i}linson, A.}, title={Height pairing...}, }
+\end{biblist}\end{bibdiv}
+```
+
+— rather than into an external `.bib`. The engine digests this correctly into
+`ltx:biblist`/`ltx:bibentry` (our `amsrefs_basic` structure test covers exactly
+that, and passes). But there is no `@files` attribute for `getBibliographies` to
+resolve, so it returns an empty list, `getBibEntries` collects **nothing**, and
+`process` then executes its unconditional
+`$doc->removeNodes($doc->findnodes('//ltx:bibentry'))` — deleting every entry it
+never collected. The result is a **silently empty References section with every
+`\cite` left dangling, and zero errors reported**.
+
+Confirmed identical on the installed **and** the vendored Perl 0.8.8
+(rev `51fea96a`): witness 2605.01646 (`AIPFa.tex`) gives Perl `ltx_bibitem: 0` /
+`ltx_missing_citation: 81`. Recorded upstream as KNOWN_PERL_ERRORS #49.
+
+**Why this is safe.** A paper with an external `.bib` carries no inline
+`ltx:bibentry` in the main document at this point in the pipeline, so the extra
+scan contributes nothing and the entry map is byte-identical. A biblatex `.bbl`
+is read into inline bibentries since batch 56jc (#306), and those are exactly the
+entries the bibliography formats. The scan runs
+*after* the external documents, so a key defined both externally and inline
+resolves to the inline one — matching upstream's own last-source-wins loop.
+
+**Every inline entry is printed, each in its own bibliography (63g).** An amsrefs
+`biblist` typesets every `\bib` it holds, cited or not, so a bibliography's
+own inline entries are all queued for printing. A `.bib` instead is a library
+the cited entries are taken from. Keys are matched case-insensitively, as
+Perl's MakeBibliography (`lc`, `MakeBibliography.pm:270-313`) and BibTeX match
+them; amsrefs itself is case-sensitive (pdflatex leaves `\cite{able}` undefined
+against `\bib{Able}`). A cited entry that sits inline in *another*
+bibliography is left to that bibliography, so two `bibdiv`s each print only
+their own entries. Witness 1012.2719: 29 → 34 references, as its PDF prints
+them. Guards `06_cluster_bibliography::{amsrefs_uncited_entries_kept,
+amsrefs_two_bibdivs_each_their_own, amsrefs_case_variant_cite}`.
+
+**Measured.** All 40 amsrefs papers in sandboxes 2605+2606 went from 0 rendered
+references (100% loss, every citation dangling) to **1,482 references rendered
+with zero dangling citations**. Witness 2605.01646 (23 entries), 2605.00783,
+2605.03852.
+
 ## 50. Loading `bibunits`/`chapterbib` dangles EVERY citation (`Scan` and `CrossRef` disagree on the list chain)
 
 Merely loading `bibunits` — without ever opening a `bibunit` environment — makes
@@ -2083,6 +2270,42 @@ searched lists, following `Scan.pm`'s own convention; unit lists are still
 searched first, so a real per-chapter bibliography keeps priority. 2303.06077 →
 93 bibitems / 0 dangling / 179 resolved links. **Upstream candidate** — the fix
 is one line in `CrossRef.pm` L515 to mirror `Scan.pm` L379-380.
+
+**The Rust fix, moved from OXIDIZED_DESIGN_DIVERGENCES #59** ("A citation also searches the main `bibliography` list, not just its bibunit", 2026-11-14):
+
+**Decision:** `CrossRef::make_bibcite` (`latexml_post/src/crossref.rs`, called by `fill_in_bibrefs`) searches
+the bibref's `inlist` units **and then the main `bibliography` list**. Perl
+`CrossRef.pm` L515 reads `inlist || 'bibliography'` — an *exclusive* choice that
+searches the unit list alone whenever `inlist` is set.
+
+**Why.** `bibunits`/`chapterbib` stamp `CITE_UNIT` onto every `\cite` (bibunits'
+`\lx@bibunits@resetglobal`, `bibunits.sty.ltxml` L39-41), so a bibref carries
+`inlist='bu0'` **merely because the package is loaded** — even when the document
+never opens a `bibunit` environment and has exactly one ordinary
+`\bibliography`. That bibliography registers its bibitems under the default
+`bibliography` list (`MakeBibliography`, mirroring `Scan.pm` L465), so the
+unit-only lookup can never match and **every** citation dangles.
+
+Perl's own `Scan.pm` L379-380 spells the intended chain — the unit lists **plus**
+the main one, commented *"Citation specifies main 'bibliography', as well as any
+specific others (eg. per chapter)"* — and registers the reference under both. So
+upstream already disagrees with itself: Scan records two lists, CrossRef reads
+one. We follow Scan's convention in both places.
+
+**Specificity is preserved.** The unit lists are searched first and the scan
+breaks on the first list yielding an `id`, so a genuine per-chapter bibliography
+still wins over the global one; the main list is only ever a fallback.
+
+**PARITY with same-host Perl** — fixed here rather than reproduced
+(KNOWN_PERL_ERRORS #50). Witness 2303.06077 (revtex4-2 + `bibunits`): 93
+bibitems rendered, 93 keys dangling, 0 links → now 93 / 0 / 179 links. The
+minimal reproducer is 6 lines (`tests/cluster_regressions/bibunits_cite.tex`):
+deleting the single `\usepackage{bibunits}` line resolves the cite. Perl on that
+same reproducer: 1 bibitem, 1 dangling, 0 links.
+
+Since BU1 the bibunits binding stamps a unit only inside one (KNOWN_PERL_ERRORS #1223), so the
+reproducer's bibref carries no `inlist`; the fallback still serves chapterbib and a unit's cite whose
+unit has no bibliography of its own.
 
 ## 51. `\end{lstlisting}` with content before it on the same line silently swallows the rest of the document
 
@@ -2291,6 +2514,95 @@ The mandatory half of the same defect (`\documentclass{article}` →
 the same subfile group is entry #55 (a package loaded in the child's preamble
 loses its definitions).
 
+**The Rust fix, moved from OXIDIZED_DESIGN_DIVERGENCES #63** ("A subimported child's `\documentclass` options are class options, not a package list", 2026-11-14):
+
+Perl `standalone.sty.ltxml` L24-33 intercepts a sub-document's `\documentclass`
+and `RequirePackage`s its **optional** argument, comma-split:
+
+```perl
+DefPrimitive('\@standalone@documentclass[]{}', sub {
+    my ($stomach, $packages) = @_;          # $packages = the OPTIONAL [] arg
+    for my $package (split(",", ToString($packages))) { RequirePackage($package); }
+```
+
+But that argument holds **class options**. `\documentclass[12pt]{article}` in a
+`\subimport`ed child therefore requires `12pt.sty` and warns
+`missing_file:12pt` (issue #309); `\documentclass[border=2pt]{standalone}` — the
+most common standalone idiom — requires `border=2pt.sty`. The mandatory half had
+the same defect until #293 (`\documentclass{article}` → `missing_file:article`).
+Content is never lost; the damage is a false `missing_file` in the log and tally.
+
+Ground truth is the package being emulated. `standalone.sty` L604-614:
+
+```tex
+\newcommand{\sa@documentclass}[2][]{%
+  \let\sa@subfile@options\@empty
+  \ifsa@obeyclassoptions                      % \newif ⇒ default FALSE
+    \edef\@tempa{#2}\edef\@tempb{standalone}%
+    \ifx\@tempa\@tempb \def\sa@subfile@options{#1}%  % ONLY if the class IS standalone
+    \else \fi
+  \fi
+```
+
+It ignores a subfile's class options by default, and even under
+`obeyclassoptions` consults them only when the subfile's class is literally
+`standalone` — then handing them to a keyval family, never to `\RequirePackage`.
+
+**We keep the loop but gate it twice.** The class must be `standalone`
+(`standalone.sty`'s own `\ifx` guard), and the option must be one that
+`standalone.cls` itself turns into a same-named package load — exactly
+`tikz`, `pstricks`, `preview`, `varwidth`, `multido` (standalone.cls
+L171/193/237/249/255, resolved at L562 and L611-620). Every other option
+(`crop`, `multi`, `math`, `beamer`, `float`, `png`, `border=`, `class=`,
+`10pt`/`11pt`/`12pt`, …) the class handles internally.
+
+Note the asymmetry this creates, deliberately: the allowlist is read off
+`standalone.cls`, but the code path being emulated is `standalone.sty`'s, and
+**that path never `\RequirePackage`s any of them** — it hands the options to
+`\setkeys{standalone.sty/class}`, where `tikz` means
+`multi=tikzpicture,varwidth=false` (L815-820) and `varwidth` *warns* "Please
+load this package in the preamble" and disables itself if the package is not
+already loaded (L821-831). Verified empirically: with a plain
+`\usepackage{standalone}`, `\ifsa@obeyclassoptions` is **false** (so real
+LaTeX ignores subfile class options entirely) yet `varwidth.sty` is loaded
+anyway, because `standalone.sty` preloads it unconditionally at L744-746 —
+deleting `varwidth` from a subfile's options leaves pdflatex clean. So the
+loop is a LaTeXML convenience justified by LaTeXML#1432, not a port; the
+divergence is intentional and worth keeping, but it should not be described
+as ported.
+
+The option list is read as **`OptionalKeyVals`**, not comma-split by hand:
+every one of these options has a valued form (`\sa@boolorvalue` accepts
+`varwidth=5cm` / `tikz=true` exactly as the bare word, L815-824) and values
+may be brace groups containing commas (`border={1pt 2pt}`). Matching whole
+comma-split items missed all of it — `[varwidth=5cm]{standalone}` dropped the
+package and raised `Error:undefined:{varwidth}` where pdflatex is clean, i.e.
+a harder failure than the spurious warning this entry exists to fix. Matching
+on the KEY of the parsed keyval list keeps the bare and valued forms
+equivalent and puts these options through the same reader
+`\documentclass`/`\usepackage` options already use.
+
+Dropping the loop entirely would be *more* faithful to `standalone.sty`'s default,
+but it would discard the reason the binding exists: upstream LaTeXML#1432's
+motivating MWE is a `\documentclass[tikz]{standalone}` child, where the option
+really is the package to load.
+
+This is a **shared upstream bug**, not a Rust regression: same-host Perl warns
+identically (`Warning:missing_file:12pt Can't find binding for package 12pt`).
+See KNOWN_PERL_ERRORS #54 — candidate to upstream. Executing that preamble is
+also what makes a package load inside our own bracket possible; the consequence
+and its fix are #65.
+
+Witness = issue #309's `index.tex` + `child.tex` (`No obvious problems` after,
+1 warning before). Regression test:
+`06_cluster_regressions::standalone_subimport_documentclass_no_spurious_require`,
+which also guards the `{standalone}` half — its child *uses* `varwidth`, so
+dropping a name from `CLASS_OPTION_PACKAGES` fails the test with
+`Error:undefined:{varwidth}` — and the valued/brace-group form
+(`[varwidth=5cm,border={1pt 2pt}]`) alongside it. **#293 originally landed a guard asserting the
+un-gated behavior** (`[zzznope]{article}` must warn); this entry is why that
+assertion was inverted rather than restored.
+
 ## 55. A package loaded inside a group loses its definitions while its document hooks survive
 
 `standalone.sty.ltxml` L24-33 opens the subfile group at the child's
@@ -2461,6 +2773,47 @@ same-host Perl still reports 15. Guard
 `104_lstinputlisting_range_crlf::lastline_shorter_than_file_does_not_swallow_the_document`.
 Candidate to upstream (not filed as of 2026-07-25).
 
+**The Rust fix, moved from OXIDIZED_DESIGN_DIVERGENCES #68** ("Trimming a listing's trailing empty lines re-closes what the trim cut open", 2026-11-14):
+
+Perl `listings.sty.ltxml` L1330 drops trailing blank lines by slicing the generated
+token vector:
+
+```perl
+@LaTeXML::lsttokens = @LaTeXML::lsttokens[0 .. $LaTeXML::emptyfrom - 1] if $LaTeXML::emptyfrom;
+```
+
+`$emptyfrom` is where the run of trailing empty lines began — but it is an index into
+a token stream, not a structural boundary. When a delimited class (a string, a
+comment, a styled span) is still **open** at that point, its closing `}` tokens live
+in the discarded tail. The slice throws them away and the listing body is emitted with
+unclosed groups; `\@@listings@block` then reads its arguments past the end of the
+listing and off the end of the **document**.
+
+`lastline=N` on a file with more than N lines is the everyday way to reach it: the
+skip loop consumes the remaining lines without closing what the last rendered line
+left open. Measured discarded tail on the witness below —
+
+```
+["\@lst@startline", "{", "}", "}", "}", "}", "\@lst@endline"]
+```
+
+— three of those `}` close groups opened *before* the cut, leaving the body at brace
+depth 3.
+
+**Both engines lose the snippet**, with different diagnostics: Perl reports
+`Missing argument {} for \@@listings@block {}{}{}`, we reported
+`Gullet->readBalanced ran out of input in an unbalanced state` plus a cascade of
+`Attempt to end mode internal_vertical` and malformed-sectioning errors as the
+mode-switch frame was never unwound.
+
+Rust truncates as Perl does, then re-closes whatever the cut left open. The discarded
+region is by construction only empty-line markup (it starts at a line with
+`colnum == 0`), so nothing visible is lost by closing there.
+
+Witness: arXiv 2412.04705 (arXiv/html_feedback#6735) — 22 errors → **0**, where
+same-host Perl still reports 15. Guard:
+`104_lstinputlisting_range_crlf::lastline_shorter_than_file_does_not_swallow_the_document`.
+
 ## 59. A CRLF listing source makes line-comment styling bleed down the file
 
 `listingsReadRawFile` slurps the file verbatim, but every end-of-line test in the
@@ -2569,6 +2922,54 @@ block, so the full author list survives in the body (max label on the witness
 `cluster_bib_long_author_list_refnum`. Candidate to upstream — the fix upstream is
 to route the refnum through the already-present `do_names_short` and stop
 skipping the first block.
+
+**The Rust fix, moved from OXIDIZED_DESIGN_DIVERGENCES #71** ("The author-year citation label is the SHORT author form, not every author", 2026-11-14):
+
+**Perl behaviour.** `MakeBibliography.pm` builds the `role="refnum"`
+`ltx_bib_author-year` label from `do_authors`→`do_names` (L505-517, L568-584):
+**every** author, with "et al." only when the BibTeX field literally ends
+`and others`. It then drops the entry's first block — `shift(@blockspecs); # Skip
+redundant 1st block!!` — because the authors are already in the label.
+
+On a collaboration paper that label is the whole entry. Witness arXiv 2607.21432
+(A&A, Simons Observatory): a **5104-character** citation label, and 9 of its 19
+entries over 120 characters. Reported by a reader as
+[arXiv/html_feedback#6797](https://github.com/arXiv/html_feedback/issues/6797).
+Applies whenever the bibliography is built from a `.bib` (we do not interpret
+`.bst`), which is the default `BIB_CONFIG` order `['bib','bbl']`.
+
+**Rust behaviour.** The label is the short form — `Abitbol et al. (2025)`,
+`Jones and Brown (2019)`, `Berg (2018)` — and the first block is **kept**, so the
+full author list still appears in the entry body. Nothing is lost; the label
+becomes usable. Max label on the witness: 5104 → **48** characters.
+
+**Why — pdflatex is the ground truth for the shape.** Running the witness's own
+`aa.bst` through BibTeX emits
+
+```
+\bibitem[{Abitbol {et~al.}(2025)Abitbol, Abril-Cabezas, Adachi, …}]{Abitbol_2025}
+Abitbol, M., Abril-Cabezas, I., Adachi, S., {et~al.} 2025, JCAP, 2025, 034
+```
+
+natbib's **short** form (`Abitbol et al. (2025)`) is the citation label; the long
+surname list is only natbib's *optional* full-author form, used by `\citet*` and
+never printed in the bibliography; and the authors are shown in the entry BODY.
+That is exactly the shape adopted here.
+
+Two further signs the Perl behaviour is an oversight rather than a decision:
+`do_names_short` — the correct `>2 → "First et al."` helper — is **defined at
+`MakeBibliography.pm` L586 and never called**; and Perl's own `role="authors"`
+tag already truncates at `>2` (L433-437), so the full-list label contradicted its
+own neighbouring policy. See `KNOWN_PERL_ERRORS.md` #61.
+
+Beyond Perl's unused helper, a trailing BibTeX `others` is dropped and forces the
+"et al." form, so `Smith and others` reads "Smith et al." rather than
+"Smith and others" — keeping it consistent with `do_names`, which does handle
+`others`.
+
+**Witnesses**: arXiv 2607.21432 (arXiv/html_feedback#6797).
+**Guard**: `cluster_bib_long_author_list_refnum`.
+**Upstream**: to file against `brucemiller/LaTeXML` (dead `do_names_short`).
 
 ## 62. `\href` in a **Semiverbatim** argument expands forever (`doi = {\href{…}{…}}` hangs `latexmlc`)
 
@@ -3120,6 +3521,61 @@ fancyvrb binding itself is fine (`fancyvrb.sty.ltxml` adds the per-line
 `ltx_verbatim` class); the Rust port of that binding had dropped the hack
 and now carries it.
 
+**The Rust fix, moved from OXIDIZED_DESIGN_DIVERGENCES #93** ("Verbatim renders true-to-source: `white-space:pre` + one line per row", 2026-11-14):
+
+Vanilla `LaTeXML.css:454` sets `.ltx_verbatim { text-align:left;
+white-space:nowrap; }`. Because author CSS beats the UA stylesheet, that
+`nowrap` overrides `pre { white-space:pre }`, so a plain `{verbatim}` block
+collapses to a **single line** (measured: the 4-line `<pre>` renders 15 px
+tall, one line, headless Chrome 2026-08-02), and fancyvrb's per-line spans
+lose leading indentation and runs of spaces, flowing side-by-side two-up in
+a wide window. Perl 0.8.8 renders identically (same markup, same CSS);
+pdflatex is the ground truth and preserves all of it. ar5iv fixed the `<pre>`
+half downstream by dropping the `nowrap` (`ar5iv-css/css/ar5iv.css:2949`).
+Recorded as KNOWN_PERL_ERRORS #71.
+
+The bundled stylesheet adds a local delta (issue #431):
+`.ltx_verbatim { white-space:pre; }` (keeps nowrap's no-wrapping, restores
+newlines/indentation/spacing) and
+`.ltx_text.ltx_verbatim.ltx_inline-block { display:block; text-indent:0;
+min-height:1lh; }` (one fancyvrb source line per row, blank lines keep a
+line's height, no inherited paragraph indent). Only the fancyvrb binding
+puts `ltx_verbatim` on an inline-block text span. Measured after: each line on
+its own row, `    print(i)` keeps its 4-space indent, `<pre>` renders 4
+lines. Guard: `witnessed_css_delta::verbatim_whitespace_delta_stays_present`.
+
+`pre` is scoped where it broke layout (issues #431/#702): inline `\verb`
+(`<code>`) is `pre-wrap; overflow-wrap:break-word`, keeping its spaces but
+wrapping so a long one cannot widen a narrow page, except in a table cell
+(`pre`: the cell is `nowrap`, and TeX does not break `\verb` either); an fvextra
+`breaklines` line's `\parbox` is `normal`, since `pre` rendered the markup's
+newlines as blank rows (a one-row line 60 px, 2605.00468's 849 lines 41,496 →
+13,650 px at 1280 px), and its paragraph's text `pre-wrap`, which wraps and keeps
+the source's spaces (`normal` rendered `        return   x` as `return x`). A
+line, and xleftmargin's wrapper box around it (2605.01024), is capped at
+`max-width:100%`. The wrapper is a flex row (the line `min-width:0`), as TeX's
+`\hbox to\hsize{\kern\leftmargin\hbox to\linewidth{…}}` (fancyvrb.sty
+`\FV@ListProcessLine`) is: its margin arrives as U+2003 text, which a block
+wrapper put in an anonymous block above the block line — a blank row under every
+line, the margin lost (issue 853: row 30 → 15 px, text x 40 → 56 px, Chrome and
+Firefox alike). A line with a `.ltx_parbox` child is a flex row whose
+parbox shrinks beside the fixed break-indent boxes; an `ltx_text` an id keeps
+around them (a numbered indented line) is `display:contents`. The parbox's
+parent line carries an inline `width`, so the earlier
+`.ltx_framed_verbatim.ltx_break .ltx_parbox { max-width:100% }` capped nothing.
+Chrome at 375 px on the browser guard's page: framed breaklines scrollWidth
+468 → 330 = clientWidth, page width 488 → 375 px. Browser guard
+`browser_render_verbatim_narrow` (opt-in, local).
+
+One serialization nuance, same entry: Perl nests two wrappers per line
+(`<text font="typewriter" width="345.0pt"><text class="ltx_verbatim"
+width="345.0pt">…`), an artifact of its box construction; Rust's
+`\lx@add@cssclass` — like Perl's, "add class to the current element" —
+merges onto the one line box: `<text class="ltx_verbatim" font="typewriter"
+width="345.0pt">…`. Same attributes, same semantics, one element instead of
+two; no upstream `t/` golden pins the nested form. Golden:
+`tokenize/fancyvrb.xml`.
+
 ## 72. `seealsoPartition_aux` keys its attribute hash on attribute NODES — the styling attributes it means to copy are lost
 
 `Post/MakeIndex.pm` L445, re-wrapping a `\see`/`\seealso` phrase's styling
@@ -3333,6 +3789,48 @@ targets unchanged. Issue #526; upstream-fileable against `brucemiller/LaTeXML`.
 Guard: `50_structure::hypertarget_empty_anchor_test`. Witness
 arXiv:2607.16395v1 (revtex4-2, `\linkedfootnotetext`).
 
+**The Rust fix, moved from OXIDIZED_DESIGN_DIVERGENCES #104** ("An empty `\hypertarget`/`\hyperdef` emits a bare anchor, never wraps an open node", 2026-11-14):
+
+**Perl** `hyperref.sty.ltxml`'s `localized_anchor` (`afterConstruct` of
+`\hypertarget`/`\hyperdef`, L238) DFS-walks from the current node and wraps the
+first node `ltx:anchor` may legally contain — with **no** empty-content
+short-circuit and **no** open-node guard. Two failures follow, and same-host
+Perl 0.8.8 exhibits **both byte-for-byte** (so this is SHARED-FAILURE, not a
+Rust-only defect):
+- An **empty** `\hypertarget{id}{}` has nothing of its own to localize onto, so
+  the walk grabs unrelated *surrounding* content. Mid-paragraph
+  (`Before \hypertarget{b}{}after`) Perl wraps the preceding run:
+  `<anchor>Before </anchor>after`.
+- At the **head of a floating `ltx:note`** — the common "linked / back-referenced
+  footnote" idiom `\footnotetext{\hypertarget{id}{}#2}` — the only candidate is
+  the still-**open** note, which `ltx:anchor` *may* contain, so the walk wraps and
+  prematurely **closes** it: the note comes out empty and the footnote text is
+  orphaned into the enclosing `<p>`, with `Error:malformed:ltx:anchor` +
+  `Error:malformed:ltx:note`. Renders in ar5iv as a bare "number + rule" in the
+  margin (issue #526, reporter dginev; witness **arXiv:2607.16395v1**, revtex4-2,
+  whose `\linkedfootnotetext` macro hits this on every call).
+
+**Divergence** (surpass-Perl): two general guards in `localized_anchor`
+(`hyperref_sty.rs`), no per-constructor special-case:
+1. the localizable content is the construct's **last argument** (the `{text}` of
+   both `\hypertarget` and `\hyperdef`); when it `is_empty()`, the anchor is a
+   pure destination — emit a bare self-closed `<ltx:anchor xml:id=id/>` at the
+   insertion point;
+2. never select a candidate the document reports as still **open**
+   (`document.is_open`); when the walk finds no in-content target, emit a bare
+   anchor rather than failing.
+Net: the empty-in-note idiom yields `<note …><anchor xml:id=id/>text…</note>`
+with **0 errors**, the empty-in-paragraph case yields a clean bare
+`<anchor/>` between the surrounding text (Perl wraps the preceding run), and
+non-empty targets are wrapped exactly as before (Perl-identical). Upstream:
+fileable against `brucemiller/LaTeXML` (Perl would benefit from the same two
+guards).
+
+**Guard**: `50_structure::hypertarget_empty_anchor_test`
+(`tests/structure/hypertarget_empty_anchor.{tex,xml}` — non-empty in text, empty
+in text, empty at head of note, non-empty at head of note; the golden is clean
+with 0 errors across all four).
+
 ## 77. Default CSS lets display math escape a width-constrained cell (Rust surpasses)
 
 Upstream's default `LaTeXML.css` (v0.8.8 and master) renders display math as
@@ -3366,6 +3864,38 @@ container that stays within its cell (scrolling horizontally when too wide),
 mirrored in `ar5iv-css`. Normal full-width display math is untouched. Guard:
 `latexml_post::xslt::witnessed_css_delta::constrained_equation_overflow_delta_stays_present`.
 
+**The Rust fix, moved from OXIDIZED_DESIGN_DIVERGENCES #108** ("Display math is contained within a width-constrained box, not left to escape", 2026-11-14):
+
+**Perl** LaTeXML.css renders display math as `.ltx_eqn_table { display:table;
+width:100% }` with 50%-wide center-pad cells. Inside a width-constrained box —
+a `p{}` cell / `\parbox` / `minipage` (`.ltx_inline-block`) or a table cell
+(`.ltx_td`) — a wide equation's intrinsic width exceeds the box, and because
+`overflow` is ignored on `display:table`, nothing clips it: the equation
+**escapes the cell** and scatters across the page (issue #533, reporter nasser1
+— a `longtable` `p{}` cell holding an `enumerate` whose items contain
+`\[\begin{aligned}…\end{aligned}\]`). Same-host Perl 0.8.8 renders the identical
+breakage ⇒ SHARED-FAILURE; the lualatex PDF keeps the math in its cell.
+
+**Divergence** (surpass-Perl, user-approved 2026-08-15): a bundled-CSS local
+delta re-boxes display math as a **block scroll container** *only under a
+constrained ancestor*, so it stays inside the cell and scrolls horizontally when
+too wide — the same containment `.ltx_listing` (code) already uses:
+`.ltx_inline-block .ltx_eqn_table, .ltx_td .ltx_eqn_table { display:block;
+overflow-x:auto; max-width:100% }`. `display:block` (not `overflow` on the
+table, which browsers ignore) is required to establish the scroll box; the
+`.ltx_eqn_row/cell` children regenerate an anonymous table, so center-pad
+centering and eqno columns still lay out correctly. **Scoped deliberately**:
+normal full-width display math keeps `display:table` untouched (the heavily-
+exercised common path is unchanged; the broader unconditional variant that also
+tackles page-level equation overflow was declined for this ticket). Mirrored in
+`~/git/ar5iv-css` (both stylesheets define `.ltx_eqn_table` identically). CSS
+only — zero core/XML/HTML change, no golden churn.
+
+**Guard**: `latexml_post::xslt::witnessed_css_delta::constrained_equation_overflow_delta_stays_present`
+(asserts the bundled `LaTeXML.css` keeps the `#533` selectors + declaration, so a
+future re-vanilla sweep cannot silently drop it — same shape as the #473/#431
+CSS-delta guards).
+
 ## 78. A `\text{…}`-only display equation `\[…\]` stacks one word per line (Perl; Rust surpasses)
 
 **Trigger:** `\[\text{The solution is not valid}\]`.
@@ -3382,6 +3912,49 @@ is unaffected (its content is a real `ltx_td`, already nowrapped). Same-host Per
 nowrap rule to `.ltx_eqn_cell` ([OXIDIZED_DESIGN #109]). Issue #527;
 upstream-fileable against `brucemiller/LaTeXML`. Guard:
 `cluster_cli::display_math_text_nowrap::display_math_text_cell_gets_nowrap_css`.
+
+**The Rust fix, moved from OXIDIZED_DESIGN_DIVERGENCES #109** ("A `\text{…}`-only display equation nowraps its cell (renders on one line)", 2026-11-14):
+
+**Perl** `LaTeXML.css` gives every aligned *table* cell `white-space:nowrap`
+(`.ltx_td.ltx_align_{left,right,center}`, `.ltx_th…`) but NOT the equation cell
+(`.ltx_eqn_cell`). A single display equation `\[…\]` puts its content in an
+`ltx_eqn_cell` with an alignment class and NO `ltx_td`, laid out between two
+50%-width centering pad cells inside a `width:100%` `ltx_eqn_table`. For ordinary
+math that is fine (a `<math>`/image is atomic and unwrappable), but `\[\text{The
+solution is not valid}\]` digests to `ltx_markedasmath` **text** — which *is*
+wrappable — so the center cell collapsed to its min-content and the text stacked
+one word per line. `\begin{align*}` is unaffected because its content sits in a
+real `ltx:td` (`ltx_td.ltx_align_right`), which already nowraps. Same-host Perl
+0.8.8 reproduces the broken stacking byte-for-byte (issue #527, reporter nasser1).
+
+**Divergence** (surpass-Perl, user-approved 2026-08-15): `LaTeXML.css` gives
+`ltx_eqn_cell` the **same** nowrap-with-`ltx_wrap`-optout treatment as `ltx_td`/
+`ltx_th`, for `ltx_align_left`/`right`/`center` — so a display equation renders on
+one line regardless of whether its content is real math or marked-as-math text,
+and a very wide display overflows/scrolls (standard) rather than reflowing into a
+column. CSS-only: the emitted HTML is byte-identical (zero golden churn); a
+too-wide equation was already the behavior for `align*` and real math. Upstream-
+fileable (`brucemiller/LaTeXML`, not yet filed).
+
+Covers both content shapes that reach the centering cell: a pure `\text{}` display
+(a bare `ltx_markedasmath` run — **stacks** one word per line without the fix) and
+mixed math+text `\[x^2+\text{…}=y^2\]` (a `<math>` with `<mtext>` — **clips** its
+text without the fix). Both render on one line with it.
+
+**Guards** (two levels):
+- `cluster_cli::display_math_text_nowrap::display_math_text_cell_gets_nowrap_css` —
+  platform-independent structural guard: both displays land in the
+  `ltx_eqn_cell ltx_align_center` cell, and the destination `LaTeXML.css` carries
+  the `.ltx_eqn_cell.ltx_align_center` nowrap rule.
+- `cluster_cli::browser_render_display_math::display_math_renders_on_one_line_without_clipping` —
+  the **rendered** guarantee: Playwright (system Chrome, `tests/browser/measure.js`)
+  measures the cell geometry and asserts both displays are one line tall
+  (`cellHeight < 40px` — catches stacking) and un-clipped (`scrollWidth −
+  clientWidth ≤ 2px` — catches the mixed overflow). **Opt-in / local only** — a
+  headless-browser job is expensive, so it is NOT run in CI (the structural guard
+  above is the CI gate); self-skips unless `npm install`ed in `tests/browser` and
+  run with `LATEXML_BROWSER_TESTS=1`. Verified red→green: reverting the CSS rule
+  fails it at 74px-tall (pure) / 35px-overflow (mixed).
 
 ## 79. fancyvrb `frame=single` draws disconnected rules, not a box (Rust surpasses)
 
@@ -3497,6 +4070,41 @@ Sibling (manyind/mindsample, 2026-09-09): the same re-tokenize uses style catcod
 letter), so `\index{\AB@\relax…}` is one undefined `\AB@` and an undefined sort-key word
 `\A` is digested — Perl 15 errors on the manual. Rust re-reads what survives the `\protected@write` expansion with the document's table
 and keeps undefined words inert / literal in the key (OXIDIZED_DESIGN_DIVERGENCES #222).
+
+**The Rust fix, moved from OXIDIZED_DESIGN_DIVERGENCES #119** ("`\verb` inside `\index{…}` renders as typewriter, not an empty `<verbatim/>`", 2026-11-14):
+
+**Perl** LaTeXML reads `\index`'s argument `SanitizedVerbatim` (`latex_constructs.pool.ltxml`
+L4397 `DefMacro('\index SanitizedVerbatim', \&process_index_phrases)`), which re-tokenizes the
+argument string. That collapses a `\verb`'s raw catcode-12 body back into control sequences
+(`\delta`, not `\`,`d`,…) and leaves `\verb` with no mouth to scan its delimiter from, so at
+`process_index_phrases` time `\verb` emits an empty `<verbatim/>` and its body leaks out
+mis-tokenized (`\delta` → math-italic δ). A `|` delimiter additionally collides with the
+makeindex encap separator that `process_index_phrases` splits on, losing everything after the
+first `|` into a bogus `style=` attribute and raising `Error:expected:delimiter Verbatim argument
+lost`. latexml-oxide reproduced Perl 0.8.8 byte-for-byte (SHARED-FAILURE). Real pdflatex passes
+the characters through to the `.idx` and the index typesets `\delta` in typewriter (issue #354).
+
+**Perl behavior**: `\index{\verb|\delta|}` → error + empty `<indexphrase/>` (the `|` eats the
+phrase); `\index{\verb+\delta+}` → empty `<verbatim/>` + leaked math δ. **Rust behavior**:
+`process_index_phrases` (`latex_constructs.rs`) intercepts a `\verb`/`\verb*` token in its scan
+loop, consumes the whole `\verb<D>body<D>` run atomically — BEFORE the `!`/`@`/`|` split can see
+the delimiter — `untex`+`Explode!`s the body back to catcode-OTHER literals (so the digested body
+renders as typewriter text rather than re-expanding), and emits `\@internal@text@verb{star}{D}{body}`.
+Both delimiter forms and `\verb*` now render `<verbatim font="typewriter">…</verbatim>` with no
+error, and the interception composes with the `!` subentry split (`grp!\verb|sub|` → a plain `grp`
+head + a verbatim `sub` subentry).
+
+**Why**: a kernel-quality gap, not a TeX-semantics change — real LaTeX+makeindex typesets the
+`\verb` body in typewriter; both LaTeXML engines simply lost it in the sanitized re-tokenization.
+The fix is one locus (`process_index_phrases`) and halos across every `\verb`-in-`\index` paper.
+
+**Witnesses**: issue #354 (split out of #347). `\index{\verb+\delta+}`, `\index{\verb|\delta|}`,
+`\index{\verb*|a b|}`, `\index{grp!\verb|sub|}` — all render typewriter, 0 errors, where Perl 0.8.8
+errors/loses the phrase.
+
+**Upstream**: worth filing against `brucemiller/LaTeXML` (same SanitizedVerbatim/`\verb` gap).
+
+**Guards**: `06_cluster_regressions::cluster_verb_in_index_renders_typewriter`.
 
 ## 84. `\ref` to a `\label` on a `\nonumber` eqnarray row renders the document title (Rust surpasses)
 
@@ -3731,6 +4339,57 @@ a
 the wrapper's class instead of overwriting, so the child keeps `ltx_lstlisting` and gains
 `ltx_minipage`. Full rationale + guard in OXIDIZED_DESIGN #125.
 
+**The Rust fix, moved from OXIDIZED_DESIGN_DIVERGENCES #125** ("A wrapper box merges its `class` onto a single block child, not overwrites it", 2026-11-14):
+
+**Perl**'s `insertBlock` (`TeX_Box.pool.ltxml` L489-493) absorbs a box (minipage,
+parbox, …) onto its content when that content is a single block the context can
+hold directly: it copies the box's attributes onto the child and unwraps the
+wrapper. For `class` it uses `setAttribute(class => …)`, which **overwrites**.
+LaTeXML has a separate `addClass` (used elsewhere in the same file, L887/892/896)
+that merges the space-separated set — but `insertBlock` doesn't use it. So a
+`lstlisting` (or a `minted` block, which routes through the same listings display)
+that is the **sole** content of a `minipage` becomes `<listing class="ltx_minipage">`,
+**losing `ltx_lstlisting`** — and with it the whitespace-preserving CSS keyed on
+that class, so its indentation collapses. latexml-oxide reproduced this exactly
+(SHARED-FAILURE, verified same-host: Perl 0.8.8 also emits `class="ltx_minipage"`).
+
+**Rust behavior**: `insert_block` (`base_utilities/blocks.rs`) treats `class` as the
+space-separated set it is — it `add_class`es the wrapper's class onto the child
+instead of overwriting, so the child keeps its own semantic class and *gains* the
+wrapper's: `<listing class="ltx_lstlisting ltx_minipage" vattach="…" width="…">`.
+Every other absorbed attribute (`width`, `vattach`, …) is still `set_attribute`d as
+before; only `class` merges. This is the same `addClass`-vs-`setAttribute`
+distinction LaTeXML already draws, applied at the one site that forgot it.
+
+**Why**: the child's class carries its rendering contract (`ltx_lstlisting` →
+`white-space` handling for code); a wrapper that borrows the child's element must
+not erase it. pdflatex shows the code indented; keeping `ltx_lstlisting` is what
+preserves that in HTML.
+
+**Scope note**: this is the *single-minipage-in-a-float* path. A float with
+*multiple* side-by-side minipages takes the flex-figure layout, where the minipage
+is a separate `ltx_figure_panel` wrapper and the listing already keeps its class —
+so this fix and that path are independent. (The whitespace loss reported for the
+flex path in html_feedback#6632, arXiv:2605.03143, was a *separate*, CSS-only
+cause: arXiv's deployed `arxiv-html-papers-theme` layer sets a bare
+`.ltx_listingline{white-space:normal}` that overrides ar5iv's `nowrap` by
+cascade-layer order — not an engine issue.)
+
+**Witness**: arXiv:2605.03143 (a single `\begin{minipage}…\begin{minted}` in a
+`figure`); before, `<listing class="ltx_minipage">`, after,
+`<listing class="ltx_lstlisting ltx_minipage">`.
+
+**Upstream**: worth filing against `brucemiller/LaTeXML` (`insertBlock` should
+`addClass`, not `setAttribute`, for the `class` key).
+
+**Connected behavior**: the same merge preserves any absorbed block's own class,
+not just listings — e.g. an algorithm float (`ltx_float_algorithm`) that is a
+minipage panel now keeps `ltx_float_algorithm` alongside `ltx_minipage` instead of
+being clobbered to bare `ltx_minipage` (golden `tests/complex/figure_mixed_content.xml`).
+
+**Guard**: `cluster_sizing::listing_in_minipage_keeps_class::listing_sole_content_of_minipage_keeps_lstlisting_class`;
+the `80_complex::figure_mixed_content_test` golden pins the algorithm-float case.
+
 ## 93. Numeric-mode natbib `.bbl` mislabels authored+dated References with author-year, not `[N]` (Rust surpasses)
 
 natbib's `\NAT@wrout` (`natbib.sty.ltxml` L609-620) chooses each `\bibitem`'s reference-list label
@@ -3753,6 +4412,45 @@ give `[1]`. Reported as arXiv/html_feedback#4295 (witness 2410.05202, 57 entries
 **surpasses**: `\NAT@wrout` forces number style for `'numbers'`/`'super'` too, so the whole list is
 `[N]`, matching the PDF — the `authoryear` path is untouched. Full rationale + guard in
 OXIDIZED_DESIGN #126.
+
+**The Rust fix, moved from OXIDIZED_DESIGN_DIVERGENCES #126** ("Numeric/superscript natbib `.bbl` labels the References with `[N]`, not author-year", 2026-11-14):
+
+**Perl**'s `\NAT@wrout` (`natbib.sty.ltxml` L609-620) formats each `\bibitem`'s
+reference-list `refnum` from `CITE_STYLE`, but its numeric branch is gated on
+`$style eq 'number'` (**singular**) — a value `CITE_STYLE` never holds (it is
+`'numbers'`/`'super'`/`'authoryear'`). The only route to number style is the
+empty-author/year fallback (L612: `$style = 'number' if IsEmpty($authors) ||
+IsEmpty($year)`). So a pre-formatted numeric `.bbl` — the `thebibliography` /
+`\bibitem` path, distinct from the `.bib` / MakeBibliography path in #116 — whose
+`\bibitem[{Name(Year)}]{key}` label carries an author AND a year keeps an
+author-year label (`Shor [1994]`) even though the inline `\cite` correctly shows
+`[N]`. SHARED-FAILURE: Perl 0.8.8 emits the identical `Shor [1994]` (numbers) /
+`Shor 1994` (super), verified same-host.
+
+**Rust behavior**: `\NAT@wrout` (`natbib_sty.rs`) forces number style whenever
+`CITE_STYLE` is `'numbers'` or `'super'` (as well as the empty author/year
+fallback), so every entry's `refnum` is the bracketed entry number `[N]` (the bare
+number in super mode, whose `CITE_OPEN`/`CLOSE` are empty) — consistent with the
+inline `[N]` cites and the published PDF. `authoryear` mode is unchanged: an entry
+with an author+year keeps `Author (Year)`, and only an empty author or year falls
+back to the number.
+
+**Why**: apsrev4-2 / `[numbers]natbib` is a numeric style; pdflatex+bibtex render
+the whole reference list as `[N]`. Matching the PDF beats a partial author-year
+list that contradicts its own inline `[N]` cites, and Perl's singular-`'number'`
+guard is the defect.
+
+**Witness**: arXiv 2410.05202 (html_feedback#4295) — `revtex4-2` / apsrev4-2, 57
+entries. Before, entries with a year (`[1]` Shor(1994), `[4]` Reiher et al.(2017))
+showed an author-year label while genuinely year-less entries (`[3]` Gidney and
+Ekerå, empty `()`) already showed `[3]`; now all 57 are `[1]`…`[57]`, matching the
+PDF.
+
+**Upstream**: worth filing against `brucemiller/LaTeXML` (the singular-`'number'`
+guard mislabels every numeric-mode `.bbl` with authors+years).
+
+**Guard**: `06_cluster_bibliography::cluster_bib_natbib_bbl_numeric_refnum`
+(numbers + super go numeric; the `authoryear` control keeps `Shor (1994)`).
 
 ## 94. IEEEtran multi-row author grid is linearized column-major, scrambling author order (Rust surpasses)
 
@@ -4190,6 +4888,48 @@ on the real body element — and by extending algorithm2e's `\algocf@style` disp
 (algorithm/algorithmicx, newfloat, float.sty, algorithm2e boxed/ruled) now frame their body,
 matching the pdflatex golden. To be filed upstream.
 
+**The Rust fix, moved from OXIDIZED_DESIGN_DIVERGENCES #149** ("Float body frames (`ruled`/`boxed`) land on the body, not the metadata `<tags>` — algorithm2e ruled family wired", 2026-11-14):
+
+**Background.** `addFloatFrames` (`float.sty.ltxml` L76-85) draws a float's frame from
+two maps: `%float_outerframe` puts an outer rule on the `<float>` itself, `%float_innerframe`
+puts an inner rule on the float's **body** — the first child that is not a caption
+(`grep { getNodeQName !~ /^ltx:(?:toc)?caption$/ } childNodes`). `ruled` → outer `top` +
+inner `topbottom`; `boxed` → inner `rectangle`. pdflatex draws both rules.
+
+**Perl behavior**: SHARED failure. A `\refstepcounter`'d float emits `<ltx:tags>` as its
+**first** child, and `<tags>` (`LaTeXML-block.rnc:325`, `element tags { tag+ }`) carries
+**no attributes** — so `setAttribute($body, framed => …)` is silently schema-dropped and the
+**inner rule is never drawn**. The outer `framed="top"` (set on the float) survives, so a
+ruled float shows only its top rule; a `boxed` float shows **no frame at all** (boxed has no
+outer rule). Verified same-host on Perl 0.8.8: `floatnames.tex` (newfloat `\floatstyle{ruled}`)
+and a `[boxed]` algorithm2e MWE both emit only the outer `framed`, never the inner. Separately,
+algorithm2e's own binding (`algorithm2e.sty.ltxml` L88-91) wires **only** the `box` family to a
+frame; the `ruled` family (`ruled`/`algoruled`/`tworuled`/`plainruled`) is dropped by both
+engines, so a default `\usepackage[ruled]{algorithm2e}` gets no rules.
+
+**Rust behavior**: `add_float_frames` also skips `<ltx:tags>` when choosing the body, so the
+inner `framed` lands on the real body element (`<listing>`, `<p>`, …) that pdflatex frames.
+And the algorithm2e binding extends its `\algocf@style` dispatch: `box`→`boxed` (unchanged),
+else `ruled`→`ruled`, so `[ruled]`/`[algoruled]`/… draw the top+body rules. Reach is
+engine-level — every framed float (algorithm/algorithmicx, `newfloat`, `float.sty`,
+algorithm2e boxed/ruled) now frames its body.
+
+**Why it's safe.** `framed` is a generic `Backgroundable.attributes` decoration; the fix only
+moves the *target* of an already-intended `setAttribute` from a metadata element that rejects
+it to the body element that accepts it — no new markup shape, no change to the listings dialect
+(an `lstlisting` serving as a ruled-float body is decorated exactly as any other body would be).
+The outer-frame path is unchanged. Full suite green.
+
+**Witnesses**: `floatnames.tex` (newfloat ruled), `algx.tex` (algorithmicx ruled),
+`figure_mixed_content.tex` (algorithm floats), `various_colors.tex` (lstlisting ruled-float body);
+`[boxed]`/`[ruled]` algorithm2e MWEs cross-checked against pdflatex goldens.
+
+**Guards**: `50_structure::algorithm2e_frames_test` (ruled → `top`+`topbottom`, boxed →
+`rectangle`, via `\RestyleAlgo`); the four re-blessed goldens above pin the general fix.
+
+**Upstream**: to be filed at brucemiller/LaTeXML (inner float frame dropped onto `<tags>`; ruled
+family unwired in algorithm2e).
+
 ## 107. `\fname@<type>` is undefined — float.sty's real caption-name internal missing (Rust surpasses)
 
 **Perl source:** `float.sty.ltxml` L36 reimplements `\floatname` as
@@ -4393,6 +5133,13 @@ bounded `\@index` box never closed (three errors per entry, a leaked
 `<XMath>`). A `$` at brace depth 0 toggles the phrase-material state.
 
 Minimal trigger: `\newcommand{\myInd}[1]{\index{#1@\mbox{#1}\csuse{r@e@m}}}` + `\csdef{r@e@m}{}` + itemize item `\myInd{x}`; `\index{arroba@$@$}`.
+
+**The Rust fix, moved from OXIDIZED_DESIGN_DIVERGENCES #174** ("`\index` sort keys are brace-protected through the `\@indexphrase` re-parse (Perl truncates at `]`)", 2026-11-14):
+
+**Perl behavior**: `process_index_phrases` emits `\@indexphrase[<sortas>]{<phrase>}` with the sort key raw between `[`/`]` (latex_constructs.pool.ltxml L4351-4353); a `]` INSIDE the sort key (examdoc `\indc{gradetable[v]}` → `\index{gradetable[v]@…}`) truncates the constructor's optional-arg re-parse at the first `]` — key attribute cut short and the display phrase spilled as illegal `<ltx:indexmark>` children (`malformed:ltx:text`).
+**Rust behavior**: the emitted expansion wraps the sort key in a brace group (`[{<sortas>}]`), which the optional reader treats as opaque; `clean_index_key` strips exactly one whole-span outer pair.
+**Why**: KNOWN_PERL_ERRORS #83 sibling — real makeindex splits the out-of-band `.idx` string where a `]` is harmless.
+**Witnesses**: exam/examdoc 39-error family → 0; pgfornament docs.
 
 ## 84. glossaries: `\gls` inside math emits bare XM* under `ltx:glossaryref` (schema-invalid)
 
@@ -5268,6 +6015,40 @@ switched to mode horizontal"). Trigger:
 Rust: cross-variant equality is `false` (the same hack was removed from
 `ExpansionBody::PartialEq`). Guard:
 `perfect_kernel_batch54::biditools_env_patch_leaves_begin_end_intact`.
+
+**The Rust fix, moved from OXIDIZED_DESIGN_DIVERGENCES #183** ("A native (closure) macro is never `\ifx`-equal to a token macro (Perl's `Equals` matches its `CODE(0x…)` text)", 2026-11-14):
+
+**Perl behavior**: `Common/Object.pm:80-95` `Equals` treats a CODE-ref expansion as equal to a token list whose string is the same `CODE(0x…)`, so a `\meaning` → `\scantokens` → `\ifx` round-trip (etoolbox's `\etb@ifscanable`, biditools.sty:792 `\bidi@ifscanable`) reports a native macro as reconstructable. `\ifpatchable*{\begin}` answers yes, and biditools' own patchcmd clone then `\def`s `\begin#1{…CODE(0x…)}` — a macro whose tail is the literal text `CODE(0x…)`; the `\begingroup` that `\begin` pushed is gone and the document errors ("Attempt to end mode internal_vertical" on a bare `x` body; crbox-doc/ghab-doc "close a group that switched to mode horizontal"). Rust carried the same hack (2023) in `ExpansionBody::PartialEq`.
+**Rust behavior**: cross-variant `\ifx` is `false`: `\ifpatchable*{\begin}` answers no, biditools leaves the native `\begin`/`\end` alone, and the environments keep their groups. The Perl-golden fixture `expansion/etoolbox` line "begin is patchable" is re-blessed to "begin is not patchable".
+**Why**: kernel-quality: a closure cannot be rebuilt from its `\meaning`; saying it can only lets patchers install broken macros. Same-shaped as the native etoolbox `\patchcmd` refusing closure bodies (etoolbox_sty.rs).
+**Witnesses**: crbox/crbox-doc, ghab/ghab-doc (perfect-kernel corpus).
+**Guard**: `perfect_kernel_batch54::biditools_env_patch_leaves_begin_end_intact`.
+**Upstream**: not filed.
+
+**The Rust fix, moved from OXIDIZED_DESIGN_DIVERGENCES #1005** ("`\meaning` of a macro coded in the host language prints `CODE(<name>)`, with no address (QA89)", 2026-11-14):
+
+**Perl behavior**: a CODE-ref body stringifies as `CODE(0x55…)` (TeX_Debugging.pool.ltxml:163 `ToString`), a heap
+address, so `\meaning\@ifnextchar`, a `\show`, a `\detokenize`d meaning set in the text or a meaning compared as a
+string change on every run. Rust printed the same. pdflatex prints latex.ltx's body.
+**Rust behavior**: `\meaning` prints `CODE(` + the definition's name + `)` (`definition::closure_body_meaning`:
+`CODE(@ifnextchar)`, `CODE(begin)`, `CODE(today)`); a name with a character other than a letter or `@` prints
+`CODE(native)` (`CLOSURE_BODY_TEXT`, also `ExpansionBody`'s `Debug`/`Display`). The same on every run. Two natives'
+meanings stay apart as their addresses kept them only when both names are letters or `@` (`\meaning\value` vs
+`\meaning\arabic` compare unequal, as in pdflatex): any other name (`\csname cite \endcsname`, expl3's
+`\__tl_set_rescan:nNN`) prints `CODE(native)`, so two such meanings of the same parameters compare equal; letters
+only, so a `\scantokens` rebuild reads text, no control sequence. The name is the definition's, which can be an
+internal one: `\meaning\multicolumn` prints `CODE(lx@alignment@multicolumn)`, its `\let` target (`tex_debugging.rs`
+`get_cs_name`), as `\meaning\label` prints `\lx@label`. It keeps the `CODE(` that etoolbox_sty's `\lx@ifnativecmd`
+splits on (`\robustify` leaves a native alone), and `\ifx` of two definitions never reads it (#183), so
+`\ifpatchable`/`\patchcmd` on a native `\begin` still answer no. Not latex.ltx's body: a `\meaning`→`\scantokens`
+rebuild would then replace the native `\begin` (#183, KNOWN_PERL_ERRORS #147); that is the post-merge macro-faces
+design (QA53).
+**Why**: determinism: no output, log or string comparison may depend on an allocation address.
+**Witnesses**: BM Q&A probe Q3.8 `meaning` (synthetic); cnltx/cnltx_en; 36 latex.ltx user commands (QA51's sizing:
+`\begin`, `\end`, `\arabic`, `\value`, `\verb`, `\today`, `\multicolumn`, `\csname`, …).
+**Guard**: `perfect_kernel_batch56::meaning_of_a_closure_macro_is_perls_code_form`
+(`expansion-primitives/meaning_of_a_closure_macro_is_stable.tex`: exact text, no address, etoolbox's answers).
+**Upstream**: not filed (Perl stringifies the code ref; a name would serve).
 
 ## 148. LGR fontmap slot 0x73 (`s`) is final sigma ς instead of σ
 
@@ -7335,6 +8116,28 @@ rows are spaced), the notes are units (`Formatter::Units`, biblatex's `\newunit`
 (`Formatter::Any`); OXIDIZED_DESIGN_DIVERGENCES #321. Guard `stream_a_recall::bibliography_fields_are_separated`; repro
 `tools/perfect_kernel/repros/index-bib/bib_fields_separated.tex`.
 
+**The Rust fix, moved from OXIDIZED_DESIGN_DIVERGENCES #321** ("The bibliography formatter separates the fields of one block (Perl: run together)", 2026-11-14):
+
+**Rust** (batch 56jt, `latexml_post::make_bibliography::get_fmt_spec`, shared by every `.bib`
+bibliography): an editor follows the author in the name block after ", "; a website's title and
+its parenthesized type follow the name after a space, as does `software`'s type after its key; the
+elements a row's path matches are joined — `ltx:bib-note` (`note`, `howpublished`, `addendum`,
+`annote`) as units with ". " (`Formatter::Units`, BibTeX's `new.block`, biblatex's `\newunit`),
+any other row's (`organization` + `institution` in `ltx:bib-organization`) as a list with ", "
+(`Formatter::Any`); after an element whose printed text already ends in a mark only the space is
+printed (a formula or a reference CrossRef fills later ends in none), and an
+element with neither text nor child elements prints nothing (a `\citet` in a note is an empty
+`ltx:bibref` until CrossRef fills it). The text of every field is unchanged.
+
+**Perl** gives these rows `""` punctuation (MakeBibliography.pm:708, :752, :769, :781-787, :794) and
+concatenates a row's elements (`do_any`, :550, :688), and LaTeXML.css adds no separator between
+the `ltx_bib_*` spans: "George Frideric HandelAtlanta Symphony (Ed.)", "V. JacobsonModified
+TCP…(Website)", "Note: NovemberhowLimanote" (KNOWN_PERL_ERRORS #280). Witnesses biblatex-ieee,
+biblatex-chicago cms-notes-sample (88.6 → 90.4 %), cms-trad-sample, cms-dates-sample,
+biblatex-caspervector; 311 bibliography manuals keep their error and warning counts.
+
+**Guard**: `stream_a_recall::bibliography_fields_are_separated`.
+
 ## 281. `\glossary` in text is dropped, a missing makeindex output prints nothing, and MakeIndex builds one list (FIXED in Rust)
 
 Perl's `\glossary{}` (latex_constructs.pool.ltxml:4424-4436) warns `unexpected:glossary` and
@@ -8177,6 +8980,14 @@ Rust (57y, DIVERGENCES #346): the itemize counts in `@item`. Its ids are the ker
 
 **Guard**: `perfect_kernel_batch56::elsarticle_itemize_has_bullets` (repro `list-structure/elsarticle_itemize_has_bullets`).
 
+**The Rust fix, moved from OXIDIZED_DESIGN_DIVERGENCES #346** ("elsarticle's itemize labels as an itemize", 2026-11-14):
+
+Perl's elsarticle binding counts `{itemize}[]` in the enumerate counter (elsarticle.cls.ltxml:64), so every bullet list prints "1."/"(a)" labels (KNOWN_PERL_ERRORS #360).
+
+**Rust** (batch 57y): the itemize counts in `@item` (`elsarticle_cls.rs`), labelled by `\labelitem<depth>` as elsarticle.cls:1143-1150 and the kernel do, its optional argument that level's label (`\@Itemize[#1]`); pdflatex the oracle. Item and list ids are the kernel itemize's.
+
+**Guard**: `perfect_kernel_batch56::elsarticle_itemize_has_bullets`.
+
 ## 361. `\textcircled` circles the source of its argument
 
 latex_constructs.pool.ltxml:5399 builds the circle from `ToString($arg)`, the argument's raw tokens: `\textcircled{\small{2}}` is "\small{2}⃝", and an enumitem label `\textcircled{\arabic*}` prints "\arabicenumi⃝" (enumitem.sty.ltxml:114-119 puts one `enumi` token for the star). `\textcircled` is a text accent (latex.ltx:10057, :14449-14450 `\UseTextAccent`) that typesets its argument; pdflatex prints a circled 2 and ①.
@@ -8473,6 +9284,29 @@ and a subfigure built the same way claims its caption minipage's width, so the p
 one row. Rust: fixed by divergence #375 (57by; witnesses 2605.03502, 2605.15932). Repro
 `captions-floats/collapsed_panel_keeps_the_float_geometry`.
 
+**The Rust fix, moved from OXIDIZED_DESIGN_DIVERGENCES #375** ("A collapsed float takes no box geometry from a panel that stood beside other content; classes merge", 2026-11-14):
+
+Perl's `collapseFloat` (latex_constructs.pool.ltxml:3437-3464) merges a float holding exactly one inner float, when they
+do not both have captions, by copying every attribute of the inner onto the outer (:3447-3449, `setAttribute`
+overwrites) and splicing the inner's children in its place (KNOWN_PERL_ERRORS #388). When the inner float was a box — a
+caption minipage — beside another panel, its `width`, `vattach` and `ltx_minipage`/`ltx_figure_panel` classes
+describe that one panel, yet land on the whole float: a side caption's `0.3\linewidth` minipage gives its figure
+`width="103.5pt"` around a wider panel, a subfigure of a caption minipage and a panel claims the caption's width, and the
+parent's panel rows then set several `\linewidth` subfigures on one row.
+
+**Rust** (57by; `collapse_float`, latex_constructs/mod.rs): when the outer holds content other than the inner float and
+what `arrange_panels` counts as no panel (`is_panel_break_name`: tags, captions, breaks; notes, index marks), the
+collapse copies no `width`, `height`, `depth` or `vattach` and none of the inner's `ltx_minipage`, `ltx_parbox`,
+`ltx_figure_panel` classes. In both cases the class merges with the outer's own (`add_class`), as a wrapper box's does
+(#125, KNOWN_PERL_ERRORS #92): a lone-minipage `algorithm` keeps `ltx_float_algorithm` with the minipage's geometry, where
+Perl overwrote it with `ltx_minipage`. Labels, ids and captions merge as before. The parent's panel rows see the
+collapsed float's own width, so three `0.4\linewidth` subfigures set two to a row, as pdflatex. Witnesses: 2605.03502
+S3.F3 (103.5pt side caption), 2605.15932 S4.F3 (17.3pt subfigures, now a row each), 2605.17037 (algorithm class); 59
+papers of the 57by delta A/B, every tally identical. Residual: a `\rule{\linewidth}{…}` panel's `width="100%"` is not
+measured by the panel rows, so 2605.18774's rule moves between rows either way. **Guard**:
+`perfect_kernel_batch57::collapsed_panel_keeps_the_float_geometry` (repro
+`captions-floats/collapsed_panel_keeps_the_float_geometry`), `perfect_kernel_gemini::collapsed_panel_content_stays_in_place`.
+
 ## 389. A box folded into its one rule gives the rule the box's width
 
 `insertBlock`'s single-node fold (TeX_Box.pool.ltxml:489-493) writes the box's `width` over its only child's, so a
@@ -8515,6 +9349,37 @@ the same inside one picture (`\node{\usebox\bead};\node{\usebox\bead};`). Perl a
 Rust: fixed by divergence #383 (57cl, `Document::record_svg_ids`): suanpan-l3 9,481 → 1 jing lines (expl3 coffins drawn
 once, placed with `\box_use:N`), thuaslogos-doc-english/-dutch 4 → 0. Repro
 `graphics-tikz/copied_picture_keeps_unique_svg_ids`.
+
+**The Rust fix, moved from OXIDIZED_DESIGN_DIVERGENCES #383** ("A copied picture's svg ids are renamed with their references", 2026-11-14):
+
+Perl writes a copied pgf picture's svg ids once per copy (KNOWN_PERL_ERRORS #391): the driver fixes them at digestion
+and `\copy` repeats the whatsit, so the XML repeats an ID-typed attribute.
+
+**Rust** (57cl, 57cl.1): each outermost `svg:svg` root, when it closes, makes the svg `id`s under it unique in the document
+(`Document::record_svg_ids`, triggered by the `svg:svg` close hook in tex_box.rs; `Document::svg_ids` is the set of ids
+handed out): an id already handed out (or held by an `xml:id`) takes the next `radix_alpha` suffix (`pgfcp1` →
+`pgfcp1a`, a per-base counter), and every reference under the root — `url(#X)` in any attribute, `href`/`xlink:href`
+`#X` (the latter a literal prefixed name until finalize) — binds to the latest preceding definition of X under the root;
+a reference to a definition in another picture is left alone. A walked element carries a `_svgid` mark (stripped at
+finalize): the math parser moves a picture by re-creating it (`append_tree` copies attributes), closing a new `svg:svg`
+each time, and the mark tells that move from a TeX copy — so a picture in math keeps Perl's ids (57cl keyed the registry
+by node address and renamed each re-creation, leaving `xlink:href` dangling). `append_clone` (MathFork, the frontmatter
+writer's contacts and notes) makes a second copy instead: `append_clone_aux` copies an svg element's plain `id` as Perl
+does (Document.pm:1943-1954, only `xml:id` is remapped) and drops the mark, so the copy's own `svg:svg` close renames the
+ids it repeats with their references (NE7: it had remapped the `id` into an `xml:id`, schema-invalid — tikz-shields-doc,
+8 jing lines at `=2`, whose writer copies each contact into its creator, `repart.rs` `write_items`). The change is
+mode-independent: a MathFork copy of a picture changes off too (2206.10577: the copy's clipPath `id="S2.Ex13.m3.4"`
+with `url(#pgfcp14)` — a reference into the original — becomes `pgfcp14a` with `url(#pgfcp14a)`, later math `xml:id`s
+shift by one; content, Errors and rendering unchanged; accepted at the flip as a Perl-parity fix, revX5). A picture
+keeps Perl's ids unless an earlier element holds them (a relocated footnote copy can); nothing is dropped (content_diff: suanpan-l3, thuaslogos unchanged). Modelled on Perl's own
+`appendClone` id map (Document.pm:1920-1956). Witnesses: suanpan-l3 (9,480 of 9,481 jing lines), thuaslogos-doc-english,
+thuaslogos-doc-dutch (4 each; copies nested in one picture) — +2 schema-valid manuals. Residual: an `xml:id` recorded
+after a picture that holds the same svg id is not renamed (the check is one-way). **Guards**:
+`perfect_kernel_batch57::copied_pictures_keep_unique_svg_ids`,
+`perfect_kernel_batch57::rebuilt_math_pictures_keep_their_svg_ids`,
+`perfect_kernel_batchne7::tikz_badges_in_frontmatter_contacts_keep_svg_ids`,
+`perfect_kernel_batchne7::an_eqnarray_copy_in_a_picture_keeps_its_references`; repros
+`graphics-tikz/copied_picture_keeps_unique_svg_ids`, `graphics-tikz/rebuilt_math_picture_keeps_its_svg_ids`.
 
 ## 392. glossaries turns its link targets off with its links
 
@@ -8988,6 +9853,24 @@ Rust (58n): the toc copy is digested with notes, `\label`, `\index`, `\glossary`
 (DIVERGENCES #399). Witnesses 2605.15775 (marks 1 then 3), 2605.09284, 2605.19033. Guards
 `perfect_kernel_batch58::{note_in_a_title_or_caption_steps_once,
 footnotemark_in_a_heading_pairs_with_its_text}`.
+
+**The Rust fix, moved from OXIDIZED_DESIGN_DIVERGENCES #399** ("A toc copy is digested with notes, `\label`, `\index` neutralized (Perl: digested as the heading, its notes stepping twice)", 2026-11-14):
+
+**LaTeX** typesets a heading or caption once; its toc/lof copy is written untypeset
+(`\addcontentsline` → `\protected@write`, latex.ltx:17351-17362; `\@caption`, :17401-17412), with
+`\label`, `\index`, `\glossary` gobbled (:17359-17361). **Perl** digests the toc copy as typeset
+material (latex_constructs.pool.ltxml:627-628, :3187-3190), so a `\protect\footnote` in a heading
+steps the counter twice and a caption's note appears twice; every later note's number shifts
+(KNOWN_PERL_ERRORS #417). **Rust** digests the copy under `\lx@toc@copy@neutralize` (the note
+constructors, the current footnote hooks, `\label`, `\index`, `\glossary` gobbled by plain `o m`/`s o m` macros, and since 65m
+a `_`/`^` in its text a character, `tex_math::WRITTEN_COPY`, #550 — LaTeX's ltcmd expandable
+`\@gobble@om` left a constructor argument's frame open, 2605.13648), inside
+`\lx@format@toctitle@@`'s group and around the direct `\@@toccaption` callers (listings,
+algorithm2e). Witnesses 2605.15775, 2605.09284, 2605.19033 (20 of the 3,003 A/B papers). Guards
+`perfect_kernel_batch58::{note_in_a_title_or_caption_steps_once,
+footnotemark_in_a_heading_pairs_with_its_text, optional_label_after_a_caption_converts}`. Open: with
+a `\tableofcontents`, pdflatex typesets the toc line's note as well, so an article's later notes
+number one higher there (the TOC LaTeXML builds shows no note).
 
 ## 418. A copyright year without a holder reads ", 2020"
 
@@ -9985,6 +10868,13 @@ After.\end{document}
 pdflatex: "After." after the verbatim. Rust (61p): `\lx@end@verbatim@` takes no argument, and the `\endgroup` ends the
 group. Guard `perfect_kernel_batch61::verbatim_trivlist_ends_with_the_verbatim`.
 
+**The Rust fix, moved from OXIDIZED_DESIGN_DIVERGENCES #436** ("verbatim.sty's `\endverbatim` ends its group (Perl: abandoned with its `\aftergroup` tokens)", 2026-11-14):
+
+**Perl**'s `\lx@end@verbatim@{}` (verbatim.sty.ltxml:58) takes the `\endgroup` after it as an argument (KNOWN_PERL_ERRORS
+#460). **Rust** (61p): no argument; the verbatim's group ends and its `\aftergroup` tokens run (a class's `\@verbatim`
+trivlist closes before the text after the verbatim; `\verbatiminput` no longer leaves a group open). Guard
+`perfect_kernel_batch61::verbatim_trivlist_ends_with_the_verbatim`.
+
 ## 461. pgf's `@` arithmetic in floating point: the cloud shape's border anchor never converges
 
 Perl's pgfmath binding computes `\pgfmathadd@`, `\pgfmathsubtract@` and `\pgfmathdivide@` in floating point and prints
@@ -10326,6 +11216,20 @@ pdflatex: "A [?] B". Perl: "Missing argument" errors (kernel `\cite`), terminate
 `Recursion`/`PushbackLimit` (2305.06365, revtex4-2). Rust (62i): the constructor is `\lx@@cite`, `\@@cite` its alias,
 and the bindings call `\lx@@cite` (OXIDIZED_DESIGN_DIVERGENCES #443). Guard
 `perfect_kernel_batch61::a_cite_saved_as_at_at_cite_still_cites`.
+
+**The Rust fix, moved from OXIDIZED_DESIGN_DIVERGENCES #443** ("The citation constructor is `\lx@@cite`, with `\@@cite` its alias (Perl: `\@@cite`)", 2026-11-14):
+
+Perl's citation constructor `\@@cite` (latex_constructs.pool.ltxml:4182) sits in a name LaTeX leaves free, and
+documents use it to save `\cite` (`\let\@@cite\cite`); the bindings' `\cite`, calling `\@@cite`, then called itself
+(KPE #476).
+
+**Rust** (batch 62i): the constructor is `\lx@@cite` (sect11.rs) and every binding invokes it by that name (the
+kernel's `\cite`, natbib, biblatex, jurabib, abntex2cite); `\@@cite` is `\let` to it, so a binding or document that
+calls `\@@cite` still cites until a document takes the name. `\@@bibref` and `\@@citephrase` keep Perl's names.
+
+Witness: 2305.06365 (revtex4-2 + natbib, `PushbackLimit`).
+
+**Guard**: `perfect_kernel_batch61::a_cite_saved_as_at_at_cite_still_cites`.
 
 ## 477. `\selectfont` defines no font identifier, so `\em` under `\DeclareEmphSequence` never stops
 
@@ -10730,6 +11634,16 @@ counter steps (latex.ltx:14963 `\protected@edef`), locally. After an enumitem li
 pdflatex: clean, the label is the section's. Perl: hangs (killed at 200 s). Rust (62z): the unread digest is not made
 (sect11.rs); the label is the section's. Witness 2609.13327. Guard
 `perfect_kernel_batch61::label_after_a_relabeled_list_does_not_loop`.
+
+**The Rust fix, moved from OXIDIZED_DESIGN_DIVERGENCES #452** ("`\label` does not digest `\@currentlabel` into an unread value (Perl: `LABEL@<label>`)", 2026-11-14):
+
+Perl's `\lx@label` digests `\@currentlabel` into the state value `LABEL@<label>` (latex_constructs.pool.ltxml:3802);
+nothing in Perl or here reads it, and the label's reference text comes from the counter's refnum
+(Package.pm:770, whose digest still reports a broken `\the<ctr>`). The digest is not made (sect11.rs): read lazily after
+a list whose `label=` redefined `\theenumi`, it reached a document's self-referential `\theenumi` and looped
+(KNOWN_PERL_ERRORS #496; Perl hangs). Witness 2609.13327.
+
+**Guard**: `perfect_kernel_batch61::label_after_a_relabeled_list_does_not_loop`.
 
 ## 497. mathtools' sized paired delimiters put the size before the delimiter, outside a group
 
@@ -11564,6 +12478,29 @@ whatsit makes the `@{}l` column empty) puts "24" over VolSDF. `normalize_mark_sp
 shrink it and Nodes keeps `rowspan="4"` over three rows. Perl 0.8.8 gives both, with no diagnostic. Fixed in Rust
 (63s), OXIDIZED_DESIGN_DIVERGENCES #467. Witnesses 2406.06521, 2507.20312.
 
+**The Rust fix, moved from OXIDIZED_DESIGN_DIVERGENCES #467** ("Pruning an empty column shrinks an empty spanner over it, and a covered `\multirow` spans no rows (Perl: the row slides, the span overruns)", 2026-11-14):
+
+**Background.** `normalize_prune_columns` (Perl `Core/Alignment.pm` L801-857) removes a column empty in every row,
+decrementing the colspan of the cell that spans it. When the empty column is the spanner's own (`\multicolumn{3}{c}{}`,
+itself empty), Perl removes the spanner (L854): its covered cells, still marked skipped, are emitted by nothing, the
+row comes out a cell short and the header slides over the next column (2406.06521 Table 2: an 18-cell header over
+20-cell rows). `normalize_mark_spans` (L697-726) lets a cell an earlier row's `\multirow` already covers mark rows of
+its own: an empty `\multirow{3}{*}{}` under `\multirow{5}{*}{Nodes}` takes the rows below as its own, so pruning the
+empty rows shrinks it, not Nodes, which then spans into the next row (2507.20312 Table 2). Perl 0.8.8 gives both.
+
+**Rust behavior.** An empty spanner at the pruned column shrinks by one: its first covered cell is removed and its
+colspan decremented, its place, borders and content kept. A cell already covered by a row span spans no rows of its own
+(TeX overlaps the empty nested box; a covered cell is always skippable, else the outer span is truncated before it,
+L716-721), and keeps none: a leftover span on it read to the header guess as one into the body, which un-guessed
+2401.13447's headers. In the witness's own form, each `\multirow` inside a `\multicolumn`, the outer cell
+also spans only the rows left (repro: 4, was 5).
+
+**Measured.** 2406.06521: its one uneven table even. 2507.20312: Computing nodes spans the rows it covers. 2503.16337:
+its "Upper bound" `\multirow{10}` over every second row empty spans the 5 rows left (was 9), its "Lower bound" 2 and 3
+(was 3 and 4). On 1,494 papers compared with 63r12 no other table changes. Guards
+`perfect_kernel_batch63::{empty_spanner_shrinks_with_pruned_column, nested_empty_multirow_keeps_outer_span}`, repros
+alignment/empty_spanner_shrinks_with_pruned_column, alignment/nested_empty_multirow_keeps_outer_span.
+
 ## 541. Bindings read a verbatim or starred argument as text, or lack what the file defines
 
 A binding that digests an argument the real file reads verbatim (`\url`, `\tl_to_str:n`), or that misses a starred
@@ -11627,6 +12564,21 @@ fontsize="90%">ab@x.org</text></contact>` (Perl 0.8.8 and Rust). pdflatex sets t
 font. Witnesses 2609.14733 (cas-sc, `\small` before a longtable), 2609.03698. Open: RED
 sectioning-frontmatter/frontmatter_digested_in_body_font; the HTML link no longer depends on it
 (OXIDIZED_DESIGN_DIVERGENCES #470).
+
+**The Rust fix, moved from OXIDIZED_DESIGN_DIVERGENCES #470** ("A contact's HTML link falls back to the first text inside it (Perl: its first text node only)", 2026-11-14):
+
+**Background.** LaTeXML-structure-xhtml.xsl builds an `email`, `url` or `orcid` contact's link from `text()`, the
+contact's first text node. When the address sits in an element of its own — a font wrapper (a `\small` after the
+title block, KNOWN_PERL_ERRORS #544), `\texttt{…}` — there is none, and the link is `mailto:` alone or `href=""`,
+though the page shows the address (2609.14733, 2609.03698; Perl's stylesheet the same). A contact that is already a
+link (`\email{\href{mailto:…}{…}}`) was wrapped in a second `<a>`, nested anchors.
+
+**Rust behavior.** A named template `contact-address` gives the contact's own first non-blank text, trimmed, and only
+when there is none the first non-blank text inside it: a contact holding its address as its own text links to it as
+before (marks after it, `\email{a@b.org \textsuperscript{*}}`, stay out of the link), one whose address is wrapped
+links to the address. An `email` or `url` contact holding an `ltx:ref` (at any depth) is left to that link, as the `orcid` template
+already does for a direct one. Guards `perfect_kernel_batch63::{contact_link_from_whole_text, cas_ead_verbatim}`, repro
+sectioning-frontmatter/contact_link_from_whole_text.
 
 ## 545. elsarticle's `\affiliation` keys are joined with commas, the rest dropped
 
@@ -11962,6 +12914,22 @@ Minimal triggers: `\usepackage[export]{adjustbox} … \adjustimage{width=3cm}{fi
 Fixed in Rust (64c): graphicx's `\Gin@i` is `\includegraphics`'s dispatch (OXIDIZED_DESIGN_DIVERGENCES #475);
 aas_support's `\email[]{}` adds `#2`. An address aastex7 does not print is metadata since 64g (#559). Guards `perfect_kernel_batch64::{adjustimage_includes_the_graphic,
 aastex7_email_show}`.
+
+**The Rust fix, moved from OXIDIZED_DESIGN_DIVERGENCES #475** ("`\Gin@i` includes the graphic (Perl: defined as nothing)", 2026-11-14):
+
+**Background.** Perl defines `\Gin@i [][]{}` as empty (graphics.sty.ltxml:327, marked `# ?`). In LaTeX it is the
+body of `\includegraphics` (graphics.sty:119-124: `[llx,lly][urx,ury]{file}`; graphicx.sty:198-203 redefines it to
+read `[keys]{file}`), and adjustbox calls it directly: `\adjustimage{#1}{#2}` and `\adjincludegraphics[#1]{#2}` are
+`\adjustbox{#1}{\Gin@clipfalse\Gin@i{#2}}` (adjustbox.sty:275-280, also :439/:450). Defined as nothing, every such
+image was an empty box (KNOWN_PERL_ERRORS #555).
+
+**Rust behavior.** graphics_sty.rs defines `\Gin@i [][]{}` as `\@includegraphics[#1][#2]{#3}` (the graphics form);
+graphicx_sty.rs redefines it as `\includegraphics`'s own dispatch, `\Gin@i []` →
+`\@ifnextchar[{\@includegraphics[#1]}{\@includegraphicx[#1]}`, so a keyval call reaches `\@includegraphicx` and its
+sizer and the box is the image's, as `\adjustbox{…}{\includegraphics{…}}` makes it (routed through the graphics
+constructor it had been sized as the file name's text, 64c review r1). It does not go through `\includegraphics`, which
+a document may define in terms of `\Gin@i`. Witness 2410.09019 (three `\adjustimage` figures). Guard
+`perfect_kernel_batch64::adjustimage_includes_the_graphic`, repro graphics-tikz/adjustimage_includes_the_graphic.
 
 ## 556. AASTeX `\gridline` panels lost; a bare `\fig` in a float numbered as a figure of its own
 
@@ -12590,6 +13558,26 @@ a class's `\newenvironment{proof}` becomes a numbered "Proof" theorem (the stub 
 \begin{theorem}A theorem.\end{theorem}\begin{equation} x = \conj{y_1} + z_2 \end{equation}\end{document}` → 9 errors
 (`ltx:theorem isn't allowed in ltx:XMath`). Fixed in Rust (65e, OD #533; 1308.6566, 0811.3048, cs0511055).
 
+**The Rust fix, moved from OXIDIZED_DESIGN_DIVERGENCES #533** ("The OmniBus theorem set declares only the names that are free, and each stub fires once (Perl: overwrites)", 2026-11-14):
+
+**Perl behavior**: the first undeclared theorem environment runs `\newtheorem` for all 31 names of OmniBus.cls.ltxml:160-209,
+overwriting an author's macro or environment of the same name (KPE #609).
+**Rust behavior**: each `\newtheorem{X}` of the set runs under `\@ifundefined{X}`, LaTeX's own refusal of a defined name
+(latex.ltx:17174-17195 `\@ifdefinable`), silent since the author never wrote it. The `\begin{X}` stub fires once: it
+removes itself, and steps aside for an environment declared since it was installed (`\begin` finds the stub before
+`\X`: a raw class's `\newenvironment{proof}`, tlp.cls:494, read over OmniBus, cs0511055), which the set would refuse
+and the stub then run again for ever. A name the set cannot declare is LaTeX's undefined environment. The set's amsthm
+load keeps amsthm's `{proof}` (the set's numbered "Proof" theorem is refused) — as pdflatex with amsthm.
+**Why**: 1308.6566 and 0811.3048 (`\newcommand{\conj}[1]{…}`), cs0511055 (`\fact`): math `\conj{y}` opened a theorem in
+XMath, 101 errors + Fatal → 0. A name numbered within another's counter (`\newtheorem{cor}[thm]`) whose owner was
+refused for an author's macro gets a counter of its own (`\@ifundefined{c@thm}`), not an undefined `\thethm`. A
+binding that declared fewer theorems than its class, which the set then
+re-declared within the section, declares them as the class does (siamltex.cls:459-476, `onethmnum`; 2312.13144).
+Residual (shared with Perl): the set's amsthm load replaces a document's own
+`\newenvironment{proof}` (amsthm's binding defines `\begin{proof}` over the document's `\proof`). Guards
+`perfect_kernel_batch65e::{omnibus_theorem_set_keeps_author_macro, omnibus_stub_yields_to_declared_environment,
+omnibus_dependent_theorem_without_owner_counter}`.
+
 ## 610. TeX.pool's LaTeX autoload triggers answer generic-format probes with "LaTeX" in a plain TeX document
 
 Perl `TeX.pool.ltxml` L33-39 `DefAutoload`s sixteen LaTeX commands (`\ProvidesFile`, `\ProvidesPackage`,
@@ -12637,6 +13625,22 @@ the kernel's tabular hooks after the group has dropped their definitions. Trigge
 \end{document}` → 8 errors (`\@xcolor@tabular@before` undefined, then the alignment's groups mismatched); pdflatex 0
 (the sub-file's preamble is skipped). Fixed in Rust (65i, OD #543; 2512.09430, repro
 loader/standalone_subfile_xcolor_tabular_hooks).
+
+**The Rust fix, moved from OXIDIZED_DESIGN_DIVERGENCES #543** ("A package loaded in a standalone sub-file's preamble adds to a macro locally (Perl: `AddToMacro` is global)", 2026-11-14):
+
+Perl `AddToMacro` (Package.pm:2534-2548) redefines the macro with `scope => 'global'`. A standalone sub-file's preamble
+runs in a bracket (OD #63, #65; real standalone.sty skips it), where a package's own definitions are local: xcolor
+added `\@xcolor@tabular@before`/`\@tabular@row@before@xcolor`/`\@xcolor@row@after` to the kernel's tabular hooks for
+good, while their definitions ended with the bracket, so every table of the main document after the `\input` called
+three undefined macros and lost its alignment (2512.09430: 84 errors, 101 + `Fatal:TooManyErrors` once 65b reported
+each misplaced `\toprule`; Perl the same, KNOWN_PERL_ERRORS #614).
+
+**Rust** (batch 65i): `AddToMacro` in a package loaded inside the bracket (`require_package` with the
+`subfile:<depth>` scope active) assigns locally (binding/content.rs `add_to_macro_scope`), so the addition lives as
+long as the package's definitions. Outside the bracket the main document's tables carry no hook of a package only a
+sub-file loaded, as in pdflatex, where standalone.sty skips the sub-file's preamble. Everywhere else `AddToMacro` stays
+global. **Witness**: 2512.09430 84 → 5 Errors (the 5 left: fancyheadings' `\lhead`/`\chead`/`\rhead`/`\cfoot`/
+`\fancyplain` in the sub-file's own preamble, 64ze too). **Guard**: `perfect_kernel_batch65i::standalone_subfile_package_hooks_stay_in_its_preamble`.
 
 ## 615. rccol's `R` column is read as tokens: the number unformatted and an extra alignment tab
 
@@ -12782,6 +13786,21 @@ omits PoS.cls's `\RequirePackage{color}` (v1.2.6 :162; 1904.06989). Triggers
 `\documentclass[3p]{elsarticle}\geometry{left=2cm}\begin{document}Text.\end{document}` → 1 error (`\geometry`);
 pdflatex 0 on both. Fixed in Rust (65r, OD #561, #562; 2412.02079, 2609.13883).
 
+**The Rust fix, moved from OXIDIZED_DESIGN_DIVERGENCES #561** ("elsarticle's `1p`/`3p`/`5p` load geometry, and the one-column layouts give it their text width (Perl: the load is commented out)", 2026-11-14):
+
+elsarticle.cls:1252-1300 loads geometry for the journal layouts and sets the page with `\geometry{twoside,
+paperwidth=210mm, paperheight=297mm, textheight=…, textwidth=…, centering, …}` (1p 384pt, 3p 468pt, 5p 522pt with
+`columnsep=18pt` and `\@twocolumntrue`). Perl's binding has `# RequirePackage('geometry')` (elsarticle.cls.ltxml:44,
+KNOWN_PERL_ERRORS #629), so a document's `\geometry`, `\newgeometry` or `\restoregeometry` is undefined.
+
+**Rust** (batch 65r, `elsarticle_cls.rs`): the three layouts load geometry. The one-column ones (1p, and 3p without
+`twocolumn`) pass the class's page and text width to it, which the geometry binding uses for measured SVG pictures only
+(#99); the two-column ones (5p, 3p with `twocolumn`) load it without the class's call, because our geometry has no
+column model: a full-width picture there is a column (252pt for 5p) wide, and `\Gm@tw` would make it the text width.
+Witnesses 2609.13883, 2404.14059, 2103.06107, 1904.12395 (`\geometry`), 2406.15044 (`\newgeometry`). **Guards**:
+`perfect_kernel_batch65r::{elsarticle_3p_loads_geometry, elsarticle_layouts_set_geometry_text_width}`; repro
+`stub-dependencies/elsarticle_3p_loads_geometry`.
+
 ## 630. amsmath's internals that documents call are undefined
 
 amsmath.sty defines internals that authors reach from their own macros: `\bBigg@` (:726-734, the scaled delimiter
@@ -12864,6 +13883,22 @@ path (pool:3190) calls it. The Cambridge University Press classes save `\caption
 `\makeatletter\let\@@caption\caption\makeatother\begin{document}\begin{figure}\caption{A}\end{figure}` → Perl
 `Fatal:perl:deep_recursion`; pdflatex "Figure 1: A". Fixed in Rust (OXIDIZED_DESIGN #566).
 
+**The Rust fix, moved from OXIDIZED_DESIGN_DIVERGENCES #566** ("The kernel's caption constructor is `\lx@@caption`; `\@@caption` is its alias (Perl: the constructor is `\@@caption`)", 2026-11-14):
+
+Perl defines the `ltx:caption` constructor as `\@@caption` (latex_constructs.pool.ltxml:3368), a name LaTeX leaves free
+for classes: the Cambridge University Press classes keep LaTeX's `\caption` there for their `\contcaption`
+(fac.cls:803-805, ijsipaper.cls:876-878, mscs.cls:794-795: `\let\@@caption\caption`). Raw-loaded (`localrawclasses`,
+#444), that made every caption call itself through the kernel's `\@caption@@@` (ours `Stomach:Recursion`, Perl
+`deep_recursion`; KNOWN_PERL_ERRORS #637).
+
+**Rust** (batch 66b, sect09.rs): the constructor is `\lx@@caption`, which the kernel and the bindings (caption,
+listings, algorithm2e, aas_support, tabularray) call; `\@@caption` is `\let` to it for any other caller, so a class's
+own meaning for the name is the class's and its `\contcaption` repeats the figure number as in pdflatex. Witnesses
+1209.5152, 1311.2960, 1410.5131, 1610.02500, 2205.14586, 2212.13027, 1604.04575, 2112.07588 (Fatal → 0 errors). The
+image fragments' prefix (latex_images.rs) gobbles `\lx@@caption` beside LaTeXImages.pm:411's `\@@caption`, since a
+fragment's `tex` reverts the caption under the new name.
+Guard `perfect_kernel_batch66b::cup_contcaption_keeps_its_caption`; repro `captions-floats/cup_contcaption_lets_caption`.
+
 ## 638. `\newcommand` with an optional argument does not define the internal `\\cs`
 
 latex.ltx:1245-1257 `\@xargdef` defines the macro taking `[#1]` as `\\cs`, which `\@protected@testopt\cs\\cs{<default>}`
@@ -12891,6 +13926,27 @@ latex_constructs.pool.ltxml:3178-3180 `\@hack@caption@` runs `\@caption@@@{…}`
 unbalanced conditional in the caption takes the wrapper's `\else`/`\fi`. Trigger
 `\begin{figure}\caption{A stray \fi\ here.}\label{f:a}\end{figure}` → Perl 101 errors and Fatal (`Until:\label` to the
 end of the file); pdflatex 4 "Extra \fi" and the figure. Fixed in Rust (OXIDIZED_DESIGN #570).
+
+**The Rust fix, moved from OXIDIZED_DESIGN_DIVERGENCES #570** ("The caption-label hoist closes its test before the caption is digested (Perl: inside it)", 2026-11-14):
+
+Perl's `\@hack@caption@` (latex_constructs.pool.ltxml:3178-3180) is `\ifx.#5.\@caption@@@{…}{…}{#3#4}\else
+\@@@hack@caption@…#5\endcaption\fi`: the caption is digested inside the conditional, so a stray `\fi` in it (listings'
+`basicstyle=\lst@ifdisplaystyle\small\fi` written with `@` not a letter, in an `\lstinline`; 2012.08626, 2210.17505) or
+an `\if` without its `\fi` (0807.3034's `\def\arcs{\ifmmode … \else …}`; 1904.11818, 1602.01884) took the wrapper's own
+`\else`/`\fi`, and the `\label` scan read to the end of the file (Fatal `Mouth:EoF`, Perl the same; KPE #641).
+
+**Rust** (batch 66d, sect09.rs): `\ifx.#5.\expandafter\@firstoftwo\else\expandafter\@secondoftwo\fi{…}{…}`, latex.ltx's
+idiom: the test closes before either branch runs. A stray `\fi` is then "Didn't expect \fi" (pdflatex's "Extra \fi"),
+an open `\if` stays open as in TeX. The 5 witnesses lose their Fatal (0807.3034: 0 errors). Guards
+`perfect_kernel_batch66d::caption_hoist_*`; repros `captions-floats/caption_hoist_{stray_fi,unbalanced_if}`.
+
+Since 66h the branch is a control sequence, not a braced argument:
+`\ifx.#5.\expandafter\lx@caption@nolabel\else\expandafter\@@@hack@caption@\fi{#1}{#2}{#3#4}#5\endcaption`. A caption
+that is a one-token box argument (`\parbox[b]{9cm}` then `\caption{…}`, mn2e) carries the box's `}` in as its `\@xdblarg`
+argument (Perl's readArg likewise, Gullet.pm:732-744); in 66d's braced branches that `}` closed the first early, the
+second ran, and its `\label` scan read to the end of the file (astro-ph0107461 and 15 more run-345 papers, Fatal
+`Mouth:EoF`). Now it is the "Attempt to close" Errors of before 66d (66cr4's 2). Guard
+`perfect_kernel_batch66h::caption_one_token_box_argument`; repro `captions-floats/caption_one_token_box_argument`.
 
 ## 642. amsppt's binding lacks the amsppt.sty state amsppt1.tex reads
 
@@ -13169,6 +14225,16 @@ keywords block. Minimal trigger: `\documentclass{IEEEtran}\newcommand{\keywords}
 2011.04315). Fixed in Rust (ieeetran_cls.rs: a `Fallback` definition, OXIDIZED_DESIGN_DIVERGENCES #582; repro
 class-bindings/ieeetran_document_keywords_macro_wins).
 
+**The Rust fix, moved from OXIDIZED_DESIGN_DIVERGENCES #582** ("IEEEtran's convenience `\keywords` yields to the document's (Perl: locked)", 2026-11-14):
+
+IEEEtran.cls (1.8b) defines no `\keywords`; the binding's (`\keywords{…}` or `\keywords … \endkeywords` as the
+keywords block, Perl IEEEtran.cls.ltxml:398-403) is a convenience Perl locks, so a document's
+`\newcommand{\keywords}{M-estimators, …}` was refused and `\keywords` in `{IEEEkeywords}` opened a second keywords
+block whose end met the environment's `\endgroup` (KPE #664; 2006.10005, 2008.05854, 2011.04315). Ours defines it with
+the `Fallback` origin (#408, `is_definable_latex`), unlocked: the document's definition wins, and without one the
+convenience works as before. Guards `perfect_kernel_batch66m::{ieeetran_document_keywords_macro_wins,
+ieeetran_keywords_fallback_still_works}`.
+
 ## 665. emulateapj's deluxetable needs an `\enddata`
 
 deluxetable.sty.ltxml:35 `\enddeluxetable` = `\spew@tblnotes\end{table}` never closes the data `\startdata` opened. In
@@ -13280,6 +14346,15 @@ Body.` Fixed in Rust (dialect.rs: a bare `\endX` ends the mode only when the top
 other non-environment frame is left alone with one Warning; OXIDIZED_DESIGN #584; repro
 sectioning-frontmatter/bare_end_without_its_begin_keeps_the_box).
 
+**The Rust fix, moved from OXIDIZED_DESIGN_DIVERGENCES #584** ("A bare `\endX` ends only an environment's frame (Perl: any frame of the same mode)", 2026-11-14):
+
+Perl's bare `\endX` (Package.pm:1970-1975) pops the top frame if it binds the environment's mode. Ours ends the mode only
+when the top frame is an environment's — a bare `\X`'s (`lx@env@bare@end`), a `\begin{X}`'s (`lx@env@begin@end`) or one a
+group's end handed back (`lx@env@ended@by@group`); any environment's, since amsmath ends a `\equation*` display with
+`\endequation` (tcolorbox `ams equation*`, 2211.17024). A frame no environment opened (a box's) is left alone with one
+Warning, as LaTeX's list-ending `\endX` does no group work. Witnesses 2301.00752, 2602.19492 (IEEE Open Journal keywords
+boxes; the body was read into the box). KPE #674; guard `perfect_kernel_batch66t::bare_end_without_its_begin_keeps_the_box`.
+
 ## 676. A list closed only by its environment's group swallows the rest of the document
 
 latex_constructs.pool.ltxml:1647-1653 opens `\lx@list` with `beginMode('internal_vertical')` for `\list`/`\@trivlist`,
@@ -13289,6 +14364,16 @@ which open no TeX group. A document environment whose begin code calls `\list` a
 mode frame: "Attempt to close a group that switched to mode internal_vertical", and the text after the environment goes
 into the last item. Minimal trigger: `\def\refs{\list{}{}}` then `\begin{refs}\item One.\end{refs} After.` Fixed in Rust
 (sect06.rs `\lx@list` marks its frame a bare environment's; OXIDIZED_DESIGN #586; repros lists/).
+
+**The Rust fix, moved from OXIDIZED_DESIGN_DIVERGENCES #586** ("A list's frame is ended by the group around it (Perl: an Error, the rest swallowed)", 2026-11-14):
+
+`\list`/`\@trivlist` open no TeX group (latex.ltx), so the `\lx@list` mode frame they open (OD #180) is LaTeXML's alone.
+Ours marks it a bare environment's frame, ended by `\endlx@list`: a `}` or `\endgroup` meeting it ends the list first
+(stomach.rs `close_environment_frame`, an Info) and then its own group. Perl's frame has no such mark: `\end{X}`'s
+`\endgroup` meets it ("Attempt to close a group that switched to mode internal_vertical") and the rest of the document
+goes into the last item. `\endlx@list`, not `\endlist`: a group's end does not undo `\list`'s global `\@listdepth` step.
+Witnesses astro-ph9806019 (iopconf `\references`), 0902.3464 (jT `resume`), 2106.10067 (INFORMS `\Trivlist`); KPE #676;
+guards `perfect_kernel_batch66x`.
 
 ## 677. An `array` outside math reads its cells as text
 
@@ -13365,6 +14450,27 @@ too, but Perl's drop of that row is kept. Fixed in Rust, OXIDIZED_DESIGN_DIVERGE
 alignment/ams_tag_only_row_keeps_number and package-bindings/tcilatex_tcitag_tags_eqnarray_rows; guards
 `perfect_kernel_batch67j::{ams_tag_only_row_keeps_number, tcilatex_tcitag_tags_eqnarray_rows,
 trailing_row_without_tag_is_still_pruned}`.
+
+**The Rust fix, moved from OXIDIZED_DESIGN_DIVERGENCES #591** ("A math-alignment row its author tagged is kept even when its cells are empty (Perl: dropped with its tag)", 2026-11-14):
+
+pdflatex prints a tag on its own row: amsmath's `\notag \\ \tag{29}`, and Scientific Word's eqnarray
+`… \nonumber \\ && \TCItag{27}`, which SW uses for every wrapped numbered equation. Perl drops these rows together with
+their tags, in three places (KNOWN_PERL_ERRORS #682). Here, a row whose `EQUATIONROW_TAGS` were set by
+`\lx@equation@settag` counts as tagged: `tags` together with the `reset` from its retract
+(`Template::has_explicit_tags`, `latexml_core/src/alignment/template.rs`). Such a row is never pruned as empty
+(`normalize_prune_rows`), and its element carries the internal `_tagged` attribute (`TAGGED_ROW_ATTRIBUTE`, stripped
+at finalization). eqnarray's `rearrange_eqnarray` treats a tagged empty row as it already treated a numbered labelled
+one (#54, 63j): in a multi-column eqnarray it joins the unnumbered equation above, which then carries the tag, or stands
+alone when that equation has a number; in an eqnarray using a single column (nlin0106009's (27), whose formula sits in
+the third column only) it stands as its own equation holding the tag, as in align and gather. amsmath's `rearrange_ams_align`/`rearrange_ams_gather` (`empty_row_keeps_number`) keep it as an equation
+holding only its tags, which is where pdflatex prints it. An auto-numbered empty row still goes, as in Perl: the
+trailing `\\` of an eqnarray or align (pdflatex prints an empty numbered line in both, an accident of the markup),
+and an inner `\\ \\`. Witness nlin0106009: its 11 tag-only rows (27), (32b-d), (34d), (37), (46b-d), (53a-b) were lost
+once 67j made `\TCItag` amsmath's `\tag`. Guards `perfect_kernel_batch67j::{ams_tag_only_row_keeps_number,
+tcilatex_tcitag_tags_eqnarray_rows, trailing_row_without_tag_is_still_pruned}`. RED residuals: `\TCItag` in
+`eqnarray*` or after `\nonumber` on its row prints a number pdflatex does not (tcilatex 5.0 `\@@eqncr` prints
+`\@taggnum` only under `\if@eqnsw`; repro alignment/tcitag_in_unnumbered_row_prints_nothing); amsmath `\tag{z}\notag`
+on one row loses the tag, as in Perl (repro alignment/ams_tag_then_notag_keeps_tag).
 
 ## 683. REVTeX 4.1/4.2's `\newfloat@ltx` is undefined, so a preamble's float repair undefines `\newfloat`
 
@@ -14384,6 +15490,32 @@ undefined, its stub is refused, and each retry raises the same Error. Minimal tr
 Rust: the same before 68u (and more often, as more names are locked: `\cite`, `\maketitle`); the stub now installs past
 the lock (OXIDIZED_DESIGN_DIVERGENCES #641; witnesses 2006.07968, 1509.06375, 2311.14793, 2501.10505, 2510.26876).
 Guard `perfect_kernel_batch68u::a_locked_name_let_to_an_undefined_one_errs_once`.
+
+**The Rust fix, moved from OXIDIZED_DESIGN_DIVERGENCES #641** ("The undefined-token error stub installs past a lock (Perl: refused, the token loops to TooManyErrors)", 2026-11-14):
+
+The Stomach's recovery from an undefined control sequence defines it as `<ltx:ERROR/>` and re-reads it (Perl
+State.pm:532-554 `generateErrorStub`, Stomach.pm:234-238 `invokeToken_undefined`). Perl installs the stub through
+`installDefinition`, which refuses a locked name (State.pm:502-517), so a locked binding a `\let` has cleared stays
+undefined and the retry raises the same Error until TooManyErrors (KNOWN_PERL_ERRORS #841).
+
+**Rust** (68u): the stub is the engine's recovery, not a source redefinition, so `generate_error_stub` (and the
+undefined-environment stub, `install_undefined_error_constructor`) install it with the state unlocked
+(state.rs `past_the_lock`): one Error per name and its `<ltx:ERROR/>`, as pdflatex gives one "Undefined control
+sequence" per use, and the text after it is typeset. The lock itself is unchanged, so a later redefinition is still
+judged by it. The stub of a name that carries a lock is installed at LOCAL scope (state.rs `stub_scope`; round 3), every
+other name's globally as Perl's (State.pm:553): such a name is undefined only because a `\let` cleared its binding, and
+the stub ends where that clearing ends — `{\let\cite\undefined X\cite{a}} Y\cite{b}` typesets the second citation,
+as pdflatex does, and `\begingroup\let\section\nonexist\section{A}\endgroup\section{B}` keeps the section B; a
+top-level clearing keeps the stub for the rest of the document (one Error per name). A discarded diagnostics hold
+undoes such a stub only while it still stands (`remove_error_stub`). Witnesses (the rawclasses lever, study
+agent_reports/2026-10-15_rc_rawcls_regressions.md R4): 2006.07968 (apa6, the document's `\let\cite\parencite` with
+`\parencite` undefined: 507 Errors and Fatal → 1, as pdflatex), 1509.06375 (pittetd.cls:313
+`\AtBeginDocument{\let\maketitle\HyOrg@maketitle}` before 67q's `\HyOrg@maketitle`), 2311.14793, 2501.10505, 2510.26876
+(eulerpx.sty:130-132 `\let\mathscr=\undefined` then a `\DeclareMathAlphabet\mathscr` the kernel's lock refuses: 511
+Errors and Fatal → 1; 2203.12624 the same, then a separate `multlined` root). Repro
+macro-state/locked_name_let_to_undefined_stub_loop; guards
+`perfect_kernel_batch68u::{a_locked_name_let_to_an_undefined_one_errs_once, a_locked_maketitle_let_to_an_undefined_one_errs_once,
+a_locked_name_cleared_in_a_group_is_back_after_it}`.
 
 ## 842. `\|` is unexpandable, so a robust `\|` defined over its expansion calls itself
 
@@ -16710,6 +17842,34 @@ papers of the census A/B'd for 78f, 83 addresses (in 81 papers) were on an autho
 benedikt.maier@ on T. K. Årrestad; 0811.0981). Fixed in Rust (78f, OXIDIZED_DESIGN_DIVERGENCES #806, #808, #809).
 Guards `perfect_kernel_batch78f::{iopart_ead_goes_to_the_author_it_spells, iopart_ead_under_its_address_mark}`.
 
+**The Rust fix, moved from OXIDIZED_DESIGN_DIVERGENCES #806** ("iopart's `\ead` goes to the author it spells, not the last author", 2026-11-14):
+
+iopart.cls:363-364 `\def\ead#1{\vspace*{5pt}\address{E-mail: \mailto{#1}}}`, `\def\mailto#1{{\tt #1}}`: the address
+prints as an address block of its own right after the `\address` before it, no name's. Perl's
+iopart_support.sty.ltxml:54 `\lx@add@email{#1}` gives it to the last author (KNOWN_PERL_ERRORS #1031): 2311.12551's
+benedikt.maier@cern.ch, B. Maier's (author 5 of 7), on T. K. Årrestad; in the 162 iopart `\ead` papers of the census
+A/B'd for 78f, int47a put 83 addresses (in 81 of the papers) on an author another name spells. Ours
+(iopart_support_sty.rs): the #805 placement (`\lx@add@contact@placed[owner=sequence]`), so an address goes to the author
+it spells, else the n-th author's when the `\ead`s are one for each author in order, else the one author requesting
+the mark of the `\address` it follows, in a document that writes an `\ead` between its addresses (#808), else the group's
+only author's — each `\author` a group (#808; 2311.17496: `\author{Ann}\address{…}\ead{…}\author{Bob}`) —, else, for
+the one address left on the author block, the ONE author of its group (and of those requesting its address's mark)
+marked as the corresponding author (#809), else the author block's. An `\ead{a, b}` or `\ead{a and b}` list is an address each (2111.00753; 0710.2104, 1003.0073), and a `\mailto` inside an `\ead` is iopart's
+address font, not the binding's `\let\mailto\ead` contact nested in it (0811.0981's `\ead{\mailto{edvard@…},
+\mailto{chris.clarkson@…}}`: both addresses and a "," contact on Chris Clarkson; now each on its author). An `\ead`
+inside an `\address{…}` is digested with the address and takes its labels, as before (1205.6797, 1607.05491: on the
+address's authors, residual). An `\ead` list is split by `\lx@split@addresses` (#805), a shared domain
+(`\ead{\{yangqq, yangjh\}@ipp.ac.cn}`, 2607.04241) each of its addresses written out. A/B (int47a → 78f, 162 iopart
+`\ead` papers of the census; the reviewer's spelling test, `emailmatch.py`): 112 outputs changed, E/F/W equal;
+addresses on the author they spell 154 → 269, on an author another name spells 83 → 4 — two an `\ead` inside an
+`\address`, unchanged, and two the test's false flags, each right (1902.07874's numeric `b97202056@` for Che-Yu Chen by
+the order, cond-mat0404018's `nikos@` for N S Skantzos) —, on the author block 3 → 14 (an address spelling no single
+author: 2205.06148's `daniel.haeupl@` for Häupl, 2311.07087's `sgess@`, 2607.04241's two Yangs); 19 papers only
+reorder a creator's contacts (the e-mail before or after its affiliation). Repros sectioning-frontmatter/{iopart_ead_goes_to_the_author_it_spells,
+iopart_ead_lists_are_an_address_each, iopart_ead_and_list_is_an_address_each}; guards
+`perfect_kernel_batch78f::{iopart_ead_goes_to_the_author_it_spells, iopart_ead_lists_are_an_address_each,
+iopart_ead_and_list_is_an_address_each}`, `perfect_kernel_batch63::iopart_author_per_call`.
+
 ## 1032. An `\inst` after a comma goes to the next author
 
 llncs.cls:894-896 and aa.cls:759-760 set `\inst` and `\fnmsep` with `\unskip`: written after a comma (`Clara Dehman,
@@ -16956,6 +18116,18 @@ trigger: `\usepackage[noline]{algorithm2e}` `\SetKwBlock{Loop}{loop}{end}` `\beg
 — pdflatex "end", "b;" at the left; Perl and Rust indent both. Fixed in Rust (78o, OXIDIZED_DESIGN_DIVERGENCES #852):
 `\algocf@Noline` pops the level it pushed, so `noline`/`\SetAlgoNoLine` blocks and groups give it back (1410.4452).
 Repro listings-algorithms/algorithm2e_noline_block_pops_its_indentation; guards
+`perfect_kernel_batch78o::{algorithm2e_noline_block_pops_its_indentation, algorithm2e_setalgonoline_groups_pop_their_indentation}`.
+
+**The Rust fix, moved from OXIDIZED_DESIGN_DIVERGENCES #852** ("algorithm2e's `noline` block gives its indentation back", 2026-11-14):
+
+algorithm2e.sty:1851-1860 `\algocf@Noline` sets the block's body in a box of its own (`\algocf@push{\skiprule}` around
+it, `\algocf@pop` after), so the line after a block is at the block's level; `\SetAlgoNoLine` (the `noline` option,
+:1438, and `\SetNoline`, :3244) and `\SetNothing` make `\algocf@group` (an `\If`'s branch, a loop's body) and the block
+`\algocf@Noline` (:1901-1905, :1919-1923). Perl's `\algocf@Noline` (algorithm2e.sty.ltxml:120) pushes
+`\lx@algo@advlevel` and never pops it, unlike its `\algocf@Vline`/`\algocf@Vsline`, so every line after a block went one
+level deeper (KNOWN_PERL_ERRORS #1062). Ours (78o, algorithm2e_sty.rs) pops it as `\algocf@Vline` does (1410.4452's
+Algorithm 1 now reads as its PDF: "else", "end", "foreach" back at the left). Repro
+listings-algorithms/algorithm2e_noline_block_pops_its_indentation; guards
 `perfect_kernel_batch78o::{algorithm2e_noline_block_pops_its_indentation, algorithm2e_setalgonoline_groups_pop_their_indentation}`.
 
 ## 1063. caption's `\caption*` takes none of caption's fonts
@@ -18917,6 +20089,47 @@ Fixed in Rust (89d, OXIDIZED_DESIGN_DIVERGENCES #914): bbold_sty.rs keys the map
 `perfect_kernel_batch89d::bbold_map_is_its_own_familys`. Still reached: bbm's and bbmss's fonts, which font.rs names
 `blackboard` too (SYNC_STATUS Font-Selection residual 12).
 
+**The Rust fix, moved from OXIDIZED_DESIGN_DIVERGENCES #914** ("bbold's blackboard map is its own family's (`blackboard`, a name bbm and bbmss share), not the `U` encoding's, and a family's map is read without an encoding map (Perl: bbold's map decodes every `U` font)", 2026-11-14):
+
+bbold.sty.ltxml:30 registers its map as `U_fontmap`, the encoding's (KNOWN_PERL_ERRORS #1203), so beside
+`\usepackage{bbold}` every `U` symbol font without a map of its own decoded as blackboard letters, silently: a paper's
+copy of mathabx.dcl:944 `\widehat` in `U/mathx` printed 𝕡 (and 89c's name rule never fired, the font now having a
+map), stmaryrd's `\boxslash` in `U/stmry` σ, a raw `U/msa` `\Cap` 𝕖 — loaded first, the encoding map also stopped
+u_fontmap.rs, which holds `U_msa`/`U_msb`/`U_eur`, from ever loading — and program.sty's `U/eur` `\powersetsymbol` –.
+OXIDIZED_DESIGN_DIVERGENCES #27's "`U` with a family other than `msa`/`msb`/`eur` has no map" was false under bbold.
+
+Ours: bbold_sty.rs registers the map for bbold's own font, by both names it goes by — `U_blackboard`, the family its
+`\mathbb`/`\textbb`/`\bbfamily` constructors name (and `\fontfamily{bbold}` selects, font.rs's family table), and
+`U_bbold`, Ubbold.fd's and bbold.sty's NFSS family (`\DeclareSymbolFont{…}{U}{bbold}{m}{n}`) — with its multichar
+entry (`DeclareFontMapMultichar!("U", family, …)`, `U_<family>_fontmap_multichar`). `U` keeps no map of its own. Three
+readers had reached a family map only through its encoding's, as Perl's `FontDecode`/`FontDecodeString` do
+(Package.pm:2878-2882, :2907-2910), and are now its own: font.rs `decoding_map`, shared by `decode`, `decode_string`
+and the `\char` multichar lookup, reads the family's map (and its multichar table, which a slot of Perl's map holds)
+whether or not the encoding has one, as content.rs `font_decode` already did; math characters decode in the font's
+family (`decode_in_font`, mathchar.rs), as Perl's `decodeMathChar` passes `$font` to `FontDecode` (Package.pm:2990),
+where Rust had passed the encoding alone, so `\mathbb{R1}` under bbold is ℝ𝟙; and `\selectfont` gives back the encoding
+`\fontencoding` named, which decodes through OT1 for want of a map (`\lx@fontencoding`, #645), when the selected family
+has a map under it (sect13.rs `nfss_selected_font`), so `\usefont{U}{bbold}{m}{n}R1` is ℝ𝟙 as `\textbb{R1}` is. Every
+`*_fontmap.rs` is its own encoding's map, and no other binding registers an encoding map under a shared encoding.
+Still open: the map's reach is the family as font.rs names it, and font.rs's family table (font.rs:184-186) names
+`bbm`, `bbold` and `bbmss` alike `blackboard`, so beside bbold the `U/bbm` and `U/bbmss` fonts decode through bbold's
+map too — `{\usefont{U}{bbm}{m}{n}\char"0B\char"00}` is αℾ, where bbm10 (58 characters) has none at either slot and
+pdflatex prints nothing. The fix keys the map to the NFSS family before font.rs normalises it (SYNC_STATUS
+Font-Selection residual 12; RED repro fonts-nfss/bbold_map_reaches_bbm_through_the_blackboard_alias).
+Repro fonts-nfss/bbold_map_is_its_own_familys; guard `perfect_kernel_batch89d::bbold_map_is_its_own_familys` (mathx's
+`\widehat` ^ and `\widecheck` ˇ by their names, `\boxslash` U+FFFD with `U/stmry`'s Warning, `\Cap` ⋒, ℘, and bbold's
+𝟙/ℝ through `\mathbb`, `\textbb`, `\bbfamily`, `\usefont` and a declared `U/bbold` symbol font, eager and
+`--streaming`). The glyph sweep (the 89b reviewer's 23 setups, 89c's 26 accent and 22 raw setups, 21 accent-name
+setups, and bbold alone, with amssymb, stmaryrd and mathabx) changes no bbold glyph. In the 89d A/B (run `r89d1x`,
+against 89c's tip) five bbold papers change, each checked against pdflatex: 2208.07361's mathabx copies (`\otimes`
+`\boxtimes` `\oplus` `\boxplus` in `U/matha`/`U/mathb`, 114 tokens, 𝕓 and a backquote; pdflatex ⊗ ⊠ ⊕ ⊞),
+2401.14126's cmll `\invamp` `\Bot` `\biginvamp` (`U/cmllr` 0/13/10, 64 tokens, ℾ ℽ Ω; cmllr10 draws ⅋, its
+bottom and a large ⅋) and 2601.14312's `U/txsyc` `\df` (5, 𝔹;
+pdflatex ≔) are now U+FFFD, each font saying so (W +2, +1, +1; the `U/cmllr` and `txsyc` tables are open,
+SYNC_STATUS Font-Selection residual 9); hep-ph0607037's `\lesssim` at `AMSa` "2E is ≲ again (`U_msa` loads; it was
+`.`, and `$\beta\lesssim 0.3$` read `.0.3`); 2003.08144's fourier-orns `\leafNE` (`\fontencoding{U}`, `U/futs` "G")
+is `G` as without bbold, where it was 𝔾 (pdflatex: a leaf; a text `U` font without a map decodes as OT1, #645).
+
 ## 1204. A `\label` inside a frontmatter item labels an annotation no entry requests: a `\thanks` holding one is lost
 
 `digestFrontmatterItem` (Base_Utility.pool.ltxml:327-335) lets `\label` be `\lx@set@frontmatter@label` while it digests
@@ -18969,6 +20182,61 @@ Text.
 
 Fixed in Rust (OXIDIZED_DESIGN_DIVERGENCES #957): the break is taken out, the notes the names'. Witnesses 2609.17106,
 2411.05212, 2312.10807.
+
+**The Rust fix, moved from OXIDIZED_DESIGN_DIVERGENCES #957** ("A line of notes only after an author block's `\\` is the line above's, its notes the names' (Perl: a line of its own, read as an affiliation by the mark inside its first note, its notes the document's)", 2026-11-14):
+
+**What** (batch 100c; census127 cluster 6). `\lx@add@authors` (`add_authors_calls_sectioned`, author_block/dispatch.rs)
+takes out, before it reads the block's lines, a `\\` (with its `*`, its `[len]` and any spacer `\\` after it) that
+opens a line of notes only — `\thanks{…}`, `\footnote{…}` or `\IEEEcompsocitemizethanks{…}`, each with an optional
+`[…]`, and spacing (`author_block/notes.rs` `notes_only_line`, `author_block/preprocess.rs` `notes_line_joins_names`).
+Only that misreading is undone: a block whose names carry marks (`has_author_marks`, outside its notes) and a line
+whose notes do (`author_mark_position`), after a names line — its `\and` group's first, or one whose marks follow its
+text (`marker_leads` false): after an affiliation or an `Emails: …` line the notes stay a line (joined, 1911.03356's
+address list no longer read as one, every address lost its author; control repro
+`notes_only_line_after_an_emails_line_stays`); only a break at the block's top level, outside braces and environments,
+and only up to the next `\\` or `\and`. The notes then follow the names line as if written without the break, and are
+read as such notes are: a marked note (`\thanks{$^{1}$…}`) the contact of the names requesting its mark. Only notes
+a name requests join (`notes_the_names_request`): the mark leading a note's text — a superscript or mark command before
+any letter, or a math group of no letter it opens with (`$*$`) — keys a label the names' marks request (`mark_keys`:
+each comma piece, and a glued `1*` as `1` and `*` too, 2411.05212). A line of no requested note stays a line; on a
+line mixing both, a note no name requests (`\thanks{This work was funded by …}`, 2609.17106; a symbol only a note
+prints, 2312.10807's `$^{*}$Equal contribution` under `\IEEEauthorrefmark{1}`) stays the document's, a `<pubnote>`, as
+the line read whole made it, and not the last name's note (FIDELITY_CHARTER R1; review rev100c S1): it is taken out of
+the block and added after the block's calls, its `\thanks` written `\lx@add@pubnote@thanks`, its `\footnote`
+`\lx@add@pubnote` — what they mean digested in a contact (queue_digest.rs) —, so no mark its text prints is read as a
+name's (`$^{\dagger}$Corresponding author`). A mixed line whose unrequested note is no plain `\thanks{…}` or
+`\footnote{…}` stays a line. The observer reads it so too: on a notes-only line under names that mixes them, the
+resolver gives an unrequested note to the block (`resolver/blocks.rs`, rule `note:unrequested`), and the writer holds
+such a block note where today's prints it as a pubnote (`emitter/plan.rs` `held_as_pubnote`, `Front::pubnotes`), so a
+written paper stays written (2609.17106: its six authors' e-mails and the `∗` legend on the two starred authors). A
+note on an address line (`note:address-line`) is not held so: the writer still declines there (SYNC_STATUS row 100c). A line of
+unmarked notes stays a line: in a marked block it continues the entry above as it would joined, and in an unmarked
+block its notes are the document's, no author's by position — batch 86d's reading (`without_stop_after_grade`:
+2112.14209, 2409.11755, 2510.15773, 2605.22853), which moved such notes onto a `\\`-line on purpose. IEEEtran's own
+reader of a grade-and-notes line (`ieeetran_cls.rs` `grade_only_line`) is now "one `\IEEEmembership{…}`, then
+`notes_only_line`".
+
+**Why.** pdflatex prints only the notes' marks on such a line, the notes as footnotes: the line holds no text of its
+own. Read as a line, it led with the mark inside its first note — `author_mark_position` (frontmatter/classify/marks.rs) counts a
+`^` inside a `\thanks`, `has_author_marks` skips it; the disagreement stays, cited at the preprocess — so it took the
+leading-mark branch as one affiliation labelled `1` whose content digested to nothing, answering mark 1, while its notes
+went to the document as `<pubnote>`s; the observer read the block right and its writer, holding creators only, declined.
+Perl does the same (Base_Utility.pool.ltxml:702-712; KNOWN_PERL_ERRORS #1206), a `\\[3.0ex]` making it a creator
+"[3.0ex]" besides. Witnesses 2609.17106 (ieeeconf, names over two lines), 2411.05212 (ieeeconf), 2312.10807 (IEEEtran,
+`\\[3.0ex]`): every author now holds the affiliation its mark requests; 2312.10807's two legend notes, whose `*`
+and `†` no name's `\IEEEauthorrefmark{n}` is keyed to (SYNC_STATUS row 100c), stay document pubnotes. A line holding a note and text (`\\ \thanks{$^1$Univ A.} $^2$Univ
+B`) stays a line (RED repro `notes_and_text_line_after_the_names`).
+
+**Guards** `perfect_kernel_batch100c::{a_notes_only_line_after_the_names_is_theirs,
+a_notes_only_line_past_a_starred_break_a_spacer_or_in_an_and_group,
+a_notes_only_line_stays_a_line_after_unmarked_names_or_an_emails_line, a_note_no_name_requests_stays_the_documents}`
+(the boundary, and the mixed line; `perfect_kernel_batch86d::ieee_membership_kept_after_closing_stop` pins the IEEE variants); repros
+sectioning-frontmatter/`notes_only_line_after_the_names_is_theirs`, `notes_only_line_after_ieee_names_is_theirs`,
+`notes_only_line_after_a_gap_is_the_names` (each equal to `notes_only_line_without_a_break_control`),
+`notes_only_line_after_a_starred_break_and_a_spacer`, `notes_only_line_in_each_and_group`,
+`notes_only_line_after_unmarked_names`, `notes_only_line_after_an_emails_line_stays` (controls),
+`notes_only_line_with_a_note_no_name_requests`; RED `notes_only_line_unmarked_under_a_marked_names_line` (an unmarked
+note alone on its line under marked names goes to the last name, int127a the same; SYNC_STATUS row 100c).
 
 ## 1207. `\end{X}` over a `\begingroup` opened inside X is an error, and the environment stays open
 
@@ -19647,6 +20915,17 @@ Perl 0 Errors, `<p>X ZY</p>`; Rust `<p>XZY</p>`):
 \begin{document}
 X\subimport{sub/}{y}Y
 
+**The Rust fix, moved from OXIDIZED_DESIGN_DIVERGENCES #1023** ("The import commands typeset no space before the imported file; `\import@path` is import.sty's macro (#772)", 2026-11-14):
+
+**TeX.** import.sty:53-92: `\import`/`\subimport` and their aliases run `\@import` with no group and no space token
+before the `\input`/`\include`, so `X\subimport{sub/}{y}Y` with `y.tex` = `Z%` prints "XZY"; `\import@path` is the
+package's macro, set globally (:83), restored after the input (:93), emptied by `\import`/`\inputfrom`/`\includefrom`
+before it is saved (:53-58). **Perl.** import.sty.ltxml:44-47 `{\lx@set@path #1{#2} \input{#3}}`: the space after the
+path argument is typeset ("X ZY", KNOWN_PERL_ERRORS #1239), and `\import@path` is undefined. **Rust.** The bodies
+carry no space; `\import@path` is defined and kept as import.sty keeps it, a nested `\import` restoring it to empty.
+**Guards**: `bindings_batch1::import_path_is_the_package_macro` (repros `package-bindings/import_path_is_the_package_macro.tex`,
+`import_nested_import_empties_the_path.tex`).
+
 ## 1242. `\counterwithin` / `\counterwithout` ignore latex.ltx's `[format]` optional and misread it silently
 
 latex.ltx declares `\NewDocumentCommand\counterwithin{sO{\arabic}mm}` (and `\counterwithout`, latex.ltx:10182-10199): an optional
@@ -19703,6 +20982,18 @@ lossily). Rust ignores `page=` on these formats (OXIDIZED_DESIGN_DIVERGENCES #10
 \end{document}
 ```
 
+**The Rust fix, moved from OXIDIZED_DESIGN_DIVERGENCES #1026** ("`page=` on a single-page format (SVG, PNG, JPEG) selects nothing: the source is copied as it is (#791)", 2026-11-14):
+
+**TeX.** pdfTeX ignores `page=` on a single-image file: `\includegraphics[page=2,width=2cm]{a.png}` typesets the PNG
+(pdflatex, 0 `!` lines). **Perl.** `image_graphicx_parse` pushes `page` as a transform (Util/Image.pm:179) and
+`image_graphicx_is_trivial` counts it non-trivial (:284), so `Post/Graphics.pm:262-271` re-encodes a PNG or JPEG through
+ImageMagick under a generated `xN` name, and refuses it on an SVG with a `limitation` Warning before copying
+(KNOWN_PERL_ERRORS #1241). **Rust.** `Graphics::process` drops `page=` for `svg`/`png`/`jpg`/`jpeg` before planning, so
+such a graphic takes the path it takes without `page=`: the source copied byte for byte, its `imagewidth`/`imageheight`
+kept, no Warning. Before, every `page=` went through `convert` (an SVG became a re-encoded `x1.svg` without its size).
+Multi-page or multi-frame sources (PDF, PS, TIFF, GIF) keep `page=`. **Guard**:
+`graphics::tests::a_single_page_source_ignores_page`.
+
 ## 1240. OperatorDictionary.pm puts infix `/` in category B; MathML Core puts it in K
 
 OperatorDictionary.pm:185 lists U+002F among the infix B operators (0.222 em each side); MathML Core (W3C CR snapshot
@@ -19732,6 +21023,18 @@ Glue('1pt plus 2pt')->add(Glue('1pt plus 1fil'))->toString   # 2.0pt plus 3.0pt,
 
 TeX's `\advance\skip0 by 1pt plus 1fil` on `\skip0=1pt plus 2pt` gives `2.0pt plus 1.0fil`, and so does Rust's Rhai
 `Glue + Glue` (OXIDIZED_DESIGN_DIVERGENCES #1030).
+
+**The Rust fix, moved from OXIDIZED_DESIGN_DIVERGENCES #1030** ("Rhai glue arithmetic is TeX's `\advance`, not Perl's Glue.pm / MuGlue.pm", 2026-11-14):
+
+**Perl.** Glue.pm overrides only `add`, comparing fill orders with `==` on the fill names (`"fil"` reads as 0, so
+`1pt plus 2pt` + `1pt plus 1fil` is `2.0pt plus 3.0pt`; KNOWN_PERL_ERRORS #1244); `subtract` is Number.pm's
+`new($self->valueOf - $other->valueOf)`, which drops a Glue's stretch and shrink (`Glue("3pt plus 1fil") -
+Dimension("1pt")` is `2.0pt`, `Glue("1pt plus 1fil") - Glue("1pt plus 2fil")` is `0.0pt`); MuGlue + MuGlue takes Glue.pm's
+non-Glue branch (`ref $other eq 'LaTeXML::Common::Glue'` fails), adding only the natural size (`3mu plus 1mu` +
+`1mu plus 1fil` is `4.0mu plus 1.0mu`). **Rust.** The Rhai `+`/`-`/`add`/`subtract` of Glue and MuGlue follow TeX's
+`\advance` (tex.web §1239, the core's `Glue::add_glue`): per component, the higher fill order wins and equal orders add,
+so the examples give `2.0pt plus 1.0fil`, `2.0pt plus 1.0fil`, `0.0pt plus -1.0fil` and `4.0mu plus 1.0fil`, as
+`\advance` on registers prints them. **Guard**: `perfect_kernel_batchw3rc::rhai_typed_registers` (p2, all four).
 
 ## 1245. The regenerated StandardMetrics (#2845) drops msam's U+25C6/U+25C7: `\Diamond` takes ifgeo's 1em box
 
@@ -19830,3 +21133,534 @@ whole-document `//*[pred]` queries of the core's finalization (`cleanup_unrefere
 `unrecord_node_ids`, which `rebuild_idstore_from_dom` runs from the root) are tree walks too (`Document::find_elements`,
 `xml::descendant_or_self_elements`). Guard `perfect_kernel_batchi802::collapsed_dual_references_take_the_branch_id`.
 An upstream offer.
+
+## 1250. Bib-section title = leading balanced group, not all trailing tokens
+
+**Formerly OXIDIZED_DESIGN_DIVERGENCES #28** (moved 2026-11-14: a Perl defect and its Rust fix, not a design divergence).
+
+**Decision:** In `begin_bibliography_clean`
+(`latexml_engine/src/latex_constructs.rs`), when deciphering
+`\bibsection`'s body for the bibliography title, after stripping the
+sectional-unit CS and an optional `*` we take **only the leading
+balanced `{...}` group** as the title, rather than all remaining
+expansion tokens. When there is no leading group (an un-braced title)
+we fall back to all tokens — Perl's behavior.
+
+**Perl ground truth:** `beginBibliography_clean`
+(`LaTeX.pool.ltxml` L4035-4053) sets `$bibtitle = Tokens(@t)` — *all*
+remaining tokens after the unit + `*`. Right at that line the Perl
+author left the TODO: `# Check for balanced? or just take balanced
+begining?` — i.e. they knew the title should be the unit's argument
+(the brace group), not whatever trails it. We realize that intent.
+
+**Why diverge:** Papers that prevent the bibliography from breaking to
+a new page do
+`\renewcommand\bibsection[1]{\section*{\refname}\small #1}`
+(a *parameterized* `\bibsection`). After the unit+`*` strip Perl's
+"all tokens" leaves `{\refname}\small #1`, and digesting that pushes
+the page/font directive `\small` **and** the bare parameter token
+`#1` — an ARG-catcode token that errors `The token "#1" (catcode ARG)
+should never reach Stomach!`. Perl only escapes this in the witness by
+a fragile, comment-line-dependent mouth artifact (the *same*
+`\bibsection` macro leaks in a minimal Perl repro, perl-rc=1); the
+leading-group rule fixes it deterministically and is strictly more
+robust. Output is identical to Perl on the witness:
+`<bibliography xml:id="bib"><title>References</title>…`. Trailing
+page/font directives (`\small`, `\markboth`, `\thispagestyle`) that
+LaTeXML never renders in a title are correctly dropped.
+
+**Witness:** arXiv:1702.01165 (llncs + IEEEtranN `.bbl`,
+`\renewcommand\bibsection[1]{\section*{\refname}\small #1}`).
+
+## 1251. etoolbox `\robustify` is a no-op on native (closure) bindings
+
+**Formerly OXIDIZED_DESIGN_DIVERGENCES #35** (moved 2026-11-14: a Perl defect and its Rust fix, not a design divergence).
+
+**Decision:** `\robustify` (and the etoolbox patching family it shares
+machinery with) leaves a **native, Rust-closure-bodied** binding
+unchanged, instead of reconstructing it from its `\meaning`.
+
+**Rationale:** etoolbox's `\robustify` makes a *fragile* macro robust by
+reading its `\meaning` (`macro:<params>->...body...`), then
+re-`\def`-ing it (via `\scantokens`) wrapped in `\protected`. That round
+trip only works when the body is real tokens. Many LaTeXML commands are
+realized as native closures whose `\meaning` renders as
+`...->CODE(<name>)` (Perl `CODE(0x<ptr>)`, #1005); reconstructing from that produces a broken macro
+whose param text (`#1#2#3#4`) is taken literally and whose body is the
+literal text `CODE(<name>)` — so e.g. a robustified natbib `\cite` grabs the
+wrong number of arguments and can swallow a following `\begin{equation}`.
+Native bindings are *already* robust (no `\protect` fragility), so the
+faithful-to-intent behavior is to leave them alone.
+
+**Perl behavior:** Perl LaTeXML ports the identical etoolbox
+`\robustify` (`LaTeXML/Package/etoolbox.sty.ltxml:1203-1225`; the
+`\ifdefparam`-false branch `\protected\edef#1{\expandonce\etb@resrvda}`, :1220,
+beside the `\etb@robustify` rescan of :1227)
+and has the **same** bug — its robustified native `\cite` emits the literal
+pointer text (`CODE(0x…)`) and swallows what follows. So this is a
+**surpass-Perl** correction, not a Perl parity match: Rust keeps `\cite` working.
+
+**Minimal trigger** (pdflatex clean; Perl 0.8.8: `See CODE(0x…)a=b`, the
+equation lost, 2 Errors `Can't close environment equation`; ours: the citation
+and the equation, 0 errors):
+```latex
+\documentclass{article}
+\usepackage{natbib}
+\usepackage{etoolbox}
+\robustify{\cite}
+\begin{document}
+See \cite{x}.
+\begin{equation}a=b\end{equation}
+\end{document}
+```
+
+**Implementation:** `\lx@ifnativecmd` in
+`latexml_package/src/package/etoolbox_sty.rs` mirrors etoolbox's own
+`\ifdefmacro` `\meaning`-split idiom (sentinel `CODE(`); `\robustify` is
+wrapped to no-op on natives and delegate to the original for token macros.
+
+**Witness:** 2110.11931 (mnras — its template ships `\robustify{\cite}`):
+10 errors → 0, with correct citation output. User-macro robustify
+(`\robustify{\foo}`) is unaffected. (The `\patchcmd`/`\apptocmd`/`\pretocmd`
+siblings were checked and do NOT need wrapping: on a native binding they hit
+etoolbox's `\etb@ifscanable`-FALSE branch and **fail gracefully** via the
+caller's `{fail}` callback, leaving the binding intact — verified
+`\patchcmd{\cite}…`/`\apptocmd{\cite}…` → graceful fail, 0 errors, no garbage.
+Only `\robustify`'s `\ifdefparam`-false → `\protected\edef` path was broken.)
+
+## 1252. `inst`-style `\author[marks]{name}` accepts the optional marks and accumulates
+
+**Formerly OXIDIZED_DESIGN_DIVERGENCES #53** (moved 2026-11-14: a Perl defect and its Rust fix, not a design divergence).
+
+**Decision:** `inst_support.sty`'s `\author` (used by classes following the
+`\inst` institution convention — the fallthrough for a raw-loaded `ifacconf.cls`
+via OmniBus, and historically aa/llncs/sv) is redefined from Perl's
+`DefMacro('\author{}', …)` to `DefMacro('\author[]{}', …)`. This is a
+**surpass-Perl divergence** authorized under the PDF-fidelity policy: same-host
+Perl reproduces the bad output.
+
+**The shared bug.** Perl `inst_support.sty.ltxml:33` documents `\author[marks]{author}`
+in its own comment but defines a **single-argument** `\author{}` whose body is
+`\lx@clear@creators[role=author]\lx@splitting{\lx@add@author}{\and\And,}{#1}`.
+A class that calls `\author` **once per author with a label** —
+ifacconf's `\author[First]{Eryn Vaid}` (four such calls) — then (a) reads the
+literal `[` of `[First]` as the single mandatory argument, so the personname
+becomes `[`, and (b) `\lx@clear@creators` wipes the prior author on every call,
+so only the last survives. Result: one `<ltx:personname>[</ltx:personname>`.
+Perl and Rust emit the identical garbage. Witness arXiv:2605.00004, whose
+pdflatex PDF lists all four authors (Vaid, Chiri, Guglielmi, Notomista).
+
+**The fix** (`inst_support_sty.rs`): accept the optional `[marks]` (so `[` is
+never mistaken for the name), take the name from `#2`, and **drop the per-call
+`\lx@clear@creators`** so successive `\author` calls **accumulate**. Dropping the
+clear is safe: it is a no-op on the first `\author` call, so single-`\author`
+classes are unaffected — and aa/llncs/sv define their own `\author` regardless.
+The `[marks]` (the author↔affiliation label) are dropped exactly as Perl's
+single-arg form dropped them; wiring them to the affiliation annotation (à la
+`\inst`) is a separate follow-up. Verified: 2605.00004 now yields all four
+personnames; full suite 1532/0.
+
+Each `\and` piece is now split at its commas, " and " and " \& " by `\lx@add@author@split` (63e, #459).
+
+## 1253. A `.bib`-derived bibliography does not run the missing-`\bibitem` rescue
+
+**Formerly OXIDIZED_DESIGN_DIVERGENCES #75** (moved 2026-11-14: a Perl defect and its Rust fix, not a design divergence).
+
+**Perl behaviour.** `BibTeX.pool.ltxml:183` gives `{bibtex@bibliography}` the
+same `afterDigestBegin => beginBibliography` as a hand-written
+`{thebibliography}`. `beginBibliography` = `beginBibliography_clean` +
+`setupPseudoBibitem` (`latex_constructs.pool.ltxml` L4028-4047), and
+`setupPseudoBibitem` `\let`s **both** `\par` and `\\` to
+`\par@in@bibliography`, which emits a fresh `\save@bibitem{}` every time it
+fires. Its purpose is stated in its own comment: "Since SOME people seem to
+write bibliographies w/o `\bibitem`, just blank lines between apparent
+entries".
+
+That rescue cannot apply to a `.bib`-derived bibliography.
+`Pre::BibTeX::toTeX` (L110-122) generates the body mechanically — one
+`\ProcessBibTeXEntry{key}` per line between `\begin{bibtex@bibliography}` and
+`\end{bibtex@bibliography}` — so there is never a missing `\bibitem` to
+recover, and the only `\par`/`\\` that can reach the heuristic come from
+**inside a field value**. There the heuristic opens `<ltx:bibitem>` in the
+middle of `<ltx:surname>` / `<ltx:bib-title>` / `<ltx:bib-note>`; the model
+rejects it (`Error:malformed:ltx:bibitem`), it is inserted anyway, and it is
+never closed, so every later entry nests inside it.
+
+Note the diagnostic trap: the element named in the error is **not** the one
+that failed to close. `<ltx:surname>` is opened and closed exactly as its
+constructor says — it is merely the insertion context at the moment the
+spurious item is opened.
+
+**Rust behaviour.** `{bibtex@bibliography}` calls `begin_bibliography_clean`
+and skips `setup_pseudo_bibitem`. Nothing else in that environment needs the
+skipped bindings: `\newblock`→`\lx@bibnewblock` is already `Let` globally
+(`latex_constructs.pool.ltxml` L4133), `\bibitem`/`\item`/`\vskip` never occur
+in the generated body, and the trailing "risky" lookahead that unreads a `\par`
+is a no-op because the body starts with the executable `\ProcessBibTeXEntry`.
+`{thebibliography}` and the biblatex/amsrefs/revtex/OmniBus bibliographies keep
+the full `begin_bibliography` — the rescue still applies where it was meant to.
+
+**Why.** Same-host Perl 0.8.8 emits byte-identical malformed output on the same
+input (over the fixture `.bib`: the same 6 `malformed:ltx:bibitem` errors, one
+of them naming `<ltx:givenname>` where Rust names `<ltx:surname>` — a name-split
+nuance, same cluster), so pdflatex is the ground truth, and it disagrees with
+both engines:
+bibtex 0.99d compresses every white-space run in a field value to a single
+space, so a blank line **never reaches TeX at all**, and it copies `\\` through
+to the `.bbl`, where `thebibliography` renders it as a line break *inside* the
+item. Verified by running bibtex 0.99d over the fixture's `blankline` entry:
+the generated `.bbl` reads `Debarati Das and Michal Koucky.` and `A dynamic
+structure for one-dimensional top-k range reporting.` on single lines. Under
+neither reading does a field value start a new bibliography item.
+
+Measured, current binary: **2605.03313 7 -> 0**, **2605.03693 7 -> 1** (the
+residual is an unrelated text-mode `^`), **2605.11080 1 -> 0**. The final
+rendered HTML is **byte-identical** on all three — `MakeBibliography` rebuilds
+each cited entry from its fields, so the injected items never reached the page
+and the whole cost was diagnostic noise plus a malformed intermediate.
+
+Guard: `06_cluster_bibliography::bib_field_blank_line_does_not_inject_a_bibitem`
+(`convert_and_post_clean`, since the damage is done in the recursive `.bib`
+session that `MakeBibliography` drives during POST). Fixture
+`bib_field_blank_line.{bib,tex}` carries all three witness shapes: a blank line
+in `title`, in `author`, in a `note`-routed `Annote`, plus the `\\` note — 6
+errors RED, 0 GREEN.
+
+## 1254. Display equations carry a 1em vertical CSS margin
+
+**Formerly OXIDIZED_DESIGN_DIVERGENCES #92** (moved 2026-11-14: a Perl defect and its Rust fix, not a design divergence).
+
+Vanilla `LaTeXML.css` (upstream master included, checked 2026-08-01) gives the
+display-math containers no vertical margin: `.ltx_eqn_table` is
+`display:table; width:100%; border-collapse:collapse;` (L244) and
+`.ltx_eqn_div` (the unaligned rendering, L241) likewise has none. Text
+paragraphs get their spacing from the UA's `p { margin:1em 0 }` collapsing
+through `div.ltx_para`, so two adjacent displays render **touching** (issue
+#473 MWE: two `\[…\]` in a row) — identically in Perl 0.8.8 and Rust
+(same-host check: same body elements and classes, differing only in
+whitespace serialization and the sanctioned #18 invisible-operator; same
+CSS). pdflatex is the ground
+truth and separates displays with `\abovedisplayskip`/`\belowdisplayskip`
+≈ 1em of the body font (10pt @ 10pt, 12pt @ 12pt).
+
+The bundled stylesheet adds a local delta:
+`.ltx_eqn_table, .ltx_eqn_div { margin-top:1em; margin-bottom:1em; }`.
+`1em` (not ar5iv's `0.65rem`) because it collapses with the UA `<p>` margins
+through the `ltx_para` wrappers: measured headless-Chrome gaps
+(text→eqn / eqn→eqn / eqn→text) go 16/0/16 px → uniform 16/16/16 px, i.e.
+the text↔display gap is unchanged (no doubling) while display↔display gains
+the paragraph rhythm.
+
+**Minimal trigger** (issue #473): `\[ a \] \[ b \]` — two displays in a row,
+touching under Perl's CSS, a display skip apart in the PDF.
+
+Guard:
+`witnessed_css_delta::equation_display_margin_delta_stays_present`
+(`latexml_post/src/xslt.rs`).
+
+## 1255. The FIRST paragraph is `ltx_noindent` when `\parindent` is zero
+
+**Formerly OXIDIZED_DESIGN_DIVERGENCES #143** (moved 2026-11-14: a Perl defect and its Rust fix, not a design divergence).
+
+**Perl** LaTeXML's `\par` (`TeX_Paragraph.pool.ltxml` L131-137) marks a paragraph `ltx_noindent`
+via a *deferred* flag: the `\par` that closes paragraph N reads `next_para_class` (set by the
+`\par` that closed N-1) and records a fresh flag for N+1, keyed on `\parindent==0` at close time.
+The mechanism models the fact that a paragraph's indent is fixed by `\parindent` when it *begins*,
+approximated by `\parindent` at the *previous* `\par`. But the very first body paragraph has no
+prior `\par`, so it is never marked — even under `\setlength{\parindent}{0pt}`. It then inherits
+the stylesheet's default first-line indent (`ltx-article.css` `.ltx_para > .ltx_p:first-child {
+text-indent:2em }`), rendering visibly indented where pdflatex is flush-left. latexml-oxide
+reproduced Perl exactly (SHARED-FAILURE; verified same-host — byte-identical XML, first `<para>`
+un-classed in both).
+
+**Perl behavior**: with `\parindent=0`, the first paragraph is un-classed → indented 2em by CSS;
+the 2nd+ paragraphs are `ltx_noindent`.
+**Rust behavior**: `\par`'s `after_digest` (`tex_paragraph.rs`) flags the closing paragraph a
+first-paragraph candidate when `\parindent==0` and no deferred class applies; the constructor then
+stamps `ltx_noindent` iff the paragraph is *structurally* first — no preceding `ltx:para` sibling
+(`document::helpers::preceding_para_sibling`, shared with `prune_empty_para`). The structural test
+matters: a state one-shot ("first `\par` seen") is consumed by a begin-document `\par` before the
+first content paragraph under the no-dump / freshly-generated-dump sequence (the CI path), so the
+first landing reverted there; the DOM position is robust to how many stray `\par`s fired. The stamp
+fires only when `\parindent` is genuinely zero — where `ltx_noindent` is correct — so
+default-`\parindent` documents are byte-identical to before, and only the first paragraph is
+touched (later paragraphs keep the unchanged deferred mechanism).
+
+**Why**: a kernel-quality off-by-one, not a TeX-semantics change — real LaTeX+`\parindent=0`
+leaves the first line flush too. The fix halos across every `\parindent=0` document (manual
+`\setlength`, `parskip`, KOMA `parskip=`, …). Completes #106's `parskip` surpass, whose first
+paragraph was the residual gap.
+
+**Witnesses**: issue #719 (reporter nasser1), the first-paragraph tail of #558/#106 (same
+reporter). MWE: `\setlength{\parindent}{0pt}` + two paragraphs → both `ltx_noindent`.
+
+**Upstream**: worth filing against `brucemiller/LaTeXML` (same off-by-one upstream).
+
+**Guards**: `06_cluster_regressions::cluster_first_para_noindent_719` (first paragraph
+`ltx_noindent` under `\parindent=0`; a control fixture confirms default `\parindent` marks no
+paragraph); `cluster_package_guards::dump_gate_init::nodump_latex_branch_converts_healthily` (the
+same via a `LATEXML_NODUMP=1` subprocess, sharing one raw kernel load with the other NODUMP guards —
+guards the exact stray-`\par` path that broke the state-flag first landing);
+`50_structure::parskip_test` (all three paragraphs `ltx_noindent`).
+
+## 1256. Listings raw-line capture keeps the first body line after a line-crossing argument probe
+
+**Formerly OXIDIZED_DESIGN_DIVERGENCES #162** (moved 2026-11-14: a Perl defect and its Rust fix, not a design divergence).
+
+**Perl behavior**: `readListingsLines`-style capture (`listings.sty.ltxml`) discards its first
+`readRawLine` unconditionally as "the remainder of the `\begin{…}` line". When the environment
+was defined with an optional argument (`\lstnewenvironment{x}[1][]`) and none is given, the
+`Optional` probe (`readNonSpace`) crosses the newline after `\begin{x}` and unreads the body's
+first character — the "first line" then IS the body's first line, and Perl swallows it. Verified
+same-host on Perl 0.8.8: a two-line body comes back holding only line two.
+
+**Rust behavior**: `listings_read_raw_lines` (`listings_sty.rs`) discards the first raw line
+only when the gullet pushback is empty (`gullet::pushback_is_empty`) — pushback pending means an
+argument probe already advanced into the body, so the first raw line (pushback + line remainder)
+is real content and is kept.
+
+**Why**: content preservation — real listings drops only the `\begin`-line remainder; the first
+body line is typeset. Every `\lstnewenvironment`-defined example environment in the TL doc corpus
+(cnltx, ltxdockit, … — the standard "define an example env, body on following lines" style) lost
+its first line in both engines. Known residual: `\begin{env} same-line-junk` (no optional given)
+now keeps the junk as body line 1 instead of dropping it — pathological input real listings warns
+about; accepted.
+
+**Witnesses**: TL2025 doc corpus manuals via cnltx-example.sty / ltxdockit.sty; 10-line repro in
+`cluster_package_guards::defplain_skips_blanks_before_brace` (guards #161 + #162 together).
+
+## 1257. Raw loader keeps `\ProvidesPackage`'s `\ver@<file>` (fallback-only `\fmtversion`)
+
+**Formerly OXIDIZED_DESIGN_DIVERGENCES #169** (moved 2026-11-14: a Perl defect and its Rust fix, not a design divergence).
+
+**Perl behavior**: `Package.pm` L2393 (raw loadTeXDefinitions) unconditionally
+`Let`s `\ver@<file>` to `\fmtversion` after the load — clobbering the version
+string the file's own `\ProvidesPackage` just recorded. Every downstream date
+guard (`\GetFileInfo`, `\@ifpackagelater`, toptesi.cls L44-73's version
+comparison) then reads the format date.
+
+**Rust behavior**: `\fmtversion` is applied only as a FALLBACK when the file
+declared nothing — the guarded idiom Perl itself uses in the ltxml-binding
+branch (and we already used at `content.rs` L652-660). Real LaTeX keeps the
+declared string.
+
+**Why**: kernel-quality — real LaTeX semantics; unlocks every version guard,
+not one package.
+
+**Witnesses**: 12-doc toptesi cluster ("the sty file you are using has a date
+of <empty>" abort → gone). Guard:
+`cluster_package_guards::raw_provides_version_survives`.
+
+**Upstream**: Perl-filing candidate.
+
+## 1258. The trivial-recursion guard anchors on the invoking token (Perl: the definition's CS)
+
+**Formerly OXIDIZED_DESIGN_DIVERGENCES #185** (moved 2026-11-14: a Perl defect and its Rust fix, not a design divergence).
+
+**Perl behavior**: `Expandable.pm:80-89` errors "Token \x expands into itself!" when a macro body begins with `$$self{cs}` — the Expandable's home CS. A `\let` alias shares the object, so invoking the alias of a legitimately self-headed body fires too: musixlyr.tex:709-722 stores `\cont@<verse>` bodies that begin with `\cont@<verse>`, snapshots them into `\der@kontext`, clears the original and expands the alias (recorder-fingering, undar-digitacion-doc 14 errors).
+**Rust behavior**: the comparison is `t0 == self.cs && t0 == invoking token` (`get_current_token()`). `\def\x{\x}` invoked as `\x` still fires; through an alias the loop is caught one step later when `\x` itself expands.
+**Why**: kernel-quality: TeX has no such guard at all; ours exists to turn a certain hang into an error, and it must not fire on a finite expansion.
+**Witnesses**: recorder-fingering/recorder-fingering, undar-digitacion/undar-digitacion-doc.
+**Guard**: `perfect_kernel_batch54::recursion_guard_anchors_on_the_invoking_token`.
+**Upstream**: not filed.
+
+## 1259. The pst-grad binding loads `pst-grad.tex`
+
+**Formerly OXIDIZED_DESIGN_DIVERGENCES #218** (moved 2026-11-14: a Perl defect and its Rust fix, not a design divergence).
+
+**Perl behavior**: `pst-grad.sty.ltxml` is `RequirePackage('pstricks')` and
+nothing else (`LaTeXML/Package/pst-grad.sty.ltxml:23`), so `\psfs@gradient` and the `grad*` keys never exist.
+**Minimal trigger** (latex clean, prints "defined"; Perl 0.8.8 "undefined"; ours "defined"):
+`\usepackage{pst-grad}` … `\makeatletter\ifdefined\psfs@gradient defined\else undefined\fi`.
+**Rust behavior**: `pst_grad_sty.rs` additionally raw-loads `pst-grad.tex`
+(pst-grad.sty:3), exactly what the wrapper does.
+**Why**: with `\pst@object` dispatching for real (batch 56af) a raw object's
+bracket `[fillstyle=gradient,…,addfillstyle=boxfill]` reaches pstricks.tex's
+`fillstyle`/`addfillstyle` keys (:1333-1350): the first raised "Undefined fill
+style" and left `\psk@fillstyle` at its `\let…\relax` default
+(pstricks.tex:1337); the second's `\expandafter\noexpand\psk@fillstyle`
+then froze that unexpandable NAME into the new definition — a
+self-recursion at the next use (TeX loops the same way; the difference is
+only that pdflatex has `\psfs@gradient`). The gradient fill styles are PostScript
+strings the renderer ignores; the key surface is what matters.
+**Witnesses**: arabi/big2 (0 → 2 after 56af → 0).
+**Guards**: `perfect_kernel_batch56::pst_grad_binding_loads_the_gradient_fill_styles`.
+
+## 1260. `blindtext` does not force `babel[english]`
+
+**Formerly OXIDIZED_DESIGN_DIVERGENCES #228** (moved 2026-11-14: a Perl defect and its Rust fix, not a design divergence).
+
+**Perl behavior**: blindtext.sty.ltxml:21 `RequirePackage('babel', options => ['english'])`
+so `\languagename` exists; babel's `\extrasenglish` then runs the English text that
+blindtext.sty:342-354 registered, replacing the Latin `\blindtext@text` default
+(:356-369) — `\blindtext` reads "Hello, here is some text without a meaning".
+**Rust behavior**: no implicit babel; the engine defines `\languagename`
+(tex_hyphenation.rs), so a document without babel gets the Latin default exactly as
+pdflatex does (the shipped PDFs of assoccnt/xassoccnt), and one that loads babel
+gets its own language's text as before.
+**Why**: the oracle is the PDF; the forced language was a binding convenience with
+a visible, wrong side effect. Guard `blindtext_default_is_latin_without_babel`. Batch 56bx.
+
+## 1261. `\makebox[w][s]` alignment emits `align="justified"` (Perl: schema-invalid `stretched`)
+
+**Formerly OXIDIZED_DESIGN_DIVERGENCES #239** (moved 2026-11-14: a Perl defect and its Rust fix, not a design divergence).
+
+**Perl behavior**: `%makebox_alignment` (latex_constructs.pool.ltxml:4663, #2829)
+maps `s => 'stretched'`, so `\makebox[w][s]{…}` (and `\framebox`, `\parbox[s]`,
+etc.) emit `align="stretched"` — a value the schema `align` enum forbids
+(`LaTeXML-common.rnc:216` = `left|center|right|justified`). pgf-periodictable's
+manual alone carries 1419 such invalid attributes.
+**Rust behavior**: `makebox_alignment` (`latex_constructs/mod.rs`) maps
+`s => "justified"`. `[s]` justifies the box's inter-word glue to fill the
+width, which the schema value `justified` denotes and `text-align:justify`
+renders — so the output is both schema-valid and render-faithful. A CSS rule
+`.ltx_align_justified { text-align:justify; }` (LaTeXML.css) is added because
+the XSLT builds the class as `ltx_align_<align>` = `ltx_align_justified`
+(distinct from the pre-existing `ltx_align_justify`).
+**Why**: kernel-quality / schema validity (user-approved surpass 2026-09-19);
+`stretched` is not a legal `align` value and rendered as plain left before.
+**Witnesses**: pgf-periodictable (1419), any `\makebox[…][s]`.
+**Minimal trigger**: `\makebox[3cm][s]{a b c}` (pdflatex clean; Perl 0.8.8 `align="stretched"`, ours `align="justified"`).
+**Guard**: `picture_makebox_offset::makebox_stretch_is_justified`.
+**Upstream**: not filed.
+
+## 1262. Resetting a counter skips a `UN` companion that was never allocated (Perl: assigns it, "not a register")
+
+**Formerly OXIDIZED_DESIGN_DIVERGENCES #268** (moved 2026-11-14: a Perl defect and its Rust fix, not a design divergence).
+
+LaTeXML pairs each `\newcounter` counter with `\c@UN<ctr>` for unnumbered-item ids, and a
+reset list names both (Package.pm:674). A counter allocated with a raw `\newcount`
+(doc.sty:870 `\c@CodelineNo`) has no companion, but l3doc.cls:463
+`\@addtoreset{CodelineNo}{part}` still resets it at every `\part`; Perl `ResetCounter`
+(Package.pm:886) assigns the companion unconditionally and warns "\c@UNCodelineNo is
+not a register" (Rust did the same; ltx-talk-code, 20 warnings once 56gj's deposit ran
+its `\part`). Rust resets only an existing companion — the existence test Perl itself
+applies in `RefStepID` (Package.pm:863). Guard
+`perfect_kernel_batch56::reset_list_skips_a_missing_un_companion`.
+
+## 1263. Only a titlepage with ink hides the document title in HTML (Perl: any titlepage hides it)
+
+**Formerly OXIDIZED_DESIGN_DIVERGENCES #761** (moved 2026-11-14: a Perl defect and its Rust fix, not a design divergence).
+
+LaTeXML's HTML stylesheet skips the document's `ltx:title` whenever the document has an `ltx:titlepage` child
+(LaTeXML-structure-xhtml.xsl, Perl's :358-359), taking the cover to carry the title. An empty cover —
+`\begin{titlepage}\thispagestyle{empty}\vspace*{2cm}\end{titlepage}` before `\maketitle`, which pdflatex prints as a
+blank page and then the title — builds an empty `<ltx:titlepage/>`, so the HTML showed no title at all (only the
+`<head>` `<title>`), with 0 errors (68t; silent-loss inventory #22). The rule now skips the title only beside a
+titlepage with ink: text, or a graphic, picture, formula or SVG. A cover that prints the title keeps hiding the
+duplicate, as before. Repro `sectioning-frontmatter/empty_titlepage_keeps_the_title`; guard
+`perfect_kernel_batch74b::empty_titlepage_keeps_the_title`.
+
+## 1264. A Cyrillic text symbol set in a Latin letter's slot (T2A/T2B/T2C) is that Cyrillic letter (Perl: the Latin letter)
+
+**Formerly OXIDIZED_DESIGN_DIVERGENCES #776** (moved 2026-11-14: a Perl defect and its Rust fix, not a design divergence).
+
+**TeX**: t2aenc.def:230-237 (t2benc.def:230-239, t2cenc.def alike) declares `\CYRII`/`\cyrii`, `\CYRJE`/`\cyrje`,
+`\CYRQ`/`\cyrq`, `\CYRW`/`\cyrw` — and in T2B/T2C `\CYRDZE`/`\cyrdze` — at the slots of I i J j Q q W w (S s): the LH
+fonts draw the shared glyph, so the PDF shows the letter, while its text layer reads Latin (pdftotext "Iван"). X2
+(x2enc.def:244-273) uses the same slots for the same ten letters, and OT2 puts `\CYRJE`/`\cyrje` at J/j (ot2enc.def:96,
+124, slots 74/106).
+
+**Perl**: `\DeclareTextSymbol` decodes the slot through the encoding's fontmap (latex_constructs.pool.ltxml:2614-2625, a
+`CharDef` of the slot; t2a.fontmap.ltxml), so `\cyrii` — which a UTF-8 `і` becomes (t2aenc.dfu) — is Latin `i`:
+Ukrainian "Іван" and Serbian "ј" come out spelled with Latin letters, wrong for search, hyphenation and speech.
+
+**Rust** (77s): a text symbol naming one of those letters is the letter when its slot decodes to an ASCII letter, in any
+encoding (`cyrillic_letter_in_latin_slot`, latex_constructs/sect08.rs); the slot still decodes as Latin, so a Latin `i`
+typed in T2A text stays Latin, and a letter with a slot of its own (`\cyrdze` at T2A 175) is unchanged. X2 and OT2 had
+no fontmap (Perl neither: no x2/ot2.fontmap.ltxml), so their symbols decoded to nothing and the letters were dropped
+without a diagnostic; 77u gives them maps whose slots are already the Cyrillic letters (#777). Repro
+`fonts-nfss/t2a_cyrillic_i_and_je_are_cyrillic`; guard `perfect_kernel_batch77s::t2a_cyrillic_i_and_je_are_cyrillic`.
+
+## 1265. A constructor's `require_math` warning names the command it reverts as
+
+**Formerly OXIDIZED_DESIGN_DIVERGENCES #889** (moved 2026-11-14: a Perl defect and its Rust fix, not a design divergence).
+
+Perl's `requireMath` (Package.pm:1466) warns with the definition's own name. A constructor defined with an `alias`
+stands in for another command — the Springer classes' `\vec` is `\lx@sv@vec@boldmath` reverting as `\vec`
+(sv_support_sty.rs), fourier's `\math@bb` reverts as `\mathbb` (fourier_sty.rs:15) — so its text-mode warning named an
+internal macro the author never wrote, where pdflatex's "Missing $ inserted" is at the author's command. Ours (79d,
+dialect.rs `def_constructor`): the warning names the `alias` when it is a control sequence ("\vec should only appear in
+math mode", "\mathbb …"); an empty alias (latexml_sty's `alias => ""` entries) keeps the definition's name. No robust
+constructor uses `require_math`. Repro class-bindings/llncs_text_mode_vec_warns_as_vec; guard
+`perfect_kernel_batch79d::llncs_text_mode_vec_warns_as_vec`.
+
+## 1266. The observer places an entry's one-address e-mail call by the charter's chain, not on every name carrying the entry's label, and llncs's one institute no `\inst{n}` picks on every author (Perl: the call inherits its `\institute` entry's label, copied onto every carrier; the one institute on the first author)
+
+**Formerly OXIDIZED_DESIGN_DIVERGENCES #917** (moved 2026-11-14: a Perl defect and its Rust fix, not a design divergence).
+
+Frontmatter refactor stage 7, the llncs and aa move (task #429; `agent_reports/2026-10-29_s6_aa_llncs_gate.md` §2, G3).
+The rule is the resolver's (`observer/resolver`), whose decisions the emitter writes since the flip (OXIDIZED_DESIGN_DIVERGENCES #980).
+
+- **The defect.** llncs and aa (inst_support's `\institute`) print the `\institute` list once under the names, an
+  `\email` inside an entry once, under its institute. Perl, and our reader before this rule (both through the entry's label,
+  `\lx@add@affiliation[labelseq=affiliation]` / `\lx@add@contact[role=affiliation,labelseq=affiliation]`)
+  gave the address to every name carrying the entry's `\inst{n}`: `ann.able@x.org` on Ann Able and on
+  Cid Cole (1606.03774, 2204.03161; aa 0901.4618's `nuccio.lanza@`, 1401.5494's `lfossati@`). A Perl-origin defect;
+  reach in the census, a one-address inner e-mail on two or more carriers: aa 142 of 559
+  papers, llncs 77 of 686.
+- **The rule** (`Resolver::answer_inner_emails`, run after `answer_pending`'s loop, whose legend notes the
+  corresponding step reads): an `email` contact recorded `api:inner-contact` that prints one address (one printing
+  several is written out, `ruling3:written-out`) goes by FIDELITY_CHARTER §4's chain exactly, never bare position and
+  no elimination — the author it spells, any live author (an address under institute 2 may spell an author of
+  institute 1); else the entry's only live carrier; else the block, once (a group's shared address under an institute
+  two names carry, spelling neither; a template, `\{first.last\}@x.org`, `owner:pattern`). Then the charter's
+  corresponding step, once over every address the post-pass placed (these and the `_share` entry's lines below:
+  `Resolver::place_emails_left`, the one helper): the ONE address left on the block of a multi-author paper — no
+  other of them left, no e-mail on the block already — goes to the one of its candidates (an entry's carriers, a
+  shared entry's live authors) marked the corresponding author (`Resolver::corresponding`, a "Corresponding author"
+  note) who holds no other address; a template and a list of local parts the reader cannot part stay the block's, and
+  a template counts as left (a template under Univ X and `office@y.org` under Univ Y are two left: review rev92b_r2
+  S1, where `office@y.org` went to the corresponding Ann Able; `llncs_inner_pattern_and_entry_email_are_the_blocks`).
+  Two left are each the block's, though one corresponding author carries both entries (review rev92b_r1 B2: llncs
+  `\author{Ann Able\inst{1,2}\thanks{Corresponding author.} \and Bob Baker\inst{1,2}}` gave `info@x.org` and
+  `office@y.org` both to Ann Able; 2408.14427's `\{first.last\}@uii-ai.com` under five authors went to Meng Zheng; kept:
+  2307.04136 `xfy_73…` Fengying Xie's, 2206.03049 `liuj@` Jiang Liu's). An entry no live name carries, its address
+  spelling no one, keeps the unrequested entry's placement. Each rule carries `owner:inner-email` on the association it decides (the change-tag list
+  `resolver::CHANGE_TAGS` went with the census, DEL4).
+- **A line break inside the call.** `\email{a@x.org \\ b@y.org}` prints one address a line (llncs's `{\tt#1}`); the
+  rehearsal's break whatsit was stringified into the verbatim argument (`a@x.org\lx@fm@obs@breakb@y.org`, one address
+  that spelled its first author, 2608.29307). `events::raw_lines` reads an e-mail call's argument with each break a
+  space, so its addresses are several, each written out.
+- **Census** (re-resolved from the 92a r5 census dumps; the line-break reading needs a reconversion): unclassified aa
+  57 → 38 of 554 papers, llncs 81 → 58 of 463; the G3 decisions on a disagreement: aa 426 spelled, 94 block, 2 only
+  carrier; llncs 173 spelled, 105 block, 8 corresponding, 4 only carrier.
+- **85b's `_share` port** (gate study row 4, llncs class S, 19 papers: 1912.11606, 2302.05745; OD #901). llncs's one
+  `\institute`, no `\and` in it (`\lx@llncs@institute@sole`, `_share=authors`), prints unnumbered under the whole row of
+  names; the resolver read its number 1, which no name requests, and left it on the block. Now (`Resolver::shared`,
+  `share_unpicked`, `answer_shared_emails`) it is every live author's (`api:share:authors`) unless a mark picks it, as
+  `marks_pick` reads one: a live name shows the class's own request of a number (`\inst{n}`; the requests the
+  class's request commands made, `Resolver::class_requests`, Mark role `inst`/`request` or `annotations=` — a hand-typed
+  `$^{1}$`, `\inst{*}`, `\inst{}` pick nothing: 2607.02596, 2207.04574, 2604.20229), a name shows a number other than
+  1 by hand, or the entry holds a mark of its own. Its e-mail calls go by the charter's chain over the live authors,
+  as `row_email_calls` does: spelled; the entry's addresses one per author in order (`owner:order`); one author;
+  else the block (a template's too), the corresponding step above taking the one address left. No elimination. A list of local parts the address reader cannot part (`(npalmer|pwg)@…`,
+  cs0607047) spells no one (`Resolver::spelled`, as `spelled_owner`, user ruling R10). Census: llncs
+  unclassified 58 → 41 of 463 (17 of the 19 class-S papers agree; 2104.12226 and cs0607047 keep a note and a residual).
+- Repros class-bindings/`llncs_inner_email_is_its_spellers`, `llncs_inner_shared_email_is_the_blocks`,
+  `llncs_inner_email_is_the_corresponding_carriers`, `aa_inner_email_is_its_spellers`,
+  `llncs_inner_email_lines_are_each_written_out`, `llncs_sole_institute_is_every_authors_in_order`,
+  `llncs_sole_institute_emails_by_the_chain`, `llncs_sole_institute_shared_address_is_the_blocks`,
+  `llncs_sole_institute_picked_by_inst`, `llncs_inner_emails_left_are_each_the_blocks`,
+  `llncs_inner_pattern_email_is_the_blocks`, `llncs_inner_pattern_and_entry_email_are_the_blocks`; guards
+  `perfect_kernel_batch92b::an_entry_email_printing_one_address_is_placed_by_the_chain`,
+  `perfect_kernel_batch92b::a_sole_institute_no_inst_picks_is_every_authors`.
+
+## 1267. `\framebox[w]` measures as an object address
+
+**Formerly OXIDIZED_DESIGN_DIVERGENCES #327** (moved 2026-11-14; its parity changes, Perl's own behaviour, were dropped).
+
+**Perl source:** `LaTeXML/Engine/latex_constructs.pool.ltxml` lines 4696–4712 (`\@framebox[Dimension][]{}`, `sizer => '#3'`, `width => $width` stored as given).
+
+**Symptom:** a `\framebox[w]{…}` box measures 1568748557.57892pt wide (Perl stores the digested width argument, and its size reads the object's address).
+
+**Fixed in Rust:** the size code (`get_size`) reads only typed sizes, and box sizes are stored as `Dimension`s:
+- `\framebox[w]` stores its width typed (sect12.rs), so it measures w: latex.ltx:16196-16229 puts the frame inside the width. Perl stores the digested argument, which measures 1568748557.57892pt, an object address.
+- `node_box_append::replacing_a_node_keeps_the_boxes`: the `\parbox{2cm}` node's picture is 97.93 (Perl 97.92). Its box is 63.70549pt, pdflatex's to the sp.
+- rotman's isorot wheel (a `\savebox` holding `{sideways}`) is 93.14pt wide (Perl 163.75pt, pdflatex 101.99pt). The remaining gap is the document's 11pt font, which is measured here at 10pt.
+
+**Guards**:
+- `perfect_kernel_batch56::{box_sizes_are_their_constructed_sizes, a_box_width_does_not_break_its_contents}`
+- repro `boxes-groups/box_dimensions_measured.tex`
+
+**Open (K18 step 2):** `\raisebox`'s `[height][depth]` (RED `boxes-groups/raisebox_optionals_measure_the_box.tex`), `\resizebox{1em}`'s last digits, makecell/diagbox string sizes: `docs/perfect_kernel/OPEN_ROWS.md` ODR5.
