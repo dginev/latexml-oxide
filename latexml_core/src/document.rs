@@ -5778,7 +5778,9 @@ impl Document {
   }
 
   /// Perl `Document.pm:removeNode` L1783-1792, "Don't remove insertion point!": a point at or inside `subtree`
-  /// moves to `parent`, or to the root element when the subtree is already detached.
+  /// moves to `parent`. When the subtree is already detached it moves to the root element: our own choice (Perl's
+  /// `removeNode` assumes a parent, :1793, and the math parser's unbound children, MathParser.pm:330, keep its point
+  /// alive in the garbage tree); nothing is built after the post-build math parse, so no content moves (issue #790).
   fn keep_point_out_of(&mut self, subtree: &Node, parent: Option<&Node>) {
     if xml::is_descendant_or_self(&self.node, subtree)
       && let Some(target) = parent.cloned().or_else(|| self.document.get_root_element())
