@@ -19809,6 +19809,7 @@ xmllint --xpath "descendant-or-self::b[@idref='x']" big.xml   # <b idref="x"/>
 Rust builds one `idref → nodes` index by a tree walk on the first collapse that needs it (`Document::idref_index`),
 kept current by `remove_node` and `merge_attributes`, and renames through it; output byte-identical. The other
 whole-document `//*[pred]` queries of the core's finalization (`cleanup_unreferenced_xmtok_ids`,
-`load_labels_for_rewrite` = Rewrite.pm:38's `//*[@labels]`, `prune_dangling_split_xmrefs`) are tree walks too
-(`Document::find_elements`). Guard `perfect_kernel_batchi802::collapsed_dual_references_take_the_branch_id`. An upstream
-offer.
+`load_labels_for_rewrite` = Rewrite.pm:38's `//*[@labels]`, `prune_dangling_split_xmrefs`, and `record_node_ids` /
+`unrecord_node_ids`, which `rebuild_idstore_from_dom` runs from the root) are tree walks too (`Document::find_elements`,
+`xml::descendant_or_self_elements`). Guard `perfect_kernel_batchi802::collapsed_dual_references_take_the_branch_id`.
+An upstream offer.

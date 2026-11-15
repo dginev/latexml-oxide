@@ -4900,7 +4900,8 @@ impl Document {
   pub fn record_node_ids(&mut self, node: &Node) -> Result<()> {
     use rustc_hash::FxHashMap;
     let mut rename: FxHashMap<String, String> = FxHashMap::default();
-    for mut idnode in self.findnodes("descendant-or-self::*[@xml:id]", Some(node)) {
+    // `descendant-or-self::*[@xml:id]` as a walk: finalize's rebuild runs it from the root (#802).
+    for mut idnode in xml::descendant_or_self_elements(node, |n| n.has_attribute_ns("id", XML_NS)) {
       if let Some(id) = idnode.get_attribute_ns("id", XML_NS) {
         let newid = self.record_id_with_node(&id, &idnode);
         if newid != id {
@@ -4910,7 +4911,7 @@ impl Document {
       }
     }
     if !rename.is_empty() {
-      for mut xmref in self.findnodes("descendant-or-self::*[@idref]", Some(node)) {
+      for mut xmref in xml::descendant_or_self_elements(node, |n| n.has_attribute_no_ns("idref")) {
         if let Some(idref) = xmref.get_attribute("idref")
           && let Some(new) = rename.get(&idref)
         {
@@ -5028,7 +5029,7 @@ impl Document {
   }
 
   pub fn unrecord_node_ids(&mut self, node: &Node) {
-    for idnode in self.findnodes("descendant-or-self::*[@xml:id]", Some(node)) {
+    for idnode in xml::descendant_or_self_elements(node, |n| n.has_attribute_ns("id", XML_NS)) {
       if let Some(id) = idnode.get_attribute_ns("id", XML_NS) {
         self.unrecord_id(&id);
       }
@@ -6398,8 +6399,8 @@ impl Document {
       self.unrecord_id(&dualid); // We'll move or remove the ID from the dual
       if let Some(branchid) = branch.get_attribute_ns("id", XML_NS) {
         // branch has id too! Change dualid refs to branchid (Perl's `//*[@idref='$dualid']`, Document.pm:1643, #802)
+        // No freed handle can be here: remove_node unindexes a subtree's references before discard_subtree frees it.
         let mut refs = self.idref_index().remove(&dualid).unwrap_or_default();
-        refs.retain(|tref| !tref.is_null());
         for tref in &mut refs {
           tref.set_attribute("idref", &branchid)?;
         }
@@ -6440,6 +6441,7 @@ impl Document {
       && let Some(idref) = node.get_attribute_no_ns("idref")
       && let Some(refs) = index.get_mut(&idref)
     {
+      // O(references to this idref) per removed node: a bucket is a dual's few references.
       refs.retain(|tref| tref != node);
     }
   }
