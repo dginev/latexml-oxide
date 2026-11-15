@@ -1,0 +1,25 @@
+% latex.ltx:17664 `\@footnotetext` and :16350 `\@mpfootnotetext` `\def\@currentcounter{footnote|mpfootnote}` before the
+%   note's text, and amsmath steps `equation` before a row's `\label` runs; LaTeXML's `\lx@note` steps in its properties,
+%   after the text, and an align/gather row after its cells (Perl's order), so a `label` hook there reads the enclosing
+%   counter (the State `current_counter` too).
+% witness: synthetic (siblings of unbtex-example's `\@currentcounter`, CURCTR; zref-clever's `label` hook reads it).
+% status:  RED
+% oracle:  pdflatex 0 errors; "Labels: [f1:footnote/1][mf:mpfootnote/a][a1:equation/1][a2:equation/2][g1:equation/3]."
+% engines: rust CURCTR: 0 errors, "[f1:section/1][mf:section/1][a1:section/1][a2:equation/1][g1:section/1]";
+%          MAIN882: 5 errors, "/0" each.
+% expect:  0 errors, 0 warnings; the labels pdflatex prints.
+% moves:   post-merge (a step before the body it numbers: `\lx@note`'s properties, sect03.rs; amsmath's row step)
+\documentclass{article}
+\usepackage{amsmath}
+\makeatletter
+\AddToHookWithArguments{label}{\xdef\lastctr{\lastctr[#1:\@currentcounter/\csname the\@currentcounter\endcsname]}}
+\makeatother
+\def\lastctr{}
+\begin{document}
+\section{One}
+Note\footnote{N\label{f1}}.
+\begin{minipage}{3cm}M\footnote{m\label{mf}}\end{minipage}
+\begin{align}a&=b\label{a1}\\c&=d\label{a2}\end{align}
+\begin{gather}e\label{g1}\end{gather}
+Labels: \lastctr.
+\end{document}

@@ -14,14 +14,16 @@
 # run over the html root unchanged (S3_EXT=html). Resumable: docs with a
 # verdict row are skipped. Env: JOBS (4), TIMEOUT_S (180), WORKER_BIN.
 #
-# POST_MODE=mono runs the whole pipeline in ONE process per doc — `.tex` →
+# POST_MODE (default mono) — mono runs the whole pipeline in ONE process per doc — `.tex` →
 # `.html` with the sweep's preload (run_doc.sh's raw-interpretation profile and
 # its lualatex-oracle gate) — instead of post-processing the sweep's core XML
 # with `--whatsin=xml`. The split form rebuilds the bibliography session from
 # the preloads only, so preamble macros used inside `.bib` fields
 # (`\mkbibemph`, `\onethird`, `\cmslink` — biblatex-chicago and friends) come
 # back undefined there and only there; the monolithic form is what a user runs
-# and is the audit's post pass of record (LEDGER 2026-09-17). `CORPUS`
+# and is the audit's post pass of record (LEDGER 2026-09-17), so the default
+# (`POST_MODE=split` keeps the core-XML form; under it sweep #187 lost the
+# `filecontents` bibliographies the mono pass keeps). `CORPUS`
 # (default `~/data/perfect_kernel/corpus.tsv`) supplies each doc's `.tex`.
 set -uo pipefail
 # Absolute: each doc runs from its own output directory (`cd "$out"`), so a
@@ -33,7 +35,7 @@ JOBS="${JOBS:-4}"
 TIMEOUT_S="${TIMEOUT_S:-180}"
 BIN="${WORKER_BIN:-$HOME/data/pk_bin/latexml_oxide.sweep75}"
 DOCROOT="${DOCROOT:-$(kpsewhich -var-value=TEXMFDIST)/doc/latex}"
-POST_MODE="${POST_MODE:-split}"
+POST_MODE="${POST_MODE:-mono}"
 CORPUS="${CORPUS:-$HOME/data/perfect_kernel/corpus.tsv}"
 export XMLROOT HTMLROOT TIMEOUT_S BIN DOCROOT POST_MODE CORPUS
 mkdir -p "$HTMLROOT"

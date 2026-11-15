@@ -14,6 +14,8 @@
 //! ahead of `\AtEndOfPackage`, `env/abstract/begin|end`, `selectfont` (RED catalog: `selectfont_hook_on_emph_red`).
 //! QAB2b: the abstract's begin hook ahead of its name, its end hook once, a family register's font value (RED catalog:
 //! `abstract_begin_hook_size_under_the_class_small_red`, `amsart_abstract_begin_hook_text_before_the_title_red`).
+//! CURCTR: the `label` hook reads the `\@currentcounter` `\refstepcounter` sets (RED catalog:
+//! `label_hook_currentcounter_stepped_after_the_body_red`).
 use latexml::util::test::{
   RequirementTable, Requirements, assert_element, check_table, convert_with, current_test_name,
 };
@@ -465,6 +467,49 @@ const ROWS: &[Row] = &[
       "xml:id=\"S1.p1.1\"",
       r#"<p xml:id="S1.p1.1">See <ref labelref="LABEL:s:a" show="creftype~creflabel"/>.</p>"#,
     )],
+  },
+  // CURCTR: `\refstepcounter` sets `\@currentcounter`, which the `label` hook reads (unbtex-example; red: "/0." each, 25
+  // errors `You can't use } after \the`).
+  Row {
+    name:     "label_hook_reads_currentcounter",
+    tex:      include_str!(
+      "../../../tools/perfect_kernel/repros/macro-state/label_hook_reads_currentcounter.tex"
+    ),
+    counts:   (0, 0),
+    messages: &[],
+    absent:   &[],
+    elements: &[
+      (
+        "p",
+        "xml:id=\"S1.p1.1\"",
+        r#"<p xml:id="S1.p1.1">Section: section/1.</p>"#,
+      ),
+      (
+        "p",
+        "xml:id=\"S1.p1.2\"",
+        r#"<p xml:id="S1.p1.2">Item: enumi/2.</p>"#,
+      ),
+      (
+        "p",
+        "xml:id=\"S1.p1.3\"",
+        r#"<p xml:id="S1.p1.3">Equation: equation/1.</p>"#,
+      ),
+      (
+        "p",
+        "xml:id=\"S1.p1.4\"",
+        r#"<p xml:id="S1.p1.4">Eqnarray: equation/2.</p>"#,
+      ),
+      (
+        "p",
+        "xml:id=\"S1.p2.1\"",
+        r#"<p xml:id="S1.p2.1">Lemma: thm/1.</p>"#,
+      ),
+      (
+        "p",
+        "xml:id=\"S1.p3.1\"",
+        "<p xml:id=\"S1.p3.1\">Figure: figure/1.\n\nGroup: section/1.</p>",
+      ),
+    ],
   },
   // QA47B: `\include`'s hooks around the file, and the excluded ones (red: "Text.\nChapter text.\nMore.").
   Row {
