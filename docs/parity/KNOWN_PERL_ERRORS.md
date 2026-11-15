@@ -19830,3 +19830,20 @@ whole-document `//*[pred]` queries of the core's finalization (`cleanup_unrefere
 `unrecord_node_ids`, which `rebuild_idstore_from_dom` runs from the root) are tree walks too (`Document::find_elements`,
 `xml::descendant_or_self_elements`). Guard `perfect_kernel_batchi802::collapsed_dual_references_take_the_branch_id`.
 An upstream offer.
+
+## 1273. A `\parbox` sets `\textwidth` and `\columnwidth` to its width
+
+latex.ltx:16249-16253 `\@iiiparbox` sets `\hsize` to the box's width and runs `\@parboxrestore`, whose
+`\@arrayparboxrestore` sets `\linewidth\hsize` and `\@totalleftmargin\z@` (:16272-16288); `\textwidth` and `\columnwidth`
+stay the enclosing ones. Only a minipage sets them (`\@iiiminipage`, :16312-16313). Perl's `\parbox` macro assigns
+`\hsize=#4\textwidth\hsize\columnwidth\hsize` (latex_constructs.pool.ltxml:4753), so a width stated against the page
+inside a parbox is a fraction of the box. Minimal trigger:
+`\parbox{0.44\textwidth}{\includegraphics[width=0.44\textwidth]{a}\the\textwidth}` — pdflatex "345.0pt" and a
+151.8pt graphic; Perl "151.80084pt" and 66.79pt. About 1,640 arXiv papers state a page width in a parbox's body (QA14
+census). Fixed in Rust (QA14A): `\lx@parbox@restore` (latex_constructs/sect12.rs) sets `\hsize`, `\linewidth` and
+`\@totalleftmargin` only, and the panel grid rule reads a parbox's content again against the enclosing `\textwidth` and
+`\columnwidth` (`declare_panel_parbox_line`, `BoxSets::Line`; a minipage's against its own). A sub-float no longer
+takes `beforeFloat`'s `\hsize := \columnwidth` (:3377), which only `\@xfloat`/`\@dblfloat` assign (latex.ltx:17482,
+:17556): a `\subcaptionbox` in a parbox or a `p` cell reads the box's `\hsize` (`begin_float`, latex_constructs/mod.rs;
+witness 2010.06608 S4.F8). Witnesses 1412.0314, 1711.09469. Guard
+`perfect_kernel_batchqa14a::parbox_sets_only_the_line_width`. An upstream offer.

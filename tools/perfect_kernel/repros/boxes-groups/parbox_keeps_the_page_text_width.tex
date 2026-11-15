@@ -1,0 +1,31 @@
+% witness: QA14 census (report_QA14.tsv, ~1,640 arXiv papers: \parbox{w}{...\textwidth|\columnwidth...}); 1412.0314,
+%          1711.09469 (\parbox{0.44\textwidth}{\includegraphics[width=0.44\textwidth]{...}})
+% oracle:  pdflatex 0 errors. latex.ltx:16249-16253 \@iiiparbox sets \hsize, \@parboxrestore (:16272-16288)
+%          \linewidth\hsize; \textwidth and \columnwidth stay the page's. \@iiiminipage (:16312-16313) sets them too.
+%          Each line prints \textwidth \columnwidth \linewidth \hsize:
+%          A 345.0pt 345.0pt 151.80084pt 151.80084pt (the image 0.44 x 345pt = 151.8pt)
+%          B 151.80084pt x4 (minipage; the image 66.79pt)   C 345.0pt 345.0pt 172.5pt 172.5pt (\fbox{\parbox})
+%          D 172.5pt x4 (a minipage in a parbox)   E 172.5pt 172.5pt 86.25pt 86.25pt (a parbox in a minipage)
+%          F 345.0pt 345.0pt 172.5pt 172.5pt (a parbox in a p cell)   G 345.0pt 345.0pt 103.50105pt 103.50105pt
+% engines: rust (main 75531ffc9d6) and Perl (latex_constructs.pool.ltxml:4753): a parbox sets all four to its
+%          width, A "151.80084pt" x4 and its image 66.79274pt (KNOWN_PERL_ERRORS #1273)
+% expect:  0 errors, 0 warnings; the widths pdflatex prints, the A image width=151.80084pt
+% status:  RED (75531ffc9d6) -> GREEN (QA14A)
+\documentclass{article}
+\usepackage{graphicx}
+\newcommand\W{\the\textwidth\ \the\columnwidth\ \the\linewidth\ \the\hsize}
+\begin{document}
+\parbox{0.44\textwidth}{\includegraphics[width=0.44\textwidth]{a.png}A \W}
+
+\begin{minipage}{0.44\textwidth}\includegraphics[width=0.44\textwidth]{b.png}B \W\end{minipage}
+
+\fbox{\parbox{0.5\textwidth}{C \W}}
+
+\parbox{0.5\textwidth}{\begin{minipage}{0.5\textwidth}D \W\end{minipage}}
+
+\begin{minipage}{0.5\textwidth}\parbox{0.5\textwidth}{E \W}\end{minipage}
+
+\begin{tabular}{p{0.4\textwidth}}\parbox{0.5\textwidth}{F \W}\end{tabular}
+
+\parbox[t][3cm][s]{0.3\textwidth}{G \W}
+\end{document}

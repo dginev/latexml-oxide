@@ -4174,8 +4174,12 @@ fn begin_float(
   } else {
     "\\columnwidth"
   };
-  let dim_val = lookup_dimension(dim_name).unwrap_or_default();
-  assign_register("\\hsize", dim_val.into(), None, Vec::new()).ok();
+  // latex.ltx:17482, :17556 (`\@xfloat`, `\@dblfloat`); a sub-float (`preincrement`, caption.sty's sub-types) sets no
+  // `\hsize`, subcaption's minipage its own (`set_minipage_width`): `\subcaptionbox` in a `\parbox` (2010.06608 S4.F8).
+  if preincrement.is_none() {
+    let dim_val = lookup_dimension(dim_name).unwrap_or_default();
+    assign_register("\\hsize", dim_val.into(), None, Vec::new()).ok();
+  }
   // The real line the float's panels are set in rows against (`install_panel_line`), in a float not inside another.
   if !in_float {
     install_panel_line(double);
@@ -4694,19 +4698,49 @@ pub fn declare_panel_width(cs: &str, arg: usize, keys: &[&str], height_keys: &[&
 }
 
 /// The state value marking a construct that sets its content in a parbox of the width it states
-/// (`declare_panel_parbox_width`), by the construct's control sequence.
+/// (`declare_panel_parbox_width`), by the construct's control sequence: which registers it sets (`BoxSets`).
 fn panel_parbox_key(cs: &str) -> String { s!("lx@panel@parbox@{cs}") }
 
+/// Which of `LINE_REGISTERS` a box of a stated width sets to that width: all four (latex.ltx:16312-16313
+/// `\@iiiminipage`), or a `\parbox`'s `\linewidth` and `\hsize` alone (:16253 `\@iiiparbox`, :16280 `\@parboxrestore`).
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum BoxSets {
+  All,
+  Line,
+}
+
 /// A binding declares a construct that states its width as its argument `arg` (`declare_panel_width`) and sets its
-/// content in a parbox of that width — a `{minipage}`, a `\parbox`, a sub-figure — whose `\linewidth`, `\hsize`,
-/// `\textwidth` and `\columnwidth` are that width (latex.ltx:16312-16313 `\@iiiminipage`; for a `\parbox`, Perl's
-/// latex_constructs.pool.ltxml:4746 `\hsize=#4\textwidth\hsize\columnwidth\hsize`, where latex.ltx:16249-16253
-/// `\@iiiparbox` sets only `\hsize` and, by `\@parboxrestore`, `\linewidth`: the widths are evaluated as we digest
-/// the box): its content's stated widths are evaluated against it (`note_stated_widths_in`). An `\hbox`'s
-/// (`\makebox[w]`, `\resizebox{w}{!}`) content is set at the enclosing line.
+/// content in a minipage of that width — a `{minipage}`, a sub-figure — whose `\linewidth`, `\hsize`, `\textwidth`
+/// and `\columnwidth` are that width (latex.ltx:16312-16313 `\@iiiminipage`): its content's stated widths are
+/// evaluated against it (`note_stated_widths_in`). An `\hbox`'s (`\makebox[w]`, `\resizebox{w}{!}`) content is set
+/// at the enclosing line.
 pub fn declare_panel_parbox_width(cs: &str, arg: usize) {
   declare_panel_width(cs, arg, &[], &[]);
-  assign_value(&panel_parbox_key(cs), true, Some(Scope::Global));
+  assign_value(
+    &panel_parbox_key(cs),
+    Stored::Bool(true),
+    Some(Scope::Global),
+  );
+}
+
+/// As `declare_panel_parbox_width`, for a `\parbox` (`BoxSets::Line`): its `\textwidth` and `\columnwidth` are the
+/// enclosing ones (KNOWN_PERL_ERRORS #1273).
+pub fn declare_panel_parbox_line(cs: &str, arg: usize) {
+  declare_panel_width(cs, arg, &[], &[]);
+  assign_value(
+    &panel_parbox_key(cs),
+    Stored::Bool(false),
+    Some(Scope::Global),
+  );
+}
+
+/// What a construct's box sets of `LINE_REGISTERS` (`declare_panel_parbox_width`, `declare_panel_parbox_line`).
+fn panel_box_sets(cs: &str) -> Option<BoxSets> {
+  match lookup_value(&panel_parbox_key(cs)) {
+    Some(Stored::Bool(true)) => Some(BoxSets::All),
+    Some(Stored::Bool(false)) => Some(BoxSets::Line),
+    _ => None,
+  }
 }
 
 /// What a construct states its size with (`declare_panel_width`), where it was kept (`KEEP_STATED_LENGTHS`): the tokens
@@ -4725,8 +4759,9 @@ struct StatedSize {
   /// The width and the height the construct was given (a positional argument's digested value, a `width=`'s, a
   /// `height=`'s), which the stated tokens must give again at the registers' geometry (`note_stated_widths_in`).
   given:       (Option<f64>, Option<f64>),
-  /// The construct sets its content in a parbox of its stated width (`declare_panel_parbox_width`).
-  parbox:      bool,
+  /// The construct sets its content in a box of its stated width, and which registers that sets
+  /// (`declare_panel_parbox_width`).
+  parbox:      Option<BoxSets>,
 }
 
 /// What `whatsit` states its size with (`StatedSize`), if its binding declared where (`declare_panel_width`). A width or
@@ -4770,7 +4805,7 @@ fn stated_size_of(whatsit: &Whatsit) -> std::result::Result<Option<StatedSize>, 
           keep_within: false,
           value,
           given: (value, None),
-          parbox: lookup_bool(&panel_parbox_key(&cs)),
+          parbox: panel_box_sets(&cs),
         })),
         Some(_) => Ok(None),
         // (a length given whose tokens were not kept: a box built before the float; one a binding gave and withheld,
@@ -4812,7 +4847,7 @@ fn stated_size_of(whatsit: &Whatsit) -> std::result::Result<Option<StatedSize>, 
         keep_within: kv.has_key("keepaspectratio"),
         value:       None,
         given:       (given(width), given(height)),
-        parbox:      false,
+        parbox:      None,
       }))
     },
   }
@@ -4984,13 +5019,15 @@ struct PanelLineContext {
 }
 
 impl PanelLineContext {
-  /// Inside a box of `ours`/`real` width (a minipage sets `\textwidth`, `\columnwidth`, `\hsize` and `\linewidth` to
-  /// its width, latex.ltx `\@iiiminipage`).
-  fn inside(ours: i64, real: i64) -> Self {
-    PanelLineContext {
-      ours: [ours; 4],
-      real: [real; 4],
+  /// Inside a box of `ours`/`real` width, which sets the registers `sets` names (`BoxSets`).
+  fn inside(self, sets: BoxSets, ours: i64, real: i64) -> Self {
+    let from = if sets == BoxSets::All { 0 } else { 2 };
+    let mut inner = self;
+    for i in from..4 {
+      inner.ours[i] = ours;
+      inner.real[i] = real;
     }
+    inner
   }
 }
 
@@ -5232,8 +5269,8 @@ fn note_stated_widths_in(
     // sub-figures, 2504.07193 Fig 5; an `\hbox`'s content is set at the enclosing line, `declare_panel_parbox_width`)
     if let Some((ours, real)) = width {
       note(notes, PANEL_LINE, real as f64);
-      if stated.parbox {
-        inner = PanelLineContext::inside(ours, real);
+      if let Some(sets) = stated.parbox {
+        inner = context.inside(sets, ours, real);
       }
       stated_width = true;
     }
