@@ -69,6 +69,12 @@ pub const FRONTMATTER_CONVENTIONS: FmConventions = FmConventions {
   binding: "iopart_support.sty",
   email_owner: FmEmailOwner::SpelledElseOrder,
   call_is_group: true,
+  // (iopart.cls:98 `\newcommand\maketitle{\newpage}`; its `\title` :106-118 and `\author` :225-231 print where they
+  // stand: 2606.08462, 1407.1223)
+  title_page: FmTitlePageDecl {
+    setter_print: &[("iopart.cls", "iopart.cls:98, :106-118, :225-231")],
+    ..FM_KERNEL_CONVENTIONS.title_page
+  },
   cite: "iopart.cls:225-231, 363-364; OD #806 (2311.12551), #808 (2407.14305, 2311.07087, 2311.17496), #809 \
          (2504.15015)",
   ..FM_KERNEL_CONVENTIONS

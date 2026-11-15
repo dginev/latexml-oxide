@@ -731,14 +731,16 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
     // anchors it (a superset of #242, which placed at the current point when a
     // pagebreak sat between the titlepage and `\maketitle` — no corpus doc has that
     // shape; the anchored tree is the valid one); preamble residue ahead of it moves
-    // behind it, and visible body content ahead of it stays in order after the
-    // head-placed frontmatter (#262; Perl's current-point placement stranded the
-    // title — amsldoc/tkz-doc/tuda-ci/tzplot and the logo-cover controls).
-    place_frontmatter(doc, false, FrontmatterAnchor::LeadingFrontmatter)?;
+    // behind it, and a section, TOC or float ahead of it follows the head-placed
+    // frontmatter (#262; Perl's current-point placement stranded the title —
+    // amsldoc/tkz-doc/tuda-ci/tzplot and the logo-cover controls).
+    let before = place_frontmatter(doc, false, FrontmatterAnchor::LeadingFrontmatter)?;
     // What the document printed of the marked fields before its `\maketitle` is their ink (`\lx@field@mark`).
     if lift_marked_field_ink(doc)? {
       assign_value("lx_title_ink_dedup_done", true, Some(Scope::Global));
     }
+    // (the text it printed before, which `\lx@text@before@title` keeps ahead of the title block where it prints here)
+    hold_text_before_title(before);
   },
   after_digest => {
     // (a binding's `\maketitle` has no deposit: what the document gave the raw setters before it is read here,
@@ -754,6 +756,20 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
     // An abstract queued from here on is LATE (`\lx@frontmatter@mark`'s `late`, OXIDIZED_DESIGN_DIVERGENCES #903).
     assign_value("lx_frontmatter_here_digested", true, Some(Scope::Global));
   });
+
+  // The text a `\maketitle` flush found before it stays ahead of the title block, as the PDF prints it, where the class's
+  // title page prints the title or its authors at this `\maketitle` (the deposit's reading, `note_title_page_print`;
+  // QA91, BM's probe Q2.3), not where they print at their setters or never (iopart.cls:98 `\maketitle{\newpage}`;
+  // 2606.08462, 1407.1223).
+  DefConstructor!("\\lx@text@before@title", sub[doc, _args, props] {
+    if let Some(before) = take_text_before_title()
+      && matches!(props.get("prints"), Some(Stored::Bool(true)))
+    {
+      wrap_text_before_title(doc, before)?;
+    }
+  },
+  properties => sub[_args] { Ok(stored_map!("prints" => lookup_bool("lx_maketitle_prints_title"))) },
+  reversion => "");
 
   // Same, but put it at the beginning of document, but after any ltx:resources
   DefConstructor!("\\lx@frontmatter@fallback", sub[document,_args] {

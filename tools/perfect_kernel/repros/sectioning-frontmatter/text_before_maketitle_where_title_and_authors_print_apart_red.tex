@@ -1,0 +1,27 @@
+% mechanism: QA91's wrap (`\lx@text@before@title`) makes one yes/no for the whole title block (sect05.rs
+%   `note_title_page_print`: the reading reached `\@title` or `\@author`): a class printing the title at `\title` and
+%   the authors at `\maketitle` prints the text set between them after the title and before the authors, but the
+%   wrap puts it above both. Principle for the fix: decide on the printed title's words, per field.
+% witness: synthetic (revQAB4b finding 2, probe p7_mixed)
+% oracle:  pdflatex 0 errors (TL 2025, -no-shell-escape): "The Title", "Dated May 14th.", "A. Author", "Body."
+% engines: QAB4c and QAB4d: "Dated May 14th." in `<titlepage class="ltx_titlepage_before">` above `<title>`, then the
+%   creator, 0 errors, 0 warnings
+% expect:  "Dated May 14th." after `<title>` and before the creator, or (the schema's frontmatter group first) after the
+%   title block, as the base placed it
+% status:  RED (QAB4c, QAB4d)
+% moves:   post-merge (the wrap decided on the printed title's words, per field)
+% preload: ar5iv.sty
+\begin{filecontents*}[overwrite]{mixprint.cls}
+\NeedsTeXFormat{LaTeX2e}\ProvidesClass{mixprint}[2026/11/14 stand-in]
+\LoadClass{article}
+\renewcommand\title[1]{{\centering\Large #1\par}}
+\renewcommand\maketitle{{\centering\@author\par}}
+\end{filecontents*}
+\documentclass{mixprint}
+\begin{document}
+\title{The Title}
+\author{A. Author}
+Dated May 14th.
+\maketitle
+Body.
+\end{document}

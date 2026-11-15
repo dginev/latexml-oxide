@@ -76,6 +76,10 @@ pub struct TitlePageDecl {
   /// stands for the class's page, and the declaration ([`Self::author`]) answers. A class no declaration names is
   /// unknown: a document's `\@maketitle` is not taken for its page (`ledger::class_maketitle_runs`)
   pub maketitle_runs: &'static [(&'static str, MaketitleRuns, &'static str)],
+  /// the document classes (their bindings' file names) that print the title and the authors where they are set, their
+  /// `\maketitle` printing neither, each with the lines that show it: text set before `\maketitle` follows them there
+  /// (`\lx@text@before@title`, QA91)
+  pub setter_print:   &'static [(&'static str, &'static str)],
 }
 
 /// Whether a class's `\maketitle` runs `\@maketitle` ([`TitlePageDecl::maketitle_runs`]).
@@ -230,6 +234,7 @@ pub const KERNEL: Policy = Policy {
         "extbook.cls:191-276",
       ),
     ],
+    setter_print:   &[],
   },
   cite:              "Perl Base_Utility.pool.ltxml:676-700 (@authorsplits, positionOf); FIDELITY_CHARTER §4; OD #925",
 };
@@ -318,6 +323,19 @@ pub fn declared_maketitle_runs(binding: &str, class: &str) -> Option<MaketitleRu
         .iter()
         .find(|(name, ..)| *name == class)
         .map(|(_, runs, _)| *runs)
+    })
+  })
+}
+
+/// Whether `binding` declared that `class` (its binding's file name) prints the title and the authors at their setters
+/// ([`TitlePageDecl::setter_print`], any of its hooks).
+pub fn declared_setter_print(binding: &str, class: &str) -> bool {
+  declared(binding).is_some_and(|d| {
+    d.iter().any(|p| {
+      p.title_page
+        .setter_print
+        .iter()
+        .any(|(name, _)| *name == class)
     })
   })
 }

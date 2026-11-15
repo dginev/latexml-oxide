@@ -28,6 +28,26 @@
     OXIDIZED_DESIGN_DIVERGENCES #1) and registers its document namespaces. 17 Perl calls remain outside the
     dialect, listed at the end of `CHEATSHEET.md`. Guard
     `script_bindings::tests::package_pm_gap_calls_mean_what_perl_does`.
+  - **Text set before `\maketitle` stays above the title** (QA91, Bruce Miller's probe). A
+    preprint number, a copyright line or a journal heading the document typesets before
+    `\maketitle` came out after the title, the authors and the abstract; it now stays ahead of
+    them, as the PDF prints it, wherever the class's title page prints the title at
+    `\maketitle`. A class that prints the title and the authors where they are set (iopart)
+    keeps its order: text between them and `\maketitle` still follows them, and so does a
+    leftover mark that prints no word (a stray `]`, an affiliation mark `*1`). Guard
+    `perfect_kernel_batch56::text_before_maketitle_stays_before_the_title`
+    (OXIDIZED_DESIGN_DIVERGENCES #262).
+  - **A class's title page reads the date or the title as a number** (DEPN, Bruce Miller's
+    probe). A class whose title page computed with `\@date` (`\@tempcnta=\@date`,
+    `\advance\@tempcntb\@date`, `\ifnum`, `\numexpr`) printed "Exam session 0" with a
+    "Missing number" Warning, or lost its title-page block; it now prints "Exam session 2024"
+    as pdflatex. Guard `perfect_kernel_batch56::deposit_reads_a_field_as_a_number`
+    (OXIDIZED_DESIGN_DIVERGENCES #265).
+  - **A paper's own pre-2.0 `lni.cls` keeps LaTeX's `\author`** (LXAB). The lni binding gave
+    every lni paper the class's 2.0 author command (authblk's four arguments), so a paper
+    shipping an older class raised an Error, printed its author block a second time and gained
+    an ORCID link it never wrote (2203.09493, 1705.02823, 2210.04484). Guard
+    `perfect_kernel_batch68u::lni_authors_carry_email_orcid_and_affiliation`.
   - **The document body uses LaTeX's initialized hooks** (QA47B). `\begin{document}` now runs
     lthooks' initialization, as LaTeX does: a body `\UseHook` expands to the hook's code (an
     `\edef` holds the code, not `\hook_use:n`), and code added in the body is built into its hook

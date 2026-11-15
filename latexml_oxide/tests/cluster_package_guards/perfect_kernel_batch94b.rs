@@ -138,8 +138,15 @@ fn named_contacts(xml: &str) -> Vec<String> {
     .collect()
 }
 
-/// The text of the document's body: everything after its frontmatter, the first `<section` or `<para` on.
+/// The text of the document's body: everything after its frontmatter, the first `<section` or `<para` on — or, with
+/// text set before `\maketitle` kept ahead of the title (`ltx_titlepage_before`, QA91), everything from that text on
+/// but the document's title and creators: the rest of the frontmatter (an abstract, a date) included.
 pub(super) fn body_text(xml: &str) -> String {
+  if let Some(start) = xml.find(r#"<titlepage class="ltx_titlepage_before""#) {
+    let title = regex::Regex::new(r"(?s)<title>.*?</title>").unwrap();
+    let creators = regex::Regex::new(r"(?s)<creator .*?</creator>").unwrap();
+    return text(&creators.replace_all(&title.replace(&xml[start..], ""), ""));
+  }
   let at = [xml.find("<section"), xml.find("<para")]
     .into_iter()
     .flatten()
@@ -305,7 +312,7 @@ fn a_contact_in_running_text_stays_the_class() {
     );
     assert_eq!(
       body_text(&xml),
-      "E-mail: list@archive.org is the list. Write to the curator, E-mail: data@archive.org , until 2030. 1 1 §1 1 \
+      "Write to the curator, E-mail: data@archive.org , until 2030. E-mail: list@archive.org is the list. 1 1 §1 1 \
        Intro Body.",
       "streaming={streaming}"
     );

@@ -1,0 +1,22 @@
+% The control of `text_before_maketitle_where_the_title_prints_at_its_setter`: a raw class whose `\maketitle` prints
+% the title and the authors, so the text set before it precedes them on the page and stays ahead of the title block
+% (QA91, the deposit's reading: `\@title` reached the print).
+% witness: synthetic (revQAB4 B1's control)
+% oracle:  pdflatex 0 errors (TL 2025, -no-shell-escape): "Dated May 14th.", "The Title", "A. Author", "Body."
+% engines: QAB4 round 2 and QAB4c: the date in a before-titlepage above `<title>`
+% expect:  the date in `<titlepage class="ltx_titlepage_before">`, then `<title>`, the creator; 0 errors, 0 warnings
+% status:  GREEN (QAB4c); guard perfect_kernel_batch56::text_before_maketitle_stays_before_the_title
+% preload: ar5iv.sty
+\begin{filecontents*}[overwrite]{ownprint.cls}
+\NeedsTeXFormat{LaTeX2e}\ProvidesClass{ownprint}[2026/11/14 stand-in]
+\LoadClass{article}
+\renewcommand\maketitle{{\centering{\Large\@title\par}\@author\par}}
+\end{filecontents*}
+\documentclass{ownprint}
+\begin{document}
+\title{The Title}
+\author{A. Author}
+Dated May 14th.
+\maketitle
+Body.
+\end{document}
