@@ -142,7 +142,7 @@ fn scan_ids_and_pis_from(
         scan_ids_and_pis_from(document, c, has_dtd, ids, pis);
       },
       Some(NodeType::PiNode) if c.with_name(|name| name == "latexml") => {
-        pis.push(c.get_content());
+        pis.push(c.with_content(str::to_owned));
       },
       _ => {},
     }

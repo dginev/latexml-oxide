@@ -2682,7 +2682,7 @@ impl Document {
       },
       Some(NodeType::ElementNode) => {
         // Get the qualified name (prefix:localname) for namespace-prefixed elements
-        let local_name = node.get_name();
+        let local_name = node.with_name(str::to_owned);
         // Streaming assembly: a spill placeholder serializes as the processed
         // segment's text, spliced verbatim from disk (same depth/noindent by
         // construction — the segment was serialized with the exact values this
@@ -2829,7 +2829,7 @@ impl Document {
         }
       },
       Some(NodeType::TextNode) => {
-        out.push_str(&serialize_string(&node.get_content()));
+        node.with_content(|text| out.push_str(&serialize_string(text)));
       },
       Some(NodeType::PiNode) => {
         // should code this by hand, as well...
@@ -2842,7 +2842,9 @@ impl Document {
         }
       },
       Some(NodeType::CommentNode) => {
-        write!(out, "<!-- {}-->", serialize_string(&node.get_content())).ok();
+        node
+          .with_content(|text| write!(out, "<!-- {}-->", serialize_string(text)))
+          .ok();
       },
       _ => {},
     }
