@@ -36584,7 +36584,9 @@ LaTeXML.css shows every author's contacts only in a hover pop-up behind a blue s
 `ltx_authors_multiline` (KNOWN_PERL_ERRORS #1248); the XML cannot tell the line from a setter's `\affiliation{}`.
 **Rust.** A contact the emitter writes from the block's own text, where the last line break or column before it is a
 line break and no note holds it (`emit.rs` `on_an_author_line`; a printed line holds across its text and its word
-"and", and resets only at `\\`, an `\and` command or a column break such as `\alignauthor`: 1602.06359, 2605.17295),
+"and", and resets only at `\\`, an `\and` command, a column break such as `\alignauthor` — 1602.06359, 2605.17295 — or
+one of the reading's names, whose line prints what follows it beside the name: IEEE's grades on a names line continued
+past `\\`, 2408.01902, 2408.02464),
 carries `class=ltx_author_line`; so does an e-mail the Kind step splits out of such a line (`kind_entry_addresses`,
 the class handed to it by the emitter as `\lx@frontmatter@itemkinded`'s e-mail keys, never read back) and each `\\`
 line of Perl's split when the reading declines (`fallback.rs`; its address line's e-mail gets none,

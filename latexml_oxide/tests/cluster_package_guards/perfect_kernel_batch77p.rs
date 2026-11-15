@@ -247,9 +247,9 @@ fn spacing_run_marked_rows() {
   let xml = convert_repro!("author_spacing_run_marked_rows.tex");
   assert_no_merged_names(&xml);
   let sized = |size: &str, id: &str, text: &str| {
-    affiliation(&format!(
+    author_line(affiliation(&format!(
       r#"<text fontsize="{size}" xml:id="{id}">{text}</text>"#
-    ))
+    )))
   };
   // (at `=2` an address in the `\texttt` and the `\small` it prints in)
   let small_tt = |id: &str, address: &str| {
@@ -677,8 +677,8 @@ fn email_order_path_respects_spelled_owners() {
   assert_no_merged_names(&xml);
   let (nanjing, hk, shenzhen) = (
     author_line(affiliation(" Nanjing University")),
-    affiliation(" Hong Kong Polytechnic University"),
-    affiliation(" Shenzhen University"),
+    author_line(affiliation(" Hong Kong Polytechnic University")),
+    author_line(affiliation(" Shenzhen University")),
   );
   let tt = |address: &str, id: &str| author_line(typewriter_email(address, id));
   assert_eq!(creators(&xml), vec![
@@ -717,11 +717,11 @@ fn email_order_path_respects_spelled_owners() {
       "Ann Able",
       &format!(
         "{} {}",
-        affiliation("Univ A"),
+        author_line(affiliation("Univ A")),
         author_line(typewriter_email("ann.able@gmail.com", "id1"))
       )
     ),
-    creator(false, "Bob Baker", &affiliation("Univ B")),
+    creator(false, "Bob Baker", &author_line(affiliation("Univ B"))),
     shared(&format!(
       "{} {}",
       author_line(typewriter_email("xx@x.edu", "id2")),
@@ -759,7 +759,7 @@ fn email_gap_counts_every_author() {
   // "Xidian University, " and "Microsoft Research Asia ")
   let (xidian, msra) = (
     author_line(affiliation("Xidian University")),
-    affiliation("Microsoft Research Asia"),
+    author_line(affiliation("Microsoft Research Asia")),
   );
   // (at `=2` each address in the `\tt \small` it prints in)
   let small_tt = |id: usize, address: &str| {
@@ -897,7 +897,10 @@ fn link_line_of_an_unmarked_block_is_the_blocks_url() {
   assert_eq!(creators(&xml), [
     creator(true, "Ann Able", &univ_a),
     creator(false, "Bob Baker", &univ_a),
-    shared_urls(&[&link(r#" fontsize="90%""#, "https://project.example.org")]),
+    shared(&author_line(url(&link(
+      r#" fontsize="90%""#,
+      "https://project.example.org"
+    )))),
   ]);
 }
 
@@ -1003,10 +1006,14 @@ fn mailto_line_of_a_marked_block_is_the_spelled_names_email() {
       "Bob Baker",
       &format!(
         "{univ_a} {}",
-        mailto_email("Correspondence", "email@domain", "bbaker@uni-b.edu")
+        author_line(mailto_email(
+          "Correspondence",
+          "email@domain",
+          "bbaker@uni-b.edu"
+        ))
       )
     ),
-    creator(false, "Cat Cole", &affiliation("Univ B")),
+    creator(false, "Cat Cole", &author_line(affiliation("Univ B"))),
   ]);
 }
 
@@ -1223,7 +1230,10 @@ fn href(target: &str, text: &str) -> String {
 fn symbol_row_brace_list_goes_by_spelling() {
   let xml = convert_repro!("author_symbol_row_brace_list_under_the_row.tex");
   assert_no_merged_names(&xml);
-  let (univ_a, lab_b) = (author_line(affiliation(" Univ A")), affiliation(" Lab B"));
+  let (univ_a, lab_b) = (
+    author_line(affiliation(" Univ A")),
+    author_line(affiliation(" Lab B")),
+  );
   // (the address as the list spells it; the group's `\tt\small` around the line is no wrapper an address keeps — at
   // `=2` it is, the address printed in it)
   let small_tt = |id: &str, address: &str| {
@@ -1309,7 +1319,7 @@ fn symbol_carriers_stay_in_their_row() {
   assert_no_merged_names(&xml);
   assert_eq!(creators(&xml), vec![
     creator(true, "Ann Able", &author_line(affiliation(" Univ A"))),
-    creator(false, "Bob Baker", &affiliation(" Univ B")),
+    creator(false, "Bob Baker", &author_line(affiliation(" Univ B"))),
     creator(false, "Cat Cole", &author_line(affiliation(" Univ C"))),
   ]);
 }
@@ -1329,7 +1339,7 @@ fn compound_symbol_mark_is_a_label_per_symbol() {
       r#"Ann Able<sup xml:id="id1">∗</sup>"#,
       &author_line(affiliation(" Univ A"))
     ),
-    creator(false, "Bob Baker", &affiliation(" Univ B")),
+    creator(false, "Bob Baker", &author_line(affiliation(" Univ B"))),
     creator(false, "Cat Cole", &author_line(affiliation(" Univ A"))),
   ]);
 }
@@ -1606,9 +1616,9 @@ fn symbol_row_group_wrapped_line_goes_by_its_marks() {
   };
   // (at `=2`: an institution in its `\small`, an address under the line's label "Contact:")
   let small = |id: usize, text: &str| {
-    affiliation(&format!(
+    author_line(affiliation(&format!(
       r#"<text fontsize="90%" xml:id="id{id}">{text}</text>"#
-    ))
+    )))
   };
   let contact_email = |id: usize, address: &str| {
     email(id, address).replacen(r#"name="Email: ""#, r#"name="Contact: ""#, 1)
@@ -1812,8 +1822,8 @@ fn doubled_symbol_marks_label_their_institutions() {
   assert_no_merged_names(&xml);
   assert_eq!(creators(&xml), vec![
     creator(true, "Ann Able", &author_line(affiliation(" Univ A"))),
-    creator(false, "Bob Baker", &affiliation(" Univ B")),
-    creator(false, "Cat Cole", &affiliation(" Univ C")),
+    creator(false, "Bob Baker", &author_line(affiliation(" Univ B"))),
+    creator(false, "Cat Cole", &author_line(affiliation(" Univ C"))),
   ]);
 }
 
@@ -1862,7 +1872,7 @@ fn link_words_in_a_linked_institution_under_a_marked_row() {
     creator(
       false,
       "Bob Baker",
-      &format!("{} {lab}", affiliation(" Univ B"))
+      &format!("{} {lab}", author_line(affiliation(" Univ B")))
     ),
   ]);
 }

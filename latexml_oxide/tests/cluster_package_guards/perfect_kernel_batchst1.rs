@@ -160,7 +160,7 @@ fn cut_runs_and_counts_read_as_printed() {
       ],
       &[
         r#"<creator role="author"><personname>Ann Lee</personname><contact class="ltx_author_line" name="Affiliation: " role="affiliation">Univ A, Rome</contact></creator>"#,
-        r#"<creator before="  " role="author"><personname>Bob Ray</personname><contact name="Affiliation: " role="affiliation">Inst B, Paris</contact></creator>"#,
+        r#"<creator before="  " role="author"><personname>Bob Ray</personname><contact class="ltx_author_line" name="Affiliation: " role="affiliation">Inst B, Paris</contact></creator>"#,
       ],
     ),
     (
@@ -172,7 +172,7 @@ fn cut_runs_and_counts_read_as_printed() {
       ],
       &[
         r#"<creator role="author"><personname>Ann Lee</personname><contact class="ltx_author_line" name="Affiliation: " role="affiliation">Univ A, Rome</contact></creator>"#,
-        r#"<creator before="  " role="author"><personname>Bob Ray</personname><contact name="Affiliation: " role="affiliation">Inst B, Paris</contact></creator>"#,
+        r#"<creator before="  " role="author"><personname>Bob Ray</personname><contact class="ltx_author_line" name="Affiliation: " role="affiliation">Inst B, Paris</contact></creator>"#,
       ],
     ),
     (
@@ -181,14 +181,14 @@ fn cut_runs_and_counts_read_as_printed() {
       &[],
       &[
         r#"<creator role="author"><personname>Ann Lee</personname><contact class="ltx_author_line" name="Affiliation: " role="affiliation"><text font="bold">Univ A</text></contact><note class="ltx_note_frontmatter ltx_thanks_contribution" mark="∗" role="thanks"><sup>∗</sup> Equal Contribution</note></creator>"#,
-        r#"<creator before="  " role="author"><personname>Bob Ray</personname><contact name="Affiliation: " role="affiliation"><text font="bold">Univ B, <emph font="italic">Rome</emph></text></contact><note class="ltx_note_frontmatter ltx_thanks_contribution" mark="∗" role="thanks"><sup>∗</sup> Equal Contribution</note></creator>"#,
-        r#"<creator before="  " role="author"><personname>Cy Do</personname><contact name="Affiliation: " role="affiliation"><text font="bold">Univ B, <emph font="italic">Rome</emph></text></contact><note class="ltx_note_frontmatter ltx_thanks_contribution" mark="†" role="thanks"><sup>†</sup> Project Leader</note></creator>"#,
+        r#"<creator before="  " role="author"><personname>Bob Ray</personname><contact class="ltx_author_line" name="Affiliation: " role="affiliation"><text font="bold">Univ B, <emph font="italic">Rome</emph></text></contact><note class="ltx_note_frontmatter ltx_thanks_contribution" mark="∗" role="thanks"><sup>∗</sup> Equal Contribution</note></creator>"#,
+        r#"<creator before="  " role="author"><personname>Cy Do</personname><contact class="ltx_author_line" name="Affiliation: " role="affiliation"><text font="bold">Univ B, <emph font="italic">Rome</emph></text></contact><note class="ltx_note_frontmatter ltx_thanks_contribution" mark="†" role="thanks"><sup>†</sup> Project Leader</note></creator>"#,
       ],
     ),
     (row!("cut_run_nested_wrapper_per_entry"), (0, 0), &[], &[
       r#"<creator role="author"><personname>Ann Lee</personname><contact class="ltx_author_line" name="Affiliation: " role="affiliation"><text font="bold italic">Univ A</text></contact><note class="ltx_note_frontmatter ltx_thanks_contribution" mark="∗" role="thanks"><sup>∗</sup> Equal Contribution</note></creator>"#,
-      r#"<creator before="  " role="author"><personname>Bob Ray</personname><contact name="Affiliation: " role="affiliation"><text font="bold italic">Univ B</text></contact><note class="ltx_note_frontmatter ltx_thanks_contribution" mark="∗" role="thanks"><sup>∗</sup> Equal Contribution</note></creator>"#,
-      r#"<creator before="  " role="author"><personname>Cy Do</personname><contact name="Affiliation: " role="affiliation"><text font="bold italic">Univ B</text></contact><note class="ltx_note_frontmatter ltx_thanks_contribution" mark="†" role="thanks"><sup>†</sup> Project Leader</note></creator>"#,
+      r#"<creator before="  " role="author"><personname>Bob Ray</personname><contact class="ltx_author_line" name="Affiliation: " role="affiliation"><text font="bold italic">Univ B</text></contact><note class="ltx_note_frontmatter ltx_thanks_contribution" mark="∗" role="thanks"><sup>∗</sup> Equal Contribution</note></creator>"#,
+      r#"<creator before="  " role="author"><personname>Cy Do</personname><contact class="ltx_author_line" name="Affiliation: " role="affiliation"><text font="bold italic">Univ B</text></contact><note class="ltx_note_frontmatter ltx_thanks_contribution" mark="†" role="thanks"><sup>†</sup> Project Leader</note></creator>"#,
     ]),
     (
       row!("check_shipped_class_text_is_not_the_authors"),

@@ -73,7 +73,7 @@ fn ieee_group_names_keep_their_memberships() {
       "Dan Dorn",
       &format!(
         "{} {}",
-        author_line(membership("Fellow, IEEE")),
+        membership("Fellow, IEEE"),
         thanks("note", "id1", "Ann Able is with Univ A.")
       )
     ),

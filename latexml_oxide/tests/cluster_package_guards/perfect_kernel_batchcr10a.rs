@@ -18,7 +18,7 @@ fn nested_names_block_keeps_every_author() {
   ));
   assert_eq!(elements(&xml, "creator"), vec![
     "<creator role=\"author\">\n    <personname>Ann Able</personname>\n    <contact role=\"membership\">Member,\u{a0}IEEE</contact>\n  </creator>",
-    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Bob Baker</personname>\n    <contact class=\"ltx_author_line\" role=\"membership\">Senior Member,\u{a0}IEEE</contact>\n  </creator>",
+    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Bob Baker</personname>\n    <contact role=\"membership\">Senior Member,\u{a0}IEEE</contact>\n  </creator>",
     "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Cy Coe</personname>\n    <contact role=\"membership\">Fellow,\u{a0}IEEE</contact>\n    <note class=\"ltx_note_frontmatter ltx_thanks_funding\" role=\"thanks\" xml:id=\"id1\">Zebra funded this.</note>\n  </creator>",
   ]);
 }
@@ -38,7 +38,7 @@ fn italic_grade_before_stop_ends_the_names() {
     "<creator role=\"author\">\n    <personname>Ann Able</personname>\n  </creator>",
     "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Bob Baker</personname>\n  </creator>",
     "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Cy Coe</personname>\n  </creator>",
-    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Dee Dale</personname>\n    <contact class=\"ltx_author_line\" role=\"membership\"><text font=\"italic\" xml:id=\"id1\">Member, IEEE</text></contact>\n  </creator>",
+    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Dee Dale</personname>\n    <contact role=\"membership\"><text font=\"italic\" xml:id=\"id1\">Member, IEEE</text></contact>\n  </creator>",
     "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Eve Eads</personname>\n    <contact role=\"membership\"><text font=\"italic\" xml:id=\"id2\">Fellow, IEEE</text></contact>\n  </creator>",
   ]);
 }

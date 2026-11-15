@@ -1,0 +1,19 @@
+% witness: 2408.01902, 2408.02464 (IEEEtran journal: a names line continued past `\\`, its grades beside the names);
+%          the shape of batch63's ieee_compsoc_names_continue_past_a_break
+% mechanism: issue #783 — a name ends the printed line: what prints after a name on the line a `\\` opens is beside
+%   the name, not under it, so its contacts take no `ltx_author_line` (emit.rs `on_an_author_line`, the reading's
+%   name runs)
+% oracle:  pdflatex 0 errors; "Ann Able, Member, IEEE," over "Bob Baker, Fellow, IEEE, and Cat Cole"
+% engines: fix/issue-783 r3 = 0 errors; Bob Baker's grade class="ltx_author_line"
+% expect:  0 errors, 0 warnings; every grade a membership contact of no class
+% status:  RED (fix/issue-783 r3) -> GREEN (r4); guard 06_cluster_frontmatter::frontmatter_author_lines_783
+% preload: ar5iv.sty
+\documentclass[journal]{IEEEtran}
+\begin{document}
+\title{T}
+\author{Ann~Able,~\IEEEmembership{Member,~IEEE}, \\
+        Bob~Baker,~\IEEEmembership{Fellow,~IEEE}, and~Cat~Cole
+\thanks{A. Able is with Univ A.}}
+\maketitle
+Body.
+\end{document}

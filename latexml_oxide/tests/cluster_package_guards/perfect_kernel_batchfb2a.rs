@@ -87,14 +87,17 @@ fn a_tabular_juggle_is_a_column_or_its_break() {
   );
   assert!(two[0].contains(&affiliation("Dept")), "{}", two[0]);
   assert_eq!(two, vec![
-    "<creator role=\"author\">\n    <personname>A One</personname>\n    <contact class=\"ltx_author_line\" name=\"Affiliation:\u{a0}\" role=\"affiliation\">Dept</contact>\n  </creator>"
+    "<creator role=\"author\">\n    <personname>A One</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Dept</contact>\n  </creator>"
   ]);
-  // (a juggle printing a break between its close and its reopen, 1301.5612's `\end{tabular}\newline\begin{tabular}{c}`)
+  // (a juggle printing a break between its close and its reopen, 1301.5612's `\end{tabular}\newline\begin{tabular}{c}`:
+  // "Dept" the same contact, printed under the name, so of class `ltx_author_line`, issue #783)
   let tex = repro!("author_shared_affiliation_line");
   let newline = tex.replacen("\\end{tabular}\n", "\\end{tabular}\\newline\n", 1);
   assert_ne!(newline, tex);
   let two_newline = both(&newline);
-  assert_eq!(two_newline, two);
+  assert_eq!(two_newline, vec![
+    "<creator role=\"author\">\n    <personname>A One</personname>\n    <contact class=\"ltx_author_line\" name=\"Affiliation:\u{a0}\" role=\"affiliation\">Dept</contact>\n  </creator>"
+  ]);
 }
 
 /// An alignment environment opening after the names and ending the block is lines under them, each its own and every
@@ -116,7 +119,12 @@ fn a_trailing_alignment_environment_is_lines_under_the_names() {
     ];
     let at: Vec<usize> = lines
       .iter()
-      .map(|line| creator.find(&affiliation(line)).expect(line))
+      // (the order of the lines, whatever class each holds: the whole creators below pin it)
+      .map(|line| {
+        creator
+          .find(&format!(" role=\"affiliation\">{line}</contact>"))
+          .expect(line)
+      })
       .collect();
     assert!(at.windows(2).all(|w| w[0] < w[1]), "{creator}");
   }

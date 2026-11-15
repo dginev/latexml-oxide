@@ -175,13 +175,13 @@ fn eptcs_todays_shapes_keep_their_creator_elements() {
 <creator before="  " role="author">
     <personname>Bob Baker</personname>
     <contact name="Affiliation: " role="affiliation">Univ B</contact>
-    <contact class="ltx_author_line" name="Affiliation: " role="affiliation">Dept B</contact>
+    <contact name="Affiliation: " role="affiliation">Dept B</contact>
     <contact name="Email: " role="email"><text font="typewriter">bob@b.edu</text></contact>
   </creator>
 == eptcs_row_of_names
 <creator role="author">
     <personname>Carl Cole</personname>
-    <contact class="ltx_author_line" name="Affiliation: " role="affiliation">Univ C</contact>
+    <contact name="Affiliation: " role="affiliation">Univ C</contact>
     <contact class="ltx_author_line" name="Email: " role="email"><text font="typewriter">cole@c.edu</text></contact>
     <contact name="Affiliation: " role="affiliation">Lab D</contact>
   </creator>
@@ -245,11 +245,11 @@ fn eptcs_todays_shapes_keep_their_creator_elements() {
 == eptcs_author_let_copy_of_and_parts_the_names
 <creator role="author">
     <personname>Ann Able</personname>
-    <contact name="Affiliation: " role="affiliation">Univ A</contact>
+    <contact class="ltx_author_line" name="Affiliation: " role="affiliation">Univ A</contact>
   </creator>
 <creator before="  " role="author">
     <personname>Bob Baker</personname>
-    <contact name="Affiliation: " role="affiliation">Univ B</contact>
+    <contact class="ltx_author_line" name="Affiliation: " role="affiliation">Univ B</contact>
   </creator>"##
   );
 }

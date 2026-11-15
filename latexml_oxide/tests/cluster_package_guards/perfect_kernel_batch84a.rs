@@ -48,7 +48,10 @@ fn clean(tex: &str) -> String {
 fn author_mark_then_space_separates_names() {
   let xml = clean(repro!("author_mark_then_space_separates_names.tex"));
   let univ = |u: &str| {
-    format!("<contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ {u}</contact>")
+    format!(
+      "<contact class=\"ltx_author_line\" name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ \
+       {u}</contact>"
+    )
   };
   let creator = |first: bool, name: &str, inner: &str| {
     format!(
@@ -198,8 +201,8 @@ fn author_prefix_marks_then_space_separate_names() {
   let xml = clean(repro!("author_prefix_marks_then_space_separate_names.tex"));
   let creator = |first: bool, name: &str, univ: &str| {
     format!(
-      "<creator {}role=\"author\"><personname>{name}</personname><contact name=\"Affiliation:\u{a0}\" \
-       role=\"affiliation\">Univ {univ}</contact></creator>",
+      "<creator {}role=\"author\"><personname>{name}</personname><contact class=\"ltx_author_line\" \
+       name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ {univ}</contact></creator>",
       if first {
         ""
       } else {

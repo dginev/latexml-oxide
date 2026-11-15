@@ -456,7 +456,7 @@ fn a_definition_its_call_prints_takes_effect_in_order() {
        <contact class=\"ltx_author_line\" name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id3\"><text font=\"italic\" \
        xml:id=\"id3.1\">2</text></sup> Univ Y</contact></creator>",
       "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker</personname>\
-       <contact class=\"ltx_author_line\" name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id4\"><text font=\"italic\" \
+       <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id4\"><text font=\"italic\" \
        xml:id=\"id4.1\">2</text></sup></contact>\
        <contact name=\"Note:\u{a0}\" role=\"note\">Corresponding author.</contact>\
        <contact class=\"ltx_author_line\" name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id5\"><text font=\"italic\" \
@@ -464,7 +464,7 @@ fn a_definition_its_call_prints_takes_effect_in_order() {
        <contact class=\"ltx_author_line\" name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id6\"><text font=\"italic\" \
        xml:id=\"id6.1\">2</text></sup> Univ Y</contact></creator>",
       "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Carl Cole</personname>\
-       <contact class=\"ltx_author_line\" name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id7\"><text font=\"italic\" \
+       <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id7\"><text font=\"italic\" \
        xml:id=\"id7.1\">1</text></sup></contact>\
        <contact class=\"ltx_author_line\" name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id8\"><text font=\"italic\" \
        xml:id=\"id8.1\">1</text></sup> Univ X</contact>\
@@ -489,14 +489,14 @@ fn a_definition_its_call_prints_takes_effect_in_order() {
     // (as the unread line, Carl Cole's recalled mark counted by the given-marks Warning)
     (repro!("footrecall_read_where_the_split_would_be_whole"), 3, false, &row(&[
       "<creator role=\"author\"><personname>Ann Able</personname>\
-       <contact class=\"ltx_author_line\" name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id1\"><text font=\"italic\" \
+       <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id1\"><text font=\"italic\" \
        xml:id=\"id1.1\">1</text></sup></contact>\
        <contact class=\"ltx_author_line\" name=\"Affiliation:\u{a0}\" role=\"affiliation\"> <sup xml:id=\"id2\"><text font=\"italic\" \
        xml:id=\"id2.1\">1</text></sup> Univ X</contact>\
        <contact class=\"ltx_author_line\" name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id3\"><text font=\"italic\" \
        xml:id=\"id3.1\">2</text></sup> Univ Y</contact></creator>",
       "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker</personname>\
-       <contact class=\"ltx_author_line\" name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id4\"><text font=\"italic\" \
+       <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id4\"><text font=\"italic\" \
        xml:id=\"id4.1\">2</text></sup></contact>\
        <contact name=\"Note:\u{a0}\" role=\"note\">Corresponding author.</contact>\
        <contact class=\"ltx_author_line\" name=\"Affiliation:\u{a0}\" role=\"affiliation\"> <sup xml:id=\"id5\"><text font=\"italic\" \
@@ -504,7 +504,7 @@ fn a_definition_its_call_prints_takes_effect_in_order() {
        <contact class=\"ltx_author_line\" name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id6\"><text font=\"italic\" \
        xml:id=\"id6.1\">2</text></sup> Univ Y</contact></creator>",
       "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Carl Cole</personname>\
-       <contact class=\"ltx_author_line\" name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id7\"><text font=\"italic\" \
+       <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id7\"><text font=\"italic\" \
        xml:id=\"id7.1\">1</text></sup></contact>\
        <contact class=\"ltx_author_line\" name=\"Affiliation:\u{a0}\" role=\"affiliation\"> <sup xml:id=\"id8\"><text font=\"italic\" \
        xml:id=\"id8.1\">1</text></sup> Univ X</contact>\

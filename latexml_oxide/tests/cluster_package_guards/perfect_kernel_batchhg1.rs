@@ -388,7 +388,7 @@ fn marked_blocks_restored_read_as_printed() {
       lines:    &[],
       creators: Creators::Whole(&[
         r#"<creator role="author"><personname>Ann Able<sup>1</sup></personname><contact class="ltx_author_line" name="Affiliation: " role="affiliation"> Department of Physics, University of Somewhere</contact></creator>"#,
-        r#"<creator before="  " role="author"><personname>Bob Baker</personname><contact class="ltx_author_line" name="Affiliation: " role="affiliation"> Department of Physics, University of Somewhere</contact><contact name="Affiliation: " role="affiliation">Univ B</contact></creator>"#,
+        r#"<creator before="  " role="author"><personname>Bob Baker</personname><contact class="ltx_author_line" name="Affiliation: " role="affiliation"> Department of Physics, University of Somewhere</contact><contact class="ltx_author_line" name="Affiliation: " role="affiliation">Univ B</contact></creator>"#,
       ]),
     },
     Row {
@@ -398,7 +398,7 @@ fn marked_blocks_restored_read_as_printed() {
       lines:    &[],
       creators: Creators::Whole(&[
         r#"<creator role="author"><personname>Ann</personname><contact class="ltx_author_line" name="Affiliation: " role="affiliation"><text fontsize="90%">Univ A</text></contact></creator>"#,
-        r#"<creator before="  " role="author"><personname>Bob</personname><contact name="Affiliation: " role="affiliation"><text fontsize="90%">Univ B</text></contact></creator>"#,
+        r#"<creator before="  " role="author"><personname>Bob</personname><contact class="ltx_author_line" name="Affiliation: " role="affiliation"><text fontsize="90%">Univ B</text></contact></creator>"#,
       ]),
     },
     Row {

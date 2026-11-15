@@ -47,7 +47,7 @@ fn ieee_membership_grade_is_the_readings_contact() {
     (
       repro!("ieee_membership_grade_spelled_by_a_macro_or_copy"),
       &[
-        "<creator role=\"author\"><personname>Ann\u{a0}Able</personname><contact class=\"ltx_author_line\" role=\"membership\">Member,\u{a0}IEEE</contact></creator>",
+        "<creator role=\"author\"><personname>Ann\u{a0}Able</personname><contact role=\"membership\">Member,\u{a0}IEEE</contact></creator>",
         "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob\u{a0}Baker</personname><contact role=\"membership\">Senior Member,\u{a0}IEEE</contact></creator>",
         "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Cy\u{a0}Coe</personname><contact role=\"membership\">Fellow,\u{a0}IEEE</contact></creator>",
       ],
@@ -65,7 +65,7 @@ fn ieee_membership_grade_is_the_readings_contact() {
       &[
         "<creator role=\"author\"><personname>Ann\u{a0}Able</personname></creator>",
         "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob\u{a0}Baker</personname></creator>",
-        "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Cy\u{a0}Coe</personname><contact role=\"membership\">Member,\u{a0}IEEE</contact><note class=\"ltx_note_frontmatter ltx_thanks_funding\" role=\"thanks\" xml:id=\"id1\">Funded.</note></creator>",
+        "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Cy\u{a0}Coe</personname><contact class=\"ltx_author_line\" role=\"membership\">Member,\u{a0}IEEE</contact><note class=\"ltx_note_frontmatter ltx_thanks_funding\" role=\"thanks\" xml:id=\"id1\">Funded.</note></creator>",
       ],
       (0, 0),
     ),
@@ -106,8 +106,8 @@ fn ieee_membership_grade_is_the_readings_contact() {
     (
       repro!("ieee_membership_grade_on_an_affiliation_line"),
       &[
-        "<creator role=\"author\"><personname>Ann\u{a0}Able</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A, Town,\u{a0}Senior Member,\u{a0}IEEE</contact></creator>",
-        "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob\u{a0}Baker</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A, Town,\u{a0}Senior Member,\u{a0}IEEE</contact></creator>",
+        "<creator role=\"author\"><personname>Ann\u{a0}Able</personname><contact class=\"ltx_author_line\" name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A, Town,\u{a0}Senior Member,\u{a0}IEEE</contact></creator>",
+        "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob\u{a0}Baker</personname><contact class=\"ltx_author_line\" name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A, Town,\u{a0}Senior Member,\u{a0}IEEE</contact></creator>",
       ],
       (0, 0),
     ),
@@ -122,24 +122,24 @@ fn ieee_membership_grade_is_the_readings_contact() {
     (
       repro!("ieee_membership_grade_in_a_plain_affiliation_call_red"),
       &[
-        "<creator role=\"author\"><personname>Ann\u{a0}Able</personname><contact role=\"membership\">Member,\u{a0}IEEE</contact><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A, Member, ACM</contact><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Cy Coe</contact></creator>",
-        "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob\u{a0}Baker</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A, Member, ACM</contact><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Cy Coe</contact></creator>",
+        "<creator role=\"author\"><personname>Ann\u{a0}Able</personname><contact role=\"membership\">Member,\u{a0}IEEE</contact><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A, Member, ACM</contact><contact class=\"ltx_author_line\" name=\"Affiliation:\u{a0}\" role=\"affiliation\">Cy Coe</contact></creator>",
+        "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob\u{a0}Baker</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A, Member, ACM</contact><contact class=\"ltx_author_line\" name=\"Affiliation:\u{a0}\" role=\"affiliation\">Cy Coe</contact></creator>",
       ],
       (0, 2),
     ),
     (
       repro!("ieee_membership_grade_line_under_an_affiliation"),
       &[
-        "<creator role=\"author\"><personname>Ann\u{a0}Able<sup xml:id=\"id1\">1</sup></personname><contact role=\"membership\">Member,\u{a0}IEEE</contact><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A, Town<break/>Fellow,\u{a0}IEEE</contact></creator>",
-        "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob\u{a0}Baker</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A, Town<break/>Fellow,\u{a0}IEEE</contact><note class=\"ltx_note_frontmatter ltx_thanks_note\" role=\"thanks\" xml:id=\"id2\">Note.</note></creator>",
+        "<creator role=\"author\"><personname>Ann\u{a0}Able<sup xml:id=\"id1\">1</sup></personname><contact role=\"membership\">Member,\u{a0}IEEE</contact><contact class=\"ltx_author_line\" name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A, Town<break/>Fellow,\u{a0}IEEE</contact></creator>",
+        "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob\u{a0}Baker</personname><contact class=\"ltx_author_line\" name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A, Town<break/>Fellow,\u{a0}IEEE</contact><note class=\"ltx_note_frontmatter ltx_thanks_note\" role=\"thanks\" xml:id=\"id2\">Note.</note></creator>",
       ],
       (0, 0),
     ),
     (
       repro!("ieee_membership_grade_alone_under_an_affiliation"),
       &[
-        "<creator role=\"author\"><personname>Ann\u{a0}Able</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A, Town</contact></creator>",
-        "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob\u{a0}Baker</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A, Town</contact></creator>",
+        "<creator role=\"author\"><personname>Ann\u{a0}Able</personname><contact class=\"ltx_author_line\" name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A, Town</contact></creator>",
+        "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob\u{a0}Baker</personname><contact class=\"ltx_author_line\" name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A, Town</contact></creator>",
         "<creator role=\"author\"><note role=\"note\" xml:id=\"id1\">Fellow,\u{a0}IEEE</note></creator>",
       ],
       (0, 1),

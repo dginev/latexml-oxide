@@ -1553,8 +1553,8 @@ fn frontmatter_author_continuation_line_keeps_its_break() {
     ),
   ] {
     let creator = format!(
-      "role=\"author\"><personname>{name}</personname><contact name=\"Affiliation:\u{a0}\" \
-       role=\"affiliation\">{affiliation}</contact></creator>"
+      "role=\"author\"><personname>{name}</personname><contact class=\"ltx_author_line\" \
+       name=\"Affiliation:\u{a0}\" role=\"affiliation\">{affiliation}</contact></creator>"
     );
     assert!(flat.contains(&creator), "{creator}:\n{x}");
   }
@@ -1578,7 +1578,7 @@ fn frontmatter_author_lines_783() {
       ))
     };
   }
-  let rows: [(&str, &str, usize, Vec<String>); 12] = [
+  let rows: [(&str, &str, usize, Vec<String>); 13] = [
     ("book", repro!("book"), 0, vec![format!(
       "<creator role=\"author\"><personname>name</personname>{L}school name</contact>{L}dept. \
        name</contact></creator>"
@@ -1648,6 +1648,19 @@ fn frontmatter_author_lines_783() {
         "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker</personname>{L}Univ \
          B</contact></creator>"
       ),
+    ]),
+    // (a name ends the printed line: the grade beside a name the line after `\\` opens takes no class)
+    ("names_continue", repro!("names_continue"), 0, vec![
+      "<creator role=\"author\"><personname>Ann\u{a0}Able</personname><contact \
+       role=\"membership\">Member,\u{a0}IEEE</contact></creator>"
+        .to_string(),
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob\u{a0}Baker</personname><contact \
+       role=\"membership\">Fellow,\u{a0}IEEE</contact></creator>"
+        .to_string(),
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Cat\u{a0}Cole</personname><note \
+       class=\"ltx_note_frontmatter ltx_thanks_note\" role=\"thanks\" xml:id=\"id1\">A. Able is with Univ \
+       A.</note></creator>"
+        .to_string(),
     ]),
     // (a block the reading declines, written as Perl's `\lx@add@authors` splits it: fallback.rs)
     ("declined_block", repro!("declined_block"), 1, vec![

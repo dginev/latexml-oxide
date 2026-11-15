@@ -1743,11 +1743,15 @@ fn event_at<R>(
 }
 
 /// Whether the item `span` of the block at ledger index `index` prints on a line under its author's name: the last line
-/// break or column before it is a line break — a printed line holds across its text and its word "and" —, and no note
+/// break or column before it is a line break, no name printed since (`names`, the runs of the block's names: IEEE's
+/// `Cat~Cole, \\ Dan~Doe, Eve~Elm,~\IEEEmembership{…}` prints the grade beside its name, 2408.01902), and no note
 /// holds it (issue #783).
-fn on_an_author_line(index: usize, span: (u16, u16)) -> bool {
-  with_block(index, false, |_, events| {
+fn on_an_author_line(index: usize, span: (u16, u16), names: &BlockNameRuns) -> bool {
+  with_block(index, false, |block, events| {
     let holds = |s: (u16, u16)| s.0 <= span.0 && span.1 <= s.1;
+    let runs = names.get(&index).map_or(&[][..], Vec::as_slice);
+    let at = |p: u16| usize::from(p).saturating_sub(block.range.0);
+    let a_name = |s: (u16, u16)| runs.iter().any(|&(a, b)| at(s.0) < b && a < at(s.1));
     let mut line = false;
     for e in events {
       if e.kind == EventKind::Note && e.span.is_some_and(holds) {
@@ -1759,12 +1763,16 @@ fn on_an_author_line(index: usize, span: (u16, u16)) -> bool {
       match e.kind {
         EventKind::Break => line = e.break_kind != Some(BreakKind::Column),
         EventKind::Sep(SepKind::And(_) | SepKind::Column(_)) => line = false,
+        EventKind::Name if e.span.is_some_and(a_name) => line = false,
         _ => {},
       }
     }
     line
   })
 }
+
+/// Per author block (its ledger index), the runs of its tokens the reading's names were taken from (`block_names`).
+type BlockNameRuns = BTreeMap<usize, Vec<(usize, usize)>>;
 
 /// The note `span` of the block at ledger index `index` is one piece of, strictly inside it: from one of its body's
 /// events' start to one's end (the reading's cut of a marked `\thanks`, `Resolver::keep_note`), its span.
@@ -2039,11 +2047,13 @@ fn joined_run_link(
 }
 
 /// The call for one item of the reading, under `label`.
+#[allow(clippy::too_many_arguments)]
 fn item_call(
   key: &Key,
   assoc: &Assoc,
   label: &str,
   separate: &BTreeSet<usize>,
+  names: &BlockNameRuns,
   memo: &mut CallCuts,
   whole: &mut BTreeSet<usize>,
   cuts: &[EntryCut],
@@ -2053,7 +2063,7 @@ fn item_call(
   // marked so, and each e-mail the Kind step makes of it, issue #783)
   let line_class = if key.0 != Kind::Note
     && let Some((index, Some(span))) = assoc.source
-    && on_an_author_line(index, span)
+    && on_an_author_line(index, span, names)
   {
     ",class=ltx_author_line"
   } else {
@@ -2076,6 +2086,7 @@ fn item_call(
           entry,
           label,
           separate,
+          names,
           memo,
           whole,
           std::slice::from_ref(cut),
@@ -5515,6 +5526,7 @@ pub(in crate::base_utilities) fn emit_commands(commands: &mut Vec<RawFrontmatter
   let mut names: BTreeMap<usize, (Option<Vec<Token>>, Vec<Token>)> = BTreeMap::new();
   // (the runs each name written from its tokens is taken from, its marks written past it too: what it prints, [`NameMarks::marks_in`])
   let mut name_runs: BTreeMap<usize, Vec<(usize, usize)>> = BTreeMap::new();
+  let mut block_runs = BlockNameRuns::new();
   // (the footnote counter's steps of the notes written apart, on the creator where each prints: `note_steps`)
   let mut steps: BTreeMap<(usize, bool), usize> = BTreeMap::new();
   let mut on_names: BTreeSet<(usize, (u16, u16))> = BTreeSet::new();
@@ -5546,6 +5558,7 @@ pub(in crate::base_utilities) fn emit_commands(commands: &mut Vec<RawFrontmatter
     for (k, (&i, (name, cites, run, apart, in_name))) in members.iter().zip(tokens).enumerate() {
       if let Some(run) = run {
         runs.push((i, run));
+        block_runs.entry(source).or_default().push(run);
       }
       stepped.extend(in_name);
       let name = name.filter(|_| !overlapping.contains(&k));
@@ -5907,6 +5920,7 @@ pub(in crate::base_utilities) fn emit_commands(commands: &mut Vec<RawFrontmatter
       item.assoc,
       &label,
       &separate,
+      &block_runs,
       &mut memo,
       &mut written,
       &analysis.cuts,

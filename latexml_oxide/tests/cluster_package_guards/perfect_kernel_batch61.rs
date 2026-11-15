@@ -7,6 +7,7 @@ use latexml::util::test::{
 use super::{
   perfect_kernel_batch46::{convert_with_then, error_count, warning_count},
   perfect_kernel_batch57::{RAW, assert_elements},
+  perfect_kernel_batch77d::author_line,
 };
 
 /// bfhpub.cls (koma-script based) and the fonts it loads (texlive-fonts-extra).
@@ -6353,9 +6354,7 @@ fn marked_affiliation_review_shapes() {
     format!("<creator {sep}role=\"author\"><personname>{name}</personname>{rest}</creator>")
   };
   let affiliation = |name: &str| {
-    format!(
-      "<contact class=\"ltx_author_line\" name=\"Affiliation:\u{a0}\" role=\"affiliation\">{name}</contact>"
-    )
+    format!("<contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">{name}</contact>")
   };
   // (an llncs `\email`'s address, set in typewriter type as llncs.cls:897 sets it, 64zc)
   assert_eq!(
@@ -6369,8 +6368,8 @@ Text.
 \end{document}"
     ),
     vec![
-      creator(false, "Ann Able", &affiliation("Univ A")),
-      creator(true, "Bob Baker", &affiliation("Univ C"))
+      creator(false, "Ann Able", &author_line(affiliation("Univ A"))),
+      creator(true, "Bob Baker", &author_line(affiliation("Univ C")))
     ]
   );
   // `\and` ends Ann's entry: "Univ C" is an entry of its own (placed by position, so not pinned here), not folded
@@ -6801,7 +6800,7 @@ fn author_marks_link_their_affiliations() {
     // (97e: informs4's family, `UNDECLARED`, written — the `*` line is the legend of Bob Baker's symbol mark, a
     // correspondence note of his, as pdflatex prints it under the names: FIDELITY_CHARTER §4 ruling 2)
     [
-      "<creator role=\"author\"><personname>Ann Able<sup><text font=\"italic\">a</text></sup></personname><contact class=\"ltx_author_line\" name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup><text font=\"italic\">a</text></sup>Univ A</contact></creator>",
+      "<creator role=\"author\"><personname>Ann Able<sup><text font=\"italic\">a</text></sup></personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup><text font=\"italic\">a</text></sup>Univ A</contact></creator>",
       "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker<sup>*</sup></personname><note class=\"ltx_note_frontmatter ltx_thanks_correspondence\" mark=\"∗\" role=\"thanks\"><sup>∗</sup>Corresponding author</note></creator>",
     ]
   );
@@ -6883,15 +6882,15 @@ fn frontmatter_digest_cluster_2609() {
     (
       r"\begin{center} Ann Able$^{1}$, Bob Baker$^{2}$ \\ $^1$Univ A \\ $^2$Univ B \end{center}",
       vec![
-        creator("", "Ann Able", &affiliation("Univ A")),
-        creator(second, "Bob Baker", &affiliation("Univ B")),
+        creator("", "Ann Able", &author_line(affiliation("Univ A"))),
+        creator(second, "Bob Baker", &author_line(affiliation("Univ B"))),
       ],
     ),
     (
       r"\begin{center}Ann\\ Univ A\end{center} \and \begin{center}Bob\\ Univ B\end{center}",
       vec![
-        creator("", "Ann", &affiliation("Univ A")),
-        creator(second, "Bob", &affiliation("Univ B")),
+        creator("", "Ann", &author_line(affiliation("Univ A"))),
+        creator(second, "Bob", &author_line(affiliation("Univ B"))),
       ],
     ),
   ] {

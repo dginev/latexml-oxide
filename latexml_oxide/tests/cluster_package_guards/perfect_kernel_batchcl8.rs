@@ -127,8 +127,8 @@ fn a_class_email_keeps_its_printed_label_as_name() {
   let ann = |name: &str, label: &str, id: u8| {
     vec![format!(
       "<creator role=\"author\"> <personname>Ann Able</personname> <contact class=\"ltx_author_line\" name=\"Affiliation: \" \
-       role=\"affiliation\">Univ A</contact> <contact name=\"{name}\" role=\"email\">{label}<text \
-       font=\"typewriter\" xml:id=\"id{id}\">ann@able.org</text></contact> </creator>"
+       role=\"affiliation\">Univ A</contact> <contact class=\"ltx_author_line\" name=\"{name}\" \
+       role=\"email\">{label}<text font=\"typewriter\" xml:id=\"id{id}\">ann@able.org</text></contact> </creator>"
     )]
   };
   let expected = ann("E-mail: ", "", 1);

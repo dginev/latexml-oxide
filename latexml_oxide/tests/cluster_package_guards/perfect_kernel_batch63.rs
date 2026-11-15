@@ -1041,7 +1041,7 @@ fn author_prefix_marked_affiliations_after_break_and_quad() {
     ),
     &[
       "<creator role=\"author\"><personname>Ann Able</personname><contact class=\"ltx_author_line\" name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A</contact></creator>",
-      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ B</contact></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker</personname><contact class=\"ltx_author_line\" name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ B</contact></creator>",
     ],
   );
 }
@@ -1076,7 +1076,7 @@ fn author_prefix_marked_company_affiliation_with_email_line() {
     ),
     &[
       "<creator role=\"author\"><personname>Ann Able</personname><contact class=\"ltx_author_line\" name=\"Affiliation:\u{a0}\" role=\"affiliation\">Google DeepMind</contact><contact class=\"ltx_author_line\" name=\"Email:\u{a0}\" role=\"email\"><text font=\"typewriter\" xml:id=\"id1\">ann@google.com</text></contact></creator>",
-      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker</personname><contact class=\"ltx_author_line\" name=\"Affiliation:\u{a0}\" role=\"affiliation\">Huawei Technologies</contact><contact name=\"Email:\u{a0}\" role=\"email\"><text font=\"typewriter\" xml:id=\"id2\">bob@huawei.com</text></contact></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker</personname><contact class=\"ltx_author_line\" name=\"Affiliation:\u{a0}\" role=\"affiliation\">Huawei Technologies</contact><contact class=\"ltx_author_line\" name=\"Email:\u{a0}\" role=\"email\"><text font=\"typewriter\" xml:id=\"id2\">bob@huawei.com</text></contact></creator>",
     ],
   );
 }
@@ -1109,7 +1109,7 @@ fn author_prefix_marked_names_beside_company_affiliations_below() {
     ),
     &[
       "<creator role=\"author\"><personname>Ann Able</personname><contact class=\"ltx_author_line\" name=\"Affiliation:\u{a0}\" role=\"affiliation\">Google DeepMind</contact><contact class=\"ltx_author_line\" name=\"Email:\u{a0}\" role=\"email\"><text font=\"typewriter\" xml:id=\"id1\">ann@google.com</text></contact></creator>",
-      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Huawei Technologies</contact><contact name=\"Email:\u{a0}\" role=\"email\"><text font=\"typewriter\" xml:id=\"id2\">bob@huawei.com</text></contact></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker</personname><contact class=\"ltx_author_line\" name=\"Affiliation:\u{a0}\" role=\"affiliation\">Huawei Technologies</contact><contact class=\"ltx_author_line\" name=\"Email:\u{a0}\" role=\"email\"><text font=\"typewriter\" xml:id=\"id2\">bob@huawei.com</text></contact></creator>",
     ],
   );
 }
@@ -2163,8 +2163,8 @@ fn ieee_membership_outside_the_names_stays_dropped() {
   assert_eq!(super::perfect_kernel_batch61::creators_of(&xml), [
     "<creator role=\"author\"><personname>Wenming\u{a0}Li</personname></creator>",
     "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Xiaochun\u{a0}Ye</personname></creator>",
-    "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Dongrui\u{a0}Fan</personname><contact class=\"ltx_author_line\" role=\"membership\">Senior\u{a0}Member,\u{a0}IEEE</contact></creator>",
-    "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Yuan\u{a0}Xie</personname><contact class=\"ltx_author_line\" role=\"membership\">Fellow,\u{a0}IEEE</contact></creator>",
+    "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Dongrui\u{a0}Fan</personname><contact role=\"membership\">Senior\u{a0}Member,\u{a0}IEEE</contact></creator>",
+    "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Yuan\u{a0}Xie</personname><contact role=\"membership\">Fellow,\u{a0}IEEE</contact></creator>",
   ]);
 }
 

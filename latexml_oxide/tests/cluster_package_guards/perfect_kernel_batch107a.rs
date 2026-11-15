@@ -17,7 +17,6 @@
 use super::{
   convert_files_with,
   perfect_kernel_batch46::{error_count, warning_count},
-  perfect_kernel_batch77d::author_line,
 };
 
 const PRELOAD: &str = "ar5iv.sty";
@@ -57,13 +56,19 @@ fn creators_with(tex: &str, counts: (usize, usize)) -> String {
 }
 
 /// The two authors under University of Alpha and Cy Coe under Department of Physics, University of Beta, of the split-list
-/// repros, `ann` and `bo` their e-mails after the affiliation (`bo` empty for none), `cy` Cy Coe's.
-fn alpha_beta(ann: &str, bo: &str, bo_name: &str, cy: &str) -> String {
+/// repros, `ann` and `bo` their e-mails after the affiliation (`bo` empty for none), `cy` Cy Coe's; the e-mails of
+/// class `ltx_author_line` where `lines`.
+fn alpha_beta(ann: &str, bo: &str, bo_name: &str, cy: &str, lines: bool) -> String {
+  let class = if lines {
+    r#"class="ltx_author_line" "#
+  } else {
+    ""
+  };
   let email = |address: &str| {
     if address.is_empty() {
       String::new()
     } else {
-      format!(r#"<contact name="Email: " role="email">{address}</contact> "#)
+      format!(r#"<contact {class}name="Email: " role="email">{address}</contact> "#)
     }
   };
   format!(
@@ -73,7 +78,7 @@ fn alpha_beta(ann: &str, bo: &str, bo_name: &str, cy: &str) -> String {
       r#"<creator before=" " role="author"> <personname>{}</personname> "#,
       r#"<contact name="Affiliation: " role="affiliation">University of Alpha</contact> {}</creator> "#,
       r#"<creator before=" " role="author"> <personname>Cy Coe</personname> "#,
-      r#"<contact name="Affiliation: " role="affiliation">Department of Physics, University of Beta</contact> "#,
+      r#"<contact class="ltx_author_line" name="Affiliation: " role="affiliation">Department of Physics, University of Beta</contact> "#,
       r#"{}</creator>"#
     ),
     email(ann),
@@ -95,18 +100,19 @@ fn alpha_beta(ann: &str, bo: &str, bo_name: &str, cy: &str) -> String {
 fn a_local_part_spells_its_author_through_the_transliteration() {
   assert_eq!(
     creators_with(repro!("email_list_umlaut_transliteration_split"), (0, 0)),
-    author_line(alpha_beta(
+    alpha_beta(
       r#"<text font="typewriter">ann.able@alpha.edu</text>"#,
       r#"<text font="typewriter">bo.baecker@alpha.edu</text>"#,
       "Bo Bäcker",
       r#"<text font="typewriter">cy.coe@alpha.edu</text>"#,
-    ))
+      true,
+    )
   );
   let author = |before: &str, name: &str, address: &str| {
     format!(
       concat!(
         r#"<creator {}role="author"> <personname>{}</personname> "#,
-        r#"<contact name="Affiliation: " role="affiliation">University of Alpha</contact> "#,
+        r#"<contact class="ltx_author_line" name="Affiliation: " role="affiliation">University of Alpha</contact> "#,
         r#"<contact class="ltx_author_line" name="Email: " role="email"><text font="typewriter">{}@alpha.edu</text></contact> "#,
         r#"</creator>"#
       ),
@@ -147,6 +153,7 @@ fn a_split_address_list_is_read_whatever_its_entries_spell() {
     r#"<text font="typewriter">xq.zz@alpha.edu</text>"#,
     "Bo Baker",
     r#"<text font="typewriter">cy.coe@alpha.edu</text>"#,
+    false,
   );
   assert_eq!(
     creators_with(repro!("email_list_split_unspelled_entry_glued"), (0, 0)),
@@ -187,7 +194,7 @@ fn a_split_address_list_left_unread_is_a_counted_warning() {
     )
   );
   let affiliation = concat!(
-    r#"<contact name="Affiliation: " role="affiliation">University of Alpha, project "#,
+    r#"<contact class="ltx_author_line" name="Affiliation: " role="affiliation">University of Alpha, project "#,
     r#"<text font="typewriter">lib{core}<break/></text>@alpha_lab on Twitter</contact>"#
   );
   assert_eq!(
@@ -253,13 +260,13 @@ fn alpha_three(names: [(&str, Option<&str>); 3], domain: &str, block: Option<&st
     .map(|(at, (name, address))| {
       let email = address.map_or(String::new(), |local| {
         format!(
-          r#"<contact name="Email: " role="email"><text font="typewriter">{local}@{domain}</text></contact> "#
+          r#"<contact class="ltx_author_line" name="Email: " role="email"><text font="typewriter">{local}@{domain}</text></contact> "#
         )
       });
       format!(
         concat!(
           r#"<creator {}role="author"> <personname>{}</personname> "#,
-          r#"<contact name="Affiliation: " role="affiliation">University of Alpha</contact> {}</creator>"#
+          r#"<contact class="ltx_author_line" name="Affiliation: " role="affiliation">University of Alpha</contact> {}</creator>"#
         ),
         if at == 0 { "" } else { r#"before=" " "# },
         name,
@@ -270,7 +277,7 @@ fn alpha_three(names: [(&str, Option<&str>); 3], domain: &str, block: Option<&st
   if let Some(local) = block {
     creators.push(format!(
       concat!(
-        r#"<creator role="author"> <contact name="Email: " role="email">"#,
+        r#"<creator role="author"> <contact class="ltx_author_line" name="Email: " role="email">"#,
         r#"<text font="typewriter">{}@{}</text></contact> </creator>"#
       ),
       local, domain
@@ -294,7 +301,7 @@ fn a_transliteration_neither_breaks_a_tie_nor_lifts_a_threshold() {
       repro!("email_list_literal_and_transliterated_spelling_tie"),
       (0, 0)
     ),
-    author_line(alpha_three(
+    alpha_three(
       [
         ("Jörg Müller", None),
         ("Hans Mueller", None),
@@ -302,14 +309,14 @@ fn a_transliteration_neither_breaks_a_tie_nor_lifts_a_threshold() {
       ],
       "alpha.de",
       Some("mueller")
-    ))
+    )
   );
   assert_eq!(
     creators_with(
       repro!("email_list_short_surname_transliteration_exact"),
       (0, 0)
     ),
-    author_line(alpha_three(
+    alpha_three(
       [
         ("Wei Lü", None),
         ("Ann Able", Some("aable")),
@@ -317,7 +324,7 @@ fn a_transliteration_neither_breaks_a_tie_nor_lifts_a_threshold() {
       ],
       "alpha.org",
       Some("bluesky")
-    ))
+    )
   );
 }
 
@@ -333,7 +340,7 @@ fn a_surname_prefix_never_reuses_the_given_names_letters() {
       repro!("email_list_surname_prefix_outside_given_name"),
       (0, 0)
     ),
-    author_line(alpha_three(
+    alpha_three(
       [
         ("Andrea Andreassen", None),
         ("Andrea Rossi", Some("andrea.rossi")),
@@ -341,11 +348,11 @@ fn a_surname_prefix_never_reuses_the_given_names_letters() {
       ],
       "alpha.dk",
       None
-    ))
+    )
   );
   assert_eq!(
     creators_with(repro!("email_list_nordic_given_name_prefix"), (0, 0)),
-    author_line(alpha_three(
+    alpha_three(
       [
         ("Søren Sørensen", None),
         ("Søren Hansen", Some("soeren.hansen")),
@@ -353,6 +360,6 @@ fn a_surname_prefix_never_reuses_the_given_names_letters() {
       ],
       "alpha.dk",
       None
-    ))
+    )
   );
 }
