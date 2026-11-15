@@ -415,7 +415,8 @@ LoadDefinitions!({
  \ifx\next[\let\next@\nextii@\else\ifx\next"\let\next@\nextiii@\else\let\next@\nextiv@\fi\fi\next@}"###);
   // The digested body is `#1` (Perl's `#body` is never set for DigestUntil: KPE, every item lost; alg-geom9502009).
   // The roster's id is stepped at `\roster`, before its items read it, and held for the properties after the body; a
-  // nested roster gives the outer's item ids back at its end.
+  // braced nested roster gives the outer's item ids back at its end (math9506206). Unbraced, amsppt.sty:744 makes the
+  // outer `\item` plain's (amsppt_unbraced_nested_roster_outer_item_red).
   DefConstructor!("\\roster DigestUntil:\\endroster",
     "<ltx:enumerate xml:id='#id'>#1</ltx:enumerate>",
     bounded => true,
