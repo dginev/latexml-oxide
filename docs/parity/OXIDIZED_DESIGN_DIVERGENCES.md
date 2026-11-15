@@ -68,64 +68,43 @@ with `--nocomments` (or ignore `<!-- … -->` / `%**** … ****` lines).
 
 ### 4. → OXIDIZED_DESIGN_MATH #20 (Marpa-Style Math Parser)
 
-### 5. Color as a First-Class Type
+### 5. Colour is a typed value: font equality compares colours visually, the emitted attribute by variant + values (Perl: blessed arrayrefs compared by reference) — absorbs #6 #20
 
-**Decision:** Colors are represented as `enum Color { Rgb(f64,f64,f64), Cmy(f64,f64,f64), Cmyk(f64,f64,f64,f64), Hsb(f64,f64,f64), Gray(f64) }` instead of Perl's blessed arrayrefs.
-
-**Rationale:** Rust's enum makes the color model explicit and prevents model mismatches
-at compile time. The Font struct stores `Option<Color>` instead of `Option<Cow<str>>`,
-eliminating string-parsing at comparison time.
-
-**Parity:** All five Perl color models (rgb, cmy, cmyk, hsb, gray) are supported with
-full inter-conversion. `to_attribute()` produces identical hex strings.
-
-#### Font Color Comparison: Discriminant-Based Reference Equality
-
-Perl's `Font::isDiff` uses `$x ne $y` — string comparison of *object references*. Two
-Color objects at different memory addresses are "different" even if visually identical.
-This means `Cmyk(0,0,0,1)` (CMYK black) is "different" from `Rgb(0,0,0)` (DEFCOLOR)
-even though both render as `#000000`.
-
-In Rust, we use two comparison functions:
+**Rule (DG 2026-11-14: document today's code).** A colour is `enum Color { Rgb(f64,f64,f64), Cmy(f64,f64,f64),
+Cmyk(f64,f64,f64,f64), Hsb(f64,f64,f64), Gray(f64) }` (`latexml_core/src/common/color.rs:12`), and a font's `color` is an
+`Option<Color>` whose `None` is the inherited default. Font equality, hashing and font matching compare colours
+**visually**; the attribute decision compares **variant + values**, so a colour named in another model than its
+context's is emitted even when it renders the same. **Perl**: Font.pm's `isDiff` uses `ne` on unoverloaded `Color`
+objects — reference identity — so equal-valued colours built separately differ, and Perl writes an incidental
+`color="#000000"` wherever the author restates the context's colour.
+**Code.** `latexml_core/src/common/font.rs:2282 is_diff_font_color`, `:2297 is_diff_font_color_ref`, `:2276 is_diff_color`.
 
 | Function | Mode | Used by |
 |---|---|---|
-| `is_diff_font_color` | Visual: `unwrap_or(DEFCOLOR)` then `to_rgb()` fallback | `PartialEq`, `Hash`, `font_match` |
-| `is_diff_font_color_ref` | Exact: `unwrap_or(DEFCOLOR)` then `cx != cy` (derived PartialEq — checks variant + values) | `distance()`, `relative_to()` |
+| `is_diff_font_color` | Visual: `unwrap_or(DEFCOLOR)` (`DEFCOLOR = Rgb(0,0,0)`), then a `to_rgb()` fallback | `PartialEq`, `Hash`, `font_match` |
+| `is_diff_font_color_ref` | Exact: `unwrap_or(DEFCOLOR)`, then `cx != cy` (derived PartialEq: variant + values) | `Font::distance`, `relative_to` |
+| `is_diff_color` | `None` ("transparent") distinct from `Some(Black)` | the `bg` field |
 
-The key insight: **different Color enum variants = different Perl object references**.
+- **Cases (the ref mode).** `\color{black}` → `LookupColor("black")` → `Rgb(0,0,0)` = DEFCOLOR → not diff;
+  `\color[cmyk]{0,0,0,1}` → `Cmyk(0,0,0,1)` → diff (variant); `\color[gray]{0.0}` → `Gray(0.0)` → diff (variant);
+  `\color{red}` → `Rgb(1,0,0)` → diff (values). `Gray(0)` and `Rgb(0,0,0)` are the same font colour. Edge case:
+  `\color[rgb]{0,0,0}` equals DEFCOLOR; a *new* `Rgb(0,0,0)` from `\definecolor` would be a new reference (diff) to Perl and
+  not to us — appears in no test.
+- **Observable** (main, probe `A {\color{black}B} {\color[gray]{0}C} {\color[rgb]{0,0,0}D}` with xcolor, default black
+  context): `<text color="#000000">B</text> <text color="#000000">C</text> D` — xcolor's `black` is a gray colour, so it and
+  `[gray]{0}` keep their attribute; an RGB black in an RGB-black context adds none. SVG elements likewise drop a
+  `color`/`fill`/`stroke` that repeats the parent's colour in the same model. Guards: the `tikz_3d_cone` and
+  `ac_drive_components` SVG goldens (fewer `color`/`fill`/`stroke` than Perl).
+- **Why two modes.** Font equality must not split runs of visually identical text into separate fonts; the attribute
+  records the colour the author named, in the model they named it. All five Perl models (rgb, cmy, cmyk, hsb, gray)
+  inter-convert; `to_attribute()` gives Perl's hex strings; the enum catches model mismatches at compile time and the
+  font stores `Option<Color>`, not `Option<Cow<str>>`, so comparison parses no string.
+- **Font defaults** (ex-#6). `DEFBACKGROUND = None` and `DEFLANGUAGE = None` (Perl's `undef`, "no value set"), and the
+  font's `color` defaults to `None`, not `Some(DEFCOLOR)` — with a `Some` default the pre-defined `black` would always
+  match and the CMYK/Gray distinction would be lost. Early Rust code used `DEFBACKGROUND = "white"` and
+  `DEFLANGUAGE = "en"`, which gave spurious font diffs against elements with no explicit background or language.
 
-- `\color{black}` → `LookupColor("black")` → stored `Rgb(0,0,0)` = DEFCOLOR → not diff
-- `\color[cmyk]{0,0,0,1}` → new `Cmyk(0,0,0,1)` ≠ `Rgb(0,0,0)` → diff (variant differs)
-- `\color[gray]{0.0}` → new `Gray(0.0)` ≠ `Rgb(0,0,0)` → diff (variant differs)
-- `\color{red}` → stored `Rgb(1,0,0)` ≠ `Rgb(0,0,0)` → diff (values differ)
-
-The `color` field uses `Option<Color>` where `None` means "inherited default" (treated
-as `DEFCOLOR = Rgb(0,0,0)` via `unwrap_or`). The `bg` field also uses `Option<Color>`
-but `None` means "transparent" (no background), so it uses the original `is_diff_color`
-which treats `None` as distinct from `Some(Black)`.
-
-**Edge case:** `\color[rgb]{0,0,0}` creates `Rgb(0,0,0)` which equals DEFCOLOR by both
-variant and value — treated as "not different", matching Perl where the stored pre-defined
-`black` object is the same type. If someone defined a *new* Rgb(0,0,0) via `\definecolor`
-then looked it up, Perl would see it as a new reference (diff), but our code would not.
-This theoretical edge case does not appear in any test.
-
-### 6. Font Defaults: None vs Named Strings
-
-**Decision:** `DEFBACKGROUND = None` and `DEFLANGUAGE = None` (Perl uses `undef`).
-Font `color` also defaults to `None` (not `Some(DEFCOLOR)`), meaning "inherited/unset".
-
-**Rationale:** Perl's `undef` for these defaults is semantically "no value set", not
-"white" or "en". The Rust port uses `Option<Color>` and `Option<Cow<str>>` to represent
-this correctly, rather than sentinel strings. For color specifically, `None` enables the
-discriminant-based comparison in section 5 — if the default were `Some(Rgb(0,0,0))`,
-looking up pre-defined `black` would always match and the CMYK/Gray distinction would
-be lost.
-
-**Previous bug:** Early Rust code used `DEFBACKGROUND = "white"` and `DEFLANGUAGE = "en"`,
-which caused spurious font diffs when compared against elements that had no explicit
-background/language.
+### 6. → #5 (Font Defaults: None vs Named Strings)
 
 ### 7. (retired: superseded by the SVG port — `collapse_svg_group`, tex_box.rs:495 (Perl TeX_Box.pool.ltxml:199-271), and pgfsys's `svg:g`/`svg:foreignObject` output, pgfsys_latexml_def.rs; nothing of the deferral remains)
 
@@ -203,27 +182,7 @@ AssignValue!("MATHPARSER_SPECULATE" => true, Scope::Global);
 **Impact:** Tests with `.latexml` files need corresponding `*_src.rs` files in `tests/helpers/` and `\input{name.latexml}` in their `.tex` source to get the same parsing behavior as Perl.
 ### 19. (removed: an implementation guide: `latexml_core::common::local_assignments`'s own docs)
 
-### 20. Colour comparison: visual for font equality, variant + values for the emitted attribute
-
-**Rule.** Two comparisons, by use (DG 2026-11-14: document today's code). Font equality, hashing and font matching
-compare colours **visually** (`font.rs` `is_diff_font_color`: `None` is `DEFCOLOR = Rgb(0,0,0)`, then `to_rgb()`), so
-`Gray(0)` and `Rgb(0,0,0)` are the same font colour. The attribute decision (`Font::distance`, `relative_to`:
-`is_diff_font_color_ref`) compares **variant + values**, with no `to_rgb()` fallback, so a colour of another model than
-its context's is emitted even when it renders the same.
-
-**Perl.** `Font.pm`'s `isDiff` uses `ne` on unoverloaded `Color` objects, i.e. reference identity: two equal-valued
-colours built separately are "different", so Perl writes an incidental `color="#000000"` wherever the author restates
-the context's colour. Ours drops that only when the variant and values match.
-
-**Observable (main, probe `A {\color{black}B} {\color[gray]{0}C} {\color[rgb]{0,0,0}D}` with xcolor, default black
-context):** `<text color="#000000">B</text> <text color="#000000">C</text> D` — xcolor's `black` is a gray colour, so it
-and `[gray]{0}` keep their attribute; an RGB black in an RGB-black context adds none. SVG elements likewise drop a
-`color`/`fill`/`stroke` that repeats the parent's colour in the same model.
-
-**Why two modes.** Font equality must not split runs of visually identical text into separate fonts; the attribute
-records the colour the author named, in the model they named it. **Guards**: the `tikz_3d_cone` and
-`ac_drive_components` SVG goldens (fewer `color`/`fill`/`stroke` than Perl). Related: #5 (colour as a
-first-class type), #6 (font defaults, `None` as the default colour).
+### 20. → #5 (Colour comparison: visual for font equality, variant + values for the emitted attribute)
 
 ### 21. No `tex=` Attribute on `<picture>` Elements
 
@@ -568,50 +527,35 @@ Font-Selection residual 9): it is a macro that expands to nothing, so it makes n
 
 ### 28. → KNOWN_PERL_ERRORS #1250 (Bib-section title = leading balanced group, not all trailing tokens)
 
-### 29. `wrapfigure`/`wraptable` emit the declared wrap width
+### 29. A box's text width is the width it declares, as the kernel's `\@parboxrestore` sets it — `\hsize`, `\columnwidth` and `\linewidth` inside, the declared width on the element (Perl: the trio without `\linewidth`; wrapfig's width discarded) — absorbs #42
 
-**Decision:** `wrapfig.sty`'s `{wrapfigure}`/`{wraptable}` set the figure/table
-element's `@width` to the mandatory `{Dimension}` wrap-width argument (→ CSS
-`width:`), capping the float — image *and* caption — to that width.
+**Rule.** Inside a minipage, a `\parbox`, a `p`/`m`/`b` cell and a wrap float, `\linewidth` is the box's `\hsize`, as
+latex.ltx's `\@iiiminipage`/`\@iiiparbox`/`\@startpbox` reach it through `\@parboxrestore`/`\@arrayparboxrestore`
+(`\linewidth\hsize`, latex.ltx:16755, :16280); a wrap float also carries its declared width. **Perl**: the minipage
+binding assigns `\hsize`/`\textwidth`/`\columnwidth` only (latex_constructs.pool L4787-4789; `\parbox` L4746, the same
+trio), its `\@parboxrestore` is `Tokens()`, a `p` cell sets `\hsize` alone (TeX_Tables.pool.ltxml:76), and
+`wrapfig.sty.ltxml` reads the wrap width as its last `{Dimension}` and discards it (`float='right'|'left'` only).
+**Code.** `latexml_package/src/package/wrapfig_sty.rs:114 set_wrap_width` (and `wrapstuff_sty.rs:98`), the minipage and
+`\parbox` bindings, `\lx@tabular@p`.
 
-**Perl behavior:** Perl `wrapfig.sty.ltxml` captures the wrap width as the last
-`{Dimension}` argument of the environment but then **discards it** — the emitted
-`ltx:figure` carries only `float='right'|'left'`, no width.
-
-**Why diverge:** A wrapfig float with no width constraint shrinks/expands to its
-content. Under ar5iv.css (`.ltx_align_floatright { float:right }`, no width cap)
-a small figure whose caption fits on one long line balloons into an enormous
-box — the caption sets the float width, not the image. Real LaTeX confines the
-float to the declared wrap width (`\begin{wrapfigure}{r}{0.4\textwidth}`); we
-honor that intent. The width renders via the existing `@width` → `base-styling`
-`width:` path (the same mechanism `{minipage}` uses), so the image (CSS
-`width:auto; max-width:100%`) and the caption both wrap within the declared
-width. This keeps `width:auto` working as CSS intends (the SVG/image keeps its
-natural intrinsic size; the *figure* is what's bounded) rather than pinning the
-image's own dimensions.
-
-**Impact:** `<ltx:figure>`/`<ltx:table>` from wrap environments gain a
-`width="<dim>"` attribute (e.g. `width="138.0pt"` for `0.35\textwidth`). Witness
-arXiv:2012.00499 Figure 3 (`\begin{wrapfigure}{r}{0.4\textwidth}` around a
-`width=0.4\textwidth` histogram): previously the float filled the column width to
-fit the single-line caption; now both image and caption are capped to the wrap
-width.
-
-**Extension — inner `\linewidth`:** the `@width` cap on the figure is not enough
-when the body carries its OWN intrinsic size — a `\includegraphics[width=\linewidth]`
-or `\begin{minipage}{\linewidth}` that read `\linewidth` at the full page width
-render a fixed-size box (e.g. a tikz picture serializes to `<svg width="479">`)
-that overflows the narrow float and collides with the wrapped text (`max-width:100%`
-does not rein a fixed-`width` SVG in). So `set_wrap_width` also reduces the INNER
-`\hsize`/`\columnwidth`/`\linewidth` to the wrap width (in `after_digest_begin`,
-before the body digests), exactly as real LaTeX wrapfig does (`\hsize<width>` +
-`\@parboxrestore`'s `\linewidth\hsize`) and as `{minipage}` already does here.
-`\textwidth` is left alone (the `@width` percentage is relative to the OUTER
-textwidth). Perl discards the width arg entirely, so Perl's wrapfig image renders
-full-width too (SHARED-FAILURE). Witness arXiv 2603.23669 Figure 3
-(`0.296\textwidth` wrapfigure around a 512px tikz image): the picture dropped from
-479px → 141px and the text now wraps cleanly. Guard
-`cluster_sizing::wrapfig_inner_linewidth`.
+- **minipage, `\parbox`, `\@parboxrestore`** (ex-#42): the minipage binding also assigns `\linewidth`; the `\parbox` raw
+  macro appends `\linewidth\hsize`; `\@parboxrestore`/`\@arrayparboxrestore` are ported from latex.ltx (minus the
+  `\if`-lets and accent `\let`s LaTeXML manages) — relevant on the no-dump path, the dump captures the kernel's.
+  tcolorbox wraps every box's content in `\minipage` (`tcb@lrbox`) and sizes a nested box `width=\linewidth`: stale, an
+  inner box overflowed its parent (2605.02240, `innercode` in `responsebox`). Probe `nested.tex`: pdflatex OUTER
+  `hsize=linewidth=313.70206pt`, INNER `282.40411pt`, ours both to the sp; Perl `linewidth=345pt` at both. Golden
+  `figure_dual_caption.xml`: `\includegraphics[width=0.95\linewidth]` in `\begin{minipage}{.5\textwidth}` is 163.87pt
+  (pdflatex's), not 327.75pt. Shared limitation in Perl, invisible without measured drawing; candidate to upstream.
+- **A `p`/`m`/`b` cell** (also `\multicolumn` over one, longtable) sets `\linewidth\hsize`: `\includegraphics[width=\linewidth]`
+  in a cell took the page width (issue 778). Guard `perfect_kernel_batch60::paragraph_cell_linewidth_is_the_column_width`;
+  no golden moved.
+- **wrapfig's `{wrapfigure}`/`{wraptable}`**: the element's `@width` is the mandatory wrap width (→ CSS `width:` through
+  `base-styling`, as `{minipage}`), capping image and caption (ar5iv.css's `.ltx_align_floatright` has no width cap, so a
+  one-line caption ballooned the float; `width="138.0pt"` for `0.35\textwidth`). Witness 2012.00499 Figure 3
+  (`\begin{wrapfigure}{r}{0.4\textwidth}` around a `width=0.4\textwidth` histogram). Inside, `set_wrap_width` reduces
+  `\hsize`/`\columnwidth`/`\linewidth` in `after_digest_begin` (wrapfig's `\hsize<width>` + `\@parboxrestore`), leaving
+  `\textwidth` (the `@width` percentage is of the outer one): 2603.23669 Figure 3 (`0.296\textwidth` around a 512px tikz
+  image, 479px → 141px; Perl full width too, SHARED-FAILURE). Guard `cluster_sizing::wrapfig_inner_linewidth`.
 
 ---
 
@@ -672,32 +616,33 @@ comma or ` and ` in an affiliation (`MIT, Cambridge`) and `Lastname, Firstname` 
 - Guard: `perfect_kernel_batch61::frontmatter_digest_cluster_2609` (the alias guard
   `perfect_kernel_batch59::relax_aliases_do_not_split_a_late_author` was deleted at DEL1; its shape is unguarded).
 
-### 37. XSLT `f:seclev-aux` memoized to global variables (O(n²)→O(n), output-neutral)
+### 37. An XSLT value that is document-global is computed once (a global variable or an `xsl:key`), output byte-identical (Perl: recomputed per call, O(n²)) — absorbs #40 #41
 
-**Decision:** In the embedded `resources/XSLT/LaTeXML-structure-xhtml.xsl`,
-the recursive `f:seclev-aux` (which computes a section heading's `<hN>` level)
-is replaced by a lookup into precomputed global `<xsl:variable>`s
-(`seclev_document` … `seclev_backmatter`). The function body now just selects
-the variable matching the element-type name.
+**Rule.** Where an upstream template recomputes a whole-tree scan whose value does not depend on the calling node, the
+embedded stylesheet computes it once — a global `<xsl:variable>`, or a hashed `xsl:key` for a distinct set — and the
+output is byte-identical. A surpass-Perl performance divergence of the local XSLT only; candidates to upstream.
+**Code.** `latexml_post/resources/XSLT/LaTeXML-structure-xhtml.xsl` (`seclev_*`, `maketitle_has_up_nav`) and
+`LaTeXML-webpage-xhtml.xsl` (`f:indexphrase-by-value`). Analysis: `docs/performance/ARXIV_PERFORMANCE.md` Hotspots #2-#4.
 
-**Perl behavior:** upstream LaTeXML's `f:seclev-aux` recomputes whole-tree
-`boolean(//ltx:chapter/ltx:title)`-style **descendant scans** on *every* call,
-and `f:section-head-level` calls it once per `ltx:title`. That is
-O(headings × tree-size) ≈ **O(n²)** — the dominant XSLT cost on large
-section/math-heavy documents.
-
-**Rationale & neutrality:** the level for a given element-type *name* is a
-**document-global constant** — it depends only on which structural element
-types are present (the `boolean(//…)` probes), never on the calling node. So
-computing it once per name yields *identical* values; only the redundant
-recomputation is removed. Verified byte-identical (a 99k-element truncation of
-arXiv 2404.12418 `diff`s IDENTICAL pre/post; full suite 1480/0 unchanged).
-
-**Impact:** 2404.12418 went 179 s fatal-timeout → 34.7 s; all 14 "XSLT-dominated"
-arXiv perf-testbed papers (formerly 176–179 s timeouts) now complete. This is a
-**surpass-Perl** perf win (Perl keeps the O(n²); Rust @99k is now 5.3 s vs Perl
-8.7 s on the same stylesheet) and a candidate to upstream. Local divergence from
-upstream XSLT only. Full analysis: `docs/performance/ARXIV_PERFORMANCE.md` (Hotspot #2).
+- **`f:seclev-aux`** (Hotspot #2): a section heading's `<hN>` level is a lookup into precomputed globals
+  (`seclev_document` … `seclev_backmatter`); upstream recomputes `boolean(//ltx:chapter/ltx:title)`-style descendant
+  scans on every call, and `f:section-head-level` calls it once per `ltx:title` — O(headings × tree-size). The level per
+  element-type name depends only on which structural types are present. Byte-identical on a 99k-element truncation of
+  2404.12418 (full suite 1480/0); 2404.12418 179 s fatal-timeout → 34.7 s; all 14 "XSLT-dominated" perf-testbed papers
+  (176–179 s timeouts) complete; at 99k elements 5.3 s vs Perl 8.7 s on the same stylesheet.
+- **`head-keywords`** (Hotspot #3): the distinct index phrases for `<meta name="keywords">` are the Muenchian method,
+  `//ltx:indexphrase[generate-id() = generate-id(key('f:indexphrase-by-value',.)[1])]`, instead of
+  `//ltx:indexphrase[not(.=preceding::ltx:indexphrase)]` (O(P²) comparisons, each `preceding::` O(tree-size)); the key
+  keeps the first in document order, exactly that set, and `<xsl:sort>` is unchanged. Byte-identical by `xsltproc` on
+  2208.07515; guard `08_xslt_head_keywords.rs`. 145 s → 0.04 s on 2208.07515 (560 indexphrases); index-bearing survivors
+  2–5× (2208.07515 95 s→33 s, 1802.06435 78 s→17 s, 0807.4838 78 s→13 s). It supersedes the deferral of the "third XSLT
+  O(n²)": head-keywords, not the index-render templates, was the root.
+- **`maketitle`'s navigation scan** (Hotspot #4): `not($maketitle_has_up_nav)`, one global
+  `boolean(//ltx:navigation/ltx:ref[@rel='up'])`, where upstream evaluates `not(//ltx:navigation/ltx:ref[@rel='up'])`
+  inline per title (the `//` axis resets to the root). Byte-identical HTML by `xsltproc` on the 25 MB Core XML of
+  2605.01585 (a 2000+-formula physics book, 512 titles): `maketitle` self-time 22.739 s → 0.004 s, the html5 transform
+  24.94 s → 2.15 s (11.6×). Guard `09_xslt_maketitle_navscan.rs` (the `\date` still renders for a non-split document,
+  where the value is `false`).
 
 ### 38. `theorem`/`proof` allowed inside `figure`/`table`/`float` (schema expansion)
 
@@ -726,107 +671,13 @@ typically lower to `float`/`theorem` too, so they benefit as well.)
 
 ### 39. → KNOWN_PERL_ERRORS #38 (`\marginpar` font/catcode changes are scoped (`bounded`))
 
-### 40. XSLT `head-keywords` index dedup via Muenchian key (O(n²)→O(n), output-neutral)
+### 40. → #37 (XSLT `head-keywords` index dedup via Muenchian key (O(n²)→O(n), output-neutral))
 
-**Decision:** In the embedded `resources/XSLT/LaTeXML-webpage-xhtml.xsl`, the
-`head-keywords` template (which builds `<meta name="keywords">` from the distinct
-index phrases) selects its distinct set with a hashed `xsl:key`
-(`f:indexphrase-by-value`, the **Muenchian method**:
-`//ltx:indexphrase[generate-id() = generate-id(key('f:indexphrase-by-value',.)[1])]`)
-instead of upstream's `//ltx:indexphrase[not(.=preceding::ltx:indexphrase)]`.
-
-**Perl behavior:** upstream LaTeXML deduplicates by testing each indexphrase
-against the entire `preceding::ltx:indexphrase` axis — O(P²) string comparisons in
-the indexphrase count P, and each `preceding::` traversal is itself O(tree-size).
-On index-bearing math documents (large trees) this is the dominant XSLT cost. Perl
-keeps the O(n²).
-
-**Rationale & neutrality:** the Muenchian key returns, for each distinct
-string-value, the first indexphrase in document order — exactly the set
-`not(.=preceding::)` keeps. The `<xsl:sort>` is unchanged, so the keywords string is
-**identical**. Verified byte-identical via `xsltproc` (full HTML `diff` IDENTICAL on
-arXiv 2208.07515) and a full-pipeline regression guard
-(`08_xslt_head_keywords.rs`); suite unchanged.
-
-**Impact:** the `head-keywords` template went 145 s → 0.04 s on 2208.07515 (560
-indexphrases); cluster-wide the index-bearing arXiv perf survivors dropped 2–5×
-(2208.07515 95 s→33 s, 1802.06435 78 s→17 s, 0807.4838 78 s→13 s). This **supersedes**
-the prior campaign's deferral of the "third XSLT O(n²)" (`docs/performance/ARXIV_PERFORMANCE.md`)
-— head-keywords, not the index-render templates, was the real root. Surpass-Perl;
-candidate to upstream. Local divergence from upstream XSLT only. Full analysis:
-`docs/performance/ARXIV_PERFORMANCE.md` (Hotspot #3).
-
-### 41. XSLT `maketitle` navigation scan memoized to a global variable (O(n²)→O(n), output-neutral)
-
-**Decision:** In the embedded `resources/XSLT/LaTeXML-structure-xhtml.xsl`, the
-`maketitle` template decides whether to emit the title's `\date` block with
-`not($maketitle_has_up_nav)`, where `maketitle_has_up_nav` is a single global
-`<xsl:variable select="boolean(//ltx:navigation/ltx:ref[@rel='up'])"/>` evaluated
-once. Upstream re-evaluates `not(//ltx:navigation/ltx:ref[@rel='up'])` **inline, once
-per title**.
-
-**Perl behavior:** upstream LaTeXML scans `//ltx:navigation` (a full descendant
-traversal from the document root) inside `maketitle`, which runs for every titled
-unit. On a large book with hundreds of titles this is O(titles × tree-size) — Perl
-keeps the O(n²).
-
-**Rationale & neutrality:** `//ltx:navigation` always resolves from the root
-regardless of the current title (the `//` axis resets to the document node), so the
-boolean is document-global and identical for every title. Hoisting it to a global
-variable changes nothing in the output — verified `xsltproc` **byte-identical** HTML
-on the 25 MB Core XML of arXiv 2605.01585, plus a full-pipeline regression guard
-(`09_xslt_maketitle_navscan.rs`, asserting the `\date` still renders for a non-split
-document where the memoized value is `false`).
-
-**Impact:** `maketitle` self-time 22.739 s → 0.004 s; the whole html5 transform
-24.94 s → 2.15 s (11.6×) on 2605.01585 (a 2000+-formula physics book, 512 titles).
-This was the dominant residual XSLT cost on large math books after #2/#3 landed.
-Surpass-Perl; candidate to upstream. Local divergence from upstream XSLT only. Full
-analysis: `docs/performance/ARXIV_PERFORMANCE.md` (Hotspot #4).
+### 41. → #37 (XSLT `maketitle` navigation scan memoized to a global variable (O(n²)→O(n), output-neutral))
 
 ---
 
-### 42. `\linewidth` tracks the reduced text width in boxed contexts (kernel-faithful; Perl leaves it stale)
-
-**Decision:** Three coordinated completions make `\linewidth` inside a
-box reflect the box's text width, as in real LaTeX:
-
-1. The `{minipage}` binding's width assignment (Perl latex_constructs.pool
-   L4787-4789 assigns `\hsize`/`\textwidth`/`\columnwidth`) additionally
-   assigns `\linewidth`.
-2. The `\parbox` raw macro (Perl L4746, same trio) appends
-   `\linewidth\hsize`.
-3. `\@parboxrestore`/`\@arrayparboxrestore` are real macros ported from
-   `latex.ltx` (minus the `\if`-lets and accent `\let`s LaTeXML manages
-   itself) instead of Perl's empty/`\relax` stubs — relevant on the
-   no-dump path; with a format dump the raw `latex.ltx` kernel versions
-   are captured anyway.
-4. A `p`/`m`/`b` table cell (`\lx@tabular@p`; also `\multicolumn` over one, longtable) sets `\linewidth\hsize`, as TeX's
-   `\@startpbox` → `\@arrayparboxrestore` does (latex.ltx:16755, :16280); Perl (TeX_Tables.pool.ltxml:76) sets `\hsize` alone,
-   so `\includegraphics[width=\linewidth]` in a cell took the page width (issue 778). Guard
-   `perfect_kernel_batch60::paragraph_cell_linewidth_is_the_column_width`; no golden moved.
-
-**Why:** Real LaTeX's `\@iiiminipage`/`\@iiiparbox` run `\@parboxrestore`,
-whose `\linewidth\hsize` is what raw-loaded packages read back. tcolorbox
-wraps every box's content in `\minipage` (`tcb@lrbox`) and sizes a nested
-`tcolorbox` as `width=\linewidth` — with `\linewidth` stale at the page
-width, an inner box drew itself full-outer-width and overflowed its parent
-frame (arXiv 2605.02240, `innercode` inside `responsebox`). Probe
-(`nested.tex`, outer+inner tcolorbox): pdflatex gives OUTER
-`hsize=linewidth=313.70206pt`, INNER `282.40411pt`; after the fix Rust
-matches **both to the sp**; Perl (and pre-fix Rust) leave `linewidth=345pt`
-at both levels.
-
-**Perl behavior:** shared limitation — Perl's minipage binding assigns only
-the trio, and its `\@parboxrestore` is `Tokens()`. Perl does not draw
-boxes from measured sizes at this fidelity, so the staleness is invisible
-there; in our sizing-driven pgf pipeline it is a visible frame overflow.
-Candidate to upstream.
-
-**Golden churn:** `figure_dual_caption.xml` — `\includegraphics[width=0.95\linewidth]`
-inside `\begin{minipage}{.5\textwidth}` now yields 163.87pt (= 0.95 x 172.5,
-the pdflatex value); the prior 327.75pt golden had the stale full-page
-`\linewidth` baked in (image at double its true width).
+### 42. → #29 (`\linewidth` tracks the reduced text width in boxed contexts (kernel-faithful; Perl leaves it stale))
 
 ### 43. Repeat package loads apply surviving handlers for NEW options (modern-kernel fidelity)
 
@@ -882,23 +733,7 @@ Perl (which keeps the flawed reset) — e.g. the itemize-in-vbox probe that
 previously matched Perl to the sp. Deliberate: truer to TeX, and the safe
 direction for frame/content agreement.
 
-### 45. NFSS family-code vocabulary extended to modern font packages
-
-**Decision:** `FONT_FAMILY` (Common/Font.pm `%font_family` port) gains the
-family codes of the dominant modern font packages: inconsolata (`zi4`,
-`fi4`), TeX Gyre (`qcr`/`qpl`/`qtm`/`qbk`/`qcs`/`qhv`/`qag`/`qzc`), Latin
-Modern (`lmr`/`lmss`/`lmtt`/`lmvtt`), Bera (`fvm`/`fve`/`fvs`), Source
-Code Pro / Fira Mono codes.
-
-**Why:** raw `\fontfamily{<code>}\selectfont` (fancyvrb's font setup, and
-any package that repoints `\ttdefault` et al.) decodes the code through
-this table to recover the ABSTRACT family; unknown codes silently lose it.
-colm2026_conference loads inconsolata (`\ttdefault`=zi4), so boxed
-Verbatim dropped `ltx_font_typewriter` — the browser painted full-size
-serif prose inside frames TeX measured as compact monospace (witness
-2605.00468). Perl's table has the same gap (frozen at ~2005-era fonts);
-upstream candidate. Future refinement: derive family knowledge from `.fd`
-files instead of an enumerated table.
+### 45. → #288 (NFSS family-code vocabulary extended to modern font packages)
 
 ### 46. foreignObject font-size anchor = the foreignObject's node font size, declared for its content
 
@@ -2327,40 +2162,52 @@ but making such a cite *link* needs key normalisation at the
 `bibtex:unbalanced`; they lose no cited keys — the #58 resync recovers the next
 entry — so it is log noise, not data loss.
 
-### 61. `\end{lstlisting}` terminates the listing anywhere on the line, not only at its start
+### 61. A verbatim or listing body is read line by line as TeX's file reader and the package's own scanner read it (Perl: its own anchored, verbatim reads) — absorbs #69 #274 #521
 
-Perl `listings.sty.ltxml` L316 (`listingsReadRawLines`) anchors the terminator:
+**Rule.** The raw-line readers behind `{lstlisting}`, `\lstinputlisting` and verbatim.sty's `\verbatim@start` take a line
+as TeX does (its terminator stripped, `\endlinechar` appended) and end, start and head a body where the real package's
+scanner does (listings.sty, verbatim.sty:107-112). **Perl** anchors the terminator, slurps a listing file verbatim,
+never looks at the token after `\verbatim@start`, and drops begin-line text without the package's warning.
+**Code.** `latexml_package/src/package/listings_sty.rs:111 listings_read_raw_lines`, `:437 listings_read_raw_file`,
+`verbatim_sty.rs:294 read_verbatim_lines`; the mouth's `mouth.rs:1471 read_raw_line`.
 
-```perl
-if ($line =~ /^\s*\\end\{\Q$environment\E\}(.*?)$/) {
-```
-
-so a line that carries content *before* the terminator —
-`</body></html> \end{lstlisting}` — never matches. The reader then consumes every
-remaining line, `\end{document}` included, and the document simply ends where the
-input does. Nothing is reported: the environment is not "unterminated" from the
-reader's point of view, it just ran out of file. **The entire tail of the paper is
-lost with zero `Error:`.**
-
-Real `listings` terminates there. Ground truth (pdflatex on the minimal repro
-`hello world \end{lstlisting}`): compiles cleanly, renders `hello world` as the
-listing's last line, and typesets the following text normally.
-
-We therefore search for `\end{<env>}` **anywhere** in the line: text before it
-becomes the listing's final line (whitespace-only before → no line, preserving
-the ordinary terminator-on-its-own-line case), text after it is unread — which is
-what Perl already does for the trailing part.
-
-This is a **shared upstream bug**, not a Rust regression: same-host Perl loses the
-tail identically and reports `Conversion complete: No obvious problems`. See
-KNOWN_PERL_ERRORS #51 — candidate to upstream.
-
-Witness **2605.11619**: a complete 54 KB paper silently lost its Conclusion,
-`\bibliography` and appendix (1.3 MB of HTML, 0 errors, 0 references). After:
-Conclusion + appendix restored and **32 references, 0 dangling**. Breadth: 7 of
-the 169 truncated papers in the 2026-07-14 empty-References sweep, 3 of them in
-the silent (no-`Error:`) subset. Regression test:
-`06_cluster_regressions::inline_end_lstlisting_does_not_swallow_the_document`.
+- **`\end{lstlisting}` anywhere on the line.** Perl `listings.sty.ltxml` L316 (`listingsReadRawLines`) matches
+  `/^\s*\\end\{\Q$environment\E\}(.*?)$/`, so `</body></html> \end{lstlisting}` never ends the listing: the reader takes
+  every remaining line, `\end{document}` included, with zero `Error:` (KNOWN_PERL_ERRORS #51, shared; same-host Perl
+  "No obvious problems"; candidate to upstream). pdflatex on `hello world \end{lstlisting}` ends there, `hello world` the
+  last line. Ours: text before the terminator is the final line (whitespace-only → no line), text after it is unread
+  (as Perl). Witness 2605.11619 (54 KB paper, Conclusion, `\bibliography` and appendix lost, 1.3 MB of HTML, 0 errors, 0
+  references → 32 references, 0 dangling); 7 of the 169 truncated papers in the 2026-07-14 empty-References sweep, 3 in
+  the silent subset. Guard `06_cluster_regressions::inline_end_lstlisting_does_not_swallow_the_document`.
+- **CRLF normalized on read** (ex-#69). `listingsReadRawFile` slurps verbatim and every end-of-line test (the
+  `__NEWLINE__` close test for line comments, `lstProcessStartLine`'s blank-line test, the line-skipping loops) is
+  against `\n`, so a `\r` keeps a line comment open and its font/colour group bleeds over the following lines (the
+  `ltx_lst_comment` class wrapper does close). TeX never sees the CR; `\r\n` and a lone `\r` become `\n`
+  (`listings_read_raw_file`). Witness 2412.04705 (arXiv/html_feedback#6735, CRLF Python sources): pdflatex 9 green vs 69
+  black glyph groups, both LaTeXML engines all green and slanted; an LF copy rendered right. Guard
+  `104_lstinputlisting_range_crlf::crlf_line_comment_style_does_not_bleed_past_its_line`.
+- **Text after `\begin{lstlisting}`** (ex-#521) is dropped with listings' "Package Listings Warning: Text dropped after
+  begin of listing" (listings.sty:2142-2145; Perl drops it silently, or keeps it). Not text: a tcolorbox listing box's
+  arguments, options after a space (`\@ifnextchar[` skips it; 1606.07935), a `%` comment while `%` has comment catcode
+  (under doc.sty's `\MakePercentIgnore` it is text). After a begin-line comment the next line is kept as the first
+  line, where pdflatex drops it with the warning (the base kept it too); Perl drops it after a bare
+  `\begin{lstlisting}% c` and keeps it after `[language=C] % c`. Flagged on purpose: a single leftover character warns
+  where pdflatex is silent (`\begin{lstlisting}d`, catcode-9 `% d`; two characters warn in both) — 2104.03678
+  (Favalon-en.tex:663/783 `…{*}]]`, pdflatex takes the `]` as lstlisting's #2, listings.sty:2267-2276); 1606.07935
+  (spedoc.tex:274 `…][t!]`) is a real drop pdflatex warns about. Guards
+  `perfect_kernel_batch64zf::{lstlisting_begin_line_text_is_dropped_with_a_warning,
+  lstlisting_begin_line_percent_that_is_no_comment_is_dropped_text}`.
+- **`\verbatim@start` heads line 1 with a pending command** (ex-#274, 56hc). Perl's `\verbatim@start` =
+  `\lx@verbatim@\verbatim@` (verbatim.sty.ltxml:76) never inspects the next token, so verbatimbox's
+  `\verbatim\verbbox@inner` captured `\begin{verbbox}[\footnotesize]`'s bracket as text (6 errors, empty boxes). As
+  verbatim.sty:107-112 does, a pending control sequence goes at the head of line 1's `\verbatim@addtoline` and runs in
+  `\verbatim@processline` (tex.web §506: `\if\noexpand#1\noexpand~` holds only for the active line end), so the bracket is
+  consumed and the size applied (readarray.tex:440, verbatimbox, stackengine). A pending `\relax` (the
+  `\verbatim@start\relax` idiom: curve2e `{Esempio}`, memoir, digiconfigs) is dropped rather than prepended, since our
+  processline stringifies line tokens; in TeX it is a no-op. Guards `perfect_kernel_batch50::verbatim_start_relax_idiom`,
+  `perfect_kernel_batch56::verbatim_start_runs_a_prepended_command`.
+- Related: KNOWN_PERL_ERRORS #58 (#68, a trim re-closing what it cut), #1256 (#162, the first body line after a
+  line-crossing probe).
 
 ### 62. The biblatex binding announces itself as `Info`, not an unconditional `Warn`
 
@@ -2519,27 +2366,7 @@ content correctly and can never emit *fewer* errors than Perl.
 
 ### 68. → KNOWN_PERL_ERRORS #58 (Trimming a listing's trailing empty lines re-closes what the trim cut open)
 
-### 69. A listing source file's CRLF line endings are normalized on read
-
-`listingsReadRawFile` slurps the file verbatim in Perl. Every end-of-line test in the
-listings processor is then written against `\n` — the `__NEWLINE__` close test for
-line comments, the blank-line test in `lstProcessStartLine`, the line-skipping loops —
-and a `\r` sitting before the `\n` defeats all of them. A line comment therefore never
-terminates, and its **style** bleeds over every following line. (The
-`ltx_lst_comment` class wrapper does close; it is the font/colour group that leaks, so
-the defect is invisible if you inspect classes rather than `font`/`color`.)
-
-TeX never sees the CR — its file reader strips the line terminator and appends
-`\endlinechar` — so normalizing `\r\n` and lone `\r` to `\n` at ingestion is what
-matches the engine we emulate, not a special case.
-
-Ground truth, arXiv 2412.04705 (arXiv/html_feedback#6735), whose Python sources are
-CRLF: pdflatex renders only the `#` line in comment green (measured on the rendered
-page: 9 green vs 69 black glyph groups), while both LaTeXML engines painted the whole
-snippet green and slanted. Verified by A/B — pre-fix, an LF copy of the same file
-renders correctly and the CRLF original does not.
-
-Guard: `104_lstinputlisting_range_crlf::crlf_line_comment_style_does_not_bleed_past_its_line`.
+### 69. → #61 (A listing source file's CRLF line endings are normalized on read)
 
 ### 70. → OXIDIZED_DESIGN_MATH #23 (A comma between digit groups is a thousands separator, not a list separator)
 
@@ -3212,50 +3039,27 @@ applies there — filed as **brucemiller/LaTeXML#2856**. Also
 
 Guard: `06_cluster_regressions::cluster_fnum_arg_hook`.
 
-### 86. `\bibliography{}` with an empty argument still inputs `\jobname.bbl`
+### 86. A bibliography command inputs its `.bbl` unconditionally, as latex.ltx and bibunits do, when the file exists (Perl: the `.bib` route only, or nothing for an empty argument) — absorbs #87
 
-`latex.ltx` ends `\bibliography` with an **unconditional**
-`\@input@{\jobname.bbl}` — the argument only drives the `.aux` `\bibdata`
-record, not whether the `.bbl` is read. So `\bibliography{}` beside a shipped
-`<jobname>.bbl` renders the full reference list under pdflatex (measured:
-"References / [1] A. Uthor. A paper. 2020.", with `\cite` resolving to `[1]`).
+**Rule.** `\bibliography` ends in an unconditional `\@input@{\jobname.bbl}` (latex.ltx) and bibunits' `\putbib` in
+`\@input@{\@bibunitname.bbl}` (bibunits.sty L324-330): the argument writes the `.aux` `\bibdata` record, it never
+decides whether the `.bbl` is read; so a shipped `.bbl` is read first, and the `.bib` route is the fallback.
+**Perl**: `return unless $bib_files;` (latex_constructs.pool.ltxml L3901, no diagnostic) and bibunits' `\putbib[#1]` →
+`\lx@bibliography[\bu@unitname]{…}` (bibunits.sty.ltxml L78), the `.bib` route only.
+**Code.** `latex_constructs/sect11.rs:233` (`\lx@ifusebbl{#1}{\input{\jobname.bbl}}{\lx@bibliography{#1}}`), an empty
+argument taking the `.bbl` branch only when `\jobname.bbl` exists (else it returns quietly); `bibunits_sty.rs:128`.
 
-Perl returns before looking at anything (`latex_constructs.pool.ltxml` L3901,
-`return unless $bib_files;`) and raises no diagnostic, so the references are
-dropped in silence; this port mirrored that. Rust now follows `latex.ltx`
-instead: on an empty argument it takes the `.bbl` branch **when
-`\jobname.bbl` actually exists**, and otherwise still returns quietly.
+- **`\bibliography{}`** beside a shipped `<jobname>.bbl`: pdflatex prints "References / [1] A. Uthor. A paper. 2020."
+  with `\cite` resolving to `[1]`. 7 papers in the 2605+2606 sandboxes, including the GWTC-5 LIGO set (one template).
+  Witness 2605.27226; repro `docs/parity/bib_absence_2026-07-29/repros/f3_empty_arg_bbl/`; audit family F3(a) in
+  [`BIB_ABSENCE_AUDIT_2026-07-29.md`](BIB_ABSENCE_AUDIT_2026-07-29.md). Guard `bib_empty_argument_still_reads_the_jobname_bbl`.
+- **bibunits' `\putbib`** reads the shipped `bu<N>.bbl` (arXiv ships them because it does not run bibtex; the `.bib` is
+  usually absent): 15 papers, every one 0 entries before and complete after — 2606.04416 (79), 2606.28854 (180),
+  2605.21570 (46 = bu1's 34 + bu2's 12, each matching its unit's `\begin{thebibliography}{N}`). Audit family F3(c).
+  Guard `bibunits_putbib_reads_the_per_unit_bbl`.
+- Ground truth is the arXiv PDF (`BIBLIOGRAPHY_WORKLIST.md`): Rust and Perl agreed with each other, not with the PDF.
 
-Ground truth is the arXiv PDF (bibliography formats are config-driven —
-`BIBLIOGRAPHY_WORKLIST.md`), and this is the shape where Rust and Perl agreed
-with each other but not with the PDF. 7 papers in the 2605+2606 sandboxes,
-including the GWTC-5 LIGO set, which share one template that writes
-`\bibliography{}` and ships the `.bbl`. Witness **2605.27226**; repro
-`docs/parity/bib_absence_2026-07-29/repros/f3_empty_arg_bbl/`; audit family
-F3(a) in [`BIB_ABSENCE_AUDIT_2026-07-29.md`](BIB_ABSENCE_AUDIT_2026-07-29.md).
-
-Guard: `bib_empty_argument_still_reads_the_jobname_bbl`.
-
-### 87. bibunits' `\putbib` inputs the per-unit `bu<N>.bbl`
-
-Same shape as #86, one level down. The real package
-(`bibunits.sty` L324-330) writes the optional argument to the bibunit `.aux`
-as a `\bibdata` record and then runs `\@input@{\@bibunitname.bbl}`
-**unconditionally** — the argument never decides whether the `.bbl` is read.
-
-Perl's binding (`bibunits.sty.ltxml` L78) expands `\putbib[#1]` to
-`\lx@bibliography[\bu@unitname]{…}`, i.e. the `.bib` route only. arXiv
-submissions ship the *generated* `bu1.bbl`/`bu2.bbl` precisely because arXiv
-does not run bibtex, and the named `.bib` is usually absent — so the lookup
-finds nothing and the References section renders empty. Rust prefers the
-shipped `.bbl` and keeps Perl's route as the fallback.
-
-15 papers measured across the 2605+2606 sandboxes, every one 0 entries before
-and complete after: 2606.04416 (79), 2606.28854 (180), 2605.21570 (46 = bu1's
-34 + bu2's 12, each matching its unit's own `\begin{thebibliography}{N}`).
-Audit family F3(c) in [`BIB_ABSENCE_AUDIT_2026-07-29.md`](BIB_ABSENCE_AUDIT_2026-07-29.md).
-
-Guard: `bibunits_putbib_reads_the_per_unit_bbl`.
+### 87. → #86 (bibunits' `\putbib` inputs the per-unit `bu<N>.bbl`)
 
 ### 88. The core `\cite` is locked against raw `.sty` redefinition
 
@@ -3509,36 +3313,73 @@ the document's final font.
 pins the value; `114_streaming_cluster_regressions::streaming_matches_eager_on_cluster_regressions`
 pins eager == streaming (it is what caught the defect).
 
-### 97. `\hrulefill`/`\dotfill` restore the LaTeX kernel's `\leavevmode`
+### 97. A command whose latex.ltx (or package) definition begins with `\leavevmode` starts the paragraph in our binding too (Perl: several drop it) — absorbs #323 #338 #340
 
-**Perl** (`plain_constructs.pool.ltxml` L86-87): `\hrulefill` → `\leaders\hrule\hfill`,
-`\dotfill` → `\leaders\hbox{.}\hfill` — dropping the leading `\leavevmode` and
-trailing `\kern\z@` of the real LaTeX kernel (`latex.ltx` L643-644:
-`\def\hrulefill{\leavevmode\leaders\hrule\hfill\kern\z@}`).
+**Rule.** Where the kernel or the package starts a command with `\leavevmode`, the binding starts a paragraph there as
+well — the kernel body kept verbatim, or `enter_horizontal` on the constructor: `\everypar` fires before the box, the
+space after it is kept, `\ifvmode` after it is false; in restricted horizontal mode or math the step is a no-op.
+**Perl** drops it on `\hrulefill`/`\dotfill` (plain_constructs.pool.ltxml L86-87), `\mbox`, `\fbox`, `\colorbox`,
+`\fcolorbox`, `\textcolor` (only `\makebox` and `\raisebox` enter horizontal, latex_constructs.pool.ltxml:4658-4667,
+4800-4802; KNOWN_PERL_ERRORS #293), `\lx@parbox` (:4750-4764, KNOWN_PERL_ERRORS #309) and `\lx@orcidlink` (#313).
+**Code.** `plain_constructs.rs:248` (`\hrulefill`), the `enter_horizontal` box constructors in
+`latex_constructs/sect12.rs`, the whatsit's `in_paragraph` (`constructor.rs` `digest_to_whatsit`), and
+`base_utilities/blocks.rs:296 insert_block_in_paragraph`.
 
-**Rust** uses the kernel definitions verbatim (with `\leavevmode\…\kern\z@`).
-
-**Why**: `\hrule` is a vertical-mode command and the fill leader is horizontal,
-so LaTeX enters horizontal mode FIRST (`\leavevmode` starts the paragraph). Only
-then does a following `\vskip`/`\vspace*` fire TeX's `head_for_vmode` (tex.web
-L21160 `hmode+vskip: head_for_vmode`) — the internal `\par` that ends the
-paragraph. Perl gets away without the `\leavevmode` because `\hfill`'s
-`enterHorizontal` (an `inplace` MODE assignment) persists past `\leaders` (a
-`bounded` constructor); Rust's `bounded` reverts it, so after `\hrulefill` the
-mode was `internal_vertical`, `leaveHorizontal` never fired, the leader's
-`<ltx:p>` never closed, and the next float panel merged into it — a
-schema-invalid `<caption>`-in-`<block>` (arXiv **2302.11635**), and, more
-generally, a *silent* paragraph-merge in any float with `\hrulefill\vspace*`
-between rows. Restoring the kernel definition fixes the root faithfully; where
-`\hrulefill` is used mid-line (already horizontal) the `\leavevmode` is a no-op,
-so output is byte-identical to Perl.
-
-**Cost**: no golden churn — the `\leavevmode` only bites in vertical contexts,
-where it makes Rust match BOTH Perl's output and the LaTeX kernel. 2302.11635:
-4 errors → 0, 10 `<figure>` / 0 `<block>` (Perl-identical structure).
-
-**Guards**: `50_structure::vspace_closes_leader_para_test` (the `\vspace*` vs
-`\par` control pair). Cross-ref WISDOM #38.
+- **`\hrulefill`/`\dotfill`** keep latex.ltx L643-644's `\def\hrulefill{\leavevmode\leaders\hrule\hfill\kern\z@}`: `\hrule`
+  is a vertical-mode command, so LaTeX enters horizontal mode first and a following `\vskip`/`\vspace*` fires
+  `head_for_vmode` (tex.web L21160 `hmode+vskip`), the `\par` that closes the leader's paragraph. Perl gets away without
+  it because `\hfill`'s `enterHorizontal` (an `inplace` MODE assignment) persists past the `bounded` `\leaders`; our
+  `bounded` reverts it, so the leader's `<ltx:p>` never closed and the next float panel merged into it (schema-invalid
+  `<caption>`-in-`<block>`, 2302.11635: 4 errors → 0, 10 `<figure>` / 0 `<block>`, Perl-identical). Mid-line it is a no-op,
+  output byte-identical to Perl; no golden churn. Guard `50_structure::vspace_closes_leader_para_test`; WISDOM #38.
+- **The box commands** (56kb): `\mbox`, `\@makebox`, `\@framebox`, `\raisebox` and color's `\fcolorbox` (like xcolor's)
+  carry `enter_horizontal`; `\colorbox` and `\textcolor` open with `\leavevmode` (color.sty:104, 163-164): pdflatex
+  `[EP]Box after.`, Perl `Box[EP]after.`. `\fcolorbox`'s body is `restricted_horizontal`, the `\hbox` it is (57r; Perl's
+  `internal_vertical` ended the paragraph, KPE #336). Witnesses matapli-doc (`\item \Verb+FiraSans+ et`), the biblatex
+  manual (ltxdockit's `\sty`), titlesec (`\fbox{2.9}`), etoolbox-DE, 2605.21713 (`\colorbox` runs), 2605.21322
+  (`\makebox[0pt][c]` panels), 2605.18438, 2605.29836. Guards `mbox_argument_is_bounded::box_commands_start_the_paragraph`,
+  `::boxes_fire_everypar_first_and_stay_out_of_math`.
+- **`\parbox`** (57d; latex.ltx:16249-16250 `\@iiiparbox` begins with `\leavevmode`). `\lx@parbox` declares
+  `enter_horizontal`; the whatsit records `in_paragraph` when that leaves TeX in a paragraph (invoked in vertical mode,
+  tex.web §1091 `new_graf`, or after `\noindent`; not in a restricted box, `\rotatebox{90}{\parbox…}` 2605.20645, nor math).
+  `insert_block_in_paragraph`, after the capture and the sectioning float-out (#250), opens the `ltx:p` where text would
+  (`text_opens_paragraph`, the model's auto-open route for `#PCDATA`): the box is an `<inline-block class="ltx_parbox">`
+  and the text after it continues the paragraph (Perl begins `inline_internal_vertical` without `enterHorizontal`:
+  `insertBlock` makes a `<para class="ltx_parbox">` of its own, the space dropped). Not
+  in a float, whose content is panels for `arrange_panels` (`in_panel_float`, `PANEL_FLOATS`: 2605.27134's parbox-topped
+  minipage panels stay side by side; captioned parbox panels in a `{center}` stay sub-figures); not for an empty box; not
+  for content no inline box holds (a bibliography, an index, a caption), which the hoist places after the box. Found by
+  the K13 binding-conformance audit. Settled dead-end: opening the `ltx:p` before `insert_block` changes its decisions (a
+  section stayed in the `<p>`, #250 skipped; `{center}`/`{minipage}` panels became `<p>` panels with captions hoisted);
+  opened before the hoist, it left an empty `<p/>` behind a moved bibliography or a `<block>` in the `<p>` (memman,
+  swfigure-examples).
+- **`{minipage}`** (57f; latex.ltx:16305-16306 `\@iiiminipage` begins with `\leavevmode`): built the same way, so minipages
+  on one line sit side by side (`\hfill` pairs, a list's minipage of `\item`s beside a second, 2605.19762's three
+  `\subsubsection*` minipages in a `table*`). **Lone float** (user ruling 2026-09-27, option C, both boxes): a box whose
+  whole content is one float becomes that float by Perl's fold when its line holds nothing else (`\captionof` in a
+  minipage or parbox → `<figure class="ltx_minipage">` / `<figure class="ltx_parbox">`), settled once the document is
+  built; a float-box followed by text on its line stays inline; image + `\captionof` and figure-box rows: #339 (57g).
+- **`\orcidlink`** (57i, a K13 stage-2 finding): the real `\orcidlinkX` is `\href{…}{…}` (orcidlink.sty:69), whose
+  `\hyper@linkurl` begins with `\leavevmode` (hpdftex.def:411); the binding's `\orcidlinkX` (`orcidlink_sty.rs:29`) begins
+  with it too, while the shared `\lx@orcidlink` stays mode-less for the frontmatter's `\lx@add@orcid` in author
+  annotations. No corpus witness; no paper of the 3,003-paper A/B changes (95 load orcidlink); 2605.21922 (a `p{…}` cell)
+  byte-identical, 0 errors. Guard `perfect_kernel_batch56::orcidlink_starts_the_paragraph`; repro
+  `boxes-groups/orcidlink_starts_the_paragraph.tex` (RED 57h → GREEN).
+- **A/B (57c → 57d, 3,003 papers)**: tallies identical (errors 5,085, fatals 6, words 44,327,175); 28 papers change, each a
+  parbox joining its paragraph with the same text (2605.15128 also keeps the spaces after its boxes; 2605.02364 splits a
+  whitespace node); 2605.27134, 2605.20645 byte-identical. Manual net (1,000): 0 regressions; 74 of 75 changed are parbox
+  moves (hitreport-example, jourcl: a parbox holding one `tabular` carries the box's attributes), memman's and
+  swfigure's captioned parbox sub-figures intact.
+- **Guards** `perfect_kernel_batch56::{a_parbox_starts_the_paragraph, a_parbox_in_a_restricted_box_starts_no_paragraph,
+  parbox_panels_stay_panels, a_parbox_holding_a_section_floats_it_out, a_parbox_holding_a_bibliography_opens_no_paragraph,
+  a_minipage_starts_the_paragraph, a_box_holding_only_a_float_becomes_it, para_class_minipage_in_figure_demotes_keeping_its_width}`,
+  `cluster_schema::quote_holds_framed_logical_and_sectional_blocks` (#271 through `{framed}`); repros
+  `tools/perfect_kernel/repros/boxes-groups/{parbox_starts_the_paragraph, parbox_in_a_restricted_box_starts_no_paragraph,
+  parbox_holding_a_section_floats_it_out, parbox_holding_a_bibliography_opens_no_paragraph, minipage_starts_the_paragraph}.tex`
+  (the last RED 57d → GREEN), `captions-floats/{parbox_panels_stay_panels, box_holding_only_a_float_becomes_it}.tex`;
+  goldens `alignment/vmode`, `digestion/dollar` (the parbox moves into the section's paragraph). Guards reshaped with it:
+  list auto-item (the #261 branch pinned by a `\vbox` case), titlepage demotion (a `{center}` body), quote (#271),
+  lstnewenvironment, calc/pdfcomment minipages, nested/restricted parbox.
 
 ### 98. `\autoref` feeds the number as `\<type>autorefname~<number>\null` (active `~`), enabling the delimited-arg idiom
 
@@ -5861,67 +5702,97 @@ not match its definition" instead of silently returning empty arguments —
 separate hardening: the leading-delimiter case landed in 56iq (#295); an `Until:` miss stays quiet by design
 (parameter.rs:440-452).
 
-### 167. LuaTeX-only packages get first-class treatment (texlua bridge + piton/luacode/showexpl bindings)
+### 167. → #168 (LuaTeX-only packages get first-class treatment (texlua bridge + piton/luacode/showexpl bindings))
 
-**Perl behavior**: no `\directlua` support and no bindings for luacode, piton,
-or a content-bearing showexpl — LuaTeX-only packages either abort fatally
-(piton: "LuaLaTeX is mandatory", killing the rest of the document) or lose
-their bodies (showexpl's noop stub).
+### 168. The engine identity is a persona: pdfTeX-model by default, `luatex` or `xetex` on request, and every engine probe answers from it (Perl: one fixed pdfTeX-model identity) — absorbs #167 #204 #220 #283 #303
 
-**Rust behavior** (user directive 2026-08-31): `latexml_engine::lua_bridge`
-runs a persistent per-conversion `texlua` (assumed present with TeX Live);
-`\lx@directlua` evaluates chunks with LuaTeX-manual semantics and
-`tex.print`/`sprint` output re-enters the input stream. luacode.sty maps its
-whole API onto it ({luacode} bodies EXECUTE); piton.sty's environments render
-their bodies as listings (coloring is presentation; running piton.lua's LPEG
-highlighter through the bridge is a possible refinement); showexpl's
-{LTXexample} emits the code listing AND executes the body as the result —
-since 59u inside showexpl's preset group (`\SX@@preset`, showexpl.sty:88-114;
-`\SX@resultInput` :348-366), with its keys read as listings keys (:46-68).
-Not modelled: one caption around the PAIR (showexpl.sty:245/261; here
-`caption=`/`label=` caption the code listing, and with `float` the result does
-not float inside it); the order — the code always comes first, where
-`pos=l` (the default, :400), `t`, `o` and `i` put the result first (:142-158);
-`graphic=`, `rangeaccept`, `explpreset` and the layout keys; and the locked
-`\footnote`/`\cite` still act in the result (RED
-singletons/showexpl_result_keys_and_locked_commands).
-CRITICAL constraint: the engine never defines `\directlua`/`\luatexversion`
-under their real names — those are the LuaTeX-detection probes (babel et
-al.), and claiming them flips package ecosystems onto luatex code paths
-(measured: 26 suite tests red).
+**Rule.** The document declares its engine through the Rust-only latexml.sty option (`\usepackage[luatex]{latexml}`,
+`[xetex]`, or a `[…,xetex]latexml.sty` preload); the default is pdfTeX-model. iftex's conditionals, l3sys's engine
+identity, `\ifpdf`, the engine-only primitives and the format's text encoding all answer from that persona, read when
+tested (state-consulting conditionals, so load order does not matter). The real LuaTeX-detection names
+(`\directlua`, `\luatexversion`) and the XeTeX primitives are never defined outside their persona: they are the probes
+by which babel, amsmath, mathastext, minted2 et al. pick a code path (claiming `\directlua` measured 26 suite tests red).
+**Perl**: one engine identity; `\batchmode`…`\errorstopmode` no-ops; no TU fontmap; no `\directlua`.
+**Code.** `latexml_package/src/package/latexml_sty/mod.rs` (`:1525 set_l3sys_engine`, `:1467
+install_unicode_format_encoding`), `latexml_core/src/state.rs:5405 unicode_engine_profile`, `iftex_sty.rs`,
+`latexml_engine/src/lua_bridge.rs`, `tex_file_io.rs:139` (the `\read` halt).
 
-**Witnesses**: nicematrix manual (piton fatal truncated it at ~4% depth; now
-full 8,334 lines convert), luacode/showexpl guard tests.
-
-### 168. Opt-in `luatex` profile (`\usepackage[luatex]{latexml}`)
-
-**Perl behavior**: one fixed engine identity (pdfTeX-model); LuaLaTeX-authored
-documents take dead branches (engine probes false, `\directlua` undefined,
-fontspec surface unreachable).
-
-**Rust behavior** (user decision 2026-08-31): the Rust-only latexml.sty option
-`luatex` declares the DOCUMENT LuaLaTeX-authored for this conversion:
-iftex-level probes (`\iftutex`/`\ifluatex`/`\ifpdftex`… — state-consulting
-conditionals, so load order doesn't matter), `\directlua`/`\luaescapestring`
-under their REAL names (bridged to texlua), `\luatexversion`, the common
-LuaTeX parameter surface (`\hyphenationmin`, `\outputmode`, `\suppress*error`,
-…) and TLT direction primitives. The default identity is untouched without the
-option; the perfect-kernel harness auto-selects it for docs whose LaTeX oracle
-required lualatex. fontspec gains v2 post-optional signatures; a minimal
-unicode-math binding absorbs math-font selection (both presentation).
-
-**Witnesses**: hvfloat corpus preambles (`\setmonofont{…}[…]` bare after
-libertinus→otf), TL doc bundles oracle-classified lualatex (~300).
-
-**l3sys (batch 54m, 2026-09-03).** expl3 freezes `\c_sys_engine_str` and the
-`\sys_if_engine_<e>` conditionals at format-build time (expl3-code.tex:7846-7861,
-`\cs_if_exist:NT \tex_luatexversion:D {luatex}`), before the profile defined
-`\luatexversion`, so `\sys_if_engine_luatex:TF` stayed FALSE and polyglossia's
-gloss-latin.ldf:125 took its XeTeX branch (`\newXeTeXintercharclass` ×12; hang,
-sample). The profile now re-derives them (`\c_sys_engine_str` = luatex, the
-five engine conditionals, `\c_sys_engine_exec_str`/`_format_str` = luatex /
-lualatex per :7868-7916). `sys_if_engine_opentype` is left as derived. Guard:
-`perfect_kernel_batch54::l3sys_engine_identity_under_luatex_profile`.
+- **`luatex`** (user decision 2026-08-31): iftex-level probes (`\iftutex`/`\ifluatex`/`\ifpdftex`…), `\directlua`/
+  `\luaescapestring` under their real names (bridged to texlua), `\luatexversion`, the LuaTeX parameter surface
+  (`\hyphenationmin`, `\outputmode`, `\suppress*error`, …) and TLT direction primitives; fontspec gains v2 post-optional
+  signatures, a minimal unicode-math binding absorbs math-font selection. The perfect-kernel harness selects it for
+  documents whose LaTeX oracle required lualatex. Witnesses: hvfloat corpus preambles (`\setmonofont{…}[…]` after
+  libertinus→otf), ~300 TL doc bundles oracle-classified lualatex. l3sys (54m): expl3 freezes `\c_sys_engine_str` and
+  `\sys_if_engine_<e>` at format build (expl3-code.tex:7846-7861, `\cs_if_exist:NT \tex_luatexversion:D {luatex}`), so
+  polyglossia's gloss-latin.ldf:125 took its XeTeX branch (`\newXeTeXintercharclass` ×12; hang); the profile re-derives
+  `\c_sys_engine_str`, the five conditionals, `\c_sys_engine_exec_str`/`_format_str` (:7868-7916), leaving
+  `sys_if_engine_opentype`. Guard `perfect_kernel_batch54::l3sys_engine_identity_under_luatex_profile`.
+- **The texlua bridge** (ex-#167, user directive 2026-08-31): `latexml_engine::lua_bridge` runs a persistent
+  per-conversion `texlua` (assumed with TeX Live); `\lx@directlua` evaluates chunks with LuaTeX-manual semantics, and
+  `tex.print`/`sprint` output re-enters the input. luacode.sty's API maps onto it ({luacode} bodies execute); piton.sty's
+  environments render as listings (Perl: "LuaLaTeX is mandatory" fatal; running piton.lua's LPEG highlighter is a
+  possible refinement); showexpl's {LTXexample} emits the code listing and executes the body as the result, since 59u
+  inside `\SX@@preset` (showexpl.sty:88-114; `\SX@resultInput` :348-366), its keys read as listings keys (:46-68). Not
+  modelled: one caption around the pair (:245/261; `caption=`/`label=` caption the code listing; with `float` the result
+  does not float in it); the order (`pos=l`, the default :400, `t`, `o`, `i` put the result first, :142-158; ours code
+  first); `graphic=`, `rangeaccept`, `explpreset`, the layout keys; the locked `\footnote`/`\cite` act in the result (RED
+  singletons/showexpl_result_keys_and_locked_commands). Witness: the nicematrix manual (piton's fatal truncated it at ~4 %;
+  8,334 lines now), the luacode/showexpl guard tests.
+- **`\ifpdf`** (ex-#204): iftex.sty:272-291 answers TRUE on LuaTeX when the output mode is PDF (its default), so a
+  lualatex-oracle document takes the PDF branch (tikzrput.sty's `\rput`: pgfornament ornaments/tikzrput); pdfTeX's is
+  `\ifnum\pdfoutput>0` (:290-291), read since 56id (the K6 ruling, #285) with a per-document default; FALSE under `xetex`.
+  Read when tested, not frozen at load (our format loads iftex before a document's `\pdfoutput=1`): a document changing
+  `\pdfoutput` after iftex differs; `\pdftrue`/`\pdffalse` override. Guards `perfect_kernel_batch56::{ifpdf_is_true_under_the_luatex_profile,
+  ifpdf_delegates_to_iftex}`, `class_census::ifpdf_follows_pdfoutput`.
+- **`\read` halt and `\Require<engine>`** (ex-#220). The interaction modes set a global level (tex.web §71, §1265); a
+  `\read` from a stream that is not open is a Fatal in batch or nonstop mode, a no-op in scroll/errorstop (tex.web §484;
+  KNOWN_PERL_ERRORS #213): `\batchmode\read -1 to …` is iftex's and expl3 `\msg_fatal`'s halt idiom; without it a
+  wrong-engine package looped on undefined engine primitives (bidi.sty:354 `\XeTeXcharclass`) until memory ran out (the
+  23-doc `alloc_failed 3288334336` cluster of sweep 57: handout, latexbangla, lshort-persian,
+  texnegar-xetex-bidi-leaders-hrule…; `repros/backend-persona/xetex_only_package_batchmode_read_halt.tex`). iftex's
+  `\Require<engine>` and `ifxetex` are the real definitions (iftex.sty:42-52, 78-91; ifxetex.sty:4-5). **#220's update
+  (56hr, user direction 2026-09-24) reverses its own first rule, and the code follows the update**: the default persona
+  converts XeLaTeX documents, so `\RequireXeTeX` and `\RequireTUTeX` pass, as in Perl (`iftex_sty.rs:82`
+  `\protected\def\RequireXeTeX{\lx@xetex@interchar}`), installing XeTeX's inter-character primitives (`\XeTeXcharclass`,
+  `\XeTeXinterchartoks`, `\XeTeXinterchartokenstate`, latex.ltx:22025's `\newXeTeXintercharclass`) as argument-reading
+  no-ops, only once a package requests XeTeX; setter forms only (not zxjatype's getter in `\int_compare`); unicode-bidi.sty:20-21
+  and xetexko.sty:55-57 drive them without `\RequireXeTeX` and stay exposed. bidi, xeCJK, mathspec get content-keeping
+  bindings. arXiv 2605: 11 halting papers convert, 10 with 0 errors; TL manuals 18 of 28 (latexbangla clean, was the 6.3 GB
+  `alloc_failed`), the other 10 in xepersian's and quran's expl3 checks under luatex and stex-doc's missing archive.
+  `\Require…` for LuaTeX, pTeX, upTeX, VTeX … still halts under the default (cartonaugh, mandi, luaprogtable,
+  luamathalign, junicodevf, as pdflatex; under `luatex` it passes, cartonaugh-example 0 errors); `\RequirePDFTeX`/
+  `\RequireeTeX` pass. Guards `perfect_kernel_batch56::{batchmode_terminal_read_halts_the_job,
+  xetex_only_packages_load_under_the_default_persona}`.
+- **`xetex`** (ex-#283, 56hx). l3sys's engine is one value frozen at format build (expl3-code.tex:7846-7861), so the default
+  cannot pass fduthesis.cls:69-71's and njuthesis.cls:62-63's `\sys_if_engine_xetex:F{\sys_if_engine_luatex:F{\msg_fatal…}}`,
+  exam-zh.cls:22, or fontspec's gate inlined in xtufte-common.def:20-24 (TL class census 2026-09-24); flipping the default
+  would turn `\sys_if_engine_pdftex` false for 436 pdflatex classes. The profile: `\ifxetex`/`\iftutex` true, `\ifpdftex`
+  false; l3sys `xetex`/`xelatex` (`set_l3sys_engine`); `\XeTeXversion`/`\XeTeXrevision`, `\Uchar`, the inert
+  inter-character primitives; the Unicode-engine behaviours (non-ASCII letter catcodes, `\char` above 255, no utf8 byte
+  mouth). fontspec, unicode-math, xeCJK stay bindings, with the expl3 internals classes call
+  (`\__fontspec_main_set…font:nn`, `\__um_setmathfont:nn`, the `unicode-math` keys, `\xeCJK_declare_node:n`), and ulem's
+  `\ULC@box`. Census: xtufte-book, xtufte-handout, fduthesis-en, xduugtp, bitbeamer Fatal/errors → 0; fduthesis,
+  njuthesis, exam-zh, xdupgthesis, xduugthesis Fatal → converting (1-8 errors). `run_doc.sh` routes clean-xelatex-oracle
+  documents to it (inert for TL manuals, whose oracle does not try xelatex). Guards
+  `class_census::{xetex_profile_engine_identity, xetex_class_calls_binding_internals}`.
+- **TU encoding** (ex-#303, 56ja). A LuaTeX/XeTeX format makes `TU` the default (fonttext.ltx:57-68, 93); Perl's
+  `\lx@fontencoding{TU}` falls back to OT1 (TeX_Fonts.pool.ltxml:169-175: `\char`\{` prints "–", `<` "¡"). Under both
+  profiles (`install_unicode_format_encoding`, `tu_fontmap.rs`): the identity on printable slots with the Latin Modern
+  text fonts' ligatures (tuenc.def:60 `+tlig;`, :100 `mapping=tex-text;`: `"` `'` `` ` `` are ” ’ ‘; the quote ligatures
+  `non_typewriter_t1`, Perl TeX_Fonts.pool.ltxml:344, apply too), the typewriter map plain (tulmtt.fd); a TU symbol above
+  255 is that code point (`decode_slot`; tuenc-greek.def:204 `\DeclareTextSymbol{\textalpha}\UnicodeEncodingName{"03B1}`);
+  `xetex` installs it after `\XeTeXrevision`, `\XeTeXversion`, `\tex_Umathcode:D` so tuenc.def takes its XeTeX branch
+  (v2.1d probes the first, v2.2a the others). The default keeps OT1, as pdflatex (tuenc.def:49-57 defaults to T1), but an
+  explicit TU selection (`\fontencoding{TU}`, `\UseTextSymbol{TU}`, fontenc's `[TU]`, fontspec's `\latinencoding`=TU via
+  babel's `\latintext`) decodes through TU. Identical to lualatex and xelatex on
+  `tools/perfect_kernel/repros/unicode-catcodes/tu_encoding_char_and_tlig.tex`; 339 clean-oracle manuals: tipauni-example
+  80.1 → 93.4, greek-fontenc char-list 64.6 → 65.8, pgfornament tikzrput 97.7 → 98.1, errors 375 → 375, warnings 15,829
+  → 15,902 (char-list +74, ijsra −1). char-list's regression (resolved in 56jf, #308): textalpha's accents via tuenc.def's
+  `\add@unicode@accent` (`\char"0313\relax`) and our case changer (`lx_read_and_change_case`, latex_constructs/mod.rs,
+  which ignores textalpha.sty:213 `\DeclareCaseChangeEquivalent`) split `\char` from its number in
+  `\MakeUppercase{\>\`α}` (74 "Missing number", `”0313` as text where lualatex prints Ὰ); red repro
+  `unicode-catcodes/case_change_greek_accent_char.tex`. Guards `unicode_format_encoding::*`,
+  `perfect_kernel_batch56::luatex_csstring_primitive`.
 
 ### 169. → KNOWN_PERL_ERRORS #1257 (Raw loader keeps `\ProvidesPackage`'s `\ver@<file>` (fallback-only `\fmtversion`))
 
@@ -6057,14 +5928,84 @@ no-adjust-everywhere breaks — cells.xml/graphrot goldens caught it).
 **Guard**: `perfect_kernel_batch54::zero_width_vrule_is_a_strut_not_a_border`, `53_alignment::halignatt_test`, `cells_test` (makecell `\null` opacity).
 **Upstream**: not yet filed. KNOWN_PERL_ERRORS #131.
 
-### 177. A source-tree relative package path falls back to its basename (Perl fails the load)
+### 177. A named file is found where pdflatex (or biber) finds it, and a source-tree path that resolves nowhere falls back to its basename (Perl: its own search only) — absorbs #230 #235 #454 #477 #882
 
-**Perl behavior**: `\usepackage{../tex/tikzpingus}` (tikzpingus-doc.tex:16 — the CTAN source layout where `doc/` and `tex/` are siblings) is looked up literally; in the installed TeX Live tree `../tex/` does not exist, so the package never loads and the manual's whole shape/layer error mass (354 lines) follows. pdflatex fails identically there.
-**Rust behavior**: `require_package` (`binding/content.rs::source_tree_basename`) reroutes a request containing a directory separator to its basename when the literal path resolves nowhere AND the basename does (kpathsea), with an `Info:loading` note. A relative path that resolves (a paper's own `./mypkg`) still loads the local file.
-**Why**: build-environment mismatch, not TeX semantics; the manual's intent is the installed package. Gated on a miss so arXiv-local packages (memory 0906.3507) are untouched.
-**Witnesses**: 61 TL doc/latex manuals with `\usepackage{../…}` (tikzpingus, classicthesis, pgf-go, cora-macs …).
-**Guard**: `perfect_kernel_batch54::relative_package_path_falls_back_to_basename`.
-**Upstream**: not filed (environment-specific).
+**Rule.** A package, input, graphic or bibliography resource is looked up as TeX's own lookup takes it — the local
+paths and kpathsea, then each `\input@path` entry, a graphic over graphics.sty's `\Gin@getbase` order — and, past a
+miss on the name as written, under its basename (a directory the source tree does not have) or an implied extension.
+Each resource kind keeps its own lookup; this entry states their shared order. **Perl**: FindFile has no
+`\input@path` step; `image_candidates` (Util/Image.pm:43-57) and `candidate_pathnames` (Pathname.pm:325-391) list every
+`name.ext` in readdir order, search only an absolute name's own directory (:328-329) and ask kpsewhich only for an
+extensionless name with `.png`/`.pdf`; a pathful `\usepackage{../tex/x}` fails the load.
+**Code.** Inputs `binding/content.rs:5394 find_file_aux`, `:5566 find_on_input_path`, `:3826 source_tree_basename`;
+graphics `util/image.rs:32 image_candidates_with`, `:356 in_graphics_type_order`; `.bib` resources
+`latexml_post/src/make_bibliography.rs:4439 bib_lookup_candidates`.
+
+- **`\input@path`** (ex-#454; latex.ltx:9667-9696 `\IfFileExists` → l3file `\file_full_name:n`, expl3-code.tex:12585-12612):
+  a file kpathsea misses is looked for under each entry in order, a `/` added to an entry lacking one, `filecontents`'
+  virtual files included; `\InputIfFileExists`, `\usepackage`, `\input` all reach it. The raw `\openin`/`\input`
+  primitives resolve through the same FindFile and so see `\input@path` too, which pdfTeX's do not (accepted: more files
+  found, none lost). 71 papers in 2609 set it. Witness 2609.02998 (its class style, whose natbib every `\citep` needed).
+  Graphics too (79g; graphics.sty:211-231 tests each name with `\IfFileExists`): the entries after `\graphicspath`, the
+  search paths and the source directory (1112.0840's 8 figures in `graphics/` under `\csdef{input@path}{{style/}{graphics/}{}}`),
+  and a name looked up unquoted as `\set@curr@file`'s `\unquote@name` drops every `"` (latex.ltx:9654-9666;
+  `{"Figure_1".jpg}` is `Figure_1.jpg`, 1907.03916, 2005.11727; Perl stripped none); `graphic` keeps the name as written,
+  `candidates` the file found. Guards `perfect_kernel_batch61::input_path_finds_a_style_in_a_subdirectory`,
+  `perfect_kernel_batch79g::{includegraphics_looks_under_the_input_path, includegraphics_finds_a_quoted_name_unquoted}`.
+- **A graphic's candidates as pdflatex takes them** (ex-#477). A name whose extension has a pdftex.def graphics rule
+  (`\Gin@rule@.<ext>`, pdftex.def:601-612, case as written: `.pdf .PDF .png .PNG .jpg .JPG .jpeg .JPEG .jb2 .jbig2 .mps
+  .eps`) that names a file is those files alone, failing that the file in another case (kpathsea's `fig.pdf` for
+  `fig.PDF`); any other name (extensionless, `b.v0.5_x`, `c.EPS`, `fig.ps`) lists its `name.ext` files before a bare file
+  (graphics.sty:205-231: never an extensionless name bare); files only (Perl's list defers `-f`, Pathname.pm:391); among
+  several `name.ext` the order is `\Gin@extensions`' since 78w (#883). Post rendered the best-rated candidate, so Perl's
+  `\includegraphics{c.eps}` beside a `c.eps.png` rendered the png. A leading `/` naming no file is read under each search
+  directory as TeX glues `\input@path` entries (`plots/` + `/example_1/a.pdf` = `plots//example_1/a.pdf`), the source
+  directory and `SEARCHPATHS` too, beyond pdflatex, as post's fallback already glued it. Witness 2409.13454 (`\folder` =
+  `/example_1/`, 42 graphics, 0 → 42 found). Guards `perfect_kernel_batch64::{graphic_exact_name_first,
+  graphic_exact_name_over_other_directories, graphic_bare_name_listed_last, graphicspath_leading_slash_name}`. Open: the
+  sizer boxes the first raster candidate and post renders its best-rated one, where pdflatex reads the first (`.pdf`
+  before `.png`; RED graphics-tikz/graphic_extension_order_pdf_first); an exact-case `fig.eps` wins over a `Fig.pdf`
+  kpathsea reaches first; the box's `cssstyle` comes from the first vector candidate (`natural_display_size_pt_of_candidates`)
+  while post renders its best raster one.
+- **kpsewhich for an extensioned graphic** (ex-#230; user-approved surpass 2026-09-17). When the candidate list is empty,
+  `kpsewhich <name>` supplies the candidate (the `<path>.png`/`.pdf` query runs for any name without a graphics
+  extension): a package-shipped asset named in full, `\includegraphics[page=N]{openmoji-color-all.pdf}` — five icon
+  galleries, 97.8 % of the corpus's lost figures (~27,700). Guard
+  `graphics_kpsewhich::extensioned_texmf_graphic_is_a_candidate`.
+- **An extension the file was not shipped under** (ex-#882, 78v). graphics.sty:205-231 takes `\includegraphics{recomb.eps}`
+  as that file and pdftex.def's `.eps` rule converts it; authors who ran epstopdf shipped only `recomb.pdf`, which arXiv's
+  pdflatex then read (TL 2025's epstopdf asks for `recomb-eps-converted-to.pdf`: "File not found"); Perl's
+  `image_candidates` (Util/Image.pm:43-56) searches `recomb.eps.*` and `recomb.eps` only, so `image_graphicx_sizer` has no
+  size and its post loses the image (KNOWN_PERL_ERRORS #1137). A name with a graphics extension
+  (`has_graphics_extension`) that names no file on the search paths nor in texmf retries its base name and keeps the
+  graphics-type files that answer, as post's `find_graphic_file` (latexml_post graphics.rs) already did; a file that
+  exists stays the only candidate (`fig.eps` beside `fig.pdf`). Hits in TeX's order (`in_graphics_type_order`): by type
+  (pdftex.def:597-600 `\Gin@extensions`, its uppercase `.PDF,…,.JB2` after the lowercase, then `.eps` that
+  epstopdf-base.sty:498-505 appends, `.ps`, post's types, other-case variants last), then by search directory
+  (`\graphicspath{{new/}{figs/}}` takes `new/plot.pdf`), then by name (0907.3747's `nuebar.pdf,nuebar.ps` beside
+  `nuebar_limit.ps,nuebar_limit.pdf`). Witnesses 1408.2843 Fig 1-2 (`recomb.eps` → `recomb.pdf`), 1503.04804 Fig 3
+  (`pnt_pwpt_*.eps` → `.pdf`); 97 of the census's 26,364 graphics papers name such a file (first five per paper: 261 `.eps`,
+  12 `.png`, 12 `.pdf`, 1 `.ps`, 1 `.jpg`), 77 gain candidates and sizes. Repro
+  package-bindings/includegraphics_eps_shipped_only_as_pdf_is_sized; guards
+  `perfect_kernel_batch78v::{includegraphics_eps_shipped_only_as_pdf_is_sized, includegraphics_eps_retry_keeps_the_graphicspath_order}`.
+- **A source-tree path falls back to its basename** (beyond TeX; a build-environment mismatch). `require_package`
+  reroutes a request with a directory separator to its basename when the literal path resolves nowhere AND the basename
+  does (kpathsea), with an `Info:loading` note: `\usepackage{../tex/tikzpingus}` (tikzpingus-doc.tex:16, CTAN's sibling
+  `doc/`/`tex/` layout; pdflatex fails identically in the installed tree, and the manual's 354-line shape/layer error mass
+  followed). A relative path that resolves (`./mypkg`, arXiv-local packages such as 0906.3507's memory) loads the local
+  file. 61 TL doc/latex manuals (tikzpingus, classicthesis, pgf-go, cora-macs …). Guard
+  `perfect_kernel_batch54::relative_package_path_falls_back_to_basename`. Upstream: not filed (environment-specific).
+- **biblatex resources** (ex-#235; Perl: no biblatex binding, and its `pathname_find` for `\bibliography{}` misses a
+  pathful name too). A resource that misses is retried with `.bib` appended when it has no extension (biber tries the
+  name, then `name.bib`; a legacy `\begin{refsection}[refs]`), and by its basename when it carries a directory
+  (`\addglobalbib{../bibtex/bib/biblatex-apa-test-references.bib}`, biblatex-apa-test.tex:69, apa6-test:444, mirror the TL
+  source tree while the `.bib` ships beside the `.tex`); the exact name always wins and no search climbs out of the
+  document directory. `\refsection[resources]`/`\newrefsection[resources]` register their resources
+  (biblatex.sty:10757/:10771). Witnesses biblatex-apa/biblatex-apa-test (283 entries, 16 % recall before),
+  biblatex-apa6/biblatex-apa6-test. Guards `06_cluster_bibliography::{pathful_bib_resource_falls_back_to_its_basename,
+  refsection_optional_argument_registers_its_resources}`. Batch 56cs.
+- Related: #883 (output in key order, the candidates' sort among them), #886 (an EPS graphic's box), #55 (a quoted
+  search directory).
 
 ### 178. A shipped page advances `\c@page` (Perl leaves it at 1 forever)
 
@@ -6648,21 +6589,7 @@ the loader (`content.rs` `already_handled`, `_load_binding`, the option-clash
 check, `\ver@` relax) and `\@ifl@aded` honour it. Guard:
 `perfect_kernel_batch56::fontenc_reloads_with_new_encodings`.
 
-### 204. `\ifpdf` follows the output mode (Perl: static FALSE)
-
-Extends #168: iftex.sty:272-291 answers `\ifpdf` TRUE on LuaTeX whenever the
-output mode is PDF — always, LuaTeX's default — so a lualatex-oracle document
-takes the PDF branch (tikzrput.sty defines `\rput` only there: pgfornament
-ornaments/tikzrput). On pdfTeX it is `\ifnum\pdfoutput>0` (:290-291), and under
-the `xetex` profile it is FALSE (XeTeX has no `\pdfoutput`). Since batch 56id
-(the K6 ruling, #285) the pdfTeX persona reads `\pdfoutput` too, whose default
-is set per document. The value is read when `\ifpdf` is tested, not frozen when
-iftex loads as the real package does: our format loads iftex before a
-document's own `\pdfoutput=1`. The one observable difference is a document that
-changes `\pdfoutput` after loading iftex (real `\ifpdf` keeps the load-time
-answer); `\pdftrue`/`\pdffalse` still override. Guards:
-`perfect_kernel_batch56::{ifpdf_is_true_under_the_luatex_profile,
-ifpdf_delegates_to_iftex}`, `class_census::ifpdf_follows_pdfoutput`.
+### 204. → #168 (`\ifpdf` follows the output mode (Perl: static FALSE))
 
 ### 205. A box keeps what it can hold; the rest is placed after it (`insertBlock`)
 
@@ -6877,19 +6804,90 @@ assignments) vs §274/§282 (the save stack). KNOWN_PERL_ERRORS #209.
 **Witnesses**: msc/msc (21 → 0, `repros/graphics-tikz/msc_declinst_tikz_scope_desync.tex`).
 **Guards**: `perfect_kernel_batch56::globaldefs_does_not_globalize_the_save_stack`.
 
-### 216. `\pgfmathpointintersectionoflineandarc` is closed form
+### 216. pgfmath computes what pgf computes: its grammar, number forms, units, registers, arrays and overflow test are pgf's (Perl: Perl `eval`'s numbers and precedences, its own grammar) — absorbs #404 #423 #973 #1004 #1010 #1012
 
-**Perl behavior**: the raw pgf bisection runs over Perl's float trig and never
-meets its exact-equality exit (KNOWN_PERL_ERRORS #210).
-**Rust behavior**: a binding solves the ray/ellipse quadratic and returns the
-parametric angle of the root on the arc (nearest to it otherwise — pgf's own
-"best estimate" `\n`), then pgf's `\pgfpointadd{center}{\pgfpointpolar…}` as
-before.
-**Why**: the point set is the bisection's limit; no loop, no dependence on
-trig self-consistency. Sub-point border coordinates of rounded-rectangle and
-callout nodes may move from the bisection's approximation to the exact point.
-**Witnesses**: zx-calculus/zx-calculus (Fatal → 0), arXiv 2201.09268 class.
-**Guards**: `perfect_kernel_batch56::line_and_arc_intersection_is_closed_form`.
+**Rule.** The native pgfmath evaluator (`latexml_package/src/package/pgfmath_code_tex.rs`) reads an expression as pgf's
+parser reads it (pgfmathparser.code.tex) and returns the value and the form live pgf leaves in `\pgfmathresult`,
+erring where pgf errs; probes against pdflatex/lualatex with TL 2025 pgf. **Perl**'s binding evaluates with Perl `eval`
+(pgfmath.code.tex.ltxml:363-382), prints every number as a real, uses Perl's precedences, and its grammar (:696-711) has
+no space in a number, no `\dimexpr`, multiplies by any register and declares units for every one. Not in this entry,
+because the code departs from pgf there: #259 (a zero divisor; `reciprocal`/`sec`/`cosec`/`cot` keep Perl's epsilon) and
+#1007 (calc's names: calc's value and a Warning, where pgf errs and computes 0).
+
+- **Precedence and result form** (ex-#404; pgfmathparser.code.tex:898-916): `?:` binds looser than `&&`/`||`, which bind
+  looser than comparisons; chained ternaries group left (`1?2:3?4:5` is 4). An integer literal (`7`, `(7)`, `0x1F` 31), a
+  comparison, a logic operator or an integer function (`int`, `sign`, …) prints as an integer; arithmetic, units,
+  registers and real functions as a real (`2+3` 5.0, `-1` -1.0); `?:`, `ifthenelse` and `array` return their operand's
+  form; a user-declared function's result keeps its body's form, its integer arguments passed as integers (a non-numeric
+  result reported once, read as 0). Perl `[10.0][7.0][2.0][1.0]` for `3>2?10:20`, `(7)`, `1?2:3?4:5`, `ifthenelse(2>1,1,0)`;
+  pgf and ours `[10][7][4][1]` — an `\ifnum` read `1.0` as `1` plus text (pgf-spectra). Not yet: `random(m,n)` an integer;
+  `.5`/`1.` passed through; canonical integer printing (`07`, `+5` print `7`, `5`). Guards
+  `pgfmath_golden_tests::ternary_and_logic_follow_pgf_precedence`, `perfect_kernel_batch59::pgfmath_ternary_after_a_comparison`.
+- **Numbers and control-sequence operands** (ex-#1010, PGR1; `\pgfmath@parse@@number`, pgfmathparser.code.tex:426-600):
+  digits and points with spaces skipped (`-4 .5` is -4.5); a two-letter unit tried before an exponent and before a
+  `0x`/`0X`/`0b`/`0B` prefix (`0bp` is 0bp); a leading `0` is octal (`010+1` is 9.0); a `\dimexpr`/`\glueexpr`/`\numexpr`/
+  `\muexpr` read by a TeX assignment (the core's `read_dimension`/`read_number`/`read_mu_glue`); it and a count register take
+  the place of a number before them (`2\mycount`, `0.5\dimexpr 4pt` 4.0), a dimension register scales it; a count declares no
+  units; a control sequence is the token pgf receives (`\csname pal@data1H\endcsname`, an expl3 `\l_x_dim`), spelled by
+  `pgfmath_input_text` as `\csname…\endcsname` when no `[a-zA-Z@]` run, which `cs_at` takes whole. Functions `try_number`,
+  `unit_at`, `try_cs_register`, `pgfmath_read_expr`. Before, the grammar stopped and returned the partial value silently
+  (`0bp` on 40 of 464 EB1 A/B papers: 1106.3771, 1104.5553, 1503.00895; `\dimexpr` 1711.06128, 2206.04438; `-4 .5`
+  1612.03043; `\pal@data1H`, pagelayout.cls:237-252, 165 + 9 Errors in a `\dimexpr` on pagelayout's example-grid and
+  pagelayout-manual-layout-guides, a silent 0 bare; PGR1b, repro `pgfmath_csname_register_operands`). Not yet: an
+  expression operand's name re-read under the current catcodes (`%`; RED `pgfmath_csname_name_reread_in_expr_red`); a
+  string result's `\meaning` spells `\csname…\endcsname` (RED `pgfmath_string_result_spells_csname_red`); TeX-exact unit
+  conversion and pdfTeX's `px`/`nd`/`nc` (`pgfmath_units_as_tex_reads_them_red`); pgf's error on an octal 8 or 9
+  (`pgfmath_octal_bad_digit_red`). Guards `pgfmath_golden_tests::golden_pgfmath_corpus`, `perfect_kernel_batchdtl1::batchdtl1_pgfmath_rows`
+  (repro `pgfmath_grammar_gaps`).
+- **Box dimensions** (ex-#1004, DTL1, DTL1b). Perl's `REGISTER` reads `\wd`/`\ht`/`\dp` and a control sequence
+  (pgfmath.code.tex.ltxml:696-701; `pgfmath_getwidth`/`getheight`/`getdepth`, :499-521), so `\pgfmathparse{\wd0}` is 0.
+  `try_cs_register` (`box_number`, `pgfmath_box_dimension`, units declared) also reads digits, as TeX does: pdflatex 50.0
+  for a 50pt box, Perl 0.0. Before the port `\wd\box` read 0 and tikzscale's loop (tikzscale.sty:392, 522-524) scaled every
+  picture by `\requestedSize/0`, clamped to 16383.99998 (2010.05701, 2205.15714, 2311.08887, 2604.09771). Fit's
+  `.5\dp\pgfnodeparttextbox` (tikzlibraryfit.code.tex:74) reads the node's declared size since DTL1a; an expl3 box register
+  (`\wd\l_my_box`) is read by its token's name (`cs_at`, DTL1e, PGR1b): pdflatex 80.0 for twice a 40pt box, Perl
+  16383.99998 with 2 Errors (repro `pgfmath_box_named_by_expl3.tex`). Repros `graphics-tikz/pgfmath_box_dimensions.tex`,
+  `pgfmath_tikzscale_width.tex`; guard `perfect_kernel_batchdtl1::batchdtl1_pgfmath_rows`.
+- **Arrays** (ex-#973; Perl `Error:pgfparse`, its parser numeric). The winnow grammar had skipped `{`, `}` as blanks:
+  `{1,2,3}[1]` was 1 (pgf 2), `{"a","b"}[1]` 0.0 (pgf b), `dim({1,2})` 1, with no Error; tikzpingus.sty:93-96 built
+  `\@pingu@wingdown@0.0@`. An indexed brace group and a list that is the rest of a formula are an array (`opens_array`,
+  `array_primary`): numbers (integer form kept), text or arrays; a text or array value leaves as `text_result` in pgf's form
+  (`{1}{2}{3}`, `{{3}{4}}`, pgfmathparser.code.tex:943-954). pgf's errors stay Errors: "Array index out of bounds" (0), text
+  in arithmetic ("Missing number"). Text as pgf's code reads it: `ifthenelse` returns a branch as it is; arithmetic reads text
+  as `\pgfmath@x=#1pt` (`"1"` 1, `"1cm"` its points, `"1e2"` 1 and an Error); a formula's braces go first (:139, `{"a"}` is
+  `a`); `\pgfmath@bgroup@strip` (:963, :984-1009) drops the spaces before a string's first two tokens only, its `#1#2#3` undelimited (`{"a b","c"}[0]`
+  `ab`, `{"a ? b","c"}[0]` `a? b`, `"a b"` alone stays); a list of one indexes its value's tokens (`{"ab"}[1]` `b`,
+  `{1cm}[0]` `2`, `array({"ab"},1)` `b`), inside another its value (`{{"ab"}}[0]` `ab`); the sizers take a braced string,
+  `height{"Q"}` (pgfcircvoltage.tex:192, circuitikzmanual). Witnesses tikzpingus-doc, 2002.08586, 2509.25473. Left: the
+  residual list is `docs/perfect_kernel/OPEN_ROWS.md` ODR1 (SYNC row R; review revM3r2P1), REDs
+  `graphics-tikz/pgfmath_string_and_units_in_arithmetic_red`, `pgfmath_width_of_a_braced_string_red`,
+  `pgfmath_lone_number_in_a_sublist_red`, `pgfmath_string_keeps_protected_commands_red`. Guards
+  `perfect_kernel_batchm3::{pgfmath_arrays_are_read_as_pgf_reads_them, pgfmath_array_misuse_is_an_error,
+  pgfmath_array_text_is_read_as_pgf_reads_it}`.
+- **The document font's `em`, `ex`, `width()`** (ex-#423, 60a): pgf evaluates lengths after `\pgfmath@selectfont`
+  (pgfmathcalc.code.tex:30-38, pgfmathparser.code.tex:132); Perl's `pgfmath_convert` (pgfmath.code.tex.ltxml:476-485)
+  converts in `\nullfont` (`8em` at `\footnotesize` 64.00012pt, pdflatex 68.00098pt; KNOWN_PERL_ERRORS #437). Ours converts
+  in `nfss_selected_font`'s font, reads `\pgfmathsetlength`'s quick path in a group under it and typesets `width()` in it:
+  consort-flowchart 333.16 → 351.5pt (pdflatex 351.49686pt). Guard `picture_sizing::pgfmath_em_is_the_document_fonts`.
+- **Overflow** (ex-#1012, DTL1h): pgf reads each operand into `\pgfmath@x` (`\pgfmath@x=#1pt`), where scan_dimen rounds to
+  sp and stops only at 2^30 sp (tex.web §452-453, §461: `16383.99999pt` is `\maxdimen`, printed 16383.99998); under `/pgf/fpu`
+  (pgflibraryfpu.code.tex:29-46) a float sum (`12319.0+4442`) is no dimension. Perl tests the five-decimal result against
+  16383.99998 (:342-344, :391-393; KNOWN_PERL_ERRORS #1232). Ours: `exceeds_max_dimen` (|round(points·65536)| ≥ 2^30) on
+  the result outside the fpu (`fpu_active`, `\ifpgfmathfloatparseactive`), `scanned_dimension` on each `<number><unit>`
+  operand, in the fpu too: `20000pt-10000pt` one Error and 6383.99998, `20000pt+1` two, as pdflatex. In the fpu
+  `\pgfmathparse` is pgf's `\pgfmathfloatparse` (pgflibraryfpu.code.tex:396); `\pgfmathsetmacro` keeps the decimal form
+  (`16761.0` where pgf holds `1Y1.6761e4]`). Witnesses 1811.10950 (invclip's `(-16383.99999pt,-16383.99999pt) rectangle
+  (16383.99999pt,16383.99999pt)`: 16 → 0), 2411.12316 (tikz-bbox under its fpu, pgflibrarybbox.code.tex:28-35: 1 → 0),
+  2109.14286 (2 → 0; the funnel printed `16,384` for 16,761), TL manuals ddphonism (40 → 0), tikzbrickfigurines-doc (352 → 0).
+  Guard `error_boundary::perfect_kernel_error_boundary` (rows `pgfmath_maxdimen_spelling_and_fpu_in_range`, 0 errors;
+  `pgfmath_past_maxdimen_errs`, 7 as pdflatex).
+- **`\pgfmathpointintersectionoflineandarc` is closed form** (a WORKAROUND whose value is pgf's limit; pgfmathcalc_code_tex.rs,
+  pgfmathcalc.code.tex:366-468). Perl runs pgf's bisection over its float trig and never meets the exact-equality exit
+  (KNOWN_PERL_ERRORS #210); the binding solves the ray/ellipse quadratic, returns the root's parametric angle on the arc
+  (nearest otherwise, pgf's "best estimate" `\n`), then `\pgfpointadd{center}{\pgfpointpolar…}`. Rounded-rectangle and
+  callout border sub-points may move to the exact point. Witnesses zx-calculus/zx-calculus (Fatal → 0), 2201.09268's
+  class. Guard `perfect_kernel_batch56::line_and_arc_intersection_is_closed_form`. The principled replacement is TeX-exact
+  trig in the evaluator, so pgf's own bisection terminates (no SYNC row yet: SYNC note).
 
 ### 217. The document hooks run inline in the galley
 
@@ -6929,49 +6927,7 @@ gone); pst-node `Xnodesep` users.
 `keyval::tests::keyval_qname_normalizes_empty_prefix`,
 `keyvals::tests::keyvals_new_keeps_the_empty_family`.
 
-### 220. A terminal `\read` below scroll mode halts the job (tex.web §484)
-
-**Perl behavior**: `\batchmode`/`\nonstopmode`/`\scrollmode`/`\errorstopmode`
-are no-ops and a `\read` from an unopened stream does nothing.
-**Rust behavior**: the modes set a global interaction level (tex.web §71,
-§1265); a `\read` from a stream that is not open is a Fatal when the level is
-batch or nonstop, and stays a no-op in scroll/errorstop mode (no terminal).
-iftex's `\Require<engine>` and `ifxetex` are the real definitions
-(iftex.sty:42-52, 78-91; ifxetex.sty:4-5 requires iftex).
-**Why**: `\batchmode\read -1 to …` is THE halt idiom of iftex and expl3's
-`\msg_fatal`; without it a wrong-engine package keeps loading and loops on
-undefined engine primitives (bidi.sty:354 on `\XeTeXcharclass`) until memory
-runs out. KNOWN_PERL_ERRORS #213. Does not define any XeTeX primitive: those
-names are engine-detection probes (the XeTeX analogue of the parked
-`\directlua` family). Collateral by design: a LuaTeX-only package's
-`\RequireLuaTeX` (cartonaugh, mandi, luaprogtable, luamathalign, junicodevf)
-halts under the pdfTeX profile exactly as pdflatex would; lualatex-oracle
-documents are converted under the `luatex` profile, where it passes
-(cartonaugh-example: 0 errors).
-**Witnesses**: the 23-doc `alloc_failed 3288334336` cluster of sweep 57
-(handout, latexbangla, lshort-persian, texnegar-xetex-bidi-leaders-hrule…);
-`repros/backend-persona/xetex_only_package_batchmode_read_halt.tex`.
-**Guards**: `perfect_kernel_batch56::batchmode_terminal_read_halts_the_job`.
-**Update (batch 56hr, user direction 2026-09-24)**: the default persona converts XeLaTeX
-documents. The input is Unicode-native, so what XeTeX gives a document is already there:
-UTF-8 text, and OpenType fonts and script switching via the fontspec/polyglossia bindings.
-`\RequireXeTeX` and `\RequireTUTeX` therefore pass, as in Perl. The loop the halt guarded
-against is fixed at its source: `\RequireXeTeX` installs XeTeX's inter-character
-primitives (`\XeTeXcharclass`, `\XeTeXinterchartoks`, `\XeTeXinterchartokenstate`, and
-latex.ltx:22025's `\newXeTeXintercharclass`) as argument-reading no-ops. They are
-installed only once some package requests XeTeX, because amsmath, mathastext, minted2 and
-others probe `\XeTeXcharclass` to detect XeTeX. Only the setter forms are emulated, not
-`\XeTeXcharclass <n>` as a getter (zxjatype's `\int_compare`), and two TL packages drive the
-primitives without calling `\RequireXeTeX` (unicode-bidi.sty:20-21, xetexko.sty:55-57), so
-they remain exposed to the loop. bidi, xeCJK and mathspec, whose raw files check
-the engine themselves or drive those primitives directly, get bindings that keep content
-and drop the font and direction switches. arXiv 2605: 11 halting papers now convert, 10 of
-them with 0 errors. TL manuals: 18 of the 28 halting ones now convert, latexbangla clean
-where it previously hit the 6.3 GB `alloc_failed`. The other 10 fail as before, in
-xepersian's and quran's own expl3 engine checks under the luatex profile, and in stex-doc's
-missing archive. `\Require…` for an engine the persona is not (LuaTeX, pTeX, upTeX, VTeX …) still halts;
-`\RequirePDFTeX`/`\RequireeTeX` pass as before.
-Guard `perfect_kernel_batch56::xetex_only_packages_load_under_the_default_persona`.
+### 220. → #168 (A terminal `\read` below scroll mode halts the job (tex.web §484))
 
 ### 221. `\@roman` & co. are latex.ltx token macros; a `{Type}` re-parse is isolated
 
@@ -7137,18 +7093,7 @@ odd number of backslashes, so the control space survives (`pre_bibtex.rs`).
 **Why**: user-approved surpass (2026-09-17); the source is valid BibTeX and the
 PDF shows the entries. Guard `bib_field_trailing_control_space_survives_trimming`.
 
-### 230. A graphic named with its extension is also asked of kpsewhich
-
-**Perl behavior**: `image_candidates` (Util/Image.pm:43-57) searches the
-graphics/search paths; when nothing is found it consults kpsewhich only for an
-EXTENSIONLESS name with `.png`/`.pdf` appended. A package-shipped asset
-referenced by its full name — `\includegraphics[page=N]{openmoji-color-all.pdf}`,
-five icon galleries, 97.8 % of the corpus's lost figures (~27,700) — is never
-found although kpsewhich locates it.
-**Rust behavior**: when the candidate list is empty and the name has an
-extension, `kpsewhich <name>` supplies the candidate (`image.rs`).
-**Why**: user-approved surpass (2026-09-17). Guard
-`graphics_kpsewhich::extensioned_texmf_graphic_is_a_candidate`.
+### 230. → #177 (A graphic named with its extension is also asked of kpsewhich)
 
 ### 231. A `.bib` written by `filecontents` reaches MakeBibliography
 
@@ -7262,27 +7207,7 @@ Since 73a the definitions are typeset only when `\printnomenclature` prints the 
 is left out with a Warning (#738).
 
 
-### 235. biblatex resources resolve by basename and with an implied `.bib` (Perl: no binding)
-
-**Perl behavior**: no `biblatex.sty.ltxml`; the raw package fails to load. Its
-`pathname_find` for a classic `\bibliography{}` would also miss a resource named
-with a directory that does not exist beside the document.
-**Rust behavior**: a resource that misses under its given name is looked up
-again with `.bib` appended when it has no extension (biber tries the name, then
-`name.bib`; a legacy `\begin{refsection}[refs]` names its resources that way),
-and by its basename when the name carries a directory — `\addglobalbib
-{../bibtex/bib/biblatex-apa-test-references.bib}` (biblatex-apa-test.tex:69,
-apa6-test:444) mirrors the TeX Live SOURCE tree while the `.bib` ships beside
-the `.tex`, and no search path climbs out of the document directory
-(`make_bibliography.rs::bib_lookup_candidates`; the exact name always wins).
-`\refsection[resources]`/`\newrefsection[resources]` register their resources
-(biblatex.sty:10757/:10771), where the binding had dropped them.
-**Why**: the PDF is the oracle — the shipped bibliographies are the documents.
-biblatex-apa-test's 283-entry bibliography (16 % recall) and apa6-test's hinged
-on it.
-**Witnesses**: biblatex-apa/biblatex-apa-test, biblatex-apa6/biblatex-apa6-test.
-**Guard**: `06_cluster_bibliography::{pathful_bib_resource_falls_back_to_its_basename,
-refsection_optional_argument_registers_its_resources}`. Batch 56cs.
+### 235. → #177 (biblatex resources resolve by basename and with an implied `.bib` (Perl: no binding))
 
 ### 236. `\bibliography` is locked against a raw `\@input{\jobname.bbl}` redefinition (Perl: overridden, nothing rendered)
 
@@ -8443,9 +8368,7 @@ parts, validity unchanged (27/31), no diagnostic change. Guard
 ### 273. Delimiter spaces and prefix scanning follow tex.web, not Perl's Gullet/Stomach (KNOWN_PERL_ERRORS #222, #223)
 
 **Perl**: a space in a macro's prefix delimiter swallows every following space (`readMatch`, Gullet.pm:614-617). A `\relax` or a space after `\global`/`\long`/`\outer`/`\protected` clears the prefix (Stomach.pm:212/:234). **Rust**: a delimiter space matches exactly one space token (tex.web §392, batch 56gy). After one of TeX's prefixes, a `\relax` keeps it and a space is skipped (tex.web §1211/§404, batch 56hb), so catoptions' `\protected\relax\def` and `\global\sbox` behave as in pdflatex. The details, triggers and witnesses are in the KPE entries. **Guards**: `perfect_kernel_batch56::prefix_space_delimiter_matches_one_space`, `relax_after_a_prefix_keeps_the_prefix`.
-### 274. `\verbatim@start` heads line 1 with a pending command, except `\relax` (Perl: never looks)
-
-**Perl**: `\verbatim@start` = `\lx@verbatim@\verbatim@` (verbatim.sty.ltxml:76) reads raw lines and never inspects the token after it, so verbatimbox's `\verbatim\verbbox@inner` captures `\begin{verbbox}[\footnotesize]`'s bracket as verbatim text. On the witness this also gives 6 errors and empty boxes. **Rust** (batch 56hc, `verbatim_sty.rs` `\verbatim@start` / `read_verbatim_lines`): as verbatim.sty:107-112 does, a pending control sequence goes at the head of line 1's `\verbatim@addtoline` and runs inside `\verbatim@processline`. Per tex.web §506, `\if\noexpand#1\noexpand~` holds only for the active line end. So the bracket is consumed and the size applied (readarray.tex:440, verbatimbox, stackengine). The divergence from verbatim.sty itself is that a pending `\relax` (the `\verbatim@start\relax` idiom: curve2e `{Esempio}`, memoir, digiconfigs) is dropped rather than prepended, because our default processline stringifies line tokens and would print it; in TeX it is a no-op, so the rendering matches. **Guards**: `perfect_kernel_batch50::verbatim_start_relax_idiom`, `perfect_kernel_batch56::verbatim_start_runs_a_prepended_command`.
+### 274. → #61 (`\verbatim@start` heads line 1 with a pending command, except `\relax` (Perl: never looks))
 
 ### 275. titling's pre/post hooks reach the output (Perl: kept but never read)
 
@@ -8481,28 +8404,7 @@ Two gaps in the xcolor binding, both shared with Perl, where pdflatex is clean.
 
 `def_autoload` (and OmniBus's `\lx@late@usepackage`, and the LaTeX-pool autoload) clears its trigger and sets the package's loaded-flag GLOBALLY. It then hoisted the load's meaning-delta to global so the package lives as long, which is the 1711.11576 fix. Issue #348 later restricted the shared hoist to conditionals, for #65's sibling subfiles, and that restriction reached the autoload callers too. So natbib autoloaded by a `\citep` inside `{\itshape …}` lost `\citep` at the `}`, while its lock (`\citep:locked`) survived. Every later `\citep` was then undefined and could not be redefined: arXiv 2605.08349, 2605.10423, 2605.14513 and 2605.04028, `undefined:\citep` ×100, Fatal. Perl fails the same way (OmniBus.cls.ltxml:49-51; 101 errors + Fatal on 08349 and 14513). **Rust** (batch 56hu, `state.rs`): the autoload callers hoist the whole load with `snapshot_top_frame_keys` + `hoist_top_frame_package_load`: its meanings, and its values, so natbib's citation style does not revert after the group either. The subfile bracket keeps the conditionals-only `hoist_top_frame_conditional_delta` (#65). The snapshot-diff is an approximation. A key the group had already bound is not promoted. Catcode, mathcode and the other code tables are not covered. A value the package sets that the group had not bound yet, such as the current font, would become global. The planned replacement runs the load as if at group level 0: set the group's frames aside for the load and restore them after. **Guard**: `regress_2605_clusters::autoloaded_package_outlives_the_group`; repro `repros/loader/autoload_in_group_survives_the_group.tex`.
 
-### 283. An opt-in `xetex` profile, the counterpart of `luatex` (Perl: no engine personas)
-
-The default persona is pdfTeX-model, and since #220's update it passes iftex's `\RequireXeTeX`. It cannot pass an engine test on l3sys, whose identity was frozen to pdftex when the format was built (expl3-code.tex:7846-7861). Examples:
-- fduthesis.cls:69-71 and njuthesis.cls:62-63: `\sys_if_engine_xetex:F{\sys_if_engine_luatex:F{\msg_fatal…}}`;
-- exam-zh.cls:22;
-- fontspec's gate, inlined in xtufte-common.def:20-24, so no binding reaches it.
-
-Each of these halted (TeX Live class census, 2026-09-24). Flipping the default persona is not an option: l3sys's engine is a single value, so `\sys_if_engine_pdftex` would turn false for the 436 pdflatex classes.
-
-**Rust** (batch 56hx, `latexml_sty/mod.rs`): `\usepackage[xetex]{latexml}` (preload `[…,xetex]latexml.sty`) makes the document XeTeX-authored:
-- iftex's `\ifxetex`/`\iftutex` read true and `\ifpdftex` false;
-- l3sys reports `xetex` and `xelatex` (`set_l3sys_engine`, shared with `luatex`);
-- `\XeTeXversion`/`\XeTeXrevision`, `\Uchar` and the inert inter-character primitives are defined;
-- the Unicode-engine behaviours are on (`state::unicode_engine_profile`: non-ASCII letter catcodes, `\char` above 255, no utf8 byte mouth).
-
-fontspec, unicode-math and xeCJK stay bindings, so the raw XeTeX font backends are never reached. Their bindings gained the expl3 internals that classes call directly (`\__fontspec_main_set…font:nn`, `\__um_setmathfont:nn`, the `unicode-math` key family, `\xeCJK_declare_node:n` and friends), and ulem's `\ULC@box`.
-
-Census classes under the profile: xtufte-book, xtufte-handout, fduthesis-en, xduugtp and bitbeamer go from Fatal or errors to 0. fduthesis, njuthesis, exam-zh, xdupgthesis and xduugthesis go from Fatal to converting, with 1-8 residual errors.
-
-`run_doc.sh` routes clean-xelatex-oracle documents to the profile, as it routes lualatex ones to `luatex`. The TL-manual oracle does not yet try xelatex, so that routing is inert there for now.
-
-**Guards**: `class_census::xetex_profile_engine_identity`, `xetex_class_calls_binding_internals`.
+### 283. → #168 (An opt-in `xetex` profile, the counterpart of `luatex` (Perl: no engine personas))
 
 ### 284. A kernel length keeps latex.ltx's register allocation (Perl: renamed to its CS name)
 
@@ -8565,93 +8467,161 @@ pdflatex+epstopdf is taken as DVI, as arXiv's own cue would.
 `perfect_kernel_batch61::dvips_class_option_is_dvi`, `perfect_kernel_batch64::{pdftex_option_with_eps_figures, pdftex_option_selects_pdf_mode}`,
 `converter::tests::compile_route_of_main_sources`.
 
-### 286. The bibliography formatter prints subtitles, a host's publisher and place, and access dates (Perl: dropped)
+### 286. The bibliography formatter prints what the entry holds as the style prints it: every captured field, the style's name form, its URL and period rules (Perl: fields captured and dropped, initials, "Link", periods unconditional) — absorbs #289 #299 #306
 
-The `.bib` reader files `subtitle` as `ltx:bib-subtitle` (BibTeX.pool.ltxml:571) and, for
-`@inbook`/`@incollection`/`@inproceedings`, the host's `publisher`/`address` under
-`ltx:bib-related` (:402-403, :437). Perl's formatter reads neither: MakeBibliography.pm has no
-subtitle spec, and its incollection block reads only the direct `ltx:bib-publisher`/`ltx:bib-place`
-(:742-744). The structure is captured and then not printed.
+**Rule.** A field the `.bib` (or a biblatex `.bbl`) reader captured is printed, in the form the bibliography's style
+gives it — the `.bst`'s or biblatex's given-name form, URLs where the style prints them, units joined and periods added
+by the style's engine's own rule (BibTeX's `add.period$`, biblatex's punctuation tracker). **Perl**'s MakeBibliography
+has no row for many captured fields (no subtitle spec; the incollection block reads only the direct
+`ltx:bib-publisher`/`ltx:bib-place`, MakeBibliography.pm:742-744), prints given names always as initials (:555-566;
+its note at :557 says this should be an option), every `url` as "Link" (BibTeX.pool.ltxml:740-741), and its "." / ". "
+unconditionally (:527-531: "What is X?. A survey", "Pub, Inc..").
+**Code.** `latexml_post/src/make_bibliography.rs:2052 get_fmt_spec` (shared by every `.bib` bibliography), `:3662
+style_prints_urls`, `PeriodRule::of_style` (unit test `make_bibliography::test_period_rule`, :4545).
 
-**Rust** (batch 56ie, `latexml_post::make_bibliography::get_fmt_spec`, shared by every `.bib`
-bibliography): a `ltx:bib-subtitle` spec after each title ("Title. Subtitle."), the incollection
-block's `ltx:bib-related/ltx:bib-publisher` and `ltx:bib-related/ltx:bib-place`, and a metadata
-line for `ltx:bib-date[@role='accessed']` ("Accessed: …", biblatex's `urldate`). The `.bib` reader
-also reads biblatex's field names (`journaltitle`, `location`, `urldate`, `titleaddon`,
-`addendum`) for the biblatex binding's no-biber path (since 78i defined by the binding, not the pool: #823). Witnesses: 78 biblatex manuals of sweep 120
-(biblatex-ieee 75.1 → 78.3 %, biblatex-chicago/cms-notes-sample 66.2 → 74.9 %,
-biblatex-apa-test 72.6 → 78.4 % recall). No existing golden carries these fields.
-
-**Guard**: `cluster_cli::whatsinout::biblatex_bib_fields_reach_the_reference_list`.
-
-**Crossref (batch 56jd).** The host publisher/place rows carry Perl's host-row step
-`ltx:bib-related[@type][not(../ltx:bib-related[@bibrefs])]` (MakeBibliography.pm:732-734): an
-entry with a `crossref` prints "See [parent]" and no host fields, as plain.bst's
-`format.incoll.inproc.crossref` does ("In [1], pages 1–10"); the biblatex event rows are gated the
-same way. Guard: `bibliography_crossref::crossref_child_sees_its_parent_and_skips_the_host_title`.
+- **Subtitles, host publisher/place, access dates** (56ie). The reader files `subtitle` as `ltx:bib-subtitle`
+  (BibTeX.pool.ltxml:571) and an `@inbook`/`@incollection`/`@inproceedings` host's `publisher`/`address` under
+  `ltx:bib-related` (:402-403, :437); the formatter prints "Title. Subtitle.", the `ltx:bib-related/ltx:bib-publisher` and
+  `ltx:bib-related/ltx:bib-place` rows, and "Accessed: …" for `ltx:bib-date[@role='accessed']` (biblatex's `urldate`).
+  biblatex's field names (`journaltitle`, `location`, `urldate`, `titleaddon`, `addendum`) are read for the binding's
+  no-biber path (defined by the binding since 78i: #823). Recall on 78 biblatex manuals of sweep 120: biblatex-ieee 75.1 →
+  78.3 %, biblatex-chicago/cms-notes-sample 66.2 → 74.9 %, biblatex-apa-test 72.6 → 78.4 %. Crossref (56jd): the host rows
+  carry Perl's step `ltx:bib-related[@type][not(../ltx:bib-related[@bibrefs])]` (MakeBibliography.pm:732-734), so a
+  `crossref` child prints "See [parent]" and no host fields, as plain.bst's `format.incoll.inproc.crossref` ("In [1],
+  pages 1–10"); the biblatex event rows likewise. Guards `cluster_cli::whatsinout::biblatex_bib_fields_reach_the_reference_list`,
+  `bibliography_crossref::crossref_child_sees_its_parent_and_skips_the_host_title`.
+- **URLs, translators, annotations** (ex-#289, 56ii). Where the style prints URLs (`style_prints_urls`: biblatex, recorded
+  as `bibstyle='biblatex'`; `plainnat`/`abbrvnat`/`unsrtnat`, plainnat.bst:285 `format.url`; `abntex2-num`/`abntex2-alf`,
+  abntex2-num.bst:993-1001, 57cm) the address replaces "Link"; `plain`/`alpha`/`unsrt` keep "Link". A "Translated by …"
+  row (`ltx:bib-name[@role='translator']`, :560-562) and biblatex's `annotation` (read like `annote`, a `role=annotation`
+  note, under biblatex only since 78i) print for every style. Recall (sweep #121): biblatex-apa-test 81.0 → 92.1 %, cms-dates-intro
+  83.0 → 97.8 %, cms-dates-sample, cms-trad-sample and cms-notes-sample +2.6 to +3.5 points, docsurvey (126 annotated
+  entries) 78.0 → 92.7 %. Guard `cluster_cli::whatsinout::bib_urls_translators_and_annotations`.
+- **Given names follow the style** (ex-#299, 56iu). BibTeX: the `.bst`'s first literal `format.name$` template with an
+  `f` piece decides (`ff` full, `f` initials), skipping templates with no given-name piece and calls compared with
+  `"others"` (achemso.bst:514, biochem.bst — the only two TL 2025 styles that rule changes); a template in a variable or a
+  missing `.bst` falls back to initials; the abnTeX family (abntex2-*.bst, unbtex-*.bst, fcavtex.bst) reads `{, ff}` and its
+  `#0`/`#1 'abnt.full.initials :=` default decides first (abntex2-num.bst:2045, 57cm.1; unbtex-example "L. C. Araujo", PDF
+  "ARAUJO, L. C."). biblatex: the resolved `author` format decides (`\ifgiveninits` follows the option, else
+  `\namepartgiveni` initials, `\namepartgiven` full; seeds and aliases biblatex.def:953, 989-993, biblatex.sty:4494-4545),
+  then `giveninits`; `initsonly` is initials. A native style whose `.bbx` the binding does not load still has its
+  top-level `\ExecuteBibliographyOptions`/`\RequireBibliographyStyle` read in file order (ieee.bbx:26-34 `giveninits`, from
+  ieee-alphabetic.bbx:13). Name lists use Perl's separator rule, "A. X, B. Y, et al." (MakeBibliography.pm:568-584).
+- **biblatex's second-tier fields** (ex-#299). `subtitle`, `titleaddon`, `booksubtitle`, `maintitle`, `eventtitle`, `venue`,
+  `eventdate` print: subtitle and addon as two units for the title, book title and main title, joined as `\newunit`
+  (". ", biblatex.def:173, or " " after a mark `.` `?` `!` `,` `;` `:` `…` seen through closing brackets and quotes:
+  biblatex.sty:2118-2130 `\blx@addpunct`, :2026, :1749-1754; pdflatex + biber "Second (2nd ed.) Addon", "In the U.S.A.
+  Addon", "Ends with colon: Addon"); an `@inproceedings`' event, venue and date once; an `@incollection`/`@inbook` event
+  nested in the book host once (standard.bbx:311/578/710 print none; sbl.bbx:293 does). Witnesses biblatex-apa,
+  biblatex-chicago (cms-*-sample), fiwi manuals, spines, biblatex-examples.bib `salam`. Residuals: `eventdate`/`urldate`
+  in ISO form (biblatex's default `comp` form depends on the language); hyphenated initials "A." (biblatex "A.-T.");
+  per-type options and name formats; geschichtsfrkl's `\ifbool{bbx:nurinit}` (geschichtsfrkl.bbx:105) read as initials; a
+  title addon listed before its subtitle prints first; the book subtitle's `,` before the place's `(` ("Symposium, (…")
+  and the event date running into the editor. (#299's residual "a row's trailing `.` is unconditional" is retired by the
+  period rule below.)
+- **A biblatex `.bbl` read into bibentries** (ex-#306, 56jc, worker W6). Perl's ar5iv binding (biblatex.sty.ltxml:495-690)
+  rebuilds it as `\bibitem`s, dropping unknown fields. Ours reads `\entry`/`\name`/`\list`/`\field`/`\keyw`/`\verb` into the
+  BibTeX pool's `BibEntry` (field tables blx-dm.def:473-634) and runs `\ProcessBibTeXEntry`, keeping biber's choices:
+  labels (`labelalpha` + `extraalpha` as the refnum, `\cite` → `[Knu84]`), the entry order (inline entries printed whole,
+  `sort='false'`), one datalist (the default refcontext's), `skipbib`, biblists. Not modelled: filtered
+  `\printbibliography`, per-refsection printing. Inline bibentry ids are released before formatting
+  (`PostDocument::release_id`), resolving amsrefs' links too (amshelp: 24 of 25 dangling → 0).
+- **Row periods** (ex-#306). The period after a mark is dropped by the engine's rule, by `bibstyle`: `add.period$` (no
+  period after `.` `?` `!`, btxhak.tex:326-329) for a `.bst` or no style; biblatex's tracker for biblatex; a formula or a
+  reference CrossRef fills in later ends in no mark. Checked with pdflatex+bibtex and pdflatex+biber. Measured
+  (POST_MODE=mono, 340 bibliography manuals): recall ±0, mark-plus-period 356 → 1; the 7 papers of the 3,003 sample that ship
+  a biblatex `.bbl` keep their counts, 5 gain words (up to +50 %), 2605.17646's duplicate datalist gone (58 → 29). Residuals:
+  the `.bib` path's alphabetic labels (`[1]`; biber's labelalpha port would fix it), "Jr.", `maxbibnames`, apa's "&" in the
+  bibliography and `\parencite` (apa.cbx:496-497, :727; `\textcite` joins with "and", :50-55).
+- **Guards** `bibliography_names_fields::{bst_full_name_template_spells_given_names_out,
+  bst_initials_template_abbreviates_given_names, biblatex_default_spells_given_names_out,
+  biblatex_giveninits_abbreviates_given_names, biblatex_style_decides_given_names,
+  bst_name_list_with_others_is_comma_separated, biblatex_giveninits_keeps_percent_comment_entries,
+  biblatex_second_tier_fields_are_printed, biblatex_title_units_and_events_print_once, classic_host_rows_are_unchanged,
+  title_mark_takes_no_period_biblatex, title_mark_takes_no_period_bst, bbl_prints_what_its_bib_prints,
+  bbl_keeps_bibers_alphabetic_labels_and_order, bbl_prints_the_default_refcontext_datalist,
+  bbl_skips_its_biblists_and_skipbib_entries, bbl_format2_reads_as_its_bib, bare_thebibliography_twice_arms_once}`; the
+  06_cluster_bibliography goldens (15 updated to the style's own name form). Related: KNOWN_PERL_ERRORS #280 (#321, fields
+  of one block run together).
 
 ### 287. → Bindings beyond Perl's tree: quotchap.sty (`quotchap_sty.rs`)
 
-### 288. NFSS size state: `\fontsize`, `\selectfont` and `\f@size` carry the font size (Perl: fixed at 10)
+### 288. NFSS font state is kept as the kernel keeps it: size, codes, defaults and the current font follow every switch (Perl: size fixed at 10, codes only from `\fontfamily`…, resets to `\rmdefault`) — absorbs #45 #309 #779
 
-Perl's `\fontsize{}{}` swallows its arguments and its `\f@size` is a constant `10`
-(latex_constructs.pool.ltxml:5167, :5620); `\selectfont` merges family, series and shape only. So a
-document's `{\fontsize{24}{28}\selectfont …}` keeps no size, `\f@size` reads 10 after `\large`,
-and a raw class whose size commands run `\@setfontsize` (the `.clo` files: size11.clo,
-KOMA's scrsize11pt.clo) never changes the text size. typearea then measures its good text width
-at 10 pt instead of 10.95 pt and warns "Bad type area settings!" (765 KOMA-Script manuals, sweep
-#121). Perl's `\baselinestretch` is the kernel's macro `1` (L1050); ours was a register.
+**Rule.** The NFSS state (`\f@size`, `\f@baselineskip`, `\f@family`, `\f@series`, `\f@shape`, the encoding) is set where
+latex.ltx sets it — `\fontsize`/`\set@fontsize`/`\selectfont`'s deferred `\size@update` (latex.ltx:10527-10528,
+12585-12601, 14103-14107), every font switch, and `\normalfont`/`\reset@font` returning to the document's
+`\familydefault`/`\seriesdefault`/`\shapedefault`/`\encodingdefault` (:14113-14122) — and the current font is named
+from that state. **Perl**: `\fontsize{}{}` swallows its arguments and `\f@size` is a constant `10`
+(latex_constructs.pool.ltxml:5167, :5620); `\selectfont` merges family, series and shape only; NFSS codes are written
+only by `\fontfamily` and its relatives and a class size switch sets the size alone (article.cls.ltxml:111; :5622);
+`\normalfont` is `\fontfamily{\rmdefault}\fontseries{\mddefault}\fontshape{\updefault}\selectfont` (:5194-5195) and
+`neutralizeFont` (TeX_Box.pool.ltxml:218-221) the serif `textDefault`; `\the\font` is the last `\font` identifier or
+`\lx@default@font` (TeX_Macro.pool.ltxml:272, TeX_Fonts.pool.ltxml:41-43).
+**Code.** `binding/content.rs:5740 sync_nfss_font_state` (and `merge_font_ref`), `tex_fonts.rs:776
+current_font_identifier`, `base_utilities/fonts_defs.rs:70 neutralize_font` / `:92 font_code_named`,
+`latex_constructs/sect13.rs:2574 nfss_selected_font` and sect13.rs's `\normalfont`.
 
-**Rust** (batch 56ih): the kernel's mechanism, latex.ltx:10527-10528, 12585-12601 and 14103-14107.
-- `\fontsize` is the kernel's, and `\set@fontsize` records `\f@size`, `\f@baselineskip` and
-  `\f@linespread` and arms `\size@update`.
-- The next `\selectfont` runs the update once: `\baselineskip`, `\strutbox`, and the current font
-  takes `\f@size` points (`\lx@fontsize@merge`, the size half of `\selectfont`'s font choice).
-- A `\selectfont` with no pending update (`\bfseries` after `\large`) leaves the size alone, as the
-  kernel's deferral does. The update disarms itself before its `\hbox`, not after, so it cannot
-  re-enter.
-- `\@setfontsize` runs `\fontsize{#2}{#3}\selectfont` inside its `\@typeset@protect` guard.
-- The class bindings' size switches (`font => {size => …}`) record `\f@size` through the font merge
-  (content.rs `merge_font_ref`, #309) and end in `\selectfont` (dialect.rs).
-- A preamble `\@setfontsize\normalsize…` sets `NOMINAL_FONT_SIZE`, as a0poster's binding does, so an
-  11pt raw class's body text carries no `fontsize` and `\large`/`\small` read 110 %/91 %.
-- `\baselinestretch` is a macro again.
-- `\check@mathfonts` is the size half of the kernel's `\glb@settings` (Perl's is a no-op):
-  `\tf@size`, `\sf@size` and `\ssf@size` for `\f@size`, from fontmath.ltx's table or
-  `\calculate@math@sizes`. It runs at load and after each size update; the kernel runs it at math
-  entry. Both come with the dump; without one (`LATEXML_NODUMP`) they, `\ifmath@fonts` and the
-  script ratios are defined from latex.ltx (:10467, :10472-10489, :10742-10754). Needed once `\fontsize` reads its arguments: `\@textsuperscript` and the logos'
-  `\fontsize\sf@size…` (latex.ltx:17643, :10076) met an undefined `\sf@size` (program-doc,
-  uhrzeit-doc, memman in the A/B).
+- **Size** (56ih). `\fontsize` is the kernel's; `\set@fontsize` records `\f@size`, `\f@baselineskip`, `\f@linespread` and
+  arms `\size@update`; the next `\selectfont` runs it once (`\baselineskip`, `\strutbox`, the font takes `\f@size` points:
+  `\lx@fontsize@merge`), and disarms before its `\hbox` so it cannot re-enter; a `\selectfont` with none pending
+  (`\bfseries` after `\large`) leaves the size alone. `\@setfontsize` runs `\fontsize{#2}{#3}\selectfont` inside its
+  `\@typeset@protect` guard; the class bindings' size switches (`font => {size => …}`) record `\f@size` through the font
+  merge and end in `\selectfont`, pushed back into the input (dialect.rs), so pgf's `\nullfont` in a picture stays. A
+  preamble `\@setfontsize\normalsize…` sets `NOMINAL_FONT_SIZE` (as a0poster's binding does): an 11pt raw class's body
+  carries no `fontsize`, `\large`/`\small` read 110 %/91 %. `\baselinestretch` is a macro again (Perl's L1050 `1`; ours was a
+  register). `\check@mathfonts` is `\glb@settings`' size half (Perl: a no-op): `\tf@size`, `\sf@size`, `\ssf@size` from
+  fontmath.ltx's table or `\calculate@math@sizes`, at load and after each update; without a dump (`LATEXML_NODUMP`) it,
+  `\ifmath@fonts` and the script ratios come from latex.ltx (:10467, :10472-10489, :10742-10754) — `\@textsuperscript` and
+  the logos' `\fontsize\sf@size…` (latex.ltx:17643, :10076) met an undefined `\sf@size` (program-doc, uhrzeit-doc, memman).
+  Before: `{\fontsize{24}{28}\selectfont …}` kept no size, size11.clo/scrsize11pt.clo never changed it, and typearea
+  warned "Bad type area settings!" (765 KOMA-Script manuals, sweep #121). The binding classes still ignore
+  `10pt`/`11pt`/`12pt` (Perl too). Guards `class_census::{fontsize_selectfont_size_state, raw_class_normalsize_nominal}`.
+- **Codes and the current font** (ex-#309, 56je, worker W8, each checked with `\typeout` probes). Every font merge
+  writes the codes, locally and in text mode only (reverse maps in `common/font.rs`); a code in force that names the same
+  font is kept (`pcr` survives `\ttfamily`); a raw `\font\x=cmtt10 \x` writes them too, where TeX leaves them to NFSS.
+  `\the\font`, `\fontname\font`, `\fontdimen`/`\hyphenchar` of `\font` use the current font's identifier, defined once as
+  the kernel names it (`\OT1/cmtt/m/n/10`): ltxdoc's `\oc@ttf` (ltxdoc.cls:136) and short-math-guide's `\ttfont` print in
+  typewriter. `\emph`'s `\f@shape` hook (latex_constructs.pool.ltxml:414-416) is subsumed; plain `\em`
+  (plain_base.pool.ltxml:604-609) and `neutralize_font` (notes, tags) go through the same sync, as `\reset@font` does
+  (latex.ltx:14122, :17658-17659). doc.sty's `\MacroFont` (`\fontfamily\ttdefault … \small`, doc.sty:149-153) now
+  applies cmtt. OT1 mis-glyphs in code (“ – ˝): moloch 690/554/554 → 11/0/0, achicago-bst 102/671/665 → 45/2/0,
+  short-math-guide 496/29/26 → 19/3/0, source2e 2761/534/397 → 281/89/0; typewriter runs up 3-15×; recall, errors and
+  goldens unchanged. Left: `\fontname` names a scaled base font (`cmr10 at 14.4pt`, pdflatex `cmr12`); the default
+  codes are fixed to cmr/cmss/cmtt/bx. Guards `nfss_font_state::*` (9), `math_text_font_restore::*`.
+- **Defaults on every reset** (ex-#779, 77u r2, user ruling 2026-10-20). `\normalfont` is latex.ltx's
+  (`\fontencoding\encodingdefault` first), and `neutralize_font` (notes, tags, index entries) takes the family, series
+  and shape the defaults name when the font table knows them (`font_code_named` reads a literal or a chain of
+  parameterless macros without expanding). Every reset — `\begin{document}`'s `\init@series@setup` (:13902-13920), a
+  footnote's `\reset@font\footnotesize` (:17659), `\textnormal` (:14216), `\@eqnnum`, `\@floatboxreset` — returns to them:
+  a `\renewcommand\familydefault{\sfdefault}` document (helvet's and cmbright's idiom, lrec2026.sty's tgheros branch,
+  acmart/aamas's sigchi-a mode) carries `font="sansserif"` on its text runs (the root keeps LaTeXML's serif default), as
+  its PDF (CMSS10/CMSSI10, CMSS8 footnotes); `\textrm` stays serif. A default the table does not know (`droidserif`,
+  droidserif.sty:101 under `[default]`, which cmpj3.sty loads, 2603.23615) resets to serif (`\lx@normalfont@base` first),
+  as Perl's `\rmdefault` did. The `.bib` session (bib_session.rs) digests the reset recorded where the bibliography stands
+  (`lx@bibliography@normalfont`, sect11.rs `\lx@bibliography`), not the document's end (cmpj3's `\ukrainianpart`). The
+  encoding reset: `{\fontencoding{OT1}\selectfont <c> \normalfont <d>}` in a T1 document prints `<d>` as written, not ¡d¿;
+  0710.2028's `\cyr` (`\renewcommand\encodingdefault{OT2}\normalfont`) prints Cyrillic ("Там даже …"). Bindings standing
+  for a package or class that sets a default do it as the original: cmbright_sty.rs (cmbright.sty:26-28), acmart_cls.rs
+  (`\@ACM@sigchiamodetrue`, acmart.cls:238-240, :888-890). `\selectfont` keeps the font in force for an unmapped family
+  but never `\nullfont`, which it leaves on serif (`nfss_selected_font`): a pgf node under `\usepackage[default]{opensans}`
+  dropped its text silently (prerex/chart; DEMO-BFHSciPoster's `\rmdefault`; guard
+  `perfect_kernel_batchm1::selectfont_of_an_unmapped_family_leaves_nullfont`). Residuals (`perfect_kernel/OPEN_ROWS.md`
+  "FONT — Font-Selection Chain Residuals" 5-7): `\textnormal@math` keeps a fixed serif; a `.bib` entry's names and year
+  carry no sans; opensans.sty's `[default]` (:160-161, `\opensansfamily`) stays serif; a formula's tokens are written
+  against the text default (#780). Repros `fonts-nfss/{family_default_sets_the_body, family_default_survives_a_preamble_switch,
+  unknown_family_default_resets_to_serif, selectfont_of_an_unmapped_family_leaves_nullfont}`. Guards
+  `perfect_kernel_batch77u::{family_default_sets_the_body, family_default_survives_a_preamble_switch,
+  unknown_family_default_resets_to_serif}`, `06_cluster_bibliography::bib_entries_take_the_defaults_where_the_bibliography_stands`;
+  golden `tikz/ac-drive-components.xml` (node text CMSS, "Control unit" CMSSBX10 as pdflatex).
+- **Family codes** (ex-#45). `FONT_FAMILY` (Common/Font.pm `%font_family`) gains inconsolata (`zi4`, `fi4`), TeX Gyre
+  (`qcr`/`qpl`/`qtm`/`qbk`/`qcs`/`qhv`/`qag`/`qzc`), Latin Modern (`lmr`/`lmss`/`lmtt`/`lmvtt`), Bera (`fvm`/`fve`/`fvs`), Source
+  Code Pro / Fira Mono: a raw `\fontfamily{<code>}\selectfont` (fancyvrb's setup, a repointed `\ttdefault`) recovers the
+  abstract family. colm2026_conference loads inconsolata (`\ttdefault`=zi4), so boxed Verbatim dropped
+  `ltx_font_typewriter` (2605.00468). Perl's table has the same gap (~2005-era fonts); upstream candidate. Future: derive
+  the table from the `.fd` files.
 
-The binding classes still ignore the `10pt`/`11pt`/`12pt` option (Perl too).
-
-**Guards**: `class_census::{fontsize_selectfont_size_state, raw_class_normalsize_nominal}`.
-
-### 289. The bibliography formatter prints URLs where the style does, translators, and biblatex annotations (Perl: "Link", dropped)
-
-Perl's `.bib` reader writes every `url` as `<ltx:bib-url href='…'>Link</ltx:bib-url>`
-(BibTeX.pool.ltxml:740-741). MakeBibliography then prints "External Links: Link", so the address
-survives only in the `href`. A `translator` is read into `ltx:bib-name[@role='translator']` (:560-562)
-and never printed, since its FMT_SPEC has no row for it. biblatex's `annotation` field, the name
-biblatex gives BibTeX's `annote`, is not read at all. biblatex's standard styles print all three:
-"URL: …", "Trans. by …", and the annotation in annotating styles. Witnesses (sweep #121 recall):
-biblatex-apa-test, the biblatex-chicago samples, and docsurvey's 126 annotated entries.
-
-**Rust** (batch 56ii):
-- `latexml_post::make_bibliography` shows the address itself in place of "Link" when the
-  bibliography's style prints URLs (`style_prints_urls`: biblatex, which the binding now records as
-  `bibstyle='biblatex'`, natbib's `plainnat`/`abbrvnat`/`unsrtnat`, plainnat.bst:285
-  `format.url`, and abnTeX2's `abntex2-num`/`abntex2-alf`, abntex2-num.bst:993-1001, 57cm). The classic `plain`/`alpha`/`unsrt` keep "Link".
-- A "Translated by …" row sits in the shared field block.
-- `annotation` reads like `annote`, as a `role=annotation` note (under biblatex only since 78i, #823).
-
-Only the URL change is style-gated; the translator row and the `annotation` field print for every
-style, like the `note`/`annote` row before them (#286's pattern: captured `.bib` content is printed).
-Recall on the witnesses: biblatex-apa-test 81.0 → 92.1 %, cms-dates-intro 83.0 → 97.8 %,
-cms-dates-sample, cms-trad-sample and cms-notes-sample +2.6 to +3.5 points, docsurvey 78.0 → 92.7 %.
-
-**Guard**: `cluster_cli::whatsinout::bib_urls_translators_and_annotations`.
+### 289. → #286 (The bibliography formatter prints URLs where the style does, translators, and biblatex annotations (Perl: "Link", dropped))
 
 ### 290. → Bindings beyond Perl's tree: versonotes.sty (`versonotes_sty.rs`)
 
@@ -8756,75 +8726,113 @@ in running text. Fill and stroke colours are not modelled, and neither is `fillf
 filter is not ported. **Guard**: `perfect_kernel_batch56::psframebox_keeps_its_body`.
 
 ---
-### 298. `\rule[raise]` sizes its box as latex.ltx does (Perl: the raise is ignored)
+### 298. A box measures what TeX measures: each constructor's size follows latex.ltx, the package source or tex.web (Perl: the attribute strings, its arguments, or nothing) — absorbs #328 #331 #391 #397 #420 #421 #462 #490
 
-Perl stores `\rule`'s Dimensions as its width and height (latex_constructs.pool.ltxml:4797-4799) and
-ignores the raise. latex.ltx:16360-16368 `\@rule` builds `\vrule` with height h + raise and depth
-−raise; hpack floors each at 0 (tex.web §653). **Rust** (batch 56is, sect12.rs) sizes the box that
-way: `\rule[-2pt]{1pt}{1cm}` measures 26.45274pt high and 2.0pt deep, and `\rule[-2cm]{1pt}{1cm}`
-measures 0pt high and 56.9055pt deep, as pdflatex prints. The attribute
-strings are unchanged. Before this batch Rust stored only the strings, and the box measured 0×0.
-bfhsciposter.cls:171's `\box_gresize_to_ht_plus_dp` then divided by zero (bfh-ci SciPoster, 11
-errors). **Guard**: `perfect_kernel_batch56::rule_box_has_its_size`.
+**Rule.** The size a box reports — to `\settowidth`, `\resizebox`, adjustbox, pgf, the panel and cell logic — is the size
+TeX gives the box: its dimensions as the kernel or package builds them, read with the box set where the kernel reads
+them so, packed and floored as tex.web packs (§649, §653, §679, §1087). Each sub-rule is its constructor's sizer; there
+is no single function. **Perl** sizes many constructors from their attribute strings or arguments, counts every box of
+a body as a line (Whatsit.pm:252-255, Font.pm:667-682), returns a lone box unfloored (List.pm:41-44), and has no sizer
+for several (QED symbols, `pspicture`). Related: KNOWN_PERL_ERRORS #1267 (#327, `\framebox[w]`).
+
+- **`\rule[raise]`** (56is, sect12.rs; Perl latex_constructs.pool.ltxml:4797-4799 ignores the raise): latex.ltx:16360-16368
+  `\@rule` builds `\vrule` of height h + raise, depth −raise, each floored at 0 by hpack (tex.web §653):
+  `\rule[-2pt]{1pt}{1cm}` 26.45274pt high, 2.0pt deep; `\rule[-2cm]{1pt}{1cm}` 0pt high, 56.9055pt deep, as pdflatex; the
+  attribute strings unchanged. Before, 0×0, and bfhsciposter.cls:171's `\box_gresize_to_ht_plus_dp` divided by zero
+  (bfh-ci SciPoster, 11 errors). Guard `perfect_kernel_batch56::rule_box_has_its_size`.
+- **Size arguments read with the box set** (ex-#328, 56kl, theme 11, K18 step 2; latex.ltx:16085-16094
+  `\@begin@tempboxa`; Perl KNOWN_PERL_ERRORS #298: `\width` etc. are `0pt` text, read before the box, so `2\width` is
+  20pt). `\makebox`'s and `\framebox`'s width, `\parbox`'s height, `\raisebox`'s `[height]`/`[depth]` and, since 61v (user
+  ruling 2026-10-04, KPE #466, rendered as #438) its raise, and `\Gscale@box@dd`/`@dddd`'s lengths are `TempboxaDimension`
+  (a `SetlengthDimension` with `after_box`, base_parameter_types.rs), honoured only by a constructor whose last argument
+  is the box: `Parameters::read_arguments_and_digest` keeps the raw tokens, digests the box (a plain `{}` in a group, as
+  `\hbox{`), then `within_tempboxa` (parameter.rs) puts it in `\@tempboxa`, digests `\lx@tempboxa@sizes` (latex.ltx:16088-16093
+  verbatim, `\def\width{\wd\@tempboxa}`…, exact to the sp) and re-parses each argument through `\setlength` (calc, or a
+  redefined one), before `properties` and the sizer. Outside a box command the four stay Perl's `0pt` stubs.
+  `\makebox[2\width]{x}` 10.6pt (was 20pt); `\makebox[\value{c}pt]{\stepcounter{c}x}` sees the step; siamart's
+  `\raisebox{0pt}[\height][0pt]` (100 papers of the 3,003 sample; 2605.00332, 2605.01276); `\raisebox{-.5\height}{icon}` (13
+  papers / 105 uses; 2605.18894, 2605.03941; repro `boxes-groups/raisebox_raise_measures_the_box.tex`). Open:
+  `\resizebox{\width}{!}` (`xscale="0"`) and `\resizebox*` through `GraphixDimension`/`\Gscale@@box` (4 papers);
+  `\pic@raisebox` (sect13.rs) and `{minipage}`'s `[height]` (`\endminipage` → `\@iiiparbox`) read the stubs; an empty
+  `\raisebox{d}[]{x}` reads 0pt with "Missing number" (56kj), where latex.ltx's `\@irsbox` (`\ifx\\#2\\`) takes it as not
+  given (0 uses; RED `boxes-groups/raisebox_empty_height_is_not_given.tex`). Guard
+  `perfect_kernel_batch56::box_size_arguments_measure_the_box`; repros `boxes-groups/{box_size_arguments_measure_the_box,
+  raisebox_optionals_measure_the_box}.tex`.
+- **A non-vertical list is floored at 0** (ex-#331, 56ko; tex.web §649 `hpack`, §720 math lists; KNOWN_PERL_ERRORS #301).
+  `List::compute_size` (list.rs) floors a non-vertical (or modeless) list's height and depth, where a one-item list took
+  `compute_boxes_size`'s bare-box shortcut (Perl's `getSize` of a lone Box, Font.pm:648-649):
+  `\hbox{\rotatebox[origin=l,y=1.2em]{90}{Qg}}` was −11.99998pt deep, `\hbox{\box2}` with `\dp2=-5pt` −5pt,
+  `\raisebox{0pt}[5pt][-3pt]` −3pt, and the `\fbox`/`\resizebox`/`\scalebox` of such boxes. A vbox keeps its last box's
+  negative depth (§670). Guard `perfect_kernel_batch56::a_one_item_hbox_has_no_negative_depth` (the vbox the negative
+  control); repro `boxes-groups/hbox_single_child_negative_depth.tex`.
+- **A note is its mark in the line** (ex-#391, 58b). Perl sizes only `\lx@note` by its mark (`sizer => '#mark'`,
+  latex_constructs.pool.ltxml:460); `\lx@notemark`, `\lx@notetext` (:467, :478), `\marginpar` (:3487), plain's
+  `\footnote{}{}` (plain_constructs.pool.ltxml:147), amsppt's and revtex4's notes (amsppt.sty.ltxml:268/:290,
+  revtex4_support.sty.ltxml :123/:145) by their arguments. TeX sets a note's text as an insertion (tex.web §1100
+  `begin_insert_or_adjust`) and a margin note as a float; the HTML shows the mark with a popup
+  (`.ltx_note_content{display:none}`, LaTeXML.css:494). `note_size_in_line` (the `mark`, or plain's `prenote`) for every
+  note that marks the line — `\lx@note`, `\lx@note@live`, `\lx@notemark`, plain `\footnote{}{}`, amsppt
+  `\footnote`/`\footnotemark`, revtex4 `\endnote`/`\endnotemark`; `out_of_line_size` (nothing) for the texts and margin notes —
+  `\lx@notetext`, `\lx@notetext@live`, `\lx@marginpar`, amsppt `\footnotetext`, revtex4 `\endnotetext`, deluxetable
+  `\tablenotetext`, pdfcomment's notes, mdpi `\endnote`, elsart `\thanks`/`\note`, mn2e queries, acmart `\Description`,
+  slides `\addtime`/`\settime`. mn2e's queries print inline in the PDF (`\aquery` = `\mbox{\largerm {[#1]}}`,
+  texmf-dist/doc/latex/mnras/LEGACY/mn2e.cls:1469; `\hbox{A\aquery{…}B}` 138.7pt for 13.5pt), as elsart's `\thanks` prints a
+  mark: a render-driven surpass. Before, a note with a `\par` added its lines to the line, one measured as its `tags`
+  counted every tag form, `\hbox{A\footnotemark B}` was 50.69pt for 19.07pt. Witnesses 2605.18427 S3.T4 (802.6 → 556.7pt,
+  pdflatex 521.7), 2605.14713 S2.T1 (aa `\tablefoot`). Residuals: a note still breaks a measured line; plain TeX's
+  `\footnote` (plain.tex `\insert\footins`) is measured with its body; a minipage footnote's text (`\@mpfootins`) is not
+  counted. Guard `perfect_kernel_batch58::notes_measure_as_their_mark`.
+- **`pspicture`** (ex-#397): `\begin{pspicture}(x0,y0)(x1,y1)` is x1−x0 × y1−y0 (pstricks.tex `\pspicture`); Perl sets
+  only `pxwidth`/`pxheight` (pstricks_support.sty.ltxml:532-535), measuring 0pt, and floatrow gobbled such a floatbox
+  (floatrow.sty:366-369: frsample10's pstricks figures and their `\footnotetext` lost). `pspicture_properties`
+  (pstricks_support_sty.rs) types the declared size as `{picture}` is (sect13.rs); corners in either order give a
+  positive box (pst-code-pspicture.tex:151-160); `[shift=…]` not applied (Perl neither). Guards
+  `perfect_kernel_batch58::{floatrow_keeps_an_object_it_measures_empty, pspicture_has_its_declared_size}`.
+- **`\vtop to`/`spread`** (ex-#420, 59w; tex.web §1087, §1083): packed as a `\vbox`, then the first item's height (0pt
+  for glue, a kern or a penalty) and the rest as depth (`d := x + d - h`); Perl's `setHeight` (TeX_Box.pool.ltxml:571-574)
+  sets the packed height. `set_specified_height` (tex_box.rs), `compute_boxes_size_stack` (font.rs):
+  `\vtop to 50pt{\hbox{A}\hbox{B}}` 6.83pt high, 43.17pt deep; `\vtop{\kern0pt\hbox{A}\hbox{g}}` 0pt, 20.78pt; `\vbox
+  to`/`spread` set the height (the port had left Perl's rule out: `\vbox to 50pt` measured 6.83pt). Residual: an
+  `\halign` last in a `\vtop to` (`\vtop to 40pt{\halign{#\cr A\cr B\cr}}` 45.17pt for 33.17pt; `normalize_sum_sizes`,
+  `hack_vbox_attachment`). Repro boxes-groups/box_primitives_unpack (cases 6, 10-14, 17; 15-16 RED); guard
+  `box_primitives::unpack`.
+- **A vertical box's own interline parameters** (ex-#421, 59x; tex.web §679 `append_to_vlist`). Perl's `List` records
+  only the `\baselineskip` after the box's group (List.pm:52-53) and reads `\lineskip` when measuring. Ours records
+  `\baselineskip`, `\lineskip`, `\lineskiplimit` on a `\vbox`/`\vtop` list before its group ends
+  (`predigest_box_contents_in_mode`, base_utilities/boxes_lists.rs), used by the sizing (`\lineskip` under `\lineskiplimit`
+  as §679) and `\vsplit`'s break search (tex_inserts.rs): `\vbox{\offinterlineskip …}` drains in TeX's pieces,
+  `\vbox{\small …}` stacks at 11pt. Read at the box's end (`\vbox{\begingroup\small …\endgroup}` 12pt, TeX 11pt); a list
+  with none stacks with `\lineskiplimit` 0pt and the `\lineskip` in force (Perl's rule, Font.pm:838-849). A captured
+  vertical body (a minipage; constructor.rs `capture_body`; whatsit.rs; 60l) records them when it opens, after
+  `\@parboxrestore`: a cell's zero `\lineskip` (2605.19065's tcolorbox cells); a change inside the body is not seen (RED
+  kernel-alignment/captured_body_interline_changed_inside). Residuals: `\nointerlineskip` (`\prevdepth`) leaves no item
+  (R7); the sizing skips interline glue after a negative-depth box (Perl's `prevdepth >= 0`), `\vsplit` does not. Witness
+  short-math-guide (51 of 61 `symlist` splits move; 3.3.3 letters, arrows split as the PDF). Guards `box_primitives::vsplit`,
+  `perfect_kernel_batch58::vsplit_breaks_only_where_tex_can`, `perfect_kernel_batch60::minipage_in_a_cell_keeps_its_lineskip`.
+- **A display listing** (ex-#462): `lst_block_size` (`listings_sty.rs`) sizes `\@@listings@block` (listings.sty.ltxml:261,
+  :1342-1351, :1546-1548; it had no sizer, so whatsit.rs `compute_size` gave one line, while Perl counts every box) as TeX
+  sets it: each source line one strut, `\baselineskip` (`\lst@NewLine`, listings.sty:703-705; lstmisc.sty:1630, :1648),
+  `breaklines` lines by width (lstmisc.sty:1308-1320), `aboveskip`/`belowskip` around (listings.sty:1765, :1818), `\linewidth`
+  wide (lstmisc.sty:1285-1286), no depth; each `\@lst@startline` records the `\baselineskip`/`\linewidth` after
+  `basicstyle` (`\footnotesize` 9.5pt); an `\@listingGroup{cls}{…}` spanning lines is opened. minted, piton, showexpl and
+  tcblisting go through `lst_process_display` too. html_feedback: 230 of 290 listings in a tcolorbox were a line high,
+  37 papers (HF1; 2406.06469, 2604.25850, 2601.23265, 2402.10176, 2311.11482, 2402.07204); Perl's six-line repro 307.8
+  output units against 116.23 for TeX's 84pt. Guards `perfect_kernel_batch63::{tcb_listing_body_height, tcb_listing_comment_lines}`
+  (84pt; 60pt); repros `boxes-groups/`.
+- **QED symbols** (ex-#490): a cell under 1sp is empty and skipped (Alignment.pm:458-470, the test kept), and Perl's QED
+  constructors have no sizer, so `\mbox{\IEEEQED}` alone in an eqnarray cell or `& \hfill\IEEEQEDhere` in an IEEEeqnarray
+  `x` cell lost it (KPE #581). `latex_constructs::symbol_box_size`: IEEEtran `\IEEEQEDclosed`/`\qed` the 1.3ex rule
+  (IEEEtran.cls:5533); amsthm's and autart's `\qed` amsthm's `\openbox` (.77778 × .675em, amsthm.sty:422-426,
+  `openbox_size`); cmsy10's `\sqcup` glyph for llncs `\squareforqed`/`\qed` (llncs.cls:400), svjour3/svmult `\qed`
+  (svjour3.cls v3.2 :959, svmult.cls v5.4 :1027), A&A's `\squareforqed` (aa.cls v5.3/5.4 :805, v6.0 :893, v6.1 :905, v7.0
+  :914; v8+ none), mn2e's `\squareforqed`/`\sq` (mn2e.cls:410; `\proofbox`, a 6.5×6.5 picture at :871, `\let` to it);
+  elsart/elsarticle's `\qed` a `\Box` (elsart.cls:457, TL elsarticle.cls:1238 `\hbox{}\hfill$\Box$`). Witnesses 2201.11150,
+  1903.06134, 1905.10621 (elsarticle cells, amsthm via krudces.sty:188); 12 IEEEtran papers match pdflatex's QED count.
+  Residual: the binding's A&A `\sq`/`\qed` are □, ∎ (aa_support_sty.rs), not Perl's `\squareforqed` lets
+  (aa_support.sty.ltxml:321-324). A general rule (visible content keeps its cell) is proposed as a K-row in the 64ra report.
 
 ---
-### 299. Bibliography given names follow the style; biblatex's second-tier fields are printed (Perl: always initials, fields dropped)
-
-Perl's MakeBibliography always prints given names as initials (MakeBibliography.pm:555-566; its note
-at :557 says this should be an option). biblatex's title units, host titles and events have no rows
-there, so `subtitle`, `titleaddon`, `booksubtitle`, `maintitle`, `eventtitle`, `venue` and
-`eventdate` are dropped. Witnesses: the biblatex-apa, biblatex-chicago (cms-*-sample) and fiwi
-manuals, spines, and biblatex-examples.bib `salam`.
-
-**Rust** (batch 56iu, round-12 P2/P3):
-- **The given-name form comes from the style.**
-  - **BibTeX:** the `.bst`'s first literal `format.name$` template with an `f` piece decides: `ff` is
-    full, a single `f` is initials. Templates with no given-name piece are skipped, and so are calls
-    whose result is compared with `"others"` (the "and others" test; achemso.bst:514, biochem.bst).
-    A template held in a variable, or a missing `.bst`, falls back to Perl's initials. A survey of
-    TL 2025 found achemso and biochem are the only two changed by the `"others"` rule.
-    The abnTeX family (abntex2-*.bst, unbtex-*.bst, fcavtex.bst) reads `{, ff}` and abbreviates in
-    its own code: its `#0`/`#1 'abnt.full.initials :=` default (abntex2-num.bst:2045) decides
-    first (57cm.1; unbtex-example "L. C. Araujo", the PDF's "ARAUJO, L. C.").
-  - **biblatex:** the resolved `author` name format decides first. A format that tests
-    `\ifgiveninits` follows the option; otherwise `\namepartgiveni` is initials and `\namepartgiven`
-    is full. Seeds and aliases follow biblatex.def:953, 989-993 and biblatex.sty:4494-4545. The
-    `giveninits` option comes next; `initsonly` is always initials.
-  - **Native styles:** for a style whose `.bbx` the binding does not load, its top-level
-    `\ExecuteBibliographyOptions` and `\RequireBibliographyStyle` are still read, in file order
-    (ieee.bbx:26-34 `giveninits`, reached from ieee-alphabetic.bbx:13).
-- **Name lists:** they use Perl's separator rule, "A. X, B. Y, et al." (MakeBibliography.pm:568-584).
-- **Second-tier fields:**
-  - biblatex's subtitle and title addon are printed as two units, for the title, the book title and
-    the main title.
-  - The units are joined as `\newunit` joins them: ". " (biblatex.def:173), or " " after a unit that
-    already ends in a mark (`.` `?` `!` `,` `;` `:` `…`), looking through closing brackets and quotes
-    (biblatex.sty:2118-2130 `\blx@addpunct`, :2026, :1749-1754). A blank unit prints nothing.
-    pdflatex + biber: "Second (2nd ed.) Addon", "In the U.S.A. Addon", "Ends with colon: Addon".
-  - An `@inproceedings`' event, venue and date print once. An `@incollection` or `@inbook` event is
-    nested in the book host and prints once. biblatex's standard drivers print no event for those
-    two (standard.bbx:311/578/710); sbl.bbx:293 does.
-- **Residuals:**
-  - `eventdate` and `urldate` print in ISO form, which is biblatex's `eventdate=iso`. Its default
-    `comp` form ("May 19–25, 1968") depends on the document language.
-  - Hyphenated initials print "A." where biblatex prints "A.-T.".
-  - Per-type options and name formats are not modelled.
-  - geschichtsfrkl's private switch (`\ifbool{bbx:nurinit}`, geschichtsfrkl.bbx:105) is read as
-    initials.
-  - A title addon listed before its subtitle in the `.bib` prints first.
-  - The book subtitle's `,` before the place's `(` ("Symposium, (…"), and the event date running
-    into the editor with no punctuation.
-  - A row's trailing `.` is unconditional, as in Perl, so a title ending in `?` prints "What is
-    X?. A survey"; biblatex and BibTeX's `add.period$` print "What is X? A survey".
-
-**Guards**:
-- `bibliography_names_fields::{bst_full_name_template_spells_given_names_out,
-  bst_initials_template_abbreviates_given_names, biblatex_default_spells_given_names_out,
-  biblatex_giveninits_abbreviates_given_names, biblatex_style_decides_given_names,
-  bst_name_list_with_others_is_comma_separated, biblatex_giveninits_keeps_percent_comment_entries,
-  biblatex_second_tier_fields_are_printed, biblatex_title_units_and_events_print_once,
-  classic_host_rows_are_unchanged}`;
-- the 06_cluster_bibliography goldens (15 updated to the style's own name form).
+### 299. → #286 (Bibliography given names follow the style; biblatex's second-tier fields are printed (Perl: always initials, fields dropped))
 
 ---
 ### 300. catchfile reads the file as catchfile.sty does; newverbs' own code prints in the document encoding (Perl: raw catchfile, ASCII quotes)
@@ -8905,70 +8913,39 @@ hexgame_board_converts, pstricks_macro_colour_keys_in_tabularx_cells}`.
 ---
 ### 302. → Bindings beyond Perl's tree: forest.sty, chemnum.sty (`forest_sty.rs`)
 
-### 303. The Unicode-engine profiles typeset in the TU encoding (Perl: no TU encoding, OT1 throughout)
+### 303. → #168 (The Unicode-engine profiles typeset in the TU encoding (Perl: no TU encoding, OT1 throughout))
 
-A LuaTeX or XeTeX format inputs tuenc.def and makes `TU` the default encoding (fonttext.ltx:57-68,
-93); its slots are Unicode code points. Perl has no TU fontmap, so `\lx@fontencoding{TU}` falls back
-to OT1 (TeX_Fonts.pool.ltxml:169-175), and text and `\char` decode through OT1 even in a document
-that only lualatex or xelatex can compile: `\char`\{` prints "–", a typed `<` prints "¡".
-**Rust** (batch 56ja) follows the Unicode format under the `luatex` and `xetex` profiles
-(`latexml_sty` `install_unicode_format_encoding`, `tu_fontmap.rs`):
+### 304. A balanced read that reaches the end of an `\input` file recovers as TeX's scanner status says (tex.web §305, §336-339) and the document goes on (Perl: the read stops at the mouth's end) — absorbs #310
 
-- The TU map is the identity on printable slots, with the TeX ligatures of the format's Latin
-  Modern text fonts (tuenc.def:60 `+tlig;`, :100 `mapping=tex-text;`): `"` `'` `` ` `` are ” ’ ‘,
-  and the quote ligatures (`non_typewriter_t1`, Perl TeX_Fonts.pool.ltxml:344 OT1/T1) also apply
-  under TU. The typewriter map is the plain identity (tulmtt.fd loads no ligatures).
-- A text symbol, accent or composite declared for TU at a slot above 255 is that code point
-  (`decode_slot`; tuenc-greek.def:204 `\DeclareTextSymbol{\textalpha}\UnicodeEncodingName{"03B1}`),
-  where the 8-bit rule gives no glyph.
-- The `xetex` profile installs the same format encoding, after `\XeTeXrevision`, `\XeTeXversion` and
-  `\tex_Umathcode:D` so that tuenc.def takes its XeTeX branch (v2.1d probes the first, v2.2a the other two).
-- The pdfTeX-model default keeps OT1, as pdflatex. The TU map is registered for every profile,
-  though, so an explicit TU selection under it (`\fontencoding{TU}`, `\UseTextSymbol{TU}`,
-  fontenc's `[TU]`, the fontspec binding's `\latinencoding`=TU reached through babel's
-  `\latintext`) now decodes through TU where Perl falls back to OT1. pdflatex has no TU
-  (tuenc.def:49-57 defaults to T1); xelatex prints TU.
+**Rule.** At the end of a file level (`Mouth::is_file_level`, tex.web's `name>17`, `mouth.rs:557`), a balanced read never
+crosses it: TeX's message for the scanner status is reported and TeX's recovery inserted, then reading goes on in the
+enclosing input (tex.web §362 calls §336 `check_outer_validity`). **Perl**'s `readBalanced` stops at the mouth's end (Gullet.pm:470-472), reports "ran out" (:525) and
+runs the macro on the partial argument (:683), so a definition is lost (`misdefined`); Rust read a file held in memory
+(filecontents, an `\openout` file) as a string, so an `\edef` swallowed the rest of the document.
+**Code.** `gullet.rs:3037 read_balanced_with_close`; the status is saved and restored by a guard type on every exit path,
+reset per conversion; `\long` survives the dump.
 
-Measured against lualatex and xelatex (repro
-`tools/perfect_kernel/repros/unicode-catcodes/tu_encoding_char_and_tlig.tex`): identical output.
-Manual A/B over the 339 manuals with a clean lualatex/xelatex oracle: tipauni-example 80.1 → 93.4,
-greek-fontenc char-list 64.6 → 65.8, pgfornament tikzrput 97.7 → 98.1, no recall loss; errors
-375 → 375, warnings 15,829 → 15,902 (char-list +74, ijsra −1).
+| status | set by | message | recovery |
+|---|---|---|---|
+| defining | `\def`/`\edef` bodies (`read_definition_body`) | "File ended while scanning definition" | insert `}` (§338-339 `ins_list`) |
+| absorbing | `GeneralText`/`XGeneralText`, `\toks=`/`\everyX=`, the pdfTeX text reads (`\pdfescapehex`…`\pdffiledump`, `scan_pdf_ext_toks`), and since 56jj (#313) `\message`, `\errmessage`, `\mark`, `\marks`, `\special` and a primitive's own token reads | "…scanning text of \X" | insert `}` |
+| matching | macro arguments (`Expandable::read_call_arguments`) | "…scanning use of \X"; a non-`\long` call whose runaway holds a `\par`: "Paragraph ended before \X was complete" (§396) | the call is dropped (§392); after a `\par` the text from it on is kept; the ended file is closed |
+| aligning | the `\halign` preamble | "…scanning preamble of \halign" | insert `\cr}` |
 
-**Regression this batch introduced, on one manual (resolved in 56jf, #308)**: greek-fontenc char-list. TU routes textalpha's
-Greek accents through tuenc.def's `\add@unicode@accent` (`\char"0313\relax`), and our case changer
-(`lx_read_and_change_case`, latex_constructs/mod.rs) expands robust text commands and ignores
-l3text's case-change equivalents (textalpha.sty:213 `\DeclareCaseChangeEquivalent`), so in
-`\MakeUppercase{\>\`α}` it separates `\char` from its number: 74 "Missing number" warnings, and
-`”0313` printed as text in the uppercase column where lualatex prints Ὰ. Before the batch the same
-cells were empty or a stray combining mark. Red repro
-`unicode-catcodes/case_change_greek_accent_char.tex`; SYNC_STATUS lead.
-
-**Guards**: `unicode_format_encoding::*`, `perfect_kernel_batch56::luatex_csstring_primitive`.
-
-### 304. A file that ends inside a definition inserts a `}` and the document goes on (Perl: the read stops at the file's end)
-
-TeX, at the end of a file read while scanning a definition, closes the file, reports "File ended
-while scanning definition", inserts a `}` and carries on in the enclosing input (tex.web §362 calls
-§336 `check_outer_validity`; §338-339 `ins_list`): the definition ends at the file's end and the rest
-of the document is kept. Perl's `readBalanced` stops at the mouth's end (Gullet.pm:470-472), then
-errors (:525), and the definition is lost (`misdefined`). Rust stopped the same way for a file on
-disk, one error more than pdflatex (the document's `}` then stray), and read a file held in memory
-(filecontents, an `\openout` file) as a string, crossing its end: the `\edef` swallowed the rest
-of the document. **Rust** (batch 56ja) marks every mouth that reads a file, on disk or in memory,
-as a file level (`Mouth::is_file_level`, tex.web's `name>17`). A balanced read never crosses a
-file level's end, and inside a definition it recovers as TeX does (`read_balanced_with_close`).
-Scope, and where it stops short of TeX:
-
-- Only an autoclose file level with an enclosing input recovers: an `\input` file, a filecontents
-  or `\openout` file, catchfile's opener. A package or class file read through
-  `reading_from_mouth` (not autoclose) and the main document keep Perl's stop.
-- Batch 56jg (#310) extends the recovery to every scan status TeX has at a file end: token-list
-  texts, macro arguments and `\halign` preambles. `\scantokens` stays crossable (the cprotect binding wraps text in it without
-`\protect`, cprotect.sty:180-185), as does any `\everyeof{\noexpand}` read (batch 56ix).
-Error counts equal pdflatex's on the six cases of `vfs_file_end` and the 56ix control.
-
-**Guards**: `vfs_file_end::*`, `noexpand_input_ends::a_definition_still_runs_off_a_file_end`.
+- **Scope**: an autoclose file level with an enclosing input — an `\input` file, a filecontents or `\openout` file,
+  catchfile's opener. A package or class read through `reading_from_mouth` (not autoclose) and the main document keep
+  Perl's stop. `\scantokens` stays crossable (cprotect wraps text in it without `\protect`, cprotect.sty:180-185), as does
+  any `\everyeof{\noexpand}` read (56ix). A runaway argument now loses what Perl kept, as pdfTeX does.
+- **Measured**: error counts, messages and text equal pdflatex's on the six cases of `vfs_file_end`, the 56ix control
+  and the repros `expansion-primitives/file_end_*` (before, a file on disk errred once more than pdflatex: the
+  document's `}` then stray).
+- **Not modelled** (SYNC_STATUS residuals): `\lstnewenvironment`/`\newtcbinputlisting` bodies and LaTeX-level commands
+  Rust implements as primitives or constructors (`\setcounter`) keep Perl's stop (a primitive-level abort would be
+  needed); TeX's `skipping` status; the defining message does not name the macro; the inserted `\cr` is not TeX's frozen
+  one; a parameterless closure macro running inside an enclosing macro's typed-argument read charges its runaway to the
+  enclosing call; a Rust `DefMacro` of a `\long` LaTeX original is non-`\long` (keeps the text after a `\par`).
+- **Guards** `vfs_file_end::*`, `scanner_status::*` (8), `noexpand_input_ends::a_definition_still_runs_off_a_file_end`,
+  re-pinned `binding_singletons_56::catchfile_expands_the_name_and_reads_filecontents` (pdflatex's "Before. After.").
 
 ### 305. The format is read as initex reads it, and `\radical` is a primitive (Perl: `{` at catcode 1, `\radical` undefined)
 
@@ -8999,36 +8976,7 @@ release-dumps.yml pattern), so CI catches an init regression whenever the engine
 
 **Guards**: `dump_gate_init::*` (6).
 
-### 306. A biblatex `.bbl` is read into bibentries and formatted like its `.bib`; a bibliography row adds no period after a mark (Perl: `.bbl` rebuilt as `\bibitem`s, periods unconditional)
-
-- **`.bbl` reader.** Perl's ar5iv biblatex binding (biblatex.sty.ltxml:495-690) rebuilds a `.bbl`
-  as a `\thebibliography` of `\bibitem`s, and so did Rust, dropping every field its layout did not
-  know (subtitles, title addons, events). **Rust** (batch 56jc, worker W6) reads the `.bbl`'s
-  `\entry`/`\name`/`\list`/`\field`/`\keyw`/`\verb` data into the BibTeX pool's `BibEntry` (field
-  tables from blx-dm.def:473-634) and runs `\ProcessBibTeXEntry`, so a `.bbl` gives the same
-  `ltx:bibentry` as its `.bib`, formatted by MakeBibliography with the `.bib` path's rules. biber's
-  choices are kept: labels (`labelalpha` + `extraalpha`, used as the refnum, so `\cite` prints
-  `[Knu84]`), the `.bbl`'s entry order (a biblatex bibliography of inline entries is printed whole
-  with `sort='false'`), one datalist (the default refcontext's; biblatex prints one), `skipbib`
-  and biblists. Filtered `\printbibliography` calls and per-refsection printing are not modelled.
-  Inline bibentry ids are released before formatting (`PostDocument::release_id`), which also
-  resolves amsrefs' bibliography links (amshelp: 24 of 25 dangling → 0).
-- **Row periods.** Perl's `formatBibEntry` adds its "." / ". " unconditionally
-  (MakeBibliography.pm:527-531): "What is X?. A survey", "Pub, Inc..". Rust drops the period after
-  a mark by the bibliography engine's own rule, picked by the `bibstyle`: BibTeX's `add.period$`
-  (no period after `.` `?` `!`, btxhak.tex:326-329) for a `.bst` or no style; biblatex's
-  punctuation tracker (biblatex.sty:2118-2130, :2026, :1749-1754) for biblatex. A formula, or a
-  reference CrossRef fills in later, counts as ending in no mark. Checked with pdflatex+bibtex and
-  pdflatex+biber.
-
-Measured (POST_MODE=mono, 340 bibliography manuals): recall up 0, down 0; mark-plus-period in
-bibliographies 356 → 1. arXiv: the 7 papers of the 3,003 sample that ship a biblatex `.bbl` keep
-their bibitem counts, 5 gain words (up to +50 %), labels are biber's; 2605.17646's duplicate
-datalist is gone (58 → 29 bibitems). Residuals: the `.bib` path's alphabetic labels (it prints
-`[1]`; porting biber's labelalpha would fix it), "Jr.", `maxbibnames`, apa's "&" in the
-bibliography and `\parencite` (apa.cbx:496-497, :727; `\textcite` joins with "and", :50-55).
-
-**Guards**: `bibliography_names_fields::{title_mark_takes_no_period_biblatex, title_mark_takes_no_period_bst, bbl_prints_what_its_bib_prints, bbl_keeps_bibers_alphabetic_labels_and_order, bbl_prints_the_default_refcontext_datalist, bbl_skips_its_biblists_and_skipbib_entries, bbl_format2_reads_as_its_bib, bare_thebibliography_twice_arms_once}`, unit test `make_bibliography::test_period_rule`.
+### 306. → #286 (A biblatex `.bbl` is read into bibentries and formatted like its `.bib`; a bibliography row adds no period after a mark (Perl: `.bbl` rebuilt as `\bibitem`s, periods unconditional))
 
 ### 307. Citation labels follow Perl's `make_bibcite`; the bibliography's XPath is real XPath (Perl: the same; cloned tag nodes)
 
@@ -9081,37 +9029,7 @@ gets `ltx_cite_numeric`; one with any `author`/`fullauthor`/`title`/`year`/`full
 - Guards: `bibref_show::*` (the class on every pinned cite), `bibref_show::cite_numeric_class_rows` (`thebibliography`,
   biblatex numeric and authoryear, natbib `[super]`).
 
-### 309. NFSS text-font state follows every font switch; `\the\font` names the current font (Perl: codes only from `\fontfamily`…; `\the\font` = the last `\font` identifier or cmr10)
-
-Perl keeps LaTeX's NFSS codes (`\f@family`, `\f@series`, `\f@shape`) only where `\fontfamily` and
-its relatives write them, and its class bindings' size switches set the size alone
-(article.cls.ltxml:111; latex_constructs.pool.ltxml:5622). So doc.sty's `\MacroFont`
-(`\fontfamily\ttdefault … \small`, doc.sty:149-153), which relies on `\small`'s `\selectfont`
-(latex.ltx:14103-14107), never applied cmtt, and a later `\selectfont` reset a plain `\tt`/`\bf`
-to the stale codes: code printed `\ { }` through OT1 roman as “ – ˝. **Rust** (batch 56je, worker
-W8), each checked against pdflatex with `\typeout` probes:
-
-1. Every font merge writes the NFSS codes, locally and in text mode only (content.rs
-   `sync_nfss_font_state`, reverse maps in `common/font.rs`); a code already in force that names
-   the same font is kept (`pcr` survives `\ttfamily`). A raw `\font\x=cmtt10 \x` writes them too,
-   where TeX leaves them to NFSS.
-2. A class binding's size switch ends in `\selectfont`, pushed back into the input (dialect.rs), so
-   whatever `\selectfont` means there runs (pgf's `\nullfont` in a picture stays).
-3. `\the\font`, `\fontname\font` and `\fontdimen`/`\hyphenchar` of `\font` use the current
-   font's identifier (`current_font_identifier`, tex_fonts.rs), defined once as the kernel names it
-   (`\OT1/cmtt/m/n/10`), where Perl returns the last `\font` identifier or `\lx@default@font`
-   (TeX_Macro.pool.ltxml:272, TeX_Fonts.pool.ltxml:41-43). ltxdoc's `\oc@ttf` (ltxdoc.cls:136) and
-   short-math-guide's `\ttfont` print in typewriter.
-4. `\emph`'s `\f@shape` toggle hook (latex_constructs.pool.ltxml:414-416) is subsumed by (1); plain
-   `\em` (plain_base.pool.ltxml:604-609) and `neutralize_font` (notes, tags) go through the same
-   sync, the latter as `\reset@font` does (latex.ltx:14122, :17658-17659).
-
-Measured (worker W8): OT1 mis-glyphs in code, “ – ˝: moloch 690/554/554 → 11/0/0, achicago-bst
-102/671/665 → 45/2/0, short-math-guide 496/29/26 → 19/3/0, source2e 2761/534/397 → 281/89/0;
-typewriter runs up 3-15×; recall, errors and goldens unchanged. Left: `\fontname` names a scaled
-base font (`cmr10 at 14.4pt`, pdflatex `cmr12`); the default codes are fixed to cmr/cmss/cmtt/bx.
-
-**Guards**: `nfss_font_state::*` (9), `math_text_font_restore::*`.
+### 309. → #288 (NFSS text-font state follows every font switch; `\the\font` names the current font (Perl: codes only from `\fontfamily`…; `\the\font` = the last `\font` identifier or cmr10))
 
 ### 308. `\MakeUppercase`/`\MakeLowercase` follow l3text's declarations (Perl: `latexChangeCase` expands everything)
 
@@ -9146,35 +9064,7 @@ text keeps its case where pdflatex uppercases it) and lacks `\begin`, `\end`, `\
 
 **Guards**: `case_change_equivalents::*`.
 
-### 310. A file ending inside a text, a macro argument or a preamble recovers as TeX does (Perl: the read stops at the mouth's end)
-
-Batch 56ja (#304) gave a definition body TeX's file-end recovery. **Rust** (batch 56jg, worker W9)
-models tex.web's scanner status (§305) for every balanced read at an autoclose file level's end
-(the same scope as #304), with TeX's messages and recovery (§338-339):
-
-| status | set by | message | recovery |
-|---|---|---|---|
-| defining | `\def`/`\edef` bodies (`read_definition_body`) | "File ended while scanning definition" | insert `}` |
-| absorbing | `GeneralText`/`XGeneralText`, `\toks=`/`\everyX=`, the pdfTeX text reads (incl. `\pdfescapehex`…`\pdffiledump`, read with `scan_pdf_ext_toks` in pdfTeX) | "…scanning text of \X" | insert `}` |
-| matching | macro arguments (`Expandable::read_call_arguments`) | "…scanning use of \X"; for a non-`\long` call whose runaway holds a `\par`, "Paragraph ended before \X was complete" (§396) | the call is dropped (§392); after a `\par` the text from the `\par` on is kept; the ended file is closed |
-| aligning | the `\halign` preamble | "…scanning preamble of \halign" | insert `\cr}` |
-
-Perl's `readBalanced` stops at the mouth's end (Gullet.pm:470-472), reports "ran out" (:525) and
-runs the macro on the partial argument (:683), so a runaway argument now loses what Perl kept, as
-pdfTeX does. The status is saved and restored by a guard type on every exit path and reset per
-conversion; `\long` survives the dump. Error counts, messages and text equal pdflatex's on the
-repros (`expansion-primitives/file_end_*`). Since batch 56jj (#313) `\message`, `\errmessage`,
-`\mark`, `\marks` and `\special` read their text at absorbing status, and a primitive's own token
-reads follow the status too. Not modelled (residuals, SYNC_STATUS): `\lstnewenvironment`/
-`\newtcbinputlisting` bodies and LaTeX-level commands Rust implements as primitives or constructors
-(e.g. `\setcounter`) keep Perl's stop (a primitive-level abort would be needed); TeX's `skipping`
-status; the defining message does not name the macro; the inserted `\cr` is not TeX's frozen one; a
-parameterless closure macro running during an enclosing macro's typed-argument read has its runaway
-charged to the enclosing call; a Rust `DefMacro` binding of a `\long` LaTeX original is non-`\long`
-(it keeps the text after a `\par`, where pdflatex drops it).
-
-**Guards**: `scanner_status::*` (8), `vfs_file_end::*`, re-pinned
-`binding_singletons_56::catchfile_expands_the_name_and_reads_filecontents` (pdflatex's "Before. After.").
+### 310. → #304 (A file ending inside a text, a macro argument or a preamble recovers as TeX does (Perl: the read stops at the mouth's end))
 
 ### 311. siunitx units mixing macros with literal material are parsed as literal units; listing files are decoded (Perl: pre-power before its item; raw bytes)
 
@@ -9873,25 +9763,7 @@ default template. (`{c@}` gives pdflatex only "Missing @-exp in array arg".)
 
 **Guards**: `regress_2605_clusters::tabular_template_missing_argument_stays_in_the_template`, `::multicolumn_template_missing_argument_keeps_the_cell`, `::nested_template_amp_does_not_end_the_enclosing_cell`.
 
-### 323. The box commands start the paragraph, as LaTeX's `\leavevmode` does (Perl: `\mbox`, `\fbox`, `\colorbox`, `\fcolorbox`, `\textcolor` do not)
-
-**Rust** (batch 56kb): `\mbox`, `\@makebox`, `\@framebox`, `\raisebox` (sect12.rs) and color's
-`\fcolorbox` (like xcolor's) carry `enter_horizontal`; color's `\colorbox` and `\textcolor` open with
-`\leavevmode` (color.sty:104, 163-164). A box at a paragraph's or an item's start starts the
-paragraph: `\everypar` fires before the box (pdflatex `[EP]Box after.`, where Perl gives
-`Box[EP]after.`), the space after it is kept, and `\ifvmode` after it is false. In math the step
-is a no-op. (`\fcolorbox`'s body, `internal_vertical` in Perl, also ended the running paragraph
-until 57r set it `restricted_horizontal`, the `\hbox` it is; KPE #336.) Same shape as #97 (`\hrulefill`/`\dotfill` keep the kernel's `\leavevmode`).
-
-**Perl** has enterHorizontal only on `\makebox` and `\raisebox` (latex_constructs.pool.ltxml:
-4658-4667, 4800-4802); the rest drop the space after the box (KNOWN_PERL_ERRORS #293).
-
-**Witnesses**: matapli-doc (`\item \Verb+FiraSans+ et`), the biblatex manual (ltxdockit's `\sty`),
-titlesec (`\fbox{2.9}` version marks), etoolbox-DE, arXiv 2605.21713 (`\colorbox` runs),
-2605.21322 (`\makebox[0pt][c]` figure panels), 2605.18438, 2605.29836.
-
-**Guards**: `mbox_argument_is_bounded::box_commands_start_the_paragraph`,
-`::boxes_fire_everypar_first_and_stay_out_of_math`.
+### 323. → #97 (The box commands start the paragraph, as LaTeX's `\leavevmode` does (Perl: `\mbox`, `\fbox`, `\colorbox`, `\fcolorbox`, `\textcolor` do not))
 
 ### 324. biblatex bibliographies: standard.bbx's entry-type aliases, an article's editors, a host's edition (Perl: book format, no article editor, no host edition)
 
@@ -10039,43 +9911,7 @@ repros `tools/perfect_kernel/repros/expansion-primitives/braced_length_redefined
 
 ### 327. → KNOWN_PERL_ERRORS #1267 (`\framebox[w]` measured as an object address; the rest was a parity record)
 
-### 328. A box command's size arguments are read with the box set, `\width`/`\height`/`\depth`/`\totalheight` measuring it (Perl: `0pt` text, read before the box)
-
-**Rust** (batch 56kl, theme 11, K18 step 2): the arguments follow latex.ltx's `\@begin@tempboxa` (16085-16094). The affected arguments are:
-- `\makebox`'s and `\framebox`'s width;
-- `\parbox`'s height;
-- `\raisebox`'s `[height]` and `[depth]`;
-- the lengths of `\Gscale@box@dd`/`@dddd`.
-
-**How it works.** Each is declared `TempboxaDimension`, a `SetlengthDimension` with `after_box` (base_parameter_types.rs). Only a constructor whose last argument is the box honours it; a macro reads it at once.
-1. `Parameters::read_arguments_and_digest` reads such an argument's raw tokens and leaves its slot empty.
-2. It digests the box. A plain `{}` box is digested in a group, as TeX's `\hbox{`; `HBoxArgContents`/`VBoxContents` open their own.
-3. Then `within_tempboxa` (parameter.rs), in a group:
-   - puts the box in `\@tempboxa`;
-   - digests `\lx@tempboxa@sizes` (latex.ltx:16088-16093 verbatim: `\def\width{\wd\@tempboxa}`…, internal dimensions, so `2\width` is exact to the sp);
-   - re-parses each waiting argument through the `SetlengthDimension` path (calc, or a redefined `\setlength`).
-
-This all happens before the constructor's `properties` and sizer read the arguments.
-
-The `\raisebox` sizer applies `[height]`/`[depth]` over Perl's `raisedSizer`. Outside a box command the four stay Perl's `0pt` stubs (sect12.rs).
-
-**Effect:**
-- `\makebox[2\width]{x}` is 10.6pt wide (was 20pt).
-- `\makebox[\value{c}pt]{\stepcounter{c}x}` sees the step.
-- siamart's `\raisebox{0pt}[\height][0pt]` keeps the height and drops the depth (100 papers of the 3,003-paper 2605 sample; 2605.00332, 2605.01276).
-- `tex=` reversions carry the true values.
-- Since 61v (user ruling 2026-10-04) `\raisebox`'s raise is read with the box set too (`\raisebox{-.5\height}{icon}`,
-  13 papers / 105 uses; 2605.18894, 2605.03941; KPE #466), rendered as #438 describes. Repro
-  `boxes-groups/raisebox_raise_measures_the_box.tex` GREEN.
-
-**Open:**
-- **`\resizebox`:** `\resizebox{\width}{!}` (still `xscale="0"`) and `\resizebox*`, through `GraphixDimension`/`\Gscale@@box` (4 papers).
-- **Picture and minipage heights:** `\pic@raisebox` (sect13.rs) and `{minipage}`'s `[height]` (latex.ltx's `\endminipage` → `\@iiiparbox`) still read the stubs.
-- **Empty `[]`:** `\raisebox{d}[]{x}` now reads its empty `[height]` as 0pt with "Missing number" (56kj: pdflatex's size and the warning), where latex.ltx's `\@irsbox` (`\ifx\\#2\\`) treats it as not given. There are 0 uses in the sample. RED repro `boxes-groups/raisebox_empty_height_is_not_given.tex`.
-
-**Perl** (KNOWN_PERL_ERRORS #298): `\width` etc. are `0pt` text, so `2\width` is 20pt, and the arguments are read before the box.
-
-**Guard**: `perfect_kernel_batch56::box_size_arguments_measure_the_box`. Repros `boxes-groups/box_size_arguments_measure_the_box.tex`, `boxes-groups/raisebox_optionals_measure_the_box.tex`.
+### 328. → #298 (A box command's size arguments are read with the box set, `\width`/`\height`/`\depth`/`\totalheight` measuring it (Perl: `0pt` text, read before the box))
 
 ### 329. `\rotatebox[…]` turns about graphicx's point: the centre, then the keys in order (Perl: the reference point, `c` a letter)
 
@@ -10116,21 +9952,7 @@ In the same batch:
 
 **Guard**: `perfect_kernel_batch56::unitlength_set_through_calc_is_the_length`.
 
-### 331. A non-vertical list's height and depth are floored at 0 (Perl: a one-item list reports its item's size)
-
-**Rust** (batch 56ko): `List::compute_size` (list.rs) floors the height and depth of a list whose mode is not vertical at 0, as TeX's `hpack` does (tex.web §649, §720 for math lists). A list with no mode counts as horizontal, as it does in `compute_boxes_size`.
-
-Lists of several items were already floored. A one-item list went through `compute_boxes_size`'s bare-box shortcut, which is Perl's `getSize` of a lone Box (Font.pm:648-649), and returned its item's size. The affected results, now pdflatex's:
-- `\hbox{\rotatebox[origin=l,y=1.2em]{90}{Qg}}` was −11.99998pt deep;
-- `\hbox{\box2}` with `\dp2=-5pt` was −5pt deep;
-- `\raisebox{0pt}[5pt][-3pt]` had depth −3pt;
-- the `\fbox`, `\resizebox` and `\scalebox` of such boxes.
-
-A vbox keeps its last box's negative depth (§670).
-
-**Perl** (KNOWN_PERL_ERRORS #301): `List()` returns the lone box itself (List.pm:41-44), so Perl measures it unfloored as well.
-
-**Guard**: `perfect_kernel_batch56::a_one_item_hbox_has_no_negative_depth`, with the vbox as negative control. Repro `boxes-groups/hbox_single_child_negative_depth.tex`.
+### 331. → #298 (A non-vertical list's height and depth are floored at 0 (Perl: a one-item list reports its item's size))
 
 ### 332. `\eminnershape` is latex.ltx's `\upshape` (Perl: empty)
 
@@ -10226,19 +10048,7 @@ A small PDF's vector render (beyond Perl, which only rasterizes) is cropped thro
 
 **Guard**: `latexml_post graphics::tests::{trim_and_viewport_crop_the_raster_into_its_own_file, a_crop_gets_its_own_file_and_a_zero_trim_none, crop_svg_narrows_the_view_box}`, `perfect_kernel_batch56::a_natural_figure_box_follows_its_crop_and_turn` and `latexml_core util::image::…::{graphicx_crop_rect_follows_perl_trim_and_viewport, raster_resolution_reads_png_and_jfif_units}`. Witness 2510.17772 (S3.F4: `trim=90 30 50 50` on a 3000×1500 300-dpi PNG keeps 2417×1167 pixels). Repro `graphics-tikz/includegraphics_trim_crops_the_raster.tex`.
 
-### 338. A `\parbox` or minipage between paragraphs starts one (Perl: a block of its own)
-
-latex.ltx's `\parbox` ends in `\@iiiparbox`, which begins with `\leavevmode` (latex.ltx:16249-16250): a parbox met in vertical mode starts a paragraph, the box is its first material, and the text after it continues that paragraph.
-
-**Perl** (KNOWN_PERL_ERRORS #309): `\lx@parbox` (latex_constructs.pool.ltxml:4750-4764) begins `inline_internal_vertical` mode without `enterHorizontal`, and `insertBlock` at section level makes the box a `<para class="ltx_parbox">` of its own; the space after it is read in vertical mode and dropped, and the text opens a new paragraph.
-
-**Rust** (batch 57d): `\lx@parbox` declares `enter_horizontal`, and a constructor declaring it records `in_paragraph` on its whatsit when that `\leavevmode` leaves TeX in a paragraph: invoked in vertical mode (a new one, tex.web §1091 `new_graf`) or in unrestricted horizontal mode (`\noindent\parbox…`); in a restricted box (`\rotatebox{90}{\parbox…}`, arXiv 2605.20645) or math it is a no-op (constructor.rs `digest_to_whatsit`). The parbox is built by `insert_block_in_paragraph` (base_utilities/blocks.rs), which after the capture and the sectioning float-out (#250) opens the `ltx:p` where text would open one (`text_opens_paragraph`, the model's auto-open route for `#PCDATA`): the box goes into it as an `<inline-block class="ltx_parbox">` and ` text after.` continues it. Not in a float, whose content is panels for `arrange_panels`, seen through the captures of any box or environment built in it (`in_panel_float`, `PANEL_FLOATS`: arXiv 2605.27134's parbox-topped minipage panels stay side by side, captioned parbox panels in a `{center}` stay sub-figures); not for an empty box; not for content no inline box holds (a bibliography, an index, a caption), which the hoist places after the box as before. Found by the K13 binding-conformance audit.
-
-**`{minipage}`** (batch 57f): `\@iiiminipage` begins with `\leavevmode` too (latex.ltx:16305-16306); the environment declares `enter_horizontal` and is built by `insert_block_in_paragraph`, so a minipage between paragraphs is an inline block in the paragraph it starts, the text after it continues that paragraph, and minipages on one line sit side by side (`\hfill` pairs, a list's minipage of `\item`s beside a second one, 2605.19762's three `\subsubsection*` minipages in a `table*`) instead of stacking. **Lone float** (user ruling 2026-09-27, option C, shared by both boxes): a box whose whole content is one float becomes that float by Perl's fold when its line holds nothing else — `\captionof` in a minipage or a parbox gives `<figure class="ltx_minipage">` / `<figure class="ltx_parbox">` (for the parbox this restores Perl's shape over 57d's inline one); since 57g this is settled once the document is built (#339), and a float-box followed by text on its line stays inline. A box that is clearly a figure but holds more than the float (image + `\captionof`) becomes the float with its image, and lone-float boxes on one line form a row of panels: #339 (57g). Guards `perfect_kernel_batch56::{a_minipage_starts_the_paragraph, a_box_holding_only_a_float_becomes_it, para_class_minipage_in_figure_demotes_keeping_its_width}`, `cluster_schema::quote_holds_framed_logical_and_sectional_blocks` (the #271 admissions through `{framed}`); repros `boxes-groups/minipage_starts_the_paragraph` (RED 57d → GREEN), `captions-floats/box_holding_only_a_float_becomes_it`; goldens `alignment/vmode`, `digestion/dollar`; guards reshaped: list auto-item (the #261 branch now pinned by a `\vbox` case), titlepage demotion (a `{center}` body, whole element), quote (#271), lstnewenvironment, calc/pdfcomment minipages, nested/restricted parbox.
-
-**Witnesses**: goldens `alignment/vmode` and `digestion/dollar` (the parbox moves into the section's paragraph). arXiv A/B (57c → 57d, 3,003 papers): tallies identical (errors 5,085, fatals 6, words 44,327,175); 28 papers change, each a parbox joining its paragraph with the same text (2605.15128 also keeps the spaces after its boxes; 2605.02364 only splits a whitespace node); witnesses 2605.27134 and 2605.20645 byte-identical to 57c. Manual net (1,000 manuals): 0 regressions, validity and words unchanged; 74 of the 75 changed manuals are parbox moves (hitreport-example, jourcl: a parbox holding one `tabular`, which now carries the box's attributes in the paragraph), memman's and swfigure's captioned parbox sub-figures intact.
-
-**Guard**: `perfect_kernel_batch56::{a_parbox_starts_the_paragraph, a_parbox_in_a_restricted_box_starts_no_paragraph, parbox_panels_stay_panels, a_parbox_holding_a_section_floats_it_out, a_parbox_holding_a_bibliography_opens_no_paragraph}`; repros `tools/perfect_kernel/repros/boxes-groups/{parbox_starts_the_paragraph, parbox_in_a_restricted_box_starts_no_paragraph, parbox_holding_a_section_floats_it_out, parbox_holding_a_bibliography_opens_no_paragraph}.tex`, `captions-floats/parbox_panels_stay_panels.tex`. Settled dead-end: opening the `ltx:p` before `insert_block` (the first cut) changes every decision it makes from its context — a section in the box stayed in the `<p>` (#250 skipped), the float panels inside `{center}`/`{minipage}` captures became `<p>` panels (stacked, captions hoisted out of their sub-figures); opened before the hoist, it left an empty `<p/>` behind a bibliography the hoist moved out, or a `<block>` inside the `<p>`, and captions hoisted out of parbox sub-figures in a box inside a figure (memman, swfigure-examples).
+### 338. → #97 (A `\parbox` or minipage between paragraphs starts one (Perl: a block of its own))
 
 ### 339. A box that is clearly a figure becomes a `<figure>` holding its image; figure-boxes on one line form a row (Perl: a caption-only float beside the image, stacked)
 
@@ -10252,15 +10062,7 @@ latex.ltx's `\parbox` ends in `\@iiiparbox`, which begins with `\leavevmode` (la
 
 **Guard**: `perfect_kernel_batch56::{figure_boxes_become_figures_and_rows, figure_box_lines_settle_when_the_paragraph_closes, float_boxes_keep_their_line_alignment, a_noindent_lone_float_box_stands_beside_the_paragraph, logical_block_climbs_out_of_para}` (the last: #240's climb, now with text after the float), `116_adaptive_streaming::figure_box_rows_settle_alike_when_streamed` (eager and forced-spill streaming identical), `perfect_kernel_batch53::hvfloat_only_text_env_options_and_ifoddpage`, `latex_via_exemplos_residue::caption_settype_declares_the_float_type` (a float-box followed by text stays inline); repros `captions-floats/{figure_boxes_become_figures_and_rows, figure_box_lines_settle_when_the_paragraph_closes, float_boxes_keep_their_line_alignment, figure_box_rows_settle_alike_when_streamed}.tex`, `captions-floats/noindent_lone_float_box_leaves_empty_para.tex` (RED 57f → GREEN); goldens `tikz/consort-flowchart`, `structure/autoref` (a lone float's paragraph number unused).
 
-### 340. `\orcidlink` starts the paragraph it begins (Perl: the link is built in vertical mode)
-
-The real `\orcidlinkX` is `\href{…}{…}` (orcidlink.sty:69); hyperref's `\hyper@linkurl` begins with `\leavevmode` (hpdftex.def:411). LaTeXML's binding wraps the link in the mode-less constructor `\lx@orcidlink` (KNOWN_PERL_ERRORS #313), so at a paragraph's start the space after the link was dropped.
-
-**Rust** (batch 57i, a K13 stage-2 finding): orcidlink.sty's `\orcidlinkX` begins with `\leavevmode`, the prologue of the `\href` it stands for. The shared `\lx@orcidlink` is unchanged: the frontmatter's `\lx@add@orcid` builds the same link inside author annotations, where no paragraph must open.
-
-**Witnesses**: none in the corpus; found by the K13 audit. No paper of the 3,003-paper A/B changes (95 load orcidlink); links in author blocks, `\thanks`, captions, `l` cells and math convert byte-identically. Re-converted 2605.21922 (the `p{…}` cell witness above): byte-identical, 0 errors.
-
-**Guard**: `perfect_kernel_batch56::orcidlink_starts_the_paragraph`; repro `boxes-groups/orcidlink_starts_the_paragraph.tex` (RED 57h → GREEN).
+### 340. → #97 (`\orcidlink` starts the paragraph it begins (Perl: the link is built in vertical mode))
 
 ### 341. → Bindings beyond Perl's tree: changepage.sty (`changepage_sty.rs`)
 
@@ -10468,32 +10270,7 @@ review's kern.tex cases (valid pdflatex input; jing rejected three on 57cpe). **
 
 ### 390. → OXIDIZED_DESIGN_MATH #54 (A function takes a limit-type operator's application)
 
-### 391. A note is its mark in the line it sits in; a note text or margin note is nothing
-
-**Perl** sizes only the kernel's `\lx@note` by its mark (`sizer => '#mark'`, latex_constructs.pool.ltxml:460); every
-other note constructor — `\lx@notemark`, `\lx@notetext` (:467, :478), `\marginpar` (:3487), plain's `\footnote{}{}`
-(plain_constructs.pool.ltxml:147), amsppt's and revtex4's notes (amsppt.sty.ltxml:268/:290, revtex4_support.sty.ltxml
-:123/:145) — is measured by its arguments: its body, and for `\footnotemark` the counter's name.
-
-**TeX**: a note's text is an insertion, set out of the line (tex.web §1100 `begin_insert_or_adjust`), and so is a
-margin note (a float); in the line a footnote is its mark. The HTML agrees: a note renders as its mark with the text in
-a popup (`.ltx_note_content{display:none}`, LaTeXML.css:494).
-
-**Rust** (58b): `note_size_in_line` (the `mark`, or plain's `prenote`; nothing without one) for every note that puts a
-mark in the line — `\lx@note`, `\lx@note@live`, `\lx@notemark`, plain `\footnote{}{}`, amsppt `\footnote`/`\footnotemark`,
-revtex4 `\endnote`/`\endnotemark`; `out_of_line_size` (nothing) for the texts and margin notes — `\lx@notetext`,
-`\lx@notetext@live`, `\lx@marginpar`, amsppt `\footnotetext`, revtex4 `\endnotetext`, deluxetable `\tablenotetext`,
-pdfcomment's notes, mdpi `\endnote`, elsart `\thanks`/`\note`, mn2e queries, acmart `\Description`, slides
-`\addtime`/`\settime`. Not all of these are insertions in the PDF: mn2e's queries print inline (`\aquery` =
-`\mbox{\largerm {[#1]}}`, texmf-dist/doc/latex/mnras/LEGACY/mn2e.cls:1469; `\hbox{A\aquery{…}B}` 138.7pt for 13.5pt), as elsart's `\thanks` prints a mark; the HTML
-shows each as a † with its text in a popup, so they measure as nothing — a render-driven surpass, not TeX's insertion.
-Measured with its body a note holding a `\par` added its paragraphs' lines to the line; measured
-as its `tags` it counted every registered tag form (hyperref + cleveref: a `\resizebox`d tabular with a footnote at half
-size); `\hbox{A\footnotemark B}` was 50.69pt for pdflatex's 19.07pt. Witnesses 2605.18427 S3.T4 (natural width 802.6
-→ 556.7pt, pdflatex 521.7), 2605.14713 S2.T1 (aa `\tablefoot`). Residuals: a note still breaks a measured line; plain
-TeX's `\footnote` (plain.tex `\insert\footins`) is measured with its body; a minipage footnote's text, which LaTeX sets
-inside the box (`\@mpfootins`), is not counted (consistent with the popup). Guard
-`perfect_kernel_batch58::notes_measure_as_their_mark`.
+### 391. → #298 (A note is its mark in the line it sits in; a note text or margin note is nothing)
 
 ### 392. A size switch sets the leading; `\begin{document}` runs `\normalsize`
 
@@ -10534,16 +10311,7 @@ tex.web §1269: after an assignment, the token saved by `\afterassignment` is pu
 
 ### 396. → OXIDIZED_DESIGN_MATH #57 (A large product operator keeps its juxtaposed operand whole)
 
-### 397. A `pspicture` measures its declared size
-
-`\begin{pspicture}(x0,y0)(x1,y1)` is a box x1−x0 wide and y1−y0 tall in pstricks (pstricks.tex `\pspicture`). Perl sets only
-the rendering attributes (`pxwidth`/`pxheight`, pstricks_support.sty.ltxml:532-535), so it measures 0pt — `\settowidth`,
-`\resizebox`, adjustbox and centring arithmetic read nothing, and floatrow gobbles a floatbox whose object is one
-(floatrow.sty:366-369: frsample10's pstricks figures and their `\footnotetext` were lost). Rust gives the box its declared
-size as typed cached dimensions (`pspicture_properties`, pstricks_support_sty.rs), as `{picture}` is typed (sect13.rs);
-corners in either order give a positive box (pst-code-pspicture.tex:151-160); the rendered attributes are unchanged. A
-`[shift=…]` is not applied (depth stays 0; Perl ignores it too). Guards
-`perfect_kernel_batch58::{floatrow_keeps_an_object_it_measures_empty, pspicture_has_its_declared_size}`.
+### 397. → #298 (A `pspicture` measures its declared size)
 
 
 ### 398. → OXIDIZED_DESIGN_MATH #58 (An integral's letter `d` stays a differential past a sign, a colon and narrow punctuation)
@@ -10589,24 +10357,7 @@ error names the conditional's own start (its `IfFrame` locator), where Perl repo
 at which the skip began (Conditional.pm:124); the stack itself is a typed `State::if_stack`
 (Perl's `if_stack` Value, edited in place, never grouped).
 
-### 404. pgfmath results take the form live pgf gives them; `?:` and `&&`/`||` follow pgf's precedences (Perl: Perl `eval`'s numbers and precedences)
-
-Perl's pgfmath binding evaluates an expression with Perl `eval` (pgfmath.code.tex.ltxml:363-382)
-and prints every number as a real (`10.0`, `7.0`); its precedences are Perl's (a right-nested
-`?:`). The Rust evaluator follows pgf (pgfmathparser.code.tex:898-916; probes against
-lualatex/pgf TL2025): `?:` binds looser than `&&`/`||`, which bind looser than the comparisons,
-and chained ternaries group to the left (`1?2:3?4:5` is 4); a result keeps the form pgf leaves it
-in — an integer literal (`7`, `(7)`, `0x1F` 31), a comparison, a logic operator or an integer
-function (`int`, `sign`, …) prints as an integer, arithmetic, units, registers and real functions
-as a real (`2+3` 5.0, `-1` -1.0), and `?:`, `ifthenelse` and `array` return their chosen operand's
-form; a user-declared function's result keeps the form its body leaves `\pgfmathresult` in, and its
-integer arguments are passed as integers (a non-numeric result is reported once and read as 0). Perl prints `[10.0][7.0][2.0][1.0]` for `3>2?10:20`, `(7)`, `1?2:3?4:5`,
-`ifthenelse(2>1,1,0)`; pgf and Rust `[10][7][4][1]`. The integer form matters downstream: an
-`\ifnum` on a result read `1.0` as `1` followed by text (pgf-spectra, `ifthenelse` in
-`\pgfmathsetmacro`). Guards `pgfmath_golden_tests::ternary_and_logic_follow_pgf_precedence`,
-`perfect_kernel_batch59::pgfmath_ternary_after_a_comparison`. Not yet followed: `random(m,n)` is an
-integer in pgf; pgf passes `.5` and `1.` through unchanged; an integer result is printed in canonical
-form (`07`, `+5` print `7`, `5`).
+### 404. → #216 (pgfmath results take the form live pgf gives them; `?:` and `&&`/`||` follow pgf's precedences (Perl: Perl `eval`'s numbers and precedences))
 
 ### 405. What code appends to `\@author` after `\author` is the author block, kept (Perl: dropped)
 
@@ -10679,64 +10430,96 @@ of the abstract with it.
 `perfect_kernel_batch59::abstract_ends_the_open_paragraph` (repro
 `sectioning-frontmatter/abstract_ends_the_open_paragraph`); witness: none (review of 59e).
 
-### 408. A document's `\newcommand` wins over what the fallback class defined (Perl: ignored as a redefinition)
+### 408. A guess yields: a `Fallback`, `Stub` or `Borrowed` meaning gives way to the document's and the author's own definitions (Perl: ignored as a redefinition) — absorbs #505 #513 #516 #574
 
-For a class with no binding both engines load OmniBus, a fallback that defines the commands many classes have —
-among them convenience aliases such as `\let\abst\abstract` (OmniBus.cls.ltxml:216). **Perl** then treats a
-document's `\newcommand{\abst}` as a redefinition and ignores it (`isDefinableLaTeX`,
-latex_constructs.pool.ltxml:2512-2526; only an Info), so `\abst{a}` opens an abstract inside a formula and the
-document's |a| is lost. Yet a document that compiles with its real class and `\newcommand`s a name shows that class
-leaves it undefined.
+**Rule.** A meaning LaTeXML guessed — OmniBus's for a class with no binding (`DefinitionOrigin::Fallback`), a kernel
+stand-in (`Stub`), what a binding borrows from a package the real one does not load (`Borrowed`) — never outranks what
+the document's world defines: the document's own `\newcommand`, `\providecommand`, `\newenvironment` and `\@ifdefinable`
+replace it, and so does a file the author shipped. **Perl** treats the document's `\newcommand{\abst}` as a
+redefinition and ignores it (`isDefinableLaTeX`, latex_constructs.pool.ltxml:2512-2526; an Info), so `\abst{a}` opens an
+abstract inside a formula and |a| is lost; a document that compiles with its real class and `\newcommand`s a name shows
+that class leaves it undefined (latex.ltx `\@ifdefinable`).
+**Code.** `latex_constructs/mod.rs:228 is_definable_latex` (the `is_fallback_meaning` branch); the mark is
+`state.rs:4014 is_fallback_meaning` / `:4022 fallback_meaning_origin` (`fallback_meanings`, kept until anything else
+assigns the name; a group-local reassignment clears it for good); the origins `definition/origin.rs` (`Fallback`, `Stub`,
+`Borrowed`); the author's file `binding/content.rs:324 reading_author_file`.
 
-**Rust** (59g): what OmniBus defines carries `DefinitionOrigin::Fallback`; `State::assign_internal` records the
-names whose current meaning a fallback installed (`fallback_meanings`, until anything else assigns them), and
-`is_definable_latex` treats such a name as definable when the document itself defines it (`DefinitionOrigin::Document`) or, since 64ze (OD #516), a file under the paper's own source directory defines it
-— for `\newcommand`, `\providecommand`, `\newenvironment` and `\@ifdefinable` — unless the OmniBus definition is
-locked. OmniBus's semantic frontmatter commands are locked (user ruling 2026-10-01): `\doi`, `\orcid`, `\email`,
-`\emailaddr`, `\ead`, `\address`, `\affil`, `\affiliation`, `\keywords`, `\kword`, `\kwd`, `{keyword}`, `{keywords}`,
-`\classification`, `\correspondingauthor`, `\subtitle`, `\titlenote`, `\dedicated` keep their markup against any
-later definition — a document's presentational `\newcommand{\orcid}` (2605.08630), `\providecommand{\keywords}`, a
-package's deferred `\providecommand{\doi}` (apacite), a raw `\def\doi` (imsart.sty), a document's
-`\renewcommand{\doi}` (unlike Perl, which lets those replace them; since QAB57 the document's own definitions win
-under the fallback, below); conveniences and aliases (`\abst`, `\etal`,
-`\corref`) and common words (`\volume`, `\issue`, `\journal`) yield. arXiv A/B (3,003 papers, 59f2 -> 59g4):
-2605.05619 errors 52 -> 0 and words 39,866 -> 53,885, 2605.13204 errors 6 -> 0 (its own `\corref`), 2605.13443 its own
-upright `\etal`. Open: a package the paper ships (`\usepackage{mymacros}`) is a raw File, not the document, so its
-`\newcommand` still yields (RED `singletons/omnibus_alias_shadows_a_local_package`); a group-local reassignment clears
-the fallback mark for good. A raw class or package loaded beside
-OmniBus (apa7.cls, whose `\doi` OmniBus reads as a URL) still yields to it, as raw files yield to bindings
-(guard `perfect_kernel_batch56::omnibus_doi_reads_as_a_url`). A census (TeX Live 2025 and ~23,000 arXiv sources) found `\abst` defined as an abstract setter by
-jpsj2.cls:841 and ptptex.cls:617 and shipped classes (jpsj3, pasj0x), which load raw; papers that define it as an
-absolute value (2605.05619, 2605.05645, 2501.01582); and one paper that uses it undefined as an abstract
-(astro-ph0003107, `PASJ95` not shipped), which the alias still serves. Witness 2605.05619 (its own
-`siamart250211.cls`; 12 formulas). Guards `perfect_kernel_batch59::omnibus_alias_yields_to_newcommand`,
-`perfect_kernel_batch56::omnibus_doi_reads_as_a_url` (the locked `\doi`). Since 66l the bindings OmniBus requires as part of its guess,
-inst_support (`\inst`, `\institute`, `\author[]{}`) and aas_macros (`\apj`, `\mnras`), load `Fallback` too
-(`input_definitions` and both binding dispatchers keep a requesting `Fallback` origin), so a document's
-`\newcommand{\inst}{\mathcal I}` wins (2603.21740, cas-sc, whose class and cas-common.sty define no `\inst`; before, inst_support's
-`\inst{}` took the formula's closing `$`). epsf and graphicx are packages, not guesses: OmniBus loads them as bindings
-(`with_origin(Binding)`), so a document's `\providecommand{\includegraphics}` stays declined. Guard
-`perfect_kernel_batch66l::omnibus_inst_yields_to_newcommand`.
-
-**Extension (QAB57, 2026-11-14): the document's own definitions win over the locked guesses too.** BM Q3.12: "OmniBus
-sets a flag letting `\newcommand` and its family redefine without complaint"; DG 2026-11-14: "the document wins". A
-document that `\newcommand`s a locked guess shows its real class leaves it undefined, so pdflatex prints the
-document's version (probe p58: `\newcommand\email[1]{E:#1}` prints "E:a@b"); Perl ignores it and makes a contact of
-it. OmniBus loaded as the fallback sets `GUESSES_REDEFINABLE`, and `install_definition` does not refuse a definition
-of a name whose meaning is still OmniBus's guess (`fallback_meaning_origin` is `Fallback`) when the document's own text
-makes it (`DefinitionOrigin::Document`, the state not re-locked: `state::document_redefines_guess`) — `\newcommand`,
-`\renewcommand`, `\def`, `\DeclareRobustCommand`; `\newenvironment`/`\renewenvironment` also drop OmniBus's
-`\begin{name}` constructor, which `\begin` looks up first. A `\providecommand` defers to a locked guess as to any
-class command (the 2026-10-01 ruling's `\providecommand{\keywords}`; guard
-`perfect_kernel_batchp21d::a_column_is_read_on_its_own_ink_not_its_contacts`). The semantic markup the guess carried
-is lost with it: the e-mail, address, affiliation and ORCID are no longer the author's contacts, the keywords no
-classification, the DOI no link — the document's text is what the PDF prints. Unchanged: OmniBus provided over a named
-binding's base class (ceurart; #736) keeps its locks, and so does a package's or the document's begin-document hook
-code, run re-locked (apacite's `\AtBeginDocument{\providecommand{\doi}…}` keeps OmniBus's link; the document's own
-hook definition is refused too, RED `singletons/omnibus_document_hook_definition_refused_red`, post-merge); so does a
-package the paper ships (`\usepackage{mydefs}` defining `\email`, a raw File: #408's open row). Perl patch prepared
-(`bruce_qa/patches/qa58.patch`: `\newcommand` and `\newenvironment` may redefine OmniBus's guesses). Guard
-`perfect_kernel_batchqab57::omnibus_guesses_yield_to_the_document`.
+- **Who wins over a guess.** The document (`DefinitionOrigin::Document`); a raw `File` when it is author-shipped (the
+  gullet's current source, symlinks resolved, under the resolved `SOURCEDIRECTORY`: a vendored copy of a TeX Live
+  package there counts, a file reached through `../` does not, a TeX Live tree placed inside the source directory
+  counts); any raw `File` when the guess is a `Stub` (the real file does define it: copernicus.cls:1673
+  `\equalcontrib[1]`) or `Borrowed` (cc.cls's ccproof.sty:56 `\newenvironment{proof}` after theorem.sty, 1507.02955).
+  TeX Live files still yield to a `Fallback` (apa7.cls's `\doi`, which OmniBus reads as a URL; guard
+  `perfect_kernel_batch56::omnibus_doi_reads_as_a_url`), as raw files yield to bindings.
+- **Locked guesses (user ruling 2026-10-01; extended QAB57, BM Q3.12 / DG 2026-11-14).** OmniBus's semantic frontmatter
+  commands are locked: `\doi`, `\orcid`, `\email`, `\emailaddr`, `\ead`, `\address`, `\affil`, `\affiliation`,
+  `\keywords`, `\kword`, `\kwd`, `{keyword}`, `{keywords}`, `\classification`, `\correspondingauthor`, `\subtitle`,
+  `\titlenote`, `\dedicated`; conveniences and aliases (`\abst`, OmniBus.cls.ltxml:216 `\let\abst\abstract`; `\etal`,
+  `\corref`) and common words (`\volume`, `\issue`, `\journal`) are not. Against a lock, a package's deferred
+  `\providecommand{\doi}` (apacite), a raw `\def\doi` (imsart.sty) and a `\providecommand{\keywords}` stay refused (guard
+  `perfect_kernel_batchp21d::a_column_is_read_on_its_own_ink_not_its_contacts`). The document's own text wins over a
+  lock: OmniBus as the fallback sets `GUESSES_REDEFINABLE`, and `install_definition` lets through a document-origin
+  `\newcommand`, `\renewcommand`, `\def`, `\DeclareRobustCommand` of a name still OmniBus's guess
+  (`state.rs:5831 document_redefines_guess`); `\newenvironment`/`\renewenvironment` also drop OmniBus's `\begin{name}`
+  constructor. Probe p58: `\newcommand\email[1]{E:#1}` prints "E:a@b" in pdflatex; Perl makes a contact of it; ours the
+  text (2605.08630's presentational `\newcommand{\orcid}`). The guess's markup is lost with it (no contact, no
+  classification, no DOI link). Locks stay over a named binding's base class (ceurart; #736), in re-locked
+  begin-document hook code (apacite's `\AtBeginDocument{\providecommand{\doi}…}`; the document's own hook definition is
+  refused too, RED `singletons/omnibus_document_hook_definition_refused_red`, post-merge). Perl patch
+  `bruce_qa/patches/qa58.patch`. Guard `perfect_kernel_batchqab57::omnibus_guesses_yield_to_the_document`.
+- **OmniBus's required bindings guess too (66l).** inst_support (`\inst`, `\institute`, `\author[]{}`) and aas_macros
+  (`\apj`, `\mnras`) load `Fallback` when OmniBus requires them (`input_definitions` and both binding dispatchers keep a
+  requesting `Fallback` origin): 2603.21740 (cas-sc, no `\inst` in the class or cas-common.sty) keeps its
+  `\newcommand{\inst}{\mathcal I}` (before, inst_support's `\inst{}` took the formula's closing `$`). epsf and graphicx are
+  loaded `with_origin(Binding)`, so a document's `\providecommand{\includegraphics}` stays declined. Guard
+  `perfect_kernel_batch66l::omnibus_inst_yields_to_newcommand`.
+- **OmniBus for a missing `\documentstyle` option only provides** (ex-#505; user ruling 2026-10-11: OmniBus never
+  overrides a class definition). Perl's `\compat@loadpackages` (latex_constructs.pool.ltxml:148-151) loads it whole over
+  the class. Ours loads it under `ProvideOnlyGuard` (`definition/origin.rs`): a binding's definition (`def_macro`,
+  `def_primitive`, `def_constructor`, `def_register` with its value, `def_conditional`, `def_environment`, `def_math`, `Let!`)
+  of a name defined before the guard (not `\relax`, not a guess, not assigned since: `provide_only_assigned`) is declined
+  (`state.rs:2123 provide_only_declines`); an environment whole when `\begin{X}` or `\X` was defined; a definition marked
+  `extends` installs anyway (OmniBus's `\bibitem`, natbib for a `[\protect\citeauthoryear…]` label: cond-mat9808262).
+  TeX's own `\def`/`\let` and the loader's bookkeeping are not declined. Files first loaded under the guard (graphicx,
+  epsf, aas_macros, inst_support, and graphics, keyval…) are unmarked at `end_provide_only`, so `\@ifpackageloaded{graphicx}`
+  reads false while `\includegraphics` works, and a later `\usepackage{graphicx}` loads it whole
+  (`omnibus_provide_only_package_loads_whole_later`). OmniBus's `LoadClass('article')` is skipped
+  (`\documentstyle[foobarx]{report}` keeps report's "1.1"); OmniBus locks only what it provided. Exposed and fixed with
+  it: epsfig's `\epsfbox` (KPE #574), aas_support's titled `\references` (aas_support.sty.ltxml:289-293). The 2.09 option
+  styles whose `\author` appends are bound instead: World Scientific's `sprocl`/`mprocl`/`stwol` (ws_procl_sty.rs,
+  sprocl.sty:18-21 `\@aabuffer`; hep-ph9611287, gr-qc9710030, hep-th9610159; `\address` an affiliation as Perl's
+  iopart_support.sty.ltxml:53, routed by a leading mark as REVTeX's `\affiliation`, hep-lat9806004) and AASTeX's
+  `aas2pp4`, `aaspptwo`, `apjpt4`, `aj_pt4` as the aaspp binding (astro-ph9703136, astro-ph9303008, astro-ph9801307).
+  A/B of 149 papers: class definitions now win (running-title `<toctitle>`, 13 crckapb; nameless acknowledgements, 13
+  aaspp4; `citestyle` on 5 aipproc bibliographies). Witnesses hep-th9610203, cond-mat9403039, `\documentstyle[myjunkx]{elsart}`
+  with labelled `\author[a]`/`\address[a]`. Guards `perfect_kernel_batch64zd::{omnibus_provide_only_keeps_bound_class_grouping,
+  omnibus_provide_only_keeps_bound_class_commands, omnibus_provide_only_labelled_elsart_addresses,
+  omnibus_provide_only_keeps_report_numbering, omnibus_provide_only_provides_missing_address,
+  omnibus_citeauthoryear_bibitem_under_provide_only, epsfig_epsffile_includes_the_graphic,
+  aas_references_environment_has_its_title}`.
+- **Kernel stubs** (ex-#574). sect05.rs predefines `\shorttitle`→`\@shorttitle` and `\shortauthor`→`\@shortauthor`
+  (Rust-only, for templates that read them before `\author`, 2406.14142; latex.ltx has neither) as `Stub`s, as the AAAI
+  `\equalcontrib` stubs: a document's `\newcommand{\shorttitle}` defines it, where refusing it made
+  `\title[\shorttitle]{…}` alias `\@shorttitle` to itself (Fatal `Timeout:Recursion`: 1105.4905, 0909.2464; pdflatex and
+  Perl 0). Guard `perfect_kernel_batch66d::shorttitle_is_the_documents_own`; repro
+  `sectioning-frontmatter/shorttitle_newcommand_by_document`.
+- **mn2e's journal abbreviations** (ex-#513, Perl: none). Two mn2e.cls copies stamped "2001/02/06 v2.2" differ (the
+  1574-line copy defines none; a 1695-line copy plain `\def`s; the 1696-line copy on `\ref@jnl`; another on `\reff@jnl`):
+  the binding reads the shipped copy's one-line definitions and their `@` helpers (Latin-1, `\iffalse` blocks skipped); no
+  copy shipped installs the 1696-line set as a `Fallback`, which yields to the author's `mn2e_journal_style.sty`
+  (0901.4335). Witnesses 0901.1150, 0901.4335, 1403.4079. Guards `perfect_kernel_batch64ze::{mn2e_*,
+  mn2e_fallback_yields_to_the_authors_own_style, ws_fallback_yields_to_the_authors_own_style}`.
+- **Witnesses** 2605.05619 (its own `siamart250211.cls`, `\newcommand{\abst}[1]{|#1|}`; A/B of 3,003 papers, 59f2 → 59g4:
+  errors 52 → 0, words 39,866 → 53,885), 2605.13204 (its own `\corref`, errors 6 → 0), 2605.13443 (its own upright
+  `\etal`). Census (TL 2025 and ~23,000 arXiv sources): `\abst` an abstract setter in jpsj2.cls:841, ptptex.cls:617 and
+  shipped jpsj3/pasj0x (loaded raw); an absolute value in 2605.05619, 2605.05645, 2501.01582; used undefined as an abstract
+  in astro-ph0003107 (`PASJ95` not shipped), which the alias still serves. Guard
+  `perfect_kernel_batch59::omnibus_alias_yields_to_newcommand`.
+- **Open.** Recorded at 59g, before the author-file rule above: a package the paper ships (`\usepackage{mymacros}`) is
+  a raw `File`, so its `\newcommand` yields (RED `singletons/omnibus_alias_shadows_a_local_package`, not re-run here). A
+  locked guess keeps its lock against a package the paper ships (`\usepackage{mydefs}` defining `\email`). Related: #783
+  (a binding's `\newtheorem` claims no name — a separate mechanism, the `lx@newtheorem@document@<name>` key in
+  `sect08.rs`).
 
 ### 409. A raw float end's `\@endfloatbox` closes only a box that was opened (Perl: it pops the float binding's frame)
 
@@ -10946,41 +10729,9 @@ looped: 2605.02221, 2605.25087; the kern and skip loops already did); and it bre
 (§970/§974; short-math-guide's `\null\penalty-\@M`: the first symbols of 12 lists, +31 words). The piece split off stays a list, not §977's vbox
 (RED in boxes-groups/box_primitives_vsplit). Guards `box_primitives::{lastbox, vsplit}`.
 
-### 420. `\vtop to`/`spread` keep the first box's height and take the rest into the depth (Perl: the height)
+### 420. → #298 (`\vtop to`/`spread` keep the first box's height and take the rest into the depth (Perl: the height))
 
-tex.web §1087 packs a `\vtop` like a `\vbox` (`to <h>`: exactly `h`; `spread <s>`: natural + `s`, §1083) and then
-gives it the first item's height — 0pt when that item is glue or a kern — and the rest as depth (`d := x + d - h`,
-`x` and `d` the packed box's height and depth). Perl's `setHeight` (TeX_Box.pool.ltxml:571-574) sets the packed height
-as the `\vtop`'s height. Rust (59w, tex_box.rs `set_specified_height`, font.rs `compute_boxes_size_stack`) follows
-TeX: `\vtop to 50pt{\hbox{A}\hbox{B}}` is 6.83pt high and 43.17pt deep, `\vtop{\kern0pt\hbox{A}\hbox{g}}` 0pt high
-and 20.78pt deep, as pdflatex reports; `\vbox to`/`spread` set the height (Perl's rule, which the port had left out:
-`\vbox to 50pt` measured 6.83pt). A leading penalty counts as glue does. Residual: an `\halign` as the last item
-of a `\vtop to` gives the wrong depth (`\vtop to 40pt{\halign{#\cr A\cr B\cr}}` 45.17pt for TeX's 33.17pt): the
-alignment fixes its top/bottom split when first measured (`normalize_sum_sizes`), top-attached by
-`hack_vbox_attachment` wherever it sits, so the depth below its last row is not known. Repro
-boxes-groups/box_primitives_unpack (cases 6, 10-14, 17; cases 15-16 RED); guard `box_primitives::unpack`.
-
-### 421. A vertical box records its own interline parameters (Perl: the `\baselineskip` after the box)
-
-tex.web §679 `append_to_vlist` makes the glue between a vertical list's lines from the `\baselineskip`, `\lineskip` and
-`\lineskiplimit` in force as each line is appended — inside the box. Perl's `List` records only the `\baselineskip`,
-read after the box's group has ended (List.pm:52-53), and the sizing reads `\lineskip` when it measures. Rust (59x,
-base_utilities/boxes_lists.rs `predigest_box_contents_in_mode`) records all three on a `\vbox`/`\vtop` list before its group
-ends; its sizing (font.rs `compute_boxes_size_stack`, `\lineskip` under `\lineskiplimit` as §679) and `\vsplit`'s break
-search (tex_inserts.rs) use them: `\vbox{\offinterlineskip …}` drains in TeX's pieces, `\vbox{\small …}` stacks at
-11pt. They are read at the box's end, not as each line is appended (`\vbox{\begingroup\small …\endgroup}` stacks at
-the outer 12pt; TeX at 11pt), and a list that recorded none is stacked with `\lineskiplimit` 0pt (LaTeX's) — not the
-limit in force where it is measured — and the `\lineskip` in force (Perl's rule, Font.pm:838-849). Residuals:
-`\nointerlineskip` (`\prevdepth`) leaves no item, so the stacking assumes interline glue there (R7); the sizing still
-skips interline glue after a box of negative depth (Perl's `prevdepth >= 0`), `\vsplit` does not.
-Witness short-math-guide: 51 of its 61 `symlist` column splits move, and the tables checked (3.3.3 letters, arrows)
-now split as the published PDF does. Guards `box_primitives::vsplit`, `perfect_kernel_batch58::vsplit_breaks_only_where_tex_can`.
-A vertical environment's captured body (a minipage; constructor.rs `capture_body`) records the three values too, read
-when the body opens, after its begin code (`\@parboxrestore`), and the whatsit's sizing passes them as a box's list does
-(whatsit.rs; 60l): measured after its group, a minipage took the enclosing values — a table cell's zero `\lineskip`
-since 60l (arXiv 2605.19065's tcolorbox cells), `\lineskip=0pt` around it before. A change inside the body (`\small`,
-`\offinterlineskip`, `\linespread`) is not seen (RED kernel-alignment/captured_body_interline_changed_inside). Guard
-`perfect_kernel_batch60::minipage_in_a_cell_keeps_its_lineskip`.
+### 421. → #298 (A vertical box records its own interline parameters (Perl: the `\baselineskip` after the box))
 
 ### 422. Spacing items carry TeX's node type: glue `isSkip`, kerns `isKern` (Perl: only `\hskip`/`\vskip`)
 
@@ -10997,17 +10748,7 @@ algorithmic's `\\` (`\@centercr`: `\unskip\par`) writes `<break/>` in a listing 
 the space unskipped the words either side met (2605.13790; guard `perfect_kernel_batch59::algorithmic_line_break`). Visible effect: no space before punctuation an `\unskip`
 removes — author lists, keywords, tags, `\@killglue`. Guard `box_primitives::unskip_horizontal_glue`.
 
-### 423. pgfmath's `em`, `ex` and `width()` are the document font's (Perl: the picture's `\nullfont`)
-
-pgf evaluates every length after `\pgfmath@selectfont` (pgfmathcalc.code.tex:30-38, pgfmathparser.code.tex:132), so
-inside a picture `em`, `ex` and `width("…")` are the document font's. Perl's native `pgfmath_convert`
-(pgfmath.code.tex.ltxml:476-485) takes `$STATE->convertUnit($unit)` in the font in force, `\nullfont`, which LaTeXML
-gives the size's metrics: `8em` at `\footnotesize` is 64.00012pt where pdflatex has 68.00098pt (KNOWN_PERL_ERRORS
-#437). Rust (60a) converts in the font `\selectfont`'s own resolver gives (`nfss_selected_font`), reads
-`\pgfmathsetlength`'s quick path in a group under it and typesets `width()` in it. Visible effect: TikZ geometry set in
-`em`/`ex` at a font whose quad is not its size — `inner sep=.3333em` at `\footnotesize`, `text width=8em` frames,
-typewriter and sans nodes — is pdflatex's (consort-flowchart 333.16 → 351.5pt, pdflatex 351.49686pt). Guard
-`picture_sizing::pgfmath_em_is_the_document_fonts`.
+### 423. → #216 (pgfmath's `em`, `ex` and `width()` are the document font's (Perl: the picture's `\nullfont`))
 
 ### 424. An LMC fontmap: montex's Mongolian Cyrillic decodes to Cyrillic (Perl: OT1 fallback)
 
@@ -11582,27 +11323,7 @@ load is retired. Witnesses 2609.07722 (265 errors, Fatal TooManyErrors → 0), b
 **Guards**: `perfect_kernel_batch61::class_endminipage_does_not_replace_the_environment`,
 `perfect_kernel_batch61::document_endminipage_definition_is_kept`, `perfect_kernel_batch54::memoir_keeps_native_endminipage`.
 
-### 454. `\input@path` is searched for files kpathsea does not find (Perl: not searched)
-
-`\IfFileExists` (latex.ltx:9667-9696) asks l3file's `\file_full_name:n` (expl3-code.tex:12585-12612): a file kpathsea
-does not find is looked for under each entry of `\input@path`, in order, a `/` added to an entry lacking one —
-`\InputIfFileExists`, `\usepackage` and `\input` all reach it. Perl's FindFile has no such step, so a paper keeping
-its style files in a subdirectory (`\def\input@path{{styles/}}`) loaded none of them. Rust's `find_file_aux`
-(content.rs `find_on_input_path`) tries the entries after the local paths and kpathsea, as l3file does, the virtual
-files written by `filecontents` included. Since the raw `\openin` and `\input` primitives resolve through the same
-FindFile, they see `\input@path` too, which pdfTeX's do not: `\openin` finds such a file where pdfTeX's `\ifeof`
-would report it missing; accepted, as more files are found and none lost. 71 papers in 2609 set `\input@path`.
-Witness 2609.02998 (its class style, whose natbib every `\citep` needed).
-
-Graphics are looked up the same way (79g): graphics.sty's `\Gin@getbase` tests each name with `\IfFileExists`
-(graphics.sty:211-231), so the image search (image.rs `image_candidates_with`) takes the `\input@path` entries after
-`\graphicspath`, the search paths and the source directory (1112.0840's 8 figures in `graphics/` under its class's
-`\csdef{input@path}{{style/}{graphics/}{}}`), and looks a name up unquoted, as `\set@curr@file`'s `\unquote@name`
-drops every `"` (latex.ltx:9654-9666; `{"Figure_1".jpg}` is `Figure_1.jpg`, 1907.03916, 2005.11727; Perl stripped
-none). The `graphic` attribute keeps the name as written; `candidates` names the file found.
-
-**Guard**: `perfect_kernel_batch61::input_path_finds_a_style_in_a_subdirectory`;
-`perfect_kernel_batch79g::{includegraphics_looks_under_the_input_path, includegraphics_finds_a_quoted_name_unquoted}`.
+### 454. → #177 (`\input@path` is searched for files kpathsea does not find (Perl: not searched))
 
 ### 455. The closing float-up (`^^`) climbs only open nodes (compensates for a paragraph Perl has already closed)
 
@@ -11915,31 +11636,7 @@ orphaned note cannot be routed into a title this way.
 **Measured.** A/B on 318 papers vs 63g: only 0704.0478 and 1001.2402 change, each from 1 jing error to 0. Guards
 `perfect_kernel_batch63::{aastex_title_altaffilmark_is_a_note, elsarticle_title_tnote_is_a_note}`.
 
-### 462. A display listing is measured as TeX sets it (Perl: every box of its body a line)
-
-**Background.** The listings binding emits a display listing as one `\@@listings@block` whatsit holding a flat stream:
-`\@lst@startline` and `\@lst@endline` whatsits around each source line's characters (listings.sty.ltxml:261,
-:1342-1351, :1546-1548). The whatsit had no sizer. Rust measured its body as one horizontal list (whatsit.rs
-`compute_size` → `Font::compute_boxes_size`), so the listing was one line high. Perl unlists the arguments and
-counts every box as a line (Whatsit.pm:252-255, Font.pm:667-682): far too tall (a foreignObject of 307.8 output
-units for the six-line repro, against 116.23 for TeX's 84pt).
-Any box that measures its content inherits the error, whether a tcolorbox, a pgf picture, a minipage or
-`\resizebox`. minted, piton, showexpl and tcblisting all go through `lst_process_display` too. In the html_feedback
-reports, 230 of the 290 listings in a tcolorbox were a line high, across 37 papers (HF1; 2406.06469, 2604.25850,
-2601.23265, 2402.10176, 2311.11482, 2402.07204).
-
-**Rust behavior.** `lst_block_size` (`listings_sty.rs`) sizes the block as TeX does:
-- **Lines.** Each source line is its own line (`\lst@NewLine`, listings.sty:703-705), one strut high, so it takes
-  `\baselineskip` whatever its glyphs (lstmisc.sty:1630, :1648).
-- **Breaking.** Under `breaklines`, a line takes as many lines as its width needs (lstmisc.sty:1308-1320).
-- **Skips.** `aboveskip` and `belowskip` go around the block (listings.sty:1765, :1818), read as `\vspace` reads them.
-- **Box.** The block is `\linewidth` wide (lstmisc.sty:1285-1286) with no depth.
-
-Each `\@lst@startline` records the `\baselineskip` and `\linewidth` in force after the listing's `basicstyle`, so
-`\footnotesize` gives 9.5pt lines. A string or comment class group (`\@listingGroup{cls}{…}`) stays open across the
-lines it spans, so the sizer opens any whatsit holding line markers. A negative total is no height. The block records its skips and `breaklines` while the listing's settings hold.
-Only the size changes; the XML structure is untouched. Guard `perfect_kernel_batch63::tcb_listing_body_height` (six
-lines: 84pt), `tcb_listing_comment_lines` (a three-line comment: 60pt); repros `boxes-groups/`.
+### 462. → #298 (A display listing is measured as TeX sets it (Perl: every box of its body a line))
 
 ### 463. `\includestandalone` inputs a `.tex` sub-file as standalone.sty does, its preamble skipped (Perl: undefined)
 
@@ -12185,32 +11882,7 @@ closed, the body placed by `insert_block` — its paragraphs end at its edges (a
 figure), 2609.08929 (a table), 2609.22546 (a nomenclature box). Guards `perfect_kernel_batch64::{cuted_strip_keeps_content,
 cuted_strip_paragraphs_end_at_its_edges}`, repros captions-floats/cuted_strip_*.
 
-### 477. A graphic's candidates as pdflatex takes them; a leading `/` read under the search directories (Perl: every `name.ext`, readdir order; absolute)
-
-**Background.** Perl's `candidate_pathnames` (Pathname.pm:325-391) lists, per search directory, the files matching
-`^name\.\w+$` and `^name$` in readdir order (directories too, the `-f` check deferred), and searches only the name's own
-directory when the name is absolute (:328-329). Post renders the candidate it rates best (latexml_post graphics.rs), so
-`\includegraphics{c.eps}` beside a `c.eps.png` rendered the png. pdflatex's `\Gin@getbase` tries the name over every
-`\input@path` entry before appending any extension (graphics.sty:211-231), never takes an extensionless name bare
-(:205-209), and TeX glues each `\input@path` entry to the name as written (`plots/` + `/example_1/a.pdf` =
-`plots//example_1/a.pdf`, found).
-
-**Rust behavior.** `image_candidates` (latexml_core util/image.rs): a name whose extension has a pdftex.def graphics
-rule (`\Gin@rule@.<ext>`, pdftex.def:601-612, case as written: `.pdf .PDF .png .PNG .jpg .JPG .jpeg .JPEG .jb2 .jbig2
-.mps .eps`) that names a file in some search directory is those files alone, failing that the file of that name in
-another case (kpathsea's `fig.pdf` for `fig.PDF`); any other name — extensionless, or with an extension no rule reads
-(`b.v0.5_x`, `c.EPS`, `fig.ps`) — lists its `name.ext` files before a bare file of that name, in either case tier
-(graphics.sty:211-231 appends the extensions first); files only. The kpsewhich `<path>.png`/`.pdf` query runs for any
-name without a graphics extension. Among several `name.ext` files the order is `\Gin@extensions`' since 78w (#883),
-not the directory's; open: the sizer boxes the first raster candidate and post renders its best-rated one, where
-pdflatex reads the first (`.pdf` before `.png`; RED graphics-tikz/graphic_extension_order_pdf_first); an
-exact-case `fig.eps` wins over a `Fig.pdf` kpathsea reaches first; and the box's `cssstyle` comes from the first vector
-candidate while post renders its best raster one (`natural_display_size_pt_of_candidates`), so the two can be different
-files of one figure. A name with a leading `/` that names no file is read
-under each search directory — the source directory and `SEARCHPATHS` too, beyond pdflatex, as post's fallback already
-glued it. Witness 2409.13454 (`\folder` = `/example_1/`, 42 graphics, 0 → 42 found). Guards
-`perfect_kernel_batch64::{graphic_exact_name_first, graphic_exact_name_over_other_directories,
-graphic_bare_name_listed_last, graphicspath_leading_slash_name}`.
+### 477. → #177 (A graphic's candidates as pdflatex takes them; a leading `/` read under the search directories (Perl: every `name.ext`, readdir order; absolute))
 
 ### 478. `\icmlkeywords` is PDF metadata, written as RDFa (Perl: a displayed keywords block)
 
@@ -12552,24 +12224,7 @@ Addendum (64zf): outside display math (an `{IEEEeqnarray}` row's cell) the merge
 pdflatex's "You can't use `\eqno' in math mode" (tex.web §1140), the QED kept with the row's number. Repro
 block-model/ieeeeqnarray_row_qedhereeqn_keeps_its_qed.
 
-### 490. The class QED symbols are sized as their boxes, so a cell holding only one is kept (Perl: the cell dropped as empty)
-
-**Perl behavior**: a cell whose boxes measure under 1sp is empty and skipped (Alignment.pm:458-470); the QED constructors
-have no sizer, so `\mbox{\IEEEQED}` alone in an eqnarray cell, or `& \hfill\IEEEQEDhere` in an IEEEeqnarray `x` cell,
-loses its QED (KPE #581).
-**Rust behavior**: the QED constructors carry the size TeX measures (`latex_constructs::symbol_box_size`): IEEEtran
-`\IEEEQEDclosed` and its `\qed` the 1.3ex rule (IEEEtran.cls:5533), amsthm's and autart's mirror `\qed` amsthm's
-`\openbox` (.77778 × .675em, amsthm.sty:422-426, one function `openbox_size`), cmsy10's `\sqcup` glyph box for llncs
-`\squareforqed`/`\qed` (llncs.cls:400), svjour3/svmult `\qed` (svjour3.cls v3.2 :959, svmult.cls v5.4 :1027), A&A's
-direct `\squareforqed` (aa.cls v5.3/5.4 :805, v6.0 :893, v6.1 :905, v7.0 :914; v8+ define none) and mn2e's
-`\squareforqed`/`\sq` (mn2e.cls:410; its `\proofbox`, a 6.5×6.5 picture at :871, is `\let` to it) — glyph boxes, not
-rules — and elsart/elsarticle's `\qed` a `\Box` glyph (elsart.cls:457, TL elsarticle.cls:1238 `\hbox{}\hfill$\Box$`;
-latexsym's lasy or amssymb's msam `\Box`, of comparable size). The emptiness test is Perl's. Residual: the binding's
-A&A `\sq`/`\qed` are plain characters (□, ∎; aa_support_sty.rs), not Perl's `\squareforqed` lets
-(aa_support.sty.ltxml:321-324) — a pre-existing difference.
-**Why**: the QED is author content (2201.11150, 1903.06134; 1905.10621's elsarticle cells, kept by amsthm's
-`openbox_size` since its krudces.sty:188 loads amsthm after the class; 12 IEEEtran papers now match pdflatex's QED
-count). A general rule (a constructor with visible content keeps its cell) is proposed as a K-row in the 64ra report.
+### 490. → #298 (The class QED symbols are sized as their boxes, so a cell holding only one is kept (Perl: the cell dropped as empty))
 
 ### 491. `\IEEEeqnarray` and `IEEEeqnarraybox` build their columns from the IEEEtrantools column table (Perl: a three-column eqnarray, L/C/R)
 
@@ -12872,44 +12527,7 @@ papers, each a run joined or a `~`: 1001.1367, 1001.1793, 1301.6104, 1301.6221, 
 
 ### 504. → Bindings beyond Perl's tree: REVTeX 3 (`revtex3_support_sty.rs`)
 
-### 505. OmniBus loaded for a missing `\documentstyle` option only provides (Perl: loaded whole over the class)
-
-**Perl behavior**: `\compat@loadpackages` (latex_constructs.pool.ltxml:148-151) loads OmniBus after the class or binding
-whenever an option is neither declared nor a style file; its `\author`, `\address`, `\title`, `\keywords`,
-`\references`… replace the class's own.
-**Rust behavior**: it loads under `ProvideOnlyGuard` (definition/origin.rs), and never overrides a definition made before
-it. While the guard lives, any binding's definition — OmniBus's own (`DefinitionOrigin::Fallback`) and those of the
-bindings it requires (`Binding`: inst_support's `\author[]{}`, epsf's `\epsfbox`) — through a binding definer
-(`def_macro`, `def_primitive`, `def_constructor`, `def_register` with its value, `def_conditional`, `def_math`) or `Let!`
-is declined when the name was defined before the guard: defined in the `\providecommand` sense (a meaning other than
-`\relax`), not a fallback guess, and not assigned since the guard began (`provide_only_assigned`, so the load may
-redefine its own names; `state::provide_only_declines`). An environment is declined whole when `\begin{X}` or `\X` was
-defined. The files first loaded under the guard (graphicx, epsf, aas_macros, inst_support when not loaded before) are
-unmarked when it ends (`end_provide_only`), and with them the packages they pulled in (graphics, keyval, …): loaded
-only partly, a later `\usepackage{graphicx}` loads them whole (`omnibus_provide_only_package_loads_whole_later`). So
-after the load `\@ifpackageloaded{graphicx}`/`{epsf}` read false while `\includegraphics`/`\epsfbox` still work — as in
-pdflatex, which never loaded them for a missing option. OmniBus's `LoadClass('article')` is skipped (a class is loaded already: `\documentstyle[foobarx]{report}`
-keeps report's "1.1"/(1.1)). TeX's own `\def`/`\let` and the loader's bookkeeping (made at its caller's origin) are not
-declined, so TeX code run during the load (a hook appended to) keeps its effect. OmniBus locks only names it provided.
-A definition that wraps and delegates to the current meaning is marked `extends` and installs anyway (OmniBus's
-`\bibitem`, natbib for a `[\protect\citeauthoryear…]` label, else the saved `\bibitem`: cond-mat9808262).
-OmniBus as the class itself (no binding, no file) loads whole. Exposed and fixed alongside: epsfig's `\epsfbox` (KPE
-#574) and aas_support's titled `\references` (Perl's aas_support.sty.ltxml:289-293), which OmniBus had covered.
-**Why**: user ruling 2026-10-11: OmniBus must never override a class definition; it keeps Perl's recovery intent (a 2.09
-journal option's frontmatter commands). Witnesses hep-th9610203, cond-mat9403039; `\documentstyle[myjunkx]{elsart}`
-with labelled `\author[a]`/`\address[a]` (inst_support's `\author` had broken the labels). Guards
-`perfect_kernel_batch64zd::{omnibus_provide_only_keeps_bound_class_grouping, omnibus_provide_only_keeps_bound_class_commands,
-omnibus_provide_only_labelled_elsart_addresses, omnibus_provide_only_keeps_report_numbering,
-omnibus_provide_only_provides_missing_address,
-omnibus_citeauthoryear_bibitem_under_provide_only, epsfig_epsffile_includes_the_graphic,
-aas_references_environment_has_its_title}`. Class definitions now winning over OmniBus's (A/B of 149 papers):
-running-title `<toctitle>` (13, crckapb), acknowledgements without a name (13, aaspp4 prints none), `citestyle` on 5
-aipproc bibliographies. The 2.09 option styles whose own `\author` appends, which OmniBus's whole load used to stand in
-for, are bound instead (author content first; widened A/B of 400 option-stratified papers): World Scientific's
-`sprocl`/`mprocl`/`stwol` (ws_procl_sty.rs, sprocl.sty:18-21 `\@aabuffer`; hep-ph9611287, gr-qc9710030,
-hep-th9610159; their `\address` an affiliation, as Perl's iopart_support.sty.ltxml:53 takes iopart's, routed by a
-leading mark as REVTeX's `\affiliation`, hep-lat9806004) and AASTeX's substyles `aas2pp4`, `aaspptwo`, `apjpt4`, `aj_pt4` as the aaspp binding (astro-ph9703136,
-astro-ph9303008, astro-ph9801307).
+### 505. → #408 (OmniBus loaded for a missing `\documentstyle` option only provides (Perl: loaded whole over the class))
 
 ### 506. A bibliography a `\bibitem` opens outside any bibliography takes the author's heading line as its title, else none (Perl: `\refname`)
 
@@ -12978,15 +12596,7 @@ lonely_bibliography_does_not_reach_the_next_document}`.
 
 ### 512. → Bindings beyond Perl's tree: svmono.cls (`svmult_cls.rs`)
 
-### 513. mn2e's journal abbreviations follow the copy the paper ships (Perl: none)
-
-Two mn2e.cls copies carry the same "2001/02/06 v2.2" stamp; only some define `\apj`, `\mnras`, … (the 1574-line copy
-none; a 1695-line copy plain `\def`s; the 1696-line copy on `\ref@jnl`; another on `\reff@jnl`). The binding reads the
-shipped copy's own one-line definitions and their `@` helpers (a line filter: Latin-1, `\iffalse` blocks skipped,
-one-line definitions only); a copy without them gives none. With no copy shipped, the 1696-line v2.2 set is installed as
-a `Fallback`, which yields to the document's own and to the author's own shipped files' definitions (OD #516).
-Witnesses 0901.1150, 0901.4335 (author's `mn2e_journal_style.sty`), 1403.4079. Guards
-`perfect_kernel_batch64ze::{mn2e_*, mn2e_fallback_yields_to_the_authors_own_style}`.
+### 513. → #408 (mn2e's journal abbreviations follow the copy the paper ships (Perl: none))
 
 ### 514. `\noalign\\` is an empty noalign and the row end; "Missing { inserted" unless the kernel's text tabular newline (Perl: Missing `{` and a cascade)
 
@@ -13016,14 +12626,7 @@ quote opening the next chapter (starred chapters take the motto only, svmult.cls
 0911.4644, 1010.1304. Residual: svmult numbers front-matter chapters (svmult.cls:592-594), ours does not (RED
 class-bindings/svmult_frontmatter_chapter_numbered).
 
-### 516. A `Fallback` meaning yields to a definition from a file the author shipped (Perl: only the document's)
-
-Amends OD #408: a meaning installed as a `Fallback` (OmniBus, a binding's guess) yields to a definition read from an
-author-shipped file — the gullet's current source, after resolving symlinks, lies under `SOURCEDIRECTORY` (also
-resolved) — as well as to the document's own. Measured limits: a file under the directory counts even when it is a
-vendored copy of a TeX Live package; a file reached through `../` does not; a TeX Live tree placed inside the source
-directory counts. TeX Live files still yield to the fallback. Witness 0901.4335. Guards
-`perfect_kernel_batch64ze::{mn2e_fallback_yields_to_the_authors_own_style, ws_fallback_yields_to_the_authors_own_style}`.
+### 516. → #408 (A `Fallback` meaning yields to a definition from a file the author shipped (Perl: only the document's))
 
 ### 517. quantumarticle's REVTeX-compatibility `\pacs`/`\preprint` are kept as RDFa metadata (Perl: undefined)
 
@@ -13112,19 +12715,7 @@ setspace_switch_in_a_plain_group_rearms_on_the_enclosing_group, setspace_box_env
 setspace_report_names_the_enclosing_end, setspace_end_closes_only_a_switch_of_its_own_group,
 setspace_plain_group_rearms_every_switch, abandoned_group_discards_hook_queued_aftergroup}`.
 
-### 521. Text after `\begin{lstlisting}` on its line: a Warning, a `%` comment is no text, the next line kept (Perl: dropped silently, or kept)
-
-Text on the `\begin{lstlisting}` line after the options is dropped with listings' own "Package Listings Warning: Text
-dropped after begin of listing" (listings.sty:2142-2145). Not dropped text: a tcolorbox listing box's arguments,
-options after a space (`\@ifnextchar[` skips it; 1606.07935), and a `%` comment while `%` has comment catcode (under
-doc.sty's `\MakePercentIgnore` it is text). After a begin-line comment the next line is kept as the listing's first
-line, where pdflatex drops it with the warning; the base already kept it. Perl drops it after a bare
-`\begin{lstlisting}% c` (like pdflatex) and keeps it after `[language=C] % c`. Flagged on purpose: a single leftover
-character warns, where pdflatex is silent (`\begin{lstlisting}d`, catcode-9 `% d`; two characters warn in both).
-Witnesses: 2104.03678 (Favalon-en.tex:663/783 `…{*}]]`) is the single-character, pdflatex-silent case (pdflatex takes
-the `]` as lstlisting's #2, listings.sty:2267-2276); 1606.07935 (spedoc.tex:274 `…][t!]`) is a real drop pdflatex also
-warns about. Guards `perfect_kernel_batch64zf::{lstlisting_begin_line_text_is_dropped_with_a_warning,
-lstlisting_begin_line_percent_that_is_no_comment_is_dropped_text}`.
+### 521. → #61 (Text after `\begin{lstlisting}` on its line: a Warning, a `%` comment is no text, the next line kept (Perl: dropped silently, or kept))
 
 ### 522. Alignment column ends are recognized by command code: equality on the defining cs (Perl: current meaning)
 
@@ -14364,16 +13955,7 @@ was converted alone (Fatal `Document:Malformed`: 1402.3465, 2503.12837, 1505.075
 vetoes unconditionally, as Perl; one without keeps the score gate. Guards
 `main_tex::tests::{driver_vetoes_the_preamble_it_inputs, wrapper_without_begin_document_keeps_its_main}`.
 
-### 574. The kernel's `\shorttitle`/`\shortauthor` aliases yield to the document's `\newcommand`
-
-sect05.rs predefines `\shorttitle`→`\@shorttitle` and `\shortauthor`→`\@shortauthor` (Rust-only, for templates that read
-them before `\author`, 2406.14142); latex.ltx has neither. A document's `\newcommand{\shorttitle}{…}` was refused as a
-redefinition, and `\title[\shorttitle]{…}` then set `\@shorttitle` to the alias of itself (Fatal `Timeout:Recursion`:
-1105.4905, 0909.2464; pdflatex and Perl 0).
-
-**Rust** (batch 66d): the two aliases are kernel stubs (`DefinitionOrigin::Stub`), which `\newcommand` treats as
-undefined, as the AAAI `\equalcontrib` stubs. Guard `perfect_kernel_batch66d::shorttitle_is_the_documents_own`; repro
-`sectioning-frontmatter/shorttitle_newcommand_by_document`.
+### 574. → #408 (The kernel's `\shorttitle`/`\shortauthor` aliases yield to the document's `\newcommand`)
 
 ### 575. AMS-TeX's `\tag` recovers where TeX errs
 
@@ -18142,54 +17724,7 @@ Gullet.pm:732-744 alike; tex.web §395 stops at it, "Argument of \x has an extra
 `parameter-conditional/p_form_applies_to_the_expanded_number`; guards
 `perfect_kernel_batch77u::{p_form_applies_to_the_expanded_number, p_forms_of_the_kernel_keep_their_reference}`.
 
-### 779. `\normalfont` and `\reset@font` select the document's `\familydefault`, `\seriesdefault`, `\shapedefault` and `\encodingdefault` (Perl: `\rmdefault`, `\mddefault`, `\updefault`, the encoding kept)
-
-**TeX**: latex.ltx:14113-14122 `\DeclareRobustCommand\normalfont{\fontencoding\encodingdefault \edef\f@family{\familydefault}
-\edef\f@series{\seriesdefault} \edef\f@shape{\shapedefault} … \selectfont}`, `\let\reset@font\normalfont`: every reset —
-`\begin{document}`'s `\init@series@setup` (:13902-13920), a footnote's `\reset@font\footnotesize` (:17659), `\textnormal`
-(:14216), `\@eqnnum`, a float's `\@floatboxreset` — returns to the document's defaults. A
-`\renewcommand\familydefault{\sfdefault}` document (helvet's and cmbright's idiom, lrec2026.sty's tgheros branch,
-acmart/aamas's sigchi-a mode, posters and theses) is set in the sans family throughout.
-
-**Perl** (latex_constructs.pool.ltxml:5194-5195): `\normalfont` is `\fontfamily{\rmdefault}\fontseries{\mddefault}
-\fontshape{\updefault}\selectfont`, and `neutralizeFont` (TeX_Box.pool.ltxml:218-221) the serif `textDefault`: such a
-document was serif from its first reset on — the body after `\begin{document}` once 77u ran `\init@series@setup`, every
-footnote, tag and `\textnormal` before.
-
-**Rust** (77u r2, user ruling 2026-10-20): sect13.rs `\normalfont` is latex.ltx's (`\fontencoding\encodingdefault`
-first, then the three defaults); `neutralize_font` (base_utilities/fonts_defs.rs: notes, tags, index entries) takes the family,
-series and shape `\familydefault`/`\seriesdefault`/`\shapedefault` name when the font table knows them
-(`font_code_named` reads a literal or a chain of parameterless macros without expanding, as on every tag), the encoding
-as before. A sans-default document's text carries `font="sansserif"` throughout (the document root keeps LaTeXML's serif
-default, so the attribute sits on the text runs), as its PDF (CMSS10/CMSSI10, CMSS8 footnotes); `\textrm` stays serif.
-Two consequences of the reset now reading the document:
-- A default the font table does not know (`\familydefault` = `droidserif`, droidserif.sty:101 under `[default]`, which
-  cmpj3.sty loads, 2603.23615) would keep the font in force, as `\selectfont` does for any unknown family; `\normalfont`
-  first puts serif medium upright in force (`\lx@normalfont@base`), so it resets to LaTeXML's serif as Perl's
-  `\rmdefault` did.
-- The `.bib` session (bib_session.rs) runs after the document in its live state, so its `\normalfont` read the defaults
-  of the document's end: cmpj3's `\ukrainianpart` after the bibliography (`\renewcommand\familydefault{\sfdefault}`) made
-  the entries sans where pdflatex's bibliography, typeset in place, is serif. `\lx@bibliography` (sect11.rs) records the
-  reset as the defaults stand there (`lx@bibliography@normalfont`), and the session digests that.
-`\normalfont` restoring the encoding is latex.ltx's too: after `{\fontencoding{OT1}\selectfont <c> \normalfont <d>}` in
-a T1 document `<d>` prints as written (pdflatex), no longer ¡d¿; 0710.2028's `\cyr`
-(`\renewcommand\encodingdefault{OT2}\normalfont`) now prints its OT2 transliteration in Cyrillic ("Там даже …", as the
-PDF). The bindings that stand for a package or class setting the default do so as the original does (77u r3):
-cmbright_sty.rs runs cmbright.sty:26-28, acmart_cls.rs sigchi-a's `\@ACM@sigchiamodetrue` and `\familydefault`
-(acmart.cls:238-240, :888-890). Residuals (`perfect_kernel/OPEN_ROWS.md` "FONT — Font-Selection Chain Residuals" 5-7): `\textnormal` in maths
-(`\textnormal@math`) keeps its fixed serif font; a `.bib` entry's author names and year carry no sans; a family the
-font table does not know falls back to serif only in `\normalfont` — opensans.sty's `[default]` (:160-161,
-`\opensansfamily`) stays serif. A formula's tokens are written against the text default, not the sans text (#780). Repros
-`fonts-nfss/family_default_sets_the_body`, `fonts-nfss/family_default_survives_a_preamble_switch`,
-`fonts-nfss/unknown_family_default_resets_to_serif`. `\selectfont` itself keeps the font in force for an unmapped family,
-but never `\nullfont`, which it leaves on serif (`nfss_selected_font`): in a pgf node (`\usepackage[default]{opensans}`) the
-text was dropped, silently (prerex/chart; DEMO-BFHSciPoster's case of `\rmdefault`, sect13.rs; repro
-`fonts-nfss/selectfont_of_an_unmapped_family_leaves_nullfont`, guard
-`perfect_kernel_batchm1::selectfont_of_an_unmapped_family_leaves_nullfont`). Guards
-`perfect_kernel_batch77u::{family_default_sets_the_body,
-family_default_survives_a_preamble_switch, unknown_family_default_resets_to_serif}`,
-`06_cluster_bibliography::bib_entries_take_the_defaults_where_the_bibliography_stands`; golden
-`tikz/ac-drive-components.xml` (its node text CMSS, "Control unit" CMSSBX10 as pdflatex).
+### 779. → #288 (`\normalfont` and `\reset@font` select the document's `\familydefault`, `\seriesdefault`, `\shapedefault` and `\encodingdefault` (Perl: `\rmdefault`, `\mddefault`, `\updefault`, the encoding kept))
 
 ### 780. A formula's token fonts are written relative to the text default, not to the enclosing text element, and MathML reads the context font inside the formula only (Perl: written against the enclosing text element, that relative font read whole)
 
@@ -20889,31 +20424,7 @@ author_math_mark_thanks_keeps_the_mark_and_the_note, author_footnotemark_inside_
 author_note_macro_inside_a_mark_keeps_the_note}`,
 `author_split_tests::notes_out_of_marks_takes_the_note_after_the_mark`.
 
-### 882. A graphic named with an extension it was not shipped under is found under its base name at digestion
-
-graphics.sty:205-231 takes `\includegraphics{recomb.eps}` as that file, and pdftex.def's `.eps` rule converts it
-(epstopdf); authors who ran epstopdf themselves often shipped only `recomb.pdf`, which arXiv's pdflatex of the time read
-(TL 2025's epstopdf asks for `recomb-eps-converted-to.pdf` instead: "File not found"). Perl's `image_candidates`
-(Util/Image.pm:43-56) searches `recomb.eps.*` and `recomb.eps` only, so the graphic has no candidates and
-`image_graphicx_sizer` no size, and its post loses the image too (KNOWN_PERL_ERRORS #1137). Ours (78v): when a name with
-a graphics extension (`has_graphics_extension`) names no file on the search paths nor in the texmf tree, `image_candidates`
-(util/image.rs) retries its base name and keeps the files of a graphics type that answer it — the rule post's
-`find_graphic_file` (latexml_post graphics.rs) already applied, which kept the HTML right — so the box has the real
-file's size and a sub-figure panel its width. A requested file that exists is found first and stays the only candidate
-(`fig.eps` beside a `fig.pdf`); an extensionless name, or one the search finds, is untouched. The retry's hits are
-listed in the order TeX tries them (`in_graphics_type_order`: by type, pdftex.def's `\Gin@extensions` order,
-pdftex.def:597-600, its uppercase `.PDF,…,.JB2` after its lowercase ones as it lists them, then `.eps`, which
-epstopdf-base.sty:498-505 appends, `.ps` and post's types, their other-case variants last; then by search directory, the `\graphicspath`/`\input@path` order each type is looked for along; then by name
-within one directory), not the directory's, since the sizer reads the first readable one (0907.3747 had
-`nuebar.pdf,nuebar.ps` beside `nuebar_limit.ps,nuebar_limit.pdf`; 78v r2, review rev78v finding 3;
-`\graphicspath{{new/}{figs/}}` takes `new/plot.pdf` first, where a tie-break by full path took `figs/plot.pdf` and sized
-the box from it: 78v r3, review rev78v2 findings 2-3, guard
-`perfect_kernel_batch78v::includegraphics_eps_retry_keeps_the_graphicspath_order`). Witnesses 1408.2843 Fig 1-2
-(`recomb.eps` → `recomb.pdf`), 1503.04804 Fig 3 (`pnt_pwpt_*.eps` → `.pdf`); 97 of the census's 26,364 graphics papers name
-such a file (in the first five per paper: 261 `.eps`, 12 `.png`, 12 `.pdf`, 1 `.ps`, 1 `.jpg` names), 77 of which gain
-candidates and sizes in the 78v A/B. Repro
-package-bindings/includegraphics_eps_shipped_only_as_pdf_is_sized; guard
-`perfect_kernel_batch78v::includegraphics_eps_shipped_only_as_pdf_is_sized`.
+### 882. → #177 (A graphic named with an extension it was not shipped under is found under its base name at digestion)
 
 ### 883. Output that followed a hash table's layout is in key order: the dump's records, CrossRef's missing-id report, a PI's keys, held-tag roles, idcheck, the fragment index, an extensionless graphic's candidates
 
@@ -28066,22 +27577,7 @@ formula stays. One rule at three sites: the head of `email_line_calls`, the Kind
 `email_spacing_formula_prints_no_text`; rows of `perfect_kernel_batchcr4b::email_math_shifts_pair_as_tex_pairs_them`
 and `author_split_tests::math_shifts_pair_left_to_right`.
 
-### 973. pgfmath reads arrays: a `{…}[i]` primary, text elements, `array`, `dim` (Perl: `Error:pgfparse`, its parser numeric)
-
-`pgfmath_code_tex.rs`, the winnow grammar skips `{`, `}` as blanks and has only numbers, so `{1,2,3}[1]` was 1 (pgf 2),
-`{"a","b"}[1]` 0.0 (pgf b), `dim({1,2})` 1, each with no Error; tikzpingus.sty:93-96 built `\@pingu@wingdown@0.0@`. An indexed brace
-group, and a list that is the rest of a formula, are now an array (`opens_array`, `array_primary`): elements are numbers (their
-integer form kept), text or arrays; a text or array value leaves the parse as `text_result`, in pgf's form (`{1}{2}{3}`, an indexed
-array `{{3}{4}}`, pgfmathparser.code.tex:943-954). pgf's errors stay Errors: "Array index out of bounds" (0) and text in arithmetic
-("Missing number"). Witnesses tikzpingus-doc, 2002.08586, 2509.25473. Guards `perfect_kernel_batchm3::{pgfmath_arrays_are_read_as_pgf_reads_them,
-pgfmath_array_misuse_is_an_error, pgfmath_array_text_is_read_as_pgf_reads_it}`.
-
-Text follows pgf's code, each form pinned against pdflatex: `ifthenelse` returns a branch as it is; arithmetic reads text as `\pgfmath@x=#1pt` does, so `"1"`
-is 1, `"1cm"` its points, `"1e2"` 1 and an Error; a whole formula's braces go first (pgfmathparser.code.tex:139, `{"a"}` is `a`); a list's
-`\pgfmath@bgroup@strip` (:963, :984-1009) drops the spaces before a string's first two tokens only, its `#1#2#3` being undelimited (`{"a b","c"}[0]` is `ab`,
-`{"a ? b","c"}[0]` is `a? b`, `"a b"` alone stays); a list of one indexes its value's tokens (`{"ab"}[1]` is `b`, `{1cm}[0]` is `2`, `array({"ab"},1)` is `b`), and such a list inside another its value (`{{"ab"}}[0]` is `ab`); the sizers take a braced string, `height{"Q"}` (pgfcircvoltage.tex:192, circuitikzmanual).
-
-**Left:** the residual list (wrong numbers with no Error, and the review revM3r2P1 cases) is `docs/perfect_kernel/OPEN_ROWS.md` ODR1 (SYNC row R); its RED repros are `graphics-tikz/pgfmath_string_and_units_in_arithmetic_red`, `pgfmath_width_of_a_braced_string_red`, `pgfmath_lone_number_in_a_sublist_red`, `pgfmath_string_keeps_protected_commands_red`.
+### 973. → #216 (pgfmath reads arrays: a `{…}[i]` primary, text elements, `array`, `dim` (Perl: `Error:pgfparse`, its parser numeric))
 
 ### 974. A PDF string's escapes are the characters they name (pdflatex: the bytes, broken by a UTF-16 string)
 
@@ -30824,22 +30320,7 @@ switches off only to the group's end, so a following `\email` lands on the last 
 Guard `perfect_kernel_batchrb1::revtex_maketitle_switches_the_author_block_off` (one row per shape, exact Error and
 Warning counts, whole creators, the body text).
 
-### 1004. pgfmath reads `\wd`/`\ht`/`\dp` of a box numbered by digits too (`\wd0`) (DTL1, DTL1b)
-
-**Perl.** The pgfmath grammar's `REGISTER` reads `\wd`, `\ht` or `\dp` followed by a control sequence
-(pgfmath.code.tex.ltxml:696-701) and looks the box up by that register's number (`pgfmath_getwidth`/`getheight`/
-`getdepth`, :499-521). A box given by digits (`\pgfmathparse{\wd0}`) matches no rule: 0.
-
-**Rust.** `try_cs_register` (`pgfmath_code_tex.rs`) ports the rule (`box_number`, `pgfmath_box_dimension`: the box
-register's own getter, units declared), and also reads decimal digits after `\wd`/`\ht`/`\dp`, as TeX and pgf read
-`\wd0`: pdflatex 50.0 for a 50pt box, Perl 0.0. Reason: content (the value pgf computes). Before the port the rule was
-missing, `\wd\box` read 0, and tikzscale's measuring loop (tikzscale.sty:392, 522-524) scaled every picture by
-`\requestedSize/0`, clamped to 16383.99998 (2010.05701, 2205.15714, 2311.08887, 2604.09771). Fit's
-`.5\dp\pgfnodeparttextbox` (tikzlibraryfit.code.tex:74) reads the node's declared size since DTL1a. A box named by
-an expl3 register (`\wd\l_my_box`) is read by its token's name (`cs_at`, DTL1e, PGR1b #1010): pdflatex
-80.0 for twice a 40pt box, Perl 16383.99998 with 2 Errors (repro `pgfmath_box_named_by_expl3.tex`).
-Repros `graphics-tikz/pgfmath_box_dimensions.tex`, `pgfmath_tikzscale_width.tex`; guard
-`perfect_kernel_batchdtl1::batchdtl1_pgfmath_rows`.
+### 1004. → #216 (pgfmath reads `\wd`/`\ht`/`\dp` of a box numbered by digits too (`\wd0`) (DTL1, DTL1b))
 
 ### 1005. → KNOWN_PERL_ERRORS #147 (`\meaning` of a macro coded in the host language prints `CODE(<name>)`, with no address (QA89))
 
@@ -30972,29 +30453,7 @@ hiding their marks hides the entries' too (`llncs_inst_names_marked_institute_ma
 entries on the first block's authors (`llncs_second_maketitle_names_are_text_red`); names led by marks parted at commas
 lose every mark past the first uncounted (`llncs_comma_names_led_by_marks_later_marks_lost_red`).
 
-### 1010. pgfmath reads a number and a control-sequence operand as pgf's parser does (PGR1)
-
-**TeX.** pgf's `\pgfmath@parse@@number` (pgfmathparser.code.tex:426-600) collects digits and points, skipping the spaces
-between them (`-4 .5` is -4.5); after them it tries a two-letter unit before an exponent and before a `0x`/`0X`/`0b`/`0B`
-prefix (`0bp` is 0bp); a number opening with `0` is octal (`010+1` is 9.0). A `\dimexpr`, `\glueexpr`, `\numexpr` or
-`\muexpr` is read by a TeX assignment; it and a count register take the place of a number before them (`2\mycount` is the
-count, `0.5\dimexpr 4pt` 4.0), and a dimension register scales it. A count declares no units. A control sequence is
-the token pgf receives, whatever its name (`\csname pal@data1H\endcsname`, an expl3 `\l_x_dim`). Not yet: inside a
-`\dimexpr`/`\numexpr` operand the name is re-read as text under the current catcodes, so one holding a character TeX reads
-otherwise (`%`) breaks (RED `pgfmath_csname_name_reread_in_expr_red`); a string result's `\meaning` spells such a name
-`\csname…\endcsname` (RED `pgfmath_string_result_spells_csname_red`).
-**Perl.** Its grammar (pgfmath.code.tex.ltxml:696-711) has no space inside a number, no `\dimexpr`, multiplies by any
-register and declares units for every one. **Rust.** pgf's rules (`pgfmath_code_tex.rs` `try_number`, `unit_at`,
-`try_cs_register`, `pgfmath_read_expr`; the expression through the core's `read_dimension`/`read_number`/`read_mu_glue`).
-Reason: real TeX decides behaviour; the grammar stopped on these and returned the partial value silently (`0bp` on 40 of
-464 EB1 A/B papers: 1106.3771, 1104.5553, 1503.00895; `\dimexpr` 1711.06128, 2206.04438; `-4 .5` 1612.03043). The
-parser reads text, so `pgfmath_input_text` spells a name that is no `[a-zA-Z@]` run as `\csname…\endcsname`, which
-`cs_at` and TeX's re-read of an expression take whole; read as its letters, `\pal@data1H` (pagelayout.cls:237-252) was
-`\pal@data` then `1H`: 165 + 9 Errors in a `\dimexpr` on pagelayout's manuals example-grid and
-pagelayout-manual-layout-guides, a silent 0 bare (PGR1b; repro `pgfmath_csname_register_operands`). Not yet:
-TeX-exact unit conversion and pdfTeX's `px`/`nd`/`nc` (repro `pgfmath_units_as_tex_reads_them_red`), pgf's error on an
-octal 8 or 9 (`pgfmath_octal_bad_digit_red`). Guards `pgfmath_golden_tests::golden_pgfmath_corpus`,
-`perfect_kernel_batchdtl1::batchdtl1_pgfmath_rows` (repro `pgfmath_grammar_gaps`).
+### 1010. → #216 (pgfmath reads a number and a control-sequence operand as pgf's parser does (PGR1))
 
 
 ### 1011. After caption loads, `\@makecaption` is a shorthand-free wrapper calling the format it replaced (CAP1)
@@ -31014,25 +30473,7 @@ spanish: 2 false Errors each gone). **Guard**: `perfect_kernel_batchqa47a::batch
 (`command_hook_on_makecaption_caption_repeat_without_options_red`); code on a `cmd/@makecaption` hook never runs, since LaTeXML's
 `\caption` does not go through `\@makecaption` (`command_hook_on_makecaption_code_never_runs_red`, post-merge QAHK).
 
-### 1012. pgfmath's overflow test reads the dimension TeX holds, and none in the fpu (DTL1h)
-
-**TeX.** pgf reads each operand into `\pgfmath@x` (`\pgfmath@x=#1pt`), where scan_dimen rounds the fraction to sp and
-stops on "Dimension too large" only at 2^30 sp (tex.web §452-453, §461): `16383.99999pt` is `\maxdimen`, printed
-16383.99998. Under `/pgf/fpu` (pgflibraryfpu.code.tex:29-46) the parser computes in floats: a sum like `12319.0+4442`
-(16761) is no dimension, and only a unit'd operand is still scanned into one. **Perl.** It tests the five-decimal
-result against 16383.99998 (pgfmath.code.tex.ltxml:342-344, :391-393): `\pgfmathparse{16383.99999pt}` errs
-(KNOWN_PERL_ERRORS #1232), and with no fpu reading its `\pgfmathsetmacro` under the fpu errs and clamps 16761 to
-16383.99998. **Rust.** `pgfmath_code_tex.rs` `exceeds_max_dimen` (|round(points·65536)| ≥ 2^30) on the parser's result
-outside the fpu (`fpu_active`, `\ifpgfmathfloatparseactive`), and `scanned_dimension` on each `<number><unit>` operand,
-in the fpu too, `\maxdimen` kept: `20000pt-10000pt` is one Error and 6383.99998, `20000pt+1` two, as pdflatex. In the
-fpu `\pgfmathparse` is pgf's own `\pgfmathfloatparse` (pgflibraryfpu.code.tex:396); the native parser serves the
-binding's direct callers (`\pgfmathsetmacro`), whose result keeps its decimal form (`16761.0` where pgf holds
-`1Y1.6761e4]`). **Witnesses**: 1811.10950 (the invclip idiom `(-16383.99999pt,-16383.99999pt) rectangle
-(16383.99999pt,16383.99999pt)`: 16 → 0 overflow Errors), 2411.12316 (tikz-bbox's `\pgfmathsetmacro` under its fpu,
-pgflibrarybbox.code.tex:28-35: 1 → 0), 2109.14286 (`\pgfmathsetmacro` under `/pgf/fpu`: 2 → 0, and the funnel figure
-printed `16,384` for 16,761), the TL manuals ddphonism (40 → 0) and tikzbrickfigurines-doc (352 → 0). **Guards**:
-`error_boundary::perfect_kernel_error_boundary` (rows `pgfmath_maxdimen_spelling_and_fpu_in_range`, 0 errors;
-`pgfmath_past_maxdimen_errs`, 7 as pdflatex).
+### 1012. → #216 (pgfmath's overflow test reads the dimension TeX holds, and none in the fpu (DTL1h))
 
 ### 1013. cmpj's `\refaddr` marks print as TeX's second run (CMPJ1)
 
@@ -31512,35 +30953,42 @@ Document.pm:74 dies there; `rhai-bindings/fonttest_fatal_closed_by_set_node_red.
 
 ### 1030. → KNOWN_PERL_ERRORS #1244 (Rhai glue arithmetic is TeX's `\advance`, not Perl's Glue.pm / MuGlue.pm)
 
-### 1031. A Rhai `Dimension`/`Glue` spec that is not a number and a unit is an Error
+### 1031. A Rhai call named after Perl's keeps Perl's intent on our core's TeX-accurate values; an unreadable `Dimension`/`Glue` spec is an Error (Perl: a silent or warned wrong value) — absorbs #1035
 
-**Perl.** `Dimension('3 furlongs')` reads the leading number as sp (`3sp`, with only Perl's `Argument "3 furlongs"
-isn't numeric` warning), and `Glue('1pt plus')` Warns `Missing Glue specification`. **Rust.** The Rhai constructors,
-and the string form of `DefRegister`/`AssignRegister`, raise `Error:unexpected:<spec>` naming the spec and use 0; a
-fresh register's unitless string (`DefRegister("\\c", "5")`) is the same Error, where Perl's untyped register errs at
-`\the`, while an existing register's declared type still reads it (`"5"` for a Number register is 5). A wrong value
-read silently is the likelier wrong output (BM, 2026-11-05). **Guard**: `perfect_kernel_batchw3rc::rhai_typed_registers_error_side`.
+**Rule (rulings 10-13, DG 2026-11-14; one name, one meaning).** A Rhai call lowers to the Rust macros' core call, so it
+answers as the core does, and a spec that cannot be read as its type is an `Error:unexpected:<spec>` naming it, using 0;
+a Number string keeps Perl's `int()` reading with Perl's Warning. A wrong value read silently is the likelier wrong
+output (BM, 2026-11-05). Where a Perl-shaped use changes meaning, it keeps working one release with one deprecation
+Warning per load. **Code.** `latexml_contrib/src/script_bindings/values.rs:68 unreadable`, `:73 dimension_of`, `:83
+glue_of`, `:112 register_value_of_spec`; `latexml_core/src/common/number.rs:52 from_str_value`.
 
-### 1035. Rhai's Perl-named calls: where they keep our core's behaviour, and the transitions (PR #829 rounds G-H)
+- **Dimension/Glue** (ex-#1031). Perl's `Dimension('3 furlongs')` reads the leading number as sp (`3sp`, with only
+  Perl's `Argument "3 furlongs" isn't numeric` warning), and `Glue('1pt plus')` Warns `Missing Glue specification`. Ours
+  errs, for the constructors and the string form of `DefRegister`/`AssignRegister`; a fresh register's unitless string
+  (`DefRegister("\\c", "5")`) is the same Error, where Perl's untyped register errs at `\the`; an existing register's
+  declared type still reads it (`"5"` for a Number register is 5). Guard `perfect_kernel_batchw3rc::rhai_typed_registers_error_side`.
+- **Number** (Number.pm:31-34 `int($number)`): `Number(string)`, a Number register's string form and the core
+  `Number::from(String)` are one reader — `"1e3"` 1000, `"1.5"` 1, a non-numeric remainder (`"12abc"`) Warned (`isn't
+  numeric`) and its prefix read — where the core read 0 silently.
+- **Colours and fonts.** Perl's `MergeFont(color => 'red')` keeps the name (`color="red"`) with or without a colour
+  package, and Font.pm `merge` ignores an unknown key. Ours resolves the name to its colour (`#FF0000`) — a base name
+  (`red`, color.sty's eight) without a colour package included, dvipsnam.def read only once a package defines
+  `\DefineNamedColor` (so `Blue` with no colour package is the lookup's Error and Black, where Perl prints the name); an
+  unknown font key Warns.
+- **Definitions and boxes.** `LookupDefinition` returns a handle that keeps the meaning it found, so `AssignMeaning`
+  installs it after a redefinition (`A:OLD:NEW`); a `DefPrimitive` body's returned box or array of boxes is its output
+  (Primitive.pm:78). Perl's diagnostics take `(cat, obj, $where, msg, @details)`.
+- **Transition.** `CounterValue` returns a Number as in Perl; its int uses (`+`, `-`, `*`, every comparison with an int or
+  float in either order, `roman`/`Roman`) keep working one release with one deprecation Warning per load, since Rhai
+  answers an unregistered comparison `false` silently (PR #829 rounds G-H).
+- **Glue arithmetic** is TeX's `\advance`: KNOWN_PERL_ERRORS #1244 (#1030).
+- **Guards** `perfect_kernel_batchw3rg::rhai_perl_names_behave_as_perl` (Font.pm keys, ExplodeText's ASCII letters, the
+  counter calls, variadic Push/UnshiftValue, `ptValue`'s clamp, LookupDimension's argument forms,
+  `getAttribute`/`setAttribute`, returned boxes, the diagnostics' form; Perl 3 W plus the Error, ours 1 W more, the
+  unknown key), `perfect_kernel_batchw3rg::rhai_perl_names_review_rows` (no colour package, the kept definition, the
+  mixed comparisons, `roman(Number)`, `Number(string)`).
 
-**Perl.** `MergeFont(color => 'red')` keeps the name (`color="red"`) with or without a colour package, and Font.pm
-`merge` ignores an unknown key; `Number($s)` is `int($s)` (Number.pm:31-34; `"12abc"` Warns `isn't numeric`);
-`LookupDefinition` returns the definition object; `CounterValue` returns a Number; Perl's diagnostics take
-`(cat, obj, $where, msg, @details)`. **Rust.** The Rhai calls lower to the macros' core calls (rulings 10-13, DG
-2026-11-14): a colour name resolves to its colour (`#FF0000`), a base name (`red`, color.sty's eight) without a colour
-package included, while dvipsnam.def is read only once a package defines `\DefineNamedColor` (so `Blue` with no colour
-package is the lookup's Error and Black, where Perl prints the name); an unknown font key
-Warns; `Number(string)`, the string form of a Number register and the core `Number::from(String)` are one reader with
-Perl's `int()` (`"1e3"` 1000, `"1.5"` 1, a non-numeric remainder Warned and its prefix read), where the core read 0
-silently; a `LookupDefinition` handle keeps the meaning it found, so `AssignMeaning` installs it after a
-redefinition (`A:OLD:NEW`); a `DefPrimitive` body's returned box or array of boxes is its output (Primitive.pm:78).
-CounterValue's int uses (`+`, `-`, `*`, every comparison with an int or float in either order, `roman`/`Roman`) keep
-working one release with one deprecation Warning per load, since Rhai answers an unregistered comparison `false`
-silently. **Guards**: `perfect_kernel_batchw3rg::rhai_perl_names_behave_as_perl` (Font.pm keys, ExplodeText's ASCII
-letters, the counter calls, variadic Push/UnshiftValue, `ptValue`'s clamp, LookupDimension's argument forms,
-`getAttribute`/`setAttribute`, returned boxes, the diagnostics' form; Perl 3 W plus the Error, ours 1 W more, the
-unknown key), `perfect_kernel_batchw3rg::rhai_perl_names_review_rows` (no colour package, the kept definition, the
-mixed comparisons, `roman(Number)`, `Number(string)`).
+### 1035. → #1031 (Rhai's Perl-named calls: where they keep our core's behaviour, and the transitions (PR #829 rounds G-H))
 
 ### 1037. An EPUB keeps its log outside the container and never over an existing file (UPS1, upstream #2855)
 
