@@ -43,11 +43,6 @@ unused_qualifications = "warn"
 # [patch.crates-io]
 # marpa-asf = { path = "/home/deyan/git/marpa/marpa" }
 
-[patch.crates-io]
-# TEMP until libxml 0.3.24 is released: the combined local rust-libxml branch `perf/0.3.24` (KWARC/rust-libxml PR 231).
-# Must be removed, and libxml bumped to 0.3.24 in every crate, before the PR.
-libxml = { path = "/home/deyan/data/pk_wt/INTPERF_libxml" }
-
 [profile.release]
 # Local benchmark/sandbox/canvas profile. Tuned for the 32 GB / 20-thread
 # laptop used to rebuild the sandbox corpus: keep strong optimized binaries
