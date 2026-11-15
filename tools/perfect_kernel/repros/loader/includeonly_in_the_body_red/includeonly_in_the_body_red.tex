@@ -1,0 +1,14 @@
+% witness: synthetic (revQAB3 finding 4)
+% oracle:  pdflatex 1 `!` (Can be used only in preamble: \includeonly), "Main. ca Chapter A text. Chapter B text."
+% engines: rust base main 0 errors; fix/qa90-preamble-cmds 1 error, "Chapter B text" dropped in both (the body
+%          `\includeonly` is applied: the walk's recovery runs the command, where pdflatex prints its argument)
+% expect:  1 error, both chapters kept
+% status:  RED
+% moves:   post-merge (a command whose effect a later command reads needs pdflatex's recovery, not Perl's: OD #226)
+\documentclass{article}
+\begin{document}
+Main.
+\includeonly{ca}
+\include{ca}
+\include{cb}
+\end{document}

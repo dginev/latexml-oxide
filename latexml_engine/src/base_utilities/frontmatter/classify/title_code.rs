@@ -245,14 +245,11 @@ fn closes_only_its_own_groups(tokens: &[Token]) -> bool {
 /// `\def\address##1{\textsuperscript{##1}}`; a delimiter alone, `\def\x[]{…}`, reads none), or a `\newcommand`'s
 /// (`\providecommand`'s) `[n]` past its definee with n > 0: `[0]` defines a parameterless macro (latex.ltx:1267-1281,
 /// `\@yargd@f`'s parameter text runs `#1`…`#n`, none for 0). A count that is no number here (`[\n]`) is taken as
-/// reading. Its argument prints what the rehearsal, which runs without the title code's definitions, read as the block's
-/// own (`\address{1}`'s "1", a mark), so the command is no undefined token for a piece to take alone
-/// (`emitter::content::Field::held_undefined_at`, PC3's; Z18m moved it here with this reader); a parameterless one
-/// (aaai2026.sty's `\co`, a note; `\newcommand{\x}[0]{…}` (RA0); a `\let`, a `\newcounter`'s `\c@x`) is.
-pub(in crate::base_utilities::frontmatter) fn reads_arguments(
-  definee: &Token,
-  statement: &[Token],
-) -> bool {
+/// reading. The frontmatter observer's rehearsal reads the author content under such a definition, so its argument
+/// prints there as it prints in pdflatex (`\address{1}`'s "1", a mark: `author_markup_begin`, OD #941); a
+/// parameterless one (aaai2026.sty's `\co`, a note; `\newcommand{\x}[0]{…}` (RA0); a `\let`, a `\newcounter`'s `\c@x`)
+/// stays undefined there, an undefined token a piece takes alone (`emitter::content::Field::held_undefined_at`).
+pub(in crate::base_utilities) fn reads_arguments(definee: &Token, statement: &[Token]) -> bool {
   let Some(at) = statement.iter().skip(1).position(|t| t == definee) else {
     return false;
   };

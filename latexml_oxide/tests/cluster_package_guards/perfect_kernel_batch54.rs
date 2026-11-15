@@ -2395,7 +2395,8 @@ fn index_control_word_before_letter_at_is_not_glued() {
 /// latex.ltx:9512/9537: `\document` is preamble-only and its hooks one-time —
 /// a second `\begin{document}` (ltnews.tex:236/296, l3news.tex:109/177
 /// `\renewenvironment{document}` + per-issue `\input`) re-fired csquotes'
-/// end-preamble block whose hooks are `\undef`ed after use (csquotes.sty:2434-2446).
+/// end-preamble block whose hooks are `\undef`ed after use (csquotes.sty:2434-2446). The one Error is pdflatex's
+/// "Can be used only in preamble" for the second `\begin{document}` (QA90, OD #226; it was 0 before).
 #[test]
 fn second_begin_document_fires_no_hooks() {
   let tex = r"\documentclass{article}
@@ -2409,7 +2410,7 @@ Second begin.
 \end{document}
 ";
   let (stderr, xml) = convert(tex, false);
-  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(error_count(&stderr), 1, "{stderr}");
   assert!(xml.contains("Second begin."), "{xml}");
   assert_eq!(xml.matches("<document ").count(), 1, "{xml}");
 }
@@ -3663,7 +3664,8 @@ fn wave11_package_internals_are_defined() {
 
 /// tuenc.def:106-121 `\DeclareUnicodeAccent` under the luatex profile
 /// (tipauni.sty:349) and the LuaTeX PDF primitives beside `\directlua`
-/// (`\pdfvariable pageattr`, multimedia.sty:30).
+/// (`\pdfvariable pageattr`, multimedia.sty:30). The one Error is lualatex's "Can be used only in preamble" for the
+/// body `\DeclareTextCommand` (QA90, OD #226; lualatex then 4 more from the unread accent; ours makes it).
 #[test]
 fn unicode_accent_and_pdfvariable_under_luatex_profile() {
   let tex = r#"\documentclass{article}
@@ -3674,7 +3676,7 @@ fn unicode_accent_and_pdfvariable_under_luatex_profile() {
 \end{document}
 "#;
   let (stderr, xml) = convert_with(tex, Some("[luatex,rawstyles,rawclasses]latexml.sty"));
-  assert_eq!(error_count(&stderr), 0, "{stderr}");
+  assert_eq!(error_count(&stderr), 1, "{stderr}");
   assert!(xml.contains("[n\u{0329}]"), "{xml}");
 }
 

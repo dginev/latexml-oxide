@@ -1,16 +1,16 @@
 % mechanism: a command the class's title code defines where it reads `\@author` (pazhastl.cls:112's
-%   `\def\address##1{\textsuperscript{##1}}` inside `\@maketitle`'s group) is undefined in the observer's rehearsal,
-%   its Error held; a definee reading arguments is no undefined command a piece takes alone
-%   (`content::Field::held_undefined_at`, `content::reads_arguments`), so the e-mail piece before it does not grow over it,
-%   cut from its `{1}`:
-%   `\address{1}` stays the name's mark, digested under the title code's definitions. OXIDIZED_DESIGN_DIVERGENCES #983
+%   `\def\address##1{\textsuperscript{##1}}` inside `\@maketitle`'s group) reading arguments is defined in the
+%   observer's rehearsal too (`author_markup_begin`, LOSTF), so no Error is held at it and the e-mail piece before
+%   it does not grow over it, cut from its `{1}`:
+%   `\address{1}` stays the name's mark, digested under the title code's definitions. OXIDIZED_DESIGN_DIVERGENCES #983, #941
 % witness: 1108.4222, 1202.2889, 1206.0451, 1207.2226, 1301.4791, 1307.2761, 2103.05801, 2408.01858, 2412.06362 (pazhastl);
 %   2607.07582 (pazha2.cls:126 `\addres`)
 % oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "Ann Able*1 , Bob Baker2"
 % engines: Perl 0.8.8: 1 Error (`\address` undefined, KNOWN_PERL_ERRORS #1219 family); int155a2: 1 Error, the e-mail
 %   contact `<sup>*</sup><ERROR>\address</ERROR>`
-% expect:  0 Errors, 2 Warnings (the content check: "1 Baker2 ann@x.org" — pdflatex prints no address, `\email` stores
-%   it — and "Baker"); Ann Able<sup>1</sup> with the e-mail contact `<sup>*</sup>` alone, Bob Baker<sup>2</sup>
+% expect:  0 Errors, 1 Warning (the content check: "ann@x.org" — pdflatex prints no address, `\email` stores it; LOSTF's
+%   rehearsal reads `\address` under the title code's definition, so "1 Baker2" and "Baker" are no longer counted);
+%   Ann Able<sup>1</sup> with the e-mail contact `<sup>*</sup>` alone, Bob Baker<sup>2</sup>
 \documentclass{article}
 \makeatletter
 \def\email#1{\textsuperscript{*}\gdef\@email{#1}}
