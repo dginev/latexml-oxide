@@ -4,12 +4,21 @@ on:
   push:
     branches: [main]
   pull_request:
+  # Nightly: the macOS leg alone, on main's head, so a Homebrew libxml2/libxslt
+  # update or a runner-image change is caught even on a day nothing merged
+  # (every other job skips on `schedule`; see `changes`).
+  schedule:
+    - cron: '23 4 * * *'
+  # Manual: the macOS leg alone on the chosen ref (Actions → CI → Run workflow).
+  workflow_dispatch:
 
 name: CI
 
-# Cancel in-progress runs on the same branch when a new push arrives.
+# Cancel in-progress runs on the same branch when a new push arrives. The event
+# name keeps the nightly/manual macOS-only run from cancelling a `main` push's
+# full run (both are on refs/heads/main), and vice versa.
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
+  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -25,10 +34,22 @@ jobs:
   #    crate-level `notes.md` — flips it true and runs CI. Deliberately NOT
   #    excluded: `**/src/**/*.md`, because `latexml_contrib/src/script_bindings/
   #    API.md` is `#[doc = include_str!()]`-compiled and IS a rustdoc input.
-  #  * macos — the native-libxml2/libxslt divergence surface (witness #292):
-  #    `latexml_core/**` + `latexml_post/**` (where rust-libxml is used) plus the
-  #    link/dep/config inputs. On a PR the macOS leg runs only when this matches;
-  #    on a `main` push it runs for ANY code change (the net, see the macos job).
+  #  * macos — the code whose behaviour can differ by PLATFORM, by concern
+  #    (DG 2026-11-14: macOS is the slow, queued leg; the engine's own logic —
+  #    expansion, digestion, frontmatter, bindings — is deterministic Rust that
+  #    does not diverge by OS, so it is not in the list):
+  #      - XML parsing, schema, serialization, XPath and XSLT, where libxml2 /
+  #        libxslt versions diverge (witness #292, a user stylesheet libxslt
+  #        refused): `latexml_post/**` minus its embedded CSS/JS text, the
+  #        XML wrapper and schema/fragment readers in `latexml_core`;
+  #      - the OS surface: paths, file lookup and kpathsea, fonts on disk,
+  #        subprocesses, the RSS/time watchdog, dumps on disk, the CLI;
+  #      - the link/dep/config inputs.
+  #    On a PR the macOS leg runs only when this matches, or when the PR carries
+  #    the `ci:macos` label (read at the run's start: label first, then push);
+  #    on a `main` push it runs for ANY code change — the net, at most one
+  #    merge late, under the workflow's cancel-in-progress group, so only the
+  #    newest main commit runs — and nightly on `schedule`.
   #
   # This never SELECTS a test subset by path — that would hide regressions in a
   # coupled engine. It only skips WHOLE jobs when the diff cannot change their
@@ -43,8 +64,12 @@ jobs:
       macos: ${{ steps.filter.outputs.macos }}
     steps:
       - uses: actions/checkout@v6
+      # On `schedule`/`workflow_dispatch` there is no diff to filter: the step
+      # is skipped, both outputs are empty, every not_docs-gated job skips, and
+      # the macos job runs on its event test alone.
       - uses: dorny/paths-filter@v3
         id: filter
+        if: github.event_name == 'pull_request' || github.event_name == 'push'
         with:
           # micromatch semantics: a file matches when it matches a positive
           # pattern and none of the `!` negations. `!*.md` is top-level only
@@ -57,8 +82,30 @@ jobs:
               - '!.github/**/*.md'
               - '!LICENSE'
             macos:
-              - 'latexml_core/**'
+              # XML parsing / schema / serialization / XPath / XSLT
               - 'latexml_post/**'
+              - '!latexml_post/resources/CSS/**'
+              - '!latexml_post/resources/javascript/**'
+              - 'latexml_core/src/common/xml.rs'
+              - 'latexml_core/src/common/relaxng/**'
+              - 'latexml_core/src/sxml/**'
+              # the OS surface: paths, file lookup, kpathsea, fonts on disk,
+              # subprocesses, the watchdog, dumps on disk, the CLI
+              - 'latexml_core/src/util/**'
+              - 'latexml_core/src/watchdog.rs'
+              - 'latexml_core/src/lib.rs'
+              - 'latexml_core/src/binding/content.rs'
+              - 'latexml_core/src/binding/author_files.rs'
+              - 'latexml_core/src/binding/virtual_files.rs'
+              - 'latexml_core/src/common/font/**'
+              - 'latexml_engine/src/dump_paths.rs'
+              - 'latexml_engine/src/embedded_dumps.rs'
+              - 'latexml_engine/src/lua_bridge.rs'
+              - 'latexml_oxide/src/**'
+              - 'latexml_oxide/bin/**'
+              - 'tools/make_formats.sh'
+              - 'tools/build_static_kpathsea.sh'
+              # link / dependency / runner config
               - '**/build.rs'
               - '**/Cargo.toml'
               - 'Cargo.lock'
@@ -439,14 +486,20 @@ jobs:
   macos:
     name: latexml-oxide CI (macOS shard ${{ matrix.shard }}/4)
     needs: changes
-    # macOS is the slow leg and its unique value is the native libxml2/libxslt
-    # divergence surface (#292). On a PR run it only when that surface changed
-    # (`changes.macos`); on a `main` push run it for ANY code change — that
+    # macOS is the slow leg and its unique value is the platform-dependent
+    # surface (`changes.macos`: libxml2/libxslt parsing and XSLT, #292; the OS
+    # surface). On a PR run it only when that surface changed or the PR is
+    # labelled `ci:macos`; on a `main` push run it for ANY code change — that
     # post-merge run is the net that catches a macOS regression a PR's narrow
-    # filter let through. Docs-only diffs skip it on both.
+    # filter let through; and always on the nightly `schedule` and a manual
+    # `workflow_dispatch`. Docs-only diffs skip it on PRs and pushes.
     if: >-
-      needs.changes.outputs.not_docs == 'true' &&
-      (needs.changes.outputs.macos == 'true' || github.event_name == 'push')
+      github.event_name == 'schedule' ||
+      github.event_name == 'workflow_dispatch' ||
+      (needs.changes.outputs.not_docs == 'true' &&
+       (needs.changes.outputs.macos == 'true' ||
+        github.event_name == 'push' ||
+        contains(github.event.pull_request.labels.*.name, 'ci:macos')))
     runs-on: macos-15
     # 3 vCPU / 7 GB RAM — tighter than the 16 GB Linux runner, so the same
     # RAM-tuned `ci` profile + jobs=2 apply; the cold build dominates, so
