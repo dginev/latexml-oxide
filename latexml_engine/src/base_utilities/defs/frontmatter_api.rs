@@ -603,6 +603,16 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
   DefPrimitive!("\\lx@add@frontmatter@until {} OptionalKeyVals:Frontmatter DefToken",
     sub[(tag_tks, kv, end)] {
     let tag = tag_tks.to_string();
+    // `\begin{abstract}`'s `env/abstract/begin` runs in its group ahead of `\abstract` (latex.ltx:15354-15362): before
+    // the name is read below and the class's begin code replays (`\lx@abstract@class@setters`); what it typesets
+    // heads the body
+    let mut boxes = Vec::new();
+    if tag == "ltx:abstract" && lookup_bool("lx_abstract_begun") {
+      let hook = crate::latex_constructs::env_hook_tokens("abstract", "begin");
+      if !hook.is_empty() {
+        boxes.push(digest(Tokens::new(hook))?);
+      }
+    }
     let mut options = TagAttrs::default();
     let mut role = String::new();
     if let Some(kv) = kv {
@@ -648,7 +658,8 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
       // frontmatter_stores.rs `\lx@abstract@class@setters` — mtt.cls papers' English and Ukrainian abstracts at
       // their end: 1310.0585, 1310.0589, 1212.3890)
       assign_value("lx_frontmatter_kept_in_place", true, Some(Scope::Local));
-      return digest_next_body(Some(end));
+      boxes.extend(digest_next_body(Some(end))?);
+      return Ok(boxes);
     }
     // extract (possibly multiple!) labels
     let mut labels = clean_frontmatter_labels(
@@ -703,7 +714,7 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
     // this frame, `until_terminal_inside_group` (stomach.rs) acts.
     // (the title-page check's watch over a frontmatter command's entry: #953 "106t")
     let watch = begin_frontmatter_entry_digestion(None, checked);
-    let body = digest_next_body(Some(end));
+    let body = digest_next_body(Some(end)).map(|body| [boxes, body].concat());
     assign_value("lx_frontmatter_par_item", enclosing.0.unwrap_or(Stored::None), Some(Scope::Local));
     assign_value("lx_frontmatter_par_depth", enclosing.1.unwrap_or(Stored::None), Some(Scope::Local));
     let digested = body.map(|body| Digested::from(List::new(body)));

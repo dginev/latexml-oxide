@@ -9,6 +9,13 @@
     `\affiliation` or `\email` keeps the pop-up, and a `\thanks` or `\footnote` keeps its mark. Offered upstream. Guards
     `06_cluster_frontmatter::frontmatter_author_lines_783`,
     `witnessed_css_delta::author_line_delta_stays_present` (OXIDIZED_DESIGN_DIVERGENCES #1051).
+  - **A numeric citation says so** (issue 857). A `<cite>` that shows only numbers or labels
+    (`[1]`, `[3, 4]`, `[1, Section 7]`, `[Kho00]`, a superscript citation) carries the class
+    `ltx_cite_numeric`; an author-year or textual one (`Bekki (2013)`, `Smith [2]`) does not, so a
+    stylesheet can keep a numeric citation on one line without doing so for long author-year
+    ones. The form is the one the citation printed, after the bibliography is read (a numeric
+    `.bbl` under natbib, an entry with no author). Guard `bibref_show::cite_numeric_class_rows`
+    (OXIDIZED_DESIGN_DIVERGENCES #307).
   - **LaTeX's kernel hooks run where LaTeX runs them** (QA47B). Code a document or package adds
     with `\AddToHook` to the hooks of `\end{document}` (`env/document/end`, and the document's own
     code in `enddocument/afterlastpage`, `/afteraux`, `/end`), of `verbatim`/`verbatim*`
@@ -87,6 +94,14 @@
     `\pdfoutput` to 1 or 0 over the mode LaTeXML guesses from the source's cues, e.g.
     `--preload=[nopdfoutput]latexml.sty` for a latex+dvips paper. Default output is unchanged.
     OXIDIZED_DESIGN #1046; guard `perfect_kernel_batchqab57::latexml_pdfoutput_options_override_the_mode`.
+  - **The document body uses LaTeX's initialized hooks** (QA47B). `\begin{document}` now runs
+    lthooks' initialization, as LaTeX does: a body `\UseHook` expands to the hook's code (an
+    `\edef` holds the code, not `\hook_use:n`), and code added in the body is built into its hook
+    at once. Most documents convert faster (median −6.6 % instructions over 56 papers); acro papers,
+    which add to `enddocument` at every acronym use, cost +0.6…+5.6 % — TeX's own rebuild per add
+    (300 body adds to one hook: pdflatex 5.25G instructions, LaTeXML 7.81G). Guard
+    `perfect_kernel_batchqa47a::batchqa47a_command_hook_rows` (OXIDIZED_DESIGN_DIVERGENCES #1048,
+    KNOWN_PERL_ERRORS #1249).
   - **No default `rowspacing="0pt"` on a MathML table** (issue 695). An `array`, `aligned` or
     other multi-row table carried `rowspacing="0pt"`, which MathML Core does not have (Chrome
     ignores it) but Firefox and MathJax honour, setting the rows touching. It is no longer

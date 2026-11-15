@@ -64,7 +64,18 @@ pub(super) fn contact_key(a: &Assoc) -> Key {
   match a.role.as_str() {
     "note" | "thanks" => (Kind::Note, norm(&a.text)),
     "orcid" => (Kind::Contact("orcid".into()), norm(orcid_id(&a.text))),
-    role => (Kind::Contact(role.to_string()), norm(&a.text)),
+    role => (Kind::Contact(role.to_string()), symbol_key(a)),
+  }
+}
+
+/// A contact's key ([`norm`]), or the symbol it prints where it prints no letter or digit, so it is written: fcs's
+/// starred `\author*` "✉" (fcs_cls.rs; 2410.08723, 2401.13011, 2408.05715 — OXIDIZED_DESIGN_DIVERGENCES #905).
+fn symbol_key(a: &Assoc) -> String {
+  let key = norm(&a.text);
+  if key.is_empty() {
+    a.text.trim().to_string()
+  } else {
+    key
   }
 }
 

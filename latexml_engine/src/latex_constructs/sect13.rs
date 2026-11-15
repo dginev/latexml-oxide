@@ -1150,6 +1150,11 @@ pub(crate) fn load() -> Result<()> {
     if lookup_definition(&update)?.is_some() && !update.defined_as(&TOKEN_RELAX) {
       unread_one(update);
     }
+    // latex.ltx:12580 `\UseHook{selectfont}` ahead of it, when the hook holds code (scrartcl.cls:2673, everysel.sty:49)
+    thread_local! { static SELECTFONT_HOOK: HookStore = HookStore::new("selectfont"); }
+    if SELECTFONT_HOOK.with(HookStore::has_code) {
+      unread(Tokens::new(hook_use_tokens("selectfont", false)));
+    }
     Ok(Vec::new())
   });
 
@@ -2095,9 +2100,15 @@ pub(crate) fn load() -> Result<()> {
   // Relocated from `latex_base.rs` 2026-04-18 for Perl-parity and to
   // unblock `LATEXML_DUMP_ONLY=1` paths (see SYNC_STATUS D0 v3.f).
 
-  // Perl L5645
-  DefPrimitive!("\\@onlypreamble{}", {
-    only_preamble("\\@onlypreamble")?;
+  // Perl L5645 records nothing; latex.ltx:1224-1226 lists the command for `\begin{document}`'s walk (mod.rs
+  // `disable_preamble_commands`), which also makes `\@onlypreamble` itself an Error in the body (:1227). After the
+  // walk the list is `\@notprerr` (:9522) and records nothing (lppl.tex:44's `\ifx\@preamblecmds\@notprerr`).
+  DefPrimitive!("\\@onlypreamble{}", sub[(cs)] {
+    if !x_equals(&T_CS!("\\@preamblecmds"), &T_CS!("\\@notprerr")) {
+      let mut entry = vec![T_CS!("\\do")];
+      entry.extend(cs.revert());
+      add_to_macro(T_CS!("\\@preamblecmds"), Tokens::new(entry))?;
+    }
   });
 
   // Perl L5646-5648

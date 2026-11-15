@@ -1,0 +1,16 @@
+% witness: issue #857 (an author-year citation keeps no form class, whatever its macro); synthetic
+% oracle:  pdflatex+biber 0 errors: "A Hampe 2017, B (Hampe 2017), C Hampe (2017)." (style=authoryear)
+% engines: base main 5e02406406e = the same, no form class on any `<cite>`
+% expect:  0 errors 0 warnings; no `ltx_cite_numeric` on any of the three cites
+% status:  GREEN
+% preload: ar5iv.sty
+\begin{filecontents*}{cite_numeric_biblatex_authoryear.bib}
+@article{Hampe_2017, author={Hampe, Simon}, title={T}, journal={J}, year={2017}}
+\end{filecontents*}
+\documentclass{article}
+\usepackage[style=authoryear]{biblatex}
+\addbibresource{cite_numeric_biblatex_authoryear.bib}
+\begin{document}
+A \cite{Hampe_2017}, B \parencite{Hampe_2017}, C \textcite{Hampe_2017}.
+\printbibliography
+\end{document}

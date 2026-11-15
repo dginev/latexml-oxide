@@ -1,0 +1,23 @@
+% witness: math0309287 (Theorem A's `\roster {\item"{(i)}" …\endroster`, the brace never closed: the roster runs to the document's end)
+% oracle:  pdftex (\input amstex, \documentstyle{amsppt}) this file: 0 errors ("(\end occurred inside a group at level 1)" in the log);
+%          "1. Brace (i) One, (ii) two. After. (1) Next."
+% engines: Perl 0.8.8 = 0 errors, 1 warning ("\endroster body should have ended with '\endroster'"), one `<enumerate/>`: everything
+%          after `\roster` lost; rust fix/amsppt-ids-sections = 1 error (malformed: `ltx:document` closes an open `enumerate`), 1 warning
+%          (the same), "After." and the second roster inside item (ii): `DigestUntil` digests the `{` group whole, so the `\endroster`
+%          inside it does not end the roster (amsppt.sty's `\endroster` is a macro, which TeX expands at any group level)
+% expect:  0 errors; `<enumerate>` with items "(i)" and "(ii)", then "After." and the second roster after it
+% status:  RED (fix/amsppt-ids-sections)
+% moves:   post-merge (the `DigestUntil` reading, shared by every amsppt block; 1 paper of the 63 roster papers of the AMSPPT census)
+\input amstex
+\documentstyle{amsppt}
+\document
+\head 1. Brace\endhead
+\roster
+{\item"{(i)}" One,
+\item"{(ii)}" two.
+\endroster
+After.
+\roster
+\item Next.
+\endroster
+\enddocument

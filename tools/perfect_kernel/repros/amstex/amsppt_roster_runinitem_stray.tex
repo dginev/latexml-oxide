@@ -1,0 +1,15 @@
+% witness: synthetic (the error side of amsppt_roster_runinitem: `\runinitem` only reads as an item right after `\roster`)
+% oracle:  pdftex (\input amstex, \documentstyle{amsppt}) this file: 1 error ("! Undefined control sequence." at `\runinitem`);
+%          "1. Stray (1) First, second. After."
+% engines: Perl 0.8.8 = 1 error (undefined `\runinitem`), `<enumerate/>` empty (amsppt.sty.ltxml:243's `#body`); rust 7dea7e597a1 = the same
+% expect:  1 error (undefined `\runinitem`), 0 warnings; `<enumerate xml:id="Ix1">` holding item "(1)" with "First, second."
+% status:  RED (7dea7e597a1) -> GREEN (fix/amsppt-ids-sections; guard perfect_kernel_batchamsppt::amsppt_heads_and_theorems)
+\input amstex
+\documentstyle{amsppt}
+\document
+\head 1. Stray\endhead
+\roster
+\item First, \runinitem second.
+\endroster
+After.
+\enddocument

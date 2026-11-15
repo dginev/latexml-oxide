@@ -192,6 +192,10 @@ pub(crate) fn load() -> Result<()> {
     // pool:304-335 re-fires too). Guard:
     // `perfect_kernel_batch54::second_begin_document_fires_no_hooks`.
     let first_begin = lookup_bool("inPreamble");
+    // latex.ltx:9537 `\@onlypreamble\document`: a second `\begin{document}` meets `\@notprerr` (OD #226).
+    if !first_begin {
+      boxes.push(digest(Tokens!(T_CS!("\\@notprerr")))?);
+    }
     if first_begin
       && let Some(ops) = lookup_tokens("@document@preamble@atend") {
       boxes.push(digest_relocked(ops)?);
@@ -232,6 +236,11 @@ pub(crate) fn load() -> Result<()> {
     // latex.ltx `\document` L9471: `\@kernel@after@begindocument@before`, whose
     // `\reinstall@nfss@defs` (:12513-12514) makes the shape switches
     // `\protected` for the body (latex_constructs_rust_only.rs).
+    // Its first step (:9532-9535): `env/document/begin` has run, its code `\let` to `\@empty` (in lthooks' document
+    // mode a later `\UseHook` of it runs nothing).
+    if first_begin && is_defined_token(&T_CS!("\\__hook env/document/begin")) {
+      Let!("\\__hook env/document/begin", "\\@empty", Scope::Global);
+    }
     if first_begin && lookup_definition(&T_CS!("\\reinstall@nfss@defs"))?.is_some() {
       boxes.push(digest_relocked(Tokens!(T_CS!("\\reinstall@nfss@defs")))?);
     }
@@ -326,11 +335,12 @@ pub(crate) fn load() -> Result<()> {
     }
     // Leave the preamble now — AFTER the begindocument hooks (the `\@preamblecmds`
     // point, latex.ltx L9522). This single transition both (a) disables the
-    // \@onlypreamble commands, so from here the onlyPreamble guard rejects body-level
-    // `\RequirePackage`/`\usepackage` (matching pdflatex + Perl), and (b) restores the
+    // \@onlypreamble commands (`disable_preamble_commands`: pdflatex's Error for a body-level
+    // `\usepackage`, `\documentclass`, a second `\begin{document}`, …), and (b) restores the
     // pre-#2846 placement — `\AtBeginDocument` above ran while still `inPreamble=1`.
     // `\par` paragraph-breaking is governed by mode + the `document` env, not this flag.
     assign_value("inPreamble", false, None);
+    disable_preamble_commands()?;
     // latex.ltx:9521-9522: the `\@preamblecmds` walk leaves `\@preamblecmds`
     // itself `\let` to `\@notprerr` (it is `\@onlypreamble`, latex.ltx:1228).
     // Raw code probes exactly that (lppl.tex:44) to detect a running document;

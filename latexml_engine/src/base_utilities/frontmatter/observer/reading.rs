@@ -26,6 +26,7 @@ use super::{
   resolver::{Assoc, Resolved, ledger_inputs, resolve},
   *,
 };
+use crate::base_utilities::defs::frontmatter_fields::author_markup_begin;
 
 /// Forget the observer's ledger: a conversion's start (the converter's session preparation, with the field
 /// provenance's reset).
@@ -249,9 +250,15 @@ fn read_pending() -> Result<HeldUndefined> {
       // (the block's tokens beside it: its in-block contacts' entries are read as the writer can cut them,
       // `events::labelled_entries`)
       let rehearse_block = |tokens: &Tokens| {
+        // (under the author markup its digestion reads it with, `author_markup_begin`: a class binding's (vmsta's
+        // `\inits` gobbles, 1508.02842, 1411.4499, 1506.02940), OmniBus's, the title code's (astlb.cls:117-118's
+        // `\address` a mark, 1202.2889, 1108.4222, 1206.0451) — OXIDIZED_DESIGN_DIVERGENCES #802, #941, #983; undone with
+        // the rehearsal's group, no `\lx@author@markup@unprovide` after the block's last token, whose declaration it was)
+        let mut stamped = author_markup_begin(true)?.unlist();
+        stamped.extend(field_stamped(2, block.range.0, tokens.unlist_ref()).unlist());
         with_block_content(block.range.0, tokens.clone(), || {
           rehearse(
-            field_stamped(2, block.range.0, tokens.unlist_ref()),
+            Tokens::new(stamped),
             title_marks,
             block_breaks,
             lex_with_inks,

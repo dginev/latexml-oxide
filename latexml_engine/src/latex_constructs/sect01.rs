@@ -44,8 +44,8 @@ pub(crate) fn make_missing_float_counters() -> Result<()> {
 /// load reads `\lx@kernel@chapter`: amsart_cls.rs `\specialsection`). Only the document's first `\documentclass`: a
 /// second one (a merged file's) loads no class in TeX — in the preamble latex.ltx:18618 of TL 2025 has made it
 /// `\@twoclasseserror`, in the body :18621 `\@onlypreamble\documentclass` stops it ("Can be used only in preamble",
-/// a diagnostic we do not raise yet, SYNC_STATUS) — and keeps the first class's chapters (memoir with a second
-/// `\documentclass{memoir}` in the body: both chapters).
+/// raised by `\begin{document}`'s walk, mod.rs `disable_preamble_commands`) — and keeps the first class's chapters
+/// (memoir with a second `\documentclass{memoir}` in the body: both chapters).
 pub(crate) fn retract_chapter_before_class_load() {
   if lookup_bool("\\chapter:settles") {
     return;
@@ -251,9 +251,11 @@ fn end_environment_tokens(env: Tokens) -> Result<Tokens> {
     // the begin took LaTeX's indirection (see `\begin`): `\endX`, then the begin's group closes
     out_tokens = end_environment_by_macro(&name);
   } else if is_defined_token(&t) {
-    // Magic CS! (its constructor fires `env/NAME/end` inside the group; the document's, a macro, does not: latex.ltx
-    // :15386 runs it before `\enddocument`, QA47B)
-    if name == "document" {
+    // Magic CS! (its constructor fires `env/NAME/end` inside the group; the document's and the kernel abstract's,
+    // macros, do not: latex.ltx:15386 runs it before `\enddocument`/`\endabstract`, QA47B)
+    let kernel_abstract =
+      name == "abstract" && lookup_definition(&t)?.is_some_and(|defn| defn.is_expandable());
+    if name == "document" || kernel_abstract {
       out_tokens.extend(use_hook("end"));
     }
     out_tokens.push(t);
@@ -674,6 +676,7 @@ pub(crate) fn load() -> Result<()> {
       if let Some(after) = after_opt {
         tks.extend(after.unlist());
       }
+      tks.extend(hooks_initialize_all_tokens());
       tks.extend(use_hook("begin"));
       tks.push(T_CS!("\\document"));
       return Ok(Tokens::new(tks));
@@ -707,6 +710,7 @@ pub(crate) fn load() -> Result<()> {
         // hook's code was dropped: ctex classes queue their deferred
         // `\RequirePackage{biblatex}` there with `\ctex_gadd_ltxhook:nn`
         // (xdupgthesis.cls:1733, xduugthesis.cls:1502; class census 2026-09-24).
+        tks.extend(hooks_initialize_all_tokens());
         tks.extend(use_hook("begin"));
       }
       tks.push(T_CS!(begin_name));

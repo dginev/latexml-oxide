@@ -1015,21 +1015,54 @@ fn relocate_footnote_aux(
   Ok(())
 }
 
-pub fn only_preamble(cs: &str) -> Result<()> {
-  // Legal while `inPreamble`. `\begin{document}` keeps `inPreamble=1` through the
-  // begindocument hooks and only clears it AFTER them (matching real latex.ltx,
-  // which disables the \@onlypreamble commands via `\@preamblecmds` (L9522) only
-  // after firing the begindocument hook (L9512)), so a `\RequirePackage`/
-  // `\usepackage` deferred to `\AtBeginDocument` is still legal — no separate hook
-  // flag needed. Paragraph-breaking inside `\AtBeginDocument` (upstream #2754) is
-  // handled independently by `\par`'s no-op-in-vertical-mode rule, NOT by clearing
-  // `inPreamble` early (upstream #2846 is thus unnecessary; KNOWN_PERL_ERRORS #43).
-  if !lookup_bool_sym(pin!("inPreamble")) {
-    Error!(
-      "unexpected",
-      cs,
-      s!("The current command '{cs}' can only appear in the preamble")
+/// latex.ltx:9521-9522 `\gdef\do#1{\global\let#1\@notprerr}\@preamblecmds`, run by `\begin{document}` after its
+/// hooks, for the listed commands that are our Rust definitions: each becomes `\lx@notprerr\lx@onlypreamble@<name>`,
+/// latex.ltx's "Can be used only in preamble" Error and then the command (Perl's `onlyPreamble` recovery,
+/// latex_constructs.pool.ltxml:155). latex.ltx's token macros are left working: our loader runs `\@pushfilename` and
+/// `\@currnamestack` when a binding loads a package in the body (content.rs). OXIDIZED_DESIGN_DIVERGENCES #226.
+pub fn disable_preamble_commands() -> Result<()> {
+  use definition::origin::DefinitionOrigin;
+  let list = match lookup_definition(&T_CS!("\\@preamblecmds"))? {
+    Some(defn) => match defn.get_expansion() {
+      Some(ExpansionBody::Tokens(body)) => body.unlist_ref().to_vec(),
+      _ => return Ok(()),
+    },
+    None => return Ok(()),
+  };
+  let do_token = T_CS!("\\do");
+  let mut tokens = list.iter();
+  while let Some(token) = tokens.next() {
+    if *token != do_token {
+      continue;
+    }
+    let Some(cs) = tokens.next() else { break };
+    // `\begin`/`\end` read `\document`'s identity (sect01.rs); its constructor errs on a second run (sect02.rs).
+    if x_equals(cs, &T_CS!("\\lx@orig@document")) {
+      continue;
+    }
+    // Only the kernel's own: a binding's replacement is its package's re-let after the walk (docmute.sty:19,
+    // standalone.sty:738 `\documentclass`; docmute_sty.rs, standalone_sty.rs define theirs at load).
+    let kernel = |origin| matches!(origin, DefinitionOrigin::Pool | DefinitionOrigin::Unknown);
+    let ours = match lookup_meaning(cs) {
+      Some(Stored::Primitive(defn)) => kernel(defn.origin),
+      Some(Stored::Constructor(defn)) => kernel(defn.origin),
+      Some(Stored::MathPrimitive(defn)) => kernel(defn.origin),
+      Some(Stored::Expandable(defn)) => {
+        kernel(defn.origin) && matches!(defn.get_expansion(), Some(ExpansionBody::Closure(_)))
+      },
+      _ => false,
+    };
+    if !ours {
+      continue;
+    }
+    let name = cs.to_string();
+    let alias = T_CS!(s!("\\lx@onlypreamble@{}", name.trim_start_matches('\\')));
+    assign_meaning(
+      &alias,
+      lookup_meaning(cs).unwrap_or(Stored::None),
+      Some(Scope::Global),
     );
+    DefMacro!(*cs, None, Tokens!(T_CS!("\\lx@notprerr"), alias), scope => Some(Scope::Global));
   }
   Ok(())
 }
@@ -7806,6 +7839,22 @@ fn clean_index_key(key: &str) -> String {
     }
   }
   key.trim_end_matches(['.', ',', ';']).to_string()
+}
+/// latex.ltx:15356-15361 `\@execute@begin@hook{document}`: the first `\begin{document}` runs `\@expl@@@initialize@all@@`
+/// (lthooks' `\__hook_initialize_all:`, :5854) between `env/document/before` and `/begin`, which builds every hook's code
+/// once and leaves lthooks' preamble mode, where each `\UseHook` rebuilds its hook and stays `\protected`.
+pub(crate) fn hooks_initialize_all_tokens() -> Vec<Token> {
+  let init = T_CS!("\\@expl@@@initialize@all@@");
+  // Once: `\__hook_initialize_all:` makes `\__hook_update_hook_code:n` no longer `\use_none:n` (:5853/:5856), as in
+  // every lthooks since its first release (2020-10-01); `\__hook_post_initialization_defs:` is 2023-06-01's.
+  let preamble_mode = x_equals(
+    &T_CS!("\\__hook_update_hook_code:n"),
+    &T_CS!("\\use_none:n"),
+  );
+  if !preamble_mode || !is_defined_token(&init) {
+    return Vec::new();
+  }
+  vec![init]
 }
 /// The kernel's `env/<name>/<point>` hook call, in its own token shapes:
 /// bare `\UseHook{env/#1/<point>}` for before/begin/after

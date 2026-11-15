@@ -1,0 +1,19 @@
+% mechanism: latex.ltx:19669/19672 `\@iinput` runs `file/<name>/before|after` with a plain `\UseHook`, at every
+%   `\input` of the file (content.rs `input_content_with_file_hooks`).
+% witness: synthetic (review revHOOKINIT)
+% status:  GREEN (QAB2; RED before: one-time hooks, so a second `\input` dropped them and code added after the
+%   first ran at once, where it was added)
+% oracle:  pdflatex 0 `!`; "[fb]IN [fa][FA][fb]IN [fa][FA] (add)[fb][fb2]IN [fa][FA]"
+% engines: rust HOOKINIT 4741298fc5 and 5e02406406: "[fb]IN [fa][FA]IN [FA] [fb2](add)IN [FA]"; QAB2: pdflatex's
+% expect:  0 errors, 0 warnings; <p>[fb]IN [fa][FA][fb]IN [fa][FA] (add)[fb][fb2]IN [fa][FA]</p>
+\begin{filecontents*}[overwrite]{fhsub.tex}
+IN
+\end{filecontents*}
+\documentclass{article}
+\AddToHook{file/fhsub.tex/before}{[fb]}
+\begin{document}
+\AddToHook{file/fhsub.tex/after}{[fa]}
+\AddToHook{file/after}{[FA]}
+\input{fhsub}\input{fhsub}
+\AddToHook{file/fhsub.tex/before}{[fb2]}(add)\input{fhsub}
+\end{document}

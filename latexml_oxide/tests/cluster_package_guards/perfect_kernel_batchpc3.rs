@@ -31,7 +31,9 @@ fn a_title_code_command_after_an_email_keeps_its_argument() {
     repro!("title_code_command_after_an_email_keeps_its_argument"),
     false,
   );
-  assert_eq!((error_count(&log), warning_count(&log)), (0, 2), "{log}");
+  // (1 Warning, the content check's "ann@x.org", which pdflatex stores, never prints; its "1 Baker2" and "Baker" are
+  // gone since the rehearsal reads `\address` under the title code's definition, LOSTF, OD #941)
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 1), "{log}");
   assert!(!xml.contains("<ERROR"), "{xml}");
   assert_eq!(creator_elements(&xml), [
     "<creator role=\"author\">\n    <personname>Ann Able<sup>1</sup></personname>\n    <contact \
