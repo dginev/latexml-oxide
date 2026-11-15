@@ -127,7 +127,7 @@ LoadDefinitions!({
     // at a later assignment; pstricks' raw `\psaddtolength` depends on it
     // (lsc). Perl never fires it (KNOWN_PERL_ERRORS #257). Guard:
     // `perfect_kernel_batch56::afterassignment_fires_after_arithmetic`.
-    after_assignment();
+    after_assignment()?;
   });
 
   DefPrimitive!("\\multiply Variable", sub[(var)] {
@@ -146,7 +146,7 @@ LoadDefinitions!({
         Error!("expected","definition", message);
       }}
     }
-    after_assignment(); // tex.web §1269, as for `\advance`
+    after_assignment()?; // tex.web §1269, as for `\advance`
   });
 
   DefPrimitive!("\\divide Variable", sub[(var)] {
@@ -170,7 +170,7 @@ LoadDefinitions!({
         Error!("expected","definition", message);
       }}
     }
-    after_assignment(); // tex.web §1269, as for `\advance`
+    after_assignment()?; // tex.web §1269, as for `\advance`
   });
 });
 
@@ -199,6 +199,6 @@ pub fn shorthand_def(cs: Token, address_type: &str, init: RegisterValue) -> Resu
     ..RegisterOptions::default()
   });
   def_register(cs, None, init, options)?;
-  after_assignment();
+  after_assignment()?;
   Ok(())
 }

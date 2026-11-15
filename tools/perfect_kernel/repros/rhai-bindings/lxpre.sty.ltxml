@@ -1,0 +1,9 @@
+# Perl stand-in for lxpre.sty.rhai (the Perl run).
+package LaTeXML::Package::Pool;
+use strict; use warnings; use LaTeXML::Package;
+DefMacro('\lxtcl', sub { Explode(scalar(my @l = TrimmedCommaList('a,b,'))); });
+DefMacro('\lxstd', sub { Explode(Stringify(Dimension('1pt'))); });
+DeclareFontMap('GENC', ['x', 'y', 'z']);
+DeclareFontMap('GENC', ['X', 'Y', 'Z'], family => 'serif');
+DefMacro('\lxfdf', sub { Explode((FontDecode(1, 'GENC'))[0]); });
+1;

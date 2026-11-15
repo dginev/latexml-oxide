@@ -11,6 +11,23 @@
     `verbatim` in `\@currenvir`, as in LaTeX. The kernel's first aid for the raw cleveref.sty is
     not registered under LaTeXML's cleveref binding, which replaces the code it repairs. Guard
     `perfect_kernel_batchqa47a::batchqa47a_command_hook_rows` (OXIDIZED_DESIGN_DIVERGENCES #1048).
+  - **The Rhai cheat sheet is a three-way API: Perl | Rust | Rhai, every Perl and Rust cell filled.**
+    `CHEATSHEET.md`'s middle column, formerly the compile-time macro alone, names the Rust a compiled
+    binding uses for each call: the macro where there is one, then the function, method, type, field or
+    trait item the Rhai call itself reaches, each a rustdoc intra-doc link (the sheet is now also rendered as
+    `script_bindings::cheatsheet`, so `cargo doc` fails on a renamed item). The Rhai helpers Perl has no single
+    call for show the Perl that does the same; four Perl calls point at the Rhai expression that already does
+    them (`DefExpandable`, `Float`, `GenerateID`, `TokensI`). Gate
+    `script_bindings::tests::api_reference_is_up_to_date` (no empty Perl or Rust cell).
+  - **26 more Package.pm calls in the Rhai dialect, with Perl's names and meanings**: `CleanIndexKey`,
+    `CleanClassName`, `CleanBibKey`, `NormalizeBibKey`, `CleanURL`, `ComposeURL`, `TrimmedCommaList`,
+    `HasKeyVal`, `DisableKeyVal`, `AfterAssignment`, `Deprecated` (Warns once per key), `DigestLiteral`,
+    `DefAutoload`, `FontDecode`, `FontDecodeString`, `LoadFontMap`, `MaybePeekLabel`, `MaybeNoteLabel`,
+    `CheckOptions`, `Stringify`, `gullet.ReadParameters`, the I-forms `DefConditionalI`, `DefEnvironmentI`,
+    `DefMathI`, `DefRegisterI`, and `DocType`, which Warns that no DTD is read (RelaxNG only,
+    OXIDIZED_DESIGN_DIVERGENCES #1) and registers its document namespaces. 17 Perl calls remain outside the
+    dialect, listed at the end of `CHEATSHEET.md`. Guard
+    `script_bindings::tests::package_pm_gap_calls_mean_what_perl_does`.
   - **The document body uses LaTeX's initialized hooks** (QA47B). `\begin{document}` now runs
     lthooks' initialization, as LaTeX does: a body `\UseHook` expands to the hook's code (an
     `\edef` holds the code, not `\hook_use:n`), and code added in the body is built into its hook

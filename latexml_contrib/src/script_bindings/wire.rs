@@ -1030,7 +1030,21 @@ pub(super) fn wire_conditional(
   test: Option<FnPtr>,
   opts: Map,
 ) -> Result<()> {
-  let operation = format!("DefConditional ({proto})");
+  let (cs, paramlist) = parse_prototype(proto, true)?;
+  wire_conditional_i(engine, ast, cs, paramlist, test, opts)
+}
+
+/// Perl's `DefConditionalI($cs, $paramlist, $test, %options)` (Package.pm:1194): [`wire_conditional`] for a control
+/// sequence and parameters in hand.
+pub(super) fn wire_conditional_i(
+  engine: &Rc<Engine>,
+  ast: &Rc<AST>,
+  cs: Token,
+  paramlist: Option<latexml_core::parameter::Parameters>,
+  test: Option<FnPtr>,
+  opts: Map,
+) -> Result<()> {
+  let operation = format!("DefConditional ({cs})");
   let mut options = ConditionalOptions::default();
   for (key, val) in checked_opts(&operation, CONDITIONAL_OPTIONS, &["skipper"], opts)? {
     match key.as_str() {
@@ -1039,7 +1053,6 @@ pub(super) fn wire_conditional(
       _ => {},
     }
   }
-  let (cs, paramlist) = parse_prototype(proto, true)?;
   let cs_name = cs.to_string();
   let engine = engine.clone();
   let ast = ast.clone();
