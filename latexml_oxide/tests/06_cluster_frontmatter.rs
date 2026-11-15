@@ -1578,7 +1578,7 @@ fn frontmatter_author_lines_783() {
       ))
     };
   }
-  let rows: [(&str, &str, usize, Vec<String>); 13] = [
+  let rows: [(&str, &str, usize, Vec<String>); 14] = [
     ("book", repro!("book"), 0, vec![format!(
       "<creator role=\"author\"><personname>name</personname>{L}school name</contact>{L}dept. \
        name</contact></creator>"
@@ -1661,6 +1661,14 @@ fn frontmatter_author_lines_783() {
        class=\"ltx_note_frontmatter ltx_thanks_note\" role=\"thanks\" xml:id=\"id1\">A. Able is with Univ \
        A.</note></creator>"
         .to_string(),
+    ]),
+    // (a `\footnote` is Perl's role=note contact: no class, the line after it still a line; LaTeXML.css exempts it)
+    ("footnote_note", repro!("footnote_note"), 0, vec![
+      format!("<creator role=\"author\"><personname>Ann Able</personname>{L}Univ A</contact></creator>"),
+      format!(
+        "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker</personname><contact \
+         name=\"Note:\u{a0}\" role=\"note\">X</contact>{L}Univ B</contact></creator>"
+      ),
     ]),
     // (a block the reading declines, written as Perl's `\lx@add@authors` splits it: fallback.rs)
     ("declined_block", repro!("declined_block"), 1, vec![

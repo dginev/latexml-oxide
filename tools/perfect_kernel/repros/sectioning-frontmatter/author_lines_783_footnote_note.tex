@@ -1,0 +1,19 @@
+% witness: 1112.2930 (a \footnote after the name, then three lines); synthetic shape from revI783
+% mechanism: issue #783 — a `\footnote` in `\author` is Perl's `\lx@add@note` (Base_Utility.pool.ltxml:331, :663), a
+%   contact of role note; it does not keep the author's `\\` lines (class `ltx_author_line`) behind the starred pop-up:
+%   LaTeXML.css exempts a note contact from the all-lines test, the note keeping the star and its pop-up.
+% oracle:  pdflatex 0 errors; Ann Able / Univ A beside Bob Baker∗ / Univ B, footnote ∗ "X"
+% engines: I783E (ace9f62b85e) = Bob Baker's "Univ B" only in the starred pop-up (the note blocked the lines layout)
+% expect:  Bob's note contact role=note with no class, "Univ B" class="ltx_author_line"; in the browser Univ B under
+%   the name, the star kept, the note shown on hover
+% status:  RED (I783E) -> GREEN (fix/issue-783, round 5); guards 06_cluster_frontmatter::frontmatter_author_lines_783
+%   (row footnote_note), cluster_cli::browser_render_author_lines, xslt::witnessed_css_delta::author_line_delta_stays_present
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{Two authors}
+\author{Ann Able \\ Univ A \and Bob Baker\footnote{X} \\ Univ B}
+\date{}
+\maketitle
+text
+\end{document}

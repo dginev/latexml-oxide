@@ -1,10 +1,10 @@
 // Render an HTML file at the given viewport widths and report, per author, the issue #783 geometry: the starred
-// pop-up marker of its contacts, each note's mark and content shown, and each contact's visibility and whether it
-// sits below the name.
+// pop-up marker of its contacts, each note's mark and content shown, and each contact's visibility, whether it sits
+// below the name, and whether it shows while the pointer is over the author's notes (hover).
 //
 // Usage:   node measure_authors.js <file-url> [width,...]
 //          (Chrome; with LATEXML_FIREFOX=<firefox executable> Firefox as well)
-// Output:  JSON { "<engine>/<width>": { creators: [{ name, star, notes: [{ mark, content }], contacts: [{ text, visible, belowName }] }] } }.
+// Output:  JSON { "<engine>/<width>": { creators: [{ name, star, notes: [{ mark, content }], contacts: [{ text, visible, belowName, hover }] }] } }.
 //          Exit 2 on error.
 const pw = require('playwright-core');
 
@@ -28,7 +28,25 @@ const pw = require('playwright-core');
       for (const w of widths) {
         const page = await browser.newPage({ viewport: { width: w, height: 900 } });
         await page.goto(url, { waitUntil: 'load' });
-        out[`${name}/${w}`] = await page.evaluate(() => {
+        const shownWhile = async (hovered) => {
+          if (hovered) await page.hover(hovered);
+          return page.evaluate(() => Array.from(document.querySelectorAll('.ltx_creator')).map((c) =>
+            Array.from(c.querySelectorAll('.ltx_contact')).map((k) => {
+              for (let n = k; n; n = n.parentElement) {
+                const s = getComputedStyle(n);
+                if (s.display === 'none' || s.visibility !== 'visible') return false;
+              }
+              return true;
+            })));
+        };
+        const hovered = [];
+        const notes = await page.$$('.ltx_creator');
+        for (let i = 0; i < notes.length; i++) {
+          const has = await notes[i].$('.ltx_author_notes');
+          hovered.push(has ? (await shownWhile(`.ltx_authors > .ltx_creator >> nth=${i} >> .ltx_author_notes`))[i] : []);
+          await page.mouse.move(0, 0);
+        }
+        out[`${name}/${w}`] = await page.evaluate((hovered) => {
           const R = (e) => e.getBoundingClientRect();
           const shown = (e) => {
             for (let n = e; n; n = n.parentElement) {
@@ -37,7 +55,7 @@ const pw = require('playwright-core');
             }
             return true;
           };
-          const creators = Array.from(document.querySelectorAll('.ltx_creator')).map((c) => {
+          const creators = Array.from(document.querySelectorAll('.ltx_creator')).map((c, i) => {
             const notes = c.querySelector('.ltx_author_notes');
             const nameBox = R(c.querySelector('.ltx_personname'));
             const star = notes ? getComputedStyle(notes, '::before').content : 'none';
@@ -48,15 +66,16 @@ const pw = require('playwright-core');
                 mark: shown(n.querySelector('.ltx_note_mark')),
                 content: shown(n.querySelector('.ltx_note_content')),
               })),
-              contacts: Array.from(c.querySelectorAll('.ltx_contact')).map((k) => ({
+              contacts: Array.from(c.querySelectorAll('.ltx_contact')).map((k, j) => ({
                 text: k.innerText.trim(),
                 visible: shown(k),
                 belowName: R(k).top >= nameBox.bottom - 0.5,
+                hover: hovered[i][j],
               })),
             };
           });
           return { creators };
-        });
+        }, hovered);
         await page.close();
       }
     } finally {
