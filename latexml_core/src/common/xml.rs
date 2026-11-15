@@ -6,7 +6,7 @@ use libxml::{
 };
 use rustc_hash::FxHashMap as HashMap;
 
-use crate::common::error::Result;
+use crate::common::{error::Result, xml_walk::WalkQuery};
 
 pub const XMLNS_NS: &str = "http://www.w3.org/2000/xmlns/";
 pub const XML_NS: &str = "http://www.w3.org/XML/1998/namespace";
@@ -191,6 +191,8 @@ pub struct XPath {
   /// Each expression compiled once: a document asks some 60 distinct expressions 15k–32k times, and libxml2's string
   /// evaluators compile on every call (docs/performance/PERFORMANCE.md P10).
   compiled: HashMap<Box<str>, Expression>,
+  /// Each expression parsed once as a read-only walk (`None`: outside the walk's grammar), under the same limit.
+  walks:    HashMap<Box<str>, Option<WalkQuery>>,
 }
 
 /// How many compiled expressions an [`XPath`] keeps: an expression built from data (an id, a label) past it is
@@ -220,7 +222,36 @@ impl XPath {
     XPath {
       context,
       compiled: HashMap::default(),
+      walks: HashMap::default(),
     }
+  }
+
+  /// `xpath` at `node` answered by a read-only walk ([`WalkQuery`]): `None` when it is outside the walk's grammar
+  /// or `doc` cannot let the walk vouch for XPath's answer, and the caller evaluates it as XPath.
+  pub fn walk(&mut self, doc: &Document, xpath: &str, node: Option<&Node>) -> Option<Vec<Node>> {
+    if !self.walks.contains_key(xpath) {
+      if self.walks.len() >= COMPILED_XPATH_LIMIT {
+        return WalkQuery::parse(xpath)?.find(doc, node);
+      }
+      self.walks.insert(xpath.into(), WalkQuery::parse(xpath));
+    }
+    self.walks.get(xpath)?.as_ref()?.find(doc, node)
+  }
+
+  /// The first node of [`walk`](Self::walk)'s answer (`Some(None)`: none), the walk stopping there.
+  pub fn walk_first(
+    &mut self,
+    doc: &Document,
+    xpath: &str,
+    node: Option<&Node>,
+  ) -> Option<Option<Node>> {
+    if !self.walks.contains_key(xpath) {
+      if self.walks.len() >= COMPILED_XPATH_LIMIT {
+        return WalkQuery::parse(xpath)?.find_first(doc, node);
+      }
+      self.walks.insert(xpath.into(), WalkQuery::parse(xpath));
+    }
+    self.walks.get(xpath)?.as_ref()?.find_first(doc, node)
   }
 
   pub fn register_namespace(&mut self, codeprefix: &str, namespace: &str) -> Result<()> {
