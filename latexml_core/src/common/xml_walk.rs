@@ -429,10 +429,14 @@ fn parse_atom(atom: &str) -> Option<Atom> {
     .strip_prefix("concat(")
     .and_then(|h| h.strip_suffix(')'))
   {
-    Some(list) => split_top(list, ",")
-      .into_iter()
-      .map(|part| parse_str_part(part.trim()))
-      .collect::<Option<Vec<_>>>()?,
+    // XPath's `concat` takes two or more arguments; one is an arity error, left to XPath to report.
+    Some(list) => match split_top(list, ",") {
+      parts if parts.len() >= 2 => parts
+        .into_iter()
+        .map(|part| parse_str_part(part.trim()))
+        .collect::<Option<Vec<_>>>()?,
+      _ => return None,
+    },
     None => vec![parse_str_part(haystack)?],
   };
   Some(Atom::Contains(parts, parse_literal(needle.trim())?))
@@ -504,7 +508,8 @@ mod tests {
        <XMTok role='SUPERSCRIPT' xml:id='s1'/>\
        <XMTok role='SUPERSCRIPT' id='s2'/>\
        <XMTok role='ADDOP' xml:id='s3'/>\
-       <section id='s1'><para><p><ref idref='deep'/><text>tail</text></p></para>\
+       <section id='s1'><para><p><ref idref='deep'/><text>tail</text></p>\
+         <ref xmlns='' id='plain' idref='nons'/><p id='onlyns' o:idref='ns2'/></para>\
          <Math id='m2'><XMath><XMDual _cvis='1' id='outer'><XMDual _pvis='1' id='nested'/></XMDual>\
            <XMText><Math id='m3'><XMath><XMTok id='tok' _pvis='1'/></XMath></Math></XMText></XMath></Math>\
        </section>\
@@ -512,7 +517,9 @@ mod tests {
      </document>";
 
   /// Every shape the grammar admits gives libxml2's nodes in libxml2's order, each once: the root, nested and
-  /// repeated matches, namespaced look-alikes (`o:p`, `o:idref`), unions whose arms overlap, and every predicate atom.
+  /// repeated matches, namespaced and no-namespace look-alikes (`o:p`, a bare `ref`, `o:idref` alone, which `@idref`
+  /// does not match), unions whose arms overlap, and every predicate atom; at element, document, text and attribute
+  /// contexts.
   #[test]
   fn walk_agrees_with_xpath_on_every_supported_shape() {
     let doc = parse(DOC);
@@ -520,6 +527,14 @@ mod tests {
     let section = root.get_last_child().unwrap().get_prev_sibling().unwrap();
     let math = section.get_last_child().unwrap();
     let doc_node = doc.as_node();
+    let para = section.get_first_child().unwrap();
+    let text_node = para
+      .get_first_child()
+      .and_then(|p| p.get_last_child())
+      .and_then(|t| t.get_first_child())
+      .unwrap();
+    assert!(text_node.is_text_node());
+    let attr_node = section.get_attribute_node("id").unwrap();
     for xpath in [
       "//*",
       "//ltx:document | //ltx:ref",
@@ -552,7 +567,14 @@ mod tests {
     ] {
       let query = WalkQuery::parse(xpath)
         .unwrap_or_else(|| panic!("`{xpath}` must be inside the walk grammar"));
-      for context in [None, Some(&section), Some(&math), Some(&doc_node)] {
+      for context in [
+        None,
+        Some(&section),
+        Some(&math),
+        Some(&doc_node),
+        Some(&text_node),
+        Some(&attr_node),
+      ] {
         let walked: Vec<String> = query
           .find(&doc, context)
           .expect("no DTD, an attached context")
@@ -589,7 +611,8 @@ mod tests {
       "//ltx:ref[(@a or @b) and @c]", // parenthesised precedence
       "//ltx:text[contains(@class, x)]",
       "//ltx:text[contains(concat(' ', @class), ' a ', 'b')]",
-      "//ltx:ref | descendant::ltx:ref", // mixed axes
+      "//ltx:text[contains(concat(@class), 'x')]", // one-argument concat: an XPath arity error
+      "//ltx:ref | descendant::ltx:ref",           // mixed axes
       "//processing-instruction('latexml')",
     ] {
       assert!(
@@ -597,6 +620,15 @@ mod tests {
         "`{xpath}` must fall through to XPath, not be walked"
       );
     }
+    // XPath itself rejects the one-argument `concat` (xpath.c xmlXPathConcatFunction's arity check).
+    let doc = parse(DOC);
+    let ctx = Context::new(&doc).expect("ctx");
+    ctx.register_namespace("ltx", LTX_NS).expect("ns");
+    assert!(
+      ctx
+        .evaluate("//ltx:text[contains(concat(@class), 'x')]")
+        .is_err()
+    );
   }
 
   /// The walk declines where it cannot vouch for XPath's answer: a document with a DTD (entity references, default

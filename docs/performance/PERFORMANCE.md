@@ -393,11 +393,26 @@ and two runs). Output: XML, HTML and every auxiliary file byte-identical on the 
 all three reps, and on the A/B `popPERFE` (139 papers by `\cref`, `thebibliography`, display math with braces/fractions,
 index/glossary packages, plus 60 controls): 0 of 199 changed in XML and in HTML (sha256 over every output file), E/F/W
 equal (321/4/2542 XML, 321/4/2559 HTML). Guards (`latexml_core` `common::xml_walk::tests`):
-`walk_agrees_with_xpath_on_every_supported_shape` (28 shapes at four contexts against libxml2's answer, and
-`find_first`), `unsupported_shapes_are_not_claimed_by_the_walk`, `walk_declines_where_xpath_must_answer` (it
-replaces PERFD's entity-retrace guard: a DTD document now goes to XPath, whose answer does not enter entity content),
-`walk_answers_from_the_live_tree_after_mutation`. Left: rust-libxml 0.3.24 must be released before the `[patch]`
-path entry can go.
+`walk_agrees_with_xpath_on_every_supported_shape` (28 shapes at six contexts — the root, element, document, text and
+attribute nodes — against libxml2's answer, with namespaced and no-namespace look-alikes, and `find_first`),
+`unsupported_shapes_are_not_claimed_by_the_walk` (incl. a one-argument `concat`, an XPath arity error),
+`walk_declines_where_xpath_must_answer` (it replaces PERFD's entity-retrace guard: a DTD document now goes to XPath,
+whose answer does not enter entity content), `walk_answers_from_the_live_tree_after_mutation`.
+
+Output changes, all outside arXiv runs (the core never writes a DTD, nor a namespaced `idref`/`labelref`/`fragid`); seen
+only on hand-made XML read with `--whatsin=xml`, and documented, not reverted. Cause: the walk tests `@a` with no
+namespace (`has_attribute_no_ns`, as XPath's `@a`), where PERFD's walk used `xmlHasProp` (any namespace, plus DTD
+default attributes); and a DTD document now goes to XPath. (a) A `<ref o:idref="S1">` is no longer resolved to a link:
+`<a href="#S1">` before, `<span class="ltx_ref ltx_ref_self">` now, as Perl `latexmlpost`. (b) A DTD default attribute
+(`<!ATTLIST text labelref CDATA "LABEL:sec">`) no longer drives cross-referencing: `--post` XML no longer adds
+`idref`/`href`/`title` to every `<text>`, as Perl's XML; the HTML is unchanged. (c) A `<graphics>` inside an internal
+entity no longer logs "No graphic source found"; the entity's content is dropped from the HTML before and now, and by
+Perl — whose parser expands entities, so Perl agrees on the HTML only, not on the reason. The planned fix (DG, after
+the cutoff): XML input expands entities at parse time. (d) Above libxml2's node-set ceiling (10M nodes), a core or
+relative query that logged an Error and returned nothing now answers.
+
+Left: rust-libxml 0.3.24 must be released before the `[patch]` path entry can go. Commits `0b1388e9f37..6e0b6ce366b`
+need the since-abandoned rust-libxml `perf/readonly-handles` branch; the series is squash-merged.
 
 ### 2026-11-15 — post's whole-document queries wrap only their matches (PERFD, PERF1 lever L5)
 
