@@ -972,6 +972,9 @@ fn input_definitions_impl(
   // load its same-named raw counterpart via `noltxml=>1`.
   if !options.reloadable && already_handled(&filename) {
     // Already-loaded early return: emit no load note (nothing was loaded).
+    if options.handleoptions {
+      pop_load_frame(pushpop, file_stack_pushed, &prevname, &prevext)?;
+    }
     return Ok(());
   }
 
@@ -1415,13 +1418,19 @@ fn input_definitions_impl(
       // the skipped read left `\__tikzlings_process_line:w #1^^M` scanning
       // the enclosing document to its end. Guard:
       // `perfect_kernel_batch52::input_rereads_loaded_sty`.
+      if options.handleoptions {
+        pop_load_frame(pushpop, file_stack_pushed, &prevname, &prevext)?;
+      }
       return Err(s!("Not loaded by this call: {}", filename).into());
     } else if !lookup_bool(&s!("{filename}_loaded")) && !lookup_bool(&s!("{filename}_raw_loaded")) {
       if options.noerror {
         // With noerror: don't mark as loaded and return Err so callers can
         // try fallback names (e.g. tikzlibrary → pgflibrary). Matches Perl's
         // InputDefinitions which returns undef on not-found even with noerror=>1.
-        // Nothing loaded → emit no load note.
+        // Nothing loaded → emit no load note; undo the push (a missing class's OmniBus fallback kept `\@currext` `cls`).
+        if options.handleoptions {
+          pop_load_frame(pushpop, file_stack_pushed, &prevname, &prevext)?;
+        }
         return Err(s!("File not found: {}", filename).into());
       }
       // Perl Package.pm L2679 / L2715: maybeRequireDependencies($name, $type)
@@ -1536,82 +1545,95 @@ fn input_definitions_impl(
         ))))?;
       }
     }
-    if file_stack_pushed {
-      digest(T_CS!("\\@expl@@@filehook@file@pop@@"))?;
-    }
-    // Perl-faithful: Package.pm:2637 —
-    //   Digest(($pushpop ? T_CS('\@popfilename') : T_CS('\lx@popfilename')));
-    // Pair with the dispatched push above: the SAME `$pushpop` decision, taken
-    // before the push (see the declaration at the `handleoptions` branch), so a
-    // load that defines `\@popfilename` mid-way still pops the stack it pushed.
-    if pushpop {
-      digest(T_CS!("\\@popfilename"))?;
+    pop_load_frame(pushpop, file_stack_pushed, &prevname, &prevext)?;
+    reset_options()?;
+  }
+  // No handleoptions=false cleanup needed: we never mutated
+  // \@currname/\@currext on that path (matching Perl).
+  Ok(())
+}
+
+/// The end of a `handleoptions` load (Package.pm:2652-2654): pop what `before_input_handle_options` pushed and restore
+/// `\@currname`/`\@currext`, also when the load found nothing to read (Perl pushes only once the file is found; TeX pops a
+/// missing file too, latex.ltx:18363 and :18801).
+fn pop_load_frame(
+  pushpop: bool,
+  file_stack_pushed: bool,
+  prevname: &str,
+  prevext: &str,
+) -> Result<()> {
+  if file_stack_pushed {
+    digest(T_CS!("\\@expl@@@filehook@file@pop@@"))?;
+  }
+  // Perl-faithful: Package.pm:2654 —
+  //   Digest(($pushpop ? T_CS('\@popfilename') : T_CS('\lx@popfilename')));
+  // Pair with the dispatched push above: the SAME `$pushpop` decision, taken
+  // before the push (see the declaration at the `handleoptions` branch), so a
+  // load that defines `\@popfilename` mid-way still pops the stack it pushed.
+  if pushpop {
+    digest(T_CS!("\\@popfilename"))?;
+  } else {
+    digest(T_CS!("\\lx@popfilename"))?;
+  }
+  // Restore @currname/@currext as a FALLBACK — AFTER the pop above, since
+  // latex.ltx's `\@popfilename` (and a package's patched copy, e.g.
+  // afterpackage.sty:20-28 firing `\<pkg>.sty-@dd` hooks) reads
+  // `\@currname` as the file being FINISHED and restores from its own
+  // stack. Restoring first made a nested load's hook look up the PARENT's
+  // name (ncclatex → nccsect: ncc's `\openrightorany` never defined).
+  // Guard: `perfect_kernel_batch54::afterpackage_hook_fires_for_a_nested_load`.
+  if !prevname.is_empty() {
+    def_macro(
+      T_CS!("\\@currname"),
+      None,
+      Tokens!(ExplodeText!(prevname)),
+      None,
+    )?;
+  }
+  if !prevext.is_empty() {
+    def_macro(
+      T_CS!("\\@currext"),
+      None,
+      Tokens!(ExplodeText!(prevext)),
+      None,
+    )?;
+  }
+  // Verify @currname was correctly restored, and force-fix if not
+  let restored_name = if lookup_definition(&T_CS!("\\@currname"))?.is_some() {
+    do_expand(T_CS!("\\@currname"))?.to_string()
+  } else {
+    String::new()
+  };
+  if !prevname.is_empty() && restored_name != prevname {
+    // @popfilename may have popped a stale entry; force correct value
+    def_macro(
+      T_CS!("\\@currname"),
+      None,
+      Tokens!(ExplodeText!(prevname)),
+      Some(ExpandableOptions {
+        scope: Some(Scope::Global),
+        ..ExpandableOptions::default()
+      }),
+    )?;
+  }
+  if !prevext.is_empty() {
+    let restored_ext = if lookup_definition(&T_CS!("\\@currext"))?.is_some() {
+      do_expand(T_CS!("\\@currext"))?.to_string()
     } else {
-      digest(T_CS!("\\lx@popfilename"))?;
-    }
-    // Restore @currname/@currext as a FALLBACK — AFTER the pop above, since
-    // latex.ltx's `\@popfilename` (and a package's patched copy, e.g.
-    // afterpackage.sty:20-28 firing `\<pkg>.sty-@dd` hooks) reads
-    // `\@currname` as the file being FINISHED and restores from its own
-    // stack. Restoring first made a nested load's hook look up the PARENT's
-    // name (ncclatex → nccsect: ncc's `\openrightorany` never defined).
-    // Guard: `perfect_kernel_batch54::afterpackage_hook_fires_for_a_nested_load`.
-    if !prevname.is_empty() {
-      def_macro(
-        T_CS!("\\@currname"),
-        None,
-        Tokens!(ExplodeText!(prevname)),
-        None,
-      )?;
-    }
-    if !prevext.is_empty() {
+      String::new()
+    };
+    if restored_ext != prevext {
       def_macro(
         T_CS!("\\@currext"),
         None,
         Tokens!(ExplodeText!(prevext)),
-        None,
-      )?;
-    }
-    // Verify @currname was correctly restored, and force-fix if not
-    let restored_name = if lookup_definition(&T_CS!("\\@currname"))?.is_some() {
-      do_expand(T_CS!("\\@currname"))?.to_string()
-    } else {
-      String::new()
-    };
-    if !prevname.is_empty() && restored_name != prevname {
-      // @popfilename may have popped a stale entry; force correct value
-      def_macro(
-        T_CS!("\\@currname"),
-        None,
-        Tokens!(ExplodeText!(prevname)),
         Some(ExpandableOptions {
           scope: Some(Scope::Global),
           ..ExpandableOptions::default()
         }),
       )?;
     }
-    if !prevext.is_empty() {
-      let restored_ext = if lookup_definition(&T_CS!("\\@currext"))?.is_some() {
-        do_expand(T_CS!("\\@currext"))?.to_string()
-      } else {
-        String::new()
-      };
-      if restored_ext != prevext {
-        def_macro(
-          T_CS!("\\@currext"),
-          None,
-          Tokens!(ExplodeText!(prevext)),
-          Some(ExpandableOptions {
-            scope: Some(Scope::Global),
-            ..ExpandableOptions::default()
-          }),
-        )?;
-      }
-    }
-    reset_options()?;
   }
-  // No handleoptions=false cleanup needed: we never mutated
-  // \@currname/\@currext on that path (matching Perl).
   Ok(())
 }
 

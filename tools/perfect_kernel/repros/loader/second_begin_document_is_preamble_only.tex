@@ -1,0 +1,11 @@
+% witness: synthetic (revHOOKINIT finding 6; the 30k census's second \begin{document}s, 1205.6201, sit in a conditional's other branch)
+% oracle:  pdflatex 1 `!` (LaTeX Error: Can be used only in preamble); "First. Second."
+% engines: Perl 0 errors; rust base 0 errors; fix/qa90-preamble-cmds 1 error
+% expect:  1 error, 0 warnings; "First." and "Second." kept
+% status:  GREEN (fix/qa90-preamble-cmds: `\document` is in latex.ltx's `\@preamblecmds`, OD #226)
+\documentclass{article}
+\begin{document}
+First.
+\begin{document}
+Second.
+\end{document}

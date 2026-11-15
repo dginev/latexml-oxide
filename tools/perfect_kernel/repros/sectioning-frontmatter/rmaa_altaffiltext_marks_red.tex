@@ -14,7 +14,10 @@
 %          abstract in place of the English
 % expect:  0 errors, 0 warnings; three creators, each with the affiliations its marks request, in order; the two
 %          abstracts; the keywords, both entries; the toc title
-% status:  RED (int116a) -> GREEN (86b)
+% engines: rust main b72bf540ff = 0 errors, 4 warnings ("unanswered_mark_lost": the altaffil marks "altaffil:1",
+%          "altaffil:2" not shown on the names), the three creators and their alternate affiliations kept
+% status:  RED (int116a) -> GREEN (86b) -> RED (b72bf540ff; nov02 green)
+% moves:   post-merge (#904; LOSTC: reach below ~500)
 % preload: ar5iv.sty
 \begin{filecontents*}{rmaa.cls}
 % A minimal stand-in for rmaa.cls v3.24 (2007/09/14, Instituto de Astronomia, UNAM), written for a latexml-oxide test:
