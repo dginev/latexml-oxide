@@ -4160,10 +4160,17 @@ pub fn read_value(value_type: RegisterType) -> Result<RegisterValue> {
       static TOKEN_CSNAME: Lazy<Token> = Lazy::new(|| T_CS!("\\csname"));
       let token = read_non_space()?.unwrap_or(*TOKEN_RELAX);
       if token.defined_as(&TOKEN_CSNAME) {
-        Ok(read_cs_name()?.into())
-      } else {
-        Ok(token.into())
+        return Ok(read_cs_name()?.into());
       }
+      // tex.web §577 `scan_font_ident`'s `def_family` branch: `\textfont9=\textfont1` is family 1's font (the
+      // token registers are the family ones; Perl took `\textfont` and left the "1" to print, 2511.21986)
+      if let Some(defn) = lookup_register_definition(&token)
+        && matches!(defn.register_type(), Some(RegisterType::Token))
+      {
+        let args = defn.read_arguments()?;
+        return Ok(defn.value_of(args).unwrap_or_else(|| token.into()));
+      }
+      Ok(token.into())
     },
     RegisterType::CharDef => Ok(read_number()?.into()),
     RegisterType::Any => Ok(read_arg(ExpansionLevel::Off)?.into()),

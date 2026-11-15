@@ -143,7 +143,8 @@ impl Default for InputDefinitionOptions {
 /// and :18867-18875 `\UseOneTimeHook{package/<name>/after}` +
 /// `\UseHook{package/after}` after its `-h@@k`; `\InputIfFileExists`'
 /// `\@input@file@exists@with@hooks` adds `file/<name>.<ext>/before|after`
-/// and `file/before|after`. Perl fires none of them (Package.pm L2620-2655),
+/// and `file/before|after`, plain `\UseHook`s whose `after` pair runs ahead of
+/// the `-h@@k` (`when` = `file/after`). Perl fires none of them (Package.pm L2620-2655),
 /// so `\AddToHook{class/scrbook/after}{…}` (tudapub.cls hooking scrbook's
 /// `\addchap`, DEMO-TUDaPhD) never ran. Only when lthooks is loaded
 /// (`\UseHook` defined) and only for package/class loads. Guard:
@@ -162,20 +163,23 @@ fn use_load_hooks(name: &str, as_type: &str, when: &str) -> Result<()> {
     return Ok(());
   }
   let kind = if as_type == "cls" { "class" } else { "package" };
-  let code = if when == "before" {
-    [
+  // The file hooks are plain `\UseHook`s (latex.ltx:19668-19673), the package/class ones one-time (:18843-18848)
+  let code = match when {
+    "before" => vec![
       use_hook(&s!("{kind}/before"), false),
       use_hook(&s!("{kind}/{name}/before"), true),
       use_hook("file/before", false),
-      use_hook(&s!("file/{name}.{as_type}/before"), true),
-    ]
-  } else {
-    [
-      use_hook(&s!("file/{name}.{as_type}/after"), true),
+      use_hook(&s!("file/{name}.{as_type}/before"), false),
+    ],
+    // `\InputIfFileExists`' end, ahead of the load's `-h@@k` (:18865)
+    "file/after" => vec![
+      use_hook(&s!("file/{name}.{as_type}/after"), false),
       use_hook("file/after", false),
+    ],
+    _ => vec![
       use_hook(&s!("{kind}/{name}/after"), true),
       use_hook(&s!("{kind}/after"), false),
-    ]
+    ],
   }
   .concat();
   digest(crate::mouth::tokenize_internal(TeXString::assembled(code)))?;
@@ -972,6 +976,9 @@ fn input_definitions_impl(
   // load its same-named raw counterpart via `noltxml=>1`.
   if !options.reloadable && already_handled(&filename) {
     // Already-loaded early return: emit no load note (nothing was loaded).
+    if options.handleoptions {
+      pop_load_frame(pushpop, file_stack_pushed, &prevname, &prevext)?;
+    }
     return Ok(());
   }
 
@@ -1415,13 +1422,19 @@ fn input_definitions_impl(
       // the skipped read left `\__tikzlings_process_line:w #1^^M` scanning
       // the enclosing document to its end. Guard:
       // `perfect_kernel_batch52::input_rereads_loaded_sty`.
+      if options.handleoptions {
+        pop_load_frame(pushpop, file_stack_pushed, &prevname, &prevext)?;
+      }
       return Err(s!("Not loaded by this call: {}", filename).into());
     } else if !lookup_bool(&s!("{filename}_loaded")) && !lookup_bool(&s!("{filename}_raw_loaded")) {
       if options.noerror {
         // With noerror: don't mark as loaded and return Err so callers can
         // try fallback names (e.g. tikzlibrary → pgflibrary). Matches Perl's
         // InputDefinitions which returns undef on not-found even with noerror=>1.
-        // Nothing loaded → emit no load note.
+        // Nothing loaded → emit no load note; undo the push (a missing class's OmniBus fallback kept `\@currext` `cls`).
+        if options.handleoptions {
+          pop_load_frame(pushpop, file_stack_pushed, &prevname, &prevext)?;
+        }
         return Err(s!("File not found: {}", filename).into());
       }
       // Perl Package.pm L2679 / L2715: maybeRequireDependencies($name, $type)
@@ -1493,7 +1506,8 @@ fn input_definitions_impl(
       // Guard: `perfect_kernel_batch54::at_end_of_package_hook_runs_with_at_letter`.
       let saved_at = lookup_catcode('@');
       assign_catcode('@', Catcode::LETTER, None);
-      let hook = digest(T_CS!(s!("\\{name}.{as_type}-h@@k")))
+      let hook = use_load_hooks(name, &as_type, "file/after")
+        .and_then(|_| digest(T_CS!(s!("\\{name}.{as_type}-h@@k"))))
         .and_then(|_| unprocessed_options(name, &as_type))
         .and_then(|_| use_load_hooks(name, &as_type, "after"));
       assign_catcode('@', saved_at.unwrap_or(Catcode::OTHER), None);
@@ -1536,82 +1550,95 @@ fn input_definitions_impl(
         ))))?;
       }
     }
-    if file_stack_pushed {
-      digest(T_CS!("\\@expl@@@filehook@file@pop@@"))?;
-    }
-    // Perl-faithful: Package.pm:2637 —
-    //   Digest(($pushpop ? T_CS('\@popfilename') : T_CS('\lx@popfilename')));
-    // Pair with the dispatched push above: the SAME `$pushpop` decision, taken
-    // before the push (see the declaration at the `handleoptions` branch), so a
-    // load that defines `\@popfilename` mid-way still pops the stack it pushed.
-    if pushpop {
-      digest(T_CS!("\\@popfilename"))?;
+    pop_load_frame(pushpop, file_stack_pushed, &prevname, &prevext)?;
+    reset_options()?;
+  }
+  // No handleoptions=false cleanup needed: we never mutated
+  // \@currname/\@currext on that path (matching Perl).
+  Ok(())
+}
+
+/// The end of a `handleoptions` load (Package.pm:2652-2654): pop what `before_input_handle_options` pushed and restore
+/// `\@currname`/`\@currext`, also when the load found nothing to read (Perl pushes only once the file is found; TeX pops a
+/// missing file too, latex.ltx:18363 and :18801).
+fn pop_load_frame(
+  pushpop: bool,
+  file_stack_pushed: bool,
+  prevname: &str,
+  prevext: &str,
+) -> Result<()> {
+  if file_stack_pushed {
+    digest(T_CS!("\\@expl@@@filehook@file@pop@@"))?;
+  }
+  // Perl-faithful: Package.pm:2654 —
+  //   Digest(($pushpop ? T_CS('\@popfilename') : T_CS('\lx@popfilename')));
+  // Pair with the dispatched push above: the SAME `$pushpop` decision, taken
+  // before the push (see the declaration at the `handleoptions` branch), so a
+  // load that defines `\@popfilename` mid-way still pops the stack it pushed.
+  if pushpop {
+    digest(T_CS!("\\@popfilename"))?;
+  } else {
+    digest(T_CS!("\\lx@popfilename"))?;
+  }
+  // Restore @currname/@currext as a FALLBACK — AFTER the pop above, since
+  // latex.ltx's `\@popfilename` (and a package's patched copy, e.g.
+  // afterpackage.sty:20-28 firing `\<pkg>.sty-@dd` hooks) reads
+  // `\@currname` as the file being FINISHED and restores from its own
+  // stack. Restoring first made a nested load's hook look up the PARENT's
+  // name (ncclatex → nccsect: ncc's `\openrightorany` never defined).
+  // Guard: `perfect_kernel_batch54::afterpackage_hook_fires_for_a_nested_load`.
+  if !prevname.is_empty() {
+    def_macro(
+      T_CS!("\\@currname"),
+      None,
+      Tokens!(ExplodeText!(prevname)),
+      None,
+    )?;
+  }
+  if !prevext.is_empty() {
+    def_macro(
+      T_CS!("\\@currext"),
+      None,
+      Tokens!(ExplodeText!(prevext)),
+      None,
+    )?;
+  }
+  // Verify @currname was correctly restored, and force-fix if not
+  let restored_name = if lookup_definition(&T_CS!("\\@currname"))?.is_some() {
+    do_expand(T_CS!("\\@currname"))?.to_string()
+  } else {
+    String::new()
+  };
+  if !prevname.is_empty() && restored_name != prevname {
+    // @popfilename may have popped a stale entry; force correct value
+    def_macro(
+      T_CS!("\\@currname"),
+      None,
+      Tokens!(ExplodeText!(prevname)),
+      Some(ExpandableOptions {
+        scope: Some(Scope::Global),
+        ..ExpandableOptions::default()
+      }),
+    )?;
+  }
+  if !prevext.is_empty() {
+    let restored_ext = if lookup_definition(&T_CS!("\\@currext"))?.is_some() {
+      do_expand(T_CS!("\\@currext"))?.to_string()
     } else {
-      digest(T_CS!("\\lx@popfilename"))?;
-    }
-    // Restore @currname/@currext as a FALLBACK — AFTER the pop above, since
-    // latex.ltx's `\@popfilename` (and a package's patched copy, e.g.
-    // afterpackage.sty:20-28 firing `\<pkg>.sty-@dd` hooks) reads
-    // `\@currname` as the file being FINISHED and restores from its own
-    // stack. Restoring first made a nested load's hook look up the PARENT's
-    // name (ncclatex → nccsect: ncc's `\openrightorany` never defined).
-    // Guard: `perfect_kernel_batch54::afterpackage_hook_fires_for_a_nested_load`.
-    if !prevname.is_empty() {
-      def_macro(
-        T_CS!("\\@currname"),
-        None,
-        Tokens!(ExplodeText!(prevname)),
-        None,
-      )?;
-    }
-    if !prevext.is_empty() {
+      String::new()
+    };
+    if restored_ext != prevext {
       def_macro(
         T_CS!("\\@currext"),
         None,
         Tokens!(ExplodeText!(prevext)),
-        None,
-      )?;
-    }
-    // Verify @currname was correctly restored, and force-fix if not
-    let restored_name = if lookup_definition(&T_CS!("\\@currname"))?.is_some() {
-      do_expand(T_CS!("\\@currname"))?.to_string()
-    } else {
-      String::new()
-    };
-    if !prevname.is_empty() && restored_name != prevname {
-      // @popfilename may have popped a stale entry; force correct value
-      def_macro(
-        T_CS!("\\@currname"),
-        None,
-        Tokens!(ExplodeText!(prevname)),
         Some(ExpandableOptions {
           scope: Some(Scope::Global),
           ..ExpandableOptions::default()
         }),
       )?;
     }
-    if !prevext.is_empty() {
-      let restored_ext = if lookup_definition(&T_CS!("\\@currext"))?.is_some() {
-        do_expand(T_CS!("\\@currext"))?.to_string()
-      } else {
-        String::new()
-      };
-      if restored_ext != prevext {
-        def_macro(
-          T_CS!("\\@currext"),
-          None,
-          Tokens!(ExplodeText!(prevext)),
-          Some(ExpandableOptions {
-            scope: Some(Scope::Global),
-            ..ExpandableOptions::default()
-          }),
-        )?;
-      }
-    }
-    reset_options()?;
   }
-  // No handleoptions=false cleanup needed: we never mutated
-  // \@currname/\@currext on that path (matching Perl).
   Ok(())
 }
 
@@ -2378,7 +2405,7 @@ fn input_content_with_file_hooks(request: &str, path: &str, options: InputOption
   let push = lookup_definition(&T_CS!("\\@expl@@@filehook@file@push@@"))?.is_some() && pop;
   let after = s!(
     "{set}{}{}{}",
-    use_hook(&s!("file/{name}/after"), true),
+    use_hook(&s!("file/{name}/after"), false),
     use_hook("file/after", false),
     if push {
       "\\@expl@@@filehook@file@pop@@"
@@ -2396,7 +2423,7 @@ fn input_content_with_file_hooks(request: &str, path: &str, options: InputOption
       ""
     },
     use_hook("file/before", false),
-    use_hook(&s!("file/{name}/before"), true)
+    use_hook(&s!("file/{name}/before"), false)
   );
   gullet::unread_expansion(crate::mouth::tokenize_internal(TeXString::assembled(
     before,

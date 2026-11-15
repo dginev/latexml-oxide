@@ -6301,7 +6301,7 @@ no-adjust-everywhere breaks — cells.xml/graphrot goldens caught it).
 **Rust behavior**: the document's first `\documentclass` clears the kernel's `\chapter` before the class loads (sect01.rs
 `retract_chapter_before_class_load`; a second one loads no class in TeX and keeps the first class's chapters — in the
 preamble latex.ltx:18618 has made it `\@twoclasseserror`, in the body :18621 `\@onlypreamble\documentclass` stops it
-with "Can be used only in preamble", which we do not raise yet (SYNC_STATUS): probe rev72b/r2/dc2, memoir's two
+with "Can be used only in preamble" (#226): probe rev72b/r2/dc2, memoir's two
 chapters), so the class's own code meets it undefined, as in TeX: a raw class's
 `\@ifundefined{chapter}` takes the undefined branch (pdflatex "CLS=S.", where 72b r1 and Perl say C). The lock stays,
 with the kernel's binding kept aside as for a file's clearing `\let` (`\chapter:locked@cleared`, #569): a class's own
@@ -7298,7 +7298,7 @@ Guard `afterpage_body_undoubles_parameter_hashes`. Gemini round 10 N5, merged
 with the autoload removed.
 
 
-### 226. `\@preamblecmds` is `\@notprerr` inside a running document
+### 226. `\begin{document}` walks latex.ltx's `\@preamblecmds`: the preamble-only commands err in the body, and `\@preamblecmds` is `\@notprerr`
 
 **Perl behavior**: latex_constructs.pool.ltxml:5460 `\@preamblecmds` = `Tokens()`
 forever, `:5594` `\@onlypreamble` records nothing ("Don't bother enforcing this"),
@@ -7309,10 +7309,36 @@ license (beameruserguide: 16 of 26 chapters lost, zero errors; SHARED).
 **Rust behavior**: `\@notprerr` is defined (latex.ltx:9019) and `\document` `\let`s
 `\@preamblecmds` to it globally at the latex.ltx:9521-9522 point (`\@preamblecmds`
 is itself `\@onlypreamble`, :1228), so the probe reads as it does in LaTeX.
-`\@onlypreamble` itself stays the loose flag-only guard (sect01.rs), not a `\do` list.
-**Why**: the observable side effect raw code tests for is part of the kernel
-contract; reproducing it costs one `\let` and no per-command bookkeeping.
-Guard `preamblecmds_is_notprerr_inside_a_running_document`. Batch 56bx.
+**Rule**: `\begin{document}` walks latex.ltx's `\@preamblecmds` (:9521-9522) after its hooks; each listed
+command that is one of our Rust definitions becomes `\lx@notprerr\lx@onlypreamble@<name>`: latex.ltx's own
+`\@notprerr` Error ("Can be used only in preamble", :9019) and then the command itself, as Perl recovers
+(latex_constructs.pool.ltxml:155 `onlyPreamble`, which Perl applies to 8 commands only and with its own text).
+- The list is latex.ltx's (the dump's, 124 entries) plus each `\@onlypreamble` run in the preamble: `\@onlypreamble`
+  records `\do<cs>` as latex.ltx:1224-1226 does (Perl :5594 records nothing), and nothing once `\@preamblecmds` is
+  `\@notprerr` (:9522), so a body package load keeps lppl.tex:44's probe true. Without a dump it is Perl's 8.
+- Inside a package or class load (`\@currext` `sty`/`cls`) no Error: pdflatex never loads one after the preamble, so
+  the packages a body `\usepackage` loads in recovery add none (pdflatex: one Error); nor while a binding runs a
+  sub-file's preamble under Perl's `inPreamble` (standalone_sty.rs). The loader restores `\@currext` after every
+  load, a missing file's too (content.rs `pop_load_frame`, Package.pm:2652-2654), so under an unknown class's
+  OmniBus fallback the body is not a class load.
+- Only the kernel's definitions (origin `Pool`): a binding's replacement (docmute_sty.rs, standalone_sty.rs
+  `\documentclass`) stands for its package's re-let after the walk (docmute.sty:19, standalone.sty:738).
+- A command re-let after the walk (a renewed `document`, exam-n.cls's `\let\document\@empty`) is its own again.
+  `\document` itself stays the constructor's alias, whose identity `\begin`/`\end` read (sect01.rs): the
+  constructor's second run raises the Error.
+- Token macros in the list are left working, a gap: latex.ltx's (`\makeindex`; TeX's `\let` to `\@notprerr` would
+  print their arguments, and our loader runs `\@pushfilename`/`\@currnamestack` in the body, content.rs) and a
+  document's own (`\newcommand\myonly{M}\@onlypreamble\myonly`, pdflatex 1 Error, ours 0). RED repros
+  `loader/makeindex_in_the_body_red.tex`, `loader/document_onlypreamble_macro_in_the_body_red.tex`.
+- Perl's recovery is wrong where a later command reads the setting: a body `\includeonly{ca}` still drops `\include{cb}`,
+  which pdflatex keeps (RED `loader/includeonly_in_the_body_red/`).
+**Why**: the observable side effect raw code tests for is part of the kernel contract, and pdflatex errs on every
+listed Rust-defined command in the body; the recovery keeps what the command does instead of typesetting its
+arguments. Witnesses: synthetic (30k main files: 45 name one after `\begin{document}`, none in a branch pdflatex
+takes; 1205.6201's are a conditional's other preambles).
+Guards `preamblecmds_is_notprerr_inside_a_running_document`, `error_boundary::perfect_kernel_error_boundary`
+(rows "preamble-only commands in the body/preamble", "a second \begin{document}", "under an unknown class",
+"a body package's \@onlypreamble").
 
 ### 227. → SYNC_STATUS "Rust Error Fixes" (a port-bug fix: a `filecontents` capture ends at `\end{<current environment>}`)
 
@@ -11842,6 +11868,15 @@ placeholders, so a streamed unit with prose before its entries keeps its own hea
 (`\appendix\section{References}` keeps two headings); a last subsection's number can end up on a section-level
 bibliography; the unit's other attributes (`class`, `xml:lang`) are not carried. Guard
 `perfect_kernel_batch61::bibliography_takes_the_place_of_its_heading_unit`.
+
+**amsppt (2026-11-14).** amsppt's heads stay open for their bodies (amsppt.sty.ltxml:94-140), so its `\Refs` (and the
+bare `\ref` that opens it, `\@auto@Refs`) is placed as back matter at the place of amsppt's top unit, the `\specialhead`
+chapter (`adjust_backmatter_element`, as LaTeX's bibliography, latex_constructs.pool.ltxml:3935-3946): amsppt.sty:862-869
+sets `\Refs` as a head, not inside the last one. A `\head References\endhead` or `\specialhead References\endspecialhead`
+before it then heads it as above. Perl's `\@Refs` (amsppt.sty.ltxml:335-340) opens in place: the bibliography nests in
+the last head, under a second "References". Witnesses math0304264, q-alg9506019, math-ph9910014; repros
+amstex/amsppt_refs_close_the_heads, amstex/amsppt_specialhead_heads_the_references; guard
+`perfect_kernel_batchamsppt::amsppt_heads_and_theorems`.
 
 ### 457. etex's register-block allocators are defined on today's kernel (Perl and current pdflatex: undefined)
 
@@ -31884,6 +31919,13 @@ atveryend's commands are no-ops: every hook's code is dropped.
 `\AtBeginEnvironment{verbatim}` joins the same hook, its private store gone); `\label` runs
 `\UseHookWithArguments{label}{1}{#1}` in a group (:14943); `\include` names the file current and runs `include/before`,
 `include/<name>/before`, `/end`, `/after`, and `include/excluded` for a file `\includeonly` leaves out (:9609-9627).
+The kernel's abstract, a binding macro, runs `env/abstract/begin` inside the abstract's group before `\abstract`
+(:15354-15362) — ahead of the abstract's name and the class's replayed begin code, what it typesets heading the body —
+and `env/abstract/end` before `\end{abstract}` (:15386); an abstract that is a constructor environment runs both from
+its constructor only. `\selectfont` runs `\UseHook{selectfont}` before `\size@update` (:12580), only when the hook
+holds code (scrartcl.cls:2673's `\par@update`, everysel.sty:49), read from the hook's slots it names once;
+`file/<name>/before|after` are plain `\UseHook`s at every `\input` and load (:19668-19673), and a load's `after` pair
+runs before its `\AtEndOfPackage`/`\AtEndOfClass` code and `package/<name>/after` (:18865-18869).
 `\begin` defines `\@currenvir` (`verbatim*` its own name) before `env/<name>/begin` (:15350-15352), so the verbatim
 constructor runs its begin hooks, the kernel's and etoolbox's `@atbegin` store, after it. `enddocument/afterlastpage`, `/afteraux` and
 `/end` (:15262-15277) follow the last page, where pdflatex prints nothing they typeset: the document's own code
@@ -31908,11 +31950,18 @@ latex.ltx runs it before the `.aux` write, so a hook's `\@currentlabel` does not
 Package.pm:1920-1927; `environment_begin_hook_reads_its_environment_red`: moving it alone raised 2001.02707's
 `\AtBeginEnvironment{defn}{\begin{samepage}}` from 29 to 54 errors, so the end side moves with it); no `\begin` path
 sets `\@currenvline` (`currenvline_is_never_set_red`); a
-document's `\AtEndAfterFileList` is lost (`enddocument_info_hook_red`). **Guard**:
+document's `\AtEndAfterFileList` is lost (`enddocument_info_hook_red`); `\emph` and the other font constructors call no
+`\selectfont`, so its hook does not run there (`selectfont_hook_on_emph_red`, the macro faces); the kernel abstract
+sets no class abstract font, so a begin hook's `\large` is not undone by article's `\small`
+(`abstract_begin_hook_size_under_the_class_small_red`), and what amsart's begin hook typesets before an abstract
+ahead of `\maketitle` stays in the abstract, where pdflatex prints it before the title
+(`amsart_abstract_begin_hook_text_before_the_title_red`). **Guard**:
 `perfect_kernel_batchqa47a::batchqa47a_command_hook_rows` (rows `enddocument_hooks_run`,
 `enddocument_hook_commands_run`, `verbatim_env_hooks_run`, `verbatim_begin_hook_reads_its_environment`,
 `label_hook_runs`, `include_hooks_run`, `label_hook_opens_no_paragraph`, `cleveref_firstaid_not_registered`,
-`cleveref_firstaid_absent_removes_nothing`).
+`cleveref_firstaid_absent_removes_nothing`, `file_hooks_run_at_every_input`, `file_hooks_order_around_a_package`,
+`abstract_env_hooks_run`, `selectfont_hook_runs`, `abstract_end_hook_once_in_a_constructor_abstract`,
+`abstract_begin_hook_runs_before_the_name`).
 
 ### 1045. Every box's width, height and depth are the CSS custom properties `--ltx-box-width`, `--ltx-box-height`, `--ltx-box-depth` (Perl: `style="width:…;height:…;vertical-align:…"`, or dropped)
 
@@ -33448,3 +33497,4 @@ keytheorems.sty:994, :1075-1079 stores the head through `\deferred@thm@head` for
 binding's theorem never calls `\deferred@thm@head`: it makes the head an `ltx:title` before the box. latexml_contrib/src/keytheorems_sty.rs reads
 the file raw and leaves the macro empty, so the box's title slot is empty and the head is kept. Witnesses tutodoc-en, tutodoc-fr. Guard
 `perfect_kernel_batchm3::a_tcolorbox_keytheorem_keeps_its_head_and_body`.
+and the row `file_hooks_run_at_every_input` (#1048: `file/<name>/before|after` plain `\UseHook`s, latex.ltx:19669/19672).

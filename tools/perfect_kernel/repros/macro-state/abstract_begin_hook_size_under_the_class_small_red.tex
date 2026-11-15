@@ -1,0 +1,17 @@
+% mechanism: article's `\abstract` sets `\small` after `env/abstract/begin` ran (latex.ltx:15354-15362), so a hook's
+%   `\large` gives way; the kernel abstract never applies the class's `\small` (Perl's neither), so the hook's size
+%   stays. Not the hook's order (QAB2b runs it first): the class's abstract font is not modelled.
+% witness: synthetic (revQAB2 `p1/lg.tex`)
+% status:  RED (QAB2b: <text fontsize="120%">Abstract text.</text>)
+% oracle:  pdflatex 0 `!`; "Abstract Abstract text. After." with the text in `\small`
+% engines: rust QAB2b: the red line; Perl 0.8.8: no hooks, upright normal size.
+% expect:  0 errors, 0 warnings; the abstract's text without fontsize="120%"
+% moves:   post-merge
+\documentclass{article}
+\AddToHook{env/abstract/begin}{\large}
+\begin{document}
+\begin{abstract}
+Abstract text.
+\end{abstract}
+After.
+\end{document}
