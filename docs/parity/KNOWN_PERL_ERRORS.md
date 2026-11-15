@@ -21707,3 +21707,23 @@ offer.
 A\textfont9=\textfont1 B\scriptfont9=\scriptfont1 C\setbox0=\hbox{$0$}D
 \end{document}
 ```
+
+## 1273. A `\parbox` sets `\textwidth` and `\columnwidth` to its width
+
+latex.ltx:16249-16253 `\@iiiparbox` sets `\hsize` to the box's width and runs `\@parboxrestore`, whose
+`\@arrayparboxrestore` sets `\linewidth\hsize` and `\@totalleftmargin\z@` (:16272-16288); `\textwidth` and `\columnwidth`
+stay the enclosing ones. Only a minipage sets them (`\@iiiminipage`, :16312-16313). Perl's `\parbox` macro assigns
+`\hsize=#4\textwidth\hsize\columnwidth\hsize` (latex_constructs.pool.ltxml:4746), so a width stated against the page
+inside a parbox is a fraction of the box. Minimal trigger:
+`\parbox{0.44\textwidth}{\includegraphics[width=0.44\textwidth]{a}\the\textwidth}` — pdflatex "345.0pt" and a
+151.8pt graphic; Perl "151.80084pt" and 66.79pt. About 1,640 arXiv papers state a page width in a parbox's body (QA14
+census). Fixed in Rust (QA14A): `\lx@parbox@restore` (latex_constructs/sect12.rs) sets `\hsize`, `\linewidth` and
+`\@totalleftmargin` only, and the panel grid rule reads a parbox's content again against the enclosing `\textwidth` and
+`\columnwidth` (`declare_panel_parbox_line`, `BoxSets::Line`; a minipage's against its own). `beforeFloat`'s
+`\hsize := \columnwidth` (:3377), which Perl runs for every float, is assigned only where the code models
+`\@xfloat`/`\@dblfloat` (latex.ltx:17482, :17556; `before_xfloat`, latex_constructs/mod.rs), not by a sub-float
+(subcaption's, subfig's `\subfloat`, subfigure.sty's `\subfigure`), wrapfig or floatflt (which set `\hsize` to their own
+width), nor algorithm2e's or listings' floating forms (which start where `\hsize` is `\columnwidth` already): a
+sub-float or a captioned listing in a parbox or a `p` cell reads the box's `\hsize` (witnesses 2010.06608 S4.F8,
+2007.14228 S5.F7).
+Witnesses 1412.0314, 1711.09469. Guard `perfect_kernel_batchqa14a::parbox_sets_only_the_line_width`. An upstream offer.

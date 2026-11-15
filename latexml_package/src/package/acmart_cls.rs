@@ -3,7 +3,7 @@
 use latexml_core::definition::origin::{DefinitionOrigin, OriginGuard};
 
 use crate::{
-  engine::latex_constructs::{after_float, before_float},
+  engine::latex_constructs::{after_float, before_xfloat},
   float_description::{define_float_description, float_description_tokens},
   package::caption_sty,
   prelude::*,
@@ -388,7 +388,7 @@ yysep={,},notesep={, }}}
     "<ltx:figure xml:id='#id' inlist='#inlist' class='ltx_teaserfigure' ?#1(placement='#1')>#tags#body</ltx:figure>",
     // A plain closer runs away in TeX: `\Collect@Body` collects the body up to `\end{X}` (acmart.cls:991-1003, :2201-2202).
     tex_group => { TexGroup::Box },
-    before_digest => { before_float("figure", None)?; engine::latex_constructs::reset_float_box()?; },
+    before_digest => { before_xfloat("figure", false)?; },
     after_digest => sub[whatsit] { after_float(whatsit); },
     mode => "internal_vertical"
   );
@@ -424,7 +424,7 @@ yysep={,},notesep={, }}}
     "<ltx:figure xml:id='#id' inlist='#inlist' class='ltx_marginfigure' ?#1(placement='#1')>#tags#body</ltx:figure>",
     // A plain closer runs away in TeX: `\Collect@Body` collects the body up to `\end{X}` (acmart.cls:991-1003, :2201-2202).
     tex_group => { TexGroup::Box },
-    before_digest => { before_float("figure", None)?; engine::latex_constructs::reset_float_box()?; },
+    before_digest => { before_xfloat("figure", false)?; },
     after_digest => sub[whatsit] { after_float(whatsit); },
     mode => "internal_vertical"
   );
@@ -433,7 +433,7 @@ yysep={,},notesep={, }}}
     "<ltx:table xml:id='#id' inlist='#inlist' class='ltx_margintable' ?#1(placement='#1')>#tags#body</ltx:table>",
     // A plain closer runs away in TeX: `\Collect@Body` collects the body up to `\end{X}` (acmart.cls:991-1003, :2201-2202).
     tex_group => { TexGroup::Box },
-    before_digest => { before_float("table", None)?; engine::latex_constructs::reset_float_box()?; },
+    before_digest => { before_xfloat("table", false)?; },
     after_digest => sub[whatsit] { after_float(whatsit); },
     mode => "internal_vertical"
   );
