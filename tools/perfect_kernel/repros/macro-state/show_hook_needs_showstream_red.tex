@@ -1,0 +1,14 @@
+% `\ShowHook` (lthooks' `\hook_show:n`, latex.ltx) prints through `\tex_showstream:D`, pdfTeX's `\showstream`
+%   (TL 2021+), which LaTeXML does not define: 11 errors and the hook's description typeset into the text.
+% witness: synthetic (brief HOOKINIT probe)
+% status:  RED
+% moves:   post-merge
+% oracle:  pdflatex 0 `!`; "xy" (the description goes to the log)
+% engines: rust 5e02406406 and HOOKINIT: 11 errors, 10 warnings, "x\tex_showstream:D… The hook 'h': …y"; Perl: the same
+% expect:  0 errors, 0 warnings; <p>xy</p>
+\documentclass{article}
+\NewHook{h}
+\AddToHook{h}{A}
+\begin{document}
+x\ShowHook{h}y
+\end{document}

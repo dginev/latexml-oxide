@@ -9,7 +9,8 @@
 //! QA47B adds the kernel hooks LaTeX runs where LaTeXML's bindings stand in for its macros: `env/document/end` and the
 //! late `enddocument/*` hooks, `env/verbatim/begin|end`, `label`, `\include`'s file hooks (RED catalog:
 //! `enddocument_info_hook_red`, `label_hook_sets_the_reference_text_red`, `currenvline_is_never_set_red`,
-//! `environment_begin_hook_reads_its_environment_red`).
+//! `environment_begin_hook_reads_its_environment_red`). HOOKINIT: lthooks' document mode from the first
+//! `\begin{document}` on (RED catalog: `show_hook_needs_showstream_red`, `file_hooks_run_at_every_input_red`).
 use latexml::util::test::{
   RequirementTable, Requirements, assert_element, check_table, convert_with, current_test_name,
 };
@@ -476,6 +477,51 @@ const ROWS: &[Row] = &[
       "xml:id=\"p1.1\"",
       "<p xml:id=\"p1.1\">Text.\n[EX][OX]\n[IB][ICB]Chapter text.\n[ICE][IE][ICA][IA]\nMore.</p>",
     )],
+  },
+  // HOOKINIT: the first `\begin{document}` runs `\@expl@@@initialize@all@@`, so a body `\UseHook` expands to its code
+  // (red: "macro:-&gt;\hook_use:n {myhook}").
+  Row {
+    name:     "use_hook_expands_in_the_body",
+    tex:      include_str!(
+      "../../../tools/perfect_kernel/repros/macro-state/use_hook_expands_in_the_body.tex"
+    ),
+    counts:   (0, 0),
+    messages: &[],
+    absent:   &[],
+    elements: &[(
+      "p",
+      "xml:id=\"p1.1\"",
+      "<p xml:id=\"p1.1\">A[<text font=\"typewriter\" xml:id=\"p1.1.1\">macro:-&gt;XYZ</text>] [K] [B(late)]\n[<text \
+       font=\"typewriter\" xml:id=\"p1.1.2\">macro:-&gt;KB(late)</text>]</p>",
+    )],
+  },
+  // HOOKINIT: in lthooks' document mode a body add rebuilds its hook at once (`\__hook_update_hook_code:n`), a path the
+  // preamble mode never ran (green on the base, whose `\UseHook` rebuilt at each use).
+  Row {
+    name:     "hook_code_added_in_the_body_runs",
+    tex:      include_str!(
+      "../../../tools/perfect_kernel/repros/macro-state/hook_code_added_in_the_body_runs.tex"
+    ),
+    counts:   (0, 0),
+    messages: &[],
+    absent:   &[],
+    elements: &[(
+      "p",
+      "xml:id=\"p1.1\"",
+      "<p xml:id=\"p1.1\">(begin)FxG\n\n(begin)(next)FyG\n(begin)FzG\nE\n\nN\n\n[BA]\n\n(now)\n[]</p>",
+    )],
+  },
+  // HOOKINIT: a second `\begin{document}` (a renewed `\document`) does not initialize again on an lthooks whose
+  // `\__hook_post_initialization_defs:` never ends as `\prg_do_nothing:` (pre-2023; red: "B2H").
+  Row {
+    name:     "hooks_initialize_once_on_an_older_lthooks",
+    tex:      include_str!(
+      "../../../tools/perfect_kernel/repros/macro-state/hooks_initialize_once_on_an_older_lthooks.tex"
+    ),
+    counts:   (0, 0),
+    messages: &[],
+    absent:   &[],
+    elements: &[("p", "xml:id=\"p1.1\"", "<p xml:id=\"p1.1\">A1H\n\nB1H</p>")],
   },
 ];
 
