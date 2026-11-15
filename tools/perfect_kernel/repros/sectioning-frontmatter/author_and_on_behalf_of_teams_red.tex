@@ -1,0 +1,19 @@
+% witness: 1002.4968 (asp2006.sty read raw: `\author{… Mai Shirahata$^4$ and Sophia Khan$^5$ on behalf of the AKARI Deep
+%          Field North and South teams}`)
+% oracle:  pdflatex 0 errors: "Ann Able1 and Bob Baker2 on behalf of the Deep Field North and South teams"
+% engines: rust main b72bf540ff = 0 errors, 0 warnings: three creators — "Ann Able", "Bob Baker" and an invented
+%          "on behalf of the Deep Field North", each with a collaboration "South teams" (the " and " inside the
+%          collaboration's words read as a name separator); nov02 = two creators, the collaboration "on behalf of the
+%          Deep Field North and South teams" on both
+% expect:  0 errors, 0 warnings; two creators "Ann Able" and "Bob Baker", the collaboration "on behalf of the Deep Field
+%          North and South teams" theirs, no creator made of its words
+% status:  RED (b72bf540ff)
+% moves:   post-merge (LOSTC: reach below ~500)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{Ann Able$^1$ and Bob Baker$^2$ on behalf of the Deep Field North and South teams}
+\maketitle
+Text.
+\end{document}

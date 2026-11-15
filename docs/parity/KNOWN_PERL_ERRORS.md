@@ -19248,7 +19248,8 @@ the block's Error, and the flush's net raises no command the flush's code assign
 defining it (`reading::HeldUndefined`): 0 Errors, the affiliation "Univ X" (OXIDIZED_DESIGN_DIVERGENCES #983). A
 command with an argument the title code defines, right after an e-mail call (pazhastl.cls:112's `\def\address##1{…}`:
 `\author{Ann Able\email{ann@x.org}\address{1}}`, Perl 1 Error `\address`), is no real undefined command for the e-mail
-piece either (`content::Field::held_undefined_at`): 0 Errors, `\address{1}` the name's mark (1108.4222, 2607.07582; PC3).
+piece either (the observer's rehearsal reads it under the title code's definition, `author_markup_begin`, OD
+#941): 0 Errors, `\address{1}` the name's mark (1108.4222, 2607.07582; PC3, LOSTF).
 
 ## 1220. REVTeX: an author block repeated after `\maketitle` (a supplement) puts every repeated contact on the last author
 

@@ -492,6 +492,9 @@ mod perfect_kernel_batchlo3;
 mod perfect_kernel_batchlo4;
 /// LOGO1: what a constructor prints of its own (`\LaTeX`, `\TeX`) is ink of the name or line it is in (amsldoc).
 mod perfect_kernel_batchlogo1;
+/// LOSTF (OD ruling 13): three frontmatter content regressions — fcs's corresponding mark, vmsta's name parts, the pazh/astl
+/// title code's marks; OD #905, #802, #941.
+mod perfect_kernel_batchlostf;
 mod perfect_kernel_batchm1;
 mod perfect_kernel_batchm3;
 /// MACSYNC: the binding macros mean what Perl's same-named API means (AUDMAC).
