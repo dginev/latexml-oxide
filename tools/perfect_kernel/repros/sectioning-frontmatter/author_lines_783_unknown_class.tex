@@ -1,0 +1,17 @@
+% witness: synthetic (unknown class: OmniBus)
+% mechanism: issue #783 — a contact the author block prints on a line under the name (Perl's `\\` line,
+%   Base_Utility.pool.ltxml:722-726) carries class `ltx_author_line` (emit.rs `on_an_author_line`; fallback.rs; kind.rs
+%   for an e-mail split out of such a line), which LaTeXML.css shows under the name instead of the starred pop-up.
+% oracle:  pdflatex 3 errors (nosuchclass.cls not found); as article: Ann Able / Univ. of A / Dept. of B
+% engines: base (main 2778c0d67e) = 0 errors, 1 warning (missing class); no class
+% expect:  both affiliation contacts class="ltx_author_line"; 1 warning
+% status:  RED (base) -> GREEN (fix/issue-783); guard 06_cluster_frontmatter::frontmatter_author_lines_783
+% preload: ar5iv.sty
+\documentclass{nosuchclass}
+\begin{document}
+\title{Unknown class}
+\author{Ann Able \\ Univ.\ of A \\ Dept.\ of B}
+\date{}
+\maketitle
+text
+\end{document}

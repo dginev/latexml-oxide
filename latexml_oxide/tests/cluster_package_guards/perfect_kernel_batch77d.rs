@@ -51,6 +51,14 @@ pub(super) fn creator(first: bool, name: &str, tail: &str) -> String {
   format!(r#"<creator {before}role="author"> <personname>{name}</personname> {tail}</creator>"#)
 }
 
+/// `contact`, a contact the author block prints on a `\\` line under the name: its first `<contact ` gains
+/// `class="ltx_author_line"` (issue #783, OXIDIZED_DESIGN_DIVERGENCES #1051).
+pub(super) fn author_line(contact: impl AsRef<str>) -> String {
+  let contact = contact.as_ref();
+  assert!(contact.contains("<contact "), "not a contact: {contact}");
+  contact.replacen("<contact ", r#"<contact class="ltx_author_line" "#, 1)
+}
+
 /// No personname holds a separator: the names are apart.
 pub(super) fn assert_no_merged_names(xml: &str) {
   for piece in xml.split("<personname>").skip(1) {
@@ -107,8 +115,11 @@ fn lowercased_separator_macro_separates_names() {
 fn comma_in_mark_math_separates_names_and_keeps_marks() {
   let xml = convert_repro!("author_comma_in_mark_math.tex");
   assert_no_merged_names(&xml);
-  let univ =
-    |u: &str| format!("<contact name=\"Affiliation: \" role=\"affiliation\">Univ {u}</contact>");
+  let univ = |u: &str| {
+    format!(
+      "<contact class=\"ltx_author_line\" name=\"Affiliation: \" role=\"affiliation\">Univ {u}</contact>"
+    )
+  };
   assert_eq!(creators(&xml), [
     creator(true, "Ann Able", &univ("A")),
     creator(false, "Bob Baker", &univ("A")),

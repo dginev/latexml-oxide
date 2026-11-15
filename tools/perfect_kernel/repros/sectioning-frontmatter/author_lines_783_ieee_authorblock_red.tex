@@ -1,0 +1,17 @@
+% witness: synthetic (IEEEtran's \IEEEauthorblockA, a class's own contact call)
+% mechanism: issue #783's layout reaches only the contacts of a plain `\author{…\\…}` (class `ltx_author_line`); a
+%   class's contact call is a setter, so its lines stay behind the starred pop-up although the PDF prints them under
+%   the name (DG 2026-11-14 scoped #783 to authors without a class's own affiliation).
+% oracle:  pdflatex 0 errors; "Ann Able / Univ. of A / ann@a.edu" on three centred lines
+% engines: fix/issue-783 = the affiliation and e-mail contacts without class, HTML "Ann Able*" (pop-up)
+% expect:  the lines shown under the name (a class-level layout rule, or the class's contacts marked as lines)
+% status:  RED (catalog; no guard)
+% moves:   post-merge
+% preload: ar5iv.sty
+\documentclass[conference]{IEEEtran}
+\begin{document}
+\title{IEEE}
+\author{\IEEEauthorblockN{Ann Able}\IEEEauthorblockA{Univ.\ of A\\ ann@a.edu}}
+\maketitle
+text
+\end{document}

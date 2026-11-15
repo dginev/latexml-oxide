@@ -42,8 +42,8 @@ fn an_orcid_link_printing_the_name_is_written_once() {
     (
       repro!("orcid_link_names_in_one_author_line_written_once"),
       &[
-        "<creator role=\"author\">\n    <personname><ref class=\"ltx_href\" href=\"https://orcid.org/0000-0001-0000-0001\">Ann Able</ref></personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ X</contact>\n  </creator>",
-        "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname><ref class=\"ltx_href\" href=\"https://orcid.org/0000-0002-0000-0002\">Bob Baker</ref></personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ Y</contact>\n  </creator>",
+        "<creator role=\"author\">\n    <personname><ref class=\"ltx_href\" href=\"https://orcid.org/0000-0001-0000-0001\">Ann Able</ref></personname>\n    <contact class=\"ltx_author_line\" name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ X</contact>\n  </creator>",
+        "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname><ref class=\"ltx_href\" href=\"https://orcid.org/0000-0002-0000-0002\">Bob Baker</ref></personname>\n    <contact class=\"ltx_author_line\" name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ Y</contact>\n  </creator>",
       ][..],
     ),
   ] {

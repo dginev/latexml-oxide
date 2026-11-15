@@ -89,7 +89,7 @@ fn a_paragraph_in_a_box_keeps_a_contacts_markup() {
       repro!("authblk_minipage_paragraph_keeps_a_typewriter_email"),
       (0, 0),
       rows(&[&["Ann Able 1", "email=a@x.org", "affiliation=Univ X"]]),
-      "<contact name=\"Email:\u{a0}\" role=\"email\"><text font=\"typewriter\" xml:id=\"id2\">a@x.org</text></contact>",
+      "<contact class=\"ltx_author_line\" name=\"Email:\u{a0}\" role=\"email\"><text font=\"typewriter\" xml:id=\"id2\">a@x.org</text></contact>",
     ),
     (
       "parbox href",

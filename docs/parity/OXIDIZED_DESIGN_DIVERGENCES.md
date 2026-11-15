@@ -31881,6 +31881,37 @@ a plain `\UseHook`; post-merge).
 
 ---
 
+### 1051. A line of the author block under the name is a contact of class `ltx_author_line` (issue #783)
+
+**Principle.** The PDF prints `\author{name\\school\\dept}`'s lines centred under the name (article.cls:246-248, `\@maketitle`'s
+`tabular[t]{c}`; book.cls and report.cls the same); where a contact prints is a fact of that contact, so it goes on the contact, in Perl's own keyvals
+(`\lx@add@affiliation[…]`, Base_Utility.pool.ltxml:645). Related: #156 (a `\thanks` is a marked note, untouched), #52
+(the author block's reading), #412 (a creator laid out by its role's CSS).
+**Perl.** Each `\\` line is `\lx@add@affiliation{line}` (Base_Utility.pool.ltxml:722-726), and since #2767 (`23f3acfa`)
+LaTeXML.css shows every author's contacts only in a hover pop-up behind a blue star unless the document is
+`ltx_authors_multiline` (KNOWN_PERL_ERRORS #1268); the XML cannot tell the line from a setter's `\affiliation{}`.
+**Rust.** A contact the emitter writes from the block's own text, where the last line break or column before it is a
+line break and no note holds it (`emit.rs` `on_an_author_line`; a printed line holds across its text and its word
+"and", and resets only at `\\`, an `\and` command, a column break such as `\alignauthor` — 1602.06359, 2605.17295 — or
+one of the reading's names, whose line prints what follows it beside the name: IEEE's grades on a names line continued
+past `\\`, 2408.01902, 2408.02464),
+carries `class=ltx_author_line`; so does an e-mail the Kind step splits out of such a line (`kind_entry_addresses`,
+the class handed to it by the emitter as `\lx@frontmatter@itemkinded`'s e-mail keys, never read back) and each `\\`
+line of Perl's split when the reading declines (`fallback.rs`; its address line's e-mail gets none,
+`author_lines_783_declined_email_red.tex`). A setter's contact (REVTeX `\affiliation`, `\email`) and a note get none; `\\`
+lines inside a per-author class's own `\author{Name\\line}` (REVTeX, amsart) are marked too. A line printed once under
+several names (`\author{Ann, Bob, Cy \\ CMU}`) is repeated under each name, each creator keeping its own contacts
+(DG 2026-11-14; 2104.07210). LaTeXML.css (local delta after the multiline rules): outside `ltx_authors_multiline`, an
+author whose contacts are all such lines or notes is an `inline-block` card with the lines under the name, their labels
+hidden; a note contact (`\footnote` in `\author` is `\thanks`, article.cls:241, Perl's role=note contact,
+Base_Utility.pool.ltxml:331) keeps the star and shows on hover in the card's flow, so two notes, or a note and the
+lines, never cover one another (1112.2930, math0111266), and with no note there is no star; an author
+with any other contact keeps the pop-up, its labels shown; a `\thanks` note keeps its mark and pop-up. Chrome and
+Firefox at 1280/375 px. ar5iv.css already shows every
+author's contacts (`css/ar5iv.css:920`, `:940` at ar5iv-css `6dc3e97`; it does not load LaTeXML.css): no change. Offered upstream. **Guards**:
+`06_cluster_frontmatter::frontmatter_author_lines_783` (repros `sectioning-frontmatter/author_lines_783_*.tex`),
+`xslt::witnessed_css_delta::author_line_delta_stays_present`, `cluster_cli::browser_render_author_lines` (local).
+
 ## Bindings beyond Perl's tree
 
 Not divergences: Perl has no binding for these packages and classes, so there is no Perl behaviour to depart from

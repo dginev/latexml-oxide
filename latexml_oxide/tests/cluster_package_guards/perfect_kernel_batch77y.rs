@@ -22,7 +22,7 @@ use latexml::util::test::convert_with;
 
 use super::{
   perfect_kernel_batch46::{error_count, warning_count},
-  perfect_kernel_batch77d::{assert_no_merged_names, creator, creators, squash},
+  perfect_kernel_batch77d::{assert_no_merged_names, author_line, creator, creators, squash},
   perfect_kernel_batchcr8::without_candidates,
 };
 
@@ -100,18 +100,24 @@ fn link_word_columns_are_urls() {
 fn exact_spelling_outranks_a_truncated_one() {
   let xml = convert_repro!("author_email_exact_spelling_beats_truncated.tex");
   assert_no_merged_names(&xml);
-  let univ_a = affiliation("Univ A");
+  let univ_a = author_line(affiliation("Univ A"));
   assert_eq!(creators(&xml), [
     creator(
       true,
       "Yu Wang",
-      &format!("{univ_a} {}", typewriter_email("wangyu@x.edu", "id1"))
+      &format!(
+        "{univ_a} {}",
+        author_line(typewriter_email("wangyu@x.edu", "id1"))
+      )
     ),
     creator(false, "Yuxin Wang", &univ_a),
     creator(
       false,
       "Yang Li",
-      &format!("{univ_a} {}", typewriter_email("liyang@x.edu", "id2"))
+      &format!(
+        "{univ_a} {}",
+        author_line(typewriter_email("liyang@x.edu", "id2"))
+      )
     ),
     creator(false, "Yangfan Li", &univ_a),
   ]);
@@ -125,13 +131,13 @@ fn exact_spelling_outranks_a_truncated_one() {
 fn unsplittable_address_list_spells_no_one() {
   let xml = convert_repro!("author_mailto_unsplittable_list.tex");
   assert_no_merged_names(&xml);
-  let univ_a = affiliation("Univ A");
+  let univ_a = author_line(affiliation("Univ A"));
   assert_eq!(creators(&xml), [
     creator(true, "Ann Able", &univ_a),
     creator(false, "Bob Baker", &univ_a),
     creator(false, "Cat Cole", &univ_a),
     shared(&format!(
-      r#"<contact name="Email: " role="email">{}</contact>"#,
+      r#"<contact class="ltx_author_line" name="Email: " role="email">{}</contact>"#,
       href("mailto:x@y.edu", "{aable,bbaker,ccole}it@y.edu")
     )),
   ]);
@@ -196,7 +202,7 @@ fn icon_parted_from_its_link_goes_with_it() {
   // (the icon's file as the TeX tree holds it: where that tree is, aside)
   assert!(
     without_candidates(&xml).contains(
-      r#"<creator role="author"> <contact name="URL: " role="url"><text yoffset="-1.5pt" xml:id="id2"><graphics graphic="example-image" options="height=10.00002pt,keepaspectratio=true" xml:id="g1a"/></text> <ref class="ltx_url" font="typewriter" href="https://github.com/x/y">https://github.com/x/y</ref></contact> </creator>"#
+      r#"<creator role="author"> <contact class="ltx_author_line" name="URL: " role="url"><text yoffset="-1.5pt" xml:id="id2"><graphics graphic="example-image" options="height=10.00002pt,keepaspectratio=true" xml:id="g1a"/></text> <ref class="ltx_url" font="typewriter" href="https://github.com/x/y">https://github.com/x/y</ref></contact> </creator>"#
     ),
     "{xml}"
   );
@@ -218,9 +224,10 @@ fn bare_domain_link_naming_its_domain_is_an_institution() {
 fn email_label_before_a_semicolon_brace_list() {
   let xml = convert_repro!("author_email_label_semicolon_brace_list.tex");
   assert_no_merged_names(&xml);
-  let univ_a = affiliation("Univ A");
-  let email =
-    |address: &str| format!(r#"<contact name="Email: " role="email">{address}</contact>"#);
+  let univ_a = author_line(affiliation("Univ A"));
+  let email = |address: &str| {
+    format!(r#"<contact class="ltx_author_line" name="Email: " role="email">{address}</contact>"#)
+  };
   assert_eq!(creators(&xml), [
     creator(
       true,
@@ -247,10 +254,10 @@ fn email_label_before_a_semicolon_brace_list() {
 fn correspondence_label_before_two_mailto_links() {
   let xml = convert_repro!("author_correspondence_two_mailto_links.tex");
   assert_no_merged_names(&xml);
-  let univ_a = affiliation("Univ A");
+  let univ_a = author_line(affiliation("Univ A"));
   let email = |address: &str| {
     format!(
-      r#"<contact name="Correspondence: " role="email">{}</contact>"#,
+      r#"<contact class="ltx_author_line" name="Correspondence: " role="email">{}</contact>"#,
       href(&format!("mailto:{address}"), address)
     )
   };
@@ -281,22 +288,22 @@ fn link_word_surnames_stay_names() {
     creator(
       true,
       &href("https://x.org/lp", "Lawrence E. Page"),
-      &affiliation("Univ A")
+      &author_line(affiliation("Univ A"))
     ),
     creator(
       false,
       &href("https://x.org/hj", "Hans-Peter Link"),
-      &affiliation("Univ B")
+      &author_line(affiliation("Univ B"))
     ),
     creator(
       false,
       &href("https://x.org/ls", "Lucy Page-Smith"),
-      &affiliation("Univ C")
+      &author_line(affiliation("Univ C"))
     ),
     creator(
       false,
       &href("https://x.org/mc", "Mary Ann Code"),
-      &affiliation("Univ D")
+      &author_line(affiliation("Univ D"))
     ),
   ]);
 }
@@ -383,27 +390,27 @@ fn link_word_surnames_stay_names_over_any_line() {
   let xml = convert_repro!("author_linked_names_link_word_surnames_any_line_under.tex");
   assert_no_merged_names(&xml);
   assert_eq!(creators(&xml), [
-    creator(true, "Ann Able", &affiliation("Univ A")),
+    creator(true, "Ann Able", &author_line(affiliation("Univ A"))),
     creator(
       false,
       &href("https://x.org/mc", "Mary Ann Code"),
-      &typewriter_email("mcode@x.org", "id1")
+      &author_line(typewriter_email("mcode@x.org", "id1"))
     ),
     creator(
       false,
       &href("https://x.org/lp", "Lawrence Edward Page"),
-      &affiliation("Stanford, CA")
+      &author_line(affiliation("Stanford, CA"))
     ),
     creator(
       false,
       &href("https://x.org/as", "Anne-Page Smith"),
-      &affiliation("Univ B")
+      &author_line(affiliation("Univ B"))
     ),
   ]);
   let xml = convert_repro!("author_linked_name_link_word_surname_alone.tex");
   assert_no_merged_names(&xml);
   assert_eq!(creators(&xml), [
-    creator(true, "Ann Able", &affiliation("Univ A")),
+    creator(true, "Ann Able", &author_line(affiliation("Univ A"))),
     creator(false, &href("https://x.org/mc", "Mary Ann Code"), ""),
   ]);
 }
@@ -444,14 +451,14 @@ fn homepage_handle_link_is_a_url() {
       "Ann Able",
       &format!(
         "{} {}",
-        affiliation("Univ A"),
-        url(&href("https://www.annable.com", "annable"))
+        author_line(affiliation("Univ A")),
+        author_line(url(&href("https://www.annable.com", "annable")))
       )
     ),
     creator(
       false,
       "Bob Baker",
-      &url(&href("https://www.bobbaker.org", "bobbaker"))
+      &author_line(url(&href("https://www.bobbaker.org", "bobbaker")))
     ),
   ]);
 }
@@ -463,12 +470,15 @@ fn homepage_handle_link_is_a_url() {
 fn diverging_local_part_is_the_shorter_names() {
   let xml = convert_repro!("author_email_diverging_from_a_longer_name.tex");
   assert_no_merged_names(&xml);
-  let univ_a = affiliation("Univ A");
+  let univ_a = author_line(affiliation("Univ A"));
   assert_eq!(creators(&xml), [
     creator(
       true,
       "Wei Zhang",
-      &format!("{univ_a} {}", typewriter_email("zhangweiwei@x.edu", "id1"))
+      &format!(
+        "{univ_a} {}",
+        author_line(typewriter_email("zhangweiwei@x.edu", "id1"))
+      )
     ),
     creator(false, "Weiwen Zhang", &univ_a),
   ]);
@@ -487,14 +497,14 @@ fn homepage_handle_spelling_the_name_is_a_url() {
       "Ann Able",
       &format!(
         "{} {}",
-        affiliation("Univ A"),
-        url(&href("https://annable.com", "ann-able"))
+        author_line(affiliation("Univ A")),
+        author_line(url(&href("https://annable.com", "ann-able")))
       )
     ),
     creator(
       false,
       "Bob Baker",
-      &url(&href("https://www.bobbaker42.com", "bobbaker42"))
+      &author_line(url(&href("https://www.bobbaker42.com", "bobbaker42")))
     ),
   ]);
 }
@@ -507,7 +517,7 @@ fn homepage_handle_spelling_the_name_is_a_url() {
 fn organization_link_its_authors_names_run_through_is_their_affiliation() {
   let xml = convert_repro!("author_organization_link_its_authors_names_spell.tex");
   assert_no_merged_names(&xml);
-  let huawei = affiliation(&href("https://www.huawei.com", "Huawei"));
+  let huawei = author_line(affiliation(&href("https://www.huawei.com", "Huawei")));
   assert_eq!(creators(&xml), [
     creator(true, "Hua Wu", &huawei),
     creator(false, "Xiaoming Wei", &huawei),
@@ -552,11 +562,11 @@ fn link_word_surnames_stay_names_plural_or_suffixed() {
     assert_eq!(
       creators(&xml),
       [
-        creator(true, "Ann Able", &affiliation("Univ A")),
+        creator(true, "Ann Able", &author_line(affiliation("Univ A"))),
         creator(
           false,
           &href("https://x.org/p", name),
-          &affiliation("Univ B")
+          &author_line(affiliation("Univ B"))
         ),
       ],
       "{name}"

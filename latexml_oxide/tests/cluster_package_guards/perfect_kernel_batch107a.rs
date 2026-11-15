@@ -56,13 +56,19 @@ fn creators_with(tex: &str, counts: (usize, usize)) -> String {
 }
 
 /// The two authors under University of Alpha and Cy Coe under Department of Physics, University of Beta, of the split-list
-/// repros, `ann` and `bo` their e-mails after the affiliation (`bo` empty for none), `cy` Cy Coe's.
-fn alpha_beta(ann: &str, bo: &str, bo_name: &str, cy: &str) -> String {
+/// repros, `ann` and `bo` their e-mails after the affiliation (`bo` empty for none), `cy` Cy Coe's; the e-mails of
+/// class `ltx_author_line` where `lines`.
+fn alpha_beta(ann: &str, bo: &str, bo_name: &str, cy: &str, lines: bool) -> String {
+  let class = if lines {
+    r#"class="ltx_author_line" "#
+  } else {
+    ""
+  };
   let email = |address: &str| {
     if address.is_empty() {
       String::new()
     } else {
-      format!(r#"<contact name="Email: " role="email">{address}</contact> "#)
+      format!(r#"<contact {class}name="Email: " role="email">{address}</contact> "#)
     }
   };
   format!(
@@ -72,7 +78,7 @@ fn alpha_beta(ann: &str, bo: &str, bo_name: &str, cy: &str) -> String {
       r#"<creator before=" " role="author"> <personname>{}</personname> "#,
       r#"<contact name="Affiliation: " role="affiliation">University of Alpha</contact> {}</creator> "#,
       r#"<creator before=" " role="author"> <personname>Cy Coe</personname> "#,
-      r#"<contact name="Affiliation: " role="affiliation">Department of Physics, University of Beta</contact> "#,
+      r#"<contact class="ltx_author_line" name="Affiliation: " role="affiliation">Department of Physics, University of Beta</contact> "#,
       r#"{}</creator>"#
     ),
     email(ann),
@@ -99,14 +105,15 @@ fn a_local_part_spells_its_author_through_the_transliteration() {
       r#"<text font="typewriter">bo.baecker@alpha.edu</text>"#,
       "Bo Bäcker",
       r#"<text font="typewriter">cy.coe@alpha.edu</text>"#,
+      true,
     )
   );
   let author = |before: &str, name: &str, address: &str| {
     format!(
       concat!(
         r#"<creator {}role="author"> <personname>{}</personname> "#,
-        r#"<contact name="Affiliation: " role="affiliation">University of Alpha</contact> "#,
-        r#"<contact name="Email: " role="email"><text font="typewriter">{}@alpha.edu</text></contact> "#,
+        r#"<contact class="ltx_author_line" name="Affiliation: " role="affiliation">University of Alpha</contact> "#,
+        r#"<contact class="ltx_author_line" name="Email: " role="email"><text font="typewriter">{}@alpha.edu</text></contact> "#,
         r#"</creator>"#
       ),
       before, name, address
@@ -146,6 +153,7 @@ fn a_split_address_list_is_read_whatever_its_entries_spell() {
     r#"<text font="typewriter">xq.zz@alpha.edu</text>"#,
     "Bo Baker",
     r#"<text font="typewriter">cy.coe@alpha.edu</text>"#,
+    false,
   );
   assert_eq!(
     creators_with(repro!("email_list_split_unspelled_entry_glued"), (0, 0)),
@@ -180,13 +188,13 @@ fn a_split_address_list_left_unread_is_a_counted_warning() {
       r#"<creator before=" " role="author"> <personname>Bo Baker</personname> "#,
       r#"<contact name="Affiliation: " role="affiliation">University of Alpha</contact> </creator> "#,
       r#"<creator before=" " role="author"> <personname>Cy Coe</personname> "#,
-      r#"<contact name="Affiliation: " role="affiliation">Department of Physics, University of Beta<break/>"#,
+      r#"<contact class="ltx_author_line" name="Affiliation: " role="affiliation">Department of Physics, University of Beta<break/>"#,
       r#"<text font="typewriter">{ann.able,xq.zz,<break/>cy.coe}@alpha.edu (Ann)</text></contact> "#,
       r#"</creator>"#
     )
   );
   let affiliation = concat!(
-    r#"<contact name="Affiliation: " role="affiliation">University of Alpha, project "#,
+    r#"<contact class="ltx_author_line" name="Affiliation: " role="affiliation">University of Alpha, project "#,
     r#"<text font="typewriter">lib{core}<break/></text>@alpha_lab on Twitter</contact>"#
   );
   assert_eq!(
@@ -194,7 +202,7 @@ fn a_split_address_list_left_unread_is_a_counted_warning() {
     format!(
       concat!(
         r#"<creator role="author"> <personname>Ann Able</personname> {0} "#,
-        r#"<contact name="Email: " role="email"><text font="typewriter">ann.able@alpha.edu</text></contact> "#,
+        r#"<contact class="ltx_author_line" name="Email: " role="email"><text font="typewriter">ann.able@alpha.edu</text></contact> "#,
         r#"</creator> "#,
         r#"<creator before=" " role="author"> <personname>Bo Baker</personname> {0} </creator>"#
       ),
@@ -215,7 +223,7 @@ fn a_split_address_list_read_as_contacts_of_its_own_is_one_list() {
     format!(
       concat!(
         r#"<creator {}role="author"> <personname>{}</personname> "#,
-        r#"<contact name="Affiliation: " role="affiliation">{}</contact> "#,
+        r#"<contact class="ltx_author_line" name="Affiliation: " role="affiliation">{}</contact> "#,
         r#"<contact name="Email: " role="email"><text font="typewriter">{}@alpha.edu</text></contact> "#,
         r#"</creator>"#
       ),
@@ -252,13 +260,13 @@ fn alpha_three(names: [(&str, Option<&str>); 3], domain: &str, block: Option<&st
     .map(|(at, (name, address))| {
       let email = address.map_or(String::new(), |local| {
         format!(
-          r#"<contact name="Email: " role="email"><text font="typewriter">{local}@{domain}</text></contact> "#
+          r#"<contact class="ltx_author_line" name="Email: " role="email"><text font="typewriter">{local}@{domain}</text></contact> "#
         )
       });
       format!(
         concat!(
           r#"<creator {}role="author"> <personname>{}</personname> "#,
-          r#"<contact name="Affiliation: " role="affiliation">University of Alpha</contact> {}</creator>"#
+          r#"<contact class="ltx_author_line" name="Affiliation: " role="affiliation">University of Alpha</contact> {}</creator>"#
         ),
         if at == 0 { "" } else { r#"before=" " "# },
         name,
@@ -269,7 +277,7 @@ fn alpha_three(names: [(&str, Option<&str>); 3], domain: &str, block: Option<&st
   if let Some(local) = block {
     creators.push(format!(
       concat!(
-        r#"<creator role="author"> <contact name="Email: " role="email">"#,
+        r#"<creator role="author"> <contact class="ltx_author_line" name="Email: " role="email">"#,
         r#"<text font="typewriter">{}@{}</text></contact> </creator>"#
       ),
       local, domain

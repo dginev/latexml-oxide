@@ -50,11 +50,11 @@ fn article_author_href_pieces_beside_whole_link() {
   assert_eq!(
     email_contacts(&xml),
     [
-      "<contact name=\"Email:\u{a0}\" role=\"email\"><ref class=\"ltx_href\" font=\"typewriter\" \
+      "<contact class=\"ltx_author_line\" name=\"Email:\u{a0}\" role=\"email\"><ref class=\"ltx_href\" font=\"typewriter\" \
        href=\"mailto:ann@x.org\">ann@x.org</ref></contact>",
-      "<contact name=\"Email:\u{a0}\" role=\"email\"><ref class=\"ltx_href\" font=\"typewriter\" \
+      "<contact class=\"ltx_author_line\" name=\"Email:\u{a0}\" role=\"email\"><ref class=\"ltx_href\" font=\"typewriter\" \
        href=\"mailto:bob@x.org\">bob@x.org</ref></contact>",
-      "<contact name=\"Email:\u{a0}\" role=\"email\"><ref class=\"ltx_href\" font=\"typewriter\" \
+      "<contact class=\"ltx_author_line\" name=\"Email:\u{a0}\" role=\"email\"><ref class=\"ltx_href\" font=\"typewriter\" \
        href=\"mailto:cid@y.org\">cid@y.org</ref></contact>",
     ],
     "{xml}"

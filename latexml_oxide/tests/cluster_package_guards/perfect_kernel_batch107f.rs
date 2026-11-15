@@ -68,7 +68,7 @@ fn a_role_tag_after_an_address_is_its_owners_note() {
 fn a_held_correspondence_note_keeps_the_email_label() {
   assert_eq!(
     converted(repro!("email_label_correspondence_beside_thanks_note"), 0),
-    r##"<title>T</title> <creator role="author"> <personname>Ann Able</personname> <note class="ltx_note_frontmatter ltx_thanks_correspondence" role="thanks" xml:id="id1">To whom correspondence should be addressed.</note> <contact name="Affiliation: " role="affiliation">Univ A, Town</contact> <contact name="Corresponding author: " role="email">aable@a.edu</contact> </creator> <creator before=" " role="author"> <personname>Bob Baker</personname> <contact name="Affiliation: " role="affiliation">Univ A, Town</contact> </creator> <para xml:id="p1"> <p xml:id="p1.1">Text.</p> </para>"##
+    r##"<title>T</title> <creator role="author"> <personname>Ann Able</personname> <note class="ltx_note_frontmatter ltx_thanks_correspondence" role="thanks" xml:id="id1">To whom correspondence should be addressed.</note> <contact class="ltx_author_line" name="Affiliation: " role="affiliation">Univ A, Town</contact> <contact class="ltx_author_line" name="Corresponding author: " role="email">aable@a.edu</contact> </creator> <creator before=" " role="author"> <personname>Bob Baker</personname> <contact class="ltx_author_line" name="Affiliation: " role="affiliation">Univ A, Town</contact> </creator> <para xml:id="p1"> <p xml:id="p1.1">Text.</p> </para>"##
   );
 }
 
@@ -80,7 +80,7 @@ fn a_held_correspondence_note_keeps_the_email_label() {
 fn a_joined_suffix_spelling_never_breaks_a_surname_tie() {
   assert_eq!(
     converted(repro!("email_spell_joined_suffix_breaks_surname_tie"), 0),
-    r##"<title>T</title> <creator role="author"> <personname>Yi Wang</personname> <contact name="Affiliation: " role="affiliation">Univ. A</contact> <contact name="Email: " role="email"><text font="typewriter" xml:id="id1">yiwang@a.edu</text></contact> </creator> <creator before=" " role="author"> <personname>Xiaoyu Wang</personname> <contact name="Affiliation: " role="affiliation">Univ. A</contact> <contact name="Email: " role="email"><text font="typewriter" xml:id="id2">xywang@a.edu</text></contact> </creator> <para xml:id="p1"> <p xml:id="p1.1">Body.</p> </para>"##
+    r##"<title>T</title> <creator role="author"> <personname>Yi Wang</personname> <contact class="ltx_author_line" name="Affiliation: " role="affiliation">Univ. A</contact> <contact class="ltx_author_line" name="Email: " role="email"><text font="typewriter" xml:id="id1">yiwang@a.edu</text></contact> </creator> <creator before=" " role="author"> <personname>Xiaoyu Wang</personname> <contact class="ltx_author_line" name="Affiliation: " role="affiliation">Univ. A</contact> <contact class="ltx_author_line" name="Email: " role="email"><text font="typewriter" xml:id="id2">xywang@a.edu</text></contact> </creator> <para xml:id="p1"> <p xml:id="p1.1">Body.</p> </para>"##
   );
 }
 

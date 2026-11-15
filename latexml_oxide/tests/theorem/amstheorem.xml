@@ -8,7 +8,7 @@
   <title>Newtheorem and theoremstyle test</title>
   <creator role="author">
     <personname>Michael Downes</personname>
-    <contact name="Affiliation: " role="affiliation">updated by Barbara Beeton</contact>
+    <contact class="ltx_author_line" name="Affiliation: " role="affiliation">updated by Barbara Beeton</contact>
   </creator>
   <date role="creation">none</date>
   <section inlist="toc" xml:id="S1">

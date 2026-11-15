@@ -21677,6 +21677,24 @@ The rule is the resolver's (`observer/resolver`), whose decisions the emitter wr
 
 **Open (K18 step 2):** `\raisebox`'s `[height][depth]` (RED `boxes-groups/raisebox_optionals_measure_the_box.tex`), `\resizebox{1em}`'s last digits, makecell/diagbox string sizes: `docs/perfect_kernel/OPEN_ROWS.md` ODR5.
 
+## 1268. Since #2767 an `\author{name\\school}` line shows only in a hover pop-up
+
+Base_Utility.pool.ltxml:722-726 makes each `\\` line of a plain `\author` an `\lx@add@affiliation`, and #2767
+(`23f3acfa`) made LaTeXML.css's starred pop-up the default author layout (it had been opt-in, `.ltx_authors_1line`):
+the lines the PDF prints under the name show only on hover behind a blue star, and nothing in the XML tells them from
+a setter's `\affiliation{}`. Rust marks the line contacts `class=ltx_author_line` and lays them out under the name
+(OXIDIZED_DESIGN_DIVERGENCES #1051); offered upstream as the `[class=ltx_author_line]` keyval at :726 and the CSS.
+Minimal trigger (pdflatex: "name / school name / dept. name" on three lines; Perl HTML: "name*"):
+
+```latex
+\documentclass{book}
+\begin{document}
+\title{the title}
+\author{name \\ school name \\ dept. name}
+\maketitle
+\end{document}
+```
+
 ## 1269. amsppt's theorem-like blocks prefix a name amsppt.sty never prints
 
 amsppt.sty:639-688 heads `\definition`, `\remark`, `\demo` and `\example` with their argument alone (`\definition{Definition

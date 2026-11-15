@@ -7,6 +7,7 @@ use latexml::util::test::{
 use super::{
   perfect_kernel_batch46::{convert_with_then, error_count, warning_count},
   perfect_kernel_batch57::{RAW, assert_elements},
+  perfect_kernel_batch77d::author_line,
 };
 
 /// bfhpub.cls (koma-script based) and the fonts it loads (texlive-fonts-extra).
@@ -2550,7 +2551,7 @@ Hello.
     // (the line of an address alone is the author's e-mail since 106a, the Kind step for an entry's address line, OD
     // #966; it had been an affiliation) The contact's name ends in a no-break space.
     &format!(
-      r#"<creator role="author"><personname>A. Author</personname><contact name="Email:{}" role="email"><text font="typewriter" xml:id="id1">a@b.c</text></contact></creator>"#,
+      r#"<creator role="author"><personname>A. Author</personname><contact class="ltx_author_line" name="Email:{}" role="email"><text font="typewriter" xml:id="id1">a@b.c</text></contact></creator>"#,
       '\u{a0}'
     ),
   );
@@ -5162,7 +5163,7 @@ Text.
     &xml,
     "creator",
     &["role=\"author\""],
-    "<creator role=\"author\"><personname>A</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">X</contact></creator>",
+    "<creator role=\"author\"><personname>A</personname><contact class=\"ltx_author_line\" name=\"Affiliation:\u{a0}\" role=\"affiliation\">X</contact></creator>",
   );
 }
 
@@ -6368,8 +6369,8 @@ Text.
 \end{document}"
     ),
     vec![
-      creator(false, "Ann Able", &affiliation("Univ A")),
-      creator(true, "Bob Baker", &affiliation("Univ C"))
+      creator(false, "Ann Able", &author_line(affiliation("Univ A"))),
+      creator(true, "Bob Baker", &author_line(affiliation("Univ C")))
     ]
   );
   // `\and` ends Ann's entry: "Univ C" is an entry of its own (placed by position, so not pinned here), not folded
@@ -6769,7 +6770,9 @@ fn author_marks_link_their_affiliations() {
     creators_of(&xml)
   };
   let affiliation = |name: &str| {
-    format!("<contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">{name}</contact>")
+    format!(
+      "<contact class=\"ltx_author_line\" name=\"Affiliation:\u{a0}\" role=\"affiliation\">{name}</contact>"
+    )
   };
   let creator = |before: &str, name: &str, rest: &str| {
     format!("<creator {before}role=\"author\"><personname>{name}</personname>{rest}</creator>")
@@ -6880,15 +6883,15 @@ fn frontmatter_digest_cluster_2609() {
     (
       r"\begin{center} Ann Able$^{1}$, Bob Baker$^{2}$ \\ $^1$Univ A \\ $^2$Univ B \end{center}",
       vec![
-        creator("", "Ann Able", &affiliation("Univ A")),
-        creator(second, "Bob Baker", &affiliation("Univ B")),
+        creator("", "Ann Able", &author_line(affiliation("Univ A"))),
+        creator(second, "Bob Baker", &author_line(affiliation("Univ B"))),
       ],
     ),
     (
       r"\begin{center}Ann\\ Univ A\end{center} \and \begin{center}Bob\\ Univ B\end{center}",
       vec![
-        creator("", "Ann", &affiliation("Univ A")),
-        creator(second, "Bob", &affiliation("Univ B")),
+        creator("", "Ann", &author_line(affiliation("Univ A"))),
+        creator(second, "Bob", &author_line(affiliation("Univ B"))),
       ],
     ),
   ] {

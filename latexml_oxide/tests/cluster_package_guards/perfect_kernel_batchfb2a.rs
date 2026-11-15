@@ -18,6 +18,7 @@
 use latexml::util::test::{error_count, warning_count};
 
 use super::{
+  perfect_kernel_batch77d::author_line,
   perfect_kernel_batch84b::creators,
   perfect_kernel_batchz4::{ENVIRONMENT_SHAPE, creators_xml, environment_row, run},
 };
@@ -88,12 +89,15 @@ fn a_tabular_juggle_is_a_column_or_its_break() {
   assert_eq!(two, vec![
     "<creator role=\"author\">\n    <personname>A One</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Dept</contact>\n  </creator>"
   ]);
-  // (a juggle printing a break between its close and its reopen, 1301.5612's `\end{tabular}\newline\begin{tabular}{c}`)
+  // (a juggle printing a break between its close and its reopen, 1301.5612's `\end{tabular}\newline\begin{tabular}{c}`:
+  // "Dept" the same contact, printed under the name, so of class `ltx_author_line`, issue #783)
   let tex = repro!("author_shared_affiliation_line");
   let newline = tex.replacen("\\end{tabular}\n", "\\end{tabular}\\newline\n", 1);
   assert_ne!(newline, tex);
   let two_newline = both(&newline);
-  assert_eq!(two_newline, two);
+  assert_eq!(two_newline, vec![
+    "<creator role=\"author\">\n    <personname>A One</personname>\n    <contact class=\"ltx_author_line\" name=\"Affiliation:\u{a0}\" role=\"affiliation\">Dept</contact>\n  </creator>"
+  ]);
 }
 
 /// An alignment environment opening after the names and ending the block is lines under them, each its own and every
@@ -115,13 +119,18 @@ fn a_trailing_alignment_environment_is_lines_under_the_names() {
     ];
     let at: Vec<usize> = lines
       .iter()
-      .map(|line| creator.find(&affiliation(line)).expect(line))
+      // (the order of the lines, whatever class each holds: the whole creators below pin it)
+      .map(|line| {
+        creator
+          .find(&format!(" role=\"affiliation\">{line}</contact>"))
+          .expect(line)
+      })
       .collect();
     assert!(at.windows(2).all(|w| w[0] < w[1]), "{creator}");
   }
   assert_eq!(two, vec![
-    "<creator role=\"author\">\n    <personname>Ann Able</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Department of Physics and Astronomy</contact>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">University of X</contact>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">City</contact>\n  </creator>",
-    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Bob Baker</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Department of Physics and Astronomy</contact>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">University of X</contact>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">City</contact>\n  </creator>"
+    "<creator role=\"author\">\n    <personname>Ann Able</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Department of Physics and Astronomy</contact>\n    <contact class=\"ltx_author_line\" name=\"Affiliation:\u{a0}\" role=\"affiliation\">University of X</contact>\n    <contact class=\"ltx_author_line\" name=\"Affiliation:\u{a0}\" role=\"affiliation\">City</contact>\n  </creator>",
+    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Bob Baker</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Department of Physics and Astronomy</contact>\n    <contact class=\"ltx_author_line\" name=\"Affiliation:\u{a0}\" role=\"affiliation\">University of X</contact>\n    <contact class=\"ltx_author_line\" name=\"Affiliation:\u{a0}\" role=\"affiliation\">City</contact>\n  </creator>"
   ]);
   let two = both(repro!("author_block_environment_is_one_unit"));
   assert_eq!(two.len(), 2, "{two:#?}");
@@ -144,8 +153,8 @@ fn a_note_in_a_formula_keeps_its_words() {
     two[1]
   );
   assert_eq!(two, vec![
-    "<creator role=\"author\">\n    <personname>Ann Able</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A</contact>\n  </creator>",
-    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Bob Baker</personname>\n    <note class=\"ltx_note_frontmatter ltx_thanks_contribution\" role=\"thanks\">The first two authors contributed equally</note>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A</contact>\n  </creator>"
+    "<creator role=\"author\">\n    <personname>Ann Able</personname>\n    <contact class=\"ltx_author_line\" name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A</contact>\n  </creator>",
+    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Bob Baker</personname>\n    <note class=\"ltx_note_frontmatter ltx_thanks_contribution\" role=\"thanks\">The first two authors contributed equally</note>\n    <contact class=\"ltx_author_line\" name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A</contact>\n  </creator>"
   ]);
 }
 
@@ -167,18 +176,18 @@ fn a_url_line_under_every_name_is_the_blocks() {
     "{two:#?}"
   );
   assert_eq!(two, vec![
-    "<creator role=\"author\">\n    <personname>Ann Able</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A</contact>\n  </creator>",
-    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Bob Baker</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A</contact>\n  </creator>",
-    "<creator role=\"author\">\n    <contact name=\"URL:\u{a0}\" role=\"url\"><ref class=\"ltx_nolink ltx_url\" font=\"typewriter\" fontsize=\"90%\" href=\"https://project.example.org\">https://project.example.org</ref></contact>\n  </creator>"
+    "<creator role=\"author\">\n    <personname>Ann Able</personname>\n    <contact class=\"ltx_author_line\" name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A</contact>\n  </creator>",
+    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Bob Baker</personname>\n    <contact class=\"ltx_author_line\" name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A</contact>\n  </creator>",
+    "<creator role=\"author\">\n    <contact class=\"ltx_author_line\" name=\"URL:\u{a0}\" role=\"url\"><ref class=\"ltx_nolink ltx_url\" font=\"typewriter\" fontsize=\"90%\" href=\"https://project.example.org\">https://project.example.org</ref></contact>\n  </creator>"
   ]);
   let two = both(repro!("author_url_line_under_one_column_is_its_names"));
   assert_eq!(two.len(), 3, "{two:#?}");
   let urls: Vec<bool> = two.iter().map(|c| c.contains("role=\"url\"")).collect();
   assert_eq!(urls, [true, true, false], "{two:#?}");
   assert_eq!(two, vec![
-    "<creator role=\"author\">\n    <personname>Ann Able</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A</contact>\n    <contact name=\"URL:\u{a0}\" role=\"url\"><ref class=\"ltx_nolink ltx_url\" font=\"typewriter\" href=\"https://project.example.org\">https://project.example.org</ref></contact>\n  </creator>",
-    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Bob Baker</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A</contact>\n    <contact name=\"URL:\u{a0}\" role=\"url\"><ref class=\"ltx_nolink ltx_url\" font=\"typewriter\" href=\"https://project.example.org\">https://project.example.org</ref></contact>\n  </creator>",
-    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Cat Cole</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ C</contact>\n  </creator>"
+    "<creator role=\"author\">\n    <personname>Ann Able</personname>\n    <contact class=\"ltx_author_line\" name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A</contact>\n    <contact class=\"ltx_author_line\" name=\"URL:\u{a0}\" role=\"url\"><ref class=\"ltx_nolink ltx_url\" font=\"typewriter\" href=\"https://project.example.org\">https://project.example.org</ref></contact>\n  </creator>",
+    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Bob Baker</personname>\n    <contact class=\"ltx_author_line\" name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A</contact>\n    <contact class=\"ltx_author_line\" name=\"URL:\u{a0}\" role=\"url\"><ref class=\"ltx_nolink ltx_url\" font=\"typewriter\" href=\"https://project.example.org\">https://project.example.org</ref></contact>\n  </creator>",
+    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Cat Cole</personname>\n    <contact class=\"ltx_author_line\" name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ C</contact>\n  </creator>"
   ]);
 }
 
@@ -216,13 +225,15 @@ fn a_macro_closing_a_tabular_is_no_juggle() {
 fn a_link_printing_an_institution_is_every_names() {
   let two = both(repro!("author_link_printing_an_institution_is_every_names"));
   assert_eq!(two.len(), 2, "{two:#?}");
-  let google = affiliation("<ref class=\"ltx_href\" href=\"https://www.google.com\">Google</ref>");
+  let google = author_line(affiliation(
+    "<ref class=\"ltx_href\" href=\"https://www.google.com\">Google</ref>",
+  ));
   for (creator, name) in two.iter().zip(["Ann Able", "Bob Baker"]) {
     assert!(
       creator.contains(&format!("<personname>{name}</personname>")),
       "{creator}"
     );
-    let at: Vec<usize> = [affiliation("Univ A"), google.clone()]
+    let at: Vec<usize> = [author_line(affiliation("Univ A")), google.clone()]
       .iter()
       .map(|a| creator.find(a.as_str()).expect(a))
       .collect();
@@ -230,8 +241,8 @@ fn a_link_printing_an_institution_is_every_names() {
     assert!(!creator.contains("role=\"url\""), "{creator}");
   }
   assert_eq!(two, vec![
-    "<creator role=\"author\">\n    <personname>Ann Able</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A</contact>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><ref class=\"ltx_href\" href=\"https://www.google.com\">Google</ref></contact>\n  </creator>",
-    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Bob Baker</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A</contact>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><ref class=\"ltx_href\" href=\"https://www.google.com\">Google</ref></contact>\n  </creator>"
+    "<creator role=\"author\">\n    <personname>Ann Able</personname>\n    <contact class=\"ltx_author_line\" name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A</contact>\n    <contact class=\"ltx_author_line\" name=\"Affiliation:\u{a0}\" role=\"affiliation\"><ref class=\"ltx_href\" href=\"https://www.google.com\">Google</ref></contact>\n  </creator>",
+    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Bob Baker</personname>\n    <contact class=\"ltx_author_line\" name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A</contact>\n    <contact class=\"ltx_author_line\" name=\"Affiliation:\u{a0}\" role=\"affiliation\"><ref class=\"ltx_href\" href=\"https://www.google.com\">Google</ref></contact>\n  </creator>"
   ]);
 }
 

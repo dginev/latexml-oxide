@@ -30,10 +30,10 @@ fn a_whole_label_line_cut_keeps_the_breaks() {
   assert_eq!(
     creators_xml(&xml),
     [
-      "<creator role=\"author\">\n    <personname>Ann Able</personname>\n    <contact name=\"Affiliation:\u{a0}\" \
+      "<creator role=\"author\">\n    <personname>Ann Able</personname>\n    <contact class=\"ltx_author_line\" name=\"Affiliation:\u{a0}\" \
        role=\"affiliation\">Univ X<break/>1 Main Road, Town</contact>\n  </creator>",
-      "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Bob Baker</personname>\n    <contact \
-       name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ Z<break/>2 Side Road, City</contact>\n    <contact \
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Bob Baker</personname>\n    <contact class=\"ltx_author_line\" \
+       name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ Z<break/>2 Side Road, City</contact>\n    <contact class=\"ltx_author_line\" \
        name=\"Correspondence: \" role=\"email\"><ref class=\"ltx_href\" \
        href=\"mailto:bob@z.org\">bob@z.org</ref></contact>\n  </creator>",
     ],

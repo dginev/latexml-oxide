@@ -50,8 +50,8 @@ fn a_script_before_printed_ink_or_on_a_base_is_text() {
       counts:   (0, 0),
       lines:    &[],
       creators: Creators::Whole(&[
-        r#"<creator role="author"><personname>Ann Able</personname><contact name="Affiliation: " role="affiliation">Univ X</contact></creator>"#,
-        r#"<creator before="  " role="author"><personname>Bob Baker</personname><contact name="Affiliation: " role="affiliation">Univ Y, <Math mode="inline" tex="{\rm{}^{3}He}" text="^ 3 He"><XMath><XMApp><XMTok role="SUPERSCRIPTOP" scriptpos="pre2"/><XMTok role="UNKNOWN">He</XMTok><XMTok fontsize="70%" meaning="3" role="NUMBER">3</XMTok></XMApp></XMath></Math> Lab</contact></creator>"#,
+        r#"<creator role="author"><personname>Ann Able</personname><contact class="ltx_author_line" name="Affiliation: " role="affiliation">Univ X</contact></creator>"#,
+        r#"<creator before="  " role="author"><personname>Bob Baker</personname><contact class="ltx_author_line" name="Affiliation: " role="affiliation">Univ Y, <Math mode="inline" tex="{\rm{}^{3}He}" text="^ 3 He"><XMath><XMApp><XMTok role="SUPERSCRIPTOP" scriptpos="pre2"/><XMTok role="UNKNOWN">He</XMTok><XMTok fontsize="70%" meaning="3" role="NUMBER">3</XMTok></XMApp></XMath></Math> Lab</contact></creator>"#,
       ]),
     },
     Row {
@@ -135,8 +135,8 @@ fn a_script_before_printed_ink_or_on_a_base_is_text() {
       counts:   (0, 0),
       lines:    &[],
       creators: Creators::Whole(&[
-        r#"<creator role="author"><personname>Ann Able</personname><contact name="Affiliation: " role="affiliation"><Math mode="inline" tex="{\rm{}^{1}Dept}" text="^ 1 Dept"><XMath><XMApp><XMTok role="SUPERSCRIPTOP" scriptpos="pre2"/><XMTok role="UNKNOWN">Dept</XMTok><XMTok fontsize="70%" meaning="1" role="NUMBER">1</XMTok></XMApp></XMath></Math> of Physics, Univ X</contact></creator>"#,
-        r#"<creator before="  " role="author"><personname>Bob Baker</personname><contact name="Affiliation: " role="affiliation"><Math mode="inline" tex="{\rm{}^{2}Lab}" text="^ 2 Lab"><XMath><XMApp><XMTok role="SUPERSCRIPTOP" scriptpos="pre2"/><XMTok role="UNKNOWN">Lab</XMTok><XMTok fontsize="70%" meaning="2" role="NUMBER">2</XMTok></XMApp></XMath></Math> of Chemistry, Univ Y</contact></creator>"#,
+        r#"<creator role="author"><personname>Ann Able</personname><contact class="ltx_author_line" name="Affiliation: " role="affiliation"><Math mode="inline" tex="{\rm{}^{1}Dept}" text="^ 1 Dept"><XMath><XMApp><XMTok role="SUPERSCRIPTOP" scriptpos="pre2"/><XMTok role="UNKNOWN">Dept</XMTok><XMTok fontsize="70%" meaning="1" role="NUMBER">1</XMTok></XMApp></XMath></Math> of Physics, Univ X</contact></creator>"#,
+        r#"<creator before="  " role="author"><personname>Bob Baker</personname><contact class="ltx_author_line" name="Affiliation: " role="affiliation"><Math mode="inline" tex="{\rm{}^{2}Lab}" text="^ 2 Lab"><XMath><XMApp><XMTok role="SUPERSCRIPTOP" scriptpos="pre2"/><XMTok role="UNKNOWN">Lab</XMTok><XMTok fontsize="70%" meaning="2" role="NUMBER">2</XMTok></XMApp></XMath></Math> of Chemistry, Univ Y</contact></creator>"#,
       ]),
     },
     Row {
@@ -178,8 +178,8 @@ fn a_script_before_printed_ink_or_on_a_base_is_text() {
       counts:   (0, 0),
       lines:    &[],
       creators: Creators::Whole(&[
-        r#"<creator role="author"><personname>Ann Able</personname><contact name="Affiliation: " role="affiliation"><Math mode="inline" tex="{\rm{}^{1}Dept}" text="^ 1 Dept"><XMath><XMApp><XMTok role="SUPERSCRIPTOP" scriptpos="pre2"/><XMTok role="UNKNOWN">Dept</XMTok><XMTok fontsize="70%" meaning="1" role="NUMBER">1</XMTok></XMApp></XMath></Math> of Physics, Univ X</contact></creator>"#,
-        r#"<creator before="  " role="author"><personname>Bob Baker</personname><contact name="Affiliation: " role="affiliation"><Math mode="inline" tex="{\rm{}^{2}Lab}" text="^ 2 Lab"><XMath><XMApp><XMTok role="SUPERSCRIPTOP" scriptpos="pre2"/><XMTok role="UNKNOWN">Lab</XMTok><XMTok fontsize="70%" meaning="2" role="NUMBER">2</XMTok></XMApp></XMath></Math> of Chemistry, Univ Y</contact></creator>"#,
+        r#"<creator role="author"><personname>Ann Able</personname><contact class="ltx_author_line" name="Affiliation: " role="affiliation"><Math mode="inline" tex="{\rm{}^{1}Dept}" text="^ 1 Dept"><XMath><XMApp><XMTok role="SUPERSCRIPTOP" scriptpos="pre2"/><XMTok role="UNKNOWN">Dept</XMTok><XMTok fontsize="70%" meaning="1" role="NUMBER">1</XMTok></XMApp></XMath></Math> of Physics, Univ X</contact></creator>"#,
+        r#"<creator before="  " role="author"><personname>Bob Baker</personname><contact class="ltx_author_line" name="Affiliation: " role="affiliation"><Math mode="inline" tex="{\rm{}^{2}Lab}" text="^ 2 Lab"><XMath><XMApp><XMTok role="SUPERSCRIPTOP" scriptpos="pre2"/><XMTok role="UNKNOWN">Lab</XMTok><XMTok fontsize="70%" meaning="2" role="NUMBER">2</XMTok></XMApp></XMath></Math> of Chemistry, Univ Y</contact></creator>"#,
       ]),
     },
     Row {
@@ -188,8 +188,8 @@ fn a_script_before_printed_ink_or_on_a_base_is_text() {
       counts:   (0, 0),
       lines:    &[],
       creators: Creators::Whole(&[
-        r#"<creator role="author"><personname>Ann Able</personname><contact name="Affiliation: " role="affiliation"><Math mode="inline" tex="{\rm{}^{1}Dept}" text="^ 1 Dept"><XMath><XMApp><XMTok role="SUPERSCRIPTOP" scriptpos="pre2"/><XMTok role="UNKNOWN">Dept</XMTok><XMTok fontsize="70%" meaning="1" role="NUMBER">1</XMTok></XMApp></XMath></Math> of Physics, Univ X</contact></creator>"#,
-        r#"<creator before="  " role="author"><personname>Bob Baker</personname><contact name="Affiliation: " role="affiliation"><Math mode="inline" tex="{\rm{}^{2}Lab}" text="^ 2 Lab"><XMath><XMApp><XMTok role="SUPERSCRIPTOP" scriptpos="pre2"/><XMTok role="UNKNOWN">Lab</XMTok><XMTok fontsize="70%" meaning="2" role="NUMBER">2</XMTok></XMApp></XMath></Math> of Chemistry, Univ Y</contact></creator>"#,
+        r#"<creator role="author"><personname>Ann Able</personname><contact class="ltx_author_line" name="Affiliation: " role="affiliation"><Math mode="inline" tex="{\rm{}^{1}Dept}" text="^ 1 Dept"><XMath><XMApp><XMTok role="SUPERSCRIPTOP" scriptpos="pre2"/><XMTok role="UNKNOWN">Dept</XMTok><XMTok fontsize="70%" meaning="1" role="NUMBER">1</XMTok></XMApp></XMath></Math> of Physics, Univ X</contact></creator>"#,
+        r#"<creator before="  " role="author"><personname>Bob Baker</personname><contact class="ltx_author_line" name="Affiliation: " role="affiliation"><Math mode="inline" tex="{\rm{}^{2}Lab}" text="^ 2 Lab"><XMath><XMApp><XMTok role="SUPERSCRIPTOP" scriptpos="pre2"/><XMTok role="UNKNOWN">Lab</XMTok><XMTok fontsize="70%" meaning="2" role="NUMBER">2</XMTok></XMApp></XMath></Math> of Chemistry, Univ Y</contact></creator>"#,
       ]),
     },
     Row {
@@ -198,8 +198,8 @@ fn a_script_before_printed_ink_or_on_a_base_is_text() {
       counts:   (0, 0),
       lines:    &[],
       creators: Creators::Whole(&[
-        r#"<creator role="author"><personname>Ann Able</personname><contact name="Affiliation: " role="affiliation"><Math mode="inline" tex="{\rm{}^{1}Dept}" text="^ 1 Dept"><XMath><XMApp><XMTok role="SUPERSCRIPTOP" scriptpos="pre2"/><XMTok role="UNKNOWN">Dept</XMTok><XMTok fontsize="70%" meaning="1" role="NUMBER">1</XMTok></XMApp></XMath></Math> of Physics, Univ X</contact></creator>"#,
-        r#"<creator before="  " role="author"><personname>Bob Baker</personname><contact name="Affiliation: " role="affiliation">Lab of Chemistry, Univ Y</contact></creator>"#,
+        r#"<creator role="author"><personname>Ann Able</personname><contact class="ltx_author_line" name="Affiliation: " role="affiliation"><Math mode="inline" tex="{\rm{}^{1}Dept}" text="^ 1 Dept"><XMath><XMApp><XMTok role="SUPERSCRIPTOP" scriptpos="pre2"/><XMTok role="UNKNOWN">Dept</XMTok><XMTok fontsize="70%" meaning="1" role="NUMBER">1</XMTok></XMApp></XMath></Math> of Physics, Univ X</contact></creator>"#,
+        r#"<creator before="  " role="author"><personname>Bob Baker</personname><contact class="ltx_author_line" name="Affiliation: " role="affiliation">Lab of Chemistry, Univ Y</contact></creator>"#,
       ]),
     },
     // (no name requests a mark: the line-opening fallback reads the mid-line `${\rm ^2Lab}$` as text, one contact as
@@ -224,8 +224,8 @@ fn a_script_before_printed_ink_or_on_a_base_is_text() {
         "more often than the author blocks print them: NLPCT.",
       ],
       creators: Creators::Whole(&[
-        r#"<creator role="author"><personname>Ann Able</personname><contact name="Affiliation: " role="affiliation">NLP<sup><text font="italic">3</text></sup>CT Lab, <Math mode="inline" tex="{\rm{}^{3}He}" text="^ 3 He"><XMath><XMApp><XMTok role="SUPERSCRIPTOP" scriptpos="pre2"/><XMTok role="UNKNOWN">He</XMTok><XMTok fontsize="70%" meaning="3" role="NUMBER">3</XMTok></XMApp></XMath></Math> Center</contact></creator>"#,
-        r#"<creator before="  " role="author"><personname>Bob Baker</personname><contact name="Affiliation: " role="affiliation">Univ Y</contact></creator>"#,
+        r#"<creator role="author"><personname>Ann Able</personname><contact class="ltx_author_line" name="Affiliation: " role="affiliation">NLP<sup><text font="italic">3</text></sup>CT Lab, <Math mode="inline" tex="{\rm{}^{3}He}" text="^ 3 He"><XMath><XMApp><XMTok role="SUPERSCRIPTOP" scriptpos="pre2"/><XMTok role="UNKNOWN">He</XMTok><XMTok fontsize="70%" meaning="3" role="NUMBER">3</XMTok></XMApp></XMath></Math> Center</contact></creator>"#,
+        r#"<creator before="  " role="author"><personname>Bob Baker</personname><contact class="ltx_author_line" name="Affiliation: " role="affiliation">Univ Y</contact></creator>"#,
       ]),
     },
     // (P4b4a: the cut inside `$5^{2}$` closes the formula and opens it again, its base Able's, its script Bob's label;

@@ -53,11 +53,11 @@ fn llncs_author_url_pieces_in_font_groups() {
   assert_eq!(
     email_contacts(&xml),
     [
-      "<contact name=\"E-mail\u{a0}\" role=\"email\"><ref class=\"ltx_url\" font=\"typewriter italic\" fontsize=\"90%\" \
+      "<contact class=\"ltx_author_line\" name=\"E-mail\u{a0}\" role=\"email\"><ref class=\"ltx_url\" font=\"typewriter italic\" fontsize=\"90%\" \
        href=\"robin.andre@ira.uka.de\">robin.andre@ira.uka.de</ref></contact>",
-      "<contact name=\"E-mail\u{a0}\" role=\"email\"><text font=\"italic\" fontsize=\"90%\" \
+      "<contact class=\"ltx_author_line\" name=\"E-mail\u{a0}\" role=\"email\"><text font=\"italic\" fontsize=\"90%\" \
        xml:id=\"id3\">sebastian.schlag@kit.edu</text></contact>",
-      "<contact name=\"E-mail\u{a0}\" role=\"email\"><text font=\"italic\" fontsize=\"90%\" \
+      "<contact class=\"ltx_author_line\" name=\"E-mail\u{a0}\" role=\"email\"><text font=\"italic\" fontsize=\"90%\" \
        xml:id=\"id5\">christian.schulz@kit.edu</text></contact>",
     ],
     "{xml}"
@@ -79,10 +79,10 @@ fn article_author_url_before_pieces_run() {
   assert_eq!(
     emails,
     [
-      "<contact name=\"Email:\u{a0}\" role=\"email\"><ref class=\"ltx_url\" font=\"typewriter\" \
+      "<contact class=\"ltx_author_line\" name=\"Email:\u{a0}\" role=\"email\"><ref class=\"ltx_url\" font=\"typewriter\" \
        href=\"cid@y.org\">cid@y.org</ref></contact>",
-      "<contact name=\"Email:\u{a0}\" role=\"email\">ann@x.org</contact>",
-      "<contact name=\"Email:\u{a0}\" role=\"email\">bob@x.org</contact>",
+      "<contact class=\"ltx_author_line\" name=\"Email:\u{a0}\" role=\"email\">ann@x.org</contact>",
+      "<contact class=\"ltx_author_line\" name=\"Email:\u{a0}\" role=\"email\">bob@x.org</contact>",
     ],
     "{xml}"
   );

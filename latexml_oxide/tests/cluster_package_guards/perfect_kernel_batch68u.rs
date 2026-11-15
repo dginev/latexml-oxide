@@ -293,7 +293,7 @@ fn a_raw_class_keywords_environment_collecting_its_body_sets_the_keywords() {
   assert_eq!(
     front_block(&xml),
     normalize_markup(
-      r#"<title>The Title</title><creator role="author"><personname>Ann Author</personname><contact name="Affiliation: " role="affiliation">Some University</contact></creator><abstract inlist="toc" name="Abstract" xml:id="abstract1"><p>Abs.</p></abstract><keywords name="Keywords: ">alpha, beta</keywords>"#
+      r#"<title>The Title</title><creator role="author"><personname>Ann Author</personname><contact class="ltx_author_line" name="Affiliation: " role="affiliation">Some University</contact></creator><abstract inlist="toc" name="Abstract" xml:id="abstract1"><p>Abs.</p></abstract><keywords name="Keywords: ">alpha, beta</keywords>"#
     ),
     "{xml}"
   );

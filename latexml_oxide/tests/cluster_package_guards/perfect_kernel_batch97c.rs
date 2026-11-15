@@ -87,7 +87,7 @@ fn block_entry_of_several_words_is_cut_whole() {
   let tex = repro!("block_entry_of_several_words_is_cut_whole.tex");
   assert_eq!(
     both_ways(tex, &[]),
-    r#"<title>T</title> <creator role="author"> <personname>Ann Able</personname> <contact name="Affiliation: " role="affiliation">Univ of Science and Technology</contact> </creator> <creator before=" " role="author"> <personname>Bob Baker</personname> <contact name="Affiliation: " role="affiliation">Univ C</contact> </creator>"#
+    r#"<title>T</title> <creator role="author"> <personname>Ann Able</personname> <contact class="ltx_author_line" name="Affiliation: " role="affiliation">Univ of Science and Technology</contact> </creator> <creator before=" " role="author"> <personname>Bob Baker</personname> <contact class="ltx_author_line" name="Affiliation: " role="affiliation">Univ C</contact> </creator>"#
   );
   let comma = tex
     .replace(
@@ -99,7 +99,7 @@ fn block_entry_of_several_words_is_cut_whole() {
   assert_eq!(
     both_ways(&comma, &[]),
     // at `=2` each entry keeps the space after its `$ ^1 $` mark (T1: whitespace only)
-    r#"<title>T</title> <creator role="author"> <personname>Ann Able</personname> <contact name="Affiliation: " role="affiliation"> Univ A, X</contact> </creator> <creator before=" " role="author"> <personname>Bob Baker</personname> <contact name="Affiliation: " role="affiliation"> Univ B</contact> </creator>"#
+    r#"<title>T</title> <creator role="author"> <personname>Ann Able</personname> <contact class="ltx_author_line" name="Affiliation: " role="affiliation"> Univ A, X</contact> </creator> <creator before=" " role="author"> <personname>Bob Baker</personname> <contact class="ltx_author_line" name="Affiliation: " role="affiliation"> Univ B</contact> </creator>"#
   );
 }
 
@@ -112,7 +112,7 @@ fn block_entry_of_several_words_is_cut_whole() {
 fn block_mark_after_a_break_opens_an_entry() {
   assert_eq!(
     both_ways(repro!("block_mark_after_a_break_opens_an_entry.tex"), &[]),
-    r#"<title>T</title> <creator role="author"> <personname>Ann Able</personname> <contact name="Affiliation: " role="affiliation">Univ A, Town</contact> </creator> <creator before=" " role="author"> <personname>Bob Baker</personname> <contact name="Affiliation: " role="affiliation">Univ B, City</contact> </creator> <para xml:id="p1"> <p xml:id="p1.1">Text.</p> </para>"#
+    r#"<title>T</title> <creator role="author"> <personname>Ann Able</personname> <contact class="ltx_author_line" name="Affiliation: " role="affiliation">Univ A, Town</contact> </creator> <creator before=" " role="author"> <personname>Bob Baker</personname> <contact class="ltx_author_line" name="Affiliation: " role="affiliation">Univ B, City</contact> </creator> <para xml:id="p1"> <p xml:id="p1.1">Text.</p> </para>"#
   );
 }
 

@@ -134,7 +134,7 @@ fn an_address_of_a_list_keeps_its_fonts() {
   let (log, xml) = run(repro!("emit_addresses_in_their_fonts_one_contact_each"));
   assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
   let emitted = creators_xml(&xml);
-  assert!(emitted[0].contains("<contact name=\"Email:\u{a0}\" role=\"email\"><text font=\"typewriter\" fontsize=\"90%\">ann@a.edu</text></contact>"), "{emitted:#?}");
+  assert!(emitted[0].contains("<contact class=\"ltx_author_line\" name=\"Email:\u{a0}\" role=\"email\"><text font=\"typewriter\" fontsize=\"90%\">ann@a.edu</text></contact>"), "{emitted:#?}");
   assert!(
     emitted[1].contains(r#"<text font="typewriter" fontsize="90%">bob@a.edu</text>"#),
     "{emitted:#?}"

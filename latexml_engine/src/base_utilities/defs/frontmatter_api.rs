@@ -775,7 +775,7 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
     // Rust-only (OXIDIZED_DESIGN_DIVERGENCES #956): the Kind step for the addresses an affiliation-kind entry prints, after
     // the Cut, each of its pieces once: its lines of addresses are e-mails digested inside it, the entry's addresses,
     // which the Link step places (`kind_entry_addresses`, `insert::link_entry_addresses`).
-    let content = kind_entry_addresses(&tag, kv.as_ref(), &content)?.unwrap_or(content);
+    let content = kind_entry_addresses(&tag, kv.as_ref(), &content, "")?.unwrap_or(content);
     // Perl: queueFrontMatter($stomach, ToString($tag), $kv,
     //   Invocation(T_CS('\lx@annotate@frontmatter@now'), $parenttag, $tag, $kv, $content))
     let mut inv_tokens: Vec<Token> = vec![T_CS!("\\lx@annotate@frontmatter@now")];
@@ -846,9 +846,11 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
     assign_value(SETTERS_RECOVERED, Stored::Bool(recovered), Some(Scope::Local));
     Ok(Vec::new())
   });
-  // (an entry as `\\lx@annotate@frontmatter` queues it, its lines of addresses read, on `@now`)
-  DefMacro!("\\lx@frontmatter@itemkinded {}{} OptionalKeyVals:Frontmatter {}", sub[(parent, tag, kv, content)] {
-    let content = kind_entry_addresses(&tag, kv.as_ref(), &content)?.unwrap_or(content);
+  // (an entry as `\\lx@annotate@frontmatter` queues it, its lines of addresses read, on `@now`; the keys the emitter gives
+  // the e-mails the Kind step makes of them, `kind_entry_addresses`' `email_keys`)
+  DefMacro!("\\lx@frontmatter@itemkinded {}{}{} OptionalKeyVals:Frontmatter {}", sub[(parent, tag, email_keys, kv, content)] {
+    let keys = email_keys.to_string();
+    let content = kind_entry_addresses(&tag, kv.as_ref(), &content, &keys)?.unwrap_or(content);
     let mut call = vec![T_CS!("\\lx@annotate@frontmatter@now"), T_BEGIN!()];
     call.extend(parent.unlist());
     call.extend([T_END!(), T_BEGIN!()]);
