@@ -256,13 +256,24 @@ with this pattern is normalized to the Rust form.
 ### 23. Load flags: a binding sets Perl's two, a raw file sets `<name>_raw_loaded` (Perl: `<name>_loaded` for both)
 
 **Rule.** A binding load sets `<file>_loaded` and `<file>.ltxml_loaded`, as Perl's `loadLTXML` does (Package.pm:2332-2333;
-`latexml_core/src/binding/content.rs:1095`, :1104); a raw `.sty`/`.cls`/`.def` read sets `<file>_raw_loaded`
-(content.rs:3057), where Perl's `loadTeXDefinitions` sets `<file>_loaded` (Package.pm:2363-2364). The split lets a
+`latexml_core/src/binding/content.rs:1100`, :1108); a raw `.sty`/`.cls`/`.def` read sets `<file>_raw_loaded`
+(content.rs:3062), where Perl's `loadTeXDefinitions` sets `<file>_loaded` (Package.pm:2363-2364). The split lets a
 binding raw-load its own same-named file after its flag is set (`babel_sty.rs` → raw `babel.sty`, `cite_sty.rs` → raw
 `cite.sty`).
-- **The gate keys on the path taken** (`already_handled`, content.rs:579): `noltxml` (raw only) reads `_raw_loaded`,
+- **The gate keys on the path taken** (`already_handled`, content.rs:583): `noltxml` (raw only) reads `_raw_loaded`,
   `notex` (binding only) `_loaded` or `_load_attempted`, the default either. `_load_attempted` (Rust-only) marks a
   request no file answered, so a miss is not retried and `_loaded` stays reserved for a binding that loaded.
+  `_load_binding` keeps a binding-only gate (`_loaded` alone, content.rs:1665-1668, as `loadLTXML`, Package.pm:2328-2330:
+  a raw read does not stop the binding); the raw search gates on `_raw_loaded` (content.rs:1364, :3058), and on
+  `_loaded` too where the request's fallback binding just loaded (:1361, as `FindFile`'s `if/elsif` returns, Package.pm:2135-2141:
+  `caption2` → `caption.sty.ltxml` reads no raw `caption2.sty`).
+- **On a read error the flag stays set.** Perl sets `_loaded` before reading (Package.pm:2332, :2364) and keeps it
+  when the read fails, so a later request skips; whether the read succeeded is its return value, not a flag. Ours: a
+  raw read sets `_raw_loaded` before reading (content.rs:3062), a binding `_loaded` when its body returns, an `Err`
+  included (:1749), with the in-progress set (:1686) ending a re-entrant request as Perl's early flag does. The
+  Rust-only `_found_loaded` is gone.
+- **`<file>_loaded_with_options`** (Perl Package.pm:2586, :2629) keeps the options a file was loaded with (set at
+  content.rs:928), read by the option-clash Info (:550) and a repeated load (:747).
 - **Readers:** "binding loaded?" `state::binding_loaded`, "raw read?" `state::raw_loaded` (state.rs:3953), "either?"
   `state::load_recorded`; "is the package loaded", as `\@ifpackageloaded` asks, reads `\ver@<file>`
   (`state::file_loaded`, #1015), not the flags.
@@ -349,7 +360,7 @@ investigation.
 
 #### Package-load flags
 
-*(moved to #23, which states the live scheme: `_loaded`, `.ltxml_loaded`, `_raw_loaded`, `_load_attempted`, and the dump skip list of #449; the Rust-only `_found_loaded` is gone.)*
+*(moved to #23, which states the live scheme: `_loaded`, `.ltxml_loaded`, `_raw_loaded`, `_load_attempted`, `_loaded_with_options`, the path-aware gate (`de21ae928`), the flag kept on a read error, and the dump skip list of #449; the Rust-only `_found_loaded` is gone.)*
 
 ### 26. `mdframed` frames through `insert_block`: a `logical-block` in flow, the inline variant inside a float (ar5iv-bindings: `inline-block`)
 
@@ -659,7 +670,7 @@ comma or ` and ` in an affiliation (`MIT, Cambridge`) and `Lastname, Firstname` 
 - Witnesses: 0804.0870 (`(Scuola Normale Superiore, Pisa)`), hep-ex0007011 (`(On behalf of the H1 and ZEUS
   collaborations)`), 2609.01563, 2609.17357, 2609.33831 (an environment), 2609.15009.
 - Guard: `perfect_kernel_batch61::frontmatter_digest_cluster_2609` (the alias guard
-  `relax_aliases_do_not_split_a_late_author` was deleted at DEL1; its shape is unguarded).
+  `perfect_kernel_batch59::relax_aliases_do_not_split_a_late_author` was deleted at DEL1; its shape is unguarded).
 
 ### 37. XSLT `f:seclev-aux` memoized to global variables (O(n²)→O(n), output-neutral)
 
@@ -3039,15 +3050,20 @@ announced, just not as the image's alternative — the warning names it as a
 possible cause, and acmart's own documentation puts `\Description` after the
 graphic.
 
-The slot is chosen by the description's tokens as written: `\Description[]{}` is a macro
-(acmart_cls.rs:235-236) that hands both arguments, undigested, to `float_description_tokens`
-(`latexml_package/src/float_description.rs:53`), and a control sequence, an active character, `$`, `^` or `_` in them
-means markup, which `@alt` cannot hold. The arguments are then digested by the `\lx@acm@description` constructor
-(float_description.rs:134), as Perl's `{}` (acmart.cls.ltxml:78) digests them, with `_ ^ & #` outside math made the
-text commands for them (`description_text`, :9-30: acmart.cls:895 gobbles the argument, so authors leave
-`\Description{Complaint_Loss}` unescaped, 2502.07049). Read undigested, the block had printed its markup as raw TeX
-(`\sysname{}`, 2403.09168; 2401.04997, 2304.01062, 2312.11013); so an undefined command inside a description is an
-Error again, as in Perl (2607.21760's `\D1 … \D5`, a copy-paste slip).
+The slot is chosen on the digested argument. The `\lx@acm@description` constructor (float_description.rs:131) digests
+both arguments, as Perl's `{}` (acmart.cls.ltxml:78) does, and its `before_construct` reverts the digested long
+description (`get_arg(2)`'s `revert()`, :215-227): a token other than a letter, an other character or a space in that
+reversion means markup, which `@alt` cannot hold. So `\def\foo{abc}` `\Description{\foo}` gives the image
+`@alt="abc"`, and `\Description{Complaint_Loss}`, whose `_` is digested as `\textunderscore`, its `aria-describedby`
+(probed on the QA76A base). `\Description[]{}` is a macro (acmart_cls.rs:235-237) that hands both arguments to
+`float_description_tokens` (`latexml_package/src/float_description.rs:53`), which builds the constructor's call with
+`_ ^ & #` outside math made the text commands for them (`description_text`, :9-30: acmart.cls:895 gobbles the
+argument, so authors leave `\Description{Complaint_Loss}` unescaped, 2502.07049). Read undigested, the block had
+printed its markup as raw TeX (`\sysname{}`, 2403.09168; 2401.04997, 2304.01062, 2312.11013). Digested, an undefined
+command inside a description is an Error, as in Perl: 2607.21760's `\D1 … \D5` (a copy-paste slip) gives
+`Error:undefined:\D`, an `<ltx:ERROR>` in the block and the image's `aria-describedby` (probed). **Open question for
+DG:** acmart.cls:895 discards the argument, so pdflatex never meets that undefined command; whether such an error stays
+an Error (Perl's and the code's today) or is reported lower is not ruled (KNOWN_PERL_ERRORS #66, point 2).
 
 Both descriptions are emitted as separate `ltx:note`s with their own `xml:id`
 and class (`ltx_acm_description_short` / `ltx_acm_description`) — two distinct
@@ -4686,7 +4702,10 @@ first recorded is retracted: pdflatex does not end a comment there.)
 - Witnesses: 2606.11493 (a mid-line `\end{comment}` swallows the bibliography in both engines and pdflatex aborts);
   2401.14656, 2405.12964, 2411.10188, 2501.06699, 2504.19287 (a TAB-indented `\end{CCSXML}`).
 - Guards: `00_tokenize::comment_test`, `06_cluster_bibliography::comment_midline_end_runs_to_eof_like_pdflatex`,
-  `perfect_kernel_gemini::comment_self_terminating_hands_to_end`, `perfect_kernel_batch64::comment_indented_end_line`.
+  `perfect_kernel_gemini::comment_self_terminating_hands_to_end`, `perfect_kernel_batch64::comment_indented_end_line`;
+  fixture `latexml_oxide/tests/cluster_regressions/comment_midline_end.tex`. The retracted rule's guard
+  `06_cluster_bibliography::comment_midline_end_keeps_bibliography` is retired: `comment_midline_end_runs_to_eof_like_pdflatex`
+  replaced it.
 
 ### 134. `--urlstyle` defaults to `file`, not Perl's `server`
 
@@ -4968,7 +4987,8 @@ convention or a break spacing attribute would let both engines carry it).
 ### 144. T1/T2 slots 94 and 126 are ASCII `^`/`~`, and verbatim contexts read in the ASCII encoding (Perl: the accents U+02C6/U+02DC)
 
 **Rule.** The T1, T2A, T2B and T2C font maps decode slots 94 and 126 as ASCII `^` and `~`, as t1enc.def:141-142
-declares them and pdflatex extracts them in any context (`latexml_package/src/package/t1_fontmap.rs:18`, :22;
+declares them and pdflatex extracts them in any context (Verbatim, listings, l3doc's `\cs`, `\string^`; verified with
+pdftotext and against the pdftex golden `ec.enc ∘ glyphtounicode.tex`; `latexml_package/src/package/t1_fontmap.rs:18`, :22;
 `t2a`/`t2b`/`t2c_fontmap.rs:31`, :39). **Perl** maps them to U+02C6/U+02DC (Bruce Miller, LaTeXML `9ec6a4122`
 "Encodings (#2435)", 2024-11-20: "^ and ~ which should be accents"), so a literal catcode-12 `~`/`^` under T1 — in
 `\verb`, `verbatim`, a `Verbatim`/`HyperVerbatim` argument, `\url`/`\path` — displays as the accent (Perl `\url{~a^b}`
@@ -4981,7 +5001,10 @@ declares them and pdflatex extracts them in any context (`latexml_package/src/pa
   package may re-install as the kernel's checking command (latex.ltx:10490-10492; luatexja's lltjfont.sty:549-551),
   which knows no `\T@ASCII` (qworld's 7 "Encoding scheme `ASCII' unknown").
 - **Stale tooling:** `tools/fontmap_drift.py:56-67` still allowlists the eight (t1/t2a/t2b/t2c, 94/126) slots "as
-  Bruce's accents"; they no longer drift from `glyphtounicode`, so the allowlist entries are dead.
+  Bruce's accents"; they no longer drift from `glyphtounicode`, so the allowlist entries are dead. Its other entries
+  stand, LaTeXML choices shared with Perl: slot 127, the line-break hyphen, is U+2010 (distinct from slot 45's ASCII
+  U+002D; glyphtounicode maps both to U+002D), and T2 slots 14/15 the angle quotes ‹› U+2039/U+203A (glyphtounicode's
+  deprecated 〈〉 U+2329/U+232A).
 - Witnesses: issue #723 (a Rhai `HyperVerbatim` URL's `~` became U+02DC); `\usepackage[T1]{fontenc}` +
   `\verb|a~b^c|` → `a~b^c`, `\url{http://g/~h^i}` → `~h^i`.
 - Guards: `06_cluster_regressions::{cluster_t1_hyperverbatim_ascii_723, cluster_t1_verbatim_ascii_723}`,
@@ -14805,7 +14828,7 @@ llncs_spothm_section_reset_v220_copy, llncs_autoref_envcountsame, llncs_autoref_
 llncs_alias_newcounter}`. Witnesses 2202.10090, 2601.04573 (`\@spothm`), 2412.05162 (`\let\c@case\relax` before
 `\spnewtheorem{case}[theorem]`), 2303.08726 (`\newcounter{case}` of the alias), 1612.00484.
 
-### 615. → KNOWN_PERL_ERRORS #1111 (llncs and svjour join a theorem's section number to its own with a period; ours uses the class's empty `\@thmcountersep`, "X 11" as pdflatex, llncs_cls.rs:478)
+### 615. → KNOWN_PERL_ERRORS #1111 (llncs and svjour join a theorem's section number to its own with a period; ours uses the class's empty `\@thmcountersep`, "X 11" as pdflatex, llncs_cls.rs:478 — overriding the 2026-10-16 ruling for "X 1.1", an open question for DG recorded there)
 
 ### 616. An ORCID iD given as its orcid.org address is the iD (Perl: the contact holds the text as written)
 
@@ -17766,7 +17789,7 @@ rerouted stores, `decide_unset_nulls`'s all-`\relax` and all-`\@empty` runs then
 `instructions:u` in 77i r3 — 1309.6905 +0.03%, 1503.05530 +0.07%, 1603.03011 +0.29%, the r3 review's run of 1603.03011
 +0.23%, 10.0017e9 → 10.0251e9 — and, over r3, +0.06% (1503.05530), +0.23% (1603.03011), +0.98% (1309.6905: its labelled keywords add the label and
 confirming runs) in 77i r4). **Residuals:** what the assignment journal does not undo — the raw-read paths list
-(`RAW_READ_PATHS`, content.rs:2432) and the pending field-provenance cover (`FIELD_COVER_PENDING`, token.rs:919) —, unlikely to
+(`RAW_READ_PATHS`, content.rs:2437) and the pending field-provenance cover (`FIELD_COVER_PENDING`, token.rs:919) —, unlikely to
 be reached by title-page code; a run whose assignments could not be undone (its groups changed) keeps the global
 assignments it made with sentinel values (a class's `\xdef\@x{\@store}` would carry "LxSentinel…zZ" into the document),
 and the walk then decides; a test of the value takes its branch with the sentinel's value, not the document's —
@@ -23317,7 +23340,8 @@ r6_llncs_shapes_are_written_whole` now in process and with the binary, eager and
   #918's hand-mark request; the block's again, as the binding declares and 63i's guard pins (its aa twin
   `perfect_kernel_batch92c::aa_sole_institute_is_the_rows`). With several authors a later line of it printing
   addresses alone outside the class's e-mail calls is an e-mail line of the row, each address a contact placed as a
-  call's (`api::row_address_lines`), as today's row reads it (`shared_row::row_email_calls`, OD #901): 2506.20360's
+  call's (`api::row_address_lines`; the old `shared_row::row_email_calls`, OD #901, deleted in P27b, the emitter's entry
+  cut `classify/entry_emails.rs` `entry_email_cut` since): 2506.20360's
   `\email{guolianglv@sina.com};{chunhuazhu@sina.cn}` had the second address in the institute's text, which then
   differed from today's.
 - **An e-mail call's text is what it prints** (`events::raw_lines`): an `\href` in it its printed text, never its
