@@ -17,6 +17,7 @@ citations are why the file is kept.
 
 ## Design & mission logs (referenced from live docs / code)
 
+- `OD_FRONTMATTER_RECORDS_2026-11-15.md` — the former texts of the 133 frontmatter OD entries that OD rationalization PR D (ruling 10, DG 2026-11-14) rewrote into eleven pipeline primaries (#980 #981 #993 #459 #920 #911 #805 #954 #262 #767 #460); verbatim, many describing deleted code. Cited from those primaries for the witness ids, figures and guard names.
 - `EXPECTED_ID_XMREF_DESIGN_2026-06-08.md` — `expected:id` XMRef study; Class B + distribute-extend fixed; residual in `../parity/DEFERRED_FAMILIES.md`. Cited by document.rs, parser.rs, amsmath_sty.rs, 06_cluster_math.rs, three cluster_regressions fixtures.
 - `EXPL3_CATCODE_GAP_2026-06-08.md` — expl3 catcode-clobber study, closed; dead ends kept; latent residual in `../parity/DEFERRED_FAMILIES.md`. Cited by expl3_sty.rs, sect08.rs, `../parity/WISDOM.md`.
 - `AR5IV_DIAGNOSTICS_2026-08-14.md` — the ar5iv 100-issue sweep (2026-07-18/20); residuals in `../SYNC_STATUS.md` (ar5iv tracker residuals).
