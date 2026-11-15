@@ -106,17 +106,42 @@ pub(crate) fn is_ltx(node: &Node) -> bool {
 /// `descendant-or-self::node()`, which past 10M nodes overflows the hardcoded
 /// `XPATH_MAX_NODESET_LENGTH`, returns NULL, and — formerly silently — yields an
 /// empty result. A direct DOM walk has no node-set and no such ceiling.
-fn scan_ids_and_pis(node: &Node, ids: &mut Vec<(String, Node)>, pis: &mut Vec<String>) {
+fn scan_ids_and_pis(document: &Node, ids: &mut Vec<(String, Node)>, pis: &mut Vec<String>) {
+  // The walk is read-only and wraps only the elements with an id as `Node`s: a wrapper is a registry entry kept until
+  // the document drops (PERF2 R5). A DTD can default an `xml:id` that `get_xml_id` reads, so then every element is asked.
+  let ro = document.as_readonly();
+  let has_dtd = ro
+    .get_child_nodes()
+    .iter()
+    .any(|c| c.get_type() == Some(NodeType::DTDNode));
+  scan_ids_and_pis_from(document, ro, has_dtd, ids, pis);
+}
+
+fn scan_ids_and_pis_from(
+  document: &Node,
+  node: RoNode,
+  has_dtd: bool,
+  ids: &mut Vec<(String, Node)>,
+  pis: &mut Vec<String>,
+) {
   let mut child = node.get_first_child();
   while let Some(c) = child {
     match c.get_type() {
       Some(NodeType::ElementNode) => {
-        if let Some(id) = get_xml_id(&c) {
-          ids.push((id, c.clone()));
+        // (without a DTD, `get_xml_id` finds an id only on a property named `id` or `xml:id`)
+        let mut named_id = has_dtd;
+        if !named_id {
+          c.for_each_property(|name, _| named_id |= name == "id" || name == "xml:id");
         }
-        scan_ids_and_pis(&c, ids, pis);
+        if named_id {
+          let element = document.wrap_readonly(c);
+          if let Some(id) = get_xml_id(&element) {
+            ids.push((id, element));
+          }
+        }
+        scan_ids_and_pis_from(document, c, has_dtd, ids, pis);
       },
-      Some(NodeType::PiNode) if c.get_name() == "latexml" => {
+      Some(NodeType::PiNode) if c.with_name(|name| name == "latexml") => {
         pis.push(c.get_content());
       },
       _ => {},

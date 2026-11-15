@@ -9,7 +9,10 @@ use std::{
   rc::Rc,
 };
 
-use libxml::tree::{Document as XmlDoc, Namespace, Node, NodeType};
+use libxml::{
+  readonly::RoNode,
+  tree::{Document as XmlDoc, Namespace, Node, NodeType},
+};
 use once_cell::sync::Lazy;
 use regex::Regex;
 use rustc_hash::{FxHashMap as HashMap, FxHashSet as HashSet};
@@ -1143,14 +1146,17 @@ impl Document {
           // no-scrap path (this is the streaming hot path — see the
           // `get_attributes` note above). `_lxfragment` is not one.
           // The engine's field marks (processing instructions, [`FIELD_MARK_TARGET`]) are scaffolding too.
+          // (read-only: only a scrap is wrapped as a `Node`)
           let scraps: Vec<Node> = current
+            .as_readonly()
             .get_child_nodes()
             .into_iter()
             .filter(|c| match c.get_type() {
-              Some(NodeType::ElementNode) => c.get_name().ends_with("_Capture_"),
-              Some(NodeType::PiNode) => c.get_name() == FIELD_MARK_TARGET,
+              Some(NodeType::ElementNode) => c.with_name(|name| name.ends_with("_Capture_")),
+              Some(NodeType::PiNode) => c.with_name(|name| name == FIELD_MARK_TARGET),
               _ => false,
             })
+            .map(|c| current.wrap_readonly(c))
             .collect();
           for scrap in scraps {
             if scrap.get_type() == Some(NodeType::PiNode) {
@@ -1163,12 +1169,14 @@ impl Document {
               self.remove_node(scrap);
             }
           }
-          let children = current.get_child_nodes();
+          // (read-only; a child is wrapped as a `Node` where it becomes work)
+          let children = current.as_readonly().get_child_nodes();
           // Collect work items forward, then push in reverse for left-to-right processing
           let mut child_work: Vec<Work> = Vec::new();
-          for child in &children {
-            let child_type = child.get_type();
+          for &ro_child in &children {
+            let child_type = ro_child.get_type();
             if child_type == Some(NodeType::ElementNode) {
+              let child = current.wrap_readonly(ro_child);
               let was_forcefont = child.has_attribute("_force_font");
               // Enter first, PostElement after (reversed when pushed to stack)
               child_work.push(Work::Enter(child.clone()));
@@ -1190,7 +1198,8 @@ impl Document {
               }
               if can_contain(&current, FONT_ELEMENT_NAME)
                 && !pending_declaration.is_empty()
-                && let Some(mut text) = self.wrap_nodes(FONT_ELEMENT_NAME, vec![child.clone()])?
+                && let Some(mut text) =
+                  self.wrap_nodes(FONT_ELEMENT_NAME, vec![current.wrap_readonly(ro_child)])?
               {
                 for (key, (value, _properties)) in pending_declaration.iter() {
                   self.set_attribute(&mut text, key, value)?;
@@ -2563,7 +2572,13 @@ impl Document {
     heuristic: bool,
   ) -> String {
     let mut serialized = String::new();
-    self.serialize_into(&mut serialized, node, depth, noindent, heuristic);
+    self.serialize_into(
+      &mut serialized,
+      node.as_readonly(),
+      depth,
+      noindent,
+      heuristic,
+    );
     serialized
   }
 
@@ -2632,11 +2647,12 @@ impl Document {
   /// Buffer-threaded core of [`serialize_aux`]. Writes the subtree directly into
   /// `out` instead of building (and re-copying) a fresh `String` per node — the
   /// recursive return-a-String pattern was the single largest byte source in the
-  /// allocation profile (~2.8 GB across the witness corpus). Output is identical.
+  /// allocation profile (~2.8 GB across the witness corpus). Output is identical. The walk is read-only, so it
+  /// wraps no `Node`s: a wrapper is a registry entry kept until the document drops (PERF2 R5).
   fn serialize_into(
     &self,
     out: &mut String,
-    node: &Node,
+    node: RoNode,
     depth: usize,
     noindent: bool,
     heuristic: bool,
@@ -2658,13 +2674,10 @@ impl Document {
     match node.get_type() {
       Some(NodeType::DocumentNode) => {
         out.push_str("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n");
-        if let Some(child) = node.get_first_child() {
-          self.serialize_into(out, &child, depth, noindent, heuristic);
-          let mut current_child = child;
-          while let Some(sibling) = current_child.get_next_sibling() {
-            self.serialize_into(out, &sibling, depth, noindent, heuristic);
-            current_child = sibling;
-          }
+        let mut child = node.get_first_child();
+        while let Some(current) = child {
+          self.serialize_into(out, current, depth, noindent, heuristic);
+          child = current.get_next_sibling();
         }
       },
       Some(NodeType::ElementNode) => {
@@ -2706,16 +2719,10 @@ impl Document {
         }
         // (a literal_placeholders doc falls through: the placeholder is an
         // ordinary childless element and serializes as itself)
-        let tag = if let Some(ns) = node.get_namespace() {
-          let prefix = ns.get_prefix();
-          if prefix.is_empty() {
-            local_name
-          } else {
-            s!("{}:{}", prefix, local_name)
-          }
-        } else {
-          local_name
-        };
+        let tag = node.with_namespace_prefix(|prefix| match prefix {
+          Some(prefix) if !prefix.is_empty() => s!("{}:{}", prefix, local_name),
+          _ => local_name,
+        });
         let children = node.get_child_nodes();
         let mut open_tag = s!("<{tag}");
 
@@ -2741,7 +2748,7 @@ impl Document {
         // code got that by appending it separately, which is also what rewrote every plain `id` into an
         // invalid-NCName `xml:id` (witness arXiv 2508.17585).
         let mut anodes: Vec<(String, SymStr, String)> = Vec::new();
-        node.as_readonly().for_each_property_ns(|key, href, value| {
+        node.for_each_property_ns(|key, href, value| {
           anodes.push((
             key.to_owned(),
             model::document_qname(href, key),
@@ -2789,7 +2796,7 @@ impl Document {
             .any(|e| e.get_type() == Some(NodeType::TextNode))
         } else {
           // This is the "Correct" way to determine whether to add indentation
-          let node_qname = get_node_qname(node);
+          let node_qname = model::get_ro_node_qname(node);
           model::can_contain_sym(node_qname, pin!("#PCDATA"))
         };
 
@@ -2807,7 +2814,7 @@ impl Document {
             out.push('\n');
           }
           for child in children {
-            self.serialize_into(out, &child, depth + 1, noindent_children, heuristic);
+            self.serialize_into(out, child, depth + 1, noindent_children, heuristic);
           }
           if !noindent_children {
             push_indent(out, depth);
@@ -2829,7 +2836,7 @@ impl Document {
         if !noindent {
           push_indent(out, depth);
         }
-        out.push_str(&self.document.node_to_string(node));
+        out.push_str(&self.document.ronode_to_string(&node));
         if !noindent {
           out.push('\n');
         }
@@ -5512,7 +5519,7 @@ impl Document {
         self.literal_placeholders,
         "spill_run must serialize placeholders literally (set for all of pass 1)"
       );
-      self.serialize_into(&mut xml, &node, depth, noindent, false);
+      self.serialize_into(&mut xml, node.as_readonly(), depth, noindent, false);
       chunk.push(node);
       let last = i + 1 == total;
       if xml.len() >= chunk_ceiling || last {
