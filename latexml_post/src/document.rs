@@ -13,6 +13,7 @@ use std::path::Path;
 use latexml_core::common::xml::compiled_xpath;
 use libxml::{
   parser::Parser as XmlParser,
+  readonly::RoNode,
   tree::{Document, Namespace, Node, NodeType},
   xpath::{Context as XPathContext, Expression, XPathError},
 };
@@ -307,9 +308,9 @@ fn parse_walk_union(union_xpath: &str) -> Option<Vec<WalkArm>> {
 /// Does `node` satisfy this arm? Name test first — it is a string compare,
 /// while the namespace check wraps a `Namespace` and the ancestor/child atoms
 /// walk.
-fn walk_arm_matches(arm: &WalkArm, node: &Node) -> bool {
+fn walk_arm_matches(arm: &WalkArm, node: RoNode) -> bool {
   if let Some(want) = &arm.name
-    && (node.get_name() != *want || !is_ltx(node))
+    && (node.get_name() != *want || !ro_is_ltx(node))
   {
     return false;
   }
@@ -323,7 +324,7 @@ fn walk_arm_matches(arm: &WalkArm, node: &Node) -> bool {
       WalkPred::NoAncestor(n) => {
         let mut cur = node.get_parent();
         while let Some(p) = cur {
-          if p.get_type() == Some(NodeType::ElementNode) && p.get_name() == *n && is_ltx(&p) {
+          if p.get_type() == Some(NodeType::ElementNode) && p.get_name() == *n && ro_is_ltx(p) {
             return false;
           }
           cur = p.get_parent();
@@ -332,28 +333,98 @@ fn walk_arm_matches(arm: &WalkArm, node: &Node) -> bool {
       },
       WalkPred::NoChild(n) => !node
         .get_child_elements()
-        .iter()
-        .any(|c| c.get_name() == *n && is_ltx(c)),
+        .into_iter()
+        .any(|c| c.get_name() == *n && ro_is_ltx(c)),
     })
   })
 }
 
-/// Limit-safe pre-order walk collecting every element matching ANY arm, in
-/// document order, each element pushed at most once — the same contract an
-/// XPath union has.
-fn collect_walk_matches(node: &Node, arms: &[WalkArm], out: &mut Vec<Node>) {
+/// [`is_ltx`] for a read-only node.
+fn ro_is_ltx(node: RoNode) -> bool {
+  node
+    .get_namespace()
+    .map(|ns| ns.get_href() == LTX_NSURI)
+    .unwrap_or(false)
+}
+
+/// Limit-safe pre-order walk collecting every element of `doc` matching ANY
+/// arm, in document order, each element pushed at most once — the same
+/// contract an XPath union has.
+///
+/// The arms are tested on read-only nodes; `Node` handles are then made only for
+/// the matches and their ancestors (wrapping every node was 2/3 of a query,
+/// 2308.04512). Both passes read the live tree, so nothing outlives the query.
+fn collect_walk_matches(doc: &Document, arms: &[WalkArm], out: &mut Vec<Node>) {
+  let (Some(ro_root), Some(root)) = (doc.get_root_readonly(), doc.get_root_element()) else {
+    return;
+  };
+  let mut matches = Vec::new();
+  collect_ro_matches(ro_root, arms, &mut matches);
+  if matches.is_empty() {
+    return;
+  }
+  // Every proper ancestor of a match, up to the root: the subtrees to enter.
+  let mut enter = FxHashSet::default();
+  for m in &matches {
+    let mut cur = m.get_parent();
+    while let Some(p) = cur
+      && enter.insert(p.node_ptr() as usize)
+    {
+      cur = p.get_parent();
+    }
+  }
+  let first = usize::from(matches[0].node_ptr() == root.node_ptr());
+  if first == 1 {
+    out.push(root.clone());
+  }
+  let mut next = first;
+  wrap_matches(&root, &matches, Some(&enter), &mut next, out);
+  if next < matches.len() {
+    // A match whose parent chain is not its tree path (an entity's content):
+    // wrap along pass 1's own route instead.
+    out.truncate(first);
+    next = first;
+    wrap_matches(&root, &matches, None, &mut next, out);
+  }
+}
+
+/// Pass 1 of [`collect_walk_matches`]: the matching elements, in document order.
+fn collect_ro_matches(node: RoNode, arms: &[WalkArm], out: &mut Vec<RoNode>) {
   if node.get_type() == Some(NodeType::ElementNode)
     && arms.iter().any(|arm| walk_arm_matches(arm, node))
   {
-    out.push(node.clone());
+    out.push(node);
   }
-  // first_child/next_sibling like `collect_split_pages` below — the previous
-  // `get_child_nodes()` materialized a Vec of wrapped nodes per recursion
-  // level, ~2.4% self + allocator share on a whole-document walk that answers
-  // every post `//NAME[pred]` query (2026-08-23 audit R5).
   let mut child = node.get_first_child();
   while let Some(c) = child {
-    collect_walk_matches(&c, arms, out);
+    collect_ro_matches(c, arms, out);
+    child = c.get_next_sibling();
+  }
+}
+
+/// Pass 2 of [`collect_walk_matches`]: the same document order, entering only
+/// the subtrees in `enter` (every one when `None`), so `matches[*next]` is
+/// always the next one met.
+fn wrap_matches(
+  node: &Node,
+  matches: &[RoNode],
+  enter: Option<&FxHashSet<usize>>,
+  next: &mut usize,
+  out: &mut Vec<Node>,
+) {
+  let mut child = node.get_first_child();
+  while let Some(c) = child {
+    if *next == matches.len() {
+      return;
+    }
+    let ptr = c.node_ptr();
+    if ptr == matches[*next].node_ptr() {
+      out.push(c.clone());
+      *next += 1;
+    }
+    if enter.is_none_or(|e| e.contains(&(ptr as usize))) {
+      wrap_matches(&c, matches, enter, next, out);
+    }
     child = c.get_next_sibling();
   }
 }
@@ -952,10 +1023,10 @@ impl PostDocument {
     // while exiting 0). Unrecognised shapes fall through to libxml2 unchanged.
     if context_node.is_none()
       && let Some(arms) = parse_walk_union(xpath)
-      && let Some(root) = self.document.get_root_element()
+      && self.document.get_root_readonly().is_some()
     {
       let mut out = Vec::new();
-      collect_walk_matches(&root, &arms, &mut out);
+      collect_walk_matches(&self.document, &arms, &mut out);
       return out;
     }
 
@@ -2549,9 +2620,16 @@ mod tests {
          <XMDual _pvis='1'/>\
          <XMDual _cvis='1' _pvis='1'/>\
          <XMDual/>\
+         <section id='s1'><para><p><ref idref='deep'/><text>tail</text></p></para>\
+           <Math id='m2'><XMath><XMDual _cvis='1' id='outer'><XMDual _pvis='1' id='nested'/></XMDual></XMath></Math>\
+         </section>\
+         <p id='after'>no match follows</p>\
        </document>",
     );
     for xpath in [
+      // Every element, the root first: the order of the wrapping pass.
+      "//*",
+      "//ltx:document | //ltx:ref",
       "//*[@idref]",
       "//*[@labelref]",
       "//ltx:ref[@href and not(@idref) and not(@labelref)]",
@@ -2566,7 +2644,7 @@ mod tests {
       let arms = parse_walk_union(xpath)
         .unwrap_or_else(|| panic!("`{xpath}` must be inside the walk grammar"));
       let mut walked = Vec::new();
-      collect_walk_matches(&doc.get_document_element().unwrap(), &arms, &mut walked);
+      collect_walk_matches(&doc.document, &arms, &mut walked);
       // The XPath side deliberately goes through the same public entry point,
       // which routes recognised shapes to the walk — so compare against
       // libxml2 directly instead.
@@ -2586,6 +2664,31 @@ mod tests {
         .collect();
       assert_eq!(got, expected, "walk disagrees with XPath for `{xpath}`");
     }
+  }
+
+  /// The walk keeps nothing between queries: a match inserted or removed since
+  /// the last query is seen by the next one, in document order.
+  #[test]
+  fn walk_answers_from_the_live_tree_after_mutation() {
+    let doc = make_test_doc(
+      "<document xmlns='http://dlmf.nist.gov/LaTeXML'><p><ref idref='a'/></p><p/></document>",
+    );
+    let ids = |doc: &PostDocument| -> Vec<Option<String>> {
+      doc
+        .findnodes("//*[@idref]")
+        .iter()
+        .map(|n| n.get_attribute("idref"))
+        .collect()
+    };
+    assert_eq!(ids(&doc), [Some("a".to_string())]);
+    let mut p2 = doc.findnodes("//ltx:p").pop().unwrap();
+    let mut added = Node::new("ref", p2.get_namespace(), &doc.document).unwrap();
+    added.set_attribute("idref", "b").unwrap();
+    p2.add_child(&mut added).unwrap();
+    assert_eq!(ids(&doc), [Some("a".to_string()), Some("b".to_string())]);
+    let mut first = doc.findnodes("//ltx:ref").remove(0);
+    first.unlink_node();
+    assert_eq!(ids(&doc), [Some("b".to_string())]);
   }
 
   /// A shape outside the grammar must NOT be approximated — it has to fall
