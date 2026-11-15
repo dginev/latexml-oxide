@@ -6024,12 +6024,7 @@ pub fn owns_calls(cs: &Token, binding: &Stored) -> bool {
     _ => None,
   };
   params
-    .and_then(|params| {
-      params
-        .get_parameters()
-        .iter()
-        .find(|param| !param.optional)
-    })
+    .and_then(|params| params.get_parameters().iter().find(|param| !param.optional))
     .is_some_and(|param| arena::with(param.name, |name| BRACED_ARGUMENT_TYPES.contains(&name)))
 }
 
