@@ -7,7 +7,13 @@
 % oracle:  pdflatex 0 errors: "Abstract. Abs.", "T", "Ann Able*", today's date, "Text.", footnote "e-mail: ann@x.org"
 % engines: rust int124a = 0 errors, the e-mail lost; perl = 0 errors, <ltx:contact role="email"> on Ann Able (OmniBus)
 % expect:  0 errors, 0 warnings; Ann Able<sup>*</sup> with <ltx:contact role="email">ann@x.org</ltx:contact>
-% status:  RED (int124a) -> GREEN (95d)
+% engines: rust main b72bf540ff and LOSTF = 0 errors, 0 warnings: "Ann Able" without the mark, and two e-mail contacts,
+%          "<sup>*</sup>" and "ann@x.org" — the observer reads the rerouted setter as the class's own e-mail command
+%          (`EmailMeaning::Own`, ledger.rs `email_meaning`), so the emitter writes its call `\email{ann@x.org}` as an
+%          e-mail item: its mark prints in that contact and its `\lx@add@email` makes a second one (1202.2889, 1108.4222,
+%          1206.0451)
+% status:  RED (int124a) -> GREEN (95d) -> RED (DEL1)
+% moves:   post-merge (a second mechanism: the reading of a mark-printing setter the table reroutes, LOSTF)
 % preload: ar5iv.sty
 \begin{filecontents*}[overwrite]{astmark.cls}
 \LoadClass{article}

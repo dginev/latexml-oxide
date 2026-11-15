@@ -7,7 +7,11 @@
 % expect:  0 errors, 0 warnings; two creators, "Yuliya Mishura" and "Ivan Voronov" (the vmsta binding reads the class
 %          raw and gives the author content its title page's name parts, `\lx@author@markup@class`)
 % engines: rust int160a (HG1) = 0 errors, 0 warnings: "Yu.Yuliya Mishura" and "I.Ivan Voronov", the initials the title page drops kept; 77t's guard kept only the counts after DEL1
-% status:  RED (77t base) -> GREEN (77t) -> RED (int160a, HG1)
+% engines: rust LOSTF = 0 errors, 0 warnings: "Yuliya Mishura" and "Ivan Voronov" — the frontmatter observer's rehearsal
+%          read the author content without the binding's markup (`\inits` undefined there, its "Yu." printed), and the
+%          emitter wrote the names from that reading; it now reads it under `\lx@author@markup@begin`, as the digestion
+%          does (OXIDIZED_DESIGN_DIVERGENCES #802)
+% status:  RED (77t base) -> GREEN (77t) -> RED (int160a, HG1) -> GREEN (LOSTF)
 % preload: ar5iv.sty
 \documentclass{vmsta}
 \begin{document}

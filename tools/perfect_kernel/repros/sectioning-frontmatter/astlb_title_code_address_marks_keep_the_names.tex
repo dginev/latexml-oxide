@@ -1,0 +1,48 @@
+% mechanism: astlb.cls:117-118 defines \address and \addresstext only inside its \@maketitle, where \@author expands:
+%   `\address{1}` prints the mark 1, `\addresstext{1}{…}` the footnote of the institute it marks (the pazh/astl
+%   family: astlb, pazhb, pazhb_eng, pazha2, pazhastl). The digestion of the author content runs those definitions
+%   (`\lx@author@markup@begin`, OXIDIZED_DESIGN_DIVERGENCES #983), but the frontmatter observer's rehearsal read the
+%   content without them, both commands undefined: their arguments printed as text, so the reading took "1," and
+%   the institutes for names and affiliations — creators invented, or a name merged into an affiliation
+%   (1206.0451's S.Yu. Sazonov). The rehearsal now reads the content under the same markup (#941).
+% witness: 1202.2889 (cccp_combined.tex:63-68), 1108.4222, 1206.0451 (manuscripten.tex:48-53); here a minimal stand-in
+% oracle:  pdflatex 0 errors: "Ann Able*1 , Bob Baker1,2", footnotes "1 Univ A, Moscow", "2 Univ B, Boston",
+%          "* e-mail: ann@a.org"
+% engines: rust main b72bf540ff = 0 errors, 4 warnings: five creators — "Ann Able", "Bob Baker1", "2 1Univ A",
+%          "Moscow 2Univ B", "Boston"; nov02 = the footnotes inside Bob Baker's personname
+% expect:  0 errors, 2 warnings (the two notes' italic, "note no argument"); two creators: "Ann Able" (mark 1, the
+%          e-mail ann@a.org) and "Bob Baker" (marks 1,2), the two institutes notes of the author block's last name.
+%          Still wrong, RED elsewhere: the e-mail's mark "*" is a contact of its own, not the name's
+%          (mark_then_store_email_read_by_a_refused_abstract_red); the notes are not given by their marks (Ann's 1)
+% status:  RED (b72bf540ff) -> GREEN (LOSTF)
+% preload: ar5iv.sty
+\begin{filecontents*}{astlb.cls}
+% A minimal stand-in for astlb.cls (Astronomy Letters, ASTL.CLS 04.02.12), written for a latexml-oxide test: its
+% \email (:78), \author (:87-88), the title code's \address and \addresstext (:117-118), and \endabstract's
+% \maketitle and e-mail footnote (:79-85, :176).
+\NeedsTeXFormat{LaTeX2e}\ProvidesClass{astlb}[2012/02/04 stand-in]
+\LoadClass{article}
+\def\email#1{\textsuperscript{*}\gdef\@email{#1}}
+\def\@@email#1{\let\oldthefootnote\thefootnote\renewcommand\thefootnote{\relax}%
+  \footnotetext{\hspace{-\parindent}\textsuperscript{*}e-mail: #1}\let\thefootnote\oldthefootnote
+  \setcounter{footnote}{0}}
+\def\author#1{\gdef\@author{#1}}
+\renewcommand\thempfootnote{\arabic{mpfootnote}}
+\def\@maketitle{\begin{center}\begin{minipage}{0.885\linewidth}%
+  \def\address##1{\textsuperscript{##1}}%
+  \def\addresstext##1##2{\footnotetext[##1]{\itshape ##2}}%
+  \begin{center}{\large\bfseries\@title\par}{\bfseries\@author\par}\end{center}%
+  \end{minipage}\end{center}}
+\renewenvironment{abstract}{\par\textbf{Abstract ---}}{\par\maketitle\@@email{\@email}}
+\end{filecontents*}
+\documentclass{astlb}
+\title{Repro Title}
+\author{Ann Able\email{ann@a.org}\address{1},
+  Bob Baker\address{1,2}
+  \addresstext{1}{Univ A, Moscow}
+  \addresstext{2}{Univ B, Boston}
+}
+\begin{document}
+\begin{abstract}Abstract words.\end{abstract}
+Body text.
+\end{document}
