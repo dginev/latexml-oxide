@@ -826,10 +826,10 @@ fn marked_blocks_restored_read_as_printed() {
 /// parts of its output that are right, the rest the RED its repro's header names. Row by row:
 /// - kernel `\thanks` whose ink is a command, a math token, a rule or frame, a constructor, a colour box or an empty
 ///   superscript (`kernel_thanks_*_red`, 92e): 0 E, every name; the authors whose `\thanks` prints nothing whole
-///   (no note), Bob Baker's "B" note kept. The other notes are dropped, the REDs, each named in the content check's one
-///   Warning (UNC);
+///   (no note), Bob Baker's "B" note kept. The other notes are dropped, each named in the content check's one Warning
+///   (UNC); the drop accepted, the REDs retired (old OD #916, DG 2026-11-15);
 /// - an undefined command in `\thanks` (`kernel_thanks_undefined_command_is_ink_red`): its one Error; the note and its
-///   error marker dropped, the RED, named in the content check's Warning (UNC);
+///   error marker dropped, named in the content check's Warning (UNC; retired as above);
 /// - the orphan mark (`author_block_orphan_mark_is_kept_red`, 59): the name; its printed "1" lost: the RED;
 /// - 64zd's asterisk-marked revtex names, noted affiliation and other note command
 ///   (`revtex_asterisk_marked_authors_split_red`, `author_noted_affiliation_stays_affiliation_red`,
