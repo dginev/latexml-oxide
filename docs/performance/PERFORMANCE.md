@@ -315,14 +315,13 @@ copy, single-text values read in place, a `str::from_utf8` fast path, child list
 wrapping elements only). Left, each with its basis (exact call counts × gdb-stepped instructions per call):
 * `get_properties` callers that read only names or a count — `namespace_prefixes_in_use` (`document.rs` ~:8744,
   0.51 %), `finalize_rec` (~:1218, 0.51 %; `_`-prefixed names and the count), `append_tree` (~:8171, 0.45 %),
-  `serialize_into` (~:2696, 0.24 %): ≈1.9 % with a borrowed attribute walk — a latexml-side change, needing an additive
-  rust-libxml visitor (no public-API break); waits for a rust-libxml release (PERF1 L4, 2026-11-15: 0.54 % of the mix,
-  the issue-790 book 1.4 %, b1000 1.3 %).
+  `serialize_into` (~:2696, 0.24 %): done 2026-11-15 (PERFG, rust-libxml's `RoNode::for_each_property`, below).
 * `get_name` behind `get_node_qname` (`common/model.rs:723`) and `collect_named` (`latexml_math_parser/src/util.rs:946`):
-  0.72 % of String copies, 2.56 M calls — a borrowed name read (additive API) on the latexml side.
+  0.72 % of String copies, 2.56 M calls — `get_node_qname` done 2026-11-15 (PERFG); `collect_named` left.
 * `Node::_wrap`'s `NodeMap` probe + `Rc` clone on every traversal step (5.27 M hits, 0.48 %): a `_private` back-pointer
   would remove the probe, but collides with P11 option 2 — design decision, not taken. Post's whole-document queries
-  walk `RoNode`s and wrap only their matches (2026-11-15, PERFD).
+  walk `RoNode`s and wrap only their matches (2026-11-15, PERFD); `serialize_into`, post's id scan and finalize's child
+  scan walk `RoNode`s (2026-11-15, PERFG).
 * `_autoopened` presence tests (`document.rs` ~:3540, ~:3584, `get_attribute("_autoopened").is_some()`) copy the value
   into a `String` only to test it exists: 2.93 M calls, 0.79 % with the wrapper (perf453c basis); `has_attribute` is
   allocation-free on 0.3.23 — a one-lever run, measured alone.
@@ -348,6 +347,50 @@ code on AMD (skid), so the figures are counts × stepped instructions.
 ---
 
 ## Audit log (periodic passes; newest first)
+
+### 2026-11-15 — borrowed reads through rust-libxml: no wrapper, map or String per node (PERFG, PERF2 R5-R7, PERF1 L4)
+
+Defects: every node a read-only walk met was wrapped as a `Node` (rust-libxml `Node::_wrap`: a `NodeMap` probe, on first
+sight an insert and an `Rc` kept until the document drops); `get_properties` copied every attribute into a
+`HashMap<String,String>` for callers that read names, a count or each value once; `get_node_qname` copied the name and
+the namespace prefix into Strings and spelled `prefix:local` into a third. Fix: additive rust-libxml API (local branch
+`perf/borrowed-reads`, consumed through a `[patch.crates-io]` path entry until libxml 0.3.24 is released):
+`Node::as_readonly` / `wrap_readonly`, `RoNode::for_each_property(_ns)`, `with_name`, `with_namespace_prefix`,
+`with_content`, each borrowing libxml2's strings (checked by `str::from_utf8` before the lossy decoder). Moved: R7
+`model::get_node_qname` (via `get_ro_node_qname`, the qname spelled in `arena::pin_qname`'s reused buffer); R6
+`serialize_into`, `finalize_rec`'s bookkeeping strip, `append_tree`, `namespace_prefixes_in_use` (the map's keying kept
+where it showed: one attribute per local name, the first's qname and the last's value); R5 `serialize_into`, post's
+`scan_ids_and_pis` (an element is wrapped only when it has a property named `id` or `xml:id`, `get_xml_id`'s own
+condition without a DTD; with a DTD every element is asked) and `finalize_rec`'s child scan (a child is wrapped where
+it becomes work).
+
+Basis: release, `perf stat -e instructions:u,cycles:u`, 3 interleaved runs per side on one core (`kit/perf_ab_cycles.sh`),
+base `INTPERF` (95042553f8b), the ar5iv recipe for `html`, the 10 papers from `popPERFBs`; instructions vary < 0.1 %
+within a pair (up to 0.4 % between sessions, 2010.05701); cycles under the shared host's load vary 5-40 % per run, so only the total's (the minimum of 3) are given:
+
+| Document | R7 | R6 | R5 | total instructions | total cycles |
+|---|---:|---:|---:|---:|---:|
+| book790 html | −0.92 % | −1.20 % | −1.07 % | 800.9 → 776.0 G, −3.11 % | −5.34 % |
+| b1000 html | −0.82 % | −1.44 % | −1.10 % | 208.1 → 201.1 G, −3.35 % | −0.31 % |
+| b500 xml | −1.23 % | −1.91 % | −0.67 % | 73.26 → 70.51 G, −3.75 % | −4.08 % |
+| 2308.04512 html | −0.51 % | −1.01 % | −0.56 % | 322.7 → 316.1 G, −2.06 % | −1.56 % |
+| amsldoc (raw) | −0.62 % | −0.92 % | −0.22 % | 6.250 → 6.146 G, −1.67 % | −4.11 % |
+| 10 random papers (html; 8 per lever) | −0.14 … −0.75 % | −0.37 … −1.22 % | −0.12 … −1.25 % | −0.53 … −3.07 % (median −2.06 %) | −0.59 … −8.91 % |
+| 2010.05701 (control) | −0.02 % | −0.43 % | +0.46 % | 267.00 → 266.97 G, −0.01 % | −0.11 % |
+| circuitikzmanual (control) | −0.18 % | −0.57 % | +0.25 % | 670.3 → 667.1 G, −0.47 % | +3.24 % |
+
+R5 is its walk commit plus `with_name`/`with_content` in `serialize_into` (the `RoNode` copies decode lossily). The
+controls' R5 cost is codegen, not the walk: an `instructions:u` profile of 2010.05701 (frame pointers) moves only gullet
+symbols (`Parameter::read_with` +0.71, `read_x_token` +0.65, `read_token` −0.51 points), and no document-build symbol
+reaches 1.5 % inclusive on either side. Peak RSS (html): b1000 1,419,756 → 1,368,008 KB (−3.6 %), book790 6,883,488 →
+6,885,544 KB (its peak is one formula's parse). Output: XML or HTML with every aux file byte-identical on the mix and on
+an A/B of 180 arXiv papers (`popPERFG`: 120 of `popPERFB` + 60 controls, ar5iv recipe), E/F/W 417/0/16591 on both; the
+base run twice differed on 4 (1203.4558, 2409.06317, 2403.20315, 2006.01789: their image aux files). Guards: the crate's
+`tests/borrowed_reads_tests.rs` (each read against its copying accessor; namespaced and same-name properties; a node
+created or unlinked mid-walk); the suite's serialization goldens. Left: `xml::descendant_or_self_elements`
+(`Document::find_elements`) still wraps every element for its `FnMut(&Node)` predicate, left to the shared read-only walk
+(PERFE); a qname memo keyed by libxml2's name pointers (PERF2 R7's second half) was not taken: a name freed and
+reallocated would hit a stale entry.
 
 ### 2026-11-15 — an unsplit document's page kept resident between post's passes (PERFH, PERF2 R2)
 
@@ -495,8 +538,7 @@ Measured (release, best of 3 interleaved, `instructions:u`, base MAIN884 ab9e1a4
 +0.04 %, b250 +0.06 %, amsldoc +0.07 %, 2205.15714 −0.01 %; 1106.3601's own spread is ±5 %, ASF second-chance wall
 deadlines); peak RSS unchanged. Byte identity: an A/B of 130 math-heavy papers + 59 controls, all forced to stream with
 many segments (`LATEXML_STREAMING=true LATEXML_SPILL_AT_MIB=1 LATEXML_SOFT_YIELD_MIN_BOXES=64`), raw XML identical on all 189.
-PERF1's L4 (a borrowed attribute walk for `get_properties`' name/count-only callers, P12) needs an additive visitor in
-rust-libxml, a crates.io dependency (0.3.23), not vendored: it waits for a rust-libxml release.
+PERF1's L4 (a borrowed attribute walk for `get_properties`' name/count-only callers, P12): done by PERFG (above).
 
 ### 2026-11-13 — the AASTeX many-author regression (batch AAS1)
 

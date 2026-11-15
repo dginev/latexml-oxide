@@ -44,9 +44,9 @@ unused_qualifications = "warn"
 # marpa-asf = { path = "/home/deyan/git/marpa/marpa" }
 
 [patch.crates-io]
-# TEMP until libxml 0.3.24 is released (`Document::is_well_formed` / `is_ns_valid` / `forget_unshared_nodes`,
-# rust-libxml branch perfh/doc-parse-properties).
-libxml = { path = "/home/deyan/data/pk_wt/PERFH_libxml" }
+# TEMP until libxml 0.3.24 is released: the combined local rust-libxml branch `perf/0.3.24` (PERFG's borrowed reads
+# + PERFH's parse flags and node-cache trim). Must be removed, and libxml bumped to 0.3.24 in every crate, before the PR.
+libxml = { path = "/home/deyan/data/pk_wt/INTPERF_libxml" }
 
 [profile.release]
 # Local benchmark/sandbox/canvas profile. Tuned for the 32 GB / 20-thread
@@ -247,6 +247,4 @@ opt-level = 1
 
 [profile.ci.package.latexml_core]
 opt-level = 1
-
-
 

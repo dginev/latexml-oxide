@@ -4,7 +4,7 @@ use std::{
   io::{BufRead, BufReader},
 };
 
-use libxml::tree::Node;
+use libxml::{readonly::RoNode, tree::Node};
 use once_cell::sync::Lazy;
 use regex::Regex;
 use rustc_hash::FxHashSet as HashSet;
@@ -680,12 +680,8 @@ pub fn get_namespace(codeprefix: &str, probe: bool) -> Result<Option<SymStr>> {
   Ok(ns)
 }
 
-/// Get the node's qualified name in standard form
-/// Ie. using the registered (code) prefix for that namespace.
-/// NOTE: Reconsider how _Capture_ & _WildCard_ should be integrated!?!
 /// Build a `prefix:local` qname with one exact-capacity allocation, avoiding the
-/// `format!` machinery (`s!`) that showed up under `get_node_qname` in profiles —
-/// this runs on every model check / serialization step.
+/// `format!` machinery (`s!`) ([`get_foreign_node_qname`]).
 #[inline]
 fn prefixed_qname(prefix: &str, local: &str) -> String {
   let mut q = String::with_capacity(prefix.len() + 1 + local.len());
@@ -695,7 +691,14 @@ fn prefixed_qname(prefix: &str, local: &str) -> String {
   q
 }
 
-pub fn get_node_qname(node: &Node) -> SymStr {
+/// Get the node's qualified name in standard form
+/// Ie. using the registered (code) prefix for that namespace.
+/// NOTE: Reconsider how _Capture_ & _WildCard_ should be integrated!?!
+pub fn get_node_qname(node: &Node) -> SymStr { get_ro_node_qname(node.as_readonly()) }
+
+/// [`get_node_qname`] of a node met in a read-only walk. The name and prefix are read borrowed: this runs on every model
+/// check and serialization step, where copying them out was ≈0.75 % of a conversion (PERF2 R7).
+pub fn get_ro_node_qname(node: RoNode) -> SymStr {
   use libxml::tree::NodeType::*;
   let node_type = node.get_type();
   if node_type.is_none() {
@@ -719,34 +722,28 @@ pub fn get_node_qname(node: &Node) -> SymStr {
       // }
       pin!("xmlns")
     },
-    ElementNode | AttributeNode => {
-      let name_str = node.get_name();
+    ElementNode | AttributeNode => node.with_name(|name| {
       // Use the actual namespace prefix from the node when available.
       // For SVG/MathML/etc with explicit prefix, use that prefix directly.
-      if let Some(ns) = node.get_namespace() {
-        let prefix = ns.get_prefix();
-        if prefix.is_empty() {
-          // Default namespace — use ltx: prefix. The document we build declares
-          // ltx as ITS default namespace, so an empty prefix means ltx here, and
-          // this deliberately does NOT read the namespace URI to confirm it:
-          // `Namespace::get_href` allocates a String per call, and on this path
-          // (~140 call sites, once per node and per attribute) that measured a
-          // 3.4% whole-conversion regression. A node whose DEFAULT namespace is
-          // something else can only come from a foreign document — see
-          // [`get_foreign_node_qname`], which is what reads such a tree.
-          arena::pin(prefixed_qname("ltx", &name_str))
-        } else {
-          // Explicit prefix (e.g., "svg", "m") — use it
-          arena::pin(prefixed_qname(&prefix, &name_str))
-        }
-      } else {
+      node.with_namespace_prefix(|prefix| match prefix {
+        // Default namespace — use ltx: prefix. The document we build declares
+        // ltx as ITS default namespace, so an empty prefix means ltx here, and
+        // this deliberately does NOT read the namespace URI to confirm it:
+        // `Namespace::get_href` allocates a String per call, and on this path
+        // (~140 call sites, once per node and per attribute) that measured a
+        // 3.4% whole-conversion regression. A node whose DEFAULT namespace is
+        // something else can only come from a foreign document — see
+        // [`get_foreign_node_qname`], which is what reads such a tree.
+        Some("") => arena::pin_qname("ltx", name),
+        // Explicit prefix (e.g., "svg", "m") — use it
+        Some(prefix) => arena::pin_qname(prefix, name),
         // No namespace — special cases for non-namespaced elements
-        match name_str.as_str() {
-          "song" | "verse" => arena::pin(name_str),
-          regular => arena::pin(prefixed_qname("ltx", regular)),
-        }
-      }
-    },
+        None => match name {
+          "song" | "verse" => arena::pin(name),
+          regular => arena::pin_qname("ltx", regular),
+        },
+      })
+    }),
     // Need others?
     _ => {
       // Defense-in-depth (issue #217): a node with an unexpected libxml2 type
@@ -837,26 +834,31 @@ pub fn get_node_document_qname(node: &Node) -> SymStr {
     NamespaceDecl => pin!("xmlns"),
 
     ElementNode | AttributeNode => {
-      let empty_sym = pin!("");
-      let mut prefix = empty_sym;
-      if let Some(ns) = node.get_namespace() {
-        let href = ns.get_href();
-        if !href.is_empty() {
-          prefix = get_document_namespace_prefix(&href, false, true).unwrap_or(empty_sym);
-        }
-      }
-      if prefix == empty_sym {
-        arena::pin(node.get_name())
-      } else {
-        arena::pin(arena::with(prefix, |prefix_str| {
-          s!("{}:{}", prefix_str, node.get_name())
-        }))
-      }
+      let node = node.as_readonly();
+      node.with_name(|name| node.with_namespace_href(|href| document_qname(href, name)))
     },
     // Need others?
     t => {
       panic!("Fatal:misdefined:<caller> should not ask for qualified name for node of type {t:?}")
     },
+  }
+}
+
+/// [`get_node_document_qname`] of an element or attribute named `name` in the namespace `href`.
+pub fn document_qname(href: Option<&str>, name: &str) -> SymStr {
+  let empty_sym = pin!("");
+  let prefix = match href {
+    Some(href) if !href.is_empty() => {
+      get_document_namespace_prefix(href, false, true).unwrap_or(empty_sym)
+    },
+    _ => empty_sym,
+  };
+  if prefix == empty_sym {
+    arena::pin(name)
+  } else {
+    arena::pin(arena::with(prefix, |prefix_str| {
+      s!("{}:{}", prefix_str, name)
+    }))
   }
 }
 
