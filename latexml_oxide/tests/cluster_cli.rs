@@ -2876,8 +2876,9 @@ mod browser_render_eqn_tags {
 mod browser_render_author_lines {
   //! Issue #783 rendered at 1280/375 px: an author whose contacts are all `\\` lines of the author block shows them
   //! under the name with no starred pop-up (a `\thanks` keeps its mark, its text in its pop-up; a `\footnote` note
-  //! keeps the star, its text shown on hover, 1112.2930); an author with a class's own `\affiliation` keeps the pop-up. Opt-in and LOCAL like the guards above (Firefox too with
-  //! `LATEXML_FIREFOX`); the CI half is `witnessed_css_delta::author_line_delta_stays_present`.
+  //! keeps the star, its text shown on hover, 1112.2930); an author with a class's own `\affiliation` keeps the pop-up.
+  //! On hover no name or contact covers another (two notes, math0111266). Opt-in and LOCAL like the guards above
+  //! (Firefox too with `LATEXML_FIREFOX`); the CI half is `witnessed_css_delta::author_line_delta_stays_present`.
 
   const LINES: &str = "\\documentclass{article}\n\\begin{document}\n\\title{Two authors}\n\
      \\author{Ann Able\\thanks{Supported by X.} \\\\ Univ.\\ of A \\\\ Dept.\\ of Physics\n\
@@ -2885,12 +2886,21 @@ mod browser_render_author_lines {
   const NOTE: &str = include_str!(
     "../../tools/perfect_kernel/repros/sectioning-frontmatter/author_lines_783_footnote_note.tex"
   );
+  const TWO_NOTES: &str = include_str!(
+    "../../tools/perfect_kernel/repros/sectioning-frontmatter/author_lines_783_two_notes_hover.tex"
+  );
+  const THANKS_NOTE: &str = "\\documentclass{article}\n\\begin{document}\n\\title{A note beside a thanks}\n\
+     \\author{Ann Able\\thanks{Supported by X.}\\footnote{A note on Ann.} \\\\ Univ.\\ of A \\\\ Dept.\\ of Physics\n\
+     \\and Bob Baker \\\\ Univ.\\ of B}\n\\date{}\n\\maketitle\ntext\n\\end{document}\n";
+  const EMAIL_NOTE: &str = "\\documentclass{article}\n\\begin{document}\n\\title{A note beside an e-mail line}\n\
+     \\author{Ann Able\\footnote{A note on Ann.} \\\\ Univ.\\ of A \\\\ \\texttt{ann@a.edu}\n\
+     \\and Bob Baker \\\\ Univ.\\ of B}\n\\date{}\n\\maketitle\ntext\n\\end{document}\n";
   const SETTER: &str = "\\documentclass[aps,prl]{revtex4-2}\n\\begin{document}\n\\title{REVTeX}\n\
      \\author{Ann Able\\\\ Dept.\\ of Physics}\n\\affiliation{Univ.\\ of A}\n\
      \\begin{abstract}Abs.\\end{abstract}\n\\maketitle\ntext\n\\end{document}\n";
 
   /// Each run's creators as (name, star, [(note mark shown, note text shown)], [(contact text, shown, below the name,
-  /// shown while the author's notes are hovered)]).
+  /// shown while the author's notes are hovered)], [the names and contacts covering one another on that hover]).
   fn creators(stdout: &str) -> Vec<(String, serde_json::Value)> {
     let v: serde_json::Value = serde_json::from_str(stdout.trim()).expect("parse JSON");
     v.as_object()
@@ -2912,14 +2922,17 @@ mod browser_render_author_lines {
       let expected = serde_json::json!([
         { "name": "Ann Able", "star": "none", "notes": [{ "mark": true, "content": false }],
           "contacts": [{ "text": "Univ. of A", "visible": true, "belowName": true, "hover": true },
-                       { "text": "Dept. of Physics", "visible": true, "belowName": true, "hover": true }] },
+                       { "text": "Dept. of Physics", "visible": true, "belowName": true, "hover": true }],
+          "overlaps": [] },
         { "name": "Bob Baker", "star": "none", "notes": [],
           "contacts": [{ "text": "Univ. of B", "visible": true, "belowName": true, "hover": true },
-                       { "text": "bob@b.edu", "visible": true, "belowName": true, "hover": true }] }
+                       { "text": "bob@b.edu", "visible": true, "belowName": true, "hover": true }],
+          "overlaps": [] }
       ]);
       assert_eq!(run, expected, "the author lines ({key}): {stdout}");
     }
-    // Before (I783E): Bob Baker's note kept "Univ B" behind the star too.
+    // Before (I783E): Bob Baker's note kept "Univ B" behind the star too. (The hidden note is `display:none`, whose
+    // innerText is its text.)
     let Some(stdout) =
       super::browser_harness::render_and_measure("#783", NOTE, "measure_authors.js")
     else {
@@ -2928,12 +2941,57 @@ mod browser_render_author_lines {
     for (key, run) in creators(&stdout) {
       let expected = serde_json::json!([
         { "name": "Ann Able", "star": "none", "notes": [],
-          "contacts": [{ "text": "Univ A", "visible": true, "belowName": true, "hover": true }] },
+          "contacts": [{ "text": "Univ A", "visible": true, "belowName": true, "hover": true }],
+          "overlaps": [] },
         { "name": "Bob Baker", "star": "\"*\"", "notes": [],
-          "contacts": [{ "text": "", "visible": false, "belowName": false, "hover": true },
-                       { "text": "Univ B", "visible": true, "belowName": true, "hover": true }] }
+          "contacts": [{ "text": "Note:\u{a0}X", "visible": false, "belowName": false, "hover": true },
+                       { "text": "Univ B", "visible": true, "belowName": true, "hover": true }],
+          "overlaps": [] }
       ]);
       assert_eq!(run, expected, "the note's author ({key}): {stdout}");
+    }
+    // Before (I783F): each note its own absolute pop-up, so on hover the second note covered the first and both the
+    // lines (Chrome and Firefox, 1280/375); a note beside a `\thanks` or above an e-mail line covered the lines.
+    let line = |text: &str| serde_json::json!({ "text": text, "visible": true, "belowName": true, "hover": true });
+    let note = |text: &str| serde_json::json!({ "text": text, "visible": false, "belowName": false, "hover": true });
+    let bob = serde_json::json!({ "name": "Bob Baker", "star": "none", "notes": [],
+      "contacts": [line("Univ. of B")], "overlaps": [] });
+    for (label, doc, ann) in [
+      (
+        "two notes",
+        TWO_NOTES,
+        serde_json::json!({ "name": "Ann Able", "star": "\"*\"", "notes": [],
+        "contacts": [note("Note:\u{a0}First note on Ann."), note("Note:\u{a0}Second note on Ann."),
+                     line("Univ. of A"), line("Dept. of Physics")], "overlaps": [] }),
+      ),
+      (
+        "a note beside a \\thanks",
+        THANKS_NOTE,
+        serde_json::json!({ "name": "Ann Able", "star": "\"*\"",
+        "notes": [{ "mark": true, "content": false }],
+        "contacts": [note("Note:\u{a0}A note on Ann."), line("Univ. of A"), line("Dept. of Physics")],
+        "overlaps": [] }),
+      ),
+      (
+        "a note beside an e-mail line",
+        EMAIL_NOTE,
+        serde_json::json!({ "name": "Ann Able", "star": "\"*\"",
+        "notes": [], "contacts": [note("Note:\u{a0}A note on Ann."), line("Univ. of A"), line("ann@a.edu")],
+        "overlaps": [] }),
+      ),
+    ] {
+      let Some(stdout) =
+        super::browser_harness::render_and_measure("#783", doc, "measure_authors.js")
+      else {
+        return;
+      };
+      for (key, run) in creators(&stdout) {
+        assert_eq!(
+          run,
+          serde_json::json!([ann, bob]),
+          "{label} ({key}): {stdout}"
+        );
+      }
     }
     let Some(stdout) =
       super::browser_harness::render_and_measure("#783", SETTER, "measure_authors.js")

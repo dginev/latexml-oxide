@@ -1,0 +1,20 @@
+% witness: math0111266 (two \footnote's on one name); synthetic shape from revI783F (B1)
+% mechanism: issue #783 — in LaTeXML.css's card (an author whose contacts are all `\\` lines or notes) each note
+%   contact was its own absolute pop-up, so two notes opened on top of each other, and over the lines; on hover a
+%   note now joins the card's flow (siblings: a note beside a `\thanks`, a note beside an e-mail line — rows of the
+%   same browser guard).
+% oracle:  pdflatex 0 errors; Ann Able†∗ / Univ. of A / Dept. of Physics beside Bob Baker / Univ. of B, two footnotes
+% engines: I783F (f6660cf8fb7) = on hover "Second note on Ann." covers "First note on Ann.", both cover the lines
+%   (Chrome and Firefox, 1280/375)
+% expect:  on hover both notes shown, stacked under the name above the lines, nothing covering anything
+% status:  RED (I783F) -> GREEN (fix/issue-783, round 6); guard cluster_cli::browser_render_author_lines
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{Two notes}
+\author{Ann Able\footnote{First note on Ann.}\footnote{Second note on Ann.} \\ Univ.\ of A \\ Dept.\ of Physics
+\and Bob Baker \\ Univ.\ of B}
+\date{}
+\maketitle
+text
+\end{document}

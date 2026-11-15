@@ -32108,10 +32108,11 @@ several names (`\author{Ann, Bob, Cy \\ CMU}`) is repeated under each name, each
 (DG 2026-11-14; 2104.07210). LaTeXML.css (local delta after the multiline rules): outside `ltx_authors_multiline`, an
 author whose contacts are all such lines or notes is an `inline-block` card with the lines under the name, their labels
 hidden; a note contact (`\footnote` in `\author` is `\thanks`, article.cls:241, Perl's role=note contact,
-Base_Utility.pool.ltxml:331) keeps the star and shows on hover (1112.2930), and with no note there is no star; an author
+Base_Utility.pool.ltxml:331) keeps the star and shows on hover in the card's flow, so two notes, or a note and the
+lines, never cover one another (1112.2930, math0111266), and with no note there is no star; an author
 with any other contact keeps the pop-up, its labels shown; a `\thanks` note keeps its mark and pop-up. Chrome and
 Firefox at 1280/375 px. ar5iv.css already shows every
-author's contacts (`css/ar5iv.css:613`, `:834`): no change. Offered upstream. **Guards**:
+author's contacts (`css/ar5iv.css:920`, `:940` at ar5iv-css `6dc3e97`; it does not load LaTeXML.css): no change. Offered upstream. **Guards**:
 `06_cluster_frontmatter::frontmatter_author_lines_783` (repros `sectioning-frontmatter/author_lines_783_*.tex`),
 `xslt::witnessed_css_delta::author_line_delta_stays_present`, `cluster_cli::browser_render_author_lines` (local).
 

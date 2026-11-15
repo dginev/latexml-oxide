@@ -105,7 +105,7 @@ a.ltx_LaTeXML_logo { text-decoration: none; }
     display:none; }
 /* latexml-oxide local delta (issue #783, OXIDIZED_DESIGN_DIVERGENCES #1051): a contact the author block prints on a
    line under the name has class ltx_author_line; an author whose contacts are all such lines or notes shows the lines
-   under the name, as the PDF does, not behind the starred pop-up; a note keeps the star and its pop-up. */
+   under the name, as the PDF does, not behind the starred pop-up; a note keeps the star, shown on hover. */
 .ltx_document:not(.ltx_authors_multiline) .ltx_creator:has(.ltx_author_line):not(:has(.ltx_contact:not(.ltx_author_line):not(.ltx_role_note):not(.ltx_role_thanks))) {
     display:inline-block; vertical-align:top; text-align:center; margin:0 1em; }
 .ltx_document:not(.ltx_authors_multiline) .ltx_author_notes:not(:has(.ltx_contact:not(.ltx_author_line):not(.ltx_role_note):not(.ltx_role_thanks))):has(.ltx_author_line) {
@@ -119,9 +119,12 @@ a.ltx_LaTeXML_logo { text-decoration: none; }
     visibility:visible; opacity:1; position:static; padding:0; background:none; border:none;
     border-radius:0; box-shadow:none; font-size:inherit; text-align:inherit; }
 .ltx_document:not(.ltx_authors_multiline) .ltx_author_notes:not(:has(.ltx_contact:not(.ltx_author_line):not(.ltx_role_note):not(.ltx_role_thanks))):has(.ltx_author_line) .ltx_contact:not(.ltx_author_line) {
-    visibility:hidden; opacity:0; transition: opacity 0.3s; position:absolute; z-index:10; }
+    display:none; }
+/* on hover each note joins the card's flow, so two notes, or a note and the lines, never cover one another;
+   inline-size containment keeps the card's width, so the star stays under the pointer */
 .ltx_document:not(.ltx_authors_multiline) .ltx_author_notes:not(:has(.ltx_contact:not(.ltx_author_line):not(.ltx_role_note):not(.ltx_role_thanks))):has(.ltx_author_line):hover .ltx_contact:not(.ltx_author_line) {
-    visibility:visible; opacity:1; background:white; text-align:left;
+    display:block; position:static; contain:inline-size; overflow-wrap:anywhere; margin:0.2em 0;
+    background:white; text-align:left;
     border: 1px solid black; border-radius: 0 5px 5px 5px; box-shadow: 5px 5px 10px gray;
     padding:0.3rem; font-size:1rem; }
 .ltx_document:not(.ltx_authors_multiline) .ltx_author_notes:not(:has(.ltx_contact:not(.ltx_author_line):not(.ltx_role_note):not(.ltx_role_thanks))):has(.ltx_author_line) .ltx_author_line .ltx_contact_name { display:none; }
