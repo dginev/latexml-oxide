@@ -1210,8 +1210,9 @@ impl Document {
               }
               if can_contain(&current, FONT_ELEMENT_NAME)
                 && !pending_declaration.is_empty()
-                && let Some(mut text) =
-                  self.wrap_nodes(FONT_ELEMENT_NAME, vec![current.node_from_readonly(ro_child)])?
+                && let Some(mut text) = self.wrap_nodes(FONT_ELEMENT_NAME, vec![
+                  current.node_from_readonly(ro_child),
+                ])?
               {
                 for (key, (value, _properties)) in pending_declaration.iter() {
                   self.set_attribute(&mut text, key, value)?;
