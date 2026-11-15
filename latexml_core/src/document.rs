@@ -2736,21 +2736,8 @@ impl Document {
           _ => local_name,
         });
         let children = node.get_child_nodes();
-        let mut open_tag = s!("<{tag}");
 
-        let nsnodes = node.get_namespace_declarations();
-        for ns in nsnodes {
-          let prefix = ns.get_prefix();
-          let prefix_declaration = if prefix.is_empty() {
-            s!("xmlns")
-          } else {
-            s!("xmlns:{}", prefix)
-          };
-          let href = ns.get_href();
-          write!(open_tag, " {prefix_declaration}=\"{href}\"").ok();
-        }
-
-        // Every attribute's local name, document qname and serialized value, in libxml2's order. A local name
+        // Every attribute's local name, document qname and value, in libxml2's order. A local name
         // keys one attribute, as `get_attributes()`'s map did: the qname of the first that has it
         // (`get_attribute_node`), the value of the last. `get_node_document_qname` resolves the attribute's
         // NAMESPACE, so it returns "xml:id" for an `xml:id` and "id" for a genuine plain `id`, which the model
@@ -2764,7 +2751,7 @@ impl Document {
           anodes.push((
             key.to_owned(),
             model::document_qname(href, key),
-            serialize_attr(value),
+            value.to_owned(),
           ));
         });
         if anodes.len() > 1 {
@@ -2793,12 +2780,6 @@ impl Document {
             .cmp(&rank(*b_sym, b_key))
             .then_with(|| a_key.cmp(b_key))
         });
-        for (_, key_sym, val_serialized) in anodes {
-          arena::with(key_sym, |key_str| {
-            write!(open_tag, " {key_str}=\"{val_serialized}\"")
-          })
-          .ok();
-        }
         let noindent_children: bool = if heuristic {
           // libxml2's heuristic: inline (noindent) if ANY direct child is a text node.
           // Crucially, this does NOT propagate the parent's noindent — each element
@@ -2816,7 +2797,25 @@ impl Document {
         if !noindent {
           push_indent(out, depth);
         }
-        out.push_str(&open_tag);
+        // The open tag, written in place: its namespace declarations, then the attributes, each value escaped.
+        out.push('<');
+        out.push_str(&tag);
+        for ns in node.get_namespace_declarations() {
+          let prefix = ns.get_prefix();
+          out.push_str(" xmlns");
+          if !prefix.is_empty() {
+            out.push(':');
+            out.push_str(&prefix);
+          }
+          write!(out, "=\"{}\"", ns.get_href()).ok();
+        }
+        for (_, key_sym, value) in anodes {
+          out.push(' ');
+          arena::with(key_sym, |key_str| out.push_str(key_str));
+          out.push_str("=\"");
+          push_escaped_attr(out, &value);
+          out.push('"');
+        }
         // Perl serializes elements with children (including empty text nodes) as
         // <tag>...</tag>, and truly childless elements as <tag/>. Match this behavior.
         if !children.is_empty() {
@@ -2841,7 +2840,7 @@ impl Document {
         }
       },
       Some(NodeType::TextNode) => {
-        node.with_content(|text| out.push_str(&serialize_string(text)));
+        node.with_content(|text| push_escaped_text(out, text));
       },
       Some(NodeType::PiNode) => {
         // should code this by hand, as well...
@@ -2854,9 +2853,9 @@ impl Document {
         }
       },
       Some(NodeType::CommentNode) => {
-        node
-          .with_content(|text| write!(out, "<!-- {}-->", serialize_string(text)))
-          .ok();
+        out.push_str("<!-- ");
+        node.with_content(|text| push_escaped_text(out, text));
+        out.push_str("-->");
       },
       _ => {},
     }
@@ -8547,21 +8546,32 @@ fn xml_sanitize(value: &str) -> Cow<'_, str> {
   }
 }
 
-fn serialize_string(string: &str) -> String {
-  // Basic entities
-  let mut serialized = string.replace('&', "&amp;");
-  serialized = serialized.replace('>', "&gt;");
-  serialized = serialized.replace('<', "&lt;");
-  serialized
-}
+/// Text content with its basic entities escaped (`&`, `>`, `<`), appended to `out` in one pass. No replacement
+/// contains a character escaped, so this equals replacing `&` first and the rest after (the guard
+/// `serializer_escape_matches_sequential_replace`).
+fn push_escaped_text(out: &mut String, string: &str) { push_escaped(out, string, false) }
 
-fn serialize_attr(string: &str) -> String {
-  let mut serialized = serialize_string(string);
-  // And escape any remaining special code points
-  serialized = serialized.replace('\"', "&quot;");
-  serialized = serialized.replace('\n', "&#10;");
-  serialized = serialized.replace('\t', "&#9;");
-  serialized
+/// An attribute value escaped as [`push_escaped_text`], and `"`, newline and tab too.
+fn push_escaped_attr(out: &mut String, string: &str) { push_escaped(out, string, true) }
+
+fn push_escaped(out: &mut String, string: &str, attr: bool) {
+  let mut rest = string;
+  // Copy each run up to the next escaped character whole; every escaped character is ASCII.
+  while let Some(at) =
+    rest.find(|c| matches!(c, '&' | '<' | '>') || (attr && matches!(c, '"' | '\n' | '\t')))
+  {
+    out.push_str(&rest[..at]);
+    out.push_str(match rest.as_bytes()[at] {
+      b'&' => "&amp;",
+      b'<' => "&lt;",
+      b'>' => "&gt;",
+      b'"' => "&quot;",
+      b'\n' => "&#10;",
+      _ => "&#9;",
+    });
+    rest = &rest[at + 1..];
+  }
+  out.push_str(rest);
 }
 
 pub trait IntoVDQS {
@@ -9150,5 +9160,59 @@ mod attribute_cleaners {
       crate::common::cleaners::clean_id("S2.I10.i1\\par"),
       "S2.I10.i1par"
     );
+  }
+}
+
+#[cfg(test)]
+mod serializer_escape {
+  use super::{push_escaped_attr, push_escaped_text};
+
+  /// The one-pass escape writes exactly what the sequential `replace` chain wrote (`&` first, then `>`, `<`, and for an
+  /// attribute `"`, newline, tab), on strings made of every escaped character, the unescaped `\r` and `'`, entities
+  /// already escaped, and non-ASCII text around them.
+  #[test]
+  fn serializer_escape_matches_sequential_replace() {
+    fn text_by_replace(s: &str) -> String {
+      s.replace('&', "&amp;")
+        .replace('>', "&gt;")
+        .replace('<', "&lt;")
+    }
+    fn attr_by_replace(s: &str) -> String {
+      text_by_replace(s)
+        .replace('"', "&quot;")
+        .replace('\n', "&#10;")
+        .replace('\t', "&#9;")
+    }
+    let alphabet = [
+      "&", "<", ">", "\"", "'", "\r", "\t", "\n", "a", "é", "∑", "&amp;", "&lt;", "&#10;",
+      "&quot;", ";", "#",
+    ];
+    let mut cases: Vec<String> = vec![
+      String::new(),
+      "plain".into(),
+      "&amp;&amp;amp;".into(),
+      "a<b>&c\"d'e\r\nf\tg".into(),
+      "x\u{1F600}&\u{0300}<".into(),
+    ];
+    // Every string of up to three pieces of the alphabet.
+    for a in alphabet {
+      for b in alphabet {
+        for c in alphabet {
+          cases.push(format!("{a}{b}{c}"));
+        }
+      }
+    }
+    for case in &cases {
+      let mut text = String::from("prefix");
+      push_escaped_text(&mut text, case);
+      assert_eq!(
+        text,
+        format!("prefix{}", text_by_replace(case)),
+        "text {case:?}"
+      );
+      let mut attr = String::new();
+      push_escaped_attr(&mut attr, case);
+      assert_eq!(attr, attr_by_replace(case), "attribute {case:?}");
+    }
   }
 }
