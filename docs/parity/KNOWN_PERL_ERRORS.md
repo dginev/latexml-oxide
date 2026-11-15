@@ -21664,3 +21664,37 @@ The rule is the resolver's (`observer/resolver`), whose decisions the emitter wr
 - repro `boxes-groups/box_dimensions_measured.tex`
 
 **Open (K18 step 2):** `\raisebox`'s `[height][depth]` (RED `boxes-groups/raisebox_optionals_measure_the_box.tex`), `\resizebox{1em}`'s last digits, makecell/diagbox string sizes: `docs/perfect_kernel/OPEN_ROWS.md` ODR5.
+
+## 1274. pgfmath's native functions compute when expanded, before the assignment that expanded them
+
+**Perl source:** `LaTeXML/Package/pgfmath.code.tex.ltxml` lines 85-90 (`pgfmathresult` returns `\def\pgfmathresult{…}`
+tokens), 147-243 (every `\pgfmath<fn>@` a `DefMacro` closure), 401-403 (`\lx@pgfmath@parse`, let to `\pgfmathparse`).
+
+**Symptom:** pgf's functions begin with `\begingroup` or `\def` (pgfmathfunctions.code.tex:59-104,
+pgfmathparser.code.tex:20-30), so TeX computes them only when it executes them. A closure computes when it is expanded,
+and TeX expands the token after a unit while it looks for the optional space (tex.web §443-§448), and after a number
+while it looks for more digits. So in `\advance\dimen0 by 3pt%` followed by `\pgfmathreciprocal@{\pgf@sys@tonumber
+\dimen0}`, the closure reads `\dimen0` before the `\advance`: Perl `0.5`, pdflatex `0.2`. Witness 2606.14412
+(pgflibrarycurvilinear.code.tex:96-98, `bending` arrow tips): 55 "Dimension too large" Errors and a curve drawn to
+x = 22670pt; pdflatex 0 `!`. The parse also skipped pgf's closing `\ignorespaces` (pgfmathparser.code.tex:146-149;
+`\pgfmathsetlength` likewise, pgfmathcalc.code.tex:48), so a space after the call was typeset. PERL-ORIGIN.
+
+**Fixed in Rust:** every native function, `\pgfmathparse` (`\lx@pgfmath@parse`), `\lx@pgfmath@parseX` and
+`\pgfmathint@` is a primitive. It defines `\pgfmathresult` when digested, in the current group, as `\def` does
+(`pgfmath_code_tex::def_pgfmath_result`). The parse and `\pgfmathsetlength` end with pgf's `\ignorespaces`.
+Inside an `\edef`, `\pgfmathparse{1+2}` now stays unexpanded. The closure used to leave `\def` and the old
+`\pgfmathresult`'s value there. pdflatex raises Undefined control sequence and Incomplete `\iffalse`, then stops.
+
+**Guards:** `perfect_kernel_batchdtl1::batchdtl1_pgfmath_rows` row `pgfmath_natives_compute_when_digested` (repro
+`graphics-tikz/pgfmath_natives_compute_when_digested.tex`). Open: `\pgfmathsetlength`'s quick path does not `\unskip`
+the list (RED `graphics-tikz/pgfmath_setlength_quick_path_unskips_red.tex`, Perl the same). Minimal trigger:
+
+```latex
+\documentclass{article}
+\usepackage{tikz}
+\newdimen\dd
+\begin{document}
+\dd=2pt%
+\pgfmathparse{\dd+3pt}[\pgfmathresult]% pdflatex [5.0], Perl [3.0]
+\end{document}
+```
