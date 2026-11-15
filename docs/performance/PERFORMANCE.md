@@ -358,11 +358,16 @@ object over 4 KiB a chunk of its own, and frees every chunk to glibc (4 KiB requ
 `perf/obstack-reuse`; consumed through the root `Cargo.toml`'s TEMP `[patch.crates-io]` until a release):
 `marpa_obs.c` is built from the crate's modified copy `libmarpa-sys/c/marpa_obs.c`. Its chunks are 16 KiB (b250: 239 k
 further chunks, 7 oversize), and a freed default-size chunk goes onto a per-thread LIFO list of at most 64 (1 MiB) that
-the next obstack takes from. A pthread key destructor frees the list at thread exit; Windows and wasm keep plain
-`malloc`/`free`. Allocation only: no grammar, recognizer or value change. Each half alone on b250: the cache (4 KiB
-chunks) −1.23 %, 16 KiB chunks −1.01 %; caps of 64, 128 and 256 chunks measure the same. Guard: the marpa crate's
-`tests/obstack_chunk_cache.rs` (one input parsed 20 times on each of 4 threads that exit with full caches, every
-result equal; heaptrack: no chunk leaked).
+the next obstack takes from. The list is a heap struct whose only owner is a pthread key (no `_Thread_local`: macOS frees
+that storage in its own key destructor, which may run first); the key's destructor frees it at thread exit and leaves a
+static "retired" marker, so a libmarpa call from a later TSD destructor bypasses the cache and allocates nothing that
+could leak. Windows and wasm keep plain `malloc`/`free`. Allocation only: no grammar, recognizer or value change.
+Each half alone on b250: the cache (4 KiB chunks) −1.23 %, 16 KiB chunks −1.01 %; caps of 64, 128 and 256 chunks measure the same. Guard: the marpa crate's
+`tests/obstack_chunk_cache.rs`, reading the test-only `chunk-cache-stats` counters: on 4 threads that exit with full
+caches, every result equals the first, the cache serves chunks, fills to its cap and overflows, and objects over 16 KiB
+are requested while it holds chunks; a parse from a TSD destructor after the cache's own gets no cache. A cache that
+served a wrong-size request fails it (SIGSEGV; heap-buffer-overflow under ASan); the marpa CI runs it under ASan on
+Linux and macOS (LeakSanitizer clean on Linux).
 
 Basis: release, `kit/perf_ab_cycles.sh` (base and candidate interleaved, best of 3, one core each); the mix in XML
 (`ar5iv.sty`; amsldoc `[rawstyles,rawclasses]latexml.sty`), the book and the typical papers (`ab_66bundle/popPERFBs.tsv`)
@@ -379,9 +384,13 @@ Cycles spread 2-60 % on a shared host; instructions spread ≤ 0.2 %.
 | amsldoc (control) | 5.743 → 5.698 | −0.77 % | 2.984 → 2.947 | −1.23 % |
 | 2010.05701 (control) | 266.987 → 266.978 | −0.00 % | 87.364 → 87.243 | −0.14 % |
 
+The table measured the cache in `_Thread_local` storage; the shipped key-held cache (`pthread_getspecific` per chunk)
+re-measured, instructions best of 3: b250 37.174 → 36.459 (−1.92 %), 2308.04512 −0.76 % (XML) and −0.60 % (HTML); the
+10 typical papers +0.04 to −1.52 % (one run each), every output byte-identical to the base.
 1106.3601 (+2.26 %) stays out: its instructions vary by 2-24 % between runs of one binary (ASF wall deadlines).
-Peak RSS (KB; run-to-run noise ±4 MB), measured with a 256-chunk cap: the book 6,883,028 → 6,870,500, b1000
-1,419,068 → 1,423,544, b250 458,304-461,216 → 463,416-467,520 (464,684 with the 64 kept), b500 792,568 → 785,968 (64). A/B (`popPERFI`: 130 math-heavy
+Peak RSS (KB, `/usr/bin/time`, cortex's HTML recipe, two runs per side, the shipped 64-chunk cap): the book 6,376,012 /
+6,883,068 → 6,833,516 / 6,872,104 (the base alone spreads 0.5 GB), b1000 1,436,040 / 1,415,768 → 1,424,048 / 1,424,988:
+within noise, and the HTML byte-identical. A/B (`popPERFI`: 130 math-heavy
 papers, 3 witnesses, 60 controls; `AB_XMLSIG=raw`): base against base 0 of 193 changed; base against candidate
 0 of 193 changed, E/F/W equal (2311.05131 lost one parse in an earlier run under load: alone, both binaries give the same
 XML twice).

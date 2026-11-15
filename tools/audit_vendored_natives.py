@@ -200,12 +200,17 @@ AUDITED = {
     # The dginev/marpa fork's sys crate, published to crates.io as
     # `libmarpa-asf-sys` (the upstream `libmarpa-sys` name is taken). Registry-
     # sourced now (was a git dep); consumed via the `package = "marpa-asf"` alias.
-    "libmarpa-asf-sys": ("0.3.0",
-        "Vendors libmarpa 8.6.2 as a tarball. Mixed per-file licensing that the "
-        "manifest's 'MIT OR Apache-2.0' does not express: marpa.c/marpa_ami.c/"
+    # 0.3.1 (until released: the TEMP [patch.crates-io] path in Cargo.toml) builds
+    # marpa_obs.c from its own modified copy; 0.3.0 (verbatim) is no longer resolved.
+    "libmarpa-asf-sys": ("0.3.1",
+        "Vendors libmarpa 8.6.2 as a tarball, built with one modified file: c/marpa_obs.c "
+        "(GNU obstack, LGPL-2.1+; 16 KiB chunks and a per-thread chunk cache, the change "
+        "recorded in its header) replaces the tarball's copy. Mixed per-file licensing that "
+        "the manifest's 'MIT OR Apache-2.0' does not express: marpa.c/marpa_ami.c/"
         "marpa_codes.c are MIT (c) Jeffrey Kegler; marpa_avl.c/marpa_tavl.c are "
-        "LGPL-3.0+ (Ben Pfaff's libavl); marpa_obs.c is LGPL-2.1+ (GNU obstack). "
-        "Attributed in THIRD-PARTY-NOTICES 3.3; static LGPL link -> relink note 3.5."
+        "LGPL-3.0+ (Ben Pfaff's libavl); marpa_obs.c is LGPL-2.1+ (GNU obstack), its "
+        "modified source shipped in the crate. Attributed in THIRD-PARTY-NOTICES 3.3; "
+        "static LGPL link -> relink note 3.5."
     ),
     "libmimalloc-sys": ("0.1.49", 
         "Vendors mimalloc C. The crate-root LICENSE.txt is the wrapper author's "
@@ -312,6 +317,13 @@ BUILD_RS_NATIVE_RE = re.compile(
 # what makes the gitignored lockfile survivable: CI re-locks to the highest compatible patch
 # (e.g. cc 1.4.3 -> 1.4.4, native probe byte-identical) without a manual AUDITED edit each time.
 FINGERPRINTS = {
+    # The modified obstack and the libmarpa tarball 0.3.1 builds (AUDITED above).
+    "libmarpa-asf-sys": {
+        "c/marpa_obs.c":
+            "e909c80d38eb1d7dcc757091d88a864cef47f2551fd2f2f9776a9e49d995a82c",
+        "libmarpa-8.6.2.tar.gz":
+            "60b80363d8319a496243c111ded203d326880decef2522f63cd8a7878ee693c4",
+    },
     "nix": {
         "test/test_kmod/hello_mod/hello.c":
             "bcac6b19c5bd807e1f3878c15e426acc85785a8ade9840c3bb4d068635c9188c",
@@ -326,11 +338,14 @@ FINGERPRINTS = {
 
 
 def native_source_shas(pkg_dir):
-    """{relative_posix_path: sha256} over every native SOURCE file the crate ships."""
+    """{relative_posix_path: sha256} over every native SOURCE file the crate ships, vendored
+    source archives included: libmarpa-asf-sys builds from a tarball plus one loose file, and a
+    fingerprint of the loose file alone would auto-accept a bump that swapped the tarball."""
     return {
         p.relative_to(pkg_dir).as_posix(): hashlib.sha256(p.read_bytes()).hexdigest()
         for p in sorted(pkg_dir.rglob("*"))
-        if p.is_file() and p.suffix.lower() in NATIVE_SOURCE_SUFFIXES
+        if p.is_file()
+        and (p.suffix.lower() in NATIVE_SOURCE_SUFFIXES or p.name.lower().endswith(VENDORED_ARCHIVE_SUFFIXES))
     }
 
 
