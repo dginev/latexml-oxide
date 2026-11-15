@@ -11344,7 +11344,7 @@ verbatim. **Rust** (61c): the T1, T2A, T2B, T2C fontmaps decode 94/126 as `^`/`~
 commands); LY1 keeps its accents there (ly1enc.def:99,106). `tests/encoding/{t1,t2a,t2b,t2c}.xml` differ from Perl's in
 those two cells. Guard `perfect_kernel_batch61::t1_ascii_slots_print_ascii`.
 
-### 434. A document's authors are rendered without a title (Perl: only beneath a title)
+### 434. A unit's authors, pubnotes, subtitles and dates are rendered without a title (Perl: only beneath a title)
 
 **LaTeXML** keeps `\author` as frontmatter `creator`s whether or not the document has a title or a `\maketitle`, and
 shows the title without one. **Perl**'s structure XSLT renders authors only from the title template
@@ -11356,6 +11356,16 @@ sidebar, which has its own). Nine s140 manuals have authors and no title; eight 
 wordle-doc-en/-fr); exam-n/template-master prints `\author` only in `compose` mode, so its HTML shows a name its PDF
 does not — LaTeXML's frontmatter model, as for a title without `\maketitle`. Guard
 `perfect_kernel_batch61::authors_without_a_title_reach_the_html`.
+
+Pubnotes, subtitles and dates had the same hole (Perl's structure XSLT renders them only from `maketitle`,
+`match="ltx:pubnote"`, `ltx:date`, `ltx:subtitle` empty), while the PDF prints them: 2006.12592 (a raw `\@maketitle`, the
+`\thanks` affiliation), els-mrw's `\articletag` (els-mrw.cls:174; 2501.07938, 2501.10000, 2503.10397, 2604.15546),
+1112.0709 (IAU-TrA), 1504.03712 (amsart `\title{}`: a 118-word `\thanks` and the date). **Rule** (PNOTEA): in a unit
+with no `ltx:title`, not a sidebar, the first of its authors, pubnotes, subtitles and dates renders them all once, in
+`maketitle`'s order — every pubnote in the `ltx_pubnotes_meta` block (no title to hold a note), the subtitle, the
+authors, the dates (none on a page with an up-link, as `maketitle`). Guard
+`perfect_kernel_batch61::untitled_head_metadata_reaches_the_html` (and its titled control). Upstream: offerable to
+Perl's LaTeXML-structure-xhtml.xsl as is (its `maketitle` order and templates).
 
 ### 435. A raw `\trivlist` keeps its list: itemization in the enclosing group (Perl: an empty list, the label lost)
 
