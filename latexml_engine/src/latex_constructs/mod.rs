@@ -4175,7 +4175,7 @@ fn begin_float(
     }
   }
   // Perl's beforeFloat assigns `\hsize` for every float (:3377); only `\@xfloat`/`\@dblfloat` do (`before_xfloat`), so a
-  // sub-float in a `\parbox` or a `p` cell reads the box's (2010.06608 S4.F8; subfig, subfigure.sty).
+  // sub-float in a `\parbox` or a `p` cell reads the box's (2010.06608 S4.F8; 2007.14228 S5.F7, subfigure.sty).
   if xfloat {
     let dim_name = if double {
       "\\textwidth"
