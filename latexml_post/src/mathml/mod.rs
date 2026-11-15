@@ -14,6 +14,7 @@ pub mod linebreaker;
 pub mod operator_dictionary;
 pub mod presentation;
 
+use latexml_core::common::xml::name_is;
 use libxml::tree::Node;
 use rustc_hash::FxHashMap as HashMap;
 
@@ -507,7 +508,7 @@ fn element_child_named(node: &Node, ns_uri: &str, local: &str) -> Option<Node> {
   let mut current = node.get_first_child();
   while let Some(c) = current {
     if c.get_type() == Some(libxml::tree::NodeType::ElementNode)
-      && c.get_name() == local
+      && name_is(&c, local)
       && c.get_namespace().map(|ns| ns.get_href()).as_deref() == Some(ns_uri)
     {
       return Some(c);
@@ -786,7 +787,7 @@ pub fn math_context_font(xmath: &Node) -> Option<String> {
     if let Some(val) = n.get_attribute("font") {
       return Some(val);
     }
-    if n.get_name() == "Math" {
+    if name_is(n, "Math") {
       return None;
     }
     current = n.get_parent();

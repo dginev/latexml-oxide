@@ -322,7 +322,7 @@ fn process_math_node(
 /// Port of `MathProcessor::maybeSetMathImage`.
 fn maybe_set_math_image(math: &Node, conversion: &MathConversion) {
   if let Some(ref mimetype) = conversion.mimetype {
-    if mimetype.starts_with("image/") && math.get_attribute("imagesrc").is_none() {
+    if mimetype.starts_with("image/") && !math.has_attribute("imagesrc") {
       if let Some(ref src) = conversion.src {
         let mut math_mut = math.clone();
         math_mut.set_attribute("imagesrc", src).ok();

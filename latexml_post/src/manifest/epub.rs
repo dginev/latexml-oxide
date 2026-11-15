@@ -12,6 +12,8 @@ use std::{
   path::{Path, PathBuf},
 };
 
+use latexml_core::common::xml::name_is;
+
 /// The OPF package namespace (EPUB 3).
 const OPF_NS: &str = "http://www.idpf.org/2007/opf";
 /// Dublin Core, the metadata vocabulary an OPF's `<metadata>` carries.
@@ -458,7 +460,7 @@ fn text_without_indexmarks(node: &libxml::tree::Node) -> String {
       continue;
     }
     match current.get_type() {
-      Some(NodeType::ElementNode) if current.get_name() != "indexmark" => {
+      Some(NodeType::ElementNode) if !name_is(&current, "indexmark") => {
         text.push_str(&text_without_indexmarks(&current));
       },
       Some(NodeType::TextNode | NodeType::CDataSectionNode) => {
@@ -677,7 +679,7 @@ mod tests {
     let hrefs: Vec<String> = crate::document::element_children(
       &crate::document::element_children(&root)
         .into_iter()
-        .find(|n| n.get_name() == "manifest")
+        .find(|n| name_is(n, "manifest"))
         .expect("a <manifest>"),
     )
     .iter()
@@ -734,23 +736,23 @@ mod tests {
     );
 
     // The identifier the package points at must actually carry that id.
-    let meta = kids.iter().find(|n| n.get_name() == "metadata").unwrap();
+    let meta = kids.iter().find(|n| name_is(n, "metadata")).unwrap();
     let ident = crate::document::element_children(meta)
       .into_iter()
-      .find(|n| n.get_attribute("id").as_deref() == Some("pub-id"))
+      .find(|n| n.with_attribute(c"id", |v| v == "pub-id") == Some(true))
       .expect("a <dc:identifier id='pub-id'>");
     assert_eq!(ident.get_content(), "urn:uuid:abc");
 
     // `properties` is optional and must be emitted only when present.
     let item =
-      crate::document::element_children(kids.iter().find(|n| n.get_name() == "manifest").unwrap())
+      crate::document::element_children(kids.iter().find(|n| name_is(n, "manifest")).unwrap())
         .into_iter()
         .next()
         .expect("an <item>");
     assert_eq!(item.get_attribute("properties").as_deref(), Some("nav"));
 
     let itemref =
-      crate::document::element_children(kids.iter().find(|n| n.get_name() == "spine").unwrap())
+      crate::document::element_children(kids.iter().find(|n| name_is(n, "spine")).unwrap())
         .into_iter()
         .next()
         .expect("an <itemref>");

@@ -5,6 +5,7 @@
 //! and records their IDs, labels, titles, and relationships in the ObjectDB.
 //! This data is used by later processors (CrossRef, MakeIndex, etc.).
 
+use latexml_core::common::xml::name_is;
 use libxml::tree::{Node, NodeType};
 use rustc_hash::FxHashMap as HashMap;
 
@@ -520,7 +521,7 @@ impl Scan {
       let mut note = String::new();
       let mut child = node.get_first_child();
       while let Some(c) = child {
-        if !(is_ltx(&c) && c.get_name() == "tags") {
+        if !(is_ltx(&c) && name_is(&c, "tags")) {
           note.push_str(&clean_text_content(&c));
         }
         child = c.get_next_sibling();
@@ -889,7 +890,7 @@ impl Scan {
             if meaning.starts_with("delimited-") {
               continue;
             }
-            if sym.get_attribute("role").as_deref() == Some("RELOP") {
+            if sym.with_attribute(c"role", |v| v == "RELOP") == Some(true) {
               rel.push(meaning);
             } else {
               non_rel.push(meaning);
@@ -1076,7 +1077,7 @@ fn collect_element_children(node: &Node) -> Vec<Node> {
 /// its group's number (html_feedback#94).
 fn equation_refnum_text(node: &Node) -> Option<String> {
   for t in child_tag_nodes(node) {
-    if t.get_attribute("role").as_deref() == Some("refnum") {
+    if t.with_attribute(c"role", |v| v == "refnum") == Some(true) {
       // Cleaned, as the row's own refnum is (`collect_common`).
       let txt = clean_text_content(&t);
       if !txt.trim().is_empty() {
@@ -1095,11 +1096,11 @@ fn equation_refnum_text(node: &Node) -> Option<String> {
 /// sibling is numbered. See `collect_common` (html_feedback#94).
 fn group_sibling_refnum(node: &Node) -> Option<String> {
   let parent = node.get_parent()?;
-  if parent.get_name() != "equationgroup" {
+  if !name_is(&parent, "equationgroup") {
     return None;
   }
   let is_equation =
-    |n: &Node| n.get_type() == Some(NodeType::ElementNode) && n.get_name() == "equation";
+    |n: &Node| n.get_type() == Some(NodeType::ElementNode) && name_is(n, "equation");
   let mut fwd = node.get_next_sibling();
   while let Some(sib) = fwd {
     if is_equation(&sib) {
@@ -1125,10 +1126,10 @@ fn child_tag_nodes(node: &Node) -> Vec<Node> {
   let mut result = Vec::new();
   let mut child = node.get_first_child();
   while let Some(c) = child {
-    if c.get_type() == Some(NodeType::ElementNode) && c.get_name() == "tags" {
+    if c.get_type() == Some(NodeType::ElementNode) && name_is(&c, "tags") {
       let mut tag_child = c.get_first_child();
       while let Some(t) = tag_child {
-        if t.get_type() == Some(NodeType::ElementNode) && t.get_name() == "tag" {
+        if t.get_type() == Some(NodeType::ElementNode) && name_is(&t, "tag") {
           result.push(t.clone());
         }
         tag_child = t.get_next_sibling();
@@ -1141,7 +1142,7 @@ fn child_tag_nodes(node: &Node) -> Vec<Node> {
 
 /// Is `node` an `ltx:indexmark` — what Perl `Scan::cleanNode` removes?
 fn is_indexmark(node: &Node) -> bool {
-  node.get_type() == Some(NodeType::ElementNode) && node.get_name() == "indexmark" && is_ltx(node)
+  node.get_type() == Some(NodeType::ElementNode) && name_is(node, "indexmark") && is_ltx(node)
 }
 
 /// Every `ltx:indexmark` below `node`, outermost first; a mark nested in a

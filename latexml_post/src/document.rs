@@ -10,7 +10,10 @@
 
 use std::path::Path;
 
-use latexml_core::common::{xml::compiled_xpath, xml_walk::WalkQuery};
+use latexml_core::common::{
+  xml::{compiled_xpath, name_is},
+  xml_walk::WalkQuery,
+};
 use libxml::{
   parser::Parser as XmlParser,
   readonly::RoNode,
@@ -1027,24 +1030,26 @@ impl PostDocument {
     if node.get_type() != Some(NodeType::ElementNode) {
       return None;
     }
-    let localname = node.get_name();
-    if let Some(ns) = node.get_namespace() {
-      let nsuri = ns.get_href();
-      if let Some(prefix) = self.namespace_uris.get(&nsuri) {
-        Some(format!("{}:{}", prefix, localname))
-      } else {
-        // Auto-generate a prefix for unknown namespaces
-        let n = self
-          .namespaces
-          .keys()
-          .filter(|k| k.starts_with("_ns"))
-          .count()
-          + 1;
-        Some(format!("_ns{}:{}", n, localname))
-      }
-    } else {
-      Some(localname)
-    }
+    let node = node.as_readonly();
+    node.with_name(|localname| {
+      node.with_namespace_href(|href| match href {
+        Some(nsuri) => {
+          if let Some(prefix) = self.namespace_uris.get(nsuri) {
+            Some(format!("{}:{}", prefix, localname))
+          } else {
+            // Auto-generate a prefix for unknown namespaces
+            let n = self
+              .namespaces
+              .keys()
+              .filter(|k| k.starts_with("_ns"))
+              .count()
+              + 1;
+            Some(format!("_ns{}:{}", n, localname))
+          }
+        },
+        None => Some(localname.to_owned()),
+      })
+    })
   }
 
   /// Resolve a node's namespace URI to its registered prefix without
@@ -1056,10 +1061,9 @@ impl PostDocument {
     if node.get_type() != Some(NodeType::ElementNode) {
       return None;
     }
-    node.get_namespace().and_then(|ns| {
-      let nsuri = ns.get_href();
-      self.namespace_uris.get(&nsuri).cloned()
-    })
+    node
+      .as_readonly()
+      .with_namespace_href(|href| href.and_then(|nsuri| self.namespace_uris.get(nsuri).cloned()))
   }
 
   /// Check whether a node's qualified name equals a fixed "prefix:localname"
@@ -1076,22 +1080,19 @@ impl PostDocument {
       Some((p, l)) => (Some(p), l),
       None => (None, expected),
     };
-    let localname = node.get_name();
-    if localname != expected_local {
+    let node = node.as_readonly();
+    if !node.with_name(|localname| localname == expected_local) {
       return false;
     }
-    match (node.get_namespace(), expected_prefix) {
-      (Some(ns), Some(ep)) => {
-        let nsuri = ns.get_href();
-        self
-          .namespace_uris
-          .get(&nsuri)
-          .map(|p| p == ep)
-          .unwrap_or(false)
-      },
+    node.with_namespace_href(|href| match (href, expected_prefix) {
+      (Some(nsuri), Some(ep)) => self
+        .namespace_uris
+        .get(nsuri)
+        .map(|p| p == ep)
+        .unwrap_or(false),
       (None, None) => true,
       _ => false,
-    }
+    })
   }
 
   // ======================================================================
@@ -1211,7 +1212,7 @@ impl PostDocument {
 
     // If the parent has a fragid, create one here too
     if let Some(ref p) = parent_node {
-      if p.get_attribute("fragid").is_some() {
+      if p.has_attribute("fragid") {
         let new_fragid = format!("{}.{}{}", p.get_attribute("fragid").unwrap(), prefix, n);
         node.set_attribute("fragid", &new_fragid).ok();
       }
@@ -1718,8 +1719,8 @@ impl PostDocument {
       None => return,
     };
 
-    let has_cvis = node.get_attribute("_cvis").is_some();
-    let has_pvis = node.get_attribute("_pvis").is_some();
+    let has_cvis = node.has_attribute("_cvis");
+    let has_pvis = node.has_attribute("_pvis");
     if (!cvis || has_cvis) && (!pvis || has_pvis) {
       return;
     }
@@ -2013,7 +2014,7 @@ impl PostDocument {
     let elements = self.findnodes("//ltx:navigation");
     for nav in &elements {
       for child in nav.get_child_nodes() {
-        if child.get_name() != "ref" {
+        if !name_is(&child, "ref") {
           continue;
         }
         // Strict: an unnamespaced `<ref>` does not match `ltx:ref` in XPath
@@ -2353,7 +2354,7 @@ mod tests {
     let first_nav_refs = doc.findnodes("//ltx:navigation").first().map(|n| {
       n.get_child_nodes()
         .iter()
-        .filter(|c| c.get_name() == "ref")
+        .filter(|c| name_is(c, "ref"))
         .count()
     });
     assert_eq!(

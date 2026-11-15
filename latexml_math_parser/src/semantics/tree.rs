@@ -2,7 +2,10 @@ use std::{borrow::Cow, cmp::Ordering, error::Error, fmt, fmt::Display, rc::Rc};
 
 use latexml_core::{
   Debug,
-  common::{font::Font, xml::element_nodes},
+  common::{
+    font::Font,
+    xml::{element_nodes, name_is},
+  },
   document::Document,
 };
 use libxml::tree::Node;
@@ -2357,7 +2360,7 @@ fn add_child_guard_xmarg(
   receiver: &mut Node,
   incoming: &mut Node,
 ) -> Result<(), Box<dyn Error + Send + Sync>> {
-  if incoming.get_name() == "XMArg" {
+  if name_is(incoming, "XMArg") {
     let mut to_reparent = element_nodes(incoming);
     for incoming_child in to_reparent.iter_mut() {
       incoming_child.unlink();

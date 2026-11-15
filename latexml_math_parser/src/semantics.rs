@@ -3,7 +3,7 @@ use std::{borrow::Cow, cell::Cell, error::Error, rc::Rc};
 use latexml_core::{
   common::{
     font::{self, Font},
-    xml::element_nodes,
+    xml::{element_nodes, name_is},
   },
   document::Document,
   raw_map,
@@ -871,8 +871,8 @@ pub(crate) fn is_ellipsis(xm: &XM, ctxt: &ActionContext) -> bool {
       .is_some_and(|name| ELLIPSIS_NAMES.contains(&name)),
     XM::Lexeme(lex, _) => lookup_lex_node(lex, ctxt.nodes).ok().is_some_and(|node| {
       let node = crate::data::resolve_xmref(node).unwrap_or_else(|| node.clone());
-      node.get_name() == "XMTok"
-        && (node.get_attribute("role").as_deref() == Some("ELIDEOP")
+      name_is(&node, "XMTok")
+        && (node.with_attribute(c"role", |v| v == "ELIDEOP") == Some(true)
           || node
             .get_attribute("name")
             .is_some_and(|name| ELLIPSIS_NAMES.contains(&name.as_str())))
@@ -1700,7 +1700,7 @@ fn holds_text(xm: &XM, ctxt: &ActionContext) -> bool {
   }
   match xm {
     XM::Lexeme(lex, _) => {
-      lookup_lex_node(lex, ctxt.nodes).is_ok_and(|node| node.get_name() == "XMText")
+      lookup_lex_node(lex, ctxt.nodes).is_ok_and(|node| name_is(node, "XMText"))
     },
     XM::Apply(op, args, ..) => {
       holds_text(&op.0, ctxt) || args.0.iter().flatten().any(|arg| holds_text(arg, ctxt))
@@ -4058,7 +4058,7 @@ fn node_mark(node: &libxml::tree::Node, document: &Document) -> Option<&'static 
     "XMApp" => {
       let children = node.get_child_elements();
       let head = children.first()?;
-      if head.get_attribute("role").as_deref() == Some("OVERACCENT") {
+      if head.with_attribute(c"role", |v| v == "OVERACCENT") == Some(true) {
         return match head.get_attribute("name").as_deref() {
           Some("vec" | "overrightarrow") => Some("vector-accent"),
           Some("hat" | "widehat") => Some("hat-accent"),
@@ -4066,7 +4066,7 @@ fn node_mark(node: &libxml::tree::Node, document: &Document) -> Option<&'static 
           _ => children.get(1).and_then(|base| node_mark(base, document)),
         };
       }
-      if head.get_attribute("meaning").as_deref() == Some("divide")
+      if head.with_attribute(c"meaning", |v| v == "divide") == Some(true)
         && is_leibniz_fraction(&children[1..])
       {
         return Some("derivative");
@@ -4115,14 +4115,14 @@ fn is_leibniz_fraction(parts: &[libxml::tree::Node]) -> bool {
   };
   let is_differential = |part: &libxml::tree::Node| {
     leading_token(part).is_some_and(|token| {
-      token.get_attribute("role").as_deref() == Some("DIFFOP")
+      token.with_attribute(c"role", |v| v == "DIFFOP") == Some(true)
         || matches!(token.get_content().as_str(), "d" | "\u{2202}" | "\u{3B4}")
     })
   };
   is_differential(numerator)
     && is_differential(denominator)
     && content_of(denominator).is_some_and(|node| {
-      node.get_name() == "XMApp"
+      name_is(&node, "XMApp")
         && node.get_child_elements().first().is_some_and(|head| {
           !head
             .get_attribute("role")
@@ -4151,7 +4151,8 @@ fn leading_token(node: &libxml::tree::Node) -> Option<libxml::tree::Node> {
       let children = node.get_child_elements();
       let head = children.first()?;
       let role = head.get_attribute("role").unwrap_or_default();
-      let is_product = head.get_attribute("meaning").as_deref() == Some("times") || role == "MULOP";
+      let is_product =
+        head.with_attribute(c"meaning", |v| v == "times") == Some(true) || role == "MULOP";
       if is_product || role.ends_with("SCRIPTOP") {
         children.get(1).and_then(leading_token)
       } else {
@@ -4172,7 +4173,8 @@ fn is_ascii_letter(text: &str) -> bool {
 /// Does a built atom hold a trig function anywhere?
 fn holds_trig_function(node: &libxml::tree::Node) -> bool {
   node.get_child_elements().iter().any(|child| {
-    (child.get_name() == "XMTok" && child.get_attribute("role").as_deref() == Some("TRIGFUNCTION"))
+    (name_is(child, "XMTok")
+      && child.with_attribute(c"role", |v| v == "TRIGFUNCTION") == Some(true))
       || holds_trig_function(child)
   })
 }
@@ -4188,9 +4190,9 @@ fn is_adjoint_mark(script: &XM, ctxt: &ActionContext) -> bool {
   };
   // A split row's content branch reaches the script through an XMRef to its whole script node.
   let mut node = crate::data::resolve_xmref(node).unwrap_or_else(|| node.clone());
-  while node.get_name() != "XMTok" {
+  while !name_is(&node, "XMTok") {
     match node.get_child_elements().as_slice() {
-      [.., last] if node.get_name() == "XMApp" => node = last.clone(),
+      [.., last] if name_is(&node, "XMApp") => node = last.clone(),
       [only] => node = only.clone(),
       _ => return false,
     }
@@ -4696,13 +4698,15 @@ fn raises_a_prime_to_a_constant(script: &XM, nodes: &[XMLNode]) -> bool {
         };
         let raised: Vec<&XMLNode> = raised
           .iter()
-          .filter(|child| child.get_attribute("meaning").as_deref() != Some("absent"))
+          .filter(|child| child.with_attribute(c"meaning", |v| v == "absent") != Some(true))
           .collect();
-        node.get_name() == "XMApp"
-          && resolve(prime).get_attribute("role").as_deref() == Some("SUPOP")
+        name_is(&node, "XMApp")
+          && resolve(prime).with_attribute(c"role", |v| v == "SUPOP") == Some(true)
           && !raised.is_empty()
           && raised.iter().all(|child| {
-            !matches!(resolve(child).get_name().as_str(), "XMWrap" | "XMDual")
+            !resolve(child)
+              .as_readonly()
+              .with_name(|n| matches!(n, "XMWrap" | "XMDual"))
               && crate::util::is_constant_node(child)
           })
       })
@@ -4724,10 +4728,10 @@ fn opens_with_a_prime(script: &XM, nodes: &[XMLNode]) -> bool {
           crate::data::resolve_xmref_in_store(node).unwrap_or_else(|| node.clone())
         };
         let node = resolve(node);
-        node.get_name() == "XMApp"
+        name_is(&node, "XMApp")
           && element_nodes(&node).first().is_some_and(|op| {
             let op = resolve(op);
-            op.get_name() == "XMTok" && op.get_attribute("role").as_deref() == Some("SUPOP")
+            name_is(&op, "XMTok") && op.with_attribute(c"role", |v| v == "SUPOP") == Some(true)
           })
       })
     },
@@ -4748,27 +4752,27 @@ fn is_accented_letter(node: &XMLNode) -> bool {
   let node = resolve(node);
   let role = |node: &XMLNode| {
     let node = resolve(node);
-    (node.get_name() == "XMTok")
+    (name_is(&node, "XMTok"))
       .then(|| node.get_attribute("role"))
       .flatten()
   };
   let is_a_letter = |node: &XMLNode| {
     let node = resolve(node);
     role(&node).as_deref() == Some("UNKNOWN")
-      || node.get_name() == "XMApp"
+      || name_is(&node, "XMApp")
         && matches!(element_nodes(&node).as_slice(), [script_op, letter, script]
         if role(letter).as_deref() == Some("UNKNOWN")
           && match role(script_op).as_deref() {
             Some("SUBSCRIPTOP") => true,
             Some("SUPERSCRIPTOP") => {
               let script = resolve(script);
-              matches!(script.get_name().as_str(), "XMWrap" | "XMDual")
+              script.as_readonly().with_name(|n| matches!(n, "XMWrap" | "XMDual"))
                 || !crate::util::is_constant_node(&script)
             },
             _ => false,
           })
   };
-  node.get_name() == "XMApp"
+  name_is(&node, "XMApp")
     && matches!(element_nodes(&node).as_slice(), [accent, base]
       if matches!(role(accent).as_deref(), Some("OVERACCENT" | "UNDERACCENT"))
         && is_a_letter(base))
@@ -5378,7 +5382,7 @@ fn differential_d(diffd: Option<XM>, ctxt: &ActionContext) -> Result<Option<XM>,
     // tests/parse/integrals_and_differentials.tex#gathered_row_keeps_its_differential (arXiv
     // 2605.01547, 2605.23309 split integrands).
     Some(XM::Lexeme(lex, meta)) => match lookup_lex_node(&lex, ctxt.nodes) {
-      Ok(node) if node.get_name() == "XMRef" => Some(XM::Ref(XProps {
+      Ok(node) if name_is(node, "XMRef") => Some(XM::Ref(XProps {
         id: node.get_attribute("idref").map(Cow::Owned),
         xmkey: node.get_attribute("_xmkey").map(Cow::Owned),
         role: Some(Cow::Borrowed("DIFFOP")),
@@ -8690,9 +8694,9 @@ pub fn apply_invisible_times(
         let idx = if lex_idx > 0 { lex_idx - 1 } else { 0 };
         if idx < ctxt.nodes.len() {
           let node = &ctxt.nodes[idx];
-          if node.get_name() == "XMApp" {
+          if name_is(node, "XMApp") {
             for child in node.get_child_elements() {
-              if child.get_attribute("role").as_deref() == Some("FRACOP") {
+              if child.with_attribute(c"role", |v| v == "FRACOP") == Some(true) {
                 r_frac = true;
                 break;
               }
@@ -9850,7 +9854,7 @@ fn node_bound_variables(
     matches!(
       node.get_attribute("role").as_deref(),
       Some("RELOP" | "ARROW")
-    ) || node.get_attribute("meaning").as_deref() == Some("multirelation")
+    ) || node.with_attribute(c"meaning", |v| v == "multirelation") == Some(true)
   };
   let is_list = |node: &XMLNode| {
     matches!(
@@ -9939,7 +9943,7 @@ fn node_letters(
 /// A token node's letter: one alphabetic character of an unknown or identifier (`\mu`,
 /// `\boldsymbol\gamma`, `\mathcal D`) — not a number, an operator, or a name (`max`).
 fn node_letter(node: &XMLNode, document: &Document) -> Option<Variable> {
-  if node.get_name() != "XMTok"
+  if !name_is(node, "XMTok")
     || !matches!(
       node.get_attribute("role").as_deref(),
       None | Some("UNKNOWN" | "ID")
@@ -10032,7 +10036,7 @@ fn node_mentions_free(node: &XMLNode, variables: &[Variable], document: &Documen
 fn node_binder_variables(op: &XMLNode, document: &Document) -> Vec<Variable> {
   let mut variables = Vec::new();
   let mut nucleus = realize_xmnode(op, document).into_owned();
-  while nucleus.get_name() == "XMApp"
+  while name_is(&nucleus, "XMApp")
     && let [script_op, base, _] = nucleus.get_child_elements().as_slice()
     && is_script_node(script_op, document)
   {
@@ -10060,7 +10064,7 @@ fn node_binder_variables(op: &XMLNode, document: &Document) -> Vec<Variable> {
 /// The variables of every subscript on a scripted node.
 fn node_subscript_variables(node: &XMLNode, document: &Document, variables: &mut Vec<Variable>) {
   let node = realize_xmnode(node, document);
-  if node.get_name() == "XMApp"
+  if name_is(&node, "XMApp")
     && let [script_op, base, script] = node.get_child_elements().as_slice()
     && is_script_node(script_op, document)
   {
@@ -10562,7 +10566,7 @@ pub fn vertbar_modifier(
   // does (`diffop_apply`).
   let source = match vertbar {
     Some(XM::Lexeme(lex, _)) => match lookup_lex_node(&lex, ctxt.nodes) {
-      Ok(node) if node.get_name() == "XMRef" => {
+      Ok(node) if name_is(node, "XMRef") => {
         let bar = XM::Ref(XProps {
           id: node.get_attribute("idref").map(Cow::Owned),
           xmkey: node.get_attribute("_xmkey").map(Cow::Owned),
