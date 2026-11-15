@@ -322,7 +322,7 @@ surface below is what landed.
 
 The callable surface is not documented here. [`API.md`](../../latexml_contrib/src/script_bindings/API.md) lists every
 call (generated from the engine), [`CHEATSHEET.md`](../../latexml_contrib/src/script_bindings/CHEATSHEET.md) sets each
-beside its Perl spelling and its compile-time macro (generated, with the dialect's gaps), and
+beside its Perl spelling and the Rust a compiled binding uses (generated, with the dialect's gaps), and
 [`RHAI_BINDINGS_GUIDE.md`](RHAI_BINDINGS_GUIDE.md) teaches the dialect with the worked examples under
 [`docs/examples/`](../examples/), which CI converts error-free (`30_script_bindings::docs_examples_convert_clean`).
 This file keeps the design: why Rhai, the seam, discovery, the sandbox, failure containment, the shared lowering and
@@ -382,7 +382,7 @@ included into rustdoc as `latexml_contrib::script_bindings::interface`, so
 Each row carries a one-line explanation plus a link to the Rust item that
 implements the call, so the generated file answers both "what exists" and "what
 does this do"; the generated `CHEATSHEET.md` beside it sets each call by its Perl spelling and its
-macro; the prose in THIS document covers the design — why the surface is
+Rust; the prose in THIS document covers the design — why the surface is
 shaped the way it is, and how failures are contained.
 
 `gen_fn_signatures` needs Rhai's `metadata` feature, which pulls serde +

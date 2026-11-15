@@ -222,7 +222,7 @@ pub fn new_counter(ctr: &str, within: &str, options_opt: Option<NewCounterOption
     assign_mapping::<Stored>("counter_for_type", ctr, None);
     assign_mapping::<Stored>("counter_alias", ctr, None);
   }
-  after_assignment();
+  after_assignment()?;
   if !has_value(&clctr) {
     assign_value(&clctr, Tokens!(), Some(Scope::Global));
   }
@@ -476,7 +476,7 @@ pub fn set_counter(ctr: &str, value: Number) -> Result<()> {
     Some(Scope::Global),
     Vec::new(),
   )?;
-  after_assignment();
+  after_assignment()?;
   def_macro(
     T_CS!(s!("\\@{ctr}@ID")),
     None,
@@ -491,7 +491,7 @@ pub fn set_counter(ctr: &str, value: Number) -> Result<()> {
 pub fn add_to_counter(ctr: &str, value: Number) -> Result<()> {
   let v = counter_value(ctr)?.add(value);
   assign_register(&s!("\\c@{ctr}"), v.into(), Some(Scope::Global), Vec::new())?;
-  after_assignment();
+  after_assignment()?;
   let id_cs = T_CS!(s!("\\@{ctr}@ID"));
   def_macro(
     id_cs,
@@ -511,7 +511,7 @@ pub fn step_counter(ctr: &str, noreset: bool) -> Result<()> {
   let newvalue = value.add(Number::new(1));
   let c_ctr = s!("\\c@{ctr}");
   assign_register(&c_ctr, newvalue.into(), Some(Scope::Global), Vec::new())?;
-  after_assignment();
+  after_assignment()?;
   let token_value = Tokens::new(Explode!(newvalue.value_of()));
   def_macro(
     T_CS!(s!("\\@{ctr}@ID")),
