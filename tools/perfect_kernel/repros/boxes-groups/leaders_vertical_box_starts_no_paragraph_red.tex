@@ -1,0 +1,14 @@
+% tex.web §1078/§1084: a vertical-mode `\leaders<box>\vskip` is glue on the vertical list; it starts no paragraph,
+% and "After" is a paragraph of its own below the leader. The kernel opens an `ltx:text` for a box filler, which
+% auto-opens a paragraph and sets the leader inside "After"'s (Perl's TeX_Box.pool.ltxml:879 the same; a rule filler
+% is a bare rule since #805, KPE #1282). brucemiller/LaTeXML#2882: "the box may be a vertical box".
+% witness: synthetic (I805's sibling sweep, issue #805)
+% oracle:  pdflatex 0 errors; the 1em rule leader above "After"
+% engines: rust I805 = main 8f06e79a39d: `<p><text class="ltx_leader"><rule … vattach="bottom" width="10.0pt"/></text>After</p>`
+% expect:  0 errors; the leader outside "After"'s paragraph
+% status:  RED (moves: post-merge)
+\documentclass{article}
+\begin{document}
+\leaders\vbox{\hrule width 1em\vskip 2pt}\vskip 1cm
+After
+\end{document}
