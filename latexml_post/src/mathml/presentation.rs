@@ -12,6 +12,7 @@
 
 use std::cell::Cell;
 
+use latexml_core::common::xml::name_is;
 use libxml::tree::Node;
 use rustc_hash::FxHashMap as HashMap;
 
@@ -1843,7 +1844,7 @@ fn pmml_infix(doc: &PostDocument, op: &Node, args: &[Node]) -> NodeData {
     // `−`.lspace, collapsing the gap (issue #535). A non-token (embellished)
     // operator renders normally, exactly as Perl's ternary does.
     [arg] => {
-      let op_prefix = if op.get_name() == "XMTok" {
+      let op_prefix = if name_is(&op, "XMTok") {
         pmml_token_inner(doc, op, Some("OPERATOR"))
       } else {
         pmml(doc, op)
@@ -1870,7 +1871,7 @@ fn pmml_infix(doc: &PostDocument, op: &Node, args: &[Node]) -> NodeData {
 /// the right operand for postfix-relop rules. Used by `pmml_infix`
 /// to suppress materialization in Presentation MathML. Task #264.
 fn is_absent_operand(node: &Node) -> bool {
-  if node.get_name() != "XMTok" {
+  if !name_is(&node, "XMTok") {
     return false;
   }
   node.get_attribute("meaning").as_deref() == Some("absent")

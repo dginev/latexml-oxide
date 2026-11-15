@@ -28,6 +28,7 @@
 //! extracted subtree usually inherits its namespaces fine as long as
 //! the consumer doesn't re-parse it standalone).
 
+use latexml_core::common::xml::name_is;
 use libxml::tree::Node;
 
 use crate::document::PostDocument;
@@ -229,7 +230,7 @@ pub fn get_embeddable(doc: &PostDocument) -> Option<Node> {
 
   // Unwrap nested single-child div wrappers.
   loop {
-    if embeddable.get_name() != "div" {
+    if !name_is(&embeddable, "div") {
       break;
     }
     let children = embeddable.get_child_nodes();
@@ -250,7 +251,7 @@ pub fn get_embeddable(doc: &PostDocument) -> Option<Node> {
   }
 
   // `<p>` with all-inline children → rename to `<span class="text">`.
-  if embeddable.get_name() == "p" {
+  if name_is(&embeddable, "p") {
     let children = embeddable.get_child_nodes();
     if !children.is_empty() && children.iter().all(|c| is_inline_child(&c.get_name())) {
       let _ = embeddable.set_name("span");

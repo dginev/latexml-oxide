@@ -140,7 +140,7 @@ pub fn parse_fragment(markup: &str) -> std::result::Result<ParsedFragment, Strin
 pub fn is_parse_artifact(node: &Node) -> bool {
   match node.get_type() {
     Some(NodeType::DocumentNode) => true,
-    Some(NodeType::ElementNode) => node.get_name() == FRAGMENT_WRAPPER,
+    Some(NodeType::ElementNode) => name_is(&node, FRAGMENT_WRAPPER),
     _ => false,
   }
 }
@@ -444,11 +444,13 @@ pub fn descendant_or_self_elements(root: &Node, mut keep: impl FnMut(&Node) -> b
 /// XPath's `ltx:<local>` name test: a LaTeXML-namespace element named `local`. Unlike `get_node_qname`, it rejects a
 /// namespace-less element of that name, as the XPath it replaces does.
 pub fn is_ltx_element(node: &Node, local: &str) -> bool {
-  node.get_name() == local
-    && node
-      .get_namespace()
-      .is_some_and(|ns| ns.get_href() == crate::common::model::LTX_NAMESPACE)
+  let node = node.as_readonly();
+  node.with_name(|name| name == local)
+    && node.with_namespace_href(|href| href == Some(crate::common::model::LTX_NAMESPACE))
 }
+
+/// `node.get_name() == name`, read without an owned `String` (MEM1 L12).
+pub fn name_is(node: &Node, name: &str) -> bool { node.as_readonly().with_name(|n| n == name) }
 
 /// obtains all content children of `node` (`Element` and `Text`), ignoring all other node types
 pub fn content_nodes(node: &Node) -> Vec<Node> {
@@ -782,7 +784,7 @@ mod parse_fragment_tests {
   fn the_wrapper_never_enters_the_result() {
     let f = parse_fragment("<b>a</b><i>b</i>").unwrap();
     assert!(
-      !f.nodes().iter().any(|n| n.get_name() == FRAGMENT_WRAPPER),
+      !f.nodes().iter().any(|n| name_is(&n, FRAGMENT_WRAPPER)),
       "the throwaway wrapper must not be handed back"
     );
   }

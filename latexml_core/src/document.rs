@@ -28,7 +28,7 @@ use crate::{
     numeric_ops::NumericOps,
     object::Object,
     store::Stored,
-    xml::{self, XML_NS, XPath},
+    xml::{self, XML_NS, XPath, name_is},
   },
   definition::FontDirective,
   document::{
@@ -584,7 +584,7 @@ enum Placement_ {
 fn subtree_holds_prose(node: &Node) -> bool {
   fn is_ltx(node: &Node, local: &str) -> bool {
     node.get_type() == Some(NodeType::ElementNode)
-      && node.get_name() == local
+      && name_is(&node, local)
       && node
         .get_namespace()
         .is_some_and(|ns| ns.get_href() == model::LTX_NAMESPACE)
@@ -4466,7 +4466,7 @@ impl Document {
     } else {
       Cow::Borrowed(node)
     };
-    let is_capture = first.get_name() == "_Capture_";
+    let is_capture = name_is(&first, "_Capture_");
 
     if first.get_type() != Some(NodeType::DocumentNode) && !is_capture {
       nodes.push(first.clone().into_owned());
@@ -4477,7 +4477,7 @@ impl Document {
       let mut current_opt = Some(Cow::Borrowed(node));
       while let Some(current) = current_opt {
         current_opt = current.get_prev_sibling().map(Cow::Owned);
-        if current.get_name() == "_Capture_" {
+        if name_is(&current, "_Capture_") {
           nodes.extend(xml::element_nodes(&current));
         } else {
           nodes.push(current.into_owned());
@@ -4494,7 +4494,7 @@ impl Document {
       if node_type.is_none() || node_type == Some(NodeType::DocumentNode) {
         break;
       }
-      if element_node.get_name() == "_Capture_" {
+      if name_is(&element_node, "_Capture_") {
         nodes.extend(xml::element_nodes(&element_node));
       } else {
         nodes.push(element_node.into_owned());
@@ -5166,7 +5166,7 @@ impl Document {
           .get_child_nodes()
           .into_iter()
           .filter(|c| {
-            c.get_type() == Some(NodeType::ElementNode) && c.get_name() != SPILL_PLACEHOLDER
+            c.get_type() == Some(NodeType::ElementNode) && !name_is(&c, SPILL_PLACEHOLDER)
           })
           .collect();
         elem_kids.len() == 1 && get_node_qname(&elem_kids[0]) == pin!("ltx:text")
@@ -5184,7 +5184,7 @@ impl Document {
           .as_ref()
           .is_some_and(|prev| prev.as_ref() == Some(&child));
         let eligible = child.get_type() == Some(NodeType::ElementNode)
-          && child.get_name() != SPILL_PLACEHOLDER
+          && !name_is(&child, SPILL_PLACEHOLDER)
           && !pending
           && !parent_is_collapse_frame
           && (level > 0 || ROOT_SPILLABLE.contains(&child.get_name().as_str()))
@@ -5219,7 +5219,7 @@ impl Document {
           // rest of it (`spill_prose_free_children`).
           let resident_root_child = level == 0
             && child.get_type() == Some(NodeType::ElementNode)
-            && child.get_name() != SPILL_PLACEHOLDER
+            && !name_is(&child, SPILL_PLACEHOLDER)
             && !ROOT_SPILLABLE.contains(&child.get_name().as_str())
             && !ROOT_FRONTMATTER.contains(&child.get_name().as_str());
           if resident_root_child {
@@ -5284,7 +5284,7 @@ impl Document {
       // content (a spilled `ltx:sup` from a root-level `ltx:note` failed
       // there: tests/cluster_regressions/frontmatter_spconf_name).
       let is_element = child.get_type() == Some(NodeType::ElementNode)
-        && child.get_name() != SPILL_PLACEHOLDER
+        && !name_is(&child, SPILL_PLACEHOLDER)
         && model::can_contain_sym(pin!("ltx:para"), get_node_qname(&child));
       // Prose = an `ltx:p` outside any picture that holds non-space text
       // outside any picture. A text-less `ltx:p` — an inline centered picture
@@ -5918,7 +5918,7 @@ impl Document {
     };
     let mut last_resource: Option<Node> = None;
     for child in root.get_child_nodes() {
-      if child.get_type() == Some(NodeType::ElementNode) && child.get_name() == "resource" {
+      if child.get_type() == Some(NodeType::ElementNode) && name_is(&child, "resource") {
         last_resource = Some(child);
       }
     }
@@ -7580,7 +7580,7 @@ impl Document {
   /// descends into an inline `\verb` at a paragraph edge and trims its
   /// leading space (tokenize/verb.t), and we keep that parity.
   fn is_typewriter_wrapper(&self, node: &Node) -> bool {
-    if node.get_name() == "verbatim" {
+    if name_is(&node, "verbatim") {
       return false;
     }
     if node
@@ -7653,7 +7653,7 @@ impl Document {
     let mut candidate = node.get_last_child();
     while let Some(ref child) = candidate {
       if (child.get_type() == Some(NodeType::ElementNode)
-        && child.get_name() == "text"
+        && name_is(&child, "text")
         && child.get_first_child().is_none()
         && child.has_attribute("_noautoclose"))
         // …and an empty construction-time marker (`trim_node_left_whitespace`)

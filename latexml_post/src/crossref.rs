@@ -7,6 +7,7 @@
 
 use std::{cell::RefCell, collections::VecDeque, rc::Rc, sync::LazyLock};
 
+use latexml_core::common::xml::name_is;
 use libxml::tree::{Node, NodeType};
 use regex::Regex;
 use rustc_hash::{FxHashMap as HashMap, FxHashSet as HashSet};
@@ -385,7 +386,7 @@ fn full_entry(bibitem: &Node, dropped_year: Option<&str>) -> Vec<NodeData> {
   let blocks = crate::document::element_children(bibitem)
     .into_iter()
     .filter(|block| {
-      block.get_name() == "bibblock"
+      name_is(&block, "bibblock")
         && !block
           .get_attribute("class")
           .is_some_and(|class| class.split_whitespace().any(|c| c == "ltx_bib_cited"))
@@ -959,7 +960,7 @@ impl CrossRef {
       && let Some(at) = out
         .iter()
         .position(|datum| !matches!(datum, NodeData::Text(_)))
-      && matches!(&out[at], NodeData::XmlNode(first) if first.get_name() == "tag")
+      && matches!(&out[at], NodeData::XmlNode(first) if name_is(&first, "tag"))
     {
       out.remove(at);
     }
@@ -1969,7 +1970,7 @@ impl CrossRef {
         next = node.get_next_sibling();
       }
       let formatted = next
-        .filter(|node| node.get_name() == "ref")
+        .filter(|node| name_is(&node, "ref"))
         .and_then(|node| Some((node.get_attribute("idref")?, node.get_attribute("show")?)))
         .is_some_and(|(id, show)| {
           let alternatives = show_alternatives(&show);

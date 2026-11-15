@@ -1,5 +1,6 @@
 use std::cell::RefCell;
 
+use latexml_core::common::xml::name_is;
 use libxml::tree::{Node, NodeType};
 use rustc_hash::FxHashMap;
 
@@ -64,7 +65,7 @@ pub(crate) fn end_parse_differential_map() {
 /// whole document, as the eager parse does.
 pub fn read_differential_evidence(document: &Document, node: &Node) {
   let mut xmaths = Vec::new();
-  if node.get_name() == "XMath" {
+  if name_is(&node, "XMath") {
     xmaths.push(node.clone());
   } else {
     crate::util::collect_named(node, "XMath", &mut xmaths);
@@ -247,7 +248,7 @@ pub fn clear_lost_nodes() { LOST_NODES.with(|cell| cell.borrow_mut().clear()); }
 /// Resolve an XMRef node to its target using the idstore (matching Perl's lookupID).
 /// Falls back to DOM traversal if idstore is not set.
 pub(crate) fn resolve_xmref(node: &Node) -> Option<Node> {
-  if node.get_name() == "XMRef"
+  if name_is(&node, "XMRef")
     && let Some(idref) = node.get_attribute("idref")
   {
     // Use idstore first (fast and reliable, matching Perl's $doc->lookupID)
@@ -274,7 +275,7 @@ pub(crate) fn resolve_xmref(node: &Node) -> Option<Node> {
 /// formula resolves to nothing (`util::is_numeric_constant`, which asks it of every reference in an atom; a walk per
 /// reference doubled 2605.06431's math parsing time).
 pub(crate) fn resolve_xmref_in_store(node: &Node) -> Option<Node> {
-  if node.get_name() != "XMRef" {
+  if !name_is(&node, "XMRef") {
     return None;
   }
   let idref = node.get_attribute("idref")?;

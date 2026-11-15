@@ -14,6 +14,7 @@
 //! 6. Format each entry into ltx:bibitem with ltx:tags + ltx:bibblock sections
 //! 7. Optionally split by initial letter
 
+use latexml_core::common::xml::name_is;
 use libxml::tree::Node;
 use rustc_hash::{FxHashMap as HashMap, FxHashSet as HashSet};
 
@@ -689,7 +690,7 @@ impl MakeBibliography {
       .filter(|entry| {
         let mut up = entry.get_parent();
         while let Some(node) = up {
-          if node.get_name() == "bibliography" {
+          if name_is(&node, "bibliography") {
             return crate::document::get_xml_id(&node) != own_id;
           }
           up = node.get_parent();
