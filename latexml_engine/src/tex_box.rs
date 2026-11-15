@@ -1887,6 +1887,7 @@ LoadDefinitions!({
     // Perl: $stomach->enterHorizontal — but not for the rule `\leaders` reads (see `\hrule`).
     if lookup_bool("lx@leaders@rule") {
       assign_value("lx@leaders@rule", false, None);
+      whatsit.set_property("leader_rule", true);
     } else {
       enter_horizontal();
     }
@@ -1947,8 +1948,9 @@ LoadDefinitions!({
     "?#isHorizontalRule()(<ltx:rule ?#rheight(height='#rheight') ?#rdepth(depth='#rdepth')\
        ?#rwidth(width='#rwidth') ?#color(color='#color')/>)",
   before_construct => sub[document, whatsit] {
-    // Perl: maybeCloseElement('ltx:p') if rwidth is '100%'
-    if whatsit.get_property_string("rwidth") == "100%" {
+    // Perl: maybeCloseElement('ltx:p') if rwidth is '100%' — not for a leader's rule, which ends no
+    // paragraph (tex.web §1084; #805).
+    if whatsit.get_property_string("rwidth") == "100%" && !whatsit.get_property_bool("leader_rule") {
       document.maybe_close_element("ltx:p")?;
     }
   },
@@ -1971,6 +1973,7 @@ LoadDefinitions!({
     // `perfect_kernel_batch58::leaders_rule_keeps_the_paragraph`.
     if lookup_bool("lx@leaders@rule") {
       assign_value("lx@leaders@rule", false, None);
+      whatsit.set_property("leader_rule", true);
     } else {
       leave_horizontal()?;
     }
@@ -2049,35 +2052,41 @@ LoadDefinitions!({
       })
     });
 
-    let mut noautoclose_attrs = HashMap::default();
-    noautoclose_attrs.insert(String::from("_noautoclose"), String::from("1"));
-    let mut container = document.open_element("ltx:text", Some(noautoclose_attrs), None)?;
-
-    if let Some(filler_d) = filler {
-      document.absorb(filler_d, None)?;
-    }
-
-    // Check if we should extend a rule to fill the requested width
-    let mut unwrap = false;
-    if let (Some(_), Some(rw)) = (&cbox, &req_width) {
-      // Find the last child of the container — should be the absorbed rule
-      if let Some(mut fnode) = container.get_last_child() {
-        let qname = fnode.get_name();
-        if qname == "rule" {
-          // Extend the rule to fill the width
-          document.set_attribute(&mut fnode, "width", &rw.to_attribute())?;
-          document.add_class(&mut fnode, "ltx_filled_leader")?;
-          unwrap = true;
+    // A rule filler is a rule specification (tex.web §1078, §1084), so it opens no container: the
+    // `ltx:rule` is the leader. Perl wraps every filler in an `ltx:text` and closes it by name
+    // (TeX_Box.pool.ltxml:879, :896), which a hook closing that text breaks (KPE #1282; #805).
+    let rule_filler = filler.as_ref().is_some_and(|f| {
+      f.any(|d| matches!(d.data(), DigestedData::Whatsit(w) if w.borrow().get_property_bool("leader_rule")))
+    });
+    if rule_filler {
+      let first = document.get_constructed_nodes().len();
+      if let Some(filler_d) = filler {
+        document.absorb(filler_d, None)?;
+      }
+      let rule = document.get_constructed_nodes()[first..]
+        .iter()
+        .find(|n| document::get_node_qname(n) == pin!("ltx:rule"))
+        .cloned();
+      if let Some(mut rule) = rule {
+        if let (Some(_), Some(rw)) = (&cbox, &req_width) {
+          document.set_attribute(&mut rule, "width", &rw.to_attribute())?;
+          document.add_class(&mut rule, "ltx_filled_leader")?;
+        } else {
+          document.add_class(&mut rule, "ltx_leader")?;
         }
       }
-    }
-    if !unwrap {
+    } else {
+      let mut noautoclose_attrs = HashMap::default();
+      noautoclose_attrs.insert(String::from("_noautoclose"), String::from("1"));
+      let mut container = document.open_element("ltx:text", Some(noautoclose_attrs), None)?;
       document.add_class(&mut container, "ltx_leader")?;
-    }
-
-    document.close_element("ltx:text")?;
-    if unwrap {
-      document.unwrap_nodes(container)?;
+      if let Some(filler_d) = filler {
+        document.absorb(filler_d, None)?;
+      }
+      // closed by node, and only if the filler left it open
+      if document.is_open(&container) {
+        document.close_node(&container)?;
+      }
     }
   },
     bounded => true,

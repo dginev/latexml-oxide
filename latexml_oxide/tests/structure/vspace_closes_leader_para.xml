@@ -5,12 +5,12 @@
   <resource src="LaTeXML.css" type="text/css"/>
   <resource src="ltx-article.css" type="text/css"/>
   <figure class="ltx_panels_gallery" panelcols="1" panelrows="2" xml:id="fig1">
-    <p class="ltx_figure_panel" panelwidth="0.01"><text class="ltx_leader"><rule height="1px" width="100%"/></text></p>
+    <p class="ltx_figure_panel">Lead<rule class="ltx_leader" height="1px" width="100%"/></p>
     <break class="ltx_break"/>
     <p class="ltx_figure_panel">Second</p>
   </figure>
   <figure class="ltx_panels_gallery" panelcols="1" panelrows="2" xml:id="fig2">
-    <p class="ltx_figure_panel" panelwidth="0.01"><text class="ltx_leader"><rule height="1px" width="100%"/></text></p>
+    <p class="ltx_figure_panel">Lead<rule class="ltx_leader" height="1px" width="100%"/></p>
     <break class="ltx_break"/>
     <p class="ltx_figure_panel">Third</p>
   </figure>

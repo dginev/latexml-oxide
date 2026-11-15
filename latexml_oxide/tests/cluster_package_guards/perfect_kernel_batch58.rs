@@ -337,40 +337,55 @@ fn vertical_kern_starts_no_paragraph() {
 
 /// 58d: the rule right after `\leaders` is a rule specification (tex.web §1078/§1084): an `\hrule`
 /// ends no paragraph and a vertical-mode `\vrule` starts none, while a box filler's own `\hrule`
-/// executes; a `\protected` or robust rule macro is the rule too (KPE #405). Repro
+/// executes; a `\protected` or robust rule macro is the rule too (KPE #405). The rule is the leader,
+/// in no `ltx:text` (#805, KPE #1282; before, `<text class="ltx_leader"><rule …/></text>` each, p3's
+/// in a paragraph of its own text), filled to a box of known width (p6). Repro
 /// boxes-groups/leaders_rule_keeps_the_paragraph.
 #[test]
 fn leaders_rule_keeps_the_paragraph() {
   let tex = include_str!(
     "../../../tools/perfect_kernel/repros/boxes-groups/leaders_rule_keeps_the_paragraph.tex"
   );
-  assert_elements(tex, RAW, (0, 0), &[
+  let xml = assert_elements(tex, RAW, (0, 0), &[
     (
       "para",
       "p1",
-      r##"<para xml:id="p1"><p>A<text class="ltx_leader"><rule height="1px" width="100%"/></text>B</p></para>"##,
+      r##"<para xml:id="p1"><p>A<rule class="ltx_leader" height="1px" width="100%"/>B</p></para>"##,
     ),
     (
       "para",
       "p2",
       r##"<para xml:id="p2"><p>X<text class="ltx_leader"><inline-block vattach="bottom"><p>Y</p><rule height="1px" width="2.0pt"/></inline-block></text>Z</p></para>"##,
     ),
-    (
-      "para",
-      "p3",
-      r##"<para xml:id="p3"><p><text class="ltx_leader"><rule/></text>[4]</p></para>"##,
-    ),
+    ("para", "p3", r##"<para xml:id="p3"><p>[4]</p></para>"##),
     (
       "para",
       "p4",
-      r##"<para xml:id="p4"><p>P<text class="ltx_leader"><rule height="1px" width="100%"/></text>Q</p></para>"##,
+      r##"<para xml:id="p4"><p>P<rule class="ltx_leader" height="1px" width="100%"/>Q</p></para>"##,
     ),
     (
       "para",
       "p5",
-      r##"<para xml:id="p5"><p>R<text class="ltx_leader"><rule height="1px" width="100%"/></text>S</p></para>"##,
+      r##"<para xml:id="p5"><p>R<rule class="ltx_leader" height="1px" width="100%"/>S</p></para>"##,
+    ),
+    (
+      "para",
+      "p6",
+      r##"<para class="ltx_noindent" xml:id="p6"><p><text width="85.4pt">I<rule class="ltx_filled_leader" height="1px" width="85.4pt"/>J</text></p></para>"##,
+    ),
+    (
+      "para",
+      "p7",
+      r##"<para xml:id="p7"><p>V<rule class="ltx_leader" height="1px" vattach="bottom" width="100%"/>W</p></para>"##,
     ),
   ]);
+  // the vertical leader before p3: a bare rule between the paragraphs
+  assert_eq!(
+    xml.matches(r#"<rule class="ltx_leader"/>"#).count(),
+    1,
+    "{xml}"
+  );
+  assert_eq!(xml.matches(r#"class="ltx_leader""#).count(), 6, "{xml}");
 }
 
 /// 58e: a `\noexpand`-ed token has `\relax`'s meaning in `scan_box` (tex.web §358, §1084), so
@@ -383,7 +398,7 @@ fn box_operand_skips_noexpanded_token() {
   assert_elements(tex, RAW, (0, 0), &[(
     "para",
     "p1",
-    r##"<para xml:id="p1"><p>A<text class="ltx_leader"><rule height="1px" width="100%"/></text>B</p></para>"##,
+    r##"<para xml:id="p1"><p>A<rule class="ltx_leader" height="1px" width="100%"/>B</p></para>"##,
   )]);
 }
 

@@ -5,13 +5,17 @@
 % or robust rule macro is the rule too. Perl digests the rule as an argument whose afterDigest
 % `leaveHorizontal`/`enterHorizontal` changes mode, and skips only a literal `\relax` before it, so a robust rule
 % is lost (TeX_Box.pool.ltxml:838, :803; KPE #405).
-% witness: 2605.00332 (`$z$ (…) \hrulefill` split a figure panel).
+% The rule is the leader itself, with no `ltx:text` around it (Perl wraps every filler in one, closed by name,
+% TeX_Box.pool.ltxml:879, :896; KPE #1282): `ltx_filled_leader` at the width of a box of known width (I…J).
+% witness: 2605.00332 (`$z$ (…) \hrulefill` split a figure panel); issue #805 (brucemiller/LaTeXML#2882).
 % Guard: perfect_kernel_batch58::leaders_rule_keeps_the_paragraph.
-% status:  GREEN (58d)
+% status:  GREEN (58d; the bare rule: I805)
 % oracle:  pdflatex 0 errors; one line "A", rule, "B"; "Y" and the 2pt rule stacked in the filler; "[4]" (A, X,
-%          the filler's Y, "["); "P", rule, "Q" and "R", rule, "S" on one line each.
+%          the filler's Y, "["); "P", rule, "Q" and "R", rule, "S" on one line each; "I", rule, "J" in a 3cm box;
+%          "V", the 2pt-high box holding the rule, "W".
 % engines: rust 58c: `<p>A</p><p><text class="ltx_leader">…</text>B</p>`, "[7]", the robust rule lost
 %          (`<text class="ltx_leader"/>`); Perl `<p>A</p><p><rule class="ltx_filled_leader" …/>B</p>`.
+%          rust main 8f06e79a39d: each rule in `<text class="ltx_leader">`.
 % expect:  0 errors, 0 warnings.
 \documentclass{article}
 \newcount\pc
@@ -28,4 +32,8 @@ X\leaders\vbox{Y\hrule width 2pt}\hfill Z
 P\leaders\prule\hfill Q
 
 R\leaders\rrule\hfill S
+
+\noindent\hbox to 3cm{I\leaders\hrule\hfill J}
+
+V\vbox{\leaders\hrule\vskip 2pt}W
 \end{document}

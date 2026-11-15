@@ -344,9 +344,10 @@ fn an_omit_cell_of_an_array_is_text() {
     ),
     "{xml}"
   );
-  // `\multispan{3}\hrulefill` and `\omit\span\omit $x^2$`: one text box per spanned cell, no empty box per column
+  // `\multispan{3}\hrulefill` and `\omit\span\omit $x^2$`: one text box per spanned cell, no empty box per column (the
+  // leader's rule in no text of its own, #805)
   assert!(
-    xml.contains(r#"<XMCell align="left" colspan="3"><XMText class="ltx_leader"><rule height="1px" width="100%"/></XMText></XMCell>"#),
+    xml.contains(r#"<XMCell align="left" colspan="3"><XMText><rule class="ltx_leader" height="1px" width="100%"/></XMText></XMCell>"#),
     "{xml}"
   );
   assert!(
