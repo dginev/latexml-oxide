@@ -1065,7 +1065,10 @@ pub fn retract_scanned_braces(tokens: &[Token]) {
 /// Correct ONLY for tokens that were previously READ (and hence counted) —
 /// for expansion output use [`unread_expansion`] (tex.web `begin_token_list`
 /// flavor, which adjusts nothing).
-pub fn unread_vec(tokens: Vec<Token>) {
+pub fn unread_vec(tokens: Vec<Token>) { unread_iter(tokens.into_iter()) }
+
+/// [`unread_vec`] of the tokens `tokens` yields (a drain of a buffer kept for reuse).
+fn unread_iter(tokens: impl DoubleEndedIterator<Item = Token> + ExactSizeIterator) {
   let mut level: i64 = 0;
   if let Some(ref mut runtime) = gullet_mut!().runtime {
     // Reserve once, push each token in reverse-iteration order so the
@@ -1073,7 +1076,7 @@ pub fn unread_vec(tokens: Vec<Token>) {
     // semantics as the old VecDeque push_front loop, but without
     // per-element head-pointer arithmetic.
     runtime.pushback.reserve(tokens.len());
-    for token in tokens.into_iter().rev() {
+    for token in tokens.rev() {
       match token.get_catcode() {
         Catcode::BEGIN => level -= 1, // Retract scanned braces
         Catcode::END => level += 1,
@@ -3383,13 +3386,11 @@ pub fn read_balanced_with_close(
 /// Perf: zero-allocation char-wise comparison against each keyword.
 /// The previous version allocated two Strings per char-match (via `to_uppercase()`
 /// and `char::to_string()`), which was expensive in hot parameter parsing loops.
-pub fn read_keyword(keywords: &[&str]) -> Result<Option<String>> {
+pub fn read_keyword<'k>(keywords: &[&'k str]) -> Result<Option<&'k str>> {
   skip_spaces()?;
+  // One token per matched char, unread on no-match; one buffer for every keyword tried (`read_unit`'s ten).
+  let mut matched = Vec::new();
   for keyword in keywords.iter() {
-    // Pre-size to the keyword length — `matched` holds one token per
-    // matched char, and we unread them on no-match. Keyword-match
-    // runs on every parameter/keyword read; small win per call.
-    let mut matched = Vec::with_capacity(keyword.len());
     let mut ok = true;
     for expected in keyword.chars() {
       let Some(tok) = read_x_token(Some(false), false, None)? else {
@@ -3414,16 +3415,15 @@ pub fn read_keyword(keywords: &[&str]) -> Result<Option<String>> {
       }
     }
     if ok {
-      return Ok(Some(keyword.to_string()));
+      return Ok(Some(keyword));
     } else {
       // scan_keyword backs up the plain tokens it read (tex.web §407): a
       // `\noexpand`'d one goes back as its plain self (see `unread_scanned`).
-      for token in &mut matched {
-        if let Some(plain) = token.noexpand_shadowed() {
-          *token = plain;
-        }
-      }
-      unread(matched.into());
+      unread_iter(
+        matched
+          .drain(..)
+          .map(|token| token.noexpand_shadowed().unwrap_or(token)),
+      );
     }
   }
   Ok(None)
@@ -3735,7 +3735,10 @@ fn read_cs_name_inner(quiet: bool) -> Result<Token> {
   // `read_x_token` pushback Vec. Cap at 4096 bytes — beyond that there's no
   // legitimate CS name, just a runaway. Emit one clear error and break.
   const MAX_CS_NAME_BYTES: usize = 4096;
-  let mut cs = String::from("\\");
+  // A nested `\csname` (read while expanding this one's name) takes an empty buffer.
+  let mut cs = CS_NAME_BUFFER.take();
+  cs.clear();
+  cs.push('\\');
   // keep newlines from having \n inside!
   while let Some(token) = read_x_token(Some(true), false, None)? {
     if token.defined_as(&TOKEN_ENDCSNAME) {
@@ -3779,7 +3782,7 @@ fn read_cs_name_inner(quiet: bool) -> Result<Token> {
         // (CLUSTER-NBSP, 18 papers; `~`→U+00A0 in `\csname r@LABEL\endcsname`),
         // `\exp_stop_f:` (mhchem raw-load). The `\lx@NBSP` carve-out below stays
         // for clarity; the general `Stored::Token` case handles the rest uniformly.
-        let cs_str = token.with_str(|s| s.to_string());
+        let is_applyaccent = token.text == crate::pin!("\\lx@applyaccent");
         // Well-known `\text…` primitives that map to a single char in real
         // pdflatex's csname-stream interpretation. The `DefPrimitive!(name,
         // "char")` body is a closure that wraps a Tbox — not statically
@@ -3787,7 +3790,7 @@ fn read_cs_name_inner(quiet: bool) -> Result<Token> {
         // canonical set. Witnesses (stage-1..3 of 100k warning corpus):
         //   \\textquoteright surfacing in `\twemoji flag: Côte d` cluster
         //   (≥4 papers across 2603.08303, 2604.13899, 2604.17338, 2604.20621).
-        let soft_char: Option<char> = match cs_str.as_str() {
+        let soft_char: Option<char> = token.with_str(|cs_str| match cs_str {
           "\\lx@NBSP" | "\\lx@nobreakspace" | "\\nobreakspace" => Some('\u{00A0}'),
           "\\textquoteright" => Some('\u{2019}'),
           "\\textquoteleft" => Some('\u{2018}'),
@@ -3820,10 +3823,10 @@ fn read_cs_name_inner(quiet: bool) -> Result<Token> {
           "\\T1\\i" | "\\OT1\\i" | "\\LY1\\i" => Some('\u{0131}'),
           "\\T1\\j" | "\\OT1\\j" | "\\LY1\\j" => Some('\u{0237}'),
           _ => None,
-        };
+        });
         if let Some(c) = soft_char {
           cs.push(c);
-        } else if cs_str == "\\lx@applyaccent" {
+        } else if is_applyaccent {
           // Accent macros (`\'`, `\"`, `\^`, …) expand to
           // `\lx@applyaccent <accent> <combining> <standalone> {<letter>}`
           // (tex_character.rs::accent_def). pdflatex's `\csname` skips the
@@ -3927,12 +3930,17 @@ fn read_cs_name_inner(quiet: bool) -> Result<Token> {
   // colour probe) and the characters the octet readers emit (the binding's
   // `\definecolor` name) — which pdfTeX never distinguishes. One spelling
   // per name: the decoded one (`mouth::decode_byte_mouth_runs`).
-  let cs = match crate::mouth::decode_byte_mouth_runs(&cs) {
-    std::borrow::Cow::Borrowed(_) => cs,
-    std::borrow::Cow::Owned(decoded) => decoded,
+  let token = match crate::mouth::decode_byte_mouth_runs(&cs) {
+    std::borrow::Cow::Borrowed(name) => T_CS!(name),
+    std::borrow::Cow::Owned(decoded) => T_CS!(decoded),
   };
-  Ok(T_CS!(cs))
+  CS_NAME_BUFFER.set(cs);
+  Ok(token)
 }
+
+/// The buffer [`read_cs_name_inner`] spells a name in, kept across `\csname`s.
+#[thread_local]
+static CS_NAME_BUFFER: Cell<String> = Cell::new(String::new());
 
 /// reads and discards tokens, until it encounters a conditional, if any.
 /// Perl: skipConditionalBody inner loop (Conditional.pm L127-133) reads tokens directly
@@ -4891,7 +4899,7 @@ pub fn read_dimension() -> Result<Dimension> {
 pub fn read_unit() -> Result<Option<(i64, i64)>> {
   let unit_opt = if let Some(u) = read_keyword(&["ex", "em", "zw", "zh"])? {
     skip_one_space(true)?;
-    Some(convert_unit_ratio(&u))
+    Some(convert_unit_ratio(u))
   } else if let Some(u) = read_internal_integer()? {
     Some((u.value_of(), UNITY)) // These are coerced to number=>sp
   } else if let Some(u) = read_internal_dimension()? {
@@ -4902,7 +4910,7 @@ pub fn read_unit() -> Result<Option<(i64, i64)>> {
     read_keyword(&["true"])?; // But ignore, we're not bothering with mag...
     if let Some(u) = read_keyword(&["pt", "pc", "in", "bp", "cm", "mm", "dd", "cc", "sp", "px"])? {
       skip_one_space(true)?;
-      Some(convert_unit_ratio(&u))
+      Some(convert_unit_ratio(u))
     } else {
       None
     }
@@ -4958,7 +4966,7 @@ pub fn read_rubber(mu: bool) -> Result<(Option<i64>, Option<FillCode>)> {
       Ok((Some(f * s), None))
     },
     Some(f) => match read_keyword(&["filll", "fill", "fil"])? {
-      Some(fil) => Ok((Some(fixpoint(s as f64 * f, None)), FillCode::from(&fil))),
+      Some(fil) => Ok((Some(fixpoint(s as f64 * f, None)), FillCode::from(fil))),
       None => {
         let ratio = if mu {
           match read_mu_unit()? {

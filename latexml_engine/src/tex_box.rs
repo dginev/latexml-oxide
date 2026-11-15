@@ -1850,7 +1850,7 @@ LoadDefinitions!({
     let mut keyvals = KeyVals::new(
       KeyvalsConfig{ skip_missing: keyvals::SkipMissing::All, .. KeyvalsConfig::default()});
     while let Some(key) = read_keyword(&["width", "height", "depth"])? {
-      keyvals.set_value(&key, ArgWrap::Dimension(read_dimension()?), false)?;
+      keyvals.set_value(key, ArgWrap::Dimension(read_dimension()?), false)?;
     }
     keyvals
   },

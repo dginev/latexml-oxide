@@ -153,7 +153,7 @@ fn read_term(expr_type: &str) -> Result<RegisterValue> {
   while let Some(op) = read_keyword(&["*", "/"])? {
     let factor2 = read_value("Number")?;
     factor = match factor2 {
-      CalcValue::Flt(f) => apply_float_op(&factor, &op, f),
+      CalcValue::Flt(f) => apply_float_op(&factor, op, f),
       CalcValue::Reg(rv) => {
         if op == "*" {
           factor.multiply(rv)
