@@ -76,6 +76,9 @@ const SBX2_ANN_UNIV_A: &str = r#"<document xmlns="http://dlmf.nist.gov/LaTeXML" 
 
 const SBX2_LLNCS: &str = r#"<document xmlns="http://dlmf.nist.gov/LaTeXML" class="ltx_authors_1line"><title>T</title><creator role="author"><personname>Ann Lee</personname><contact name="Affiliation: " role="affiliation">Amazon</contact></creator><creator before="  " role="author"><personname>Bob Roe</personname><contact name="Affiliation: " role="affiliation">UW</contact></creator><para xml:id="p1"><p xml:id="p1.1">Hi.</p></para></document>"#;
 
+const NOTPRERR: &str = "Error:latex:\\GenericError LaTeX Error: Can be used only in preamble         See the LaTeX \
+                        manual or LaTeX Companion for explanation.         Your command was ignored.";
+
 const BOUNDARY: &[Row] = &[
   // --- `\chapter` (SVC, OD #734, #735). TeX errs (and Perl, where named): one Warning (user 2026-11-11) ---
   (
@@ -721,6 +724,44 @@ const BOUNDARY: &[Row] = &[
     (0, 0),
     &[],
     &[("p", "p1.1", r#"<p xml:id="p1.1">Type 8.</p>"#)],
+  ),
+  // --- latex.ltx's `\@preamblecmds` (QA90, OD #226): pdflatex's Error in the body, the command still done ---
+  (
+    "preamble-only commands in the body (repro loader/preamble_only_commands_in_the_body)",
+    "pdflatex 7 `!` (4 Can be used only in preamble, 3 Undefined control sequence); Perl 1 error (unexpected:\\usepackage)",
+    include_str!(
+      "../../../tools/perfect_kernel/repros/loader/preamble_only_commands_in_the_body.tex"
+    ),
+    &[],
+    (4, 0),
+    &[NOTPRERR, NOTPRERR, NOTPRERR, NOTPRERR],
+    &[("p", "p1.1", "<p xml:id=\"p1.1\">Before.\n\nAfter Q .</p>")],
+  ),
+  (
+    "a second \\begin{document} (repro loader/second_begin_document_is_preamble_only)",
+    "pdflatex 1 `!` (Can be used only in preamble); Perl 0 errors",
+    include_str!(
+      "../../../tools/perfect_kernel/repros/loader/second_begin_document_is_preamble_only.tex"
+    ),
+    &[],
+    (1, 0),
+    &[NOTPRERR],
+    &[(
+      "para",
+      "p1",
+      "<para xml:id=\"p1\"><p xml:id=\"p1.1\">First.</p><p xml:id=\"p1.2\">Second.</p></para>",
+    )],
+  ),
+  (
+    "preamble-only commands in the preamble (repro loader/preamble_only_commands_in_the_preamble)",
+    "pdflatex 0 `!`; Perl 0 errors",
+    include_str!(
+      "../../../tools/perfect_kernel/repros/loader/preamble_only_commands_in_the_preamble.tex"
+    ),
+    &[],
+    (0, 0),
+    &[],
+    &[("p", "p1.1", "<p xml:id=\"p1.1\">After Q  done.</p>")],
   ),
 ];
 

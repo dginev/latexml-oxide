@@ -1,0 +1,15 @@
+% witness: synthetic (Bruce Q&A QA90; no 30k main file uses one in a branch pdflatex takes)
+% oracle:  pdflatex 7 `!`: 4 "LaTeX Error: Can be used only in preamble" (\listfiles, \DeclareTextCommand, \usepackage,
+%          \documentclass), 3 "Undefined control sequence" (their arguments typeset: "OT1Q xspace article")
+% engines: Perl 1 error (unexpected:\usepackage); rust base 1 error (the same); fix/qa90-preamble-cmds 4 errors
+% expect:  4 errors "Can be used only in preamble", 0 warnings; "Before. After Q ." (each command still does its work)
+% status:  GREEN (fix/qa90-preamble-cmds: `\begin{document}` walks latex.ltx's `\@preamblecmds`, OD #226)
+\documentclass{article}
+\begin{document}
+Before.
+\listfiles
+\DeclareTextCommand{\qmark}{OT1}{Q}
+\usepackage{xspace}
+\documentclass{article}
+After \qmark\ \xspace.
+\end{document}

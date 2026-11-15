@@ -2095,9 +2095,12 @@ pub(crate) fn load() -> Result<()> {
   // Relocated from `latex_base.rs` 2026-04-18 for Perl-parity and to
   // unblock `LATEXML_DUMP_ONLY=1` paths (see SYNC_STATUS D0 v3.f).
 
-  // Perl L5645
-  DefPrimitive!("\\@onlypreamble{}", {
-    only_preamble("\\@onlypreamble")?;
+  // Perl L5645 records nothing; latex.ltx:1224-1226 lists the command for `\begin{document}`'s walk (mod.rs
+  // `disable_preamble_commands`), which also makes `\@onlypreamble` itself an Error in the body (:1227).
+  DefPrimitive!("\\@onlypreamble{}", sub[(cs)] {
+    let mut entry = vec![T_CS!("\\do")];
+    entry.extend(cs.revert());
+    add_to_macro(T_CS!("\\@preamblecmds"), Tokens::new(entry))?;
   });
 
   // Perl L5646-5648

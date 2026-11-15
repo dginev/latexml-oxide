@@ -8066,7 +8066,7 @@ issue-worthy (KNOWN_PERL_ERRORS #81).
 **Rust behavior**: the document's first `\documentclass` clears the kernel's `\chapter` before the class loads (sect01.rs
 `retract_chapter_before_class_load`; a second one loads no class in TeX and keeps the first class's chapters — in the
 preamble latex.ltx:18618 has made it `\@twoclasseserror`, in the body :18621 `\@onlypreamble\documentclass` stops it
-with "Can be used only in preamble", which we do not raise yet (SYNC_STATUS): probe rev72b/r2/dc2, memoir's two
+with "Can be used only in preamble" (#226): probe rev72b/r2/dc2, memoir's two
 chapters), so the class's own code meets it undefined, as in TeX: a raw class's
 `\@ifundefined{chapter}` takes the undefined branch (pdflatex "CLS=S.", where 72b r1 and Perl say C). The lock stays,
 with the kernel's binding kept aside as for a file's clearing `\let` (`\chapter:locked@cleared`, #569): a class's own
@@ -9109,7 +9109,7 @@ Guard `afterpage_body_undoubles_parameter_hashes`. Gemini round 10 N5, merged
 with the autoload removed.
 
 
-### 226. `\@preamblecmds` is `\@notprerr` inside a running document
+### 226. `\begin{document}` walks latex.ltx's `\@preamblecmds`: the preamble-only commands err in the body, and `\@preamblecmds` is `\@notprerr`
 
 **Perl behavior**: latex_constructs.pool.ltxml:5460 `\@preamblecmds` = `Tokens()`
 forever, `:5594` `\@onlypreamble` records nothing ("Don't bother enforcing this"),
@@ -9120,10 +9120,28 @@ license (beameruserguide: 16 of 26 chapters lost, zero errors; SHARED).
 **Rust behavior**: `\@notprerr` is defined (latex.ltx:9019) and `\document` `\let`s
 `\@preamblecmds` to it globally at the latex.ltx:9521-9522 point (`\@preamblecmds`
 is itself `\@onlypreamble`, :1228), so the probe reads as it does in LaTeX.
-`\@onlypreamble` itself stays the loose flag-only guard (sect01.rs), not a `\do` list.
-**Why**: the observable side effect raw code tests for is part of the kernel
-contract; reproducing it costs one `\let` and no per-command bookkeeping.
-Guard `preamblecmds_is_notprerr_inside_a_running_document`. Batch 56bx.
+**Rule (QA90)**: `\begin{document}` walks latex.ltx's `\@preamblecmds` (:9521-9522) after its hooks; each listed
+command that is one of our Rust definitions becomes `\lx@notprerr\lx@onlypreamble@<name>`: latex.ltx's own
+`\@notprerr` Error ("Can be used only in preamble", :9019) and then the command itself, as Perl recovers
+(latex_constructs.pool.ltxml:155 `onlyPreamble`, which Perl applies to 8 commands only and with its own text).
+- The list is latex.ltx's (the dump's, 124 entries) plus every `\@onlypreamble` a raw package runs: `\@onlypreamble`
+  records `\do<cs>` as latex.ltx:1224-1226 does (Perl :5594 records nothing). Without a dump it is Perl's 8.
+- Inside a package or class load (`\@currext` `sty`/`cls`) no Error: pdflatex never loads one after the preamble, so
+  the packages a body `\usepackage` loads in recovery add none (pdflatex: one Error); nor while a binding runs a
+  sub-file's preamble under Perl's `inPreamble` (standalone_sty.rs).
+- Only the kernel's definitions (origin `Pool`): a binding's replacement (docmute_sty.rs, standalone_sty.rs
+  `\documentclass`) stands for its package's re-let after the walk (docmute.sty:19, standalone.sty:738).
+- A command re-let after the walk (a renewed `document`, exam-n.cls's `\let\document\@empty`) is its own again. `\document` itself stays the constructor's alias, whose identity `\begin`/`\end`
+  read (sect01.rs): the constructor's second run raises the Error.
+- latex.ltx's token macros in the list are left working, a gap: TeX's `\let` to `\@notprerr` would print their
+  arguments, and our loader runs `\@pushfilename`/`\@currnamestack` in the body (content.rs:1773). RED repro
+  `loader/makeindex_in_the_body_red.tex`.
+**Why**: the observable side effect raw code tests for is part of the kernel contract, and pdflatex errs on every
+listed command in the body; the recovery keeps what the command does instead of typesetting its arguments.
+Census (30k, main files, comments and verbatim stripped): 45 name one after `\begin{document}`; converting them
+moves no Error (1205.6201's are a conditional's other preambles, most others documentation guides' examples).
+Guards `preamblecmds_is_notprerr_inside_a_running_document`, `error_boundary::perfect_kernel_error_boundary`
+(rows "preamble-only commands in the body/preamble", "a second \begin{document}"). Batch 56bx; QA90.
 
 ### 227. A `filecontents` capture ends at `\end{<current environment>}`
 
