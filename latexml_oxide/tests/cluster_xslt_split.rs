@@ -1764,6 +1764,7 @@ mod picture_svg_on_the_live_dom {
   /// (an LR-box), so the foreignObject holds `<span class="ltx_inline-block">`
   /// (was Perl's schema-invalid `<block>`/`<div class="ltx_block">`); the
   /// foreignObject dimensions and position are unchanged (render-faithful).
+  /// The parbox's width is `--ltx-box-width` in its style (OD #1045, QAB57b).
   #[test]
   fn parbox_inside_a_picture_renders_as_a_foreign_object() {
     let html = html_of(
@@ -1780,7 +1781,7 @@ mod picture_svg_on_the_live_dom {
       r##"<foreignObject height="17.14" overflow="visible" width="132.84">"##,
       r##"<span class="ltx_foreignobject_container"><span class="ltx_foreignobject_content">"##,
       "\n",
-      r##"<span class="ltx_inline-block ltx_parbox ltx_align_middle" style="width:100.0pt;">"##,
+      r##"<span class="ltx_inline-block ltx_parbox ltx_align_middle" style="--ltx-box-width:100.0pt;">"##,
       "\n",
       r##"<span class="ltx_p">PARBOXVISIBLEWORD inside picture</span>"##,
       "\n",

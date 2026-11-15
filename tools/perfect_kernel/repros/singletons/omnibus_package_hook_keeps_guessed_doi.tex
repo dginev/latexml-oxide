@@ -1,0 +1,13 @@
+% A package's begin-document hook is not the document: apacite's `\AtBeginDocument{\providecommand{\doi}…}`
+% (apacite.sty:1812-1816) keeps OmniBus's `\doi` link under a class with no binding (user ruling 2026-10-01), while
+% the document's own definitions win over OmniBus's guesses (QAB57, `state::document_redefines_guess`).
+% witness: synthetic (the apacite case of OXIDIZED_DESIGN_DIVERGENCES #408).
+% status:  GREEN (QAB57)
+% oracle:  pdflatex (with article for the unknown class) 0 errors: "X 10.1000/xyz."
+% Perl:    OmniBus's `\doi` (its `\providecommand` finds it defined).
+% expect:  0 errors, 1 warning (the missing class); `\doi` a link to https://doi.org/10.1000/xyz.
+\documentclass{nosuchclassqa}
+\usepackage{apacite}
+\begin{document}
+X \doi{10.1000/xyz}.
+\end{document}

@@ -1736,8 +1736,9 @@ pub fn install_definition<T: Into<Stored>>(definition: T, scope: Option<Scope>) 
   }
   // (read against this redefinition's own interface: a lock that holds only against copies, `files_lock_holds`; an
   // unlocked state reads no lock and allocates nothing here)
-  let locked =
-    !state_is_unlocked() && token.with_cs_name(|cs| redefinition_locked(cs, &definition));
+  let locked = !state_is_unlocked()
+    && token.with_cs_name(|cs| redefinition_locked(cs, &definition))
+    && !document_redefines_guess(&token);
   // (a stand-in's copy's own write to LaTeX's document hooks is document-time code, which it does not register, as it
   // does not its `\AtBeginDocument` code: `copy_provides_defers`. ltxgrid's `\prepdef\@begindocumenthook{\open@column@one
   // \@ne\set@colht…}` in qm2008_abs.cls and snp.cls, REVTeX 4 copies routed to the revtex4 binding, ran its page
@@ -5822,6 +5823,17 @@ fn copies_lock_in_force(cs: &str, protected: &Token) -> bool { x_equals(&T_CS!(c
 /// Whether a file's clearing `\let` has put the protected meaning of `cs` aside (`"{cs}:locked@cleared"`, [`let_i`]).
 fn copies_lock_kept_aside(cs: &str) -> bool {
   lookup_value(&s!("{cs}:locked@cleared")).is_some_and(|b| !matches!(b, Stored::None))
+}
+
+/// Whether the document redefines a guess of the fallback class, which wins under OmniBus (BM Q3.12, DG 2026-11-14):
+/// OmniBus sets `GUESSES_REDEFINABLE` for a class with no binding, so its locks yield to the document's own text — not
+/// to hook code (apacite's `\AtBeginDocument{\providecommand{\doi}…}` keeps OmniBus's `\doi`).
+pub fn document_redefines_guess(token: &Token) -> bool {
+  crate::definition::origin::current_origin()
+    == crate::definition::origin::DefinitionOrigin::Document
+    && !state_is_relocked()
+    && fallback_meaning_origin(token) == Some(crate::definition::origin::DefinitionOrigin::Fallback)
+    && lookup_bool("GUESSES_REDEFINABLE")
 }
 
 /// [`install_definition`]'s verdict, in the locked state, on a redefinition of `cs`: [`lock_holds_against`] read

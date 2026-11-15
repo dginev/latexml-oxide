@@ -153,6 +153,9 @@ pub fn decrement_align_group_count() {
 
 pub fn state_is_unlocked() -> bool { locals!().unlocked.last().copied().unwrap_or(false) }
 pub fn local_state_unlocked(v: bool) { locals_mut!().unlocked.push(v); }
+/// Whether a reader re-locked the state explicitly: code that is not the document's own text, a raw file's or a hook's
+/// (`\AtBeginDocument`'s, run by `\begin{document}`), as Perl runs them under `$UNLOCKED=0`.
+pub fn state_is_relocked() -> bool { locals!().unlocked.last() == Some(&false) }
 pub fn expire_state_unlocked() { locals_mut!().unlocked.pop(); }
 
 pub fn align_group_count() -> i32 {

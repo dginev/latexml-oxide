@@ -48,6 +48,38 @@
     shipping an older class raised an Error, printed its author block a second time and gained
     an ORCID link it never wrote (2203.09493, 1705.02823, 2210.04484). Guard
     `perfect_kernel_batch68u::lni_authors_carry_email_orcid_and_affiliation`.
+  - **Every box's width, height and depth are CSS custom properties: `--ltx-box-width`,
+    `--ltx-box-height`, `--ltx-box-depth`** (Bruce Miller Q2.4, DG
+    2026-11-14). A minipage, `\parbox`, `\makebox`, `p{}` cell, transformed box or wrapfigure wrote
+    `style="width:<w>"`; the HTML now writes `style="--ltx-box-width:<w>"`, which LaTeXML.css (and
+    ar5iv-css) applies at the inline style's rank, so pages render as before. A section set inside a
+    minipage or `\parbox` keeps the box's width the same way (it was dropped). A rule's width and
+    MathML's stay `width:`; the XML's `width` attribute is unchanged. Custom stylesheets: an
+    `!important` override such as `.ltx_minipage { width: 100% !important }` works as before; a rule
+    that matched `[style*="width"]` still matches; one that keyed on `style^="width:"` must now read
+    the property, and a stylesheet may reuse its value (`width: min(var(--ltx-box-width), 100%)
+    !important`) or switch every box width off (`:where([style*="--ltx-box-width:"])
+    { --ltx-box-width: initial !important }`). The widths now need LaTeXML.css or ar5iv-css: they
+    are lost under `--nodefaultresources` without a stylesheet carrying the rule, and in readers
+    that ignore our CSS or lack `var()`/`:where()`. A box's height and depth go the same way (DG
+    2026-11-14): `style="height:<h+d>;vertical-align:<-d>"` is now
+    `style="--ltx-box-height:<h>;--ltx-box-depth:<d>"`, TeX's own values, from which LaTeXML.css
+    derives the height and the drop below the line (a `\raisebox{y}[h][d]` keeps its shift); a
+    rule's height and MathML's stay. Switch every box height off with
+    `:where([style*="--ltx-box-height:"]) { --ltx-box-height: initial !important }`, or every depth
+    with `--ltx-box-depth: 0pt` the same way. OXIDIZED_DESIGN #1045; guards
+    `perfect_kernel_batchqab57::section_in_a_box_keeps_the_box_width`,
+    `perfect_kernel_batchqab57::box_heights_ride_the_custom_properties`.
+  - **Under the OmniBus fallback, the document's own definitions win over its guesses** (Bruce
+    Miller Q3.12, DG 2026-11-14: "the document wins"). A `\newcommand`, `\renewcommand`, `\def`,
+    `\DeclareRobustCommand`, `\let` or `\NewDocumentCommand` of a name OmniBus had guessed
+    (`\doi`, `\corref`, `\etal`) replaces the guess, as in pdflatex; `\providecommand` keeps it.
+    OXIDIZED_DESIGN #408 (extended); guard
+    `perfect_kernel_batchqab57::omnibus_guesses_yield_to_the_document`.
+  - **latexml.sty takes `pdfoutput` and `nopdfoutput` options** (Bruce Miller Q4.2). They set
+    `\pdfoutput` to 1 or 0 over the mode LaTeXML guesses from the source's cues, e.g.
+    `--preload=[nopdfoutput]latexml.sty` for a latex+dvips paper. Default output is unchanged.
+    OXIDIZED_DESIGN #1046; guard `perfect_kernel_batchqab57::latexml_pdfoutput_options_override_the_mode`.
   - **No default `rowspacing="0pt"` on a MathML table** (issue 695). An `array`, `aligned` or
     other multi-row table carried `rowspacing="0pt"`, which MathML Core does not have (Chrome
     ignores it) but Firefox and MathJax honour, setting the rows touching. It is no longer
