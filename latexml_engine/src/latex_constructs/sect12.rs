@@ -714,7 +714,7 @@ pub(crate) fn load() -> Result<()> {
   // NOTE: There are 2 extra arguments (See LaTeX Companion, p.866)
   // for height and inner-pos. We're ignoring inner-pos, for now, though.
   // The box sets `\hsize` and, by `\@parboxrestore`, `\linewidth` and `\@totalleftmargin` (latex.ltx:16253,
-  // :16280-16281); `\textwidth` and `\columnwidth` stay the page's, which Perl's macro set too (L4753,
+  // :16280-16281); `\textwidth` and `\columnwidth` stay the page's, which Perl's macro set too (:4746,
   // KNOWN_PERL_ERRORS #1273; witnesses 1412.0314, 1711.09469); a minipage sets them (`set_minipage_width`). Its interline
   // values too (latex.ltx:16284-16286), restored inside a table cell where
   // `\@array` zeroed them (60l, `\lx@begin@alignment`).

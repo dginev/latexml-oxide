@@ -4011,7 +4011,7 @@ pub fn begin_float_continuation(float_type: &str) {
 }
 
 /// `before_float` for a float caption never types: subfig's, subfigure.sty's and subfloat.sty's
-/// sub-floats and containers (their own packages step them), and listings' floats — no
+/// sub-floats and containers (their own packages step them), and listings' floats — no `\hsize` (`before_xfloat`), no
 /// `\caption@settype`, so a pending continuation survives it, and its own counter's steps neither
 /// prepare nor take the continuation (`step_float_counter`). Guard
 /// `perfect_kernel_batch56::continuedfloat_scope_opens_where_caption_sets_the_type`.
@@ -4021,15 +4021,15 @@ pub fn before_untyped_float(float_type: &str) -> Result<()> {
     float_type.to_string(),
     Some(Scope::Local),
   );
-  begin_float(float_type, None, false, false)
+  begin_float(float_type, None, false, false, false)
 }
 
 /// latex.ltx `\@floatboxreset` (`\reset@font\normalsize`, run by `\@xfloat`): a floating
 /// environment's text starts in the body font, size and leading whatever surrounds it — through
 /// `\lx@floatbox@reset`, which setspace makes single-spaced (setspace.sty:418-422), so a document's
 /// `\doublespacing` no longer stretches its tables (2605.18633 S6.T1). Called by the environments
-/// that model `\@xfloat` (figure/table, `\@float`, float.sty, rotating, acmart, jhep, aas plates,
-/// wrapstuff) — not by sub-floats, wrapfig/floatflt, an algorithm2e placed `[H]` (a minipage),
+/// that model `\@xfloat` (`before_xfloat`: figure/table, `\@float`, float.sty, rotating, acmart, jhep, aas plates,
+/// wrapstuff; algorithm2e's floats itself) — not by sub-floats, wrapfig/floatflt, an algorithm2e placed `[H]` (a minipage),
 /// supertabular (`\lx@float@keepsize`) or listings, which reset nothing in LaTeX. A class with no
 /// `\normalsize` (amsppt) has none to run. Guards `perfect_kernel_batch58::{line_spacing_commands_set_the_stretch,
 /// only_floats_reset_the_size}`.
@@ -4101,22 +4101,29 @@ pub fn minipage_takes_natural_width(whatsit: &mut Whatsit) -> Result<()> {
   Ok(())
 }
 
-/// Perl: beforeFloat (latex_constructs.pool.ltxml L3430-3438)
-/// Sets \@captype, adjusts \hsize for single/double column floats.
-/// `preincrement`: if Some("figure"), pre-increments the parent float counter
+/// Perl: beforeFloat (blib latex_constructs.pool.ltxml:3373-3382) without its `\hsize := \columnwidth`, which is
+/// `before_xfloat`'s: sets `\@captype`. `preincrement`: if Some("figure"), pre-increments the parent float counter
 ///   on first subfloat entry (before main caption), storing result for later use.
 pub fn before_float(float_type: &str, preincrement: Option<&str>) -> Result<()> {
   before_float_ex(float_type, preincrement, false)
 }
 /// Extended version with `double` flag for `*` variants (span both columns).
 pub fn before_float_ex(float_type: &str, preincrement: Option<&str>, double: bool) -> Result<()> {
-  begin_float(float_type, preincrement, double, true)
+  begin_float(float_type, preincrement, double, true, false)
+}
+/// The begin of a float modelling latex.ltx `\@xfloat`/`\@dblfloat`: `\hsize := \columnwidth` (`\textwidth` when
+/// `double`; :17482, :17556), then `reset_float_box`. A sub-float, wrapfig and floatflt assign none; algorithm2e's and
+/// listings' floats neither, begun in outer par mode, where `\hsize` is `\columnwidth` already.
+pub fn before_xfloat(float_type: &str, double: bool) -> Result<()> {
+  begin_float(float_type, None, double, true, true)?;
+  reset_float_box()
 }
 fn begin_float(
   float_type: &str,
   preincrement: Option<&str>,
   double: bool,
   typed: bool,
+  xfloat: bool,
 ) -> Result<()> {
   set_aside_pending_caption(float_type);
   // The boxes open in this float (`begin_caption_box`) end before it does; `after_float` unwinds any whose end an
@@ -4167,16 +4174,14 @@ fn begin_float(
       let_definition(&T_CS!(name), &T_CS!(panel), None);
     }
   }
-  // Perl: AssignRegister('\hsize' => LookupDimension($options{double} ? '\textwidth' :
-  // '\columnwidth'));
-  let dim_name = if double {
-    "\\textwidth"
-  } else {
-    "\\columnwidth"
-  };
-  // latex.ltx:17482, :17556 (`\@xfloat`, `\@dblfloat`); a sub-float (`preincrement`, caption.sty's sub-types) sets no
-  // `\hsize`, subcaption's minipage its own (`set_minipage_width`): `\subcaptionbox` in a `\parbox` (2010.06608 S4.F8).
-  if preincrement.is_none() {
+  // Perl's beforeFloat assigns `\hsize` for every float (:3377); only `\@xfloat`/`\@dblfloat` do (`before_xfloat`), so a
+  // sub-float in a `\parbox` or a `p` cell reads the box's (2010.06608 S4.F8; subfig, subfigure.sty).
+  if xfloat {
+    let dim_name = if double {
+      "\\textwidth"
+    } else {
+      "\\columnwidth"
+    };
     let dim_val = lookup_dimension(dim_name).unwrap_or_default();
     assign_register("\\hsize", dim_val.into(), None, Vec::new()).ok();
   }

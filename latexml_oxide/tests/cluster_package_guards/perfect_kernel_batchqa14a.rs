@@ -1,6 +1,6 @@
 //! Guards for QA14A: a `\parbox` sets `\hsize` and `\linewidth` to its width (latex.ltx:16253 `\@iiiparbox`, :16280
 //! `\@parboxrestore`), `\textwidth` and `\columnwidth` staying the enclosing ones; a minipage sets all four (:16312-16313
-//! `\@iiiminipage`). Perl's `\parbox` set all four (latex_constructs.pool.ltxml:4753, KNOWN_PERL_ERRORS #1273), so a
+//! `\@iiiminipage`). Perl's `\parbox` set all four (latex_constructs.pool.ltxml:4746, KNOWN_PERL_ERRORS #1273), so a
 //! `\parbox{0.44\textwidth}{\includegraphics[width=0.44\textwidth]{…}}` drew the graphic at 0.44 of the box. Witnesses
 //! 1412.0314, 1711.09469.
 use latexml::util::test::{assert_element, convert_with};
@@ -30,9 +30,12 @@ type Case = (
 /// a_subcaptionbox_keeps_the_box_hsize: a sub-float sets no `\hsize` (only `\@xfloat` does, latex.ltx:17482), so a
 /// `\subcaptionbox` in a parbox or a `p` cell reads the box's. Red (QA14A r1): (a)'s graphic 345.0pt and (b) "H 345.0pt",
 /// the parbox no longer setting `\columnwidth`; (c) "H 345.0pt" on 75531ffc9d6 too. Witness 2010.06608 S4.F8.
+/// a_subfloat_keeps_the_box_hsize, a_subfigure_keeps_the_box_hsize: subfig's `\subfloat` and subfigure.sty's
+/// `\subfigure` (`before_untyped_float`) likewise (review revQA14A p9/p10). Red (QA14A r2, 0b8415564db): (a)'s graphic
+/// 172.5pt, (b) "H 345.0pt"; (c) "H 345.0pt" on 75531ffc9d6 too.
 #[test]
 fn parbox_sets_only_the_line_width() {
-  let cases: [Case; 3] = [
+  let cases: [Case; 5] = [
     (
       repro!("boxes-groups/parbox_keeps_the_page_text_width.tex"),
       &[
@@ -150,6 +153,64 @@ fn parbox_sets_only_the_line_width() {
           "p",
           "S0.F2.sf2.2",
           "<p xml:id=\"S0.F2.sf2.2\">H 345.0pt L 345.0pt</p>",
+        ),
+      ],
+    ),
+    (
+      repro!("captions-floats/a_subfloat_keeps_the_box_hsize.tex"),
+      &[
+        (
+          "figure",
+          "S0.F1.sf1",
+          "<figure align=\"center\" class=\"ltx_figure_panel\" xml:id=\"S0.F1.sf1\"><tags><tag>(a)</tag>\
+           <tag role=\"refnum\">1a</tag></tags>\
+           <graphics graphic=\"a.png\" options=\"width=82.79926pt,keepaspectratio=true\" xml:id=\"S0.F1.sf1.g1\"/>\
+           <toccaption><tag close=\" \">a</tag>a</toccaption><caption><tag close=\" \">(a)</tag>a</caption></figure>",
+        ),
+        (
+          "p",
+          "S0.F1.sf2.1",
+          "<p xml:id=\"S0.F1.sf2.1\">H 165.59853pt L 165.59853pt</p>",
+        ),
+        (
+          "p",
+          "S0.F1.sf3.1",
+          "<p xml:id=\"S0.F1.sf3.1\">H 103.50105pt L 103.50105pt</p>",
+        ),
+        (
+          "p",
+          "S0.F2.sf1.1",
+          "<p xml:id=\"S0.F2.sf1.1\">H 345.0pt L 345.0pt</p>",
+        ),
+      ],
+    ),
+    (
+      repro!("captions-floats/a_subfigure_keeps_the_box_hsize.tex"),
+      &[
+        (
+          "figure",
+          "S0.F1.sf1",
+          "<figure align=\"center\" class=\"ltx_figure_panel\" xml:id=\"S0.F1.sf1\"><tags><tag>\
+           <text fontsize=\"80%\" xml:id=\"S0.F1.sf1.1\">(a)</text></tag><tag role=\"refnum\">1(a)</tag></tags>\
+           <graphics graphic=\"a.png\" options=\"width=82.79926pt,keepaspectratio=true\" xml:id=\"S0.F1.sf1.g1\"/>\
+           <toccaption><tag close=\" \">(a)</tag>a</toccaption><caption><tag close=\" \">\
+           <text fontsize=\"80%\" xml:id=\"S0.F1.sf1.2\">(a)</text></tag>\
+           <text fontsize=\"80%\" xml:id=\"S0.F1.sf1.3\">a</text></caption></figure>",
+        ),
+        (
+          "p",
+          "S0.F1.sf2.2",
+          "<p xml:id=\"S0.F1.sf2.2\">H 165.59853pt L 165.59853pt</p>",
+        ),
+        (
+          "p",
+          "S0.F1.sf3.2",
+          "<p xml:id=\"S0.F1.sf3.2\">H 103.50105pt L 103.50105pt</p>",
+        ),
+        (
+          "p",
+          "S0.F2.sf1.2",
+          "<p xml:id=\"S0.F2.sf1.2\">H 345.0pt L 345.0pt</p>",
         ),
       ],
     ),

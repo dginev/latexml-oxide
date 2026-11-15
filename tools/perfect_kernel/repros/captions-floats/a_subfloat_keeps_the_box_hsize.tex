@@ -1,0 +1,23 @@
+% witness: synthetic (review revQA14A p9/p10: subfig's \subfloat in a \parbox{0.48\textwidth}, width=0.5\hsize)
+% oracle:  pdflatex 0 errors. A subfig sub-float assigns no \hsize; only \@xfloat and \@dblfloat do (latex.ltx:17482,
+%          :17556). (a)'s graphic 82.79926pt (0.5 x 165.59853pt); "H 165.59853pt L 165.59853pt" (b); in a p cell
+%          "H 103.50105pt L 103.50105pt" (c); in the float "H 345.0pt L 345.0pt" (d)
+% engines: rust (main 75531ffc9d6): (a), (b) right, the \parbox's \columnwidth being its width; (c) "H 345.0pt" (Perl's
+%          beforeFloat :3377, \hsize := \columnwidth for every float); QA14A r2, the \parbox keeping the page's
+%          \columnwidth: (a) 172.5pt, (b) "H 345.0pt"
+% expect:  0 errors, 0 warnings; the widths pdflatex prints
+% status:  RED (75531ffc9d6 for c; QA14A r2 for a, b) -> GREEN (QA14Ab)
+\documentclass{article}
+\usepackage{graphicx,subfig}
+\begin{document}
+\begin{figure}
+\parbox{0.48\textwidth}{\centering\subfloat[a]{\includegraphics[width=0.5\hsize]{a.png}}\par
+\subfloat[b]{H \the\hsize\ L \the\linewidth}}\hfill
+\begin{tabular}{p{0.3\textwidth}}\subfloat[c]{H \the\hsize\ L \the\linewidth}\end{tabular}
+\caption{Boxes.}
+\end{figure}
+\begin{figure}
+\subfloat[d]{H \the\hsize\ L \the\linewidth}
+\caption{Float.}
+\end{figure}
+\end{document}

@@ -105,8 +105,7 @@ LoadDefinitions!({
     // The begin code opens a TeX group of its own: rotating.sty:109-115 `\@rotfloat` -> `\@float` (latex.ltx:17479 `\color@vbox`).
     tex_group => { TexGroup::Box },
     before_digest => {
-      engine::latex_constructs::before_float("figure", None)?;
-      engine::latex_constructs::reset_float_box()?;
+      engine::latex_constructs::before_xfloat("figure", false)?;
       // rotatedPage: \hsize = \textheight
       // rotatedPage: \hsize = \textheight
       let texheight = lookup_dimension("\\textheight").unwrap_or_default();
@@ -128,8 +127,7 @@ LoadDefinitions!({
     // The begin code opens a TeX group of its own: rotating.sty:109-115 `\@rotfloat` -> `\@float` (latex.ltx:17479 `\color@vbox`).
     tex_group => { TexGroup::Box },
     before_digest => {
-      engine::latex_constructs::before_float("figure", None)?;
-      engine::latex_constructs::reset_float_box()?;
+      engine::latex_constructs::before_xfloat("figure", false)?;
       // rotatedPage: \hsize = \textheight
       let texheight = lookup_dimension("\\textheight").unwrap_or_default();
       AssignRegister!("\\hsize", texheight.into());
@@ -150,8 +148,7 @@ LoadDefinitions!({
     // The begin code opens a TeX group of its own: rotating.sty:109-115 `\@rotfloat` -> `\@float` (latex.ltx:17479 `\color@vbox`).
     tex_group => { TexGroup::Box },
     before_digest => {
-      engine::latex_constructs::before_float("table", None)?;
-      engine::latex_constructs::reset_float_box()?;
+      engine::latex_constructs::before_xfloat("table", false)?;
       // rotatedPage: \hsize = \textheight
       let texheight = lookup_dimension("\\textheight").unwrap_or_default();
       AssignRegister!("\\hsize", texheight.into());
@@ -172,8 +169,7 @@ LoadDefinitions!({
     // The begin code opens a TeX group of its own: rotating.sty:109-115 `\@rotfloat` -> `\@float` (latex.ltx:17479 `\color@vbox`).
     tex_group => { TexGroup::Box },
     before_digest => {
-      engine::latex_constructs::before_float("table", None)?;
-      engine::latex_constructs::reset_float_box()?;
+      engine::latex_constructs::before_xfloat("table", false)?;
       // rotatedPage: \hsize = \textheight
       let texheight = lookup_dimension("\\textheight").unwrap_or_default();
       AssignRegister!("\\hsize", texheight.into());
