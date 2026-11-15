@@ -156,10 +156,11 @@ AUDITED = {
     "walkdir": ("2.5.0",
         "compare/nftw.c -- a benchmark comparison against C's nftw(3), not built.",
     ),
-    "nix": ("0.31.3",
-        "test/test_kmod/hello_mod/hello.c -- a Linux kernel-module test fixture, not built; "
-        "zip 9 depends on nix only on macOS and the BSDs (zip-9.0.3 Cargo.toml:263, feature "
-        "\"fs\"), so no Linux build compiles nix at all; license MIT.",
+    "nix": (("0.31.3", "0.32.0"),
+        "test/test_kmod/hello_mod/hello.c -- a Linux kernel-module test fixture, not built "
+        "(0.32.0: the same one native file, byte-identical; FINGERPRINTS below); zip 9 depends on "
+        "nix only on macOS and the BSDs (zip-9.0.3 Cargo.toml:263, zip-9.5.1 :275, feature \"fs\"), "
+        "so no Linux build compiles nix at all; license MIT.",
     ),
     # Both versions audited: the same uncompiled reference/*.cpp shape.
     # (A tuple lists every audited version — needed because the lockfile is
@@ -311,6 +312,10 @@ BUILD_RS_NATIVE_RE = re.compile(
 # what makes the gitignored lockfile survivable: CI re-locks to the highest compatible patch
 # (e.g. cc 1.4.3 -> 1.4.4, native probe byte-identical) without a manual AUDITED edit each time.
 FINGERPRINTS = {
+    "nix": {
+        "test/test_kmod/hello_mod/hello.c":
+            "bcac6b19c5bd807e1f3878c15e426acc85785a8ade9840c3bb4d068635c9188c",
+    },
     "cc": {
         "src/detect_compiler_family.c":
             "97ca4b021495611e828becea6187add37414186a16dfedd26c2947cbce6e8b2f",
