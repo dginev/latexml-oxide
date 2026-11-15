@@ -201,7 +201,8 @@ The canonical corpus phase bands (digest 19.7%, math_parse 19.2%, build 18.1%, x
   materializes complete core XML as a `String`; TeX-to-HTML passes that string
   to post, which may immediately spill it to disk. Pass 2 also clones the
   conversion-global font map and rewrite rules per segment and constructs an
-  unused XML scaffold per fragment.
+  unused XML scaffold per fragment. (The math grammar is shared since 2026-11-15:
+  audit log, PERFA.)
 * **Fix:** add a writer/file-backed conversion API while retaining the current
   string API as a compatibility wrapper. Hand the CLI's file directly to post.
   Independently, share immutable pass-2 data, use fragment-local overlays, make
@@ -315,7 +316,8 @@ wrapping elements only). Left, each with its basis (exact call counts × gdb-ste
 * `get_properties` callers that read only names or a count — `namespace_prefixes_in_use` (`document.rs` ~:8744,
   0.51 %), `finalize_rec` (~:1218, 0.51 %; `_`-prefixed names and the count), `append_tree` (~:8171, 0.45 %),
   `serialize_into` (~:2696, 0.24 %): ≈1.9 % with a borrowed attribute walk — a latexml-side change, needing an additive
-  rust-libxml visitor (no public-API break).
+  rust-libxml visitor (no public-API break); waits for a rust-libxml release (PERF1 L4, 2026-11-15: 0.54 % of the mix,
+  the issue-790 book 1.4 %, b1000 1.3 %).
 * `get_name` behind `get_node_qname` (`common/model.rs:723`) and `collect_named` (`latexml_math_parser/src/util.rs:946`):
   0.72 % of String copies, 2.56 M calls — a borrowed name read (additive API) on the latexml side.
 * `Node::_wrap`'s `NodeMap` probe + `Rc` clone on every traversal step (5.27 M hits, 0.48 %): a `_private` back-pointer
@@ -345,6 +347,24 @@ code on AMD (skid), so the figures are counts × stepped instructions.
 ---
 
 ## Audit log (periodic passes; newest first)
+
+### 2026-11-15 — the math grammar built once per streamed conversion (PERF1 L1, batch PERFA)
+
+Defect: `streaming_pass2` (`latexml_oxide/src/core_interface.rs`) made a `MathParser::default()` per spilled segment,
+and each ran `init_grammar()` and re-precomputed the whole Marpa grammar (≈60 M instructions; 253 segments on
+2308.04512, 442 on circuitikzmanual). Fix: `latexml_math_parser::MathGrammar` holds the grammar precomputed once with
+its rule actions (fn items, no captured state) and tree builder (rule-id sets); each segment gets a fresh
+`MathParser::with_grammar` (its own warned-formula set, counters, engine) and hands the grammar on with
+`MathParser::grammar()`, which returns it only if it passes `try_reset_clone_path`'s trivial parse (a grammar
+`reset_engine` rebuilt is handed on). The eager path and the spine keep `MathParser::default()`. Guard:
+`cluster_units` `parse::shared_grammar_parses_like_a_fresh_one`.
+Measured (release, best of 3 interleaved, `instructions:u`, base MAIN884 ab9e1a4474d; XML byte-identical in every run):
+2308.04512 284.50 → 261.11 G (−8.22 %), circuitikzmanual 693.94 → 677.62 G (−2.35 %); unstreamed documents within +0.09 % (the issue-790 book +0.09 %, b1000
++0.04 %, b250 +0.06 %, amsldoc +0.07 %, 2205.15714 −0.01 %; 1106.3601's own spread is ±5 %, ASF second-chance wall
+deadlines); peak RSS unchanged. Byte identity: an A/B of 130 math-heavy papers + 59 controls, all forced to stream with
+many segments (`LATEXML_STREAMING=true LATEXML_SPILL_AT_MIB=1 LATEXML_SOFT_YIELD_MIN_BOXES=64`), raw XML identical on all 189.
+PERF1's L4 (a borrowed attribute walk for `get_properties`' name/count-only callers, P12) needs an additive visitor in
+rust-libxml, a crates.io dependency (0.3.23), not vendored: it waits for a rust-libxml release.
 
 ### 2026-11-13 — the AASTeX many-author regression (batch AAS1)
 
