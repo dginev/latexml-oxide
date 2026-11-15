@@ -2141,17 +2141,20 @@ impl CrossRef {
       if bibrefs.is_empty() {
         return;
       }
-      let mut cites: HashMap<Node, bool> = HashMap::default();
+      let mut cites: HashMap<usize, (Node, bool)> = HashMap::default();
       for bibref in &bibrefs {
         let (cite, numeric) = self.make_bibcite(doc, bibref);
         if let Some(parent) = bibref.get_parent()
           && doc.get_qname(&parent).as_deref() == Some("ltx:cite")
         {
-          *cites.entry(parent).or_insert(true) &= numeric;
+          cites
+            .entry(parent.to_hashable())
+            .or_insert((parent, true))
+            .1 &= numeric;
         }
         doc.replace_node(bibref, &cite);
       }
-      for (mut parent, _) in cites.into_iter().filter(|(_, numeric)| *numeric) {
+      for (mut parent, _) in cites.into_values().filter(|(_, numeric)| *numeric) {
         PostDocument::add_class(&mut parent, "ltx_cite_numeric");
       }
     }
