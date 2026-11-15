@@ -31650,8 +31650,11 @@ processing, and a Fatal the binding deliberately catches may continue, as Perl's
 `fontTest` and a register setter may die as Perl's (Document.pm:1227 `&$fonttest($font)`, Register.pm:66 `&$setter`):
 `FontTestClosure` returns `Result<bool>`, `RegisterSetterClosure` and `Definition::set_value` `Result<()>`, so their
 Fatal ends the conversion: a setter's as a body's, a `fontTest`'s as any build hook's (the build stops and keeps the
-document built so far, with its Warning). **Exception** (catalog `rhai-bindings/register_getter_fatal_continues_red.tex`):
-a register getter's Fatal is dropped and the register reads unset, since `Definition::value_of` returns an `Option`.
+document built so far, with its Warning). **Exceptions**, one decision post-merge (propagate the `Result`, or re-raise a logged
+Fatal): a register getter's Fatal is dropped and the register reads unset, since `Definition::value_of` returns an `Option`
+(catalog `rhai-bindings/register_getter_fatal_continues_red.tex`); a `fontTest`'s Fatal raised while `set_node` closes the open
+text (a `\footnote` right after the text) is dropped, since `set_node` discards `close_text_internal`'s Result (Perl's
+Document.pm:74 dies there; `rhai-bindings/fonttest_fatal_closed_by_set_node_red.tex`).
 **Guard**: `30_script_bindings::a_rhai_fatal_is_logged_once` (the caught-then-thrown, `fontTest` and setter rows).
 
 ### 1030. → KNOWN_PERL_ERRORS #1244 (Rhai glue arithmetic is TeX's `\advance`, not Perl's Glue.pm / MuGlue.pm)

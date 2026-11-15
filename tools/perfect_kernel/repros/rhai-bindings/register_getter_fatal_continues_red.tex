@@ -5,7 +5,7 @@
 % witness: synthetic (RHFAT, the getter sibling of ODR10; the binding lxrgf.sty.rhai, lxrgf.sty.ltxml for Perl,
 %   lxrgf.sty for pdflatex)
 % oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "Before 0.0pt after. Second paragraph."; Perl 0.8.8:
-%   <p>Before </p>, 1 fatal error (the getter dies, the conversion ends)
+%   1 fatal error, no document written (the getter dies, the conversion ends; revRHFAT)
 % engines: RHFAT: <p>Before  after.</p> <p>Second paragraph.</p>, 1 fatal error
 % expect:  1 fatal error; the text after the getter's read not built (as a body `Fatal()`)
 % status:  RED (RHFAT)
