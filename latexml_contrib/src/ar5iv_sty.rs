@@ -107,7 +107,13 @@ LoadDefinitions!({
   // sets no knob, and before it latexml.sty takes its options alone and ar5iv's are lost (`rawclasses`: a class read
   // raw under ar5iv falls to OmniBus, `Warning:missing_file`). Perl alike (Core.pm:333-335, Package.pm:2357,
   // :2586-2590); docs/SYNC_STATUS.md. Guard `perfect_kernel_batch78z::ar5iv_classcaptionfonts_option_sets_the_knob`.
-  for option in ["classcaptionfonts", "noclasscaptionfonts"] {
+  // So are latexml.sty's output-mode options (`pdfoutput`, `nopdfoutput`; OXIDIZED_DESIGN_DIVERGENCES #1046).
+  for option in [
+    "classcaptionfonts",
+    "noclasscaptionfonts",
+    "pdfoutput",
+    "nopdfoutput",
+  ] {
     DeclareOption!(option, {
       pass_options("latexml", "sty", vec![option.to_string()])?;
     });

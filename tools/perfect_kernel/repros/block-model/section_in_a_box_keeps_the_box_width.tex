@@ -1,0 +1,23 @@
+% A sectioning unit set inside a minipage or a \parbox becomes a real section carrying the box's class (OD #250), and
+% the box's width, which a section cannot hold as an attribute, as the CSS custom property `--ltx-box-width` in its
+% `cssstyle` (BM Q2.4, DG 2026-11-14); a framed box's `inline-sectional-block` likewise. A plain minipage keeps its
+% `width` attribute.
+% witness: synthetic (Bruce Q&A probe Q2.4); 2512.24470 (a \section inside a minipage).
+% status:  GREEN (QAB57)
+% oracle:  pdflatex 0 errors: the boxed sections set at the boxes' widths.
+% Perl:    `<sectional-block class="ltx_minipage">` around the section, no width.
+% ours:    before QAB57 `<section class="ltx_minipage">`, no width.
+% expect:  0 errors, 0 warnings; each lifted unit `cssstyle="--ltx-box-width:<the box width>"`.
+\documentclass{article}
+\begin{document}
+Plain box: \begin{minipage}[t]{3cm}Text in a plain minipage.\end{minipage}
+
+\begin{minipage}[t]{4cm}
+\subsection*{Starred}
+Text A.
+\end{minipage}
+
+\parbox{5cm}{\section{In a parbox} Text B.}
+
+\fbox{\begin{minipage}{6cm}\section{Framed} F.\end{minipage}}
+\end{document}

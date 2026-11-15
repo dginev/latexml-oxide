@@ -102,7 +102,7 @@ LoadDefinitions!({
   // expansion-primitives/register_command_on_a_non_register).
   DefPrimitive!("\\advance Variable", sub[(var)] {
     if let ArgWrap::RegisterDefinition(dbox) = var {
-      read_keyword(&["by"])?;
+      read_by_keyword()?;
       let (defn_token, inner) = *dbox;
       let defn_token_str = defn_token.to_string();
       if !defn_token_str.is_empty() && defn_token_str != "missing" {
@@ -127,12 +127,12 @@ LoadDefinitions!({
     // at a later assignment; pstricks' raw `\psaddtolength` depends on it
     // (lsc). Perl never fires it (KNOWN_PERL_ERRORS #257). Guard:
     // `perfect_kernel_batch56::afterassignment_fires_after_arithmetic`.
-    after_assignment();
+    after_assignment()?;
   });
 
   DefPrimitive!("\\multiply Variable", sub[(var)] {
     if let ArgWrap::RegisterDefinition(dbox) = var {
-      read_keyword(&["by"])?;
+      read_by_keyword()?;
       let scale = read_number()?;
       let (varname, inner) = *dbox;
       // Upgrade: Why are the arguments used twice here? Is there a way to avoid cloning them?
@@ -146,12 +146,12 @@ LoadDefinitions!({
         Error!("expected","definition", message);
       }}
     }
-    after_assignment(); // tex.web §1269, as for `\advance`
+    after_assignment()?; // tex.web §1269, as for `\advance`
   });
 
   DefPrimitive!("\\divide Variable", sub[(var)] {
     if let ArgWrap::RegisterDefinition(dbox) = var {
-      read_keyword(&["by"])?;
+      read_by_keyword()?;
       let scale = read_number()?;
       let (varname, inner) = *dbox;
       // Upgrade: Why are the arguments used twice here? Is there a way to avoid cloning them?
@@ -170,9 +170,17 @@ LoadDefinitions!({
         Error!("expected","definition", message);
       }}
     }
-    after_assignment(); // tex.web §1269, as for `\advance`
+    after_assignment()?; // tex.web §1269, as for `\advance`
   });
 });
+
+/// The optional `by` of `\advance`, `\multiply` and `\divide`, read ahead of the operand as its first token is
+/// (`gullet::operand_lookahead`: a deposit's emptied field gives its value, DEPN).
+fn read_by_keyword() -> Result<()> {
+  let _operand = operand_lookahead();
+  read_keyword(&["by"])?;
+  Ok(())
+}
 
 /// Note that these define a "shorthand" for eg. \count123, but are NOT macros!
 pub fn shorthand_def(cs: Token, address_type: &str, init: RegisterValue) -> Result<()> {
@@ -199,6 +207,6 @@ pub fn shorthand_def(cs: Token, address_type: &str, init: RegisterValue) -> Resu
     ..RegisterOptions::default()
   });
   def_register(cs, None, init, options)?;
-  after_assignment();
+  after_assignment()?;
   Ok(())
 }

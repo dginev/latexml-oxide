@@ -1,0 +1,15 @@
+% Under OmniBus the document's own definitions win over its guesses (QAB57), but not those the document puts in its
+% begin-document hook: hook code runs re-locked, as a package's does (apacite's `\providecommand{\doi}`), and the
+% state cannot tell the document's hook code from a package's, so `\email` stays OmniBus's contact and "E:" is lost.
+% witness: synthetic (QAB57's sibling sweep of `state::document_redefines_guess`).
+% status:  RED
+% moves:   post-merge
+% oracle:  pdflatex (with article for the unknown class) 0 errors: "X E:a@b."
+% Perl:    the same refusal ("Ignoring redefinition (\newcommand)").
+% ours:    `<contact role="email">a@b</contact>`, "X ." (an Info only).
+% expect:  0 errors, 1 warning (the missing class); "X E:a@b."
+\documentclass{nosuchclassqa}
+\AtBeginDocument{\newcommand\email[1]{E:#1}}
+\begin{document}
+X \email{a@b}.
+\end{document}

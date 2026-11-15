@@ -107,6 +107,8 @@ LoadDefinitions!({
   // so the packages the class's dependency scan loads after it see it too.
   if lookup_string("fallback_target") == "OmniBus" {
     assign_value("OmniBus:fallback", true, Some(Scope::Global));
+    // Its guesses yield to the document's own definitions, locked ones too (`state::install_definition`; BM Q3.12).
+    assign_value("GUESSES_REDEFINABLE", true, Some(Scope::Global));
   }
   if !provide_only() {
     LoadClass!("article");
@@ -897,11 +899,11 @@ LoadDefinitions!({
   DefEnvironment!("{aug}", "#body");
 
   // What OmniBus defines yields to the document's own definition (`DefinitionOrigin::Fallback`), but its
-  // semantic frontmatter commands keep their markup against any later one — a document's presentational
-  // `\newcommand{\orcid}` (2605.08630, `\href` and an icon), `\providecommand{\keywords}`, a package's
-  // `\AtBeginDocument{\providecommand{\doi}…}` (apacite) — user ruling 2026-10-01. Conveniences and aliases
-  // (`\abst`, `\etal`, `\corref`) and common words (`\volume`, `\issue`, `\journal`) still yield
-  // (OXIDIZED_DESIGN_DIVERGENCES #408).
+  // semantic frontmatter commands keep their markup against a file's (a package's `\providecommand{\doi}`, apacite)
+  // and, provided over a named binding's base class, against the document's too (user ruling 2026-10-01); as the
+  // fallback for an unknown class they yield to the document (`GUESSES_REDEFINABLE`, DG 2026-11-14: 2605.08630's
+  // presentational `\newcommand{\orcid}`). Conveniences and aliases (`\abst`, `\etal`, `\corref`) and common words
+  // (`\volume`, `\issue`, `\journal`) always yield (OXIDIZED_DESIGN_DIVERGENCES #408).
   for cs in [
     "\\doi", "\\orcid", "\\email", "\\emailaddr", "\\ead", "\\address", "\\affil", "\\affiliation",
     "\\keywords", "\\kword", "\\kwd", "\\begin{keyword}", "\\begin{keywords}", "\\classification",

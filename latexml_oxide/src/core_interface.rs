@@ -2249,14 +2249,19 @@ fn establish_pdf_output_mode(dir: &str) {
   // opposite (`state::pdf_driver_option`, 2210.04612).
   // The figures the source includes come next (`state::figure_output_cue`, OXIDIZED_DESIGN_DIVERGENCES #537); only
   // when none resolves, and no pstricks is loaded, does the tree's file inventory decide.
-  let pdf = state::lookup_bool("LUATEX_PROFILE")
-    || state::pdf_driver_option()
-    || (!state::dvi_driver_option()
-      && match state::figure_output_cue() {
-        state::FigureOutputCue::Pdf => true,
-        state::FigureOutputCue::Dvi => false,
-        state::FigureOutputCue::Undecided => !source_figures_are_postscript_only(dir),
-      });
+  // (an author's latexml.sty option `pdfoutput`/`nopdfoutput`, preloaded, decides over every cue: OD #1046)
+  let pdf = if state::has_value("PDFOUTPUT_OPTION") {
+    state::lookup_int("PDFOUTPUT_OPTION") != 0
+  } else {
+    state::lookup_bool("LUATEX_PROFILE")
+      || state::pdf_driver_option()
+      || (!state::dvi_driver_option()
+        && match state::figure_output_cue() {
+          state::FigureOutputCue::Pdf => true,
+          state::FigureOutputCue::Dvi => false,
+          state::FigureOutputCue::Undecided => !source_figures_are_postscript_only(dir),
+        })
+  };
   let _ = state::assign_register(
     "\\pdfoutput",
     latexml_core::common::number::Number(i64::from(pdf)).into(),

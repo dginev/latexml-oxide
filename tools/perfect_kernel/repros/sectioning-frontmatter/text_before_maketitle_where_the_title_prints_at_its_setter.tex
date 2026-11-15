@@ -1,0 +1,26 @@
+% A class that prints the title and the authors where they are set and whose `\maketitle` only ends the page (iopart's
+% shape: iopart.cls:98 `\newcommand\maketitle{\newpage}`): the text between `\author` and `\maketitle` follows them on
+% the page, so it is no text before the title; it stays after the title block (the base placement), not wrapped
+% (revQAB4 B1).
+% witness: 2606.08462 (pdflatex: title, authors, addresses, e-mail, then "May 14th, 2026"), 1407.1223 (`\today` in a
+%   center)
+% oracle:  pdflatex 0 errors (TL 2025, -no-shell-escape): "The Title", "A. Author", "Dated May 14th.", "Body."
+% engines: QAB4 round 2: the date in a before-titlepage above `<title>`; QAB4base: after the title block
+% expect:  `<title>`, the creator, then the date paragraph, no titlepage; 0 errors, 0 warnings
+% status:  RED (QAB4 round 2) → GREEN (QAB4c); guard perfect_kernel_batch56::text_before_maketitle_stays_before_the_title
+% preload: ar5iv.sty
+\begin{filecontents*}[overwrite]{setterprint.cls}
+\NeedsTeXFormat{LaTeX2e}\ProvidesClass{setterprint}[2026/11/14 stand-in]
+\LoadClass{article}
+\renewcommand\title[1]{{\centering\Large #1\par}}
+\renewcommand\author[1]{{\centering #1\par}}
+\renewcommand\maketitle{\newpage}
+\end{filecontents*}
+\documentclass{setterprint}
+\begin{document}
+\title{The Title}
+\author{A. Author}
+Dated May 14th.
+\maketitle
+Body.
+\end{document}

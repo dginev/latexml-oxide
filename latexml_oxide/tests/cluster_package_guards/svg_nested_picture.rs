@@ -56,7 +56,7 @@ pub(crate) fn post_html(xml: &str) -> String {
 /// 56eq (#243) the `\parbox` in the picture `<g>` is a schema-valid
 /// `<inline-block>` (an LR-box), so the inner foreignObject holds
 /// `<span class="ltx_inline-block">` (was the schema-invalid `<div class="ltx_block">`);
-/// the box width (56.9pt) is unchanged (render-faithful). The foreignObject is
+/// the box width (56.9pt, its `--ltx-box-width` since QAB57b, OD #1045) is unchanged (render-faithful). The foreignObject is
 /// 15.81×75.58: its height comes from the `\makebox` inner height, rendered at
 /// 0.1pt since 56kn as Perl renders it (15.83 before).
 #[test]
@@ -67,6 +67,6 @@ fn picture_nested_in_a_scaled_box_is_converted() {
     &html,
     "foreignObject",
     &[r#"width="75.58""#],
-    r##"<foreignObject height="15.81" overflow="visible" width="75.58"><span class="ltx_foreignobject_container"><span class="ltx_foreignobject_content"><span class="ltx_inline-block ltx_parbox ltx_align_middle" style="width:56.9pt;"><span class="ltx_p ltx_align_center">SCALEDTEXTWORD box</span></span></span></span></foreignObject>"##,
+    r##"<foreignObject height="15.81" overflow="visible" width="75.58"><span class="ltx_foreignobject_container"><span class="ltx_foreignobject_content"><span class="ltx_inline-block ltx_parbox ltx_align_middle" style="--ltx-box-width:56.9pt;"><span class="ltx_p ltx_align_center">SCALEDTEXTWORD box</span></span></span></span></foreignObject>"##,
   );
 }

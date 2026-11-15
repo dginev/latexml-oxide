@@ -1,0 +1,37 @@
+% DEPN's sibling reads (revQAB4 S1): a register assignment with no `=` and `\advance`/`\multiply`/`\divide` with no `by`
+% read the emptied field's value too. TeX expands while it looks for the `=` (tex.web §405 `scan_optional_equals`) or
+% the `by` (§407 `scan_keyword`), so the field's tokens are the operand's first ones; the deposit serves its value there
+% as at the operand (gullet.rs `operand_lookahead`).
+% witness: synthetic (revQAB4's probe d1/noeq; DEPN's witness BM's probe `session`, QA60)
+% oracle:  pdflatex 0 errors (TL 2025, -no-shell-escape): "Lecture Notes", "A=2024", "B=2025", "C=4048", "D=2024",
+%   "W=2024.0pt", "Q=2", "E-even", "G=-2024", "Text."
+% engines: QAB4 round 2: the deposit raised "Missing number" (A=0 B=1 C=0 D=0 W=0.0pt Q=4048) and was dropped, its
+%   block lost, 0 errors, 0 warnings
+% expect:  every line as pdflatex; 0 errors, 0 warnings
+% status:  RED (QAB4 round 2) → GREEN (QAB4c); guard perfect_kernel_batch56::deposit_reads_a_field_as_a_number
+% preload: ar5iv.sty
+\begin{filecontents*}[overwrite]{noeqcls.cls}
+\NeedsTeXFormat{LaTeX2e}
+\ProvidesClass{noeqcls}
+\LoadClass{article}
+\def\@maketitle{%
+  \begin{center}
+    {\LARGE \@title \par}
+    \@tempcnta\@date\relax A=\the\@tempcnta\par
+    \@tempcntb=1 \advance\@tempcntb\@date B=\the\@tempcntb\par
+    \@tempcntb=2 \multiply\@tempcntb\@date C=\the\@tempcntb\par
+    \count255 \@date D=\the\count255\par
+    \dimen@\@date pt W=\the\dimen@\par
+    \@tempcntb=4048 \divide\@tempcntb\@date Q=\the\@tempcntb\par
+    \ifodd\@date E-odd\else E-even\fi\par
+    \@tempcnta=-\@date G=\the\@tempcnta\par
+  \end{center}\par}
+\end{filecontents*}
+\documentclass{noeqcls}
+\title{Lecture Notes}
+\author{A. Author}
+\date{2024}
+\begin{document}
+\maketitle
+Text.
+\end{document}

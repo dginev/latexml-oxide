@@ -1,0 +1,18 @@
+% Under a preload of latexml.sty (ar5iv.sty's, the default in arXiv runs) a document's `\usepackage[nopdfoutput]{latexml}`
+% is a repeat load whose new options are dropped without a word (content.rs `apply_repeat_options` applies them only for
+% a key-value or `_repeat_clash` package), so the option sets nothing; the same for every latexml.sty option (`noids`).
+% In TeX the document's load is the first one and its options apply.
+% witness: synthetic (QAB57, the in-document form of the QA64 option under `--preload=ar5iv.sty`).
+% status:  RED
+% moves:   post-merge
+% oracle:  latex 0 errors: "Mode: DVI, 0, dvips.def."
+% Perl:    the same drop (its preload's options only, Core.pm:333-335).
+% ours:    "Mode: PDF, 1, pdftex.def.", 0 warnings.
+% expect:  "Mode: DVI, 0, dvips.def." under `--preload=ar5iv.sty`, or a Warning that the option was not applied.
+\documentclass{article}
+\usepackage[nopdfoutput]{latexml}
+\usepackage{graphicx}
+\usepackage{ifpdf}
+\begin{document}
+\makeatletter Mode: \ifpdf PDF\else DVI\fi, \the\pdfoutput, \Gin@driver.\makeatother
+\end{document}

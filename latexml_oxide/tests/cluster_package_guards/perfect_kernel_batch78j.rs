@@ -685,6 +685,7 @@ fn has_empty_tag(xml: &str) -> bool {
 /// and "p | q", each row asserted whole. Red (78j r3): 2 "Missing } inserted" + "Extra alignment tab '&'", "p" moved
 /// into the row above. Repro
 /// cross-references/cleveref_format_form_keeps_the_alignment_brace_count.
+/// A minipage's width is `--ltx-box-width` in its style (OD #1045, QAB57b).
 #[test]
 fn cleveref_format_form_keeps_the_alignment_brace_count() {
   let html = html_of(repro!(
@@ -695,12 +696,12 @@ fn cleveref_format_form_keeps_the_alignment_brace_count() {
     "tr",
     &["id=\"fig1.1.1\""],
     r##"<tr id="fig1.1.1" class="ltx_tr">
-<td id="fig1.1.1.1" class="ltx_td ltx_align_center"><span id="fig1.1.1.1.1" class="ltx_inline-logical-block ltx_minipage ltx_align_middle" style="width:113.8pt;">
+<td id="fig1.1.1.1" class="ltx_td ltx_align_center"><span id="fig1.1.1.1.1" class="ltx_inline-logical-block ltx_minipage ltx_align_middle" style="--ltx-box-width:113.8pt;">
 <span id="S0.F1" class="ltx_figure ltx_figure_panel">
 <span id="S0.F1.2" class="ltx_p">x</span>
 <span class="ltx_caption"><span class="ltx_tag ltx_tag_figure">Figure 1: </span>left</span>
 </span></span></td>
-<td id="fig1.1.1.2" class="ltx_td ltx_align_center"><span id="fig1.1.1.2.1" class="ltx_inline-logical-block ltx_minipage ltx_align_middle" style="width:113.8pt;">
+<td id="fig1.1.1.2" class="ltx_td ltx_align_center"><span id="fig1.1.1.2.1" class="ltx_inline-logical-block ltx_minipage ltx_align_middle" style="--ltx-box-width:113.8pt;">
 <span id="S0.F2" class="ltx_figure ltx_figure_panel">
 <span id="S0.F2.2" class="ltx_p">y</span>
 <span class="ltx_caption"><span class="ltx_tag ltx_tag_figure">Figure 2: </span>right</span>
@@ -728,6 +729,7 @@ fn cleveref_format_form_keeps_the_alignment_brace_count() {
 /// \@declaredcolor was complete"), which TeX typesets on from and we answer with cleveref's default ("Item 1"): one Error.
 /// Both rows asserted whole ("x | <the list>", "z | w"). Red (78j r3): "Missing } inserted" + "Extra alignment tab
 /// '&'", the row's `\\` swallowed. Repro cross-references/cleveref_format_form_keeps_an_alignment_row_end.
+/// A minipage's width is `--ltx-box-width` in its style (OD #1045, QAB57b).
 #[test]
 fn cleveref_format_form_keeps_an_alignment_row_end() {
   let (log, html) = html_with_errors(
@@ -748,7 +750,7 @@ fn cleveref_format_form_keeps_an_alignment_row_end() {
     r##"<tr id="p1.1.1" class="ltx_tr">
 <th id="p1.1.1.1" class="ltx_td ltx_align_left ltx_th ltx_th_row">x</th>
 <td id="p1.1.1.2" class="ltx_td ltx_align_left">
-<span id="p1.1.1.2.1" class="ltx_inline-block ltx_minipage ltx_align_middle" style="width:85.4pt;">
+<span id="p1.1.1.2.1" class="ltx_inline-block ltx_minipage ltx_align_middle" style="--ltx-box-width:85.4pt;">
 <span id="S0.I1" class="ltx_enumerate">
 <span id="S0.I1.i1" class="ltx_item" style="list-style-type:none;"><span class="ltx_tag ltx_tag_item">1.</span> 
 <span id="S0.I1.i1.p1" class="ltx_para">
@@ -931,6 +933,7 @@ fn cleveref_format_of_an_unlabelled_panel_raises_nothing() {
 /// for a `\captionof` in a tabular cell's minipage gives pdflatex's one Error ("Missing } inserted") at `\autoref{f1}`,
 /// "A Fig 1.", both rows whole. Red (78j r4): 2 errors, the summary "The text of a autoref tag does not close the
 /// groups it opens" beside the name's own. Repro cross-references/autoref_name_opening_a_group_errs_once (rev78j4 n9).
+/// A minipage's width is `--ltx-box-width` in its style (OD #1045, QAB57b).
 #[test]
 fn autoref_name_opening_a_group_errs_once() {
   let (log, html) = html_with_errors(
@@ -943,7 +946,7 @@ fn autoref_name_opening_a_group_errs_once() {
     "tr",
     &["id=\"p1.1.1\""],
     r##"<tr id="p1.1.1" class="ltx_tr">
-<td id="p1.1.1.1" class="ltx_td ltx_align_center"><span id="p1.1.1.1.1" class="ltx_inline-logical-block ltx_minipage ltx_align_middle" style="width:113.8pt;">
+<td id="p1.1.1.1" class="ltx_td ltx_align_center"><span id="p1.1.1.1.1" class="ltx_inline-logical-block ltx_minipage ltx_align_middle" style="--ltx-box-width:113.8pt;">
 <span id="p1.p1" class="ltx_para">
 <span id="p1.p1.1" class="ltx_p">x</span>
 </span>

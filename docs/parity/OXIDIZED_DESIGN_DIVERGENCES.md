@@ -19,7 +19,9 @@ rules, and `compute_indirect_model` cannot discover DTD elements. Fixing this pr
 would require significant rearchitecting of the containment model for a rarely-used feature.
 
 **Impact:** Namespace tests (ns1–ns5) are permanently ignored. The `DocType!` macro and
-`set_doc_type()` function have been removed.
+`set_doc_type()` function have been removed. A Rhai binding's `DocType(root, pubid, sysid[, namespaces])`
+(Package.pm:2032) Warns once per call, `unexpected:DocType`, that no DTD is read, then registers its namespaces as
+`RegisterDocumentNamespace` does.
 
 ### 2. No `%\n` in TeX Attributes
 
@@ -9521,7 +9523,7 @@ NOT covered: `<block>` directly in a list (`itemize`/`enumerate`) — colorframe
 framed-in-list nesting) + tableaux (SHARED), 2 docs, distinct root cause (list nesting).
 **Render**: a `\parbox` in a picture still renders as a `<foreignObject>` of the SAME
 dimensions/position; only the inner wrapper flips `<div class="ltx_block">`→`<span
-class="ltx_inline-block" style="width:…">` (and its `<p>`→`<span class="ltx_p">`) — a
+class="ltx_inline-block" style="--ltx-box-width:…">` (#1045; and its `<p>`→`<span class="ltx_p">`) — a
 100pt/56.9pt fixed-width box wraps text identically, so render-faithful. Two SVG goldens
 re-blessed: `parbox_inside_a_picture_renders_as_a_foreign_object` (cluster_xslt_split),
 `picture_nested_in_a_scaled_box_is_converted` (cluster_package_guards).
@@ -9785,7 +9787,7 @@ enclosing unit for a same-or-higher level, nesting a deeper one — and made the
 so trailing box content and the post-box text nest inside; non-sectioning lead content stays
 where the box was; the box's `class` (`ltx_minipage`) and any attributes
 `Sectional.attributes` admit (`framed`/`framecolor`/`cssstyle`) ride the first floated unit
-(`width`/`vattach` are dropped, as the old `sectional-block` already dropped them). Numbering
+(`vattach` is dropped, as the old `sectional-block` dropped it; `width` rides as `--ltx-box-width`, #1045). Numbering
 needs no repair: the unit already carries its digest-time `<tags>`.
 **Why**: user ruling 2026-09-20 — "we should not treat a section in a minipage as a schema
 extension … convert the minipage into an annotation via class attribute to the usual
@@ -10120,34 +10122,34 @@ Witnesses qworld (24 schema errors), colorframed-doc (6), tableaux/exemples (2).
 Guards `perfect_kernel_batch56::block_in_a_list_before_an_item_gets_an_auto_item`,
 `perfect_kernel_batch56::nested_list_before_an_item_gets_an_auto_item`.
 
-### 262. The frontmatter always opens the document: preamble residue and visible body content before the flush follow it (Perl: placed at the current point, title stranded after the body)
+### 262. The frontmatter opens the document, and body content keeps its order around the title as the PDF prints it (Perl: placed at the current point, title stranded after the body)
 
-**Perl** places a `\maketitle` flush at the current insertion point
+**Principle.** The document model puts the frontmatter group before all `document.body.class` content
+(LaTeXML-structure.rnc:34); within that, every word keeps the place the PDF gives it (content > markup > PDF,
+FIDELITY_CHARTER). **Perl** places a `\maketitle` flush at the current insertion point
 (Base_Utility.pool.ltxml:918) and the fallback at the top; whatever precedes the
-current point stays ahead of `<title>`. The document model puts the frontmatter group
-before all `document.body.class` content (LaTeXML-structure.rnc:34), so any visible
+current point stays ahead of `<title>`, so any visible
 node there — a paragraph the PREAMBLE typeset (an undefined command's marker and its
 argument: engine primitives such as `\mubytein`/`\XeTeXgenerateactualtext`, a missing
 sibling file's macros, an unbound class option), prose or a class-drawn cover before
 `\maketitle`, a logo — leaves `<title>` stranded after the body: schema-invalid, and
 SHARED in the 59 s112 manuals whose first jing error was a frontmatter element.
-**Rust** (user-approved surpass, 2026-09-23), two layers in the one placement pass
+**Rust** (user-approved surpass, 2026-09-23), three layers in the `\maketitle` flush
 (`place_frontmatter`, base_utilities/frontmatter/place.rs): (1) the `\begin{document}` constructor
 (latex_constructs/sect02.rs) marks every child of a root the preamble already opened
 as PREAMBLE residue (`_preamble`, internal). LaTeX forbids typesetting there
 (`\@nodocument`, "Missing \begin{document}"), so residue is never body: the pass moves
 it below the frontmatter like content-free nodes and never wraps it as a cover
 titlepage. `\begin{document}` still issues no `\par` — preamble text and the first body
-words share a paragraph as in TeX. (2) Visible body content before the flush no longer
-stops the pass: the frontmatter goes to the head (after the resources and any leading
-frontmatter-group run) and that content follows it in its own order. Every flush ends
+words share a paragraph as in TeX. (2) Visible body content before the flush does not
+stop the pass: the frontmatter goes to the head (after the resources and any leading
+frontmatter-group run); a section, TOC or float ahead of it follows it in its own order. Every flush ends
 the paragraph it interrupts, when every open element up to the root auto-closes, as
 LaTeX's flush points do (`\maketitle` opens with `\par`, article.cls:203; `\section`;
 `\end{document}`) — never a frontmatter container: an open `{titlepage}` stays open for
 its `\unwind@titlepage` hook — and a `\maketitle` inside a `\parbox` leaves the box
-content in the box.
-Reordering is limited to moving the frontmatter group up; no content is dropped
-(content_diff.py and golden-PDF recall unchanged on all 59 witnesses). Supersedes the
+content in the box. (3) Body text the PDF prints before the title stays ahead of it (QA91, below).
+No content is dropped (content_diff.py and golden-PDF recall unchanged on all 59 witnesses). Supersedes the
 56ep/56es "never hoist over visible content" controls and the degrade-to-`ltx:text`
 placement of a `\maketitle` in a box (now removed as unreachable); generalizes #258
 (error-marker-only paragraph). Witnesses: 55 of the 59 s112 frontmatter-first-error
@@ -10155,11 +10157,36 @@ manuals become valid (a 56th, bmstu, with 56gg's heading page-break fix) (ean13i
 makebarcode, zwgetfdate, zwpagelayout, a4wide, hebdomon, turnstile ×2, aomart ×2,
 beameruserguide, ltnews, l3news, …). Guards
 `perfect_kernel_batch56::{preamble_residue_follows_the_frontmatter,
-titlepage_around_maketitle_leaves_no_empty_titlepage, frontmatter_leads_a_leading_graphic,
-frontmatter_leads_a_leading_framed_empty_box,
+titlepage_around_maketitle_leaves_no_empty_titlepage, leading_graphic_stays_before_the_title,
+leading_framed_empty_box_stays_before_the_title,
 frontmatter_hoists_over_an_error_marker_only_paragraph}`,
 `perfect_kernel_batch54::maketitle_inside_a_box_goes_to_the_head`; goldens revtex4_endpage
 (now valid), aliceblog.
+**Extended (QA91, DG 2026-11-14: "keep it in place"; BM's probe Q2.3).** Layer (3): the paragraphs and display blocks
+(`is_titlepage_layout`) a `\maketitle` flush finds ahead of it precede the title on the page only where the title
+block prints at that `\maketitle`. The deposit's title-page reading says so (`note_title_page_print`: its run printed
+`\@title` or `\@author`, `\@title` marked by `\lx@title@page@title`); under a class binding, whose reading runs
+article.cls's page in for the class's, the binding declares a class that prints the title and the authors at their
+setters (`TitlePageDecl::setter_print`: iopart.cls:98 `\newcommand\maketitle{\newpage}`). There the text is wrapped,
+after the field-ink lift (#715) took a print of the title or the authors out of it, as
+`<titlepage class="ltx_titlepage_before">` right before the placed title block (`\lx@text@before@title`, after the
+deposit, `wrap_text_before_title`; a titlepage is first-group, so the tree stays valid); where the title block prints
+at the setters or never, it follows the title block as in (2) (2606.08462, 1407.1223). The class means "text that
+preceded `\maketitle`" and, like #903's `ltx_titlepage_continued`, stands for no title: the XHTML `ltx:title`
+template still shows the title and creators beside it, and every engine reader of "a titlepage replacing the title"
+excludes both (`title_standing_titlepage`: `settle_cover_title_ink`, `lift_marked_field_ink`,
+`maybe_dedup_leading_title_ink`). Not wrapped: blank lines and `\vspace` (content-free), preamble residue (and the
+body words that share its paragraph, as in TeX), the paragraph holding a boxed `\maketitle`, whatever follows the
+first section, TOC or float, and a run printing no word (`net_content_words`), graphic or rule: a mark a class left of
+an author line (`]`, `,`, `*1`, `1`: 2209.03353, 0905.0312, 2305.09250, 2309.09081, 2407.04435, 2409.17131, 2506.23765)
+keeps the base placement, though pdflatex prints it first. A `{titlepage}` or `\section` flush before `\maketitle`
+places the frontmatter first, and the text before `\maketitle` still follows the title (RED
+`text_before_maketitle_after_an_earlier_flush_red`). The decision reads the `\@title`/`\@author` marks, one answer for
+the whole block, not the printed title's words per field: REDs `text_before_maketitle_where_a_class_prints_its_own_title_store_red`
+(a class's own `\my@title` printed at `\maketitle`: not wrapped) and
+`text_before_maketitle_where_title_and_authors_print_apart_red` (the title at `\title`, the authors at `\maketitle`:
+wrapped above both). Guard `perfect_kernel_batch56::text_before_maketitle_stays_before_the_title` (the setter-printing
+raw class, the iopart binding, the `\maketitle`-printing control, the word-less run); golden revtex4_endpage.
 
 ### 263. `\unwind@titlepage` re-homes what it unwraps through the content model (Perl: children spliced in place)
 
@@ -10337,6 +10364,19 @@ its degree statement and Urbana-Champaign line (thesis-ex 86.1 → 97.4 %, with 
 uppercase `\@Utitle`/`\@Uauthor` copies its own `\title`/`\author` would make). A definer the body never reaches (an
 untaken non-`\newif` branch, a nested macro body) is accepted too; the replay's diagnostics hold drops what then errors.
 Guard `perfect_kernel_batch61::uiucthesis_title_page_is_replayed`.
+**Extended (DEPN, 2026-11-14).** The deposit and the replay run with the frontmatter's fields emptied
+(`\let\@date\@empty`, sect05.rs `TITLE_PAGE_FIELDS`, and the handed stores, `\lx@captured@stores`) so that the title
+page does not print them twice; a class that reads a field as a number met the empty one: `\@tempcnta=\@date\relax`
+printed "Exam session 0" with a "Missing number" Warning where pdflatex prints "Exam session 2024" (BM's probe
+`session`, QA60). The fields are emptied for printing only: while the deposit and the replay run, the token a
+quantity's operand reads after its signs (tex.web §441, gullet.rs `scan_optional_signs`; an eTeX expression's factor,
+etex.rs `etex_readexpr_i`), or that an assignment's optional `=` (§405) or the `by` of `\advance`, `\multiply` and
+`\divide` (§1236) expands ahead of it (`gullet::operand_lookahead`), expands to the field's value when its meaning is
+still the emptied one (`gullet::set_operand_values`, `frontmatter_stores::deposit_operand_values`). The lookahead of a
+scan that already has its number (`\vskip 1em \@date`, the scan for `plus`) still reads it empty. Reach: no arXiv
+paper of a 20,000-paper sample ships a class reading `\@date`/`\@title`/`\@author`/`\@thanks` as a number. Guard
+`perfect_kernel_batch56::deposit_reads_a_field_as_a_number` (the replay, `\@maketitle` through `\ifnum`,
+`\setcounter`, a dimension and `\numexpr`; no `=`, no `by`; and `\date{}`, where pdflatex errs too: one Warning).
 
 ### 266. A recatcoded 8-bit input byte is decoded where it enters, through its own inputenc declaration (Perl: the font map's upper half, applied to every character)
 
@@ -14405,7 +14445,8 @@ locked. OmniBus's semantic frontmatter commands are locked (user ruling 2026-10-
 `\classification`, `\correspondingauthor`, `\subtitle`, `\titlenote`, `\dedicated` keep their markup against any
 later definition — a document's presentational `\newcommand{\orcid}` (2605.08630), `\providecommand{\keywords}`, a
 package's deferred `\providecommand{\doi}` (apacite), a raw `\def\doi` (imsart.sty), a document's
-`\renewcommand{\doi}` (unlike Perl, which lets those replace them); conveniences and aliases (`\abst`, `\etal`,
+`\renewcommand{\doi}` (unlike Perl, which lets those replace them; since QAB57 the document's own definitions win
+under the fallback, below); conveniences and aliases (`\abst`, `\etal`,
 `\corref`) and common words (`\volume`, `\issue`, `\journal`) yield. arXiv A/B (3,003 papers, 59f2 -> 59g4):
 2605.05619 errors 52 -> 0 and words 39,866 -> 53,885, 2605.13204 errors 6 -> 0 (its own `\corref`), 2605.13443 its own
 upright `\etal`. Open: a package the paper ships (`\usepackage{mymacros}`) is a raw File, not the document, so its
@@ -14424,6 +14465,26 @@ inst_support (`\inst`, `\institute`, `\author[]{}`) and aas_macros (`\apj`, `\mn
 `\inst{}` took the formula's closing `$`). epsf and graphicx are packages, not guesses: OmniBus loads them as bindings
 (`with_origin(Binding)`), so a document's `\providecommand{\includegraphics}` stays declined. Guard
 `perfect_kernel_batch66l::omnibus_inst_yields_to_newcommand`.
+
+**Extension (QAB57, 2026-11-14): the document's own definitions win over the locked guesses too.** BM Q3.12: "OmniBus
+sets a flag letting `\newcommand` and its family redefine without complaint"; DG 2026-11-14: "the document wins". A
+document that `\newcommand`s a locked guess shows its real class leaves it undefined, so pdflatex prints the
+document's version (probe p58: `\newcommand\email[1]{E:#1}` prints "E:a@b"); Perl ignores it and makes a contact of
+it. OmniBus loaded as the fallback sets `GUESSES_REDEFINABLE`, and `install_definition` does not refuse a definition
+of a name whose meaning is still OmniBus's guess (`fallback_meaning_origin` is `Fallback`) when the document's own text
+makes it (`DefinitionOrigin::Document`, the state not re-locked: `state::document_redefines_guess`) — `\newcommand`,
+`\renewcommand`, `\def`, `\DeclareRobustCommand`; `\newenvironment`/`\renewenvironment` also drop OmniBus's
+`\begin{name}` constructor, which `\begin` looks up first. A `\providecommand` defers to a locked guess as to any
+class command (the 2026-10-01 ruling's `\providecommand{\keywords}`; guard
+`perfect_kernel_batchp21d::a_column_is_read_on_its_own_ink_not_its_contacts`). The semantic markup the guess carried
+is lost with it: the e-mail, address, affiliation and ORCID are no longer the author's contacts, the keywords no
+classification, the DOI no link — the document's text is what the PDF prints. Unchanged: OmniBus provided over a named
+binding's base class (ceurart; #736) keeps its locks, and so does a package's or the document's begin-document hook
+code, run re-locked (apacite's `\AtBeginDocument{\providecommand{\doi}…}` keeps OmniBus's link; the document's own
+hook definition is refused too, RED `singletons/omnibus_document_hook_definition_refused_red`, post-merge); so does a
+package the paper ships (`\usepackage{mydefs}` defining `\email`, a raw File: #408's open row). Perl patch prepared
+(`bruce_qa/patches/qa58.patch`: `\newcommand` and `\newenvironment` may redefine OmniBus's guesses). Guard
+`perfect_kernel_batchqab57::omnibus_guesses_yield_to_the_document`.
 
 ### 409. A raw float end's `\@endfloatbox` closes only a box that was opened (Perl: it pops the float binding's frame)
 
@@ -14900,7 +14961,8 @@ box and the line grows to hold it. **Rust** (61v, with the faithful `\raisebox` 
 `vertical-align:<y>`, so a lowered table icon (`\raisebox{-.5\height}{…}`, 2605.18894) sits centred on its row instead
 of overflowing into the next one; an element that also has `height`, `depth` or `xoffset` (`\raisebox{y}[h][d]`'s
 smash, `\lx@tweaked` overlays) keeps `position:relative`, its content shifted without the line growing, and its `depth`
-gives no `vertical-align` (it would shift the content twice). The logos (`\LaTeX`, `\TeX`) and `\raise`/`\lower`
+gives no `vertical-align` (it would shift the content twice; since QAB57d LaTeXML.css's `--ltx-box-depth` rule, off
+under the `; bottom:` shift, OD #1045). The logos (`\LaTeX`, `\TeX`) and `\raise`/`\lower`
 render with `vertical-align`. Guards `perfect_kernel_batch61::raisebox_raise_measures_the_box`,
 `stream_a_recall::bib_title_recase_keeps_undefined_control_words`.
 
@@ -35686,8 +35748,11 @@ the un-featured traces are Rust's own instrumentation with no Perl feature to en
 apart from `Info:` lines in a log. An undeclared `--debug` feature is named at the end of the run, before the verdict,
 as Perl's `CheckDebuggable` (`check_debuggable`, `common/error.rs`); its known list holds only the features Rust
 declares (`frontmatter`; Perl's `DebuggableFeature` calls declare 15: `alignment`, `modes`, `size`, `svg`, …), so a
-`DebugFeature!` site ported from Perl registers its feature through `debuggable_feature`. Guard
-`cluster_cli::debug_feature_scope::debug_feature_prints_only_its_feature`.
+`DebugFeature!` site ported from Perl registers its feature through `debuggable_feature`. A Rhai binding's
+`Debug(message)` and `Debug(cat, obj, message)` are `Debug!` (DG 2026-11-14): printed only under `--verbose`, counted
+either way, where Perl's `Debug` prints unconditionally. Guards
+`cluster_cli::debug_feature_scope::debug_feature_prints_only_its_feature`,
+`script_bindings::tests::diagnostics_surface_info_notes_progress_and_fatal`.
 
 ### 1007. calc's names inside a pgfmath expression: calc's value and a Warning per parse (EB1)
 
@@ -36587,3 +36652,104 @@ document's `\AtEndAfterFileList` is lost (`enddocument_info_hook_red`). **Guard*
 `enddocument_hook_commands_run`, `verbatim_env_hooks_run`, `verbatim_begin_hook_reads_its_environment`,
 `label_hook_runs`, `include_hooks_run`, `label_hook_opens_no_paragraph`, `cleveref_firstaid_not_registered`,
 `cleveref_firstaid_absent_removes_nothing`).
+
+### 1045. Every box's width, height and depth are the CSS custom properties `--ltx-box-width`, `--ltx-box-height`, `--ltx-box-depth` (Perl: `style="width:…;height:…;vertical-align:…"`, or dropped)
+
+Principle: the HTML/CSS cascade — a presentational value the stylesheet applies, so one rule can override or reuse
+it. Related: #20 (colour), #887 (`--ltx-panel-*`), #250 (a section lifted out of a box).
+
+**Perl** writes a Positionable element's `width` as `style="width:<w>"` (LaTeXML-common.xsl `base-styling`), and a
+sectioning unit set inside a minipage or a `\parbox` (a real section carrying the box's class, #250; a framed box's
+`inline-sectional-block`) loses the box's width: no `Sectional.attributes` admits `width` (LaTeXML-structure.rnc),
+and Perl's `<sectional-block class="ltx_minipage">` drops it too (TeX_Box.pool.ltxml `insertBlock`).
+
+**Rust** (QAB57; BM Q2.4 asked for the box's "attributes and classes"; DG 2026-11-14: a dedicated custom property, and
+"Move them all now"). One name for every box:
+- the lifted unit: `insert_block_as` (`carry_box_width`, block_insertion.rs) writes the box's width as
+  `--ltx-box-width:<w>` at the head of its `cssstyle`, so a `width:` the box's own style sets follows it (varwidth's
+  `--ltx-box-width:63.4pt;width:max-content;max-width:227.6pt`); a unit lifted through nested boxes keeps the first,
+  innermost box's width, the one pdflatex sets it in (a `\section` in a minipage{3cm} inside a minipage{8cm}: 85.4pt);
+- every other box: `base-styling` writes `--ltx-box-width:<w>` for an LaTeXML element's `width` (minipage and
+  `\parbox` `inline-block`/`inline-logical-block`, the panel `figure` and `p` a minipage becomes, `\makebox`'s `text`,
+  a transformed box's outer, a wrapfigure, a `tabular`/`td` width, an `ltx:picture` rendered as an image or as its TeX
+  through `add_attributes`), and `add_transformable_attributes` for the inner box's `innerwidth`. The XML keeps
+  `width` as Perl writes it; of our stylesheets only the XHTML ones read it (neither the JATS nor the TEI one does).
+- every box's height and depth (QAB57d; DG 2026-11-14: "also adding --ltx-box-height and --ltx-box-depth"):
+  `base-styling` writes TeX's own values, `--ltx-box-height:<h>` (above the baseline) and `--ltx-box-depth:<d>` (below),
+  each only where the attribute is set (a `\raisebox{y}[h][d]`'s `text`, a rotated or scaled box's outer
+  `inline-block`), where Perl writes `height:<h+d>` (or `<h>`) and, without a `yoffset`,
+  `vertical-align:<-d>`. A `\raisebox{y}[h][d]` keeps its `position:relative; bottom:<y>`; a plain `\raisebox{y}` its
+  `vertical-align:<y>`. `innerheight`/`innerdepth` stay unwritten, as in Perl.
+- Not boxes, so `width:`/`height:` stay: `ltx:rule` (its ink, as an image's size) and MathML's `mspace`/`mpadded`
+  (MathML's own attributes). Graphics (`imagewidth`), a picture drawn as SVG, and `--ltx-panel-width` never reach `base-styling`'s
+  width.
+
+LaTeXML.css: `:where([style*="--ltx-box-width:"]:not([style^="width:"], [style*=";width:"], [style*="; width:"])) {
+width: var(--ltx-box-width, auto) !important }`. Important and of zero specificity, it ranks where the inline `width:`
+ranked: over every normal rule (`.ltx_tabular .ltx_tabular`'s 100 %, `.ltx_framed_verbatim`'s fit-content), under
+every other `!important` one. It is off where the element's own style sets a `width:` (varwidth's `max-content`,
+#1014; a `\text` minipage's, batch76a). ar5iv-css carries the same rule un-layered, so that its layered rules rank under
+it as under the inline style, and caps a lifted section at its container
+(`:is(section, .ltx_inline-sectional-block)[style*="--ltx-box-width:"] { max-width: 100% }`, as its `.ltx_minipage`).
+The height and depth, one rule per case, as the custom properties inherit and a `var()` fallback cannot test that a
+box's own style sets one (a height-only box inside a box with a depth would add the outer depth):
+`height: var(--ltx-box-height)` where the style sets `--ltx-box-height:`, `height: calc(var(--ltx-box-height) +
+var(--ltx-box-depth))` where it sets both, and `vertical-align: calc(-1 * var(--ltx-box-depth))` where it sets
+`--ltx-box-depth:`; each `!important` in `:where()` and off where the box's own style sets that property (an author's
+`height:`; for the depth a `vertical-align:` or the `; bottom:` of a `yoffset` shift, Perl's `@depth and not(@yoffset)`).
+ar5iv-css carries the three un-layered beside the width's.
+A stylesheet overrides one box's width with `.sel { --ltx-box-width: <w> !important }` or `.sel { width: <w>
+!important }`, reuses it (`width: min(var(--ltx-box-width), 100%) !important`), and switches every box width off with
+`:where([style*="--ltx-box-width:"]) { --ltx-box-width: initial !important }`; the same for the height
+(`--ltx-box-height`, `height:`). Every box's height is switched off with `:where([style*="--ltx-box-height:"]) {
+--ltx-box-height: initial !important }` (its depth's drop kept) and every depth set to zero with
+`:where([style*="--ltx-box-depth:"]) { --ltx-box-depth: 0pt !important }` (its height then h): `initial` on the
+depth would void the h+d sum as well.
+
+Cost: a box's width, height and depth now need LaTeXML.css or ar5iv-css. It is lost under `--nodefaultresources` without a stylesheet
+carrying the rule, in a reader that does not apply our CSS, and in an EPUB reader without `var()` or `:where()` (the
+EPUB ships LaTeXML.css).
+
+Measured (QAB57c): each page of the 63 arXiv papers whose HTML moved (QAB57b A/B), rendered once with inline
+`width:` and once with the property under the same stylesheet, has every body element's box identical in Chrome at
+1280 and 375 px and in Firefox at 1280 px, under LaTeXML.css and under ar5iv.css; in Firefox at 375 px too, except
+six `∙` glyph boxes in 2512.16386's bibliography under ar5iv.css, 2 px shorter, nothing moved. Screenshot ink is
+identical where it was compared (every page in Chrome; in Firefox only the pages short enough to shoot). The repro
+shapes (side-by-side, figure, nested and over-wide minipages, `\parbox` in text, `p{}` cells, `tabular*`,
+`\makebox`, scaled/resized/rotated boxes, varwidth, wrapfigure, framed verbatim, lifted sections) were measured so on
+QAB57b; on QAB57c the varwidth section is 131 px wide in Chrome as before QAB57 (QAB57b: 85 px, its heading wrapped)
+and the nested one 114 px (85.4pt; QAB57b: 303 px). Not reached, as before QAB57: a framed box holding a section
+draws its frame as an empty 2 px box above it (RED `block-model/framed_box_section_frame_collapses_red`, post-merge).
+Measured (QAB57d): of 93 arXiv papers (QAB57b's 63 and the 30 heaviest in `\raisebox`, `\smash`, `\parbox[…][h]` of
+a census sample; 92 converted, 2609.23556 crashes on both binaries) the HTML of 52 moved, and only in these
+declarations (`kit/html_style_diff.py --derive-box`: every other declaration and byte unchanged). Each of the 52 has
+every body element's box identical, base against candidate, in Chrome and Firefox at 1280 and 375 px under LaTeXML.css
+and under ar5iv.css (one Chrome 375 px difference in 1505.06377's equation cell, gone on its rerun); screenshot ink is
+identical where shot, but for 2604.04765 in Chrome at 375 px under ar5iv.css, whose base differs from itself by the
+same 22,167 px. So are the repro's and hand-built depth-only, author-`height:`, nested and author-`vertical-align:`
+boxes, and the two switch-off recipes render as the declarations they stand for. Not reached, as in Perl: a
+`\parbox[t][3cm]` or `minipage[t][2cm]` carries no height to write (RED `block-model/parbox_and_minipage_height_dropped_red`,
+post-merge).
+Guards
+`perfect_kernel_batchqab57::section_in_a_box_keeps_the_box_width` (repros `block-model/section_in_a_box_keeps_the_box_width`,
+`section_in_varwidth_keeps_its_own_width`, `section_in_nested_boxes_keeps_the_inner_width`,
+`box_widths_ride_the_custom_property`), `perfect_kernel_batchqab57::box_heights_ride_the_custom_properties` (repro
+`block-model/box_heights_ride_the_custom_properties`).
+
+### 1046. latexml.sty's `pdfoutput`/`nopdfoutput` options set the output mode over the guess (Perl: no such options)
+
+Principle: Perl's own intent for latexml.sty — its options are the author's switches over how LaTeXML processes the
+document, as its X/noX pairs are. Related: #285, #537 (the presented `\pdfoutput` and its cues), #204 (`\ifpdf`).
+
+We present `\pdfoutput=1` unless the source's cues say latex+dvips (#285, #537); Perl presents 0. BM (Q4.2): presenting
+a mode "may often be desirable … And/Or possibly that should be an additional latexml.sty switch". **Rust** (QAB57, DG
+2026-11-14): latexml.sty's options `pdfoutput` (1, pdflatex) and `nopdfoutput` (0, latex+dvips) — latexml.sty's X/noX
+pairs, named for the register they set — assign `\pdfoutput` globally and record `PDFOUTPUT_OPTION`, which
+`establish_pdf_output_mode` (core_interface.rs) takes over every cue when the option was preloaded
+(`--preload=[nopdfoutput]latexml.sty`; under ar5iv `--preload=[nopdfoutput]ar5iv.sty`, which passes it on). Drivers
+read `\pdfoutput` as they load, so the option comes first in the preamble: given after graphicx, graphicx keeps the
+driver it chose, as TeX's load order decides. Under a preload of latexml.sty a document's own
+`\usepackage[nopdfoutput]{latexml}` is a repeat load whose options are dropped, as for every latexml.sty option (RED
+`backend-persona/latexml_option_after_ar5iv_preload_red`, post-merge). Default output unchanged. Perl patch prepared
+(`bruce_qa/patches/qa64.patch`: the two options, and TeX's latexml.sty declaring them). Guard
+`perfect_kernel_batchqab57::latexml_pdfoutput_options_override_the_mode`.
