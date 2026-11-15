@@ -84,7 +84,7 @@ flat XMath) → **Serialization**. (The post-processing pipeline lives in
 |-------|----------------|------|
 | `latexml_core` | `LaTeXML::Core::*` | Mouth, Gullet, Stomach, document builder, state |
 | `latexml_engine` | `LaTeXML::Engine::*` | Pool ports (`tex.rs`/`latex.rs`, primitives, constructs) |
-| `latexml_package` | `LaTeXML::Package` | Package/class definitions, binding macro infrastructure |
+| `latexml_package` | `LaTeXML::Package` | Package/class definitions (the binding macros live in `latexml_engine/src/setup_binding_language.rs`) |
 | `latexml_math_parser` | `LaTeXML::MathParser` | Marpa-style math parser |
 | `latexml_post` | `LaTeXML::Post::*` | XML→HTML/MathML/ePub/JATS post-processing |
 | `latexml_oxide` | `latexml` CLI | Binary targets (`latexml_oxide`, `latexmlmath_oxide`) + integration suite |
@@ -101,8 +101,8 @@ flat XMath) → **Serialization**. (The post-processing pipeline lives in
 - **Compile-time macros** — `DefMacro!`/`DefConstructor!`/`DefPrimitive!` expand at
   build time (proc macros), eliminating Perl's per-`\usepackage` parse cost.
 - **Engine file layout** — the pools are split along the same seams Perl uses,
-  one Rust file per pool: `latex_bootstrap.rs` / `latex_base.rs` /
-  `latex_constructs.rs` (plus the Rust-only `latex_constructs_rust_only.rs` and
+  one Rust module per pool: `latex_bootstrap.rs` / `latex_base.rs` /
+  the module directory `latex_constructs/` (plus the Rust-only `latex_constructs_rust_only.rs` and
   the dump loader `latex_dump.rs`), and `plain_bootstrap.rs` / `plain_base.rs` /
   `plain_constructs.rs` / `plain_dump.rs`. Full map:
   [ORGANIZATION.md](ORGANIZATION.md).
