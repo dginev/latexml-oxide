@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"mod":["author_files","content","counter","def","kernel_autoload","store_setters","virtual_files"]};
+window.SIDEBAR_ITEMS = {"mod":["author_files","content","counter","def","kernel_autoload","preamble_commands","store_setters","virtual_files"]};

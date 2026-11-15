@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"fn":["close_preamble_commands","close_subfile_preamble","disable_preamble_command","end_subfile_preamble","reopen_for_subfile_preamble","reopen_preamble_commands"],"struct":["ReopenedForLoad"]};
