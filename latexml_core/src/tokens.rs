@@ -665,10 +665,7 @@ impl Tokens {
         continue;
       }
       token_string.clear();
-      if cc == Catcode::ARG {
-        token_string.push('#');
-      }
-      token.with_str(|text| token_string.push_str(text));
+      let _ = write!(token_string, "{token}");
       // Note: \n only-used to fail alphanumeric test
       let first_char = token_string.chars().next().unwrap_or('\n');
       if cc == Catcode::LETTER {
