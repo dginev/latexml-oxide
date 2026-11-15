@@ -1,0 +1,8 @@
+% witness: issue #790 (sibling of 0710.4421: the number rewrite parks the point, Rewrite.pm:132)
+% oracle: pdflatex clean (0 `!`); Perl 0 errors, the number `1,000`
+% expect: 0 errors; the numerator number `1,000` kept; both formulae parsed
+% status: GREEN (I790A): see mathparse_discard_keeps_point_text_script.tex
+\documentclass{article}
+\begin{document}
+$x+\frac{1{,}000}{2}$ and $\frac{a}{b}$
+\end{document}

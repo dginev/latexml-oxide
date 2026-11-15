@@ -577,6 +577,24 @@ look alike (RSS 4.1–4.2 GB, VmSize 5.4–5.6 GB), so no threshold separates th
 cooperative check polls (math-parse stream, parked). 0804.2004, 0804.2001, 0804.2002 reach the cap after
 `streaming:transition`; 1009.2640 `Fatal:Document` "failed to create element" (libxml2 `malloc` at the cap).
 
+## Cluster L — the insertion point freed with a discarded math subtree (GENUINE Rust-only) — FIXED 2026-11-15 (issue #790)
+
+**Witnesses**: 0710.4421 (CLI default, no preload) and the issue #790 book (`crash_sept_4_2026/1.tex`, 3.9 MB): SIGSEGV
+(exit 139) every run under `GLIBC_TUNABLES=glibc.malloc.perturb=165`, latent with the default allocator. Minimal:
+`$x+\mbox{F$_1$}$ and $\frac{a}{b}$`; sibling `$x+\frac{1{,}000}{2}$ and $\frac{a}{b}$`.
+
+**Cause**: a rewrite parks the insertion point at the match's parent (Perl `Rewrite.pm:132` `setNode($parent)`) and the
+text-script rule (`TeX_Math.pool.ltxml:530`) leaves it on an `XMText`; the math parser defers freeing the replaced
+children (`MathParser.pm:330` `unbindNode`), and `drain_pending_discards` → `Document::discard_subtree` freed a subtree
+still holding `Document.node`; the next formula's `replace_tree_detach` walked up from freed memory. Perl's
+`removeNode` (`Document.pm:1783-1792`, "Don't remove insertion point!") never frees the point.
+
+**Fix**: `Document::discard_subtree` moves a point at or inside the subtree to its parent, or to the root element when
+the subtree is already detached (`keep_point_out_of`, shared with `replace_tree_detach`), and forgets a cached text run
+inside it. Output byte-identical. Guards: `02_unit_replace_tree::discard_subtree_keeps_the_insertion_point_out`;
+`06_cluster_math::cluster_discard_keeps_the_insertion_point_out`, which reruns its rows in a child under
+`glibc.malloc.perturb=165` on Linux glibc (red on the base: SIGABRT on a `0xa5a5…` pointer).
+
 ## Method notes
 
 - Sweep failure logs: `~/data/large_scale_canvas_3/canvas/stage_*/failures/<id>.<KIND>.log`.
