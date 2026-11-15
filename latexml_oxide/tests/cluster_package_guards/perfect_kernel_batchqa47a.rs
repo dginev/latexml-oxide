@@ -14,6 +14,8 @@
 //! ahead of `\AtEndOfPackage`, `env/abstract/begin|end`, `selectfont` (RED catalog: `selectfont_hook_on_emph_red`).
 //! QAB2b: the abstract's begin hook ahead of its name, its end hook once, a family register's font value (RED catalog:
 //! `abstract_begin_hook_size_under_the_class_small_red`, `amsart_abstract_begin_hook_text_before_the_title_red`).
+//! CURCTR: the `label` hook reads the `\@currentcounter` `\refstepcounter` sets (RED catalog:
+//! `label_hook_currentcounter_stepped_after_the_body_red`).
 use latexml::util::test::{
   RequirementTable, Requirements, assert_element, check_table, convert_with, current_test_name,
 };
@@ -466,6 +468,49 @@ const ROWS: &[Row] = &[
       r#"<p xml:id="S1.p1.1">See <ref labelref="LABEL:s:a" show="creftype~creflabel"/>.</p>"#,
     )],
   },
+  // CURCTR: `\refstepcounter` sets `\@currentcounter`, which the `label` hook reads (unbtex-example; red: "/0." each, 25
+  // errors `You can't use } after \the`).
+  Row {
+    name:     "label_hook_reads_currentcounter",
+    tex:      include_str!(
+      "../../../tools/perfect_kernel/repros/macro-state/label_hook_reads_currentcounter.tex"
+    ),
+    counts:   (0, 0),
+    messages: &[],
+    absent:   &[],
+    elements: &[
+      (
+        "p",
+        "xml:id=\"S1.p1.1\"",
+        r#"<p xml:id="S1.p1.1">Section: section/1.</p>"#,
+      ),
+      (
+        "p",
+        "xml:id=\"S1.p1.2\"",
+        r#"<p xml:id="S1.p1.2">Item: enumi/2.</p>"#,
+      ),
+      (
+        "p",
+        "xml:id=\"S1.p1.3\"",
+        r#"<p xml:id="S1.p1.3">Equation: equation/1.</p>"#,
+      ),
+      (
+        "p",
+        "xml:id=\"S1.p1.4\"",
+        r#"<p xml:id="S1.p1.4">Eqnarray: equation/2.</p>"#,
+      ),
+      (
+        "p",
+        "xml:id=\"S1.p2.1\"",
+        r#"<p xml:id="S1.p2.1">Lemma: thm/1.</p>"#,
+      ),
+      (
+        "p",
+        "xml:id=\"S1.p3.1\"",
+        "<p xml:id=\"S1.p3.1\">Figure: figure/1.\n\nGroup: section/1.</p>",
+      ),
+    ],
+  },
   // QA47B: `\include`'s hooks around the file, and the excluded ones (red: "Text.\nChapter text.\nMore.").
   Row {
     name:     "include_hooks_run",
@@ -555,6 +600,34 @@ const ROWS: &[Row] = &[
       "xml:id=\"p1.1\"",
       "<p xml:id=\"p1.1\">[PB][pb][FB][fb](in)[fa][FA][eop][pa][PA]</p>",
     )],
+  },
+  // REGCDE: the document's first textcomp load runs its hooks though the format carries textcomp (biblatex-sbl; red on
+  // MAIN882: 2 errors, undefined `\afterok` and `\fileb`, "loaded: yes/yes").
+  Row {
+    name:     "afterpackage_of_the_formats_textcomp",
+    tex:      include_str!(
+      "../../../tools/perfect_kernel/repros/loader/afterpackage_of_the_formats_textcomp.tex"
+    ),
+    counts:   (0, 0),
+    messages: &[],
+    absent:   &[],
+    elements: &[(
+      "p",
+      "xml:id=\"p1.1\"",
+      "<p xml:id=\"p1.1\">after: OK; hook: HOOK; file: FB; loaded: no/yes; ½</p>",
+    )],
+  },
+  // REGCDE3: a document's load after the format's runs textcomp.sty's options only, never the symbols again (revREGCDE2
+  // E; red on aef337b2747: "A ½ °.").
+  Row {
+    name:     "textcomp_after_the_format_keeps_the_documents_symbols",
+    tex:      include_str!(
+      "../../../tools/perfect_kernel/repros/loader/textcomp_after_the_format_keeps_the_documents_symbols.tex"
+    ),
+    counts:   (0, 0),
+    messages: &[],
+    absent:   &[],
+    elements: &[("p", "xml:id=\"p1.1\"", "<p xml:id=\"p1.1\">A HALF DEG.</p>")],
   },
   // QAB2: the kernel abstract, a binding macro, runs `env/abstract/begin|end` in its group (red: "Abstract text.").
   Row {
@@ -674,5 +747,45 @@ fn batchqa47a_command_hook_rows() {
     for (tag, attrs, element) in row.elements {
       assert_element(&xml, tag, &[attrs], element);
     }
+  }
+}
+
+/// REGCDE: under the LuaTeX profile ctex's selectfont chunk (ctex-engine-luatex.def:1220, labelled by the package or
+/// class that reads the .def) reads LuaTeX-ja's font tables at :1226's `\selectfont`; latexml.sty's shim voids it (red
+/// on MAIN882: 1 error each, undefined `\LTJY3/song/m/n/10`; TL manuals inkpaper-en, caspervector-ay, codebox-doc-en).
+#[test]
+fn batchqa47a_ctex_luatex_selectfont_chunk_voided() {
+  const ROWS: &[(&str, &str)] = &[
+    (
+      "ctex_selectfont_hook_voided",
+      include_str!(
+        "../../../tools/perfect_kernel/repros/luatex-profile/ctex_selectfont_hook_voided.tex"
+      ),
+    ),
+    (
+      "ctex_selectfont_hook_voided_package",
+      include_str!(
+        "../../../tools/perfect_kernel/repros/luatex-profile/ctex_selectfont_hook_voided_package.tex"
+      ),
+    ),
+  ];
+  const REQUIRES: &RequirementTable = &[
+    (
+      "ctex_selectfont_hook_voided",
+      Requirements::packages(&["ctexart.cls", "luatexja.sty"]),
+    ),
+    (
+      "ctex_selectfont_hook_voided_package",
+      Requirements::packages(&["ctex.sty", "luatexja.sty"]),
+    ),
+  ];
+  for (name, tex) in ROWS {
+    if !check_table(&current_test_name(), name, Some(REQUIRES)) {
+      continue;
+    }
+    let (log, xml) = convert_with(tex, Some("[rawstyles,rawclasses,luatex]latexml.sty"));
+    assert_eq!(error_count(&log), 0, "{name}: errors\n{log}");
+    assert_eq!(warning_count(&log), 0, "{name}: warnings\n{log}");
+    assert_element(&xml, "p", &[], "<p>中文 text.</p>");
   }
 }

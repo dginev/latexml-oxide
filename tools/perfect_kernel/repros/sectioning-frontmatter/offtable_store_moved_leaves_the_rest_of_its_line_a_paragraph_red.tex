@@ -1,0 +1,22 @@
+% A moved store whose line goes on after it with the class's own text: the pubnote is right, and the rest of the line
+% ("(corresponding author)") stays behind as a paragraph of its own, which the PDF prints after the address.
+% witness: synthetic (review revQA61D1, probe grp).
+% oracle:  pdflatex 0 errors: "Lecture Notes / A. Author / E-mail: a@b.org (corresponding author) / Text.".
+% engines: QA61D1b: `<pubnote name="E-mail:">a@b.org</pubnote>` and `<p>(corresponding author)</p>` before "Text.".
+% expect:  the line's own text with its pubnote (or the store kept in its line), no orphaned paragraph.
+% status:  RED
+% moves:   post-merge (the line's rest, QA61 follow-up)
+\begin{filecontents*}[overwrite]{qasixtyoneg.cls}
+\ProvidesClass{qasixtyoneg}\LoadClass{article}
+\newcommand\mail[1]{\gdef\@mail{#1}}
+\renewcommand\@maketitle{\begin{center}{\LARGE \@title\par}{\large \@author\par}\end{center}
+  {\bfseries E-mail:} \texttt{\@mail} (corresponding author)\par}
+\end{filecontents*}
+\documentclass{qasixtyoneg}
+\title{Lecture Notes}
+\author{A. Author}
+\mail{a@b.org}
+\begin{document}
+\maketitle
+Text.
+\end{document}

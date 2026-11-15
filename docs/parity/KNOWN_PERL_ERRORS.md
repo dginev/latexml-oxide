@@ -3299,8 +3299,8 @@ A dedicated XSLT template strips the footnote scaffolding (point 1). `acm_aria.x
 matched Perl byte-for-byte and so certified the defect.
 
 **Point 2 is not fixed:** Rust digests the description as Perl does (read undigested, its markup had printed as raw
-TeX: 2403.09168), so 2607.21760's `\D` is an Error in both engines. Whether it should be is an open question for DG
-(OD #83).
+TeX: 2403.09168), so 2607.21760's `\D` is an Error in both engines. DG 2026-11-15 ruled the target: digest it, but
+report an error inside it as a Warning (OD #83; post-cutoff code).
 
 Candidate to upstream: swapping `#1`→`#2` is a one-token fix; the note decoration needs the XSLT template too.
 
@@ -18551,12 +18551,11 @@ keep the kernel's "." (latex_constructs.pool.ltxml:2832). Minimal trigger:
 Review 78q finding 8. Repros cross-references/{llncs,svjour3}_own_theorem_separator{,_envcountsect}; guard
 `perfect_kernel_batch78q::theorem_counter_separator_is_the_class_s`.
 
-**Open for DG: 78q r2 overrode a ruling.** OD #615 recorded the main session's ruling of 2026-10-16 for "X 1.1", the
-kernel's "." as Perl prints it: semantics over the PDF, since "11" reads as the eleventh theorem, and a `\ref` to it
-too. 78q r2 replaced it with the class's empty separator, so the code prints "X 11" (llncs_cls.rs:474-478,
-svjour_cls.rs:89-96). Reach: 5 of 374 sampled llncs papers with a main file (batch 68g round 1). OD #615's trigger:
-`\documentclass{llncs}` `\newtheorem{x}{X}[section]` `\section{A}\begin{x}a\end{x}` — pdflatex "X 11 a", Perl "X 1.1",
-ours "X 11" (tag and `\ref`). Which reading stands is DG's ruling to make.
+**Ruled: TeX wins (DG 2026-11-15).** The code prints the class's "X 11" (tag and `\ref`; llncs_cls.rs:474-478,
+svjour_cls.rs:89-96) as pdflatex does; the main session's ruling of 2026-10-16 for the kernel's "X 1.1" (semantics over
+the PDF, OD #615) is retired. Reach: 5 of 374 sampled llncs papers with a main file (batch 68g round 1). OD #615's
+trigger: `\documentclass{llncs}` `\newtheorem{x}{X}[section]` `\section{A}\begin{x}a\end{x}` — pdflatex "X 11 a", Perl
+"X 1.1", ours "X 11".
 
 ## 1115. amsmath's `\genfrac` is not robust
 

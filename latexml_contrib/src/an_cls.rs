@@ -38,6 +38,7 @@ LoadDefinitions!({
     latexml_engine::latex_constructs::note_title_page_part(
       "\\@maketitle",
       TokenizeInternal!(LABELLED_STORE),
+      0,
     );
   }
 });

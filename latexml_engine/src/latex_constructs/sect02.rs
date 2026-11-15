@@ -342,14 +342,10 @@ pub(crate) fn load() -> Result<()> {
     assign_value("inPreamble", false, None);
     disable_preamble_commands()?;
     // latex.ltx:9521-9522: the `\@preamblecmds` walk leaves `\@preamblecmds`
-    // itself `\let` to `\@notprerr` (it is `\@onlypreamble`, latex.ltx:1228).
+    // itself `\let` to `\@notprerr` (it is `\@onlypreamble`, latex.ltx:1228; listed only by the dump's list).
     // Raw code probes exactly that (lppl.tex:44) to detect a running document;
     // see `\@notprerr` in sect05.rs.
-    assign_meaning(
-      &T_CS!("\\@preamblecmds"),
-      lookup_meaning(&T_CS!("\\@notprerr")).unwrap_or(Stored::None),
-      Some(Scope::Global),
-    );
+    binding::preamble_commands::disable_preamble_command(&T_CS!("\\@preamblecmds"));
     // latex.ltx:9525 `\UseOneTimeHook{begindocument/end}` — AFTER the
     // preamble is left. jwjournal.cls:643-650 wraps the whole body in a `+b`
     // environment from this hook (and closes it from `enddocument`); without

@@ -240,7 +240,10 @@
     chemarr, extarrows and extpfeil arrow was →. The relation is now the heads amsmath.sty draws
     (`\arrowfill@#1#2#3#4`, :971-976): an end that is just the `\relbar`/`\Relbar` fill is dropped,
     a left/right pair is its composed arrow (↔, ⇔, ⟷, ⟺, ↦), and the named fills
-    (`\rightarrowfill@` …) no longer leave their style argument behind. Witness 2405.01836. Guard
+    (`\rightarrowfill@` …) no longer leave their style argument behind. `\ext@arrow` sets the fill in an
+    `\hbox`, as amsmath.sty:1014 does, so a package fill that opens its own `$…$` (halloweenmath)
+    no longer ends the formula, and an active `|` (ltxguide.cls's `\MakeShortVerb{\|}`) no longer
+    errs when amsmath loads. Witness 2405.01836; TL manuals halloweenmath-man, moreenum-doc. Guard
     `arrowfill_heads::arrowfill_keeps_its_heads` (repros `tools/perfect_kernel/repros/arrowfill/`).
   - **`--format=epub` writes an EPUB 3 container** (issue 807). `--format=epub` or an `.epub`
     destination selected the EPUB stylesheet but wrote one bare XHTML file. It now writes the zip

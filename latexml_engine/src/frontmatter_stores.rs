@@ -704,6 +704,8 @@ struct StoreLabel {
   reader:      String,
   /// The tokens the label takes up there (balanced; the store itself with them when the label is in the store's group).
   part:        Tokens,
+  /// Where `part` starts in the macro's body.
+  at:          usize,
   /// The label's text ([`LabelText`]).
   text:        Tokens,
   /// Is it in the store's own group, which is the argument of a control sequence (not a font command's)?
@@ -1019,6 +1021,7 @@ impl ClassReaders {
           return Some(StoreLabel {
             reader,
             part: Tokens::new(body[start..end].to_vec()),
+            at: start,
             text,
             in_argument,
           });
@@ -1216,10 +1219,24 @@ impl ClassReaders {
   /// \@email\par}` one line of the class's (review rev79a Q1). A value the line ends before is in another line:
   /// `\vbox{…\@jinfo\par\@author\par\@address\par}` (probe kb).
   fn store_lines(&self, store: &Token, carried: &dyn Fn(&Token) -> bool) -> StoreLines {
+    self.store_lines_among(store, carried, None)
+  }
+
+  /// [`ClassReaders::store_lines`], with `stores` values of a line whatever their names: the class's other off-table
+  /// stores (ij4uq.cls's `\dataallo` and `\dataallf` in one line, 2410.00116). With them, a store's line is not cut
+  /// at the argument of a face or box that prints it ([`argument_of`]: `\texttt{\@x} \@y\par`), and one in no group
+  /// is read in the macro's body (`E-mail: \@x, tel.\ \@y\par`) — the moved store's rule
+  /// ([`decide_moved_offtable_stores`], review revQA61D1).
+  fn store_lines_among(
+    &self,
+    store: &Token,
+    carried: &dyn Fn(&Token) -> bool,
+    stores: Option<&[Token]>,
+  ) -> StoreLines {
     let other = |t: &Token| {
       t != store
         && t.get_catcode() == Catcode::CS
-        && t.with_str(|s| s.starts_with("\\@"))
+        && (t.with_str(|s| s.starts_with("\\@")) || stores.is_some_and(|stores| stores.contains(t)))
         && !carried(t)
     };
     let mut lines = StoreLines::default();
@@ -1250,9 +1267,20 @@ impl ClassReaders {
             if glued_to_class_text(body, k, open.last().copied()) {
               lines.glued = true;
             }
-            if let Some(&start) = open.last()
-              && let Some(end) = tokens_group_end(body, start)
-            {
+            let line_group = match stores {
+              None => open.last().copied(),
+              Some(_) => open
+                .iter()
+                .rev()
+                .copied()
+                .find(|&start| !argument_of(body, start).is_some_and(|(_, printed)| printed)),
+            };
+            let line = match line_group {
+              Some(start) => tokens_group_end(body, start).map(|end| (start, end)),
+              None if stores.is_some() => Some((0, body.len())),
+              None => None,
+            };
+            if let Some((start, end)) = line {
               let from = body[start..k]
                 .iter()
                 .rposition(ends_a_line)
@@ -3674,22 +3702,7 @@ fn reroute_raw_file_stores(cls: &str, package: bool) -> Result<()> {
     // where a class tests for the unset store, ptptex.cls:88-104's journal line and "(Received …)"
     // printed unless `\@ifundefined{@pubinfo}`/`{@recdate}` (hep-th9803240, 1309.6905); `\@empty`
     // where it tests `\ifx\@institute\@empty` after its own `\maketitle` defaulted it so.
-    DefMacro!("\\lx@captured@stores", sub[_args] {
-      let names = lookup_string("lx_rerouted_stores");
-      let mut nulls: Vec<Token> = Vec::new();
-      for name in names.split(',').filter(|n| !n.is_empty()) {
-        let store = store_of(name);
-        let null = if lookup_bool(&s!("lx_store_handed_{name}")) {
-          s!("\\let\\{store}\\@empty")
-        } else if lookup_bool(&s!("lx_store_unset_empty_{name}")) {
-          s!("\\lx@ifdefined\\{store}\\else\\let\\{store}\\@empty\\fi")
-        } else {
-          s!("\\lx@ifdefined\\{store}\\else\\let\\{store}\\relax\\fi")
-        };
-        nulls.extend(mouth::tokenize_internal(TeXString::assembled(null)).unlist());
-      }
-      Ok(Tokens::new(nulls))
-    });
+    DefMacro!("\\lx@captured@stores", sub[_args] { Ok(captured_store_nulls()) });
     // A store the document never set keeps the class's default (lion-msc.cls:
     // 196-203 `\gdef\@affiliation{Huygens-Kamerlingh Onnes Laboratory, …}`),
     // which `\@maketitle` typesets; nulled in the deposit, it reached neither
@@ -3719,6 +3732,33 @@ fn reroute_raw_file_stores(cls: &str, package: bool) -> Result<()> {
     );
   }
   Ok(())
+}
+
+/// The expansion of `\lx@captured@stores` ([`reroute_raw_file_stores`]): each rerouted store nulled, and each off-table
+/// store moved to the frontmatter ([`decide_moved_offtable_stores`]) read as empty.
+fn captured_store_nulls() -> Tokens {
+  let names = lookup_string("lx_rerouted_stores");
+  let mut nulls: Vec<Token> = Vec::new();
+  for name in names.split(',').filter(|n| !n.is_empty()) {
+    let store = store_of(name);
+    let null = if lookup_bool(&s!("lx_store_handed_{name}")) {
+      s!("\\let\\{store}\\@empty")
+    } else if lookup_bool(&s!("lx_store_unset_empty_{name}")) {
+      s!("\\lx@ifdefined\\{store}\\else\\let\\{store}\\@empty\\fi")
+    } else {
+      s!("\\lx@ifdefined\\{store}\\else\\let\\{store}\\relax\\fi")
+    };
+    nulls.extend(mouth::tokenize_internal(TeXString::assembled(null)).unlist());
+  }
+  for name in lookup_string("lx_offtable_stores")
+    .split(',')
+    .filter(|n| lookup_bool(&s!("lx_offtable_moved_{n}")))
+  {
+    if let Some(Stored::Token(store)) = lookup_value(&s!("lx_offtable_store_{name}")) {
+      nulls.extend([T_CS!("\\let"), store, T_CS!("\\@empty")]);
+    }
+  }
+  Tokens::new(nulls)
 }
 
 /// The text a class prints right before `body[at]` in its line: the letters, other characters, spaces and ties back to
@@ -3883,6 +3923,7 @@ fn labelled_api(name: &str, api: &str, store: &Token, readers: &ClassReaders) ->
     part,
     text,
     in_argument,
+    ..
   }) = label
   else {
     if named.is_some() && readers.read_by_the_title_page(store) {
@@ -3979,6 +4020,7 @@ fn note_store_handed(name: &str) {
     crate::latex_constructs::note_title_page_part(
       &lookup_string(&s!("lx_store_label_reader_{name}")),
       part,
+      0,
     );
   }
 }
@@ -4055,7 +4097,8 @@ pub(crate) fn deposit_operand_values() -> Result<Vec<(Token, Tokens)>> {
 /// `\institutions`, `\mels`, read only by its `\def\@title`/`\def\@author` (:176-191; 1503.05530), which the
 /// deposit reads as empty, so the authors were lost; risethesis's cover fields (2208.03566), vmsta's `\fnm`. Each is
 /// recorded with its class default (`lx_offtable_stores`); at `\maketitle` `\lx@store@untypeset` hands on the value
-/// the document gave one whose title-page code did not typeset it.
+/// the document gave one whose title-page code did not typeset it, or printed after its label
+/// ([`decide_moved_offtable_stores`]).
 fn survey_off_table_stores(cls: &str, readers: &mut Option<ClassReaders>) -> Result<()> {
   let from_a_file = |stored: &Stored| match stored {
     Stored::Expandable(defn) => defn.get_origin() == DefinitionOrigin::File,
@@ -4106,6 +4149,7 @@ fn survey_off_table_stores(cls: &str, readers: &mut Option<ClassReaders>) -> Res
     .filter(|n| !n.is_empty())
     .map(String::from)
     .collect();
+  let found_stores: Vec<Token> = found.iter().map(|(_, store)| *store).collect();
   for (name, store) in &found {
     let default = match lookup_meaning(store) {
       Some(Stored::Expandable(defn)) => match defn.get_expansion() {
@@ -4125,7 +4169,11 @@ fn survey_off_table_stores(cls: &str, readers: &mut Option<ClassReaders>) -> Res
       Some(Scope::Global),
     );
     if let Some(StoreLabel {
-      part, text: label, in_argument, ..
+      reader,
+      part,
+      at,
+      text: label,
+      in_argument,
     }) = readers
       .as_ref()
       .and_then(|r| r.label_in(store, &r.title_page_fields))
@@ -4133,6 +4181,22 @@ fn survey_off_table_stores(cls: &str, readers: &mut Option<ClassReaders>) -> Res
       assign_value(
         &s!("lx_offtable_label_in_argument_{name}"),
         in_argument,
+        Some(Scope::Global),
+      );
+      // (what a store moved to the frontmatter takes out of the title page with it, [`decide_moved_offtable_stores`])
+      assign_value(
+        &s!("lx_offtable_label_reader_{name}"),
+        Stored::String(pin(reader)),
+        Some(Scope::Global),
+      );
+      assign_value(
+        &s!("lx_offtable_label_part_{name}"),
+        Stored::Tokens(part.clone()),
+        Some(Scope::Global),
+      );
+      assign_value(
+        &s!("lx_offtable_label_at_{name}"),
+        Stored::Int(at as i64),
         Some(Scope::Global),
       );
       // (with the space the title page prints between the label and the store, a tie in the note's name, as
@@ -4156,6 +4220,24 @@ fn survey_off_table_stores(cls: &str, readers: &mut Option<ClassReaders>) -> Res
         Stored::Tokens(Tokens::new(label)),
         Some(Scope::Global),
       );
+      // (its lines, judged with the document's values at `\maketitle`, [`decide_moved_offtable_stores`])
+      if let Some(r) = readers.as_ref() {
+        let lines = r.store_lines_among(
+          store,
+          &|t: &Token| t.with_str(|cs| KERNEL_FIELDS.contains(&cs)),
+          Some(&found_stores),
+        );
+        assign_value(
+          &s!("lx_offtable_line_glued_{name}"),
+          lines.glued,
+          Some(Scope::Global),
+        );
+        assign_value(
+          &s!("lx_offtable_line_values_{name}"),
+          Stored::Tokens(Tokens::new(lines.others)),
+          Some(Scope::Global),
+        );
+      }
     }
     list.push(name.clone());
   }
@@ -4184,11 +4266,12 @@ fn survey_off_table_stores(cls: &str, readers: &mut Option<ClassReaders>) -> Res
     Stored::String(pin(list.join(","))),
     Some(Scope::Global),
   );
+  DefMacro!("\\lx@captured@stores", sub[_args] { Ok(captured_store_nulls()) });
   Info!(
     "frontmatter",
     cls,
     s!(
-      "The raw class's title-page stores outside the table, handed on at \\maketitle when its title page does not typeset them: \\{}",
+      "The raw class's title-page stores outside the table, handed on at \\maketitle when its title page prints them after their label or does not typeset them: \\{}",
       found
         .iter()
         .map(|(n, _)| n.as_str())
@@ -5010,6 +5093,7 @@ pub fn before_title_page_runs() -> Result<()> {
       );
     }
     assign_value("lx_sentinel_ran", true, Some(Scope::Global));
+    decide_moved_offtable_stores(&offtable, &printed);
   }
   if !net.is_empty() {
     let net_printed = of(&printed, &net);
@@ -5901,8 +5985,9 @@ fn walked_title_page_reads() -> (Vec<SymStr>, FxHashSet<SymStr>) {
 /// nowfnt's names-only cover list, 2308.02698); any other an `ltx:pubnote` (Base_Utility.pool.ltxml:634, a note about
 /// the document), its `\and` between authors' blocks a line break (2108.12618), named by the label the title page prints
 /// before it (`lx_offtable_label_<name>`) when it prints one. A run that typeset it keeps it, so nothing is shown
-/// twice; a store the title page prints only under a switch that is off — a `\newif` (aiaa-tc.cls:199-200
-/// `\aiaa@conference` under `[handcarry]`), a class's own boolean (sigplanconf.cls:1118, 1603.03011's "nnnnnnn.nnnnnnn"
+/// twice, unless it is printed after its label ([`decide_moved_offtable_stores`]: the run read it as empty); a store
+/// the title page prints only under a switch that is off — a `\newif` (aiaa-tc.cls:199-200 `\aiaa@conference` under
+/// `[handcarry]`), a class's own boolean (sigplanconf.cls:1118, 1603.03011's "nnnnnnn.nnnnnnn"
 /// placeholder DOI) — or only in a box or a running head is not printed and not handed on. Perl drops them all (no
 /// binding, its `\@maketitle` relaxed, latex_constructs.pool.ltxml:1105). Then the unclaimed-text net's stores, the
 /// ones no owner claims ([`hand_net_stores`]).
@@ -5912,13 +5997,151 @@ fn hand_untypeset_stores() -> Result<Vec<Digested>> {
   Ok(out)
 }
 
+/// DG's D1 (QA61, BM Q3.13): an off-table store the title page prints (`printed`) right after the class's own label
+/// (`verify_title_page_labels`), in a line holding no other value (another of its stores counted, ij4uq 2410.00116), is
+/// the frontmatter's even where the deposit or the replay typesets it — a pubnote named by the label
+/// ([`hand_offtable_stores`]); they read it as empty, the label taken out with it (`\lx@captured@stores`,
+/// `\lx@replay@records`, [`part_to_the_line_end`]). The class prints its title and names bare, so an
+/// unlabelled store stays (SelfArx `\PaperTitle`, 2011.01685), as one glued to its text (fundam `FI-\@publyear`,
+/// 2006.07415), one its own `\title`/`\author`/`\@author` reads (jfpc, 1503.05530) and one labelled as the abstract.
+fn decide_moved_offtable_stores(offtable: &[(String, Token, Tokens)], printed: &str) {
+  let author_reads = lookup_string("lx_offtable_author_reads");
+  let abstract_name = parameterless_body(&T_CS!("\\abstractname"))
+    .map(|name| label_plain_text(&name))
+    .filter(|name| !name.is_empty());
+  let handed: Vec<Token> = rerouted_names()
+    .iter()
+    .filter(|name| lookup_bool(&s!("lx_store_handed_{name}")))
+    .map(|name| T_CS!(&s!("\\{}", store_of(name))))
+    .collect();
+  for (name, store, value) in offtable {
+    let listed = |list: &str| store.with_str(|cs| list.split(',').any(|n| n == cs));
+    let Some(Stored::Tokens(label)) = lookup_value(&s!("lx_offtable_label_{name}")) else {
+      continue;
+    };
+    // (a store labelled with LaTeX's `\abstractname` is the abstract, no note: raa.cls:349 `{\bfseries\abstractname}\
+    // \@abstract`, 1404.3644)
+    if !listed(printed)
+      || abstract_name.as_ref() == Some(&label_plain_text(&label))
+      || lookup_bool(&s!("lx_offtable_line_glued_{name}"))
+      || listed(&author_reads)
+      || class_field_setter("title", name)
+      || class_field_setter("author", name)
+    {
+      continue;
+    }
+    // (another value in its lines, with the document's values: the line is the class's, tlp.cls:627's shape)
+    if let Some(Stored::Tokens(others)) = lookup_value(&s!("lx_offtable_line_values_{name}"))
+      && others
+        .unlist_ref()
+        .iter()
+        .any(|t| !handed.contains(t) && prints_as_a_value(t))
+    {
+      continue;
+    }
+    assign_value(&s!("lx_offtable_moved_{name}"), true, Some(Scope::Global));
+    // (the value the title page prints: the class's own `\maketitle` the replay runs may clear the store after it,
+    // ourlematema.cls:307-308 `\global\let\@MSC\relax`, 2412.12514)
+    assign_value(
+      &s!("lx_offtable_moved_value_{name}"),
+      Stored::Tokens(value.clone()),
+      Some(Scope::Global),
+    );
+    if let Some(Stored::Tokens(part)) = lookup_value(&s!("lx_offtable_label_part_{name}")) {
+      let reader = lookup_string(&s!("lx_offtable_label_reader_{name}"));
+      let at = match lookup_value(&s!("lx_offtable_label_at_{name}")) {
+        Some(Stored::Int(at)) => usize::try_from(at).ok(),
+        _ => None,
+      };
+      let (part, nth) = part_to_the_line_end(&reader, part, at, store);
+      crate::latex_constructs::note_title_page_part(&reader, part, nth);
+    }
+  }
+}
+
+/// A moved store's label `part` in the macro `reader`, extended over the store (alone in a group, or a command's
+/// argument) and the stop the class prints after it where its line ends: smj.cls:211 `\textbf{E-mail:}
+/// \texttt{\@CorrEmail}.` (1509.00049), lms.cls:1148-1149 `\footnotetext{2000 {…} \@classno.}` (0712.0944). `at`:
+/// where the label read it ([`ClassReaders::label_in`]), not another line with the same label (review revQA61D1); its
+/// first match when the macro has changed since. With the part, which of its matches in the macro it is (for
+/// `\lx@replay@records`).
+fn part_to_the_line_end(
+  reader: &str,
+  part: Tokens,
+  at: Option<usize>,
+  store: &Token,
+) -> (Tokens, usize) {
+  let Some(body) = parameterless_body(&T_CS!(reader)) else {
+    return (part, 0);
+  };
+  let (body, label) = (body.unlist_ref(), part.unlist_ref());
+  let Some(at) = (!label.is_empty())
+    .then(|| {
+      at.filter(|&at| body.get(at..at + label.len()) == Some(label))
+        .or_else(|| body.windows(label.len()).position(|w| w == label))
+    })
+    .flatten()
+  else {
+    return (part, 0);
+  };
+  let nth = |part: &[Token]| {
+    body[..at]
+      .iter()
+      .enumerate()
+      .filter(|(i, _)| body[*i..].starts_with(part))
+      .count()
+  };
+  let (mut k, mut depth, mut seen) = (at + label.len(), 0usize, label.contains(store));
+  while let Some(t) = body.get(k) {
+    match t.get_catcode() {
+      Catcode::SPACE => {},
+      Catcode::BEGIN => depth += 1,
+      Catcode::END if depth > 0 => depth -= 1,
+      Catcode::CS if *t == *store => seen = true,
+      // (a command whose argument holds the store: `\texttt{\@CorrEmail}`)
+      Catcode::CS
+        if !seen
+          && body
+            .get(skip_spaces(body, k + 1))
+            .is_some_and(|b| b.get_catcode() == Catcode::BEGIN) => {},
+      _ => break,
+    }
+    k += 1;
+  }
+  let stop = k;
+  while body.get(k).is_some_and(|t| {
+    t.get_catcode() == Catcode::OTHER && [".", ",", ";"].contains(&t.to_string().as_str())
+  }) {
+    k += 1;
+  }
+  let next = body.get(skip_spaces(body, k));
+  if depth > 0
+    || !seen
+    || k == stop
+    || next.is_some_and(|t| t.get_catcode() != Catcode::END && !ends_a_line(t))
+  {
+    let nth = nth(label);
+    return (part, nth);
+  }
+  (Tokens::new(body[at..k].to_vec()), nth(&body[at..k]))
+}
+
 /// K11's part of [`hand_untypeset_stores`]: its off-table stores.
 fn hand_offtable_stores() -> Result<Vec<Digested>> {
   if lookup_string("lx_offtable_stores").is_empty() || lookup_bool("lx_offtable_handed") {
     return Ok(Vec::new());
   }
   assign_value("lx_offtable_handed", true, Some(Scope::Global));
-  let candidates = offtable_candidates();
+  let mut candidates = offtable_candidates();
+  // (a moved store's value as its title page printed it, [`decide_moved_offtable_stores`])
+  for name in lookup_string("lx_offtable_stores").split(',') {
+    if let Some(Stored::Tokens(value)) = lookup_value(&s!("lx_offtable_moved_value_{name}"))
+      && let Some(Stored::Token(store)) = lookup_value(&s!("lx_offtable_store_{name}"))
+    {
+      candidates.retain(|(_, s, _)| *s != store);
+      candidates.push((name.to_string(), store, value));
+    }
+  }
   if candidates.is_empty() {
     return Ok(Vec::new());
   }
@@ -5942,7 +6165,9 @@ fn hand_offtable_stores() -> Result<Vec<Digested>> {
       printed
         .iter()
         .position(|cs| *cs == key)
-        .filter(|_| !typeset.contains(&key))
+        .filter(|_| {
+          !typeset.contains(&key) || lookup_bool(&s!("lx_offtable_moved_{}", candidate.0))
+        })
         .map(|at| (at, candidate))
     })
     .collect();
@@ -6056,9 +6281,15 @@ fn hand_offtable_stores() -> Result<Vec<Digested>> {
     Info!(
       "frontmatter",
       s!("\\{name}"),
-      s!(
-        "The class's title page prints the store of \\{name}, which no title-page run here typeset: it is handed on as {what}"
-      )
+      if lookup_bool(&s!("lx_offtable_moved_{name}")) {
+        s!(
+          "The class's title page prints the store of \\{name} after its label: it is handed on as {what}, the label its name"
+        )
+      } else {
+        s!(
+          "The class's title page prints the store of \\{name}, which no title-page run here typeset: it is handed on as {what}"
+        )
+      }
     );
   }
   calls.extend(rows);

@@ -1,3 +1,7 @@
+use latexml_core::binding::preamble_commands::{
+  close_subfile_preamble, end_subfile_preamble, reopen_for_subfile_preamble,
+};
+
 use crate::prelude::*;
 
 LoadDefinitions!({
@@ -18,9 +22,14 @@ LoadDefinitions!({
       if !lookup_bool("inPreamble") {
         assign_value("inPreamble", true, None);
         assign_value("lx@subpreamble@begindocument", Stored::Bool(true), None);
+        // (latex.ltx's preamble commands with it, `\@notprerr` again at its `\begin{document}`)
+        reopen_for_subfile_preamble();
       }
     }
   );
+  DefPrimitive!("\\lx@subfile@preamble@end", {
+    end_subfile_preamble();
+  });
 
   // Fake \begin{document}/\end{document} for subfiles:
   // After the main document starts, nested \begin{document} just opens/closes
@@ -36,6 +45,7 @@ LoadDefinitions!({
     );
     assign_value("inPreamble", false, None);
     assign_value("lx@subpreamble@begindocument", Stored::Bool(false), None);
+    close_subfile_preamble();
     begin_mode("internal_vertical")?;
   });
 

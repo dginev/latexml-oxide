@@ -1,0 +1,39 @@
+% CONTROL for offtable_store_printed_with_its_label_is_a_pubnote.tex: the off-table stores the title page prints with
+% no label of their own stay where the deposit typesets them — the class's title under another name, printed bare
+% (SelfArx `\PaperTitle`, 2011.01685), a store in one line with another value (tlp.cls:627's shape), also one of the
+% class's stores not named `\@…` (ij4uq.cls's `\dataallo`/`\dataallf`, 2410.00116), and one glued to the class's text
+% (fundam `FI-\@publyear`, 2006.07415) —, while the labelled one beside them is a pubnote.
+% witness: 2011.01685, 2006.07415, 2410.00116 (shapes); synthetic.
+% oracle:  pdflatex 0 errors: "Real Title / Course: MATH 410 / Term: Fall 2024, Room: B12 / Track: Geometry (Graduate) /
+%          Code: X-417 / A. Author".
+% engines: rust before QA61D1: all five lines in the body; QA61D1 r1 (before `store_lines_among`): "Track:" a pubnote,
+%          "(Graduate)" left alone in the body.
+% expect:  0 errors, 0 warnings; `<pubnote name="Course: ">MATH 410</pubnote>`; "Real Title", "Term: Fall 2024, Room:
+%          B12", "Track: Geometry (Graduate)" and "Code: X-417" each once, in the body.
+% status:  GREEN (QA61D1)
+\begin{filecontents*}[overwrite]{qasixtyonec.cls}
+\ProvidesClass{qasixtyonec}\LoadClass{article}
+\newcommand\PaperTitle[1]{\gdef\@PaperTitle{#1}}
+\newcommand\course[1]{\gdef\@course{#1}}
+\newcommand\term[1]{\gdef\@term{#1}}
+\newcommand\room[1]{\gdef\@room{#1}}
+\newcommand\code[1]{\gdef\@code{#1}}
+\newcommand\track[1]{\gdef\@track{#1}}
+\newcommand\level[1]{\gdef\thelevel{#1}}
+\renewcommand\@maketitle{\begin{center}{\LARGE \@PaperTitle \par}
+  {\large Course: \@course \par}{\large Term: \@term, Room: \@room \par}
+  {\large Track: \@track\ (\thelevel)\par}{\large Code: X-\@code \par}{\large \@author \par}\end{center}\par}
+\end{filecontents*}
+\documentclass{qasixtyonec}
+\author{A. Author}
+\PaperTitle{Real Title}
+\course{MATH 410}
+\term{Fall 2024}
+\room{B12}
+\code{417}
+\track{Geometry}
+\level{Graduate}
+\begin{document}
+\maketitle
+Text.
+\end{document}

@@ -792,7 +792,8 @@ LoadDefinitions!({
   // arrow renderer, #6 the below-label, #7 the above-label.
   // amsmath.sty L971: `\def\arrowfill@#1#2#3#4` — the stretchy-arrow renderer.
   // User code calls both directly when defining custom arrows; we don't model
-  // stretchy rendering: `\ext@arrow` relates by its fill #5, labels as scripts.
+  // stretchy rendering: `\ext@arrow` relates by its fill #5, labels as scripts. The fill is set in an `\hbox`
+  // (amsmath.sty:1014): a package fill opens its own `$…$` (halloweenmath.sty:873-882; TL manual halloweenmath-man).
   //
   // EVERY parameter of both is a plain TeX undelimited argument: it reads a
   // single token OR a balanced `{...}` group. Spelling any of them `Token`
@@ -815,11 +816,12 @@ LoadDefinitions!({
   // and a 194-error one here).
   DefMacro!(
     "\\ext@arrow {}{}{}{}{}{}{}",
-    "{\\mathrel{#5\\displaystyle}\\@ifnotempty{#7}{^{#7}}\\@ifnotempty{#6}{_{#6}}}"
+    "{\\mathrel{\\hbox{#5\\displaystyle}}\\@ifnotempty{#7}{^{#7}}\\@ifnotempty{#6}{_{#6}}}"
   );
   // amsmath.sty:971-976 draws `#4#1 … \cleaders #2 … #3`: the heads #1 and #3 are the glyph. An end that is just the
   // fill `\relbar`/`\Relbar` is dropped (both: the fill #2), equal ends count once, and a left/right pair of
   // `\lx@arrowfill@compose` is its one composed arrow. Witnesses 2405.01836 (mhchem `<=>`), 1308.1071 (extpfeil `\xmapsto`).
+  // The name's separator is `@`, not `|`: `|` may be active when amsmath loads (ltxguide.cls:142; TL manual moreenum-doc).
   RawTeX!(
     r"\def\lx@arrowfill@relbar{\relbar}\def\lx@arrowfill@Relbar{\Relbar}
 \def\lx@arrowfill@end#1{\def\lx@arrowfill@tmp{#1}%
@@ -829,9 +831,9 @@ LoadDefinitions!({
 \lx@arrowfill@end{#1}\let\lx@arrowfill@a\lx@arrowfill@tmp\lx@arrowfill@end{#3}\let\lx@arrowfill@b\lx@arrowfill@tmp
 \ifx\lx@arrowfill@a\lx@arrowfill@b\let\lx@arrowfill@b\@empty\fi
 \ifx\lx@arrowfill@a\@empty\ifx\lx@arrowfill@b\@empty\def\lx@arrowfill@a{#2}\fi\fi
-\ifcsname lx@arrowfill@\detokenize{#1}|\detokenize{#3}\endcsname
-\csname lx@arrowfill@\detokenize{#1}|\detokenize{#3}\endcsname\else\lx@arrowfill@a\lx@arrowfill@b\fi}}
-\def\lx@arrowfill@compose#1#2#3{\expandafter\def\csname lx@arrowfill@\detokenize{#1}|\detokenize{#2}\endcsname{#3}}
+\ifcsname lx@arrowfill@\detokenize{#1}@\detokenize{#3}\endcsname
+\csname lx@arrowfill@\detokenize{#1}@\detokenize{#3}\endcsname\else\lx@arrowfill@a\lx@arrowfill@b\fi}}
+\def\lx@arrowfill@compose#1#2#3{\expandafter\def\csname lx@arrowfill@\detokenize{#1}@\detokenize{#2}\endcsname{#3}}
 \lx@arrowfill@compose\leftarrow\rightarrow\leftrightarrow
 \lx@arrowfill@compose\Leftarrow\Rightarrow\Leftrightarrow
 \lx@arrowfill@compose\longleftarrow\longrightarrow\longleftrightarrow

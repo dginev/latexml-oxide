@@ -1147,6 +1147,19 @@ pub fn label_stepped_counter(ctype: &str, ctr: &str) -> Result<HashMap<Stored>> 
 
   // And install the scope (if any) for this reference number.
   assign_value("current_counter", ctr.clone(), Some(Scope::Local));
+  // latex.ltx:14958-14962 `\let\@currentcounter\reserved@a` (local; not for `*`, the current counter's alias): a
+  // `label` hook reads it (unbtex.cls:485-493 `\cref@updatelabeldata{\@currentcounter}`, unbtex-example).
+  if ctr != "*" {
+    def_macro(
+      T_CS!("\\@currentcounter"),
+      None,
+      Tokens::new(ExplodeText!(&ctr)),
+      Some(ExpandableOptions {
+        scope: Some(Scope::Local),
+        ..ExpandableOptions::default()
+      }),
+    )?;
+  }
   // The step's serial: in scope (local, as LaTeX's `\@currentlabel` is, latex.ltx:14963) and the latest one made
   // (global). A `\label` whose scope's step is not the latest comes after a step a group has since undone
   // ([`label_follows_an_undone_step`]).

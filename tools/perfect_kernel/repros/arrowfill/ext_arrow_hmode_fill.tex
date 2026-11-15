@@ -1,0 +1,16 @@
+% witness: TL manual halloweenmath-man (halloweenmath.sty:873-882: a fill that opens its own `$…$`, as amsmath.sty:971-975's `\arrowfill@`)
+% oracle:  pdflatex 0 errors: A -f-> B, a long arrow
+% engines: rust MAIN882 = 2 errors ("Missing $ closing display math": `\ext@arrow` set its fill #5 in math, the fill's `$` closed
+%          the display); int171b 0 errors, `A to ^ f B`; Perl 2 errors (no `\ext@arrow`)
+% expect:  amsmath.sty:1014 sets the fill in `\hbox{#5\displaystyle}`: 0 errors, the arrow one relation with its label
+% status:  RED (MAIN882) -> GREEN (REGAB)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{amsmath}
+\makeatletter
+\newcommand*\myfill@[1]{$\m@th#1\relbar\mkern-7mu\cleaders\hbox{$#1\mkern-2mu\relbar\mkern-2mu$}\hfill\mkern-7mu\rightarrow$}
+\newcommand*\xmyarrow[2][]{\ext@arrow 0359\myfill@{#1}{#2}}
+\makeatother
+\begin{document}
+\[ A \xmyarrow{f} B \]
+\end{document}

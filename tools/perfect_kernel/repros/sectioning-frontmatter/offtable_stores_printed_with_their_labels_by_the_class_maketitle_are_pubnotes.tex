@@ -1,0 +1,24 @@
+% The replay's sibling of offtable_store_printed_with_its_label_is_a_pubnote.tex: the class's own refused `\maketitle`
+% prints two labelled stores, each in a line of its own; the replay reads both as empty, their labels taken out of
+% `\lx@dropped@maketitle`, and each is a pubnote named by its label, in the order the title page prints them.
+% witness: none (synthetic; ij4uq's "Original manuscript submitted" / "Final draft received" lines, 2410.00116).
+% oracle:  pdflatex 0 errors: "Lecture Notes on Topology / Course: MATH 410 / Term: Fall 2024 / A. Author / Text.".
+% engines: rust before QA61D1: both lines a centred body paragraph.
+% expect:  0 errors, 0 warnings; `<pubnote name="Course: ">MATH 410</pubnote> <pubnote name="Term: ">Fall 2024</pubnote>`.
+% status:  GREEN (QA61D1)
+\begin{filecontents*}[overwrite]{qasixtyoner.cls}
+\ProvidesClass{qasixtyoner}\LoadClass{article}
+\newcommand\course[1]{\gdef\@course{#1}}
+\newcommand\term[1]{\gdef\@term{#1}}
+\renewcommand\maketitle{\begin{center}{\LARGE \@title \par}
+  {\large Course: \@course \par}{\large Term: \@term \par}{\large \@author \par}\end{center}\par}
+\end{filecontents*}
+\documentclass{qasixtyoner}
+\title{Lecture Notes on Topology}
+\author{A. Author}
+\course{MATH 410}
+\term{Fall 2024}
+\begin{document}
+\maketitle
+Text.
+\end{document}

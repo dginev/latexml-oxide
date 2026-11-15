@@ -1016,12 +1016,21 @@ fn relocate_footnote_aux(
 }
 
 /// latex.ltx:9521-9522 `\gdef\do#1{\global\let#1\@notprerr}\@preamblecmds`, run by `\begin{document}` after its
-/// hooks, for the listed commands that are our Rust definitions: each becomes `\lx@notprerr\lx@onlypreamble@<name>`,
-/// latex.ltx's "Can be used only in preamble" Error and then the command (Perl's `onlyPreamble` recovery,
-/// latex_constructs.pool.ltxml:155). latex.ltx's token macros are left working: our loader runs `\@pushfilename` and
-/// `\@currnamestack` when a binding loads a package in the body (content.rs). OXIDIZED_DESIGN_DIVERGENCES #226.
+/// hooks: each listed command becomes `\@notprerr` (core `preamble_commands`, which reopens them for a body load).
+/// Perl's loaders (`onlyPreamble`, latex_constructs.pool.ltxml:155) keep Perl's recovery instead, the Error and then
+/// the load: `\lx@notprerr\lx@onlypreamble@<name>`. OXIDIZED_DESIGN_DIVERGENCES #226.
 pub fn disable_preamble_commands() -> Result<()> {
   use definition::origin::DefinitionOrigin;
+  use latexml_core::binding::preamble_commands::disable_preamble_command;
+  const LOADERS: [&str; 7] = [
+    "\\documentclass",
+    "\\documentstyle",
+    "\\usepackage",
+    "\\RequirePackage",
+    "\\RequirePackageWithOptions",
+    "\\LoadClass",
+    "\\LoadClassWithOptions",
+  ];
   let list = match lookup_definition(&T_CS!("\\@preamblecmds"))? {
     Some(defn) => match defn.get_expansion() {
       Some(ExpansionBody::Tokens(body)) => body.unlist_ref().to_vec(),
@@ -1040,13 +1049,17 @@ pub fn disable_preamble_commands() -> Result<()> {
     if x_equals(cs, &T_CS!("\\lx@orig@document")) {
       continue;
     }
+    let name = cs.to_string();
+    if !LOADERS.contains(&name.as_str()) {
+      disable_preamble_command(cs);
+      continue;
+    }
     // Only the kernel's own: a binding's replacement is its package's re-let after the walk (docmute.sty:19,
     // standalone.sty:738 `\documentclass`; docmute_sty.rs, standalone_sty.rs define theirs at load).
     let kernel = |origin| matches!(origin, DefinitionOrigin::Pool | DefinitionOrigin::Unknown);
     let ours = match lookup_meaning(cs) {
       Some(Stored::Primitive(defn)) => kernel(defn.origin),
       Some(Stored::Constructor(defn)) => kernel(defn.origin),
-      Some(Stored::MathPrimitive(defn)) => kernel(defn.origin),
       Some(Stored::Expandable(defn)) => {
         kernel(defn.origin) && matches!(defn.get_expansion(), Some(ExpansionBody::Closure(_)))
       },
@@ -1055,7 +1068,6 @@ pub fn disable_preamble_commands() -> Result<()> {
     if !ours {
       continue;
     }
-    let name = cs.to_string();
     let alias = T_CS!(s!("\\lx@onlypreamble@{}", name.trim_start_matches('\\')));
     assign_meaning(
       &alias,

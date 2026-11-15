@@ -1,5 +1,25 @@
+use latexml_core::state::binding_loaded;
+
 use crate::prelude::*;
 LoadDefinitions!({
+  // After the format's load (sect13.rs) a document's load is textcomp.sty v2.1b's: the symbols are the kernel's, the
+  // file declares and processes its options only (textcomp.sty:21-45), so a user's `\renewcommand\textonehalf` stays.
+  if binding_loaded("textcomp.sty") {
+    TeX!(
+      r"\DeclareOption{full}{\DeclareEncodingSubset{TS1}{?}{0}}
+\DeclareOption{almostfull}{\DeclareEncodingSubset{TS1}{?}{1}}
+\DeclareOption{euro}{\DeclareEncodingSubset{TS1}{?}{8}}
+\DeclareOption{safe}{\DeclareEncodingSubset{TS1}{?}{9}}
+\DeclareOption{error}{\gdef\tc@errorwarn{\PackageError{textcomp}}}
+\DeclareOption{warn}{\gdef\tc@errorwarn#1#2{\PackageWarning{textcomp}{#1}}}
+\DeclareOption{info}{\gdef\tc@errorwarn#1#2{\PackageInfo{textcomp}{#1}}}
+\DeclareOption{quiet}{\gdef\tc@errorwarn#1#2{}}
+\DeclareOption{force}{\def\CheckEncodingSubset#1#2#3#4#5{\ifnum #4>0\csname #2:?\endcsname\relax
+  \expandafter\@firstoftwo\else\expandafter\@secondoftwo\fi{#1{#2}}{#3}#5}}
+\ProcessOptions\relax"
+    );
+    return Ok(());
+  }
   //======================================================================
   // Accent Symbols
   DefAccent!("\\capitalacute", '\u{0301}', "\u{00B4}");

@@ -1044,6 +1044,14 @@ is_bib_name_or_noise`, `:1281 find_balanced_brace_end`.
   (`BIBSTYLE` = `biblatex`, or `biblatex.sty` loaded, which a split post session has from its preloads), whatever its
   `backend=`; a `%` inside a value is untouched (`parse_string`/`parse_balanced_braces` never skip white). windycity recovers
   27 entries; biblatex-iso690 and frankenstein some. Guard `perfect_kernel_batch56::biber_bib_percent_comments_keep_the_entry`.
+- **What the `.bib` session supplies** (today's code, recorded as it stands: DG 2026-11-15). Before the entries, the
+  `.bbl` fallback block (`\providecommand{\url}`, `\doi`, `\bibinfo`, `\eprint`, `\newblock`, …;
+  `latexml_oxide/src/bib_session.rs:55 BBL_STANDARD_FALLBACKS`); when `\url` is undefined, url.sty's binding, for its
+  Semiverbatim argument (`:199 provide_url_command`; #72). `mathscinet.sty` is not loaded for the document (#78, the
+  catalog), but while `{bibtex@bibliography}`'s entries are digested MathSciNet's export macros `\cprime`, `\Cprime`,
+  `\cdprime`, `\Cdprime`, `\cftil` are provided where free (62zr, user ruling 2026-10-06;
+  `latexml_engine/src/bibtex.rs:3044 provide_mathscinet_export_macros`). A field's content is data (#74); `abstract`,
+  `keywords` and `contents` are read Verbatim besides (#73).
 
 ### 59. → KNOWN_PERL_ERRORS #50 (A citation also searches the main `bibliography` list, not just its bibunit)
 
@@ -1297,6 +1305,11 @@ Guards: `06_cluster_bibliography::bib_field_bbl_fallbacks_render_without_a_url_p
 test file.)*
 
 ### 73. A `.bib` `abstract`/`keywords`/`contents` field is read verbatim, not digested
+
+**Amended by #74 (every field's content is data).** Since #74 a `%`, `&`, `#` in ANY field is inert where the entry is
+read, so this entry's `%` story is one case of #74's rule, and its reading of a `%` in a `title` as "genuine parity"
+is superseded there. These three fields are still read Verbatim (`bibtex.rs:2543`), so their markup is not digested;
+`ltx:bib-extract` carries the stored text.
 
 **Perl behaviour.** `BibTeX.pool.ltxml` L708-709/716-717/732-733 route these three
 fields to `\bib@@field{ltx:bib-extract}[role=...]`, whose value is `Digested` —
@@ -1775,9 +1788,10 @@ reversion means markup, which `@alt` cannot hold. So `\def\foo{abc}` `\Descripti
 argument, so authors leave `\Description{Complaint_Loss}` unescaped, 2502.07049). Read undigested, the block had
 printed its markup as raw TeX (`\sysname{}`, 2403.09168; 2401.04997, 2304.01062, 2312.11013). Digested, an undefined
 command inside a description is an Error, as in Perl: 2607.21760's `\D1 … \D5` (a copy-paste slip) gives
-`Error:undefined:\D`, an `<ltx:ERROR>` in the block and the image's `aria-describedby` (probed). **Open question for
-DG:** acmart.cls:895 discards the argument, so pdflatex never meets that undefined command; whether such an error stays
-an Error (Perl's and the code's today) or is reported lower is not ruled (KNOWN_PERL_ERRORS #66, point 2).
+`Error:undefined:\D`, an `<ltx:ERROR>` in the block and the image's `aria-describedby` (probed). **Target (DG
+2026-11-15, post-cutoff code; SYNC row R line OD83):** acmart.cls:895 discards the argument, so pdflatex never meets that
+undefined command — keep digesting `\Description`, but report an error inside it as a Warning (KNOWN_PERL_ERRORS #66,
+point 2); today's code still raises the Error.
 
 Both descriptions are emitted as separate `ltx:note`s with their own `xml:id`
 and class (`ltx_acm_description_short` / `ltx_acm_description`) — two distinct
@@ -3097,6 +3111,9 @@ byte-matching the golden pdflatex `.bbl`+`.aux`. Shared upstream bug recorded as
 KNOWN_PERL_ERRORS #89.
 
 **Guard**: `06_cluster_bibliography::cluster_bib_natbib_late_numeric_style_forces_numbers`.
+**Target (DG 2026-11-15, post-cutoff; SYNC row R line NATBIB):** the citation mode decided once, as early as our
+stages allow, and recorded as metadata where post-processing needs it — replacing today's per-cite post-pass
+(crossref.rs:2182 `make_bibcite`).
 
 ### 124. Content injected into `\@maketitle` is recovered, not discarded
 
@@ -5583,36 +5600,35 @@ license (beameruserguide: 16 of 26 chapters lost, zero errors; SHARED).
 **Rust behavior**: `\@notprerr` is defined (latex.ltx:9019) and `\document` `\let`s
 `\@preamblecmds` to it globally at the latex.ltx:9521-9522 point (`\@preamblecmds`
 is itself `\@onlypreamble`, :1228), so the probe reads as it does in LaTeX.
-**Rule**: `\begin{document}` walks latex.ltx's `\@preamblecmds` (:9521-9522) after its hooks; each listed
-command that is one of our Rust definitions becomes `\lx@notprerr\lx@onlypreamble@<name>`: latex.ltx's own
-`\@notprerr` Error ("Can be used only in preamble", :9019) and then the command itself, as Perl recovers
-(latex_constructs.pool.ltxml:155 `onlyPreamble`, which Perl applies to 8 commands only and with its own text).
+**Rule**: `\begin{document}` walks latex.ltx's `\@preamblecmds` (:9521-9522) after its hooks and `\global\let`s each
+listed command to `\@notprerr` (DG ruling (b), 2026-11-15), except Perl's 7 loaders (`\documentclass`,
+`\documentstyle`, `\usepackage`, `\RequirePackage`, `\RequirePackageWithOptions`, `\LoadClass`,
+`\LoadClassWithOptions`; latex_constructs.pool.ltxml:155 `onlyPreamble`): each becomes
+`\lx@notprerr\lx@onlypreamble@<name>`, latex.ltx's Error (:9019) and then the load, as Perl recovers.
 - The list is latex.ltx's (the dump's, 124 entries) plus each `\@onlypreamble` run in the preamble: `\@onlypreamble`
-  records `\do<cs>` as latex.ltx:1224-1226 does (Perl :5594 records nothing), and nothing once `\@preamblecmds` is
-  `\@notprerr` (:9522), so a body package load keeps lppl.tex:44's probe true. Without a dump it is Perl's 8.
-- Inside a package or class load (`\@currext` `sty`/`cls`) no Error: pdflatex never loads one after the preamble, so
-  the packages a body `\usepackage` loads in recovery add none (pdflatex: one Error); nor while a binding runs a
-  sub-file's preamble under Perl's `inPreamble` (standalone_sty.rs). The loader restores `\@currext` after every
-  load, a missing file's too (content.rs `pop_load_frame`, Package.pm:2652-2654), so under an unknown class's
-  OmniBus fallback the body is not a class load.
-- Only the kernel's definitions (origin `Pool`): a binding's replacement (docmute_sty.rs, standalone_sty.rs
-  `\documentclass`) stands for its package's re-let after the walk (docmute.sty:19, standalone.sty:738).
-- A command re-let after the walk (a renewed `document`, exam-n.cls's `\let\document\@empty`) is its own again.
-  `\document` itself stays the constructor's alias, whose identity `\begin`/`\end` read (sect01.rs): the
-  constructor's second run raises the Error.
-- Token macros in the list are left working, a gap: latex.ltx's (`\makeindex`; TeX's `\let` to `\@notprerr` would
-  print their arguments, and our loader runs `\@pushfilename`/`\@currnamestack` in the body, content.rs) and a
-  document's own (`\newcommand\myonly{M}\@onlypreamble\myonly`, pdflatex 1 Error, ours 0). RED repros
-  `loader/makeindex_in_the_body_red.tex`, `loader/document_onlypreamble_macro_in_the_body_red.tex`.
-- Perl's recovery is wrong where a later command reads the setting: a body `\includeonly{ca}` still drops `\include{cb}`,
-  which pdflatex keeps (RED `loader/includeonly_in_the_body_red/`).
-**Why**: the observable side effect raw code tests for is part of the kernel contract, and pdflatex errs on every
-listed Rust-defined command in the body; the recovery keeps what the command does instead of typesetting its
-arguments. Witnesses: synthetic (30k main files: 45 name one after `\begin{document}`, none in a branch pdflatex
+  records `\do<cs>` as latex.ltx:1224-1226 does (Perl :5594 records nothing). Without a dump it is Perl's 8.
+- A package or class LaTeXML reads in the body (Perl's recovery, a binding's load) and a sub-file's preamble
+  (standalone_sty.rs, subfiles_sty.rs) read the commands as a preamble does, which pdflatex never reaches: the walk
+  keeps each meaning under `\lx@onlypreamble@<name>`, and core `binding::preamble_commands` gives them back around the
+  load (`input_definitions`, from before `\@pushfilename` to after `\@popfilename`) or the sub-file's preamble (to its
+  `\begin{document}`, or where a sub-file without one ends: `gullet::unread_after_current_file`), then walks again.
+  What such a load records with `\@onlypreamble` is dropped (`\@preamblecmds` is `\@notprerr` after), so lppl.tex:44's
+  probe stays true. A loader inside one is no Error (`\@currext` `sty`/`cls`, `inPreamble`).
+- A loader replaced by a binding (docmute_sty.rs, standalone_sty.rs `\documentclass`) stands for its package's re-let
+  after the walk (docmute.sty:19, standalone.sty:738). `\document` stays the constructor's alias, whose identity
+  `\begin`/`\end` read (sect01.rs): the constructor's second run raises the Error.
+- The loaders are not `\@notprerr`: scrlttr2.cls:2313 `\ifx\RequirePackage\@notprerr` reads "no" in the body (RED
+  `loader/loader_is_not_notprerr_red.tex`, the ruling's cost).
+**Why**: the observable side effect raw code tests for is part of the kernel contract (ltnews23.tex:42-43
+`\ifx\DeclareTextCommandDefault\@tempa`, gloss-french.ldf:468 `\ifx\@onlypreamble\@notprerr`), and a body
+`\includeonly{ca}` must print its argument and keep `\include{cb}` as pdflatex does. Witnesses: TL manual ltnews (3
+false Errors before); synthetic (30k main files: 45 name one after `\begin{document}`, none in a branch pdflatex
 takes; 1205.6201's are a conditional's other preambles).
 Guards `preamblecmds_is_notprerr_inside_a_running_document`, `error_boundary::perfect_kernel_error_boundary`
 (rows "preamble-only commands in the body/preamble", "a second \begin{document}", "under an unknown class",
-"a body package's \@onlypreamble").
+"a body package's \@onlypreamble", "a preamble-only command is \@notprerr", "a document's \@onlypreamble macro",
+"a body \includeonly", "a package read in the body", "a subfile's preamble", "a standalone sub-file's preamble",
+"a standalone sub-file with no \begin{document}", "a subfile with no \begin{document}").
 
 ### 227. → SYNC_STATUS "Rust Error Fixes" (a port-bug fix: a `filecontents` capture ends at `\end{<current environment>}`)
 
@@ -6195,6 +6211,8 @@ pushback limit (carbohydrates_en, a pdflatex-clean manual; Perl never draws it).
 by the same mechanism; no witness). Guard
 `perfect_kernel_batch56::pgfmath_division_by_zero_returns_the_dividend`.
 **Upstream**: worth proposing (the epsilon is the port's invention).
+**Target (DG 2026-11-15, post-cutoff; SYNC row R line PGF259):** one rule, pgf's `\divide`, for every native division by
+zero — `pgfmath_divisor` (pgfmath_code_tex.rs:208) still returns EPSILON today.
 
 ### 260. A space token's character code is 32, an end-of-line space included (Perl: 10)
 
@@ -8707,7 +8725,7 @@ reset, as Perl's), the entry's `&` is `\&`, and the alignment level is raised by
 as the argument's braces raise TeX's `align_state` (tex.web §358) — a tabular inside the entry still ends its own
 cells. Witness robustsample (robustsample.tex:45/:59). Guard `perfect_kernel_batch59::index_entry_ampersand_is_literal`.
 
-### 412. → #460 (A g-brief letter's sender and addressee are frontmatter creators (Perl: lost with the first-page style))
+### 412. → Bindings beyond Perl's tree: g-brief.cls (`g_brief_cls.rs`, `g_brief2_cls.rs`)
 
 ### 413. → #767 (A one-shot eso-pic overlay inside a class's title page is the title page's picture (Perl: dropped))
 
@@ -8796,6 +8814,9 @@ held name that is never shown keeps a later live Info quiet. The in-process `con
 reads its verdict after the document is built, as `convert` does (a construction-time error read "No obvious
 problems"). Guards `perfect_kernel_batch59::autoref_names_follow_hyperref`,
 `perfect_kernel_batch56::autoref_name_is_a_name_noun`, `perfect_kernel_batch60::autoref_name_diagnostics_wait_for_an_autoref`.
+**Target (DG 2026-11-15, post-cutoff; SYNC row R line DEFER):** label forms deferred like index/glossary/bibitem,
+typeset where printed through `defer_print` (stomach.rs:2778, :2828), retiring option A and #748's retry; today's code
+is the above.
 
 ### 419. A vertical-mode `\penalty` is a list item that `\vsplit` breaks at (Perl: an item in every mode, never a break)
 
@@ -9476,49 +9497,30 @@ author's contact, never part of the name and never a creator.
 `article_mark_led_second_row_of_one_name_read_as_affiliation_red`, `aa_institute_and_inside_a_macro_group_red`.
 **Upstream.** Not offered (reads digested events). Records: [the archive](../archive/OD_FRONTMATTER_RECORDS_2026-11-15.md), under each number.
 
-### 460. Class bindings map their title-page commands onto the frontmatter API as the class prints them (the CLSFM table) — absorbs #412 #466 #472 #485 #495 #496 #599 #602 #763 #772 #775 #790 #800 #801 #802 #841 #842 #898 #899 #904 #905 #912 #963
+### 460. Class bindings map their title-page commands onto the frontmatter API as the class prints them (the CLSFM table) — absorbs #472 #485 #496 #963
 
 **Rule.** A class or package binding maps each title-page command to a frontmatter API call (`\lx@add@frontmatter`,
 `\lx@annotate@frontmatter`, the `\lx@add@contact*` family), its ownership by the label or key the class prints, and,
 where the binding reads the class raw, overrides only those commands. Each row's detail, witnesses and guards are the
 archive record of its number.
 
-**Perl.** OmniBus.cls.ltxml:62-247 for an unknown class; most of these have no Perl binding (the commands undefined,
-lost, or garbled). **TeX.** Each class's own `\@maketitle` (cited per binding in its module doc).
+**Perl.** Each row's class has a Perl binding the row departs from (svjour3.cls.ltxml, elsarticle.cls.ltxml,
+quantumarticle.cls.ltxml, revtex3_support.sty.ltxml, aastex.cls.ltxml); the bindings Perl lacks (#412 #466 #495 #599
+#602 #763 #772 #775 #790 #800 #801 #802 #841 #842 #898 #899 #904 #905 #912) are in "Bindings beyond Perl's tree", the
+same mapping (DG 2026-11-15, ODDOC-D Q4). **TeX.** Each class's own `\@maketitle` (cited per binding in its module doc).
 
 | # | binding (file) | what maps |
 |---|---|---|
 | 460 | svjour3 EPJ (`svjour3_cls.rs`) | `\thanksref`/`\thankstext`/`\label` → label requests, institute labels, thanks notes |
-| 466 | imsart (`imsart_cls.rs`) | `\ead`, `\author[A]`, `\address[A]`, `\thanksref`, `\arxiv` as the class prints them |
 | 472 | elsarticle, cas (`elsarticle_cls.rs`, `cas_dc_cls.rs`) | `\affiliation` keyvals; keyless text kept as written |
 | 485 | quantumarticle, ptephy (`quantumarticle_cls.rs`, `ptephy_cls.rs`) | tikz at `\begin{document}`; `\name`/`\affil`/`\email` |
-| 495 | OSA (`osa_journal_sty.rs`) | groups, marked addresses, e-mails via `\lx@add@contact@placed` |
 | 496 | REVTeX 2.1 (`revtex3_support_sty.rs`) | `{title}`, `{instit}`, `\moreauthors`, `\receipt` |
-| 763 | an, apa, cclayout (`an_cls.rs`, `apa_cls.rs`, `cclayout_sty.rs`) | `\aaabstract`, `\acknowledgements`, `\Abstract`/`{subject}` |
-| 772 | AISTATS (`aistats_sty.rs`) | `\aistatstitle`/`\aistatsauthor`/`\aistatsaddress`, columns paired |
-| 775 | aero (`aero_cls.rs`) | `\ADsetup` variables at `\maketitle` |
-| 790 | entics/entcs (`entics_cls.rs`) | raw, with elsart's interface (`\thanksref` → `\thanks[key]`) |
-| 800 | webofc (`webofc_cls.rs`) | raw, `\institute`/`\inst`, `\\`-split authors, side caption |
-| 801 | jinstpub (`jinstpub_sty.rs`) | jheppub's plus JINST's extras; e-mails by #805's chain |
-| 802 | vmsta (`vmsta_cls.rs`) | `\email`, `\ead`, `\address[label]` → their authors' contacts |
-| 841 | jpconf (`jpconf_cls.rs`) | raw, then iopart_support's `\address`/`\ead` |
-| 842 | bmcart (`bmcart_cls.rs`) | raw, then its title/author/address printers |
-| 898 | eptcs (`eptcs_cls.rs`) | `\institute`, `\email` inside `\author` each a line under the names |
-| 899 | lmcs (`lmcs_cls.rs`) | an author's letters request the labelled addresses; `\lmcsorcid` |
-| 904 | pos.sty, rmaa (`pos_sty.rs`, `rmaa_cls.rs`) | title-page setters routed through the API before the raw read |
-| 905 | fcs, dgruyter (`fcs_cls.rs`, `dgruyter_sty.rs`) | `\author*[labels]`: corresponding contact; `\address[n]` labelled n (revtex4_support's `\affil` half: KNOWN_PERL_ERRORS #1199); a contact printing no letter or digit (fcs's "✉") keyed by its symbol, so written (`emitter/plan.rs:63 contact_key`, `:73 symbol_key`; PR #866) |
-| 912 | just.cls (`cpc_hepnp_cls.rs`, cpc-hepnp renamed; registered for just only, `latexml_package/src/lib.rs:624-627`) | `\email`, `\address` after `\maketitle` |
 | 963 | AASTeX 6+ (`aastex_cls.rs`) | `\email` after `\correspondingauthor{X}` before any `\author` is X's |
-| 412 | g-brief (`g_brief_cls.rs`, `g_brief2_cls.rs`) | the letter's sender and addressee → creators (FURN) |
-| 599 | egpubl (`egpubl_cls.rs`) | the title-page copyright line (FURN) |
-| 602 | Wiley NJD (`wileynjd_cls.rs`) | `\doiheadtext` → a DOI note (FURN) |
 
 **Witnesses and guards** per row in the archive record of its number; e.g.
-`perfect_kernel_batch78m::bmcart_frontmatter_is_frontmatter`, `perfect_kernel_batch63::author_svjour3_and_piece_splits`,
-`perfect_kernel_batch104d::an_aastex6_email_after_correspondingauthor_is_the_correspondents`,
-`perfect_kernel_batch61::brief_letter_sender_is_frontmatter`, `perfect_kernel_batch74b::apa_acknowledgements_are_kept_in_every_mode`.
-RED: `rmaa_altaffiltext_marks_red`, `vmsta_emails_and_addresses_are_contacts_red`. **Upstream.** Each binding is offerable
-as a Perl `.ltxml`. Records: [the archive](../archive/OD_FRONTMATTER_RECORDS_2026-11-15.md).
+`perfect_kernel_batch63::author_svjour3_and_piece_splits`,
+`perfect_kernel_batch104d::an_aastex6_email_after_correspondingauthor_is_the_correspondents`. **Upstream.** Each
+binding's mapping is offerable to its Perl `.ltxml`. Records: [the archive](../archive/OD_FRONTMATTER_RECORDS_2026-11-15.md).
 
 ### 461. A labelled annotation relocated into a title is the title's note (Perl: an `ltx:contact` there, schema-invalid)
 
@@ -9605,7 +9607,7 @@ email (`\name A \email a@b`, the JMLR idiom) is the author's email contact (#465
 
 ### 465. → #805 (A name line's trailing address is the author's email (Perl: undefined markup, the address in the name))
 
-### 466. → #460 (imsart's frontmatter as the class prints it (Perl: lost or garbled))
+### 466. → Bindings beyond Perl's tree: imsart.cls (`imsart_cls.rs`)
 
 
 ### 467. → KNOWN_PERL_ERRORS #540 (Pruning an empty column shrinks an empty spanner over it, and a covered `\multirow` spans no rows (Perl: the row slides, the span overruns))
@@ -10058,7 +10060,7 @@ column glue, `[decl]`, struts and the box's default `[b]` position not modelled.
 
 ### 494. → Bindings beyond Perl's tree: epl2.cls, epl.cls (`epl_cls.rs`)
 
-### 495. → #460 (The OSA journal styles have a binding (Perl: a missing package))
+### 495. → Bindings beyond Perl's tree: the OSA journal styles (`osa_journal_sty.rs`)
 
 ### 496. → #460 (REVTeX 2.1's frontmatter environments are part of revtex3_support (Perl: `{instit}` undefined, the title a first token))
 
@@ -12018,7 +12020,7 @@ the PDF shows one glyph. Approved by the main session 2026-10-15 (round-1 open q
 (astro-ph0309194, astro-ph0510296, astro-ph0401471), `\dZ`/`\dR`… (math0308074, math0212055, astro-ph0410557).
 Repro class-bindings/kluwer_class_commands; guard `perfect_kernel_batch67y::kluwer_class_commands_are_defined`.
 
-### 599. → #460 (egpubl's title-page copyright line is the frontmatter copyright (Perl: no egpubl binding))
+### 599. → Bindings beyond Perl's tree: egpubl.cls (`egpubl_cls.rs`)
 
 ### 601. Wiley NJD's table notes open no empty first item (Perl: no Wiley binding)
 
@@ -12032,7 +12034,7 @@ class-bindings/wileynjd_v2_class_commands, wileynjdv5_box_environments; guards
 `perfect_kernel_batch67w::wileynjd_v2_class_commands`, `::wileynjdv5_box_environments`. Approved by the main session
 2026-10-15 (round-1 open question).
 
-### 602. → #460 (Wiley NJD's `\doiheadtext` is a DOI note (Perl: no Wiley binding))
+### 602. → Bindings beyond Perl's tree: Wiley NJD (`wileynjd_cls.rs`)
 
 ### 603. A `\section` opening Wiley NJD's `{boxtext}` is the box's head (Perl: no Wiley binding)
 
@@ -12129,7 +12131,7 @@ llncs_spothm_section_reset_v220_copy, llncs_autoref_envcountsame, llncs_autoref_
 llncs_alias_newcounter}`. Witnesses 2202.10090, 2601.04573 (`\@spothm`), 2412.05162 (`\let\c@case\relax` before
 `\spnewtheorem{case}[theorem]`), 2303.08726 (`\newcounter{case}` of the alias), 1612.00484.
 
-### 615. → KNOWN_PERL_ERRORS #1111 (llncs and svjour join a theorem's section number to its own with a period; ours uses the class's empty `\@thmcountersep`, "X 11" as pdflatex, llncs_cls.rs:478 — overriding the 2026-10-16 ruling for "X 1.1", an open question for DG recorded there)
+### 615. → KNOWN_PERL_ERRORS #1111 (llncs and svjour join a theorem's section number to its own with a period; ours uses the class's empty `\@thmcountersep`, "X 11" as pdflatex, llncs_cls.rs:478 — TeX wins, DG 2026-11-15; the 2026-10-16 ruling for "X 1.1" retired)
 
 ### 616. An ORCID iD given as its orcid.org address is the iD (Perl: the contact holds the text as written)
 
@@ -13958,7 +13960,7 @@ answers from the categories filed so far (it took three arguments and printed bo
 question about the entry being typeset, is always false. **Why**: the
 author's split bibliography — which entries pdflatex lists under each heading, and the one label each entry has.
 
-### 763. → #460 (an.cls, apa.cls and cclayout.sty title-page stores are the frontmatter (Perl: OmniBus for the classes, an Error on `{subject}`))
+### 763. → Bindings beyond Perl's tree: an.cls, apa.cls, cclayout.sty (`an_cls.rs`, `apa_cls.rs`, `cclayout_sty.rs`)
 
 ### 764. A shipped class's pre-2020 `\@pushfilename` is read with the pop of its era (TL 2025 pdflatex: errors; Perl: OmniBus)
 
@@ -14031,7 +14033,7 @@ bypassed under raw loading; the class's `\@maketitle` never runs under the locke
 **Sub-rules** (`latexml_engine/src/frontmatter_stores.rs` module doc)
 - *The table*: `latexml_core/src/binding/store_setters.rs:22 STORE_SETTERS` (655 TL classes surveyed; a synonym table,
   never a name pattern); a setter a binding defined is the binding's.
-- *The run*: `frontmatter_stores.rs:4853 before_title_page_runs`, `:4469 sentinel_runs` (letters and digits sentinels;
+- *The run*: `frontmatter_stores.rs:4897 before_title_page_runs`, `:4513 sentinel_runs` (letters and digits sentinels;
   a numeric context consumes the digits), confirmed with the document's values; the `\maketitle` replay gate reads the
   class body as TeX runs it (`latex_constructs/sect05.rs:2241`; formerly #756).
 - *Static readers* (the fallback, retiring post-cutoff, ruling 9): `:1423 prints_as_a_value`, `:1480
@@ -14041,6 +14043,14 @@ bypassed under raw loading; the class's `\@maketitle` never runs under the locke
   prints (formerly #939); a raw package's stores (formerly #940); a mark before a pure store (formerly #941); displaced
   affiliation text (formerly #955); a class-numbered `\institute` by numbers (formerly #791); neurips's
   `\@projectpage` (formerly #741); wiley-article and CSML (formerly #758).
+- *A labelled off-table store* (QA61, DG 2026-11-15; BM Q3.13): one the run prints right after the class's own label, in
+  a line holding no other value and not glued to the class's text, is an `ltx:pubnote` named by the label even where the
+  deposit or replay typesets it; they read it as empty and take the label out, from the line the label was read in
+  (`decide_moved_offtable_stores`). The line runs between line breaks in the innermost group around the store that is
+  no argument a face or box prints (`\texttt`, `\mbox`, `\href`'s text), or in the macro's body: `\texttt{\@x} \@y\par` and `E-mail: \@x, tel.\ \@y\par` stay
+  (`store_lines_among`; the other readers of `store_lines` keep the innermost group). The class
+  prints its title and names bare, so an unlabelled store stays where the deposit typesets it (SelfArx `\PaperTitle`,
+  2011.01685), as one glued to its text (fundam `FI-\@publyear`, 2006.07415) or read by its `\title`/`\author`/`\@author`.
 - *Page furniture* (FURN): a one-shot eso-pic overlay is the title page's picture (`eso_pic_sty.rs`; formerly #413);
   textpos blocks are placed where written (`textpos_sty.rs`; formerly #416); a copyright line only a page foot prints
   is a frontmatter note (formerly #432).
@@ -14049,7 +14059,8 @@ bypassed under raw loading; the class's `\@maketitle` never runs under the locke
 (medima.sty), 0712.1312 (copernicus), 1206.6940. **Guards**
 `perfect_kernel_batch94b::a_class_body_calls_a_setter_through_one_token`,
 `perfect_kernel_batch94b::a_contact_in_running_text_stays_the_class`,
-`perfect_kernel_batch95d::a_date_with_no_label_read_keeps_its_default_only_where_printed`. RED:
+`perfect_kernel_batch95d::a_date_with_no_label_read_keeps_its_default_only_where_printed`,
+`perfect_kernel_batch77i::offtable_store_typeset_by_the_title_page`. RED:
 `mark_then_store_email_read_by_a_refused_abstract_red`. **Upstream.** Not offered (Perl runs no raw class title page).
 Residuals: `\ifnum`-tested and `\romannumeral` stores (`frontmatter_stores.rs:4380-4390`). Records: [the archive](../archive/OD_FRONTMATTER_RECORDS_2026-11-15.md).
 
@@ -14198,7 +14209,7 @@ revtex40_preprint_numbers_follow_the_class}`.
 
 ### 771. → Bindings beyond Perl's tree: blkarray.sty (`blkarray_sty.rs`)
 
-### 772. → #460 (The AISTATS styles' title-block setters are the frontmatter, one binding for every year (Perl: no binding))
+### 772. → Bindings beyond Perl's tree: the AISTATS styles (`aistats_sty.rs`)
 
 ### 773. A second `\documentstyle` raises LaTeX's error and loads no class (Perl: applies latex209 and the class again)
 
@@ -14231,7 +14242,7 @@ binding applies them (`six_begin_processing_for_units`), and an explicit empty v
 per-unit `number-unit-product = \ ` puts its interword space before nm/dBm. 77r r2; repro
 `package-bindings/siunitx_unit_named_by_its_own_char_code`; guard `perfect_kernel_batch77r::siunitx_*`.
 
-### 775. → #460 (aero.cls's `\ADsetup` title page is the frontmatter (Perl: no aero binding, `\ADsetup` undefined))
+### 775. → Bindings beyond Perl's tree: aero.cls (`aero_cls.rs`)
 
 ### 776. → KNOWN_PERL_ERRORS #1264 (A Cyrillic text symbol set in a Latin letter's slot (T2A/T2B/T2C) is that Cyrillic letter (Perl: the Latin letter))
 
@@ -14550,7 +14561,7 @@ corpus paper has the shape). 71 vmsta papers (1508.02842, 1411.4499, 1601.01109)
 class-bindings/vmsta/vmsta_title_page_name_parts_red, vmsta_first_name_without_surname_red; guards
 `perfect_kernel_batch77t::{vmsta_title_page_name_parts, vmsta_first_name_without_surname}`.
 
-### 790. → #460 (entics.cls and entcs.cls are read raw with elsart's frontmatter interface)
+### 790. → Bindings beyond Perl's tree: entics.cls, entcs.cls (`entics_cls.rs`)
 
 ### 791. → #767 (A class-numbered `\institute` store goes to the authors by their numbers)
 
@@ -14577,11 +14588,11 @@ after `\appendix` numbers its appendices from "A" with their letters, as the cla
 "APPENDIX B"). Authored content first: the destroyed argument is the author's text. Repro
 sectioning-frontmatter/ieeetran_appendix_with_a_title_is_one_appendix; guard
 `perfect_kernel_batch78d::ieeetran_appendix_with_a_title_is_one_appendix` (KNOWN_PERL_ERRORS #1022).
-### 800. → #460 (webofc.cls is read raw with the `\inst` frontmatter, its side caption a caption)
+### 800. → Bindings beyond Perl's tree: webofc.cls (`webofc_cls.rs`)
 
-### 801. → #460 (jinstpub.sty is jheppub's frontmatter with JINST's extras)
+### 801. → Bindings beyond Perl's tree: jinstpub.sty (`jinstpub_sty.rs`)
 
-### 802. → #460 (vmsta's e-mails and addresses are their authors' contacts)
+### 802. → Bindings beyond Perl's tree: vmsta.cls (`vmsta_cls.rs`)
 
 ### 803. → #981 (A frontmatter note all of whose content became contacts is not emitted)
 
@@ -15023,9 +15034,9 @@ guards `perfect_kernel_batch78l::{tblr_setcell_spans_columns_and_rows, tblr_setc
 
 ### 840. → #993 (A space a name sets before its own mark is the name's; spacing-only math, `\enskip` after a mark part names)
 
-### 841. → #460 (jpconf.cls is read raw, then its address and e-mail blocks are the frontmatter)
+### 841. → Bindings beyond Perl's tree: jpconf.cls (`jpconf_cls.rs`)
 
-### 842. → #460 (bmcart.cls is read raw, then its title, author and address printers are the frontmatter)
+### 842. → Bindings beyond Perl's tree: bmcart.cls (`bmcart_cls.rs`)
 
 ### 844. A citation's ordering is a class on its `ltx:bibref`, applied where the numbers are known
 
@@ -16173,9 +16184,9 @@ cross-references/newlabel_records_name_their_references; guard
 
 ### 897. → #993 (Names parted by horizontal space alone are separate creators (Perl: one author holds them))
 
-### 898. → #460 (eptcs.cls: `\institute` and `\email` inside `\author` are each a line under the names (Perl: no binding))
+### 898. → Bindings beyond Perl's tree: eptcs.cls (`eptcs_cls.rs`)
 
-### 899. → #460 (lmcs.cls: an author's letters request the addresses they label; `\lmcsorcid` is the author's ORCID (Perl: no binding))
+### 899. → Bindings beyond Perl's tree: lmcs.cls (`lmcs_cls.rs`)
 
 ### 900. → #459 (An unmarked author block's next name line under the lines of the name above starts the next author (Perl: the first author holds every line))
 
@@ -16241,9 +16252,9 @@ omnibus_kwd_entries_add_up, omnibus_kwd_blocks_each_entry_once, amsart_document_
 
 ### 903. → #262 (An abstract placed ahead of title-page text pdflatex prints before it follows that text, wrapped as a continued `<titlepage>` (Perl: the text after the abstract, or lost))
 
-### 904. → #460 (pos.sty and rmaa.cls have bindings: their title-page stores are the frontmatter (Perl: no binding; pos.sty unread, an empty name; rmaa through OmniBus))
+### 904. → Bindings beyond Perl's tree: pos.sty, rmaa.cls (`pos_sty.rs`, `rmaa_cls.rs`)
 
-### 905. → #460 (fcs's and dgruyter's `\author*[labels]` mark the corresponding author and request its labelled affiliations (Perl: no fcs or dgruyter author binding, the authors mangled))
+### 905. → Bindings beyond Perl's tree: fcs.cls, dgruyter.sty (`fcs_cls.rs`, `dgruyter_sty.rs`)
 
 ### 906. The `\maketitle` replay gate does not run what `\ifx` and its kin only compare or show; the full stop closing an IEEE author block after a grade is no part of its names, and the notes after it stay the block's (Perl: the class body is never run; IEEE grades dropped)
 
@@ -16439,7 +16450,10 @@ a mark is what prints as a superscript beside the name.
   #924), `:185 label_owners` (Perl's prefix chain); a label several `\and` columns answer is each column's, a compound
   symbol mark all its symbols' (formerly #927).
 - *Hand marks*: a numbered entry owned by a hand-printed mark is ruling 1's; one whose lines marks lead is split at them
-  (formerly #918); a mark-led affiliation is the entry it labels (formerly #937).
+  (formerly #918; amended by #924: a `_share=authors` entry — llncs's one `\institute`, its number never printed,
+  llncs.cls:878-883, and aa's since #932 — is requested only by the class's `\inst{n}`, never by a hand mark, so
+  `Ann Able$^{1,2}$` over `\institute{{1} Univ A \\ {2} Univ B}` leaves it the block's, `resolver/post.rs:993
+  answer_pending`); a mark-led affiliation is the entry it labels (formerly #937).
 - *A glued script is text*: a script a letter or digit prints after in its own formula (an isotope prescript,
   `${\rm ^{3}He}$`, `${}^{87}{\rm Rb}$`) is the formula's text, not a mark, unless a name requests it or, none
   requesting, it opens its line (`events/lexer.rs:561`; 2105.07958, 1006.5052).
@@ -16456,7 +16470,7 @@ a mark is what prints as a superscript beside the name.
 `perfect_kernel_batch90a::a_script_before_printed_ink_or_on_a_base_is_text`. RED:
 `llncs_thanks_requested_mark_legend_read_as_affiliation_red`. **Upstream.** Not offered. Records: [the archive](../archive/OD_FRONTMATTER_RECORDS_2026-11-15.md).
 
-### 912. → #460 (just.cls (Chinese Physics C's cpc-hepnp.cls under the PhiPsi15 name) has a binding: its `\email` is the author's e-mail and its `\address` after `\maketitle` the names' affiliations; cpc-hepnp itself waits for 91c (Perl: no binding; through OmniBus the list is one address of the last author))
+### 912. → Bindings beyond Perl's tree: just.cls (`cpc_hepnp_cls.rs`)
 
 ### 913. → #911 (The observer reads a mark of `\ref`s as one mark with every key, a publication note's e-mail calls by the charter's chain, and the frontmatter clears (Perl: no observer; its labels split `\ref{…}` by ToString, `cleanFrontmatterLabels`))
 
@@ -17883,7 +17897,9 @@ text; a note with no ink prints a mark only.
 **Sub-rules**
 - *No ink*: resolver rule 9 (`observer/resolver/mod.rs` module doc; `Event::inkless`): a note whose content all became
   contacts (formerly #803: aa/webofc `\fnmsep\thanks{\email{…}}`), or whose content prints nothing (formerly #916:
-  `\thanks{}`; user ruling 2026-10-30, FIDELITY_CHARTER §2, §4).
+  `\thanks{}`; user ruling 2026-10-30, FIDELITY_CHARTER §2, §4). A note whose only ink has no letter or digit (a command's
+  text, a math token, a rule, `\colorbox`) is dropped as well, named in the content check's Warning: accepted (DG 2026-11-15,
+  old #916's "only a note with no ink" retired).
 - *Take-outs* keep what they did not take (formerly #944): aa's `\mail` labelled as the paper's copy prints it
   (aa_support.sty.ltxml:118-119), an emptied entry's label kept, a store's label read before its printed occurrence
   (`resolver/labels.rs:985 address_take_out`, `:1112 take_labels`).
@@ -17899,7 +17915,9 @@ repros record it): #802 vmsta's initials GREEN (`vmsta_title_page_name_parts`, a
 deleted); #905 GREEN (LOSTF); #908 RED (`ijcai_binding_emails_in_author_order_red`); #911 GREEN (ISO1,
 `revtex_affiliation_isotope_prescript_keeps_its_line`); #912 the TSV's known deficit
 (repro `just_marked_address_after_maketitle`, no guard: each name its marked lines, the marks kept as text in the
-names, "Ann Able 1,2"); #916 RED for the inked notes (`kernel_thanks_colorbox_is_ink_red` and its five siblings; their counts a row of
+names, "Ann Able 1,2"); #916's inked notes (command text, math tokens, rules and frames, `\colorbox`, an empty superscript, an
+undefined command) are dropped and counted by the content check's Warning — the drop accepted and the REDs retired (DG
+2026-11-15; `kernel_thanks_colorbox_is_ink_red` and its six siblings, `status: RETIRED`, their counts rows of
 `perfect_kernel_batchhg1::reds_keep_their_counts_and_right_parts`); #920 RED
 (`ptephy_author_given_twice_keeps_the_last_red`: Univ A lost, 3 Warnings); #941 RED
 (`mark_then_store_email_read_by_a_refused_abstract_red`, its mark a second e-mail contact; #767), its LOSTF part GREEN
@@ -18372,12 +18390,14 @@ Guard `perfect_kernel_batchcr8::an_unmarked_frontmatter_note_renders_inline_with
 
 ### 992. → #805 (AASTeX's `\affil` e-mail lines are the API's to place: the line goes as the affiliation it is written as, the Kind and Link steps place its addresses (Z18l))
 
-### 993. An author call is cut at the separators its digested argument means — `\and` and its family, a break, a wide space — read by meaning — absorbs #36 #48 #445 #765 #804 #840 #897 #994 #995 #1009
+### 993. An author call is cut at its separators: the rehearsal reads `\and` and its family, a break, a wide space by meaning; the bindings' token splitters cut by spelling — absorbs #36 #48 #445 #765 #804 #840 #897 #994 #995 #1009
 
 **Rule.** The names of an author block are parted where the rehearsal's digested list holds a separator event: a
 `Sep(And)` whatever spells it (literal, held in a macro, a `\let` copy, `\csname and\endcsname`), a line break, or the
 horizontal space pdflatex sets between names. A binding asks the same question by meaning through one query, and a
-binding's marked list is cut by the API's Cut as the binding declares it.
+binding's marked list is cut by the API's Cut as the binding declares it. The token splitters a binding calls on its
+arguments (`split_tokens`, `\lx@splitting`) cut by spelling, as Perl's `SplitTokens` does: today's code, kept as generic
+binding utilities (DG 2026-11-15).
 
 **Perl.** `SplitTokens` matches the separator tokens before digestion (Base_Utility.pool.ltxml:114-140, `@authorsplits`
 :679-680 `\and \And \AND , " and " \quad \qquad`; `Equals` by meaning, Common/Object.pm:100-103), so a separator a macro
@@ -18397,10 +18417,11 @@ hides, a wrapper prints, or spaces alone set, is not seen; " and " only between 
 - *Space-parted names* (formerly #897, #840, #765): a wide space between names parts them (`resolver/lines.rs:1137
   only_gap_between`, `:1150 name_continues_at_gap`, `:1352 gap_inside_one_command`); a space a name sets before its
   own mark stays the name's; " and " beside a control word, a break or a mark is a separator.
-- *Token splits that remain* (bindings' and Perl's fallback): `tokens.rs:96 split_tokens` does not cut inside balanced
-  `(…)` (`:39 paren_close_offset`) or before a closing environment (`classify/preprocess.rs:233
+- *Token splits by spelling* (the bindings' utilities and Perl's fallback; DG 2026-11-15: "split_tokens in particular has
+  generic utility for bindings", so they stay spelling splitters): `tokens.rs:96 split_tokens` (21 call sites) does not
+  cut inside balanced `(…)` (`:39 paren_close_offset`) or before a closing environment (`classify/preprocess.rs:233
   environment_closes_ahead`; formerly #36); `\lx@splitting` at `\\` drops the break's `*` and `[…]`
-  (`defs/general.rs:178`; formerly #804). These still cut by spelling, as does #996's `\@author` tail (RED below).
+  (`defs/general.rs:178`; formerly #804). #996's `\@author` tail also cuts by spelling (RED below).
 - *Font wrappers*: the reading sees the commas inside `\textbf{A$^1$, B$^1$, C$^1$}` as digested, so no wrapper hides a
   separator from it (formerly #48, whose token rule was the deleted `split_author_line`'s).
 - *A binding's marked list* (formerly #1009): `defs/frontmatter_api.rs:84 cut_list`, each mark shown as written.
@@ -18557,6 +18578,8 @@ pgfmath expression: pdflatex reports "Unknown function" / "Undefined control seq
 first, binds the names only where one survives (pgf's order, DTL1g), returns calc's value, and raises one Warning per parse
 (`pgfmath_code_tex.rs`). Reason: the staged rule (2) — only TeX errs, and the recovery carries the meaning the author wrote.
 Guard `error_boundary::perfect_kernel_error_boundary` (the calc rows and their safe twin).
+**Target (DG 2026-11-15, post-cutoff with an A/B; SYNC row R line PGF1007):** follow pgf — "Unknown function" and 0,
+`calc_compat_expand` (pgfmath_code_tex.rs:2247) retired; today's code is the above.
 
 ### 1008. A `cmd/<name>/<hook>` hook on a command LaTeXML binds does not run: a Warning for the document's code, an Info for a class's or package's (QA47A)
 
@@ -18695,7 +18718,12 @@ hhline, subcaption, subfig, natbib's `cite`, quantumarticle, sn-jnl, changepage,
 `binding_loaded`, `raw_loaded`: the autoload triggers, `\documentstyle`'s fallback, the class dispatch, amsmath's
 beyond-original load). Two writes follow: a binding that stands in for a file its original loads marks it as that load
 does (`state::mark_loaded`: thmtools's thm-patch.sty, aipproc's aipxfm.sty); revtex4_support's preload of hyperref,
-which the real class never loads, undefines `\ver@hyperref.sty` with its record (`state::unmark_loaded`); a request the records skip restores a
+which the real class never loads, undefines `\ver@hyperref.sty` with its record (`state::unmark_loaded`), and so does the
+format's preload of textcomp (sect13.rs; Perl latex_constructs.pool.ltxml:5893 leaves it loaded), whose definitions
+latex.ltx carries without `\ver@textcomp.sty`: the document's first load runs its file and package hooks (TL manual
+biblatex-sbl, `\AfterPackage{textcomp}`; guard `perfect_kernel_batchqa47a` row `afterpackage_of_the_formats_textcomp`), and,
+as textcomp.sty v2.1b (:52-75), declares and processes the options only: the symbols are not defined again over the
+document's (textcomp_sty.rs reads `binding_loaded`; row `textcomp_after_the_format_keeps_the_documents_symbols`); a request the records skip restores a
 mark the document took back (`\let\ver@X\relax` then `\usepackage{X}` leaves X loaded, as LaTeX's reload does; the loader's
 records-only skip is the ruling of 2026-10-14) with the file's declared version, as the binding load does. A loader marks
 the file unless it is loaded by this rule: a `\relax` left by a query before the load (`\expandafter\ifx\csname ver@X.sty\endcsname\relax`,
@@ -19204,7 +19232,10 @@ atveryend's commands are no-ops: every hook's code is dropped.
 **Rust.** With the kernel's hooks loaded: `\end{document}` runs `env/document/end` before `\enddocument` (:15386);
 `\begin{verbatim}`/`{verbatim*}` run `env/<name>/begin|end` (no DefEnvironment fires them; etoolbox's
 `\AtBeginEnvironment{verbatim}` joins the same hook, its private store gone); `\label` runs
-`\UseHookWithArguments{label}{1}{#1}` in a group (:14943); `\include` names the file current and runs `include/before`,
+`\UseHookWithArguments{label}{1}{#1}` in a group (:14943), with the `\@currentcounter` `\refstepcounter` sets (a local
+`\let`, none for `*`, :14958-14962; Perl's `RefStepCounter`, Package.pm:755-779, sets only `current_counter`;
+unbtex-example's `\cref@updatelabeldata{\@currentcounter}`, unbtex.cls:485-493, read it empty: a Fatal pushback loop);
+`\include` names the file current and runs `include/before`,
 `include/<name>/before`, `/end`, `/after`, and `include/excluded` for a file `\includeonly` leaves out (:9609-9627).
 The kernel's abstract, a binding macro, runs `env/abstract/begin` inside the abstract's group before `\abstract`
 (:15354-15362) — ahead of the abstract's name and the class's replayed begin code, what it typesets heading the body —
@@ -19231,7 +19262,11 @@ see). The kernel's first aid for cleveref.sty (latex2e-first-aid-for-external-fi
 labelled `firstaid`) is not registered under cleveref's binding, which replaces the code it repairs (DG 2026-11-14):
 its `label` hook code cost 3.5M instructions a `\label`. It is removed only where the chunk is registered
 (`hook_has_labelled_code`; the chunk dates from 2024-03-22, firstaid changes.txt), as lthooks warns "Cannot remove
-chunk" for a missing one. **Open** (post-merge, catalog): `\label`'s hook runs after the label is recorded, where
+chunk" for a missing one. **Open** (post-merge, catalog): a note steps its counter after its text is digested
+and an align or gather row after its cells (Perl's order), so a label hook there reads the enclosing counter (or, in an
+align's later row, the previous row's step) where
+latex.ltx's `\@footnotetext` and `\@mpfootnotetext` define it (:17664, :16350) and amsmath has stepped `equation`
+(`label_hook_currentcounter_stepped_after_the_body_red`); `\label`'s hook runs after the label is recorded, where
 latex.ltx runs it before the `.aux` write, so a hook's `\@currentlabel` does not reach `\ref`
 (`label_hook_sets_the_reference_text_red`); a DefEnvironment runs its begin hooks before its `\@currenvir` (Perl
 Package.pm:1920-1927; `environment_begin_hook_reads_its_environment_red`: moving it alone raised 2001.02707's
@@ -19248,7 +19283,7 @@ ahead of `\maketitle` stays in the abstract, where pdflatex prints it before the
 `label_hook_runs`, `include_hooks_run`, `label_hook_opens_no_paragraph`, `cleveref_firstaid_not_registered`,
 `cleveref_firstaid_absent_removes_nothing`, `file_hooks_run_at_every_input`, `file_hooks_order_around_a_package`,
 `abstract_env_hooks_run`, `selectfont_hook_runs`, `abstract_end_hook_once_in_a_constructor_abstract`,
-`abstract_begin_hook_runs_before_the_name`).
+`abstract_begin_hook_runs_before_the_name`, `label_hook_reads_currentcounter`).
 
 ### 1045. Every box's width, height and depth are the CSS custom properties `--ltx-box-width`, `--ltx-box-height`, `--ltx-box-depth` (Perl: `style="width:…;height:…;vertical-align:…"`, or dropped)
 
@@ -19502,12 +19537,15 @@ until they move into the binding module's `//!` doc comment (a code PR; this PR 
 | apacite.sty | `apacite_sty.rs` | apacite's reference-list layer runs verbatim, less three layout-only details | #342 |
 | tabularray.sty | `tabularray_sty.rs` | tabularray tables are reduced to the kernel's `tabular`/`array` | #384 |
 | tcolorbox.sty | `tcolorbox_sty.rs` | A tcolorbox listing box is a listings environment that reads its own begin line (Perl: raw tcblistings through a temp file) | #410 |
+| g-brief.cls | `g_brief_cls.rs`, `g_brief2_cls.rs` | A g-brief letter's sender and addressee are frontmatter creators (Perl: lost with the first-page style) | #412 |
 | tocloft.sty | `tocloft_sty.rs` | tocloft keeps the kernel's lists (Perl: no binding, the lists lost under `rawstyles`) | #446 |
 | pinlabel.sty | `pinlabel_sty.rs` | pinlabel.sty is read raw, and pdfTeX's `\pdfximage` keywords and `\pdfximagebbox` are implemented (Perl: neither) | #458 |
+| imsart.cls | `imsart_cls.rs` | imsart's frontmatter as the class prints it (Perl: lost or garbled) | #466 |
 | paspconf.sty, caption2.sty | `paspconf_sty.rs`, `caption2_sty.rs` | paspconf is bound to aaspp, caption2 by its own name, and a keyless `\reference` starts an unkeyed entry (Perl: OmniBus, the caption fallback, the first letter as key) | #483 |
 | axodraw.sty | `axodraw_sty.rs` | axodraw v1 is a native binding that draws its PostScript procedures into the picture model (Perl: no binding; a shipped copy draws nothing) | #492 |
 | l-aa (`\documentstyle`) | `l_aa_cls.rs` | `\documentstyle{l-aa}` is the `aa` class with L-AA's own commands (Perl: OmniBus, `\thesaurus` undefined) | #493 |
 | epl2.cls, epl.cls | `epl_cls.rs` | `epl2`/`epl` have a class binding (Perl: OmniBus, the bibliography macros undefined) | #494 |
+| the OSA journal styles | `osa_journal_sty.rs` | The OSA journal styles have a binding (Perl: a missing package) | #495 |
 | REVTeX 3 | `revtex3_support_sty.rs` | REVTeX 3's own options, numbering and author lists belong to revtex3_support (Perl: its options missing, OmniBus loaded over the binding) | #504 |
 | svmono.cls | `svmult_cls.rs` | svmono uses the svmult binding (Perl: no svmono binding, the class raw-loaded) | #512 |
 | MnSymbol.sty | `mnsymbol_sty.rs` | The MnSymbol binding declares every MnSymbol name, and a name already defined keeps its definition (Perl: no binding; MnSymbol.sty redeclares the whole AMS set) | #545 |
@@ -19515,6 +19553,8 @@ until they move into the binding module's `//!` doc comment (a code PR; this PR 
 | SIunits.sty | `siunits_sty.rs` | SIunits defines its own commands and units over the siunitx shim (Perl: a siunitx shim with `\squaren` only) | #565 |
 | diagrams.tex | `diagrams_tex.rs` | Paul Taylor's `diagrams`: a diagram is a math array of its objects and arrows (Perl: `<ERROR>{diagram}</ERROR>`) | #589 |
 | pict2e.sty | `pict2e_sty.rs` | pict2e keeps the `\@tempdimd` of its pre-2020 versions and its graph-code layer (Perl: raw pict2e, TL 2025) | #590 |
+| egpubl.cls | `egpubl_cls.rs` | egpubl's title-page copyright line is the frontmatter copyright (Perl: no egpubl binding) | #599 |
+| Wiley NJD | `wileynjd_cls.rs` | Wiley NJD's `\doiheadtext` is a DOI note (Perl: no Wiley binding) | #602 |
 | breqn.sty | `breqn_sty.rs` | breqn's displays are equations and equation groups; breqn.sty is not read raw (Perl: no breqn binding) | #607 |
 | hyperref.sty, url.sty | `hyperref_sty.rs`, `url_sty.rs` | hyperref's index page numbers and url's `\Url@FormatString` are text (no PDF page anchors, no url math) | #608 |
 | beilstein.cls, lni.cls, apa6.cls, apa.cls | `beilstein_cls.rs`, `lni_cls.rs`, `apa6_cls.rs`, `apa_cls.rs` | beilstein.cls, lni.cls, apa6.cls and apa.cls author blocks are bindings over the raw class (Perl: no binding) | #644 |
@@ -19522,7 +19562,21 @@ until they move into the binding module's `//!` doc comment (a code PR; this PR 
 | cjs-rcs-article.cls | `cjs_rcs_article_cls.rs` | cjs-rcs-article.cls is a binding over the raw class: its environ-collected abstracts and keywords are the frontmatter (Perl: no binding) | #660 |
 | smfart.cls, projlib-author.sty | `smfart_cls.rs`, `projlib_author_sty.rs` | smfart.cls and projlib-author.sty are bindings over the raw files: the other-language abstract and the author-block lines are the frontmatter (Perl: no binding) | #661 |
 | appolb.cls | `appolb_cls.rs` | appolb.cls (Acta Physica Polonica B), not in TeX Live and mostly not shipped, is bound over OmniBus | #719 |
+| an.cls, apa.cls, cclayout.sty | `an_cls.rs`, `apa_cls.rs`, `cclayout_sty.rs` | an.cls, apa.cls and cclayout.sty title-page stores are the frontmatter (Perl: OmniBus for the classes, an Error on `{subject}`) | #763 |
 | blkarray.sty | `blkarray_sty.rs` | A blkarray block's preamble formats its rows; its delimiters are dropped (Perl: no blkarray binding) | #771 |
+| the AISTATS styles | `aistats_sty.rs` | The AISTATS styles' title-block setters are the frontmatter, one binding for every year (Perl: no binding) | #772 |
+| aero.cls | `aero_cls.rs` | aero.cls's `\ADsetup` title page is the frontmatter (Perl: no aero binding, `\ADsetup` undefined) | #775 |
+| entics.cls, entcs.cls | `entics_cls.rs` | entics.cls and entcs.cls are read raw with elsart's frontmatter interface | #790 |
+| webofc.cls | `webofc_cls.rs` | webofc.cls is read raw with the `\inst` frontmatter, its side caption a caption | #800 |
+| jinstpub.sty | `jinstpub_sty.rs` | jinstpub.sty is jheppub's frontmatter with JINST's extras | #801 |
+| vmsta.cls | `vmsta_cls.rs` | vmsta's e-mails and addresses are their authors' contacts | #802 |
+| jpconf.cls | `jpconf_cls.rs` | jpconf.cls is read raw, then its address and e-mail blocks are the frontmatter | #841 |
+| bmcart.cls | `bmcart_cls.rs` | bmcart.cls is read raw, then its title, author and address printers are the frontmatter | #842 |
+| eptcs.cls | `eptcs_cls.rs` | eptcs.cls: `\institute` and `\email` inside `\author` are each a line under the names (Perl: no binding) | #898 |
+| lmcs.cls | `lmcs_cls.rs` | lmcs.cls: an author's letters request the addresses they label; `\lmcsorcid` is the author's ORCID (Perl: no binding) | #899 |
+| pos.sty, rmaa.cls | `pos_sty.rs`, `rmaa_cls.rs` | pos.sty and rmaa.cls have bindings: their title-page stores are the frontmatter (Perl: no binding; pos.sty unread, an empty name; rmaa through OmniBus) | #904 |
+| fcs.cls, dgruyter.sty | `fcs_cls.rs`, `dgruyter_sty.rs` | fcs's and dgruyter's `\author*[labels]` mark the corresponding author and request its labelled affiliations (Perl: no fcs or dgruyter author binding, the authors mangled) | #905 |
+| just.cls | `cpc_hepnp_cls.rs` | just.cls (Chinese Physics C's cpc-hepnp.cls under the PhiPsi15 name) has a binding: its `\email` is the author's e-mail and its `\address` after `\maketitle` the names' affiliations; cpc-hepnp itself waits for 91c (Perl: no binding; through OmniBus the list is one address of the last author) | #912 |
 | keytheorems.sty | `keytheorems_sty.rs` | A tcolorbox keytheorem's head is its theorem's `ltx:title` (pdflatex: the box's title) | #975 |
 
 #### 77. `silence.sty` and the bundled `arxiv.sty` family get bindings Perl does not have
@@ -19750,8 +19804,8 @@ own arguments then leak into the surrounding math as text.
 **We define both** (`latexml_package/src/package/amsmath_sty.rs`). `\arrowfill@#1#2#3#4` relates by the arrow's
 HEADS #1 and #3, as amsmath.sty:971-976 draws them (`#4#1 … \cleaders #2 … #3`): an end that is exactly `\relbar`/`\Relbar`
 (the fill) is dropped, two equal ends count once (`\xlongequal` gives one `=`), a head pair TeX composes becomes one token
-(↔ ⇔ ⟷ ⟺ ↦), and the style argument #4 is consumed; `\ext@arrow` relates by its fill `#5\displaystyle`, with the labels as
-scripts. Before, both passed through to `\to`, so mhchem's `\ce{A <=> B}` (mhchem.sty:1251-1254) read "→→" where pdflatex
+(↔ ⇔ ⟷ ⟺ ↦), and the style argument #4 is consumed; `\ext@arrow` relates by its fill, set in `\hbox{#5\displaystyle}` as
+amsmath.sty:1014 does (a fill may open its own `$…$`: halloweenmath.sty:873-882), with the labels as scripts. Before, both passed through to `\to`, so mhchem's `\ce{A <=> B}` (mhchem.sty:1251-1254) read "→→" where pdflatex
 draws ⇀ over ↽ (witness 2405.01836). We do not model stretchy rendering; the arity and the heads are what the binding is for.
 Residual (post-merge): a pair outside the compose table, or a `\let` alias of a head, reads as `list@(…)`
 (`arrowfill/arrowfill_uncomposed_pair_red.tex`). Witnesses 2411.17873 and
@@ -20316,6 +20370,13 @@ Witnesses jsonparse-doc (7 -> 1 jing errors), 2605.21082 (two `label=`s on their
 `perfect_kernel_batch59::{tcb_listing_keeps_its_hypertarget, tcb_listing_label_names_its_listing,
 tcb_listing_begin_line_edge_cases}`, `perfect_kernel_batch56::tcb_bang_leading_optional_reaches_options`.
 
+#### 412. A g-brief letter's sender and addressee are frontmatter creators (Perl: lost with the first-page style)
+
+g-brief.cls (`g_brief_cls.rs`, `g_brief2_cls.rs`): the letter's sender and addressee → creators (FURN) — mapped onto the
+frontmatter API as the class prints it (OD #460's rule; moved here, DG 2026-11-15). Witnesses, guards and detail: [the
+archive](../archive/OD_FRONTMATTER_RECORDS_2026-11-15.md), #412. Guard
+`perfect_kernel_batch61::brief_letter_sender_is_frontmatter`.
+
 #### 446. tocloft keeps the kernel's lists (Perl: no binding, the lists lost under `rawstyles`)
 
 tocloft.sty has no binding in Perl, so under `rawstyles` (the arXiv preload `ar5iv.sty`) its `\tableofcontents`,
@@ -20367,6 +20428,12 @@ source the stub printed (`\pinlabel`, `at`, coordinates, raw `\includegraphics[�
 Witnesses math0412330, 1010.6236, 1112.5970, 1310.1838, 1904.09721, 1904.12947. Guards
 `perfect_kernel_batch63::{pinlabel_labels_every_figure, pinlabel_dvi_figure_keeps_its_picture,
 pdfximagebbox_reads_the_cropbox}`, `util::image` test `read_pdf_page_box_prefers_cropbox_and_reaches_into_object_streams`.
+
+#### 466. imsart's frontmatter as the class prints it (Perl: lost or garbled)
+
+imsart.cls (`imsart_cls.rs`): `\ead`, `\author[A]`, `\address[A]`, `\thanksref`, `\arxiv` as the class prints them —
+mapped onto the frontmatter API as the class prints it (OD #460's rule; moved here, DG 2026-11-15). Witnesses, guards
+and detail: [the archive](../archive/OD_FRONTMATTER_RECORDS_2026-11-15.md), #466.
 
 #### 483. paspconf is bound to aaspp, caption2 by its own name, and a keyless `\reference` starts an unkeyed entry (Perl: OmniBus, the caption fallback, the first letter as key)
 
@@ -20484,6 +20551,12 @@ errors 74 → 0 (346 → 0), the 46 unmarked-institute papers 46 → 0, every af
 `perfect_kernel_batch64u::{epl_class_frontmatter_and_bibliography, epl_unmarked_institute_one_entry,
 epl_comment_abstract_is_metadata, epl_email_forms_among_names}`. epl2's `\[n]` among the names (no corpus case) is
 display math.
+
+#### 495. The OSA journal styles have a binding (Perl: a missing package)
+
+the OSA journal styles (`osa_journal_sty.rs`): groups, marked addresses, e-mails via `\lx@add@contact@placed` — mapped
+onto the frontmatter API as the class prints it (OD #460's rule; moved here, DG 2026-11-15). Witnesses, guards and
+detail: [the archive](../archive/OD_FRONTMATTER_RECORDS_2026-11-15.md), #495.
 
 #### 504. REVTeX 3's own options, numbering and author lists belong to revtex3_support (Perl: its options missing, OmniBus loaded over the binding)
 
@@ -20712,6 +20785,18 @@ with 643 errors, then Fatal at the same-error cap once other errors no longer in
 undefined `\CalculateSin`/`\UseCos` and 18 with undefined `\pIIe@addtoGraph`. Guard
 `perfect_kernel_batch67g::pict2e_ellipse_has_its_old_registers_and_trig`.
 
+#### 599. egpubl's title-page copyright line is the frontmatter copyright (Perl: no egpubl binding)
+
+egpubl.cls (`egpubl_cls.rs`): the title-page copyright line (FURN) — mapped onto the frontmatter API as the class prints
+it (OD #460's rule; moved here, DG 2026-11-15). Witnesses, guards and detail: [the
+archive](../archive/OD_FRONTMATTER_RECORDS_2026-11-15.md), #599.
+
+#### 602. Wiley NJD's `\doiheadtext` is a DOI note (Perl: no Wiley binding)
+
+Wiley NJD (`wileynjd_cls.rs`): `\doiheadtext` → a DOI note (FURN) — mapped onto the frontmatter API as the class prints
+it (OD #460's rule; moved here, DG 2026-11-15). Witnesses, guards and detail: [the
+archive](../archive/OD_FRONTMATTER_RECORDS_2026-11-15.md), #602.
+
 #### 607. breqn's displays are equations and equation groups; breqn.sty is not read raw (Perl: no breqn binding)
 
 breqn.sty (TL 2025 v0.98l) typesets each display by measuring and re-breaking boxes (:441-1700) and loads flexisym.sty,
@@ -20862,6 +20947,13 @@ a stand-in for the author's file (latexml_core binding/author_files.rs `AUTHOR_F
 finds it only where the paper ships it. Guards
 `perfect_kernel_batch71a::{appolb_pacs, appolb_running_heads_and_abbreviations, appolb_class_commands}`.
 
+#### 763. an.cls, apa.cls and cclayout.sty title-page stores are the frontmatter (Perl: OmniBus for the classes, an Error on `{subject}`)
+
+an.cls, apa.cls, cclayout.sty (`an_cls.rs`, `apa_cls.rs`, `cclayout_sty.rs`): `\aaabstract`, `\acknowledgements`,
+`\Abstract`/`{subject}` — mapped onto the frontmatter API as the class prints it (OD #460's rule; moved here, DG
+2026-11-15). Witnesses, guards and detail: [the archive](../archive/OD_FRONTMATTER_RECORDS_2026-11-15.md), #763. Guard
+`perfect_kernel_batch74b::apa_acknowledgements_are_kept_in_every_mode`.
+
 #### 771. A blkarray block's preamble formats its rows; its delimiters are dropped (Perl: no blkarray binding)
 
 blkarray.sty:868-922 `\BA@beginblock` is a `\noalign` that parses the block's preamble; its rows use the block's columns
@@ -20880,10 +20972,91 @@ dropped them too; review probe b3 "M", "N"; SYNC_STATUS row "blkarray side label
 `blkarray_block_cells_in_text_control`); guards `perfect_kernel_batch77k::{blkarray_block_preamble_formats_its_rows,
 blkarray_block_text_cell_in_display_errs}`.
 
+#### 772. The AISTATS styles' title-block setters are the frontmatter, one binding for every year (Perl: no binding)
+
+the AISTATS styles (`aistats_sty.rs`): `\aistatstitle`/`\aistatsauthor`/`\aistatsaddress`, columns paired — mapped onto
+the frontmatter API as the class prints it (OD #460's rule; moved here, DG 2026-11-15). Witnesses, guards and detail:
+[the archive](../archive/OD_FRONTMATTER_RECORDS_2026-11-15.md), #772.
+
+#### 775. aero.cls's `\ADsetup` title page is the frontmatter (Perl: no aero binding, `\ADsetup` undefined)
+
+aero.cls (`aero_cls.rs`): `\ADsetup` variables at `\maketitle` — mapped onto the frontmatter API as the class prints it
+(OD #460's rule; moved here, DG 2026-11-15). Witnesses, guards and detail: [the
+archive](../archive/OD_FRONTMATTER_RECORDS_2026-11-15.md), #775.
+
+#### 790. entics.cls and entcs.cls are read raw with elsart's frontmatter interface
+
+entics.cls, entcs.cls (`entics_cls.rs`): raw, with elsart's interface (`\thanksref` → `\thanks[key]`) — mapped onto the
+frontmatter API as the class prints it (OD #460's rule; moved here, DG 2026-11-15). Witnesses, guards and detail: [the
+archive](../archive/OD_FRONTMATTER_RECORDS_2026-11-15.md), #790.
+
+#### 800. webofc.cls is read raw with the `\inst` frontmatter, its side caption a caption
+
+webofc.cls (`webofc_cls.rs`): raw, `\institute`/`\inst`, `\\`-split authors, side caption — mapped onto the frontmatter
+API as the class prints it (OD #460's rule; moved here, DG 2026-11-15). Witnesses, guards and detail: [the
+archive](../archive/OD_FRONTMATTER_RECORDS_2026-11-15.md), #800.
+
+#### 801. jinstpub.sty is jheppub's frontmatter with JINST's extras
+
+jinstpub.sty (`jinstpub_sty.rs`): jheppub's plus JINST's extras; e-mails by #805's chain — mapped onto the frontmatter
+API as the class prints it (OD #460's rule; moved here, DG 2026-11-15). Witnesses, guards and detail: [the
+archive](../archive/OD_FRONTMATTER_RECORDS_2026-11-15.md), #801.
+
+#### 802. vmsta's e-mails and addresses are their authors' contacts
+
+vmsta.cls (`vmsta_cls.rs`): `\email`, `\ead`, `\address[label]` → their authors' contacts — mapped onto the frontmatter
+API as the class prints it (OD #460's rule; moved here, DG 2026-11-15). Witnesses, guards and detail: [the
+archive](../archive/OD_FRONTMATTER_RECORDS_2026-11-15.md), #802. RED `vmsta_emails_and_addresses_are_contacts_red`.
+
+#### 841. jpconf.cls is read raw, then its address and e-mail blocks are the frontmatter
+
+jpconf.cls (`jpconf_cls.rs`): raw, then iopart_support's `\address`/`\ead` — mapped onto the frontmatter API as the
+class prints it (OD #460's rule; moved here, DG 2026-11-15). Witnesses, guards and detail: [the
+archive](../archive/OD_FRONTMATTER_RECORDS_2026-11-15.md), #841.
+
+#### 842. bmcart.cls is read raw, then its title, author and address printers are the frontmatter
+
+bmcart.cls (`bmcart_cls.rs`): raw, then its title/author/address printers — mapped onto the frontmatter API as the class
+prints it (OD #460's rule; moved here, DG 2026-11-15). Witnesses, guards and detail: [the
+archive](../archive/OD_FRONTMATTER_RECORDS_2026-11-15.md), #842. Guard
+`perfect_kernel_batch78m::bmcart_frontmatter_is_frontmatter`.
+
+#### 898. eptcs.cls: `\institute` and `\email` inside `\author` are each a line under the names (Perl: no binding)
+
+eptcs.cls (`eptcs_cls.rs`): `\institute`, `\email` inside `\author` each a line under the names — mapped onto the
+frontmatter API as the class prints it (OD #460's rule; moved here, DG 2026-11-15). Witnesses, guards and detail: [the
+archive](../archive/OD_FRONTMATTER_RECORDS_2026-11-15.md), #898.
+
+#### 899. lmcs.cls: an author's letters request the addresses they label; `\lmcsorcid` is the author's ORCID (Perl: no binding)
+
+lmcs.cls (`lmcs_cls.rs`): an author's letters request the labelled addresses; `\lmcsorcid` — mapped onto the frontmatter
+API as the class prints it (OD #460's rule; moved here, DG 2026-11-15). Witnesses, guards and detail: [the
+archive](../archive/OD_FRONTMATTER_RECORDS_2026-11-15.md), #899.
+
+#### 904. pos.sty and rmaa.cls have bindings: their title-page stores are the frontmatter (Perl: no binding; pos.sty unread, an empty name; rmaa through OmniBus)
+
+pos.sty, rmaa.cls (`pos_sty.rs`, `rmaa_cls.rs`): title-page setters routed through the API before the raw read — mapped
+onto the frontmatter API as the class prints it (OD #460's rule; moved here, DG 2026-11-15). Witnesses, guards and
+detail: [the archive](../archive/OD_FRONTMATTER_RECORDS_2026-11-15.md), #904. RED `rmaa_altaffiltext_marks_red`.
+
+#### 905. fcs's and dgruyter's `\author*[labels]` mark the corresponding author and request its labelled affiliations (Perl: no fcs or dgruyter author binding, the authors mangled)
+
+fcs.cls, dgruyter.sty (`fcs_cls.rs`, `dgruyter_sty.rs`): `\author*[labels]`: corresponding contact; `\address[n]`
+labelled n (revtex4_support's `\affil` half: KNOWN_PERL_ERRORS #1199); a contact printing no letter or digit (fcs's "✉")
+keyed by its symbol, so written (`emitter/plan.rs:63 contact_key`, `:73 symbol_key`; PR #866) — mapped onto the
+frontmatter API as the class prints it (OD #460's rule; moved here, DG 2026-11-15). Witnesses, guards and detail: [the
+archive](../archive/OD_FRONTMATTER_RECORDS_2026-11-15.md), #905.
+
+#### 912. just.cls (Chinese Physics C's cpc-hepnp.cls under the PhiPsi15 name) has a binding: its `\email` is the author's e-mail and its `\address` after `\maketitle` the names' affiliations; cpc-hepnp itself waits for 91c (Perl: no binding; through OmniBus the list is one address of the last author)
+
+just.cls (`cpc_hepnp_cls.rs`, cpc-hepnp renamed; registered for just only, `latexml_package/src/lib.rs:624-627`):
+`\email`, `\address` after `\maketitle` — mapped onto the frontmatter API as the class prints it (OD #460's rule; moved
+here, DG 2026-11-15). Witnesses, guards and detail: [the archive](../archive/OD_FRONTMATTER_RECORDS_2026-11-15.md),
+#912.
+
 #### 975. A tcolorbox keytheorem's head is its theorem's `ltx:title` (pdflatex: the box's title)
 
 keytheorems.sty:994, :1075-1079 stores the head through `\deferred@thm@head` for `title=\__keythms_thm_tcbtemphead:`. The amsthm
 binding's theorem never calls `\deferred@thm@head`: it makes the head an `ltx:title` before the box. latexml_contrib/src/keytheorems_sty.rs reads
 the file raw and leaves the macro empty, so the box's title slot is empty and the head is kept. Witnesses tutodoc-en, tutodoc-fr. Guard
 `perfect_kernel_batchm3::a_tcolorbox_keytheorem_keeps_its_head_and_body`.
-and the row `file_hooks_run_at_every_input` (#1048: `file/<name>/before|after` plain `\UseHook`s, latex.ltx:19669/19672).

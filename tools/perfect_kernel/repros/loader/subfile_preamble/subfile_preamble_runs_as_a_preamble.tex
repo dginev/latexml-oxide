@@ -1,12 +1,13 @@
 % witness: synthetic (revQAB3 finding 4: subfiles.sty skips a sub-file's preamble)
-% oracle:  pdflatex 0 `!`, "Main. Sub text. End."; Perl 1 error (unexpected:\usepackage)
+% oracle:  pdflatex 0 `!`, "Main. Sub text. End: yes."; Perl 1 error (unexpected:\usepackage)
 % engines: rust base main 1 error; fix/qa90-preamble-cmds r1 2 errors (\usepackage, \listfiles)
-% expect:  0 errors, 0 warnings, "Main. Sub text. End." (sub.tex beside it)
+% expect:  0 errors, 0 warnings, "Main. Sub text. End: yes." (sub.tex beside it; `\listfiles` is `\@notprerr` again after
+%          the sub-file's `\begin{document}`, REGCDE r2)
 % status:  GREEN (subfiles_sty.rs runs the sub-file's preamble under `inPreamble`, as standalone_sty.rs does)
 \documentclass{article}
 \usepackage{subfiles}
 \begin{document}
 Main.
 \subfile{sub}
-End.
+End: \makeatletter\ifx\listfiles\@notprerr yes\else no\fi\makeatother.
 \end{document}

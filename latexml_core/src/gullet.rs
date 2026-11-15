@@ -972,6 +972,25 @@ pub fn unread_expansion(tokens: Tokens) {
   }
 }
 
+/// Push `tokens` to be read where the innermost `\input` file ([`mark_everyeof_mouth`]) ends, in its enclosing level,
+/// as `\InputIfFileExists` leaves its `file/after` hooks there (`content.rs`); false when no such file is open.
+pub fn unread_after_current_file(tokens: Tokens) -> bool {
+  let mut gullet = gullet_mut!();
+  let gullet = &mut *gullet;
+  let mut levels = gullet
+    .runtime
+    .iter_mut()
+    .chain(gullet.mouthstack.iter_mut());
+  if !levels.any(|runtime| runtime.insert_everyeof) {
+    return false;
+  }
+  let Some(enclosing) = levels.next() else {
+    return false;
+  };
+  enclosing.pushback.extend(tokens.unlist().into_iter().rev());
+  true
+}
+
 /// [`unread_substituted`] of arguments all read as tokens, each found where it is.
 pub fn unread_substituted_args(
   body: &[Token],

@@ -1,0 +1,14 @@
+% mechanism: after the format's textcomp (sect13.rs) a document's load is textcomp.sty v2.1b's, which declares and
+%   processes its options only (textcomp.sty:52-75): the symbols the document redefined before it stay
+% witness: synthetic (revREGCDE2 E: e4.tex)
+% oracle:  pdflatex 0 `!`, "A HALF DEG."; Perl "A HALF DEG."
+% engines: rust MAIN882 "A HALF DEG."; REGCDE aef337b2747 "A ½ °." (the binding's symbols defined a second time)
+% expect:  0 errors, 0 warnings; <p>A HALF DEG.</p>
+% status:  GREEN (textcomp_sty.rs: a load after the binding's own runs the options only)
+\documentclass{article}
+\renewcommand\textonehalf{HALF}
+\renewcommand\textdegree{DEG}
+\usepackage[full]{textcomp}
+\begin{document}
+A \textonehalf\ \textdegree.
+\end{document}

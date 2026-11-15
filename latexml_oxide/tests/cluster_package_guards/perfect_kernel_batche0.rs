@@ -1657,7 +1657,10 @@ const TOKEN_READS: &[(&str, usize)] = &[
   // head lacked `\tt`, `\LARGE`, `\huge`, `\Huge`, 2508.08560; `events` drops its `\selectfont` read, 62 -> 61)
   // (P6a, 527 -> 520: its `group_end` is `tokens_group_end` (4, in `rest /tokens.rs`), its `balanced` core's
   // `Tokens::slice_is_balanced` (3))
-  ("frontmatter_stores", 520),
+  // (QA61D1, 520 -> 532: DG's D1 moves a labelled off-table store to a pubnote; what the deposit takes out with it is the
+  // label's token part K11's table path takes, extended over the store and its line's stop (`part_to_the_line_end`),
+  // and the line gate counts the class's other stores (`store_lines_among`) — the static readers of OD #767's fallback)
+  ("frontmatter_stores", 532),
   ("gretsi_cls.rs", 14),
   // (CR10a, 119 -> 128: the class's author body is read as tokens before it is digested, as `author_block_body` reads it —
   // a names block nested in another's spliced in (`unnested_name_blocks`, 1511.03982), the alias `\authorblockN`'s grades,
@@ -2632,6 +2635,9 @@ const SHARED_CODE_PACKAGE_NAMES: &[(&str, usize)] = &[
   ("latexml_engine/src/latex_constructs/sect07.rs", 2),
   // (`\NAT@ifcmd`, GA0 finding 7: the kernel `\bibitem` keyed to natbib; witness 1003.3017)
   ("latexml_engine/src/latex_constructs/sect11.rs", 1),
+  // (REGCDE +1: `unmark_loaded("textcomp.sty")`, the format's own textcomp preload, Perl latex_constructs.pool.ltxml:5937,
+  // left unloaded as latex.ltx leaves it — no `\ver@textcomp.sty`; biblatex-sbl's `\AfterPackage{textcomp}`)
+  ("latexml_engine/src/latex_constructs/sect13.rs", 1),
   // (`package_loaded("biblatex")`)
   ("latexml_engine/src/pre_bibtex.rs", 1),
   // (`package_loaded("array")` in the `\noalign\\` rule, `lx@array@keeps@interline` ×3: GA0 finding 3)
@@ -2850,6 +2856,8 @@ const KERNEL_TOKEN_SPELLINGS: &[(&str, usize)] = &[
   ("latexml_core/src/alignment/cell.rs", 1),
   ("latexml_core/src/alignment/normalize.rs", 1),
   ("latexml_core/src/binding/content.rs", 45),
+  // REGCDE: the walk's `\global\let` (`global_let`: the engine's `assign_meaning`, `lookup_meaning`), no decision.
+  ("latexml_core/src/binding/preamble_commands.rs", 2),
   // TABU2b +1: `run_trivlist_hook` names the kernel's own `\lx@trivlist@hook` to read its meaning (empty: skipped).
   ("latexml_core/src/binding/counter/dialect.rs", 32),
   // QAB1b +2: `hook_has_code` reads lthooks' storage by meaning (`with_macro_body`'s `with_meaning`) where it expanded
@@ -2904,9 +2912,12 @@ const KERNEL_TOKEN_SPELLINGS: &[(&str, usize)] = &[
   ("latexml_engine/src/latex.rs", 2),
   ("latexml_engine/src/latex_base.rs", 1),
   ("latexml_engine/src/latex_bootstrap.rs", 5),
-  ("latexml_engine/src/latex_constructs/mod.rs", 163),
+  // REGCDE +1: `disable_preamble_commands`' table of Perl's 7 loaders (latex_constructs.pool.ltxml:155 `onlyPreamble`'s
+  // callers), which keep Perl's recovery by DG's ruling (b) of 2026-11-15: Perl's data, by name as Perl's is.
+  ("latexml_engine/src/latex_constructs/mod.rs", 164),
   ("latexml_engine/src/latex_constructs/sect01.rs", 8),
-  ("latexml_engine/src/latex_constructs/sect02.rs", 9),
+  // (REGCDE -2: the walk's `\@preamblecmds` `\let` moved to core `preamble_commands`)
+  ("latexml_engine/src/latex_constructs/sect02.rs", 7),
   ("latexml_engine/src/latex_constructs/sect04.rs", 4),
   ("latexml_engine/src/latex_constructs/sect05.rs", 266),
   ("latexml_engine/src/latex_constructs/sect06.rs", 9),

@@ -3664,20 +3664,29 @@ fn wave11_package_internals_are_defined() {
 
 /// tuenc.def:106-121 `\DeclareUnicodeAccent` under the luatex profile
 /// (tipauni.sty:349) and the LuaTeX PDF primitives beside `\directlua`
-/// (`\pdfvariable pageattr`, multimedia.sty:30). The one Error is lualatex's "Can be used only in preamble" for the
-/// body `\DeclareTextCommand` (QA90, OD #226; lualatex then 4 more from the unread accent; ours makes it).
+/// (`\pdfvariable pageattr`, multimedia.sty:30): lualatex 0 `!`, the accent. In the body `\DeclareTextCommand` is
+/// `\@notprerr` (QA90, OD #226): lualatex 5 `!`, "TU [n]"; ours the Error and the undefined `\textsyllabic` (2).
 #[test]
 fn unicode_accent_and_pdfvariable_under_luatex_profile() {
-  let tex = r#"\documentclass{article}
-\usepackage{multimedia}
-\begin{document}
-\DeclareUnicodeAccent{\textsyllabic}{TU}{"0329}
-[\textsyllabic{n}]
-\end{document}
-"#;
-  let (stderr, xml) = convert_with(tex, Some("[luatex,rawstyles,rawclasses]latexml.sty"));
-  assert_eq!(error_count(&stderr), 1, "{stderr}");
-  assert!(xml.contains("[n\u{0329}]"), "{xml}");
+  for (declared, errors, text) in [
+    (
+      "\\DeclareUnicodeAccent{\\textsyllabic}{TU}{\"0329}\n\\begin{document}\n",
+      0,
+      "[n\u{0329}]",
+    ),
+    (
+      "\\begin{document}\n\\DeclareUnicodeAccent{\\textsyllabic}{TU}{\"0329}\n",
+      2,
+      "[<ERROR class=\"undefined\">\\textsyllabic</ERROR>n]",
+    ),
+  ] {
+    let tex = format!(
+      "\\documentclass{{article}}\n\\usepackage{{multimedia}}\n{declared}[\\textsyllabic{{n}}]\n\\end{{document}}\n"
+    );
+    let (stderr, xml) = convert_with(&tex, Some("[luatex,rawstyles,rawclasses]latexml.sty"));
+    assert_eq!(error_count(&stderr), errors, "{stderr}");
+    assert!(xml.contains(text), "{xml}");
+  }
 }
 
 /// ltxtable.sty:9 `\LTXtable{width}{file}` — a longtable with `X` columns
