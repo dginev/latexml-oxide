@@ -857,10 +857,12 @@ impl MathParser {
   /// Recovery ladder:
   /// 1. Clone `self.grammar` + trivial parse — cheap, common case.
   /// 2. Re-clone and retry once — covers transient marpa state hiccups.
-  /// 3. Full `init_grammar()` rebuild — expensive, but some grammar corruption patterns (observed
-  ///    on the `testscripts` regression fixture) only recover after a fresh precompute. The D5
-  ///    "avoid init_grammar fallback" item turned out to describe the ideal, not the floor —
-  ///    legitimate callers still hit step 3.
+  /// 3. Full `init_grammar()` rebuild — expensive. The "grammar corruption" once seen here (the
+  ///    `testscripts` fixture, 2026-04) was steps 1-2 re-running `marpa_g_precompute` on the
+  ///    precomputed grammar, which libmarpa refuses (`MARPA_ERR_PRECOMPUTED`), so every reset fell
+  ///    through to step 3; `with_precomputed_grammar` removed that (30bfb5bd1b5, 2026-06-21). Step 3
+  ///    is now reached only through libmarpa's fatal flag (`MARPA_ERR_YIM_COUNT`, an Earley set of
+  ///    65,534 items), which the trivial parse detects at bocage/tree creation.
   /// 4. Log + keep previous engine. Subsequent `parse_math` / `recognizes` will fail gracefully (0
   ///    trees, no panic); better than crashing the whole conversion.
   ///
@@ -874,9 +876,8 @@ impl MathParser {
     if self.try_reset_clone_path().is_ok() {
       return;
     }
-    // Both clone attempts failed — reach for a full rebuild. Expensive,
-    // but the testscripts regression fixture demonstrates that some
-    // corruption patterns only clear after a fresh precompute.
+    // Both clone attempts failed: the shared grammar carries libmarpa's
+    // fatal flag (see the ladder above), so only a fresh precompute recovers.
     match init_grammar() {
       Ok((grammar, _actions, _builder)) => {
         let thin_grammar = grammar.unwrap();

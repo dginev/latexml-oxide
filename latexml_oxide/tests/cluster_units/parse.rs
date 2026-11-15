@@ -68,6 +68,8 @@ fn basic_1() {
 
 /// A streamed conversion's parsers share one precomputed `MathGrammar`, each segment's parser handing
 /// it to the next (`streaming_pass2`): a parser over the handed-on grammar reads as a freshly built one.
+/// A smoke test of the hand-off after a soft parse failure; libmarpa's fatal flag (the case the
+/// hand-off's trivial-parse gate exists for) cannot be forced cheaply here.
 #[test]
 fn shared_grammar_parses_like_a_fresh_one() {
   let ambiguous = "UNKNOWN:f:1 OPEN:(:2 UNKNOWN:x:3 CLOSE:):4 ADDOP:plus:5 UNKNOWN:y:6 ";
