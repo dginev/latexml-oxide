@@ -1,0 +1,21 @@
+% witness: synthetic (QA29 check, 2026-11-14; math9201249's theorem-like blocks)
+% oracle:  pdftex (\input amstex, \documentstyle{amsppt}) this file: 0 errors; "Definition 1. A definition. Remark 2. A remark. Example 3. An example. Proof. A proof. Theorem 4. A theorem."
+% engines: Perl 0.8.8 = 1 error (undefined `\examplename`), ids Thmx1-Thmx5 from the one `theorem` counter, titles "Definition Definition 1",
+%          "Remark Remark 2", "Demonstration Proof" (KNOWN_PERL_ERRORS #1269); rust 7dea7e597a1 = 0 errors, no ids, the blocks at document level
+% expect:  0 errors, 0 warnings; the section holds Thmx1 (definition) … Thmx5 (proclaim), each titled with its argument as amsppt.sty prints it
+% status:  RED (7dea7e597a1) -> GREEN (fix/amsppt-ids-sections; guard perfect_kernel_batchamsppt::amsppt_heads_and_theorems)
+\input amstex
+\documentstyle{amsppt}
+\document
+\head 1. Intro\endhead
+\definition{Definition 1} A definition.
+\enddefinition
+\remark{Remark 2} A remark.
+\endremark
+\example{Example 3} An example.
+\endexample
+\demo{Proof} A proof.
+\enddemo
+\proclaim{Theorem 4} A theorem.
+\endproclaim
+\enddocument

@@ -1,0 +1,13 @@
+% witness: synthetic (revQAB3 B1: an unknown class's OmniBus fallback left `\@currext` `cls` in the body)
+% oracle:  pdflatex stops at the missing class; with a class file present (`\LoadClass{article}`) 2 `!` (Can be used
+%          only in preamble: \usepackage, \listfiles), "More []"; Perl 1 error (unexpected:\usepackage)
+% engines: rust base main 1 error; fix/qa90-preamble-cmds r1 0 errors, "More [cls]"; r2 2 errors, "More []"
+% expect:  2 errors "Can be used only in preamble", 1 warning (missing_file nosuchclass), "More []"
+% status:  GREEN (the loader restores `\@currext` after a missing file's load, content.rs `pop_load_frame`, OD #226)
+\documentclass{nosuchclass}
+\begin{document}
+Body.
+\usepackage{xspace}
+\listfiles
+More \makeatletter[\@currext]\makeatother.
+\end{document}

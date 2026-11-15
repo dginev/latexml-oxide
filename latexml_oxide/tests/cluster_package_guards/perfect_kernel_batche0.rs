@@ -2852,9 +2852,9 @@ const KERNEL_TOKEN_SPELLINGS: &[(&str, usize)] = &[
   ("latexml_core/src/binding/content.rs", 45),
   // TABU2b +1: `run_trivlist_hook` names the kernel's own `\lx@trivlist@hook` to read its meaning (empty: skipped).
   ("latexml_core/src/binding/counter/dialect.rs", 32),
-  // QAB1b +2: `hook_has_code` reads lthooks' storage by meaning (`macro_body`'s `lookup_meaning`) where it expanded
-  // `\IfHookEmptyTF`, and `\if:w I` (`hook_used_once`) compares the slot's first token with the character `I`.
-  ("latexml_core/src/binding/def/dialect.rs", 43),
+  // QAB1b +2: `hook_has_code` reads lthooks' storage by meaning (`with_macro_body`'s `with_meaning`) where it expanded
+  // `\IfHookEmptyTF`, and `\if:w I` (`hook_used_once`) compares the slot's first token with the character `I`; QAB2b -1.
+  ("latexml_core/src/binding/def/dialect.rs", 42),
   ("latexml_core/src/binding/def/replacement.rs", 3),
   ("latexml_core/src/binding/virtual_files.rs", 1),
   ("latexml_core/src/common/def_parser.rs", 1),
@@ -2904,7 +2904,7 @@ const KERNEL_TOKEN_SPELLINGS: &[(&str, usize)] = &[
   ("latexml_engine/src/latex.rs", 2),
   ("latexml_engine/src/latex_base.rs", 1),
   ("latexml_engine/src/latex_bootstrap.rs", 5),
-  ("latexml_engine/src/latex_constructs/mod.rs", 160),
+  ("latexml_engine/src/latex_constructs/mod.rs", 163),
   ("latexml_engine/src/latex_constructs/sect01.rs", 8),
   ("latexml_engine/src/latex_constructs/sect02.rs", 9),
   ("latexml_engine/src/latex_constructs/sect04.rs", 4),

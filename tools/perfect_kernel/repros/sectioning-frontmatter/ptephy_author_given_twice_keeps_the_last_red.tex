@@ -5,7 +5,10 @@
 % engines: perl 0.8.8 = (no ptephy binding: OmniBus) one creator "\nameBob Baker2"; rust 92a: Ann Able and Bob Baker
 %          (the binding's kernel author was inst_support's, which stacks)
 % expect:  0 errors, 0 warnings; Bob Baker only, with Univ B; Univ A, which no printed name requests, the block's
-% status:  RED (92a) -> GREEN (92b)
+% engines: rust main b72bf540ff = 0 errors, 3 warnings: Bob Baker with Univ B, Univ A lost (counted: "the call is
+%          written as queued", an orphaned annotation, the content check's "A Univ")
+% status:  RED (92a) -> GREEN (92b) -> RED (b72bf540ff; nov02 green)
+% moves:   post-merge (#920 v2; LOSTC: reach below ~500)
 % preload: ar5iv.sty
 \documentclass{ptephy}
 \begin{document}

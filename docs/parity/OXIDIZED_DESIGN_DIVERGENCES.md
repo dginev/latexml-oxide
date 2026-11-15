@@ -6301,7 +6301,7 @@ no-adjust-everywhere breaks — cells.xml/graphrot goldens caught it).
 **Rust behavior**: the document's first `\documentclass` clears the kernel's `\chapter` before the class loads (sect01.rs
 `retract_chapter_before_class_load`; a second one loads no class in TeX and keeps the first class's chapters — in the
 preamble latex.ltx:18618 has made it `\@twoclasseserror`, in the body :18621 `\@onlypreamble\documentclass` stops it
-with "Can be used only in preamble", which we do not raise yet (SYNC_STATUS): probe rev72b/r2/dc2, memoir's two
+with "Can be used only in preamble" (#226): probe rev72b/r2/dc2, memoir's two
 chapters), so the class's own code meets it undefined, as in TeX: a raw class's
 `\@ifundefined{chapter}` takes the undefined branch (pdflatex "CLS=S.", where 72b r1 and Perl say C). The lock stays,
 with the kernel's binding kept aside as for a file's clearing `\let` (`\chapter:locked@cleared`, #569): a class's own
@@ -7298,7 +7298,7 @@ Guard `afterpage_body_undoubles_parameter_hashes`. Gemini round 10 N5, merged
 with the autoload removed.
 
 
-### 226. `\@preamblecmds` is `\@notprerr` inside a running document
+### 226. `\begin{document}` walks latex.ltx's `\@preamblecmds`: the preamble-only commands err in the body, and `\@preamblecmds` is `\@notprerr`
 
 **Perl behavior**: latex_constructs.pool.ltxml:5460 `\@preamblecmds` = `Tokens()`
 forever, `:5594` `\@onlypreamble` records nothing ("Don't bother enforcing this"),
@@ -7309,10 +7309,36 @@ license (beameruserguide: 16 of 26 chapters lost, zero errors; SHARED).
 **Rust behavior**: `\@notprerr` is defined (latex.ltx:9019) and `\document` `\let`s
 `\@preamblecmds` to it globally at the latex.ltx:9521-9522 point (`\@preamblecmds`
 is itself `\@onlypreamble`, :1228), so the probe reads as it does in LaTeX.
-`\@onlypreamble` itself stays the loose flag-only guard (sect01.rs), not a `\do` list.
-**Why**: the observable side effect raw code tests for is part of the kernel
-contract; reproducing it costs one `\let` and no per-command bookkeeping.
-Guard `preamblecmds_is_notprerr_inside_a_running_document`. Batch 56bx.
+**Rule**: `\begin{document}` walks latex.ltx's `\@preamblecmds` (:9521-9522) after its hooks; each listed
+command that is one of our Rust definitions becomes `\lx@notprerr\lx@onlypreamble@<name>`: latex.ltx's own
+`\@notprerr` Error ("Can be used only in preamble", :9019) and then the command itself, as Perl recovers
+(latex_constructs.pool.ltxml:155 `onlyPreamble`, which Perl applies to 8 commands only and with its own text).
+- The list is latex.ltx's (the dump's, 124 entries) plus each `\@onlypreamble` run in the preamble: `\@onlypreamble`
+  records `\do<cs>` as latex.ltx:1224-1226 does (Perl :5594 records nothing), and nothing once `\@preamblecmds` is
+  `\@notprerr` (:9522), so a body package load keeps lppl.tex:44's probe true. Without a dump it is Perl's 8.
+- Inside a package or class load (`\@currext` `sty`/`cls`) no Error: pdflatex never loads one after the preamble, so
+  the packages a body `\usepackage` loads in recovery add none (pdflatex: one Error); nor while a binding runs a
+  sub-file's preamble under Perl's `inPreamble` (standalone_sty.rs). The loader restores `\@currext` after every
+  load, a missing file's too (content.rs `pop_load_frame`, Package.pm:2652-2654), so under an unknown class's
+  OmniBus fallback the body is not a class load.
+- Only the kernel's definitions (origin `Pool`): a binding's replacement (docmute_sty.rs, standalone_sty.rs
+  `\documentclass`) stands for its package's re-let after the walk (docmute.sty:19, standalone.sty:738).
+- A command re-let after the walk (a renewed `document`, exam-n.cls's `\let\document\@empty`) is its own again.
+  `\document` itself stays the constructor's alias, whose identity `\begin`/`\end` read (sect01.rs): the
+  constructor's second run raises the Error.
+- Token macros in the list are left working, a gap: latex.ltx's (`\makeindex`; TeX's `\let` to `\@notprerr` would
+  print their arguments, and our loader runs `\@pushfilename`/`\@currnamestack` in the body, content.rs) and a
+  document's own (`\newcommand\myonly{M}\@onlypreamble\myonly`, pdflatex 1 Error, ours 0). RED repros
+  `loader/makeindex_in_the_body_red.tex`, `loader/document_onlypreamble_macro_in_the_body_red.tex`.
+- Perl's recovery is wrong where a later command reads the setting: a body `\includeonly{ca}` still drops `\include{cb}`,
+  which pdflatex keeps (RED `loader/includeonly_in_the_body_red/`).
+**Why**: the observable side effect raw code tests for is part of the kernel contract, and pdflatex errs on every
+listed Rust-defined command in the body; the recovery keeps what the command does instead of typesetting its
+arguments. Witnesses: synthetic (30k main files: 45 name one after `\begin{document}`, none in a branch pdflatex
+takes; 1205.6201's are a conditional's other preambles).
+Guards `preamblecmds_is_notprerr_inside_a_running_document`, `error_boundary::perfect_kernel_error_boundary`
+(rows "preamble-only commands in the body/preamble", "a second \begin{document}", "under an unknown class",
+"a body package's \@onlypreamble").
 
 ### 227. → SYNC_STATUS "Rust Error Fixes" (a port-bug fix: a `filecontents` capture ends at `\end{<current environment>}`)
 
@@ -11842,6 +11868,15 @@ placeholders, so a streamed unit with prose before its entries keeps its own hea
 (`\appendix\section{References}` keeps two headings); a last subsection's number can end up on a section-level
 bibliography; the unit's other attributes (`class`, `xml:lang`) are not carried. Guard
 `perfect_kernel_batch61::bibliography_takes_the_place_of_its_heading_unit`.
+
+**amsppt (2026-11-14).** amsppt's heads stay open for their bodies (amsppt.sty.ltxml:94-140), so its `\Refs` (and the
+bare `\ref` that opens it, `\@auto@Refs`) is placed as back matter at the place of amsppt's top unit, the `\specialhead`
+chapter (`adjust_backmatter_element`, as LaTeX's bibliography, latex_constructs.pool.ltxml:3935-3946): amsppt.sty:862-869
+sets `\Refs` as a head, not inside the last one. A `\head References\endhead` or `\specialhead References\endspecialhead`
+before it then heads it as above. Perl's `\@Refs` (amsppt.sty.ltxml:335-340) opens in place: the bibliography nests in
+the last head, under a second "References". Witnesses math0304264, q-alg9506019, math-ph9910014; repros
+amstex/amsppt_refs_close_the_heads, amstex/amsppt_specialhead_heads_the_references; guard
+`perfect_kernel_batchamsppt::amsppt_heads_and_theorems`.
 
 ### 457. etex's register-block allocators are defined on today's kernel (Perl and current pdflatex: undefined)
 
@@ -18797,6 +18832,13 @@ Witnesses 1508.02842, 1801.00977, 1411.4499, 1506.02940, 1601.01109 (2014-2018),
 class-bindings/vmsta/vmsta_emails_and_addresses_are_contacts_red, class-bindings/vmsta_2018/
 vmsta_2018_emails_and_addresses_are_contacts_red (cut-down classes beside them); guards
 `perfect_kernel_batch78e::{vmsta_emails_and_addresses_are_contacts, vmsta_2018_emails_and_addresses_are_contacts}`.
+The names: the frontmatter observer's rehearsal read the author content without the author markup its digestion runs
+(`\lx@author@markup@begin`), so vmsta's `\inits` was undefined there, its "Yu." printed, and the emitter wrote the names
+from that reading, "Yu.Yuliya Mishura" with no Warning (since HG1; 1508.02842, 1411.4499, 1506.02940). The rehearsal now
+reads each author block under `author_markup_begin` (observer/reading.rs; defs/frontmatter_fields.rs
+`author_markup_begin`): the binding's class markup, OmniBus's, and the title code's definitions that read arguments (#941).
+Repro class-bindings/vmsta/vmsta_title_page_name_parts (GREEN); guard
+`perfect_kernel_batchlostf::lost_frontmatter_content_is_kept`.
 
 ### 803. A frontmatter note all of whose content became contacts is not emitted
 
@@ -22411,7 +22453,7 @@ astro-ph0208329, 1301.7157, astro-ph0105072 (rmaa). Census A/B against int116a: 
 changed, all better, every creator compared: E 52 → 52, F 1 → 1 — 2504.21590's expansion-loop Fatal on both — W 93 →
 93) and 345 OmniBus/aguplus/AASTeX `\altaffiltext` papers (byte-identical). Repros
 `sectioning-frontmatter/{pos_sty_speaker_author_contacts, pos_sty_marked_authors, pos_sty_marked_speaker_second,
-pos_sty_report_unstarred_author, rmaa_altaffiltext_marks, rmaa_altaffiltext_unmarked}`; guards
+pos_sty_report_unstarred_author, rmaa_altaffiltext_marks_red, rmaa_altaffiltext_unmarked}`; guards
 `perfect_kernel_batch86b::*`.
 
 ### 905. fcs's and dgruyter's `\author*[labels]` mark the corresponding author and request its labelled affiliations (Perl: no fcs or dgruyter author binding, the authors mangled)
@@ -22436,8 +22478,13 @@ a 292-paper amsart sample, 53 REVTeX/AASTeX papers defining `\affil`, all 24 fcs
 worse, every creator compared: the 20 fcs/dgruyter papers with the starred name, its corresponding contact and its
 labelled affiliations, and the 3 REVTeX papers with the document's `\affil`; the AMS papers and the amsart sample
 byte-identical; E 2,273 → 2,273, F 3 → 3.
-Repros `sectioning-frontmatter/{fcs_author_star_and_address_labels, dgruyter_author_star_and_affil_labels}`; guards
-`perfect_kernel_batch86c::{fcs_author_star_and_address_labels, dgruyter_author_star_and_affiliation_labels}`.
+The frontmatter emitter keys a creator's items by their letters and digits, so the "✉" contact (none) was dropped with no
+Warning (red since DEL1, on 3 of 3 witnesses: 2410.08723, 2401.13011, 2408.05715, which call no `\maketitle`: the class
+makes the title, fcs.cls:768-771 `\AfterEndPreamble`): a contact printing no letter or digit keys by the symbol it prints
+(emitter/plan.rs `contact_key`, LOSTF).
+Repros `sectioning-frontmatter/{fcs_author_star_and_address_labels, fcs_author_star_without_maketitle,
+dgruyter_author_star_and_affil_labels}`; guards `perfect_kernel_batchlostf::lost_frontmatter_content_is_kept` (the fcs
+rows), `perfect_kernel_batch86c::dgruyter_author_star_and_affiliation_labels`.
 
 ### 906. The `\maketitle` replay gate does not run what `\ifx` and its kin only compare or show; the full stop closing an IEEE author block after a grade is no part of its names, and the notes after it stay the block's (Perl: the class body is never run; IEEE grades dropped)
 
@@ -23353,7 +23400,7 @@ replacing class, none for a stacking one); never a flag, a convention key, the s
   gate study's piece 8: landed, OD #922), is the decision this leaves.
 - The 16 aa census papers with two `\author` calls in source change nothing either way (their second calls sit in
   comments or conditionals).
-- Repros sectioning-frontmatter/`ptephy_author_given_twice_keeps_the_last`, `ptephy_v2_author_calls_stack`; class-bindings/
+- Repros sectioning-frontmatter/`ptephy_author_given_twice_keeps_the_last_red`, `ptephy_v2_author_calls_stack`; class-bindings/
   `webofc_author_given_twice_keeps_the_last` (catalog only: its raw-read class leaves a conditional open, a pre-existing
   Warning), `aa_author_given_twice_keeps_the_last` and `ieeetj_author_calls_stack` (catalog: the open question's
   shapes); guard `perfect_kernel_batch92b::each_class_author_replaces_or_stacks_as_its_class`.
@@ -24698,8 +24745,22 @@ the forms a marked line leads with (`leading_mark`, the extent-reporting form of
 store; the rerouted setter keeps the whole body, so the mark prints where it is called (inside `\author{…}`, at the
 name) and the store goes to the table's call (`\lx@add@email`, read at `\maketitle` or the frontmatter's flush). Only
 table setters; an off-table setter (`survey_off_table_stores`) still needs a pure store. Repro sectioning-frontmatter/
-`mark_then_store_email_read_by_a_refused_abstract`; guard
-`perfect_kernel_batch95d::mark_then_store_email_is_its_creators_contact`.
+`mark_then_store_email_read_by_a_refused_abstract_red` (RED since DEL1, post-merge: the observer reads the rerouted
+setter as the class's own e-mail command, `EmailMeaning::Own`, so the emitter writes the call `\email{…}` as an e-mail
+item — its mark a contact "*" of its own, not the name's).
+
+**The title code's marks in the rehearsal (LOSTF).** The pazh/astl title code defines `\address` and `\addresstext` only
+in `\@maketitle`, where `\@author` expands (astlb.cls:117-118, pazhastl.cls:112: `\def\address##1{\textsuperscript{##1}}`,
+`\def\addresstext##1##2{\footnotetext[##1]{\itshape ##2}}`). The digestion of the author content runs them (#983), but the
+observer's rehearsal read the content without them: undefined, their arguments printed as text, and the reading took "1,"
+and the institutes for names and affiliations — 1206.0451's S.Yu. Sazonov merged into an affiliation, "2 1Space Research
+Institute" an affiliation of 1202.2889 and 1108.4222. Rule: the rehearsal reads the author content under the author
+markup its digestion runs, a title-code definition among it where it reads arguments (`author_markup_begin`;
+`title_code::reads_arguments`); a parameterless one stays undefined there, its held Error a piece's to take (#983's
+aaai2026 `\co`: run in the rehearsal it moved 2508.08170 to a counter decline). PC3's exclusion of such definees from
+`content::Field::held_undefined_at` is deleted: no Error is held at them. Still wrong (post-merge): the institutes notes go
+to the block's last name, not by their marks. Repro `sectioning-frontmatter/astlb_title_code_address_marks_keep_the_names`;
+guard `perfect_kernel_batchlostf::lost_frontmatter_content_is_kept`.
 
 ### 942. The observer writes IEEEtran, acmart, authblk and the MNRAS family, each behind its own gate; an entry's take-out e-mail is a change tag; the comparator reads the take-out (Perl: the old reader's output, no observer)
 
@@ -28993,20 +29054,21 @@ had made Carl Bob's affiliation, silently, review revPB S2). A `\newcounter{x}` 
 unit `author_split_tests::title_code_counters_replay_by_their_count_register`). Known residuals: the content check counts
 a note such a macro prints as placed more often than printed (2508.04047, 2508.00545, 2508.05996, 2508.08170, 2508.21091,
 2607.29185: one Warning each, the PDF printing the note once), because the block's rehearsal runs without the title
-code's definitions (`\co` undefined there prints nothing) while the creator's content runs with them; running them in
-the rehearsal too trades it for the emitter's "note no argument" Warning (the note's tokens are the macro's body, not
-the block's: one per note) and moves 2508.08170 to a counter decline, so it is not taken. 2205.11640's `\Aff` column (an
+code's parameterless definitions (`\co` undefined there prints nothing) while the creator's content runs with them; running
+them in the rehearsal too trades it for the emitter's "note no argument" Warning (the note's tokens are the macro's body,
+not the block's: one per note) and moves 2508.08170 to a counter decline, so it is not taken (those reading arguments run
+there since LOSTF, #941). 2205.11640's `\Aff` column (an
 address) is the affiliation of the last name only (David Barber), where the PDF shares it among the three. RED (review
 revPB S5, synthetic): a reader macro's first use is the reading point, so where that use sits in a group defining `\coo`
 (a measuring `\setbox`) and the shipped reading outside it, `\coo` is replayed and pdflatex's `Error:undefined:\coo` is
 silenced (repro `pbb_reader_first_use_in_a_measuring_group`, no guard; aaai2026.sty's two passes define the same `\co`);
 the fix is to replay only the definitions in force at every reading point. The pazh classes' `\address`, defined only in
 pazhastl.cls:112's `\@maketitle` minipage (`\def\address##1{\textsuperscript{##1}}`; PC3): a piece never takes alone a
-held undefined command that the title code defines, reading arguments, where it reads `\@author` (`emitter/content.rs`
-`Field::held_undefined_at`, the one predicate `past_held_undefined` and `block_names` share, leaves out such definees of
-`title_code_author_definitions`, told by its `reads_arguments` (both in `frontmatter/classify/title_code.rs` since Z18m), on the title code's own statement: a parameter in a `\def`'s parameter text, a
-`\newcommand`'s `[n]` with n > 0; the flush's net spares them already, by its meaning recorder) — the rehearsal, without the title
-code's definitions, read the argument's print as the block's own — so the e-mail piece is `\email{…}` alone and
+held undefined command that the title code defines, reading arguments, where it reads `\@author` (since LOSTF the
+rehearsal reads the content under such definitions, `author_markup_begin`, told by `reads_arguments` in
+`frontmatter/classify/title_code.rs` on the title code's own statement: a parameter in a `\def`'s parameter text, a
+`\newcommand`'s `[n]` with n > 0; so no Error is held at them for `emitter/content.rs` `Field::held_undefined_at` to
+take, #941) — so the e-mail piece is `\email{…}` alone and
 `\address{1}` stays the name's mark, digested under the title code's definitions. A parameterless definee is still taken:
 it prints, under those definitions, what the piece holds (aaai2026.sty's `\co`, the corresponding-author note: leaving it
 out lost the note on 2508.04047, 2508.08170, 2508.00545, 2508.05996, 2508.21091, 2607.29185). It had grown the
@@ -29088,7 +29150,7 @@ affiliation, no word lost (`sectioning-frontmatter/title_tabular_linebreak_insid
 steps a counter (`\def\co{\stepcounter{corfn}\textsuperscript{\arabic{corfn}}}`) prints its mark for the first author
 only, the second's lost silently (`sectioning-frontmatter/title_code_counter_mark_first_author_only`). The content
 check's excess Warning on 2508.00545, 2508.04047, 2508.05996, 2508.08170, 2508.21091 and 2607.29185 (W +1 each, with E
-1 → 0; main session: accepted): the block's rehearsal runs without the title code's definitions, so `\co` prints
+1 → 0; main session: accepted): the block's rehearsal runs without the title code's parameterless definitions, so `\co` prints
 nothing there while the creator prints the note; running them in the rehearsal traded it for "note no argument"
 Warnings and moved 2508.08170 to a counter decline (PBb, reverted).
 
@@ -31857,6 +31919,13 @@ atveryend's commands are no-ops: every hook's code is dropped.
 `\AtBeginEnvironment{verbatim}` joins the same hook, its private store gone); `\label` runs
 `\UseHookWithArguments{label}{1}{#1}` in a group (:14943); `\include` names the file current and runs `include/before`,
 `include/<name>/before`, `/end`, `/after`, and `include/excluded` for a file `\includeonly` leaves out (:9609-9627).
+The kernel's abstract, a binding macro, runs `env/abstract/begin` inside the abstract's group before `\abstract`
+(:15354-15362) — ahead of the abstract's name and the class's replayed begin code, what it typesets heading the body —
+and `env/abstract/end` before `\end{abstract}` (:15386); an abstract that is a constructor environment runs both from
+its constructor only. `\selectfont` runs `\UseHook{selectfont}` before `\size@update` (:12580), only when the hook
+holds code (scrartcl.cls:2673's `\par@update`, everysel.sty:49), read from the hook's slots it names once;
+`file/<name>/before|after` are plain `\UseHook`s at every `\input` and load (:19668-19673), and a load's `after` pair
+runs before its `\AtEndOfPackage`/`\AtEndOfClass` code and `package/<name>/after` (:18865-18869).
 `\begin` defines `\@currenvir` (`verbatim*` its own name) before `env/<name>/begin` (:15350-15352), so the verbatim
 constructor runs its begin hooks, the kernel's and etoolbox's `@atbegin` store, after it. `enddocument/afterlastpage`, `/afteraux` and
 `/end` (:15262-15277) follow the last page, where pdflatex prints nothing they typeset: the document's own code
@@ -31881,11 +31950,18 @@ latex.ltx runs it before the `.aux` write, so a hook's `\@currentlabel` does not
 Package.pm:1920-1927; `environment_begin_hook_reads_its_environment_red`: moving it alone raised 2001.02707's
 `\AtBeginEnvironment{defn}{\begin{samepage}}` from 29 to 54 errors, so the end side moves with it); no `\begin` path
 sets `\@currenvline` (`currenvline_is_never_set_red`); a
-document's `\AtEndAfterFileList` is lost (`enddocument_info_hook_red`). **Guard**:
+document's `\AtEndAfterFileList` is lost (`enddocument_info_hook_red`); `\emph` and the other font constructors call no
+`\selectfont`, so its hook does not run there (`selectfont_hook_on_emph_red`, the macro faces); the kernel abstract
+sets no class abstract font, so a begin hook's `\large` is not undone by article's `\small`
+(`abstract_begin_hook_size_under_the_class_small_red`), and what amsart's begin hook typesets before an abstract
+ahead of `\maketitle` stays in the abstract, where pdflatex prints it before the title
+(`amsart_abstract_begin_hook_text_before_the_title_red`). **Guard**:
 `perfect_kernel_batchqa47a::batchqa47a_command_hook_rows` (rows `enddocument_hooks_run`,
 `enddocument_hook_commands_run`, `verbatim_env_hooks_run`, `verbatim_begin_hook_reads_its_environment`,
 `label_hook_runs`, `include_hooks_run`, `label_hook_opens_no_paragraph`, `cleveref_firstaid_not_registered`,
-`cleveref_firstaid_absent_removes_nothing`).
+`cleveref_firstaid_absent_removes_nothing`, `file_hooks_run_at_every_input`, `file_hooks_order_around_a_package`,
+`abstract_env_hooks_run`, `selectfont_hook_runs`, `abstract_end_hook_once_in_a_constructor_abstract`,
+`abstract_begin_hook_runs_before_the_name`).
 
 ### 1045. Every box's width, height and depth are the CSS custom properties `--ltx-box-width`, `--ltx-box-height`, `--ltx-box-depth` (Perl: `style="width:…;height:…;vertical-align:…"`, or dropped)
 
@@ -33421,3 +33497,4 @@ keytheorems.sty:994, :1075-1079 stores the head through `\deferred@thm@head` for
 binding's theorem never calls `\deferred@thm@head`: it makes the head an `ltx:title` before the box. latexml_contrib/src/keytheorems_sty.rs reads
 the file raw and leaves the macro empty, so the box's title slot is empty and the head is kept. Witnesses tutodoc-en, tutodoc-fr. Guard
 `perfect_kernel_batchm3::a_tcolorbox_keytheorem_keeps_its_head_and_body`.
+and the row `file_hooks_run_at_every_input` (#1048: `file/<name>/before|after` plain `\UseHook`s, latex.ltx:19669/19672).

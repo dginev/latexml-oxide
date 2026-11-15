@@ -1,0 +1,22 @@
+% mechanism: `\end{abstract}` runs `env/abstract/end` itself only for the kernel abstract, a binding macro
+%   (sect05.rs); an abstract that is a constructor environment (the titlepage's, sect05.rs `DefEnvironment{abstract}`)
+%   runs it from its constructor (dialect.rs), so `\end` adding it too ran it twice.
+% witness: synthetic (revQAB2 B2; `\AtEndEnvironment{abstract}` takes the same path)
+% status:  GREEN (QAB2b; RED on QAB2 c01a9dc55ad: "Abstract text.\n[en][en]")
+% oracle:  pdflatex 0 `!`; "Title page. [ab][bg] Abstract Abstract text. [en] [af] After."
+% engines: rust QAB2: the red line; Perl 0.8.8: no hooks ("Abstract text."); QAB2b: one "[en]".
+% expect:  0 errors, 0 warnings; <p>Abstract text.\n[en]</p> in the titlepage's abstract
+\documentclass{article}
+\AddToHook{env/abstract/before}{[ab]}
+\AddToHook{env/abstract/begin}{[bg]}
+\AddToHook{env/abstract/end}{[en]}
+\AddToHook{env/abstract/after}{[af]}
+\begin{document}
+\begin{titlepage}
+Title page.
+\begin{abstract}
+Abstract text.
+\end{abstract}
+\end{titlepage}
+After.
+\end{document}

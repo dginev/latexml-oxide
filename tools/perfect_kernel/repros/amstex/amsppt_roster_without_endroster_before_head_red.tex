@@ -1,0 +1,23 @@
+% witness: synthetic (revAMSPPT)
+% oracle:  pdftex (\input amstex, \documentstyle{amsppt}) this file: 1 error ("AmS-TeX error: You seem to have a missing or
+%          misspelled \endroster"; amsppt.sty's `\add@missing`, :574-576, :863, closes the roster at `\endproclaim`);
+%          "1. A Theorem 1. Claim: (1) One. (2) Two. After. 2. B Body B."
+% engines: Perl 0.8.8 = 0 errors, 1 warning, every item lost (KNOWN_PERL_ERRORS #1270); rust fix/amsppt-ids-sections = 2 errors
+%          (malformed: `ltx:section` in `ltx:p`; `ltx:document` closes an open `enumerate`), section 2 inside item (2)'s
+%          paragraph; the round-2 base = 0 errors, everything after `\roster` lost
+% expect:  1 error (the missing `\endroster`); the roster closed at `\endproclaim`, "After." after the theorem, section 2 a sibling
+% status:  RED (fix/amsppt-ids-sections)
+% moves:   post-merge (`DigestUntil` has no `\add@missing`: a block's end closes an open inner block)
+\input amstex
+\documentstyle{amsppt}
+\document
+\head 1. A\endhead
+\proclaim{Theorem 1} Claim:
+\roster
+\item One.
+\item Two.
+\endproclaim
+After.
+\head 2. B\endhead
+Body B.
+\enddocument

@@ -1,0 +1,29 @@
+% mechanism: a package load runs `\InputIfFileExists`' `file/<name>.sty/after` and `file/after` (latex.ltx:19672-19673)
+%   before the load's `\AtEndOfPackage` code (`-h@@k`, :18865) and `package/<name>/after` (:18868); content.rs ran
+%   the file hooks after the `-h@@k`. The class load (`\AtEndOfClass`, `class/<name>/after`) takes the same path.
+% witness: synthetic (QA46 "package/class/file hooks: order"; QAB2)
+% status:  GREEN (QAB2; RED before: "[PB][pb][FB][fb](in)[eop][fa][FA][pa][PA]")
+% oracle:  pdflatex 0 `!`; "[PB][pb][FB][fb](in)[fa][FA][eop][pa][PA]"
+% engines: rust QAB2 base abad17dfeaf: "[PB][pb][FB][fb](in)[eop][fa][FA][pa][PA]"; QAB2: pdflatex's; Perl: no hooks.
+% expect:  0 errors, 0 warnings; <p>[PB][pb][FB][fb](in)[fa][FA][eop][pa][PA]</p>
+\begin{filecontents*}[overwrite]{qabfhpkg.sty}
+\AtEndOfPackage{\g@addto@macro\rec{[eop]}}
+\g@addto@macro\rec{(in)}
+\end{filecontents*}
+\documentclass{article}
+\makeatletter
+\def\rec{}
+\AddToHook{package/before}{\g@addto@macro\rec{[PB]}}
+\AddToHook{package/qabfhpkg/before}{\g@addto@macro\rec{[pb]}}
+\AddToHook{file/before}{\g@addto@macro\rec{[FB]}}
+\AddToHook{file/qabfhpkg.sty/before}{\g@addto@macro\rec{[fb]}}
+\AddToHook{file/qabfhpkg.sty/after}{\g@addto@macro\rec{[fa]}}
+\AddToHook{file/after}{\g@addto@macro\rec{[FA]}}
+\AddToHook{package/qabfhpkg/after}{\g@addto@macro\rec{[pa]}}
+\AddToHook{package/after}{\g@addto@macro\rec{[PA]}}
+\makeatother
+\usepackage{qabfhpkg}
+\let\recp\rec
+\begin{document}
+\recp
+\end{document}

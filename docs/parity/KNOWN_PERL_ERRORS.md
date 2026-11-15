@@ -20516,7 +20516,8 @@ the block's Error, and the flush's net raises no command the flush's code assign
 defining it (`reading::HeldUndefined`): 0 Errors, the affiliation "Univ X" (OXIDIZED_DESIGN_DIVERGENCES #983). A
 command with an argument the title code defines, right after an e-mail call (pazhastl.cls:112's `\def\address##1{…}`:
 `\author{Ann Able\email{ann@x.org}\address{1}}`, Perl 1 Error `\address`), is no real undefined command for the e-mail
-piece either (`content::Field::held_undefined_at`): 0 Errors, `\address{1}` the name's mark (1108.4222, 2607.07582; PC3).
+piece either (the observer's rehearsal reads it under the title code's definition, `author_markup_begin`, OD
+#941): 0 Errors, `\address{1}` the name's mark (1108.4222, 2607.07582; PC3, LOSTF).
 
 ## 1220. REVTeX: an author block repeated after `\maketitle` (a supplement) puts every repeated contact on the last author
 
@@ -21664,6 +21665,46 @@ The rule is the resolver's (`observer/resolver`), whose decisions the emitter wr
 - repro `boxes-groups/box_dimensions_measured.tex`
 
 **Open (K18 step 2):** `\raisebox`'s `[height][depth]` (RED `boxes-groups/raisebox_optionals_measure_the_box.tex`), `\resizebox{1em}`'s last digits, makecell/diagbox string sizes: `docs/perfect_kernel/OPEN_ROWS.md` ODR5.
+
+## 1269. amsppt's theorem-like blocks prefix a name amsppt.sty never prints
+
+amsppt.sty:639-688 heads `\definition`, `\remark`, `\demo` and `\example` with their argument alone (`\definition{Definition
+1}` prints "Definition 1."). Perl's amsppt.sty.ltxml:184-235 titles them `\definitionname`, `\remarkname`,
+`\examplename` (undefined) or `\demonstrationname`, a space, then the argument: "Definition Definition 1", "Demonstration
+Proof", and an undefined-macro error for every `\example`. Minimal trigger (pdftex: "Example 3. An example."; Perl: 1
+error, title "\examplename Example 3"): `\input amstex \documentstyle{amsppt} \document \example{Example 3} An example.
+\endexample \enddocument`. Rust titles each block with its argument (amsppt_sty.rs; repro
+amstex/amsppt_theorem_kinds_share_the_counter, guard `perfect_kernel_batchamsppt::amsppt_heads_and_theorems`).
+
+## 1270. amsppt's `\roster` drops every item, silently
+
+Perl's amsppt.sty.ltxml:243-250 builds `\roster DigestUntil:\endroster` with the template `<ltx:enumerate>#body</ltx:enumerate>`,
+but a `DigestUntil` constructor's body is its argument `#1`; `#body` is never set, so every roster is an empty `<enumerate/>`
+(0 errors, 0 warnings). Its `\roster@item` tests `?#1` with no argument, so no item would be tagged; `\item"(b)"` and `\item[5]`
+are not read (amsppt.sty:723-736: the label prints, the count is set), `\runinitem` (amsppt.sty:705-718) is undefined, and the
+roster's id is stepped in `properties`, after its items took theirs. Minimal trigger (pdftex: "(1) Plain item. (b) Labelled
+item."; Perl: `<enumerate/>`): `\input amstex \documentstyle{amsppt} \document \roster \item Plain item. \item"(b)" Labelled item.
+\endroster \enddocument`. Rust digests into `#1`, reads `\item` as amsppt.sty's `\rosteritem@` does into an item tagged
+`\therosteritem{n}` or `{\rm label}`, steps the roster's id at `\roster` and gives a nested roster's outer item ids back at its
+end. Witness alg-geom9502009 (45 rosters); repros amstex/{amsppt_roster_keeps_its_items, amsppt_roster_nested,
+amsppt_roster_runinitem, amsppt_roster_runinitem_stray}; guard `perfect_kernel_batchamsppt::amsppt_heads_and_theorems`.
+Upstream: to offer.
+
+## 1271. A family register's value is read as one token: `\textfont9=\textfont1` typesets the "1"
+
+tex.web §577 `scan_font_ident` reads the font of a `\textfont`/`\scriptfont`/`\scriptscriptfont` assignment as a font
+identifier, and its `def_family` branch reads a family register's 4-bit number and gives that family's font. Perl's
+registers (TeX_Math.pool.ltxml:882-900) are `Token`-valued, read by `readValue('Token')` (Gullet.pm:770-775: one
+unexpanded token), so the value is `\textfont` and the family number is left to print. Minimal trigger (pdflatex:
+"ABCD"; Perl: "A1 B1 CD"); 2511.21986's `\AtBeginEnvironment{abstract}` prints "1 1 1" once the hook runs. Rust's
+`read_value(Token)` reads a token register's own arguments and gives its value (`gullet.rs`). Guard
+`perfect_kernel_batchqa47a::batchqa47a_command_hook_rows` row `font_family_register_takes_a_family_font`. An upstream
+offer.
+
+```latex
+\documentclass{article}
+\begin{document}
+A\textfont9=\textfont1 B\scriptfont9=\scriptfont1 C\setbox0=\hbox{$0$}D
 
 ## 1274. pgfmath's native functions compute when expanded, before the assignment that expanded them
 

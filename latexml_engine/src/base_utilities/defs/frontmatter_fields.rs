@@ -10,7 +10,7 @@ pub(in crate::base_utilities) use names::*;
 
 use crate::base_utilities::{
   defs::frontmatter_api::spacing_formulas_as_space,
-  frontmatter::classify::title_code::title_code_author_definitions,
+  frontmatter::classify::title_code::{reads_arguments, title_code_author_definitions},
 };
 
 pub(in crate::base_utilities) fn load() -> Result<()> {
@@ -80,48 +80,7 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
     "\\lx@author@markup@provide{}{}",
     "\\ifx#1\\@undefined\\let#1#2\\expandafter\\def\\expandafter\\lx@author@markup@unprovide\\expandafter{\\lx@author@markup@unprovide\\let#1\\@undefined}\\fi"
   );
-  DefMacro!("\\lx@author@markup@begin", sub[()] {
-    // A binding's author markup for a class that defines its own only where its title code prints the author list
-    // (`\lx@author@markup@class`, `\lx@author@markup@provide` calls: vmsta.cls:278-291 `\name@m@front`, which prints
-    // `\fnm`/`\snm` as "Yuliya~Mishura" and drops `\inits`; latexml_contrib vmsta_cls.rs) comes first, before
-    // OmniBus's identity meanings would take the names it gives.
-    let mut out = TokenizeInternal!(r"\def\lx@author@markup@unprovide{}").unlist();
-    if IsDefined!(&T_CS!("\\lx@author@markup@class")) {
-      out.push(T_CS!("\\lx@author@markup@class"));
-    }
-    out.extend(if lookup_bool("\\author:redefined") {
-      TokenizeInternal!(
-        r"\lx@author@markup@provide\prefix\@firstofone\lx@author@markup@provide\suffix\@firstofone\lx@author@markup@provide\particle\@firstofone\lx@author@markup@provide\fnms\@firstofone\lx@author@markup@provide\snm\@firstofone\lx@author@markup@provide\inits\@firstofone\lx@author@markup@provide\degs\@firstofone\lx@author@markup@provide\roles\@firstofone\lx@author@markup@provide\orcid\lx@author@orcid"
-      )
-      .unlist()
-    } else {
-      Vec::new()
-    });
-    // The author markup a class defines only where its title code reads `\@author` is in force for the author content
-    // too: melba.cls:279-283 `{\def\aff{…}\def\name{…}\@author …}` (2405.09787, 2407.21368, 2105.14711), dmlr2e.sty:
-    // 249-251 (2404.08403), amta2024.sty:77-78 (2405.16969), ssArxiv.sty:109-111 (2503.22625), a preamble's own
-    // `\@maketitle` (2601.05137). In pdflatex `\@author` expands inside that group, while here the author content is
-    // read at the frontmatter, before the title code runs. Each definition of a control sequence still undefined runs,
-    // in source order, for the author content, which it is undefined again after, as the OmniBus author markup is
-    // (#444); a definition already in force stands. Perl errs the same (`undefined:\name`).
-    let definitions = title_code_author_definitions();
-    let undefined: Vec<bool> = definitions
-      .iter()
-      .map(|(definee, _)| lookup_meaning(definee).is_none())
-      .collect();
-    for ((definee, statement), undefined) in definitions.into_iter().zip(undefined) {
-      if !undefined {
-        continue;
-      }
-      out.extend(statement);
-      out.extend(
-        TokenizeInternal!(r"\expandafter\def\expandafter\lx@author@markup@unprovide\expandafter{\lx@author@markup@unprovide\let")
-          .unlist(),
-      );
-      out.extend([definee, T_CS!("\\@undefined"), T_END!()]);
-    }
-    Ok(Tokens::new(out))
-  });
+  DefMacro!("\\lx@author@markup@begin", sub[()] { author_markup_begin(false) });
   DefMacro!("\\lx@author@markup@run{}{}", "#2#1");
   DefMacro!("\\lx@author@orcid[]{}", "\\lx@add@orcid{#2}");
   DefMacro!("\\lx@inst@mark{}", sub[(label)] {
@@ -926,6 +885,54 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
     Ok(Tokens::new(calls))
   });
   Ok(())
+}
+
+/// `\lx@author@markup@begin`: the author markup in force for the author content; with `rehearsal`, the frontmatter
+/// observer's rehearsal's (observer/reading.rs), in which a title-code definition reading no argument stays undefined,
+/// its held Error the reading's (`reads_arguments`; OXIDIZED_DESIGN_DIVERGENCES #802, #941).
+pub(in crate::base_utilities) fn author_markup_begin(rehearsal: bool) -> Result<Tokens> {
+  // A binding's author markup for a class that defines its own only where its title code prints the author list
+  // (`\lx@author@markup@class`, `\lx@author@markup@provide` calls: vmsta.cls:278-291 `\name@m@front`, which prints
+  // `\fnm`/`\snm` as "Yuliya~Mishura" and drops `\inits`; latexml_contrib vmsta_cls.rs) comes first, before
+  // OmniBus's identity meanings would take the names it gives.
+  let mut out = TokenizeInternal!(r"\def\lx@author@markup@unprovide{}").unlist();
+  if IsDefined!(&T_CS!("\\lx@author@markup@class")) {
+    out.push(T_CS!("\\lx@author@markup@class"));
+  }
+  out.extend(if lookup_bool("\\author:redefined") {
+    TokenizeInternal!(
+      r"\lx@author@markup@provide\prefix\@firstofone\lx@author@markup@provide\suffix\@firstofone\lx@author@markup@provide\particle\@firstofone\lx@author@markup@provide\fnms\@firstofone\lx@author@markup@provide\snm\@firstofone\lx@author@markup@provide\inits\@firstofone\lx@author@markup@provide\degs\@firstofone\lx@author@markup@provide\roles\@firstofone\lx@author@markup@provide\orcid\lx@author@orcid"
+    )
+    .unlist()
+  } else {
+    Vec::new()
+  });
+  // The author markup a class defines only where its title code reads `\@author` is in force for the author content
+  // too: melba.cls:279-283 `{\def\aff{…}\def\name{…}\@author …}` (2405.09787, 2407.21368, 2105.14711), dmlr2e.sty:
+  // 249-251 (2404.08403), amta2024.sty:77-78 (2405.16969), ssArxiv.sty:109-111 (2503.22625), a preamble's own
+  // `\@maketitle` (2601.05137). In pdflatex `\@author` expands inside that group, while here the author content is
+  // read at the frontmatter, before the title code runs. Each definition of a control sequence still undefined runs,
+  // in source order, for the author content, which it is undefined again after, as the OmniBus author markup is
+  // (#444); a definition already in force stands. Perl errs the same (`undefined:\name`).
+  let definitions = title_code_author_definitions();
+  let applies: Vec<bool> = definitions
+    .iter()
+    .map(|(definee, statement)| {
+      lookup_meaning(definee).is_none() && (!rehearsal || reads_arguments(definee, statement))
+    })
+    .collect();
+  for ((definee, statement), applies) in definitions.into_iter().zip(applies) {
+    if !applies {
+      continue;
+    }
+    out.extend(statement);
+    out.extend(
+      TokenizeInternal!(r"\expandafter\def\expandafter\lx@author@markup@unprovide\expandafter{\lx@author@markup@unprovide\let")
+        .unlist(),
+    );
+    out.extend([definee, T_CS!("\\@undefined"), T_END!()]);
+  }
+  Ok(Tokens::new(out))
 }
 
 /// `\lx@add@author[attr]{name}` and `\lx@add@creator[attr]{name}` (Base_Utility.pool.ltxml `\lx@add@creator`): the
