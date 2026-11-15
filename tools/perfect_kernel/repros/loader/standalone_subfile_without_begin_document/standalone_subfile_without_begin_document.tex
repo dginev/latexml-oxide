@@ -1,0 +1,15 @@
+% mechanism: a sub-file's preamble reopens latex.ltx's preamble commands; with no `\begin{document}` they close where
+%   the sub-file ends (preamble_commands.rs `reopen_for_subfile_preamble`, gullet.rs `unread_after_current_file`)
+% witness: synthetic (revREGCDE2 C: m3.tex)
+% oracle:  pdflatex 1 `!` (File ended while scanning use of \sa@gobble; the sub-file gobbled), "Main. After yes yes."
+% engines: rust MAIN882 and REGCDE aef337b2747 0 errors, "After no no." (the reopening stayed open for the rest of the body)
+% expect:  0 errors, 0 warnings; "Main. Sub text. After yes yes." (sac.tex beside it; the sub-file's text is run, as
+%          Perl runs it, OD #63/#65)
+% status:  GREEN (standalone_sty.rs)
+\documentclass{article}
+\usepackage{standalone}
+\begin{document}
+Main.
+\input{sac}
+After \makeatletter\ifx\DeclareMathAlphabet\@notprerr yes\else no\fi\ \ifx\DeclareTextCommandDefault\@notprerr yes\else no\fi\makeatother.
+\end{document}

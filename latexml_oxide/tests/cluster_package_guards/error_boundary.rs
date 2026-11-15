@@ -879,6 +879,27 @@ const BOUNDARY: &[Row] = &[
     )],
   ),
   (
+    "a standalone sub-file with no \\begin{document} (repro loader/standalone_subfile_without_begin_document; \
+     revREGCDE2 C, red on aef337b2747: \"After no no.\")",
+    "pdflatex 1 `!` (File ended while scanning use of \\sa@gobble), \"Main. After yes yes.\"",
+    include_str!(
+      "../../../tools/perfect_kernel/repros/loader/standalone_subfile_without_begin_document/standalone_subfile_without_begin_document.tex"
+    ),
+    &[(
+      "sac.tex",
+      include_str!(
+        "../../../tools/perfect_kernel/repros/loader/standalone_subfile_without_begin_document/sac.tex"
+      ),
+    )],
+    (0, 0),
+    &[],
+    &[(
+      "p",
+      "p1.1",
+      "<p xml:id=\"p1.1\">Main.\n\n\nSub text.\n\nAfter yes yes.\n\n</p>",
+    )],
+  ),
+  (
     "a second \\begin{document} (repro loader/second_begin_document_is_preamble_only)",
     "pdflatex 1 `!` (Can be used only in preamble); Perl 0 errors",
     include_str!(
@@ -948,6 +969,26 @@ const BOUNDARY: &[Row] = &[
       "para",
       "p1",
       "<para xml:id=\"p1\"><p xml:id=\"p1.1\">Main.</p><p xml:id=\"p1.2\">Sub text.\nEnd: yes.</p></para>",
+    )],
+  ),
+  (
+    "a subfile with no \\begin{document} (repro loader/subfile_without_begin_document; red on aef337b2747: \"End: no.\")",
+    "pdflatex 1 `!` (File ended while scanning use of \\documentclass), \"Main. End: yes.\"",
+    include_str!(
+      "../../../tools/perfect_kernel/repros/loader/subfile_without_begin_document/subfile_without_begin_document.tex"
+    ),
+    &[(
+      "subc.tex",
+      include_str!(
+        "../../../tools/perfect_kernel/repros/loader/subfile_without_begin_document/subc.tex"
+      ),
+    )],
+    (0, 0),
+    &[],
+    &[(
+      "p",
+      "p1.1",
+      "<p xml:id=\"p1.1\">Main.\nSub text.\n\nEnd: yes.</p>",
     )],
   ),
   (

@@ -2,7 +2,9 @@
 //! Perl: standalone.sty.ltxml (40 lines).
 //! NOTE: standalone.cls is handled separately; this is the .sty package.
 use latexml_core::{
-  binding::preamble_commands::{close_preamble_commands, reopen_preamble_commands},
+  binding::preamble_commands::{
+    close_subfile_preamble, end_subfile_preamble, reopen_for_subfile_preamble,
+  },
   util::image::image_candidates,
 };
 
@@ -108,8 +110,10 @@ LoadDefinitions!({
   DefPrimitive!("\\@standalone@start@input", {
     assign_value("inPreamble", false, None);
     assign_value("lx@subpreamble@begindocument", Stored::Bool(false), None);
-    close_preamble_commands();
+    close_subfile_preamble();
   });
+  // (where a sub-file with no `\begin{document}` ends)
+  DefPrimitive!("\\lx@subfile@preamble@end", { end_subfile_preamble(); });
 
   // Perl L24-33: DefPrimitive \@standalone@documentclass[]{} — open a
   // group, mark inPreamble = 1, RequirePackage each comma-separated entry
@@ -160,7 +164,7 @@ LoadDefinitions!({
     activate_scope(subfile_scope_here());
     assign_value("inPreamble", true, None);
     // (latex.ltx's preamble commands with it, `\@notprerr` again at its `\begin{document}`, `\@standalone@start@input`)
-    reopen_preamble_commands();
+    reopen_for_subfile_preamble();
     // its `\AtBeginDocument` code is not run (`at_document_hook`, sect02.rs; 2405.01743)
     assign_value("lx@subpreamble@begindocument", Stored::Bool(true), None);
     if class_tks.to_string().trim() == "standalone"

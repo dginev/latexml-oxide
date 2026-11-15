@@ -572,6 +572,18 @@ const ROWS: &[Row] = &[
       "<p xml:id=\"p1.1\">after: OK; hook: HOOK; file: FB; loaded: no/yes; ½</p>",
     )],
   },
+  // REGCDE3: a document's load after the format's runs textcomp.sty's options only, never the symbols again (revREGCDE2
+  // E; red on aef337b2747: "A ½ °.").
+  Row {
+    name:     "textcomp_after_the_format_keeps_the_documents_symbols",
+    tex:      include_str!(
+      "../../../tools/perfect_kernel/repros/loader/textcomp_after_the_format_keeps_the_documents_symbols.tex"
+    ),
+    counts:   (0, 0),
+    messages: &[],
+    absent:   &[],
+    elements: &[("p", "xml:id=\"p1.1\"", "<p xml:id=\"p1.1\">A HALF DEG.</p>")],
+  },
   // QAB2: the kernel abstract, a binding macro, runs `env/abstract/begin|end` in its group (red: "Abstract text.").
   Row {
     name:     "abstract_env_hooks_run",

@@ -5,6 +5,7 @@
 //! keeps each meaning under `\lx@onlypreamble@<name>`; the State holds the list (OXIDIZED_DESIGN_DIVERGENCES #226).
 use crate::{
   common::store::Stored,
+  gullet::unread_after_current_file,
   state::{
     Scope, assign_meaning, assign_value, lookup_bool, lookup_meaning, lookup_tokens, x_equals,
   },
@@ -16,6 +17,8 @@ use crate::{
 const DISABLED: &str = "lx@preamble@disabled";
 /// Set while the disabled commands are reopened (a body load or a sub-file preamble), so a nested one leaves them.
 const REOPENED: &str = "lx@preamble@reopened";
+/// Set while a sub-file's preamble holds the reopening ([`reopen_for_subfile_preamble`]).
+const SUBFILE: &str = "lx@preamble@subfile";
 
 fn saved_cs(cs: &Token) -> Token {
   let name = cs.to_string();
@@ -77,6 +80,34 @@ pub fn close_preamble_commands() {
     }
   }
   assign_value(REOPENED, false, Some(Scope::Global));
+}
+
+/// [`reopen_preamble_commands`] for a sub-file's preamble (standalone, subfiles): closed at its `\begin{document}` or,
+/// without one, where the sub-file ends (`\lx@subfile@preamble@end`, [`close_subfile_preamble`]).
+pub fn reopen_for_subfile_preamble() {
+  if reopen_preamble_commands() {
+    assign_value(SUBFILE, true, Some(Scope::Global));
+    unread_after_current_file(Tokens::new(vec![T_CS!("\\lx@subfile@preamble@end")]));
+  }
+}
+
+/// The close of the reopening a sub-file's preamble holds; false when it holds none (closed at its `\begin{document}`).
+pub fn close_subfile_preamble() -> bool {
+  if !lookup_bool(SUBFILE) {
+    return false;
+  }
+  assign_value(SUBFILE, false, Some(Scope::Global));
+  close_preamble_commands();
+  true
+}
+
+/// `\lx@subfile@preamble@end`: a sub-file that ends with no `\begin{document}` ends its preamble there (pdflatex:
+/// "File ended while scanning use of \sa@gobble").
+pub fn end_subfile_preamble() {
+  if close_subfile_preamble() {
+    assign_value("inPreamble", false, None);
+    assign_value("lx@subpreamble@begindocument", false, None);
+  }
 }
 
 /// [`reopen_preamble_commands`] for the extent of a load, closed when dropped (also on an Error's early return).

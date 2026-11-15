@@ -1,0 +1,14 @@
+% mechanism: amsopn.sty's `\@onlypreamble\DeclareMathOperator`: a body use is `\@notprerr` (latex.ltx:9521); the
+%   amsmath binding never adds it to `\@preamblecmds`
+% witness: synthetic (revREGCDE2 c1.tex)
+% oracle:  pdflatex 3 `!` (Can be used only in preamble; \Tr undefined twice), "Tr A x B."
+% engines: rust MAIN882 and REGCDE 0 errors, "A Tr x B." (`\Tr` an operator)
+% expect:  1 error (preamble only) and the undefined `\Tr`'s
+% status:  RED
+% moves:   post-merge
+\documentclass{article}
+\usepackage{amsmath}
+\begin{document}
+\DeclareMathOperator{\Tr}{Tr}
+A $\Tr x$ B.
+\end{document}

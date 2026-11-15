@@ -5593,9 +5593,10 @@ listed command to `\@notprerr` (DG ruling (b), 2026-11-15), except Perl's 7 load
 - A package or class LaTeXML reads in the body (Perl's recovery, a binding's load) and a sub-file's preamble
   (standalone_sty.rs, subfiles_sty.rs) read the commands as a preamble does, which pdflatex never reaches: the walk
   keeps each meaning under `\lx@onlypreamble@<name>`, and core `binding::preamble_commands` gives them back around the
-  load (`input_definitions`, from before `\@pushfilename` to after `\@popfilename`) or the sub-file's preamble, then
-  walks again. What such a load records with `\@onlypreamble` is dropped (`\@preamblecmds` is `\@notprerr` after),
-  so lppl.tex:44's probe stays true. A loader inside one is no Error (`\@currext` `sty`/`cls`, `inPreamble`).
+  load (`input_definitions`, from before `\@pushfilename` to after `\@popfilename`) or the sub-file's preamble (to its
+  `\begin{document}`, or where a sub-file without one ends: `gullet::unread_after_current_file`), then walks again.
+  What such a load records with `\@onlypreamble` is dropped (`\@preamblecmds` is `\@notprerr` after), so lppl.tex:44's
+  probe stays true. A loader inside one is no Error (`\@currext` `sty`/`cls`, `inPreamble`).
 - A loader replaced by a binding (docmute_sty.rs, standalone_sty.rs `\documentclass`) stands for its package's re-let
   after the walk (docmute.sty:19, standalone.sty:738). `\document` stays the constructor's alias, whose identity
   `\begin`/`\end` read (sect01.rs): the constructor's second run raises the Error.
@@ -5609,7 +5610,8 @@ takes; 1205.6201's are a conditional's other preambles).
 Guards `preamblecmds_is_notprerr_inside_a_running_document`, `error_boundary::perfect_kernel_error_boundary`
 (rows "preamble-only commands in the body/preamble", "a second \begin{document}", "under an unknown class",
 "a body package's \@onlypreamble", "a preamble-only command is \@notprerr", "a document's \@onlypreamble macro",
-"a body \includeonly", "a package read in the body", "a subfile's preamble", "a standalone sub-file's preamble").
+"a body \includeonly", "a package read in the body", "a subfile's preamble", "a standalone sub-file's preamble",
+"a standalone sub-file with no \begin{document}", "a subfile with no \begin{document}").
 
 ### 227. → SYNC_STATUS "Rust Error Fixes" (a port-bug fix: a `filecontents` capture ends at `\end{<current environment>}`)
 
@@ -18695,7 +18697,9 @@ does (`state::mark_loaded`: thmtools's thm-patch.sty, aipproc's aipxfm.sty); rev
 which the real class never loads, undefines `\ver@hyperref.sty` with its record (`state::unmark_loaded`), and so does the
 format's preload of textcomp (sect13.rs; Perl latex_constructs.pool.ltxml:5893 leaves it loaded), whose definitions
 latex.ltx carries without `\ver@textcomp.sty`: the document's first load runs its file and package hooks (TL manual
-biblatex-sbl, `\AfterPackage{textcomp}`; guard `perfect_kernel_batchqa47a` row `afterpackage_of_the_formats_textcomp`); a request the records skip restores a
+biblatex-sbl, `\AfterPackage{textcomp}`; guard `perfect_kernel_batchqa47a` row `afterpackage_of_the_formats_textcomp`), and,
+as textcomp.sty v2.1b (:52-75), declares and processes the options only: the symbols are not defined again over the
+document's (textcomp_sty.rs reads `binding_loaded`; row `textcomp_after_the_format_keeps_the_documents_symbols`); a request the records skip restores a
 mark the document took back (`\let\ver@X\relax` then `\usepackage{X}` leaves X loaded, as LaTeX's reload does; the loader's
 records-only skip is the ruling of 2026-10-14) with the file's declared version, as the binding load does. A loader marks
 the file unless it is loaded by this rule: a `\relax` left by a query before the load (`\expandafter\ifx\csname ver@X.sty\endcsname\relax`,
