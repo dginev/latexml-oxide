@@ -310,22 +310,34 @@ LoadDefinitions!({
   });
   Let!("\\botcaption", "\\topcaption");
 
-  // Section structure — Perl L112-147. AmSTeX uses terminator-delimited
-  // syntax (`\head Foo \endhead`) not balanced `\section{Foo}`.
-  // We use DefConstructors matching Perl to avoid relying on LaTeX's
-  // `\section*` which is undefined in pure AmSTeX contexts.
+  // Section structure — Perl amsppt.sty.ltxml:94-140. A head opens its unit and leaves it open, as amsppt.sty's heads
+  // only set a title (:573-617): the next head at its level or above, or the document's end, closes it (autoClose).
   NewCounter!("chapter", "document", idprefix => "C", nested => vec!["section"]);
   NewCounter!("section", "chapter", idprefix => "S", nested => vec!["subsection"]);
   NewCounter!("subsection", "section", idprefix => "SS", nested => vec!["subsubsection"]);
   NewCounter!("subsubsection", "subsection", idprefix => "SSS", nested => vec!["paragraph"]);
+  Tag!("ltx:chapter", auto_close => true);
+  Tag!("ltx:section", auto_close => true);
+  Tag!("ltx:subsection", auto_close => true);
+  Tag!("ltx:subsubsection", auto_close => true);
 
+  DefConstructor!("\\specialhead Until:\\endspecialhead",
+    "<ltx:chapter inlist='toc' xml:id='#id'>#tags<ltx:title>#1</ltx:title>",
+    bounded => true,
+    properties => sub[_args] { RefStepID!("chapter") });
+  Let!("\\endspecialhead", "\\relax");
   DefConstructor!("\\head Until:\\endhead",
-    "<ltx:section inlist='toc' xml:id='#id'><ltx:title>#1</ltx:title></ltx:section>",
+    "<ltx:section inlist='toc' xml:id='#id'>#tags<ltx:title>#1</ltx:title>",
+    bounded => true,
     properties => sub[_args] { RefStepID!("section") });
   Let!("\\endhead", "\\relax");
-
   DefMacro!("\\heading Until:\\endheading", "\\head#1\\endhead");
   Let!("\\endheading", "\\relax");
+  DefConstructor!("\\subhead Until:\\endsubhead",
+    "<ltx:subsection inlist='toc' xml:id='#id'>#tags<ltx:title>#1</ltx:title>",
+    bounded => true,
+    properties => sub[_args] { RefStepID!("subsection") });
+  Let!("\\endsubhead", "\\relax");
 
   // Perl amsppt.sty.ltxml L133-141: \subheading dispatches on next token.
   DefMacro!("\\subheading", sub[_args] {
@@ -343,62 +355,45 @@ LoadDefinitions!({
   DefMacro!("\\subheading@env Until:\\endsubheading", "\\subhead#1\\endsubhead");
   def_macro_noop("\\endsubheading")?;
 
-  DefConstructor!("\\specialhead Until:\\endspecialhead",
-    "<ltx:chapter inlist='toc' xml:id='#id'><ltx:title>#1</ltx:title></ltx:chapter>",
-    properties => sub[_args] { RefStepID!("chapter") });
-  Let!("\\endspecialhead", "\\relax");
-
-  DefConstructor!("\\subhead Until:\\endsubhead",
-    "<ltx:subsection inlist='toc' xml:id='#id'><ltx:title>#1</ltx:title></ltx:subsection>",
-    properties => sub[_args] { RefStepID!("subsection") });
-  Let!("\\endsubhead", "\\relax");
-
   DefConstructor!("\\subsubhead Until:\\endsubsubhead",
-    "<ltx:subsubsection inlist='toc' xml:id='#id'><ltx:title>#1</ltx:title></ltx:subsubsection>",
+    "<ltx:subsubsection inlist='toc' xml:id='#id'>#tags<ltx:title>#1</ltx:title>",
+    bounded => true,
     properties => sub[_args] { RefStepID!("subsubsection") });
   Let!("\\endsubsubhead", "\\relax");
 
-  // Theorem environments — Perl L170-243 use
-  //   DefConstructor('\<kind> Undigested DigestUntil:\end<kind>', …)
-  // The Rust port now follows that pattern (with title font/counter
-  // glue intentionally simplified — see #44 amsthm-counter aliasing).
-  // Earlier Rust versions routed through `\begin{theorem}` macros,
-  // which leaked an internal_vertical mode frame at \enddocument
-  // time when the body content closed paragraphs naturally. Reverting
-  // to the Perl-faithful DefConstructor approach avoids that — the
-  // body digests in surrounding mode without pushing a new frame.
-  // Perl-faithful port of L170-243 — DefConstructor with `Undigested
-  // DigestUntil:\end<kind>` so the body digests in surrounding mode
-  // without pushing/popping a mode frame (which the previous
-  // `\begin{theorem}` macro routing did, and which leaked at
-  // \enddocument time when the body content closed paragraphs
-  // naturally — see amsppt mode-leak repro `/tmp/min_amstex.tex`,
-  // commit `aa3304142`'s residual). The Perl `properties => RefStepID`
-  // and per-kind counter glue is omitted; ltx:theorem auto_close
-  // (already registered above) handles the closing.
+  // Theorem-like blocks — Perl amsppt.sty.ltxml:157-235: the body digests in the surrounding mode (`DigestUntil`), each
+  // block numbered by the one `theorem` counter for its id (`Thmx1`, …), math9201249. The title is the argument, as
+  // amsppt.sty:623-688 prints it; Perl prefixes `\definitionname` etc., which amsppt.sty never prints (KNOWN_PERL_ERRORS
+  // #1269).
+  NewCounter!("theorem", "document", idprefix => "Thm");
   DefConstructor!("\\proclaim Undigested DigestUntil:\\endproclaim",
-    "<ltx:theorem class='ltx_theorem_proclaim'><ltx:title>#1</ltx:title>#2",
-    after_construct => sub[doc,_a] { doc.maybe_close_element("ltx:theorem")?; });
+    "<ltx:theorem class='ltx_theorem_proclaim' xml:id='#id'>#tags<ltx:title>#1</ltx:title>#2",
+    after_construct => sub[doc,_a] { doc.maybe_close_element("ltx:theorem")?; },
+    properties => sub[_args] { RefStepID!("theorem") });
   Let!("\\endproclaim", "\\relax");
 
   DefConstructor!("\\definition Undigested DigestUntil:\\enddefinition",
-    "<ltx:theorem class='ltx_theorem_definition'><ltx:title>#1</ltx:title>#2",
-    after_construct => sub[doc,_a] { doc.maybe_close_element("ltx:theorem")?; });
+    "<ltx:theorem class='ltx_theorem_definition' xml:id='#id'>#tags<ltx:title>#1</ltx:title>#2",
+    after_construct => sub[doc,_a] { doc.maybe_close_element("ltx:theorem")?; },
+    properties => sub[_args] { RefStepID!("theorem") });
   Let!("\\enddefinition", "\\relax");
 
   DefConstructor!("\\remark Undigested DigestUntil:\\endremark",
-    "<ltx:theorem class='ltx_theorem_remark'><ltx:title>#1</ltx:title>#2",
-    after_construct => sub[doc,_a] { doc.maybe_close_element("ltx:theorem")?; });
+    "<ltx:theorem class='ltx_theorem_remark' xml:id='#id'>#tags<ltx:title>#1</ltx:title>#2",
+    after_construct => sub[doc,_a] { doc.maybe_close_element("ltx:theorem")?; },
+    properties => sub[_args] { RefStepID!("theorem") });
   Let!("\\endremark", "\\relax");
 
   DefConstructor!("\\example Undigested DigestUntil:\\endexample",
-    "<ltx:theorem class='ltx_theorem_example'><ltx:title>#1</ltx:title>#2",
-    after_construct => sub[doc,_a] { doc.maybe_close_element("ltx:theorem")?; });
+    "<ltx:theorem class='ltx_theorem_example' xml:id='#id'>#tags<ltx:title>#1</ltx:title>#2",
+    after_construct => sub[doc,_a] { doc.maybe_close_element("ltx:theorem")?; },
+    properties => sub[_args] { RefStepID!("theorem") });
   Let!("\\endexample", "\\relax");
 
   DefConstructor!("\\demo Undigested DigestUntil:\\enddemo",
-    "<ltx:theorem class='ltx_theorem_demonstration'><ltx:title>#1</ltx:title>#2",
-    after_construct => sub[doc,_a] { doc.maybe_close_element("ltx:theorem")?; });
+    "<ltx:theorem class='ltx_theorem_demonstration' xml:id='#id'>#tags<ltx:title>#1</ltx:title>#2",
+    after_construct => sub[doc,_a] { doc.maybe_close_element("ltx:theorem")?; },
+    properties => sub[_args] { RefStepID!("theorem") });
   Let!("\\enddemo", "\\relax");
 
   // Lists — Perl amsppt.sty.ltxml L245-259. Faithful Perl port replaces
@@ -410,12 +405,51 @@ LoadDefinitions!({
   NewCounter!("roster", "document", idprefix => "I");
   NewCounter!("rosteritem", "roster", idprefix => "i");
   DefMacro!("\\therosteritem{}", "\\rom{(#1)}");
+  // amsppt.sty:704-736: `\item[n]` sets the count, `\item"label"` prints `{\rm label}`, a bare `\item` steps the
+  // count; the label is the item's tag (amsppt's `\itembox@`).
+  RawTeX!(r###"\newcount\rostercount@
+\def\roster@item{\FN@\rosteritem@}
+\def\rosteritem@{\DNii@[##1]{\rostercount@##1\relax\lx@amsppt@roster@item{\therosteritem{\number\rostercount@}}}%
+ \def\nextiii@"##1"{\lx@amsppt@roster@item{\rm##1}}%
+ \def\nextiv@{\advance\rostercount@\@ne\lx@amsppt@roster@item{\therosteritem{\number\rostercount@}}}%
+ \ifx\next[\let\next@\nextii@\else\ifx\next"\let\next@\nextiii@\else\let\next@\nextiv@\fi\fi\next@}"###);
+  // The digested body is `#1` (Perl's `#body` is never set for DigestUntil: KPE, every item lost; alg-geom9502009).
+  // The roster's id is stepped at `\roster`, before its items read it, and held for the properties after the body; a
+  // braced nested roster gives the outer's item ids back at its end (math9506206). Unbraced, amsppt.sty:744 makes the
+  // outer `\item` plain's (amsppt_unbraced_nested_roster_outer_item_red).
   DefConstructor!("\\roster DigestUntil:\\endroster",
-    "<ltx:enumerate>#body</ltx:enumerate>",
+    "<ltx:enumerate xml:id='#id'>#1</ltx:enumerate>",
     bounded => true,
-    properties => sub[_args] { RefStepID!("roster") },
-    before_digest => { let_i(&T_CS!("\\item"), &T_CS!("\\roster@item"), Some(Scope::Local)); });
-  DefConstructor!("\\roster@item",
+    properties => sub[_args] {
+      match lookup_value("amsppt@roster@id") {
+        Some(id) => Ok(stored_map!("id" => id)),
+        None => RefStepID!("roster"), // a body that closed the roster's group early (math0309287's `{\item`)
+      }
+    },
+    after_digest => sub[_whatsit] {
+      if let Some(Stored::Int(items)) = lookup_value("amsppt@roster@outer@items") {
+        let_i(&T_CS!("\\@roster@ID"), &T_CS!("\\lx@amsppt@outer@roster@ID"), Some(Scope::Global));
+        assign_register("\\c@UNrosteritem", RegisterValue::Number(Number::new(items)), Some(Scope::Global), vec![])?;
+      }
+    },
+    before_digest => {
+      if lookup_value("amsppt@roster@id").is_some() {
+        let_i(&T_CS!("\\lx@amsppt@outer@roster@ID"), &T_CS!("\\@roster@ID"), Some(Scope::Local));
+        let items = lookup_number("\\c@UNrosteritem").unwrap_or_default().value_of();
+        assign_value("amsppt@roster@outer@items", Stored::Int(items), Some(Scope::Local));
+      }
+      if let Some(id) = RefStepID!("roster")?.get("id") {
+        assign_value("amsppt@roster@id", id.clone(), Some(Scope::Local));
+      }
+      assign_register("\\rostercount@", RegisterValue::Number(Number::new(0)), Some(Scope::Local), vec![])?;
+      let_i(&T_CS!("\\item"), &T_CS!("\\roster@item"), Some(Scope::Local));
+      // amsppt.sty:705-718: a `\runinitem` right after `\roster` is its first item (run in); elsewhere it is undefined.
+      match read_token()? {
+        Some(t) if t == T_CS!("\\runinitem") => unread_one(T_CS!("\\roster@item")),
+        Some(t) => unread_one(t),
+        None => {},
+      } });
+  DefConstructor!("\\lx@amsppt@roster@item{}",
     "<ltx:item xml:id='#id'>?#1(<ltx:tags><ltx:tag>#1</ltx:tag></ltx:tags>)",
     properties => sub[_args] { RefStepID!("rosteritem") });
   Let!("\\endroster", "\\relax");
@@ -576,6 +610,9 @@ LoadDefinitions!({
   DefMacro!("\\@auto@Refs", "\\Refs");
   DefMacro!("\\Refs", "\\@Refs\\def\\@auto@Refs{}");
   DefMacro!("\\endRefs", "\\def\\@auto@Refs{\\Refs}\\end@Refs");
+  // The bibliography is back matter, at the place of amsppt's top unit (`\specialhead`'s chapter): amsppt.sty:862-869 sets
+  // `\Refs` as a head, so it closes the open heads (as LaTeX's, latex_constructs.pool.ltxml:3935-3946) instead of
+  // nesting in the last one, and a heading unit before it heads it (`absorb_bibliography_heading`; math0304264).
   DefConstructor!("\\@Refs",
     "<ltx:bibliography xml:id='#id'>\
        <ltx:title>References</ltx:title>\
@@ -585,7 +622,12 @@ LoadDefinitions!({
         .to_string();
       let mut props = SymHashMap::default();
       props.insert("id", Stored::String(pin(&id_str)));
+      props.insert("backmatterelement", Stored::String(pin("ltx:chapter")));
+      props.insert("backmatterself", Stored::String(pin("ltx:bibliography")));
       Ok(props)
+    },
+    before_construct => sub[document, whatsit] {
+      latexml_engine::latex_constructs::adjust_backmatter_element(document, whatsit)?;
     });
   DefConstructor!("\\end@Refs", "</ltx:bibliography>");
 
@@ -1166,10 +1208,7 @@ LoadDefinitions!({
   def_macro_noop("\\toc Until:\\endtoc")?;
   Let!("\\endtoc", "\\relax");
 
-  // Theorem-env skip registers and name/font overrides — Perl L178-232.
-  // The full DefConstructor bodies for \proclaim / \definition etc. still
-  // need NewCounter+title infrastructure to match, but the register /
-  // macro stubs are safe to land now so users can `\def\proclaimfont{…}`.
+  // Theorem-block skip registers and fonts — Perl L178-232 (the blocks are defined with the section heads).
   DefRegister!("\\preproclaimskip"     => Glue::new(0));
   DefRegister!("\\postproclaimskip"    => Glue::new(0));
   DefMacro!("\\proclaimfont", "\\it");
@@ -1182,11 +1221,8 @@ LoadDefinitions!({
   DefMacro!("\\remarkfont", "\\rm");
   DefMacro!("\\remarkname", "Remark");
   DefMacro!("\\demonstrationname", "Demonstration");
-  // Perl amsppt.sty.ltxml L226 references `\examplename` in `\example`'s
-  // title-Digest call but never defines it (Perl's L190 comment notes the
-  // gap). Define it here for parity with `\definitionname` / `\remarkname` /
-  // `\demonstrationname` so the `\example {...}` constructor's title format
-  // doesn't trigger an undefined-CS error.
+  // Perl amsppt.sty.ltxml:218 titles `\example` with an undefined `\examplename`; defined as its siblings are, for a
+  // document that uses it (the blocks' titles are their argument, KNOWN_PERL_ERRORS #1269).
   DefMacro!("\\examplename", "Example");
 
   // Perl L468: \edtext expands to "ed." — the editor-marker inserted in

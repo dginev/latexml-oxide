@@ -1,0 +1,16 @@
+% witness: math9201249 (QA29 check, 2026-11-14)
+% oracle:  pdftex (\input amstex, \documentstyle{amsppt}) this file: 0 errors; "1. Intro Theorem 1. First paragraph. Second paragraph with x. After the theorem."
+% engines: Perl 0.8.8 = 0 errors, `<section xml:id="C0.Sx1">` holding `<theorem class="ltx_theorem_proclaim" xml:id="Thmx1">`, both paragraphs in it, "After the theorem." after it in the section;
+%          rust 7dea7e597a1 = 0 errors, the section closed after its title, the theorem at document level with no id, its paragraphs `p1`, `p2`
+% expect:  0 errors, 0 warnings; the section holds the theorem `Thmx1` (both paragraphs inside, `Thmx1.p1`, `Thmx1.p2`) and the paragraph after it
+% status:  RED (7dea7e597a1) -> GREEN (fix/amsppt-ids-sections; guard perfect_kernel_batchamsppt::amsppt_heads_and_theorems)
+\input amstex
+\documentstyle{amsppt}
+\document
+\head 1. Intro\endhead
+\proclaim{Theorem 1} First paragraph.
+
+Second paragraph with $x$.
+\endproclaim
+After the theorem.
+\enddocument

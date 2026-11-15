@@ -1,0 +1,19 @@
+% witness: synthetic (revAMSPPT)
+% oracle:  pdftex (\input amstex, \documentstyle{amsppt}) this file: 2 errors ("AmS-TeX error: You seem to have a missing or
+%          misspelled \endproclaim" at `\head`, `\add@missing`; "Extra \endproclaim"); "1. Intro Theorem 1. Claim text.
+%          2. Next More text. After." with "More text." and "After." separate paragraphs
+% engines: Perl 0.8.8 = 0 errors; rust fix/amsppt-ids-sections = 0 errors (both bases the same), the structure as printed but
+%          "More text." and "After." one paragraph
+% expect:  2 errors; the theorem closed at `\head 2`, "More text." and "After." two paragraphs
+% status:  RED (fix/amsppt-ids-sections)
+% moves:   post-merge (`\add@missing` at a head; the stray `\endproclaim` errs and ends the paragraph)
+\input amstex
+\documentstyle{amsppt}
+\document
+\head 1. Intro\endhead
+\proclaim{Theorem 1} Claim text.
+\head 2. Next\endhead
+More text.
+\endproclaim
+After.
+\enddocument
