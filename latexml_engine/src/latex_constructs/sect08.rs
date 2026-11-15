@@ -1531,7 +1531,7 @@ pub(crate) fn load() -> Result<()> {
   // 0.8.8 shares byte-identically; pdflatex clean). The class's own
   // handler discards the optional (`\@aom@newthm@[#1]{\@xnthm\relax}`),
   // so discarding is the ground truth. Standard forms start with `{` and
-  // never match the optional. KNOWN_PERL_ERRORS #82.
+  // never match the optional. KNOWN_PERL_ERRORS #1277.
   //
   // latex.ltx `\@nthm` (`\expandafter\@ifdefinable\csname #1\endcsname`, amsthm.sty's alike) refuses a theorem whose
   // `\<name>` is defined: "Command \<name> already defined", the first declaration kept. The refusal is kept to a

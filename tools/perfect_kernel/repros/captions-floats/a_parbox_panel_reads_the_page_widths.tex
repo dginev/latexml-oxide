@@ -1,0 +1,24 @@
+% witness: QA14A (synthetic; the panel grid rule's second reading of a box's stated widths, `note_stated_widths_in`)
+% oracle:  pdflatex 0 errors; IEEEtran's 252pt column: two 0.48\columnwidth parboxes in one row, each holding a
+%          0.45\columnwidth graphic (113.4pt, \columnwidth stays the column's inside a \parbox, latex.ltx:16253);
+%          a figure* of three 0.3\textwidth parboxes in one row
+% engines: rust (main 75531ffc9d6): one row each (panelline="1", "2.048"), the graphics at 0.45 of the box (74.5pt)
+% expect:  0 errors, 0 warnings; the rows as the PDF, panelline kept (each graphic read again against the page's
+%          \columnwidth, not the box's: a reading at the box's would not give the graphic's width again, Unevaluable,
+%          and lose the float's panel line); graphics at 0.45 of Perl's 345pt register, 155.24895pt
+% status:  GREEN (QA14A; a guard of the second reader the \parbox fix moves together with the registers)
+\documentclass{IEEEtran}
+\usepackage{graphicx}
+\begin{document}
+\begin{figure}
+\parbox{0.48\columnwidth}{\includegraphics[width=0.45\columnwidth]{a.png}}\hfill
+\parbox{0.48\columnwidth}{\includegraphics[width=0.45\columnwidth]{b.png}}
+\caption{Two.}
+\end{figure}
+\begin{figure*}
+\parbox{0.3\textwidth}{\includegraphics[width=0.3\textwidth]{a.png}}\hfill
+\parbox{0.3\textwidth}{\includegraphics[width=\linewidth]{b.png}}\hfill
+\parbox{0.3\textwidth}{\includegraphics[width=0.3\textwidth]{c.png}}
+\caption{Three.}
+\end{figure*}
+\end{document}

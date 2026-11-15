@@ -1,0 +1,24 @@
+% mechanism: svjour3.cls:304-322 (every copy, 1401.6947's) `\keywords`, `\subclass`, `\PACS`, `\CRclass` each
+%   `\def\and{\ifhmode\unskip\nobreak\fi\ $\cdot$ }` for their list; the binding (Perl sv_support.sty.ltxml:65-74) left
+%   the frontmatter's `\and`, which printed nothing there (upstream brucemiller/LaTeXML#2263's svjour3 sibling).
+% witness: 1401.6947, 1504.05523, 1505.07624 (shipped svjour3.cls with `\keywords`)
+% oracle:  pdflatex with 1401.6947's svjour3.cls and svglov3.clo 0 errors: "Keywords Alpha · Beta gamma · Delta",
+%          "Mathematics Subject Classification (2010) 11A · 22B", "PACS 01.02 · 03.04", "CR Subject Classification
+%          C.1 · D.2" (`$\cdot$`)
+% engines: rust base (origin/main 75531ffc9d6) "Alpha Beta gamma Delta", "11A 22B", …; Perl 0.8.8 the same
+% expect:  0 errors, 0 warnings; every item kept, each `\and` a "⋅" between them
+% status:  RED (75531ffc9d6) -> GREEN (QA76A)
+% preload: ar5iv.sty
+\documentclass{svjour3}
+\begin{document}
+\title{T}\author{A \and B}
+\maketitle
+\begin{abstract}
+Abs.
+\keywords{Alpha \and Beta gamma \and Delta}
+\subclass{11A \and 22B}
+\PACS{01.02 \and 03.04}
+\CRclass{C.1 \and D.2}
+\end{abstract}
+Text.
+\end{document}
