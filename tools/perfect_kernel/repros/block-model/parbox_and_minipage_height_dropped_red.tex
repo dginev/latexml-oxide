@@ -1,0 +1,14 @@
+% A \parbox or minipage given its height (`[pos][height]`) loses it: the XML's `inline-block` carries the width and
+% vattach only, so the HTML box is as tall as its text, where pdflatex sets it 3cm (2cm) tall. Perl's
+% \lx@parbox and {minipage} constructors drop it too (latex_constructs.pool.ltxml insertBlock: width and vattach).
+% witness: synthetic (QAB57d, the box-height probe; DG 2026-11-14 on PR #858).
+% status:  RED
+% moves:   post-merge (a binding attribute; no word lost)
+% oracle:  pdflatex 0 errors: the parbox 3cm tall, the minipage 2cm tall, C after them.
+% Perl:    `<inline-block class="ltx_parbox" vattach="top" width="113.8pt">`, no height.
+% ours:    the same as Perl (QAB57d).
+% expect:  the box's height in the XML (`height=`), so the HTML writes `--ltx-box-height`.
+\documentclass{article}
+\begin{document}
+A \parbox[t][3cm]{4cm}{A parbox with a height.} B \begin{minipage}[t][2cm]{3cm}A minipage with a height.\end{minipage} C
+\end{document}

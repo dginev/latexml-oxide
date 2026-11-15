@@ -4646,6 +4646,7 @@ Body.
 /// document's top level, with no diagnostic. It stays in the table now (2609.05763's glossary), a section of class
 /// `ltx_appendix` since 62zs (a sectioning unit in a float, OXIDIZED_DESIGN_DIVERGENCES #189 ruling 2026-10-06; Perl
 /// errs). pdflatex: the heading, the table and its caption.
+/// (QAB57: the unit carries the box's width as `--ltx-box-width`, OD #1045 — pdflatex sets it at the box's width.)
 #[test]
 fn appendix_in_a_minipage_stays_in_its_float() {
   let (log, xml) = convert_with(
@@ -4674,7 +4675,7 @@ Body.
     &xml,
     "table",
     &["xml:id=\"A1.T1\""],
-    "<table inlist=\"lot\" placement=\"h\" xml:id=\"A1.T1\"><tags><tag>Table 1</tag><tag role=\"refnum\">1</tag><tag role=\"typerefnum\">Table 1</tag></tags><inline-sectional-block class=\"ltx_minipage\" xml:id=\"A1.T1.1\"><section class=\"ltx_appendix\" inlist=\"toc\" labels=\"LABEL:sec:tab\" xml:id=\"A2\"><tags><tag>Appendix B</tag><tag role=\"refnum\">B</tag><tag role=\"typerefnum\">Appendix B</tag></tags><title><tag close=\" \">Appendix B</tag>Notation Table</title><toctitle><tag close=\" \">B</tag>Notation Table</toctitle><para align=\"center\" xml:id=\"A2.p1\"><tabular vattach=\"middle\" xml:id=\"A2.p1.1\"><tbody><tr xml:id=\"A2.p1.1.1\"><td align=\"center\" xml:id=\"A2.p1.1.1.1\">a</td><td align=\"center\" xml:id=\"A2.p1.1.1.2\">b</td></tr></tbody></tabular></para></section></inline-sectional-block><toccaption><tag close=\" \">1</tag>Notation.</toccaption><caption><tag close=\": \">Table 1</tag>Notation.</caption></table>",
+    "<table inlist=\"lot\" placement=\"h\" xml:id=\"A1.T1\"><tags><tag>Table 1</tag><tag role=\"refnum\">1</tag><tag role=\"typerefnum\">Table 1</tag></tags><inline-sectional-block class=\"ltx_minipage\" cssstyle=\"--ltx-box-width:345.0pt\" xml:id=\"A1.T1.1\"><section class=\"ltx_appendix\" inlist=\"toc\" labels=\"LABEL:sec:tab\" xml:id=\"A2\"><tags><tag>Appendix B</tag><tag role=\"refnum\">B</tag><tag role=\"typerefnum\">Appendix B</tag></tags><title><tag close=\" \">Appendix B</tag>Notation Table</title><toctitle><tag close=\" \">B</tag>Notation Table</toctitle><para align=\"center\" xml:id=\"A2.p1\"><tabular vattach=\"middle\" xml:id=\"A2.p1.1\"><tbody><tr xml:id=\"A2.p1.1.1\"><td align=\"center\" xml:id=\"A2.p1.1.1.1\">a</td><td align=\"center\" xml:id=\"A2.p1.1.1.2\">b</td></tr></tbody></tabular></para></section></inline-sectional-block><toccaption><tag close=\" \">1</tag>Notation.</toccaption><caption><tag close=\": \">Table 1</tag>Notation.</caption></table>",
   );
 }
 

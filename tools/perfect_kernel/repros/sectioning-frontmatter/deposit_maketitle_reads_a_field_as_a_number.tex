@@ -1,0 +1,38 @@
+% mechanism: the title-page deposit runs a raw class's `\@maketitle` with the title fields emptied for printing
+%   (sect05.rs `\lx@deposit@maketitle`); a field read as a quantity's operand reads its value (gullet.rs
+%   `set_operand_values`): `\ifnum`, `\setcounter`, a dimension, and an eTeX expression's factor (etex.rs
+%   `etex_readexpr_i`), while the field printed after a dimension's unit (`\vskip 1em \@date`, read by the scan's
+%   lookahead for `plus`) stays empty, the frontmatter's date carrying it
+% witness: synthetic (DEPN's siblings, QAB4)
+% oracle:  pdflatex 0 errors (TL 2025, -no-shell-escape): "Lecture Notes on Topology", "2024", "Recent edition",
+%   "Year 2024", "Next 2025", "Width 2024.0pt", "Text."
+% engines: QAB4base: 0 errors, 3 warnings ("Missing number" ×2, "Missing number (Dimension)"), "Year 0", "Next 1", "pt Width 0.0pt",
+%   "Recent edition" lost; QAB4: as expected; perl not run
+% expect:  0 errors, 0 warnings; the date once (`ltx:date`), "Recent edition", "Year 2024", "Next 2025",
+%   "Width 2024.0pt"
+% status:  GREEN (QAB4)
+% guard:   perfect_kernel_batch56::deposit_reads_a_field_as_a_number
+% preload: ar5iv.sty
+\begin{filecontents*}[overwrite]{sessionsibling.cls}
+\NeedsTeXFormat{LaTeX2e}
+\ProvidesClass{sessionsibling}
+\LoadClass{article}
+\newcounter{yr}
+\def\@maketitle{%
+  \begin{center}
+    {\LARGE \@title \par}
+    \vskip 1em \@date\par
+    \ifnum\@date>2000 Recent edition\par\fi
+    \setcounter{yr}{\@date}Year \arabic{yr}\par
+    Next \the\numexpr\@date+1\relax\par
+    \@tempdima=\@date pt Width \the\@tempdima\par
+  \end{center}\par}
+\end{filecontents*}
+\documentclass{sessionsibling}
+\title{Lecture Notes on Topology}
+\author{A. Author}
+\date{2024}
+\begin{document}
+\maketitle
+Text.
+\end{document}

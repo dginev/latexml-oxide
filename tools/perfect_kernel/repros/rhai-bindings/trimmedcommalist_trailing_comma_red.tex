@@ -1,0 +1,13 @@
+% mechanism: Rhai `TrimmedCommaList` (cleaners.rs:132 `trimmed_comma_list`) keeps the empty field after a trailing
+%   comma, where Perl's `split(/\s*,\s*/, …)` (Package.pm:575) drops trailing empty fields
+% witness: synthetic (revCHEAT3; the binding lxpre.sty.rhai, lxpre.sty.ltxml for Perl, lxpre.sty for pdflatex)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "2"; Perl 0.8.8: <p>2</p>, 0 errors
+% engines: CHEAT3b: <p>3</p>, 0 errors
+% expect:  0 errors, 0 warnings; <p>2</p>
+% status:  RED (CHEAT3b)
+% moves:   post-merge
+\documentclass{article}
+\usepackage{lxpre}
+\begin{document}
+\lxtcl
+\end{document}

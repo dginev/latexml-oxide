@@ -1,0 +1,29 @@
+% Every LaTeXML box's width reaches the HTML as the CSS custom property `--ltx-box-width` (DG 2026-11-14, "Move them
+% all now"): a minipage, a \parbox, a \makebox, a transformed box (outer and inner), a wrapfigure, a section lifted out
+% of a minipage (QA24); the XML keeps its `width` attribute. A rule's width is its ink and MathML's `mspace` width is
+% MathML's own: both stay `width:`; varwidth's own `width:max-content` follows the property and outranks it in LaTeXML.css.
+% witness: synthetic (Bruce Q&A probe Q2.4); 2512.24470 (a \section inside a minipage).
+% status:  GREEN (QAB57b)
+% oracle:  pdflatex 0 errors: each box set at its width.
+% Perl:    `style="width:<w>"` from LaTeXML-common.xsl's base-styling (a lifted section: no width).
+% ours:    before QAB57b `style="width:<w>"`.
+% expect:  0 errors, 0 warnings; each box `style="--ltx-box-width:<w>;…"`, the rule and the mspace `width:`.
+\documentclass{article}
+\usepackage{graphicx,varwidth,wrapfig}
+\begin{document}
+\begin{minipage}[t]{3cm}A minipage.\end{minipage} \parbox{2cm}{A parbox.} \makebox[4cm][r]{boxed}
+
+\rotatebox{90}{\parbox{2cm}{Turned}} \rule{3cm}{2pt} $x\hspace{1cm}y$
+
+\begin{varwidth}{8cm}short\end{varwidth}
+
+\begin{wrapfigure}{r}{0.3\textwidth}
+\centering W
+\end{wrapfigure}
+Text beside the wrapfigure.
+
+\begin{minipage}{4cm}
+\subsection*{Lifted}
+Text in a lifted section.
+\end{minipage}
+\end{document}

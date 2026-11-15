@@ -1736,8 +1736,9 @@ pub fn install_definition<T: Into<Stored>>(definition: T, scope: Option<Scope>) 
   }
   // (read against this redefinition's own interface: a lock that holds only against copies, `files_lock_holds`; an
   // unlocked state reads no lock and allocates nothing here)
-  let locked =
-    !state_is_unlocked() && token.with_cs_name(|cs| redefinition_locked(cs, &definition));
+  let locked = !state_is_unlocked()
+    && token.with_cs_name(|cs| redefinition_locked(cs, &definition))
+    && !document_redefines_guess(&token);
   // (a stand-in's copy's own write to LaTeX's document hooks is document-time code, which it does not register, as it
   // does not its `\AtBeginDocument` code: `copy_provides_defers`. ltxgrid's `\prepdef\@begindocumenthook{\open@column@one
   // \@ne\set@colht…}` in qm2008_abs.cls and snp.cls, REVTeX 4 copies routed to the revtex4 binding, ran its page
@@ -5824,6 +5825,17 @@ fn copies_lock_kept_aside(cs: &str) -> bool {
   lookup_value(&s!("{cs}:locked@cleared")).is_some_and(|b| !matches!(b, Stored::None))
 }
 
+/// Whether the document redefines a guess of the fallback class, which wins under OmniBus (BM Q3.12, DG 2026-11-14):
+/// OmniBus sets `GUESSES_REDEFINABLE` for a class with no binding, so its locks yield to the document's own text — not
+/// to hook code (apacite's `\AtBeginDocument{\providecommand{\doi}…}` keeps OmniBus's `\doi`).
+pub fn document_redefines_guess(token: &Token) -> bool {
+  crate::definition::origin::current_origin()
+    == crate::definition::origin::DefinitionOrigin::Document
+    && !state_is_relocked()
+    && fallback_meaning_origin(token) == Some(crate::definition::origin::DefinitionOrigin::Fallback)
+    && lookup_bool("GUESSES_REDEFINABLE")
+}
+
 /// [`install_definition`]'s verdict, in the locked state, on a redefinition of `cs`: [`lock_holds_against`] read
 /// against its own interface, and a redefinition the lock lets through drops what a copies lock kept aside
 /// ([`drop_copies_lock_aside`]) — probed only where a lock against the files is set, as every copies lock is one (so
@@ -7504,7 +7516,7 @@ pub fn let_i(token1: &Token, token2: &Token, scope: Option<Scope>) {
       .unwrap_or(Stored::None);
   // };
   if copy_provides_keeps_saved_meaning(token1, token2, &meaning) {
-    after_assignment();
+    let _ = after_assignment(); // (`let_i` returns no Result; a Fatal is logged where `Fatal!` raises it)
     return;
   }
   // A lock against the class and package files (`"{cs}:locked@files"`, [`name_carries_lock`]) holds for their `\let`
@@ -7537,7 +7549,7 @@ pub fn let_i(token1: &Token, token2: &Token, scope: Option<Scope>) {
     let holds = files_lock_holds(&cs, || takes_optional_first(&meaning));
     if holds && !matches!(meaning, Stored::None) {
       restore_cleared_binding(token1);
-      after_assignment();
+      let _ = after_assignment();
       return;
     }
     let protected = copies_lock(&cs);
@@ -7645,12 +7657,12 @@ pub fn let_i(token1: &Token, token2: &Token, scope: Option<Scope>) {
     );
     if let Ok(wrapper) = new_wrapper {
       install_definition(wrapper, scope);
-      after_assignment();
+      let _ = after_assignment();
       return;
     }
   }
   assign_meaning(token1, meaning, scope);
-  after_assignment();
+  let _ = after_assignment();
 }
 /// `XEquals` check for two token arguments
 pub fn x_equals(token1: &Token, token2: &Token) -> bool {
@@ -7744,14 +7756,22 @@ pub fn generate_ligature_id() -> usize {
   id as usize
 }
 
-/// run the accumulated directives from `\afterassignment`
-pub fn after_assignment() {
+/// run the accumulated directives from `\afterassignment` (Package.pm:716); a value that is no token (a binding's
+/// `AssignValue("afterAssignment", "Q")`) is an Error and dropped.
+pub fn after_assignment() -> Result<()> {
   match remove_value_sym(pin!("afterAssignment")) {
     Some(Stored::Tokens(after)) => gullet::unread(after),
     Some(Stored::Token(after)) => gullet::unread_one(after),
     None | Some(Stored::None) => {},
-    Some(other) => panic!("unexpected in after_assignment: {other:?}"),
+    Some(other) => {
+      Error!(
+        "unexpected",
+        "afterAssignment",
+        format!("the saved \\afterassignment is not a token: {other:?}; dropped")
+      );
+    },
   }
+  Ok(())
 }
 
 // Ported from Perl's "local" declarations

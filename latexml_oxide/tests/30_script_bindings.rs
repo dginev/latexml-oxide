@@ -1867,3 +1867,78 @@ fn docs_examples_convert_clean() {
     }
   }
 }
+
+/// The Package.pm calls the cheat sheet added, by their effect in a conversion (revCHEAT3): `DefAutoload`'s trigger
+/// loads its file (a `.sty`, an `.sty.ltxml`, a `.cls`, a `.pool`; a bare name Warns), `DefMathI`/`DefEnvironmentI` build their markup, a
+/// `DisableKeyVal` key is ignored at use, `Deprecated` Warns once, `DocType`'s three-argument form Warns, and a non-token
+/// `afterAssignment`, `LoadFormat` and a key `CheckOptions`' hash refuses are Errors with the conversion going on.
+#[test]
+fn package_pm_calls_take_effect_in_a_conversion() {
+  use latexml::util::test::{assert_element, error_count, warning_count};
+  let binding = r#"
+    DefAutoload("gfoo", "lxpmauto.sty");
+    DefAutoload("\\gqux", "lxpmqux.sty.ltxml");
+    DefAutoload("gbar", "lxpmbar");
+    DefAutoload("gcls", "lxpmcls.cls");
+    DefAutoload("gpool", "lxpmpool.pool.ltxml");
+    DefMathI("\\gm", "{}", "\\sqrt{#1}");
+    DefEnvironmentI("genv", "{}", "<ltx:para class='g'><ltx:p>#1</ltx:p>#body</ltx:para>");
+    RawTeX("\\RequirePackage{keyval}\\define@key{gfam}{gon}{[on:#1]}\\define@key{gfam}{goff}{[off:#1]}");
+    DisableKeyVal("KV", "gfam", "goff");
+    Deprecated("gold", "0.8", "use gnew");
+    Deprecated("gold", "0.8", "use gnew");
+    DocType("song", "-//NIST LaTeXML//LaTeXML Poem", "ns1.dtd");
+    DefMacro("\\gaa", || { AssignValue("afterAssignment", "Q", "global"); AfterAssignment(); "" });
+    LoadFormat("plain");
+    CheckOptions("gop", #{a: true, b: false}, #{a: 1, b: 2});
+  "#;
+  let files = [
+    ("lxpm.sty.rhai", binding),
+    ("lxpmauto.sty.rhai", r#"DefMacro("\\gfoo", "AUTOLOADED");"#),
+    ("lxpmqux.sty.rhai", r#"DefMacro("\\gqux", "QUXLOADED");"#),
+    ("lxpmcls.cls.rhai", r#"DefMacro("\\gcls", "CLSLOADED");"#),
+    (
+      "lxpmpool.pool.rhai",
+      r#"DefMacro("\\gpool", "POOLLOADED");"#,
+    ),
+  ];
+  let tex = "\\documentclass{article}\\usepackage{lxpm}\\begin{document}\n\
+             A \\gfoo{} B \\gqux{} \\gcls{} \\gpool{} C $\\gm{x}$ \\setkeys{gfam}{gon=1,goff=2}\\gaa D\n\n\
+             \\begin{genv}{T}body\\end{genv}\n\\end{document}";
+  let (log, xml) = latexml::util::test::convert_files_with(tex, &files, None);
+  let lines =
+    |prefix: &str| -> Vec<&str> { log.lines().filter(|l| l.starts_with(prefix)).collect() };
+  assert_eq!(
+    lines("Warning:"),
+    [
+      "Warning:unexpected:lxpmbar Don't know how to autoload \\gbar from lxpmbar",
+      "Warning:deprecated:gold gold is deprecated (as of 0.8)",
+      "Warning:unexpected:DocType DocType(song, …): no DTD is read (RelaxNG only); its namespaces are registered",
+      "Warning:undefined:keyval `goff' has been disabled. ",
+    ],
+    "{log}"
+  );
+  assert_eq!((error_count(&log), warning_count(&log)), (3, 4), "{log}");
+  for error in [
+    "Error:unexpected:LoadFormat LoadFormat(plain): the format is chosen with the dump, before any binding loads",
+    "Error:misdefined:gop gop does not accept options:b",
+    "Error:unexpected:afterAssignment the saved \\afterassignment is not a token: ",
+  ] {
+    assert!(log.lines().any(|l| l.starts_with(error)), "{error}\n{log}");
+  }
+  // Perl's XMDual of `\sqrt{#1}` collapses to the application, its meaning the presentation's (Perl 0.8.8 the same).
+  assert_element(
+    &xml,
+    "p",
+    &[],
+    r#"<p>A AUTOLOADED B QUXLOADED CLSLOADED POOLLOADED C <Math mode="inline" tex="\gm{x}" text="gm@(x)" xml:id="p1.m1"><XMath><XMApp>
+       <XMTok meaning="square-root" name="gm" role="UNKNOWN"/><XMTok font="italic" role="UNKNOWN">x</XMTok></XMApp>
+       </XMath></Math> [on:1]D</p>"#,
+  );
+  assert_element(
+    &xml,
+    "para",
+    &[r#"class="g""#],
+    r#"<para class="g" xml:id="p2"><p>T</p><p>body</p></para>"#,
+  );
+}

@@ -1,15 +1,15 @@
 # Writing a Rhai binding: a guide for newcomers
 
 [← docs/README.md](../README.md) · Reference: [`API.md`](../../latexml_contrib/src/script_bindings/API.md) (every call) ·
-[`CHEATSHEET.md`](../../latexml_contrib/src/script_bindings/CHEATSHEET.md) (Perl | Rust macro | Rhai) · Design:
+[`CHEATSHEET.md`](../../latexml_contrib/src/script_bindings/CHEATSHEET.md) (Perl | Rust | Rhai) · Design:
 [`script_bindings_plan.md`](script_bindings_plan.md) · Examples: [`docs/examples/`](../examples/) · On the rustdoc site:
 [interface](https://dginev.github.io/latexml-oxide/latexml_contrib/script_bindings/interface/index.html),
 [cheat sheet](https://dginev.github.io/latexml-oxide/latexml_contrib/script_bindings/cheatsheet/index.html)
 
 `API.md` is generated from the live engine and re-checked on every test run (`api_reference_is_up_to_date`), so it
 cannot drift from what is registered; `cargo doc --workspace --open` renders it as
-`latexml_contrib::script_bindings::interface` and the cheat sheet as `…::cheatsheet`, beside the Rust API. The cheat
-sheet's empty cells are the dialect's gaps.
+`latexml_contrib::script_bindings::interface` and the cheat sheet as `…::cheatsheet`, beside the Rust API. An empty
+Rhai cell in the cheat sheet is a Perl call the dialect lacks.
 
 A **binding** tells latexml-oxide what a LaTeX package or class means: which macros expand to what, which commands
 build which XML. Perl LaTeXML writes them in Perl (`foo.sty.ltxml`); latexml-oxide compiles its own in Rust, and you

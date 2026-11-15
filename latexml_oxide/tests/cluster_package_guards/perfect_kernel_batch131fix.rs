@@ -116,7 +116,7 @@ fn null_cs_optional_internal_keeps_the_line_break() {
       ),
       0
     ),
-    r#"<title>T</title> <creator role="author"> <personname>Ann Author</personname> <contact name="Affiliation: " role="affiliation">Univ A</contact> </creator> <date role="creation">A<break/>B</date> <para xml:id="p1"> <p xml:id="p1.1">Before text.</p> </para> <para xml:id="p2"> <p xml:id="p2.1">Body text.</p> </para>"#
+    r#"<titlepage class="ltx_titlepage_before" xml:id="id1"> <block xml:id="p1"> <p xml:id="p1.1">Before text.</p> </block> </titlepage> <title>T</title> <creator role="author"> <personname>Ann Author</personname> <contact name="Affiliation: " role="affiliation">Univ A</contact> </creator> <date role="creation">A<break/>B</date> <para xml:id="p2"> <p xml:id="p2.1">Body text.</p> </para>"#
   );
 }
 

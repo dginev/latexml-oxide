@@ -126,6 +126,8 @@ thread_local! {
 /// ([`note_frontmatter_entry`]).
 pub fn reset_title_page_check() {
   crate::latex_constructs::title_page_reading::end_title_page_epoch();
+  // (and the text a flush held for `\lx@text@before@title`, a node of the last document's)
+  take_text_before_title();
   SPILLED.with_borrow_mut(|spilled| *spilled = SpilledWords::default());
   CALLED.with_borrow_mut(Vec::clear);
   QUEUED_BY_CONTENT.with_borrow_mut(HashMap::clear);

@@ -69,7 +69,8 @@ fn assert_lifts(
 }
 
 /// The document's top-level body before its first section, as the XML has it: every child of `<document>` (two-space
-/// indentation) that is no resource and no frontmatter element, whole. Empty when every print was lifted.
+/// indentation) that is no resource and no frontmatter element, whole — the text set before `\maketitle`, kept ahead of
+/// the title (`ltx_titlepage_before`, QA91), is the body's. Empty when every print was lifted.
 fn leading_body(xml: &str) -> String {
   let body = xml.split_once("<document").map_or("", |(_, b)| b);
   let mut out: Vec<&str> = Vec::new();
@@ -82,7 +83,7 @@ fn leading_body(xml: &str) -> String {
       if child.starts_with("<section") {
         break;
       }
-      keep = !["<resource", "<title", "<creator", "<date"]
+      keep = !["<resource", "<title>", "<title ", "<creator", "<date"]
         .iter()
         .any(|f| child.starts_with(f));
     }
@@ -491,7 +492,7 @@ fn field_prov_slice_before_macro_kept() {
   );
   assert_eq!(
     leading_body(&xml),
-    "  <para xml:id=\"p1\">\n    <p align=\"center\">About</p>\n  </para>",
+    "  <titlepage class=\"ltx_titlepage_before\">\n    <block xml:id=\"p1\">\n      <p align=\"center\">About</p>\n    </block>\n  </titlepage>",
     "{xml}"
   );
 }
@@ -509,8 +510,8 @@ fn field_prov_two_slices_kept() {
   );
   assert_eq!(
     leading_body(&xml),
-    "  <logical-block>\n    <para xml:id=\"p1\">\n      <p align=\"center\">Sp</p>\n      <p \
-     align=\"center\">le</p>\n    </para>\n  </logical-block>",
+    "  <titlepage class=\"ltx_titlepage_before\">\n    <block>\n      <p align=\"center\">Sp</p>\n      <p \
+     align=\"center\">le</p>\n    </block>\n  </titlepage>",
     "{xml}"
   );
 }
@@ -562,7 +563,7 @@ fn field_prov_earlier_value_copy_kept() {
   );
   assert_eq!(
     leading_body(&xml),
-    "  <para xml:id=\"p1\">\n    <p align=\"center\">Long Original Title</p>\n  </para>",
+    "  <titlepage class=\"ltx_titlepage_before\">\n    <block xml:id=\"p1\">\n      <p align=\"center\">Long Original Title</p>\n    </block>\n  </titlepage>",
     "{xml}"
   );
 }
@@ -583,7 +584,7 @@ fn field_prov_unused_boxes_kept() {
   );
   assert_eq!(
     leading_body(&xml),
-    "  <para xml:id=\"p1\">\n    <p align=\"center\">About</p>\n  </para>",
+    "  <titlepage class=\"ltx_titlepage_before\">\n    <block xml:id=\"p1\">\n      <p align=\"center\">About</p>\n    </block>\n  </titlepage>",
     "{xml}"
   );
 }
@@ -600,7 +601,7 @@ fn field_prov_math_mbox_kept() {
   );
   assert_eq!(
     leading_body(&xml),
-    "  <para xml:id=\"p1\">\n    <p align=\"center\">About</p>\n  </para>\n  <para xml:id=\"p2\">\n    <p><text class=\"ltx_markedasmath\">Foo Bar</text></p>\n  </para>",
+    "  <titlepage class=\"ltx_titlepage_before\">\n    <block xml:id=\"p1\">\n      <p align=\"center\">About</p>\n    </block>\n    <block xml:id=\"p2\">\n      <p><text class=\"ltx_markedasmath\">Foo Bar</text></p>\n    </block>\n  </titlepage>",
     "{xml}"
   );
 }
@@ -617,7 +618,7 @@ fn field_prov_box_in_math_and_text() {
   );
   assert_eq!(
     leading_body(&xml),
-    "  <para xml:id=\"p2\">\n    <p><text class=\"ltx_markedasmath\">About Foo Bar</text></p>\n  </para>",
+    "  <titlepage class=\"ltx_titlepage_before\">\n    <block xml:id=\"p2\">\n      <p><text class=\"ltx_markedasmath\">About Foo Bar</text></p>\n    </block>\n  </titlepage>",
     "{xml}"
   );
 }
@@ -647,7 +648,7 @@ fn field_prov_phantom_kept() {
   );
   assert_eq!(
     leading_body(&xml),
-    "  <para xml:id=\"p1\">\n    <p align=\"center\">About<text class=\"ltx_phantom\"> Foo Bar</text></p>\n  </para>\n  <para xml:id=\"p2\">\n    <p align=\"center\">About<text class=\"ltx_phantom\"> Foo Bar</text></p>\n  </para>\n  <para xml:id=\"p3\">\n    <p align=\"center\"><text class=\"ltx_phantom\">About Foo Bar</text></p>\n  </para>",
+    "  <titlepage class=\"ltx_titlepage_before\">\n    <block xml:id=\"p1\">\n      <p align=\"center\">About<text class=\"ltx_phantom\"> Foo Bar</text></p>\n    </block>\n    <block xml:id=\"p2\">\n      <p align=\"center\">About<text class=\"ltx_phantom\"> Foo Bar</text></p>\n    </block>\n    <block xml:id=\"p3\">\n      <p align=\"center\"><text class=\"ltx_phantom\">About Foo Bar</text></p>\n    </block>\n  </titlepage>",
     "{xml}"
   );
 }
@@ -664,7 +665,7 @@ fn field_prov_title_calls_kept() {
   );
   assert_eq!(
     leading_body(&xml),
-    "  <para xml:id=\"p1\">\n    <p align=\"center\">A Title</p>\n  </para>",
+    "  <titlepage class=\"ltx_titlepage_before\">\n    <block xml:id=\"p1\">\n      <p align=\"center\">A Title</p>\n    </block>\n  </titlepage>",
     "{xml}"
   );
 }
@@ -681,7 +682,7 @@ fn field_prov_edef_calls() {
   );
   assert_eq!(
     leading_body(&xml),
-    "  <para xml:id=\"p1\">\n    <p align=\"center\">A Title</p>\n  </para>\n  <para xml:id=\"p4\">\n    <p align=\"center\">A Title</p>\n  </para>",
+    "  <titlepage class=\"ltx_titlepage_before\">\n    <block xml:id=\"p1\">\n      <p align=\"center\">A Title</p>\n    </block>\n    <block xml:id=\"p4\">\n      <p align=\"center\">A Title</p>\n    </block>\n  </titlepage>",
     "{xml}"
   );
 }
@@ -698,7 +699,7 @@ fn field_prov_author_calls_kept() {
   );
   assert_eq!(
     leading_body(&xml),
-    "  <para xml:id=\"p1\">\n    <p align=\"center\">Ann Author</p>\n  </para>",
+    "  <titlepage class=\"ltx_titlepage_before\">\n    <block xml:id=\"p1\">\n      <p align=\"center\">Ann Author</p>\n    </block>\n  </titlepage>",
     "{xml}"
   );
 }
@@ -930,7 +931,7 @@ fn field_prov_reprint_order_kept() {
   );
   assert_eq!(
     leading_body(&xml),
-    "  <para xml:id=\"p1\">\n    <p align=\"center\">TwiTwice Title</p>\n  </para>\n  <para xml:id=\"p2\">\n    <p align=\"center\">TitleTwice</p>\n  </para>\n  <para xml:id=\"p3\">\n    <p align=\"center\">TwiTwice TitleTitle</p>\n  </para>\n  <para xml:id=\"p4\">\n    <p align=\"center\">TTwice Title</p>\n  </para>",
+    "  <titlepage class=\"ltx_titlepage_before\">\n    <block xml:id=\"p1\">\n      <p align=\"center\">TwiTwice Title</p>\n    </block>\n    <block xml:id=\"p2\">\n      <p align=\"center\">TitleTwice</p>\n    </block>\n    <block xml:id=\"p3\">\n      <p align=\"center\">TwiTwice TitleTitle</p>\n    </block>\n    <block xml:id=\"p4\">\n      <p align=\"center\">TTwice Title</p>\n    </block>\n  </titlepage>",
     "{xml}"
   );
 }
@@ -992,7 +993,7 @@ fn field_prov_unshown_alignment_kept() {
   );
   assert_eq!(
     leading_body(&xml),
-    "  <para xml:id=\"p1\">\n    <tabular vattach=\"middle\">\n      <tbody>\n        <tr>\n          <td align=\"center\">Alpha</td>\n        </tr>\n      </tbody>\n    </tabular>\n    <tabular vattach=\"middle\">\n      <tbody>\n        <tr>\n          <td align=\"center\">Beta</td>\n        </tr>\n      </tbody>\n    </tabular>\n  </para>\n  <para xml:id=\"p2\">\n    <p align=\"center\">Alpha</p>\n  </para>\n  <para xml:id=\"p3\">\n    <p align=\"center\">Beta</p>\n  </para>\n  <para xml:id=\"p4\">\n    <p align=\"center\">Alpha</p>\n  </para>\n  <para xml:id=\"p5\">\n    <p align=\"center\">Beta</p>\n  </para>\n  <para xml:id=\"p6\">\n    <p align=\"center\">Alpha</p>\n  </para>\n  <para xml:id=\"p7\">\n    <p align=\"center\">Beta</p>\n  </para>",
+    "  <titlepage class=\"ltx_titlepage_before\">\n    <block xml:id=\"p1\">\n      <tabular vattach=\"middle\">\n        <tbody>\n          <tr>\n            <td align=\"center\">Alpha</td>\n          </tr>\n        </tbody>\n      </tabular>\n      <tabular vattach=\"middle\">\n        <tbody>\n          <tr>\n            <td align=\"center\">Beta</td>\n          </tr>\n        </tbody>\n      </tabular>\n    </block>\n    <block xml:id=\"p2\">\n      <p align=\"center\">Alpha</p>\n    </block>\n    <block xml:id=\"p3\">\n      <p align=\"center\">Beta</p>\n    </block>\n    <block xml:id=\"p4\">\n      <p align=\"center\">Alpha</p>\n    </block>\n    <block xml:id=\"p5\">\n      <p align=\"center\">Beta</p>\n    </block>\n    <block xml:id=\"p6\">\n      <p align=\"center\">Alpha</p>\n    </block>\n    <block xml:id=\"p7\">\n      <p align=\"center\">Beta</p>\n    </block>\n  </titlepage>",
     "{xml}"
   );
 }
@@ -1010,7 +1011,7 @@ fn field_prov_unshown_alignment_trailing_kept() {
   );
   assert_eq!(
     leading_body(&xml),
-    "  <para xml:id=\"p1\">\n    <p align=\"center\">Alpha</p>\n  </para>",
+    "  <titlepage class=\"ltx_titlepage_before\">\n    <block xml:id=\"p1\">\n      <p align=\"center\">Alpha</p>\n    </block>\n  </titlepage>",
     "{xml}"
   );
 }

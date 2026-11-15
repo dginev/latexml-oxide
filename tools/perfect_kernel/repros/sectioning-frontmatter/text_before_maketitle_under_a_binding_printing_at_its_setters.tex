@@ -1,0 +1,20 @@
+% The iopart binding's path of `text_before_maketitle_where_the_title_prints_at_its_setter`: under a class binding the
+% title-page reading runs article.cls's page in for the class's, so the binding declares that its class prints the
+% title and the authors at their setters (`TitlePageDecl::setter_print`, iopart_support.sty: iopart.cls:98
+% `\newcommand\maketitle{\newpage}`, :106-118, :225-231); the text before `\maketitle` follows the title block.
+% witness: 2606.08462 (its PDF: title, authors, addresses, e-mail, then "May 14th, 2026"), 1407.1223 (`\today` in a
+%   center, after the addresses)
+% oracle:  iopart.cls is not in TeX Live; 2606.08462's pdflatex PDF (TL 2025, its own iopart.cls) prints the date after
+%   the title block
+% engines: QAB4 round 2: the date in a before-titlepage above `<title>`; QAB4base: after the title block
+% expect:  `<title>`, the creator, then the date paragraph, no titlepage; 0 errors, 0 warnings
+% status:  RED (QAB4 round 2) → GREEN (QAB4c); guard perfect_kernel_batch56::text_before_maketitle_stays_before_the_title
+% preload: ar5iv.sty
+\documentclass{iopart}
+\begin{document}
+\title{The Title}
+\author{A. Author}
+Dated May 14th.
+\maketitle
+Body.
+\end{document}

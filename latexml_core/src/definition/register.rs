@@ -779,12 +779,15 @@ impl Definition for Register {
     // my $profiled = $state->lookupValue('PROFILING') && ($LaTeXML::CURRENT_TOKEN || $$self{cs});
     // LaTeXML::Core::Definition::startProfiling($profiled, 'digest') if $profiled;
     let args = self.read_arguments()?;
-    gullet::read_keyword(&["="])?;
+    {
+      let _operand = gullet::operand_lookahead();
+      gullet::read_keyword(&["="])?;
+    }
     let value = gullet::read_value(self.register_type().unwrap())?;
 
     self.set_value(value, None, args);
 
-    state::after_assignment();
+    state::after_assignment()?;
     // # Tracing ?
     // LaTeXML::Core::Definition::stopProfiling($profiled, 'digest') if $profiled;
 
