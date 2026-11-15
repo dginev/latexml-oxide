@@ -74,10 +74,8 @@ struct Arm {
 /// A parsed query inside the walk's grammar (see the module doc).
 #[derive(Debug)]
 pub struct WalkQuery {
-  axis:       Axis,
-  arms:       Vec<Arm>,
-  /// Some arm tests an element name (read once per element, not per arm).
-  needs_name: bool,
+  axis: Axis,
+  arms: Vec<Arm>,
 }
 
 impl WalkQuery {
@@ -95,10 +93,11 @@ impl WalkQuery {
         (Axis::Descendant, rest)
       } else if let Some(rest) = raw.strip_prefix("descendant::") {
         (Axis::Descendant, rest)
-      } else if let Some(rest) = raw.strip_prefix("descendant-or-self::") {
-        (Axis::DescendantOrSelf, rest)
       } else {
-        return None;
+        (
+          Axis::DescendantOrSelf,
+          raw.strip_prefix("descendant-or-self::")?,
+        )
       };
       if axis.is_some_and(|a| a != arm_axis) {
         return None;
@@ -142,8 +141,7 @@ impl WalkQuery {
         preds,
       });
     }
-    let needs_name = arms.iter().any(|arm| matches!(arm.name, NameTest::Ltx(_)));
-    Some(WalkQuery { axis: axis?, arms, needs_name })
+    Some(WalkQuery { axis: axis?, arms })
   }
 
   /// The query's matches in `doc`, in document order, each once: XPath's answer, evaluated at `context` (or at the
@@ -171,7 +169,7 @@ impl WalkQuery {
     }
     let context = match context {
       Some(node) => {
-        let ro = node.to_readonly();
+        let ro = node.as_readonly();
         if ro.is_null() {
           return None;
         }
@@ -195,7 +193,7 @@ impl WalkQuery {
     Some(
       found
         .into_iter()
-        .map(|node| doc.get_node_from_readonly(node))
+        .map(|node| doc.wrap_readonly(node))
         .collect(),
     )
   }
@@ -245,23 +243,20 @@ impl WalkQuery {
     if node.get_type() != Some(NodeType::ElementNode) {
       return false;
     }
-    let name = if self.needs_name {
-      node.get_name()
-    } else {
-      String::new()
-    };
-    let mut in_ltx = None;
-    self.arms.iter().any(|arm| {
-      if let NameTest::Ltx(want) = &arm.name
-        && (name != *want || !*in_ltx.get_or_insert_with(|| is_ltx(node)))
-      {
-        return false;
-      }
-      arm.preds.is_empty()
-        || arm
-          .preds
-          .iter()
-          .any(|group| group.iter().all(|atom| atom.holds(node)))
+    node.with_name(|name| {
+      let mut in_ltx = None;
+      self.arms.iter().any(|arm| {
+        if let NameTest::Ltx(want) = &arm.name
+          && (name != want || !*in_ltx.get_or_insert_with(|| is_ltx(node)))
+        {
+          return false;
+        }
+        arm.preds.is_empty()
+          || arm
+            .preds
+            .iter()
+            .any(|group| group.iter().all(|atom| atom.holds(node)))
+      })
     })
   }
 }
@@ -275,7 +270,8 @@ impl Atom {
       Atom::NoChild(name) => {
         let mut child = node.get_first_child();
         while let Some(c) = child {
-          if c.get_type() == Some(NodeType::ElementNode) && c.get_name() == *name && is_ltx(c) {
+          if c.get_type() == Some(NodeType::ElementNode) && c.with_name(|n| n == name) && is_ltx(c)
+          {
             return false;
           }
           child = c.get_next_sibling();
@@ -319,7 +315,7 @@ impl NameTest {
   fn accepts(&self, node: RoNode) -> bool {
     match self {
       NameTest::Any => true,
-      NameTest::Ltx(name) => node.get_name() == *name && is_ltx(node),
+      NameTest::Ltx(name) => node.with_name(|n| n == name) && is_ltx(node),
     }
   }
 }
@@ -330,11 +326,7 @@ fn ancestors(node: RoNode) -> impl Iterator<Item = RoNode> {
     .take_while(|p| p.get_type() == Some(NodeType::ElementNode))
 }
 
-fn is_ltx(node: RoNode) -> bool {
-  node
-    .get_namespace()
-    .is_some_and(|ns| ns.get_href() == LTX_NS)
-}
+fn is_ltx(node: RoNode) -> bool { node.with_namespace_href(|href| href == Some(LTX_NS)) }
 
 /// `s` split at each `sep` outside quotes, parentheses and brackets.
 fn split_top<'a>(s: &'a str, sep: &str) -> Vec<&'a str> {

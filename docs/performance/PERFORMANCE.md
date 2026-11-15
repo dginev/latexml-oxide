@@ -321,8 +321,8 @@ wrapping elements only). Left, each with its basis (exact call counts × gdb-ste
 * `get_name` behind `get_node_qname` (`common/model.rs:723`) and `collect_named` (`latexml_math_parser/src/util.rs:946`):
   0.72 % of String copies, 2.56 M calls — a borrowed name read (additive API) on the latexml side.
 * `Node::_wrap`'s `NodeMap` probe + `Rc` clone on every traversal step (5.27 M hits, 0.48 %): a `_private` back-pointer
-  would remove the probe, but collides with P11 option 2 — design decision, not taken. Post's whole-document queries
-  walk `RoNode`s and wrap only their matches (2026-11-15, PERFD).
+  would remove the probe, but collides with P11 option 2 — design decision, not taken. Core's and post's
+  `findnodes` answer their common shapes by a `RoNode` walk that wraps only the matches (2026-11-15, PERFD, PERFE).
 * `_autoopened` presence tests (`document.rs` ~:3540, ~:3584, `get_attribute("_autoopened").is_some()`) copy the value
   into a `String` only to test it exists: 2.93 M calls, 0.79 % with the wrapper (perf453c basis); `has_attribute` is
   allocation-free on 0.3.23 — a one-lever run, measured alone.
@@ -349,6 +349,52 @@ code on AMD (skid), so the figures are counts × stepped instructions.
 
 ## Audit log (periodic passes; newest first)
 
+### 2026-11-15 — one read-only XPath walk for core and post (PERFE, PERF2 levers R1 + R3)
+
+Defect: after PERFD, post still sent its subtree and path shapes to libxml2 (`//ltx:ref//*[@fragid]`, the cref
+conjunctions' `contains(concat(' ', @class, ' '), …)`, `descendant::*[@decl_id or @meaning]`, `//*[@xml:id]`), and
+core sent all of its own: `Document::finalize`'s `mark_xmnode_visibility` (`//ltx:XMath/*`, then
+`descendant-or-self::*[@_pvis or @_cvis]` per formula), prune_xmduals' `findnode`s, `cleanup_scripts`, the XMDual
+`after_close_late` (`base_xmath.rs`) and `resolve_xmkeys` (2 + R `descendant::` scans per key attribute and formula,
+`parser.rs`); libxml2 builds a node set over every element it passes and rust-libxml wraps every result (PERF2:
+`XPath::findnodes` 4.1 % of the mix's instructions, 8.9 % of typical papers' cycles). Fix:
+`latexml_core::common::xml_walk::WalkQuery`, used by core `Document::findnodes` / `findnode` (parsed once per
+expression, `XPath::walk`) and post `findnodes_at` / `findnode(_at)`. A union of `//STEP`, `//A//STEP`, `//A/STEP`,
+`descendant::STEP`, `.//STEP` or `descendant-or-self::STEP` arms, `STEP` being `*` or `ltx:NAME` with one predicate
+of top-level `or`/`and` over `@a`, `@xml:a`, `not(@a)`, `not(ancestor::ltx:N)`, `not(ltx:N)` and `contains(…)` over
+attributes, `concat` and literals. Matches are tested on `RoNode`s, names and namespaces read borrowed, and only the
+matches are wrapped (rust-libxml's additive borrowed reads, `Document::wrap_readonly`, `RoNode::with_name`);
+`findnode` stops at the first. `resolve_xmkeys` is one
+`descendant::*[@KEY]` walk per key attribute; a key's target is the first non-XMRef carrying it, as before. The walk
+answers only where it equals XPath (the same nodes, document order, each once) and declines otherwise: any other
+shape; a document with a DTD (default attributes, entity references); a context outside the document's tree (a
+foreign `.bib.xml` entry, a detached or null node). It keeps no state between queries.
+
+Basis: `perf stat -e instructions:u,cycles:u`, release, best of 3 interleaved against INTPERF (`95042553f8b`), cores
+0-31; HTML in cortex's recipe. Step 1 = the walk shared and post widened (R3); step 2 = core's callers (R1).
+
+| Document | instructions (G) | step 1 | steps 1 + 2 |
+|---|---:|---:|---:|
+| the issue-790 book html | 798.8 | −0.31 % | −4.18 % |
+| b500 xml | 73.3 | −0.01 % | −4.14 % |
+| b1000 html | 208.0 | −0.69 % | −3.59 % |
+| 2308.04512 xml | 259.0 | +0.12 % | −1.31 % |
+| 2308.04512 html | 322.7 | +0.20 % | −0.95 % |
+| 2103.04797 html | 8.1 | −0.15 % | −1.20 % |
+| amsldoc xml (control) | 5.7 | +0.05 % | −2.62 % |
+| 2010.05701 xml (control) | 267.2 | −0.08 % | −0.18 % |
+| 10 typical papers html (`popPERFBs`) | 2.0–32.0 | −0.25 … +0.20 % | −0.60 … −3.42 %, median −1.98 % |
+
+Cycles could not be measured: CPUs n and n+64 are SMT siblings and the siblings ran another writer's load, so the
+base's own cycles varied by up to 143 % between its three runs (instructions ≤ 0.23 %, 1109.6643 2.5 %). Peak RSS
+(book html, b1000 html): RSS_PLACEHOLDER. Output: XML, HTML and every auxiliary file byte-identical on the 18 runs above in
+all three reps, and on the A/B AB_PLACEHOLDER. Guards (`latexml_core` `common::xml_walk::tests`):
+`walk_agrees_with_xpath_on_every_supported_shape` (28 shapes at four contexts against libxml2's answer, and
+`find_first`), `unsupported_shapes_are_not_claimed_by_the_walk`, `walk_declines_where_xpath_must_answer` (it
+replaces PERFD's entity-retrace guard: a DTD document now goes to XPath, whose answer does not enter entity content),
+`walk_answers_from_the_live_tree_after_mutation`. Left: rust-libxml 0.3.24 must be released before the `[patch]`
+path entry can go.
+
 ### 2026-11-15 — post's whole-document queries wrap only their matches (PERFD, PERF1 lever L5)
 
 Defect: every whole-document `//NAME[pred]` query post answers by traversal (`PostDocument::findnodes`, ≈20 per HTML
@@ -368,8 +414,8 @@ and root matches, and `//*`), `walk_retraces_into_entity_content_like_the_refere
 `walk_answers_from_the_live_tree_after_mutation` (against a future cross-query cache).
 A cross-query element index (by name, built once) was not taken: processors insert and remove elements through `Node`
 directly, between and inside their queries, and nothing tells the document. Left: the queries outside the walk's
-grammar go to libxml2 XPath (`descendant::*[@decl_id or @meaning]`, `//ltx:text[contains(…)]`,
-`//ltx:picture[child::…]`, 0.2–0.5 s each on the book); the core's `xml::descendant_or_self_elements`
+grammar go to libxml2 XPath (`descendant::*[@decl_id or @meaning]`, `//ltx:text[contains(…)]` — both walked since
+PERFE, below — and `//ltx:picture[child::…]`, 0.2–0.5 s each on the book); the core's `xml::descendant_or_self_elements`
 (`Document::find_elements`, #865) wraps every element the same way.
 
 ### 2026-11-15 — a `\global` assignment's walk over the undo frames (PERFC)
