@@ -195,7 +195,7 @@
 <a href=#195 id=195 data-nosnippet>195</a>}
 <a href=#196 id=196 data-nosnippet>196</a>
 <a href=#197 id=197 data-nosnippet>197</a><span class="kw">fn </span>create_float_env(name: <span class="kw-2">&amp;</span>str, class: <span class="kw-2">&amp;</span>str, style: <span class="kw-2">&amp;</span>str) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
-<a href=#198 id=198 data-nosnippet>198</a>  <span class="kw">use </span><span class="kw">crate</span>::engine::latex_constructs::{after_float, before_float_ex, reset_float_box};
+<a href=#198 id=198 data-nosnippet>198</a>  <span class="kw">use </span><span class="kw">crate</span>::engine::latex_constructs::{after_float, before_xfloat};
 <a href=#199 id=199 data-nosnippet>199</a>
 <a href=#200 id=200 data-nosnippet>200</a>  <span class="kw">let </span>class_val = class.to_string();
 <a href=#201 id=201 data-nosnippet>201</a>  <span class="comment">// Extract the base type for before_float (remove trailing *)
@@ -270,112 +270,111 @@
 <a href=#270 id=270 data-nosnippet>270</a>  <span class="comment">// before_digest: beforeFloat($type [, double =&gt; 1])
 <a href=#271 id=271 data-nosnippet>271</a>  </span><span class="kw">let </span>bt = base_type;
 <a href=#272 id=272 data-nosnippet>272</a>  <span class="kw">let </span>before_closure: BeforeDigestClosure = Rc::new(<span class="kw">move </span>|| {
-<a href=#273 id=273 data-nosnippet>273</a>    before_float_ex(<span class="kw-2">&amp;</span>bt, <span class="prelude-val">None</span>, is_double)<span class="question-mark">?</span>;
-<a href=#274 id=274 data-nosnippet>274</a>    reset_float_box()<span class="question-mark">?</span>;
-<a href=#275 id=275 data-nosnippet>275</a>    <span class="prelude-val">Ok</span>(Vec::new())
-<a href=#276 id=276 data-nosnippet>276</a>  });
-<a href=#277 id=277 data-nosnippet>277</a>  options.before_digest.push(before_closure);
-<a href=#278 id=278 data-nosnippet>278</a>
-<a href=#279 id=279 data-nosnippet>279</a>  <span class="comment">// after_digest: afterFloat($whatsit)
-<a href=#280 id=280 data-nosnippet>280</a>  </span><span class="kw">let </span>after_closure: DigestionClosure = Rc::new(<span class="kw">move </span>|whatsit: <span class="kw-2">&amp;mut </span>Whatsit| {
-<a href=#281 id=281 data-nosnippet>281</a>    after_float(whatsit);
-<a href=#282 id=282 data-nosnippet>282</a>    <span class="prelude-val">Ok</span>(Vec::new())
-<a href=#283 id=283 data-nosnippet>283</a>  });
-<a href=#284 id=284 data-nosnippet>284</a>  options.after_digest.push(after_closure);
-<a href=#285 id=285 data-nosnippet>285</a>
-<a href=#286 id=286 data-nosnippet>286</a>  <span class="comment">// after_construct: addFloatFrames
-<a href=#287 id=287 data-nosnippet>287</a>  </span><span class="kw">let </span>style_for_construct = style_str;
-<a href=#288 id=288 data-nosnippet>288</a>  <span class="kw">let </span>after_construct_closure: ConstructionClosure =
-<a href=#289 id=289 data-nosnippet>289</a>    Rc::new(<span class="kw">move </span>|document: <span class="kw-2">&amp;mut </span>Document, _whatsit: <span class="kw-2">&amp;</span>Whatsit| {
-<a href=#290 id=290 data-nosnippet>290</a>      add_float_frames(document, <span class="kw-2">&amp;</span>style_for_construct)<span class="question-mark">?</span>;
-<a href=#291 id=291 data-nosnippet>291</a>      <span class="prelude-val">Ok</span>(())
-<a href=#292 id=292 data-nosnippet>292</a>    });
-<a href=#293 id=293 data-nosnippet>293</a>  options.after_construct.push(after_construct_closure);
-<a href=#294 id=294 data-nosnippet>294</a>
-<a href=#295 id=295 data-nosnippet>295</a>  options.properties = Rc::new(|<span class="kw">_</span>| <span class="prelude-val">Ok</span>(<span class="macro">stored_map!</span>(<span class="string">"layout" </span>=&gt; <span class="string">"vertical"</span>)));
-<a href=#296 id=296 data-nosnippet>296</a>
-<a href=#297 id=297 data-nosnippet>297</a>  def_environment(name.to_string(), paramlist, <span class="prelude-val">Some</span>(replacement), options);
-<a href=#298 id=298 data-nosnippet>298</a>  <span class="prelude-val">Ok</span>(())
-<a href=#299 id=299 data-nosnippet>299</a>}
-<a href=#300 id=300 data-nosnippet>300</a>
-<a href=#301 id=301 data-nosnippet>301</a><span class="doccomment">/// Perl: addFloatFrames (float.sty.ltxml L76-85)
-<a href=#302 id=302 data-nosnippet>302</a></span><span class="kw">pub fn </span>add_float_frames(document: <span class="kw-2">&amp;mut </span>Document, style: <span class="kw-2">&amp;</span>str) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
-<a href=#303 id=303 data-nosnippet>303</a>  <span class="kw">let </span>caption_qname = <span class="macro">pin!</span>(<span class="string">"ltx:caption"</span>);
-<a href=#304 id=304 data-nosnippet>304</a>  <span class="kw">let </span>toccaption_qname = <span class="macro">pin!</span>(<span class="string">"ltx:toccaption"</span>);
-<a href=#305 id=305 data-nosnippet>305</a>  <span class="kw">let </span>tags_qname = <span class="macro">pin!</span>(<span class="string">"ltx:tags"</span>);
-<a href=#306 id=306 data-nosnippet>306</a>  <span class="comment">// The inner frame must land on the float's BODY element (listing/graphics/…),
-<a href=#307 id=307 data-nosnippet>307</a>  // never on its `&lt;ltx:tags&gt;` metadata sibling. Perl's filter only skips
-<a href=#308 id=308 data-nosnippet>308</a>  // caption/toccaption (float.sty.ltxml L82) — but a RefStepCounter'd float
-<a href=#309 id=309 data-nosnippet>309</a>  // emits `&lt;tags&gt;` as its FIRST child, and `&lt;tags&gt;` (LaTeXML-block.rnc:325,
-<a href=#310 id=310 data-nosnippet>310</a>  // `element tags { tag+ }`) carries NO attributes, so `framed` on it is
-<a href=#311 id=311 data-nosnippet>311</a>  // silently schema-dropped and no frame is ever drawn. Both engines lose the
-<a href=#312 id=312 data-nosnippet>312</a>  // box; skipping `&lt;tags&gt;` too puts the frame on the real body.
-<a href=#313 id=313 data-nosnippet>313</a>  // OXIDIZED_DESIGN #149 (surpass), KNOWN_PERL_ERRORS #106.
-<a href=#314 id=314 data-nosnippet>314</a>  </span><span class="kw">let </span>is_body = |qname| qname != caption_qname &amp;&amp; qname != toccaption_qname &amp;&amp; qname != tags_qname;
-<a href=#315 id=315 data-nosnippet>315</a>  <span class="kw">let </span>node = document.get_node();
-<a href=#316 id=316 data-nosnippet>316</a>  <span class="kw">if let </span><span class="prelude-val">Some</span>(float_node) = node.get_last_child() {
-<a href=#317 id=317 data-nosnippet>317</a>    <span class="comment">// Frame styles: outer on the float, inner on the body. Ports Perl's
-<a href=#318 id=318 data-nosnippet>318</a>    // %float_outerframe / %float_innerframe (float.sty.ltxml L37-38) plus the
-<a href=#319 id=319 data-nosnippet>319</a>    // algorithm2e ruled family (top rule on the float, topbottom on the body).
-<a href=#320 id=320 data-nosnippet>320</a>    </span><span class="kw">let </span>(outer, inner): (<span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>str&gt;, <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>str&gt;) = <span class="kw">match </span>style {
-<a href=#321 id=321 data-nosnippet>321</a>      <span class="string">"ruled" </span>=&gt; (<span class="prelude-val">Some</span>(<span class="string">"top"</span>), <span class="prelude-val">Some</span>(<span class="string">"topbottom"</span>)),
-<a href=#322 id=322 data-nosnippet>322</a>      <span class="string">"boxed" </span>=&gt; (<span class="prelude-val">None</span>, <span class="prelude-val">Some</span>(<span class="string">"rectangle"</span>)),
-<a href=#323 id=323 data-nosnippet>323</a>      <span class="kw">_ </span>=&gt; (<span class="prelude-val">None</span>, <span class="prelude-val">None</span>), <span class="comment">// plain, plaintop — no framing
-<a href=#324 id=324 data-nosnippet>324</a>    </span>};
-<a href=#325 id=325 data-nosnippet>325</a>    <span class="kw">if let </span><span class="prelude-val">Some</span>(outer) = outer {
-<a href=#326 id=326 data-nosnippet>326</a>      <span class="kw">let </span><span class="kw-2">mut </span>float_mut = float_node.clone();
-<a href=#327 id=327 data-nosnippet>327</a>      document.set_attribute(<span class="kw-2">&amp;mut </span>float_mut, <span class="string">"framed"</span>, outer)<span class="question-mark">?</span>;
-<a href=#328 id=328 data-nosnippet>328</a>    }
-<a href=#329 id=329 data-nosnippet>329</a>    <span class="kw">if let </span><span class="prelude-val">Some</span>(inner) = inner {
-<a href=#330 id=330 data-nosnippet>330</a>      <span class="kw">for </span>child <span class="kw">in </span>float_node.get_child_elements() {
-<a href=#331 id=331 data-nosnippet>331</a>        <span class="kw">if </span>is_body(document::get_node_qname(<span class="kw-2">&amp;</span>child)) {
-<a href=#332 id=332 data-nosnippet>332</a>          <span class="kw">let </span><span class="kw-2">mut </span>child_mut = child;
-<a href=#333 id=333 data-nosnippet>333</a>          document.set_attribute(<span class="kw-2">&amp;mut </span>child_mut, <span class="string">"framed"</span>, inner)<span class="question-mark">?</span>;
-<a href=#334 id=334 data-nosnippet>334</a>          <span class="kw">break</span>;
-<a href=#335 id=335 data-nosnippet>335</a>        }
-<a href=#336 id=336 data-nosnippet>336</a>      }
-<a href=#337 id=337 data-nosnippet>337</a>    }
-<a href=#338 id=338 data-nosnippet>338</a>  }
-<a href=#339 id=339 data-nosnippet>339</a>  <span class="prelude-val">Ok</span>(())
-<a href=#340 id=340 data-nosnippet>340</a>}
-<a href=#341 id=341 data-nosnippet>341</a>
-<a href=#342 id=342 data-nosnippet>342</a><span class="doccomment">/// Move a float's `&lt;ltx:caption&gt;`/`&lt;ltx:toccaption&gt;` to BEFORE its body element, so
-<a href=#343 id=343 data-nosnippet>343</a>/// the caption renders at the TOP of the frame. algorithm2e's ruled family
-<a href=#344 id=344 data-nosnippet>344</a>/// (`ruled`/`algoruled`/`tworuled`/`plainruled`/`boxruled`) draws the caption at the
-<a href=#345 id=345 data-nosnippet>345</a>/// top: real algorithm2e.sty sets `\@algocf@capt@ruled`=`top` (L2530) /
-<a href=#346 id=346 data-nosnippet>346</a>/// `\@algocf@capt@boxruled`=`above` (L2540), and `\algocf@makethealgo` (L2589+) lays
-<a href=#347 id=347 data-nosnippet>347</a>/// the caption out before the body. LaTeXML emits the caption last (standard float
-<a href=#348 id=348 data-nosnippet>348</a>/// order = bottom), and so does Perl LaTeXML — so this is a surpass over Perl to match
-<a href=#349 id=349 data-nosnippet>349</a>/// the pdflatex golden. OXIDIZED_DESIGN #153. DOM order determines the XSLT render
-<a href=#350 id=350 data-nosnippet>350</a>/// position, so a pre-body caption renders above the listing. The float content model
-<a href=#351 id=351 data-nosnippet>351</a>/// (`LaTeXML-para.rnc:196`, `(tags? | … | Block.model | Caption.class)*`) is an
-<a href=#352 id=352 data-nosnippet>352</a>/// order-free choice, so the moved caption stays schema-valid.
-<a href=#353 id=353 data-nosnippet>353</a></span><span class="kw">pub fn </span>reposition_caption_top(document: <span class="kw-2">&amp;mut </span>Document) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
-<a href=#354 id=354 data-nosnippet>354</a>  <span class="kw">let </span>caption_qname = <span class="macro">pin!</span>(<span class="string">"ltx:caption"</span>);
-<a href=#355 id=355 data-nosnippet>355</a>  <span class="kw">let </span>toccaption_qname = <span class="macro">pin!</span>(<span class="string">"ltx:toccaption"</span>);
-<a href=#356 id=356 data-nosnippet>356</a>  <span class="kw">let </span>tags_qname = <span class="macro">pin!</span>(<span class="string">"ltx:tags"</span>);
-<a href=#357 id=357 data-nosnippet>357</a>  <span class="kw">let </span>node = document.get_node();
-<a href=#358 id=358 data-nosnippet>358</a>  <span class="kw">let </span><span class="prelude-val">Some</span>(float_node) = node.get_last_child() <span class="kw">else </span>{
-<a href=#359 id=359 data-nosnippet>359</a>    <span class="kw">return </span><span class="prelude-val">Ok</span>(());
-<a href=#360 id=360 data-nosnippet>360</a>  };
-<a href=#361 id=361 data-nosnippet>361</a>  <span class="kw">let </span>is_body = |qname| qname != caption_qname &amp;&amp; qname != toccaption_qname &amp;&amp; qname != tags_qname;
-<a href=#362 id=362 data-nosnippet>362</a>  <span class="comment">// The first body element (the listing) is the reference point; captions move ahead
-<a href=#363 id=363 data-nosnippet>363</a>  // of it, preserving their relative order (toccaption then caption).
-<a href=#364 id=364 data-nosnippet>364</a>  </span><span class="kw">let </span>children = float_node.get_child_elements();
-<a href=#365 id=365 data-nosnippet>365</a>  <span class="kw">let </span><span class="prelude-val">Some</span>(<span class="kw-2">mut </span>body) = children
-<a href=#366 id=366 data-nosnippet>366</a>    .iter()
-<a href=#367 id=367 data-nosnippet>367</a>    .find(|c| is_body(document::get_node_qname(c)))
-<a href=#368 id=368 data-nosnippet>368</a>    .cloned()
-<a href=#369 id=369 data-nosnippet>369</a>  <span class="kw">else </span>{
-<a href=#370 id=370 data-nosnippet>370</a>    <span class="kw">return </span><span class="prelude-val">Ok</span>(());
-<a href=#371 id=371 data-nosnippet>371</a>  };
-<a href=#372 id=372 data-nosnippet>372</a>  <span class="kw">for </span>child <span class="kw">in </span>children {
-<a href=#373 id=373 data-nosnippet>373</a>    <span class="kw">let </span>qname = document::get_node_qname(<span class="kw-2">&amp;</span>child);
-<a href=#374 id=374 data-nosnippet>374</a>    <span class="kw">if </span>qname == caption_qname || qname == toccaption_qname {
-<a href=#375 id=375 data-nosnippet>375</a>      <span class="kw">let </span><span class="kw-2">mut </span>child_mut = child;
-<a href=#376 id=376 data-nosnippet>376</a>      body.add_prev_sibling(<span class="kw-2">&amp;mut </span>child_mut)<span class="question-mark">?</span>;
-<a href=#377 id=377 data-nosnippet>377</a>    }
-<a href=#378 id=378 data-nosnippet>378</a>  }
-<a href=#379 id=379 data-nosnippet>379</a>  <span class="prelude-val">Ok</span>(())
-<a href=#380 id=380 data-nosnippet>380</a>}
+<a href=#273 id=273 data-nosnippet>273</a>    before_xfloat(<span class="kw-2">&amp;</span>bt, is_double)<span class="question-mark">?</span>;
+<a href=#274 id=274 data-nosnippet>274</a>    <span class="prelude-val">Ok</span>(Vec::new())
+<a href=#275 id=275 data-nosnippet>275</a>  });
+<a href=#276 id=276 data-nosnippet>276</a>  options.before_digest.push(before_closure);
+<a href=#277 id=277 data-nosnippet>277</a>
+<a href=#278 id=278 data-nosnippet>278</a>  <span class="comment">// after_digest: afterFloat($whatsit)
+<a href=#279 id=279 data-nosnippet>279</a>  </span><span class="kw">let </span>after_closure: DigestionClosure = Rc::new(<span class="kw">move </span>|whatsit: <span class="kw-2">&amp;mut </span>Whatsit| {
+<a href=#280 id=280 data-nosnippet>280</a>    after_float(whatsit);
+<a href=#281 id=281 data-nosnippet>281</a>    <span class="prelude-val">Ok</span>(Vec::new())
+<a href=#282 id=282 data-nosnippet>282</a>  });
+<a href=#283 id=283 data-nosnippet>283</a>  options.after_digest.push(after_closure);
+<a href=#284 id=284 data-nosnippet>284</a>
+<a href=#285 id=285 data-nosnippet>285</a>  <span class="comment">// after_construct: addFloatFrames
+<a href=#286 id=286 data-nosnippet>286</a>  </span><span class="kw">let </span>style_for_construct = style_str;
+<a href=#287 id=287 data-nosnippet>287</a>  <span class="kw">let </span>after_construct_closure: ConstructionClosure =
+<a href=#288 id=288 data-nosnippet>288</a>    Rc::new(<span class="kw">move </span>|document: <span class="kw-2">&amp;mut </span>Document, _whatsit: <span class="kw-2">&amp;</span>Whatsit| {
+<a href=#289 id=289 data-nosnippet>289</a>      add_float_frames(document, <span class="kw-2">&amp;</span>style_for_construct)<span class="question-mark">?</span>;
+<a href=#290 id=290 data-nosnippet>290</a>      <span class="prelude-val">Ok</span>(())
+<a href=#291 id=291 data-nosnippet>291</a>    });
+<a href=#292 id=292 data-nosnippet>292</a>  options.after_construct.push(after_construct_closure);
+<a href=#293 id=293 data-nosnippet>293</a>
+<a href=#294 id=294 data-nosnippet>294</a>  options.properties = Rc::new(|<span class="kw">_</span>| <span class="prelude-val">Ok</span>(<span class="macro">stored_map!</span>(<span class="string">"layout" </span>=&gt; <span class="string">"vertical"</span>)));
+<a href=#295 id=295 data-nosnippet>295</a>
+<a href=#296 id=296 data-nosnippet>296</a>  def_environment(name.to_string(), paramlist, <span class="prelude-val">Some</span>(replacement), options);
+<a href=#297 id=297 data-nosnippet>297</a>  <span class="prelude-val">Ok</span>(())
+<a href=#298 id=298 data-nosnippet>298</a>}
+<a href=#299 id=299 data-nosnippet>299</a>
+<a href=#300 id=300 data-nosnippet>300</a><span class="doccomment">/// Perl: addFloatFrames (float.sty.ltxml L76-85)
+<a href=#301 id=301 data-nosnippet>301</a></span><span class="kw">pub fn </span>add_float_frames(document: <span class="kw-2">&amp;mut </span>Document, style: <span class="kw-2">&amp;</span>str) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
+<a href=#302 id=302 data-nosnippet>302</a>  <span class="kw">let </span>caption_qname = <span class="macro">pin!</span>(<span class="string">"ltx:caption"</span>);
+<a href=#303 id=303 data-nosnippet>303</a>  <span class="kw">let </span>toccaption_qname = <span class="macro">pin!</span>(<span class="string">"ltx:toccaption"</span>);
+<a href=#304 id=304 data-nosnippet>304</a>  <span class="kw">let </span>tags_qname = <span class="macro">pin!</span>(<span class="string">"ltx:tags"</span>);
+<a href=#305 id=305 data-nosnippet>305</a>  <span class="comment">// The inner frame must land on the float's BODY element (listing/graphics/…),
+<a href=#306 id=306 data-nosnippet>306</a>  // never on its `&lt;ltx:tags&gt;` metadata sibling. Perl's filter only skips
+<a href=#307 id=307 data-nosnippet>307</a>  // caption/toccaption (float.sty.ltxml L82) — but a RefStepCounter'd float
+<a href=#308 id=308 data-nosnippet>308</a>  // emits `&lt;tags&gt;` as its FIRST child, and `&lt;tags&gt;` (LaTeXML-block.rnc:325,
+<a href=#309 id=309 data-nosnippet>309</a>  // `element tags { tag+ }`) carries NO attributes, so `framed` on it is
+<a href=#310 id=310 data-nosnippet>310</a>  // silently schema-dropped and no frame is ever drawn. Both engines lose the
+<a href=#311 id=311 data-nosnippet>311</a>  // box; skipping `&lt;tags&gt;` too puts the frame on the real body.
+<a href=#312 id=312 data-nosnippet>312</a>  // OXIDIZED_DESIGN #149 (surpass), KNOWN_PERL_ERRORS #106.
+<a href=#313 id=313 data-nosnippet>313</a>  </span><span class="kw">let </span>is_body = |qname| qname != caption_qname &amp;&amp; qname != toccaption_qname &amp;&amp; qname != tags_qname;
+<a href=#314 id=314 data-nosnippet>314</a>  <span class="kw">let </span>node = document.get_node();
+<a href=#315 id=315 data-nosnippet>315</a>  <span class="kw">if let </span><span class="prelude-val">Some</span>(float_node) = node.get_last_child() {
+<a href=#316 id=316 data-nosnippet>316</a>    <span class="comment">// Frame styles: outer on the float, inner on the body. Ports Perl's
+<a href=#317 id=317 data-nosnippet>317</a>    // %float_outerframe / %float_innerframe (float.sty.ltxml L37-38) plus the
+<a href=#318 id=318 data-nosnippet>318</a>    // algorithm2e ruled family (top rule on the float, topbottom on the body).
+<a href=#319 id=319 data-nosnippet>319</a>    </span><span class="kw">let </span>(outer, inner): (<span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>str&gt;, <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>str&gt;) = <span class="kw">match </span>style {
+<a href=#320 id=320 data-nosnippet>320</a>      <span class="string">"ruled" </span>=&gt; (<span class="prelude-val">Some</span>(<span class="string">"top"</span>), <span class="prelude-val">Some</span>(<span class="string">"topbottom"</span>)),
+<a href=#321 id=321 data-nosnippet>321</a>      <span class="string">"boxed" </span>=&gt; (<span class="prelude-val">None</span>, <span class="prelude-val">Some</span>(<span class="string">"rectangle"</span>)),
+<a href=#322 id=322 data-nosnippet>322</a>      <span class="kw">_ </span>=&gt; (<span class="prelude-val">None</span>, <span class="prelude-val">None</span>), <span class="comment">// plain, plaintop — no framing
+<a href=#323 id=323 data-nosnippet>323</a>    </span>};
+<a href=#324 id=324 data-nosnippet>324</a>    <span class="kw">if let </span><span class="prelude-val">Some</span>(outer) = outer {
+<a href=#325 id=325 data-nosnippet>325</a>      <span class="kw">let </span><span class="kw-2">mut </span>float_mut = float_node.clone();
+<a href=#326 id=326 data-nosnippet>326</a>      document.set_attribute(<span class="kw-2">&amp;mut </span>float_mut, <span class="string">"framed"</span>, outer)<span class="question-mark">?</span>;
+<a href=#327 id=327 data-nosnippet>327</a>    }
+<a href=#328 id=328 data-nosnippet>328</a>    <span class="kw">if let </span><span class="prelude-val">Some</span>(inner) = inner {
+<a href=#329 id=329 data-nosnippet>329</a>      <span class="kw">for </span>child <span class="kw">in </span>float_node.get_child_elements() {
+<a href=#330 id=330 data-nosnippet>330</a>        <span class="kw">if </span>is_body(document::get_node_qname(<span class="kw-2">&amp;</span>child)) {
+<a href=#331 id=331 data-nosnippet>331</a>          <span class="kw">let </span><span class="kw-2">mut </span>child_mut = child;
+<a href=#332 id=332 data-nosnippet>332</a>          document.set_attribute(<span class="kw-2">&amp;mut </span>child_mut, <span class="string">"framed"</span>, inner)<span class="question-mark">?</span>;
+<a href=#333 id=333 data-nosnippet>333</a>          <span class="kw">break</span>;
+<a href=#334 id=334 data-nosnippet>334</a>        }
+<a href=#335 id=335 data-nosnippet>335</a>      }
+<a href=#336 id=336 data-nosnippet>336</a>    }
+<a href=#337 id=337 data-nosnippet>337</a>  }
+<a href=#338 id=338 data-nosnippet>338</a>  <span class="prelude-val">Ok</span>(())
+<a href=#339 id=339 data-nosnippet>339</a>}
+<a href=#340 id=340 data-nosnippet>340</a>
+<a href=#341 id=341 data-nosnippet>341</a><span class="doccomment">/// Move a float's `&lt;ltx:caption&gt;`/`&lt;ltx:toccaption&gt;` to BEFORE its body element, so
+<a href=#342 id=342 data-nosnippet>342</a>/// the caption renders at the TOP of the frame. algorithm2e's ruled family
+<a href=#343 id=343 data-nosnippet>343</a>/// (`ruled`/`algoruled`/`tworuled`/`plainruled`/`boxruled`) draws the caption at the
+<a href=#344 id=344 data-nosnippet>344</a>/// top: real algorithm2e.sty sets `\@algocf@capt@ruled`=`top` (L2530) /
+<a href=#345 id=345 data-nosnippet>345</a>/// `\@algocf@capt@boxruled`=`above` (L2540), and `\algocf@makethealgo` (L2589+) lays
+<a href=#346 id=346 data-nosnippet>346</a>/// the caption out before the body. LaTeXML emits the caption last (standard float
+<a href=#347 id=347 data-nosnippet>347</a>/// order = bottom), and so does Perl LaTeXML — so this is a surpass over Perl to match
+<a href=#348 id=348 data-nosnippet>348</a>/// the pdflatex golden. OXIDIZED_DESIGN #153. DOM order determines the XSLT render
+<a href=#349 id=349 data-nosnippet>349</a>/// position, so a pre-body caption renders above the listing. The float content model
+<a href=#350 id=350 data-nosnippet>350</a>/// (`LaTeXML-para.rnc:196`, `(tags? | … | Block.model | Caption.class)*`) is an
+<a href=#351 id=351 data-nosnippet>351</a>/// order-free choice, so the moved caption stays schema-valid.
+<a href=#352 id=352 data-nosnippet>352</a></span><span class="kw">pub fn </span>reposition_caption_top(document: <span class="kw-2">&amp;mut </span>Document) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
+<a href=#353 id=353 data-nosnippet>353</a>  <span class="kw">let </span>caption_qname = <span class="macro">pin!</span>(<span class="string">"ltx:caption"</span>);
+<a href=#354 id=354 data-nosnippet>354</a>  <span class="kw">let </span>toccaption_qname = <span class="macro">pin!</span>(<span class="string">"ltx:toccaption"</span>);
+<a href=#355 id=355 data-nosnippet>355</a>  <span class="kw">let </span>tags_qname = <span class="macro">pin!</span>(<span class="string">"ltx:tags"</span>);
+<a href=#356 id=356 data-nosnippet>356</a>  <span class="kw">let </span>node = document.get_node();
+<a href=#357 id=357 data-nosnippet>357</a>  <span class="kw">let </span><span class="prelude-val">Some</span>(float_node) = node.get_last_child() <span class="kw">else </span>{
+<a href=#358 id=358 data-nosnippet>358</a>    <span class="kw">return </span><span class="prelude-val">Ok</span>(());
+<a href=#359 id=359 data-nosnippet>359</a>  };
+<a href=#360 id=360 data-nosnippet>360</a>  <span class="kw">let </span>is_body = |qname| qname != caption_qname &amp;&amp; qname != toccaption_qname &amp;&amp; qname != tags_qname;
+<a href=#361 id=361 data-nosnippet>361</a>  <span class="comment">// The first body element (the listing) is the reference point; captions move ahead
+<a href=#362 id=362 data-nosnippet>362</a>  // of it, preserving their relative order (toccaption then caption).
+<a href=#363 id=363 data-nosnippet>363</a>  </span><span class="kw">let </span>children = float_node.get_child_elements();
+<a href=#364 id=364 data-nosnippet>364</a>  <span class="kw">let </span><span class="prelude-val">Some</span>(<span class="kw-2">mut </span>body) = children
+<a href=#365 id=365 data-nosnippet>365</a>    .iter()
+<a href=#366 id=366 data-nosnippet>366</a>    .find(|c| is_body(document::get_node_qname(c)))
+<a href=#367 id=367 data-nosnippet>367</a>    .cloned()
+<a href=#368 id=368 data-nosnippet>368</a>  <span class="kw">else </span>{
+<a href=#369 id=369 data-nosnippet>369</a>    <span class="kw">return </span><span class="prelude-val">Ok</span>(());
+<a href=#370 id=370 data-nosnippet>370</a>  };
+<a href=#371 id=371 data-nosnippet>371</a>  <span class="kw">for </span>child <span class="kw">in </span>children {
+<a href=#372 id=372 data-nosnippet>372</a>    <span class="kw">let </span>qname = document::get_node_qname(<span class="kw-2">&amp;</span>child);
+<a href=#373 id=373 data-nosnippet>373</a>    <span class="kw">if </span>qname == caption_qname || qname == toccaption_qname {
+<a href=#374 id=374 data-nosnippet>374</a>      <span class="kw">let </span><span class="kw-2">mut </span>child_mut = child;
+<a href=#375 id=375 data-nosnippet>375</a>      body.add_prev_sibling(<span class="kw-2">&amp;mut </span>child_mut)<span class="question-mark">?</span>;
+<a href=#376 id=376 data-nosnippet>376</a>    }
+<a href=#377 id=377 data-nosnippet>377</a>  }
+<a href=#378 id=378 data-nosnippet>378</a>  <span class="prelude-val">Ok</span>(())
+<a href=#379 id=379 data-nosnippet>379</a>}
 </code></pre></div></section></main></body></html>

@@ -3,7 +3,7 @@
 <a href=#3 id=3 data-nosnippet>3</a></span><span class="kw">use </span>latexml_core::definition::origin::{DefinitionOrigin, OriginGuard};
 <a href=#4 id=4 data-nosnippet>4</a>
 <a href=#5 id=5 data-nosnippet>5</a><span class="kw">use crate</span>::{
-<a href=#6 id=6 data-nosnippet>6</a>  engine::latex_constructs::{after_float, before_float},
+<a href=#6 id=6 data-nosnippet>6</a>  engine::latex_constructs::{after_float, before_xfloat},
 <a href=#7 id=7 data-nosnippet>7</a>  float_description::{define_float_description, float_description_tokens},
 <a href=#8 id=8 data-nosnippet>8</a>  package::caption_sty,
 <a href=#9 id=9 data-nosnippet>9</a>  prelude::<span class="kw-2">*</span>,
@@ -388,7 +388,7 @@
 <a href=#388 id=388 data-nosnippet>388</a>    <span class="string">"&lt;ltx:figure xml:id='#id' inlist='#inlist' class='ltx_teaserfigure' ?#1(placement='#1')&gt;#tags#body&lt;/ltx:figure&gt;"</span>,
 <a href=#389 id=389 data-nosnippet>389</a>    <span class="comment">// A plain closer runs away in TeX: `\Collect@Body` collects the body up to `\end{X}` (acmart.cls:991-1003, :2201-2202).
 <a href=#390 id=390 data-nosnippet>390</a>    </span>tex_group =&gt; { TexGroup::Box },
-<a href=#391 id=391 data-nosnippet>391</a>    before_digest =&gt; { before_float(<span class="string">"figure"</span>, <span class="prelude-val">None</span>)<span class="question-mark">?</span>; engine::latex_constructs::reset_float_box()<span class="question-mark">?</span>; },
+<a href=#391 id=391 data-nosnippet>391</a>    before_digest =&gt; { before_xfloat(<span class="string">"figure"</span>, <span class="bool-val">false</span>)<span class="question-mark">?</span>; },
 <a href=#392 id=392 data-nosnippet>392</a>    after_digest =&gt; sub[whatsit] { after_float(whatsit); },
 <a href=#393 id=393 data-nosnippet>393</a>    mode =&gt; <span class="string">"internal_vertical"
 <a href=#394 id=394 data-nosnippet>394</a>  </span>);
@@ -424,7 +424,7 @@
 <a href=#424 id=424 data-nosnippet>424</a>    <span class="string">"&lt;ltx:figure xml:id='#id' inlist='#inlist' class='ltx_marginfigure' ?#1(placement='#1')&gt;#tags#body&lt;/ltx:figure&gt;"</span>,
 <a href=#425 id=425 data-nosnippet>425</a>    <span class="comment">// A plain closer runs away in TeX: `\Collect@Body` collects the body up to `\end{X}` (acmart.cls:991-1003, :2201-2202).
 <a href=#426 id=426 data-nosnippet>426</a>    </span>tex_group =&gt; { TexGroup::Box },
-<a href=#427 id=427 data-nosnippet>427</a>    before_digest =&gt; { before_float(<span class="string">"figure"</span>, <span class="prelude-val">None</span>)<span class="question-mark">?</span>; engine::latex_constructs::reset_float_box()<span class="question-mark">?</span>; },
+<a href=#427 id=427 data-nosnippet>427</a>    before_digest =&gt; { before_xfloat(<span class="string">"figure"</span>, <span class="bool-val">false</span>)<span class="question-mark">?</span>; },
 <a href=#428 id=428 data-nosnippet>428</a>    after_digest =&gt; sub[whatsit] { after_float(whatsit); },
 <a href=#429 id=429 data-nosnippet>429</a>    mode =&gt; <span class="string">"internal_vertical"
 <a href=#430 id=430 data-nosnippet>430</a>  </span>);
@@ -433,7 +433,7 @@
 <a href=#433 id=433 data-nosnippet>433</a>    <span class="string">"&lt;ltx:table xml:id='#id' inlist='#inlist' class='ltx_margintable' ?#1(placement='#1')&gt;#tags#body&lt;/ltx:table&gt;"</span>,
 <a href=#434 id=434 data-nosnippet>434</a>    <span class="comment">// A plain closer runs away in TeX: `\Collect@Body` collects the body up to `\end{X}` (acmart.cls:991-1003, :2201-2202).
 <a href=#435 id=435 data-nosnippet>435</a>    </span>tex_group =&gt; { TexGroup::Box },
-<a href=#436 id=436 data-nosnippet>436</a>    before_digest =&gt; { before_float(<span class="string">"table"</span>, <span class="prelude-val">None</span>)<span class="question-mark">?</span>; engine::latex_constructs::reset_float_box()<span class="question-mark">?</span>; },
+<a href=#436 id=436 data-nosnippet>436</a>    before_digest =&gt; { before_xfloat(<span class="string">"table"</span>, <span class="bool-val">false</span>)<span class="question-mark">?</span>; },
 <a href=#437 id=437 data-nosnippet>437</a>    after_digest =&gt; sub[whatsit] { after_float(whatsit); },
 <a href=#438 id=438 data-nosnippet>438</a>    mode =&gt; <span class="string">"internal_vertical"
 <a href=#439 id=439 data-nosnippet>439</a>  </span>);

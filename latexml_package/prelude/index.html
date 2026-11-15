@@ -716,13 +716,12 @@ after such a <code>\\</code> begins a paragraph, whose glue a float’s row keep
 <code>\the\columnwidth</code>/<code>\the\textwidth</code> in a two-column float give them for the options given), and whether the page
 is set in two columns now (<code>twocolumn</code>; <code>set_panel_page_twocolumn</code> follows a one-column region). The registers keep
 the binding’s values; only the rows are set against this page. Without a declaration the rows follow the registers
-(<code>panel_page</code>).</dd><dt><a class="fn" href="fn.declare_panel_parbox_width.html" title="fn latexml_package::prelude::declare_panel_parbox_width">declare_<wbr>panel_<wbr>parbox_<wbr>width</a></dt><dd>A binding declares a construct that states its width as its argument <code>arg</code> (<code>declare_panel_width</code>) and sets its
-content in a parbox of that width — a <code>{minipage}</code>, a <code>\parbox</code>, a sub-figure — whose <code>\linewidth</code>, <code>\hsize</code>,
-<code>\textwidth</code> and <code>\columnwidth</code> are that width (latex.ltx:16312-16313 <code>\@iiiminipage</code>; for a <code>\parbox</code>, Perl’s
-latex_constructs.pool.ltxml:4746 <code>\hsize=#4\textwidth\hsize\columnwidth\hsize</code>, where latex.ltx:16249-16253
-<code>\@iiiparbox</code> sets only <code>\hsize</code> and, by <code>\@parboxrestore</code>, <code>\linewidth</code>: the widths are evaluated as we digest
-the box): its content’s stated widths are evaluated against it (<code>note_stated_widths_in</code>). An <code>\hbox</code>’s
-(<code>\makebox[w]</code>, <code>\resizebox{w}{!}</code>) content is set at the enclosing line.</dd><dt><a class="fn" href="fn.declare_panel_width.html" title="fn latexml_package::prelude::declare_panel_width">declare_<wbr>panel_<wbr>width</a></dt><dd>A binding declares where a construct states its width (the panel grid rule, <code>note_stated_widths</code>): its argument
+(<code>panel_page</code>).</dd><dt><a class="fn" href="fn.declare_panel_parbox_line.html" title="fn latexml_package::prelude::declare_panel_parbox_line">declare_<wbr>panel_<wbr>parbox_<wbr>line</a></dt><dd>As <code>declare_panel_parbox_width</code>, for a <code>\parbox</code> (<code>BoxSets::Line</code>): its <code>\textwidth</code> and <code>\columnwidth</code> are the
+enclosing ones (KNOWN_PERL_ERRORS #1273).</dd><dt><a class="fn" href="fn.declare_panel_parbox_width.html" title="fn latexml_package::prelude::declare_panel_parbox_width">declare_<wbr>panel_<wbr>parbox_<wbr>width</a></dt><dd>A binding declares a construct that states its width as its argument <code>arg</code> (<code>declare_panel_width</code>) and sets its
+content in a minipage of that width — a <code>{minipage}</code>, a sub-figure — whose <code>\linewidth</code>, <code>\hsize</code>, <code>\textwidth</code>
+and <code>\columnwidth</code> are that width (latex.ltx:16312-16313 <code>\@iiiminipage</code>): its content’s stated widths are
+evaluated against it (<code>note_stated_widths_in</code>). An <code>\hbox</code>’s (<code>\makebox[w]</code>, <code>\resizebox{w}{!}</code>) content is set
+at the enclosing line.</dd><dt><a class="fn" href="fn.declare_panel_width.html" title="fn latexml_package::prelude::declare_panel_width">declare_<wbr>panel_<wbr>width</a></dt><dd>A binding declares where a construct states its width (the panel grid rule, <code>note_stated_widths</code>): its argument
 <code>arg</code> (1-based: <code>{minipage}{0.48\textwidth}</code>’s 4, <code>\resizebox</code>’s first), or, with <code>keys</code>, the last of those keys
 given in its <code>KeyVals</code> argument <code>arg</code> (<code>\includegraphics[width=0.48\linewidth]</code>), and with <code>height_keys</code> the keys
 whose value scales its natural width when it states none of <code>keys</code> (an aspect-keeping graphic’s <code>height</code>). <code>cs</code> is

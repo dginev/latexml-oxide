@@ -1,7 +1,7 @@
 <!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_package/src/package/jhep_cls.rs`."><title>jhep_cls.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../../static.files/rustdoc-1f5a765c.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="latexml_package" data-themes="" data-resource-suffix="" data-rustdoc-version="1.102.0-nightly (5f4effd57 2026-11-13)" data-channel="nightly" data-search-js="search-69faa2c4.js" data-stringdex-js="stringdex-b5109af9.js" data-settings-js="settings-9b351432.js" ><script src="../../../static.files/storage-41dd4d93.js"></script><script defer src="../../../static.files/src-script-813739b1.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-419f3a3f.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-101b5a15.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">latexml_package/package/</div>jhep_cls.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-3"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="doccomment">//! JHEP.cls — Journal of High Energy Physics document class
 <a href=#2 id=2 data-nosnippet>2</a>//! Perl: JHEP.cls.ltxml — 314 lines (mostly journal abbreviation macros)
 <a href=#3 id=3 data-nosnippet>3</a></span><span class="kw">use crate</span>::{
-<a href=#4 id=4 data-nosnippet>4</a>  engine::latex_constructs::{after_float, before_float},
+<a href=#4 id=4 data-nosnippet>4</a>  engine::latex_constructs::{after_float, before_xfloat},
 <a href=#5 id=5 data-nosnippet>5</a>  prelude::<span class="kw-2">*</span>,
 <a href=#6 id=6 data-nosnippet>6</a>};
 <a href=#7 id=7 data-nosnippet>7</a>
@@ -253,7 +253,7 @@
 <a href=#253 id=253 data-nosnippet>253</a>    <span class="string">"&lt;ltx:figure xml:id='#id' inlist='#inlist' width='0.45%'&gt;#body&lt;/ltx:figure&gt;#tags"</span>,
 <a href=#254 id=254 data-nosnippet>254</a>    <span class="comment">// The begin code opens a TeX group of its own: a float: `\@float` (latex.ltx:17479 `\color@vbox`).
 <a href=#255 id=255 data-nosnippet>255</a>    </span>tex_group =&gt; { TexGroup::Box },
-<a href=#256 id=256 data-nosnippet>256</a>    before_digest =&gt; { before_float(<span class="string">"figure"</span>, <span class="prelude-val">None</span>)<span class="question-mark">?</span>; engine::latex_constructs::reset_float_box()<span class="question-mark">?</span>; },
+<a href=#256 id=256 data-nosnippet>256</a>    before_digest =&gt; { before_xfloat(<span class="string">"figure"</span>, <span class="bool-val">false</span>)<span class="question-mark">?</span>; },
 <a href=#257 id=257 data-nosnippet>257</a>    after_digest  =&gt; sub[whatsit] { after_float(whatsit); },
 <a href=#258 id=258 data-nosnippet>258</a>    mode =&gt; <span class="string">"internal_vertical"</span>);
 <a href=#259 id=259 data-nosnippet>259</a>
@@ -267,7 +267,7 @@
 <a href=#267 id=267 data-nosnippet>267</a>    <span class="string">"&lt;ltx:table xml:id='#id' inlist='#inlist' width='0.45%'&gt;#body&lt;/ltx:table&gt;#tags"</span>,
 <a href=#268 id=268 data-nosnippet>268</a>    <span class="comment">// The begin code opens a TeX group of its own: a float: `\@float` (latex.ltx:17479 `\color@vbox`).
 <a href=#269 id=269 data-nosnippet>269</a>    </span>tex_group =&gt; { TexGroup::Box },
-<a href=#270 id=270 data-nosnippet>270</a>    before_digest =&gt; { before_float(<span class="string">"table"</span>, <span class="prelude-val">None</span>)<span class="question-mark">?</span>; engine::latex_constructs::reset_float_box()<span class="question-mark">?</span>; },
+<a href=#270 id=270 data-nosnippet>270</a>    before_digest =&gt; { before_xfloat(<span class="string">"table"</span>, <span class="bool-val">false</span>)<span class="question-mark">?</span>; },
 <a href=#271 id=271 data-nosnippet>271</a>    after_digest  =&gt; sub[whatsit] { after_float(whatsit); },
 <a href=#272 id=272 data-nosnippet>272</a>    mode =&gt; <span class="string">"internal_vertical"</span>);
 <a href=#273 id=273 data-nosnippet>273</a>
@@ -277,7 +277,7 @@
 <a href=#277 id=277 data-nosnippet>277</a>    <span class="string">"&lt;ltx:figure xml:id='#id' inlist='#inlist' float='#float'&gt;#tags#body&lt;/ltx:figure&gt;"</span>,
 <a href=#278 id=278 data-nosnippet>278</a>    <span class="comment">// The begin code opens a TeX group of its own: a float: `\@float` (latex.ltx:17479 `\color@vbox`).
 <a href=#279 id=279 data-nosnippet>279</a>    </span>tex_group =&gt; { TexGroup::Box },
-<a href=#280 id=280 data-nosnippet>280</a>    before_digest =&gt; { before_float(<span class="string">"figure"</span>, <span class="prelude-val">None</span>)<span class="question-mark">?</span>; engine::latex_constructs::reset_float_box()<span class="question-mark">?</span>; },
+<a href=#280 id=280 data-nosnippet>280</a>    before_digest =&gt; { before_xfloat(<span class="string">"figure"</span>, <span class="bool-val">false</span>)<span class="question-mark">?</span>; },
 <a href=#281 id=281 data-nosnippet>281</a>    after_digest  =&gt; sub[whatsit] { after_float(whatsit); },
 <a href=#282 id=282 data-nosnippet>282</a>    properties    =&gt; sub[args] {
 <a href=#283 id=283 data-nosnippet>283</a>      <span class="kw">let </span>pos = args[<span class="number">0</span>].as_ref().map(|a| a.to_string()).unwrap_or_default();
@@ -289,7 +289,7 @@
 <a href=#289 id=289 data-nosnippet>289</a>    <span class="string">"&lt;ltx:table xml:id='#id' inlist='#inlist' float='#float'&gt;#tags#body&lt;/ltx:table&gt;"</span>,
 <a href=#290 id=290 data-nosnippet>290</a>    <span class="comment">// The begin code opens a TeX group of its own: a float: `\@float` (latex.ltx:17479 `\color@vbox`).
 <a href=#291 id=291 data-nosnippet>291</a>    </span>tex_group =&gt; { TexGroup::Box },
-<a href=#292 id=292 data-nosnippet>292</a>    before_digest =&gt; { before_float(<span class="string">"table"</span>, <span class="prelude-val">None</span>)<span class="question-mark">?</span>; engine::latex_constructs::reset_float_box()<span class="question-mark">?</span>; },
+<a href=#292 id=292 data-nosnippet>292</a>    before_digest =&gt; { before_xfloat(<span class="string">"table"</span>, <span class="bool-val">false</span>)<span class="question-mark">?</span>; },
 <a href=#293 id=293 data-nosnippet>293</a>    after_digest  =&gt; sub[whatsit] { after_float(whatsit); },
 <a href=#294 id=294 data-nosnippet>294</a>    properties    =&gt; sub[args] {
 <a href=#295 id=295 data-nosnippet>295</a>      <span class="kw">let </span>pos = args[<span class="number">0</span>].as_ref().map(|a| a.to_string()).unwrap_or_default();

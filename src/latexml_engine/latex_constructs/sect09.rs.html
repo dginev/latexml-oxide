@@ -447,7 +447,7 @@
 <a href=#447 id=447 data-nosnippet>447</a>    properties   =&gt; { <span class="macro">stored_map!</span>(<span class="string">"layout" </span>=&gt; <span class="string">"vertical"</span>) },
 <a href=#448 id=448 data-nosnippet>448</a>    <span class="comment">// The begin code opens a TeX group of its own: `\@float` -&gt; `\@xfloat`'s `\color@vbox` (latex.ltx:17421, :17479).
 <a href=#449 id=449 data-nosnippet>449</a>    </span>tex_group =&gt; { TexGroup::Box },
-<a href=#450 id=450 data-nosnippet>450</a>    before_digest =&gt; { before_float(<span class="string">"figure"</span>, <span class="prelude-val">None</span>)<span class="question-mark">?</span>; reset_float_box()<span class="question-mark">?</span>; },
+<a href=#450 id=450 data-nosnippet>450</a>    before_digest =&gt; { before_xfloat(<span class="string">"figure"</span>, <span class="bool-val">false</span>)<span class="question-mark">?</span>; },
 <a href=#451 id=451 data-nosnippet>451</a>    after_digest  =&gt; sub[whatsit] { after_float(whatsit); },
 <a href=#452 id=452 data-nosnippet>452</a>    mode =&gt; <span class="string">"internal_vertical"
 <a href=#453 id=453 data-nosnippet>453</a>  </span>);
@@ -460,7 +460,7 @@
 <a href=#460 id=460 data-nosnippet>460</a>    properties   =&gt; { <span class="macro">stored_map!</span>(<span class="string">"layout" </span>=&gt; <span class="string">"vertical"</span>) },
 <a href=#461 id=461 data-nosnippet>461</a>    <span class="comment">// The begin code opens a TeX group of its own: `\@float` -&gt; `\@xfloat`'s `\color@vbox` (latex.ltx:17421, :17479).
 <a href=#462 id=462 data-nosnippet>462</a>    </span>tex_group =&gt; { TexGroup::Box },
-<a href=#463 id=463 data-nosnippet>463</a>    before_digest =&gt; { before_float_ex(<span class="string">"figure"</span>, <span class="prelude-val">None</span>, <span class="bool-val">true</span>)<span class="question-mark">?</span>; reset_float_box()<span class="question-mark">?</span>; }, <span class="comment">// double=true for *
+<a href=#463 id=463 data-nosnippet>463</a>    before_digest =&gt; { before_xfloat(<span class="string">"figure"</span>, <span class="bool-val">true</span>)<span class="question-mark">?</span>; }, <span class="comment">// double=true for *
 <a href=#464 id=464 data-nosnippet>464</a>    </span>after_digest  =&gt; sub[whatsit] { after_float(whatsit); },
 <a href=#465 id=465 data-nosnippet>465</a>    mode =&gt; <span class="string">"internal_vertical"
 <a href=#466 id=466 data-nosnippet>466</a>  </span>);
@@ -470,7 +470,7 @@
 <a href=#470 id=470 data-nosnippet>470</a>    properties   =&gt; { <span class="macro">stored_map!</span>(<span class="string">"layout" </span>=&gt; <span class="string">"vertical"</span>) },
 <a href=#471 id=471 data-nosnippet>471</a>    <span class="comment">// The begin code opens a TeX group of its own: `\@float` -&gt; `\@xfloat`'s `\color@vbox` (latex.ltx:17421, :17479).
 <a href=#472 id=472 data-nosnippet>472</a>    </span>tex_group =&gt; { TexGroup::Box },
-<a href=#473 id=473 data-nosnippet>473</a>    before_digest =&gt; { before_float(<span class="string">"table"</span>, <span class="prelude-val">None</span>)<span class="question-mark">?</span>; reset_float_box()<span class="question-mark">?</span>; },
+<a href=#473 id=473 data-nosnippet>473</a>    before_digest =&gt; { before_xfloat(<span class="string">"table"</span>, <span class="bool-val">false</span>)<span class="question-mark">?</span>; },
 <a href=#474 id=474 data-nosnippet>474</a>    after_digest  =&gt; sub[whatsit] { after_float(whatsit); },
 <a href=#475 id=475 data-nosnippet>475</a>    mode =&gt; <span class="string">"internal_vertical"</span>);
 <a href=#476 id=476 data-nosnippet>476</a>  <span class="comment">// Perl: latex_constructs.pool.ltxml line 3478
@@ -479,7 +479,7 @@
 <a href=#479 id=479 data-nosnippet>479</a>    properties   =&gt; { <span class="macro">stored_map!</span>(<span class="string">"layout" </span>=&gt; <span class="string">"vertical"</span>) },
 <a href=#480 id=480 data-nosnippet>480</a>    <span class="comment">// The begin code opens a TeX group of its own: `\@float` -&gt; `\@xfloat`'s `\color@vbox` (latex.ltx:17421, :17479).
 <a href=#481 id=481 data-nosnippet>481</a>    </span>tex_group =&gt; { TexGroup::Box },
-<a href=#482 id=482 data-nosnippet>482</a>    before_digest =&gt; { before_float_ex(<span class="string">"table"</span>, <span class="prelude-val">None</span>, <span class="bool-val">true</span>)<span class="question-mark">?</span>; reset_float_box()<span class="question-mark">?</span>; }, <span class="comment">// double=true for *
+<a href=#482 id=482 data-nosnippet>482</a>    before_digest =&gt; { before_xfloat(<span class="string">"table"</span>, <span class="bool-val">true</span>)<span class="question-mark">?</span>; }, <span class="comment">// double=true for *
 <a href=#483 id=483 data-nosnippet>483</a>    </span>after_digest  =&gt; sub[whatsit] { after_float(whatsit); },
 <a href=#484 id=484 data-nosnippet>484</a>    mode =&gt; <span class="string">"internal_vertical"</span>);
 <a href=#485 id=485 data-nosnippet>485</a>
@@ -494,170 +494,168 @@
 <a href=#494 id=494 data-nosnippet>494</a>    properties =&gt; sub[args] {
 <a href=#495 id=495 data-nosnippet>495</a>      <span class="kw">let </span>float_type = args.first().and_then(|a| a.as_ref())
 <a href=#496 id=496 data-nosnippet>496</a>        .map(|d| d.to_string()).unwrap_or_default();
-<a href=#497 id=497 data-nosnippet>497</a>      before_float(<span class="kw-2">&amp;</span>float_type, <span class="prelude-val">None</span>)<span class="question-mark">?</span>;
-<a href=#498 id=498 data-nosnippet>498</a>      reset_float_box()<span class="question-mark">?</span>;
-<a href=#499 id=499 data-nosnippet>499</a>      <span class="prelude-val">Ok</span>(<span class="macro">stored_map!</span>(<span class="string">"layout" </span>=&gt; <span class="string">"vertical"</span>))
-<a href=#500 id=500 data-nosnippet>500</a>    },
-<a href=#501 id=501 data-nosnippet>501</a>    <span class="comment">// The begin code opens a TeX group of its own: `\@xfloat`'s `\color@vbox` (latex.ltx:17421, :17479).
-<a href=#502 id=502 data-nosnippet>502</a>    </span>tex_group =&gt; { TexGroup::Box },
-<a href=#503 id=503 data-nosnippet>503</a>    after_digest  =&gt; sub[whatsit] { after_float(whatsit); },
-<a href=#504 id=504 data-nosnippet>504</a>    mode =&gt; <span class="string">"internal_vertical"</span>);
-<a href=#505 id=505 data-nosnippet>505</a>  <span class="macro">DefEnvironment!</span>(<span class="string">"{@dblfloat}{}[]"</span>,
-<a href=#506 id=506 data-nosnippet>506</a>    <span class="string">"&lt;ltx:float xml:id='#id' inlist='#inlist' ?#2(placement='#2') class='ltx_float_#1'&gt;\
-<a href=#507 id=507 data-nosnippet>507</a>    #tags#body\
-<a href=#508 id=508 data-nosnippet>508</a>    &lt;/ltx:float&gt;"</span>,
-<a href=#509 id=509 data-nosnippet>509</a>    properties =&gt; sub[args] {
-<a href=#510 id=510 data-nosnippet>510</a>      <span class="kw">let </span>float_type = args.first().and_then(|a| a.as_ref())
-<a href=#511 id=511 data-nosnippet>511</a>        .map(|d| d.to_string()).unwrap_or_default();
-<a href=#512 id=512 data-nosnippet>512</a>      before_float_ex(<span class="kw-2">&amp;</span>float_type, <span class="prelude-val">None</span>, <span class="bool-val">true</span>)<span class="question-mark">?</span>;
-<a href=#513 id=513 data-nosnippet>513</a>      reset_float_box()<span class="question-mark">?</span>;
-<a href=#514 id=514 data-nosnippet>514</a>      <span class="prelude-val">Ok</span>(<span class="macro">stored_map!</span>(<span class="string">"layout" </span>=&gt; <span class="string">"vertical"</span>))
-<a href=#515 id=515 data-nosnippet>515</a>    },
-<a href=#516 id=516 data-nosnippet>516</a>    <span class="comment">// The begin code opens a TeX group of its own: `\@xfloat`'s `\color@vbox` (latex.ltx:17421, :17479).
-<a href=#517 id=517 data-nosnippet>517</a>    </span>tex_group =&gt; { TexGroup::Box },
-<a href=#518 id=518 data-nosnippet>518</a>    after_digest  =&gt; sub[whatsit] { after_float(whatsit); },
-<a href=#519 id=519 data-nosnippet>519</a>    mode =&gt; <span class="string">"internal_vertical"</span>);
-<a href=#520 id=520 data-nosnippet>520</a>
-<a href=#521 id=521 data-nosnippet>521</a>  <span class="comment">// `\flushbottom`/`\suppressfloats` are latex_base.pool's (latex_base.rs:434,
-<a href=#522 id=522 data-nosnippet>522</a>  // the NODUMP branch only); latex.ltx:18330 declares `\flushbottom` a robust
-<a href=#523 id=523 data-nosnippet>523</a>  // MACRO and the dump carries it. Re-declaring it a primitive here (after
-<a href=#524 id=524 data-nosnippet>524</a>  // the dump) made scrlttr2.cls:5053 `\g@addto@macro\flushbottom{…}` capture
-<a href=#525 id=525 data-nosnippet>525</a>  // the unexpandable token literally — `\flushbottom` expanding into itself
-<a href=#526 id=526 data-nosnippet>526</a>  // (scrlttr2copy letter-copy-test; RUST-ONLY, Perl keeps the dump's macro).
-<a href=#527 id=527 data-nosnippet>527</a>  // The NODUMP branch still gets latex_base.rs's primitives (Perl-faithful there).
-<a href=#528 id=528 data-nosnippet>528</a>  // Guard: `perfect_kernel_batch56::flushbottom_stays_the_kernel_macro`.
-<a href=#529 id=529 data-nosnippet>529</a>
-<a href=#530 id=530 data-nosnippet>530</a>  </span><span class="macro">NewCounter!</span>(<span class="string">"topnumber"</span>);
-<a href=#531 id=531 data-nosnippet>531</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\topfraction"</span>, <span class="string">"0.25"</span>);
-<a href=#532 id=532 data-nosnippet>532</a>  <span class="macro">NewCounter!</span>(<span class="string">"bottomnumber"</span>);
-<a href=#533 id=533 data-nosnippet>533</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\bottomfraction"</span>, <span class="string">"0.25"</span>);
-<a href=#534 id=534 data-nosnippet>534</a>  <span class="macro">NewCounter!</span>(<span class="string">"totalnumber"</span>);
-<a href=#535 id=535 data-nosnippet>535</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\textfraction"</span>, <span class="string">"0.25"</span>);
-<a href=#536 id=536 data-nosnippet>536</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\floatpagefraction"</span>, <span class="string">"0.25"</span>);
-<a href=#537 id=537 data-nosnippet>537</a>  <span class="macro">NewCounter!</span>(<span class="string">"dbltopnumber"</span>);
-<a href=#538 id=538 data-nosnippet>538</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\dbltopfraction"</span>, <span class="string">"0.7"</span>);
-<a href=#539 id=539 data-nosnippet>539</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\dblfloatpagefraction"</span>, <span class="string">"0.25"</span>);
-<a href=#540 id=540 data-nosnippet>540</a>  <span class="macro">DefRegister!</span>(<span class="string">"\\floatsep"         </span>=&gt; <span class="macro">Glue!</span>(<span class="string">"12.0pt plus 2.0pt minus 2.0pt"</span>));
-<a href=#541 id=541 data-nosnippet>541</a>  <span class="macro">DefRegister!</span>(<span class="string">"\\textfloatsep"     </span>=&gt; <span class="macro">Glue!</span>(<span class="string">"20.0pt plus 2.0pt minus 4.0pt"</span>));
-<a href=#542 id=542 data-nosnippet>542</a>  <span class="macro">DefRegister!</span>(<span class="string">"\\intextsep"        </span>=&gt; <span class="macro">Glue!</span>(<span class="string">"12.0pt plus 2.0pt minus 2.0pt"</span>));
-<a href=#543 id=543 data-nosnippet>543</a>  <span class="macro">DefRegister!</span>(<span class="string">"\\dblfloatsep"      </span>=&gt; <span class="macro">Glue!</span>(<span class="string">"12.0pt plus 2.0pt minus 2.0pt"</span>));
-<a href=#544 id=544 data-nosnippet>544</a>  <span class="macro">DefRegister!</span>(<span class="string">"\\dbltextfloatsep"  </span>=&gt; <span class="macro">Glue!</span>(<span class="string">"20.0pt plus 2.0pt minus 4.0pt"</span>));
-<a href=#545 id=545 data-nosnippet>545</a>  <span class="macro">DefRegister!</span>(<span class="string">"\\@maxsep"          </span>=&gt; Dimension::new(<span class="number">0</span>));
-<a href=#546 id=546 data-nosnippet>546</a>  <span class="macro">DefRegister!</span>(<span class="string">"\\@dblmaxsep"       </span>=&gt; Dimension::new(<span class="number">0</span>));
-<a href=#547 id=547 data-nosnippet>547</a>  <span class="macro">DefRegister!</span>(<span class="string">"\\@fptop"           </span>=&gt; Glue::new(<span class="number">0</span>));
-<a href=#548 id=548 data-nosnippet>548</a>  <span class="macro">DefRegister!</span>(<span class="string">"\\@fpsep"           </span>=&gt; Glue::new(<span class="number">0</span>));
-<a href=#549 id=549 data-nosnippet>549</a>  <span class="macro">DefRegister!</span>(<span class="string">"\\@fpbot"           </span>=&gt; Glue::new(<span class="number">0</span>));
-<a href=#550 id=550 data-nosnippet>550</a>  <span class="macro">DefRegister!</span>(<span class="string">"\\@dblfptop"        </span>=&gt; Glue::new(<span class="number">0</span>));
-<a href=#551 id=551 data-nosnippet>551</a>  <span class="macro">DefRegister!</span>(<span class="string">"\\@dblfpsep"        </span>=&gt; Glue::new(<span class="number">0</span>));
-<a href=#552 id=552 data-nosnippet>552</a>  <span class="macro">DefRegister!</span>(<span class="string">"\\@dblfpbot"        </span>=&gt; Glue::new(<span class="number">0</span>));
-<a href=#553 id=553 data-nosnippet>553</a>  <span class="comment">// Perl LaTeX.pool.ltxml L3648-3649 defines these in the BASE (not only in
-<a href=#554 id=554 data-nosnippet>554</a>  // article.cls.ltxml), so they are available under ANY document class. The
-<a href=#555 id=555 data-nosnippet>555</a>  // prior Rust comment ("not in Perl engine") was mistaken — it saw only the
-<a href=#556 id=556 data-nosnippet>556</a>  // article.cls copy. A paper on a custom class that does NOT load article
-<a href=#557 id=557 data-nosnippet>557</a>  // (e.g. `\documentclass{style/vldb}`, witness 1703.00080) then hit
-<a href=#558 id=558 data-nosnippet>558</a>  // `undefined:\abovecaptionskip` on `\setlength{\abovecaptionskip}{…}`.
-<a href=#559 id=559 data-nosnippet>559</a>  // Define them here too (Glue 0, exactly Perl), as a base fallback that
-<a href=#560 id=560 data-nosnippet>560</a>  // article/book/ams_support still override with their own values.
-<a href=#561 id=561 data-nosnippet>561</a>  </span><span class="macro">DefRegister!</span>(<span class="string">"\\abovecaptionskip" </span>=&gt; Glue::new(<span class="number">0</span>));
-<a href=#562 id=562 data-nosnippet>562</a>  <span class="macro">DefRegister!</span>(<span class="string">"\\belowcaptionskip" </span>=&gt; Glue::new(<span class="number">0</span>));
-<a href=#563 id=563 data-nosnippet>563</a>  <span class="macro">Let!</span>(<span class="string">"\\topfigrule"</span>, <span class="string">"\\relax"</span>);
-<a href=#564 id=564 data-nosnippet>564</a>  <span class="macro">Let!</span>(<span class="string">"\\botfigrule"</span>, <span class="string">"\\relax"</span>);
-<a href=#565 id=565 data-nosnippet>565</a>  <span class="macro">Let!</span>(<span class="string">"\\dblfigrule"</span>, <span class="string">"\\relax"</span>);
-<a href=#566 id=566 data-nosnippet>566</a>
-<a href=#567 id=567 data-nosnippet>567</a>  <span class="comment">// \figurename / \figuresname / \tablename / \tablesname already defined
-<a href=#568 id=568 data-nosnippet>568</a>  // earlier in this file (figure/table caption block); avoid identical
-<a href=#569 id=569 data-nosnippet>569</a>  // re-definitions here.
-<a href=#570 id=570 data-nosnippet>570</a>
-<a href=#571 id=571 data-nosnippet>571</a>  </span><span class="macro">Let!</span>(<span class="string">"\\outer@nobreak"</span>, <span class="string">"\\@empty"</span>);
-<a href=#572 id=572 data-nosnippet>572</a>  <span class="comment">// latex.ltx:17538 `\@endfloatbox` ends with `\egroup\color@endbox`, closing the
-<a href=#573 id=573 data-nosnippet>573</a>  // `\color@vbox` + `\vbox\bgroup` that `\@xfloat` opens (:17478-17481). The
-<a href=#574 id=574 data-nosnippet>574</a>  // `{@float}`/`{@dblfloat}` bindings above open one mode frame instead and never run
-<a href=#575 id=575 data-nosnippet>575</a>  // `\@xfloat`, so on the binding's own frame (`lx@float@frame`, set by `begin_float`)
-<a href=#576 id=576 data-nosnippet>576</a>  // the closers go with the opener: a raw float end that calls `\@endfloatbox`
-<a href=#577 id=577 data-nosnippet>577</a>  // (floatrow.sty:421/:436 `\float@end`/`\float@dblend` for a `\DeclareNewFloatType`)
-<a href=#578 id=578 data-nosnippet>578</a>  // no longer pops the binding's frame (3 errors per float). A box a raw opener made on
-<a href=#579 id=579 data-nosnippet>579</a>  // top of it (examplep.sty:1794-1807 `\vbox\bgroup`…`\@floatboxreset`) is closed as
-<a href=#580 id=580 data-nosnippet>580</a>  // LaTeX closes it. The body keeps latex.ltx's tokens, so `\patchcmd` (lltjcore.sty:227)
-<a href=#581 id=581 data-nosnippet>581</a>  // and `\appdef` (ltxgrid.sty:1120) still meet them; only the closers are the hook
-<a href=#582 id=582 data-nosnippet>582</a>  // `\lx@endfloatbox@close`. RUST-ONLY: Perl keeps the raw `\@endfloatbox` from its dump
-<a href=#583 id=583 data-nosnippet>583</a>  // (latex_dump.pool.ltxml:1993) and binds none, so it errs the same. Witness
-<a href=#584 id=584 data-nosnippet>584</a>  // kaytannollista-latexia. Guard: `perfect_kernel_batch59::floatrow_new_float_type_closes_its_box`.
-<a href=#585 id=585 data-nosnippet>585</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\@endfloatbox"</span>,
-<a href=#586 id=586 data-nosnippet>586</a>    <span class="string">"\\par\\vskip\\z@skip\\@minipagefalse\\outer@nobreak\\lx@endfloatbox@close"</span>);
-<a href=#587 id=587 data-nosnippet>587</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\lx@endfloatbox@close"</span>, sub[_args] {
-<a href=#588 id=588 data-nosnippet>588</a>    <span class="kw">let </span>on_the_float = <span class="macro">matches!</span>(lookup_value(<span class="string">"lx@float@frame"</span>),
-<a href=#589 id=589 data-nosnippet>589</a>      <span class="prelude-val">Some</span>(Stored::Number(n)) <span class="kw">if </span>n.<span class="number">0 </span><span class="kw">as </span>u64 == current_frame_id());
-<a href=#590 id=590 data-nosnippet>590</a>    <span class="prelude-val">Ok</span>(<span class="kw">if </span>on_the_float {
-<a href=#591 id=591 data-nosnippet>591</a>      <span class="comment">// The raw end code closes `\@xfloat`'s box group here, as TeX does: a
-<a href=#592 id=592 data-nosnippet>592</a>      // closer that meets the binding's frame afterwards no longer meets a box
-<a href=#593 id=593 data-nosnippet>593</a>      // group (stomach.rs `close_environment_frame`; 2106.02397).
-<a href=#594 id=594 data-nosnippet>594</a>      </span><span class="kw">if </span>is_value_bound(<span class="string">"lx@env@tex@group"</span>, <span class="prelude-val">Some</span>(<span class="number">0</span>)) {
-<a href=#595 id=595 data-nosnippet>595</a>        assign_frame_value(<span class="string">"lx@env@tex@group"</span>, TexGroup::None.as_str());
-<a href=#596 id=596 data-nosnippet>596</a>      }
-<a href=#597 id=597 data-nosnippet>597</a>      Tokens::default()
-<a href=#598 id=598 data-nosnippet>598</a>    } <span class="kw">else </span>{
-<a href=#599 id=599 data-nosnippet>599</a>      <span class="macro">Tokens!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\egroup"</span>), <span class="macro">T_CS!</span>(<span class="string">"\\color@endbox"</span>))
-<a href=#600 id=600 data-nosnippet>600</a>    })
-<a href=#601 id=601 data-nosnippet>601</a>  });
-<a href=#602 id=602 data-nosnippet>602</a>  def_macro_identity(<span class="string">"\\@dbflt{}"</span>)<span class="question-mark">?</span>;
-<a href=#603 id=603 data-nosnippet>603</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\@xdblfloat{}[]"</span>, <span class="string">"\\@xfloat{#1}[#2]"</span>);
-<a href=#604 id=604 data-nosnippet>604</a>  def_macro_noop(<span class="string">"\\@floatplacement"</span>)<span class="question-mark">?</span>;
-<a href=#605 id=605 data-nosnippet>605</a>  def_macro_noop(<span class="string">"\\@dblfloatplacement"</span>)<span class="question-mark">?</span>;
-<a href=#606 id=606 data-nosnippet>606</a>
-<a href=#607 id=607 data-nosnippet>607</a>  <span class="macro">DefConditional!</span>(<span class="string">"\\if@reversemargin"</span>);
-<a href=#608 id=608 data-nosnippet>608</a>  <span class="macro">Let!</span>(<span class="string">"\\reversemarginpar"</span>, <span class="string">"\\@reversemargintrue"</span>);
-<a href=#609 id=609 data-nosnippet>609</a>  <span class="macro">Let!</span>(<span class="string">"\\normalmarginpar"</span>, <span class="string">"\\@reversemarginfalse"</span>);
-<a href=#610 id=610 data-nosnippet>610</a>  <span class="comment">// Perl: latex_constructs.pool.ltxml lines 3543-3546
-<a href=#611 id=611 data-nosnippet>611</a>  // `bounded =&gt; true` scopes font/catcode changes inside the margin note to the
-<a href=#612 id=612 data-nosnippet>612</a>  // note itself. This is an INTENTIONAL surpass-Perl divergence (OXIDIZED_DESIGN
-<a href=#613 id=613 data-nosnippet>613</a>  // #39, KNOWN_PERL_ERRORS): upstream Perl LaTeXML's `\marginpar` is NOT bounded,
-<a href=#614 id=614 data-nosnippet>614</a>  // so a `\marginpar{\Large …}` leaks the size switch into the body text after
-<a href=#615 id=615 data-nosnippet>615</a>  // it (real pdflatex scopes it to the margin box — the leak is a LaTeXML bug,
-<a href=#616 id=616 data-nosnippet>616</a>  // shared by both engines). Mirrors `\mbox`'s `bounded =&gt; true`. Witness:
-<a href=#617 id=617 data-nosnippet>617</a>  // mhchem.tex `\marginpar{\Large !}` made the entire manual render at 144%.
-<a href=#618 id=618 data-nosnippet>618</a>  // latex.ltx:11216 `\long\def\marginpar{\@ifnextchar[\@xmpar\@ympar}` — the
-<a href=#619 id=619 data-nosnippet>619</a>  // TeX-visible MACRO shape packages patch by expansion (marginfix.sty:91
-<a href=#620 id=620 data-nosnippet>620</a>  // `\edef\marginpar{…\expandafter\unexpanded\expandafter{\marginpar}}`,
-<a href=#621 id=621 data-nosnippet>621</a>  // which with a Constructor here captured the bare `\marginpar` token and
-<a href=#622 id=622 data-nosnippet>622</a>  // re-expanded itself without end: sidenotes/caesar_example, "Box-list
-<a href=#623 id=623 data-nosnippet>623</a>  // runaway"; Perl's Constructor loops the same way; pdflatex clean). The
-<a href=#624 id=624 data-nosnippet>624</a>  // constructor lives under `\lx@marginpar`. Guard:
-<a href=#625 id=625 data-nosnippet>625</a>  // `perfect_kernel_batch54::marginpar_is_a_macro_over_its_constructor`.
-<a href=#626 id=626 data-nosnippet>626</a>  // The dispatch targets are LaTeXML-PRIVATE, not the kernel's `\@xmpar`/
-<a href=#627 id=627 data-nosnippet>627</a>  // `\@ympar`: latex.ltx:17570-17591 allocates `\@currbox` and `\@marbox`
-<a href=#628 id=628 data-nosnippet>628</a>  // from `\@freelist` before dispatching, and classes customise marginal
-<a href=#629 id=629 data-nosnippet>629</a>  // notes by redefining `\@ympar` with the kernel idiom `\@savemarbox\@marbox
-<a href=#630 id=630 data-nosnippet>630</a>  // {…}\@xympar` (caesar_book.cls:84-87). Dispatching to the kernel names let
-<a href=#631 id=631 data-nosnippet>631</a>  // that redefinition hijack `\marginpar` into the raw float machinery with no
-<a href=#632 id=632 data-nosnippet>632</a>  // `\@marbox` (undefined `\@marbox`, 24 unclosed `\vbox`es, the `\@captype`
-<a href=#633 id=633 data-nosnippet>633</a>  // residue: sidenotes caesar_example, 42 errors). Perl's `\marginpar`
-<a href=#634 id=634 data-nosnippet>634</a>  // constructor (latex_constructs.pool.ltxml:3487) never consults `\@ympar`.
-<a href=#635 id=635 data-nosnippet>635</a>  // The kernel-named aliases below stay for direct callers. Guard:
-<a href=#636 id=636 data-nosnippet>636</a>  // `perfect_kernel_batch56::marginpar_ignores_a_class_redefined_ympar`.
-<a href=#637 id=637 data-nosnippet>637</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\marginpar"</span>, <span class="string">"\\@ifnextchar[\\lx@xmpar\\lx@ympar"</span>);
-<a href=#638 id=638 data-nosnippet>638</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\lx@xmpar[]{}"</span>, <span class="string">"\\lx@marginpar[{#1}]{#2}"</span>);
-<a href=#639 id=639 data-nosnippet>639</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\lx@ympar{}"</span>, <span class="string">"\\lx@marginpar{#1}"</span>);
-<a href=#640 id=640 data-nosnippet>640</a>  <span class="comment">// latex.ltx:17591 `\@xmpar[#1]#2` uses `#1` as a brace group
-<a href=#641 id=641 data-nosnippet>641</a>  // (`\@savemarbox\@marbox{#1}`); re-passed UNBRACED, an optional holding
-<a href=#642 id=642 data-nosnippet>642</a>  // its own brackets (`\marginpar[{\lipsum[1][1-4]}]{…}`, Test-flexipage) was
-<a href=#643 id=643 data-nosnippet>643</a>  // cut at the inner `]` by `\lx@marginpar`'s `[]` reader ("readBalanced ran
-<a href=#644 id=644 data-nosnippet>644</a>  // out of input", a 55a regression). Guard:
-<a href=#645 id=645 data-nosnippet>645</a>  // `perfect_kernel_batch54::marginpar_optional_keeps_its_own_brackets`.
-<a href=#646 id=646 data-nosnippet>646</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\@xmpar[]{}"</span>, <span class="string">"\\lx@marginpar[{#1}]{#2}"</span>);
-<a href=#647 id=647 data-nosnippet>647</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\@ympar{}"</span>, <span class="string">"\\lx@marginpar{#1}"</span>);
-<a href=#648 id=648 data-nosnippet>648</a>  <span class="comment">// The note's text is set in a box of its own (latex.ltx `\@xympar` → `\@savemarbox`: `\vtop{… #2}`, internal vertical
-<a href=#649 id=649 data-nosnippet>649</a>  // mode), so it is text wherever `\marginpar` is called: a `$…$` in a note called from a formula opens math there, as
-<a href=#650 id=650 data-nosnippet>650</a>  // `\lx@note`'s body does (sect03.rs). Perl's constructor (latex_constructs.pool.ltxml:3487) takes no mode, so a note
-<a href=#651 id=651 data-nosnippet>651</a>  // called from math digested `$#1$` as the formula's own `$`s: the next formula of the paragraph met its scripts in
-<a href=#652 id=652 data-nosnippet>652</a>  // text (2002.06461's `\newcommand{\defineNotation}[1]{#1\marginnote{$#1$}}` inside `$…$`; KNOWN_PERL_ERRORS #661).
-<a href=#653 id=653 data-nosnippet>653</a>  // Guard: `perfect_kernel_batch66l::marginnote_formula_called_from_math`.
-<a href=#654 id=654 data-nosnippet>654</a>  </span><span class="macro">DefConstructor!</span>(<span class="string">"\\lx@marginpar[]{}"</span>, <span class="string">r###"?#1(&lt;ltx:note role='margin' class='ltx_marginpar_left'&gt;&lt;ltx:inline-logical-block&gt;#1&lt;/ltx:inline-logical-block&gt;&lt;/ltx:note&gt;?#2(&lt;ltx:note role='margin' class='ltx_marginpar_right'&gt;&lt;ltx:inline-logical-block&gt;#2&lt;/ltx:inline-logical-block&gt;&lt;/ltx:note&gt;))(&lt;ltx:note role='margin' class='ltx_marginpar'&gt;&lt;ltx:inline-logical-block&gt;#2&lt;/ltx:inline-logical-block&gt;&lt;/ltx:note&gt;)"###</span>,
-<a href=#655 id=655 data-nosnippet>655</a>    mode =&gt; <span class="string">"inline_internal_vertical"</span>,
-<a href=#656 id=656 data-nosnippet>656</a>    bounded =&gt; <span class="bool-val">true</span>, reversion =&gt; <span class="string">r"\marginpar[#1]{#2}"</span>,
-<a href=#657 id=657 data-nosnippet>657</a>    sizer =&gt; sub[_whatsit] { <span class="prelude-val">Ok</span>(out_of_line_size()) });
+<a href=#497 id=497 data-nosnippet>497</a>      before_xfloat(<span class="kw-2">&amp;</span>float_type, <span class="bool-val">false</span>)<span class="question-mark">?</span>;
+<a href=#498 id=498 data-nosnippet>498</a>      <span class="prelude-val">Ok</span>(<span class="macro">stored_map!</span>(<span class="string">"layout" </span>=&gt; <span class="string">"vertical"</span>))
+<a href=#499 id=499 data-nosnippet>499</a>    },
+<a href=#500 id=500 data-nosnippet>500</a>    <span class="comment">// The begin code opens a TeX group of its own: `\@xfloat`'s `\color@vbox` (latex.ltx:17421, :17479).
+<a href=#501 id=501 data-nosnippet>501</a>    </span>tex_group =&gt; { TexGroup::Box },
+<a href=#502 id=502 data-nosnippet>502</a>    after_digest  =&gt; sub[whatsit] { after_float(whatsit); },
+<a href=#503 id=503 data-nosnippet>503</a>    mode =&gt; <span class="string">"internal_vertical"</span>);
+<a href=#504 id=504 data-nosnippet>504</a>  <span class="macro">DefEnvironment!</span>(<span class="string">"{@dblfloat}{}[]"</span>,
+<a href=#505 id=505 data-nosnippet>505</a>    <span class="string">"&lt;ltx:float xml:id='#id' inlist='#inlist' ?#2(placement='#2') class='ltx_float_#1'&gt;\
+<a href=#506 id=506 data-nosnippet>506</a>    #tags#body\
+<a href=#507 id=507 data-nosnippet>507</a>    &lt;/ltx:float&gt;"</span>,
+<a href=#508 id=508 data-nosnippet>508</a>    properties =&gt; sub[args] {
+<a href=#509 id=509 data-nosnippet>509</a>      <span class="kw">let </span>float_type = args.first().and_then(|a| a.as_ref())
+<a href=#510 id=510 data-nosnippet>510</a>        .map(|d| d.to_string()).unwrap_or_default();
+<a href=#511 id=511 data-nosnippet>511</a>      before_xfloat(<span class="kw-2">&amp;</span>float_type, <span class="bool-val">true</span>)<span class="question-mark">?</span>;
+<a href=#512 id=512 data-nosnippet>512</a>      <span class="prelude-val">Ok</span>(<span class="macro">stored_map!</span>(<span class="string">"layout" </span>=&gt; <span class="string">"vertical"</span>))
+<a href=#513 id=513 data-nosnippet>513</a>    },
+<a href=#514 id=514 data-nosnippet>514</a>    <span class="comment">// The begin code opens a TeX group of its own: `\@xfloat`'s `\color@vbox` (latex.ltx:17421, :17479).
+<a href=#515 id=515 data-nosnippet>515</a>    </span>tex_group =&gt; { TexGroup::Box },
+<a href=#516 id=516 data-nosnippet>516</a>    after_digest  =&gt; sub[whatsit] { after_float(whatsit); },
+<a href=#517 id=517 data-nosnippet>517</a>    mode =&gt; <span class="string">"internal_vertical"</span>);
+<a href=#518 id=518 data-nosnippet>518</a>
+<a href=#519 id=519 data-nosnippet>519</a>  <span class="comment">// `\flushbottom`/`\suppressfloats` are latex_base.pool's (latex_base.rs:434,
+<a href=#520 id=520 data-nosnippet>520</a>  // the NODUMP branch only); latex.ltx:18330 declares `\flushbottom` a robust
+<a href=#521 id=521 data-nosnippet>521</a>  // MACRO and the dump carries it. Re-declaring it a primitive here (after
+<a href=#522 id=522 data-nosnippet>522</a>  // the dump) made scrlttr2.cls:5053 `\g@addto@macro\flushbottom{…}` capture
+<a href=#523 id=523 data-nosnippet>523</a>  // the unexpandable token literally — `\flushbottom` expanding into itself
+<a href=#524 id=524 data-nosnippet>524</a>  // (scrlttr2copy letter-copy-test; RUST-ONLY, Perl keeps the dump's macro).
+<a href=#525 id=525 data-nosnippet>525</a>  // The NODUMP branch still gets latex_base.rs's primitives (Perl-faithful there).
+<a href=#526 id=526 data-nosnippet>526</a>  // Guard: `perfect_kernel_batch56::flushbottom_stays_the_kernel_macro`.
+<a href=#527 id=527 data-nosnippet>527</a>
+<a href=#528 id=528 data-nosnippet>528</a>  </span><span class="macro">NewCounter!</span>(<span class="string">"topnumber"</span>);
+<a href=#529 id=529 data-nosnippet>529</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\topfraction"</span>, <span class="string">"0.25"</span>);
+<a href=#530 id=530 data-nosnippet>530</a>  <span class="macro">NewCounter!</span>(<span class="string">"bottomnumber"</span>);
+<a href=#531 id=531 data-nosnippet>531</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\bottomfraction"</span>, <span class="string">"0.25"</span>);
+<a href=#532 id=532 data-nosnippet>532</a>  <span class="macro">NewCounter!</span>(<span class="string">"totalnumber"</span>);
+<a href=#533 id=533 data-nosnippet>533</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\textfraction"</span>, <span class="string">"0.25"</span>);
+<a href=#534 id=534 data-nosnippet>534</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\floatpagefraction"</span>, <span class="string">"0.25"</span>);
+<a href=#535 id=535 data-nosnippet>535</a>  <span class="macro">NewCounter!</span>(<span class="string">"dbltopnumber"</span>);
+<a href=#536 id=536 data-nosnippet>536</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\dbltopfraction"</span>, <span class="string">"0.7"</span>);
+<a href=#537 id=537 data-nosnippet>537</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\dblfloatpagefraction"</span>, <span class="string">"0.25"</span>);
+<a href=#538 id=538 data-nosnippet>538</a>  <span class="macro">DefRegister!</span>(<span class="string">"\\floatsep"         </span>=&gt; <span class="macro">Glue!</span>(<span class="string">"12.0pt plus 2.0pt minus 2.0pt"</span>));
+<a href=#539 id=539 data-nosnippet>539</a>  <span class="macro">DefRegister!</span>(<span class="string">"\\textfloatsep"     </span>=&gt; <span class="macro">Glue!</span>(<span class="string">"20.0pt plus 2.0pt minus 4.0pt"</span>));
+<a href=#540 id=540 data-nosnippet>540</a>  <span class="macro">DefRegister!</span>(<span class="string">"\\intextsep"        </span>=&gt; <span class="macro">Glue!</span>(<span class="string">"12.0pt plus 2.0pt minus 2.0pt"</span>));
+<a href=#541 id=541 data-nosnippet>541</a>  <span class="macro">DefRegister!</span>(<span class="string">"\\dblfloatsep"      </span>=&gt; <span class="macro">Glue!</span>(<span class="string">"12.0pt plus 2.0pt minus 2.0pt"</span>));
+<a href=#542 id=542 data-nosnippet>542</a>  <span class="macro">DefRegister!</span>(<span class="string">"\\dbltextfloatsep"  </span>=&gt; <span class="macro">Glue!</span>(<span class="string">"20.0pt plus 2.0pt minus 4.0pt"</span>));
+<a href=#543 id=543 data-nosnippet>543</a>  <span class="macro">DefRegister!</span>(<span class="string">"\\@maxsep"          </span>=&gt; Dimension::new(<span class="number">0</span>));
+<a href=#544 id=544 data-nosnippet>544</a>  <span class="macro">DefRegister!</span>(<span class="string">"\\@dblmaxsep"       </span>=&gt; Dimension::new(<span class="number">0</span>));
+<a href=#545 id=545 data-nosnippet>545</a>  <span class="macro">DefRegister!</span>(<span class="string">"\\@fptop"           </span>=&gt; Glue::new(<span class="number">0</span>));
+<a href=#546 id=546 data-nosnippet>546</a>  <span class="macro">DefRegister!</span>(<span class="string">"\\@fpsep"           </span>=&gt; Glue::new(<span class="number">0</span>));
+<a href=#547 id=547 data-nosnippet>547</a>  <span class="macro">DefRegister!</span>(<span class="string">"\\@fpbot"           </span>=&gt; Glue::new(<span class="number">0</span>));
+<a href=#548 id=548 data-nosnippet>548</a>  <span class="macro">DefRegister!</span>(<span class="string">"\\@dblfptop"        </span>=&gt; Glue::new(<span class="number">0</span>));
+<a href=#549 id=549 data-nosnippet>549</a>  <span class="macro">DefRegister!</span>(<span class="string">"\\@dblfpsep"        </span>=&gt; Glue::new(<span class="number">0</span>));
+<a href=#550 id=550 data-nosnippet>550</a>  <span class="macro">DefRegister!</span>(<span class="string">"\\@dblfpbot"        </span>=&gt; Glue::new(<span class="number">0</span>));
+<a href=#551 id=551 data-nosnippet>551</a>  <span class="comment">// Perl LaTeX.pool.ltxml L3648-3649 defines these in the BASE (not only in
+<a href=#552 id=552 data-nosnippet>552</a>  // article.cls.ltxml), so they are available under ANY document class. The
+<a href=#553 id=553 data-nosnippet>553</a>  // prior Rust comment ("not in Perl engine") was mistaken — it saw only the
+<a href=#554 id=554 data-nosnippet>554</a>  // article.cls copy. A paper on a custom class that does NOT load article
+<a href=#555 id=555 data-nosnippet>555</a>  // (e.g. `\documentclass{style/vldb}`, witness 1703.00080) then hit
+<a href=#556 id=556 data-nosnippet>556</a>  // `undefined:\abovecaptionskip` on `\setlength{\abovecaptionskip}{…}`.
+<a href=#557 id=557 data-nosnippet>557</a>  // Define them here too (Glue 0, exactly Perl), as a base fallback that
+<a href=#558 id=558 data-nosnippet>558</a>  // article/book/ams_support still override with their own values.
+<a href=#559 id=559 data-nosnippet>559</a>  </span><span class="macro">DefRegister!</span>(<span class="string">"\\abovecaptionskip" </span>=&gt; Glue::new(<span class="number">0</span>));
+<a href=#560 id=560 data-nosnippet>560</a>  <span class="macro">DefRegister!</span>(<span class="string">"\\belowcaptionskip" </span>=&gt; Glue::new(<span class="number">0</span>));
+<a href=#561 id=561 data-nosnippet>561</a>  <span class="macro">Let!</span>(<span class="string">"\\topfigrule"</span>, <span class="string">"\\relax"</span>);
+<a href=#562 id=562 data-nosnippet>562</a>  <span class="macro">Let!</span>(<span class="string">"\\botfigrule"</span>, <span class="string">"\\relax"</span>);
+<a href=#563 id=563 data-nosnippet>563</a>  <span class="macro">Let!</span>(<span class="string">"\\dblfigrule"</span>, <span class="string">"\\relax"</span>);
+<a href=#564 id=564 data-nosnippet>564</a>
+<a href=#565 id=565 data-nosnippet>565</a>  <span class="comment">// \figurename / \figuresname / \tablename / \tablesname already defined
+<a href=#566 id=566 data-nosnippet>566</a>  // earlier in this file (figure/table caption block); avoid identical
+<a href=#567 id=567 data-nosnippet>567</a>  // re-definitions here.
+<a href=#568 id=568 data-nosnippet>568</a>
+<a href=#569 id=569 data-nosnippet>569</a>  </span><span class="macro">Let!</span>(<span class="string">"\\outer@nobreak"</span>, <span class="string">"\\@empty"</span>);
+<a href=#570 id=570 data-nosnippet>570</a>  <span class="comment">// latex.ltx:17538 `\@endfloatbox` ends with `\egroup\color@endbox`, closing the
+<a href=#571 id=571 data-nosnippet>571</a>  // `\color@vbox` + `\vbox\bgroup` that `\@xfloat` opens (:17478-17481). The
+<a href=#572 id=572 data-nosnippet>572</a>  // `{@float}`/`{@dblfloat}` bindings above open one mode frame instead and never run
+<a href=#573 id=573 data-nosnippet>573</a>  // `\@xfloat`, so on the binding's own frame (`lx@float@frame`, set by `begin_float`)
+<a href=#574 id=574 data-nosnippet>574</a>  // the closers go with the opener: a raw float end that calls `\@endfloatbox`
+<a href=#575 id=575 data-nosnippet>575</a>  // (floatrow.sty:421/:436 `\float@end`/`\float@dblend` for a `\DeclareNewFloatType`)
+<a href=#576 id=576 data-nosnippet>576</a>  // no longer pops the binding's frame (3 errors per float). A box a raw opener made on
+<a href=#577 id=577 data-nosnippet>577</a>  // top of it (examplep.sty:1794-1807 `\vbox\bgroup`…`\@floatboxreset`) is closed as
+<a href=#578 id=578 data-nosnippet>578</a>  // LaTeX closes it. The body keeps latex.ltx's tokens, so `\patchcmd` (lltjcore.sty:227)
+<a href=#579 id=579 data-nosnippet>579</a>  // and `\appdef` (ltxgrid.sty:1120) still meet them; only the closers are the hook
+<a href=#580 id=580 data-nosnippet>580</a>  // `\lx@endfloatbox@close`. RUST-ONLY: Perl keeps the raw `\@endfloatbox` from its dump
+<a href=#581 id=581 data-nosnippet>581</a>  // (latex_dump.pool.ltxml:1993) and binds none, so it errs the same. Witness
+<a href=#582 id=582 data-nosnippet>582</a>  // kaytannollista-latexia. Guard: `perfect_kernel_batch59::floatrow_new_float_type_closes_its_box`.
+<a href=#583 id=583 data-nosnippet>583</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\@endfloatbox"</span>,
+<a href=#584 id=584 data-nosnippet>584</a>    <span class="string">"\\par\\vskip\\z@skip\\@minipagefalse\\outer@nobreak\\lx@endfloatbox@close"</span>);
+<a href=#585 id=585 data-nosnippet>585</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\lx@endfloatbox@close"</span>, sub[_args] {
+<a href=#586 id=586 data-nosnippet>586</a>    <span class="kw">let </span>on_the_float = <span class="macro">matches!</span>(lookup_value(<span class="string">"lx@float@frame"</span>),
+<a href=#587 id=587 data-nosnippet>587</a>      <span class="prelude-val">Some</span>(Stored::Number(n)) <span class="kw">if </span>n.<span class="number">0 </span><span class="kw">as </span>u64 == current_frame_id());
+<a href=#588 id=588 data-nosnippet>588</a>    <span class="prelude-val">Ok</span>(<span class="kw">if </span>on_the_float {
+<a href=#589 id=589 data-nosnippet>589</a>      <span class="comment">// The raw end code closes `\@xfloat`'s box group here, as TeX does: a
+<a href=#590 id=590 data-nosnippet>590</a>      // closer that meets the binding's frame afterwards no longer meets a box
+<a href=#591 id=591 data-nosnippet>591</a>      // group (stomach.rs `close_environment_frame`; 2106.02397).
+<a href=#592 id=592 data-nosnippet>592</a>      </span><span class="kw">if </span>is_value_bound(<span class="string">"lx@env@tex@group"</span>, <span class="prelude-val">Some</span>(<span class="number">0</span>)) {
+<a href=#593 id=593 data-nosnippet>593</a>        assign_frame_value(<span class="string">"lx@env@tex@group"</span>, TexGroup::None.as_str());
+<a href=#594 id=594 data-nosnippet>594</a>      }
+<a href=#595 id=595 data-nosnippet>595</a>      Tokens::default()
+<a href=#596 id=596 data-nosnippet>596</a>    } <span class="kw">else </span>{
+<a href=#597 id=597 data-nosnippet>597</a>      <span class="macro">Tokens!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\egroup"</span>), <span class="macro">T_CS!</span>(<span class="string">"\\color@endbox"</span>))
+<a href=#598 id=598 data-nosnippet>598</a>    })
+<a href=#599 id=599 data-nosnippet>599</a>  });
+<a href=#600 id=600 data-nosnippet>600</a>  def_macro_identity(<span class="string">"\\@dbflt{}"</span>)<span class="question-mark">?</span>;
+<a href=#601 id=601 data-nosnippet>601</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\@xdblfloat{}[]"</span>, <span class="string">"\\@xfloat{#1}[#2]"</span>);
+<a href=#602 id=602 data-nosnippet>602</a>  def_macro_noop(<span class="string">"\\@floatplacement"</span>)<span class="question-mark">?</span>;
+<a href=#603 id=603 data-nosnippet>603</a>  def_macro_noop(<span class="string">"\\@dblfloatplacement"</span>)<span class="question-mark">?</span>;
+<a href=#604 id=604 data-nosnippet>604</a>
+<a href=#605 id=605 data-nosnippet>605</a>  <span class="macro">DefConditional!</span>(<span class="string">"\\if@reversemargin"</span>);
+<a href=#606 id=606 data-nosnippet>606</a>  <span class="macro">Let!</span>(<span class="string">"\\reversemarginpar"</span>, <span class="string">"\\@reversemargintrue"</span>);
+<a href=#607 id=607 data-nosnippet>607</a>  <span class="macro">Let!</span>(<span class="string">"\\normalmarginpar"</span>, <span class="string">"\\@reversemarginfalse"</span>);
+<a href=#608 id=608 data-nosnippet>608</a>  <span class="comment">// Perl: latex_constructs.pool.ltxml lines 3543-3546
+<a href=#609 id=609 data-nosnippet>609</a>  // `bounded =&gt; true` scopes font/catcode changes inside the margin note to the
+<a href=#610 id=610 data-nosnippet>610</a>  // note itself. This is an INTENTIONAL surpass-Perl divergence (OXIDIZED_DESIGN
+<a href=#611 id=611 data-nosnippet>611</a>  // #39, KNOWN_PERL_ERRORS): upstream Perl LaTeXML's `\marginpar` is NOT bounded,
+<a href=#612 id=612 data-nosnippet>612</a>  // so a `\marginpar{\Large …}` leaks the size switch into the body text after
+<a href=#613 id=613 data-nosnippet>613</a>  // it (real pdflatex scopes it to the margin box — the leak is a LaTeXML bug,
+<a href=#614 id=614 data-nosnippet>614</a>  // shared by both engines). Mirrors `\mbox`'s `bounded =&gt; true`. Witness:
+<a href=#615 id=615 data-nosnippet>615</a>  // mhchem.tex `\marginpar{\Large !}` made the entire manual render at 144%.
+<a href=#616 id=616 data-nosnippet>616</a>  // latex.ltx:11216 `\long\def\marginpar{\@ifnextchar[\@xmpar\@ympar}` — the
+<a href=#617 id=617 data-nosnippet>617</a>  // TeX-visible MACRO shape packages patch by expansion (marginfix.sty:91
+<a href=#618 id=618 data-nosnippet>618</a>  // `\edef\marginpar{…\expandafter\unexpanded\expandafter{\marginpar}}`,
+<a href=#619 id=619 data-nosnippet>619</a>  // which with a Constructor here captured the bare `\marginpar` token and
+<a href=#620 id=620 data-nosnippet>620</a>  // re-expanded itself without end: sidenotes/caesar_example, "Box-list
+<a href=#621 id=621 data-nosnippet>621</a>  // runaway"; Perl's Constructor loops the same way; pdflatex clean). The
+<a href=#622 id=622 data-nosnippet>622</a>  // constructor lives under `\lx@marginpar`. Guard:
+<a href=#623 id=623 data-nosnippet>623</a>  // `perfect_kernel_batch54::marginpar_is_a_macro_over_its_constructor`.
+<a href=#624 id=624 data-nosnippet>624</a>  // The dispatch targets are LaTeXML-PRIVATE, not the kernel's `\@xmpar`/
+<a href=#625 id=625 data-nosnippet>625</a>  // `\@ympar`: latex.ltx:17570-17591 allocates `\@currbox` and `\@marbox`
+<a href=#626 id=626 data-nosnippet>626</a>  // from `\@freelist` before dispatching, and classes customise marginal
+<a href=#627 id=627 data-nosnippet>627</a>  // notes by redefining `\@ympar` with the kernel idiom `\@savemarbox\@marbox
+<a href=#628 id=628 data-nosnippet>628</a>  // {…}\@xympar` (caesar_book.cls:84-87). Dispatching to the kernel names let
+<a href=#629 id=629 data-nosnippet>629</a>  // that redefinition hijack `\marginpar` into the raw float machinery with no
+<a href=#630 id=630 data-nosnippet>630</a>  // `\@marbox` (undefined `\@marbox`, 24 unclosed `\vbox`es, the `\@captype`
+<a href=#631 id=631 data-nosnippet>631</a>  // residue: sidenotes caesar_example, 42 errors). Perl's `\marginpar`
+<a href=#632 id=632 data-nosnippet>632</a>  // constructor (latex_constructs.pool.ltxml:3487) never consults `\@ympar`.
+<a href=#633 id=633 data-nosnippet>633</a>  // The kernel-named aliases below stay for direct callers. Guard:
+<a href=#634 id=634 data-nosnippet>634</a>  // `perfect_kernel_batch56::marginpar_ignores_a_class_redefined_ympar`.
+<a href=#635 id=635 data-nosnippet>635</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\marginpar"</span>, <span class="string">"\\@ifnextchar[\\lx@xmpar\\lx@ympar"</span>);
+<a href=#636 id=636 data-nosnippet>636</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\lx@xmpar[]{}"</span>, <span class="string">"\\lx@marginpar[{#1}]{#2}"</span>);
+<a href=#637 id=637 data-nosnippet>637</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\lx@ympar{}"</span>, <span class="string">"\\lx@marginpar{#1}"</span>);
+<a href=#638 id=638 data-nosnippet>638</a>  <span class="comment">// latex.ltx:17591 `\@xmpar[#1]#2` uses `#1` as a brace group
+<a href=#639 id=639 data-nosnippet>639</a>  // (`\@savemarbox\@marbox{#1}`); re-passed UNBRACED, an optional holding
+<a href=#640 id=640 data-nosnippet>640</a>  // its own brackets (`\marginpar[{\lipsum[1][1-4]}]{…}`, Test-flexipage) was
+<a href=#641 id=641 data-nosnippet>641</a>  // cut at the inner `]` by `\lx@marginpar`'s `[]` reader ("readBalanced ran
+<a href=#642 id=642 data-nosnippet>642</a>  // out of input", a 55a regression). Guard:
+<a href=#643 id=643 data-nosnippet>643</a>  // `perfect_kernel_batch54::marginpar_optional_keeps_its_own_brackets`.
+<a href=#644 id=644 data-nosnippet>644</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\@xmpar[]{}"</span>, <span class="string">"\\lx@marginpar[{#1}]{#2}"</span>);
+<a href=#645 id=645 data-nosnippet>645</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\@ympar{}"</span>, <span class="string">"\\lx@marginpar{#1}"</span>);
+<a href=#646 id=646 data-nosnippet>646</a>  <span class="comment">// The note's text is set in a box of its own (latex.ltx `\@xympar` → `\@savemarbox`: `\vtop{… #2}`, internal vertical
+<a href=#647 id=647 data-nosnippet>647</a>  // mode), so it is text wherever `\marginpar` is called: a `$…$` in a note called from a formula opens math there, as
+<a href=#648 id=648 data-nosnippet>648</a>  // `\lx@note`'s body does (sect03.rs). Perl's constructor (latex_constructs.pool.ltxml:3487) takes no mode, so a note
+<a href=#649 id=649 data-nosnippet>649</a>  // called from math digested `$#1$` as the formula's own `$`s: the next formula of the paragraph met its scripts in
+<a href=#650 id=650 data-nosnippet>650</a>  // text (2002.06461's `\newcommand{\defineNotation}[1]{#1\marginnote{$#1$}}` inside `$…$`; KNOWN_PERL_ERRORS #661).
+<a href=#651 id=651 data-nosnippet>651</a>  // Guard: `perfect_kernel_batch66l::marginnote_formula_called_from_math`.
+<a href=#652 id=652 data-nosnippet>652</a>  </span><span class="macro">DefConstructor!</span>(<span class="string">"\\lx@marginpar[]{}"</span>, <span class="string">r###"?#1(&lt;ltx:note role='margin' class='ltx_marginpar_left'&gt;&lt;ltx:inline-logical-block&gt;#1&lt;/ltx:inline-logical-block&gt;&lt;/ltx:note&gt;?#2(&lt;ltx:note role='margin' class='ltx_marginpar_right'&gt;&lt;ltx:inline-logical-block&gt;#2&lt;/ltx:inline-logical-block&gt;&lt;/ltx:note&gt;))(&lt;ltx:note role='margin' class='ltx_marginpar'&gt;&lt;ltx:inline-logical-block&gt;#2&lt;/ltx:inline-logical-block&gt;&lt;/ltx:note&gt;)"###</span>,
+<a href=#653 id=653 data-nosnippet>653</a>    mode =&gt; <span class="string">"inline_internal_vertical"</span>,
+<a href=#654 id=654 data-nosnippet>654</a>    bounded =&gt; <span class="bool-val">true</span>, reversion =&gt; <span class="string">r"\marginpar[#1]{#2}"</span>,
+<a href=#655 id=655 data-nosnippet>655</a>    sizer =&gt; sub[_whatsit] { <span class="prelude-val">Ok</span>(out_of_line_size()) });
+<a href=#656 id=656 data-nosnippet>656</a>
+<a href=#657 id=657 data-nosnippet>657</a>  <span class="macro">DefRegister!</span>(<span class="string">"\\marginparpush"</span>, Dimension::new(<span class="number">0</span>));
 <a href=#658 id=658 data-nosnippet>658</a>
-<a href=#659 id=659 data-nosnippet>659</a>  <span class="macro">DefRegister!</span>(<span class="string">"\\marginparpush"</span>, Dimension::new(<span class="number">0</span>));
-<a href=#660 id=660 data-nosnippet>660</a>
-<a href=#661 id=661 data-nosnippet>661</a>  <span class="prelude-val">Ok</span>(())
-<a href=#662 id=662 data-nosnippet>662</a>}
+<a href=#659 id=659 data-nosnippet>659</a>  <span class="prelude-val">Ok</span>(())
+<a href=#660 id=660 data-nosnippet>660</a>}
 </code></pre></div></section></main></body></html>
