@@ -348,6 +348,34 @@ code on AMD (skid), so the figures are counts × stepped instructions.
 
 ## Audit log (periodic passes; newest first)
 
+### 2026-11-15 — a `\global` assignment's walk over the undo frames (PERFC)
+
+Defect: `State::assign_internal`'s `Scope::Global` branch (State.pm:156-168) probed every frame's count table down to the
+locked one with a hashbrown `remove`, then removed and re-inserted the key in the last frame and probed the state table
+twice; under pgf/TikZ (`\global` register and `\let` assignments in deep groups) that was `remove_entry` 2.0 % +
+`assign_internal` self 1.7 % of 2205.15714's instructions. Fix: `AssignmentCount` (a frame's counts for one table) keeps a
+256-bit filter of the keys it ever counted, set by every insertion and never cleared, so the walk skips a frame whose bit
+is clear; the last frame's count is read and replaced in one `insert`; the state table is probed once. What a later group
+end restores is unchanged. Guard: `00_unit_state::global_assignment_undo_frames_restore_at_each_group_end` (red against
+three broken variants: the last frame's count dropped, the inner frames' kept, the filter always clear).
+
+Basis: `perf stat -e instructions:u`, release, min of 3 (base) and 2 (candidate) runs (`kit/probe.sh`, `PERF=1`,
+`ar5iv.sty`; circuitikzmanual and amsldoc under `[rawstyles,rawclasses]latexml.sty`), XML byte-identical on every run.
+
+| Document | MAIN884 (G) | PERFC (G) | Δ |
+|---|---:|---:|---:|
+| 2205.15714 | 42.637 | 42.130 | −1.19 % |
+| circuitikzmanual | 693.788 | 686.809 | −1.01 % |
+| 2010.05701 | 268.736 | 266.927 | −0.67 % |
+| 2308.04512 | 284.500 | 282.633 | −0.66 % |
+| b250 (control) | 37.133 | 37.168 | +0.09 % |
+| amsldoc (control) | 5.739 | 5.741 | +0.03 % |
+
+The empty-table check and the single last-frame probe alone gained 0.03-0.22 %: pgf's frames are rarely empty. The
+controls' cost is the frame's larger default (10 × 32 bytes) and the bit set per local assignment. Peak RSS: book790
+6,883,732 → 6,884,868 KB, b1000 1,419,424 → 1,421,120 KB. A/B (`popPERFC`: 80 pgfplots/circuitikz, 59 tikzpicture, 60
+controls): 0 of 199 changed, E/F/W equal.
+
 ### 2026-11-15 — the math grammar built once per streamed conversion (PERF1 L1, batch PERFA)
 
 Defect: `streaming_pass2` (`latexml_oxide/src/core_interface.rs`) made a `MathParser::default()` per spilled segment,
@@ -764,7 +792,8 @@ name (all-`???` annotation) on this box — use perf instead.
   `remove_entry` 1.85%) is faithful Perl State semantics (Perl also
   Global-assigns `if_count` per conditional) — a typed `State` field for
   LaTeXML-internal counters would be the "meaningful Rust types" translation
-  (done for `if_count` and, in 59a, `if_stack`).
+  (done for `if_count` and, in 59a, `if_stack`; the walk itself skips frames
+  that never counted the key since 2026-11-15, PERFC).
 
 ### 2026-07-06 — CrossRef O(n²)→O(n) on very-large split docs
 

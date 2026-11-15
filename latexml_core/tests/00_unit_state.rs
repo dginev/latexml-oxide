@@ -574,3 +574,135 @@ fn a_state_watch_ends_with_every_change_of_the_state() {
     assert_eq!(row(), expected, "{name}");
   }
 }
+
+// One step of a group/assignment script: what `\global`'s walk over the undo frames (State.pm:156-168) must leave for
+// each later group end to restore.
+#[derive(Clone, Copy)]
+enum Op {
+  Begin,
+  End,
+  Daemon,
+  EndDaemon,
+  Local(&'static str, &'static str),
+  Global(&'static str, &'static str),
+  Is(&'static str, &'static str),
+  /// 600 local bindings of other keys: every bit of the frame's key filter set
+  Crowd,
+}
+
+#[test]
+fn global_assignment_undo_frames_restore_at_each_group_end() {
+  use Op::*;
+  let rows: &[(&str, &[Op])] = &[
+    ("a global inside nested locals survives every group end", &[
+      Global("g", "a"),
+      Begin,
+      Local("g", "b"),
+      Begin,
+      Local("g", "c"),
+      Global("g", "d"),
+      Is("g", "d"),
+      End,
+      Is("g", "d"),
+      Local("g", "e"),
+      End,
+      Is("g", "d"),
+    ]),
+    (
+      "a local after a global in the same group ends with the group",
+      &[
+        Global("g", "a"),
+        Begin,
+        Global("g", "f"),
+        Local("g", "g"),
+        Is("g", "g"),
+        End,
+        Is("g", "f"),
+      ],
+    ),
+    ("frames that are empty or bind other keys only", &[
+      Local("g", "a"),
+      Begin,
+      Begin,
+      Local("h", "x"),
+      Begin,
+      Local("g", "b"),
+      Begin,
+      Global("g", "c"),
+      Local("g", "d"),
+      Global("g", "e"),
+      Local("g", "f"),
+      End,
+      Is("g", "e"),
+      End,
+      Is("g", "e"),
+      Is("h", "x"),
+      End,
+      Is("h", "base"),
+      End,
+      Is("g", "e"),
+    ]),
+    (
+      "a global stops at the locked frame, which a daemon end undoes",
+      &[
+        Global("g", "a"),
+        Daemon,
+        Local("g", "b"),
+        Begin,
+        Local("g", "c"),
+        Global("g", "d"),
+        End,
+        Is("g", "d"),
+        EndDaemon,
+        Is("g", "a"),
+      ],
+    ),
+    ("a frame binding far more keys than its filter has bits", &[
+      Global("g", "a"),
+      Begin,
+      Local("g", "b"),
+      Begin,
+      Crowd,
+      Global("g", "c"),
+      Local("g", "d"),
+      End,
+      Is("g", "c"),
+      End,
+      Is("g", "c"),
+    ]),
+    ("a global at the locked frame over its own local", &[
+      Global("g", "a"),
+      Daemon,
+      Local("g", "b"),
+      Global("g", "c"),
+      Global("g", "d"),
+      EndDaemon,
+      Is("g", "a"),
+    ]),
+  ];
+  for (name, ops) in rows {
+    set_state(State::new(StateOptions::default()));
+    assign_value("h", "base", Some(Scope::Global));
+    for (step, op) in ops.iter().enumerate() {
+      match *op {
+        Begin => push_frame(),
+        End => pop_frame().unwrap(),
+        Daemon => push_daemon_frame(),
+        EndDaemon => pop_daemon_frame().unwrap(),
+        Local(key, value) => assign_value(key, value, Some(Scope::Local)),
+        Crowd => (0..600).for_each(|n| assign_value(&format!("crowd{n}"), "x", Some(Scope::Local))),
+        Global(key, value) => assign_value(key, value, Some(Scope::Global)),
+        Is(key, expected) => match lookup_value(key) {
+          Some(Stored::String(got)) => {
+            assert_eq!(
+              arena::to_string(got),
+              expected,
+              "{name}, step {step}: {key}"
+            )
+          },
+          other => panic!("{name}, step {step}: {key} is {other:?}"),
+        },
+      }
+    }
+  }
+}
