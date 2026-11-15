@@ -1,0 +1,15 @@
+% witness: math0304264 (also q-alg9506019, math-ph9910014 with `\head References\endhead`)
+% oracle:  pdftex (\input amstex, \documentstyle{amsppt}) this file: 0 errors; "1. Intro Text. References [1] A. Author, Title." (one "References")
+% engines: Perl 0.8.8 = 0 errors, chapter "References" holding a bibliography titled "References" (the heading twice); rust 7dea7e597a1 = 0 errors,
+%          the chapter closed after its title, then absorbed by the bibliography after it
+% expect:  0 errors, 0 warnings; chapter Cx1 holds "Text."; the bibliography `bib` at document level takes the `\specialhead`'s heading
+%          (`absorb_bibliography_heading`), "References" once
+% status:  RED (Perl; fix/amsppt-ids-sections before its back-matter step) -> GREEN (fix/amsppt-ids-sections; guard perfect_kernel_batchamsppt::amsppt_heads_and_theorems)
+\input amstex
+\documentstyle{amsppt}
+\document
+\specialhead 1. Intro\endspecialhead
+Text.
+\specialhead References\endspecialhead
+\ref\key 1\by A. Author\paper Title\endref
+\enddocument

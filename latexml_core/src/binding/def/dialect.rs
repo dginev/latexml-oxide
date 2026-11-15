@@ -1447,24 +1447,44 @@ pub fn env_hook_has_code(name: &str, point: &str) -> bool {
   hook_has_code(&format!("env/{name}/{point}"))
 }
 
-/// Whether the kernel hook `hook` holds code: lthooks' `\hook_if_empty:nTF` (latex.ltx:6436-6448) read from its
-/// storage, no expansion: the labelled code (`\g__hook_<hook>_code_prop` not `\c_empty_prop`), the document's
-/// (`\__hook_toplevel <hook>`) and the next-use code (`\__hook_next <hook>`) — a slot holds code when it is a macro
-/// with a non-empty body (`\__hook_cs_if_empty:c`, :5688).
-pub fn hook_has_code(hook: &str) -> bool {
-  if !l3_hooks_loaded() {
-    return false;
+/// Whether the kernel hook `hook` holds code: [`HookStore::has_code`].
+pub fn hook_has_code(hook: &str) -> bool { HookStore::new(hook).has_code() }
+
+/// The slots lthooks keeps a hook's code in, named once (a hook read at every `\selectfont` keeps its own).
+pub struct HookStore {
+  prop:     Token,
+  toplevel: Token,
+  next:     Token,
+}
+
+impl HookStore {
+  pub fn new(hook: &str) -> Self {
+    HookStore {
+      prop:     T_CS!(s!("\\g__hook_{hook}_code_prop")),
+      toplevel: T_CS!(s!("\\__hook_toplevel {hook}")),
+      next:     T_CS!(s!("\\__hook_next {hook}")),
+    }
   }
-  let prop = macro_body(&T_CS!(s!("\\g__hook_{hook}_code_prop")));
-  // `\prop_if_empty:N` (expl3-code.tex:10450): a flat prop is empty when its meaning is `\c_empty_prop`'s
-  let prop_has_code = match &prop {
-    Some(Some(body)) => macro_body(&T_CS!("\\c_empty_prop")).flatten().as_ref() != Some(body),
-    Some(None) => true,
-    None => false,
-  };
-  prop_has_code
-    || hook_slot_has_code(&T_CS!(s!("\\__hook_toplevel {hook}")))
-    || hook_slot_has_code(&T_CS!(s!("\\__hook_next {hook}")))
+
+  /// lthooks' `\hook_if_empty:nTF` (latex.ltx:6436-6448) read from its storage, no expansion: the labelled code
+  /// (`\g__hook_<hook>_code_prop` not `\c_empty_prop`), the document's (`\__hook_toplevel <hook>`) and the next-use
+  /// code (`\__hook_next <hook>`) — a slot holds code when it is a macro with a non-empty body
+  /// (`\__hook_cs_if_empty:c`, :5688).
+  pub fn has_code(&self) -> bool {
+    if !l3_hooks_loaded() {
+      return false;
+    }
+    // `\prop_if_empty:N` (expl3-code.tex:10450): a flat prop is empty when its meaning is `\c_empty_prop`'s
+    let prop_has_code = with_macro_body(&self.prop, |body| match body {
+      Some(body) => {
+        with_macro_body(&T_CS!("\\c_empty_prop"), |empty| empty != Some(body)).unwrap_or(true)
+      },
+      None => true,
+    });
+    prop_has_code.unwrap_or(false)
+      || hook_slot_has_code(&self.toplevel)
+      || hook_slot_has_code(&self.next)
+  }
 }
 
 /// Whether `hook` holds a chunk labelled `label`: lthooks keeps labelled code in a flat prop (`\prop_if_in:cnTF`,
@@ -1473,44 +1493,45 @@ pub fn hook_has_labelled_code(hook: &str, label: &str) -> bool {
   if !l3_hooks_loaded() {
     return false;
   }
-  let Some(Some(prop)) = macro_body(&T_CS!(s!("\\g__hook_{hook}_code_prop"))) else {
-    return false;
-  };
   let (pair, sep) = (T_CS!("\\__prop_pair:wn"), T_CS!("\\s__prop"));
-  let mut entries = prop.split(|t| *t == pair).skip(1);
-  entries.any(|entry| {
-    let key = entry
-      .iter()
-      .take_while(|t| **t != sep)
-      .map(|t| t.to_string())
-      .collect::<String>();
-    key == label
+  with_macro_body(&T_CS!(s!("\\g__hook_{hook}_code_prop")), |prop| {
+    let Some(prop) = prop else {
+      return false;
+    };
+    let mut entries = prop.split(|t| *t == pair).skip(1);
+    entries.any(|entry| {
+      let key = entry
+        .iter()
+        .take_while(|t| **t != sep)
+        .map(|t| t.to_string())
+        .collect::<String>();
+      key == label
+    })
   })
+  .unwrap_or(false)
 }
 
 /// No L3 hook system (the plain/no-op format): no hook code anywhere.
-fn l3_hooks_loaded() -> bool { lookup_meaning(&T_CS!("\\hook_if_empty:nTF")).is_some() }
+fn l3_hooks_loaded() -> bool {
+  with_meaning(&T_CS!("\\hook_if_empty:nTF"), |meaning| meaning.is_some())
+}
 
 /// lthooks' `\__hook_cs_if_empty:cF` (latex.ltx:5688-5699): `cs` is a macro with a non-empty body.
 pub fn hook_slot_has_code(cs: &Token) -> bool {
-  match macro_body(cs) {
-    Some(Some(body)) => !body.is_empty(),
-    // a macro whose body is Rust: code, by the safe answer
-    Some(None) => true,
-    None => false,
-  }
+  // (a macro whose body is Rust: code, by the safe answer)
+  with_macro_body(cs, |body| body.is_none_or(|body| !body.is_empty())).unwrap_or(false)
 }
 
-/// `Some(body)` for a macro (`Some(None)` when its body is a closure), `None` for anything else.
-fn macro_body(cs: &Token) -> Option<Option<Vec<Token>>> {
-  match lookup_meaning(cs) {
+/// `f` of a macro's body, borrowed (`None` when the body is a closure); `None` for anything else.
+fn with_macro_body<R>(cs: &Token, f: impl FnOnce(Option<&[Token]>) -> R) -> Option<R> {
+  with_meaning(cs, |meaning| match meaning {
     Some(Stored::Expandable(code)) => Some(match code.get_expansion() {
-      Some(ExpansionBody::Tokens(body)) => Some(body.unlist_ref().clone()),
-      Some(ExpansionBody::Closure(_)) => None,
-      None => Some(Vec::new()),
+      Some(ExpansionBody::Tokens(body)) => f(Some(body.unlist_ref())),
+      Some(ExpansionBody::Closure(_)) => f(None),
+      None => f(Some(&[])),
     }),
     _ => None,
-  }
+  })
 }
 
 /// The tokens running the kernel hook `hook` as `\UseHook` (or, `once`, `\UseOneTimeHook`) does, or none when it has
@@ -1551,8 +1572,10 @@ pub fn hook_use_tokens(hook: &str, once: bool) -> Vec<Token> {
 fn hook_used_once(hook: &str) -> bool {
   // (`\if:w I`: the slot's first token is the character `I`)
   let used = [T_LETTER!("I"), T_OTHER!("I")];
-  matches!(macro_body(&T_CS!(s!("\\g__hook_{hook}_reversed_tl"))), Some(Some(body))
-    if body.first().is_some_and(|t| used.contains(t)))
+  with_macro_body(&T_CS!(s!("\\g__hook_{hook}_reversed_tl")), |body| {
+    body.is_some_and(|body| body.first().is_some_and(|t| used.contains(t)))
+  })
+  .unwrap_or(false)
 }
 
 /// The TeX group an environment's begin code leaves open: its definition's

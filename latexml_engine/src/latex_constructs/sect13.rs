@@ -1150,6 +1150,11 @@ pub(crate) fn load() -> Result<()> {
     if lookup_definition(&update)?.is_some() && !update.defined_as(&TOKEN_RELAX) {
       unread_one(update);
     }
+    // latex.ltx:12580 `\UseHook{selectfont}` ahead of it, when the hook holds code (scrartcl.cls:2673, everysel.sty:49)
+    thread_local! { static SELECTFONT_HOOK: HookStore = HookStore::new("selectfont"); }
+    if SELECTFONT_HOOK.with(HookStore::has_code) {
+      unread(Tokens::new(hook_use_tokens("selectfont", false)));
+    }
     Ok(Vec::new())
   });
 
