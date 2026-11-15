@@ -18,9 +18,6 @@ use super::{
   plan::reads_as_alignment,
   *,
 };
-use crate::base_utilities::frontmatter::classify::title_code::{
-  reads_arguments, title_code_author_definitions,
-};
 
 /// A field's tokens as a rehearsal read them: `tokens[0]` at position `base`, and its formulas (`events::lex_with_formulas`:
 /// outermost, in order).
@@ -530,18 +527,15 @@ impl Field<'_> {
   }
 
   /// Whether its rehearsal held an undefined command's Error (`Error:undefined:`) at `tokens[index]`'s position: the
-  /// command's own, raised where it was invoked — and one a piece may take alone. Not a command reading arguments that the
-  /// class's title code defines where it reads `\@author` ([`title_code_author_definitions`], [`reads_arguments`]): the
-  /// rehearsal runs without those definitions, so it held an Error pdflatex never raises, and read the argument's print
-  /// as the block's own; taken alone, the command is cut from its argument, and digested apart from the author content it
-  /// errs. pazhastl.cls:112's `\def\address##1{\textsuperscript{##1}}` inside `\@maketitle`'s group, after an
-  /// `\email{…}`: the e-mail piece took it without its `{1}` and raised `Error:undefined:\address` there (1108.4222,
-  /// 1202.2889, 1206.0451, 1207.2226, 1301.4791, 1307.2761, 2103.05801, 2408.01858, 2412.06362; pazha2.cls:126's
-  /// `\addres`, 2607.07582); left out, `\address{1}` stays the name's mark and the flush's net spares it, by its meaning
-  /// recorder (`reading::HeldUndefined`). A parameterless one is still taken: in a name's piece it prints, under the title code's
-  /// definitions the piece is digested with (`\lx@author@withinst`), what the piece holds — aaai2026.sty's `\co`, its
-  /// corresponding-author note (2508.04047, 2508.08170). Repro
-  /// sectioning-frontmatter/title_code_command_after_an_email_keeps_its_argument (OXIDIZED_DESIGN_DIVERGENCES #983).
+  /// command's own, raised where it was invoked — and one a piece may take alone. A command reading arguments that the
+  /// class's title code defines where it reads `\@author` is no such command: the rehearsal reads the author content under
+  /// that definition, as its digestion does (`author_markup_begin`, `title_code::reads_arguments`) — pazhastl.cls:112's
+  /// `\def\address##1{\textsuperscript{##1}}` (1108.4222, 1202.2889, 1206.0451, 1207.2226, 1301.4791, 1307.2761,
+  /// 2103.05801, 2408.01858, 2412.06362; pazha2.cls:126's `\addres`, 2607.07582). A parameterless one stays undefined
+  /// there and is taken: in a name's piece it prints, under the title code's definitions the piece is digested with
+  /// (`\lx@author@withinst`), what the piece holds — aaai2026.sty's `\co`, its corresponding-author note (2508.04047,
+  /// 2508.08170). Repro sectioning-frontmatter/title_code_command_after_an_email_keeps_its_argument
+  /// (OXIDIZED_DESIGN_DIVERGENCES #983).
   pub(super) fn held_undefined_at(&self, index: usize) -> bool {
     let pos = self.base + index;
     self.held.iter().any(|error| {
@@ -549,11 +543,7 @@ impl Field<'_> {
         && error
           .span
           .is_some_and(|(from, to)| usize::from(from) <= pos && pos < usize::from(to))
-    }) && !title_code_author_definitions()
-      .iter()
-      .any(|(definee, statement)| {
-        *definee == self.tokens[index] && reads_arguments(definee, statement)
-      })
+    })
   }
 
   /// Whether its rehearsal held an error at `tokens[index]`'s position.

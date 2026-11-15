@@ -1,0 +1,38 @@
+% mechanism: fcs.cls:268-290 `\DeclareDocumentCommand \author { s o m }`: the star marks the corresponding author (an
+%   envelope, :720-723); the class prints its title block itself, `\AfterEndPreamble{\maketitle}` (:768-771), so the
+%   papers call no `\maketitle` and the frontmatter is read at its flush. The fcs binding's corresponding contact "✉"
+%   prints no letter or digit, and the frontmatter emitter's items keyed by letters and digits dropped it
+%   (OXIDIZED_DESIGN_DIVERGENCES #905).
+% witness: 2410.08723, 2401.13011, 2408.05715 (no `\maketitle`; `\author*[1,2]{…}`); here a minimal stand-in of the class
+% oracle:  pdflatex 0 errors: "Ann Author1 Bob Corresponding(b)1 2 Carl Plain / 1 University of Witness / 2 Institute
+%          of Repro" (the stand-in's "(b)" for the class's envelope)
+% engines: rust main b72bf540ff = 0 errors, 0 warnings, Bob Corresponding without his corresponding contact (no
+%          Warning); nov02 kept it; perl (no binding) = every author mangled
+% expect:  0 errors, 0 warnings; three creators: Ann with address 1; Bob with the corresponding mark "✉" and addresses
+%          1 and 2; Carl with none
+% status:  RED (b72bf540ff) -> GREEN (LOSTF)
+% preload: ar5iv.sty
+\begin{filecontents*}{fcs.cls}
+% A minimal stand-in for fcs.cls (Front. Comput. Sci., 2020, Zhao Chongbin), written for a latexml-oxide test: its
+% \author (:268-290), \address (:293-307), the title block they print and its \AfterEndPreamble{\maketitle} (:768-771).
+\NeedsTeXFormat{LaTeX2e}\ProvidesClass{fcs}[2020/01/01 stand-in]
+\LoadClass{article}\RequirePackage{xparse}
+\def\fcs@authors{}\def\fcs@addresses{}\newcounter{fcs@address}
+\DeclareDocumentCommand\author{s o m}{\g@addto@macro\fcs@authors{#3\IfBooleanT{#1}{(\textsc{b})}%
+  \IfNoValueF{#2}{\textsuperscript{\@for\fcs@r:=#2\do{\ref{\fcs@r} }}} }}
+\DeclareDocumentCommand\address{o m}{\g@addto@macro\fcs@addresses{\par
+  \IfNoValueTF{#1}{#2}{\refstepcounter{fcs@address}\label{#1}\arabic{fcs@address}\quad #2}}}
+\renewcommand\maketitle{{\centering\LARGE\@title\par\normalsize\fcs@authors\par\fcs@addresses\par}}
+\AtBeginDocument{\maketitle}
+\end{filecontents*}
+\documentclass{fcs}
+\title{Repro Title}
+\author[1]{Ann Author}
+\author*[1,2]{Bob Corresponding}
+\author{Carl Plain}
+\address[1]{University of Witness}
+\address[2]{Institute of Repro}
+\begin{document}
+\begin{abstract}Abstract words here.\end{abstract}
+Body text.
+\end{document}

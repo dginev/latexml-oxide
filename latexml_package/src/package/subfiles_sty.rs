@@ -10,10 +10,16 @@ LoadDefinitions!({
     "\\@ifundefined{ver@subfiles.cls}\\@secondoftwo\\@firstoftwo"
   );
 
-  // Redefine \documentclass to do nothing in subfiles
-  DefMacro!(
+  // Redefine \documentclass to do nothing in subfiles; the sub-file's preamble that follows, which subfiles.sty skips,
+  // runs as a preamble, as standalone_sty.rs runs one (`inPreamble`; its `\AtBeginDocument` code is not run).
+  DefPrimitive!(
     "\\documentclass PackageOptions SkipSpaces Semiverbatim []",
-    ""
+    {
+      if !lookup_bool("inPreamble") {
+        assign_value("inPreamble", true, None);
+        assign_value("lx@subpreamble@begindocument", Stored::Bool(true), None);
+      }
+    }
   );
 
   // Fake \begin{document}/\end{document} for subfiles:
@@ -28,6 +34,8 @@ LoadDefinitions!({
       "\\lx@subfiles@fake@enddocument",
       Scope::Global
     );
+    assign_value("inPreamble", false, None);
+    assign_value("lx@subpreamble@begindocument", Stored::Bool(false), None);
     begin_mode("internal_vertical")?;
   });
 

@@ -2904,7 +2904,7 @@ const KERNEL_TOKEN_SPELLINGS: &[(&str, usize)] = &[
   ("latexml_engine/src/latex.rs", 2),
   ("latexml_engine/src/latex_base.rs", 1),
   ("latexml_engine/src/latex_bootstrap.rs", 5),
-  ("latexml_engine/src/latex_constructs/mod.rs", 160),
+  ("latexml_engine/src/latex_constructs/mod.rs", 163),
   ("latexml_engine/src/latex_constructs/sect01.rs", 8),
   ("latexml_engine/src/latex_constructs/sect02.rs", 9),
   ("latexml_engine/src/latex_constructs/sect04.rs", 4),
