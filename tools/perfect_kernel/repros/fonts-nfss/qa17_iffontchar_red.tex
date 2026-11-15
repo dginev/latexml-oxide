@@ -1,0 +1,18 @@
+% mechanism: `\iffontchar`/`\fontchar*` read `<font>` as a plain Token (etex.rs:620, :253) where tex.web §577 `scan_font_ident`
+%   reads a font identifier: `\textfont1 "80` typesets `”80`, `\nullfont` answers Y; the NFSS current font has no file, so the
+%   answer is always TRUE, and the identifier's file ignores the encoding (tex_fonts.rs:858; latex.ltx `\get@external@font`:12538 gives ecrm1000)
+% witness: synthetic (Bruce Q&A QA17, BM Q4.6); reach 0 author uses in 35,942 papers (12 bundled package copies)
+% status:  RED
+% oracle:  pdflatex 0 `!`; prints "[a:N] [b:N] [c:N] [d:Y] [e:cmbxti10]"
+% engines: rust main 3ef55023f86 0 E: "[a:Y] [b:”80 Y] [c:Y] [d:Y] [e:OT1/cmr/bx/it/10]"; Perl 1 E (`\iffontchar` undefined): "[a:N] [b:N] [c:N] [d:N] [e:cmr10]"
+% expect:  0 errors; the paragraph "[a:N] [b:N] [c:N] [d:Y] [e:cmbxti10]"
+% moves:   post-merge (SYNC row R QA17: a FontToken + `\nullfont` empty (EASY) together with the file from `\get@external@font` in
+%   `pickup_font` (MED) — the first alone makes T1 wrong; the font-package family stays CM, sect13.rs:907)
+\documentclass{article}
+\begin{document}
+[a:\iffontchar\font"A0 Y\else N\fi]
+[b:$\hbox{\iffontchar\textfont1 "80 Y\else N\fi}$]
+[c:\iffontchar\nullfont`a Y\else N\fi]
+[d:{\fontencoding{T1}\selectfont\iffontchar\font"A0 Y\else N\fi}]
+[e:{\bfseries\itshape\fontname\font}]
+\end{document}
