@@ -1,0 +1,23 @@
+% mechanism: latex.ltx carries textcomp's definitions but no `\ver@textcomp.sty`, so the document's first load reads
+%   textcomp.sty and runs its file and package hooks (latex.ltx:19668-19673); our format's preload (sect13.rs) is unmarked
+% witness: TL manual biblatex-sbl (biblatex-sbl.tex:2 `\AfterPackage{textcomp}{\RequirePackage{imakeidx}}`, `\printindex`)
+% oracle:  pdflatex 0 `!`; "after: OK; hook: HOOK; file: FB; loaded: no/yes; ½"
+% engines: rust MAIN882 2 errors (undefined \afterok, \fileb), "loaded: yes/yes"; RHFATbase "after: OK"
+% expect:  0 errors, 0 warnings; <p>after: OK; hook: HOOK; file: FB; loaded: no/yes; ½</p>
+% status:  GREEN (REGCDE: sect13.rs `unmark_loaded("textcomp.sty")` after the format's load)
+\RequirePackage{scrlfile}
+\AfterPackage{textcomp}{\def\afterok{OK}}
+\AddToHook{package/textcomp/after}{\def\hookok{HOOK}}
+\AddToHook{file/textcomp.sty/before}{\edef\fileb{\ifx\fileb\undefined FB\else\fileb FB\fi}}
+\makeatletter
+\edef\early{\@ifpackageloaded{textcomp}{yes}{no}}
+\makeatother
+\documentclass{article}
+\usepackage{textcomp}
+\usepackage{textcomp}
+\makeatletter
+\edef\late{\@ifpackageloaded{textcomp}{yes}{no}}
+\makeatother
+\begin{document}
+after: \afterok; hook: \hookok; file: \fileb; loaded: \early/\late; \textonehalf
+\end{document}

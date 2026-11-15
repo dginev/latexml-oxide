@@ -18695,7 +18695,10 @@ hhline, subcaption, subfig, natbib's `cite`, quantumarticle, sn-jnl, changepage,
 `binding_loaded`, `raw_loaded`: the autoload triggers, `\documentstyle`'s fallback, the class dispatch, amsmath's
 beyond-original load). Two writes follow: a binding that stands in for a file its original loads marks it as that load
 does (`state::mark_loaded`: thmtools's thm-patch.sty, aipproc's aipxfm.sty); revtex4_support's preload of hyperref,
-which the real class never loads, undefines `\ver@hyperref.sty` with its record (`state::unmark_loaded`); a request the records skip restores a
+which the real class never loads, undefines `\ver@hyperref.sty` with its record (`state::unmark_loaded`), and so does the
+format's preload of textcomp (sect13.rs; Perl latex_constructs.pool.ltxml:5893 leaves it loaded), whose definitions
+latex.ltx carries without `\ver@textcomp.sty`: the document's first load runs its file and package hooks (TL manual
+biblatex-sbl, `\AfterPackage{textcomp}`; guard `perfect_kernel_batchqa47a` row `afterpackage_of_the_formats_textcomp`); a request the records skip restores a
 mark the document took back (`\let\ver@X\relax` then `\usepackage{X}` leaves X loaded, as LaTeX's reload does; the loader's
 records-only skip is the ruling of 2026-10-14) with the file's declared version, as the binding load does. A loader marks
 the file unless it is loaded by this rule: a `\relax` left by a query before the load (`\expandafter\ifx\csname ver@X.sty\endcsname\relax`,

@@ -556,6 +556,22 @@ const ROWS: &[Row] = &[
       "<p xml:id=\"p1.1\">[PB][pb][FB][fb](in)[fa][FA][eop][pa][PA]</p>",
     )],
   },
+  // REGCDE: the document's first textcomp load runs its hooks though the format carries textcomp (biblatex-sbl; red on
+  // MAIN882: 2 errors, undefined `\afterok` and `\fileb`, "loaded: yes/yes").
+  Row {
+    name:     "afterpackage_of_the_formats_textcomp",
+    tex:      include_str!(
+      "../../../tools/perfect_kernel/repros/loader/afterpackage_of_the_formats_textcomp.tex"
+    ),
+    counts:   (0, 0),
+    messages: &[],
+    absent:   &[],
+    elements: &[(
+      "p",
+      "xml:id=\"p1.1\"",
+      "<p xml:id=\"p1.1\">after: OK; hook: HOOK; file: FB; loaded: no/yes; ½</p>",
+    )],
+  },
   // QAB2: the kernel abstract, a binding macro, runs `env/abstract/begin|end` in its group (red: "Abstract text.").
   Row {
     name:     "abstract_env_hooks_run",

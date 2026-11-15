@@ -1473,6 +1473,9 @@ pub(crate) fn load() -> Result<()> {
   // Perl latex_constructs.pool.ltxml L5937-5938:
   // LaTeX now includes textcomp by default.
   RequirePackage!("textcomp");
+  // latex.ltx carries textcomp's definitions but not `\ver@textcomp.sty`: the document's first load reads textcomp.sty
+  // and runs its file and package hooks (latex.ltx:19668-19673; biblatex-sbl.tex:2's `\AfterPackage{textcomp}`).
+  unmark_loaded("textcomp.sty");
 
   //======================================================================
   // Perl latex_constructs.pool.ltxml L5941-5993: Case-changing
