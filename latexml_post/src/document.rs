@@ -352,16 +352,20 @@ fn ro_is_ltx(node: RoNode) -> bool {
 /// contract an XPath union has.
 ///
 /// The arms are tested on read-only nodes; `Node` handles are then made only for
-/// the matches and their ancestors (wrapping every node was 2/3 of a query,
+/// the children of the matches' ancestors — the matches and every sibling and
+/// text node beside them on the route (wrapping every node was 2/3 of a query,
 /// 2308.04512). Both passes read the live tree, so nothing outlives the query.
-fn collect_walk_matches(doc: &Document, arms: &[WalkArm], out: &mut Vec<Node>) {
+///
+/// Returns true when that route missed a match and pass 1's full route was
+/// retraced (only expected for an entity's content).
+fn collect_walk_matches(doc: &Document, arms: &[WalkArm], out: &mut Vec<Node>) -> bool {
   let (Some(ro_root), Some(root)) = (doc.get_root_readonly(), doc.get_root_element()) else {
-    return;
+    return false;
   };
   let mut matches = Vec::new();
   collect_ro_matches(ro_root, arms, &mut matches);
   if matches.is_empty() {
-    return;
+    return false;
   }
   // Every proper ancestor of a match, up to the root: the subtrees to enter.
   let mut enter = FxHashSet::default();
@@ -385,7 +389,11 @@ fn collect_walk_matches(doc: &Document, arms: &[WalkArm], out: &mut Vec<Node>) {
     out.truncate(first);
     next = first;
     wrap_matches(&root, &matches, None, &mut next, out);
+    // Pass 2 now walks pass 1's exact route, so it meets every match.
+    debug_assert_eq!(next, matches.len());
+    return true;
   }
+  false
 }
 
 /// Pass 1 of [`collect_walk_matches`]: the matching elements, in document order.
@@ -1026,7 +1034,7 @@ impl PostDocument {
       && self.document.get_root_readonly().is_some()
     {
       let mut out = Vec::new();
-      collect_walk_matches(&self.document, &arms, &mut out);
+      let _retraced = collect_walk_matches(&self.document, &arms, &mut out);
       return out;
     }
 
@@ -2644,7 +2652,11 @@ mod tests {
       let arms = parse_walk_union(xpath)
         .unwrap_or_else(|| panic!("`{xpath}` must be inside the walk grammar"));
       let mut walked = Vec::new();
-      collect_walk_matches(&doc.document, &arms, &mut walked);
+      let retraced = collect_walk_matches(&doc.document, &arms, &mut walked);
+      assert!(
+        !retraced,
+        "`{xpath}`: the wrapping route must meet every match without an entity"
+      );
       // The XPath side deliberately goes through the same public entry point,
       // which routes recognised shapes to the walk — so compare against
       // libxml2 directly instead.
@@ -2667,7 +2679,9 @@ mod tests {
   }
 
   /// The walk keeps nothing between queries: a match inserted or removed since
-  /// the last query is seen by the next one, in document order.
+  /// the last query is seen by the next one, in document order. The per-query
+  /// walk passes this by construction; it guards against a future cross-query
+  /// cache or index that would answer from a stale tree.
   #[test]
   fn walk_answers_from_the_live_tree_after_mutation() {
     let doc = make_test_doc(
@@ -2689,6 +2703,55 @@ mod tests {
     let mut first = doc.findnodes("//ltx:ref").remove(0);
     first.unlink_node();
     assert_eq!(ids(&doc), [Some("b".to_string())]);
+  }
+
+  /// The one-pass walk before the split, for `//*[@idref]`: a plain
+  /// first-child/next-sibling walk over `Node`s, the reference for entity content.
+  fn reference_idref_walk(node: &Node, out: &mut Vec<Node>) {
+    if node.get_type() == Some(NodeType::ElementNode) && node.has_attribute("idref") {
+      out.push(node.clone());
+    }
+    let mut child = node.get_first_child();
+    while let Some(c) = child {
+      reference_idref_walk(&c, out);
+      child = c.get_next_sibling();
+    }
+  }
+
+  /// Post parses without entity substitution, so a match inside an internal
+  /// entity's content has no parent route from the root and pass 2 retraces
+  /// pass 1. The walk enters the content once per reference (unlike XPath,
+  /// which does not descend into entity references) — pre-existing behaviour
+  /// that must not change; the matches around it must still all be met.
+  #[test]
+  fn walk_retraces_into_entity_content_like_the_reference_walk() {
+    let doc = make_test_doc(
+      "<?xml version='1.0'?>\
+       <!DOCTYPE document [<!ENTITY ent '<ref xmlns=\"http://dlmf.nist.gov/LaTeXML\" idref=\"in-ent\"/>'>]>\
+       <document xmlns='http://dlmf.nist.gov/LaTeXML'>\
+         <p><ref idref='before'/></p>\
+         <p>&ent;</p>\
+         <p><ref idref='middle'/>&ent;</p>\
+         <section><ref idref='after'/></section>\
+       </document>",
+    );
+    let arms = parse_walk_union("//*[@idref]").unwrap();
+    let mut walked = Vec::new();
+    assert!(collect_walk_matches(&doc.document, &arms, &mut walked));
+    let mut reference = Vec::new();
+    reference_idref_walk(&doc.get_document_element().unwrap(), &mut reference);
+    let idrefs =
+      |v: &[Node]| -> Vec<String> { v.iter().filter_map(|n| n.get_attribute("idref")).collect() };
+    assert_eq!(idrefs(&walked), idrefs(&reference));
+    assert_eq!(idrefs(&walked), [
+      "before", "in-ent", "middle", "in-ent", "after"
+    ]);
+    let ctx = libxml::xpath::Context::new(&doc.document).expect("ctx");
+    let xpath = ctx
+      .evaluate("//*[@idref]")
+      .expect("xpath")
+      .get_nodes_as_vec();
+    assert_eq!(idrefs(&xpath), ["before", "middle", "after"]);
   }
 
   /// A shape outside the grammar must NOT be approximated — it has to fall

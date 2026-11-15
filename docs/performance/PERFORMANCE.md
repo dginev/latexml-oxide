@@ -352,16 +352,18 @@ code on AMD (skid), so the figures are counts × stepped instructions.
 Defect: every whole-document `//NAME[pred]` query post answers by traversal (`PostDocument::findnodes`, ≈20 per HTML
 document, one or two per processor) wrapped EVERY node it passed as a `Node` (a `NodeMap` probe and an `Rc` per node):
 2/3 of a query (2308.04512: 160 ms of which a read-only walk is 45 ms). Fix (`latexml_post/src/document.rs`
-`collect_walk_matches`): the arms are tested on `RoNode`s, then `Node` handles are made only for the matches and the
-subtrees holding them. Both passes read the live tree, so no state outlives a query and mutation between queries cannot
-make one stale; a match the second pass does not meet on its parent route (an entity's content) is wrapped along the
-first pass's route. Measured by in-process timing of every query: 2308.04512 html 4.36 → 2.13 s, the issue-790 book
-html 11.7 → 5.5 s. `instructions:u` (release, best of 3, interleaved against MAIN884): 2308.04512 html −0.46 %, the
-book html −0.28 % (best of 5; median −0.63 %), 2103.04797 html −0.31 %, amsldoc html −0.71 %; XML controls (2010.05701,
-1106.3601) within their run-to-run spread (±0.1 %, 1106.3601 ±20 %). Peak RSS unchanged (book html 6.88 GB, b1000 html
-1.43 GB). HTML and every auxiliary file byte-identical on the four and on 200 arXiv papers (140 by bibitems, Math count
-and length, 60 controls). Guards: `walk_union_agrees_with_xpath_on_every_supported_shape` (now with nested and
-root matches, and `//*`), `walk_answers_from_the_live_tree_after_mutation`.
+`collect_walk_matches`): the arms are tested on `RoNode`s, then `Node` handles are made only for the children of the
+matches' ancestors (the matches and every sibling and text node beside them on the route). Both passes read the live
+tree, so no state outlives a query and mutation between queries cannot make one stale; a match the second pass does not
+meet on its parent route (an entity's content) is wrapped along the first pass's route; the union guard asserts the
+route itself serves every match. Measured by in-process timing of every query: 2308.04512 html 4.36 → 2.13 s, the
+issue-790 book html 11.7 → 5.5 s. `instructions:u` (release, best of 3, interleaved against MAIN884): 2308.04512 html
+−0.46 %, the book html −0.28 % (best of 5; median −0.63 %), 2103.04797 html −0.31 %, amsldoc html −0.71 %; XML controls
+(2010.05701, 1106.3601) within their run-to-run spread (±0.1 %, 1106.3601 ±20 %). Peak RSS unchanged (book html 6.88 GB,
+b1000 html 1.43 GB). HTML and every auxiliary file byte-identical on the four and on 200 arXiv papers (140 by bibitems,
+Math count and length, 60 controls). Guards: `walk_union_agrees_with_xpath_on_every_supported_shape` (now with nested
+and root matches, and `//*`), `walk_retraces_into_entity_content_like_the_reference_walk`,
+`walk_answers_from_the_live_tree_after_mutation` (against a future cross-query cache).
 A cross-query element index (by name, built once) was not taken: processors insert and remove elements through `Node`
 directly, between and inside their queries, and nothing tells the document. Left: the queries outside the walk's
 grammar go to libxml2 XPath (`descendant::*[@decl_id or @meaning]`, `//ltx:text[contains(…)]`,
