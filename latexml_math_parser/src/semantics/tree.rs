@@ -2360,7 +2360,7 @@ fn add_child_guard_xmarg(
   receiver: &mut Node,
   incoming: &mut Node,
 ) -> Result<(), Box<dyn Error + Send + Sync>> {
-  if name_is(&incoming, "XMArg") {
+  if name_is(incoming, "XMArg") {
     let mut to_reparent = element_nodes(incoming);
     for incoming_child in to_reparent.iter_mut() {
       incoming_child.unlink();

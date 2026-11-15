@@ -2354,7 +2354,7 @@ mod tests {
     let first_nav_refs = doc.findnodes("//ltx:navigation").first().map(|n| {
       n.get_child_nodes()
         .iter()
-        .filter(|c| name_is(&c, "ref"))
+        .filter(|c| name_is(c, "ref"))
         .count()
     });
     assert_eq!(

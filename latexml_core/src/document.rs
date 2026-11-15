@@ -584,7 +584,7 @@ enum Placement_ {
 fn subtree_holds_prose(node: &Node) -> bool {
   fn is_ltx(node: &Node, local: &str) -> bool {
     node.get_type() == Some(NodeType::ElementNode)
-      && name_is(&node, local)
+      && name_is(node, local)
       && node
         .get_namespace()
         .is_some_and(|ns| ns.get_href() == model::LTX_NAMESPACE)
@@ -5171,9 +5171,7 @@ impl Document {
         let elem_kids: Vec<Node> = parent
           .get_child_nodes()
           .into_iter()
-          .filter(|c| {
-            c.get_type() == Some(NodeType::ElementNode) && !name_is(&c, SPILL_PLACEHOLDER)
-          })
+          .filter(|c| c.get_type() == Some(NodeType::ElementNode) && !name_is(c, SPILL_PLACEHOLDER))
           .collect();
         elem_kids.len() == 1 && get_node_qname(&elem_kids[0]) == pin!("ltx:text")
       };
@@ -7586,7 +7584,7 @@ impl Document {
   /// descends into an inline `\verb` at a paragraph edge and trims its
   /// leading space (tokenize/verb.t), and we keep that parity.
   fn is_typewriter_wrapper(&self, node: &Node) -> bool {
-    if name_is(&node, "verbatim") {
+    if name_is(node, "verbatim") {
       return false;
     }
     if node
@@ -7659,7 +7657,7 @@ impl Document {
     let mut candidate = node.get_last_child();
     while let Some(ref child) = candidate {
       if (child.get_type() == Some(NodeType::ElementNode)
-        && name_is(&child, "text")
+        && name_is(child, "text")
         && child.get_first_child().is_none()
         && child.has_attribute("_noautoclose"))
         // …and an empty construction-time marker (`trim_node_left_whitespace`)

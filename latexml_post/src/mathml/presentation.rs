@@ -1844,7 +1844,7 @@ fn pmml_infix(doc: &PostDocument, op: &Node, args: &[Node]) -> NodeData {
     // `−`.lspace, collapsing the gap (issue #535). A non-token (embellished)
     // operator renders normally, exactly as Perl's ternary does.
     [arg] => {
-      let op_prefix = if name_is(&op, "XMTok") {
+      let op_prefix = if name_is(op, "XMTok") {
         pmml_token_inner(doc, op, Some("OPERATOR"))
       } else {
         pmml(doc, op)
@@ -1871,7 +1871,7 @@ fn pmml_infix(doc: &PostDocument, op: &Node, args: &[Node]) -> NodeData {
 /// the right operand for postfix-relop rules. Used by `pmml_infix`
 /// to suppress materialization in Presentation MathML. Task #264.
 fn is_absent_operand(node: &Node) -> bool {
-  if !name_is(&node, "XMTok") {
+  if !name_is(node, "XMTok") {
     return false;
   }
   node.with_attribute(c"meaning", |v| v == "absent") == Some(true)

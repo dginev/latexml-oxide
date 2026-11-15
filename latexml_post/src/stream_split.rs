@@ -975,7 +975,7 @@ impl Splitter {
     let has_direct_date = page
       .get_child_elements()
       .iter()
-      .any(|c| name_is(&c, "date") && is_ltx(c));
+      .any(|c| name_is(c, "date") && is_ltx(c));
     let mut trailer = String::new();
     for r in &self.resources_xml {
       trailer.push_str(r);
@@ -1424,7 +1424,7 @@ fn has_lists_toc_descendant(node: &Node) -> bool {
 
 fn has_lists_toc_node(node: &Node) -> bool {
   node.get_type() == Some(NodeType::ElementNode)
-    && name_is(&node, "TOC")
+    && name_is(node, "TOC")
     && is_ltx(node)
     && node.with_attribute(c"lists", |v| v == "toc") == Some(true)
 }

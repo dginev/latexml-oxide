@@ -679,7 +679,7 @@ mod tests {
     let hrefs: Vec<String> = crate::document::element_children(
       &crate::document::element_children(&root)
         .into_iter()
-        .find(|n| name_is(&n, "manifest"))
+        .find(|n| name_is(n, "manifest"))
         .expect("a <manifest>"),
     )
     .iter()
@@ -736,7 +736,7 @@ mod tests {
     );
 
     // The identifier the package points at must actually carry that id.
-    let meta = kids.iter().find(|n| name_is(&n, "metadata")).unwrap();
+    let meta = kids.iter().find(|n| name_is(n, "metadata")).unwrap();
     let ident = crate::document::element_children(meta)
       .into_iter()
       .find(|n| n.with_attribute(c"id", |v| v == "pub-id") == Some(true))
@@ -745,14 +745,14 @@ mod tests {
 
     // `properties` is optional and must be emitted only when present.
     let item =
-      crate::document::element_children(kids.iter().find(|n| name_is(&n, "manifest")).unwrap())
+      crate::document::element_children(kids.iter().find(|n| name_is(n, "manifest")).unwrap())
         .into_iter()
         .next()
         .expect("an <item>");
     assert_eq!(item.get_attribute("properties").as_deref(), Some("nav"));
 
     let itemref =
-      crate::document::element_children(kids.iter().find(|n| name_is(&n, "spine")).unwrap())
+      crate::document::element_children(kids.iter().find(|n| name_is(n, "spine")).unwrap())
         .into_iter()
         .next()
         .expect("an <itemref>");

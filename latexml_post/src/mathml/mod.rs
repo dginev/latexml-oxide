@@ -787,7 +787,7 @@ pub fn math_context_font(xmath: &Node) -> Option<String> {
     if let Some(val) = n.get_attribute("font") {
       return Some(val);
     }
-    if name_is(&n, "Math") {
+    if name_is(n, "Math") {
       return None;
     }
     current = n.get_parent();

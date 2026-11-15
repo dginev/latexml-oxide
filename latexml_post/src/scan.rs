@@ -1100,7 +1100,7 @@ fn group_sibling_refnum(node: &Node) -> Option<String> {
     return None;
   }
   let is_equation =
-    |n: &Node| n.get_type() == Some(NodeType::ElementNode) && name_is(&n, "equation");
+    |n: &Node| n.get_type() == Some(NodeType::ElementNode) && name_is(n, "equation");
   let mut fwd = node.get_next_sibling();
   while let Some(sib) = fwd {
     if is_equation(&sib) {
@@ -1142,7 +1142,7 @@ fn child_tag_nodes(node: &Node) -> Vec<Node> {
 
 /// Is `node` an `ltx:indexmark` — what Perl `Scan::cleanNode` removes?
 fn is_indexmark(node: &Node) -> bool {
-  node.get_type() == Some(NodeType::ElementNode) && name_is(&node, "indexmark") && is_ltx(node)
+  node.get_type() == Some(NodeType::ElementNode) && name_is(node, "indexmark") && is_ltx(node)
 }
 
 /// Every `ltx:indexmark` below `node`, outermost first; a mark nested in a

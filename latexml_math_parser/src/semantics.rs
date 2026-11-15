@@ -1700,7 +1700,7 @@ fn holds_text(xm: &XM, ctxt: &ActionContext) -> bool {
   }
   match xm {
     XM::Lexeme(lex, _) => {
-      lookup_lex_node(lex, ctxt.nodes).is_ok_and(|node| name_is(&node, "XMText"))
+      lookup_lex_node(lex, ctxt.nodes).is_ok_and(|node| name_is(node, "XMText"))
     },
     XM::Apply(op, args, ..) => {
       holds_text(&op.0, ctxt) || args.0.iter().flatten().any(|arg| holds_text(arg, ctxt))
@@ -4173,7 +4173,7 @@ fn is_ascii_letter(text: &str) -> bool {
 /// Does a built atom hold a trig function anywhere?
 fn holds_trig_function(node: &libxml::tree::Node) -> bool {
   node.get_child_elements().iter().any(|child| {
-    (name_is(&child, "XMTok")
+    (name_is(child, "XMTok")
       && child.with_attribute(c"role", |v| v == "TRIGFUNCTION") == Some(true))
       || holds_trig_function(child)
   })
@@ -5382,7 +5382,7 @@ fn differential_d(diffd: Option<XM>, ctxt: &ActionContext) -> Result<Option<XM>,
     // tests/parse/integrals_and_differentials.tex#gathered_row_keeps_its_differential (arXiv
     // 2605.01547, 2605.23309 split integrands).
     Some(XM::Lexeme(lex, meta)) => match lookup_lex_node(&lex, ctxt.nodes) {
-      Ok(node) if name_is(&node, "XMRef") => Some(XM::Ref(XProps {
+      Ok(node) if name_is(node, "XMRef") => Some(XM::Ref(XProps {
         id: node.get_attribute("idref").map(Cow::Owned),
         xmkey: node.get_attribute("_xmkey").map(Cow::Owned),
         role: Some(Cow::Borrowed("DIFFOP")),
@@ -8694,7 +8694,7 @@ pub fn apply_invisible_times(
         let idx = if lex_idx > 0 { lex_idx - 1 } else { 0 };
         if idx < ctxt.nodes.len() {
           let node = &ctxt.nodes[idx];
-          if name_is(&node, "XMApp") {
+          if name_is(node, "XMApp") {
             for child in node.get_child_elements() {
               if child.with_attribute(c"role", |v| v == "FRACOP") == Some(true) {
                 r_frac = true;
@@ -9943,7 +9943,7 @@ fn node_letters(
 /// A token node's letter: one alphabetic character of an unknown or identifier (`\mu`,
 /// `\boldsymbol\gamma`, `\mathcal D`) — not a number, an operator, or a name (`max`).
 fn node_letter(node: &XMLNode, document: &Document) -> Option<Variable> {
-  if !name_is(&node, "XMTok")
+  if !name_is(node, "XMTok")
     || !matches!(
       node.get_attribute("role").as_deref(),
       None | Some("UNKNOWN" | "ID")
@@ -10566,7 +10566,7 @@ pub fn vertbar_modifier(
   // does (`diffop_apply`).
   let source = match vertbar {
     Some(XM::Lexeme(lex, _)) => match lookup_lex_node(&lex, ctxt.nodes) {
-      Ok(node) if name_is(&node, "XMRef") => {
+      Ok(node) if name_is(node, "XMRef") => {
         let bar = XM::Ref(XProps {
           id: node.get_attribute("idref").map(Cow::Owned),
           xmkey: node.get_attribute("_xmkey").map(Cow::Owned),

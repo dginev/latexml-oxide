@@ -140,7 +140,7 @@ pub fn parse_fragment(markup: &str) -> std::result::Result<ParsedFragment, Strin
 pub fn is_parse_artifact(node: &Node) -> bool {
   match node.get_type() {
     Some(NodeType::DocumentNode) => true,
-    Some(NodeType::ElementNode) => name_is(&node, FRAGMENT_WRAPPER),
+    Some(NodeType::ElementNode) => name_is(node, FRAGMENT_WRAPPER),
     _ => false,
   }
 }
@@ -784,7 +784,7 @@ mod parse_fragment_tests {
   fn the_wrapper_never_enters_the_result() {
     let f = parse_fragment("<b>a</b><i>b</i>").unwrap();
     assert!(
-      !f.nodes().iter().any(|n| name_is(&n, FRAGMENT_WRAPPER)),
+      !f.nodes().iter().any(|n| name_is(n, FRAGMENT_WRAPPER)),
       "the throwaway wrapper must not be handed back"
     );
   }

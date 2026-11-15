@@ -169,7 +169,7 @@ fn integral_operand_reach(
       },
       "RELOP" | "ARROW" => ended = true,
       "METARELOP" if !is_a_colon(node) => ended = true,
-      "PUNCT" if name_is(&node, "XMHint") || punct_followed_by_wide_space(node) => ended = true,
+      "PUNCT" if name_is(node, "XMHint") || punct_followed_by_wide_space(node) => ended = true,
       "PUNCT" | "VERTBAR" => weak = true,
       "ADDOP" => signed = true,
       "SUMOP" | "BIGOP" | "LIMITOP" if !signed && binds_the_letter_d(nodes, at) => return None,
@@ -185,7 +185,7 @@ fn integral_operand_reach(
 /// `\int\sqrt{dP\,dQ}` (2605.09119), `\int\frac{dx}{2+x}` (ruling 2026-10-01c)? A sub-parse runs before the formula
 /// around it, which is read raw; a script's content stays out (an exponent's `d`, `\int e^{-dx}\,dx`).
 pub(crate) fn in_an_enclosing_integrand(container: &Node) -> bool {
-  if !name_is(&container, "XMArg") {
+  if !name_is(container, "XMArg") {
     return false;
   }
   let Some(app) = container.get_parent() else {
@@ -204,7 +204,7 @@ pub(crate) fn in_an_enclosing_integrand(container: &Node) -> bool {
   let nodes: Vec<Node> = outer
     .get_child_elements()
     .into_iter()
-    .filter(|node| !name_is(&node, "XMHint"))
+    .filter(|node| !name_is(node, "XMHint"))
     .collect();
   let Some(at) = nodes.iter().position(|node| *node == app) else {
     return false;
@@ -322,7 +322,7 @@ impl<'a> DifferentialEvidence<'a> {
         None => {
           a_variable |= !in_a_script(nodes, levels, at)
             && !nodes.get(at + 1).is_some_and(|next| {
-              name_is(&next, "XMApp")
+              name_is(next, "XMApp")
                 || matches!(
                   levels.roles[at + 1].as_str(),
                   "OPEN" | "OPERATOR" | "OPFUNCTION" | "TRIGFUNCTION" | "FUNCTION" | "FRACOP"
@@ -357,7 +357,7 @@ impl<'a> DifferentialEvidence<'a> {
       } else {
         lone
           && !nodes.get(k + 1).is_some_and(|next| {
-            name_is(&next, "XMApp")
+            name_is(next, "XMApp")
               || matches!(
                 levels.roles[k + 1].as_str(),
                 "OPEN" | "OPERATOR" | "OPFUNCTION" | "TRIGFUNCTION" | "FUNCTION" | "FRACOP"
@@ -548,7 +548,7 @@ enum ArgContext {
 impl ArgContext {
   /// The context of `container`, an `XMArg` whose parent `XMApp` is a root, a script or a fraction.
   fn of(container: &Node) -> ArgContext {
-    if !name_is(&container, "XMArg") {
+    if !name_is(container, "XMArg") {
       return ArgContext::Other;
     }
     let Some(app) = container.get_parent() else {
@@ -604,13 +604,13 @@ impl ArgContext {
         |arg: &Node| first_visible_token(arg).is_some_and(|first| token_text(&first) == "d");
       // (a denominator is lexed before it is parsed: its `d` takes a variable, `\frac{dn}{d+2}` is no quotient)
       let opens_with_a_differential = |arg: &Node| {
-        if !name_is(&arg, "XMArg") {
+        if !name_is(arg, "XMArg") {
           return opens_with_d(arg);
         }
         let nodes: Vec<Node> = arg
           .get_child_elements()
           .into_iter()
-          .filter(|node| !name_is(&node, "XMHint"))
+          .filter(|node| !name_is(node, "XMHint"))
           .collect();
         nodes.first().is_some_and(|first| token_text(first) == "d")
           && raw_differential_variable(&nodes, 0).is_some()
@@ -623,16 +623,16 @@ impl ArgContext {
         if let Some(recorded) = app.get_attribute("_lx_leibniz") {
           return recorded == "1";
         }
-        if name_is(&arg, "XMArg") {
+        if name_is(arg, "XMArg") {
           let nodes: Vec<Node> = arg
             .get_child_elements()
             .into_iter()
-            .filter(|node| !name_is(&node, "XMHint"))
+            .filter(|node| !name_is(node, "XMHint"))
             .collect();
           return numerator_of_a_quotient(&nodes);
         }
         // (unwrapped to its one token: a lone `d`)
-        name_is(&arg, "XMTok") && token_text(arg) == "d"
+        name_is(arg, "XMTok") && token_text(arg) == "d"
       };
       let numerator = numerator_is_a_differential(&children[1]);
       let leibniz = numerator && opens_with_a_differential(&children[2]);
@@ -706,7 +706,7 @@ fn numerator_of_a_quotient(nodes: &[Node]) -> bool {
   }
   let first = &nodes[k];
   let role = get_grammatical_role(first);
-  let accent = name_is(&first, "XMApp")
+  let accent = name_is(first, "XMApp")
     && first.get_child_elements().first().is_some_and(|op| {
       matches!(
         op.get_attribute("role").as_deref(),
@@ -721,7 +721,7 @@ fn numerator_of_a_quotient(nodes: &[Node]) -> bool {
   }
   let holds_a_d = nodes[k..].iter().any(|node| {
     let mut tokens = Vec::new();
-    if name_is(&node, "XMTok") {
+    if name_is(node, "XMTok") {
       tokens.push(node.clone());
     } else {
       collect_named(node, "XMTok", &mut tokens);
@@ -746,7 +746,7 @@ fn numerator_of_a_quotient(nodes: &[Node]) -> bool {
 
 /// The first token of `node` in reading order that prints (an application's invisible times skipped).
 fn first_visible_token(node: &Node) -> Option<Node> {
-  if name_is(&node, "XMTok") {
+  if name_is(node, "XMTok") {
     return (token_text(node) != "\u{2062}" && !token_text(node).is_empty()).then(|| node.clone());
   }
   node
@@ -792,14 +792,14 @@ fn scalar_by_shape(nodes: &[Node], at: usize, end: usize, other_candidates: bool
       matches!(
         get_grammatical_role(node).as_str(),
         "NUMBER" | "ADDOP" | "MULOP" | "PUNCT"
-      ) || name_is(&node, "XMApp")
+      ) || name_is(node, "XMApp")
         && node
           .get_child_elements()
           .first()
           .is_some_and(|op| op.with_attribute(c"role", |v| v == "FRACOP") == Some(true))
     })
     && rest.iter().any(|node| {
-      get_grammatical_role(node) == "NUMBER" && token_text(node) != "0" || name_is(&node, "XMApp")
+      get_grammatical_role(node) == "NUMBER" && token_text(node) != "0" || name_is(node, "XMApp")
     })
 }
 
@@ -840,7 +840,7 @@ impl DifferentialMap {
     let nodes: Vec<Node> = container
       .get_child_elements()
       .into_iter()
-      .filter(|node| !name_is(&node, "XMHint"))
+      .filter(|node| !name_is(node, "XMHint"))
       .collect();
     // (a `d` token, or a reference to one, as the lexer realizes it)
     let is_a_d = |node: &Node| {
@@ -885,7 +885,7 @@ impl DifferentialMap {
         });
       let introduces = closed_bar
         || nodes.get(next).is_some_and(|next| {
-          name_is(&next, "XMApp")
+          name_is(next, "XMApp")
             || token_text(next) == "\u{27E8}"
             || matches!(
               get_grammatical_role(next).as_str(),
@@ -969,7 +969,7 @@ fn token_text(node: &Node) -> String {
 /// A letter: an UNKNOWN or ID token of one character (`x`, `\theta`, `\mathbf x`).
 fn is_a_letter(node: &Node) -> bool {
   matches!(get_grammatical_role(node).as_str(), "UNKNOWN" | "ID")
-    && !name_is(&node, "XMApp")
+    && !name_is(node, "XMApp")
     && token_text(node).chars().count() == 1
 }
 
@@ -983,7 +983,7 @@ fn has_trailing_space(node: &Node) -> bool {
 
 /// A script's bracketing node in the lexer's stream (its first occurrence opens it, its second closes it).
 fn is_a_script_marker(node: &Node) -> bool {
-  name_is(&node, "XMApp")
+  name_is(node, "XMApp")
     && matches!(
       node.get_attribute("role").as_deref(),
       Some("POSTSUBSCRIPT" | "POSTSUPERSCRIPT" | "FLOATSUBSCRIPT" | "FLOATSUPERSCRIPT")
@@ -1301,7 +1301,7 @@ fn is_a_wedge(node: &Node) -> bool { token_text(node) == "\u{2227}" }
 fn continues_an_open_integral(mathnode: &Node) -> bool {
   let Some(math) = mathnode
     .get_parent()
-    .filter(|parent| name_is(&parent, "Math"))
+    .filter(|parent| name_is(parent, "Math"))
   else {
     return false;
   };
@@ -1318,7 +1318,7 @@ fn continues_an_open_integral(mathnode: &Node) -> bool {
   }
   let parent = math.get_parent();
   let mut open = 0usize;
-  if let Some(td) = parent.filter(|parent| name_is(&parent, "td")) {
+  if let Some(td) = parent.filter(|parent| name_is(parent, "td")) {
     // a cell: its column pair (an `&`-pair of an alignment, `lhs & rhs`), in its row and the row before
     let Some(row) = td.get_parent() else {
       return false;
@@ -1382,7 +1382,7 @@ fn element_children(node: &Node, name: &str) -> Vec<Node> {
   node
     .get_child_elements()
     .into_iter()
-    .filter(|child| name_is(&child, name))
+    .filter(|child| name_is(child, name))
     .collect()
 }
 
@@ -1429,7 +1429,7 @@ fn pair_formulas(pair: &[Node]) -> Vec<Node> {
 /// The cell row before `row`: its previous `tr`, or the last cell row of the previous equation's MathBranch (a `tr`, or the
 /// branch itself).
 fn previous_cell_row(row: &Node) -> Option<Node> {
-  if name_is(&row, "tr")
+  if name_is(row, "tr")
     && let Some(previous) = previous_element(row, "tr")
   {
     return Some(previous);
@@ -1668,14 +1668,14 @@ pub(crate) fn operand_levels(nodes: &[Node], stream: bool) -> OperandLevels {
     } else if role == "OPEN"
       || side().as_deref() == Some("left")
       || (stream
-        && name_is(&node, "XMApp")
+        && name_is(node, "XMApp")
         && !node.has_attribute("_rewrite")
         && node
           .get_attribute("role")
           .is_some_and(|role| !matches!(role.as_str(), "ARROW" | "METARELOP" | "RELOP")))
     {
       levels.push(open.len());
-      open.push((name_is(&node, "XMApp")).then_some(node));
+      open.push((name_is(node, "XMApp")).then_some(node));
     } else if (role == "CLOSE" || side().as_deref() == Some("right"))
       && open.last().is_some_and(Option::is_none)
     {
@@ -2035,7 +2035,7 @@ pub(crate) fn is_constant_node(node: &Node) -> bool {
       let Some((op, args)) = children.split_first() else {
         return false;
       };
-      if !name_is(&op, "XMTok") || args.is_empty() {
+      if !name_is(op, "XMTok") || args.is_empty() {
         return false;
       }
       let role = op.get_attribute("role");
@@ -2060,8 +2060,8 @@ pub(crate) fn is_constant_node(node: &Node) -> bool {
 fn is_constant_run(nodes: &[Node]) -> bool {
   let mut constants = 0;
   nodes.iter().all(|node| {
-    if name_is(&node, "XMHint")
-      || name_is(&node, "XMTok")
+    if name_is(node, "XMHint")
+      || name_is(node, "XMTok")
         && matches!(
           node.get_attribute("role").as_deref(),
           Some("OPEN" | "CLOSE")
@@ -2078,7 +2078,7 @@ fn is_constant_run(nodes: &[Node]) -> bool {
 /// The imaginary unit: `i`, upright or italic, `\imath`, or a token meaning it — a constant right after another
 /// (`is_constant_run`, `semantics::constant_run`).
 pub(crate) fn is_imaginary_unit_token(node: &Node) -> bool {
-  name_is(&node, "XMTok")
+  name_is(node, "XMTok")
     && (node.with_attribute(c"meaning", |v| v == "imaginary-unit") == Some(true)
       || node.with_attribute(c"name", |v| v == "imath") == Some(true)
       || node.with_attribute(c"role", |v| v == "UNKNOWN") == Some(true)
@@ -2342,7 +2342,7 @@ pub fn create_xmrefs(args: &mut [&mut XM], ctxt: ActionContext) -> Result<Vec<XM
         // idref so a content branch never points at a presentation-side
         // reference. Without this branch the ref-to-a-ref shape reaches
         // the output (Perl's whole golden corpus has zero of them).
-        if name_is(&node, "XMRef") {
+        if name_is(node, "XMRef") {
           // Carry BOTH spellings, as Perl does — `_xmkey` is the deferred
           // form used before ids exist, `idref` the resolved one, and either
           // may be absent. Taking this branch unconditionally matters: on a

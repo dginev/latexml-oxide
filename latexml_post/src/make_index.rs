@@ -1099,7 +1099,7 @@ fn trimmed_child_nodes(node: &Node) -> Vec<NodeData> {
 /// `descendant-or-self::ltx:ref` before warning about an unresolved
 /// see-also phrase.)
 fn node_has_ref_descendant(node: &Node) -> bool {
-  if node.get_type() == Some(NodeType::ElementNode) && name_is(&node, "ref") {
+  if node.get_type() == Some(NodeType::ElementNode) && name_is(node, "ref") {
     return true;
   }
   node.get_child_nodes().iter().any(node_has_ref_descendant)

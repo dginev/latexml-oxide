@@ -1072,12 +1072,12 @@ impl MathParser {
         }
         let has_direct_open = child_elems.iter().any(|ch| {
           let role = ch.get_attribute("role").unwrap_or_default();
-          (role == "OPEN" || role == "CLOSE") && name_is(&ch, "XMTok")
+          (role == "OPEN" || role == "CLOSE") && name_is(ch, "XMTok")
         });
         // Also check for XMArray with adjacent XMTok (unparsed aligned-in-fenced)
         let has_array_with_tok = !has_direct_open
-          && child_elems.iter().any(|ch| name_is(&ch, "XMArray"))
-          && child_elems.iter().any(|ch| name_is(&ch, "XMTok"));
+          && child_elems.iter().any(|ch| name_is(ch, "XMArray"))
+          && child_elems.iter().any(|ch| name_is(ch, "XMTok"));
         if has_direct_open || has_array_with_tok {
           let mut xm = xmath;
           self.parse_kludge(&mut xm, document)?;
@@ -4091,7 +4091,7 @@ fn resolve_xmkeys(
     let keyed = document.findnodes(&format!("descendant::*[@{attr_name}]"), Some(mathnode));
     let mut targets: HashMap<String, &Node> = HashMap::default();
     for node in &keyed {
-      if !name_is(&node, "XMRef")
+      if !name_is(node, "XMRef")
         && let Some(key) = node.get_attribute(attr_name)
       {
         targets.entry(key).or_insert(node);
@@ -4269,7 +4269,7 @@ fn expectation_operators(nodes: &[Node], document: &Document) -> Vec<Node> {
     let realized = |node: &Node| crate::data::resolve_xmref(node).unwrap_or_else(|| node.clone());
     let role = |node: &Node| node.get_attribute("role");
     let is_script = |node: &Node| {
-      name_is(&node, "XMApp")
+      name_is(node, "XMApp")
         && matches!(
           role(node).as_deref(),
           Some("POSTSUBSCRIPT" | "POSTSUPERSCRIPT")
