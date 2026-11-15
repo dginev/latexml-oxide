@@ -692,3 +692,43 @@ fn batchqa47a_command_hook_rows() {
     }
   }
 }
+
+/// REGCDE: under the LuaTeX profile ctex's selectfont chunk (ctex-engine-luatex.def:1220, labelled by the package or
+/// class that reads the .def) reads LuaTeX-ja's font tables at :1226's `\selectfont`; latexml.sty's shim voids it (red
+/// on MAIN882: 1 error each, undefined `\LTJY3/song/m/n/10`; TL manuals inkpaper-en, caspervector-ay, codebox-doc-en).
+#[test]
+fn batchqa47a_ctex_luatex_selectfont_chunk_voided() {
+  const ROWS: &[(&str, &str)] = &[
+    (
+      "ctex_selectfont_hook_voided",
+      include_str!(
+        "../../../tools/perfect_kernel/repros/luatex-profile/ctex_selectfont_hook_voided.tex"
+      ),
+    ),
+    (
+      "ctex_selectfont_hook_voided_package",
+      include_str!(
+        "../../../tools/perfect_kernel/repros/luatex-profile/ctex_selectfont_hook_voided_package.tex"
+      ),
+    ),
+  ];
+  const REQUIRES: &RequirementTable = &[
+    (
+      "ctex_selectfont_hook_voided",
+      Requirements::packages(&["ctexart.cls", "luatexja.sty"]),
+    ),
+    (
+      "ctex_selectfont_hook_voided_package",
+      Requirements::packages(&["ctex.sty", "luatexja.sty"]),
+    ),
+  ];
+  for (name, tex) in ROWS {
+    if !check_table(&current_test_name(), name, Some(REQUIRES)) {
+      continue;
+    }
+    let (log, xml) = convert_with(tex, Some("[rawstyles,rawclasses,luatex]latexml.sty"));
+    assert_eq!(error_count(&log), 0, "{name}: errors\n{log}");
+    assert_eq!(warning_count(&log), 0, "{name}: warnings\n{log}");
+    assert_element(&xml, "p", &[], "<p>中文 text.</p>");
+  }
+}

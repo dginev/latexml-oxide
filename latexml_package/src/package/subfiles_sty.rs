@@ -1,3 +1,5 @@
+use latexml_core::binding::preamble_commands::{close_preamble_commands, reopen_preamble_commands};
+
 use crate::prelude::*;
 
 LoadDefinitions!({
@@ -18,6 +20,8 @@ LoadDefinitions!({
       if !lookup_bool("inPreamble") {
         assign_value("inPreamble", true, None);
         assign_value("lx@subpreamble@begindocument", Stored::Bool(true), None);
+        // (latex.ltx's preamble commands with it, `\@notprerr` again at its `\begin{document}`)
+        reopen_preamble_commands();
       }
     }
   );
@@ -36,6 +40,7 @@ LoadDefinitions!({
     );
     assign_value("inPreamble", false, None);
     assign_value("lx@subpreamble@begindocument", Stored::Bool(false), None);
+    close_preamble_commands();
     begin_mode("internal_vertical")?;
   });
 

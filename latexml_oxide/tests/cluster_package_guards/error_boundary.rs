@@ -80,6 +80,8 @@ const APACITE_FULL: &str = r#"<p xml:id="p1.1">A <cite class="ltx_citemacro_cite
 
 const APACITE_NATBIBAPA: &str = r#"<p xml:id="p1.1">A <ERROR class="undefined" xml:id="p1.1.1">\fullcite</ERROR>a. C <ERROR class="undefined" xml:id="p1.1.2">\fullciteA</ERROR>a. F <ERROR class="undefined" xml:id="p1.1.3">\citeauthorNP</ERROR>a.</p>"#;
 
+const QMARK: &str = "Error:undefined:\\qmark The token T_CS[\\qmark] is not defined.";
+
 const NOTPRERR: &str = "Error:latex:\\GenericError LaTeX Error: Can be used only in preamble         See the LaTeX \
                         manual or LaTeX Companion for explanation.         Your command was ignored.";
 
@@ -772,7 +774,8 @@ const BOUNDARY: &[Row] = &[
     ],
     &[("p", "p1.1", APACITE_NATBIBAPA)],
   ),
-  // --- latex.ltx's `\@preamblecmds` (QA90, OD #226): pdflatex's Error in the body, the command still done ---
+  // --- latex.ltx's `\@preamblecmds` (QA90, OD #226): in the body each listed command is `\@notprerr`, Perl's loaders
+  // Error and then load (DG ruling (b), 2026-11-15) ---
   (
     "preamble-only commands in the body (repro loader/preamble_only_commands_in_the_body)",
     "pdflatex 7 `!` (4 Can be used only in preamble, 3 Undefined control sequence); Perl 2 errors \
@@ -781,9 +784,99 @@ const BOUNDARY: &[Row] = &[
       "../../../tools/perfect_kernel/repros/loader/preamble_only_commands_in_the_body.tex"
     ),
     &[],
-    (4, 0),
-    &[NOTPRERR, NOTPRERR, NOTPRERR, NOTPRERR],
-    &[("p", "p1.1", "<p xml:id=\"p1.1\">Before.\n\nAfter Q .</p>")],
+    (5, 0),
+    &[NOTPRERR, NOTPRERR, NOTPRERR, NOTPRERR, QMARK],
+    &[(
+      "p",
+      "p1.1",
+      "<p xml:id=\"p1.1\">Before.\n<ERROR class=\"undefined\" xml:id=\"p1.1.1\">\\qmark</ERROR>OT1Q\nAfter <ERROR \
+       class=\"undefined\" xml:id=\"p1.1.2\">\\qmark</ERROR> .</p>",
+    )],
+  ),
+  (
+    "a preamble-only command is \\@notprerr (repro loader/preamble_only_command_is_notprerr; TL manual ltnews)",
+    "pdflatex 0 `!`, \"preamble-only: yes yes\"; Perl 0 errors, \"no no\"",
+    include_str!(
+      "../../../tools/perfect_kernel/repros/loader/preamble_only_command_is_notprerr.tex"
+    ),
+    &[],
+    (0, 0),
+    &[],
+    &[("p", "p1.1", "<p xml:id=\"p1.1\">preamble-only: yes yes</p>")],
+  ),
+  (
+    "a document's \\@onlypreamble macro (repro loader/document_onlypreamble_macro_in_the_body)",
+    "pdflatex 1 `!` (Can be used only in preamble), \"Text .\"; Perl 0 errors, \"Text M.\"",
+    include_str!(
+      "../../../tools/perfect_kernel/repros/loader/document_onlypreamble_macro_in_the_body.tex"
+    ),
+    &[],
+    (1, 0),
+    &[NOTPRERR],
+    &[("p", "p1.1", "<p xml:id=\"p1.1\">Text .</p>")],
+  ),
+  (
+    "a body \\includeonly (repro loader/includeonly_in_the_body)",
+    "pdflatex 1 `!` (Can be used only in preamble), \"Main. ca Chapter A text. Chapter B text.\"",
+    include_str!(
+      "../../../tools/perfect_kernel/repros/loader/includeonly_in_the_body/includeonly_in_the_body.tex"
+    ),
+    &[
+      (
+        "ca.tex",
+        include_str!("../../../tools/perfect_kernel/repros/loader/includeonly_in_the_body/ca.tex"),
+      ),
+      (
+        "cb.tex",
+        include_str!("../../../tools/perfect_kernel/repros/loader/includeonly_in_the_body/cb.tex"),
+      ),
+    ],
+    (1, 0),
+    &[NOTPRERR],
+    &[(
+      "p",
+      "p1.1",
+      "<p xml:id=\"p1.1\">Main.\nca\nChapter A text.\n\nChapter B text.</p>",
+    )],
+  ),
+  (
+    "a package read in the body (repro loader/body_package_reads_preamble_commands)",
+    "pdflatex 2 `!` (Can be used only in preamble: \\usepackage; Undefined control sequence), \"rawopt Opt: . After: \
+     yes yes.\"; Perl 1 error (unexpected:\\usepackage)",
+    include_str!(
+      "../../../tools/perfect_kernel/repros/loader/body_package_reads_preamble_commands/body_package_reads_preamble_commands.tex"
+    ),
+    &[(
+      "rawopt.sty",
+      include_str!(
+        "../../../tools/perfect_kernel/repros/loader/body_package_reads_preamble_commands/rawopt.sty"
+      ),
+    )],
+    (1, 0),
+    &[NOTPRERR],
+    &[(
+      "p",
+      "p1.1",
+      "<p xml:id=\"p1.1\">Opt: x-end. After: yes yes.</p>",
+    )],
+  ),
+  (
+    "a standalone sub-file's preamble (repro loader/standalone_preamble)",
+    "pdflatex 0 `!` (standalone.sty skips the preamble), \"Main. Sub text. After yes yes.\"; Perl 0 errors",
+    include_str!(
+      "../../../tools/perfect_kernel/repros/loader/standalone_preamble/standalone_preamble_reads_preamble_commands.tex"
+    ),
+    &[(
+      "sab.tex",
+      include_str!("../../../tools/perfect_kernel/repros/loader/standalone_preamble/sab.tex"),
+    )],
+    (0, 0),
+    &[],
+    &[(
+      "p",
+      "p1.1",
+      "<p xml:id=\"p1.1\">Main.\n\n\n\nSub text.\n\n\nAfter yes yes.</p>",
+    )],
   ),
   (
     "a second \\begin{document} (repro loader/second_begin_document_is_preamble_only)",
@@ -840,7 +933,8 @@ const BOUNDARY: &[Row] = &[
   ),
   (
     "a subfile's preamble (repro loader/subfile_preamble)",
-    "pdflatex 0 `!` (subfiles.sty skips the preamble); Perl 1 error (unexpected:\\usepackage)",
+    "pdflatex 0 `!` (subfiles.sty skips the preamble), \"Main. Sub text. End: yes.\"; Perl 1 error \
+     (unexpected:\\usepackage)",
     include_str!(
       "../../../tools/perfect_kernel/repros/loader/subfile_preamble/subfile_preamble_runs_as_a_preamble.tex"
     ),
@@ -853,7 +947,7 @@ const BOUNDARY: &[Row] = &[
     &[(
       "para",
       "p1",
-      "<para xml:id=\"p1\"><p xml:id=\"p1.1\">Main.</p><p xml:id=\"p1.2\">Sub text.\nEnd.</p></para>",
+      "<para xml:id=\"p1\"><p xml:id=\"p1.1\">Main.</p><p xml:id=\"p1.2\">Sub text.\nEnd: yes.</p></para>",
     )],
   ),
   (

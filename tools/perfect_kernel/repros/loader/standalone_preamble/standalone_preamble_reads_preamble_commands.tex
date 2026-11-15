@@ -1,0 +1,13 @@
+% witness: synthetic (REGCDE r2: a standalone sub-file's preamble, run under Perl's `inPreamble`)
+% oracle:  pdflatex 0 `!` (standalone.sty skips the preamble), "Main. Sub text. After yes yes."; Perl 0 errors
+% engines: rust MAIN882 0 errors, "After no no."; REGCDE r2 0 errors, "After yes yes."
+% expect:  0 errors, 0 warnings; the sub-file's \DeclareTextCommandDefault and \listfiles run (sab.tex beside it), and
+%          after its `\begin{document}` they are `\@notprerr` again
+% status:  GREEN (standalone_sty.rs reopens latex.ltx's preamble commands for the sub-file's preamble; OD #226)
+\documentclass{article}
+\usepackage{standalone}
+\begin{document}
+Main.
+\input{sab}
+After \makeatletter\ifx\@onlypreamble\@notprerr yes\else no\fi\ \ifx\DeclareTextCommandDefault\@notprerr yes\else no\fi\makeatother.
+\end{document}

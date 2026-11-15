@@ -1,5 +1,6 @@
 pub mod author_files;
 pub mod content;
+pub mod preamble_commands;
 pub mod virtual_files;
 #[macro_use]
 pub mod def;

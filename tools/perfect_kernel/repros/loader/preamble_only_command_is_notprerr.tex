@@ -2,12 +2,9 @@
 %   `\@notprerr`, which raw code tests with `\ifx` (ltnews23/24.tex:42-43; 31 TL files `\ifx\@onlypreamble\@notprerr`)
 % witness: TL manual ltnews (3 errors since #867); synthetic shape
 % oracle:  pdflatex 0 `!`; "preamble-only: yes yes"; Perl 0 errors, "no no"
-% engines: rust MAIN882 1 error (Can be used only in preamble: `\DeclareTextCommandDefault` ran), "no no"
+% engines: rust MAIN882 1 error (Can be used only in preamble: `\DeclareTextCommandDefault` ran), "no no"; REGCDE r2 0
 % expect:  0 errors, 0 warnings; "preamble-only: yes yes"
-% status:  RED (mod.rs `disable_preamble_commands` wraps each kernel command as `\lx@notprerr\lx@onlypreamble@<cs>`;
-%   the faithful `\global\let` needs the body-load and sub-file-preamble exemptions to restore the commands, and drops
-%   Perl's run-after recovery, latex_constructs.pool.ltxml:155 — a ruling for the main session)
-% moves:   post-merge (REGCDE report, open question C)
+% status:  GREEN (REGCDE r2: the walk `\let`s each non-loader to `\@notprerr`, DG ruling (b); OD #226)
 \documentclass{article}
 \begin{document}
 \makeatletter

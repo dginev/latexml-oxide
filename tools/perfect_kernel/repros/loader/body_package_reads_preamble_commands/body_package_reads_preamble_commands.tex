@@ -1,0 +1,15 @@
+% witness: synthetic (REGCDE r2: the reopening the faithful `\let` needs, DG ruling (b))
+% oracle:  pdflatex 2 `!` (Can be used only in preamble: \usepackage; Undefined control sequence: \rawoptval),
+%          "rawopt Opt: . After: yes yes."; Perl 1 error (unexpected:\usepackage)
+% engines: rust MAIN882 1 error, "Opt: x-end. After: no no."; REGCDE r2 1 error, "Opt: x-end. After: yes yes."
+% expect:  1 error (the loader's), 0 warnings; the package's \ProvidesPackage, \DeclareOption, \ExecuteOptions,
+%          \ProcessOptions, \DeclareTextCommandDefault and \AtEndOfPackage run (rawopt.sty beside it); after the load
+%          they are `\@notprerr` again
+% status:  GREEN (core binding::preamble_commands around `input_definitions`; OD #226)
+\documentclass{article}
+\begin{document}
+\usepackage{rawopt}
+\makeatletter
+Opt: \rawoptval. After: \ifx\DeclareOption\@notprerr yes\else no\fi\ \ifx\ProvidesPackage\@notprerr yes\else no\fi.
+\makeatother
+\end{document}

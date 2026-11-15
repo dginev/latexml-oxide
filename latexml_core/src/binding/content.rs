@@ -898,6 +898,11 @@ fn input_definitions_impl(
   // Guard: `perfect_kernel_batch56::preload_that_pulls_in_the_format_pops_with_the_native_stack`.
   let mut pushpop = false;
   let mut file_stack_pushed = false;
+  // A package or class read in the body (Perl's recovery, a binding's load) reads latex.ltx's preamble commands,
+  // `\@pushfilename` first; they are `\@notprerr` again after it (latex.ltx:9521).
+  let _reopened = options
+    .handleoptions
+    .then(crate::binding::preamble_commands::ReopenedForLoad::new);
   if options.handleoptions {
     pushpop = before_input_handle_options(&mut options, &prevname, &prevext, name, &as_type)?;
     def_macro(
