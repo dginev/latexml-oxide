@@ -1,0 +1,24 @@
+% The off-table store rule's duplicate direction: a store the kept `\@maketitle` deposit typesets is not handed on a
+% second time; printed right after the class's label "Laboratory:", in a line of its own, it is a pubnote named so and
+% the deposit reads it as empty, the label taken out with it (DG's D1 of QA61, `decide_moved_offtable_stores`,
+% frontmatter_stores.rs) — the label after a `\par` at the macro's top level, the store class-defaulted.
+% witness: none (synthetic; the duplicate direction of silent-loss inventory #5 (a))
+% oracle:  pdflatex 0 errors: "Laboratory: Widget Lab" after the author.
+% engines: rust 67int35 = 77i: "Laboratory: Widget Lab" once, in the deposit's paragraph; QA61D1: the pubnote.
+% expect:  0 errors, 0 warnings; `<pubnote name="Laboratory: ">Widget Lab</pubnote>` (U+00A0), "Widget Lab" once, no
+%          body line.
+% status:  GREEN (67int35, 77i; QA61D1)
+\begin{filecontents*}[overwrite]{rckept.cls}
+\ProvidesClass{rckept}
+\LoadClass{article}
+\def\@lab{}
+\newcommand{\lab}[1]{\def\@lab{#1}}
+\def\@maketitle{\@title\par\@author\par Laboratory: \@lab\par}
+\end{filecontents*}
+\documentclass{rckept}
+\title{T}\author{Anton}
+\lab{Widget Lab}
+\begin{document}
+\maketitle
+Text.
+\end{document}

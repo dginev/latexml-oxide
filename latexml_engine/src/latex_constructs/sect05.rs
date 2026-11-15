@@ -1353,7 +1353,14 @@ pub(crate) fn load() -> Result<()> {
       if part.is_empty() || body.len() < part.len() {
         continue;
       }
-      let Some(at) = body.windows(part.len()).position(|w| w == part) else { continue };
+      // (its `nth` match, `note_title_page_part`: the line it was read from, of two lines alike; review revQA61D1)
+      let nth = match pair.get(2) {
+        Some(Stored::Int(nth)) => usize::try_from(*nth).unwrap_or(0),
+        _ => 0,
+      };
+      let mut matches = body.windows(part.len()).enumerate().filter(|(_, w)| *w == part).map(|(at, _)| at);
+      let Some(first) = matches.next() else { continue };
+      let at = if nth == 0 { first } else { matches.nth(nth - 1).unwrap_or(first) };
       let (mut head, mut tail) = (&body[..at], &body[at + part.len()..]);
       // a note left empty goes with its text: `\footnote{KW: \@keywords}` with the keywords' label and store taken
       // out (review probe `fn`) is no note in the PDF, whose footnote showed the keywords
@@ -3220,9 +3227,10 @@ fn is_font_state(key: SymStr) -> bool {
 
 /// A binding's record of `part`, the text the parameterless macro `name` prints for a store the frontmatter carries:
 /// it joins `lx_replay_records`, which `\lx@replay@records` takes out of the macro in the title-page deposit and
-/// replay (`\lx@deposit@maketitle`) as it does a refused setter's record (`note_replay_records`). an.cls v1.03's
-/// label before its abstract store (`\noindent{\bfseries\abstractname}\ \@abstract`, an_cls.rs; astro-ph0306340).
-pub fn note_title_page_part(name: &str, part: Tokens) {
+/// replay (`\lx@deposit@maketitle`) as it does a refused setter's record (`note_replay_records`), at its `nth` match
+/// there (0: the first). an.cls v1.03's label before its abstract store (`\noindent{\bfseries\abstractname}\ \@abstract`,
+/// an_cls.rs; astro-ph0306340).
+pub fn note_title_page_part(name: &str, part: Tokens, nth: usize) {
   let mut records = match lookup_value("lx_replay_records") {
     Some(Stored::VecDequeStored(records)) => records,
     _ => VecDeque::new(),
@@ -3230,6 +3238,7 @@ pub fn note_title_page_part(name: &str, part: Tokens) {
   records.push_back(Stored::VecDequeStored(VecDeque::from([
     Stored::String(pin(name)),
     Stored::Tokens(part),
+    Stored::Int(nth as i64),
   ])));
   assign_value(
     "lx_replay_records",

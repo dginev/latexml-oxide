@@ -14034,7 +14034,7 @@ bypassed under raw loading; the class's `\@maketitle` never runs under the locke
 **Sub-rules** (`latexml_engine/src/frontmatter_stores.rs` module doc)
 - *The table*: `latexml_core/src/binding/store_setters.rs:22 STORE_SETTERS` (655 TL classes surveyed; a synonym table,
   never a name pattern); a setter a binding defined is the binding's.
-- *The run*: `frontmatter_stores.rs:4853 before_title_page_runs`, `:4469 sentinel_runs` (letters and digits sentinels;
+- *The run*: `frontmatter_stores.rs:4897 before_title_page_runs`, `:4513 sentinel_runs` (letters and digits sentinels;
   a numeric context consumes the digits), confirmed with the document's values; the `\maketitle` replay gate reads the
   class body as TeX runs it (`latex_constructs/sect05.rs:2241`; formerly #756).
 - *Static readers* (the fallback, retiring post-cutoff, ruling 9): `:1423 prints_as_a_value`, `:1480
@@ -14044,6 +14044,14 @@ bypassed under raw loading; the class's `\@maketitle` never runs under the locke
   prints (formerly #939); a raw package's stores (formerly #940); a mark before a pure store (formerly #941); displaced
   affiliation text (formerly #955); a class-numbered `\institute` by numbers (formerly #791); neurips's
   `\@projectpage` (formerly #741); wiley-article and CSML (formerly #758).
+- *A labelled off-table store* (QA61, DG 2026-11-15; BM Q3.13): one the run prints right after the class's own label, in
+  a line holding no other value and not glued to the class's text, is an `ltx:pubnote` named by the label even where the
+  deposit or replay typesets it; they read it as empty and take the label out, from the line the label was read in
+  (`decide_moved_offtable_stores`). The line runs between line breaks in the innermost group around the store that is
+  no argument a face or box prints (`\texttt`, `\mbox`, `\href`'s text), or in the macro's body: `\texttt{\@x} \@y\par` and `E-mail: \@x, tel.\ \@y\par` stay
+  (`store_lines_among`; the other readers of `store_lines` keep the innermost group). The class
+  prints its title and names bare, so an unlabelled store stays where the deposit typesets it (SelfArx `\PaperTitle`,
+  2011.01685), as one glued to its text (fundam `FI-\@publyear`, 2006.07415) or read by its `\title`/`\author`/`\@author`.
 - *Page furniture* (FURN): a one-shot eso-pic overlay is the title page's picture (`eso_pic_sty.rs`; formerly #413);
   textpos blocks are placed where written (`textpos_sty.rs`; formerly #416); a copyright line only a page foot prints
   is a frontmatter note (formerly #432).
@@ -14052,7 +14060,8 @@ bypassed under raw loading; the class's `\@maketitle` never runs under the locke
 (medima.sty), 0712.1312 (copernicus), 1206.6940. **Guards**
 `perfect_kernel_batch94b::a_class_body_calls_a_setter_through_one_token`,
 `perfect_kernel_batch94b::a_contact_in_running_text_stays_the_class`,
-`perfect_kernel_batch95d::a_date_with_no_label_read_keeps_its_default_only_where_printed`. RED:
+`perfect_kernel_batch95d::a_date_with_no_label_read_keeps_its_default_only_where_printed`,
+`perfect_kernel_batch77i::offtable_store_typeset_by_the_title_page`. RED:
 `mark_then_store_email_read_by_a_refused_abstract_red`. **Upstream.** Not offered (Perl runs no raw class title page).
 Residuals: `\ifnum`-tested and `\romannumeral` stores (`frontmatter_stores.rs:4380-4390`). Records: [the archive](../archive/OD_FRONTMATTER_RECORDS_2026-11-15.md).
 

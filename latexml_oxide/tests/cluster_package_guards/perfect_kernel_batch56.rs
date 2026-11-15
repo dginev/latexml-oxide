@@ -6333,9 +6333,13 @@ fn deposit_reads_a_field_as_a_number() {
   let replay = include_str!(
     "../../../tools/perfect_kernel/repros/sectioning-frontmatter/deposit_replay_reads_a_field_as_a_number.tex"
   );
+  // (the labelled "Course:" line a pubnote since QA61D1, DG's D1: pdflatex prints it under the title)
   let session = |year: &str| {
     format!(
-      r#"<logical-block><para><p align="center"><text fontsize="120%">Course: MATH 410</text></p><p align="center"><text fontsize="120%">Exam session {year}</text></p></para></logical-block><para><p>Text.</p></para></document>"#
+      "<pubnote name=\"Course:\u{a0}\">MATH 410</pubnote>{}",
+      format_args!(
+        r#"<para><p align="center"><text fontsize="120%">Exam session {year}</text></p></para><para><p>Text.</p></para></document>"#
+      )
     )
   };
   let date = r#"<date role="creation">2024</date>"#;

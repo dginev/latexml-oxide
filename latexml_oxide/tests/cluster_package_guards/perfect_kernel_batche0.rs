@@ -1657,7 +1657,10 @@ const TOKEN_READS: &[(&str, usize)] = &[
   // head lacked `\tt`, `\LARGE`, `\huge`, `\Huge`, 2508.08560; `events` drops its `\selectfont` read, 62 -> 61)
   // (P6a, 527 -> 520: its `group_end` is `tokens_group_end` (4, in `rest /tokens.rs`), its `balanced` core's
   // `Tokens::slice_is_balanced` (3))
-  ("frontmatter_stores", 520),
+  // (QA61D1, 520 -> 532: DG's D1 moves a labelled off-table store to a pubnote; what the deposit takes out with it is the
+  // label's token part K11's table path takes, extended over the store and its line's stop (`part_to_the_line_end`),
+  // and the line gate counts the class's other stores (`store_lines_among`) — the static readers of OD #767's fallback)
+  ("frontmatter_stores", 532),
   ("gretsi_cls.rs", 14),
   // (CR10a, 119 -> 128: the class's author body is read as tokens before it is digested, as `author_block_body` reads it —
   // a names block nested in another's spliced in (`unnested_name_blocks`, 1511.03982), the alias `\authorblockN`'s grades,

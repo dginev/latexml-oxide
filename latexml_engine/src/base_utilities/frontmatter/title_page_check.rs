@@ -962,7 +962,8 @@ pub(super) fn note_net_counted(words: &[String]) {
 }
 
 /// The document's frontmatter elements, whose text [`check_title_page_words`] reads first: the title page's words are
-/// mostly theirs.
+/// mostly theirs. A pubnote's label is its `name` alone, which only the last, whole-document step reads otherwise
+/// (smj's "E-mail:", 1509.00049; 1309.6903).
 const FRONT_ELEMENTS: &[&str] = &[
   "title",
   "subtitle",
@@ -973,6 +974,7 @@ const FRONT_ELEMENTS: &[&str] = &[
   "keywords",
   "classification",
   "note",
+  "pubnote",
   "titlepage",
 ];
 

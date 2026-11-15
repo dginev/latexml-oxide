@@ -1,0 +1,33 @@
+% Two shapes of a labelled off-table store moved to a pubnote (`decide_moved_offtable_stores`, frontmatter_stores.rs):
+% the stop the class prints after the store, where its line ends, goes with the line (`part_to_the_line_end`: smj.cls:211
+% `\textbf{E-mail:} \texttt{\@CorrEmail}.`, 1509.00049; lms.cls:1148-1149 `\footnotetext{2000 {…} \@classno.}`,
+% 0712.0944), so no "." stays in a paragraph or a note of its own; and the pubnote holds the value the title page
+% printed, which the class's own `\maketitle` clears after it (ourlematema.cls:307-308 `\global\let\@MSC\relax`,
+% 2412.12514).
+% witness: 1509.00049, 0712.0944, 2412.12514 (shapes); synthetic.
+% oracle:  pdflatex 0 errors: "Lecture Notes / A. Author / E-mail: a@b.org. / Text." and the footnote "2020 Mathematics
+%          Subject Classification 05C10.".
+% engines: rust before QA61D1: both lines in the body; QA61D1 r1: `<p>.</p>` and `<note role="footnotetext">.</note>`
+%          left, the classification's value lost.
+% expect:  0 errors, 0 warnings; `<pubnote name="E-mail:">a@b.org</pubnote>` and `<pubnote name="2020 Mathematics
+%          Subject Classification ">05C10</pubnote>`; no "." of its own.
+% status:  GREEN (QA61D1)
+\begin{filecontents*}[overwrite]{qasixtyones.cls}
+\ProvidesClass{qasixtyones}\LoadClass{article}
+\newcommand\msc[1]{\gdef\@msc{#1}}
+\newcommand\mail[1]{\gdef\@mail{#1}}
+\renewcommand\maketitle{\begingroup\@maketitle\endgroup\global\let\@msc\relax\global\let\@mail\relax}
+\renewcommand\@maketitle{\begin{center}{\LARGE \@title\par}{\large \@author\par}\end{center}
+  \textbf{E-mail:} \texttt{\@mail}.
+
+  \footnotetext{2020 {\itshape Mathematics Subject Classification} \@msc.}\par}
+\end{filecontents*}
+\documentclass{qasixtyones}
+\title{Lecture Notes}
+\author{A. Author}
+\mail{a@b.org}
+\msc{05C10}
+\begin{document}
+\maketitle
+Text.
+\end{document}

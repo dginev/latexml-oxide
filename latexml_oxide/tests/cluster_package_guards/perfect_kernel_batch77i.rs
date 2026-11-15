@@ -125,26 +125,116 @@ fn offtable_stores_read_by_class_author_are_the_creators() {
   }
 }
 
-/// #5 (a), the duplicate direction (CONTROL): a store the kept `\@maketitle` deposit typesets is not a note too.
+/// #5 (a), a store the kept title page typesets (DG's D1 of QA61, BM Q3.13): printed right after the class's own label
+/// in a line of its own, it is a pubnote named by the label, once, and the deposit (rows 1-2, 4-5) or the replay (row 3)
+/// leaves it out with its label and the stop ending its line, the value the title page printed kept (row 5: 1509.00049,
+/// 0712.0944, 2412.12514; `decide_moved_offtable_stores`); printed bare (a title under another name, SelfArx 2011.01685),
+/// in one line with another value or another store of the class's (2410.00116), or glued to the class's text (fundam,
+/// 2006.07415), it stays where the deposit typesets it, once (rows 4, 6: the line read around a command's argument and in
+/// the macro's body); of two lines printing one label, the moved store's own line goes (row 7); a copy the class
+/// writes to a contents file is in no printed line (row 8: jetpl, cond-mat0511168). Each row the whole document.
 #[test]
-fn offtable_store_typeset_by_the_deposit_stays_there() {
-  let (xml, flat) = convert_clean(include_str!(
-    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/offtable_store_typeset_by_the_deposit_stays_there.tex"
-  ));
-  assert_eq!(flat.matches("Widget Lab").count(), 1, "{xml}");
-  assert!(!flat.contains("note"), "{xml}");
-  assert_element(
-    &xml,
-    "para",
-    &[r#"xml:id="p1""#],
-    r#"<para xml:id="p1"><p xml:id="p1.1">Laboratory: Widget Lab</p></para>"#,
-  );
-  assert_element(
-    &xml,
-    "para",
-    &[r#"xml:id="p2""#],
-    r#"<para xml:id="p2"><p xml:id="p2.1">Text.</p></para>"#,
-  );
+fn offtable_store_typeset_by_the_title_page() {
+  let author = r#"<creator role="author"> <personname>A. Author</personname> </creator>"#;
+  let text = r#"<para xml:id="p1"> <p xml:id="p1.1">Text.</p> </para>"#;
+  for (repro, body, values) in [
+    (
+      include_str!(
+        "../../../tools/perfect_kernel/repros/sectioning-frontmatter/offtable_store_typeset_by_the_deposit_with_its_label_is_a_pubnote.tex"
+      ),
+      format!(
+        r#"<title>T</title> <creator role="author"> <personname>Anton</personname> </creator> <pubnote name="Laboratory: ">Widget Lab</pubnote> {text}"#
+      ),
+      &["Widget Lab"][..],
+    ),
+    (
+      include_str!(
+        "../../../tools/perfect_kernel/repros/sectioning-frontmatter/offtable_store_printed_with_its_label_is_a_pubnote.tex"
+      ),
+      format!(
+        r#"<title>Lecture Notes on Topology</title> {author} <pubnote name="Course: ">MATH 410</pubnote> {text}"#
+      ),
+      &["MATH 410"],
+    ),
+    (
+      include_str!(
+        "../../../tools/perfect_kernel/repros/sectioning-frontmatter/offtable_stores_printed_with_their_labels_by_the_class_maketitle_are_pubnotes.tex"
+      ),
+      format!(
+        r#"<title>Lecture Notes on Topology</title> {author} <pubnote name="Course: ">MATH 410</pubnote> <pubnote name="Term: ">Fall 2024</pubnote> {text}"#
+      ),
+      &["MATH 410", "Fall 2024"],
+    ),
+    (
+      include_str!(
+        "../../../tools/perfect_kernel/repros/sectioning-frontmatter/offtable_stores_printed_bare_or_with_other_text_stay_in_the_title_page.tex"
+      ),
+      format!(
+        r#"{author} <pubnote name="Course: ">MATH 410</pubnote> <logical-block xml:id="id1"> <para xml:id="p1"> <p align="center" xml:id="p1.1"><text fontsize="173%" xml:id="p1.1.1">Real Title</text></p> <p align="center" xml:id="p1.2"><text fontsize="120%" xml:id="p1.2.1">Term: Fall 2024, Room: B12</text></p> <p align="center" xml:id="p1.3"><text fontsize="120%" xml:id="p1.3.1">Track: Geometry (Graduate)</text></p> <p align="center" xml:id="p1.4"><text fontsize="120%" xml:id="p1.4.1">Code: X-417</text></p> </para> </logical-block> <para xml:id="p2"> <p xml:id="p2.1">Text.</p> </para>"#
+      ),
+      &[
+        "MATH 410",
+        "Real Title",
+        "Fall 2024",
+        "B12",
+        "Geometry",
+        "Graduate",
+        "417",
+      ],
+    ),
+    (
+      include_str!(
+        "../../../tools/perfect_kernel/repros/sectioning-frontmatter/offtable_stores_moved_take_their_stop_and_keep_the_printed_value.tex"
+      ),
+      format!(
+        r#"<title>Lecture Notes</title> {author} <pubnote name="E-mail:">a@b.org</pubnote> <pubnote name="2020 Mathematics Subject Classification ">05C10</pubnote> {text}"#
+      ),
+      &["a@b.org", "05C10"],
+    ),
+    // (review revQA61D1: the line read around the command whose argument holds the store, and in the macro's body for
+    // one in no group; the moved store's own line, of two printing the same label)
+    (
+      include_str!(
+        "../../../tools/perfect_kernel/repros/sectioning-frontmatter/offtable_store_in_one_line_with_another_value_stays_in_the_title_page.tex"
+      ),
+      format!(
+        r#"<title>Lecture Notes</title> {author} <para xml:id="p1"> <p xml:id="p1.1">E-mail: a@b.org, tel. 555</p> </para> <para xml:id="p2"> <p xml:id="p2.1"><text font="bold" xml:id="p2.1.1">E-mail:</text> <text font="typewriter" xml:id="p2.1.2">alt@b.org</text> 555</p> </para> <para xml:id="p3"> <p xml:id="p3.1">Text.</p> </para>"#
+      ),
+      &["a@b.org", "alt@b.org", "tel. 555"],
+    ),
+    (
+      include_str!(
+        "../../../tools/perfect_kernel/repros/sectioning-frontmatter/offtable_store_moved_takes_its_own_line_of_two_alike.tex"
+      ),
+      format!(
+        r#"<title>Lecture Notes</title> {author} <pubnote name="E-mail:">a@b.org</pubnote> <para xml:id="p1"> <p xml:id="p1.1"><text font="bold" xml:id="p1.1.1">E-mail:</text> <text font="typewriter" xml:id="p1.1.2">alt@b.org</text> 555</p> </para> <para xml:id="p2"> <p xml:id="p2.1">Text.</p> </para>"#
+      ),
+      &["a@b.org", "alt@b.org", "555"],
+    ),
+    // (a copy written to a contents file is in no printed line: jetpl.cls, cond-mat0511168)
+    (
+      include_str!(
+        "../../../tools/perfect_kernel/repros/sectioning-frontmatter/offtable_store_also_written_to_a_contents_file_is_a_pubnote.tex"
+      ),
+      format!(
+        r#"<title>Lecture Notes</title> {author} <pubnote name="PACS: ">73.21.-b</pubnote> {text}"#
+      ),
+      &["73.21.-b"],
+    ),
+  ] {
+    let (xml, flat) = convert_clean(repro);
+    assert!(
+      flat.contains(&format!(r#"class="ltx_authors_1line"> {body} </document>"#)),
+      "{xml}"
+    );
+    // (the name's tie, U+00A0, which the whitespace split above takes as a space)
+    if body.contains(r#": ">"#) {
+      assert!(xml.contains(":\u{a0}\">"), "{xml}");
+    }
+    for value in values {
+      assert_eq!(flat.matches(value).count(), 1, "{value}: {xml}");
+    }
+  }
 }
 
 /// #5 (a), jfpc's shape: the store the class's own `\title` hands its argument to is the document's title, the one its

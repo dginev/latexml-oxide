@@ -1,0 +1,28 @@
+% A table store (K11, `\email`) printed in a line of the macro's body with another value: K11's line reader
+% (`ClassReaders::store_lines`) takes the line from the store's innermost group and sees none at the top level, so it
+% hands the e-mail on (a contact) and leaves "E-mail: , tel. 555" on the base; with the e-mail handed, the phone's line
+% holds no other value and the phone becomes a pubnote too (QA61D1), leaving "E-mail:" alone. The moved store's rule
+% reads that line in the macro's body (`store_lines_among`); K11's reader does not yet.
+% witness: synthetic (review revQA61D1's top-level finding, applied to the other reader of the fact).
+% oracle:  pdflatex 0 errors: "Lecture Notes / A. Author / E-mail: a@b.org, tel. 555 / Text.".
+% engines: MAIN882: `<contact role="email">a@b.org</contact>` and `<p>E-mail: , tel. 555</p>`; QA61D1b: the contact,
+%          `<pubnote name="tel. ">555</pubnote>` and `<p>E-mail:</p>`.
+% expect:  the line whole in the body ("E-mail: a@b.org, tel. 555"), or every word of it in the frontmatter, no orphan.
+% status:  RED
+% moves:   post-merge (one line reading for every `store_lines` reader; main decides)
+\begin{filecontents*}[overwrite]{qasixtyonek.cls}
+\ProvidesClass{qasixtyonek}\LoadClass{article}
+\newcommand\phone[1]{\gdef\@phone{#1}}
+\newcommand\email[1]{\gdef\@email{#1}}
+\renewcommand\@maketitle{\begin{center}{\LARGE \@title\par}{\large \@author\par}\end{center}
+  E-mail: \@email, tel.\ \@phone\par}
+\end{filecontents*}
+\documentclass{qasixtyonek}
+\title{Lecture Notes}
+\author{A. Author}
+\phone{555}
+\email{a@b.org}
+\begin{document}
+\maketitle
+Text.
+\end{document}

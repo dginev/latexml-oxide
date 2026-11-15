@@ -1,0 +1,23 @@
+% An off-table store the class's title page prints right after its own label, in a line of its own, is a pubnote named
+% by the label (DG's D1 of QA61, BM Q3.13; `decide_moved_offtable_stores`, frontmatter_stores.rs): the kept
+% `\@maketitle` deposit reads it as empty, the label taken out with it, so no "Course: MATH 410" line stays in the body.
+% witness: none (synthetic; BM's Q3.13 atexam probe; the copernicus "Correspondence to:" shape, 1401.8205).
+% oracle:  pdflatex 0 errors: "Lecture Notes on Topology / Course: MATH 410 / A. Author / Text.".
+%          perl: no binding for the class, its title page dropped: "MATH 410" absent.
+% engines: rust before QA61D1: `<p align="center"><text fontsize="120%">Course: MATH 410</text></p>` in the body.
+% expect:  0 errors, 0 warnings; `<pubnote name="Course: ">MATH 410</pubnote>` (U+00A0), no body line.
+% status:  GREEN (QA61D1)
+\begin{filecontents*}[overwrite]{qasixtyone.cls}
+\ProvidesClass{qasixtyone}\LoadClass{article}
+\newcommand\course[1]{\gdef\@course{#1}}
+\renewcommand\@maketitle{\begin{center}{\LARGE \@title \par}
+  {\large Course: \@course \par}{\large \@author \par}\end{center}\par}
+\end{filecontents*}
+\documentclass{qasixtyone}
+\title{Lecture Notes on Topology}
+\author{A. Author}
+\course{MATH 410}
+\begin{document}
+\maketitle
+Text.
+\end{document}

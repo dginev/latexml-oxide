@@ -1,0 +1,27 @@
+% A moved store takes its label and stop out of the line its label was read in (`part_to_the_line_end` from the
+% label's offset, `\lx@replay@records` at the part's match there), not out of an earlier line printing the same label:
+% the first "E-mail:" line holds another value and stays whole.
+% witness: synthetic (review revQA61D1, probe dup).
+% oracle:  pdflatex 0 errors: "Lecture Notes / A. Author / E-mail: alt@b.org 555 / E-mail: a@b.org. / Text.".
+% engines: QA61D1 r1: two pubnotes and `<p>555</p>` and `<p>.</p>` left in the body.
+% expect:  0 errors, 0 warnings; `<pubnote name="E-mail:">a@b.org</pubnote>`; the first line whole in the body, no "."
+%          of its own.
+% status:  GREEN (QA61D1b)
+\begin{filecontents*}[overwrite]{qasixtyoned.cls}
+\ProvidesClass{qasixtyoned}\LoadClass{article}
+\newcommand\altmail[1]{\gdef\@altmail{#1}}
+\newcommand\phone[1]{\gdef\@phone{#1}}
+\newcommand\mail[1]{\gdef\@mail{#1}}
+\renewcommand\@maketitle{\begin{center}{\LARGE \@title\par}{\large \@author\par}\end{center}
+  \textbf{E-mail:} \texttt{\@altmail} \@phone\par
+  \textbf{E-mail:} \texttt{\@mail}.\par}
+\end{filecontents*}
+\documentclass{qasixtyoned}
+\title{Lecture Notes}
+\author{A. Author}
+\altmail{alt@b.org}\phone{555}
+\mail{a@b.org}
+\begin{document}
+\maketitle
+Text.
+\end{document}
