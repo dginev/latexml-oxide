@@ -912,23 +912,22 @@ fn attribute_namespace(key: &str) -> Option<String> {
 /// Given a Qualified name, possibly prefixed with a namespace prefix,
 /// as defined by the code namespace mapping,
 /// return the NamespaceURI and localname.
-/// The localname is borrowed from `codetag` (MEM1 L17).
-pub fn decode_qname(codetag: &str) -> Result<(Option<String>, &str)> {
+pub fn decode_qname(codetag: &str) -> Result<(Option<String>, String)> {
   match PREFIXED_LOCALNAME_RE.captures(codetag) {
     Some(captures) => {
       let prefix = captures.get(1).map_or("", |m| m.as_str());
       let localname = captures.get(2).map_or("", |m| m.as_str());
 
       if prefix == "xml" {
-        Ok((None, codetag))
+        Ok((None, codetag.to_string()))
       } else {
         Ok((
           get_namespace(prefix, false)?.map(arena::to_string),
-          localname,
+          localname.to_string(),
         ))
       }
     },
-    None => Ok((None, codetag)),
+    None => Ok((None, codetag.to_string())),
   }
 }
 
@@ -936,7 +935,7 @@ pub fn decode_qname(codetag: &str) -> Result<(Option<String>, &str)> {
 /// For now let's allocate strings and release the arena, but this is a CODE SMELL!
 pub fn decode_qname_sym(sym: SymStr) -> Result<(Option<String>, String)> {
   let codetag = arena::to_string(sym);
-  decode_qname(&codetag).map(|(ns, localname)| (ns, localname.to_owned()))
+  decode_qname(&codetag)
 }
 
 //**********************************************************************

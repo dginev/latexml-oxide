@@ -7473,20 +7473,20 @@ impl Document {
   }
   pub fn rename_node_qsym(&mut self, node: Node, newsym: SymStr, reinsert: bool) -> Result<Node> {
     let (ns, tag) = model::decode_qname_sym(newsym)?;
-    self.rename_node_internal(node, newsym, ns, &tag, reinsert)
+    self.rename_node_internal(node, newsym, ns, tag, reinsert)
   }
   fn rename_node_internal(
     &mut self,
     mut node: Node,
     newname: SymStr,
     ns: Option<String>,
-    tag: &str,
+    tag: String,
     reinsert: bool,
   ) -> Result<Node> {
     let mut parent = node
       .get_parent()
       .expect("rename should never be called on an orphan or root node.");
-    let mut new = self.open_element_internal(&mut parent, ns, tag)?;
+    let mut new = self.open_element_internal(&mut parent, ns, &tag)?;
     // Move to the position AFTER node
     node.add_next_sibling(&mut new)?;
     // Copy ALL attributes from `node` to `newnode`, in key order (HashMap
