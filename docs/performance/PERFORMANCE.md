@@ -348,6 +348,45 @@ code on AMD (skid), so the figures are counts × stepped instructions.
 
 ## Audit log (periodic passes; newest first)
 
+### 2026-11-15 — per-character and serializer allocations (MEMB, MEM1 levers L4a/b/e, L7, L10, L18)
+
+Defects (allocation counts of `agent_reports/report_MEM1.md`): every digested letter paid a `String` in
+`font::decode_string`'s result (L4a), a `String` copy of the box's text in `Tbox::be_absorbed` (L4b) and a one-box
+`Vec` in `push_onto_node_box`'s flattening (L4e); the serializer ran 3 `replace` passes over every text node and 6 over
+every attribute value, each a new `String`, and built each open tag in a `String` of its own (L7); `dump_reader`'s
+`url_decode` returned a new `String` for every dump field, ~68k per conversion (L18); `store_setters::setter_definition`
+formatted and pinned `"\\{name}"` for each table setter twice per binding load (L10). Fixes: `decode_string` spells into a
+reused thread-local buffer and returns its input symbol when the decoding changed nothing; `be_absorbed` reads its text
+through the new `arena::with_copy` (copied to the stack when ≤ 64 bytes — the absorbing interns, so the text cannot be
+read under an `arena::with` borrow, whose buffer a new symbol may move); `List::push_boxes` takes an iterator and the
+lone box goes in as a slice; `push_escaped_text`/`push_escaped_attr` append in one pass (no replacement contains an
+escaped character, so one pass equals the chain with `&` first); `url_decode` returns a `Cow`; the setter probe is `arena::get_suffixed("\\", name)` (a name never interned has no definition).
+Guard: `latexml_core` `document::serializer_escape::serializer_escape_matches_sequential_replace` (every 3-piece string
+of `& < > " ' \r \t \n`, already-escaped entities and non-ASCII text, against the old `replace` chain).
+Measured: instructions:u, best of 3 interleaved, each lever against the commit before it, base INTPERF4 `e4ab916a806`,
+cortex's ar5iv HTML recipe unless XML:
+
+| Document | L18 | L10 | L7 | L4a/b/e | all |
+|---|---:|---:|---:|---:|---:|
+| b250 xml / html | −0.04 / −0.06 % | −0.01 / +0.01 % | −0.93 / −0.65 % | −0.06 / −0.04 % | −1.04 / −0.74 % |
+| 2308.04512 xml / html | +0.03 / +0.01 % | +0.16 / +0.15 % | −0.91 / −0.74 % | −0.09 / −0.08 % | −0.81 / −0.66 % |
+| 2604.01119 html | −0.11 % | −0.04 % | −0.37 % | −0.62 % | −1.14 % |
+| amsldoc xml | −0.18 % | −0.08 % | −0.40 % | −0.72 % | −1.37 % |
+| ten typical papers (popPERFBs.tsv) | −0.10 to −0.49 % | +0.05 to −0.37 % | −0.05 to −0.50 % | −0.02 to −0.54 % | −0.69 to −1.07 % |
+
+Peak RSS (HTML, the issue-790 book): +2.8 to +3.9 % (4.35-4.40 → 4.52 GB, two runs each), from mimalloc's delayed,
+time-based release of freed pages: with `MIMALLOC_PURGE_DELAY=0` both peak at 4.34 GB, the candidate 1.3 MB (−0.03 %)
+lower; no live-memory increase (by the review: mimalloc's page count lower, heaptrack's glibc/libxml2 profile identical,
+the half book 4.5 MB lower). Reserving each escape's length first buys no memory and costs 0.2-0.3 % (b250 xml −0.70 %
+against −1.03 %, 2308.04512 −0.51 % against −0.69 %), so the escape runs unreserved and the open tag is written in
+place. Run-to-run spread ≤ 0.03 % on every document but t_1109.6643 (0.14 %); L10's +0.15 % on 2308.04512 is the build's
+code placement, not work (the change only removes a format per setter). Cycles:u moved ±10-19 % between runs of one
+binary on the shared host, below resolution for these levers. Output byte-identical on the 16 measured runs (every rep)
+and on the A/B population `popMEMB.tsv` (160 papers, 60 controls), raw XML and the HTML recipe with every auxiliary
+file; the final build hashes identical (every output file) on b250, 2308.04512, 2604.01119 and the book, XML and HTML.
+Left (MEM1, not taken): L4c `tbox.rs` `vec![node]` and L4f `stomach.rs` result `Vec` (return shapes), L4d
+`text_run_font`'s `Font` clone (`Rc<Font>` through `open_text`'s eight callers) — each ≤ 0.06-0.08 % by MEM1's estimate.
+
 ### 2026-11-15 — the token path's per-token allocations (MEMA, MEM1 levers L1-L3, L5, L6, L8, L9, L19)
 
 Defect: dhat (MEM1, on `e4ab916a806`) found short-lived heap blocks on every digested or read token: a `String` per `MODE` test

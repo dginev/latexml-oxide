@@ -20,7 +20,7 @@
 //!   DC\tCHAR\tCH\tVALUE            — delcode assignment
 //!   MC\tCHAR\tCH\tVALUE            — mathcode assignment
 
-use std::path::Path;
+use std::{borrow::Cow, path::Path};
 
 use crate::{
   common::{arena, numeric_ops::NumericOps, store::Stored},
@@ -231,7 +231,7 @@ pub fn collect_meaning_keys(content: &str) -> rustc_hash::FxHashSet<Box<str>> {
       continue;
     }
     if raw_key.contains('%') {
-      keys.insert(url_decode(raw_key).into_boxed_str());
+      keys.insert(url_decode(raw_key).into_owned().into_boxed_str());
     } else {
       keys.insert(Box::from(raw_key));
     }
@@ -253,11 +253,7 @@ fn parse_and_load(line: &str) -> Result<bool, String> {
   // Key decode: Cow borrows the original &str when no `%` escape is
   // present (the overwhelming majority). Saves a per-line allocation
   // for the ~25k dump entries that have plain CS-name keys.
-  let key_cow: std::borrow::Cow<'_, str> = if raw_key.contains('%') {
-    std::borrow::Cow::Owned(url_decode(raw_key))
-  } else {
-    std::borrow::Cow::Borrowed(raw_key)
-  };
+  let key_cow = url_decode(raw_key);
   let key = key_cow.as_ref();
   let data = it.next().unwrap_or("");
 
@@ -426,19 +422,18 @@ fn load_value(key: &str, data: &str) -> Result<bool, String> {
         .map_err(|e| format!("Bad number: {}", e))?;
       Stored::Number(crate::common::number::Number(n))
     },
-    "S" => Stored::from(url_decode(rest)),
+    "S" => Stored::from(url_decode(rest).into_owned()),
     "F" => {
       // Stored::Font — written by dump_writer's Stored::Font arm.
       // Format: F\tname=...\x1fsize=...\x1ffamily=...\x1f...
       // Each unit-separator-delimited segment is `key=urlencoded_value`.
       // Mirrors Perl `dump_font` (Core/Dumper.pm L281-284).
-      use std::borrow::Cow;
 
       use crate::common::font::Font;
       let mut font = Font::default();
       for kv in rest.split('\x1f') {
         if let Some((k, v)) = kv.split_once('=') {
-          let v_dec = url_decode(v);
+          let v_dec = url_decode(v).into_owned();
           match k {
             "name" => font.name = Some(Cow::Owned(v_dec)),
             "family" => font.family = Some(Cow::Owned(v_dec)),
@@ -637,9 +632,9 @@ fn load_meaning(key: &str, data: &str) -> Result<bool, String> {
       // `\@nil` handling. Keep blast radius tight.
       const DEFERRED_NAMES: &[&str] = &["\\unexpanded", "\\the", "\\detokenize", "\\showthe"];
       let alias_decoded = url_decode(alias_field);
-      let is_alias_diff = cs_tok.with_cs_name(|s| s != alias_decoded.as_str());
-      let alias_for_traits = if is_alias_diff && DEFERRED_NAMES.contains(&alias_decoded.as_str()) {
-        Some(alias_decoded)
+      let is_alias_diff = cs_tok.with_cs_name(|s| s != alias_decoded);
+      let alias_for_traits = if is_alias_diff && DEFERRED_NAMES.contains(&&*alias_decoded) {
+        Some(alias_decoded.into_owned())
       } else {
         None
       };
@@ -764,7 +759,7 @@ fn load_meaning(key: &str, data: &str) -> Result<bool, String> {
       // `F\t...` payload (see Stored::Font arm in dump_writer + the `F` arm
       // in parse_value above).
       use crate::definition::{BeforeDigestClosure, primitive::Primitive};
-      let font_id_raw = url_decode(rest);
+      let font_id_raw = url_decode(rest).into_owned();
       let font_id_pin = arena::pin(&font_id_raw);
       let font_id_str = font_id_raw;
       let cs_for_fontdef = cs_tok;
@@ -855,7 +850,9 @@ fn load_meaning(key: &str, data: &str) -> Result<bool, String> {
         .filter(|s| !s.is_empty())
         .and_then(|s| s.parse::<u32>().ok())
         .and_then(char::from_u32);
-      let dump_address: Option<String> = r_addr_field.filter(|s| !s.is_empty()).map(url_decode);
+      let dump_address: Option<String> = r_addr_field
+        .filter(|s| !s.is_empty())
+        .map(|s| url_decode(s).into_owned());
       // For register-aliases (M-line key != register's internal cs), the
       // storage slot lives at the cs name, not the alias key. e.g.
       //   M  \tex_endlinechar:D  R  \endlinechar  N  0
@@ -869,7 +866,7 @@ fn load_meaning(key: &str, data: &str) -> Result<bool, String> {
       let internal_cs_decoded = url_decode(r_cs);
       let dump_address: Option<String> = dump_address.or_else(|| {
         if internal_cs_decoded != *key && !internal_cs_decoded.is_empty() {
-          Some(internal_cs_decoded)
+          Some(internal_cs_decoded.into_owned())
         } else {
           None
         }
@@ -1148,7 +1145,7 @@ fn parse_token(s: &str) -> Result<Token, String> {
   // hundreds of thousands of token entries; every `to_owned()` avoided
   // here matters.
   let text_sym = if text.contains('%') {
-    arena::pin(url_decode(text))
+    arena::pin(url_decode(text).as_ref())
   } else {
     arena::pin(text)
   };
@@ -1237,12 +1234,12 @@ pub(crate) fn parse_parameters_v3(
   }
 }
 
-pub(crate) fn url_decode(s: &str) -> String {
+pub(crate) fn url_decode(s: &str) -> Cow<'_, str> {
   // Fast path: the overwhelming majority of dump entries have no `%`
-  // escapes in their key or proto fields, so a single memcpy via
-  // `to_owned()` beats char-by-char iteration for ~19k key loads.
+  // escapes in their key or proto fields, so the field itself is the
+  // answer (~68k decodes per conversion; most callers only compare or pin).
   if !s.contains('%') {
-    return s.to_owned();
+    return Cow::Borrowed(s);
   }
   let mut result = String::with_capacity(s.len());
   let mut chars = s.chars();
@@ -1256,7 +1253,7 @@ pub(crate) fn url_decode(s: &str) -> String {
       result.push(ch);
     }
   }
-  result
+  Cow::Owned(result)
 }
 
 /// Parse a serialized Glue value: "skip,pN,pfN,mN,mfN"
