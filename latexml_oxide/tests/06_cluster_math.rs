@@ -256,7 +256,8 @@ fn cluster_hdotsfor_columns() {
 /// decorates the arrow (Perl `relop : RELOP addOpDecoration`, 57ag). The relation
 /// is the fill's heads (amsmath.sty:971-976; batch AFH, before it a `\to`): the bar
 /// end `{\relbar\relbar}` is kept, as pdflatex draws it (a long bar under the label).
-/// Two adjacent RELOPs read as a `list` (the uncomposed-pair residual of AFH).
+/// Two adjacent RELOPs read as a `list` (the uncomposed-pair residual of AFH). The fill sits in an `\hbox`, as
+/// amsmath.sty:1014 sets it (REGAB: only `tex=` moved).
 #[test]
 fn cluster_ext_arrow_braced_mkern() {
   let x = convert_to_xml("tests/cluster_regressions/ext_arrow_braced_mkern.tex");
@@ -265,7 +266,7 @@ fn cluster_ext_arrow_braced_mkern() {
     "Math",
     &[r#"xml:id="S0.Ex1.m1""#],
     concat!(
-      r#"<Math mode="display" tex="A{\mathrel{\relbar\relbar}^{\simeq}}B" text="A (list@(relbar, relbar)) ^ similar-to-or-equals B" xml:id="S0.Ex1.m1"><XMath><XMApp>"#,
+      r#"<Math mode="display" tex="A{\mathrel{\hbox{$\relbar\relbar$}}^{\simeq}}B" text="A (list@(relbar, relbar)) ^ similar-to-or-equals B" xml:id="S0.Ex1.m1"><XMath><XMApp>"#,
       r#"<XMApp role="RELOP"><XMTok role="SUPERSCRIPTOP" scriptpos="post2"/><XMDual role="RELOP"><XMApp><XMTok meaning="list"/>"#,
       r#"<XMRef idref="S0.Ex1.m1.1"/><XMRef idref="S0.Ex1.m1.2"/></XMApp><XMWrap>"#,
       r#"<XMTok name="relbar" role="RELOP" xml:id="S0.Ex1.m1.1">-</XMTok><XMTok role="PUNCT">⁣</XMTok>"#,
