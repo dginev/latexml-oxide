@@ -1815,87 +1815,6 @@ by its bold title.
 
 ### From "Rust Error Fixes" (entry bodies)
 
-#### Moved from OXIDIZED_DESIGN_DIVERGENCES by the 2026-11-14 rationalization (port-bug fixes, not divergences)
-
-### formerly OD #227 (whole entry)
-
-### 227. A `filecontents` capture ends at `\end{<current environment>}`
-
-**Perl behavior**: latex_constructs.pool.ltxml:4278-4295 binds only
-`\begin{filecontents*}`; the bare `\filecontents*` command that a wrapper
-environment runs through `\csname filecontents*\endcsname` (latexdemo.sty:97-101
-`DefineCode`) is undefined there — an error, but no loss.
-**Rust behavior**: the bare command is a primitive; its raw capture ended at a
-fixed `\end{filecontents[*]}`, which a wrapper's body never contains, so the rest
-of the document was swallowed silently (latex4wp: 63% of the manual). The
-terminator is now `\end{<\@currenvir>}` (latex.ltx:19047), the wrapper's own end.
-**Why**: faithful to latex.ltx; the fixed marker was the Rust-only defect.
-Guard `filecontents_inside_a_wrapper_environment_ends_at_the_wrappers_end`. Batch 56bx.
-
-### formerly OD #572 (whole entry)
-
-### 572. `{filecontents}` ends at its `\end{…}` anywhere in a line, as LaTeX's does
-
-latex.ltx:19047-19066 reads each line as `##1\E##2\E##3\relax`: the text before `\end{<currenvir>}` is written as the
-file's last line ("Writing text … before \end{…} as last line"), the text after it ignored ("Ignoring text … after
-\end{…}"). The port matched the whole trimmed line (fancyvrb's rule, the former `capture_raw_lines_until`, now removed), so
-`\end{tikzpicture}\end{filecontents*}` or `\end{filecontents}{b.tex}` captured the rest of the document (Fatal
-`Document:Malformed`; Perl's unanchored regex, latex_constructs.pool.ltxml:4274/4292, ends there too).
-
-**Rust** (batch 66d, `cache_filecontents`): the capture ends at the marker anywhere in a line, with LaTeX's two warnings;
-a prefix of spaces only is neither written nor warned about (LaTeX writes it as a blank last line, with the warning,
-latex.ltx:19055-19058, its spaces being of category other). Witnesses 1909.03404, 2311.02007,
-2503.03764. Guard `perfect_kernel_batch66d::filecontents_ends_mid_line`; repro `macro-state/filecontents_end_midline`.
-
-### formerly OD #787 (whole entry)
-
-### 787. nicematrix's `\Block{i-j}<tokens>{content}` sets the tokens before the content (Perl: no nicematrix binding)
-
-nicematrix.sty:7258 `\__nicematrix_Block_i: { m m D < > { } +m }`: the `<…>` argument is set before the content in the
-block's box. nicematrix_sty.rs's `\Block` read `{}{}` only, so the `<\bfseries>` was the content (OT1's `<`/`>`, "¡Tall¿").
-Rust (78a): `OptionalAngled` reads it; present, the content is `{<tokens><content>}`. Guard
-`perfect_kernel_batch78a::nicematrix_block_angle_tokens_apply_to_the_content`.
-
-### formerly OD #785 (title-font half; the OD entry keeps its pointer)
-
-`\@@unnumbered@section`'s `\lx@format@title@font@@{type}` before a starred title (latex_constructs.pool.ltxml:666-670) had been lost in the port; restored (78a). Guard `perfect_kernel_batch78a::unnumbered_section_takes_the_title_font`.
-
-### formerly OD #503 (font half)
-
-**Rust behavior**: `apply_accent` (tex_character.rs) took the font of the empty letter's box, which has none: the accent
-came out font-less between two runs, `<text font="sansserif">a</text>˜<text font="sansserif">b</text>` (also under
-`\textit`, `\texttt`) — a Rust-only split. An empty letter (or one without a font) now takes the current font, as
-Perl's: one run. Beyond Perl,
-
-### formerly OD #468 (`content=` half)
-
- Rust also dropped `content=` itself: the
-resource came out empty, with `Warning:expected:resource` (Perl's RequireResource passes the options, Package.pm
-L3139-3167).
-
-### formerly OD #136 (insert_pi)
-
- Emitting it also surfaced and fixed an `insert_pi` bug — a PI added after
-the root element already exists was queued into the once-drained `pending` list and
-silently lost; it is now inserted directly before the root, matching Perl
-`Core/Document.pm::insertPI` ("a PI always lands before the root element").
-
-### formerly OD #145 (mix-weight (now in the binding catalog body))
-
-**Bundled fix (not a divergence).** `color_sty::try_color_algebra` mixed `c!p` at `(100-p)%` of the
-color instead of `p%` (`blue!15` came out dark `#2626FF` instead of light `#D9D9FF`), because it
-passed `1.0 - pct_frac` to `Color::mix` whose `fraction` is the weight of *self*. Corrected to
-`pct_frac`. This only surfaced through **direct** Rust callers of the algebra path
-(nicematrix here, plus `soul`/`fancyvrb`/`colordvi`); `\color`/`\textcolor` were already correct
-because xcolor's own decoder (`xcolor_sty::apply_mix_expr`) does the mix right.
-
-### formerly OD #493 (plain `\matrix` (now in the binding catalog body))
-
-Plain TeX's `\matrix{…\cr}` (l-aa loads no amsmath) keeps its plain reading: the aa binding's `\@currenvir` dispatch,
-as for `\pmatrix` and `\cases`, which amsmath's environment-only `\matrix` lacked (65e; KPE #608; astro-ph9609122,
-astro-ph9809009, astro-ph9503122, astro-ph0002500, astro-ph9901229, astro-ph9610167: 101 errors + Fatal → 0).
-
-
 - **An `\xymatrix` cell opening with `\xy` lost the wrapper's conditional (82f)**: xy_sty.rs's `\xy` wrapper (`\if\inxy@\lx@xy@svgnested\else\lx@xy@svg\fi\lx@xy@original`, LaTeXML's own) at a cell head was expanded by the alignment's peek and its conditional was lost before the `\else` in xymatrix's two-pass `\halign` — 10 errors for `$\xymatrix{\xy *{a} \endxy}$`, conditional-limit Fatals in 1109.4916 and 1611.07444 (a raw `\halign` keeps such a conditional: probed). The wrapper opens with `\relax`, as `\endxy`'s does. Guard `perfect_kernel_batch81::an_xymatrix_cell_may_open_with_xy`.
 - **A display's `$$` deferred past an author's open group (82g)**: tex.web §1193 + §1064-1065 `off_save` closes a group opened in the formula at its math shift; done for inline formulas (OXIDIZED_DESIGN #553), a display's end waited for the group's own end, which a typo (`$$ H^k{X,\C/\Z) $$`, 1309.7562) never reaches — 101 errors and a Fatal, pdflatex 1. A `$$` display outside alignments carries `DISPLAY_FORMULA` and takes the same path (`formula_reachable`). Guard `perfect_kernel_batch81::a_display_math_shift_closes_a_group_opened_in_it`.
 - **`\newcommand{\cs[n]}{…}` (82h)**: KNOWN_PERL_ERRORS #1192; `LaTeXDefToken` adds latex.ltx's `\@testopt{…}0` step (1312.5793: 90 errors and a Fatal → 0).
@@ -1925,6 +1844,86 @@ astro-ph9809009, astro-ph9503122, astro-ph0002500, astro-ph9901229, astro-ph9610
 - **hyperref's `\Hy@driver` was `hpdftex` whatever the output mode (101a)**: hyperref_sty.rs defined it as a constant, so a shipped siamart copy (siamart251216.cls:1302-1336 `\ifpdf\else\usepackage{hypdvips}\fi`) under the DVI persona (`\pdfoutput=0`, K6) met hypdvips.sty:27-36's "Wrong hyperref driver `hpdftex.def' selected!" Error — 14 papers of the cortex 2605/2606 reruns (2605.04427, 2605.04786, 2605.05043, 2605.08634, 2605.14933, 2605.26592, 2605.28291, 2605.17732, 2606.08053, 2606.13198, 2606.14937, 2606.15203, 2606.16251, 2606.22191, 2606.26900) and 1703.08345. It is now what hyperref.sty's `\Hy@AtEndOfPackage` (:4246-4407) settles on: `hpdftex` under `\ifpdf` whatever option (`hluatex` under the `luatex` profile), `hxetex` under XeTeX, else the last DVI driver option, the class's global ones read first (`dvipdfmx` → `hdvipdfm`, …), defaulting to `hdvips`; `\Hy@PutCatalog` (hypdvips.sty:3091-3108) is hpdftex.def:40's draft-mode `\@gobble` (Perl's binding defines neither). Under DVI, hrefhide.sty:153-166 now raises "Producing not a pdf file", as latex+dvips does. Residual: hyperref's wrong-driver-option Errors (`[dvips]` in PDF mode, `[pdftex]` in DVI mode, hyperref.sty:2528-2563) are not raised, and the `driverfallback` key (ctex's `driverfallback=dvipdfmx`, ctex-engine-pdftex.def:493) is not honoured; hypdvips.sty:2002 `\g@addto@macro{\endfigure}` is dropped with Perl's Warning (`\endfigure` a constructor, Package.pm:2542). Guards `perfect_kernel_batch101a::{siamart_copy_loads_hypdvips_in_dvi_mode, hyperref_driver_follows_the_output_mode}` (the latter's `[dvips]`-in-PDF and `[pdftex]`-in-DVI shapes pin the missing wrong-option Error, not TeX). Review rev101a: SHIP (driver matched latex/pdflatex/xelatex/lualatex on every probe; PDF-persona probes byte-identical to base). Also not modelled, no witness: `tex4ht` in DVI (`\Hy@texhttrue`, colorlinks), `customdriver`, the `\DocumentMetadata` `hgeneric-testphase` path (hyperref.sty:2738-2750), a user `\Hy@defaultdriver`. Under DVI hypdvips.sty now runs to its end and redefines `\begin`, `\end`, `\@sect`, `\bibitem`, `\@footnotetext`, `\contentsline` (base stopped at :31); the witnesses and a feature-rich probe came out byte-identical, but a later unlocking of those kernel macros brings them into play.
 - **A recovered Fatal left the Stomach's token stack full (int131fix)**: `invoke_token` (stomach.rs) pops its `token_stack` entry only on a normal exit, and the recovery arms that keep the document (`core_interface.rs` `digest_step_guarded`'s Err arm, the streaming resource stop, `streaming_restart::release_before_rerun`) reset the box lists but not the stack, so after a `Stomach:Recursion` Fatal the build's first digestion (103c's `kind_legend_contacts` reading a contact name) failed its first push: a second Fatal, "build stopped early" (2410.07647: 96 of 886 words in the Bundle 1 A/B; 2105.02599 0 words on both sides). `stomach::clear_token_stack` in each arm, as Perl's `hardYankProcessing` (Common/Error.pm:329); WISDOM #101. Guard `perfect_kernel_batch131fix::a_recovered_fatal_leaves_no_token_stack_behind`.
 - **The null control sequence's optional-argument internal was `\\` (int131fix)**: `define_optional_internal` (sect08.rs, batch 66b, OD #567) named the internal `"\\" + cs`, which for `\csname\endcsname` is `\\` itself, so `\expandafter\newcommand\expandafter{\csname\endcsname}[1][x]{…}` replaced the line break (2410.07647: changes' `\csname\Changes@commandname\endcsname`, its `\Changes@commandname` undefined in our binding; a `{#1\\}` body recursed to the base's Fatal). Named as `\string` prints it, `\\csname\endcsname` (latex.ltx:1252/1255, tex.web §263); Perl clean. Guard `perfect_kernel_batch131fix::null_cs_optional_internal_keeps_the_line_break`.
+
+#### Moved from OXIDIZED_DESIGN_DIVERGENCES by the 2026-11-14 rationalization (port-bug fixes, not divergences)
+
+##### formerly OD #227 (whole entry)
+
+###### 227. A `filecontents` capture ends at `\end{<current environment>}`
+
+**Perl behavior**: latex_constructs.pool.ltxml:4278-4295 binds only
+`\begin{filecontents*}`; the bare `\filecontents*` command that a wrapper
+environment runs through `\csname filecontents*\endcsname` (latexdemo.sty:97-101
+`DefineCode`) is undefined there — an error, but no loss.
+**Rust behavior**: the bare command is a primitive; its raw capture ended at a
+fixed `\end{filecontents[*]}`, which a wrapper's body never contains, so the rest
+of the document was swallowed silently (latex4wp: 63% of the manual). The
+terminator is now `\end{<\@currenvir>}` (latex.ltx:19047), the wrapper's own end.
+**Why**: faithful to latex.ltx; the fixed marker was the Rust-only defect.
+Guard `filecontents_inside_a_wrapper_environment_ends_at_the_wrappers_end`. Batch 56bx.
+
+##### formerly OD #572 (whole entry)
+
+###### 572. `{filecontents}` ends at its `\end{…}` anywhere in a line, as LaTeX's does
+
+latex.ltx:19047-19066 reads each line as `##1\E##2\E##3\relax`: the text before `\end{<currenvir>}` is written as the
+file's last line ("Writing text … before \end{…} as last line"), the text after it ignored ("Ignoring text … after
+\end{…}"). The port matched the whole trimmed line (fancyvrb's rule, the former `capture_raw_lines_until`, now removed), so
+`\end{tikzpicture}\end{filecontents*}` or `\end{filecontents}{b.tex}` captured the rest of the document (Fatal
+`Document:Malformed`; Perl's unanchored regex, latex_constructs.pool.ltxml:4274/4292, ends there too).
+
+**Rust** (batch 66d, `cache_filecontents`): the capture ends at the marker anywhere in a line, with LaTeX's two warnings;
+a prefix of spaces only is neither written nor warned about (LaTeX writes it as a blank last line, with the warning,
+latex.ltx:19055-19058, its spaces being of category other). Witnesses 1909.03404, 2311.02007,
+2503.03764. Guard `perfect_kernel_batch66d::filecontents_ends_mid_line`; repro `macro-state/filecontents_end_midline`.
+
+##### formerly OD #787 (whole entry)
+
+###### 787. nicematrix's `\Block{i-j}<tokens>{content}` sets the tokens before the content (Perl: no nicematrix binding)
+
+nicematrix.sty:7258 `\__nicematrix_Block_i: { m m D < > { } +m }`: the `<…>` argument is set before the content in the
+block's box. nicematrix_sty.rs's `\Block` read `{}{}` only, so the `<\bfseries>` was the content (OT1's `<`/`>`, "¡Tall¿").
+Rust (78a): `OptionalAngled` reads it; present, the content is `{<tokens><content>}`. Guard
+`perfect_kernel_batch78a::nicematrix_block_angle_tokens_apply_to_the_content`.
+
+##### formerly OD #785 (title-font half; the OD entry keeps its pointer)
+
+`\@@unnumbered@section`'s `\lx@format@title@font@@{type}` before a starred title (latex_constructs.pool.ltxml:666-670) had been lost in the port; restored (78a). Guard `perfect_kernel_batch78a::unnumbered_section_takes_the_title_font`.
+
+##### formerly OD #503 (font half)
+
+**Rust behavior**: `apply_accent` (tex_character.rs) took the font of the empty letter's box, which has none: the accent
+came out font-less between two runs, `<text font="sansserif">a</text>˜<text font="sansserif">b</text>` (also under
+`\textit`, `\texttt`) — a Rust-only split. An empty letter (or one without a font) now takes the current font, as
+Perl's: one run. Beyond Perl,
+
+##### formerly OD #468 (`content=` half)
+
+ Rust also dropped `content=` itself: the
+resource came out empty, with `Warning:expected:resource` (Perl's RequireResource passes the options, Package.pm
+L3139-3167).
+
+##### formerly OD #136 (insert_pi)
+
+ Emitting it also surfaced and fixed an `insert_pi` bug — a PI added after
+the root element already exists was queued into the once-drained `pending` list and
+silently lost; it is now inserted directly before the root, matching Perl
+`Core/Document.pm::insertPI` ("a PI always lands before the root element").
+
+##### formerly OD #145 (mix-weight (now in the binding catalog body))
+
+**Bundled fix (not a divergence).** `color_sty::try_color_algebra` mixed `c!p` at `(100-p)%` of the
+color instead of `p%` (`blue!15` came out dark `#2626FF` instead of light `#D9D9FF`), because it
+passed `1.0 - pct_frac` to `Color::mix` whose `fraction` is the weight of *self*. Corrected to
+`pct_frac`. This only surfaced through **direct** Rust callers of the algebra path
+(nicematrix here, plus `soul`/`fancyvrb`/`colordvi`); `\color`/`\textcolor` were already correct
+because xcolor's own decoder (`xcolor_sty::apply_mix_expr`) does the mix right.
+
+##### formerly OD #493 (plain `\matrix` (now in the binding catalog body))
+
+Plain TeX's `\matrix{…\cr}` (l-aa loads no amsmath) keeps its plain reading: the aa binding's `\@currenvir` dispatch,
+as for `\pmatrix` and `\cases`, which amsmath's environment-only `\matrix` lacked (65e; KPE #608; astro-ph9609122,
+astro-ph9809009, astro-ph9503122, astro-ph0002500, astro-ph9901229, astro-ph9610167: 101 errors + Fatal → 0).
 
 ### From "Open items" — R4 detail
 

@@ -1472,3 +1472,28 @@ Moved whole from `docs/SYNC_STATUS.md` when its ranked rows folded into row R's 
 - State: **OPEN**, not started (user 2026-10-02)
 - Size: large
 - Detail: memory `project_repro_suite_move`
+
+### ODR — residual lists moved out of OXIDIZED_DESIGN_DIVERGENCES (2026-11-14 rationalization)
+
+Moved verbatim from the OD entries named, which now keep only their rule and point here; each is a line of SYNC row R's
+"After the merge" list under the same id. Open unless a line says otherwise.
+
+#### ODR1 — OD #973's pgfmath residuals
+
+**Left, wrong numbers with no Error** (repro graphics-tikz/pgfmath_string_and_units_in_arithmetic_red): a `"` operand inside a formula, `"1"+1` (pgf 2.0, ours 0.0), `("a")`,
+`dim("a")`, `"a"==1`, `"a"+"b"`, `max("a",1)`; a unit after an array primary, `{1,2}[0] pt`, `3*{1,2}[1]pt`, `{10,20}[1] mm`, where pgf errs; `({1,2,3})[1]`, `({1,2,3}[1])`
+(ours 1, 2; pgf out of bounds); `\nums[1]*\dimexpr 1pt\relax` (pgf 2.0, ours 0.0); `{1+2}*3`, `{2}*3` (grouping skipped; pgf "Missing number"); `{1,2}+1`; `{}` (pgf empty, ours 0.0); `-{1,2}[1]`
+(pgf `.`, ours -2.0); `int({"a"}[0])` (pgf `a`, ours 0 and an Error); a macro holding `{1}{2}{3}` is no array to index (pgf `{3}{1}`, out of bounds); an unindexed list as an argument, `ifthenelse(1,{1,2},3)` (pgf `{1}{2}`, ours 1.0);
+a user function's array or text argument, `f({"a","b"}[0])` (pgf `a`, ours 0.0 and an Error). **Left, from review revM3r2P1 (pdflatex vs ours):** `width({"a"})`, `height({"Q"})`, `depth({"Q"})` 5.00002, 6.83331, 1.94444 vs 0.0 with no Error (repro graphics-tikz/pgfmath_width_of_a_braced_string_red); a sublist of one number, `{{1},{2}}[0]` 1 vs `{{1}}` (repro graphics-tikz/pgfmath_lone_number_in_a_sublist_red); `{"a"}+1` 1.0 and 2 errors vs 0.0 and none; `{ab}[0]` an Error vs none; `{"{a b} c","d"}[0]` `a b` vs `{a b} c`; `{"a{b c}","d"}[0]` `ab c` vs `a{b c}`; `ifthenelse(1,{"a"},2)` `a` vs 0.0; `ifthenelse(1,"a b",2)` `ab` vs `a b`; `{{{"a"}}}[0]` `{a}` vs `{{{a}}}`; last digits on `1 cm`, `-1cm`, `1in` (73.26999 vs 73.27), `1mm`. **Left, a `\protected` command in a string** (repro graphics-tikz/pgfmath_string_keeps_protected_commands_red): `{"\textbf{A}","b"}[0]` prints A in pgf, whose `\edef` stops
+at it; the native parser expands it, text and Errors.
+
+#### ODR2 — OD #976's tabularray `preto`/`appto` residuals
+
+An inline key's `\my_later:n` under `\ExplSyntaxOn` reads as `\my`, `_` (repro
+alignment-bindings/tblr_inline_expl_command_in_a_key_red). An inner key's two-argument form, `cell{1}{1}={r=2}{preto=s}`, `cell{1}{1}={c=2}{appto=t}`, loses its span and its text with no Warning: `tblr_cell_styles` reads the value as one key list, and `tblr_keys` finds no key name before its first brace (repro alignment-bindings/tblr_preto_in_a_two_argument_cell_key_red). `\SetCell{preto={},appto={}}` warns of a lost text ''. `\SetTblrInner{cells={preto=n}}` with `Q[preto=p]` prints `npaq`, pdflatex `pnaq`.
+
+#### ODR5 — KNOWN_PERL_ERRORS #1267 (formerly OD #327): box sizes, K18 step 2
+
+- `\raisebox`'s `[height][depth]`. latex.ltx reads them after the box, with `\height` etc. measuring it; here `\height` is a 0pt stub, as in Perl. RED repro `boxes-groups/raisebox_optionals_measure_the_box.tex`.
+- `\resizebox{1em}` is 10.00002pt (Perl's); pdflatex's 10.00081pt comes through `\Gscale@div`.
+- makecell and diagbox still store string sizes.

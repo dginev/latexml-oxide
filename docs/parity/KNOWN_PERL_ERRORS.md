@@ -1031,9 +1031,37 @@ unrelated contentless labels can spuriously match each other during
 second field is empty but still prefixed).
 
 **Rust:** drops fields with no real content before prefixing
-(intentional divergence, `OXIDIZED_DESIGN.md` #34; plan decisions
+(the fix below, moved from OXIDIZED_DESIGN_DIVERGENCES #34, now a stub; plan decisions
 log #5). Perl's trailing-empty `split` semantics is otherwise
 preserved byte-exactly.
+
+**The Rust fix, moved from OXIDIZED_DESIGN_DIVERGENCES #34** ("Contentless Frontmatter Annotation Labels Are Dropped", 2026-11-14):
+
+**Decision:** `clean_frontmatter_labels` skips fields with no real
+content. Perl `cleanFrontmatterLabels` prefixes empty fields too, so
+a doubled comma, a trailing-comma-plus-interior-empty, or an empty
+keyval (`label={a,,b}`) yields a contentless `"prefix:"` label.
+
+**Perl behavior:** `split(',')` + unconditional `$prefix . ':' . $label`
+emits `affiliation:`-style labels with no payload; these enter the
+`_annotations`/`_label` matching tables and can spuriously match
+*another* contentless label during `relocateAnnotations`, attaching
+an annotation to an unrelated parent.
+
+**Rust behavior:** empty fields (after trim; including `\ref{}` with
+empty referent) are dropped before prefixing. Perl's `split`-drops-
+trailing-empties semantics is otherwise preserved exactly.
+
+**Witness:** none in the corpus (defensive); decided at plan time —
+`docs/archive/frontmatter_api_refactor.md` decisions log #5.
+
+**Font switches (64u):** Perl strips only `\rm` from the labels
+(`$labels =~ s/\\rm//g`, Base_Utility.pool.ltxml:365); Rust strips the
+font switches `\rm`, `\bf`, `\it`, `\mathbf`, `\mathrm`, `\textbf`,
+`\textrm` alike (keeping the character after), so a mark set in bold
+(`Hui Cao$^{\bf{1,4},*}$`, 1109.3726) labels the affiliations 1 and 4
+its plain twin labels. Guard
+`perfect_kernel_batch64u::osa_mark_font_switch_is_no_label`.
 
 ## `catoptions.sty` raw-load fails in Perl too (SHARED, not Rust-only)
 
@@ -1359,35 +1387,6 @@ glyphs — every populated slot gets a nonzero-width glyph, so the loops
 terminate. All six witness papers now convert error-free with full-size
 documents (math0102053: 4.5 GB OOM → 3.2 s, 0 errors). No control-flow
 divergence: Perl given the same fontmap would behave identically.
-
-**The Rust fix, moved from OXIDIZED_DESIGN_DIVERGENCES #34** ("Contentless Frontmatter Annotation Labels Are Dropped", 2026-11-14):
-
-**Decision:** `clean_frontmatter_labels` skips fields with no real
-content. Perl `cleanFrontmatterLabels` prefixes empty fields too, so
-a doubled comma, a trailing-comma-plus-interior-empty, or an empty
-keyval (`label={a,,b}`) yields a contentless `"prefix:"` label.
-
-**Perl behavior:** `split(',')` + unconditional `$prefix . ':' . $label`
-emits `affiliation:`-style labels with no payload; these enter the
-`_annotations`/`_label` matching tables and can spuriously match
-*another* contentless label during `relocateAnnotations`, attaching
-an annotation to an unrelated parent. Recorded as a Perl-origin
-buglet in `KNOWN_PERL_ERRORS.md` #31.
-
-**Rust behavior:** empty fields (after trim; including `\ref{}` with
-empty referent) are dropped before prefixing. Perl's `split`-drops-
-trailing-empties semantics is otherwise preserved exactly.
-
-**Witness:** none in the corpus (defensive); decided at plan time —
-`docs/archive/frontmatter_api_refactor.md` decisions log #5.
-
-**Font switches (64u):** Perl strips only `\rm` from the labels
-(`$labels =~ s/\\rm//g`, Base_Utility.pool.ltxml:365); Rust strips the
-font switches `\rm`, `\bf`, `\it`, `\mathbf`, `\mathrm`, `\textbf`,
-`\textrm` alike (keeping the character after), so a mark set in bold
-(`Hui Cao$^{\bf{1,4},*}$`, 1109.3726) labels the affiliations 1 and 4
-its plain twin labels. Guard
-`perfect_kernel_batch64u::osa_mark_font_switch_is_no_label`.
 
 ---
 
@@ -21153,10 +21152,26 @@ Native bindings are *already* robust (no `\protect` fragility), so the
 faithful-to-intent behavior is to leave them alone.
 
 **Perl behavior:** Perl LaTeXML ports the identical etoolbox
-`\etb@robustify` and has the **same** bug — its robustified native `\cite`
-emits the literal pointer text (`Start CODE(0x…)…`) — it simply does not
-raise an `Error:`. So this is a **surpass-Perl** correction, not a Perl
-parity match: Rust both avoids the error *and* keeps `\cite` working.
+`\robustify` (`LaTeXML/Package/etoolbox.sty.ltxml:1203-1225`; the
+`\ifdefparam`-false branch `\protected\edef#1{\expandonce\etb@resrvda}`, :1220,
+beside the `\etb@robustify` rescan of :1227)
+and has the **same** bug — its robustified native `\cite` emits the literal
+pointer text (`CODE(0x…)`) and swallows what follows. So this is a
+**surpass-Perl** correction, not a Perl parity match: Rust keeps `\cite` working.
+
+**Minimal trigger** (pdflatex clean; Perl 0.8.8: `See CODE(0x…)a=b`, the
+equation lost, 2 Errors `Can't close environment equation`; ours: the citation
+and the equation, 0 errors):
+```latex
+\documentclass{article}
+\usepackage{natbib}
+\usepackage{etoolbox}
+\robustify{\cite}
+\begin{document}
+See \cite{x}.
+\begin{equation}a=b\end{equation}
+\end{document}
+```
 
 **Implementation:** `\lx@ifnativecmd` in
 `latexml_package/src/package/etoolbox_sty.rs` mirrors etoolbox's own
@@ -21293,7 +21308,12 @@ The bundled stylesheet adds a local delta:
 through the `ltx_para` wrappers: measured headless-Chrome gaps
 (text→eqn / eqn→eqn / eqn→text) go 16/0/16 px → uniform 16/16/16 px, i.e.
 the text↔display gap is unchanged (no doubling) while display↔display gains
-the paragraph rhythm. Guard:
+the paragraph rhythm.
+
+**Minimal trigger** (issue #473): `\[ a \] \[ b \]` — two displays in a row,
+touching under Perl's CSS, a display skip apart in the PDF.
+
+Guard:
 `witnessed_css_delta::equation_display_margin_delta_stays_present`
 (`latexml_post/src/xslt.rs`).
 
@@ -21408,7 +21428,9 @@ of <empty>" abort → gone). Guard:
 **Formerly OXIDIZED_DESIGN_DIVERGENCES #218** (moved 2026-11-14: a Perl defect and its Rust fix, not a design divergence).
 
 **Perl behavior**: `pst-grad.sty.ltxml` is `RequirePackage('pstricks')` and
-nothing else, so `\psfs@gradient` and the `grad*` keys never exist.
+nothing else (`LaTeXML/Package/pst-grad.sty.ltxml:23`), so `\psfs@gradient` and the `grad*` keys never exist.
+**Minimal trigger** (latex clean, prints "defined"; Perl 0.8.8 "undefined"; ours "defined"):
+`\usepackage{pst-grad}` … `\makeatletter\ifdefined\psfs@gradient defined\else undefined\fi`.
 **Rust behavior**: `pst_grad_sty.rs` additionally raw-loads `pst-grad.tex`
 (pst-grad.sty:3), exactly what the wrapper does.
 **Why**: with `\pst@object` dispatching for real (batch 56af) a raw object's
@@ -21442,7 +21464,7 @@ a visible, wrong side effect. Guard `blindtext_default_is_latin_without_babel`. 
 
 **Formerly OXIDIZED_DESIGN_DIVERGENCES #239** (moved 2026-11-14: a Perl defect and its Rust fix, not a design divergence).
 
-**Perl behavior**: `%makebox_alignment` (latex_constructs.pool.ltxml #2829)
+**Perl behavior**: `%makebox_alignment` (latex_constructs.pool.ltxml:4663, #2829)
 maps `s => 'stretched'`, so `\makebox[w][s]{…}` (and `\framebox`, `\parbox[s]`,
 etc.) emit `align="stretched"` — a value the schema `align` enum forbids
 (`LaTeXML-common.rnc:216` = `left|center|right|justified`). pgf-periodictable's
@@ -21457,6 +21479,7 @@ the XSLT builds the class as `ltx_align_<align>` = `ltx_align_justified`
 **Why**: kernel-quality / schema validity (user-approved surpass 2026-09-19);
 `stretched` is not a legal `align` value and rendered as plain left before.
 **Witnesses**: pgf-periodictable (1419), any `\makebox[…][s]`.
+**Minimal trigger**: `\makebox[3cm][s]{a b c}` (pdflatex clean; Perl 0.8.8 `align="stretched"`, ours `align="justified"`).
 **Guard**: `picture_makebox_offset::makebox_stretch_is_justified`.
 **Upstream**: not filed.
 
@@ -21526,14 +21549,14 @@ constructor uses `require_math`. Repro class-bindings/llncs_text_mode_vec_warns_
 **Formerly OXIDIZED_DESIGN_DIVERGENCES #917** (moved 2026-11-14: a Perl defect and its Rust fix, not a design divergence).
 
 Frontmatter refactor stage 7, the llncs and aa move (task #429; `agent_reports/2026-10-29_s6_aa_llncs_gate.md` §2, G3).
-Shadow-side, in the resolver; a written family's output changes where its writer takes the tagged difference.
+The rule is the resolver's (`observer/resolver`), whose decisions the emitter writes since the flip (OXIDIZED_DESIGN_DIVERGENCES #980).
 
 - **The defect.** llncs and aa (inst_support's `\institute`) print the `\institute` list once under the names, an
-  `\email` inside an entry once, under its institute. Today's old reader and Perl (both through the entry's label,
-  `\lx@add@affiliation[labelseq=affiliation]` / `\lx@add@contact[role=affiliation,labelseq=affiliation]`) and the
-  resolver alike gave the address to every name carrying the entry's `\inst{n}`: `ann.able@x.org` on Ann Able and on
-  Cid Cole (1606.03774, 2204.03161; aa 0901.4618's `nuccio.lanza@`, 1401.5494's `lfossati@`). A Perl-origin defect
-  shared with today's output; reach in the census, a one-address inner e-mail on two or more carriers: aa 142 of 559
+  `\email` inside an entry once, under its institute. Perl, and our reader before this rule (both through the entry's label,
+  `\lx@add@affiliation[labelseq=affiliation]` / `\lx@add@contact[role=affiliation,labelseq=affiliation]`)
+  gave the address to every name carrying the entry's `\inst{n}`: `ann.able@x.org` on Ann Able and on
+  Cid Cole (1606.03774, 2204.03161; aa 0901.4618's `nuccio.lanza@`, 1401.5494's `lfossati@`). A Perl-origin defect;
+  reach in the census, a one-address inner e-mail on two or more carriers: aa 142 of 559
   papers, llncs 77 of 686.
 - **The rule** (`Resolver::answer_inner_emails`, run after `answer_pending`'s loop, whose legend notes the
   corresponding step reads): an `email` contact recorded `api:inner-contact` that prints one address (one printing
@@ -21552,8 +21575,8 @@ Shadow-side, in the resolver; a written family's output changes where its writer
   `\author{Ann Able\inst{1,2}\thanks{Corresponding author.} \and Bob Baker\inst{1,2}}` gave `info@x.org` and
   `office@y.org` both to Ann Able; 2408.14427's `\{first.last\}@uii-ai.com` under five authors went to Meng Zheng; kept:
   2307.04136 `xfy_73…` Fengying Xie's, 2206.03049 `liuj@` Jiang Liu's). An entry no live name carries, its address
-  spelling no one, keeps the unrequested entry's placement. Each rule carries `owner:inner-email`, a change tag
-  (`resolver::CHANGE_TAGS`).
+  spelling no one, keeps the unrequested entry's placement. Each rule carries `owner:inner-email` on the association it decides (the change-tag list
+  `resolver::CHANGE_TAGS` went with the census, DEL4).
 - **A line break inside the call.** `\email{a@x.org \\ b@y.org}` prints one address a line (llncs's `{\tt#1}`); the
   rehearsal's break whatsit was stringified into the verbatim argument (`a@x.org\lx@fm@obs@breakb@y.org`, one address
   that spelled its first author, 2608.29307). `events::raw_lines` reads an e-mail call's argument with each break a
@@ -21565,13 +21588,13 @@ Shadow-side, in the resolver; a written family's output changes where its writer
   `\institute`, no `\and` in it (`\lx@llncs@institute@sole`, `_share=authors`), prints unnumbered under the whole row of
   names; the resolver read its number 1, which no name requests, and left it on the block. Now (`Resolver::shared`,
   `share_unpicked`, `answer_shared_emails`) it is every live author's (`api:share:authors`) unless a mark picks it, as
-  today's `marks_pick` reads one: a live name shows the class's own request of a number (`\inst{n}`; the requests the
+  `marks_pick` reads one: a live name shows the class's own request of a number (`\inst{n}`; the requests the
   class's request commands made, `Resolver::class_requests`, Mark role `inst`/`request` or `annotations=` — a hand-typed
   `$^{1}$`, `\inst{*}`, `\inst{}` pick nothing: 2607.02596, 2207.04574, 2604.20229), a name shows a number other than
   1 by hand, or the entry holds a mark of its own. Its e-mail calls go by the charter's chain over the live authors,
-  as today's `row_email_calls`: spelled; the entry's addresses one per author in order (`owner:order`); one author;
+  as `row_email_calls` does: spelled; the entry's addresses one per author in order (`owner:order`); one author;
   else the block (a template's too), the corresponding step above taking the one address left. No elimination. A list of local parts the address reader cannot part (`(npalmer|pwg)@…`,
-  cs0607047) spells no one (`Resolver::spelled`, as today's `spelled_owner`, user ruling R10). Census: llncs
+  cs0607047) spells no one (`Resolver::spelled`, as `spelled_owner`, user ruling R10). Census: llncs
   unclassified 58 → 41 of 463 (17 of the 19 class-S papers agree; 2104.12226 and cs0607047 keep a note and a residual).
 - Repros class-bindings/`llncs_inner_email_is_its_spellers`, `llncs_inner_shared_email_is_the_blocks`,
   `llncs_inner_email_is_the_corresponding_carriers`, `aa_inner_email_is_its_spellers`,
@@ -21598,3 +21621,5 @@ Shadow-side, in the resolver; a written family's output changes where its writer
 **Guards**:
 - `perfect_kernel_batch56::{box_sizes_are_their_constructed_sizes, a_box_width_does_not_break_its_contents}`
 - repro `boxes-groups/box_dimensions_measured.tex`
+
+**Open (K18 step 2):** `\raisebox`'s `[height][depth]` (RED `boxes-groups/raisebox_optionals_measure_the_box.tex`), `\resizebox{1em}`'s last digits, makecell/diagbox string sizes: `docs/perfect_kernel/OPEN_ROWS.md` ODR5.

@@ -54,18 +54,19 @@ Rules that keep this file honest and mergeable:
 - **The BM Q&A rows** (QA01-QA93, `~/data/pk_agents/main/bruce_qa/ACTIONS.md`, which keeps each row's text and evidence; status and rank live here) are all catalogued: the open ones are the QA lines below (QA60 site 8 as SR4/SR5, QA27 within CSS, QA75's rest as QA75 and QA75M); their pre-merge work done (QA41 → RV1 and PSF1, QA46/QA47 → QA47A, QA60 site 2 → TP3, QA75's short look, the eight upstream patches QA08, QA35, QA36, QA39, QA50, QA56, QA62 and the Perl sides of QA30 and QA45 — submitted as QA80; QA92 awaits QA02's rest); not listed — 28 done (QA01, QA02, QA03, QA07, QA09, QA10, QA12, QA13, QA18, QA25, QA30, QA31, QA33, QA34, QA40, QA42, QA45, QA54, QA55, QA59, QA67, QA70, QA71, QA82, QA83, QA87, QA89, QA93) and 10 that need no work (QA04, QA16, QA21, QA38, QA49, QA65, QA68, QA72, QA74, QA78: confirmed or noted).
 - **Detail per row:** the batch reports in `~/data/pk_agents/main/agent_reports/`, the BM Q&A rows in the Q&A tracker, each deferred finding's `_red.tex` (`moves:` names its row), the moved SYNC rows' detail in [`perfect_kernel/OPEN_ROWS.md`](perfect_kernel/OPEN_ROWS.md) "Post-merge rows moved from SYNC_STATUS (SYNC3)" under the same id. DG's pragmatic bar (2026-11-12) still sorts new findings: regressions and high-frequency / high-impact gaps first, new edge cases into this list.
 
-  **The worklist** (268 lines, weight 560; id — task; weight — easy 1, medium 3, hard 5):
+  **The worklist** (269 lines, weight 561; id — task; weight — easy 1, medium 3, hard 5):
 
 
-  - ODR1 — OD #973's pgfmath residuals (moved from OD by the 2026-11-14 rationalization): string operands, units after array primaries, grouping, out-of-bounds indexing (repro `graphics-tikz/pgfmath_string_and_units_in_arithmetic_red`); 3
-  - ODR2 — OD #976's tabularray `preto`/`appto` unwarned losses (inline expl key, the inner key's two-argument form; repro `alignment-bindings/tblr_inline_expl_command_in_a_key_red`); 1
+  - ODR1 — OD #973's pgfmath residuals (moved from OD by the 2026-11-14 rationalization): string operands, units after array primaries, grouping, out-of-bounds indexing (repro `graphics-tikz/pgfmath_string_and_units_in_arithmetic_red`; every case's pgf-vs-ours values: OPEN_ROWS ODR1); 3
+  - ODR2 — OD #976's tabularray `preto`/`appto` unwarned losses (inline expl key, the inner key's two-argument form, empty `preto`/`appto`, the `\SetTblrInner` order; repros `alignment-bindings/tblr_inline_expl_command_in_a_key_red`, `tblr_preto_in_a_two_argument_cell_key_red`; detail OPEN_ROWS ODR2); 1
   - ODR3 — OD #1019's mark-led names: REDs `article_mark_led_unanswered_trailing_mark_uncounted_red` and the two siblings; 1
   - ODR4 — OD #982: a top-level `\institute` after the author block is not cleared (revDEL3b R1, RED); 1
-  - ODR5 — KPE #1267 (formerly OD #327) box sizes, K18 step 2: `\raisebox`'s `[height][depth]` with `\height` a 0pt stub, `\resizebox{1em}` 10.00002pt vs pdflatex 10.00081pt, makecell/diagbox string sizes; 3
+  - ODR5 — KPE #1267 (formerly OD #327) box sizes, K18 step 2: `\raisebox`'s `[height][depth]` with `\height` a 0pt stub, `\resizebox{1em}` 10.00002pt vs pdflatex 10.00081pt, makecell/diagbox string sizes (RED repro `boxes-groups/raisebox_optionals_measure_the_box`; detail OPEN_ROWS ODR5); 3
   - ODR6 — OD ruling 12 (recorded in OD #449): `dump_reader.rs`'s "add-only" docstrings (:365, :574) corrected, then a removal trial of the skip lists against CLAUDE.md rule 2; 1
   - ODR7 — OD ruling 6: each "Bindings beyond Perl's tree" body (end of OD) into its binding module's `//!` doc comment, then trim the catalog to its table; 3
   - ODR8 — OD docs: #8 (the OML slot-127 claim unconfirmed in code), #26 (mdframed now inserts through `insert_block`, `mdframed_sty.rs`); 1
   - ODR9 — wire `tools/perfect_kernel/od_anchors.sh` into `tools/lint.sh`; 1
+  - ODR10 — OD #1028's two exceptions (the post-cutoff Error-policy batch): make a Rhai Fatal raised in a `DefLigature` `fontTest` (`script_bindings/wire.rs` `contain_bool`) or a register setter (`script_bindings/values.rs`, `let _ = contain(…)`) propagate as the other hooks' do; red probe: a `fontTest` or a `DefRegister` setter calling `Fatal()` prints one `Fatal:` line and the whole text is still built; 1
   - CT1b — CT1b; 1
   - CT1d — CT1d; 1
   - HG2 — HG2: 182 DEL1-kept guards + a no-content-assertion fence; 3

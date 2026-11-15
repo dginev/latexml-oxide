@@ -5969,6 +5969,9 @@ untouched.
 elements-manual, carbohydrates_en, flashmovie/test-beamer-0. 10-line repro in the
 guard test.
 
+**Upstream**: approved 2026-08-31 as branch-contained (perfect_kernel); upstream
+filing deferred by user directive ("contain all work to this branch only").
+
 ### 162. → KNOWN_PERL_ERRORS #1256 (Listings raw-line capture keeps the first body line after a line-crossing argument probe)
 
 ### 163. `\makeindex` allocates the `\@indexfile` write stream (kernel contract subset)
@@ -28211,7 +28214,7 @@ is 1, `"1cm"` its points, `"1e2"` 1 and an Error; a whole formula's braces go fi
 `\pgfmath@bgroup@strip` (:963, :984-1009) drops the spaces before a string's first two tokens only, its `#1#2#3` being undelimited (`{"a b","c"}[0]` is `ab`,
 `{"a ? b","c"}[0]` is `a? b`, `"a b"` alone stays); a list of one indexes its value's tokens (`{"ab"}[1]` is `b`, `{1cm}[0]` is `2`, `array({"ab"},1)` is `b`), and such a list inside another its value (`{{"ab"}}[0]` is `ab`); the sizers take a braced string, `height{"Q"}` (pgfcircvoltage.tex:192, circuitikzmanual).
 
-**Left:** the residual list (wrong numbers with no Error, and the review revM3r2P1 cases) is in SYNC_STATUS row R; its RED repros are `graphics-tikz/pgfmath_string_and_units_in_arithmetic_red`, `pgfmath_width_of_a_braced_string_red`, `pgfmath_lone_number_in_a_sublist_red`, `pgfmath_string_keeps_protected_commands_red`.
+**Left:** the residual list (wrong numbers with no Error, and the review revM3r2P1 cases) is `docs/perfect_kernel/OPEN_ROWS.md` ODR1 (SYNC row R); its RED repros are `graphics-tikz/pgfmath_string_and_units_in_arithmetic_red`, `pgfmath_width_of_a_braced_string_red`, `pgfmath_lone_number_in_a_sublist_red`, `pgfmath_string_keeps_protected_commands_red`.
 
 ### 974. A PDF string's escapes are the characters they name (pdflatex: the bytes, broken by a UTF-16 string)
 
@@ -28227,7 +28230,7 @@ lines). Guard `perfect_kernel_batchm3::a_pdf_string_under_a_latin_inputenc_and_w
 
 Those of a colspec's `Q[…]`, `column`, `row`, `cell`, `cells`, `rows`, `columns` join the cell's text, inside its math and its `cmd` (tabularray.sty:2639-2640, :2660-2686;
 latexml_contrib/src/tabularray_sty.rs, `\lx@tblr@cell@open`). The binding's `\Set…` commands take no key at all, so their text is lost: each gives `Warning:tabularray_key:<key>` with the
-text; a spanned cell's `\SetCell` (`\SetCell[c=2]{preto=W}`, `\SetCell[r=2]{appto=V}`), which `tblr_span_cells` takes before the macro, counts its own the same way, once under `hlines` too (repro alignment-bindings/tblr_preto_in_a_spanned_cell_red, RED: counted, not applied). Guard `perfect_kernel_batchm3::tblr_preto_and_appto_join_the_cell_text` (a row per repro). **Left:** the unwarned losses (an inline expl3 key, an inner two-argument cell key, empty `preto`/`appto`, the `\SetTblrInner` order) are in SYNC_STATUS row R; RED repros `alignment-bindings/tblr_inline_expl_command_in_a_key_red`, `tblr_preto_in_a_two_argument_cell_key_red`.
+text; a spanned cell's `\SetCell` (`\SetCell[c=2]{preto=W}`, `\SetCell[r=2]{appto=V}`), which `tblr_span_cells` takes before the macro, counts its own the same way, once under `hlines` too (repro alignment-bindings/tblr_preto_in_a_spanned_cell_red, RED: counted, not applied). Guard `perfect_kernel_batchm3::tblr_preto_and_appto_join_the_cell_text` (a row per repro). **Left:** the unwarned losses (an inline expl3 key, an inner two-argument cell key, empty `preto`/`appto`, the `\SetTblrInner` order) are `docs/perfect_kernel/OPEN_ROWS.md` ODR2 (SYNC row R); RED repros `alignment-bindings/tblr_inline_expl_command_in_a_key_red`, `tblr_preto_in_a_two_argument_cell_key_red`.
 
 ### 977. l3fp's doors answer natively: what the macro's run leaves, from a port of l3fp's arithmetic
 
@@ -29970,7 +29973,7 @@ creators) and 2604.04847 byte-identical too.
 
 **Perl.** Every binding splits an author list by its tokens before digestion: `SplitTokens` matches a token whose meaning
 is the separator's, the separator itself or a `\let` copy (`Base_Utility.pool.ltxml:114-140`, `@authorsplits` :679;
-`Equals` by meaning, `Common/Object.pm:100-103`; #994), so a separator held in a macro (`\author{\aut}`,
+`Equals` by meaning, `Common/Object.pm:100-103`; SEP1 below, formerly #994), so a separator held in a macro (`\author{\aut}`,
 `\newcommand\nx{\and}`), printed by a document wrapper (`\pair{Ann Able}{Bob Baker}`, `\pair` printing `#1 \and #2`)
 or spelled `\csname and\endcsname` leaves one piece: one creator, "Ann Able and Bob Baker" (Perl 0.8.8 under OmniBus,
 inst_support.sty.ltxml:33-38; llncs, llncs.cls.ltxml:43; IEEEtran, journal and conference grid). pdflatex prints two
@@ -30304,6 +30307,56 @@ groups unbalanced) is not replayed: `declaration_reads_past` declines the block 
 reached by no known input (revGRP1's 12 probes; by the code, only a span starting before the block). Guard
 `perfect_kernel_batchaut1::a_declaration_is_replayed_as_far_as_its_call_read`; RED
 `amsart_author_macro_lines_with_email_array_split_red`.
+
+**SEP1 (absorbed from #994): the rehearsal binds a `\let` copy of an author-line separator or note command by its meaning, as the command it copies.** Perl: `\let\nx\and` then `\author{Ann Able \nx Bob Baker}` gives two creators, Ann Able and Bob Baker (Perl 0.8.8,
+run on the repro): `\lx@add@authors` splits at `@authorsplits` (`\and`, `\And`, `\AND`, …; `Base_Utility.pool.ltxml:679`)
+by `SplitTokens` (:114-140), whose `Equals` compares two tokens by their meanings (`Common/Object.pm:100-103`,
+`lookupMeaning`; `Core/Token.pm:318-320` `equals` is the by-name one), so `\nx` matches `\and`; a `\let\nx\relax` or a
+`\def\nx{\and}` is not split (Perl 0.8.8, `--debug=frontmatter`). A copy taken before `\renewcommand\and` is split too:
+it matches `\And`/`\AND`, which keep the kernel's meaning (`Let('\And', '\and')`, `latex_constructs.pool.ltxml:1095-1096`).
+pdflatex prints two authors: `\nx` is `\and`.
+
+Before SEP1 the rehearsal bound the author line's vocabulary by name only (`observer/rehearsal.rs`
+`install_event_bindings`, `ALWAYS_BOUND`: `\and` to `\lx@fm@obs@and`, `\\` to `\lx@fm@obs@break`, `\thanks`, `\footnote`
+to their events). A `\let` copy kept the command's own meaning (the kernel `\and` a constructor printing " and ",
+`sect05.rs`), so the block held no `Sep(And)` to cut: one creator "Ann Able
+and Bob Baker", `Error:frontmatter:merged_creators`, under article, eptcs and IEEEtran journal (OC1's `\let` probe); a
+copy of `\thanks` printed the kernel's note and the creator held none; a copy of `\footnote` had its note text ("footnote",
+the mark, "Univ A") read into the name.
+
+Now, before the by-name bindings, `let_copies_of_bound_commands` collects the commands the block reaches — spelled in its
+tokens, or held in the bodies of the document's own macros it spells (`DefinitionOrigin::Document`, at most 256 macros
+per block) — whose meaning is a definition made for an `ALWAYS_BOUND` command flagged bound by meaning (`\and`, `\And`,
+`\AND`, `\\`, `\thanks`, `\footnote`): `defined_as` it, so a `\relax` or an undefined name is no copy of a separator a
+class `\let` to `\relax` or left undefined. It is not compared with what the command means now, as the command itself
+is bound by its name whatever its definition: a copy taken before the document renews the command
+(`\let\nx\and\renewcommand\and{\unskip\ and\ }`, `\let\oldthanks\thanks\renewcommand\thanks[1]{}`) keeps the
+separator or the note in TeX (SEP1b); a test against the command's current meaning had left it unbound, one merged
+creator, the note lost. This binds a copy of a class's own `\and` too (amsart.cls:599's word-printing `\and`, then renewed:
+two creators, the printed "and" kept as Bob Baker's `before`), as TeX does, where Perl's `Equals` would not split at it —
+Perl's split on a renewed `\and`'s older copy holds only for the kernel's `\and`, through `\And`/`\AND`'s `Let` copies
+(`latex_constructs.pool.ltxml:1095-1096`). The distinct commands read are kept in a hash set (`Token` hashes what its equality compares; a `Vec` searched linearly was quadratic:
+a 300-macro synthetic, 1.14 G instructions → 10.2 G under SEP1, 1.19 G since).
+Each is `\let` to the command's event constructor, in the rehearsal's group. A name bound by its own name
+(`ALWAYS_BOUND`, `BOUND_WHEN_DEFINED`: fixacm.sty's `\let\alignauthor\and`, 1801.02123) or one the binding declares a
+block break keeps that binding. Class macros are not read into: a copy a class's own code makes (latex.ltx's
+`\@normalcr`, revtex's `\and@latex`) is the class's business.
+
+SEP1's reach (a source scan of the 35,942 census papers, `\let\X\and|\And|\AND|\\|\thanks|\footnote` and `X` in an
+`\author`/`\authors` argument): a copy of `\and`/`\And`/`\AND` used in an author argument, 0 papers beyond fixacm's
+`\alignauthor` (bound by name already; 294 papers define such a copy, 289 of them in a class or package); of `\\`, 5
+(all `\newline`, bound by name); of `\thanks`, 73 (72 `\footnote`, bound by name; acl.sty's `\Thanks`, 2407.16574); of
+`\footnote`, 170 (169 `\thanks`, bound by name; www-notes.cls's `\Affiliation`, 1712.07684, `\let` to `\footnote` only inside
+`\preauthor`, `\@gobble` outside it). Byte-diff against OC1b (3,283 papers: the scan's 570, the article 614, the llncs
+699, int152c's stage2 1,434; 3,263 converted on both sides, the other 20 on neither): one paper changed, 2407.16574,
+better (its two `\Thanks` notes, a `pubnote` each before, now Eunseop Yoon's and Chang D. Yoo's, as the PDF marks them);
+E/F/W totals equal on every list. Not bound by meaning: the rest of `ALWAYS_BOUND` (`\par`, `\label`, `\footnotemark`, `\footnotetext`,
+`\newline`, `\linebreak`, `\inst`), whose copies (`\endgraf`, `\@@par`) are kernel and class internals.
+
+SEP1's guards `perfect_kernel_batchsep1::{a_let_copy_of_and_parts_the_names, eptcs_cells_part_at_a_let_copy_of_and,
+a_let_copy_of_a_note_command_is_its_note}`; repros
+`sectioning-frontmatter/author_let_copy_of_{and_parts_the_names,and_parts_the_names_ieeetran,and_in_a_macro_parts_the_names,and_before_renewal_parts_the_names,thanks_is_the_note,thanks_before_renewal_is_the_note,footnote_is_the_note}.tex`,
+`class-bindings/eptcs/eptcs_author_let_copy_of_and_parts_the_names.tex`.
 
 ### 994. → #993 (merged: The rehearsal binds a `\let` copy of an author-line separator or note command by its meaning, as the command it copies (SEP1))
 
@@ -31577,8 +31630,12 @@ swallow it (`script_bindings/wire.rs` `contain` returns the Fatal `take_raised_f
 conversion from a binding's top level, a body, a hook or a binding another binding loads (probe: `Before \wftopmacro\
 after.` with a body `Fatal()` keeps no text, "Conversion failed: 1 fatal error"). A Fatal the script catches with
 `try`/`catch` was printed at its raise; the script and the conversion go on, and a later error stays its own counted
-line (the user's ruling that every Error is emitted and counted, 2026-11-11); no ignore flag outlives it. DG 2026-11-14 confirmed both halves: a Rhai Fatal stops
-processing, and a Fatal the binding deliberately catches may continue, as Perl's `eval` allows. **Guard**: `30_script_bindings::a_rhai_fatal_is_logged_once` (the caught-then-thrown rows).
+`Error:script:` line (the user's ruling that every Error is emitted and counted, 2026-11-11); no ignore flag outlives it. DG 2026-11-14 confirmed both halves: a Rhai Fatal stops
+processing, and a Fatal the binding deliberately catches may continue, as Perl's `eval` allows. **Two exceptions today**
+(SYNC row R ODR10): a Fatal raised in a `DefLigature` `fontTest` (`wire.rs` `contain_bool`, `.unwrap_or(false)`) or in a
+register setter (`values.rs` `let _ = contain(…)`) prints its one line and sets status 3, but is dropped there: the
+test reads false or the setter's body stops, and the conversion builds the whole text (probes: `Before qq after.` under a
+`fontTest` calling `Fatal()`, `Before \wfreg=5pt after.` under such a setter; each "Conversion failed: 1 fatal error"). **Guard**: `30_script_bindings::a_rhai_fatal_is_logged_once` (the caught-then-thrown rows).
 
 ### 1030. → KNOWN_PERL_ERRORS #1244 (Rhai glue arithmetic is TeX's `\advance`, not Perl's Glue.pm / MuGlue.pm)
 
