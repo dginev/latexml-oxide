@@ -184,13 +184,15 @@ The canonical corpus phase bands (digest 19.7%, math_parse 19.2%, build 18.1%, x
 
 * **Current reality:** the discarded `node_to_string(&dual)` in
   `Document::prune_xmduals` is gone (batch 68p, byte-identical, within noise).
-  `collapse_xmdual` still evaluates `//*[@idref='<dualid>']` from the document for
-  each collapsed dual.
-* **Cost shape:** definite serialization/allocation waste, followed by a
-  worst-case `O(collapsed_duals * document_nodes)` reference-repair loop. The
-  delta has not yet been measured.
-* **Next:** build one `idref -> nodes` index and update its buckets when ids
-  move. See audit F2 for edge cases and witnesses.
+  `collapse_xmdual` renames a dual's references through `Document::idref_index`,
+  one `idref -> nodes` walk built on the first collapse that needs it and kept
+  current by `remove_node` and `merge_attributes` (issue 802, KNOWN_PERL_ERRORS
+  #1248): the per-dual `//*[@idref='<dualid>']`, `O(collapsed_duals *
+  document_nodes)` and refused by libxml2 past 10,000,000 nodes, is gone. Guard
+  `perfect_kernel_batchi802::collapsed_dual_references_take_the_branch_id`.
+  Measured (instructions:u, release, base 5e02406406e): 500 / 1000 / 2000
+  paragraphs of the guard's second formula take 23.7 / 78.6 / 259.2 G on the
+  base (quadratic) and 6.6 / 12.3 / 23.7 G after (linear); XML byte-identical.
 
 ### P2 — Complete streaming across the core-to-post boundary
 

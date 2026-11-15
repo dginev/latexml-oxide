@@ -11208,6 +11208,21 @@ string "0" as false (a key, title or year suffix of "0") is not copied.
 
 **Guards**: `bibref_show::*` (6), `bibliography_crossref::crossref_child_sees_its_parent_and_skips_the_host_title`.
 
+**Extension (issue #857): the citation's form is a class on its `<ltx:cite>`.** Rule: an `ltx:cite` whose every
+bibref (at any depth, e.g. natbib `[super]`'s `<sup>`) printed only `refnum`/`number`/`super` with phrases and literals
+gets `ltx_cite_numeric`; one with any `author`/`fullauthor`/`title`/`year`/`fullentry` or preformatted text gets none.
+- Perl: CrossRef.pm:486-493 `fill_in_bibrefs` replaces each bibref and drops its `show`, so
+  `<cite class="ltx_citemacro_citep">` covers `[40]` and `(Bekki, 2013; …)` alike. Principle: Perl's own intent, the form
+  the core records as `show` and the show walk settles per entry (CrossRef.pm:505-507 the force-numeric collapse, :542
+  the nameless fallback, refined by #786; the walk :566-640); a missing entry counts neither way.
+- Classed: `[1]`, `[1, 2]`, `[1, Section 7]`, `[Kho00]`, a superscript `\cite`/`\citep`; not: `Bekki (2013)`,
+  `Smith [2]`, a mixed `Smith [2], [1]`. A biblatex `\textcite` of a nameless entry prints "[2]" and is classed numeric
+  where the PDF prints "No Author Misc [2]" (#786's `labeltitle` residual); the guard pins that output.
+- Consumer: ar5iv-css keeps a numeric cite's refs inline where `text-justify` is missing (WebKit). Offered to Perl:
+  `make_bibcite` returning the form beside its nodes, `fill_in_bibrefs` calling `$doc->addClass($cite,'ltx_cite_numeric')`.
+- Guards: `bibref_show::*` (the class on every pinned cite), `bibref_show::cite_numeric_class_rows` (`thebibliography`,
+  biblatex numeric and authoryear, natbib `[super]`).
+
 ### 309. NFSS text-font state follows every font switch; `\the\font` names the current font (Perl: codes only from `\fontfamily`…; `\the\font` = the last `\font` identifier or cmr10)
 
 Perl keeps LaTeX's NFSS codes (`\f@family`, `\f@series`, `\f@shape`) only where `\fontfamily` and
@@ -36646,8 +36661,9 @@ etoolbox's `\AfterEndDocument` adds to `enddocument/end`, atveryend's commands t
 label hook's code that prints nothing leaves no box (2501.00173: `\label{…}` + `\ ` before a list opened an empty
 paragraph). The storage read (`hook_has_code`: the labelled-code prop, the top-level and next-use slots) replaces an
 expansion that cost 0.2-0.4M instructions at every `\label` and environment end; `\include`'s hooks pass over an empty
-hook (`\lx@usehook`, `\lx@useonetimehook`: a `\UseHook` cost 0.7M, a `\UseOneTimeHook` 3M here, as our document never
-runs `\@expl@@@initialize@all@@`), an empty one-time hook only marking itself used (`\__hook_use_once_set:n`; the clear
+hook (`\lx@usehook`, `\lx@useonetimehook`: a `\UseHook` cost 0.7M, a `\UseOneTimeHook` 3M in lthooks' preamble mode,
+where each use rebuilds its hook; the package, class and file hooks of every load take the same path), an empty one-time
+hook only marking itself used (`\__hook_use_once_set:n`; the clear
 code lthooks leaves in an undeclared hook's next slot is not kept, which only `\IfHookEmptyTF` on that used hook would
 see). The kernel's first aid for cleveref.sty (latex2e-first-aid-for-external-files.ltx:193-270, `package/cleveref/after`
 labelled `firstaid`) is not registered under cleveref's binding, which replaces the code it repairs (DG 2026-11-14):
@@ -36765,3 +36781,21 @@ driver it chose, as TeX's load order decides. Under a preload of latexml.sty a d
 `backend-persona/latexml_option_after_ar5iv_preload_red`, post-merge). Default output unchanged. Perl patch prepared
 (`bruce_qa/patches/qa64.patch`: the two options, and TeX's latexml.sty declaring them). Guard
 `perfect_kernel_batchqab57::latexml_pdfoutput_options_override_the_mode`.
+**Addendum (HOOKINIT): lthooks' document mode.** latex.ltx:15356-15361 `\@execute@begin@hook{document}` runs
+`\@expl@@@initialize@all@@` (`\__hook_initialize_all:`, :5854) between `env/document/before` and `/begin`: every declared
+hook's code is built once, `\__hook_update_hook_code:n` rebuilds a hook at each later add, and
+`\__hook_post_initialization_defs:` (:6380) makes `\hook_use:n` the expandable `\__hook_use_initialized:n` (:6351).
+LaTeXML's `\begin{document}` (sect01.rs, both the constructor and a renewed `document`) runs it there once, read from
+`\__hook_update_hook_code:n` still being `\use_none:n` (:5853/:5856, every lthooks since 2020-10-01), and `\document`'s
+`\@kernel@after@begindocument@before` step `\let`s `env/document/begin`'s code to `\@empty` (:9532-9535). Perl's
+`\begin{document}` runs neither and stays in preamble mode: a body `\edef\x{\UseHook{h}}` holds `\hook_use:n {h}`
+where pdflatex's holds the code (KNOWN_PERL_ERRORS #1249), and each body `\UseHook` of a hook with code rebuilt it.
+Cost: a body add now rebuilds its hook, as pdflatex does, so acro papers (an `enddocument` add per acronym use,
+acro.sty:3917) cost +0.6…+5.6 % instructions (2502.06996 +5.65 %, 2205.14872 +1.4 %, 2008.04164 +0.6 %) and others
+run faster (2307.05602 −7.7 %, 2605.14422 −10 %; median −6.6 % over 56 papers); 300 body adds to one hook take
+pdflatex 5.25G instructions, ours 7.81G (accepted as TeX's own cost, DG 2026-11-14).
+**Guard**: `perfect_kernel_batchqa47a::batchqa47a_command_hook_rows` (rows `use_hook_expands_in_the_body`,
+`hook_code_added_in_the_body_runs`, `hooks_initialize_once_on_an_older_lthooks`); RED catalog
+`show_hook_needs_showstream_red` (`\ShowHook` needs pdfTeX's `\showstream`, post-merge),
+`file_hooks_run_at_every_input_red` (content.rs runs `file/<name>/before|after` as one-time hooks, latex.ltx:19669/19672
+a plain `\UseHook`; post-merge).
