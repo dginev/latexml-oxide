@@ -184,7 +184,7 @@ LoadDefinitions!({
     properties => sub[args] {
       let list = args[0].as_ref().map(|t| t.to_string()).unwrap_or_default();
       let list = if list.is_empty() { "main".to_string() } else { list };
-      let math = lookup_string_from_sym(pin!("MODE")).ends_with("math");
+      let math = mode_ends_with("math");
       Ok(stored_map!("list" => list, "math" => math))
     });
 

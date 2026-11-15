@@ -239,9 +239,8 @@ LoadDefinitions!({
         return Ok(Vec::new());
       }
       // Perl: combine any digested horizontal material into a horizontal List
-      let mode = lookup_string_from_sym(pin!("MODE"));
-      let bound = lookup_string_from_sym(pin!("BOUND_MODE"));
-      if mode == "horizontal" && bound.ends_with("vertical") {
+      let bound = lookup_string_sym_from_sym(pin!("BOUND_MODE"));
+      if lookup_mode() == pin!("horizontal") && with(bound, |bound| bound.ends_with("vertical")) {
         // Perl: $stomach->repackHorizontal; an explicit `\par` ends the paragraph (tex.web §1096 `end_graf`).
         if LookupBool!("INTERNAL_PAR") {
           repack_horizontal();
@@ -260,7 +259,7 @@ LoadDefinitions!({
         whatsit.set_property("reversion", Tokens!());
         return Ok(Vec::new());
       }
-      whatsit.set_property("mode", lookup_string_from_sym(pin!("MODE")));
+      whatsit.set_property("mode", lookup_mode());
       // When invoked by leave_horizontal: no reversion, don't close ltx:para
       if LookupBool!("INTERNAL_PAR") {
         whatsit.set_property("internal_par", true);
@@ -346,7 +345,7 @@ LoadDefinitions!({
         // Each queued `\vadjust` is a list already built, its paragraph ended (the primitive above). A `\par` in a
         // restricted horizontal box or in math ends no paragraph (tex.web §1096 `end_graf` acts in `hmode` only), so the
         // queue waits: `Juliet\vadjust{Kilo} \mbox{Lima\par Mike}` sets Kilo after Juliet's line.
-        if !lookup_string_from_sym(pin!("MODE")).ends_with("vertical") {
+        if !mode_ends_with("vertical") {
           return Ok(Vec::new());
         }
         // A `\vspace` the paragraph ended at lies between it and the next (tex_glue.rs `note_skip_after_para`).

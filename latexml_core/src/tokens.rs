@@ -64,14 +64,44 @@ impl PartialEq for Tokens {
 #[macro_export]
 macro_rules! Tokens(
   () => ( $crate::tokens::NO_TOKENS );
+  ($tokens:expr_2021) => ({
+    let t_vec : Vec<$crate::token::Token> = $tokens.into();
+    $crate::tokens::Tokens::new(t_vec)
+  });
   ($( $tokens:expr_2021 ),+) => ({
     let mut collected : Vec<$crate::token::Token> = Vec::new();
     $(
-      let t_vec : Vec<$crate::token::Token> = $tokens.into();
-      collected.extend(t_vec);
+      $crate::tokens::TokensPiece::append_to($tokens, &mut collected);
     )*
     $crate::tokens::Tokens::new(collected)
   }));
+
+/// A piece of [`Tokens!`]: appended in place, without the `Vec` its `Into<Vec<Token>>` would make per piece.
+#[doc(hidden)]
+pub trait TokensPiece {
+  fn append_to(self, collected: &mut Vec<Token>);
+}
+impl TokensPiece for Token {
+  fn append_to(self, collected: &mut Vec<Token>) { collected.push(self) }
+}
+impl TokensPiece for Tokens {
+  fn append_to(self, collected: &mut Vec<Token>) {
+    if collected.is_empty() {
+      *collected = self.0;
+    } else {
+      collected.extend(self.0);
+    }
+  }
+}
+impl TokensPiece for Vec<Token> {
+  fn append_to(self, collected: &mut Vec<Token>) {
+    if collected.is_empty() {
+      *collected = self;
+    } else {
+      collected.extend(self);
+    }
+  }
+}
 // We also need convenient auxiliaries, including auto-casting
 impl From<Vec<Token>> for Tokens {
   fn from(ts: Vec<Token>) -> Tokens { Tokens::new(ts) }
@@ -626,13 +656,16 @@ impl Tokens {
     let mut length = 0;
     let mut level = 0;
     let mut prevs = String::new();
+    // the token's text (its `Display`), spelled in a buffer reused across tokens
+    let mut token_string = String::new();
     let mut prevcc = Catcode::COMMENT;
     while let Some(token) = tokens.pop_front() {
       let cc = token.get_catcode();
       if cc == Catcode::COMMENT {
         continue;
       }
-      let mut token_string = token.to_string();
+      token_string.clear();
+      let _ = write!(token_string, "{token}");
       // Note: \n only-used to fail alphanumeric test
       let first_char = token_string.chars().next().unwrap_or('\n');
       if cc == Catcode::LETTER {
@@ -683,7 +716,7 @@ impl Tokens {
         if cc == Catcode::END {
           level -= 1;
         }
-        prevs = token_string;
+        std::mem::swap(&mut prevs, &mut token_string);
         prevcc = cc;
       }
     }

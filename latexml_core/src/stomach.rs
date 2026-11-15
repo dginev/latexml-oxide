@@ -1111,10 +1111,7 @@ fn close_environment_frame(closer: Token, semi_simple: bool) -> Result<bool> {
   if !is_closer {
     return Ok(false);
   }
-  if matches!(
-    lookup_string_from_sym(crate::pin!("MODE")).as_str(),
-    "math" | "display_math"
-  ) {
+  if matches!(lookup_mode(), m if m == crate::pin!("math") || m == crate::pin!("display_math")) {
     return Ok(false);
   }
   let (end, bare) = if is_value_bound("lx@env@bare@end", Some(0)) {
@@ -1911,7 +1908,7 @@ fn pending_everypar() -> Option<Tokens> {
 /// `\leavevmode`) still fire it in place (`fire_everypar`). OXIDIZED_DESIGN #267; guard
 /// `perfect_kernel_batch56::everypar_reads_the_token_that_started_the_paragraph`.
 fn back_input_for_new_graf(token: Token) -> bool {
-  if !lookup_string_from_sym(crate::pin!("MODE")).ends_with("vertical") {
+  if !mode_ends_with("vertical") {
     return false;
   }
   let Some(toks) = pending_everypar() else {
@@ -1937,7 +1934,7 @@ fn back_input_for_new_graf(token: Token) -> bool {
 /// a `\let` copy is the same command.
 /// Guard `perfect_kernel_batch80a::everypar_box_holds_a_line_opened_by_a_control_space`.
 fn starts_new_graf(cs: &Token) -> bool {
-  lookup_string_from_sym(crate::pin!("MODE")).ends_with("vertical")
+  mode_ends_with("vertical")
     && cs.with_str(|name| {
       matches!(
         name,
@@ -1981,8 +1978,8 @@ pub fn enter_horizontal_listed_indent() { enter_horizontal_graf(false, true) }
 pub fn enter_horizontal_without_everypar() { enter_horizontal_graf(true, false) }
 
 fn enter_horizontal_graf(implicit_indent: bool, everypar: bool) {
-  let mode = lookup_string_from_sym(crate::pin!("MODE"));
-  if mode.ends_with("vertical") {
+  let mode = lookup_mode();
+  if arena::with(mode, |mode| mode.ends_with("vertical")) {
     assign_value_inplace_sym(crate::pin!("MODE"), crate::pin!("horizontal"));
     mark_paragraph_start(implicit_indent);
     if everypar && implicit_indent {
@@ -1994,12 +1991,17 @@ fn enter_horizontal_graf(implicit_indent: bool, everypar: bool) {
       // text opened the `ltx:p` first and the class was lost). Repro block-model/noindent_class_survives_everypar.
       gullet::unread(toks);
     }
-  } else if !mode.ends_with("horizontal") && !mode.ends_with("math") {
+  } else if arena::with(mode, |mode| {
+    !mode.ends_with("horizontal") && !mode.ends_with("math")
+  }) {
     // Perl L420-422: warn on unexpected mode
     Warn!(
       "unexpected",
       "enterHorizontal",
-      s!("Unexpected mode '{}' for enterHorizontal", mode)
+      s!(
+        "Unexpected mode '{}' for enterHorizontal",
+        arena::to_string(mode)
+      )
     );
   }
   // else: already horizontal or math — fine
@@ -2008,9 +2010,12 @@ fn enter_horizontal_graf(implicit_indent: bool, everypar: bool) {
 /// Resume vertical mode by executing \par, in TeX-like fashion.
 /// Perl: sub leaveHorizontal
 pub fn leave_horizontal() -> Result<()> {
-  let mode = lookup_string_from_sym(crate::pin!("MODE"));
-  let bound = lookup_string_from_sym(crate::pin!("BOUND_MODE"));
-  if mode == "horizontal" && bound.ends_with("vertical") {
+  if lookup_mode() == crate::pin!("horizontal")
+    && arena::with(
+      lookup_string_sym_from_sym(crate::pin!("BOUND_MODE")),
+      |bound| bound.ends_with("vertical"),
+    )
+  {
     // This needs to be an invisible, and slightly gentler, \par
     assign_value("INTERNAL_PAR", true, Some(Scope::Local));
     let par = T_CS!("\\par");
@@ -2052,11 +2057,13 @@ pub fn leave_horizontal() -> Result<()> {
 /// Used within argument digestion, e.g. endMode for vertical modes.
 /// Perl: sub leaveHorizontal_internal
 pub fn leave_horizontal_internal() {
-  let mode = lookup_string_from_sym(crate::pin!("MODE"));
-  let bound = lookup_string_from_sym(crate::pin!("BOUND_MODE"));
-  if mode == "horizontal" && bound.ends_with("vertical") {
+  if lookup_mode() != crate::pin!("horizontal") {
+    return;
+  }
+  let bound = lookup_string_sym_from_sym(crate::pin!("BOUND_MODE"));
+  if arena::with(bound, |bound| bound.ends_with("vertical")) {
     repack_horizontal();
-    assign_value_inplace_sym(crate::pin!("MODE"), arena::pin(&bound));
+    assign_value_inplace_sym(crate::pin!("MODE"), bound);
   }
 }
 
@@ -2652,7 +2659,7 @@ fn adds_no_line_material(item: &Digested) -> bool {
 /// The lowest index of the current list the list-tail primitives may reach: in a paragraph, only what it added
 /// (tex.web §1080, §1105: TeX's list holds only the paragraph's own nodes, `paragraph_start`).
 fn own_list_floor(stomach: &Stomach) -> usize {
-  let in_paragraph = lookup_string_from_sym(crate::pin!("MODE")) == "horizontal";
+  let in_paragraph = lookup_mode() == crate::pin!("horizontal");
   match stomach.paragraph_start {
     Some(start) if in_paragraph => start.index.min(stomach.box_list.len()),
     _ => 0,
@@ -2703,7 +2710,7 @@ where FnR: FnOnce(&[Digested]) -> R {
 /// which LaTeXML does not list: the paragraph is then without one, and null if nothing follows (§1096). True when
 /// there was one to take.
 pub fn take_implicit_indent() -> bool {
-  let in_paragraph = lookup_string_from_sym(crate::pin!("MODE")) == "horizontal";
+  let in_paragraph = lookup_mode() == crate::pin!("horizontal");
   let mut stomach = stomach_mut!();
   let floor = own_list_floor(&stomach);
   let own_empty = stomach.box_list[floor..]
@@ -3196,10 +3203,7 @@ pub fn in_left_group() -> bool {
 /// Whether the innermost group is the formula's own math shift (a frame that switched to math mode).
 fn in_math_shift_group() -> bool {
   is_value_bound("MODE", Some(0))
-    && matches!(
-      lookup_string_from_sym(crate::pin!("MODE")).as_str(),
-      "math" | "display_math"
-    )
+    && matches!(lookup_mode(), m if m == crate::pin!("math") || m == crate::pin!("display_math"))
 }
 
 /// The closer a `}` is missing in the innermost group when that group is one `}` cannot close (tex.web §1069
@@ -3312,7 +3316,7 @@ pub fn formula_reachable(flag: &str) -> bool {
 /// swapped (OXIDIZED_DESIGN #553; 65d review probes f4, a18, a19). Guards
 /// `perfect_kernel_batch65n::{par_in_inline_math_ends_the_formula, environment_end_in_inline_math_ends_the_formula}`.
 pub fn insert_dollar_sign(again: Tokens) -> Result<bool> {
-  if lookup_string_from_sym(crate::pin!("MODE")) != "math" || !inline_formula_reachable() {
+  if lookup_mode() != crate::pin!("math") || !inline_formula_reachable() {
     return Ok(false);
   }
   Error!(
@@ -3527,7 +3531,7 @@ fn lookahead_command(token: &Token, depth: usize, budget: &mut usize) -> Lookahe
 /// (`{\cf^{1}/G}$`, `\left[0,1\right)`). The look-ahead starts after the judged `\par`, its leading `\par`s and spaces
 /// skipped — an `\obeylines` line end's active `^^M` among them (hep-ph9809328).
 pub fn formula_continues_past_par() -> bool {
-  if lookup_string_from_sym(crate::pin!("MODE")) != "math" || !inline_formula_reachable() {
+  if lookup_mode() != crate::pin!("math") || !inline_formula_reachable() {
     return false;
   }
   let upcoming = gullet::peek_upcoming_tokens(
@@ -4114,10 +4118,7 @@ fn digest_body(terminal_opt: Option<Token>, in_paragraph: bool) -> Result<Vec<Di
       && lookup_alignment().is_none()
       && !lookup_bool_sym(crate::pin!("IN_MATH"))
       && open_conditional_count() == 0
-      && matches!(
-        lookup_string_from_sym(crate::pin!("MODE")).as_str(),
-        "vertical" | "internal_vertical"
-      )
+      && matches!(lookup_mode(), m if m == crate::pin!("vertical") || m == crate::pin!("internal_vertical"))
     {
       FRAGMENT_YIELDED.set(true);
       FRAGMENT_YIELD_REQUESTED.set(false);
@@ -4657,8 +4658,9 @@ fn invoke_token_simple(meaning: Token) -> Result<Option<Digested>> {
       }
       clear_prefixes(); // Perl Stomach.pm line 234: prefixes shouldn't apply here.
       // Perl: if($STATE->lookupValue('MODE') =~ /(?:math|vertical)$/) { return (); }
-      let mode = lookup_string_from_sym(crate::pin!("MODE"));
-      if mode.ends_with("math") || mode.ends_with("vertical") {
+      if arena::with(lookup_mode(), |mode| {
+        mode.ends_with("math") || mode.ends_with("vertical")
+      }) {
         Ok(None)
       } else {
         enter_horizontal();

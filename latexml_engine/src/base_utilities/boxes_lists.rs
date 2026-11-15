@@ -188,15 +188,14 @@ fn predigest_list_in_mode(
     // Perl's endMode triggers leaveHorizontal_internal → repackHorizontal
     // when enterHorizontal changed MODE to 'horizontal' inplace within this frame.
     // Check the condition BEFORE endMode pops the frame.
-    let post_mode = lookup_string_from_sym(pin!("MODE"));
-    let bound_mode = lookup_string_from_sym(pin!("BOUND_MODE"));
-    if post_mode == "horizontal"
-      && bound_mode.ends_with("vertical")
+    let bound_mode = lookup_string_sym_from_sym(pin!("BOUND_MODE"));
+    if lookup_mode() == pin!("horizontal")
+      && with(bound_mode, |bound| bound.ends_with("vertical"))
       && has_only_simple_horizontal_content(&item)
     {
       repack_horizontal_in_list(&mut item);
       // Restore MODE like leave_horizontal_internal does
-      assign_value_inplace_sym(pin!("MODE"), pin(&bound_mode));
+      assign_value_inplace_sym(pin!("MODE"), bound_mode);
     }
     // Perl: $stomach->endMode($mode) — pop the frame
     if mode.ends_with("vertical") || mode.ends_with("horizontal") {

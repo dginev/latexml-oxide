@@ -27,7 +27,7 @@ LoadDefinitions!({
   // nothing, so `\lastpenalty` there is 0 where TeX gives the value (OXIDIZED_DESIGN_DIVERGENCES #419).
   DefPrimitive!("\\penalty Number", sub[(n)] {
     let value = n.value_of();
-    if !lookup_string_from_sym(pin!("MODE")).ends_with("vertical") {
+    if !mode_ends_with("vertical") {
       return Ok(Vec::new());
     }
     let mut reversion = vec![T_CS!("\\penalty")];

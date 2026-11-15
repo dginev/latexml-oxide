@@ -383,8 +383,9 @@ impl Constructor {
     // `\rotatebox{90}{\parbox…}`). A box that is paragraph material may need to open that
     // paragraph in the document (`insert_block_in_paragraph`, latexml_engine).
     let in_paragraph = self.declared_mode.is_some_and(|mode| mode.enter_horizontal) && {
-      let mode = lookup_string_from_sym(crate::pin!("MODE"));
-      mode.ends_with("vertical") || mode == "horizontal"
+      let mode = lookup_mode();
+      mode == crate::pin!("horizontal")
+        || crate::common::arena::with(mode, |mode| mode.ends_with("vertical"))
     };
     let mut result = self.execute_before_digest()?;
     // After the `before` code: `\lx@finalize@document`'s is what ends the document (1611.05714: an
@@ -429,12 +430,12 @@ impl Constructor {
     // Perl: $mode = $properties{mode} || $state->lookupValue('MODE') || 'restricted_horizontal';
     // Set mode on whatsit so repackHorizontal can distinguish vertical vs horizontal items.
     properties.entry("mode").or_insert_with(|| {
-      let mode = lookup_string_from_sym(crate::pin!("MODE"));
-      Stored::String(crate::common::arena::pin(if mode.is_empty() {
-        "restricted_horizontal"
+      let mode = lookup_mode();
+      Stored::String(if mode == crate::pin!("") {
+        crate::pin!("restricted_horizontal")
       } else {
-        &mode
-      }))
+        mode
+      })
     });
     if in_paragraph {
       properties.insert("in_paragraph", Stored::Bool(true));
@@ -515,22 +516,21 @@ impl Constructor {
       // kernel-alignment/minipage_in_a_cell_keeps_its_lineskip.
       use crate::common::numeric_ops::NumericOps;
       // the body's own mode, in force now (the whatsit's `mode` property is the mode it was invoked in)
-      let interline: Vec<(&str, crate::Dimension)> =
-        if lookup_string_from_sym(crate::pin!("MODE")).ends_with("vertical") {
-          [
-            ("baseline", "\\baselineskip"),
-            ("lineskip", "\\lineskip"),
-            ("lineskiplimit", "\\lineskiplimit"),
-          ]
-          .into_iter()
-          .filter_map(|(key, register)| {
-            lookup_register_quiet(register)
-              .map(|value| (key, crate::Dimension::new(value.value_of())))
-          })
-          .collect()
-        } else {
-          Vec::new()
-        };
+      let interline: Vec<(&str, crate::Dimension)> = if mode_ends_with("vertical") {
+        [
+          ("baseline", "\\baselineskip"),
+          ("lineskip", "\\lineskip"),
+          ("lineskiplimit", "\\lineskiplimit"),
+        ]
+        .into_iter()
+        .filter_map(|(key, register)| {
+          lookup_register_quiet(register)
+            .map(|value| (key, crate::Dimension::new(value.value_of())))
+        })
+        .collect()
+      } else {
+        Vec::new()
+      };
       let captured = digest_next_body(None)?;
       // info!(target:"constructor:digest_next_body", "\n{:?}\n----\n",captured);
       post.extend(captured);

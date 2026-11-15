@@ -2184,7 +2184,7 @@ LoadDefinitions!({
     // template (a spec with none has columns inferred), never the key list around it — the
     // template `hlines, vlines, colspec={…}` gave a `p` the width `e`.
     let spec = extract_colspec_value(&inner.to_string()).or_else(|| key_list_colspec(&stored));
-    let math = lookup_string_from_sym(pin!("MODE")).ends_with("math");
+    let math = mode_ends_with("math");
     let body_width = if math { tblr_body_width()? } else { 0 };
     let mut column_keys = Vec::new();
     let mut colspec_ncols = None;

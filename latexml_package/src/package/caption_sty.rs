@@ -1151,7 +1151,7 @@ LoadDefinitions!({
   DefPrimitive!("\\lx@caption@where{}", sub[args] {
     let of: Tokens = args.into_iter().next().unwrap().into();
     let of = !of.is_empty();
-    let auto = if lookup_string_from_sym(pin!("MODE")).ends_with("horizontal") {
+    let auto = if mode_ends_with("horizontal") {
       "bottom"
     } else if of && !lookup_bool("lx@in@float") {
       "auto@outer"

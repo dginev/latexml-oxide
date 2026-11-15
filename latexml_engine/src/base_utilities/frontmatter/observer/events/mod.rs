@@ -1969,7 +1969,7 @@ fn numeric_arguments(w: &Whatsit) -> Vec<bool> {
     .map(|params| {
       params
         .get_parameters()
-        .into_iter()
+        .iter()
         .filter(|p| !p.novalue)
         .map(|p| p.name)
         .collect()

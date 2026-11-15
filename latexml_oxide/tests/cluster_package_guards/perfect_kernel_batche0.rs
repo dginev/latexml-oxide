@@ -2886,10 +2886,12 @@ const KERNEL_TOKEN_SPELLINGS: &[(&str, usize)] = &[
   ("latexml_core/src/dump_codegen.rs", 7),
   ("latexml_core/src/dump_reader.rs", 7),
   ("latexml_core/src/dump_writer.rs", 17),
-  ("latexml_core/src/gullet.rs", 155),
+  // (MEMA, 155 -> 154: `read_cs_name_inner` tests `\lx@applyaccent` as a pinned symbol, the same name test without a String)
+  ("latexml_core/src/gullet.rs", 154),
   ("latexml_core/src/keyval.rs", 1),
   ("latexml_core/src/keyvals.rs", 22),
-  ("latexml_core/src/mouth.rs", 47),
+  // (MEMA, 47 -> 46: `handle_escape` spells the name in a reused buffer instead of `s!("\\{}", ch)`, which counted)
+  ("latexml_core/src/mouth.rs", 46),
   ("latexml_core/src/parameter.rs", 34),
   ("latexml_core/src/rewrite/declare.rs", 7),
   ("latexml_core/src/state.rs", 160),
@@ -2897,7 +2899,8 @@ const KERNEL_TOKEN_SPELLINGS: &[(&str, usize)] = &[
   ("latexml_core/src/tbox.rs", 3),
   ("latexml_core/src/telemetry.rs", 1),
   ("latexml_core/src/token.rs", 77),
-  ("latexml_core/src/tokens.rs", 49),
+  // (MEMA, 49 -> 48: `untex` writes each token's `Display` into a reused buffer, an output and not a decision)
+  ("latexml_core/src/tokens.rs", 48),
   ("latexml_core/src/util/image.rs", 2),
   // the Windows verbatim path prefix `\\?\` (pathname.rs `WINDOWS_VERBATIM_PREFIXES`): a path, not a TeX token
   ("latexml_core/src/util/pathname.rs", 1),

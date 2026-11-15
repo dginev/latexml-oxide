@@ -4642,6 +4642,26 @@ pub fn lookup_string_from_sym(key: SymStr) -> String {
     Some(v) => v.into(),
   }
 }
+
+/// [`lookup_string_from_sym`]'s value as its interned symbol (`pin!("")` when unset), without the `String`.
+pub fn lookup_string_sym_from_sym(key: SymStr) -> SymStr {
+  let state = state!();
+  match state.lookup_value_sym(key) {
+    None => pin!(""),
+    Some(Stored::String(v)) => *v,
+    Some(other) => arena::pin(String::from(other)),
+  }
+}
+
+/// The current `MODE`, for the mode tests on every digested token: compare with `pin!("horizontal")`, or use
+/// [`mode_ends_with`].
+pub fn lookup_mode() -> SymStr { lookup_string_sym_from_sym(pin!("MODE")) }
+
+/// Whether the current `MODE` ends with `suffix` (Perl's `lookupValue('MODE') =~ /vertical$/`).
+pub fn mode_ends_with(suffix: &str) -> bool {
+  arena::with(lookup_mode(), |mode| mode.ends_with(suffix))
+}
+
 /// like `lookup_value`, but casts the entry into a SymStr from the string interner
 ///  (`pin!("")` if None)
 pub fn lookup_string_sym(key: &str) -> SymStr {
@@ -5966,7 +5986,7 @@ fn copy_default(definition: &Stored) -> Option<Tokens> {
     return lookup_meaning(&inner).and_then(|inner| copy_default(&inner));
   }
   definition_parameters(definition)
-    .and_then(|params| params.get_parameters().into_iter().next())
+    .and_then(|params| params.get_parameters().first())
     .filter(|param| param.optional)
     .and_then(|param| param.extra.first().cloned())
 }
@@ -6004,12 +6024,7 @@ pub fn owns_calls(cs: &Token, binding: &Stored) -> bool {
     _ => None,
   };
   params
-    .and_then(|params| {
-      params
-        .get_parameters()
-        .into_iter()
-        .find(|param| !param.optional)
-    })
+    .and_then(|params| params.get_parameters().iter().find(|param| !param.optional))
     .is_some_and(|param| arena::with(param.name, |name| BRACED_ARGUMENT_TYPES.contains(&name)))
 }
 
@@ -6120,7 +6135,7 @@ pub fn call_openers(binding: &Token) -> Vec<Token> {
   if let Some(params) = defn.get_parameters() {
     for param in params
       .get_parameters()
-      .into_iter()
+      .iter()
       .take_while(|param| param.optional)
     {
       if arena::with(param.name, |name| name == "OptionalMatch") {

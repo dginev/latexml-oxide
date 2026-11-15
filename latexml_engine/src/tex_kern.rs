@@ -74,7 +74,7 @@ LoadDefinitions!({
   // `perfect_kernel_batch58::horizontal_kern_has_its_width`.
   properties => sub[args] {
     let size = args[0].as_ref().and_then(|d| d.get_dimension()).unwrap_or_default();
-    if lookup_string_from_sym(pin!("MODE")).ends_with("vertical") {
+    if mode_ends_with("vertical") {
       Ok(stored_map!("height" => size, "width" => Dimension::default(),
         "depth" => Dimension::default(), "isSpace" => true, "isKern" => true,
         "isVerticalSpace" => true, "isBreak" => true))

@@ -304,7 +304,7 @@ LoadDefinitions!({
           }
           let params = match expandable.get_parameters() {
             Some(ps) => ps.get_parameters(),
-            None => Vec::new(),
+            None => &[],
           };
           let mut spec_parts: Vec<SymStr> = Vec::new();
           let mut p_trailer = "";

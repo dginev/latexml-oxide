@@ -271,7 +271,7 @@ fn setter_body(cs: &Token) -> Result<Option<(Tokens, usize)>> {
   };
   let stored_arg = defn.get_parameters().and_then(|p| {
     let params = p.get_parameters();
-    match params.as_slice() {
+    match params {
       [only] if !only.optional && undelimited(only) => Some(1),
       [first, second] if first.optional && !second.optional && undelimited(second) => Some(2),
       _ => None,
@@ -2175,7 +2175,7 @@ fn in_place_contact_setter(name: &str) -> Result<Option<(usize, bool)>> {
   };
   let arg = defn
     .get_parameters()
-    .and_then(|p| match p.get_parameters().as_slice() {
+    .and_then(|p| match p.get_parameters() {
       [only] if !only.optional && undelimited(only) => Some(1),
       [first, second] if first.optional && !second.optional && undelimited(second) => Some(2),
       _ => None,
@@ -2236,9 +2236,10 @@ fn run_in_contact_setter(name: &str) -> bool {
   let Some(Stored::Expandable(defn)) = lookup_meaning(&T_CS!(&s!("\\{name}"))) else {
     return false;
   };
-  if !defn.get_parameters().is_some_and(
-    |p| matches!(p.get_parameters().as_slice(), [only] if !only.optional && undelimited(only)),
-  ) {
+  if !defn
+    .get_parameters()
+    .is_some_and(|p| matches!(p.get_parameters(), [only] if !only.optional && undelimited(only)))
+  {
     return false;
   }
   let Some(ExpansionBody::Tokens(body)) = defn.get_expansion() else {
@@ -3008,9 +3009,9 @@ fn displaced_setter(name: &str) -> bool {
     return false;
   };
   if defn.get_origin() != DefinitionOrigin::File
-    || !defn.get_parameters().is_some_and(
-      |p| matches!(p.get_parameters().as_slice(), [only] if !only.optional && undelimited(only)),
-    )
+    || !defn
+      .get_parameters()
+      .is_some_and(|p| matches!(p.get_parameters(), [only] if !only.optional && undelimited(only)))
   {
     return false;
   }
@@ -7561,9 +7562,9 @@ fn collects_body_for_the_title_page(begin: &[Token], readers: &mut Option<ClassR
   let Some(Stored::Expandable(defn)) = lookup_meaning(&setter) else {
     return false;
   };
-  let one_arg = defn.get_parameters().is_some_and(
-    |p| matches!(p.get_parameters().as_slice(), [only] if !only.optional && undelimited(only)),
-  );
+  let one_arg = defn
+    .get_parameters()
+    .is_some_and(|p| matches!(p.get_parameters(), [only] if !only.optional && undelimited(only)));
   let Some(ExpansionBody::Tokens(body)) = defn.get_expansion() else {
     return false;
   };

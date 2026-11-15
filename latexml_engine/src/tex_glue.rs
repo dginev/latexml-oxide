@@ -204,7 +204,7 @@ LoadDefinitions!({
     }},
     // Perl: leaveHorizontal => 1
     before_digest => {
-      assign_value("lx@vskip@in@paragraph", lookup_string_from_sym(pin!("MODE")) == "horizontal", None);
+      assign_value("lx@vskip@in@paragraph", lookup_mode() == pin!("horizontal"), None);
       leave_horizontal()?;
     },
     // Perl: height => $_[1] — stores glue value as height property
