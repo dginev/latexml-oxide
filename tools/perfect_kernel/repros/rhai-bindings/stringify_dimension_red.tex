@@ -1,0 +1,13 @@
+% mechanism: Rhai `Stringify` (engine.rs, Object.pm:30) of a Dimension falls through to its ToString ("1.0pt"), where
+%   Perl's Dimension stringify gives its class and sp value
+% witness: synthetic (revCHEAT3; the binding lxpre.sty.rhai, lxpre.sty.ltxml for Perl, lxpre.sty for pdflatex)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "Dimension[65536]"; Perl 0.8.8: <p>Dimension[65536]</p>, 0 errors
+% engines: CHEAT3b: <p>1.0pt</p>, 0 errors
+% expect:  0 errors, 0 warnings; <p>Dimension[65536]</p> (each value handle as Perl's stringify)
+% status:  RED (CHEAT3b)
+% moves:   post-merge
+\documentclass{article}
+\usepackage{lxpre}
+\begin{document}
+\lxstd
+\end{document}

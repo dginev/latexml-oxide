@@ -147,15 +147,26 @@ fn register_value_of_spec(operation: &str, cs: &Token, spec: &str) -> RhaiResult
 /// Perl `DefRegister($proto, $value, %options)` (Package.pm:1335-1358), as the `DefRegister!` macro: the value's
 /// type is the register's; `getter`/`setter` closures as Register.pm calls them, `readonly`, `address`, `allocate`.
 fn def_register(proto: &str, value: Dynamic, opts: Map) -> RhaiResult<()> {
+  let (cs, params) = parse_prototype(proto, true).map_err(rhai_err)?;
+  def_register_i(cs, params, value, opts)
+}
+
+/// Perl's `DefRegisterI($cs, $paramlist, $value, %options)` (Package.pm:1341): [`def_register`] for a control sequence
+/// and parameters in hand.
+fn def_register_i(
+  cs: Token,
+  params: Option<latexml_core::parameter::Parameters>,
+  value: Dynamic,
+  opts: Map,
+) -> RhaiResult<()> {
   let (engine, ast) = current_script()?;
-  let operation = format!("DefRegister ({proto})");
+  let operation = format!("DefRegister ({cs})");
   check_options(
     &operation,
     REGISTER_OPTIONS,
     opts.keys().map(|k| k.as_str()),
   )
   .map_err(rhai_err)?;
-  let (cs, params) = parse_prototype(proto, true).map_err(rhai_err)?;
   let value = if value.is_string() {
     register_value_of_spec("DefRegister", &cs, &dynamic_to_string(value))?
   } else {
@@ -392,6 +403,16 @@ pub(super) fn register_values(engine: &mut Engine) {
     def_register(proto, value, Map::new())
   });
   engine.register_fn("DefRegister", def_register);
+  let register_i = |cs: Dynamic, params: Dynamic, value: Dynamic, opts: Map| -> RhaiResult<()> {
+    let cs = coerce_cs("DefRegisterI", cs)?;
+    let params = i_form_params("DefRegisterI", &cs, params).map_err(rhai_err)?;
+    def_register_i(cs, params, value, opts)
+  };
+  engine.register_fn(
+    "DefRegisterI",
+    move |cs: Dynamic, params: Dynamic, value: Dynamic| register_i(cs, params, value, Map::new()),
+  );
+  engine.register_fn("DefRegisterI", register_i);
   engine.register_fn("LookupRegister", |cs: Dynamic| {
     lookup_register(cs, Vec::new())
   });

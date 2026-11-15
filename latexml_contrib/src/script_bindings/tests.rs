@@ -874,9 +874,13 @@ fn lookup_value_on_list_returns_rhai_array() {
 /// log from neither (both macros wrote stderr and were level-gated off).
 #[test]
 fn diagnostics_surface_info_notes_progress_and_fatal() {
+  use latexml_core::{
+    common::error::{LogStatus, get_status},
+    util::logger,
+  };
   fresh_state();
   // Capture the log buffer to prove routing (the log write is not stderr-gated).
-  latexml_core::util::logger::bind_log();
+  logger::bind_log();
   load_script(
     r#"
     Info("test", "obj", "an info message");
@@ -889,7 +893,7 @@ fn diagnostics_surface_info_notes_progress_and_fatal() {
     "#,
   )
   .expect("non-fatal diagnostics must load and run cleanly");
-  let log = latexml_core::util::logger::flush_log();
+  let log = logger::flush_log();
   assert!(
     log.contains("a log note"),
     "NoteLog did not reach the log:\n{log}"
@@ -902,6 +906,26 @@ fn diagnostics_surface_info_notes_progress_and_fatal() {
     !log.contains("a stderr note"),
     "NoteSTDERR leaked into the log (it must be stderr only):\n{log}"
   );
+  // `Debug` means our `Debug!` (DG 2026-11-14): counted at every verbosity, logged only under `--verbose`.
+  let debug_script = r#"Debug("a quiet debug"); Debug("cat", "obj", "a quiet record");"#;
+  let debugs = get_status(LogStatus::Debug);
+  let _ = logger::init(log::LevelFilter::Info);
+  logger::bind_log();
+  load_script(debug_script).expect("Debug runs");
+  let log = logger::flush_log();
+  assert_eq!(get_status(LogStatus::Debug), debugs + 2);
+  assert!(
+    !log.contains("a quiet"),
+    "Debug printed without --verbose:\n{log}"
+  );
+  let _ = logger::init(log::LevelFilter::Debug);
+  logger::bind_log();
+  load_script(debug_script).expect("Debug runs");
+  let log = logger::flush_log();
+  let _ = logger::init(log::LevelFilter::Off);
+  assert_eq!(get_status(LogStatus::Debug), debugs + 4);
+  assert!(log.contains("a quiet debug"), "{log}");
+  assert!(log.contains("Debug:cat:obj a quiet record"), "{log}");
   let fatal = load_script(r#"Fatal("internal", "obj", "boom");"#);
   assert!(fatal.is_err(), "Fatal must abort the script, got {fatal:?}");
   // Clear the run tally so the raised fatal doesn't leak into sibling tests.
@@ -1151,6 +1175,176 @@ fn m1_errors_are_clean() {
   latexml_core::reset_thread_engine();
 }
 
+/// The Package.pm calls the cheat sheet listed as the dialect's gaps, with Perl's names and meanings (CHEAT3): one
+/// row per call, `(script, state key, value)`, and the Warnings the run must count.
+#[test]
+fn package_pm_gap_calls_mean_what_perl_does() {
+  use latexml_core::common::error::{LogStatus, get_status};
+  let rows: &[(&str, &str, &str)] = &[
+    (
+      r#"AssignValue("g:k", CleanIndexKey("  Foo  bar.;; "))"#,
+      "g:k",
+      "Foo  bar",
+    ),
+    (
+      r#"AssignValue("g:k", CleanClassName(" é-x 1 "))"#,
+      "g:k",
+      "ex1",
+    ),
+    (r#"AssignValue("g:k", CleanBibKey(" A b "))"#, "g:k", "Ab"),
+    (
+      r#"AssignValue("g:k", NormalizeBibKey(" A b "))"#,
+      "g:k",
+      "ab",
+    ),
+    (
+      r#"AssignValue("g:k", if defined(NormalizeBibKey("")) { "def" } else { "undef" })"#,
+      "g:k",
+      "undef",
+    ),
+    (r#"AssignValue("g:k", CleanURL(" a\\~{}b "))"#, "g:k", "a~b"),
+    (
+      r#"AssignValue("g:k", ComposeURL("http://x.org/", "p/q", "sec1"))"#,
+      "g:k",
+      "http://x.org/p/q#sec1",
+    ),
+    (
+      r#"AssignValue("g:k", ComposeURL("http://x.org", "https://y.org/z"))"#,
+      "g:k",
+      "https://y.org/z",
+    ),
+    (
+      r#"AssignValue("g:k", TrimmedCommaList(" a , b,c ").reduce(|s, x| s + "|" + x))"#,
+      "g:k",
+      "|a|b|c",
+    ),
+    (
+      r#"let before = HasKeyVal("KV", "gfam", "gkey"); DefKeyVal("gfam", "gkey", "");
+         AssignValue("g:k", `${before} ${HasKeyVal("KV", "gfam", "gkey")}`)"#,
+      "g:k",
+      "false true",
+    ),
+    (
+      r#"AssignValue("g:k", DigestLiteral("a{b}c"))"#,
+      "g:k",
+      "abc",
+    ),
+    (
+      r#"DeclareFontMap("GENC", ["x", "y", "z"]);
+         AssignValue("g:k", FontDecode(1, "GENC") + FontDecodeString("\x02\x00", "GENC", false)
+           + `${defined(FontDecode(-1, "GENC"))}`)"#,
+      "g:k",
+      "yzxfalse",
+    ),
+    // Perl's shorter forms: FontDecode($code) in the current font's encoding (OT1), FontDecodeString($s, $enc).
+    (
+      r#"DeclareFontMap("GENC", ["x", "y", "z"]);
+         AssignValue("g:k", FontDecode(65) + FontDecodeString("\x02\x00", "GENC"))"#,
+      "g:k",
+      "Azx",
+    ),
+    (
+      r#"DefConditionalI("\\ifgi", "{}", |a| ToString(a) == "y");
+         AssignValue("g:k", UnTeX(Expand(TokenizeInternal("\\ifgi{y}Y\\else N\\fi\\ifgi{n}Y\\else N\\fi"))))"#,
+      "g:k",
+      "YN",
+    ),
+    (
+      r#"DefRegisterI("\\greg", (), Dimension("3pt")); AssignValue("g:k", ToString(LookupRegister("\\greg")))"#,
+      "g:k",
+      "3.0pt",
+    ),
+    (
+      r#"DeclareFontMap("GENC", ["x", (), "z"]);
+         AssignValue("g:k", LoadFontMap("GENC").map(|c| if defined(c) { c } else { "-" }).reduce(|s, c| s + c, ""))"#,
+      "g:k",
+      "x-z",
+    ),
+    (
+      r#"AssignValue("g:k", `${defined(LoadFontMap("GNONE"))}`)"#,
+      "g:k",
+      "false",
+    ),
+    (
+      r#"AssignValue("g:k", Stringify(Tokens(T_CS("\\a"), T_LETTER("b"))) + Stringify(()))"#,
+      "g:k",
+      "Tokens[\\a,b]undef",
+    ),
+    (
+      r#"AssignValue("g:k", `${CheckOptions("gop", ["a", "b"], #{a: 1})}`)"#,
+      "g:k",
+      "true",
+    ),
+    (
+      r#"AssignValue("g:k", `${CheckOptions("gop", #{a: true, b: false}, #{a: 1})}`)"#,
+      "g:k",
+      "true",
+    ),
+    (
+      r#"DefMacro("\\grp", |gullet| { let a = ReadParameters(gullet, "{}[]"); AssignValue("g:k", `${ToString(a[0])}|${defined(a[1])}`, "global"); Tokens() });
+         Expand(TokenizeInternal("\\grp{xy}z"));"#,
+      "g:k",
+      "xy|false",
+    ),
+  ];
+  for (script, key, expected) in rows {
+    fresh_state();
+    let warnings = get_status(LogStatus::Warning);
+    load_script(script).unwrap_or_else(|e| panic!("{script}: {e}"));
+    assert_eq!(lookup_str(key), *expected, "{script}");
+    assert_eq!(
+      get_status(LogStatus::Warning),
+      warnings,
+      "{script}: no Warning"
+    );
+  }
+  // AfterAssignment puts the saved token back into the input, ahead of what follows.
+  fresh_state();
+  load_script(
+    r#"AssignValue("afterAssignment", T_OTHER("Q"), "global");
+       DefMacro("\\gaa", |gullet| { AfterAssignment(); Tokens() });"#,
+  )
+  .expect("load");
+  let expanded = gullet::do_expand(mouth::tokenize_internal(r"\gaa X")).expect("expand");
+  assert_eq!(expanded.untex(), "QX");
+  assert!(latexml_core::state::lookup_value("afterAssignment").is_none());
+  // CheckOptions Errors on a key not allowed, and answers false.
+  fresh_state();
+  let errors = get_status(LogStatus::Error);
+  load_script(r#"AssignValue("g:k", `${CheckOptions("gop", ["a"], #{a: 1, c: 2})}`)"#)
+    .expect("load");
+  assert_eq!(
+    (lookup_str("g:k").as_str(), get_status(LogStatus::Error)),
+    ("false", errors + 1)
+  );
+  // With a label-mapping hook, MaybePeekLabel notes the label of a following `\label`, MaybeNoteLabel a given one.
+  fresh_state();
+  latexml_core::state::set_label_mapping_hook(Rc::new(|_, _, _| (None, None)));
+  load_script(
+    r#"RawTeX("\\def\\label#1{}");
+       DefMacro("\\gpk", |gullet| { MaybePeekLabel(); Tokens() });"#,
+  )
+  .expect("load");
+  gullet::do_expand(mouth::tokenize_internal(r"\gpk \label{p q}")).expect("expand");
+  assert_eq!(lookup_str("PEEKED_LABEL"), "p_q");
+  load_script(r#"MaybeNoteLabel("n m");"#).expect("load");
+  assert_eq!(lookup_str("PEEKED_LABEL"), "n_m");
+  // Deprecated Warns once per key; DocType Warns that no DTD is read, then registers its namespaces.
+  fresh_state();
+  let warnings = get_status(LogStatus::Warning);
+  load_script(
+    r#"Deprecated("gold", "0.8", "use gnew"); Deprecated("gold", "0.8", "use gnew");
+       DocType("ltx:document", (), (), #{gdt: "http://example.org/gdt"});"#,
+  )
+  .expect("load");
+  assert_eq!(get_status(LogStatus::Warning), warnings + 2);
+  assert_eq!(
+    latexml_core::common::model::get_document_namespace("gdt", true).as_deref(),
+    Some("http://example.org/gdt")
+  );
+  latexml_core::reset_thread_engine();
+}
+
 /// The SHIPPED example binding must always load cleanly — pins
 /// `docs/examples/sample.sty.rhai` against surface drift.
 #[test]
@@ -1219,27 +1413,47 @@ fn api_reference_is_up_to_date() {
     "api_doc::PERL_GAPS lists calls the engine now registers — move each to its DOCS entry's Mirror: \
      {stale_gaps:?}"
   );
-  // The cheat sheet's macro column names real macros: each must still be defined in the workspace.
-  let sources = macro_sources();
+  let unexplained = api_doc::gaps_without_reason();
+  assert!(
+    unexplained.is_empty(),
+    "a lacking PERL_GAPS call needs its api_doc::GAP_REASONS entry (and a reason names a lacking call): \
+     {unexplained:?}"
+  );
+  // The cheat sheet's Rust column names real macros: each must still be defined in the workspace.
+  let defined = api_doc::workspace_macros();
   let undefined: Vec<&str> = api_doc::named_macros()
     .into_iter()
-    .filter(|cell| {
-      cell.strip_suffix('!').is_none_or(|mac| {
-        !sources.contains(&format!("macro_rules! {mac} "))
-          && !sources.contains(&format!("macro_rules! {mac}("))
-      })
+    .filter(|item| {
+      !defined
+        .iter()
+        .any(|m| m.is_named(item.trim_end_matches('!')))
     })
     .collect();
   assert!(
     undefined.is_empty(),
-    "api_doc's Mirror/PERL_GAPS macro cells that are no `name!` a workspace crate defines: {undefined:?}"
+    "api_doc's Mirror/PERL_GAPS Rust cells name macros no workspace crate defines: {undefined:?}"
   );
+  // Every row fills its Perl and Rust cells: only a Rhai cell may be empty (a Perl call the dialect lacks).
+  let cheatsheet = api_doc::generate_cheatsheet(&engine);
+  let half_empty: Vec<&str> = cheatsheet
+    .lines()
+    .filter(|line| line.starts_with("| ") && !line.starts_with("| Perl |"))
+    .filter(|line| {
+      let unescaped = line.replace("\\|", "");
+      let cells: Vec<&str> = unescaped.split('|').map(str::trim).collect();
+      cells.get(1).is_none_or(|c| c.is_empty()) || cells.get(2).is_none_or(|c| c.is_empty())
+    })
+    .collect();
   for (file, generated) in [
     ("API.md", api_doc::generate(&engine)),
-    ("CHEATSHEET.md", api_doc::generate_cheatsheet(&engine)),
+    ("CHEATSHEET.md", cheatsheet.clone()),
   ] {
     check_generated(file, &generated);
   }
+  assert!(
+    half_empty.is_empty(),
+    "CHEATSHEET.md rows with an empty Perl or Rust cell (fill the Mirror): {half_empty:#?}"
+  );
 }
 
 /// Every row of the checked-in API.md and CHEATSHEET.md tables has its header's columns: a `|` in a description
@@ -1269,36 +1483,6 @@ fn api_tables_keep_their_columns() {
       "{file}: rows with a different column count: {bad:#?}"
     );
   }
-}
-
-/// Every non-comment `macro_rules!` line of the crates that define the binding macros, for the cheat-sheet check.
-fn macro_sources() -> String {
-  fn walk(dir: &std::path::Path, out: &mut String) {
-    for entry in std::fs::read_dir(dir).into_iter().flatten().flatten() {
-      let path = entry.path();
-      if path.is_dir() {
-        walk(&path, out);
-      } else if path.extension().is_some_and(|e| e == "rs") {
-        for line in std::fs::read_to_string(&path).unwrap_or_default().lines() {
-          if line.trim_start().starts_with("macro_rules!") {
-            out.push_str(line.trim_start());
-            out.push('\n');
-          }
-        }
-      }
-    }
-  }
-  let mut out = String::new();
-  for krate in ["latexml_core", "latexml_engine", "latexml_package"] {
-    walk(
-      &std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
-        .join("..")
-        .join(krate)
-        .join("src"),
-      &mut out,
-    );
-  }
-  out
 }
 
 /// Compare a generated reference with its file beside `API.md`; `UPDATE_API_DOC=1` rewrites it.

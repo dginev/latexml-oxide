@@ -135,6 +135,39 @@ pub fn def_autoload(cs_name: &str, package: &str) -> Result<()> {
   Ok(())
 }
 
+/// Perl's `DefAutoload($cs, $defnfile)` (Package.pm:1086-1107): `defnfile` is `name.pool`, `name.sty` or `name.cls`
+/// (an `.ltxml` suffix dropped), loaded by its type when `cs` is first used; nothing when it is already loaded or `cs`
+/// defined. Any other file name Warns (Perl's own branch dies calling an undefined `Warning`: KNOWN_PERL_ERRORS #1247).
+pub fn def_autoload_file(cs: &Token, defnfile: &str) -> Result<()> {
+  use latexml_core::binding::content::load_class;
+  let csname = cs.to_string();
+  let defnfile = defnfile.strip_suffix(".ltxml").unwrap_or(defnfile);
+  let Some((name, kind)) = defnfile
+    .rsplit_once('.')
+    .filter(|(_, kind)| matches!(*kind, "pool" | "sty" | "cls"))
+  else {
+    Warn!(
+      "unexpected",
+      defnfile,
+      format!("Don't know how to autoload {csname} from {defnfile}")
+    );
+    return Ok(());
+  };
+  if load_recorded(&s!("{name}.{kind}")) || load_recorded(&s!("{name}.{kind}.ltxml")) {
+    return Ok(());
+  }
+  match kind {
+    "sty" => def_autoload(&csname, name),
+    "pool" => def_autoload_pool(&csname, name),
+    _ => {
+      let name = name.to_string();
+      def_autoload_with(&csname, move || {
+        load_class(&name, Vec::new(), Tokens::default())
+      })
+    },
+  }
+}
+
 /// Fire the autoload trigger `cs` of `package` (`def_autoload`): the trigger cleared, the package loaded.
 pub fn fire_autoload(cs: &Token, package: &str) -> Result<()> {
   use latexml_core::common::store::Stored;
@@ -193,12 +226,22 @@ pub fn unfired_autoload_package(cs: &Token) -> Option<String> {
 /// `DefAutoload($trigger, '<Pool>.pool.ltxml')` form used by TeX.pool
 /// to lazy-load AmSTeX.pool on amstex-style triggers.
 fn def_autoload_pool(cs_name: &str, pool: &str) -> Result<()> {
+  let pool_name = pool.to_string();
+  def_autoload_with(cs_name, move || {
+    input_definitions(&pool_name, InputDefinitionOptions {
+      extension: Some(Cow::Borrowed("pool")),
+      ..InputDefinitionOptions::default()
+    })
+  })
+}
+
+/// The trigger of a `.pool` or `.cls` autoload: `load` runs on first use, the trigger cleared, then `cs` re-read.
+fn def_autoload_with(cs_name: &str, load: impl Fn() -> Result<()> + 'static) -> Result<()> {
   use latexml_core::{common::store::Stored, definition::ExpansionBody};
   let cs_tok = T_CS!(cs_name);
   if IsDefined!(&cs_tok) {
     return Ok(());
   }
-  let pool_name = pool.to_string();
   let cs_for_closure = cs_tok;
   def_macro(
     cs_tok,
@@ -206,10 +249,7 @@ fn def_autoload_pool(cs_name: &str, pool: &str) -> Result<()> {
     ExpansionBody::Closure(Rc::new(move |_args| {
       assign_meaning(&cs_for_closure, Stored::None, Some(Scope::Global));
       let pre_keys = snapshot_top_frame_keys();
-      input_definitions(&pool_name, InputDefinitionOptions {
-        extension: Some(Cow::Borrowed("pool")),
-        ..InputDefinitionOptions::default()
-      })?;
+      load()?;
       hoist_top_frame_package_load(&pre_keys);
       Ok(Tokens::new(vec![cs_for_closure]))
     })),

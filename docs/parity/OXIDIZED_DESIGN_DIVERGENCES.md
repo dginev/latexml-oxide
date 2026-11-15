@@ -19,7 +19,9 @@ rules, and `compute_indirect_model` cannot discover DTD elements. Fixing this pr
 would require significant rearchitecting of the containment model for a rarely-used feature.
 
 **Impact:** Namespace tests (ns1–ns5) are permanently ignored. The `DocType!` macro and
-`set_doc_type()` function have been removed.
+`set_doc_type()` function have been removed. A Rhai binding's `DocType(root, pubid, sysid[, namespaces])`
+(Package.pm:2032) Warns once per call, `unexpected:DocType`, that no DTD is read, then registers its namespaces as
+`RegisterDocumentNamespace` does.
 
 ### 2. No `%\n` in TeX Attributes
 
@@ -35693,8 +35695,11 @@ the un-featured traces are Rust's own instrumentation with no Perl feature to en
 apart from `Info:` lines in a log. An undeclared `--debug` feature is named at the end of the run, before the verdict,
 as Perl's `CheckDebuggable` (`check_debuggable`, `common/error.rs`); its known list holds only the features Rust
 declares (`frontmatter`; Perl's `DebuggableFeature` calls declare 15: `alignment`, `modes`, `size`, `svg`, …), so a
-`DebugFeature!` site ported from Perl registers its feature through `debuggable_feature`. Guard
-`cluster_cli::debug_feature_scope::debug_feature_prints_only_its_feature`.
+`DebugFeature!` site ported from Perl registers its feature through `debuggable_feature`. A Rhai binding's
+`Debug(message)` and `Debug(cat, obj, message)` are `Debug!` (DG 2026-11-14): printed only under `--verbose`, counted
+either way, where Perl's `Debug` prints unconditionally. Guards
+`cluster_cli::debug_feature_scope::debug_feature_prints_only_its_feature`,
+`script_bindings::tests::diagnostics_surface_info_notes_progress_and_fatal`.
 
 ### 1007. calc's names inside a pgfmath expression: calc's value and a Warning per parse (EB1)
 

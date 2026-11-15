@@ -165,7 +165,7 @@ LoadDefinitions!({
     let value = read_number()?;
     install_definition(
       Register::new_chardef(newcs, Some(value.into()), None, None), None);
-    after_assignment();
+    after_assignment()?;
     Ok(Vec::new())
   });
 
