@@ -232,7 +232,7 @@ pub(crate) fn load() -> Result<()> {
     // latex.ltx `\document` L9471: `\@kernel@after@begindocument@before`, whose
     // `\reinstall@nfss@defs` (:12513-12514) makes the shape switches
     // `\protected` for the body (latex_constructs_rust_only.rs).
-    // Its first step (:9536-9539): `env/document/begin` has run, its code `\let` to `\@empty` (in lthooks' document
+    // Its first step (:9532-9535): `env/document/begin` has run, its code `\let` to `\@empty` (in lthooks' document
     // mode a later `\UseHook` of it runs nothing).
     if first_begin && is_defined_token(&T_CS!("\\__hook env/document/begin")) {
       Let!("\\__hook env/document/begin", "\\@empty", Scope::Global);

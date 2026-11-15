@@ -11,6 +11,14 @@
     `verbatim` in `\@currenvir`, as in LaTeX. The kernel's first aid for the raw cleveref.sty is
     not registered under LaTeXML's cleveref binding, which replaces the code it repairs. Guard
     `perfect_kernel_batchqa47a::batchqa47a_command_hook_rows` (OXIDIZED_DESIGN_DIVERGENCES #1048).
+  - **The document body uses LaTeX's initialized hooks** (QA47B). `\begin{document}` now runs
+    lthooks' initialization, as LaTeX does: a body `\UseHook` expands to the hook's code (an
+    `\edef` holds the code, not `\hook_use:n`), and code added in the body is built into its hook
+    at once. Most documents convert faster (median −6.6 % instructions over 56 papers); acro papers,
+    which add to `enddocument` at every acronym use, cost +0.6…+5.6 % — TeX's own rebuild per add
+    (300 body adds to one hook: pdflatex 5.25G instructions, LaTeXML 7.81G). Guard
+    `perfect_kernel_batchqa47a::batchqa47a_command_hook_rows` (OXIDIZED_DESIGN_DIVERGENCES #1048,
+    KNOWN_PERL_ERRORS #1249).
   - **No default `rowspacing="0pt"` on a MathML table** (issue 695). An `array`, `aligned` or
     other multi-row table carried `rowspacing="0pt"`, which MathML Core does not have (Chrome
     ignores it) but Firefox and MathJax honour, setting the rows touching. It is no longer

@@ -10,7 +10,7 @@
 //! late `enddocument/*` hooks, `env/verbatim/begin|end`, `label`, `\include`'s file hooks (RED catalog:
 //! `enddocument_info_hook_red`, `label_hook_sets_the_reference_text_red`, `currenvline_is_never_set_red`,
 //! `environment_begin_hook_reads_its_environment_red`). HOOKINIT: lthooks' document mode from the first
-//! `\begin{document}` on (RED catalog: `show_hook_needs_showstream_red`).
+//! `\begin{document}` on (RED catalog: `show_hook_needs_showstream_red`, `file_hooks_run_at_every_input_red`).
 use latexml::util::test::{
   RequirementTable, Requirements, assert_element, check_table, convert_with, current_test_name,
 };
@@ -510,6 +510,18 @@ const ROWS: &[Row] = &[
       "xml:id=\"p1.1\"",
       "<p xml:id=\"p1.1\">(begin)FxG\n\n(begin)(next)FyG\n(begin)FzG\nE\n\nN\n\n[BA]\n\n(now)\n[]</p>",
     )],
+  },
+  // HOOKINIT: a second `\begin{document}` (a renewed `\document`) does not initialize again on an lthooks whose
+  // `\__hook_post_initialization_defs:` never ends as `\prg_do_nothing:` (pre-2023; red: "B2H").
+  Row {
+    name:     "hooks_initialize_once_on_an_older_lthooks",
+    tex:      include_str!(
+      "../../../tools/perfect_kernel/repros/macro-state/hooks_initialize_once_on_an_older_lthooks.tex"
+    ),
+    counts:   (0, 0),
+    messages: &[],
+    absent:   &[],
+    elements: &[("p", "xml:id=\"p1.1\"", "<p xml:id=\"p1.1\">A1H\n\nB1H</p>")],
   },
 ];
 

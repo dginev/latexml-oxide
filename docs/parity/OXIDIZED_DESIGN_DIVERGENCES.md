@@ -36577,11 +36577,18 @@ document's `\AtEndAfterFileList` is lost (`enddocument_info_hook_red`). **Guard*
 **Addendum (HOOKINIT): lthooks' document mode.** latex.ltx:15356-15361 `\@execute@begin@hook{document}` runs
 `\@expl@@@initialize@all@@` (`\__hook_initialize_all:`, :5854) between `env/document/before` and `/begin`: every declared
 hook's code is built once, `\__hook_update_hook_code:n` rebuilds a hook at each later add, and
-`\__hook_post_initialization_defs:` (:6380) makes `\hook_use:n` the expandable `\__hook_use_initialized:n`. LaTeXML's
-`\begin{document}` (sect01.rs, both the constructor and a renewed `document`) runs it there once, and `\document`'s
-`\@kernel@after@begindocument@before` step `\let`s `env/document/begin`'s code to `\@empty` (:9536). Perl's
+`\__hook_post_initialization_defs:` (:6380) makes `\hook_use:n` the expandable `\__hook_use_initialized:n` (:6351).
+LaTeXML's `\begin{document}` (sect01.rs, both the constructor and a renewed `document`) runs it there once, read from
+`\__hook_update_hook_code:n` still being `\use_none:n` (:5853/:5856, every lthooks since 2020-10-01), and `\document`'s
+`\@kernel@after@begindocument@before` step `\let`s `env/document/begin`'s code to `\@empty` (:9532-9535). Perl's
 `\begin{document}` runs neither and stays in preamble mode: a body `\edef\x{\UseHook{h}}` holds `\hook_use:n {h}`
 where pdflatex's holds the code (KNOWN_PERL_ERRORS #1249), and each body `\UseHook` of a hook with code rebuilt it.
+Cost: a body add now rebuilds its hook, as pdflatex does, so acro papers (an `enddocument` add per acronym use,
+acro.sty:3917) cost +0.6…+5.6 % instructions (2502.06996 +5.65 %, 2205.14872 +1.4 %, 2008.04164 +0.6 %) and others
+run faster (2307.05602 −7.7 %, 2605.14422 −10 %; median −6.6 % over 56 papers); 300 body adds to one hook take
+pdflatex 5.25G instructions, ours 7.81G (accepted as TeX's own cost, DG 2026-11-14).
 **Guard**: `perfect_kernel_batchqa47a::batchqa47a_command_hook_rows` (rows `use_hook_expands_in_the_body`,
-`hook_code_added_in_the_body_runs`); RED catalog `show_hook_needs_showstream_red` (`\ShowHook` needs pdfTeX's
-`\showstream`, post-merge).
+`hook_code_added_in_the_body_runs`, `hooks_initialize_once_on_an_older_lthooks`); RED catalog
+`show_hook_needs_showstream_red` (`\ShowHook` needs pdfTeX's `\showstream`, post-merge),
+`file_hooks_run_at_every_input_red` (content.rs runs `file/<name>/before|after` as one-time hooks, latex.ltx:19669/19672
+a plain `\UseHook`; post-merge).

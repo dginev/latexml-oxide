@@ -19778,7 +19778,7 @@ B.
 ## 1249. lthooks never leaves its preamble mode: a body `\UseHook` stays `\protected`
 
 latex.ltx:15356-15361 `\@execute@begin@hook{document}` runs `\@expl@@@initialize@all@@` (`\__hook_initialize_all:`,
-:5854) at `\begin{document}`, after which `\UseHook` is the expandable `\__hook_use_initialized:n` (:6380-6386) and a
+:5854) at `\begin{document}`, after which `\UseHook` is the expandable `\__hook_use_initialized:n` (:6351, set by :6380-6386) and a
 hook's code is built at each add instead of at each use. Perl's `\begin{document}` (latex_constructs.pool.ltxml:304) is
 not latex.ltx's `\begin` and never runs it. Minimal trigger (pdflatex: "macro:->XYZ"; Perl: "macro:->\hook_use:n
 {myhook}"); Rust runs it (OXIDIZED_DESIGN_DIVERGENCES #1048 addendum): an upstream offer.

@@ -7812,12 +7812,13 @@ fn clean_index_key(key: &str) -> String {
 /// once and leaves lthooks' preamble mode, where each `\UseHook` rebuilds its hook and stays `\protected`.
 pub(crate) fn hooks_initialize_all_tokens() -> Vec<Token> {
   let init = T_CS!("\\@expl@@@initialize@all@@");
-  // (once: `\__hook_post_initialization_defs:` ends as `\prg_do_nothing:`, :6385)
-  let done = x_equals(
-    &T_CS!("\\__hook_post_initialization_defs:"),
-    &T_CS!("\\prg_do_nothing:"),
+  // Once: `\__hook_initialize_all:` makes `\__hook_update_hook_code:n` no longer `\use_none:n` (:5853/:5856), as in
+  // every lthooks since its first release (2020-10-01); `\__hook_post_initialization_defs:` is 2023-06-01's.
+  let preamble_mode = x_equals(
+    &T_CS!("\\__hook_update_hook_code:n"),
+    &T_CS!("\\use_none:n"),
   );
-  if done || !is_defined_token(&init) {
+  if !preamble_mode || !is_defined_token(&init) {
     return Vec::new();
   }
   vec![init]
