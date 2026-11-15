@@ -102,6 +102,9 @@ pub struct Document {
   pub node_boxes:                HashMap<usize, Digested>, // used to be _box attribute
   pub node_fonts:                HashMap<u64, Font>,       // used to be _font attribute
   pub idstore:                   HashMap<String, Node>,
+  /// While `prune_xmduals` runs: the elements carrying each `idref` value, so a collapsed dual's references are renamed
+  /// without a whole-document `//*[@idref=…]` per dual (#802); `remove_node` and `merge_attributes` keep it current.
+  idref_index:                   Option<HashMap<String, Vec<Node>>>,
   /// Streaming pass 1: every `xml:id` moved out of `idstore` by a spill.
   /// The GLOBAL half of id-collision dedup — a later build-time minting of
   /// the same id must rename exactly as eager would have (witness: the
@@ -648,6 +651,7 @@ impl Document {
       node_boxes:                  HashMap::default(),
       node_fonts:                  HashMap::default(),
       idstore:                     HashMap::default(),
+      idref_index:                 None,
       spilled_ids:                 rustc_hash::FxHashSet::default(),
       spill_anchors:               rustc_hash::FxHashSet::default(),
       spilled_anchor_counters:     rustc_hash::FxHashMap::default(),
@@ -770,6 +774,15 @@ impl Document {
       });
       self.context = Some(context);
       self.context.as_mut().unwrap()
+    }
+  }
+
+  /// The document's elements that `keep` accepts, in document order: `//*[pred]` as a walk, which cannot fail on a large
+  /// document as libxml2's node set does ([`xml::descendant_or_self_elements`], #802).
+  pub fn find_elements(&self, keep: impl FnMut(&Node) -> bool) -> Vec<Node> {
+    match self.document.get_root_element() {
+      Some(root) => xml::descendant_or_self_elements(&root, keep),
+      None => Vec::new(),
     }
   }
 
@@ -919,13 +932,14 @@ impl Document {
   pub fn cleanup_unreferenced_xmtok_ids(&mut self) {
     use rustc_hash::FxHashSet as HashSet;
     let mut referenced_ids: HashSet<String> = HashSet::default();
-    for node in self.findnodes("descendant-or-self::*[@idref]", None) {
-      if let Some(idref) = node.get_attribute("idref") {
+    let xml_ns = "http://www.w3.org/XML/1998/namespace";
+    // One walk for `descendant-or-self::*[@idref]` and `descendant-or-self::ltx:XMTok[@xml:id]` (#802).
+    let toks = self.find_elements(|node| {
+      if let Some(idref) = node.get_attribute_no_ns("idref") {
         referenced_ids.insert(idref);
       }
-    }
-    let xml_ns = "http://www.w3.org/XML/1998/namespace";
-    let toks = self.findnodes("descendant-or-self::ltx:XMTok[@xml:id]", None);
+      xml::is_ltx_element(node, "XMTok") && node.get_attribute_ns("id", xml_ns).is_some()
+    });
     for mut tok in toks {
       if let Some(id) = tok.get_attribute_ns("id", xml_ns)
         && !referenced_ids.contains(&id)
@@ -3521,7 +3535,14 @@ impl Document {
         }
       } else if !to.has_attribute(key) || is_forced {
         // Else if attribute not present on $to, or if we specifically override it, just copy
+        let reindex = key == "idref";
+        if reindex {
+          self.unindex_idref(to);
+        }
         to.set_attribute(key, val)?;
+        if reindex {
+          self.index_idref(to);
+        }
       }
     }
     Ok(())
@@ -6143,7 +6164,11 @@ impl Document {
   /// referenced cell into the visible XMArray branch — no glyph or
   /// formula material is lost.
   pub fn prune_dangling_split_xmrefs(&mut self) -> Result<()> {
-    let xmrefs = self.findnodes("//ltx:XMRef[@_split_ref or @_mf_ref]", None);
+    // `//ltx:XMRef[@_split_ref or @_mf_ref]` and `//ltx:XMRef[@idref]`, walked (#802).
+    let is_xmref = |n: &Node| xml::is_ltx_element(n, "XMRef");
+    let xmrefs = self.find_elements(|n| {
+      is_xmref(n) && (n.has_attribute_no_ns("_split_ref") || n.has_attribute_no_ns("_mf_ref"))
+    });
     for xmref in xmrefs {
       let idref = match xmref.get_attribute("idref") {
         Some(id) => id,
@@ -6166,7 +6191,7 @@ impl Document {
     // (`S1.Ex1.m1.1` → `.1a`) stays untouched. canvas papers using
     // `\begin{equation}` produce `E1`/`E2`/... ids.
     static RE_MATH_ID: Lazy<Regex> = Lazy::new(|| Regex::new(r"^S\d+\.E\d+\.m\d+\.").unwrap());
-    let xmrefs2 = self.findnodes("//ltx:XMRef[@idref]", None);
+    let xmrefs2 = self.find_elements(|n| is_xmref(n) && n.has_attribute_no_ns("idref"));
     for xmref in xmrefs2 {
       // Skip if already pruned via _split_ref sweep above.
       if xmref.get_parent().is_none() {
@@ -6213,6 +6238,13 @@ impl Document {
   pub fn prune_xmduals(&mut self) -> Result<()> {
     // RE-mark visibility!
     self.mark_xmnode_visibility()?;
+    let pruned = self.prune_marked_xmduals();
+    self.idref_index = None;
+    pruned
+  }
+
+  /// `prune_xmduals`' loop, over the marked visibility; `idref_index` lives only while it runs.
+  fn prune_marked_xmduals(&mut self) -> Result<()> {
     // will reversing keep from problems removing nodes from trees that already have been removed?
     for dual in self
       .findnodes("descendant-or-self::ltx:XMDual", None)
@@ -6365,10 +6397,13 @@ impl Document {
     if let Some(dualid) = dual.get_attribute_ns("id", XML_NS) {
       self.unrecord_id(&dualid); // We'll move or remove the ID from the dual
       if let Some(branchid) = branch.get_attribute_ns("id", XML_NS) {
-        // branch has id too!
-        for mut tref in self.findnodes(&s!("//*[@idref='{}']", dualid), None) {
+        // branch has id too! Change dualid refs to branchid (Perl's `//*[@idref='$dualid']`, Document.pm:1643, #802)
+        let mut refs = self.idref_index().remove(&dualid).unwrap_or_default();
+        refs.retain(|tref| !tref.is_null());
+        for tref in &mut refs {
           tref.set_attribute("idref", &branchid)?;
-        } // Change dualid refs to branchid
+        }
+        self.idref_index().entry(branchid).or_default().extend(refs);
       } else {
         // Assign the dual's id to the branch. Record first so we
         // receive a deduplicated id if something else claimed it
@@ -6383,6 +6418,39 @@ impl Document {
     dual_mut.add_prev_sibling(&mut branch).ok();
     self.remove_node(dual_mut);
     Ok(())
+  }
+
+  /// `idref_index`, built by one walk of the document on first use.
+  fn idref_index(&mut self) -> &mut HashMap<String, Vec<Node>> {
+    if self.idref_index.is_none() {
+      let mut index: HashMap<String, Vec<Node>> = HashMap::default();
+      for node in self.find_elements(|n| n.has_attribute_no_ns("idref")) {
+        if let Some(idref) = node.get_attribute_no_ns("idref") {
+          index.entry(idref).or_default().push(node);
+        }
+      }
+      self.idref_index = Some(index);
+    }
+    self.idref_index.get_or_insert_default()
+  }
+
+  /// Take `node` out of `idref_index` (when one is live), before it is freed or its `idref` changes.
+  fn unindex_idref(&mut self, node: &Node) {
+    if let Some(index) = self.idref_index.as_mut()
+      && let Some(idref) = node.get_attribute_no_ns("idref")
+      && let Some(refs) = index.get_mut(&idref)
+    {
+      refs.retain(|tref| tref != node);
+    }
+  }
+
+  /// Put `node` into `idref_index` (when one is live) under its current `idref`.
+  fn index_idref(&mut self, node: &Node) {
+    if let Some(index) = self.idref_index.as_mut()
+      && let Some(idref) = node.get_attribute_no_ns("idref")
+    {
+      index.entry(idref).or_default().push(node.clone());
+    }
   }
 
   //**********************************************************************
@@ -6565,6 +6633,7 @@ impl Document {
       if let Some(id) = node.get_attribute_ns("id", XML_NS) {
         self.unrecord_id(&id);
       }
+      self.unindex_idref(&node);
       if box_action == NodeBoxAction::Unlink
         && let Some(nodebox) = self.get_node_box(&node)
         && let Some(parent) = node.get_parent()
@@ -6601,6 +6670,7 @@ impl Document {
       if let Some(id) = node.get_attribute_ns("id", XML_NS) {
         self.unrecord_id(&id);
       }
+      self.unindex_idref(&node);
       for child in node.get_child_nodes() {
         chopped = chopped || self.remove_node_aux(child);
       }
@@ -8105,7 +8175,8 @@ impl Document {
   }
 
   pub fn load_labels_for_rewrite(&mut self) -> Result<()> {
-    for mut node in self.findnodes("//*[@labels]", None) {
+    // Perl Rewrite.pm:38's `//*[@labels]`, walked (#802).
+    for mut node in self.find_elements(|n| n.has_attribute_no_ns("labels")) {
       if let Some(labels) = node.get_attribute("labels") {
         // A labelled node MUST carry an xml:id so `\ref` can resolve to it.
         // The `Tag('ltx:*', afterClose:late)` GenerateID hook

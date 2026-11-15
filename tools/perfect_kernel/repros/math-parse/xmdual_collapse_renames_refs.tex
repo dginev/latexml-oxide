@@ -1,0 +1,21 @@
+% witness: issue 802 (a 16,000-page book: `//*[@idref='…']` per collapsed dual fails past libxml2's 10,000,000-node
+%          set, its references are never renamed, Fatal:TooManyErrors); synthetic shape
+% oracle:  pdflatex 0 errors, "x + x" and "x + x + x" (the fallbacks print the presentation branch)
+% engines: Perl Document.pm:1643 `findnodes("//*[\@idref='$dualid']")` per collapse; rust base 5e02406406e the same
+%          query (document.rs collapse_xmdual), output as expected below (byte-identical to the fix)
+% expect:  0 errors, 0 warnings; each inner XMDual is seen only from its parent's presentation side, so it collapses to
+%          its presentation branch `x`, which has an id: every XMRef to the dual is renamed to the branch's id (`p1.m1.2`,
+%          `p1.m2.2`), the one in the middle dual's removed content branch included (row 1), every one of several (row 2)
+% status:  GREEN (issue 802: the references are renamed through one idref index, Document::idref_index)
+\documentclass{article}
+\makeatletter
+\providecommand\lx@dual[2]{#2}
+\providecommand\lx@xmarg[2]{#2}
+\providecommand\lx@xmref[1]{x}
+\makeatother
+\begin{document}
+\makeatletter
+$\lx@dual{y}{\lx@dual{\lx@xmref{c}}{\lx@xmarg{c}{\lx@dual{\lx@xmref{d}}{\lx@xmarg{d}{x}}}+\lx@xmref{c}}}$
+$\lx@dual{y}{\lx@xmarg{c}{\lx@dual{\lx@xmref{d}}{\lx@xmarg{d}{x}}}+\lx@xmref{c}+\lx@xmref{c}}$
+\makeatother
+\end{document}

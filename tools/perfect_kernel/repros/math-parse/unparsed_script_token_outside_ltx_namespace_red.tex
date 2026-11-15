@@ -1,0 +1,14 @@
+% witness: 1207.1060 (S2.Ex8: 52 script tokens of unparsed formulas); synthetic minimal shape
+% oracle:  pdflatex 0 errors, "f = <x1 : i < j>"
+% engines: rust 5e02406406e: the unparsed formula's script `ltx:XMApp` and its `SUBSCRIPTOP` token are built with no
+%          namespace, so `cleanup_unreferenced_xmtok_ids`' `ltx:XMTok[@xml:id]` misses the token and its unreferenced
+%          id stays: `<XMTok role="SUBSCRIPTOP" scriptpos="post1" xml:id="p1.m1.1.3.2.1"/>` (every other token of the
+%          formula loses its unreferenced id); Perl gives these tokens no id
+% expect:  0 errors; the script XMApp and XMTok in the LaTeXML namespace, and `<XMTok role="SUBSCRIPTOP"
+%          scriptpos="post1"/>` with no xml:id
+% status:  RED
+% moves:   post-merge (found by issue 802's walk of that query, which kept XPath's namespace test to stay byte-identical)
+\documentclass{article}
+\begin{document}
+$f=\langle x_{1}\colon i<j\rangle$
+\end{document}
