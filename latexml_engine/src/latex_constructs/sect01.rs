@@ -251,9 +251,11 @@ fn end_environment_tokens(env: Tokens) -> Result<Tokens> {
     // the begin took LaTeX's indirection (see `\begin`): `\endX`, then the begin's group closes
     out_tokens = end_environment_by_macro(&name);
   } else if is_defined_token(&t) {
-    // Magic CS! (its constructor fires `env/NAME/end` inside the group; the document's, a macro, does not: latex.ltx
-    // :15386 runs it before `\enddocument`, QA47B)
-    if name == "document" {
+    // Magic CS! (its constructor fires `env/NAME/end` inside the group; the document's and the kernel abstract's,
+    // macros, do not: latex.ltx:15386 runs it before `\enddocument`/`\endabstract`, QA47B)
+    let kernel_abstract =
+      name == "abstract" && lookup_definition(&t)?.is_some_and(|defn| defn.is_expandable());
+    if name == "document" || kernel_abstract {
       out_tokens.extend(use_hook("end"));
     }
     out_tokens.push(t);

@@ -1,0 +1,17 @@
+% witness: synthetic (the `\Refs` after a `\subhead`'s text of the amsppt census papers, AMSPPT A/B: 26 of them)
+% oracle:  pdftex (\input amstex, \documentstyle{amsppt}) this file: 0 errors; "1. Intro 1.1. Sub. Text. References [1] A. Author, Title."
+% engines: Perl 0.8.8 = 0 errors, the bibliography nested in the open subsection; rust 7dea7e597a1 = 0 errors, every head closed after its title,
+%          "Text." and the bibliography at document level
+% expect:  0 errors, 0 warnings; section C0.Sx1 > subsection holding "Text.", then the bibliography `bib` at document level (amsppt.sty:862-869:
+%          `\Refs` is a head, as back matter it closes the open heads)
+% status:  RED (Perl; fix/amsppt-ids-sections before its back-matter step) -> GREEN (fix/amsppt-ids-sections; guard perfect_kernel_batchamsppt::amsppt_heads_and_theorems)
+\input amstex
+\documentstyle{amsppt}
+\document
+\head 1. Intro\endhead
+\subhead 1.1. Sub\endsubhead
+Text.
+\Refs
+\ref\key 1\by A. Author\paper Title\endref
+\endRefs
+\enddocument

@@ -1,0 +1,24 @@
+% witness: synthetic (QA29 check, 2026-11-14; the head shapes of math9201249)
+% oracle:  pdftex (\input amstex, \documentstyle{amsppt}) this file: 0 errors; every title and body printed in order, "1.1. Sub." … "A.1. Inside"
+% engines: Perl 0.8.8 = 0 errors, each `\head`/`\subhead`/`\subsubhead`/`\subheading{}`/`\specialhead` unit holding its body and the lower units,
+%          closed by the next head at its level or above; rust 7dea7e597a1 = 0 errors, every unit closed after its title, every body at document level
+% expect:  0 errors, 0 warnings; section C0.Sx1 > subsection C0.Sx1.SSx1 > subsubsection, section C0.Sx2 > subsection, chapter Cx1 > section Cx1.Sx1, each with its body
+% status:  RED (7dea7e597a1) -> GREEN (fix/amsppt-ids-sections; guard perfect_kernel_batchamsppt::amsppt_heads_and_theorems)
+\input amstex
+\documentstyle{amsppt}
+\document
+\head 1. First\endhead
+Body of the first section.
+\subhead 1.1. Sub\endsubhead
+Body of the subsection.
+\subsubhead 1.1.1. Subsub\endsubsubhead
+Body of the subsubsection.
+\head 2. Second\endhead
+Body of the second section.
+\subheading{2.1. Braced}
+Body of the braced subsection.
+\specialhead Appendix\endspecialhead
+Body of the appendix.
+\head A.1. Inside\endhead
+Body of the appendix section.
+\enddocument

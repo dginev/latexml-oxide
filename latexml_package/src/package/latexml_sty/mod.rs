@@ -438,6 +438,8 @@ LoadDefinitions!({
 }
 \AddToHook{package/lltjfont/after}{%
   \DeclareRobustCommand\fontfamily[1]{\edef\f@family{##1}}%
+  % lltjfont.sty:384's kanji selection reads LuaTeX's font tables, which the bridge has not (kksymbols-doc)
+  \RemoveFromHook{selectfont}[luatexja]%
 }
 \NewDocumentCommand\LuaULNewUnderlineType{ s +m }{0}
 \NewDocumentCommand\LuaULSetUnderline{ m }{}

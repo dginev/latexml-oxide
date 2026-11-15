@@ -10,7 +10,10 @@
 //! late `enddocument/*` hooks, `env/verbatim/begin|end`, `label`, `\include`'s file hooks (RED catalog:
 //! `enddocument_info_hook_red`, `label_hook_sets_the_reference_text_red`, `currenvline_is_never_set_red`,
 //! `environment_begin_hook_reads_its_environment_red`). HOOKINIT: lthooks' document mode from the first
-//! `\begin{document}` on (RED catalog: `show_hook_needs_showstream_red`, `file_hooks_run_at_every_input_red`).
+//! `\begin{document}` on (RED catalog: `show_hook_needs_showstream_red`). QAB2: the file hooks at every `\input` and
+//! ahead of `\AtEndOfPackage`, `env/abstract/begin|end`, `selectfont` (RED catalog: `selectfont_hook_on_emph_red`).
+//! QAB2b: the abstract's begin hook ahead of its name, its end hook once, a family register's font value (RED catalog:
+//! `abstract_begin_hook_size_under_the_class_small_red`, `amsart_abstract_begin_hook_text_before_the_title_red`).
 use latexml::util::test::{
   RequirementTable, Requirements, assert_element, check_table, convert_with, current_test_name,
 };
@@ -522,6 +525,120 @@ const ROWS: &[Row] = &[
     messages: &[],
     absent:   &[],
     elements: &[("p", "xml:id=\"p1.1\"", "<p xml:id=\"p1.1\">A1H\n\nB1H</p>")],
+  }, // QAB2: `file/<name>/before|after` are plain `\UseHook`s at every `\input` (red: "[fb]IN [fa][FA]IN [FA]
+  // [fb2](add)IN [FA]").
+  Row {
+    name:     "file_hooks_run_at_every_input",
+    tex:      include_str!(
+      "../../../tools/perfect_kernel/repros/macro-state/file_hooks_run_at_every_input.tex"
+    ),
+    counts:   (0, 0),
+    messages: &[],
+    absent:   &[],
+    elements: &[(
+      "p",
+      "xml:id=\"p1.1\"",
+      "<p xml:id=\"p1.1\">[fb]IN\n[fa][FA][fb]IN\n[fa][FA]\n(add)[fb][fb2]IN\n[fa][FA]</p>",
+    )],
+  },
+  // QAB2: a package load's file hooks end before its `\AtEndOfPackage` code (red: "…(in)[eop][fa][FA][pa][PA]").
+  Row {
+    name:     "file_hooks_order_around_a_package",
+    tex:      include_str!(
+      "../../../tools/perfect_kernel/repros/macro-state/file_hooks_order_around_a_package.tex"
+    ),
+    counts:   (0, 0),
+    messages: &[],
+    absent:   &[],
+    elements: &[(
+      "p",
+      "xml:id=\"p1.1\"",
+      "<p xml:id=\"p1.1\">[PB][pb][FB][fb](in)[fa][FA][eop][pa][PA]</p>",
+    )],
+  },
+  // QAB2: the kernel abstract, a binding macro, runs `env/abstract/begin|end` in its group (red: "Abstract text.").
+  Row {
+    name:     "abstract_env_hooks_run",
+    tex:      include_str!(
+      "../../../tools/perfect_kernel/repros/macro-state/abstract_env_hooks_run.tex"
+    ),
+    counts:   (0, 0),
+    messages: &[],
+    absent:   &[],
+    elements: &[
+      (
+        "p",
+        "xml:id=\"abstract1.1\"",
+        "<p xml:id=\"abstract1.1\">[bg]<text font=\"italic\" xml:id=\"abstract1.1.1\">Abstract text.\n[en]</text></p>",
+      ),
+      (
+        "p",
+        "xml:id=\"p2.1\"",
+        "<p xml:id=\"p2.1\">[af]\nAfter.</p>",
+      ),
+    ],
+  },
+  // QAB2: `\selectfont` runs the `selectfont` hook (red: 1 `Error:undefined:\lastseries`, "(next)" lost).
+  Row {
+    name:     "selectfont_hook_runs",
+    tex:      include_str!(
+      "../../../tools/perfect_kernel/repros/macro-state/selectfont_hook_runs.tex"
+    ),
+    counts:   (0, 0),
+    messages: &[],
+    absent:   &[],
+    elements: &[(
+      "p",
+      "xml:id=\"p1.1\"",
+      "<p xml:id=\"p1.1\">A <text font=\"bold\" xml:id=\"p1.1.1\">B [bx] </text>C [m]\n<text font=\"bold\" \
+       xml:id=\"p1.1.2\">D <text font=\"italic\" xml:id=\"p1.1.2.1\">(next)E </text>F</text></p>",
+    )],
+  },
+  // QAB2b: a constructor abstract (the titlepage's) runs `env/abstract/end` once, from its constructor (red: "[en][en]").
+  Row {
+    name:     "abstract_end_hook_once_in_a_constructor_abstract",
+    tex:      include_str!(
+      "../../../tools/perfect_kernel/repros/macro-state/abstract_end_hook_once_in_a_constructor_abstract.tex"
+    ),
+    counts:   (0, 0),
+    messages: &[],
+    absent:   &[],
+    elements: &[(
+      "abstract",
+      "xml:id=\"abstract1\"",
+      "<abstract inlist=\"toc\" xml:id=\"abstract1\"><p xml:id=\"abstract1.1\">Abstract text.\n[en]</p></abstract>",
+    )],
+  },
+  // QAB2b: `env/abstract/begin` runs before the abstract's name is read (red: name="Abstract").
+  Row {
+    name:     "abstract_begin_hook_runs_before_the_name",
+    tex:      include_str!(
+      "../../../tools/perfect_kernel/repros/macro-state/abstract_begin_hook_runs_before_the_name.tex"
+    ),
+    counts:   (0, 0),
+    messages: &[],
+    absent:   &[],
+    elements: &[(
+      "abstract",
+      "xml:id=\"abstract1\"",
+      "<abstract inlist=\"toc\" name=\"Summary\" xml:id=\"abstract1\"><p xml:id=\"abstract1.1\">Abstract text.</p></abstract>",
+    )],
+  },
+  // QAB2b: a family register's value is a family's font, tex.web §577 (red: "A1 [fontname not available] B2 …").
+  Row {
+    name:     "font_family_register_takes_a_family_font",
+    tex:      include_str!(
+      "../../../tools/perfect_kernel/repros/fonts-nfss/font_family_register_takes_a_family_font.tex"
+    ),
+    counts:   (0, 0),
+    messages: &[],
+    absent:   &[],
+    elements: &[(
+      "p",
+      "xml:id=\"p1.1\"",
+      "<p xml:id=\"p1.1\"><Math mode=\"inline\" tex=\"0\" text=\"0\" xml:id=\"p1.m1\"><XMath xml:id=\"p1.m1.1\"><XMTok \
+       meaning=\"0\" role=\"NUMBER\">0</XMTok></XMath></Math> A[cmmi10] B[cmsy7] C[cmmi10] DE</p>",
+    )],
   },
 ];
 
