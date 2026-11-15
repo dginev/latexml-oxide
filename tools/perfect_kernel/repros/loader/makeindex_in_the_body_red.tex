@@ -1,0 +1,13 @@
+% witness: synthetic (QA90: latex.ltx's own token macros in `\@preamblecmds`, here `\makeindex`)
+% oracle:  pdflatex 1 `!` (LaTeX Error: Can be used only in preamble); "Before. After."
+% engines: Perl 0 errors; rust fix/qa90-preamble-cmds 0 errors, "Before. After."
+% expect:  1 error, the text kept
+% status:  RED
+% moves:   post-merge (the walk wraps only our Rust definitions: a token macro of latex.ltx would need TeX's `\let` to
+%          `\@notprerr`, which our package loader breaks, running `\@pushfilename`/`\@currnamestack` in the body)
+\documentclass{article}
+\begin{document}
+Before.
+\makeindex
+After.
+\end{document}

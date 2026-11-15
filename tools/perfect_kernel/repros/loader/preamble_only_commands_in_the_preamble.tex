@@ -1,0 +1,13 @@
+% witness: synthetic (the safe side of preamble_only_commands_in_the_body.tex)
+% oracle:  pdflatex 0 `!`; "After Q done."
+% engines: Perl 0 errors; rust base 0 errors; fix/qa90-preamble-cmds 0 errors
+% expect:  0 errors, 0 warnings (a deferred \RequirePackage in \AtBeginDocument runs before latex.ltx's walk)
+% status:  GREEN
+\documentclass{article}
+\listfiles
+\DeclareTextCommand{\qmark}{OT1}{Q}
+\usepackage{xspace}
+\AtBeginDocument{\RequirePackage{array}}
+\begin{document}
+After \qmark\ \xspace done.
+\end{document}
