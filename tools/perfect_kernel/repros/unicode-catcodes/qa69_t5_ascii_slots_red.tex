@@ -1,0 +1,15 @@
+% mechanism: an encoding with no fontmap decodes as OT1 (tex_fonts.rs:228-261; SHARED with Perl TeX_Fonts.pool.ltxml:169-176), and
+%   only `Info:missing_font_encoding` says so, so a wrong glyph goes uncounted: T5's ASCII slots `"`/`<`/`>`/`|` print OT1's ” ¡ ¿ —
+% witness: 2406.15888 (Interspeech2024.cls loads `\usepackage[T5]{fontenc}` last: "overrider" printed as ”overrider”); also
+%   2511.17955, 2605.10376 (T5 ≈480 papers, a wrong glyph in ≈240; L7x, IL2 and U reach the fallback too)
+% status:  RED
+% oracle:  pdflatex 0 `!`; prints `an "overrider" a<b>c |x| "<| “q” "<`
+% engines: rust main 3ef55023f86 0 E 0 W (1 Info): `an ”overrider” a¡b¿c —x— "<| “q” ”¡`; Perl the same (Info:fontmap)
+% expect:  0 errors; the paragraph `an "overrider" a<b>c |x| "<| “q” "<`
+% moves:   post-merge (SYNC row R QA69: derive `<ENC>_fontmap` while `<enc>enc.def` is read, `\DeclareFontEncoding` sect08.rs:1127,
+%   seeded with encguide §3.1's ASCII slots, symbols from bound LICRs or the inverse of `<enc>enc.dfu`, composites by NFC; U excluded)
+\documentclass{article}
+\usepackage[T5]{fontenc}
+\begin{document}
+an "overrider" a<b>c |x| \textquotedbl\textless\textbar\ ``q'' \char34\char60
+\end{document}
