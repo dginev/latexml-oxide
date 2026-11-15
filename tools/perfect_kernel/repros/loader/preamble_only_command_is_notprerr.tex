@@ -1,0 +1,17 @@
+% mechanism: latex.ltx:9521 `\gdef\do#1{\global\let#1\@notprerr}\@preamblecmds`: in the body each listed command IS
+%   `\@notprerr`, which raw code tests with `\ifx` (ltnews23/24.tex:42-43; 31 TL files `\ifx\@onlypreamble\@notprerr`)
+% witness: TL manual ltnews (3 errors since #867); synthetic shape
+% oracle:  pdflatex 0 `!`; "preamble-only: yes yes"; Perl 0 errors, "no no"
+% engines: rust MAIN882 1 error (Can be used only in preamble: `\DeclareTextCommandDefault` ran), "no no"; REGCDE r2 0
+% expect:  0 errors, 0 warnings; "preamble-only: yes yes"
+% status:  GREEN (REGCDE r2: the walk `\let`s each non-loader to `\@notprerr`, DG ruling (b); OD #226)
+\documentclass{article}
+\begin{document}
+\makeatletter
+\def\@tempa{\@latex@error{Can be used only in preamble}\@eha}
+\ifx\DeclareTextCommandDefault\@tempa\else
+  \DeclareTextCommandDefault\textcommabelowx[1]{#1}\fi
+preamble-only: \ifx\@onlypreamble\@notprerr yes\else no\fi\
+\ifx\DeclareTextCommandDefault\@notprerr yes\else no\fi
+\makeatother
+\end{document}

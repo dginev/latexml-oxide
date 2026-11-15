@@ -1,0 +1,8 @@
+\NeedsTeXFormat{LaTeX2e}
+\ProvidesPackage{rawopt}[2026/01/01]
+\def\rawoptval{default}
+\DeclareOption{x}{\def\rawoptval{x}}
+\ExecuteOptions{x}
+\ProcessOptions\relax
+\DeclareTextCommandDefault{\rawsym}{R}
+\AtEndOfPackage{\def\rawoptval{x-end}}

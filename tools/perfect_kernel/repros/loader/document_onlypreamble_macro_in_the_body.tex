@@ -1,0 +1,12 @@
+% witness: synthetic (revQAB3 finding 3)
+% oracle:  pdflatex 1 `!` (Can be used only in preamble: \myonly), "Text ."
+% engines: Perl 0 errors; rust fix/qa90-preamble-cmds 0 errors, "Text M."; REGCDE r2 1 error, "Text ."
+% expect:  1 error, "Text ."
+% status:  GREEN (REGCDE r2: a document's token macro in `\@preamblecmds` is `\let` to `\@notprerr`; OD #226)
+\documentclass{article}
+\makeatletter
+\newcommand\myonly{M}\@onlypreamble\myonly
+\makeatother
+\begin{document}
+Text \myonly.
+\end{document}

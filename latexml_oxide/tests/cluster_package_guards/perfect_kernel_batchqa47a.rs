@@ -601,6 +601,34 @@ const ROWS: &[Row] = &[
       "<p xml:id=\"p1.1\">[PB][pb][FB][fb](in)[fa][FA][eop][pa][PA]</p>",
     )],
   },
+  // REGCDE: the document's first textcomp load runs its hooks though the format carries textcomp (biblatex-sbl; red on
+  // MAIN882: 2 errors, undefined `\afterok` and `\fileb`, "loaded: yes/yes").
+  Row {
+    name:     "afterpackage_of_the_formats_textcomp",
+    tex:      include_str!(
+      "../../../tools/perfect_kernel/repros/loader/afterpackage_of_the_formats_textcomp.tex"
+    ),
+    counts:   (0, 0),
+    messages: &[],
+    absent:   &[],
+    elements: &[(
+      "p",
+      "xml:id=\"p1.1\"",
+      "<p xml:id=\"p1.1\">after: OK; hook: HOOK; file: FB; loaded: no/yes; ½</p>",
+    )],
+  },
+  // REGCDE3: a document's load after the format's runs textcomp.sty's options only, never the symbols again (revREGCDE2
+  // E; red on aef337b2747: "A ½ °.").
+  Row {
+    name:     "textcomp_after_the_format_keeps_the_documents_symbols",
+    tex:      include_str!(
+      "../../../tools/perfect_kernel/repros/loader/textcomp_after_the_format_keeps_the_documents_symbols.tex"
+    ),
+    counts:   (0, 0),
+    messages: &[],
+    absent:   &[],
+    elements: &[("p", "xml:id=\"p1.1\"", "<p xml:id=\"p1.1\">A HALF DEG.</p>")],
+  },
   // QAB2: the kernel abstract, a binding macro, runs `env/abstract/begin|end` in its group (red: "Abstract text.").
   Row {
     name:     "abstract_env_hooks_run",
@@ -719,5 +747,45 @@ fn batchqa47a_command_hook_rows() {
     for (tag, attrs, element) in row.elements {
       assert_element(&xml, tag, &[attrs], element);
     }
+  }
+}
+
+/// REGCDE: under the LuaTeX profile ctex's selectfont chunk (ctex-engine-luatex.def:1220, labelled by the package or
+/// class that reads the .def) reads LuaTeX-ja's font tables at :1226's `\selectfont`; latexml.sty's shim voids it (red
+/// on MAIN882: 1 error each, undefined `\LTJY3/song/m/n/10`; TL manuals inkpaper-en, caspervector-ay, codebox-doc-en).
+#[test]
+fn batchqa47a_ctex_luatex_selectfont_chunk_voided() {
+  const ROWS: &[(&str, &str)] = &[
+    (
+      "ctex_selectfont_hook_voided",
+      include_str!(
+        "../../../tools/perfect_kernel/repros/luatex-profile/ctex_selectfont_hook_voided.tex"
+      ),
+    ),
+    (
+      "ctex_selectfont_hook_voided_package",
+      include_str!(
+        "../../../tools/perfect_kernel/repros/luatex-profile/ctex_selectfont_hook_voided_package.tex"
+      ),
+    ),
+  ];
+  const REQUIRES: &RequirementTable = &[
+    (
+      "ctex_selectfont_hook_voided",
+      Requirements::packages(&["ctexart.cls", "luatexja.sty"]),
+    ),
+    (
+      "ctex_selectfont_hook_voided_package",
+      Requirements::packages(&["ctex.sty", "luatexja.sty"]),
+    ),
+  ];
+  for (name, tex) in ROWS {
+    if !check_table(&current_test_name(), name, Some(REQUIRES)) {
+      continue;
+    }
+    let (log, xml) = convert_with(tex, Some("[rawstyles,rawclasses,luatex]latexml.sty"));
+    assert_eq!(error_count(&log), 0, "{name}: errors\n{log}");
+    assert_eq!(warning_count(&log), 0, "{name}: warnings\n{log}");
+    assert_element(&xml, "p", &[], "<p>中文 text.</p>");
   }
 }

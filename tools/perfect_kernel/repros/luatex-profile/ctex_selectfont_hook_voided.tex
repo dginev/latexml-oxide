@@ -1,0 +1,13 @@
+% witness: TL manuals inkpaper-en, caspervector-ay (ctexart class), codebox-doc-en (ctex package): 1 error each since
+%          #869 runs `\UseHook{selectfont}`
+% oracle:  lualatex 0 `!`, "中文 text."
+% engines: rust MAIN882 1 error (undefined \LTJY3/song/m/n/10: ctex-engine-luatex.def:1220's selectfont chunk reads
+%          LuaTeX-ja's font tables at :1226's \selectfont); REGCDE r2 0 errors
+% expect:  0 errors, 0 warnings, "中文 text." under [rawstyles,rawclasses,luatex]latexml.sty
+% status:  GREEN (latexml.sty's LuaTeX shim voids the chunk on package/luatexja/after, by the label of the package or
+%          class that reads the .def: ctex, ctexart, …)
+% preload: [rawstyles,rawclasses,luatex]latexml.sty
+\documentclass[UTF8]{ctexart}
+\begin{document}
+中文 text.
+\end{document}

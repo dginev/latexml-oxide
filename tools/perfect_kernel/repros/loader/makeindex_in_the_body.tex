@@ -1,0 +1,11 @@
+% witness: synthetic (QA90: latex.ltx's own token macros in `\@preamblecmds`, here `\makeindex`)
+% oracle:  pdflatex 1 `!` (LaTeX Error: Can be used only in preamble); "Before. After."
+% engines: Perl 0 errors; rust fix/qa90-preamble-cmds 0 errors, "Before. After."; REGCDE r2 1 error
+% expect:  1 error, the text kept
+% status:  GREEN, no guard (the path of document_onlypreamble_macro_in_the_body.tex's row; OD #226)
+\documentclass{article}
+\begin{document}
+Before.
+\makeindex
+After.
+\end{document}

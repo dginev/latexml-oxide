@@ -1,0 +1,13 @@
+% mechanism: as loader/standalone_subfile_without_begin_document, through subfiles' `\documentclass` (subfiles_sty.rs)
+% witness: synthetic (REGCDE3's sibling of revREGCDE2 C)
+% oracle:  pdflatex 1 `!` (File ended while scanning use of \documentclass; the sub-file gobbled), "Main. End: yes."
+% engines: rust MAIN882 and REGCDE aef337b2747 0 errors, "End: no."
+% expect:  0 errors, 0 warnings; "Main. Sub text. End: yes." (subc.tex beside it)
+% status:  GREEN (subfiles_sty.rs)
+\documentclass{article}
+\usepackage{subfiles}
+\begin{document}
+Main.
+\subfile{subc}
+End: \makeatletter\ifx\listfiles\@notprerr yes\else no\fi\makeatother.
+\end{document}

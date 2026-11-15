@@ -441,6 +441,16 @@ LoadDefinitions!({
   % lltjfont.sty:384's kanji selection reads LuaTeX's font tables, which the bridge has not (kksymbols-doc)
   \RemoveFromHook{selectfont}[luatexja]%
 }
+% and ctex's (ctex-engine-luatex.def:1220, read by \file_input:n, no file hook; labelled by the package or class that
+% reads it), voided before its :1226 \selectfont (codebox-doc-en, inkpaper-en, caspervector-ay)
+\AddToHook{package/luatexja/after}{%
+  \AddToHook{selectfont}[lx@ltj]{}%
+  \DeclareHookRule{selectfont}{lx@ltj}{voids}{ctex}%
+  \DeclareHookRule{selectfont}{lx@ltj}{voids}{ctexart}%
+  \DeclareHookRule{selectfont}{lx@ltj}{voids}{ctexbook}%
+  \DeclareHookRule{selectfont}{lx@ltj}{voids}{ctexrep}%
+  \DeclareHookRule{selectfont}{lx@ltj}{voids}{ctexbeamer}%
+}
 \NewDocumentCommand\LuaULNewUnderlineType{ s +m }{0}
 \NewDocumentCommand\LuaULSetUnderline{ m }{}
 \NewDocumentCommand\LuaULResetUnderline{ s }{}

@@ -775,7 +775,7 @@ pub(crate) fn load() -> Result<()> {
   // ends the whole document at the license (beameruserguide lost 16 of 26
   // chapters). Perl defines neither (SHARED); OXIDIZED_DESIGN_DIVERGENCES #226.
   DefMacro!("\\@notprerr", "\\@latex@error{Can be used only in preamble}\\@eha");
-  // The `\@notprerr` of a command `\begin{document}` wrapped (mod.rs `disable_preamble_commands`): none inside a
+  // The `\@notprerr` of a loader `\begin{document}` wrapped (mod.rs `disable_preamble_commands`): none inside a
   // package or class load (`\@currext`), which pdflatex never performs after the preamble, nor while a binding runs a
   // sub-file's preamble (Perl's `inPreamble`, standalone_sty.rs).
   DefMacro!("\\lx@notprerr", sub[_args] {

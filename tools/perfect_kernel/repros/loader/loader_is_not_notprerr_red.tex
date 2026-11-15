@@ -1,0 +1,14 @@
+% witness: synthetic (scrlttr2.cls:2313-2325 `\LoadLetterOption` in the body: `\ifx\RequirePackage\@notprerr`)
+% oracle:  pdflatex 0 `!`, "Loaders: yes yes."; Perl 0 errors, "no no"
+% engines: rust REGCDE r2 0 errors, "Loaders: no no." (Perl's 7 loaders keep Perl's recovery, the Error and then the
+%          load, so they are not `\@notprerr`: DG ruling (b), 2026-11-15); scrlttr2 then re-defines them to the same
+%          wrapper, and its letter is kept
+% expect:  0 errors, "Loaders: yes yes."
+% status:  RED
+% moves:   post-merge (the ruling's cost; a loader that is `\@notprerr` would need the recovery elsewhere, OD #226)
+\documentclass{article}
+\begin{document}
+\makeatletter
+Loaders: \ifx\RequirePackage\@notprerr yes\else no\fi\ \ifx\usepackage\@notprerr yes\else no\fi.
+\makeatother
+\end{document}

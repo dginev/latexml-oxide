@@ -263,9 +263,9 @@ fn locked_names_derived_classes() {
   assert_eq!(error_count(&log), 0, "{log}");
   assert_eq!(warning_count(&log), 0, "{log}");
   // Own their calls: a braced first mandatory argument, outside LaTeX's `@` namespace.
+  // (`\DeclareTextAccentDefault` is `\@notprerr` after `\begin{document}`, latex.ltx:9521: OD #226)
   assert_eq!(owners, [
     r"\DeclareLowercaseMapping",
-    r"\DeclareTextAccentDefault",
     r"\DeclareTitlecaseMapping",
     r"\DeclareUppercaseMapping",
     r"\author",
@@ -308,6 +308,7 @@ fn locked_names_derived_classes() {
     r"\@trivlist",
     r"\@twocolumna",
     r"\DeclareTextAccent",
+    r"\DeclareTextAccentDefault",
     r"\DeclareTextCommand",
     r"\DeclareTextComposite",
     r"\DeclareTextCompositeCommand",
