@@ -21680,7 +21680,8 @@ census). Fixed in Rust (QA14A): `\lx@parbox@restore` (latex_constructs/sect12.rs
 `\columnwidth` (`declare_panel_parbox_line`, `BoxSets::Line`; a minipage's against its own). `beforeFloat`'s
 `\hsize := \columnwidth` (:3377), which Perl runs for every float, is assigned only where the code models
 `\@xfloat`/`\@dblfloat` (latex.ltx:17482, :17556; `before_xfloat`, latex_constructs/mod.rs), not by a sub-float
-(subcaption's, subfig's `\subfloat`, subfigure.sty's `\subfigure`), wrapfig, floatflt, algorithm2e or listings: a
+(subcaption's, subfig's `\subfloat`, subfigure.sty's `\subfigure`), wrapfig or floatflt (which set `\hsize` to their own
+width), nor algorithm2e's or listings' floating forms (which start where `\hsize` is `\columnwidth` already): a
 sub-float or a captioned listing in a parbox or a `p` cell reads the box's `\hsize` (witnesses 2010.06608 S4.F8,
 2007.14228 S5.F7).
 Witnesses 1412.0314, 1711.09469. Guard `perfect_kernel_batchqa14a::parbox_sets_only_the_line_width`. An upstream offer.

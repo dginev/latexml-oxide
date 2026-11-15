@@ -4112,8 +4112,11 @@ pub fn before_float_ex(float_type: &str, preincrement: Option<&str>, double: boo
   begin_float(float_type, preincrement, double, true, false)
 }
 /// The begin of a float modelling latex.ltx `\@xfloat`/`\@dblfloat`: `\hsize := \columnwidth` (`\textwidth` when
-/// `double`; :17482, :17556), then `reset_float_box`. A sub-float, wrapfig and floatflt assign none; algorithm2e's and
-/// listings' floats neither, begun in outer par mode, where `\hsize` is `\columnwidth` already.
+/// `double`; :17482, :17556; float.sty's `[H]`, :85), then `reset_float_box`. A sub-float keeps the enclosing `\hsize`;
+/// wrapfig and floatflt set it to their own width (wrapfig.sty:58, floatflt.sty:90), never to `\columnwidth`.
+/// algorithm2e's and listings' floating forms do run `\@float` (algorithm2e.sty:2488-2491, listings.sty:1705-1708) but
+/// start in outer par mode, where `\hsize` is `\columnwidth` already. Not yet `\@parboxrestore`'s `\linewidth\hsize`
+/// (latex.ltx:17483; post-merge).
 pub fn before_xfloat(float_type: &str, double: bool) -> Result<()> {
   begin_float(float_type, None, double, true, true)?;
   reset_float_box()
