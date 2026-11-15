@@ -254,14 +254,8 @@ pub fn settle_cover_title_ink(document: &mut Document) {
   let Some(root) = document.get_document().get_root_element() else {
     return;
   };
-  // (a titlepage continuing the title block stands for no title: OXIDIZED_DESIGN_DIVERGENCES #903)
-  if document
-    .findnode(
-      &s!("/ltx:document/ltx:titlepage[not(contains(concat(' ', @class, ' '), ' {CONTINUED_TITLEPAGE} '))]"),
-      None,
-    )
-    .is_some()
-  {
+  // (a titlepage continuing the title block or set before it stands for no title: OXIDIZED_DESIGN_DIVERGENCES #903, QA91)
+  if title_standing_titlepage(document).is_some() {
     for mark in cover_title_marks(document, &root) {
       document.remove_node(mark);
     }
@@ -781,9 +775,7 @@ pub fn lift_marked_field_ink(document: &mut Document) -> Result<bool> {
   if marks.is_empty() {
     return Ok(false);
   }
-  let no_titlepage = document
-    .findnode("/ltx:document/ltx:titlepage", None)
-    .is_none();
+  let no_titlepage = title_standing_titlepage(document).is_none();
   let title_shown = no_titlepage && document.findnode("/ltx:document/ltx:title", None).is_some();
   let creators_shown = no_titlepage
     && document

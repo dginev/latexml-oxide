@@ -823,6 +823,8 @@ pub const INK_AUTHOR: char = '\u{4}';
 pub const INK_TAIL: char = '\u{5}';
 /// Where what a document appended to `\@author` ends ([`INK_AUTHOR`]).
 pub const INK_TAIL_END: char = '\u{6}';
+/// Where `\@title` begins ([`INK_AUTHOR`]).
+pub const INK_TITLE: char = '\u{7}';
 
 /// The mark [`ink_word_text`] sets at the edges of a whatsit that prints: no word ends there in the text it reads
 /// (`Jos\'e`, `\textbf{Ab}le`), but where a word does not continue across it, the pieces are words of their own

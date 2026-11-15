@@ -8,15 +8,16 @@
 //! - whether that appended tail prints, which decides whether the frontmatter reads it (frontmatter_stores.rs
 //!   `author_tail_calls`).
 //!
-//! The run marks where `\@author` begins and where its tail begins and ends (sect05.rs `title_page_mark`), records the
-//! `\and` family where `\@author` first prints (for the separator query, TP2), and whether article.cls's stand-in ran
-//! (the kernel's `\@maketitle`, `\lx@kernel@maketitle`). Its tail answer is its own only where code a raw file or the
-//! document wrote ran and the stand-in did not; else the binding's declaration answers
-//! (`fm_author_tail_declared`, `Policy::title_page`). Perl reads no title page (latex_constructs.pool.ltxml:1099-1113).
+//! The run marks where `\@title` and `\@author` begin and where `\@author`'s tail begins and ends (sect05.rs
+//! `title_page_mark`), records the `\and` family where `\@author` first prints (for the separator query, TP2), and
+//! whether article.cls's stand-in ran (the kernel's `\@maketitle`, `\lx@kernel@maketitle`). Its tail answer is its own
+//! only where code a raw file or the document wrote ran and the stand-in did not; else the binding's declaration
+//! answers (`fm_author_tail_declared`, `Policy::title_page`). Perl reads no title page
+//! (latex_constructs.pool.ltxml:1099-1113).
 
 use std::cell::{Cell, RefCell};
 
-use super::{INK_AUTHOR, INK_TAIL, INK_TAIL_END, *};
+use super::{INK_AUTHOR, INK_TAIL, INK_TAIL_END, INK_TITLE, *};
 
 /// Which code the reading's run ran for the title page.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -65,6 +66,8 @@ pub(crate) struct TitlePageReading {
   pub(crate) untailed: String,
   /// its text ([`ink_text`])
   pub(crate) text:     String,
+  /// `\@title` reached the print
+  pub(crate) title:    bool,
   pub(crate) author:   AuthorPrint,
 }
 
@@ -207,6 +210,7 @@ pub(crate) fn title_page_reading() -> Result<Rc<TitlePageReading>> {
   if let Some((marks, _)) = marks {
     inject.extend(marks);
   }
+  inject.extend(title_mark()?);
   // (the class's own `\thanks` kept aside before the run sets the net's in its place)
   let mut tokens = mouth::tokenize_internal(r"{\let\lx@check@thanks\thanks").unlist();
   // (and the Infos building the run gives — a `\maketitle` body not replayable — are the deposit's, which gives them)
@@ -233,7 +237,7 @@ pub(crate) fn title_page_reading() -> Result<Rc<TitlePageReading>> {
     Err(SpeculativeRun::Aborted) => (RunOutcome::Aborted, String::new(), String::new()),
     Err(_) => (RunOutcome::Unavailable, String::new(), String::new()),
   };
-  let is_mark = |c: char| matches!(c, INK_AUTHOR | INK_TAIL | INK_TAIL_END);
+  let is_mark = |c: char| matches!(c, INK_TITLE | INK_AUTHOR | INK_TAIL | INK_TAIL_END);
   let mut untailed = String::with_capacity(marked.len());
   let mut in_tail = false;
   for c in marked.chars() {
@@ -251,6 +255,7 @@ pub(crate) fn title_page_reading() -> Result<Rc<TitlePageReading>> {
     words: marked.chars().filter(|c| !is_mark(*c)).collect(),
     untailed,
     text,
+    title: marked.contains(INK_TITLE),
     author: AuthorPrint {
       printed: marked.contains(INK_AUTHOR),
       tail: tailed.then(|| marked.contains(INK_TAIL)),
@@ -259,10 +264,12 @@ pub(crate) fn title_page_reading() -> Result<Rc<TitlePageReading>> {
   };
   DebugFeature!(
     "frontmatter",
-    "FRONT the title page reading: {:?}, stand-in {}, {:?}; \\@author printed {}, its tail {:?}, the \\and family {}",
+    "FRONT the title page reading: {:?}, stand-in {}, {:?}; \\@title printed {}, \\@author printed {}, its tail {:?}, \
+     the \\and family {}",
     reading.source,
     reading.stand_in,
     reading.outcome,
+    reading.title,
     reading.author.printed,
     reading.author.tail,
     if reading.author.family.is_some() {
@@ -274,6 +281,25 @@ pub(crate) fn title_page_reading() -> Result<Rc<TitlePageReading>> {
   let reading = Rc::new(reading);
   READING.set(Some((key, Rc::clone(&reading))));
   Ok(reading)
+}
+
+/// The definition of `\@title` the reading's run makes, marked where it begins (`\lx@title@page@title`); none when
+/// `\@title` is empty or takes parameters.
+fn title_mark() -> Result<Vec<Token>> {
+  let Some(current) = crate::frontmatter_stores::store_value("title")?.filter(|t| !t.is_empty())
+  else {
+    return Ok(Vec::new());
+  };
+  let mut def = mouth::tokenize_internal(r"\def\@title{\lx@title@page@title").unlist();
+  // (a parameter token of the stored value doubled, as a definition's body holds it)
+  for token in current.unlist() {
+    def.push(token);
+    if token.get_catcode() == Catcode::PARAM {
+      def.push(token);
+    }
+  }
+  def.push(T_END!());
+  Ok(def)
 }
 
 /// The definition of `\@author` the reading's run makes, marked ([`title_page_mark`](super::title_page_mark)):
@@ -344,6 +370,7 @@ mod tests {
       words:    String::new(),
       untailed: String::new(),
       text:     String::new(),
+      title:    false,
       author:   AuthorPrint::default(),
     });
     let writes = READ_VALUES

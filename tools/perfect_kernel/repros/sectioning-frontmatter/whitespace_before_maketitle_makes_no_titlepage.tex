@@ -1,0 +1,18 @@
+% mechanism: only visible text before `\maketitle` is wrapped as the before-titlepage (`wrap_text_before_title`,
+%   QA91): blank lines and a `\vspace*` leave no node with content (`node_is_content_free`), so no `<titlepage>`
+% witness: synthetic (QA91 round 2)
+% oracle:  pdflatex 0 errors: "The Title", "A. Author", the date, "1 Intro", "Body."
+% engines: QAB4base: the same as expected
+% expect:  `<title>` first, no `<titlepage>`; 0 errors, 0 warnings
+% status:  GREEN (QAB4base and QAB4 round 2); guard perfect_kernel_batch56::text_before_maketitle_stays_before_the_title
+\documentclass{article}
+\title{The Title}
+\author{A. Author}
+\begin{document}
+  
+
+\vspace*{1cm}
+\maketitle
+\section{Intro}
+Body.
+\end{document}

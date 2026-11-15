@@ -35,7 +35,7 @@ pub enum DefinitionOrigin {
   /// The guess of a fallback class — OmniBus, loaded for a class with no binding: what it defines is a
   /// convenience the real class may not have, so a document's own `\newcommand` (and `\providecommand`,
   /// `\newenvironment`, `\@ifdefinable`) of the name wins over it, unless it is locked
-  /// (`state::is_fallback_meaning`).
+  /// (`state::is_fallback_meaning`) — and as OmniBus's fallback, locked too (`state::document_redefines_guess`).
   Fallback,
   /// A kernel stand-in for a name a class or style defines only where the document cannot reach it (aaai's
   /// `\equalcontrib`, set inside its `\@maketitle`): yields as `Fallback` does, and to a raw class's or package's own

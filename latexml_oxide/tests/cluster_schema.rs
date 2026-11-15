@@ -194,6 +194,7 @@ fn listing_language_class_is_an_nmtoken() {
 /// `ltx_noindent` class) to the auto-close (tagpair/sample). Whole `<para>`,
 /// schema-valid. Since 57f each minipage starts the quote's paragraph (latex.ltx
 /// `\@iiiminipage` `\leavevmode`) and is its inline block.
+/// (QAB57: the unit carries the box's width as `--ltx-box-width`, OD #1045 — pdflatex sets it at the box's width.)
 #[test]
 fn quote_holds_paragraph_and_box_blocks() {
   let (stderr, xml) = convert(
@@ -208,7 +209,7 @@ fn quote_holds_paragraph_and_box_blocks() {
     &xml,
     "para",
     &["xml:id=\"p1\""],
-    r##"<para xml:id="p1"><quote><para class="ltx_noindent" xml:id="p1.p1"><p>Quoted.</p></para></quote><quote><p><inline-logical-block class="ltx_minipage" vattach="middle" width="276.0pt"><TOC lists="toc" scope="global" select="ltx:part | ltx:chapter | ltx:section | ltx:subsection | ltx:subsubsection | ltx:appendix | ltx:index | ltx:bibliography"><title>Contents</title></TOC></inline-logical-block></p></quote><quote><p><inline-sectional-block class="ltx_minipage"><section xml:id="Sx1"><title>Notation</title><para xml:id="Sx1.p1"><p>Body.</p></para></section></inline-sectional-block></p></quote></para>"##,
+    r##"<para xml:id="p1"><quote><para class="ltx_noindent" xml:id="p1.p1"><p>Quoted.</p></para></quote><quote><p><inline-logical-block class="ltx_minipage" vattach="middle" width="276.0pt"><TOC lists="toc" scope="global" select="ltx:part | ltx:chapter | ltx:section | ltx:subsection | ltx:subsubsection | ltx:appendix | ltx:index | ltx:bibliography"><title>Contents</title></TOC></inline-logical-block></p></quote><quote><p><inline-sectional-block class="ltx_minipage" cssstyle="--ltx-box-width:345.0pt"><section xml:id="Sx1"><title>Notation</title><para xml:id="Sx1.p1"><p>Body.</p></para></section></inline-sectional-block></p></quote></para>"##,
   );
 }
 

@@ -155,7 +155,11 @@ pub(crate) fn load() -> Result<()> {
     // but is genuinely undefined in Perl (its `DefAutoload` lives in OmniBus, not
     // loaded for typical papers), so `\providecommand{\align}{…}` must DEFINE it
     // there. See [[project_newenvironment_autoload_clobber]].
-    if is_definable_latex(&cs)?.0 {
+    // (a semantic command OmniBus guessed and locked is the class's own, which `\providecommand` defers to: the
+    // document's `\providecommand{\keywords}` keeps it, user ruling 2026-10-01, where its `\newcommand` replaces it)
+    let locked_guess = fallback_meaning_origin(&cs) == Some(definition::origin::DefinitionOrigin::Fallback)
+      && lookup_bool(&s!("{}:locked", cs.to_string()));
+    if !locked_guess && is_definable_latex(&cs)?.0 {
       let nargs = nargs.value_of() as usize;
       if opt.is_some() {
         define_optional_internal(&cs, nargs, &body, star.is_some())?;
@@ -1416,6 +1420,7 @@ pub(crate) fn load() -> Result<()> {
       // latex.ltx `\newenvironment` → `\@star@or@long`: starred, the begin macro is not `\long`.
       DefMacro!(name_cs, converted_args, begin, tex_declared => { star.is_some() && nargs > 0 });
       DefMacro!(end_name_cs, None, end);
+      yield_guessed_environment(&name);
     }
     Ok(Vec::new())
   });
@@ -1428,8 +1433,9 @@ pub(crate) fn load() -> Result<()> {
   DefPrimitive!("\\renewenvironment OptionalMatch:* {}[Number][]{}{}",
   sub[(star, name, nargs, opt, begin, end)] {
     let name = Expand!(name).to_string();
-    let is_locked = lock_holds_against(&s!("\\{name}"), || opt.as_ref().is_some_and(|d| !d.is_empty())) ||
-       lookup_bool(&s!("\\begin{{{}}}:locked",name));
+    let is_locked = (lock_holds_against(&s!("\\{name}"), || opt.as_ref().is_some_and(|d| !d.is_empty())) ||
+       lookup_bool(&s!("\\begin{{{}}}:locked",name)))
+      && !document_redefines_guess(&T_CS!(s!("\\begin{{{name}}}")));
     if !is_locked {
       let name_cs = T_CS!(s!("\\{}",name));
       let end_name_cs = T_CS!(s!("\\end{}",name));
@@ -1441,6 +1447,7 @@ pub(crate) fn load() -> Result<()> {
 
       DefMacro!(name_cs, converted_args, begin, tex_declared => { star.is_some() && nargs > 0 });
       DefMacro!(end_name_cs, None, end);
+      yield_guessed_environment(&name);
     } else if copy_provides_refuses_locked(&T_CS!(s!("\\{name}"))) {
       // (a stand-in's copy takes nothing over: `state::copy_provides_refuses_locked`)
     } else {
@@ -1977,6 +1984,16 @@ pub(crate) fn load() -> Result<()> {
 /// every_xargdef_declarator_defines_the_internal_macro, refused_dblarg_setter_reaches_its_internal}`.
 /// `\counterwithin`'s `[format]`, `\arabic` when absent (latex.ltx `O{\arabic}`); a wholly braced value
 /// loses its braces as ltcmd strips them (`[{\arabic}]`, tcolorbox 6.10's `\exp_args:NNo`).
+/// The document's `name` environment replaces the one OmniBus guessed, whose `\begin{name}` constructor `\begin` would
+/// otherwise look up first (`state::document_redefines_guess`; BM Q3.12: under OmniBus the document wins).
+fn yield_guessed_environment(name: &str) {
+  for cs in [T_CS!(s!("\\begin{{{name}}}")), T_CS!(s!("\\end{{{name}}}"))] {
+    if document_redefines_guess(&cs) {
+      assign_meaning(&cs, Stored::None, None);
+    }
+  }
+}
+
 fn counter_format(format: Option<Tokens>) -> Vec<Token> {
   match format {
     Some(format) => format.strip_braces().unlist(),

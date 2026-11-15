@@ -1,0 +1,26 @@
+% mechanism: the `\maketitle` flush (`\lx@frontmatterhere`) places the frontmatter at the document's head
+%   (place.rs `place_frontmatter`, OXIDIZED_DESIGN #262); the body text it found ahead of it is then wrapped, after the
+%   field-ink lift, as `<titlepage class="ltx_titlepage_before">` before the title block (`wrap_text_before_title`;
+%   QA91, DG 2026-11-14: "keep it in place"). The XHTML stylesheet shows the title and creators beside it
+%   (LaTeXML-structure-xhtml.xsl, the `ltx:title` template), as beside `ltx_titlepage_continued` (#903)
+% witness: synthetic (BM's probe Q2.3, QA91; siblings: a flushright/center preprint line, report with a footnote, text
+%   before an early `{abstract}`, `\documentclass{nosuchclass}`, `\twocolumn[\maketitle]`, a second `\maketitle`)
+% oracle:  pdflatex 0 errors (TL 2025, -no-shell-escape): page 1 "This preamble text comes before the title."; page 2
+%   "The Title", "A. Author", the date, "Abstract", "An abstract.", "1 Intro", "Body."
+% engines: perl: the paragraph first, then title, creator, abstract (schema-invalid); QAB4base: title, creator,
+%   abstract, then the paragraph, 0 errors, 0 warnings
+% expect:  the paragraph in the before-titlepage ahead of `<title>`, schema-valid; the HTML shows it, then the title and
+%   the creator; 0 errors, 0 warnings
+% status:  RED (QAB4base) → GREEN (QAB4 round 2); guard perfect_kernel_batch56::text_before_maketitle_stays_before_the_title
+\documentclass{article}
+\title{The Title}
+\author{A. Author}
+\begin{document}
+This preamble text comes before the title.
+\maketitle
+\begin{abstract}
+An abstract.
+\end{abstract}
+\section{Intro}
+Body.
+\end{document}

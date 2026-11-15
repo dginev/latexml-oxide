@@ -1,0 +1,21 @@
+% mechanism: the field-ink lift (`lift_marked_field_ink`, OXIDIZED_DESIGN #715) runs before the before-titlepage wrap
+%   (`wrap_text_before_title`, QA91): the title the document printed with `\@title` before `\maketitle` is taken into
+%   `<title>` (shown once), and only the rest of what it printed there stays ahead of the title block
+% witness: synthetic (QA91 round 2; the lift's own shape is field_mark_before_maketitle_lifted)
+% oracle:  pdflatex 0 errors: page 1 "Cover Then Maketitle", "Preprint XYZ-2024-01"; page 2 "Cover Then Maketitle",
+%   "Max Author", the date, "1 Intro", "Text."
+% engines: QAB4base: title, creator, then the preprint line as a body paragraph; 0 errors, 0 warnings
+% expect:  `<titlepage class="ltx_titlepage_before">` holding only the preprint line, then `<title>`; "Cover Then
+%   Maketitle" only in `<title>`; 0 errors, 0 warnings
+% status:  GREEN (QAB4 round 2); guard perfect_kernel_batch56::text_before_maketitle_stays_before_the_title
+\documentclass{article}
+\makeatletter
+\title{Cover Then Maketitle}
+\author{Max Author}
+\begin{document}
+\begin{center}{\Huge \@title\par}\end{center}
+\begin{flushright}Preprint XYZ-2024-01\end{flushright}
+\maketitle
+\section{Intro}
+Text.
+\end{document}
