@@ -58,7 +58,7 @@ fn natbib_sort_compress_numbers() {
     &html,
     "p",
     &["id=\"p1.1\""],
-    r##"<p id="p1.1" class="ltx_p">X <cite class="ltx_cite ltx_citemacro_citep">[<a href="#bib.bib1" title="" class="ltx_ref">1</a>–<a href="#bib.bib3" title="" class="ltx_ref">3</a>]</cite>, <cite class="ltx_cite ltx_citemacro_citet">Able [<a href="#bib.bib1" title="" class="ltx_ref">1</a>]</cite>, <cite class="ltx_cite ltx_citemacro_citep">[<a href="#bib.bib2" title="" class="ltx_ref">2</a>, p. 2]</cite>, <cite class="ltx_cite ltx_citemacro_cite">[<a href="#bib.bib1" title="" class="ltx_ref">1</a>, <a href="#bib.bib3" title="" class="ltx_ref">3</a>]</cite>.</p>"##,
+    r##"<p id="p1.1" class="ltx_p">X <cite class="ltx_cite ltx_cite_numeric ltx_citemacro_citep">[<a href="#bib.bib1" title="" class="ltx_ref">1</a>–<a href="#bib.bib3" title="" class="ltx_ref">3</a>]</cite>, <cite class="ltx_cite ltx_citemacro_citet">Able [<a href="#bib.bib1" title="" class="ltx_ref">1</a>]</cite>, <cite class="ltx_cite ltx_cite_numeric ltx_citemacro_citep">[<a href="#bib.bib2" title="" class="ltx_ref">2</a>, p. 2]</cite>, <cite class="ltx_cite ltx_cite_numeric ltx_citemacro_cite">[<a href="#bib.bib1" title="" class="ltx_ref">1</a>, <a href="#bib.bib3" title="" class="ltx_ref">3</a>]</cite>.</p>"##,
   );
 }
 
@@ -85,7 +85,7 @@ fn cite_sty_sorts_and_compresses() {
     &html,
     "p",
     &["id=\"p1.1\""],
-    r##"<p id="p1.1" class="ltx_p">X <cite class="ltx_cite ltx_citemacro_cite">[<a href="#bib.bib1" title="" class="ltx_ref">1</a>–<a href="#bib.bib4" title="" class="ltx_ref">4</a>]</cite>, <cite class="ltx_cite ltx_citemacro_cite">[<a href="#bib.bib1" title="" class="ltx_ref">1</a>, <a href="#bib.bib2" title="" class="ltx_ref">2</a>]</cite>, <cite class="ltx_cite ltx_citemacro_cite">[<a href="#bib.bib1" title="" class="ltx_ref">1</a>]</cite>.</p>"##,
+    r##"<p id="p1.1" class="ltx_p">X <cite class="ltx_cite ltx_cite_numeric ltx_citemacro_cite">[<a href="#bib.bib1" title="" class="ltx_ref">1</a>–<a href="#bib.bib4" title="" class="ltx_ref">4</a>]</cite>, <cite class="ltx_cite ltx_cite_numeric ltx_citemacro_cite">[<a href="#bib.bib1" title="" class="ltx_ref">1</a>, <a href="#bib.bib2" title="" class="ltx_ref">2</a>]</cite>, <cite class="ltx_cite ltx_cite_numeric ltx_citemacro_cite">[<a href="#bib.bib1" title="" class="ltx_ref">1</a>]</cite>.</p>"##,
   );
 }
 
@@ -98,7 +98,7 @@ fn cite_sty_nosort_keeps_the_order() {
     &html,
     "p",
     &["id=\"p1.1\""],
-    r##"<p id="p1.1" class="ltx_p">X <cite class="ltx_cite ltx_citemacro_cite">[<a href="#bib.bib3" title="" class="ltx_ref">3</a>, <a href="#bib.bib1" title="" class="ltx_ref">1</a>, <a href="#bib.bib2" title="" class="ltx_ref">2</a>, <a href="#bib.bib4" title="" class="ltx_ref">4</a>]</cite>, <cite class="ltx_cite ltx_citemacro_cite">[<a href="#bib.bib2" title="" class="ltx_ref">2</a>–<a href="#bib.bib4" title="" class="ltx_ref">4</a>]</cite>.</p>"##,
+    r##"<p id="p1.1" class="ltx_p">X <cite class="ltx_cite ltx_cite_numeric ltx_citemacro_cite">[<a href="#bib.bib3" title="" class="ltx_ref">3</a>, <a href="#bib.bib1" title="" class="ltx_ref">1</a>, <a href="#bib.bib2" title="" class="ltx_ref">2</a>, <a href="#bib.bib4" title="" class="ltx_ref">4</a>]</cite>, <cite class="ltx_cite ltx_cite_numeric ltx_citemacro_cite">[<a href="#bib.bib2" title="" class="ltx_ref">2</a>–<a href="#bib.bib4" title="" class="ltx_ref">4</a>]</cite>.</p>"##,
   );
 }
 
@@ -111,7 +111,7 @@ fn revtex_citations_sort_and_compress() {
     &html,
     "p",
     &["id=\"p1.1\""],
-    r##"<p id="p1.1" class="ltx_p">X <cite class="ltx_cite ltx_citemacro_cite">[<a href="#bib.bib1" title="" class="ltx_ref">1</a>–<a href="#bib.bib3" title="" class="ltx_ref">3</a>]</cite>, <cite class="ltx_cite ltx_citemacro_cite">[<a href="#bib.bib1" title="" class="ltx_ref">1</a>, <a href="#bib.bib3" title="" class="ltx_ref">3</a>]</cite>.</p>"##,
+    r##"<p id="p1.1" class="ltx_p">X <cite class="ltx_cite ltx_cite_numeric ltx_citemacro_cite">[<a href="#bib.bib1" title="" class="ltx_ref">1</a>–<a href="#bib.bib3" title="" class="ltx_ref">3</a>]</cite>, <cite class="ltx_cite ltx_cite_numeric ltx_citemacro_cite">[<a href="#bib.bib1" title="" class="ltx_ref">1</a>, <a href="#bib.bib3" title="" class="ltx_ref">3</a>]</cite>.</p>"##,
   );
 }
 
@@ -127,7 +127,7 @@ fn acmart_numeric_citations_sort_and_compress() {
     &html,
     "p",
     &["id=\"p1.1\""],
-    r##"<p id="p1.1" class="ltx_p">See <cite class="ltx_cite ltx_citemacro_citep">[<a href="#bib.bib1" title="" class="ltx_ref">1</a>–<a href="#bib.bib3" title="" class="ltx_ref">3</a>]</cite>, <cite class="ltx_cite ltx_citemacro_citep">[<a href="#bib.bib1" title="" class="ltx_ref">1</a>, <a href="#bib.bib2" title="" class="ltx_ref">2</a>]</cite>.</p>"##,
+    r##"<p id="p1.1" class="ltx_p">See <cite class="ltx_cite ltx_cite_numeric ltx_citemacro_citep">[<a href="#bib.bib1" title="" class="ltx_ref">1</a>–<a href="#bib.bib3" title="" class="ltx_ref">3</a>]</cite>, <cite class="ltx_cite ltx_cite_numeric ltx_citemacro_citep">[<a href="#bib.bib1" title="" class="ltx_ref">1</a>, <a href="#bib.bib2" title="" class="ltx_ref">2</a>]</cite>.</p>"##,
   );
 }
 
@@ -377,7 +377,7 @@ fn natbib_numbers_prints_a_label_given() {
     &html,
     "p",
     &["id=\"p1.1\""],
-    r##"<p id="p1.1" class="ltx_p">A <cite class="ltx_cite ltx_citemacro_citep">[<a href="#bib.bib1" title="" class="ltx_ref">1</a>–<a href="#bib.bib3" title="" class="ltx_ref">3</a>]</cite>. G <cite class="ltx_cite ltx_citemacro_citep">[<a href="#bib.bib4" title="" class="ltx_ref">Knu84</a>, <a href="#bib.bib5" title="" class="ltx_ref">Lam86</a>, <a href="#bib.bib6" title="" class="ltx_ref">Mil90</a>]</cite>.</p>"##,
+    r##"<p id="p1.1" class="ltx_p">A <cite class="ltx_cite ltx_cite_numeric ltx_citemacro_citep">[<a href="#bib.bib1" title="" class="ltx_ref">1</a>–<a href="#bib.bib3" title="" class="ltx_ref">3</a>]</cite>. G <cite class="ltx_cite ltx_cite_numeric ltx_citemacro_citep">[<a href="#bib.bib4" title="" class="ltx_ref">Knu84</a>, <a href="#bib.bib5" title="" class="ltx_ref">Lam86</a>, <a href="#bib.bib6" title="" class="ltx_ref">Mil90</a>]</cite>.</p>"##,
   );
 }
 
@@ -393,7 +393,7 @@ fn cite_sty_prints_unsorted_labels_first() {
     &html,
     "p",
     &["id=\"p1.1\""],
-    r##"<p id="p1.1" class="ltx_p">A <cite class="ltx_cite ltx_citemacro_cite">[<a href="#bib.bib1" title="" class="ltx_ref">1</a>–<a href="#bib.bib3" title="" class="ltx_ref">3</a>]</cite>. C <cite class="ltx_cite ltx_citemacro_cite">[<a href="#bib.bibx1" title="" class="ltx_ref">Knu84</a>, <a href="#bib.bibx2" title="" class="ltx_ref">Lam86</a>, <a href="#bib.bib1" title="" class="ltx_ref">1</a>]</cite>. E <cite class="ltx_cite ltx_citemacro_cite">[<a href="#bib.bib1" title="" class="ltx_ref">1</a>, <a href="#bib.bib1" title="" class="ltx_ref">1</a>–<a href="#bib.bib3" title="" class="ltx_ref">3</a>]</cite>.</p>"##,
+    r##"<p id="p1.1" class="ltx_p">A <cite class="ltx_cite ltx_cite_numeric ltx_citemacro_cite">[<a href="#bib.bib1" title="" class="ltx_ref">1</a>–<a href="#bib.bib3" title="" class="ltx_ref">3</a>]</cite>. C <cite class="ltx_cite ltx_cite_numeric ltx_citemacro_cite">[<a href="#bib.bibx1" title="" class="ltx_ref">Knu84</a>, <a href="#bib.bibx2" title="" class="ltx_ref">Lam86</a>, <a href="#bib.bib1" title="" class="ltx_ref">1</a>]</cite>. E <cite class="ltx_cite ltx_cite_numeric ltx_citemacro_cite">[<a href="#bib.bib1" title="" class="ltx_ref">1</a>, <a href="#bib.bib1" title="" class="ltx_ref">1</a>–<a href="#bib.bib3" title="" class="ltx_ref">3</a>]</cite>.</p>"##,
   );
 }
 
@@ -577,7 +577,7 @@ fn cite_sty_sorts_numbers_with_a_suffix() {
     &html,
     "p",
     &["id=\"p1.1\""],
-    r##"<p id="p1.1" class="ltx_p">A <cite class="ltx_cite ltx_citemacro_cite">[<a href="#bib.bib1" title="" class="ltx_ref">1</a>, <a href="#bib.bibx2" title="" class="ltx_ref">2a</a>, <a href="#bib.bibx3" title="" class="ltx_ref">7</a>]</cite>. B <cite class="ltx_cite ltx_citemacro_cite">[<a href="#bib.bibx1" title="" class="ltx_ref">Knu84</a>, <a href="#bib.bib2" title="" class="ltx_ref">2</a>, <a href="#bib.bib3" title="" class="ltx_ref">3</a>]</cite>. C <cite class="ltx_cite ltx_citemacro_cite">[<a href="#bib.bibx4" title="" class="ltx_ref">4a</a>–<a href="#bib.bibx6" title="" class="ltx_ref">4c</a>]</cite>.</p>"##,
+    r##"<p id="p1.1" class="ltx_p">A <cite class="ltx_cite ltx_cite_numeric ltx_citemacro_cite">[<a href="#bib.bib1" title="" class="ltx_ref">1</a>, <a href="#bib.bibx2" title="" class="ltx_ref">2a</a>, <a href="#bib.bibx3" title="" class="ltx_ref">7</a>]</cite>. B <cite class="ltx_cite ltx_cite_numeric ltx_citemacro_cite">[<a href="#bib.bibx1" title="" class="ltx_ref">Knu84</a>, <a href="#bib.bib2" title="" class="ltx_ref">2</a>, <a href="#bib.bib3" title="" class="ltx_ref">3</a>]</cite>. C <cite class="ltx_cite ltx_cite_numeric ltx_citemacro_cite">[<a href="#bib.bibx4" title="" class="ltx_ref">4a</a>–<a href="#bib.bibx6" title="" class="ltx_ref">4c</a>]</cite>.</p>"##,
   );
 }
 
@@ -592,7 +592,7 @@ fn natbib_numbers_textual_label() {
     &html,
     "p",
     &["id=\"p1.1\""],
-    r##"<p id="p1.1" class="ltx_p">A <cite class="ltx_cite ltx_citemacro_citet"><a href="#bib.bib1" title="" class="ltx_ref">Knu84</a></cite>. B <cite class="ltx_cite ltx_citemacro_citet"><a href="#bib.bib2" title="" class="ltx_ref">2</a></cite>. C <cite class="ltx_cite ltx_citemacro_citep">[<a href="#bib.bib1" title="" class="ltx_ref">Knu84</a>]</cite>.</p>"##,
+    r##"<p id="p1.1" class="ltx_p">A <cite class="ltx_cite ltx_cite_numeric ltx_citemacro_citet"><a href="#bib.bib1" title="" class="ltx_ref">Knu84</a></cite>. B <cite class="ltx_cite ltx_cite_numeric ltx_citemacro_citet"><a href="#bib.bib2" title="" class="ltx_ref">2</a></cite>. C <cite class="ltx_cite ltx_cite_numeric ltx_citemacro_citep">[<a href="#bib.bib1" title="" class="ltx_ref">Knu84</a>]</cite>.</p>"##,
   );
 }
 

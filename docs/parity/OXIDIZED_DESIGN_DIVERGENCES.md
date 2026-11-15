@@ -11168,6 +11168,21 @@ string "0" as false (a key, title or year suffix of "0") is not copied.
 
 **Guards**: `bibref_show::*` (6), `bibliography_crossref::crossref_child_sees_its_parent_and_skips_the_host_title`.
 
+**Extension (issue #857, 2026-11-14): the citation's form is a class on its `<ltx:cite>`.** Principle: Perl's own
+intent. The core already records the form of each citation as the bibref's `show`, and the show walk settles it per
+entry (the force-numeric collapse #123, the nameless fallback :542, #786). Perl drops it when the bibref is replaced
+(CrossRef.pm:486-491), so `<cite class="ltx_citemacro_citep">` covers `[40]` and `(Bekki, 2013; …)` alike and a
+stylesheet cannot keep `[1]` on one line without also keeping long author-year citations on one line. Now
+`make_bibcite` also returns whether every entry printed only `refnum`/`number`/`super` (with phrases and literals),
+none `author`/`fullauthor`/`title`/`year`/`fullentry` and no preformatted text; a missing entry does not count either
+way. `fill_in_bibrefs` adds `ltx_cite_numeric` to the parent `ltx:cite` when every bibref in it is numeric: `[1]`,
+`[1, 2]`, `[1, Section 7]`, `[Kho00]`, a superscript `\citep`, a nameless entry's `\textcite` `[2]`. An author-year
+citation, a textual `Smith [2]`, and one that mixes forms (`Smith [2], [1]`) get none. ar5iv-css reads it to keep a
+numeric cite's refs inline in an engine without `text-justify` (WebKit). Offered to Perl: `make_bibcite` returning
+the form beside its nodes, and `fill_in_bibrefs` calling `$doc->addClass($cite, 'ltx_cite_numeric')`.
+Guards: `bibref_show::*` (the class on every pinned cite), `bibref_show::cite_numeric_class_rows` (plain
+`thebibliography`, biblatex numeric and authoryear).
+
 ### 309. NFSS text-font state follows every font switch; `\the\font` names the current font (Perl: codes only from `\fontfamily`…; `\the\font` = the last `\font` identifier or cmr10)
 
 Perl keeps LaTeX's NFSS codes (`\f@family`, `\f@series`, `\f@shape`) only where `\fontfamily` and
