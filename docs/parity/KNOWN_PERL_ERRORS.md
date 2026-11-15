@@ -21813,3 +21813,28 @@ Abs.
 Rust: llncs_cls.rs's `\keywords` sets the class's `\and` before its items; sv_support_sty.rs's four setters run
 `\lx@sv@list@and`, empty there (svmult.cls v5.12:2432 sets none, 2512.18788) and svjour3_cls.rs's dot (shared with its `\JEL`). Guard
 `perfect_kernel_batchqa76a::class_keyword_lists_print_their_and`. An upstream offer.
+
+## 1282. `\leaders` wraps every filler in an `ltx:text` and closes it by name
+
+TeX's leader is glue pointing to a box or a rule (tex.web §1078 `box_end`); a rule after `\leaders` is a rule
+specification, read and never executed (§1084 `scan_box`), so nothing contains it. Perl's `\leaders` opens an
+`ltx:text` (`_noautoclose`) around every filler (TeX_Box.pool.ltxml:879) and closes it with
+`closeElement('ltx:text')` (:897), which closes the innermost open `ltx:text`, not its own. A binding that closes the
+open inline container before an `\hrule` (BookML's hook, brucemiller/LaTeXML#2882) closes the leader's text, and
+`\leaders` then errs or closes an enclosing box's text, setting the box's later material outside it. Minimal trigger,
+with a binding `LookupDefinition('\hrule')` whose beforeConstruct runs `maybeCloseElement('ltx:text')` (pdflatex 0
+errors):
+
+```latex
+C\hrulefill D                                   % Perl: Error "Attempt to close </ltx:text>, which isn't open"
+\noindent\hbox to 3cm{I\leaders\hrule\hfill J}  % Perl: "J" outside the box's ltx:text
+```
+
+Rust (issue #805): a rule filler (the `\hrule`/`\vrule` that `\leaders` reads, marked `leader_rule`) opens no
+container: the `ltx:rule` is the leader, of class `ltx_leader`, or `ltx_filled_leader` at the width of a context box
+of known width; `\hrule`'s full-width `maybeCloseElement('ltx:p')` skips it. Any other filler keeps the `ltx:text`,
+closed by node and only while it is still open (tex_box.rs). A paragraph holding only a rule leader is a bare rule,
+as `\leavevmode\vrule…\par` already was; in a float that rule is no panel and ends the row, standing between breaks as
+Perl's standalone paragraph did (`arrange_panels`; 2302.11635; fixture `structure/vspace_closes_leader_para`). Not ported: Perl's copies of a box filler to a box's known width (:889-894).
+Guards `perfect_kernel_batch58::leaders_rule_keeps_the_paragraph`, `30_script_bindings`
+`lookup_definition_pushes_construct_hooks_end_to_end`. An upstream offer (#2882).

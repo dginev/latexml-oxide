@@ -1,0 +1,16 @@
+% A rule leader between two panels on one line fills the glue between them (tex.web §625-628): pdflatex sets
+% "A ——— B" as one row. Its HTML rule is the line's width (`ltx_leader`, width 100%), so `arrange_panels` ends the
+% row at it (issue #805) and A and B fall into two rows, as on main, where the leader's paragraph took B in.
+% witness: synthetic (I805 round 1's sibling probe; the row break's shape is 2302.11635)
+% oracle:  pdflatex 0 errors; one line: A, a rule, B
+% engines: rust I805 r1: `<p …>A</p><break/><rule class="ltx_leader" …/><break/><p …>B</p>`, panelrows="2";
+%          main 8f06e79a39d: A, then B inside the leader's `ltx:p`, panelrows="2"
+% expect:  0 errors; A, the rule and B in one row (a leader of the remaining width)
+% status:  RED (moves: post-merge)
+\documentclass{article}
+\begin{document}
+\begin{figure}
+\begin{minipage}{0.3\textwidth}A\end{minipage}\hrulefill
+\begin{minipage}{0.3\textwidth}B\end{minipage}
+\end{figure}
+\end{document}

@@ -1,0 +1,13 @@
+% tex.web §625-628 (`hlist_out` leaders): a box filler is repeated across the glue's width (11 dots here). The kernel
+% sets one copy in an `ltx:text class="ltx_leader"`; Perl copies it `int(reqw/fillw)` times in a box of known width
+% (TeX_Box.pool.ltxml:889-894; KPE #1282 "Not ported").
+% witness: synthetic (I805's sibling sweep, issue #805)
+% oracle:  pdflatex 0 errors; "G ........... H" in the 3cm box
+% engines: rust I805 = main 8f06e79a39d: `<text width="85.4pt">G<text class="ltx_leader" width="5.7pt">.</text>H</text>`
+%          (one dot); perl: 15 copies of the filler
+% expect:  0 errors; the dots filling the box (a CSS repeat, or copies to the box's width)
+% status:  RED (moves: post-merge)
+\documentclass{article}
+\begin{document}
+\noindent\hbox to 3cm{G\leaders\hbox to 2mm{\hss.\hss}\hfill H}
+\end{document}

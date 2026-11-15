@@ -60,10 +60,11 @@ fn ieeetran_internals_documents_call() {
 
 /// The rule rows of an `{IEEEeqnarraybox}` table (cs0608041, 0911.1713, 1004.2757, 1112.1125): each spans all the
 /// columns the specification defines (`\@IEEEeqnnumcols`) with a leader rule; `\IEEEeqnarraydblrulerow` is two of them
-/// around a separator row, `\IEEEeqnarrayseprow` a blank row: 9 rows.
+/// around a separator row, `\IEEEeqnarrayseprow` a blank row: 9 rows. The rule is the leader, in no text of its own
+/// (#805).
 fn assert_ruled_table(xml: &str) {
   let rule_row = regex::Regex::new(
-    r#"<XMCell align="left" colspan="5"[^>]*>\s*<XMText class="ltx_leader"[^>]*><rule height="0.4pt" width="100%"/></XMText>\s*</XMCell>"#,
+    r#"<XMCell align="left" colspan="5"[^>]*>\s*<XMText[^>]*><rule class="ltx_leader" height="0.4pt" width="100%"/></XMText>\s*</XMCell>"#,
   )
   .unwrap();
   assert_eq!(rule_row.find_iter(xml).count(), 4, "{xml}");

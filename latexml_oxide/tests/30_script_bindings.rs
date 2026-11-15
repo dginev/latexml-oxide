@@ -740,6 +740,10 @@ const HOOK_SAMPLE: &str = r##"
   // kernel def AND the push installs despite the binding-time lock (bindings run
   // UNLOCKED, Perl Package.pm:loadLTXML `local $UNLOCKED = 1`).
   LookupDefinition("\\rule").pushAfterConstruct(|document| { document.absorbString("RULEHOOK"); });
+
+  // BookML's `\hrule` hook closes the open inline container (#805, brucemiller/LaTeXML#2882): `\leaders`
+  // must open none for its rule, or the hook closes it and `\leaders` errs closing it again.
+  LookupDefinition("\\hrule").unshiftBeforeConstruct(|document| { document.maybeCloseElement("ltx:text"); });
 "##;
 
 fn hook_dispatch(request: &str) -> Option<Result<()>> {
@@ -766,7 +770,7 @@ fn lookup_definition_pushes_construct_hooks_end_to_end() {
 
   let tex = concat!(
     "literal:\\documentclass{article}\\usepackage{lxhooktest}",
-    "\\begin{document}\\bmlwrap{MID}\\rule{1pt}{2pt}\\end{document}"
+    "\\begin{document}\\bmlwrap{MID}\\rule{1pt}{2pt}\\par C\\hrulefill D\\end{document}"
   );
   let doc = latexml
     .convert_file(tex.to_string())
@@ -798,6 +802,11 @@ fn lookup_definition_pushes_construct_hooks_end_to_end() {
   assert!(
     xml.contains("<rule") && xml.contains("RULEHOOK"),
     "pushAfterConstruct onto the kernel \\rule did not fire; xml=\n{xml}"
+  );
+  // #805: 0 errors (above; before, 1 "Attempt to close </ltx:text>, which isn't open"), the rule the leader itself
+  assert!(
+    xml.contains(r#"<p>C<rule class="ltx_leader" height="1px" width="100%"/>D</p>"#),
+    "the leader rule under BookML's \\hrule hook; xml=\n{xml}"
   );
 
   drop(latexml);
