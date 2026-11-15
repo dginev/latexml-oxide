@@ -43,6 +43,11 @@ unused_qualifications = "warn"
 # [patch.crates-io]
 # marpa-asf = { path = "/home/deyan/git/marpa/marpa" }
 
+[patch.crates-io]
+# TEMP until libxml 0.3.24 is released: Node::to_readonly and Document::get_node_from_readonly (branch
+# perf/readonly-handles of ~/git/rust-libxml), used by latexml_core's read-only walk (common/xml_walk.rs).
+libxml = { path = "/home/deyan/data/pk_wt/PERFE_libxml" }
+
 [profile.release]
 # Local benchmark/sandbox/canvas profile. Tuned for the 32 GB / 20-thread
 # laptop used to rebuild the sandbox corpus: keep strong optimized binaries
