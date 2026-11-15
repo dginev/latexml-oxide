@@ -5606,14 +5606,17 @@ separate hardening: the leading-delimiter case landed in 56iq (#295); an `Until:
 
 ### 167. → #168 (LuaTeX-only packages get first-class treatment (texlua bridge + piton/luacode/showexpl bindings))
 
-### 168. The engine identity is a persona: pdfTeX-model by default, `luatex` or `xetex` on request, and every engine probe answers from it (Perl: one fixed pdfTeX-model identity) — absorbs #167 #204 #220 #283 #303
+### 168. The engine identity is a persona: pdfTeX-model by default, `luatex` or `xetex` on request, and the engine probes answer from it (Perl: one fixed pdfTeX-model identity) — absorbs #167 #204 #220 #283 #303
 
 **Rule.** The document declares its engine through the Rust-only latexml.sty option (`\usepackage[luatex]{latexml}`,
-`[xetex]`, or a `[…,xetex]latexml.sty` preload); the default is pdfTeX-model. iftex's conditionals, l3sys's engine
-identity, `\ifpdf`, the engine-only primitives and the format's text encoding all answer from that persona, read when
-tested (state-consulting conditionals, so load order does not matter). The real LuaTeX-detection names
-(`\directlua`, `\luatexversion`) and the XeTeX primitives are never defined outside their persona: they are the probes
-by which babel, amsmath, mathastext, minted2 et al. pick a code path (claiming `\directlua` measured 26 suite tests red).
+`[xetex]`, or a `[…,xetex]latexml.sty` preload); the default is pdfTeX-model. iftex's conditionals and `\ifpdf` answer
+from that persona when tested (state-consulting conditionals, so load order does not matter for them); l3sys's engine
+identity is assigned once, at option time (`set_l3sys_engine`), and the engine-only primitives and the format's text
+encoding are installed with the persona. The real LuaTeX-detection names (`\directlua`, `\luatexversion`) and the
+engines' version primitives are never defined outside their persona: they are the probes by which babel, amsmath,
+mathastext, minted2 et al. pick a code path (claiming `\directlua` measured 26 suite tests red). Under the default
+persona `\RequireXeTeX` still installs XeTeX's inter-character setters (`\XeTeXcharclass`, `\XeTeXinterchartoks`,
+`\XeTeXinterchartokenstate`; `iftex_sty.rs:82`, `:111-125`; ex-#220 below).
 **Perl**: one engine identity; `\batchmode`…`\errorstopmode` no-ops; no TU fontmap; no `\directlua`.
 **Code.** `latexml_package/src/package/latexml_sty/mod.rs` (`:1525 set_l3sys_engine`, `:1467
 install_unicode_format_encoding`), `latexml_core/src/state.rs:5405 unicode_engine_profile`, `iftex_sty.rs`,
@@ -6769,8 +6772,9 @@ because the code departs from pgf there: #259 (a zero divisor; `reciprocal`/`sec
 - **The document font's `em`, `ex`, `width()`** (ex-#423, 60a): pgf evaluates lengths after `\pgfmath@selectfont`
   (pgfmathcalc.code.tex:30-38, pgfmathparser.code.tex:132); Perl's `pgfmath_convert` (pgfmath.code.tex.ltxml:476-485)
   converts in `\nullfont` (`8em` at `\footnotesize` 64.00012pt, pdflatex 68.00098pt; KNOWN_PERL_ERRORS #437). Ours converts
-  in `nfss_selected_font`'s font, reads `\pgfmathsetlength`'s quick path in a group under it and typesets `width()` in it:
-  consort-flowchart 333.16 → 351.5pt (pdflatex 351.49686pt). Guard `picture_sizing::pgfmath_em_is_the_document_fonts`.
+  in `nfss_selected_font`'s font, reads `\pgfmathsetlength`'s quick path in a group under it and typesets `width()` in it,
+  so TikZ geometry in `em`/`ex` at a font whose quad is not its size (`inner sep=.3333em` at `\footnotesize`, `text width=8em`
+  frames, typewriter and sans nodes) is pdflatex's: consort-flowchart 333.16 → 351.5pt (pdflatex 351.49686pt). Guard `picture_sizing::pgfmath_em_is_the_document_fonts`.
 - **Overflow** (ex-#1012, DTL1h): pgf reads each operand into `\pgfmath@x` (`\pgfmath@x=#1pt`), where scan_dimen rounds to
   sp and stops only at 2^30 sp (tex.web §452-453, §461: `16383.99999pt` is `\maxdimen`, printed 16383.99998); under `/pgf/fpu`
   (pgflibraryfpu.code.tex:29-46) a float sum (`12319.0+4442`) is no dimension. Perl tests the five-decimal result against
@@ -18334,7 +18338,7 @@ prepare_latex_equation_counter`.
 - **`\nonumber` in `{equation}` only under amsmath** (ex-#865, 78r). latex.ltx:15737-15739's `{equation}` always prints
   `\@eqnnum` (`\nonumber` is eqnarray's switch); amsmath's (amsmath.sty:1268-1269) removes it. Perl gives every `{equation}`
   amsmath's on purpose (latex_constructs.pool.ltxml:1915-1916, "even though stock LaTeX provides no means to override
-  them"): hep-ph9710521's `\nl` in a `\beq` (61 → 74 of 74), nucl-th0404042's `j-sum1`/`l-sum1` (PDF 20, 23; 15 → 17 of 17).
+  them"): hep-ph9710521's `\nl` in a `\beq` (61 → 74 of 74; before 78r, 45 of 56 labels matched its PDF), nucl-th0404042's `j-sum1`/`l-sum1` (PDF 20, 23; 15 → 17 of 17).
   `prepare_latex_equation_counter` marks `LATEX_EQNNUM` unless amsmath is loaded (`amsmath_nonumber`: `\ver@amsmath.sty` or
   the loaded flag; `amsmath_loaded_beyond_original` counts as not loaded; `\ver@` because aa.cls's binding clears the flag,
   aa_cls.rs), for LaTeX's `{equation}` and the class bindings that redefine it for a `$`: mn2e/mnras/mn
@@ -31067,7 +31071,7 @@ restructuring whose only Perl-visible difference is two diagnostics, is not offe
 | #300 | binding | catchfile reads the file as catchfile.sty does; newverbs' own code prints in the document … | `Gullet.pm:683-685` | `tex.web §338`; `tex.web §367` | candidate, not filed |
 | #311 | binding | siunitx units mixing macros with literal material are parsed as literal units; listing … | `siunitx.sty.ltxml:903-927`; `siunitx.sty.ltxml:1352` | `siunitx.sty:6596-6613`; `siunitx.sty:6633-6641, :6801` | candidate, not filed |
 | #313 | scanning | A primitive's token read crosses a file end; a token-list assignment takes an implicit … | `TeX_Macro.pool.ltxml:174-177`; `Base_Utility.pool.ltxml:729-737` | `latex.ltx:17726` | candidate, not filed |
-| #332 | kernel | `\eminnershape` is latex.ltx's `\upshape` (Perl: empty) | `latex_constructs.pool.ltxml:5861` | `latex.ltx:14048-14052` | candidate, not filed |
+| #332 | kernel | `\eminnershape` is latex.ltx's `\upshape` (Perl: empty) | `latex_constructs.pool.ltxml:5861` | `latex.ltx:14048-14052`, `:14058` | candidate, not filed |
 | #335 | binding | elsarticle's equations are flush left only in the `5p` and two-column `3p` layouts (Perl: … | `elsarticle.cls.ltxml:45` | `elsarticle.cls:1280, 1295`; `elsarticle.cls:82-87` | candidate, not filed |
 | #400 | binding | The German and French babel bindings define `\date<lang>` as their `.ldf` does (Perl: … | — | `germanb.ldf:124-130` | candidate, not filed |
 | #403 | scanning | Number scanning keeps the token after the signs in hand; a skipped conditional reports … | `Gullet.pm:852-858`; `State.pm:537-545` | `tex.web §440` | not upstream-worthy |
