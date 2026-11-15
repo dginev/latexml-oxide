@@ -241,7 +241,7 @@ pub fn get_embeddable(doc: &PostDocument) -> Option<Node> {
     if !is_unwrappable_div_class(&class) {
       break;
     }
-    if embeddable.get_attribute("style").is_some() {
+    if embeddable.has_attribute("style") {
       break;
     }
     match embeddable.get_first_child() {

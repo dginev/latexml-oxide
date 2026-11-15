@@ -872,7 +872,7 @@ pub(crate) fn is_ellipsis(xm: &XM, ctxt: &ActionContext) -> bool {
     XM::Lexeme(lex, _) => lookup_lex_node(lex, ctxt.nodes).ok().is_some_and(|node| {
       let node = crate::data::resolve_xmref(node).unwrap_or_else(|| node.clone());
       name_is(&node, "XMTok")
-        && (node.get_attribute("role").as_deref() == Some("ELIDEOP")
+        && (node.with_attribute(c"role", |v| v == "ELIDEOP") == Some(true)
           || node
             .get_attribute("name")
             .is_some_and(|name| ELLIPSIS_NAMES.contains(&name.as_str())))
@@ -4058,7 +4058,7 @@ fn node_mark(node: &libxml::tree::Node, document: &Document) -> Option<&'static 
     "XMApp" => {
       let children = node.get_child_elements();
       let head = children.first()?;
-      if head.get_attribute("role").as_deref() == Some("OVERACCENT") {
+      if head.with_attribute(c"role", |v| v == "OVERACCENT") == Some(true) {
         return match head.get_attribute("name").as_deref() {
           Some("vec" | "overrightarrow") => Some("vector-accent"),
           Some("hat" | "widehat") => Some("hat-accent"),
@@ -4066,7 +4066,7 @@ fn node_mark(node: &libxml::tree::Node, document: &Document) -> Option<&'static 
           _ => children.get(1).and_then(|base| node_mark(base, document)),
         };
       }
-      if head.get_attribute("meaning").as_deref() == Some("divide")
+      if head.with_attribute(c"meaning", |v| v == "divide") == Some(true)
         && is_leibniz_fraction(&children[1..])
       {
         return Some("derivative");
@@ -4115,7 +4115,7 @@ fn is_leibniz_fraction(parts: &[libxml::tree::Node]) -> bool {
   };
   let is_differential = |part: &libxml::tree::Node| {
     leading_token(part).is_some_and(|token| {
-      token.get_attribute("role").as_deref() == Some("DIFFOP")
+      token.with_attribute(c"role", |v| v == "DIFFOP") == Some(true)
         || matches!(token.get_content().as_str(), "d" | "\u{2202}" | "\u{3B4}")
     })
   };
@@ -4151,7 +4151,8 @@ fn leading_token(node: &libxml::tree::Node) -> Option<libxml::tree::Node> {
       let children = node.get_child_elements();
       let head = children.first()?;
       let role = head.get_attribute("role").unwrap_or_default();
-      let is_product = head.get_attribute("meaning").as_deref() == Some("times") || role == "MULOP";
+      let is_product =
+        head.with_attribute(c"meaning", |v| v == "times") == Some(true) || role == "MULOP";
       if is_product || role.ends_with("SCRIPTOP") {
         children.get(1).and_then(leading_token)
       } else {
@@ -4172,7 +4173,8 @@ fn is_ascii_letter(text: &str) -> bool {
 /// Does a built atom hold a trig function anywhere?
 fn holds_trig_function(node: &libxml::tree::Node) -> bool {
   node.get_child_elements().iter().any(|child| {
-    (name_is(&child, "XMTok") && child.get_attribute("role").as_deref() == Some("TRIGFUNCTION"))
+    (name_is(&child, "XMTok")
+      && child.with_attribute(c"role", |v| v == "TRIGFUNCTION") == Some(true))
       || holds_trig_function(child)
   })
 }
@@ -4696,10 +4698,10 @@ fn raises_a_prime_to_a_constant(script: &XM, nodes: &[XMLNode]) -> bool {
         };
         let raised: Vec<&XMLNode> = raised
           .iter()
-          .filter(|child| child.get_attribute("meaning").as_deref() != Some("absent"))
+          .filter(|child| child.with_attribute(c"meaning", |v| v == "absent") != Some(true))
           .collect();
         name_is(&node, "XMApp")
-          && resolve(prime).get_attribute("role").as_deref() == Some("SUPOP")
+          && resolve(prime).with_attribute(c"role", |v| v == "SUPOP") == Some(true)
           && !raised.is_empty()
           && raised.iter().all(|child| {
             !resolve(child)
@@ -4729,7 +4731,7 @@ fn opens_with_a_prime(script: &XM, nodes: &[XMLNode]) -> bool {
         name_is(&node, "XMApp")
           && element_nodes(&node).first().is_some_and(|op| {
             let op = resolve(op);
-            name_is(&op, "XMTok") && op.get_attribute("role").as_deref() == Some("SUPOP")
+            name_is(&op, "XMTok") && op.with_attribute(c"role", |v| v == "SUPOP") == Some(true)
           })
       })
     },
@@ -8694,7 +8696,7 @@ pub fn apply_invisible_times(
           let node = &ctxt.nodes[idx];
           if name_is(&node, "XMApp") {
             for child in node.get_child_elements() {
-              if child.get_attribute("role").as_deref() == Some("FRACOP") {
+              if child.with_attribute(c"role", |v| v == "FRACOP") == Some(true) {
                 r_frac = true;
                 break;
               }
@@ -9852,7 +9854,7 @@ fn node_bound_variables(
     matches!(
       node.get_attribute("role").as_deref(),
       Some("RELOP" | "ARROW")
-    ) || node.get_attribute("meaning").as_deref() == Some("multirelation")
+    ) || node.with_attribute(c"meaning", |v| v == "multirelation") == Some(true)
   };
   let is_list = |node: &XMLNode| {
     matches!(

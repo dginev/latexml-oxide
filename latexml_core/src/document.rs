@@ -3601,7 +3601,7 @@ impl Document {
       );
 
       let parent = self.node.get_parent().unwrap();
-      if self.box_to_absorb.is_some() && parent.get_attribute("_autoopened").is_some() {
+      if self.box_to_absorb.is_some() && parent.has_attribute("_autoopened") {
         // Perl L1136-1137: appendNodeBox to accumulate boxes for autoopened elements
         let bta = self.box_to_absorb.clone().unwrap();
         self.append_node_box(&parent, &bta);
@@ -3645,7 +3645,7 @@ impl Document {
       // or text allowed here
       let mut point = self.find_insertion_point("#PCDATA", None)?;
       // Perl L1149-1150: appendNodeBox for autoopened insertion points
-      if self.box_to_absorb.is_some() && point.get_attribute("_autoopened").is_some() {
+      if self.box_to_absorb.is_some() && point.has_attribute("_autoopened") {
         let bta = self.box_to_absorb.clone().unwrap();
         self.append_node_box(&point, &bta);
       }
@@ -4969,7 +4969,7 @@ impl Document {
   /// `perfect_kernel_batch57::rebuilt_math_pictures_keep_their_svg_ids`.
   pub fn record_svg_ids(&mut self, root: &Node) -> Result<()> {
     use rustc_hash::FxHashMap;
-    if root.get_attribute("_svgid").is_some() {
+    if root.has_attribute("_svgid") {
       return Ok(());
     }
     let mut in_effect: FxHashMap<String, String> = FxHashMap::default();
@@ -4978,7 +4978,7 @@ impl Document {
       if !is_svg {
         continue;
       }
-      let walked = node.get_attribute("_svgid").is_some();
+      let walked = node.has_attribute("_svgid");
       if !walked {
         node.set_attribute("_svgid", "1")?;
       }

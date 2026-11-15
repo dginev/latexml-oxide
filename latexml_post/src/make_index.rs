@@ -865,7 +865,7 @@ impl Processor for MakeIndex {
         let lists = node
           .get_attribute("lists")
           .unwrap_or_else(|| "glossary".to_string());
-        let list_unreferenced = node.get_attribute("role").as_deref() == Some("nomenclature");
+        let list_unreferenced = node.with_attribute(c"role", |v| v == "nomenclature") == Some(true);
         let entries = self.get_glossary_entries(&lists, &id, list_unreferenced);
         if !entries.is_empty() {
           let glist = self.make_glossary_list(&entries);

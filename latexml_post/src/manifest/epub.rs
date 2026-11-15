@@ -739,7 +739,7 @@ mod tests {
     let meta = kids.iter().find(|n| name_is(&n, "metadata")).unwrap();
     let ident = crate::document::element_children(meta)
       .into_iter()
-      .find(|n| n.get_attribute("id").as_deref() == Some("pub-id"))
+      .find(|n| n.with_attribute(c"id", |v| v == "pub-id") == Some(true))
       .expect("a <dc:identifier id='pub-id'>");
     assert_eq!(ident.get_content(), "urn:uuid:abc");
 

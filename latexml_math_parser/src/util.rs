@@ -196,7 +196,7 @@ pub(crate) fn in_an_enclosing_integrand(container: &Node) -> bool {
       matches!(
         op.get_attribute("meaning").as_deref(),
         Some("square-root" | "nth-root")
-      ) || op.get_attribute("role").as_deref() == Some("FRACOP")
+      ) || op.with_attribute(c"role", |v| v == "FRACOP") == Some(true)
     });
   let Some(outer) = app.get_parent().filter(|_| root_or_fraction) else {
     return false;
@@ -598,7 +598,7 @@ impl ArgContext {
     ) {
       return ArgContext::Root;
     }
-    if op.get_attribute("role").as_deref() == Some("FRACOP") && children.len() == 3 {
+    if op.with_attribute(c"role", |v| v == "FRACOP") == Some(true) && children.len() == 3 {
       // (a part parsed already, or unwrapped to its one token, opens with its first visible token)
       let opens_with_d =
         |arg: &Node| first_visible_token(arg).is_some_and(|first| token_text(&first) == "d");
@@ -796,7 +796,7 @@ fn scalar_by_shape(nodes: &[Node], at: usize, end: usize, other_candidates: bool
         && node
           .get_child_elements()
           .first()
-          .is_some_and(|op| op.get_attribute("role").as_deref() == Some("FRACOP"))
+          .is_some_and(|op| op.with_attribute(c"role", |v| v == "FRACOP") == Some(true))
     })
     && rest.iter().any(|node| {
       get_grammatical_role(node) == "NUMBER" && token_text(node) != "0" || name_is(&node, "XMApp")
@@ -1009,7 +1009,7 @@ fn raw_differential_variable(nodes: &[Node], at: usize) -> Option<(usize, usize)
   let mut variable = at + 1;
   let marker = nodes.get(variable)?;
   if is_a_script_marker(marker) {
-    if marker.get_attribute("role").as_deref() != Some("POSTSUPERSCRIPT") {
+    if marker.with_attribute(c"role", |v| v == "POSTSUPERSCRIPT") != Some(true) {
       return None;
     }
     let mut order = Vec::new();
@@ -1040,7 +1040,7 @@ fn differential_variable(nodes: &[Node], at: usize) -> Option<(usize, usize)> {
   let mut variable = at + 1;
   let marker = nodes.get(variable)?;
   if is_a_script_marker(marker) {
-    if marker.get_attribute("role").as_deref() != Some("POSTSUPERSCRIPT") {
+    if marker.with_attribute(c"role", |v| v == "POSTSUPERSCRIPT") != Some(true) {
       return None;
     }
     let close = variable
@@ -1485,7 +1485,7 @@ fn integral_balance(formula: &Node, mut open: usize) -> usize {
     if role.as_deref() == Some("INTOP") {
       open += 1;
     } else if token.get_content() == "d"
-      && (token.get_attribute("meaning").as_deref() == Some("differential-d")
+      && (token.with_attribute(c"meaning", |v| v == "differential-d") == Some(true)
         || role.as_deref() == Some("DIFFOP")
         || !parsed && tokens.get(k + 1).is_some_and(is_a_letter))
     {
@@ -1598,7 +1598,7 @@ fn binds_the_letter_d(nodes: &[Node], at: usize) -> bool {
     let operator = realized(operator);
     match operator.get_attribute("meaning").as_deref() {
       Some("list") => operands.iter().any(is_d),
-      _ if operator.get_attribute("meaning").as_deref() == Some("multirelation")
+      _ if operator.with_attribute(c"meaning", |v| v == "multirelation") == Some(true)
         || relates(&operator) =>
       {
         operands
@@ -1724,7 +1724,7 @@ fn node_to_grammar_lexemes_ctx(
     // compound node (XMApp without role) — these need flattening.
     // Note: we do NOT replace the node variable — we keep the XMRef.
 
-    if name_is(&node, "XMApp") && node.get_attribute("role").is_some() {
+    if name_is(&node, "XMApp") && node.has_attribute("role") {
       let role = node.get_attribute("role").unwrap();
       // A complete operator that has been decorated or scripted is still a
       // single grammatical operator and must lex as ONE atomic terminal:
@@ -1841,7 +1841,7 @@ fn node_to_grammar_lexemes_ctx(
       // tests/parse/bar_pairs.tex#named_vertbar_parses_as_absolute_value.
       if role == "VERTBAR" {
         let bar = resolve_xmref(&node).unwrap_or_else(|| node.clone());
-        if bar.get_attribute("meaning").is_none() {
+        if !bar.has_attribute("meaning") {
           match bar.get_content().as_str() {
             "|" => text = "|".to_string(),
             "\u{2225}" | "\u{2016}" => text = "||".to_string(),
@@ -1904,7 +1904,7 @@ fn node_to_grammar_lexemes_ctx(
         format!("XDIFFID:{text}:{idx}")
       } else if role == "VERTBAR"
         && text == "|"
-        && node.get_attribute("stretchy").as_deref() == Some("true")
+        && node.with_attribute(c"stretchy", |v| v == "true") == Some(true)
       {
         // `\left|...\right|` produces a balanced pair of VERTBAR tokens
         // with `stretchy="true"` (whereas bare `|x|` is `stretchy="false"`).
@@ -2020,8 +2020,8 @@ pub(crate) fn is_numeric_constant(node: &Node) -> bool {
 pub(crate) fn is_constant_node(node: &Node) -> bool {
   match node.get_name().as_str() {
     "XMTok" => {
-      node.get_attribute("role").as_deref() == Some("NUMBER")
-        || node.get_attribute("name").as_deref() == Some("pi")
+      node.with_attribute(c"role", |v| v == "NUMBER") == Some(true)
+        || node.with_attribute(c"name", |v| v == "pi") == Some(true)
     },
     "XMRef" => {
       crate::data::resolve_xmref_in_store(node).is_some_and(|target| is_constant_node(&target))
@@ -2079,9 +2079,10 @@ fn is_constant_run(nodes: &[Node]) -> bool {
 /// (`is_constant_run`, `semantics::constant_run`).
 pub(crate) fn is_imaginary_unit_token(node: &Node) -> bool {
   name_is(&node, "XMTok")
-    && (node.get_attribute("meaning").as_deref() == Some("imaginary-unit")
-      || node.get_attribute("name").as_deref() == Some("imath")
-      || node.get_attribute("role").as_deref() == Some("UNKNOWN") && node.get_content() == "i")
+    && (node.with_attribute(c"meaning", |v| v == "imaginary-unit") == Some(true)
+      || node.with_attribute(c"name", |v| v == "imath") == Some(true)
+      || node.with_attribute(c"role", |v| v == "UNKNOWN") == Some(true)
+        && node.get_content() == "i")
 }
 
 /// An accent over a differential operator (`\bar\partial`, `\overline\partial`): an application of an
@@ -2223,7 +2224,9 @@ pub fn filter_hints(nodes: Vec<Node>) -> Vec<Node> {
       }
       // Unlink from the XML tree; XMHints are ephemeral
       node.unlink();
-    } else if name_is(&node, "XMTok") && node.get_attribute("role").as_deref() == Some("APPLYOP") {
+    } else if name_is(&node, "XMTok")
+      && node.with_attribute(c"role", |v| v == "APPLYOP") == Some(true)
+    {
       prefiltered.push(node);
       last_hint_for.push(None);
       phantom.push(false);

@@ -458,8 +458,7 @@ fn needs_fill_in(node: &Node) -> bool {
 /// An `ltx:ref` naming its target (`idref`/`labelref`) whose text is still to be generated (Perl `next if
 /// $ref->textContent`).
 fn is_unfilled_ref(node: &Node) -> bool {
-  (node.get_attribute("idref").is_some() || node.get_attribute("labelref").is_some())
-    && node.get_content().is_empty()
+  (node.has_attribute("idref") || node.has_attribute("labelref")) && node.get_content().is_empty()
 }
 
 /// The text of ref content as Perl `getTextContent` reads a filled title (`CrossRef.pm` L861-879): a tag with its
@@ -1920,12 +1919,12 @@ impl CrossRef {
       }
 
       if let Some(ref id_str) = id {
-        if ref_mut.get_attribute("href").is_none() {
+        if !ref_mut.has_attribute("href") {
           if let Some(url) = self.generate_url(doc, id_str) {
             ref_mut.set_attribute("href", &url).ok();
           }
         }
-        if ref_mut.get_attribute("title").is_none() {
+        if !ref_mut.has_attribute("title") {
           if let Some(titlestring) = self.generate_title(doc, id_str, &show) {
             ref_mut.set_attribute("title", &titlestring).ok();
           }
@@ -2025,7 +2024,7 @@ impl CrossRef {
         (title, entry.get_string("id").map(str::to_string))
       });
       if let Some((title, id)) = found {
-        if ref_mut.get_attribute("title").is_none()
+        if !ref_mut.has_attribute("title")
           && let Some(title) = title
         {
           ref_mut.set_attribute("title", &title).ok();
@@ -2515,7 +2514,7 @@ impl CrossRef {
   fn fill_in_mathlinks(&mut self, doc: &PostDocument) {
     for sym in &doc.findnodes("descendant::*[@decl_id or @meaning]") {
       let tag = doc.get_qname(sym).unwrap_or_default();
-      if tag == "ltx:XMRef" || sym.get_attribute("href").is_some() {
+      if tag == "ltx:XMRef" || sym.has_attribute("href") {
         continue;
       }
       let entry_key = sym

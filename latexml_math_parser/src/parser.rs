@@ -3438,7 +3438,7 @@ fn new_script_node(
   };
 
   // Perl: if base was a float script, bump level
-  if base.get_attribute("_wasfloat").is_some() {
+  if base.has_attribute("_wasfloat") {
     l += 1;
   } else if let Some(bump_str) = base.get_attribute("_bumplevel")
     && let Ok(bump) = bump_str.parse::<u32>()
@@ -3509,13 +3509,13 @@ fn new_script_node(
   if x == "pre" {
     if let Some(lpad) = script_node.get_attribute("lpadding")
       && !lpad.is_empty()
-      && app_node.get_attribute("lpadding").is_none()
+      && !app_node.has_attribute("lpadding")
     {
       app_node.set_attribute("lpadding", &lpad).ok();
     }
   } else if let Some(rpad) = script_node.get_attribute("rpadding")
     && !rpad.is_empty()
-    && app_node.get_attribute("rpadding").is_none()
+    && !app_node.has_attribute("rpadding")
   {
     app_node.set_attribute("rpadding", &rpad).ok();
   }
@@ -4337,14 +4337,14 @@ fn expectation_operators(nodes: &[Node], document: &Document) -> Vec<Node> {
 
 /// A superscript whose argument holds numbers only: `^2`, `^{3}`.
 fn is_numeric_superscript(script: &Node) -> bool {
-  if script.get_attribute("role").as_deref() != Some("POSTSUPERSCRIPT") {
+  if script.with_attribute(c"role", |v| v == "POSTSUPERSCRIPT") != Some(true) {
     return false;
   }
   let mut tokens = Vec::new();
   collect_tokens(script, &mut tokens);
   tokens
     .iter()
-    .any(|token| token.get_attribute("role").as_deref() == Some("NUMBER"))
+    .any(|token| token.with_attribute(c"role", |v| v == "NUMBER") == Some(true))
     && tokens.iter().all(|token| {
       token
         .get_attribute("role")
@@ -4357,7 +4357,7 @@ fn is_numeric_superscript(script: &Node) -> bool {
 /// its XMWrap).
 fn opens_a_group(node: &Node) -> bool {
   match node.get_name().as_str() {
-    "XMTok" => node.get_attribute("role").as_deref() == Some("OPEN"),
+    "XMTok" => node.with_attribute(c"role", |v| v == "OPEN") == Some(true),
     "XMDual" => node.get_child_elements().get(1).is_some_and(opens_a_group),
     "XMWrap" => node
       .get_first_element_child()

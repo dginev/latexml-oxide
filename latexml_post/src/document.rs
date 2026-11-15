@@ -1212,7 +1212,7 @@ impl PostDocument {
 
     // If the parent has a fragid, create one here too
     if let Some(ref p) = parent_node {
-      if p.get_attribute("fragid").is_some() {
+      if p.has_attribute("fragid") {
         let new_fragid = format!("{}.{}{}", p.get_attribute("fragid").unwrap(), prefix, n);
         node.set_attribute("fragid", &new_fragid).ok();
       }
@@ -1719,8 +1719,8 @@ impl PostDocument {
       None => return,
     };
 
-    let has_cvis = node.get_attribute("_cvis").is_some();
-    let has_pvis = node.get_attribute("_pvis").is_some();
+    let has_cvis = node.has_attribute("_cvis");
+    let has_pvis = node.has_attribute("_pvis");
     if (!cvis || has_cvis) && (!pvis || has_pvis) {
       return;
     }

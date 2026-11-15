@@ -890,7 +890,7 @@ impl Scan {
             if meaning.starts_with("delimited-") {
               continue;
             }
-            if sym.get_attribute("role").as_deref() == Some("RELOP") {
+            if sym.with_attribute(c"role", |v| v == "RELOP") == Some(true) {
               rel.push(meaning);
             } else {
               non_rel.push(meaning);
@@ -1077,7 +1077,7 @@ fn collect_element_children(node: &Node) -> Vec<Node> {
 /// its group's number (html_feedback#94).
 fn equation_refnum_text(node: &Node) -> Option<String> {
   for t in child_tag_nodes(node) {
-    if t.get_attribute("role").as_deref() == Some("refnum") {
+    if t.with_attribute(c"role", |v| v == "refnum") == Some(true) {
       // Cleaned, as the row's own refnum is (`collect_common`).
       let txt = clean_text_content(&t);
       if !txt.trim().is_empty() {

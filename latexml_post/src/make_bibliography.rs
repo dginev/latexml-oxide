@@ -1750,7 +1750,7 @@ impl Processor for MakeBibliography {
         .as_deref()
         .map(|s| s.is_empty() || s == "numbers")
         .unwrap_or(true);
-      let unsorted_style = bib.get_attribute("sort").as_deref() == Some("false");
+      let unsorted_style = bib.with_attribute(c"sort", |v| v == "false") == Some(true);
       let cite_order = (is_numeric && unsorted_style).then(|| citation_order(&doc));
       // A backend's listing keeps its own order in every style: biber applied
       // the style's sorting scheme (the `.bbl` order is the PDF's), and biblatex
@@ -3754,7 +3754,7 @@ fn order_entry_keys(
 /// can set) are all printed (OXIDIZED_DESIGN_DIVERGENCES #57) and sorted as a
 /// `.bib`'s are.
 fn given_listing(doc: &PostDocument, bib: &Node) -> Option<Vec<String>> {
-  if bib.get_attribute("sort").as_deref() != Some("false")
+  if bib.with_attribute(c"sort", |v| v == "false") != Some(true)
     || !bib
       .get_attribute("bibstyle")
       .is_some_and(|style| style.starts_with("biblatex"))
