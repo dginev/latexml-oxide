@@ -1,0 +1,23 @@
+% witness: synthetic (the nested rosters of the AMSPPT census: 7 in 2 papers); alg-geom9502009 for the roster itself
+% oracle:  pdftex (\input amstex, \documentstyle{amsppt}) this file: 0 errors; "Theorem 1. (1) One. (2) Two: (a) Inner one. (1) Inner two."
+%          (TeX prints no outer item after the inner `\endroster`, which lets `\item` back to plain's: amsppt.sty:742)
+% engines: Perl 0.8.8 = 0 errors, 0 warnings, one empty `<enumerate/>`: every item and the inner roster lost (amsppt.sty.ltxml:243's
+%          `#body`); rust 7dea7e597a1 = the same
+% expect:  0 errors, 0 warnings; the theorem's `<enumerate xml:id="Ix1">` holds items `Ix1.ix1` "(1)" and `Ix1.ix2` "(2)", the second
+%          holding `<enumerate xml:id="Ix2">` with `Ix2.ix1` "(a)" and `Ix2.ix2` "(1)" (the inner count starts at 0; a label leaves it)
+% status:  RED (7dea7e597a1) -> GREEN (fix/amsppt-ids-sections; guard perfect_kernel_batchamsppt::amsppt_heads_and_theorems)
+\input amstex
+\documentstyle{amsppt}
+\document
+\head 1. Nested\endhead
+\proclaim{Theorem 1}
+\roster
+\item One.
+\item Two:
+  \roster
+  \item"(a)" Inner one.
+  \item Inner two.
+  \endroster
+\endroster
+\endproclaim
+\enddocument
