@@ -1,7 +1,9 @@
 % mechanism: amsart's `\abstract` boxes the abstract for `\maketitle` (amsart.cls `\abstractbox`); text an
 %   `env/abstract/begin` hook typesets runs before it, in the page, so an abstract before `\maketitle` prints it ahead
 %   of the title. Ours puts it at the head of the abstract's body (`\lx@add@frontmatter@until`).
-% witness: synthetic (revQAB2 `p4/am.tex`)
+% witness: synthetic (revQAB2 `p4/am.tex`); siblings revtex4-2 and elsarticle print "[bg]" before the title too, and in
+%   article the hook's text joins the abstract's first word (`<p>[bg]Abstract text.</p>`; pdflatex: its own paragraph above
+%   the heading; revQAB2b `p2/`, `p3/tp.tex`). No corpus hook user typesets text (they set names, fonts, math families).
 % status:  RED (QAB2b: <abstract name="Abstract."><p>[bg]Abstract text.\n[en]</p></abstract>)
 % oracle:  pdflatex 0 `!`; "[bg] T A. AUTHOR Abstract. Abstract text. [en] Body."
 % engines: rust QAB2b: the red line; Perl 0.8.8: no hooks.
