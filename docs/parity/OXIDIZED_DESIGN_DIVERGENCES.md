@@ -11358,7 +11358,8 @@ does not — LaTeXML's frontmatter model, as for a title without `\maketitle`. G
 `perfect_kernel_batch61::authors_without_a_title_reach_the_html`.
 
 Pubnotes, subtitles and dates had the same hole (Perl's structure XSLT renders them only from `maketitle`,
-`match="ltx:pubnote"`, `ltx:date`, `ltx:subtitle` empty), while the PDF prints them: 2006.12592 (a raw `\@maketitle`, the
+LaTeXML-structure-xhtml.xsl:424; `match="ltx:pubnote"` :480, `ltx:date` :751, `ltx:subtitle` :790 empty; a section holds
+no date or pubnote, LaTeXML-structure.rnc:666), while the PDF prints them: 2006.12592 (a raw `\@maketitle`, the
 `\thanks` affiliation), els-mrw's `\articletag` (els-mrw.cls:174; 2501.07938, 2501.10000, 2503.10397, 2604.15546),
 1112.0709 (IAU-TrA), 1504.03712 (amsart `\title{}`: a 118-word `\thanks` and the date). **Rule** (PNOTEA): in a unit
 with no `ltx:title`, not a sidebar, the first of its authors, pubnotes, subtitles and dates renders them all once, in
