@@ -2918,9 +2918,11 @@ const KERNEL_TOKEN_SPELLINGS: &[(&str, usize)] = &[
   ("latexml_engine/src/latex_constructs/sect11.rs", 28),
   ("latexml_engine/src/latex_constructs/sect12.rs", 4),
   ("latexml_engine/src/latex_constructs/sect13.rs", 34),
+  // (QAB4c +1: `title_mark` builds the reading's `\@title` mark, `\def\@title{\lx@title@page@title…}`, as `author_marks`
+  // builds `\@author`'s; a construction, no decision on a spelling)
   (
     "latexml_engine/src/latex_constructs/title_page_reading.rs",
-    5,
+    6,
   ),
   ("latexml_engine/src/latex_constructs_rust_only.rs", 17),
   ("latexml_engine/src/latex_kernel.rs", 3),

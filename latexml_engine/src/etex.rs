@@ -116,7 +116,10 @@ LoadDefinitions!({
   }
 
   fn etex_readexpr_i(rtype: RegisterType, prec: usize) -> Result<RegisterValue> {
-    let token = match read_x_non_space()? {
+    let operand = OperandRead::begin();
+    let token = read_x_non_space()?;
+    drop(operand);
+    let token = match token {
       Some(t) => t,
       None => return Ok(RegisterValue::default()),
     };

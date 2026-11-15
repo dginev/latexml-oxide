@@ -1,0 +1,35 @@
+% mechanism: the title-page deposit replays a raw class's refused `\maketitle` with the title fields emptied for printing
+%   (sect05.rs `\lx@deposit@maketitle`: the fields are the frontmatter's); where the class reads a field as a number
+%   (`\@tempcnta=\@date\relax`), the quantity's operand reads the field's value (gullet.rs `set_operand_values`,
+%   tex.web §441: the token after the signs), so the class's derived line prints as in the PDF
+% witness: synthetic (BM's Q3.13 probe `session`, QA60; DEPN)
+% oracle:  pdflatex 0 errors (TL 2025, -no-shell-escape): "Lecture Notes on Topology", "Course: MATH 410",
+%   "Exam session 2024", "Text."; with `\date{}` pdflatex errs "Missing number" and prints "Exam session 0"
+% engines: int168a (TP3base): 0 errors, 1 warning (expected:<number> "Missing number, treated as zero"), the body held
+%   "Exam session 0"; QAB4: as expected; perl not run
+% expect:  "Exam session 2024", 0 errors, 0 warnings; with `\date{}`: "Exam session 0", 0 errors, 1 warning
+% status:  RED (int168a) → GREEN (QAB4)
+% guard:   perfect_kernel_batch56::deposit_reads_a_field_as_a_number
+% preload: ar5iv.sty
+\begin{filecontents*}[overwrite]{sessionnotes.cls}
+\NeedsTeXFormat{LaTeX2e}
+\ProvidesClass{sessionnotes}
+\LoadClass{article}
+\newcommand\course[1]{\gdef\@course{#1}}
+\renewcommand\maketitle{%
+  \begin{center}
+    {\LARGE \@title \par}
+    {\large Course: \@course \par}
+    \@tempcnta=\@date\relax
+    {\large Exam session \the\@tempcnta \par}
+  \end{center}\par}
+\end{filecontents*}
+\documentclass{sessionnotes}
+\title{Lecture Notes on Topology}
+\author{A. Author}
+\date{2024}
+\course{MATH 410}
+\begin{document}
+\maketitle
+Text.
+\end{document}
