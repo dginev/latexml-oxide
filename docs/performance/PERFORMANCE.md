@@ -360,14 +360,16 @@ reused thread-local buffer and returns its input symbol when the decoding change
 through the new `arena::with_copy` (copied to the stack when ≤ 64 bytes — the absorbing interns, so the text cannot be
 read under an `arena::with` borrow, whose buffer a new symbol may move); `List::push_boxes` takes an iterator and the
 lone box goes in as a slice; `push_escaped_text`/`push_escaped_attr` append in one pass (no replacement contains an
-escaped character, so one pass equals the chain with `&` first) and the open tag is written in place; `url_decode`
+escaped character, so one pass equals the chain with `&` first), each reserving its escaped length first and the open
+tag still pushed whole, so the output `String` grows through the same capacities (written piecewise, it peaked 168 MB
+higher on the issue-790 book); `url_decode`
 returns a `Cow`; the setter probe is `arena::get_suffixed("\\", name)` (a name never interned has no definition).
 Guard: `latexml_core` `document::serializer_escape::serializer_escape_matches_sequential_replace` (every 3-piece string
 of `& < > " ' \r \t \n`, already-escaped entities and non-ASCII text, against the old `replace` chain).
 Measured: instructions:u, best of 3 interleaved, each lever against the commit before it, base INTPERF4 `e4ab916a806`,
 cortex's ar5iv HTML recipe unless XML:
 
-| Document | L18 | L10 | L7 | L4a/b/e | all |
+| Document | L18 | L10 | L7 (in place) | L4a/b/e | all |
 |---|---:|---:|---:|---:|---:|
 | b250 xml / html | −0.04 / −0.06 % | −0.01 / +0.01 % | −0.93 / −0.65 % | −0.06 / −0.04 % | −1.04 / −0.74 % |
 | 2308.04512 xml / html | +0.03 / +0.01 % | +0.16 / +0.15 % | −0.91 / −0.74 % | −0.09 / −0.08 % | −0.81 / −0.66 % |
@@ -375,10 +377,13 @@ cortex's ar5iv HTML recipe unless XML:
 | amsldoc xml | −0.18 % | −0.08 % | −0.40 % | −0.72 % | −1.37 % |
 | ten typical papers (popPERFBs.tsv) | −0.10 to −0.49 % | +0.05 to −0.37 % | −0.05 to −0.50 % | −0.02 to −0.54 % | −0.69 to −1.07 % |
 
-Run-to-run spread ≤ 0.03 % on every document but t_1109.6643 (0.14 %); L10's +0.15 % on 2308.04512 is the build's
+L7 as committed (reserved, the tag pushed whole) keeps −0.75 % of b250 xml's −1.04 % (all levers) and −0.98 % of
+2604.01119's −1.16 %. Peak RSS (HTML): b1000 1.377 → 1.359 GB, the issue-790 book 4.35 → 4.43 GB (+1.9 %, two runs each;
+the in-place variant +3.8 %). Run-to-run spread ≤ 0.03 % on every document but t_1109.6643 (0.14 %); L10's +0.15 % on 2308.04512 is the build's
 code placement, not work (the change only removes a format per setter). Cycles:u moved ±10-19 % between runs of one
 binary on the shared host, below resolution for these levers. Output byte-identical on the 16 measured runs (every rep)
-and on the A/B population `popMEMB.tsv` (160 papers, 60 controls), raw XML and the HTML recipe.
+and on the A/B population `popMEMB.tsv` (160 papers, 60 controls), raw XML and the HTML recipe with every auxiliary
+file (the in-place build; the committed one on b250, 2604.01119, the book and b1000).
 Left (MEM1, not taken): L4c `tbox.rs` `vec![node]` and L4f `stomach.rs` result `Vec` (return shapes), L4d
 `text_run_font`'s `Font` clone (`Rc<Font>` through `open_text`'s eight callers) — each ≤ 0.06-0.08 % by MEM1's estimate.
 
