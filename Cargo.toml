@@ -44,9 +44,14 @@ unused_qualifications = "warn"
 # marpa-asf = { path = "/home/deyan/git/marpa/marpa" }
 
 [patch.crates-io]
-# TEMP until libxml 0.3.24 is released: the combined local rust-libxml branch `perf/0.3.24` (PERFG's borrowed reads
-# + PERFH's parse flags and node-cache trim, with LIBXML24's guards, aliases and docs). Must be removed, and libxml bumped to 0.3.24 in every crate, before the PR.
+# TEMP until libxml 0.3.24 is released: the combined local rust-libxml branch `perf/0.3.24` (KWARC/rust-libxml PR 231).
+# Must be removed, and libxml bumped to 0.3.24 in every crate, before the PR.
 libxml = { path = "/home/deyan/data/pk_wt/INTPERF_libxml" }
+# TEMP until libmarpa-asf-sys 0.3.1 is released (dginev/marpa PR 7): libmarpa's per-thread obstack chunk cache
+# (allocation only). The published marpa-asf 0.4.0 asks for libmarpa-asf-sys ^0.3.0, which 0.3.1 meets, so no
+# dependency spec here moves. No release may be built with this path: the modified LGPL marpa_obs.c must ship from
+# crates.io (LICENSE_INVENTORY §D.3).
+libmarpa-asf-sys = { path = "/home/deyan/data/pk_wt/PERFJ_marpa/libmarpa-sys" }
 
 [profile.release]
 # Local benchmark/sandbox/canvas profile. Tuned for the 32 GB / 20-thread
