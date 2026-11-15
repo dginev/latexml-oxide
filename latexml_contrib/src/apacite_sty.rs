@@ -637,6 +637,31 @@ LoadDefinitions!({
     DefMacro!("\\cite [] OptionalAngled [] Semiverbatim", sub[args] {
       apacite_delegate("\\lx@natbib@cite@parenthetical", false, args)
     });
+    // Classic mode only (apacite.sty:258-584 `\if@APAC@classic@cite`): `\citeauthorNP` and `\shortciteauthorA`
+    // (:387-393, :401-407) are `\citeauthor`'s; the full forms (:268-276, :295-303, :335-341, :373-379, :394-400) cite
+    // every author (`\citeauthoryear{full}{full}`), natbib's starred ones (upstream #711). apacite defines no
+    // `\fullciteauthorNP`, only naming it in its mask lists (:557, :578).
+    DefMacro!("\\citeauthorNP [] OptionalAngled [] Semiverbatim", sub[args] {
+      apacite_delegate("\\citeauthor", false, args)
+    });
+    DefMacro!("\\shortciteauthorA [] OptionalAngled [] Semiverbatim", sub[args] {
+      apacite_delegate("\\citeauthor", false, args)
+    });
+    DefMacro!("\\fullcite [] OptionalAngled [] Semiverbatim", sub[args] {
+      apacite_delegate("\\lx@natbib@cite@parenthetical", true, args)
+    });
+    DefMacro!("\\fullciteNP [] OptionalAngled [] Semiverbatim", sub[args] {
+      apacite_delegate("\\citealp", true, args)
+    });
+    DefMacro!("\\fullciteA [] OptionalAngled [] Semiverbatim", sub[args] {
+      apacite_delegate("\\citet", true, args)
+    });
+    DefMacro!("\\fullciteauthor [] OptionalAngled [] Semiverbatim", sub[args] {
+      apacite_delegate("\\citeauthor", true, args)
+    });
+    DefMacro!("\\fullciteauthorA [] OptionalAngled [] Semiverbatim", sub[args] {
+      apacite_delegate("\\citeauthor", true, args)
+    });
   } else if mode == "natbibemu" {
     DefMacro!("\\cite OptionalMatch:* [][] Semiverbatim", sub[args] {
       let mut it = args.into_iter();
@@ -673,30 +698,6 @@ LoadDefinitions!({
   });
   DefMacro!("\\shortciteauthor [] OptionalAngled [] Semiverbatim", sub[args] {
     apacite_delegate("\\citeauthor", false, args)
-  });
-  // `\citeauthorNP` and `\shortciteauthorA` (apacite.sty:387-393, :401-407) are `\citeauthor`'s; the full forms
-  // (:268-276, :295-303, :335-341, :373-379, :394-400) cite every author (`\citeauthoryear{full}{full}`), natbib's starred
-  // ones (upstream #711). apacite defines no `\fullciteauthorNP`, only naming it in its mask lists (:557, :578).
-  DefMacro!("\\citeauthorNP [] OptionalAngled [] Semiverbatim", sub[args] {
-    apacite_delegate("\\citeauthor", false, args)
-  });
-  DefMacro!("\\shortciteauthorA [] OptionalAngled [] Semiverbatim", sub[args] {
-    apacite_delegate("\\citeauthor", false, args)
-  });
-  DefMacro!("\\fullcite [] OptionalAngled [] Semiverbatim", sub[args] {
-    apacite_delegate("\\lx@natbib@cite@parenthetical", true, args)
-  });
-  DefMacro!("\\fullciteNP [] OptionalAngled [] Semiverbatim", sub[args] {
-    apacite_delegate("\\citealp", true, args)
-  });
-  DefMacro!("\\fullciteA [] OptionalAngled [] Semiverbatim", sub[args] {
-    apacite_delegate("\\citet", true, args)
-  });
-  DefMacro!("\\fullciteauthor [] OptionalAngled [] Semiverbatim", sub[args] {
-    apacite_delegate("\\citeauthor", true, args)
-  });
-  DefMacro!("\\fullciteauthorA [] OptionalAngled [] Semiverbatim", sub[args] {
-    apacite_delegate("\\citeauthor", true, args)
   });
 
   // Old-format compat macros (pre-2012 apacite.bst): the `\bibitem` label uses

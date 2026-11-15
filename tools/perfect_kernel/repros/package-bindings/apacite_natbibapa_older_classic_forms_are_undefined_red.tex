@@ -1,0 +1,18 @@
+% mechanism: apacite.sty defines `\citeA`, `\citeNP`, `\citeyearNP` and the `\shortcite` family only under
+%   `\if@APAC@classic@cite` (:258-584); the binding defines them in every citation mode
+% witness: synthetic (revQA76A)
+% oracle:  pdflatex 7 errors "! Undefined control sequence.", then "A a. B a. C a. D a. E a. F a. G a."
+% engines: rust base (origin/main 75531ffc9d6) and QA76A 0 errors, each a natbib cite; Perl 0.8.8 6 errors (all but
+%          `\shortcite`: no apacite binding)
+% expect:  7 errors (each undefined form), 0 warnings
+% status:  RED (QA76A)
+% moves:   post-merge
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage[natbibapa]{apacite}
+\begin{document}
+A \citeA{a}. B \citeNP{a}. C \citeyearNP{a}. D \shortcite{a}. E \shortciteA{a}. F \shortciteNP{a}. G \shortciteauthor{a}.
+\begin{thebibliography}{9}
+\bibitem[\protect\citeauthoryear{Smith}{Smith}{2001}]{a} Smith, J. (2001). Title.
+\end{thebibliography}
+\end{document}

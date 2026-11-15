@@ -21688,5 +21688,5 @@ Abs.
 ```
 
 Rust: llncs_cls.rs's `\keywords` sets the class's `\and` before its items; sv_support_sty.rs's four setters run
-`\lx@sv@list@and`, empty there (svmult.cls:2339 sets none) and svjour3_cls.rs's dot (shared with its `\JEL`). Guard
+`\lx@sv@list@and`, empty there (svmult.cls v5.12:2432 sets none, 2512.18788) and svjour3_cls.rs's dot (shared with its `\JEL`). Guard
 `perfect_kernel_batchqa76a::class_keyword_lists_print_their_and`. An upstream offer.

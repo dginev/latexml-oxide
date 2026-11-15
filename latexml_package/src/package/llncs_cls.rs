@@ -278,7 +278,8 @@ LoadDefinitions!({
   DefMacro!("\\url Semiverbatim",   "\\lx@add@url{#1}");
   DefMacro!("\\mail {}",            "\\lx@add@address[name={\\mailname~}]{#1}");
   DefMacro!("\\keywordname",        "\\textbf{Keywords}");
-  // llncs.cls:906: the keywords' `\and` is the class's centred dot (upstream #2263; KNOWN_PERL_ERRORS #1272)
+  // llncs.cls:906: the keywords' `\and` is the class's centred dot (upstream #2263; KNOWN_PERL_ERRORS #1272).
+  // Witness 2307.04136.
   DefMacro!("\\keywords{}",         "\\lx@add@keywords[name={\\keywordname:~}]{\\def\\and{{\\textperiodcentered} }#1}");
 
   DefMacro!("\\ackname", "Acknowledgements");

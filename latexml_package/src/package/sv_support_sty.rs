@@ -290,8 +290,8 @@ LoadDefinitions!({
   );
   DefMacro!("\\orcid[]{}", "\\lx@add@orcid[name={#1}]{#2}");
 
-  // The `\and` a class's keyword and classification lists set, before their items: none here (svmult.cls:2339), svjour3's
-  // centred dot (svjour3_cls.rs).
+  // The `\and` a class's keyword and classification lists set, before their items: none here (svmult.cls v5.12:2432,
+  // 2512.18788), svjour3's centred dot (svjour3_cls.rs).
   def_macro_noop("\\lx@sv@list@and")?;
   DefMacro!("\\keywordname", "\\textbf{Keywords}");
   DefMacro!(
