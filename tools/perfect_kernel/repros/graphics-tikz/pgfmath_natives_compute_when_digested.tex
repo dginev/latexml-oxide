@@ -1,0 +1,43 @@
+% mechanism: pgf's math functions compute only after their opening `\begingroup` (or `\def`), so when TeX expands one
+%   while it scans a <dimen> or <number> for its optional space or more digits (tex.web §443-§448), the scan ends first
+%   and the assignment is done before the function reads its operand. The native `\pgfmath<fn>@`, `\pgfmathparse` and
+%   `\pgfmathint@` were DefMacro closures that computed when expanded, so they read the register before the pending
+%   assignment (`2pt%` then a function of it). Covered: a float function after `\advance … by 3pt%`, the sp arithmetic,
+%   `\pgfmathparse` after a dimen and after a count, `\pgfmathint@`, `\pgfmathsetmacro`, `\pgfmathsincos`, a raw
+%   wrapper (`\pgfmathadd`), the result's group, and the `\ignorespaces` that ends `\pgfmathparse` and
+%   `\pgfmathsetlength` (pgfmathparser.code.tex:146-149, pgfmathcalc.code.tex:48).
+% witness: 2606.14412 (pgflibrarycurvilinear.code.tex:96-98 `\advance\pgf@x by …pt%` then `\pgfmathreciprocal@`;
+%   55 "Dimension too large" Errors, a curve to x=22670pt; pdflatex 0 `!`)
+% oracle:  pdflatex 0 `!`: [1:0.2] [2:3.0] [3:5.0] [4:6.0] [5:7] [6:5.0] [7:0.0,1.0] [8:5.0] [9:5.0] [10:5.0]
+%          [11:3.0pt], one space between rows
+% engines: rust main 03ec8caaf70: [1:0.5] [2:6.0] [3:3.0] [4:1.0] [5:5] [6:5.0] [7:0.0,0.06976] [8:91.0] [9:91.0]
+%          [10:5.0] [11:3.0pt], two spaces before rows 10 and 11, 0 errors;
+%          Perl: [1:0.5] [2:6] [3:3.0] [4:1.0] [5:7] [6:5.0] [7:0.99756,0.06976] [8:91] [9:91] [10:5.0] [11:3.0pt], 0 errors
+%          (KNOWN_PERL_ERRORS #1274)
+% expect:  the pdflatex values and spaces, 0 errors, 0 warnings
+% status:  GREEN (QA11A)
+\documentclass{article}
+\usepackage{tikz}
+\newdimen\dd \newcount\cc
+\begin{document}
+\makeatletter
+\dimen0=2pt \advance\dimen0 by 3pt%
+\pgfmathreciprocal@{\pgf@sys@tonumber\dimen0}[1:\pgfmathresult]
+\dimen0=2pt%
+\pgfmathadd@{\pgf@sys@tonumber\dimen0}{1}[2:\pgfmathresult]
+\dd=2pt%
+\pgfmathparse{\dd+3pt}[3:\pgfmathresult]
+\cc=5%
+\pgfmathparse{\cc+1}[4:\pgfmathresult]
+\cc=7%
+\pgfmathint@{\the\cc.5}[5:\pgfmathresult]
+\dd=4pt%
+\pgfmathsetmacro\m{\dd+1pt}[6:\m]
+\dd=90pt%
+\pgfmathsincos{\pgf@sys@tonumber\dd}[7:\pgfmathresultx,\pgfmathresulty]
+\dd=4pt%
+\pgfmathadd{\dd}{1pt}[8:\pgfmathresult]
+{\pgfmathparse{1+1}}[9:\pgfmathresult]
+\pgfmathparse{2+3} [10:\pgfmathresult]
+\pgfmathsetlength\dd{3pt} [11:\the\dd]
+\end{document}

@@ -447,7 +447,7 @@ pub(crate) fn load() -> Result<()> {
     properties   => { stored_map!("layout" => "vertical") },
     // The begin code opens a TeX group of its own: `\@float` -> `\@xfloat`'s `\color@vbox` (latex.ltx:17421, :17479).
     tex_group => { TexGroup::Box },
-    before_digest => { before_float("figure", None)?; reset_float_box()?; },
+    before_digest => { before_xfloat("figure", false)?; },
     after_digest  => sub[whatsit] { after_float(whatsit); },
     mode => "internal_vertical"
   );
@@ -460,7 +460,7 @@ pub(crate) fn load() -> Result<()> {
     properties   => { stored_map!("layout" => "vertical") },
     // The begin code opens a TeX group of its own: `\@float` -> `\@xfloat`'s `\color@vbox` (latex.ltx:17421, :17479).
     tex_group => { TexGroup::Box },
-    before_digest => { before_float_ex("figure", None, true)?; reset_float_box()?; }, // double=true for *
+    before_digest => { before_xfloat("figure", true)?; }, // double=true for *
     after_digest  => sub[whatsit] { after_float(whatsit); },
     mode => "internal_vertical"
   );
@@ -470,7 +470,7 @@ pub(crate) fn load() -> Result<()> {
     properties   => { stored_map!("layout" => "vertical") },
     // The begin code opens a TeX group of its own: `\@float` -> `\@xfloat`'s `\color@vbox` (latex.ltx:17421, :17479).
     tex_group => { TexGroup::Box },
-    before_digest => { before_float("table", None)?; reset_float_box()?; },
+    before_digest => { before_xfloat("table", false)?; },
     after_digest  => sub[whatsit] { after_float(whatsit); },
     mode => "internal_vertical");
   // Perl: latex_constructs.pool.ltxml line 3478
@@ -479,7 +479,7 @@ pub(crate) fn load() -> Result<()> {
     properties   => { stored_map!("layout" => "vertical") },
     // The begin code opens a TeX group of its own: `\@float` -> `\@xfloat`'s `\color@vbox` (latex.ltx:17421, :17479).
     tex_group => { TexGroup::Box },
-    before_digest => { before_float_ex("table", None, true)?; reset_float_box()?; }, // double=true for *
+    before_digest => { before_xfloat("table", true)?; }, // double=true for *
     after_digest  => sub[whatsit] { after_float(whatsit); },
     mode => "internal_vertical");
 
@@ -494,8 +494,7 @@ pub(crate) fn load() -> Result<()> {
     properties => sub[args] {
       let float_type = args.first().and_then(|a| a.as_ref())
         .map(|d| d.to_string()).unwrap_or_default();
-      before_float(&float_type, None)?;
-      reset_float_box()?;
+      before_xfloat(&float_type, false)?;
       Ok(stored_map!("layout" => "vertical"))
     },
     // The begin code opens a TeX group of its own: `\@xfloat`'s `\color@vbox` (latex.ltx:17421, :17479).
@@ -509,8 +508,7 @@ pub(crate) fn load() -> Result<()> {
     properties => sub[args] {
       let float_type = args.first().and_then(|a| a.as_ref())
         .map(|d| d.to_string()).unwrap_or_default();
-      before_float_ex(&float_type, None, true)?;
-      reset_float_box()?;
+      before_xfloat(&float_type, true)?;
       Ok(stored_map!("layout" => "vertical"))
     },
     // The begin code opens a TeX group of its own: `\@xfloat`'s `\color@vbox` (latex.ltx:17421, :17479).

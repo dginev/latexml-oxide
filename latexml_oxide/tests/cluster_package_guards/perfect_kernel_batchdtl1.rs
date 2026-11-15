@@ -2,7 +2,7 @@
 //! Warnings on 2010.05701, 2205.15714, 2311.08887, 2604.09771, 2311.02367, which pdflatex compiles cleanly). One
 //! table of the values pdflatex prints, each row's oracle (pdflatex `!` count and value, Perl's count) in its repro
 //! header; the error side ("Dimension too large") is a row of `error_boundary`. Mechanism B's pure-parser values are
-//! rows of `pgfmath_golden_tests` (latexml_package).
+//! rows of `pgfmath_golden_tests` (latexml_package). QA11A's row: when the natives compute (2606.14412).
 use latexml::util::test::{assert_element, convert_files_with};
 
 use super::perfect_kernel_batch46::{error_count, warning_count};
@@ -261,6 +261,24 @@ const ROWS: &[Row] = &[
       ),
     ],
     holds:    &[],
+  },
+  // QA11A: the natives compute when digested, after the assignment whose optional-space scan expanded them (2606.14412:
+  // 55 Errors); main 03ec8caaf70: [1:0.5] [2:6.0] [3:3.0] [4:1.0] [5:5] [7:0.0,0.06976] [8:91.0] [9:91.0], and two
+  // spaces before rows 10 and 11 (no `\ignorespaces`), which only `holds` sees; Perl the same values (KPE #1274).
+  Row {
+    name:     "pgfmath_natives_compute_when_digested",
+    tex:      include_str!(
+      "../../../tools/perfect_kernel/repros/graphics-tikz/pgfmath_natives_compute_when_digested.tex"
+    ),
+    files:    &[],
+    counts:   (0, 0),
+    elements: &[(
+      "para",
+      "xml:id=\"p1\"",
+      r#"<para xml:id="p1"><p xml:id="p1.1">[1:0.2] [2:3.0] [3:5.0] [4:6.0] [5:7] [6:5.0] [7:0.0,1.0] [8:5.0]
+        [9:5.0] [10:5.0] [11:3.0pt]</p></para>"#,
+    )],
+    holds:    &["[9:5.0]\n[10:5.0]\n[11:3.0pt]</p>"],
   },
 ];
 

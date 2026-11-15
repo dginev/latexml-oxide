@@ -1,0 +1,15 @@
+% mechanism: the native pgfmath entry points are primitives (QA11A, KNOWN_PERL_ERRORS #1274), so inside an `\edef` they stay
+%   unexpanded and the `\edef`'s body later recomputes: `\x` runs `\pgfmathparse{1+2}`. pgf's raw macros begin with
+%   `\begingroup`/`\def`, which an `\edef` cannot digest: pdflatex errs and stops. An expand-only context meeting one of these
+%   primitives should raise an Error, as TeX does
+% witness: synthetic (revQA11A `p3/e1.tex`; no corpus use: pdflatex dies on it)
+% status:  RED (QA11A)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 4 errors (Undefined control sequence, Incomplete \iffalse), then it stops
+% engines: base 03ec8caaf70: 1 error ("Missing control sequence inserted"), "[7]"; QA11A: 0 errors, "[3.0]"
+% expect:  at least 1 error
+% moves:   post-merge (an Error when a pgfmath primitive is met unexpanded in an expand-only context)
+\documentclass{article}
+\usepackage{tikz}
+\begin{document}
+\pgfmathparse{7}\edef\x{\pgfmathparse{1+2}}\x[\pgfmathresult]
+\end{document}

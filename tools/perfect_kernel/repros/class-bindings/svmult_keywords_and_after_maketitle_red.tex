@@ -1,0 +1,19 @@
+% mechanism: svmult.cls v5.12:2432 `\keywords` sets no `\and`, so after `\maketitle` the kernel's tabular `\and`
+%   (latex.ltx:17219 `\end{tabular}\hskip 1em \@plus.17fil\begin{tabular}[t]{c}`) errs;
+%   the binding prints the list silently
+% witness: 2512.18788 (its svmult.cls v5.12; synthetic shape, revQA76A)
+% oracle:  pdflatex (TL 2025, -no-shell-escape, 2512.18788's svmult.cls) 19 errors (Misplaced \crcr, \begin{tabular}
+%          ended by \end{document}, ...), emergency stop, no PDF
+% engines: rust base (origin/main 75531ffc9d6) and QA76A 0 errors, 0 warnings, `<keywords>Alpha Beta</keywords>`
+% expect:  an Error at `\and` (TeX errs), the words kept: "Alpha Beta"
+% status:  RED (QA76A)
+% moves:   post-merge
+% preload: ar5iv.sty
+\documentclass{svmult}
+\begin{document}
+\title{T}\author{A}\institute{I}
+\maketitle
+\abstract{Abs.}
+\keywords{Alpha \and Beta}
+Text.
+\end{document}

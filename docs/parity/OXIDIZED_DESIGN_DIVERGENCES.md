@@ -19,7 +19,7 @@
 > port-bug fix (→ SYNC "Rust Error Fixes"), a gap or residual list (→ SYNC row R), a math-parse divergence (→ `docs/math/OXIDIZED_DESIGN_MATH.md`).
 > A WORKAROUND entry must name the principled mechanism that would replace it and open a SYNC row for it. Entry shape: rule · Perl ref · TeX
 > source:line · sub-rules as bullets · witnesses · guards · upstream status; no batch history (git keeps it); about 60 lines at most. OD
-> numbers are permanent anchors (cited from code): never renumber; a moved entry leaves a one-line stub. Next free number: **#1052** (2026-11-14; allocate at integration with `tools/perfect_kernel/next_entry_numbers.sh`, which also counts the numbers every open PR's head holds and flags a number two branches define as `CLASH`; `--local-only` reads the working tree alone).
+> numbers are permanent anchors (cited from code): never renumber; a moved entry leaves a one-line stub. Next free number: **#1052** (2026-11-15; #1051 is reserved; allocate at integration with `tools/perfect_kernel/next_entry_numbers.sh`, which also counts the numbers every open PR's head holds and flags a number two branches define as `CLASH`; `--local-only` reads the working tree alone).
 
 ---
 
@@ -127,36 +127,25 @@ be lost.
 which caused spurious font diffs when compared against elements that had no explicit
 background/language.
 
-### 7. SVG Support Deferred
+### 7. (retired: superseded by the SVG port — `collapse_svg_group`, tex_box.rs:495 (Perl TeX_Box.pool.ltxml:199-271), and pgfsys's `svg:g`/`svg:foreignObject` output, pgfsys_latexml_def.rs; nothing of the deferral remains)
 
-**Decision:** SVG-related code paths removed from glue, kern, and box modules.
+### 8. OML slot 127 (the tie accent) is U+0361 alone (Perl: NBSP + U+0361)
 
-**Rationale:** latexml-oxide targets XML/HTML output. SVG generation is not critical
-for the core TeX→XML pipeline and adds significant complexity.
+**Rule.** The OML font map's slot 127 is the combining double inverted breve U+0361 by itself
+(`latexml_engine/src/tex_fonts.rs:395`, the `DeclareFontMap!("OML", …)` table); Perl stores the two-character string
+`UTF(0xA0) . "\x{0361}"` (TeX_Fonts.pool.ltxml:272). The slot is an accent, applied to the base it is given, so the
+mark is stored without a carrier.
 
-**Planning condition:** When we advance to translating `pgf.sty` and `tikz.sty` support,
-we will add the full breadth of SVG infrastructure from Perl, including all other
-SVG-producing bindings (e.g. `collapseSVGGroup`, `svg:foreignObject`, `svg:g` tags).
-This is deferred, not permanently removed.
+### 9. A constructor's `font` attribute pair is not an XML attribute; the element's font is the whatsit's `font` property
 
-### 8. OML Font Map Position 127
-
-**Decision:** Rust stores `'\u{0361}'` (COMBINING DOUBLE INVERTED BREVE) for OML
-position 127. Perl stores a two-character string.
-
-**Rationale:** The single combining character is the correct Unicode representation.
-Perl's two-char string is a legacy artifact of its string handling.
-
-### 9. Constructor Compiler `font` Attribute Interception
-
-**Decision:** The constructor compiler (`constructable.rs`) special-cases `font` as an
-attribute key, replacing it with a no-op `();`. Font information on elements is instead
-handled through `_force_font` which triggers `finalize_rec` font computation.
-
-**Rationale:** Font attributes in constructors need special treatment because they
-represent inherited typographic state, not simple XML attributes. The `_force_font`
-mechanism ensures font properties are computed correctly for empty elements (like
-`XMTok`) where no text content triggers normal font specialization.
+**Rule.** Both constructor compilers drop a `font='…'` pair from the attribute map and open the element with the
+whatsit's `font` property as its font: the proc-macro codegen (`latexml_codegen/src/constructable.rs:209-218`
+`emit_avpairs`, the font read at :140-151) and the runtime compiler (`latexml_core/src/binding/def/replacement.rs:787-800`
+`eval_avpairs`, the font read at :716). **Perl** passes the pair's value to `openElement` as its font
+(Constructor/Compiler.pm:207-210 `translate_string`, Document.pm:1834 `$attributes{font}`), so `font='#titlefont'`
+fonts the element with that property. A binding that wants another font puts it in the `font` property
+(amsthm_sty.rs:294-302: the proof title's font, `font="italic"` as in Perl). `_force_font` is Perl's own attribute
+(Document.pm), not part of this divergence.
 
 ### 10. (removed: a parity record: Perl maps math `*` to U+2217 too)
 
@@ -255,81 +244,42 @@ Suppressing it produces cleaner output at no cost to any downstream consumer.
 **Impact:** All tikz/pgf test reference XMLs omit the `tex=` attribute on `<picture>`
 elements. When copying test XMLs from Perl, strip `tex="..."` from `<picture>` tags.
 
-### 22. No Empty Nested Language-Return Wrappers on Group Exit
+### 22. No empty language-return wrappers at a group's end
 
-**Decision:** When exiting a group that changed `xml:lang` (e.g.,
-`\foreignlanguage{english}{…}` nested inside `\begin{otherlanguage}{french}`),
-Rust emits at most one empty `<text xml:lang="…">` wrapper per closing group,
-not a nested chain mirroring each enclosing language scope.
+**Rule.** Returning from a nested language scope at the end of a paragraph emits no empty `<ltx:text xml:lang=…>`
+wrapper. **Perl** unwinds each enclosing language frame as a nested empty `<text>`: `t/babel/page545.xml` ends the
+`\foreignlanguage{english}{…}` paragraph inside `\begin{otherlanguage}{french}` (document language German) with
+`<text xml:lang="fr">⏎<text xml:lang="de"></text></text>`. Ours, the golden `latexml_oxide/tests/babel/page545.xml:22-23`,
+ends it with the paragraph's text alone. The wrappers carry no text and render nothing; a test XML copied from Perl
+with this pattern is normalized to the Rust form.
 
-**Perl behavior:** Perl's document builder unwinds each enclosing font/language
-frame as a separate empty `<text>` element. For a document with class option
-`[german]{article}` + `\usepackage[french,english]{babel}` + the page545 test's
-nested `\foreignlanguage{english}{…}\end{otherlanguage}`, Perl emits
-`<text xml:lang="fr"><text xml:lang="de"></text></text></p>` at end of the
-English foreignlanguage paragraph.
+### 23. Load flags: a binding sets Perl's two, a raw file sets `<name>_raw_loaded` (Perl: `<name>_loaded` for both)
 
-**Rust behavior:** Rust's document builder emits only
-`<text xml:lang="fr"></text></p>` — the outer wrap from returning to French,
-but not a further nested wrap for the default-document German. This reflects
-a single-level language-change tracking model vs. Perl's per-frame stack
-unwind.
-
-**Rationale:** Both empty wrappers contain zero content and are invisible in
-rendering. The nested wrap is a Perl-specific structural artifact with no
-semantic or visual impact. Matching it would require deeper font-stack
-unwinding logic at group close that has no downstream benefit.
-
-**Impact:** The `tests/babel/page545.xml` expected XML has been updated to
-the Rust form (single empty wrap). Any future test XMLs copied from Perl
-with this pattern should be similarly normalized.
-
-### 23. `_loaded` Flag Naming — Drop `ltxml_loaded`, Add `_raw_loaded`
-
-**Decision:** Rust uses a unified `<name>_loaded` flag for *bindings* (Rust
-modules under `latexml_package/src/package/`) and a separate `<name>_raw_loaded`
-flag for raw .sty/.cls/.def TeX files. The Perl `<name>.ltxml_loaded` form
-is dropped.
-
-**Perl behavior** (Package.pm L2311-2316, L2346-2347):
-- `loadLTXML` (binding load): sets BOTH `$request_loaded` AND
-  `$ltxname_loaded` where `$ltxname = $name . '.ltxml'`
-  (e.g. `babel.sty.ltxml_loaded`).
-- `loadTeXDefinitions` (raw .sty/.cls load): sets only `$request_loaded`
-  (e.g. `babel.sty_loaded`).
-- The `.ltxml`-suffixed key was a Perl-specific marker indicating "binding
-  loaded", checked by `\@ifpackageloaded` and `\RequirePackage` guards.
-
-**Rust translation:**
-- Binding load (Rust module dispatch, e.g. `babel_sty.rs`) → sets
-  `<filename>_loaded` (e.g. `babel.sty_loaded`). This is the ONLY flag
-  set on binding load.
-- Raw `.sty`/`.cls`/`.def` load (the underlying TeX file, possibly
-  triggered from inside a binding via `\input`) → sets
-  `<filename>_raw_loaded` (e.g. `babel.sty_raw_loaded`). This is the
-  ONLY flag set on raw load.
-- A binding `.rs` can load a raw `.sty` of the same name without the
-  flags clobbering each other:
-  - `babel_sty.rs` runs → `babel.sty_loaded = 1`
-  - inside, `InputDefinitions("babel", noltxml=true)` → `babel.sty_raw_loaded = 1`
-- Reads check the appropriate flag(s):
-  - "Was the binding loaded?" → `<filename>_loaded`
-  - "Was the raw file loaded?" → `<filename>_raw_loaded`
-  - "Either?" → check both (`state::load_recorded`; `binding_loaded`, `raw_loaded`)
-  - "Is the package loaded, as `\@ifpackageloaded` asks?" → `\ver@<file>` (`state::file_loaded`), not the
-    records (#1015)
-
-**Rationale:** Perl's two-key scheme leaks the `.ltxml` filesystem suffix
-into the API. In Rust, bindings are compile-time modules with no `.ltxml`
-filename, so the Perl convention is meaningless and confusing. The
-`_loaded` rename simplifies the Rust API. The `_raw_loaded` key preserves
-the binding-vs-raw distinction needed for correctness (e.g., when a binding
-replaces a raw file, we should not double-load the raw file when something
-later `\input <name>.sty`s).
-
-**Migration:** Sites that check `<name>.ltxml_loaded` migrate to
-`<name>_loaded`. Sites that check whether the *raw* file was loaded use
-`<name>_raw_loaded`.
+**Rule.** A binding load sets `<file>_loaded` and `<file>.ltxml_loaded`, as Perl's `loadLTXML` does (Package.pm:2332-2333;
+`latexml_core/src/binding/content.rs:1100`, :1108); a raw `.sty`/`.cls`/`.def` read sets `<file>_raw_loaded`
+(content.rs:3062), where Perl's `loadTeXDefinitions` sets `<file>_loaded` (Package.pm:2363-2364). The split lets a
+binding raw-load its own same-named file after its flag is set (`babel_sty.rs` → raw `babel.sty`, `cite_sty.rs` → raw
+`cite.sty`).
+- **The gate keys on the path taken** (`already_handled`, content.rs:583): `noltxml` (raw only) reads `_raw_loaded`,
+  `notex` (binding only) `_loaded` or `_load_attempted`, the default either. `_load_attempted` (Rust-only) marks a
+  request no file answered, so a miss is not retried and `_loaded` stays reserved for a binding that loaded.
+  `_load_binding` keeps a binding-only gate (`_loaded` alone, content.rs:1665-1668, as `loadLTXML`, Package.pm:2328-2330:
+  a raw read does not stop the binding); the raw search gates on `_raw_loaded` (content.rs:1364, :3058), and on
+  `_loaded` too where the request's fallback binding just loaded (:1361, as `FindFile`'s `if/elsif` returns, Package.pm:2135-2141:
+  `caption2` → `caption.sty.ltxml` reads no raw `caption2.sty`).
+- **On a read error the flag stays set.** Perl sets `_loaded` before reading (Package.pm:2332, :2364) and keeps it
+  when the read fails, so a later request skips; whether the read succeeded is its return value, not a flag. Ours: a
+  raw read sets `_raw_loaded` before reading (content.rs:3062), a binding `_loaded` when its body returns, an `Err`
+  included (:1749), with the in-progress set (:1686) ending a re-entrant request as Perl's early flag does. The
+  Rust-only `_found_loaded` is gone.
+- **`<file>_loaded_with_options`** (Perl Package.pm:2586, :2629) keeps the options a file was loaded with (set at
+  content.rs:928), read by the option-clash Info (:550) and a repeated load (:747).
+- **Readers:** "binding loaded?" `state::binding_loaded`, "raw read?" `state::raw_loaded` (state.rs:3953), "either?"
+  `state::load_recorded`; "is the package loaded", as `\@ifpackageloaded` asks, reads `\ver@<file>`
+  (`state::file_loaded`, #1015), not the flags.
+- **Dumps:** `dump_reader.rs:358` `SKIP_VALUE_CONTAINS = ["_loaded"]` keeps every load flag out of the state a dump
+  loads (a dumped `loadhyph-*.tex_loaded` skipped babel's later reads); a sanctioned exception to the unconditional
+  dump apply, recorded in #449.
 
 ### 24. Graphics Content-Hash Deduplication
 
@@ -408,67 +358,23 @@ Implementation completed 2026-04-26 (commits `1eb66c75c`, `de21ae928`,
 `01df250c6`). See `docs/archive/BABEL_TIMEOUT_BISECT.md` for the triggering
 investigation.
 
-#### Package-load flag machinery (`_loaded` / `_raw_loaded` / `_found_loaded`)
+#### Package-load flags
 
-*(Cross-refs #23. This block sits under #25 for historical reasons but is about
-the load-flag scheme.)*
+*(moved to #23, which states the live scheme: `_loaded`, `.ltxml_loaded`, `_raw_loaded`, `_load_attempted`, `_loaded_with_options`, the path-aware gate (`de21ae928`), the flag kept on a read error, and the dump skip list of #449; the Rust-only `_found_loaded` is gone.)*
 
-- **Path-aware gating** (`binding/content.rs` `already_handled`, commit
-  `de21ae928`): a binding `<file>.rs` may `InputDefinitions(noltxml=>1)` its
-  same-named raw `.sty/.cls` *after* its own `_loaded` is set (e.g. `babel_sty.rs`
-  → raw `babel.sty`). The gate therefore keys on the path taken — `noltxml`
-  (raw-only) → check only `_raw_loaded`; `notex` (binding-only) → only `_loaded`;
-  default → either. The step-4 raw-search gate checks only the raw flag;
-  `_load_binding` keeps a binding-only `_loaded` gate (mirrors Perl `loadLTXML`,
-  Package.pm L2311).
-- **Reader semantics** (commit `01df250c6`): user-level "is X loaded?" queries
-  (`\@ifpackageloaded`, soul/cleveref probes) consult EITHER flag.
-- **Perl error semantics:** Perl sets `_loaded` *before* reading (persists on read
-  error → later calls early-skip); "did it succeed" is answered by the return
-  value, not a flag. Rust mirrors this. The Rust-only `_found_loaded` flag (a
-  redundant "actually succeeded" marker with no Perl equivalent) is slated for
-  removal — audit its ~6 read sites to `_loaded` / `_raw_loaded` / an explicit
-  `Result` check, leaving exactly `_loaded`, `_raw_loaded`, `_loaded_with_options`.
-- **Dump skip-list:** Perl dumps emit all `_loaded` flags verbatim (both raw
-  `expl3.ltx_loaded` and binding `expl3.ltx.ltxml_loaded`). Rust's
-  `dump_reader::SKIP_VALUE_CONTAINS = ["_loaded"]` is a workaround — a dump-loaded
-  `_loaded` wrongly short-circuits later `\input`s (e.g. babel hyphenation
-  registers). `LoadFormat` exclusivity has landed and the list is still applied: it is a sanctioned
-  exception to the unconditional dump apply, recorded in #449, with its removal trial queued.
+### 26. `mdframed` frames through `insert_block`: a `logical-block` in flow, the inline variant inside a float (ar5iv-bindings: `inline-block`)
 
-### 26. `mdframed` Uses `inline-logical-block`, Not `inline-block`
-
-**Decision:** `\begin{mdframed}…\end{mdframed}` wraps body in
-`<ltx:inline-logical-block>` (Misc.class container that accepts
-Para.model body — theorem / proof / para), not `<ltx:inline-block>`
-(Misc.class but accepts Block.model only — rejects theorem).
-
-**Perl behavior:** `ar5iv-bindings/mdframed.sty.ltxml` uses
-`<ltx:inline-block framed="rectangle" …>`. A paper that wraps a
-theorem environment in mdframed (a common pattern for highlighting
-key results) hits a schema-rejection cascade:
-`"ltx:theorem" isn't allowed in <ltx:inline-block>`.
-
-**Rust behavior:** `latexml_contrib/src/mdframed_sty.rs` emits
-`<ltx:inline-logical-block framed='rectangle' …>`. Choosing
-`inline-logical-block` over the also-valid `logical-block` is
-deliberate:
-
-* `inline-logical-block` ∈ Misc.class (same membership as Perl's
-  `inline-block`) — accepted in every parent context where Perl's
-  choice fits, including inline contexts.
-* `logical-block` ∈ Para.class — REJECTED in inline contexts; would
-  break papers using `\fbox{\begin{mdframed}…}` or similar inline
-  wrappers.
-* Both candidates expose the same `Backgroundable.attributes`
-  surface (`framed`, `framecolor`, `backgroundcolor`).
-* `LaTeXML.css` sets `.ltx_inline-logical-block { display:
-  inline-block }` — identical CSS to `.ltx_inline-block`, so the
-  visual output is unchanged.
-
-**Witness:** arXiv:2506.03074v1 (ICML 2025 — multiple
-`\begin{mdframed}\begin{theorem}…\end{theorem}\end{mdframed}`
-blocks). 3 errors → 0. Tests 1328/0/0.
+**Rule.** The `{mdframed}` body is built in a capture block and inserted by `insert_block`
+(`latexml_contrib/src/mdframed_sty.rs:157-190`; `base_utilities/blocks.rs:282`, Perl's `insertBlock`,
+TeX_Box.pool.ltxml:449, the shape Perl's `framed.sty.ltxml:21-26` uses), which picks the container from the content
+and the context: `ltx:logical-block` in flow (a framed theorem, nested frames), `ltx:inline-logical-block` inside a
+float. Perl's tree has no mdframed binding; the ar5iv-bindings `mdframed.sty.ltxml` emits `<ltx:inline-block>`, whose
+Block.model refuses a theorem (`"ltx:theorem" isn't allowed in <ltx:inline-block>`).
+- Witnesses: 2506.03074 (theorems in mdframed, 3 errors → 0), 2402.07712, 1712.00062 (flow); 1907.05772 (in a float);
+  cnltx-example (a frame in a low-level list kept the outer list's items); biblatex-juradiss (a frame before
+  `\printbibliography`).
+- Guards: `perfect_kernel_batch56::mdframed_inside_low_level_list_keeps_items`,
+  `perfect_kernel_gemini::{mdframed_block_bibliography_juradiss, mdframed_in_float_and_nested}`.
 
 ### 27. An undecodable math slot is U+FFFD, and its symbol font says so once (Perl: an empty token, silently)
 
@@ -722,20 +628,7 @@ exactly that (witness 2110.10227). At top-level digestion (`fully_expand`)
 protected macros still expand, so normal `\href` behavior is unchanged.
 Pinned by `tests/58_href_edef_loop.rs`.
 
-### 31. natbib bibitem labels with text-encoding symbols are not force-expanded
-
-Perl's `\lx@NAT@parselabel` (natbib.sty.ltxml L564) unconditionally
-`Expand`s a "bare" bibitem label to locate the `(year)` paren. Rust skips the
-full expansion when the label carries text-encoding symbol commands
-(`\i`, `\j`, `\ss`, `\oe`, …) — under `[T1]{fontenc}` the kernel's
-`\@changed@cmd` dispatcher (`\T1-cmd \i \T1\i`) re-injects the CS through
-`\csname\cf@encoding\string#1\endcsname`, which loops under Rust's full
-expansion where Perl's happens to terminate (witness 2111.00584,
-`M{\'\i}guez`). The `(year)` is always a literal paren in natbib/BibTeX
-output, so the raw label suffices. This is a STOPGAP at the consumer level —
-the tracked root cause is the encoding-dispatcher expansion loop itself
-(SYNC_STATUS "natbib dispatcher" open item); the guard list should be deleted
-when that lands. Pinned by `tests/59_natbib_label_dotless_i.rs`.
+### 31. → KNOWN_PERL_ERRORS #252 (natbib expands a bare `\bibitem` label before splitting it; ours splits it unexpanded at its literal `(year)`, natbib_sty.rs:1530)
 
 ### 32. NUL's default catcode is 12 (OTHER) — Perl parity over TeXbook
 
@@ -758,68 +651,26 @@ no invalid XML and no libxml `CString` panic. Pinned by
 
 ### 35. → KNOWN_PERL_ERRORS #1251 (etoolbox `\robustify` is a no-op on native (closure) bindings)
 
-### 36. Author-list splitting protects balanced parentheses
+### 36. Author-list splitting protects balanced parentheses and a closed environment
 
-**Decision:** `SplitTokens` (`base_utilities/tokens.rs`, the author/frontmatter
-list splitter) does NOT match a delimiter (`,`, ` and `, `\and`, `\quad`, …)
-that sits inside balanced `(…)` parentheses — extending the brace `{…}` and
-math `$…$` protection it already has.
-
-**Rationale — what the heuristics assume, and why this is the safe level.**
-`\author{}` is free-form; LaTeX's only *designed* author separator is
-`\and`. To recover author lists from documents that didn't use it, LaTeXML
-heuristically also splits on `,`, the literal word ` and `, and `\quad`.
-Those tokens are **ambiguous**: the same `,` is an author separator in
-`Alice, Bob` and ordinary punctuation in an affiliation `MIT, Cambridge`.
-The *unambiguous* signal is syntactic **grouping**: content inside a balanced
-grouper is one unit and must never be split. Braces and math were already
-protected; parentheses are the remaining natural text grouper, so a
-parenthesized affiliation `(Scuola Normale Superiore, Pisa)` is now kept
-whole. The guard `paren_closes_ahead` means an *unbalanced* `(` is treated as
-an ordinary token (it must not greedily swallow a later `\\` name/affiliation
-separator). An unbraced environment, `\begin{name}...\end{name}`, is the other
-grouper (62zt): a `{center}` affiliation under the names (2609.01563, 17357) or a
-`{tabular}` holding `COSIC, KU Leuven` (2609.33831) was cut at its inner `and`, `,`
-or `\\`, its ends in different `\lx@personname`s (Perl errs alike); kept whole
-when the matching `\end{name}` follows (`environment_closes_ahead`) — an alignment
-environment (`center`, `flushleft`, `flushright`) wrapping the whole block or a whole
-`\and` group is unwrapped first (`unwrap_alignment_environment`), its lines split as
-written, so only an environment inside a piece is one unit. An affiliation list's cut by the
-kernel's `\and` by meaning (#48, `classify::affiliation_lines`) keeps the parentheses rule
-(`tokens::inside_balanced_parens`): beamer's `\inst{1}Univ A (North \and South) \and \inst{2}Univ B`
-is one entry (P6f2); the binding routes' cut (`split_at_kernel_separators`, #995) still cuts inside them. A superscript
-whose one-token argument is a separator (`Bob Baker\textsuperscript, Carl Cole`,
-2609.15009) is a split there, the superscript dropped. Guard
-`perfect_kernel_batch61::frontmatter_digest_cluster_2609`.
-
-**Perl behavior & scope.** Perl's `SplitTokens` (Base_Utility.pool.ltxml)
-protects braces/math but NOT parens, so it makes the same mistake — witness
-**arXiv 0804.0870**, where `\author{Alessio Martini\\(Scuola Normale
-Superiore, Pisa)\\…}` produced a spurious second `<personname>Pisa)`. So this
-is a **surpass-Perl** correction. It deliberately stops at the *unambiguous*
-case: bare (unparenthesized) commas/` and ` in an affiliation (`MIT,
-Cambridge`; `School of Arts and Sciences`) and `Lastname, Firstname` name
-order remain genuinely undecidable from the token stream alone — the same
-tokens read as either one comma-affiliation or two authors — so we keep
-Perl's recall-oriented over-split there rather than substitute a different
-wrong guess. Authors who want such an affiliation kept whole can group it in
-`{…}` or `(…)` (both now honoured).
-
-**Witnesses (real arXiv, both Perl-wrong):** 0804.0870 —
-`(Scuola Normale Superiore, Pisa)` (comma in parens) stays one affiliation;
-hep-ex0007011 — `(On behalf of the H1 and ZEUS collaborations)` (the literal
-` and ` separator in parens) stays one affiliation instead of splitting off a
-spurious `ZEUS collaborations)` author. So the protection covers *every*
-delimiter inside the group, not just commas. Suite 1465/0; verified
-balanced/nested parens protect, unbalanced parens do not regress the `\\`
-split.
-
-A delimiter also matches an alias of its own definition (Perl's `Equals`,
-Token.pm:321-327, compares catcode and name only): `\AND` `\let` to `\and`
-splits as `\and`. Only its own — a delimiter `\let` to another command matches
-itself alone, or an `\and` disabled to `\relax` by a `\maketitle` split a later
-`\author` at every `\relax` alias, `\protect` and a disabled `\thanks` (59e;
-guard `perfect_kernel_batch59::relax_aliases_do_not_split_a_late_author`).
+**Rule.** `split_tokens` (`latexml_engine/src/base_utilities/tokens.rs:96`, Perl's `SplitTokens`,
+Base_Utility.pool.ltxml) does not cut at a delimiter (`,`, ` and `, `\and`, `\quad`, …) inside balanced `(…)`
+(`paren_close_offset`, :39; an unbalanced `(` is an ordinary token, so it cannot swallow a later `\\`), as it already
+did not inside braces and math; nor inside an environment whose `\end{name}` follows (`environment_closes_ahead`,
+`frontmatter/classify/preprocess.rs:233`). **Perl** protects braces and math only, so `\author{Alessio Martini\\(Scuola
+Normale Superiore, Pisa)\\…}` gave a second `<personname>Pisa)`. The parentheses are the unambiguous signal; a bare
+comma or ` and ` in an affiliation (`MIT, Cambridge`) and `Lastname, Firstname` stay Perl's over-split.
+- A cut by meaning keeps the rule (`inside_balanced_parens`, tokens.rs:56): an affiliation list's cut at the kernel's
+  `\and` (`classify::affiliation_lines`, `classify/separators.rs:247`) leaves beamer's `\inst{1}Univ A (North \and
+  South)` one entry (#48). An alignment environment around the names' lines is read in the frontmatter pipeline
+  (`trailing_alignment_as_lines`, `observer/resolver/mod.rs:449`; #980).
+- A delimiter also matches an alias of its own definition (Perl's `Equals`, Token.pm:321-327, compares catcode and
+  name only): `\AND` `\let` to `\and` splits as `\and`; a delimiter `\let` to another command (an `\and` a
+  `\maketitle` disabled to `\relax`) matches itself alone (`delimiter_token_matches`, tokens.rs:77).
+- Witnesses: 0804.0870 (`(Scuola Normale Superiore, Pisa)`), hep-ex0007011 (`(On behalf of the H1 and ZEUS
+  collaborations)`), 2609.01563, 2609.17357, 2609.33831 (an environment), 2609.15009.
+- Guard: `perfect_kernel_batch61::frontmatter_digest_cluster_2609` (the alias guard
+  `perfect_kernel_batch59::relax_aliases_do_not_split_a_late_author` was deleted at DEL1; its shape is unguarded).
 
 ### 37. XSLT `f:seclev-aux` memoized to global variables (O(n²)→O(n), output-neutral)
 
@@ -3199,14 +3050,20 @@ announced, just not as the image's alternative — the warning names it as a
 possible cause, and acmart's own documentation puts `\Description` after the
 graphic.
 
-Choosing between the slots is why the argument is read **`Undigested`**
-(`ExpansionLevel::Off`): the tokens must be inspected for control sequences
-*before* anything expands. That also means nothing inside a `\Description` is
-ever expanded — matching `acmart.cls` L895, which gobbles the argument, so
-pdflatex never expands it either and an author cannot see a defect there.
-arXiv:2607.21760 went from `1 error` (an `Error:undefined:\D` on a copy-paste
-slip inside `\Description`) and **zero** figure descriptions, to **zero errors**
-and four descriptions in its HTML.
+The slot is chosen on the digested argument. The `\lx@acm@description` constructor (float_description.rs:131) digests
+both arguments, as Perl's `{}` (acmart.cls.ltxml:78) does, and its `before_construct` reverts the digested long
+description (`get_arg(2)`'s `revert()`, :215-227): a token other than a letter, an other character or a space in that
+reversion means markup, which `@alt` cannot hold. So `\def\foo{abc}` `\Description{\foo}` gives the image
+`@alt="abc"`, and `\Description{Complaint_Loss}`, whose `_` is digested as `\textunderscore`, its `aria-describedby`
+(probed on the QA76A base). `\Description[]{}` is a macro (acmart_cls.rs:235-237) that hands both arguments to
+`float_description_tokens` (`latexml_package/src/float_description.rs:53`), which builds the constructor's call with
+`_ ^ & #` outside math made the text commands for them (`description_text`, :9-30: acmart.cls:895 gobbles the
+argument, so authors leave `\Description{Complaint_Loss}` unescaped, 2502.07049). Read undigested, the block had
+printed its markup as raw TeX (`\sysname{}`, 2403.09168; 2401.04997, 2304.01062, 2312.11013). Digested, an undefined
+command inside a description is an Error, as in Perl: 2607.21760's `\D1 … \D5` (a copy-paste slip) gives
+`Error:undefined:\D`, an `<ltx:ERROR>` in the block and the image's `aria-describedby` (probed). **Open question for
+DG:** acmart.cls:895 discards the argument, so pdflatex never meets that undefined command; whether such an error stays
+an Error (Perl's and the code's today) or is reported lower is not ruled (KNOWN_PERL_ERRORS #66, point 2).
 
 Both descriptions are emitted as separate `ltx:note`s with their own `xml:id`
 and class (`ltx_acm_description_short` / `ltx_acm_description`) — two distinct
@@ -4413,7 +4270,7 @@ customization does not leak/error and the References populate).
 
 ### 118. → Bindings beyond Perl's tree: amsrefs.sty (`amsrefs_sty.rs`)
 
-### 119. → KNOWN_PERL_ERRORS #83 (first series) (`\verb` inside `\index{…}` renders as typewriter, not an empty `<verbatim/>`)
+### 119. → KNOWN_PERL_ERRORS #83 (`\verb` inside `\index{…}` renders as typewriter, not an empty `<verbatim/>`)
 
 ### 120. A `\label` on a `\nonumber` eqnarray row references the equation number
 
@@ -4833,59 +4690,22 @@ heuristic-2-before-3 reorder would benefit Perl `Pack.pm`).
 **Guards**: `main_tex::tests::bbl_sibling_outranks_pdf_include_marker` and
 `::reorder_preserves_common_name_when_multiple_bbl`.
 
-### 133. comment.sty detects `\end{comment}` mid-line, not only as a whole line
+### 133. comment.sty: a comment no whole `\end{name}` line closes is TeX's Error at the end of the file (Perl: the rest of the file dropped silently)
 
-**RETRACTED 2026-09-05** (user directive: match pdflatex). comment.sty:186-193
-compares each WHOLE line against `\end{name}` (`\ProcessCommentLine#1^^M{\def
-\test{#1}\csarg\ifx{End…Test}\test`) with every special made innocent, so a
-mid-line `…text.\end{comment}` is NOT an end: the comment runs to the end of
-the file and pdflatex aborts with "File ended while scanning use of \next" and
-no PDF — verified on the witness fixture `tests/cluster_regressions/
-comment_midline_end.tex` and on each edge shape (leading spaces, trailing `%`,
-text before or after: all abort; trailing spaces: end, TeX's line reader strips
-them). The claim below that pdflatex keeps the 31-entry bibliography was wrong.
-`comment_sty.rs` now ends only on such a line and reports TeX's error at EOF
-(Perl's `^\s*\end{name}\s*$` is looser on leading spaces). Guards:
-`00_tokenize::comment_test`, `06_cluster_bibliography::
-comment_midline_end_runs_to_eof_like_pdflatex`,
-`perfect_kernel_gemini::comment_self_terminating_hands_to_end`. Original text kept
-for the record:
-
-**Perl**: `comment.sty.ltxml`'s `defineExcluded` reads the body raw line-by-line
-and stops only at a line that is *entirely* the end marker — `/^\s*\Q\end{name}\E\s*$/`
-(L30). A comment whose closing sits at the end of a content line —
-`…text.\end{comment}` — never matches, so the raw-line scan runs to **end of
-file**, silently swallowing everything after the comment. The old Rust port
-matched Perl exactly (`line.trim() == end_mark`).
-
-**Rust**: match `\end{name}` **anywhere in a line** (allowing spaces between
-`\end` and `{`, i.e. `\end {name}`), mirroring the in-tree verbatim.sty
-`\verbatim@` scanner (`verbatim_sty.rs`), and drop the rest of that line (with an
-`Info:unexpected:stuff`). Crucially, the scan looks only at the **code part** of
-each line — an `\end` behind a `%` comment (`% […] \end{name}`) is NOT an end,
-because comment.sty reads its body with `%` active as a comment. `comment_sty.rs`.
-
-This surpasses Perl on a **SHARED-FAILURE**: both LaTeXML engines silently drop
-the content. Witness **arXiv:2606.11493** — a proof wrapped in
-`\begin{comment}…\(G(h_1)=0\).\end{comment}` swallowed the document's 31-`\bibitem`
-`thebibliography`, so the paper rendered with **0** bibliography entries and **no
-diagnostic** (R3b: silent bibliography loss); pdflatex compiles the same source
-with the full 31-entry bibliography, and after the fix Rust does too. (comment.sty
-itself is finicky about mid-line closings — reduced/synthetic cases can even
-`Runaway` in pdflatex — so this is not a byte-for-byte pdflatex port but the
-robust reading verbatim.sty already used, which recovers the real witness without
-regressing the tokenize `comment` fixture's `%`-guarded edge cases.)
-
-**Upstream**: not yet filed to `brucemiller/LaTeXML` (TODO — the same
-mid-line-end scan would benefit Perl `comment.sty.ltxml`).
-
-**Guard**: `06_cluster_bibliography::comment_midline_end_keeps_bibliography`.
-
-**Indented end lines (64d, user ruling 2026-10-09).** An end line indented by spaces or tabs ends the block, as Perl's
-`/^\s*\Q$endmark\E\s*$/` (comment.sty.ltxml:30) and LaTeX before 2024-11 (TAB not in `\dospecials`) did, where TL2025
-pdflatex runs on to the end of the file: the acmart papers indenting `\end{CCSXML}` by a TAB lost their whole body
-(2401.14656, 2405.12964, 2411.10188, 2501.06699, 2504.19287). Text before or after it on the line still does not end it.
-Guard `perfect_kernel_batch64::comment_indented_end_line`.
+**Rule.** A comment ends only on a line that is `\end{name}`, as comment.sty:186-193 compares each whole line
+(`\ProcessCommentLine`), trailing spaces stripped (tex.web §362); a line indented by spaces or tabs ends it too (user
+ruling 2026-10-09: Perl's `/^\s*\Q$endmark\E\s*$/`, comment.sty.ltxml:30, and LaTeX before 2024-11, which had no TAB
+in `\dospecials`). Text before or after `\end{name}` on its line does not end it, and a comment that runs to the end
+of the file is pdflatex's "File ended while scanning use of \next", an Error (`latexml_package/src/package/comment_sty.rs:39`,
+:50). **Perl** runs the raw-line scan to the end of the file with no diagnostic. (The mid-line detection this entry
+first recorded is retracted: pdflatex does not end a comment there.)
+- Witnesses: 2606.11493 (a mid-line `\end{comment}` swallows the bibliography in both engines and pdflatex aborts);
+  2401.14656, 2405.12964, 2411.10188, 2501.06699, 2504.19287 (a TAB-indented `\end{CCSXML}`).
+- Guards: `00_tokenize::comment_test`, `06_cluster_bibliography::comment_midline_end_runs_to_eof_like_pdflatex`,
+  `perfect_kernel_gemini::comment_self_terminating_hands_to_end`, `perfect_kernel_batch64::comment_indented_end_line`;
+  fixture `latexml_oxide/tests/cluster_regressions/comment_midline_end.tex`. The retracted rule's guard
+  `06_cluster_bibliography::comment_midline_end_keeps_bibliography` is retired: `comment_midline_end_runs_to_eof_like_pdflatex`
+  replaced it.
 
 ### 134. `--urlstyle` defaults to `file`, not Perl's `server`
 
@@ -5164,72 +4984,32 @@ convention or a break spacing attribute would let both engines carry it).
 
 ### 143. → KNOWN_PERL_ERRORS #1255 (The FIRST paragraph is `ltx_noindent` when `\parindent` is zero)
 
-### 144. Verbatim contexts keep `~`/`^` ASCII under T1 (the fontmap accent stays for normal text)
+### 144. T1/T2 slots 94 and 126 are ASCII `^`/`~`, and verbatim contexts read in the ASCII encoding (Perl: the accents U+02C6/U+02DC)
 
-**Background.** LaTeXML's `t1.fontmap` (and `t2a`/`t2b`/`t2c`) *deliberately* map slot 126 (`~`)
-to `U+02DC` SMALL TILDE and slot 94 (`^`) to `U+02C6` MODIFIER LETTER CIRCUMFLEX — Bruce Miller,
-commit `9ec6a4122` "Encodings (#2435)", 2024-11-20: "^ and ~ which should be accents". We KEEP
-that mapping. Those slots are reached only by a *literal catcode-12* `~`/`^`: in normal text `~`
-is active and `^` is superscript, and `\textasciitilde`/`\textasciicircum` emit ASCII U+007E/U+005E
-directly (not via the slot). The one place the slot is hit is a **verbatim** context — `\verb`,
-the `verbatim` environment, a `Verbatim`/`HyperVerbatim` argument (incl. `\href` and a Rhai
-binding's verbatim arg), and `\url`/`\path` — where the intent is the *literal* character, so a
-`.../~user` URL must stay ASCII (the reporter's Rhai `HyperVerbatim` URL came out `˜`).
-
-**Perl behavior**: a verbatim/URL `~`/`^` under T1 font-decodes through the fontmap to the accent
-glyphs `U+02DC`/`U+02C6` in the **displayed** text (SHARED-FAILURE — Perl does the same for `\verb`,
-`\url`, and a `HyperVerbatim`/`Verbatim` constructor argument alike). What always stayed ASCII was
-the href **attribute**: it is built by *reversion* of the catcode-12 tokens, which never touches
-the fontmap — so #723's "`\href`/Semiverbatim is fine" was about the attribute, NOT the display.
-(Verified same-host: Perl `\url{~a^b}` → `<ref … href="~a^b">˜aˆb</ref>`; a `DefConstructor('\x
-HyperVerbatim {}')` → the same `˜aˆb` display.)
-**Rust behavior**: every verbatim context now selects the identity `"ASCII"` fontmap for its run,
-so `~`/`^` (and `` ` ``/`'`) stay ASCII in the display too, while the fontmap itself is untouched —
-normal T1 text still follows Bruce. Four sites, all leaving the `typewriter` family intact (styling
-unchanged): `Verbatim`/`HyperVerbatim` add `MergeFont(encoding => "ASCII")` in `before_digest`
-(`base_parameter_types.rs`); `\verbatim@font` gains `\lx@fontencoding{ASCII}` (`latex_constructs/sect13.rs`,
-covers the `verbatim` environment); `\@internal@{text,math}@verb`'s `font` clause gains `encoding =>
-"ASCII"` (covers `\verb`); and `\UrlFont` (all `\urlstyle` variants) gains `\lx@fontencoding{ASCII}`
-(`url_sty.rs`, covers `\url`/`\path` — whose displayed text is a separately-digested `\UrlFont`-
-wrapped plain arg, so the reader's semiverbatim ASCII fontmap did not reach it). `\lx@fontencoding`
-merges only the encoding and `\selectfont` merges only family/series/shape, so the ASCII encoding
-survives the family switch. (The OmniBus and apacite `\doi` set their verbatim argument in the ASCII
-encoding the same way: `omnibus_cls.rs`, `apacite_sty.rs`.) The sites call the digest primitive `\lx@fontencoding` that `\fontencoding`
-stands for (Perl TeX_Fonts.pool.ltxml:169), never the public name, which a package may re-install as
-the kernel's checking command (latex.ltx:10490-10492; luatexja's lltjfont.sty:549-551/573-574), and
-which knows no `\T@ASCII`: qworld's 7 "Encoding scheme `ASCII' unknown" (59j; guard
-`perfect_kernel_batch59::url_font_survives_a_checking_fontencoding`).
-
-**Why**: verbatim wants the literal input character; the T1 slot's accent shape is right only for
-the accent-command contexts (a standalone `\^{}`/`\~{}`) that Bruce was protecting, which do not
-take the verbatim path. Scoping ASCII to verbatim reconciles both, and matches what pdflatex
-extracts (a verbatim `~`/`^` under T1 → ASCII U+007E/U+005E, verified via pdftotext and via the
-pdftex golden `ec.enc ∘ glyphtounicode.tex`).
-
-**Update (61c, #433)**: the T1/T2 fontmaps no longer keep Bruce's mapping — slots 94/126 decode as ASCII `^`/`~`, as
-t1enc.def:141-142 declares and pdflatex extracts in any context (Verbatim, listings, l3doc's `\cs`, `\string^`). A
-standalone `\^{}`/`\~{}` still prints ˆ/˜ (an accent command, never the slot), so the verbatim scoping above is now
-redundant for these encodings and stays for the others.
-
-**Fontmap drift tooling**: `tools/fontmap_drift.py` recomputes that pdftex golden for each shipped
-text encoding and fails on un-allowlisted drift. Slots 94/126 are allowlisted there **as Bruce's
-intentional accent choice** (with the `#2435` reason), documenting exactly why our fontmap differs
-from `glyphtounicode` — alongside slot 127 (line-break hyphen `U+2010`) and T2 slots 14/15
-(Cyrillic angle quotes `‹›`).
-
-**Witnesses**: issue #723 (reporter xworld21) — a Rhai `HyperVerbatim` URL argument under T1 whose
-`~` became `U+02DC`; the `\url`/`\path` follow-up came from Vincenzo's observation that "hyperref
-works fine" (the attribute) while a constructor's verbatim arg did not (the display). MWE:
-`\usepackage[T1]{fontenc}` + `\verb|a~b^c|` → `a~b^c`; `\url{http://g/~h^i}` → display `~h^i`.
-
-**Upstream**: worth filing against `brucemiller/LaTeXML` (verbatim/`\url` display loses ASCII there
-too, and Bruce can weigh the verbatim-vs-accent split).
-
-**Guards**: `06_cluster_regressions::cluster_t1_hyperverbatim_ascii_723` (the reported Rhai
-`HyperVerbatim` URL, ASCII, via a subprocess so the runtime binding loads);
-`cluster_t1_verbatim_ascii_723` (`\verb` + `verbatim` env + `\url`/`\path` stay ASCII AND keep
-`font="typewriter"`); `tools/fontmap_drift.py` (the fontmap values, with 94/126 allowlisted as
-Bruce's accents).
+**Rule.** The T1, T2A, T2B and T2C font maps decode slots 94 and 126 as ASCII `^` and `~`, as t1enc.def:141-142
+declares them and pdflatex extracts them in any context (Verbatim, listings, l3doc's `\cs`, `\string^`; verified with
+pdftotext and against the pdftex golden `ec.enc ∘ glyphtounicode.tex`; `latexml_package/src/package/t1_fontmap.rs:18`, :22;
+`t2a`/`t2b`/`t2c_fontmap.rs:31`, :39). **Perl** maps them to U+02C6/U+02DC (Bruce Miller, LaTeXML `9ec6a4122`
+"Encodings (#2435)", 2024-11-20: "^ and ~ which should be accents"), so a literal catcode-12 `~`/`^` under T1 — in
+`\verb`, `verbatim`, a `Verbatim`/`HyperVerbatim` argument, `\url`/`\path` — displays as the accent (Perl `\url{~a^b}`
+→ `href="~a^b">˜aˆb`). A standalone `\^{}`/`\~{}` still prints ˆ/˜: an accent command, never the slot.
+- **Verbatim contexts select the identity `ASCII` font map** for their run, keeping the `typewriter` family, so the
+  literal character survives in the other encodings too: `Verbatim`/`HyperVerbatim` merge `encoding => "ASCII"`
+  (`base_parameter_types.rs:1097`, :1175); `\verbatim@font` and `\@internal@{text,math}@verb` likewise; `\UrlFont`
+  (every `\urlstyle`) is `\lx@fontencoding{ASCII}…` (`url_sty.rs:39`, :43), as are OmniBus's and apacite's `\doi`. The
+  sites call the digest primitive `\lx@fontencoding` (Perl TeX_Fonts.pool.ltxml:169), not `\fontencoding`, which a
+  package may re-install as the kernel's checking command (latex.ltx:10490-10492; luatexja's lltjfont.sty:549-551),
+  which knows no `\T@ASCII` (qworld's 7 "Encoding scheme `ASCII' unknown").
+- **Stale tooling:** `tools/fontmap_drift.py:56-67` still allowlists the eight (t1/t2a/t2b/t2c, 94/126) slots "as
+  Bruce's accents"; they no longer drift from `glyphtounicode`, so the allowlist entries are dead. Its other entries
+  stand, LaTeXML choices shared with Perl: slot 127, the line-break hyphen, is U+2010 (distinct from slot 45's ASCII
+  U+002D; glyphtounicode maps both to U+002D), and T2 slots 14/15 the angle quotes ‹› U+2039/U+203A (glyphtounicode's
+  deprecated 〈〉 U+2329/U+232A).
+- Witnesses: issue #723 (a Rhai `HyperVerbatim` URL's `~` became U+02DC); `\usepackage[T1]{fontenc}` +
+  `\verb|a~b^c|` → `a~b^c`, `\url{http://g/~h^i}` → `~h^i`.
+- Guards: `06_cluster_regressions::{cluster_t1_hyperverbatim_ascii_723, cluster_t1_verbatim_ascii_723}`,
+  `perfect_kernel_batch59::url_font_survives_a_checking_fontencoding`, `tools/fontmap_drift.py`.
+- Upstream: worth filing against brucemiller/LaTeXML (#433's 61c change, the t1enc.def reading).
 
 ### 145. → Bindings beyond Perl's tree: nicematrix.sty (`nicematrix_sty.rs`)
 
@@ -6247,7 +6027,7 @@ gotham-user-cmds (101 strays), se2thesis (52), citation-style-language-doc
 directions: the l3 drift AND the `\@ifstar` re-emission that a naive
 no-adjust-everywhere breaks — cells.xml/graphrot goldens caught it).
 
-**Upstream**: Perl issue-worthy (KNOWN_PERL_ERRORS #81).
+**Upstream**: Perl issue-worthy (KNOWN_PERL_ERRORS #1276).
 
 ### 173. xkeyval key presets implemented (Perl stubs them)
 
@@ -6257,7 +6037,7 @@ no-adjust-everywhere breaks — cells.xml/graphrot goldens caught it).
 **Witnesses**: cntperchap_doc 6→3, cntperchap_example (TeX Live doc corpus).
 **Residual**: `\XKV@s@tkeys` passes the full `\XKV@fams` list rather than per-family `\XKV@tfam` inside the preset loop — a multi-family `\setkeys` whose preset key name exists in an earlier family could dispatch there (single-family callers unaffected).
 
-### 174. → KNOWN_PERL_ERRORS #83 (second series) (`\index` sort keys are brace-protected through the `\@indexphrase` re-parse (Perl truncates at `]`))
+### 174. → KNOWN_PERL_ERRORS #1278 (`\index` sort keys are brace-protected through the `\@indexphrase` re-parse (Perl truncates at `]`))
 
 ### 175. Unknown section types open the element of their `\@startsection` LEVEL (Perl warns and opens `ltx:section`)
 
@@ -7236,7 +7016,7 @@ sorts on the string `\AB`, it never typesets it.
 makeindex, `\input`); the kernel emulates that pipeline in one pass, and the
 catcodes of the re-read are the document's. Witness: manyind/mindsample
 (oracle pdflatex-clean) 3 → 0. Guards `index_entry_passes_undefined_words_inert`,
-`index_sort_key_undefined_word_is_text`; KNOWN_PERL_ERRORS #83 sibling. Batch 56bp.
+`index_sort_key_undefined_word_is_text`; KNOWN_PERL_ERRORS #1278 sibling. Batch 56bp.
 **Also (61m):** the write's two expansions are kept apart by origin. A control word the
 re-read forms from TYPED characters (`\@sanitize` made `\` other, imakeidx.sty:164-168) is
 written verbatim and runs only when the entry is typeset (`reread_sanitized_entry`, frozen
@@ -7772,17 +7552,18 @@ the finalization safety net that covers what it structurally cannot.
 the moved nodes carry no ink — an empty paragraph renders nothing, a `<pagination>`'s only
 HTML trace is the 2em gap of `.ltx_pagination.ltx_role_newpage`, which now falls below the
 title instead of above it (exactly #242's result); frontmatter and body keep their order. A
-leading node with visible ink (a logo `<graphics>`, a `<rule>`, text) is not content-free
-and blocks the pass, so a hand-typeset cover (toptesi-it's TeX-logo page) stays above the
-`<titlepage>` — invalid but faithful; the pass never reorders visible content. Streaming:
+leading node with visible ink (a logo `<graphics>`, a `<rule>`, text) is not content-free and
+this pass does not move it; where visible content before the title goes is #262's rule, and a
+`{titlepage}` built after it is a layout paragraph (#257: toptesi-it's TeX-logo cover stays
+above it, valid). Streaming:
 a spilled document top simply yields no leading run (no-op).
 **Witnesses**: gitinfo2, gitlog (3→0 rng-errors each); toptesi/FrontespizioScudo (3→0),
 toptesi-example-{sss,triennale,con-frontespizio} (1→0); toptesi-it unchanged (visible
 cover, correctly left).
 **Guard**: `perfect_kernel_batch56::{frontmatter_relocates_past_a_leading_empty_box_pagebreak,
-titlepage_relocates_past_a_leading_pagination, titlepage_stays_below_a_visible_leading_cover,
-pagebreak_before_a_leading_bibliography_stays_put,
-frontmatter_stays_below_a_leading_framed_empty_box}`.
+titlepage_relocates_past_a_leading_pagination, titlepage_stays_below_a_visible_leading_cover
+(which pins #257's demotion), pagebreak_before_a_leading_bibliography_stays_put}`
+(`frontmatter_stays_below_a_leading_framed_empty_box` is #262's `leading_framed_empty_box_stays_before_the_title`).
 **Superseded (mechanism)**: the placement logic now lives in #247's single `place_frontmatter` pass; the behavior and witnesses above are unchanged.
 **Upstream**: not filed.
 
@@ -7870,7 +7651,7 @@ late_abstract_after_maketitle_leaves_no_marker_and_wraps_nothing}`; fixture `str
 `\lx@frontmatter@fallback` places it at the top after `ltx:resource[last()]`; nothing else
 (`Base_Utility.pool.ltxml:824-944`). Whatever precedes the placement stays where it is.
 **Rust behavior**: `place_frontmatter(document, wrap_layout, anchor, on_stop)`
-(`base_utilities/defs/author_macros.rs`) runs at every placement point — `\lx@frontmatterhere`, both
+(`base_utilities/frontmatter/place.rs:1012`) runs at every placement point — `\lx@frontmatterhere`, both
 `\lx@frontmatter@fallback` branches, the `{titlepage}` environment's `after_construct` — and
 classifies the LEADING REGION (root children between the resources and the bound: the
 abstract's `ltx:_Frontmatter_Capture_` position marker when present, else everything built so
@@ -7898,7 +7679,10 @@ conservative title promotion (#246), `maybe_dedup_leading_title_ink` (#6924),
 on the `\maketitle` path — it would flip three fidelity controls
 (`frontmatter_does_not_hoist_above_a_leading_graphic`, `titlepage_stays_below_a_visible_leading_cover`,
 `frontmatter_stays_below_a_leading_framed_empty_box`) and cannot tell a genuine cover (9 docs)
-from a leaked command's argument text (8 docs).
+from a leaked command's argument text (8 docs). Settled since by #262, which states the live rule for visible content
+before the title (the first two controls are now `leading_graphic_stays_before_the_title` and
+`leading_framed_empty_box_stays_before_the_title`), and #257 (`titlepage_stays_below_a_visible_leading_cover` pins a
+stranded `{titlepage}`'s demotion to a layout paragraph).
 **Witnesses**: all 45 cataloged docs identical to s107 (rng counts and leading shapes) — the 56ep 14, 56es 6, 56et 16, P4 2, the fidelity/ERROR controls (toptesi-it 1→1, ltnews 1→1, l3news 1→1, pgf-spectraManual 8→8, oubraces 6→6, a4wide 4→4, eqnnumwarn 2→2, turnstile 3→3, lua-tikz3dtools 3→3); the only differences are 56et.1's marker-leak fix that s107 predates (forest-doc 4→3, lips 1→0). 22 targeted tests (14 guards + 5 fixtures + streaming eager≡streaming + title-ink dedup + class-abstract store); full suite 2993/2993; clippy + rustdoc clean.
 **Guard**: the 14 `perfect_kernel_batch56` frontmatter guards of #242/#245/#246 unchanged; fixtures
 `structure/{promote_center_title,faketitlepage,titlepage,svabstract,amsarticle}`;
@@ -8323,7 +8107,9 @@ LaTeX's flush points do (`\maketitle` opens with `\par`, article.cls:203; `\sect
 `\end{document}`) — never a frontmatter container: an open `{titlepage}` stays open for
 its `\unwind@titlepage` hook — and a `\maketitle` inside a `\parbox` leaves the box
 content in the box. (3) Body text the PDF prints before the title stays ahead of it (QA91, below).
-No content is dropped (content_diff.py and golden-PDF recall unchanged on all 59 witnesses). Supersedes the
+No content is dropped (content_diff.py and golden-PDF recall unchanged on all 59 witnesses). This is the one live rule for content before the
+title: #245's and #247's "never reorders visible content" controls are superseded here, and a `{titlepage}` stranded after
+body content is #257's layout paragraph (guard `titlepage_stays_below_a_visible_leading_cover`). Supersedes the
 56ep/56es "never hoist over visible content" controls and the degrade-to-`ltx:text`
 placement of a `\maketitle` in a box (now removed as unreachable); generalizes #258
 (error-marker-only paragraph). Witnesses: 55 of the 59 s112 frontmatter-first-error
@@ -11305,12 +11091,14 @@ natbib_bib_bibliography_prints_its_bibpreamble}`, `perfect_kernel_gemini::bibpre
 select `\encodingdefault` (latex.ltx:14113-14122). **Perl** keeps OT1 in both places (KNOWN_PERL_ERRORS #450).
 **Rust** (60r): the fontspec binding selects the format's TU (the luatex/xetex profiles' installation); under the
 pdfTeX persona it installs it, inputting tuenc.def's XeTeX branch with the XeTeX identity it probes (`\XeTeXrevision`;
-v2.2a: `\tex_Umathcode:D`, `\XeTeXversion`) defined for the input only, so the engine probes stay undefined after;
-`neutralize_font` uses `\encodingdefault`, expanded, and tags babel's `\latinencoding` (`neutralize_font_latin`);
-identifiers digested after it come from their source tokens (`\lx@tag@intags OptionalUndigested`, `type_name`,
-`\lxDeclare` keys). Guards `perfect_kernel_batch60::{fontspec_text_is_tu_encoded,
-fontspec_selects_tu_after_a_t1_fontenc, normalfont_note_keeps_the_text_encoding,
-normalfont_note_expands_the_encoding_default, identifiers_are_not_font_decoded}`.
+v2.2a: `\tex_Umathcode:D`, `\XeTeXversion`) defined for the input only, so the engine probes stay undefined after.
+`neutralize_font` (`base_utilities/fonts_defs.rs:70`) takes `\encodingdefault`, expanded, and the document's family,
+series and shape defaults (#779). LaTeXML's own English reference names (`\footnotetyperefname`…) are set in babel's
+`\latinencoding`, else OT1, by the TeX macro `\lx@latin@name` (`base_utilities/defs/tags_refnums.rs:269-272`;
+babel.sty:3915-3933), so a Greek region does not read them back as `φοοτνοτε`; identifiers digested after it come from
+their source tokens (`\lx@tag@intags OptionalUndigested`, `type_name`, `\lxDeclare` keys). Guards
+`perfect_kernel_batch60::{fontspec_text_is_tu_encoded, fontspec_selects_tu_after_a_t1_fontenc,
+normalfont_note_keeps_the_text_encoding, normalfont_note_expands_the_encoding_default, identifiers_are_not_font_decoded}`.
 
 ### 431. TeX ligatures follow the encoding's fonts; a listing's code forms none (Perl: cmr's set, OT1/T1 only)
 
@@ -13154,8 +12942,13 @@ of auto-opened `ltx:biblist`s left empty. No hook removes the node it closes (Do
 
 ### 508. AMS-TeX `\end` ends the document unless followed by `{`
 
-AMS-TeX's `\end` is `\lx@end@document` unless followed by `{`, a consequence of routing amsppt through LaTeX
-(amstex.tex). Witness 1008.3855 (4 entries written after `\end` are, as in TeX, not typeset).
+**Rule.** In an AMS-TeX document `\end` is `\lx@end@document`, except before a `{`, where it stays LaTeX's `\end{<env>}`
+(`latexml_engine/src/amstex.rs:193-208`). **Perl** reads an amsppt document plain, where `\end` is `\lx@end@document`
+(plain_constructs.pool.ltxml:284) and amsppt's `\enddocument` reaches it through `\plainend` (amsppt.sty:1090-1098); we
+read it through LaTeX (converter.rs `compile_route`), where a bare `\end` took what followed for an environment name (an
+`unexpected:\endgroup` Error per document: 1505.02369, 1901.01055, 2410.05768, math-ph9812020, q-alg9510020). The `{`
+exception keeps a LaTeX document that loads AMS-TeX working. Witness 1008.3855 (4 entries written after `\end` are, as
+in TeX, not typeset).
 
 ### 509. `\endabstract` is locked against redefinition from files (Perl: unlocked)
 
@@ -15046,15 +14839,7 @@ llncs_spothm_section_reset_v220_copy, llncs_autoref_envcountsame, llncs_autoref_
 llncs_alias_newcounter}`. Witnesses 2202.10090, 2601.04573 (`\@spothm`), 2412.05162 (`\let\c@case\relax` before
 `\spnewtheorem{case}[theorem]`), 2303.08726 (`\newcounter{case}` of the alias), 1612.00484.
 
-### 615. llncs: a paper's `\newtheorem{x}{X}[section]` prints "X 1.1", not the PDF's "X 11"
-
-llncs.cls:1058 `\edef\@thmcountersep{}` (`.` only under `envcountsect`, :1140) is the separator kernel `\newtheorem`'s
-`\@xnthm` puts between the section and the theorem number (latex.ltx `\@thmcountersep`), so outside `envcountsect`
-pdflatex prints a paper's own `\newtheorem{x}{X}[section]` (or `\spnewtheorem{x}{X}[section]{…}{…}`) as "X 11" for
-section 1's first. This binding keeps the kernel's `.`: "X 1.1", as Perl prints it. Main session ruling 2026-10-16:
-semantics over the PDF — "11" cannot be told from the eleventh, and a `\ref` to it reads as one. 5 of 374 sampled llncs
-papers with a main file are affected (68g round 1). Minimal trigger: `\documentclass{llncs}`
-`\newtheorem{x}{X}[section]` `\section{A}\begin{x}a\end{x}` — pdflatex "X 11 a", both engines "X 1.1".
+### 615. → KNOWN_PERL_ERRORS #1111 (llncs and svjour join a theorem's section number to its own with a period; ours uses the class's empty `\@thmcountersep`, "X 11" as pdflatex, llncs_cls.rs:478 — overriding the 2026-10-16 ruling for "X 1.1", an open question for DG recorded there)
 
 ### 616. An ORCID iD given as its orcid.org address is the iD (Perl: the contact holds the text as written)
 
@@ -17224,10 +17009,11 @@ an unclosed `\abstract{` the TOC ends the abstract as a `\section` does (sect05.
 members running as at any heading (the frontmatter fallback of a document without `\maketitle`, a bibliography's end).
 A raw class's own `\tableofcontents` replaces the kernel's, as before (memoir's and oblivoir's lists, which read
 a `.toc` LaTeXML never writes, are `\lx@kernel@listof` again: memoir_cls.rs, MEM1; the list's name is read
-`Undigested`, as Perl's literal `'toc'`, since a Greek font typeset it "τος": 0712.0401). The rule for a TOC differs from a `\section*`
-inside a balanced abstract, which document.rs's sectioning leniency still keeps in place without an Error (Perl errs
-there, `<ltx:section> isn't allowed in <ltx:abstract>`; a nested second one errs in both): the TOC follows the schema
-and Perl's own placement of an element its context refuses.
+`Undigested`, as Perl's literal `'toc'`, since a Greek font typeset it "τος": 0712.0401). A TOC inside a balanced abstract goes after it while the
+abstract's text after it stays the abstract's, where a `\section`/`\section*` there ends the abstract and starts the
+body with the text after it (#755, `\lx@heading@ends@frontmatter` at sect04.rs:202-205; the TOC's
+`\@startsection@hook` does not read it): the TOC follows the schema and Perl's own placement of an element its context
+refuses.
 **Why**: pdflatex prints the TOC inside the abstract's quotation (`\section*` in the `quotation` list), where the schema
 has no place for it; after the abstract keeps both whole and in order. Witnesses — a balanced abstract ending with
 `\tableofcontents{}` (LyX; amsart/article/revtex4): 1011.3976, 1310.0349, 1509.04736, 1404.7641, 0809.1270, 1509.03167,
@@ -17984,7 +17770,7 @@ duplicate, not handed on (`repeats_creator_names`; "Corresponding author: \@corr
 review probe `corr`); any other store an `ltx:pubnote` (Base_Utility.pool.ltxml:634, a note about the document),
 its `\and` between authors' blocks a line break, named by the label the title page prints before it with the space
 printed before the store kept as a tie (jfpc's `\@lannee`: `name="Actes JFPC~"`, "Actes JFPC 2015", :177, as
-acmart_cls.rs:178's `name={Price:~}`). 1503.05530 had lost its title, authors, institutions and e-mail. The same run (1) settles #6b (`settle_placed_stores`, `\lx@store@hand`): a handed store's
+acmart_cls.rs:218's `name={Price:~}`). 1503.05530 had lost its title, authors, institutions and e-mail. The same run (1) settles #6b (`settle_placed_stores`, `\lx@store@hand`): a handed store's
 setter called again after `\maketitle` only re-sets the store when run (1) printed the store (OD #154 addendum).
 
 **The deposit's unset stores** (77h/23b; `decide_unset_nulls`, `\lx@captured@stores`): a rerouted store the paper never
@@ -18014,7 +17800,7 @@ rerouted stores, `decide_unset_nulls`'s all-`\relax` and all-`\@empty` runs then
 `instructions:u` in 77i r3 — 1309.6905 +0.03%, 1503.05530 +0.07%, 1603.03011 +0.29%, the r3 review's run of 1603.03011
 +0.23%, 10.0017e9 → 10.0251e9 — and, over r3, +0.06% (1503.05530), +0.23% (1603.03011), +0.98% (1309.6905: its labelled keywords add the label and
 confirming runs) in 77i r4). **Residuals:** what the assignment journal does not undo — the raw-read paths list
-(`RAW_READ_PATHS`, content.rs:2166) and the pending field-provenance cover (`FIELD_COVER_PENDING`, token.rs:884) —, unlikely to
+(`RAW_READ_PATHS`, content.rs:2437) and the pending field-provenance cover (`FIELD_COVER_PENDING`, token.rs:919) —, unlikely to
 be reached by title-page code; a run whose assignments could not be undone (its groups changed) keeps the global
 assignments it made with sentinel values (a class's `\xdef\@x{\@store}` would carry "LxSentinel…zZ" into the document),
 and the walk then decides; a test of the value takes its branch with the sentinel's value, not the document's —
@@ -23546,7 +23332,9 @@ guards `perfect_kernel_batch92c::a_notes_item_prints_after_the_author_block` (B-
 `an_email_group_with_its_domain_after_the_brace` (B-3); `perfect_kernel_batchfms2a2r6::
 r6_llncs_shapes_are_written_whole` now in process and with the binary, eager and `--streaming` (S-4).
 
-### 924. Observer readings the aa/llncs promotion needed: a label glued to a symbol parted, a group's domain inside its braces, names spelled by their base letters, an unprinted share entry no hand mark requests, a note's spelled address a change (Perl: none of these readings)
+### 924. Observer readings of the aa/llncs blocks: a label glued to a symbol parted, a group's domain inside its braces, names spelled by their base letters, an unprinted share entry no hand mark requests, a note's spelled address a change (Perl: none of these readings)
+
+**Status (2026-11-15).** The reading code stands in the live observer → resolver → emitter pipeline (#980). The promotion they were written for — the shadow switch and the old writer, the "today's" below — was deleted at DEL1/DEL4, and with it the guards `a_label_glued_to_a_symbol_is_parted_and_written`, `an_email_group_with_its_domain_after_the_brace` and `an_email_group_is_written_out_to_its_spellers`; their repros remain in `tools/perfect_kernel/repros/`, unguarded. One entry per reading, stated against the live pipeline, is the frontmatter docs rewrite's (OD ruling 10).
 
 - **A label glued to a footnote symbol** in one written piece (`\inst{1*}` printing "1∗", `*2`) is the marks it
   prints, ruling 1, tagged `ruling1:parted` (`labels::glued_symbol_parts`, `lines.rs`'s Mark arm), so the writer may
@@ -23563,7 +23351,8 @@ r6_llncs_shapes_are_written_whole` now in process and with the binary, eager and
   #918's hand-mark request; the block's again, as the binding declares and 63i's guard pins (its aa twin
   `perfect_kernel_batch92c::aa_sole_institute_is_the_rows`). With several authors a later line of it printing
   addresses alone outside the class's e-mail calls is an e-mail line of the row, each address a contact placed as a
-  call's (`api::row_address_lines`), as today's row reads it (`shared_row::row_email_calls`, OD #901): 2506.20360's
+  call's (`api::row_address_lines`; the old `shared_row::row_email_calls`, OD #901, deleted in P27b, the emitter's entry
+  cut `classify/entry_emails.rs` `entry_email_cut` since): 2506.20360's
   `\email{guolianglv@sina.com};{chunhuazhu@sina.cn}` had the second address in the institute's text, which then
   differed from today's.
 - **An e-mail call's text is what it prints** (`events::raw_lines`): an `\href` in it its printed text, never its
@@ -23659,7 +23448,9 @@ sectioning-frontmatter/`author_block_marked_lines_joined_are_cut`, `author_block
 guards `perfect_kernel_batch93a::marked_lines_joined_today_are_cut_by_the_writer`,
 `a_legend_line_is_written_as_the_starred_names_note`.
 
-### 927. Observer readings the kernel family's promotion needed: a label several `\and` columns answer is each column's, a compound symbol mark is all its symbols', an author-order list agrees with the block's every spelled address, a trailing mark is a label only on a name (Perl: the old reader's)
+### 927. Observer readings of the kernel family's blocks: a label several `\and` columns answer is each column's, a compound symbol mark is all its symbols', an author-order list agrees with the block's every spelled address, a trailing mark is a label only on a name (Perl: none of these readings)
+
+**Status (2026-11-15).** The reading code stands in the live observer → resolver → emitter pipeline (#980). The promotion they were written for — the shadow switch and the old writer, the "today's" below — was deleted at DEL1/DEL4, and with it the guards `a_marked_email_print_goes_to_its_spellers`, `a_marked_email_print_takes_the_chain_over_its_carriers`, `a_raw_store_marked_line_runs_on_until_the_next_mark`, `a_marked_email_prints_unspelled_address_is_every_carriers`, `a_marked_email_print_is_spelled_against_every_author` and `a_blocks_entries_are_written_in_print_order` (and `apply::place`); their repros remain in `tools/perfect_kernel/repros/`, unguarded. One entry per reading, stated against the live pipeline, is the frontmatter docs rewrite's (OD ruling 10).
 
 Each was the old reader's reading already (its guards pin the XML); the reading differed, and the kernel family written
 would have printed it.

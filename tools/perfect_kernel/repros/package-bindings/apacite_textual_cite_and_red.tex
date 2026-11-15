@@ -1,0 +1,19 @@
+% mechanism: apacite.sty:352 (`\@citeA`) and :411 (`\@citeauthor`) set `\@BBA` to `\BBAB` ("and") for a textual cite,
+%   :315 (`\@cite`) and :428 (`\@citeauthorNP`) to `\BBAA` ("\&"); the label's `\BBA` follows the form. The binding
+%   digests the label's `\BBA` once, as "\&", for every form.
+% witness: synthetic (found with apacite_full_cites, upstream brucemiller/LaTeXML#711)
+% oracle:  pdflatex 0 errors: "A Smith and Jones (2001). B Smith and Jones. C (Smith & Jones, 2001)."
+% engines: rust base (origin/main 75531ffc9d6) and QA76A "A Smith & Jones (2001). B Smith & Jones. C (Smith & Jones,
+%          2001)."; Perl 0.8.8 has no apacite binding (2 errors)
+% expect:  0 errors, 0 warnings; "and" in the textual forms A, B
+% status:  RED (QA76A)
+% moves:   post-merge
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{apacite}
+\begin{document}
+A \citeA{a}. B \citeauthor{a}. C \cite{a}.
+\begin{thebibliography}{9}
+\bibitem[\protect\citeauthoryear{Smith\ \BBA{} Jones}{Smith\ \BBA{} Jones}{2001}]{a} Smith, J., \& Jones, K. (2001). Title.
+\end{thebibliography}
+\end{document}

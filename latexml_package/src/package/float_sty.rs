@@ -195,7 +195,7 @@ pub fn define_float_environment(ftype: &str, auxext: &str, within: &str) -> Resu
 }
 
 fn create_float_env(name: &str, class: &str, style: &str) -> Result<()> {
-  use crate::engine::latex_constructs::{after_float, before_float_ex, reset_float_box};
+  use crate::engine::latex_constructs::{after_float, before_xfloat};
 
   let class_val = class.to_string();
   // Extract the base type for before_float (remove trailing *)
@@ -270,8 +270,7 @@ fn create_float_env(name: &str, class: &str, style: &str) -> Result<()> {
   // before_digest: beforeFloat($type [, double => 1])
   let bt = base_type;
   let before_closure: BeforeDigestClosure = Rc::new(move || {
-    before_float_ex(&bt, None, is_double)?;
-    reset_float_box()?;
+    before_xfloat(&bt, is_double)?;
     Ok(Vec::new())
   });
   options.before_digest.push(before_closure);
