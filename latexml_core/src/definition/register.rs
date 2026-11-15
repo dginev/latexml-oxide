@@ -493,8 +493,9 @@ impl PartialEq for RegisterType {
 
 /// looks up a stored value from the state frame (at a constant key, or key based on the arguments)
 pub type RegisterGetterClosure = Rc<dyn Fn(Vec<ArgWrap>) -> Option<RegisterValue>>;
-/// sets a register value in the state::frame
-pub type RegisterSetterClosure = Rc<dyn Fn(RegisterValue, Option<Scope>, Vec<ArgWrap>)>;
+/// sets a register value in the state::frame; may die, as Perl's `&$setter` (Register.pm:66)
+pub type RegisterSetterClosure =
+  Rc<dyn Fn(RegisterValue, Option<Scope>, Vec<ArgWrap>) -> Result<()>>;
 
 /// A struct representing a TeX register
 #[derive(Clone)]
@@ -595,7 +596,12 @@ impl Definition for Register {
   fn get_cs_name(&self) -> Cow<'_, str> { Cow::Owned(self.cs.with_cs_name(ToString::to_string)) }
   fn get_alias(&self) -> Option<&String> { None }
 
-  fn set_value(&self, value: RegisterValue, scope: Option<Scope>, args: Vec<ArgWrap>) {
+  fn set_value(
+    &self,
+    value: RegisterValue,
+    scope: Option<Scope>,
+    args: Vec<ArgWrap>,
+  ) -> Result<()> {
     // A dimen register holds a dimension, a skip register a glue: "When a
     // glue_val changes to a dimen_val, we use the width component" (tex.web
     // §429). calc's `\setlength` is `\calc@assign@skip` (calc.sty:86), so it
@@ -616,13 +622,9 @@ impl Definition for Register {
       let message = self
         .cs
         .with_cs_name(|cs_str| s!("Can't assign to chardef {}", cs_str));
-      let err = || {
-        Error!("unexpected", "chardef", message);
-        Ok(())
-      };
-      err().ok();
+      Error!("unexpected", "chardef", message);
     } else if let Some(setter) = &self.setter {
-      setter(value, scope, args);
+      setter(value, scope, args)?;
     } else {
       // default setter
       if self.readonly {
@@ -642,6 +644,7 @@ impl Definition for Register {
         state::assign_value_sym(loc, value, scope);
       }
     }
+    Ok(())
   }
   // No before/after daemons ???
   // (other than afterassign)
@@ -785,7 +788,7 @@ impl Definition for Register {
     }
     let value = gullet::read_value(self.register_type().unwrap())?;
 
-    self.set_value(value, None, args);
+    self.set_value(value, None, args)?;
 
     state::after_assignment()?;
     // # Tracing ?

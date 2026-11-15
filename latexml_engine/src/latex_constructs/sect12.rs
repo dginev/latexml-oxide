@@ -115,7 +115,7 @@ fn assign_braced_length(target: Tokens, length: Tokens, add: bool) -> Result<()>
   if let Some((defn, params, value)) = assignment {
     if add {
       let oldlength = defn.value_of(params.clone()).unwrap_or_default();
-      defn.set_value(oldlength.add(value), None, params);
+      defn.set_value(oldlength.add(value), None, params)?;
     } else {
       // What it states, for a float's width read through the register (the panel grid rule, `note_setlength`).
       if params.is_empty() {
@@ -125,7 +125,7 @@ fn assign_braced_length(target: Tokens, length: Tokens, add: bool) -> Result<()>
           value.clone().value_of(),
         );
       }
-      defn.set_value(value, None, params);
+      defn.set_value(value, None, params)?;
     }
   }
   unread_vec(tail);

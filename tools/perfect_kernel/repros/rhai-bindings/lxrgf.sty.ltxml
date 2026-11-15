@@ -1,0 +1,5 @@
+# Perl stand-in for lxrgf.sty.rhai (the Perl run).
+package LaTeXML::Package::Pool;
+use LaTeXML::Package;
+DefRegister('\lxrgf', Dimension(0), getter => sub { Fatal('unexpected', 'Internal', undef, 'lxrgf gives up'); return Dimension('1pt'); });
+1;
