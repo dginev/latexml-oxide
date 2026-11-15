@@ -16,9 +16,9 @@ static THOUSANDS_SEP: Lazy<HashMap<&'static str, &'static str>> = Lazy::new(
   || static_map!("en" => ",", "de" => ".", "fr" => ".", "nl" => ".", "pt" => ".", "es" => "."),
 );
 
-/// How many times the thousands-separator rewrite is registered — one pass per
-/// separator in the longest number it can fully collapse. See the rule for why
-/// chains need repeated passes; 4 covers up to 10^15.
+/// How many passes the thousands-separator rewrite makes — one per separator in
+/// the longest number it can fully collapse. See the rule for why chains need
+/// repeated passes; 4 covers up to 10^15.
 const THOUSANDS_MERGE_PASSES: usize = 4;
 
 /// Selects the HEAD of a comma-grouped number: a `NUMBER` token immediately
@@ -892,14 +892,17 @@ LoadDefinitions!({
   // the US default resolves it this way, deliberately.
   //
   // Chains (`1,234,567`) need one pass per separator: the rewrite engine runs
-  // each rule exactly once over a match set computed up front, and merging the
-  // head would dangle the later matches, so the selector takes only chain HEADS
-  // and the rule is registered several times. Each extra pass is one XPath that
-  // matches nothing on the overwhelmingly common single-separator number.
+  // a rule once over a match set computed up front, and merging the head would
+  // dangle the later matches, so the selector takes only chain HEADS and the
+  // rule makes several passes. Only a merged token can become a new head (its
+  // neighbours' windows keep their tokens and text), so `passes` evaluates each
+  // later pass on the tokens the previous one inserted, not the whole document
+  // (book790: the four whole-document passes were 2.82 s of its 4.37 s of rewrites).
   // THOUSANDS_MERGE_PASSES = 4 covers up to 10^15.
-  for _pass in 0..THOUSANDS_MERGE_PASSES {
+  {
     DefRewrite!(select => THOUSANDS_SELECT_XPATH,
     select_count => 3,
+    passes => { Some(THOUSANDS_MERGE_PASSES) },
     replace => sub[document, nodes] {
       // `nodes` is [NUMBER, PUNCT ",", NUMBER] — already detached and
       // id-unrecorded by the rewrite engine; we insert ONE token in their place.

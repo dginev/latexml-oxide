@@ -2474,8 +2474,8 @@ fn load_latexml_file(path: &str) -> Result<()> {
       RewritePattern::String(String::new()),
     ));
 
-    let rewrite = Rewrite {
-      options: RewriteOptions {
+    let rewrite = Rewrite::from_clauses(
+      RewriteOptions {
         attributes_map: Some(attrs),
         is_math: true,
         select_count,
@@ -2484,7 +2484,7 @@ fn load_latexml_file(path: &str) -> Result<()> {
         ..RewriteOptions::default()
       },
       clauses,
-    };
+    );
 
     state::push_value("DOCUMENT_REWRITE_RULES", rewrite)?;
   }
