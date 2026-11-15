@@ -19816,3 +19816,17 @@ Proof", and an undefined-macro error for every `\example`. Minimal trigger (pdft
 error, title "\examplename Example 3"): `\input amstex \documentstyle{amsppt} \document \example{Example 3} An example.
 \endexample \enddocument`. Rust titles each block with its argument (amsppt_sty.rs; repro
 amstex/amsppt_theorem_kinds_share_the_counter, guard `perfect_kernel_batchamsppt::amsppt_heads_and_theorems`).
+
+## 1270. amsppt's `\roster` drops every item, silently
+
+Perl's amsppt.sty.ltxml:243-250 builds `\roster DigestUntil:\endroster` with the template `<ltx:enumerate>#body</ltx:enumerate>`,
+but a `DigestUntil` constructor's body is its argument `#1`; `#body` is never set, so every roster is an empty `<enumerate/>`
+(0 errors, 0 warnings). Its `\roster@item` tests `?#1` with no argument, so no item would be tagged; `\item"(b)"` and `\item[5]`
+are not read (amsppt.sty:723-736: the label prints, the count is set), `\runinitem` (amsppt.sty:705-718) is undefined, and the
+roster's id is stepped in `properties`, after its items took theirs. Minimal trigger (pdftex: "(1) Plain item. (b) Labelled
+item."; Perl: `<enumerate/>`): `\input amstex \documentstyle{amsppt} \document \roster \item Plain item. \item"(b)" Labelled item.
+\endroster \enddocument`. Rust digests into `#1`, reads `\item` as amsppt.sty's `\rosteritem@` does into an item tagged
+`\therosteritem{n}` or `{\rm label}`, steps the roster's id at `\roster` and gives a nested roster's outer item ids back at its
+end. Witness alg-geom9502009 (45 rosters); repros amstex/{amsppt_roster_keeps_its_items, amsppt_roster_nested,
+amsppt_roster_runinitem, amsppt_roster_runinitem_stray}; guard `perfect_kernel_batchamsppt::amsppt_heads_and_theorems`.
+Upstream: to offer.

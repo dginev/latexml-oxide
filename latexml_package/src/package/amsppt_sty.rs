@@ -405,13 +405,50 @@ LoadDefinitions!({
   NewCounter!("roster", "document", idprefix => "I");
   NewCounter!("rosteritem", "roster", idprefix => "i");
   DefMacro!("\\therosteritem{}", "\\rom{(#1)}");
-  // (`#body` is never set for a DigestUntil constructor: every item is lost, as in Perl; RED amstex/amsppt_roster_items_red)
+  // amsppt.sty:704-736: `\item[n]` sets the count, `\item"label"` prints `{\rm label}`, a bare `\item` steps the
+  // count; the label is the item's tag (amsppt's `\itembox@`).
+  RawTeX!(r###"\newcount\rostercount@
+\def\roster@item{\FN@\rosteritem@}
+\def\rosteritem@{\DNii@[##1]{\rostercount@##1\relax\lx@amsppt@roster@item{\therosteritem{\number\rostercount@}}}%
+ \def\nextiii@"##1"{\lx@amsppt@roster@item{\rm##1}}%
+ \def\nextiv@{\advance\rostercount@\@ne\lx@amsppt@roster@item{\therosteritem{\number\rostercount@}}}%
+ \ifx\next[\let\next@\nextii@\else\ifx\next"\let\next@\nextiii@\else\let\next@\nextiv@\fi\fi\next@}"###);
+  // The digested body is `#1` (Perl's `#body` is never set for DigestUntil: KPE, every item lost; alg-geom9502009).
+  // The roster's id is stepped at `\roster`, before its items read it, and held for the properties after the body; a
+  // nested roster gives the outer's item ids back at its end.
   DefConstructor!("\\roster DigestUntil:\\endroster",
-    "<ltx:enumerate>#body</ltx:enumerate>",
+    "<ltx:enumerate xml:id='#id'>#1</ltx:enumerate>",
     bounded => true,
-    properties => sub[_args] { RefStepID!("roster") },
-    before_digest => { let_i(&T_CS!("\\item"), &T_CS!("\\roster@item"), Some(Scope::Local)); });
-  DefConstructor!("\\roster@item",
+    properties => sub[_args] {
+      match lookup_value("amsppt@roster@id") {
+        Some(id) => Ok(stored_map!("id" => id)),
+        None => RefStepID!("roster"), // a body that closed the roster's group early (math0309287's `{\item`)
+      }
+    },
+    after_digest => sub[_whatsit] {
+      if let Some(Stored::Int(items)) = lookup_value("amsppt@roster@outer@items") {
+        let_i(&T_CS!("\\@roster@ID"), &T_CS!("\\lx@amsppt@outer@roster@ID"), Some(Scope::Global));
+        assign_register("\\c@UNrosteritem", RegisterValue::Number(Number::new(items)), Some(Scope::Global), vec![])?;
+      }
+    },
+    before_digest => {
+      if lookup_value("amsppt@roster@id").is_some() {
+        let_i(&T_CS!("\\lx@amsppt@outer@roster@ID"), &T_CS!("\\@roster@ID"), Some(Scope::Local));
+        let items = lookup_number("\\c@UNrosteritem").unwrap_or_default().value_of();
+        assign_value("amsppt@roster@outer@items", Stored::Int(items), Some(Scope::Local));
+      }
+      if let Some(id) = RefStepID!("roster")?.get("id") {
+        assign_value("amsppt@roster@id", id.clone(), Some(Scope::Local));
+      }
+      assign_register("\\rostercount@", RegisterValue::Number(Number::new(0)), Some(Scope::Local), vec![])?;
+      let_i(&T_CS!("\\item"), &T_CS!("\\roster@item"), Some(Scope::Local));
+      // amsppt.sty:705-718: a `\runinitem` right after `\roster` is its first item (run in); elsewhere it is undefined.
+      match read_token()? {
+        Some(t) if t == T_CS!("\\runinitem") => unread_one(T_CS!("\\roster@item")),
+        Some(t) => unread_one(t),
+        None => {},
+      } });
+  DefConstructor!("\\lx@amsppt@roster@item{}",
     "<ltx:item xml:id='#id'>?#1(<ltx:tags><ltx:tag>#1</ltx:tag></ltx:tags>)",
     properties => sub[_args] { RefStepID!("rosteritem") });
   Let!("\\endroster", "\\relax");

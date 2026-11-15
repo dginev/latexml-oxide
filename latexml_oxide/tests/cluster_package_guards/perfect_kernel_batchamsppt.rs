@@ -1,7 +1,7 @@
 //! Red/green guards for batch AMSPPT: amsppt's heads and theorem-like blocks, ported from Perl amsppt.sty.ltxml:94-235.
 //! A head opens its unit and leaves it open for its body (the next head at its level or above, or the document's end,
 //! closes it); `\proclaim`, `\definition`, `\remark`, `\example` and `\demo` take their id from the one `theorem` counter.
-use super::perfect_kernel_batch57::assert_elements;
+use super::perfect_kernel_batch57::{assert_elements, assert_elements_with};
 
 const AR5IV: &str = "ar5iv.sty";
 
@@ -14,7 +14,9 @@ type Row = (
 /// Each repro converts once, 0 errors / 0 warnings; the unit holding its body and blocks is asserted whole. Rows: a
 /// `\proclaim` of two paragraphs in its section (math9201249); every head (`\head`, `\subhead`, `\subsubhead`,
 /// `\subheading{}`, `\specialhead`) holding its body and the lower units; the five block kinds numbered by one counter;
-/// `\Refs` as back matter after the open heads, and a `\specialhead References` heading the bibliography (math0304264).
+/// `\Refs` as back matter after the open heads, and a `\specialhead References` heading the bibliography (math0304264);
+/// `\roster` keeping its items, tagged as amsppt.sty:723-736 prints them (`\item`, `\item"(b)"`, `\item[5]`, the document's
+/// `\therosteritem`), nested in a `\proclaim`, and `\roster\runinitem` (alg-geom9502009).
 #[test]
 fn amsppt_heads_and_theorems() {
   let rows: &[Row] = &[
@@ -90,10 +92,46 @@ fn amsppt_heads_and_theorems() {
         ),
       ],
     ),
+    (
+      include_str!("../../../tools/perfect_kernel/repros/amstex/amsppt_roster_keeps_its_items.tex"),
+      &[(
+        "section",
+        "C0.Sx1",
+        r#"<section inlist="toc" xml:id="C0.Sx1"><title>1. Lists</title><para xml:id="C0.Sx1.p1"><enumerate xml:id="Ix1"><item xml:id="Ix1.ix1"><tags><tag>(1)</tag></tags><para xml:id="Ix1.ix1.p1"><p xml:id="Ix1.ix1.p1.1">Plain item.</p></para></item><item xml:id="Ix1.ix2"><tags><tag>(b)</tag></tags><para xml:id="Ix1.ix2.p1"><p xml:id="Ix1.ix2.p1.1">Labelled item.</p></para></item><item xml:id="Ix1.ix3"><tags><tag>(5)</tag></tags><para xml:id="Ix1.ix3.p1"><p xml:id="Ix1.ix3.p1.1">Set item.</p></para></item><item xml:id="Ix1.ix4"><tags><tag>(6)</tag></tags><para xml:id="Ix1.ix4.p1"><p xml:id="Ix1.ix4.p1.1">Next item.</p></para></item></enumerate><p xml:id="C0.Sx1.p1.1">After.</p><enumerate xml:id="Ix2"><item xml:id="Ix2.ix1"><tags><tag>(i)</tag></tags><para xml:id="Ix2.ix1.p1"><p xml:id="Ix2.ix1.p1.1">Roman one.</p></para></item><item xml:id="Ix2.ix2"><tags><tag>(ii)</tag></tags><para xml:id="Ix2.ix2.p1"><p xml:id="Ix2.ix2.p1.1">Roman two.</p></para></item></enumerate></para></section>"#,
+      )],
+    ),
+    (
+      include_str!("../../../tools/perfect_kernel/repros/amstex/amsppt_roster_nested.tex"),
+      &[(
+        "section",
+        "C0.Sx1",
+        r#"<section inlist="toc" xml:id="C0.Sx1"><title>1. Nested</title><theorem class="ltx_theorem_proclaim" xml:id="Thmx1"><title>Theorem 1</title><para xml:id="Thmx1.p1"><enumerate xml:id="Ix1"><item xml:id="Ix1.ix1"><tags><tag>(1)</tag></tags><para xml:id="Ix1.ix1.p1"><p xml:id="Ix1.ix1.p1.1">One.</p></para></item><item xml:id="Ix1.ix2"><tags><tag>(2)</tag></tags><para xml:id="Ix1.ix2.p1"><p xml:id="Ix1.ix2.p1.1">Two:</p><enumerate xml:id="Ix2"><item xml:id="Ix2.ix1"><tags><tag>(a)</tag></tags><para xml:id="Ix2.ix1.p1"><p xml:id="Ix2.ix1.p1.1">Inner one.</p></para></item><item xml:id="Ix2.ix2"><tags><tag>(1)</tag></tags><para xml:id="Ix2.ix2.p1"><p xml:id="Ix2.ix2.p1.1">Inner two.</p></para></item></enumerate></para></item></enumerate></para></theorem></section>"#,
+      )],
+    ),
+    (
+      include_str!("../../../tools/perfect_kernel/repros/amstex/amsppt_roster_runinitem.tex"),
+      &[(
+        "section",
+        "C0.Sx1",
+        r#"<section inlist="toc" xml:id="C0.Sx1"><title>1. Run-in</title><para xml:id="C0.Sx1.p1"><p xml:id="C0.Sx1.p1.1">Text</p><enumerate xml:id="Ix1"><item xml:id="Ix1.ix1"><tags><tag>(1)</tag></tags><para xml:id="Ix1.ix1.p1"><p xml:id="Ix1.ix1.p1.1">first,</p></para></item><item xml:id="Ix1.ix2"><tags><tag>(2)</tag></tags><para xml:id="Ix1.ix2.p1"><p xml:id="Ix1.ix2.p1.1">second,</p></para></item><item xml:id="Ix1.ix3"><tags><tag>(z)</tag></tags><para xml:id="Ix1.ix3.p1"><p xml:id="Ix1.ix3.p1.1">third.</p></para></item></enumerate><p xml:id="C0.Sx1.p1.2">After.</p></para></section>"#,
+      )],
+    ),
   ];
   for (tex, expected) in rows {
     let xml = assert_elements(tex, AR5IV, (0, 0), expected);
     // no paragraph is left at the document's level (whose ids would be `p1`, `p2`, …)
     assert!(!xml.contains(r#"xml:id="p1""#), "{xml}");
   }
+  // the error side of `\roster\runinitem`: elsewhere `\runinitem` is undefined, as in TeX (pdftex 1 `!`, Perl 1 Error)
+  assert_elements_with(
+    include_str!("../../../tools/perfect_kernel/repros/amstex/amsppt_roster_runinitem_stray.tex"),
+    AR5IV,
+    (1, 0),
+    &["undefined:\\runinitem"],
+    &[(
+      "section",
+      "C0.Sx1",
+      r#"<section inlist="toc" xml:id="C0.Sx1"><title>1. Stray</title><para xml:id="C0.Sx1.p1"><enumerate xml:id="Ix1"><item xml:id="Ix1.ix1"><tags><tag>(1)</tag></tags><para xml:id="Ix1.ix1.p1"><p xml:id="Ix1.ix1.p1.1">First, <ERROR class="undefined" xml:id="Ix1.ix1.p1.1.1">\runinitem</ERROR>second.</p></para></item></enumerate><p xml:id="C0.Sx1.p1.1">After.</p></para></section>"#,
+    )],
+  );
 }

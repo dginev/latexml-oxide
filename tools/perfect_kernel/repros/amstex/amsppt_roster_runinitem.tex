@@ -1,0 +1,14 @@
+% witness: synthetic (`\roster\runinitem`: 1 paper of the AMSPPT census); alg-geom9502009 for the roster itself
+% oracle:  pdftex (\input amstex, \documentstyle{amsppt}) this file: 0 errors; "Text (1) first, (2) second, (z) third. After."
+%          (the first item runs into the paragraph, amsppt.sty:708-718)
+% engines: Perl 0.8.8 = 1 error (undefined `\runinitem`), `<enumerate/>` empty: every item lost (amsppt.sty.ltxml:243's `#body`);
+%          rust 7dea7e597a1 = the same
+% expect:  0 errors, 0 warnings; "Text", then `<enumerate xml:id="Ix1">` with items tagged "(1)" (the `\runinitem` item, a list item
+%          here), "(2)", "(z)", then "After."
+% status:  RED (7dea7e597a1) -> GREEN (fix/amsppt-ids-sections; guard perfect_kernel_batchamsppt::amsppt_heads_and_theorems)
+\input amstex
+\documentstyle{amsppt}
+\document
+\head 1. Run-in\endhead
+Text \roster\runinitem first, \item second, \item"(z)" third.\endroster After.
+\enddocument
