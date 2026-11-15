@@ -4084,25 +4084,41 @@ fn resolve_xmkeys(
   document: &mut Document,
 ) -> std::result::Result<(), Box<dyn std::error::Error>> {
   // Resolve both _xmkey (from existing infrastructure) and _pxmkey (from parser)
-  for attr_name in &["_xmkey", "_pxmkey"] {
-    let refs = document.findnodes(
-      &format!("descendant::ltx:XMRef[@{}]", attr_name),
-      Some(mathnode),
-    );
-    for mut ref_node in refs {
+  for attr_name in ["_xmkey", "_pxmkey"] {
+    // One walk per key attribute: the refs are its `ltx:XMRef`s, a key's target the first non-XMRef carrying it in
+    // document order, as the per-ref `descendant::*[@KEY='key'][not(local-name()='XMRef')]` found it (nothing below
+    // adds or removes a key before the cleanup).
+    let keyed = document.findnodes(&format!("descendant::*[@{attr_name}]"), Some(mathnode));
+    let mut targets: HashMap<String, &Node> = HashMap::default();
+    for node in &keyed {
+      if node.get_name() != "XMRef"
+        && let Some(key) = node.get_attribute(attr_name)
+      {
+        targets.entry(key).or_insert(node);
+      }
+    }
+    for mut ref_node in keyed
+      .iter()
+      .filter(|node| get_node_qname(node) == pin!("ltx:XMRef"))
+      .cloned()
+    {
       let key = match ref_node.get_attribute(attr_name) {
         Some(k) => k,
         None => continue,
       };
-      // Find the element with matching key (non-XMRef)
+      // Find the element with matching key (non-XMRef); a key XPath cannot quote still errs as XPath.
       // Note: not(self::ltx:XMRef) may fail with namespace prefix in nested
       // predicates (XPath bug). Use local-name() check instead.
-      let xpath = format!(
-        "descendant::*[@{}='{}'][not(local-name()='XMRef')]",
-        attr_name, key
-      );
-      let targets = document.findnodes(&xpath, Some(mathnode));
-      if let Some(mut target) = targets.into_iter().next() {
+      let target = if key.contains('\'') {
+        let xpath = format!("descendant::*[@{attr_name}='{key}'][not(local-name()='XMRef')]");
+        document
+          .findnodes(&xpath, Some(mathnode))
+          .into_iter()
+          .next()
+      } else {
+        targets.get(&key).map(|node| (*node).clone())
+      };
+      if let Some(mut target) = target {
         // Ensure target has xml:id
         let target_id = if let Some(id) = target
           .get_attribute("xml:id")
@@ -4123,7 +4139,7 @@ fn resolve_xmkeys(
       let _ = ref_node.remove_attribute(attr_name);
     }
     // Clean up from non-ref elements
-    for mut node in document.findnodes(&format!("descendant::*[@{}]", attr_name), Some(mathnode)) {
+    for mut node in keyed {
       let _ = node.remove_attribute(attr_name);
     }
   }

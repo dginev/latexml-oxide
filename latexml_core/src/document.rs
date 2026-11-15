@@ -755,7 +755,12 @@ impl Document {
         None => return Vec::new(),
       },
     };
-    self.get_xpath().findnodes(xpath, Some(&node))
+    self.get_xpath();
+    let context = self.context.as_mut().expect("get_xpath made it");
+    match context.walk(&self.document, xpath, Some(&node)) {
+      Some(found) => found,
+      None => context.findnodes(xpath, Some(&node)),
+    }
   }
 
   /// Get an XPath context that knows about our namespace mappings.
@@ -791,7 +796,14 @@ impl Document {
 
   /// Like findnodes, but only returns the first matched node
   pub fn findnode(&mut self, xpath: &str, node: Option<&Node>) -> Option<Node> {
-    let mut nodes = self.get_xpath().findnodes(xpath, node);
+    self.get_xpath();
+    let context = self.context.as_mut().expect("get_xpath made it");
+    if let Some(node) = node
+      && let Some(first) = context.walk_first(&self.document, xpath, Some(node))
+    {
+      return first;
+    }
+    let mut nodes = context.findnodes(xpath, node);
     if nodes.is_empty() {
       None
     } else {

@@ -22,6 +22,7 @@ pub mod pair;
 pub mod relaxng;
 pub mod store;
 pub mod xml;
+pub mod xml_walk;
 
 use std::rc::Rc;
 
