@@ -915,7 +915,7 @@
 <a href=#915 id=915 data-nosnippet>915</a></span><span class="macro">macro_rules!</span> DefLigature {
 <a href=#916 id=916 data-nosnippet>916</a>  (<span class="macro-nonterminal">$regex</span>:expr_2021, <span class="macro-nonterminal">$replacement</span>:expr_2021, fontTest =&gt; sub[<span class="macro-nonterminal">$font</span>:ident] <span class="macro-nonterminal">$body</span>:block) =&gt; {
 <a href=#917 id=917 data-nosnippet>917</a>    <span class="kw">let </span>regex_compiled = Regex::new(<span class="macro-nonterminal">$regex</span>).unwrap();
-<a href=#918 id=918 data-nosnippet>918</a>    <span class="kw">let </span>test_closure: <span class="prelude-ty">Option</span>&lt;FontTestClosure&gt; = <span class="prelude-val">Some</span>(Rc::new(<span class="kw">move </span>|<span class="macro-nonterminal">$font</span>| <span class="macro-nonterminal">$body</span>));
+<a href=#918 id=918 data-nosnippet>918</a>    <span class="kw">let </span>test_closure: <span class="prelude-ty">Option</span>&lt;FontTestClosure&gt; = <span class="prelude-val">Some</span>(Rc::new(<span class="kw">move </span>|<span class="macro-nonterminal">$font</span>| <span class="prelude-val">Ok</span>(<span class="macro-nonterminal">$body</span>)));
 <a href=#919 id=919 data-nosnippet>919</a>    <span class="kw">let </span>new_ligature_id = generate_ligature_id();
 <a href=#920 id=920 data-nosnippet>920</a>    unshift_value(<span class="string">"TEXT_LIGATURES"</span>, <span class="macro">vec!</span>[Ligature {
 <a href=#921 id=921 data-nosnippet>921</a>      id:        new_ligature_id,

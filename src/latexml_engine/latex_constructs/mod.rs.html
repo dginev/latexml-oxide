@@ -4995,7 +4995,7 @@
 <a href=#4995 id=4995 data-nosnippet>4995</a>      } <span class="kw">else </span>{
 <a href=#4996 id=4996 data-nosnippet>4996</a>        Dimension::new(<span class="kw-2">*</span>value).into()
 <a href=#4997 id=4997 data-nosnippet>4997</a>      };
-<a href=#4998 id=4998 data-nosnippet>4998</a>      register.set_value(value, <span class="prelude-val">None</span>, Vec::new());
+<a href=#4998 id=4998 data-nosnippet>4998</a>      register.set_value(value, <span class="prelude-val">None</span>, Vec::new())<span class="question-mark">?</span>;
 <a href=#4999 id=4999 data-nosnippet>4999</a>    }
 <a href=#5000 id=5000 data-nosnippet>5000</a>    <span class="kw">let </span>(value, _tail) = read_braced(tokens.clone(), || <span class="kw">match </span>braced_length_evaluator() {
 <a href=#5001 id=5001 data-nosnippet>5001</a>      <span class="prelude-val">Some</span>(evaluate) =&gt; <span class="prelude-val">Ok</span>(evaluate(kind)<span class="question-mark">?</span>.value_of()),

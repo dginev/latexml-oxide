@@ -187,7 +187,7 @@
 <a href=#187 id=187 data-nosnippet>187</a>      <span class="comment">// Same parametrized-register guard as the getter: skip a no-arg write
 <a href=#188 id=188 data-nosnippet>188</a>      // rather than panic on `args.remove(0)`.
 <a href=#189 id=189 data-nosnippet>189</a>      </span><span class="kw">if </span>args.len() &lt; <span class="number">2 </span>{
-<a href=#190 id=190 data-nosnippet>190</a>        <span class="kw">return</span>;
+<a href=#190 id=190 data-nosnippet>190</a>        <span class="kw">return </span><span class="prelude-val">Ok</span>(());
 <a href=#191 id=191 data-nosnippet>191</a>      }
 <a href=#192 id=192 data-nosnippet>192</a>      <span class="kw">let </span>p = args.remove(<span class="number">0</span>).expect_number().value_of();
 <a href=#193 id=193 data-nosnippet>193</a>      <span class="kw">let </span>key = font_parameters_key(args.remove(<span class="number">0</span>).expected_token());
