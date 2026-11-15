@@ -206,7 +206,12 @@ impl WalkQuery {
     if include_self && self.matches(start) {
       out.push(start);
     }
-    if out.len() >= limit || start.get_type() != Some(NodeType::ElementNode) {
+    if out.len() >= limit
+      || !matches!(
+        start.get_type(),
+        Some(NodeType::ElementNode | NodeType::DocumentNode)
+      )
+    {
       return;
     }
     let mut cur = start.get_first_child();
@@ -522,6 +527,7 @@ mod tests {
     let root = doc.get_root_element().unwrap();
     let section = root.get_last_child().unwrap().get_prev_sibling().unwrap();
     let math = section.get_last_child().unwrap();
+    let doc_node = doc.as_node();
     for xpath in [
       "//*",
       "//ltx:document | //ltx:ref",
@@ -554,7 +560,7 @@ mod tests {
     ] {
       let query = WalkQuery::parse(xpath)
         .unwrap_or_else(|| panic!("`{xpath}` must be inside the walk grammar"));
-      for context in [None, Some(&section), Some(&math)] {
+      for context in [None, Some(&section), Some(&math), Some(&doc_node)] {
         let walked: Vec<String> = query
           .find(&doc, context)
           .expect("no DTD, an attached context")
