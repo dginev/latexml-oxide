@@ -1,0 +1,5 @@
+# Perl stand-in for lxlfn.sty.rhai (the Perl run).
+package LaTeXML::Package::Pool;
+use LaTeXML::Package;
+DefLigature(qr{qq}, 'Q', fontTest => sub { my ($font) = @_; Fatal('unexpected', 'Internal', undef, 'lxlfn gives up') if ($font->getSeries || '') eq 'bold'; return 1; });
+1;

@@ -1213,7 +1213,7 @@ fn empty_column_rewrite_accumulator() -> Result<()> {
       crate::definition::register::RegisterValue::Tokens(Tokens::default()),
       None,
       Vec::new(),
-    );
+    )?;
   }
   Ok(())
 }

@@ -4995,7 +4995,7 @@ fn evaluate_stated_length_at(
       } else {
         Dimension::new(*value).into()
       };
-      register.set_value(value, None, Vec::new());
+      register.set_value(value, None, Vec::new())?;
     }
     let (value, _tail) = read_braced(tokens.clone(), || match braced_length_evaluator() {
       Some(evaluate) => Ok(evaluate(kind)?.value_of()),

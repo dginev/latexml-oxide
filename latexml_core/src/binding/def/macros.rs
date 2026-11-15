@@ -247,12 +247,18 @@ macro_rules! getter {
 macro_rules! setter {
   ($value:ident, $args: ident, $body:block) => {
     Some(Rc::new(
-      move |$value: RegisterValue, _scope: Option<Scope>, mut $args: Vec<ArgWrap>| $body,
+      move |$value: RegisterValue, _scope: Option<Scope>, mut $args: Vec<ArgWrap>| {
+        $body;
+        Ok(())
+      },
     ))
   };
   ($value:ident, $scope:ident, $args: ident, $body:block) => {
     Some(Rc::new(
-      move |$value: RegisterValue, $scope: Option<Scope>, mut $args: Vec<ArgWrap>| $body,
+      move |$value: RegisterValue, $scope: Option<Scope>, mut $args: Vec<ArgWrap>| {
+        $body;
+        Ok(())
+      },
     ))
   };
 }
@@ -464,7 +470,7 @@ macro_rules! AssignRegister {
   ($cs:expr_2021, $value:expr_2021, $scope:expr_2021, $params:expr_2021) => {
     let cs = $crate::binding::def::macros::register_cs($cs);
     match $crate::state::lookup_register_definition(&cs) {
-      Some(defn) => $crate::definition::Definition::set_value(&*defn, $value, $scope, $params),
+      Some(defn) => $crate::definition::Definition::set_value(&*defn, $value, $scope, $params)?,
       None => $crate::state::warn_not_register(&cs),
     }
   };

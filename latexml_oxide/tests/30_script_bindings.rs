@@ -1624,14 +1624,17 @@ fn a_rewrite_scope_names_its_unit() {
 /// binding loads; and no `Warning:` beside it (Perl prints the one line). A Fatal a script CATCHES was printed at its
 /// raise; a later plain error stays its own contained `Error:script:` and the document carries on.
 /// (row name, the `.sty.rhai` files, the document body, the messages the `Fatal:` lines name, the contained
-/// `Error:script:` lines, a text the document keeps). A binding's top-level throw is its own Fatal, as Perl's
-/// `Fatal('die', …, "File … had an error")` (Package.pm:2338).
+/// `Error:script:` lines, the `Warning:` lines, a text the document keeps, a text it does not). A binding's top-level
+/// throw is its own Fatal, as Perl's `Fatal('die', …, "File … had an error")` (Package.pm:2338). A Fatal in a build
+/// hook (a `fontTest`) stops the build, which keeps the document built so far with its one Warning.
 type FatalRow<'a> = (
   &'a str,
   &'a [(&'a str, &'a str)],
   &'a str,
   &'a [&'a str],
   usize,
+  usize,
+  &'a str,
   &'a str,
 );
 
@@ -1648,6 +1651,8 @@ fn a_rhai_fatal_is_logged_once() {
       "Before \\wftopmacro\\ after.",
       &["Fatal:unexpected:Internal  wftop requires something"],
       0,
+      0,
+      "",
       "",
     ),
     (
@@ -1659,6 +1664,8 @@ fn a_rhai_fatal_is_logged_once() {
       "Before \\wftopmacro\\ after.",
       &["Fatal:unexpected:Internal  wfbody gives up"],
       0,
+      0,
+      "",
       "",
     ),
     (
@@ -1670,6 +1677,8 @@ fn a_rhai_fatal_is_logged_once() {
       "Body.",
       &["Too many errors (> 100)!"],
       0,
+      0,
+      "",
       "",
     ),
     (
@@ -1687,6 +1696,8 @@ fn a_rhai_fatal_is_logged_once() {
       "Before \\wftopmacro\\ after.",
       &["Fatal:unexpected:Internal  wfinner requires something"],
       0,
+      0,
+      "",
       "",
     ),
     (
@@ -1699,7 +1710,9 @@ fn a_rhai_fatal_is_logged_once() {
       "Before \\wfa\\ middle \\wfb\\ after.",
       &["Fatal:unexpected:Internal  wfa caught one"],
       1,
+      0,
       "Before A middle",
+      "",
     ),
     (
       "a caught Fatal, then a throw in an afterDigest hook",
@@ -1711,7 +1724,9 @@ fn a_rhai_fatal_is_logged_once() {
       "Before \\wfa\\ middle \\wfc\\ after.",
       &["Fatal:unexpected:Internal  wfa gives up"],
       1,
+      0,
       "Before A middle",
+      "",
     ),
     (
       "a caught Fatal, then a plain throw at a later binding's top level",
@@ -1729,11 +1744,65 @@ fn a_rhai_fatal_is_logged_once() {
         "script-binding run error: Runtime error: wfinner plain trouble",
       ],
       0,
+      0,
+      "",
+      "",
+    ),
+    (
+      "a ligature fontTest",
+      &[(
+        "wftop.sty.rhai",
+        r#"DefLigature("qq", "Q", #{ fontTest: |font| { Fatal("unexpected", "Internal", "wflig test gives up"); true } });"#,
+      )],
+      "Before qq after.\\par Second paragraph.",
+      &["Fatal:unexpected:Internal  wflig test gives up"],
+      0,
+      1,
+      "Before qq after.",
+      "Second",
+    ),
+    (
+      "a caught Fatal in a ligature fontTest",
+      &[(
+        "wftop.sty.rhai",
+        r#"DefLigature("qq", "Q", #{ fontTest: |font| { try { Fatal("unexpected", "Internal", "wflig caught one"); } catch (e) { } true } });"#,
+      )],
+      "Before qq after.\\par Second qq.",
+      &["Fatal:unexpected:Internal  wflig caught one"],
+      0,
+      0,
+      "Second Q.",
+      "",
+    ),
+    (
+      "a register setter",
+      &[(
+        "wftop.sty.rhai",
+        r#"DefRegister("\\wfreg", Dimension("0pt"), #{ setter: |value, scope| { Fatal("unexpected", "Internal", "wfset gives up"); } });"#,
+      )],
+      "Before \\wfreg=5pt after.",
+      &["Fatal:unexpected:Internal  wfset gives up"],
+      0,
+      0,
+      "",
+      "Before",
+    ),
+    (
+      "a caught Fatal in a register setter",
+      &[(
+        "wftop.sty.rhai",
+        r#"DefRegister("\\wfreg", Dimension("0pt"), #{ setter: |value, scope| { try { Fatal("unexpected", "Internal", "wfset caught one"); } catch (e) { } } });"#,
+      )],
+      "Before \\wfreg=5pt after.",
+      &["Fatal:unexpected:Internal  wfset caught one"],
+      0,
+      0,
+      "Before after.",
       "",
     ),
   ];
   let mut failures = Vec::new();
-  for (name, files, body, messages, want_contained, kept) in rows {
+  for (name, files, body, messages, want_contained, want_warnings, kept, gone) in rows {
     let tex = format!(
       "\\documentclass{{article}}\\usepackage{{wftop}}\\begin{{document}}{body}\\end{{document}}"
     );
@@ -1748,15 +1817,17 @@ fn a_rhai_fatal_is_logged_once() {
         .any(|(l, m)| !l.contains(m))
       || code != 3
       || contained != *want_contained
-      || warnings != 0
+      || warnings != *want_warnings
       || !xml.contains(kept)
+      || (!gone.is_empty() && xml.contains(gone))
     {
       failures.push(format!(
         "{name}: {} Fatal: lines (want those naming {messages:?}), status {code}, {contained} contained \
-         Error:script: lines (want {want_contained}), {warnings} Warning: lines (want 0), keeps {kept:?}: {}; \
-         fatals={fatals:#?}\n{log}",
+         Error:script: lines (want {want_contained}), {warnings} Warning: lines (want {want_warnings}), keeps \
+         {kept:?}: {}, drops {gone:?}: {}; fatals={fatals:#?}\n{xml}\n{log}",
         fatals.len(),
-        xml.contains(kept)
+        xml.contains(kept),
+        gone.is_empty() || !xml.contains(gone)
       ));
     }
   }

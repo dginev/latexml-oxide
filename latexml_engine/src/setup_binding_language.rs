@@ -915,7 +915,7 @@ macro_rules! Invocation {
 macro_rules! DefLigature {
   ($regex:expr_2021, $replacement:expr_2021, fontTest => sub[$font:ident] $body:block) => {
     let regex_compiled = Regex::new($regex).unwrap();
-    let test_closure: Option<FontTestClosure> = Some(Rc::new(move |$font| $body));
+    let test_closure: Option<FontTestClosure> = Some(Rc::new(move |$font| Ok($body)));
     let new_ligature_id = generate_ligature_id();
     unshift_value("TEXT_LIGATURES", vec![Ligature {
       id:        new_ligature_id,

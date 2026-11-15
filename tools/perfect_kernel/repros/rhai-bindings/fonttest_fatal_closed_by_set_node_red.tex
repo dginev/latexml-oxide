@@ -1,0 +1,18 @@
+% mechanism: a Rhai `Fatal()` raised in a `DefLigature` `fontTest` while `set_node` closes the open text (a `\footnote`
+%   entered right after bold text) is dropped: `latexml_core/src/document.rs` `set_node` discards
+%   `close_text_internal()`'s Result, so the whole document is still built. Without the footnote the text is closed by a
+%   path that propagates, and the build stops (RHFAT; OD #1028). Perl's `setNode` (Document.pm:74) runs
+%   `closeText_internal`, which dies there
+% witness: synthetic (revRHFAT `p/ligb1.tex`; the binding lxlfn.sty.rhai, lxlfn.sty.ltxml for Perl, lxlfn.sty for pdflatex)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors; Perl 0.8.8: 1 fatal error, no document written
+% engines: RHFAT: 1 fatal error, 0 warnings, the whole document built through "Second Q."
+% expect:  1 fatal error; the build stops at the bold text (as without the footnote: 1 warning)
+% status:  RED (RHFAT)
+% moves:   post-merge (set_node returns the Result, or re-raises a logged Fatal; with the getter's, one decision)
+\documentclass{article}
+\usepackage{lxlfn}
+\begin{document}
+Plain qq. {\bfseries Before qq\footnote{\mdseries Note qq.}} after qq.
+
+Second qq.
+\end{document}
