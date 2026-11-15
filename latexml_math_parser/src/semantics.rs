@@ -13,7 +13,7 @@ use marpa::{lexer::token::Token, stack::*, thin::Value, tree_builder::*};
 use rustc_hash::FxHashMap as HashMap;
 
 use self::tree::lookup_lex_node;
-pub use self::tree::{Args, Operator, XM, XProps};
+pub use self::tree::{Args, Operator, Shared, XM, XProps};
 use crate::{
   parser::{p_get_value, realize_xmnode},
   pragmatics::{ValidationPragmatics, is_invisible_times_op},
@@ -185,7 +185,7 @@ pub fn infix_apply(
   }
   let apply_tree = XM::Apply(
     infixop.into(),
-    Args(vec![arg1, arg2]),
+    Args(Shared::new(vec![arg1, arg2])),
     XProps::default(),
     Meta::default(),
   );
@@ -728,7 +728,7 @@ fn distribute_list_relation(
   };
   let mut rhs = r_args.pop().flatten().unwrap();
   let mut lhs = r_args.pop().flatten().unwrap();
-  let mut r_op = *r_op_box;
+  let mut r_op = r_op_box.into_inner();
   // Ref the four presentation nodes (left, lhs, rhs, relop); rhs and relop are
   // shared across the two distributed content relations.
   let refs = create_xmrefs(&mut [&mut left, &mut lhs, &mut rhs, &mut r_op], ctxt)?;
@@ -739,8 +739,8 @@ fn distribute_list_relation(
   let ref_rop = it.next().unwrap();
   let mk_rel = |op: XM, l: XM, r: XM| {
     XM::Apply(
-      Operator(Box::new(op)),
-      Args(vec![Some(l), Some(r)]),
+      Operator(Shared::new(op)),
+      Args(Shared::new(vec![Some(l), Some(r)])),
       XProps::default(),
       Meta::default(),
     )
@@ -754,22 +754,26 @@ fn distribute_list_relation(
   }
   .into();
   let content = XM::Apply(
-    Operator(Box::new(formulae_op)),
-    Args(vec![Some(rel1), Some(rel2)]),
+    Operator(Shared::new(formulae_op)),
+    Args(Shared::new(vec![Some(rel1), Some(rel2)])),
     XProps::default(),
     Meta::default(),
   );
   // presentation: ∈(XMWrap(a,',',b), A)
-  let pres_wrap = XM::Wrap(vec![left, sep, lhs], XProps::default(), Meta::default());
+  let pres_wrap = XM::Wrap(
+    Shared::new(vec![left, sep, lhs]),
+    XProps::default(),
+    Meta::default(),
+  );
   let pres = XM::Apply(
-    Operator(Box::new(r_op)),
-    Args(vec![Some(pres_wrap), Some(rhs)]),
+    Operator(Shared::new(r_op)),
+    Args(Shared::new(vec![Some(pres_wrap), Some(rhs)])),
     XProps::default(),
     Meta::default(),
   );
   Ok(XM::Dual(
-    Box::new(content),
-    Box::new(pres),
+    Shared::new(content),
+    Shared::new(pres),
     XProps::default(),
     Meta::default(),
   ))
@@ -788,14 +792,14 @@ fn list_or_formulae_create(
   };
   let ref_args = create_xmrefs(&mut [&mut left, &mut right], ctxt)?;
   Ok(Some(XM::Dual(
-    Box::new(XM::Apply(
+    Shared::new(XM::Apply(
       op.into(),
       Args(ref_args.into_iter().map(Some).collect()),
       XProps::default(),
       Meta::default(),
     )),
-    Box::new(XM::Wrap(
-      vec![left, sep, right],
+    Shared::new(XM::Wrap(
+      Shared::new(vec![left, sep, right]),
       XProps::default(),
       Meta::default(),
     )),
@@ -1583,8 +1587,8 @@ fn attach_in_container(
     }
     return Ok(Some(relation));
   }
-  *wrapped = new_wrapped;
-  refs.0 = new_refs;
+  *wrapped = Shared::new(new_wrapped);
+  refs.0 = Shared::new(new_refs);
   if all_relational && op_props.meaning.as_deref() == Some("list") {
     op_props.meaning = Some(Cow::Borrowed("formulae"));
   }
@@ -1738,13 +1742,17 @@ fn enumeration(refs: Vec<Option<XM>>, wrapped: Vec<XM>) -> XM {
     ..XProps::default()
   };
   XM::Dual(
-    Box::new(XM::Apply(
+    Shared::new(XM::Apply(
       op.into(),
-      Args(refs),
+      Args(Shared::new(refs)),
       XProps::default(),
       Meta::default(),
     )),
-    Box::new(XM::Wrap(wrapped, XProps::default(), Meta::default())),
+    Shared::new(XM::Wrap(
+      Shared::new(wrapped),
+      XProps::default(),
+      Meta::default(),
+    )),
     XProps::default(),
     Meta::default(),
   )
@@ -2494,7 +2502,7 @@ pub fn infix_apply_nary(
         new_args.extend(factors);
         return Ok(Some(XM::Apply(
           right_op,
-          Args(new_args),
+          Args(Shared::new(new_args)),
           right_props,
           right_meta,
         )));
@@ -2510,7 +2518,7 @@ pub fn infix_apply_nary(
     // Apply(op, left, first) …
     let product = Some(XM::Apply(
       infixop.into(),
-      Args(vec![left, first]),
+      Args(Shared::new(vec![left, first])),
       XProps::default(),
       Meta::default(),
     ));
@@ -2519,7 +2527,7 @@ pub fn infix_apply_nary(
     new_args.extend(factors);
     return Ok(Some(XM::Apply(
       right_op,
-      Args(new_args),
+      Args(Shared::new(new_args)),
       right_props,
       right_meta,
     )));
@@ -2528,7 +2536,7 @@ pub fn infix_apply_nary(
   // base case: new apply tree
   let apply_tree = XM::Apply(
     infixop.into(),
-    Args(vec![left, right]),
+    Args(Shared::new(vec![left, right])),
     XProps::default(),
     Meta::default(),
   );
@@ -2589,7 +2597,7 @@ fn integrand_before_differentials(right: Option<XM>, ctxt: &ActionContext) -> Op
       );
       let mut regrouped = vec![Some(integrand)];
       regrouped.extend(rest);
-      Some(XM::Apply(op, Args(regrouped), props, meta))
+      Some(XM::Apply(op, Args(Shared::new(regrouped)), props, meta))
     },
     _ => Some(XM::Apply(op, Args(factors), props, meta)),
   }
@@ -2768,7 +2776,7 @@ fn leibniz_numerator(left: XM) -> Result<(Vec<Option<XM>>, XM), Box<XM>> {
         unreachable!()
       };
       if after.is_empty() {
-        return Ok((factors, numerator));
+        return Ok((factors.into_inner(), numerator));
       }
       // The differential operator takes the factors after it: `\partial\rho u` ∂(ρu).
       let (head, mut operand) = match numerator {
@@ -2783,18 +2791,18 @@ fn leibniz_numerator(left: XM) -> Result<(Vec<Option<XM>>, XM), Box<XM>> {
       } else {
         Some(XM::Apply(
           invisible_times().into(),
-          Args(operand),
+          Args(Shared::new(operand)),
           XProps::default(),
           Meta::default(),
         ))
       };
       let numerator = XM::Apply(
         head,
-        Args(vec![operand]),
+        Args(Shared::new(vec![operand])),
         XProps::default(),
         Meta::for_differential(),
       );
-      Ok((factors, numerator))
+      Ok((factors.into_inner(), numerator))
     },
     other => Err(Box::new(other)),
   }
@@ -2811,7 +2819,7 @@ pub(crate) fn regroup_leibniz_numerator(numerator: XM) -> XM {
       before.push(Some(numerator));
       XM::Apply(
         invisible_times().into(),
-        Args(before),
+        Args(Shared::new(before)),
         XProps::default(),
         Meta::default(),
       )
@@ -2849,14 +2857,14 @@ pub(crate) fn regroup_leibniz_denominator(denominator: XM, ctxt: &ActionContext)
       } else {
         Some(XM::Apply(
           invisible_times().into(),
-          Args(operand),
+          Args(Shared::new(operand)),
           XProps::default(),
           Meta::default(),
         ))
       };
       grouped.push(Some(XM::Apply(
         head,
-        Args(vec![operand]),
+        Args(Shared::new(vec![operand])),
         XProps::default(),
         Meta::for_differential(),
       )));
@@ -2894,7 +2902,7 @@ pub(crate) fn regroup_leibniz_denominator(denominator: XM, ctxt: &ActionContext)
     Some(Some(only)) if grouped.is_empty() => only,
     last => {
       grouped.push(last.flatten());
-      XM::Apply(op, Args(grouped), props, meta)
+      XM::Apply(op, Args(Shared::new(grouped)), props, meta)
     },
   }
 }
@@ -3028,7 +3036,7 @@ fn leibniz_quotient(left: XM, divide: XM, right: XM, ctxt: &ActionContext) -> XM
   };
   factors.push(Some(XM::Apply(
     divide.into(),
-    Args(vec![Some(numerator), Some(denominator)]),
+    Args(Shared::new(vec![Some(numerator), Some(denominator)])),
     XProps::default(),
     Meta::default(),
   )));
@@ -3039,7 +3047,7 @@ fn leibniz_quotient(left: XM, divide: XM, right: XM, ctxt: &ActionContext) -> XM
       factors.push(last.flatten());
       XM::Apply(
         invisible_times().into(),
-        Args(factors),
+        Args(Shared::new(factors)),
         XProps::default(),
         Meta::default(),
       )
@@ -3107,7 +3115,7 @@ fn fenced_tuple_items(
       }
       // A bare paren `vector` (no delimiters of its own) spreads as before.
       if meaning == "vector" && presents_its_items_alone(presentation, items.len()) {
-        return Some((items.clone(), false));
+        return Some((items.to_vec(), false));
       }
       Some(items)
     },
@@ -3156,9 +3164,9 @@ fn fenced_tuple_items(
     && let XM::Wrap(list_separated, ..) = &**list_presentation
     && arg_punct(list_separated)
   {
-    return Some((list_items.clone(), true));
+    return Some((list_items.to_vec(), true));
   }
-  items.map(|items| (items.clone(), false))
+  items.map(|items| (items.to_vec(), false))
 }
 
 /// The presentation of a group whose one item is a bare list, when a function takes the list's
@@ -3206,7 +3214,7 @@ pub fn prefix_apply(
     let XM::Dual(content_box, pres_box, ..) = arg1_inner else {
       unreachable!()
     };
-    let mut pres_wrap = *pres_box;
+    let mut pres_wrap = pres_box.into_inner();
     // Single fenced arg `(x)` → one operand; n-ary paren comma-list `(a,b,…)`
     // → spread its items, dropping the implicit `vector` (Perl ApplyDelimited).
     let content_args = match fenced_tuple_items(&content_box, &pres_wrap, &ctxt) {
@@ -3216,32 +3224,32 @@ pub fn prefix_apply(
         }
         items
       },
-      None => vec![Some(*content_box)],
+      None => vec![Some(content_box.into_inner())],
     };
     let func_refs = create_xmrefs(&mut [&mut func], ctxt)?;
     let func_ref = func_refs.into_iter().next().unwrap();
     let content_apply = XM::Apply(
       func_ref.into(),
-      Args(content_args),
+      Args(Shared::new(content_args)),
       XProps::default(),
       Meta::default(),
     );
     let pres_apply = XM::Apply(
       func.into(),
-      Args(vec![Some(pres_wrap)]),
+      Args(Shared::new(vec![Some(pres_wrap)])),
       XProps::default(),
       Meta::default(),
     );
     return Ok(Some(XM::Dual(
-      Box::new(content_apply),
-      Box::new(pres_apply),
+      Shared::new(content_apply),
+      Shared::new(pres_apply),
       XProps::default(),
       Meta::default(),
     )));
   }
   Ok(Some(XM::Apply(
     prefixop.into(),
-    Args(vec![arg1]),
+    Args(Shared::new(vec![arg1])),
     XProps::default(),
     Meta::default(),
   )))
@@ -4821,7 +4829,12 @@ pub fn bound_argument_extends(
       document: &mut *ctxt.document,
     })?
   };
-  operator_bare_apply(rule_id, vec![Some(*head), joined], pragmas, ctxt)
+  operator_bare_apply(
+    rule_id,
+    vec![Some(head.into_inner()), joined],
+    pragmas,
+    ctxt,
+  )
 }
 
 /// Perl `addEasyArgs` (MathGrammar:571-576): an OPFUNCTION applies to a balanced group, `OPEN …
@@ -4903,26 +4916,26 @@ pub fn apply_delimited(
   // Content branch: Apply(XMRef(func), XMRef(content))
   let content_apply = XM::Apply(
     func_ref.into(),
-    Args(vec![Some(content_ref)]),
+    Args(Shared::new(vec![Some(content_ref)])),
     XProps::default(),
     Meta::default(),
   );
   // Presentation branch: Apply(func, XMWrap(open, content, close))
   let pres_wrap = XM::Wrap(
-    vec![open.unwrap(), content_node, close.unwrap()],
+    Shared::new(vec![open.unwrap(), content_node, close.unwrap()]),
     XProps::default(),
     Meta::default(),
   );
   let pres_apply = XM::Apply(
     func_node.into(),
-    Args(vec![Some(pres_wrap)]),
+    Args(Shared::new(vec![Some(pres_wrap)])),
     XProps::default(),
     Meta::default(),
   );
   // XMDual(content, presentation)
   Ok(Some(XM::Dual(
-    Box::new(content_apply),
-    Box::new(pres_apply),
+    Shared::new(content_apply),
+    Shared::new(pres_apply),
     XProps::default(),
     Meta::default(),
   )))
@@ -4945,7 +4958,7 @@ pub fn modifier_prefix_apply(
   );
   Ok(Some(XM::Apply(
     modop.into(),
-    Args(vec![Some(absent), arg1]),
+    Args(Shared::new(vec![Some(absent), arg1])),
     XProps::default(),
     Meta::default(),
   )))
@@ -4969,7 +4982,7 @@ pub fn postfix_modifier_apply(
   );
   Ok(Some(XM::Apply(
     annotated.into(),
-    Args(vec![expr, modifier]),
+    Args(Shared::new(vec![expr, modifier])),
     XProps::default(),
     Meta::default(),
   )))
@@ -5002,7 +5015,7 @@ pub fn annotated_fenced_modifier(
   // Build Apply(op, Absent, inner_expr) for the modifier content
   let mut modifier_apply = XM::Apply(
     op.into(),
-    Args(vec![Some(absent), inner_expr]),
+    Args(Shared::new(vec![Some(absent), inner_expr])),
     XProps::default(),
     Meta::default(),
   );
@@ -5010,9 +5023,9 @@ pub fn annotated_fenced_modifier(
   // matching Perl's Fence() which creates XMDual for parenthesized groups
   let mut fenced_xmrefs = create_xmrefs(&mut [&mut modifier_apply], ctxt)?;
   let fenced = XM::Dual(
-    Box::new(fenced_xmrefs.remove(0)),
-    Box::new(XM::Wrap(
-      vec![open.unwrap(), modifier_apply, close.unwrap()],
+    Shared::new(fenced_xmrefs.remove(0)),
+    Shared::new(XM::Wrap(
+      Shared::new(vec![open.unwrap(), modifier_apply, close.unwrap()]),
       XProps::default(),
       Meta::default(),
     )),
@@ -5021,7 +5034,7 @@ pub fn annotated_fenced_modifier(
   );
   Ok(Some(XM::Apply(
     annotated.into(),
-    Args(vec![expr, Some(fenced)]),
+    Args(Shared::new(vec![expr, Some(fenced)])),
     XProps::default(),
     Meta::default(),
   )))
@@ -5119,7 +5132,7 @@ pub fn speculative_prefix_apply(
   }
   Ok(Some(XM::Apply(
     prefixop.into(),
-    Args(vec![arg1]),
+    Args(Shared::new(vec![arg1])),
     XProps::default(),
     Meta::default(),
   )))
@@ -5190,7 +5203,7 @@ pub fn limit_from_apply(
   );
   Ok(Some(XM::Apply(
     op.into(),
-    Args(vec![base, sign]),
+    Args(Shared::new(vec![base, sign])),
     XProps::default(),
     Meta::default(),
   )))
@@ -5217,20 +5230,20 @@ pub fn diffop_apply(
   {
     let differential = XM::Apply(
       annotated.into(),
-      Args(vec![Some(base.clone())]),
+      Args(Shared::new(vec![Some(base.clone())])),
       XProps::default(),
       Meta::for_differential(),
     );
     return Ok(Some(XM::Apply(
       Operator(op.clone()),
-      Args(vec![Some(differential), Some(power.clone())]),
+      Args(Shared::new(vec![Some(differential), Some(power.clone())])),
       props.clone(),
       meta.clone(),
     )));
   }
   Ok(Some(XM::Apply(
     annotated.into(),
-    Args(vec![arg1]),
+    Args(Shared::new(vec![arg1])),
     XProps::default(),
     Meta::for_differential(),
   )))
@@ -5327,7 +5340,7 @@ pub fn differential_power_apply(
   unp!(args => power, variable);
   Ok(Some(XM::Apply(
     power.into(),
-    Args(vec![variable]),
+    Args(Shared::new(vec![variable])),
     XProps::default(),
     Meta::for_differential(),
   )))
@@ -5858,7 +5871,7 @@ pub fn prefix_apply_applyop(
   }
   Ok(Some(XM::Apply(
     prefixop.into(),
-    Args(vec![arg1]),
+    Args(Shared::new(vec![arg1])),
     XProps::default(),
     Meta::default(),
   )))
@@ -6004,7 +6017,7 @@ pub fn postfix_apply(
       let last_arg = new_args.pop().unwrap();
       let wrapped = XM::Apply(
         limit_from.into(),
-        Args(vec![last_arg, op]),
+        Args(Shared::new(vec![last_arg, op])),
         XProps::default(),
         Meta::default(),
       );
@@ -6020,7 +6033,7 @@ pub fn postfix_apply(
   // Fallback: wrap the entire expression
   Ok(Some(XM::Apply(
     limit_from.into(),
-    Args(vec![arg, op]),
+    Args(Shared::new(vec![arg, op])),
     XProps::default(),
     Meta::default(),
   )))
@@ -6063,7 +6076,7 @@ pub fn apply_postfix(
   unp!(args => base, op);
   Ok(Some(XM::Apply(
     op.into(),
-    Args(vec![base]),
+    Args(Shared::new(vec![base])),
     XProps::default(),
     Meta::default(),
   )))
@@ -6412,7 +6425,7 @@ pub fn fenced(
   let close = close_opt.unwrap();
   // let xmrefs = create_xmrefs(&[&arg], ctxt)?.remove(0);
   // Ok(Some(
-  //   XM::Dual(Box::new(xmrefs), Box::new(
+  //   XM::Dual(Shared::new(xmrefs), Shared::new(
   //     XM::Wrap(vec![open_opt.unwrap(),arg,close_opt.unwrap()], XProps::default(),
   // Meta::default())   ), XProps::default(), Meta::default())
   // ))
@@ -6492,12 +6505,12 @@ pub fn fenced(
         // A bare list Dual (`presents_its_items_alone`): its presentation is the items with their
         // separators between.
         XM::Dual(_, pres, ..) => {
-          let XM::Wrap(wrap_items, ..) = *pres else {
+          let XM::Wrap(wrap_items, ..) = pres.into_inner() else {
             unreachable!("is_multi_item: a bare list presents its items in a Wrap")
           };
           let first_separator = realized_value(&wrap_items[1], &ctxt)?;
           let comma_list = first_separator == ",";
-          (wrap_items, comma_list)
+          (wrap_items.into_inner(), comma_list)
         },
         // A bare Apply carries no separators of its own: comma-joined. No producer of a Dual-less
         // list is known (57ba review); kept as the fallback the shape check admits.
@@ -6540,15 +6553,15 @@ pub fn fenced(
       let mut arg_xmrefs = create_xmrefs(&mut [&mut arg], ctxt)?;
       if arg_xmrefs.is_empty() {
         return Ok(Some(XM::Wrap(
-          vec![open, arg, close],
+          Shared::new(vec![open, arg, close]),
           XProps::default(),
           Meta::default(),
         )));
       }
       Ok(Some(XM::Dual(
-        Box::new(arg_xmrefs.remove(0)),
-        Box::new(XM::Wrap(
-          vec![open, arg, close],
+        Shared::new(arg_xmrefs.remove(0)),
+        Shared::new(XM::Wrap(
+          Shared::new(vec![open, arg, close]),
           XProps::default(),
           Meta::default(),
         )),
@@ -6688,7 +6701,7 @@ fn fenced_list_items(open: XM, arg: XM, close: XM) -> Vec<XM> {
   let XM::Dual(_, presentation, ..) = arg else {
     unreachable!("fenced_list admits only a Dual");
   };
-  let XM::Wrap(items, ..) = *presentation else {
+  let XM::Wrap(items, ..) = presentation.into_inner() else {
     unreachable!("fenced_list admits only a Wrap presentation");
   };
   let mut stuff = Vec::with_capacity(items.len() + 2);
@@ -6727,14 +6740,14 @@ pub fn empty_fenced(
   };
   // Build: Dual(Apply(list), Wrap(open, close))
   Ok(Some(XM::Dual(
-    Box::new(XM::Apply(
+    Shared::new(XM::Apply(
       list_op.into(),
       vec![].into(),
       XProps::default(),
       Meta::default(),
     )),
-    Box::new(XM::Wrap(
-      vec![open, close],
+    Shared::new(XM::Wrap(
+      Shared::new(vec![open, close]),
       XProps::default(),
       Meta::default(),
     )),
@@ -6861,14 +6874,14 @@ pub fn interval(
   meta.unbalanced_fence = balanced_close(&o) != Some(c.as_ref());
 
   Ok(Some(XM::Dual(
-    Box::new(XM::Apply(
+    Shared::new(XM::Apply(
       op.into(),
       ref_args.into(),
       XProps::default(),
       Meta::default(),
     )),
-    Box::new(XM::Wrap(
-      vec![open, arg1, sep, arg2, close],
+    Shared::new(XM::Wrap(
+      Shared::new(vec![open, arg1, sep, arg2, close]),
       XProps::default(),
       Meta::default(),
     )),
@@ -7116,14 +7129,14 @@ pub fn bracket_conditional(
   }
   .into();
   let inner = XM::Dual(
-    Box::new(XM::Apply(
+    Shared::new(XM::Apply(
       cond_op.into(),
       inner_refs.into(),
       XProps::default(),
       Meta::default(),
     )),
-    Box::new(XM::Wrap(
-      vec![a, bar, b],
+    Shared::new(XM::Wrap(
+      Shared::new(vec![a, bar, b]),
       XProps::default(),
       Meta::default(),
     )),
@@ -7150,13 +7163,17 @@ fn interpret_delimited(
   let (_seps, mut args) = extract_separators(&mut stuff[1..upto]);
   let ref_args = create_xmrefs(&mut args, ctxt)?;
   Ok(XM::Dual(
-    Box::new(XM::Apply(
+    Shared::new(XM::Apply(
       op.into(),
       ref_args.into(),
       XProps::default(),
       Meta::default(),
     )),
-    Box::new(XM::Wrap(stuff, XProps::default(), Meta::default())),
+    Shared::new(XM::Wrap(
+      Shared::new(stuff),
+      XProps::default(),
+      Meta::default(),
+    )),
     XProps::default(),
     Meta::default(),
   ))
@@ -7209,7 +7226,7 @@ pub fn postfix_embellished(
     // fall back to a bare Wrap, mirroring the `fenced` empty-refs guard
     // (semantics.rs:2138, hep-ph/9210235).
     return Ok(Some(XM::Wrap(
-      vec![arg, trailer],
+      Shared::new(vec![arg, trailer]),
       XProps::default(),
       Meta::default(),
     )));
@@ -7217,23 +7234,23 @@ pub fn postfix_embellished(
   let content = if in_a_script {
     // Perl `NewList(item, punct)` for a script's `endPunct` (MathParser.pm:1463-1475): a one-item
     // list, whatever the mark.
-    Box::new(XM::Apply(
+    Shared::new(XM::Apply(
       XProps {
         meaning: Some(Cow::Borrowed("list")),
         ..XProps::default()
       }
       .into(),
-      Args(vec![Some(ref_arg.remove(0))]),
+      Args(Shared::new(vec![Some(ref_arg.remove(0))])),
       XProps::default(),
       Meta::default(),
     ))
   } else {
-    Box::new(ref_arg.remove(0))
+    Shared::new(ref_arg.remove(0))
   };
   Ok(Some(XM::Dual(
     content,
-    Box::new(XM::Wrap(
-      vec![arg, trailer],
+    Shared::new(XM::Wrap(
+      Shared::new(vec![arg, trailer]),
       XProps::default(),
       Meta::default(),
     )),
@@ -7254,10 +7271,10 @@ pub fn faux_wrap(
   // Bundle both the script wrapper lexeme and the parsed expression.
   // new_script_inner will detect this Wrap and use the parsed content.
   Ok(Some(XM::Wrap(
-    vec![
+    Shared::new(vec![
       start_script.unwrap(),
       content.unwrap_or(XM::Token(XProps::default(), Meta::default())),
-    ],
+    ]),
     XProps::default(),
     Meta::default(),
   )))
@@ -7274,10 +7291,10 @@ pub fn standalone_script(
   // the parsed content, bundled as `faux_wrap` does: re-reading the script from the DOM loses a
   // content XMDual (`\Gamma^{{}^{(2)}}_{ij}`, `{}^{(a,b)}_{c}` gave an XMRef with no idref, 57bj review).
   let script = XM::Wrap(
-    vec![
+    Shared::new(vec![
       start_script.unwrap(),
       content.unwrap_or(XM::Token(XProps::default(), Meta::default())),
-    ],
+    ]),
     XProps::default(),
     Meta::default(),
   );
@@ -7526,7 +7543,7 @@ fn new_script_inner(
     };
     Ok(Some(XM::Apply(
       op.into(),
-      Args(vec![base_arg, script_arg]),
+      Args(Shared::new(vec![base_arg, script_arg])),
       app_props,
       meta,
     )))
@@ -7715,7 +7732,7 @@ pub fn function_times_bigop(
   factors.push(bigop);
   let product = XM::Apply(
     invisible_times().into(),
-    Args(factors),
+    Args(Shared::new(factors)),
     XProps::default(),
     Meta::default(),
   );
@@ -7738,7 +7755,7 @@ fn open_product_factors(xm: XM) -> Vec<Option<XM>> {
           if props.meaning.as_deref() == Some("times")
             && props.content.as_deref() == Some("\u{2062}")) =>
     {
-      factors
+      factors.into_inner()
     },
     xm => vec![Some(xm)],
   }
@@ -7953,11 +7970,11 @@ fn take_a_limit_operator(before: XM, bigop: XM) -> XM {
           invisible_product(inner, bigop)
         }
       });
-      XM::Apply(op, Args(vec![inner]), props, meta)
+      XM::Apply(op, Args(Shared::new(vec![inner])), props, meta)
     },
     before => XM::Apply(
       before.into(),
-      Args(vec![Some(bigop)]),
+      Args(Shared::new(vec![Some(bigop)])),
       XProps::default(),
       Meta::default(),
     ),
@@ -8053,7 +8070,7 @@ fn take_the_big_operator(xm: XM, bigop: XM) -> XM {
   if is_expectation_operator(&xm) {
     return XM::Apply(
       xm.into(),
-      Args(vec![Some(bigop)]),
+      Args(Shared::new(vec![Some(bigop)])),
       XProps::default(),
       Meta::default(),
     );
@@ -8066,7 +8083,7 @@ fn take_the_big_operator(xm: XM, bigop: XM) -> XM {
         Some(arg) => function_takes_a_limit_operator(invisible_product(arg, bigop)),
         None => bigop,
       };
-      XM::Apply(head, Args(vec![Some(arg)]), props, meta)
+      XM::Apply(head, Args(Shared::new(vec![Some(arg)])), props, meta)
     },
     xm => invisible_product(xm, bigop),
   }
@@ -8079,7 +8096,7 @@ fn invisible_product(left: XM, right: XM) -> XM {
   factors.push(Some(right));
   XM::Apply(
     invisible_times().into(),
-    Args(factors),
+    Args(Shared::new(factors)),
     XProps::default(),
     Meta::default(),
   )
@@ -8546,25 +8563,25 @@ pub fn apply_invisible_times(
       let XM::Dual(content_box, pres_box, ..) = arg_dual else {
         unreachable!()
       };
-      let content_ref = *content_box;
-      let pres_wrap = *pres_box;
+      let content_ref = content_box.into_inner();
+      let pres_wrap = pres_box.into_inner();
       let func_refs = create_xmrefs(&mut [&mut func], ctxt)?;
       let func_ref = func_refs.into_iter().next().unwrap();
       let content_apply = XM::Apply(
         func_ref.into(),
-        Args(vec![Some(content_ref)]),
+        Args(Shared::new(vec![Some(content_ref)])),
         XProps::default(),
         Meta::default(),
       );
       let pres_apply = XM::Apply(
         func.into(),
-        Args(vec![Some(pres_wrap)]),
+        Args(Shared::new(vec![Some(pres_wrap)])),
         XProps::default(),
         Meta::default(),
       );
       return Ok(Some(XM::Dual(
-        Box::new(content_apply),
-        Box::new(pres_apply),
+        Shared::new(content_apply),
+        Shared::new(pres_apply),
         XProps::default(),
         Meta::default(),
       )));
@@ -8617,7 +8634,7 @@ pub fn apply_invisible_times(
           && last_props.id.is_none()
           && is_invisible_times_operator(&last_op.0, &ctxt) =>
       {
-        items
+        items.into_inner()
       },
       other => vec![other],
     };
@@ -8625,7 +8642,7 @@ pub fn apply_invisible_times(
     operand.push(right.clone());
     l_args.push(Some(XM::Apply(
       Operator(times_op.clone()),
-      Args(operand),
+      Args(Shared::new(operand)),
       XProps::default(),
       Meta::default(),
     )));
@@ -8744,7 +8761,7 @@ pub fn apply_invisible_times(
       },
       other => XM::Apply(
         op.into(),
-        Args(vec![other, right]),
+        Args(Shared::new(vec![other, right])),
         XProps::default(),
         Meta::default(),
       ),
@@ -8760,7 +8777,7 @@ pub fn apply_invisible_times(
 
   Ok(Some(XM::Apply(
     op.into(),
-    Args(vec![left, right]),
+    Args(Shared::new(vec![left, right])),
     XProps::default(),
     Meta::default(),
   )))
@@ -8837,13 +8854,17 @@ pub fn new_list(mut pieces: Vec<XM>, ctxt: ActionContext) -> Result<Option<XM>, 
   } else {
     let (_seps, mut items) = extract_separators(&mut pieces);
     Ok(Some(XM::Dual(
-      Box::new(XM::Apply(
+      Shared::new(XM::Apply(
         new_props(Some(Cow::Borrowed("list")), None, None).into(),
         create_xmrefs(&mut items, ctxt)?.into(),
         XProps::default(),
         Meta::default(),
       )),
-      Box::new(XM::Wrap(pieces, XProps::default(), Meta::default())),
+      Shared::new(XM::Wrap(
+        Shared::new(pieces),
+        XProps::default(),
+        Meta::default(),
+      )),
       XProps::default(),
       Meta::default(),
     )))
@@ -10449,14 +10470,20 @@ fn chain_relation(left: Option<XM>, op: Option<XM>, operand: Option<XM>) -> XM {
       let (left_1, left_2) = (left_args.next().flatten(), left_args.next().flatten());
       XM::Apply(
         multirel_tok.into(),
-        Args(vec![left_1, Some(*left_op.0), left_2, op, operand]),
+        Args(Shared::new(vec![
+          left_1,
+          Some(left_op.0.into_inner()),
+          left_2,
+          op,
+          operand,
+        ])),
         XProps::default(),
         Meta::default(),
       )
     },
     left => XM::Apply(
       op.into(),
-      Args(vec![left, operand]),
+      Args(Shared::new(vec![left, operand])),
       XProps::default(),
       Meta::default(),
     ),
@@ -10545,7 +10572,7 @@ pub fn vertbar_modifier(
         });
         return Ok(Some(XM::Apply(
           bar.into(),
-          Args(vec![left, right]),
+          Args(Shared::new(vec![left, right])),
           XProps::default(),
           Meta::default(),
         )));
@@ -10574,7 +10601,7 @@ pub fn vertbar_modifier(
   };
   Ok(Some(XM::Apply(
     modop.into(),
-    Args(vec![left, right]),
+    Args(Shared::new(vec![left, right])),
     XProps::default(),
     Meta::default(),
   )))
@@ -10874,7 +10901,7 @@ pub fn prefix_metarelop_apply(
   unp!(args => metarelop, right);
   Ok(Some(XM::Apply(
     metarelop.into(),
-    Args(vec![Some(absent()), right]),
+    Args(Shared::new(vec![Some(absent()), right])),
     XProps::default(),
     Meta::default(),
   )))
@@ -10918,9 +10945,9 @@ pub fn prefix_relop_apply(
     _ => false,
   });
   let args = if is_binop {
-    Args(vec![right])
+    Args(Shared::new(vec![right]))
   } else {
-    Args(vec![Some(absent()), right])
+    Args(Shared::new(vec![Some(absent()), right]))
   };
   Ok(Some(XM::Apply(
     relop.into(),
@@ -10939,7 +10966,7 @@ pub fn prefix_arrow_apply(
   unp!(args => arrowop, right);
   Ok(Some(XM::Apply(
     arrowop.into(),
-    Args(vec![Some(absent()), right]),
+    Args(Shared::new(vec![Some(absent()), right])),
     XProps::default(),
     Meta::default(),
   )))
@@ -10956,7 +10983,7 @@ pub fn arrow_wrap_apply(
   unp!(args => _start, arrowop, content, _end);
   Ok(Some(XM::Apply(
     arrowop.into(),
-    Args(vec![Some(absent()), content]),
+    Args(Shared::new(vec![Some(absent()), content])),
     XProps::default(),
     Meta::default(),
   )))
@@ -11008,13 +11035,13 @@ pub fn open_fenced(
       Meta::default(),
     );
     let pres = XM::Wrap(
-      vec![open, arg, absent_close],
+      Shared::new(vec![open, arg, absent_close]),
       XProps::default(),
       Meta::default(),
     );
     Ok(Some(XM::Dual(
-      Box::new(content),
-      Box::new(pres),
+      Shared::new(content),
+      Shared::new(pres),
       XProps::default(),
       Meta::default(),
     )))
@@ -11028,7 +11055,7 @@ pub fn open_fenced(
       Meta::default(),
     );
     Ok(Some(XM::Wrap(
-      vec![open, arg, absent_close],
+      Shared::new(vec![open, arg, absent_close]),
       XProps::default(),
       Meta::default(),
     )))
@@ -11069,13 +11096,13 @@ pub fn close_fenced(
       Meta::default(),
     );
     let pres = XM::Wrap(
-      vec![absent_open, arg, close],
+      Shared::new(vec![absent_open, arg, close]),
       XProps::default(),
       Meta::default(),
     );
     Ok(Some(XM::Dual(
-      Box::new(content),
-      Box::new(pres),
+      Shared::new(content),
+      Shared::new(pres),
       XProps::default(),
       Meta::default(),
     )))
@@ -11088,7 +11115,7 @@ pub fn close_fenced(
       Meta::default(),
     );
     Ok(Some(XM::Wrap(
-      vec![absent_open, arg, close],
+      Shared::new(vec![absent_open, arg, close]),
       XProps::default(),
       Meta::default(),
     )))
@@ -11114,7 +11141,7 @@ pub fn double_fenced(
   };
   Ok(Some(XM::Apply(
     Operator::from(op),
-    Args(vec![Some(arg)]),
+    Args(Shared::new(vec![Some(arg)])),
     XProps::default(),
     Meta::default(),
   )))
@@ -11206,7 +11233,11 @@ pub fn eval_at(
   );
 
   // Build presentation arm AFTER content (so base has _xmkey set)
-  let wrap = XM::Wrap(vec![base, bar_close], XProps::default(), Meta::default());
+  let wrap = XM::Wrap(
+    Shared::new(vec![base, bar_close]),
+    XProps::default(),
+    Meta::default(),
+  );
 
   let sub_op = XM::Token(
     XProps {
@@ -11218,7 +11249,7 @@ pub fn eval_at(
   );
   let mut pres = XM::Apply(
     sub_op.into(),
-    Args(vec![Some(wrap), sub_content_xm2]),
+    Args(Shared::new(vec![Some(wrap), sub_content_xm2])),
     XProps::default(),
     Meta::default(),
   );
@@ -11234,15 +11265,15 @@ pub fn eval_at(
     );
     pres = XM::Apply(
       sup_op.into(),
-      Args(vec![Some(pres), Some(sup_xm)]),
+      Args(Shared::new(vec![Some(pres), Some(sup_xm)])),
       XProps::default(),
       Meta::default(),
     );
   }
 
   Ok(Some(XM::Dual(
-    Box::new(content),
-    Box::new(pres),
+    Shared::new(content),
+    Shared::new(pres),
     XProps::default(),
     Meta::default(),
   )))
@@ -11333,13 +11364,17 @@ fn qm_fenced(
     }
   }
   Ok(Some(XM::Dual(
-    Box::new(XM::Apply(
+    Shared::new(XM::Apply(
       op.into(),
-      Args(refs),
+      Args(Shared::new(refs)),
       XProps::default(),
       Meta::default(),
     )),
-    Box::new(XM::Wrap(stuff, XProps::default(), Meta::default())),
+    Shared::new(XM::Wrap(
+      Shared::new(stuff),
+      XProps::default(),
+      Meta::default(),
+    )),
     XProps::default(),
     Meta::default(),
   )))

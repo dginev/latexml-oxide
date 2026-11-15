@@ -18,10 +18,64 @@ use crate::{
   pragmatics::ValidationPragmatics,
 };
 
+/// A subtree shared, copy-on-write, by the parse alternatives that hold it. The ASF traversal hands
+/// each child glade's readings to every combination of its parent (`asf_traverser.rs`), so a clone
+/// must not copy the subtree: it bumps a count, and a write (`DerefMut`, `Rc::make_mut`) copies one
+/// level first, keeping each alternative's changes its own. Compares, hashes and prints as the value.
+#[derive(Default, PartialEq, Eq, Hash)]
+pub struct Shared<T>(Rc<T>);
+impl<T> Clone for Shared<T> {
+  fn clone(&self) -> Self { Shared(Rc::clone(&self.0)) }
+}
+impl<T: Clone> Shared<T> {
+  pub fn new(value: T) -> Self { Shared(Rc::new(value)) }
+  /// The value, copied only if another alternative still holds it.
+  pub fn into_inner(self) -> T { Rc::unwrap_or_clone(self.0) }
+}
+impl<T> std::ops::Deref for Shared<T> {
+  type Target = T;
+  fn deref(&self) -> &T { &self.0 }
+}
+impl<T: Clone> std::ops::DerefMut for Shared<T> {
+  fn deref_mut(&mut self) -> &mut T { Rc::make_mut(&mut self.0) }
+}
+impl<T> AsRef<T> for Shared<T> {
+  fn as_ref(&self) -> &T { &self.0 }
+}
+impl<T: Clone> AsMut<T> for Shared<T> {
+  fn as_mut(&mut self) -> &mut T { Rc::make_mut(&mut self.0) }
+}
+impl<T: fmt::Debug> fmt::Debug for Shared<T> {
+  fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result { self.0.fmt(f) }
+}
+impl<T: Clone> From<T> for Shared<T> {
+  fn from(value: T) -> Self { Shared::new(value) }
+}
+impl<T: Clone> FromIterator<T> for Shared<Vec<T>> {
+  fn from_iter<I: IntoIterator<Item = T>>(iter: I) -> Self {
+    Shared::new(iter.into_iter().collect())
+  }
+}
+impl<T: Clone> IntoIterator for Shared<Vec<T>> {
+  type Item = T;
+  type IntoIter = std::vec::IntoIter<T>;
+  fn into_iter(self) -> Self::IntoIter { self.into_inner().into_iter() }
+}
+impl<'a, T> IntoIterator for &'a Shared<Vec<T>> {
+  type Item = &'a T;
+  type IntoIter = std::slice::Iter<'a, T>;
+  fn into_iter(self) -> Self::IntoIter { self.0.iter() }
+}
+impl<'a, T: Clone> IntoIterator for &'a mut Shared<Vec<T>> {
+  type Item = &'a mut T;
+  type IntoIter = std::slice::IterMut<'a, T>;
+  fn into_iter(self) -> Self::IntoIter { Rc::make_mut(&mut self.0).iter_mut() }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub struct Operator(pub Box<XM>);
+pub struct Operator(pub Shared<XM>);
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub struct Args(pub Vec<Option<XM>>);
+pub struct Args(pub Shared<Vec<Option<XM>>>);
 
 #[derive(Debug, Clone, Default)]
 /// The allowed properties on any newly created XMath nodes
@@ -204,11 +258,11 @@ pub enum XM {
   Lexeme(Rc<str>, Meta),
   Token(XProps, Meta), // does this need Meta?
   Apply(Operator, Args, XProps, Meta),
-  Dual(Box<XM>, Box<XM>, XProps, Meta),
+  Dual(Shared<XM>, Shared<XM>, XProps, Meta),
   Ref(XProps),
-  Wrap(Vec<XM>, XProps, Meta),
-  Arg(Vec<XM>),
-  Choices(Vec<XM>),
+  Wrap(Shared<Vec<XM>>, XProps, Meta),
+  Arg(Shared<Vec<XM>>),
+  Choices(Shared<Vec<XM>>),
 }
 impl From<XProps> for XM {
   fn from(t: XProps) -> Self { XM::Token(t, Meta::default()) }
@@ -218,10 +272,10 @@ impl Display for Operator {
   fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result { self.fmt_indented(&Vec::new(), f) }
 }
 impl From<XProps> for Operator {
-  fn from(t: XProps) -> Self { Operator(Box::new(XM::Token(t, Meta::default()))) }
+  fn from(t: XProps) -> Self { Operator(Shared::new(XM::Token(t, Meta::default()))) }
 }
 impl From<XM> for Operator {
-  fn from(xm: XM) -> Self { Operator(Box::new(xm)) }
+  fn from(xm: XM) -> Self { Operator(Shared::new(xm)) }
 }
 impl Operator {
   /// obtain a reference to this operator's metadata
@@ -548,7 +602,7 @@ impl XM {
           .collect();
         match kept.len() {
           1 => kept.remove(0),
-          _ => XM::Choices(kept),
+          _ => XM::Choices(Shared::new(kept)),
         }
       },
       other => other,
@@ -732,9 +786,9 @@ impl XM {
           .filter(|t| t.count_absent() == min)
           .collect();
         match kept.len() {
-          0 => XM::Choices(Vec::new()),
+          0 => XM::Choices(Shared::new(Vec::new())),
           1 => kept.into_iter().next().unwrap(),
-          _ => XM::Choices(kept),
+          _ => XM::Choices(Shared::new(kept)),
         }
       },
       other => other,
@@ -760,9 +814,9 @@ impl XM {
           .filter(|t| t.count_evaluation_bars_inside() == min)
           .collect();
         match kept.len() {
-          0 => XM::Choices(Vec::new()),
+          0 => XM::Choices(Shared::new(Vec::new())),
           1 => kept.into_iter().next().unwrap(),
-          _ => XM::Choices(kept),
+          _ => XM::Choices(Shared::new(kept)),
         }
       },
       other => other,
@@ -820,9 +874,9 @@ impl XM {
           .filter(|t| t.count_nodes_for_parse_ranking() == min)
           .collect();
         match kept.len() {
-          0 => XM::Choices(Vec::new()),
+          0 => XM::Choices(Shared::new(Vec::new())),
           1 => kept.into_iter().next().unwrap(),
-          _ => XM::Choices(kept),
+          _ => XM::Choices(Shared::new(kept)),
         }
       },
       other => other,
@@ -1036,9 +1090,9 @@ impl XM {
         }
         let kept: Vec<XM> = trees.into_iter().filter(|t| !is_redundant(t)).collect();
         match kept.len() {
-          0 => XM::Choices(Vec::new()),
+          0 => XM::Choices(Shared::new(Vec::new())),
           1 => kept.into_iter().next().unwrap(),
-          _ => XM::Choices(kept),
+          _ => XM::Choices(Shared::new(kept)),
         }
       },
       other => other,
@@ -1112,9 +1166,9 @@ impl XM {
           .filter(|t| !t.root_is_multirelation_with_interior_absent())
           .collect();
         match kept.len() {
-          0 => XM::Choices(Vec::new()),
+          0 => XM::Choices(Shared::new(Vec::new())),
           1 => kept.into_iter().next().unwrap(),
-          _ => XM::Choices(kept),
+          _ => XM::Choices(Shared::new(kept)),
         }
       },
       other => other,
@@ -1142,9 +1196,9 @@ impl XM {
           .filter(|t| !t.is_list_holding_a_relation())
           .collect();
         match kept.len() {
-          0 => XM::Choices(Vec::new()),
+          0 => XM::Choices(Shared::new(Vec::new())),
           1 => kept.into_iter().next().unwrap(),
-          _ => XM::Choices(kept),
+          _ => XM::Choices(Shared::new(kept)),
         }
       },
       other => other,
@@ -1214,9 +1268,9 @@ impl XM {
           })
           .collect();
         match kept.len() {
-          0 => XM::Choices(Vec::new()),
+          0 => XM::Choices(Shared::new(Vec::new())),
           1 => kept.into_iter().next().unwrap(),
-          _ => XM::Choices(kept),
+          _ => XM::Choices(Shared::new(kept)),
         }
       },
       other => other,
@@ -1289,9 +1343,9 @@ impl XM {
           .filter(|t| t.count_delimited_wrappers() == max_delim)
           .collect();
         match kept.len() {
-          0 => XM::Choices(Vec::new()),
+          0 => XM::Choices(Shared::new(Vec::new())),
           1 => kept.into_iter().next().unwrap(),
-          _ => XM::Choices(kept),
+          _ => XM::Choices(Shared::new(kept)),
         }
       },
       other => other,
@@ -1403,9 +1457,9 @@ impl XM {
           .filter(|t| t.count_nested_same_fence() == min)
           .collect();
         match kept.len() {
-          0 => XM::Choices(Vec::new()),
+          0 => XM::Choices(Shared::new(Vec::new())),
           1 => kept.into_iter().next().unwrap(),
-          _ => XM::Choices(kept),
+          _ => XM::Choices(Shared::new(kept)),
         }
       },
       other => other,
@@ -1471,9 +1525,9 @@ impl XM {
           .filter(|t| t.count_qm_specific_semantics() == max)
           .collect();
         match kept.len() {
-          0 => XM::Choices(Vec::new()),
+          0 => XM::Choices(Shared::new(Vec::new())),
           1 => kept.into_iter().next().unwrap(),
-          _ => XM::Choices(kept),
+          _ => XM::Choices(Shared::new(kept)),
         }
       },
       other => other,
@@ -1644,9 +1698,9 @@ impl XM {
           .filter(|t| t.count_letter_at_vertbar() == max)
           .collect();
         match kept.len() {
-          0 => XM::Choices(Vec::new()),
+          0 => XM::Choices(Shared::new(Vec::new())),
           1 => kept.into_iter().next().unwrap(),
-          _ => XM::Choices(kept),
+          _ => XM::Choices(Shared::new(kept)),
         }
       },
       other => other,
@@ -1725,9 +1779,9 @@ impl XM {
           .filter(|t| t.count_conditionals() == min)
           .collect();
         match kept.len() {
-          0 => XM::Choices(Vec::new()),
+          0 => XM::Choices(Shared::new(Vec::new())),
           1 => kept.into_iter().next().unwrap(),
-          _ => XM::Choices(kept),
+          _ => XM::Choices(Shared::new(kept)),
         }
       },
       other => other,
@@ -1815,9 +1869,9 @@ impl XM {
           })
           .collect();
         match kept.len() {
-          0 => XM::Choices(Vec::new()),
+          0 => XM::Choices(Shared::new(Vec::new())),
           1 => kept.into_iter().next().unwrap(),
-          _ => XM::Choices(kept),
+          _ => XM::Choices(Shared::new(kept)),
         }
       },
       other => other,
@@ -1841,9 +1895,9 @@ impl XM {
         }
         let kept: Vec<XM> = trees.into_iter().filter(|t| t.root_is_addition()).collect();
         match kept.len() {
-          0 => XM::Choices(Vec::new()),
+          0 => XM::Choices(Shared::new(Vec::new())),
           1 => kept.into_iter().next().unwrap(),
-          _ => XM::Choices(kept),
+          _ => XM::Choices(Shared::new(kept)),
         }
       },
       other => other,
@@ -2165,7 +2219,10 @@ impl XM {
         // props.into_xmath(&mut apply_node,document)?;
         let (_, font, attrs) = props.into_attributes();
         let mut apply_node = document.open_element_at(owner, "ltx:XMApp", attrs, font)?;
-        let mut op_node = op.0.into_xmath(&mut apply_node, nodes, document)?;
+        let mut op_node = op
+          .0
+          .into_inner()
+          .into_xmath(&mut apply_node, nodes, document)?;
 
         add_child_guard_xmarg(&mut apply_node, &mut op_node)?;
         for arg in args.0.into_iter().flatten() {
@@ -2179,9 +2236,13 @@ impl XM {
         let (_, font, attrs) = props.into_attributes();
         let mut dual_node = document.open_element_at(owner, "ltx:XMDual", attrs, font)?;
         // Content branch first, then presentation (Perl convention)
-        let mut content_node = content.into_xmath(&mut dual_node, nodes, document)?;
+        let mut content_node = content
+          .into_inner()
+          .into_xmath(&mut dual_node, nodes, document)?;
         add_child_guard_xmarg(&mut dual_node, &mut content_node)?;
-        let mut pres_node = pres.into_xmath(&mut dual_node, nodes, document)?;
+        let mut pres_node = pres
+          .into_inner()
+          .into_xmath(&mut dual_node, nodes, document)?;
         add_child_guard_xmarg(&mut dual_node, &mut pres_node)?;
         document.close_element_at(&mut dual_node)?;
         Ok(dual_node)
@@ -2391,19 +2452,19 @@ impl From<&Node> for XM {
       "XMArg" => {
         let children = element_nodes(n);
         let inner_xm = children.iter().map(XM::from).collect::<Vec<_>>();
-        XM::Arg(inner_xm)
+        XM::Arg(Shared::new(inner_xm))
       },
       "XMDual" => {
         let mut children = element_nodes(n);
         let content = children.remove(0);
         let presentation = if children.is_empty() {
-          XM::Wrap(Vec::new(), XProps::default(), Meta::default())
+          XM::Wrap(Shared::new(Vec::new()), XProps::default(), Meta::default())
         } else {
           XM::from(&children.remove(0))
         };
         XM::Dual(
-          Box::new(XM::from(&content)),
-          Box::new(presentation),
+          Shared::new(XM::from(&content)),
+          Shared::new(presentation),
           XProps::from(n),
           Meta::default(),
         )
@@ -2412,7 +2473,7 @@ impl From<&Node> for XM {
       "XMWrap" => {
         let children = element_nodes(n);
         let inner_xm = children.iter().map(XM::from).collect::<Vec<_>>();
-        XM::Wrap(inner_xm, XProps::from(n), Meta::default())
+        XM::Wrap(Shared::new(inner_xm), XProps::from(n), Meta::default())
       },
       // Fallback for unhandled node types — treat as token preserving attributes
       _other => XM::Token(XProps::from(n), Meta::default()),
@@ -2462,5 +2523,49 @@ impl From<&Node> for XProps {
       rpadding,
       ..Default::default()
     }
+  }
+}
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+
+  /// Two alternatives built from one child reading share its subtree; a write through either copies
+  /// what it changes, so the other keeps the reading as the child glade produced it.
+  #[test]
+  fn a_shared_subtree_takes_writes_privately() {
+    let child = XM::Apply(
+      Operator::from("ADDOP:plus:1"),
+      Args::from(vec![XM::from("letter:a"), XM::from("letter:b")]),
+      XProps::default(),
+      Meta::default(),
+    );
+    let one = XM::Wrap(
+      Shared::new(vec![child.clone()]),
+      XProps::default(),
+      Meta::default(),
+    );
+    let mut two = one.clone();
+    let XM::Wrap(items, ..) = &mut two else {
+      unreachable!()
+    };
+    let XM::Apply(_, args, props, _) = &mut items[0] else {
+      unreachable!()
+    };
+    args.0[1] = Some(XM::from("letter:c"));
+    props.role = Some(Cow::Borrowed("ADDOP"));
+    let XM::Wrap(items, ..) = &one else {
+      unreachable!()
+    };
+    assert_eq!(items[0], child, "the first alternative keeps its child");
+    assert_ne!(one, two, "the second alternative has its own");
+    let XM::Wrap(items, ..) = two else {
+      unreachable!()
+    };
+    let XM::Apply(_, args, ..) = items.into_inner().remove(0) else {
+      unreachable!()
+    };
+    assert_eq!(args.0[1], Some(XM::from("letter:c")));
+    assert_eq!(args.0[0], Some(XM::from("letter:a")));
   }
 }
