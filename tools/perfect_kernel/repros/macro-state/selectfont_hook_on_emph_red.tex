@@ -1,0 +1,17 @@
+% mechanism: latex.ltx `\emph` → `\eminnershape`/`\itshape` → `\selectfont`, which runs the `selectfont` hook
+%   (:12580); our `\emph` is a constructor with a font, never calling `\selectfont`, so the hook does not run
+%   (`\textbf`, `\small`, `\usefont`, `\normalfont` do). Font constructors calling no `\selectfont` are the binding's
+%   design: the fix is the macro faces (QA51/QA53).
+% witness: synthetic (QAB2 sibling sweep; hook users scrartcl.cls:2673 layout-only, everysel 6/30k)
+% status:  RED
+% moves:   post-merge
+% oracle:  pdflatex 0 `!`; "A B1 C2 D3 E 4 F5"
+% engines: rust QAB2: "A B 1 C2 D3 E 3 F4" (one count short from \emph on)
+% expect:  0 errors, 0 warnings; <p>A <text font="bold">B</text>1 <text fontsize="90%">C2 D3 <emph
+%   font="italic">E</emph>4 F5</text></p>
+\documentclass{article}
+\newcounter{sel}
+\AddToHook{selectfont}{\stepcounter{sel}}
+\begin{document}
+\setcounter{sel}{0}A \textbf{B}\arabic{sel} \small C\arabic{sel} \usefont{T1}{cmr}{m}{n}D\arabic{sel} \emph{E}\arabic{sel} \normalfont F\arabic{sel}
+\end{document}

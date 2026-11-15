@@ -1,0 +1,16 @@
+% mechanism: latex.ltx:12580 `\selectfont` runs `\UseHook{selectfont}` after the font switch, before
+%   `\size@update` (ours: sect13.rs `\selectfont`, only when the hook holds code); `\AddToHookNext` runs once.
+% witness: synthetic (QA46 "font hooks: none"; users: scrartcl.cls:2673 `\par@update`, everysel.sty:49; QAB2)
+% status:  GREEN (QAB2; RED before: two `Error:undefined:\lastseries`, "(next)" lost)
+% oracle:  pdflatex 0 `!`; "A B [bx] C [m] D (next)E F"
+% engines: rust QAB2 base abad17dfeaf: 1 Error, "A B [\lastseries] C [\lastseries] D E F"; QAB2: pdflatex's.
+% expect:  0 errors, 0 warnings; <p>A <text font="bold">B [bx] </text>C [m]\n<text font="bold">D <text
+%   font="italic">(next)E </text>F</text></p>
+\documentclass{article}
+\makeatletter
+\AddToHook{selectfont}{\xdef\lastseries{\f@series}}
+\makeatother
+\begin{document}
+A \bfseries B [\lastseries] \mdseries C [\lastseries]
+\fontseries{b}\selectfont D \AddToHookNext{selectfont}{(next)}\fontshape{it}\selectfont E \upshape F
+\end{document}

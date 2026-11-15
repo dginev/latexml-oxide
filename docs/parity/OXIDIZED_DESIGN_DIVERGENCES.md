@@ -36624,6 +36624,11 @@ atveryend's commands are no-ops: every hook's code is dropped.
 `\AtBeginEnvironment{verbatim}` joins the same hook, its private store gone); `\label` runs
 `\UseHookWithArguments{label}{1}{#1}` in a group (:14943); `\include` names the file current and runs `include/before`,
 `include/<name>/before`, `/end`, `/after`, and `include/excluded` for a file `\includeonly` leaves out (:9609-9627).
+The kernel's abstract, a binding macro, runs `env/abstract/begin` at its body's head and `env/abstract/end` before
+`\end{abstract}` (:15362, :15386), inside the abstract's group; `\selectfont` runs `\UseHook{selectfont}` before
+`\size@update` (:12580), only when the hook holds code (scrartcl.cls:2673's `\par@update`, everysel.sty:49);
+`file/<name>/before|after` are plain `\UseHook`s at every `\input` and load (:19668-19673), and a load's `after` pair
+runs before its `\AtEndOfPackage`/`\AtEndOfClass` code and `package/<name>/after` (:18865-18869).
 `\begin` defines `\@currenvir` (`verbatim*` its own name) before `env/<name>/begin` (:15350-15352), so the verbatim
 constructor runs its begin hooks, the kernel's and etoolbox's `@atbegin` store, after it. `enddocument/afterlastpage`, `/afteraux` and
 `/end` (:15262-15277) follow the last page, where pdflatex prints nothing they typeset: the document's own code
@@ -36648,11 +36653,13 @@ latex.ltx runs it before the `.aux` write, so a hook's `\@currentlabel` does not
 Package.pm:1920-1927; `environment_begin_hook_reads_its_environment_red`: moving it alone raised 2001.02707's
 `\AtBeginEnvironment{defn}{\begin{samepage}}` from 29 to 54 errors, so the end side moves with it); no `\begin` path
 sets `\@currenvline` (`currenvline_is_never_set_red`); a
-document's `\AtEndAfterFileList` is lost (`enddocument_info_hook_red`). **Guard**:
+document's `\AtEndAfterFileList` is lost (`enddocument_info_hook_red`); `\emph` and the other font constructors call no
+`\selectfont`, so its hook does not run there (`selectfont_hook_on_emph_red`, the macro faces). **Guard**:
 `perfect_kernel_batchqa47a::batchqa47a_command_hook_rows` (rows `enddocument_hooks_run`,
 `enddocument_hook_commands_run`, `verbatim_env_hooks_run`, `verbatim_begin_hook_reads_its_environment`,
 `label_hook_runs`, `include_hooks_run`, `label_hook_opens_no_paragraph`, `cleveref_firstaid_not_registered`,
-`cleveref_firstaid_absent_removes_nothing`).
+`cleveref_firstaid_absent_removes_nothing`, `file_hooks_run_at_every_input`, `file_hooks_order_around_a_package`,
+`abstract_env_hooks_run`, `selectfont_hook_runs`).
 
 ### 1045. Every box's width, height and depth are the CSS custom properties `--ltx-box-width`, `--ltx-box-height`, `--ltx-box-depth` (Perl: `style="width:…;height:…;vertical-align:…"`, or dropped)
 
@@ -36770,5 +36777,4 @@ pdflatex 5.25G instructions, ours 7.81G (accepted as TeX's own cost, DG 2026-11-
 **Guard**: `perfect_kernel_batchqa47a::batchqa47a_command_hook_rows` (rows `use_hook_expands_in_the_body`,
 `hook_code_added_in_the_body_runs`, `hooks_initialize_once_on_an_older_lthooks`); RED catalog
 `show_hook_needs_showstream_red` (`\ShowHook` needs pdfTeX's `\showstream`, post-merge),
-`file_hooks_run_at_every_input_red` (content.rs runs `file/<name>/before|after` as one-time hooks, latex.ltx:19669/19672
-a plain `\UseHook`; post-merge).
+and the row `file_hooks_run_at_every_input` (#1048: `file/<name>/before|after` plain `\UseHook`s, latex.ltx:19669/19672).
