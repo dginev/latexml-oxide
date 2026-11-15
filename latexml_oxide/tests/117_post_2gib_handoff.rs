@@ -109,3 +109,86 @@ fn oversized_handoff_spills_and_output_is_identical() {
     "the spill route must not change the post-processed output"
   );
 }
+
+/// An unsplit document whose sweeps both change the page: Scan names the root,
+/// MakeIndex fills `\printindex`, MakeBibliography converts `lit.bib`.
+const RESIDENT_TEX: &str = r#"\documentclass{article}
+\usepackage{makeidx}
+\makeindex
+\begin{document}
+\section{One}
+Text\index{alpha} with a footnote\footnote{A note.} and a citation \cite{Lamport:1994}.
+
+\begin{tabular}{|l|r|}\hline a & 1\\ \hline\end{tabular}
+\[ x^2 + y_1 = \frac{a}{b} \]
+\section{Two}
+More\index{beta} text with entities: \& $<$ $>$ ``quotes''.
+\bibliographystyle{plain}
+\bibliography{lit}
+\printindex
+\end{document}
+"#;
+
+/// The one page of an unsplit document stays resident between post's passes
+/// instead of going through disk: its render must be byte-identical to the
+/// disk-staged page's (`LATEXML_POST_SPILL_PAGE=1`), through Scan's root id and
+/// both sweeps' changes. Resident needs a clean parse, asserted first so the
+/// comparison cannot pass vacuously.
+#[test]
+fn resident_page_renders_as_the_disk_staged_one() {
+  let dir = tempfile::tempdir().expect("temp dir");
+  let tex = dir.path().join("resident.tex");
+  std::fs::write(&tex, RESIDENT_TEX).expect("write fixture");
+  std::fs::copy("tests/structure/lit.bib", dir.path().join("lit.bib")).expect("copy lit.bib");
+  let config = Config {
+    format: OutputFormat::XML,
+    ..Config::default()
+  };
+  let mut converter = Converter::from_config(config);
+  converter
+    .initialize_session()
+    .expect("can initialize session");
+  let xml = converter
+    .convert(tex.to_string_lossy().into_owned())
+    .result
+    .expect("conversion produced XML output");
+  let parsed = latexml_post::document::PostDocument::new_from_string(&xml, Default::default())
+    .expect("core XML parses");
+  assert!(
+    parsed.get_document().is_well_formed() && parsed.get_document().is_ns_valid(),
+    "the fixture must parse cleanly, or the page is staged on disk either way"
+  );
+  drop(parsed);
+
+  let src = dir.path().to_string_lossy().into_owned();
+  let opts = PostOptions {
+    source_directory: Some(&src),
+    ..post_opts()
+  };
+  let resident = latexml::post::run_post_processing_logged(&xml, &opts);
+  // SAFETY: nextest runs each test in its own process; nothing else reads
+  // the environment concurrently in this one.
+  unsafe { std::env::set_var("LATEXML_POST_SPILL_PAGE", "1") };
+  let staged = latexml::post::run_post_processing_logged(&xml, &opts);
+  unsafe { std::env::remove_var("LATEXML_POST_SPILL_PAGE") };
+
+  for needle in [
+    "ltx_indexlist",
+    "ltx_bibitem",
+    "Lamport",
+    "ltx_note",
+    "ltx_tabular",
+    "<math",
+  ] {
+    assert!(
+      resident.html.contains(needle),
+      "{needle} missing from the resident render:\n{}",
+      resident.html
+    );
+  }
+  assert_eq!(
+    resident.html, staged.html,
+    "the resident page must render as the disk-staged one"
+  );
+  assert_eq!(resident.log, staged.log);
+}

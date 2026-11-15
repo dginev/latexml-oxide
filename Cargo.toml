@@ -43,6 +43,11 @@ unused_qualifications = "warn"
 # [patch.crates-io]
 # marpa-asf = { path = "/home/deyan/git/marpa/marpa" }
 
+[patch.crates-io]
+# TEMP until libxml 0.3.24 is released (`Document::is_well_formed` / `is_ns_valid` / `forget_unshared_nodes`,
+# rust-libxml branch perfh/doc-parse-properties).
+libxml = { path = "/home/deyan/data/pk_wt/PERFH_libxml" }
+
 [profile.release]
 # Local benchmark/sandbox/canvas profile. Tuned for the 32 GB / 20-thread
 # laptop used to rebuild the sandbox corpus: keep strong optimized binaries
