@@ -3352,12 +3352,12 @@ impl Document {
     let mut head = whole;
     let ocontent = head.split_off(start);
     let mut content = Cow::Borrowed(&ocontent);
-    state::with_value("TEXT_LIGATURES", |value_opt| {
+    state::with_value("TEXT_LIGATURES", |value_opt| -> Result<()> {
       if let Some(Stored::VecDequeStored(ligatures)) = value_opt {
         for stored_ligature in ligatures.iter() {
           if let Stored::Ligature(ligature) = stored_ligature {
             if let Some(ref font_test) = ligature.font_test
-              && !(font_test)(font)
+              && !(font_test)(font)?
             {
               continue; // if the font test fails, skip the ligature
             }
@@ -3365,7 +3365,8 @@ impl Document {
           }
         }
       }
-    });
+      Ok(())
+    })?;
     if *content != ocontent {
       self.node.set_content(&format!("{head}{content}"))?;
     }

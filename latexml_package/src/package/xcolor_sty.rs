@@ -1278,7 +1278,7 @@ LoadDefinitions!({
       if let Some(defn) = lookup_register_definition(&varname) {
         let defn_args: Vec<ArgWrap> = inner.clone();
         let defn_value = defn.value_of(inner).unwrap_or_default();
-        defn.set_value(defn_value.multiply(Number::new(10)), None, defn_args);
+        defn.set_value(defn_value.multiply(Number::new(10)), None, defn_args)?;
       }
     }
     Ok(())
@@ -1290,7 +1290,7 @@ LoadDefinitions!({
       if let Some(defn) = lookup_register_definition(&varname) {
         let defn_args: Vec<ArgWrap> = inner.clone();
         let defn_value = defn.value_of(inner).unwrap_or_default();
-        defn.set_value(defn_value.multiply(Number::new(100)), None, defn_args);
+        defn.set_value(defn_value.multiply(Number::new(100)), None, defn_args)?;
       }
     }
     Ok(())
@@ -1303,7 +1303,7 @@ LoadDefinitions!({
       if let Some(defn) = lookup_register_definition(&varname) {
         let defn_args: Vec<ArgWrap> = inner.clone();
         let defn_value = defn.value_of(inner).unwrap_or_default();
-        defn.set_value(defn_value.divide(Number::new(10)), None, defn_args);
+        defn.set_value(defn_value.divide(Number::new(10)), None, defn_args)?;
       }
     }
     Ok(())
@@ -1315,7 +1315,7 @@ LoadDefinitions!({
       if let Some(defn) = lookup_register_definition(&varname) {
         let defn_args: Vec<ArgWrap> = inner.clone();
         let defn_value = defn.value_of(inner).unwrap_or_default();
-        defn.set_value(defn_value.divide(Number::new(100)), None, defn_args);
+        defn.set_value(defn_value.divide(Number::new(100)), None, defn_args)?;
       }
     }
     Ok(())
@@ -1342,7 +1342,7 @@ LoadDefinitions!({
         let n: f64 = xc_expand(num)?.to_string().parse().unwrap_or(0.0);
         // Perl: setValue((10 * num) . 'pt') — stores as dimension string
         let dim = Dimension::from_str(&s!("{}pt", 10.0 * n))?;
-        defn.set_value(RegisterValue::Dimension(dim), None, inner);
+        defn.set_value(RegisterValue::Dimension(dim), None, inner)?;
       }
     }
     Ok(())
@@ -1355,7 +1355,7 @@ LoadDefinitions!({
         let n: f64 = xc_expand(num)?.to_string().parse().unwrap_or(0.0);
         // Perl: setValue((100 * num) . 'pt') — stores as dimension string
         let dim = Dimension::from_str(&s!("{}pt", 100.0 * n))?;
-        defn.set_value(RegisterValue::Dimension(dim), None, inner);
+        defn.set_value(RegisterValue::Dimension(dim), None, inner)?;
       }
     }
     Ok(())
@@ -1557,7 +1557,7 @@ LoadDefinitions!({
         && rownum.is_register()
       {
         let n = i64::try_from(n).unwrap_or(i64::MAX);
-        rownum.set_value(RegisterValue::Number(Number::new(n)), Some(Scope::Global), Vec::new());
+        rownum.set_value(RegisterValue::Number(Number::new(n)), Some(Scope::Global), Vec::new())?;
       }
       if if_condition(&T_CS!("\\if@rowcolors"))?.unwrap_or(false) {
         let first = match lookup_value("tabular_row_color_first") {

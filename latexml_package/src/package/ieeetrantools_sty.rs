@@ -220,7 +220,7 @@ pub fn define_ieeeeqnarray() -> Result<()> {
       .into_iter()
       .map(|(before, after)| Cell { before: Some(before), after: Some(after), empty: true, ..Cell::default() })
       .collect();
-    set_column_count(columns.len());
+    set_column_count(columns.len())?;
     eqnarray_bindings_with_columns(columns)?;
     AssignValue!("IEEEeqnarray@mathcells" => false);
   });
@@ -474,7 +474,7 @@ pub fn define_eqnarraybox() -> Result<()> {
         Cell { before: Some(before), after: Some(after), ..Cell::default() }
       })
       .collect();
-    set_column_count(columns.len());
+    set_column_count(columns.len())?;
     let template = Template::new(TemplateConfig {
       columns: Some(columns),
       ..TemplateConfig::default()
@@ -502,8 +502,9 @@ pub fn define_eqnarraybox() -> Result<()> {
 
 /// `\@IEEEeqnnumcols`, the number of columns of the specification (IEEEtrantools.sty:2498, :2535), for the rows that
 /// span them all (`\IEEEeqnarrayrulerow` and the rest).
-fn set_column_count(count: usize) {
+fn set_column_count(count: usize) -> Result<()> {
   AssignRegister!("\\@IEEEeqnnumcols", Number::new(count as i64).into());
+  Ok(())
 }
 
 /// The alignment an IEEEeqnarraybox opens over the column specification `cols`; `\@@IEEE@array` keeps `cols` whole

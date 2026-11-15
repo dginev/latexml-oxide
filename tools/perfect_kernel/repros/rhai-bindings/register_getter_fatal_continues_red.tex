@@ -1,0 +1,19 @@
+% mechanism: a Rhai `Fatal()` raised in a `DefRegister` getter is dropped (`script_bindings/values.rs`
+%   `register_getter`, `contain(…).ok()?`): the register reads as unset and the whole text is built. The getter is
+%   `Definition::value_of`, which returns an `Option` (720 callers), so its Fatal cannot propagate as a setter's or
+%   a `fontTest`'s now does (RHFAT; OD #1028)
+% witness: synthetic (RHFAT, the getter sibling of ODR10; the binding lxrgf.sty.rhai, lxrgf.sty.ltxml for Perl,
+%   lxrgf.sty for pdflatex)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "Before 0.0pt after. Second paragraph."; Perl 0.8.8:
+%   1 fatal error, no document written (the getter dies, the conversion ends; revRHFAT)
+% engines: RHFAT: <p>Before  after.</p> <p>Second paragraph.</p>, 1 fatal error
+% expect:  1 fatal error; the text after the getter's read not built (as a body `Fatal()`)
+% status:  RED (RHFAT)
+% moves:   post-merge (a fallible register read: value_of → Result, or a read path that re-raises the getter's Fatal)
+\documentclass{article}
+\usepackage{lxrgf}
+\begin{document}
+Before \the\lxrgf\ after.
+
+Second paragraph.
+\end{document}

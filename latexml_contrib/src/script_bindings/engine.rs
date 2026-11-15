@@ -3726,10 +3726,9 @@ fn def_ligature(pattern: &str, replacement: &str, opts: Map) -> RhaiResult<()> {
     Some(test) => {
       let (engine, ast) = current_script()?;
       let test: latexml_core::ligature::FontTestClosure = Rc::new(move |font| {
-        // (the hook returns a bool, so a Fatal raised in the test is logged, not propagated)
         match call_deferred_body(&engine, &ast, &test, (Dynamic::from(font.clone()),)) {
-          Ok(ret) => ret.as_bool().unwrap_or(false),
-          Err(e) => contain_bool("DefLigature fontTest", e),
+          Ok(ret) => Ok(ret.as_bool().unwrap_or(false)),
+          Err(e) => contain("DefLigature fontTest", e, false),
         }
       });
       Some(test)

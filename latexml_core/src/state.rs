@@ -4978,7 +4978,7 @@ pub fn assign_register_token(
   if let Some(defn) = defn_opt
     && defn.is_register()
   {
-    defn.set_value(value, scope, parameters);
+    defn.set_value(value, scope, parameters)?;
     return Ok(());
   }
   warn_not_register(cs);

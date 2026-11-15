@@ -112,7 +112,7 @@ LoadDefinitions!({
           let summand = read_value(defn.register_type().unwrap())?;
           let defn_args : Vec<ArgWrap> = inner.clone();
           let defn_value = defn.value_of(inner).unwrap_or_default();
-          defn.set_value(defn_value.add(summand), None, defn_args);
+          defn.set_value(defn_value.add(summand), None, defn_args)?;
         } else {
           let message = s!("\\advance expected a defined variable for {:?}, found no definition",
           defn_token_str);
@@ -139,7 +139,7 @@ LoadDefinitions!({
       match lookup_register_definition(&varname) { Some(defn) => {
         let defn_args : Vec<ArgWrap> = inner.clone();
         let defn_value = defn.value_of(inner).unwrap_or_default();
-        defn.set_value(defn_value.multiply(scale), None, defn_args);
+        defn.set_value(defn_value.multiply(scale), None, defn_args)?;
       } _ => {
         let message =
           s!("\\multiply expected a defined variable for {:?}, found no definition", varname);
@@ -163,7 +163,7 @@ LoadDefinitions!({
           Error!("misdefined", scale, "Illegal \\divide by 0; assuming 1");
           denominator = 1.0;
         }
-        defn.set_value(defn_value.divide(Float::new_f64(denominator)), None, defn_args);
+        defn.set_value(defn_value.divide(Float::new_f64(denominator)), None, defn_args)?;
       } _ => {
         let message =
           s!("\\divide expected a defined variable for {:?}, found no definition", varname);

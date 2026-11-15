@@ -66,7 +66,7 @@ Rules that keep this file honest and mergeable:
   - ODR7 — OD ruling 6: each "Bindings beyond Perl's tree" body (end of OD) into its binding module's `//!` doc comment, then trim the catalog to its table; 3
   - ODR8 — OD docs: #8 (the OML slot-127 claim unconfirmed in code), #26 (mdframed now inserts through `insert_block`, `mdframed_sty.rs`); 1
   - ODR9 — wire `tools/perfect_kernel/od_anchors.sh` into `tools/lint.sh`; 1
-  - ODR10 — OD #1028's two exceptions (the post-cutoff Error-policy batch): make a Rhai Fatal raised in a `DefLigature` `fontTest` (`script_bindings/wire.rs` `contain_bool`) or a register setter (`script_bindings/values.rs`, `let _ = contain(…)`) propagate as the other hooks' do; red probe: a `fontTest` or a `DefRegister` setter calling `Fatal()` prints one `Fatal:` line and the whole text is still built; 1
+  - ODR10 — done (RHFAT, fix/rhai-fatal-hooks): a Rhai `Fatal()` in a `DefLigature` `fontTest` or a register setter ends the conversion; the two remaining dropped paths — a register getter (`Definition::value_of` is an `Option`) and a `fontTest` Fatal in `set_node`'s close — are REDs for one post-merge decision (propagate the `Result`, or re-raise a logged Fatal): `rhai-bindings/register_getter_fatal_continues_red.tex`, `rhai-bindings/fonttest_fatal_closed_by_set_node_red.tex`; 1
   - CT1b — CT1b; 1
   - CT1d — CT1d; 1
   - HG2 — HG2: 182 DEL1-kept guards + a no-content-assertion fence; 3
