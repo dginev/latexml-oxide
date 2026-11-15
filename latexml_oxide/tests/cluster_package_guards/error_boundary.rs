@@ -728,7 +728,8 @@ const BOUNDARY: &[Row] = &[
   // --- latex.ltx's `\@preamblecmds` (QA90, OD #226): pdflatex's Error in the body, the command still done ---
   (
     "preamble-only commands in the body (repro loader/preamble_only_commands_in_the_body)",
-    "pdflatex 7 `!` (4 Can be used only in preamble, 3 Undefined control sequence); Perl 1 error (unexpected:\\usepackage)",
+    "pdflatex 7 `!` (4 Can be used only in preamble, 3 Undefined control sequence); Perl 2 errors \
+     (unexpected:\\usepackage, \\documentclass)",
     include_str!(
       "../../../tools/perfect_kernel/repros/loader/preamble_only_commands_in_the_body.tex"
     ),
@@ -750,6 +751,62 @@ const BOUNDARY: &[Row] = &[
       "para",
       "p1",
       "<para xml:id=\"p1\"><p xml:id=\"p1.1\">First.</p><p xml:id=\"p1.2\">Second.</p></para>",
+    )],
+  ),
+  (
+    "under an unknown class (repro loader/preamble_only_commands_under_an_unknown_class)",
+    "pdflatex stops at the missing class; with one present 2 `!` (Can be used only in preamble), \"More []\"; \
+     Perl 1 error (unexpected:\\usepackage)",
+    include_str!(
+      "../../../tools/perfect_kernel/repros/loader/preamble_only_commands_under_an_unknown_class.tex"
+    ),
+    &[],
+    (2, 1),
+    &[NOTPRERR, NOTPRERR],
+    &[("p", "p1.1", "<p xml:id=\"p1.1\">Body.\nMore [].</p>")],
+  ),
+  (
+    "under an unknown class, in the preamble",
+    "pdflatex stops at the missing class; with one present 0 `!`; Perl 0 errors",
+    "\\documentclass{nosuchclass}\n\\usepackage{xspace}\n\\listfiles\n\\begin{document}\nBody\\xspace.\n\\end{document}\n",
+    &[],
+    (0, 1),
+    &[],
+    &[("p", "p1.1", "<p xml:id=\"p1.1\">Body.</p>")],
+  ),
+  (
+    "a body package's \\@onlypreamble (repro loader/body_package_onlypreamble)",
+    "pdflatex 1 `!` (Can be used only in preamble), \"A:DOC. B:DOC.\"; Perl 1 error (unexpected:\\usepackage), \
+     \"A:PRE. B:PRE.\"",
+    include_str!(
+      "../../../tools/perfect_kernel/repros/loader/body_package_onlypreamble/body_package_onlypreamble_keeps_the_list_closed.tex"
+    ),
+    &[(
+      "onlyp.sty",
+      include_str!(
+        "../../../tools/perfect_kernel/repros/loader/body_package_onlypreamble/onlyp.sty"
+      ),
+    )],
+    (1, 0),
+    &[NOTPRERR],
+    &[("p", "p1.1", "<p xml:id=\"p1.1\">A:DOC.\nB:DOC.</p>")],
+  ),
+  (
+    "a subfile's preamble (repro loader/subfile_preamble)",
+    "pdflatex 0 `!` (subfiles.sty skips the preamble); Perl 1 error (unexpected:\\usepackage)",
+    include_str!(
+      "../../../tools/perfect_kernel/repros/loader/subfile_preamble/subfile_preamble_runs_as_a_preamble.tex"
+    ),
+    &[(
+      "sub.tex",
+      include_str!("../../../tools/perfect_kernel/repros/loader/subfile_preamble/sub.tex"),
+    )],
+    (0, 0),
+    &[],
+    &[(
+      "para",
+      "p1",
+      "<para xml:id=\"p1\"><p xml:id=\"p1.1\">Main.</p><p xml:id=\"p1.2\">Sub text.\nEnd.</p></para>",
     )],
   ),
   (

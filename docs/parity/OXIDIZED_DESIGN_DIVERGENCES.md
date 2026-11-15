@@ -9120,28 +9120,36 @@ license (beameruserguide: 16 of 26 chapters lost, zero errors; SHARED).
 **Rust behavior**: `\@notprerr` is defined (latex.ltx:9019) and `\document` `\let`s
 `\@preamblecmds` to it globally at the latex.ltx:9521-9522 point (`\@preamblecmds`
 is itself `\@onlypreamble`, :1228), so the probe reads as it does in LaTeX.
-**Rule (QA90)**: `\begin{document}` walks latex.ltx's `\@preamblecmds` (:9521-9522) after its hooks; each listed
+**Rule**: `\begin{document}` walks latex.ltx's `\@preamblecmds` (:9521-9522) after its hooks; each listed
 command that is one of our Rust definitions becomes `\lx@notprerr\lx@onlypreamble@<name>`: latex.ltx's own
 `\@notprerr` Error ("Can be used only in preamble", :9019) and then the command itself, as Perl recovers
 (latex_constructs.pool.ltxml:155 `onlyPreamble`, which Perl applies to 8 commands only and with its own text).
-- The list is latex.ltx's (the dump's, 124 entries) plus every `\@onlypreamble` a raw package runs: `\@onlypreamble`
-  records `\do<cs>` as latex.ltx:1224-1226 does (Perl :5594 records nothing). Without a dump it is Perl's 8.
+- The list is latex.ltx's (the dump's, 124 entries) plus each `\@onlypreamble` run in the preamble: `\@onlypreamble`
+  records `\do<cs>` as latex.ltx:1224-1226 does (Perl :5594 records nothing), and nothing once `\@preamblecmds` is
+  `\@notprerr` (:9522), so a body package load keeps lppl.tex:44's probe true. Without a dump it is Perl's 8.
 - Inside a package or class load (`\@currext` `sty`/`cls`) no Error: pdflatex never loads one after the preamble, so
   the packages a body `\usepackage` loads in recovery add none (pdflatex: one Error); nor while a binding runs a
-  sub-file's preamble under Perl's `inPreamble` (standalone_sty.rs).
+  sub-file's preamble under Perl's `inPreamble` (standalone_sty.rs). The loader restores `\@currext` after every
+  load, a missing file's too (content.rs `pop_load_frame`, Package.pm:2652-2654), so under an unknown class's
+  OmniBus fallback the body is not a class load.
 - Only the kernel's definitions (origin `Pool`): a binding's replacement (docmute_sty.rs, standalone_sty.rs
   `\documentclass`) stands for its package's re-let after the walk (docmute.sty:19, standalone.sty:738).
-- A command re-let after the walk (a renewed `document`, exam-n.cls's `\let\document\@empty`) is its own again. `\document` itself stays the constructor's alias, whose identity `\begin`/`\end`
-  read (sect01.rs): the constructor's second run raises the Error.
-- latex.ltx's token macros in the list are left working, a gap: TeX's `\let` to `\@notprerr` would print their
-  arguments, and our loader runs `\@pushfilename`/`\@currnamestack` in the body (content.rs:1773). RED repro
-  `loader/makeindex_in_the_body_red.tex`.
+- A command re-let after the walk (a renewed `document`, exam-n.cls's `\let\document\@empty`) is its own again.
+  `\document` itself stays the constructor's alias, whose identity `\begin`/`\end` read (sect01.rs): the
+  constructor's second run raises the Error.
+- Token macros in the list are left working, a gap: latex.ltx's (`\makeindex`; TeX's `\let` to `\@notprerr` would
+  print their arguments, and our loader runs `\@pushfilename`/`\@currnamestack` in the body, content.rs) and a
+  document's own (`\newcommand\myonly{M}\@onlypreamble\myonly`, pdflatex 1 Error, ours 0). RED repros
+  `loader/makeindex_in_the_body_red.tex`, `loader/document_onlypreamble_macro_in_the_body_red.tex`.
+- Perl's recovery is wrong where a later command reads the setting: a body `\includeonly{ca}` still drops `\include{cb}`,
+  which pdflatex keeps (RED `loader/includeonly_in_the_body_red/`).
 **Why**: the observable side effect raw code tests for is part of the kernel contract, and pdflatex errs on every
-listed command in the body; the recovery keeps what the command does instead of typesetting its arguments.
-Census (30k, main files, comments and verbatim stripped): 45 name one after `\begin{document}`; converting them
-moves no Error (1205.6201's are a conditional's other preambles, most others documentation guides' examples).
+listed Rust-defined command in the body; the recovery keeps what the command does instead of typesetting its
+arguments. Witnesses: synthetic (30k main files: 45 name one after `\begin{document}`, none in a branch pdflatex
+takes; 1205.6201's are a conditional's other preambles).
 Guards `preamblecmds_is_notprerr_inside_a_running_document`, `error_boundary::perfect_kernel_error_boundary`
-(rows "preamble-only commands in the body/preamble", "a second \begin{document}"). Batch 56bx; QA90.
+(rows "preamble-only commands in the body/preamble", "a second \begin{document}", "under an unknown class",
+"a body package's \@onlypreamble").
 
 ### 227. A `filecontents` capture ends at `\end{<current environment>}`
 
