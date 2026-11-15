@@ -226,6 +226,7 @@ fn register_getter(
     let args: Vec<Dynamic> = args.into_iter().map(arg_value).collect();
     let ret = match call_deferred_body(&engine, &ast, &f, args) {
       Ok(ret) => ret,
+      // (`value_of` returns an Option, so a Fatal here is dropped: rhai-bindings/register_getter_fatal_continues_red.tex)
       Err(e) => contain(&what, e, Dynamic::UNIT).ok()?,
     };
     let value = dynamic_to_register_value(&ret);
@@ -258,8 +259,9 @@ fn register_setter(
       };
       let mut dyn_args = vec![register_value_to_dynamic(value), scope];
       dyn_args.extend(args.into_iter().map(arg_value));
-      if let Err(e) = call_deferred_body(&engine, &ast, &f, dyn_args) {
-        let _ = contain(&what, e, ());
+      match call_deferred_body(&engine, &ast, &f, dyn_args) {
+        Ok(_) => Ok(()),
+        Err(e) => contain(&what, e, ()),
       }
     },
   )

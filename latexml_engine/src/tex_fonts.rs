@@ -187,7 +187,7 @@ LoadDefinitions!({
       // Same parametrized-register guard as the getter: skip a no-arg write
       // rather than panic on `args.remove(0)`.
       if args.len() < 2 {
-        return;
+        return Ok(());
       }
       let p = args.remove(0).expect_number().value_of();
       let key = font_parameters_key(args.remove(0).expected_token());
