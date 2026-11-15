@@ -871,6 +871,12 @@ pub(super) fn make_engine() -> Engine {
       },
     );
   }
+  // Perl `Debug($message)` (Error.pm:476-480) with our `Debug!` meaning (DG 2026-11-14): logged only under
+  // `--verbose`, counted either way; plus the macro's `(cat, obj, message)` form.
+  engine.register_fn("Debug", |msg: &str| latexml_core::Debug!("{}", msg));
+  engine.register_fn("Debug", |cat: &str, obj: &str, msg: &str| {
+    latexml_core::Debug!(cat, obj, msg.to_string())
+  });
   // Notes + progress reporting (Perl `Note`/`NoteSTDERR`/`NoteLog`, `ProgressStep`,
   // `ProgressSpinup`/`ProgressSpindown`). Matching Perl `Common/Error.pm`: `Note`
   // writes to BOTH the log and stderr, `NoteSTDERR` to stderr only, `NoteLog` to
@@ -1172,6 +1178,25 @@ pub(super) fn make_engine() -> Engine {
   engine.register_fn("RegisterDocumentNamespace", |prefix: &str, ns: &str| {
     latexml_core::common::model::register_document_namespace(prefix, Some(ns));
   });
+  // Package.pm:2032: no DTD is read here (RelaxNG only, OXIDIZED_DESIGN_DIVERGENCES #1), so a Warning, then the
+  // document namespaces DocType declares, as `RegisterDocumentNamespaces!` does.
+  let doc_type = |root: &str, _pubid: Dynamic, _sysid: Dynamic, namespaces: Map| {
+    latexml_core::Warn!(
+      "unexpected",
+      "DocType",
+      format!("DocType({root}, …): no DTD is read (RelaxNG only); its namespaces are registered"),
+      "use RegisterDocumentNamespace(prefix, namespace), and RelaxNGSchema for the schema"
+        .to_string()
+    );
+    for (prefix, ns) in namespaces {
+      latexml_core::common::model::register_document_namespace(&prefix, Some(&ns.to_string()));
+    }
+  };
+  engine.register_fn(
+    "DocType",
+    move |root: &str, pubid: Dynamic, sysid: Dynamic| doc_type(root, pubid, sysid, Map::new()),
+  );
+  engine.register_fn("DocType", doc_type);
   engine.register_fn("RelaxNGSchema", |schema: &str| {
     latexml_core::binding::content::select_relaxng_schema(schema, None);
   });
@@ -1286,6 +1311,197 @@ pub(super) fn make_engine() -> Engine {
   });
   engine.register_fn("CleanID", |key: Dynamic| {
     latexml_core::common::cleaners::clean_id(&dynamic_to_string(key))
+  });
+  // The other cleaners (Package.pm:513-575): each reads its argument as its ToString.
+  {
+    use latexml_core::common::cleaners as clean;
+    engine.register_fn("CleanIndexKey", |key: Dynamic| {
+      clean::clean_index_key(&dynamic_to_string(key))
+    });
+    engine.register_fn("CleanClassName", |key: Dynamic| {
+      clean::clean_class_name(&dynamic_to_string(key))
+    });
+    engine.register_fn("CleanBibKey", |key: Dynamic| {
+      clean::clean_bib_key(&dynamic_to_string(key))
+    });
+    // Perl's `$key ? lc(CleanBibKey($key)) : undef`.
+    engine.register_fn("NormalizeBibKey", |key: Dynamic| {
+      if perl_truthy(&key) {
+        Dynamic::from(clean::normalize_bib_key(&dynamic_to_string(key)))
+      } else {
+        Dynamic::UNIT
+      }
+    });
+    engine.register_fn("CleanURL", |url: Dynamic| {
+      clean::clean_url(&dynamic_to_string(url))
+    });
+    engine.register_fn("ComposeURL", |base: Dynamic, url: Dynamic| {
+      clean::compose_url(&dynamic_to_string(base), &dynamic_to_string(url), None)
+    });
+    engine.register_fn(
+      "ComposeURL",
+      |base: Dynamic, url: Dynamic, fragid: Dynamic| {
+        let fragid = (!fragid.is_unit()).then(|| dynamic_to_string(fragid));
+        clean::compose_url(
+          &dynamic_to_string(base),
+          &dynamic_to_string(url),
+          fragid.as_deref(),
+        )
+      },
+    );
+    engine.register_fn("TrimmedCommaList", |text: Dynamic| -> rhai::Array {
+      clean::trimmed_comma_list(&dynamic_to_string(text))
+        .into_iter()
+        .map(Dynamic::from)
+        .collect()
+    });
+  }
+  // KeyVal.pm:42-55: whether a key of `prefix`/`keyset` is defined; disable one.
+  engine.register_fn("HasKeyVal", |prefix: &str, keyset: &str, key: &str| {
+    latexml_core::keyval::has_keyval(prefix, keyset, key)
+  });
+  engine.register_fn(
+    "DisableKeyVal",
+    |prefix: &str, keyset: &str, key: &str| -> RhaiResult<()> {
+      latexml_core::keyval::disable_keyval(prefix, keyset, key).map_err(rhai_err)
+    },
+  );
+  // Package.pm:716: the pending `\afterassignment` token, back into the gullet.
+  engine.register_fn("AfterAssignment", || -> RhaiResult<()> {
+    latexml_core::state::after_assignment().map_err(rhai_err)
+  });
+  // Error.pm:493: Warn `deprecated` once per key and conversion.
+  engine.register_fn("Deprecated", |key: &str, version: &str, message: &str| {
+    use latexml_core::state::{assign_mapping, lookup_mapping};
+    if lookup_mapping("DEPRECATIONS_WARNED", key).is_none() {
+      latexml_core::Warn!(
+        "deprecated",
+        key,
+        format!("{key} is deprecated (as of {version})"),
+        message.to_string()
+      );
+      assign_mapping("DEPRECATIONS_WARNED", key, Some(true));
+    }
+  });
+  // Package.pm:414: the ToString of the stuff digested as ASCII-ish text (a string is Tokenized first).
+  engine.register_fn("DigestLiteral", |stuff: Dynamic| -> RhaiResult<String> {
+    let tokens = match stuff.clone().try_cast::<Tokens>() {
+      Some(tokens) => tokens,
+      None => match stuff.clone().try_cast::<Token>() {
+        Some(token) => Tokens::new(vec![token]),
+        None => mouth::tokenize(TeXString::assembled(dynamic_to_string(stuff))),
+      },
+    };
+    latexml_core::binding::content::digest_literal(tokens)
+      .map(|d| d.to_string())
+      .map_err(rhai_err)
+  });
+  // Package.pm:818-850: with a label-mapping hook, peek for a following `\label`, or note one.
+  engine.register_fn("MaybePeekLabel", || -> RhaiResult<()> {
+    latexml_core::binding::counter::dialect::maybe_peek_label().map_err(rhai_err)
+  });
+  engine.register_fn("MaybeNoteLabel", |label: Dynamic| {
+    latexml_core::binding::counter::dialect::maybe_note_label(&dynamic_to_string(label));
+  });
+  // Package.pm:2917: an encoding's font map (loading it on first use) as an array of its characters (`()` for an
+  // unmapped position), or `()` when there is none.
+  engine.register_fn("LoadFontMap", |encoding: &str| -> Dynamic {
+    latexml_core::binding::content::load_font_map(encoding).map_or(Dynamic::UNIT, |map| {
+      let chars: rhai::Array = map
+        .iter()
+        .map(|c| c.map_or(Dynamic::UNIT, |c| Dynamic::from(c.to_string())))
+        .collect();
+      Dynamic::from(chars)
+    })
+  });
+  // Package.pm:1062: an Error naming the option keys not in `allowed` (an array, or Perl's hash: its true keys);
+  // whether all were.
+  let check = |operation: &str, allowed: Vec<String>, options: Map| -> RhaiResult<bool> {
+    let allowed: Vec<&str> = allowed.iter().map(String::as_str).collect();
+    check_options(operation, &allowed, options.keys().map(|k| k.as_str())).map_err(rhai_err)
+  };
+  engine.register_fn(
+    "CheckOptions",
+    move |operation: &str, allowed: rhai::Array, options: Map| {
+      check(
+        operation,
+        allowed.into_iter().map(dynamic_to_string).collect(),
+        options,
+      )
+    },
+  );
+  engine.register_fn(
+    "CheckOptions",
+    move |operation: &str, allowed: Map, options: Map| {
+      let allowed = allowed.into_iter().filter(|(_, v)| perl_truthy(v));
+      check(
+        operation,
+        allowed.map(|(k, _)| k.to_string()).collect(),
+        options,
+      )
+    },
+  );
+  // Object.pm:30: the debugging form of a value (`Tokens[…]`, `Box[…]`), `undef` for `()`.
+  engine.register_fn("Stringify", |v: Dynamic| -> String {
+    use latexml_core::common::object::Object;
+    if v.is_unit() {
+      "undef".to_string()
+    } else if let Some(t) = v.clone().try_cast::<Token>() {
+      t.stringify()
+    } else if let Some(t) = v.clone().try_cast::<Tokens>() {
+      t.stringify()
+    } else if let Some(d) = v.clone().try_cast::<Digested>() {
+      d.stringify()
+    } else {
+      dynamic_to_string(v)
+    }
+  });
+  // Package.pm:1086: `\cs` loads `file` (`name.sty`, `.cls` or `.pool`) when first used.
+  engine.register_fn("DefAutoload", |cs: Dynamic, file: &str| -> RhaiResult<()> {
+    let cs = match cs.clone().try_cast::<Token>() {
+      Some(token) => token,
+      None => {
+        let name = dynamic_to_string(cs);
+        let name = if name.starts_with('\\') {
+          name
+        } else {
+          format!("\\{name}")
+        };
+        latexml_core::T_CS!(name.as_str())
+      },
+    };
+    latexml_engine::tex::def_autoload_file(&cs, file).map_err(rhai_err)
+  });
+  // Package.pm:2871-2916: a code point, or each char of a string, through the font map of an encoding
+  // (the current font's when `()`).
+  let font_decode = |code: i64, encoding: Dynamic| -> Dynamic {
+    let encoding = (!encoding.is_unit()).then(|| dynamic_to_string(encoding));
+    let code = i32::try_from(code).unwrap_or(-1);
+    latexml_core::binding::content::font_decode(code, encoding.as_deref(), None)
+      .0
+      .map_or(Dynamic::UNIT, |c| Dynamic::from(c.to_string()))
+  };
+  engine.register_fn("FontDecode", move |code: i64| {
+    font_decode(code, Dynamic::UNIT)
+  });
+  engine.register_fn("FontDecode", font_decode);
+  let font_decode_string = |string: &str, encoding: Dynamic, implicit: bool| {
+    let encoding = (!encoding.is_unit()).then(|| dynamic_to_string(encoding));
+    latexml_core::binding::content::font_decode_string(string, encoding.as_deref(), implicit)
+  };
+  engine.register_fn(
+    "FontDecodeString",
+    move |string: &str, encoding: Dynamic| font_decode_string(string, encoding, false),
+  );
+  engine.register_fn("FontDecodeString", font_decode_string);
+  // Package.pm:2734: the format is fixed where the dump is chosen, before any binding runs (strict LoadFormat).
+  engine.register_fn("LoadFormat", |name: &str| {
+    script_error(
+      "unexpected",
+      "LoadFormat",
+      &format!("LoadFormat({name}): the format is chosen with the dump, before any binding loads"),
+      None,
+    )
   });
   engine.register_fn("SetCounter", |ctr: &str, value: i64| -> RhaiResult<()> {
     latexml_core::binding::counter::dialect::set_counter(ctr, Number(value)).map_err(rhai_err)
@@ -1438,6 +1654,22 @@ pub(super) fn make_engine() -> Engine {
         .map_err(rhai_err)
     },
   );
+  // DefMathI (Package.pm:1617): DefMath for the CS and its parameter spec apart.
+  let math_i = |cs: Dynamic, params: Dynamic, presentation: &str, opts: Map| -> RhaiResult<()> {
+    let cs = coerce_cs("DefMathI", cs)?;
+    let params = i_form_params("DefMathI", &cs, params).map_err(rhai_err)?;
+    let (engine, ast) = current_script()?;
+    let options = math_options_from_map(&cs.to_string(), opts, &engine, &ast).map_err(rhai_err)?;
+    latexml_core::binding::def::dialect::def_math(cs, params, presentation.to_string(), options)
+      .map_err(rhai_err)
+  };
+  engine.register_fn(
+    "DefMathI",
+    move |cs: Dynamic, params: Dynamic, presentation: &str| {
+      math_i(cs, params, presentation, Map::new())
+    },
+  );
+  engine.register_fn("DefMathI", math_i);
   // DefConditional: the test is a Rhai closure receiving its args as Tokens and returning a
   // bool; without a test (or with `()`), the `\newif` form driven by `SetCondition`.
   engine.register_fn(
@@ -1464,6 +1696,32 @@ pub(super) fn make_engine() -> Engine {
       wire_now(|e, a| wire_conditional(e, a, proto, None, opts))
     },
   );
+  // DefConditionalI (Package.pm:1194): the CS and its parameter spec apart; the test a closure or `()`.
+  let conditional_i = |cs: Dynamic, params: Dynamic, test: Dynamic, opts: Map| -> RhaiResult<()> {
+    let cs = coerce_cs("DefConditionalI", cs)?;
+    let test = match test.clone().try_cast::<FnPtr>() {
+      Some(fp) => Some(fp),
+      None if test.is_unit() => None,
+      None => {
+        return Err(
+          format!(
+            "DefConditionalI: the test is a closure or (), got {}",
+            type_label(&test)
+          )
+          .into(),
+        );
+      },
+    };
+    wire_now(|e, a| {
+      let params = i_form_params("DefConditionalI", &cs, params)?;
+      wire_conditional_i(e, a, cs, params, test, opts)
+    })
+  };
+  engine.register_fn(
+    "DefConditionalI",
+    move |cs: Dynamic, params: Dynamic, test: Dynamic| conditional_i(cs, params, test, Map::new()),
+  );
+  engine.register_fn("DefConditionalI", conditional_i);
   // SetCondition (Package.pm:1255): `\iffoo` to `\iftrue`/`\iffalse`, for a test-less conditional.
   engine.register_fn("SetCondition", |cs: Dynamic, value: bool| {
     let cs = token_arg("SetCondition", cs)?;
@@ -1700,6 +1958,20 @@ pub(super) fn make_engine() -> Engine {
   engine.register_fn("ReadOptional", read_optional);
   engine.register_fn("readToken", |_g: &mut GulletHandle| read_token());
   engine.register_fn("ReadToken", read_token);
+  // Package.pm:434: the arguments a parameter spec reads from the input, each as a body receives it.
+  engine.register_fn(
+    "ReadParameters",
+    |_g: &mut GulletHandle, spec: &str| -> RhaiResult<rhai::Array> {
+      let anonymous = Token::new("Anonymous", Catcode::OTHER);
+      let Some(params) = latexml_core::common::def_parser::parse_parameters(spec, &anonymous, true)
+        .map_err(rhai_err)?
+      else {
+        return Ok(rhai::Array::new());
+      };
+      let args = params.read_arguments(None).map_err(rhai_err)?;
+      Ok(args.into_iter().map(arg_value).collect())
+    },
+  );
   engine.register_fn("skipSpaces", |_g: &mut GulletHandle| {
     latexml_core::gullet::skip_spaces().map_err(rhai_err)
   });
@@ -2083,6 +2355,37 @@ pub(super) fn make_engine() -> Engine {
       wire_now(|e, a| wire_environment(e, a, proto, ConstructorRepl::Closure(body), opts))
     },
   );
+  // DefEnvironmentI (Package.pm:1899): the name and its parameter spec apart, the prototype DefEnvironment parses.
+  let environment_i =
+    |name: Dynamic, params: Dynamic, repl: Dynamic, opts: Map| -> RhaiResult<()> {
+      let spec = if params.is_unit() {
+        String::new()
+      } else {
+        dynamic_to_string(params)
+      };
+      let proto = format!("{{{}}}{spec}", dynamic_to_string(name));
+      let repl = match repl.clone().try_cast::<FnPtr>() {
+        Some(body) => ConstructorRepl::Closure(body),
+        None if repl.is_string() => ConstructorRepl::Template(dynamic_to_string(repl)),
+        None => {
+          return Err(
+            format!(
+              "DefEnvironmentI: the replacement is a template or a closure, got {}",
+              type_label(&repl)
+            )
+            .into(),
+          );
+        },
+      };
+      wire_now(|e, a| wire_environment(e, a, &proto, repl, opts))
+    };
+  engine.register_fn(
+    "DefEnvironmentI",
+    move |name: Dynamic, params: Dynamic, repl: Dynamic| {
+      environment_i(name, params, repl, Map::new())
+    },
+  );
+  engine.register_fn("DefEnvironmentI", environment_i);
 
   // ── document proxy: methods mirror Perl's `$document->method` idiom ──
   // The body receives `document` (a DocProxy) as its first arg, and each digested

@@ -175,60 +175,152 @@ enum Doc {
 }
 
 /// A call's counterparts, for the generated three-column cheat sheet ([`generate_cheatsheet`]): Perl's spelling
-/// (Package.pm, or the Perl method or expression), then the compile-time macro that lowers to the same core call;
-/// `""` where there is none.
+/// (Package.pm, or the Perl method or expression; `helper: …` for a Rhai helper, then the Perl that does the same),
+/// then the Rust a compiled binding uses: items split by ` / `, each a macro `Name!`, a public item's path, `label =>
+/// path`, or a private `name @ file`; `""` is the [`Doc::Rust`] item, which also follows a macro-only cell.
 struct Mirror(&'static str, &'static str);
 
-/// Perl calls a binding author meets (Package.pm's exports and the value constructors) that the dialect does not
-/// register yet, with their macro: the cheat sheet's empty Rhai cells. [`stale_gaps`] fails when one gets registered.
-const PERL_GAPS: &[(&str, &str)] = &[
-  ("AfterAssignment", ""),
-  ("CheckOptions", ""),
-  ("CleanBibKey", ""),
-  ("CleanClassName", ""),
-  ("CleanIndexKey", ""),
-  ("CleanURL", ""),
-  ("Color", ""),
-  ("ComposeURL", ""),
-  ("Debug", "Debug!"),
-  ("DefAutoload", ""),
-  ("DefColor", ""),
-  ("DefColorModel", ""),
-  ("DefConditionalI", ""),
-  ("DefEnvironmentI", ""),
-  ("DefExpandable", ""),
-  ("DefMathI", ""),
-  ("DefRegisterI", ""),
-  ("Deprecated", ""),
-  ("DigestLiteral", ""),
-  ("DisableKeyVal", ""),
-  ("DocType", ""),
-  ("Float", ""),
-  ("FontDecode", ""),
-  ("FontDecodeString", ""),
-  ("GenerateID", ""),
-  ("HasKeyVal", ""),
-  ("InputContent", ""),
-  ("InstallDefinition", "InstallDefinition!"),
-  ("LoadFontMap", ""),
-  ("LoadFormat", ""),
-  ("LookupColor", "LookupColor!"),
-  ("MaybeNoteLabel", ""),
-  ("MaybePeekLabel", ""),
-  ("MuDimension", ""),
-  ("NormalizeBibKey", ""),
-  ("Pair", ""),
-  ("PairList", ""),
-  ("ProcessPendingResources", ""),
-  ("ReadAlignmentTemplate", ""),
-  ("ReadParameters", ""),
-  ("Stringify", ""),
-  ("TokensI", ""),
-  ("TrimmedCommaList", ""),
-  ("convertLaTeXArgs", ""),
-  ("createXMRefs", ""),
-  ("decodeMathChar", ""),
-  ("dualize_arglist", ""),
+/// Perl calls a binding author meets (Package.pm's exports and the value constructors) that the dialect registers
+/// under no Perl name: `(perl, rust, rhai)`, the Rust as in [`Mirror`], `rhai` the existing call or expression that
+/// does the same (`""` while the dialect lacks it: the cheat sheet's gaps). [`stale_gaps`] fails when one gets
+/// registered.
+const PERL_GAPS: &[(&str, &str, &str)] = &[
+  ("Color", "latexml_core::common::color::Color", ""),
+  ("DefColor", "latexml_core::binding::content::def_color", ""),
+  (
+    "DefColorModel",
+    "latexml_core::binding::content::def_color_model",
+    "",
+  ),
+  (
+    "DefExpandable",
+    "DefMacro! / latexml_core::binding::def::dialect::def_macro",
+    "DefMacro(proto, expansion, opts)",
+  ),
+  (
+    "Float",
+    "latexml_core::common::float::Float",
+    "a Rhai float (`1.5`)",
+  ),
+  (
+    "GenerateID",
+    "latexml_core::document::Document::generate_id",
+    "document.generateID(node, prefix)",
+  ),
+  (
+    "InputContent",
+    "latexml_core::binding::content::input_content",
+    "",
+  ),
+  (
+    "InstallDefinition",
+    "InstallDefinition! / latexml_core::state::install_definition",
+    "",
+  ),
+  (
+    "LookupColor",
+    "LookupColor! / latexml_package::package::color_sty::lookup_color",
+    "",
+  ),
+  (
+    "MuDimension",
+    "latexml_core::common::mudimension::MuDimension",
+    "",
+  ),
+  ("Pair", "latexml_core::common::pair::Pair::new", ""),
+  (
+    "PairList",
+    "Vec<Pair> => latexml_core::common::pair::Pair",
+    "",
+  ),
+  (
+    "ProcessPendingResources",
+    "latexml_core::document::Document::process_pending_resources",
+    "",
+  ),
+  (
+    "ReadAlignmentTemplate",
+    "latexml_core::alignment::read_alignment_template",
+    "",
+  ),
+  (
+    "TokensI",
+    "latexml_core::tokens::Tokens::new",
+    "Tokens(t1, t2, …)",
+  ),
+  (
+    "convertLaTeXArgs",
+    "latexml_core::binding::content::convert_latex_args",
+    "",
+  ),
+  (
+    "createXMRefs",
+    "latexml_package::xmath_helpers::i_xmref / rearrange_ams_split @ latexml_package/src/package/amsmath_sty.rs",
+    "",
+  ),
+  (
+    "decodeMathChar",
+    "latexml_core::common::mathchar::decode_math_char",
+    "",
+  ),
+  (
+    "dualize_arglist",
+    "latexml_core::binding::def::dialect::dualize_arglist",
+    "",
+  ),
+];
+
+/// Why each [`PERL_GAPS`] call the dialect lacks has no Rhai call yet, for the cheat sheet's gap list ([`gaps_without_reason`]
+/// fails on a lacking call with none).
+const GAP_REASONS: &[(&str, &str)] = &[
+  ("Color", "a Color value handle the dialect lacks"),
+  ("DefColor", "takes a Color value handle the dialect lacks"),
+  (
+    "DefColorModel",
+    "its conversion closures take Color value handles the dialect lacks",
+  ),
+  (
+    "InputContent",
+    "not yet exposed; a binding reaches it as `RawTeX(\"\\\\input{file}\")`",
+  ),
+  (
+    "InstallDefinition",
+    "needs a Definition object; the dialect's definers install their own",
+  ),
+  (
+    "LookupColor",
+    "returns a Color value handle the dialect lacks",
+  ),
+  (
+    "MuDimension",
+    "a MuDimension value handle the dialect lacks",
+  ),
+  ("Pair", "a Pair value handle the dialect lacks"),
+  ("PairList", "a PairList value handle the dialect lacks"),
+  (
+    "ProcessPendingResources",
+    "run by the schema as `ltx:document` opens (Base_Schema.pool.ltxml:61, `afterOpen`); no binding calls it",
+  ),
+  (
+    "ReadAlignmentTemplate",
+    "returns an alignment template, a handle the dialect lacks",
+  ),
+  (
+    "convertLaTeXArgs",
+    "internal to `\\newcommand`'s definers; a binding writes its parameter spec itself",
+  ),
+  (
+    "createXMRefs",
+    "an XMRef per math node or argument, inside `DefMath`'s XMDual (Package.pm:1544), which the dialect's `DefMath` builds",
+  ),
+  (
+    "decodeMathChar",
+    "returns Perl's list (glyph, font, reversion, properties); not yet exposed as a Rhai value",
+  ),
+  (
+    "dualize_arglist",
+    "internal to `DefMath`'s XMDual, which the dialect's `DefMath` builds",
+  ),
 ];
 
 /// Every registered call, by name. Overloads share one entry: the signatures
@@ -245,7 +337,10 @@ const NUMBER_AS_INT: &str = "**Deprecated** (Warns once per binding load): a Num
 const DOCS: &[(&str, Mirror, Doc)] = &[
   (
     "!",
-    Mirror("!$v", ""),
+    Mirror(
+      "!$v",
+      "perl_truthy @ latexml_contrib/src/script_bindings/mod.rs",
+    ),
     Doc::Note(
       "Perl's truthiness, for `!!v` (`if ($v)`) and `!v` (`unless ($v)`): `()`, `\"\"`, `\"0\"`, `0` and `0.0` are \
        false, a bool is itself, every Token, Tokens (even empty), box, whatsit, array and map is true \
@@ -254,7 +349,10 @@ const DOCS: &[(&str, Mirror, Doc)] = &[
   ),
   (
     "!=",
-    Mirror("$a ne $b", ""),
+    Mirror(
+      "$a ne $b",
+      "impl PartialEq for str => str / register_string_tests @ latexml_contrib/src/script_bindings/engine.rs",
+    ),
     Doc::Note(
       "**Deprecated** (Warns once per binding load): a Tokens, Token, box or value handle against a string compares \
        its string form (use `ToString(v) != s`); `()` against a string, either way round, is `\"\"`, as Perl's `undef ne ''` \
@@ -263,7 +361,10 @@ const DOCS: &[(&str, Mirror, Doc)] = &[
   ),
   (
     "==",
-    Mirror("$a eq $b", ""),
+    Mirror(
+      "$a eq $b",
+      "impl PartialEq for str => str / register_string_tests @ latexml_contrib/src/script_bindings/engine.rs",
+    ),
     Doc::Note(
       "**Deprecated** (Warns once per binding load): a Tokens, Token, box or value handle against a string compares \
        its string form (use `ToString(v) == s`); `()` against a string, either way round, is `\"\"`, as Perl's `undef eq ''` \
@@ -273,17 +374,26 @@ const DOCS: &[(&str, Mirror, Doc)] = &[
   ),
   (
     "%",
-    Mirror("$n->valueOf % $m", ""),
+    Mirror(
+      "$n->valueOf % $m",
+      "latexml_core::common::numeric_ops::NumericOps::value_of / register_number_int_transition @ latexml_contrib/src/script_bindings/values.rs",
+    ),
     Doc::Note(NUMBER_AS_INT),
   ),
   (
     "&",
-    Mirror("$n->valueOf & $m", ""),
+    Mirror(
+      "$n->valueOf & $m",
+      "latexml_core::common::numeric_ops::NumericOps::value_of / register_number_int_transition @ latexml_contrib/src/script_bindings/values.rs",
+    ),
     Doc::Note(NUMBER_AS_INT),
   ),
   (
     "*",
-    Mirror("$v->multiply($n)", ""),
+    Mirror(
+      "$v->multiply($n)",
+      "latexml_core::common::numeric_ops::NumericOps::multiply",
+    ),
     Doc::Note(
       "A Number, Dimension, Glue or MuGlue times an int, a float or a Number (Number.pm `multiply`, truncated; Glue scales \
        its stretch and shrink). **Deprecated** (Warns once per binding load): a Number times a float, or an int or float \
@@ -292,12 +402,18 @@ const DOCS: &[(&str, Mirror, Doc)] = &[
   ),
   (
     "**",
-    Mirror("$n->valueOf ** $m", ""),
+    Mirror(
+      "$n->valueOf ** $m",
+      "latexml_core::common::numeric_ops::NumericOps::value_of / register_number_int_transition @ latexml_contrib/src/script_bindings/values.rs",
+    ),
     Doc::Note(NUMBER_AS_INT),
   ),
   (
     "+",
-    Mirror("$v->add($w)", ""),
+    Mirror(
+      "$v->add($w)",
+      "latexml_core::common::numeric_ops::NumericOps::add / latexml_core::common::glue::Glue::add_glue",
+    ),
     Doc::Note(
       "The sum of two value handles of one type (Number.pm `add`); Glue + Glue and MuGlue + MuGlue as TeX's `\\advance` \
        (the higher fill order wins: `MuGlue(\"3mu plus 1mu\") + MuGlue(\"1mu plus 1fil\")` is `4.0mu plus 1.0fil`), \
@@ -306,7 +422,10 @@ const DOCS: &[(&str, Mirror, Doc)] = &[
   ),
   (
     "-",
-    Mirror("$v->subtract($w)", ""),
+    Mirror(
+      "$v->subtract($w)",
+      "latexml_core::common::numeric_ops::NumericOps::subtract / latexml_core::common::numeric_ops::NumericOps::negate",
+    ),
     Doc::Note(
       "The difference of two value handles (Number.pm `subtract`), or the negation of one (`negate`); a Glue as TeX's \
        `\\advance` by the negation: Glue − Dimension keeps the stretch, `Glue(\"1pt plus 1fil\") - Glue(\"1pt plus 2fil\")` \
@@ -315,7 +434,10 @@ const DOCS: &[(&str, Mirror, Doc)] = &[
   ),
   (
     "/",
-    Mirror("$v->divide($n)", ""),
+    Mirror(
+      "$v->divide($n)",
+      "latexml_core::common::numeric_ops::NumericOps::divide",
+    ),
     Doc::Note(
       "A value handle divided by an int or a Number, truncated (Number.pm `divide`). **Deprecated** (Warns once per \
        binding load): an int or float by a Number, or a Number by a float, divides as the int it was.",
@@ -323,42 +445,66 @@ const DOCS: &[(&str, Mirror, Doc)] = &[
   ),
   (
     "<",
-    Mirror("$v->valueOf < $w->valueOf", ""),
+    Mirror(
+      "$v->valueOf < $w->valueOf",
+      "latexml_core::common::numeric_ops::NumericOps::value_of",
+    ),
     Doc::Note("Compares two value handles of one type by `valueOf`."),
   ),
   (
     "<<",
-    Mirror("$n->valueOf << $m", ""),
+    Mirror(
+      "$n->valueOf << $m",
+      "latexml_core::common::numeric_ops::NumericOps::value_of / register_number_int_transition @ latexml_contrib/src/script_bindings/values.rs",
+    ),
     Doc::Note(NUMBER_AS_INT),
   ),
   (
     "<=",
-    Mirror("$v->valueOf <= $w->valueOf", ""),
+    Mirror(
+      "$v->valueOf <= $w->valueOf",
+      "latexml_core::common::numeric_ops::NumericOps::value_of",
+    ),
     Doc::Note("Compares two value handles of one type by `valueOf`."),
   ),
   (
     ">",
-    Mirror("$v->valueOf > $w->valueOf", ""),
+    Mirror(
+      "$v->valueOf > $w->valueOf",
+      "latexml_core::common::numeric_ops::NumericOps::value_of",
+    ),
     Doc::Note("Compares two value handles of one type by `valueOf`."),
   ),
   (
     ">=",
-    Mirror("$v->valueOf >= $w->valueOf", ""),
+    Mirror(
+      "$v->valueOf >= $w->valueOf",
+      "latexml_core::common::numeric_ops::NumericOps::value_of",
+    ),
     Doc::Note("Compares two value handles of one type by `valueOf`."),
   ),
   (
     ">>",
-    Mirror("$n->valueOf >> $m", ""),
+    Mirror(
+      "$n->valueOf >> $m",
+      "latexml_core::common::numeric_ops::NumericOps::value_of / register_number_int_transition @ latexml_contrib/src/script_bindings/values.rs",
+    ),
     Doc::Note(NUMBER_AS_INT),
   ),
   (
     "^",
-    Mirror("$n->valueOf ^ $m", ""),
+    Mirror(
+      "$n->valueOf ^ $m",
+      "latexml_core::common::numeric_ops::NumericOps::value_of / register_number_int_transition @ latexml_contrib/src/script_bindings/values.rs",
+    ),
     Doc::Note(NUMBER_AS_INT),
   ),
   (
     "|",
-    Mirror("$n->valueOf | $m", ""),
+    Mirror(
+      "$n->valueOf | $m",
+      "latexml_core::common::numeric_ops::NumericOps::value_of / register_number_int_transition @ latexml_contrib/src/script_bindings/values.rs",
+    ),
     Doc::Note(NUMBER_AS_INT),
   ),
   (
@@ -371,7 +517,7 @@ const DOCS: &[(&str, Mirror, Doc)] = &[
   ),
   (
     "AppendSearchPath",
-    Mirror("", ""),
+    Mirror("helper: PushValue(SEARCHPATHS => $dir)", ""),
     Doc::Rust(
       "Append a directory to the input search path (searched after existing paths).",
       "latexml_core::state::add_search_path",
@@ -379,7 +525,7 @@ const DOCS: &[(&str, Mirror, Doc)] = &[
   ),
   (
     "AssignBool",
-    Mirror("AssignValue", ""),
+    Mirror("AssignValue", "AssignValue!"),
     Doc::Rust(
       "Bind a key to a value, as `AssignValue`.",
       "latexml_core::state::assign_value",
@@ -403,7 +549,7 @@ const DOCS: &[(&str, Mirror, Doc)] = &[
   ),
   (
     "AssignFloat",
-    Mirror("AssignValue", ""),
+    Mirror("AssignValue", "AssignValue!"),
     Doc::Rust(
       "Bind a key to a fractional (float) value, with a scope.",
       "latexml_core::state::assign_value",
@@ -443,7 +589,7 @@ const DOCS: &[(&str, Mirror, Doc)] = &[
   ),
   (
     "AssignNumber",
-    Mirror("AssignValue", ""),
+    Mirror("AssignValue", "AssignValue!"),
     Doc::Rust(
       "Bind a key to a value, as `AssignValue`.",
       "latexml_core::state::assign_value",
@@ -467,7 +613,7 @@ const DOCS: &[(&str, Mirror, Doc)] = &[
   ),
   (
     "AssignString",
-    Mirror("AssignValue", ""),
+    Mirror("AssignValue", "AssignValue!"),
     Doc::Rust(
       "Bind a key to a value, as `AssignValue`.",
       "latexml_core::state::assign_value",
@@ -491,7 +637,10 @@ const DOCS: &[(&str, Mirror, Doc)] = &[
   ),
   (
     "AtBeginDocument",
-    Mirror("AtBeginDocument", ""),
+    Mirror(
+      "AtBeginDocument",
+      "latexml_package::prelude::at_begin_document",
+    ),
     Doc::Rust(
       "Queue TeX source, a `Tokens`/`Token` value, or a closure (installed as a macro) to run at `\\begin{document}`.",
       "latexml_core::state::push_value",
@@ -499,7 +648,7 @@ const DOCS: &[(&str, Mirror, Doc)] = &[
   ),
   (
     "AtEndDocument",
-    Mirror("AtEndDocument", ""),
+    Mirror("AtEndDocument", "latexml_package::prelude::at_end_document"),
     Doc::Rust(
       "Queue TeX source, a `Tokens`/`Token` value, or a closure (installed as a macro) to run at `\\end{document}`.",
       "latexml_core::state::push_value",
@@ -507,102 +656,105 @@ const DOCS: &[(&str, Mirror, Doc)] = &[
   ),
   (
     "CC_ACTIVE",
-    Mirror("CC_ACTIVE", ""),
+    Mirror("CC_ACTIVE", "latexml_core::token::Catcode::ACTIVE"),
     Doc::Note("The catcode constant `CC_ACTIVE` (13), for `Token(string, catcode)`."),
   ),
   (
     "CC_ALIGN",
-    Mirror("CC_ALIGN", ""),
+    Mirror("CC_ALIGN", "latexml_core::token::Catcode::ALIGN"),
     Doc::Note("The catcode constant `CC_ALIGN` (4), for `Token(string, catcode)`."),
   ),
   (
     "CC_ARG",
-    Mirror("CC_ARG", ""),
+    Mirror("CC_ARG", "latexml_core::token::Catcode::ARG"),
     Doc::Note("The catcode constant `CC_ARG` (18), for `Token(string, catcode)`."),
   ),
   (
     "CC_BEGIN",
-    Mirror("CC_BEGIN", ""),
+    Mirror("CC_BEGIN", "latexml_core::token::Catcode::BEGIN"),
     Doc::Note("The catcode constant `CC_BEGIN` (1), for `Token(string, catcode)`."),
   ),
   (
     "CC_COMMENT",
-    Mirror("CC_COMMENT", ""),
+    Mirror("CC_COMMENT", "latexml_core::token::Catcode::COMMENT"),
     Doc::Note("The catcode constant `CC_COMMENT` (14), for `Token(string, catcode)`."),
   ),
   (
     "CC_CS",
-    Mirror("CC_CS", ""),
+    Mirror("CC_CS", "latexml_core::token::Catcode::CS"),
     Doc::Note("The catcode constant `CC_CS` (16), for `Token(string, catcode)`."),
   ),
   (
     "CC_END",
-    Mirror("CC_END", ""),
+    Mirror("CC_END", "latexml_core::token::Catcode::END"),
     Doc::Note("The catcode constant `CC_END` (2), for `Token(string, catcode)`."),
   ),
   (
     "CC_EOL",
-    Mirror("CC_EOL", ""),
+    Mirror("CC_EOL", "latexml_core::token::Catcode::EOL"),
     Doc::Note("The catcode constant `CC_EOL` (5), for `Token(string, catcode)`."),
   ),
   (
     "CC_ESCAPE",
-    Mirror("CC_ESCAPE", ""),
+    Mirror("CC_ESCAPE", "latexml_core::token::Catcode::ESCAPE"),
     Doc::Note("The catcode constant `CC_ESCAPE` (0), for `Token(string, catcode)`."),
   ),
   (
     "CC_IGNORE",
-    Mirror("CC_IGNORE", ""),
+    Mirror("CC_IGNORE", "latexml_core::token::Catcode::IGNORE"),
     Doc::Note("The catcode constant `CC_IGNORE` (9), for `Token(string, catcode)`."),
   ),
   (
     "CC_INVALID",
-    Mirror("CC_INVALID", ""),
+    Mirror("CC_INVALID", "latexml_core::token::Catcode::INVALID"),
     Doc::Note("The catcode constant `CC_INVALID` (15), for `Token(string, catcode)`."),
   ),
   (
     "CC_LETTER",
-    Mirror("CC_LETTER", ""),
+    Mirror("CC_LETTER", "latexml_core::token::Catcode::LETTER"),
     Doc::Note("The catcode constant `CC_LETTER` (11), for `Token(string, catcode)`."),
   ),
   (
     "CC_MARKER",
-    Mirror("CC_MARKER", ""),
+    Mirror("CC_MARKER", "latexml_core::token::Catcode::MARKER"),
     Doc::Note("The catcode constant `CC_MARKER` (17), for `Token(string, catcode)`."),
   ),
   (
     "CC_MATH",
-    Mirror("CC_MATH", ""),
+    Mirror("CC_MATH", "latexml_core::token::Catcode::MATH"),
     Doc::Note("The catcode constant `CC_MATH` (3), for `Token(string, catcode)`."),
   ),
   (
     "CC_OTHER",
-    Mirror("CC_OTHER", ""),
+    Mirror("CC_OTHER", "latexml_core::token::Catcode::OTHER"),
     Doc::Note("The catcode constant `CC_OTHER` (12), for `Token(string, catcode)`."),
   ),
   (
     "CC_PARAM",
-    Mirror("CC_PARAM", ""),
+    Mirror("CC_PARAM", "latexml_core::token::Catcode::PARAM"),
     Doc::Note("The catcode constant `CC_PARAM` (6), for `Token(string, catcode)`."),
   ),
   (
     "CC_SPACE",
-    Mirror("CC_SPACE", ""),
+    Mirror("CC_SPACE", "latexml_core::token::Catcode::SPACE"),
     Doc::Note("The catcode constant `CC_SPACE` (10), for `Token(string, catcode)`."),
   ),
   (
     "CC_SUB",
-    Mirror("CC_SUB", ""),
+    Mirror("CC_SUB", "latexml_core::token::Catcode::SUB"),
     Doc::Note("The catcode constant `CC_SUB` (8), for `Token(string, catcode)`."),
   ),
   (
     "CC_SUPER",
-    Mirror("CC_SUPER", ""),
+    Mirror("CC_SUPER", "latexml_core::token::Catcode::SUPER"),
     Doc::Note("The catcode constant `CC_SUPER` (7), for `Token(string, catcode)`."),
   ),
   (
     "Command",
-    Mirror("", ""),
+    Mirror(
+      "helper: system($program, @args)",
+      "std::process::Command::new",
+    ),
     Doc::Note(
       "Start a `std::process::Command` builder. A Rhai-only shim; nothing runs until `output()`.",
     ),
@@ -659,7 +811,10 @@ const DOCS: &[(&str, Mirror, Doc)] = &[
   ),
   (
     "List",
-    Mirror("List", ""),
+    Mirror(
+      "List",
+      "latexml_core::list::List / list_of @ latexml_contrib/src/script_bindings/engine.rs",
+    ),
     Doc::Note(
       "Perl's `List(@boxes, mode => $mode)` (List.pm:31) as `List([boxes])` or `List([boxes], #{mode: m})`: `()`s \
        dropped, one box (of the asked mode) is itself, else a list in the mode (the current one by default).",
@@ -843,17 +998,23 @@ const DOCS: &[(&str, Mirror, Doc)] = &[
   ),
   (
     "absolute",
-    Mirror("$v->absolute", ""),
+    Mirror(
+      "$v->absolute",
+      "latexml_core::common::numeric_ops::NumericOps::absolute",
+    ),
     Doc::Note("A value handle's absolute value (Number.pm)."),
   ),
   (
     "add",
-    Mirror("$v->add", ""),
+    Mirror(
+      "$v->add",
+      "latexml_core::common::numeric_ops::NumericOps::add / latexml_core::common::glue::Glue::add_glue",
+    ),
     Doc::Note("Perl's `$a->add($b)`: as `+`."),
   ),
   (
     "defined",
-    Mirror("defined $v", ""),
+    Mirror("defined $v", "rhai::Dynamic::is_unit"),
     Doc::Note(
       "Perl's `defined($v)`: true for every value but `()` (`\"\"`, `0` and empty Tokens are defined); `v == ()` \
        is not the test for a string, which compares equal to `()` when empty.",
@@ -958,7 +1119,7 @@ const DOCS: &[(&str, Mirror, Doc)] = &[
   ),
   (
     "LaTeXMLVersion",
-    Mirror("$LaTeXML::VERSION", ""),
+    Mirror("$LaTeXML::VERSION", "latexml_core::state::lookup_string"),
     Doc::Note(
       "The engine version string — the `LATEXML_VERSION` value ([`lookup_string`](latexml_core::state::lookup_string)).",
     ),
@@ -1141,7 +1302,10 @@ const DOCS: &[(&str, Mirror, Doc)] = &[
   ),
   (
     "ParseXML",
-    Mirror("", ""),
+    Mirror(
+      "helper: LaTeXML::Common::XML::Parser->new->parseChunk($xml)",
+      "",
+    ),
     Doc::Rust(
       "Parse a markup chunk into nodes; a bare fragment is fine.",
       "latexml_core::common::xml::parse_fragment",
@@ -1165,7 +1329,7 @@ const DOCS: &[(&str, Mirror, Doc)] = &[
   ),
   (
     "PrependSearchPath",
-    Mirror("", ""),
+    Mirror("helper: UnshiftValue(SEARCHPATHS => $dir)", ""),
     Doc::Rust(
       "Prepend a directory to the input search path (searched first).",
       "latexml_core::state::search_paths_push_front",
@@ -1496,14 +1660,17 @@ const DOCS: &[(&str, Mirror, Doc)] = &[
   ),
   (
     "ToString",
-    Mirror("ToString", ""),
+    Mirror(
+      "ToString",
+      "impl Display for Digested => latexml_core::digested::Digested / dynamic_to_string @ latexml_contrib/src/script_bindings/mod.rs",
+    ),
     Doc::Note(
       "Perl's `ToString`: a box, Tokens or Token as plain text, a whatsit as its reversion, `()` as `\"\"`.",
     ),
   ),
   (
     "Today",
-    Mirror("", "Today!"),
+    Mirror("helper: Expand(T_CS('\\\\today'))", "Today!"),
     Doc::Rust(
       "Today's date, as `\\today` renders it.",
       "latexml_engine::base_utilities::today",
@@ -1580,7 +1747,7 @@ const DOCS: &[(&str, Mirror, Doc)] = &[
   ),
   (
     "absorbProperty",
-    Mirror("", ""),
+    Mirror("helper: $document->absorb($props{$key})", ""),
     Doc::Rust(
       "Absorb one of the whatsit's properties, by name.",
       "latexml_core::document::Document::absorb",
@@ -1612,29 +1779,41 @@ const DOCS: &[(&str, Mirror, Doc)] = &[
   ),
   (
     "arg",
-    Mirror("", ""),
+    Mirror("helper: push(@command, $arg)", "std::process::Command::arg"),
     Doc::Note("Append one argument to the command."),
   ),
   (
     "argString",
-    Mirror("$whatsit->getArg", ""),
+    Mirror(
+      "$whatsit->getArg",
+      "latexml_core::whatsit::Whatsit::get_arg / latexml_core::digested::Digested::untex",
+    ),
     Doc::Note("The whatsit's nth argument, reverted to source text."),
   ),
   (
     "args",
-    Mirror("", ""),
+    Mirror(
+      "helper: push(@command, @args)",
+      "std::process::Command::args",
+    ),
     Doc::Note("Append several arguments at once, from an array."),
   ),
   (
     "assign_global",
-    Mirror("AssignValue", ""),
+    Mirror(
+      "AssignValue",
+      "AssignValue! / latexml_core::state::assign_value",
+    ),
     Doc::Note(
       "[`assign_value`](latexml_core::state::assign_value) with [`Scope::Global`](latexml_core::state::Scope::Global): the binding survives the enclosing TeX group.",
     ),
   ),
   (
     "assign_value",
-    Mirror("AssignValue", ""),
+    Mirror(
+      "AssignValue",
+      "AssignValue! / latexml_core::state::assign_value",
+    ),
     Doc::Note(
       "[`assign_value`](latexml_core::state::assign_value) with [`Scope::Local`](latexml_core::state::Scope::Local), TeX's default: the binding expires with the enclosing group.",
     ),
@@ -1682,22 +1861,31 @@ const DOCS: &[(&str, Mirror, Doc)] = &[
   ),
   (
     "current_dir",
-    Mirror("", ""),
+    Mirror("helper: chdir($dir)", "std::process::Command::current_dir"),
     Doc::Note("Run the command in this working directory."),
   ),
   (
     "divide",
-    Mirror("$v->divide", ""),
+    Mirror(
+      "$v->divide",
+      "latexml_core::common::numeric_ops::NumericOps::divide",
+    ),
     Doc::Note("Perl's `$a->divide(n)`: as `/`; also by a Number."),
   ),
   (
     "divideround",
-    Mirror("$v->divideround", ""),
+    Mirror(
+      "$v->divideround",
+      "latexml_core::common::numeric_ops::NumericOps::divideround",
+    ),
     Doc::Note("Perl's `$a->divideround(n)`: the quotient rounded, as eTeX's."),
   ),
   (
     "env",
-    Mirror("", ""),
+    Mirror(
+      "helper: local $ENV{$key} = $value",
+      "std::process::Command::env",
+    ),
     Doc::Note("Set one environment variable for the command."),
   ),
   (
@@ -1735,7 +1923,7 @@ const DOCS: &[(&str, Mirror, Doc)] = &[
   ),
   (
     "generateID",
-    Mirror("", ""),
+    Mirror("GenerateID($document, $node, undef, $prefix)", ""),
     Doc::Rust(
       "Give a node an `xml:id`, if it has none.",
       "latexml_core::document::Document::generate_id",
@@ -1792,12 +1980,15 @@ const DOCS: &[(&str, Mirror, Doc)] = &[
   ),
   (
     "getShrink",
-    Mirror("$v->getShrink", ""),
+    Mirror("$v->getShrink", "latexml_core::common::glue::Glue::minus"),
     Doc::Note("A Glue's shrink as a Dimension (Glue.pm)."),
   ),
   (
     "getShrinkOrder",
-    Mirror("$v->getShrinkOrder", ""),
+    Mirror(
+      "$v->getShrinkOrder",
+      "latexml_core::common::glue::Glue::mfill",
+    ),
     Doc::Note("A Glue's shrink fill order as a Number, 0 (finite) to 3 (filll)."),
   ),
   (
@@ -1807,12 +1998,15 @@ const DOCS: &[(&str, Mirror, Doc)] = &[
   ),
   (
     "getStretch",
-    Mirror("$v->getStretch", ""),
+    Mirror("$v->getStretch", "latexml_core::common::glue::Glue::plus"),
     Doc::Note("A Glue's stretch as a Dimension (Glue.pm)."),
   ),
   (
     "getStretchOrder",
-    Mirror("$v->getStretchOrder", ""),
+    Mirror(
+      "$v->getStretchOrder",
+      "latexml_core::common::glue::Glue::pfill",
+    ),
     Doc::Note("A Glue's stretch fill order as a Number, 0 (finite) to 3 (filll)."),
   ),
   (
@@ -1841,7 +2035,10 @@ const DOCS: &[(&str, Mirror, Doc)] = &[
   ),
   (
     "insertXML",
-    Mirror("", ""),
+    Mirror(
+      "helper: $document->appendClone($document->getNode, @nodes)",
+      "",
+    ),
     Doc::Rust(
       "Splice ALREADY-PARSED nodes in at the insertion point.",
       "latexml_core::document::Document::insert_nodes",
@@ -1849,12 +2046,15 @@ const DOCS: &[(&str, Mirror, Doc)] = &[
   ),
   (
     "larger",
-    Mirror("$v->larger", ""),
+    Mirror(
+      "$v->larger",
+      "latexml_core::common::numeric_ops::NumericOps::larger",
+    ),
     Doc::Note("The larger of two value handles of one type, by `valueOf`."),
   ),
   (
     "lookup_value",
-    Mirror("LookupValue", ""),
+    Mirror("LookupValue", "latexml_core::state::lookup_value"),
     Doc::Note(
       "[`lookup_value`](latexml_core::state::lookup_value) coerced to a string; empty when unset, so an unbound key and an empty one are indistinguishable here.",
     ),
@@ -1869,7 +2069,10 @@ const DOCS: &[(&str, Mirror, Doc)] = &[
   ),
   (
     "multiply",
-    Mirror("$v->multiply", ""),
+    Mirror(
+      "$v->multiply",
+      "latexml_core::common::numeric_ops::NumericOps::multiply",
+    ),
     Doc::Note("Perl's `$a->multiply(n)`: as `*`; also by a Number."),
   ),
   (
@@ -1879,12 +2082,15 @@ const DOCS: &[(&str, Mirror, Doc)] = &[
   ),
   (
     "negate",
-    Mirror("$v->negate", ""),
+    Mirror(
+      "$v->negate",
+      "latexml_core::common::numeric_ops::NumericOps::negate",
+    ),
     Doc::Note("A value handle negated (Glue: its stretch and shrink too)."),
   ),
   (
     "neutralize_font",
-    Mirror("", ""),
+    Mirror("helper: neutralizeFont()", ""),
     Doc::Rust(
       "Reset the text and math fonts to their defaults, group-locally.",
       "latexml_engine::base_utilities::neutralize_font",
@@ -1916,14 +2122,14 @@ const DOCS: &[(&str, Mirror, Doc)] = &[
   ),
   (
     "output",
-    Mirror("", ""),
+    Mirror("helper: qx($command)", "std::process::Command::output"),
     Doc::Note(
       "Run the command and return `#{ status, stdout, stderr }`. Refused when `LATEXML_DISABLE_SHELL_ESCAPE` is set (see SAFETY.md).",
     ),
   ),
   (
     "parent",
-    Mirror("$node->parentNode", ""),
+    Mirror("$node->parentNode", "libxml::tree::Node::get_parent"),
     Doc::Note(
       "The parent node ([`get_parent`](libxml::tree::Node::get_parent)), or `()` when there is none. A node from `ParseXML` is a TOP-LEVEL node of its chunk, so it reports NO parent: everything above it is a parse artifact ([`is_parse_artifact`](latexml_core::common::xml::is_parse_artifact)), never markup the script wrote.",
     ),
@@ -1938,44 +2144,68 @@ const DOCS: &[(&str, Mirror, Doc)] = &[
   ),
   (
     "propertyString",
-    Mirror("$whatsit->getProperty", ""),
+    Mirror(
+      "$whatsit->getProperty",
+      "latexml_core::BoxOps::get_property_string",
+    ),
     Doc::Note("One property of the whatsit, as a string."),
   ),
   (
     "ptValue",
-    Mirror("$v->ptValue", ""),
+    Mirror(
+      "$v->ptValue",
+      "latexml_core::common::numeric_ops::NumericOps::pt_value",
+    ),
     Doc::Note(
       "A Dimension's or Glue's natural size in points, rounded to `prec` decimals (2 by default; Dimension.pm).",
     ),
   ),
   (
     "pushAfterConstruct",
-    Mirror("push(@{$$defn{afterConstruct}}, …)", ""),
+    Mirror(
+      "push(@{$$defn{afterConstruct}}, …)",
+      "latexml_core::definition::constructor::Constructor::after_construct / push_definition_hook @ latexml_contrib/src/script_bindings/wire.rs",
+    ),
     Doc::Note("Append a hook to that definition's `afterConstruct` list."),
   ),
   (
     "pushAfterDigest",
-    Mirror("push(@{$$defn{afterDigest}}, …)", ""),
+    Mirror(
+      "push(@{$$defn{afterDigest}}, …)",
+      "latexml_core::definition::constructor::Constructor::after_digest / push_definition_hook @ latexml_contrib/src/script_bindings/wire.rs",
+    ),
     Doc::Note("Append a hook to that definition's `afterDigest` list."),
   ),
   (
     "pushAfterDigestBody",
-    Mirror("push(@{$$defn{afterDigestBody}}, …)", ""),
+    Mirror(
+      "push(@{$$defn{afterDigestBody}}, …)",
+      "latexml_core::definition::constructor::Constructor::after_digest_body / push_definition_hook @ latexml_contrib/src/script_bindings/wire.rs",
+    ),
     Doc::Note("Append a hook to that definition's `afterDigestBody` list."),
   ),
   (
     "pushBeforeConstruct",
-    Mirror("push(@{$$defn{beforeConstruct}}, …)", ""),
+    Mirror(
+      "push(@{$$defn{beforeConstruct}}, …)",
+      "latexml_core::definition::constructor::Constructor::before_construct / push_definition_hook @ latexml_contrib/src/script_bindings/wire.rs",
+    ),
     Doc::Note("Append a hook to that definition's `beforeConstruct` list."),
   ),
   (
     "pushBeforeDigest",
-    Mirror("push(@{$$defn{beforeDigest}}, …)", ""),
+    Mirror(
+      "push(@{$$defn{beforeDigest}}, …)",
+      "latexml_core::definition::constructor::Constructor::before_digest / push_definition_hook @ latexml_contrib/src/script_bindings/wire.rs",
+    ),
     Doc::Note("Append a hook to that definition's `beforeDigest` list."),
   ),
   (
     "pxValue",
-    Mirror("$v->pxValue", ""),
+    Mirror(
+      "$v->pxValue",
+      "latexml_core::common::numeric_ops::NumericOps::px_value",
+    ),
     Doc::Note("A Dimension's or Glue's natural size in pixels at the `DPI` value (Dimension.pm)."),
   ),
   (
@@ -2054,7 +2284,10 @@ const DOCS: &[(&str, Mirror, Doc)] = &[
   // means something different on each, so it lives in HANDLE_DOCS.
   (
     "setContent",
-    Mirror("", ""),
+    Mirror(
+      "helper: $node->removeChildNodes; $node->appendText($text)",
+      "",
+    ),
     Doc::Rust(
       "Replace the node's text content.",
       "libxml::tree::Node::set_content",
@@ -2070,14 +2303,20 @@ const DOCS: &[(&str, Mirror, Doc)] = &[
   ),
   (
     "setProperty",
-    Mirror("$whatsit->setProperty", ""),
+    Mirror(
+      "$whatsit->setProperty",
+      "latexml_core::BoxOps::set_property",
+    ),
     Doc::Note(
       "Set a property (any value) on the whatsit. Only a DIGEST hook may: in a construction hook the whatsit is already read-only, and this is a clean script error.",
     ),
   ),
   (
     "sign",
-    Mirror("$v->sign", ""),
+    Mirror(
+      "$v->sign",
+      "latexml_core::common::numeric_ops::NumericOps::sign",
+    ),
     Doc::Note("-1, 0 or 1 by a value handle's `valueOf`."),
   ),
   (
@@ -2090,22 +2329,34 @@ const DOCS: &[(&str, Mirror, Doc)] = &[
   ),
   (
     "smaller",
-    Mirror("$v->smaller", ""),
+    Mirror(
+      "$v->smaller",
+      "latexml_core::common::numeric_ops::NumericOps::smaller",
+    ),
     Doc::Note("The smaller of two value handles of one type, by `valueOf`."),
   ),
   (
     "spValue",
-    Mirror("$v->spValue", ""),
+    Mirror(
+      "$v->spValue",
+      "latexml_core::common::numeric_ops::NumericOps::value_of",
+    ),
     Doc::Note("A Dimension's or Glue's natural size in sp."),
   ),
   (
     "subtract",
-    Mirror("$v->subtract", ""),
+    Mirror(
+      "$v->subtract",
+      "latexml_core::common::numeric_ops::NumericOps::subtract",
+    ),
     Doc::Note("Perl's `$a->subtract($b)`: as `-`."),
   ),
   (
     "toAttribute",
-    Mirror("$v->toAttribute", ""),
+    Mirror(
+      "$v->toAttribute",
+      "latexml_core::common::numeric_ops::NumericOps::to_attribute",
+    ),
     Doc::Note(
       "A value handle as an XML attribute value (`3.0pt`; Dimension.pm `attributeformat`).",
     ),
@@ -2120,27 +2371,42 @@ const DOCS: &[(&str, Mirror, Doc)] = &[
   ),
   (
     "unshiftAfterConstruct",
-    Mirror("unshift(@{$$defn{afterConstruct}}, …)", ""),
+    Mirror(
+      "unshift(@{$$defn{afterConstruct}}, …)",
+      "latexml_core::definition::constructor::Constructor::after_construct / push_definition_hook @ latexml_contrib/src/script_bindings/wire.rs",
+    ),
     Doc::Note("Prepend a hook to that definition's `afterConstruct` list."),
   ),
   (
     "unshiftAfterDigest",
-    Mirror("unshift(@{$$defn{afterDigest}}, …)", ""),
+    Mirror(
+      "unshift(@{$$defn{afterDigest}}, …)",
+      "latexml_core::definition::constructor::Constructor::after_digest / push_definition_hook @ latexml_contrib/src/script_bindings/wire.rs",
+    ),
     Doc::Note("Prepend a hook to that definition's `afterDigest` list."),
   ),
   (
     "unshiftAfterDigestBody",
-    Mirror("unshift(@{$$defn{afterDigestBody}}, …)", ""),
+    Mirror(
+      "unshift(@{$$defn{afterDigestBody}}, …)",
+      "latexml_core::definition::constructor::Constructor::after_digest_body / push_definition_hook @ latexml_contrib/src/script_bindings/wire.rs",
+    ),
     Doc::Note("Prepend a hook to that definition's `afterDigestBody` list."),
   ),
   (
     "unshiftBeforeConstruct",
-    Mirror("unshift(@{$$defn{beforeConstruct}}, …)", ""),
+    Mirror(
+      "unshift(@{$$defn{beforeConstruct}}, …)",
+      "latexml_core::definition::constructor::Constructor::before_construct / push_definition_hook @ latexml_contrib/src/script_bindings/wire.rs",
+    ),
     Doc::Note("Prepend a hook to that definition's `beforeConstruct` list."),
   ),
   (
     "unshiftBeforeDigest",
-    Mirror("unshift(@{$$defn{beforeDigest}}, …)", ""),
+    Mirror(
+      "unshift(@{$$defn{beforeDigest}}, …)",
+      "latexml_core::definition::constructor::Constructor::before_digest / push_definition_hook @ latexml_contrib/src/script_bindings/wire.rs",
+    ),
     Doc::Note("Prepend a hook to that definition's `beforeDigest` list."),
   ),
   (
@@ -2153,14 +2419,17 @@ const DOCS: &[(&str, Mirror, Doc)] = &[
   ),
   (
     "valueOf",
-    Mirror("$v->valueOf", ""),
+    Mirror(
+      "$v->valueOf",
+      "latexml_core::common::numeric_ops::NumericOps::value_of",
+    ),
     Doc::Note(
       "A value handle's integer value: a Number's value, a Dimension's or Glue's sp (Glue: the natural size).",
     ),
   ),
   (
     "whatsit",
-    Mirror("$whatsit", ""),
+    Mirror("$whatsit", "latexml_core::whatsit::Whatsit"),
     Doc::Note(
       "A handle on the whatsit under construction, inside a hook. USING it outside one is a clean script error, not a crash.",
     ),
@@ -2215,7 +2484,10 @@ const DOCS: &[(&str, Mirror, Doc)] = &[
   ),
   (
     "DeclareFontMapMultichar",
-    Mirror("", "DeclareFontMapMultichar!"),
+    Mirror(
+      "helper: DeclareFontMap($name, [..., \"ffi\", ...])",
+      "DeclareFontMapMultichar! / latexml_core::binding::content::load_font_map",
+    ),
     Doc::Note(
       "Declare the multi-character glyphs of a font map (optionally a family's): position (decimal string) to its text.",
     ),
@@ -2230,7 +2502,10 @@ const DOCS: &[(&str, Mirror, Doc)] = &[
   ),
   (
     "Equals",
-    Mirror("Equals", ""),
+    Mirror(
+      "Equals",
+      "latexml_core::tokens::Tokens::equals / equals @ latexml_contrib/src/script_bindings/engine.rs",
+    ),
     Doc::Note(
       "Perl's `Equals`: `()` equals only `()`; tokens compare their meanings (themselves when neither has one), `Tokens` token by token, other values by their string.",
     ),
@@ -2271,7 +2546,10 @@ const DOCS: &[(&str, Mirror, Doc)] = &[
   ),
   (
     "IsEmpty",
-    Mirror("IsEmpty", ""),
+    Mirror(
+      "IsEmpty",
+      "is_empty_thing @ latexml_contrib/src/script_bindings/engine.rs",
+    ),
     Doc::Note(
       "Perl's `IsEmpty`: true when nothing but spaces, braces and other non-printing tokens (or empty digested content).",
     ),
@@ -2286,14 +2564,20 @@ const DOCS: &[(&str, Mirror, Doc)] = &[
   ),
   (
     "LookupRegisterOrDefault",
-    Mirror("", "LookupRegisterOrDefault!"),
+    Mirror(
+      "helper: IsDefined($cs) ? LookupRegister($cs) : Number(0)",
+      "LookupRegisterOrDefault! / latexml_core::state::lookup_register",
+    ),
     Doc::Note(
       "A register's typed value (as `LookupRegister`), a Number 0 when `cs` is no register, without a Warning.",
     ),
   ),
   (
     "ProcessKeyOptions",
-    Mirror("", "ProcessKeyOptions!"),
+    Mirror(
+      "helper: ProcessOptions(keysets => [$keyset])",
+      "ProcessKeyOptions!",
+    ),
     Doc::Rust(
       "`ProcessOptions` for a package whose options are key=value pairs; `\\@curroptions` is kept.",
       "latexml_core::binding::content::process_key_options",
@@ -2314,37 +2598,55 @@ const DOCS: &[(&str, Mirror, Doc)] = &[
   ),
   (
     "UTF",
-    Mirror("UTF", ""),
+    Mirror("UTF", "char::from_u32"),
     Doc::Note("The character of a Unicode code point."),
   ),
   (
     "getEncoding",
-    Mirror("$font->getEncoding", ""),
+    Mirror(
+      "$font->getEncoding",
+      "latexml_core::common::font::Font::get_encoding",
+    ),
     Doc::Note("A `Font`'s encoding, or `()`."),
   ),
   (
     "getFamily",
-    Mirror("$font->getFamily", ""),
+    Mirror(
+      "$font->getFamily",
+      "latexml_core::common::font::Font::get_family",
+    ),
     Doc::Note("A `Font`'s family (`serif`, `typewriter`, …), or `()`."),
   ),
   (
     "getLanguage",
-    Mirror("$font->getLanguage", ""),
+    Mirror(
+      "$font->getLanguage",
+      "latexml_core::common::font::Font::get_language",
+    ),
     Doc::Note("A `Font`'s language, or `()`."),
   ),
   (
     "getSeries",
-    Mirror("$font->getSeries", ""),
+    Mirror(
+      "$font->getSeries",
+      "latexml_core::common::font::Font::get_series",
+    ),
     Doc::Note("A `Font`'s series, or `()`."),
   ),
   (
     "getShape",
-    Mirror("$font->getShape", ""),
+    Mirror(
+      "$font->getShape",
+      "latexml_core::common::font::Font::get_shape",
+    ),
     Doc::Note("A `Font`'s shape, or `()`."),
   ),
   (
     "getSize",
-    Mirror("$font->getSize", ""),
+    Mirror(
+      "$font->getSize",
+      "latexml_core::common::font::Font::get_size",
+    ),
     Doc::Note("A `Font`'s size in points, or `()`."),
   ),
   (
@@ -2352,6 +2654,223 @@ const DOCS: &[(&str, Mirror, Doc)] = &[
     Mirror("roman", "roman!"),
     Doc::Note(
       "Lower-case roman numerals of a number, as `Tokens`; a `Number` (CounterValue's) is read as its int, Warned once as deprecated.",
+    ),
+  ),
+  (
+    "CleanIndexKey",
+    Mirror("CleanIndexKey", ""),
+    Doc::Rust(
+      "An index key: trimmed, NFC, its trailing `.,;` dropped (Package.pm:513).",
+      "latexml_core::common::cleaners::clean_index_key",
+    ),
+  ),
+  (
+    "CleanClassName",
+    Mirror("CleanClassName", ""),
+    Doc::Rust(
+      "A class name: trimmed, accents decomposed, only `[a-zA-Z0-9]` kept (Package.pm:527).",
+      "latexml_core::common::cleaners::clean_class_name",
+    ),
+  ),
+  (
+    "CleanBibKey",
+    Mirror("CleanBibKey", ""),
+    Doc::Rust(
+      "A bibliography key without its spaces, its case kept (Package.pm:537).",
+      "latexml_core::common::cleaners::clean_bib_key",
+    ),
+  ),
+  (
+    "NormalizeBibKey",
+    Mirror("NormalizeBibKey", ""),
+    Doc::Rust(
+      "`CleanBibKey` lowercased; `()` for a false key, as Perl's `undef` (Package.pm:546).",
+      "latexml_core::common::cleaners::normalize_bib_key",
+    ),
+  ),
+  (
+    "CleanURL",
+    Mirror("CleanURL", ""),
+    Doc::Rust(
+      "A URL, trimmed, each `\\~{}` read as `~` (Package.pm:550).",
+      "latexml_core::common::cleaners::clean_url",
+    ),
+  ),
+  (
+    "ComposeURL",
+    Mirror("ComposeURL", ""),
+    Doc::Rust(
+      "`url` on `base` (unless it has a protocol), then `#` and the `CleanID` of `fragid` when given (Package.pm:557).",
+      "latexml_core::common::cleaners::compose_url",
+    ),
+  ),
+  (
+    "TrimmedCommaList",
+    Mirror("TrimmedCommaList", ""),
+    Doc::Rust(
+      "A comma-separated string as an array of its trimmed items (Package.pm:570).",
+      "latexml_core::common::cleaners::trimmed_comma_list",
+    ),
+  ),
+  (
+    "HasKeyVal",
+    Mirror("HasKeyVal", ""),
+    Doc::Rust(
+      "Whether the key `prefix`/`keyset`/`key` is defined (KeyVal.pm:42).",
+      "latexml_core::keyval::has_keyval",
+    ),
+  ),
+  (
+    "DisableKeyVal",
+    Mirror("DisableKeyVal", ""),
+    Doc::Rust(
+      "Disable the key `prefix`/`keyset`/`key`: using it later Warns (KeyVal.pm:49).",
+      "latexml_core::keyval::disable_keyval",
+    ),
+  ),
+  (
+    "AfterAssignment",
+    Mirror("AfterAssignment", ""),
+    Doc::Rust(
+      "Put the token `\\afterassignment` saved back into the input, for a primitive that assigns (Package.pm:716).",
+      "latexml_core::state::after_assignment",
+    ),
+  ),
+  (
+    "Debug",
+    Mirror("Debug", "Debug!"),
+    Doc::Rust(
+      "Log a `Debug:` record, `Debug(message)` or `Debug(cat, obj, message)`, counted in the status tally; silent unless `--verbose`, where Perl prints unconditionally (Error.pm:476) — DG 2026-11-14.",
+      "latexml_core::common::error::emit_record",
+    ),
+  ),
+  (
+    "Deprecated",
+    Mirror("Deprecated", "Warn!"),
+    Doc::Note(
+      "Warn `deprecated:key` once per conversion: `key is deprecated (as of version)`, then the message (Error.pm:493).",
+    ),
+  ),
+  (
+    "DigestLiteral",
+    Mirror("DigestLiteral", ""),
+    Doc::Rust(
+      "The `ToString` of a string (Tokenized), Token or Tokens digested in text mode in an ASCII font (Package.pm:414).",
+      "latexml_core::binding::content::digest_literal",
+    ),
+  ),
+  (
+    "DefAutoload",
+    Mirror("DefAutoload", ""),
+    Doc::Rust(
+      "Make `cs` load a definition file when first used: `name.sty` (a package), `name.cls` (a class) or `name.pool`, an `.ltxml` suffix dropped; nothing when it is loaded or `cs` defined; any other name Warns (Package.pm:1086).",
+      "latexml_engine::tex::def_autoload_file",
+    ),
+  ),
+  (
+    "FontDecode",
+    Mirror("FontDecode", ""),
+    Doc::Rust(
+      "The character a code point is in an encoding's font map (the current font's when `()` or not given), or `()` (Package.pm:2871).",
+      "latexml_core::binding::content::font_decode",
+    ),
+  ),
+  (
+    "FontDecodeString",
+    Mirror("FontDecodeString", ""),
+    Doc::Rust(
+      "A string through an encoding's font map (the current font's when `()`), each char a code point: a char the map lacks is dropped, or with `implicit` a code point past the map (or with no map) decodes to itself (Package.pm:2895).",
+      "latexml_core::binding::content::font_decode_string",
+    ),
+  ),
+  (
+    "LoadFormat",
+    Mirror(
+      "LoadFormat",
+      "plain_dump_available @ latexml_engine/src/tex.rs / latex_dump_available @ latexml_engine/src/latex.rs",
+    ),
+    Doc::Note(
+      "An Error: the format (plain or LaTeX) is chosen with its dump before any binding loads, and a binding cannot load another (strict LoadFormat, Package.pm:2752).",
+    ),
+  ),
+  (
+    "DocType",
+    Mirror("DocType", "RegisterDocumentNamespaces!"),
+    Doc::Rust(
+      "One Warning per call, that no DTD is read (RelaxNG only, OXIDIZED_DESIGN_DIVERGENCES #1); then the map's document namespaces registered, as `RegisterDocumentNamespace` (Package.pm:2032).",
+      "latexml_core::common::model::register_document_namespace",
+    ),
+  ),
+  (
+    "DefConditionalI",
+    Mirror("DefConditionalI", ""),
+    Doc::Rust(
+      "`DefConditional` with the control sequence and its parameter spec (a string, or `()`) apart; the test a closure or `()` (Package.pm:1194).",
+      "latexml_core::binding::def::dialect::def_conditional",
+    ),
+  ),
+  (
+    "DefEnvironmentI",
+    Mirror("DefEnvironmentI", ""),
+    Doc::Rust(
+      "`DefEnvironment` with the name and its parameter spec (a string, or `()`) apart (Package.pm:1899).",
+      "latexml_core::binding::def::dialect::def_environment",
+    ),
+  ),
+  (
+    "DefMathI",
+    Mirror("DefMathI", ""),
+    Doc::Rust(
+      "`DefMath` with the control sequence and its parameter spec (a string, or `()`) apart (Package.pm:1617).",
+      "latexml_core::binding::def::dialect::def_math",
+    ),
+  ),
+  (
+    "DefRegisterI",
+    Mirror("DefRegisterI", ""),
+    Doc::Rust(
+      "`DefRegister` with the control sequence and its parameter spec (a string, or `()`) apart (Package.pm:1341).",
+      "latexml_core::binding::def::dialect::def_register",
+    ),
+  ),
+  (
+    "MaybePeekLabel",
+    Mirror("MaybePeekLabel", ""),
+    Doc::Rust(
+      "With a label-mapping hook (`LABEL_MAPPING_HOOK`), peek past spaces for a `\\label` and note its label for the counter about to step (Package.pm:818).",
+      "latexml_core::binding::counter::dialect::maybe_peek_label",
+    ),
+  ),
+  (
+    "MaybeNoteLabel",
+    Mirror("MaybeNoteLabel", ""),
+    Doc::Rust(
+      "With a label-mapping hook, note a label (`CleanLabel`'d) unless it was already used (Package.pm:838).",
+      "latexml_core::binding::counter::dialect::maybe_note_label",
+    ),
+  ),
+  (
+    "LoadFontMap",
+    Mirror("LoadFontMap", ""),
+    Doc::Rust(
+      "An encoding's font map, loaded on first use, as an array of its characters (`()` at an unmapped position); `()` when it has none (Package.pm:2917).",
+      "latexml_core::binding::content::load_font_map",
+    ),
+  ),
+  (
+    "CheckOptions",
+    Mirror("CheckOptions", ""),
+    Doc::Rust(
+      "One Error naming the option keys of a map not allowed (an `allowed` array, or a map of its true keys, Perl's hashref); whether all were (Package.pm:1062).",
+      "latexml_core::binding::def::options::check_options",
+    ),
+  ),
+  (
+    "Stringify",
+    Mirror("Stringify", ""),
+    Doc::Rust(
+      "The debugging form of a value (`Tokens[…]`, a box's), `undef` for `()`, a string itself (Object.pm:30).",
+      "latexml_core::common::object::Object::stringify",
     ),
   ),
 ];
@@ -2382,10 +2901,21 @@ const HANDLE_DOCS: &[(&str, &str, Mirror, Doc)] = &[
   (
     "Definition",
     "is_empty",
-    Mirror("", ""),
+    Mirror(
+      "helper: ToString($definition) eq ''",
+      "register_string_length @ latexml_contrib/src/script_bindings/engine.rs",
+    ),
     Doc::Note(MEANING_IS_EMPTY),
   ),
-  ("Definition", "len", Mirror("", ""), Doc::Note(MEANING_LEN)),
+  (
+    "Definition",
+    "len",
+    Mirror(
+      "helper: length(ToString($definition))",
+      "register_string_length @ latexml_contrib/src/script_bindings/engine.rs",
+    ),
+    Doc::Note(MEANING_LEN),
+  ),
   (
     "Token",
     "is_empty",
@@ -2429,13 +2959,19 @@ const HANDLE_DOCS: &[(&str, &str, Mirror, Doc)] = &[
   (
     "Document",
     "getProperties",
-    Mirror("$whatsit->getProperties", ""),
+    Mirror(
+      "$whatsit->getProperties",
+      "latexml_core::BoxOps::get_properties",
+    ),
     Doc::Note("The whatsit's whole property map (a Rhai object map), inside a constructor body."),
   ),
   (
     "Document",
     "getProperty",
-    Mirror("$whatsit->getProperty", ""),
+    Mirror(
+      "$whatsit->getProperty",
+      "latexml_core::BoxOps::get_property",
+    ),
     Doc::Note("One whatsit property by name, inside a constructor body; `()` when absent."),
   ),
   (
@@ -2459,55 +2995,79 @@ const HANDLE_DOCS: &[(&str, &str, Mirror, Doc)] = &[
   (
     "Dimension",
     "to_string",
-    Mirror("$v->toString", ""),
+    Mirror(
+      "$v->toString",
+      "impl Display for Dimension => latexml_core::common::dimension::Dimension",
+    ),
     Doc::Note("The value as TeX prints it (`toString`, `\\the`): `1.0pt plus 2.0pt`."),
   ),
   (
     "Glue",
     "to_string",
-    Mirror("$v->toString", ""),
+    Mirror(
+      "$v->toString",
+      "impl Display for Glue => latexml_core::common::glue::Glue",
+    ),
     Doc::Note("The value as TeX prints it (`toString`, `\\the`): `1.0pt plus 2.0pt`."),
   ),
   (
     "MuGlue",
     "to_string",
-    Mirror("$v->toString", ""),
+    Mirror(
+      "$v->toString",
+      "impl Display for MuGlue => latexml_core::common::muglue::MuGlue",
+    ),
     Doc::Note("The value as TeX prints it (`toString`, `\\the`): `1.0pt plus 2.0pt`."),
   ),
   (
     "Number",
     "to_string",
-    Mirror("$v->toString", ""),
+    Mirror(
+      "$v->toString",
+      "impl Display for Number => latexml_core::common::number::Number",
+    ),
     Doc::Note("The value as TeX prints it (`toString`, `\\the`): `1.0pt plus 2.0pt`."),
   ),
   (
     "Node",
     "toString",
-    Mirror("$node->toString", ""),
+    Mirror("$node->toString", "libxml::tree::Document::node_to_string"),
     Doc::Note("The node and its subtree serialized back to markup — the inverse of `ParseXML`."),
   ),
   (
     "Dimension",
     "toString",
-    Mirror("$v->toString", ""),
+    Mirror(
+      "$v->toString",
+      "impl Display for Dimension => latexml_core::common::dimension::Dimension",
+    ),
     Doc::Note("Perl's `toString`: the value as TeX prints it (`\\the`), `1.0pt plus 2.0pt`."),
   ),
   (
     "Glue",
     "toString",
-    Mirror("$v->toString", ""),
+    Mirror(
+      "$v->toString",
+      "impl Display for Glue => latexml_core::common::glue::Glue",
+    ),
     Doc::Note("Perl's `toString`: the value as TeX prints it (`\\the`), `1.0pt plus 2.0pt`."),
   ),
   (
     "MuGlue",
     "toString",
-    Mirror("$v->toString", ""),
+    Mirror(
+      "$v->toString",
+      "impl Display for MuGlue => latexml_core::common::muglue::MuGlue",
+    ),
     Doc::Note("Perl's `toString`: the value as TeX prints it (`\\the`), `1.0pt plus 2.0pt`."),
   ),
   (
     "Number",
     "toString",
-    Mirror("$v->toString", ""),
+    Mirror(
+      "$v->toString",
+      "impl Display for Number => latexml_core::common::number::Number",
+    ),
     Doc::Note("Perl's `toString`: the value as TeX prints it (`\\the`), `1.0pt plus 2.0pt`."),
   ),
   (
@@ -2531,7 +3091,10 @@ const HANDLE_DOCS: &[(&str, &str, Mirror, Doc)] = &[
   (
     "Definition",
     "to_string",
-    Mirror("ToString($definition)", ""),
+    Mirror(
+      "ToString($definition)",
+      "definition_string @ latexml_contrib/src/script_bindings/mod.rs",
+    ),
     Doc::Note(
       "Perl's `ToString` of a definition (Definition.pm:116): the CS, then its parameters after a space.",
     ),
@@ -2539,7 +3102,10 @@ const HANDLE_DOCS: &[(&str, &str, Mirror, Doc)] = &[
   (
     "Definition",
     "to_debug",
-    Mirror("", ""),
+    Mirror(
+      "helper: ToString($definition)",
+      "definition_string @ latexml_contrib/src/script_bindings/mod.rs",
+    ),
     Doc::Note("As `to_string`: how an array shows the value (`ToString([…])`, `${[…]}`)."),
   ),
   (
@@ -2551,25 +3117,37 @@ const HANDLE_DOCS: &[(&str, &str, Mirror, Doc)] = &[
   (
     "Dimension",
     "to_debug",
-    Mirror("", ""),
+    Mirror(
+      "helper: $v->toString",
+      "impl Display for Dimension => latexml_core::common::dimension::Dimension",
+    ),
     Doc::Note("As `to_string`: how an array shows the value (`ToString([…])`, `${[…]}`)."),
   ),
   (
     "Glue",
     "to_debug",
-    Mirror("", ""),
+    Mirror(
+      "helper: $v->toString",
+      "impl Display for Glue => latexml_core::common::glue::Glue",
+    ),
     Doc::Note("As `to_string`: how an array shows the value (`ToString([…])`, `${[…]}`)."),
   ),
   (
     "MuGlue",
     "to_debug",
-    Mirror("", ""),
+    Mirror(
+      "helper: $v->toString",
+      "impl Display for MuGlue => latexml_core::common::muglue::MuGlue",
+    ),
     Doc::Note("As `to_string`: how an array shows the value (`ToString([…])`, `${[…]}`)."),
   ),
   (
     "Number",
     "to_debug",
-    Mirror("", ""),
+    Mirror(
+      "helper: $v->toString",
+      "impl Display for Number => latexml_core::common::number::Number",
+    ),
     Doc::Note("As `to_string`: how an array shows the value (`ToString([…])`, `${[…]}`)."),
   ),
   (
@@ -2596,13 +3174,16 @@ const HANDLE_DOCS: &[(&str, &str, Mirror, Doc)] = &[
   (
     "Stomach",
     "getGullet",
-    Mirror("$stomach->getGullet", ""),
+    Mirror("$stomach->getGullet", "gullet => latexml_core::gullet"),
     Doc::Note("`stomach.getGullet()`: the `Gullet` handle, Perl's `$stomach->getGullet`."),
   ),
   (
     "Whatsit",
     "to_string",
-    Mirror("ToString($whatsit)", ""),
+    Mirror(
+      "ToString($whatsit)",
+      "latexml_core::whatsit::Whatsit::revert / whatsit_string @ latexml_contrib/src/script_bindings/mod.rs",
+    ),
     Doc::Note(
       "The whatsit in a string: Perl's `ToString($whatsit)`, its reversion (an error inside its own reversion).",
     ),
@@ -2632,6 +3213,18 @@ const HANDLE_DOCS: &[(&str, &str, Mirror, Doc)] = &[
     Doc::Rust(
       "Set an attribute on this node directly.",
       "libxml::tree::Node::set_attribute",
+    ),
+  ),
+  (
+    "Gullet",
+    "ReadParameters",
+    Mirror(
+      "ReadParameters($gullet, $spec)",
+      "latexml_core::common::def_parser::parse_parameters / latexml_core::parameter::Parameters::read_arguments",
+    ),
+    Doc::Rust(
+      "The arguments a parameter spec (`{}[]`) reads from the input, each as a body receives it (Package.pm:434).",
+      "latexml_core::parameter::Parameters::read_arguments",
     ),
   ),
 ];
@@ -2782,26 +3375,138 @@ fn short_path(path: &str) -> String {
   }
 }
 
+/// [`PERL_GAPS`] calls the dialect lacks with no [`GAP_REASONS`] entry, and reasons for a call that is no gap.
+pub(super) fn gaps_without_reason() -> Vec<&'static str> {
+  let lacking = PERL_GAPS
+    .iter()
+    .filter(|(_, _, rhai)| rhai.is_empty())
+    .map(|(perl, ..)| *perl);
+  let unexplained = lacking
+    .clone()
+    .filter(|perl| GAP_REASONS.iter().all(|(name, _)| name != perl));
+  let stray = GAP_REASONS
+    .iter()
+    .map(|(name, _)| *name)
+    .filter(|name| lacking.clone().all(|perl| perl != *name));
+  unexplained.chain(stray).collect()
+}
+
 /// [`PERL_GAPS`] entries the engine now registers: move each to its [`DOCS`] entry's [`Mirror`].
 pub(super) fn stale_gaps(engine: &Engine) -> Vec<&'static str> {
   let live = registered_calls(engine);
   PERL_GAPS
     .iter()
-    .map(|(perl, _)| *perl)
+    .map(|(perl, ..)| *perl)
     .filter(|perl| live.iter().any(|(r, n)| r.is_none() && n == perl))
     .collect()
 }
 
-/// Every non-empty macro cell of the cheat sheet, as written, for the check that each ends in `!` and is defined.
+/// Every macro the cheat sheet's Rust column names (`DefMacro!`), for the check that each is defined.
 pub(super) fn named_macros() -> Vec<&'static str> {
-  let docs = DOCS.iter().map(|(_, Mirror(_, mac), _)| *mac);
-  let handles = HANDLE_DOCS.iter().map(|(_, _, Mirror(_, mac), _)| *mac);
-  let gaps = PERL_GAPS.iter().map(|(_, mac)| *mac);
+  let docs = DOCS.iter().map(|(_, Mirror(_, rust), _)| *rust);
+  let handles = HANDLE_DOCS.iter().map(|(_, _, Mirror(_, rust), _)| *rust);
+  let gaps = PERL_GAPS.iter().map(|(_, rust, _)| *rust);
   docs
     .chain(handles)
     .chain(gaps)
-    .filter(|mac| !mac.is_empty())
+    .flat_map(|rust| rust.split(" / "))
+    .filter(|item| item.ends_with('!'))
     .collect()
+}
+
+/// A `macro_rules!` of a crate that defines binding macros: its name, its crate (`None` if not `#[macro_export]`ed)
+/// and its file, from the crate's `src`.
+pub(super) struct MacroHome(String, Option<&'static str>, String);
+
+impl MacroHome {
+  pub(super) fn is_named(&self, name: &str) -> bool { self.0 == name }
+}
+
+/// Every `macro_rules!` of the crates that define the binding macros; a macro's export attribute may sit above its
+/// doc comment or below it.
+pub(super) fn workspace_macros() -> Vec<MacroHome> {
+  fn walk(dir: &std::path::Path, krate: &'static str, out: &mut Vec<MacroHome>) {
+    for entry in std::fs::read_dir(dir).into_iter().flatten().flatten() {
+      let path = entry.path();
+      if path.is_dir() {
+        walk(&path, krate, out);
+      } else if path.extension().is_some_and(|e| e == "rs") {
+        let text = std::fs::read_to_string(&path).unwrap_or_default();
+        let lines: Vec<&str> = text.lines().map(str::trim_start).collect();
+        for (i, line) in lines.iter().enumerate() {
+          let Some(rest) = line.strip_prefix("macro_rules! ") else {
+            continue;
+          };
+          let exported = lines[..i]
+            .iter()
+            .rev()
+            .take_while(|l| l.starts_with("#[") || l.starts_with("//"))
+            .any(|l| l.starts_with("#[macro_export]"));
+          let name: String = rest
+            .chars()
+            .take_while(|c| c.is_ascii_alphanumeric() || *c == '_')
+            .collect();
+          let file = path.to_string_lossy();
+          let file = file
+            .rsplit_once("/../")
+            .map_or(&*file, |(_, f)| f)
+            .to_string();
+          out.push(MacroHome(name, exported.then_some(krate), file));
+        }
+      }
+    }
+  }
+  let mut out = Vec::new();
+  for krate in ["latexml_core", "latexml_engine", "latexml_package"] {
+    let src = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+      .join("..")
+      .join(krate)
+      .join("src");
+    walk(&src, krate, &mut out);
+  }
+  out
+}
+
+/// The Rust cell of one call: its [`Mirror`] items, then its [`Doc::Rust`] item when the cell names only macros (or
+/// nothing), each a rustdoc intra-doc link (so `cargo doc` checks every name) or, for a private item, its file.
+fn rust_cell(rust: &str, doc: Option<&Doc>, macros: &[MacroHome]) -> String {
+  let mut items: Vec<&str> = rust.split(" / ").filter(|i| !i.is_empty()).collect();
+  if let Some(Doc::Rust(_, path)) = doc
+    && items.iter().all(|i| i.ends_with('!'))
+  {
+    items.push(path);
+  }
+  let item_cell = |item: &str| -> String {
+    if let Some((name, file)) = item.split_once(" @ ") {
+      return format!("`{name}` (`{file}`)");
+    }
+    if let Some((label, path)) = item.split_once(" => ") {
+      return format!("[`{label}`]({path})");
+    }
+    if let Some(name) = item.strip_suffix('!') {
+      return match macros.iter().find(|m| m.0 == name) {
+        Some(MacroHome(_, Some(krate), _)) => format!("[`{item}`]({krate}::{item})"),
+        Some(MacroHome(_, None, file)) => format!("`{item}` (`{file}`)"),
+        None => format!("`{item}`"),
+      };
+    }
+    format!("[`{}`]({item})", short_path(item))
+  };
+  items
+    .into_iter()
+    .map(item_cell)
+    .collect::<Vec<_>>()
+    .join(" / ")
+}
+
+/// The Perl cell: the spelling as code, or a Rhai helper's Perl equivalent after `helper: `.
+fn perl_cell(perl: &str) -> String {
+  let code = |s: &str| format!("`{}`", s.replace('|', "\\|"));
+  match perl.strip_prefix("helper: ") {
+    Some(equivalent) => format!("(Rhai helper; Perl: {})", code(equivalent)),
+    None if perl.is_empty() => String::new(),
+    None => code(perl),
+  }
 }
 
 /// The replacement of a call [`super::DEPRECATED_ALIASES`] deprecates as a whole; `None` for a live call, and for
@@ -2814,27 +3519,20 @@ fn deprecated_row(rhai: &str, name: &str) -> Option<&'static str> {
     .filter(|new| !new.starts_with(&format!("{name}(")))
 }
 
-/// Render the three-column cheat sheet, Perl | Rust macro | Rhai, as Markdown: a row per registered call (in
-/// [`GROUPS`] order) and per [`PERL_GAPS`] entry, then the empty cells listed as the dialect's gaps.
+/// Render the three-column cheat sheet, Perl | Rust | Rhai, as Markdown: a row per registered call (in [`GROUPS`]
+/// order) and per [`PERL_GAPS`] entry, then the Perl calls the dialect lacks.
 pub(super) fn generate_cheatsheet(engine: &Engine) -> String {
   let mut calls = registered_calls(engine);
   calls.sort();
   calls.dedup();
-  let cell = |s: &str| {
-    if s.is_empty() {
-      String::new()
-    } else {
-      format!("`{}`", s.replace('|', "\\|"))
-    }
-  };
+  let macros = workspace_macros();
   let mut out = String::from(CHEATSHEET_HEADER);
-  out.push_str("\n| Perl | Rust macro | Rhai |\n|---|---|---|\n");
-  let (mut no_perl, mut no_macro) = (Vec::new(), Vec::new());
+  out.push_str("\n| Perl | Rust | Rhai |\n|---|---|---|\n");
   for (receiver, ..) in GROUPS {
     // A deprecated alias sorts right after the call that replaces it (`whatsit.getArg`, then `whatsit.argString`).
     let mut rows = Vec::new();
     for (_, name) in calls.iter().filter(|(r, _)| r.as_deref() == *receiver) {
-      let Some((Mirror(perl, mac), doc)) = lookup_entry(*receiver, name) else {
+      let Some((Mirror(perl, rust), doc)) = lookup_entry(*receiver, name) else {
         continue;
       };
       let rhai = match receiver {
@@ -2847,72 +3545,65 @@ pub(super) fn generate_cheatsheet(engine: &Engine) -> String {
         .map(|(call, _)| call.rsplit('.').next().unwrap_or(call))
         .filter(|call| call.chars().all(|c| c.is_ascii_alphanumeric() || c == '_'))
         .unwrap_or(name);
+      let rhai = rhai.replace('|', "\\|");
       let rhai_cell = match replaced_by {
         Some(new) if new.contains('(') => format!("`{rhai}` (deprecated: `{new}`)"),
         Some(new) => format!("`{rhai}` (deprecated: {new})"),
-        None => cell(&rhai),
+        None => format!("`{rhai}`"),
       };
       rows.push((
         (anchor.to_string(), replaced_by.is_some(), name.clone()),
-        format!("| {} | {} | {rhai_cell} |\n", cell(perl), cell(mac)),
+        format!(
+          "| {} | {} | {rhai_cell} |\n",
+          perl_cell(perl),
+          rust_cell(rust, Some(doc), &macros)
+        ),
       ));
-      if perl.is_empty() {
-        no_perl.push(format!("`{rhai}`"));
-      }
-      // A plain Perl function the macros do not spell: compiled bindings call the Rust function instead.
-      if receiver.is_none()
-        && replaced_by.is_none()
-        && mac.is_empty()
-        && !perl.is_empty()
-        && perl.chars().all(|c| c.is_ascii_alphanumeric() || c == '_')
-      {
-        no_macro.push(match doc {
-          Doc::Rust(_, path) => format!("`{name}` (`{}`)", short_path(path)),
-          Doc::Note(_) => format!("`{name}`"),
-        });
-      }
     }
     rows.sort_by(|a, b| a.0.cmp(&b.0));
     out.extend(rows.into_iter().map(|(_, row)| row));
   }
-  for (perl, mac) in PERL_GAPS {
-    out.push_str(&format!("| {} | {} |  |\n", cell(perl), cell(mac)));
-  }
-  let no_rhai: Vec<String> = PERL_GAPS
-    .iter()
-    .map(|(perl, _)| format!("`{perl}`"))
-    .collect();
-  for (title, list) in [
-    ("Perl calls the dialect lacks (an empty Rhai cell)", no_rhai),
-    (
-      "Rhai calls with no Perl counterpart (an empty Perl cell)",
-      no_perl,
-    ),
-    (
-      "Perl functions with no macro (compiled bindings call the Rust function named)",
-      no_macro,
-    ),
-  ] {
+  let mut lacking = Vec::new();
+  for (perl, rust, rhai) in PERL_GAPS {
+    let rhai_cell = if rhai.is_empty() {
+      let why = GAP_REASONS
+        .iter()
+        .find(|(name, _)| name == perl)
+        .map_or("", |(_, why)| *why);
+      lacking.push(format!("- `{perl}`: {why}."));
+      String::new()
+    } else if rhai.contains('`') {
+      rhai.to_string()
+    } else {
+      format!("`{rhai}`")
+    };
     out.push_str(&format!(
-      "\n## {title}\n\n{} calls: {}.\n",
-      list.len(),
-      list.join(", ")
+      "| {} | {} | {rhai_cell} |\n",
+      perl_cell(perl),
+      rust_cell(rust, None, &macros)
     ));
   }
+  out.push_str(&format!(
+    "\n## Perl calls the dialect lacks (an empty Rhai cell)\n\n{} calls, each with the reason:\n\n{}\n",
+    lacking.len(),
+    lacking.join("\n")
+  ));
   out
 }
 
-const CHEATSHEET_HEADER: &str = r#"# Perl | Rust macro | Rhai: the binding dialects side by side
+const CHEATSHEET_HEADER: &str = r#"# Perl | Rust | Rhai: the binding dialects side by side
 
 One row per call: its Perl LaTeXML spelling (a `Package.pm` function, or the Perl method or expression that does the
-same), the compile-time Rust macro that lowers to the same core call, and the runtime `.rhai` call. **Generated** from
+same), the Rust a compiled binding uses for it (the macro where there is one, then the function, method, type or
+trait item the call reaches — the one the Rhai call itself calls), and the runtime `.rhai` call. **Generated** from
 `api_doc.rs` with [`API.md`](https://github.com/dginev/latexml-oxide/blob/main/latexml_contrib/src/script_bindings/API.md), and checked with it on every test run (`api_reference_is_up_to_date`); regenerate
 with `UPDATE_API_DOC=1 cargo test -p latexml_contrib --lib api_reference_is_up_to_date`.
 
-An empty cell is a gap, listed at the end: a Perl call the dialect lacks, a Rhai call Perl has no counterpart for (a
-Rhai-only helper), or a Perl function the macros do not spell. Methods (`document.openElement`) have no macro: a
-compiled binding calls the Rust method. A deprecated alias follows the call that replaces it, marked `(deprecated: …)`
-(the aliases of `mod.rs`'s `DEPRECATED_ALIASES`). Each Rhai call's arguments and meaning are in [`API.md`](https://github.com/dginev/latexml-oxide/blob/main/latexml_contrib/src/script_bindings/API.md); the
+Every Rust name is a rustdoc intra-doc link, so `cargo doc` fails on a renamed one; a private item is named with its
+file. A Rhai helper Perl has no single call for shows the Perl that does the same, as "(Rhai helper; Perl: …)". A
+deprecated alias follows the call that replaces it, marked `(deprecated: …)` (the aliases of `mod.rs`'s
+`DEPRECATED_ALIASES`). An empty Rhai cell is a Perl call the dialect lacks, listed at the end. Each Rhai call's
+arguments and meaning are in [`API.md`](https://github.com/dginev/latexml-oxide/blob/main/latexml_contrib/src/script_bindings/API.md); the
 newcomer guide is [`RHAI_BINDINGS_GUIDE.md`](https://github.com/dginev/latexml-oxide/blob/main/docs/parity/RHAI_BINDINGS_GUIDE.md).
 "#;
 
@@ -3001,7 +3692,7 @@ closure-registered functions; only the accepted types are.
 
 New to the dialect? Start with the guide, [`RHAI_BINDINGS_GUIDE.md`](https://github.com/dginev/latexml-oxide/blob/main/docs/parity/RHAI_BINDINGS_GUIDE.md);
 [`CHEATSHEET.md`](https://github.com/dginev/latexml-oxide/blob/main/latexml_contrib/src/script_bindings/CHEATSHEET.md)
-sets each call beside its Perl spelling and its compile-time macro.
+sets each call beside its Perl spelling and the Rust a compiled binding uses.
 "#;
 
 /// One registered function, split into the parts we present.

@@ -141,7 +141,7 @@ LoadDefinitions!({
     install_font_def(cs, &name, props_opt, at_sp, at_str_opt, None)?;
     // tex.web §1269: the `\afterassignment` token follows the whole assignment (Perl never fires
     // it, DIVERGENCES #394).
-    after_assignment();
+    after_assignment()?;
   });
 
   // Perl: DefMacro('\fontname FontDef', sub { Explode($fontinfo && $$fontinfo{name}
