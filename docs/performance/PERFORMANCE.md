@@ -389,7 +389,7 @@ expression, `XPath::walk`) and post `findnodes_at` / `findnode(_at)`. A union of
 `descendant::STEP`, `.//STEP` or `descendant-or-self::STEP` arms, `STEP` being `*` or `ltx:NAME` with one predicate
 of top-level `or`/`and` over `@a`, `@xml:a`, `not(@a)`, `not(ancestor::ltx:N)`, `not(ltx:N)` and `contains(…)` over
 attributes, `concat` and literals. Matches are tested on `RoNode`s, names and namespaces read borrowed, and only the
-matches are wrapped (rust-libxml's additive borrowed reads, `Document::wrap_readonly`, `RoNode::with_name`);
+matches are wrapped (rust-libxml's additive borrowed reads, `Document::node_from_readonly`, `RoNode::with_name`);
 `findnode` stops at the first. `resolve_xmkeys` is one
 `descendant::*[@KEY]` walk per key attribute; a key's target is the first non-XMRef carrying it, as before. The walk
 answers only where it equals XPath (the same nodes, document order, each once) and declines otherwise: any other
@@ -447,7 +447,7 @@ sight an insert and an `Rc` kept until the document drops); `get_properties` cop
 `HashMap<String,String>` for callers that read names, a count or each value once; `get_node_qname` copied the name and
 the namespace prefix into Strings and spelled `prefix:local` into a third. Fix: additive rust-libxml API (local branch
 `perf/borrowed-reads`, consumed through a `[patch.crates-io]` path entry until libxml 0.3.24 is released):
-`Node::as_readonly` / `wrap_readonly`, `RoNode::for_each_property(_ns)`, `with_name`, `with_namespace_prefix`,
+`Node::as_readonly` / `node_from_readonly`, `RoNode::for_each_property(_ns)`, `with_name`, `with_namespace_prefix`,
 `with_content`, each borrowing libxml2's strings (checked by `str::from_utf8` before the lossy decoder). Moved: R7
 `model::get_node_qname` (via `get_ro_node_qname`, the qname spelled in `arena::pin_qname`'s reused buffer); R6
 `serialize_into`, `finalize_rec`'s bookkeeping strip, `append_tree`, `namespace_prefixes_in_use` (the map's keying kept

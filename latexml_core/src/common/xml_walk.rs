@@ -193,7 +193,7 @@ impl WalkQuery {
     Some(
       found
         .into_iter()
-        .map(|node| doc.wrap_readonly(node))
+        .map(|node| doc.node_from_readonly(node))
         .collect(),
     )
   }

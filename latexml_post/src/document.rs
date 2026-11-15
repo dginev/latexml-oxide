@@ -138,7 +138,7 @@ fn scan_ids_and_pis_from(
           c.for_each_property(|name, _| named_id |= name == "id" || name == "xml:id");
         }
         if named_id {
-          let element = document.wrap_readonly(c);
+          let element = document.node_from_readonly(c);
           if let Some(id) = get_xml_id(&element) {
             ids.push((id, element));
           }

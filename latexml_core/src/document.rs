@@ -1168,7 +1168,7 @@ impl Document {
               Some(NodeType::PiNode) => c.with_name(|name| name == FIELD_MARK_TARGET),
               _ => false,
             })
-            .map(|c| current.wrap_readonly(c))
+            .map(|c| current.node_from_readonly(c))
             .collect();
           for scrap in scraps {
             if scrap.get_type() == Some(NodeType::PiNode) {
@@ -1188,7 +1188,7 @@ impl Document {
           for &ro_child in &children {
             let child_type = ro_child.get_type();
             if child_type == Some(NodeType::ElementNode) {
-              let child = current.wrap_readonly(ro_child);
+              let child = current.node_from_readonly(ro_child);
               let was_forcefont = child.has_attribute("_force_font");
               // Enter first, PostElement after (reversed when pushed to stack)
               child_work.push(Work::Enter(child.clone()));
@@ -1211,7 +1211,7 @@ impl Document {
               if can_contain(&current, FONT_ELEMENT_NAME)
                 && !pending_declaration.is_empty()
                 && let Some(mut text) =
-                  self.wrap_nodes(FONT_ELEMENT_NAME, vec![current.wrap_readonly(ro_child)])?
+                  self.wrap_nodes(FONT_ELEMENT_NAME, vec![current.node_from_readonly(ro_child)])?
               {
                 for (key, (value, _properties)) in pending_declaration.iter() {
                   self.set_attribute(&mut text, key, value)?;
