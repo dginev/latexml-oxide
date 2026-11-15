@@ -1554,7 +1554,8 @@ fn input_definitions_impl(
 }
 
 /// The end of a `handleoptions` load (Package.pm:2652-2654): pop what `before_input_handle_options` pushed and restore
-/// `\@currname`/`\@currext`, also when the load found nothing to read (Perl pushes only once the file is found).
+/// `\@currname`/`\@currext`, also when the load found nothing to read (Perl pushes only once the file is found; TeX pops a
+/// missing file too, latex.ltx:18363 and :18801).
 fn pop_load_frame(
   pushpop: bool,
   file_stack_pushed: bool,
@@ -1564,7 +1565,7 @@ fn pop_load_frame(
   if file_stack_pushed {
     digest(T_CS!("\\@expl@@@filehook@file@pop@@"))?;
   }
-  // Perl-faithful: Package.pm:2637 —
+  // Perl-faithful: Package.pm:2654 —
   //   Digest(($pushpop ? T_CS('\@popfilename') : T_CS('\lx@popfilename')));
   // Pair with the dispatched push above: the SAME `$pushpop` decision, taken
   // before the push (see the declaration at the `handleoptions` branch), so a

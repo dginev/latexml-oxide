@@ -1,7 +1,8 @@
 % witness: synthetic (revQAB3 finding 2; the probe of lppl.tex:44, xcomment.sty, pgfmanual's license test)
-% oracle:  pdflatex 1 `!` (Can be used only in preamble: \usepackage), "A:DOC. B:DOC."; Perl 1 error
+% oracle:  pdflatex 1 `!` (Can be used only in preamble: \usepackage), "A:DOC. B:DOC."; Perl 1 error, 1 warning
 %          (unexpected:\usepackage), "A:PRE. B:PRE."
-% engines: rust base main 1 error, "A:DOC. B:DOC."; fix/qa90-preamble-cmds r1 1 error, "A:DOC. B:PRE."
+% engines: rust base main 2 errors (unexpected:\usepackage, unexpected:\@onlypreamble), "A:DOC. B:DOC.";
+%          fix/qa90-preamble-cmds r1 1 error, "A:DOC. B:PRE."
 % expect:  1 error "Can be used only in preamble", 0 warnings, "A:DOC. B:DOC." (onlyp.sty beside it)
 % status:  GREEN (`\@onlypreamble` records nothing once `\@preamblecmds` is `\@notprerr`, latex.ltx:9522; OD #226)
 \documentclass{article}
