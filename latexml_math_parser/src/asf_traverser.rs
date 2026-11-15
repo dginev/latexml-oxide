@@ -84,7 +84,7 @@ fn token_text(raw: Rc<str>) -> Rc<str> {
 /// driver's per-glade `cache.insert(_, output.clone())` and `cache
 /// .get(&id).clone()` become refcount bumps instead of deep tree
 /// copies. A reading's subtrees are `Shared` (copy-on-write), so the per-combination clones below
-/// copy its root node only, not the subtree (the issue-790 book: −17 % cycles; t_1109.6643 −42 %).
+/// copy its root node only, not the subtree.
 pub type GladeAlts = Rc<Vec<Option<XM>>>;
 
 /// Per-glade traversal callback. Holds the math parser's actions,

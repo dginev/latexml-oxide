@@ -2530,21 +2530,38 @@ impl From<&Node> for XProps {
 mod tests {
   use super::*;
 
-  /// Two alternatives built from one child reading share its subtree; a write through either copies
-  /// what it changes, so the other keeps the reading as the child glade produced it.
+  /// `plus(<a>, times(x, <y>))`, built fresh on each call from constructors only: an expected value
+  /// sharing no `Rc` with the tree under test (`Rc`'s `==` on an `Eq` type answers `true` on pointer
+  /// identity alone) and taking no write (so it cannot lose one the way the tree under test might).
+  fn sum_of_product(a: &str, y: &str, role: Option<&'static str>) -> XM {
+    let product = XM::Apply(
+      Operator::from("MULOP:times:1"),
+      Args::from(vec![XM::from("letter:x"), XM::from(y)]),
+      XProps::default(),
+      Meta::default(),
+    );
+    XM::Apply(
+      Operator::from("ADDOP:plus:1"),
+      Args::from(vec![XM::from(a), product]),
+      XProps {
+        role: role.map(Cow::Borrowed),
+        ..XProps::default()
+      },
+      Meta::default(),
+    )
+  }
+
+  fn wrap(child: XM) -> XM {
+    XM::Wrap(Shared::new(vec![child]), XProps::default(), Meta::default())
+  }
+
+  /// Two alternatives built from one child reading share its subtree; a write through either, at
+  /// the child's arguments or one level deeper, copies what it changes, so the other keeps the
+  /// reading as the child glade produced it.
   #[test]
   fn a_shared_subtree_takes_writes_privately() {
-    let child = XM::Apply(
-      Operator::from("ADDOP:plus:1"),
-      Args::from(vec![XM::from("letter:a"), XM::from("letter:b")]),
-      XProps::default(),
-      Meta::default(),
-    );
-    let one = XM::Wrap(
-      Shared::new(vec![child.clone()]),
-      XProps::default(),
-      Meta::default(),
-    );
+    let original = || wrap(sum_of_product("letter:a", "letter:y", None));
+    let one = original();
     let mut two = one.clone();
     let XM::Wrap(items, ..) = &mut two else {
       unreachable!()
@@ -2552,20 +2569,36 @@ mod tests {
     let XM::Apply(_, args, props, _) = &mut items[0] else {
       unreachable!()
     };
-    args.0[1] = Some(XM::from("letter:c"));
+    args.0[0] = Some(XM::from("letter:c"));
     props.role = Some(Cow::Borrowed("ADDOP"));
-    let XM::Wrap(items, ..) = &one else {
+    assert_eq!(one, original(), "the first alternative keeps its child");
+    assert_eq!(
+      two,
+      wrap(sum_of_product("letter:c", "letter:y", Some("ADDOP"))),
+      "the second has its own"
+    );
+
+    // A grandchild write: the product inside the shared arguments.
+    let mut three = one.clone();
+    let XM::Wrap(items, ..) = &mut three else {
       unreachable!()
     };
-    assert_eq!(items[0], child, "the first alternative keeps its child");
-    assert_ne!(one, two, "the second alternative has its own");
-    let XM::Wrap(items, ..) = two else {
+    let XM::Apply(_, args, ..) = &mut items[0] else {
       unreachable!()
     };
-    let XM::Apply(_, args, ..) = items.into_inner().remove(0) else {
+    let Some(XM::Apply(_, grand_args, ..)) = &mut args.0[1] else {
       unreachable!()
     };
-    assert_eq!(args.0[1], Some(XM::from("letter:c")));
-    assert_eq!(args.0[0], Some(XM::from("letter:a")));
+    grand_args.0[1] = Some(XM::from("letter:z"));
+    assert_eq!(
+      one,
+      original(),
+      "the first alternative keeps its grandchild"
+    );
+    assert_eq!(
+      three,
+      wrap(sum_of_product("letter:a", "letter:z", None)),
+      "the third has its own"
+    );
   }
 }
