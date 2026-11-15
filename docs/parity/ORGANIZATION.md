@@ -1,19 +1,102 @@
-# Engine Organization: Perl → Rust Mapping
+# Organization: the Rust layout for Perl readers
 
-This document describes how the Rust files in `latexml_engine/src/`
-relate to the Perl files in `LaTeXML/lib/LaTeXML/Engine/`.
+A map from Perl LaTeXML's files (`LaTeXML/lib/LaTeXML/` and `LaTeXML/bin/` in the main checkout) to the Rust crates
+and files that port them: where the bindings, the dump, the constructs, the schema, the post-processor and the CLI
+live. CLAUDE.md's "Key Concepts Mapping" (`CLAUDE.md`, repository root) names the concepts. This doc is the file-level
+map (Bruce Miller Q&A QA85, Q8.1).
 
-**Counts (2026-05-15):** 40 Perl `.pool.ltxml` files, 47 Rust `.rs`
-files. 38 of the 40 Perl pools have direct 1:1 Rust counterparts;
-2 are partial ports (AmSTeX skeleton, BibTeX skeleton — see
-[`archive/BIBTEX_PORT_PLAN_2026-06-20.md`](../archive/BIBTEX_PORT_PLAN_2026-06-20.md)). The Rust side has
-8 additional files for Rust-specific concerns (module
-infrastructure, dump-path/embedded-dump support, the dump-runtime
-loader pair, and a Rust-only constructs supplement) — listed below.
+**Counts (2026-11-15):** 8 crates (`Cargo.toml` `[workspace] members`). The `.rs` count of each crate's `src/` is
+in the first table.
 
-## Loading hierarchy
+## The crates
 
-### Perl
+| Crate | Perl counterpart | Holds | `src/*.rs` |
+|---|---|---|---|
+| `latexml_core` | `Core.pm`'s machinery, `Core/*`, `Common/*`, most of `Util/*`, `Package.pm`'s definers and loaders | Mouth, Gullet, Stomach, State, Document, tokens, boxes, definitions, the model and schema, the dump reader and writer | 105 |
+| `latexml_codegen` | — (does at compile time what `Core/Definition/Constructor/Compiler.pm` does at run time) | proc macros: constructor templates, the compiled model, parameters, tokens, test harnesses | 6 |
+| `latexml_engine` | `Engine/*.pool.ltxml`, `Pre/BibTeX*.pm` | the TeX/LaTeX pools, the binding DSL macros (`DefMacro!` & co), the dump loaders, frontmatter | 165 |
+| `latexml_package` | `Package/*.ltxml` | the bindings Perl ships (`*_sty.rs`, `*_cls.rs`, …) and their dispatch table | 552 |
+| `latexml_contrib` | — | bindings Perl does not ship; the Rhai runtime bindings | 348 |
+| `latexml_math_parser` | `MathParser.pm`, `MathGrammar` | the Marpa math grammar and its semantics | 15 |
+| `latexml_post` | `Post.pm`, `Post/*`, `Util/Pack*`, `Util/ObjectDB*` | the post-processors, XSLT, CSS, JavaScript | 40 |
+| `latexml_oxide` | `LaTeXML.pm`, `Core.pm`'s session, `bin/*` | the converter, iniTeX and dump building, the CLI binaries, the library API, the LSP server | 33 (+ 15 in `bin/`) |
+
+## `latexml_core`: Core, Common, Util, and Package.pm's machinery
+
+| Perl (`LaTeXML/lib/LaTeXML/…`) | Rust |
+|---|---|
+| `Core.pm` (`initializeState`, pre/postamble, `convertDocument`) | `latexml_oxide/src/core_interface.rs`, `latexml_oxide/src/converter.rs` |
+| `Core/State.pm` | `latexml_core/src/state.rs` |
+| `Core/Mouth.pm`, `Core/Mouth/{file,http,https}.pm` | `latexml_core/src/mouth.rs` |
+| `Core/Gullet.pm` | `latexml_core/src/gullet.rs` |
+| `Core/Stomach.pm` | `latexml_core/src/stomach.rs` |
+| `Core/Document.pm` | `latexml_core/src/document.rs`, `latexml_core/src/document/` |
+| `Core/Token.pm`, `Core/Tokens.pm` | `latexml_core/src/token.rs`, `latexml_core/src/tokens.rs` |
+| `Core/Box.pm`, `Core/List.pm`, `Core/Whatsit.pm`, `Core/Comment.pm` | `latexml_core/src/tbox.rs`, `list.rs`, `whatsit.rs`, `comment.rs` (their shared interface: `digested.rs`) |
+| `Core/Definition.pm`, `Core/Definition/{Expandable,Primitive,Constructor,Conditional,Register}.pm` | `latexml_core/src/definition.rs`, `latexml_core/src/definition/{expandable,primitive,constructor,conditional,register}.rs` |
+| `Core/Definition/CharDef.pm`, `FontDef.pm` | `latexml_core/src/definition/register.rs` (`CharDefProps`), `definition/primitive.rs` (the `\font` id) |
+| `Core/Definition/Constructor/Compiler.pm` | `latexml_core/src/binding/def/replacement.rs` (run time), `latexml_codegen/src/constructable.rs` (compile time) |
+| `Core/Parameter.pm`, `Core/Parameters.pm` | `latexml_core/src/parameter.rs`, `latexml_core/src/definition/argument.rs` |
+| `Core/KeyVal.pm`, `Core/KeyVals.pm` | `latexml_core/src/keyval.rs`, `latexml_core/src/keyvals.rs` |
+| `Core/Alignment.pm`, `Core/Alignment/Template.pm` | `latexml_core/src/alignment.rs`, `latexml_core/src/alignment/` |
+| `Core/Rewrite.pm` | `latexml_core/src/rewrite.rs`, `latexml_core/src/rewrite/declare.rs` |
+| `Core/MuDimension.pm`, `Core/MuGlue.pm`, `Core/Pair.pm`, `Core/PairList.pm` | `latexml_core/src/common/{mudimension,muglue,pair}.rs` |
+| `Core/Array.pm` | — (a token stream of `{…}` groups: `latexml_engine/src/base_parameter_types.rs` `CommaList`) |
+| `Core/Dumper.pm` | `latexml_core/src/dump_writer.rs` (writes), `latexml_core/src/dump_reader.rs` (applies; see "The dump") |
+| `Common/Config.pm` | `latexml_core/src/common.rs` (`Config`); the options: `latexml_oxide/bin/latexml_oxide.rs` |
+| `Common/Color.pm`, `Common/Color/*` | `latexml_core/src/common/color.rs` |
+| `Common/{Dimension,Glue,Number,Float}.pm` | `latexml_core/src/common/{dimension,glue,number,float}.rs` |
+| `Common/Error.pm` | `latexml_core/src/common/error.rs`, `latexml_core/src/util/logger.rs` |
+| `Common/Font.pm`, `Common/Font/{Metric,StandardMetrics}.pm` | `latexml_core/src/common/font.rs`, `latexml_core/src/common/font/` |
+| `Common/Locator.pm`, `Common/Object.pm` | `latexml_core/src/common/locator.rs`, `latexml_core/src/common/object.rs` |
+| `Common/Model.pm` | `latexml_core/src/common/model.rs` |
+| `Common/Model/RelaxNG.pm` | `latexml_core/src/common/relaxng/` |
+| `Common/Model/DTD.pm` | — (RelaxNG only, no DTD) |
+| `Common/XML.pm`, `Common/XML/{Parser,XPath}.pm` | `latexml_core/src/common/xml.rs` |
+| `Common/XML/XSLT.pm` | `latexml_post/src/xslt.rs` |
+| `Util/Pathname.pm`, `Util/Image.pm`, `Util/Radix.pm` | `latexml_core/src/util/{pathname,image,radix}.rs` |
+| `Util/Test.pm` | `latexml_core/src/test.rs`, `latexml_oxide/src/util/test.rs`, `latexml_codegen/src/testable.rs` |
+| `Util/Unicode.pm` | `latexml_post/src/unicode.rs` |
+| `Util/Geometry.pm`, `Util/Transform.pm`, `Util/WWW.pm` | — (no Rust module cites them) |
+| `resources/RelaxNG/*` | `latexml_core/resources/RelaxNG/` (embedded: `latexml_core/src/common/relaxng/embedded.rs`; our extensions: `docs/parity/SCHEMA_EXTENSIONS.md`) |
+
+## Bindings: `Package.pm`'s definers, `Package/*.ltxml`, contrib, Rhai
+
+| Perl | Rust |
+|---|---|
+| `Package.pm` definers (`DefMacro`, `DefConstructor`, `DefEnvironment`, `DefPrimitive`, …) as functions | `latexml_core/src/binding/def/dialect.rs` (`def_macro` & co), `latexml_core/src/binding/def/builder.rs` |
+| … and as the call-site DSL | the macros `DefMacro!`, `DefConstructor!`, `DefEnvironment!` in `latexml_engine/src/setup_binding_language.rs`; helper macros in `latexml_core/src/binding/def/macros.rs` (`docs/parity/BINDING_DSL_ARCHITECTURE.md`) |
+| `Package.pm` loaders (`InputDefinitions`, `RequirePackage`, `LoadClass`, `LoadPool`, `FindFile`) | `latexml_core/src/binding/content.rs` |
+| `Package.pm` counters (`NewCounter`, `RefStepCounter`, …) | `latexml_core/src/binding/counter/dialect.rs` (`new_counter`, `ref_step_counter`), `latexml_core/src/binding/counter.rs` |
+| `Package/<name>.<ext>.ltxml` (455: 365 sty, 43 cls, 17 fontmap, 14 tex, 11 def, 3 ldf, 1 ltx, 1 lua) | `latexml_package/src/package/<name>_<ext>.rs`, with non-alphanumerics → `_` (544 files). 450 of the 455 have a file of that name. The other 5 dispatch to a sibling: `epsf.tex` → `epsf_sty.rs`, `psfig.tex` → `epsfig_sty.rs`, `xy.tex` → `xy_sty.rs`, `utf8x.def` → `utf8_def.rs`, `latexml.sty` → the module `latexml_package/src/package/latexml_sty/` |
+| `FindFile` of a binding (`<name>.<ext>.ltxml` on the path) | the table `BINDINGS` (509 entries) and `dispatch` in `latexml_package/src/lib.rs`; the modules are declared in `latexml_package/src/package.rs` |
+| — (bindings Perl does not ship) | `latexml_contrib/src/<name>_<ext>.rs` (342 files: 196 sty, 130 cls, 7 tex, and 9 others: `lib.rs` and shared modules); table `BINDINGS` (363 entries) and `dispatch` in `latexml_contrib/src/lib.rs`, passed to the converter as `extra_bindings_dispatch` (`latexml_oxide/src/api.rs`); catalogued in `docs/parity/OXIDIZED_DESIGN_DIVERGENCES.md` "Bindings beyond Perl's tree" |
+| a user's `.ltxml` (Perl code loaded at run time) | `<name>.<ext>.rhai`, loaded by `latexml_oxide/src/converter.rs` through `latexml_contrib/src/script_bindings/` (the only module that embeds Rhai; API: `latexml_contrib/src/script_bindings/API.md`; guide: `docs/parity/RHAI_BINDINGS_GUIDE.md`; examples: `docs/examples/`) |
+
+## The dump
+
+Strict `LoadFormat` mutual exclusivity (Perl `Package.pm:LoadFormat` L2734-2752): bootstrap → dump → constructs where
+a dump built from this TeX tree is found, otherwise bootstrap → base → constructs. Design:
+`docs/parity/DUMP_DESIGN.md`.
+
+| Perl | Rust |
+|---|---|
+| `latexml --init=latex.ltx` (`Core.pm` iniTeX, then `Core/Dumper.pm`) | `latexml_oxide/src/ini_tex.rs`; a dump for the TeX tree in use is built on demand by `latexml_oxide/src/format_dumps.rs` (OD #449) |
+| `Core/Dumper.pm` writing `blib/…/Engine/{plain,latex}_dump.pool.ltxml` | `latexml_core/src/dump_writer.rs` → `resources/dumps/{plain,latex}.YYYY.dump.txt` (gitignored; `tools/make_formats.sh`) |
+| loading the generated `*_dump.pool.ltxml` (every record `assign_internal('global')`, Dumper.pm L59-67) | `latexml_core/src/dump_reader.rs`, called by `latexml_engine/src/plain_dump.rs` and `latexml_engine/src/latex_dump.rs` |
+| — | the embedding of dumps in the binary: `latexml_engine/build.rs` → `latexml_engine/src/embedded_dumps.rs`; year and tree matching: `latexml_engine/src/dump_paths.rs`; dump → Rust source: `latexml_core/src/dump_codegen.rs` |
+
+## `latexml_engine`: the pools
+
+Perl `lib/LaTeXML/Engine/` holds 38 `.pool.ltxml`; `make` adds the two generated dump pools to `blib/` (40). All 38
+have a Rust module of the same name in `latexml_engine/src/`: 36 files and two module directories (`base_utilities/`,
+`latex_constructs/`). Two of them are partial ports (AmSTeX, BibTeX). The 50 top-level `.rs` files are those 36,
+`pre_bibtex.rs` (Perl `Pre/BibTeX.pm`), the two dump loaders, and 11 Rust-only files (listed below). With the module directories
+(`base_utilities/`, `latex_constructs/`, `l3fp_native/`) the crate has 165 `.rs` files.
+
+### Loading hierarchy
+
+Perl:
 ```
 TeX.pool
 ├── Base.pool          (loads all Base_* + TeX_* + eTeX + pdfTeX + Base_Deprecated)
@@ -21,7 +104,7 @@ TeX.pool
 │   ├── Base_ParameterTypes
 │   ├── Base_Utility
 │   ├── Base_XMath
-│   ├── TeX_Box .. TeX_Tables  (18 files)
+│   ├── TeX_Box .. TeX_Tables  (19 files)
 │   ├── eTeX
 │   ├── pdfTeX
 │   └── Base_Deprecated
@@ -41,153 +124,121 @@ LaTeX.pool
     └── latex_constructs
 ```
 
-### Rust
-
-Strict-Perl `LoadFormat` mutual exclusivity (commit `0c4d609ad` and
-follow-ups). Either dump XOR base, never both:
-
+Rust (dump XOR base, never both):
 ```
-tex.rs                     (≈ TeX.pool + Base.pool combined)
-├── base_schema
-├── base_parameter_types
-├── base_utilities         (≈ Base_Utility)
-├── base_xmath
-├── tex_box .. tex_tables  (18 files, same as Perl)
-├── etex
-├── pdftex
-├── base_deprecated
-├── plain_bootstrap        (≈ plain_bootstrap.pool.ltxml)
+tex.rs                     (≈ TeX.pool)
+├── base                   (≈ Base.pool: base_schema … base_deprecated, as Perl)
+├── plain_bootstrap
 ├── if dump available && !LATEXML_NODUMP:
-│     plain_dump           (runtime loader for plain.dump.txt)
+│     plain_dump           (runtime loader for the plain dump)
 │   else:
-│     plain_base           (≈ plain_base.pool.ltxml)
-└── plain_constructs       (≈ plain_constructs.pool.ltxml)
-    └── math_common        (≈ math_common.pool.ltxml)
+│     plain_base
+└── plain_constructs
+    └── math_common
 
 latex.rs                   (≈ LaTeX.pool)
-├── LoadPool!("TeX")       (loads tex.rs above)
-├── latex_bootstrap.rs     (≈ latex_bootstrap.pool.ltxml)
+├── LoadPool!("TeX")       (tex.rs above)
+├── latex_bootstrap
 ├── if dump available && !LATEXML_NODUMP:
-│     latex_dump           (runtime loader for latex.dump.txt)
+│     latex_dump           (runtime loader for the latex dump)
 │   else:
-│     latex_base.rs        (≈ latex_base.pool.ltxml)
-└── latex_constructs.rs    (≈ latex_constructs.pool.ltxml, ~12,900 lines, sections C.1–C.15)
+│     latex_base
+├── latex_constructs       (module directory, sections C.1–C.15)
+└── latex_constructs_rust_only
 ```
 
-Mirrors Perl `Package.pm:LoadFormat` L2734-2752 exactly. See
-[`PERL_LOADFORMAT_AUDIT.md`](../archive/PERL_LOADFORMAT_AUDIT.md) for the
-parity audit.
+`--init` (dump building) stops after the bootstrap (`latexml_engine/src/latex.rs`), so the snapshot holds what
+`latex.ltx` defines, as Perl's iniTeX → `DumpFile` flow does.
 
-Dump-build snapshots are taken by the init/dump-generation path
-(`ini_tex::dump_format`), not by the normal runtime `tex.rs` /
-`latex.rs` load chain.
+### File-by-file
 
-## File-by-file mapping
-
-### TeX primitives (Base.pool children)
-
-| Perl file | Rust file | Notes |
+| Perl file | Rust (`latexml_engine/src/`) | Notes |
 |---|---|---|
-| `Base.pool.ltxml` | *(inlined in `tex.rs`)* | Pure loader — zero definitions, just `LoadPool(...)` calls |
+| `TeX.pool.ltxml` | `tex.rs` | autoload triggers, `LoadFormat('plain')` |
+| `LaTeX.pool.ltxml` | `latex.rs` | `LoadFormat('latex')` |
+| `Base.pool.ltxml` | `base.rs` | loader only |
 | `Base_Schema.pool.ltxml` | `base_schema.rs` | |
 | `Base_ParameterTypes.pool.ltxml` | `base_parameter_types.rs` | |
-| `Base_Utility.pool.ltxml` | `base_utilities/` (module directory) | Rust name uses plural convention |
+| `Base_Utility.pool.ltxml` | `base_utilities/` | also the frontmatter machinery (`base_utilities/frontmatter/`, `base_utilities/defs/`) |
 | `Base_XMath.pool.ltxml` | `base_xmath.rs` | |
-| `TeX_Box.pool.ltxml` | `tex_box.rs` | |
-| `TeX_Character.pool.ltxml` | `tex_character.rs` | |
-| `TeX_Debugging.pool.ltxml` | `tex_debugging.rs` | |
-| `TeX_FileIO.pool.ltxml` | `tex_file_io.rs` | |
-| `TeX_Fonts.pool.ltxml` | `tex_fonts.rs` | |
-| `TeX_Glue.pool.ltxml` | `tex_glue.rs` | |
-| `TeX_Hyphenation.pool.ltxml` | `tex_hyphenation.rs` | |
-| `TeX_Inserts.pool.ltxml` | `tex_inserts.rs` | |
-| `TeX_Job.pool.ltxml` | `tex_job.rs` | |
-| `TeX_Kern.pool.ltxml` | `tex_kern.rs` | |
-| `TeX_Logic.pool.ltxml` | `tex_logic.rs` | |
-| `TeX_Macro.pool.ltxml` | `tex_macro.rs` | |
-| `TeX_Marks.pool.ltxml` | `tex_marks.rs` | |
-| `TeX_Math.pool.ltxml` | `tex_math.rs` | Includes subscript/superscript (was `tex_scripts.rs`) |
-| `TeX_Page.pool.ltxml` | `tex_page.rs` | |
-| `TeX_Paragraph.pool.ltxml` | `tex_paragraph.rs` | |
-| `TeX_Penalties.pool.ltxml` | `tex_penalties.rs` | |
-| `TeX_Registers.pool.ltxml` | `tex_registers.rs` | |
-| `TeX_Tables.pool.ltxml` | `tex_tables.rs` | |
-| `eTeX.pool.ltxml` | `etex.rs` | |
-| `pdfTeX.pool.ltxml` | `pdftex.rs` | |
+| `TeX_{Box,Character,Debugging,FileIO,Fonts,Glue,Hyphenation,Inserts,Job,Kern,Logic,Macro,Marks,Math,Page,Paragraph,Penalties,Registers,Tables}.pool.ltxml` (19) | `tex_{box,character,debugging,file_io,fonts,glue,hyphenation,inserts,job,kern,logic,macro,marks,math,page,paragraph,penalties,registers,tables}.rs` | |
+| `eTeX.pool.ltxml`, `pdfTeX.pool.ltxml` | `etex.rs`, `pdftex.rs` | |
 | `Base_Deprecated.pool.ltxml` | `base_deprecated.rs` | |
+| `plain_bootstrap.pool.ltxml`, `plain_base.pool.ltxml`, `plain_constructs.pool.ltxml` | `plain_bootstrap.rs`, `plain_base.rs`, `plain_constructs.rs` | |
+| `math_common.pool.ltxml` | `math_common.rs` | |
+| `latex_bootstrap.pool.ltxml`, `latex_base.pool.ltxml` | `latex_bootstrap.rs`, `latex_base.rs` | |
+| `latex_constructs.pool.ltxml` (5,969 lines) | `latex_constructs/` (21,305 lines in `sect01.rs`–`sect13.rs`, 9,229 in `mod.rs`) | sections below |
+| `plain_dump.pool.ltxml`, `latex_dump.pool.ltxml` (generated, `blib/` only) | `plain_dump.rs`, `latex_dump.rs` | loaders of the text dump |
+| `AmSTeX.pool.ltxml` | `amstex.rs` (1,208 lines) | partial port |
+| `BibTeX.pool.ltxml`, `Pre/BibTeX.pm`, `Pre/BibTeX/Entry.pm` | `bibtex.rs` (3,873 lines), `pre_bibtex.rs` (1,924 lines) | `.bib → .xml` end to end; field-synthesis polish open (`docs/archive/BIBTEX_PORT_PLAN_2026-06-20.md`) |
 
-### Plain TeX format (LoadFormat 'plain')
+### `latex_constructs`: the sections
 
-| Perl file | Rust file | Notes |
+| Section (Lamport) | Perl from line | Rust (`latexml_engine/src/latex_constructs/`) |
 |---|---|---|
-| `plain_bootstrap.pool.ltxml` | `plain_bootstrap.rs` | `\TeX`, `\newif`, `\leavevmode`, `\alloc@` |
-| `plain_base.pool.ltxml` | `plain_base.rs` | Appendix B: registers, allocation, spacing, formatting |
-| `plain_constructs.pool.ltxml` | `plain_constructs.rs` | Font commands, accents, alignment, footnotes |
-| `math_common.pool.ltxml` | `math_common.rs` | Greek, operators, relations, arrows, delimiters, log functions |
+| preamble: compatibility, `\documentclass` (Perl L78) | 1 | `mod.rs` |
+| C.1 Commands and Environments | 162 | `sect01.rs` |
+| C.2 The Structure of the Document | 287 | `sect02.rs` |
+| C.3 Sentences and Paragraphs | 400 | `sect03.rs` |
+| C.4 Sectioning and Table of Contents | 544 | `sect04.rs` |
+| C.5 Classes, Packages and Page Styles (the title page and abstract: C.5.4, Perl 1060) | 771 | `sect05.rs`; the title-page reading: `title_page_reading.rs` |
+| C.6 Displayed Paragraphs | 1206 | `sect06.rs` |
+| C.7 Mathematical Formulas | 1870 | `sect07.rs`, `reference_math_slots.rs` |
+| C.8 Definitions, Numbering and Programming | 2509 | `sect08.rs` |
+| C.9 Figures and Other Floating Bodies | 3125 | `sect09.rs`; the panel grid (`annotate_panel_grid`) in `mod.rs` |
+| C.10 Lining It Up in Columns | 3501 | `sect10.rs` |
+| C.11 Moving Information Around | 3774 | `sect11.rs` |
+| C.12 Line and Page Breaking; C.13 Lengths, Spaces and Boxes | 4553, 4590 | `sect12.rs` |
+| C.14 Pictures and Color; C.15 Font Selection | 4815, 5146 | `sect13.rs` |
 
-Loading chain in `tex.rs` (strict-Perl `LoadFormat`):
-`InnerPool!(plain_bootstrap)` → EITHER `InnerPool!(plain_dump)` OR
-`InnerPool!(plain_base)`
-(mutually exclusive) → `InnerPool!(plain_constructs)` (which loads
-`InnerPool!(math_common)`).
-
-### LaTeX format (LoadFormat 'latex')
-
-| Perl file | Rust file | Notes |
-|---|---|---|
-| `latex_bootstrap.pool.ltxml` | `latex_bootstrap.rs` | Stubs for font/counter internals |
-| `latex_base.pool.ltxml` | `latex_base.rs` | Infrastructure: DefMacro, Let, DefRegister, RawTeX |
-| `latex_constructs.pool.ltxml` | `latex_constructs.rs` | All constructors/environments (~8675 lines, C.1–C.15) |
-
-Loading chain in `latex.rs` (strict-Perl `LoadFormat`):
-`LoadPool!("TeX")` → `InnerPool!(latex_bootstrap)` →
-EITHER `InnerPool!(latex_dump)` OR `InnerPool!(latex_base)`
-(mutually exclusive) →
-`InnerPool!(latex_constructs)`.
-
-### LaTeX constructs — section mapping
-
-`latex_constructs.rs` (~8675 lines) is a single file matching Perl's
-`latex_constructs.pool.ltxml` (6014 lines). It contains all LaTeX semantic
-definitions organized by Lamport chapter with section comment headers.
-
-| Section | Lamport chapter | Perl lines (approx) |
-|---|---|---|
-| C.1 | Commands and Environments | 31–276 |
-| C.2 | The Structure of the Document | 276–372 |
-| C.3 | Sentences and Paragraphs | 372–587 |
-| C.4 | Sectioning and Table of Contents | 588–833 |
-| C.5 | Classes, Packages and Page Styles | 833–1310 |
-| C.6 | Displayed Paragraphs | 1311–1646 |
-| C.7 | Mathematical Formulas | 1646–2246 |
-| C.8 | Definitions, Numbering and Programming | 2247–2785 |
-| C.9 | Figures and Other Floating Bodies | 2786–2985 |
-| C.10 | Lining It Up in Columns | 2985–3229 |
-| C.11 | Moving Information Around | 3230–3832 |
-| C.12 | Line and Page Breaking | 3832–3866 |
-| C.13 | Lengths, Spaces and Boxes | 3866–4123 |
-| C.14 | Pictures and Color | 4124–4414 |
-| C.15 | Font Selection and Special Symbols | 4414–5366 |
-| (auxiliary) | Auxiliary file stubs, language declarations | 5366–6014 |
-
-### Partially-ported Perl engine files
-
-| Perl file | Rust file | Status |
-|---|---|---|
-| `AmSTeX.pool.ltxml` | `amstex.rs` | Skeleton + a few definitions ported; plain-TeX-style format, rare in arxiv corpora |
-| `BibTeX.pool.ltxml` | `bibtex.rs` (2217 lines) + `pre_bibtex.rs` (935 lines) | Phases 1-8 of `docs/archive/BIBTEX_PORT_PLAN_2026-06-20.md` shipped (end-to-end `.bib → .xml`); long-tail of MR-Zbl field synthesis polish remains. Skip via `--nobibtex` in production |
-
-### Rust-only files (no Perl `.pool.ltxml` equivalent)
+### Rust-only files in `latexml_engine/src/`
 
 | Rust file | Purpose |
 |---|---|
-| `lib.rs` | Crate root + module declarations |
-| `prelude.rs` | Rust prelude bringing common imports into scope |
-| `macros.rs` | Engine-internal Rust macros (`InnerPool!`, etc.) |
-| `base.rs` | Shared base module loaded by both `tex.rs` and `latex.rs` |
-| `setup_binding_language.rs` | DSL setup for `DefMacro!`/`DefConstructor!`-style call sites |
-| `plain_dump.rs` | Runtime loader for `resources/dumps/plain.YYYY.dump.txt` (delegates to `dump_reader`) |
-| `latex_dump.rs` | Runtime loader for `resources/dumps/latex.YYYY.dump.txt` (delegates to `dump_reader`) |
-| `dump_paths.rs` | Versioned-dump filename conventions + ambient TL year detection (kpsewhich SELFAUTOPARENT + pdflatex --version fallback) |
-| `embedded_dumps.rs` | Build-script-generated manifest of `include_str!`'d dumps; runtime year-aware accessors with fallback to most-recent embedded year |
-| `latex_constructs_rust_only.rs` | LaTeXML-specific constructs with no upstream Perl counterpart |
+| `lib.rs`, `prelude.rs`, `macros.rs` | crate root, prelude, engine-internal macros (`InnerPool!`, …) |
+| `setup_binding_language.rs` | the binding DSL macros (`DefMacro!`, `DefConstructor!`, …) every binding crate uses |
+| `dump_paths.rs`, `embedded_dumps.rs`, `build_rerun.rs` | dump file names and TeX Live year detection; the embedded-dump manifest; what `build.rs` tracks |
+| `latex_kernel.rs` | loads the LaTeX format on demand (the safety net of the eager trigger list) |
+| `latex_constructs_rust_only.rs` | LaTeX-format overrides with no Perl counterpart, loaded after `latex_constructs` |
+| `frontmatter_stores.rs` | reroutes a raw class's title-page stores to the frontmatter API |
+| `lua_bridge.rs` | evaluates `\directlua` bodies in an external `texlua` |
+| `l3fp_native/` | a native evaluator for l3fp's `\__fp_parse:n` |
+
+## `latexml_math_parser`
+
+| Perl | Rust (`latexml_math_parser/src/`) |
+|---|---|
+| `MathParser.pm` (driver, lexing, semantics) | `parser.rs`, `util.rs`, `semantics.rs`, `semantics/`, `pragmatics.rs` |
+| `MathGrammar` (Parse::RecDescent) | `grammar.rs`, `grammar/builder.rs`, `grammar/macros.rs` (Marpa: an ambiguous grammar pruned in the semantics) |
+| — | `asf_traverser.rs` (the parse forest), `data.rs`, `diag.rs` |
+
+Design: `docs/math/MATH_PARSER_AND_ASF.md`.
+
+## `latexml_post`
+
+| Perl (`LaTeXML/lib/LaTeXML/…`) | Rust (`latexml_post/src/`) |
+|---|---|
+| `Post.pm` (driver, `LaTeXML::Post::Document`, the processor base) | `lib.rs`, `document.rs`, `processor.rs`; the pipeline API: `latexml_oxide/src/post.rs` |
+| `Post/{Collector,CrossRef,Graphics,LaTeXImages,LexMath,MakeBibliography,MakeIndex,MathImages,OpenMath,PictureImages,Scan,SVG,TeXMath,UnicodeMath,Writer,XMath,XSLT}.pm` | `collector.rs`, `crossref.rs`, `graphics.rs`, `latex_images.rs`, `lex_math.rs`, `make_bibliography.rs`, `make_index.rs`, `math_images.rs`, `open_math.rs`, `picture_images.rs`, `scan.rs`, `svg.rs`, `tex_math.rs`, `unicode_math.rs`, `writer.rs`, `xmath.rs`, `xslt.rs` |
+| `Post/Split.pm` | `split.rs`, `stream_split.rs` |
+| `Post/MathML.pm`, `Post/MathML/{Presentation,Content,Linebreaker,OperatorDictionary}.pm` | `mathml/mod.rs`, `mathml/{presentation,content,linebreaker,operator_dictionary}.rs` |
+| `Post/Manifest.pm`, `Post/Manifest/Epub.pm` | `manifest/mod.rs`, `manifest/epub.rs` |
+| `Util/Pack.pm`, `Util/Pack/{Dir,Zip}.pm` | `pack.rs`, `extract.rs` |
+| `Util/ObjectDB.pm`, `Util/ObjectDB/Entry.pm` | `object_db.rs` |
+| `Util/Radix.pm`, `Util/Unicode.pm` | `radix.rs`, `unicode.rs` |
+| `resources/{XSLT,CSS,javascript}/` | `latexml_post/resources/{XSLT,CSS,javascript}/` (embedded) |
+| — | `graphics_cache.rs`, `math_processor.rs`, `postscript_fonts.rs`, `schema_docs.rs`, `diag.rs`, `test_env.rs` |
+
+## `latexml_oxide`: the converter and the CLI
+
+| Perl | Rust |
+|---|---|
+| `LaTeXML.pm` (the converter: `convert`, the ambles, the status) | `latexml_oxide/src/converter.rs` |
+| `Core.pm` (`initializeState`, pre/postamble) | `latexml_oxide/src/core_interface.rs` |
+| `bin/latexml`, `bin/latexmlc`, `bin/latexmlpost` | one binary, `latexml_oxide/bin/latexml_oxide.rs` (post-processing included) |
+| `bin/latexmlmath` | `latexml_oxide/bin/latexmlmath_oxide.rs` |
+| `doc/manual/genschema`, `tools/compileschema` (Perl repository) | `latexml_oxide/bin/genschema_oxide.rs`, `tools/compileschema.sh` |
+| `bin/latexmlfind` | — |
+| — | `latexml_oxide/bin/cortex_worker.rs` (the arXiv fleet worker), `latexml_oxide/bin/binding_audit.rs`, `latexml_oxide/bin/ab_audit/` |
+| — | `latexml_oxide/src/api.rs` (the library API), `latexml_oxide/src/lsp_server/`, `main_tex.rs` (finding a directory's main `.tex`), `multidoc.rs`, `bib_session.rs`, `render_workers.rs`, `streaming_restart.rs`, `identity.rs`, `source_date.rs`, `conformance/` |
+| `latexml --init` | `latexml_oxide/src/ini_tex.rs`, `latexml_oxide/src/format_dumps.rs` (see "The dump") |
