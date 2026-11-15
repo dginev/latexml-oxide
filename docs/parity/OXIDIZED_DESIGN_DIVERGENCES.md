@@ -9506,7 +9506,7 @@ lost, or garbled). **TeX.** Each class's own `\@maketitle` (cited per binding in
 | 898 | eptcs (`eptcs_cls.rs`) | `\institute`, `\email` inside `\author` each a line under the names |
 | 899 | lmcs (`lmcs_cls.rs`) | an author's letters request the labelled addresses; `\lmcsorcid` |
 | 904 | pos.sty, rmaa (`pos_sty.rs`, `rmaa_cls.rs`) | title-page setters routed through the API before the raw read |
-| 905 | fcs, dgruyter (`fcs_cls.rs`, `dgruyter_sty.rs`) | `\author*[labels]`: corresponding contact; `\address[n]` labelled n (revtex4_support's `\affil` half: KNOWN_PERL_ERRORS #1199) |
+| 905 | fcs, dgruyter (`fcs_cls.rs`, `dgruyter_sty.rs`) | `\author*[labels]`: corresponding contact; `\address[n]` labelled n (revtex4_support's `\affil` half: KNOWN_PERL_ERRORS #1199); a contact printing no letter or digit (fcs's "✉") keyed by its symbol, so written (`emitter/plan.rs:63 contact_key`, `:73 symbol_key`; PR #866) |
 | 912 | just.cls (`cpc_hepnp_cls.rs`, cpc-hepnp renamed; registered for just only, `latexml_package/src/lib.rs:624-627`) | `\email`, `\address` after `\maketitle` |
 | 963 | AASTeX 6+ (`aastex_cls.rs`) | `\email` after `\correspondingauthor{X}` before any `\author` is X's |
 | 412 | g-brief (`g_brief_cls.rs`, `g_brief2_cls.rs`) | the letter's sender and addressee → creators (FURN) |
@@ -14587,19 +14587,22 @@ sectioning-frontmatter/ieeetran_appendix_with_a_title_is_one_appendix; guard
 
 ### 804. → #993 (`\lx@splitting` at `\\` drops the break's `*` and `[…]` from the next piece)
 
-### 805. A separately printed address goes to its owner by one chain: its own mark, the author it spells, author order when the list is the authors', the group's only author, the one marked corresponding author, else the block — absorbs #140 #159 #465 #808 #809 #901 #908 #932 #938 #956 #966 #970 #972 #984 #992
+### 805. A separately printed address goes to its owner by one chain: its own mark, the author it spells, author order when the list is the authors', the group's only author, elimination, the one marked corresponding author, else the block — absorbs #140 #159 #465 #808 #809 #901 #908 #932 #938 #956 #966 #970 #972 #984 #992
 
 **Rule.** A contact the block or a class list prints apart from its author is owned by its own mark, else the author it
 spells (base letters and transliteration), else author order when the list is the authors', else the group's only
-author, else the one author marked corresponding, else the block (resolver rule 7; user ruling R10). An e-mail printed
-inside an affiliation entry is that entry's addresses, placed by the same chain; one contact per print event.
+author, else by elimination (an address no name spells to a name no address spells, where one of each is left or the
+spelled addresses' order confirms it; a role mailbox is no person's), else the one author marked corresponding, else
+the block (resolver rule 7; user ruling R10). An e-mail printed inside an affiliation entry is that entry's addresses,
+placed by the same chain; one contact per print event.
 
 **Perl.** The n-th piece of a comma split goes on the n-th author, or the address stays in the affiliation's text and is
 copied onto every holder; iopart's `\ead` goes to the last author (KNOWN_PERL_ERRORS #1031). **TeX.** The class prints
 the list where its `\@maketitle` puts it (iopart.cls `\ead`, ijcai.sty `\emails`); the PDF shows no owner but the spelling.
 
 **Sub-rules**
-- *The chain*: `observer/resolver/mod.rs` rule 7; `resolver/owners.rs:860 entry_address_owners`; spelling by
+- *The chain*: `observer/resolver/mod.rs` rule 7; `resolver/owners.rs:860 entry_address_owners`; elimination
+  `owners.rs:768 owners_by_elimination` (`classify/links.rs:359 is_role_mailbox`; formerly #52(j), (o)); spelling by
   `resolver/mod.rs:1198 base_letters`, `labels.rs:258 tex_letters`, `:1511 surname_owners` (formerly #970);
   `place.rs:291 marked_corresponding_author` (formerly #809).
 - *Class lists*: ijcai's `\emails`, cas's `\address[label]` (formerly #908); each iopart `\author` a group (iopart.cls:225-231),
@@ -16437,6 +16440,9 @@ a mark is what prints as a superscript beside the name.
   symbol mark all its symbols' (formerly #927).
 - *Hand marks*: a numbered entry owned by a hand-printed mark is ruling 1's; one whose lines marks lead is split at them
   (formerly #918); a mark-led affiliation is the entry it labels (formerly #937).
+- *A glued script is text*: a script a letter or digit prints after in its own formula (an isotope prescript,
+  `${\rm ^{3}He}$`, `${}^{87}{\rm Rb}$`) is the formula's text, not a mark, unless a name requests it or, none
+  requesting, it opens its line (`events/lexer.rs:561`; 2105.07958, 1006.5052).
 - *Notes inside marks*: ijcai's binding takes a `\thanks` out of its mark before the block is read
   (`defs/author_macros/ijcai.rs:441 notes_out_of_marks`, 2512.05464; formerly #881); the emitter digests each note where
   its name's run holds it, its footnote step there (`emit.rs:882 note_steps`).
@@ -16446,7 +16452,8 @@ a mark is what prints as a superscript beside the name.
 `perfect_kernel_batch92a::a_mark_of_refs_requests_every_key`,
 `perfect_kernel_batch92b::a_numbered_entry_owned_by_a_hand_mark_is_ruling_ones`,
 `perfect_kernel_batch93a::a_label_answered_in_several_columns_is_each_columns_own`,
-`perfect_kernel_batch93a::a_compound_symbol_mark_names_the_names_carrying_all`. RED:
+`perfect_kernel_batch93a::a_compound_symbol_mark_names_the_names_carrying_all`,
+`perfect_kernel_batch90a::a_script_before_printed_ink_or_on_a_base_is_text`. RED:
 `llncs_thanks_requested_mark_legend_read_as_affiliation_red`. **Upstream.** Not offered. Records: [the archive](../archive/OD_FRONTMATTER_RECORDS_2026-11-15.md).
 
 ### 912. → #460 (just.cls (Chinese Physics C's cpc-hepnp.cls under the PhiPsi15 name) has a binding: its `\email` is the author's e-mail and its `\address` after `\maketitle` the names' affiliations; cpc-hepnp itself waits for 91c (Perl: no binding; through OmniBus the list is one address of the last author))
@@ -16600,7 +16607,8 @@ call extends what `\@maketitle` prints.
 **Witnesses** 1412.6580, 2311.07297, 1606.03167, 2511.03250. **Guards**
 `perfect_kernel_batchfx24::a_coauthor_appended_to_author_is_kept`, `…::an_author_tail_the_title_page_prints_is_read`,
 `…::an_author_tail_the_title_page_does_not_print_is_not_read`, `…::an_llncs_author_tail_is_kept`. RED:
-`article_author_tail_let_and_stays_a_row_red`, `authblk_author_tail_before_a_later_author_is_lost_red`.
+`article_author_tail_let_and_stays_a_row_red`, `authblk_author_tail_before_a_later_author_is_lost_red`,
+`ptephy_author_given_twice_keeps_the_last_red` (ptephy's replacing `\author`: the first call's Univ A lost, 3 Warnings).
 **Upstream.** Offerable: stacking per class. Records: [the archive](../archive/OD_FRONTMATTER_RECORDS_2026-11-15.md), under each number.
 
 ### 921. A frontmatter note whose class prints no label has none: an explicit empty `name=` is no label (Perl: the role's default label)
@@ -17791,8 +17799,11 @@ it whole as one `\lx@add@author` (Base_Utility.pool.ltxml:687-693), else `SplitT
 - *Queue.* Every call queues its block whole (`defs/author_macros.rs:35 whole_block_call`); the ledger records it with
   its stamped position range (`observer/ledger.rs`).
 - *Flush.* `place.rs:520 digest_front_matter` rehearses and lexes every block not read yet (`observer/reading.rs`;
-  `observer/rehearsal.rs`; `events/mod.rs:2774 lex_with_formulas` reads a span's content from the digested list, a
-  speculative run's in-place edits undone — formerly #978), then calls `emitter/emit.rs:5001 emit_commands` (place.rs:589).
+  `observer/rehearsal.rs`; each block under the author markup its digestion runs, `reading.rs:252`,
+  `defs/frontmatter_fields.rs:893 author_markup_begin`: a binding's class markup, OmniBus's, the title code's
+  definitions that read arguments — formerly in #802's and #941's records; `events/mod.rs:2774 lex_with_formulas`
+  reads a span's content from the digested list, a speculative run's in-place edits undone — formerly #978), then calls
+  `emitter/emit.rs:5001 emit_commands` (place.rs:589).
 - *Resolve.* `observer/resolver/mod.rs:1257 resolve` applies the rules its module doc numbers 1-10 under the family's
   declared conventions (`observer/policy.rs:371 policy_for`; the kernel's and an undeclared binding's: `KERNEL`,
   `UNDECLARED`, Perl's `@authorsplits` reading).
@@ -17812,11 +17823,36 @@ it whole as one `\lx@add@author` (Base_Utility.pool.ltxml:687-693), else `SplitT
 - *Families* read whole: eptcs's block and OmniBus's `\authors` list go whole to the reading (formerly #991; Perl:
   `OmniBus.cls.ltxml:74` `\authors{}` prints nothing).
 
-**History** (code deleted; each record kept verbatim in
-[archive/OD_FRONTMATTER_RECORDS_2026-11-15.md](../archive/OD_FRONTMATTER_RECORDS_2026-11-15.md) under its number):
-- #52 the old reader's `\thanks`-abuse and juggle recoveries (`author_block/`, deleted DEL1/DEL2); what survives is the
-  fallback's own preparation (`fallback.rs` module doc) and the resolver's comma cut of a names line.
-- #837 the shadow-mode observer and census (`LATEXML_FM_SHADOW`, `ab_audit fmshadow`), deleted DEL4 `78530dfda5c`.
+**History** (what each absorbed record's code was, what was deleted, and where its live rules are now; each
+record kept in [archive/OD_FRONTMATTER_RECORDS_2026-11-15.md](../archive/OD_FRONTMATTER_RECORDS_2026-11-15.md) under
+its number):
+- #52 the old reader's driver and its raw-token preparation (`author_block/`, deleted DEL1/DEL2; its last mark and
+  separator readers, for authblk and IEEEtran, in `classify/old_reader/`). Its rules that run, by the record's letters,
+  and the primary holding each:
+  - (a) a `\thanks` opening with an affiliation mark is the affiliations it labels (`defs/frontmatter_fields.rs:833`,
+    `classify/notes.rs:390 starts_with_affiliation_mark`); (i) a footnote-symbol mark stays visible
+    (`emitter/calls.rs:847 rewrite_symbol_superscripts`, `\lx@frontmatter@keepsup`) → #911.
+  - (g) the `\and` family is a hard author boundary, in the Perl split the fallback writes (`fallback.rs:101
+    perl_author_calls`, `classify/separators.rs:210 author_and_splits`) and in the API's marked affiliation list
+    (`defs/frontmatter_api/affiliations.rs:158`); (h) authblk's comma list (`authblk_sty.rs:226 has_separated_names`);
+    (o) spacing runs part names and the labels in a mark (`fallback.rs:425 normalize_hspace_separators`,
+    `queue_digest.rs:807 clean_frontmatter_labels`) → #993.
+  - (j) a shared address line is one contact per address, its notes the document's
+    (`defs/frontmatter_api/email_lines.rs:13 email_line_calls`, `affiliations.rs:527 place_address_runs`,
+    `emitter/calls.rs:773 document_note_call`, the amsart grid's `insert.rs:4054 distribute_upfront_contacts`); (o)
+    elimination (`resolver/owners.rs:768 owners_by_elimination`, user ruling R10, role mailboxes excluded) → #805.
+  - (f) a line of `\textsuperscript{n}Affil` entries is cut at its marks (`emitter/calls.rs:716
+    split_wrapped_affiliation_marks`) → #954.
+  - (b) a bare e-mail line is a contact, not an affiliation (`classify/email_owners.rs:14 line_is_email`); (c) a marked
+    line with a name before its mark is a names line, however short the name (`classify/marks.rs:94
+    name_precedes_marker`) → #459.
+  - The fallback's own preparation and the comma cut of a names line only (`fallback.rs` module doc) → the Declines
+    stage above (formerly #988). Code cites no other letter of the record.
+- #837 the shadow mode and its census (`LATEXML_FM_SHADOW`, `ab_audit fmshadow`), deleted DEL4 `78530dfda5c`. The
+  observer it built is this pipeline's: the ledger (`observer/ledger.rs`, `queue.rs`), the rehearsal's event
+  constructors and the lexer (`observer/rehearsal.rs`, `observer/events/`), the conventions each binding declares
+  (`observer/policy.rs`), the resolver (`observer/resolver/`); its stage decisions (S2a.2 r2-r6, the landing decisions
+  of 2026-10-22) are in its archive record.
 - #923 #925 #942 #948 the per-family `written: true` gates of the S2b writer (aa/llncs, kernel, IEEEtran/acmart/authblk/
   MNRAS, the rest), deleted with `Policy::written` at DEL4.
 - #926 #928 #958 #979 the S2b writer's DOM operations (`write_observed_frontmatter`, `plan::cut_block_lines`,
@@ -17854,18 +17890,22 @@ text; a note with no ink prints a mark only.
 - *Accounting*: the emitter's declines (#980) and the unclaimed-text net (`insert.rs:381 keep_unclaimed_net_notes`)
   and the title-page check (#953) each name the words they could not place.
 
-**Loss rows** (the deleted guards of `docs/parity/FRONTMATTER_REDS_AT_EMIT2.tsv`, status as that file and the live repros
-record it): #802 vmsta's initials GREEN (`vmsta_title_page_name_parts`, a row of
+**Loss rows** (the deleted guards of `docs/parity/FRONTMATTER_REDS_AT_EMIT2.tsv`, status as that file and the live
+repros record it): #802 vmsta's initials GREEN (`vmsta_title_page_name_parts`, a row of
 `perfect_kernel_batchlostf::lost_frontmatter_content_is_kept`), the 2018 e-mails GREEN (a row of
 `perfect_kernel_batchunc::uncounted_losses_are_counted_or_kept`), the e-mails and addresses RED
 (`vmsta_emails_and_addresses_are_contacts_red`); #803 right (rows of `perfect_kernel_batchhg1`); #808 RED
 (`iopart_ead_under_its_address_mark_red`); #904 rmaa RED (`rmaa_altaffiltext_marks_red`), pos.sty unverified (guards
 deleted); #905 GREEN (LOSTF); #908 RED (`ijcai_binding_emails_in_author_order_red`); #911 GREEN (ISO1,
-`revtex_affiliation_isotope_prescript_keeps_its_line`); #912 unverified (guards deleted); #916 RED for the inked notes
-(`kernel_thanks_colorbox_is_ink_red` and its five siblings; their counts a row of
-`perfect_kernel_batchhg1::reds_keep_their_counts_and_right_parts`); #920 unverified ("A Univ", guard deleted); #941 no row;
-#944 RED (`author_marked_list_keeps_its_printed_separators_red`, `author_marked_list_amsart_comma_and_keeps_its_comma_red`);
-#954 the 13 `cut_*` rows retired (no longer reproduce; LOSTF).
+`revtex_affiliation_isotope_prescript_keeps_its_line`); #912 the TSV's known deficit
+(repro `just_marked_address_after_maketitle`, no guard: each name its marked lines, the marks kept as text in the
+names, "Ann Able 1,2"); #916 RED for the inked notes (`kernel_thanks_colorbox_is_ink_red` and its five siblings; their counts a row of
+`perfect_kernel_batchhg1::reds_keep_their_counts_and_right_parts`); #920 RED
+(`ptephy_author_given_twice_keeps_the_last_red`: Univ A lost, 3 Warnings); #941 RED
+(`mark_then_store_email_read_by_a_refused_abstract_red`, its mark a second e-mail contact; #767), its LOSTF part GREEN
+(`astlb_title_code_address_marks_keep_the_names`, a row of `lost_frontmatter_content_is_kept`); #944 RED
+(`author_marked_list_keeps_its_printed_separators_red`, `author_marked_list_amsart_comma_and_keeps_its_comma_red`); #954
+the 13 `cut_*` rows retired (no longer reproduce; LOSTF).
 
 **Witnesses** 2409.01693, astro-ph0405280, astro-ph0608669, 1005.3784. **Guards**
 `perfect_kernel_batch92e::aa_offprints_command_text_is_ink`, `perfect_kernel_batch92e::mdpi_corres_label_only_note_is_kept`,

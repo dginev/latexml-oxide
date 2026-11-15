@@ -2,7 +2,8 @@
 
 [← OXIDIZED_DESIGN_DIVERGENCES.md](../parity/OXIDIZED_DESIGN_DIVERGENCES.md) · The full former texts of the frontmatter
 entries that docs PR D (OD rationalization ruling 10, DG 2026-11-14) rewrote into the observer → resolver → emitter
-primaries #980 #981 #993 #459 #920 #911 #805 #954 #262 #767 #460, verbatim as they stood at `664fb785b6d`. **Frozen:**
+primaries #980 #981 #993 #459 #920 #911 #805 #954 #262 #767 #460: each entry byte-identical to its text at `664fb785b6d`
+apart from one added closing line, `*Live rule: OD #P.*`, naming the primary that holds its rule now. **Frozen:**
 many describe code since deleted (the S2b writer, the old author reader, the shadow census) or name guards deleted at
 DEL1/HG1; the live rule is the primary's, and `docs/parity/FRONTMATTER_REDS_AT_EMIT2.tsv` keeps the deleted guards'
 deficits. Kept for the witness ids, measured figures, guard names and rulings these entries recorded.
