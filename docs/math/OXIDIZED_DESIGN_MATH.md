@@ -2,7 +2,7 @@
 
 [← OXIDIZED_DESIGN.md](../parity/OXIDIZED_DESIGN.md) · Marpa-style ambiguous grammar design + the numbered grammar-rule divergences.
 
-> **Numbering note:** these `### N` numbers (`#16`, and the grammar cluster `#7–#18`) are a SEPARATE sequence from the divergences in [OXIDIZED_DESIGN_DIVERGENCES.md](../parity/OXIDIZED_DESIGN_DIVERGENCES.md) and collide with them by value — kept verbatim because code refers to them (notably `#18` = "Speculative function application", the f(x)→apply decision). `#19`–`#62` are the math-parse entries moved here from the divergences file on 2026-11-14, each headed "formerly OD #N" (the code's `OXIDIZED_DESIGN #N` citations resolve through the stub there). See also divergence #4 (Marpa parser) and #15 (improved parses) in the divergences file.
+> **Numbering note:** these `### N` numbers (`#16`, the design rules, and the grammar cluster `#7–#15`, `#17`, `#18` and `#63`, which held a second `#16` until 2026-11-15) are a SEPARATE sequence from the divergences in [OXIDIZED_DESIGN_DIVERGENCES.md](../parity/OXIDIZED_DESIGN_DIVERGENCES.md) and collide with them by value — kept verbatim because code refers to them (notably `#18` = "Speculative function application", the f(x)→apply decision). `#19`–`#62` are the math-parse entries moved here from the divergences file on 2026-11-14, each headed "formerly OD #N" (the code's `OXIDIZED_DESIGN #N` citations resolve through the stub there). See also divergence #4 (Marpa parser) and #15 (improved parses) in the divergences file.
 
 ---
 
@@ -207,7 +207,7 @@ and `norm` pattern (`||a||` → `norm@(a)` with ‖). These match Perl's
 MathGrammar `evalAtOp`/`maybeEvalAt` and `SINGLEVERTBAR SINGLEVERTBAR`
 rules respectively.
 
-### 16. Grammar: Bigop argument scope after invisible times
+### 63. Grammar: Bigop argument scope after invisible times (renumbered from the grammar cluster's second #16, 2026-11-15)
 
 **Decision:** Removed `any_bigop` from `scripted_factor_r11`/`scripted_factor_r12`
 rules. Bigops now ONLY get scripts via `scripted_bigop`, ensuring
@@ -1219,8 +1219,8 @@ still leaves, `\partial\log x\ldots` ∂(log x)·…; latent, no corpus witness)
 factor may follow it takes at term level (`diffop_term`, a `bigop_operand`), so a factor-level operand cannot split it:
 a big operator's application (`\partial_t\int_\Omega u\,dx` ∂_t(∫…); 57cj's factor-level route gave
 `\partial_t\int u(y)v(y)w(y)\,dy` 42 trees, 8 now as before), a function before one (`\partial\log\sum_i x_i` ∂(log·∑…), ∂(log(∑…)) since 57cj.22's Q7,
-2605.30560), a bare function (`\partial\operatorname{\mu}`, 2605.29136), a bare operator (`\partial_t\nabla\cdot u` (∂_t∇)·u, as
-`\nabla\cdot u` is ∇·u) and a bare differential operator, a chain (`\partial_x\partial_y` (∂_x)@(∂_y),
+2605.30560), a bare function (`\partial\operatorname{\mu}`, 2605.29136), a bare operator before a big operator (`\partial_t\nabla\cdot\sum_i u_i`
+(∂_t∇)·∑; a divergence or a curl is one factor, below) and a bare differential operator, a chain (`\partial_x\partial_y` (∂_x)@(∂_y),
 `\eta^{\alpha\beta}\partial_\alpha\partial_\beta`, `(\partial_t\partial_s-\partial_s\partial_t)\Phi=0`, `D^\alpha=\partial_1^{\alpha_1}\cdots
 \partial_n^{\alpha_n}`; 2605.12948, 2605.21314, 2605.22252, 2605.26285, 2605.27600, 2605.28314, 2605.29990). A partial
 derivative is the first item of an operator's, an OPFUNCTION's and a trig function's bare argument (Perl's `aBarearg`
@@ -1246,8 +1246,8 @@ braced compound (`\partial_z{\delta B_y}` ∂_z(δ)·B_y, 2605.22729) and an ord
 (`\partial f/\partial x\partial y` (∂f/∂x)·∂y) stay; a letter constant is no number (`\partial_x\pi r^2` ∂_x(π)·r²,
 `\partial_\theta\frac1N\sum_n\ell_n` ∂_θ(1/N)·∑…, 57cj.1 review); iopart's `\rmd^n f/\rmd x^n\,\rmd x`
 takes the integral's `\rmd x` (the d kind matches); a `\frac` denominator's constant joins the variable
-(`\frac{\partial^2\phi}{\partial t^2c^2}` ∂(t²c²)); `\partial_t\nabla\cdot u` is (∂_t∇)·u, where Perl and 57ci read
-∂_t(∇·u) (open, a ruling: equal as operators, but the tree differentiates the ∇ symbol). 57cj.1's numeric operands
+(`\frac{\partial^2\phi}{\partial t^2c^2}` ∂(t²c²)); `\partial_t\nabla\cdot u` is ∂_t(∇·u), as Perl and 57ci read
+it (user ruling 2026-10-01, below; `semantics.rs:5439` `divergence_or_curl`). 57cj.1's numeric operands
 (`numeric_monomial`, a fraction of numbers lexed `ATOM_NUMBER`, util.rs), the operand before a big operator
 (`numeric_big_operand`, before a function before one too) and the unsubscripted ∂ a `\frac` denominator regroups
 were the 57cj.1 and 57cj.2 reviews' (57cj.2, 57cj.3; latent, the reviews' probes); a derivative right after the number

@@ -8523,7 +8523,7 @@ pub(crate) fn process_index_phrases(
   // into the live stream — one mode error + one orphaned indexphrase per
   // `\OptionInd` (algxpar-doc 162+149 errs, numerica; pdflatex clean —
   // real makeindex splits the out-of-band .idx STRING where imbalance
-  // cannot corrupt the document). KNOWN_PERL_ERRORS #83.
+  // cannot corrupt the document). KNOWN_PERL_ERRORS #1278.
   // Nor inside math: `\index{arroba@$@$}` (latex-via-exemplos.tex:1042
   // `\arrobasymbforindex` = `$@$`, used at :4238/:4691/:5363) is the key
   // `arroba` and the display `$@$`; splitting at the `@` inside the math
@@ -8633,7 +8633,7 @@ pub(crate) fn process_index_phrases(
           // `\indc{gradetable[v]}`, pgfornament `pgfornament[<options>]`)
           // truncates the constructor's `[]` re-parse at the first `]`,
           // spilling the display phrase as illegal <ltx:indexmark> children
-          // (Perl shares the flat re-parse — KNOWN_PERL_ERRORS #83 sibling).
+          // (Perl shares the flat re-parse — KNOWN_PERL_ERRORS #1278 sibling).
           // clean_index_key strips the one wrapping pair symmetrically.
           expansion.push(T_OTHER!("["));
           expansion.push(T_BEGIN!());

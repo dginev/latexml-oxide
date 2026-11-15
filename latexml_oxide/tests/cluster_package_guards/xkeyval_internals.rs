@@ -68,7 +68,7 @@ const PTR_TEX: &str = "\\documentclass{article}\n\
 /// Three engine contracts on one doc: (1) the pointer system —
 /// `\savekeys` + `\usevalue` + raw `\XKV@<header><key>@value` readback
 /// (chessboard.sty L1059/L1221); (2) `\define@cmdkey` code receives the
-/// BARE value as `#1` and defines `\cmd<header>` (KNOWN_PERL_ERRORS #80 —
+/// BARE value as `#1` and defines `\cmd<header>` (KNOWN_PERL_ERRORS #1275 —
 /// Perl passes `#<value>`, leaking a PARAM token to the stomach); (3) a
 /// key DEFAULT holding an internal `\xxx@yyy` name survives as one TOKEN
 /// (xskak-keys.sty L25 `[\xskak@val@defaultid]` — the string round-trip

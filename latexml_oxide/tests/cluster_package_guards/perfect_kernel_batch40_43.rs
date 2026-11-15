@@ -321,7 +321,7 @@ fn color_name_accent_symmetric_keys() {
 }
 
 /// Batch 43: `\index` sort keys brace-protected through the
-/// `\@indexphrase[]` re-parse (OXIDIZED_DESIGN #174, KPE #83 sibling).
+/// `\@indexphrase[]` re-parse (OXIDIZED_DESIGN #174, KPE #1278 sibling).
 /// RED: a `]` inside the sort key truncated the optional-arg re-parse —
 /// key attribute cut at `gradetable[v`, display phrase spilled as illegal
 /// indexmark children. Witness: exam/examdoc (39-error family → 0),

@@ -4,11 +4,10 @@ This file documents issues in the original Perl LaTeXML codebase.
 These are upstream behaviors or design quirks — NOT bugs introduced by the Rust port.
 For Rust-specific error bookkeeping, see `docs/SYNC_STATUS.md`.
 
-> **Numbers #80–#86 occur twice** (a historical merge; the `## N` numbers are cited from code, so neither series is
-> renumbered). The first series runs from `pdfcol.sty` (#80) to `\@ifundefined{r@LABEL}` forward references (#86);
-> the second from `\define@cmdkey` (#80) to `\maketitle` inside box captures (#86). Code comments citing #80, #82
-> and #83 (keyval, the locked `\newtheorem`, the `\index` phrase splitter) mean the second series. Cite these by
-> number *and* title. New entries take the next free number from
+> **Numbers #80–#86 occurred twice** (a historical merge). The first series, `pdfcol.sty` (#80) to `\@ifundefined{r@LABEL}`
+> forward references (#86), keeps its numbers; the second, `\define@cmdkey` (#80) to `\maketitle` inside box captures
+> (#86), is #1275–#1281 since 2026-11-15 (OD rationalization C21), each heading naming its old number, and every citation
+> of it was moved with it. Cite an entry by number *and* title. New entries take the next free number from
 > `tools/perfect_kernel/next_entry_numbers.sh` (it counts open PR heads too), allocated at integration.
 
 ---
@@ -3292,8 +3291,9 @@ Two further problems do stand:
    engines report `Error:undefined:\D` — for content they then discard.
 
 **Fixed in Rust, deliberately diverging** (`latexml_package/src/package/acmart_cls.rs`;
-see `OXIDIZED_DESIGN_DIVERGENCES.md` #83): the description is read `Undigested`
-so nothing inside it expands; where the float holds a lone image the short form
+see `OXIDIZED_DESIGN_DIVERGENCES.md` #83): the description is digested as Perl
+digests it, so point 2 is shared (read undigested, its markup printed as raw TeX: 2403.09168), and its slot is chosen
+by its tokens as written; where the float holds a lone image the short form
 becomes that image's `@alt` and the long form an `aria:describedby` block, and
 where it holds none or several (an empty float, a table, a multi-panel figure)
 both stay referenced from the float itself — never as a name relation, so the
@@ -5044,7 +5044,7 @@ bibitem with no non-empty `key` and only whitespace `<ltx:bibblock>`s — the ph
 `\bibitem` always has a key, so citeable references are untouched. A surpass (OXIDIZED_DESIGN
 #155). Guard `06_cluster_regressions::cluster_bib_preamble_no_phantom_entry`.
 
-## 80. `\define@cmdkey` code never sees its value; stray `#` reaches the stomach (Rust fixes)
+## 1275. `\define@cmdkey` code never sees its value; stray `#` reaches the stomach (Rust fixes) (renumbered from the second #80, 2026-11-15)
 
 Perl `Core/KeyVal.pm:defineCommand` L124-133 emits the key code's invocation as
 `\ltxml@orig@<qname>{#<value>}` — a literal `T_PARAM` before the value, flagged by the
@@ -5067,7 +5067,7 @@ unreported upstream. Rust fixes: `latexml_core/src/keyval.rs:define_command` emi
 bare value (guard `cluster_package_guards::xkeyval_internals`; witness
 `doc/latex/xkeymask/xkeymask.tex`, perfect-kernel sweep 12).
 
-## 81. ALIGN_STATE drifts on expl3 brace-tricks; l3doc manuals emit stray-`&` (Rust fixes)
+## 1276. ALIGN_STATE drifts on expl3 brace-tricks; l3doc manuals emit stray-`&` (Rust fixes) (renumbered from the second #81, 2026-11-15)
 
 Perl's `$LaTeXML::ALIGN_STATE` retracts braces on every `unread`
 (Gullet.pm L343-358) including expansion output that was never scanned, and
@@ -5103,7 +5103,7 @@ Rust fix: tex.web align_state protocol (scan-count §342/§357, back_input
 retract §325, begin_token_list no-adjust; scan_toks doesn't localize) — see
 OXIDIZED_DESIGN #172.
 
-## 82. Locked `\newtheorem` mis-parses class-provided leading optional; `\[` clobbered (Rust fixes)
+## 1277. Locked `\newtheorem` mis-parses class-provided leading optional; `\[` clobbered (Rust fixes) (renumbered from the second #82, 2026-11-15)
 
 aomart.cls L676-679 wraps `\newtheorem` to accept-and-discard a leading style
 optional (`\newtheorem[{}\it]{thm}{Theorem}[section]`). Both engines lock
@@ -5115,7 +5115,7 @@ signature with a discarded leading `[]` (the class's own semantics).
 
 Minimal trigger: `\documentclass{aomart}` + `\newtheorem[{}\it]{thm}{Theorem}[section]` + `\[ x \]`.
 
-## 83. `\index` phrase splitter ignores brace depth; separators inside groups shred the token stream (Rust fixes)
+## 1278. `\index` phrase splitter ignores brace depth; separators inside groups shred the token stream (Rust fixes) (renumbered from the second #83, 2026-11-15)
 
 Perl `process_index_phrases` (latex_constructs.pool.ltxml L4326-4350) splits
 on `@`/`!`/`|`/`"` with a flat scan. packdoc.sty L328/L331 writes
@@ -5138,10 +5138,10 @@ Minimal trigger: `\newcommand{\myInd}[1]{\index{#1@\mbox{#1}\csuse{r@e@m}}}` + `
 
 **Perl behavior**: `process_index_phrases` emits `\@indexphrase[<sortas>]{<phrase>}` with the sort key raw between `[`/`]` (latex_constructs.pool.ltxml L4351-4353); a `]` INSIDE the sort key (examdoc `\indc{gradetable[v]}` → `\index{gradetable[v]@…}`) truncates the constructor's optional-arg re-parse at the first `]` — key attribute cut short and the display phrase spilled as illegal `<ltx:indexmark>` children (`malformed:ltx:text`).
 **Rust behavior**: the emitted expansion wraps the sort key in a brace group (`[{<sortas>}]`), which the optional reader treats as opaque; `clean_index_key` strips exactly one whole-span outer pair.
-**Why**: KNOWN_PERL_ERRORS #83 sibling — real makeindex splits the out-of-band `.idx` string where a `]` is harmless.
+**Why**: KNOWN_PERL_ERRORS #1278 sibling — real makeindex splits the out-of-band `.idx` string where a `]` is harmless.
 **Witnesses**: exam/examdoc 39-error family → 0; pgfornament docs.
 
-## 84. glossaries: `\gls` inside math emits bare XM* under `ltx:glossaryref` (schema-invalid)
+## 1279. glossaries: `\gls` inside math emits bare XM* under `ltx:glossaryref` (schema-invalid) (renumbered from the second #84, 2026-11-15)
 
 Perl's glossaries.sty.ltxml (L26-37) rewires `\@gls@link` through a text-level
 `ltx:glossaryref` wrapper that is not math-mode aware: fired inside math
@@ -5166,7 +5166,7 @@ Minimal trigger:
 Fix would be a math-aware `\lx@glossaries@gls@link` (drop the wrapper in math
 mode) — a surpass needing its own approval (PLANS P16).
 
-## 85. lstlisting inside tabular cells rejected by `td_model = Inline.model`
+## 1280. lstlisting inside tabular cells rejected by `td_model = Inline.model` (renumbered from the second #85, 2026-11-15)
 
 Legal LaTeX (lexref.tex L305-320, engtlc, expex-glossonly) puts
 `\lstnewenvironment` environments inside tabular cells; the schema's
@@ -5176,7 +5176,7 @@ survives in the output). Upstream schema question — admit a small Block
 subset into td — tracked, not patched locally (two-load-path rule:
 LaTeXML.model would need the same edit).
 
-## 86. `\maketitle` inside box captures scatters frontmatter into `_CaptureBlock_`
+## 1281. `\maketitle` inside box captures scatters frontmatter into `_CaptureBlock_` (renumbered from the second #86, 2026-11-15)
 
 `insertFrontMatter` (Base_Utility.pool.ltxml L824/L918) opens
 `ltx:title`/`ltx:creator` at the CURRENT insertion point; inside a
