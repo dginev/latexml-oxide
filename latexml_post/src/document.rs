@@ -13,6 +13,7 @@ use std::path::Path;
 use latexml_core::common::{xml::compiled_xpath, xml_walk::WalkQuery};
 use libxml::{
   parser::Parser as XmlParser,
+  readonly::RoNode,
   tree::{Document, Namespace, Node, NodeType},
   xpath::{Context as XPathContext, Expression, XPathError},
 };
