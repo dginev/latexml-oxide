@@ -19806,3 +19806,27 @@ not latex.ltx's `\begin` and never runs it. Minimal trigger (pdflatex: "macro:->
 \edef\x{\UseHook{myhook}}\texttt{\meaning\x}
 \end{document}
 ```
+
+## 1248. `collapseXMDual` searches the whole document for each dual's references, and libxml2 refuses it past 10M nodes
+
+Document.pm:1643: when an `ltx:XMDual` with an `xml:id` collapses to a branch that has its own id, `collapseXMDual`
+renames the dual's references with `findnodes("//*[\@idref='$dualid']")` from the document root, once per collapsed
+dual: `O(collapsed duals × document elements)`. libxml2 (2.15) evaluates the `//` step as a node set over every node of
+the document and refuses a set over 10,000,000 entries, so on a very large document the query fails ("XPath evaluation
+failure"), the references keep the removed dual's id, and post-processing cascades into `Cannot find a node with
+xml:id` and `Fatal:TooManyErrors` (issue 802: a 16,000-page book). Minimal trigger of the libxml2 limit (10,000,001
+elements):
+
+```sh
+python3 -c "print('<r>' + '<a/>' * 10000000 + '<b idref=\"x\"/></r>')" > big.xml
+xmllint --xpath "//*[@idref='x']" big.xml        # XPath evaluation failure
+xmllint --xpath "descendant-or-self::b[@idref='x']" big.xml   # <b idref="x"/>
+```
+
+Rust builds one `idref → nodes` index by a tree walk on the first collapse that needs it (`Document::idref_index`),
+kept current by `remove_node` and `merge_attributes`, and renames through it; output byte-identical. The other
+whole-document `//*[pred]` queries of the core's finalization (`cleanup_unreferenced_xmtok_ids`,
+`load_labels_for_rewrite` = Rewrite.pm:38's `//*[@labels]`, `prune_dangling_split_xmrefs`, and `record_node_ids` /
+`unrecord_node_ids`, which `rebuild_idstore_from_dom` runs from the root) are tree walks too (`Document::find_elements`,
+`xml::descendant_or_self_elements`). Guard `perfect_kernel_batchi802::collapsed_dual_references_take_the_branch_id`.
+An upstream offer.
