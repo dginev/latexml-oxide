@@ -252,6 +252,24 @@ where FnR: FnOnce(&str) -> R {
   })
 }
 
+/// [`with`] for a caller that may intern while it reads `sym`'s text (a new symbol may move the arena's buffer under a
+/// `with` borrow): the text is copied out first, to the stack when short, so the common case allocates nothing.
+pub fn with_copy<R, FnR>(sym: SymStr, caller: FnR) -> R
+where FnR: FnOnce(&str) -> R {
+  let mut short = [0u8; 64];
+  let copied = with(sym, |text| match short.get_mut(..text.len()) {
+    Some(head) => {
+      head.copy_from_slice(text.as_bytes());
+      Ok(text.len())
+    },
+    None => Err(text.to_owned()),
+  });
+  match copied {
+    Ok(len) => caller(std::str::from_utf8(&short[..len]).expect("a copy of a str is UTF-8")),
+    Err(long) => caller(&long),
+  }
+}
+
 /// The first `N` bytes of `sym`'s text, if it has as many: a read only, so without the borrow and guard of [`with`], for
 /// a test by name on a hot path.
 #[inline]

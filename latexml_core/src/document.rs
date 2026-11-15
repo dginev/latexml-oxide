@@ -8924,14 +8924,21 @@ fn push_onto_node_box(list: &Digested, thisbox: &Digested) -> bool {
   let Ok(mut list) = cell.try_borrow_mut() else {
     return false;
   };
-  let pushed = flatten_horizontal(thisbox);
+  // `flatten_horizontal`, without a Vec for the one box that is not a list (MEM1 L4e).
+  let unlisted;
+  let pushed = if matches!(thisbox.data(), DigestedData::List(_)) && flattens(box_mode(thisbox)) {
+    unlisted = unlist(thisbox);
+    unlisted.as_slice()
+  } else {
+    std::slice::from_ref(thisbox)
+  };
   // Pushing the list into itself would make it contain itself.
   if !list.properties.contains_key_sym(&pin!("node_box"))
     || pushed.iter().any(|b| b.as_ptr() == own)
   {
     return false;
   }
-  list.push_boxes(pushed);
+  list.push_boxes(pushed.iter().cloned());
   for cached in [
     pin!("cached_width"),
     pin!("cached_height"),
