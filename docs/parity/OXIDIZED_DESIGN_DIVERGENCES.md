@@ -31919,6 +31919,13 @@ atveryend's commands are no-ops: every hook's code is dropped.
 `\AtBeginEnvironment{verbatim}` joins the same hook, its private store gone); `\label` runs
 `\UseHookWithArguments{label}{1}{#1}` in a group (:14943); `\include` names the file current and runs `include/before`,
 `include/<name>/before`, `/end`, `/after`, and `include/excluded` for a file `\includeonly` leaves out (:9609-9627).
+The kernel's abstract, a binding macro, runs `env/abstract/begin` inside the abstract's group before `\abstract`
+(:15354-15362) — ahead of the abstract's name and the class's replayed begin code, what it typesets heading the body —
+and `env/abstract/end` before `\end{abstract}` (:15386); an abstract that is a constructor environment runs both from
+its constructor only. `\selectfont` runs `\UseHook{selectfont}` before `\size@update` (:12580), only when the hook
+holds code (scrartcl.cls:2673's `\par@update`, everysel.sty:49), read from the hook's slots it names once;
+`file/<name>/before|after` are plain `\UseHook`s at every `\input` and load (:19668-19673), and a load's `after` pair
+runs before its `\AtEndOfPackage`/`\AtEndOfClass` code and `package/<name>/after` (:18865-18869).
 `\begin` defines `\@currenvir` (`verbatim*` its own name) before `env/<name>/begin` (:15350-15352), so the verbatim
 constructor runs its begin hooks, the kernel's and etoolbox's `@atbegin` store, after it. `enddocument/afterlastpage`, `/afteraux` and
 `/end` (:15262-15277) follow the last page, where pdflatex prints nothing they typeset: the document's own code
@@ -31943,11 +31950,18 @@ latex.ltx runs it before the `.aux` write, so a hook's `\@currentlabel` does not
 Package.pm:1920-1927; `environment_begin_hook_reads_its_environment_red`: moving it alone raised 2001.02707's
 `\AtBeginEnvironment{defn}{\begin{samepage}}` from 29 to 54 errors, so the end side moves with it); no `\begin` path
 sets `\@currenvline` (`currenvline_is_never_set_red`); a
-document's `\AtEndAfterFileList` is lost (`enddocument_info_hook_red`). **Guard**:
+document's `\AtEndAfterFileList` is lost (`enddocument_info_hook_red`); `\emph` and the other font constructors call no
+`\selectfont`, so its hook does not run there (`selectfont_hook_on_emph_red`, the macro faces); the kernel abstract
+sets no class abstract font, so a begin hook's `\large` is not undone by article's `\small`
+(`abstract_begin_hook_size_under_the_class_small_red`), and what amsart's begin hook typesets before an abstract
+ahead of `\maketitle` stays in the abstract, where pdflatex prints it before the title
+(`amsart_abstract_begin_hook_text_before_the_title_red`). **Guard**:
 `perfect_kernel_batchqa47a::batchqa47a_command_hook_rows` (rows `enddocument_hooks_run`,
 `enddocument_hook_commands_run`, `verbatim_env_hooks_run`, `verbatim_begin_hook_reads_its_environment`,
 `label_hook_runs`, `include_hooks_run`, `label_hook_opens_no_paragraph`, `cleveref_firstaid_not_registered`,
-`cleveref_firstaid_absent_removes_nothing`).
+`cleveref_firstaid_absent_removes_nothing`, `file_hooks_run_at_every_input`, `file_hooks_order_around_a_package`,
+`abstract_env_hooks_run`, `selectfont_hook_runs`, `abstract_end_hook_once_in_a_constructor_abstract`,
+`abstract_begin_hook_runs_before_the_name`).
 
 ### 1045. Every box's width, height and depth are the CSS custom properties `--ltx-box-width`, `--ltx-box-height`, `--ltx-box-depth` (Perl: `style="width:…;height:…;vertical-align:…"`, or dropped)
 
@@ -33483,3 +33497,4 @@ keytheorems.sty:994, :1075-1079 stores the head through `\deferred@thm@head` for
 binding's theorem never calls `\deferred@thm@head`: it makes the head an `ltx:title` before the box. latexml_contrib/src/keytheorems_sty.rs reads
 the file raw and leaves the macro empty, so the box's title slot is empty and the head is kept. Witnesses tutodoc-en, tutodoc-fr. Guard
 `perfect_kernel_batchm3::a_tcolorbox_keytheorem_keeps_its_head_and_body`.
+and the row `file_hooks_run_at_every_input` (#1048: `file/<name>/before|after` plain `\UseHook`s, latex.ltx:19669/19672).

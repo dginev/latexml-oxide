@@ -1,0 +1,15 @@
+% mechanism: tex.web §577 `scan_font_ident` expands the value of a font assignment before reading a family register
+%   (`\textfont`/`\scriptfont`/`\scriptscriptfont` + its 4-bit number); ours (gullet.rs `read_value(Token)`, QAB2b) catches only a
+%   family register written out directly: a `\csname` result returns before the family check, a macro is read unexpanded.
+% witness: synthetic (revQAB2b `p1/c1.tex`, `p1/c2.tex`); the corpus shape 2511.21986 (`\textfont9=\textfont1`) is fixed
+% status:  RED (QAB2b: "1 C" and "1 A")
+% oracle:  pdflatex 0 `!`; prints "C" and "A", no "1"
+% engines: rust QAB2b: "1 C 1 A"; Perl 0.8.8: "1 C 1 A" (KNOWN_PERL_ERRORS #1271)
+% expect:  0 errors; the paragraph "C A", no "1"
+% moves:   post-merge (put the `\csname` result into the value token and expand the value's head before the family check)
+\documentclass{article}
+\def\tf{\textfont}
+\begin{document}
+\textfont9=\csname textfont\endcsname 1 C
+\textfont9=\tf1 A
+\end{document}
