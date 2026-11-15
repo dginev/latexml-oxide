@@ -167,7 +167,8 @@ pub fn pin<S: AsRef<str>>(text: S) -> SymStr { with_arena_mut(|arena| arena.get_
 /// with one probe-key twin per defined control sequence (2026-08-23 audit R6).
 pub fn get<S: AsRef<str>>(text: S) -> Option<SymStr> { with_arena_mut(|arena| arena.get(text)) }
 
-/// The buffer [`get_suffixed`] spells its key in. Freed by [`reset`], as a `#[thread_local]` has no destructor.
+/// The buffer [`get_suffixed`] and [`pin_qname`] spell their key in. Freed by [`reset`], as a `#[thread_local]` has no
+/// destructor.
 #[thread_local]
 static SUFFIXED_KEY: RefCell<String> = RefCell::new(String::new());
 
@@ -179,6 +180,17 @@ pub fn get_suffixed(name: &str, suffix: &str) -> Option<SymStr> {
   key.push_str(name);
   key.push_str(suffix);
   get(key.as_str())
+}
+
+/// [`pin`] of `prefix:local`, spelled in a reused buffer rather than a new `String`: `get_node_qname` asks it of every
+/// element and attribute it names. Not to be called inside [`with`], whose borrow a new symbol may invalidate.
+pub fn pin_qname(prefix: &str, local: &str) -> SymStr {
+  let mut key = SUFFIXED_KEY.borrow_mut();
+  key.clear();
+  key.push_str(prefix);
+  key.push(':');
+  key.push_str(local);
+  pin(key.as_str())
 }
 
 /// ASCII char-pin cache: every unique ASCII byte resolves to a single

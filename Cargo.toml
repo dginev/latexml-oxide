@@ -245,3 +245,8 @@ opt-level = 1
 
 
 
+
+# TEMP until libxml 0.3.24 is released: its borrowed reads (`Node::as_readonly`, `RoNode::for_each_property`,
+# `RoNode::with_name`), from the local rust-libxml branch `perf/borrowed-reads`.
+[patch.crates-io]
+libxml = { path = "/home/deyan/data/pk_wt/PERFG_libxml" }
