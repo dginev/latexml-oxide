@@ -349,6 +349,44 @@ code on AMD (skid), so the figures are counts × stepped instructions.
 
 ## Audit log (periodic passes; newest first)
 
+### 2026-11-15 — four easy levers of PERF2 (R4, R6a, R11, R12; batch PERFF)
+
+Basis for every figure: `instructions:u`, release, best of 3 interleaved on one core (`kit/perf_ab_cycles.sh`, `HTML=1
+STAT=min`: cortex's recipe, the whole destination
+directory compared), each lever against its parent commit; base INTPERF (`95042553f8b`). Every run byte-identical.
+`cycles:u` (best of 5, four lanes on separate cores; 12 parallel runs on the loaded host spread ±5-20 %) per lever
+below.
+* **R4, rewrites.** `base_xmath`'s thousands-separator rule was registered 4 times, each a whole-document
+  `descendant-or-self::ltx:XMTok[…]` XPath (book790: 2.82 s of its 4.37 s of rewrites). Now one rule with the Rust-only
+  `RewriteOptions::passes` (`latexml_core/src/rewrite.rs` `Rewrite::invoke`): pass k+1 evaluates the select only on the
+  nodes pass k inserted. Identical by construction — no rule runs between the passes, and a merge changes the
+  selector's window only for the merged token. b1000 −1.01 % (cycles −3.7 %), book790 −1.55 %, typical −0.01 to −1.05 %
+  (2301.03725; cycles −6.2 %).
+  Guard: `06_cluster_math::cluster_thousands_separator_us_default`. `\not`'s second registration stays (below).
+* **R6a, `get_xml_id`** (`latexml_post/src/document.rs`): the fallback built the whole `get_properties` map for every
+  node without an `xml:id`; it now builds it only when `has_property("id")` (`xmlHasProp`, any namespace) finds one, so
+  the map's "last `id` wins" is kept. Typical −0.09 to −0.64 %, 2604.01119 −0.30 %, book790 −0.30 %; by cycles within
+  noise (+0.1/+0.3 %).
+* **R11, graphics hashing** (`graphics_cache::SourceDigest`): the SHA-256 state after a source's bytes gives both the
+  dedupe key (was a SipHash read, `JobKey`/`CopyKey` equality only) and, extended by the `RenderKey`, the cache key
+  (byte-for-byte the old `hash_key`, so existing cache entries still hit); a convert job carries its planning digest to
+  `with_cache_dims`, so a converted source is read once instead of 2 (hit) or 3 (miss) times. 2605.23075 −4.35 %
+  (cycles −3.5 %), 2604.01119 −0.30 % (cycles −1.9 %), 2507.16680 −0.31 %, papers with no converted image ±0.04 %.
+* **R12, fontmap key memos** (`latexml_core/src/binding/content.rs`): `fontmap_key_syms` and `fontmap_family_key_syms`
+  (several probes per decoded glyph; the family one built two `String` keys per probe) answer from their last hit.
+  2103.04797 −0.94 % (cycles −0.5 %), 2604.01119 −0.68 %, 2601.13118 −0.61 %, 1704.02085 −0.43 %, the other typical
+  −0.07 to −0.36 %.
+
+Peak RSS (html): book790 6,882,084 → 6,888,084 KB, b1000 1,420,684 → 1,427,896 KB. A/B (`popPERFF`: 9 mix witnesses, 40
+revtex, 30 elsarticle, 30 subfigure/subcaption, 25 `\not`
+users, 60 controls): HTML and every aux file identical on 193 of 193 (one has no main file), raw XML (`rowsig`) on 193
+of 193, E/F/W equal.
+Not taken: `\not`'s rule runs twice in every LaTeX document because `latex_constructs` force-reloads `plain_constructs`
+and `math_common` (Perl `latex_constructs.pool.ltxml` L19-21, L38, which Perl does too), re-pushing math_common's
+`DefRewrite` and its three ligatures. The second `\not` pass is not idle: the cancel path's `append_tree` copies its
+operand (Perl moves it, `appendChild`), so a `\not` inside it (`$\not\sqrt{a\not=b}$`) is rewritten only by the second
+registration; registering it once changes that output.
+
 ### 2026-11-15 — post's whole-document queries wrap only their matches (PERFD, PERF1 lever L5)
 
 Defect: every whole-document `//NAME[pred]` query post answers by traversal (`PostDocument::findnodes`, ≈20 per HTML
@@ -1127,7 +1165,8 @@ structural math output on math-heavy fixtures before treating it as a win.
 ## Graphics — completed work (breadcrumbs for regression triage)
 
 - **In-doc coalescing** (`48fd96ac75`) — `Plan::Copy`/`Plan::Convert` key on
-  `(SipHash(content), graphicx_options)`. arXiv:2402.01336 1083 nodes → 17 files.
+  `(SHA-256(content), graphicx_options)` (SipHash until PERFF, whose `SourceDigest` also keys the cache).
+  arXiv:2402.01336 1083 nodes → 17 files.
 - **Persistent on-disk cache** — SHA-256 of `source‖page‖density‖target-ext` at
   `$XDG_CACHE_HOME/latexml-oxide/graphics/<aa>/<hash>.<ext>` + `.dims` sidecar
   (Perl `LaTeXML.cache` parity). Multi-process safe (tmp+atomic rename,
