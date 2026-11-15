@@ -43,11 +43,25 @@ fn both_with(tex: &str, files: &[(&str, &str)], warnings: usize) -> Vec<Vec<Stri
   creators(&xml)
 }
 
+/// Where the first `collaboration` contact of `xml` opens: any contact whose open tag holds the role, a line's class or
+/// none (issue #783).
+fn collaboration_at(xml: &str) -> Option<usize> {
+  xml
+    .match_indices("<contact ")
+    .map(|(at, _)| at)
+    .find(|&at| {
+      xml[at..]
+        .split('>')
+        .next()
+        .is_some_and(|tag| tag.contains("role=\"collaboration\""))
+    })
+}
+
 /// The `collaboration` contacts of `xml`, each element whole, its `xml:id`s dropped: their text and markup as written.
 fn collaborations(xml: &str) -> Vec<String> {
   let mut out = Vec::new();
   let mut rest = xml;
-  while let Some(at) = rest.find("<contact role=\"collaboration\"") {
+  while let Some(at) = collaboration_at(rest) {
     let end = rest[at..].find("</contact>").expect("a closed contact") + at + "</contact>".len();
     let mut element = rest[at..end].to_string();
     while let Some(id) = element.find(" xml:id=\"") {
@@ -190,7 +204,7 @@ fn a_collaboration_remark_is_the_names_contact() {
     ],
   ];
   assert_eq!(two, want);
-  let bcool = "<contact role=\"collaboration\"><text fontsize=\"80%\">on behalf of the Bcool project \
+  let bcool = "<contact class=\"ltx_author_line\" role=\"collaboration\"><text fontsize=\"80%\">on behalf of the Bcool project \
                team</text></contact>";
   let tex = repro!("emit_a_line_speaking_for_a_collaboration_is_a_contact");
   assert_eq!(collaborations(&run(tex).1), [bcool]);
@@ -217,9 +231,7 @@ fn a_remark_after_a_note_keeps_its_own_span() {
   // (her thanks note before the collaboration, as the source prints them)
   let note = xml.find("<note class=\"ltx_note_frontmatter ltx_thanks_note\" role=\"thanks\"");
   assert!(
-    note.is_some_and(|note| xml
-      .find("<contact role=\"collaboration\"")
-      .is_some_and(|c| note < c)),
+    note.is_some_and(|note| collaboration_at(&xml).is_some_and(|c| note < c)),
     "{xml}"
   );
 }

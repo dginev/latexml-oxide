@@ -127,9 +127,12 @@ pub(in crate::base_utilities) fn perl_author_calls(
     pieces.push(names);
     whole_block_author(keys(n), content)
   };
+  // (each a line of the block under the names, Perl's `\\` line (Base_Utility.pool.ltxml:722-726), marked so: issue #783)
   let affiliation = |content: Tokens| -> Result<Tokens> {
     Ok(Invocation!(T_CS!("\\lx@add@affiliation"), vec![
-      None,
+      Some(mouth::tokenize_internal(TeXString::assembled(
+        "class=ltx_author_line".to_string()
+      ))),
       Some(content)
     ]))
   };

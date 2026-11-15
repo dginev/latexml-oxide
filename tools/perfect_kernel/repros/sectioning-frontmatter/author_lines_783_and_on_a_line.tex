@@ -1,0 +1,17 @@
+% witness: synthetic (the 77p r4 re-review's probe w10 shape, `author_and_run_between_marked_entries.tex`); 1602.06359's
+%          `$^*$\{…\}@…, $^\dag$\{…\}@…` and 2605.17295's marked affiliation row print several entries on one line
+% mechanism: issue #783 — a printed line holds across its text and its word "and": every contact on it carries
+%   `ltx_author_line`; the line state resets only at the next `\\`, an `\and` command, a column break or one of
+%   the reading's names (emit.rs `on_an_author_line`; author_lines_783_names_continue)
+% oracle:  pdflatex 0 errors; "Ann Able1 and Bob Baker2 / 1Univ A and 2Univ B" (both entries on the second line)
+% engines: fix/issue-783 r2 = 0 errors; Univ A class="ltx_author_line", Univ B none (a text event reset the line)
+% expect:  0 errors, 0 warnings; Univ A and Univ B each class="ltx_author_line"
+% status:  RED (fix/issue-783 r2) -> GREEN (r3); guard 06_cluster_frontmatter::frontmatter_author_lines_783
+% preload: ar5iv.sty
+\documentclass{article}
+\title{T}
+\author{Ann Able$^1$~~and~~Bob Baker$^2$ \\ $^1$Univ A~~and~~$^2$Univ B}
+\begin{document}
+\maketitle
+Text.
+\end{document}

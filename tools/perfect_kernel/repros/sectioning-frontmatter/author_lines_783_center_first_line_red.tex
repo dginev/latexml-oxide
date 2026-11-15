@@ -1,0 +1,20 @@
+% witness: 2609.17357, 2609.01563, 2609.33831 (a `center` environment under the names ends the author block)
+% mechanism: issue #783 — `on_an_author_line` starts a line at a `\\` only: the environment's first line, printed under
+%   the names as its later lines are, takes no `ltx_author_line`
+% oracle:  pdflatex 0 errors; "Ann Able and Bob Baker" over three centred lines "Department of Physics and Astronomy",
+%          "University of X", "City"
+% engines: fix/issue-783 r4 = 0 errors; "Department of Physics and Astronomy" no class, the two lines after it
+%          class="ltx_author_line"
+% expect:  0 errors, 0 warnings; every line of the environment class="ltx_author_line"
+% status:  RED (fix/issue-783 r4); moves: post-merge
+% preload: ar5iv.sty
+\documentclass[journal]{IEEEtran}
+\begin{document}
+\title{T}
+\author{Ann Able and Bob Baker
+\begin{center}
+Department of Physics and Astronomy\\ University of X\\ City
+\end{center}}
+\maketitle
+Text.
+\end{document}

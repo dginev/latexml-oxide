@@ -52,7 +52,7 @@ fn a_link_filling_a_name_slot_is_the_name() {
       &[
         "<creator role=\"author\">\n    <personname><ref class=\"ltx_href\" href=\"http://ann.org\">Ann Able</ref></personname>\n    <note class=\"ltx_note_frontmatter ltx_thanks_funding\" role=\"thanks\">Supported by X.</note>\n  </creator>",
         "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname><ref class=\"ltx_href\" href=\"http://bob.org/home\">Bob Baker</ref></personname>\n  </creator>",
-        "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Cy Cole</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ B, City</contact>\n  </creator>",
+        "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Cy Cole</personname>\n    <contact class=\"ltx_author_line\" name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ B, City</contact>\n  </creator>",
       ][..],
     ),
     (
@@ -141,9 +141,9 @@ fn an_address_decides_only_its_own_ink() {
   let (log, xml) = run(row);
   assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
   assert_eq!(creators_xml(&xml), vec![
-    "<creator role=\"author\">\n    <personname>Ann Able</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><text fontsize=\"90%\">IDSIA, 6928 Manno, Switzerland</text></contact>\n    <contact name=\"Email:\u{a0}\" role=\"email\"><text fontsize=\"90%\">ann@idsia.ch</text></contact>\n  </creator>",
-    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Bob Baker</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><text fontsize=\"90%\">IDSIA, 6928 Manno, Switzerland</text></contact>\n    <contact name=\"Email:\u{a0}\" role=\"email\"><text fontsize=\"90%\">bob@idsia.ch</text></contact>\n  </creator>",
-    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Cy Cole</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><text fontsize=\"90%\">IDSIA, 6928 Manno, Switzerland</text></contact>\n    <contact name=\"Email:\u{a0}\" role=\"email\"><text fontsize=\"90%\">cy@idsia.ch</text></contact>\n  </creator>"
+    "<creator role=\"author\">\n    <personname>Ann Able</personname>\n    <contact class=\"ltx_author_line\" name=\"Affiliation:\u{a0}\" role=\"affiliation\"><text fontsize=\"90%\">IDSIA, 6928 Manno, Switzerland</text></contact>\n    <contact class=\"ltx_author_line\" name=\"Email:\u{a0}\" role=\"email\"><text fontsize=\"90%\">ann@idsia.ch</text></contact>\n  </creator>",
+    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Bob Baker</personname>\n    <contact class=\"ltx_author_line\" name=\"Affiliation:\u{a0}\" role=\"affiliation\"><text fontsize=\"90%\">IDSIA, 6928 Manno, Switzerland</text></contact>\n    <contact class=\"ltx_author_line\" name=\"Email:\u{a0}\" role=\"email\"><text fontsize=\"90%\">bob@idsia.ch</text></contact>\n  </creator>",
+    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Cy Cole</personname>\n    <contact class=\"ltx_author_line\" name=\"Affiliation:\u{a0}\" role=\"affiliation\"><text fontsize=\"90%\">IDSIA, 6928 Manno, Switzerland</text></contact>\n    <contact class=\"ltx_author_line\" name=\"Email:\u{a0}\" role=\"email\"><text fontsize=\"90%\">cy@idsia.ch</text></contact>\n  </creator>"
   ]);
   let author = |name: &'static str, address: &'static str| -> Vec<&'static str> {
     vec![name, "affiliation=IDSIA, 6928 Manno, Switzerland", address]

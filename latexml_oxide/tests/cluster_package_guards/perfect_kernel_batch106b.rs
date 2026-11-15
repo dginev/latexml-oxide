@@ -42,7 +42,7 @@ fn refmark_blocks_pair_and_print_their_symbols() {
 fn a_contact_held_twice_keeps_the_first() {
   assert_eq!(
     converted(repro!("contact_twice_keeps_the_first"), 0),
-    r#"<title>Contact twice</title> <creator role="author"> <personname>Ann Able</personname> <contact name="Affiliation: " role="affiliation">Univ A, City A</contact> <contact name="Affiliation: " role="affiliation">Univ B, City B</contact> </creator> <creator before=" " role="author"> <personname>Bob Bell</personname> <contact name="Affiliation: " role="affiliation">Univ A, City A</contact> </creator> <para xml:id="p1"> <p xml:id="p1.1">Text.</p> </para>"#
+    r#"<title>Contact twice</title> <creator role="author"> <personname>Ann Able</personname> <contact class="ltx_author_line" name="Affiliation: " role="affiliation">Univ A, City A</contact> <contact class="ltx_author_line" name="Affiliation: " role="affiliation">Univ B, City B</contact> </creator> <creator before=" " role="author"> <personname>Bob Bell</personname> <contact class="ltx_author_line" name="Affiliation: " role="affiliation">Univ A, City A</contact> </creator> <para xml:id="p1"> <p xml:id="p1.1">Text.</p> </para>"#
   );
 }
 

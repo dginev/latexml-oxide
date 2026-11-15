@@ -27,9 +27,9 @@ fn the_blocks_creator_is_the_emitters() {
   ];
   assert_eq!(creators(&xml), want, "{xml}");
   assert_eq!(creators_xml(&xml), vec![
-    "<creator role=\"author\">\n    <personname>Ann Able</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A</contact>\n  </creator>",
-    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Bob Baker</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A</contact>\n  </creator>",
-    "<creator role=\"author\">\n    <contact name=\"E-mail: \" role=\"email\">lab@a.org</contact>\n  </creator>"
+    "<creator role=\"author\">\n    <personname>Ann Able</personname>\n    <contact class=\"ltx_author_line\" name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A</contact>\n  </creator>",
+    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Bob Baker</personname>\n    <contact class=\"ltx_author_line\" name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A</contact>\n  </creator>",
+    "<creator role=\"author\">\n    <contact class=\"ltx_author_line\" name=\"E-mail: \" role=\"email\">lab@a.org</contact>\n  </creator>"
   ]);
   assert!(
     creators_xml(&xml)[2].starts_with(r#"<creator role="author">"#),

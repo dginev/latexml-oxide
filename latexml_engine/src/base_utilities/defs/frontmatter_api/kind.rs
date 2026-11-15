@@ -30,6 +30,7 @@ pub(in crate::base_utilities) fn kind_entry_addresses(
   tag: &Tokens,
   kv: Option<&KeyVals>,
   content: &Tokens,
+  email_keys: &str,
 ) -> Result<Option<Tokens>> {
   if tag.to_string() != "ltx:contact"
     || !content
@@ -165,15 +166,15 @@ pub(in crate::base_utilities) fn kind_entry_addresses(
         })
     });
   // (each e-mail the Kind step made says so, `ENTRY_KINDED`: an e-mail command the author wrote inside the entry is
-  // placed by its own call where it holds one address, `insert::link_entry_addresses`)
-  let kinded = mouth::tokenize_internal(TeXString::assembled(s!("{ENTRY_KINDED}=true"))).unlist();
+  // placed by its own call where it holds one address, `insert::link_entry_addresses`; and the keys its writer gives them,
+  // `email_keys`: the class of the author block's line it decided, issue #783)
+  let kinded_keys = s!("{ENTRY_KINDED}=true{email_keys}");
+  let kinded = mouth::tokenize_internal(TeXString::assembled(kinded_keys.clone())).unlist();
   // (a line printed before every line the entry keeps, its e-mails placed before the entry: user ruling R8,
   // `\IEEEauthorblockA{\href{mailto:ann@a.org}{ann@a.org}\\ \url{https://orcid.org/…}\\ …}`, 2206.10577 — review
   // rev107c N1, `insert::LINE_FIRST`)
-  let kinded_first = mouth::tokenize_internal(TeXString::assembled(s!(
-    "{ENTRY_KINDED}=true,{LINE_FIRST}=true"
-  )))
-  .unlist();
+  let kinded_first =
+    mouth::tokenize_internal(TeXString::assembled(s!("{kinded_keys},{LINE_FIRST}=true"))).unlist();
   for ((line, link_label), leading) in address_lines.into_iter().zip(leading) {
     let kinded = if leading && prints_else {
       &kinded_first

@@ -243,12 +243,12 @@ fn a_mark_after_a_cut_address_stays() {
 #[test]
 fn a_cut_entry_over_lines_keeps_its_markup() {
   emitted(repro!("emit_a_cut_entry_over_lines_keeps_its_markup"), &[
-    "<creator role=\"author\">\n    <personname>Ann Able</personname>\n    <contact name=\"Affiliation:\u{a0}\" \
-     role=\"affiliation\"><text fontsize=\"90%\"> Univ A. City.</text></contact>\n    <contact \
+    "<creator role=\"author\">\n    <personname>Ann Able</personname>\n    <contact class=\"ltx_author_line\" name=\"Affiliation:\u{a0}\" \
+     role=\"affiliation\"><text fontsize=\"90%\"> Univ A. City.</text></contact>\n    <contact class=\"ltx_author_line\" \
      name=\"Email:\u{a0}\" role=\"email\"><text fontsize=\"90%\">ann@a.org</text></contact>\n  </creator>",
-    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Bob Baker</personname>\n    <contact \
+    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Bob Baker</personname>\n    <contact class=\"ltx_author_line\" \
      name=\"Affiliation:\u{a0}\" role=\"affiliation\"><text fontsize=\"90%\">Univ B, Lab C.<break/>Road 2, \
-     Town.</text></contact>\n    <contact name=\"Email:\u{a0}\" role=\"email\"><text \
+     Town.</text></contact>\n    <contact class=\"ltx_author_line\" name=\"Email:\u{a0}\" role=\"email\"><text \
      fontsize=\"90%\">bob@b.org</text></contact>\n  </creator>",
   ]);
 }

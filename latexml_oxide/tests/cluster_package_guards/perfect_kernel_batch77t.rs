@@ -11,7 +11,7 @@ use latexml::util::test::{assert_element, convert_files_with, convert_with};
 
 use super::{
   perfect_kernel_batch46::{error_count, warning_count},
-  perfect_kernel_batch77d::{assert_no_merged_names, creator, creators, squash},
+  perfect_kernel_batch77d::{assert_no_merged_names, author_line, creator, creators, squash},
 };
 
 /// A repro under `tools/perfect_kernel/repros/`, converted with the ar5iv preload: its squashed XML, the conversion
@@ -57,7 +57,7 @@ fn marked(name: &str, id: &str, mark: &str) -> String {
 fn dag_marked_names_over_a_shared_institution() {
   let xml = repro!("sectioning-frontmatter/author_dag_marked_names_over_a_shared_institution.tex");
   assert_no_merged_names(&xml);
-  let univ = affiliation("University of Somewhere");
+  let univ = author_line(affiliation("University of Somewhere"));
   assert_eq!(creators(&xml), [
     creator(true, &marked("Ann Able", "id1", "†"), &univ),
     creator(false, &marked("Bob Baker", "id2", "‡"), &univ),
@@ -83,7 +83,11 @@ Text.
   let xml = squash(&xml);
   assert_eq!(creators(&xml), [
     creator(true, &marked("Ann Able", "id1", "1"), ""),
-    creator(false, "Bob Baker", &affiliation("University of Somewhere")),
+    creator(
+      false,
+      "Bob Baker",
+      &author_line(affiliation("University of Somewhere"))
+    ),
   ]);
 }
 
@@ -208,7 +212,7 @@ fn llncs_author_line_break_affiliation() {
     "Ann Able",
     &format!(
       r#"{} <contact name="E-mail " role="email"><text font="typewriter" xml:id="id1">ann@x.org</text></contact> {}"#,
-      affiliation("University of Somewhere"),
+      author_line(affiliation("University of Somewhere")),
       affiliation("Inst A")
     )
   ),]);
@@ -239,12 +243,12 @@ fn dag_names_rows_each_over_their_institution() {
     creator(
       true,
       &marked("Ann Able", "id1", "†"),
-      &affiliation(" University A")
+      &author_line(affiliation(" University A"))
     ),
     creator(
       false,
       &marked("Bob Baker", "id2", "‡"),
-      &affiliation(" University B")
+      &author_line(affiliation(" University B"))
     ),
   ]);
 }
@@ -259,12 +263,12 @@ fn numbered_names_rows_each_over_their_institution() {
     creator(
       true,
       &marked("Ann Able", "id1", "1"),
-      &affiliation(" University A")
+      &author_line(affiliation(" University A"))
     ),
     creator(
       false,
       &marked("Bob Baker", "id2", "2"),
-      &affiliation(" University B")
+      &author_line(affiliation(" University B"))
     ),
   ]);
 }
@@ -277,8 +281,8 @@ fn numbered_names_rows_each_over_their_institution() {
 fn second_names_row_under_a_shared_institution() {
   let xml = repro!("sectioning-frontmatter/author_second_names_row_under_a_shared_institution.tex");
   assert_no_merged_names(&xml);
-  let somewhere = affiliation(" University of Somewhere");
-  let other = affiliation("Other Institute");
+  let somewhere = author_line(affiliation(" University of Somewhere"));
+  let other = author_line(affiliation("Other Institute"));
   assert_eq!(creators(&xml), [
     creator(true, &marked("Ann Able", "id1", "†"), &somewhere),
     creator(false, &marked("Bob Baker", "id2", "‡"), &somewhere),
@@ -309,17 +313,17 @@ fn role_and_note_lines_are_no_unmarked_institution() {
   let xml = article_author(
     r"Ann Able$^{1}$, Bob Baker$^{2}$\\ for the ATLAS Collaboration\\ $^{1}$Univ A\\ $^{2}$Univ B",
   );
-  let collaboration = r#"<contact role="collaboration">for the ATLAS Collaboration</contact> "#;
+  let collaboration = r#"<contact class="ltx_author_line" role="collaboration">for the ATLAS Collaboration</contact> "#;
   assert_eq!(creators(&xml), [
     creator(
       true,
       "Ann Able",
-      &format!("{collaboration}{}", affiliation("Univ A"))
+      &format!("{collaboration}{}", author_line(affiliation("Univ A")))
     ),
     creator(
       false,
       "Bob Baker",
-      &format!("{collaboration}{}", affiliation("Univ B"))
+      &format!("{collaboration}{}", author_line(affiliation("Univ B")))
     ),
   ]);
 }
@@ -332,7 +336,7 @@ fn llncs_author_line_break_affiliation_rows() {
   let xml = repro!("sectioning-frontmatter/llncs_author_line_break_affiliation_rows.tex");
   let somewhere = format!(
     "{} {}",
-    affiliation("University of Somewhere"),
+    author_line(affiliation("University of Somewhere")),
     affiliation("Inst A")
   );
   assert_eq!(creators(&xml), [
@@ -343,7 +347,7 @@ fn llncs_author_line_break_affiliation_rows() {
       "Cat Cole",
       &format!(
         "{} {}",
-        affiliation("Other Institute"),
+        author_line(affiliation("Other Institute")),
         affiliation("Inst A")
       )
     ),
@@ -373,7 +377,7 @@ Text.
       "Ann Able",
       &format!(
         "{} {}",
-        affiliation("University of X"),
+        author_line(affiliation("University of X")),
         affiliation("Inst A")
       )
     ),
@@ -382,7 +386,7 @@ Text.
       "Bob Baker",
       &format!(
         "{} {}",
-        affiliation("University of Y"),
+        author_line(affiliation("University of Y")),
         affiliation("Inst A")
       )
     ),
@@ -397,7 +401,7 @@ fn llncs_author_and_is_inline() {
   let xml = repro!("sectioning-frontmatter/llncs_author_and_is_inline.tex");
   let somewhere = format!(
     "{} {}",
-    affiliation("University of Somewhere"),
+    author_line(affiliation("University of Somewhere")),
     affiliation("Inst A")
   );
   assert_eq!(creators(&xml), [
@@ -440,7 +444,7 @@ Text.
       "Bob Baker",
       &format!(
         "{} {} {}",
-        affiliation("University of Y"),
+        author_line(affiliation("University of Y")),
         email("id2", "bob@y.org"),
         affiliation("Inst A")
       )

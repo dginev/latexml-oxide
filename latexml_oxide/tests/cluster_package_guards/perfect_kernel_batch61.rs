@@ -7,6 +7,7 @@ use latexml::util::test::{
 use super::{
   perfect_kernel_batch46::{convert_with_then, error_count, warning_count},
   perfect_kernel_batch57::{RAW, assert_elements},
+  perfect_kernel_batch77d::author_line,
 };
 
 /// bfhpub.cls (koma-script based) and the fonts it loads (texlive-fonts-extra).
@@ -151,6 +152,66 @@ fn authors_without_a_title_reach_the_html() {
     "<div class=\"ltx_authors\">\n<span class=\"ltx_creator ltx_role_author\">\n<span class=\"ltx_personname\">Frieda \
      Bloggs\n</span></span></div>",
   );
+}
+
+/// PNOTEA: a unit without a title renders its pubnotes, subtitle, authors and dates in maketitle's order from the first
+/// of them (OXIDIZED_DESIGN_DIVERGENCES #434); they rendered only from the title template, so 2006.12592's affiliation
+/// and 1504.03712's `\thanks` and date were lost (SHARED). Rows: a raw `\@maketitle`'s `\thanks`, amsart's `\title{}`
+/// with `\date` and `\thanks`, and the same document titled, whose head maketitle renders as before. Each row is the
+/// HTML between `<article …>` and the first paragraph. Repros sectioning-frontmatter/{pubnote_without_a_title_reaches_the_html,
+/// date_and_thanks_without_a_title_reach_the_html}.
+#[test]
+fn untitled_head_metadata_reaches_the_html() {
+  let amsart = include_str!(
+    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/date_and_thanks_without_a_title_reach_the_html.tex"
+  );
+  let thanks =
+    "<span class=\"ltx_pubnote ltx_role_thanks\">I thank the Editor and three referees.</span>";
+  let rows = [
+    (
+      include_str!(
+        "../../../tools/perfect_kernel/repros/sectioning-frontmatter/pubnote_without_a_title_reaches_the_html.tex"
+      )
+      .to_string(),
+      "<span class=\"ltx_pubnotes ltx_pubnotes_meta\"><span class=\"ltx_pubnotes_content\"><span \
+       class=\"ltx_pubnote\">Department of ECE, University of Miami</span></span></span>\n"
+        .to_string(),
+    ),
+    (
+      amsart.to_string(),
+      format!(
+        "<span class=\"ltx_pubnotes ltx_pubnotes_meta\"><span class=\"ltx_pubnotes_content\">{thanks}</span></span>\n<div \
+         class=\"ltx_dates\">Date: August 31, 2017</div>\n"
+      ),
+    ),
+    (
+      amsart.replace("\\title{}", "\\title{A Title}"),
+      format!(
+        "<h1 class=\"ltx_title ltx_title_document\">A Title<span class=\"ltx_pubnotes\"><span \
+         class=\"ltx_pubnotes_content\">{thanks}</span></span></h1>\n<div class=\"ltx_dates\">Date: August 31, \
+         2017</div>\n\n"
+      ),
+    ),
+  ];
+  for (tex, head) in rows {
+    let (log, xml) = convert_with(&tex, Some(RAW));
+    assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+    let html = super::svg_nested_picture::post_html(&xml);
+    let start = html.find("<article").expect("an article") + 1;
+    let start = start + html[start..].find(">\n").expect("the article's start tag") + 2;
+    let end = start
+      + html[start..]
+        .find("<div id=\"p1\"")
+        .expect("the first paragraph");
+    assert_eq!(&html[start..end], head, "{html}");
+    // The note once: its own span, not only the `ltx_pubnotes` wrappers.
+    let notes = ["<span class=\"ltx_pubnote\"", "<span class=\"ltx_pubnote "];
+    assert_eq!(
+      notes.map(|n| html.matches(n).count()).iter().sum::<usize>(),
+      1,
+      "{html}"
+    );
+  }
 }
 
 /// 61k: a brief.cls letter's sender is its frontmatter (user ruling 2026-10-01, as g-brief's, DIVERGENCES #412): the
@@ -2550,7 +2611,7 @@ Hello.
     // (the line of an address alone is the author's e-mail since 106a, the Kind step for an entry's address line, OD
     // #966; it had been an affiliation) The contact's name ends in a no-break space.
     &format!(
-      r#"<creator role="author"><personname>A. Author</personname><contact name="Email:{}" role="email"><text font="typewriter" xml:id="id1">a@b.c</text></contact></creator>"#,
+      r#"<creator role="author"><personname>A. Author</personname><contact class="ltx_author_line" name="Email:{}" role="email"><text font="typewriter" xml:id="id1">a@b.c</text></contact></creator>"#,
       '\u{a0}'
     ),
   );
@@ -5162,7 +5223,7 @@ Text.
     &xml,
     "creator",
     &["role=\"author\""],
-    "<creator role=\"author\"><personname>A</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">X</contact></creator>",
+    "<creator role=\"author\"><personname>A</personname><contact class=\"ltx_author_line\" name=\"Affiliation:\u{a0}\" role=\"affiliation\">X</contact></creator>",
   );
 }
 
@@ -6368,8 +6429,8 @@ Text.
 \end{document}"
     ),
     vec![
-      creator(false, "Ann Able", &affiliation("Univ A")),
-      creator(true, "Bob Baker", &affiliation("Univ C"))
+      creator(false, "Ann Able", &author_line(affiliation("Univ A"))),
+      creator(true, "Bob Baker", &author_line(affiliation("Univ C")))
     ]
   );
   // `\and` ends Ann's entry: "Univ C" is an entry of its own (placed by position, so not pinned here), not folded
@@ -6769,7 +6830,9 @@ fn author_marks_link_their_affiliations() {
     creators_of(&xml)
   };
   let affiliation = |name: &str| {
-    format!("<contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">{name}</contact>")
+    format!(
+      "<contact class=\"ltx_author_line\" name=\"Affiliation:\u{a0}\" role=\"affiliation\">{name}</contact>"
+    )
   };
   let creator = |before: &str, name: &str, rest: &str| {
     format!("<creator {before}role=\"author\"><personname>{name}</personname>{rest}</creator>")
@@ -6880,15 +6943,15 @@ fn frontmatter_digest_cluster_2609() {
     (
       r"\begin{center} Ann Able$^{1}$, Bob Baker$^{2}$ \\ $^1$Univ A \\ $^2$Univ B \end{center}",
       vec![
-        creator("", "Ann Able", &affiliation("Univ A")),
-        creator(second, "Bob Baker", &affiliation("Univ B")),
+        creator("", "Ann Able", &author_line(affiliation("Univ A"))),
+        creator(second, "Bob Baker", &author_line(affiliation("Univ B"))),
       ],
     ),
     (
       r"\begin{center}Ann\\ Univ A\end{center} \and \begin{center}Bob\\ Univ B\end{center}",
       vec![
-        creator("", "Ann", &affiliation("Univ A")),
-        creator(second, "Bob", &affiliation("Univ B")),
+        creator("", "Ann", &author_line(affiliation("Univ A"))),
+        creator(second, "Bob", &author_line(affiliation("Univ B"))),
       ],
     ),
   ] {

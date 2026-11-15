@@ -82,7 +82,7 @@ fn correspondence_link_line_keeps_the_link() {
   assert_eq!(
     email_contacts(&xml),
     [
-      "<contact name=\"Correspondence:\u{a0}\" role=\"email\"><ref class=\"ltx_href\" \
+      "<contact class=\"ltx_author_line\" name=\"Correspondence:\u{a0}\" role=\"email\"><ref class=\"ltx_href\" \
       href=\"zz@x.org\">zz@x.org</ref></contact>"
     ],
     "{xml}"

@@ -53,14 +53,15 @@ fn both_ways(tex: &str) -> String {
 #[test]
 fn collaboration_line_under_marked_names_is_each_names() {
   let xml = both_ways(repro!("author_collaboration_line_welded_into_last_name"));
-  let one = r#"<contact name="Affiliation: " role="affiliation"><text font="italic" xml:id="ID"> Institute of One, Town 100000, Country</text></contact>"#;
-  let two = r#"<contact name="Affiliation: " role="affiliation"><text font="italic" xml:id="ID"> University of Two, City 200000, Country</text></contact>"#;
+  let one = r#"<contact class="ltx_author_line" name="Affiliation: " role="affiliation"><text font="italic" xml:id="ID"> Institute of One, Town 100000, Country</text></contact>"#;
+  let two = r#"<contact class="ltx_author_line" name="Affiliation: " role="affiliation"><text font="italic" xml:id="ID"> University of Two, City 200000, Country</text></contact>"#;
   let at = |contact: &str, id: &str| contact.replace("ID", id);
-  let xyz = r#"<contact role="collaboration">(XYZ Collaboration)</contact>"#;
+  let xyz =
+    r#"<contact class="ltx_author_line" role="collaboration">(XYZ Collaboration)</contact>"#;
   assert_eq!(creators(&xml), [
     format!(r#"<creator role="author"> <personname>A. Able</personname> {xyz} {} </creator>"#, at(one, "id1")).as_str(),
     format!(
-      r#"<creator before=" " role="author"> <personname>B. Baker</personname> {xyz} {} <contact name="Affiliation: " role="affiliation"> Also at Laboratory A, Village 300000, Country</contact> </creator>"#,
+      r#"<creator before=" " role="author"> <personname>B. Baker</personname> {xyz} {} <contact class="ltx_author_line" name="Affiliation: " role="affiliation"> Also at Laboratory A, Village 300000, Country</contact> </creator>"#,
       at(two, "id2")
     )
     .as_str(),
@@ -83,7 +84,7 @@ fn bracketed_collaboration_covers_the_names_before_it() {
   let xyz = r#"<contact role="collaboration">(The XYZ Collaboration)</contact>"#;
   let person = |before: &str, name: &str, collaboration: &str, univ: &str| {
     format!(
-      r#"<creator {before}role="author"> <personname>{name}</personname> {collaboration}<contact name="Affiliation: " role="affiliation">{univ}</contact> </creator>"#
+      r#"<creator {before}role="author"> <personname>{name}</personname> {collaboration}<contact class="ltx_author_line" name="Affiliation: " role="affiliation">{univ}</contact> </creator>"#
     )
   };
   let xyz = format!("{xyz} ");
@@ -103,7 +104,7 @@ fn collaboration_line_under_unmarked_names_covers_its_group() {
   let xml = both_ways(repro!("aastex_collaboration_line_under_names_is_a_contact"));
   let person = |before: &str, name: &str, univ: &str| {
     format!(
-      r#"<creator {before}role="author"> <personname>{name}</personname> <contact role="collaboration">(The Nearby Supernova Factory)</contact> <contact name="Alternate Affiliation: " role="altaffiliation">{univ}</contact> </creator>"#
+      r#"<creator {before}role="author"> <personname>{name}</personname> <contact class="ltx_author_line" role="collaboration">(The Nearby Supernova Factory)</contact> <contact name="Alternate Affiliation: " role="altaffiliation">{univ}</contact> </creator>"#
     )
   };
   assert_eq!(creators(&xml), [
@@ -115,8 +116,8 @@ fn collaboration_line_under_unmarked_names_covers_its_group() {
                  Collaboration \\and Bob Baker\\\\ Univ B}\n\\maketitle\nBody.\n\\end{document}\n";
   let xml = both_ways(grouped);
   assert_eq!(creators(&xml), [
-    r#"<creator role="author"> <personname>Ann Able</personname> <contact role="collaboration">for the ATLAS Collaboration</contact> </creator>"#,
-    r#"<creator before=" " role="author"> <personname>Bob Baker</personname> <contact name="Affiliation: " role="affiliation">Univ B</contact> </creator>"#,
+    r#"<creator role="author"> <personname>Ann Able</personname> <contact class="ltx_author_line" role="collaboration">for the ATLAS Collaboration</contact> </creator>"#,
+    r#"<creator before=" " role="author"> <personname>Bob Baker</personname> <contact class="ltx_author_line" name="Affiliation: " role="affiliation">Univ B</contact> </creator>"#,
   ]);
 }
 
@@ -130,15 +131,15 @@ fn collaboration_line_under_unmarked_names_covers_its_group() {
 fn team_words_and_company_surnames_name_no_collaboration() {
   let xml = both_ways(repro!("author_team_and_group_lines_stay_affiliations"));
   assert_eq!(creators(&xml), [
-    r#"<creator role="author"> <personname>Ann Able</personname> <contact name="Affiliation: " role="affiliation">Machine Learning Group</contact> <contact name="Affiliation: " role="affiliation">Univ A</contact> </creator>"#,
-    r#"<creator before=" " role="author"> <personname>Bob Baker</personname> <contact name="Affiliation: " role="affiliation">Google Brain Team</contact> <contact name="Affiliation: " role="affiliation">Univ B</contact> </creator>"#,
+    r#"<creator role="author"> <personname>Ann Able</personname> <contact class="ltx_author_line" name="Affiliation: " role="affiliation">Machine Learning Group</contact> <contact class="ltx_author_line" name="Affiliation: " role="affiliation">Univ A</contact> </creator>"#,
+    r#"<creator before=" " role="author"> <personname>Bob Baker</personname> <contact class="ltx_author_line" name="Affiliation: " role="affiliation">Google Brain Team</contact> <contact class="ltx_author_line" name="Affiliation: " role="affiliation">Univ B</contact> </creator>"#,
   ]);
   let office = "\\documentclass{article}\n\\begin{document}\n\\title{T}\n\\author{Ann Able$^{1}$, Bob Baker$^{2}$\\\\ \
                 $^1$Univ A\\\\ $^2$The ATLAS Collaboration Office, CERN}\n\\maketitle\nBody.\n\\end{document}\n";
   let xml = both_ways(office);
   assert_eq!(creators(&xml), [
-    r#"<creator role="author"> <personname>Ann Able</personname> <contact name="Affiliation: " role="affiliation">Univ A</contact> </creator>"#,
-    r#"<creator before=" " role="author"> <personname>Bob Baker</personname> <contact name="Affiliation: " role="affiliation">The ATLAS Collaboration Office, CERN</contact> </creator>"#,
+    r#"<creator role="author"> <personname>Ann Able</personname> <contact class="ltx_author_line" name="Affiliation: " role="affiliation">Univ A</contact> </creator>"#,
+    r#"<creator before=" " role="author"> <personname>Bob Baker</personname> <contact class="ltx_author_line" name="Affiliation: " role="affiliation">The ATLAS Collaboration Office, CERN</contact> </creator>"#,
   ]);
   let company = "\\documentclass{aastex}\n\\begin{document}\n\\title{T}\n\\author{M.~Huertas-Company\\altaffilmark{1}, \
                  B.~Baker\\altaffilmark{2}}\n\\altaffiltext{1}{Univ A}\n\\altaffiltext{2}{Univ B}\n\\maketitle\nBody.\n\
@@ -155,7 +156,7 @@ fn collaboration_line_is_made_where_it_prints() {
   let tex = repro!("author_collaboration_line_keeps_its_print_order");
   let xml = both_ways(tex);
   assert_eq!(creators(&xml), [
-    r#"<creator role="author"> <personname>Ann Able</personname> <contact role="collaboration">for the XYZ Collaboration</contact> <contact name="Affiliation: " role="affiliation">Univ X</contact> </creator>"#
+    r#"<creator role="author"> <personname>Ann Able</personname> <contact class="ltx_author_line" role="collaboration">for the XYZ Collaboration</contact> <contact class="ltx_author_line" name="Affiliation: " role="affiliation">Univ X</contact> </creator>"#
   ]);
   let representing = tex.replace(
     r"\author{Ann Able \\ for the XYZ Collaboration \\ Univ X}",
@@ -163,9 +164,9 @@ fn collaboration_line_is_made_where_it_prints() {
   );
   assert_ne!(representing, tex);
   let xml = both_ways(&representing);
-  let bes = r#"<contact role="collaboration">Representing the BES Collaboration</contact> <contact name="Affiliation: " role="affiliation">Univ X</contact>"#;
+  let bes = r#"<contact class="ltx_author_line" role="collaboration">Representing the BES Collaboration</contact> <contact class="ltx_author_line" name="Affiliation: " role="affiliation">Univ X</contact>"#;
   assert_eq!(creators(&xml), [
-    format!(r#"<creator role="author"> <personname>Ann Able</personname> {bes} <contact name="E-mail: " role="email"><text font="typewriter" xml:id="id1">ann.able@x.edu</text></contact> </creator>"#).as_str(),
+    format!(r#"<creator role="author"> <personname>Ann Able</personname> {bes} <contact class="ltx_author_line" name="E-mail: " role="email"><text font="typewriter" xml:id="id1">ann.able@x.edu</text></contact> </creator>"#).as_str(),
     format!(r#"<creator before=" " role="author"> <personname>Bob Baker</personname> {bes} </creator>"#).as_str(),
   ]);
 }
@@ -179,8 +180,11 @@ fn unframed_collaboration_with_its_address_and_the_team_stay_affiliations() {
   let xml = both_ways(repro!(
     "author_unframed_collaboration_with_address_stays_affiliation"
   ));
-  let aff =
-    |text: &str| format!(r#"<contact name="Affiliation: " role="affiliation">{text}</contact>"#);
+  let aff = |text: &str| {
+    format!(
+      r#"<contact class="ltx_author_line" name="Affiliation: " role="affiliation">{text}</contact>"#
+    )
+  };
   assert_eq!(creators(&xml), [
     format!(
       r#"<creator role="author"> <personname>Ann Able</personname> {} {} {} </creator>"#,

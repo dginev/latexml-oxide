@@ -297,7 +297,7 @@ fn acmproc_era_aamas_reads_raw() {
     &xml,
     "creator",
     &["role=\"author\""],
-    "<creator role=\"author\"><personname>Paulo Shakarian</personname><contact name=\"Affiliation:\u{a0}\" \
+    "<creator role=\"author\"><personname>Paulo Shakarian</personname><contact class=\"ltx_author_line\" name=\"Affiliation:\u{a0}\" \
      role=\"affiliation\">Dept. EECS</contact><contact name=\"Email:\u{a0}\" role=\"email\">p@x.net</contact></creator>",
   );
   assert_eq!(xml.matches("<creator ").count(), 2, "{xml}");
@@ -324,8 +324,8 @@ fn spie_author_block_is_the_kernel_author() {
     &xml,
     "creator",
     &["role=\"author\""],
-    "<creator role=\"author\"><personname>Ann One</personname><contact name=\"Affiliation:\u{a0}\" \
-     role=\"affiliation\">Dept. of Physics, Univ. X, Taipei, Taiwan</contact><contact name=\"Affiliation:\u{a0}\" \
+    "<creator role=\"author\"><personname>Ann One</personname><contact class=\"ltx_author_line\" name=\"Affiliation:\u{a0}\" \
+     role=\"affiliation\">Dept. of Physics, Univ. X, Taipei, Taiwan</contact><contact class=\"ltx_author_line\" name=\"Affiliation:\u{a0}\" \
      role=\"affiliation\">Inst. Y, Tsukuba, Japan.</contact></creator>",
   );
   // Bob carries mark b only: the second line alone.
@@ -333,7 +333,7 @@ fn spie_author_block_is_the_kernel_author() {
     &xml,
     "creator",
     &["before=\"\u{2003}\u{2003}\"", "role=\"author\""],
-    "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Two</personname><contact \
+    "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Two</personname><contact class=\"ltx_author_line\" \
      name=\"Affiliation:\u{a0}\" role=\"affiliation\">Inst. Y, Tsukuba, Japan.</contact></creator>",
   );
 }

@@ -1,0 +1,118 @@
+// Render an HTML file at the given viewport widths and report, per author, the issue #783 geometry: the starred
+// pop-up marker of its contacts, each note's mark and content shown, and each contact's visibility, whether it sits
+// below the name, whether it shows while the pointer is over the author's notes (hover), and the names and contacts
+// drawn over one another during that hover (overlaps).
+//
+// Usage:   node measure_authors.js <file-url> [width,...]
+//          (Chrome; with LATEXML_FIREFOX=<firefox executable> Firefox as well)
+// Output:  JSON { "<engine>/<width>": { creators: [{ name, star, notes: [{ mark, content }], contacts: [{ text, visible, belowName, hover }],
+//                                            overlaps: [[text, text]] }] } }.
+//          Exit 2 on error.
+const pw = require('playwright-core');
+
+(async () => {
+  const url = process.argv[2];
+  const widths = (process.argv[3] || '1280,375').split(',').map(Number);
+  if (!url) {
+    console.error('usage: node measure_authors.js <file-url> [widths]');
+    process.exit(2);
+  }
+  const engines = [['chrome', () => pw.chromium.launch({
+    channel: 'chrome', headless: true, args: ['--no-sandbox', '--disable-gpu'] })]];
+  if (process.env.LATEXML_FIREFOX) {
+    engines.push(['firefox', () => pw.firefox.launch({
+      executablePath: process.env.LATEXML_FIREFOX, headless: true })]);
+  }
+  const out = {};
+  for (const [name, launch] of engines) {
+    const browser = await launch();
+    try {
+      for (const w of widths) {
+        const page = await browser.newPage({ viewport: { width: w, height: 900 } });
+        await page.goto(url, { waitUntil: 'load' });
+        const shownWhile = async (hovered) => {
+          if (hovered) await page.hover(hovered);
+          return page.evaluate(() => Array.from(document.querySelectorAll('.ltx_creator')).map((c) =>
+            Array.from(c.querySelectorAll('.ltx_contact')).map((k) => {
+              for (let n = k; n; n = n.parentElement) {
+                const s = getComputedStyle(n);
+                if (s.display === 'none' || s.visibility !== 'visible') return false;
+              }
+              return true;
+            })));
+        };
+        // The names and contacts drawn over one another while author i's notes are hovered: [text, text] pairs.
+        // (Opacity is not read: it is still fading in.)
+        const overlapping = () => page.evaluate(() => {
+          const shown = (e) => {
+            for (let n = e; n; n = n.parentElement) {
+              const s = getComputedStyle(n);
+              if (s.display === 'none' || s.visibility !== 'visible') return false;
+            }
+            return true;
+          };
+          const boxes = Array.from(document.querySelectorAll('.ltx_authors .ltx_personname, .ltx_authors .ltx_contact'))
+            .filter(shown).map((e) => [e, e.getBoundingClientRect()]);
+          const pairs = [];
+          for (let a = 0; a < boxes.length; a++) {
+            for (let b = a + 1; b < boxes.length; b++) {
+              const [[ea, A], [eb, B]] = [boxes[a], boxes[b]];
+              if (ea.contains(eb) || eb.contains(ea)) continue;
+              if (A.left < B.right - 1 && B.left < A.right - 1 && A.top < B.bottom - 1 && B.top < A.bottom - 1) {
+                pairs.push([ea.innerText.trim(), eb.innerText.trim()]);
+              }
+            }
+          }
+          return pairs;
+        });
+        const hovered = [];
+        const overlaps = [];
+        const notes = await page.$$('.ltx_creator');
+        for (let i = 0; i < notes.length; i++) {
+          const has = await notes[i].$('.ltx_author_notes');
+          hovered.push(has ? (await shownWhile(`.ltx_authors > .ltx_creator >> nth=${i} >> .ltx_author_notes`))[i] : []);
+          overlaps.push(has ? await overlapping() : []);
+          await page.mouse.move(0, 0);
+        }
+        out[`${name}/${w}`] = await page.evaluate(([hovered, overlaps]) => {
+          const R = (e) => e.getBoundingClientRect();
+          const shown = (e) => {
+            for (let n = e; n; n = n.parentElement) {
+              const s = getComputedStyle(n);
+              if (s.display === 'none' || s.visibility !== 'visible' || Number(s.opacity) === 0) return false;
+            }
+            return true;
+          };
+          const creators = Array.from(document.querySelectorAll('.ltx_creator')).map((c, i) => {
+            const notes = c.querySelector('.ltx_author_notes');
+            const nameBox = R(c.querySelector('.ltx_personname'));
+            const star = notes ? getComputedStyle(notes, '::before').content : 'none';
+            return {
+              name: c.querySelector('.ltx_personname').innerText.trim(),
+              star: star === 'none' || star === '""' || star === 'normal' ? 'none' : star,
+              notes: Array.from(c.querySelectorAll('.ltx_note')).map((n) => ({
+                mark: shown(n.querySelector('.ltx_note_mark')),
+                content: shown(n.querySelector('.ltx_note_content')),
+              })),
+              contacts: Array.from(c.querySelectorAll('.ltx_contact')).map((k, j) => ({
+                text: k.innerText.trim(),
+                visible: shown(k),
+                belowName: R(k).top >= nameBox.bottom - 0.5,
+                hover: hovered[i][j],
+              })),
+              overlaps: overlaps[i],
+            };
+          });
+          return { creators };
+        }, [hovered, overlaps]);
+        await page.close();
+      }
+    } finally {
+      await browser.close();
+    }
+  }
+  console.log(JSON.stringify(out));
+})().catch((e) => {
+  console.error(String(e));
+  process.exit(2);
+});

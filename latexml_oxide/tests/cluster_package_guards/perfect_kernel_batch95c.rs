@@ -287,11 +287,11 @@ fn a_mailto_link_address_moves_whole_into_its_email() {
     "  c email bob@y.org | ruling1:request owner:entry-address owner:spelled",
   ]);
   assert_eq!(default_mode_elements(tex), [
-    "<creator role=\"author\"><personname>Ann Able</personname><contact name=\"Affiliation:\u{a0}\" \
-     role=\"affiliation\"> Univ X</contact><contact name=\"Email:\u{a0}\" role=\"email\"><ref class=\"ltx_href\" \
+    "<creator role=\"author\"><personname>Ann Able</personname><contact class=\"ltx_author_line\" name=\"Affiliation:\u{a0}\" \
+     role=\"affiliation\"> Univ X</contact><contact class=\"ltx_author_line\" name=\"Email:\u{a0}\" role=\"email\"><ref class=\"ltx_href\" \
      font=\"typewriter\" href=\"mailto:ann@x.org\">ann@x.org</ref></contact></creator>",
-    "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker</personname><contact name=\"Affiliation:\u{a0}\" \
-     role=\"affiliation\"> Univ Y</contact><contact name=\"Email:\u{a0}\" role=\"email\"><ref class=\"ltx_href\" \
+    "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker</personname><contact class=\"ltx_author_line\" name=\"Affiliation:\u{a0}\" \
+     role=\"affiliation\"> Univ Y</contact><contact class=\"ltx_author_line\" name=\"Email:\u{a0}\" role=\"email\"><ref class=\"ltx_href\" \
      href=\"mailto:bob@y.org\">bob@y.org</ref></contact></creator>",
   ]);
 }
@@ -323,11 +323,11 @@ fn entry_emails_are_named_by_their_label_in_print_order() {
     "  c email bob@y.org | ruling1:request owner:entry-address owner:spelled",
   ]);
   assert_eq!(default_mode_elements(tex), [
-    "<creator role=\"author\"><personname>Ann Able</personname><contact name=\"Affiliation:\u{a0}\" \
-     role=\"affiliation\"> Univ X</contact><contact name=\"E-mail: \" role=\"email\">zed.able@x.org</contact><contact \
+    "<creator role=\"author\"><personname>Ann Able</personname><contact class=\"ltx_author_line\" name=\"Affiliation:\u{a0}\" \
+     role=\"affiliation\"> Univ X</contact><contact class=\"ltx_author_line\" name=\"E-mail: \" role=\"email\">zed.able@x.org</contact><contact class=\"ltx_author_line\" \
      name=\"E-mail: \" role=\"email\">quux.able@y.org</contact></creator>",
-    "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker</personname><contact name=\"Affiliation:\u{a0}\" \
-     role=\"affiliation\"> Univ Y</contact><contact name=\"Email:\u{a0}\" role=\"email\">bob@y.org</contact></creator>",
+    "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker</personname><contact class=\"ltx_author_line\" name=\"Affiliation:\u{a0}\" \
+     role=\"affiliation\"> Univ Y</contact><contact class=\"ltx_author_line\" name=\"Email:\u{a0}\" role=\"email\">bob@y.org</contact></creator>",
   ]);
 }
 
@@ -539,13 +539,13 @@ fn a_bare_label_word_before_a_line_ending_address_goes_with_it() {
     "  c email cole@z.org | ruling1:request owner:entry-address owner:spelled",
   ]);
   assert_elements(tex, &[
-    "<creator role=\"author\"><personname>Ann Able</personname><contact name=\"Affiliation:\u{a0}\" \
-     role=\"affiliation\"> Univ X</contact><contact name=\"E-mail \" role=\"email\">ann@x.org</contact></creator>",
-    "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker</personname><contact \
-     name=\"Affiliation:\u{a0}\" role=\"affiliation\"> Univ Y.</contact><contact name=\"Email \" \
+    "<creator role=\"author\"><personname>Ann Able</personname><contact class=\"ltx_author_line\" name=\"Affiliation:\u{a0}\" \
+     role=\"affiliation\"> Univ X</contact><contact class=\"ltx_author_line\" name=\"E-mail \" role=\"email\">ann@x.org</contact></creator>",
+    "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker</personname><contact class=\"ltx_author_line\" \
+     name=\"Affiliation:\u{a0}\" role=\"affiliation\"> Univ Y.</contact><contact class=\"ltx_author_line\" name=\"Email \" \
      role=\"email\">bob@y.org</contact></creator>",
-    "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Cat Cole</personname><contact \
-     name=\"Affiliation:\u{a0}\" role=\"affiliation\"> Univ Z</contact><contact name=\"e-mail \" \
+    "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Cat Cole</personname><contact class=\"ltx_author_line\" \
+     name=\"Affiliation:\u{a0}\" role=\"affiliation\"> Univ Z</contact><contact class=\"ltx_author_line\" name=\"e-mail \" \
      role=\"email\">cole@z.org</contact></creator>",
   ]);
 }
@@ -568,13 +568,13 @@ fn an_address_beside_a_prose_word_stays_in_its_entry() {
     "  a Univ W, see sales@w.org, City W | ruling1:request",
   ]);
   assert_elements(tex, &[
-    "<creator role=\"author\"><personname>Ann Able</personname><contact name=\"Affiliation:\u{a0}\" \
+    "<creator role=\"author\"><personname>Ann Able</personname><contact class=\"ltx_author_line\" name=\"Affiliation:\u{a0}\" \
      role=\"affiliation\"> Univ X, see also data@x.org</contact></creator>",
-    "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker</personname><contact \
+    "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker</personname><contact class=\"ltx_author_line\" \
      name=\"Affiliation:\u{a0}\" role=\"affiliation\"> Univ Y. Write to info@y.org</contact></creator>",
-    "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Cat Cole</personname><contact \
+    "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Cat Cole</personname><contact class=\"ltx_author_line\" \
      name=\"Affiliation:\u{a0}\" role=\"affiliation\"> Dept Z, Univ Z, write to a@z.org.</contact></creator>",
-    "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Dan Dole</personname><contact \
+    "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Dan Dole</personname><contact class=\"ltx_author_line\" \
      name=\"Affiliation:\u{a0}\" role=\"affiliation\"> Univ W, see sales@w.org, City W</contact></creator>",
   ]);
 }
@@ -587,9 +587,9 @@ fn an_address_beside_a_prose_word_stays_in_its_entry() {
 fn a_replaced_author_call_before_an_entry_address_keeps_its_holders() {
   let tex = repro!("entry_address_after_a_replaced_author_call.tex");
   assert_elements(tex, &[
-    "<creator role=\"author\"><personname>Ann Able</personname><contact name=\"Affiliation:\u{a0}\" \
-     role=\"affiliation\"> Univ X</contact><contact name=\"Email:\u{a0}\" role=\"email\">ann@x.org</contact></creator>",
-    "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker</personname><contact \
+    "<creator role=\"author\"><personname>Ann Able</personname><contact class=\"ltx_author_line\" name=\"Affiliation:\u{a0}\" \
+     role=\"affiliation\"> Univ X</contact><contact class=\"ltx_author_line\" name=\"Email:\u{a0}\" role=\"email\">ann@x.org</contact></creator>",
+    "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker</personname><contact class=\"ltx_author_line\" \
      name=\"Affiliation:\u{a0}\" role=\"affiliation\"> Univ Y</contact></creator>",
   ]);
 }

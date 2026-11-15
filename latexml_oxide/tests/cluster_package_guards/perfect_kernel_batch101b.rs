@@ -52,7 +52,7 @@ fn creators_and_pubnotes(tex: &str) -> (String, Vec<String>) {
 }
 
 /// The four creators of the marked block, each its affiliation and the address that spells its name.
-const MARKED_CREATORS: &str = r#"<creator role="author"> <personname>Ann Able</personname> <contact name="Affiliation: " role="affiliation">Univ X, Italy</contact> <contact name="Email: " role="email"><text font="typewriter">ann.able@x.it</text></contact> </creator> <creator before=" " role="author"> <personname>Bob Baker</personname> <contact name="Affiliation: " role="affiliation">Univ Y, Italy</contact> <contact name="Email: " role="email"><text font="typewriter">bob.baker@y.it</text></contact> </creator> <creator before=" " role="author"> <personname>Cy Cole</personname> <contact name="Affiliation: " role="affiliation">Univ X, Italy</contact> <contact name="Email: " role="email"><text font="typewriter">cy.cole@x.it</text></contact> </creator> <creator before=" " role="author"> <personname>Dan Dorn</personname> <contact name="Affiliation: " role="affiliation">Univ Y, Italy</contact> <contact name="Email: " role="email"><text font="typewriter">dan.dorn@y.it</text></contact> </creator>"#;
+const MARKED_CREATORS: &str = r#"<creator role="author"> <personname>Ann Able</personname> <contact class="ltx_author_line" name="Affiliation: " role="affiliation">Univ X, Italy</contact> <contact class="ltx_author_line" name="Email: " role="email"><text font="typewriter">ann.able@x.it</text></contact> </creator> <creator before=" " role="author"> <personname>Bob Baker</personname> <contact class="ltx_author_line" name="Affiliation: " role="affiliation">Univ Y, Italy</contact> <contact class="ltx_author_line" name="Email: " role="email"><text font="typewriter">bob.baker@y.it</text></contact> </creator> <creator before=" " role="author"> <personname>Cy Cole</personname> <contact class="ltx_author_line" name="Affiliation: " role="affiliation">Univ X, Italy</contact> <contact class="ltx_author_line" name="Email: " role="email"><text font="typewriter">cy.cole@x.it</text></contact> </creator> <creator before=" " role="author"> <personname>Dan Dorn</personname> <contact class="ltx_author_line" name="Affiliation: " role="affiliation">Univ Y, Italy</contact> <contact class="ltx_author_line" name="Email: " role="email"><text font="typewriter">dan.dorn@y.it</text></contact> </creator>"#;
 
 /// The marked block (IEEEtran, 2605.23553's shape): the second address line, carrying the submission `\thanks`, gives
 /// Cy Cole and Dan Dorn their e-mails (before: one affiliation "cy.cole@x.it, dan.dorn@y.it" of Dan Dorn), the note a
@@ -75,7 +75,7 @@ fn an_address_line_carrying_a_note_in_a_marked_block_is_one() {
   assert_eq!(
     creators_and_pubnotes(repro!("address_line_note_labelled_marked_block")),
     (
-      r#"<creator role="author"> <personname>Ann Able</personname> <contact name="Affiliation: " role="affiliation">Univ X, Italy</contact> <contact name="E-mail: " role="email"><text font="typewriter">ann.able@x.it</text></contact> </creator> <creator before=" " role="author"> <personname>Bob Baker</personname> <contact name="Affiliation: " role="affiliation">Univ Y, Italy</contact> <contact name="E-mail: " role="email"><text font="typewriter">bob.baker@y.it</text></contact> </creator>"#
+      r#"<creator role="author"> <personname>Ann Able</personname> <contact class="ltx_author_line" name="Affiliation: " role="affiliation">Univ X, Italy</contact> <contact class="ltx_author_line" name="E-mail: " role="email"><text font="typewriter">ann.able@x.it</text></contact> </creator> <creator before=" " role="author"> <personname>Bob Baker</personname> <contact class="ltx_author_line" name="Affiliation: " role="affiliation">Univ Y, Italy</contact> <contact class="ltx_author_line" name="E-mail: " role="email"><text font="typewriter">bob.baker@y.it</text></contact> </creator>"#
         .to_string(),
       vec![r#"<pubnote role="thanks">Submitted somewhere.</pubnote>"#.to_string()]
     )
@@ -89,7 +89,7 @@ fn an_address_line_carrying_a_note_in_an_unmarked_block_is_one() {
   assert_eq!(
     creators_and_pubnotes(repro!("address_line_note_unmarked_block")),
     (
-      r#"<creator role="author"> <personname>Ann Able</personname> <contact name="Affiliation: " role="affiliation">Univ X, Italy</contact> <contact name="Email: " role="email"><text font="typewriter">ann.able@x.it</text></contact> </creator> <creator before=" " role="author"> <personname>Bob Baker</personname> <contact name="Affiliation: " role="affiliation">Univ X, Italy</contact> <contact name="Email: " role="email"><text font="typewriter">bob.baker@y.it</text></contact> </creator>"#
+      r#"<creator role="author"> <personname>Ann Able</personname> <contact class="ltx_author_line" name="Affiliation: " role="affiliation">Univ X, Italy</contact> <contact class="ltx_author_line" name="Email: " role="email"><text font="typewriter">ann.able@x.it</text></contact> </creator> <creator before=" " role="author"> <personname>Bob Baker</personname> <contact class="ltx_author_line" name="Affiliation: " role="affiliation">Univ X, Italy</contact> <contact class="ltx_author_line" name="Email: " role="email"><text font="typewriter">bob.baker@y.it</text></contact> </creator>"#
         .to_string(),
       vec![r#"<pubnote role="thanks">Submitted somewhere.</pubnote>"#.to_string()]
     )

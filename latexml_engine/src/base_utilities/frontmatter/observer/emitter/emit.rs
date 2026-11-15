@@ -40,7 +40,7 @@ use crate::base_utilities::{
     insert::NAME_PRINTED,
     observer::{
       events::{
-        self as events, EventKind, Formula, InkTable, SepKind, font_declaration, inked,
+        self as events, BreakKind, EventKind, Formula, InkTable, SepKind, font_declaration, inked,
         lex_with_inks, text_font_command,
       },
       field_notes::{EnvironmentStep, FieldCreator, HeldExpansion},
@@ -1435,10 +1435,11 @@ fn picture_note_call(label: &str, content: &[Token]) -> Tokens {
   )
 }
 
-/// A block's or a piece's entry: `\\lx@frontmatter@itemkinded`, whose Kind step reads its lines of addresses.
-fn kinded_affiliation(keys: &str, content: &[Token]) -> Tokens {
+/// A block's or a piece's entry: `\\lx@frontmatter@itemkinded`, whose Kind step reads its lines of addresses, each
+/// e-mail it makes of them given `email_keys` (the entry's line class, issue #783).
+fn kinded_affiliation(keys: &str, email_keys: &str, content: &[Token]) -> Tokens {
   let mut head = vec![T_CS!("\\lx@frontmatter@itemkinded")];
-  head.extend(cs_group_args(&["ltx:creator", "ltx:contact"]));
+  head.extend(cs_group_args(&["ltx:creator", "ltx:contact", email_keys]));
   with_keys(
     head,
     keys,
@@ -1741,6 +1742,38 @@ fn event_at<R>(
   })
 }
 
+/// Whether the item `span` of the block at ledger index `index` prints on a line under its author's name: the last line
+/// break or column before it is a line break, no name printed since (`names`, the runs of the block's names: IEEE's
+/// `Cat~Cole, \\ Dan~Doe, Eve~Elm,~\IEEEmembership{…}` prints the grade beside its name, 2408.01902), and no note
+/// holds it (issue #783).
+fn on_an_author_line(index: usize, span: (u16, u16), names: &BlockNameRuns) -> bool {
+  with_block(index, false, |block, events| {
+    let holds = |s: (u16, u16)| s.0 <= span.0 && span.1 <= s.1;
+    let runs = names.get(&index).map_or(&[][..], Vec::as_slice);
+    let at = |p: u16| usize::from(p).saturating_sub(block.range.0);
+    let a_name = |s: (u16, u16)| runs.iter().any(|&(a, b)| at(s.0) < b && a < at(s.1));
+    let mut line = false;
+    for e in events {
+      if e.kind == EventKind::Note && e.span.is_some_and(holds) {
+        return false;
+      }
+      if e.span.is_some_and(|s| s.0 >= span.0) {
+        break;
+      }
+      match e.kind {
+        EventKind::Break => line = e.break_kind != Some(BreakKind::Column),
+        EventKind::Sep(SepKind::And(_) | SepKind::Column(_)) => line = false,
+        EventKind::Name if e.span.is_some_and(a_name) => line = false,
+        _ => {},
+      }
+    }
+    line
+  })
+}
+
+/// Per author block (its ledger index), the runs of its tokens the reading's names were taken from (`block_names`).
+type BlockNameRuns = BTreeMap<usize, Vec<(usize, usize)>>;
+
 /// The note `span` of the block at ledger index `index` is one piece of, strictly inside it: from one of its body's
 /// events' start to one's end (the reading's cut of a marked `\thanks`, `Resolver::keep_note`), its span.
 fn note_piece(index: usize, span: (u16, u16)) -> Option<(u16, u16)> {
@@ -2014,17 +2047,29 @@ fn joined_run_link(
 }
 
 /// The call for one item of the reading, under `label`.
+#[allow(clippy::too_many_arguments)]
 fn item_call(
   key: &Key,
   assoc: &Assoc,
   label: &str,
   separate: &BTreeSet<usize>,
+  names: &BlockNameRuns,
   memo: &mut CallCuts,
   whole: &mut BTreeSet<usize>,
   cuts: &[EntryCut],
 ) -> Result<Tokens> {
   let role = assoc.role.as_str();
-  let mut keys = s!("role={role},label={{{label}}}");
+  // (a contact the block prints on a line of its own under the name, Perl's `\\` line (Base_Utility.pool.ltxml:722-726):
+  // marked so, and each e-mail the Kind step makes of it, issue #783)
+  let line_class = if key.0 != Kind::Note
+    && let Some((index, Some(span))) = assoc.source
+    && on_an_author_line(index, span, names)
+  {
+    ",class=ltx_author_line"
+  } else {
+    ""
+  };
+  let mut keys = s!("role={role},label={{{label}}}{line_class}");
   // (an entry the reading took addresses out of: written as it printed, its tokens cut at the runs, `address_cut` — written by its
   // text, counted, where the path its whole takes doesn't cut; each address its owner's e-mail as printed, named by its label)
   if let Some(call) = cut_mail_call(cuts, assoc, &keys) {
@@ -2041,6 +2086,7 @@ fn item_call(
           entry,
           label,
           separate,
+          names,
           memo,
           whole,
           std::slice::from_ref(cut),
@@ -2049,6 +2095,7 @@ fn item_call(
       || {
         kinded_affiliation(
           &keys,
+          line_class,
           &by_text(Some("an entry's addresses cut"), &assoc.text),
         )
       },
@@ -2177,7 +2224,7 @@ fn item_call(
     if note {
       note_call(false, None, label, content.to_vec())
     } else if key.0 == Kind::Affiliation {
-      kinded_affiliation(&keys, content)
+      kinded_affiliation(&keys, line_class, content)
     } else {
       annotate_now("ltx:contact", &keys, &item_only(content))
     }
@@ -2350,6 +2397,7 @@ fn item_call(
           cut.inspect(|cut| cut.applied.set(true));
           return Ok(kinded_affiliation(
             &s!("role=affiliation,label={{{label}}}"),
+            "",
             &cs_group("\\lx@affiliation@withsup", &[segment.unlist_ref()]),
           ));
         }
@@ -5478,6 +5526,7 @@ pub(in crate::base_utilities) fn emit_commands(commands: &mut Vec<RawFrontmatter
   let mut names: BTreeMap<usize, (Option<Vec<Token>>, Vec<Token>)> = BTreeMap::new();
   // (the runs each name written from its tokens is taken from, its marks written past it too: what it prints, [`NameMarks::marks_in`])
   let mut name_runs: BTreeMap<usize, Vec<(usize, usize)>> = BTreeMap::new();
+  let mut block_runs = BlockNameRuns::new();
   // (the footnote counter's steps of the notes written apart, on the creator where each prints: `note_steps`)
   let mut steps: BTreeMap<(usize, bool), usize> = BTreeMap::new();
   let mut on_names: BTreeSet<(usize, (u16, u16))> = BTreeSet::new();
@@ -5509,6 +5558,7 @@ pub(in crate::base_utilities) fn emit_commands(commands: &mut Vec<RawFrontmatter
     for (k, (&i, (name, cites, run, apart, in_name))) in members.iter().zip(tokens).enumerate() {
       if let Some(run) = run {
         runs.push((i, run));
+        block_runs.entry(source).or_default().push(run);
       }
       stepped.extend(in_name);
       let name = name.filter(|_| !overlapping.contains(&k));
@@ -5870,6 +5920,7 @@ pub(in crate::base_utilities) fn emit_commands(commands: &mut Vec<RawFrontmatter
       item.assoc,
       &label,
       &separate,
+      &block_runs,
       &mut memo,
       &mut written,
       &analysis.cuts,

@@ -1366,6 +1366,47 @@ mod witnessed_css_delta {
   }
 
   #[test]
+  fn author_line_delta_stays_present() {
+    // Issue #783 (OXIDIZED_DESIGN_DIVERGENCES #1051): an author whose contacts are all lines of the author block
+    // (`ltx_author_line`) or notes shows the lines under the name, not behind the starred pop-up; a note keeps the star
+    // (1112.2930), its notes shown in the card's flow on hover (math0111266); the browser half is
+    // `cluster_cli::browser_render_author_lines`.
+    const CARD: &str =
+      ":not(:has(.ltx_contact:not(.ltx_author_line):not(.ltx_role_note):not(.ltx_role_thanks)))";
+    let css = bundled_latexml_css();
+    for rule in [
+      format!("DOC .ltx_creator:has(.ltx_author_line){CARD} {{\n    display:inline-block;"),
+      format!("DOC .ltx_author_notes{CARD}:has(.ltx_author_line) {{\n    display:inline; }}"),
+      format!(
+        "DOC .ltx_author_notes{CARD}:has(.ltx_author_line):not(:has(.ltx_role_note, \
+         .ltx_role_thanks)):before {{\n    content:none; }}"
+      ),
+      format!(
+        "DOC .ltx_author_notes{CARD}:has(.ltx_author_line) .ltx_contact:not(.ltx_author_line) {{\n    display:none; }}"
+      ),
+      // on hover a note joins the card's flow: two notes, or a note and the lines, never overlap (math0111266)
+      format!(
+        "DOC .ltx_author_notes{CARD}:has(.ltx_author_line):hover .ltx_contact:not(.ltx_author_line) {{\n    \
+         display:block; position:static; contain:inline-size;"
+      ),
+      format!(
+        "DOC .ltx_author_notes{CARD}:has(.ltx_author_line) .ltx_author_line .ltx_contact_name {{ display:none; }}"
+      ),
+    ] {
+      let rule = rule.replace("DOC", ".ltx_document:not(.ltx_authors_multiline)");
+      assert!(
+        css.contains("#783") && css.contains(&rule),
+        "LaTeXML.css lost the author-line rule `{rule}` (issue #783)"
+      );
+    }
+    // a mixed author's pop-up keeps its "Affiliation:" labels: the label hide is scoped to the card
+    assert!(
+      !css.contains("\n.ltx_author_line .ltx_contact_name"),
+      "an unscoped author-line label hide"
+    );
+  }
+
+  #[test]
   fn constrained_equation_overflow_delta_stays_present() {
     let css = bundled_latexml_css();
     assert!(

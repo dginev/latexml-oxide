@@ -15,7 +15,7 @@
   </creator>
   <creator before="  " role="author">
     <personname>Alessio Martini</personname>
-    <contact name="Affiliation: " role="affiliation">(Scuola Normale Superiore, Pisa)</contact>
+    <contact class="ltx_author_line" name="Affiliation: " role="affiliation">(Scuola Normale Superiore, Pisa)</contact>
   </creator>
   <date role="creation">Today!</date>
   <pubnote role="thanks">Whoppee!</pubnote>

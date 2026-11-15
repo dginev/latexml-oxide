@@ -1,0 +1,20 @@
+% witness: issue #783 (reporter's MWE, book)
+% mechanism: issue #783 — a contact the author block prints on a line under the name (Perl's `\\` line,
+%   Base_Utility.pool.ltxml:722-726) carries class `ltx_author_line` (emit.rs `on_an_author_line`; fallback.rs; kind.rs
+%   for an e-mail split out of such a line), which LaTeXML.css shows under the name instead of the starred pop-up.
+% oracle:  pdflatex 0 errors; "name / school name / dept. name" on three centred lines
+% engines: base (main 2778c0d67e) = the two lines affiliation contacts, no class
+% expect:  both affiliation contacts class="ltx_author_line"
+% status:  RED (base) -> GREEN (fix/issue-783); guard 06_cluster_frontmatter::frontmatter_author_lines_783
+% preload: ar5iv.sty
+\documentclass[12pt]{book}
+\begin{document}
+\title{the title}
+\author{name \\
+school name \\
+dept. name
+}
+\date{\today}
+\maketitle
+text
+\end{document}

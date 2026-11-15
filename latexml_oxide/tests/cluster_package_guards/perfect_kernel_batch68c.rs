@@ -110,7 +110,7 @@ fn spconf_threeauthors_gives_three_creators() {
     &xml,
     "creator",
     &[],
-    "<creator role=\"author\"><personname>Ann One</personname><contact name=\"Affiliation:\u{a0}\" \
+    "<creator role=\"author\"><personname>Ann One</personname><contact class=\"ltx_author_line\" name=\"Affiliation:\u{a0}\" \
      role=\"affiliation\">Inst A</contact></creator>",
   );
   assert_eq!(xml.matches(r#"role="affiliation""#).count(), 3, "{xml}");
