@@ -12,8 +12,9 @@
 use std::{cell::Cell, rc::Rc};
 
 use crate::{
-  common::{error::Result, store::Stored},
+  common::{arena, error::Result, store::Stored},
   state::{Scope, assign_value, lookup_definition, lookup_definition_stored, lookup_value},
+  token::{Catcode, Token},
 };
 
 /// Setter name (no backslash) → the frontmatter API body for its kind, with
@@ -127,7 +128,11 @@ pub const STORE_SETTERS: &[(&str, &str)] = &[
 /// undefined control sequence, or `\let` to a character (for which `lookup_definition_stored`
 /// makes a new definition on each call).
 fn setter_definition(name: &str) -> Result<Option<Stored>> {
-  let cs = T_CS!(&s!("\\{name}"));
+  // A name never interned has no definition: probe without formatting or pinning (two snapshots per binding load).
+  let Some(cs_sym) = arena::get_suffixed("\\", name) else {
+    return Ok(None);
+  };
+  let cs = Token!(sym cs_sym, Catcode::CS);
   if lookup_definition(&cs)?.is_none() {
     return Ok(None);
   }
