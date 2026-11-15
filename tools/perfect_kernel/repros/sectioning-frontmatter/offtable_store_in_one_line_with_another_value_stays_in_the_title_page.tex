@@ -1,0 +1,29 @@
+% A labelled off-table store is moved to a pubnote only when its line holds no other value (`store_lines_among`,
+% frontmatter_stores.rs), the line read in the macro's body when the store is in no group, and around the command whose
+% argument holds it (`\texttt{\@x}`), not in that argument alone: `E-mail: \@mail, tel.\ \@phone\par` is one line of
+% the class's, and so is `\textbf{E-mail:} \texttt{\@altmail} \@phone\par`.
+% witness: synthetic (review revQA61D1, probes top and dup).
+% oracle:  pdflatex 0 errors: "Lecture Notes / A. Author / E-mail: a@b.org, tel. 555 / E-mail: alt@b.org 555 / Text.".
+% engines: QA61D1 r1: `<pubnote name="E-mail: ">a@b.org</pubnote> <pubnote name="tel. ">555</pubnote>` (the ","
+%          lost), and alt@b.org a pubnote, leaving `<p>555</p>`.
+% expect:  0 errors, 0 warnings; no pubnote; both lines in the body as printed.
+% status:  GREEN (QA61D1b)
+\begin{filecontents*}[overwrite]{qasixtyonel.cls}
+\ProvidesClass{qasixtyonel}\LoadClass{article}
+\newcommand\phone[1]{\gdef\@phone{#1}}
+\newcommand\mail[1]{\gdef\@mail{#1}}
+\newcommand\altmail[1]{\gdef\@altmail{#1}}
+\renewcommand\@maketitle{\begin{center}{\LARGE \@title\par}{\large \@author\par}\end{center}
+  E-mail: \@mail, tel.\ \@phone\par
+  \textbf{E-mail:} \texttt{\@altmail} \@phone\par}
+\end{filecontents*}
+\documentclass{qasixtyonel}
+\title{Lecture Notes}
+\author{A. Author}
+\phone{555}
+\mail{a@b.org}
+\altmail{alt@b.org}
+\begin{document}
+\maketitle
+Text.
+\end{document}

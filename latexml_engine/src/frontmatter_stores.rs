@@ -704,6 +704,8 @@ struct StoreLabel {
   reader:      String,
   /// The tokens the label takes up there (balanced; the store itself with them when the label is in the store's group).
   part:        Tokens,
+  /// Where `part` starts in the macro's body.
+  at:          usize,
   /// The label's text ([`LabelText`]).
   text:        Tokens,
   /// Is it in the store's own group, which is the argument of a control sequence (not a font command's)?
@@ -1019,6 +1021,7 @@ impl ClassReaders {
           return Some(StoreLabel {
             reader,
             part: Tokens::new(body[start..end].to_vec()),
+            at: start,
             text,
             in_argument,
           });
@@ -1216,21 +1219,24 @@ impl ClassReaders {
   /// \@email\par}` one line of the class's (review rev79a Q1). A value the line ends before is in another line:
   /// `\vbox{…\@jinfo\par\@author\par\@address\par}` (probe kb).
   fn store_lines(&self, store: &Token, carried: &dyn Fn(&Token) -> bool) -> StoreLines {
-    self.store_lines_among(store, carried, &[])
+    self.store_lines_among(store, carried, None)
   }
 
   /// [`ClassReaders::store_lines`], with `stores` values of a line whatever their names: the class's other off-table
-  /// stores (ij4uq.cls's `\dataallo` and `\dataallf` in one line, 2410.00116).
+  /// stores (ij4uq.cls's `\dataallo` and `\dataallf` in one line, 2410.00116). With them, a store's line is not cut
+  /// at the argument of a face or box that prints it ([`argument_of`]: `\texttt{\@x} \@y\par`), and one in no group
+  /// is read in the macro's body (`E-mail: \@x, tel.\ \@y\par`) — the moved store's rule
+  /// ([`decide_moved_offtable_stores`], review revQA61D1).
   fn store_lines_among(
     &self,
     store: &Token,
     carried: &dyn Fn(&Token) -> bool,
-    stores: &[Token],
+    stores: Option<&[Token]>,
   ) -> StoreLines {
     let other = |t: &Token| {
       t != store
         && t.get_catcode() == Catcode::CS
-        && (t.with_str(|s| s.starts_with("\\@")) || stores.contains(t))
+        && (t.with_str(|s| s.starts_with("\\@")) || stores.is_some_and(|stores| stores.contains(t)))
         && !carried(t)
     };
     let mut lines = StoreLines::default();
@@ -1261,9 +1267,20 @@ impl ClassReaders {
             if glued_to_class_text(body, k, open.last().copied()) {
               lines.glued = true;
             }
-            if let Some(&start) = open.last()
-              && let Some(end) = tokens_group_end(body, start)
-            {
+            let line_group = match stores {
+              None => open.last().copied(),
+              Some(_) => open
+                .iter()
+                .rev()
+                .copied()
+                .find(|&start| !argument_of(body, start).is_some_and(|(_, printed)| printed)),
+            };
+            let line = match line_group {
+              Some(start) => tokens_group_end(body, start).map(|end| (start, end)),
+              None if stores.is_some() => Some((0, body.len())),
+              None => None,
+            };
+            if let Some((start, end)) = line {
               let from = body[start..k]
                 .iter()
                 .rposition(ends_a_line)
@@ -3906,6 +3923,7 @@ fn labelled_api(name: &str, api: &str, store: &Token, readers: &ClassReaders) ->
     part,
     text,
     in_argument,
+    ..
   }) = label
   else {
     if named.is_some() && readers.read_by_the_title_page(store) {
@@ -4002,6 +4020,7 @@ fn note_store_handed(name: &str) {
     crate::latex_constructs::note_title_page_part(
       &lookup_string(&s!("lx_store_label_reader_{name}")),
       part,
+      0,
     );
   }
 }
@@ -4152,6 +4171,7 @@ fn survey_off_table_stores(cls: &str, readers: &mut Option<ClassReaders>) -> Res
     if let Some(StoreLabel {
       reader,
       part,
+      at,
       text: label,
       in_argument,
     }) = readers
@@ -4172,6 +4192,11 @@ fn survey_off_table_stores(cls: &str, readers: &mut Option<ClassReaders>) -> Res
       assign_value(
         &s!("lx_offtable_label_part_{name}"),
         Stored::Tokens(part.clone()),
+        Some(Scope::Global),
+      );
+      assign_value(
+        &s!("lx_offtable_label_at_{name}"),
+        Stored::Int(at as i64),
         Some(Scope::Global),
       );
       // (with the space the title page prints between the label and the store, a tie in the note's name, as
@@ -4200,7 +4225,7 @@ fn survey_off_table_stores(cls: &str, readers: &mut Option<ClassReaders>) -> Res
         let lines = r.store_lines_among(
           store,
           &|t: &Token| t.with_str(|cs| KERNEL_FIELDS.contains(&cs)),
-          &found_stores,
+          Some(&found_stores),
         );
         assign_value(
           &s!("lx_offtable_line_glued_{name}"),
@@ -6024,25 +6049,47 @@ fn decide_moved_offtable_stores(offtable: &[(String, Token, Tokens)], printed: &
     );
     if let Some(Stored::Tokens(part)) = lookup_value(&s!("lx_offtable_label_part_{name}")) {
       let reader = lookup_string(&s!("lx_offtable_label_reader_{name}"));
-      let part = part_to_the_line_end(&reader, part, store);
-      crate::latex_constructs::note_title_page_part(&reader, part);
+      let at = match lookup_value(&s!("lx_offtable_label_at_{name}")) {
+        Some(Stored::Int(at)) => usize::try_from(at).ok(),
+        _ => None,
+      };
+      let (part, nth) = part_to_the_line_end(&reader, part, at, store);
+      crate::latex_constructs::note_title_page_part(&reader, part, nth);
     }
   }
 }
 
 /// A moved store's label `part` in the macro `reader`, extended over the store (alone in a group, or a command's
 /// argument) and the stop the class prints after it where its line ends: smj.cls:211 `\textbf{E-mail:}
-/// \texttt{\@CorrEmail}.` (1509.00049), lms.cls:1148-1149 `\footnotetext{2000 {…} \@classno.}` (0712.0944).
-fn part_to_the_line_end(reader: &str, part: Tokens, store: &Token) -> Tokens {
+/// \texttt{\@CorrEmail}.` (1509.00049), lms.cls:1148-1149 `\footnotetext{2000 {…} \@classno.}` (0712.0944). `at`:
+/// where the label read it ([`ClassReaders::label_in`]), not another line with the same label (review revQA61D1); its
+/// first match when the macro has changed since. With the part, which of its matches in the macro it is (for
+/// `\lx@replay@records`).
+fn part_to_the_line_end(
+  reader: &str,
+  part: Tokens,
+  at: Option<usize>,
+  store: &Token,
+) -> (Tokens, usize) {
   let Some(body) = parameterless_body(&T_CS!(reader)) else {
-    return part;
+    return (part, 0);
   };
   let (body, label) = (body.unlist_ref(), part.unlist_ref());
   let Some(at) = (!label.is_empty())
-    .then(|| body.windows(label.len()).position(|w| w == label))
+    .then(|| {
+      at.filter(|&at| body.get(at..at + label.len()) == Some(label))
+        .or_else(|| body.windows(label.len()).position(|w| w == label))
+    })
     .flatten()
   else {
-    return part;
+    return (part, 0);
+  };
+  let nth = |part: &[Token]| {
+    body[..at]
+      .iter()
+      .enumerate()
+      .filter(|(i, _)| body[*i..].starts_with(part))
+      .count()
   };
   let (mut k, mut depth, mut seen) = (at + label.len(), 0usize, label.contains(store));
   while let Some(t) = body.get(k) {
@@ -6073,9 +6120,10 @@ fn part_to_the_line_end(reader: &str, part: Tokens, store: &Token) -> Tokens {
     || k == stop
     || next.is_some_and(|t| t.get_catcode() != Catcode::END && !ends_a_line(t))
   {
-    return part;
+    let nth = nth(label);
+    return (part, nth);
   }
-  Tokens::new(body[at..k].to_vec())
+  (Tokens::new(body[at..k].to_vec()), nth(&body[at..k]))
 }
 
 /// K11's part of [`hand_untypeset_stores`]: its off-table stores.

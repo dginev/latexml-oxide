@@ -14043,7 +14043,10 @@ bypassed under raw loading; the class's `\@maketitle` never runs under the locke
   `\@projectpage` (formerly #741); wiley-article and CSML (formerly #758).
 - *A labelled off-table store* (QA61, DG 2026-11-15; BM Q3.13): one the run prints right after the class's own label, in
   a line holding no other value and not glued to the class's text, is an `ltx:pubnote` named by the label even where the
-  deposit or replay typesets it; they read it as empty and take the label out (`decide_moved_offtable_stores`). The class
+  deposit or replay typesets it; they read it as empty and take the label out, from the line the label was read in
+  (`decide_moved_offtable_stores`). The line runs between line breaks in the innermost group around the store that is
+  no argument a face or box prints (`\texttt`, `\mbox`, `\href`'s text), or in the macro's body: `\texttt{\@x} \@y\par` and `E-mail: \@x, tel.\ \@y\par` stay
+  (`store_lines_among`; the other readers of `store_lines` keep the innermost group). The class
   prints its title and names bare, so an unlabelled store stays where the deposit typesets it (SelfArx `\PaperTitle`,
   2011.01685), as one glued to its text (fundam `FI-\@publyear`, 2006.07415) or read by its `\title`/`\author`/`\@author`.
 - *Page furniture* (FURN): a one-shot eso-pic overlay is the title page's picture (`eso_pic_sty.rs`; formerly #413);

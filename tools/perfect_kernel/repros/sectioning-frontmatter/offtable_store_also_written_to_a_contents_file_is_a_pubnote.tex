@@ -1,0 +1,31 @@
+% A labelled off-table store the title page prints alone in its line is moved to a pubnote though the class's
+% `\maketitle` also writes it to a contents file, beside another value written there: the written copy is in an
+% argument no face or box prints, whose line is not read past its group (`store_lines_among`). jetpl.cls:435
+% `PACS: \@PACS\\[2mm]` and :460
+% `\addtocontents{sod}{\string\def\string\pacs\articlename{\@PACS}}` (cond-mat0511168, 0904.0348, 1107.3411,
+% 1610.06954).
+% witness: cond-mat0511168, 0904.0348, 1107.3411, 1610.06954 (shape); synthetic.
+% oracle:  pdflatex 0 errors: "Lecture Notes / A. Author / PACS: 73.21.-b / Text.".
+% engines: QA61D1b before this row (a store's line read past any command's argument): the PACS line in the body.
+% expect:  0 errors, 0 warnings; `<pubnote name="PACS: ">73.21.-b</pubnote>`, no PACS line in the body.
+% status:  GREEN (QA61D1b)
+\begin{filecontents*}[overwrite]{qasixtyonej.cls}
+\ProvidesClass{qasixtyonej}\LoadClass{article}
+\def\@PACS{}
+\def\PACS#1{\gdef\@PACS{#1}}
+\def\articlename{x}
+\def\@sodtitle{Lecture Notes}
+\renewcommand\maketitle{\par\begingroup\@maketitle\endgroup
+  \addtocontents{sod}{\string\def\string\art\articlename{\@sodtitle}}%
+  \addtocontents{sod}{\string\def\string\pacs\articlename{\@PACS}}}
+\def\@maketitle{\vbox{\begin{center}{\Large\@title\par}\@author\par\end{center}
+  \small\noindent PACS: \@PACS\\[2mm]}}
+\end{filecontents*}
+\documentclass{qasixtyonej}
+\title{Lecture Notes}
+\author{A. Author}
+\PACS{73.21.-b}
+\begin{document}
+\maketitle
+Text.
+\end{document}

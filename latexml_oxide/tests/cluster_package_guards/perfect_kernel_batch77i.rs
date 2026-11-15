@@ -130,7 +130,9 @@ fn offtable_stores_read_by_class_author_are_the_creators() {
 /// leaves it out with its label and the stop ending its line, the value the title page printed kept (row 5: 1509.00049,
 /// 0712.0944, 2412.12514; `decide_moved_offtable_stores`); printed bare (a title under another name, SelfArx 2011.01685),
 /// in one line with another value or another store of the class's (2410.00116), or glued to the class's text (fundam,
-/// 2006.07415), it stays where the deposit typesets it, once (row 4). Each row the whole document.
+/// 2006.07415), it stays where the deposit typesets it, once (rows 4, 6: the line read around a command's argument and in
+/// the macro's body); of two lines printing one label, the moved store's own line goes (row 7); a copy the class
+/// writes to a contents file is in no printed line (row 8: jetpl, cond-mat0511168). Each row the whole document.
 #[test]
 fn offtable_store_typeset_by_the_title_page() {
   let author = r#"<creator role="author"> <personname>A. Author</personname> </creator>"#;
@@ -188,6 +190,36 @@ fn offtable_store_typeset_by_the_title_page() {
         r#"<title>Lecture Notes</title> {author} <pubnote name="E-mail:">a@b.org</pubnote> <pubnote name="2020 Mathematics Subject Classification ">05C10</pubnote> {text}"#
       ),
       &["a@b.org", "05C10"],
+    ),
+    // (review revQA61D1: the line read around the command whose argument holds the store, and in the macro's body for
+    // one in no group; the moved store's own line, of two printing the same label)
+    (
+      include_str!(
+        "../../../tools/perfect_kernel/repros/sectioning-frontmatter/offtable_store_in_one_line_with_another_value_stays_in_the_title_page.tex"
+      ),
+      format!(
+        r#"<title>Lecture Notes</title> {author} <para xml:id="p1"> <p xml:id="p1.1">E-mail: a@b.org, tel. 555</p> </para> <para xml:id="p2"> <p xml:id="p2.1"><text font="bold" xml:id="p2.1.1">E-mail:</text> <text font="typewriter" xml:id="p2.1.2">alt@b.org</text> 555</p> </para> <para xml:id="p3"> <p xml:id="p3.1">Text.</p> </para>"#
+      ),
+      &["a@b.org", "alt@b.org", "tel. 555"],
+    ),
+    (
+      include_str!(
+        "../../../tools/perfect_kernel/repros/sectioning-frontmatter/offtable_store_moved_takes_its_own_line_of_two_alike.tex"
+      ),
+      format!(
+        r#"<title>Lecture Notes</title> {author} <pubnote name="E-mail:">a@b.org</pubnote> <para xml:id="p1"> <p xml:id="p1.1"><text font="bold" xml:id="p1.1.1">E-mail:</text> <text font="typewriter" xml:id="p1.1.2">alt@b.org</text> 555</p> </para> <para xml:id="p2"> <p xml:id="p2.1">Text.</p> </para>"#
+      ),
+      &["a@b.org", "alt@b.org", "555"],
+    ),
+    // (a copy written to a contents file is in no printed line: jetpl.cls, cond-mat0511168)
+    (
+      include_str!(
+        "../../../tools/perfect_kernel/repros/sectioning-frontmatter/offtable_store_also_written_to_a_contents_file_is_a_pubnote.tex"
+      ),
+      format!(
+        r#"<title>Lecture Notes</title> {author} <pubnote name="PACS: ">73.21.-b</pubnote> {text}"#
+      ),
+      &["73.21.-b"],
     ),
   ] {
     let (xml, flat) = convert_clean(repro);
