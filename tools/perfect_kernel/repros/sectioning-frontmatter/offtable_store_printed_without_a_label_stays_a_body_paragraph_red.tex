@@ -1,0 +1,27 @@
+% RED (catalog, no guard): an off-table store the class's title page prints with no label of its own, typeset by the kept
+% `\@maketitle` deposit, stays a centred body paragraph after the frontmatter — every word kept, but not marked as the
+% class's title page. DG's D1 (QA61) moves only a store printed after the class's label (`decide_moved_offtable_stores`);
+% the study's D2 (always wrap the kept deposit as `<titlepage class="ltx_titlepage_continued">`, OD #903's cover wrap)
+% would mark this one (the QA61 study, report_QA61D: 58 of 2,929 raw-class papers of a 30k census sample typeset an
+% off-table store in the body, 22 of them with a label read).
+% witness: 1808.06649 (thesis committee stores), 1002.3235 (`\organization`), astro-ph0509330 (`\presenter`).
+% oracle:  pdflatex 0 errors: "Lecture Notes on Topology / MATH 410 / A. Author / Text.".
+% engines: rust QA61D1 = base: `<para><p align="center"><text fontsize="120%">MATH 410</text></p></para>` after
+%          `<creator>`.
+% expect:  0 errors, 0 warnings; the line marked as the title page's (D2), or a frontmatter item — awaiting DG's ruling.
+% status:  RED (QA61D1)
+% moves:   post-merge (QA61 D2/D3 stage 1).
+\begin{filecontents*}[overwrite]{qasixtyoneu.cls}
+\ProvidesClass{qasixtyoneu}\LoadClass{article}
+\newcommand\course[1]{\gdef\@course{#1}}
+\renewcommand\@maketitle{\begin{center}{\LARGE \@title \par}
+  {\large \@course \par}{\large \@author \par}\end{center}\par}
+\end{filecontents*}
+\documentclass{qasixtyoneu}
+\title{Lecture Notes on Topology}
+\author{A. Author}
+\course{MATH 410}
+\begin{document}
+\maketitle
+Text.
+\end{document}

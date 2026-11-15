@@ -94,7 +94,8 @@ fn maketitle_replay_skips_called_delimiters() {
 }
 
 /// wiley-article.cls:420-466 renews `\maketitle`, :576 `\appto`s to it: the class's own title page and the append
-/// both run, in order (1911.06213: "Ignoring redefinition of \maketitle" twice, the paper type lost).
+/// both run (1911.06213: "Ignoring redefinition of \maketitle" twice, the paper type lost); the append's labelled
+/// "Funded by" line a pubnote since QA61D1 (DG's D1: its store printed after the class's label, in a line of its own).
 #[test]
 fn maketitle_class_append_extends_class_body() {
   let (_log, xml) = convert_beside!(
@@ -104,7 +105,7 @@ fn maketitle_class_append_extends_class_body() {
   title_and_author_once(&xml);
   assert!(
     xml.contains(
-      r#"<para class="ltx_noindent" xml:id="p1"> <p xml:id="p1.1"><text font="bold" xml:id="p1.1.1">Research Article</text></p> </para> <para class="ltx_noindent" xml:id="p2"> <p xml:id="p2.1">Funded by the Example Foundation.</p> </para> <para xml:id="p3"> <p xml:id="p3.1">Body text.</p> </para>"#
+      r#"<pubnote name="Funded by ">the Example Foundation</pubnote> <para class="ltx_noindent" xml:id="p1"> <p xml:id="p1.1"><text font="bold" xml:id="p1.1.1">Research Article</text></p> </para> <para xml:id="p2"> <p xml:id="p2.1">Body text.</p> </para>"#
     ),
     "{xml}"
   );
