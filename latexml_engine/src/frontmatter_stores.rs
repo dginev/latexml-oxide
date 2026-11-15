@@ -8165,8 +8165,7 @@ LoadDefinitions!({
     // The body is the abstract's, for [`refused_environment_definition`]: the kernel's abstract is no environment
     // frame (`\@currenvir` stays the enclosing one).
     assign_value("lx_in_kernel_abstract", true, Some(Scope::Local));
-    let begun = lookup_bool("lx_abstract_begun");
-    if begun {
+    if lookup_bool("lx_abstract_begun") {
       assign_value("lx_abstract_begun", false, Some(Scope::Global));
       assign_value("lx@until@begun", "abstract", Some(Scope::Local));
     }
@@ -8220,12 +8219,6 @@ LoadDefinitions!({
         s!("\\{name}"),
         s!("The class's abstract defines \\{name} for its body: it sets the abstract's keywords")
       );
-    }
-    // `\begin{abstract}`'s `env/abstract/begin` (latex.ltx:15362), inside the abstract's group as LaTeX's is
-    if begun {
-      unread(Tokens::new(crate::latex_constructs::env_hook_tokens(
-        "abstract", "begin",
-      )));
     }
   });
   // A raw class's label-only `{keywords}` (`reroute_keywords_environments`): `\begin{keywords}` … `\end{keywords}`

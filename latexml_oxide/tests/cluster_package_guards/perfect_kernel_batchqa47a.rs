@@ -12,6 +12,8 @@
 //! `environment_begin_hook_reads_its_environment_red`). HOOKINIT: lthooks' document mode from the first
 //! `\begin{document}` on (RED catalog: `show_hook_needs_showstream_red`). QAB2: the file hooks at every `\input` and
 //! ahead of `\AtEndOfPackage`, `env/abstract/begin|end`, `selectfont` (RED catalog: `selectfont_hook_on_emph_red`).
+//! QAB2b: the abstract's begin hook ahead of its name, its end hook once, a family register's font value (RED catalog:
+//! `abstract_begin_hook_size_under_the_class_small_red`, `amsart_abstract_begin_hook_text_before_the_title_red`).
 use latexml::util::test::{
   RequirementTable, Requirements, assert_element, check_table, convert_with, current_test_name,
 };
@@ -576,7 +578,7 @@ const ROWS: &[Row] = &[
       ),
     ],
   },
-  // QAB2: `\selectfont` runs the `selectfont` hook (red: 2 `Error:undefined:\lastseries`, "(next)" lost).
+  // QAB2: `\selectfont` runs the `selectfont` hook (red: 1 `Error:undefined:\lastseries`, "(next)" lost).
   Row {
     name:     "selectfont_hook_runs",
     tex:      include_str!(
@@ -590,6 +592,52 @@ const ROWS: &[Row] = &[
       "xml:id=\"p1.1\"",
       "<p xml:id=\"p1.1\">A <text font=\"bold\" xml:id=\"p1.1.1\">B [bx] </text>C [m]\n<text font=\"bold\" \
        xml:id=\"p1.1.2\">D <text font=\"italic\" xml:id=\"p1.1.2.1\">(next)E </text>F</text></p>",
+    )],
+  },
+  // QAB2b: a constructor abstract (the titlepage's) runs `env/abstract/end` once, from its constructor (red: "[en][en]").
+  Row {
+    name:     "abstract_end_hook_once_in_a_constructor_abstract",
+    tex:      include_str!(
+      "../../../tools/perfect_kernel/repros/macro-state/abstract_end_hook_once_in_a_constructor_abstract.tex"
+    ),
+    counts:   (0, 0),
+    messages: &[],
+    absent:   &[],
+    elements: &[(
+      "abstract",
+      "xml:id=\"abstract1\"",
+      "<abstract inlist=\"toc\" xml:id=\"abstract1\"><p xml:id=\"abstract1.1\">Abstract text.\n[en]</p></abstract>",
+    )],
+  },
+  // QAB2b: `env/abstract/begin` runs before the abstract's name is read (red: name="Abstract").
+  Row {
+    name:     "abstract_begin_hook_runs_before_the_name",
+    tex:      include_str!(
+      "../../../tools/perfect_kernel/repros/macro-state/abstract_begin_hook_runs_before_the_name.tex"
+    ),
+    counts:   (0, 0),
+    messages: &[],
+    absent:   &[],
+    elements: &[(
+      "abstract",
+      "xml:id=\"abstract1\"",
+      "<abstract inlist=\"toc\" name=\"Summary\" xml:id=\"abstract1\"><p xml:id=\"abstract1.1\">Abstract text.</p></abstract>",
+    )],
+  },
+  // QAB2b: a family register's value is a family's font, tex.web §577 (red: "A1 [fontname not available] B2 …").
+  Row {
+    name:     "font_family_register_takes_a_family_font",
+    tex:      include_str!(
+      "../../../tools/perfect_kernel/repros/fonts-nfss/font_family_register_takes_a_family_font.tex"
+    ),
+    counts:   (0, 0),
+    messages: &[],
+    absent:   &[],
+    elements: &[(
+      "p",
+      "xml:id=\"p1.1\"",
+      "<p xml:id=\"p1.1\"><Math mode=\"inline\" tex=\"0\" text=\"0\" xml:id=\"p1.m1\"><XMath xml:id=\"p1.m1.1\"><XMTok \
+       meaning=\"0\" role=\"NUMBER\">0</XMTok></XMath></Math> A[cmmi10] B[cmsy7] C[cmmi10] DE</p>",
     )],
   },
 ];

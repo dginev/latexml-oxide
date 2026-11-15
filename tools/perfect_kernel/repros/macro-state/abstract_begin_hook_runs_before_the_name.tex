@@ -1,0 +1,16 @@
+% mechanism: `\begin{abstract}` runs `env/abstract/begin` in its group BEFORE `\abstract` (latex.ltx:15354-15362), so
+%   what the hook sets is what the abstract reads: ours digests it at the head of `\lx@add@frontmatter@until`, ahead
+%   of the name read and of the class's replayed begin code (`\lx@abstract@class@setters`).
+% witness: synthetic (revQAB2 order finding)
+% status:  GREEN (QAB2b; RED on QAB2 c01a9dc55ad: name="Abstract", the hook ran after the name was read)
+% oracle:  pdflatex 0 `!`; "Summary Abstract text. After."
+% engines: rust QAB2: the red line; Perl 0.8.8: no hooks (name="Abstract"); QAB2b: name="Summary".
+% expect:  0 errors, 0 warnings; <abstract name="Summary"><p>Abstract text.</p></abstract>
+\documentclass{article}
+\AddToHook{env/abstract/begin}{\renewcommand\abstractname{Summary}}
+\begin{document}
+\begin{abstract}
+Abstract text.
+\end{abstract}
+After.
+\end{document}

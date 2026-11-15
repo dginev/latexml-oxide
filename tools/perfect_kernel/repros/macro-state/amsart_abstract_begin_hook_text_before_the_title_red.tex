@@ -1,0 +1,21 @@
+% mechanism: amsart's `\abstract` boxes the abstract for `\maketitle` (amsart.cls `\abstractbox`); text an
+%   `env/abstract/begin` hook typesets runs before it, in the page, so an abstract before `\maketitle` prints it ahead
+%   of the title. Ours puts it at the head of the abstract's body (`\lx@add@frontmatter@until`).
+% witness: synthetic (revQAB2 `p4/am.tex`)
+% status:  RED (QAB2b: <abstract name="Abstract."><p>[bg]Abstract text.\n[en]</p></abstract>)
+% oracle:  pdflatex 0 `!`; "[bg] T A. AUTHOR Abstract. Abstract text. [en] Body."
+% engines: rust QAB2b: the red line; Perl 0.8.8: no hooks.
+% expect:  0 errors, 0 warnings; "[bg]" before the title, the abstract "Abstract text.\n[en]"
+% moves:   post-merge
+\documentclass{amsart}
+\AddToHook{env/abstract/begin}{[bg]}
+\AddToHook{env/abstract/end}{[en]}
+\begin{document}
+\title{T}
+\author{A. Author}
+\begin{abstract}
+Abstract text.
+\end{abstract}
+\maketitle
+Body.
+\end{document}

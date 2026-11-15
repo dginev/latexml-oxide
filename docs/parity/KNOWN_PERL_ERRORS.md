@@ -19830,3 +19830,21 @@ whole-document `//*[pred]` queries of the core's finalization (`cleanup_unrefere
 `unrecord_node_ids`, which `rebuild_idstore_from_dom` runs from the root) are tree walks too (`Document::find_elements`,
 `xml::descendant_or_self_elements`). Guard `perfect_kernel_batchi802::collapsed_dual_references_take_the_branch_id`.
 An upstream offer.
+
+## 1271. A family register's value is read as one token: `\textfont9=\textfont1` typesets the "1"
+
+tex.web §577 `scan_font_ident` reads the font of a `\textfont`/`\scriptfont`/`\scriptscriptfont` assignment as a font
+identifier, and its `def_family` branch reads a family register's 4-bit number and gives that family's font. Perl's
+registers (TeX_Math.pool.ltxml:882-900) are `Token`-valued, read by `readValue('Token')` (Gullet.pm:770-775: one
+unexpanded token), so the value is `\textfont` and the family number is left to print. Minimal trigger (pdflatex:
+"ABCD"; Perl: "A1 B1 CD"); 2511.21986's `\AtBeginEnvironment{abstract}` prints "1 1 1" once the hook runs. Rust's
+`read_value(Token)` reads a token register's own arguments and gives its value (`gullet.rs`). Guard
+`perfect_kernel_batchqa47a::batchqa47a_command_hook_rows` row `font_family_register_takes_a_family_font`. An upstream
+offer.
+
+```latex
+\documentclass{article}
+\begin{document}
+A\textfont9=\textfont1 B\scriptfont9=\scriptfont1 C\setbox0=\hbox{$0$}D
+\end{document}
+```
