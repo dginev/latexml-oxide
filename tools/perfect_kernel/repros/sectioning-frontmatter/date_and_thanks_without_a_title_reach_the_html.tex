@@ -1,0 +1,18 @@
+% A pubnote and a date without a title reach the HTML: amsart's \title{} builds no ltx:title, so the
+% \thanks pubnote and the \date, which the structure XSLT rendered only from the title template, were lost
+% from the HTML (SHARED, Perl's LaTeXML-structure-xhtml.xsl alike).
+% witness: 1504.03712 (amsart \title{}: a 118-word \thanks and the date). Guard:
+%   perfect_kernel_batch61::untitled_head_metadata_reaches_the_html.
+% expect:  0 errors, 0 warnings; the note once, in <span class="ltx_pubnotes ltx_pubnotes_meta">, then
+%          <div class="ltx_dates">Date: August 31, 2017</div>.
+% oracle:  pdflatex 0 errors: "Body text. / Date: August 31, 2017. / I thank the Editor and three referees."
+%          perl: the date and pubnote in the XML, neither in the HTML.
+% engines: rust before PNOTEA: neither in the HTML; PNOTEA: the note and the date in the head block.
+\documentclass{amsart}
+\title{}
+\begin{document}
+\date{August 31, 2017}
+\thanks{I thank the Editor and three referees.}
+\maketitle
+Body text.
+\end{document}

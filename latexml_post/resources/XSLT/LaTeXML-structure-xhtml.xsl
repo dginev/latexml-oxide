@@ -690,15 +690,42 @@
 
   <xsl:template match="ltx:creator"/>
 
-  <!-- Authors without a title (exam-n's `\author`, which its class prints as a comment; brandeis-problemset,
-       harnon-cv; OXIDIZED_DESIGN_DIVERGENCES #434): no title template runs to render them, so the first author renders
-       the author block in place. -->
+  <!-- A unit without a title (not a sidebar, which has its own): no maketitle runs, so the first of its authors,
+       pubnotes, subtitles and dates renders them all in maketitle's order, every pubnote as metadata. Witnesses exam-n's
+       `\author`, brandeis-problemset, harnon-cv, 2006.12592, 1504.03712, 2501.07938 (OXIDIZED_DESIGN_DIVERGENCES #434).
+       A pattern per element name: a `*[…]` pattern, tested on every element, ran 2501.06616 past the post timeout. -->
   <xsl:template match="ltx:creator[@role='author'][not(../ltx:title)][not(parent::ltx:sidebar)]
-                       [not(preceding-sibling::ltx:creator[@role='author'])]">
+                         [not(preceding-sibling::ltx:creator[@role='author'] | preceding-sibling::ltx:pubnote
+                              | preceding-sibling::ltx:subtitle | preceding-sibling::ltx:date)]
+                       | ltx:pubnote[not(../ltx:title)][not(parent::ltx:sidebar)]
+                         [not(preceding-sibling::ltx:creator[@role='author'] | preceding-sibling::ltx:pubnote
+                              | preceding-sibling::ltx:subtitle | preceding-sibling::ltx:date)]
+                       | ltx:subtitle[not(../ltx:title)][not(parent::ltx:sidebar)]
+                         [not(preceding-sibling::ltx:creator[@role='author'] | preceding-sibling::ltx:pubnote
+                              | preceding-sibling::ltx:subtitle | preceding-sibling::ltx:date)]
+                       | ltx:date[not(../ltx:title)][not(parent::ltx:sidebar)]
+                         [not(preceding-sibling::ltx:creator[@role='author'] | preceding-sibling::ltx:pubnote
+                              | preceding-sibling::ltx:subtitle | preceding-sibling::ltx:date)]">
     <xsl:param name="context"/>
+    <xsl:if test="../ltx:pubnote">
+      <xsl:text>&#x0A;</xsl:text>
+      <xsl:call-template name="pubnotes">
+        <xsl:with-param name="context" select="$context"/>
+        <xsl:with-param name="extra_class" select="'ltx_pubnotes_meta'"/>
+      </xsl:call-template>
+    </xsl:if>
+    <xsl:apply-templates select="../ltx:subtitle" mode="intitle">
+      <xsl:with-param name="context" select="$context"/>
+    </xsl:apply-templates>
     <xsl:call-template name="authors">
       <xsl:with-param name="context" select="$context"/>
     </xsl:call-template>
+    <xsl:if test="not($maketitle_has_up_nav)">
+      <xsl:call-template name="dates">
+        <xsl:with-param name="context" select="$context"/>
+        <xsl:with-param name="dates" select="../ltx:date"/>
+      </xsl:call-template>
+    </xsl:if>
   </xsl:template>
 
   <!-- latexml-oxide (OXIDIZED_DESIGN #479): an author with metadata (ltx:rdf children, e.g. an AASTeX 7 address the
@@ -939,7 +966,7 @@
   <!-- If we want to deduce style & children, we could set this up as a parameter option -->
   <xsl:template match="*|/" mode="auto-toc"/>
 
-  <!-- only place the date & subtitle within the title treatment -->
+  <!-- only place the date & subtitle within the title treatment (or a titleless unit's head block) -->
   <xsl:preserve-space elements="ltx:date"/>
   <xsl:template match="ltx:date"/>
 

@@ -154,6 +154,66 @@ fn authors_without_a_title_reach_the_html() {
   );
 }
 
+/// PNOTEA: a unit without a title renders its pubnotes, subtitle, authors and dates in maketitle's order from the first
+/// of them (OXIDIZED_DESIGN_DIVERGENCES #434); they rendered only from the title template, so 2006.12592's affiliation
+/// and 1504.03712's `\thanks` and date were lost (SHARED). Rows: a raw `\@maketitle`'s `\thanks`, amsart's `\title{}`
+/// with `\date` and `\thanks`, and the same document titled, whose head maketitle renders as before. Each row is the
+/// HTML between `<article …>` and the first paragraph. Repros sectioning-frontmatter/{pubnote_without_a_title_reaches_the_html,
+/// date_and_thanks_without_a_title_reach_the_html}.
+#[test]
+fn untitled_head_metadata_reaches_the_html() {
+  let amsart = include_str!(
+    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/date_and_thanks_without_a_title_reach_the_html.tex"
+  );
+  let thanks =
+    "<span class=\"ltx_pubnote ltx_role_thanks\">I thank the Editor and three referees.</span>";
+  let rows = [
+    (
+      include_str!(
+        "../../../tools/perfect_kernel/repros/sectioning-frontmatter/pubnote_without_a_title_reaches_the_html.tex"
+      )
+      .to_string(),
+      "<span class=\"ltx_pubnotes ltx_pubnotes_meta\"><span class=\"ltx_pubnotes_content\"><span \
+       class=\"ltx_pubnote\">Department of ECE, University of Miami</span></span></span>\n"
+        .to_string(),
+    ),
+    (
+      amsart.to_string(),
+      format!(
+        "<span class=\"ltx_pubnotes ltx_pubnotes_meta\"><span class=\"ltx_pubnotes_content\">{thanks}</span></span>\n<div \
+         class=\"ltx_dates\">Date: August 31, 2017</div>\n"
+      ),
+    ),
+    (
+      amsart.replace("\\title{}", "\\title{A Title}"),
+      format!(
+        "<h1 class=\"ltx_title ltx_title_document\">A Title<span class=\"ltx_pubnotes\"><span \
+         class=\"ltx_pubnotes_content\">{thanks}</span></span></h1>\n<div class=\"ltx_dates\">Date: August 31, \
+         2017</div>\n\n"
+      ),
+    ),
+  ];
+  for (tex, head) in rows {
+    let (log, xml) = convert_with(&tex, Some(RAW));
+    assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+    let html = super::svg_nested_picture::post_html(&xml);
+    let start = html.find("<article").expect("an article") + 1;
+    let start = start + html[start..].find(">\n").expect("the article's start tag") + 2;
+    let end = start
+      + html[start..]
+        .find("<div id=\"p1\"")
+        .expect("the first paragraph");
+    assert_eq!(&html[start..end], head, "{html}");
+    // The note once: its own span, not only the `ltx_pubnotes` wrappers.
+    let notes = ["<span class=\"ltx_pubnote\"", "<span class=\"ltx_pubnote "];
+    assert_eq!(
+      notes.map(|n| html.matches(n).count()).iter().sum::<usize>(),
+      1,
+      "{html}"
+    );
+  }
+}
+
 /// 61k: a brief.cls letter's sender is its frontmatter (user ruling 2026-10-01, as g-brief's, DIVERGENCES #412): the
 /// class prints `\maakbriefhoofd`'s name and address and the `\voetitem` foot only in `\ps@firstpage` (brief.cls:285-294,
 /// :437-468), which LaTeXML never typesets (SHARED). A foot label's line break is a space in the contact's name. Repro

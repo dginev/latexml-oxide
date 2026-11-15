@@ -1,0 +1,19 @@
+% A pubnote without a title reaches the HTML: a raw \@maketitle prints the title as text, so the document has
+% no ltx:title; its \thanks is a document pubnote, which the structure XSLT rendered only from the title
+% template (SHARED, Perl's LaTeXML-structure-xhtml.xsl alike): the affiliation was lost from the HTML.
+% witness: 2006.12592 (Epigenetics.cls); same root els-mrw's \articletag (2501.07938, 2501.10000, 2503.10397,
+%   2604.15546), 1112.0709 (IAU-TrA). Guard:
+%   perfect_kernel_batch61::untitled_head_metadata_reaches_the_html.
+% expect:  0 errors, 0 warnings; the note once, in <span class="ltx_pubnotes ltx_pubnotes_meta">.
+% oracle:  pdflatex 0 errors: "An Efficient Algorithm / Xin Zhou* / Body text. / * Department of ECE, University of Miami".
+%          perl: the pubnote in the XML, none in the HTML.
+% engines: rust before PNOTEA: no pubnote in the HTML; PNOTEA: the note in the head block.
+\documentclass{article}
+\makeatletter
+\renewcommand{\@maketitle}{{\Large An Efficient Algorithm\par}%
+  \vskip1em{Xin Zhou\thanks{Department of ECE, University of Miami}}\par\vskip1em}
+\makeatother
+\begin{document}
+\maketitle
+Body text.
+\end{document}
