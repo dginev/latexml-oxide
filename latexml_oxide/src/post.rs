@@ -1171,25 +1171,27 @@ fn run_post_processing_inner(
       // re-spill each under the original path only for the first and append
       // the rest as additional spills is NOT needed here: MakeIndex and
       // MakeBibliography fill placeholders in place and return the same page.
-      for d in processed.into_iter().take(1) {
-        let xml = d.to_xml_string();
-        drop(d);
-        if resident {
-          // A changed page is re-parsed, in memory: the processors' edits reach
-          // pass B in the reparse's normal form (merged text nodes, rescoped
-          // namespaces), as from disk.
-          let reparsed = PostDocument::new_from_string(
-            &xml,
-            PostDocument::file_options(&path_str, opts.clone()),
-          )
-          .map_err(|e| {
-            post_error("post", &format!("cannot re-read a staged page: {e}"));
-          })?;
-          page_meta.resident = Some(reparsed);
-        } else if let Err(e) = std::fs::write(path, xml) {
-          post_error("post", &format!("cannot re-stage a page to disk: {e}"));
-          return Err(());
-        }
+      // (Both return `vec![doc]` today; an empty result would leave a resident
+      // page with nothing to render, so it is an error, never a silent skip.)
+      let Some(d) = processed.into_iter().next() else {
+        post_error(label, &format!("{label} returned no page"));
+        return Err(());
+      };
+      let xml = d.to_xml_string();
+      drop(d);
+      if resident {
+        // A changed page is re-parsed, in memory: the processors' edits reach
+        // pass B in the reparse's normal form (merged text nodes, rescoped
+        // namespaces), as from disk.
+        let reparsed =
+          PostDocument::new_from_string(&xml, PostDocument::file_options(&path_str, opts.clone()))
+            .map_err(|e| {
+              post_error("post", &format!("cannot re-read a staged page: {e}"));
+            })?;
+        page_meta.resident = Some(reparsed);
+      } else if let Err(e) = std::fs::write(path, xml) {
+        post_error("post", &format!("cannot re-stage a page to disk: {e}"));
+        return Err(());
       }
     }
     Ok(())
@@ -1615,7 +1617,81 @@ fn as_reparsed(
   let xml = doc.into_document();
   xml.forget_unshared_nodes();
   let path_str = path.to_string_lossy();
-  PostDocument::new(xml, PostDocument::file_options(&path_str, opts.clone()))
+  let page = PostDocument::new(xml, PostDocument::file_options(&path_str, opts.clone()));
+  #[cfg(debug_assertions)]
+  assert_matches_reparse(&page, &path_str, opts);
+  page
+}
+
+/// Test-profile check that a resident page is what its disk spill would reparse to: Scan sets the root's
+/// `xml:id` with a raw `set_attribute` (scan.rs), so a page that skipped the refresh keeps a stale id cache
+/// and `source`. Every post fixture runs it; release builds pay nothing.
+#[cfg(debug_assertions)]
+fn assert_matches_reparse(page: &PostDocument, path: &str, opts: &PostDocumentOptions) {
+  let reparsed = PostDocument::new_from_string(
+    &page.to_xml_string(),
+    PostDocument::file_options(path, opts.clone()),
+  )
+  .expect("a resident page reparses");
+  let root_id_resolves = |d: &PostDocument| {
+    let root = d.get_document().get_root_element()?;
+    let id = latexml_post::document::get_xml_id(&root)?;
+    Some(
+      d.find_node_by_id(&id)
+        .map(|n| n.node_ptr() == root.node_ptr()),
+    )
+  };
+  let ns_decls = |d: &PostDocument| {
+    let root = d.get_document().get_root_element();
+    let decls = root
+      .map(|r| r.get_namespace_declarations())
+      .unwrap_or_default();
+    decls
+      .iter()
+      .map(|ns| (ns.get_prefix(), ns.get_href()))
+      .collect::<Vec<_>>()
+  };
+  assert_eq!(
+    page.to_xml_string(),
+    reparsed.to_xml_string(),
+    "resident page: XML"
+  );
+  assert_eq!(
+    root_id_resolves(page),
+    root_id_resolves(&reparsed),
+    "resident page: root xml:id"
+  );
+  assert_eq!(
+    page.get_source(),
+    reparsed.get_source(),
+    "resident page: source"
+  );
+  assert_eq!(
+    page.source_directory, reparsed.source_directory,
+    "resident page: source_directory"
+  );
+  assert_eq!(
+    page.processing_instructions(),
+    reparsed.processing_instructions(),
+    "resident page: PIs"
+  );
+  assert_eq!(
+    page.searchpaths, reparsed.searchpaths,
+    "resident page: searchpaths"
+  );
+  assert_eq!(
+    ns_decls(page),
+    ns_decls(&reparsed),
+    "resident page: namespace declarations"
+  );
+  assert_eq!(
+    page.namespaces, reparsed.namespaces,
+    "resident page: namespaces"
+  );
+  assert_eq!(
+    page.namespace_uris, reparsed.namespace_uris,
+    "resident page: namespace_uris"
+  );
 }
 
 /// Apply HTML5 cleanup (XML prolog strip, void-element fixes) to one rendered
