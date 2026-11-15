@@ -1,0 +1,20 @@
+% A section set in a varwidth carries varwidth's own `width:max-content;max-width:<w>` and the box's natural width as
+% `--ltx-box-width`; the property must come first, so the `;width:` after it turns LaTeXML.css's rule off and the
+% heading sets at max-content (OD #1045). Framed, the `inline-sectional-block` likewise.
+% witness: synthetic (review revQAB57 B1, probe p24/vw.tex).
+% status:  GREEN (QAB57c)
+% oracle:  pdflatex 0 errors: "1 In varwidth" on one line, the box as wide as its heading.
+% Perl:    `<sectional-block class="ltx_minipage">`, varwidth's style, no width.
+% ours:    QAB57b `cssstyle="width:max-content;max-width:227.6pt;--ltx-box-width:63.4pt"`: the `!important` 63.4pt wins
+%          (Chrome: the section 85 px, its h2 wraps; 131 px before).
+% expect:  0 errors, 0 warnings; `cssstyle="--ltx-box-width:63.4pt;width:max-content;max-width:227.6pt"`.
+\documentclass{article}
+\usepackage{varwidth}
+\begin{document}
+\begin{varwidth}{8cm}
+\section{In varwidth}
+Short.
+\end{varwidth}
+
+\fbox{\begin{varwidth}{8cm}\subsection*{Framed vw} Short.\end{varwidth}}
+\end{document}

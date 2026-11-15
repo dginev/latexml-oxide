@@ -1760,6 +1760,7 @@ fn tabularray_undefined_theme() {
 /// invalid `inline-block > logical-block` (TeX_Box.pool.ltxml:502-513; divergence #385); a minipage of
 /// text or of demotable blocks keeps its shape. Repro
 /// boxes-groups/minipage_blocks_in_a_scaled_box_are_inline.
+/// (QAB57: the unit carries the box's width as `--ltx-box-width`, OD #1045 — pdflatex sets it at the box's width.)
 #[test]
 fn minipage_blocks_in_a_scaled_box_are_inline() {
   let tex = include_str!(
@@ -1779,7 +1780,7 @@ fn minipage_blocks_in_a_scaled_box_are_inline() {
     (
       "para",
       "p3",
-      r##"<para xml:id="p3"><p>C: <inline-block angle="90" depth="0.0pt" height="85.4pt" innerdepth="1.9pt" innerheight="6.9pt" innerwidth="85.4pt" width="8.9pt" xtranslate="-38.2pt" ytranslate="-38.2pt"><inline-sectional-block class="ltx_minipage"><section xml:id="Sx1"><title>Rotated section</title><para xml:id="Sx1.p1"><p>Body.</p></para></section></inline-sectional-block></inline-block></p></para>"##,
+      r##"<para xml:id="p3"><p>C: <inline-block angle="90" depth="0.0pt" height="85.4pt" innerdepth="1.9pt" innerheight="6.9pt" innerwidth="85.4pt" width="8.9pt" xtranslate="-38.2pt" ytranslate="-38.2pt"><inline-sectional-block class="ltx_minipage" cssstyle="--ltx-box-width:85.4pt"><section xml:id="Sx1"><title>Rotated section</title><para xml:id="Sx1.p1"><p>Body.</p></para></section></inline-sectional-block></inline-block></p></para>"##,
     ),
     (
       "para",

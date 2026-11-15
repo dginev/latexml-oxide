@@ -96,6 +96,9 @@ fn varwidth_takes_its_widest_line() {
 /// `width:max-content;max-width:<given>`. Each row a reader of that width: a TikZ node's foreignObject (its frame and
 /// box 4.31em, was the given 17.07em, revVARW `tz.tex`), cells under a `\resizebox` scaling them 8.2 (each cell was
 /// 345pt, off-screen, revVARW `rs1.tex`), and 2507.12476's Table 1 shape (cells in a float's resized tabular).
+/// The given width is `--ltx-box-width`, which the style's own `width:max-content` outranks (OD #1045, QAB57b); the
+/// resized box's height and depth are `--ltx-box-height`/`--ltx-box-depth` (was `height:<h+d>;vertical-align:<-d>`,
+/// QAB57d; the same boxes in Chrome and Firefox).
 #[test]
 fn varwidth_html_follows_its_content() {
   let html = |repro: &str| {
@@ -115,7 +118,7 @@ fn varwidth_html_follows_its_content() {
     &tz,
     "foreignObject",
     &[r#"width="59.64""#],
-    r#"<foreignObject style="--ltx-fo-width:4.31em;--ltx-fo-height:0.69em;--ltx-fo-depth:0em;font-size:10pt;" height="9.61" overflow="visible" transform="matrix(1 0 0 -1 0 9.61)" width="59.64"><span class="ltx_foreignobject_container"><span class="ltx_foreignobject_content"><span id="p1.pic1.1" class="ltx_inline-block ltx_minipage ltx_align_middle" style="width:4.31em;width:max-content;max-width:170.7pt;"><span id="p1.pic1.1.1" class="ltx_p ltx_align_center">short text</span></span></span></span></foreignObject>"#,
+    r#"<foreignObject style="--ltx-fo-width:4.31em;--ltx-fo-height:0.69em;--ltx-fo-depth:0em;font-size:10pt;" height="9.61" overflow="visible" transform="matrix(1 0 0 -1 0 9.61)" width="59.64"><span class="ltx_foreignobject_container"><span class="ltx_foreignobject_content"><span id="p1.pic1.1" class="ltx_inline-block ltx_minipage ltx_align_middle" style="--ltx-box-width:4.31em;width:max-content;max-width:170.7pt;"><span id="p1.pic1.1.1" class="ltx_p ltx_align_center">short text</span></span></span></span></foreignObject>"#,
   );
 
   let rs = html(include_str!(
@@ -129,7 +132,7 @@ fn varwidth_html_follows_its_content() {
     &rs,
     "div",
     &[r#"id="p2.1""#],
-    r#"<div id="p2.1" class="ltx_inline-block ltx_transformed_outer" style="width:345.0pt;height:155.4pt;vertical-align:-57.2pt;"><span class="ltx_transformed_inner" style="transform:translate(151.5pt,-68.2pt) scale(8.2034253503793,8.2034253503793) ;"><table id="p2.1.1" class="ltx_tabular ltx_align_middle"><tbody class="ltx_tbody"><tr id="p2.1.1.1" class="ltx_tr"><td id="p2.1.1.1.1" class="ltx_td ltx_align_center"><span id="p2.1.1.1.1.1" class="ltx_inline-block ltx_minipage ltx_align_middle" style="width:10.6pt;width:max-content;max-width:345.0pt;"><span id="p2.1.1.1.1.1.1" class="ltx_p">ab</span><span id="p2.1.1.1.1.1.2" class="ltx_p">cd</span></span></td><td id="p2.1.1.1.2" class="ltx_td ltx_align_center"><span id="p2.1.1.1.2.1" class="ltx_inline-block ltx_minipage ltx_align_middle" style="width:7.5pt;width:max-content;max-width:345.0pt;"><span id="p2.1.1.1.2.1.1" class="ltx_p">ef</span></span></td></tr></tbody></table></span></div>"#,
+    r#"<div id="p2.1" class="ltx_inline-block ltx_transformed_outer" style="--ltx-box-width:345.0pt;--ltx-box-height:98.2pt;--ltx-box-depth:57.2pt;"><span class="ltx_transformed_inner" style="transform:translate(151.5pt,-68.2pt) scale(8.2034253503793,8.2034253503793) ;"><table id="p2.1.1" class="ltx_tabular ltx_align_middle"><tbody class="ltx_tbody"><tr id="p2.1.1.1" class="ltx_tr"><td id="p2.1.1.1.1" class="ltx_td ltx_align_center"><span id="p2.1.1.1.1.1" class="ltx_inline-block ltx_minipage ltx_align_middle" style="--ltx-box-width:10.6pt;width:max-content;max-width:345.0pt;"><span id="p2.1.1.1.1.1.1" class="ltx_p">ab</span><span id="p2.1.1.1.1.1.2" class="ltx_p">cd</span></span></td><td id="p2.1.1.1.2" class="ltx_td ltx_align_center"><span id="p2.1.1.1.2.1" class="ltx_inline-block ltx_minipage ltx_align_middle" style="--ltx-box-width:7.5pt;width:max-content;max-width:345.0pt;"><span id="p2.1.1.1.2.1.1" class="ltx_p">ef</span></span></td></tr></tbody></table></span></div>"#,
   );
 
   let t1 = html(include_str!(
@@ -141,7 +144,7 @@ fn varwidth_html_follows_its_content() {
     "{t1}"
   );
   for (cell, width) in [(1, "64.5pt"), (2, "40.5pt"), (3, "53.1pt"), (4, "187.4pt")] {
-    let style = format!(r#"style="width:{width};width:max-content;max-width:345.0pt;""#);
+    let style = format!(r#"style="--ltx-box-width:{width};width:max-content;max-width:345.0pt;""#);
     assert!(
       t1.contains(&format!(
         r#"<span id="S0.T1.1.1.2.{cell}.1" class="ltx_inline-block ltx_minipage ltx_align_top" {style}>"#

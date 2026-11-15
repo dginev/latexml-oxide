@@ -11482,6 +11482,7 @@ fn a_parbox_holding_a_bibliography_opens_no_paragraph() {
 /// 57d's review: the parbox's paragraph is decided after the sectioning float-out
 /// (OXIDIZED_DESIGN #250), so a `\section*` in a `\parbox` between paragraphs is still a real
 /// section, not a section inside a `<p>`.
+/// (QAB57: the unit carries the box's width as `--ltx-box-width`, OD #1045 — pdflatex sets it at the box's width.)
 #[test]
 fn a_parbox_holding_a_section_floats_it_out() {
   let (stderr, xml) = convert_with(
@@ -11496,7 +11497,7 @@ fn a_parbox_holding_a_section_floats_it_out() {
     &xml,
     "section",
     &[r#"xml:id="Sx1""#],
-    r#"<section class="ltx_parbox" xml:id="Sx1"><title>Skills</title><para xml:id="Sx1.p1"><p>text</p></para><para xml:id="Sx1.p2"><p>After.</p></para></section>"#,
+    r#"<section class="ltx_parbox" cssstyle="--ltx-box-width:345.0pt" xml:id="Sx1"><title>Skills</title><para xml:id="Sx1.p1"><p>text</p></para><para xml:id="Sx1.p2"><p>After.</p></para></section>"#,
   );
 }
 

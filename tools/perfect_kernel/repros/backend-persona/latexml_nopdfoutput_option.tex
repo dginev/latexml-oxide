@@ -1,0 +1,17 @@
+% latexml.sty's `nopdfoutput` option overrides the output mode LaTeXML guesses from the source (`\pdfoutput`, OD #285;
+% BM Q4.2): first in the preamble, the drivers loaded after it see DVI output (graphicx's `dvips.def`, `\ifpdf` false).
+% Given after graphicx (the second document below, in the guard), graphicx has already chosen `pdftex.def`, as TeX's
+% load order decides. `pdfoutput` is its opposite; `--preload=[nopdfoutput]ar5iv.sty` the preload form.
+% witness: synthetic (Bruce Q&A Q4.2).
+% status:  GREEN (QAB57)
+% oracle:  latex (DVI mode) 0 errors: "Mode: DVI, 0, dvips.def."; pdflatex: "Mode: PDF, 1, pdftex.def." (TeX's
+%          latexml.sty warns of an unknown option; the prepared qa64 patch declares it a no-op there).
+% Perl:    no such option (a Warning for an unknown option; `\pdfoutput` 0 always).
+% expect:  0 errors, 0 warnings; "Mode: DVI, 0, dvips.def." (no preload).
+\documentclass{article}
+\usepackage[nopdfoutput]{latexml}
+\usepackage{graphicx}
+\usepackage{ifpdf}
+\begin{document}
+\makeatletter Mode: \ifpdf PDF\else DVI\fi, \the\pdfoutput, \Gin@driver.\makeatother
+\end{document}

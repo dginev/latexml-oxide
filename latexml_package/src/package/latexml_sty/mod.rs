@@ -36,6 +36,16 @@ LoadDefinitions!({
   DeclareOption!("nocomments", {
     AssignValue!("INCLUDE_COMMENTS" => false, Scope::Global);
   });
+  // RUST-ONLY: the output mode LaTeXML presents, over its guess from the source (`\pdfoutput`, OXIDIZED_DESIGN_DIVERGENCES
+  // #285, #1046; BM Q4.2): `pdfoutput` 1 (pdflatex), `nopdfoutput` 0 (latex+dvips). Drivers read `\pdfoutput` as they
+  // load (graphicx, hyperref, ifpdf), so give it before them: first in the preamble, or `--preload=[nopdfoutput]latexml.sty`
+  // (`[nopdfoutput]ar5iv.sty` under ar5iv).
+  for (option, mode) in [("pdfoutput", 1i64), ("nopdfoutput", 0)] {
+    DeclareOption!(option, {
+      AssignValue!("PDFOUTPUT_OPTION" => mode, Scope::Global);
+      AssignRegister!("\\pdfoutput", Number::new(mode).into(), Some(Scope::Global));
+    });
+  }
   // RUST-ONLY: the class caption fonts knob, off by default (caption_sty.rs `CLASS_CAPTION_FONTS`; user ruling
   // 2026-10-22). Read as the class loads, so set ahead of it: `--preload=[classcaptionfonts]latexml.sty`, or under ar5iv
   // `--preload=[classcaptionfonts]ar5iv.sty`, which passes it here with its own options (ar5iv_sty.rs; a second

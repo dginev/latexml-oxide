@@ -1,0 +1,20 @@
+% A LaTeXML box's height and depth reach the HTML as the CSS custom properties `--ltx-box-height` and
+% `--ltx-box-depth`, TeX's own values (DG 2026-11-14, beside QA24's `--ltx-box-width`), from which LaTeXML.css derives
+% `height:` (h+d) and `vertical-align:` (-d): a \raisebox{y}[h][d] keeps its `position:relative; bottom:` shift and so
+% no vertical-align, a plain \raisebox is TeX's \raise (`vertical-align:`), a rotated box carries all three. A rule's
+% height is its ink and MathML's mspace/mpadded sizes are MathML's own: both unchanged.
+% witness: synthetic (DG 2026-11-14 on PR #858).
+% status:  GREEN (QAB57d)
+% oracle:  pdflatex 0 errors: x raised 2pt in a 10pt+3pt box, y in an empty box, the turned word, the rules.
+% Perl:    `style="height:<h+d>;…"` and `vertical-align:<-d>` from LaTeXML-common.xsl's base-styling.
+% ours:    before QAB57d the same as Perl.
+% expect:  0 errors, 0 warnings; each box `--ltx-box-height:<h>;--ltx-box-depth:<d>;…`, the rules and MathML unchanged.
+\documentclass{article}
+\usepackage{graphicx}
+\begin{document}
+A \raisebox{2pt}[10pt][3pt]{x} B \raisebox{0pt}[0pt][0pt]{y} C \raisebox{3pt}[6pt]{z} D \raisebox{3pt}{w}
+
+\parbox[t][3cm]{4cm}{A parbox with a height.} \rotatebox{90}{turned} \rule[-1pt]{1cm}{2pt}
+
+$x\rule[-1ex]{0pt}{3ex}y\vphantom{\int}\hspace{1cm}z$
+\end{document}
