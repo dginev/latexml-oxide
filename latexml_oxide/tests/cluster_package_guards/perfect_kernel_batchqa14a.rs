@@ -13,6 +13,12 @@ macro_rules! repro {
   };
 }
 
+/// A repro and its `(tag, xml:id, element)` rows.
+type Case = (
+  &'static str,
+  &'static [(&'static str, &'static str, &'static str)],
+);
+
 /// Each repro: 0 errors, 0 warnings, and each `(tag, xml:id, element)` whole.
 /// parbox_keeps_the_page_text_width: every box prints `\textwidth \columnwidth \linewidth \hsize` as pdflatex does —
 /// a parbox (A, its graphic 151.8pt), a minipage (B, 66.79pt), `\fbox{\parbox}` (C), a minipage in a parbox (D), a
@@ -26,7 +32,7 @@ macro_rules! repro {
 /// the parbox no longer setting `\columnwidth`; (c) "H 345.0pt" on 75531ffc9d6 too. Witness 2010.06608 S4.F8.
 #[test]
 fn parbox_sets_only_the_line_width() {
-  let cases: [(&str, &[(&str, &str, &str)]); 3] = [
+  let cases: [Case; 3] = [
     (
       repro!("boxes-groups/parbox_keeps_the_page_text_width.tex"),
       &[
