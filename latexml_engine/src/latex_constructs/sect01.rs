@@ -674,6 +674,7 @@ pub(crate) fn load() -> Result<()> {
       if let Some(after) = after_opt {
         tks.extend(after.unlist());
       }
+      tks.extend(hooks_initialize_all_tokens());
       tks.extend(use_hook("begin"));
       tks.push(T_CS!("\\document"));
       return Ok(Tokens::new(tks));
@@ -707,6 +708,7 @@ pub(crate) fn load() -> Result<()> {
         // hook's code was dropped: ctex classes queue their deferred
         // `\RequirePackage{biblatex}` there with `\ctex_gadd_ltxhook:nn`
         // (xdupgthesis.cls:1733, xduugthesis.cls:1502; class census 2026-09-24).
+        tks.extend(hooks_initialize_all_tokens());
         tks.extend(use_hook("begin"));
       }
       tks.push(T_CS!(begin_name));

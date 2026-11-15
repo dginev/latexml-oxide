@@ -1,0 +1,32 @@
+% mechanism: latex.ltx:15356-15361 `\@execute@begin@hook` runs `\@expl@@@initialize@all@@` at the first
+%   `\begin{document}` only (it `\gdef`s itself). Ours reads "already run" from `\__hook_update_hook_code:n` no longer
+%   being `\use_none:n` (:5853/:5856, every lthooks since 2020-10-01); `\__hook_post_initialization_defs:` is
+%   2023-06-01's. The preamble redefines it as a pre-2023 lthooks behaves (it never becomes `\prg_do_nothing:`) and
+%   counts its calls; a renewed `\document` (the l3news/ltnews driver shape) opens a second document.
+% witness: synthetic (review revHOOKINIT, portability)
+% oracle:  pdflatex 0 `!`; "A1H B1H"
+% engines: rust HOOKINIT 4741298fc5: "A1H B2H" (initialized again); 5e02406406 and Perl: "A0H B0H" (never)
+% expect:  0 errors, 0 warnings; <p>A1H B1H</p>
+% status:  GREEN
+\documentclass{article}
+\ExplSyntaxOn
+\int_new:N \g_init_int
+\cs_gset_protected:Npn \__hook_post_initialization_defs:
+  {
+    \int_gincr:N \g_init_int
+    \cs_gset_eq:NN \hook_use:n \__hook_use_initialized:n
+    \cs_gset_eq:NN \hook_use:nnw \__hook_use_initialized:nnw
+    \cs_gset_eq:NN \__hook_preamble_hook:n \use_none:n
+  }
+\cs_new:Npn \initcount { \int_use:N \g_init_int }
+\ExplSyntaxOff
+\NewHook{h}\AddToHook{h}{H}
+\begin{document}
+A\initcount\UseHook{h}
+\let\savedenddocument\enddocument
+\def\document{}\let\enddocument\relax
+\begin{document}
+B\initcount\UseHook{h}
+\end{document}
+\let\enddocument\savedenddocument
+\end{document}

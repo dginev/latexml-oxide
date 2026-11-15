@@ -163,18 +163,35 @@ fn use_load_hooks(name: &str, as_type: &str, when: &str) -> Result<()> {
   }
   let kind = if as_type == "cls" { "class" } else { "package" };
   let code = if when == "before" {
-    s!(
-      "\\UseHook{{{kind}/before}}\\UseOneTimeHook{{{kind}/{name}/before}}\
-       \\UseHook{{file/before}}\\UseOneTimeHook{{file/{name}.{as_type}/before}}"
-    )
+    [
+      use_hook(&s!("{kind}/before"), false),
+      use_hook(&s!("{kind}/{name}/before"), true),
+      use_hook("file/before", false),
+      use_hook(&s!("file/{name}.{as_type}/before"), true),
+    ]
   } else {
-    s!(
-      "\\UseOneTimeHook{{file/{name}.{as_type}/after}}\\UseHook{{file/after}}\
-       \\UseOneTimeHook{{{kind}/{name}/after}}\\UseHook{{{kind}/after}}"
-    )
-  };
+    [
+      use_hook(&s!("file/{name}.{as_type}/after"), true),
+      use_hook("file/after", false),
+      use_hook(&s!("{kind}/{name}/after"), true),
+      use_hook(&s!("{kind}/after"), false),
+    ]
+  }
+  .concat();
   digest(crate::mouth::tokenize_internal(TeXString::assembled(code)))?;
   Ok(())
+}
+
+/// `\UseHook{hook}` (`once`: `\UseOneTimeHook`) as `\lx@usehook` reads it where it runs (sect11.rs,
+/// `hook_use_tokens`): an empty hook passes without the 1-3M instructions lthooks' preamble mode costs a use (QAB1b).
+fn use_hook(hook: &str, once: bool) -> String {
+  let fast = crate::binding::def::dialect::is_defined_token(&T_CS!("\\lx@usehook"));
+  match (fast, once) {
+    (true, false) => s!("\\lx@usehook{{{hook}}}"),
+    (true, true) => s!("\\lx@useonetimehook{{{hook}}}"),
+    (false, false) => s!("\\UseHook{{{hook}}}"),
+    (false, true) => s!("\\UseOneTimeHook{{{hook}}}"),
+  }
 }
 
 /// Push the load onto ltfilehook's file-name stack, outermost as in latex.ltx
@@ -2360,7 +2377,9 @@ fn input_content_with_file_hooks(request: &str, path: &str, options: InputOption
   let pop = lookup_definition(&T_CS!("\\@expl@@@filehook@file@pop@@"))?.is_some();
   let push = lookup_definition(&T_CS!("\\@expl@@@filehook@file@push@@"))?.is_some() && pop;
   let after = s!(
-    "{set}\\UseOneTimeHook{{file/{name}/after}}\\UseHook{{file/after}}{}",
+    "{set}{}{}{}",
+    use_hook(&s!("file/{name}/after"), true),
+    use_hook("file/after", false),
     if push {
       "\\@expl@@@filehook@file@pop@@"
     } else {
@@ -2370,12 +2389,14 @@ fn input_content_with_file_hooks(request: &str, path: &str, options: InputOption
   gullet::unread_expansion(crate::mouth::tokenize_internal(TeXString::assembled(after)));
   load_tex_content(path, options)?;
   let before = s!(
-    "{}{set}\\UseHook{{file/before}}\\UseOneTimeHook{{file/{name}/before}}",
+    "{}{set}{}{}",
     if push {
       "\\@expl@@@filehook@file@push@@"
     } else {
       ""
-    }
+    },
+    use_hook("file/before", false),
+    use_hook(&s!("file/{name}/before"), true)
   );
   gullet::unread_expansion(crate::mouth::tokenize_internal(TeXString::assembled(
     before,

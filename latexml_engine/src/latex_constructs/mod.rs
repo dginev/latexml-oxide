@@ -7807,6 +7807,22 @@ fn clean_index_key(key: &str) -> String {
   }
   key.trim_end_matches(['.', ',', ';']).to_string()
 }
+/// latex.ltx:15356-15361 `\@execute@begin@hook{document}`: the first `\begin{document}` runs `\@expl@@@initialize@all@@`
+/// (lthooks' `\__hook_initialize_all:`, :5854) between `env/document/before` and `/begin`, which builds every hook's code
+/// once and leaves lthooks' preamble mode, where each `\UseHook` rebuilds its hook and stays `\protected`.
+pub(crate) fn hooks_initialize_all_tokens() -> Vec<Token> {
+  let init = T_CS!("\\@expl@@@initialize@all@@");
+  // Once: `\__hook_initialize_all:` makes `\__hook_update_hook_code:n` no longer `\use_none:n` (:5853/:5856), as in
+  // every lthooks since its first release (2020-10-01); `\__hook_post_initialization_defs:` is 2023-06-01's.
+  let preamble_mode = x_equals(
+    &T_CS!("\\__hook_update_hook_code:n"),
+    &T_CS!("\\use_none:n"),
+  );
+  if !preamble_mode || !is_defined_token(&init) {
+    return Vec::new();
+  }
+  vec![init]
+}
 /// The kernel's `env/<name>/<point>` hook call, in its own token shapes:
 /// bare `\UseHook{env/#1/<point>}` for before/begin/after
 /// (latex.ltx:15347/15362/15391) and, for `end`,
