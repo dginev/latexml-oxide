@@ -23,7 +23,7 @@ latex_constructs.pool.ltxml:2512-2517: <code>getShortSource =~ /^plain/</code>):
 </div><section id="variant.Fallback" class="variant"><a href="#variant.Fallback" class="anchor">§</a><h3 class="code-header">Fallback</h3></section><div class="docblock"><p>The guess of a fallback class — OmniBus, loaded for a class with no binding: what it defines is a
 convenience the real class may not have, so a document’s own <code>\newcommand</code> (and <code>\providecommand</code>,
 <code>\newenvironment</code>, <code>\@ifdefinable</code>) of the name wins over it, unless it is locked
-(<code>state::is_fallback_meaning</code>).</p>
+(<code>state::is_fallback_meaning</code>) — and as OmniBus’s fallback, locked too (<code>state::document_redefines_guess</code>).</p>
 </div><section id="variant.Stub" class="variant"><a href="#variant.Stub" class="anchor">§</a><h3 class="code-header">Stub</h3></section><div class="docblock"><p>A kernel stand-in for a name a class or style defines only where the document cannot reach it (aaai’s
 <code>\equalcontrib</code>, set inside its <code>\@maketitle</code>): yields as <code>Fallback</code> does, and to a raw class’s or package’s own
 <code>\newcommand</code> of the name too, since the real file does define it (copernicus.cls:1673 <code>\equalcontrib[1]</code>).</p>
