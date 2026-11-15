@@ -102,7 +102,7 @@
 <a href=#102 id=102 data-nosnippet>102</a>  // expansion-primitives/register_command_on_a_non_register).
 <a href=#103 id=103 data-nosnippet>103</a>  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\advance Variable"</span>, sub[(var)] {
 <a href=#104 id=104 data-nosnippet>104</a>    <span class="kw">if let </span>ArgWrap::RegisterDefinition(dbox) = var {
-<a href=#105 id=105 data-nosnippet>105</a>      read_keyword(<span class="kw-2">&amp;</span>[<span class="string">"by"</span>])<span class="question-mark">?</span>;
+<a href=#105 id=105 data-nosnippet>105</a>      read_by_keyword()<span class="question-mark">?</span>;
 <a href=#106 id=106 data-nosnippet>106</a>      <span class="kw">let </span>(defn_token, inner) = <span class="kw-2">*</span>dbox;
 <a href=#107 id=107 data-nosnippet>107</a>      <span class="kw">let </span>defn_token_str = defn_token.to_string();
 <a href=#108 id=108 data-nosnippet>108</a>      <span class="kw">if </span>!defn_token_str.is_empty() &amp;&amp; defn_token_str != <span class="string">"missing" </span>{
@@ -132,7 +132,7 @@
 <a href=#132 id=132 data-nosnippet>132</a>
 <a href=#133 id=133 data-nosnippet>133</a>  <span class="macro">DefPrimitive!</span>(<span class="string">"\\multiply Variable"</span>, sub[(var)] {
 <a href=#134 id=134 data-nosnippet>134</a>    <span class="kw">if let </span>ArgWrap::RegisterDefinition(dbox) = var {
-<a href=#135 id=135 data-nosnippet>135</a>      read_keyword(<span class="kw-2">&amp;</span>[<span class="string">"by"</span>])<span class="question-mark">?</span>;
+<a href=#135 id=135 data-nosnippet>135</a>      read_by_keyword()<span class="question-mark">?</span>;
 <a href=#136 id=136 data-nosnippet>136</a>      <span class="kw">let </span>scale = read_number()<span class="question-mark">?</span>;
 <a href=#137 id=137 data-nosnippet>137</a>      <span class="kw">let </span>(varname, inner) = <span class="kw-2">*</span>dbox;
 <a href=#138 id=138 data-nosnippet>138</a>      <span class="comment">// Upgrade: Why are the arguments used twice here? Is there a way to avoid cloning them?
@@ -151,7 +151,7 @@
 <a href=#151 id=151 data-nosnippet>151</a>
 <a href=#152 id=152 data-nosnippet>152</a>  <span class="macro">DefPrimitive!</span>(<span class="string">"\\divide Variable"</span>, sub[(var)] {
 <a href=#153 id=153 data-nosnippet>153</a>    <span class="kw">if let </span>ArgWrap::RegisterDefinition(dbox) = var {
-<a href=#154 id=154 data-nosnippet>154</a>      read_keyword(<span class="kw-2">&amp;</span>[<span class="string">"by"</span>])<span class="question-mark">?</span>;
+<a href=#154 id=154 data-nosnippet>154</a>      read_by_keyword()<span class="question-mark">?</span>;
 <a href=#155 id=155 data-nosnippet>155</a>      <span class="kw">let </span>scale = read_number()<span class="question-mark">?</span>;
 <a href=#156 id=156 data-nosnippet>156</a>      <span class="kw">let </span>(varname, inner) = <span class="kw-2">*</span>dbox;
 <a href=#157 id=157 data-nosnippet>157</a>      <span class="comment">// Upgrade: Why are the arguments used twice here? Is there a way to avoid cloning them?
@@ -174,32 +174,40 @@
 <a href=#174 id=174 data-nosnippet>174</a>  </span>});
 <a href=#175 id=175 data-nosnippet>175</a>});
 <a href=#176 id=176 data-nosnippet>176</a>
-<a href=#177 id=177 data-nosnippet>177</a><span class="doccomment">/// Note that these define a "shorthand" for eg. \count123, but are NOT macros!
-<a href=#178 id=178 data-nosnippet>178</a></span><span class="kw">pub fn </span>shorthand_def(cs: Token, address_type: <span class="kw-2">&amp;</span>str, init: RegisterValue) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
-<a href=#179 id=179 data-nosnippet>179</a>  <span class="comment">// A length register the document allocates (`\newdimen`, `\newskip`): the panel grid rule's
-<a href=#180 id=180 data-nosnippet>180</a>  // `note_length_allocated`.
-<a href=#181 id=181 data-nosnippet>181</a>  </span><span class="kw">if </span><span class="macro">matches!</span>(address_type, <span class="string">"\\dimen" </span>| <span class="string">"\\skip"</span>) {
-<a href=#182 id=182 data-nosnippet>182</a>    <span class="kw">crate</span>::latex_constructs::note_length_allocated(<span class="kw-2">&amp;</span>cs);
-<a href=#183 id=183 data-nosnippet>183</a>  }
-<a href=#184 id=184 data-nosnippet>184</a>  <span class="comment">// Let w/o AfterAssign
-<a href=#185 id=185 data-nosnippet>185</a>  </span><span class="kw">let </span>relax_meaning = lookup_meaning(<span class="kw-2">&amp;</span>TOKEN_RELAX).unwrap();
-<a href=#186 id=186 data-nosnippet>186</a>  assign_meaning(<span class="kw-2">&amp;</span>cs, relax_meaning, <span class="prelude-val">None</span>);
-<a href=#187 id=187 data-nosnippet>187</a>  <span class="comment">// tex.web §1224: the optional `=` is read with expansion (§405), as for `\chardef`.
-<a href=#188 id=188 data-nosnippet>188</a>  </span>read_keyword(<span class="kw-2">&amp;</span>[<span class="string">"="</span>])<span class="question-mark">?</span>;
-<a href=#189 id=189 data-nosnippet>189</a>  <span class="comment">// define
-<a href=#190 id=190 data-nosnippet>190</a>  </span><span class="kw">let </span>num = read_number()<span class="question-mark">?</span>;
-<a href=#191 id=191 data-nosnippet>191</a>  <span class="kw">let </span>address = <span class="macro">s!</span>(<span class="string">"{address_type}{}"</span>, num.value_of());
-<a href=#192 id=192 data-nosnippet>192</a>  <span class="comment">// tex.web §1224 `define`: the shorthand is local unless `\global`, as `\chardef`'s is
-<a href=#193 id=193 data-nosnippet>193</a>  // (`def_register` installs globally, for bindings). pgfutil-common.tex:611-620's grouped
-<a href=#194 id=194 data-nosnippet>194</a>  // `\dimendef\rb=5` left a document's `\rb` macro a dimen register (2003.08372: 662
-<a href=#195 id=195 data-nosnippet>195</a>  // "Missing $", TooManyErrors; Perl's `DefRegisterI` alike). The register keeps its value.
-<a href=#196 id=196 data-nosnippet>196</a>  </span><span class="kw">let </span>options = <span class="prelude-val">Some</span>(RegisterOptions {
-<a href=#197 id=197 data-nosnippet>197</a>    address: <span class="prelude-val">Some</span>(address),
-<a href=#198 id=198 data-nosnippet>198</a>    local: <span class="bool-val">true</span>,
-<a href=#199 id=199 data-nosnippet>199</a>    ..RegisterOptions::default()
-<a href=#200 id=200 data-nosnippet>200</a>  });
-<a href=#201 id=201 data-nosnippet>201</a>  def_register(cs, <span class="prelude-val">None</span>, init, options)<span class="question-mark">?</span>;
-<a href=#202 id=202 data-nosnippet>202</a>  after_assignment()<span class="question-mark">?</span>;
-<a href=#203 id=203 data-nosnippet>203</a>  <span class="prelude-val">Ok</span>(())
-<a href=#204 id=204 data-nosnippet>204</a>}
+<a href=#177 id=177 data-nosnippet>177</a><span class="doccomment">/// The optional `by` of `\advance`, `\multiply` and `\divide`, read ahead of the operand as its first token is
+<a href=#178 id=178 data-nosnippet>178</a>/// (`gullet::operand_lookahead`: a deposit's emptied field gives its value, DEPN).
+<a href=#179 id=179 data-nosnippet>179</a></span><span class="kw">fn </span>read_by_keyword() -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
+<a href=#180 id=180 data-nosnippet>180</a>  <span class="kw">let </span>_operand = operand_lookahead();
+<a href=#181 id=181 data-nosnippet>181</a>  read_keyword(<span class="kw-2">&amp;</span>[<span class="string">"by"</span>])<span class="question-mark">?</span>;
+<a href=#182 id=182 data-nosnippet>182</a>  <span class="prelude-val">Ok</span>(())
+<a href=#183 id=183 data-nosnippet>183</a>}
+<a href=#184 id=184 data-nosnippet>184</a>
+<a href=#185 id=185 data-nosnippet>185</a><span class="doccomment">/// Note that these define a "shorthand" for eg. \count123, but are NOT macros!
+<a href=#186 id=186 data-nosnippet>186</a></span><span class="kw">pub fn </span>shorthand_def(cs: Token, address_type: <span class="kw-2">&amp;</span>str, init: RegisterValue) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
+<a href=#187 id=187 data-nosnippet>187</a>  <span class="comment">// A length register the document allocates (`\newdimen`, `\newskip`): the panel grid rule's
+<a href=#188 id=188 data-nosnippet>188</a>  // `note_length_allocated`.
+<a href=#189 id=189 data-nosnippet>189</a>  </span><span class="kw">if </span><span class="macro">matches!</span>(address_type, <span class="string">"\\dimen" </span>| <span class="string">"\\skip"</span>) {
+<a href=#190 id=190 data-nosnippet>190</a>    <span class="kw">crate</span>::latex_constructs::note_length_allocated(<span class="kw-2">&amp;</span>cs);
+<a href=#191 id=191 data-nosnippet>191</a>  }
+<a href=#192 id=192 data-nosnippet>192</a>  <span class="comment">// Let w/o AfterAssign
+<a href=#193 id=193 data-nosnippet>193</a>  </span><span class="kw">let </span>relax_meaning = lookup_meaning(<span class="kw-2">&amp;</span>TOKEN_RELAX).unwrap();
+<a href=#194 id=194 data-nosnippet>194</a>  assign_meaning(<span class="kw-2">&amp;</span>cs, relax_meaning, <span class="prelude-val">None</span>);
+<a href=#195 id=195 data-nosnippet>195</a>  <span class="comment">// tex.web §1224: the optional `=` is read with expansion (§405), as for `\chardef`.
+<a href=#196 id=196 data-nosnippet>196</a>  </span>read_keyword(<span class="kw-2">&amp;</span>[<span class="string">"="</span>])<span class="question-mark">?</span>;
+<a href=#197 id=197 data-nosnippet>197</a>  <span class="comment">// define
+<a href=#198 id=198 data-nosnippet>198</a>  </span><span class="kw">let </span>num = read_number()<span class="question-mark">?</span>;
+<a href=#199 id=199 data-nosnippet>199</a>  <span class="kw">let </span>address = <span class="macro">s!</span>(<span class="string">"{address_type}{}"</span>, num.value_of());
+<a href=#200 id=200 data-nosnippet>200</a>  <span class="comment">// tex.web §1224 `define`: the shorthand is local unless `\global`, as `\chardef`'s is
+<a href=#201 id=201 data-nosnippet>201</a>  // (`def_register` installs globally, for bindings). pgfutil-common.tex:611-620's grouped
+<a href=#202 id=202 data-nosnippet>202</a>  // `\dimendef\rb=5` left a document's `\rb` macro a dimen register (2003.08372: 662
+<a href=#203 id=203 data-nosnippet>203</a>  // "Missing $", TooManyErrors; Perl's `DefRegisterI` alike). The register keeps its value.
+<a href=#204 id=204 data-nosnippet>204</a>  </span><span class="kw">let </span>options = <span class="prelude-val">Some</span>(RegisterOptions {
+<a href=#205 id=205 data-nosnippet>205</a>    address: <span class="prelude-val">Some</span>(address),
+<a href=#206 id=206 data-nosnippet>206</a>    local: <span class="bool-val">true</span>,
+<a href=#207 id=207 data-nosnippet>207</a>    ..RegisterOptions::default()
+<a href=#208 id=208 data-nosnippet>208</a>  });
+<a href=#209 id=209 data-nosnippet>209</a>  def_register(cs, <span class="prelude-val">None</span>, init, options)<span class="question-mark">?</span>;
+<a href=#210 id=210 data-nosnippet>210</a>  after_assignment()<span class="question-mark">?</span>;
+<a href=#211 id=211 data-nosnippet>211</a>  <span class="prelude-val">Ok</span>(())
+<a href=#212 id=212 data-nosnippet>212</a>}
 </code></pre></div></section></main></body></html>
