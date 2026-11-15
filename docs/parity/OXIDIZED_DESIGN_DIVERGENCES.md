@@ -2077,90 +2077,54 @@ its `\ref`s read "Figure 1", and a teaser-free acmart document is unchanged.
 
 ### 57. → KNOWN_PERL_ERRORS #49 (amsrefs inline bibliographies are collected (upstream drops them whole))
 
-### 58. A malformed `.bib` entry resyncs at the next `@` (upstream abandons the file)
+### 58. A `.bib` file is scanned as BibTeX (or, under biblatex, biber) scans it: braces count literally, names admit what BibTeX admits, a malformed entry costs only itself (Perl: `Pre/BibTeX.pm`'s own grammar abandons the file) — absorbs #60 #229 #296
 
-**Decision:** `PreBibTeX::parse_top_level` (`latexml_engine/src/pre_bibtex.rs`)
-reports a malformed entry and **continues at the next `@`**. Perl's
-`parseTopLevel` lets the first parse error propagate out, abandoning every
-LATER entry.
+**Rule.** `latexml_engine/src/pre_bibtex.rs` reads a `.bib` the way `bibtex` 0.99d (bibtex.web) reads it — and, when the
+document uses biblatex, as biber reads it — so the entries the author's PDF has are the entries we parse; every recovery
+is a Warning. **Perl**'s `Pre/BibTeX.pm` uses `Text::Balanced`, a literal `a-zA-Z0-9` name class, a delimited `@comment`,
+a trim of every value, a `skipWhite` with no comments, and lets the first parse error abandon every later entry
+(`parseTopLevel`). Where Rust == Perl and both are wrong against the PDF, this is the authorized surpass. Related: #74 (a
+field's content is data, `% & # _ ^`), #73, #79 (an unmatched `$`).
+**Code.** `pre_bibtex.rs:478 parse_top_level`, `:968 skip_junk`, `:943 skip_white`, `:660 parse_comment`, `:1177
+is_bib_name_or_noise`, `:1281 find_balanced_brace_end`.
 
-**Why.** Real BibTeX does not abandon the file: on *"I was expecting a `,' or a
-`}'"* it reports the error and skips to the next entry (`bibtex.web`), which is
-the behaviour authors' `.bib`/`.bbl` files are written against — a single
-unbalanced `{` costs its own entry, not the rest of the bibliography. Under
-Perl's rule one stray brace silently deletes the whole tail of the References.
-`skip_junk` already *is* the resync, so the loop simply keeps going; the
-malformed entry itself is dropped, exactly as BibTeX drops it.
-
-**Loud, never silent.** Each resync emits
-`Warning:bibtex:unbalanced <label> line N: <error>; resyncing at the next '@'`,
-so the lost entry is always visible in the log (CLAUDE.md's
-fail-safe-toward-flagging-failure rule). The corpus carries 19 papers /
-298 messages in this category.
-
-**History.** This robustness previously lived in a bespoke second BibTeX parser
-inside `latexml_post::make_bibliography`, which has been deleted in favour of
-the faithful `pre_bibtex` port; the resync moved here so the single shared
-parser keeps both the faithful grammar and the BibTeX-grade error recovery.
+- **Resync at the next `@`.** On "I was expecting a `,' or a `}'" BibTeX reports and skips to the next entry; ours
+  reports `Warning:bibtex:unbalanced <label> line N: <error>; resyncing at the next '@'` and continues (`skip_junk` is the
+  resync), the malformed entry dropped as BibTeX drops it (one stray `{` costs its entry, not the References' tail). 19
+  papers / 298 messages in the corpus. The robustness once lived in a bespoke second parser in
+  `latexml_post::make_bibliography`, deleted in favour of this faithful port.
+- **Braces count literally** (ex-#60): `\{`/`\}` do not escape the depth (`find_balanced_brace_end`); Perl's
+  `Text::Balanced::extract_bracketed($line, '{}')` treats them as escaped, returns `undef` on
+  `"…{\textbackslash}boldsymbol\{Q\}…"`, extends to EOF and abandons the file (0 bibitems, 2 dangling citations on the
+  reproducer, where `bibtex` emits both). Witness 2605.00264 (`\{Q\}` in `chen2017ucb`): 1144 → 1170 of 1170 entries, 18 →
+  0 dangling citations.
+- **Non-ASCII and `\` are name characters** (ex-#60; Perl L221's `a-zA-Z0-9`): a Zotero key `alvarado-leañosLasing2022`
+  truncated at the accent (`Expected ","`); witnesses 2605.28695 (`ñ`), 2605.00121 (a stray U+FE0F). Perl excludes `\` on
+  purpose (L215-217: "it throws us off (semiverbatim vs verbatim) when we store the bibentries before digesting the
+  key!"), which loses the entry: `@misc{apple\_rl,` ends at the backslash, and a bogus `\author={...}` field kills it;
+  BibTeX keeps the key verbatim and treats `\author` as an unknown field ("empty author"). Witnesses 2605.14212,
+  2605.06974. Known limit: `\cite{apple\_rl}` is digested to `bibrefs="apple_rl"` against the verbatim key, so it still
+  dangles (`Missing bibkeys: apple_rl`) — key normalisation at the `\ProcessBibTeXEntry` seam is not done.
+- **A bare `@Comment` banner** is no error (`parse_comment`; BibTeX ignores what follows; Perl demands a delimited
+  string). Witness 2605.06974 (26 banners). All of #60's inputs are accepted by `bibtex` 0.99d (TeX Live 2025) with at
+  most an "empty journal" warning. Routing post-side parsing through this port exposed them: `bibtex/unbalanced` went 19 →
+  593 papers in sandbox 2605; a 24-paper sample of the affected set 0/24 → 22/24 clean (the brace fix alone 7/24).
+  Residual: a tail of malformed shapes still warns `bibtex:unbalanced`, losing no cited key (log noise).
+- **An escaped trailing space survives the trim** (ex-#229; user-approved surpass 2026-09-17). Perl trims every value
+  (`BibTeX.pm:273` `s/\s+$//`), so `type = {Memo No.\ }` becomes `…No.\` and
+  `\csname bib@field@default@type\endcsname{…No.\}` has `\}` eat the delimiter, the runaway swallowing later entries
+  (asmejour ×23 `malformed:ltx:bib-part`; real bibtex + pdflatex fail the same way). The trim keeps one space after an odd
+  number of backslashes. Guard `bib_field_trailing_control_space_survives_trimming`.
+- **biber's `%` comments inside an entry** (ex-#296, 56ir). biber skips `%` to the end of the line between an entry's
+  tokens (`@Book{a2004,% see also 14.110`); bibtex 0.99d errs ("You're missing a field name") and Perl's `skipWhite`
+  (LaTeXML/lib/LaTeXML/Pre/BibTeX.pm:320-330) loses the entry. `skip_white` skips it when the document uses biblatex
+  (`BIBSTYLE` = `biblatex`, or `biblatex.sty` loaded, which a split post session has from its preloads), whatever its
+  `backend=`; a `%` inside a value is untouched (`parse_string`/`parse_balanced_braces` never skip white). windycity recovers
+  27 entries; biblatex-iso690 and frankenstein some. Guard `perfect_kernel_batch56::biber_bib_percent_comments_keep_the_entry`.
 
 ### 59. → KNOWN_PERL_ERRORS #50 (A citation also searches the main `bibliography` list, not just its bibunit)
 
-### 60. `.bib` scanning follows BibTeX, not `Text::Balanced` (escaped braces, non-ASCII keys, bare `@Comment`)
-
-**Decision:** `pre_bibtex` parses `.bib` the way **BibTeX itself** does on three
-points where Perl's `Pre/BibTeX.pm` diverges from the real tool:
-
-1. **Braces count literally.** `\{` / `\}` do NOT escape the brace depth
-   (`find_balanced_brace_end`). Perl uses
-   `Text::Balanced::extract_bracketed($line, '{}')`, which treats them as
-   escaped, returns `undef` for a title like
-   `"…{\textbackslash}boldsymbol\{Q\}…"`, then extends line-by-line to EOF and
-   abandons the file.
-2. **Non-ASCII is a name character** (`is_bib_name_or_noise`). Perl's class is
-   the literal `a-zA-Z0-9` (L221), so a Zotero-style key
-   `alvarado-leañosLasing2022` truncates at the accent → `Expected ","`.
-   Non-ASCII is never a BibTeX delimiter, so admitting it cannot swallow
-   structure.
-3. **A bare `@Comment` banner is not an error** (`parse_comment`). BibTeX
-   ignores everything after `@comment`; Perl demands a delimited string.
-
-**Why — ground truth is the real tool.** All three inputs are accepted by
-`bibtex` 0.99d (TeX Live 2025) with at most a benign *"empty journal"* warning,
-so the references exist in the author's PDF. Perl LaTeXML loses them: on the
-escaped-brace reproducer it emits **0 bibitems and 2 dangling citations**
-(it abandons the whole file), where `bibtex` emits both entries. This is the
-authorized surpass-Perl case — Rust == Perl but both wrong vs the PDF.
-
-**Measured.** These were exposed by routing post-side `.bib` parsing through
-this port (#58): `bibtex/unbalanced` went 19 → 593 papers in sandbox 2605
-because the deleted bespoke parser had been permissive on exactly these points.
-On a 24-paper sample of the affected set: **0/24 clean → 22/24 clean**
-(brace fix alone: 7/24). Witness 2605.00264 (`\{Q\}` in `chen2017ucb`):
-1144 of the file's 1170 entries parsed → **all 1170**, 18 dangling
-citations → **0**.
-Witnesses 2605.28695 (`ñ` key), 2605.00121 (stray U+FE0F in the key),
-2605.06974 (26 `@Comment` banners).
-
-4. **`\` is a name character.** Perl excludes it *on purpose* (L215-217:
-   *"Especially `\`, which BibTeX allows, but it throws us off (semiverbatim vs
-   verbatim) when we store the bibentries before digesting the key!"*) — but
-   excluding it does not dodge the hazard, it just loses the entry: the key in
-   `@misc{apple\_rl,` ends at the backslash, and a bogus `\author={...}` field
-   name kills its entry outright. BibTeX takes `apple\_rl` as the key verbatim
-   and treats `\author` as an *unknown field* (hence its "empty author"
-   warning), keeping the entry. Witnesses 2605.14212, 2605.06974.
-
-**Known limit of (4) — Perl's warning is accurate downstream.** Admitting `\`
-makes the entry *parse*, and the `\author=` case then resolves end-to-end. But a
-`\cite{apple\_rl}` is **digested** to `bibrefs="apple_rl"` while the entry keeps
-the verbatim key `apple\_rl`, so that citation still dangles
-(`Missing bibkeys: apple_rl`). This is strictly better than dropping the entry,
-but making such a cite *link* needs key normalisation at the
-`\ProcessBibTeXEntry` seam — not done here.
-
-**Residual (not fixed):** a small tail of malformed-entry shapes still warns
-`bibtex:unbalanced`; they lose no cited keys — the #58 resync recovers the next
-entry — so it is log noise, not data loss.
+### 60. → #58 (`.bib` scanning follows BibTeX, not `Text::Balanced` (escaped braces, non-ASCII keys, bare `@Comment`))
 
 ### 61. A verbatim or listing body is read line by line as TeX's file reader and the package's own scanner read it (Perl: its own anchored, verbatim reads) — absorbs #69 #274 #521
 
@@ -3654,38 +3618,73 @@ no stray empty caption row in any).
 
 ### 104. → KNOWN_PERL_ERRORS #76 (An empty `\hypertarget`/`\hyperdef` emits a bare anchor, never wraps an open node)
 
-### 105. enumitem `leftmargin` is surfaced for CSS theming, not silently dropped
+### 105. Presentation the source states is kept on the element as CSS (a class or a `cssstyle` value) and the bundled stylesheets' local deltas act on it (Perl: the value dropped, or raw rules) — absorbs #111 #139 #142 #1024 #1032
 
-**Perl** `enumitem.sty.ltxml:54` groups `leftmargin` (with `align`, `left`,
-`labelindent`, `itemindent`, `labelsep`, penalties…) under `# IGNORED: Alignment,
-Positioning, penalties`: the key is `DefKeyVal`'d only to consume its value, never
-applied. This is a deliberate design choice — LaTeXML targets rich *structural*
-HTML themeable by CSS on logical roles, not a transcription of print
-micro-typesetting (which rarely reflows well responsively). So both engines drop
-positioning keys; `\begin{enumerate}[leftmargin=*]` renders with the default
-indent (issue #559, reporter nasser1).
+**Rule (surpass-Perl, user-approved 2026-08-15).** The structural stance stays Perl's — LaTeXML emits roles a stylesheet
+themes, not print micro-typesetting — but a value the author stated is not dropped: it goes on the element as a
+semantic class (a mode) or a `cssstyle` property or `--ltx-*` custom property (a length), and the stylesheet decides.
+An element without the key gets no attribute, so output without it is byte-identical. Every rule we add to the bundled
+CSS is a local delta over upstream's, mirrored into ar5iv-css (DG 2026-11-14); the `--ltx-*` names follow ar5iv-css's
+public-surface convention (`~/git/ar5iv-css` `docs/rfc_latexml_custom_properties.md`). Related: KNOWN_PERL_ERRORS #1254,
+#71, #77, #78 (#92, #93, #108, #109).
 
-**Divergence** (surpass-Perl, user-approved 2026-08-15): we keep the same
-structural stance but expose `leftmargin` on the emitted `<ltx:enumerate>` /
-`<ltx:itemize>` / `<ltx:description>` so a stylesheet *can* act on it, split by
-kind (`enumitem_sty.rs::begin_enum_itemize`):
-- `leftmargin=*` (the flush *mode* — a boolean-like toggle) ⇒ a semantic
-  `class="ltx_leftmargin_flush"` a theme can target;
-- `leftmargin=<dim>` (a *length*) ⇒ a `cssstyle="--ltx-enum-leftmargin:<dim>"`
-  CSS custom property.
-The default stylesheets consume both — `.ltx_itemize, .ltx_enumerate {
-margin-left: var(--ltx-enum-leftmargin, 1em) }` plus `.ltx_leftmargin_flush {
---ltx-enum-leftmargin: 0 }` (ltx-article/book/report.css). Lists without a
-`leftmargin` key emit **no** attribute (the constructor omits an absent-property
-attribute), so existing output is byte-identical — zero golden churn. The
-`--ltx-*` custom property follows the ar5iv-css public-surface convention
-(`~/git/ar5iv-css` `docs/rfc_latexml_custom_properties.md`); the ar5iv stylesheet
-consumes it separately.
+| entry | the source | emitted | the stylesheet delta | code / guard |
+|---|---|---|---|---|
+| leftmargin | enumitem `leftmargin=*` / `=<dim>` | `class="ltx_leftmargin_flush"` / `cssstyle="--ltx-enum-leftmargin:<dim>"` | `.ltx_itemize, .ltx_enumerate { margin-left: var(--ltx-enum-leftmargin, 1em) }`, `.ltx_leftmargin_flush { --ltx-enum-leftmargin: 0 }` (ltx-article/book/report.css) | `enumitem_sty.rs::begin_enum_itemize`; `50_structure::enumitem_leftmargin_test` |
+| framed verbatim (ex-#111) | fancyvrb `frame=single`, `framesep`, `framerule`, fvextra `backgroundcolor` | one `ltx_framed_rectangle` box, class `ltx_framed_verbatim`, `cssstyle` padding / border-width / background | `.ltx_framed_verbatim { max-width:100%; overflow-x:auto; box-sizing:border-box; display:block; width:fit-content }` (LaTeXML.css + ar5iv-css) | `fancyvrb_sty.rs`, `fvextra_sty.rs`; fixture `tests/tokenize/fancyvrb_frame.{tex,xml}`, `latexml_post::xslt::witnessed_css_delta::framed_verbatim_responsive_delta_stays_present` |
+| aspect ratio (ex-#139) | the requested `\includegraphics` W/H | `cssstyle="aspect-ratio:W/H"` on the `<img>` | `height:auto` in the flex/minipage image rules | `latexml_post/src/graphics.rs:501 set_graphic_src`; `latexml_post::graphics::tests::set_graphic_src_emits_requested_aspect_ratio_2392` |
+| break space (ex-#142) | `\\[dimen]` (non-zero) | `cssstyle="--ltx-break-space:<pt>"` on `ltx:break` | none: inert until a theme opts in | `\lx@newline`; `06_cluster_regressions::cluster_break_optional_glue_722` |
+| caption layout (ex-#1024) | caption's `justification=`, `skip`/`aboveskip`/`belowskip`, `singlelinecheck` | `text-align`, `margin-top`/`margin-bottom`, `width:fit-content;margin-left:auto;margin-right:auto` in the caption's `cssstyle` | none (inline values) | `caption_sty.rs:1410 caption_layout_tokens`; `bindings_batch2::caption_justification_and_skip`, `perfect_kernel_batch78d::mdpi_captions_end_the_label_with_a_period` |
+| aligned columns (ex-#1032) | an aligned column's alignment (markup unchanged) | `<mtd columnalign="right">` as Perl (MathML.pm L456-473) | `math mtd[columnalign="right"] { justify-items:end; }`, `…[columnalign="left"] { justify-items:start; }` (LaTeXML.css) | `cluster_cli::browser_render_aligned_math_spacing::aligned_left_column_is_right_aligned_against_the_relation`, `cluster_cli::aligned_mtable_columnspacing_zero::aligned_emits_zero_columnspacing_and_css_resets_mtd_padding` |
 
-**Guard**: `50_structure::enumitem_leftmargin_test`
-(`tests/structure/enumitem_leftmargin.{tex,xml}` — `leftmargin=*` enumerate +
-itemize ⇒ the flush class, `leftmargin=2em` ⇒ the custom property, and a plain
-enumerate with no attribute).
+- **leftmargin.** Perl `enumitem.sty.ltxml:54` `DefKeyVal`s `leftmargin` (with `align`, `left`, `labelindent`, `itemindent`,
+  `labelsep`, penalties) under `# IGNORED: Alignment, Positioning, penalties`, so `\begin{enumerate}[leftmargin=*]` took the
+  default indent (issue #559, reporter nasser1); zero golden churn (`tests/structure/enumitem_leftmargin.{tex,xml}`).
+- **Framed verbatim** (issue #525, reporter nasser1). Perl raw-loads fancyvrb: `frame=single`'s `@Single` hooks
+  (fancyvrb.sty:776) draw `\vrule`/`\hrule` (`\FV@SingleFrameLine` L869-904, side rules L948-963, `\FV@SingleFrameSep`
+  L929-947) as literal `<ltx:rule>`s that never form a box, and the bottom sep box surfaces as a stray empty line;
+  fvextra's per-line `\colorbox` strip (fvextra.sty:2547) is lost. Same-host Perl 0.8.8 byte-identical (SHARED-FAILURE);
+  the lualatex PDF draws the frame. The binding's `\FV@BeginListFrame` opens the box and `\FV@EndListFrame` closes it
+  (once each, inside `\FV@List`/`\FV@EndList`'s group), the side rules neutralized; `rulecolor` keeps the default black;
+  `backgroundcolor` is ported in `fvextra_sty.rs` for a host fvextra predating it (CI's TL errs `keyval: backgroundcolor
+  undefined`). The responsive rule caps a ~460px shrink-to-fit box at the viewport and scrolls long lines inside it (as
+  `.ltx_listing`, and the #533 math delta); the breaklines reflow is KNOWN_PERL_ERRORS #71 (#93). Scoped to
+  `frame=single`: `@Lines` `topline`/`bottomline`/`lines` still draw raw rules (a follow-up).
+- **Aspect ratio.** Perl's `Post/Graphics.pm` `setGraphicSrc` gives `width`/`height` and an `ltx_img_{square,portrait,landscape}`
+  class but no ratio, so the flex `max-width` cap (`.ltx_flex_size_N .ltx_graphics`) squashed a square into an ellipse
+  (Perl 0.8.8: 288×476 for a 476² square under `flex_size_3`); with the requested ratio (not merely the file's, for
+  `[width=…,height=…]`) the issue MWE's five panels render 1.000 (were 0.605 / 0.887). The upstream thread's design
+  (xworld21's `aspect-ratio: @imagewidth / @imageheight`, meeting brucemiller's requirement); brucemiller/LaTeXML#2392
+  open, not filed here.
+- **Break space.** Perl's `\lx@newline OptionalMatch:* [Glue]` parses `\\[20pt]` and emits a bare `<ltx:break/>`
+  (`break_model = empty`; same-host byte-identical, SHARED-FAILURE). Ours, from `args[1]`: `<br class="ltx_break"
+  style="--ltx-break-space:20.0pt;">`; plain `\\` and `\\[0pt]` stay bare; default rendering byte-identical (the #721
+  "preserve intent, let the theme decide" principle). Witness html_feedback #722 (`\title{… \\[20pt] {\small …}}`).
+  Worth raising upstream.
+- **Caption layout** (W2b, issue #787). Perl's caption.sty.ltxml:30,52 declare `justification` and `skip` and store them
+  (`CAPTION_<key>`), read by nothing. caption3.sty:955-969, 1361-1364: a justification is a command run in the caption
+  box (`\centering`, `\raggedright`, `\raggedleft`; ragged2e's `\Centering`/`\RaggedRight`/`\RaggedLeft`/`\justifying`;
+  `justified` none), which runs `\@parboxrestore`, so a float body's `\centering` does not align it; :987-993 `skip`/
+  `aboveskip` set `\abovecaptionskip`, `belowskip` `\belowcaptionskip` (0pt default); caption.sty:251-258 places them by
+  the caption's position; `position=auto` (:1034-1045) is bottom in horizontal mode and in vertical mode once the list
+  holds a box (`\prevdepth`), a longtable's bottom once it has a row (caption.sty:1169 `\LT@rows`), and a longtable caption
+  takes `\captionsetup[longtable]` (ltcaption `\caption@LT@setup`). `\lx@caption@justify` takes the body's last alignment
+  command (a document's `\DeclareCaptionJustification` counts; none → `justify`; through a user macro → `justify` too, RED
+  `captions-floats/caption_justification_through_a_macro_red`); under `singlelinecheck` (caption3.sty:677, `slc`; the HTML
+  reading of `\caption@slc`, :1497, :1568) a one-line caption sits centred, and the float's alignment class on the caption
+  is removed (a `_justified` mark, the floats' `after_close`). `\lx@caption@skip{above|below}{<position>}<glue>` (the
+  schema's caption has no spacing attribute; `cssstyle` is Common, as framed.sty.ltxml:78 uses it), nothing for a zero
+  below-skip. `\lx@caption@where` records `auto` at `\caption`/`\captionof`; the mark is read and cleared by the caption
+  formatter before any early return (a sub-caption), dropped by an inline `\caption` outside a float. Only a key the
+  document or class sets emits; a `Dimension` key stores its length (`skip=20pt` was stored empty). Not done:
+  `centerlast`/`centerfirst` read as centring, `margin=`/`width=`, subcaption's (`\captionsetup[sub]`, subcaption.sty:220
+  `skip=6pt`; RED `captions-floats/subcaption_justification_and_skip_red`), relative-unit skips read at the caption. mdpi
+  sets `aboveskip=6pt`/`belowskip=-6pt`, `justification=justified`.
+- **Aligned columns** (issues #809, #755). MathML Core dropped `columnalign`; Chrome set a `columnalign="right"` cell flush
+  left (revMML2: 0 px left, 12.3 px right; only a cell without the attribute is centred), so an `aligned`'s left column
+  ended up to 21 px short of its relation (issue 809's repro, 16 px; `text-align` on `.ltx_align_right` does not reach
+  it); Firefox honours it. The rule keys on the attribute every cell keeps (`ltx_align_right` unless a border class
+  replaces it). The Chrome guard is local only (repro `alignment/aligned_left_column_is_right_aligned.tex`). Offer upstream.
 
 ### 106. `parskip.sty` is loaded raw (no-indent paragraphs) instead of an empty stub
 
@@ -3812,47 +3811,7 @@ sibling after it) and `…::head_title_excludes_all_note_content` (a `\thanks` i
 `\title{}` + metadata pubnotes: the head `<title>` keeps the title text and no
 note/metadata text; verified red under a note-injecting head-title mutation).
 
-### 111. fancyvrb `frame=single` renders as a semantic box, not raw rules
-
-**Perl** LaTeXML raw-loads `fancyvrb.sty` and lets its frame machinery run: `frame=single`
-selects the `@Single` hooks (`fancyvrb.sty:776`) that draw the frame with `\vrule`/`\hrule`
-(top/bottom `\FV@SingleFrameLine` L869-904, per-line side rules L948-963, the sep box
-`\FV@SingleFrameSep` L929-947). LaTeXML captures those as literal `<ltx:rule>` elements
-that never reconstruct into an HTML box — so the frame renders as disconnected line
-fragments, not a rectangle — and the bottom `\FV@SingleFrameSep` box (only ink = two side
-`\vrule`s, no text) surfaces as a **stray empty line** below the last line. fvextra's
-`backgroundcolor` (a per-line `\colorbox` strip, `fvextra.sty:2547`) is likewise not
-captured. Issue #525 (reporter nasser1: frame not drawn, extra trailing line, backgroundcolor
-ignored). Same-host Perl 0.8.8 is byte-identical (SHARED-FAILURE); the lualatex PDF draws a
-proper frame.
-
-**Divergence** (surpass-Perl, user-approved 2026-08-15): redefine fancyvrb's `@Single` frame
-hooks in the binding (`fancyvrb_sty.rs`) so `\FV@BeginListFrame` **opens** an
-`ltx_framed_rectangle` box and `\FV@EndListFrame` **closes** it (both fire exactly once around
-the whole line set, inside `\FV@List`/`\FV@EndList`'s single group), neutralizing the per-line
-side rules — which drops the raw `<rule>` elements AND the stray sep line in one move.
-`framesep`→`padding`, `framerule`→`border-width`, fvextra `\FancyVerbBackgroundColor`→
-`background` (its per-line strip collapsed to one wrapper background; the key is also ported in
-`fvextra_sty.rs` so it works on a host fvextra predating the feature — the TL fvextra loaded in
-CI errors `keyval: backgroundcolor undefined` otherwise). `rulecolor` keeps the default black
-border. Only per-instance VALUES are inline (`cssstyle` border-width/padding/background); the
-box reuses the existing `ltx_framed_rectangle` semantics for the border and carries a dedicated
-`ltx_framed_verbatim` class for the fixed **responsive** behaviour — `max-width:100%;
-overflow-x:auto; box-sizing:border-box` in a bundled-CSS delta (`LaTeXML.css` + ar5iv-css
-mirror), and `display:block; width:fit-content` (a display: no paragraph indent pushes it
-past the viewport; the breaklines reflow is in #93). Rationale: the box spans the print `\linewidth` (~460px, faithful on desktop/tablet)
-but is a shrink-to-fit inline-block of non-wrapping verbatim lines, so on a phone viewport it
-would push its right border off-screen and scroll the whole page; the class caps it at the
-viewport and scrolls over-long lines *within* the box (the containment `.ltx_listing` uses for
-code, and the #533 delta for math). **Scoped to `frame=single`** (the issue's case); the
-`@Lines` `topline`/`bottomline`/`lines` variants still draw raw rules — a follow-up.
-
-**Guards**: `00_tokenize` fixture `tests/tokenize/fancyvrb_frame.{tex,xml}` — two `Verbatim`s
-(`frame=single` with explicit framerule/framesep, and `frame=single`+`backgroundcolor=yellow`):
-the golden has two `framed="rectangle" class="ltx_framed_verbatim"` boxes with the right
-`border-width`/`padding`/`background` cssstyle and **zero** `<ltx:rule>` elements; plus
-`latexml_post::xslt::witnessed_css_delta::framed_verbatim_responsive_delta_stays_present`
-(the `.ltx_framed_verbatim` responsive rule stays in the bundled `LaTeXML.css`).
+### 111. → #105 (fancyvrb `frame=single` renders as a semantic box, not raw rules)
 
 ### 112. `pdfcol.sty` is a no-op stub (PDF colour stacks have no HTML output)
 
@@ -4694,35 +4653,7 @@ would benefit from the same graphic-width fallback — to be filed at
 
 **Guard**: `06_cluster_regressions::cluster_subfigure_panels_share_a_row_6903`.
 
-### 139. A graphics `<img>` carries an explicit `aspect-ratio` (requested W/H)
-
-**Perl behavior** (`Post/Graphics.pm` `setGraphicSrc`; `LaTeXML.css` flex rules): the
-`<img>` gets `width`/`height` attributes (the *requested* size, from the
-`\includegraphics` options and the file) plus a coarse
-`ltx_img_{square,portrait,landscape}` class, but **no** `aspect-ratio`. The flex
-subfigure CSS then caps `max-width` (`.ltx_flex_size_N .ltx_graphics`), which shrinks
-the width and leaves the height attribute untouched — so a square figure renders as a
-vertical ellipsoid (a sphere becomes an ellipse). brucemiller/LaTeXML#2392, still open;
-Perl 0.8.8 distorts identically (verified: 288×476 for a 476² square under `flex_size_3`).
-
-**Rust behavior** (`latexml_post/src/graphics.rs` `set_graphic_src`; owned `LaTeXML.css`):
-`set_graphic_src` also emits `cssstyle="aspect-ratio:W/H"` from the requested
-width/height (the same W/H it puts on the attributes), and the flex/minipage image
-rules add `height:auto`. When `max-width` caps the width the browser recomputes the
-height from that ratio, so the *requested* aspect ratio is preserved — not merely the
-file's (which matters for `\includegraphics[width=…,height=…]` where they differ). All
-five panels of the issue MWE render at ratio 1.000 (were 0.605 / 0.887).
-
-**Why**: this is the design the upstream thread converged on (xworld21's
-`aspect-ratio: @imagewidth / @imageheight` proposal, meeting brucemiller's requirement
-that any width/height/min/max tweak preserve the *requested* ratio). Emitting the ratio
-per-image is CSS-safe (inert unless a dimension is freed) and beyond Perl, which has not
-implemented it. The coarse `ltx_img_*` classes still pick the flex layout.
-
-**Upstream**: brucemiller/LaTeXML#2392 (open) — the same emission + `height:auto` would
-fix Perl; not filed here.
-
-**Guard**: `latexml_post::graphics::tests::set_graphic_src_emits_requested_aspect_ratio_2392`.
+### 139. → #105 (A graphics `<img>` carries an explicit `aspect-ratio` (requested W/H))
 
 ### 140. amsart up-front author/contact grid redistributes to the right author
 
@@ -4792,36 +4723,7 @@ columns. Rust `(\columnwidth - 4\tabcolsep) * \real{0.30}` now measures 96.3pt (
 `p{…*\real{0.30}}` / `p{…*\real{0.70}}` table has no `width="0.0pt"` and carries the expected
 proportional 96.3pt / 224.7pt.
 
-### 142. `\\[dimen]` optional glue preserved as a themeable `--ltx-break-space` CSS variable
-
-**Perl** LaTeXML's `\lx@newline OptionalMatch:* [Glue]` constructor parses the optional length of
-`\\[20pt]` (the extra vertical space LaTeX inserts at a forced line break) and then **drops it**:
-it emits a bare `<ltx:break/>`, and `ltx:break` has no spacing attribute in the schema (`break_model
-= empty`). So the author's requested gap is lost in HTML while the PDF keeps it. latexml-oxide
-reproduced this exactly (SHARED-FAILURE; verified same-host — byte-identical core XML, both a bare
-`<break/>`).
-
-**Perl behavior**: `\\[20pt]` → `<break/>` (the 20pt is discarded).
-**Rust behavior**: the constructor reads the optional `[Glue]` (`args[1]`) and, when non-zero, sets
-`cssstyle="--ltx-break-space:<pt>"` on the break, so `\\[20pt]` → `<break
-cssstyle="--ltx-break-space:20.0pt"/>` → `<br class="ltx_break" style="--ltx-break-space:20.0pt;">`.
-Plain `\\` (no optional) and `\\[0pt]` stay bare. **No default CSS rule consumes the variable**, so
-default rendering is byte-identical to Perl's bare break — the value is *preserved for a theme to opt
-into* (e.g. ar5iv mapping it to a margin), not acted on.
-
-**Why**: the same "preserve intent in the data model, let the theme decide" principle as the #721
-image-sizing discussion — the engine stays faithful (emits the value, changes nothing visually) and
-spacing policy lives in the theme layer. A default-inert attribute is a strict superset of the
-parity output.
-
-**Witnesses**: html_feedback #722 (a `\title{… \\[20pt] {\small …}}` whose 20pt gap vanished in HTML).
-
-**Upstream**: worth raising against `brucemiller/LaTeXML` (the drop is upstream; a `--ltx-break-space`
-convention or a break spacing attribute would let both engines carry it).
-
-**Guards**: `06_cluster_regressions::cluster_break_optional_glue_722` — `\\[20pt]` carries
-`--ltx-break-space:20.0pt` on its break and exactly one break in the document does (plain `\\` and
-`\\[0pt]` stay bare).
+### 142. → #105 (`\\[dimen]` optional glue preserved as a themeable `--ltx-break-space` CSS variable)
 
 ### 143. → KNOWN_PERL_ERRORS #1255 (The FIRST paragraph is `ltx_noindent` when `\parindent` is zero)
 
@@ -7080,18 +6982,7 @@ Guards `preamblecmds_is_notprerr_inside_a_running_document`, `error_boundary::pe
 
 ### 228. → KNOWN_PERL_ERRORS #1260 (`blindtext` does not force `babel[english]`)
 
-### 229. A `.bib` field value keeps an escaped trailing space
-
-**Perl behavior**: `Pre::BibTeX` trims every field value (`BibTeX.pm:273`
-`s/\s+$//`), so `type = {Memo No.\ }` becomes `…No.\` and the entry-to-TeX
-splice `\csname bib@field@default@type\endcsname{…No.\}` has `\}` eat the
-delimiter — the runaway argument swallows the rest of the entry and the next
-ones (asmejour ×23 `malformed:ltx:bib-part`). Real bibtex + pdflatex fail the
-same way.
-**Rust behavior**: the trim keeps one space when the trailing run follows an
-odd number of backslashes, so the control space survives (`pre_bibtex.rs`).
-**Why**: user-approved surpass (2026-09-17); the source is valid BibTeX and the
-PDF shows the entries. Guard `bib_field_trailing_control_space_survives_trimming`.
+### 229. → #58 (A `.bib` field value keeps an escaped trailing space)
 
 ### 230. → #177 (A graphic named with its extension is also asked of kpsewhich)
 
@@ -8700,17 +8591,7 @@ chinesechess (a removed l3draw API) and mercatormap reach the 100-error limit, a
 lualatex do. **Guard**: `perfect_kernel_batch56::macro_delimiter_mismatch_ignores_the_call`.
 
 ---
-### 296. biber's `%` comments inside a `.bib` entry (Perl: the entry is lost)
-
-biber's reader takes `%` to the end of the line as a comment between an entry's tokens
-(`@Book{a2004,% see also 14.110`); bibtex 0.99d does not ("You're missing a field name"), and
-neither does Perl's `skipWhite` (LaTeXML/lib/LaTeXML/Pre/BibTeX.pm:320-330), which loses the entry.
-**Rust** (batch 56ir, pre_bibtex.rs `skip_white`): when the document uses biblatex (`BIBSTYLE` =
-`biblatex`, or `biblatex.sty` loaded, which a split post session has from its preloads), `%` to
-the end of the line is skipped there. A `%` inside a field value is untouched: values are read by
-`parse_string`/`parse_balanced_braces`, which never skip white. It applies to biblatex whatever
-its `backend=` option says. windycity recovers 27 entries; biblatex-iso690 and frankenstein recover
-some too. **Guard**: `perfect_kernel_batch56::biber_bib_percent_comments_keep_the_entry`.
+### 296. → #58 (biber's `%` comments inside a `.bib` entry (Perl: the entry is lost))
 
 ---
 ### 297. An inline pstricks framed box is framed text (Perl: an auto-opened picture swallows the paragraph)
@@ -16310,44 +16191,61 @@ koma_ids_and_appendix_follow_the_standard_classes, ceurart_title_mode_sub_is_the
 `sectioning-frontmatter/koma_ids_and_appendix_{scrartcl,scrreprt,scrbook}`, `koma_sectioning_check_warns`,
 `stand-in-copies/class_slot/ceurart_title_mode_sub`.
 
-### 738. An `\index`/`\nomenclature`/`\glossary` entry is typeset only where its list is printed (user ruling 2026-10-18)
+### 738. Text TeX writes to an auxiliary file and typesets only when it is printed is digested only where it is printed — index, nomenclature and glossary entries, a `\bibitem` label's reference forms (user ruling 2026-10-18; Perl: digested at the command) — absorbs #750
 
-**TeX**: `\index` writes its entry `\@sanitize`d and `\protected@write`-expanded to the `.idx` (latex.ltx:17710-17726),
-`\glossary` after `\makeglossary` to the `.glo` (:17727-17741), `\nomenclature` to the `.nlo` (nomencl.sty:208-245); the
-entry is typeset only when `\printindex`/the `.gls` input/`\printnomenclature` reads makeindex's `.ind`/`.gls`/`.nls` —
-with all the document's entries, the ones after the command too. Without a print command nothing is typeset, so an
-entry's `_` or `\|` is no TeX error; makeindex itself rejects a nomencl line holding a second `|` or `@` ("Extra `|'",
-the `.ilg`), braced or not.
+**Rule (user ruling 2026-10-18).** An entry or form TeX writes to an auxiliary file and typesets only when a list or a
+reference reads it back is kept as tokens under an id (`latexml_core/src/stomach.rs:2778 defer_print`), with the anchor
+`\lx@deferred@print{id}` where it was made, and digested in document order when its list is printed or its key cited
+(`:2828 resolve_deferred_prints`, from a low-water mark, so each entry is scanned once); once printed, a later entry is
+digested at once; never printed, it typesets nothing. **Perl** digests every phrase at the `\index`/`\nomenclature` (pool
+`\index`; Perl's nomencl is raw and prints no list), `\glossary` only outside `ltx:p` (KNOWN_PERL_ERRORS #281), and a
+`\bibitem` label with every form at the `\bibitem` (latex_constructs.pool.ltxml:4096-4102). A label's own reference text
+(`\@currentlabel`) is not deferred today: #418, #748, #778, #845 build it at the step — the DG question of the OD
+rationalization (C, DEFER).
 
-**Perl**: every phrase is digested at the `\index`/`\nomenclature` (pool `\index`; Perl's nomencl is raw and prints no
-list); `\glossary` inserts a phrase only outside `ltx:p` (KNOWN_PERL_ERRORS #281).
-
-**Rust** (73a): the entry's tokens (expanded as the write expands them; nomencl's with `\theequation` fixed) are kept
-under an id (latexml_core stomach.rs `defer_print`) and the anchor `\lx@deferred@print{id}` stands where the entry was
-made; when the list is printed (`{theindex}`, makeidx/imakeidx `\printindex`, the `.ind`/`.gls` stand-in
-`\lx@makeindex@output`, nomencl's `\printnomenclature`) `resolve_deferred_prints` digests them in document order (from a
-low-water mark, so repeated resolutions scan each entry once) and the anchors absorb the marks, so a list keeps its
-marks where the entries stood; once printed, a later entry is digested at once. A list never printed typesets nothing:
-no `<ltx:indexmark>`/`<ltx:glossarydefinition>`, and no HTML head keywords from index phrases (the webpage stylesheet's
-source) — the document has no index; that loss is accepted as the ruling's consequence (main session 2026-10-18; raw
-undigested marks were declined). `\glossary` follows the same rule (main-session call 2026-10-18 under the ruling).
-A nomencl entry makeindex would reject (a `|`/`@` in its prefix, symbol, description, or table-mode unit and note,
-nomencl.sty:228-232) is left out of the printed list with a Warning. Under streaming (and the adaptive eager phase's
-soft yield) a fragment is built before a later print could fill its anchors, so a yield digests every pending entry at
-once, as Perl does: a streamed conversion then holds marks of an unprinted list where the eager one has none, and a
-printed list's marks can differ too — the streamed entry is digested at the yield, under the definitions then in force,
-the eager one at the print, under the later ones (an entry `\index{\x}` with `\x` "FOO" at the yield, redefined "BAR"
-before `\printindex`: streamed "FOO", eager "BAR") — the second documented exception to the `--streaming` byte-identity besides #456 (the `--streaming` help text; the sweep's
-`streaming_sweep::STREAMING_DIVERGENT_FIXTURES` compares `cluster_regressions/verb_in_index.tex` without its
-`<indexmark>`s and
-`114_streaming_cluster_regressions::streaming_yield_typesets_pending_index_entries` asserts the divergence). Witnesses
-1112.3972 (20 → 0 Errors), 2506.02168 (1 → 0, `\printnomenclature` ahead of the entries). Repros
-index/{index_entry_typeset_only_when_printed, printed_index_keeps_its_entries,
-nomenclature_entry_typeset_only_when_printed, glossary_entry_typeset_only_when_printed},
-index-bib/index_entry_ampersand_is_literal_list_printed_first; guards
-`perfect_kernel_batch73a::{index_entry_is_typeset_only_when_printed, printed_index_keeps_its_entries,
-nomenclature_entry_is_typeset_only_when_printed, glossary_entry_is_typeset_only_when_printed,
-index_entry_ampersand_is_literal_list_printed_first, nomentbl_unit_with_a_bar_is_rejected}`.
+- **Index, nomenclature, glossary** (73a). `\index` writes its entry `\@sanitize`d and `\protected@write`-expanded to the
+  `.idx` (latex.ltx:17710-17726), `\glossary` after `\makeglossary` to the `.glo` (:17727-17741), `\nomenclature` to the
+  `.nlo` (nomencl.sty:208-245); `\printindex`/the `.gls` input/`\printnomenclature` read makeindex's `.ind`/`.gls`/`.nls`,
+  with all the entries, later ones too. Without a print command an entry's `_` or `\|` is no TeX error. The tokens are
+  kept expanded as the write expands them (nomencl's with `\theequation` fixed); the prints are `{theindex}`,
+  makeidx/imakeidx `\printindex`, the `.ind`/`.gls` stand-in `\lx@makeindex@output`, nomencl's `\printnomenclature`; the
+  anchors absorb the marks, so a list keeps its marks where the entries stood. A list never printed gives no
+  `<ltx:indexmark>`/`<ltx:glossarydefinition>` and no HTML head keywords from index phrases — the accepted cost (main
+  session 2026-10-18; raw undigested marks declined); `\glossary` likewise (main-session call 2026-10-18). A nomencl entry
+  makeindex would reject (a second `|` or `@` in its prefix, symbol, description, or table-mode unit and note,
+  nomencl.sty:228-232; "Extra `|'", the `.ilg`) is left out with a Warning. Streaming (and the adaptive eager phase's soft
+  yield) digests every pending entry at a yield, as Perl does: a streamed conversion holds marks of an unprinted list,
+  and a printed list's entry is digested under the definitions in force at the yield (`\index{\x}`, `\x` "FOO" then
+  "BAR" before `\printindex`: streamed "FOO", eager "BAR") — the second documented exception to `--streaming`
+  byte-identity besides #456 (the `--streaming` help text; `streaming_sweep::STREAMING_DIVERGENT_FIXTURES` compares
+  `cluster_regressions/verb_in_index.tex` without its `<indexmark>`s;
+  `114_streaming_cluster_regressions::streaming_yield_typesets_pending_index_entries` asserts it). Witnesses 1112.3972 (20
+  → 0 Errors), 2506.02168 (1 → 0, `\printnomenclature` ahead of the entries). Repros
+  index/{index_entry_typeset_only_when_printed, printed_index_keeps_its_entries,
+  nomenclature_entry_typeset_only_when_printed, glossary_entry_typeset_only_when_printed},
+  index-bib/index_entry_ampersand_is_literal_list_printed_first; guards
+  `perfect_kernel_batch73a::{index_entry_is_typeset_only_when_printed, printed_index_keeps_its_entries,
+  nomenclature_entry_is_typeset_only_when_printed, glossary_entry_is_typeset_only_when_printed,
+  index_entry_ampersand_is_literal_list_printed_first, nomentbl_unit_with_a_bar_is_rejected}`.
+- **A `\bibitem` label's reference forms** (ex-#750, 70c; rc_struct4 row C1). `\@lbibitem` (latex.ltx:17746-17749)
+  typesets the label as `\item[\@biblabel{#1}\hfill]` and writes `\bibcite{key}{label}`; only a `\cite` expands `\b@key`
+  (:17761-17771). `\lx@bibitem` (sect11.rs) reads `[label]` undigested and splits the tags (`tag_forms`,
+  base_utilities/util_text.rs): the role-less `\fnum@@bibitem` = `{\@biblabel{\the@bibitem}}` is digested at the
+  `\bibitem` through the class's `\@biblabel`; refnum, typerefnum, autoref and the cleveref forms are deferred under `b@key`,
+  resolved when a `\@@bibref` names the key (`sect11.rs:2475 cite_prints_keys`: the kernel's `\cite`, natbib's, biblatex's,
+  the `.bbl` styles'), at once when one already has. `\nocite` prints nothing; the streaming yield typesets pending forms at
+  the spill, as Perl. Under mn2e/mnras without `usenatbib` (their bindings define the class's `\def\@biblabel#1{}`,
+  mn2e.cls:1370, mnras.cls:1636) a `\bibitem[\protect\citeauthoryear{…}{…}]{key}` errs only when cited (pdflatex 0 uncited,
+  1 per citation). An uncited or keyless entry has no refnum tag; the bibliography XSLT shows the role-less tag, else the
+  refnum. Unchanged: natbib's entries (`\lx@NAT@lbibitem`), unlabelled `\bibitem{key}`, and any `\bibitem[label]` while natbib
+  (or a renamed copy: `\NAT@ifcmd`, natbib.sty:809) is loaded — natbib parses the label at the `\bibitem`, so it is digested
+  there once (a copy's delimited `\citeauthoryear`, natbib.sty:1014, read raw ran past the label: 1003.3017's natbib_vw.sty;
+  repro `index-bib/mn2e_natbib_copy/natbib_copy_citeauthoryear_label_cited`, pdflatex and Perl 0). An autoload the label
+  calls loads before the entry is read (`\lx@bibitem@autoloads`): crckapb's `\citeauthoryear` is natbib's (#731), whose
+  parser loaded inside the tags took `\the@bibitem` as its number (astro-ph0007279; guard
+  `perfect_kernel_batch77r::bibitem_label_autoload_loads_before_the_entry`). Witnesses 0812.1037, 1105.2318, 1306.6339,
+  1805.00040. Guards `perfect_kernel_batch70c::*`; repros `index-bib/mnras_bibitem_label_{uncited,nocite_only,cited_before,cited_after}`,
+  controls `index-bib/bibitem_numeric_label_cited_and_uncited`, `index-bib/mnras_usenatbib_bibitem_label_cited`.
 
 ### 739. AASTeX 6+'s `\tablecaption` before `\begin{deluxetable}`, or in a `{longrotatetable}` around a plain `tabular`, is kept on the table, unnumbered (user ruling 2026-10-18)
 
@@ -16529,35 +16427,7 @@ and errs ("Missing $ inserted"). KNOWN_PERL_ERRORS #973.
 Guard `perfect_kernel_batch73b::refstepcounter_in_math_sets_a_math_label`; repro
 `macro-state/refstepcounter_in_math_sets_a_math_label`.
 
-### 750. A `\bibitem` label's reference forms are typeset only where a `\cite` prints them
-
-**Decision** (70c; rc_struct4 row C1; user ruling 2026-10-18: text TeX writes to an auxiliary file and typesets only
-when printed is digested only where it is printed): `\@lbibitem` (latex.ltx:17746-17749) typesets the label in the list
-as `\item[\@biblabel{#1}\hfill]` and writes it to the .aux as `\bibcite{key}{label}`; only a `\cite` of the key expands
-`\b@key` (latex.ltx:17761-17771). So `\lx@bibitem` (sect11.rs) reads its `[label]` undigested and splits the entry's tags
-(base_utilities/util_text.rs `tag_forms`): the role-less tag, `\fnum@@bibitem` = `{\@biblabel{\the@bibitem}}`, is digested at the
-`\bibitem` through the class's own `\@biblabel`; the forms a reference prints (refnum, typerefnum, autoref, the
-cleveref forms) are deferred under the deferred-print list `b@key` (73a's latexml_core `defer_print`, #738), resolved
-when a `\@@bibref` names the key (sect11.rs `cite_prints_keys`: the kernel's `\cite`, natbib's, biblatex's, the `.bbl`
-styles'), at once when one already has. `\nocite` prints nothing and does not count. The streaming yield's fallback
-typesets every pending form at the spill, as Perl does. Under mn2e/mnras without `usenatbib`, whose bindings now define
-the class's `\def\@biblabel#1{}` (mn2e.cls:1370, mnras.cls:1636), a `\bibitem[\protect\citeauthoryear{…}{…}]{key}`
-label no longer errs for an uncited key (pdflatex 0 errors) and keeps its one Error when a `\cite` prints it (pdflatex 1
-per citation). An entry nothing cites (or a keyless one) has no refnum tag; the bibliography XSLT shows the role-less tag,
-else the refnum. natbib's entries (`\lx@NAT@lbibitem`) and unlabelled `\bibitem{key}` are unchanged, and so is any
-`\bibitem[label]` while natbib (its own or a renamed copy: `\NAT@ifcmd`, natbib.sty:809) is loaded: natbib parses the
-label at the `\bibitem` and writes the parsed author and year, so no `\cite` expands it; the label is digested there
-once, as the optional argument it was, and the tags made from what it digested to (a copy's delimited `\citeauthoryear`,
-natbib.sty:1014, read raw out of that context ran past the label's end: 1003.3017's natbib_vw.sty; repro
-`index-bib/mn2e_natbib_copy/natbib_copy_citeauthoryear_label_cited`, pdflatex and Perl 0 errors). Divergence from
-Perl, which digests the label and every form at `\bibitem` (latex_constructs.pool.ltxml:4096-4102). An autoload the
-label calls loads its package before the entry is read, where Perl's digestion of the label loaded it (sect11.rs
-`\lx@bibitem@autoloads`; a package that takes `\bibitem` over then reads the entry): crckapb's `\citeauthoryear` is
-natbib's (#731), whose parser, loaded inside the tags, took `\the@bibitem` as its own number for ever (astro-ph0007279;
-guard `perfect_kernel_batch77r::bibitem_label_autoload_loads_before_the_entry`). Witnesses
-0812.1037, 1105.2318, 1306.6339, 1805.00040. Guards `perfect_kernel_batch70c::*`; repros
-`index-bib/mnras_bibitem_label_{uncited,nocite_only,cited_before,cited_after}`, controls
-`index-bib/bibitem_numeric_label_cited_and_uncited`, `index-bib/mnras_usenatbib_bibitem_label_cited`.
+### 750. → #738 (A `\bibitem` label's reference forms are typeset only where a `\cite` prints them)
 
 ### 753. A table of contents inside a frontmatter container goes after it; `\tableofcontents` begins as a heading
 
@@ -18388,90 +18258,180 @@ no-break spaces (U+00A0, U+2002-U+2009, U+202F) part labels as their commands do
 commas only. Repro sectioning-frontmatter/jheppub_note_mark_apart_from_the_names; guard
 `perfect_kernel_batch78f::jheppub_note_mark_apart_from_the_names`.
 
-### 813. A label after a raw counter step names the object the step numbers, which takes the step's number
+### 813. A `\label` names what `\@currentlabel` holds where it is made — the object of the step in scope, numbered as the kernel or amsmath numbers it (Perl: the nearest ancestor that may carry `labels`, every row numbered) — absorbs #847 #856 #865 #875 #877
 
-LaTeX's `\label` writes the `\@currentlabel` of the last `\refstepcounter` and hyperref's anchor of that step
-(latex.ltx:14963-14967); LaTeXML's (Perl latex_constructs.pool.ltxml:3782, Document.pm:1098-1127 `floatToLabel`) climbs
-to the nearest ancestor that may carry `labels`, and `\ref` prints that element's `refnum`. A step no constructor takes —
-a raw `\refstepcounter` — numbers no element, so its labels landed on the enclosing section, whose number `\ref`
-printed (KNOWN_PERL_ERRORS #1038). tcolorbox numbers its boxes so: `\newtcbtheorem`, `\newtcolorbox[auto counter]` and
-the like put `\addtocounter{\tcbcounter}{-1}\refstepcounter{\tcbcounter}` and the `label=` key's `\label` in the box's
-phantom code (tcolorbox.sty:2311, :998, :1154-1161), placed inside the frame picture (:1925 `\pgftext`). Ours:
-(1) the kernel's `\refstepcounter` primitive records the step it made with the tags LaTeXML makes for every step
-(sect08.rs `\lx@refstepcounter@label`, dialect.rs `note_raw_refstep`; local, as LaTeX's `\@currentlabel`; any other
-step forgets it), and a `\label` made while `\@currentlabel` is still that step's `\the<counter>` carries them
-(`current_raw_refstep`, with the step's serial); (2) such a label may stop at an `ltx:picture` — the box the step is
-made in (`Document::float_to_label_for`) — but not at an object another raw step numbered (the serial in the bookkeeping
-attribute `_raw_refstep`: it climbs past, as Perl's); any other label climbs past a picture, as Perl's; the schema gives `ltx:picture`
-`Labelled.attributes` and an optional leading `ltx:tags` (LaTeXML-picture.rnc/.rng, LaTeXML.model); (3) the object it
-lands on takes the step's tags (`Document::take_raw_refstep_number`) when it has no number of its own and is not a unit
-numbered by its heading (an `ltx:title` holder: an unnumbered `\section*` or theorem stays unnumbered); the role-less
-display tag is not kept, the box printed its own number; (4) under cleveref, tcolorbox's `label type` (`\label[<box>]`,
-:955-968, with `crefname`, :2270) gives the numbered box the type's cleveref forms, adding the roles the counter has no
-name for (cleveref_sty.rs `\lx@cleverref@labeltype`, which numbered the box first — it had overwritten the enclosing
-section's names); (5) the SVG post-processor keeps a labelled `picture` element — its id, `labels` and `ltx:tags` around
-its drawing converted to SVG — where it replaces an unlabelled one (svg.rs). So `\ref` prints pdflatex's number and links
-to the box: a delegated listing box (`\newtcblisting`, `\newtcbinputlisting`) labels its first listing line, which
-takes the box counter's number. (6) A listing's start forgets the raw step (`forget_raw_refstep` in `\@@listings@block`'s
-`before_digest`: listings makes `\@currentlabel` its line number's, lstmisc.sty:1228 `\lst@Init`, :1225), and a
-tcolorbox listing box notes its own step again where its phantom code runs in the first line
-(`\lx@lst@renote@raw@refstep`, `renote_forgotten_raw_refstep`). (7) An amsmath display's own `\label` names the step held
-where the display starts (`hold_raw_refstep_for_display` in `ams_rearrangeable_bindings`/`ams_alignment_bindings`;
-the display's `\label` is `\lx@ams@display@label`, an expandable wrapper of the `\label` it replaced that announces
-its label, `mark_display_label`, until the kernel's `\lx@label` makes it; the outermost display start forgets one
-announced and never made): amsmath's `\label` there is `\label@in@display` (amsmath.sty:1230-1236), made in the row's
-tag cell after the cell group restored `\@currentlabel` (:1240-1252). A `{gather}` makes the display tag on every row
-(:1621-1627), so a `{gather*}` row's label after a step in its cell is the section's (pdflatex 7), one after a step
-before the display the step's, and an `{aligned}`/`{split}` in an `{equation*}` names the step before it (pdflatex 44,
-45). The align family (`{align}`, `{flalign}`, `{alignat}`) and `{multline}`, starred or not, hold no step:
-`\math@cr@@@align` makes the display tag only under `\iftag@` (:1833-1843), so an untagged row's label is the next
-tagged row's (`\df@label` carried: `\begin{align} a&=b \label{n2}\notag \\ c&=d \end{align}` in a `\refstepcounter`
-environment is equation 1) or none (`??`), never a held step (78g r2 gave the step, 41/42 for pdflatex's 1/2; review
-probe rev78g2 al2.tex). A paragraph box in a display (`{minipage}`, `\parbox`, and the kernel's `\@arrayparboxrestore`)
-leaves it (`leave_display_for_parbox`): amsmath's `\@arrayparboxrestore` restores `\label` to `\ltx@label`
-(:1237-1238), so its label is made at once with the box's step (`\begin{gather*} a=b
-\refstepcounter{foo}\text{\begin{minipage}{2cm}\label{z5}x\end{minipage}}\end{gather*}`: pdflatex 42). The kernel's `\label` a document saved
-(`\AtBeginDocument{\let\originallabel\label}`, the `\labelrel` idiom of 2310.19138) labels at once, with the cell's
-step ("a"). A label whose step is not the one that numbered an object climbs past it (the `_raw_refstep` mark; a
-`{gather*}` row's `\label` after `\labelrel`'s on that row). (8) `\eqno` on a display a raw step numbered
-joins that step's `ltx:tags` (`Document::merge_raw_refstep_tags`): `$$ \refstepcounter{foo}\label{x2} c=d \eqno(B) $$`
-shows "(B)" and `\ref` prints the step's 42, as pdflatex. (9) A label after a raw step never stops inside an
-`ltx:Math` (`within_math` in `float_to_label_for`): a box in math (`\text{\begin{tcolorbox}\label{t1}…}`, `\mbox`) has an
-id the math's rendering does not keep, so a label on it dangles (78g r1-r3: `\ref` empty, "Missing Target"); it climbs
-to where Perl's lands — the display, which takes the step's number when it has none (a `{gather*}` row, `\[…\]`: pdflatex
-41, 43), or past an inline formula the section (pdflatex 42, ours 7, Perl the same). Residuals (pdflatex differs): an unnumbered listing's line
-label prints the section's number (pdflatex the line's: listings steps `lstnumber` on every line; the
-`ltx:listingline` of an unnumbered listing carries no number); a second raw step in one picture
-(`\put(0,0){\refstepcounter{foo}\label{p:a}…}\put(50,0){\refstepcounter{foo}\label{p:b}…}`) labels the section (pdflatex
-42: no element of the second `\put` may carry a label — `ltx:g` has no id, a tikz node is `svg:g`). Decided (main
-session 2026-10-21): the section fallback stays, no `ltx:g` schema change; giving `ltx:g` `Labelled.attributes`, an id
-and a leading `ltx:tags`, and the SVG post-processor an `id` on its `svg:g`, remains only this residual's future path.
-An untagged `{align*}`/`{flalign*}`/`{multline*}` row's label, which amsmath never makes (pdflatex `??`, and "Multiple
-\label's" at the next label), labels the row or the section as before (Perl the same); a kernel `\label` a document
-saved, in a later `{align*}` row than a raw step made in a cell (`u&=v \refstepcounter{foo}\oldlabel{o2} \\ w&=x
-\oldlabel{o3}`), names that step (ours 45; pdflatex the section's 7: the cell group restored `\@currentlabel`; review
-probe rev78g2 obs.tex o3); a `$$…$$` label after an `{align*}` whose cell made a raw step names no step (`\refstepcounter{foo}
-\lstinputlisting[numbers=left]{code.txt}` … `\begin{align*} u&=v \refstepcounter{foo}\\ w&=x \end{align*} $$ a=b
-\label{d3} $$`: ours the section's 7, pdflatex the step before the display, 42; leak2.tex d3); a label after an `\eqno`
-(`$$ \refstepcounter{foo} c=d \eqno(E) \label{x5}$$`) is the `\eqno` tag's "(E)" (pdflatex 43, the step's; int47a the
-same; eqno.tex x5); an
-object with its own number keeps it (`\begin{equation} p=q \refstepcounter{foo}\label{e4}\end{equation}` pdflatex 42,
-ours the equation's; an `\item` likewise; a numbered `{align}`/`{gather}` row's number wins over the step of a
-paragraph box or a box in its cell, `\begin{align} a&=b \refstepcounter{foo}\text{\begin{minipage}{2cm}\label{y7}x\end{minipage}}
-\end{align}` pdflatex 48, ours 1; review probes rev78g3 pb2.tex y7, cr.tex w2); a raw step in running text labels the paragraph's section (`ltx:para` holds
-no `ltx:tags`; Perl the same); and (pre-existing, not 78g's) cleveref's `\label[]` inside an `equation` gives "condition 1"
-where pdflatex prints `??`. A/B (the sel78d census's 150 `tcb_label_ref` papers + 100 random): 8 papers changed
-references, all 44 labels on boxes with pdflatex's `.aux` number; 2 others gained numbers on unreferenced boxes (their
-inner ids shifted by one, the numbered object's tags first); 0 Error/Fatal changes. Residual too: a box whose listing
-numbers its lines keeps the label on the numbered first line, whose line number `\ref` prints. Witnesses 2505.20088,
-2311.09542, 2509.17784, 2602.03411, 2606.06976 (`\newtcolorbox[auto counter]`), 2402.06608 (`[blend into=figures]`,
-the figure counter), 2506.01072 (`\newtcbtheorem`), 2609.20563 (`\newtcblisting`). Repros tools/perfect_kernel/repros/cross-references/; guards
-`perfect_kernel_batch78g::{tcb_box_label_takes_the_box_number, tcb_listing_box_label_takes_the_box_number,
-picture_step_label_takes_the_step_number, tcb_theorem_cref_names_the_box_type, listing_label_names_no_step_before_it,
-amsmath_row_label_names_the_display_step, unnumbered_display_label_takes_the_step_number,
-picture_second_step_label_climbs, amsmath_saved_kernel_label_names_the_cell_step,
-math_box_label_climbs_to_the_display}` (the last three and the align-family, `{multline*}`, `{aligned}` and minipage rows
-of `amsmath_row_label_names_the_display_step` 78g r2-r4).
+**Rule.** LaTeX's `\label` writes the `\@currentlabel` of the last `\refstepcounter` in scope and hyperref's anchor of
+that step (latex.ltx:14963-14967): a label goes to the element that step numbered, taking the step's number when the
+element has none, and climbs from where it is made when a group has undone the step; an equation row or an `{equation}`
+is numbered by the switch the kernel (`\if@eqnsw`) or, where loaded, amsmath keeps. **Perl** (latex_constructs.pool.ltxml:3782,
+Document.pm:1098-1127 `floatToLabel`) climbs from the current node's last child to the nearest ancestor that may carry
+`labels`, and `\ref` prints that element's `refnum`; it numbers every eqnarray row without `\nonumber` and gives every
+`{equation}` amsmath's `\nonumber`.
+**Code.** `latexml_core/src/document.rs:7823 float_to_label_for`, `:7836 float_to_label_scoped`, `:7937
+take_raw_refstep_number`, `:7988 note_raw_refstep_object`, `:8006 release_earlier_label_holders`, `:8078
+merge_raw_refstep_tags`; `binding/counter/dialect.rs:785 current_raw_refstep`, `:1002 label_follows_an_undone_step`, `:722
+hold_raw_refstep_for_display`, `:754 leave_display_for_parbox`; `latex_constructs/mod.rs:2549 rearrange_eqnarray`, `:2856
+eqnarray_eqncr_numbering` (the rule's one statement), `:2976 eqnarray_next_number_tags`; `sect07.rs:58
+prepare_latex_equation_counter`.
+
+- **A raw counter step names its object (78g).** A step no constructor takes numbered no element, so its labels landed
+  on the section (KNOWN_PERL_ERRORS #1038). tcolorbox's `\newtcbtheorem`, `\newtcolorbox[auto counter]` put
+  `\addtocounter{\tcbcounter}{-1}\refstepcounter{\tcbcounter}` and the `label=` key's `\label` in the box's phantom code
+  (tcolorbox.sty:2311, :998, :1154-1161), inside the frame picture (:1925 `\pgftext`). (1) The kernel's `\refstepcounter`
+  records its step with the tags LaTeXML makes for every step (sect08.rs `\lx@refstepcounter@label`, dialect.rs
+  `note_raw_refstep`; local, as `\@currentlabel`); a `\label` made while `\@currentlabel` is still that step's
+  `\the<counter>` carries them (with the step's serial). (2) It may stop at an `ltx:picture` (the box the step is made
+  in), not at an object another raw step numbered (`_raw_refstep`); the schema gives `ltx:picture` `Labelled.attributes`
+  and an optional leading `ltx:tags` (LaTeXML-picture.rnc/.rng, LaTeXML.model). (3) The object takes the step's tags when
+  it has no number and is not a unit numbered by its heading (an unnumbered `\section*` or theorem stays unnumbered); the
+  role-less display tag is dropped. (4) Under cleveref, tcolorbox's `label type` (`\label[<box>]`, :955-968, `crefname`
+  :2270) gives the box the type's forms (cleveref_sty.rs `\lx@cleverref@labeltype`, numbering the box first). (5) The SVG
+  post-processor keeps a labelled `picture`'s id, `labels` and `ltx:tags` around its SVG (svg.rs). (6) A listing's start
+  forgets the step (`forget_raw_refstep` in `\@@listings@block`'s `before_digest`; lstmisc.sty:1228 `\lst@Init`, :1225);
+  a tcolorbox listing box notes it again in its first line (`\lx@lst@renote@raw@refstep`, `renote_forgotten_raw_refstep`):
+  a `\newtcblisting`/`\newtcbinputlisting` labels its first line with the box number. (7) An amsmath display's `\label`
+  (`\lx@ams@display@label`, wrapping the replaced `\label`, `mark_display_label`) names the step held where the display
+  starts (`hold_raw_refstep_for_display` in `ams_rearrangeable_bindings`/`ams_alignment_bindings`): amsmath's
+  `\label@in@display` (amsmath.sty:1230-1236) is made in the tag cell after the cell group restored `\@currentlabel`
+  (:1240-1252); `{gather}` tags every row (:1621-1627), so a `{gather*}` row's label after a step in its cell is the
+  section's (pdflatex 7), after a step before the display the step's, an `{aligned}`/`{split}` in `{equation*}` names the
+  step before it (44, 45); the align family and `{multline}` hold no step (`\math@cr@@@align` tags only under `\iftag@`,
+  :1833-1843: an untagged row's label is the next tagged row's, `\df@label`, or `??`, never a held step: review probe rev78g2 al2.tex). A paragraph box in a display
+  (`{minipage}`, `\parbox`, `\@arrayparboxrestore`) leaves it (`\label` restored to `\ltx@label`, :1237-1238; pdflatex 42).
+  A saved kernel `\label` (`\AtBeginDocument{\let\originallabel\label}`, 2310.19138's `\labelrel`) labels at once. (8)
+  `\eqno` on a display a raw step numbered joins its `ltx:tags`: `$$ \refstepcounter{foo}\label{x2} c=d \eqno(B) $$`
+  shows "(B)", `\ref` 42. (9) Never inside an `ltx:Math` (`within_math`): it climbs to the display, which takes the step's
+  number (pdflatex 41, 43), or past an inline formula to the section (pdflatex 42, ours 7, Perl the same).
+  Residuals (decided main session 2026-10-21: the section fallback stays, no `ltx:g` schema change; `Labelled.attributes`
+  on `ltx:g` and an `id` on `svg:g` remain the future path): an unnumbered listing's line label prints the section's
+  number (listings steps `lstnumber` per line); a second raw step in one picture (`\put(0,0){\refstepcounter{foo}\label{p:a}…}
+  \put(50,0){…\label{p:b}…}`) labels the section (pdflatex 42); an untagged `{align*}`/`{flalign*}`/`{multline*}` row's
+  label (pdflatex `??`, "Multiple \label's"); a saved `\oldlabel` in a later `{align*}` row (`u&=v
+  \refstepcounter{foo}\oldlabel{o2} \\ w&=x \oldlabel{o3}`: ours 45, pdflatex 7; rev78g2 obs.tex o3); a `$$…$$` label after
+  an `{align*}` whose cell stepped (`\begin{align*} u&=v \refstepcounter{foo}\\ w&=x \end{align*} $$ a=b \label{d3} $$`:
+  ours 7, pdflatex 42; leak2.tex d3); a label after an `\eqno` (`$$ \refstepcounter{foo} c=d \eqno(E) \label{x5}$$`: "(E)",
+  pdflatex 43; eqno.tex x5); an object's own number wins (`\begin{equation} p=q \refstepcounter{foo}\label{e4}\end{equation}`
+  pdflatex 42; an `\item`; `\begin{align} a&=b \refstepcounter{foo}\text{\begin{minipage}{2cm}\label{y7}x\end{minipage}}
+  \end{align}` pdflatex 48, ours 1; rev78g3 pb2.tex y7, cr.tex w2); a raw step in running text labels the section
+  (`ltx:para` holds no `ltx:tags`); cleveref's `\label[]` in an `equation` gives "condition 1" where pdflatex prints `??`;
+  a box whose listing numbers its lines keeps the label on the first line. A/B (sel78d's 150 `tcb_label_ref` papers + 100
+  random): 8 papers changed references, all 44 labels with pdflatex's `.aux` number; 2 gained numbers on unreferenced
+  boxes; 0 Error/Fatal changes. Witnesses 2505.20088, 2311.09542, 2509.17784, 2602.03411, 2606.06976, 2402.06608 (`[blend
+  into=figures]`), 2506.01072 (`\newtcbtheorem`), 2609.20563 (`\newtcblisting`). Repros tools/perfect_kernel/repros/cross-references/;
+  guards `perfect_kernel_batch78g::{tcb_box_label_takes_the_box_number, tcb_listing_box_label_takes_the_box_number,
+  picture_step_label_takes_the_step_number, tcb_theorem_cref_names_the_box_type, listing_label_names_no_step_before_it,
+  amsmath_row_label_names_the_display_step, unnumbered_display_label_takes_the_step_number,
+  picture_second_step_label_climbs, amsmath_saved_kernel_label_names_the_cell_step, math_box_label_climbs_to_the_display}`.
+- **A step a group undid** (ex-#856, 78p; KNOWN_PERL_ERRORS #1092). `\refstepcounter` sets `\@currentlabel` locally, so
+  after an `equation`, theorem, caption or list closes it reverts. Every step records its serial in scope and as the
+  latest made (global, `label_stepped_counter`); a label where they differ climbs from the current node, not its last
+  child (`\lx@label`'s `after_undone_step`). A label in the step's own scope is unchanged (`\caption{…}\label`, `\item…\label`).
+  A LaTeXML wrapper group around a step LaTeX makes in the current group does not undo it (`\lx@refstep@outlives@group`,
+  `keep_latest_refstep_in_scope`): caption's `\captionof` (caption.sty:390-391; 2402.05535). With no ancestor able to take
+  it, Perl's fallback (last child, else the root) stays — the root taking lastpage's `\AtEndDocument{\label{lastpage}}`
+  renumbered every `idN`. A label after a closed table, figure, equation or list names the enclosing section's (theorem's,
+  item's) number (math0107195: PDF "Theorem 5.3", Perl and ours before the equation's 16); after a `subequations`
+  block's inner `align` the block's (2505.03288 `eq:GNG` "13"); after `\subfloat{…}\label{…}` the figure when its
+  `\caption` precedes the subfloats, where pdflatex names the section when it follows (1504.02206 `fig:2c`: pdflatex 5.1,
+  ours 2; rev78p). cleveref's `\lx@cleverref@labeltype` places by `float_to_label_scoped` (78j r5; guard
+  `perfect_kernel_batch78j::cleveref_label_type_after_a_closed_float_names_the_object_in_scope`). Repro
+  cross-references/label_after_an_inner_equation_names_the_theorem; guards `perfect_kernel_batch78p::{
+  label_after_an_inner_equation_names_the_theorem, label_after_a_closed_step_names_the_step_in_scope,
+  label_after_captionof_names_its_float}`.
+- **eqnarray numbers by `\@@eqncr`'s `\if@eqnsw`** (ex-#847, 78n r3). latex.ltx:15750-15797: a row is numbered only if it
+  ends through `\@@eqncr` (`\\`, `\\*`, `\\[len]`, `\end{eqnarray}`) with no `\nonumber` (`\global\@eqnswfalse`, :15775)
+  since the last one (:15795 `\if@eqnsw\@eqnnum\stepcounter{equation}\fi \global\@eqnswtrue`); a raw `\cr` neither
+  numbers nor resets; `\@currentlabel` is `\p@equation\theequation` (:15752), so a label names the number the next
+  printing `\@@eqncr` prints. Perl's `\eqnarray@row@after@` (latex_constructs.pool.ltxml:2226) runs `afterEquation` for
+  any row end. Ours: `\lx@eqnarray@number@check` (expanded by `\\` and `\end{eqnarray}`) records `EQNARRAY_EQNNUM` from
+  `EQNARRAY_EQNSW`; `\nonumber` clears it; `\eqnarray@row@after@` retracts unnumbered rows' preset numbers and marks them
+  (`UNNUMBERED_EQNCR_ROW_ATTRIBUTE`); `rearrange_eqnarray` moves their labels to the next numbered row. Opt-in numbering key
+  `eqncr=1`: latex.ltx's `eqnarray`/`eqnarray*` (not iopart's `\eqnalign`, subeqn's or subeqnarray's `subeqnarray`). A number
+  printed on an empty row under an unnumbered one (`x &=& y \cr \end{eqnarray}`, `… \cr &&\\`, `\label{e} x = y, \nonumber\\
+  \end{eqnarray}`) is that equation's (`NUMBER_ROW_PROPERTY`; the empty numbered row joins the equation above, tags and id
+  with it, single-column too); an empty numbered row under a numbered equation (`a &=& b \\ \end{eqnarray}`) is removed,
+  its number consumed as in LaTeX. A label with no numbered row after it in its group (an `eqnarray*`, a trailing
+  `\nonumber` row) names the counter's next value (78r; KNOWN_PERL_ERRORS #1106): `\lx@eqnarray@label` marks the row
+  (`EQNARRAY_ROW_LABELLED`), `eqnarray_next_number_tags` digests that value's `tag_forms` (refnum, typerefnum, autoref,
+  cleveref forms; no printed tag), and the row stands as its own equation (split from a numbered equation), except in a
+  single relation column whose rows join one numbered equation (the residual); before, `\ref` printed the group's number
+  (6 for our 5), a section's ("1" for 2, iopart) or the raw id ("S0.Ex5" for 7; rev78n2). The split costs grouping: 84 of
+  569 changed census papers split 122 continuation rows (math-parse Warnings 18,514 → 18,540). A continuation-only row
+  (`&&+ 2,`) under a numbered row is its own equation since 79d (#888; 1310.2253 `eqn:zg`, PDF 11). IEEEeqnarray follows the
+  label rule since 79d (`labelnext=1`: IEEEtrantools.sty:1986-1991, :2072-2117; guard
+  `perfect_kernel_batch79d::ieeeeqnarray_unnumbered_row_label_names_next_number`). `.aux` matches (base → final):
+  2112.13115 30 → 112 of 112 (one ahead of its PDF from (32) before), 1206.6051 66 → 98 of 98 (NA3, PDF "V.3"), 1011.0523
+  7 → 12 of 12 (PDF (19) was our 22), 0910.0753 14 → 35 of 35, 0708.0012 0 → 28 of 29 (`\label{l5}\cr &=& v`), 0806.3762 3
+  → 15 of 16 (each miss a label defined twice); 35 changed papers 805 → 1,066 of 1,151; 1602.03553 68 → 89 of 89
+  (`eqn:zeta01` 5), 2301.00760 37 → 58 of 58 (`comorph*` 54), 1303.3431 64 → 65 of 65 (`appa3` 66); 20 more census papers
+  676 → 702 of 704 (the misses no eqnarray's: 1508.00199, gr-qc0201061). 212 papers in the fidelity3 scan of 9,829
+  eqnarray papers had a `\cr` row; nucl-th9903062 ((1) our 2, (6) our 12), nucl-th9807024. Repros
+  cross-references/{eqnarray_cr_row_is_unnumbered, eqnarray_cr_then_empty_numbered_row, eqnarray_cr_row_label_names_next_number,
+  eqnarray_nonumber_row_label_names_next_number, eqnarray_nonumber_holds_until_eqncr,
+  eqnarray_label_with_no_numbered_row_after_it}, alignment/eqnarray_cr_row_unnumbered (65o); guards
+  `perfect_kernel_batch78n::{eqnarray_row_ended_by_cr_is_unnumbered, eqnarray_empty_numbered_row_numbers_the_equation_above,
+  eqnarray_cr_row_label_names_next_number, eqnarray_nonumber_row_label_names_next_number, eqnarray_nonumber_holds_until_eqncr}`,
+  `perfect_kernel_batch78r::eqnarray_label_with_no_numbered_row_after_it_names_the_next_number`,
+  `perfect_kernel_batch65o::eqnarray_number_column` ("(1)", "(star)", "(2)").
+- **`\nonumber` in `{equation}` only under amsmath** (ex-#865, 78r). latex.ltx:15737-15739's `{equation}` always prints
+  `\@eqnnum` (`\nonumber` is eqnarray's switch); amsmath's (amsmath.sty:1268-1269) removes it. Perl gives every `{equation}`
+  amsmath's on purpose (latex_constructs.pool.ltxml:1915-1916, "even though stock LaTeX provides no means to override
+  them"): hep-ph9710521's `\nl` in a `\beq` (61 → 74 of 74), nucl-th0404042's `j-sum1`/`l-sum1` (PDF 20, 23; 15 → 17 of 17).
+  `prepare_latex_equation_counter` marks `LATEX_EQNNUM` unless amsmath is loaded (`amsmath_nonumber`: `\ver@amsmath.sty` or
+  the loaded flag; `amsmath_loaded_beyond_original` counts as not loaded; `\ver@` because aa.cls's binding clears the flag,
+  aa_cls.rs), for LaTeX's `{equation}` and the class bindings that redefine it for a `$`: mn2e/mnras/mn
+  (mn2e_support_sty.rs) and aa (aa_support_sty.rs; a shipped aa.cls loading amsmath keeps amsmath's: 1712.01010,
+  1812.04463, 2501.07980). `\documentclass{mnras}`: pdflatex (1) (2), "See 1; 2." (rev78r r2 finding 2; repro
+  class-bindings/mnras_equation_nonumber_keeps_the_number). REVTeX 3's aps.sty:401-450, REVTeX 4.x (amsmath only under
+  its option, revtex4-2.cls:6132-6140), iopart.cls:771-776 print it (28 REVTeX 3 and 8 iopart of 123 census papers; 19
+  REVTeX 4.x 370 → 560 of 561); 13 census papers 92 → 273 of 274. Residual: a `\nonumber` in an `aligned`/`split` of an
+  `{equation}` still removes its number (amsmath's local `\let\print@eqnum\@empty`; 2407.10017 `eq:chainMapHam`, PDF 41).
+  Repros cross-references/{equation_nonumber_without_amsmath_keeps_the_number, equation_nonumber_with_amsmath_removes_the_number};
+  guards `perfect_kernel_batch78r::{equation_nonumber_without_amsmath_keeps_the_number,
+  equation_nonumber_with_amsmath_removes_the_number, mnras_equation_nonumber_keeps_the_number}`.
+- **amsmath `{equation}` + `\nonumber` + `\label`** (ex-#875, 78t; KNOWN_PERL_ERRORS #1128). amsmath's `{equation}`
+  (amsmath.sty:2913-2932) steps at its start (`\incr@eqnum`, `\refstepcounter`); its `\nonumber` (:1269-1275) steps back only
+  while `\if@eqnsw` holds; the label is made at the end (`\label@in@display`, `\endmathdisplay@a` :2821-2830), so it names
+  the stepped number; `\tag{X}\nonumber` prints "(X)". Perl retracts and labels the unit (latex_constructs.pool.ltxml:2025-2057),
+  and its `\nonumber` after `\tag` retracted the tag. Ours: `AMS_EQUATION` marks it; `\lx@equation@nonumber` digests the
+  stepped number's forms (`eqnarray_next_number_tags`) before retracting, does nothing once gone; the equation drops them
+  without a label (`NEXT_NUMBER_EQUATION`). `{equation*}` and `\[…\]` step nothing. The #865 residual's `aligned`/`split`
+  label names pdflatex's number. Witness 1306.2116 (`eq:covariate`, PDF 17, int57a "3.1"; 75 → 77 of 77). Kept quirk:
+  pdflatex's `\cref{e2}` prints "eq. (1)" (cleveref.sty `\cref@currentlabel` after the step back,
+  `\newlabel{e2@cref}{{[equation][1][]1}…}`) where `\ref`/`\eqref` print 2; ours "(2)" for both. Repro
+  cross-references/ams_equation_nonumber_label_names_the_stepped_number; guard
+  `perfect_kernel_batch78t::ams_equation_nonumber_label_names_the_stepped_number`.
+- **algorithm2e's lines** (ex-#877, 78t; KNOWN_PERL_ERRORS #1129). algorithm2e.sty:1657-1667: `\nl` is
+  `\refstepcounter{AlgoLine}\gdef\@currentlabel{\theAlgoLine}` (with hyperref `\stepcounter{AlgoLine}` and
+  `\algocf@nl@sethref{\theAlgoLine}`), then `\algocf@printnl`, so a label names the line until the next number (`stmt\;
+  \label{x}`, `\While{c}{\label{x} …}`). Perl's line carries only the printed number (algorithm2e.sty.ltxml:180-221).
+  `\algocf@printnl@i` records the line as its step's object (`note_raw_refstep_object`, `RAW_REFSTEP_MARK`), global as the
+  `\gdef` (`\lx@refstep@global`, `globalize_raw_refstep`), forgotten in the next algorithm's group (`\@algocf@init` steps
+  `algocfline`, algorithm2e.sty:2560-2561; 2010.00626's `alg:F_cycle`, PDF 2); with hyperref `\algocf@nl@sethref` records
+  `\lx@refstepcounter@label{AlgoLine}` when the number is `\theAlgoLine`; the line takes the forms
+  (`take_raw_refstep_number`), `renumber_algo_lines` (algorithm2e_sty.rs:173) renumbers with the printed number. Witnesses
+  2406.05437 (`step1`, `step2`: PDF 14, 17; 37 → 39 of 40), 1602.05866 (`algline:mainloop`, PDF 8). Residuals: `\nlset{text}`
+  lines take no form; a labelled line's id is made at its close (`algorithm1.1` in `algorithm1.5`); each listing restarts at
+  1 where a paper continues the count (1311.7635: PDF 9-11, ours 2-4); `\enl` (:1671-1679) never calls `\algocf@printnl`, so
+  its label names the algorithm.
+- **The later `\label` of a key wins** (ex-#877, 78t r2; KNOWN_PERL_ERRORS #1131). LaTeX's last `\newlabel` wins
+  (latex.ltx `\@newl@bel`: `\global\@namedef{r@key}`, "Label multiply defined"), while the post scan registers in document
+  order, outer first (Perl Scan.pm:196-203, scan.rs `register_scanned`): 2001.00288's `\label{algo2}` at a block's start
+  and after `\caption` gave a line (pdflatex "Algorithm 2"; `.aux` 13 → 14 of 19). A label placed takes the key from the
+  earlier holders that contain it or that it contains (`release_earlier_label_holders`, from `\lx@label`, only for a key
+  placed before); holders apart keep it (the scan takes the later already); the streaming build may have spilled the
+  earlier, so streaming and eager agree (`114_streaming_graphics`: graphrot's two tables `tb:tab3`). Perl keeps both, the
+  inner winning (`\caption{Panel}\label{x}` in a `{subfigure}` then `\caption{Main}\label{x}`: Perl "1(a)", pdflatex 1). In
+  the 1,608-paper A/B 15 earlier holders in 10 papers gave their key up (1908.05655's `fig:rule_example`), none left the
+  document; `.aux` matches over 144 papers 6,582 → 7,095. Witnesses 2001.00288, 1611.06737, 1711.00112, 1804.00071,
+  2010.05861, 2209.06323, 2511.10625, astro-ph0512093. Residuals: algorithm2e's caption box (`\global\sbox\algocf@capbox`,
+  algorithm2e.sty:2305-2336: bottom for `plain`/`boxed`, top for the ruled family) writes its `\label` there, so 2511.10625's
+  caption `\label{alg:general_astar}` names the algorithm in pdflatex (1), ours the line (13); a deferred float's
+  `\newlabel` is written when placed and wins (`\begin{figure}[p]\caption{Deferred}\label{k}\end{figure}\section{Two}\label{k}See
+  \ref{k}.`: pdflatex "See 1.", ours "See 2."; rev78t2's lb2; SYNC_STATUS row). Repros
+  listings-algorithms/algorithm2e_line_label_names_the_line, cross-references/the_later_label_wins; guards
+  `perfect_kernel_batch78t::{algorithm2e_line_label_names_the_line, the_later_label_wins}`.
+- Related: #491 (IEEEeqnarray's columns), #360 (a duplicated label in streaming vs eager), KNOWN_PERL_ERRORS #46 (#54, #888).
 
 ### 823. biblatex's own `.bib` fields are read by the biblatex binding only
 
@@ -19843,64 +19803,7 @@ includepdf_page_past_the_last}`, `pdfpages_sty::tests::include_pdf_pages_reads_p
 `binding_singletons_56::includepdf_file_name_is_semiverbatim`,
 `perfect_kernel_gemini::pdfpages_includepdfmerge_multi_and_opts`.
 
-### 847. eqnarray numbers its rows by `\@@eqncr`'s `\if@eqnsw` state
-
-latex.ltx:15750-15797: a row of `eqnarray` is numbered only if it ends through `\@@eqncr` (`\\`, `\\*`, `\\[len]`,
-`\end{eqnarray}`) and no `\nonumber` came since the previous `\@@eqncr` — `\nonumber` is `\global\@eqnswfalse`
-(:15775), `\@@eqncr` runs `\if@eqnsw\@eqnnum\stepcounter{equation}\fi \global\@eqnswtrue` (:15795), and a row an
-author ends with a raw `\cr` neither prints a number nor resets the switch. `\@currentlabel` is
-`\p@equation\theequation` (:15752), a counter only `\eqnarray`'s `\stepcounter` and each printing `\@@eqncr` step, so
-every `\label` names the number the next printing `\@@eqncr` prints. Perl numbers every row unless it holds a
-`\nonumber` (latex_constructs.pool.ltxml:2226 `\eqnarray@row@after@` runs `afterEquation` whatever ended the row) and
-leaves each label on its row: a `\cr` row is numbered (1011.0523's PDF (19) was our 22, nucl-th9903062's (1) our 2 and
-(6) our 12; 212 papers in the fidelity3 audit's scan of 9,829 eqnarray papers), a `\nonumber` before a `\cr` does not
-reach the `\\` row after it (2112.13115 one ahead of its PDF from (32)), and a `\label` in an unnumbered row names no
-number (1206.6051's NA3, PDF "V.3"; 0708.0012's `\label{l5}\cr &=& v`). Ours (78n r3, sect07.rs; the rule documented
-once at `latex_constructs::eqnarray_eqncr_numbering`): `\lx@eqnarray@number@check`, which `\\` and `\end{eqnarray}`
-expand, is `\@@eqncr`'s test — it records whether the row it ends prints its number (`EQNARRAY_EQNNUM`, from
-`EQNARRAY_EQNSW` = `\if@eqnsw`, then sets the switch); `\nonumber` clears the switch; `\eqnarray@row@after@` retracts
-the preset number of every row not so numbered and marks it (`UNNUMBERED_EQNCR_ROW_ATTRIBUTE`), and `rearrange_eqnarray`
-moves the labels of each marked row to the next numbered row (with none after it — an `eqnarray*`, a trailing
-`\nonumber` row — they stay: LaTeX's `\ref` then names the counter's next value, which no row of the group prints). For
-the environments that opt in with the numbering key `eqncr=1`: latex.ltx's `eqnarray` and `eqnarray*` (iopart's
-`\eqnalign`, subeqn's and subeqnarray's `subeqnarray`, whose rows end in `\cr` or whose end has no check, do not). The
-XML placement of a number printed on an empty row of its own under an unnumbered one — `x &=& y \cr \end{eqnarray}`
-(the end's row), the `… \cr &&\\` idiom, `\label{e} x = y, \nonumber\\ \end{eqnarray}` — is that equation's: the
-row is kept through normalization (`NUMBER_ROW_PROPERTY`, set when it is numbered and the row before is not), and
-`rearrange_eqnarray` joins an empty numbered row (labelled or not) to the unnumbered equation above it, its tags and
-id with it, in a single-column eqnarray too (Perl removes empty rows and their numbers; an empty numbered row under a
-numbered equation, the trailing `\\` of `a &=& b \\ \end{eqnarray}`, is still removed, its number consumed as in
-LaTeX). Equation `\ref` numbers against pdflatex's `.aux` (int52a / 78n r2 / r3): 2112.13115 30 / 63 / 112 of 112,
-1206.6051 66 / 79 / 98 of 98, 1011.0523 7 / 12 / 12 of 12, 0910.0753 14 / 35 / 35 of 35, 0708.0012 0 / 28 / 28 of 29 and
-0806.3762 3 / 15 / 15 of 16 (each miss a label defined twice); 35 changed papers 805 / 933 / 1,066 of 1,151. A label
-with no numbered row after it in its group (an `eqnarray*`, a trailing `\nonumber` row) names the counter's next value,
-the next equation's number, which no row of the group prints (78r; KNOWN_PERL_ERRORS #1106): `\lx@eqnarray@label` marks
-the row labelled (`EQNARRAY_ROW_LABELLED`), `\eqnarray@row@after@` digests that value's reference forms while the row's
-preset number still holds it (`eqnarray_next_number_tags`: every `tag_forms` role a reference prints — refnum,
-typerefnum, autoref, the cleveref forms — and no printed tag), and `rearrange_eqnarray` keeps them on a row whose labels
-did not move on, counting it numbered and labelled: it stands as its own equation (a continuation row of a numbered
-equation is split from it, so that equation's number does not take the label), except in a single relation column whose
-rows all join one equation with a number of its own, which keeps the label (the residual). Before 78r its `\ref`
-printed a wrong number with no diagnostic — the group's (a trailing `\nonumber` row: pdflatex the next, 6 for our 5), a
-section's (iopart, a `\nonumber\cr` row held into the last row: "1" for pdflatex's 2), or the raw id (`eqnarray*`:
-"S0.Ex5" for pdflatex's 7); review rev78n2. Equation `\ref` numbers against pdflatex's `.aux` (int54a / 78r):
-1602.03553 68 / 89 of 89 (`eqn:zeta01` 5, int54a "1"), 2301.00760 37 / 58 of 58 (`comorph*` 54), 1303.3431 64 / 65 of 65
-(`appa3` 66); 20 more changed census papers (19 build) 676 / 704 → 702 / 704 (the 2 misses no eqnarray's: an amsmath
-`equation*` label, 1508.00199; a `$$…\label…$$`, gr-qc0201061). The split costs math grouping: 84 of the 569 changed
-papers of the 801-paper census population split 122 continuation rows (their math-parse Warnings 18,514 → 18,540).
-A row holding only a continuation (`&&+ 2,`) under a numbered row joined it though both are numbered, the join keeping
-the last number, so a `\label` on the first named the second's (1310.2253 `eqn:zg`, PDF 11, ours 12; Perl's
-rearrangement): its own equation since 79d (#888). IEEEeqnarray follows the same label rule since 79d (numbering key
-`labelnext=1`: IEEEtrantools.sty:1986-1991, :2072-2117 pre-advance the counter and point `\@currentlabel` at it; guard
-`perfect_kernel_batch79d::ieeeeqnarray_unnumbered_row_label_names_next_number`). Repro cross-references/eqnarray_label_with_no_numbered_row_after_it; guard
-`perfect_kernel_batch78r::eqnarray_label_with_no_numbered_row_after_it_names_the_next_number`. Repros
-cross-references/eqnarray_cr_row_is_unnumbered, eqnarray_cr_then_empty_numbered_row, eqnarray_cr_row_label_names_next_number,
-eqnarray_nonumber_row_label_names_next_number, eqnarray_nonumber_holds_until_eqncr, alignment/eqnarray_cr_row_unnumbered
-(65o review); guards `perfect_kernel_batch78n::{eqnarray_row_ended_by_cr_is_unnumbered,
-eqnarray_empty_numbered_row_numbers_the_equation_above, eqnarray_cr_row_label_names_next_number,
-eqnarray_nonumber_row_label_names_next_number, eqnarray_nonumber_holds_until_eqncr}`,
-`perfect_kernel_batch65o::eqnarray_number_column` ("(1)", unnumbered "(star)" row, "(2)", as pdflatex). Witnesses also
-0806.3762, 0910.0753, nucl-th9807024. The same reference forms name the stepped number of a labelled amsmath `{equation}` whose `\nonumber` removed it (78t, #875).
+### 847. → #813 (eqnarray numbers its rows by `\@@eqncr`'s `\if@eqnsw` state)
 
 ### 848. A class's `\@xnthm` may print a theorem's within-counter its own way
 
@@ -20066,31 +19969,7 @@ kernel's header guess reads the borders as it does a `tabular`'s. Open: `\SetHli
 tblr_rule_keys_become_cell_borders}; guards `perfect_kernel_batch78p::{tblr_rules_keep_an_empty_table,
 tblr_rule_keys_become_cell_borders, tblr_rules_end_a_table_with_a_cmd_column}`.
 
-### 856. A `\label` after a counter step a group has undone does not name the object that step numbered
-
-LaTeX's `\label` names `\@currentlabel` (latex.ltx:14963-14967), which a `\refstepcounter` sets locally: when the
-group of the step closes (an `equation`, a theorem, a float's caption, a list), it reverts to the step in scope. Perl's
-`floatToLabel` (Document.pm:1098-1127) starts at the current node's last child, so a label right after a closed
-element that can take one named that element: a `\label` after `\end{equation}`, still inside a theorem, labelled the
-equation (math0107195: PDF "Theorem 5.3", ours and Perl's the equation's 16; KNOWN_PERL_ERRORS #1092). Ours (78p):
-every counter step records its serial in scope (local) and as the latest made (global, `label_stepped_counter`); a
-`\label` digested where they differ (`label_follows_an_undone_step`) climbs from the current node, not its last child
-(`Document::float_to_label_scoped`, `\lx@label`'s `after_undone_step`). A label in the step's own scope is
-unchanged (`\caption{…}\label` in a float, `\item…\label`, a section's). A wrapper group of LaTeXML's own around a step
-LaTeX makes in the current group does not undo it (`\lx@refstep@outlives@group`, `keep_latest_refstep_in_scope`):
-caption's `\captionof` (caption.sty:390-391), which LaTeXML sets in a float (2402.05535
-`\captionof{figure}{…}\else…\fi\label{…}`, the figure). Where no ancestor can take the label, Perl's
-fallback (the last child, else the root) stays: the root taking lastpage's `\AtEndDocument{\label{lastpage}}` gave it an
-id and renumbered every generated `idN`. Effects against pdflatex: a label after a closed table, figure, equation or
-list names the enclosing section's (or theorem's, or item's) number, as `\ref` prints there; a label after a
-`subequations` block's inner `align` names the block's number (2505.03288 `eq:GNG` "13", int52a an unnumbered inner
-group); after `\subfloat{…}\label{…}` the figure when its `\caption` comes before the subfloats — when the caption comes
-after them pdflatex names the section (1504.02206 `fig:2c`: pdflatex 5.1, ours 2; review rev78p). cleveref's `\label[type]` constructor
-(`\lx@cleverref@labeltype`) places its type by `float_to_label_scoped` too since 78j r5 (guard
-`perfect_kernel_batch78j::cleveref_label_type_after_a_closed_float_names_the_object_in_scope`). Repro
-cross-references/label_after_an_inner_equation_names_the_theorem; guards `perfect_kernel_batch78p::{
-label_after_an_inner_equation_names_the_theorem, label_after_a_closed_step_names_the_step_in_scope,
-label_after_captionof_names_its_float}`.
+### 856. → #813 (A `\label` after a counter step a group has undone does not name the object that step numbered)
 
 ### 857. mathabx's `\curvearrowbotleftright` is U+293B
 
@@ -20160,58 +20039,9 @@ numbers "A1" where every later release numbers "A.1"; an elsarticle copy shaped 
 `\def\appendix{\@ifstar…}`, no `\renewcommand\appendix`) keeps the kernel's numbering. Guards
 `perfect_kernel_batch78q::*`.
 
-### 865. `\nonumber` removes an `{equation}`'s number only where amsmath is loaded
+### 865. → #813 (`\nonumber` removes an `{equation}`'s number only where amsmath is loaded)
 
-latex.ltx:15737-15739 `{equation}` always prints `\@eqnnum`; `\nonumber` (:15775 `\global\@eqnswfalse`) is eqnarray's
-switch, which the next `\eqnarray` sets again, and amsmath's `\nonumber` (amsmath.sty:1268-1269) is what removes an
-`{equation}`'s number. Perl gives every `{equation}` amsmath's behaviour on purpose (latex_constructs.pool.ltxml:1915-1916,
-"even though stock LaTeX provides no means to override them"), so a paper without amsmath that writes `\nonumber` in an
-`{equation}` lost the number pdflatex prints, and every later number was one behind (hep-ph9710521's `\nl` in a `\beq`,
-45 of 56 labels matching its PDF; nucl-th0404042's `j-sum1` and `l-sum1`, PDF 20 and 23, unnumbered). Ours (78r,
-sect07.rs): LaTeX's `{equation}` marks its numbering `LATEX_EQNNUM` unless amsmath is loaded (`amsmath_nonumber`:
-`\@ifpackageloaded{amsmath}`'s `\ver@amsmath.sty`, or the binding's or the raw file's loaded flag; a binding's load
-beyond its original, `amsmath_loaded_beyond_original`, counts as not loaded; `\ver@` because aa.cls's binding clears the
-flag after today's aa.cls loads amsmath, aa_cls.rs), and `\lx@equation@nonumber` does nothing in such an equation. One
-helper, `prepare_latex_equation_counter` (sect07.rs), sets that numbering for LaTeX's `{equation}` and for the class
-bindings that redefine it only to let a `$` in it: mn2e/mnras/mn (mn2e_support_sty.rs) and aa (aa_support_sty.rs, the
-old aa.cls without amsmath; a shipped aa.cls that loads it keeps amsmath's `\nonumber`, 1712.01010, 1812.04463,
-2501.07980). `\documentclass{mnras}` with a `\nonumber` in an `{equation}`: pdflatex (1) (2), "See 1; 2."; int54a and 78r
-r1 removed the first number (78r r2 review finding 2; repro class-bindings/mnras_equation_nonumber_keeps_the_number,
-guard `perfect_kernel_batch78r::mnras_equation_nonumber_keeps_the_number`). REVTeX 3's aps.sty:401-450, REVTeX 4.x (which loads
-amsmath only under its `amsmath` option, revtex4-2.cls:6132-6140) and iopart.cls:771-776 print the number as LaTeX does
-(28 REVTeX 3 and 8 iopart papers of the 123 census papers; 19 more REVTeX 4.x papers). Equation `\ref` numbers against
-pdflatex's `.aux` (int54a / 78r): hep-ph9710521 61 / 74 of 74, nucl-th0404042 15 / 17 of 17; 13 changed census papers
-92 / 274 → 273 / 274 (7 more do not build under TL 2025); the 19 REVTeX 4.x papers 370 / 561 → 560 / 561. Residual: a
-`\nonumber` inside an amsmath inner block of an `{equation}` (`aligned`, `split`) still removes the equation's number,
-where amsmath's local `\let\print@eqnum\@empty` ends with the block (2407.10017 `eq:chainMapHam`, PDF 41; int54a the
-same). Repros cross-references/equation_nonumber_without_amsmath_keeps_the_number,
-equation_nonumber_with_amsmath_removes_the_number; guards
-`perfect_kernel_batch78r::{equation_nonumber_without_amsmath_keeps_the_number,
-equation_nonumber_with_amsmath_removes_the_number}`. A `\label` in an amsmath `{equation}` with `\nonumber` names the number the equation stepped, and a `\nonumber` after a `\tag` keeps the tag (78t, #875); in the residual's `aligned`/`split` case the label so names pdflatex's number while the equation still prints none.
-
-### 875. A `\label` in an amsmath `{equation}` with `\nonumber` names the number the equation stepped
-
-amsmath's `{equation}` (amsmath.sty:2913-2932) steps the counter at its start (`\incr@eqnum`, `\refstepcounter`, which
-sets `\@currentlabel`); its `\nonumber` (:1269-1275) steps the counter back only while `\if@eqnsw` holds, and the
-display's `\label` is made at its end (`\label@in@display`, `\endmathdisplay@a` :2821-2830), so it names the stepped
-number, the next equation's, which neither equation prints. A `\nonumber` after a `\tag` (or a second one) finds the
-switch off and changes nothing: `\tag{X}\nonumber` prints "(X)". Perl retracts the number and the label names the
-enclosing unit (latex_constructs.pool.ltxml:2025-2057), and a `\nonumber` after `\tag` retracted the tag too. Ours
-(78t, sect07.rs): amsmath's `{equation}` marks its numbering (`AMS_EQUATION`, set by `prepare_latex_equation_counter`
-where amsmath is loaded, OD #865); `\lx@equation@nonumber` there digests the stepped number's reference forms before it
-retracts the number (`eqnarray_next_number_tags`, the eqnarray form of #847: refnum, typerefnum, … and no printed tag),
-and does nothing once the number is gone; the `ltx:equation` drops them when it closes without a label
-(`NEXT_NUMBER_EQUATION`). `{equation*}` and `\[…\]` step nothing: their labels name the enclosing unit as before, which is
-pdflatex's `\@currentlabel` there (the display's group undoes an inner step). A `\nonumber` inside an `aligned`/`split`
-of an `{equation}` reaches the same branch: the label now names the stepped number as pdflatex's does, while the
-equation's own number is still removed (the #865 residual). Witness 1306.2116 (`eq:covariate`, PDF 17, int57a "3.1";
-`.aux` equation numbers 75 → 77 of 77). A cleveref quirk stays: cleveref's `\label` writes its `@cref` entry from the
-counter as it stands at the label (cleveref.sty `\cref@currentlabel`), after `\nonumber` stepped it back, so pdflatex's
-`\cref{e2}` prints "eq. (1)" (`\newlabel{e2@cref}{{[equation][1][]1}…}`) where `\ref` and `\eqref` print 2; ours prints
-"(2)" for both, the number the label names (probe `\begin{equation} b=2 \nonumber\label{e2}\end{equation}` after an
-`{equation}` 1, amsmath + hyperref + cleveref). KNOWN_PERL_ERRORS #1128. Repro
-cross-references/ams_equation_nonumber_label_names_the_stepped_number; guard
-`perfect_kernel_batch78t::ams_equation_nonumber_label_names_the_stepped_number`.
+### 875. → #813 (A `\label` in an amsmath `{equation}` with `\nonumber` names the number the equation stepped)
 
 ### 876. subfigure's panels are numbered whatever their arguments, with the kernel's caption; subfigure.cfg is read
 
@@ -20302,58 +20132,7 @@ subfigure_panel_is_as_wide_as_its_body, a_label_between_spaces_counts_one, psfig
 subtable_after_the_caption_is_numbered_by_it, subfig_caption_is_not_the_documents_caption,
 subfigure_panel_is_as_wide_as_its_body, a_label_between_spaces_counts_one, psfig_panels_are_as_wide_as_their_keys}`.
 
-### 877. A `\label` after an algorithm2e line's number names the line
-
-algorithm2e.sty:1657-1667: `\nl` is `\refstepcounter{AlgoLine}\gdef\@currentlabel{\theAlgoLine}` (with hyperref
-`\stepcounter{AlgoLine}` and `\algocf@nl@sethref{\theAlgoLine}`) then `\algocf@printnl`, so a `\label` after a line's
-number names that line until the next number: in the line, after its `\;` (`stmt\; \label{x}`, the label then at the
-next line's start), or at a block's start (`\While{c}{\label{x} …}`, the `\gdef` outliving the header's group). Perl's
-line carries the printed number alone and the label names the algorithm (algorithm2e.sty.ltxml:180-221). Ours (78t):
-`\algocf@printnl@i` records the line as the object of its number's raw step (`Document::note_raw_refstep_object`,
-marking it `RAW_REFSTEP_MARK`; the kernel's record of a `\refstepcounter` no constructor took, #813), made global as the
-`\gdef` makes `\@currentlabel` (`\lx@refstep@global`, `globalize_raw_refstep`), and forgotten in the next algorithm's
-group, whose `\@algocf@init` steps `algocfline` (algorithm2e.sty:2560-2561: a label at its start names that algorithm,
-2010.00626's `alg:F_cycle`, PDF 2); with hyperref, `\algocf@nl@sethref`
-records that step (`\lx@refstepcounter@label{AlgoLine}`) when the number is `\theAlgoLine` (`\nlset`'s own text records
-none). A label after the step goes to that line wherever it stands (`Document::float_to_label_scoped`; its id is made at
-its close), and the line, which printed the number itself, takes the step's reference forms into its tags
-(`Document::take_raw_refstep_number`); `renumber_algo_lines` renumbers them with the printed number (the over-stepped
-`AlgoLine` counter). Witnesses 2406.05437 (`step1`, `step2`: PDF 14, 17, int57a "1"; `.aux` 37 → 39 of 40), 1602.05866
-(`algline:mainloop`, PDF 8). Residuals: `\nlset{text}` lines take no reference form; a labelled line's id is made at its
-close, out of its listing's order (`algorithm1.1` in `algorithm1.5`); `renumber_algo_lines` restarts each listing at 1
-where a paper continues the count across algorithms (1311.7635: PDF 9-11, ours 2-4; int57a the algorithm's number);
-`\enl` (algorithm2e.sty:1671-1679) steps `AlgoLine` and makes it `\@currentlabel` globally but never calls
-`\algocf@printnl`, so its line is recorded as no step's object and a label after it names the algorithm, as before.
-
-The later `\label` of a key wins. With a line able to take a label, one key labels two elements where a paper repeats it:
-2001.00288's `\label{algo2}` at a block's start (its line) and after `\caption` (the algorithm). LaTeX's last `\newlabel`
-wins (latex.ltx `\@newl@bel`: `\global\@namedef{r@key}`, "Label multiply defined"; pdflatex "Algorithm 2"), while the
-post scan registers in document order, the outer element first, so the inner, earlier one won (Perl Scan.pm:196-203, ours
-scan.rs `register_scanned`; 78t r1 "Algorithm 1", a line). Ours (78t r2): a `\label` placed on its element takes the key
-from the earlier holders that contain it or that it contains (`Document::release_earlier_label_holders`, from the
-`\lx@label` constructor, only for a key placed before). Holders apart from each other keep it: pdflatex's last
-`\newlabel` is the last written, which is the later in the document but for a float LaTeX defers past a later label of
-the key (below), and the scan takes the later already; the streaming build may have spilled the earlier
-(a closed top-level element, never an ancestor of the holder nor, below the root, a descendant), so the streaming and
-eager builds agree (`114_streaming_graphics`: graphrot's two tables labelled `tb:tab3`).
-Perl keeps both, the inner winning (`\caption{Panel}\label{x}` in a subcaption `{subfigure}`, then `\caption{Main}
-\label{x}`: Perl "1(a)", pdflatex 1; KNOWN_PERL_ERRORS #1131). In the 1,608-paper A/B 15 earlier holders in 10 papers
-gave their key up (1908.05655's `fig:rule_example` on five displays inside its figure, then after the figure's
-`\caption`: the figure, as pdflatex), no key left the document, and the `.aux` labels matching pdflatex's last
-`\newlabel` over 144 papers are 6,582 (int58a) → 7,094 (r1) → 7,095 (r2).
-Witnesses 2001.00288 (`.aux` 13 → 14 of 19 matching, int58a's 14), 1611.06737, 1711.00112, 1804.00071, 2010.05861,
-2209.06323, 2511.10625, astro-ph0512093. Residual:
-algorithm2e sets a caption's text in a box it places at the style's caption position (`\global\sbox\algocf@capbox`,
-algorithm2e.sty:2305-2336: the bottom for `plain`/`boxed`, the top for the ruled family), and a `\label` in it is written
-there, so in 2511.10625's `plain` algorithm the caption-text `\label{alg:general_astar}` is written after the same key's
-`\label` after the last line and names the algorithm (pdflatex 1, ours the line, 13, as 78t r1; int58a 1). And a float
-LaTeX defers writes its `\newlabel` when it is placed, after a later label of the same key, and wins in pdflatex:
-`\begin{figure}[p]\caption{Deferred}\label{k}\end{figure}\section{Two}\label{k}See \ref{k}.` — pdflatex "See 1." (the
-figure, written on page 2), ours and int58a "See 2." (review rev78t2's lb2; SYNC_STATUS row).
-
-KNOWN_PERL_ERRORS #1129, #1131. Repros listings-algorithms/algorithm2e_line_label_names_the_line,
-cross-references/the_later_label_wins; guards `perfect_kernel_batch78t::{algorithm2e_line_label_names_the_line,
-the_later_label_wins}`.
+### 877. → #813 (A `\label` after an algorithm2e line's number names the line)
 
 ### 880. `classify_thanks` reads its funding words as words
 
@@ -30724,37 +30503,7 @@ scoped to its enclosing unit's id (`current` outside any unit), to `\etocsetnext
 
 ### 1023. → KNOWN_PERL_ERRORS #1239 (The import commands typeset no space before the imported file; `\import@path` is import.sty's macro (#772))
 
-### 1024. caption's `justification=` and skips are the caption's `text-align` and margins (W2b, issue #787)
-
-**Perl.** caption.sty.ltxml:30,52 declare `justification` and `skip` and `\captionsetup` stores them (`CAPTION_<key>`);
-nothing reads them, so the caption keeps the theme's alignment and spacing. **TeX.** caption3.sty:955-969, 1361-1364: a
-justification is a command run in the caption box (`\centering`, `\raggedright`, `\raggedleft`; ragged2e's
-`\Centering`/`\RaggedRight`/`\RaggedLeft`/`\justifying`; `justified` none), and the box runs `\@parboxrestore`, so a
-`\centering` in the float body does not align it; :987-993 `skip`/`aboveskip` set `\abovecaptionskip`, `belowskip`
-`\belowcaptionskip` (0pt by default); caption.sty:251-258 puts the above-skip between a top caption and the float's body
-and above a bottom one, the below-skip on the other side; `position=auto` (:1034-1045) is bottom in horizontal mode and
-in vertical mode once the list holds a box (`\prevdepth`), a longtable's bottom once it has a row (caption.sty:1169
-`\LT@rows`), and a longtable's caption takes `\captionsetup[longtable]` over its type's (ltcaption `\caption@LT@setup`).
-**Rust.** `caption_layout_tokens` (caption_sty.rs) puts on the caption, from its settings, `\lx@caption@justify`: the
-`text-align` in its `cssstyle` the justification's body sets (its last alignment command, so a `\DeclareCaptionJustification`
-of the document's counts; `justify` for a body with none, as `\@parboxrestore` leaves it — an alignment reached through a
-user macro reads as `justify` too: RED repro `captions-floats/caption_justification_through_a_macro_red`), under `singlelinecheck` (caption3.sty:677, on by default; `slc`) with
-`width:fit-content;margin-left:auto;margin-right:auto` beside it, the HTML reading of `\caption@slc` (:1497, :1568): a
-caption that fits one line sits centred, a longer one fills the line with the set alignment; this also removes the alignment class a `\centering` &c. of
-the float gives the caption (a `_justified` mark, the floats' `after_close`); and `\lx@caption@skip{above|below}
-{<position>}<glue>`, `margin-top`/`margin-bottom` in the same `cssstyle` (the schema's caption has no spacing
-attribute; `cssstyle` is Common, as framed.sty.ltxml:78 uses it), nothing for a zero below-skip. `\lx@caption@where`,
-at `\caption`/`\captionof`, records `auto` as bottom in horizontal mode; in vertical mode the constructor reads the
-list (an element other than `ltx:tags`/`ltx:toccaption` before the caption, or before a `\captionof`'s wrapper outside a
-float); longtable's caption records it by the table's rows. The mark is its caption's: the caption formatter reads and
-clears it before any early return (a sub-caption) and the inline caption of a `\caption` outside a float drops it, so a
-caption formatted without `\caption` (listings') never reads another's. Only a key the document or class sets emits anything. A
-`Dimension` key's value is stored as its length (`skip=20pt` was stored empty). Not done: `centerlast`/`centerfirst` read as centring,
-`margin=`/`width=`, subcaption's sub-captions (`\captionsetup[sub]`, subcaption.sty:220 `skip=6pt`; RED repro
-`captions-floats/subcaption_justification_and_skip_red`), and a skip in relative units (`\baselineskip`, `em`) is read
-at the caption, not at the `\captionsetup`.
-**Guards**: `bindings_batch2::caption_justification_and_skip`; `perfect_kernel_batch78d::mdpi_captions_end_the_label_with_a_period`
-(mdpi's `aboveskip=6pt`/`belowskip=-6pt`, `justification=justified`).
+### 1024. → #105 (caption's `justification=` and skips are the caption's `text-align` and margins (W2b, issue #787))
 
 ### 1025. colortbl's rule colour is each border side's, taken as the rule is drawn (W4, #773)
 
@@ -30816,18 +30565,7 @@ pdflatex prints `[read][42]Tail.` (0 `!`). An ordinary `\input` keeps its bindin
 binding answers `\input glyphtounicode` (`\pdfglyphtounicode` a no-op, the raw read's output the same, at fewer
 instructions). **Guards**: `perfect_kernel_batch51::file_get_reads_the_file_whole`, the format build's zero-error gate.
 
-### 1032. An aligned column's `columnalign` is the stylesheet's `justify-items` (issues #809, #755)
-
-**Perl** and Rust emit `<mtd columnalign="right">` (`ltx_align_right` unless a border class replaces it, MathML.pm
-L456-473); MathML Core dropped `columnalign`, and Chrome set a `columnalign="right"` cell flush left (start; revMML2: 0 px left,
-12.3 px right; only a cell without the attribute is centred), so an `aligned`'s left column ended short of its relation,
-up to 21 px late (issue 809's repro, 16 px) (`text-align` on `.ltx_align_right` does not reach it). Firefox honours `columnalign`. **Rust.** LaTeXML.css adds
-`math mtd[columnalign="right"] { justify-items:end; }` and `…[columnalign="left"] { justify-items:start; }`, keyed on the
-attribute, which every cell keeps; the markup is unchanged. Offer upstream (LaTeXML.css). **Guards**:
-`cluster_cli::browser_render_aligned_math_spacing::aligned_left_column_is_right_aligned_against_the_relation` (Chrome,
-local only, repro `alignment/aligned_left_column_is_right_aligned.tex`),
-`cluster_cli::aligned_mtable_columnspacing_zero::aligned_emits_zero_columnspacing_and_css_resets_mtd_padding` (the rule
-ships).
+### 1032. → #105 (An aligned column's `columnalign` is the stylesheet's `justify-items` (issues #809, #755))
 
 ### 1033. A visible MathML Core category-K operator has no operator space: `/` is K, and an Ord (issue #789)
 
@@ -31326,6 +31064,75 @@ pdflatex 5.25G instructions, ours 7.81G (accepted as TeX's own cost, DG 2026-11-
 `file_hooks_run_at_every_input_red` (content.rs runs `file/<name>/before|after` as one-time hooks, latex.ltx:19669/19672
 a plain `\UseHook`; post-merge).
 
+
+---
+
+## TeX-source fidelity family (TEXSRC)
+
+An index, not new entries: the entries below each restore what latex.ltx, tex.web or the real package defines over a
+Perl simplification of it, so each is a divergence whose ruler is the TeX source (OD rationalization ruling 7, DG
+2026-11-14: TEX entries stay, as family tables with an upstream column). The entry keeps its rule, witnesses and
+guards; the table names the Perl reference it departs from and the TeX or package source that decides, as the entry
+cites them (`—`: the entry cites none). Kinds: **kernel**, a kernel definition or macro as latex.ltx has it;
+**binding**, a binding aligned to its real package's source; **scanning**, argument and token scanning as tex.web does
+it. Upstream: every row is offered to Perl as a patch after the release; none is filed yet (the #403 row, a
+restructuring whose only Perl-visible difference is two diagnostics, is not offered).
+
+| entry | kind | rule (the entry's heading) | Perl ref | TeX / package source | upstream |
+|---|---|---|---|---|---|
+| #97 | kernel | A command whose latex.ltx (or package) definition begins with `\leavevmode` starts the … | `plain_constructs.pool.ltxml L86-87`; `latex_constructs.pool.ltxml:4658-4667` | `latex.ltx L643-644`; `tex.web L21160` | candidate, not filed |
+| #98 | kernel | `\autoref` feeds the number as `\<type>autorefname~<number>\null` (active `~`), enabling … | `hyperref.sty.ltxml` | `hyperref.sty:8247` | candidate, not filed |
+| #130 | kernel | `\twocolumn[header]` scopes the spanning-header's font/alignment declarations | `latex_constructs.pool.ltxml L1015` | — | candidate, not filed |
+| #150 | binding | `\floatname`/`\newfloat` also define float.sty's real `\fname@<type>` internal | `float.sty.ltxml L36` | `float.sty L34`, `L59` | candidate, not filed |
+| #158 | binding | acmart affiliation parts break AFTER the comma, not before | `acmart.cls.ltxml L97-101` | `acmart.cls L1679`, `L2879` | candidate, not filed |
+| #161 | scanning | `DefPlain` skips blanks before its required `{` (undelimited-argument scanning) | `Base_ParameterTypes.pool.ltxml L34`; `Gullet.pm L441-452` | tex.web `macro_call` | candidate, not filed |
+| #163 | kernel | `\makeindex` allocates the `\@indexfile` write stream (kernel contract subset) | `latex_constructs.pool.ltxml L4531-4532` | latex.ltx `\makeindex` | candidate, not filed |
+| #164 | kernel | `\usepackage`/`\documentclass` record the kernel's `\@raw@opt@<name>.<ext>` raw-option list | — | `latex.ltx L19398`; `latex.ltx L18509-18526` | candidate, not filed |
+| #165 | kernel | `\@currsize` defaults to `\normalsize` (begin-document invariant) | — | `latex.ltx:14103` | candidate, not filed |
+| #166 | kernel | `\@filelist` entries carry kernel catcodes (letters as LETTER) | — | `latex.ltx L1784-1789` (`\string@makeletter`), `L1790-1795` | candidate, not filed |
+| #171 | scanning | Required-brace hunt expands `\protected` macros (scan_left_brace fidelity) | — | tex.web `scan_left_brace` (§403) | candidate, not filed |
+| #180 | kernel | `\@trivlist` is the shared list opener (Perl neutralizes it to `\relax`) — PLANS P38 | `latex_constructs.pool.ltxml:1642-1643` | `latex.ltx:15848`; `latex.ltx:15913` | candidate, not filed |
+| #187 | kernel | `\@ifundefined` leaves the probed name undefined (Perl defines it as `\relax`) | `Base_Utility.pool.ltxml:23-31` | `latex.ltx:1729-1737` | candidate, not filed |
+| #197 | scanning | `TeXFileName` fully expands the filename tokens (Perl expands with `readXToken(0)`) | `Base_ParameterTypes.pool.ltxml:296-306` | `tex.web §526` | candidate, not filed |
+| #200 | scanning | `read_match` keeps a delimiter's adjacent space tokens (Perl always skips the run) | `Gullet.pm:604-620` | `tex.web §392` | candidate, not filed |
+| #221 | kernel | `\@roman` & co. are latex.ltx token macros; a `{Type}` re-parse is isolated | `latex_constructs.pool.ltxml:3053` | `latex.ltx:10206-10224` | candidate, not filed |
+| #223 | kernel | A class-cleared option handler is undefined for a package's default option | `Package.pm:2481-2486` | `latex.ltx:18582`; `latex.ltx:18589` | candidate, not filed |
+| #224 | scanning | A delimited argument keeps each interior group's own close token | `Gullet.pm:661` | `tex.web §392-398` | candidate, not filed |
+| #226 | kernel | `\begin{document}` walks latex.ltx's `\@preamblecmds`: the preamble-only commands err in … | `latex_constructs.pool.ltxml:5460`; `latex_constructs.pool.ltxml:155` | `latex.ltx:9019`; `latex.ltx:9521-9522` | candidate, not filed |
+| #254 | kernel | `\usecounter` is counter-only (latex.ltx:16048); the list starts at `\@trivlist` (Perl: … | `latex_constructs.pool.ltxml:1642` | `latex.ltx:16048`; `latex.ltx:15848` | candidate, not filed |
+| #273 | scanning | Delimiter spaces and prefix scanning follow tex.web, not Perl's Gullet/Stomach … | `Gullet.pm:614-617`; `Stomach.pm:212` | `tex.web §392`; `tex.web §1211` | candidate, not filed |
+| #278 | binding | natbib's `\setcitestyle` ignores words it does not know (Perl: keyvals, an unknown word … | `natbib.sty.ltxml:402-404` | `natbib.sty:303-335`; `natbib.sty:315-316` | candidate, not filed |
+| #280 | binding | `\import`/`\subimport` run the file ungrouped (Perl: a `{…}` around the input) | `import.sty.ltxml L44-47` | `import.sty:65-92` | candidate, not filed |
+| #281 | binding | xcolor: a repeat load processes its name sets, and active separators stand for themselves … | `xcolor.sty.ltxml:561` | `xcolor.sty:171-193`; `xcolor.sty:104-120` | candidate, not filed |
+| #294 | binding | siunitx v3 keys that change the printed number (Perl: not handled) | `siunitx.sty.ltxml:38-54`; `siunitx.sty.ltxml:329-375` | `siunitx.sty:4956-5013` | candidate, not filed |
+| #295 | scanning | A macro call that does not match its `\def` is reported and ignored (Perl: reported, then … | `Parameter.pm` | `tex.web §397-398` | candidate, not filed |
+| #300 | binding | catchfile reads the file as catchfile.sty does; newverbs' own code prints in the document … | `Gullet.pm:683-685` | `tex.web §338`; `tex.web §367` | candidate, not filed |
+| #311 | binding | siunitx units mixing macros with literal material are parsed as literal units; listing … | `siunitx.sty.ltxml:903-927`; `siunitx.sty.ltxml:1352` | `siunitx.sty:6596-6613`; `siunitx.sty:6633-6641, :6801` | candidate, not filed |
+| #313 | scanning | A primitive's token read crosses a file end; a token-list assignment takes an implicit … | `TeX_Macro.pool.ltxml:174-177`; `Base_Utility.pool.ltxml:729-737` | `latex.ltx:17726` | candidate, not filed |
+| #332 | kernel | `\eminnershape` is latex.ltx's `\upshape` (Perl: empty) | `latex_constructs.pool.ltxml:5861` | `latex.ltx:14048-14052` | candidate, not filed |
+| #335 | binding | elsarticle's equations are flush left only in the `5p` and two-column `3p` layouts (Perl: … | `elsarticle.cls.ltxml:45` | `elsarticle.cls:1280, 1295`; `elsarticle.cls:82-87` | candidate, not filed |
+| #400 | binding | The German and French babel bindings define `\date<lang>` as their `.ldf` does (Perl: … | — | `germanb.ldf:124-130` | candidate, not filed |
+| #403 | scanning | Number scanning keeps the token after the signs in hand; a skipped conditional reports … | `Gullet.pm:852-858`; `State.pm:537-545` | `tex.web §440` | not upstream-worthy |
+| #417 | kernel | `\fileversion` and `\filedate` are not predefined (Perl: predefined empty) | `latex_constructs.pool.ltxml:5726-5727` | latex.ltx (neither defined) | candidate, not filed |
+| #442 | scanning | A `\par` in a non-`\long` macro's argument ends the call (Perl: the argument reads on) | `Expandable.pm:46` | `tex.web §392` | candidate, not filed |
+| #450 | binding | AASTeX's math and decimal table columns follow the class (Perl: `C`/`L`/`R` undefined, `D` … | `aas_support.sty.ltxml`; `TeX_Math.pool.ltxml:50` | `tex.web §1138` | candidate, not filed |
+| #469 | kernel | `\underbar` and `\TextOrMath` as latex.ltx defines them (Perl: shortcuts) | `math_common.pool.ltxml:541`; `latex_constructs.pool.ltxml:5864` | `latex.ltx:619`; `latex.ltx:10243-10248` | candidate, not filed |
+| #480 | kernel | Every counter has the kernel's `\theH<counter>` (Perl: none) | `Package.pm`; `latex_constructs.pool.ltxml` | `latex.ltx:10145`; `hyperref.sty:6607` | candidate, not filed |
+| #564 | binding | xy's frame feature requires curve, as the pdf driver's frame support does (Perl: curve only … | — | `xypdf-fr.tex:60` | candidate, not filed |
+| #567 | kernel | `\newcommand` with an optional argument also defines LaTeX's internal `\\cs` (Perl: only … | — | `latex.ltx:1245-1257`; `latex.ltx:1324-1331` | candidate, not filed |
+| #579 | kernel | The article/report/book bindings define `\fnum@figure`/`\fnum@table` as the tag LaTeXML … | `Base_Utility.pool.ltxml:1041-1056` | `article.cls:457` | candidate, not filed |
+| #580 | binding | The algorithm2e binding loads no float package (Perl: float) | `algorithm2e.sty.ltxml:37` | `algorithm2e.sty:2487-2488` | candidate, not filed |
+| #593 | kernel | In maths an old font command switches the math alphabet to the group's end, as latex.ltx's … | `latex_constructs.pool.ltxml:5200` | `article.cls:497-498` | candidate, not filed |
+| #642 | kernel | `\\|` is a protected macro over the double-bar atom, as LaTeX's is (Perl: the atom itself) | `math_common.pool.ltxml:84` | `fontmath.ltx:467`; `latex.ltx:13641-13645` | candidate, not filed |
+| #645 | kernel | `\try@load@fontshape` reads the family's .fd, `\DeclareFontShape` records the shape, and … | `latex_bootstrap.pool.ltxml:62`; `latex_constructs.pool.ltxml:2690` | `latex.ltx:10605-10620`; `latex.ltx:10279-10305` | candidate, not filed |
+| #646 | binding | empheq's `left`/`right` material is kept, and `overload` gives the AMS environments the option | `empheq.sty.ltxml` | `empheq.sty:785-838`; `empheq.sty:961-1066` | candidate, not filed |
+| #655 | binding | apacite's `\cite` is parenthetical, with or without notes, in its classic citation mode | — | `apacite.sty:76-83` | candidate, not filed |
+| #746 | kernel | `\setlength` on a non-register runs its code | `latex_constructs.pool.ltxml:4603` | `latex.ltx:10253`; `latex.ltx:9137` | candidate, not filed |
+| #747 | kernel | A `\DeclareMathAlphabet`'d alphabet takes one argument | `latex_constructs.pool.ltxml:2686` | `mathalpha.sty:116` | candidate, not filed |
+| #773 | kernel | A second `\documentstyle` raises LaTeX's error and loads no class (Perl: applies latex209 … | `latex_constructs.pool.ltxml:97-129` | `latex.ltx:18617-18618` | candidate, not filed |
+| #774 | binding | A siunitx unit's own `\DeclareSIUnit[<options>]` apply where it is a command's whole unit … | — | `siunitx.sty:6684-6694` | candidate, not filed |
+| #829 | binding | thmtools names an unnamed theorem by its environment, case-modified as its options say | `thmtools.sty.ltxml:80-82` | `thmtools.sty:35-39` | candidate, not filed |
+| #1002 | binding | `\rownum` is colortbl's count, as TeX has it, not Perl's row-number macro (GA1c) | `xcolor.sty.ltxml:744-748` | `colortbl.sty:269-275` | candidate, not filed |
 
 ---
 
