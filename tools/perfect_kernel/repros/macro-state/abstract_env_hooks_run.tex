@@ -1,0 +1,19 @@
+% mechanism: `\begin{abstract}` runs `env/abstract/begin` inside the environment's group and `\end{abstract}` runs
+%   `env/abstract/end` before `\endabstract` (latex.ltx:15362, :15386); the kernel's abstract is a binding macro,
+%   not a constructor, so neither ran (`before`/`after` did). Command forms (`\abstract`…`\endabstract`) run none.
+% witness: synthetic (QA46 "env/abstract: missing"; QAB2)
+% status:  GREEN (QAB2; RED before: "<p>Abstract text.</p>", [bg] and [en] lost, the text upright)
+% oracle:  pdflatex 0 `!`; "[ab][bg] Abstract Abstract text. [en] [af] After." (the abstract's text and [en] italic)
+% engines: rust QAB2 base abad17dfeaf: "[ab] Abstract text. [af] After."; QAB2: pdflatex's; Perl: no hooks.
+% expect:  0 errors, 0 warnings; <p>[bg]<text font="italic">Abstract text.\n[en]</text></p>; <p>[af]\nAfter.</p>
+\documentclass{article}
+\AddToHook{env/abstract/before}{[ab]}
+\AddToHook{env/abstract/begin}{[bg]\itshape}
+\AddToHook{env/abstract/end}{[en]}
+\AddToHook{env/abstract/after}{[af]}
+\begin{document}
+\begin{abstract}
+Abstract text.
+\end{abstract}
+After.
+\end{document}

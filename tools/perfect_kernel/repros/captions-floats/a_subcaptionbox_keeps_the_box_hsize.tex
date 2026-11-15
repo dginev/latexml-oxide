@@ -1,0 +1,25 @@
+% witness: 2010.06608 S4.F8 (\parbox[b]{0.23\columnwidth}{\subcaptionbox{…}{\includegraphics[width=\hsize]{…}}})
+% oracle:  pdflatex 0 errors. A \subcaptionbox with no width sets its content in an \hbox (caption.sty / subcaption.sty
+%          :122-127 \caption@iibox@) and assigns no \hsize; only \@xfloat and \@dblfloat do (latex.ltx:17482, :17556).
+%          The graphic 79.34853pt (0.23 x 345pt); "H 186.29768pt L 186.29768pt" (b); in a p cell "H 103.50105pt
+%          L 103.50105pt" (c); in the float "H 345.0pt L 345.0pt" (d)
+% engines: rust (main 75531ffc9d6): (a) 79.34853pt and (b) right, the \parbox's \columnwidth being its width; (c)
+%          "H 345.0pt" (Perl's beforeFloat :3377, \hsize := \columnwidth for every sub-float); QA14A r1, the \parbox
+%          keeping the page's \columnwidth: (a) 345.0pt, (b) "H 345.0pt"
+% expect:  0 errors, 0 warnings; the widths pdflatex prints
+% status:  RED (75531ffc9d6 for c; QA14A r1 for a, b) -> GREEN (QA14A r2)
+\documentclass{article}
+\usepackage{graphicx,subcaption}
+\begin{document}
+\begin{figure}
+\parbox[b]{0.23\columnwidth}{\subcaptionbox{a}{\includegraphics[width=\hsize]{a.png}}}
+\hskip3em
+\parbox[b]{0.54\columnwidth}{\subcaptionbox{b}{H \the\hsize\ L \the\linewidth}}
+\caption{Boxes.}
+\end{figure}
+\begin{figure}
+\begin{tabular}{p{0.3\textwidth}}\subcaptionbox{c}{H \the\hsize\ L \the\linewidth}\end{tabular}
+\subcaptionbox{d}{H \the\hsize\ L \the\linewidth}
+\caption{Cell.}
+\end{figure}
+\end{document}

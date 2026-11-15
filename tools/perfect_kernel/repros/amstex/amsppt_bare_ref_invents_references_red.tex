@@ -1,0 +1,16 @@
+% witness: math0206022 (`\def\section#1{\heading{#1}\endheading}`, `\section{BIBLIOGRAPHY}` then bare `\ref`s)
+% oracle:  pdftex (\input amstex, \documentstyle{amsppt}) this file: 0 errors; "1. Intro Text. Bibliography 1. A. Author, Title." (no "References")
+% engines: Perl 0.8.8 = 0 errors, the bibliography a bare `\ref` opens (`\@auto@Refs`) titled "References", which amsppt.sty prints only for
+%          `\Refs` (:862-872); rust 7dea7e597a1 = fix/amsppt-ids-sections = 0 errors, an empty section "Bibliography", then a bibliography
+%          titled "References" (the heading before it is titled otherwise, so it does not head it, OXIDIZED_DESIGN_DIVERGENCES #456)
+% expect:  0 errors, 0 warnings; one bibliography headed "Bibliography", no "References"
+% status:  RED (7dea7e597a1, fix/amsppt-ids-sections)
+% moves:   post-merge (an auto-opened amsppt bibliography is untitled, as the kernel's implicit one, #506, and takes the heading before it)
+\input amstex
+\documentstyle{amsppt}
+\document
+\head 1. Intro\endhead
+Text.
+\head Bibliography\endhead
+\ref\no 1\by A. Author\paper Title\endref
+\enddocument

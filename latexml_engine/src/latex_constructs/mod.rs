@@ -4044,7 +4044,7 @@ pub fn begin_float_continuation(float_type: &str) {
 }
 
 /// `before_float` for a float caption never types: subfig's, subfigure.sty's and subfloat.sty's
-/// sub-floats and containers (their own packages step them), and listings' floats — no
+/// sub-floats and containers (their own packages step them), and listings' floats — no `\hsize` (`before_xfloat`), no
 /// `\caption@settype`, so a pending continuation survives it, and its own counter's steps neither
 /// prepare nor take the continuation (`step_float_counter`). Guard
 /// `perfect_kernel_batch56::continuedfloat_scope_opens_where_caption_sets_the_type`.
@@ -4054,15 +4054,15 @@ pub fn before_untyped_float(float_type: &str) -> Result<()> {
     float_type.to_string(),
     Some(Scope::Local),
   );
-  begin_float(float_type, None, false, false)
+  begin_float(float_type, None, false, false, false)
 }
 
 /// latex.ltx `\@floatboxreset` (`\reset@font\normalsize`, run by `\@xfloat`): a floating
 /// environment's text starts in the body font, size and leading whatever surrounds it — through
 /// `\lx@floatbox@reset`, which setspace makes single-spaced (setspace.sty:418-422), so a document's
 /// `\doublespacing` no longer stretches its tables (2605.18633 S6.T1). Called by the environments
-/// that model `\@xfloat` (figure/table, `\@float`, float.sty, rotating, acmart, jhep, aas plates,
-/// wrapstuff) — not by sub-floats, wrapfig/floatflt, an algorithm2e placed `[H]` (a minipage),
+/// that model `\@xfloat` (`before_xfloat`: figure/table, `\@float`, float.sty, rotating, acmart, jhep, aas plates,
+/// wrapstuff; algorithm2e's floats itself) — not by sub-floats, wrapfig/floatflt, an algorithm2e placed `[H]` (a minipage),
 /// supertabular (`\lx@float@keepsize`) or listings, which reset nothing in LaTeX. A class with no
 /// `\normalsize` (amsppt) has none to run. Guards `perfect_kernel_batch58::{line_spacing_commands_set_the_stretch,
 /// only_floats_reset_the_size}`.
@@ -4134,22 +4134,32 @@ pub fn minipage_takes_natural_width(whatsit: &mut Whatsit) -> Result<()> {
   Ok(())
 }
 
-/// Perl: beforeFloat (latex_constructs.pool.ltxml L3430-3438)
-/// Sets \@captype, adjusts \hsize for single/double column floats.
-/// `preincrement`: if Some("figure"), pre-increments the parent float counter
+/// Perl: beforeFloat (blib latex_constructs.pool.ltxml:3373-3382) without its `\hsize := \columnwidth`, which is
+/// `before_xfloat`'s: sets `\@captype`. `preincrement`: if Some("figure"), pre-increments the parent float counter
 ///   on first subfloat entry (before main caption), storing result for later use.
 pub fn before_float(float_type: &str, preincrement: Option<&str>) -> Result<()> {
   before_float_ex(float_type, preincrement, false)
 }
 /// Extended version with `double` flag for `*` variants (span both columns).
 pub fn before_float_ex(float_type: &str, preincrement: Option<&str>, double: bool) -> Result<()> {
-  begin_float(float_type, preincrement, double, true)
+  begin_float(float_type, preincrement, double, true, false)
+}
+/// The begin of a float modelling latex.ltx `\@xfloat`/`\@dblfloat`: `\hsize := \columnwidth` (`\textwidth` when
+/// `double`; :17482, :17556; float.sty's `[H]`, :85), then `reset_float_box`. A sub-float keeps the enclosing `\hsize`;
+/// wrapfig and floatflt set it to their own width (wrapfig.sty:58, floatflt.sty:90), never to `\columnwidth`.
+/// algorithm2e's and listings' floating forms do run `\@float` (algorithm2e.sty:2488-2491, listings.sty:1705-1708) but
+/// start in outer par mode, where `\hsize` is `\columnwidth` already. Not yet `\@parboxrestore`'s `\linewidth\hsize`
+/// (latex.ltx:17483; post-merge).
+pub fn before_xfloat(float_type: &str, double: bool) -> Result<()> {
+  begin_float(float_type, None, double, true, true)?;
+  reset_float_box()
 }
 fn begin_float(
   float_type: &str,
   preincrement: Option<&str>,
   double: bool,
   typed: bool,
+  xfloat: bool,
 ) -> Result<()> {
   set_aside_pending_caption(float_type);
   // The boxes open in this float (`begin_caption_box`) end before it does; `after_float` unwinds any whose end an
@@ -4200,15 +4210,17 @@ fn begin_float(
       let_definition(&T_CS!(name), &T_CS!(panel), None);
     }
   }
-  // Perl: AssignRegister('\hsize' => LookupDimension($options{double} ? '\textwidth' :
-  // '\columnwidth'));
-  let dim_name = if double {
-    "\\textwidth"
-  } else {
-    "\\columnwidth"
-  };
-  let dim_val = lookup_dimension(dim_name).unwrap_or_default();
-  assign_register("\\hsize", dim_val.into(), None, Vec::new()).ok();
+  // Perl's beforeFloat assigns `\hsize` for every float (:3377); only `\@xfloat`/`\@dblfloat` do (`before_xfloat`), so a
+  // sub-float in a `\parbox` or a `p` cell reads the box's (2010.06608 S4.F8; 2007.14228 S5.F7, subfigure.sty).
+  if xfloat {
+    let dim_name = if double {
+      "\\textwidth"
+    } else {
+      "\\columnwidth"
+    };
+    let dim_val = lookup_dimension(dim_name).unwrap_or_default();
+    assign_register("\\hsize", dim_val.into(), None, Vec::new()).ok();
+  }
   // The real line the float's panels are set in rows against (`install_panel_line`), in a float not inside another.
   if !in_float {
     install_panel_line(double);
@@ -4727,19 +4739,49 @@ pub fn declare_panel_width(cs: &str, arg: usize, keys: &[&str], height_keys: &[&
 }
 
 /// The state value marking a construct that sets its content in a parbox of the width it states
-/// (`declare_panel_parbox_width`), by the construct's control sequence.
+/// (`declare_panel_parbox_width`), by the construct's control sequence: which registers it sets (`BoxSets`).
 fn panel_parbox_key(cs: &str) -> String { s!("lx@panel@parbox@{cs}") }
 
+/// Which of `LINE_REGISTERS` a box of a stated width sets to that width: all four (latex.ltx:16312-16313
+/// `\@iiiminipage`), or a `\parbox`'s `\linewidth` and `\hsize` alone (:16253 `\@iiiparbox`, :16280 `\@parboxrestore`).
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum BoxSets {
+  All,
+  Line,
+}
+
 /// A binding declares a construct that states its width as its argument `arg` (`declare_panel_width`) and sets its
-/// content in a parbox of that width — a `{minipage}`, a `\parbox`, a sub-figure — whose `\linewidth`, `\hsize`,
-/// `\textwidth` and `\columnwidth` are that width (latex.ltx:16312-16313 `\@iiiminipage`; for a `\parbox`, Perl's
-/// latex_constructs.pool.ltxml:4746 `\hsize=#4\textwidth\hsize\columnwidth\hsize`, where latex.ltx:16249-16253
-/// `\@iiiparbox` sets only `\hsize` and, by `\@parboxrestore`, `\linewidth`: the widths are evaluated as we digest
-/// the box): its content's stated widths are evaluated against it (`note_stated_widths_in`). An `\hbox`'s
-/// (`\makebox[w]`, `\resizebox{w}{!}`) content is set at the enclosing line.
+/// content in a minipage of that width — a `{minipage}`, a sub-figure — whose `\linewidth`, `\hsize`, `\textwidth`
+/// and `\columnwidth` are that width (latex.ltx:16312-16313 `\@iiiminipage`): its content's stated widths are
+/// evaluated against it (`note_stated_widths_in`). An `\hbox`'s (`\makebox[w]`, `\resizebox{w}{!}`) content is set
+/// at the enclosing line.
 pub fn declare_panel_parbox_width(cs: &str, arg: usize) {
   declare_panel_width(cs, arg, &[], &[]);
-  assign_value(&panel_parbox_key(cs), true, Some(Scope::Global));
+  assign_value(
+    &panel_parbox_key(cs),
+    Stored::Bool(true),
+    Some(Scope::Global),
+  );
+}
+
+/// As `declare_panel_parbox_width`, for a `\parbox` (`BoxSets::Line`): its `\textwidth` and `\columnwidth` are the
+/// enclosing ones (KNOWN_PERL_ERRORS #1273).
+pub fn declare_panel_parbox_line(cs: &str, arg: usize) {
+  declare_panel_width(cs, arg, &[], &[]);
+  assign_value(
+    &panel_parbox_key(cs),
+    Stored::Bool(false),
+    Some(Scope::Global),
+  );
+}
+
+/// What a construct's box sets of `LINE_REGISTERS` (`declare_panel_parbox_width`, `declare_panel_parbox_line`).
+fn panel_box_sets(cs: &str) -> Option<BoxSets> {
+  match lookup_value(&panel_parbox_key(cs)) {
+    Some(Stored::Bool(true)) => Some(BoxSets::All),
+    Some(Stored::Bool(false)) => Some(BoxSets::Line),
+    _ => None,
+  }
 }
 
 /// What a construct states its size with (`declare_panel_width`), where it was kept (`KEEP_STATED_LENGTHS`): the tokens
@@ -4758,8 +4800,9 @@ struct StatedSize {
   /// The width and the height the construct was given (a positional argument's digested value, a `width=`'s, a
   /// `height=`'s), which the stated tokens must give again at the registers' geometry (`note_stated_widths_in`).
   given:       (Option<f64>, Option<f64>),
-  /// The construct sets its content in a parbox of its stated width (`declare_panel_parbox_width`).
-  parbox:      bool,
+  /// The construct sets its content in a box of its stated width, and which registers that sets
+  /// (`declare_panel_parbox_width`).
+  parbox:      Option<BoxSets>,
 }
 
 /// What `whatsit` states its size with (`StatedSize`), if its binding declared where (`declare_panel_width`). A width or
@@ -4803,7 +4846,7 @@ fn stated_size_of(whatsit: &Whatsit) -> std::result::Result<Option<StatedSize>, 
           keep_within: false,
           value,
           given: (value, None),
-          parbox: lookup_bool(&panel_parbox_key(&cs)),
+          parbox: panel_box_sets(&cs),
         })),
         Some(_) => Ok(None),
         // (a length given whose tokens were not kept: a box built before the float; one a binding gave and withheld,
@@ -4845,7 +4888,7 @@ fn stated_size_of(whatsit: &Whatsit) -> std::result::Result<Option<StatedSize>, 
         keep_within: kv.has_key("keepaspectratio"),
         value:       None,
         given:       (given(width), given(height)),
-        parbox:      false,
+        parbox:      None,
       }))
     },
   }
@@ -4995,7 +5038,7 @@ fn evaluate_stated_length_at(
       } else {
         Dimension::new(*value).into()
       };
-      register.set_value(value, None, Vec::new());
+      register.set_value(value, None, Vec::new())?;
     }
     let (value, _tail) = read_braced(tokens.clone(), || match braced_length_evaluator() {
       Some(evaluate) => Ok(evaluate(kind)?.value_of()),
@@ -5017,13 +5060,15 @@ struct PanelLineContext {
 }
 
 impl PanelLineContext {
-  /// Inside a box of `ours`/`real` width (a minipage sets `\textwidth`, `\columnwidth`, `\hsize` and `\linewidth` to
-  /// its width, latex.ltx `\@iiiminipage`).
-  fn inside(ours: i64, real: i64) -> Self {
-    PanelLineContext {
-      ours: [ours; 4],
-      real: [real; 4],
+  /// Inside a box of `ours`/`real` width, which sets the registers `sets` names (`BoxSets`).
+  fn inside(self, sets: BoxSets, ours: i64, real: i64) -> Self {
+    let from = if sets == BoxSets::All { 0 } else { 2 };
+    let mut inner = self;
+    for i in from..4 {
+      inner.ours[i] = ours;
+      inner.real[i] = real;
     }
+    inner
   }
 }
 
@@ -5265,8 +5310,8 @@ fn note_stated_widths_in(
     // sub-figures, 2504.07193 Fig 5; an `\hbox`'s content is set at the enclosing line, `declare_panel_parbox_width`)
     if let Some((ours, real)) = width {
       note(notes, PANEL_LINE, real as f64);
-      if stated.parbox {
-        inner = PanelLineContext::inside(ours, real);
+      if let Some(sets) = stated.parbox {
+        inner = context.inside(sets, ours, real);
       }
       stated_width = true;
     }

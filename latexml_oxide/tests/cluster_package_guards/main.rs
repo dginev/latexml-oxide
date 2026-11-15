@@ -415,6 +415,7 @@ mod perfect_kernel_batch98c;
 mod perfect_kernel_batch98d;
 mod perfect_kernel_batch98e;
 mod perfect_kernel_batch99b;
+mod perfect_kernel_batchamsppt;
 mod perfect_kernel_batchaut1;
 mod perfect_kernel_batchbc1;
 mod perfect_kernel_batchc1;
@@ -598,6 +599,8 @@ mod perfect_kernel_batchpb;
 /// keeps its argument (pazh), a class's own `\email` reads its argument unexpanded (1802.01191); OD #983.
 mod perfect_kernel_batchpc3;
 mod perfect_kernel_batchpsf1;
+/// QA14A: a `\parbox` sets `\hsize` and `\linewidth` only, `\textwidth`/`\columnwidth` the page's; KPE #1273.
+mod perfect_kernel_batchqa14a;
 /// QA47A: `\begin{document}` runs the kernel's begin-document lists, so `cmd/<name>/<hook>` hooks patch TeX macros;
 /// a binding's hook is a counted Warning (BM Q3.3).
 mod perfect_kernel_batchqa47a;

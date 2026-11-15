@@ -8,7 +8,8 @@ use crate::{
 };
 
 pub type LigatureClosure = Rc<dyn Fn(&str) -> String>;
-pub type FontTestClosure = Rc<dyn Fn(&Font) -> bool>;
+/// Perl's `fontTest` (Document.pm:1227), which may die: a Fatal it raises ends the conversion.
+pub type FontTestClosure = Rc<dyn Fn(&Font) -> Result<bool>>;
 pub type LigatureMatcher =
   Rc<dyn Fn(&mut Document, &mut Node) -> Result<Option<(usize, String, MathLigatureOptions)>>>;
 

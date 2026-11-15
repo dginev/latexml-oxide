@@ -54,7 +54,7 @@ fn calc_assign(variable: ArgWrap, expression: Tokens, kind: &str) -> Result<()> 
           value.clone().value_of(),
         );
       }
-      defn.set_value(value, None, params);
+      defn.set_value(value, None, params)?;
       unread_vec(tail);
     }
   }
@@ -710,7 +710,7 @@ LoadDefinitions!({
       if let Some(defn) = rtoken.to_register() {
         let old_value = defn.value_of(params.clone()).unwrap_or_default();
         let (delta, tail) = evaluate("Glue", arg)?;
-        defn.set_value(old_value.add(delta), None, params);
+        defn.set_value(old_value.add(delta), None, params)?;
         unread_vec(tail);
       }
     }

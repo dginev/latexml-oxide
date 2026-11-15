@@ -115,7 +115,7 @@ fn assign_braced_length(target: Tokens, length: Tokens, add: bool) -> Result<()>
   if let Some((defn, params, value)) = assignment {
     if add {
       let oldlength = defn.value_of(params.clone()).unwrap_or_default();
-      defn.set_value(oldlength.add(value), None, params);
+      defn.set_value(oldlength.add(value), None, params)?;
     } else {
       // What it states, for a float's width read through the register (the panel grid rule, `note_setlength`).
       if params.is_empty() {
@@ -125,7 +125,7 @@ fn assign_braced_length(target: Tokens, length: Tokens, add: bool) -> Result<()>
           value.clone().value_of(),
         );
       }
-      defn.set_value(value, None, params);
+      defn.set_value(value, None, params)?;
     }
   }
   unread_vec(tail);
@@ -713,10 +713,9 @@ pub(crate) fn load() -> Result<()> {
   Let!("\\lx@parboxnewline", "\\lx@newline");
   // NOTE: There are 2 extra arguments (See LaTeX Companion, p.866)
   // for height and inner-pos. We're ignoring inner-pos, for now, though.
-  // `\linewidth\hsize` appended to Perl's register trio (L4746) — same
-  // intentional divergence as the {minipage} binding: real LaTeX \@iiiparbox
-  // runs \@parboxrestore, so nested raw-loaded boxes read the reduced
-  // \linewidth. See the minipage after_digest_begin note. Its interline
+  // The box sets `\hsize` and, by `\@parboxrestore`, `\linewidth` and `\@totalleftmargin` (latex.ltx:16253,
+  // :16280-16281); `\textwidth` and `\columnwidth` stay the page's, which Perl's macro set too (:4746,
+  // KNOWN_PERL_ERRORS #1273; witnesses 1412.0314, 1711.09469); a minipage sets them (`set_minipage_width`). Its interline
   // values too (latex.ltx:16284-16286), restored inside a table cell where
   // `\@array` zeroed them (60l, `\lx@begin@alignment`).
   // The `\ifx.#2.` dispatch closes BEFORE the box body is digested
@@ -729,7 +728,7 @@ pub(crate) fn load() -> Result<()> {
   // The width is read as the source states it, at the registers outside the box, as latex.ltx:16252 reads it
   // (`\setlength\@tempdima{#4}` before the `\vbox`), and the box's own registers are set inside it (`\hsize\@tempdima`,
   // :16253), where `\lx@parbox@restore` reads the width again: `\lx@parbox` keeps the tokens a float's panel states
-  // (`declare_panel_parbox_width`), so a `\parbox{\linewidth}` table note against a two-column class's declared page
+  // (`declare_panel_parbox_line`), so a `\parbox{\linewidth}` table note against a two-column class's declared page
   // is a whole column, not the 345pt Perl's registers give it over the real 229.5pt (`perfect_kernel_batch79f`;
   // Perl's `{Dimension}` macro, latex_constructs.pool.ltxml:4745, handed `\lx@parbox` the value).
   DefMacro!(
@@ -738,7 +737,7 @@ pub(crate) fn load() -> Result<()> {
   );
   DefMacro!(
     "\\lx@parbox@restore{}",
-    r"\setlength\hsize{#1}\textwidth\hsize\columnwidth\hsize\linewidth\hsize\parindent\z@\parskip\z@skip\everypar{}\lx@restore@interline"
+    r"\setlength\hsize{#1}\linewidth\hsize\@totalleftmargin\z@\parindent\z@\parskip\z@skip\everypar{}\lx@restore@interline"
   );
   DefConstructor!("\\lx@parbox OptionalPosition [TempboxaDimension] OptionalUndigested {SetlengthDimension} VBoxContents",
     sub[document, args, props] {
@@ -845,7 +844,7 @@ pub(crate) fn load() -> Result<()> {
     }
   );
   // The width it states is a float panel's (the panel grid rule, `declare_panel_width`).
-  declare_panel_parbox_width("\\lx@parbox", 4);
+  declare_panel_parbox_line("\\lx@parbox", 4);
   // INTENTIONAL DIVERGENCE from Perl (empty stub, latex_constructs.pool
   // L4767): the kernel's \@parboxrestore = \@arrayparboxrestore (see
   // latex_base.rs for the ported body and rationale — the load-bearing

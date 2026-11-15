@@ -1,0 +1,24 @@
+% witness: synthetic (revAMSPPT; the corpus's nested rosters are braced, math9506206 lines 1339-1341, and keep the outer count right)
+% oracle:  pdftex (\input amstex, \documentstyle{amsppt}) this file: 0 errors; "(1) One. (2) Two: (a) Inner one. (1) Inner two.
+%          T hree. After." — the inner `\endroster` runs amsppt.sty:744's `\let\item\plainitem@`, so the outer third `\item` is
+%          plain's: its label is the next token "T"
+% engines: Perl 0.8.8 = 0 errors, every item lost (KNOWN_PERL_ERRORS #1270); rust fix/amsppt-ids-sections = 0 errors, the third
+%          item tagged "(3)" (invented) with the text "Three." (the restore at amsppt_sty.rs's `\roster` gives the roster `\item` back)
+% expect:  0 errors; no tag "(3)": the third item labelled "T" with the text "hree.", as amstex prints it
+% status:  RED (fix/amsppt-ids-sections)
+% moves:   post-merge (give the roster `\item` back only when a group closes around the inner roster)
+\input amstex
+\documentstyle{amsppt}
+\document
+\head 1. Nested\endhead
+\roster
+\item One.
+\item Two:
+  \roster
+  \item"(a)" Inner one.
+  \item Inner two.
+  \endroster
+\item Three.
+\endroster
+After.
+\enddocument

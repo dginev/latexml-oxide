@@ -1,0 +1,13 @@
+% mechanism: a `\textfont`/`\scriptfont`/`\scriptscriptfont` assignment's value is a font identifier (tex.web §577
+%   `scan_font_ident`): a family register there reads its 4-bit family and gives that family's font. Read as one
+%   token (Perl's readValue('Token')), `\textfont9=\textfont1` took `\textfont` and the "1" was typeset. `\fontname`
+%   (FontToken) already read the family.
+% witness: 2511.21986 (`\AtBeginEnvironment{abstract}{\textfont9=\textfont1 …}`: "1 1 1" in its abstract); KPE #1271
+% status:  GREEN (QAB2b; RED on QAB2 c01a9dc55ad: "A1 [fontname not available] B2 [fontname not available] C0 …")
+% oracle:  pdflatex 0 `!`; "0 A[cmmi10] B[cmsy7] C[cmmi10] DE"
+% engines: rust QAB2: the red line; Perl 0.8.8: the red line; QAB2b: pdflatex's.
+% expect:  0 errors, 0 warnings; <p>…</Math> A[cmmi10] B[cmsy7] C[cmmi10] DE</p>
+\documentclass{article}
+\begin{document}
+$0$ A\textfont9=\textfont1 [\fontname\textfont9] B\scriptscriptfont9=\scriptfont2 [\fontname\scriptscriptfont9] C{\textfont9=\textfont0 }[\fontname\textfont9] D\setbox0=\hbox{$0$}E
+\end{document}

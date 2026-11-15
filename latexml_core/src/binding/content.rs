@@ -143,7 +143,8 @@ impl Default for InputDefinitionOptions {
 /// and :18867-18875 `\UseOneTimeHook{package/<name>/after}` +
 /// `\UseHook{package/after}` after its `-h@@k`; `\InputIfFileExists`'
 /// `\@input@file@exists@with@hooks` adds `file/<name>.<ext>/before|after`
-/// and `file/before|after`. Perl fires none of them (Package.pm L2620-2655),
+/// and `file/before|after`, plain `\UseHook`s whose `after` pair runs ahead of
+/// the `-h@@k` (`when` = `file/after`). Perl fires none of them (Package.pm L2620-2655),
 /// so `\AddToHook{class/scrbook/after}{…}` (tudapub.cls hooking scrbook's
 /// `\addchap`, DEMO-TUDaPhD) never ran. Only when lthooks is loaded
 /// (`\UseHook` defined) and only for package/class loads. Guard:
@@ -162,20 +163,23 @@ fn use_load_hooks(name: &str, as_type: &str, when: &str) -> Result<()> {
     return Ok(());
   }
   let kind = if as_type == "cls" { "class" } else { "package" };
-  let code = if when == "before" {
-    [
+  // The file hooks are plain `\UseHook`s (latex.ltx:19668-19673), the package/class ones one-time (:18843-18848)
+  let code = match when {
+    "before" => vec![
       use_hook(&s!("{kind}/before"), false),
       use_hook(&s!("{kind}/{name}/before"), true),
       use_hook("file/before", false),
-      use_hook(&s!("file/{name}.{as_type}/before"), true),
-    ]
-  } else {
-    [
-      use_hook(&s!("file/{name}.{as_type}/after"), true),
+      use_hook(&s!("file/{name}.{as_type}/before"), false),
+    ],
+    // `\InputIfFileExists`' end, ahead of the load's `-h@@k` (:18865)
+    "file/after" => vec![
+      use_hook(&s!("file/{name}.{as_type}/after"), false),
       use_hook("file/after", false),
+    ],
+    _ => vec![
       use_hook(&s!("{kind}/{name}/after"), true),
       use_hook(&s!("{kind}/after"), false),
-    ]
+    ],
   }
   .concat();
   digest(crate::mouth::tokenize_internal(TeXString::assembled(code)))?;
@@ -1502,7 +1506,8 @@ fn input_definitions_impl(
       // Guard: `perfect_kernel_batch54::at_end_of_package_hook_runs_with_at_letter`.
       let saved_at = lookup_catcode('@');
       assign_catcode('@', Catcode::LETTER, None);
-      let hook = digest(T_CS!(s!("\\{name}.{as_type}-h@@k")))
+      let hook = use_load_hooks(name, &as_type, "file/after")
+        .and_then(|_| digest(T_CS!(s!("\\{name}.{as_type}-h@@k"))))
         .and_then(|_| unprocessed_options(name, &as_type))
         .and_then(|_| use_load_hooks(name, &as_type, "after"));
       assign_catcode('@', saved_at.unwrap_or(Catcode::OTHER), None);
@@ -2400,7 +2405,7 @@ fn input_content_with_file_hooks(request: &str, path: &str, options: InputOption
   let push = lookup_definition(&T_CS!("\\@expl@@@filehook@file@push@@"))?.is_some() && pop;
   let after = s!(
     "{set}{}{}{}",
-    use_hook(&s!("file/{name}/after"), true),
+    use_hook(&s!("file/{name}/after"), false),
     use_hook("file/after", false),
     if push {
       "\\@expl@@@filehook@file@pop@@"
@@ -2418,7 +2423,7 @@ fn input_content_with_file_hooks(request: &str, path: &str, options: InputOption
       ""
     },
     use_hook("file/before", false),
-    use_hook(&s!("file/{name}/before"), true)
+    use_hook(&s!("file/{name}/before"), false)
   );
   gullet::unread_expansion(crate::mouth::tokenize_internal(TeXString::assembled(
     before,

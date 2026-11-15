@@ -117,7 +117,7 @@ pub use crate::{
   latex_constructs::{
     EQUATIONROW_HOLDS, SUBEQUATION_ROLLBACK, begin_appendices, declare_bound_text_symbols,
     declare_capital_greek, declare_capital_greek_named, declare_panel_floats_centred,
-    declare_panel_page, declare_panel_parbox_width, declare_panel_width,
+    declare_panel_page, declare_panel_parbox_line, declare_panel_parbox_width, declare_panel_width,
     declare_standard_class_page, end_appendices, given_class_options, has_chapter_counter,
     is_document_class, keep_pending_next_numbers, kernel_chapter_with_warning, last_class_option,
     last_declared_class_option, make_note_tags, note_size_in_line, out_of_line_size,

@@ -11869,6 +11869,15 @@ placeholders, so a streamed unit with prose before its entries keeps its own hea
 bibliography; the unit's other attributes (`class`, `xml:lang`) are not carried. Guard
 `perfect_kernel_batch61::bibliography_takes_the_place_of_its_heading_unit`.
 
+**amsppt (2026-11-14).** amsppt's heads stay open for their bodies (amsppt.sty.ltxml:94-140), so its `\Refs` (and the
+bare `\ref` that opens it, `\@auto@Refs`) is placed as back matter at the place of amsppt's top unit, the `\specialhead`
+chapter (`adjust_backmatter_element`, as LaTeX's bibliography, latex_constructs.pool.ltxml:3935-3946): amsppt.sty:862-869
+sets `\Refs` as a head, not inside the last one. A `\head References\endhead` or `\specialhead References\endspecialhead`
+before it then heads it as above. Perl's `\@Refs` (amsppt.sty.ltxml:335-340) opens in place: the bibliography nests in
+the last head, under a second "References". Witnesses math0304264, q-alg9506019, math-ph9910014; repros
+amstex/amsppt_refs_close_the_heads, amstex/amsppt_specialhead_heads_the_references; guard
+`perfect_kernel_batchamsppt::amsppt_heads_and_theorems`.
+
 ### 457. etex's register-block allocators are defined on today's kernel (Perl and current pdflatex: undefined)
 
 etex.sty:382-425 defines `\globcountblk` … `\locmarksblk` only in its pre-2020 branch; on a kernel with extended
@@ -31699,11 +31708,16 @@ conversion from a binding's top level, a body, a hook or a binding another bindi
 after.` with a body `Fatal()` keeps no text, "Conversion failed: 1 fatal error"). A Fatal the script catches with
 `try`/`catch` was printed at its raise; the script and the conversion go on, and a later error stays its own counted
 `Error:script:` line (the user's ruling that every Error is emitted and counted, 2026-11-11); no ignore flag outlives it. DG 2026-11-14 confirmed both halves: a Rhai Fatal stops
-processing, and a Fatal the binding deliberately catches may continue, as Perl's `eval` allows. **Two exceptions today**
-(SYNC row R ODR10): a Fatal raised in a `DefLigature` `fontTest` (`wire.rs` `contain_bool`, `.unwrap_or(false)`) or in a
-register setter (`values.rs` `let _ = contain(…)`) prints its one line and sets status 3, but is dropped there: the
-test reads false or the setter's body stops, and the conversion builds the whole text (probes: `Before qq after.` under a
-`fontTest` calling `Fatal()`, `Before \wfreg=5pt after.` under such a setter; each "Conversion failed: 1 fatal error"). **Guard**: `30_script_bindings::a_rhai_fatal_is_logged_once` (the caught-then-thrown rows).
+processing, and a Fatal the binding deliberately catches may continue, as Perl's `eval` allows. A `DefLigature`
+`fontTest` and a register setter may die as Perl's (Document.pm:1227 `&$fonttest($font)`, Register.pm:66 `&$setter`):
+`FontTestClosure` returns `Result<bool>`, `RegisterSetterClosure` and `Definition::set_value` `Result<()>`, so their
+Fatal ends the conversion: a setter's as a body's, a `fontTest`'s as any build hook's (the build stops and keeps the
+document built so far, with its Warning). **Exceptions**, one decision post-merge (propagate the `Result`, or re-raise a logged
+Fatal): a register getter's Fatal is dropped and the register reads unset, since `Definition::value_of` returns an `Option`
+(catalog `rhai-bindings/register_getter_fatal_continues_red.tex`); a `fontTest`'s Fatal raised while `set_node` closes the open
+text (a `\footnote` right after the text) is dropped, since `set_node` discards `close_text_internal`'s Result (Perl's
+Document.pm:74 dies there; `rhai-bindings/fonttest_fatal_closed_by_set_node_red.tex`).
+**Guard**: `30_script_bindings::a_rhai_fatal_is_logged_once` (the caught-then-thrown, `fontTest` and setter rows).
 
 ### 1030. → KNOWN_PERL_ERRORS #1244 (Rhai glue arithmetic is TeX's `\advance`, not Perl's Glue.pm / MuGlue.pm)
 
@@ -31910,6 +31924,13 @@ atveryend's commands are no-ops: every hook's code is dropped.
 `\AtBeginEnvironment{verbatim}` joins the same hook, its private store gone); `\label` runs
 `\UseHookWithArguments{label}{1}{#1}` in a group (:14943); `\include` names the file current and runs `include/before`,
 `include/<name>/before`, `/end`, `/after`, and `include/excluded` for a file `\includeonly` leaves out (:9609-9627).
+The kernel's abstract, a binding macro, runs `env/abstract/begin` inside the abstract's group before `\abstract`
+(:15354-15362) — ahead of the abstract's name and the class's replayed begin code, what it typesets heading the body —
+and `env/abstract/end` before `\end{abstract}` (:15386); an abstract that is a constructor environment runs both from
+its constructor only. `\selectfont` runs `\UseHook{selectfont}` before `\size@update` (:12580), only when the hook
+holds code (scrartcl.cls:2673's `\par@update`, everysel.sty:49), read from the hook's slots it names once;
+`file/<name>/before|after` are plain `\UseHook`s at every `\input` and load (:19668-19673), and a load's `after` pair
+runs before its `\AtEndOfPackage`/`\AtEndOfClass` code and `package/<name>/after` (:18865-18869).
 `\begin` defines `\@currenvir` (`verbatim*` its own name) before `env/<name>/begin` (:15350-15352), so the verbatim
 constructor runs its begin hooks, the kernel's and etoolbox's `@atbegin` store, after it. `enddocument/afterlastpage`, `/afteraux` and
 `/end` (:15262-15277) follow the last page, where pdflatex prints nothing they typeset: the document's own code
@@ -31934,11 +31955,18 @@ latex.ltx runs it before the `.aux` write, so a hook's `\@currentlabel` does not
 Package.pm:1920-1927; `environment_begin_hook_reads_its_environment_red`: moving it alone raised 2001.02707's
 `\AtBeginEnvironment{defn}{\begin{samepage}}` from 29 to 54 errors, so the end side moves with it); no `\begin` path
 sets `\@currenvline` (`currenvline_is_never_set_red`); a
-document's `\AtEndAfterFileList` is lost (`enddocument_info_hook_red`). **Guard**:
+document's `\AtEndAfterFileList` is lost (`enddocument_info_hook_red`); `\emph` and the other font constructors call no
+`\selectfont`, so its hook does not run there (`selectfont_hook_on_emph_red`, the macro faces); the kernel abstract
+sets no class abstract font, so a begin hook's `\large` is not undone by article's `\small`
+(`abstract_begin_hook_size_under_the_class_small_red`), and what amsart's begin hook typesets before an abstract
+ahead of `\maketitle` stays in the abstract, where pdflatex prints it before the title
+(`amsart_abstract_begin_hook_text_before_the_title_red`). **Guard**:
 `perfect_kernel_batchqa47a::batchqa47a_command_hook_rows` (rows `enddocument_hooks_run`,
 `enddocument_hook_commands_run`, `verbatim_env_hooks_run`, `verbatim_begin_hook_reads_its_environment`,
 `label_hook_runs`, `include_hooks_run`, `label_hook_opens_no_paragraph`, `cleveref_firstaid_not_registered`,
-`cleveref_firstaid_absent_removes_nothing`).
+`cleveref_firstaid_absent_removes_nothing`, `file_hooks_run_at_every_input`, `file_hooks_order_around_a_package`,
+`abstract_env_hooks_run`, `selectfont_hook_runs`, `abstract_end_hook_once_in_a_constructor_abstract`,
+`abstract_begin_hook_runs_before_the_name`).
 
 ### 1045. Every box's width, height and depth are the CSS custom properties `--ltx-box-width`, `--ltx-box-height`, `--ltx-box-depth` (Perl: `style="width:…;height:…;vertical-align:…"`, or dropped)
 
@@ -33474,3 +33502,4 @@ keytheorems.sty:994, :1075-1079 stores the head through `\deferred@thm@head` for
 binding's theorem never calls `\deferred@thm@head`: it makes the head an `ltx:title` before the box. latexml_contrib/src/keytheorems_sty.rs reads
 the file raw and leaves the macro empty, so the box's title slot is empty and the head is kept. Witnesses tutodoc-en, tutodoc-fr. Guard
 `perfect_kernel_batchm3::a_tcolorbox_keytheorem_keeps_its_head_and_body`.
+and the row `file_hooks_run_at_every_input` (#1048: `file/<name>/before|after` plain `\UseHook`s, latex.ltx:19669/19672).
