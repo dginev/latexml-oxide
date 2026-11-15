@@ -1808,7 +1808,7 @@ pub fn def_environment(
         ..Parameter::default()
       };
       let mut params = vec![skip_spaces_param];
-      params.extend(pl.get_parameters().into_iter().cloned());
+      params.extend(pl.get_parameters().iter().cloned());
       Some(Parameters::new(params))
     },
     _ => paramlist.clone(),

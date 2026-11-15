@@ -5986,7 +5986,7 @@ fn copy_default(definition: &Stored) -> Option<Tokens> {
     return lookup_meaning(&inner).and_then(|inner| copy_default(&inner));
   }
   definition_parameters(definition)
-    .and_then(|params| params.get_parameters().into_iter().next())
+    .and_then(|params| params.get_parameters().first())
     .filter(|param| param.optional)
     .and_then(|param| param.extra.first().cloned())
 }
@@ -6027,7 +6027,7 @@ pub fn owns_calls(cs: &Token, binding: &Stored) -> bool {
     .and_then(|params| {
       params
         .get_parameters()
-        .into_iter()
+        .iter()
         .find(|param| !param.optional)
     })
     .is_some_and(|param| arena::with(param.name, |name| BRACED_ARGUMENT_TYPES.contains(&name)))
@@ -6140,7 +6140,7 @@ pub fn call_openers(binding: &Token) -> Vec<Token> {
   if let Some(params) = defn.get_parameters() {
     for param in params
       .get_parameters()
-      .into_iter()
+      .iter()
       .take_while(|param| param.optional)
     {
       if arena::with(param.name, |name| name == "OptionalMatch") {

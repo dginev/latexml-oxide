@@ -60,7 +60,7 @@ fn shown_mark(digested: &Digested) -> String {
       && parameter
         .inner
         .as_ref()
-        .is_none_or(|inner| inner.get_parameters().into_iter().any(shows))
+        .is_none_or(|inner| inner.get_parameters().iter().any(shows))
   }
   fn shown(digested: &Digested, out: &mut String) {
     match digested.data() {
@@ -81,7 +81,7 @@ fn shown_mark(digested: &Digested) -> String {
             .map(|parameters| {
               parameters
                 .get_parameters()
-                .into_iter()
+                .iter()
                 .filter(|p| !p.novalue)
                 .collect()
             })
