@@ -1,0 +1,17 @@
+% mechanism: `\ext@arrow` sets its fill in `\mathrel{\hbox{#5\displaystyle}}` (amsmath.sty:1014; REGAB), and a `$` nested in an `\hbox`
+%   does not inherit the enclosing bold math font (`\bm`/`\boldsymbol`), so the arrow loses `font="bold"`; the base already loses it on
+%   `\bm{A \hbox{$\to$} B}` — the general hbox/`$` math-font inheritance gap
+% witness: synthetic (revREGAB `p/bm2.tex`; no paper in REGAB's 217-paper A/B)
+% oracle:  pdflatex (TL 2025) 0 errors; `\showbox` puts the arrow glyph in `\OMS/cmsy/b/n/10` (bold)
+% engines: REGAB: the `\xfoo` arrow's `<XMTok name="rightarrow">` without `font="bold"` (MAIN882 had it, before the `\hbox`)
+% expect:  0 errors; both arrows `<XMTok font="bold" …>`
+% status:  RED (fix/amsmath-arrowfill-regressions)
+% moves:   post-merge (the nested `$` in an `\hbox` inherits the bold math font, as TeX's `\boldmath` state)
+\documentclass{article}
+\usepackage{amsmath,bm}
+\makeatletter
+\newcommand*\xfoo[2][]{\ext@arrow 0359\rightarrowfill@{#1}{#2}}
+\makeatother
+\begin{document}
+\[ \bm{A \hbox{$\to$} B} \quad \boldsymbol{A \xfoo{h} B} \quad \bm{A \to B}\]
+\end{document}
