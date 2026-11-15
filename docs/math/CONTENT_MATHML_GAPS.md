@@ -187,7 +187,7 @@
   Two implementation notes worth keeping: pass the lead token's font to
   `insert_math_token` (with `None` it stamps `font="italic"` from the ambient
   math font, so the merged token would differ from its own unmerged twin); and
-  the rewrite engine runs each rule ONCE over a match set computed up front, so
+  the rewrite engine runs each pass over a match set computed up front, so
   chains are handled by selecting only chain HEADS and running the rule
   `THOUSANDS_MERGE_PASSES` (4) passes (`RewriteOptions::passes`; each later pass
   reads only the tokens the previous one merged) — merging a head would otherwise

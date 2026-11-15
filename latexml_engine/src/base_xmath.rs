@@ -35,7 +35,7 @@ const THOUSANDS_MERGE_PASSES: usize = 4;
 /// * the `not(preceding-sibling…)` clause restricts matches to chain HEADS.
 ///   Matches are computed up front, so merging a head would leave the interior
 ///   matches pointing at freed nodes; taking heads only makes each pass
-///   independent, and repeated registration walks the chain rightward.
+///   independent, and the rule's passes (`RewriteOptions::passes`) walk the chain rightward.
 ///
 /// * `not(parent::ltx:XMWrap)` keeps this to commas the AUTHOR typed. A package
 ///   that formats numbers itself — siunitx `\num{12345}`, numprint

@@ -385,7 +385,10 @@ Not taken: `\not`'s rule runs twice in every LaTeX document because `latex_const
 and `math_common` (Perl `latex_constructs.pool.ltxml` L19-21, L38, which Perl does too), re-pushing math_common's
 `DefRewrite` and its three ligatures. The second `\not` pass is not idle: the cancel path's `append_tree` copies its
 operand (Perl moves it, `appendChild`), so a `\not` inside it (`$\not\sqrt{a\not=b}$`) is rewritten only by the second
-registration; registering it once changes that output.
+registration; registering it once changes that output. The second pass repairs nesting depth 2 only: at depth 3
+(`$\not\sqrt{\not\sqrt{a\not=b}}$`) Perl gives `≠` while Rust leaves a bare `／`, a plain `=` and an extra invisible
+times, and `$\not\frac{\not\sqrt{a\not=b}}{c}$` gets `fontsize="49%"` against Perl's `70%` (revPERFF, both binaries;
+pre-existing). The fix is the move Perl makes, then one registration (row R).
 
 ### 2026-11-15 — post's whole-document queries wrap only their matches (PERFD, PERF1 lever L5)
 
