@@ -63,7 +63,8 @@ fn natbib_sort_compress_numbers() {
 }
 
 /// The superscript form compresses inside its superscript: "1–3", a run of two "1; 2", "1–3; 5" (natbib.sty:401-421,
-/// the form achemso.cls:1396 asks for). Red (int50a): "3; 1; 2". Repro index-bib/natbib_super_sort_compress.
+/// the form achemso.cls:1396 asks for). Red (int50a): "3; 1; 2". Repro index-bib/natbib_super_sort_compress. Each
+/// superscript cite is numeric, the class on the bibref's nearest `ltx:cite` (issue #857, OD #307).
 #[test]
 fn natbib_super_sort_compress() {
   let html = html_of(repro!("index-bib/natbib_super_sort_compress.tex"));
@@ -71,7 +72,7 @@ fn natbib_super_sort_compress() {
     &html,
     "p",
     &["id=\"p1.1\""],
-    r##"<p id="p1.1" class="ltx_p">X<cite class="ltx_cite ltx_citemacro_cite"><sup id="p1.1.1" class="ltx_sup"><a href="#bib.bib1" title="" class="ltx_ref">1</a>–<a href="#bib.bib3" title="" class="ltx_ref">3</a></sup></cite>, Y<cite class="ltx_cite ltx_citemacro_cite"><sup id="p1.1.2" class="ltx_sup"><a href="#bib.bib1" title="" class="ltx_ref">1</a>; <a href="#bib.bib2" title="" class="ltx_ref">2</a></sup></cite>, Z<cite class="ltx_cite ltx_citemacro_cite"><sup id="p1.1.3" class="ltx_sup"><a href="#bib.bib1" title="" class="ltx_ref">1</a>–<a href="#bib.bib3" title="" class="ltx_ref">3</a>; <a href="#bib.bib5" title="" class="ltx_ref">5</a></sup></cite>.</p>"##,
+    r##"<p id="p1.1" class="ltx_p">X<cite class="ltx_cite ltx_cite_numeric ltx_citemacro_cite"><sup id="p1.1.1" class="ltx_sup"><a href="#bib.bib1" title="" class="ltx_ref">1</a>–<a href="#bib.bib3" title="" class="ltx_ref">3</a></sup></cite>, Y<cite class="ltx_cite ltx_cite_numeric ltx_citemacro_cite"><sup id="p1.1.2" class="ltx_sup"><a href="#bib.bib1" title="" class="ltx_ref">1</a>; <a href="#bib.bib2" title="" class="ltx_ref">2</a></sup></cite>, Z<cite class="ltx_cite ltx_cite_numeric ltx_citemacro_cite"><sup id="p1.1.3" class="ltx_sup"><a href="#bib.bib1" title="" class="ltx_ref">1</a>–<a href="#bib.bib3" title="" class="ltx_ref">3</a>; <a href="#bib.bib5" title="" class="ltx_ref">5</a></sup></cite>.</p>"##,
   );
 }
 
