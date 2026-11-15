@@ -214,53 +214,27 @@ AssignValue!("MATHPARSER_SPECULATE" => true, Scope::Global);
 **Impact:** Tests with `.latexml` files need corresponding `*_src.rs` files in `tests/helpers/` and `\input{name.latexml}` in their `.tex` source to get the same parsing behavior as Perl.
 ### 19. (removed: an implementation guide: `latexml_core::common::local_assignments`'s own docs)
 
-### 20. Color Comparison: Visual Equivalence
+### 20. Colour comparison: visual for font equality, variant + values for the emitted attribute
 
-**Decision:** In latexml-oxide, two `Color` values are compared by variant and values
-(structural equality), not by object identity. `Color::Rgb(0.0, 0.0, 0.0)` equals
-`Color::Rgb(0.0, 0.0, 0.0)` regardless of how or when they were created. Colors from
-different models (e.g., `Gray(0)` vs `Rgb(0,0,0)`) ARE considered different even when
-visually equivalent — the comparison is by variant + values, not by conversion to a
-common model.
+**Rule.** Two comparisons, by use (DG 2026-11-14: document today's code). Font equality, hashing and font matching
+compare colours **visually** (`font.rs` `is_diff_font_color`: `None` is `DEFCOLOR = Rgb(0,0,0)`, then `to_rgb()`), so
+`Gray(0)` and `Rgb(0,0,0)` are the same font colour. The attribute decision (`Font::distance`, `relative_to`:
+`is_diff_font_color_ref`) compares **variant + values**, with no `to_rgb()` fallback, so a colour of another model than
+its context's is emitted even when it renders the same.
 
-**Perl behavior:** `Font.pm`'s `isDiff` uses Perl's `ne` operator on unoverloaded
-`Color` objects, which compares memory addresses (reference equality). Two Color objects
-with identical values (e.g., both `Color::rgb(0,0,0)`) are considered "different" if
-they are different Perl objects. This produces incidental `color="#000000"` attributes on
-elements when the author explicitly sets `\color{black}` in a scope that already has
-black as the default color.
+**Perl.** `Font.pm`'s `isDiff` uses `ne` on unoverloaded `Color` objects, i.e. reference identity: two equal-valued
+colours built separately are "different", so Perl writes an incidental `color="#000000"` wherever the author restates
+the context's colour. Ours drops that only when the variant and values match.
 
-**Observable differences:**
+**Observable (main, probe `A {\color{black}B} {\color[gray]{0}C} {\color[rgb]{0,0,0}D}` with xcolor, default black
+context):** `<text color="#000000">B</text> <text color="#000000">C</text> D` — xcolor's `black` is a gray colour, so it
+and `[gray]{0}` keep their attribute; an RGB black in an RGB-black context adds none. SVG elements likewise drop a
+`color`/`fill`/`stroke` that repeats the parent's colour in the same model.
 
-- `\color{black}` in a black context produces NO `color="#000000"` attribute (Perl may
-  produce one due to reference inequality)
-- `\color[gray]{0}` vs default `Rgb(0,0,0)` DOES produce a `color` attribute because
-  `Gray(0) != Rgb(0,0,0)` (different Color variants)
-- SVG elements like `svg:g` do not get redundant `color="#000000" fill="#000000"
-  stroke="#000000"` attributes when the parent already establishes black
-
-**Implementation:** Two comparison functions in `font.rs`:
-
-| Function | Mode | Used by |
-|---|---|---|
-| `is_diff_font_color` | Visual: `unwrap_or(DEFCOLOR)` then `to_rgb()` fallback | `PartialEq`, `Hash`, `font_match` |
-| `is_diff_font_color_ref` | Variant+values (no `to_rgb` fallback) | `distance()`, `relative_to()` |
-
-Both treat `None` (inherited default) as equivalent to `DEFCOLOR = Rgb(0,0,0)` via
-`unwrap_or(DEFCOLOR)`.
-
-**Rationale:** Perl's reference-inequality semantics are an accident of its object
-model, not an intentional design. When a user writes `\color{black}` in a context that
-is already black, the redundant `color="#000000"` attribute carries no information. The
-Rust port's structural equality produces cleaner output without changing any visible
-rendering. Cross-model comparison (`Gray(0)` vs `Rgb(0,0,0)`) still detects the
-difference because the Color enum variant differs, preserving the ability to distinguish
-colors specified via different models — see also section 5 ("Font Color Comparison:
-Discriminant-Based Reference Equality").
-
-**Impact:** Tikz SVG tests show fewer `color`/`fill`/`stroke` attributes than Perl
-output. This is the primary source of remaining diffs in `tikz_3d_cone` and
-`ac_drive_components` tests.
+**Why two modes.** Font equality must not split runs of visually identical text into separate fonts; the attribute
+records the colour the author named, in the model they named it. **Guards**: the `tikz_3d_cone` and
+`ac_drive_components` SVG goldens (fewer `color`/`fill`/`stroke` than Perl). Related: #5 (colour as a
+first-class type), #6 (font defaults, `None` as the default colour).
 
 ### 21. No `tex=` Attribute on `<picture>` Elements
 
@@ -31543,9 +31517,8 @@ swallow it (`script_bindings/wire.rs` `contain` returns the Fatal `take_raised_f
 conversion from a binding's top level, a body, a hook or a binding another binding loads (probe: `Before \wftopmacro\
 after.` with a body `Fatal()` keeps no text, "Conversion failed: 1 fatal error"). A Fatal the script catches with
 `try`/`catch` was printed at its raise; the script and the conversion go on, and a later error stays its own counted
-line (the user's ruling that every Error is emitted and counted, 2026-11-11); no ignore flag outlives it. Queued (DG
-2026-11-14: "a Rhai Fatal should also stop processing"): the caught case too, SYNC row R, the post-cutoff Error-policy
-batch. **Guard**: `30_script_bindings::a_rhai_fatal_is_logged_once` (the caught-then-thrown rows).
+line (the user's ruling that every Error is emitted and counted, 2026-11-11); no ignore flag outlives it. DG 2026-11-14 confirmed both halves: a Rhai Fatal stops
+processing, and a Fatal the binding deliberately catches may continue, as Perl's `eval` allows. **Guard**: `30_script_bindings::a_rhai_fatal_is_logged_once` (the caught-then-thrown rows).
 
 ### 1030. → KNOWN_PERL_ERRORS #1244 (Rhai glue arithmetic is TeX's `\advance`, not Perl's Glue.pm / MuGlue.pm)
 
