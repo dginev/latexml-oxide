@@ -19235,7 +19235,8 @@ labelled `firstaid`) is not registered under cleveref's binding, which replaces 
 its `label` hook code cost 3.5M instructions a `\label`. It is removed only where the chunk is registered
 (`hook_has_labelled_code`; the chunk dates from 2024-03-22, firstaid changes.txt), as lthooks warns "Cannot remove
 chunk" for a missing one. **Open** (post-merge, catalog): a note steps its counter after its text is digested
-and an align or gather row after its cells (Perl's order), so a label hook there reads the enclosing counter where
+and an align or gather row after its cells (Perl's order), so a label hook there reads the enclosing counter (or, in an
+align's later row, the previous row's step) where
 latex.ltx's `\@footnotetext` and `\@mpfootnotetext` define it (:17664, :16350) and amsmath has stepped `equation`
 (`label_hook_currentcounter_stepped_after_the_body_red`); `\label`'s hook runs after the label is recorded, where
 latex.ltx runs it before the `.aux` write, so a hook's `\@currentlabel` does not reach `\ref`

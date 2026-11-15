@@ -21,9 +21,9 @@
 # the preloads only, so preamble macros used inside `.bib` fields
 # (`\mkbibemph`, `\onethird`, `\cmslink` — biblatex-chicago and friends) come
 # back undefined there and only there; the monolithic form is what a user runs
-# and is the audit's post pass of record (LEDGER 2026-09-17), so the default
-# (`POST_MODE=split` keeps the core-XML form; under it sweep #187 lost the
-# `filecontents` bibliographies the mono pass keeps). `CORPUS`
+# and is the audit's post pass of record (LEDGER 2026-09-17), so it is the
+# default; `POST_MODE=split` keeps the core-XML form (under it sweep #187 lost
+# the `filecontents` bibliographies the mono pass keeps). `CORPUS`
 # (default `~/data/perfect_kernel/corpus.tsv`) supplies each doc's `.tex`.
 set -uo pipefail
 # Absolute: each doc runs from its own output directory (`cd "$out"`), so a
