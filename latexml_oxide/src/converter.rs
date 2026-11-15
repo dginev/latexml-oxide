@@ -1014,12 +1014,13 @@ impl Converter {
   fn finish_response(&mut self, serialized: String) -> ConversionResponse {
     self.runtime.status = get_status_message();
     self.runtime.status_code = get_status_code();
+    // (the function form: the conversion's end has no source position to locate it at)
     let lent_interns = arena::take_overflow_interns();
     if lent_interns > 0 {
-      Info!(
+      emit_info(
         "arena",
         "overflow",
-        s!("{lent_interns} strings interned while a text was lent went to the overflow page")
+        &s!("{lent_interns} strings interned while a text was lent went to the overflow page"),
       );
     }
     if self.opts.verbosity >= 0 {
