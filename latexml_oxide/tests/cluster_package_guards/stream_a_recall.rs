@@ -468,7 +468,7 @@ fn a_citation_of_another_lists_item_is_missing_here() {
     "div",
     &[r#"id="Sx1.p1""#],
     r##"<div id="Sx1.p1" class="ltx_para">
-<p class="ltx_p">Supplement <cite class="ltx_cite ltx_citemacro_cite">[<a href="#biba.bib1" title="" class="ltx_ref">1</a>]</cite>.</p>
+<p class="ltx_p">Supplement <cite class="ltx_cite ltx_cite_numeric ltx_citemacro_cite">[<a href="#biba.bib1" title="" class="ltx_ref">1</a>]</cite>.</p>
 </div>"##,
   );
 }

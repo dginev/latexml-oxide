@@ -1,0 +1,28 @@
+% mechanism: in lthooks' document mode (`\@expl@@@initialize@all@@` at `\begin{document}`, latex.ltx:15360) code added
+%   in the body rebuilds its hook at once (`\__hook_update_hook_code:n`, :5853-5856): an environment's begin hook,
+%   `\AddToHookNext`, a rule declared in the body, `\IfHookEmptyTF` after an add, a used one-time hook.
+% witness: synthetic (brief HOOKINIT)
+% oracle:  pdflatex 0 `!`; "(begin)FxG (begin)(next)FyG (begin)FzG E N [BA] (now) []"
+% engines: rust 5e02406406 (preamble mode, each `\UseHook` rebuilding its hook): as pdflatex; Perl: "FxG FyG FzG E N
+%   [BA] (now) []"
+% expect:  0 errors, 0 warnings; <p>(begin)FxG (begin)(next)FyG (begin)FzG E N [BA] (now) []</p>
+% status:  GREEN
+\documentclass{article}
+\newenvironment{foo}{F}{G}
+\NewHook{h}
+\NewHook{once}
+\begin{document}
+\AddToHook{env/foo/begin}{(begin)}
+\begin{foo}x\end{foo}
+\AddToHookNext{env/foo/begin}{(next)}
+\begin{foo}y\end{foo}
+\begin{foo}z\end{foo}
+\IfHookEmptyTF{env/bar/begin}{E}{N}
+\AddToHook{env/bar/begin}{q}
+\IfHookEmptyTF{env/bar/begin}{E}{N}
+\AddToHook{h}[a]{A}\AddToHook{h}[b]{B}\DeclareHookRule{h}{b}{before}{a}
+[\UseHook{h}]
+\UseOneTimeHook{once}
+\AddToHook{once}{(now)}
+[\UseOneTimeHook{once}]
+\end{document}

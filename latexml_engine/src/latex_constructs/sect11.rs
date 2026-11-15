@@ -1346,8 +1346,9 @@ pub(crate) fn load() -> Result<()> {
     }
   });
 
-  // `\UseHook`, `\UseOneTimeHook` that pass over an empty hook without expanding lthooks, which costs 1-3M
-  // instructions a use here (an `\include` runs six; QAB1b): `hook_use_tokens`, read where the hook runs.
+  // `\UseHook`, `\UseOneTimeHook` that pass over an empty hook without expanding lthooks, which cost 1-3M
+  // instructions a use in its preamble mode (QAB1b; an `\include` runs six, content.rs a load's eight): `hook_use_tokens`,
+  // read where the hook runs.
   DefMacro!("\\lx@usehook{}", sub[(hook)] { Tokens::new(hook_use_tokens(&hook.to_string(), false)) });
   DefMacro!("\\lx@useonetimehook{}", sub[(hook)] { Tokens::new(hook_use_tokens(&hook.to_string(), true)) });
 
