@@ -120,8 +120,8 @@ pub(super) fn insert_block_as(
   // unit for a same-or-higher level, nesting a deeper one) and becomes the insertion
   // node, so trailing box content and post-box document text nest inside it; the
   // box's own annotation (`class="ltx_minipage"` and the frame attributes
-  // `Sectional.attributes` admit — `width`/`vattach` are not, as `sectional-block`
-  // already dropped them) rides the FIRST floated unit. A box inside a `<quote>`, a
+  // `Sectional.attributes` admit; `vattach` is not, and `width` rides as `--ltx-box-width`,
+  // `carry_box_width`) rides the FIRST floated unit. A box inside a `<quote>`, a
   // list `<item>` or a `<figure>` has no such path (none auto-closes to a section
   // holder) and keeps today's Perl-parity shape. Witnesses: aguplus, fancyvrb-doc,
   // latex-via-exemplos, phonenumbers-{de,en}, recorder-fingering, tasks-manual,
@@ -157,6 +157,7 @@ pub(super) fn insert_block_as(
           document.set_attribute(&mut unit, k, v)?;
         }
       }
+      carry_box_width(document, &mut unit, &block_attr)?;
     }
     // Everything of substance has been moved out; the capture is spent.
     document.remove_node(container);
@@ -573,9 +574,9 @@ pub(super) fn insert_block_as(
   // TODO: There is an arena code smell here. The `Model` interface needs to become lock-free
   // where Symbol tickets and &str are equally intuitive to use without runtime panics from
   // arena mutability exceptions.
-  if let Some(final_tag) = allowed_candidates.first() {
+  let mut renamed = if let Some(final_tag) = allowed_candidates.first() {
     // The context can hold this block — rename the capture in place.
-    document.rename_node(container, &to_string(*final_tag), true)?;
+    document.rename_node(container, &to_string(*final_tag), true)?
   } else if let Some(&final_tag) = filtered_candidates.first() {
     // Surpass (OXIDIZED_DESIGN #240): the context (e.g. an already-open `<para>`)
     // cannot hold this Para.class block, but an ancestor can. Climb to the
@@ -694,11 +695,11 @@ pub(super) fn insert_block_as(
       // THEN rename the container to <block> — so nothing is ever moved into a <block>
       // while still Para.class (which would emit a spurious `malformed` Error).
       demote_para_class_content(document, &container)?;
-      document.rename_node(container, "ltx:block", true)?;
+      document.rename_node(container, "ltx:block", true)?
     } else if let Some(inline) = inline_home {
-      document.rename_node_qsym(container, inline, true)?;
+      document.rename_node_qsym(container, inline, true)?
     } else {
-      document.rename_node(container, &to_string(final_tag), true)?;
+      document.rename_node(container, &to_string(final_tag), true)?
     }
   } else {
     // we didn't know what to do?
@@ -714,9 +715,33 @@ pub(super) fn insert_block_as(
       )
     });
     Warn!("malformed", "_CaptureBlock_", message);
-    document.rename_node(container, "ltx:block", true)?;
-  }
+    document.rename_node(container, "ltx:block", true)?
+  };
+  carry_box_width(document, &mut renamed, &block_attr)?;
   Ok(nodes)
+}
+
+/// A box's `width` that the element it became cannot hold (a sectioning unit, a `sectional-block`) rides as the CSS
+/// custom property `--ltx-box-width` of its `cssstyle`, which LaTeXML.css applies and a stylesheet may override (BM Q2.4).
+/// It goes first, so a `width:` the box's own style sets (varwidth's `max-content`) follows it and wins; a unit lifted
+/// through nested boxes keeps the innermost box's width, the one pdflatex sets it in.
+fn carry_box_width(
+  document: &mut Document,
+  node: &mut Node,
+  block_attr: &HashMap<String, String>,
+) -> Result<()> {
+  let Some(width) = block_attr.get("width") else {
+    return Ok(());
+  };
+  if document::sym_can_have_attribute(document::get_node_qname(node), pin_static("width")) {
+    return Ok(());
+  }
+  let style = match node.get_attribute("cssstyle") {
+    Some(style) if style.contains("--ltx-box-width:") => return Ok(()),
+    Some(style) if !style.is_empty() => s!("--ltx-box-width:{width};{style}"),
+    _ => s!("--ltx-box-width:{width}"),
+  };
+  document.set_attribute(node, "cssstyle", &style)
 }
 
 /// The row separators a capture that stays a container holds (`insert_block_as`): inside it they separate none of the

@@ -1,0 +1,14 @@
+% A framed minipage holding a \section becomes `<inline-sectional-block framed="rectangle">` in a `<p>` (OD #189,
+% #250); its HTML is `<p><span class="ltx_inline-sectional-block ltx_framed">` around a `<section>`, which the HTML
+% parser does not nest there, so the frame draws as an empty 2 px box above the section instead of around it.
+% witness: synthetic (QAB57c render check of revQAB57's p24/vw.tex; the same on main 8060573).
+% status:  RED
+% moves:   post-merge (presentation of an existing shape; no word lost)
+% oracle:  pdflatex 0 errors: the frame around "1 Framed" and "F.".
+% Perl:    `<sectional-block class="ltx_minipage" framed="rectangle">`, schema-invalid inside the paragraph.
+% ours:    Chrome 1280 px: the framed span 2 px tall at the section's top-left (main: 2 x 2 px; QAB57c: 229.6 x 2 px).
+% expect:  the frame encloses the section (a block-level element for a framed box holding a sectioning unit).
+\documentclass{article}
+\begin{document}
+\fbox{\begin{minipage}{6cm}\section{Framed} F.\end{minipage}}
+\end{document}

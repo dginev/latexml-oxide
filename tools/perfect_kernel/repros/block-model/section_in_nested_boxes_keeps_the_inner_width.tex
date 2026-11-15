@@ -1,0 +1,18 @@
+% A section set in a minipage{3cm} inside a minipage{8cm} is lifted twice (OD #250): it keeps the innermost box's
+% width, the one pdflatex sets its heading in, as its one `--ltx-box-width` (OD #1045).
+% witness: synthetic (review revQAB57 B1, probe p24/nest.tex).
+% status:  GREEN (QAB57c)
+% oracle:  pdflatex 0 errors: "1 Inner" set in the 3cm column.
+% Perl:    `<sectional-block class="ltx_minipage">`, no width.
+% ours:    QAB57b `cssstyle="--ltx-box-width:85.4pt;--ltx-box-width:227.6pt"`: the last declaration wins, 8cm.
+% expect:  0 errors, 0 warnings; `cssstyle="--ltx-box-width:85.4pt"`.
+\documentclass{article}
+\begin{document}
+\begin{minipage}{8cm}
+\begin{minipage}{3cm}
+\section{Inner}
+Text inner.
+\end{minipage}
+Outer text.
+\end{minipage}
+\end{document}

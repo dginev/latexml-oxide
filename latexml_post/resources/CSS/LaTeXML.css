@@ -755,6 +755,26 @@ cite                 { font-style: normal; }
   max-width:100%;
   height:auto; /* #2392: preserve the emitted aspect-ratio when the width is capped */
 }
+/* latexml-oxide local delta (not in vanilla LaTeXML.css): a box's width (minipage, \parbox, \makebox, p{} cell,
+   tabular*) is its --ltx-box-width (OXIDIZED_DESIGN_DIVERGENCES #1045). Important at zero specificity, it ranks where
+   the inline style's width ranked: over every normal rule, under every other !important one. A width the box's own
+   style sets (varwidth's max-content) wins over it. A stylesheet overrides it with an !important rule. */
+:where([style*="--ltx-box-width:"]:not([style^="width:"], [style*=";width:"], [style*="; width:"])) {
+  width: var(--ltx-box-width, auto) !important;
+}
+/* Its height above the baseline and depth below (\raisebox[h][d], a rotated or scaled box) are --ltx-box-height and
+   --ltx-box-depth, applied the same way: the height as h+d, the depth as the box's drop below the line, unless the
+   box's own style sets that property (a \raise's vertical-align: or bottom:, an author's height:). One rule per
+   case: the custom properties inherit, so a box's own depth is read only where its style sets one. */
+:where([style*="--ltx-box-height:"]:not([style^="height:"], [style*=";height:"], [style*="; height:"])) {
+  height: var(--ltx-box-height) !important;
+}
+:where([style*="--ltx-box-height:"][style*="--ltx-box-depth:"]:not([style^="height:"], [style*=";height:"], [style*="; height:"])) {
+  height: calc(var(--ltx-box-height) + var(--ltx-box-depth)) !important;
+}
+:where([style*="--ltx-box-depth:"]:not([style^="vertical-align:"], [style*=";vertical-align:"], [style*="; vertical-align:"], [style*="; bottom:"])) {
+  vertical-align: calc(-1 * var(--ltx-box-depth)) !important;
+}
 /* arXiv/html_feedback#6895: \scalerel*{obj}{ref} scales obj to ref's (text) height.
    The scalerel binding wraps obj in .ltx_scalerel; size the box to the line height
    and let its child (an SVG/picture/rule) fill it, so a picture-based inline icon
