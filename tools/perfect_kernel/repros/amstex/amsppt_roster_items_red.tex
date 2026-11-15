@@ -1,0 +1,18 @@
+% witness: alg-geom9502009 (45 `\roster`s, every one an empty `<enumerate/>`); 47 of the AMSPPT A/B's 103 changed papers, 354 rosters
+% oracle:  pdftex (\input amstex, \documentstyle{amsppt}) this file: 0 errors; "(1) Plain item. (b) Labelled item. After."
+% engines: Perl 0.8.8 = 0 errors, 0 warnings, `<enumerate/>` empty: both items lost, silently; rust 7dea7e597a1 = the same
+%          (amsppt.sty.ltxml:243 / amsppt_sty.rs `\roster DigestUntil:\endroster` writes `#body`, which a DigestUntil
+%          constructor never sets; its digested list is `#1`: with `#1` both items come back, but "(b)" reads as the text
+%          `”(b)”` and neither item is tagged)
+% expect:  0 errors, 0 warnings; `<enumerate>` holding two `<item>`s, tagged "(1)" and "(b)", with their text
+% status:  RED (7dea7e597a1, fix/amsppt-ids-sections)
+% moves:   a batch of its own (proposed by AMSPPT: the template's `#body` -> `#1`, plus the `\item"(b)"` label shape)
+\input amstex
+\documentstyle{amsppt}
+\document
+\roster
+\item Plain item.
+\item"(b)" Labelled item.
+\endroster
+After.
+\enddocument

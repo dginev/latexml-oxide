@@ -19806,3 +19806,13 @@ not latex.ltx's `\begin` and never runs it. Minimal trigger (pdflatex: "macro:->
 \edef\x{\UseHook{myhook}}\texttt{\meaning\x}
 \end{document}
 ```
+
+## 1269. amsppt's theorem-like blocks prefix a name amsppt.sty never prints
+
+amsppt.sty:639-688 heads `\definition`, `\remark`, `\demo` and `\example` with their argument alone (`\definition{Definition
+1}` prints "Definition 1."). Perl's amsppt.sty.ltxml:184-235 titles them `\definitionname`, `\remarkname`,
+`\examplename` (undefined) or `\demonstrationname`, a space, then the argument: "Definition Definition 1", "Demonstration
+Proof", and an undefined-macro error for every `\example`. Minimal trigger (pdftex: "Example 3. An example."; Perl: 1
+error, title "\examplename Example 3"): `\input amstex \documentstyle{amsppt} \document \example{Example 3} An example.
+\endexample \enddocument`. Rust titles each block with its argument (amsppt_sty.rs; repro
+amstex/amsppt_theorem_kinds_share_the_counter, guard `perfect_kernel_batchamsppt::amsppt_heads_and_theorems`).

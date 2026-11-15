@@ -15450,6 +15450,15 @@ placeholders, so a streamed unit with prose before its entries keeps its own hea
 bibliography; the unit's other attributes (`class`, `xml:lang`) are not carried. Guard
 `perfect_kernel_batch61::bibliography_takes_the_place_of_its_heading_unit`.
 
+**amsppt (2026-11-14).** amsppt's heads stay open for their bodies (amsppt.sty.ltxml:94-140), so its `\Refs` (and the
+bare `\ref` that opens it, `\@auto@Refs`) is placed as back matter at the place of amsppt's top unit, the `\specialhead`
+chapter (`adjust_backmatter_element`, as LaTeX's bibliography, latex_constructs.pool.ltxml:3935-3946): amsppt.sty:862-869
+sets `\Refs` as a head, not inside the last one. A `\head References\endhead` or `\specialhead References\endspecialhead`
+before it then heads it as above. Perl's `\@Refs` (amsppt.sty.ltxml:335-340) opens in place: the bibliography nests in
+the last head, under a second "References". Witnesses math0304264, q-alg9506019, math-ph9910014; repros
+amstex/amsppt_refs_close_the_heads, amstex/amsppt_specialhead_heads_the_references; guard
+`perfect_kernel_batchamsppt::amsppt_heads_and_theorems`.
+
 ### 457. etex's register-block allocators are defined on today's kernel (Perl and current pdflatex: undefined)
 
 etex.sty:382-425 defines `\globcountblk` … `\locmarksblk` only in its pre-2020 branch; on a kernel with extended
