@@ -1,0 +1,14 @@
+% witness: TL manuals moreenum-doc (moreenum-doc.tex:20-21), econometrics, qsymbols, rbt-mathnotes (ltxguide.cls:142 `\MakeShortVerb{\|}`)
+% oracle:  pdflatex 0 errors: "a | b; A -f-> B"
+% engines: rust MAIN882 = 10 errors (`\unskip` "should not appear between \csname and \endcsname", "Extra \endcsname": the
+%          binding's `\lx@arrowfill@` names read the active `|`); int171b 0 errors; Perl 0 errors, `A f@(rightarrow) B`
+% expect:  0 errors; `A f@(rightarrow) B`
+% status:  RED (MAIN882) -> GREEN (REGAB)
+% preload: ar5iv.sty
+\documentclass{article}
+\catcode`\|=\active
+\def|{\unskip\ \textbar\ \ignorespaces}
+\usepackage{amsmath}
+\begin{document}
+a|b; $A \xrightarrow{f} B$.
+\end{document}

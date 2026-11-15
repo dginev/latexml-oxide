@@ -70,6 +70,27 @@ const ROWS: &[Row] = &[
     ],
     &[r#"<XMTok name="twoheadrightarrow" role="RELOP">↠</XMTok>"#],
   ),
+  // An active `|` when amsmath loads (ltxguide.cls:142; TL manuals moreenum-doc, econometrics, qsymbols, rbt-mathnotes):
+  // the binding's own composed-arrow names must not read it (10 errors on MAIN882).
+  (
+    "bar_active_amsmath",
+    include_str!("../../../tools/perfect_kernel/repros/arrowfill/bar_active_amsmath.tex"),
+    &["amsmath.sty"],
+    &["A f@(rightarrow) B"],
+    &[
+      r#"<p xml:id="p1.1">a | b; <Math"#,
+      r#"<XMTok name="rightarrow" role="ARROW" stretchy="true">→</XMTok>"#,
+    ],
+  ),
+  // A package fill that opens its own `$…$`, set in `\ext@arrow`'s `\hbox` (amsmath.sty:1014; TL manual
+  // halloweenmath-man, halloweenmath.sty:873-882): 2 "Missing $" errors on MAIN882.
+  (
+    "ext_arrow_hmode_fill",
+    include_str!("../../../tools/perfect_kernel/repros/arrowfill/ext_arrow_hmode_fill.tex"),
+    &["amsmath.sty"],
+    &["A relbar@relbar@rightarrow ^ f B"],
+    &[r#"<XMWrap role="RELOP" xml:id="S0.Ex1.m1.1.1.1.2">"#],
+  ),
 ];
 
 #[test]

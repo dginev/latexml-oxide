@@ -19750,8 +19750,8 @@ own arguments then leak into the surrounding math as text.
 **We define both** (`latexml_package/src/package/amsmath_sty.rs`). `\arrowfill@#1#2#3#4` relates by the arrow's
 HEADS #1 and #3, as amsmath.sty:971-976 draws them (`#4#1 … \cleaders #2 … #3`): an end that is exactly `\relbar`/`\Relbar`
 (the fill) is dropped, two equal ends count once (`\xlongequal` gives one `=`), a head pair TeX composes becomes one token
-(↔ ⇔ ⟷ ⟺ ↦), and the style argument #4 is consumed; `\ext@arrow` relates by its fill `#5\displaystyle`, with the labels as
-scripts. Before, both passed through to `\to`, so mhchem's `\ce{A <=> B}` (mhchem.sty:1251-1254) read "→→" where pdflatex
+(↔ ⇔ ⟷ ⟺ ↦), and the style argument #4 is consumed; `\ext@arrow` relates by its fill, set in `\hbox{#5\displaystyle}` as
+amsmath.sty:1014 does (a fill may open its own `$…$`: halloweenmath.sty:873-882), with the labels as scripts. Before, both passed through to `\to`, so mhchem's `\ce{A <=> B}` (mhchem.sty:1251-1254) read "→→" where pdflatex
 draws ⇀ over ↽ (witness 2405.01836). We do not model stretchy rendering; the arity and the heads are what the binding is for.
 Residual (post-merge): a pair outside the compose table, or a `\let` alias of a head, reads as `list@(…)`
 (`arrowfill/arrowfill_uncomposed_pair_red.tex`). Witnesses 2411.17873 and
