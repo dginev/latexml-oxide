@@ -881,6 +881,9 @@ fn streaming_pass2(
     }
   }
   let segments: Vec<_> = store.ids().collect();
+  // The math grammar, built once and handed from each segment's parser to the next: rebuilding it
+  // per segment cost ≈60 M instructions each, 253 segments on 2308.04512, 442 on circuitikzmanual.
+  let mut math_grammar: Option<latexml_math_parser::MathGrammar> = None;
   // Rate-limited exactly like the pass-1 telemetry next door (see the
   // `is_power_of_two() || is_multiple_of(65536)` gate in `convert_streaming`):
   // the 131 MB witness spills 459,579 segments, and three ungated `info!` per
@@ -1014,8 +1017,16 @@ fn streaming_pass2(
         // Accumulated across segments, since pass 2 parses each separately.
         latexml_core::telemetry::add_formulae(frag.findnodes("//ltx:XMath", None).len() as u32);
         let _gp = latexml_core::telemetry::phase(latexml_core::telemetry::Phase::MathParse);
-        let mut parser = MathParser::default();
-        parser.parse_math(&mut frag)?;
+        if math_grammar.is_none() {
+          math_grammar = latexml_math_parser::MathGrammar::new().ok();
+        }
+        let mut parser = match &math_grammar {
+          Some(grammar) => MathParser::with_grammar(grammar),
+          None => MathParser::default(),
+        };
+        let parsed = parser.parse_math(&mut frag);
+        math_grammar = parser.grammar();
+        parsed?;
         drop(_gp);
         if due {
           emit_info(
