@@ -680,7 +680,8 @@ fn finish_document(document: &mut Document) -> Result<()> {
     // Fill in \ltx@count@parses markers with actual parse tree counts.
     // Each marker is <ltx:text _parsetrees_marker="true">0</ltx:text>.
     // Find the preceding ltx:Math[@_parsetrees] and copy the count.
-    let markers = document.findnodes("//*[@_parsetrees_marker='true']", None);
+    let markers = document
+      .find_elements(|n| n.get_attribute_no_ns("_parsetrees_marker").as_deref() == Some("true"));
     for mut marker in markers {
       let count = {
         let preceding = document.findnodes("preceding::ltx:Math[@_parsetrees][1]", Some(&marker));
@@ -964,7 +965,7 @@ fn streaming_pass2(
       // Restore empty text children the parse could not represent (spill-time
       // `_lx_empty_text` markers — see `spill_run`): `<p></p>` must not
       // collapse to `<p/>` across the round-trip.
-      for mut marked in frag.findnodes("//*[@_lx_empty_text]", None) {
+      for mut marked in frag.find_elements(|n| n.has_attribute_no_ns("_lx_empty_text")) {
         let _ = marked.remove_attribute("_lx_empty_text");
         if marked.get_child_nodes().is_empty() {
           // `append_text("")` is a no-op (the fork guards on len > 0), so
@@ -1776,7 +1777,7 @@ impl DigestionAPI for Core {
         .labels()
         .map(|(label, id)| (label.to_string(), id.to_string()))
         .collect();
-      for node in document.findnodes("//*[@labels]", None) {
+      for node in document.find_elements(|n| n.has_attribute_no_ns("labels")) {
         if let (Some(node_labels), Some(id)) =
           (node.get_attribute("labels"), node.get_attribute("id"))
         {

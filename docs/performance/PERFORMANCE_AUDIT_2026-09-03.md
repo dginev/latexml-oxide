@@ -3,7 +3,8 @@
 **Status:** diagnostic handoff; no code changed and no fresh benchmark run.
 **Findings' status (2026-10-16):** F1 done (batch 68p: the discarded serialization removed,
 byte-identical); F7 done (batch 56db, `PERFORMANCE.md` P4); F9's per-call regexes done (now `Lazy`,
-`content.rs`; the search-path clones and registry scans remain). Open: F2, F3, F4, F5, F6, F8, F10.
+`content.rs`; the search-path clones and registry scans remain). F2 done (issue 802, `PERFORMANCE.md` P1:
+one idref index for the collapses, finalize's id rebuild a walk). Open: F3, F4, F5, F6, F8, F10.
 The 2026-10-16 study (`PERFORMANCE.md` audit log) rated F6 negligible and F3 a one-witness refactor.
 **Source snapshot:** `c6779fdc128f` plus the working tree as it existed on
 2026-09-03. The tree was not clean, so re-check source locations before acting.
