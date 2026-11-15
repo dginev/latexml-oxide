@@ -21670,7 +21670,7 @@ The rule is the resolver's (`observer/resolver`), whose decisions the emitter wr
 **Perl source:** `LaTeXML/Package/pgfmath.code.tex.ltxml` lines 85-90 (`pgfmathresult` returns `\def\pgfmathresult{…}`
 tokens), 147-243 (every `\pgfmath<fn>@` a `DefMacro` closure), 401-403 (`\lx@pgfmath@parse`, let to `\pgfmathparse`).
 
-**Symptom:** pgf's functions begin with `\begingroup` or `\def` (pgfmathfunctions.code.tex:59-104,
+**Symptom:** pgf's functions begin with `\begingroup` or `\def` (the bodies in pgfmathfunctions.basic.code.tex:16-18 and the files beside it,
 pgfmathparser.code.tex:20-30), so TeX computes them only when it executes them. A closure computes when it is expanded,
 and TeX expands the token after a unit while it looks for the optional space (tex.web §443-§448), and after a number
 while it looks for more digits. So in `\advance\dimen0 by 3pt%` followed by `\pgfmathreciprocal@{\pgf@sys@tonumber
