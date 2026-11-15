@@ -14,4 +14,86 @@
     <break class="ltx_break"/>
     <p class="ltx_figure_panel">Third</p>
   </figure>
+  <figure class="ltx_panels_gallery" panelcols="2" panelfill="0.96" panelline="1" panelrows="2" xml:id="fig3">
+    <figure class="ltx_figure_panel ltx_minipage" inlist="lof" panelwidth="0.48" vattach="middle" width="165.6pt" xml:id="S0.F1">
+      <tags>
+        <tag>Figure 1</tag>
+        <tag role="refnum">1</tag>
+        <tag role="typerefnum">Figure 1</tag>
+      </tags>
+      <toccaption><tag close=" ">1</tag>A</toccaption>
+      <caption><tag close=": ">Figure 1</tag>A</caption>
+    </figure>
+    <figure class="ltx_figure_panel ltx_minipage" inlist="lof" panelwidth="0.48" vattach="middle" width="165.6pt" xml:id="S0.F2">
+      <tags>
+        <tag>Figure 2</tag>
+        <tag role="refnum">2</tag>
+        <tag role="typerefnum">Figure 2</tag>
+      </tags>
+      <toccaption><tag close=" ">2</tag>B</toccaption>
+      <caption><tag close=": ">Figure 2</tag>B</caption>
+    </figure>
+    <break class="ltx_break"/>
+    <rule class="ltx_leader" height="1px" width="100%"/>
+    <break class="ltx_break"/>
+    <figure class="ltx_figure_panel ltx_minipage" inlist="lof" panelwidth="0.48" vattach="middle" width="165.6pt" xml:id="S0.F3">
+      <tags>
+        <tag>Figure 3</tag>
+        <tag role="refnum">3</tag>
+        <tag role="typerefnum">Figure 3</tag>
+      </tags>
+      <toccaption><tag close=" ">3</tag>C</toccaption>
+      <caption><tag close=": ">Figure 3</tag>C</caption>
+    </figure>
+    <figure class="ltx_figure_panel ltx_minipage" inlist="lof" panelwidth="0.48" vattach="middle" width="165.6pt" xml:id="S0.F4">
+      <tags>
+        <tag>Figure 4</tag>
+        <tag role="refnum">4</tag>
+        <tag role="typerefnum">Figure 4</tag>
+      </tags>
+      <toccaption><tag close=" ">4</tag>D</toccaption>
+      <caption><tag close=": ">Figure 4</tag>D</caption>
+    </figure>
+  </figure>
+  <figure class="ltx_panels_gallery" panelcols="2" panelfill="0.96" panelline="1" panelrows="2" xml:id="fig4">
+    <figure class="ltx_figure_panel ltx_minipage" inlist="lof" panelwidth="0.48" vattach="middle" width="165.6pt" xml:id="S0.F5">
+      <tags>
+        <tag>Figure 5</tag>
+        <tag role="refnum">5</tag>
+        <tag role="typerefnum">Figure 5</tag>
+      </tags>
+      <toccaption><tag close=" ">5</tag>A</toccaption>
+      <caption><tag close=": ">Figure 5</tag>A</caption>
+    </figure>
+    <figure class="ltx_figure_panel ltx_minipage" inlist="lof" panelwidth="0.48" vattach="middle" width="165.6pt" xml:id="S0.F6">
+      <tags>
+        <tag>Figure 6</tag>
+        <tag role="refnum">6</tag>
+        <tag role="typerefnum">Figure 6</tag>
+      </tags>
+      <toccaption><tag close=" ">6</tag>B</toccaption>
+      <caption><tag close=": ">Figure 6</tag>B</caption>
+    </figure>
+    <break class="ltx_break"/>
+    <rule class="ltx_leader" height="1px" width="100%"/>
+    <break class="ltx_break"/>
+    <figure class="ltx_figure_panel ltx_minipage" inlist="lof" panelwidth="0.48" vattach="middle" width="165.6pt" xml:id="S0.F7">
+      <tags>
+        <tag>Figure 7</tag>
+        <tag role="refnum">7</tag>
+        <tag role="typerefnum">Figure 7</tag>
+      </tags>
+      <toccaption><tag close=" ">7</tag>C</toccaption>
+      <caption><tag close=": ">Figure 7</tag>C</caption>
+    </figure>
+    <figure class="ltx_figure_panel ltx_minipage" inlist="lof" panelwidth="0.48" vattach="middle" width="165.6pt" xml:id="S0.F8">
+      <tags>
+        <tag>Figure 8</tag>
+        <tag role="refnum">8</tag>
+        <tag role="typerefnum">Figure 8</tag>
+      </tags>
+      <toccaption><tag close=" ">8</tag>D</toccaption>
+      <caption><tag close=": ">Figure 8</tag>D</caption>
+    </figure>
+  </figure>
 </document>

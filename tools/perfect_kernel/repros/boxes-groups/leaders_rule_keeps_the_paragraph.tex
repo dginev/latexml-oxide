@@ -6,7 +6,7 @@
 % `leaveHorizontal`/`enterHorizontal` changes mode, and skips only a literal `\relax` before it, so a robust rule
 % is lost (TeX_Box.pool.ltxml:838, :803; KPE #405).
 % The rule is the leader itself, with no `ltx:text` around it (Perl wraps every filler in one, closed by name,
-% TeX_Box.pool.ltxml:879, :896; KPE #1282): `ltx_filled_leader` at the width of a box of known width (I…J).
+% TeX_Box.pool.ltxml:879, :897; KPE #1282): `ltx_filled_leader` at the width of a box of known width (I…J).
 % witness: 2605.00332 (`$z$ (…) \hrulefill` split a figure panel); issue #805 (brucemiller/LaTeXML#2882).
 % Guard: perfect_kernel_batch58::leaders_rule_keeps_the_paragraph.
 % status:  GREEN (58d; the bare rule: I805)

@@ -5998,6 +5998,38 @@ fn insert_break_before(document: &Document, child: &mut Node) -> Result<Node> {
   Ok(break_node)
 }
 
+/// Perl L3334-3342: a standalone panel as the sole row content flushes the row and forces a break before the next
+/// sibling (unless that sibling is itself a break/caption/meta), so subsequent content starts a new row.
+fn break_after_standalone(document: &Document, child: &Node) -> Result<()> {
+  if let Some(mut trailer) = child.get_next_sibling() {
+    // (a row separator the source states is passed over: what follows it decides)
+    let mut next = Some(trailer.clone());
+    while let Some(node) = next
+      .as_ref()
+      .filter(|n| n.get_attribute(PANEL_SEPARATOR).is_some())
+    {
+      next = node.get_next_sibling();
+    }
+    let trailer_name = next
+      .as_ref()
+      .map_or(pin!("ltx:caption"), document::get_node_qname);
+    if !is_panel_break_name(trailer_name) {
+      insert_break_before(document, &mut trailer)?;
+    }
+  }
+  Ok(())
+}
+
+/// The `ltx:rule` a `\leaders` with a rule filler makes (tex_box.rs: classed `ltx_leader`, or `ltx_filled_leader`).
+fn is_leader_rule(node: &Node) -> bool {
+  document::get_node_qname(node) == pin!("ltx:rule")
+    && node.get_attribute("class").is_some_and(|class| {
+      class
+        .split_whitespace()
+        .any(|c| matches!(c, "ltx_leader" | "ltx_filled_leader"))
+    })
+}
+
 /// Perl L3231: `($whatsit->getProperty('floatwidth') || Dimension('345pt'))->valueOf()`.
 /// The float's captured `\hsize` (see `after_float`), read from the box the
 /// afterClose hook receives; 345pt when absent. The rows' line is the real one
@@ -6499,6 +6531,20 @@ fn arrange_panels(
     if holds_only_its_number(&child) {
       continue;
     }
+    // A leader rule (`\hrulefill`; tex_box.rs's `\leaders`) is no panel: set at the line's width, it is a row of its
+    // own between breaks, as a standalone panel is (2302.11635: between two rows of two minipages; #805).
+    if is_leader_rule(&child) {
+      if pending_break.take().is_none() && !row.is_empty() {
+        insert_break_before(document, &mut child)?;
+      }
+      break_after_standalone(document, &child)?;
+      pending_glue = 0.0;
+      leading_glue = 0.0;
+      paragraph_start = false;
+      current_width = 0.0;
+      row.clear();
+      continue;
+    }
     // A row break the source stated before this panel: the row ends there.
     if pending_break.take().is_some() {
       pending_glue = 0.0;
@@ -6652,25 +6698,7 @@ fn arrange_panels(
         all_panels.push(child.clone());
       }
       if is_standalone_panel_name(child_name) && box_panel_width(&child).is_none() {
-        // Perl L3334-3342: a standalone panel as the sole row content flushes the
-        // row and forces a break before the next sibling (unless that sibling is
-        // itself a break/caption/meta), so subsequent content starts a new row.
-        if let Some(mut trailer) = child.get_next_sibling() {
-          // (a row separator the source states is passed over: what follows it decides)
-          let mut next = Some(trailer.clone());
-          while let Some(node) = next
-            .as_ref()
-            .filter(|n| n.get_attribute(PANEL_SEPARATOR).is_some())
-          {
-            next = node.get_next_sibling();
-          }
-          let trailer_name = next
-            .as_ref()
-            .map_or(pin!("ltx:caption"), document::get_node_qname);
-          if !is_panel_break_name(trailer_name) {
-            insert_break_before(document, &mut trailer)?;
-          }
-        }
+        break_after_standalone(document, &child)?;
         // The standalone panel is a row of its own, so the next row starts
         // empty. Perl resets `$current_width` here and then adds the panel's
         // width to it (L3341-3343), so the next row starts that full: with

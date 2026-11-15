@@ -2054,7 +2054,7 @@ LoadDefinitions!({
 
     // A rule filler is a rule specification (tex.web §1078, §1084), so it opens no container: the
     // `ltx:rule` is the leader. Perl wraps every filler in an `ltx:text` and closes it by name
-    // (TeX_Box.pool.ltxml:879, :896), which a hook closing that text breaks (KPE #1282; #805).
+    // (TeX_Box.pool.ltxml:879, :897), which a hook closing that text breaks (KPE #1282; #805).
     let rule_filler = filler.as_ref().is_some_and(|f| {
       f.any(|d| matches!(d.data(), DigestedData::Whatsit(w) if w.borrow().get_property_bool("leader_rule")))
     });

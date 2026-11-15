@@ -8,6 +8,8 @@
 % (the injected \par is sequenced ahead of the leader <p>'s materialization, so
 % its close no-ops). Witness: arXiv 2302.11635, where the un-closed <p> traps a
 % captioned minipage as a schema-invalid <caption>-in-<block>. See WISDOM #38.
+% fig3/fig4 are its bare shape: the leader <rule> is no panel and ends the row,
+% so the grid stays two rows of two minipages (#805).
 \documentclass{article}
 \begin{document}
 \begin{figure}
@@ -17,5 +19,19 @@ Second
 \begin{figure}
 Lead\hrulefill\par
 Third
+\end{figure}
+\begin{figure}
+\begin{minipage}{0.48\textwidth}\caption{A}\end{minipage}\hfill
+\begin{minipage}{0.48\textwidth}\caption{B}\end{minipage}
+\hrulefill\vspace*{4pt}
+\begin{minipage}{0.48\textwidth}\caption{C}\end{minipage}\hfill
+\begin{minipage}{0.48\textwidth}\caption{D}\end{minipage}
+\end{figure}
+\begin{figure}
+\begin{minipage}{0.48\textwidth}\caption{A}\end{minipage}\hfill
+\begin{minipage}{0.48\textwidth}\caption{B}\end{minipage}
+\hrulefill\par
+\begin{minipage}{0.48\textwidth}\caption{C}\end{minipage}\hfill
+\begin{minipage}{0.48\textwidth}\caption{D}\end{minipage}
 \end{figure}
 \end{document}
