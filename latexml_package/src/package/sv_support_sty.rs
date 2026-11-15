@@ -290,10 +290,13 @@ LoadDefinitions!({
   );
   DefMacro!("\\orcid[]{}", "\\lx@add@orcid[name={#1}]{#2}");
 
+  // The `\and` a class's keyword and classification lists set, before their items: none here (svmult.cls:2339), svjour3's
+  // centred dot (svjour3_cls.rs).
+  def_macro_noop("\\lx@sv@list@and")?;
   DefMacro!("\\keywordname", "\\textbf{Keywords}");
   DefMacro!(
     "\\keywords{}",
-    "\\lx@add@keywords[name={\\keywordname:~}]{#1}"
+    "\\lx@add@keywords[name={\\keywordname:~}]{\\lx@sv@list@and#1}"
   );
   DefMacro!(
     "\\subclassname",
@@ -301,12 +304,12 @@ LoadDefinitions!({
   );
   DefMacro!(
     "\\subclass{}",
-    "\\lx@add@classification[scheme=MSC,name={\\subclassname: }]{#1}"
+    "\\lx@add@classification[scheme=MSC,name={\\subclassname: }]{\\lx@sv@list@and#1}"
   );
   DefMacro!("\\CRclassname", "\\textbf{CR Subject Classification}");
   DefMacro!(
     "\\CRclass{}",
-    "\\lx@add@classification[scheme=CR,name={\\CRclassname: }]{#1}"
+    "\\lx@add@classification[scheme=CR,name={\\CRclassname: }]{\\lx@sv@list@and#1}"
   );
   DefMacro!("\\ESMname", "\\textbf{Electronic Supplementary Material}");
   DefMacro!(
@@ -316,7 +319,7 @@ LoadDefinitions!({
   DefMacro!("\\PACSname", "\\textbf{PACS}");
   DefMacro!(
     "\\PACS{}",
-    "\\lx@add@classification[scheme=pacs,name={\\PACSname: }]{#1}"
+    "\\lx@add@classification[scheme=pacs,name={\\PACSname: }]{\\lx@sv@list@and#1}"
   );
   DefMacro!("\\headnote{}", "\\lx@add@pubnote[role=node]{#1}");
   // No label, as the class prints none (FIDELITY_CHARTER §4, user ruling 2026-10-30; OXIDIZED_DESIGN_DIVERGENCES #921): svjour3.cls:612-616 sets the dedication in italics

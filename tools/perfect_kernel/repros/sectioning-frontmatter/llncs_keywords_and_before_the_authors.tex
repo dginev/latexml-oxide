@@ -1,0 +1,15 @@
+% mechanism: llncs.cls:906's keywords `\and` is the keywords' own (`\def` inside the command); set in the body before
+%   `\author`, it must not become the author separator (upstream brucemiller/LaTeXML#2263).
+% witness: synthetic
+% oracle:  pdflatex 0 errors: "Keywords: One · Two", then the title, authors "A and B"
+% engines: rust base (origin/main 75531ffc9d6) "One  and Two" (the kernel's `\and`); Perl 0.8.8 the same
+% expect:  0 errors, 0 warnings; two creators A, B; keywords "One · Two"
+% status:  RED (75531ffc9d6) -> GREEN (QA76A)
+% preload: ar5iv.sty
+\documentclass{llncs}
+\begin{document}
+\keywords{One \and Two}
+\title{T}\author{A \and B}\institute{I}
+\maketitle
+Text.
+\end{document}

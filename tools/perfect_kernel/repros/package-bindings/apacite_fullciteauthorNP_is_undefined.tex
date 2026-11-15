@@ -1,0 +1,16 @@
+% mechanism: apacite.sty names `\fullciteauthorNP` only in its mask lists (:557, :578) and never defines it: pdflatex
+%   errs, and so does the binding (the Error side of apacite_full_cites; upstream brucemiller/LaTeXML#711).
+% witness: synthetic
+% oracle:  pdflatex 1 error "! Undefined control sequence." (`\fullciteauthorNP`), then "A a."
+% engines: rust base (origin/main 75531ffc9d6) 1 error; Perl 0.8.8 1 error
+% expect:  1 error (undefined `\fullciteauthorNP`), 0 warnings
+% status:  CONTROL
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{apacite}
+\begin{document}
+A \fullciteauthorNP{a}.
+\begin{thebibliography}{9}
+\bibitem[\protect\citeauthoryear{Smith}{Smith}{2001}]{a} Smith, J. (2001). Title.
+\end{thebibliography}
+\end{document}

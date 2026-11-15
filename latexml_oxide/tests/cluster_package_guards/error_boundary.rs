@@ -76,6 +76,8 @@ const SBX2_ANN_UNIV_A: &str = r#"<document xmlns="http://dlmf.nist.gov/LaTeXML" 
 
 const SBX2_LLNCS: &str = r#"<document xmlns="http://dlmf.nist.gov/LaTeXML" class="ltx_authors_1line"><title>T</title><creator role="author"><personname>Ann Lee</personname><contact name="Affiliation: " role="affiliation">Amazon</contact></creator><creator before="  " role="author"><personname>Bob Roe</personname><contact name="Affiliation: " role="affiliation">UW</contact></creator><para xml:id="p1"><p xml:id="p1.1">Hi.</p></para></document>"#;
 
+const APACITE_FULL: &str = r#"<p xml:id="p1.1">A <cite class="ltx_citemacro_cite">(<bibref bibrefs="a" separator=";" show="FullAuthorsPhrase1Year" yyseparator=","><bibrefphrase>, </bibrefphrase></bibref>)</cite>. B <cite class="ltx_citemacro_citep"><bibref bibrefs="a" separator=";" show="FullAuthorsPhrase1Year" yyseparator=","><bibrefphrase>, </bibrefphrase></bibref></cite>. C <cite class="ltx_citemacro_citet"><bibref bibrefs="a" separator=";" show="FullAuthors Phrase1YearPhrase2" yyseparator=","><bibrefphrase>(</bibrefphrase><bibrefphrase>)</bibrefphrase></bibref></cite>. D <cite class="ltx_citemacro_citeauthor"><bibref bibrefs="a" separator=";" show="FullAuthors" yyseparator=","/></cite>. E <cite class="ltx_citemacro_citeauthor"><bibref bibrefs="a" separator=";" show="FullAuthors" yyseparator=","/></cite>. F <cite class="ltx_citemacro_citeauthor"><bibref bibrefs="a" separator=";" show="Authors" yyseparator=","/></cite>. G <cite class="ltx_citemacro_citeauthor"><bibref bibrefs="a" separator=";" show="Authors" yyseparator=","/></cite>. H <cite class="ltx_citemacro_cite">(e.g., <bibref bibrefs="a" separator=";" show="FullAuthorsPhrase1Year" yyseparator=","><bibrefphrase>, </bibrefphrase></bibref>, p. 5)</cite>.</p>"#;
+
 const BOUNDARY: &[Row] = &[
   // --- `\chapter` (SVC, OD #734, #735). TeX errs (and Perl, where named): one Warning (user 2026-11-11) ---
   (
@@ -721,6 +723,32 @@ const BOUNDARY: &[Row] = &[
     (0, 0),
     &[],
     &[("p", "p1.1", r#"<p xml:id="p1.1">Type 8.</p>"#)],
+  ),
+  // --- apacite's cite forms (upstream brucemiller/LaTeXML#711): the full ones and `\citeauthorNP`, `\shortciteauthorA`
+  // are defined (safe side); `\fullciteauthorNP`, which apacite.sty only names in its mask lists, stays undefined ---
+  (
+    "apacite full cites (repro package-bindings/apacite_full_cites)",
+    "pdflatex 0 `!`; Perl 9 errors (no apacite binding: every cite undefined)",
+    include_str!("../../../tools/perfect_kernel/repros/package-bindings/apacite_full_cites.tex"),
+    &[],
+    (0, 0),
+    &[],
+    &[("p", "p1.1", APACITE_FULL)],
+  ),
+  (
+    "apacite `\\fullciteauthorNP` (repro package-bindings/apacite_fullciteauthorNP_is_undefined)",
+    "pdflatex 1 `!` (Undefined control sequence); Perl 1 error (undefined:\\fullciteauthorNP)",
+    include_str!(
+      "../../../tools/perfect_kernel/repros/package-bindings/apacite_fullciteauthorNP_is_undefined.tex"
+    ),
+    &[],
+    (1, 0),
+    &["Error:undefined:\\fullciteauthorNP The token T_CS[\\fullciteauthorNP] is not defined."],
+    &[(
+      "p",
+      "p1.1",
+      r#"<p xml:id="p1.1">A <ERROR class="undefined" xml:id="p1.1.1">\fullciteauthorNP</ERROR>a.</p>"#,
+    )],
   ),
 ];
 
