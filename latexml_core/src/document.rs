@@ -1248,18 +1248,23 @@ impl Document {
           // carries ACROSS segments (read back after each segment — see
           // `streaming_pass2`).
           if get_node_qname(&node) != pin!("ltx:_lxfragment") {
-            let attrs_now = node.get_attributes();
-            let total_attrs = attrs_now.len();
-            let bookkeeping_attrs: Vec<&String> = attrs_now
-              .keys()
-              .filter(|name| name.starts_with('_'))
-              .collect();
-            let bookkeeping_count = bookkeeping_attrs.len();
-            for name in bookkeeping_attrs {
+            // (one removal per local name, as `get_attributes()`' map named them)
+            let mut has_visible = false;
+            let mut bookkeeping_attrs: Vec<String> = Vec::new();
+            node.as_readonly().for_each_property(|name, _| {
+              if name.starts_with('_') {
+                if !bookkeeping_attrs.iter().any(|seen| seen == name) {
+                  bookkeeping_attrs.push(name.to_owned());
+                }
+              } else {
+                has_visible = true;
+              }
+            });
+            for name in &bookkeeping_attrs {
               let _ = node.remove_attribute(name);
             }
             // If all attributes were bookkeeping, the node now has empty attrs.
-            if total_attrs <= bookkeeping_count {
+            if !has_visible {
               empty_attr_nodes.insert(node.to_hashable());
             }
           }
@@ -2726,29 +2731,33 @@ impl Document {
           write!(open_tag, " {prefix_declaration}=\"{href}\"").ok();
         }
 
-        let anodes = node.get_attributes();
-        // `get_attributes()` reports LOCAL names, so an `xml:id` attribute comes
-        // back keyed as "id" -- by name alone indistinguishable from a genuine
-        // plain `id`, which the model really does declare (see
-        // `LaTeXML-bib.rnc:335,353`: `ltx:bib-identifier/@id`,
-        // `ltx:bib-review/@id`). `get_node_document_qname` resolves the
-        // attribute's NAMESPACE, so it returns "xml:id" for the former and "id"
-        // for the latter; SERIALIZE that qname. Ordering stays keyed on the
-        // local name, which is what the goldens encode (`xml:lang` files under
-        // "lang", so it precedes `role`), with `xml:id` forced last -- the
-        // previous code got that by appending it separately, which is also what
-        // rewrote every plain `id` into an invalid-NCName `xml:id`
-        // (witness arXiv 2508.17585).
-        let mut anodes_keys: Vec<(SymStr, &String)> = anodes
-          .keys()
-          .map(|key| {
-            let qname = node
-              .get_attribute_node(key)
-              .map(|a| model::get_node_document_qname(&a))
-              .unwrap_or_else(|| arena::pin(key));
-            (qname, key)
-          })
-          .collect();
+        // Every attribute's local name, document qname and serialized value, in libxml2's order. A local name
+        // keys one attribute, as `get_attributes()`'s map did: the qname of the first that has it
+        // (`get_attribute_node`), the value of the last. `get_node_document_qname` resolves the attribute's
+        // NAMESPACE, so it returns "xml:id" for an `xml:id` and "id" for a genuine plain `id`, which the model
+        // really does declare (see `LaTeXML-bib.rnc:335,353`: `ltx:bib-identifier/@id`, `ltx:bib-review/@id`);
+        // SERIALIZE that qname. Ordering stays keyed on the local name, which is what the goldens encode
+        // (`xml:lang` files under "lang", so it precedes `role`), with `xml:id` forced last -- the previous
+        // code got that by appending it separately, which is also what rewrote every plain `id` into an
+        // invalid-NCName `xml:id` (witness arXiv 2508.17585).
+        let mut anodes: Vec<(String, SymStr, String)> = Vec::new();
+        node.as_readonly().for_each_property_ns(|key, href, value| {
+          anodes.push((
+            key.to_owned(),
+            model::document_qname(href, key),
+            serialize_attr(value),
+          ));
+        });
+        if anodes.len() > 1 {
+          anodes.sort_by(|(a, ..), (b, ..)| a.cmp(b));
+          anodes.dedup_by(|later, first| {
+            let same = later.0 == first.0;
+            if same {
+              std::mem::swap(&mut first.2, &mut later.2);
+            }
+            same
+          });
+        }
         // Rank: xmlns:* declarations first (matching Perl's output order), then
         // the ordinary attributes by local name, then xml:id last.
         let rank = |qname: SymStr, key: &String| -> u8 {
@@ -2760,24 +2769,17 @@ impl Document {
             1
           }
         };
-        anodes_keys.sort_by(|(a_sym, a_key), (b_sym, b_key)| {
+        anodes.sort_by(|(a_key, a_sym, _), (b_key, b_sym, _)| {
           rank(*a_sym, a_key)
             .cmp(&rank(*b_sym, b_key))
             .then_with(|| a_key.cmp(b_key))
         });
-        for (key_sym, key) in anodes_keys {
-          // Reuse the value already in `anodes` instead of re-fetching it with
-          // `get_property` — `get_attributes()` read each value from the
-          // attribute node directly, so a by-name `xmlGetProp` re-scan (plus a
-          // fresh `CString` and result `String`) here is pure redundant FFI
-          // churn (top `get_property` caller in the alloc profile).
-          let val_serialized = serialize_attr(anodes.get(key).map(String::as_str).unwrap_or(""));
+        for (_, key_sym, val_serialized) in anodes {
           arena::with(key_sym, |key_str| {
             write!(open_tag, " {key_str}=\"{val_serialized}\"")
           })
           .ok();
         }
-
         let noindent_children: bool = if heuristic {
           // libxml2's heuristic: inline (noindent) if ANY direct child is a text node.
           // Crucially, this does NOT propagate the parent's noindent — each element
@@ -8381,8 +8383,11 @@ impl Document {
     for child in data {
       match child.get_type() {
         Some(NodeType::ElementNode) => {
-          let mut attributes: HashMap<String, String> =
-            child.get_attributes().into_iter().collect();
+          // (as `get_attributes()` keys them: by local name, the last of a name wins)
+          let mut attributes: HashMap<String, String> = HashMap::default();
+          child.as_readonly().for_each_property(|name, value| {
+            attributes.insert(name.to_owned(), value.to_owned());
+          });
           // Perl appendTree: REMOVE xml:id from source node before re-creation.
           // This prevents duplicate ID registration. The ID will be re-registered
           // by open_element_at when the new node is created with the same ID.
@@ -8955,14 +8960,14 @@ fn namespace_prefixes_in_use<'p>(root: &Node, prefixes: &[&'p str]) -> HashSet<&
     return found;
   }
   let note_attributes = |node: &Node, found: &mut HashSet<&'p str>| {
-    for key in node.get_attributes().into_keys() {
+    node.as_readonly().for_each_property(|key, _| {
       for &prefix in prefixes {
         let plen = prefix.len();
         if key.len() > plen && key.starts_with(prefix) && key.as_bytes()[plen] == b':' {
           found.insert(prefix);
         }
       }
-    }
+    });
   };
   note_attributes(root, &mut found);
   let mut cur = root.get_first_child();

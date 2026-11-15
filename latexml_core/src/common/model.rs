@@ -834,26 +834,31 @@ pub fn get_node_document_qname(node: &Node) -> SymStr {
     NamespaceDecl => pin!("xmlns"),
 
     ElementNode | AttributeNode => {
-      let empty_sym = pin!("");
-      let mut prefix = empty_sym;
-      if let Some(ns) = node.get_namespace() {
-        let href = ns.get_href();
-        if !href.is_empty() {
-          prefix = get_document_namespace_prefix(&href, false, true).unwrap_or(empty_sym);
-        }
-      }
-      if prefix == empty_sym {
-        arena::pin(node.get_name())
-      } else {
-        arena::pin(arena::with(prefix, |prefix_str| {
-          s!("{}:{}", prefix_str, node.get_name())
-        }))
-      }
+      let node = node.as_readonly();
+      node.with_name(|name| node.with_namespace_href(|href| document_qname(href, name)))
     },
     // Need others?
     t => {
       panic!("Fatal:misdefined:<caller> should not ask for qualified name for node of type {t:?}")
     },
+  }
+}
+
+/// [`get_node_document_qname`] of an element or attribute named `name` in the namespace `href`.
+pub fn document_qname(href: Option<&str>, name: &str) -> SymStr {
+  let empty_sym = pin!("");
+  let prefix = match href {
+    Some(href) if !href.is_empty() => {
+      get_document_namespace_prefix(href, false, true).unwrap_or(empty_sym)
+    },
+    _ => empty_sym,
+  };
+  if prefix == empty_sym {
+    arena::pin(name)
+  } else {
+    arena::pin(arena::with(prefix, |prefix_str| {
+      s!("{}:{}", prefix_str, name)
+    }))
   }
 }
 
