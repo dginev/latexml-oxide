@@ -1,0 +1,19 @@
+% mechanism: apacite.sty defines `\fullcite`, `\fullciteA`, `\citeauthorNP` and the other full forms only under
+%   `\if@APAC@classic@cite` (:258-584); `natbibapa` (:93-100) and `natbibemu` turn it off, so they stay undefined
+%   (the Error side of apacite_full_cites; upstream brucemiller/LaTeXML#711)
+% witness: synthetic (revQA76A)
+% oracle:  pdflatex 3 errors "! Undefined control sequence." (`\fullcite`, `\fullciteA`, `\citeauthorNP`), then
+%          "A a. C a. F a."
+% engines: rust base (origin/main 75531ffc9d6) 3 errors; QA76A 3c8c3779ae8 0 errors (each a full cite); Perl 0.8.8
+%          5 errors (these three, and `\BBA`, `\BOthers`: no apacite binding)
+% expect:  3 errors (each undefined form), 0 warnings
+% status:  CONTROL
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage[natbibapa]{apacite}
+\begin{document}
+A \fullcite{a}. C \fullciteA{a}. F \citeauthorNP{a}.
+\begin{thebibliography}{9}
+\bibitem[\protect\citeauthoryear{Smith, Jones,\ \BBA{} Brown}{Smith\ \protect\BOthers{.}}{2001}]{a} Smith, J., Jones, K., \& Brown, L. (2001). Title.
+\end{thebibliography}
+\end{document}

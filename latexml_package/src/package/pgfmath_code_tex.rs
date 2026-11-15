@@ -101,25 +101,38 @@ fn pgfmath_divide_sp(x: i64, y: i64) -> i64 {
   }
 }
 
-/// `\def\pgfmathresult{<the value>}` for a value in scaled points, printed as `\the` prints a dimension, without
-/// its `pt` (§103).
-fn pgfmath_sp_result_tokens(sp: i64) -> Vec<Token> {
-  let mut toks = vec![T_CS!("\\def"), T_CS!("\\pgfmathresult"), T_BEGIN!()];
-  toks.extend(Explode!(fixedformat(sp, None)));
-  toks.push(T_END!());
-  toks
+/// `\def\pgfmathresult{<body>}` in the current group, where `\pgfmath@returnone` smuggles it (pgfmathutil.code.tex).
+/// The natives are primitives that call this when digested, as the raw functions compute only after their opening
+/// `\begingroup`: a DefMacro computed inside a <dimen> scan's look for its optional space (tex.web §443, §448), before
+/// the assignment it ended (Perl pgfmath.code.tex.ltxml:85-90, :147-243; KNOWN_PERL_ERRORS #1274; witness 2606.14412).
+fn def_pgfmath_result(body: Vec<Token>) -> Result<()> {
+  do_def(
+    false,
+    T_CS!("\\pgfmathresult"),
+    Tokens::new(Vec::new()),
+    Tokens::new(body),
+  )
 }
 
-/// Return tokens that \def\pgfmathresult{<value>}
-fn pgfmath_result_tokens(value: f64) -> Vec<Token> {
-  let s = pgfmath_result_str(value);
-  let mut toks = vec![T_CS!("\\def"), T_CS!("\\pgfmathresult"), T_BEGIN!()];
-  toks.extend(Explode!(s));
-  toks.push(T_END!());
-  toks
+/// The `\ignorespaces` that ends pgf's `\pgfmathparse` and `\pgfmathsetlength` (tex.web §1045).
+fn pgfmath_ignorespaces() -> Result<()> {
+  if let Some(t) = read_x_non_space()? {
+    unread_one(t);
+  }
+  Ok(())
 }
 
-/// Return tokens that \def\pgfmathresult{<string>}
+/// `\pgfmathresult` for a value in scaled points, printed as `\the` prints a dimension, without its `pt` (§103).
+fn set_pgfmath_sp_result(sp: i64) -> Result<()> {
+  def_pgfmath_result(Explode!(fixedformat(sp, None)))
+}
+
+/// `\pgfmathresult` for a value.
+fn set_pgfmath_result(value: f64) -> Result<()> {
+  def_pgfmath_result(Explode!(pgfmath_result_str(value)))
+}
+
+/// `\pgfmathresult` for a string result.
 ///
 /// pgfmathparser.code.tex:392-396 keeps a `"…"` string operand as the REAL
 /// tokens it was written with, so a ternary like braids.sty:276
@@ -130,8 +143,8 @@ fn pgfmath_result_tokens(value: f64) -> Vec<Token> {
 /// of exploded into dead `\`+letters. Numbers explode as before. Perl's pgfmath
 /// cannot parse the ternary at all (SHARED). Witness: braids/braids.
 /// Guard: `perfect_kernel_batch56::pgfmath_string_result_keeps_control_sequences`.
-fn pgfmath_result_tokens_str(s: &str) -> Vec<Token> {
-  let mut toks = vec![T_CS!("\\def"), T_CS!("\\pgfmathresult"), T_BEGIN!()];
+fn set_pgfmath_result_str(s: &str) -> Result<()> {
+  let mut toks = Vec::new();
   // pgfmathparser.code.tex:35-40 `\pgfmath@catcodes` re-catcodes only `= , | &`,
   // so a string operand's LETTERS stay catcode 11: tikz's path dispatcher
   // `\tikz@handle` (tikz.code.tex:2134-2163) `\ifx`-matches the letter `a` of
@@ -168,8 +181,7 @@ fn pgfmath_result_tokens_str(s: &str) -> Vec<Token> {
   } else {
     toks.extend(Explode!(s));
   }
-  toks.push(T_END!());
-  toks
+  def_pgfmath_result(toks)
 }
 
 /// pgf's `mod` (pgfmathfunctions.basic.code.tex:263-278): truncated, as TeX's `\divide` truncates, and a zero divisor
@@ -2523,121 +2535,121 @@ LoadDefinitions!({
   RawTeX!(r"\lx@ifundefined{pgfmathmathunitsdeclaredtrue}{\newif\ifpgfmathmathunitsdeclared}{}");
 
   // Constants
-  DefMacro!("\\pgfmathpi@", sub[_args] {
-    pgfmath_result_tokens(PI)
+  DefPrimitive!("\\pgfmathpi@", sub[_args] {
+    set_pgfmath_result(PI)?;
   });
-  DefMacro!("\\pgfmathe@", sub[_args] {
-    pgfmath_result_tokens(std::f64::consts::E)
+  DefPrimitive!("\\pgfmathe@", sub[_args] {
+    set_pgfmath_result(std::f64::consts::E)?;
   });
 
   // Basic arithmetic
-  DefMacro!("\\pgfmathadd@ {} {}", sub[(a, b)] {
-    pgfmath_sp_result_tokens(pgfmath_sp(&a) + pgfmath_sp(&b))
+  DefPrimitive!("\\pgfmathadd@ {} {}", sub[(a, b)] {
+    set_pgfmath_sp_result(pgfmath_sp(&a) + pgfmath_sp(&b))?;
   });
-  DefMacro!("\\pgfmathsubtract@ {} {}", sub[(a, b)] {
-    pgfmath_sp_result_tokens(pgfmath_sp(&a) - pgfmath_sp(&b))
+  DefPrimitive!("\\pgfmathsubtract@ {} {}", sub[(a, b)] {
+    set_pgfmath_sp_result(pgfmath_sp(&a) - pgfmath_sp(&b))?;
   });
-  DefMacro!("\\pgfmathneg@ {}", sub[(a)] {
-    pgfmath_sp_result_tokens(-pgfmath_sp(&a))
+  DefPrimitive!("\\pgfmathneg@ {}", sub[(a)] {
+    set_pgfmath_sp_result(-pgfmath_sp(&a))?;
   });
-  DefMacro!("\\pgfmathmultiply@ {} {}", sub[(a, b)] {
-    pgfmath_result_tokens(parse_pgf_number(&a) * parse_pgf_number(&b))
+  DefPrimitive!("\\pgfmathmultiply@ {} {}", sub[(a, b)] {
+    set_pgfmath_result(parse_pgf_number(&a) * parse_pgf_number(&b))?;
   });
-  DefMacro!("\\pgfmathdivide@ {} {}", sub[(a, b)] {
-    pgfmath_sp_result_tokens(pgfmath_divide_sp(pgfmath_sp(&a), pgfmath_sp(&b)))
+  DefPrimitive!("\\pgfmathdivide@ {} {}", sub[(a, b)] {
+    set_pgfmath_sp_result(pgfmath_divide_sp(pgfmath_sp(&a), pgfmath_sp(&b)))?;
   });
-  DefMacro!("\\pgfmathpow@ {} {}", sub[(a, b)] {
-    pgfmath_result_tokens(parse_pgf_number(&a).powf(parse_pgf_number(&b)))
+  DefPrimitive!("\\pgfmathpow@ {} {}", sub[(a, b)] {
+    set_pgfmath_result(parse_pgf_number(&a).powf(parse_pgf_number(&b)))?;
   });
 
   // Rounding and comparison
-  DefMacro!("\\pgfmathabs@ {}", sub[(a)] {
-    pgfmath_result_tokens(parse_pgf_number(&a).abs())
+  DefPrimitive!("\\pgfmathabs@ {}", sub[(a)] {
+    set_pgfmath_result(parse_pgf_number(&a).abs())?;
   });
-  DefMacro!("\\pgfmathround@ {}", sub[(a)] {
-    pgfmath_result_tokens(parse_pgf_number(&a).round())
+  DefPrimitive!("\\pgfmathround@ {}", sub[(a)] {
+    set_pgfmath_result(parse_pgf_number(&a).round())?;
   });
-  DefMacro!("\\pgfmathfloor@ {}", sub[(a)] {
-    pgfmath_result_tokens(parse_pgf_number(&a).floor())
+  DefPrimitive!("\\pgfmathfloor@ {}", sub[(a)] {
+    set_pgfmath_result(parse_pgf_number(&a).floor())?;
   });
-  DefMacro!("\\pgfmathceil@ {}", sub[(a)] {
-    pgfmath_result_tokens(parse_pgf_number(&a).ceil())
+  DefPrimitive!("\\pgfmathceil@ {}", sub[(a)] {
+    set_pgfmath_result(parse_pgf_number(&a).ceil())?;
   });
 
   // Trigonometric (input in degrees, output as float)
-  DefMacro!("\\pgfmathsin@ {}", sub[(a)] {
-    pgfmath_result_tokens(pgfmath_arg_radians(parse_pgf_number(&a)).sin())
+  DefPrimitive!("\\pgfmathsin@ {}", sub[(a)] {
+    set_pgfmath_result(pgfmath_arg_radians(parse_pgf_number(&a)).sin())?;
   });
-  DefMacro!("\\pgfmathcos@ {}", sub[(a)] {
-    pgfmath_result_tokens(pgfmath_arg_radians(parse_pgf_number(&a)).cos())
+  DefPrimitive!("\\pgfmathcos@ {}", sub[(a)] {
+    set_pgfmath_result(pgfmath_arg_radians(parse_pgf_number(&a)).cos())?;
   });
-  DefMacro!("\\pgfmathtan@ {}", sub[(a)] {
-    pgfmath_result_tokens(pgfmath_arg_radians(parse_pgf_number(&a)).tan())
+  DefPrimitive!("\\pgfmathtan@ {}", sub[(a)] {
+    set_pgfmath_result(pgfmath_arg_radians(parse_pgf_number(&a)).tan())?;
   });
-  DefMacro!("\\pgfmathatan@ {}", sub[(a)] {
-    pgfmath_result_tokens(parse_pgf_number(&a).atan().to_degrees())
+  DefPrimitive!("\\pgfmathatan@ {}", sub[(a)] {
+    set_pgfmath_result(parse_pgf_number(&a).atan().to_degrees())?;
   });
-  DefMacro!("\\pgfmathatantwo@ {} {}", sub[(a, b)] {
-    pgfmath_result_tokens(parse_pgf_number(&a).atan2(parse_pgf_number(&b)).to_degrees())
+  DefPrimitive!("\\pgfmathatantwo@ {} {}", sub[(a, b)] {
+    set_pgfmath_result(parse_pgf_number(&a).atan2(parse_pgf_number(&b)).to_degrees())?;
   });
   Let!("\\pgfmathatan2@", "\\pgfmathatantwo@");
-  DefMacro!("\\pgfmathasin@ {}", sub[(a)] {
-    pgfmath_result_tokens(parse_pgf_number(&a).asin().to_degrees())
+  DefPrimitive!("\\pgfmathasin@ {}", sub[(a)] {
+    set_pgfmath_result(parse_pgf_number(&a).asin().to_degrees())?;
   });
-  DefMacro!("\\pgfmathacos@ {}", sub[(a)] {
-    pgfmath_result_tokens(parse_pgf_number(&a).acos().to_degrees())
+  DefPrimitive!("\\pgfmathacos@ {}", sub[(a)] {
+    set_pgfmath_result(parse_pgf_number(&a).acos().to_degrees())?;
   });
-  DefMacro!("\\pgfmathcot@ {}", sub[(a)] {
+  DefPrimitive!("\\pgfmathcot@ {}", sub[(a)] {
     let r = pgfmath_arg_radians(parse_pgf_number(&a));
-    pgfmath_result_tokens(r.cos() / pgfmath_divisor(r.sin()))
+    set_pgfmath_result(r.cos() / pgfmath_divisor(r.sin()))?;
   });
-  DefMacro!("\\pgfmathsec@ {}", sub[(a)] {
-    pgfmath_result_tokens(1.0 / pgfmath_divisor(pgfmath_arg_radians(parse_pgf_number(&a)).cos()))
+  DefPrimitive!("\\pgfmathsec@ {}", sub[(a)] {
+    set_pgfmath_result(1.0 / pgfmath_divisor(pgfmath_arg_radians(parse_pgf_number(&a)).cos()))?;
   });
-  DefMacro!("\\pgfmathcosec@ {}", sub[(a)] {
-    pgfmath_result_tokens(1.0 / pgfmath_divisor(pgfmath_arg_radians(parse_pgf_number(&a)).sin()))
+  DefPrimitive!("\\pgfmathcosec@ {}", sub[(a)] {
+    set_pgfmath_result(1.0 / pgfmath_divisor(pgfmath_arg_radians(parse_pgf_number(&a)).sin()))?;
   });
 
   // Exponential and logarithmic
-  DefMacro!("\\pgfmathexp@ {}", sub[(a)] {
-    pgfmath_result_tokens(parse_pgf_number(&a).exp())
+  DefPrimitive!("\\pgfmathexp@ {}", sub[(a)] {
+    set_pgfmath_result(parse_pgf_number(&a).exp())?;
   });
-  DefMacro!("\\pgfmathln@ {}", sub[(a)] {
-    pgfmath_result_tokens(parse_pgf_number(&a).ln())
+  DefPrimitive!("\\pgfmathln@ {}", sub[(a)] {
+    set_pgfmath_result(parse_pgf_number(&a).ln())?;
   });
-  DefMacro!("\\pgfmathlogten@ {}", sub[(a)] {
-    pgfmath_result_tokens(parse_pgf_number(&a).ln() / LOG10)
+  DefPrimitive!("\\pgfmathlogten@ {}", sub[(a)] {
+    set_pgfmath_result(parse_pgf_number(&a).ln() / LOG10)?;
   });
-  DefMacro!("\\pgfmathsqrt@ {}", sub[(a)] {
-    pgfmath_result_tokens(parse_pgf_number(&a).sqrt())
+  DefPrimitive!("\\pgfmathsqrt@ {}", sub[(a)] {
+    set_pgfmath_result(parse_pgf_number(&a).sqrt())?;
   });
 
   // Random
-  DefMacro!("\\pgfmathrnd@", sub[_args] {
-    pgfmath_result_tokens(0.5) // deterministic for reproducibility
+  DefPrimitive!("\\pgfmathrnd@", sub[_args] {
+    set_pgfmath_result(0.5)?; // deterministic for reproducibility
   });
-  DefMacro!("\\pgfmathrand@", sub[_args] {
-    pgfmath_result_tokens(0.0) // deterministic
+  DefPrimitive!("\\pgfmathrand@", sub[_args] {
+    set_pgfmath_result(0.0)?; // deterministic
   });
 
-  DefMacro!("\\pgfmathreciprocal@ {}", sub[(a)] {
-    pgfmath_result_tokens(1.0 / pgfmath_divisor(parse_pgf_number(&a)))
+  DefPrimitive!("\\pgfmathreciprocal@ {}", sub[(a)] {
+    set_pgfmath_result(1.0 / pgfmath_divisor(parse_pgf_number(&a)))?;
   });
 
   // Modular arithmetic
-  DefMacro!("\\pgfmathmod@ {} {}", sub[(a, b)] {
-    pgfmath_result_tokens(pgfmath_mod(parse_pgf_number(&a), parse_pgf_number(&b), false))
+  DefPrimitive!("\\pgfmathmod@ {} {}", sub[(a, b)] {
+    set_pgfmath_result(pgfmath_mod(parse_pgf_number(&a), parse_pgf_number(&b), false))?;
   });
-  DefMacro!("\\pgfmathMod@ {} {}", sub[(a, b)] {
-    pgfmath_result_tokens(pgfmath_mod(parse_pgf_number(&a), parse_pgf_number(&b), true))
+  DefPrimitive!("\\pgfmathMod@ {} {}", sub[(a, b)] {
+    set_pgfmath_result(pgfmath_mod(parse_pgf_number(&a), parse_pgf_number(&b), true))?;
   });
 
   // Degree/radian conversion
-  DefMacro!("\\pgfmathrad@ {}", sub[(a)] {
-    pgfmath_result_tokens(parse_pgf_number(&a).to_radians())
+  DefPrimitive!("\\pgfmathrad@ {}", sub[(a)] {
+    set_pgfmath_result(parse_pgf_number(&a).to_radians())?;
   });
-  DefMacro!("\\pgfmathdeg@ {}", sub[(a)] {
-    pgfmath_result_tokens(parse_pgf_number(&a).to_degrees())
+  DefPrimitive!("\\pgfmathdeg@ {}", sub[(a)] {
+    set_pgfmath_result(parse_pgf_number(&a).to_degrees())?;
   });
 
   // Integer operations
@@ -2645,12 +2657,8 @@ LoadDefinitions!({
   // `\pgfmath@returnone`/`\pgfmath@tonumber`: pgfmathfunctions.round.code.tex:83-96
   // sets `\pgfmathresult` to the bare integer (`6`, not `6.0`; verified with
   // pdflatex — Gemini round-10 N1 review).
-  DefMacro!("\\pgfmathint@ {}", sub[(a)] {
-    let v = parse_pgf_number(&a) as i64;
-    let mut toks = vec![T_CS!("\\def"), T_CS!("\\pgfmathresult"), T_BEGIN!()];
-    toks.extend(Explode!(v.to_string()));
-    toks.push(T_END!());
-    toks
+  DefPrimitive!("\\pgfmathint@ {}", sub[(a)] {
+    def_pgfmath_result(Explode!((parse_pgf_number(&a) as i64).to_string()))?;
   });
 
   // Calc package compatibility
@@ -2672,22 +2680,21 @@ LoadDefinitions!({
   // expansion as pgf does.
 
   // ==================== pgfmathparse override ====================
-  // Perl L401-403: DefMacro('\lx@pgfmath@parse{}', sub { ... })
-  DefMacro!("\\lx@pgfmath@parse {}", sub[(tokens)] {
+  // Perl L401-403: DefMacro('\lx@pgfmath@parse{}', sub { ... }), a primitive here (`def_pgfmath_result`); pgf's
+  // parse ends with `\endgroup\ignorespaces` (pgfmathparser.code.tex:146-149).
+  DefPrimitive!("\\lx@pgfmath@parse {}", sub[(tokens)] {
     let (result, _units) = pgfmathparse(tokens)?;
-    pgfmath_result_tokens_str(&result)
+    set_pgfmath_result_str(&result)?;
+    pgfmath_ignorespaces()?;
   });
 
   // Perl L442: Let('\pgfmathparse', '\lx@pgfmath@parse');
   Let!("\\pgfmathparse", "\\lx@pgfmath@parse");
 
   // Perl L396-399: \lx@pgfmath@parseX (alternative that uses \lx@pgfmathresult)
-  DefMacro!("\\lx@pgfmath@parseX {}", sub[(tokens)] {
+  DefPrimitive!("\\lx@pgfmath@parseX {}", sub[(tokens)] {
     let (result, _units) = pgfmathparse(tokens)?;
-    let mut toks = vec![T_CS!("\\def"), T_CS!("\\lx@pgfmathresult"), T_BEGIN!()];
-    toks.extend(Explode!(result));
-    toks.push(T_END!());
-    toks
+    do_def(false, T_CS!("\\lx@pgfmathresult"), Tokens::new(Vec::new()), Tokens::new(Explode!(result)))?;
   });
 
   // Perl L425: save original \pgfmathparse
@@ -2772,6 +2779,8 @@ LoadDefinitions!({
       let (value, rest): (RegisterValue, Vec<Token>) = read?;
       let cs = register.to_string();
       assign_register(&cs, value, None, vec![])?;
+      // pgf's `\ignorespaces` follows the group that set the rest (pgfmathcalc.code.tex:48).
+      pgfmath_ignorespaces()?;
       if !rest.is_empty() {
         unread(Tokens::new(rest));
       }
@@ -2794,6 +2803,7 @@ LoadDefinitions!({
         let dim = Dimension((value * 65536.0).round() as i64);
         assign_register(&cs, dim.into(), None, vec![])?;
       }
+      pgfmath_ignorespaces()?;
     }
   });
 

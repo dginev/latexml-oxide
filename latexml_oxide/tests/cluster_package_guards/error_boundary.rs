@@ -76,6 +76,10 @@ const SBX2_ANN_UNIV_A: &str = r#"<document xmlns="http://dlmf.nist.gov/LaTeXML" 
 
 const SBX2_LLNCS: &str = r#"<document xmlns="http://dlmf.nist.gov/LaTeXML" class="ltx_authors_1line"><title>T</title><creator role="author"><personname>Ann Lee</personname><contact name="Affiliation: " role="affiliation">Amazon</contact></creator><creator before="  " role="author"><personname>Bob Roe</personname><contact name="Affiliation: " role="affiliation">UW</contact></creator><para xml:id="p1"><p xml:id="p1.1">Hi.</p></para></document>"#;
 
+const APACITE_FULL: &str = r#"<p xml:id="p1.1">A <cite class="ltx_citemacro_cite">(<bibref bibrefs="a" separator=";" show="FullAuthorsPhrase1Year" yyseparator=","><bibrefphrase>, </bibrefphrase></bibref>)</cite>. B <cite class="ltx_citemacro_citep"><bibref bibrefs="a" separator=";" show="FullAuthorsPhrase1Year" yyseparator=","><bibrefphrase>, </bibrefphrase></bibref></cite>. C <cite class="ltx_citemacro_citet"><bibref bibrefs="a" separator=";" show="FullAuthors Phrase1YearPhrase2" yyseparator=","><bibrefphrase>(</bibrefphrase><bibrefphrase>)</bibrefphrase></bibref></cite>. D <cite class="ltx_citemacro_citeauthor"><bibref bibrefs="a" separator=";" show="FullAuthors" yyseparator=","/></cite>. E <cite class="ltx_citemacro_citeauthor"><bibref bibrefs="a" separator=";" show="FullAuthors" yyseparator=","/></cite>. F <cite class="ltx_citemacro_citeauthor"><bibref bibrefs="a" separator=";" show="Authors" yyseparator=","/></cite>. G <cite class="ltx_citemacro_citeauthor"><bibref bibrefs="a" separator=";" show="Authors" yyseparator=","/></cite>. H <cite class="ltx_citemacro_cite">(e.g., <bibref bibrefs="a" separator=";" show="FullAuthorsPhrase1Year" yyseparator=","><bibrefphrase>, </bibrefphrase></bibref>, p. 5)</cite>.</p>"#;
+
+const APACITE_NATBIBAPA: &str = r#"<p xml:id="p1.1">A <ERROR class="undefined" xml:id="p1.1.1">\fullcite</ERROR>a. C <ERROR class="undefined" xml:id="p1.1.2">\fullciteA</ERROR>a. F <ERROR class="undefined" xml:id="p1.1.3">\citeauthorNP</ERROR>a.</p>"#;
+
 const NOTPRERR: &str = "Error:latex:\\GenericError LaTeX Error: Can be used only in preamble         See the LaTeX \
                         manual or LaTeX Companion for explanation.         Your command was ignored.";
 
@@ -724,6 +728,49 @@ const BOUNDARY: &[Row] = &[
     (0, 0),
     &[],
     &[("p", "p1.1", r#"<p xml:id="p1.1">Type 8.</p>"#)],
+  ),
+  // --- apacite's cite forms (upstream brucemiller/LaTeXML#711): the full ones and `\citeauthorNP`, `\shortciteauthorA`
+  // are defined in classic mode (safe side); `\fullciteauthorNP`, which apacite.sty only names in its mask lists, and
+  // the classic forms under `natbibapa` stay undefined ---
+  (
+    "apacite full cites (repro package-bindings/apacite_full_cites)",
+    "pdflatex 0 `!`; Perl 9 errors (no apacite binding: every cite undefined)",
+    include_str!("../../../tools/perfect_kernel/repros/package-bindings/apacite_full_cites.tex"),
+    &[],
+    (0, 0),
+    &[],
+    &[("p", "p1.1", APACITE_FULL)],
+  ),
+  (
+    "apacite `\\fullciteauthorNP` (repro package-bindings/apacite_fullciteauthorNP_is_undefined)",
+    "pdflatex 1 `!` (Undefined control sequence); Perl 1 error (undefined:\\fullciteauthorNP)",
+    include_str!(
+      "../../../tools/perfect_kernel/repros/package-bindings/apacite_fullciteauthorNP_is_undefined.tex"
+    ),
+    &[],
+    (1, 0),
+    &["Error:undefined:\\fullciteauthorNP The token T_CS[\\fullciteauthorNP] is not defined."],
+    &[(
+      "p",
+      "p1.1",
+      r#"<p xml:id="p1.1">A <ERROR class="undefined" xml:id="p1.1.1">\fullciteauthorNP</ERROR>a.</p>"#,
+    )],
+  ),
+  (
+    "apacite[natbibapa] full cites (repro package-bindings/apacite_natbibapa_full_cites_are_undefined)",
+    "pdflatex 3 `!` (Undefined control sequence: classic mode only, apacite.sty:258-584); Perl 5 errors (these \
+     three, \\BBA, \\BOthers)",
+    include_str!(
+      "../../../tools/perfect_kernel/repros/package-bindings/apacite_natbibapa_full_cites_are_undefined.tex"
+    ),
+    &[],
+    (3, 0),
+    &[
+      "Error:undefined:\\fullcite The token T_CS[\\fullcite] is not defined.",
+      "Error:undefined:\\fullciteA The token T_CS[\\fullciteA] is not defined.",
+      "Error:undefined:\\citeauthorNP The token T_CS[\\citeauthorNP] is not defined.",
+    ],
+    &[("p", "p1.1", APACITE_NATBIBAPA)],
   ),
   // --- latex.ltx's `\@preamblecmds` (QA90, OD #226): pdflatex's Error in the body, the command still done ---
   (

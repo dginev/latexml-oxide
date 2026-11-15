@@ -1,0 +1,15 @@
+% mechanism: `\pgfmathsetlength`'s quick path (a value beginning `+`) is `\begingroup\pgfmath@selectfont #1#2\unskip`
+%   (pgfmathcalc.code.tex:30-38): its `\unskip` removes the space typeset before the call. The native
+%   `\pgfmathsetlength` (pgfmath_code_tex.rs) drops only a trailing space of its argument, not the list's last glue.
+% witness: synthetic (found by QA11A beside pgfmath_natives_compute_when_digested.tex)
+% oracle:  pdflatex 0 `!`: [AB][4.0pt]
+% engines: rust main 03ec8caaf70 and QA11A: [A B][4.0pt], 0 errors; Perl: the same (pgfmath.code.tex.ltxml:405-423)
+% expect:  [AB][4.0pt], 0 errors, 0 warnings
+% status:  RED
+% moves:   post-merge
+\documentclass{article}
+\usepackage{pgf}
+\newdimen\dd
+\begin{document}
+[A \pgfmathsetlength\dd{+4pt}B][\the\dd]
+\end{document}

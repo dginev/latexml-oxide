@@ -17,7 +17,7 @@
 //! ratio `\c_one_fp`, :2461, is the right margin) the `float` side, `width`
 //! (:2395) the width. The raw package is NOT loaded (bindings outrank raw).
 use crate::{
-  engine::latex_constructs::{after_float, before_float},
+  engine::latex_constructs::{after_float, before_xfloat},
   prelude::*,
 };
 
@@ -50,8 +50,7 @@ LoadDefinitions!({
       // feeds `\@captype`); an untyped one is a plain wrapped box.
       if !ftype.is_empty() {
         whatsit.set_property("isfloat", Stored::Bool(true));
-        before_float(&ftype, None)?;
-        engine::latex_constructs::reset_float_box()?;
+        before_xfloat(&ftype, false)?;
       }
       if let Some(w) = width {
         set_wrap_width(whatsit, w);

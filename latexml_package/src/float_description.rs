@@ -81,12 +81,9 @@ pub fn define_float_description(command: &'static str) -> Result<()> {
   // class into discarding it).
   //
   // The MANDATORY long description is the real alt text, so it is what we
-  // emit. It is read `Undigested` — `ExpansionLevel::Off`, kept as
-  // `DigestedData::Postponed` tokens — so nothing inside it expands: the
-  // author never sees a defect there under pdflatex (the class gobbles it), so
-  // expanding it only manufactures errors. Witness arXiv:2607.21760, whose
-  // `\D1 … \D5` (a copy-paste slip from the adjacent `alt=` text, which has
-  // plain `D1 … D5`) raised `Error:undefined:\D` for content we then dropped.
+  // emit. It is digested, as Perl's `{}` (acmart.cls.ltxml:78), so an
+  // undefined command in it errs though pdflatex never meets it (arXiv:2607.21760's
+  // `\D1 … \D5`, a copy-paste slip; open for DG, OXIDIZED_DESIGN #83).
   //
   // `LaTeXML-common.xsl` L404-421 maps any `aria:*` attribute to `aria-*`
   // under HTML5, so setting them here needs no XSLT change. WHICH element
@@ -170,7 +167,7 @@ pub fn define_float_description(command: &'static str) -> Result<()> {
     // `@alt` and not `@aria-label`").
     //
     // `@alt` is a plain string and cannot carry markup, so the slot is chosen by
-    // the description's tokens as written (its reversion): a control sequence
+    // the reversion of the digested description: a control sequence
     // (or an active/`$`/`^`/`_` token) means real markup, so the block carries
     // it. The argument itself is digested, as Perl's `{}` (acmart.cls.ltxml:78)
     // and LaTeX do: read `Undigested`, the block printed its markup as raw TeX

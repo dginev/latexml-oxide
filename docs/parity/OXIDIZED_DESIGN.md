@@ -10,20 +10,21 @@ This file is the **index + overview**. The detail lives in a themed family:
 | Theme file | What it holds |
 |---|---|
 | [OXIDIZED_DESIGN_DIVERGENCES.md](OXIDIZED_DESIGN_DIVERGENCES.md) | The numbered **Intentional Divergences from Perl** (`#1–#15`, `#17–#18`, `#19–#190`) + a brief Known-Upstream-Perl-Issues list. Code comments cite these as `OXIDIZED_DESIGN #N`. |
-| [OXIDIZED_DESIGN_MATH.md](../math/OXIDIZED_DESIGN_MATH.md) | Marpa math-parser design: `#16` design rules + the grammar-rule cluster `#7–#18`. |
+| [OXIDIZED_DESIGN_MATH.md](../math/OXIDIZED_DESIGN_MATH.md) | Marpa math-parser design, its own sequence: `#16` design rules, the grammar-rule cluster `#7–#15`, `#17`, `#18`, `#63`, and the math-parse entries `#19–#62` (formerly OD, each resolving through an OD stub). |
 | [OXIDIZED_DESIGN_TYPES.md](OXIDIZED_DESIGN_TYPES.md) | Type-system improvements (behavior-neutral) + tactical internal pitfalls. |
 | [OXIDIZED_DESIGN_FUTURE_WORK.md](OXIDIZED_DESIGN_FUTURE_WORK.md) | Beyond-parity directions not yet built. |
 
 > **Finding a divergence by number.** The `### N` numbers are load-bearing —
 > `.rs` comments reference them — so they are kept verbatim, which means three
-> quirks: (1) the numbers are **not globally unique** (the math cluster `#7–#18`
-> collides by value with divergences `#7–#18`); (2) a code-referenced number
+> quirks: (1) the numbers are **not globally unique** (the math sequence's `#7–#18`
+> and `#63` collide by value with divergences of those numbers); (2) a code-referenced number
 > resolves to the file above that owns that *topic* — most (`#1–#15`, `#19–#190`)
 > are in DIVERGENCES, the math ones (incl. the code-referenced **`#18` = f(x)
 > "Speculative function application"**) are in MATH; (3) **`#76` is a retired
 > number** — its entry was consolidated into `#74` and the number was not
 > reused, so a gap in the sequence is expected, not a missing file. Next free
-> number: **#907**. When in doubt,
+> number: **#1052** (2026-11-15; #1051 is reserved; allocate with
+> `tools/perfect_kernel/next_entry_numbers.sh`, which also reads every open PR's head). When in doubt,
 > `grep '### N\.' docs/parity/OXIDIZED_DESIGN_*.md docs/math/OXIDIZED_DESIGN_MATH.md`.
 
 ---
@@ -84,7 +85,7 @@ flat XMath) → **Serialization**. (The post-processing pipeline lives in
 |-------|----------------|------|
 | `latexml_core` | `LaTeXML::Core::*` | Mouth, Gullet, Stomach, document builder, state |
 | `latexml_engine` | `LaTeXML::Engine::*` | Pool ports (`tex.rs`/`latex.rs`, primitives, constructs) |
-| `latexml_package` | `LaTeXML::Package` | Package/class definitions, binding macro infrastructure |
+| `latexml_package` | `LaTeXML::Package` | Package/class definitions (the binding macros live in `latexml_engine/src/setup_binding_language.rs`) |
 | `latexml_math_parser` | `LaTeXML::MathParser` | Marpa-style math parser |
 | `latexml_post` | `LaTeXML::Post::*` | XML→HTML/MathML/ePub/JATS post-processing |
 | `latexml_oxide` | `latexml` CLI | Binary targets (`latexml_oxide`, `latexmlmath_oxide`) + integration suite |
@@ -101,8 +102,8 @@ flat XMath) → **Serialization**. (The post-processing pipeline lives in
 - **Compile-time macros** — `DefMacro!`/`DefConstructor!`/`DefPrimitive!` expand at
   build time (proc macros), eliminating Perl's per-`\usepackage` parse cost.
 - **Engine file layout** — the pools are split along the same seams Perl uses,
-  one Rust file per pool: `latex_bootstrap.rs` / `latex_base.rs` /
-  `latex_constructs.rs` (plus the Rust-only `latex_constructs_rust_only.rs` and
+  one Rust module per pool: `latex_bootstrap.rs` / `latex_base.rs` /
+  the module directory `latex_constructs/` (plus the Rust-only `latex_constructs_rust_only.rs` and
   the dump loader `latex_dump.rs`), and `plain_bootstrap.rs` / `plain_base.rs` /
   `plain_constructs.rs` / `plain_dump.rs`. Full map:
   [ORGANIZATION.md](ORGANIZATION.md).

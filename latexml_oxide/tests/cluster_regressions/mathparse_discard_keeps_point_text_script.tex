@@ -1,0 +1,10 @@
+% witness: 0710.4421, issue #790 (SIGSEGV under glibc.malloc.perturb=165)
+% oracle: pdflatex clean (0 `!`); Perl 0 errors, `F<sub>1</sub>`
+% expect: 0 errors; the \mbox's `F` with subscript `1` kept; both formulae parsed
+% status: GREEN (I790A): Document::discard_subtree moves the insertion point out of the freed subtree
+%   (Perl Document.pm:removeNode L1783-1792); before it, the text-script rule left the point on an XMText
+%   the math parser freed, and the next formula walked up from freed memory.
+\documentclass{article}
+\begin{document}
+$x+\mbox{F$_1$}$ and $\frac{a}{b}$
+\end{document}

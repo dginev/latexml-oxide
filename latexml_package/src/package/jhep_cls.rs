@@ -1,7 +1,7 @@
 //! JHEP.cls — Journal of High Energy Physics document class
 //! Perl: JHEP.cls.ltxml — 314 lines (mostly journal abbreviation macros)
 use crate::{
-  engine::latex_constructs::{after_float, before_float},
+  engine::latex_constructs::{after_float, before_xfloat},
   prelude::*,
 };
 
@@ -253,7 +253,7 @@ LoadDefinitions!({
     "<ltx:figure xml:id='#id' inlist='#inlist' width='0.45%'>#body</ltx:figure>#tags",
     // The begin code opens a TeX group of its own: a float: `\@float` (latex.ltx:17479 `\color@vbox`).
     tex_group => { TexGroup::Box },
-    before_digest => { before_float("figure", None)?; engine::latex_constructs::reset_float_box()?; },
+    before_digest => { before_xfloat("figure", false)?; },
     after_digest  => sub[whatsit] { after_float(whatsit); },
     mode => "internal_vertical");
 
@@ -267,7 +267,7 @@ LoadDefinitions!({
     "<ltx:table xml:id='#id' inlist='#inlist' width='0.45%'>#body</ltx:table>#tags",
     // The begin code opens a TeX group of its own: a float: `\@float` (latex.ltx:17479 `\color@vbox`).
     tex_group => { TexGroup::Box },
-    before_digest => { before_float("table", None)?; engine::latex_constructs::reset_float_box()?; },
+    before_digest => { before_xfloat("table", false)?; },
     after_digest  => sub[whatsit] { after_float(whatsit); },
     mode => "internal_vertical");
 
@@ -277,7 +277,7 @@ LoadDefinitions!({
     "<ltx:figure xml:id='#id' inlist='#inlist' float='#float'>#tags#body</ltx:figure>",
     // The begin code opens a TeX group of its own: a float: `\@float` (latex.ltx:17479 `\color@vbox`).
     tex_group => { TexGroup::Box },
-    before_digest => { before_float("figure", None)?; engine::latex_constructs::reset_float_box()?; },
+    before_digest => { before_xfloat("figure", false)?; },
     after_digest  => sub[whatsit] { after_float(whatsit); },
     properties    => sub[args] {
       let pos = args[0].as_ref().map(|a| a.to_string()).unwrap_or_default();
@@ -289,7 +289,7 @@ LoadDefinitions!({
     "<ltx:table xml:id='#id' inlist='#inlist' float='#float'>#tags#body</ltx:table>",
     // The begin code opens a TeX group of its own: a float: `\@float` (latex.ltx:17479 `\color@vbox`).
     tex_group => { TexGroup::Box },
-    before_digest => { before_float("table", None)?; engine::latex_constructs::reset_float_box()?; },
+    before_digest => { before_xfloat("table", false)?; },
     after_digest  => sub[whatsit] { after_float(whatsit); },
     properties    => sub[args] {
       let pos = args[0].as_ref().map(|a| a.to_string()).unwrap_or_default();

@@ -5532,7 +5532,7 @@ fn index_entry_passes_undefined_words_inert() {
 /// `\index{\AB@\relax…}`), and an undefined control word still carrying `@` after
 /// the `\protected@write` expansion is re-read with document catcodes
 /// (`@` OTHER), so `\AB@` is key `\AB` + separator, not one undefined
-/// name (Perl's style-catcode re-tokenize; KPE #83).
+/// name (Perl's style-catcode re-tokenize; KPE #1278).
 #[test]
 fn index_sort_key_undefined_word_is_text() {
   let tex = "\\documentclass{article}\n\\usepackage{makeidx}\\makeindex\n\\begin{document}\nA\\index{\\AB@\\relax x}\n\\printindex\\end{document}\n";
