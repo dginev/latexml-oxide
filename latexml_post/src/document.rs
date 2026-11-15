@@ -725,6 +725,12 @@ impl PostDocument {
     let doc = parser
       .parse_file_with_options(path, huge_parse_options())
       .map_err(|e| format!("Failed to parse '{}': {}", path, e))?;
+    Ok(Self::new(doc, Self::file_options(path, options)))
+  }
+
+  /// The options [`Self::new_from_file`] gives a document read from `path`: `source` is the file and
+  /// `source_directory` its directory, unless already set.
+  pub fn file_options(path: &str, options: PostDocumentOptions) -> PostDocumentOptions {
     let mut opts = options;
     if opts.source.is_none() {
       opts.source = Some(path.to_string());
@@ -734,7 +740,16 @@ impl PostDocument {
         opts.source_directory = Some(parent.to_string_lossy().to_string());
       }
     }
-    Ok(Self::new(doc, opts))
+    opts
+  }
+
+  /// Give up this wrapper and return its XML document, as [`Self::new`] received it plus any changes made
+  /// since; the wrapper's caches (ids, namespaces, memos) are dropped with it.
+  pub fn into_document(mut self) -> Document {
+    std::mem::replace(
+      &mut self.document,
+      Document::new().expect("libxml2 could not allocate an empty document"),
+    )
   }
 
   /// Create from an XML string.

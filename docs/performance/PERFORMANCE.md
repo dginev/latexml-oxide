@@ -349,6 +349,45 @@ code on AMD (skid), so the figures are counts × stepped instructions.
 
 ## Audit log (periodic passes; newest first)
 
+### 2026-11-15 — an unsplit document's page kept resident between post's passes (PERFH, PERF2 R2)
+
+Defect: post's whole-DOM front-end serialized every scanned page to the staging directory and parsed it back for the
+MakeIndex and MakeBibliography sweeps and again for the render (`latexml_oxide/src/post.rs`, pass A/B), a staging built
+for 40k-page split sites; an unsplit document paid a serialize, a file round trip and one to three parses for nothing.
+Perl keeps the document resident (LaTeXML.pm L445, Post.pm L682-686 `setDocument_internal`). Fix: when the run does not
+split and libxml2 parsed the page cleanly (rust-libxml `Document::is_well_formed` and `is_ns_valid`, the parser's
+`XML_DOC_WELLFORMED`/`XML_DOC_NSVALID`), the page stays in memory as `SpilledPage::resident`, rewrapped as a fresh parse
+would return it (`PostDocument::new` over the same libxml document: ids, namespaces, PIs, memos rebuilt; `source` and
+`source_directory` from `PostDocument::file_options` of the staging path; `Document::forget_unshared_nodes` drops pass
+A's node wrappers). Why that is the reparse's DOM: a clean parse reparses to the same tree, and Scan's only edit is the
+root's `xml:id`. A sweep that changes the page still re-parses it, from a string instead of a file, because a
+processor's edits can differ from their reparse (adjacent text nodes, an invalid character dropped). A recovered parse,
+a split run and the streaming front-end stage on disk as before. Guard:
+`117_post_2gib_handoff::resident_page_renders_as_the_disk_staged_one` (index + `.bib` bibliography; the disk path forced
+by the test-only `LATEXML_POST_SPILL_PAGE=1`).
+
+Basis: release, production HTML recipe (`--preload=ar5iv.sty --format=html5 --nodefaultresources --pmml --mathtex
+--noinvisibletimes`), median of 3 interleaved runs per side (`kit/perf_ab_cycles.sh` `HTML=1 COPYDIR=1`, base INTPERF
+`95042553f8b`); every destination directory (HTML and every aux file) byte-identical. Cycles carry the load of three
+other writers' runs on the host.
+
+| Document | instructions base → cand (G) | Δ instr | Δ cycles |
+|---|---:|---:|---:|
+| b1000 | 208.08 → 202.94 | −2.47 % | −3.67 % |
+| 2308.04512 | 322.86 → 318.25 | −1.43 % | −2.95 % |
+| 2604.01119 | 9.349 → 9.215 | −1.43 % | −3.78 % |
+| 2103.04797 | 8.100 → 8.042 | −0.72 % | +4.1 % (noise) |
+| amsldoc (control; unsplit too) | 9.138 → 9.002 | −1.49 % | −11 % |
+| 2010.05701 (control) | 267.83 → 267.78 | −0.02 % | +0.24 % |
+| 10 typical papers (`popPERFBs`) | | −0.38 … −2.03 %, mean −1.32 % | −5.5 … +0.7 % |
+
+Peak RSS: book790 6,880,408-6,882,604 → 6,867,564-6,868,032 KB, b1000 1,421,528-1,421,584 → 1,422,724-1,423,436 KB
+(without `forget_unshared_nodes`, b1000 rose 21 MB: the wrapper cache keeps one `Node` per node Scan visited). A/B
+(`popPERFH`, production HTML, every output file hashed: 40 `\printindex`/glossary, 80 `\bibliography`, 39
+`thebibliography`, 30 `\includegraphics`, 20 footnotes, 19 tabular, 60 controls): 0 of 286 changed, E/F/W equal; the
+base against itself first, also 0. ImageMagick stamps each PNG with the clock, so image papers compare only under a fixed
+`SOURCE_DATE_EPOCH` (both kit scripts default it).
+
 ### 2026-11-15 — post's whole-document queries wrap only their matches (PERFD, PERF1 lever L5)
 
 Defect: every whole-document `//NAME[pred]` query post answers by traversal (`PostDocument::findnodes`, ≈20 per HTML

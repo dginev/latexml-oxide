@@ -284,6 +284,12 @@ fn stream_split_gate(path: &str) -> bool {
   }
 }
 
+/// Test override: `LATEXML_POST_SPILL_PAGE=1` stages an unsplit page on disk as
+/// a split one is, so the parity guard can compare the two paths.
+fn spill_every_page() -> bool {
+  std::env::var_os("LATEXML_POST_SPILL_PAGE").is_some_and(|v| v == "1")
+}
+
 /// `--splitnaming` → `SplitNaming`, shared by the DOM and streaming split
 /// front-ends so the two cannot disagree.
 fn resolve_split_naming(split_naming: Option<&str>) -> latexml_post::split::SplitNaming {
@@ -463,6 +469,7 @@ fn try_streaming_front(
         path: page.path.clone(),
         destination: Some(page.destination.clone()),
         destination_directory: destination_directory_of(&page.destination),
+        resident: None,
       });
       // The page's DOM drops here — one resident at a time.
     }
@@ -845,23 +852,32 @@ fn run_post_processing_inner(
     // baton sweeps below visit only the handful of pages that have work instead
     // of re-parsing every page twice (~80 k redundant parses on a 40 k-page
     // document).
+    //
+    // One unsplit page stays resident instead, as in Perl (LaTeXML.pm L445): see
+    // `SpilledPage::resident` for why that is the reparse's DOM.
+    let keep_resident =
+      !split && docs.len() == 1 && docs.iter().all(parsed_cleanly) && !spill_every_page();
     let mut spilled_pages = Vec::with_capacity(docs.len());
     for (i, d) in docs.drain(..).enumerate() {
       let path = page_spill.path().join(format!("page-{i:07}.xml"));
-      if let Err(e) = std::fs::write(&path, d.to_xml_string()) {
+      if !keep_resident && let Err(e) = std::fs::write(&path, d.to_xml_string()) {
         post_error("post", &format!("cannot stage page {i} to disk: {e}"));
         return fallback();
       }
       let (needs_index, needs_bib) = page_placeholder_probes(&d);
+      let destination = d.get_destination().map(String::from);
+      let destination_directory = d.get_destination_directory().map(String::from);
+      let resident = keep_resident.then(|| as_reparsed(d, &path, &page_opts));
       spilled_pages.push(SpilledPage {
         needs_index,
         needs_bib,
         path,
-        destination: d.get_destination().map(String::from),
-        destination_directory: d.get_destination_directory().map(String::from),
+        destination,
+        destination_directory,
+        resident,
       });
-      // `d` drops here: one page's worth of DOM and caches released before the
-      // next is touched.
+      // `d` (unless resident) drops here: one page's worth of DOM and caches
+      // released before the next is touched.
     }
     PostFront {
       spilled_pages,
@@ -870,7 +886,7 @@ fn run_post_processing_inner(
     }
   }; // ==== end of the whole-DOM front-end ====
   let PostFront {
-    spilled_pages,
+    mut spilled_pages,
     db,
     intent_literal,
   } = front;
@@ -1117,27 +1133,35 @@ fn run_post_processing_inner(
   // handful of pages out of tens of thousands, so the sweeps cost a parse each
   // and almost no writes.
   fn sweep_pages(
-    pages: &[SpilledPage],
+    pages: &mut [SpilledPage],
     opts: &PostDocumentOptions,
     proc: &mut dyn Processor,
     label: &'static str,
     selector: fn(&SpilledPage) -> bool,
   ) -> Result<(), ()> {
-    for page_meta in pages.iter().filter(|p| selector(p)) {
+    for page_meta in pages.iter_mut().filter(|p| selector(p)) {
       let (path, dest, dest_dir) = (
         &page_meta.path,
         &page_meta.destination,
         &page_meta.destination_directory,
       );
       let path_str = path.to_string_lossy().into_owned();
-      let mut page = PostDocument::new_from_file(&path_str, opts.clone()).map_err(|e| {
-        post_error("post", &format!("cannot re-read a disk-staged page: {e}"));
-      })?;
+      let resident = page_meta.resident.is_some();
+      let mut page = match page_meta.resident.take() {
+        Some(d) => d,
+        None => PostDocument::new_from_file(&path_str, opts.clone()).map_err(|e| {
+          post_error("post", &format!("cannot re-read a disk-staged page: {e}"));
+        })?,
+      };
       page.destination = dest.clone();
       page.destination_directory = dest_dir.clone();
       let nodes = proc.to_process(&page);
       if nodes.is_empty() {
-        continue; // untouched: the spill on disk is still current
+        // untouched: the spill on disk (or the resident DOM) is still current
+        if resident {
+          page_meta.resident = Some(as_reparsed(page, path, opts));
+        }
+        continue;
       }
       let processed = proc.process(page, nodes).map_err(|e| {
         post_error(label, &format!("{label} failed: {e}"));
@@ -1147,8 +1171,22 @@ fn run_post_processing_inner(
       // re-spill each under the original path only for the first and append
       // the rest as additional spills is NOT needed here: MakeIndex and
       // MakeBibliography fill placeholders in place and return the same page.
-      for d in processed.iter().take(1) {
-        if let Err(e) = std::fs::write(path, d.to_xml_string()) {
+      for d in processed.into_iter().take(1) {
+        let xml = d.to_xml_string();
+        drop(d);
+        if resident {
+          // A changed page is re-parsed, in memory: the processors' edits reach
+          // pass B in the reparse's normal form (merged text nodes, rescoped
+          // namespaces), as from disk.
+          let reparsed = PostDocument::new_from_string(
+            &xml,
+            PostDocument::file_options(&path_str, opts.clone()),
+          )
+          .map_err(|e| {
+            post_error("post", &format!("cannot re-read a staged page: {e}"));
+          })?;
+          page_meta.resident = Some(reparsed);
+        } else if let Err(e) = std::fs::write(path, xml) {
           post_error("post", &format!("cannot re-stage a page to disk: {e}"));
           return Err(());
         }
@@ -1157,9 +1195,13 @@ fn run_post_processing_inner(
     Ok(())
   }
 
-  if sweep_pages(&spilled_pages, &page_opts, &mut indexer, "MakeIndex", |p| {
-    p.needs_index
-  })
+  if sweep_pages(
+    &mut spilled_pages,
+    &page_opts,
+    &mut indexer,
+    "MakeIndex",
+    |p| p.needs_index,
+  )
   .is_err()
   {
     return fallback();
@@ -1168,7 +1210,7 @@ fn run_post_processing_inner(
   telemetry::phase_enter(Phase::Bibliography);
   let t_bib = audit_start("MakeBibliography");
   let bib_result = sweep_pages(
-    &spilled_pages,
+    &mut spilled_pages,
     &page_opts,
     &mut bibmaker,
     "MakeBibliography",
@@ -1276,6 +1318,7 @@ fn run_post_processing_inner(
     path,
     destination: dest,
     destination_directory: dest_dir,
+    resident,
     ..
   } in spilled_pages
   {
@@ -1345,7 +1388,15 @@ fn run_post_processing_inner(
         mi.fordblks / (1024 * 1024)
       );
     }
-    let outputs = match render_spilled_page(&path, &mut procs, &ctx, dest, dest_dir) {
+    let rendered = match resident {
+      Some(mut page) => {
+        page.destination = dest;
+        page.destination_directory = dest_dir;
+        render_page(page, &mut procs, &ctx)
+      },
+      None => render_spilled_page(&path, &mut procs, &ctx, dest, dest_dir),
+    };
+    let outputs = match rendered {
       Ok(o) => o,
       Err(PageFailure::Fatal) => {
         remove_pages(written);
@@ -1446,7 +1497,16 @@ pub(crate) fn render_spilled_page(
   // Free the spill as soon as it is parsed: for a 40k-page document the
   // spill area is the size of the core XML, and it need not outlive its page.
   let _ = std::fs::remove_file(path);
+  render_page(page, procs, ctx)
+}
 
+/// [`render_spilled_page`]'s pipeline after the parse: CrossRef → Graphics →
+/// MathML/XSLT on one page, returning its `(destination, output)` pairs.
+fn render_page(
+  page: PostDocument,
+  procs: &mut PageProcessors,
+  ctx: &PageRenderCtx,
+) -> Result<Vec<(Option<String>, String)>, PageFailure> {
   // CrossRef resolves this page's references out of the completed ObjectDB,
   // and its navigation/TOC work reads the DB rather than sibling pages — so
   // it is page-local once pass A has finished.
@@ -1532,6 +1592,30 @@ struct SpilledPage {
   destination_directory: Option<String>,
   needs_index:           bool,
   needs_bib:             bool,
+  /// The page itself, never written to `path`: the one page of an unsplit, cleanly parsed document. Its DOM is
+  /// what re-parsing `path` would give (a clean parse reparses to the same tree, and Scan only adds the root's
+  /// `xml:id`), and [`as_reparsed`] gives it the wrapper state of a fresh parse.
+  resident:              Option<PostDocument>,
+}
+
+/// Whether libxml2 parsed `doc` without errors: a recovered tree (say, adjacent text nodes around a dropped
+/// invalid character) can differ from its reparse, so such a page goes to disk.
+fn parsed_cleanly(doc: &PostDocument) -> bool {
+  let xml = doc.get_document();
+  xml.is_well_formed() && xml.is_ns_valid()
+}
+
+/// `doc` as [`PostDocument::new_from_file`] would return it from `path`: the same DOM, with fresh ids,
+/// namespaces, memos, node wrappers and `source` options.
+fn as_reparsed(
+  doc: PostDocument,
+  path: &std::path::Path,
+  opts: &PostDocumentOptions,
+) -> PostDocument {
+  let xml = doc.into_document();
+  xml.forget_unshared_nodes();
+  let path_str = path.to_string_lossy();
+  PostDocument::new(xml, PostDocument::file_options(&path_str, opts.clone()))
 }
 
 /// Apply HTML5 cleanup (XML prolog strip, void-element fixes) to one rendered
