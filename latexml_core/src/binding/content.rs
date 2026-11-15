@@ -5950,10 +5950,10 @@ pub fn def_color_model(model: &str, coremodel: &str) {
 /// Perl `Digest` (Package.pm:393-402): digest with side effects and mode changes, then leave a horizontal mode the
 /// digestion entered (`leaveHorizontal_internal`), as [`crate::parameter::Parameter::digest`] does for an argument.
 pub fn binding_digest<T: Into<Tokens>>(tokens: T) -> Result<Digested> {
-  let mode = lookup_string_from_sym(crate::pin!("MODE"));
+  let mode = lookup_mode();
   let value = digest(tokens)?;
-  let nmode = lookup_string_from_sym(crate::pin!("MODE"));
-  if mode != nmode && nmode == "horizontal" {
+  let nmode = lookup_mode();
+  if mode != nmode && nmode == crate::pin!("horizontal") {
     leave_horizontal_internal();
   }
   Ok(value)

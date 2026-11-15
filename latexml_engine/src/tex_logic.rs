@@ -99,24 +99,15 @@ LoadDefinitions!({
   // nondisplay math mode. \ifmmode          c  is true if TeX is in math or display math mode.
   // \ifvmode          c  is true if TeX is in vertical or internal vertical mode.
 
-  DefConditional!("\\ifvmode", {
-    let mode = lookup_string_from_sym(pin!("MODE"));
-    mode.ends_with("vertical")
-  });
-  DefConditional!("\\ifhmode", {
-    let mode = lookup_string_from_sym(pin!("MODE"));
-    mode.ends_with("horizontal")
-  });
+  DefConditional!("\\ifvmode", { mode_ends_with("vertical") });
+  DefConditional!("\\ifhmode", { mode_ends_with("horizontal") });
   // tex.web §211: inner = a box or non-display-math interior. The frame-bound
   // `INNER_BOX` flag (stomach.rs `begin_mode_opt`) carries that sign; the
   // former mode-string test read the document body's `internal_vertical`
   // galley as inner (Perl TeX_Logic.pool:127 identical).
   DefConditional!("\\ifinner", { lookup_bool_sym(pin!("INNER_BOX")) });
   // Perl: LookupValue('MODE') =~ /math$/
-  DefConditional!("\\ifmmode", {
-    let mode = lookup_string_from_sym(pin!("MODE"));
-    mode.ends_with("math")
-  });
+  DefConditional!("\\ifmmode", { mode_ends_with("math") });
 
   //======================================================================
   // I/O testing

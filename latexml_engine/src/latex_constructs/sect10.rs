@@ -623,7 +623,7 @@ pub fn math_array_bindings(
   }
   alignment_bindings(template, String::from("math"), properties, attrs);
   // Perl: if display math, switch to text mathstyle
-  if lookup_string_from_sym(pin!("MODE")).ends_with("math") {
+  if mode_ends_with("math") {
     MergeFont!(mathstyle => "text");
   }
   Let!("\\\\", "\\lx@alignment@newline");

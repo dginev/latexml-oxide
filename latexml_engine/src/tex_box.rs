@@ -117,7 +117,7 @@ fn hlist_of(stuff: &Digested, copy: bool) -> Vec<Digested> {
     },
     _ => stuff.unlist(),
   };
-  let in_paragraph = lookup_string_from_sym(pin!("MODE")) == "horizontal";
+  let in_paragraph = lookup_mode() == pin!("horizontal");
   items
     .into_iter()
     .map(|item| {
@@ -237,7 +237,7 @@ fn splice_mark(cs: &Token, serial: i64) -> Option<Digested> {
   let font = lookup_font().unwrap_or_else(|| Rc::new(Font::text_default()));
   mark.set_property("font", Stored::Font(font));
   mark.set_property("isMath", false);
-  mark.set_property("mode", lookup_string_from_sym(pin!("MODE")));
+  mark.set_property("mode", lookup_mode());
   mark.set_property("alignmentSkippable", true);
   mark.set_property("lx@splice", Stored::Int(serial));
   mark.set_property("reversion", Tokens!());
@@ -741,9 +741,10 @@ LoadDefinitions!({
     // continues their paragraph (`digest_group_body_in_paragraph`). Captured
     // BEFORE `bgroup` (the matching `}` restores mode via `egroup`).
     let mid_para = {
-      let mode = lookup_string_from_sym(pin!("MODE"));
-      let bound = lookup_string_from_sym(pin!("BOUND_MODE"));
-      mode == "horizontal" && bound.ends_with("vertical")
+      lookup_mode() == pin!("horizontal")
+        && with(lookup_string_sym_from_sym(pin!("BOUND_MODE")), |bound| {
+          bound.ends_with("vertical")
+        })
     };
     bgroup();
     let open = Tbox::new(
@@ -799,11 +800,11 @@ LoadDefinitions!({
     // `\parbox{3cm}{A {\bfseries B} C}` 17.92pt, and a reledmac `\pstart` with `{\em x}` split
     // into an extra numbered line (58b, reledmac root A; K18 width-leak family). Guard
     // `perfect_kernel_batch58::text_group_is_measured_in_its_line`.
-    let mode_str = lookup_string_from_sym(pin!("MODE"));
-    if mode_str.ends_with("vertical")
-      || (matches!(mode, Some(TexMode::Text)) && mode_str == "horizontal")
+    let mode_sym = lookup_mode();
+    if with(mode_sym, |mode_str| mode_str.ends_with("vertical"))
+      || (matches!(mode, Some(TexMode::Text)) && mode_sym == pin!("horizontal"))
     {
-      properties.insert("mode", Stored::String(pin(&mode_str)));
+      properties.insert("mode", Stored::String(mode_sym));
     }
     List {
       boxes,

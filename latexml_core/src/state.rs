@@ -4642,6 +4642,26 @@ pub fn lookup_string_from_sym(key: SymStr) -> String {
     Some(v) => v.into(),
   }
 }
+
+/// [`lookup_string_from_sym`]'s value as its interned symbol (`pin!("")` when unset), without the `String`.
+pub fn lookup_string_sym_from_sym(key: SymStr) -> SymStr {
+  let state = state!();
+  match state.lookup_value_sym(key) {
+    None => pin!(""),
+    Some(Stored::String(v)) => *v,
+    Some(other) => arena::pin(String::from(other)),
+  }
+}
+
+/// The current `MODE`, for the mode tests on every digested token: compare with `pin!("horizontal")`, or use
+/// [`mode_ends_with`].
+pub fn lookup_mode() -> SymStr { lookup_string_sym_from_sym(pin!("MODE")) }
+
+/// Whether the current `MODE` ends with `suffix` (Perl's `lookupValue('MODE') =~ /vertical$/`).
+pub fn mode_ends_with(suffix: &str) -> bool {
+  arena::with(lookup_mode(), |mode| mode.ends_with(suffix))
+}
+
 /// like `lookup_value`, but casts the entry into a SymStr from the string interner
 ///  (`pin!("")` if None)
 pub fn lookup_string_sym(key: &str) -> SymStr {
