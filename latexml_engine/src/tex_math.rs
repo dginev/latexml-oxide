@@ -1058,7 +1058,8 @@ LoadDefinitions!({
           need_scriptpos: props.need_scriptpos,
           need_mathstyle: props.need_mathstyle }
       ), None);
-    after_assignment();
+    after_assignment()?;
+    Ok(Vec::new())
   });
 
   // Perl: DefConstructor('\mathaccent Number Digested', ..., afterDigest => sub { ... })

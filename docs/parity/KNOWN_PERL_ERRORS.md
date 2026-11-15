@@ -19775,6 +19775,21 @@ B.
 \end{document}
 ```
 
+## 1247. `DefAutoload` of a file that is not `.pool`/`.sty`/`.cls` dies instead of Warning
+
+Package.pm:1107, `DefAutoload`'s branch for any other definition file name, calls `Warning(...)`, which
+`LaTeXML::Package` neither defines nor imports (Common/Error.pm exports `Warn`). The intended Warning becomes
+`Fatal:misdefined:LaTeXML::Package::DefAutoload Undefined subroutine '&LaTeXML::Package::Warning' called`, and the
+conversion fails. Minimal trigger, in a `.sty.ltxml` binding a document loads:
+
+```perl
+DefAutoload('gbar', 'gbar');   # a bare name, no .sty/.cls/.pool
+```
+
+Rust Warns `unexpected:gbar Don't know how to autoload \gbar from gbar` and goes on
+(`latexml_engine::tex::def_autoload_file`, the Rhai `DefAutoload`; guard
+`30_script_bindings::package_pm_calls_take_effect_in_a_conversion`). The fix for Perl is `Warn(...)`.
+
 ## 1248. `collapseXMDual` searches the whole document for each dual's references, and libxml2 refuses it past 10M nodes
 
 Document.pm:1643: when an `ltx:XMDual` with an `xml:id` collapses to a branch that has its own id, `collapseXMDual`

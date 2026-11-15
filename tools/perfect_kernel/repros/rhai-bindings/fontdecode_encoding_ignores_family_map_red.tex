@@ -1,0 +1,14 @@
+% mechanism: `font_decode` (binding/content.rs) takes the current font's family map even when an encoding is given;
+%   Perl's FontDecode (Package.pm:2871) reads a family map only through a font, which it looks up only when no
+%   encoding is given (FontDecodeString, Package.pm:2895, the same)
+% witness: synthetic (revCHEAT3; the binding lxpre.sty.rhai, lxpre.sty.ltxml for Perl, lxpre.sty for pdflatex)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "y"; Perl 0.8.8: <p>y</p>, 0 errors
+% engines: CHEAT3b: <p>Y</p> (the `serif` family's map), 0 errors
+% expect:  0 errors, 0 warnings; <p>y</p>
+% status:  RED (CHEAT3b)
+% moves:   post-merge
+\documentclass{article}
+\usepackage{lxpre}
+\begin{document}
+\lxfdf
+\end{document}

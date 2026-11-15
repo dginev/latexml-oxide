@@ -19,7 +19,9 @@ rules, and `compute_indirect_model` cannot discover DTD elements. Fixing this pr
 would require significant rearchitecting of the containment model for a rarely-used feature.
 
 **Impact:** Namespace tests (ns1–ns5) are permanently ignored. The `DocType!` macro and
-`set_doc_type()` function have been removed.
+`set_doc_type()` function have been removed. A Rhai binding's `DocType(root, pubid, sysid[, namespaces])`
+(Package.pm:2032) Warns once per call, `unexpected:DocType`, that no DTD is read, then registers its namespaces as
+`RegisterDocumentNamespace` does.
 
 ### 2. No `%\n` in TeX Attributes
 
@@ -10120,34 +10122,34 @@ Witnesses qworld (24 schema errors), colorframed-doc (6), tableaux/exemples (2).
 Guards `perfect_kernel_batch56::block_in_a_list_before_an_item_gets_an_auto_item`,
 `perfect_kernel_batch56::nested_list_before_an_item_gets_an_auto_item`.
 
-### 262. The frontmatter always opens the document: preamble residue and visible body content before the flush follow it (Perl: placed at the current point, title stranded after the body)
+### 262. The frontmatter opens the document, and body content keeps its order around the title as the PDF prints it (Perl: placed at the current point, title stranded after the body)
 
-**Perl** places a `\maketitle` flush at the current insertion point
+**Principle.** The document model puts the frontmatter group before all `document.body.class` content
+(LaTeXML-structure.rnc:34); within that, every word keeps the place the PDF gives it (content > markup > PDF,
+FIDELITY_CHARTER). **Perl** places a `\maketitle` flush at the current insertion point
 (Base_Utility.pool.ltxml:918) and the fallback at the top; whatever precedes the
-current point stays ahead of `<title>`. The document model puts the frontmatter group
-before all `document.body.class` content (LaTeXML-structure.rnc:34), so any visible
+current point stays ahead of `<title>`, so any visible
 node there — a paragraph the PREAMBLE typeset (an undefined command's marker and its
 argument: engine primitives such as `\mubytein`/`\XeTeXgenerateactualtext`, a missing
 sibling file's macros, an unbound class option), prose or a class-drawn cover before
 `\maketitle`, a logo — leaves `<title>` stranded after the body: schema-invalid, and
 SHARED in the 59 s112 manuals whose first jing error was a frontmatter element.
-**Rust** (user-approved surpass, 2026-09-23), two layers in the one placement pass
+**Rust** (user-approved surpass, 2026-09-23), three layers in the `\maketitle` flush
 (`place_frontmatter`, base_utilities/frontmatter/place.rs): (1) the `\begin{document}` constructor
 (latex_constructs/sect02.rs) marks every child of a root the preamble already opened
 as PREAMBLE residue (`_preamble`, internal). LaTeX forbids typesetting there
 (`\@nodocument`, "Missing \begin{document}"), so residue is never body: the pass moves
 it below the frontmatter like content-free nodes and never wraps it as a cover
 titlepage. `\begin{document}` still issues no `\par` — preamble text and the first body
-words share a paragraph as in TeX. (2) Visible body content before the flush no longer
-stops the pass: the frontmatter goes to the head (after the resources and any leading
-frontmatter-group run) and that content follows it in its own order. Every flush ends
+words share a paragraph as in TeX. (2) Visible body content before the flush does not
+stop the pass: the frontmatter goes to the head (after the resources and any leading
+frontmatter-group run); a section, TOC or float ahead of it follows it in its own order. Every flush ends
 the paragraph it interrupts, when every open element up to the root auto-closes, as
 LaTeX's flush points do (`\maketitle` opens with `\par`, article.cls:203; `\section`;
 `\end{document}`) — never a frontmatter container: an open `{titlepage}` stays open for
 its `\unwind@titlepage` hook — and a `\maketitle` inside a `\parbox` leaves the box
-content in the box.
-Reordering is limited to moving the frontmatter group up; no content is dropped
-(content_diff.py and golden-PDF recall unchanged on all 59 witnesses). Supersedes the
+content in the box. (3) Body text the PDF prints before the title stays ahead of it (QA91, below).
+No content is dropped (content_diff.py and golden-PDF recall unchanged on all 59 witnesses). Supersedes the
 56ep/56es "never hoist over visible content" controls and the degrade-to-`ltx:text`
 placement of a `\maketitle` in a box (now removed as unreachable); generalizes #258
 (error-marker-only paragraph). Witnesses: 55 of the 59 s112 frontmatter-first-error
@@ -10155,11 +10157,36 @@ manuals become valid (a 56th, bmstu, with 56gg's heading page-break fix) (ean13i
 makebarcode, zwgetfdate, zwpagelayout, a4wide, hebdomon, turnstile ×2, aomart ×2,
 beameruserguide, ltnews, l3news, …). Guards
 `perfect_kernel_batch56::{preamble_residue_follows_the_frontmatter,
-titlepage_around_maketitle_leaves_no_empty_titlepage, frontmatter_leads_a_leading_graphic,
-frontmatter_leads_a_leading_framed_empty_box,
+titlepage_around_maketitle_leaves_no_empty_titlepage, leading_graphic_stays_before_the_title,
+leading_framed_empty_box_stays_before_the_title,
 frontmatter_hoists_over_an_error_marker_only_paragraph}`,
 `perfect_kernel_batch54::maketitle_inside_a_box_goes_to_the_head`; goldens revtex4_endpage
 (now valid), aliceblog.
+**Extended (QA91, DG 2026-11-14: "keep it in place"; BM's probe Q2.3).** Layer (3): the paragraphs and display blocks
+(`is_titlepage_layout`) a `\maketitle` flush finds ahead of it precede the title on the page only where the title
+block prints at that `\maketitle`. The deposit's title-page reading says so (`note_title_page_print`: its run printed
+`\@title` or `\@author`, `\@title` marked by `\lx@title@page@title`); under a class binding, whose reading runs
+article.cls's page in for the class's, the binding declares a class that prints the title and the authors at their
+setters (`TitlePageDecl::setter_print`: iopart.cls:98 `\newcommand\maketitle{\newpage}`). There the text is wrapped,
+after the field-ink lift (#715) took a print of the title or the authors out of it, as
+`<titlepage class="ltx_titlepage_before">` right before the placed title block (`\lx@text@before@title`, after the
+deposit, `wrap_text_before_title`; a titlepage is first-group, so the tree stays valid); where the title block prints
+at the setters or never, it follows the title block as in (2) (2606.08462, 1407.1223). The class means "text that
+preceded `\maketitle`" and, like #903's `ltx_titlepage_continued`, stands for no title: the XHTML `ltx:title`
+template still shows the title and creators beside it, and every engine reader of "a titlepage replacing the title"
+excludes both (`title_standing_titlepage`: `settle_cover_title_ink`, `lift_marked_field_ink`,
+`maybe_dedup_leading_title_ink`). Not wrapped: blank lines and `\vspace` (content-free), preamble residue (and the
+body words that share its paragraph, as in TeX), the paragraph holding a boxed `\maketitle`, whatever follows the
+first section, TOC or float, and a run printing no word (`net_content_words`), graphic or rule: a mark a class left of
+an author line (`]`, `,`, `*1`, `1`: 2209.03353, 0905.0312, 2305.09250, 2309.09081, 2407.04435, 2409.17131, 2506.23765)
+keeps the base placement, though pdflatex prints it first. A `{titlepage}` or `\section` flush before `\maketitle`
+places the frontmatter first, and the text before `\maketitle` still follows the title (RED
+`text_before_maketitle_after_an_earlier_flush_red`). The decision reads the `\@title`/`\@author` marks, one answer for
+the whole block, not the printed title's words per field: REDs `text_before_maketitle_where_a_class_prints_its_own_title_store_red`
+(a class's own `\my@title` printed at `\maketitle`: not wrapped) and
+`text_before_maketitle_where_title_and_authors_print_apart_red` (the title at `\title`, the authors at `\maketitle`:
+wrapped above both). Guard `perfect_kernel_batch56::text_before_maketitle_stays_before_the_title` (the setter-printing
+raw class, the iopart binding, the `\maketitle`-printing control, the word-less run); golden revtex4_endpage.
 
 ### 263. `\unwind@titlepage` re-homes what it unwraps through the content model (Perl: children spliced in place)
 
@@ -10337,6 +10364,19 @@ its degree statement and Urbana-Champaign line (thesis-ex 86.1 → 97.4 %, with 
 uppercase `\@Utitle`/`\@Uauthor` copies its own `\title`/`\author` would make). A definer the body never reaches (an
 untaken non-`\newif` branch, a nested macro body) is accepted too; the replay's diagnostics hold drops what then errors.
 Guard `perfect_kernel_batch61::uiucthesis_title_page_is_replayed`.
+**Extended (DEPN, 2026-11-14).** The deposit and the replay run with the frontmatter's fields emptied
+(`\let\@date\@empty`, sect05.rs `TITLE_PAGE_FIELDS`, and the handed stores, `\lx@captured@stores`) so that the title
+page does not print them twice; a class that reads a field as a number met the empty one: `\@tempcnta=\@date\relax`
+printed "Exam session 0" with a "Missing number" Warning where pdflatex prints "Exam session 2024" (BM's probe
+`session`, QA60). The fields are emptied for printing only: while the deposit and the replay run, the token a
+quantity's operand reads after its signs (tex.web §441, gullet.rs `scan_optional_signs`; an eTeX expression's factor,
+etex.rs `etex_readexpr_i`), or that an assignment's optional `=` (§405) or the `by` of `\advance`, `\multiply` and
+`\divide` (§1236) expands ahead of it (`gullet::operand_lookahead`), expands to the field's value when its meaning is
+still the emptied one (`gullet::set_operand_values`, `frontmatter_stores::deposit_operand_values`). The lookahead of a
+scan that already has its number (`\vskip 1em \@date`, the scan for `plus`) still reads it empty. Reach: no arXiv
+paper of a 20,000-paper sample ships a class reading `\@date`/`\@title`/`\@author`/`\@thanks` as a number. Guard
+`perfect_kernel_batch56::deposit_reads_a_field_as_a_number` (the replay, `\@maketitle` through `\ifnum`,
+`\setcounter`, a dimension and `\numexpr`; no `=`, no `by`; and `\date{}`, where pdflatex errs too: one Warning).
 
 ### 266. A recatcoded 8-bit input byte is decoded where it enters, through its own inputenc declaration (Perl: the font map's upper half, applied to every character)
 
@@ -35671,8 +35711,11 @@ the un-featured traces are Rust's own instrumentation with no Perl feature to en
 apart from `Info:` lines in a log. An undeclared `--debug` feature is named at the end of the run, before the verdict,
 as Perl's `CheckDebuggable` (`check_debuggable`, `common/error.rs`); its known list holds only the features Rust
 declares (`frontmatter`; Perl's `DebuggableFeature` calls declare 15: `alignment`, `modes`, `size`, `svg`, …), so a
-`DebugFeature!` site ported from Perl registers its feature through `debuggable_feature`. Guard
-`cluster_cli::debug_feature_scope::debug_feature_prints_only_its_feature`.
+`DebugFeature!` site ported from Perl registers its feature through `debuggable_feature`. A Rhai binding's
+`Debug(message)` and `Debug(cat, obj, message)` are `Debug!` (DG 2026-11-14): printed only under `--verbose`, counted
+either way, where Perl's `Debug` prints unconditionally. Guards
+`cluster_cli::debug_feature_scope::debug_feature_prints_only_its_feature`,
+`script_bindings::tests::diagnostics_surface_info_notes_progress_and_fatal`.
 
 ### 1007. calc's names inside a pgfmath expression: calc's value and a Warning per parse (EB1)
 

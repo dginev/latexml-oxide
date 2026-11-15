@@ -11,6 +11,43 @@
     `verbatim` in `\@currenvir`, as in LaTeX. The kernel's first aid for the raw cleveref.sty is
     not registered under LaTeXML's cleveref binding, which replaces the code it repairs. Guard
     `perfect_kernel_batchqa47a::batchqa47a_command_hook_rows` (OXIDIZED_DESIGN_DIVERGENCES #1048).
+  - **The Rhai cheat sheet is a three-way API: Perl | Rust | Rhai, every Perl and Rust cell filled.**
+    `CHEATSHEET.md`'s middle column, formerly the compile-time macro alone, names the Rust a compiled
+    binding uses for each call: the macro where there is one, then the function, method, type, field or
+    trait item the Rhai call itself reaches, each a rustdoc intra-doc link (the sheet is now also rendered as
+    `script_bindings::cheatsheet`, so `cargo doc` fails on a renamed item). The Rhai helpers Perl has no single
+    call for show the Perl that does the same; four Perl calls point at the Rhai expression that already does
+    them (`DefExpandable`, `Float`, `GenerateID`, `TokensI`). Gate
+    `script_bindings::tests::api_reference_is_up_to_date` (no empty Perl or Rust cell).
+  - **26 more Package.pm calls in the Rhai dialect, with Perl's names and meanings**: `CleanIndexKey`,
+    `CleanClassName`, `CleanBibKey`, `NormalizeBibKey`, `CleanURL`, `ComposeURL`, `TrimmedCommaList`,
+    `HasKeyVal`, `DisableKeyVal`, `AfterAssignment`, `Deprecated` (Warns once per key), `DigestLiteral`,
+    `DefAutoload`, `FontDecode`, `FontDecodeString`, `LoadFontMap`, `MaybePeekLabel`, `MaybeNoteLabel`,
+    `CheckOptions`, `Stringify`, `gullet.ReadParameters`, the I-forms `DefConditionalI`, `DefEnvironmentI`,
+    `DefMathI`, `DefRegisterI`, and `DocType`, which Warns that no DTD is read (RelaxNG only,
+    OXIDIZED_DESIGN_DIVERGENCES #1) and registers its document namespaces. 17 Perl calls remain outside the
+    dialect, listed at the end of `CHEATSHEET.md`. Guard
+    `script_bindings::tests::package_pm_gap_calls_mean_what_perl_does`.
+  - **Text set before `\maketitle` stays above the title** (QA91, Bruce Miller's probe). A
+    preprint number, a copyright line or a journal heading the document typesets before
+    `\maketitle` came out after the title, the authors and the abstract; it now stays ahead of
+    them, as the PDF prints it, wherever the class's title page prints the title at
+    `\maketitle`. A class that prints the title and the authors where they are set (iopart)
+    keeps its order: text between them and `\maketitle` still follows them, and so does a
+    leftover mark that prints no word (a stray `]`, an affiliation mark `*1`). Guard
+    `perfect_kernel_batch56::text_before_maketitle_stays_before_the_title`
+    (OXIDIZED_DESIGN_DIVERGENCES #262).
+  - **A class's title page reads the date or the title as a number** (DEPN, Bruce Miller's
+    probe). A class whose title page computed with `\@date` (`\@tempcnta=\@date`,
+    `\advance\@tempcntb\@date`, `\ifnum`, `\numexpr`) printed "Exam session 0" with a
+    "Missing number" Warning, or lost its title-page block; it now prints "Exam session 2024"
+    as pdflatex. Guard `perfect_kernel_batch56::deposit_reads_a_field_as_a_number`
+    (OXIDIZED_DESIGN_DIVERGENCES #265).
+  - **A paper's own pre-2.0 `lni.cls` keeps LaTeX's `\author`** (LXAB). The lni binding gave
+    every lni paper the class's 2.0 author command (authblk's four arguments), so a paper
+    shipping an older class raised an Error, printed its author block a second time and gained
+    an ORCID link it never wrote (2203.09493, 1705.02823, 2210.04484). Guard
+    `perfect_kernel_batch68u::lni_authors_carry_email_orcid_and_affiliation`.
   - **No default `rowspacing="0pt"` on a MathML table** (issue 695). An `array`, `aligned` or
     other multi-row table carried `rowspacing="0pt"`, which MathML Core does not have (Chrome
     ignores it) but Firefox and MathJax honour, setting the rows touching. It is no longer

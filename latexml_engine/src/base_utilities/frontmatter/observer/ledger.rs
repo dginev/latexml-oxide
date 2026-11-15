@@ -660,6 +660,19 @@ pub fn class_maketitle_runs() -> Option<bool> {
   })
 }
 
+/// Whether the document class's bindings declare that it prints the title and the authors at their setters
+/// ([`policy::TitlePageDecl::setter_print`]: iopart.cls), its `\maketitle` printing neither.
+pub fn class_prints_title_at_setters() -> bool {
+  CLASS_BINDINGS.with(|c| {
+    let c = c.borrow();
+    c.0.first().is_some_and(|class| {
+      c.0
+        .iter()
+        .any(|binding| policy::declared_setter_print(binding, class))
+    })
+  })
+}
+
 /// The binding owning the tracked command `n`'s meaning now ([`author_binding`]'s reading, for any of
 /// [`OWNED_COMMANDS`]); `kernel` when it has none.
 fn meaning_owner(n: usize) -> String {

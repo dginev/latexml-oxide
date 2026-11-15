@@ -325,7 +325,7 @@ pub fn do_def(globally: bool, cs: Token, params: Tokens, body: Tokens) -> Result
     )?,
     scope,
   );
-  after_assignment();
+  after_assignment()?;
   Ok(())
 }
 

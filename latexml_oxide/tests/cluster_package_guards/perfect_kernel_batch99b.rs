@@ -28,7 +28,7 @@ macro_rules! repro {
 
 /// Converts `tex` from the binary eager and `--streaming`, checks each has no Error and `warnings` Warnings, all of
 /// them the net's `unclaimed`, and that both give the same XML; returns it, each whitespace run one space, from its
-/// `<title>` to its end.
+/// `<title>` (or the text set before `\maketitle`, kept ahead of it: `ltx_titlepage_before`, QA91) to its end.
 #[track_caller]
 pub(super) fn converted(tex: &str, warnings: usize) -> String {
   let mut xmls = Vec::new();
@@ -48,7 +48,10 @@ pub(super) fn converted(tex: &str, warnings: usize) -> String {
   }
   assert_eq!(xmls[0], xmls[1]);
   let xml = xmls[0].split_whitespace().collect::<Vec<_>>().join(" ");
-  let start = xml.find("<title>").unwrap_or(0);
+  let start = xml
+    .find(r#"<titlepage class="ltx_titlepage_before""#)
+    .or_else(|| xml.find("<title>"))
+    .unwrap_or(0);
   let end = xml[start..]
     .find("</document>")
     .map_or(xml.len(), |end| start + end);
