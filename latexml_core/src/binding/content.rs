@@ -6589,9 +6589,12 @@ thread_local! {
   /// (2103.04797, 1704.02085), and a string compare is cheaper than a hash probe (the family one built two keys).
   static FONTMAP_KEY_LAST: std::cell::RefCell<Option<(String, FontmapKeySyms)>> =
     const { std::cell::RefCell::new(None) };
-  static FONTMAP_FAMILY_KEY_LAST: std::cell::RefCell<Option<(String, String, (SymStr, SymStr))>> =
+  static FONTMAP_FAMILY_KEY_LAST: std::cell::RefCell<Option<(String, String, FamilyKeySyms)>> =
     const { std::cell::RefCell::new(None) };
 }
+
+/// `fontmap_family_key_syms`' answer: the family map's key and its multichar table's.
+type FamilyKeySyms = (SymStr, SymStr);
 
 #[derive(Clone, Copy)]
 pub struct FontmapKeySyms {
