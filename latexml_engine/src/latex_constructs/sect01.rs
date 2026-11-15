@@ -44,8 +44,8 @@ pub(crate) fn make_missing_float_counters() -> Result<()> {
 /// load reads `\lx@kernel@chapter`: amsart_cls.rs `\specialsection`). Only the document's first `\documentclass`: a
 /// second one (a merged file's) loads no class in TeX — in the preamble latex.ltx:18618 of TL 2025 has made it
 /// `\@twoclasseserror`, in the body :18621 `\@onlypreamble\documentclass` stops it ("Can be used only in preamble",
-/// a diagnostic we do not raise yet, SYNC_STATUS) — and keeps the first class's chapters (memoir with a second
-/// `\documentclass{memoir}` in the body: both chapters).
+/// raised by `\begin{document}`'s walk, mod.rs `disable_preamble_commands`) — and keeps the first class's chapters
+/// (memoir with a second `\documentclass{memoir}` in the body: both chapters).
 pub(crate) fn retract_chapter_before_class_load() {
   if lookup_bool("\\chapter:settles") {
     return;

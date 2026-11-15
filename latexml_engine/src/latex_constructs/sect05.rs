@@ -148,7 +148,6 @@ pub(crate) fn load() -> Result<()> {
 
   DefConstructor!("\\usepackage PackageOptions ExpandedSemiverbatim []",
                   "<?latexml package='#2' ?#options(options='#options')?>",
-    before_digest => { only_preamble("\\usepackage") },
     properties => sub[args] { Ok(options_pi_spelling(args[0].as_ref())) },
     after_digest => sub[whatsit] {
       let options: Option<&Digested> = whatsit.get_arg(1);
@@ -187,7 +186,6 @@ pub(crate) fn load() -> Result<()> {
 
   DefConstructor!("\\RequirePackage PackageOptions ExpandedSemiverbatim []",
   "<?latexml package='#2' ?#options(options='#options')?>",
-  before_digest =>  { only_preamble("\\RequirePackage") },
     properties => sub[args] { Ok(options_pi_spelling(args[0].as_ref())) },
   after_digest => sub[whatsit] {
     let options: Option<&Digested> = whatsit.get_arg(1);
@@ -216,7 +214,6 @@ pub(crate) fn load() -> Result<()> {
 
   DefConstructor!("\\LoadClass PackageOptions ExpandedSemiverbatim []",
     "<?latexml class='#2' ?#options(options='#options')?>",
-    before_digest => { only_preamble("\\LoadClass") }
     properties => sub[args] { Ok(options_pi_spelling(args[0].as_ref())) },
     after_digest => sub[whatsit] {
       let options_arg: Option<&Digested> = whatsit.get_arg(1);
@@ -426,7 +423,6 @@ pub(crate) fn load() -> Result<()> {
   // `opt@<currname>.<currext>`.
   DefConstructor!("\\RequirePackageWithOptions Semiverbatim []",
   "<?latexml package='#1'?>",
-  before_digest => { only_preamble("\\RequirePackage") }
   after_digest => sub[whatsit] {
     let pkg_arg: Option<&Digested> = whatsit.get_arg(1);
     let pkg = pkg_arg.map(|c| c.to_string().replace(' ', "")).unwrap_or_default();
@@ -458,7 +454,6 @@ pub(crate) fn load() -> Result<()> {
   // oblivoir.cls → oblivoir-utf.cls (istgame-doc: `\text`/`\binom` undefined).
   // Guard: `perfect_kernel_batch56::load_class_with_options_forwards_the_calling_options`.
   DefConstructor!("\\LoadClassWithOptions Semiverbatim []", "<?latexml class='#1'?>",
-    before_digest => { only_preamble("\\LoadClassWithOptions") }
     after_digest => sub[whatsit] {
       let class_arg: Option<&Digested> = whatsit.get_arg(1);
       let requested = class_arg.map(|c| c.to_string()).unwrap_or_default();
@@ -762,8 +757,14 @@ pub(crate) fn load() -> Result<()> {
   // through `\hook_use:n{begindocument}` instead — see line 2820+ comment.)
   Let!("\\@begindocumenthook", "\\@empty");
 
-  // Perl L5511: \@preamblecmds collects \@onlypreamble entries; empty by default
-  def_macro_noop("\\@preamblecmds")?;
+  // latex.ltx's `\@onlypreamble` list (the dump's, :1224-1226), walked by `\begin{document}` (mod.rs
+  // `disable_preamble_commands`). Perl L5511 empties it; without a dump it is Perl's own `onlyPreamble` set.
+  if lookup_definition(&T_CS!("\\@preamblecmds"))?.is_none() {
+    DefMacro!(
+      "\\@preamblecmds",
+      r"\do\documentclass\do\documentstyle\do\usepackage\do\RequirePackage\do\RequirePackageWithOptions\do\LoadClass\do\LoadClassWithOptions\do\@onlypreamble"
+    );
+  }
   // latex.ltx:9019 `\def\@notprerr{\@latex@error{Can be used only in
   // preamble}\@eha}`. `\document` (latex.ltx:9521-9522) runs
   // `\gdef\do#1{\global\let#1\@notprerr}\@preamblecmds`, and because
@@ -774,6 +775,20 @@ pub(crate) fn load() -> Result<()> {
   // ends the whole document at the license (beameruserguide lost 16 of 26
   // chapters). Perl defines neither (SHARED); OXIDIZED_DESIGN_DIVERGENCES #226.
   DefMacro!("\\@notprerr", "\\@latex@error{Can be used only in preamble}\\@eha");
+  // The `\@notprerr` of a command `\begin{document}` wrapped (mod.rs `disable_preamble_commands`): none inside a
+  // package or class load (`\@currext`), which pdflatex never performs after the preamble, nor while a binding runs a
+  // sub-file's preamble (Perl's `inPreamble`, standalone_sty.rs).
+  DefMacro!("\\lx@notprerr", sub[_args] {
+    if lookup_bool_sym(pin!("inPreamble")) {
+      return Ok(Tokens!());
+    }
+    let ext = if lookup_definition(&T_CS!("\\@currext"))?.is_some() {
+      do_expand(T_CS!("\\@currext"))?.to_string()
+    } else {
+      String::new()
+    };
+    Ok(if matches!(ext.trim(), "sty" | "cls") { Tokens!() } else { Tokens!(T_CS!("\\@notprerr")) })
+  });
 
   // Perl L5536-5539: q-tokens used by \@notdefinable error formatting and by
   // various pattern-quoting expansion paths (e.g. \GenericWarning padding).
