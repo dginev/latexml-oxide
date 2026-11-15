@@ -348,6 +348,27 @@ code on AMD (skid), so the figures are counts × stepped instructions.
 
 ## Audit log (periodic passes; newest first)
 
+### 2026-11-15 — owned names, attribute values and text read only to compare (MEMC, MEM1 lever L12)
+
+Defect (dhat, `agent_reports/report_MEM1.md` L12): rust-libxml's `get_name` / `get_attribute` / `get_content` copy
+into a `String` (`c_str_to_string`), and the hot callers only compared, measured or re-appended the copy: element-name
+tests in the math parser, the post-processor and core's `document.rs` (`is_ltx_element`, `resolve_xmref`,
+`collect_named`, `PostDocument::get_qname`/`is_qname`/`qname_prefix`), `get_attribute(..).is_some()` presence tests
+(`open_text_internal`'s `_autoopened`, per character) and `get_attribute(..).as_deref() == Some(..)`, and text content
+in `append_tree`, `open_text`/`close_text_internal` (its length) and `DefMathLigature`'s matcher. Fix: the rust-libxml
+0.3.24 borrowed reads (copy on the stack): `common::xml::name_is` over `RoNode::with_name`, `with_namespace_href`,
+`has_attribute` (the `xmlHasProp` lookup `get_attribute` makes first), `with_attribute(c"..", ..)`, `with_content`.
+Measured: instructions:u, best of 3 interleaved, base INTPERF5 `304ec7d5157`, cortex's ar5iv HTML recipe unless xml.
+The three commits (names / attributes / text) together: b250 xml / html −0.34 / −0.39 %, 2308.04512 xml / html −0.39 /
+−0.17 %, 2604.01119 −0.41 %, amsldoc xml −0.51 %, ten typical papers (popPERFBs.tsv) −0.18 to −0.49 %; alone, names
+−0.06 to −0.29 %, attributes +0.04 to −0.24 %, text −0.01 to −0.13 %. Cycles:u moved ±1-10 % between runs on the
+shared host, below resolution. Output byte-identical (HTML and every aux file, XML) on all 16 measured runs (base
+twice) and on `popMEMC.tsv` (120 papers, 60 controls): raw XML 180/180, HTML recipe 177/180, E/F/W equal; the three
+(2409.06317, 2403.20315, 2006.01789) wrote a different number of image files under the A/B's load and are identical
+alone, two runs per side. Peak RSS (HTML): book790 4,458,276 → 4,455,864 KB, b1000 1,364,376 → 1,367,620 KB. Dropped: L17 (`decode_qname` borrowing its
+localname) −0.01 to −0.08 %; L14's attribute map already reads borrowed (PERFG) and stays owned because
+`open_element_at` takes a `HashMap<String, String>`; `generate_id`'s xml:id and `get_xml_id`'s values are kept, not compared.
+
 ### 2026-11-15 — per-character and serializer allocations (MEMB, MEM1 levers L4a/b/e, L7, L10, L18)
 
 Defects (allocation counts of `agent_reports/report_MEM1.md`): every digested letter paid a `String` in
