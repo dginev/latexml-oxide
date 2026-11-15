@@ -15418,7 +15418,14 @@ astro-ph9806372 2 → 4 (A/B over the 250 `\documentstyle` papers of the census 
 latex.ltx's "`\usepackage` before `\documentclass`" (`\@fileswithoptions`) that pdflatex adds is not reproduced. No census paper uses
 `\usepackage` after `\documentstyle` (0806.0904 redefines it: `\def\usepackage#1{\input{#1.sty}}`, no trap in pdflatex either). Guard `perfect_kernel_batch70b::documentstyle_usepackage_errs_as_latex209`.
 
-### 731. A stand-in binding is followed by the paper's copy of its file, which only provides ("a stand-in's copy provides")
+### 731. A stand-in binding is followed by the paper's copy of its file, which only provides ("a stand-in's copy provides") — absorbs #732 #733 #736 #744
+
+**The one rule.** After a stand-in binding has loaded, the copy of its file the paper ships is read raw at the same point
+and provides only what the binding lacks: a name the binding owns keeps the binding's meaning for the document (the
+copy's own code sees its own), a locked name is refused, a counter, a text default or a saved meaning the binding's
+load did not make is the copy's (`binding/content.rs:2518 read_stand_in_copy`, `:2945 copy_is_the_stood_in_file`;
+`state.rs:2178 note_copy_provides_assignment`, `:2805 leave_copy_provides_frame`, `:2258 copy_provides_refuses_locked`).
+Rules 0-14 below are its sub-rules; the members after them are #732, #733, #736 and #744.
 
 **TeX**: `\documentclass{svjour3}`, `\usepackage{aas_macros}`, `\input tcilatex` read the author's file the paper ships;
 every definition in it, and everything it registers for later, takes effect.
@@ -15907,6 +15914,103 @@ from `input_definitions_impl` after the binding's `\ver@` and from `input`'s `.t
    `provides_route/self_named_copy_text_names.tex` (aas_macros.sty, from scratch),
    `provides_route/standard_class_derivative_text_names.tex`.
 
+
+**Members absorbed into this entry** (each was its own entry; the numbers stay as stubs):
+
+- **#732 — the standard classes' names in their own load; a base class is told by its load frame.** `article_cls.rs`,
+  `report_cls.rs`, `book_cls.rs` assign the names classes.dtx gives each class (article.cls:613-622, report.cls:712-722,
+  book.cls:718-727: `\contentsname`, `\listfigurename`, `\listtablename`, `\refname`/`\bibname`, `\indexname`,
+  `\figurename`, `\tablename`, `\partname`, `\chaptername` (report, book), `\appendixname`, `\abstractname` (article,
+  report)) with the kernel's predefined values, so output is unchanged; Perl assigns only `\refname`
+  (article.cls.ltxml:98) and `\bibname` (report.cls.ltxml:100, book.cls.ltxml:100) there, the rest in its kernel
+  (latex_constructs.pool.ltxml:719-722, "These actually should be in article/report/book"); the kernel predefinitions
+  stay. Every class load is a frame (`state::ClassLoadFrame`, entered at `binding::content::input_definitions` for a
+  `.cls` with options handled), recording the macros assigned outside LaTeXML's kernel layers and a name a lock kept,
+  with the macro's identity. Readers: (1) rule 11's text-default clash, over a base class its own `\LoadClass`
+  requested or one loaded while it is open (`State::copy_class_loads`): probes nc_chain (pdflatex 2 errors, "Figure 1",
+  "References"), nc_namedef (`\expandafter\def\csname bibname\endcsname`, 1 error), nc_cond (`\AtBeginDocument{\def\bibname…}`,
+  0) — replacing r6's scan of the base class file's text and its per-thread cache, which leaked to the next paper on the
+  thread; (2) a text default still the macro a class's load assigned is the class layer's (`state.rs:3512
+  class_layer_definition`), so a copy's redefinition stands: over the 415 A/B papers 4 changed, each as its PDF —
+  emulateapj.cls:470 `\def\abstractname{ABSTRACT}` (1202.3442), aipproc.sty:49 `\def\refname{REFERENCES}`
+  (astro-ph0105230, astro-ph9912326, hep-ph0102191). A base class's `\let<name>\relax` before the copy's `\newcommand`
+  (`base_class_name_made_relax`), or the copy's own earlier `\let\refname\relax` in the frame, leaves it definable
+  (pdflatex 0 errors, "Works Cited"). Guards `perfect_kernel_batch72a::{copy_newcommand_through_a_chained_base_class,
+  copy_newcommand_of_a_base_class_name_errs}`, `perfect_kernel_batchst3::a_document_after_another_on_one_thread_is_the_document_alone`
+  (its class-load row); repro `stand-in-copies/text_defaults/chain/`.
+- **#733 — a raw file's own repeat load of natbib ends the binding's early load.** When a stand-in's copy loads natbib
+  itself (`File` requester: neurips_2024.sty:71 `\RequirePackage{natbib}`, icml2024.sty:95), that load is the one TeX
+  sees: its options join the first load's (`<file>_loaded_with_options`) and the early-load state
+  (`<file>:requested_by_binding`, rule 11) ends, so a document repeat with new options is LaTeX's "Option clash for
+  package natbib" Error, the first options kept (probes neurips_rep, icml_rep: pdflatex 1 error, author-year; 2410.08709).
+  A copy that comments its load out leaves the early load, and the document's options apply (2506.00573, 2506.01987,
+  2506.08967, 2506.17103, 2506.18071, 2506.22567: numbered, as their PDFs). The clash test reads passed options too
+  (`\opt@<file>`, latex.ltx's `\@if@ptions`: 2110.14346's `\PassOptionsToPackage{numbers, compress}{natbib}` before
+  neurips_2020.sty, no clash, as pdflatex). A repeat's options run in natbib's declaration order (natbib.sty:238-263),
+  and `nobibstyle`/`bibstyle` decide whether a later `\bibstyle@<style>` sets the punctuation: 2506.08967
+  (`[square,numbers]`, then `plainnat`) and 2506.05937 (neurips_2025.sty `[numbers]`, a late `plainnat`) stay numbered,
+  `[square,authoryear]` ends gobbled (r8, `natbib_sty::NATBIB_STYLE_OPTIONS`). Perl ignores a repeat's options (Info).
+  Guard `perfect_kernel_batch72a::natbib_copy_repeat_ends_the_bindings_early_load`; repro
+  `stand-in-copies/natbib_forks/natbib_copy_repeat_ends_the_early_load.tex`. Residual (SYNC 72a row (m)): revtex4_support,
+  achemso, apacite and mnras load natbib other than their real files and are not marked as the file's own load.
+- **#736 — a stand-in class binding loads the base class its real file loads; the copy's one class slot is the net.**
+  latex.ltx lets a class `\LoadClass` once (:18800 `\@twoloadclasserror`, :18938-18942, "Two \LoadClass commands"). A
+  binding that modelled its class on OmniBus/article (ceurart_cls.rs, atlasdoc_cls.rs) let the copy's `\LoadClass` load a
+  second class: ceurart.cls:62 `\LoadClass{scrartcl}` over article, whose `\@ptsize` 0 sent typearea.sty:1400-1413 off
+  its path ("DIV for 0.0pt", then Fatal "Conditional limit of 48000000 exceeded": 2509.11496 9 E / 1 F, 0 words;
+  2608.23214, 2310.02658, 2505.16276; 74 ceurart papers in 2509, 39 in 2506); atlasdoc.cls's
+  `\LoadClass[titlepage, 11pt]{\ADOC@mainclass}` redefined `\@startsection`/`\@sect` (2509.01219; its 3 "Bad type area
+  settings" are true, pdflatex logs them; +26-33 % instructions; #737). (r9: "a binding defines in the original package's
+  conceptual space", "stub bindings load their real dependencies") Each stand-in class binding loads the class its real
+  file `\LoadClass`es under the file's option logic, so the copy's is a repeat: ceurart → scrartcl (ceurart.cls:59-62,
+  `a4paper,twoside=false`; 64 copies in the 1/25 sample, 112 papers in 2506+2509), atlasdoc → its KOMA class
+  (`atlasdoc_cls::main_class`: v13 `\ADOC@mainclass`, scrbook for `BOOK`, scrreprt for `REPORT` (default), scrartcl for
+  `cernpreprint`/`preprint`/`PAPER`/`CONF`/`PUB`; v3 scrbook or scrartcl; v1 scrartcl, article without
+  `koma`/`atlasstyle`; 47 copies), lmcs → amsart `[11pt,reqno]` (55), pnas-new → extarticle (44), jgcc → amsart
+  `[11pt,reqno]` (2), czipreprint → amsart `[reqno]` (3), clear2025 → jmlr `[pmlr]` (2; it had jmlr's binding under its own name, so
+  `\ver@jmlr.cls` was undefined). What OmniBus gave such a binding is
+  kept by loading it provide-only over the base (`omnibus_cls::provide_over_base_class`, `ProvideOnlyGuard`, as sect01.rs
+  for `\documentstyle`; #408): ceurart's `{keywords}` (`ltx:classification`; the r8 trial without it lost 10-15 words a
+  paper), `\email`, `\affiliation`. The net (`binding/content.rs:2788 binding_base_class_stands_for`, at the top of
+  `load_class`): when the copy's own code loads a class Y not loaded yet (`\ver@Y.cls` undefined; the binding's own base class is a
+  repeat load: cimart.cls `\LoadClass{article}`), the binding's class frame loaded a class
+  (`state::ClassLoadRecord::classes`) and the paper does not ship it (`shipped_with_paper`), it is not loaded — Info "the
+  binding's base class (book.cls) stands for the copy's \LoadClass{article}: not loaded" (svmult; daj's article.cls) — and
+  the binding's classes become the copy's base classes (`state.rs:3465 note_copy_base_classes`; #732's clash: newcmd_base,
+  nc_chain keep their 2 Errors). A class the author ships is read (nc_chain's `\LoadClass{mybase}`, nc_namedef, nc_cond,
+  nc_letrelax), and a class it loads meets the binding's classes (copy → mybase.cls → `\LoadClass{Y}`) (`state::open_class_load_classes` from the copy's first
+  class load, `State::copy_class_loads`; int23, 72a review r7 NIT 8; guard
+  `perfect_kernel_batchint23::a_shipped_intermediate_class_meets_the_class_slot`). Decided by mechanism, no class names.
+  The slot serves a binding out of step with its file: Perl's svmult binding loads book (svmult.cls.ltxml:34) where
+  svmult.cls and svmono.cls `\LoadClass{article}` (238 + 6 copies; SNmult 22), daj's emulates tocbase over article; an
+  interface command of Y the copy calls first is undefined, an Error (user ruling 2026-10-17; book covers article's).
+  latex.ltx's two-`\LoadClass` Error itself is not emulated (probe scr2, `\documentclass{article}` then
+  `\LoadClass{scrartcl}`, Fatal on 67int21 too; SYNC 72a row (n)). Perl never reads the copy (Package.pm:2113-2133).
+  Witnesses 2509.11496, 2608.23214, 2310.02658, 2505.16276 (ceurart 1 E → 0, `\KOMAoptions{DIV=10}` defined), 2509.01219
+  and census 1605.06035, 1805.01649, 1806.07355, 1807.02012, 1902.05892, 1904.03536 (atlasdoc 6-11 E → 0), 2309.03819,
+  2401.15504 (jgcc: `\address`, `\email`, `\copyrightinfo`). Guards `perfect_kernel_batch72a::{copy_load_class_is_the_bindings_base_class,
+  copy_load_class_meets_the_class_slot}`; repros `stand-in-copies/class_slot/`. Residual: `atlasdoc_cls::main_class` keys
+  on the copy's version, not the class its `\LoadClass` names (SYNC 72a row (r)).
+- **#744 — a copy's `\input` files are part of it; its syntax ends with its load; its declaration names the binding that
+  answered** (int23 fix round 2; main-session ruling 2026-10-18). (1) `input_definitions` suspends provides-mode only for
+  a package or class load (`handleoptions`); a file the copy `\input`s (`\@input`, `\InputIfFileExists`: its `.clo`/`.cfg`)
+  is read in the copy's mode (owned names held only inside, `\AtEndOfClass` wrapped by `copy_provides_wrap`, document
+  hooks not registered); a binding such an `\input` reaches is a load of its own (`_load_binding`). Before:
+  svjour.cls:86's `\InputIfFileExists{sv\CurrentOption.clo}` read svepj.clo (:280-284
+  `\AtEndOfClass{\let\maketitle=\epj@maketitle}`) and svepjc3.clo (:57/:71 `\def\maketitle`, re-read by its own
+  `\AtEndOfClass{\@input{svepjc3.clo}}`), replacing the binding's title page ("Address(es) of author(s) should be given",
+  "Noname", "??", `Error:\@institute`: 0901.1015 -1,500 words, 1012.5412, 1111.3868, 1512.01957, 2411.18962, 2107.02119).
+  (2) A class or package copy ends as a real load does (`load_tex_definitions`' expl3 cleanup; latex.ltx's `\@popfilename`
+  turns off a `\ProvidesExplClass`'s syntax): fcs.cls:70's expl3 catcodes had stayed on, spaces ignored, `\theta_`
+  undefined (2606.16349 recall 95.9 → 14.6; 2308.11432); an `\input` copy (`.tex`) restores nothing. (3) Rule 0's
+  declaration counts the requested file's name only when the binding is of that name: the class prefix fallback
+  (Package.pm:2700-2716) answered 1705.03989's aaart.cls (amsart declaring `aaart`) with `aa`, read as aa.cls (2 → 5
+  Errors); now the command-set test (1 of aa's 30 names: not read); the 2 remaining Errors (`\address`, `\subjclass`;
+  pdflatex 0) are the fallback's, Perl's too (KNOWN_PERL_ERRORS #970). Guards
+  `perfect_kernel_batchint23::{a_copy_option_file_keeps_the_bindings_title, a_renamed_class_under_a_fallback_is_not_read}`,
+  `perfect_kernel_batch72a::copy_identity_by_declaration_and_command_set`; repros `stand-in-copies/option_files/`,
+  `stand-in-copies/identity/{declared_expl_class_is_read,renamed_class_under_a_fallback_is_not_read}`.
+
 Costs (instructions, 72a r3 vs 67int21, faithful loads): atlasdoc papers +26-33 % in r3-r7, its `\LoadClass{scrartcl}`
 (atlasdoc.cls:319, KOMA's 22 files), +0.8-3.8 % in r8, where the binding's base class stood for it, and back with r9,
 where the binding loads it (#736); ceurart papers +159 % over 67int21 in r9 (scrartcl raw, then the copy's own loads:
@@ -15932,65 +16036,9 @@ binding loads lettersp in the class's order where the copy does (2408.07575, 250
 now takes, so OmniBus no longer loads): the binding autoloads natbib's, as Perl's OmniBus does. Guards
 `perfect_kernel_batch72a::*`; repros `tools/perfect_kernel/repros/stand-in-copies/`.
 
-### 732. article, report and book assign their classes' names in their own load; what a base class defines is told by its load frame
+### 732. → #731 (article, report and book assign their classes' names in their own load; what a base class defines is told by its load frame)
 
-The class bindings `article_cls.rs`, `report_cls.rs` and `book_cls.rs` assign the names classes.dtx gives each class in
-its own load — article.cls:613-622, report.cls:712-722, book.cls:718-727: `\contentsname`, `\listfigurename`,
-`\listtablename`, `\refname`/`\bibname`, `\indexname`, `\figurename`, `\tablename`, `\partname`, `\chaptername`
-(report, book), `\appendixname`, `\abstractname` (article, report) — with the values LaTeXML's kernel predefines, so
-output is unchanged. Perl assigns only `\refname` (article.cls.ltxml:98) and `\bibname` (report.cls.ltxml:100,
-book.cls.ltxml:100) there, the rest in its kernel (latex_constructs.pool.ltxml:719-722, "These actually should be in
-article/report/book"). The kernel predefinitions stay (Perl's; a class with no such binding still has the names).
-
-Every class load is a frame (`state::ClassLoadFrame`, entered at `binding::content::input_definitions` for a `.cls`
-with options handled): the macros assigned while it is open outside LaTeXML's kernel layers — the class binding's own,
-a raw class file's, a package's it loads — and a name a lock kept from a definition it made are recorded as the class's,
-with the macro's identity. Two readers:
-
-1. A stand-in's copy's `\newcommand` of a text default (#731 rule 1) clashes ("Command … already defined", an Error as
-   in TeX) when a base class of the copy defines it: a class its own `\LoadClass` requested, or one loaded while that
-   is open (`State::copy_class_loads`), so a chained `\LoadClass{mybase}` over article finds article's names (the
-   reviewer's probe nc_chain: pdflatex 2 errors, "Figure 1", "References"), a raw base class's own definition counts
-   (nc_namedef: `\expandafter\def\csname bibname\endcsname`, 1 error), and its document-time code does not
-   (nc_cond: `\AtBeginDocument{\def\bibname…}`, 0 errors). This replaces r6's scan of the base class file's text and its
-   per-thread cache keyed by class name, which reached the next paper a worker converted on the same thread.
-2. A text default whose meaning is still the macro a class's load assigned is the class layer's, not LaTeXML's semantic
-   layer's (`state::class_layer_definition`), as the kernel predefinitions are: a stand-in copy's redefinition of it
-   stands, as the real file's does over article.cls's. Over the 415 A/B papers this changed 4, each as its PDF:
-   emulateapj.cls:470's `\def\abstractname{ABSTRACT}` (1202.3442), aipproc.sty:49's `\def\refname{REFERENCES}`
-   (astro-ph0105230, astro-ph9912326, hep-ph0102191) — the article binding's `\refname` had been the binding's.
-
-A base class's `\let<name>\relax` before a copy's `\newcommand` leaves the name definable
-(`base_class_name_made_relax`), and so does the copy's own earlier assignment of it in the same frame
-(`\let\refname\relax` then `\newcommand\refname`; pdflatex 0 errors, "Works Cited"). Guards
-`perfect_kernel_batch72a::copy_newcommand_through_a_chained_base_class`,
-`copy_newcommand_of_a_base_class_name_errs`, `perfect_kernel_batchst3::a_document_after_another_on_one_thread_is_the_document_alone`
-(its class-load row); repro
-`stand-in-copies/text_defaults/chain/`.
-
-### 733. A raw file's own repeat load of natbib after a binding's early load is the load TeX sees
-
-A class or style binding often loads natbib (`RequirePackage!`) before or where the real file does not (#731 rule 11,
-`<file>:requested_by_binding`): the document's later `\usepackage[opts]{natbib}` then applies its options, as the first
-load TeX sees. When the real file — a stand-in's copy read after its binding — loads natbib itself (`File` requester:
-neurips_2024.sty:71 `\RequirePackage{natbib}`, icml2024.sty:95), that load is the one TeX sees: its options apply and
-join the first load's options (`<file>_loaded_with_options`), and the early-load state ends, so a document repeat with
-new options is LaTeX's "Option clash for package natbib" Error, the first options kept (the reviewer's probes
-neurips_rep, icml_rep: pdflatex 1 error, author-year; 2410.08709 the same shape). A copy that comments its load out
-leaves the early load in place, and the document's options apply (2506.00573, 2506.01987, 2506.08967, 2506.17103,
-2506.18071, 2506.22567: numbered, as their PDFs). The clash test reads the options passed to the package too
-(`\opt@<file>`, as latex.ltx's `\@if@ptions` does): 2110.14346's `\PassOptionsToPackage{numbers, compress}{natbib}`
-before neurips_2020.sty's load, then `\usepackage[numbers]{natbib}`, raises no clash, as in pdflatex. A repeat's options
-run in natbib's declaration order, as `\ProcessOptions` runs them (natbib.sty:238-263), and their
-`nobibstyle`/`bibstyle` decide whether a later `\bibliographystyle`'s `\bibstyle@<style>` still sets the punctuation: an
-explicit bracket, separator or `numbers` option gobbles it, so 2506.08967 (`[square,numbers]` after neurips' early load,
-then `plainnat`) and 2506.05937 (neurips_2025.sty `[numbers]`, a late `plainnat`) stay numbered throughout, and
-`[square,authoryear]` ends gobbled, as in TeX (r8, `natbib_sty::NATBIB_STYLE_OPTIONS`). Perl ignores a repeat load's
-options (Info) and has no early binding loads of natbib to tell from the class's. Guard
-`perfect_kernel_batch72a::natbib_copy_repeat_ends_the_bindings_early_load`; repro
-`stand-in-copies/natbib_forks/natbib_copy_repeat_ends_the_early_load.tex`. Residual (SYNC 72a row (m)): the bindings
-revtex4_support, achemso, apacite and mnras load natbib other than their real files do and are not marked as the file's
-own load; a document repeat after them still applies its options.
+### 733. → #731 (A raw file's own repeat load of natbib after a binding's early load is the load TeX sees)
 
 ### 734. A `\chapter` call in a class without chapters is LaTeXML's numbered chapter, with one Warning; the name stays undefined (TeX: undefined control sequence; Perl: the kernel's `\chapter`, `undefined:\thechapter`)
 
@@ -16066,69 +16114,7 @@ unchanged).
 `error_boundary::perfect_kernel_error_boundary`.
 **Upstream**: not filed.
 
-### 736. A stand-in class binding loads the base class its real file loads; the copy's one class slot is the net
-
-latex.ltx lets a class file `\LoadClass` once (:18800 lets `\LoadClass` to `\@twoloadclasserror`, :18938-18942, "Two
-\LoadClass commands"): a document has one class. A stand-in class binding (#731) has loaded the base class it models the
-class on — ceurart_cls.rs and atlasdoc_cls.rs OmniBus, which loads article — before the paper's copy is read, and the
-copy's own `\LoadClass{Y}` then loaded a second class over the first. ceurart.cls:62 `\LoadClass{scrartcl}` raw-read
-scrartcl, scrkbase and typearea over article, whose `\@ptsize` of 0 sends typearea.sty:1400-1413 off its path ("DIV for
-0.0pt", then Fatal "Conditional limit of 48000000 exceeded": 2509.11496 9 E / 1 F and 0 words, 2608.23214, 2310.02658,
-2505.16276; 74 ceurart papers in 2509, 39 in 2506); atlasdoc.cls's `\LoadClass[titlepage, 11pt]{\ADOC@mainclass}`
-(scrartcl) redefined `\@startsection` and `\@sect` under the binding (2509.01219: "`\@startsection` has been changed" and
-"Unexpected definition of \@sect", which #737 shows were LaTeXML's; its 3x "Bad type area settings" are true, pdflatex
-logs the same 3; +26-33 % instructions).
-
-Now (`binding::content::binding_base_class_stands_for`, at the top of `load_class`): when the copy's own code loads a
-class (provides-mode on; a file the copy loads is a real load, its `\LoadClass` is not the copy's), the class is not
-loaded yet (`\ver@Y.cls` undefined — the binding's own base class is a repeat load: cimart.cls `\LoadClass{article}`),
-the class load open now — the binding's — loaded a class (`state::ClassLoadRecord::classes`, the classes loaded while a
-class's frame is open), and the paper does not ship Y (`shipped_with_paper`, the copy test's), Y is not loaded: Info
-"the binding's base class (book.cls) stands for the copy's \LoadClass{article}: not loaded" (svmult; daj's names
-article.cls), and the binding's
-classes become the copy's base classes (`state::note_copy_base_classes`), so a copy's `\newcommand` of a name they
-define errs as over the real class (#732; newcmd_base and nc_chain keep their 2 Errors). A class the author ships is
-read (the reviewer's nc_chain `\LoadClass{mybase}`, nc_namedef, nc_cond, nc_letrelax), and a class that shipped class
-loads is the copy's too: copy → mybase.cls → `\LoadClass{Y}` meets the classes the binding's load loaded
-(`state::open_class_load_classes` reads them from the copy's first class load, `State::copy_class_loads`, not from
-mybase.cls's empty frame; int23, 72a review r7 NIT 8; probe and guard
-`perfect_kernel_batchint23::a_shipped_intermediate_class_meets_the_class_slot`). Decided by mechanism, no class
-names. Perl never reads the copy (Package.pm:2113-2133 prefers the `.ltxml`), so it has neither the Fatal nor the copy's
-extras.
-
-The base class (r9; "a binding defines in the original package's conceptual space", "stub bindings load their real
-dependencies"): a stand-in class binding loads the class its real file `\LoadClass`es, under the file's own option
-logic, so the copy's own `\LoadClass` is a repeat (`\ver@Y.cls` defined), as in TeX, and the copy's code after it meets
-Y's interface. Enumerated over every stand-in `.cls` (the copies of every 25th arXiv paper, and every 3rd for the
-classes that sample misses; `\LoadClass` target against the class each binding loads):
-ceurart → scrartcl (ceurart.cls:59-62: its options, the rest passed to scrartcl with `a4paper,twoside=false`; 64
-copies in the 1/25 sample, 112 papers in 2506+2509), atlasdoc → its KOMA class (`atlasdoc_cls::main_class`: v13
-`\ADOC@mainclass`, scrbook for `BOOK`, scrreprt for `REPORT` (true by default), scrartcl for `cernpreprint`/`preprint`/
-`PAPER`/`CONF`/`PUB`; v3 scrbook or scrartcl; v1 scrartcl, article without `koma`/`atlasstyle`; 47 copies), lmcs →
-amsart `[11pt,reqno]` (55), pnas-new → extarticle (its options passed, 44), jgcc → amsart `[11pt,reqno]` (2),
-czipreprint → amsart `[reqno]` (3 in the 1/3 sample), clear2025 → jmlr `[pmlr]` (2; it had jmlr's binding under its own
-name, so `\ver@jmlr.cls` was undefined). A binding that had OmniBus as its base keeps what OmniBus gave it where the real
-base class has nothing: `omnibus_cls::provide_over_base_class` loads OmniBus provide-only over it (`ProvideOnlyGuard`,
-as `\documentstyle` loads it over a class, sect01.rs) — ceurart's `{keywords}` (OmniBus's `ltx:classification`, which
-the r8 trial without it lost: -10 to -15 words a paper), `\email`, `\affiliation`. The binding's own definitions follow
-as before. Witnesses: 2509.11496, 2608.23214, 2310.02658, 2505.16276 (ceurart: 1 E → 0, the copy's `\KOMAoptions{DIV=10}`
-now defined), 2509.01219 and census 1605.06035, 1805.01649, 1806.07355, 1807.02012, 1902.05892, 1904.03536 (atlasdoc:
-6-11 E → 0), 2309.03819, 2401.15504 (jgcc: `\address`, `\email`, `\copyrightinfo`).
-
-The slot stays as the net for a binding still out of step with its file: Perl's svmult binding loads book
-(svmult.cls.ltxml:34) where svmult.cls and svmono.cls `\LoadClass{article}` (238 + 6 copies; SNmult 22 in the 1/3
-sample, served by svmult's binding), and daj's binding emulates tocbase (not in TeX Live) over article. There the copy's
-code is written for Y and a command of Y's interface it calls before anything else defines it is undefined, an Error
-as the copy's own Errors are (user ruling 2026-10-17; book's interface covers article's, so svmult copies meet none).
-latex.ltx's two-`\LoadClass` Error itself is not emulated in general (a document's own second `\LoadClass` still loads
-it: the reviewer's probe scr2, `\documentclass{article}` then `\LoadClass{scrartcl}`, is Fatal on 67int21 too; SYNC 72a
-row (n)). The raw KOMA base gets the standard classes' semantic layer, its ids, `\appendix` and quiet sectioning check,
-as every KOMA document does (#737). Guards `perfect_kernel_batch72a::copy_load_class_is_the_bindings_base_class` (ceurart, atlasdoc, jgcc:
-0 E / 0 W / 0 F, title, keywords, author and section whole) and
-`::copy_load_class_meets_the_class_slot` (svmult); repros `stand-in-copies/class_slot/`. Residual: `atlasdoc_cls::main_class`
-keys on the copy's version (its `{koma}` and `{REPORT}` options), not on the class its `\LoadClass` names, so a modified
-copy that names `article` or `book` itself gets the KOMA class of its version; the slot then stands that class for the
-copy's (SYNC 72a row (r)).
+### 736. → #731 (A stand-in class binding loads the base class its real file loads; the copy's one class slot is the net)
 
 ### 737. The KOMA classes, read raw, get the standard classes' semantic layer: ids, `\appendix`, and a quiet sectioning check
 
@@ -16337,35 +16323,7 @@ undefined, as in TeX. Witness 2605.09681 (both contacts kept). Repros stand-in-c
 (with the copy) and stand-in-copies/neurips_no_copy/projectpage_undefined_without_a_copy (in a directory without one); guards `perfect_kernel_batchint23::neurips_copy_setters_are_contacts`,
 `perfect_kernel_batch73a::neurips_projectpage_undefined_without_a_copy`.
 
-### 744. A stand-in copy's `\input` files are part of the copy; its syntax ends with its load; its declaration names the binding that answered
-
-**Decision** (int23 fix round 2; refines #731; main-session ruling 2026-10-18 "`\usepackage`/`\RequirePackage` from a
-copy are real loads; files a copy pulls in by `\input`/`\@input`/`\InputIfFileExists` are part of the copy"):
-1. *Input files.* `input_definitions` suspends the copy's provides-mode only for a package or class load
-   (`handleoptions`: `\RequirePackage`, `\usepackage`, `\LoadClass`); a file the copy reads by `\input` (`\@input`,
-   `\InputIfFileExists`: the `.clo`/`.cfg` it ships) is read in the copy's mode, so its definitions of names the binding
-   owns hold only inside the copy's code, its `\AtEndOfClass` code is wrapped as the copy's own (`copy_provides_wrap`)
-   and its document-time hooks are not registered. A binding such an `\input` reaches is a load of its own (the mode
-   suspended around `_load_binding`). Before: svjour.cls:86's `\InputIfFileExists{sv\CurrentOption.clo}` read
-   svepj.clo, whose :280-284 `\AtEndOfClass{\let\maketitle=\epj@maketitle}`, and svepjc3.clo, whose :57/:71
-   `\def\maketitle` (re-read by its own `\AtEndOfClass{\@input{svepjc3.clo}}`), replaced the binding's title page:
-   "Address(es) of author(s) should be given", "Noname", "??", `Error:\@institute` in place of the affiliations
-   (0901.1015 -1,500 words, 1012.5412, 1111.3868, 1512.01957, 2411.18962, 2107.02119).
-2. *Syntax at the end.* A class or package copy ends as a real class or package load does (`load_tex_definitions`'
-   expl3 cleanup, `handleoptions` for a `.cls`/`.sty` copy): latex.ltx's `\@popfilename` turns off the expl3 syntax a
-   `\ProvidesExplClass` turned on. Before: fcs.cls:70's expl3 catcodes stayed on for the whole document — spaces
-   ignored, `\theta_` undefined (2606.16349 recall 95.9 → 14.6; 2308.11432). An `\input` copy (`.tex`) restores
-   nothing, as TeX's `\input`.
-3. *Identity.* Rule 0's declaration test reads the binding that answered: a declaration naming the requested file
-   counts only when the binding is of that name. The class prefix fallback (Package.pm:2700-2716) answers a renamed
-   file too: 1705.03989's aaart.cls, amsart declaring itself `aaart`, under `aa`; read as aa.cls, its amsart code over
-   the binding raised 3 more Errors (2 → 5). It now goes to the command-set test (1 of aa's 30 names: not read). The 2
-   remaining Errors (`\address`, `\subjclass` undefined; pdflatex 0) are the fallback's, Perl's too (KNOWN_PERL_ERRORS
-   #970).
-Divergence from Perl: Perl reads no copy (#731). Guards `perfect_kernel_batchint23::{a_copy_option_file_keeps_the_bindings_title,
-a_renamed_class_under_a_fallback_is_not_read}`, `perfect_kernel_batch72a::copy_identity_by_declaration_and_command_set`
-(the fcs case now with spaced text and `$a_1$`); repros `stand-in-copies/option_files/`,
-`stand-in-copies/identity/{declared_expl_class_is_read,renamed_class_under_a_fallback_is_not_read}`.
+### 744. → #731 (A stand-in copy's `\input` files are part of the copy; its syntax ends with its load; its declaration names the binding that answered)
 
 ### 745. Typewriter whitespace is kept only where an auto-opened element reaches text
 
@@ -31070,12 +31028,12 @@ a plain `\UseHook`; post-merge).
 ## TeX-source fidelity family (TEXSRC)
 
 An index, not new entries: the entries below each restore what latex.ltx, tex.web or the real package defines over a
-Perl simplification of it, so each is a divergence whose ruler is the TeX source (OD rationalization ruling 7, DG
-2026-11-14: TEX entries stay, as family tables with an upstream column). The entry keeps its rule, witnesses and
+Perl simplification of it, so each is a divergence whose ruler is the TeX source (OD rationalization ruling 7: TEX
+entries stay, as family tables with an upstream column). The entry keeps its rule, witnesses and
 guards; the table names the Perl reference it departs from and the TeX or package source that decides, as the entry
 cites them (`—`: the entry cites none). Kinds: **kernel**, a kernel definition or macro as latex.ltx has it;
 **binding**, a binding aligned to its real package's source; **scanning**, argument and token scanning as tex.web does
-it. Upstream: every row is offered to Perl as a patch after the release; none is filed yet (the #403 row, a
+it. Upstream: each row is a candidate Perl patch; none is filed yet (the #403 row, a
 restructuring whose only Perl-visible difference is two diagnostics, is not offered).
 
 | entry | kind | rule (the entry's heading) | Perl ref | TeX / package source | upstream |
