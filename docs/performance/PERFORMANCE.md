@@ -371,24 +371,28 @@ shape; a document with a DTD (default attributes, entity references); a context 
 foreign `.bib.xml` entry, a detached or null node). It keeps no state between queries.
 
 Basis: `perf stat -e instructions:u,cycles:u`, release, best of 3 interleaved against INTPERF (`95042553f8b`), cores
-0-31; HTML in cortex's recipe. Step 1 = the walk shared and post widened (R3); step 2 = core's callers (R1).
+0-31; HTML in cortex's recipe. Step 1 = the walk shared and post widened (R3); step 2 = core's callers (R1); final =
+names and namespaces read borrowed.
 
-| Document | instructions (G) | step 1 | steps 1 + 2 |
-|---|---:|---:|---:|
-| the issue-790 book html | 798.8 | −0.31 % | −4.18 % |
-| b500 xml | 73.3 | −0.01 % | −4.14 % |
-| b1000 html | 208.0 | −0.69 % | −3.59 % |
-| 2308.04512 xml | 259.0 | +0.12 % | −1.31 % |
-| 2308.04512 html | 322.7 | +0.20 % | −0.95 % |
-| 2103.04797 html | 8.1 | −0.15 % | −1.20 % |
-| amsldoc xml (control) | 5.7 | +0.05 % | −2.62 % |
-| 2010.05701 xml (control) | 267.2 | −0.08 % | −0.18 % |
-| 10 typical papers html (`popPERFBs`) | 2.0–32.0 | −0.25 … +0.20 % | −0.60 … −3.42 %, median −1.98 % |
+| Document | instructions (G) | step 1 | steps 1 + 2 | final |
+|---|---:|---:|---:|---:|
+| the issue-790 book html | 798.8 | −0.31 % | −4.18 % | −4.18 % |
+| b500 xml | 73.3 | −0.01 % | −4.14 % | −4.10 % |
+| b1000 html | 208.0 | −0.69 % | −3.59 % | −3.80 % |
+| 2308.04512 xml | 259.0 | +0.12 % | −1.31 % | −1.30 % |
+| 2308.04512 html | 322.7 | +0.20 % | −0.95 % | −1.26 % |
+| 2103.04797 html | 8.1 | −0.15 % | −1.20 % | −1.36 % |
+| amsldoc xml (control) | 5.7 | +0.05 % | −2.62 % | −2.65 % |
+| 2010.05701 xml (control) | 267.2 | −0.08 % | −0.18 % | −0.19 % |
+| 10 typical papers html (`popPERFBs`) | 2.0–32.0 | −0.25 … +0.20 % | −0.60 … −3.42 % | −0.16 … −3.80 %, median −1.79 % |
 
 Cycles could not be measured: CPUs n and n+64 are SMT siblings and the siblings ran another writer's load, so the
 base's own cycles varied by up to 143 % between its three runs (instructions ≤ 0.23 %, 1109.6643 2.5 %). Peak RSS
-(book html, b1000 html): RSS_PLACEHOLDER. Output: XML, HTML and every auxiliary file byte-identical on the 18 runs above in
-all three reps, and on the A/B AB_PLACEHOLDER. Guards (`latexml_core` `common::xml_walk::tests`):
+(book html, b1000 html): unchanged (6,883,352 → 6,876,764 KB; b1000 1,417,628–1,427,092 → 1,420,940–1,422,700 KB, three
+and two runs). Output: XML, HTML and every auxiliary file byte-identical on the 18 runs above in
+all three reps, and on the A/B `popPERFE` (139 papers by `\cref`, `thebibliography`, display math with braces/fractions,
+index/glossary packages, plus 60 controls): 0 of 199 changed in XML and in HTML (sha256 over every output file), E/F/W
+equal (321/4/2542 XML, 321/4/2559 HTML). Guards (`latexml_core` `common::xml_walk::tests`):
 `walk_agrees_with_xpath_on_every_supported_shape` (28 shapes at four contexts against libxml2's answer, and
 `find_first`), `unsupported_shapes_are_not_claimed_by_the_walk`, `walk_declines_where_xpath_must_answer` (it
 replaces PERFD's entity-retrace guard: a DTD document now goes to XPath, whose answer does not enter entity content),
