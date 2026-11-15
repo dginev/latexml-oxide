@@ -2864,6 +2864,8 @@ const KERNEL_TOKEN_SPELLINGS: &[(&str, usize)] = &[
   // `\IfHookEmptyTF`, and `\if:w I` (`hook_used_once`) compares the slot's first token with the character `I`; QAB2b -1.
   ("latexml_core/src/binding/def/dialect.rs", 42),
   ("latexml_core/src/binding/def/replacement.rs", 3),
+  // (MEMB, +1: store_setters.rs builds a setter's CS token from its probed symbol, `Catcode::CS` a construction, no read)
+  ("latexml_core/src/binding/store_setters.rs", 1),
   ("latexml_core/src/binding/virtual_files.rs", 1),
   ("latexml_core/src/common/def_parser.rs", 1),
   ("latexml_core/src/common/font.rs", 3),
