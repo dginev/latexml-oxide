@@ -379,6 +379,46 @@ pub fn element_nodes(node: &Node) -> Vec<Node> {
     .collect()
 }
 
+/// The elements of `root`'s subtree, `root` included, that `keep` accepts, in document order: the walk behind a
+/// whole-document `descendant-or-self::*[pred]`, which libxml2 2.15 answers through a node set over every element and
+/// refuses past 10,000,000 of them ("XPath evaluation failure", #802).
+pub fn descendant_or_self_elements(root: &Node, mut keep: impl FnMut(&Node) -> bool) -> Vec<Node> {
+  let mut found = Vec::new();
+  let mut node = root.clone();
+  loop {
+    if keep(&node) {
+      found.push(node.clone());
+    }
+    if let Some(child) = node.get_first_element_child() {
+      node = child;
+      continue;
+    }
+    // Climb to the next element in document order, never past `root`.
+    loop {
+      if node == *root {
+        return found;
+      }
+      if let Some(next) = node.get_next_element_sibling() {
+        node = next;
+        break;
+      }
+      match node.get_parent() {
+        Some(parent) => node = parent,
+        None => return found,
+      }
+    }
+  }
+}
+
+/// XPath's `ltx:<local>` name test: a LaTeXML-namespace element named `local`. Unlike `get_node_qname`, it rejects a
+/// namespace-less element of that name, as the XPath it replaces does.
+pub fn is_ltx_element(node: &Node, local: &str) -> bool {
+  node.get_name() == local
+    && node
+      .get_namespace()
+      .is_some_and(|ns| ns.get_href() == crate::common::model::LTX_NAMESPACE)
+}
+
 /// obtains all content children of `node` (`Element` and `Text`), ignoring all other node types
 pub fn content_nodes(node: &Node) -> Vec<Node> {
   node
