@@ -466,7 +466,7 @@ Perl keeps the document resident (LaTeXML.pm L445, Post.pm L682-686 `setDocument
 split and libxml2 parsed the page cleanly (rust-libxml `Document::is_well_formed` and `is_ns_valid`, the parser's
 `XML_DOC_WELLFORMED`/`XML_DOC_NSVALID`), the page stays in memory as `SpilledPage::resident`, rewrapped as a fresh parse
 would return it (`PostDocument::new` over the same libxml document: ids, namespaces, PIs, memos rebuilt; `source` and
-`source_directory` from `PostDocument::file_options` of the staging path; `Document::forget_unshared_nodes` drops pass
+`source_directory` from `PostDocument::file_options` of the staging path; `Document::trim_node_cache` drops pass
 A's node wrappers). Why that is the reparse's DOM: a clean parse reparses to the same tree, and Scan's only edit is the
 root's `xml:id`. A sweep that changes the page still re-parses it, from a string instead of a file, because a
 processor's edits can differ from their reparse (adjacent text nodes, an invalid character dropped). A recovered parse,
@@ -490,7 +490,7 @@ other writers' runs on the host.
 | 10 typical papers (`popPERFBs`) | | −0.38 … −2.03 %, mean −1.32 % | −5.5 … +0.7 % |
 
 Peak RSS: book790 6,880,408-6,882,604 → 6,867,564-6,868,032 KB, b1000 1,421,528-1,421,584 → 1,422,724-1,423,436 KB
-(without `forget_unshared_nodes`, b1000 rose 21 MB: the wrapper cache keeps one `Node` per node Scan visited). A/B
+(without `trim_node_cache`, b1000 rose 21 MB: the wrapper cache keeps one `Node` per node Scan visited). A/B
 (`popPERFH`, production HTML, every output file hashed: 40 `\printindex`/glossary, 80 `\bibliography`, 39
 `thebibliography`, 30 `\includegraphics`, 20 footnotes, 19 tabular, 60 controls): 0 of 286 changed, E/F/W equal; the
 base against itself first, also 0. ImageMagick stamps each PNG with the clock, so image papers compare only under a fixed

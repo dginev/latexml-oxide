@@ -1615,7 +1615,7 @@ fn as_reparsed(
   opts: &PostDocumentOptions,
 ) -> PostDocument {
   let xml = doc.into_document();
-  xml.forget_unshared_nodes();
+  xml.trim_node_cache();
   let path_str = path.to_string_lossy();
   let page = PostDocument::new(xml, PostDocument::file_options(&path_str, opts.clone()));
   #[cfg(debug_assertions)]

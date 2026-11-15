@@ -45,7 +45,7 @@ unused_qualifications = "warn"
 
 [patch.crates-io]
 # TEMP until libxml 0.3.24 is released: the combined local rust-libxml branch `perf/0.3.24` (PERFG's borrowed reads
-# + PERFH's parse flags and node-cache trim). Must be removed, and libxml bumped to 0.3.24 in every crate, before the PR.
+# + PERFH's parse flags and node-cache trim, with LIBXML24's guards, aliases and docs). Must be removed, and libxml bumped to 0.3.24 in every crate, before the PR.
 libxml = { path = "/home/deyan/data/pk_wt/INTPERF_libxml" }
 
 [profile.release]
