@@ -5778,6 +5778,18 @@ impl Document {
     }
   }
 
+  /// Perl `Document.pm:removeNode` L1783-1792, "Don't remove insertion point!": a point at or inside `subtree`
+  /// moves to `parent`. When the subtree is already detached it moves to the root element: our own choice (Perl's
+  /// `removeNode` assumes a parent, :1793, and the math parser's unbound children, MathParser.pm:330, keep its point
+  /// alive in the garbage tree); nothing is built after the post-build math parse, so no content moves (issue #790).
+  fn keep_point_out_of(&mut self, subtree: &Node, parent: Option<&Node>) {
+    if xml::is_descendant_or_self(&self.node, subtree)
+      && let Some(target) = parent.cloned().or_else(|| self.document.get_root_element())
+    {
+      self.set_node(&target);
+    }
+  }
+
   /// Discard a garbage subtree for good: purge the pointer-keyed
   /// `node_boxes` entries, then free the C memory NOW via the fork's
   /// `Node::free_subtree` — the missing half of every unlink-to-discard
@@ -5798,6 +5810,15 @@ impl Document {
   ///   entries;
   /// * no live handle into the subtree is used afterwards.
   pub fn discard_subtree(&mut self, node: Node) {
+    // The subtree is still alive here, so its ancestor walks are safe (#790: 0710.4421 freed the point).
+    self.keep_point_out_of(&node, node.get_parent().as_ref());
+    if self
+      .text_run_font
+      .as_ref()
+      .is_some_and(|(run, ..)| xml::is_descendant_or_self(run, &node))
+    {
+      self.text_run_font = None;
+    }
     self.purge_node_boxes_rec(&node);
     // The last ligated text node may be in the freed subtree, and libxml may hand its address to the next node
     // created: forget it (the next close then ligates from the start, as Perl's).
@@ -8327,16 +8348,8 @@ impl Document {
         // old's slot either way.
         self.append_tree(&mut parent, vec![new])?;
         let inserted = parent.get_last_child();
-        // Keep the insertion point out of the discarded subtree (the
-        // `chopped` half of remove_node; its id bookkeeping happened above).
-        let mut cursor = Some(self.node.clone());
-        while let Some(cur) = cursor {
-          if cur == old {
-            self.set_node(&parent);
-            break;
-          }
-          cursor = cur.get_parent();
-        }
+        // The `chopped` half of remove_node; its id bookkeeping happened above.
+        self.keep_point_out_of(&old, Some(&parent));
         // Detach `old` (the original of the copy `append_tree` just
         // inserted); `replace_tree` frees it, the parser defers that.
         {

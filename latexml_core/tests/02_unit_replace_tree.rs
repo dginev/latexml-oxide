@@ -142,3 +142,35 @@ fn replace_tree_detached_node_returns_none() {
   let result = doc.replace_tree(new, detached).unwrap();
   assert!(result.is_none());
 }
+
+/// #790 (0710.4421): discarding a subtree that holds the insertion point moves the point out first, to the
+/// subtree's parent, or to the root element when the subtree is already detached (Perl Document.pm:removeNode).
+#[test]
+fn discard_subtree_keeps_the_insertion_point_out() {
+  let (mut doc, root) = setup_doc_with_tree();
+  let b = root.get_child_elements()[1].clone();
+  let mut chain = vec![b.clone()];
+  for name in ["B1", "B2", "B3"] {
+    let mut child = Node::new(name, None, doc.get_document()).unwrap();
+    chain.last_mut().unwrap().add_child(&mut child).unwrap();
+    chain.push(child);
+  }
+  let [b, b1, b2, b3] = <[Node; 4]>::try_from(chain).unwrap();
+  // Attached: the point on B3 goes to the discarded B2's parent, B1.
+  doc.set_node(&b3);
+  doc.discard_subtree(b2);
+  assert!(
+    *doc.get_node() == b1,
+    "point moved to the parent, got <{}>",
+    doc.get_node().get_name()
+  );
+  // Detached: B is unlinked before the discard, so the point (on B1, inside B) goes to the root element.
+  let mut b = b;
+  b.unlink();
+  doc.discard_subtree(b);
+  assert!(
+    *doc.get_node() == root,
+    "point moved to the root, got <{}>",
+    doc.get_node().get_name()
+  );
+}

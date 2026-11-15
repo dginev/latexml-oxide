@@ -343,3 +343,50 @@ fn cluster_nested_sbox_discard_no_double_free() {
   // The trailing `barf` text after each `\box0\hrule` must still be present.
   assert!(x.contains("barf"), "trailing text lost:\n{x}");
 }
+
+/// #790 (0710.4421): a formula's discarded subtree held the insertion point (the text-script rule's `XMText`, the
+/// number rewrite's parent, Rewrite.pm:132), and the next formula walked up from freed memory. On glibc the rows rerun
+/// in a child with freed memory poisoned (`glibc.malloc.perturb`), where the base crashed every time.
+#[test]
+fn cluster_discard_keeps_the_insertion_point_out() {
+  const CHILD: &str = "LATEXML_TEST_MALLOC_PERTURB_CHILD";
+  if cfg!(all(target_os = "linux", target_env = "gnu")) && std::env::var_os(CHILD).is_none() {
+    let out = std::process::Command::new(std::env::current_exe().expect("test binary"))
+      .args([
+        "--exact",
+        "cluster_discard_keeps_the_insertion_point_out",
+        "--test-threads=1",
+      ])
+      .env("GLIBC_TUNABLES", "glibc.malloc.perturb=165")
+      .env(CHILD, "1")
+      .output()
+      .expect("rerun under glibc.malloc.perturb");
+    let stdout = String::from_utf8_lossy(&out.stdout);
+    // A filter that matched nothing would pass vacuously: require the one row run.
+    assert!(
+      out.status.success() && stdout.contains("1 passed"),
+      "the rows failed under glibc.malloc.perturb=165: {}\n{stdout}{}",
+      out.status,
+      String::from_utf8_lossy(&out.stderr)
+    );
+    return;
+  }
+  for (fixture, kept) in [
+    (
+      "mathparse_discard_keeps_point_text_script",
+      "<XMText>F<sub>1</sub></XMText>",
+    ),
+    (
+      "mathparse_discard_keeps_point_rewrite",
+      r#"<XMTok fontsize="70%" meaning="1000" role="NUMBER">1,000</XMTok>"#,
+    ),
+  ] {
+    let x = convert_to_xml(&format!("tests/cluster_regressions/{fixture}.tex"));
+    assert!(x.contains(kept), "{fixture}: {kept} lost:\n{x}");
+    // The formula after the discard still parses.
+    assert!(
+      x.contains(r#"tex="\frac{a}{b}" text="a / b""#),
+      "{fixture}: the second formula unparsed:\n{x}"
+    );
+  }
+}
