@@ -19204,7 +19204,10 @@ atveryend's commands are no-ops: every hook's code is dropped.
 **Rust.** With the kernel's hooks loaded: `\end{document}` runs `env/document/end` before `\enddocument` (:15386);
 `\begin{verbatim}`/`{verbatim*}` run `env/<name>/begin|end` (no DefEnvironment fires them; etoolbox's
 `\AtBeginEnvironment{verbatim}` joins the same hook, its private store gone); `\label` runs
-`\UseHookWithArguments{label}{1}{#1}` in a group (:14943); `\include` names the file current and runs `include/before`,
+`\UseHookWithArguments{label}{1}{#1}` in a group (:14943), with the `\@currentcounter` `\refstepcounter` sets (a local
+`\let`, none for `*`, :14958-14962; Perl's `RefStepCounter`, Package.pm:755-779, sets only `current_counter`;
+unbtex-example's `\cref@updatelabeldata{\@currentcounter}`, unbtex.cls:485-493, read it empty: a Fatal pushback loop);
+`\include` names the file current and runs `include/before`,
 `include/<name>/before`, `/end`, `/after`, and `include/excluded` for a file `\includeonly` leaves out (:9609-9627).
 The kernel's abstract, a binding macro, runs `env/abstract/begin` inside the abstract's group before `\abstract`
 (:15354-15362) — ahead of the abstract's name and the class's replayed begin code, what it typesets heading the body —
@@ -19231,7 +19234,11 @@ see). The kernel's first aid for cleveref.sty (latex2e-first-aid-for-external-fi
 labelled `firstaid`) is not registered under cleveref's binding, which replaces the code it repairs (DG 2026-11-14):
 its `label` hook code cost 3.5M instructions a `\label`. It is removed only where the chunk is registered
 (`hook_has_labelled_code`; the chunk dates from 2024-03-22, firstaid changes.txt), as lthooks warns "Cannot remove
-chunk" for a missing one. **Open** (post-merge, catalog): `\label`'s hook runs after the label is recorded, where
+chunk" for a missing one. **Open** (post-merge, catalog): a note steps its counter after its text is digested
+and an align or gather row after its cells (Perl's order), so a label hook there reads the enclosing counter (or, in an
+align's later row, the previous row's step) where
+latex.ltx's `\@footnotetext` and `\@mpfootnotetext` define it (:17664, :16350) and amsmath has stepped `equation`
+(`label_hook_currentcounter_stepped_after_the_body_red`); `\label`'s hook runs after the label is recorded, where
 latex.ltx runs it before the `.aux` write, so a hook's `\@currentlabel` does not reach `\ref`
 (`label_hook_sets_the_reference_text_red`); a DefEnvironment runs its begin hooks before its `\@currenvir` (Perl
 Package.pm:1920-1927; `environment_begin_hook_reads_its_environment_red`: moving it alone raised 2001.02707's
@@ -19248,7 +19255,7 @@ ahead of `\maketitle` stays in the abstract, where pdflatex prints it before the
 `label_hook_runs`, `include_hooks_run`, `label_hook_opens_no_paragraph`, `cleveref_firstaid_not_registered`,
 `cleveref_firstaid_absent_removes_nothing`, `file_hooks_run_at_every_input`, `file_hooks_order_around_a_package`,
 `abstract_env_hooks_run`, `selectfont_hook_runs`, `abstract_end_hook_once_in_a_constructor_abstract`,
-`abstract_begin_hook_runs_before_the_name`).
+`abstract_begin_hook_runs_before_the_name`, `label_hook_reads_currentcounter`).
 
 ### 1045. Every box's width, height and depth are the CSS custom properties `--ltx-box-width`, `--ltx-box-height`, `--ltx-box-depth` (Perl: `style="width:…;height:…;vertical-align:…"`, or dropped)
 

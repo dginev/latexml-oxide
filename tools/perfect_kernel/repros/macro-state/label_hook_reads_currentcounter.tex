@@ -1,0 +1,31 @@
+% latex.ltx:14956-14962 `\refstepcounter` sets `\@currentcounter` (a local `\let`, not for `*`); equation (:15753)
+%   and eqnarray `\def` it; the `label` hook (PR #856) reads it. Notes and align/gather rows:
+%   `label_hook_currentcounter_stepped_after_the_body_red`.
+% witness: unbtex-example (TL manual; unbtex.cls:485-493 `\AddToHook{label}{\cref@updatelabeldata{\@currentcounter}}`).
+% status:  GREEN (CURCTR; RED before: every `\lastctr` "/0.", 25 errors `You can't use } after \the`)
+% oracle:  pdflatex 0 errors; "Section: section/1. Item: enumi/2. Equation: equation/1. Eqnarray: equation/2.
+%          Lemma: thm/1. Figure: figure/1. Group: section/1."
+% engines: rust MAIN882: 25 errors, "/0." each; Perl and rust before PR #856: no `label` hook, `\lastctr` undefined.
+% expect:  0 errors, 0 warnings; the texts pdflatex prints.
+\documentclass{article}
+\makeatletter
+\AddToHook{label}{\xdef\lastctr{\@currentcounter/\csname the\@currentcounter\endcsname}}
+\makeatother
+\newtheorem{thm}{Theorem}
+\newtheorem{lem}[thm]{Lemma}
+\begin{document}
+\section{One}\label{s1}
+Section: \lastctr.
+\begin{enumerate}\item a \item b\label{i2}\end{enumerate}
+Item: \lastctr.
+\begin{equation}x\label{e1}\end{equation}
+Equation: \lastctr.
+\begin{eqnarray}y\label{e2}\end{eqnarray}
+Eqnarray: \lastctr.
+\begin{lem}L\label{l1}\end{lem}
+Lemma: \lastctr.
+\begin{figure}\caption{C}\label{g1}\end{figure}
+Figure: \lastctr.
+{\refstepcounter{table}}\label{g}
+Group: \lastctr.
+\end{document}
