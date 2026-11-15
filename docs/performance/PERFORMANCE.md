@@ -348,6 +348,41 @@ code on AMD (skid), so the figures are counts × stepped instructions.
 
 ## Audit log (periodic passes; newest first)
 
+### 2026-11-15 — the token path's per-token allocations (MEMA, MEM1 levers L1-L3, L5, L6, L8, L9, L19)
+
+Defect: dhat (MEM1, on `e4ab916a806`) found short-lived heap blocks on every digested or read token: a `String` per `MODE` test
+(`lookup_string_from_sym(pin!("MODE"))` only to call `ends_with("vertical")`), a temporary `Vec` per piece of
+`Tokens!`, a `String` per control sequence read by the Mouth and per `\csname`, a `Vec<u8>` and a fresh `VecDeque<char>`
+per source line, a `Vec` and a `String` per `read_keyword` attempt (`read_unit` tries ten units), a `String` per token in
+`untex`, and a `Vec<&Parameter>` collected for `.first()`. Fix, one buffer or borrow each:
+* **L1** `state::lookup_mode` / `mode_ends_with` / `lookup_string_sym_from_sym` read the stored symbol (compare with
+  `pin!("horizontal")`); every hot `MODE`/`BOUND_MODE` test in the stomach, parameters, constructors and the engine.
+* **L2, L8, L9** `Tokens!` converts a single piece once and appends several through `TokensPiece`; `untex` spells each
+  token in one reused `String`; `Parameters::get_parameters` returns `&[Parameter]`.
+* **L3, L5** the Mouth keeps a file (or lazily decoded content) once, with line ranges, refills its `chars` in place,
+  spells a control sequence in a Mouth-owned `String`, and collects a comment only when `INCLUDE_COMMENTS` keeps it.
+* **L6, L19** `read_keyword` reuses one token buffer and returns the matched `&str`; `read_cs_name_inner` spells the
+  name in a thread-local buffer (a nested `\csname` takes an empty one).
+Measured (release, best of 3 interleaved, each group against its parent commit; base INTPERF4 `e4ab916a806`; mix
+documents XML with ar5iv.sty unless html, typical papers in cortex's HTML recipe), instructions:u Δ %:
+
+| Document | L1 | L2+L8+L9 | L3+L5 | L6+L19 |
+|---|---:|---:|---:|---:|
+| 2308.04512 xml / html | −0.45 / −0.37 | −1.10 / −0.91 | −0.13 / −0.09 | −0.20 / −0.16 |
+| b250, 2604.01119 | −0.10, −0.62 | −0.40, −0.60 | −0.00, −0.35 | +0.02, −0.03 |
+| amsldoc, 2010.05701 | −0.58, −0.42 | −0.53, −1.82 | −0.40, −0.33 | −0.01, −0.48 |
+| 10 typical (popPERFBs) | −0.12 to −0.67 | −0.22 to −0.75 | +0.07 to −1.61 | −0.02 to −0.13 |
+
+1106.3601 moves ±0.7-5 % between its own runs. cycles:u (best of 3, ten lanes in parallel on the loaded host, ±2-10 %
+per run): 2308.04512 html −1.9, −2.3, −2.1, −4.1 %; typical papers −8.1 to +5.7 % per group. Cumulatively the typical
+papers lose 0.4-3.1 % of their instructions; L6+L19 clears the 0.3 % bar on 2010.05701 alone. No new guard (no output
+change): the suite and the A/B are the check. Output byte-identical on every measured run, on a probe with `--comments`,
+a latin1 `\input` file, `\csname`, `calc` and glue keywords, and on 204 arXiv papers (144 using `\csname`, calc, multido, tabu, algorithm2e, glossaries,
+caption, babel-french, `\inputencoding`, `\scantokens` or `\obeylines`; 60 controls; `popMEMA.tsv`): raw XML 204/204
+and the HTML recipe with every auxiliary file 204/204, E/F/W equal; the base agrees with itself on XML 204/204 and HTML
+200/203 (three papers write a different number of image files between two base runs). Peak RSS (html): book790
+4,346,352 → 4,301,936 KB, b1000 1,358,180 → 1,355,624 KB, outputs identical.
+
 ### 2026-11-15 — the ASF traversal's readings share their subtrees (PERFI, PERF2 lever R10)
 
 Defect: `MathTraverser` (`latexml_math_parser/src/asf_traverser.rs`) clones each child glade's readings into every
