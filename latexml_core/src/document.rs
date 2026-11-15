@@ -2797,26 +2797,25 @@ impl Document {
         if !noindent {
           push_indent(out, depth);
         }
-        // The open tag: its namespace declarations, then the attributes, each value escaped. Spelled apart and pushed
-        // whole, so the output grows as it did (pushed piecewise, the book of issue 790 peaked 168 MB higher).
-        let mut open_tag = s!("<{tag}");
+        // The open tag, written in place: its namespace declarations, then the attributes, each value escaped.
+        out.push('<');
+        out.push_str(&tag);
         for ns in node.get_namespace_declarations() {
           let prefix = ns.get_prefix();
-          open_tag.push_str(" xmlns");
+          out.push_str(" xmlns");
           if !prefix.is_empty() {
-            open_tag.push(':');
-            open_tag.push_str(&prefix);
+            out.push(':');
+            out.push_str(&prefix);
           }
-          write!(open_tag, "=\"{}\"", ns.get_href()).ok();
+          write!(out, "=\"{}\"", ns.get_href()).ok();
         }
         for (_, key_sym, value) in anodes {
-          open_tag.push(' ');
-          arena::with(key_sym, |key_str| open_tag.push_str(key_str));
-          open_tag.push_str("=\"");
-          push_escaped_attr(&mut open_tag, &value);
-          open_tag.push('"');
+          out.push(' ');
+          arena::with(key_sym, |key_str| out.push_str(key_str));
+          out.push_str("=\"");
+          push_escaped_attr(out, &value);
+          out.push('"');
         }
-        out.push_str(&open_tag);
         // Perl serializes elements with children (including empty text nodes) as
         // <tag>...</tag>, and truly childless elements as <tag/>. Match this behavior.
         if !children.is_empty() {
@@ -8556,19 +8555,6 @@ fn push_escaped_text(out: &mut String, string: &str) { push_escaped(out, string,
 fn push_escaped_attr(out: &mut String, string: &str) { push_escaped(out, string, true) }
 
 fn push_escaped(out: &mut String, string: &str, attr: bool) {
-  // Reserved whole first, as pushing the escaped copy did: the output's growth (so its peak) stays as it was.
-  let extra: usize = string
-    .bytes()
-    .map(|b| match b {
-      b'&' => 4,
-      b'<' | b'>' => 3,
-      b'"' if attr => 5,
-      b'\n' if attr => 4,
-      b'\t' if attr => 3,
-      _ => 0,
-    })
-    .sum();
-  out.reserve(string.len() + extra);
   let mut rest = string;
   // Copy each run up to the next escaped character whole; every escaped character is ASCII.
   while let Some(at) =

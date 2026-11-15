@@ -227,8 +227,9 @@ pub fn pin_char(c: char) -> SymStr {
 }
 
 /// Resolve a symbol and call the closure with a `&str` reference.
-/// The closure may safely call `pin()` or any other arena function —
-/// re-entrant access reuses the cached borrow.
+/// The closure must not intern (`pin()`, `pin_char()`, … or anything that may call them): a new symbol can grow the
+/// interner's buffer `Vec` (string-interner 0.20 `buffer.rs:144`) and move it under the borrowed `&str`. A closure
+/// that interns takes [`with_copy`]. Read-only arena calls are fine (re-entrant access reuses the cached borrow).
 ///
 /// # Safety
 ///
@@ -237,7 +238,8 @@ pub fn pin_char(c: char) -> SymStr {
 /// `pin<S: AsRef<str>>(s)`, `pin_char(c: char)`) can only produce a
 /// SymStr from content that was already valid UTF-8. The interner's
 /// buffer is append-only by design: once a byte range is associated
-/// with a symbol it is never mutated. Callgrind showed the default
+/// with a symbol its bytes are never mutated (though a growing buffer
+/// may move them, hence the rule above). Callgrind showed the default
 /// validating `resolve` was ~3% of total Ir via `str::from_utf8`.
 pub fn with<R, FnR>(sym: SymStr, caller: FnR) -> R
 where FnR: FnOnce(&str) -> R {
