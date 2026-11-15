@@ -35,6 +35,11 @@ const BIBLATEX_BBL: &str =
 /// Convert `t.tex` (with side `files`) to HTML in one process. Returns
 /// (ANSI-stripped stderr, HTML).
 fn convert_html(tex: &str, files: &[(&str, &str)]) -> (String, String) {
+  convert_html_with(tex, files, RAW)
+}
+
+/// [`convert_html`] under `preload` (a `--preload=…` argument).
+fn convert_html_with(tex: &str, files: &[(&str, &str)], preload: &str) -> (String, String) {
   let bin = env!("CARGO_BIN_EXE_latexml_oxide");
   let workdir = tempfile::tempdir().expect("create tempdir");
   std::fs::write(workdir.path().join("t.tex"), tex).expect("write t.tex");
@@ -48,7 +53,7 @@ fn convert_html(tex: &str, files: &[(&str, &str)]) -> (String, String) {
       "t.html",
       "--nocomments",
       "--timeout=110",
-      RAW,
+      preload,
     ])
     .current_dir(workdir.path())
     .output()
@@ -109,7 +114,7 @@ fn assert_crossref_cites(stderr: &str, html: &str) {
     html,
     "p",
     &[r#"class="ltx_p""#],
-    r##"<p class="ltx_p">Cite <cite class="ltx_cite ltx_citemacro_cite">[<a href="#bib.bib2" title="One chapter" class="ltx_ref">1</a>]</cite> and <cite class="ltx_cite ltx_citemacro_cite">[<a href="#bib.bib1" title="The whole volume" class="ltx_ref">2</a>]</cite>.</p>"##,
+    r##"<p class="ltx_p">Cite <cite class="ltx_cite ltx_cite_numeric ltx_citemacro_cite">[<a href="#bib.bib2" title="One chapter" class="ltx_ref">1</a>]</cite> and <cite class="ltx_cite ltx_cite_numeric ltx_citemacro_cite">[<a href="#bib.bib1" title="The whole volume" class="ltx_ref">2</a>]</cite>.</p>"##,
   );
   // (2) The bibliography's crossref bibref, `show="title, author"`.
   latexml::util::test::assert_element(
@@ -176,7 +181,7 @@ fn natbib_numbers_citet_merges_same_authors() {
     &html,
     "p",
     &[r#"class="ltx_p""#],
-    r##"<p class="ltx_p">Text <cite class="ltx_cite ltx_citemacro_citet">Smith [<a href="#bib.bib1" title="First paper" class="ltx_ref">2</a>, <a href="#bib.bib2" title="Second paper" class="ltx_ref">3</a>]</cite> and <cite class="ltx_cite ltx_citemacro_citep">[<a href="#bib.bib1" title="First paper" class="ltx_ref">2</a>, <a href="#bib.bib2" title="Second paper" class="ltx_ref">3</a>]</cite> and <cite class="ltx_cite ltx_citemacro_citet">Smith [<a href="#bib.bib1" title="First paper" class="ltx_ref">2</a>], [<a href="#bib.bib3" title="Anonymous notes" class="ltx_ref">1</a>]</cite>.</p>"##,
+    r##"<p class="ltx_p">Text <cite class="ltx_cite ltx_citemacro_citet">Smith [<a href="#bib.bib1" title="First paper" class="ltx_ref">2</a>, <a href="#bib.bib2" title="Second paper" class="ltx_ref">3</a>]</cite> and <cite class="ltx_cite ltx_cite_numeric ltx_citemacro_citep">[<a href="#bib.bib1" title="First paper" class="ltx_ref">2</a>, <a href="#bib.bib2" title="Second paper" class="ltx_ref">3</a>]</cite> and <cite class="ltx_cite ltx_citemacro_citet">Smith [<a href="#bib.bib1" title="First paper" class="ltx_ref">2</a>], [<a href="#bib.bib3" title="Anonymous notes" class="ltx_ref">1</a>]</cite>.</p>"##,
   );
 }
 
@@ -195,7 +200,7 @@ fn natbib_super_citet_superscripts_the_number() {
     &html,
     "p",
     &[r#"class="ltx_p""#],
-    r##"<p class="ltx_p">Text <cite class="ltx_cite ltx_citemacro_citet">Smith <sup class="ltx_sup"><a href="#bib.bib1" title="First paper" class="ltx_ref">1</a></sup>; Smith <sup class="ltx_sup"><a href="#bib.bib2" title="Second paper" class="ltx_ref">2</a></sup></cite> and <cite class="ltx_cite ltx_citemacro_citep"><sup class="ltx_sup"><a href="#bib.bib1" title="First paper" class="ltx_ref">1</a></sup>; <sup class="ltx_sup"><a href="#bib.bib2" title="Second paper" class="ltx_ref">2</a></sup></cite>.</p>"##,
+    r##"<p class="ltx_p">Text <cite class="ltx_cite ltx_citemacro_citet">Smith <sup class="ltx_sup"><a href="#bib.bib1" title="First paper" class="ltx_ref">1</a></sup>; Smith <sup class="ltx_sup"><a href="#bib.bib2" title="Second paper" class="ltx_ref">2</a></sup></cite> and <cite class="ltx_cite ltx_cite_numeric ltx_citemacro_citep"><sup class="ltx_sup"><a href="#bib.bib1" title="First paper" class="ltx_ref">1</a></sup>; <sup class="ltx_sup"><a href="#bib.bib2" title="Second paper" class="ltx_ref">2</a></sup></cite>.</p>"##,
   );
 }
 
@@ -238,4 +243,76 @@ fn biblatex_bbl_title_is_digested_once() {
     &[r#"class="ltx_p""#],
     r##"<p class="ltx_p">Title <cite class="ltx_cite ltx_citemacro_citetitle"><a href="#bib.bib1" title="A study of things" class="ltx_ref">A study of things</a></cite>.</p>"##,
   );
+}
+
+/// The citation's form on its `<cite>` (issue #857, OXIDIZED_DESIGN_DIVERGENCES #307): `ltx_cite_numeric` when every
+/// entry printed only its number or label (`[1]`, `[1, Section 7]`, `[Kho00]`, a nameless entry's numeric `\textcite`),
+/// none on an author-year or textual citation. natbib's shapes (numbers, super, author-year, a mixed `Smith [2], [1]`)
+/// are pinned by the guards above. Red (base main 5e02406406e): no form class on any cite. Repros
+/// index-bib/cite_numeric_{thebibliography,biblatex,biblatex_authoryear,natbib_super}.
+#[test]
+fn cite_numeric_class_rows() {
+  const NUM: &str = "ltx_cite ltx_cite_numeric";
+  let rows: [(&str, &str, &[&str]); 4] = [
+    (
+      include_str!(
+        "../../../tools/perfect_kernel/repros/index-bib/cite_numeric_thebibliography.tex"
+      ),
+      "--preload=ar5iv.sty",
+      &[
+        r##"<cite class="NUM ltx_citemacro_cite">[<a class="ltx_ref" href="#bib.bib1" title="">1</a>]</cite>"##,
+        r##"<cite class="NUM ltx_citemacro_cite">[<a class="ltx_ref" href="#bib.bib1" title="">1</a>, <a class="ltx_ref" href="#bib.bib2" title="">2</a>]</cite>"##,
+        r##"<cite class="NUM ltx_citemacro_cite">[<a class="ltx_ref" href="#bib.bib1" title="">1</a>, Section 7]</cite>"##,
+        r##"<cite class="NUM ltx_citemacro_cite">[<a class="ltx_ref" href="#bib.bibx1" title="">Kho00</a>]</cite>"##,
+      ],
+    ),
+    (
+      include_str!("../../../tools/perfect_kernel/repros/index-bib/cite_numeric_biblatex.tex"),
+      "--preload=ar5iv.sty",
+      &[
+        r##"<cite class="NUM ltx_citemacro_cite">[<a class="ltx_ref" href="#bib.bib1" title="T">1</a>]</cite>"##,
+        r##"<cite class="NUM ltx_citemacro_cite">[<a class="ltx_ref" href="#bib.bib1" title="T">1</a>, <a class="ltx_ref" href="#bib.bib2" title="No Author Misc">2</a>]</cite>"##,
+        r##"<cite class="ltx_cite ltx_citemacro_citet">Hampe [<a class="ltx_ref" href="#bib.bib1" title="T">1</a>]</cite>"##,
+        r##"<cite class="NUM ltx_citemacro_citet">[<a class="ltx_ref" href="#bib.bib2" title="No Author Misc">2</a>]</cite>"##,
+      ],
+    ),
+    (
+      include_str!(
+        "../../../tools/perfect_kernel/repros/index-bib/cite_numeric_biblatex_authoryear.tex"
+      ),
+      "--preload=ar5iv.sty",
+      &[
+        r##"<cite class="ltx_cite ltx_citemacro_cite">Hampe, <a class="ltx_ref" href="#bib.bib1" title="T">2017</a></cite>"##,
+        r##"<cite class="ltx_cite ltx_citemacro_citep">(Hampe, <a class="ltx_ref" href="#bib.bib1" title="T">2017</a>)</cite>"##,
+        r##"<cite class="ltx_cite ltx_citemacro_citet">Hampe (<a class="ltx_ref" href="#bib.bib1" title="T">2017</a>)</cite>"##,
+      ],
+    ),
+    // natbib `[super]`: the core sets `\cite{a,b,c}`'s bibref in a `<sup>`, so the class goes on the nearest `ltx:cite`
+    // ancestor. Red (8c11e515cce): the `\cite` had no form class.
+    (
+      include_str!("../../../tools/perfect_kernel/repros/index-bib/cite_numeric_natbib_super.tex"),
+      "--preload=ar5iv.sty",
+      &[
+        r##"<cite class="NUM ltx_citemacro_cite"><sup class="ltx_sup" id="p1.1.1"><a class="ltx_ref" href="#bib.bib1" title="">1</a>–<a class="ltx_ref" href="#bib.bib3" title="">3</a></sup></cite>"##,
+        r##"<cite class="NUM ltx_citemacro_citep"><sup class="ltx_sup"><a class="ltx_ref" href="#bib.bib2" title="">2</a></sup></cite>"##,
+      ],
+    ),
+  ];
+  for (tex, preload, cites) in rows {
+    let (stderr, html) = convert_html_with(tex, &[], preload);
+    assert_eq!(
+      (error_count(&stderr), warning_count(&stderr)),
+      (0, 0),
+      "{stderr}"
+    );
+    let p = latexml::util::test::xml_element(&html, "p", &[r#"class="ltx_p""#])
+      .expect("the cites' paragraph");
+    // (`xml_element` reserializes the paragraph: `class` comes first)
+    let found: Vec<String> = p
+      .match_indices("<cite ")
+      .map(|(i, _)| p[i..i + p[i..].find("</cite>").unwrap() + 7].to_string())
+      .collect();
+    let expected: Vec<String> = cites.iter().map(|c| c.replace("NUM", NUM)).collect();
+    assert_eq!(found, expected, "{p}");
+  }
 }

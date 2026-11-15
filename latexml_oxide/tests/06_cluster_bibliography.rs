@@ -3619,7 +3619,7 @@ fn abntex2cite_bibliography_runs_the_bib_session() {
     &x,
     "para",
     &[],
-    r##"<para fragid="p1" xml:id="p1"><p>Text <cite class="ltx_citemacro_cite">[<ref href="#bib.bib1" idref="bib.bib1" title="A numbered reference">1</ref>]</cite>.</p></para>"##,
+    r##"<para fragid="p1" xml:id="p1"><p>Text <cite class="ltx_cite_numeric ltx_citemacro_cite">[<ref href="#bib.bib1" idref="bib.bib1" title="A numbered reference">1</ref>]</cite>.</p></para>"##,
   );
 }
 
@@ -3657,7 +3657,7 @@ fn abntex2cite_prints_its_fields_and_year_citations() {
     &x,
     "para",
     &[],
-    r##"<para fragid="p1" xml:id="p1"><p>Veja <cite class="ltx_citemacro_cite">[<ref href="#bib.bib2" idref="bib.bib2" title="Direitos humanos">1</ref>]</cite> e <cite class="ltx_citemacro_cite">[<ref href="#bib.bib1" idref="bib.bib1" title="Central do brasil">2</ref>]</cite>: em <cite class="ltx_citemacro_citeyear"><ref href="#bib.bib2" idref="bib.bib2" title="Direitos humanos">1994</ref></cite>, <cite class="ltx_citemacro_citeauthor"><ref href="#bib.bib2" idref="bib.bib2" title="Direitos humanos">Faria</ref></cite>.</p></para>"##,
+    r##"<para fragid="p1" xml:id="p1"><p>Veja <cite class="ltx_cite_numeric ltx_citemacro_cite">[<ref href="#bib.bib2" idref="bib.bib2" title="Direitos humanos">1</ref>]</cite> e <cite class="ltx_cite_numeric ltx_citemacro_cite">[<ref href="#bib.bib1" idref="bib.bib1" title="Central do brasil">2</ref>]</cite>: em <cite class="ltx_citemacro_citeyear"><ref href="#bib.bib2" idref="bib.bib2" title="Direitos humanos">1994</ref></cite>, <cite class="ltx_citemacro_citeauthor"><ref href="#bib.bib2" idref="bib.bib2" title="Direitos humanos">Faria</ref></cite>.</p></para>"##,
   );
 }
 
@@ -3689,7 +3689,7 @@ fn abntex2cite_bbl_carries_author_and_year() {
     &x,
     "para",
     &[],
-    r##"<para fragid="p1" xml:id="p1"><p>Veja <cite class="ltx_citemacro_cite">[<ref idref="bib.bib1">1</ref>]</cite> e <cite class="ltx_citemacro_cite">[<ref idref="bib.bib2">2</ref>]</cite>: em <cite class="ltx_citemacro_citeyear"><ref idref="bib.bib2">1994</ref></cite>, <cite class="ltx_citemacro_citeauthor"><ref idref="bib.bib2">Faria</ref></cite>.</p></para>"##,
+    r##"<para fragid="p1" xml:id="p1"><p>Veja <cite class="ltx_cite_numeric ltx_citemacro_cite">[<ref idref="bib.bib1">1</ref>]</cite> e <cite class="ltx_cite_numeric ltx_citemacro_cite">[<ref idref="bib.bib2">2</ref>]</cite>: em <cite class="ltx_citemacro_citeyear"><ref idref="bib.bib2">1994</ref></cite>, <cite class="ltx_citemacro_citeauthor"><ref idref="bib.bib2">Faria</ref></cite>.</p></para>"##,
   );
 }
 
@@ -3765,7 +3765,7 @@ fn mciteplus_starred_keys_join_the_bibliography() {
     &x,
     "para",
     &["xml:id=\"p1\""],
-    r##"<para fragid="p1" xml:id="p1"><p>Combined <cite class="ltx_citemacro_cite">[<cite/><ref href="#bib.bib1" idref="bib.bib1" title="Head entry">1</ref>, <ref href="#bib.bib3" idref="bib.bib3" title="Third entry">3</ref>]</cite>. Later <cite class="ltx_citemacro_cite">[<ref href="#bib.bib5" idref="bib.bib5" title="Later entry">5</ref>]</cite>.</p></para>"##,
+    r##"<para fragid="p1" xml:id="p1"><p>Combined <cite class="ltx_cite_numeric ltx_citemacro_cite">[<cite/><ref href="#bib.bib1" idref="bib.bib1" title="Head entry">1</ref>, <ref href="#bib.bib3" idref="bib.bib3" title="Third entry">3</ref>]</cite>. Later <cite class="ltx_cite_numeric ltx_citemacro_cite">[<ref href="#bib.bib5" idref="bib.bib5" title="Later entry">5</ref>]</cite>.</p></para>"##,
   );
 }
 
@@ -3890,7 +3890,7 @@ fn biblatex_fullcite_prints_the_entry() {
   let (x, log) =
     convert_and_post_contrib_logging("tests/cluster_regressions/biblatex_fullcite_family.tex");
   assert_eq!(warnings(&log), 0, "{log}");
-  let para = r##"<para fragid="S1.p1" xml:id="S1.p1"><p>See <cite class="ltx_citemacro_fullcite">see <text class="ltx_bib_author">Bettina Just</text><text class="ltx_bib_year"> (2022)</text> <text class="ltx_bib_title">Quantum Computing Compact</text>.  <text class="ltx_bib_publisher">Springer</text>, <text class="ltx_bib_place">Berlin</text>, p.~3</cite>. Also<note fragid="footnote1" mark="1" role="footnote" xml:id="footnote1"><tags><tag>1</tag><tag role="refnum">1</tag><tag role="typerefnum">footnote 1</tag></tags><cite class="ltx_citemacro_fullcite"><text class="ltx_bib_author">Jane Doe</text><text class="ltx_bib_year"> (2020)</text> <text class="ltx_bib_title">On Things</text>. <text class="ltx_bib_journal">J. Stuff</text> <text class="ltx_bib_volume">3</text></cite></note> and<note fragid="footnote2" mark="2" role="footnote" xml:id="footnote2"><tags><tag>2</tag><tag role="refnum">2</tag><tag role="typerefnum">footnote 2</tag></tags><cite class="ltx_citemacro_cite"><ref href="#bib.bib1" idref="bib.bib1" title="Quantum Computing Compact">4</ref></cite></note>. Both <cite class="ltx_citemacro_fullcite"><text class="ltx_bib_author">Bettina Just</text><text class="ltx_bib_year"> (2022)</text> <text class="ltx_bib_title">Quantum Computing Compact</text>.  <text class="ltx_bib_publisher">Springer</text>, <text class="ltx_bib_place">Berlin</text>, <text class="ltx_bib_author">Jane Doe</text><text class="ltx_bib_year"> (2020)</text> <text class="ltx_bib_title">On Things</text>. <text class="ltx_bib_journal">J. Stuff</text> <text class="ltx_bib_volume">3</text></cite>. Part <cite class="ltx_citemacro_fullcite"><text class="ltx_bib_author">Art Hor</text><text class="ltx_bib_year"> (2019)</text> <text class="ltx_bib_title">A Part</text>. See <text class="ltx_bib_crossref"><cite><ref href="#bib.bib3" idref="bib.bib3" title="Big Collection">Big Collection, Itor</ref></cite></text>, <text class="ltx_bib_pages">pp.~1–9</text></cite>. Marked<note fragid="footnote3" mark="3" role="footnote" xml:id="footnote3"><tags><tag>3</tag><tag role="refnum">3</tag><tag role="typerefnum">footnote 3</tag></tags><cite class="ltx_citemacro_cite"><ref href="#bib.bib2" idref="bib.bib2" title="On Things">1</ref></cite></note>.</p></para>"##
+  let para = r##"<para fragid="S1.p1" xml:id="S1.p1"><p>See <cite class="ltx_citemacro_fullcite">see <text class="ltx_bib_author">Bettina Just</text><text class="ltx_bib_year"> (2022)</text> <text class="ltx_bib_title">Quantum Computing Compact</text>.  <text class="ltx_bib_publisher">Springer</text>, <text class="ltx_bib_place">Berlin</text>, p.~3</cite>. Also<note fragid="footnote1" mark="1" role="footnote" xml:id="footnote1"><tags><tag>1</tag><tag role="refnum">1</tag><tag role="typerefnum">footnote 1</tag></tags><cite class="ltx_citemacro_fullcite"><text class="ltx_bib_author">Jane Doe</text><text class="ltx_bib_year"> (2020)</text> <text class="ltx_bib_title">On Things</text>. <text class="ltx_bib_journal">J. Stuff</text> <text class="ltx_bib_volume">3</text></cite></note> and<note fragid="footnote2" mark="2" role="footnote" xml:id="footnote2"><tags><tag>2</tag><tag role="refnum">2</tag><tag role="typerefnum">footnote 2</tag></tags><cite class="ltx_cite_numeric ltx_citemacro_cite"><ref href="#bib.bib1" idref="bib.bib1" title="Quantum Computing Compact">4</ref></cite></note>. Both <cite class="ltx_citemacro_fullcite"><text class="ltx_bib_author">Bettina Just</text><text class="ltx_bib_year"> (2022)</text> <text class="ltx_bib_title">Quantum Computing Compact</text>.  <text class="ltx_bib_publisher">Springer</text>, <text class="ltx_bib_place">Berlin</text>, <text class="ltx_bib_author">Jane Doe</text><text class="ltx_bib_year"> (2020)</text> <text class="ltx_bib_title">On Things</text>. <text class="ltx_bib_journal">J. Stuff</text> <text class="ltx_bib_volume">3</text></cite>. Part <cite class="ltx_citemacro_fullcite"><text class="ltx_bib_author">Art Hor</text><text class="ltx_bib_year"> (2019)</text> <text class="ltx_bib_title">A Part</text>. See <text class="ltx_bib_crossref"><cite><ref href="#bib.bib3" idref="bib.bib3" title="Big Collection">Big Collection, Itor</ref></cite></text>, <text class="ltx_bib_pages">pp.~1–9</text></cite>. Marked<note fragid="footnote3" mark="3" role="footnote" xml:id="footnote3"><tags><tag>3</tag><tag role="refnum">3</tag><tag role="typerefnum">footnote 3</tag></tags><cite class="ltx_cite_numeric ltx_citemacro_cite"><ref href="#bib.bib2" idref="bib.bib2" title="On Things">1</ref></cite></note>.</p></para>"##
     .replace('~', "\u{a0}");
   latexml::util::test::assert_element(&x, "para", &["xml:id=\"S1.p1\""], &para);
   latexml::util::test::assert_element(
@@ -3973,7 +3973,7 @@ fn biblatex_footcite_in_a_footnote_is_parenthesized() {
     "{log}"
   );
   assert_eq!(x.matches("<note ").count(), 1, "{x}");
-  let note = r##"<note fragid="footnote1" mark="1" role="footnote" xml:id="footnote1"><tags><tag>1</tag><tag role="refnum">1</tag><tag role="typerefnum">footnote 1</tag></tags>See  (<cite class="ltx_citemacro_cite"><ref href="#bib.bib1" idref="bib.bib1" title="Quantum Computing Compact">1</ref></cite>).</note>"##.replace('~', "\u{a0}");
+  let note = r##"<note fragid="footnote1" mark="1" role="footnote" xml:id="footnote1"><tags><tag>1</tag><tag role="refnum">1</tag><tag role="typerefnum">footnote 1</tag></tags>See  (<cite class="ltx_cite_numeric ltx_citemacro_cite"><ref href="#bib.bib1" idref="bib.bib1" title="Quantum Computing Compact">1</ref></cite>).</note>"##.replace('~', "\u{a0}");
   latexml::util::test::assert_element(&x, "note", &["xml:id=\"footnote1\""], &note);
 }
 
@@ -3986,7 +3986,7 @@ fn biblatex_footcite_in_a_notes_style_keeps_its_brackets() {
     "tests/cluster_regressions/biblatex_footcite_verbose_family.tex",
   );
   assert_eq!(warnings(&log), 0, "{log}");
-  let note = r##"<note fragid="footnote1" mark="1" role="footnote" xml:id="footnote1"><tags><tag>1</tag><tag role="refnum">1</tag><tag role="typerefnum">footnote 1</tag></tags><cite class="ltx_citemacro_cite">[<ref href="#bib.bib1" idref="bib.bib1" title="Quantum Computing Compact">1</ref>]</cite></note>"##.replace('~', "\u{a0}");
+  let note = r##"<note fragid="footnote1" mark="1" role="footnote" xml:id="footnote1"><tags><tag>1</tag><tag role="refnum">1</tag><tag role="typerefnum">footnote 1</tag></tags><cite class="ltx_cite_numeric ltx_citemacro_cite">[<ref href="#bib.bib1" idref="bib.bib1" title="Quantum Computing Compact">1</ref>]</cite></note>"##.replace('~', "\u{a0}");
   latexml::util::test::assert_element(&x, "note", &["xml:id=\"footnote1\""], &note);
 }
 
@@ -3998,7 +3998,7 @@ fn biblatex_footcite_in_a_numeric_based_style_is_the_bare_label() {
   let (x, log) =
     convert_and_post_contrib_logging("tests/cluster_regressions/biblatex_footcite_ieee_family.tex");
   assert_eq!(warnings(&log), 0, "{log}");
-  let note = r##"<note fragid="footnote1" mark="1" role="footnote" xml:id="footnote1"><tags><tag>1</tag><tag role="refnum">1</tag><tag role="typerefnum">footnote 1</tag></tags><cite class="ltx_citemacro_cite"><ref href="#bib.bib1" idref="bib.bib1" title="Quantum Computing Compact">1</ref></cite></note>"##.replace('~', "\u{a0}");
+  let note = r##"<note fragid="footnote1" mark="1" role="footnote" xml:id="footnote1"><tags><tag>1</tag><tag role="refnum">1</tag><tag role="typerefnum">footnote 1</tag></tags><cite class="ltx_cite_numeric ltx_citemacro_cite"><ref href="#bib.bib1" idref="bib.bib1" title="Quantum Computing Compact">1</ref></cite></note>"##.replace('~', "\u{a0}");
   latexml::util::test::assert_element(&x, "note", &["xml:id=\"footnote1\""], &note);
 }
 
@@ -4015,7 +4015,7 @@ fn biblatex_footcite_style_chain_decides_the_label() {
   ] {
     let (x, log) = convert_and_post_contrib_logging(fixture);
     assert_eq!(warnings(&log), 0, "{fixture}: {log}");
-    let note = r##"<note fragid="footnote1" mark="1" role="footnote" xml:id="footnote1"><tags><tag>1</tag><tag role="refnum">1</tag><tag role="typerefnum">footnote 1</tag></tags><cite class="ltx_citemacro_cite">[<ref href="#bib.bib1" idref="bib.bib1" title="Quantum Computing Compact">1</ref>]</cite></note>"##.replace('~', "\u{a0}");
+    let note = r##"<note fragid="footnote1" mark="1" role="footnote" xml:id="footnote1"><tags><tag>1</tag><tag role="refnum">1</tag><tag role="typerefnum">footnote 1</tag></tags><cite class="ltx_cite_numeric ltx_citemacro_cite">[<ref href="#bib.bib1" idref="bib.bib1" title="Quantum Computing Compact">1</ref>]</cite></note>"##.replace('~', "\u{a0}");
     latexml::util::test::assert_element(&x, "note", &["xml:id=\"footnote1\""], &note);
   }
 }
@@ -4849,7 +4849,7 @@ fn biblatex_entry_left_out_of_every_list_is_built_hidden() {
   assert_eq!(latexml::util::test::error_count(&log), 0, "{log}");
   assert_eq!(warnings(&log), 0, "{log}");
   assert!(
-    x.contains(r##"<p>See <cite class="ltx_citemacro_fullcite"><text class="ltx_bib_author">Donald Knuth</text><text class="ltx_bib_year"> (1984)</text> <text class="ltx_bib_title">The TeXbook</text>.  <text class="ltx_bib_publisher">AW</text></cite>. Also <cite class="ltx_citemacro_cite">[<ref href="#bib.bib2" idref="bib.bib2" title="LaTeX paper">3</ref>, <ref href="#biba.bib1" idref="biba.bib1" title="The TeXbook">2</ref>, <ref href="#bib.bib1" idref="bib.bib1" title="The LaTeX Companion">1</ref>, <ref href="#bib.bib3" idref="bib.bib3" title="Mittelbach paper">4</ref>]</cite>.</p>"##),
+    x.contains(r##"<p>See <cite class="ltx_citemacro_fullcite"><text class="ltx_bib_author">Donald Knuth</text><text class="ltx_bib_year"> (1984)</text> <text class="ltx_bib_title">The TeXbook</text>.  <text class="ltx_bib_publisher">AW</text></cite>. Also <cite class="ltx_cite_numeric ltx_citemacro_cite">[<ref href="#bib.bib2" idref="bib.bib2" title="LaTeX paper">3</ref>, <ref href="#biba.bib1" idref="biba.bib1" title="The TeXbook">2</ref>, <ref href="#bib.bib1" idref="bib.bib1" title="The LaTeX Companion">1</ref>, <ref href="#bib.bib3" idref="bib.bib3" title="Mittelbach paper">4</ref>]</cite>.</p>"##),
     "{x}"
   );
   assert_eq!(

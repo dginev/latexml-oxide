@@ -517,7 +517,7 @@ fn bibcite_show_walk(
   phrases: &[Node],
   yysep: &str,
   checkdups: bool,
-) -> (Vec<NodeData>, bool) {
+) -> (Vec<NodeData>, bool, Option<bool>) {
   static YEAR_DELIM: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"(?i)(\w)year").unwrap());
   static PHRASE_DELIM: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"(?i)(\w)phrase").unwrap());
   static PHRASE_NUM_DELIM: LazyLock<Regex> =
@@ -530,10 +530,13 @@ fn bibcite_show_walk(
     LazyLock::new(|| Regex::new(r"(?i)^\{\}year\{\}phrase2").unwrap());
 
   let mut didref = false;
+  // The entry's form (issue #857): `Some(true)` when it printed only numbers or labels, `None` when no role.
+  let mut numeric: Option<bool> = None;
   let mut stuff: Vec<NodeData> = Vec::new();
   let mut show = saveshow;
   if show == "none" && !preformatted.is_empty() {
     stuff = preformatted.to_vec();
+    numeric = Some(false);
     show = "";
   } else if datum.missing {
     stuff = vec![bib_ref(&datum.attr, vec![NodeData::Text(
@@ -560,6 +563,11 @@ fn bibcite_show_walk(
       rest = &rest[m.end()..];
       if role.ends_with('s') {
         role.pop();
+      }
+      match role.as_str() {
+        "refnum" | "number" | "super" => numeric = Some(numeric.unwrap_or(true)),
+        "author" | "fullauthor" | "title" | "fullentry" | "year" => numeric = Some(false),
+        _ => {},
       }
       match role.as_str() {
         "author" => stuff.extend(datum.authors.iter().cloned()),
@@ -674,7 +682,7 @@ fn bibcite_show_walk(
       break;
     }
   }
-  (stuff, didref)
+  (stuff, didref, numeric)
 }
 
 impl CrossRef {
@@ -2123,7 +2131,8 @@ impl CrossRef {
   /// Port of Perl `CrossRef::fill_in_bibrefs` (`CrossRef.pm` L486-493): every
   /// `<ltx:bibref>` is replaced by the citation
   /// [`make_bibcite`](Self::make_bibcite) builds for it — by nothing, when that
-  /// is empty.
+  /// is empty. An `<ltx:cite>` whose every bibref (at any depth) shows only numbers or labels
+  /// gets the class `ltx_cite_numeric` (issue #857), which Perl drops with the bibref's `show`.
   fn fill_in_bibrefs(&mut self, doc: &mut PostDocument) {
     // A `FullEntry` copy of a bibliography entry brings the entry's own bibrefs (a crossref'd parent, a `\cite` in a
     // note), copied before they were filled: fill again until none is left. Bounded, for an entry that copies itself.
@@ -2132,9 +2141,26 @@ impl CrossRef {
       if bibrefs.is_empty() {
         return;
       }
+      let mut cites: HashMap<usize, (Node, bool)> = HashMap::default();
       for bibref in &bibrefs {
-        let cite = self.make_bibcite(doc, bibref);
+        let (cite, numeric) = self.make_bibcite(doc, bibref);
+        // The nearest `ltx:cite` ancestor: natbib `[super]` sets the bibref in a `<sup>` inside it.
+        let mut ancestor = bibref.get_parent();
+        while let Some(node) = ancestor.as_ref()
+          && doc.get_qname(node).as_deref() != Some("ltx:cite")
+        {
+          ancestor = node.get_parent();
+        }
+        if let Some(parent) = ancestor {
+          cites
+            .entry(parent.to_hashable())
+            .or_insert((parent, true))
+            .1 &= numeric;
+        }
         doc.replace_node(bibref, &cite);
+      }
+      for (mut parent, _) in cites.into_values().filter(|(_, numeric)| *numeric) {
+        PostDocument::add_class(&mut parent, "ltx_cite_numeric");
       }
     }
     let left = doc.findnodes("//ltx:bibref").len();
@@ -2151,8 +2177,9 @@ impl CrossRef {
   /// to a bibref's keys, each labelled by the bibref's `show` pattern filled
   /// with that entry's bibliography data (see [`bibcite_show_walk`]). Every link
   /// carries the entry's title as its `title` (L530-539, L555-557): the
-  /// tooltip naming the work behind a bare `[1]`.
-  fn make_bibcite(&mut self, doc: &PostDocument, bibref: &Node) -> Vec<NodeData> {
+  /// tooltip naming the work behind a bare `[1]`. The flag says the citation
+  /// shows only numbers or labels (`[1]`, `[Kho00]`, `[1, Section 7]`).
+  fn make_bibcite(&mut self, doc: &PostDocument, bibref: &Node) -> (Vec<NodeData>, bool) {
     let keys_str = bibref.get_attribute("bibrefs").unwrap_or_default();
     let keys: Vec<&str> = keys_str.split(',').filter(|k| !k.is_empty()).collect();
     let preformatted = child_nodes_data(bibref);
@@ -2169,7 +2196,7 @@ impl CrossRef {
     // is replaced by nothing. Filling it in printed the keys — for
     // `\nocite{*}` a visible `*` as a missing citation plus its warning.
     if show == "nothing" {
-      return Vec::new();
+      return (Vec::new(), false);
     }
     let attr_or_comma = |name: &str| {
       bibref
@@ -2436,7 +2463,7 @@ impl CrossRef {
         refs.insert(0, NodeData::Text("[".to_string()));
         refs.push(NodeData::Text("]".to_string()));
       }
-      return refs;
+      return (refs, true);
     }
     let lower = show.to_lowercase();
     let checkdups =
@@ -2444,6 +2471,7 @@ impl CrossRef {
     let mut data: VecDeque<BibciteDatum> = data.into();
     // (a bare-number show absorbs no same-author entries, `checkdups`, so the joints stay aligned with the entries)
     let mut joints = joints.into_iter();
+    let mut forms: Vec<Option<bool>> = Vec::new();
     while let Some(datum) = data.pop_front() {
       let joint = joints.next().unwrap_or(CiteJoint::Separator);
       if joint == CiteJoint::Covered {
@@ -2453,7 +2481,7 @@ impl CrossRef {
         .nameless
         .then(|| nameless_numeric_show(&show))
         .flatten();
-      let (stuff, didref) = bibcite_show_walk(
+      let (stuff, didref, numeric) = bibcite_show_walk(
         nameless_show.as_deref().unwrap_or(&show),
         &datum,
         &mut data,
@@ -2463,6 +2491,7 @@ impl CrossRef {
         // Entries without names share no author label.
         checkdups && !datum.nameless,
       );
+      forms.push(numeric);
       let item = if didref {
         stuff
       } else {
@@ -2478,7 +2507,8 @@ impl CrossRef {
       }
       refs.extend(item);
     }
-    refs
+    let numeric = forms.contains(&Some(true)) && !forms.contains(&Some(false));
+    (refs, numeric)
   }
 
   fn fill_in_mathlinks(&mut self, doc: &PostDocument) {
