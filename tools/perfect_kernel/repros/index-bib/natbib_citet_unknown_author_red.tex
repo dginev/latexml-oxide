@@ -1,0 +1,16 @@
+% witness: issue #857 review revI857 probe p3; synthetic
+% oracle:  pdflatex 0 errors: "B (author?)^{1}." (natbib's \citet of an entry with no author-year label prints its
+%          "(author?)" placeholder; under `[super]` the number is a superscript)
+% engines: fix/issue-857 = `B <cite class="ltx_cite ltx_cite_numeric ltx_citemacro_citet">1</cite>`, 0 warnings (the
+%          placeholder lost, uncounted; the number not superscripted)
+% expect:  "(author?)" kept before the superscript number, or a Warning counting it
+% status:  RED
+% moves:   post-merge
+\documentclass{article}
+\usepackage[super]{natbib}
+\begin{document}
+B \citet{a}.
+\begin{thebibliography}{9}
+\bibitem{a} J. Smith, Paper, 2000.
+\end{thebibliography}
+\end{document}

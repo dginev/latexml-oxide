@@ -2131,7 +2131,7 @@ impl CrossRef {
   /// Port of Perl `CrossRef::fill_in_bibrefs` (`CrossRef.pm` L486-493): every
   /// `<ltx:bibref>` is replaced by the citation
   /// [`make_bibcite`](Self::make_bibcite) builds for it — by nothing, when that
-  /// is empty. An `<ltx:cite>` whose every bibref shows only numbers or labels
+  /// is empty. An `<ltx:cite>` whose every bibref (at any depth) shows only numbers or labels
   /// gets the class `ltx_cite_numeric` (issue #857), which Perl drops with the bibref's `show`.
   fn fill_in_bibrefs(&mut self, doc: &mut PostDocument) {
     // A `FullEntry` copy of a bibliography entry brings the entry's own bibrefs (a crossref'd parent, a `\cite` in a
@@ -2144,9 +2144,14 @@ impl CrossRef {
       let mut cites: HashMap<usize, (Node, bool)> = HashMap::default();
       for bibref in &bibrefs {
         let (cite, numeric) = self.make_bibcite(doc, bibref);
-        if let Some(parent) = bibref.get_parent()
-          && doc.get_qname(&parent).as_deref() == Some("ltx:cite")
+        // The nearest `ltx:cite` ancestor: natbib `[super]` sets the bibref in a `<sup>` inside it.
+        let mut ancestor = bibref.get_parent();
+        while let Some(node) = ancestor.as_ref()
+          && doc.get_qname(node).as_deref() != Some("ltx:cite")
         {
+          ancestor = node.get_parent();
+        }
+        if let Some(parent) = ancestor {
           cites
             .entry(parent.to_hashable())
             .or_insert((parent, true))

@@ -249,11 +249,11 @@ fn biblatex_bbl_title_is_digested_once() {
 /// entry printed only its number or label (`[1]`, `[1, Section 7]`, `[Kho00]`, a nameless entry's numeric `\textcite`),
 /// none on an author-year or textual citation. natbib's shapes (numbers, super, author-year, a mixed `Smith [2], [1]`)
 /// are pinned by the guards above. Red (base main 5e02406406e): no form class on any cite. Repros
-/// index-bib/cite_numeric_{thebibliography,biblatex,biblatex_authoryear}.
+/// index-bib/cite_numeric_{thebibliography,biblatex,biblatex_authoryear,natbib_super}.
 #[test]
 fn cite_numeric_class_rows() {
   const NUM: &str = "ltx_cite ltx_cite_numeric";
-  let rows: [(&str, &str, &[&str]); 3] = [
+  let rows: [(&str, &str, &[&str]); 4] = [
     (
       include_str!(
         "../../../tools/perfect_kernel/repros/index-bib/cite_numeric_thebibliography.tex"
@@ -285,6 +285,16 @@ fn cite_numeric_class_rows() {
         r##"<cite class="ltx_cite ltx_citemacro_cite">Hampe, <a class="ltx_ref" href="#bib.bib1" title="T">2017</a></cite>"##,
         r##"<cite class="ltx_cite ltx_citemacro_citep">(Hampe, <a class="ltx_ref" href="#bib.bib1" title="T">2017</a>)</cite>"##,
         r##"<cite class="ltx_cite ltx_citemacro_citet">Hampe (<a class="ltx_ref" href="#bib.bib1" title="T">2017</a>)</cite>"##,
+      ],
+    ),
+    // natbib `[super]`: the core sets `\cite{a,b,c}`'s bibref in a `<sup>`, so the class goes on the nearest `ltx:cite`
+    // ancestor. Red (8c11e515cce): the `\cite` had no form class.
+    (
+      include_str!("../../../tools/perfect_kernel/repros/index-bib/cite_numeric_natbib_super.tex"),
+      "--preload=ar5iv.sty",
+      &[
+        r##"<cite class="NUM ltx_citemacro_cite"><sup class="ltx_sup" id="p1.1.1"><a class="ltx_ref" href="#bib.bib1" title="">1</a>–<a class="ltx_ref" href="#bib.bib3" title="">3</a></sup></cite>"##,
+        r##"<cite class="NUM ltx_citemacro_citep"><sup class="ltx_sup"><a class="ltx_ref" href="#bib.bib2" title="">2</a></sup></cite>"##,
       ],
     ),
   ];
