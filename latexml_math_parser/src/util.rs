@@ -1675,7 +1675,7 @@ pub(crate) fn operand_levels(nodes: &[Node], stream: bool) -> OperandLevels {
           .is_some_and(|role| !matches!(role.as_str(), "ARROW" | "METARELOP" | "RELOP")))
     {
       levels.push(open.len());
-      open.push((name_is(node, "XMApp")).then_some(node));
+      open.push(name_is(node, "XMApp").then_some(node));
     } else if (role == "CLOSE" || side().as_deref() == Some("right"))
       && open.last().is_some_and(Option::is_none)
     {
@@ -2091,7 +2091,7 @@ fn is_accented_differential_operator(node: &Node) -> bool {
   let node = resolve_xmref(node).unwrap_or_else(|| node.clone());
   let role = |child: &Node| {
     let child = resolve_xmref(child).unwrap_or_else(|| child.clone());
-    (name_is(&child, "XMTok"))
+    name_is(&child, "XMTok")
       .then(|| child.get_attribute("role"))
       .flatten()
   };

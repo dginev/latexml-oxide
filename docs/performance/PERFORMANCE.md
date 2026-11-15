@@ -355,7 +355,8 @@ into a `String` (`c_str_to_string`), and the hot callers only compared, measured
 tests in the math parser, the post-processor and core's `document.rs` (`is_ltx_element`, `resolve_xmref`,
 `collect_named`, `PostDocument::get_qname`/`is_qname`/`qname_prefix`), `get_attribute(..).is_some()` presence tests
 (`open_text_internal`'s `_autoopened`, per character) and `get_attribute(..).as_deref() == Some(..)`, and text content
-in `append_tree`, `open_text`/`close_text_internal` (its length) and `DefMathLigature`'s matcher. Fix: the rust-libxml
+in `append_tree`, `open_text`/`close_text_internal` (its length), and the per-character `String` of `DefMathLigature`'s matcher (its
+`XMTok` content stays an owned read). Fix: the rust-libxml
 0.3.24 borrowed reads (copy on the stack): `common::xml::name_is` over `RoNode::with_name`, `with_namespace_href`,
 `has_attribute` (the `xmlHasProp` lookup `get_attribute` makes first), `with_attribute(c"..", ..)`, `with_content`.
 Measured: instructions:u, best of 3 interleaved, base INTPERF5 `304ec7d5157`, cortex's ar5iv HTML recipe unless xml.

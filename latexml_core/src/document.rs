@@ -583,11 +583,7 @@ enum Placement_ {
 /// every resident root child on every yield (roadmap stream C, 2026-09-25).
 fn subtree_holds_prose(node: &Node) -> bool {
   fn is_ltx(node: &Node, local: &str) -> bool {
-    node.get_type() == Some(NodeType::ElementNode)
-      && name_is(node, local)
-      && node
-        .get_namespace()
-        .is_some_and(|ns| ns.get_href() == model::LTX_NAMESPACE)
+    node.get_type() == Some(NodeType::ElementNode) && xml::is_ltx_element(node, local)
   }
   fn text_outside_pictures(node: &Node) -> bool {
     let mut child = node.get_first_child();

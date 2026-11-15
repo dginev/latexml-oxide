@@ -4752,7 +4752,7 @@ fn is_accented_letter(node: &XMLNode) -> bool {
   let node = resolve(node);
   let role = |node: &XMLNode| {
     let node = resolve(node);
-    (name_is(&node, "XMTok"))
+    name_is(&node, "XMTok")
       .then(|| node.get_attribute("role"))
       .flatten()
   };
