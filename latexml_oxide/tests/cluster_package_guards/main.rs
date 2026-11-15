@@ -604,6 +604,7 @@ mod perfect_kernel_batchqa14a;
 /// QA47A: `\begin{document}` runs the kernel's begin-document lists, so `cmd/<name>/<hook>` hooks patch TeX macros;
 /// a binding's hook is a counted Warning (BM Q3.3).
 mod perfect_kernel_batchqa47a;
+mod perfect_kernel_batchqa76a;
 mod perfect_kernel_batchqab57;
 /// QAB8 (QA26): the glue between two paragraphs is `--ltx-skip-before` on the second; OD #1050.
 mod perfect_kernel_batchqab8;

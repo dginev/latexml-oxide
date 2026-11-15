@@ -21727,3 +21727,28 @@ width), nor algorithm2e's or listings' floating forms (which start where `\hsize
 sub-float or a captioned listing in a parbox or a `p` cell reads the box's `\hsize` (witnesses 2010.06608 S4.F8,
 2007.14228 S5.F7).
 Witnesses 1412.0314, 1711.09469. Guard `perfect_kernel_batchqa14a::parbox_sets_only_the_line_width`. An upstream offer.
+
+## 1272. llncs's and svjour3's keyword lists lose their `\and` separators
+
+llncs.cls:906 `\providecommand{\keywords}[1]{\def\and{{\textperiodcentered} }…#1}` and svjour3.cls:304-322 (`\keywords`,
+`\subclass`, `\PACS`, `\CRclass`, each `\def\and{\ifhmode\unskip\nobreak\fi\ $\cdot$ }`) give `\and` the class's
+separator inside the list. llncs.cls.ltxml:58 and sv_support.sty.ltxml:65-74 pass the argument to
+`\lx@add@keywords`/`\lx@add@classification` with the frontmatter's `\and`, which prints nothing after `\maketitle`
+and " and " before it; no kernel step splits a keyword list. Upstream brucemiller/LaTeXML#2263. Minimal trigger
+(pdflatex "Keywords: Alpha · Beta gamma · Delta"; Perl "Alpha Beta gamma Delta"):
+
+```latex
+\documentclass{llncs}
+\begin{document}
+\title{T}\author{A}\institute{I}
+\maketitle
+\begin{abstract}
+Abs.
+\keywords{Alpha \and Beta gamma \and Delta}
+\end{abstract}
+\end{document}
+```
+
+Rust: llncs_cls.rs's `\keywords` sets the class's `\and` before its items; sv_support_sty.rs's four setters run
+`\lx@sv@list@and`, empty there (svmult.cls v5.12:2432 sets none, 2512.18788) and svjour3_cls.rs's dot (shared with its `\JEL`). Guard
+`perfect_kernel_batchqa76a::class_keyword_lists_print_their_and`. An upstream offer.

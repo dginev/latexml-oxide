@@ -215,9 +215,11 @@ fn svjour3_editions_commands() {
     r#"<tag><text font="bold" fontsize="90%" xml:id="S1.I2.ix1.1">Data Availability</text></tag> </tags> <para xml:id="S1.I2.ix1.p1"> <p xml:id="S1.I2.ix1.p1.1"><text fontsize="90%" xml:id="S1.I2.ix1.p1.1.1">The data are available on request.</text></p> </para> </item>"#,
     r#"<tag><text font="bold" fontsize="90%" xml:id="S1.I3.ix1.1">Conflict of interest</text></tag> </tags> <para xml:id="S1.I3.ix1.p1"> <p xml:id="S1.I3.ix1.p1.1"><text fontsize="90%" xml:id="S1.I3.ix1.p1.1.1">The authors declare none.</text></p> </para> </item>"#,
   ]);
+  // The keywords' `\and` is svjour3.cls:304-306's `$\cdot$` too (QA76A; it printed nothing, "one two").
   let xml = clean!("svjour3_jel_classification.tex");
   assert_all(&xml, &[
-    r#"<classification name="JEL Classification:" scheme="JEL">C21 <Math mode="inline" tex="\cdot" text="cdot" xml:id="m1"> <XMath xml:id="m1.1"> <XMTok name="cdot" role="MULOP">⋅</XMTok> </XMath> </Math> C58</classification>"#,
+    r#"<keywords name="Keywords: ">one <Math mode="inline" tex="\cdot" text="cdot" xml:id="m1"> <XMath xml:id="m1.1"> <XMTok name="cdot" role="MULOP">⋅</XMTok> </XMath> </Math> two</keywords>"#,
+    r#"<classification name="JEL Classification:" scheme="JEL">C21 <Math mode="inline" tex="\cdot" text="cdot" xml:id="m2"> <XMath xml:id="m2.1"> <XMTok name="cdot" role="MULOP">⋅</XMTok> </XMath> </Math> C58</classification>"#,
   ]);
 }
 

@@ -26,7 +26,7 @@ LoadDefinitions!({
     DefMacro!("\\JELname", "JEL Classification");
     DefMacro!(
       "\\JEL{}",
-      "\\lx@add@classification[scheme=JEL,name={\\JELname: }]{\\def\\and{\\unskip\\ $\\cdot$ }#1}"
+      "\\lx@add@classification[scheme=JEL,name={\\JELname: }]{\\lx@sv@list@and#1}"
     );
     RawTeX!(r"\def\fundname{Funding}
 \def\dataname{Data Availability}
@@ -41,6 +41,9 @@ LoadDefinitions!({
 \def\endconflict{\endtrivlist}
 \newenvironment{Conflict}{\begin{conflict}}{\end{conflict}}");
   }
+  // svjour3.cls:304-322 (1401.6947's, 1402.2599's): `\keywords`, `\subclass`, `\PACS`, `\CRclass` and `\JEL` set their
+  // items' `\and` to a centred dot (upstream #2263; KNOWN_PERL_ERRORS #1272).
+  DefMacro!("\\lx@sv@list@and", "\\def\\and{\\ifhmode\\unskip\\nobreak\\fi\\ $\\cdot$ }");
   // svjour3.cls :474-478 (every copy, 0712.0031's) `\lastand`, the separator before the last author in the title (", and"),
   // which papers write in `\author` (`\author{Silvia Chiappa\thanks{…} \lastand Ulrich Paquet}`, 1907.12906): an `\and`
   // (Perl's binding lacks it: KNOWN_PERL_ERRORS #813).

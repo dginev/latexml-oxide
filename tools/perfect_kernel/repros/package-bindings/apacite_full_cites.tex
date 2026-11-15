@@ -1,0 +1,22 @@
+% mechanism: apacite.sty:268-403 (classic citation mode) `\fullcite`, `\fullciteNP`, `\fullciteA`, `\fullciteauthor`,
+%   `\fullciteauthorA` — `\cite`, `\citeNP`, `\citeA`, `\citeauthor`, `\citeauthorNP` with every author
+%   (`\citeauthoryear{full}{full}`, natbib's starred forms); with `\citeauthorNP` and `\shortciteauthorA` the binding
+%   left them undefined (upstream brucemiller/LaTeXML#711).
+% witness: 11 census apacite papers use `\fullcite`
+% oracle:  pdflatex 0 errors: "A (Smith, Jones, & Brown, 2001). B Smith, Jones, & Brown, 2001. C Smith, Jones, and Brown
+%          (2001). D Smith, Jones, and Brown. E Smith, Jones, & Brown. F Smith et al.. G Smith et al.. H (e.g., Smith,
+%          Jones, & Brown, 2001, p. 5)."
+% engines: rust base (origin/main 75531ffc9d6) E=7, each an undefined macro and its keys left as text; Perl 0.8.8 has
+%          no apacite binding: E=9 (every cite undefined)
+% expect:  0 errors, 0 warnings; each a cite of `a` showing FullAuthors (A-E, H) or Authors (F, G)
+% status:  RED (75531ffc9d6) -> GREEN (QA76A)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{apacite}
+\begin{document}
+A \fullcite{a}. B \fullciteNP{a}. C \fullciteA{a}. D \fullciteauthor{a}. E \fullciteauthorA{a}.
+F \citeauthorNP{a}. G \shortciteauthorA{a}. H \fullcite<e.g.,>[p.~5]{a}.
+\begin{thebibliography}{9}
+\bibitem[\protect\citeauthoryear{Smith, Jones,\ \BBA{} Brown}{Smith\ \protect\BOthers{.}}{2001}]{a} Smith, J., Jones, K., \& Brown, L. (2001). Title.
+\end{thebibliography}
+\end{document}
