@@ -200,7 +200,8 @@ no-dynamic-clib CI assertion (release).
 ### D.2 Vendored native libraries — the cargo-about blind spot
 
 In each row **the crate manifest's license is not the license of the code that
-ships**, so cargo-deny (§A) cannot catch any of them. Audited by hand here,
+ships**, so cargo-deny (§A) cannot catch any of them — except libmarpa from
+`libmarpa-asf-sys` 0.3.1, whose manifest now names the combination. Audited by hand here,
 attributed in `THIRD-PARTY-NOTICES` §3.
 
 "Vendored **native**" understates the class: the defining trait is *a manifest that
@@ -211,15 +212,15 @@ original five signals despite being the largest native surface in the binary.
 
 | Native lib | Carrier crate | Crate declares | What actually links in | Notice |
 |---|---|---|---|---|
-| **libmarpa 8.6.2** | `libmarpa-asf-sys` 0.3.1 (crates.io; fork `dginev/marpa`) | `MIT OR Apache-2.0` | `marpa.c`/`marpa_ami.c`/`marpa_codes.c` → **MIT** © 2018 Jeffrey Kegler; `marpa_avl.c`/`marpa_tavl.c` (Ben Pfaff's libavl) → **LGPL-3.0+** © FSF; `marpa_obs.c` (GNU obstack) → **LGPL-2.1+** © FSF, built with one modified file, `c/marpa_obs.c` (16 KiB chunks, a per-thread chunk cache), modification notice in its header | §3.3 |
+| **libmarpa 8.6.2** | `libmarpa-asf-sys` 0.3.1 (crates.io; fork `dginev/marpa`) | from 0.3.1 `(MIT OR Apache-2.0) AND MIT AND LGPL-2.1-or-later AND LGPL-3.0-or-later` (0.3.0: `MIT OR Apache-2.0`); `deny.toml` allows the two LGPLs for this crate only (DG 2026-11-15) until marpa replaces those files with MIT code | `marpa.c`/`marpa_ami.c`/`marpa_codes.c` → **MIT** © 2018 Jeffrey Kegler; `marpa_avl.c`/`marpa_tavl.c` (Ben Pfaff's libavl) → **LGPL-3.0+** © FSF; `marpa_obs.c` (GNU obstack) → **LGPL-2.1+** © FSF, built with one modified file, `c/marpa_obs.c` (16 KiB chunks, a per-thread chunk cache), modification notice in its header | §3.3 |
 | **mimalloc** | `libmimalloc-sys` | `MIT` + crate-root `LICENSE.txt` © 2019 **Octavian Oncescu** (the wrapper author) | `c_src/mimalloc/**` → **MIT** © 2018-2025 **Microsoft Corporation, Daan Leijen** — a different holder than the harvested text | §3.4 |
 | **libkpathsea** | `kpathsea_sys` | `MIT OR Apache-2.0`, **no LICENSE file** | kpathsea C at `KPSE_REF` → **LGPL-2.1+** © Karl Berry, Olaf Weber et al. | §3.2 |
 | libxml2 / libxslt | `libxml` / `libxslt` | `MIT` (naming the wrapper, not Veillard) | system libxml2/libxslt/libexslt → **MIT** © Daniel Veillard — static in release | §3.1 |
 
 How each evades the automated gate:
 - **libmarpa** vendors a **tarball** (plus the loose modified `c/marpa_obs.c`), so its
-  `COPYING`/`COPYING.LESSER` are invisible to cargo-about's file scan — and a per-file license split is not expressible in a
-  manifest field anyway.
+  `COPYING`/`COPYING.LESSER` are invisible to cargo-about's file scan. From 0.3.1 the manifest's SPDX expression names
+  the licenses (not which file has which; the crate's README lists that), so cargo-deny sees them.
 - **mimalloc** *does* ship a crate-root `LICENSE.txt` — which is what makes it
   dangerous: cargo-about harvests it and emits a plausible MIT text naming the
   **wrong holder**.
