@@ -3344,7 +3344,10 @@ impl Document {
       } else {
         match &ligated {
           Some((ligated_node, len)) if *ligated_node == outnode => *len,
-          _ => outnode.get_content().len().saturating_sub(text.len()),
+          _ => outnode
+            .as_readonly()
+            .with_content(str::len)
+            .saturating_sub(text.len()),
         }
       };
       self.text_run_font = Some((outnode.clone(), font.clone(), start));
@@ -3412,7 +3415,10 @@ impl Document {
         _ => (self.get_node_font(&parent).clone(), 0),
       };
       self.apply_text_ligatures(&font, start)?;
-      self.ligated_text = Some((self.node.clone(), self.node.get_content().len()));
+      self.ligated_text = Some((
+        self.node.clone(),
+        self.node.as_readonly().with_content(str::len),
+      ));
       self.node = parent.clone(); // Effectively closed (->setNode, but don't recurse)
       Ok(parent)
     } else {
@@ -8440,7 +8446,9 @@ impl Document {
           self.append_tree(node, child.get_child_nodes())?;
         },
         Some(NodeType::TextNode) => {
-          node.append_text(&child.get_content())?;
+          child
+            .as_readonly()
+            .with_content(|text| node.append_text(text))?;
         },
         other => {
           log::debug!("append_tree: unhandled libxml NodeType {other:?}");
