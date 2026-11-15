@@ -348,6 +348,25 @@ code on AMD (skid), so the figures are counts × stepped instructions.
 
 ## Audit log (periodic passes; newest first)
 
+### 2026-11-15 — the string arena made lend-sound (ARENAR, design R+)
+
+Defect (a soundness fix, not a lever): `arena::with` lent a `&str` from string-interner 0.20 `BufferBackend`'s `Vec<u8>`
+while a re-entrant `pin` inside the closure took `&mut *ptr` through a cached raw pointer and could grow, and move,
+that `Vec` (a use-after-free; Miri rejected even a nested `with` or `get` under a lend). Fix (`latexml_core/src/common/arena.rs`):
+a lend holds a shared `RefCell` borrow; an intern while one is live goes to an overflow page of `Rc<str>` with symbols
+from `1 << 31` (the buffer refuses to reach 2 GiB), deduplicated across both tiers (a later pin outside any lend returns
+the overflow symbol); outside a lend the intern is the old `get_or_intern`, with a 256 × 64-bit filter (last byte,
+length) so only a possible page string probes the page. `arena.rs` `unsafe` 10 → 1; `with_copy` folded back into
+`with`. Every document overflows: hello-world 1 string, b250 50, 2308.04512 399, siunitx papers 105-139 (the
+conversion's end reports the count as one `Info:arena:overflow`). Cost, `instructions:u` best of 3 interleaved against
+INTPERF5 (`kit/perf_ab_cycles.sh`, `HTML=1 STAT=min`): 2308.04512 +0.24 %, b250 +0.18 %, amsldoc +0.13 %, 2604.01119
++0.07 %, 10 typical papers (`popPERFBs`) −0.35 … +0.14 %; `cycles:u` −5.3 … +2.6 % (within the loaded host's spread).
+About 4 instructions per arena call (2308.04512: 95 M lends, 51 M interns, 25 M probes): the `RefCell` borrow every lend
+now takes. Output byte-identical: the 14 documents (whole HTML destination) and `popARENAR` (50 siunitx, 39 biblatex, 20
+xkeyval/kvoptions, 18 pgfplots, 60 controls) XML 187 / 187 and HTML 187 / 187. Guards: the arena's unit tests
+(`lend_survives_interning_many_new_strings`, red under Miri on the old code), run under Stacked and Tree Borrows by
+`tools/miri_check.sh`.
+
 ### 2026-11-15 — per-character and serializer allocations (MEMB, MEM1 levers L4a/b/e, L7, L10, L18)
 
 Defects (allocation counts of `agent_reports/report_MEM1.md`): every digested letter paid a `String` in
@@ -357,8 +376,8 @@ every attribute value, each a new `String`, and built each open tag in a `String
 `url_decode` returned a new `String` for every dump field, ~68k per conversion (L18); `store_setters::setter_definition`
 formatted and pinned `"\\{name}"` for each table setter twice per binding load (L10). Fixes: `decode_string` spells into a
 reused thread-local buffer and returns its input symbol when the decoding changed nothing; `be_absorbed` reads its text
-through the new `arena::with_copy` (copied to the stack when ≤ 64 bytes — the absorbing interns, so the text cannot be
-read under an `arena::with` borrow, whose buffer a new symbol may move); `List::push_boxes` takes an iterator and the
+through the new `arena::with_copy` (copied to the stack when ≤ 64 bytes — the absorbing interns, so the text could not be
+read under an `arena::with` borrow, whose buffer a new symbol could move; folded back into `arena::with` by ARENAR); `List::push_boxes` takes an iterator and the
 lone box goes in as a slice; `push_escaped_text`/`push_escaped_attr` append in one pass (no replacement contains an
 escaped character, so one pass equals the chain with `&` first); `url_decode` returns a `Cow`; the setter probe is `arena::get_suffixed("\\", name)` (a name never interned has no definition).
 Guard: `latexml_core` `document::serializer_escape::serializer_escape_matches_sequential_replace` (every 3-piece string
