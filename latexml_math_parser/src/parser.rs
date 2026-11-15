@@ -4,6 +4,7 @@ use std::{
   collections::HashSet,
   hash::{Hash, Hasher},
   io::Cursor,
+  rc::Rc,
 };
 
 use latexml_core::{
@@ -376,7 +377,7 @@ static PARSE_VIA_ASF: Lazy<bool> = Lazy::new(|| !*PARSE_VIA_LEGACY);
 /// the caller falls to the token-preserving kludge / `ltx_math_unparsed`.
 struct CountingTokens<I> {
   inner: I,
-  count: std::rc::Rc<std::cell::Cell<usize>>,
+  count: Rc<std::cell::Cell<usize>>,
 }
 
 impl<I: Iterator> Iterator for CountingTokens<I> {
@@ -562,10 +563,33 @@ fn record_ambiguity_metric(metric: i32, input: &str) {
   });
 }
 
+/// The math grammar, built and precomputed once, with its rule actions and tree builder: none
+/// changes while parsing, so the parsers of one conversion share it (a streamed conversion makes
+/// a parser per segment, which rebuilt and re-precomputed the grammar each time).
+#[derive(Clone)]
+pub struct MathGrammar {
+  grammar: ThinGrammar,
+  actions: Rc<Actions>,
+  builder: Rc<TreeBuilder>,
+}
+
+impl MathGrammar {
+  pub fn new() -> marpa::result::Result<Self> {
+    let (grammar, actions, builder) = init_grammar()?;
+    let mut grammar = grammar.unwrap();
+    grammar.precompute()?;
+    Ok(MathGrammar {
+      grammar,
+      actions: Rc::new(actions),
+      builder: Rc::new(builder),
+    })
+  }
+}
+
 pub struct MathParser {
   grammar:                   ThinGrammar,
-  actions:                   Actions,
-  builder:                   TreeBuilder,
+  actions:                   Rc<Actions>,
+  builder:                   Rc<TreeBuilder>,
   engine:                    Parser,
   pub expert_pragmatics:     Vec<ValidationPragmatics>,
   pub student_pragmatics:    Vec<ValidationPragmatics>,
@@ -664,8 +688,44 @@ impl Default for MathParser {
     let (grammar, actions, builder) = init_grammar().unwrap();
     let thin_grammar = grammar.unwrap();
     let engine = Parser::with_grammar(thin_grammar.clone());
+    MathParser::with_engine(thin_grammar, engine, Rc::new(actions), Rc::new(builder))
+  }
+}
+
+impl MathParser {
+  /// A parser over a grammar already built and precomputed, with this parser's own state.
+  pub fn with_grammar(shared: &MathGrammar) -> Self {
+    let engine = Parser::with_precomputed_grammar(shared.grammar.clone());
+    MathParser::with_engine(
+      shared.grammar.clone(),
+      engine,
+      Rc::clone(&shared.actions),
+      Rc::clone(&shared.builder),
+    )
+  }
+
+  /// The grammar this parser holds (rebuilt by `reset_engine` if a failed parse broke it), for the
+  /// next parser of the conversion; `None` unless it passes `try_reset_clone_path`'s trivial parse.
+  pub fn grammar(&self) -> Option<MathGrammar> {
+    let mut probe = Parser::with_precomputed_grammar(self.grammar.clone());
+    probe
+      .run_recognizer(ByteScanner::new(Cursor::new("NUMBER:1:1 ")))
+      .ok()?;
+    Some(MathGrammar {
+      grammar: self.grammar.clone(),
+      actions: Rc::clone(&self.actions),
+      builder: Rc::clone(&self.builder),
+    })
+  }
+
+  fn with_engine(
+    grammar: ThinGrammar,
+    engine: Parser,
+    actions: Rc<Actions>,
+    builder: Rc<TreeBuilder>,
+  ) -> Self {
     MathParser {
-      grammar: thin_grammar,
+      grammar,
       engine,
       actions,
       builder,
@@ -2382,7 +2442,7 @@ impl MathParser {
         letter_readings: holds_letter_readings(input),
         differential_letters: holds_differential_letters(input),
       };
-      let consumed = std::rc::Rc::new(std::cell::Cell::new(0usize));
+      let consumed = Rc::new(std::cell::Cell::new(0usize));
       // The AND-node count of a bocage read by the tree iterator (`AmbiguousTree`), if it was.
       let mut sampled_and_nodes: Option<usize> = None;
       // The tree iterator stopped at `max_unique` distinct readings with trees still to come.
@@ -2427,7 +2487,7 @@ impl MathParser {
           let tree_outcome = match tree_iter.next() {
             Some(val) => {
               match self.actions.get_tree(
-                self.builder.clone(),
+                TreeBuilder::clone(&self.builder),
                 val,
                 self.expert_pragmatics.as_slice(),
                 ActionContext { nodes, document },
@@ -2472,7 +2532,7 @@ impl MathParser {
               pruned_trees,
             );
           }
-          let alts_vec = std::rc::Rc::try_unwrap(alts).unwrap_or_else(|rc| (*rc).clone());
+          let alts_vec = Rc::try_unwrap(alts).unwrap_or_else(|rc| (*rc).clone());
           for tree in alts_vec.into_iter().flatten() {
             if parses.insert(tree) {
               ok_trees += 1;
@@ -2528,7 +2588,7 @@ impl MathParser {
               break;
             }
             match self.actions.get_tree(
-              self.builder.clone(),
+              TreeBuilder::clone(&self.builder),
               val,
               self.expert_pragmatics.as_slice(),
               ActionContext { nodes, document },
@@ -2625,7 +2685,7 @@ impl MathParser {
           letter_readings: holds_letter_readings(input),
           differential_letters: holds_differential_letters(input),
         };
-        let consumed = std::rc::Rc::new(std::cell::Cell::new(0usize));
+        let consumed = Rc::new(std::cell::Cell::new(0usize));
         let second_chance_result = self.engine.parse_hybrid_with_and_node_limit(
           CountingTokens {
             inner: ByteScanner::new(Cursor::new(input)),
@@ -2658,7 +2718,7 @@ impl MathParser {
             second_chance = Some("budget spent".to_string())
           },
           Ok(HybridParseResult::Ambiguous(alts, _state)) => {
-            let alts_vec = std::rc::Rc::try_unwrap(alts).unwrap_or_else(|rc| (*rc).clone());
+            let alts_vec = Rc::try_unwrap(alts).unwrap_or_else(|rc| (*rc).clone());
             // ASF read the whole bocage: the readings the sample missed join it, after the
             // sample's own and in ASF's order, and the counts are ASF's, so the formula reports as
             // through ASF alone. The sample's order stays first: where the student pragmas leave
@@ -2732,7 +2792,7 @@ impl MathParser {
         letter_readings: holds_letter_readings(input),
         differential_letters: holds_differential_letters(input),
       };
-      let consumed = std::rc::Rc::new(std::cell::Cell::new(0usize));
+      let consumed = Rc::new(std::cell::Cell::new(0usize));
       let asf_result = self.engine.parse_and_traverse_forest(
         CountingTokens {
           inner: ByteScanner::new(Cursor::new(input)),
@@ -2772,7 +2832,7 @@ impl MathParser {
           // holds a copy in its cache (it returned its own clone via
           // `cache.insert(peak, output.clone())`), so fall back to
           // deep clone on the cold path.
-          let alts_vec = std::rc::Rc::try_unwrap(alts).unwrap_or_else(|rc| (*rc).clone());
+          let alts_vec = Rc::try_unwrap(alts).unwrap_or_else(|rc| (*rc).clone());
           for tree in alts_vec.into_iter().flatten() {
             if parses.insert(tree) {
               ok_trees += 1;
@@ -2889,7 +2949,7 @@ impl MathParser {
         // even after extended time — valid parses can appear late in the
         // enumeration (tree #3585 of 3713 for complex multi-equation formulas).
         match self.actions.get_tree(
-          self.builder.clone(),
+          TreeBuilder::clone(&self.builder),
           val,
           self.expert_pragmatics.as_slice(),
           ActionContext { nodes, document },
@@ -4526,7 +4586,7 @@ mod tests {
   // formula `\{u | a = b, c = d\}` triggers `Empty` (ASF) vs
   // `Rejected(...)` (Tree) — see marpa/docs/ASF_PERFORMANCE_FINDINGS.md.
 
-  fn lex(name: &str) -> XM { XM::Lexeme(std::rc::Rc::from(name), metadata::Meta::default()) }
+  fn lex(name: &str) -> XM { XM::Lexeme(Rc::from(name), metadata::Meta::default()) }
 
   #[test]
   fn parity_outcomes_compatible_both_empty_is_ok() {
