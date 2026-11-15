@@ -2898,7 +2898,7 @@ const KERNEL_TOKEN_SPELLINGS: &[(&str, usize)] = &[
   ("latexml_core/src/rewrite/declare.rs", 7),
   ("latexml_core/src/state.rs", 160),
   ("latexml_core/src/stomach.rs", 84),
-  // (MEMB, -1: `be_absorbed` reads its text through `arena::with_copy`, not `get_string()`)
+  // (MEMB, -1: `be_absorbed` reads its text through `arena::with`, not `get_string()`)
   ("latexml_core/src/tbox.rs", 2),
   ("latexml_core/src/telemetry.rs", 1),
   ("latexml_core/src/token.rs", 77),

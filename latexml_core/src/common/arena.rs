@@ -7,21 +7,21 @@
 //!
 //! ## Borrow safety
 //!
-//! All arena access goes through `with_arena_mut()`, which acquires a mutable
-//! borrow from `RefCell` on first call and caches the raw pointer in a
-//! thread-local `Cell`. Re-entrant calls (e.g., `pin()` inside a `with()`
-//! closure) reuse the cached pointer without touching `RefCell`, eliminating
-//! borrow conflicts entirely. A RAII guard clears the pointer on scope exit
-//! (including panics), so the invariant holds through unwinds.
+//! A lend ([`with`] and its siblings) holds a shared `RefCell` borrow of the arena for the closure's duration, so the
+//! buffer it lends from cannot move under it. A string interned while a lend is live cannot grow that buffer: it goes
+//! to the overflow page, its own `Rc<str>` under a symbol at or above `OVERFLOW_BASE`. Every text lives in one tier
+//! only (each intern probes both), so a string keeps one symbol whichever tier holds it.
 
 use std::{
   cell::{Cell, RefCell},
   hash::BuildHasherDefault,
+  ops::Deref,
+  rc::Rc,
 };
 
 use once_cell::sync::Lazy;
-use rustc_hash::FxHasher;
-use string_interner::{StringInterner, backend::BufferBackend};
+use rustc_hash::{FxHashMap, FxHasher};
+use string_interner::{StringInterner, Symbol, backend::BufferBackend};
 
 pub mod data;
 pub use data::{SymHashMap, SymStr};
@@ -40,56 +40,145 @@ static ARENA: Lazy<RefCell<Interner>> = Lazy::new(|| {
   // when running batched conversions over a corpus (one fewer
   // BufferBackend Vec realloc + HashMap rehash per process startup);
   // negligible on a single short-lived run.
-  RefCell::new(StringInterner::with_capacity_and_hasher(
-    131_072,
-    BuildHasherDefault::<FxHasher>::default(),
-  ))
+  RefCell::new(new_interner())
 });
 
-/// Cached raw pointer to the arena's inner interner, valid only while the
-/// outermost `with_arena_mut` holds its `RefMut` guard. Null when idle.
-#[thread_local]
-static ACTIVE: Cell<*mut Interner> = Cell::new(std::ptr::null_mut());
-
-/// RAII guard that clears `ACTIVE` on drop (including during unwinds).
-/// Declared AFTER the `RefMut` guard so it drops FIRST (Rust drops in
-/// reverse declaration order), ensuring no window where ACTIVE is stale.
-struct ArenaCleanup;
-impl Drop for ArenaCleanup {
-  fn drop(&mut self) { ACTIVE.set(std::ptr::null_mut()); }
+fn new_interner() -> Interner {
+  StringInterner::with_capacity_and_hasher(131_072, BuildHasherDefault::<FxHasher>::default())
 }
 
-/// Execute `f` with mutable access to the interner.
-/// First (outermost) call acquires `borrow_mut()` from `RefCell` and caches
-/// the raw pointer. Re-entrant calls reuse the cached pointer — no RefCell
-/// interaction, so no borrow conflicts.
-///
-/// # Safety
-/// Sound because: (1) `#[thread_local]` guarantees single-thread access,
-/// (2) `ArenaCleanup` clears the pointer before the `RefMut` drops,
-/// (3) re-entrant access is strictly nested (same stack, same thread).
+/// The first overflow symbol: the arena's own symbols are byte offsets into its buffer, kept below 2 GiB.
+const OVERFLOW_BASE: usize = 1 << 31;
+
+/// The strings interned while a lend was live, which the arena's buffer could not take without moving.
+#[derive(Default)]
+struct Overflow {
+  texts:   Vec<Rc<str>>,
+  symbols: FxHashMap<Rc<str>, SymStr>,
+  /// New strings since [`take_overflow_interns`] last read the count.
+  fresh:   usize,
+}
+
+#[thread_local]
+static OVERFLOW: Lazy<RefCell<Overflow>> = Lazy::new(Default::default);
+/// Whether the overflow page holds a string (one does in every document, a late one in most).
+#[thread_local]
+static OVERFLOWED: Cell<bool> = Cell::new(false);
+/// The overflow page's strings by last byte and length (mod 64): a clear bit proves a string is not on the page, so an
+/// intern outside a lend probes the page only for the few strings that may be there.
+#[thread_local]
+static ON_PAGE: [Cell<u64>; 256] = [const { Cell::new(0) }; 256];
+
 #[inline]
-fn with_arena_mut<R>(f: impl FnOnce(&mut Interner) -> R) -> R {
-  let ptr = ACTIVE.get();
-  if !ptr.is_null() {
-    // Re-entrant call — reuse existing mutable borrow.
-    // SAFETY: ptr was set by the outermost call on this thread, which still
-    // holds the RefMut guard. We are nested on the same stack.
-    f(unsafe { &mut *ptr })
-  } else {
-    // Outermost call — acquire mutable borrow from RefCell.
-    let mut guard = ARENA.borrow_mut();
-    let ptr = &mut *guard as *mut Interner;
-    ACTIVE.set(ptr);
-    let _cleanup = ArenaCleanup; // drops BEFORE guard (reverse order)
-    f(&mut guard)
+fn page_bit(text: &str) -> (usize, u64) {
+  let last = text.as_bytes().last().copied().unwrap_or(0);
+  (usize::from(last), 1 << (text.len() & 63))
+}
+
+#[inline]
+fn may_be_on_page(text: &str) -> bool {
+  let (word, bit) = page_bit(text);
+  ON_PAGE[word].get() & bit != 0
+}
+
+/// A symbol of the arena's buffer, refusing one past the 2 GiB the overflow symbols start at.
+#[inline]
+fn in_buffer(sym: SymStr) -> SymStr {
+  assert!(
+    sym.to_usize() < OVERFLOW_BASE,
+    "the string arena's buffer reached 2 GiB, where the overflow symbols start"
+  );
+  sym
+}
+
+#[inline]
+fn intern(text: &str) -> SymStr {
+  if (!OVERFLOWED.get() || !may_be_on_page(text))
+    && let Ok(mut arena) = ARENA.try_borrow_mut()
+  {
+    return in_buffer(arena.get_or_intern(text));
+  }
+  intern_cold(text)
+}
+
+/// [`intern`] when a lend is live or the string may be on the overflow page: a string either tier holds keeps its
+/// symbol (the buffer probed first, as most interns find their string); a new one goes to the buffer unless a lend is
+/// live.
+#[cold]
+#[inline(never)]
+fn intern_cold(text: &str) -> SymStr {
+  if let Some(sym) = ARENA.borrow().get(text) {
+    return sym;
+  }
+  let mut overflow = OVERFLOW.borrow_mut();
+  if let Some(&sym) = overflow.symbols.get(text) {
+    return sym;
+  }
+  if let Ok(mut arena) = ARENA.try_borrow_mut() {
+    return in_buffer(arena.get_or_intern(text));
+  }
+  let sym = SymStr::try_from_usize(OVERFLOW_BASE + overflow.texts.len())
+    .expect("the arena's overflow page is full");
+  let (word, bit) = page_bit(text);
+  ON_PAGE[word].set(ON_PAGE[word].get() | bit);
+  let text: Rc<str> = Rc::from(text);
+  overflow.texts.push(Rc::clone(&text));
+  overflow.symbols.insert(text, sym);
+  overflow.fresh += 1;
+  OVERFLOWED.set(true);
+  sym
+}
+
+/// A symbol's text, from the arena's buffer (under the caller's borrow) or the overflow page (its own `Rc`).
+enum Text<'a> {
+  Buffer(&'a str),
+  Page(Rc<str>),
+}
+
+impl Deref for Text<'_> {
+  type Target = str;
+  #[inline]
+  fn deref(&self) -> &str {
+    match self {
+      Text::Buffer(text) => text,
+      Text::Page(text) => text,
+    }
   }
 }
 
-/// Assign a static str into the arena, returning a unique symbol.
-pub fn pin_static(text: &'static str) -> SymStr {
-  with_arena_mut(|arena| arena.get_or_intern_static(text))
+#[inline]
+fn text(arena: &Interner, sym: SymStr) -> Text<'_> {
+  if is_paged(sym) {
+    Text::Page(page_text(sym))
+  } else {
+    Text::Buffer(buffer_text(arena, sym))
+  }
 }
+
+#[inline]
+fn is_paged(sym: SymStr) -> bool { sym.to_usize() >= OVERFLOW_BASE }
+
+/// The text of a symbol of the buffer (the callers' test of [`is_paged`] lets the compiler drop this one's).
+#[inline]
+fn buffer_text(arena: &Interner, sym: SymStr) -> &str {
+  assert!(
+    !is_paged(sym),
+    "an overflow symbol resolved in the arena's buffer"
+  );
+  // SAFETY: `resolve_unchecked` skips the bounds and UTF-8 checks. Every symbol below `OVERFLOW_BASE` came from
+  // the buffer's `get_or_intern` of a `&str`, and the buffer is append-only between `reset`s, so the symbol names a
+  // whole UTF-8 string in it. Callgrind measured the validating `resolve` at ~3% of total Ir (`str::from_utf8`).
+  unsafe { arena.resolve_unchecked(sym) }
+}
+
+#[cold]
+#[inline(never)]
+fn page_text(sym: SymStr) -> Rc<str> {
+  Rc::clone(&OVERFLOW.borrow().texts[sym.to_usize() - OVERFLOW_BASE])
+}
+
+/// Assign a static str into the arena, returning a unique symbol.
+pub fn pin_static(text: &'static str) -> SymStr { intern(text) }
 
 /// The [`pin!`] call sites that cached a symbol on this thread: [`reset`]
 /// replaces the arena and clears each, so a cached symbol never indexes the
@@ -150,22 +239,25 @@ macro_rules! pin {
 
 /// Assign a string into the arena, returning a unique symbol.
 ///
-/// No overflow guard: the main-level wall-clock watchdog (watchdog.rs)
-/// catches genuinely runaway loops that would eventually saturate the
-/// BufferBackend's u32 byte-offset range (~4.29 GB) long before any
-/// real-world workload approaches it. Earlier versions had both a
-/// call-count and a distinct-symbol sentinel; the call-count one
-/// false-fired on dedup-heavy hot loops, and the distinct-symbol one
-/// added a per-call `arena.len()` read on a hot path (~350k calls
-/// per doc). Neither cost was paying for itself.
-pub fn pin<S: AsRef<str>>(text: S) -> SymStr { with_arena_mut(|arena| arena.get_or_intern(text)) }
+/// No overflow guard below 2 GiB: the main-level wall-clock watchdog (watchdog.rs) catches genuinely runaway loops
+/// long before any real-world workload approaches it. Earlier versions had both a call-count and a distinct-symbol
+/// sentinel; the call-count one false-fired on dedup-heavy hot loops, and the distinct-symbol one added a per-call
+/// `arena.len()` read on a hot path (~350k calls per doc). Neither cost was paying for itself.
+pub fn pin<S: AsRef<str>>(text: S) -> SymStr { intern(text.as_ref()) }
 
 /// Probe-only lookup: the symbol for `text` if it was ever interned, without
 /// interning it. For existence-style checks (e.g. `install_definition`'s
 /// `"{cs}:locked"` gate) a `None` here proves the key cannot be bound in any
 /// state table — and skipping the intern avoids permanently growing the arena
 /// with one probe-key twin per defined control sequence (2026-08-23 audit R6).
-pub fn get<S: AsRef<str>>(text: S) -> Option<SymStr> { with_arena_mut(|arena| arena.get(text)) }
+pub fn get<S: AsRef<str>>(text: S) -> Option<SymStr> {
+  let text = text.as_ref();
+  let found = ARENA.borrow().get(text);
+  if found.is_none() && may_be_on_page(text) {
+    return OVERFLOW.borrow().symbols.get(text).copied();
+  }
+  found
+}
 
 /// The buffer [`get_suffixed`] and [`pin_qname`] spell their key in. Freed by [`reset`], as a `#[thread_local]` has no
 /// destructor.
@@ -183,7 +275,7 @@ pub fn get_suffixed(name: &str, suffix: &str) -> Option<SymStr> {
 }
 
 /// [`pin`] of `prefix:local`, spelled in a reused buffer rather than a new `String`: `get_node_qname` asks it of every
-/// element and attribute it names. Not to be called inside [`with`], whose borrow a new symbol may invalidate.
+/// element and attribute it names.
 pub fn pin_qname(prefix: &str, local: &str) -> SymStr {
   let mut key = SUFFIXED_KEY.borrow_mut();
   key.clear();
@@ -196,16 +288,15 @@ pub fn pin_qname(prefix: &str, local: &str) -> SymStr {
 /// ASCII char-pin cache: every unique ASCII byte resolves to a single
 /// SymStr for the lifetime of the thread's arena (append-only between
 /// [`reset`]s, which clears the cache with it). Cache entries use `u32::MAX` as the "not yet pinned"
-/// sentinel — all valid interner offsets are strictly below that.
+/// sentinel — every symbol value, the overflow page's included, is strictly below that.
 /// Called from `lookup_catcode` / `assign_catcode` on every token,
 /// so the RefCell + hashmap overhead on `pin` is a measurable cost
 /// (1.4% Ir per callgrind on siunitx-heavy fixtures). The fast path
-/// avoids `with_arena_mut` entirely for the common ASCII case.
+/// avoids the arena entirely for the common ASCII case.
 #[thread_local]
 static ASCII_CHAR_SYM: [Cell<u32>; 128] = [const { Cell::new(u32::MAX) }; 128];
 
 pub fn pin_char(c: char) -> SymStr {
-  use string_interner::Symbol;
   let code = c as u32;
   if code < 128 {
     let cached = ASCII_CHAR_SYM[code as usize].get();
@@ -226,106 +317,61 @@ pub fn pin_char(c: char) -> SymStr {
   sym
 }
 
-/// Resolve a symbol and call the closure with a `&str` reference.
-/// The closure must not intern (`pin()`, `pin_char()`, … or anything that may call them): a new symbol can grow the
-/// interner's buffer `Vec` (string-interner 0.20 `buffer.rs:144`) and move it under the borrowed `&str`. A closure
-/// that interns takes [`with_copy`]. Read-only arena calls are fine (re-entrant access reuses the cached borrow).
-///
-/// # Safety
-///
-/// Uses `resolve_unchecked` → `from_utf8_unchecked`. Sound because
-/// every path into the arena (`pin_static(&'static str)`,
-/// `pin<S: AsRef<str>>(s)`, `pin_char(c: char)`) can only produce a
-/// SymStr from content that was already valid UTF-8. The interner's
-/// buffer is append-only by design: once a byte range is associated
-/// with a symbol its bytes are never mutated (though a growing buffer
-/// may move them, hence the rule above). Callgrind showed the default
-/// validating `resolve` was ~3% of total Ir via `str::from_utf8`.
+/// Resolve a symbol and call the closure with a `&str` reference. The closure may intern (`pin()`, `pin_char()`, …):
+/// the text is lent under a shared borrow of the arena, so a string new during the lend goes to the overflow page
+/// instead of growing (and moving) the buffer the text lives in (string-interner 0.20 `buffer.rs:144`).
+#[inline]
 pub fn with<R, FnR>(sym: SymStr, caller: FnR) -> R
 where FnR: FnOnce(&str) -> R {
-  with_arena_mut(|arena| {
-    // SAFETY: all input strings were valid UTF-8 at intern time (see
-    // docstring above); every SymStr in this codebase originates
-    // from a successful `get_or_intern(_static|_char)` call on a
-    // valid `&str`, so the symbol always corresponds to a valid
-    // byte range in the interner's buffer.
-    let s = unsafe { arena.resolve_unchecked(sym) };
-    caller(s)
-  })
+  let (page, arena);
+  let text = if is_paged(sym) {
+    page = page_text(sym);
+    &*page
+  } else {
+    arena = ARENA.borrow();
+    buffer_text(&arena, sym)
+  };
+  caller(text)
 }
 
-/// [`with`] for a caller that may intern while it reads `sym`'s text (a new symbol may move the arena's buffer under a
-/// `with` borrow): the text is copied out first, to the stack when short, so the common case allocates nothing.
-pub fn with_copy<R, FnR>(sym: SymStr, caller: FnR) -> R
-where FnR: FnOnce(&str) -> R {
-  let mut short = [0u8; 64];
-  let copied = with(sym, |text| match short.get_mut(..text.len()) {
-    Some(head) => {
-      head.copy_from_slice(text.as_bytes());
-      Ok(text.len())
-    },
-    None => Err(text.to_owned()),
-  });
-  match copied {
-    Ok(len) => caller(std::str::from_utf8(&short[..len]).expect("a copy of a str is UTF-8")),
-    Err(long) => caller(&long),
-  }
-}
-
-/// The first `N` bytes of `sym`'s text, if it has as many: a read only, so without the borrow and guard of [`with`], for
-/// a test by name on a hot path.
+/// The first `N` bytes of `sym`'s text, if it has as many, for a test by name on a hot path.
 #[inline]
 pub fn first_bytes<const N: usize>(sym: SymStr) -> Option<[u8; N]> {
-  // SAFETY: as [`with`]'s on the text. The pointer is this thread's interner, whose borrower, if any, is further up this
-  // stack (as [`with_arena_mut`]'s re-entrant call), and nothing here writes.
-  let text = unsafe { (*ARENA.as_ptr()).resolve_unchecked(sym) };
-  text.as_bytes().first_chunk().copied()
+  with(sym, |text| text.as_bytes().first_chunk().copied())
 }
 
 pub fn with2<R, FnR>(sym1: SymStr, sym2: SymStr, caller: FnR) -> R
 where FnR: FnOnce(&str, &str) -> R {
-  with_arena_mut(|arena| {
-    // SAFETY: same invariant as `arena::with` — every SymStr here was
-    // returned by a successful intern of a valid &str.
-    let s1 = unsafe { arena.resolve_unchecked(sym1) };
-    let s2 = unsafe { arena.resolve_unchecked(sym2) };
-    caller(s1, s2)
-  })
+  let arena = ARENA.borrow();
+  caller(&text(&arena, sym1), &text(&arena, sym2))
 }
 
 pub fn with3<R, FnR>(sym1: SymStr, sym2: SymStr, sym3: SymStr, caller: FnR) -> R
 where FnR: FnOnce(&str, &str, &str) -> R {
-  with_arena_mut(|arena| {
-    // SAFETY: see `arena::with`.
-    let s1 = unsafe { arena.resolve_unchecked(sym1) };
-    let s2 = unsafe { arena.resolve_unchecked(sym2) };
-    let s3 = unsafe { arena.resolve_unchecked(sym3) };
-    caller(s1, s2, s3)
-  })
+  let arena = ARENA.borrow();
+  caller(
+    &text(&arena, sym1),
+    &text(&arena, sym2),
+    &text(&arena, sym3),
+  )
 }
 
 pub fn with_many<R, FnR>(syms: &[SymStr], caller: FnR) -> R
 where FnR: FnOnce(Vec<&str>) -> R {
-  with_arena_mut(|arena| {
-    // SAFETY: see `arena::with`.
-    let many = syms
-      .iter()
-      .map(|sym| unsafe { arena.resolve_unchecked(*sym) })
-      .collect();
-    caller(many)
-  })
+  let arena = ARENA.borrow();
+  let texts: Vec<Text> = syms.iter().map(|sym| text(&arena, *sym)).collect();
+  caller(texts.iter().map(|text| &**text).collect())
 }
 
-pub fn to_string(sym: SymStr) -> String {
-  with_arena_mut(|arena| {
-    // SAFETY: see `arena::with`.
-    unsafe { arena.resolve_unchecked(sym) }.to_owned()
-  })
-}
+pub fn to_string(sym: SymStr) -> String { with(sym, str::to_owned) }
 
 pub fn join(syms: &[SymStr], sep: &str) -> String { with_many(syms, |strs| strs.join(sep)) }
 
-pub fn len() -> usize { with_arena_mut(|arena| arena.len()) }
+pub fn len() -> usize { ARENA.borrow().len() + OVERFLOW.borrow().texts.len() }
+
+/// The number of strings the overflow page took (interned while a lend was live) since the last call: the conversion's
+/// end reports it.
+pub fn take_overflow_interns() -> usize { std::mem::take(&mut OVERFLOW.borrow_mut().fresh) }
 
 /// Free every interned string on this thread, returning the arena to a
 /// fresh, empty state.
@@ -346,10 +392,16 @@ pub fn len() -> usize { with_arena_mut(|arena| arena.len()) }
 /// thread leaks its interner (~tens of MB for a full document). See
 /// `latexml_core::reset_thread_engine`.
 pub fn reset() {
-  with_arena_mut(|arena| {
-    *arena =
-      StringInterner::with_capacity_and_hasher(131_072, BuildHasherDefault::<FxHasher>::default());
-  });
+  // A lend holds a shared borrow until its closure returns, so a reset from inside one finds the arena borrowed.
+  *ARENA
+    .try_borrow_mut()
+    .expect("arena::reset inside a lend (`arena::with`): the lent text would dangle") =
+    new_interner();
+  *OVERFLOW.borrow_mut() = Overflow::default();
+  OVERFLOWED.set(false);
+  for word in &ON_PAGE {
+    word.set(0);
+  }
   // The cached symbols index the replaced arena: a character or literal first
   // pinned mid-document would otherwise resolve to another string in the next
   // conversion on this thread.
@@ -493,5 +545,128 @@ mod tests {
     let a = pin!("arena_test_literal");
     let b = pin!("arena_test_literal");
     assert_eq!(a, b, "same literal at different call sites → same SymStr");
+  }
+
+  /// A closure lent a text may intern: 3000 new strings must not move the lent text (the use-after-free of the former
+  /// re-entrant `&mut` path, which grew the buffer under the lend; Miri flags it at the first new string).
+  #[test]
+  fn lend_survives_interning_many_new_strings() {
+    let lent = pin("arena_lend_text");
+    let read = with(lent, |text| {
+      for i in 0..3000 {
+        pin(format!("arena_lend_new_{i}"));
+      }
+      text.to_owned()
+    });
+    assert_eq!(read, "arena_lend_text");
+    for i in [0, 1499, 2999] {
+      let sym = get(format!("arena_lend_new_{i}")).expect("interned under the lend");
+      assert_eq!(to_string(sym), format!("arena_lend_new_{i}"));
+    }
+    assert_eq!(take_overflow_interns(), 3000);
+    assert_eq!(take_overflow_interns(), 0, "the count is read once");
+  }
+
+  /// Nested lends, and a pin of a string the buffer already holds, which keeps its buffer symbol.
+  #[test]
+  fn nested_lends_and_a_pin_of_an_existing_string() {
+    let outer = pin("arena_nest_outer");
+    let inner = pin("arena_nest_inner");
+    let joined = with(outer, |o| {
+      with2(inner, outer, |i, o2| {
+        assert_eq!(
+          pin("arena_nest_inner"),
+          inner,
+          "an existing string keeps its symbol under a lend"
+        );
+        format!("{o}/{i}/{o2}/{}", to_string(inner))
+      })
+    });
+    assert_eq!(
+      joined,
+      "arena_nest_outer/arena_nest_inner/arena_nest_outer/arena_nest_inner"
+    );
+    assert_eq!(take_overflow_interns(), 0, "no string was new");
+  }
+
+  /// `get` under a lend sees both tiers and interns nothing.
+  #[test]
+  fn get_under_a_lend() {
+    let lent = pin("arena_get_lent");
+    let before = len();
+    let (buffered, paged, absent) = with(lent, |_| {
+      let paged = pin("arena_get_paged");
+      (
+        get("arena_get_lent"),
+        (paged, get("arena_get_paged")),
+        get("arena_get_absent"),
+      )
+    });
+    assert_eq!(buffered, Some(lent));
+    assert_eq!(paged.1, Some(paged.0));
+    assert_eq!(absent, None);
+    assert_eq!(len(), before + 1);
+  }
+
+  /// A string first interned under a lend keeps its overflow symbol when pinned again outside any lend, and its text
+  /// reads the same through every entry point.
+  #[test]
+  fn an_overflow_string_dedups_across_tiers() {
+    let lent = pin("arena_dedup_lent");
+    let paged = with(lent, |_| pin("arena_dedup_paged"));
+    assert_eq!(
+      pin("arena_dedup_paged"),
+      paged,
+      "the later pin outside the lend finds the overflow string"
+    );
+    assert_eq!(pin_static("arena_dedup_paged"), paged);
+    assert_eq!(get("arena_dedup_paged"), Some(paged));
+    assert_eq!(to_string(paged), "arena_dedup_paged");
+    assert_eq!(first_bytes::<3>(paged), Some(*b"are"));
+    assert_eq!(
+      with3(lent, paged, lent, |a, b, c| format!("{a}{b}{c}")),
+      "arena_dedup_lentarena_dedup_pagedarena_dedup_lent"
+    );
+    assert_eq!(
+      join(&[paged, lent], ","),
+      "arena_dedup_paged,arena_dedup_lent"
+    );
+    // Outside a lend with the overflow page in use, a new string still goes to the buffer, also one the page's filter
+    // cannot tell from the paged one (same last byte and length).
+    let buffered = pin("arena_dedup_after");
+    assert_ne!(buffered, paged);
+    assert_eq!(to_string(buffered), "arena_dedup_after");
+    let twin = pin("arena_dedup_pagdd");
+    assert_ne!(twin, paged);
+    assert_eq!(get("arena_dedup_pagdd"), Some(twin));
+    assert_eq!(to_string(twin), "arena_dedup_pagdd");
+    assert_eq!(take_overflow_interns(), 1);
+  }
+
+  /// `reset` empties both tiers; the overflow page's symbols start over.
+  #[test]
+  fn reset_clears_the_overflow_page() {
+    let lent = pin("arena_reset_lent");
+    let paged = with(lent, |_| pin("arena_reset_paged"));
+    assert_eq!(len(), 2);
+    reset();
+    assert_eq!(len(), 0);
+    assert_eq!(get("arena_reset_paged"), None);
+    assert_eq!(take_overflow_interns(), 0);
+    let lent = pin("arena_reset_lent2");
+    assert_eq!(
+      with(lent, |_| pin("arena_reset_paged2")),
+      paged,
+      "the first overflow symbol again"
+    );
+    assert_eq!(to_string(paged), "arena_reset_paged2");
+  }
+
+  /// `reset` inside a lend would leave the lent text dangling: it refuses.
+  #[test]
+  #[should_panic(expected = "arena::reset inside a lend")]
+  fn reset_inside_a_lend_panics() {
+    let lent = pin("arena_reset_inside");
+    with(lent, |_| reset());
   }
 }

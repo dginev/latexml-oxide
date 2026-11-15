@@ -8,9 +8,9 @@
 # so a blanket `cargo miri test` aborts on the first FFI call. See
 # docs/release/SAFETY.md for the full `unsafe` inventory and which category each site
 # is in. The categories with genuine UB potential that Miri *can* check are:
-#  (1) the string-interner / arena (`latexml_core/src/common/arena.rs`): unchecked
-#      `resolve_unchecked` bounds-skips (cat. B) and the re-entrant `&mut *ptr`
-#      (cat. C);
+#  (1) the string-interner / arena (`latexml_core/src/common/arena.rs`): the
+#      unchecked `resolve_unchecked` bounds-skip (cat. B) under a lend's shared
+#      borrow, while the closure interns (the overflow page);
 #  (2) the `runtime-bindings` (Rhai) trampoline's re-entrant `&mut Document`
 #      round-trip (PR #248 B1), modeled libxml2-free in
 #      `latexml_core::runtime_bindings_reentrancy_model` so Miri can adjudicate the
@@ -24,7 +24,7 @@
 #                             never drops BY DESIGN; without this flag Miri
 #                             reports the singleton as a "leak" (not UB).
 #
-# Usage: tools/miri_check.sh            # run arena (SB) + reentrancy model (SB+TB)
+# Usage: tools/miri_check.sh            # run arena + reentrancy model (SB+TB each)
 #        tools/miri_check.sh <filter>   # run ONLY this test-name filter (SB)
 set -euo pipefail
 
@@ -45,11 +45,11 @@ if [ "$#" -ge 1 ]; then
   # Explicit filter: single Stacked-Borrows run (ad-hoc / back-compat).
   run "stacked" "" "$1"
 else
-  # Default (CI): arena under Stacked Borrows, plus the runtime-bindings
-  # re-entrancy model under BOTH Stacked and Tree Borrows (PR #248 B1 — the
-  # whole point of the model is the aliasing soundness, which Tree Borrows
-  # checks more strictly).
+  # Default (CI): the arena and the runtime-bindings re-entrancy model, each
+  # under BOTH Stacked and Tree Borrows (PR #248 B1 — the whole point of the
+  # model is the aliasing soundness, which Tree Borrows checks more strictly).
   run "stacked" "" "arena"
+  run "tree-borrows" "-Zmiri-tree-borrows" "arena"
   run "stacked" "" "reentrancy_model"
   run "tree-borrows" "-Zmiri-tree-borrows" "reentrancy_model"
 fi

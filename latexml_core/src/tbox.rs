@@ -319,8 +319,8 @@ impl BoxOps for Tbox {
   }
 
   fn be_absorbed(&self, document: &mut Document) -> Result<Vec<Node>> {
-    // The text copied out of the arena, not into a new String per box (MEM1 L4b): absorbing interns.
-    arena::with_copy(self.text, |text| self.absorb_text(text, document))
+    // The text lent from the arena, not copied into a new String per box (MEM1 L4b).
+    arena::with(self.text, |text| self.absorb_text(text, document))
   }
 
   fn get_font(&self) -> Result<Option<Rc<Font>>> { Ok(Some(Rc::clone(&self.font))) }
