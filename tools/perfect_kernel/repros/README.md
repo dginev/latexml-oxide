@@ -35,6 +35,8 @@ The header comment block is machine-read by `repros.sh`:
 
 `CONTROL` marks a shape that pdflatex ALSO rejects (e.g. `${$b$}$`); it must
 keep producing an error and documents the boundary of the mechanism.
+`RETIRED` marks a RED whose expected output a ruling withdrew (today's output accepted); the file stays while a
+guard row reads it (`include_str!`), and `repros.sh` treats it as informational, as RED.
 
 Name files `<mechanism>_<witness>.tex`; a topic `NOTES.md` holds the root-cause
 summary per repro (mechanism with `file:line` into latex.ltx / the `.sty` /

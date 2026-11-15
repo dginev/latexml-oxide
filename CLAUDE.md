@@ -332,4 +332,4 @@ multi-target worklist, not a session-completion bar.
 | `LaTeXML::Core::Document` | `latexml_core::document` — XML construction |
 | `LaTeXML::Core::State` | `latexml_core::state` — global state |
 | `LaTeXML::Core::Definition` | `latexml_core::definition` — macro/command defs |
-| `LaTeXML::Package` | `latexml_package` — package loading |
+| `LaTeXML::Package` | `latexml_core::binding` — the definers and loaders (`content.rs`); `latexml_package` — the bindings (`Package/*.ltxml`), per `docs/parity/ORGANIZATION.md` |
