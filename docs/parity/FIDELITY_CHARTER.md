@@ -134,7 +134,12 @@ missing image, a broken `\ref` or `\cite`, and the like — the fixes are usuall
   counts steps of `\thanks`, `\email` and `\altaffiliation` the reading does not — while REVTeX 4.1/4.2's own minipage
   letters are not written; an unmarked one is Perl's note contact, 2301.00220), acmart's `\authornote`, a legend's symbol (`$^*$Equal contribution`, IEEEtran's
   `\thanks{$^{*}$…}`, a bare `*` the names show) — and its text never opens with a copy of it. A symbol that is the
-  text's own — a formula or word it heads (`$^*$-algebras`, `$^{3}$He`), a bare `*` beside the class's mark — stays. **"One copy" is a page rule:** the XML keeps a full copy of a
+  text's own — a formula or word it heads (`$^*$-algebras`, `$^{3}$He`), a bare `*` beside the class's mark — stays.
+  **A wrong glyph is worse than none** (DG 2026-11-16): a class's automatic mark is written only where its own
+  `\maketitle` runs (a document's or a package's own prints marks unknown here), never for a name's mark the class sets
+  apart (REVTeX 4.1/4.2's letters); a `\renewcommand\thefootnote` in the author block holds for its name, as in TeX
+  (1807.02791); a mark alone keeps its glyph in `mark` only; a printed mark the conversion loses is counted, a Warning
+  (2606.00446's `§`). **"One copy" is a page rule:** the XML keeps a full copy of a
   shared note on every carrier (Perl's `relocateAnnotations`, Base_Utility.pool.ltxml:895-901, and
   `relocateFootnote`, latex_constructs.pool.ltxml:503-527, both clone), each with the same `mark` and text; a
   `\footnotemark[n]`, `\samethanks[n]` or `\authornotemark[n]` on a name is such a copy of the note it marks; a mark
