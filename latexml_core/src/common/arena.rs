@@ -9,8 +9,9 @@
 //!
 //! A lend ([`with`] and its siblings) holds a shared `RefCell` borrow of the arena for the closure's duration, so the
 //! buffer it lends from cannot move under it. A string interned while a lend is live cannot grow that buffer: it goes
-//! to the overflow page, its own `Rc<str>` under a symbol at or above `OVERFLOW_BASE`. Every text lives in one tier
-//! only (each intern probes both), so a string keeps one symbol whichever tier holds it.
+//! to the overflow page, its own `Rc<str>` under a symbol at or above `OVERFLOW_BASE`. One string has one symbol across
+//! both tiers until a [`reset`]: every intern probes the buffer first, then the page, and only a string neither holds
+//! is added (to the buffer outside a lend, to the page under one).
 
 use std::{
   cell::{Cell, RefCell},
@@ -61,27 +62,14 @@ struct Overflow {
 
 #[thread_local]
 static OVERFLOW: Lazy<RefCell<Overflow>> = Lazy::new(Default::default);
-/// Whether the overflow page holds a string (one does in every document, a late one in most).
-#[thread_local]
-static OVERFLOWED: Cell<bool> = Cell::new(false);
-/// The overflow page's strings by last byte and length (mod 64): a clear bit proves a string is not on the page, so an
-/// intern outside a lend probes the page only for the few strings that may be there.
-#[thread_local]
-static ON_PAGE: [Cell<u64>; 256] = [const { Cell::new(0) }; 256];
 
-#[inline]
-fn page_bit(text: &str) -> (usize, u64) {
-  let last = text.as_bytes().last().copied().unwrap_or(0);
-  (usize::from(last), 1 << (text.len() & 63))
-}
+/// The overflow page's symbol for `text`, if the page holds it.
+#[inline(never)]
+fn page_symbol(text: &str) -> Option<SymStr> { OVERFLOW.borrow().symbols.get(text).copied() }
 
-#[inline]
-fn may_be_on_page(text: &str) -> bool {
-  let (word, bit) = page_bit(text);
-  ON_PAGE[word].get() & bit != 0
-}
-
-/// A symbol of the arena's buffer, refusing one past the 2 GiB the overflow symbols start at.
+/// A symbol of the arena's buffer, refusing one past the 2 GiB the overflow symbols start at. Lookups pass theirs
+/// through too: a string interned past 2 GiB stays in the buffer after the panic is caught, never to read as an
+/// overflow symbol.
 #[inline]
 fn in_buffer(sym: SymStr) -> SymStr {
   assert!(
@@ -93,39 +81,34 @@ fn in_buffer(sym: SymStr) -> SymStr {
 
 #[inline]
 fn intern(text: &str) -> SymStr {
-  if (!OVERFLOWED.get() || !may_be_on_page(text))
-    && let Ok(mut arena) = ARENA.try_borrow_mut()
-  {
-    return in_buffer(arena.get_or_intern(text));
+  if let Ok(mut arena) = ARENA.try_borrow_mut() {
+    if let Some(sym) = arena.get(text) {
+      return in_buffer(sym);
+    }
+    // A string first interned under a lend keeps its overflow symbol.
+    return page_symbol(text).unwrap_or_else(|| in_buffer(arena.get_or_intern(text)));
   }
   intern_cold(text)
 }
 
-/// [`intern`] when a lend is live or the string may be on the overflow page: a string either tier holds keeps its
-/// symbol (the buffer probed first, as most interns find their string); a new one goes to the buffer unless a lend is
-/// live.
+/// [`intern`] while a lend is live: a string either tier holds keeps its symbol (the buffer probed first, as most
+/// interns find their string); a new one goes to the overflow page.
 #[cold]
 #[inline(never)]
 fn intern_cold(text: &str) -> SymStr {
   if let Some(sym) = ARENA.borrow().get(text) {
-    return sym;
+    return in_buffer(sym);
   }
   let mut overflow = OVERFLOW.borrow_mut();
   if let Some(&sym) = overflow.symbols.get(text) {
     return sym;
   }
-  if let Ok(mut arena) = ARENA.try_borrow_mut() {
-    return in_buffer(arena.get_or_intern(text));
-  }
   let sym = SymStr::try_from_usize(OVERFLOW_BASE + overflow.texts.len())
     .expect("the arena's overflow page is full");
-  let (word, bit) = page_bit(text);
-  ON_PAGE[word].set(ON_PAGE[word].get() | bit);
   let text: Rc<str> = Rc::from(text);
   overflow.texts.push(Rc::clone(&text));
   overflow.symbols.insert(text, sym);
   overflow.fresh += 1;
-  OVERFLOWED.set(true);
   sym
 }
 
@@ -252,11 +235,8 @@ pub fn pin<S: AsRef<str>>(text: S) -> SymStr { intern(text.as_ref()) }
 /// with one probe-key twin per defined control sequence (2026-08-23 audit R6).
 pub fn get<S: AsRef<str>>(text: S) -> Option<SymStr> {
   let text = text.as_ref();
-  let found = ARENA.borrow().get(text);
-  if found.is_none() && may_be_on_page(text) {
-    return OVERFLOW.borrow().symbols.get(text).copied();
-  }
-  found
+  let found = ARENA.borrow().get(text).map(in_buffer);
+  found.or_else(|| page_symbol(text))
 }
 
 /// The buffer [`get_suffixed`] and [`pin_qname`] spell their key in. Freed by [`reset`], as a `#[thread_local]` has no
@@ -301,8 +281,7 @@ pub fn pin_char(c: char) -> SymStr {
   if code < 128 {
     let cached = ASCII_CHAR_SYM[code as usize].get();
     if cached != u32::MAX {
-      // SAFETY: cached was produced by a prior successful `pin` below, so
-      // the SymStr is valid for this arena.
+      // (a prior `pin` below cached it, and `reset` clears the cache with the arena)
       return SymStr::try_from_usize(cached as usize).expect("invalid cached ASCII SymStr");
     }
   }
@@ -320,15 +299,17 @@ pub fn pin_char(c: char) -> SymStr {
 /// Resolve a symbol and call the closure with a `&str` reference. The closure may intern (`pin()`, `pin_char()`, …):
 /// the text is lent under a shared borrow of the arena, so a string new during the lend goes to the overflow page
 /// instead of growing (and moving) the buffer the text lives in (string-interner 0.20 `buffer.rs:144`).
+/// An overflow symbol's lend holds the borrow too, so every lend is one where a [`reset`] panics.
 #[inline]
 pub fn with<R, FnR>(sym: SymStr, caller: FnR) -> R
 where FnR: FnOnce(&str) -> R {
-  let (page, arena);
+  let arena = ARENA.borrow();
+  // (one branch, not `text()`'s two: the hottest lend)
+  let page;
   let text = if is_paged(sym) {
     page = page_text(sym);
     &*page
   } else {
-    arena = ARENA.borrow();
     buffer_text(&arena, sym)
   };
   caller(text)
@@ -369,8 +350,8 @@ pub fn join(syms: &[SymStr], sep: &str) -> String { with_many(syms, |strs| strs.
 
 pub fn len() -> usize { ARENA.borrow().len() + OVERFLOW.borrow().texts.len() }
 
-/// The number of strings the overflow page took (interned while a lend was live) since the last call: the conversion's
-/// end reports it.
+/// The number of strings the overflow page took (interned while a lend was live) since the last call: every conversion
+/// entry point takes it at its start, and the conversion's end reports it as a Debug line.
 pub fn take_overflow_interns() -> usize { std::mem::take(&mut OVERFLOW.borrow_mut().fresh) }
 
 /// Free every interned string on this thread, returning the arena to a
@@ -398,10 +379,6 @@ pub fn reset() {
     .expect("arena::reset inside a lend (`arena::with`): the lent text would dangle") =
     new_interner();
   *OVERFLOW.borrow_mut() = Overflow::default();
-  OVERFLOWED.set(false);
-  for word in &ON_PAGE {
-    word.set(0);
-  }
   // The cached symbols index the replaced arena: a character or literal first
   // pinned mid-document would otherwise resolve to another string in the next
   // conversion on this thread.
@@ -551,6 +528,8 @@ mod tests {
   /// re-entrant `&mut` path, which grew the buffer under the lend; Miri flags it at the first new string).
   #[test]
   fn lend_survives_interning_many_new_strings() {
+    // (counts are absolute: a test thread that converted, or ran another test, before must not shift them)
+    reset();
     let lent = pin("arena_lend_text");
     let read = with(lent, |text| {
       for i in 0..3000 {
@@ -565,6 +544,33 @@ mod tests {
     }
     assert_eq!(take_overflow_interns(), 3000);
     assert_eq!(take_overflow_interns(), 0, "the count is read once");
+  }
+
+  /// The same with more new bytes than the buffer's whole capacity (131,072 × 13 bytes, string-interner 0.20
+  /// `buffer.rs:161-169`), which would move it natively, not only under Miri, had they gone into it: the lent text
+  /// still reads, from where it was. Guards the current arena only (the old one is gone; red under Miri on it: the
+  /// test above). A native test: its 1.7 MB take Miri 2 min under Stacked and 13 under Tree Borrows.
+  #[test]
+  #[cfg_attr(miri, ignore)]
+  fn lend_survives_more_new_bytes_than_the_buffer_holds() {
+    reset();
+    let lent = pin("arena_move_text");
+    let filler = "x".repeat(1 << 15);
+    let count = 131_072 * 13 / filler.len() + 2;
+    let (read, unmoved) = with(lent, |text| {
+      let at = text.as_ptr();
+      for i in 0..count {
+        pin(format!("{i}{filler}"));
+      }
+      (text.to_owned(), with(lent, |again| again.as_ptr()) == at)
+    });
+    assert_eq!(read, "arena_move_text");
+    assert!(unmoved, "the buffer moved under the lend");
+    assert_eq!(
+      to_string(pin(format!("{}{filler}", count - 1))).len(),
+      filler.len() + 2
+    );
+    assert_eq!(take_overflow_interns(), count);
   }
 
   /// Nested lends, and a pin of a string the buffer already holds, which keeps its buffer symbol.
@@ -612,6 +618,7 @@ mod tests {
   /// reads the same through every entry point.
   #[test]
   fn an_overflow_string_dedups_across_tiers() {
+    reset();
     let lent = pin("arena_dedup_lent");
     let paged = with(lent, |_| pin("arena_dedup_paged"));
     assert_eq!(
@@ -631,13 +638,13 @@ mod tests {
       join(&[paged, lent], ","),
       "arena_dedup_paged,arena_dedup_lent"
     );
-    // Outside a lend with the overflow page in use, a new string still goes to the buffer, also one the page's filter
-    // cannot tell from the paged one (same last byte and length).
+    // Outside a lend with the overflow page in use, a new string still goes to the buffer, also one of the paged one's
+    // length and last byte.
     let buffered = pin("arena_dedup_after");
-    assert_ne!(buffered, paged);
+    assert!(!is_paged(buffered));
     assert_eq!(to_string(buffered), "arena_dedup_after");
     let twin = pin("arena_dedup_pagdd");
-    assert_ne!(twin, paged);
+    assert!(!is_paged(twin));
     assert_eq!(get("arena_dedup_pagdd"), Some(twin));
     assert_eq!(to_string(twin), "arena_dedup_pagdd");
     assert_eq!(take_overflow_interns(), 1);
@@ -646,6 +653,7 @@ mod tests {
   /// `reset` empties both tiers; the overflow page's symbols start over.
   #[test]
   fn reset_clears_the_overflow_page() {
+    reset();
     let lent = pin("arena_reset_lent");
     let paged = with(lent, |_| pin("arena_reset_paged"));
     assert_eq!(len(), 2);
@@ -668,5 +676,14 @@ mod tests {
   fn reset_inside_a_lend_panics() {
     let lent = pin("arena_reset_inside");
     with(lent, |_| reset());
+  }
+
+  /// So does `reset` inside the lend of an overflow symbol, whose text is its own `Rc`: every lend borrows the arena.
+  #[test]
+  #[should_panic(expected = "arena::reset inside a lend")]
+  fn reset_inside_an_overflow_lend_panics() {
+    let lent = pin("arena_reset_inside_page");
+    let paged = with(lent, |_| pin("arena_reset_inside_paged"));
+    with(paged, |_| reset());
   }
 }

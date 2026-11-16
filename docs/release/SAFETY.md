@@ -83,16 +83,16 @@ sound because the runtime guarantees the invariant by construction.
 
 ### B. Arena `resolve_unchecked` — performance carve-out (1 site)
 
-In `latexml_core/src/common/arena.rs`, the private `text()` that every lend (`with`, `with2`, `with3`, `with_many`,
-`to_string`, `first_bytes`) resolves through. It uses `string-interner`'s unchecked `Symbol → &str` lookup on the
-arena's buffer, under the lend's shared `RefCell` borrow.
+In `latexml_core/src/common/arena.rs`, the private `buffer_text()` that every lend (`with`, `with2`, `with3`,
+`with_many`, `to_string`, `first_bytes`) resolves a buffer symbol through. It uses `string-interner`'s unchecked
+`Symbol → &str` lookup on the arena's buffer, under the lend's shared `RefCell` borrow.
 
 The safety invariant is **append-only buffer, never grown under a lend**: every symbol below the overflow base
-(`1 << 31`) comes from the buffer's `get_or_intern` of a valid `&str`, symbols are never invalidated between `reset`s,
-and an overflow symbol never reaches the unchecked lookup (it resolves to the overflow page's own `Rc<str>`). A string
-interned while a lend is live goes to the overflow page instead of the buffer, so the buffer cannot move under a lent
-`&str`; `reset` inside a lend panics (its `try_borrow_mut` fails). Miri checks the arena tests under Stacked and Tree
-Borrows (`tools/miri_check.sh`).
+(`1 << 31`) comes from the buffer's `get_or_intern` of a valid `&str`, symbols are never invalidated between `reset`s, and an
+overflow symbol never reaches the unchecked lookup (it resolves to the overflow page's own `Rc<str>`). A string interned
+while a lend is live goes to the overflow page instead of the buffer, so the buffer cannot move under a lent `&str`;
+`reset` inside any lend, an overflow symbol's included, panics (its `try_borrow_mut` fails). Miri checks the arena tests
+under Stacked and Tree Borrows (`tools/miri_check.sh`).
 
 **Why we accept the `unsafe`**: callgrind measured the checked `resolve`
 (`from_utf8` validation per call) at ~3% of total instruction count. The

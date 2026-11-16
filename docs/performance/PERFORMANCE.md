@@ -376,18 +376,29 @@ Defect (a soundness fix, not a lever): `arena::with` lent a `&str` from string-i
 while a re-entrant `pin` inside the closure took `&mut *ptr` through a cached raw pointer and could grow, and move,
 that `Vec` (a use-after-free; Miri rejected even a nested `with` or `get` under a lend). Fix (`latexml_core/src/common/arena.rs`):
 a lend holds a shared `RefCell` borrow; an intern while one is live goes to an overflow page of `Rc<str>` with symbols
-from `1 << 31` (the buffer refuses to reach 2 GiB), deduplicated across both tiers (a later pin outside any lend returns
-the overflow symbol); outside a lend the intern is the old `get_or_intern`, with a 256 × 64-bit filter (last byte,
-length) so only a possible page string probes the page. `arena.rs` `unsafe` 10 → 1; `with_copy` folded back into
+from `1 << 31` (the buffer refuses a string that would start at or past 2 GiB), deduplicated across both tiers (a later
+pin outside any lend returns the overflow symbol); outside a lend an intern looks the string up in the buffer, on a
+miss on the page, and only then adds it to the buffer (ARENARb: the first version's 256 × 64-bit page filter cost
+0.14-0.37 % more instructions). `arena.rs` `unsafe` 10 → 1; `with_copy` folded back into
 `with`. Every document overflows: hello-world 1 string, b250 50, 2308.04512 399, siunitx papers 105-139 (the
-conversion's end reports the count as one `Info:arena:overflow`). Cost, `instructions:u` best of 3 interleaved against
-INTPERF5 (`kit/perf_ab_cycles.sh`, `HTML=1 STAT=min`): 2308.04512 +0.24 %, b250 +0.18 %, amsldoc +0.13 %, 2604.01119
+conversion's end reports the count as a Debug line, `arena:overflow`, not an `Info:` line in every log). Cost,
+`instructions:u` best of 3 interleaved against INTPERF5 (`kit/perf_ab_cycles.sh`, `HTML=1 STAT=min`): 2308.04512 +0.24 %, b250 +0.18 %, amsldoc +0.13 %, 2604.01119
 +0.07 %, 10 typical papers (`popPERFBs`) −0.35 … +0.14 %; `cycles:u` −5.3 … +2.6 % (within the loaded host's spread).
 About 4 instructions per arena call (2308.04512: 95 M lends, 51 M interns, 25 M probes): the `RefCell` borrow every lend
 now takes. Output byte-identical: the 14 documents (whole HTML destination) and `popARENAR` (50 siunitx, 39 biblatex, 20
 xkeyval/kvoptions, 18 pgfplots, 60 controls) XML 187 / 187 and HTML 187 / 187. Guards: the arena's unit tests
 (`lend_survives_interning_many_new_strings`, red under Miri on the old code), run under Stacked and Tree Borrows by
 `tools/miri_check.sh`.
+
+Fix round (ARENARb): every lend borrows the arena, an overflow symbol's too (so a `reset` inside any lend panics);
+the 2 GiB guard covers `get` and the cold path's buffer probe; the page filter is gone (above); `with` resolves in one
+branch (resolving through `text()` and matching its `Text` again cost 0.04-0.21 %); model `set_allows` looks its
+probe strings up instead of pinning them. Net against INTPERF's head with ARENAR (ARENARb0), `instructions:u` best of
+3 interleaved, `HTML=1 STAT=min`: 2308.04512 −0.48 %, b250 −0.24 %, amsldoc −0.45 %, 2604.01119 −0.39 %, the 10
+`popPERFBs` papers −0.22 … −0.52 %; the 14 HTML destinations and `popARENAR` byte-identical. Guards:
+`lend_survives_more_new_bytes_than_the_buffer_holds` (native: 1.77 MB interned under a lend, past the buffer's
+capacity, and the lent text has not moved; skipped under Miri, where it takes 13 min under Tree Borrows),
+`reset_inside_an_overflow_lend_panics`, `model::wildcard_resolution_tests::the_probes_intern_nothing`.
 
 ### 2026-11-15 — per-character and serializer allocations (MEMB, MEM1 levers L4a/b/e, L7, L10, L18)
 
