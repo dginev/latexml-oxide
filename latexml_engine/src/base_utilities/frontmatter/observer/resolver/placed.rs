@@ -163,6 +163,20 @@ impl Tally {
   fn address(&self, address: &str) -> usize { self.addresses.get(address).copied().unwrap_or(0) }
 }
 
+/// `text` past its `http://` or `https://`, if it opens with either.
+fn without_scheme(text: &str) -> &str {
+  let text = text.trim_start();
+  ["https://", "http://"]
+    .iter()
+    .find_map(|scheme| {
+      text
+        .get(..scheme.len())
+        .filter(|head| head.eq_ignore_ascii_case(scheme))
+        .map(|_| &text[scheme.len()..])
+    })
+    .unwrap_or(text)
+}
+
 /// The texts `events` print as inks: each line's Names read whole, as the reading reads a line's addresses (`Switzerland
 /// {adam`, `samuli`, `monaldo}@idsia.ch` one list, 1605.03019), a Contact or a Note on its own (a url beside an address,
 /// `https://members.loria.fr/AClement alexandre.clement@loria.fr`, is no list, 2206.10577); a contact a mark's formula
@@ -209,8 +223,13 @@ fn ink_texts(
       },
       EventKind::Contact if in_a_mark(e) => beside.add(&e.text, 1),
       EventKind::Contact | EventKind::Note if e.kind == EventKind::Contact || !e.inkless => {
-        texts.push(e.text.clone());
-        prints.push(e.text.clone());
+        // (an ORCID given as its address prints no scheme the iD's `https` link lacks: `\orcid{http://orcid.org/…}`)
+        let text = match e.role.as_deref() {
+          Some("orcid") => without_scheme(&e.text),
+          _ => &e.text,
+        };
+        texts.push(text.to_string());
+        prints.push(text.to_string());
       },
       EventKind::Sep(SepKind::Word(word)) => {
         beside.add(word, 1);

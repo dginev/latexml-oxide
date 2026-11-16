@@ -17843,9 +17843,18 @@ it whole as one `\lx@add@author` (Base_Utility.pool.ltxml:687-693), else `SplitT
 - *Queue.* Every call queues its block whole (`defs/author_macros.rs:35 whole_block_call`); the ledger records it with
   its stamped position range (`observer/ledger.rs`).
 - *Flush.* `place.rs:520 digest_front_matter` rehearses and lexes every block not read yet (`observer/reading.rs`;
-  `observer/rehearsal.rs`; each block under the author markup its digestion runs, `reading.rs:252`,
-  `defs/frontmatter_fields.rs:893 author_markup_begin`: a binding's class markup, OmniBus's, the title code's
-  definitions that read arguments — formerly in #802's and #941's records; `events/mod.rs:2774 lex_with_formulas`
+  `observer/rehearsal.rs`; each block under the author markup its digestion runs, `reading.rs:254`,
+  `defs/frontmatter_fields.rs:901 author_markup_begin`: a binding's class markup, OmniBus's, the title code's
+  definitions that read arguments — formerly in #802's and #941's records. What a title-code command assigns besides
+  printing, called from the block or in the run a paper's macro reached it in, is no declaration of the block
+  (`field_notes.rs:613 keep_declared`, `:685 field_expansion`; the run lasts while its expansion is read, a mouth its
+  `\textsuperscript` digests its argument in included, `close_runs`): pdflatex runs it inside the title code's group,
+  so its replay apart erred undefined (klmm.sty's `\instref`, 2606.12100, 2606.12130, 2606.12144, 2606.22997,
+  2606.26035). Every other definition of that macro, a name built at run time too, is the block's, replayed under the
+  author markup (`emitter/emit.rs:3150 declarations`, `frontmatter_fields.rs under_author_markup`), as pdflatex runs it
+  in that group; OmniBus's `\orcid` is bound as a class's own
+  `\orcid` (`rehearsal.rs:613`, `\lx@author@orcid`), one contact with its argument whole (2606.13132's `\orcid{orcid.org/…}`
+  had lost its iD); `events/mod.rs:2774 lex_with_formulas`
   reads a span's content from the digested list, a speculative run's in-place edits undone — formerly #978), then calls
   `emitter/emit.rs:5001 emit_commands` (place.rs:589).
 - *Resolve.* `observer/resolver/mod.rs:1257 resolve` applies the rules its module doc numbers 1-10 under the family's

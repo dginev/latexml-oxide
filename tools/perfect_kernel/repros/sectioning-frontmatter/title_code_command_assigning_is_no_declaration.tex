@@ -1,0 +1,25 @@
+% mechanism: a command the class's title code defines where it reads `\@author` (klmm.sty:117-120's
+%   `\def\instref##1{\textsuperscript{##1}\def\current@has@affil{1}}` inside `\@maketitle`'s group) runs in the
+%   observer's rehearsal under the author markup (`author_markup_begin`, LOSTF, OXIDIZED_DESIGN_DIVERGENCES #941). What
+%   it assigns besides printing is the title code's — pdflatex runs it inside the group `\@author` is read in, the
+%   digestion inside the creator's `\lx@author@withinst` — not a declaration of the block replayed apart (the emitter's
+%   `ltx:emit`), where the command is undefined: called from the block (`\instref{1}`) or reached through a paper's
+%   macro (`\myref{2}`), `field_notes::keep_declared`
+% witness: 2606.12100, 2606.12130, 2606.12144, 2606.22997, 2606.26035 (klmm.sty, `\author{… Ruichen Qiu\instref{2} …}`)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "Ann Able1 , Bob Baker2"
+% engines: CUT999 (999af99497d): 2 Errors `undefined:\instref`, the output otherwise unchanged; int171a: 0 Errors
+% expect:  0 Errors, 0 Warnings; Ann Able<sup>1</sup>, Bob Baker<sup>2</sup>
+% status:  RED (999af99497d) -> GREEN (REGREHEARSE)
+% preload: ar5iv.sty
+\documentclass{article}
+\makeatletter
+\def\@maketitle{{\def\instref##1{\textsuperscript{##1}\def\current@has@affil{1}}%
+  \def\current@has@affil{0}\large\@author\par}}
+\makeatother
+\newcommand\myref[1]{\instref{#1}}
+\title{T}
+\author{Ann Able\instref{1}, Bob Baker\myref{2}}
+\begin{document}
+\maketitle
+Text.
+\end{document}

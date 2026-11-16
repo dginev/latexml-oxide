@@ -35,6 +35,7 @@ use super::{
   policy::TitleMarks,
   *,
 };
+use crate::base_utilities::defs::frontmatter_fields::AuthorMarkup;
 
 thread_local! {
   static REHEARSING: Cell<bool> = const { Cell::new(false) };
@@ -606,6 +607,10 @@ const ALWAYS_BOUND: &[(&str, &str, bool)] = &[
   // (inside author content `\inst` is the affiliation request, `\lx@author@withinst`)
   ("\\inst", "\\lx@fm@obs@mark", false),
   ("\\lx@annotate@frontmatter", "\\lx@fm@obs@annotate", false),
+  // (OmniBus's `\orcid`, which the author markup provides where a class defines its own only inside its `\author`
+  // (`author_markup_begin`; IOS-Book-Article.cls:1170): the ORCID call it is, its argument whole, as a class's own `\orcid`
+  // is bound — its iD given as an address was cut from it, `\orcid{orcid.org/…}`'s link lost, 2606.13132)
+  ("\\lx@author@orcid", "\\lx@fm@obs@orcid", false),
   (
     "\\lx@request@frontmatter@annotation",
     "\\lx@fm@obs@request",
@@ -1298,7 +1303,7 @@ pub(in crate::base_utilities) fn rehearse_call(
   let left = READS_LEFT.get();
   let progress = token_progress();
   let conditionals = (if_count(), if_stack_depth());
-  let rehearsal = rehearse(content, title_marks, &[], lex_events)?;
+  let rehearsal = rehearse(content, None, title_marks, &[], lex_events)?;
   if let Rehearsal::Done {
     value,
     errors: 0,
@@ -1331,12 +1336,14 @@ pub(in crate::base_utilities) fn rehearse_call(
   Ok(rehearsal)
 }
 
-/// Digest `tokens` (a block's stamped tokens, `ledger::field_stamped`) under the event bindings and hand the
-/// digested list to `inspect` before discarding it; nothing of it stays. A resource Fatal (the deadline, the memory
-/// budget, a runaway limit) propagates, as does one whose run could not be undone (Fatal stays Fatal); any other Fatal
-/// is the rehearsal's alone, discarded with its diagnostics.
+/// Digest `tokens` (a block's stamped tokens, `ledger::field_stamped`) under the event bindings — and an author block's
+/// under the author `markup` its digestion reads it with (`reading.rs`) — and hand the digested list to `inspect` before
+/// discarding it; nothing of it stays. A resource Fatal (the deadline, the memory budget, a runaway limit) propagates, as
+/// does one whose run could not be undone (Fatal stays Fatal); any other Fatal is the rehearsal's alone, discarded with
+/// its diagnostics.
 pub(in crate::base_utilities) fn rehearse<R>(
   tokens: Tokens,
+  markup: Option<&AuthorMarkup>,
   title_marks: TitleMarks,
   block_breaks: &[(&str, BreakKind)],
   inspect: impl FnOnce(&Digested) -> R,
@@ -1397,8 +1404,19 @@ pub(in crate::base_utilities) fn rehearse<R>(
       bgroup();
       install_event_bindings(&tokens, title_marks, block_breaks)?;
       begin_mode("text")?;
-      field_notes_begin(&tokens, block_breaks);
-      let digested = digest(tokens)?;
+      field_notes_begin(
+        &tokens,
+        block_breaks,
+        markup.map_or(&[], |markup| &markup.title_code),
+      );
+      // (undone with the rehearsal's group: no `\lx@author@markup@unprovide` after the block's last token, whose
+      // declaration it was)
+      let digested = digest(match markup {
+        Some(markup) => {
+          Tokens::new([markup.begin.unlist_ref().as_slice(), tokens.unlist_ref()].concat())
+        },
+        None => tokens,
+      })?;
       end_mode("text")?;
       egroup()?;
       Ok(digested)

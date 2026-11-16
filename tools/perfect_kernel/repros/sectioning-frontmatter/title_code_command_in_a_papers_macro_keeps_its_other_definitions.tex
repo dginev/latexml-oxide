@@ -1,0 +1,28 @@
+% mechanism: a paper's macro that calls a command of the class's title code (klmm.sty:117-120's
+%   `\def\instref##1{\textsuperscript{##1}\def\current@has@affil{1}}` inside `\@maketitle`'s group) and defines besides
+%   it. What the title-code command assigns, in its run (`field_notes::field_expansion`, a run surviving the mouth its
+%   `\textsuperscript` digests its argument in, `close_runs`), is the title code's; every other definition of the macro
+%   is the block's declaration, a name built at run time (`\csname aff#1\endcsname`) or written (`\cityA`), replayed
+%   under the author markup the block's digestion runs (`emit::declarations`), as pdflatex runs it inside the title
+%   code's group: neither lost nor an `undefined:\instref`
+% witness: 2606.12100, 2606.12130, 2606.12144, 2606.22997, 2606.26035 (klmm.sty `\instref`); the shapes are review
+%   revREGREHEARSE's p1/a.tex and p1/b.tex
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "Ann Able1 , Bob Baker2", "Body: Inst One; City A."
+% engines: CUT999 (999af99497d): 1 Error `undefined:\instref`, "Body: Inst One; City A."; REGREHEARSE round 1
+%   (78cb40d5620): 1 Error `undefined:\instref`, "Body: ; City A."
+% expect:  0 Errors, 0 Warnings; Ann Able<sup>1</sup>, Bob Baker<sup>2</sup>; "Body: Inst One; City A."
+% status:  RED (78cb40d5620) -> GREEN (REGREHEARSE round 2)
+% preload: ar5iv.sty
+\documentclass{article}
+\makeatletter
+\def\@maketitle{{\def\instref##1{\textsuperscript{##1}\def\current@has@affil{1}}%
+  \def\current@has@affil{0}\large\@author\par}}
+\makeatother
+\newcommand\setaff[2]{\instref{#1}\expandafter\gdef\csname aff#1\endcsname{#2}}
+\newcommand\setcity[1]{\instref{#1}\gdef\cityA{City A}}
+\title{T}
+\author{Ann Able\setaff{1}{Inst One}, Bob Baker\setcity{2}}
+\begin{document}
+\maketitle
+Body: \csname aff1\endcsname; \cityA.
+\end{document}

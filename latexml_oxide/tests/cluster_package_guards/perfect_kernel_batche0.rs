@@ -2078,7 +2078,9 @@ const OBSERVER_BACKSLASH_LITERALS: &[(&str, usize)] = &[
   // meaning to print it (6); the `\emailAdd` binding's constructor (1); `calls_the_api`, a digested whatsit by its definition,
   // the rehearsal's own `\lx@fm@obs@annotate` (1) — no decision on a name a document spells)
   // (CST2, 136 -> 133: `\thefootnote`, named five times, is one constant, `THEFOOTNOTE`, which `rebinds` reads too)
-  ("rehearsal", 133),
+  // (REGREHEARSE 133 -> 135: an `ALWAYS_BOUND` row binding OmniBus's `\lx@author@orcid` to the ORCID event constructor,
+  // as the table binds a class's own `\orcid`, its two names — a binding, no decision on a name a document spells)
+  ("rehearsal", 135),
   // (also among `resolver`'s 18 in `TOKEN_READS`: a `'\\'` read of a label, a call's hook; OC1c 3 -> 4: the API's own
   // `\lx@personname` wrapper's Layout role, `api::creator_call_level`, as `TOKEN_READS` says)
   ("resolver", 4),
