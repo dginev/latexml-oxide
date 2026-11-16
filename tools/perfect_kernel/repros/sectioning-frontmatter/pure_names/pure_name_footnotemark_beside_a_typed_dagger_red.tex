@@ -1,0 +1,16 @@
+% mechanism: a `\footnotemark[2]` beside a typed `$^{\dagger}$` prints two daggers: the copy of note 2 and a mark of its own
+% witness:  advisor (PUREc coordination note)
+% oracle:   pdflatex 0 errors; "Ann Able∗ Bob Baker† Cat Cole†† Dan Dorn††"; footnotes "∗ First note.", "† Second note."
+% engines:  rust PUREc = 0 errors, 0 Warnings; Cat and Dan carry the copy of note 2 and no second † — the reader's
+%           glyph-as-label request (resolver/blocks.rs:1279-1287) takes the typed † for the note's before the pure pass
+% expect:   0 errors; Cat's and Dan's typed † each a mark-only note beside the copy
+% status:   RED (row R MARKKEY; perfect_kernel_batchfmmarks::name_marks_live_outside_the_personname_red)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{Ann Able\thanks{First note.} \and Bob Baker\thanks{Second note.} \and Cat Cole\footnotemark[2]$^{\dagger}$ \and Dan Dorn$^{\dagger}$\footnotemark[2]}
+\date{}
+\maketitle
+Text.
+\end{document}

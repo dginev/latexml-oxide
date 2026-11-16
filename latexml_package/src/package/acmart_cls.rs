@@ -3,7 +3,10 @@
 use latexml_core::definition::origin::{DefinitionOrigin, OriginGuard};
 
 use crate::{
-  engine::latex_constructs::{after_float, before_xfloat},
+  engine::{
+    base_utilities::MARK_FROM_COUNTER,
+    latex_constructs::{after_float, before_xfloat},
+  },
   float_description::{define_float_description, float_description_tokens},
   package::caption_sty,
   prelude::*,
@@ -310,8 +313,11 @@ yysep={,},notesep={, }}}
     assign_value("lx_acm_author_notes", Stored::Int(n), Some(Scope::Global));
     let mark = acm_note_mark(n + lookup_int("lx_acm_title_notes"))?;
     let mut call = TokenizeInternal!("\\lx@add@thanks").unlist();
+    // (its counter's mark, which no glyph typed on the name is: `Ann Able$^{*}$\authornote{…}` prints "∗∗")
     if let Some(mark) = mark {
-      call.extend(TokenizeInternal!(TeXString::assembled(s!("[mark={{{mark}}}]"))).unlist());
+      call.extend(
+        TokenizeInternal!(TeXString::assembled(s!("[mark={{{mark}}},{MARK_FROM_COUNTER}=true]"))).unlist(),
+      );
     }
     call.push(T_BEGIN!());
     call.extend(note.unlist());

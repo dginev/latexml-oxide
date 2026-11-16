@@ -1105,7 +1105,8 @@ const PURE: &[Row] = &[
   },
   // (PUREc: an author reference mark's number keys the one mark it printed — 2508.13181's typed §, a typed ∗ or †
   // beside it, an unheld second refmark, ieeeconf's `\authorrefmark` run of 2011.00594; acmart's counter-marked
-  // `\authornote`; `C\#` at a name's end; glued digits one number)
+  // `\authornote`; `C\#` at a name's end; glued digits one number beside a two-digit entry; a note's mark answering
+  // one printed mark)
   Row {
     repro:      "pure_names/pure_name_refmark_beside_a_typed_section_mark",
     tex:        repro!("pure_names/pure_name_refmark_beside_a_typed_section_mark"),
@@ -1189,10 +1190,48 @@ const PURE: &[Row] = &[
     repro:      "pure_names/pure_name_glued_digits_one_number",
     tex:        repro!("pure_names/pure_name_glued_digits_one_number"),
     warnings:   0,
-    creators:   &[r#"Ann Able ; footnotemark[12]= | affiliation=Univ A ; affiliation=Univ B"#],
+    creators:   &[
+      r#"Ann Able ; footnotemark[12]= | affiliation=Univ A ; affiliation=Univ B"#,
+      r#"Bob Baker | affiliation=Univ J"#,
+    ],
     moves:      r#""#,
-    page:       &[r#"Ann Able ; 12 plain"#],
+    page:       &[r#"Ann Able ; 12 plain"#, r#"Bob Baker"#],
     page_moves: r#""#,
+  },
+  Row {
+    repro:      "pure_names/pure_name_refmark_legend_note_beside_a_typed_mark",
+    tex:        repro!("pure_names/pure_name_refmark_legend_note_beside_a_typed_mark"),
+    warnings:   0,
+    creators:   &[
+      r#"Ann Able | affiliation=† Univ B"#,
+      r#"Bob Baker ; footnotemark[§]= ; thanks[§]=Equal contribution. | affiliation=† Univ B"#,
+    ],
+    moves:      r#""#,
+    page:       &[
+      r#"Ann Able"#,
+      r#"Bob Baker ; §→note | under: Equal contribution."#,
+    ],
+    page_moves: r#""#,
+  },
+  Row {
+    repro:      "pure_names/pure_name_footnotemark_beside_a_typed_dagger_red",
+    tex:        repro!("pure_names/pure_name_footnotemark_beside_a_typed_dagger_red"),
+    warnings:   0,
+    creators:   &[
+      r#"Ann Able ; thanks[*]=First note."#,
+      r#"Bob Baker ; thanks[†]=Second note."#,
+      r#"Cat Cole ; footnotemark[†]= ; thanks[†]=Second note."#,
+      r#"Dan Dorn ; footnotemark[†]= ; thanks[†]=Second note."#,
+    ],
+    moves:      r#"row R MARKKEY (a typed mark beside a `\footnotemark` of the same glyph: the reader's glyph-as-label request takes it for the note's, resolver/blocks.rs:1279-1287)"#,
+    page:       &[
+      r#"Ann Able | under: First note."#,
+      r#"Bob Baker ; †→note"#,
+      r#"Cat Cole ; †→note ; † plain"#,
+      r#"Dan Dorn ; † plain ; †→note"#,
+      r#"margin: Second note."#,
+    ],
+    page_moves: r#"the XML layer's: row R MARKKEY (a typed mark beside a `\footnotemark` of the same glyph)"#,
   },
 ];
 /// Name marks re-homed (DG 2026-11-16, personname purity): a mark typed on a name leaves the personname — the note it

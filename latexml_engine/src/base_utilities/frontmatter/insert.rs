@@ -680,12 +680,8 @@ fn mark_creator_notes(document: &mut Document) -> Result<()> {
       _ => continue,
     }
     // (the space it was set off by goes with it)
-    let next = sup.get_next_sibling();
+    trim_space_after(document, &sup);
     document.remove_node(sup);
-    if let Some(mut text) = next.filter(|n| n.get_type() == Some(NodeType::TextNode)) {
-      let content = text.get_content();
-      text.set_content(content.trim_start())?;
-    }
     while let Some(mut first) = note.get_first_child() {
       if first.get_type() == Some(NodeType::TextNode) && first.get_content().is_empty() {
         first.unlink();
@@ -701,10 +697,13 @@ fn mark_creator_notes(document: &mut Document) -> Result<()> {
 /// [`strip_bare_mark`] takes out.
 pub(in crate::base_utilities) const MARK_IN_TEXT: &str = "_markintext";
 
-/// The flag on a creator's note whose `mark` its own command prints (the title's footnote counter, `\@fnsymbol` at
-/// article.cls:205; REVTeX's numbered front-matter footnotes): no glyph typed on the name is that mark, `Ann Able*\thanks{…}`
-/// printing "*∗" (`pure_names::answer`). Finalize drops it with the other `_` attributes.
-pub(in crate::base_utilities) const MARK_FROM_COUNTER: &str = "_markfromcounter";
+/// The flag on a creator's note whose `mark` its own command prints: no glyph typed on the name is that mark, `Ann
+/// Able*\thanks{…}` printing "*∗" (`pure_names::answer`). Set by `\lx@title@thanks` (the title's footnote counter,
+/// `\@fnsymbol` at article.cls:205) and the emitter's note call, `number_footnote_parts` and `kind_shared_marked_contacts`
+/// (REVTeX's numbered front-matter footnotes), acmart's `\authornote` (acmart.cls:2237). Finalize drops it with the
+/// other `_` attributes. Internal, no binding surface: `pub` only for acmart's binding.
+#[doc(hidden)]
+pub const MARK_FROM_COUNTER: &str = "_markfromcounter";
 
 /// The bare copy of its mark a note's text opens with, taken out where the mark was read off it ([`MARK_IN_TEXT`]):
 /// ieeeconf's `\thanks{*Authors to whom correspondence should be addressed.}` (2606.00397). Whether it was.
@@ -3410,6 +3409,27 @@ impl LineText {
       }
     }
     drop_emptied_wrappers(document, parents);
+  }
+}
+
+/// Cuts the space a mark about to be taken out of a note sets before its words: the text after it, or the first text of
+/// the font wrappers after it — LaTeXML sets `\textsf{$^{\diamond}$ }Equal …`'s space in a wrapper of its own — and a
+/// wrapper that holds nothing then (revPURE N3; `mark_creator_notes`, `pure_names`' `Lead::cut`).
+pub(super) fn trim_space_after(document: &mut Document, mark: &Node) {
+  let mut next = mark.get_next_sibling();
+  while let Some(wrapper) = next
+    .as_ref()
+    .filter(|n| n.get_type() == Some(NodeType::ElementNode) && n.get_name() == "text")
+  {
+    next = wrapper.get_first_child();
+  }
+  let Some(mut text) = next.filter(|n| n.get_type() == Some(NodeType::TextNode)) else {
+    return;
+  };
+  let content = text.get_content();
+  let _ = text.set_content(content.trim_start());
+  if content.trim().is_empty() {
+    drop_emptied_wrappers(document, text.get_parent().into_iter().collect());
   }
 }
 

@@ -1,0 +1,19 @@
+% mechanism: a note's mark answers one mark printed on the name: a typed § beside the reference mark its legend note
+%            answers is a mark of its own
+% witness:  advisor (PUREc coordination note), 2508.13181's shape with a `\thanks` legend
+% oracle:   pdflatex 0 errors; "Ann Able†, Bob Baker†§ §" over "† Univ B"; the footnote "§ Equal contribution."
+% engines:  rust int/frontmatter fd43c364eb6 = 0 errors; one § (the note answered both)
+% expect:   0 errors, 0 Warnings; Bob's † consumed by Univ B, one § the note's, the typed § a mark-only note (HTML:
+%           linked to the block's one § note, OD #1052)
+% status:   RED (int/frontmatter fd43c364eb6) -> GREEN (PUREc; perfect_kernel_batchfmmarks::
+%           name_marks_live_outside_the_personname)
+% preload: ar5iv.sty
+\documentclass[conference]{IEEEtran}
+\IEEEoverridecommandlockouts
+\begin{document}
+\title{Title}
+\author{\IEEEauthorblockN{Ann Able\IEEEauthorrefmark{2}, Bob Baker\IEEEauthorrefmark{2}\IEEEauthorrefmark{4}\textsuperscript{\textsection}\thanks{\IEEEauthorrefmark{4}Equal contribution.}}
+\IEEEauthorblockA{\IEEEauthorrefmark{2}Univ B}}
+\maketitle
+Text.
+\end{document}
