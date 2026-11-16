@@ -1,12 +1,13 @@
-% mechanism: a bare `\footnotemark` past `\hfill` (a Gap with fill) directly before a name is that name's prefix, not
-%   the previous name's (review revSHGIVEN 1); the reading has no place for it, so the block is written whole with its
-%   Warning, REGFIX's (`mark_dropped`)
+% mechanism: a bare `\footnotemark` past `\hfill`, glued to the next name: the mark ledger reads the fill at its
+%   natural width and at any wider, and Bob is nearer at both (no glue after the mark), so the mark is his prefix,
+%   written before his name, its step there (`resolver::mark_ledger`)
 % witness: none (synthetic sibling of 1911.13299)
 % oracle:  pdflatex 0 errors; "Ann Able∗†Bob Baker", "∗X" (pdftotext)
 % engines: rust REGFIX: 0 errors, 1 Warning, one creator "Ann Able Bob Baker" with † and the note; SHGIVEN head
 %   6bc78862253: † on Ann, 0 Warnings (silently the wrong owner); perl 0.8.8: 0 errors, one creator, the mark inside
-% expect:  0 errors; REGFIX's: the block written whole, †, the note once, 1 Warning
-% status:  RED (6bc78862253) -> GREEN (perfect_kernel_batchne2::a_mark_a_name_follows_past_spacing_is_not_carried_back)
+% expect:  0 errors, 0 Warnings; Ann with her note ∗, Bob †
+% status:  RED (6bc78862253: † on Ann; REGFIX: the block whole) ->
+%   GREEN (perfect_kernel_batchne2::a_mark_a_name_follows_past_spacing_is_not_carried_back)
 % preload: ar5iv.sty
 \documentclass{article}
 \begin{document}

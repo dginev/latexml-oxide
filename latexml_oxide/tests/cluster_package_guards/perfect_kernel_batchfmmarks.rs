@@ -1530,11 +1530,11 @@ const SPACING: &[Row] = &[
     ],
     page_moves: r#""#,
   },
-  // the mark as printed; the Warning over-counts it (row R: a prefix mark not first on its line, fails toward flagging)
+  // the mark as printed, no Warning (the mark ledger writes the prefix Bob's: SHGNEXT, OD #1057)
   Row {
     repro:      "ne2e_prefix_mark_past_spacing_before_and",
     tex:        repro!("ne2e_prefix_mark_past_spacing_before_and"),
-    warnings:   1,
+    warnings:   0,
     creators:   &[
       r#"Ann Able"#,
       r#"Bob Baker ; footnotemark[†]="#,
@@ -1544,11 +1544,11 @@ const SPACING: &[Row] = &[
     page:       &[r#"Ann Able"#, r#"Bob Baker ; † plain"#, r#"Carl Cole"#],
     page_moves: r#""#,
   },
-  // the marks as printed; the Warnings over-count them (the same row R line)
+  // the marks as printed; the one Warning the labels' (the prefix's false "lost: †" gone: SHGNEXT, OD #1057)
   Row {
     repro:      "ne2e_prefix_marks_past_quad",
     tex:        repro!("ne2e_prefix_marks_past_quad"),
-    warnings:   2,
+    warnings:   1,
     creators:   &[
       r#"Ann Able ; footnotemark[*]="#,
       r#"Bob Baker ; footnotemark[†]="#,

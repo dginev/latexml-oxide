@@ -1,13 +1,14 @@
-% mechanism: the per-run carry's two outcomes (main's SHGIVEN fallback, 2026-11-16): a run the wider Gap follows is
-%   the name's before it (2412.20504's `Xiao Wang\textsuperscript{1}\footnotemark[1] \ \footnotemark[2] \quad
-%   Qingyi Si`), one between two equal Gaps undecided, REGFIX's counted loss
+% mechanism: the mark ledger's two outcomes past a name: a run the wider gap follows is the name's before it
+%   (2412.20504's `Xiao Wang\textsuperscript{1}\footnotemark[1] \ \footnotemark[2] \quad Qingyi Si`), a mark between two
+%   equal gaps the next name's (a tie, DG ruling 2026-11-16)
 % witness: 2412.20504 (Xiao Wang's †)
 % oracle:  pdflatex 0 errors; "Ann Able∗ † Bob Baker   ‡ / Carl Cole" (pdftotext -bbox: ∗→† 3.6pt, †→Bob 11.8pt;
 %   Baker→‡ 15.6pt, ‡→Carl 11.8pt; TeX's glue ` \ ` 6.7pt | ` \quad` 13.3pt, then 13.3pt | 13.3pt)
 % engines: rust REGFIX: 0 errors, 1 Warning ("lost: †, ‡"), Ann *; SHGIVENb 80ffc5f84b4: Ann * †, Bob ‡ (carried
 %   back); perl 0.8.8: 0 errors; Ann with both marks, Bob, the third mark a creator of its own, Carl
-% expect:  0 errors, 1 Warning ("…lost: ‡"); Ann * †, Bob, Carl, no creator carries ‡
-% status:  RED (80ffc5f84b4: ‡ on Bob) -> GREEN (perfect_kernel_batchne2::a_marks_run_is_carried_back_whole_or_left)
+% expect:  0 errors, 0 Warnings; Ann * †, Bob, Carl ‡
+% status:  RED (80ffc5f84b4: ‡ on Bob; REGFIX: ‡ lost) ->
+%   GREEN (perfect_kernel_batchne2::a_mark_beside_spacing_is_the_nearer_names)
 % preload: ar5iv.sty
 \documentclass{article}
 \begin{document}

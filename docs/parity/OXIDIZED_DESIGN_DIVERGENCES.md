@@ -19741,6 +19741,54 @@ through the `ltx_annotated_personname` wrapper (REND2's XSLT); no template rende
 `perfect_kernel_batchpure` (repros `sectioning-frontmatter/pure_names/`); 287 older guards repinned to the name alone,
 their rows listing each note's `mark` (`perfect_kernel_batch84b::creators`).
 
+### 1057. A mark or note printed beside spacing between two names is the nearer name's by TeX's glue; a bare mark no name writes keeps its footnote step (DG 2026-11-16, SHGNEXT)
+
+**Rule.** A `\footnotemark` or a note printed between two names belongs to the nearer one, measured by the glue TeX sets
+between the inks, a tie going to the following name (DG 2026-11-16). The marks and notes between two names on a line
+are parted at the widest glue among them: a mark is as near a name as the widest blank on the way to it, so `Ann (27pt)
+∗ (6.7pt) † (23.5pt) Bob` gives both to Bob, `Ann (7.8) ∗ (73.8) † (11.9) Bob` parts the run and `Ann (7.8) ∗ (23.1) Bob
+(27.3) † (4.0) Carl` gives ∗ to Ann and † to Carl. Past a name with no name after it on its line (a separator, `\\`, the
+block's end) they are that name's (1911.13299's `\ \footnotemark[3]\and`); opening a cell (`\and`, `&`, an alignment's
+cell) they are the next name's. A fill's width is the line's (its natural width at a `tabular` row that sets the
+column, else wider): it decides only where its natural width and any wider part the run alike, so a mark glued to the
+next name is that name's past `\hfill`, and `Ann Able \hfill \footnotemark[2] \quad Bob Baker` is undecided. Other ink
+glued to a name is that name's; set apart from both names beside a mark (an ORCID, a `\cite`, a formula's mark) it
+leaves the run undecided, and so does glue nowhere or two fills: an undecided mark is the counted loss (a wrong glyph
+is worse than none). A bare `\footnotemark` no name writes (one on the line a `\\` opens: no name's, ruling 4) keeps its
+footnote step where it prints, its glyph counted lost, so the marks after it print theirs.
+**Perl.** The mark stays in the personname of the `\and` segment it is typed in (Base_Utility.pool.ltxml's creator per
+`\and`), its owner the source's order; no glue is read.
+**Rust.** `resolver::mark_ledger` reads a block's events once into one record per text `\footnotemark` and note beside
+a name (its event, the widest glue back to the previous name's last ink and on to the next name's first ink from the
+lexer's `SepKind::Gap` widths and its `space_before`/`space_after` interword spaces, the side or none), and every
+consumer reads it: the reading (`Resolver::names_line`) gives a mark's request and a note to the name it names, and
+the writer (`emit::block_names`) carries the previous name's pieces past its run (over spacing, font changes and the
+pieces alone: an item the reading writes apart, an affiliation's contact before the mark, stops it) and writes the next
+name's before its text in print order — a mark's own balanced tokens in a group of their own, cut from the previous
+name's run where a group took them, a note's footnote step where it prints. Only marks and notes move; an undecided mark is
+`mark_dropped`'s: one given its number re-references a note written already and is counted lost (user ruling
+2026-11-09), a bare one's step is written where it prints on the creator before it (`\lx@title@mark@step{\footnotemark}`,
+`frontmatter_fields.rs`: the mark typed into a box no one uses) and its glyph counted lost — the block was written whole,
+its names clumped into one creator; one Warning per block names every lost mark. A bare one leading its line or cell
+with a name after it keeps the whole block: the reading takes such a cell for a labelled line (`Ann Able\thanks{X}
+\and \footnotemark Bob Baker` read Bob as Ann's affiliation). The two other readers of marks
+(`insert::mark_creator_notes`/`strip_bare_mark`, the list-box first ink) keep their own reading for now (advisor T2).
+**Residuals.** The 0pt fill of a single-row author `tabular` (article.cls:181-183 sets `\@author` in `\begin{tabular}[t]{c}`
+per `\and`) needs the class's own `\maketitle` known to be in force: until then such a fill is undecided
+(`fmmarks_mark_then_hfill_before_next_red`, `ne2g_mark_past_hfill_undecided`). A mark beside an ORCID, a `\cite` or a
+formula's mark apart from both names stays undecided (`ne2g_mark_then_orcid_nearer_next`,
+`fmmarks_mark_then_cite_nearer_next_red`, `ne2g_mark_then_superscript_nearer_next`). A single space before or after a
+note prints no `space_before` event: a run with no other glue is undecided. A cell an `\and` opens with a mark before
+its name is read as a labelled line (`ne2i_bare_mark_opening_a_cell_writes_the_block_whole`; given its number, Bob an
+affiliation as at the base). A mark after a name's comma and its label (`Igor Pikovski,$^{1, 2}$\footnotemark`,
+1111.1979: COMMAMARK) is undecided: its names now split, its glyph counted lost.
+**Witnesses.** 1911.13299, 2412.20504 (green before and after); the FMRG suite's spacing family
+(`perfect_kernel_batchfmmarks::a_mark_past_spacing_is_the_nearer_names`).
+**Guards**: `perfect_kernel_batchne2::{a_mark_beside_spacing_is_the_nearer_names,
+a_note_beside_spacing_goes_to_the_nearer_name, a_mark_nearer_the_next_name_moves_alone,
+a_mark_a_name_follows_past_spacing_is_not_carried_back, a_mark_on_no_name_keeps_its_footnote_step,
+a_given_mark_on_no_name_keeps_the_creators}`; the unit test
+`resolver::mark_ledger::tests::a_run_between_two_names_is_parted_at_its_widest_glue`.
 ---
 
 ## TeX-source fidelity family (TEXSRC)
