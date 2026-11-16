@@ -3042,6 +3042,120 @@ mod browser_render_author_lines {
   }
 }
 
+mod browser_render_fmmarks {
+  //! FMRG's browser layer (DG 2026-11-16, red/green on both targets): rows of
+  //! `cluster_package_guards::perfect_kernel_batchfmmarks` that stress the author block's CSS, rendered with the
+  //! tree's LaTeXML.css by `tests/browser/measure_fmmarks.js` at 1280 and 375 px. Each asserts: no shown box (name,
+  //! mark, note body, contact) drawn over another; every shown mark on its name's last line, touching the name or the
+  //! mark before it; every shown note body under its own name and inside its column; at either width no horizontal
+  //! overflow of the block. A one-author note in a one-line block keeps its mark and pop-up in LaTeXML.css (OD #1052),
+  //! so its body is not shown. Opt-in and LOCAL like the guards above.
+
+  macro_rules! repro {
+    ($name:literal) => {
+      include_str!(concat!(
+        "../../tools/perfect_kernel/repros/sectioning-frontmatter/",
+        $name,
+        ".tex"
+      ))
+    };
+  }
+
+  /// (row, document, the marks shown on names in order as (name, mark), the names a shown body prints under).
+  const ROWS: [(&str, &str, &[(&str, &str)], &[&str]); 5] = [
+    (
+      "a shared legend note (2407.07614's shape)",
+      repro!("author_block_symbol_legend_note_mark_not_in_its_text"),
+      &[("Ann Able", "\u{2217}"), ("Bob Baker", "\u{2217}")],
+      &["Ann Able"],
+    ),
+    (
+      "a long shared note, two names with a note of their own (1706.03762's shape)",
+      repro!("fmmarks_long_shared_note_with_second_marks"),
+      &[
+        ("Ann Able", "*"),
+        ("Bob Baker", "*"),
+        ("Cat Cole", "*"),
+        ("Dan Dorn", "*"),
+      ],
+      &["Ann Able", "Cat Cole", "Dan Dorn"],
+    ),
+    (
+      "one author's note",
+      repro!("author_footnote_is_the_marked_thanks_note"),
+      &[("Ann Able", "*")],
+      &[],
+    ),
+    (
+      "two marks on one name",
+      repro!("ne2h_marks_run_carried_back_whole"),
+      &[("Ann Able", "*"), ("Ann Able", "\u{2020}")],
+      &[],
+    ),
+    (
+      "twelve names on two lines (2602.18802's shape)",
+      repro!("fmmarks_many_names_two_legend_marks"),
+      &[("Ann Able", "\u{2217}"), ("Bob Baker", "\u{2217}")],
+      &["Ann Able", "Dan Dorn"],
+    ),
+  ];
+
+  #[test]
+  fn author_block_marks_and_notes_lay_out_as_printed() {
+    for (row, doc, marks, bodies) in ROWS {
+      let Some(stdout) =
+        super::browser_harness::render_and_measure("FMRG", doc, "measure_fmmarks.js")
+      else {
+        return;
+      };
+      let runs: serde_json::Value = serde_json::from_str(stdout.trim()).expect("parse JSON");
+      for (key, run) in runs.as_object().expect("widths") {
+        assert_eq!(run["overflow"], false, "{row} ({key}) overflows: {stdout}");
+        assert_eq!(
+          run["overlaps"],
+          serde_json::json!([]),
+          "{row} ({key}) overlaps: {stdout}"
+        );
+        let shown: Vec<(String, String)> = run["marks"]
+          .as_array()
+          .unwrap()
+          .iter()
+          .map(|m| {
+            (
+              m["name"].as_str().unwrap().to_string(),
+              m["mark"].as_str().unwrap().to_string(),
+            )
+          })
+          .collect();
+        let want: Vec<(String, String)> = marks
+          .iter()
+          .map(|(n, m)| ((*n).to_string(), (*m).to_string()))
+          .collect();
+        assert_eq!(shown, want, "{row} ({key}) marks: {stdout}");
+        for mark in run["marks"].as_array().unwrap() {
+          assert!(
+            mark["onLine"] == true && mark["gap"].as_f64().unwrap().abs() <= 1.0,
+            "{row} ({key}) a mark off its name's line or parted from it: {stdout}"
+          );
+        }
+        let under: Vec<&str> = run["bodies"]
+          .as_array()
+          .unwrap()
+          .iter()
+          .map(|b| b["name"].as_str().unwrap())
+          .collect();
+        assert_eq!(under, bodies, "{row} ({key}) bodies: {stdout}");
+        for body in run["bodies"].as_array().unwrap() {
+          assert!(
+            body["underName"] == true && body["inColumn"] == true,
+            "{row} ({key}) a body not under its name: {stdout}"
+          );
+        }
+      }
+    }
+  }
+}
+
 mod aligned_mtable_columnspacing_zero {
   //! #755, the platform-independent (CI-enforced) half: the native-MathML mtd
   //! padding reset in `LaTeXML.css` keys on `mtable[columnspacing="0pt"]`, so it
