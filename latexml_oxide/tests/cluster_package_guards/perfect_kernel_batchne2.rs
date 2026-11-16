@@ -314,7 +314,9 @@ fn a_mark_after_its_names_note_stays_with_it() {
 /// no name's, DG ruling 2026-11-16, 4) was dropped with no Warning, Bob Baker's mark one symbol short; NE2c then wrote the
 /// block whole, Perl's whole-block creator, the two names clumped into one. Now its footnote step is kept where it prints
 /// (the mark typeset into a box no one uses) and its glyph counted lost (row R SHGIVENNEXT's counter-step rule): Ann with
-/// her note ∗, Bob ‡ as pdflatex prints them, 1 Warning. Distinct from
+/// her note ∗, Bob ‡ as pdflatex prints them, 1 Warning. One that opens a line or cell with a name after it keeps no
+/// step apart: the reading took the cell `\and \footnotemark Bob Baker` for a labelled line, Bob Ann's affiliation, so
+/// the block is still written whole (REGFIX's, its Warning). Distinct from
 /// `a_counter_move_no_name_carries_writes_the_block_as_perl_splits_it`: a mark, not a counter move, that the reading has
 /// no place for.
 #[test]
@@ -329,6 +331,19 @@ fn a_mark_on_no_name_keeps_its_footnote_step() {
     row(&["Ann Able", "thanks[*]=Univ X."]),
     row(&["Bob Baker", "footnotemark[‡]="]),
   ]);
+  let (log, xml) = run(repro!(
+    "ne2i_bare_mark_opening_a_cell_writes_the_block_whole"
+  ));
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 1), "{log}");
+  assert!(
+    log.contains("on no name and no item; the block is written whole"),
+    "{log}"
+  );
+  assert_eq!(notes_in(&xml), [row(&[
+    "Ann Able and Bob Baker",
+    "footnotemark[†]=",
+    "thanks[*]=X"
+  ])]);
 }
 
 /// A `\footnotemark` given its number that no name and no item writes (`D. R. G. Schleicher,$^{1}$\samethanks[1]`,

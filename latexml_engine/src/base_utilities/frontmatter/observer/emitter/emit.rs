@@ -3942,8 +3942,10 @@ fn unwritten(
 /// short without it: its step is kept where it prints, its glyph dropped — its place, its label and its step's tokens
 /// (the mark typeset into a box no one uses, `{\setbox0\hbox{\footnotemark}}`) go to `bare_lost`, the loss counted by
 /// [`warn_marks_lost`] (the counter-step rule, row R SHGIVENNEXT; it wrote the block whole, Perl's whole-block
-/// creator, its names clumped into one). `true` for a bare one whose tokens no balanced run holds: that block is still
-/// written whole, with its Warning, once per block over the flushes (review revNE2r2 Q2: never a silent loss). A mark past
+/// creator, its names clumped into one). `true` for a bare one whose tokens no balanced run holds, or one leading its line
+/// or cell with a name after it, which the reading may take for that line's label (`Ann Able \and \footnotemark Bob
+/// Baker` read Bob as an affiliation): that block is still written whole, with its Warning, once per block over the
+/// flushes (review revNE2r2 Q2: never a silent loss). A mark past
 /// its name's note, or beside spacing the mark ledger gives a name, is that name's (`block_names`: 1610.06031,
 /// 1911.13299).
 fn mark_dropped(
@@ -3974,12 +3976,39 @@ fn mark_dropped(
       }
       (depth == 0).then(|| run.to_vec())
     };
+    // (one leading its line or cell with a name after it, which the reading may read as that line's label — `Ann Able
+    // \and \footnotemark Bob Baker`, Bob an affiliation — keeps no step: the block is written whole)
+    let leads_a_name = |k: usize| {
+      let passed = |e: &&Event| {
+        matches!(e.kind, EventKind::Sep(SepKind::Gap { .. }))
+          || (e.kind == EventKind::Layout && e.role.as_deref() != Some("cell"))
+      };
+      let opens = events[..k]
+        .iter()
+        .rev()
+        .find(|e| !passed(e))
+        .is_none_or(|e| {
+          matches!(
+            e.kind,
+            EventKind::Break
+              | EventKind::Sep(SepKind::And(_) | SepKind::Column(_))
+              | EventKind::Layout
+          )
+        });
+      opens
+        && events[k + 1..]
+          .iter()
+          .find(|e| !(passed(e) || matches!(e.kind, EventKind::Mark | EventKind::Note)))
+          .is_some_and(|e| e.kind == EventKind::Name)
+    };
     events
       .iter()
-      .filter(|e| e.kind == EventKind::Mark && e.role.as_deref() == Some("footnotemark"))
-      .filter_map(|e| {
+      .enumerate()
+      .filter(|(_, e)| e.kind == EventKind::Mark && e.role.as_deref() == Some("footnotemark"))
+      .filter_map(|(k, e)| {
         let (s, t) = (at(e.span?.0)?, at(e.span?.1)?);
-        Some((s, t, e.given_number, e.text.clone(), run(s, t)))
+        let step = (!leads_a_name(k)).then(|| run(s, t)).flatten();
+        Some((s, t, e.given_number, e.text.clone(), step))
       })
       .collect()
   });
