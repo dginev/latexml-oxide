@@ -4,13 +4,18 @@
 %   Hai$^{1\dagger}$`)
 % oracle:   pdflatex 0 errors; "Ann Able1†∗ Bob Baker1† Cat Cole2", one footnote "∗ Corresponding Author. † Co-first
 %   authors"
-% engines:  rust INTREC (3af622aca64) = 0 errors, 0 Warnings; Ann Able † ; thanks[*]=Corresponding Author. † Co-first
-%   authors | affiliation=Univ A / Bob Baker † | affiliation=Univ A / Cat Cole | affiliation=Univ B
-% expect:   0 errors, 0 Warnings; Ann Able ; footnotemark[†]= ; thanks[*]=Corresponding Author. † Co-first authors |
-%   affiliation=Univ A / Bob Baker ; footnotemark[†]= | affiliation=Univ A / Cat Cole | affiliation=Univ B
-%   (guard canon: name ; note role[mark]=text, sorted | contacts)
-% moves:    PURE (fix/pure-personname: the marks out of the personname) (PUREb B1: the note keeps its own ∗)
-% status:   RED (INTREC 3af622aca64; perfect_kernel_batchfmmarks::shared_notes_are_a_marked_copy_per_carrier_red)
+% engines:  rust int/frontmatter 10997fdf9a0 = 0 errors, 0 Warnings; XML Ann Able † ; thanks[*]=Corresponding Author.
+%   † Co-first authors | affiliation=Univ A / Bob Baker † | affiliation=Univ A / Cat Cole | affiliation=Univ
+%   B; HTML Ann Able † | under: Corresponding Author. † Co-first authors / Bob Baker † / Cat Cole
+% expect:   0 errors, 0 Warnings; XML Ann Able ; footnotemark[†]= ; thanks[*]=Corresponding Author. † Co-first authors
+%   | affiliation=Univ A / Bob Baker ; footnotemark[†]= | affiliation=Univ A / Cat Cole | affiliation=Univ B;
+%   HTML Ann Able ; † plain | under: Corresponding Author. † Co-first authors / Bob Baker ; † plain / Cat Cole
+%   (the guard's XML and HTML lines)
+% moves:    XML PURE (fix/pure-personname: the marks out of the personname) (PUREb B1: the note keeps its own ∗); HTML
+%   the XML layer's: PURE (fix/pure-personname: the marks out of the personname) (PUREb B1: the note keeps its
+%   own ∗)
+% status:   RED XML RED, HTML RED (int/frontmatter 10997fdf9a0;
+%   perfect_kernel_batchfmmarks::shared_notes_are_a_marked_copy_per_carrier and _red)
 % preload: ar5iv.sty
 \documentclass{article}
 \title{T}

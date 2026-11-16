@@ -1,11 +1,15 @@
 % mechanism: a given mark past `\ `, a `\quad` before a `\textbf` name: nearer its own name, carried back
 % witness:  revSHGIVENe q5 (q9 `{\bf …}`, s4 `\textsc`)
 % oracle:   pdflatex 0 errors; "Ann Able (7.8pt) ∗ (11.4pt) Bob Baker Carl Cole"
-% engines:  rust INTREC (3af622aca64) = 0 errors, 1 Warning; Ann Able / Bob Baker / Carl Cole
-% expect:   0 errors, 0 Warnings; Ann Able ; footnotemark[*]= / Bob Baker / Carl Cole (guard canon: name ; note
-%   role[mark]=text, sorted | contacts)
-% moves:    row R SHGIVENFONT (proposed: a font command opening the next name stops the carry-back; SHGIVENe's s4)
-% status:   RED (INTREC 3af622aca64; perfect_kernel_batchfmmarks::a_mark_past_spacing_is_the_nearer_names_red)
+% engines:  rust int/frontmatter 10997fdf9a0 = 0 errors, 1 Warning; XML Ann Able / Bob Baker / Carl Cole; HTML Ann
+%   Able / Bob Baker / Carl Cole
+% expect:   0 errors, 0 Warnings; XML Ann Able ; footnotemark[*]= / Bob Baker / Carl Cole; HTML Ann Able ; * plain /
+%   Bob Baker / Carl Cole (the guard's XML and HTML lines)
+% moves:    XML row R SHGIVENFONT (proposed: a font command opening the next name stops the carry-back; SHGIVENe's
+%   s4); HTML the XML layer's: row R SHGIVENFONT (proposed: a font command opening the next name stops the
+%   carry-back; SHGIVENe's s4)
+% status:   RED XML RED, HTML RED (int/frontmatter 10997fdf9a0;
+%   perfect_kernel_batchfmmarks::a_mark_past_spacing_is_the_nearer_names and _red)
 % preload: ar5iv.sty
 \documentclass{article}
 \title{T}

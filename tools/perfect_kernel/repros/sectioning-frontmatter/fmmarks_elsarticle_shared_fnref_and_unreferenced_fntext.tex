@@ -3,11 +3,14 @@
 % witness:  revSHREST p3 (2102.07817's shape: `\fnref{eq}` on two names, `\fntext[eq]`, an `\fntext` no name
 %   references)
 % oracle:   pdflatex 0 errors; "Ann Ablea,1, Bob Bakera,1", footnotes "1 Equal.", "2 Unreferenced note."
-% engines:  rust INTREC (3af622aca64) = 0 errors, 0 Warnings; Ann Able ; thanks[1]=Equal. | address=Univ A / Bob Baker
-%   ; thanks[1]=Equal. | address=Univ A /  | note=Unreferenced note.
-% expect:   0 errors, 0 Warnings; Ann Able ; thanks[1]=Equal. | address=Univ A / Bob Baker ; thanks[1]=Equal. |
-%   address=Univ A /  | note=Unreferenced note. (guard canon: name ; note role[mark]=text, sorted | contacts)
-% status:   GREEN (INTREC 3af622aca64; perfect_kernel_batchfmmarks::shared_notes_are_a_marked_copy_per_carrier)
+% engines:  rust int/frontmatter 10997fdf9a0 = 0 errors, 0 Warnings; XML Ann Able ; thanks[1]=Equal. | address=Univ A
+%   / Bob Baker ; thanks[1]=Equal. | address=Univ A /  | note=Unreferenced note.; HTML Ann Able ; 1→note / Bob
+%   Baker ; 1→note /  / margin: Equal.
+% expect:   0 errors, 0 Warnings; XML Ann Able ; thanks[1]=Equal. | address=Univ A / Bob Baker ; thanks[1]=Equal. |
+%   address=Univ A /  | note=Unreferenced note.; HTML Ann Able ; 1→note / Bob Baker ; 1→note /  / margin:
+%   Equal. (the guard's XML and HTML lines)
+% status:   GREEN XML GREEN, HTML GREEN (int/frontmatter 10997fdf9a0;
+%   perfect_kernel_batchfmmarks::shared_notes_are_a_marked_copy_per_carrier)
 % preload: ar5iv.sty
 \documentclass{elsarticle}
 \begin{document}

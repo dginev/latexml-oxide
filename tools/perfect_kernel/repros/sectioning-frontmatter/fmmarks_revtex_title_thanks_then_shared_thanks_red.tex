@@ -2,13 +2,15 @@
 %   both, the title's note the title's
 % witness:  revSHRESTb u_title
 % oracle:   pdflatex 0 errors; "A Title∗", "Ann Able†", "Bob Baker†"
-% engines:  rust INTREC (3af622aca64) = 0 errors, 0 Warnings; Ann Able ; thanks[†]=Equal contribution. |
-%   affiliation=Univ A / Bob Baker ; thanks[†]=Equal contribution. | affiliation=Univ B ; thanks=Funded by X.
-% expect:   0 errors, 0 Warnings; Ann Able ; thanks[†]=Equal contribution. | affiliation=Univ A / Bob Baker ;
-%   thanks[†]=Equal contribution. | affiliation=Univ B (guard canon: name ; note role[mark]=text, sorted |
-%   contacts)
-% moves:    row R REVTITLETHANKS (proposed; SHRESTb residual: a REVTeX title `\thanks` lands on the last author)
-% status:   RED (INTREC 3af622aca64; perfect_kernel_batchfmmarks::revtex_marks_follow_its_numbering_red)
+% engines:  rust int/frontmatter 10997fdf9a0 = 0 errors, 0 Warnings; XML Ann Able ; thanks[†]=Equal contribution. |
+%   affiliation=Univ A / Bob Baker ; thanks[†]=Equal contribution. | affiliation=Univ B ; thanks=Funded by X.;
+%   HTML Ann Able ; †→note / Bob Baker ; †→note / margin: Equal contribution.
+% expect:   0 errors, 0 Warnings; XML Ann Able ; thanks[†]=Equal contribution. | affiliation=Univ A / Bob Baker ;
+%   thanks[†]=Equal contribution. | affiliation=Univ B; HTML Ann Able ; †→note / Bob Baker ; †→note / margin:
+%   Equal contribution. (the guard's XML and HTML lines)
+% moves:    XML row R REVTITLETHANKS (proposed; SHRESTb residual: a REVTeX title `\thanks` lands on the last author)
+% status:   RED XML RED, HTML GREEN (int/frontmatter 10997fdf9a0;
+%   perfect_kernel_batchfmmarks::revtex_marks_follow_its_numbering and _red)
 % preload: ar5iv.sty
 \documentclass[aps,prl,preprint]{revtex4-2}
 \begin{document}

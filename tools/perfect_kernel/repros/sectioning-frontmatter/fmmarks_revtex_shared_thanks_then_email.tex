@@ -2,11 +2,12 @@
 %   so each name's own contact
 % witness:  revSHREST p1
 % oracle:   pdflatex 0 errors; "Ann Able∗ and Bob Baker†"
-% engines:  rust INTREC (3af622aca64) = 0 errors, 0 Warnings; Ann Able | thanks=Equal. ; affiliation=Univ A / Bob
-%   Baker | thanks=Equal. ; email=b@x.org ; affiliation=Univ A
-% expect:   0 errors, 0 Warnings; Ann Able | thanks=Equal. ; affiliation=Univ A / Bob Baker | thanks=Equal. ;
-%   email=b@x.org ; affiliation=Univ A (guard canon: name ; note role[mark]=text, sorted | contacts)
-% status:   GREEN (INTREC 3af622aca64; perfect_kernel_batchfmmarks::revtex_marks_follow_its_numbering)
+% engines:  rust int/frontmatter 10997fdf9a0 = 0 errors, 0 Warnings; XML Ann Able | thanks=Equal. ; affiliation=Univ A
+%   / Bob Baker | thanks=Equal. ; email=b@x.org ; affiliation=Univ A; HTML Ann Able / Bob Baker
+% expect:   0 errors, 0 Warnings; XML Ann Able | thanks=Equal. ; affiliation=Univ A / Bob Baker | thanks=Equal. ;
+%   email=b@x.org ; affiliation=Univ A; HTML Ann Able / Bob Baker (the guard's XML and HTML lines)
+% status:   GREEN XML GREEN, HTML GREEN (int/frontmatter 10997fdf9a0;
+%   perfect_kernel_batchfmmarks::revtex_marks_follow_its_numbering)
 % preload: ar5iv.sty
 \documentclass[aps,prl,preprint]{revtex4-2}
 \begin{document}

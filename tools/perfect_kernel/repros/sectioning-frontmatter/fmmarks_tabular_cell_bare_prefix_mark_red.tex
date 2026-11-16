@@ -2,12 +2,15 @@
 %   column's line under it its name's
 % witness:  revSHGIVEN p7tabsuf
 % oracle:   pdflatex 0 errors; "Ann Able∗ †Bob Baker", "Univ A  Univ B", footnote "∗ X"
-% engines:  rust INTREC (3af622aca64) = 0 errors, 1 Warning; Ann Able Bob Baker Univ A Univ B ; footnotemark[†]= ;
-%   thanks[*]=X
-% expect:   0 errors, 0 Warnings; Ann Able ; thanks[*]=X | affiliation=Univ A / Bob Baker ; footnotemark[†]= |
-%   affiliation=Univ B (guard canon: name ; note role[mark]=text, sorted | contacts)
-% moves:    row R SHGIVENNEXT (a mark nearer the next name, or a bare one; today the counted loss or the whole block)
-% status:   RED (INTREC 3af622aca64; perfect_kernel_batchfmmarks::a_mark_past_spacing_is_the_nearer_names_red)
+% engines:  rust int/frontmatter 10997fdf9a0 = 0 errors, 1 Warning; XML Ann Able Bob Baker Univ A Univ B ;
+%   footnotemark[†]= ; thanks[*]=X; HTML Ann Able Bob Baker Univ A Univ B ; † plain | under: X
+% expect:   0 errors, 0 Warnings; XML Ann Able ; thanks[*]=X | affiliation=Univ A / Bob Baker ; footnotemark[†]= |
+%   affiliation=Univ B; HTML Ann Able | under: X / Bob Baker ; † plain (the guard's XML and HTML lines)
+% moves:    XML row R SHGIVENNEXT (a mark nearer the next name, or a bare one; today the counted loss or the whole
+%   block); HTML the XML layer's: row R SHGIVENNEXT (a mark nearer the next name, or a bare one; today the
+%   counted loss or the whole block)
+% status:   RED XML RED, HTML RED (int/frontmatter 10997fdf9a0;
+%   perfect_kernel_batchfmmarks::a_mark_past_spacing_is_the_nearer_names and _red)
 % preload: ar5iv.sty
 \documentclass{article}
 \title{T}

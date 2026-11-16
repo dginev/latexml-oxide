@@ -1,0 +1,96 @@
+% mechanism: a long `\thanks` four names share through `\footnotemark[1]`, two of them with a second, own `\thanks`:
+%   the long note one marked copy per carrier (printed once, in the margin), each own note under its name
+% witness:  1706.03762 (`Ashish Vaswani\thanks{Equal contribution. Listing order is random. …}`, `Noam
+%   Shazeer\footnotemark[1]`, `Aidan N. Gomez\footnotemark[1] \thanks{Work performed while at Google Brain.}`)
+% oracle:   pdflatex 0 errors; "Ann Able∗ Bob Baker∗ Cat Cole∗† Dan Dorn∗‡", footnotes "∗ Equal contribution. Listing
+%   order is random. …" (ten lines), "† Work performed while at Lab A.", "‡ Work performed while at Lab B."
+% engines:  rust int/frontmatter 10997fdf9a0 = 0 errors, 0 Warnings; XML Ann Able ; thanks[*]=Equal contribution.
+%   Listing order is random. Author A designed part 1 of the model and ran the experiments of section 1.
+%   Author B designed part 2 of the model and ran the experiments of section 2. Author C designed part 3 of
+%   the model and ran the experiments of section 3. Author D designed part 4 of the model and ran the
+%   experiments of section 4. Author E designed part 5 of the model and ran the experiments of section 5.
+%   Author F designed part 6 of the model and ran the experiments of section 6. Author G designed part 7 of
+%   the model and ran the experiments of section 7. Author H designed part 8 of the model and ran the
+%   experiments of section 8. | affiliation=Lab A ; email=ann@a.org / Bob Baker ; thanks[*]=Equal
+%   contribution. Listing order is random. Author A designed part 1 of the model and ran the experiments of
+%   section 1. Author B designed part 2 of the model and ran the experiments of section 2. Author C designed
+%   part 3 of the model and ran the experiments of section 3. Author D designed part 4 of the model and ran
+%   the experiments of section 4. Author E designed part 5 of the model and ran the experiments of section 5.
+%   Author F designed part 6 of the model and ran the experiments of section 6. Author G designed part 7 of
+%   the model and ran the experiments of section 7. Author H designed part 8 of the model and ran the
+%   experiments of section 8. | affiliation=Lab A ; email=bob@a.org / Cat Cole ; thanks[*]=Equal contribution.
+%   Listing order is random. Author A designed part 1 of the model and ran the experiments of section 1.
+%   Author B designed part 2 of the model and ran the experiments of section 2. Author C designed part 3 of
+%   the model and ran the experiments of section 3. Author D designed part 4 of the model and ran the
+%   experiments of section 4. Author E designed part 5 of the model and ran the experiments of section 5.
+%   Author F designed part 6 of the model and ran the experiments of section 6. Author G designed part 7 of
+%   the model and ran the experiments of section 7. Author H designed part 8 of the model and ran the
+%   experiments of section 8. ; thanks[†]=Work performed while at Lab A. | affiliation=Univ C ;
+%   email=cat@c.edu / Dan Dorn ; thanks[*]=Equal contribution. Listing order is random. Author A designed part
+%   1 of the model and ran the experiments of section 1. Author B designed part 2 of the model and ran the
+%   experiments of section 2. Author C designed part 3 of the model and ran the experiments of section 3.
+%   Author D designed part 4 of the model and ran the experiments of section 4. Author E designed part 5 of
+%   the model and ran the experiments of section 5. Author F designed part 6 of the model and ran the
+%   experiments of section 6. Author G designed part 7 of the model and ran the experiments of section 7.
+%   Author H designed part 8 of the model and ran the experiments of section 8. ; thanks[‡]=Work performed
+%   while at Lab B. | affiliation=Lab B ; email=dan@b.org; HTML Ann Able ; *→note / Bob Baker ; *→note / Cat
+%   Cole ; *→note | under: Work performed while at Lab A. / Dan Dorn ; *→note | under: Work performed while at
+%   Lab B. / margin: Equal contribution. Listing order is random. Author A designed part 1 of the model and
+%   ran the experiments of section 1. Author B designed part 2 of the model and ran the experiments of section
+%   2. Author C designed part 3 of the model and ran the experiments of section 3. Author D designed part 4 of
+%   the model and ran the experiments of section 4. Author E designed part 5 of the model and ran the
+%   experiments of section 5. Author F designed part 6 of the model and ran the experiments of section 6.
+%   Author G designed part 7 of the model and ran the experiments of section 7. Author H designed part 8 of
+%   the model and ran the experiments of section 8.
+% expect:   0 errors, 0 Warnings; XML Ann Able ; thanks[*]=Equal contribution. Listing order is random. Author A
+%   designed part 1 of the model and ran the experiments of section 1. Author B designed part 2 of the model
+%   and ran the experiments of section 2. Author C designed part 3 of the model and ran the experiments of
+%   section 3. Author D designed part 4 of the model and ran the experiments of section 4. Author E designed
+%   part 5 of the model and ran the experiments of section 5. Author F designed part 6 of the model and ran
+%   the experiments of section 6. Author G designed part 7 of the model and ran the experiments of section 7.
+%   Author H designed part 8 of the model and ran the experiments of section 8. | affiliation=Lab A ;
+%   email=ann@a.org / Bob Baker ; thanks[*]=Equal contribution. Listing order is random. Author A designed
+%   part 1 of the model and ran the experiments of section 1. Author B designed part 2 of the model and ran
+%   the experiments of section 2. Author C designed part 3 of the model and ran the experiments of section 3.
+%   Author D designed part 4 of the model and ran the experiments of section 4. Author E designed part 5 of
+%   the model and ran the experiments of section 5. Author F designed part 6 of the model and ran the
+%   experiments of section 6. Author G designed part 7 of the model and ran the experiments of section 7.
+%   Author H designed part 8 of the model and ran the experiments of section 8. | affiliation=Lab A ;
+%   email=bob@a.org / Cat Cole ; thanks[*]=Equal contribution. Listing order is random. Author A designed part
+%   1 of the model and ran the experiments of section 1. Author B designed part 2 of the model and ran the
+%   experiments of section 2. Author C designed part 3 of the model and ran the experiments of section 3.
+%   Author D designed part 4 of the model and ran the experiments of section 4. Author E designed part 5 of
+%   the model and ran the experiments of section 5. Author F designed part 6 of the model and ran the
+%   experiments of section 6. Author G designed part 7 of the model and ran the experiments of section 7.
+%   Author H designed part 8 of the model and ran the experiments of section 8. ; thanks[†]=Work performed
+%   while at Lab A. | affiliation=Univ C ; email=cat@c.edu / Dan Dorn ; thanks[*]=Equal contribution. Listing
+%   order is random. Author A designed part 1 of the model and ran the experiments of section 1. Author B
+%   designed part 2 of the model and ran the experiments of section 2. Author C designed part 3 of the model
+%   and ran the experiments of section 3. Author D designed part 4 of the model and ran the experiments of
+%   section 4. Author E designed part 5 of the model and ran the experiments of section 5. Author F designed
+%   part 6 of the model and ran the experiments of section 6. Author G designed part 7 of the model and ran
+%   the experiments of section 7. Author H designed part 8 of the model and ran the experiments of section 8.
+%   ; thanks[‡]=Work performed while at Lab B. | affiliation=Lab B ; email=dan@b.org; HTML Ann Able ; *→note /
+%   Bob Baker ; *→note / Cat Cole ; *→note | under: Work performed while at Lab A. / Dan Dorn ; *→note |
+%   under: Work performed while at Lab B. / margin: Equal contribution. Listing order is random. Author A
+%   designed part 1 of the model and ran the experiments of section 1. Author B designed part 2 of the model
+%   and ran the experiments of section 2. Author C designed part 3 of the model and ran the experiments of
+%   section 3. Author D designed part 4 of the model and ran the experiments of section 4. Author E designed
+%   part 5 of the model and ran the experiments of section 5. Author F designed part 6 of the model and ran
+%   the experiments of section 6. Author G designed part 7 of the model and ran the experiments of section 7.
+%   Author H designed part 8 of the model and ran the experiments of section 8. (the guard's XML and HTML
+%   lines)
+% status:   GREEN XML GREEN, HTML GREEN (int/frontmatter 10997fdf9a0;
+%   perfect_kernel_batchfmmarks::shared_notes_are_a_marked_copy_per_carrier)
+% preload: ar5iv.sty
+\documentclass{article}
+\title{T}
+\author{Ann Able\thanks{Equal contribution. Listing order is random. Author A designed part 1 of the model and ran the experiments of section 1. Author B designed part 2 of the model and ran the experiments of section 2. Author C designed part 3 of the model and ran the experiments of section 3. Author D designed part 4 of the model and ran the experiments of section 4. Author E designed part 5 of the model and ran the experiments of section 5. Author F designed part 6 of the model and ran the experiments of section 6. Author G designed part 7 of the model and ran the experiments of section 7. Author H designed part 8 of the model and ran the experiments of section 8.}\\ Lab A\\ \texttt{ann@a.org} \and
+Bob Baker\footnotemark[1]\\ Lab A\\ \texttt{bob@a.org} \and
+Cat Cole\footnotemark[1]\ \thanks{Work performed while at Lab A.}\\ Univ C\\ \texttt{cat@c.edu} \and
+Dan Dorn\footnotemark[1]\ \thanks{Work performed while at Lab B.}\\ Lab B\\ \texttt{dan@b.org}}
+\date{}
+\begin{document}
+\maketitle
+Text.
+\end{document}

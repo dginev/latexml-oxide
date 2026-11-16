@@ -2,17 +2,19 @@
 % witness:  2607.15705 (`\authornote{…}` on Hertel, `\authornotemark[1]\authornotemark[2]` on Pütz, no second
 %   `\authornote`)
 % oracle:   pdflatex 0 errors; "Ann Able∗ Bob Baker∗† Cat Cole"
-% engines:  rust INTREC (3af622aca64) = 0 errors, 0 Warnings; Ann Able ; thanks[*]=Ann Able and Bob Baker contributed
-%   equally. | email=ann@a.edu ; affiliation=Univ A , Town , Land / Bob Baker ; footnotemark[†]=† ;
-%   thanks[*]=Ann Able and Bob Baker contributed equally. | email=bob@a.edu ; affiliation=Univ A , Town , Land
-%   / Cat Cole | email=cat@a.edu ; affiliation=Univ A , Town , Land
-% expect:   0 errors, 0 Warnings; Ann Able ; thanks[*]=Ann Able and Bob Baker contributed equally. | email=ann@a.edu ;
-%   affiliation=Univ A , Town , Land / Bob Baker ; footnotemark[†]= ; thanks[*]=Ann Able and Bob Baker
-%   contributed equally. | email=bob@a.edu ; affiliation=Univ A , Town , Land / Cat Cole | email=cat@a.edu ;
-%   affiliation=Univ A , Town , Land (guard canon: name ; note role[mark]=text, sorted | contacts)
-% moves:    NEITHER: reported to main (the mark-only note holds the glyph as its text)
-% status:   RED (NEITHER: no recorded gap, reported to main) (INTREC 3af622aca64;
-%   perfect_kernel_batchfmmarks::a_mark_on_a_name_is_a_copy_of_its_note_red)
+% engines:  rust int/frontmatter 10997fdf9a0 = 0 errors, 0 Warnings; XML Ann Able ; thanks[*]=Ann Able and Bob Baker
+%   contributed equally. | email=ann@a.edu ; affiliation=Univ A , Town , Land / Bob Baker ; footnotemark[†]=†
+%   ; thanks[*]=Ann Able and Bob Baker contributed equally. | email=bob@a.edu ; affiliation=Univ A , Town ,
+%   Land / Cat Cole | email=cat@a.edu ; affiliation=Univ A , Town , Land; HTML Ann Able ; *→note / Bob Baker ;
+%   *→note ; † plain / Cat Cole / margin: Ann Able and Bob Baker contributed equally.
+% expect:   0 errors, 0 Warnings; XML Ann Able ; thanks[*]=Ann Able and Bob Baker contributed equally. |
+%   email=ann@a.edu ; affiliation=Univ A , Town , Land / Bob Baker ; footnotemark[†]= ; thanks[*]=Ann Able and
+%   Bob Baker contributed equally. | email=bob@a.edu ; affiliation=Univ A , Town , Land / Cat Cole |
+%   email=cat@a.edu ; affiliation=Univ A , Town , Land; HTML Ann Able ; *→note / Bob Baker ; *→note ; † plain
+%   / Cat Cole / margin: Ann Able and Bob Baker contributed equally. (the guard's XML and HTML lines)
+% moves:    XML MARKSAFE (NEITHER in phase 1: acmart's mark-only note holds the glyph as its text)
+% status:   RED XML RED, HTML GREEN (int/frontmatter 10997fdf9a0;
+%   perfect_kernel_batchfmmarks::a_mark_on_a_name_is_a_copy_of_its_note and _red)
 % preload: ar5iv.sty
 \documentclass[sigconf]{acmart}
 \begin{document}

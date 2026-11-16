@@ -2,14 +2,18 @@
 %   (IEEEtran prints no `\thanks` mark): the note is both names', marked `*`, the typed marks out of the names
 % witness:  1904.03977 (`\IEEEauthorblockN{Divyam Madaan$^{*}$\thanks{*Equal Contribution}}`, `Radhika Dua$^{*}$`)
 % oracle:   pdflatex 0 errors; "Ann Able∗ Bob Baker∗ Cat Cole", each block's "Univ" and e-mail lines
-% engines:  rust INTREC (3af622aca64) = 0 errors, 0 Warnings; Ann Able * ; thanks[*]=Equal Contribution |
+% engines:  rust int/frontmatter 10997fdf9a0 = 0 errors, 0 Warnings; XML Ann Able * ; thanks[*]=Equal Contribution |
 %   affiliation=Univ A ; email=ann@a.edu / Bob Baker * ; thanks[*]=Equal Contribution | affiliation=Univ A ;
-%   email=bob@a.edu / Cat Cole | affiliation=Univ B ; email=cat@b.edu; as expected on PURE-rel
-% expect:   0 errors, 0 Warnings; Ann Able ; thanks[*]=Equal Contribution | affiliation=Univ A ; email=ann@a.edu / Bob
-%   Baker ; thanks[*]=Equal Contribution | affiliation=Univ A ; email=bob@a.edu / Cat Cole | affiliation=Univ
-%   B ; email=cat@b.edu (guard canon: name ; note role[mark]=text, sorted | contacts)
-% moves:    PURE (fix/pure-personname: the marks out of the personname)
-% status:   RED (INTREC 3af622aca64; perfect_kernel_batchfmmarks::shared_notes_are_a_marked_copy_per_carrier_red)
+%   email=bob@a.edu / Cat Cole | affiliation=Univ B ; email=cat@b.edu; HTML Ann Able * ; *→note / Bob Baker *
+%   ; *→note / Cat Cole / margin: Equal Contribution; XML as expected on PURE-rel
+% expect:   0 errors, 0 Warnings; XML Ann Able ; thanks[*]=Equal Contribution | affiliation=Univ A ; email=ann@a.edu /
+%   Bob Baker ; thanks[*]=Equal Contribution | affiliation=Univ A ; email=bob@a.edu / Cat Cole |
+%   affiliation=Univ B ; email=cat@b.edu; HTML Ann Able ; *→note / Bob Baker ; *→note / Cat Cole / margin:
+%   Equal Contribution (the guard's XML and HTML lines)
+% moves:    XML PURE (fix/pure-personname: the marks out of the personname); HTML the XML layer's: PURE
+%   (fix/pure-personname: the marks out of the personname)
+% status:   RED XML RED, HTML RED (int/frontmatter 10997fdf9a0;
+%   perfect_kernel_batchfmmarks::shared_notes_are_a_marked_copy_per_carrier and _red)
 % preload: ar5iv.sty
 \documentclass[conference]{IEEEtran}
 \title{T}

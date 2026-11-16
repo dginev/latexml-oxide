@@ -3,11 +3,12 @@
 % witness:  revSHMARKb r_40e
 % oracle:   pdflatex 0 errors; "Ann Able∗ … Bob Baker†", "† Visiting Univ C.", "∗ Electronic address: ann@a.edu" (page
 %   2)
-% engines:  rust INTREC (3af622aca64) = 0 errors, 0 Warnings; Ann Able | email=ann@a.edu ; affiliation=Univ A / Bob
-%   Baker | note=Visiting Univ C. ; affiliation=Univ B
-% expect:   0 errors, 0 Warnings; Ann Able | email=ann@a.edu ; affiliation=Univ A / Bob Baker | note=Visiting Univ C.
-%   ; affiliation=Univ B (guard canon: name ; note role[mark]=text, sorted | contacts)
-% status:   GREEN (INTREC 3af622aca64; perfect_kernel_batchfmmarks::revtex_marks_follow_its_numbering)
+% engines:  rust int/frontmatter 10997fdf9a0 = 0 errors, 0 Warnings; XML Ann Able | email=ann@a.edu ; affiliation=Univ
+%   A / Bob Baker | note=Visiting Univ C. ; affiliation=Univ B; HTML Ann Able / Bob Baker
+% expect:   0 errors, 0 Warnings; XML Ann Able | email=ann@a.edu ; affiliation=Univ A / Bob Baker | note=Visiting Univ
+%   C. ; affiliation=Univ B; HTML Ann Able / Bob Baker (the guard's XML and HTML lines)
+% status:   GREEN XML GREEN, HTML GREEN (int/frontmatter 10997fdf9a0;
+%   perfect_kernel_batchfmmarks::revtex_marks_follow_its_numbering)
 % preload: ar5iv.sty
 \documentclass[aps,prl,preprint]{revtex4}
 \begin{document}
