@@ -1363,7 +1363,14 @@ mod tests {
     // An install in flight, hard-linked from an old output: its mtime is the output's, its ctime the link's.
     fs::hard_link(&output, shard.join("abcdef.png.tmp.18.3")).unwrap();
     prune_if_over_cap_at(&root, stale_before);
-    assert_eq!(tmp_names(&shard), vec!["abcdef.png.tmp.18.3".to_string()]);
+    // On Unix the link's ctime keeps the in-flight tmp. Elsewhere the age is the mtime (std exposes no ctime), so it
+    // is reclaimed: the install's rename then fails and the image is just not cached that time.
+    let in_flight_kept: Vec<String> = if cfg!(unix) {
+      vec!["abcdef.png.tmp.18.3".to_string()]
+    } else {
+      Vec::new()
+    };
+    assert_eq!(tmp_names(&shard), in_flight_kept);
     assert!(
       entry.is_file(),
       "an entry under the cap is kept, however old"
