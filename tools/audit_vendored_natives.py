@@ -361,7 +361,7 @@ def fingerprint_holds(pkg_dir, fingerprint):
 
 
 def run(cmd):
-    return subprocess.run(cmd, capture_output=True, text=True, check=True).stdout
+    return subprocess.run(cmd, capture_output=True, encoding="utf-8", check=True).stdout
 
 
 def shipped_packages():
@@ -459,7 +459,7 @@ def native_evidence(pkg_dir, links, build_script=None):
     build_rs = build_script if build_script is not None else pkg_dir / "build.rs"
     if build_rs.is_file():
         try:
-            if BUILD_RS_NATIVE_RE.search(build_rs.read_text(errors="ignore")):
+            if BUILD_RS_NATIVE_RE.search(build_rs.read_text(encoding="utf-8", errors="ignore")):
                 why.append(f"{build_rs.name} builds/links native code")
         except OSError:
             pass
@@ -584,7 +584,7 @@ def audit_resources(verbose):
             if not p.is_file():
                 continue
             try:
-                text = p.read_text(errors="ignore")
+                text = p.read_text(encoding="utf-8", errors="ignore")
             except OSError:
                 continue
             if not THIRD_PARTY_MARKER_RE.search(text):
