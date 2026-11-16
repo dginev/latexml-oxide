@@ -11,6 +11,8 @@
 use latexml_package::{package::authblk_sty::define_author_and_affil, prelude::*};
 
 LoadDefinitions!({
+  // (the kernel's `\author`, before the class's authblk replaces it: a call written for lni v1 is its, below)
+  Let!("\\lx@lni@kernel@author", "\\author");
   InputDefinitions!("lni", noltxml => true, extension => Some(Cow::Borrowed("cls")));
   // (the title's marks lni's own `\maketitle` prints, every version's: lni.cls:475-477 `\renewcommand\thefootnote
   // {\@arabic\c@footnote}`, v0.5's :89-93; 2407.04435 "1, 1, 1,2, 3", 1705.02823, 1705.08889)
@@ -20,10 +22,21 @@ LoadDefinitions!({
   // (the class read raw by this binding is a raw class to K11, its title-page stores rerouted at the end of the class
   // load: lni.cls `\subtitle`; the binding's `\author`/`\affil` below stay its own)
   if package_loaded("authblk") {
+    // (a call written for lni v1, `\author[running names]{names}` with no e-mail and ORCID arguments after it, is read
+    // as v1's `\@dblarg\@@author` reads it, by the kernel's `\author[short]{names}`: v2.0's `[4][]` would take the next
+    // tokens for them and the running names for authblk labels; pdflatex stops there, 2407.04435)
     define_author_and_affil()?;
     Let!("\\lx@lni@author", "\\author");
+    // (and lni's `\affil` sets the footnote counter to its label, so a title `\thanks` is numbered after the last one:
+    // lni.cls:463, v1.10's :468, 2412.04178)
+    Let!("\\lx@lni@affil", "\\affil");
+    DefMacro!("\\affil OptionalSemiverbatim {}", r"\lx@lni@affil[#1]{#2}\setcounter{footnote}{#1}", robust => true);
     DefMacro!(
-      "\\author[]{}{}{}",
+      "\\author[]{}",
+      r"\@ifnextchar\bgroup{\lx@lni@author@v{#1}{#2}}{\lx@lni@kernel@author[#1]{#2}}"
+    );
+    DefMacro!(
+      "\\lx@lni@author@v{}{}{}{}",
       r"\if\relax\detokenize{#1}\relax\lx@lni@author{#2}\else\lx@lni@author[#1]{#2}\fi\if\relax\detokenize{#3}\relax\else\lx@add@email{#3}\fi\if\relax\detokenize{#4}\relax\else\lx@add@orcid{#4}\fi"
     );
   }

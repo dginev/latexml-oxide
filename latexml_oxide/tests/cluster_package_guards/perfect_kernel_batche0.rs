@@ -1223,6 +1223,73 @@ const API_KEYS_OUTSIDE_PERLS: &[(&str, usize)] = &[
     "declared _stopgap base_utilities/defs/frontmatter_api.rs",
     1,
   ),
+  // (MARKBIND FMKEYS, 0 -> 1 each, raised with its reason: the keys the engine and the bindings already pass on a queued
+  // entry, now in the one list `FRONTMATTER_INTERNAL_KEYS` with the ones above, so their use reports no unknown key on
+  // every paper that writes one — `_markshown`, `_cutlist`, `_markintext`, `_kinded` on 420, 324, 104, 98 of the
+  // frontmatter repros — while a key no list declares still reports)
+  (
+    "declared _answers base_utilities/defs/frontmatter_api.rs",
+    1,
+  ),
+  (
+    "declared _cutlist base_utilities/defs/frontmatter_api.rs",
+    1,
+  ),
+  ("declared _fnpart base_utilities/defs/frontmatter_api.rs", 1),
+  ("declared _group base_utilities/defs/frontmatter_api.rs", 1),
+  (
+    "declared _grouped base_utilities/defs/frontmatter_api.rs",
+    1,
+  ),
+  ("declared _kinded base_utilities/defs/frontmatter_api.rs", 1),
+  ("declared _mark base_utilities/defs/frontmatter_api.rs", 1),
+  (
+    "declared _markintext base_utilities/defs/frontmatter_api.rs",
+    1,
+  ),
+  (
+    "declared _markpiece base_utilities/defs/frontmatter_api.rs",
+    1,
+  ),
+  ("declared _marks base_utilities/defs/frontmatter_api.rs", 1),
+  (
+    "declared _markshown base_utilities/defs/frontmatter_api.rs",
+    1,
+  ),
+  (
+    "declared _merged_checked base_utilities/defs/frontmatter_api.rs",
+    1,
+  ),
+  (
+    "declared _nameprinted base_utilities/defs/frontmatter_api.rs",
+    1,
+  ),
+  (
+    "declared _placedbymark base_utilities/defs/frontmatter_api.rs",
+    1,
+  ),
+  (
+    "declared _refmarkshown base_utilities/defs/frontmatter_api.rs",
+    1,
+  ),
+  (
+    "declared _sequence base_utilities/defs/frontmatter_api.rs",
+    1,
+  ),
+  ("declared _store base_utilities/defs/frontmatter_api.rs", 1),
+  (
+    "declared _unmarked base_utilities/defs/frontmatter_api.rs",
+    1,
+  ),
+  (
+    "declared _unsplit base_utilities/defs/frontmatter_api.rs",
+    1,
+  ),
+  (
+    "declared _withsup base_utilities/defs/frontmatter_api.rs",
+    1,
+  ),
+  ("declared _zone base_utilities/defs/frontmatter_api.rs", 1),
   (
     "declared accumulate base_utilities/defs/frontmatter_api.rs",
     1,
@@ -1403,6 +1470,19 @@ fn read_api_speech(source: &RustSource, short: &str, speech: &mut ApiSpeech) {
       }
     }
   }
+  // (and each entry of the one list of internal keys the code declares in a loop, `FRONTMATTER_INTERNAL_KEYS`)
+  let listed =
+    Regex::new(r"const FRONTMATTER_INTERNAL_KEYS\b[^=]*=\s*&\[([^\]]*)\]").expect("the regex");
+  let entry = Regex::new(r#"\(\s*"([0-9]+)",\s*"[0-9]+"\s*\)"#).expect("the regex");
+  for list in listed.captures_iter(&source.code) {
+    for found in entry.captures_iter(&list[1]) {
+      let key = literal_of(&found[1]);
+      *speech
+        .keys
+        .entry(format!("declared {key} {short}"))
+        .or_default() += 1;
+    }
+  }
   for found in declared.captures_iter(&source.code) {
     let key = literal_of(&found[2]);
     if literal_of(&found[1]) == "Frontmatter" && !PERL_DECLARED_KEYS.contains(&key) {
@@ -1511,6 +1591,10 @@ fn every_shape_of_a_key_is_seen() {
     (
       r#"DefKeyVal!("Frontmatter", "foo", "")"#,
       "declared foo f.rs",
+    ),
+    (
+      r#"const FRONTMATTER_INTERNAL_KEYS: &[(&str, &str)] = &[("_a", ""), ("_b", "Semiverbatim")];"#,
+      "declared _a f.rs declared _b f.rs",
     ),
     (r#"T("\\lx@add@contact[role=note,#1]")"#, ""),
     (r#"T("\\lx@add@contact[role={x}]")"#, ""),

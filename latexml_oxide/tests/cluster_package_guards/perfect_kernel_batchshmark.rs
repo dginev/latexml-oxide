@@ -800,6 +800,21 @@ fn a_wrapper_of_the_class_maketitle_is_neutral() {
     assert_eq!((&notes, &page), (&plain_notes, &plain_page), "{wrapped}");
     // (the whole document alike)
     assert_eq!(xml, plain_xml);
+    if wrapped.contains("{mnras}") {
+      // (mnras's own `\@fnsymbol`, ⋆ †: the `\footnotemark[n]` and the body's `\footnotetext[n]` one note; MARKBIND)
+      assert_eq!(plain_notes, [
+        row(&["Ann Able", "footnote[⋆]=Ann note."]),
+        row(&["Bob Baker", "footnote[†]=Bob note."])
+      ]);
+    }
+    if wrapped.contains("{llncs}") {
+      // (unmarked: llncs_cls.rs declares no title marks, where llncs.cls prints ⋆ ⋆⋆ — the RED row
+      // `fmmarks_llncs_title_marks_red`, row R LLNCSMARKS)
+      assert_eq!(plain_notes, [
+        row(&["Ann Able", "thanks[]=Ann note."]),
+        row(&["Bob Baker", "thanks[]=Bob note."])
+      ]);
+    }
     if wrapped.contains("IEEEtran") {
       // (Ann's `\footnote` IEEEtran's contact, Perl's; Bob's mark kept, no Warning)
       assert_eq!(notes, [

@@ -1,0 +1,24 @@
+% mechanism: lni.cls v2.0 (authblk-era) `\affil[n]` ends in `\setcounter{footnote}{n}` (lni.cls:463; v1.10's :468,
+%   2412.04178's copy), so a title `\thanks` is numbered after the last affiliation's label; the binding's `\affil`
+%   (authblk's, `define_author_and_affil`) does the same (lni_cls.rs)
+% witness:  review revMARKSAFEc (p/lni_aff.tex), DG CASE 1
+% oracle:   pdflatex 0 errors; "Ann Able3 1 and Bob Baker2", footnotes "1 Lab One, Town,", "2 Lab Two, City,",
+%   "3 Note A."
+% engines:  rust MARKBINDb0 (int/frontmatter 4f169bcbe69) = 0 errors, 0 Warnings; Ann's thanks marked 1 (Lab One's
+%   label)
+% expect:   0 errors, 0 Warnings; Ann's thanks marked 3
+% status:   GREEN (MARKBIND; perfect_kernel_batchmarkbind::lni_affil_sets_the_footnote_counter)
+% preload:  ar5iv.sty
+\documentclass[english]{lni}
+\title{A Title}
+\author[1]{Ann Able\thanks{Note A.}}{}{}
+\author[2]{Bob Baker}{}{}
+\affil[1]{Lab One\\Town}
+\affil[2]{Lab Two\\City}
+\startpage{1}
+\editor{Ed}
+\booktitle{Book}
+\begin{document}
+\maketitle
+Body.
+\end{document}

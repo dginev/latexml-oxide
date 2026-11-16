@@ -6,9 +6,10 @@ use crate::prelude::*;
 /// (`declare_frontmatter_conventions`, user ruling 2026-10-28: each binding declares its own):
 /// revtex: `\affiliation` after a run of `\author`s is every author of the run without one (revtex4-2.cls's group
 /// rule; Perl revtex4_support.sty.ltxml `annotate=new`) — declared by this binding at the call, `annotate=new`, which
-/// the resolver's `api:annotate:new` honours. (Its title marks, revtex4-2.cls:3040-3043 `\frontmatter@thefootnote`,
-/// are `\@fnsymbol` by default — :5976-5978 `\@booleanfalse\altaffilletter@sw` after :3043's default — and `\@alph`
-/// under `altaffilletter`; this binding declares no title hook, so the kernel's fallback is the default's.) Reaches a
+/// the resolver's `api:annotate:new` honours. (Its front-matter footnote marks, revtex4-2.cls:3040-3043
+/// `\frontmatter@thefootnote`, are `\@fnsymbol` by default — :5976-5978 `\@booleanfalse\altaffilletter@sw` after
+/// :3043's default — and `\@alph` under `altaffilletter` or the `aip`/`sor` society; REVTeX 4.1/4.2's title hook is
+/// their title block's own, `declare_revtex41_title_marks`.) Reaches a
 /// binding only while its `\author` at the call is still this binding's (the key is `ledger::author_binding`): revtex4,
 /// revtex4-1, revtex4-2. Not the aastex classes: they load `aas_support` after revtex4, whose `\author` takes the
 /// ownership, so they resolve to the kernel's conventions (1005.0770, 1910.05363, 2604.19097).
@@ -975,6 +976,35 @@ pub(crate) fn selected_journal(post: &str) -> Result<(String, String)> {
     .cloned()
     .unwrap_or_default();
   Ok((society, journal))
+}
+
+/// REVTeX 4.1/4.2's title marks (`post` "4-1" or "4-2"), after its options. The society file's letters for
+/// `\frontmatter@thefootnote` (`\thanks`, `\altaffiliation`, `\email`): aip4-2.rtx:282, sor4-2.rtx:245, aip4-1.rtx:205
+/// `\@booleantrue\altaffilletter@sw`, which an `altaffilsymbol` given does not undo (pdflatex: `[altaffilsymbol,aip]`
+/// "Ann Able1, a)"). And the title hook (`latex_constructs::TITLE_THEFOOTNOTE`): a `\footnotemark` or `\footnotetext`
+/// in the title block prints the minipage letters (revtex4-2.cls:2710-2714 `\thempfn`, :487-491 `\@alph\c@mpfootnote`),
+/// or nothing in the two-column grid (:7413-7418 `\ltx@no@footnote`, which `twocolumn` and `reprint` set, :5896-6001;
+/// 1807.01940 and 2301.00155 print no mark for `\author{Hao Zhang\footnotemark[1]}`). A society whose journal file may
+/// take the grid back (aip4-2.rtx:691, sor4-2.rtx:717) keeps the hook it had. A name's own marks stay unknown
+/// (`lx_title_footnote_own_marks`, row R REVNAMEMARK).
+pub(crate) fn declare_revtex41_title_marks(post: &str) -> Result<()> {
+  if !(is_document_class("revtex4-1") || is_document_class("revtex4-2")) {
+    return Ok(());
+  }
+  let (society, _) = selected_journal(post)?;
+  if matches!(society.as_str(), "aip" | "sor") {
+    assign_value("revtex@altaffilletter", true, Some(Scope::Global));
+  }
+  let grid = matches!(
+    last_class_option(&["twocolumn", "onecolumn", "reprint"]),
+    Some("twocolumn" | "reprint")
+  );
+  if !grid {
+    DefMacro!("\\lx@title@thefootnote", "\\@alph\\c@footnote");
+  } else if matches!(society.as_str(), "aps" | "aapm" | "apsrmp") {
+    DefMacro!("\\lx@title@thefootnote", "");
+  }
+  Ok(())
 }
 
 /// REVTeX 4.0 provides `\bm` at `\begin{document}`, only while it is still undefined (revtex4.cls:6030-6032

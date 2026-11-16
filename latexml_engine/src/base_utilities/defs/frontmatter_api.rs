@@ -252,6 +252,54 @@ const fn same_str(a: &str, b: &str) -> bool {
   true
 }
 
+/// The Frontmatter keys of the engine's and the bindings' own (`_word=`), outside Perl's API, each with its value type:
+/// declared, so their use reports no unknown key (`Info:undefined`), which before changed what a speculative title-page
+/// run read (osajnl's `\vphantom{M}`: 2203.08703, 2206.12157, 2311.18459, 2411.07865; 1512.06325's first paragraph lost
+/// `ltx_noindent`), and an undeclared one still reports, a typo included. One list, pinned key by key in
+/// `perfect_kernel_batche0`'s `API_KEYS_OUTSIDE_PERLS`.
+pub(crate) const FRONTMATTER_INTERNAL_KEYS: &[(&str, &str)] = &[
+  // the store an unclaimed-text net note was handed on from (frontmatter_stores.rs `hand_net_stores`; OD #953)
+  ("_net", "Semiverbatim"),
+  // a contact whose label its binding prints with the line (authblk's `\affil[x]`, `LABEL_PRINTS`; OD #961)
+  ("_labelprints", ""),
+  // the emitter's: the label that prints (`PRINTED_LABEL`, OD #980), the block's own creator (`BLOCK_CREATOR`), the
+  // corresponding author (`CORRESPONDING`), an entry its run's stopgap alone gave (`STOPGAP_ENTRY`)
+  ("_printedlabel", ""),
+  ("_blockcreator", ""),
+  ("_corresponding", ""),
+  ("_stopgap", ""),
+  // a creator's note marked from the counter or with its mark unknown (`insert::MARK_FROM_COUNTER`, `MARK_UNKNOWN`), and a
+  // contact several names share (`_share`, `insert::ROW_SHARED`)
+  ("_markfromcounter", ""),
+  ("_markunknown", ""),
+  ("_share", ""),
+  ("_rowshared", ""),
+  // what the engine writes on a queued entry and reads where it is placed (insert.rs, place.rs, relocate.rs,
+  // `frontmatter_api::cut`, `shared_notes::FOOTNOTE_PART`, the emitter, the resolver's api.rs), and what the bindings
+  // pass (REVTeX's `_grouped`, `_unsplit`, `_zone`; aa's and elsarticle's `_zone`; llncs's `_markpiece`; jheppub's `_mark`)
+  ("_answers", ""),
+  ("_cutlist", ""),
+  ("_fnpart", ""),
+  ("_group", ""),
+  ("_grouped", ""),
+  ("_kinded", ""),
+  ("_mark", ""),
+  ("_markintext", ""),
+  ("_markpiece", ""),
+  ("_marks", ""),
+  ("_markshown", ""),
+  ("_merged_checked", ""),
+  ("_nameprinted", ""),
+  ("_placedbymark", ""),
+  ("_refmarkshown", ""),
+  ("_sequence", ""),
+  ("_store", ""),
+  ("_unmarked", ""),
+  ("_unsplit", ""),
+  ("_withsup", ""),
+  ("_zone", ""),
+];
+
 pub(in crate::base_utilities) fn load() -> Result<()> {
   //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   // General support for Front Matter. (PR #2767 rework)
@@ -364,32 +412,10 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
   // address's `_` and `~` are characters, not a script and a tie.
   DefKeyVal!("Frontmatter", "property", "Semiverbatim");
   DefKeyVal!("Frontmatter", "content", "Semiverbatim");
-  // Rust-only: the store an unclaimed-text net note was handed on from (frontmatter_stores.rs `hand_net_stores`), read
-  // where the note is placed (insert.rs `keep_unclaimed_net_notes`; OXIDIZED_DESIGN_DIVERGENCES #953).
-  DefKeyVal!("Frontmatter", "_net", "Semiverbatim");
-  // Rust-only: a contact whose label its binding prints with the line (authblk's `\affil[x]`, jheppub's
-  // `\affiliation[x]`, cas's letter: [`LABEL_PRINTS`]), read by the Kind step for a legend (insert.rs
-  // `kind_legend_contacts`; OXIDIZED_DESIGN_DIVERGENCES #961). Declared: an unknown key is reported (`Info:undefined`),
-  // and that report changed what osajnl's speculative title-page run read (its `\vphantom{M}` was lost: 2203.08703,
-  // 2206.12157, 2311.18459, 2411.07865).
-  DefKeyVal!("Frontmatter", "_labelprints", "");
-  // Rust-only: the label that prints, of an entry the frontmatter emitter wrote ([`PRINTED_LABEL`]; OD #980, P2 NT).
-  DefKeyVal!("Frontmatter", "_printedlabel", "");
-  // Rust-only: the author block's own creator, which the frontmatter emitter writes ([`BLOCK_CREATOR`]).
-  DefKeyVal!("Frontmatter", "_blockcreator", "");
-  // Rust-only: a creator the reading marks the corresponding author, which the frontmatter emitter writes and the Link step
-  // of an entry's addresses reads ([`CORRESPONDING`]). Declared, as `_labelprints` is: an unknown key's report
-  // (`Info:undefined`) changed the paragraphs after the title page (1512.06325's first paragraph lost `ltx_noindent`).
-  DefKeyVal!("Frontmatter", "_corresponding", "");
-  // Rust-only: an entry its run's stopgap alone gave its carriers, which the frontmatter emitter writes and the Link step
-  // of an entry's addresses reads ([`STOPGAP_ENTRY`]). Declared, as `_corresponding` is.
-  DefKeyVal!("Frontmatter", "_stopgap", "");
-  // Rust-only, declared as `_corresponding` is: a creator's note marked from the counter or with its mark unknown
-  // (`insert::MARK_FROM_COUNTER`, `MARK_UNKNOWN`), and a contact several names share (`_share`, `insert::ROW_SHARED`).
-  DefKeyVal!("Frontmatter", "_markfromcounter", "");
-  DefKeyVal!("Frontmatter", "_markunknown", "");
-  DefKeyVal!("Frontmatter", "_share", "");
-  DefKeyVal!("Frontmatter", "_rowshared", "");
+  // Rust-only: the internal keys, the one list of them ([`FRONTMATTER_INTERNAL_KEYS`])
+  for (key, vtype) in FRONTMATTER_INTERNAL_KEYS {
+    DefKeyVal!("Frontmatter", key, vtype);
+  }
 
   // Rust-only: `\lx@label@ref{<key>}`, the label a binding recorded for `key` once later input was read
   // ([`set_label_ref`]: cas's `\stmRef`, which LaTeX reads from the `.aux` of the run before), nothing for one never
