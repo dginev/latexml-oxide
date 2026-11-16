@@ -2,7 +2,7 @@
     mathnode: &amp;Node,
     child_nodes: <a class="struct" href="https://doc.rust-lang.org/nightly/alloc/vec/struct.Vec.html" title="struct alloc::vec::Vec">Vec</a>&lt;Node&gt;,
     idx: &amp;mut <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.usize.html">usize</a>,
-    document: <a class="enum" href="https://doc.rust-lang.org/nightly/core/option/enum.Option.html" title="enum core::option::Option">Option</a>&lt;&amp;<a class="struct" href="../latexml_core/document/struct.Document.html" title="struct latexml_core::document::Document">Document</a>&gt;,
+    document: <a class="enum" href="https://doc.rust-lang.org/nightly/core/option/enum.Option.html" title="enum core::option::Option">Option</a>&lt;&amp;Document&gt;,
 ) -&gt; (<a class="struct" href="https://doc.rust-lang.org/nightly/alloc/vec/struct.Vec.html" title="struct alloc::vec::Vec">Vec</a>&lt;<a class="struct" href="https://doc.rust-lang.org/nightly/alloc/string/struct.String.html" title="struct alloc::string::String">String</a>&gt;, <a class="struct" href="https://doc.rust-lang.org/nightly/alloc/vec/struct.Vec.html" title="struct alloc::vec::Vec">Vec</a>&lt;Node&gt;)</code></pre><details class="toggle top-doc" open><summary class="hideme"><span>Expand description</span></summary><div class="docblock"><p>Same as <code>node_to_grammar_lexemes</code> but with pre-filtered child nodes.
 Used when <code>filter_hints</code> has already been called (to avoid double-filtering). The document, when given, decodes the
 tokens’ fonts (a <code>d</code> token’s identity, <code>DifferentialEvidence</code>).</p>

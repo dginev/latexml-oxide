@@ -1363,11 +1363,18 @@
 <a href=#1363 id=1363 data-nosnippet>1363</a>    <span class="comment">// An install in flight, hard-linked from an old output: its mtime is the output's, its ctime the link's.
 <a href=#1364 id=1364 data-nosnippet>1364</a>    </span>fs::hard_link(<span class="kw-2">&amp;</span>output, shard.join(<span class="string">"abcdef.png.tmp.18.3"</span>)).unwrap();
 <a href=#1365 id=1365 data-nosnippet>1365</a>    prune_if_over_cap_at(<span class="kw-2">&amp;</span>root, stale_before);
-<a href=#1366 id=1366 data-nosnippet>1366</a>    <span class="macro">assert_eq!</span>(tmp_names(<span class="kw-2">&amp;</span>shard), <span class="macro">vec!</span>[<span class="string">"abcdef.png.tmp.18.3"</span>.to_string()]);
-<a href=#1367 id=1367 data-nosnippet>1367</a>    <span class="macro">assert!</span>(
-<a href=#1368 id=1368 data-nosnippet>1368</a>      entry.is_file(),
-<a href=#1369 id=1369 data-nosnippet>1369</a>      <span class="string">"an entry under the cap is kept, however old"
-<a href=#1370 id=1370 data-nosnippet>1370</a>    </span>);
-<a href=#1371 id=1371 data-nosnippet>1371</a>  }
-<a href=#1372 id=1372 data-nosnippet>1372</a>}
+<a href=#1366 id=1366 data-nosnippet>1366</a>    <span class="comment">// On Unix the link's ctime keeps the in-flight tmp. Elsewhere the age is the mtime (std exposes no ctime), so it
+<a href=#1367 id=1367 data-nosnippet>1367</a>    // is reclaimed: the install's rename then fails and the image is just not cached that time.
+<a href=#1368 id=1368 data-nosnippet>1368</a>    </span><span class="kw">let </span>in_flight_kept: Vec&lt;String&gt; = <span class="kw">if </span><span class="macro">cfg!</span>(unix) {
+<a href=#1369 id=1369 data-nosnippet>1369</a>      <span class="macro">vec!</span>[<span class="string">"abcdef.png.tmp.18.3"</span>.to_string()]
+<a href=#1370 id=1370 data-nosnippet>1370</a>    } <span class="kw">else </span>{
+<a href=#1371 id=1371 data-nosnippet>1371</a>      Vec::new()
+<a href=#1372 id=1372 data-nosnippet>1372</a>    };
+<a href=#1373 id=1373 data-nosnippet>1373</a>    <span class="macro">assert_eq!</span>(tmp_names(<span class="kw-2">&amp;</span>shard), in_flight_kept);
+<a href=#1374 id=1374 data-nosnippet>1374</a>    <span class="macro">assert!</span>(
+<a href=#1375 id=1375 data-nosnippet>1375</a>      entry.is_file(),
+<a href=#1376 id=1376 data-nosnippet>1376</a>      <span class="string">"an entry under the cap is kept, however old"
+<a href=#1377 id=1377 data-nosnippet>1377</a>    </span>);
+<a href=#1378 id=1378 data-nosnippet>1378</a>  }
+<a href=#1379 id=1379 data-nosnippet>1379</a>}
 </code></pre></div></section></main></body></html>
