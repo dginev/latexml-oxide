@@ -1026,7 +1026,7 @@ fn author_revtex_affiliation_line_thanks_stays_with_author() {
       "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_revtex_affiliation_line_thanks_stays_with_author.tex"
     ),
     &[
-      "<creator role=\"author\"><personname>Ann Able</personname><contact class=\"ltx_author_line\" name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A</contact><note class=\"ltx_note_frontmatter ltx_thanks_funding\" mark=\"∗\" role=\"thanks\" xml:id=\"id1\">Grant</note></creator>",
+      "<creator role=\"author\"><personname>Ann Able</personname><contact class=\"ltx_author_line\" name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A</contact><note class=\"ltx_note_frontmatter ltx_thanks_funding\" role=\"thanks\" xml:id=\"id1\">Grant</note></creator>",
     ],
   );
 }

@@ -1,0 +1,29 @@
+% witness: revSHRESTb NIT (synthetic): an affiliation's `\thanks` (revtex4-2.cls:2236 `\@AF@join` of the affiliation last
+%          given) prints at its affiliation line, after its group's names, before the next group's shared note
+% oracle:  pdflatex 0 errors; "Ann Able and Bob Baker", "Univ A∗", "Cy Cole† and Di Dorn†", "Univ B"
+% engines: rust=0 (SHRESTb, SHRESTc: every note unmarked — the affiliation's footnote is numbered once after its group's
+%          names and once after every name, the two orders disagree, so `number_footnote_parts` marks nothing) perl=0
+%          (thanks contacts, no marks) (2026-11-16)
+% expect:  0 errors, 0 warnings; Bob's affiliation note "Visiting." marked ∗; Cy and Di each with the note "Equal
+%          contribution." marked † (OD #1054)
+% status:  RED (SHRESTc; fail-safe: no mark rather than a wrong one)
+% moves:   row R — REVTeX's affiliation footnote order: decide between the group order and the last order where they
+%          disagree (pdflatex prints the group order here)
+% preload: ar5iv.sty
+\documentclass[aps,prl,preprint]{revtex4-2}
+\begin{document}
+\title{A Title}
+\author{Ann Able}
+\author{Bob Baker}
+\affiliation{Univ A}
+\thanks{Visiting.}
+\author{Cy Cole}
+\thanks{Equal contribution.}
+\affiliation{Univ B}
+\author{Di Dorn}
+\thanks{Equal contribution.}
+\affiliation{Univ B}
+\begin{abstract}Abs.\end{abstract}
+\maketitle
+Body.
+\end{document}

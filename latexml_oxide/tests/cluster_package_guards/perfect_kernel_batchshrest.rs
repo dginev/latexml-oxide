@@ -9,7 +9,8 @@
 //! - a class's footnote text two names carry under one mark is their marked note: elsarticle's `\fntext` and `\cortext`
 //!   (their counters' marks) and REVTeX's `\thanks` (its joined footnote's symbol, distinct when an e-mail joins it);
 //! - REVTeX's front-matter footnotes are numbered as printed (SHRESTb: the title's, a name's own before its joined one, an
-//!   affiliation's at its line; a `\thanks` in a name after them);
+//!   affiliation's at its line; SHRESTc: a name's `\footnote` counted where the name prints, unmarked; a `\thanks` in a
+//!   name unmarked and uncounted, as REVTeX prints none);
 //! - an ORCID iD a line end broke reads whole (2503.20847);
 //! - icml's correspondence line a document set without `\icmlcorrespondingauthor` keeps its label.
 //!
@@ -188,23 +189,68 @@ fn revtex_footnotes_are_numbered_as_printed() {
   });
 }
 
-/// A `\thanks` inside a REVTeX `\author{…}` (the kernel's name note; REVTeX prints none; 2407.11130) is numbered after the
-/// printed footnotes, one mark for one text: "Equal." ∗ on Ann and Bob, "Other." † — three unmarked notes before.
+/// A `\thanks` inside a REVTeX `\author{…}` (the kernel's name note; 2407.11130, 1308.0465's shape) is kept, unmarked:
+/// REVTeX neither prints nor counts it (revtex4, 4-1 and 4-2; revSHRESTb B1).
 #[test]
-fn a_revtex_thanks_in_a_name_is_numbered_as_its_footnote() {
+fn a_revtex_thanks_in_a_name_stays_unmarked() {
   check(&Case {
-    tex:      repro!("sectioning-frontmatter/revtex_thanks_in_names_numbered_as_footnotes.tex"),
+    tex:      repro!("sectioning-frontmatter/revtex_thanks_in_names_stay_unmarked.tex"),
     creators: &[
       &["Ann Able", "affiliation=Univ A"],
       &["Bob Baker", "affiliation=Univ A"],
       &["Cat Cole", "affiliation=Univ A"],
     ],
     elements: &[
-      r#"<note class="ltx_note_frontmatter ltx_thanks_note" mark="∗" role="thanks" xml:id="id1">Equal.</note>"#,
-      r#"<note class="ltx_note_frontmatter ltx_thanks_note" mark="∗" role="thanks" xml:id="id2">Equal.</note>"#,
-      r#"<note class="ltx_note_frontmatter ltx_thanks_note" mark="†" role="thanks" xml:id="id3">Other.</note>"#,
+      r#"<note class="ltx_note_frontmatter ltx_thanks_note" role="thanks" xml:id="id1">Equal.</note>"#,
+      r#"<note class="ltx_note_frontmatter ltx_thanks_note" role="thanks" xml:id="id2">Equal.</note>"#,
+      r#"<note class="ltx_note_frontmatter ltx_thanks_note" role="thanks" xml:id="id3">Other.</note>"#,
     ],
-    absent:   &[],
+    absent:   &["mark="],
+  });
+}
+
+/// A `\footnote` in a REVTeX name steps the front-matter footnotes' counter where the name prints, its contact unmarked
+/// (SHMARK's contract): the shared `\thanks` after it is †, in REVTeX 4.0 ("Ann Able∗") and 4.2 ("Ann Ablea") alike
+/// (revSHRESTb B2). Its siblings: a `\footnote[5]` steps nothing (1607.07280's shape), so the note is ∗; a name's
+/// `\footnotemark`, given its number or not, leaves the count unknown, so nothing is marked.
+#[test]
+fn a_revtex_name_footnote_takes_its_number_unmarked() {
+  let note = |mark: &str, id: &str| {
+    format!(
+      r#"<note class="ltx_note_frontmatter ltx_thanks_contribution" mark="{mark}" role="thanks" xml:id="{id}">Equal contribution.</note>"#
+    )
+  };
+  for (tex, mark) in [
+    (repro!("sectioning-frontmatter/revtex4_name_footnote_takes_its_number.tex"), "†"),
+    (repro!("sectioning-frontmatter/revtex_name_footnote_takes_its_number.tex"), "†"),
+    (repro!("sectioning-frontmatter/revtex_name_footnote_given_its_number_steps_nothing.tex"), "∗"),
+  ] {
+    let (log, xml) = convert_with(tex, Some("ar5iv.sty"));
+    assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+    let want = [
+      &["Ann Able", "note=Visiting Univ C.", "affiliation=Univ A"][..],
+      &["Bob Baker", "affiliation=Univ B"],
+      &["Cy Cole", "affiliation=Univ B"],
+    ];
+    let want: Vec<Vec<String>> = want
+      .iter()
+      .map(|c| c.iter().map(|s| (*s).to_string()).collect())
+      .collect();
+    assert_eq!(creators(&xml), want, "{xml}");
+    for element in [note(mark, "id1"), note(mark, "id2")] {
+      assert_eq!(xml.matches(&element).count(), 1, "{element}\n{xml}");
+    }
+    assert_eq!(xml.matches("mark=").count(), 2, "{xml}");
+  }
+  check(&Case {
+    tex:      repro!("sectioning-frontmatter/revtex_name_footnotemark_leaves_the_marks_unknown.tex"),
+    creators: &[
+      &["Ann Able", "affiliation=Univ A"],
+      &["Bob Baker", "thanks=Equal contribution.", "affiliation=Univ B"],
+      &["Cy Cole", "thanks=Equal contribution.", "affiliation=Univ B"],
+    ],
+    elements: &[],
+    absent:   &["mark=\"†\"", "mark=\"∗\""],
   });
 }
 
