@@ -29,7 +29,7 @@ use crate::base_utilities::{
   defs::{
     author_macros::KEPT_WHOLE,
     frontmatter_api::{BLOCK_CREATOR, CORRESPONDING, LABEL_PRINTS, PRINTED_LABEL, STOPGAP_ENTRY},
-    frontmatter_fields::orcid_icon_link,
+    frontmatter_fields::{orcid_icon_link, under_author_markup},
   },
   frontmatter::{
     classify::shared_call_item,
@@ -3143,7 +3143,10 @@ fn kept_breaks(piece: &[Event]) -> Vec<usize> {
   kept
 }
 
-/// The declarations of the blocks not yet emitted: an entry of their tokens, digested in the flush's group.
+/// The declarations of the blocks not yet emitted: an entry of their tokens, digested in the flush's group under the author
+/// markup the blocks are digested under (`under_author_markup`), as pdflatex runs them inside the title code's group: a
+/// paper's macro calling a title-code command declares there (`\newcommand\setaff[1]{\instref{#1}\gdef\affA{…}}`, klmm.sty's
+/// `\instref`, 2606.12100), where apart it erred undefined.
 fn declarations<'a>(sources: impl Iterator<Item = &'a usize>) -> Vec<Token> {
   with_ledger(|ledger| {
     let mut out = Vec::new();
@@ -3156,7 +3159,10 @@ fn declarations<'a>(sources: impl Iterator<Item = &'a usize>) -> Vec<Token> {
         }
       }
     }
-    out
+    if out.is_empty() {
+      return out;
+    }
+    under_author_markup(out)
   })
 }
 

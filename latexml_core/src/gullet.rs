@@ -5477,8 +5477,9 @@ fn handle_marker(marker_token: Token) {
 }
 
 /// The mouths open: the one in reading ([`Gullet::runtime`]) and those under it. [`open_mouth`] pushes nothing on the stack
-/// when none is in reading, so the stack alone doesn't count them.
-fn mouth_depth() -> usize {
+/// when none is in reading, so the stack alone doesn't count them. A [`pushback_len`] compares only at one depth: a
+/// constructor digests its argument in a mouth of its own (a rehearsal's notes, `token::FieldNotesHook`).
+pub fn mouth_depth() -> usize {
   let g = gullet!();
   g.mouthstack.len() + usize::from(g.runtime.is_some())
 }

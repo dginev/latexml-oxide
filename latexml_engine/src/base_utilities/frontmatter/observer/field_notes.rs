@@ -16,7 +16,7 @@ use latexml_core::{
   },
   digested::{Digested, DigestedData},
   document::FIELD_FORMULA_START_PROPERTY,
-  gullet::{pushback_is_empty, pushback_len},
+  gullet::{mouth_depth, pushback_is_empty, pushback_len},
   keyvals::KeyVals,
   state::{self, MeaningAssigned, lookup_definition},
   stomach::{field_position_encloses, field_token_encloses, token_stack_depth},
@@ -140,11 +140,11 @@ pub struct FieldNotes {
   assigned:          Vec<MeaningAssigned>,
   /// the field's tokens by position, what was called there ([`keep_declared`]), the first at each
   field:             Vec<Option<Token>>,
-  /// the runs of a kernel's or a binding's macro a paper's macro reached, being read ([`close_runs`]): the position they take
-  /// and how many tokens the pushback held before each
-  kernel_runs:       Vec<(u16, usize)>,
+  /// the runs of a kernel's or a binding's macro a paper's macro reached, or of a title-code command, being read
+  /// ([`close_runs`]): the position they take, the mouths open and how many tokens the pushback held before each
+  kernel_runs:       Vec<(u16, usize, usize)>,
   /// the commands of the class's title code the author markup defines for an author block (`AuthorMarkup::title_code`),
-  /// which assign on the title code's account ([`keep_declared`])
+  /// which assign on the title code's account ([`keep_declared`], [`field_expansion`])
   title_code:        Vec<Token>,
   /// where the prefixes waiting for their command start (`\global`, `\long`). With the `\expandafter`s expanded right before
   /// it they lead to a declaration ([`read_lead`]), since a content read of its span without them would be another definition,
@@ -557,10 +557,11 @@ fn handed_to_a_call(field: &[Option<Token>], pos: u16, reach: u16) -> &[Option<T
 /// The names a macro the document defined holds in its body, and those a macro of the same kind in its body holds: what a kernel's or
 /// a binding's macro it calls may be defining for it (`\newcommand\m{\newcount\qq}`, `\newcommand\m{\@ifundefined{qq}{\def\qq{1}}{}}`).
 /// A name built at run time is in no body (`\@namedef{qq}{1}`). None for a macro of a `.sty` or `.cls` it loaded: a raw package's body names its own
-/// state, which a run of the kernel's assigns for it (`\makecell`'s `\tabg@pe`, `\t@bset`, 2203.03195, 2502.11387).
+/// state, which a run of the kernel's assigns for it (`\makecell`'s `\tabg@pe`, `\t@bset`, 2203.03195, 2502.11387); nor those of a
+/// title-code command's body, which assigns on the title code's account ([`keep_declared`]).
 #[cold]
 #[inline(never)]
-fn names_in_a_papers_macro(call: &Rc<Expandable>) -> Vec<SymStr> {
+fn names_in_a_papers_macro(call: &Rc<Expandable>, title_code: &[Token]) -> Vec<SymStr> {
   let mut names: Vec<SymStr> = Vec::new();
   if call.get_origin() != DefinitionOrigin::Document {
     return names;
@@ -580,6 +581,7 @@ fn names_in_a_papers_macro(call: &Rc<Expandable>) -> Vec<SymStr> {
       if let Some(meaning) = macro_of(token)
         && meaning.get_origin() == DefinitionOrigin::Document
         && read < MACROS_READ_FOR_NAMES
+        && !title_code.contains(token)
       {
         read += 1;
         bodies.push(meaning);
@@ -601,11 +603,11 @@ const MACROS_READ_FOR_NAMES: usize = 64;
 /// and `\newcommand\m{\@ifundefined{qq}{\def\qq{1}}{}}` declare `\qq` ([`names_in_a_papers_macro`]). A kernel's or a binding's
 /// macro called there assigns on its own account likewise (a font switch's `\f@series`, `\centering`'s `\\`, an environment's
 /// `\@currenvir`): only the names the field handed it are the paper's (`\newcount\nn`, `\newsavebox\bb`, whose arguments the
-/// expansion reads). So does a command of the class's title code the author markup defines (`title_code`), called there, and
-/// a paper's macro calling one declares only what it names: pdflatex runs the command inside the group `\@author` is read
-/// in, the digestion inside the creator's `\lx@author@withinst`, so what else it assigns is no declaration replayed apart,
-/// where it is undefined — klmm.sty's `\def\instref##1{\textsuperscript{##1}\def\current@has@affil{1}}` (2606.12100,
-/// 2606.12130, 2606.12144, 2606.22997, 2606.26035).
+/// expansion reads). So does a command of the class's title code the author markup defines (`title_code`), called there or
+/// in a run a paper's macro reached: pdflatex runs it inside the group `\@author` is read in, the digestion inside the
+/// creator's `\lx@author@withinst`, so what it assigns is no declaration replayed apart, where it is undefined — klmm.sty's
+/// `\def\instref##1{\textsuperscript{##1}\def\current@has@affil{1}}` (2606.12100, 2606.12130, 2606.12144, 2606.22997,
+/// 2606.26035); what the paper's macro assigns past the run stays its own.
 #[cold]
 #[inline(never)]
 fn keep_declared(
@@ -636,13 +638,8 @@ fn keep_declared(
       });
     },
     Some(Stored::Expandable(definition)) => {
-      let named = (inside || !title_code.is_empty()).then(|| names_in_a_papers_macro(&definition));
-      if let Some(named) = named.filter(|named| {
-        inside
-          || title_code
-            .iter()
-            .any(|command| named.contains(&state::meaning_key(command)))
-      }) {
+      if inside {
+        let named = names_in_a_papers_macro(&definition, title_code);
         let handed = handed_to_a_call(field, pos, reach);
         assigned.retain(|assignment| {
           named.contains(&assignment.key)
@@ -660,15 +657,17 @@ fn keep_declared(
   }
 }
 
-/// Close the runs of a kernel's or a binding's macro read by now: an invocation that was the run's took a token above what the
-/// pushback held before the expansion, and left it at least that (`held`, past what it read; its tokens take the position of
-/// the call they came from, `token::inherit_field_prov`, so nothing else tells). One that left it below came after the run: a
-/// run's last token reading on past it read what the field handed it.
-fn close_runs(notes: &mut FieldNotes, held: usize) {
+/// Close the runs read by now ([`FieldNotes::kernel_runs`]): an invocation that was the run's took a token above what the
+/// pushback held before the expansion, and left it at least that (past what it read; its tokens take the position of the
+/// call they came from, `token::inherit_field_prov`, so nothing else tells). One that left it below came after the run: a
+/// run's last token reading on past it read what the field handed it. An invocation in a mouth opened since is the run's
+/// (a constructor digesting its argument, `\textsuperscript{##1}`), one past the mouth the run was read in is not.
+fn close_runs(notes: &mut FieldNotes) {
+  let (depth, held) = (mouth_depth(), pushback_len());
   while notes
     .kernel_runs
     .last()
-    .is_some_and(|(_, before)| held < *before)
+    .is_some_and(|&(_, mouths, before)| depth < mouths || (depth == mouths && held < before))
   {
     notes.kernel_runs.pop();
   }
@@ -679,9 +678,10 @@ fn with_expandable(token: &Token, test: impl Fn(&Expandable) -> bool) -> bool {
   macro_of(token).is_some_and(|meaning| test(&meaning))
 }
 
-/// Note the expansion of the field token `token`, its tokens about to go on the input: a kernel's or a binding's macro a paper's
-/// macro reached opens a run ([`keep_declared`]), its arguments of the field's own positions none of it (`\mbox{\def\x{1}}`,
-/// `\parbox`); a block break its binding declares is noted; it is kept for what leads to the next invocation ([`read_lead`]).
+/// Note the expansion of the field token `token`, its tokens about to go on the input: a kernel's or a binding's macro, or a
+/// command of the title code (klmm.sty's `\instref`, 2606.12100), a paper's macro reached opens a run ([`keep_declared`]),
+/// its arguments of the field's own positions none of it (`\mbox{\def\x{1}}`, `\parbox`); a block break its binding
+/// declares is noted; it is kept for what leads to the next invocation ([`read_lead`]).
 /// One for every tie of a block of a thousand names (1507.02068): a meaning is looked up only for a token no field holds there.
 fn field_expansion(token: &Token, cover: FieldCover, expansion: &Tokens) {
   let pos = field_prov_pos(token.prov);
@@ -721,12 +721,13 @@ fn field_expansion(token: &Token, cover: FieldCover, expansion: &Tokens) {
       }
     }
     note_call_read(notes, token, pos, cover.end, false);
-    let owned = !own && with_expandable(token, |meaning| meaning.get_origin().is_latexml_owned());
+    let owned = !own
+      && (notes.title_code.contains(token)
+        || with_expandable(token, |meaning| meaning.get_origin().is_latexml_owned()));
     if !notes.kernel_runs.is_empty() || owned {
-      let held = pushback_len();
-      close_runs(notes, held);
-      if owned && notes.kernel_runs.last().is_none_or(|(at, _)| *at != pos) {
-        notes.kernel_runs.push((pos, held));
+      close_runs(notes);
+      if owned && notes.kernel_runs.last().is_none_or(|(at, ..)| *at != pos) {
+        notes.kernel_runs.push((pos, mouth_depth(), pushback_len()));
       }
     }
     if !notes.block_breaks.is_empty()
@@ -852,9 +853,9 @@ fn field_invocation(token: &Token, cover: FieldCover, result: &[Digested]) {
   let (inside, quiet) = FIELD_NOTES.with(|notes| {
     let notes = &mut *notes.borrow_mut();
     if !notes.kernel_runs.is_empty() {
-      close_runs(notes, pushback_len());
+      close_runs(notes);
     }
-    let inside = notes.kernel_runs.last().is_some_and(|(at, _)| *at == pos);
+    let inside = notes.kernel_runs.last().is_some_and(|(at, ..)| *at == pos);
     // (the expansions before it, read at a declaration or by a prefix; the prefixes waiting for it, then for the next)
     notes.read_expanded = notes.expanded.take();
     notes.lead_read = notes.lead.take();

@@ -895,6 +895,19 @@ pub(in crate::base_utilities) struct AuthorMarkup {
   pub title_code: Vec<Token>,
 }
 
+/// `content` under the author markup, as `\lx@author@withinst` digests the author content: its definitions undone after it,
+/// the list of them taken before it runs (a nested author keeps it).
+pub(in crate::base_utilities) fn under_author_markup(content: Vec<Token>) -> Vec<Token> {
+  let mut out = TokenizeInternal!(
+    r"\lx@author@markup@begin\expandafter\lx@author@markup@run\expandafter{\lx@author@markup@unprovide}"
+  )
+  .unlist();
+  out.push(T_BEGIN!());
+  out.extend(content);
+  out.push(T_END!());
+  out
+}
+
 /// `\lx@author@markup@begin`: the author markup in force for the author content; with `rehearsal`, the frontmatter
 /// observer's rehearsal's (observer/reading.rs), in which a title-code definition reading no argument stays undefined,
 /// its held Error the reading's (`reads_arguments`; OXIDIZED_DESIGN_DIVERGENCES #802, #941).

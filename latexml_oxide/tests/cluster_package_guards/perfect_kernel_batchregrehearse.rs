@@ -134,7 +134,8 @@ fn omnibus_orcid_given_as_its_address_keeps_the_id() {
       format!("{}{open}{}", &contact[..start], &contact[end..])
     })
     .collect();
-  let logo = r#"<svg:svg class="ltx_orcidlogo" height="1em" version="1.1" viewBox="0 0 72 72" width="1em">"#;
+  let logo =
+    r#"<svg:svg class="ltx_orcidlogo" height="1em" version="1.1" viewBox="0 0 72 72" width="1em">"#;
   assert_eq!(
     contacts,
     [
