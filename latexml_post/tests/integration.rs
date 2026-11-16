@@ -1007,3 +1007,70 @@ fn a_pure_name_carries_every_mark_after_it_in_order() {
     r##"</span></span></span></span></div>"##,
   ),]);
 }
+
+/// Only a symbol mark (`*`, `†`, `¶`) or Perl's tagged `\footnotemark` leftover names another author's note
+/// (OXIDIZED_DESIGN_DIVERGENCES #1052; DG 2026-11-16: a wrong link is worse than none). A letter or digit is an
+/// affiliation label as often as a footnote number, so a mark-only `1` or `a` is its plain glyph: it links to no note
+/// and makes none shared (review revREND2: Bob's `1` linked Ann's own footnote `1` and sent it to the margin as shared;
+/// Dee's `a`, Cy's thanks `a`). Fay's tagged leftover `2` still links Eve's note `2`, which is then shared.
+#[test]
+fn a_letter_or_digit_mark_names_no_other_authors_note() {
+  const MARKS: &str = r#"<?xml version="1.0" encoding="UTF-8"?>
+<?latexml RelaxNGSchema="LaTeXML"?>
+<document xmlns="http://dlmf.nist.gov/LaTeXML" xml:id="Document">
+  <title>Glyph collision</title>
+  <creator role="author">
+    <personname>Ann Able</personname>
+    <note mark="1" role="footnote" xml:id="id1" fragid="id1">Ann's own numbered footnote.</note>
+  </creator>
+  <creator role="author">
+    <personname>Bob Baker</personname>
+    <note mark="1" role="footnotemark" xml:id="id2" fragid="id2"/>
+  </creator>
+  <creator role="author">
+    <personname>Cy Cole</personname>
+    <note mark="a" role="thanks" xml:id="id3" fragid="id3">Cy's own lettered thanks.</note>
+  </creator>
+  <creator role="author">
+    <personname>Dee Dunn</personname>
+    <note mark="a" role="footnotemark"/>
+  </creator>
+  <creator role="author">
+    <personname>Eve Ennis</personname>
+    <note mark="2" role="footnote" xml:id="id4" fragid="id4">Eve's footnote, which Fay's mark repeats.</note>
+  </creator>
+  <creator role="author">
+    <personname>Fay Ford</personname>
+    <note mark="2" role="footnotemark" xml:id="footnotex1" fragid="footnotex1"><tags><tag>2</tag><tag role="refnum">2</tag></tags></note>
+  </creator>
+</document>"#;
+  // Before (revREND2's p1.xml): Ann's and Cy's notes classed ltx_note_shared, Bob's `1` and Dee's `a` links to them.
+  let html = authors_html(MARKS);
+  assert_eq!(html, [concat!(
+    r##"<div class="ltx_authors">"##,
+    "\n",
+    r##"<span class="ltx_creator ltx_role_author"><span class="ltx_annotated_personname">"##,
+    "\n",
+    r##"<span class="ltx_personname">Ann Able</span><span id="id1" class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">1</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">1</sup>Ann's own numbered footnote.</span></span></span></span></span>"##,
+    "\n",
+    r##"<span class="ltx_creator ltx_role_author"><span class="ltx_annotated_personname">"##,
+    "\n",
+    r##"<span class="ltx_personname">Bob Baker</span><span id="id2" class="ltx_note ltx_role_footnotemark"><sup class="ltx_note_mark">1</sup></span></span></span>"##,
+    "\n",
+    r##"<span class="ltx_creator ltx_role_author"><span class="ltx_annotated_personname">"##,
+    "\n",
+    r##"<span class="ltx_personname">Cy Cole</span><span id="id3" class="ltx_note ltx_role_thanks"><sup class="ltx_note_mark">a</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">a</sup><span class="ltx_note_type">thanks: </span>Cy's own lettered thanks.</span></span></span></span></span>"##,
+    "\n",
+    r##"<span class="ltx_creator ltx_role_author"><span class="ltx_annotated_personname">"##,
+    "\n",
+    r##"<span class="ltx_personname">Dee Dunn</span><span class="ltx_note ltx_role_footnotemark"><sup class="ltx_note_mark">a</sup></span></span></span>"##,
+    "\n",
+    r##"<span class="ltx_creator ltx_role_author"><span class="ltx_annotated_personname">"##,
+    "\n",
+    r##"<span class="ltx_personname">Eve Ennis</span><span id="id4" class="ltx_note ltx_role_footnote ltx_note_shared"><sup class="ltx_note_mark">2</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">2</sup>Eve's footnote, which Fay's mark repeats.</span></span></span></span></span>"##,
+    "\n",
+    r##"<span class="ltx_creator ltx_role_author"><span class="ltx_annotated_personname">"##,
+    "\n",
+    r##"<span class="ltx_personname">Fay Ford</span><span id="footnotex1" class="ltx_note ltx_role_footnotemark ltx_note_shared"><sup class="ltx_note_mark"><a href="#id4">2</a></sup></span></span></span></div>"##,
+  ),]);
+}
