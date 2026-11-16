@@ -5,8 +5,9 @@
 % oracle:  pdflatex 0 errors; "‡ These authors contributed equally." above the abstract, "Joint work." and "Mini
 %          note." as front matter footnotes
 % engines: rust=4 (999af99497d: undefined \prep@absbox, \post@absbox, \@FMN@list, \mini@notes) perl=0 (2 Warnings; the text lost) (2026-11-16)
-% expect:  0 errors, 0 warnings; Ann Able's creator with her affiliation; after the frontmatter the paragraph
-%          "‡ These authors contributed equally."; the notes "Mini note." and "Joint work." on the document
+% expect:  0 errors, 0 warnings; Ann Able's creator with her affiliation and the note "‡ These authors contributed
+%          equally." (a sole author's: no name shows ‡, OD #1054; a body paragraph before); the notes "Mini note." and
+%          "Joint work." on the document
 % status:  GREEN
 % preload: ar5iv.sty
 \documentclass{revtex4-2}

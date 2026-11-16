@@ -3,7 +3,8 @@
 %   (`emitter::emit::block_names`, `on_names`): the same cause as a wrapper's note (the name's tokens print it), which
 %   the cut leaves out instead (`emit_name_in_wrapper_mark_and_thanks_apart`)
 % witness: review revLO4 (synthetic; LO3 and LO4 `=2` W=2)
-% oracle:  pdflatex 0 errors: "Ann Able∗", "Univ A", "Bob Baker", "Univ B", footnote "∗Corresponding author."
+% oracle:  pdflatex 0 errors: "Ann Able", "Univ A", "Bob Baker", "Univ B" — REVTeX prints no mark and no footnote for a
+%   `\thanks` in a name (revSHRESTb B1); the note is kept, unmarked
 % engines: off = Ann's note once; LO4 `=2` = the note twice, one "as its plain text" (2 Warnings)
 % expect:  0 errors 0 warnings; `=2` creators = off
 % status:  RED (LO4 `=2`) -> GREEN (P2)

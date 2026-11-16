@@ -357,10 +357,11 @@ fn key_list_bounds(v: &[Token]) -> (Option<usize>, Option<usize>) {
 }
 
 /// Whether a queued call's key `key` places it — the keys the reading's own placement replaces: `label`, `labelseq`,
-/// `annotate`, `owner`, `annotations` unless kept, and the internal `_` keys but `_kinded`, `_markshown` (read already)
-/// and, where kept, `_zone` (where it prints).
+/// `annotate`, `owner`, `annotations` unless kept, and the internal `_` keys but `_kinded`, `_markshown` (read already),
+/// `_fnpart` (the footnote it is part of, `FOOTNOTE_PART`) and, where kept, `_zone` (where it prints).
 fn routing_key(key: &str, keep_annotations: bool, zone: bool) -> bool {
-  (key.starts_with('_') && !(matches!(key, "_kinded" | "_markshown") || (zone && key == "_zone")))
+  (key.starts_with('_')
+    && !(matches!(key, "_kinded" | "_markshown" | "_fnpart") || (zone && key == "_zone")))
     || matches!(key, "label" | "labelseq" | "annotate" | "owner")
     || (key == "annotations" && !keep_annotations)
 }
@@ -1513,10 +1514,12 @@ fn by_text(why: Option<&str>, text: &str) -> Vec<Token> {
 /// A note's call under `label`, as `\lx@add@thanks` and `\lx@add@note` make it (their `Let`s in an author's content,
 /// `digest_frontmatter_item`), on `@now`: what's inside it is the reading's already. A legend's with the `mark` it prints,
 /// a note's with the one it shows on its name ([`shown_mark`]), a `\footnote` so marked the `\thanks` note it is there
-/// (`\lx@title@footnote`). Its footnote step is its creator's, where the note prints ([`note_steps`]). A mark read off the
-/// text's bare head ([`requested_mark`]) is flagged so (`insert::MARK_IN_TEXT`), for the copy to be taken out there.
+/// (`\lx@title@footnote`). Its footnote step is its creator's, where the note prints ([`note_steps`]); an unmarked
+/// `\footnote` `given` its number steps none (`GIVEN_PART`, the front-matter footnotes' count: OD #1054). A mark read off
+/// the text's bare head ([`requested_mark`]) is flagged so (`insert::MARK_IN_TEXT`), for the copy to be taken out there.
 fn note_call(
   footnote: bool,
+  given: bool,
   mark: Option<&str>,
   in_text: bool,
   label: &str,
@@ -1536,7 +1539,16 @@ fn note_call(
     s!("mark={{{mark}}},{in_text}")
   });
   if footnote && mark.is_none() {
-    annotate_now("ltx:contact", &s!("role=note,label={{{label}}}"), &body)
+    let given = if given {
+      s!(",{FOOTNOTE_PART}={GIVEN_PART}")
+    } else {
+      String::new()
+    };
+    annotate_now(
+      "ltx:contact",
+      &s!("role=note,label={{{label}}}{given}"),
+      &body,
+    )
   } else {
     let keys =
       s!("role=thanks,class=ltx_note_frontmatter ltx_thanks_{kind},{marked}label={{{label}}}");
@@ -2313,6 +2325,7 @@ fn item_call(
     whole.insert(index);
     return Ok(note_call(
       false,
+      false,
       Some(mark),
       in_text,
       label,
@@ -2396,7 +2409,7 @@ fn item_call(
   }
   let wrap = |content: &[Token]| -> Tokens {
     if note {
-      note_call(false, None, false, label, content.to_vec())
+      note_call(false, false, None, false, label, content.to_vec())
     } else if key.0 == Kind::Affiliation {
       kinded_affiliation(&keys, line_class, content)
     } else {
@@ -2464,16 +2477,21 @@ fn item_call(
       let piece = piece.is_some();
       // (never a `\\footnote`'s, which `\\lx@add@note` keeps a note: `\\footnote{\\textsuperscript{1}These authors
       // contributed equally …}`, 2110.12892 — P2 NT)
-      let footnote = event_at(index, span, |e| e.kind == EventKind::Note, |e| e.footnote);
+      let footnote = event_at(
+        index,
+        span,
+        |e| e.kind == EventKind::Note,
+        |e| (e.footnote, given_footnote(e)),
+      );
       let an_entry = key.0 == Kind::Affiliation
         || (role == "legend"
-          && footnote != Some(true)
+          && footnote.is_none_or(|(footnote, _)| !footnote)
           && argument.as_ref().is_some_and(|argument| {
             piece || starts_with_affiliation_mark(&Tokens::new(argument.clone()))
           }));
       if note
         && !an_entry
-        && let Some(footnote) = footnote
+        && let Some((footnote, given)) = footnote
       {
         let content = argument;
         // (or the symbol its text opens with bare that its names show)
@@ -2489,6 +2507,7 @@ fn item_call(
         .unwrap_or_default();
         return Ok(note_call(
           footnote,
+          given,
           mark.as_deref(),
           in_text,
           label,
@@ -2798,7 +2817,7 @@ fn item_call(
         // (its run grown to the mark: `*equally contributed`, 2609.16600)
         let legend = mark.as_deref().filter(|_| role == "legend");
         let tokens = in_its_font(font, tokens).unlist();
-        return Ok(note_call(false, legend, true, label, tokens));
+        return Ok(note_call(false, false, legend, true, label, tokens));
       }
       if key.0 != Kind::Affiliation {
         return Ok(wrap(&tokens));
@@ -2830,8 +2849,15 @@ fn item_call(
       }
       // (a note inside it: its command's argument as written, under the note's own kind, as a block's note — its fonts,
       // links and formulas kept: `\author{Craig Rae\thanks{Note \textit{italic} and $x^2$.}}`, review revG5 3)
-      if note && let Some((footnote, mark, argument)) = call_note(&call, assoc)? {
-        return Ok(note_call(footnote, mark.as_deref(), false, label, argument));
+      if note && let Some((footnote, given, mark, argument)) = call_note(&call, assoc)? {
+        return Ok(note_call(
+          footnote,
+          given,
+          mark.as_deref(),
+          false,
+          label,
+          argument,
+        ));
       }
       let found = match memo.pieces.entry(index) {
         Entry2::Occupied(held) => held.into_mut(),
@@ -3081,11 +3107,13 @@ fn call_contact(call: &ApiCall, assoc: &Assoc, within: bool) -> Result<Option<To
   }
 }
 
-/// A call's note ([`call_note`]): whether it is a `\\footnote`'s, the mark it shows ([`shown_mark`]) and its argument.
-type CallNote = (bool, Option<String>, Vec<Token>);
+/// A call's note ([`call_note`]): whether it is a `\\footnote`'s, whether one given its number ([`given_footnote`]), the
+/// mark it shows ([`shown_mark`]) and its argument.
+type CallNote = (bool, bool, Option<String>, Vec<Token>);
 
 /// The argument of the note command printing `assoc` in `call`'s content (the one by its text, else its only note),
-/// whether it is a `\\footnote`'s and the mark it shows ([`shown_mark`]), as [`note_argument`] reads a block's note.
+/// whether it is a `\\footnote`'s, one given its number, and the mark it shows ([`shown_mark`]), as [`note_argument`]
+/// reads a block's note.
 fn call_note(call: &ApiCall, assoc: &Assoc) -> Result<Option<CallNote>> {
   let Some((events, formulas, environments, _)) = rehearsed(call.content.unlist_ref())? else {
     return Ok(None);
@@ -3119,8 +3147,24 @@ fn call_note(call: &ApiCall, assoc: &Assoc) -> Result<Option<CallNote>> {
     field
       .content_of((start, end), 0, start)
       .and_then(|(tokens, _)| note_argument(&tokens, Some(&note.text)))
-      .map(|argument| (note.footnote, shown_mark(note), argument)),
+      .map(|argument| {
+        (
+          note.footnote,
+          given_footnote(note),
+          shown_mark(note),
+          argument,
+        )
+      }),
   )
+}
+
+/// Whether a Note event is a `\footnote` given its number (`\footnote[1]{…}`, its role `thanks mark=1 …`: 1607.07280).
+fn given_footnote(note: &Event) -> bool {
+  note.footnote
+    && note
+      .role
+      .as_deref()
+      .is_some_and(|role| role.starts_with("thanks mark="))
 }
 
 /// A call's piece ([`call_pieces`]): its text, and its tokens, `None` where no balanced run holds it.

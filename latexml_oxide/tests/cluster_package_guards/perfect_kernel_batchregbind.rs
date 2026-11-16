@@ -87,15 +87,15 @@ const PRINTED_LIST_ROWS: &[Row] = &[
     ],
   },
   // elsarticle.cls:178-179, :294, printed at :766, :806 (`\end{frontmatter}`): the class's own `\cortext` shape, an
-  // `\elsaddress` paragraph.
+  // `\elsaddress` paragraph, the author's note (OD #1054).
   Row {
     name:     "elsarticle",
     tex:      repro!("class-bindings/elsarticle_note_and_address_lists_are_the_class_macros.tex"),
     creators: &[&["Ann Able", "address=Univ A"]],
     elements: &[
+      r#"<note role="note" xml:id="id1">Preprint note.</note>"#,
       r#"<pubnote role="note">Corresponding author.</pubnote>"#,
-      r#"<p xml:id="p1.1">Preprint note.</p>"#,
-      r#"<p xml:id="p2.1">Text.</p>"#,
+      r#"<p xml:id="p1.1">Text.</p>"#,
     ],
   },
   // elsarticle: cnf.sty's `\cortext` text in `\@cornotes` (2605.08232, 2606.15628), a boxed preprint notice in
@@ -109,7 +109,7 @@ const PRINTED_LIST_ROWS: &[Row] = &[
     elements: &[
       ELS_NOTICE,
       ELS_CORRESPONDENCE,
-      r#"<p xml:id="p3.1">Text.</p>"#,
+      r#"<p xml:id="p1.1">Text.</p>"#,
     ],
   },
   // revtex4-2.cls:2648-2652, :3020-3022: `\prep@absbox` text (2606.06621), `\mini@notes`, `\@FMN@list` (2605.00976).
@@ -118,10 +118,10 @@ const PRINTED_LIST_ROWS: &[Row] = &[
     tex:      repro!("class-bindings/revtex_frontmatter_note_lists_are_the_class_macros.tex"),
     creators: &[&["Ann Able", "affiliation=Univ A"]],
     elements: &[
+      REVTEX_PREP_ABSBOX,
       r#"<pubnote role="note">Mini note.</pubnote>"#,
       r#"<pubnote role="note">Joint work.</pubnote>"#,
-      REVTEX_PREP_ABSBOX,
-      r#"<p xml:id="p2.1">Text.</p>"#,
+      r#"<p xml:id="p1.1">Text.</p>"#,
     ],
   },
   // amsaddr.sty:43, :102-113: a document's own `\email` with marks (2606.23853, 2606.25954, 2212.11488, 1801.06576,
@@ -148,22 +148,26 @@ const PRINTED_LIST_ROWS: &[Row] = &[
   },
 ];
 
-/// 2605.22682's notice, boxed into `\elsaddress`.
+/// 2605.22682's notice, boxed into `\elsaddress`: the author block's note, a sole author's (OD #1054; a body paragraph
+/// before).
 const ELS_NOTICE: &str = concat!(
-  r#"<p align="center" xml:id="p1.1"><text font="bold" fontsize="90%" xml:id="p1.1.1">Authors’ preprint version"#,
-  r#"<break cssstyle="--ltx-break-space:4.6pt"/><text font="medium" xml:id="p1.1.1.1">"#,
-  "\nThis is the authors’ preprint.</text></text></p>"
+  r#"<note role="note" xml:id="id1"><p align="center" vattach="bottom" xml:id="id1.1">"#,
+  r#"<text font="bold" fontsize="90%" xml:id="id1.1.1">Authors’ preprint version"#,
+  r#"<break cssstyle="--ltx-break-space:4.6pt"/><text font="medium" xml:id="id1.1.1.1">"#,
+  "\nThis is the authors’ preprint.</text></text></p></note>"
 );
-/// cnf.sty's `\cortext` text (2605.08232), its mark and a no-break space before it.
+/// cnf.sty's `\cortext` text (2605.08232), a list of its own whose item sets the label `cor:c`: the note of the author
+/// it goes to (none requests it: the sole author), marked ∗, its text without it (OD #1054; the block's note before,
+/// with the notice).
 const ELS_CORRESPONDENCE: &str = concat!(
-  r#"<p xml:id="p2.1"><Math mode="inline" tex="\ast" text="ast" xml:id="p2.m1">"#,
-  "\n        <XMath xml:id=\"p2.m1.1\">\n          <XMTok name=\"ast\" role=\"MULOP\">∗</XMTok>",
-  "\n        </XMath>\n      </Math>\u{a0}Corresponding author: Univ A.</p>"
+  r#"<note class="ltx_note_frontmatter ltx_thanks_correspondence" mark="∗" role="thanks" xml:id="id2">"#,
+  "Corresponding author: Univ A.</note>"
 );
-/// 2606.06621's `\prep@absbox` text.
+/// 2606.06621's `\prep@absbox` text: the note of a sole author whose name shows no ‡ (OD #1054; a body paragraph before).
 const REVTEX_PREP_ABSBOX: &str = concat!(
-  r#"<p align="center" xml:id="p1.1"><sup xml:id="p1.1.1"><text fontsize="90%" xml:id="p1.1.1.1">‡</text></sup>"#,
-  r#"<text fontsize="90%" xml:id="p1.1.2"> These authors contributed equally.</text></p>"#
+  r#"<note role="note" xml:id="id1"><p align="center" xml:id="id1.1"><sup xml:id="id1.1.1">"#,
+  r#"<text fontsize="90%" xml:id="id1.1.1.1">‡</text></sup>"#,
+  r#"<text fontsize="90%" xml:id="id1.1.2"> These authors contributed equally.</text></p></note>"#
 );
 /// amsaddr's footnote, its marks and addresses as the document gave them (2606.23853).
 const AMSADDR_EMAILS: &str = concat!(

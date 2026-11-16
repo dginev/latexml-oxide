@@ -1105,6 +1105,27 @@ const API_KEYS_OUTSIDE_PERLS: &[(&str, usize)] = &[
   // `insert::strip_bare_mark` takes out — never one a class prints beside its own text, review revSHMARK S2. Perl's API
   // has no key for "the mark is the text's own"; internal, never written out: OD #1053)
   ("const _markintext base_utilities/frontmatter/insert.rs", 1),
+  // (SHREST, 0 -> 1, raised with its reason: the mark a class prints for a creator's footnote text, elsarticle's `\fntext`
+  // number, REVTeX's joined footnote's symbol, on the contact its binding makes — a contact has no `mark` in the schema —,
+  // read where two creators hold it to make it their marked note, OD #1054; internal, never written out)
+  (
+    "const _fnmark base_utilities/frontmatter/shared_notes.rs",
+    1,
+  ),
+  // (SHREST, 0 -> 1, raised with its reason: a title-page list note placed on the names showing its leading mark carries
+  // that mark, to take it from the note's text and the names, as a legend's answered mark goes, OD #1054; Perl's API has
+  // no key for it; internal, never written out)
+  (
+    "const _listmark base_utilities/frontmatter/shared_notes.rs",
+    1,
+  ),
+  // (SHRESTb, 0 -> 1, raised with its reason: the part of a class's front-matter footnote a creator's contact is — REVTeX's
+  // `\@AF@join` of the title, author or affiliation last given, or a name's own —, which `number_footnote_parts` numbers
+  // in print order; Perl's API has no key for it, its binding no marks; internal, never written out, OD #1054)
+  (
+    "const _fnpart base_utilities/frontmatter/shared_notes.rs",
+    1,
+  ),
   // (LO2, 0 -> 1: an emitted entry's first mark read, a fact kept on its pending entry as Perl keeps its labels there
   // (Base_Utility.pool.ltxml:502-508), where LO1 kept a State flag; internal, never written out)
   ("const _markread base_utilities/defs/author_macros.rs", 1),
@@ -1597,7 +1618,9 @@ const TOKEN_READS: &[(&str, usize)] = &[
   // (CR4b, 28 -> 30: `text_glyph`, a character command in an address's formula prints its character — `$\{a,b\}$@w.edu`
   // the brace list, `p$\_$r` "p_r" (review revCR4 finding 4; OD #972): its table of commands, one row, and the one
   // compare; how an address prints, no owner decided)
-  ("defs/frontmatter_fields", 30),
+  // (SHRESTb, 30 -> 31, raised with its reason: `\lx@fm@list@label` reads the label a title-page list's item sets
+  // (elsarticle's `\elsLabel{cor1}`), a label as Perl's API reads one (ToString), whose names the note goes to; OD #1054)
+  ("defs/frontmatter_fields", 31),
   // (Z18j, 83 -> 95: moved from `author_block` with its code, as that row says)
   // (PB 95 -> 102, PBb 102 -> 100: `names.rs`' definition replay of a class's title code (OD #983) reads the class's macro
   // bodies, TeX definitions no event says. +1 the copy's kept `\@maketitle` read beside the live one (2205.14141); +1 a macro
@@ -1718,7 +1741,9 @@ const TOKEN_READS: &[(&str, usize)] = &[
   ("owners", 14),
   ("place", 6),
   ("ptephy_cls.rs", 115),
-  ("queue", 1),
+  // (SHRESTb, 1 -> 2, raised with its reason: `with_first_key` finds a queued call's key list, its `[`, to add the key a
+  // binding gives the call it just queued (REVTeX's e-mail's footnote part, `tag_last_queued_contact`); no owner decided)
+  ("queue", 2),
   // (P23e, 16 -> 17, the main session's ruling: `label_ink` tells a note's ink (`\lx@note…`, set at the page's foot) from
   // what prints in place, `printed_ink`'s `outside_notes`; cjaa.cls's `\email` sibling, OD #995)
   ("queue_digest", 17),
@@ -2271,6 +2296,9 @@ enum PassMay {
 /// entries are placed (the S2b writer's old spot, deleted in DEL4; its witnesses 2012.14750, 2201.02056, 2606.18623,
 /// 1507.02068). An allow-list and a debt: the three owner-moving ones go before the merge.
 const PASSES_AFTER_THE_EMITTER: &[(&str, PassMay)] = &[
+  // (SHRESTb: the marks of a class's front-matter footnotes, numbered in print order on the placed creators — a mark,
+  // `_fnmark` or a thanks note's `mark`, no owner moved)
+  ("number_footnote_parts", PassMay::ChangeText),
   ("count_lost_marks", PassMay::ChangeNothing),
   ("join_split_address_contacts", PassMay::ChangeText),
   ("kind_address_lines", PassMay::ChangeKind),
@@ -2280,6 +2308,10 @@ const PASSES_AFTER_THE_EMITTER: &[(&str, PassMay)] = &[
   ("write_role_notes", PassMay::ChangeKind),
   ("show_line_marks", PassMay::ChangeText),
   ("kind_dedication_lines", PassMay::ChangeKind),
+  // (SHREST, OD #1054: a footnote text two creators already hold under one mark, made their note — its kind; a list note's
+  // mark taken from its text and its holder's name, which its `mark` shows — text; the note was placed by its label)
+  ("kind_shared_marked_contacts", PassMay::ChangeKind),
+  ("show_list_note_marks", PassMay::ChangeText),
   ("kind_legend_contacts", PassMay::ChangeKind),
   // (the URL part moves a link to the block: Z9's; the grade part is a kind)
   ("kind_link_and_grade_contacts", PassMay::OwnerDebt),

@@ -10,12 +10,14 @@ LoadDefinitions!({
   for option in [
     "endfloat", "endfloats", "numafflabel",
     "oneside", "twoside", "onecolumn", "twocolumn",
-    "lefttitle", "centertitle", "reversenotenum",
+    "lefttitle", "centertitle",
     "symbold", "ussrhead", "nameyear",
     "doublespacing", "reviewcopy"].iter()
   {
     DeclareOption!(*option, None);
   }
+  // elsarticle.cls:106-109: `reversenotenum` numbers the `\fntext` notes by letter (`\thefnote`, below)
+  DeclareOption!("reversenotenum", { assign_value("@elsarticle@reversenotenum", true, Scope::Global); });
   // elsarticle.cls defines `\newif\ifpreprint`, set by its options (true for `preprint` and `review`, false for
   // `final` and the journal layouts) and true by default (`\ExecuteOptions{…,preprint,…}`, elsarticle.cls:112).
   // Journal styles test it (ycviu.sty:60, 298); without it they saw an undefined CS and cascaded (2311.04591).
@@ -101,9 +103,10 @@ LoadDefinitions!({
   // (cnf.sty:585: 2605.08232, 2606.15628) and a document (2605.22682 `\g@addto@macro\elsaddress`) extend (OD #1036).
   // The class's `\maketitle` prints the address list under the names (:806) and the notes at the page foot (:766);
   // here both after the frontmatter, once, where the class prints its title page (`\end{frontmatter}`, `\maketitle`),
-  // each `\footnotetext` a note on the document (`\lx@frontmatter@footnotes`).
+  // each `\footnotetext` a note on the document (`\lx@frontmatter@footnotes`); a correspondence item's `\elsLabel{cor1}`
+  // the `cor:cor1` its names request (`\lx@fm@list@label`, OD #1054).
   RawTeX!(r"\let\@cormark\@empty\let\@cornotes\@empty\def\elsaddress{}
-\def\lx@els@print@lists{\lx@frontmatter@footnotes{\elsaddress\@cornotes}\global\let\elsaddress\@empty\global\let\@cornotes\@empty}
+\def\lx@els@print@lists{\lx@frontmatter@footnotes{\elsaddress}\lx@frontmatter@footnotes{\def\lx@els@label@prefix{cor}\@cornotes}\global\let\elsaddress\@empty\global\let\@cornotes\@empty}
 \def\lx@els@end@frontmatter{\lx@els@print@lists\lx@note@title@page}");
   Let!("\\end{frontmatter}", "\\lx@els@end@frontmatter");
   AddToMacro!("\\lx@maketitle@body", "\\lx@els@print@lists");
@@ -268,6 +271,24 @@ LoadDefinitions!({
   // `\nonumnote{<text>}` (:153-155) adds an unnumbered title-page footnote: a note. Perl's elsarticle binding lacks
   // them. Witnesses 2609.13494, 2302.09410, 2106.01129.
   DefMacro!("\\fnmark[]", "\\fnref{#1}");
+  // elsarticle.cls:157-171, :178-189: `\fntext[<key>]` and `\cortext[<key>]` step `fnote` and `cnote` and print their
+  // text under the mark every `\fnref{<key>}`, `\corref{<key>}` prints: `\thefnote` (a letter under `reversenotenum`),
+  // ∗ and ∗∗ — a note several names share printed once, its mark on each (`kind_shared_marked_contacts`, OD #1054).
+  DefMacro!("\\fntext OptionalSemiverbatim {}", sub[(key, text)] {
+    let n = lookup_int("@elsarticle@fnote") + 1;
+    assign_value("@elsarticle@fnote", n, Scope::Global);
+    let mark = match u8::try_from(n) {
+      Ok(n @ 1..=26) if lookup_bool("@elsarticle@reversenotenum") => char::from(b'a' + n - 1).to_string(),
+      _ => n.to_string(),
+    };
+    Ok(marked_note_text(&s!("fn"), "note", Some(mark), key, text))
+  });
+  DefMacro!("\\cortext OptionalSemiverbatim {}", sub[(key, text)] {
+    let n = lookup_int("@elsarticle@cnote") + 1;
+    assign_value("@elsarticle@cnote", n, Scope::Global);
+    let mark = ["∗", "∗∗"].get(usize::try_from(n - 1).unwrap_or(usize::MAX)).map(|mark| (*mark).to_string());
+    Ok(marked_note_text(&s!("cor"), "correspondent", mark, key, text))
+  });
   DefMacro!("\\cormark[]", "\\corref{#1}");
   DefMacro!("\\nonumnote{}", "\\@add@frontmatter{ltx:note}[role=thanks]{#1}");
   // The 2020+ copies' `\newpageafter{title|author|abstract}` (16 of 35 sampled), a page break in the title block: a
@@ -313,7 +334,7 @@ LoadDefinitions!({
 \newbox\keybox
 \newdimen\Columnwidth
 \Columnwidth=\columnwidth
-\def\elsLabel#1{\@bsphack\protected@write\@auxout{}%
+\def\elsLabel#1{\ifx\lx@els@label@prefix\@undefined\else\lx@fm@list@label{\lx@els@label@prefix:#1}\fi\@bsphack\protected@write\@auxout{}%
          {\string\Newlabel{#1}{\@currentlabel}}\@esphack}
 \def\Newlabel#1#2{\expandafter\xdef\csname X@#1\endcsname{#2}}
 \def\elsRef#1{\@ifundefined{X@#1}{0}{\csname X@#1\endcsname}}
@@ -413,3 +434,24 @@ LoadDefinitions!({
     );
   }
 });
+
+/// The contact of an elsarticle note text (`\fntext`, `\cortext`) its key's names carry, with the mark they print.
+fn marked_note_text(
+  prefix: &str,
+  role: &str,
+  mark: Option<String>,
+  key: Option<Tokens>,
+  text: Tokens,
+) -> Tokens {
+  let key = key.map(|key| key.to_string()).unwrap_or_default();
+  let mark = mark
+    .map(|mark| s!("\\lx@fm@entry@attr{{_fnmark}}{{{mark}}}"))
+    .unwrap_or_default();
+  let mut call = mouth::tokenize_internal(TeXString::assembled(s!(
+    "\\lx@add@contact[label={{{prefix}:{key}}},role={role}]{{{mark}"
+  )))
+  .unlist();
+  call.extend(text.unlist());
+  call.push(T_END!());
+  Tokens::new(call)
+}

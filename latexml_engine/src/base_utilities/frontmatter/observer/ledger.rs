@@ -1095,6 +1095,35 @@ pub(in crate::base_utilities) fn record_api_call(
   });
 }
 
+/// Adds a key to the recorded call queued at `queue_position` (`queue::tag_last_queued_contact`): `keyval` first in its
+/// command's keys, `pair` last in its attributes.
+pub(in crate::base_utilities) fn add_call_key(queue_position: usize, keyval: &[Token], pair: &str) {
+  with_ledger(|ledger| {
+    let call = ledger
+      .entries_mut()
+      .iter_mut()
+      .rev()
+      .find_map(|entry| match entry {
+        Entry::Api(call) if call.queue_position == queue_position => Some(call),
+        _ => None,
+      });
+    if let Some(call) = call {
+      call.attrs = if call.attrs.is_empty() {
+        pair.to_string()
+      } else {
+        s!("{},{pair}", call.attrs)
+      };
+      if let Some(command) = call
+        .command
+        .as_ref()
+        .and_then(|command| with_first_key(command, keyval))
+      {
+        call.command = Some(command);
+      }
+    }
+  });
+}
+
 /// What a call no rehearsal read printed, as far as its tokens tell (`ApiCall::unread`, `Ledger::unrecorded`), read at
 /// the API boundary that records its content, so the content check reads text alone, parted into words as an ink's is
 /// (`resolver::words::printed_words`): its characters; a control symbol or a one-letter control word inside a word (an

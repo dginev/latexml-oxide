@@ -216,12 +216,13 @@ LoadDefinitions!({
   // REVTeX 4.0 sets an `\email` or `\homepage` address with `\url`, the `\texttt` its `\href` falls back to
   // (revtex4.cls:4476-4493), so its `_` and `~` read as typed (1001.1076 "aiwen_fan@pku.edu.cn"). REVTeX 4.2, which
   // this binding also serves, sets it in the current font (revtex4-2.cls:1980, its `\href` = `\@href`), as
-  // revtex4_support_sty.rs's commands do; `%` other in the address, as `\sanitize@url` makes it (`UrlSemiverbatim`).
+  // revtex4_support_sty.rs's commands do; `%` other in the address, as `\sanitize@url` makes it (`UrlSemiverbatim`); the
+  // footnote part it joins as there (`\lx@revtex@fn@tag`).
   if revtex4_0 {
-    DefMacro!("\\email[Default:\\lx@contact@email@name] UrlSemiverbatim", "\\lx@add@email[name={#1}]{\\lx@address@urlfont{#2}}");
-    DefMacro!("\\homepage[Default:\\lx@contact@url@name] UrlSemiverbatim", "\\lx@add@url[name={#1}]{\\lx@address@urlfont{#2}}");
-    DefMacro!("\\@email{} Semiverbatim", "\\endgroup\\lx@add@email[name={#1}]{\\lx@address@urlfont{#2}}");
-    DefMacro!("\\@homepage{} Semiverbatim", "\\endgroup\\lx@add@url[name={#1}]{\\lx@address@urlfont{#2}}");
+    DefMacro!("\\email[Default:\\lx@contact@email@name] UrlSemiverbatim", "\\lx@add@email[name={#1}]{\\lx@address@urlfont{#2}}\\lx@revtex@fn@tag");
+    DefMacro!("\\homepage[Default:\\lx@contact@url@name] UrlSemiverbatim", "\\lx@add@url[name={#1}]{\\lx@address@urlfont{#2}}\\lx@revtex@fn@tag");
+    DefMacro!("\\@email{} Semiverbatim", "\\endgroup\\lx@add@email[name={#1}]{\\lx@address@urlfont{#2}}\\lx@revtex@fn@tag");
+    DefMacro!("\\@homepage{} Semiverbatim", "\\endgroup\\lx@add@url[name={#1}]{\\lx@address@urlfont{#2}}\\lx@revtex@fn@tag");
   }
 
   // Perl L58: deferred RequirePackage of @revtex_toload. Apply tracked flags.

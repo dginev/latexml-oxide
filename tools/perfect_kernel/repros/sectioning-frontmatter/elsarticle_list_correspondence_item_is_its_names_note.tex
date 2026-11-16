@@ -1,0 +1,23 @@
+% witness: cnf.sty:585-595 (2605.08232, 2606.15628): its `\cortext` adds `\refstepcounter{cnote}\elsLabel{#1}\noindent$\ast$~…`
+%          to elsarticle's `\@cornotes`, which the title page prints, its ∗ on the name `\corref{cor1}` marks
+% oracle:  pdflatex 0 errors (two runs); "Ann Able a , Bob Baker a,∗", "a Univ A,", "∗ Corresponding author: Univ A, Town."
+% engines: rust=0 (edc515b111f: a note of the author block, the ∗ a formula in it) perl=0 (the cnf `\cortext` text a body
+%          paragraph) (2026-11-16)
+% expect:  0 errors, 0 warnings; Bob Baker with the note "Corresponding author: Univ A, Town." marked ∗ (role thanks, its
+%          text without the ∗), the item's `cor1` the label his `\corref` requests (OD #1054); Ann Able none
+% status:  RED (edc515b111f) -> GREEN (SHRESTb)
+% preload: ar5iv.sty
+\documentclass[final]{elsarticle}
+\makeatletter
+\AtBeginDocument{\def\cortext[#1]#2{\g@addto@macro\@cornotes{\refstepcounter{cnote}\elsLabel{#1}\noindent\ifcase\thecnote\or$\ast$\or$\ast\ast$\fi~#2}}}
+\makeatother
+\begin{document}
+\begin{frontmatter}
+\title{Title}
+\author[1]{Ann Able}
+\author[1]{Bob Baker\corref{cor1}}
+\cortext[cor1]{Corresponding author: Univ A, Town.}
+\affiliation[1]{organization={Univ A}}
+\end{frontmatter}
+Text.
+\end{document}

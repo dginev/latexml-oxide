@@ -32,5 +32,8 @@ mod cover_order;
 pub use cover_order::*;
 mod relocate;
 pub use relocate::*;
+mod shared_notes;
+pub(in crate::base_utilities) use shared_notes::*;
+pub use shared_notes::{FOOTNOTE_MARKS, FOOTNOTE_PART, GIVEN_PART};
 pub(in crate::base_utilities) mod observer;
 pub use observer::*;

@@ -10,7 +10,13 @@ pub(in crate::base_utilities) use names::*;
 
 use crate::base_utilities::{
   defs::frontmatter_api::spacing_formulas_as_space,
-  frontmatter::classify::title_code::{reads_arguments, title_code_author_definitions},
+  frontmatter::{
+    LIST_MARK,
+    classify::title_code::{reads_arguments, title_code_author_definitions},
+    observer::events::{
+      self, Event, EventKind, events_text, lex_body_with_inks, lex_events, opening_ink,
+    },
+  },
 };
 
 pub(in crate::base_utilities) fn load() -> Result<()> {
@@ -406,11 +412,110 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
   );
 
   // Rust-only: run a title-page note list where the class prints it (acmart.cls:2245-2247, revtex4-2.cls:3020-3022,
-  // amsaddr.sty:113): footnote texts become notes, the footnote count is restored (OD #1036; 2605.28175, 2402.16516).
+  // amsaddr.sty:113): footnote texts become notes, the footnote count is restored (OD #1036; 2605.28175, 2402.16516);
+  // what else it prints is a note at the title block (`\lx@fm@list@note`).
   DefMacro!(
     "\\lx@frontmatter@footnotes{}",
-    r"\edef\lx@fm@footnote{\the\c@footnote}\begingroup\ifvmode\let\lx@fm@par\par\else\let\lx@fm@par\relax\fi\let\footnotetext\lx@fm@footnotetext\let\@footnotetext\lx@fm@@footnotetext#1\ifhmode\lx@fm@par\fi\endgroup\global\c@footnote\lx@fm@footnote\relax"
+    r"\edef\lx@fm@footnote{\the\c@footnote}\begingroup\let\footnotetext\lx@fm@footnotetext\let\@footnotetext\lx@fm@@footnotetext\lx@fm@list@note{#1}\endgroup\global\c@footnote\lx@fm@footnote\relax"
   );
+  // Rust-only (OD #1054): what a title-page list prints beside its footnote texts is a note at the title block, or, led by
+  // a mark names show and holding no other, those names' note (2606.06621, 2605.22682, 2605.08232).
+  DefPrimitive!("\\lx@fm@list@note{}", sub[(list)] {
+    let mut body = vec![T_CS!("\\vbox"), T_BEGIN!()];
+    body.extend(list.unlist());
+    body.push(T_END!());
+    assign_value(LIST_LABELS, Stored::String(pin("")), Some(Scope::Global));
+    let stuff = digest(Tokens::new(body))?;
+    if leaves_no_ink(&stuff) {
+      return Ok(Vec::new());
+    }
+    // (the mark it opens with, the only one it holds, and the authors a `\maketitle` placed whose names show it)
+    let events = lex_body_with_inks(&stuff).0;
+    let opening: Vec<&Event> = events.iter().collect();
+    let marks = events.iter().filter(|e| e.kind == EventKind::Mark).count();
+    let labels = lookup_string(LIST_LABELS);
+    // (or a footnote symbol not raised, where an item sets a label: cnf.sty's `\noindent$\ast$~…`)
+    let symbol = |e: &Event| {
+      let text = e.text.trim();
+      !labels.is_empty() && !text.is_empty() && text.chars().all(events::is_fnsymbol)
+    };
+    let led = opening_ink(&opening)
+      .filter(|e| (e.kind == EventKind::Mark && marks == 1) || (symbol(e) && marks == 0))
+      .map(|e| e.text.trim().to_string())
+      .filter(|mark| !mark.is_empty() && !mark.contains(','))
+      .map(|mark| {
+        let carriers = creators_showing(&mark, &labels);
+        (mark, carriers)
+      })
+      .filter(|(_, carriers)| !carriers.is_empty());
+    let n = lookup_int("lx_fm_list_notes") + 1;
+    assign_value("lx_fm_list_notes", Stored::Int(n), Some(Scope::Global));
+    assign_value(&s!("lx_fm_list_note_{n}"), Stored::Digested(stuff), Some(Scope::Global));
+    let box_call = s!("\\lx@fm@list@box{{{n}}}");
+    let calls: Vec<(String, String)> = match led {
+      Some((mark, carriers)) => {
+        let kind = classify_thanks(&events_text(&opening));
+        carriers
+          .iter()
+          .map(|carrier| {
+            (
+              s!("role=thanks,label={{{carrier}}}"),
+              s!(
+                "\\lx@fm@entry@attr{{mark}}{{{mark}}}\\lx@fm@entry@attr{{class}}{{ltx_note_frontmatter ltx_thanks_{kind}}}\\lx@fm@entry@attr{{{LIST_MARK}}}{{{mark}}}{box_call}"
+              ),
+            )
+          })
+          .collect()
+      },
+      None => vec![(s!("role=note,label=addresses:block"), box_call)],
+    };
+    let mut out: Vec<Token> = Vec::new();
+    for (keys, content) in calls {
+      out.extend(
+        Invocation!(T_CS!("\\lx@annotate@frontmatter"), vec![
+          Some(mouth::tokenize_internal("ltx:creator")),
+          Some(mouth::tokenize_internal("ltx:note")),
+          Some(mouth::tokenize_internal(TeXString::assembled(keys))),
+          Some(mouth::tokenize_internal(TeXString::assembled(content)))
+        ])
+        .unlist(),
+      );
+    }
+    unread(Tokens::new(out));
+    Ok(Vec::new())
+  });
+  // Rust-only (OD #1054): the attribute `#1` (the note's `mark`, its `class`; a list note's mark, `_listmark`, and a
+  // class's footnote mark, `_fnmark`, read by `shared_notes`' Kind steps) with the value `#2`, set on the frontmatter note or contact it is
+  // digested in — carried in the content, which the frontmatter emitter writes as given where it writes a call's keys
+  // anew. It prints nothing, its arguments no ink.
+  DefConstructor!("\\lx@fm@entry@attr Semiverbatim Semiverbatim", "",
+  after_construct => sub[document, whatsit] {
+    let read = |at: usize| whatsit.get_arg(at).map(|arg| arg.to_string()).unwrap_or_default();
+    let (key, value) = (read(1), read(2));
+    set_entry_attribute(document, key.trim(), value.trim())?;
+  });
+  // Rust-only (OD #1054): the label a list's item sets (`cor:cor1`, elsarticle's `\elsLabel` in cnf.sty's `\@cornotes`),
+  // whose names carry the item, as pdflatex prints its mark on them (2605.08232, 2606.15628).
+  DefPrimitive!("\\lx@fm@list@label{}", sub[(label)] {
+    let labels = s!("{},{}", lookup_string(LIST_LABELS), label.to_string().trim());
+    assign_value(LIST_LABELS, Stored::String(pin(labels)), Some(Scope::Global));
+  });
+  // (the box's list, as `\unvbox` gives it: queued, it is digested where the frontmatter is)
+  DefPrimitive!("\\lx@fm@list@box{}", sub[(n)] {
+    let n = n.to_string();
+    let Some(Stored::Digested(stuff)) = lookup_value(&s!("lx_fm_list_note_{}", n.trim())) else {
+      return Ok(Vec::new());
+    };
+    // (the one item of the list `\lx@fm@list@note` digested is its `\vbox`)
+    let items = stuff.unlist();
+    Ok(match items.as_slice() {
+      [vbox] => match vbox.data() {
+        DigestedData::Whatsit(w) => w.borrow().get_arg(2).map(Digested::unlist).unwrap_or_default(),
+        _ => items,
+      },
+      _ => items,
+    })
+  });
   DefMacro!(
     "\\lx@fm@footnotetext[]{}",
     "\\lx@add@pubnote[role=note,name={}]{#2}"
@@ -875,8 +980,18 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
       Ok(Tokens::new(calls))
     }
   });
-  // An ordinary argument, as `\lx@add@thanks` (an author's `\footnote`; KNOWN_PERL_ERRORS #515).
+  // An ordinary argument, as `\lx@add@thanks` (an author's `\footnote`; KNOWN_PERL_ERRORS #515). Its keys are the
+  // `\footnote`'s number where the author's `Let` gives one (`\footnote[1]{…}`), a footnote that steps no counter
+  // (`GIVEN_PART`, the front-matter footnotes' count: OD #1054).
   DefMacro!("\\lx@add@note [] {}", sub[(attr, content)] {
+    let attr = attr.map(|a| {
+      let given = !a.clone().untex().contains('=');
+      let mut keys = a.unlist();
+      if given {
+        keys.extend(mouth::tokenize_internal(TeXString::assembled(s!(",{FOOTNOTE_PART}={GIVEN_PART}"))).unlist());
+      }
+      Tokens::new(keys)
+    });
     let mut calls = vec![T_CS!("\\lx@title@footnote@step")];
     calls.extend(title_note_call(true, attr, note_body(content))?);
     Ok(Tokens::new(calls))
@@ -1175,3 +1290,74 @@ pub(in crate::base_utilities) fn orcid_icon_link(id: &str, tokens: &[Token]) -> 
   content.push(T_END!());
   content
 }
+
+/// Sets `key` on the frontmatter note or contact the document is in (`\lx@fm@entry@attr`).
+fn set_entry_attribute(document: &mut Document, key: &str, value: &str) -> Result<()> {
+  if key.is_empty() {
+    return Ok(());
+  }
+  let mut node = Some(document.get_node().clone());
+  while let Some(at) = node.as_ref()
+    && !matches!(
+      at.get_name().as_str(),
+      "note" | "contact" | "creator" | "document"
+    )
+  {
+    node = at.get_parent();
+  }
+  if let Some(mut entry) = node.filter(|at| matches!(at.get_name().as_str(), "note" | "contact")) {
+    document.set_attribute(&mut entry, key, value)?;
+  }
+  Ok(())
+}
+
+/// The list labels its items set (`\lx@fm@list@label`), comma-led.
+const LIST_LABELS: &str = "lx_fm_list_labels";
+
+/// The labels (`author:N`) of the author creators a `\maketitle` placed whose names show `mark` (`Windt$^\ddagger$`, a
+/// mark of a list: `$^{1,\ddagger}$`), as their events read them; none showing it, the one label the list's items set
+/// (`cor:cor1`, which the names requesting it carry).
+fn creators_showing(mark: &str, labels: &str) -> Vec<String> {
+  let showing = creators_where(|creator| {
+    creator.content.iter().any(|part| {
+      matches!(part, TagContent::Box(d) if lex_events(d)
+        .iter()
+        .any(|e| e.kind == EventKind::Mark && e.text.split(',').any(|item| mark_key(item) == mark_key(mark))))
+    })
+  });
+  let labels: Vec<&str> = labels
+    .split(',')
+    .filter(|label| !label.is_empty())
+    .collect();
+  match labels.as_slice() {
+    [label] if showing.is_empty() => vec![(*label).to_string()],
+    _ => showing,
+  }
+}
+
+/// The labels (`author:N`) of the author creators a `\maketitle` placed that `test` takes.
+fn creators_where(test: impl Fn(&TagData) -> bool) -> Vec<String> {
+  with_value("frontmatter", |v| match v {
+    Some(Stored::HashTagData(frontmatter)) => frontmatter
+      .get("ltx:creator")
+      .map(|creators| {
+        creators
+          .iter()
+          .filter(|c| c.attr.get("role").map(String::as_str) == Some("author"))
+          .filter(|c| test(c))
+          .filter_map(|c| {
+            c.attr
+              .get("_annotations")?
+              .split(',')
+              .find(|label| label.starts_with("author:"))
+              .map(str::to_string)
+          })
+          .collect()
+      })
+      .unwrap_or_default(),
+    _ => Vec::new(),
+  })
+}
+
+/// A mark as a name shows it and a note carries it: its asterisk forms one.
+fn mark_key(mark: &str) -> String { mark.trim().replace('∗', "*") }

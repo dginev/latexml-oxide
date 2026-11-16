@@ -88,7 +88,7 @@ LoadDefinitions!({
   // The class's refused `\title` runs first for its side effects, as under the kernel's (sect05.rs `\title`,
   // OXIDIZED_DESIGN #482: the cvpr template's `\thetitle`; no witness of this binding's own).
   DefMacro!("\\title[]{}",
-    "\\lx@titlepage@class@call{title}{#1}{#2}{\\lx@replay@class@setter{title}{#1}{#2}\\gdef\\@shorttitle{#1}\\gdef\\@title{#2}\\ifx.#1.\\else\\lx@add@toctitle{#1}\\fi\\lx@add@title{#2}}");
+    "\\lx@titlepage@class@call{title}{#1}{#2}{\\lx@replay@class@setter{title}{#1}{#2}\\gdef\\@shorttitle{#1}\\gdef\\@title{#2}\\ifx.#1.\\else\\lx@add@toctitle{#1}\\fi\\lx@add@title{#2}}\\lx@revtex@fn@target{title}");
 
   // \author[labels]{name}   One \author per author
   // If labels given, the corresponding affiliation from \affil is attached
@@ -96,7 +96,7 @@ LoadDefinitions!({
   // `\author{Brent Preston and Eric Poisson}` names two (gr-qc0606093): the article `\author`'s parse, each author
   // with the labels (Perl revtex4_support makes it one author; 63e).
   // `\lx@author@after` (sect05.rs): what a package appends to `\author` (titling's `\theauthor`) runs here too.
-  DefMacro!("\\author[]{}",    "\\lx@add@authors@append[annotations={#1}]{#2}\\lx@author@after{#2}");
+  DefMacro!("\\author[]{}",    "\\lx@add@authors@append[annotations={#1}]{#2}\\lx@author@after{#2}\\lx@revtex@fn@target{join}");
   // An `\affiliation` that starts with a letter or number mark (all `\author{Name$^{a}$}`s first, then `$^{a}$`-marked
   // lines: 2011.01984, 2301.08449) is labelled by its marks under marked authors, and goes to the authors showing them
   // (relocate_annotations); any other is revtex's group rule, every author of the group before it (`annotate=run`: the
@@ -109,7 +109,10 @@ LoadDefinitions!({
   // reading honours: today's run, not the marks — FM S2b, 63i review r2; a line holding several marked entries is a
   // marked list, cut by its marks however today's places it, and so are the lines of names given after an affiliation
   // that came before the first `\author`: 2209.05548's empty `\affiliation{}`, 2510.16137, 2412.01183)
-  DefMacro!("\\affiliation{}", sub[(content)] { group_or_marked_affiliation(content, "run") });
+  DefMacro!("\\affiliation{}", sub[(content)] {
+    set_footnote_target("affil");
+    group_or_marked_affiliation(content, "run")
+  });
   // revtex4-1.cls:2147-2250, the internals of `\affiliation` (`\move@AU\move@AF\begingroup … \@affiliation`,
   // :2206-2211): `\move@AU`/`\move@AF` file the pending authors and affiliations, which the frontmatter API attaches
   // at once, and `\@affiliation{…}` (:2213) closes the group and records the affiliation. A class that redefines
@@ -117,7 +120,7 @@ LoadDefinitions!({
   // 2609.05602, 2609.07025).
   def_macro_noop("\\move@AU")?;
   def_macro_noop("\\move@AF")?;
-  DefMacro!("\\@affiliation{}", "\\endgroup\\lx@add@affiliation[annotate=run]{#1}");
+  DefMacro!("\\@affiliation{}", "\\endgroup\\lx@add@affiliation[annotate=run]{#1}\\lx@revtex@fn@target{affil}");
   DefMacro!("\\noaffiliation", "\\lx@add@affiliation[annotate=run]{}");
   // `\affil` is the binding's own (Perl revtex4_support.sty.ltxml:49): none of revtex4.cls, revtex4-1.cls or
   // revtex4-2.cls defines it, so a document's `\newcommand{\affil}{Center for Nanophotonics, …}` (1104.4073; 1907.12838,
@@ -146,18 +149,33 @@ LoadDefinitions!({
   // (an e-mail is printed in the front matter's footnotes, revtex4-2.cls:2404-2413 `\@email` into `\frontmatter@footnote`:
   // after the affiliations under the names, whenever it is queued — its print zone the footer's, `_zone=footer`,
   // OXIDIZED_DESIGN_DIVERGENCES #954; 2312.02779)
-  DefMacro!("\\email[Default:\\lx@contact@email@name] UrlSemiverbatim",    "\\lx@add@email[name={#1},_zone=footer]{\\lx@address@textfont{#2}}");
-  DefMacro!("\\homepage[Default:\\lx@contact@url@name] UrlSemiverbatim", "\\lx@add@url[name={#1}]{\\lx@address@textfont{#2}}");
+  DefMacro!("\\email[Default:\\lx@contact@email@name] UrlSemiverbatim",    "\\lx@add@email[name={#1},_zone=footer]{\\lx@address@textfont{#2}}\\lx@revtex@fn@tag");
+  DefMacro!("\\homepage[Default:\\lx@contact@url@name] UrlSemiverbatim", "\\lx@add@url[name={#1}]{\\lx@address@textfont{#2}}\\lx@revtex@fn@tag");
   // `\@email{label}{address}` closes the class's group. A class that re-dresses `\email` over them (cej.cls:88
   // `\renewcommand*\email[1][E-mail: ]{\begingroup\sanitize@url\@email{#1}}`; 0710.1022, 1201.4230 and 5 more) left
   // the group open without them, `%` other to the end of the document.
-  DefMacro!("\\@email{} Semiverbatim",    "\\endgroup\\lx@add@email[name={#1},_zone=footer]{\\lx@address@textfont{#2}}");
-  DefMacro!("\\@homepage{} Semiverbatim", "\\endgroup\\lx@add@url[name={#1}]{\\lx@address@textfont{#2}}");
-  DefMacro!("\\thanks[Default:\\lx@contact@thanks@name]{}",              "\\lx@add@contact[role=thanks,name={#1}]{#2}");
-  // revtex4-2.cls:2472-2493 (revtex4.cls, revtex4-1.cls alike): the front-matter footnote under `\thanks` and the
-  // `\author`'s optional notes, a mark shared by identical texts; documents call it for a note on several authors
-  // (`\newcommand{\equalcontrib}{\frontmatter@footnote{…contributed equally…}}`, 2605.04155). Each author keeps it.
-  DefMacro!("\\frontmatter@footnote{}",  "\\lx@add@contact[role=thanks]{#1}");
+  DefMacro!("\\@email{} Semiverbatim",    "\\endgroup\\lx@add@email[name={#1},_zone=footer]{\\lx@address@textfont{#2}}\\lx@revtex@fn@tag");
+  DefMacro!("\\@homepage{} Semiverbatim", "\\endgroup\\lx@add@url[name={#1}]{\\lx@address@textfont{#2}}\\lx@revtex@fn@tag");
+  // revtex4-2.cls:2404-2421, :2446-2450, :2472-2495: `\email`, `\homepage`, `\thanks`, `\altaffiliation` join the footnote
+  // of the title, author or affiliation last given; a name's own footnote prints first (OD #1054, `FOOTNOTE_PART`).
+  DefMacro!("\\thanks[Default:\\lx@contact@thanks@name]{}", sub[(name, text)] {
+    revtex_footnote_call(s!("role=thanks,name={{{}}}", name.map(|name| name.to_string()).unwrap_or_default()), text, false)
+  });
+  // (the join of the e-mail or homepage just queued: `revtex_footnote_kind`)
+  DefPrimitive!("\\lx@revtex@fn@tag", sub[_args] {
+    if !lookup_bool("lx_frontmatter_flushing")
+      && let Some(kind) = revtex_footnote_kind(false)
+    {
+      tag_last_queued_contact(&["email", "url"], FOOTNOTE_PART, &kind);
+    }
+  });
+  // (the title, author or affiliation a later part joins: revtex4-2.cls:2120, :2160, :2236 `\let\@AF@join…`)
+  DefPrimitive!("\\lx@revtex@fn@target{}", sub[(target)] {
+    set_footnote_target(&target.to_string());
+  });
+  // revtex4-2.cls:2472-2493: the front-matter footnote, which documents call for a note on several authors
+  // (`\newcommand{\equalcontrib}{\frontmatter@footnote{…}}`, 2605.04155): a footnote of its own.
+  DefMacro!("\\frontmatter@footnote{}", sub[(text)] { revtex_footnote_call(s!("role=thanks"), text, true) });
   // revtex4-2.cls:3040-3043 (revtex4-1.cls:3019-3022, revtex4.cls:5020-5022): the front matter's footnote marks — the
   // footnote counter's symbols (`\@fnsymbol`), its letters (`\@alph`) under `altaffilletter` — declared as the title
   // block's (`latex_constructs::TITLE_THEFOOTNOTE`): the marks the notes of the authors, the title and the date show, as
@@ -174,7 +192,7 @@ LoadDefinitions!({
   // {#2}}}`; 2605.18495, 2605.23416: `\@AF@join` undefined). The note goes where our `\thanks` puts its notes, on the
   // last author, whatever revtex's dispatch would join it to, and as a thanks note even when it holds an email: the
   // content and its link are kept.
-  DefMacro!("\\@AF@join{}",              "\\lx@add@contact[role=thanks]{#1}");
+  DefMacro!("\\@AF@join{}", sub[(text)] { revtex_footnote_call(s!("role=thanks"), text, false) });
   DefMacro!("\\orcid[]{}",               "\\lx@add@orcid[name={#1}]{#2}"); // ?
 
   DefMacro!("\\collaboration{}",    "\\author{#1}");
@@ -184,7 +202,9 @@ LoadDefinitions!({
   // group's run: role `altaffiliation`, as aastex's binding has it. Perl's `annotate=new,role=affiliation`
   // (revtex4_support.sty.ltxml:61) cost the author before it the group's affiliation (cond-mat0209262; 78 of 5,934
   // revtex papers write an `\altaffiliation` inside a group).
-  DefMacro!("\\altaffiliation[Default:\\lx@contact@altaffiliation@name]{}", "\\lx@add@contact[role=altaffiliation,name={#1}]{#2}");
+  DefMacro!("\\altaffiliation[Default:\\lx@contact@altaffiliation@name]{}", sub[(name, text)] {
+    revtex_footnote_call(s!("role=altaffiliation,name={{{}}}", name.map(|name| name.to_string()).unwrap_or_default()), text, false)
+  });
 
   def_macro_noop("\\firstname")?;
   DefConstructor!("\\surname{}", "#1", enter_horizontal => true);
@@ -1171,4 +1191,63 @@ pub(crate) fn group_or_marked_affiliation(content: Tokens, annotate: &str) -> Re
     T_CS!("\\lx@add@affiliation")
   };
   Ok(Invocation!(cs, vec![attr, Some(content)]))
+}
+
+/// The footnote a front-matter footnote part joins (`\lx@revtex@fn@target`): `title`, `join` (the author last given), or
+/// `affil:<n>` (the n-th affiliation, each its own footnote).
+const FN_TARGET: &str = "lx_revtex_fn_target";
+
+fn set_footnote_target(target: &str) {
+  let target = match target.trim() {
+    "affil" => {
+      let n = lookup_int("lx_revtex_fn_affils") + 1;
+      assign_value("lx_revtex_fn_affils", n, Some(Scope::Global));
+      s!("affil:{n}")
+    },
+    other => other.to_string(),
+  };
+  assign_value(FN_TARGET, Stored::String(pin(target)), Some(Scope::Global));
+  // (numbered and marked as revtex4-2.cls:3040-3043 `\frontmatter@thefootnote` marks them)
+  if revtex_footnote_kind(true).is_some() {
+    let style = if lookup_bool("revtex@altaffilletter") {
+      "alph"
+    } else {
+      "fnsymbol"
+    };
+    assign_value(
+      FOOTNOTE_MARKS,
+      Stored::String(pin(style)),
+      Some(Scope::Global),
+    );
+  }
+}
+
+/// The part of a front-matter footnote a call makes (`FOOTNOTE_PART`): `own` for `\frontmatter@footnote` and for any
+/// call in a name or other entry digested at the flush (2605.04155's `\author{Zhenyu Xiao\equalcontrib}`; REVTeX
+/// prints a `\thanks` there nowhere), else the target last given; none outside a REVTeX 4 class (AASTeX numbers its
+/// notes otherwise: its `\email` is no footnote) or before any target (revtex4-2.cls:2393 `\@AF@join@error`).
+fn revtex_footnote_kind(own: bool) -> Option<String> {
+  if !["revtex4", "revtex4-1", "revtex4-2"]
+    .into_iter()
+    .any(is_document_class)
+  {
+    return None;
+  }
+  if own || lookup_bool("lx_frontmatter_flushing") {
+    return Some(s!("own"));
+  }
+  Some(lookup_string(FN_TARGET)).filter(|target| !target.is_empty())
+}
+
+/// A front-matter footnote part as `\thanks`, `\altaffiliation`, `\frontmatter@footnote` and `\@AF@join` call it: the
+/// contact, its part of a footnote its key.
+fn revtex_footnote_call(keys: String, text: Tokens, own: bool) -> Result<Tokens> {
+  let part = revtex_footnote_kind(own)
+    .map(|kind| s!(",{FOOTNOTE_PART}={kind}"))
+    .unwrap_or_default();
+  let mut call =
+    mouth::tokenize_internal(TeXString::assembled(s!("\\lx@add@contact[{keys}{part}]{{"))).unlist();
+  call.extend(text.unlist());
+  call.push(T_END!());
+  Ok(Tokens::new(call))
 }

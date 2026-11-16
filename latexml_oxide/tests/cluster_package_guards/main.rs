@@ -639,6 +639,7 @@ mod perfect_kernel_batchsep1;
 /// SHMARK: a creator's note carries the mark it prints, never repeated in its text; a mark on a name is a copy of the
 /// note it marks; no affiliation-linking mark (DG rulings 1-3 of 2026-11-16, OD #1053).
 mod perfect_kernel_batchshmark;
+mod perfect_kernel_batchshrest;
 /// ST1: RED catalog repros already matching their `expect` on int159a, green rows of two concern tables.
 mod perfect_kernel_batchst1;
 /// ST3: a document converted after others on one thread (a persistent cortex_worker's papers) is the document alone.

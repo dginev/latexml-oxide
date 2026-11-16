@@ -1,0 +1,25 @@
+% witness: 2503.20847 (ios-book-article.tex:34-44 `\orcid{https://orcid.org/0000-0002-⏎9546-4195}`, three of nine iDs broken
+%          by a line end; IOS-Book-Article.cls:1170-1172 stores it, :1426-1446 prints it in the abstract with the space TeX
+%          makes of the line end)
+% oracle:  pdflatex 0 errors (acmart keeps the iD as metadata; IOS-Book-Article prints "0000-0002- 9546-4195")
+% engines: rust=0 (60edb5d0e03: `0000-0002-˙9546-4195` and `0000-0003-&#10;2581-8370`, the line end a glyph; 2503.20847's
+%          3-word missing + 3-word excess Warning) perl=0 (the
+%          contact's text as written, `https://orcid.org/0000-0002-⏎9546-4195`, no link) (2026-11-16)
+% expect:  0 errors, 0 warnings; Ann Able's ORCID link to https://orcid.org/0000-0002-9546-4195 and Bob Baker's to
+%          https://orcid.org/0000-0003-2581-8370, each iD read without the space (no iD holds one)
+% status:  RED (60edb5d0e03) -> GREEN (SHREST)
+% preload: ar5iv.sty
+\documentclass[sigconf]{acmart}
+\begin{document}
+\title{Title}
+\author{Ann Able}
+\orcid{https://orcid.org/0000-0002-
+9546-4195}
+\affiliation{\institution{Univ A}\country{C}}
+\author{Bob Baker}
+\orcid{0000-0003-
+2581-8370}
+\affiliation{\institution{Univ A}\country{C}}
+\maketitle
+Text.
+\end{document}
