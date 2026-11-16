@@ -59,7 +59,7 @@ fn nature_affiliations_list_is_the_cover_before_the_abstract() {
     ["title", "creator", "titlepage", "abstract", "section"],
     "{xml}"
   );
-  assert_eq!(creators(&xml), [["Ann Author 1"]], "{xml}");
+  assert_eq!(creators(&xml), [["Ann Author", "mark=1"]], "{xml}");
   assert_element(&xml, "titlepage", &[], TITLEPAGE);
   let at = xml.find("<abstract").expect("an abstract");
   assert_eq!(

@@ -93,7 +93,7 @@ const ROWS: &[(Source, (usize, usize), Expect)] = &[
     // (the name's `\footnote` is the marked `\thanks` note it is in article's title: OD #1053,
     // `perfect_kernel_batchshmark::a_thanks_note_carries_the_mark_its_title_prints`)
     Expect::CreatorsAndNote(
-      &[&["sPHENIX Collaboration"]],
+      &[&["sPHENIX Collaboration", "mark=*"]],
       "<note class=\"ltx_note_frontmatter ltx_thanks_note\" mark=\"*\" role=\"thanks\" xml:id=\"id1\">See the \
        appendix for the list of collaboration members</note>",
     ),

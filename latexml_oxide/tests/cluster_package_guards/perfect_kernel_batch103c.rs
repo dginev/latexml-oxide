@@ -37,6 +37,11 @@ pub(super) fn creator_notes(tex: &str) -> Vec<Vec<String>> {
           .nth(1)
           .and_then(|m| m.split('"').next())
           .unwrap_or("");
+        // (a mark-only note, `<note mark="a" role="footnotemark"/>`: its mark, PURE)
+        if creator[..open_end].ends_with('/') {
+          out.push(format!("mark={mark}"));
+          continue;
+        }
         let close = open_end + creator[open_end..].find("</note>").expect("closed note");
         out.push(format!(
           "note[{mark}]={}",
@@ -102,7 +107,7 @@ fn an_affiliation_that_is_a_legend_is_its_carriers_note() {
   );
   assert_eq!(
     converted(repro!("legend_kind_ieee_numbered_legend"), 0),
-    r#"<title>T</title> <creator role="author"> <personname>Ann Able<sup xml:id="id1">*</sup><sup xml:id="id2">‡</sup></personname> <contact name="Affiliation: " role="affiliation"><sup xml:id="id3">*</sup>Univ A, Town</contact> <note class="ltx_note_frontmatter ltx_thanks_contribution" mark="‡" role="thanks" xml:id="id4">These authors contributed equally</note> </creator> <creator before=" " role="author"> <personname>Bob Baker<sup xml:id="id5">†</sup><sup xml:id="id6">‡</sup></personname> <contact name="Affiliation: " role="affiliation"><sup xml:id="id7">†</sup>Univ B, City</contact> <note class="ltx_note_frontmatter ltx_thanks_contribution" mark="‡" role="thanks" xml:id="id8">These authors contributed equally</note> </creator> <para xml:id="p1"> <p xml:id="p1.1">Text.</p> </para>"#
+    r#"<title>T</title> <creator role="author"> <personname>Ann Able</personname> <contact name="Affiliation: " role="affiliation"><sup xml:id="id1">*</sup>Univ A, Town</contact> <note class="ltx_note_frontmatter ltx_thanks_contribution" mark="‡" role="thanks" xml:id="id2">These authors contributed equally</note> </creator> <creator before=" " role="author"> <personname>Bob Baker</personname> <contact name="Affiliation: " role="affiliation"><sup xml:id="id3">†</sup>Univ B, City</contact> <note class="ltx_note_frontmatter ltx_thanks_contribution" mark="‡" role="thanks" xml:id="id4">These authors contributed equally</note> </creator> <para xml:id="p1"> <p xml:id="p1.1">Text.</p> </para>"#
   );
 }
 

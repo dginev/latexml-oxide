@@ -82,7 +82,7 @@ fn authblk_affil_in_author_under_titling() {
   // (P4b2b: the names' printed marks, as pdflatex prints them)
   assert_eq!(
     element(&xml, "<creator", "</creator>"),
-    "<creator role=\"author\">\n<personname>Ann Author<sup xml:id=\"id1\">1</sup></personname>\n<contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Some University</contact>\n</creator>",
+    "<creator role=\"author\">\n<personname>Ann Author</personname>\n<note mark=\"1\" role=\"footnotemark\" xml:id=\"id1\"/>\n<contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Some University</contact>\n</creator>",
     "{xml}"
   );
   assert!(xml.contains("<p xml:id=\"p1.1\">Body.</p>"), "{xml}");

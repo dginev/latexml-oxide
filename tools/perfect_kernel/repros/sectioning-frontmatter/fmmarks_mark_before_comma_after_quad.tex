@@ -1,0 +1,16 @@
+% mechanism: a given mark past `\quad` and followed by a comma (a separator): carried back
+% witness:  revSHGIVENb n4comma
+% oracle:   pdflatex 0 errors; "Ann Able ,† Bob Baker Carl Cole"
+% engines:  rust INTREC (3af622aca64) = 0 errors, 0 Warnings; Ann Able ; footnotemark[†]= / Bob Baker / Carl Cole
+% expect:   0 errors, 0 Warnings; Ann Able ; footnotemark[†]= / Bob Baker / Carl Cole (guard canon: name ; note
+%   role[mark]=text, sorted | contacts)
+% status:   GREEN (INTREC 3af622aca64; perfect_kernel_batchfmmarks::a_mark_past_spacing_is_the_nearer_names)
+% preload: ar5iv.sty
+\documentclass{article}
+\title{T}
+\author{Ann Able \quad \footnotemark[2], Bob Baker \and Carl Cole}
+\date{}
+\begin{document}
+\maketitle
+Text.
+\end{document}

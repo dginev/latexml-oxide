@@ -119,8 +119,8 @@ fn an_address_placed_more_often_than_printed_is_counted() {
     "{log}"
   );
   assert_eq!(creators(&xml), [
-    row(&["Ann Able"]),
-    row(&["Bob Baker", "email=bob@b.org"]),
+    row(&["Ann Able", "mark=*"]),
+    row(&["Bob Baker", "email=bob@b.org", "mark=†"]),
   ]);
   assert!(
     xml.contains("Univ A, Town (<text font=\"typewriter\" xml:id=\"id1.1\">ann@a.org</text>"),
@@ -170,9 +170,9 @@ fn a_clean_block_counts_nothing() {
     (
       repro!("emit_content_revtex_label_shared_in_a_cut_list"),
       vec![
-        row(&["Ann Able 1", "affiliation=1 Dept of Physics, Univ X"]),
-        row(&["Bob Baker 1", "affiliation=1 Dept of Physics, Univ X"]),
-        row(&["Cat Cole 2", "affiliation=2 Lab Y"]),
+        row(&["Ann Able", "affiliation=1 Dept of Physics, Univ X"]),
+        row(&["Bob Baker", "affiliation=1 Dept of Physics, Univ X"]),
+        row(&["Cat Cole", "affiliation=2 Lab Y"]),
       ],
     ),
     (repro!("emit_content_a_label_repeated_per_column"), vec![
@@ -181,7 +181,11 @@ fn a_clean_block_counts_nothing() {
     ]),
     (
       repro!("emit_content_a_footnote_mark_on_several_names"),
-      vec![row(&["Ann Able"]), row(&["Bob Baker"]), row(&["Cat Cole"])],
+      vec![
+        row(&["Ann Able", "mark=*"]),
+        row(&["Bob Baker", "mark=*"]),
+        row(&["Cat Cole", "mark=*"]),
+      ],
     ),
     (
       repro!("emit_content_aas_altaffilmark_on_several_names"),

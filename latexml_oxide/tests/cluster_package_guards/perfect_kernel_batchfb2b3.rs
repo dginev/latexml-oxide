@@ -19,28 +19,25 @@ macro_rules! repro {
 /// A mark after the close of a brace group of names is the last name's, written after its name as its own run
 /// (`{Mohamed Benzaghta$^{\star}$, …, David López-Pérez}$^{\sharp}$`, 2504.02633), its `^` math-active (breqn's) or a
 /// superscript; a group the name's run opens itself (`{\large Ann Able}$^{\star}$`, 1208.4825's shape) keeps the mark in
-/// the one run, the mark a superscript of the name both ways. Red (FB2b2 `=2`): "Cat López" and "Cat Cole" written as
-/// plain text, the ♯ lost (a Warning).
+/// the one run, the mark the name's both ways (a mark-only note after it since PURE). Red (FB2b2 `=2`): "Cat López" and
+/// "Cat Cole" written as plain text, the ♯ lost (a Warning).
 #[test]
 fn a_mark_after_a_group_of_names_is_the_last_names() {
   let tex = repro!("author_ieee_blockn_group_marks_math_active");
   let xml = super::perfect_kernel_batchz4::run(tex).1;
-  let at = xml
-    .find("<personname>Cat López<sup")
-    .expect("Cat López's mark a superscript");
-  let end = at
-    + xml[at..]
-      .find("</personname>")
-      .expect("a closed personname");
-  assert!(xml[at..end].contains('♯'), "{}", &xml[at..end]);
+  // (the name alone, its mark nothing answers a mark-only note after it, PURE)
+  assert!(
+    xml.contains("<personname>Cat López</personname>\n    <note mark=\"♯\" role=\"footnotemark\""),
+    "Cat López's mark a mark-only note: {xml}"
+  );
 
   let two = both(tex, 0);
   let want = [
-    vec!["Ann Able ⋆"],
-    vec!["Bob Baker ♭"],
-    vec!["Cat López ♯"],
-    vec!["Dan Dorn ♭"],
-    vec!["Eve Ess † \u{2063} ⋆"],
+    vec!["Ann Able", "mark=⋆"],
+    vec!["Bob Baker", "mark=♭"],
+    vec!["Cat López", "mark=♯"],
+    vec!["Dan Dorn", "mark=♭"],
+    vec!["Eve Ess", "mark=†⋆"],
   ];
   assert_eq!(two, want);
   // (pdflatex: "Ann Able⋆ , Bob Baker♭ , Cat Cole♯ , Dan Dorn♭ , and Eve Ess†")
@@ -51,11 +48,11 @@ fn a_mark_after_a_group_of_names_is_the_last_names() {
     0,
   );
   let want = [
-    vec!["Ann Able ⋆"],
-    vec!["Bob Baker ♭"],
-    vec!["Cat Cole ♯"],
-    vec!["Dan Dorn ♭"],
-    vec!["Eve Ess †"],
+    vec!["Ann Able", "mark=⋆"],
+    vec!["Bob Baker", "mark=♭"],
+    vec!["Cat Cole", "mark=♯"],
+    vec!["Dan Dorn", "mark=♭"],
+    vec!["Eve Ess", "mark=†"],
   ];
   assert_eq!(two, want);
   // (pdflatex: "Ann Able⋆ , Bob Baker♭")
@@ -64,7 +61,7 @@ fn a_mark_after_a_group_of_names_is_the_last_names() {
      Able}$^{\\star}$, Bob Baker$^{\\flat}$}}\n\\maketitle\nx\n\\end{document}\n",
     0,
   );
-  let want = [vec!["Ann Able ⋆"], vec!["Bob Baker ♭"]];
+  let want = [vec!["Ann Able", "mark=⋆"], vec!["Bob Baker", "mark=♭"]];
   assert_eq!(two, want);
   // (a name inside a formula, its mark there: the run takes the formula whole, the `}` of the `{\rm` the name opens in
   // no names group's close — at `=2` the mark and the name written twice, 4 Maths and W=2, review revH5 finding 2;

@@ -165,12 +165,12 @@ pub(super) fn number_footnote_parts(document: &mut Document) -> Result<()> {
     };
     // (a thanks note its mark, a contact the mark the Kind step reads)
     if let Some(mark) = mark {
-      let key = if entry.get_name() == "note" {
-        "mark"
+      if entry.get_name() == "note" {
+        entry.set_attribute("mark", &mark)?;
+        entry.set_attribute(MARK_FROM_COUNTER, "true")?;
       } else {
-        PRINTED_MARK
-      };
-      entry.set_attribute(key, &mark)?;
+        entry.set_attribute(PRINTED_MARK, &mark)?;
+      }
     }
   }
   Ok(())
@@ -228,6 +228,7 @@ pub(super) fn kind_shared_marked_contacts(document: &mut Document) -> Result<()>
       &s!("ltx_note_frontmatter ltx_thanks_{kind}"),
     )?;
     document.set_attribute(&mut note, "mark", &read[at].0)?;
+    note.set_attribute(MARK_FROM_COUNTER, "true")?;
   }
   Ok(())
 }

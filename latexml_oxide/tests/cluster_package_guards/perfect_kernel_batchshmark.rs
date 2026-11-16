@@ -64,8 +64,13 @@ pub(super) fn notes_in(xml: &str) -> Vec<Vec<String>> {
             .unwrap_or("")
             .to_string()
         };
-        let close = open_end + creator[open_end..].find("</note>").expect("closed note");
-        let mut body = creator[open_end + 1..close].to_string();
+        // (a mark-only note, `<note role="footnotemark" mark="1"/>`, holds nothing: PURE's re-homed name marks)
+        let mut body = if creator[..open_end].ends_with('/') {
+          String::new()
+        } else {
+          let close = open_end + creator[open_end..].find("</note>").expect("closed note");
+          creator[open_end + 1..close].to_string()
+        };
         if let (Some(from), Some(to)) = (body.find("<tags>"), body.find("</tags>")) {
           body.replace_range(from..to + "</tags>".len(), "");
         }
@@ -120,8 +125,12 @@ fn a_notes_mark_is_never_in_its_text() {
   // (an unbound class's hand-typed legend, the generic path alone: scrartcl read raw, and an unknown class through
   // OmniBus, its Warning the missing binding's — the `$^*$` its carriers' mark, out of its text. The `\thanks` is still
   // unmarked there though scrartcl prints ∗: no binding declares its title marks, the behaviour test is open, OD #1053)
-  // (OmniBus keeps the marks in the name, as printed)
-  for (class, warnings, shown) in [("scrartcl", 0, ""), ("zzunknownclass", 1, " 1,∗")] {
+  // (OmniBus's `1` no contact of the name answers: a mark-only note after the name, which holds the name alone — PURE,
+  // OD #1055; its `∗` the legend's)
+  for (class, warnings, unanswered) in [
+    ("scrartcl", 0, None),
+    ("zzunknownclass", 1, Some("footnotemark[1]=")),
+  ] {
     let tex = format!(
       r"\documentclass{{{class}}}
 \title{{T}}
@@ -132,15 +141,20 @@ fn a_notes_mark_is_never_in_its_text() {
 Text.
 \end{{document}}"
     );
+    let named = |name: &str, notes: &[&str]| {
+      let mut row = row(&[name]);
+      row.extend(unanswered.map(ToString::to_string));
+      row.extend(notes.iter().map(ToString::to_string));
+      row
+    };
     assert_eq!(
       marked_notes(&tex, warnings),
       [
-        row(&[
-          &format!("Ann Able{shown}"),
+        named("Ann Able", &[
           "thanks[]=Funded by X.",
           "thanks[∗]=Equal contribution"
         ]),
-        row(&[&format!("Bob Baker{shown}"), "thanks[∗]=Equal contribution"]),
+        named("Bob Baker", &["thanks[∗]=Equal contribution"]),
       ],
       "{class}"
     );
@@ -387,10 +401,11 @@ fn an_affiliations_linking_mark_is_no_note() {
   assert_eq!(creators(&xml), [
     row(&[
       "Ann Able",
+      "mark=*",
       "affiliation=Univ A, Town",
       "affiliation=Lab B, City"
     ]),
-    row(&["Bob Baker", "affiliation=Univ C, Village"]),
+    row(&["Bob Baker", "mark=†", "affiliation=Univ C, Village"]),
   ]);
   assert_eq!(
     marked_notes(

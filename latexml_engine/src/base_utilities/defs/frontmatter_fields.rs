@@ -11,7 +11,7 @@ pub(in crate::base_utilities) use names::*;
 use crate::base_utilities::{
   defs::frontmatter_api::spacing_formulas_as_space,
   frontmatter::{
-    LIST_MARK,
+    LIST_MARK, MARK_FROM_COUNTER,
     classify::title_code::{reads_arguments, title_code_author_definitions},
     observer::events::{
       self, Event, EventKind, events_text, lex_body_with_inks, lex_events, opening_ink,
@@ -1012,7 +1012,9 @@ fn title_note(footnote: bool, attr: Option<Tokens>, body: Tokens) -> Result<()> 
     None if footnote => ("ltx:contact", s!("role=note")),
     mark => {
       let class = classify_thanks(body.clone().untex_string().as_ref());
-      let marked = mark.map_or_else(String::new, |mark| s!(",mark={{{mark}}}"));
+      let marked = mark.map_or_else(String::new, |mark| {
+        s!(",mark={{{mark}}},{MARK_FROM_COUNTER}=true")
+      });
       (
         "ltx:note",
         s!("role=thanks,class=ltx_note_frontmatter ltx_thanks_{class}{marked}"),

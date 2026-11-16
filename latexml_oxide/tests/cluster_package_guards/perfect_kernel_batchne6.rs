@@ -39,7 +39,7 @@ fn a_mark_macro_is_written_with_its_arguments() {
   assert_eq!(creators(&xml), [
     row(&["Ann Able", "affiliation=Princeton University"]),
     row(&["Bob Baker", "affiliation=Princeton University"]),
-    row(&["Carl Cole", "affiliation=Princeton University"]),
+    row(&["Carl Cole", "mark=†", "affiliation=Princeton University"]),
   ]);
 }
 

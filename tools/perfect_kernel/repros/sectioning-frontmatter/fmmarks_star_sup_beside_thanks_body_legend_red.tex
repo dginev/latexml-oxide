@@ -1,0 +1,21 @@
+% mechanism: a typed `$^{*}$` beside a `\thanks` on each name, its legend in the body: the typed ∗ a mark-only note,
+%   each `\thanks` its own printed mark (∗ then †)
+% witness:  revPURE p1_thanks (2406.11149's shape: `Haoran Li$^{*}$\thanks{\quad Corresponding Author}`)
+% oracle:   pdflatex 0 errors; "Ann Able∗∗ Bob Baker∗†", footnotes "∗ Email: ann@x.org", "† Email: bob@x.org"
+% engines:  rust INTREC (3af622aca64) = 0 errors, 0 Warnings; Ann Able ∗ ; thanks[*]=Email: ann@x.org / Bob Baker ∗ ;
+%   thanks[†]=Email: bob@x.org
+% expect:   0 errors, 0 Warnings; Ann Able ; footnotemark[*]= ; thanks[*]=Email: ann@x.org / Bob Baker ;
+%   footnotemark[*]= ; thanks[†]=Email: bob@x.org (guard canon: name ; note role[mark]=text, sorted |
+%   contacts)
+% moves:    PURE (fix/pure-personname: the marks out of the personname) (PUREb B1: a typed symbol beside a `\thanks`
+%   is no mark of it)
+% status:   RED (INTREC 3af622aca64; perfect_kernel_batchfmmarks::name_marks_live_outside_the_personname_red)
+% preload: ar5iv.sty
+\documentclass{article}
+\title{T}
+\author{Ann Able$^{*}$\thanks{Email: ann@x.org} \and Bob Baker$^{*}$\thanks{Email: bob@x.org}}
+\date{}
+\begin{document}
+\maketitle
+$^{*}$ These authors contributed equally.
+\end{document}

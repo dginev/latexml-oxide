@@ -127,7 +127,7 @@ fn an_undefined_command_past_a_mark_or_a_note_errs_in_the_name() {
   assert_eq!(undefined_errors(&log), ["\\undefinedprobecs"], "{log}");
   assert_eq!((error_count(&log), warning_count(&log)), (1, 0), "{log}");
   assert_eq!(creators(&xml), [
-    row(&["Ann Able \\undefinedprobecs"]),
+    row(&["Ann Able \\undefinedprobecs", "mark=*"]),
     row(&["Bob Baker"]),
   ]);
   assert!(xml.contains("Supported by X."), "{xml}");
@@ -178,13 +178,7 @@ fn an_undefined_command_after_a_footnotemark_writes_one_stub() {
   assert_eq!(undefined_errors(&log), ["\\foo"], "{log}");
   assert_eq!((error_count(&log), warning_count(&log)), (1, 0), "{log}");
   assert_eq!(creator_elements(&xml), [
-    "<creator role=\"author\">\n    <personname>Ann Able<sup>,</sup><ERROR \
-     class=\"undefined\">\\foo</ERROR></personname>\n    <note mark=\"*\" role=\"footnotemark\" \
-     xml:id=\"footnotex1\"><tags>\n        <tag>*</tag>\n        <tag role=\"refnum\">*</tag>\n        <tag \
-     role=\"typerefnum\">footnote *</tag>\n      </tags></note>\n    <note mark=\"\u{2020}\" role=\"footnotemark\" \
-     xml:id=\"footnotex2\"><tags>\n        <tag>\u{2020}</tag>\n        <tag role=\"refnum\">\u{2020}</tag>\n        \
-     <tag role=\"typerefnum\">footnote \u{2020}</tag>\n      </tags></note>\n    <note class=\"ltx_note_frontmatter \
-     ltx_thanks_note\" mark=\"*\" role=\"thanks\">Univ X.</note>\n  </creator>",
+    "<creator role=\"author\">\n    <personname>Ann Able<ERROR class=\"undefined\">\\foo</ERROR></personname>\n    <note mark=\"*\" role=\"footnotemark\" xml:id=\"footnotex1\"><tags>\n        <tag>*</tag>\n        <tag role=\"refnum\">*</tag>\n        <tag role=\"typerefnum\">footnote *</tag>\n      </tags></note>\n    <note mark=\"†\" role=\"footnotemark\" xml:id=\"footnotex2\"><tags>\n        <tag>†</tag>\n        <tag role=\"refnum\">†</tag>\n        <tag role=\"typerefnum\">footnote †</tag>\n      </tags></note>\n    <note class=\"ltx_note_frontmatter ltx_thanks_note\" mark=\"*\" role=\"thanks\">Univ X.</note>\n  </creator>",
     "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Bob Baker</personname>\n  </creator>",
   ]);
 }

@@ -55,13 +55,13 @@ fn a_sublettered_used_mark_is_written_whole() {
                of Piedmont, Alessandria; (C)INFN, Turin</contact>";
   let expected = [
     format!(
-      "<creator role=\"author\"> <personname>A. Amoroso<sup xml:id=\"id1\">2A,2C</sup></personname> {turin} </creator>"
+      "<creator role=\"author\"> <personname>A. Amoroso</personname> <note mark=\"2A,2C\" role=\"footnotemark\" xml:id=\"id1\"/> {turin} </creator>"
     ),
     "<creator before=\" \" role=\"author\"> <personname>B. Bee</personname> <contact class=\"ltx_author_line\" name=\"Affiliation: \" \
      role=\"affiliation\"> Institute One, City One</contact> </creator>"
       .to_string(),
     format!(
-      "<creator before=\" \" role=\"author\"> <personname>C. Cee<sup xml:id=\"id2\">2B</sup></personname> {turin} \
+      "<creator before=\" \" role=\"author\"> <personname>C. Cee</personname> <note mark=\"2B\" role=\"footnotemark\" xml:id=\"id2\"/> {turin} \
        </creator>"
     ),
   ];
@@ -182,11 +182,10 @@ fn a_glued_marks_letter_is_never_another_entrys() {
     )
   };
   let expected = vec![
-    creator(
-      "",
-      "A. Amoroso<sup xml:id=\"id1\">2a,2c</sup>",
-      std::slice::from_ref(&turin),
-    ),
+    creator("", "A. Amoroso", &[
+      r#"<note mark="2a,2c" role="footnotemark" xml:id="id1"/>"#.to_string(),
+      turin.clone(),
+    ]),
     creator("before=\" \" ", "B. Bee", &[
       affiliation(" Institute One, City One"),
       affiliation(" Also at the Moscow Institute, Moscow"),
@@ -195,11 +194,10 @@ fn a_glued_marks_letter_is_never_another_entrys() {
       affiliation(" Institute Three, City Three"),
       affiliation(" Also at the Kurchatov Institute, Gatchina"),
     ]),
-    creator(
-      "before=\" \" ",
-      "D. Dee<sup xml:id=\"id2\">2b</sup>",
-      std::slice::from_ref(&turin),
-    ),
+    creator("before=\" \" ", "D. Dee", &[
+      r#"<note mark="2b" role="footnotemark" xml:id="id2"/>"#.to_string(),
+      turin.clone(),
+    ]),
   ];
   let (log, xml) = run(repro!("cl10_sublettered_mark_never_another_entrys"));
   assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");

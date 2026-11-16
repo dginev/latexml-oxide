@@ -239,9 +239,19 @@ fn revtex_frontmatter_footnote_on_two_authors() {
   ));
   assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
   let want: Vec<Vec<String>> = [
-    ["Ann Author", "email=a@x.org", "affiliation=Univ A"],
-    ["Bob Author", "email=b@x.org", "affiliation=Univ B"],
-    ["Cat Author", "email=c@x.org", "affiliation=Univ C"],
+    vec![
+      "Ann Author",
+      "mark=∗",
+      "email=a@x.org",
+      "affiliation=Univ A",
+    ],
+    vec!["Bob Author", "email=b@x.org", "affiliation=Univ B"],
+    vec![
+      "Cat Author",
+      "mark=∗",
+      "email=c@x.org",
+      "affiliation=Univ C",
+    ],
   ]
   .iter()
   .map(|c| c.iter().map(|s| (*s).to_string()).collect())

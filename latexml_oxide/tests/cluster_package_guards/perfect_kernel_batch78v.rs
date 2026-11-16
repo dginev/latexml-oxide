@@ -64,9 +64,9 @@ fn affiliation_address_run_after_a_trailing_comma() {
   assert_creators(
     repro!("sectioning-frontmatter/affiliation_address_run_after_a_trailing_comma.tex"),
     &[
-      r#"<creator role="author"><personname>Ann Alpha<sup xml:id="id1">*</sup></personname><contact name="Affiliation: " role="affiliation"><sup xml:id="id2">*</sup>Univ A</contact><contact name="Email: " role="email">ann@a.edu</contact></creator>"#,
-      r#"<creator before="  " role="author"><personname>Bob Beta<sup xml:id="id3">*</sup></personname><contact name="Affiliation: " role="affiliation"><sup xml:id="id4">*</sup>Univ A</contact><contact name="Email: " role="email">bob@a.edu</contact></creator>"#,
-      r#"<creator before="  " role="author"><personname>Cy Gamma<sup xml:id="id5">†</sup></personname><contact name="Affiliation: " role="affiliation"><sup xml:id="id6">†</sup>Univ B</contact><contact name="Email: " role="email">cy@b.edu</contact></creator>"#,
+      r#"<creator role="author"><personname>Ann Alpha</personname><contact name="Affiliation: " role="affiliation"><sup xml:id="id1">*</sup>Univ A</contact><contact name="Email: " role="email">ann@a.edu</contact></creator>"#,
+      r#"<creator before="  " role="author"><personname>Bob Beta</personname><contact name="Affiliation: " role="affiliation"><sup xml:id="id2">*</sup>Univ A</contact><contact name="Email: " role="email">bob@a.edu</contact></creator>"#,
+      r#"<creator before="  " role="author"><personname>Cy Gamma</personname><contact name="Affiliation: " role="affiliation"><sup xml:id="id3">†</sup>Univ B</contact><contact name="Email: " role="email">cy@b.edu</contact></creator>"#,
     ],
   );
 }

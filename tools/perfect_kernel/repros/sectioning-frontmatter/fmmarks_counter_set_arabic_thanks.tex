@@ -1,0 +1,20 @@
+% mechanism: `\setcounter{footnote}{2}` and an arabic `\thefootnote` in the preamble: `\maketitle` still prints
+%   `\@fnsymbol`, from 3
+% witness:  revSHMARK p2
+% oracle:   pdflatex 0 errors; "Ann Able‡ Bob Baker§", footnotes "‡ First note.", "§ Second note."
+% engines:  rust INTREC (3af622aca64) = 0 errors, 0 Warnings; Ann Able ; thanks[‡]=First note. / Bob Baker ;
+%   thanks[§]=Second note.
+% expect:   0 errors, 0 Warnings; Ann Able ; thanks[‡]=First note. / Bob Baker ; thanks[§]=Second note. (guard canon:
+%   name ; note role[mark]=text, sorted | contacts)
+% status:   GREEN (INTREC 3af622aca64; perfect_kernel_batchfmmarks::a_mark_on_a_name_is_a_copy_of_its_note)
+% preload: ar5iv.sty
+\documentclass{article}
+\setcounter{footnote}{2}
+\renewcommand\thefootnote{\arabic{footnote}}
+\title{T}
+\author{Ann Able\thanks{First note.} \and Bob Baker\thanks{Second note.}}
+\date{}
+\begin{document}
+\maketitle
+Body\footnote{body note}.
+\end{document}

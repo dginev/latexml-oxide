@@ -1,0 +1,17 @@
+% mechanism: a given mark past `\qquad` and `\ ` then `\\`: a line end follows, carried back
+% witness:  revSHGIVENd d12 (d4, d5)
+% oracle:   pdflatex 0 errors; "Ann Able † Bob Baker", "Univ A" under Ann
+% engines:  rust INTREC (3af622aca64) = 0 errors, 0 Warnings; Ann Able ; footnotemark[†]= | affiliation=Univ A / Bob
+%   Baker
+% expect:   0 errors, 0 Warnings; Ann Able ; footnotemark[†]= | affiliation=Univ A / Bob Baker (guard canon: name ;
+%   note role[mark]=text, sorted | contacts)
+% status:   GREEN (INTREC 3af622aca64; perfect_kernel_batchfmmarks::a_mark_past_spacing_is_the_nearer_names)
+% preload: ar5iv.sty
+\documentclass{article}
+\title{T}
+\author{Ann Able \qquad \footnotemark[2] \ \\ Univ A \and Bob Baker}
+\date{}
+\begin{document}
+\maketitle
+Text.
+\end{document}

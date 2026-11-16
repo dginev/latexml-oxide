@@ -105,7 +105,7 @@ const PRINTED_LIST_ROWS: &[Row] = &[
     tex:      repro!(
       "class-bindings/elsarticle_journal_style_lists_print_after_the_frontmatter.tex"
     ),
-    creators: &[&["Ann Able", "address=Univ A"]],
+    creators: &[&["Ann Able", "address=Univ A", "mark=∗"]],
     elements: &[
       ELS_NOTICE,
       ELS_CORRESPONDENCE,

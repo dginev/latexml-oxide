@@ -98,10 +98,8 @@ fn llncs_author_hand_marks_read_whole() {
   let (x, y) = ("affiliation=1 Univ X, Town", "affiliation=2 Univ Y, City");
   assert_eq!(
     creators(&xml),
-    [vec!["Ann Able 1", x], vec!["Bob Baker 2", y], vec![
-      "Cid Cole 1,2",
-      x,
-      y
+    [vec!["Ann Able", x], vec!["Bob Baker", y], vec![
+      "Cid Cole", x, y
     ]],
     "{xml}"
   );

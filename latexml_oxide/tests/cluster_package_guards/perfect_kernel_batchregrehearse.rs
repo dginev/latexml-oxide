@@ -54,16 +54,17 @@ fn title_code_command_assigning_is_no_declaration() {
     assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
     assert_eq!(
       creators(&xml),
-      [vec!["Ann Able 1".to_string()], vec![
-        "Bob Baker 2".to_string()
+      [vec!["Ann Able".to_string(), "mark=1".to_string()], vec![
+        "Bob Baker".to_string(),
+        "mark=2".to_string()
       ]],
       "{xml}"
     );
     assert_eq!(
       elements(&xml, "personname"),
       [
-        r#"<personname>Ann Able<sup xml:id="id1">1</sup></personname>"#,
-        r#"<personname>Bob Baker<sup xml:id="id2">2</sup></personname>"#
+        r#"<personname>Ann Able</personname>"#,
+        r#"<personname>Bob Baker</personname>"#
       ],
       "{xml}"
     );
@@ -88,16 +89,17 @@ fn title_code_command_in_a_papers_macro_keeps_its_other_definitions() {
   );
   assert_eq!(
     creators(&xml),
-    [vec!["Ann Able 1".to_string()], vec![
-      "Bob Baker 2".to_string()
+    [vec!["Ann Able".to_string(), "mark=1".to_string()], vec![
+      "Bob Baker".to_string(),
+      "mark=2".to_string()
     ]],
     "{xml}"
   );
   assert_eq!(
     elements(&xml, "personname"),
     [
-      r#"<personname>Ann Able<sup xml:id="id1">1</sup></personname>"#,
-      r#"<personname>Bob Baker<sup xml:id="id2">2</sup></personname>"#
+      r#"<personname>Ann Able</personname>"#,
+      r#"<personname>Bob Baker</personname>"#
     ],
     "{xml}"
   );

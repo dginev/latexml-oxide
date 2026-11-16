@@ -1,0 +1,15 @@
+% witness: 2007.16032 (svjour3: `\author{Qi Wang \and … \and Yuan Yuan*}` over `\institute{* Y. Yuan is the
+%          corresponding author. \\ …}`); 2008.13745, math0304264 (`P. Li*`), math0304301 (`Shicheng Wang†`)
+% oracle:  pdflatex 0 errors: "Ann Able and Bob Baker*" over "Univ A, Town A"
+% engines: rust REGFIX = <personname>Bob Baker*</personname>, the typed symbol in the name's text
+% expect:  0 errors; the name alone, the symbol typed at its end a mark-only note after it:
+%          <personname>Bob Baker</personname><note role="footnotemark" mark="*"/> (DG 2026-11-16)
+% status:  RED (REGFIX) -> GREEN (PURE)
+\documentclass{llncs}
+\begin{document}
+\title{T}
+\author{Ann Able \and Bob Baker*}
+\institute{Univ A, Town A}
+\maketitle
+x
+\end{document}

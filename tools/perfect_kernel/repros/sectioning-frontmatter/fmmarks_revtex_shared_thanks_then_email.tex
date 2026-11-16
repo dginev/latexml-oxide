@@ -1,0 +1,24 @@
+% mechanism: revtex4-2: the same `\thanks` on two names but the second joined with an `\email`: two footnotes (∗, †),
+%   so each name's own contact
+% witness:  revSHREST p1
+% oracle:   pdflatex 0 errors; "Ann Able∗ and Bob Baker†"
+% engines:  rust INTREC (3af622aca64) = 0 errors, 0 Warnings; Ann Able | thanks=Equal. ; affiliation=Univ A / Bob
+%   Baker | thanks=Equal. ; email=b@x.org ; affiliation=Univ A
+% expect:   0 errors, 0 Warnings; Ann Able | thanks=Equal. ; affiliation=Univ A / Bob Baker | thanks=Equal. ;
+%   email=b@x.org ; affiliation=Univ A (guard canon: name ; note role[mark]=text, sorted | contacts)
+% status:   GREEN (INTREC 3af622aca64; perfect_kernel_batchfmmarks::revtex_marks_follow_its_numbering)
+% preload: ar5iv.sty
+\documentclass[aps,prl,preprint]{revtex4-2}
+\begin{document}
+\title{A Title}
+\author{Ann Able}
+\thanks{Equal.}
+\affiliation{Univ A}
+\author{Bob Baker}
+\thanks{Equal.}
+\email{b@x.org}
+\affiliation{Univ A}
+\begin{abstract}Abs.\end{abstract}
+\maketitle
+Body\footnote{body note}.
+\end{document}

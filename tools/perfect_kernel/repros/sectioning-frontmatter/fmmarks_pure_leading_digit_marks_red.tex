@@ -1,0 +1,18 @@
+% mechanism: leading digit marks (`$^{1}$Ann Able`) answered only in the body: mark-only notes, the names pure; the
+%   safety net counts the unanswered marks (1 Warning)
+% witness:  revPURE p4_lead1
+% oracle:   pdflatex 0 errors; "1Ann Able 2Bob Baker", the body "1 Univ A. 2 Univ B."
+% engines:  rust INTREC (3af622aca64) = 0 errors, 1 Warning; Ann Able 1 / Bob Baker 2; as expected on PURE-rel
+% expect:   0 errors, 1 Warning; Ann Able ; footnotemark[1]= / Bob Baker ; footnotemark[2]= (guard canon: name ; note
+%   role[mark]=text, sorted | contacts)
+% moves:    PURE (fix/pure-personname: the marks out of the personname)
+% status:   RED (INTREC 3af622aca64; perfect_kernel_batchfmmarks::name_marks_live_outside_the_personname_red)
+% preload: ar5iv.sty
+\documentclass{article}
+\title{T}
+\author{$^{1}$Ann Able \and $^{2}$Bob Baker}
+\date{}
+\begin{document}
+\maketitle
+$^1$ Univ A. $^2$ Univ B.
+\end{document}

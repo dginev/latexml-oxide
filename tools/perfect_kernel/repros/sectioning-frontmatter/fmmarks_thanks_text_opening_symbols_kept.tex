@@ -1,0 +1,21 @@
+% mechanism: `\thanks` texts opening with `$^{3}$He`, `* marks` and `$^*$-algebras`: each note marked with the class's
+%   ∗/†/‡, its own symbol kept as text
+% witness:  revSHMARK p4 (p5, p6; review revSHMARK S2)
+% oracle:   pdflatex 0 errors; "Ann Able∗ Bob Baker† Cy Cole‡", footnotes "∗3He detectors…", "† * marks the starred
+%   items.", "‡∗-algebras are studied."
+% engines:  rust INTREC (3af622aca64) = 0 errors, 0 Warnings; Ann Able ; thanks[*]=3 He detectors were funded by X. /
+%   Bob Baker ; thanks[†]=* marks the starred items. / Cy Cole ; thanks[‡]=∗ -algebras are studied.
+% expect:   0 errors, 0 Warnings; Ann Able ; thanks[*]=3 He detectors were funded by X. / Bob Baker ; thanks[†]=*
+%   marks the starred items. / Cy Cole ; thanks[‡]=∗ -algebras are studied. (guard canon: name ; note
+%   role[mark]=text, sorted | contacts)
+% status:   GREEN (INTREC 3af622aca64;
+%   perfect_kernel_batchfmmarks::notes_are_marked_only_where_the_class_prints_marks)
+% preload: ar5iv.sty
+\documentclass{article}
+\title{T}
+\author{Ann Able\thanks{$^{3}$He detectors were funded by X.} \and Bob Baker\thanks{* marks the starred items.} \and Cy Cole\thanks{$^*$-algebras are studied.}}
+\date{}
+\begin{document}
+\maketitle
+Text.
+\end{document}

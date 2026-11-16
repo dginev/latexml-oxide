@@ -72,7 +72,7 @@ fn a_title_code_macro_reading_the_author_defines_its_marks() {
   assert_eq!(
     creator_elements(&xml),
     [
-      "<creator role=\"author\"><personname>Ann Able<sup xml:id=\"id1\">†</sup></personname></creator>",
+      "<creator role=\"author\"><personname>Ann Able</personname><note mark=\"†\" role=\"footnotemark\" xml:id=\"id1\"/></creator>",
       "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker</personname></creator>"
     ],
     "{xml}"

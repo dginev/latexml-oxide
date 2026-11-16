@@ -40,9 +40,9 @@ fn institutions_side_by_side_are_entries() {
   assert_eq!(
     clean_creators(repro!("cut_acmart_institutions_side_by_side")),
     [
-      vec!["Ann Able 1", "affiliation=1 Univ A , X"],
-      vec!["Bob Baker 2", "affiliation=2 Univ B , X"],
-      vec!["Cat Cole 1", "affiliation=1 Univ A , X"],
+      vec!["Ann Able", "affiliation=1 Univ A , X"],
+      vec!["Bob Baker", "affiliation=2 Univ B , X"],
+      vec!["Cat Cole", "affiliation=1 Univ A , X"],
     ]
   );
 }
@@ -60,12 +60,13 @@ fn a_control_return_parts_marked_entries() {
       vec![
         // (the glued star of `$^{1,2*}$` a superscript of its own since 108a r2, its math glyph as printed: `glued_marks`,
         // `keepsup_in_math`)
-        "Ann Able 1,2 ∗",
+        "Ann Able",
+        "mark=∗",
         "affiliation=1 Univ A , X",
         "affiliation=2 Univ B , X"
       ],
-      vec!["Bob Baker 3", "affiliation=3 Univ C , X"],
-      vec!["Cat Cole 1", "affiliation=1 Univ A , X"],
+      vec!["Bob Baker", "affiliation=3 Univ C , X"],
+      vec!["Cat Cole", "affiliation=1 Univ A , X"],
     ]
   );
 }
@@ -81,8 +82,8 @@ fn a_control_return_parts_marked_entries() {
 #[test]
 fn tabular_rows_are_marked_entries() {
   // (P4c: the lists' printed marks shown in the pins below, as pdflatex prints them — P4S Q1)
-  let rows = [vec!["Ann Able 1", "affiliation=1 Univ A, Town"], vec![
-    "Bob Baker 2",
+  let rows = [vec!["Ann Able", "affiliation=1 Univ A, Town"], vec![
+    "Bob Baker",
     "affiliation=2 Univ B, City",
   ]];
   assert_eq!(
@@ -103,17 +104,17 @@ fn tabular_rows_are_marked_entries() {
     clean_creators(repro!("ieee_blocka_tabular_rows_are_entries")),
     [
       vec![
-        "Ann Able 1",
+        "Ann Able",
         "affiliation=1 Univ A, Town",
         "email=aable@a.edu"
       ],
       vec![
-        "Bob Baker 2",
+        "Bob Baker",
         "affiliation=2 Univ B, City",
         "email=bbaker@b.edu"
       ],
       vec![
-        "Cat Cole 1",
+        "Cat Cole",
         "affiliation=1 Univ A, Town",
         "email=ccole@a.edu"
       ],
@@ -131,18 +132,18 @@ fn a_spaced_mark_after_a_plain_lead_parts_entries() {
     clean_creators(repro!("ieee_blocka_spaced_marks_after_a_plain_lead")),
     [
       vec![
-        "Ann Able 1",
+        "Ann Able",
         "affiliation=1 Univ A, Town",
         "email=aable@a.edu"
       ],
       vec![
-        "Bob Baker 2",
+        "Bob Baker",
         "affiliation=2 Univ B, City",
         "email=bbaker@b.edu"
       ],
-      vec!["Cat Cole 3", "affiliation=3 Univ C", "email=ccole@c.edu"],
+      vec!["Cat Cole", "affiliation=3 Univ C", "email=ccole@c.edu"],
       vec![
-        "Dan Dorn 1",
+        "Dan Dorn",
         "affiliation=1 Univ A, Town",
         "email=ddorn@a.edu"
       ],
@@ -160,23 +161,15 @@ fn math_number_marks_label_lines() {
   assert_eq!(
     clean_creators(repro!("revtex_math_number_marks_label_lines")),
     [
-      vec![
-        "Ann Able 1",
-        "email=ann@a.edu",
-        "affiliation=1 Univ A, Town"
-      ],
-      vec!["Bob Baker 2", "affiliation=2 Univ B, City"],
+      vec!["Ann Able", "email=ann@a.edu", "affiliation=1 Univ A, Town"],
+      vec!["Bob Baker", "affiliation=2 Univ B, City"],
     ]
   );
   assert_eq!(
     clean_creators(repro!("revtex_math_number_first_mark_over_superscripts")),
     [
-      vec![
-        "Ann Able 1,2",
-        "affiliation=1 Univ A",
-        "affiliation=2 Univ B"
-      ],
-      vec!["Bob Baker 3", "affiliation=3 Univ C"],
+      vec!["Ann Able", "affiliation=1 Univ A", "affiliation=2 Univ B"],
+      vec!["Bob Baker", "affiliation=3 Univ C"],
     ]
   );
 }
@@ -192,21 +185,18 @@ fn an_ordinal_number_is_no_mark() {
     clean_creators(repro!("revtex_ordinal_number_line_is_entry_text")),
     [
       vec![
-        "Ann Able 1",
+        "Ann Able",
         "affiliation=1 Univ A, Town 3 rd floor, Physics Bldg"
       ],
-      vec!["Bob Baker 2", "affiliation=2 Univ B, City"],
-      vec!["Cat Cole 3", "affiliation=3 Univ C"],
+      vec!["Bob Baker", "affiliation=2 Univ B, City"],
+      vec!["Cat Cole", "affiliation=3 Univ C"],
     ]
   );
   assert_eq!(
     clean_creators(repro!("revtex_ordinal_number_line_under_number_marks")),
     [
-      vec![
-        "Ann Able 1",
-        "affiliation=1 Univ A, Town 2 nd Floor, Bldg C"
-      ],
-      vec!["Bob Baker 2", "affiliation=2 Univ B, City"],
+      vec!["Ann Able", "affiliation=1 Univ A, Town 2 nd Floor, Bldg C"],
+      vec!["Bob Baker", "affiliation=2 Univ B, City"],
     ]
   );
 }
@@ -222,10 +212,10 @@ fn an_isotope_nucleus_mark_is_text() {
   assert_eq!(
     clean_creators(repro!("revtex_nucleus_isotope_after_a_plain_lead_is_text")),
     [
-      vec!["Ann Able 1", "affiliation=1 Univ A, Lab for"],
-      vec!["Bob Baker 2", "affiliation=2 Univ B, City"],
+      vec!["Ann Able", "affiliation=1 Univ A, Lab for"],
+      vec!["Bob Baker", "affiliation=2 Univ B, City"],
       vec![
-        "Cat Cole 3",
+        "Cat Cole",
         "affiliation=3 He Physics, Town",
         "affiliation=3 Univ C"
       ],
@@ -246,8 +236,8 @@ fn a_conjunction_before_a_nucleus_mark_parts_entries() {
     clean_creators(repro!(
       "revtex_nucleus_mark_after_a_conjunction_parts_entries"
     )),
-    [vec!["Ann Able 1", "affiliation=1 Univ X"], vec![
-      "Bob Baker 2",
+    [vec!["Ann Able", "affiliation=1 Univ X"], vec![
+      "Bob Baker",
       "affiliation=2 Lab Y"
     ],]
   );
@@ -256,9 +246,9 @@ fn a_conjunction_before_a_nucleus_mark_parts_entries() {
       "revtex_nucleus_mark_after_bare_and_or_ampersand_parts_entries"
     )),
     [
-      vec!["Ann Able 1", "affiliation=1 Univ X"],
-      vec!["Bob Baker 2", "affiliation=2 Lab Y"],
-      vec!["Cat Cole 3", "affiliation=3 Inst Z"],
+      vec!["Ann Able", "affiliation=1 Univ X"],
+      vec!["Bob Baker", "affiliation=2 Lab Y"],
+      vec!["Cat Cole", "affiliation=3 Inst Z"],
     ]
   );
 }
@@ -275,11 +265,11 @@ fn a_saint_after_a_math_number_is_a_word() {
     clean_creators(repro!("revtex_math_number_mark_before_saint_is_a_mark")),
     [
       vec![
-        "Ann Able 1",
+        "Ann Able",
         "affiliation=1 St. Petersburg State University 1 st Floor, Bldg C"
       ],
-      vec!["Bob Baker 2", "affiliation=2 Univ B"],
-      vec!["Cat Cole 3", "affiliation=3 St Andrews University"],
+      vec!["Bob Baker", "affiliation=2 Univ B"],
+      vec!["Cat Cole", "affiliation=3 St Andrews University"],
     ]
   );
 }

@@ -38,9 +38,9 @@ fn ieee_refmark_sized_marks_link() {
     "../../../tools/perfect_kernel/repros/sectioning-frontmatter/ieee_refmark_sized_marks_link.tex"
   );
   assert_eq!(creators(&convert_clean(tex)), vec![
-    "<creator role=\"author\">\n    <personname>Ann Able<sup xml:id=\"id1\"><Math mode=\"inline\" tex=\"1\" text=\"1\" xml:id=\"m1\">\n          <XMath xml:id=\"m1.1\">\n            <XMTok fontsize=\"80%\" meaning=\"1\" role=\"NUMBER\">1</XMTok>\n          </XMath>\n        </Math></sup></personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id2\"><Math mode=\"inline\" tex=\"1\" text=\"1\" xml:id=\"m4a\">\n          <XMath xml:id=\"m4a.1\">\n            <XMTok fontsize=\"80%\" meaning=\"1\" role=\"NUMBER\">1</XMTok>\n          </XMath>\n        </Math></sup>Univ A, Country</contact>\n  </creator>",
-    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Bob Baker<sup xml:id=\"id3\"><Math mode=\"inline\" tex=\"2\" text=\"2\" xml:id=\"m2\">\n          <XMath xml:id=\"m2.1\">\n            <XMTok fontsize=\"80%\" meaning=\"2\" role=\"NUMBER\">2</XMTok>\n          </XMath>\n        </Math></sup></personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id4\"><Math mode=\"inline\" tex=\"2\" text=\"2\" xml:id=\"m5a\">\n          <XMath xml:id=\"m5a.1\">\n            <XMTok fontsize=\"80%\" meaning=\"2\" role=\"NUMBER\">2</XMTok>\n          </XMath>\n        </Math></sup>Univ B, Country</contact>\n  </creator>",
-    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Cy Coe<sup xml:id=\"id5\"><Math mode=\"inline\" tex=\"2\" text=\"2\" xml:id=\"m3\">\n          <XMath xml:id=\"m3.1\">\n            <XMTok fontsize=\"80%\" meaning=\"2\" role=\"NUMBER\">2</XMTok>\n          </XMath>\n        </Math></sup></personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id6\"><Math mode=\"inline\" tex=\"2\" text=\"2\" xml:id=\"m5b\">\n          <XMath xml:id=\"m5b.1\">\n            <XMTok fontsize=\"80%\" meaning=\"2\" role=\"NUMBER\">2</XMTok>\n          </XMath>\n        </Math></sup>Univ B, Country</contact>\n  </creator>",
+    "<creator role=\"author\">\n    <personname>Ann Able</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id1\"><Math mode=\"inline\" tex=\"1\" text=\"1\" xml:id=\"m4a\">\n          <XMath xml:id=\"m4a.1\">\n            <XMTok fontsize=\"80%\" meaning=\"1\" role=\"NUMBER\">1</XMTok>\n          </XMath>\n        </Math></sup>Univ A, Country</contact>\n  </creator>",
+    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Bob Baker</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id2\"><Math mode=\"inline\" tex=\"2\" text=\"2\" xml:id=\"m5a\">\n          <XMath xml:id=\"m5a.1\">\n            <XMTok fontsize=\"80%\" meaning=\"2\" role=\"NUMBER\">2</XMTok>\n          </XMath>\n        </Math></sup>Univ B, Country</contact>\n  </creator>",
+    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Cy Coe</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id3\"><Math mode=\"inline\" tex=\"2\" text=\"2\" xml:id=\"m5b\">\n          <XMath xml:id=\"m5b.1\">\n            <XMTok fontsize=\"80%\" meaning=\"2\" role=\"NUMBER\">2</XMTok>\n          </XMath>\n        </Math></sup>Univ B, Country</contact>\n  </creator>",
   ]);
 }
 
@@ -59,10 +59,10 @@ fn ieee_refmark_address_and_marks_in_a_line() {
     "../../../tools/perfect_kernel/repros/sectioning-frontmatter/ieee_refmark_address_and_marks_in_a_line.tex"
   );
   assert_eq!(creators(&convert_clean(tex)), vec![
-    "<creator role=\"author\">\n    <personname>Ben Steen<sup xml:id=\"id1\">*</sup></personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id2\">*</sup>Microsoft Data &amp; AI</contact>\n    <contact name=\"Email:\u{a0}\" role=\"email\">steen@microsoft.com</contact>\n  </creator>",
-    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Mic Tufo<sup xml:id=\"id3\">†</sup></personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id4\">†</sup>Google</contact>\n    <contact name=\"Email:\u{a0}\" role=\"email\">tufo@google.com</contact>\n  </creator>",
-    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Alex Svy<sup xml:id=\"id5\">‡</sup></personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id6\">‡</sup>Google DeepMind</contact>\n    <contact name=\"Email:\u{a0}\" role=\"email\">svy@google.com</contact>\n  </creator>",
-    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Dem Hespe<sup xml:id=\"id7\">§</sup></personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id8\">§</sup><text font=\"italic\" xml:id=\"id9\">Independent</text></contact>\n    <contact name=\"Email:\u{a0}\" role=\"email\">dem.hespe@outlook.com</contact>\n  </creator>",
+    "<creator role=\"author\">\n    <personname>Ben Steen</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id1\">*</sup>Microsoft Data &amp; AI</contact>\n    <contact name=\"Email:\u{a0}\" role=\"email\">steen@microsoft.com</contact>\n  </creator>",
+    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Mic Tufo</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id2\">†</sup>Google</contact>\n    <contact name=\"Email:\u{a0}\" role=\"email\">tufo@google.com</contact>\n  </creator>",
+    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Alex Svy</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id3\">‡</sup>Google DeepMind</contact>\n    <contact name=\"Email:\u{a0}\" role=\"email\">svy@google.com</contact>\n  </creator>",
+    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Dem Hespe</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id4\">§</sup><text font=\"italic\" xml:id=\"id5\">Independent</text></contact>\n    <contact name=\"Email:\u{a0}\" role=\"email\">dem.hespe@outlook.com</contact>\n  </creator>",
     "<creator role=\"author\">\n    <contact name=\"Email: \" role=\"email\">sund@microsoft.com</contact>\n  </creator>",
   ]);
 }
@@ -176,7 +176,8 @@ fn caption_in_centered_minipage_with_adjustbox() {
   );
 }
 
-/// 64a: `Ann Able$^*$ and Bob Bee$^1$` with no `$^1$` line: Bob's unanswered mark stays in his name (the RED of 63x).
+/// 64a: `Ann Able$^*$ and Bob Bee$^1$` with no `$^1$` line: Bob's unanswered mark stays printed (the RED of 63x), a
+/// mark-only note after his name since PURE.
 /// Repro sectioning-frontmatter/author_unmatched_numeric_mark.
 /// T1 (`=2`, `perfect_kernel_batcht1::expect`): the same; the math `*` written ∗ as LaTeXML writes a math
 /// asterisk (FIDELITY_CHARTER §4).
@@ -186,12 +187,8 @@ fn author_unmatched_numeric_mark() {
     "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_unmatched_numeric_mark.tex"
   );
   assert_eq!(creators(&convert_clean(tex)), vec![
-    format!(
-      "<creator role=\"author\">\n    <personname>Ann Able<sup xml:id=\"id1\">{}</sup></personname>\n  </creator>",
-      "∗"
-    )
-    .as_str(),
-    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Bob Bee<sup xml:id=\"id2\">1</sup></personname>\n  </creator>",
+    "<creator role=\"author\">\n    <personname>Ann Able</personname>\n    <note mark=\"∗\" role=\"footnotemark\" xml:id=\"id1\"/>\n  </creator>",
+    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Bob Bee</personname>\n    <note mark=\"1\" role=\"footnotemark\" xml:id=\"id2\"/>\n  </creator>",
   ]);
 }
 
@@ -291,8 +288,8 @@ fn llncs_and_inside_wrapper() {
     "../../../tools/perfect_kernel/repros/sectioning-frontmatter/llncs_and_inside_wrapper.tex"
   );
   assert_eq!(creators(&convert_clean(tex)), vec![
-    "<creator role=\"author\">\n    <personname><text fontsize=\"120%\" xml:id=\"id1\">Ann Able<sup xml:id=\"id1.1\">1</sup></text></personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id2\">1</sup>Univ A</contact>\n  </creator>",
-    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname><text fontsize=\"120%\" xml:id=\"id3\">Bob Baker<sup xml:id=\"id3.1\">2</sup></text></personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id4\">2</sup>Univ B</contact>\n  </creator>",
+    "<creator role=\"author\">\n    <personname><text fontsize=\"120%\" xml:id=\"id1\">Ann Able</text></personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id2\">1</sup>Univ A</contact>\n  </creator>",
+    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname><text fontsize=\"120%\" xml:id=\"id3\">Bob Baker</text></personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id4\">2</sup>Univ B</contact>\n  </creator>",
   ]);
 }
 
@@ -318,9 +315,9 @@ fn author_separator_macro_lastand() {
     "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_separator_macro_lastand.tex"
   );
   assert_eq!(creators(&convert_clean(tex)), vec![
-    "<creator role=\"author\">\n    <personname>Ann Able<sup xml:id=\"id1\">1</sup></personname>\n  </creator>",
-    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Bob Baker<sup xml:id=\"id2\">2</sup></personname>\n  </creator>",
-    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Cat Cole<sup xml:id=\"id3\">1</sup></personname>\n  </creator>",
+    "<creator role=\"author\">\n    <personname>Ann Able</personname>\n    <note mark=\"1\" role=\"footnotemark\" xml:id=\"id1\"/>\n  </creator>",
+    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Bob Baker</personname>\n    <note mark=\"2\" role=\"footnotemark\" xml:id=\"id2\"/>\n  </creator>",
+    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Cat Cole</personname>\n    <note mark=\"1\" role=\"footnotemark\" xml:id=\"id3\"/>\n  </creator>",
   ]);
 }
 
@@ -1097,11 +1094,7 @@ fn author_unmarked_first_line_list_wraps() {
   );
   let xml = convert_clean(tex);
   assert_eq!(creators(&xml), vec![
-    format!(
-      "<creator role=\"author\">\n    <personname>Ann Able<sup xml:id=\"id1\">{}</sup></personname>\n  </creator>",
-      "∗"
-    )
-    .as_str(),
+    "<creator role=\"author\">\n    <personname>Ann Able</personname>\n    <note mark=\"∗\" role=\"footnotemark\" xml:id=\"id1\"/>\n  </creator>",
     "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Bob Baker</personname>\n  </creator>",
     "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Cat Cole</personname>\n  </creator>",
     "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Dan Dee</personname>\n  </creator>",
@@ -1120,11 +1113,7 @@ fn author_unmarked_rows_without_trailing_comma() {
   );
   let xml = convert_clean(tex);
   assert_eq!(creators(&xml), vec![
-    format!(
-      "<creator role=\"author\">\n    <personname>Ann Able<sup xml:id=\"id1\">{}</sup></personname>\n  </creator>",
-      "∗"
-    )
-    .as_str(),
+    "<creator role=\"author\">\n    <personname>Ann Able</personname>\n    <note mark=\"∗\" role=\"footnotemark\" xml:id=\"id1\"/>\n  </creator>",
     "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Bob Baker</personname>\n  </creator>",
     "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Cat Cole</personname>\n  </creator>",
     "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Dan Dee</personname>\n  </creator>",
@@ -1143,8 +1132,8 @@ fn author_bold_row_after_marked_names() {
   assert_eq!(creators(&xml), vec![
     "<creator role=\"author\">\n    <personname>Ann Able</personname>\n    <contact class=\"ltx_author_line\" name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A</contact>\n  </creator>",
     "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Bob Baker</personname>\n    <contact class=\"ltx_author_line\" name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ B</contact>\n  </creator>",
-    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Cat Cole<sup xml:id=\"id1\">†</sup></personname>\n  </creator>",
-    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Dan Dee<sup xml:id=\"id2\">†</sup></personname>\n  </creator>",
+    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Cat Cole</personname>\n    <note mark=\"†\" role=\"footnotemark\" xml:id=\"id1\"/>\n  </creator>",
+    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Dan Dee</personname>\n    <note mark=\"†\" role=\"footnotemark\" xml:id=\"id2\"/>\n  </creator>",
   ]);
 }
 

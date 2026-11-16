@@ -114,7 +114,7 @@ fn a_symbol_inside_an_entrys_brackets_is_its_text() {
   let (log, xml) = run(repro!("emit_a_nested_entrys_mark_is_its_label"));
   assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
   assert_eq!(creators(&xml)[0], [
-    "Ann Able * †",
+    "Ann Able",
     "affiliation=* Univ A, Town",
     "affiliation=† Univ B, City"
   ]);

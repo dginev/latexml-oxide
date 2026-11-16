@@ -33,7 +33,9 @@ use latexml::util::test::{convert_files_with, convert_with};
 
 use super::{
   perfect_kernel_batch46::{error_count, warning_count},
-  perfect_kernel_batch77d::{assert_no_merged_names, author_line, creator, creators, squash},
+  perfect_kernel_batch77d::{
+    assert_no_merged_names, author_line, creator, creators, mark_only, squash,
+  },
 };
 
 /// A `sectioning-frontmatter` repro's squashed XML, its conversion free of errors and warnings.
@@ -116,7 +118,7 @@ fn single_spacing_stays_in_the_name() {
       "Gus Gray",
       r#"<note class="ltx_note_frontmatter ltx_thanks_note" mark="*" role="thanks" xml:id="id1">Note G.</note>"#
     ),
-    creator(false, r#"Hal Hunt<sup xml:id="id2">1</sup>"#, ""),
+    creator(false, "Hal Hunt", &mark_only("id2", "1", "")),
   ]);
 }
 
@@ -471,7 +473,7 @@ fn spacing_run_names_rows() {
         r#"<note class="ltx_note_frontmatter ltx_thanks_contribution" mark="*" role="thanks" xml:id="id1">Equal contribution.</note> {microsoft}"#
       )
     ),
-    creator(false, r#"Bob Baker<sup xml:id="id2">∗</sup>"#, &microsoft),
+    creator(false, "Bob Baker", &mark_only("id2", "∗", &microsoft)),
     creator(false, "Cat Cole", &microsoft),
     creator(false, "Dan B. Dorn", &microsoft),
     creator(false, "Eve Eads", &microsoft),
@@ -924,11 +926,15 @@ fn link_line_of_a_marked_column_is_its_authors_url() {
   assert_eq!(creators(&xml), vec![
     creator(
       true,
-      r#"Ann Able<sup xml:id="id1">∗</sup>"#,
-      &format!(
-        "{} {}",
-        author_line(affiliation(" Univ A")),
-        author_line(url(&link("", "https://ann.example.org")))
+      "Ann Able",
+      &mark_only(
+        "id1",
+        "∗",
+        format!(
+          "{} {}",
+          author_line(affiliation(" Univ A")),
+          author_line(url(&link("", "https://ann.example.org")))
+        )
       )
     ),
     creator(false, "Bob Baker", &author_line(affiliation("Univ B"))),
@@ -946,18 +952,18 @@ fn fnsymbol_command_is_a_symbol_mark() {
   assert_eq!(creators(&xml), vec![
     creator(
       true,
-      r#"Cat Cole<sup xml:id="id1">§</sup>"#,
-      &author_line(affiliation(" Univ A"))
+      "Cat Cole",
+      &mark_only("id1", "§", author_line(affiliation(" Univ A")))
     ),
     creator(
       false,
-      r#"Dan Dorn<sup xml:id="id2">§</sup>"#,
-      &author_line(affiliation(" Univ A"))
+      "Dan Dorn",
+      &mark_only("id2", "§", author_line(affiliation(" Univ A")))
     ),
     creator(
       false,
-      r#"Eve Eads<sup xml:id="id3">†</sup>"#,
-      &author_line(affiliation(" Univ A"))
+      "Eve Eads",
+      &mark_only("id3", "†", author_line(affiliation(" Univ A")))
     ),
   ]);
 }
@@ -1336,8 +1342,8 @@ fn compound_symbol_mark_is_a_label_per_symbol() {
   assert_eq!(creators(&xml), vec![
     creator(
       true,
-      r#"Ann Able<sup xml:id="id1">∗</sup>"#,
-      &author_line(affiliation(" Univ A"))
+      "Ann Able",
+      &mark_only("id1", "∗", author_line(affiliation(" Univ A")))
     ),
     creator(false, "Bob Baker", &author_line(affiliation(" Univ B"))),
     creator(false, "Cat Cole", &author_line(affiliation(" Univ A"))),
@@ -1577,8 +1583,8 @@ fn ieee_halign_markers_print_nothing() {
   );
   // (IEEEtran written since 95b, OD #942: each typewriter address line its speller's e-mail, brief 95c's take-out)
   assert_eq!(creators(&xml), [
-    r#"<creator role="author"> <personname>Ann Able<sup xml:id="id1"><text font="italic" xml:id="id1.1">1</text></sup></personname> <contact name="Email: " role="email"><text font="typewriter" xml:id="id2">aable@x.edu</text></contact> <contact name="Affiliation: " role="affiliation"><sup xml:id="id3">1</sup>Univ A</contact> </creator>"#,
-    r#"<creator before=" " role="author"> <personname>Bob Baker<sup xml:id="id4"><text font="italic" xml:id="id4.1">1</text></sup></personname> <contact name="Email: " role="email"><text font="typewriter" xml:id="id5">bbaker@x.edu</text></contact> <contact name="Affiliation: " role="affiliation"><sup xml:id="id6">1</sup>Univ A</contact> </creator>"#,
+    r#"<creator role="author"> <personname>Ann Able</personname> <contact name="Email: " role="email"><text font="typewriter" xml:id="id1">aable@x.edu</text></contact> <contact name="Affiliation: " role="affiliation"><sup xml:id="id2">1</sup>Univ A</contact> </creator>"#,
+    r#"<creator before=" " role="author"> <personname>Bob Baker</personname> <contact name="Email: " role="email"><text font="typewriter" xml:id="id3">bbaker@x.edu</text></contact> <contact name="Affiliation: " role="affiliation"><sup xml:id="id4">1</sup>Univ A</contact> </creator>"#,
   ]);
 }
 

@@ -19712,6 +19712,35 @@ a_repeated_revtex_thanks_is_the_authors_marked_note, revtex_footnotes_are_number
 a_revtex_thanks_in_a_name_stays_unmarked, a_revtex_name_footnote_takes_its_number_unmarked}`, `perfect_kernel_batch66h::revtex_frontmatter_footnote_on_two_authors`,
 `perfect_kernel_batchregbind::bindings_print_the_title_page_lists_their_files_print`.
 
+### 1055. A personname holds the name alone: each mark printed on it is its note's `mark`, the label its contact consumes, or a mark-only note after it (Perl: the marks inside the personname)
+
+**Principle.** FIDELITY_CHARTER "a name's label is the name alone" (2026-10-21) with DG 2026-11-16: `ltx:personname` is
+pure semantic markup, reusable as metadata, and no printed mark is lost — purity and no loss are one rule.
+**Perl.** The whole author line or each `\and` piece is the personname, its `$^1$`, `\textsuperscript{a}` and typed
+`*` inside it (Base_Utility.pool.ltxml:722-726); an affiliation's mark is a request it removes only where a labelled
+affiliation answers it (`relocateAnnotations`, :895-901).
+**Rust.** The last step of `insert_frontmatter`, `keep_personnames_pure` (`frontmatter/pure_names.rs`), runs once every
+route has placed the creator's contacts and notes, and takes every mark off each creator's personname — an `ltx:sup`, a
+formula of scripts alone, a footnote symbol typed at the name's end. A note of the creator marked so keeps it; an unmarked
+note opening with a copy of it takes it as `mark`, the copy cut — a superscript or a formula of scripts alone printing it,
+or for a symbol its text's head (`\thanks{*Equal Contribution}`, 1904.03977); a letter or number opening the text is the
+note's word, never a copy (`\thanks{a visitor …}`). A contact the creator holds keyed by it — its labels, or the
+superscript its text opens with, inside its font wrappers too — consumes it (ruling 3: 0707.3527, 2011.00594); a run of
+letters and digits parts where one part is a held label (`$^{a1}$`: address a consumed, 1 left; hep-ph0011101). Any other
+mark is `<note role="footnotemark" mark="…"/>` right after the name (0801.1438), flagged `_namemark` so no body
+`\footnotetext` pairs with it (`relocate_footnote`, 2208.09944). A symbol typed beside a `\thanks` is such a note, never the
+`\thanks`'s mark: the `\thanks` prints its own (`Haoran Li$^{*}$\thanks{…}` prints "∗†", 2406.11149, 2506.02863), its
+glyph the typed one too — a note its own command marks (`_markfromcounter`: the title's footnote counter, set by
+`\lx@title@thanks` and the emitter's note call; REVTeX's numbered footnotes, `number_footnote_parts`) answers no typed
+glyph, so `Ann Able*\thanks{…}` keeps both marks of "*∗" (INTREC2, the PURE × SHMARK merge). Kept in
+the name: superscripts that are name ink (`M\textsuperscript{c}Kernan`, `1\textsuperscript{st}`, an isotope prescript),
+formulas on a base, a mark a reference or an icon prints (cmpj's `\refaddr`, an ORCID link in a mark: 2205.05709), and
+every mark of a personname holding more than a name (a mark with name ink on both sides: an author block written whole,
+merged names, each already counted by its Warning or Error). HTML: the mark-only note renders as its mark beside the name
+through the `ltx_annotated_personname` wrapper (REND2's XSLT); no template renders it as a mark alone before that. **Guards**:
+`perfect_kernel_batchpure` (repros `sectioning-frontmatter/pure_names/`); 287 older guards repinned to the name alone,
+their rows listing each note's `mark` (`perfect_kernel_batch84b::creators`).
+
 ---
 
 ## TeX-source fidelity family (TEXSRC)

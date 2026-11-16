@@ -45,9 +45,9 @@ fn an_affiliation_after_a_refilled_mark_is_read() {
   // (P4c: the lists' printed marks shown in the pins below, as pdflatex prints them — P4S Q1)
   let tex = repro!("emit_ieee_affiliation_after_a_refilled_mark");
   let expected = [
-    row(&["Ann Able *", "affiliation=* Univ Alpha"]),
+    row(&["Ann Able", "affiliation=* Univ Alpha"]),
     row(&[
-      "Bob Baker †",
+      "Bob Baker",
       "affiliation=† a b c d e f g h i j k l m n o p q r s t u v w x y z",
     ]),
     row(&["affiliation=‡ Univ Line3"]),
@@ -89,8 +89,8 @@ fn an_unread_calls_words_are_counted() {
     "{log}"
   );
   assert_eq!(creators(&xml), [
-    row(&["Ann Able *"]),
-    row(&["Bob Baker †", "affiliation=† Univ Beta"]),
+    row(&["Ann Able", "mark=*"]),
+    row(&["Bob Baker", "affiliation=† Univ Beta"]),
   ]);
 }
 
@@ -168,8 +168,8 @@ fn an_unread_calls_accented_words_count_whole() {
     "{log}"
   );
   assert_eq!(creators(&xml), [
-    row(&["Ann Able *"]),
-    row(&["Bob Baker †", "affiliation=† Univ Beta"]),
+    row(&["Ann Able", "mark=*"]),
+    row(&["Bob Baker", "affiliation=† Univ Beta"]),
   ]);
 }
 

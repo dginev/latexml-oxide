@@ -39,16 +39,16 @@ fn a_paragraph_in_a_box_stays_a_group() {
       "minipage",
       repro!("amsart_dedicatory_box_paragraph_stays_a_group"),
       [
-        r#"<contact role="dedicatory"><sup xml:id="id2">1</sup>Univ X<break/>City Y</contact>"#,
-        r#"<contact role="dedicatory"><sup xml:id="id4">2</sup>Univ Z</contact>"#,
+        r#"<contact role="dedicatory"><sup xml:id="id1">1</sup>Univ X<break/>City Y</contact>"#,
+        r#"<contact role="dedicatory"><sup xml:id="id2">2</sup>Univ Z</contact>"#,
       ],
     ),
     (
       "parbox",
       repro!("amsart_dedicatory_parbox_paragraph_stays_a_group"),
       [
-        r#"<contact role="dedicatory"><sup class="ltx_centering" xml:id="id2">1</sup>Univ X<break class="ltx_centering"/>City Y</contact>"#,
-        r#"<contact role="dedicatory"><sup class="ltx_centering" xml:id="id4">2</sup>Univ Z</contact>"#,
+        r#"<contact role="dedicatory"><sup class="ltx_centering" xml:id="id1">1</sup>Univ X<break class="ltx_centering"/>City Y</contact>"#,
+        r#"<contact role="dedicatory"><sup class="ltx_centering" xml:id="id2">2</sup>Univ Z</contact>"#,
       ],
     ),
   ];
@@ -61,8 +61,8 @@ fn a_paragraph_in_a_box_stays_a_group() {
     );
     assert_eq!(
       creators(&xml),
-      rows(&[&["Ann Able 1", "dedicatory=1 Univ X City Y"], &[
-        "Bob Baker 2",
+      rows(&[&["Ann Able", "dedicatory=1 Univ X City Y"], &[
+        "Bob Baker",
         "dedicatory=2 Univ Z"
       ],]),
       "{name}: {xml}"
@@ -88,18 +88,18 @@ fn a_paragraph_in_a_box_keeps_a_contacts_markup() {
       "minipage texttt",
       repro!("authblk_minipage_paragraph_keeps_a_typewriter_email"),
       (0, 0),
-      rows(&[&["Ann Able 1", "email=a@x.org", "affiliation=Univ X"]]),
-      "<contact class=\"ltx_author_line\" name=\"Email:\u{a0}\" role=\"email\"><text font=\"typewriter\" xml:id=\"id2\">a@x.org</text></contact>",
+      rows(&[&["Ann Able", "email=a@x.org", "affiliation=Univ X"]]),
+      "<contact class=\"ltx_author_line\" name=\"Email:\u{a0}\" role=\"email\"><text font=\"typewriter\" xml:id=\"id1\">a@x.org</text></contact>",
     ),
     (
       "parbox href",
       repro!("mnras_parbox_paragraph_keeps_a_mailto_link"),
       (0, 2),
       rows(&[
-        &["Team X: Ann Able 1", "email=team@x.org"],
+        &["Team X: Ann Able", "mark=1", "email=team@x.org"],
         // (the `\footnotemark`'s note beside the name, FN1; its tags' text was in the name on int157a)
-        &["Bob Baker 2"],
-        &["Cy Cole 3"],
+        &["Bob Baker", "mark=2", "mark=1"],
+        &["Cy Cole", "mark=3"],
       ]),
       "<contact name=\"Email:\u{a0}\" role=\"email\"><ref class=\"ltx_href\" href=\"mailto:team@x.org\">team@x.org</ref></contact>",
     ),

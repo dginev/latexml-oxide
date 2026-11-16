@@ -454,6 +454,9 @@ mod perfect_kernel_batchf1;
 mod perfect_kernel_batchfb2a;
 mod perfect_kernel_batchfb2b2;
 mod perfect_kernel_batchfb2b3;
+/// FMRG: the red/green suite of frontmatter mark association — every witness and reviewer probe of the shared-note
+/// campaign against its pdflatex oracle (DG 2026-11-16).
+mod perfect_kernel_batchfmmarks;
 mod perfect_kernel_batchfmp2;
 mod perfect_kernel_batchfms1;
 mod perfect_kernel_batchfms2a1;
@@ -602,6 +605,9 @@ mod perfect_kernel_batchpb;
 /// keeps its argument (pazh), a class's own `\email` reads its argument unexpanded (1802.01191); OD #983.
 mod perfect_kernel_batchpc3;
 mod perfect_kernel_batchpsf1;
+/// PURE: a personname holds the name alone; every mark on it is its note's `mark`, consumed by the contact it labels, or
+/// a mark-only note after it (DG 2026-11-16).
+mod perfect_kernel_batchpure;
 /// QA14A: a `\parbox` sets `\hsize` and `\linewidth` only, `\textwidth`/`\columnwidth` the page's; KPE #1273.
 mod perfect_kernel_batchqa14a;
 /// QA47A: `\begin{document}` runs the kernel's begin-document lists, so `cmd/<name>/<hook>` hooks patch TeX macros;

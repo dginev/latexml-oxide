@@ -28,8 +28,8 @@ macro_rules! repro {
 fn jcappub_is_written() {
   assert_written(
     repro!("jcappub_marked_affiliation_lines_written.tex"),
-    &[&["Ann Able 1", "affiliation=1 Univ A, Town A"], &[
-      "Bob Baker 2",
+    &[&["Ann Able", "affiliation=1 Univ A, Town A"], &[
+      "Bob Baker",
       "affiliation=2 Univ B, Town B",
     ]],
     &[
@@ -50,11 +50,11 @@ fn jheppub_family_is_written() {
     repro!("jheppub_marked_affiliations_written.tex"),
     &[
       &[
-        "Ann Able a,b",
+        "Ann Able",
         "affiliation=a Univ A, Town A",
         "affiliation=b Univ B, Town B",
       ],
-      &["Bob Baker c", "affiliation=c Univ C, Town C"],
+      &["Bob Baker", "affiliation=c Univ C, Town C"],
     ],
     &[
       "C Ann Able [a,b] | line:names",
@@ -68,13 +68,13 @@ fn jheppub_family_is_written() {
     repro!("jinstpub_marked_affiliation_pieces_written.tex"),
     &[
       &[
-        "Ann Able 1,2",
+        "Ann Able",
         "affiliation=1 Univ A, Town A",
         "affiliation=2 Univ B, Town B",
         "email=ann@a.org",
       ],
-      &["Bob Baker 1", "affiliation=1 Univ A, Town A"],
-      &["Cy Cole 3", "affiliation=3 Univ C, Town C"],
+      &["Bob Baker", "affiliation=1 Univ A, Town A"],
+      &["Cy Cole", "affiliation=3 Univ C, Town C"],
     ],
     &[
       "C Ann Able [1,2] | line:names",
@@ -181,12 +181,10 @@ fn a_letter_spaced_name_is_one_name() {
   let tex = repro!("jfm_letter_spaced_name_is_one_name.tex");
   let (..) = assert_reading(
     tex,
-    Some(
-      &[&["A N N A. A B L E 1", "affiliation=1 Univ A, Town A"], &[
-        "C Y C O L E 2",
-        "affiliation=2 Univ B, Town B",
-      ]],
-    ),
+    Some(&[&["A N N A. A B L E", "affiliation=1 Univ A, Town A"], &[
+      "C Y C O L E",
+      "affiliation=2 Univ B, Town B",
+    ]]),
     &[
       "C A N N A. A B L E [1] | line:names",
       "  a Univ A, Town A | api:leading-mark",
@@ -212,8 +210,8 @@ fn an_elsarticle_key_answers_no_footnote_mark() {
     Some(&[
       &["Ann Able", "address=Univ A, Town A"],
       // (the footnote mark "1" — the kernel's marks printed "∗" — beside the name, FN1)
-      &["Bob Baker", "address=Univ B, Town B"],
-      &["Cy Cole a", "address=Univ A, Town A"],
+      &["Bob Baker", "mark=1", "address=Univ B, Town B"],
+      &["Cy Cole", "mark=a", "address=Univ A, Town A"],
       &["address=current address"],
     ]),
     &[
