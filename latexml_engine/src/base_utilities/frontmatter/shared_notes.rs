@@ -12,6 +12,150 @@ pub(in crate::base_utilities) const LIST_MARK: &str = "_listmark";
 /// `\fntext`, REVTeX's `\thanks`).
 pub(in crate::base_utilities) const PRINTED_MARK: &str = "_fnmark";
 
+/// The attribute of a creator's contact that is part of a class's front-matter footnote, which
+/// [`number_footnote_parts`] numbers: `title`, `own`, `join` (the name's joined footnote) or `affil:<n>`.
+pub const FOOTNOTE_PART: &str = "_fnpart";
+/// How a class that writes [`FOOTNOTE_PART`]s marks its front-matter footnotes: `fnsymbol` or `alph`.
+pub const FOOTNOTE_MARKS: &str = "lx_fm_footnote_marks";
+
+/// The marks of a class's front-matter footnotes (REVTeX's `\@AF@join`, revtex4-2.cls:2404-2495), numbered as printed:
+/// the title's, then each name's own (and its thanks notes) and its joined one, an affiliation's after its group's names
+/// or after every name, a text printed before keeping its number (`\y@match`). A mark only where both affiliation orders
+/// agree; none when a footnote contact has no part (OD #1054).
+pub(super) fn number_footnote_parts(document: &mut Document) -> Result<()> {
+  let style = lookup_string(FOOTNOTE_MARKS);
+  if style.is_empty() {
+    return Ok(());
+  }
+  let creators = document.findnodes("//ltx:creator", None);
+  // (each part: its node, its creator, its part, its text — an own part's as printed, a joined one's with its role)
+  let mut parts: Vec<(Node, usize, String, String)> = Vec::new();
+  let mut unknown = false;
+  for (at, creator) in creators.iter().enumerate() {
+    let entries = document.findnodes(
+      &s!("ltx:contact | ltx:note[@role='thanks' and not(@{LIST_MARK})]"),
+      Some(creator),
+    );
+    for entry in entries {
+      let role = entry.get_attribute("role").unwrap_or_default();
+      let text = entry
+        .get_content()
+        .split_whitespace()
+        .collect::<Vec<_>>()
+        .join(" ");
+      let part = match entry.get_name().as_str() {
+        "note" => Some(s!("own")),
+        _ => entry.get_attribute(FOOTNOTE_PART),
+      };
+      match part {
+        Some(part) if part == "own" => parts.push((entry, at, part, text)),
+        Some(part) => {
+          let name = entry.get_attribute("name").unwrap_or_default();
+          parts.push((entry, at, part, s!("{role}\u{2}{name}\u{2}{text}")));
+        },
+        None => unknown |= matches!(role.as_str(), "thanks" | "email" | "url" | "altaffiliation"),
+      }
+    }
+  }
+  for (entry, ..) in &mut parts {
+    entry.remove_attribute(FOOTNOTE_PART).ok();
+  }
+  if unknown || parts.is_empty() {
+    return Ok(());
+  }
+  // (each part's footnote: its own text, or its parts' joined in order — the creator's, the title's, the affiliation's)
+  let group = |at: usize, part: &str| match part {
+    "title" => s!("title"),
+    _ if part.starts_with("affil:") => part.to_string(),
+    _ => s!("join:{at}"),
+  };
+  let mut joined: HashMap<String, String> = HashMap::default();
+  for (_, at, part, text) in parts.iter().filter(|(_, _, part, _)| part != "own") {
+    let footnote = joined.entry(group(*at, part)).or_default();
+    footnote.push_str(text);
+    footnote.push('\u{1}');
+  }
+  let footnotes: Vec<String> = parts
+    .iter()
+    .map(|(_, at, part, text)| match part.as_str() {
+      "own" => text.clone(),
+      _ => joined[&group(*at, part)].clone(),
+    })
+    .collect();
+  // (the printed order: the title's, each name's own then its joined one, an affiliation's after its group's names —
+  // its footnote on the group's last name, where `\email` after `\affiliation` puts it — or after every name)
+  let numbers = |affiliations_last: bool| -> HashMap<&String, usize> {
+    let mut order: Vec<&String> = Vec::new();
+    fn add<'a>(footnote: &'a String, order: &mut Vec<&'a String>) {
+      if !order.contains(&footnote) {
+        order.push(footnote);
+      }
+    }
+    let of = |which: &dyn Fn(usize, &str) -> bool| -> Vec<&String> {
+      parts
+        .iter()
+        .zip(&footnotes)
+        .filter(|((_, at, part, _), _)| which(*at, part))
+        .map(|(_, footnote)| footnote)
+        .collect()
+    };
+    for footnote in of(&|_, part| part == "title") {
+      add(footnote, &mut order);
+    }
+    let mut affiliations: Vec<&String> = Vec::new();
+    for holder in 0..creators.len() {
+      for footnote in of(&|at, part| at == holder && part == "own") {
+        add(footnote, &mut order);
+      }
+      for footnote in of(&|at, part| at == holder && part == "join") {
+        add(footnote, &mut order);
+      }
+      for footnote in of(&|at, part| at == holder && part.starts_with("affil:")) {
+        if affiliations_last {
+          add(footnote, &mut affiliations);
+        } else {
+          add(footnote, &mut order);
+        }
+      }
+    }
+    for footnote in affiliations {
+      add(footnote, &mut order);
+    }
+    order
+      .into_iter()
+      .enumerate()
+      .map(|(n, footnote)| (footnote, n + 1))
+      .collect()
+  };
+  let (grouped, last) = (numbers(false), numbers(true));
+  for ((entry, ..), footnote) in parts.iter().zip(&footnotes) {
+    let mut entry = entry.clone();
+    let n = grouped[footnote];
+    if entry.get_attribute("role").as_deref() != Some("thanks") || n != last[footnote] {
+      continue;
+    }
+    let mark = match style.as_str() {
+      "alph" => u8::try_from(n)
+        .ok()
+        .filter(|n| (1..=26).contains(n))
+        .map(|n| char::from(b'a' + n - 1).to_string()),
+      _ => ["∗", "†", "‡", "§", "¶", "‖", "∗∗", "††", "‡‡"]
+        .get(n - 1)
+        .map(|mark| (*mark).to_string()),
+    };
+    // (a thanks note its mark, a contact the mark the Kind step reads)
+    if let Some(mark) = mark {
+      let key = if entry.get_name() == "note" {
+        "mark"
+      } else {
+        PRINTED_MARK
+      };
+      entry.set_attribute(key, &mark)?;
+    }
+  }
+  Ok(())
+}
+
 /// The Kind step for a class's footnote text that two or more creators carry under one mark ([`PRINTED_MARK`]): an
 /// elsarticle `\fntext[eq]{…}` its `\fnref{eq}` gives two names (each copy a contact `relocate_annotations` placed), a
 /// REVTeX `\thanks{…}` two names give alike — printed once, its mark on each name (elsarticle.cls:157-171, revtex4-2.cls:2472-2495
@@ -81,7 +225,10 @@ fn leading_mark(node: &Node) -> Option<(Node, String)> {
             FmFormulaMarks::Marks(scripts) if scripts.len() == 1 => {
               Some((child.clone(), scripts[0].trim().to_string()))
             },
-            _ => None,
+            // (a footnote symbol set in math, not raised: cnf.sty's `$\ast$~…`)
+            _ => Some(child.get_content().trim().to_string())
+              .filter(|text| !text.is_empty() && text.chars().all(events::is_fnsymbol))
+              .map(|text| (child.clone(), text)),
           },
           "p" | "para" | "text" | "inline-block" | "inline-para" => leading_mark(&child),
           _ => None,

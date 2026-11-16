@@ -357,10 +357,11 @@ fn key_list_bounds(v: &[Token]) -> (Option<usize>, Option<usize>) {
 }
 
 /// Whether a queued call's key `key` places it — the keys the reading's own placement replaces: `label`, `labelseq`,
-/// `annotate`, `owner`, `annotations` unless kept, and the internal `_` keys but `_kinded`, `_markshown` (read already)
-/// and, where kept, `_zone` (where it prints).
+/// `annotate`, `owner`, `annotations` unless kept, and the internal `_` keys but `_kinded`, `_markshown` (read already),
+/// `_fnpart` (the footnote it is part of, `FOOTNOTE_PART`) and, where kept, `_zone` (where it prints).
 fn routing_key(key: &str, keep_annotations: bool, zone: bool) -> bool {
-  (key.starts_with('_') && !(matches!(key, "_kinded" | "_markshown") || (zone && key == "_zone")))
+  (key.starts_with('_')
+    && !(matches!(key, "_kinded" | "_markshown" | "_fnpart") || (zone && key == "_zone")))
     || matches!(key, "label" | "labelseq" | "annotate" | "owner")
     || (key == "annotations" && !keep_annotations)
 }

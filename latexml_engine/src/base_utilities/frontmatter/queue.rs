@@ -88,6 +88,57 @@ pub fn queue_front_matter(tag: &str, attr: Option<&KeyVals>, command: Tokens) {
   });
 }
 
+/// Adds `key=value` to the entry the frontmatter queue got last, a contact of one of `roles` without that key, and to
+/// the observer's record of its call: a binding's word on the call it just queued (REVTeX's e-mail, its footnote part:
+/// `FOOTNOTE_PART`).
+pub fn tag_last_queued_contact(roles: &[&str], key: &str, value: &str) {
+  let keyval = mouth::tokenize_internal(TeXString::assembled(s!("{key}={value},"))).unlist();
+  let tagged = with_value_mut(frontmatter_queue_name(), |val_opt| {
+    let Some(&mut Stored::FrontmatterRaw(ref mut queue)) = val_opt else {
+      return None;
+    };
+    let at = queue.len().checked_sub(1)?;
+    let (tag, attr, command) = queue.last_mut()?;
+    if tag != "ltx:contact"
+      || attr.contains_key(key)
+      || !attr
+        .get("role")
+        .is_some_and(|role| roles.contains(&role.as_str()))
+    {
+      return None;
+    }
+    *command = with_first_key(command, &keyval)?;
+    attr.insert(key.to_string(), value.to_string());
+    Some(at)
+  });
+  if let Some(at) = tagged {
+    ledger::add_call_key(at, &keyval, &s!("{key}={value}"));
+  }
+}
+
+/// `command` (`\lx@annotate@frontmatter@now{parenttag}{tag}[keys]{content}`) with `keyval` first in its keys.
+pub(in crate::base_utilities) fn with_first_key(
+  command: &Tokens,
+  keyval: &[Token],
+) -> Option<Tokens> {
+  let mut tokens = command.unlist_ref().to_vec();
+  let (mut at, mut groups, mut depth) = (1, 0, 0);
+  while at < tokens.len() && groups < 2 {
+    depth += tokens[at].group_step();
+    if depth == 0 {
+      groups += 1;
+    }
+    at += 1;
+  }
+  tokens
+    .get(at)
+    .is_some_and(|t| t.get_catcode() == Catcode::OTHER && t.with_str(|s| s == "["))
+    .then(|| {
+      tokens.splice(at + 1..at + 1, keyval.iter().copied());
+      Tokens::new(tokens)
+    })
+}
+
 /// A queued entry's attributes, as `queue_front_matter` stores them.
 /// Convert KeyVals to a hash, but be concerned about multiple values!?!?
 /// (Perl: ToString($attr->getValue($_)) — the last value for multi-valued keys)

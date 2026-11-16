@@ -347,7 +347,7 @@ fn revtex3_section_numbers_as_aps() {
 
 /// Provide-only OmniBus declines what the class defines, also through the bindings it requires: under
 /// `[aps,myjunkx]{revtex}` the live `\author` is the revtex binding's, not inst_support's (review 64zd round 1); it counts
-/// its authors for REVTeX's footnote marks (`\lx@revtex@fn@author`, OD #1054).
+/// the footnote the parts after it join for REVTeX's footnote marks (`\lx@revtex@fn@target`, OD #1054).
 #[test]
 fn omnibus_provide_only_keeps_bound_class_commands() {
   let (log, xml) = convert_clean(include_str!(
@@ -361,7 +361,7 @@ fn omnibus_provide_only_keeps_bound_class_commands() {
     &xml,
     "para",
     &[r#"xml:id="p1""#],
-    r#"<para xml:id="p1"><p xml:id="p1.1"><text font="typewriter" xml:id="p1.1.1">macro:#1#2-&gt;\lx@revtex@fn@author \lx@add@authors@append [annotations={#1}]{#2}\lx@author@after {#2}</text></p></para>"#,
+    r#"<para xml:id="p1"><p xml:id="p1.1"><text font="typewriter" xml:id="p1.1.1">macro:#1#2-&gt;\lx@add@authors@append [annotations={#1}]{#2}\lx@author@after {#2}\lx@revtex@fn@target {join}</text></p></para>"#,
   );
 }
 

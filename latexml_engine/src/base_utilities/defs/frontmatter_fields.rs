@@ -14,7 +14,7 @@ use crate::base_utilities::{
     LIST_MARK,
     classify::title_code::{reads_arguments, title_code_author_definitions},
     observer::events::{
-      Event, EventKind, events_text, lex_body_with_inks, lex_events, opening_ink,
+      self, Event, EventKind, events_text, lex_body_with_inks, lex_events, opening_ink,
     },
   },
 };
@@ -416,30 +416,32 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
     "\\lx@frontmatter@footnotes{}",
     r"\edef\lx@fm@footnote{\the\c@footnote}\begingroup\let\footnotetext\lx@fm@footnotetext\let\@footnotetext\lx@fm@@footnotetext\lx@fm@list@note{#1}\endgroup\global\c@footnote\lx@fm@footnote\relax"
   );
-  // Rust-only (OXIDIZED_DESIGN_DIVERGENCES #1054): the list set in a box, where its footnote texts become notes; what the
-  // box prints beside them, text a document added to the list (2606.06621's `\prep@absbox`, 2605.22682's `\elsaddress`,
-  // cnf.sty's `\@cornotes`: 2605.08232), is the title page's, which pdflatex sets in the title block: a note of the
-  // author block (FIDELITY_CHARTER §4, as `frontmatter_stores::hand_net_stores` hands one on), its paragraphs kept. One
-  // led by a mark names request (2606.06621's `$^\ddagger$ These authors contributed equally` under two ‡ names) is
-  // those names' note, placed by the label the mark sets, with that `mark`, its text without it (DG rulings 1-2 of
-  // 2026-11-16, as a legend line of the block is).
+  // Rust-only (OD #1054): what a title-page list prints beside its footnote texts is a note at the title block, or, led by
+  // a mark names show and holding no other, those names' note (2606.06621, 2605.22682, 2605.08232).
   DefPrimitive!("\\lx@fm@list@note{}", sub[(list)] {
     let mut body = vec![T_CS!("\\vbox"), T_BEGIN!()];
     body.extend(list.unlist());
     body.push(T_END!());
+    assign_value(LIST_LABELS, Stored::String(pin("")), Some(Scope::Global));
     let stuff = digest(Tokens::new(body))?;
     if leaves_no_ink(&stuff) {
       return Ok(Vec::new());
     }
-    // (the mark it opens with, as its events read it, and the authors a `\maketitle` placed whose names show it)
+    // (the mark it opens with, the only one it holds, and the authors a `\maketitle` placed whose names show it)
     let events = lex_body_with_inks(&stuff).0;
     let opening: Vec<&Event> = events.iter().collect();
+    let marks = events.iter().filter(|e| e.kind == EventKind::Mark).count();
+    let labels = lookup_string(LIST_LABELS);
+    // (or a footnote symbol not raised, where an item sets a label: cnf.sty's `\noindent$\ast$~…`)
+    let symbol = |e: &Event| {
+      !labels.is_empty() && !e.text.trim().is_empty() && e.text.trim().chars().all(events::is_fnsymbol)
+    };
     let led = opening_ink(&opening)
-      .filter(|e| e.kind == EventKind::Mark)
+      .filter(|e| (e.kind == EventKind::Mark && marks == 1) || (symbol(e) && marks == 0))
       .map(|e| e.text.trim().to_string())
       .filter(|mark| !mark.is_empty() && !mark.contains(','))
       .map(|mark| {
-        let carriers = creators_showing(&mark);
+        let carriers = creators_showing(&mark, &labels);
         (mark, carriers)
       })
       .filter(|(_, carriers)| !carriers.is_empty());
@@ -488,6 +490,12 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
     let read = |at: usize| whatsit.get_arg(at).map(|arg| arg.to_string()).unwrap_or_default();
     let (key, value) = (read(1), read(2));
     set_entry_attribute(document, key.trim(), value.trim())?;
+  });
+  // Rust-only (OD #1054): the label a list's item sets (`cor:cor1`, elsarticle's `\elsLabel` in cnf.sty's `\@cornotes`),
+  // whose names carry the item, as pdflatex prints its mark on them (2605.08232, 2606.15628).
+  DefPrimitive!("\\lx@fm@list@label{}", sub[(label)] {
+    let labels = s!("{},{}", lookup_string(LIST_LABELS), label.to_string().trim());
+    assign_value(LIST_LABELS, Stored::String(pin(labels)), Some(Scope::Global));
   });
   // (the box's list, as `\unvbox` gives it: queued, it is digested where the frontmatter is)
   DefPrimitive!("\\lx@fm@list@box{}", sub[(n)] {
@@ -1239,25 +1247,40 @@ fn set_entry_attribute(document: &mut Document, key: &str, value: &str) -> Resul
   Ok(())
 }
 
+/// The list labels its items set (`\lx@fm@list@label`), comma-led.
+const LIST_LABELS: &str = "lx_fm_list_labels";
+
 /// The labels (`author:N`) of the author creators a `\maketitle` placed whose names show `mark` (`Windt$^\ddagger$`, a
-/// mark of a list: `$^{1,\ddagger}$`), as their events read them.
-fn creators_showing(mark: &str) -> Vec<String> {
-  let key = mark_key(mark);
-  with_value("frontmatter", |v| {
-    match v {
+/// mark of a list: `$^{1,\ddagger}$`), as their events read them; none showing it, the one label the list's items set
+/// (`cor:cor1`, which the names requesting it carry).
+fn creators_showing(mark: &str, labels: &str) -> Vec<String> {
+  let showing = creators_where(|creator| {
+    creator.content.iter().any(|part| {
+      matches!(part, TagContent::Box(d) if lex_events(d)
+        .iter()
+        .any(|e| e.kind == EventKind::Mark && e.text.split(',').any(|item| mark_key(item) == mark_key(mark))))
+    })
+  });
+  let labels: Vec<&str> = labels
+    .split(',')
+    .filter(|label| !label.is_empty())
+    .collect();
+  match labels.as_slice() {
+    [label] if showing.is_empty() => vec![(*label).to_string()],
+    _ => showing,
+  }
+}
+
+/// The labels (`author:N`) of the author creators a `\maketitle` placed that `test` takes.
+fn creators_where(test: impl Fn(&TagData) -> bool) -> Vec<String> {
+  with_value("frontmatter", |v| match v {
     Some(Stored::HashTagData(frontmatter)) => frontmatter
       .get("ltx:creator")
       .map(|creators| {
         creators
           .iter()
           .filter(|c| c.attr.get("role").map(String::as_str) == Some("author"))
-          .filter(|c| {
-            c.content.iter().any(|part| {
-              matches!(part, TagContent::Box(d) if lex_events(d)
-                .iter()
-                .any(|e| e.kind == EventKind::Mark && e.text.split(',').any(|item| mark_key(item) == key)))
-            })
-          })
+          .filter(|c| test(c))
           .filter_map(|c| {
             c.attr
               .get("_annotations")?
@@ -1269,7 +1292,6 @@ fn creators_showing(mark: &str) -> Vec<String> {
       })
       .unwrap_or_default(),
     _ => Vec::new(),
-  }
   })
 }
 

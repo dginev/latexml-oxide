@@ -4,8 +4,12 @@
 //! - a class's title-page note list prints what a document adds to it in the title block: plain text the author block's
 //!   note, text led by a mark the names show those names' marked note (2606.06621; 2605.22682, 2605.08232, 2606.15628 in
 //!   `perfect_kernel_batchregbind`'s printed-list rows);
-//! - a class's footnote text two names carry under one mark is their marked note: elsarticle's `\fntext` (its counter's
-//!   number) and REVTeX's `\thanks` (its joined footnote's symbol, distinct when an e-mail joins it);
+//!   (SHRESTb: a list holding two marks stays the block's; one whose item sets a label its names request, cnf.sty's
+//!   `\@cornotes`, is theirs);
+//! - a class's footnote text two names carry under one mark is their marked note: elsarticle's `\fntext` and `\cortext`
+//!   (their counters' marks) and REVTeX's `\thanks` (its joined footnote's symbol, distinct when an e-mail joins it);
+//! - REVTeX's front-matter footnotes are numbered as printed (SHRESTb: the title's, a name's own before its joined one, an
+//!   affiliation's at its line; a `\thanks` in a name its own);
 //! - an ORCID iD a line end broke reads whole (2503.20847);
 //! - icml's correspondence line a document set without `\icmlcorrespondingauthor` keeps its label.
 //!
@@ -98,8 +102,8 @@ fn a_lists_plain_text_is_the_blocks_note() {
   });
 }
 
-/// elsarticle.cls:157-171: one `\fntext[eq]` two names refer to is printed once under its number, 1, on both names: each
-/// copy their note marked 1; Cat Cole's own `\fntext[vis]` stays her contact.
+/// elsarticle.cls:157-171, :178-189: one `\fntext[eq]` and one `\cortext[cor]` two names refer to are printed once under
+/// their marks, 1 and ∗, on both names: each copy their note so marked; Cat Cole's own `\fntext[vis]` stays her contact.
 #[test]
 fn an_fntext_two_names_share_is_their_marked_note() {
   check(&Case {
@@ -112,8 +116,93 @@ fn an_fntext_two_names_share_is_their_marked_note() {
       &["Cat Cole", "note=Visiting Univ B.", "address=Univ A"],
     ],
     elements: &[
-      r#"<note class="ltx_note_frontmatter ltx_thanks_contribution" mark="1" role="thanks" xml:id="id1">These authors contributed equally.</note>"#,
+      r#"<note class="ltx_note_frontmatter ltx_thanks_correspondence" mark="∗" role="thanks" xml:id="id1">Corresponding authors.</note>"#,
       r#"<note class="ltx_note_frontmatter ltx_thanks_contribution" mark="1" role="thanks" xml:id="id2">These authors contributed equally.</note>"#,
+      r#"<note class="ltx_note_frontmatter ltx_thanks_correspondence" mark="∗" role="thanks" xml:id="id3">Corresponding authors.</note>"#,
+      r#"<note class="ltx_note_frontmatter ltx_thanks_contribution" mark="1" role="thanks" xml:id="id4">These authors contributed equally.</note>"#,
+    ],
+    absent:   &[],
+  });
+}
+
+/// cnf.sty:585-595 (2605.08232, 2606.15628): a `\@cornotes` item printing `$\ast$~…` under the label `\elsLabel{cor1}` is the
+/// note of the name whose `\corref{cor1}` prints ∗, marked ∗, its text without it — it was the author block's note.
+#[test]
+fn a_correspondence_items_label_gives_its_names_the_note() {
+  check(&Case {
+    tex:      repro!(
+      "sectioning-frontmatter/elsarticle_list_correspondence_item_is_its_names_note.tex"
+    ),
+    creators: &[&["Ann Able", "affiliation=Univ A"], &[
+      "Bob Baker",
+      "affiliation=Univ A",
+    ]],
+    elements: &[
+      r#"<note class="ltx_note_frontmatter ltx_thanks_correspondence" mark="∗" role="thanks" xml:id="id1">Corresponding author: Univ A, Town.</note>"#,
+      r#"<p xml:id="p1.1">Text.</p>"#,
+    ],
+    absent:   &["<Math", r#"<note role="note""#],
+  });
+}
+
+/// The review's S1 probe: a title-page list of two legend lines (`$^\dagger$ Equal.\par $^\ast$ Corresponding.`) is the
+/// author block's note, whole, the names keeping their marks — not Ann's † note holding both lines.
+#[test]
+fn a_list_with_two_marks_is_the_blocks_note() {
+  check(&Case {
+    tex:      repro!("sectioning-frontmatter/list_note_with_two_marks_is_the_blocks_note.tex"),
+    creators: &[
+      &["Ann Able †", "affiliation=Univ A"],
+      &["Bob Baker ∗", "affiliation=Univ A"],
+      &[],
+    ],
+    elements: &[concat!(
+      r#"<note role="note" xml:id="id3"><p align="center" xml:id="id3.1"><sup xml:id="id3.1.1">†</sup> Equal.</p>"#,
+      r#"<p align="center" xml:id="id3.2"><sup xml:id="id3.2.1">∗</sup> Corresponding.</p></note>"#
+    )],
+    absent:   &["mark="],
+  });
+}
+
+/// revtex4-2.cls:2120, :2160, :2236, :2446-2450, :2472-2495: the front-matter footnotes are numbered as printed — the
+/// title's ∗, each name's own (`\frontmatter@footnote`) before its joined `\thanks`, an affiliation's `\email` at its line
+/// — identical texts sharing one mark: Ann's and Bob's copies their notes marked † and ‡. (The title's note is a thanks
+/// contact of the last author, today's placement.)
+#[test]
+fn revtex_footnotes_are_numbered_as_printed() {
+  check(&Case {
+    tex:      repro!("sectioning-frontmatter/revtex_footnotes_numbered_as_printed.tex"),
+    creators: &[&["Ann Able", "affiliation=Univ A"], &[
+      "Bob Baker",
+      "affiliation=Univ B",
+      "thanks=Title note.",
+      "email=b@x.org",
+    ]],
+    elements: &[
+      r#"<note class="ltx_note_frontmatter ltx_thanks_contribution" mark="†" role="thanks" xml:id="id1">These authors contributed equally.</note>"#,
+      r#"<note class="ltx_note_frontmatter ltx_thanks_note" mark="‡" role="thanks" xml:id="id2">Visiting Univ C.</note>"#,
+      r#"<note class="ltx_note_frontmatter ltx_thanks_contribution" mark="†" role="thanks" xml:id="id3">These authors contributed equally.</note>"#,
+      r#"<note class="ltx_note_frontmatter ltx_thanks_note" mark="‡" role="thanks" xml:id="id4">Visiting Univ C.</note>"#,
+    ],
+    absent:   &[],
+  });
+}
+
+/// A `\thanks` inside a REVTeX `\author{…}` (the kernel's name note; REVTeX prints none) is numbered as a name's own
+/// footnote: "Equal." ∗ on Ann and Bob, "Other." † — three unmarked notes before.
+#[test]
+fn a_revtex_thanks_in_a_name_is_numbered_as_its_footnote() {
+  check(&Case {
+    tex:      repro!("sectioning-frontmatter/revtex_thanks_in_names_numbered_as_footnotes.tex"),
+    creators: &[
+      &["Ann Able", "affiliation=Univ A"],
+      &["Bob Baker", "affiliation=Univ A"],
+      &["Cat Cole", "affiliation=Univ A"],
+    ],
+    elements: &[
+      r#"<note class="ltx_note_frontmatter ltx_thanks_note" mark="∗" role="thanks" xml:id="id1">Equal.</note>"#,
+      r#"<note class="ltx_note_frontmatter ltx_thanks_note" mark="∗" role="thanks" xml:id="id2">Equal.</note>"#,
+      r#"<note class="ltx_note_frontmatter ltx_thanks_note" mark="†" role="thanks" xml:id="id3">Other.</note>"#,
     ],
     absent:   &[],
   });

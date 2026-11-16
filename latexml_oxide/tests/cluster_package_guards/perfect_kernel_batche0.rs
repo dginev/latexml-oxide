@@ -1107,6 +1107,13 @@ const API_KEYS_OUTSIDE_PERLS: &[(&str, usize)] = &[
     "const _listmark base_utilities/frontmatter/shared_notes.rs",
     1,
   ),
+  // (SHRESTb, 0 -> 1, raised with its reason: the part of a class's front-matter footnote a creator's contact is — REVTeX's
+  // `\@AF@join` of the title, author or affiliation last given, or a name's own —, which `number_footnote_parts` numbers
+  // in print order; Perl's API has no key for it, its binding no marks; internal, never written out, OD #1054)
+  (
+    "const _fnpart base_utilities/frontmatter/shared_notes.rs",
+    1,
+  ),
   // (LO2, 0 -> 1: an emitted entry's first mark read, a fact kept on its pending entry as Perl keeps its labels there
   // (Base_Utility.pool.ltxml:502-508), where LO1 kept a State flag; internal, never written out)
   ("const _markread base_utilities/defs/author_macros.rs", 1),
@@ -1599,7 +1606,9 @@ const TOKEN_READS: &[(&str, usize)] = &[
   // (CR4b, 28 -> 30: `text_glyph`, a character command in an address's formula prints its character — `$\{a,b\}$@w.edu`
   // the brace list, `p$\_$r` "p_r" (review revCR4 finding 4; OD #972): its table of commands, one row, and the one
   // compare; how an address prints, no owner decided)
-  ("defs/frontmatter_fields", 30),
+  // (SHRESTb, 30 -> 31, raised with its reason: `\lx@fm@list@label` reads the label a title-page list's item sets
+  // (elsarticle's `\elsLabel{cor1}`), a label as Perl's API reads one (ToString), whose names the note goes to; OD #1054)
+  ("defs/frontmatter_fields", 31),
   // (Z18j, 83 -> 95: moved from `author_block` with its code, as that row says)
   // (PB 95 -> 102, PBb 102 -> 100: `names.rs`' definition replay of a class's title code (OD #983) reads the class's macro
   // bodies, TeX definitions no event says. +1 the copy's kept `\@maketitle` read beside the live one (2205.14141); +1 a macro
@@ -1720,7 +1729,9 @@ const TOKEN_READS: &[(&str, usize)] = &[
   ("owners", 14),
   ("place", 6),
   ("ptephy_cls.rs", 115),
-  ("queue", 1),
+  // (SHRESTb, 1 -> 2, raised with its reason: `with_first_key` finds a queued call's key list, its `[`, to add the key a
+  // binding gives the call it just queued (REVTeX's e-mail's footnote part, `tag_last_queued_contact`); no owner decided)
+  ("queue", 2),
   // (P23e, 16 -> 17, the main session's ruling: `label_ink` tells a note's ink (`\lx@note…`, set at the page's foot) from
   // what prints in place, `printed_ink`'s `outside_notes`; cjaa.cls's `\email` sibling, OD #995)
   ("queue_digest", 17),
@@ -2284,6 +2295,9 @@ const PASSES_AFTER_THE_EMITTER: &[(&str, PassMay)] = &[
   ("kind_dedication_lines", PassMay::ChangeKind),
   // (SHREST, OD #1054: a footnote text two creators already hold under one mark, made their note — its kind; a list note's
   // mark taken from its text and its holder's name, which its `mark` shows — text; the note was placed by its label)
+  // (SHRESTb: the marks of a class's front-matter footnotes, numbered in print order on the placed creators — a mark,
+  // `_fnmark` or a thanks note's `mark`, no owner moved)
+  ("number_footnote_parts", PassMay::ChangeText),
   ("kind_shared_marked_contacts", PassMay::ChangeKind),
   ("show_list_note_marks", PassMay::ChangeText),
   ("kind_legend_contacts", PassMay::ChangeKind),
