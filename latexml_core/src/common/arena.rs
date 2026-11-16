@@ -529,6 +529,8 @@ mod tests {
   /// re-entrant `&mut` path, which grew the buffer under the lend; Miri flags it at the first new string).
   #[test]
   fn lend_survives_interning_many_new_strings() {
+    // (counts are absolute: a test thread that converted, or ran another test, before must not shift them)
+    reset();
     let lent = pin("arena_lend_text");
     let read = with(lent, |text| {
       for i in 0..3000 {
@@ -543,6 +545,29 @@ mod tests {
     }
     assert_eq!(take_overflow_interns(), 3000);
     assert_eq!(take_overflow_interns(), 0, "the count is read once");
+  }
+
+  /// The same with more new bytes than the buffer's whole capacity (131,072 × 13 bytes, string-interner 0.20
+  /// `buffer.rs:161-169`), which would move it natively, not only under Miri, had they gone into it: the lent text
+  /// still reads, from where it was. Guards the current arena only (the old one is gone; red under Miri on it: the
+  /// test above).
+  #[test]
+  fn lend_survives_more_new_bytes_than_the_buffer_holds() {
+    reset();
+    let lent = pin("arena_move_text");
+    let filler = "x".repeat(1 << 15);
+    let count = 131_072 * 13 / filler.len() + 2;
+    let (read, unmoved) = with(lent, |text| {
+      let at = text.as_ptr();
+      for i in 0..count {
+        pin(format!("{i}{filler}"));
+      }
+      (text.to_owned(), with(lent, |again| again.as_ptr()) == at)
+    });
+    assert_eq!(read, "arena_move_text");
+    assert!(unmoved, "the buffer moved under the lend");
+    assert_eq!(to_string(pin(format!("{}{filler}", count - 1))).len(), filler.len() + 2);
+    assert_eq!(take_overflow_interns(), count);
   }
 
   /// Nested lends, and a pin of a string the buffer already holds, which keeps its buffer symbol.
@@ -590,6 +615,7 @@ mod tests {
   /// reads the same through every entry point.
   #[test]
   fn an_overflow_string_dedups_across_tiers() {
+    reset();
     let lent = pin("arena_dedup_lent");
     let paged = with(lent, |_| pin("arena_dedup_paged"));
     assert_eq!(
@@ -624,6 +650,7 @@ mod tests {
   /// `reset` empties both tiers; the overflow page's symbols start over.
   #[test]
   fn reset_clears_the_overflow_page() {
+    reset();
     let lent = pin("arena_reset_lent");
     let paged = with(lent, |_| pin("arena_reset_paged"));
     assert_eq!(len(), 2);
