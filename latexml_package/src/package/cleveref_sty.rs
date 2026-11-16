@@ -195,20 +195,14 @@ LoadDefinitions!({
   // rest ("X4bY"; a `_` there, in a display, is a Double subscript: 2605.07565), and :2620 braces a display's key twice
   // for amsmath 2025-05-18 (amsmath.sty:1230-1236). Only for the release it repairs (:194 `\FirstAidNeededT`, the
   // `\ver@cleveref.sty` the file provides): a paper's copy of another release is read as it is.
-  let repaired_release = match lookup_definition(&T_CS!("\\ver@cleveref.sty")) {
-    Ok(Some(defn)) => match defn.get_expansion() {
-      Some(ExpansionBody::Tokens(version)) => {
-        version.to_string() == "2018/03/27 v0.21.4 Intelligent cross-referencing"
-      },
-      _ => false,
-    },
-    _ => false,
-  };
-  if first_aid && repaired_release {
-    RawTeX!(r"\AddToHook{begindocument}[cleveref]{\IfPackageAtLeastT{amsmath}{2025-05-18}{%
+  if first_aid {
+    RawTeX!(r"\def\lx@cref@firstaid@release{2018/03/27 v0.21.4 Intelligent cross-referencing}%
+\expandafter\ifx\csname ver@cleveref.sty\endcsname\lx@cref@firstaid@release
+\AddToHook{begindocument}[cleveref]{\IfPackageAtLeastT{amsmath}{2025-05-18}{%
   \def\ltx@label#1{\cref@label{#1}}%
   \def\label@in@display@noarg#1{\cref@old@label@in@display{#1}}%
-  \def\label@in@mmeasure@noarg#1{\begingroup\measuring@false\cref@old@label@in@display{#1}\endgroup}}}");
+  \def\label@in@mmeasure@noarg#1{\begingroup\measuring@false\cref@old@label@in@display{#1}\endgroup}}}%
+\fi");
   }
   // (the document's formats noted, `\lx@cref@noteformat`, above; cleveref's own `\begin{document}` code, which builds
   // the defaults, bracketed by `\lx@cref@building`, its first hook before the file's and its last after: cleveref's

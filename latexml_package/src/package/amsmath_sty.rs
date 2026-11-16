@@ -2846,8 +2846,9 @@ fn ams_author_called_internals() -> Result<()> {
   // `\label`, which a document reaches from inside a display (1904.06459 `\Label`). After the
   // `begindocument` code, as there: a cleveref.sty's `\def\ltx@label#1{\cref@label#1}` there
   // (:2623; v0.19 :2462, which the first aid does not repair) is undone (2508.14614's copy).
+  // (amstex's plain TeX has no document hooks: the `\let` stands)
   Let!("\\ltx@label", "\\label");
-  RawTeX!(r"\AddToHook{begindocument/end}{\let\ltx@label\label}");
+  RawTeX!(r"\ifdefined\AddToHook\AddToHook{begindocument/end}{\let\ltx@label\label}\fi");
 
   // amsmath.sty:1340-1342 and :733-735: `\spread@equation` opens the lines of an alignment by
   // `\jot`, once.

@@ -406,13 +406,14 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
   // Rust-only: a list of title-page notes a class prints at its `\maketitle` (acmart.cls:2245-2247 `\@authornotes`,
   // revtex4-2.cls:3020-3022 `\@FMN@list`, amsaddr.sty:113 `\emails`), which a document extends past the binding's
   // setters: run where the class runs it, each footnote text it sets a note on the document, what else it prints typeset
-  // there, a paragraph of its own when it begins one, as the class's title page is. The footnote count is left as it
+  // there, a paragraph of its own when it begins one, as the class's title page is (no `\par` otherwise: in a
+  // `--streaming` run one placed the frontmatter's later notes apart). The footnote count is left as it
   // was: none of these classes numbers the body's footnotes on from the list's (acmart.cls:2330 sets the count to 0
   // after its notes, before its abstract, whose footnotes the frontmatter digested where it stands: 2605.28175,
   // 2402.16516; revtex4-2.cls:3024-3030 steps it in a group; elsarticle's and amsaddr's step none).
   DefMacro!(
     "\\lx@frontmatter@footnotes{}",
-    r"\edef\lx@fm@footnote{\the\c@footnote}\begingroup\ifvmode\let\lx@fm@par\par\else\let\lx@fm@par\relax\fi\let\footnotetext\lx@fm@footnotetext\let\@footnotetext\lx@fm@@footnotetext#1\lx@fm@par\endgroup\global\c@footnote\lx@fm@footnote\relax"
+    r"\edef\lx@fm@footnote{\the\c@footnote}\begingroup\ifvmode\let\lx@fm@par\par\else\let\lx@fm@par\relax\fi\let\footnotetext\lx@fm@footnotetext\let\@footnotetext\lx@fm@@footnotetext#1\ifhmode\lx@fm@par\fi\endgroup\global\c@footnote\lx@fm@footnote\relax"
   );
   DefMacro!(
     "\\lx@fm@footnotetext[]{}",
