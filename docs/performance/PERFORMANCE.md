@@ -390,6 +390,16 @@ xkeyval/kvoptions, 18 pgfplots, 60 controls) XML 187 / 187 and HTML 187 / 187. G
 (`lend_survives_interning_many_new_strings`, red under Miri on the old code), run under Stacked and Tree Borrows by
 `tools/miri_check.sh`.
 
+Fix round (ARENARb): every lend borrows the arena, an overflow symbol's too (so a `reset` inside any lend panics);
+the 2 GiB guard covers `get` and the cold path's buffer probe; the page filter is gone (above); `with` resolves in one
+branch (resolving through `text()` and matching its `Text` again cost 0.04-0.21 %); model `set_allows` looks its
+probe strings up instead of pinning them. Net against INTPERF's head with ARENAR (ARENARb0), `instructions:u` best of
+3 interleaved, `HTML=1 STAT=min`: 2308.04512 −0.48 %, b250 −0.24 %, amsldoc −0.45 %, 2604.01119 −0.39 %, the 10
+`popPERFBs` papers −0.22 … −0.52 %; the 14 HTML destinations and `popARENAR` byte-identical. Guards:
+`lend_survives_more_new_bytes_than_the_buffer_holds` (native: 1.77 MB interned under a lend, past the buffer's
+capacity, and the lent text has not moved; skipped under Miri, where it takes 13 min under Tree Borrows),
+`reset_inside_an_overflow_lend_panics`, `model::wildcard_resolution_tests::the_probes_intern_nothing`.
+
 ### 2026-11-15 — per-character and serializer allocations (MEMB, MEM1 levers L4a/b/e, L7, L10, L18)
 
 Defects (allocation counts of `agent_reports/report_MEM1.md`): every digested letter paid a `String` in
