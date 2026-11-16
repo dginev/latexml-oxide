@@ -1,0 +1,21 @@
+% mechanism: a given mark past `\ `, a `\quad` before a `\textbf` name: nearer its own name, carried back
+% witness:  revSHGIVENe q5 (q9 `{\bf …}`, s4 `\textsc`)
+% oracle:   pdflatex 0 errors; "Ann Able (7.8pt) ∗ (11.4pt) Bob Baker Carl Cole"
+% engines:  rust int/frontmatter 10997fdf9a0 = 0 errors, 1 Warning; XML Ann Able / Bob Baker / Carl Cole; HTML Ann
+%   Able / Bob Baker / Carl Cole
+% expect:   0 errors, 0 Warnings; XML Ann Able ; footnotemark[*]= / Bob Baker / Carl Cole; HTML Ann Able ; * plain /
+%   Bob Baker / Carl Cole (the guard's XML and HTML lines)
+% moves:    XML row R SHGIVENFONT (proposed: a font command opening the next name stops the carry-back; SHGIVENe's
+%   s4); HTML the XML layer's: row R SHGIVENFONT (proposed: a font command opening the next name stops the
+%   carry-back; SHGIVENe's s4)
+% status:   RED XML RED, HTML RED (int/frontmatter 10997fdf9a0;
+%   perfect_kernel_batchfmmarks::a_mark_past_spacing_is_the_nearer_names and _red)
+% preload: ar5iv.sty
+\documentclass{article}
+\title{T}
+\author{Ann Able \ \footnotemark[1] \quad \textbf{Bob Baker} \and Carl Cole}
+\date{}
+\begin{document}
+\maketitle
+Text.
+\end{document}

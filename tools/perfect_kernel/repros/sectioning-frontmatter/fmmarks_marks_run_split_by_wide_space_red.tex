@@ -1,0 +1,21 @@
+% mechanism: two given marks 6em apart between two names: the first nearer Ann, the second nearer Bob
+% witness:  revSHGIVENe q1 (q2 `\hfill`, q8 `\hskip`)
+% oracle:   pdflatex 0 errors; "Ann Able (7.8pt) ∗ (73.8pt) † (11.9pt) Bob Baker Carl Cole"
+% engines:  rust int/frontmatter 10997fdf9a0 = 0 errors, 1 Warning; XML Ann Able / Bob Baker / Carl Cole; HTML Ann
+%   Able / Bob Baker / Carl Cole
+% expect:   0 errors, 0 Warnings; XML Ann Able ; footnotemark[*]= / Bob Baker ; footnotemark[†]= / Carl Cole; HTML Ann
+%   Able ; * plain / Bob Baker ; † plain / Carl Cole (the guard's XML and HTML lines)
+% moves:    XML row R SHGIVENNEXT (a mark nearer the next name, or a bare one; today the counted loss or the whole
+%   block); HTML the XML layer's: row R SHGIVENNEXT (a mark nearer the next name, or a bare one; today the
+%   counted loss or the whole block)
+% status:   RED XML RED, HTML RED (int/frontmatter 10997fdf9a0;
+%   perfect_kernel_batchfmmarks::a_mark_past_spacing_is_the_nearer_names and _red)
+% preload: ar5iv.sty
+\documentclass{article}
+\title{T}
+\author{Ann Able \ \footnotemark[1] \hspace{6em} \footnotemark[2] \quad Bob Baker \and Carl Cole}
+\date{}
+\begin{document}
+\maketitle
+Text.
+\end{document}
