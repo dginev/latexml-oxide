@@ -1,0 +1,24 @@
+% mechanism: a paper's macro passes a run-time-built definition (`\expandafter\gdef\csname aff#1\endcsname{#2}`) as an ARGUMENT
+%   to a title-code command (`\instref`): the argument's tokens take the call's position, so the definition reads as
+%   inside the title-code command's run (field_notes.rs `field_expansion`/`keep_declared`) and is not the block's —
+%   the body's `\csname aff1\endcsname` is empty, no diagnostic (the same class as a kernel run's argument today)
+% witness: synthetic (revREGREHEARSEb probe b2; no corpus witness: klmm's `\instref` arguments are plain)
+% oracle:  pdflatex 0 errors: "Body: Inst One."
+% engines: rust CUT999 (999af99497d) "Body: Inst One." with 1 Error (undefined:\instref, #866); rust int/regfix
+%   (REGREHEARSEb) "Body: ." 0 errors 0 warnings
+% expect:  "Body: Inst One.", 0 errors; fix: for a title-code run drop only the names the title-code command's own body
+%   names (\current@has@affil), not keep only the paper macro's names
+% moves:   row R REHEARSEARG
+% status:  RED
+\documentclass{article}
+\makeatletter
+\def\@maketitle{{\def\instref##1##2{##2\textsuperscript{##1}\def\current@has@affil{1}}%
+  \def\current@has@affil{0}\large\@author\par}}
+\makeatother
+\newcommand\setaff[2]{\instref{#1}{\expandafter\gdef\csname aff#1\endcsname{#2}}}
+\title{T}
+\author{Ann Able\setaff{1}{Inst One}}
+\begin{document}
+\maketitle
+Body: \csname aff1\endcsname.
+\end{document}
