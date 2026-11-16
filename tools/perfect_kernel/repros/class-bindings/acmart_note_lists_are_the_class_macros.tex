@@ -1,0 +1,21 @@
+% witness: 2605.28175 (sample-sigconf.tex:106-118, its own `\authornote`/`\@authornotemark`), 2605.16813, 2606.04448
+%          (`\g@addto@macro\@authornotes`): acmart.cls:1707, :1716, :1726 define the note lists, :2894 `\@setaddresses`
+% oracle:  pdflatex 0 errors; "Ann Able*", footnote "* Corresponding author."
+% engines: rust=4 (999af99497d: undefined \@titlenotes, \@subtitlenotes, \@authornotes, \@currentauthors at the end) perl=0 (Warning: \@authornotes not expandable) (2026-11-16)
+% expect:  0 errors, 0 warnings; Ann Able's creator with her affiliation
+% status:  GREEN
+% preload: ar5iv.sty
+\documentclass[sigconf]{acmart}
+\makeatletter
+\renewcommand{\@authornotemark}{\g@addto@macro\@currentauthors{\textsuperscript{*}}}
+\renewcommand{\authornote}[1]{\g@addto@macro\addresses{\@authornotemark}%
+  \g@addto@macro\@authornotes{\stepcounter{footnote}\footnotetext{#1}}}
+\g@addto@macro\@titlenotes{}\g@addto@macro\@subtitlenotes{}
+\makeatother
+\begin{document}
+\title{Title}
+\author{Ann Able}\authornote{Corresponding author.}
+\affiliation{\institution{Univ A}\country{C}}
+\maketitle
+Text.
+\end{document}

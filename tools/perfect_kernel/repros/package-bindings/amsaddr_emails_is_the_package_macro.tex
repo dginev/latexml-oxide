@@ -1,0 +1,17 @@
+% witness: 2606.23853 (main_arXiv.tex:283-285), 2606.25954 (:244-247): their own `\email` adding to `\emails`, which
+%          amsaddr.sty:43 defines
+% oracle:  pdflatex 0 errors; "Listed: ann@x.org, bob@x.org."
+% engines: rust=1 (999af99497d: undefined \emails) perl=1 (\emails undefined where used) (2026-11-16)
+% expect:  0 errors, 0 warnings; the paragraph "Listed: ann@x.org, bob@x.org."
+% status:  GREEN
+% preload: ar5iv.sty
+\documentclass{amsart}
+\usepackage[foot]{amsaddr}
+\makeatletter
+\renewcommand{\email}[2][]{\ifx\emails\@empty\else\g@addto@macro\emails{,\space}\fi\g@addto@macro\emails{#2}}
+\makeatother
+\begin{document}
+\title{Title}\author{Ann Able}\email{ann@x.org}\email{bob@x.org}
+\maketitle
+\makeatletter Listed: \emails.\makeatother
+\end{document}

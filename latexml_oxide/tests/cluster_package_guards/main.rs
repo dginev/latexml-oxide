@@ -619,6 +619,9 @@ mod perfect_kernel_batchra0;
 /// `\author` on (revtex4_cls.rs `switch_off_author_block_after_maketitle`).
 mod perfect_kernel_batchrb1;
 mod perfect_kernel_batchrc1;
+/// REGBIND: bindings define the macros their class or package defines (OD #1036 keeps the Error for undefined ones);
+/// cleveref's first-aid `\ltx@label` repair; pdfcomment's soulpos registers.
+mod perfect_kernel_batchregbind;
 /// RG1: a `\par` in a text group opened mid-paragraph keeps the paragraph, as Perl's open-brace box.
 mod perfect_kernel_batchrg1;
 mod perfect_kernel_batchrv1;

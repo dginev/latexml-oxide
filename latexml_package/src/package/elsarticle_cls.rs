@@ -97,6 +97,10 @@ LoadDefinitions!({
   // adds to the title page after its setters is counted (2312.03765's `\subjclass`, `\gdef\@title{\@oldtitle
   // \footnotetext{…}}`; OXIDIZED_DESIGN_DIVERGENCES #953 "107d").
   Let!("\\end{frontmatter}", "\\lx@note@title@page");
+  // elsarticle.cls:178-179, :294: the correspondence marks and notes and the address list the class prints with its
+  // title (:766, :806), which this binding's frontmatter replaces; a journal style's own `\cortext` (cnf.sty:585:
+  // 2605.08232, 2606.15628) and a document (2605.22682) extend them, as defined in TeX (OD #1036).
+  RawTeX!(r"\let\@cormark\@empty\let\@cornotes\@empty\def\elsaddress{}");
   // elsarticle.cls:656-668: a labelled `\address[a]{…}` goes to the address list under the names (`\elsaddress`), an
   // unlabelled one into the names list itself (`\@address` into `\elsauthors`), printed with the names, above every
   // labelled one — its print zone the names' (`_zone=names`, OXIDIZED_DESIGN_DIVERGENCES #954; 1710.03753, where the

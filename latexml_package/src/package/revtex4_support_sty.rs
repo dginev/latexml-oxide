@@ -761,6 +761,8 @@ pub(crate) fn record_implicit_bibstyle(post: &str) {
 /// - ltxutil.sty:418-421 `\prep@math@patch` over `\prepdef` (a no-op here), ltxutil.sty:612 `\ltx@footnote@pop`
 ///   (`\@empty`), revtex4-2.cls:5845 `\setup@hook` (`\@empty`), :6746 `\setfloatlink`.
 /// - :6283-6285 the address switches' defaults.
+/// - revtex4-2.cls:2656-2657 (revtex4-1.cls:2635-2636) `\prep@absbox` and `\post@absbox`, the code around the
+///   abstract's box, which documents extend (2606.06621 `\g@addto@macro\prep@absbox`, as defined in TeX: OD #1036).
 pub(crate) fn define_revtex41_internals() -> Result<()> {
   DefMacro!("\\doi HyperVerbatim", "doi:\\href{https://doi.org/#1}{#1}");
   DefMacro!("\\doibase", "https://doi.org/");
@@ -772,6 +774,8 @@ pub(crate) fn define_revtex41_internals() -> Result<()> {
 }%
 \let\ltx@footnote@pop\@empty
 \let\setup@hook\@empty
+\let\prep@absbox\@empty
+\let\post@absbox\@empty
 \def\setfloatlink{\def\float@link}%
 \@booleanfalse\runinaddress@sw
 \@booleantrue\@affils@sw

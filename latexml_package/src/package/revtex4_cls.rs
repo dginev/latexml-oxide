@@ -186,6 +186,7 @@ LoadDefinitions!({
   }
   RequirePackage!("revtex4_support");
   switch_off_author_block_after_maketitle()?;
+  define_frontmatter_note_lists()?;
   // revtex4-1.cls:7046, revtex4-2.cls:7067 `\let\NAT@merge\thr@@`: `\cite{a,*b}` merges b's entry into a's
   // (`natbib_sty::natbib_merge_citations`; REVTeX 4.0 does not merge). 1808.00247.
   if !revtex4_0 && !lookup_bool("revtex_nomerge") {
@@ -241,6 +242,16 @@ LoadDefinitions!({
   // `\bracketOpen` etc.) in this file via revtex's runtime convention.
   Digest!("\\InputIfFileExists{\\jobname.rty}{}{}")?;
 });
+
+/// The lists of front matter notes REVTeX's `\maketitle` prints (revtex4-2.cls:3021, :7114; revtex4-1.cls alike;
+/// revtex4.cls:5008), which this binding's frontmatter replaces and a document extends before `\maketitle` (2605.00976
+/// `\g@addto@macro\@FMN@list`), as defined in TeX (OD #1036): `\@FMN@list` emptied at `\begin{document}`
+/// (revtex4-2.cls:2115, :2497-2499; revtex4-1.cls:2094, :2476-2478; revtex4.cls:3797-3799, :4582-4584), `\mini@notes`
+/// at load (revtex4-2.cls:7201, revtex4-1.cls:7180, revtex4.cls:5650).
+pub(crate) fn define_frontmatter_note_lists() -> Result<()> {
+  RawTeX!(r"\let\mini@notes\@empty\AtBeginDocument{\global\let\@FMN@list\@empty}");
+  Ok(())
+}
 
 /// REVTeX's `\maketitle` switches the author block off (revtex4-2.cls:2670-2684, revtex4-1.cls:2649-2662,
 /// revtex4.cls:4709-4717); ours from a repeated block's first `\author` on, its new words counted (OD #1003: 2401.15572,

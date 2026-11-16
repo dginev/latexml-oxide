@@ -295,6 +295,12 @@ yysep={,},notesep={, }}}
   DefMacro!("\\titlenote{}",    "\\lx@add@pubnote[role=note,name={}]{#1}");
   DefMacro!("\\subtitlenote{}", "\\lx@add@pubnote[role=note,name={}]{#1}");
   DefMacro!("\\authornote{}",   "\\lx@add@contact[role=note]{#1}");
+  // acmart.cls:1707, :1716, :1726: the notes these three queue for `\maketitle` (:2245-2247), which a document's own
+  // copy of them extends (2605.16813, 2605.28175, 2606.04448 `\g@addto@macro\@authornotes`), as defined in TeX
+  // (OD #1036). :2894 `\def\@setaddresses{}`: amsart's address list at the end (ams_core_cls.rs `\enddoc@text`) is
+  // never set; acmart reads `\addresses` only in `\maketitle`, where the `\@currentauthors` a document's
+  // `\@authornotemark` there extends is defined (:2723-2729; 2605.28175).
+  RawTeX!(r"\def\@titlenotes{}\def\@subtitlenotes{}\def\@authornotes{}\def\@setaddresses{}");
   // acmart 2026 (acmart.cls:1683-1686): `\correspondingauthor` marks the current author the corresponding one, an
   // envelope (`\ding{41}`) after the name, outside anonymous mode. 76 2609 papers (2609.06664, 2609.07038).
   DefMacro!("\\correspondingauthor",

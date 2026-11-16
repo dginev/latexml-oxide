@@ -1,0 +1,13 @@
+% witness: 2605.22976 (identify_llm_code_smells.tex:408 `\g@addto@macro\TPT@defaults`): threeparttable.sty:302-303
+% oracle:  pdflatex 0 errors; "Cell^a", note "a Note."
+% engines: rust=1 (999af99497d: undefined \TPT@defaults) perl=0 (1 Warning) (2026-11-16)
+% expect:  0 errors, 0 warnings; the note "Note."
+% status:  GREEN
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{threeparttable}
+\makeatletter\g@addto@macro\TPT@defaults{\setlength{\itemsep}{0pt}}\makeatother
+\begin{document}
+\begin{threeparttable}\begin{tabular}{l}Cell\tnote{a}\end{tabular}
+\begin{tablenotes}\item[a] Note.\end{tablenotes}\end{threeparttable}
+\end{document}

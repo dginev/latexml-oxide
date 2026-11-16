@@ -120,8 +120,25 @@ fn icml_support(follow_paper_copy: bool) -> Result<()> {
   // \icmlcorrespondingauthor{author}{email}
   // Attempt to use author name as a matching label to connect to author
   // (should be a fuzzy match?)
-  DefMacro!("\\icmlcorrespondingauthor{}{}",
-    "\\lx@add@contact[label={\\ifx.#1.\\else fuzzy:#1\\fi},role=email,name={Correspondence to: }]{#2}");
+  // It also builds the "Correspondence to:" line its notice prints (icml2026.sty:490-499, :529-530; icml2017.sty on,
+  // or the paper's copy), which documents extend (2605.04712, 2605.21190, 2606.01172
+  // `\g@addto@macro\icmlcorrespondingauthor@text`), as defined in TeX (OD #1036).
+  if copy_or(r"\icmlcorrespondingauthor@text", year.is_some_and(|year| year >= 2017)) {
+    DefMacro!("\\icmlcorrespondingauthor{}{}",
+      r"\lx@add@contact[label={\ifx.#1.\else fuzzy:#1\fi},role=email,name={Correspondence to: }]{#2}%
+\ificmlshowauthors
+  \ifdefined\icmlcorrespondingauthor@text
+    \g@addto@macro\icmlcorrespondingauthor@text{, #1 \textless{}#2\textgreater{}}%
+  \else
+    \gdef\icmlcorrespondingauthor@text{#1 \textless{}#2\textgreater{}}%
+  \fi
+\else
+  \gdef\icmlcorrespondingauthor@text{Anonymous Author \textless{}anon.email@domain.com\textgreater{}}%
+\fi");
+  } else {
+    DefMacro!("\\icmlcorrespondingauthor{}{}",
+      "\\lx@add@contact[label={\\ifx.#1.\\else fuzzy:#1\\fi},role=email,name={Correspondence to: }]{#2}");
+  }
 
   // \printAffiliationsAndNotice / \printAffiliationsAndWorkNotice emit
   // a re-iteration of the affiliation list + a free-form notice. Since

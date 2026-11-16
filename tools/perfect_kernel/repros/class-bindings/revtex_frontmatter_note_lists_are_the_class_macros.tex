@@ -1,0 +1,18 @@
+% witness: 2605.00976 (three-body.tex:105 `\g@addto@macro\@FMN@list` before `\maketitle`), 2606.06621 (arxiv.tex:54
+%          `\g@addto@macro\prep@absbox`): revtex4-2.cls:2497-2499 (at \begin{document}), :2656-2657, :7201 define them
+% oracle:  pdflatex 0 errors; "Joint work." as a front matter footnote
+% engines: rust=4 (999af99497d: undefined \prep@absbox, \post@absbox, \@FMN@list, \mini@notes) perl=0 (2 Warnings) (2026-11-16)
+% expect:  0 errors, 0 warnings; Ann Able's creator with her affiliation
+% status:  GREEN
+% preload: ar5iv.sty
+\documentclass{revtex4-2}
+\makeatletter\g@addto@macro\prep@absbox{\relax}\g@addto@macro\post@absbox{\relax}\makeatother
+\begin{document}
+\title{Title}
+\author{Ann Able}
+\affiliation{Univ A}
+\begin{abstract}Abstract.\end{abstract}
+\makeatletter\g@addto@macro\@FMN@list{\@TBN@opr{0}{Joint work.}}\g@addto@macro\mini@notes{}\makeatother
+\maketitle
+Text.
+\end{document}
