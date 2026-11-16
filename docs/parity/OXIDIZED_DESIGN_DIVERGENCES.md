@@ -19734,20 +19734,26 @@ footnote step where it prints, its glyph counted lost, so the marks after it pri
 a name (its event, the widest glue back to the previous name's last ink and on to the next name's first ink from the
 lexer's `SepKind::Gap` widths and its `space_before`/`space_after` interword spaces, the side or none), and every
 consumer reads it: the reading (`Resolver::names_line`) gives a mark's request and a note to the name it names, and
-the writer (`emit::block_names`) carries the previous name's pieces past its run and writes the next name's before its
-text in print order — a mark's own balanced tokens in a group of their own, cut from the previous name's run where a
-group took them, a note's footnote step where it prints. Only marks and notes move; an undecided mark is
+the writer (`emit::block_names`) carries the previous name's pieces past its run (over spacing, font changes and the
+pieces alone: an item the reading writes apart, an affiliation's contact before the mark, stops it) and writes the next
+name's before its text in print order — a mark's own balanced tokens in a group of their own, cut from the previous
+name's run where a group took them, a note's footnote step where it prints. Only marks and notes move; an undecided mark is
 `mark_dropped`'s: one given its number re-references a note written already and is counted lost (user ruling
-2026-11-09), a bare one's step is written where it prints on the creator before it (`{\setbox0\hbox{\footnotemark}}`, the
-mark typed into a box no one uses) and its glyph counted lost — the block was written whole, its names clumped into one
-creator; one Warning per block names every lost mark. The two other readers of marks
+2026-11-09), a bare one's step is written where it prints on the creator before it (`\lx@title@mark@step{\footnotemark}`,
+`frontmatter_fields.rs`: the mark typed into a box no one uses) and its glyph counted lost — the block was written whole,
+its names clumped into one creator; one Warning per block names every lost mark. A bare one leading its line or cell
+with a name after it keeps the whole block: the reading takes such a cell for a labelled line (`Ann Able\thanks{X}
+\and \footnotemark Bob Baker` read Bob as Ann's affiliation). The two other readers of marks
 (`insert::mark_creator_notes`/`strip_bare_mark`, the list-box first ink) keep their own reading for now (advisor T2).
 **Residuals.** The 0pt fill of a single-row author `tabular` (article.cls:181-183 sets `\@author` in `\begin{tabular}[t]{c}`
 per `\and`) needs the class's own `\maketitle` known to be in force: until then such a fill is undecided
 (`fmmarks_mark_then_hfill_before_next_red`, `ne2g_mark_past_hfill_undecided`). A mark beside an ORCID, a `\cite` or a
 formula's mark apart from both names stays undecided (`ne2g_mark_then_orcid_nearer_next`,
 `fmmarks_mark_then_cite_nearer_next_red`, `ne2g_mark_then_superscript_nearer_next`). A single space before or after a
-note prints no `space_before` event: a run with no other glue is undecided.
+note prints no `space_before` event: a run with no other glue is undecided. A cell an `\and` opens with a mark before
+its name is read as a labelled line (`ne2i_bare_mark_opening_a_cell_writes_the_block_whole`; given its number, Bob an
+affiliation as at the base). A mark after a name's comma and its label (`Igor Pikovski,$^{1, 2}$\footnotemark`,
+1111.1979: COMMAMARK) is undecided: its names now split, its glyph counted lost.
 **Witnesses.** 1911.13299, 2412.20504 (green before and after); the FMRG suite's spacing family
 (`perfect_kernel_batchfmmarks::a_mark_past_spacing_is_the_nearer_names`).
 **Guards**: `perfect_kernel_batchne2::{a_mark_beside_spacing_is_the_nearer_names,
