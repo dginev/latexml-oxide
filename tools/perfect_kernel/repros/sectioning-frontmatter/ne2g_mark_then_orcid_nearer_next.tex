@@ -1,0 +1,19 @@
+% mechanism: the nearer-name rule's growth (DG ruling 2026-11-16) runs over `\footnotemark`s, notes and spacing only:
+%   an ORCID link between the mark and the next name stays Ann's contact, so the mark stays REGFIX's counted loss
+% witness: none (review revSHGIVENc's r1orcid; the sibling of 1911.13299)
+% oracle:  pdflatex 0 errors; "† / Ann Able   Bob Baker   Carl Cole", the ORCID logo between † and Bob
+% engines: rust REGFIX: 0 errors, 1 Warning ("lost: †"), the ORCID Ann's contact; SHGIVENc 5fa111e0674: the ORCID
+%   inside Bob's personname, † on Bob; perl 0.8.8: 0 errors, the mark and the ORCID inside Bob's personname
+% expect:  0 errors, 1 Warning ("lost: †"); REGFIX's creators, the ORCID Ann's contact
+% status:  RED (5fa111e0674) -> GREEN (perfect_kernel_batchne2::a_mark_nearer_the_next_name_moves_nothing_into_it);
+%   since the fallback (main, 2026-11-16) no growth runs at all, the row guards against its return
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{orcidlink}
+\begin{document}
+\title{T}
+\author{Ann Able \qquad \footnotemark[2] \orcidlink{0000-0002-1825-0097} \ Bob Baker \and Carl Cole}
+\date{}
+\maketitle
+Text.
+\end{document}

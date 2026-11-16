@@ -1,0 +1,19 @@
+% mechanism: a `\footnotemark` that only spacing (a spacing run the lexer reads as a Gap: ` \ `, `\quad`, `~~`,
+%   `\hspace`) and notes part from its name is the name's: `block_names`' past-marks scan stopped at the Gap, so the mark
+%   was on no name; a bare one (which steps the counter) wrote the block whole with a Warning (`mark_dropped`), a given
+%   one was lost with a Warning. The scan now runs past a spacing run before a `\footnotemark` (DG ruling 2026-11-16, 4);
+%   a mark on the line a `\\` opens stays no name's (ne2c_mark_on_no_name_writes_the_block_whole)
+% witness: 1911.13299 (`Vivek Ramanujan \thanks{equal contribution} \ \footnotemark[2]`, `Ali Farhadi \ \footnotemark[3]`)
+% oracle:  pdflatex 0 errors; "Ann Able∗ †  Bob Baker ∗  Carl Cole †  Dan Dory ‡" (pdftotext)
+% engines: rust REGFIX: 0 errors, 1 Warning, the block written whole (one creator, every mark kept); perl 0.8.8: 0
+%   errors, every mark kept (its own numbers)
+% expect:  0 errors, 0 warnings; four creators, Ann † (bare, after her note's step), Bob * and Carl † (given), Dan ‡ (bare)
+% status:  RED (REGFIX) -> GREEN (perfect_kernel_batchne2::a_mark_after_its_names_note_stays_with_it)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{Ann Able\thanks{Univ X.} \ \footnotemark \and Bob Baker \quad\footnotemark[1] \and Carl Cole~~\footnotemark[2] \and Dan Dory\hspace{1em}\footnotemark}
+\maketitle
+Text.
+\end{document}

@@ -2,8 +2,9 @@
 %   line a `\\` opens under a name) was dropped with no Warning, and the next name's mark came out one symbol short;
 %   the block is now written whole, Perl's whole-block creator, its tokens digested in order, with a counted Warning
 %   (`emit.rs` `mark_dropped`). A mark past its name's note is carried instead (ne2c_mark_after_note)
-% witness: 1911.13299 (`Vivek Ramanujan \thanks{equal contribution} \\ \footnotemark[2]`); 2101.04763 (a mark past a
-%   name's comma), 2511.12633 (a mark in a formula with a note) — review revNE2r2 Q2
+% witness: 2101.04763 (a mark past a name's comma), 2511.12633 (a mark in a formula with a note) — review revNE2r2 Q2;
+%   1911.13299 was read as this shape, but its source is `Vivek Ramanujan \thanks{equal contribution} \ \footnotemark[2]`,
+%   a control space, no `\\`: its marks are their names' (DG ruling 2026-11-16, 4; ne2e_mark_past_spacing_is_its_names)
 % oracle:  pdflatex 0 errors; "Ann Able∗ †  Bob Baker‡" (pdftotext; Ann's † on the line under her name)
 % engines: rust off: 0 errors, Ann's † the mark of an affiliation line of hers, Bob ‡; rust =2 (NE2b): 0 errors, 0
 %   warnings, Ann's mark lost, Bob †

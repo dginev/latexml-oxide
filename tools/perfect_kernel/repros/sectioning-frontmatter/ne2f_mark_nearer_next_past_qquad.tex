@@ -1,0 +1,27 @@
+% mechanism: a `\footnotemark` with spacing on both sides between two names, the gap after it the narrower: pdflatex
+%   prints it nearer the next name, whose prefix it is by nearness; that waits (SHGIVENNEXT), so the run between the
+%   names is undecided (main's SHGIVEN fallback, 2026-11-16): the mark REGFIX's counted loss, never carried back
+%   onto Ann (SHGIVENb) nor grown into Bob's personname (SHGIVENc/d)
+% witness: none (review revSHGIVENb's n1; the sibling of 1911.13299's `\ \footnotemark[2]` and 2412.20504's
+%   `\footnotemark[1] \ \footnotemark[2] \quad Qingyi Si`)
+% oracle:  pdflatex 0 errors; "† / Ann Able   Bob Baker   Carl Cole", the † over Bob's name (pdftotext -bbox: 27.3pt
+%   before it, 4.0pt after; TeX's glue `\ ` + `\qquad` 23.3pt, ` \ ` 6.7pt)
+% engines: rust REGFIX: 0 errors, 1 Warning ("lost: †"), no creator carries †; SHGIVENb 80ffc5f84b4: 0 errors, † on
+%   Ann; perl 0.8.8: 0 errors; Ann, Bob with the prefix mark, Carl
+% expect:  0 errors, 1 Warning ("…given their number (a note's, written already) on no name and no item; lost: †");
+%   Ann, Bob, Carl, no creator carries †
+% status:  RED (80ffc5f84b4: † on Ann) -> GREEN (perfect_kernel_batchne2::a_marks_run_is_carried_back_whole_or_left)
+% moves:   row R SHGIVENNEXT — the prefix by nearness (this row, ne2f_mark_nearer_next_past_ties/_quads,
+%   ne2f_mark_and_note_nearer_next, ne2f_bare_mark_nearer_next_past_quads, ne2h_*_is_undecided) and the `\thanks`
+%   order (`Ann Able \qquad \footnotemark[2]\thanks{N} \ Bob` vs `… \qquad \thanks{N} \footnotemark[2] \ Bob`: pdflatex
+%   and Perl give the note to Bob in both orders, we keep it on Ann in both) wait for the post-run mark ledger and
+%   typeset-glue experiment
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{Ann Able \qquad \footnotemark[2] \ Bob Baker \and Carl Cole}
+\date{}
+\maketitle
+Text.
+\end{document}
