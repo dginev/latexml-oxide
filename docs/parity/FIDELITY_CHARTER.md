@@ -129,9 +129,11 @@ missing image, a broken `\ref` or `\cite`, and the like — the fixes are usuall
   beta@y.org}`: both addresses Ann's and Cat's). The legend's symbol is the note's `mark`, not its text (the mark rule).
 - **The mark rule: a creator's note carries the mark it prints, once per carrier** (DG 2026-11-16, rulings 1-3; OD
   #1053). Every frontmatter note a creator holds whose mark the PDF prints carries it as `mark` — a title block's
-  `\thanks` (article's `\@fnsymbol`, REVTeX's `\frontmatter@thefootnote`; an author's `\footnote` there too), acmart's
-  `\authornote`, a legend's symbol (`$^*$Equal contribution`, IEEEtran's `\thanks{$^{*}$…}`, a bare `*` the names
-  show) — and its text never opens with a copy of it. **"One copy" is a page rule:** the XML keeps a full copy of a
+  `\thanks` (article's `\@fnsymbol`, REVTeX's `\frontmatter@thefootnote`; an author's `\footnote` where the class sets
+  it in those marks — article, REVTeX 4.0 — while REVTeX 4.1/4.2's own minipage letters are not written, its note
+  Perl's contact, 2301.00220), acmart's `\authornote`, a legend's symbol (`$^*$Equal contribution`, IEEEtran's
+  `\thanks{$^{*}$…}`, a bare `*` the names show) — and its text never opens with a copy of it. A symbol that is the
+  text's own — a formula or word it heads (`$^*$-algebras`, `$^{3}$He`), a bare `*` beside the class's mark — stays. **"One copy" is a page rule:** the XML keeps a full copy of a
   shared note on every carrier (Perl's `relocateAnnotations`, Base_Utility.pool.ltxml:895-901, and
   `relocateFootnote`, latex_constructs.pool.ltxml:503-527, both clone), each with the same `mark` and text; a
   `\footnotemark[n]`, `\samethanks[n]` or `\authornotemark[n]` on a name is such a copy of the note it marks; a mark
