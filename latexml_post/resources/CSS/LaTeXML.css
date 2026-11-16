@@ -826,16 +826,24 @@ cite                 { font-style: normal; }
    author's lines show under the name (the card of #1051, ltx_authors_multiline) its marked notes show there too: one
    author's with no mark, a shared one headed by its mark (2606.00446, 2407.07614, 1706.03762). An unmarked note is no
    one author's (IEEEtran's \thanks prints no mark: a paper-wide funding or "manuscript received" note, 1510.02728), so
-   it keeps its pop-up, as does every note elsewhere. */
+   it keeps its pop-up, as does every note elsewhere. The name is the name alone, so every mark printed on it is a note
+   after it, in the order printed; a mark-only note (ltx_role_footnotemark: an affiliation letter, an unanswered
+   \footnotemark) always shows its mark, linked when its mark names a note of the block (0801.1438). A body under the
+   name floats, full width, so the marks after it stay on the name's line; consecutive marks are parted by a superscript
+   comma ("1,2", not "12"), as authors type them. */
 .ltx_annotated_personname:has(> .ltx_note) { display:inline; }
 .ltx_note_shared > .ltx_note_mark > a { color:inherit; text-decoration:none; }
+:is(.ltx_document:not(.ltx_authors_multiline) .ltx_creator:has(.ltx_author_line):not(:has(.ltx_contact:not(.ltx_author_line):not(.ltx_role_note):not(.ltx_role_thanks))), .ltx_authors_multiline .ltx_creator) .ltx_annotated_personname:has(> .ltx_note) { display:flow-root; }
 :is(.ltx_document:not(.ltx_authors_multiline) .ltx_creator:has(.ltx_author_line):not(:has(.ltx_contact:not(.ltx_author_line):not(.ltx_role_note):not(.ltx_role_thanks))), .ltx_authors_multiline .ltx_creator) .ltx_annotated_personname > .ltx_note { display:inline; }
 :is(.ltx_document:not(.ltx_authors_multiline) .ltx_creator:has(.ltx_author_line):not(:has(.ltx_contact:not(.ltx_author_line):not(.ltx_role_note):not(.ltx_role_thanks))), .ltx_authors_multiline .ltx_creator) .ltx_annotated_personname > .ltx_note .ltx_note_content {
-    display:block; position:static; max-width:none; margin:0.2em 0; padding:0;
+    display:block; position:static; float:left; clear:both; width:100%; max-width:none; margin:0.2em 0; padding:0;
     background:none; border:none; border-radius:0; box-shadow:none; text-align:inherit; }
 :is(.ltx_document:not(.ltx_authors_multiline) .ltx_creator:has(.ltx_author_line):not(:has(.ltx_contact:not(.ltx_author_line):not(.ltx_role_note):not(.ltx_role_thanks))), .ltx_authors_multiline .ltx_creator) .ltx_annotated_personname > .ltx_note .ltx_note_content .ltx_note_mark { position:static; }
 :is(.ltx_document:not(.ltx_authors_multiline) .ltx_creator:has(.ltx_author_line):not(:has(.ltx_contact:not(.ltx_author_line):not(.ltx_role_note):not(.ltx_role_thanks))), .ltx_authors_multiline .ltx_creator) .ltx_annotated_personname > .ltx_note .ltx_note_type,
-:is(.ltx_document:not(.ltx_authors_multiline) .ltx_creator:has(.ltx_author_line):not(:has(.ltx_contact:not(.ltx_author_line):not(.ltx_role_note):not(.ltx_role_thanks))), .ltx_authors_multiline .ltx_creator) .ltx_annotated_personname > .ltx_note:not(.ltx_note_shared) .ltx_note_mark { display:none; }
+:is(.ltx_document:not(.ltx_authors_multiline) .ltx_creator:has(.ltx_author_line):not(:has(.ltx_contact:not(.ltx_author_line):not(.ltx_role_note):not(.ltx_role_thanks))), .ltx_authors_multiline .ltx_creator) .ltx_annotated_personname > .ltx_note:not(.ltx_note_shared):not(.ltx_role_footnotemark) .ltx_note_mark { display:none; }
+.ltx_annotated_personname > .ltx_note:has(~ .ltx_note) > .ltx_note_mark::after { content:","; }
+:is(.ltx_document:not(.ltx_authors_multiline) .ltx_creator:has(.ltx_author_line):not(:has(.ltx_contact:not(.ltx_author_line):not(.ltx_role_note):not(.ltx_role_thanks))), .ltx_authors_multiline .ltx_creator) .ltx_annotated_personname > .ltx_note > .ltx_note_mark::after { content:none; }
+:is(.ltx_document:not(.ltx_authors_multiline) .ltx_creator:has(.ltx_author_line):not(:has(.ltx_contact:not(.ltx_author_line):not(.ltx_role_note):not(.ltx_role_thanks))), .ltx_authors_multiline .ltx_creator) .ltx_annotated_personname > :is(.ltx_note_shared, .ltx_role_footnotemark):has(~ :is(.ltx_note_shared, .ltx_role_footnotemark)) > .ltx_note_mark::after { content:","; }
 
 .ltx_overlay {position:relative; }
 .ltx_overlay > span:nth-child(2) {position:absolute; left:0; }
