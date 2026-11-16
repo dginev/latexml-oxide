@@ -4682,4 +4682,104 @@ endobj
       );
     }
   }
+
+  /// `\includegraphics[page=2]` of a vector PDF renders page 2 (100×300 bp; page 1 is 300×100) and leaves
+  /// no temp file: mutool's `%d` counts OUTPUT pages from 1, so a temp named for the source page was
+  /// never found — pdftocairo drew the image and mutool's SVG stayed in the destination (witnesses
+  /// 2305.12780, 1906.10268, 2406.07459, 2406.14311, 1709.02311). Each converter, then the pipeline.
+  /// Fixture: `tests/fixtures/two_page_sizes.tex`.
+  #[test]
+  fn vector_svg_of_page_two_is_page_two() {
+    use latexml_core::util::image::{svg_attr_value, svg_root_tag};
+    let fixture = format!(
+      "{}/tests/fixtures/two_page_sizes.pdf",
+      env!("CARGO_MANIFEST_DIR")
+    );
+    let view_box = |path: &Path| {
+      let text = std::fs::read_to_string(path).unwrap();
+      svg_root_tag(&text)
+        .and_then(|tag| svg_attr_value(tag, "viewBox"))
+        .map(|v| v.split_whitespace().collect::<Vec<_>>().join(" "))
+    };
+    let listing = |dir: &Path| {
+      let mut names: Vec<String> = std::fs::read_dir(dir)
+        .unwrap()
+        .map(|e| e.unwrap().file_name().to_string_lossy().into_owned())
+        .collect();
+      names.sort();
+      names
+    };
+    let tmp = TempDir::new("svg_page_two");
+    type Converter = fn(&str, &str, Option<u32>) -> bool;
+    let converters: [(&str, Converter); 2] = [
+      ("mutool", Graphics::convert_image_svg_mutool),
+      ("pdftocairo", Graphics::convert_image_svg_pdftocairo),
+    ];
+    let mut mutool = false;
+    for (tool, convert) in converters {
+      if !svg_tool_or_skip(tool, "svg_page_two") {
+        continue;
+      }
+      mutool |= tool == "mutool";
+      let dir = tmp.join(tool);
+      std::fs::create_dir_all(&dir).unwrap();
+      for (page, expected) in [(2, "0 0 100 300"), (1, "0 0 300 100")] {
+        let dest = dir.join(format!("p{page}.svg"));
+        assert!(
+          convert(&fixture, dest.to_str().unwrap(), Some(page)),
+          "{tool} converts page {page}"
+        );
+        assert_eq!(
+          view_box(&dest).as_deref(),
+          Some(expected),
+          "{tool} page {page}"
+        );
+      }
+      assert_eq!(listing(&dir), ["p1.svg", "p2.svg"], "{tool}");
+    }
+    // The pipeline: page=1 and page=2 of one source, each its own page's SVG, and nothing else.
+    if !mutool {
+      return;
+    }
+    let src = tmp.join("two_page_sizes.pdf");
+    std::fs::copy(&fixture, &src).unwrap();
+    let dest = tmp.join("out").join("out.html");
+    std::fs::create_dir_all(dest.parent().unwrap()).unwrap();
+    let xml = format!(
+      r#"<document xmlns="http://dlmf.nist.gov/LaTeXML">
+  <graphics graphic="two_page_sizes.pdf" candidates="{0}" options="page=1" xml:id="g1"/>
+  <graphics graphic="two_page_sizes.pdf" candidates="{0}" options="page=2" xml:id="g2"/>
+</document>"#,
+      src.display()
+    );
+    let doc_opts = crate::document::PostDocumentOptions {
+      destination: Some(dest.display().to_string()),
+      source_directory: Some(tmp.path().display().to_string()),
+      ..Default::default()
+    };
+    let doc = PostDocument::new_from_string(&xml, doc_opts).expect("parse");
+    let mut graphics =
+      Graphics::new(None, true).with_cache_policy(crate::graphics_cache::CachePolicy::Bypass);
+    let nodes = graphics.to_process(&doc);
+    assert_eq!(nodes.len(), 2);
+    let out = graphics.process(doc, nodes).expect("graphics process")[0].to_xml_string();
+    let element = |id: &str| {
+      let at = out.find(&format!(r#"xml:id="{id}""#)).unwrap();
+      let tag = &out[out[..at].rfind('<').unwrap()..at + out[at..].find('>').unwrap()];
+      let attr = |name: &str| {
+        let at = tag.find(&format!(" {name}=\""))? + name.len() + 3;
+        Some(tag[at..at + tag[at..].find('"')?].to_string())
+      };
+      [attr("imagesrc"), attr("imagewidth"), attr("imageheight")]
+    };
+    let some = |v: [&str; 3]| v.map(|s| Some(s.to_string()));
+    assert_eq!(element("g1"), some(["x1.svg", "300", "100"]), "{out}");
+    assert_eq!(element("g2"), some(["x2.svg", "100", "300"]), "{out}");
+    let out_dir = dest.parent().unwrap();
+    assert_eq!(listing(out_dir), ["x1.svg", "x2.svg"], "{out}");
+    assert_eq!(
+      view_box(&out_dir.join("x2.svg")).as_deref(),
+      Some("0 0 100 300")
+    );
+  }
 }
