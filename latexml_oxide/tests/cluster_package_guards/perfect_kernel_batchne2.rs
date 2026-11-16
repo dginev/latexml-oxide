@@ -51,9 +51,12 @@ fn a_notes_footnote_step_runs_where_it_prints() {
   assert_eq!(
     notes,
     [
-      r#"<note class="ltx_note_frontmatter ltx_thanks_note" role="thanks" xml:id="id1""#,
-      r#"<note class="ltx_note_frontmatter ltx_thanks_note" role="thanks" xml:id="id2""#,
-      r#"<note mark="*" role="footnotemark" xml:id="footnote1""#,
+      "<note class=\"ltx_note_frontmatter ltx_thanks_note\" mark=\"*\" role=\"thanks\" \
+       xml:id=\"id1\"",
+      "<note class=\"ltx_note_frontmatter ltx_thanks_note\" mark=\"†\" role=\"thanks\" \
+       xml:id=\"id2\"",
+      "<note class=\"ltx_note_frontmatter ltx_thanks_note\" mark=\"*\" role=\"thanks\" \
+       xml:id=\"footnote1\"",
     ],
     "{xml}"
   );
@@ -140,17 +143,22 @@ fn a_counter_move_no_name_carries_writes_the_block_as_perl_splits_it() {
   // (every note kept, each mark as pdflatex prints it: Ann's footnotemark †, Carl's *; each creator's in order, Ann's mark
   // and thanks, Bob's two thanks, Carl's mark)
   let (mark_ann, mark_carl) = (
-    r#"<note mark="†" role="footnotemark" xml:id="footnote2""#,
-    r#"<note mark="*" role="footnotemark" xml:id="footnote1""#,
+    "<note class=\"ltx_note_frontmatter ltx_thanks_note\" mark=\"†\" role=\"thanks\" \
+     xml:id=\"footnote2\"",
+    "<note class=\"ltx_note_frontmatter ltx_thanks_note\" mark=\"*\" role=\"thanks\" \
+     xml:id=\"footnote1\"",
   );
-  let thanks = |n: u8| {
-    format!(r#"<note class="ltx_note_frontmatter ltx_thanks_note" role="thanks" xml:id="id{n}""#)
+  // (each `\thanks` with the mark pdflatex prints for it, OD #1053)
+  let thanks = |n: u8, mark: &str| {
+    format!(
+      r#"<note class="ltx_note_frontmatter ltx_thanks_note" mark="{mark}" role="thanks" xml:id="id{n}""#
+    )
   };
   let expected = vec![
     mark_ann.to_string(),
-    thanks(1),
-    thanks(2),
-    thanks(3),
+    thanks(1, "*"),
+    thanks(2, "‡"),
+    thanks(3, "†"),
     mark_carl.to_string(),
   ];
   assert_eq!(notes, expected, "{xml}");
@@ -191,32 +199,51 @@ fn footnotemarks(xml: &str) -> Vec<&str> {
 #[test]
 fn a_mark_after_its_names_note_stays_with_it() {
   let mark = |m: &str, n: &str| format!(r#"<note mark="{m}" role="footnotemark" xml:id="{n}""#);
+  // (SHMARK, OD #1053: each `\thanks` note with the mark it prints, and a given mark a copy of the note it marks)
+  let thanks = |m: &str, n: &str| {
+    format!(
+      r#"<note class="ltx_note_frontmatter ltx_thanks_note" mark="{m}" role="thanks" xml:id="{n}""#
+    )
+  };
   for (tex, expected, marks) in [
     (
       repro!("ne2c_mark_after_note"),
       vec![row(&["Ann Able"]), row(&["Bob Baker"])],
-      vec![mark("†", "footnote2"), mark("‡", "footnote3")],
+      vec![
+        mark("†", "footnote2"),
+        thanks("*", "id1"),
+        mark("‡", "footnote3"),
+      ],
     ),
     (
       repro!("ne2c_mark_after_note_spaced"),
       vec![row(&["Ann Able"]), row(&["Bob Baker"]), row(&["Carl Cole"])],
-      vec![mark("†", "footnote2"), mark("§", "footnote4")],
+      vec![
+        mark("†", "footnote2"),
+        thanks("*", "id1"),
+        thanks("‡", "id2"),
+        mark("§", "footnote4"),
+      ],
     ),
     (
       repro!("ne2c_mark_after_note_numbered"),
       vec![row(&["Ann Able"]), row(&["Bob Baker"]), row(&["Carl Cole"])],
-      vec![mark("*", "footnotex1"), mark("*", "footnotex2")],
+      vec![
+        mark("*", "footnotex1"),
+        thanks("*", "id1"),
+        thanks("*", "footnotex2"),
+        thanks("†", "id2"),
+      ],
     ),
     (
       repro!("ne2c_mark_after_footnote_glued"),
-      vec![
-        row(&["Ann Able"]),
-        row(&["Bob Baker", "note=Univ Y."]),
-        row(&["Carl Cole"]),
-      ],
+      // (Bob Baker's `\footnote` the `\thanks` note it is in article's title, ‡, his `\footnotemark[1]` Ann Able's ∗)
+      vec![row(&["Ann Able"]), row(&["Bob Baker"]), row(&["Carl Cole"])],
       vec![
         mark("†", "footnote2"),
-        mark("*", "footnotex1"),
+        thanks("*", "id1"),
+        thanks("*", "footnotex1"),
+        thanks("‡", "id2"),
         mark("§", "footnote4"),
       ],
     ),
@@ -267,12 +294,13 @@ fn a_mark_on_no_name_writes_the_block_whole() {
     [
       r#"<note mark="†" role="footnotemark" xml:id="footnote2""#,
       r#"<note mark="‡" role="footnotemark" xml:id="footnote3""#,
+      r#"<note class="ltx_note_frontmatter ltx_thanks_note" mark="*" role="thanks" xml:id="id1""#,
     ],
     "{xml}"
   );
   assert_eq!(
     xml
-      .matches(r#"<note class="ltx_note_frontmatter ltx_thanks_note" role="thanks""#)
+      .matches(r#"<note class="ltx_note_frontmatter ltx_thanks_note" mark="*" role="thanks""#)
       .count(),
     1,
     "{xml}"
@@ -299,7 +327,10 @@ fn a_given_mark_on_no_name_keeps_the_creators() {
     ]
   };
   let expected = names("Carl Cole");
-  let marks: Vec<String> = vec![];
+  // (the `\thanks` note with its mark, OD #1053; the lost given marks are SHGIVEN's)
+  let marks = vec![
+    r#"<note class="ltx_note_frontmatter ltx_thanks_note" mark="*" role="thanks" xml:id="id1""#,
+  ];
   let (log, xml) = run(repro!("ne2d_given_mark_dropped_keeps_the_creators"));
   assert_eq!((error_count(&log), warning_count(&log)), (0, 1), "{log}");
   assert!(
@@ -311,7 +342,7 @@ fn a_given_mark_on_no_name_keeps_the_creators() {
   assert_eq!(footnotemarks(&xml), marks, "{xml}");
   assert_eq!(
     xml
-      .matches(r#"<note class="ltx_note_frontmatter ltx_thanks_note" role="thanks""#)
+      .matches(r#"<note class="ltx_note_frontmatter ltx_thanks_note" mark="*" role="thanks""#)
       .count(),
     1,
     "{xml}"
@@ -335,6 +366,7 @@ fn a_given_mark_on_no_name_keeps_the_creators() {
       r#"<note mark="*" role="footnotemark" xml:id="footnotex1""#,
       r#"<note mark="†" role="footnotemark" xml:id="footnote2""#,
       r#"<note mark="‡" role="footnotemark" xml:id="footnote3""#,
+      r#"<note class="ltx_note_frontmatter ltx_thanks_note" mark="*" role="thanks" xml:id="id7""#,
     ],
     "{xml}"
   );

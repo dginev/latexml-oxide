@@ -229,7 +229,7 @@ fn hollow_guards_restored_read_as_printed() {
       counts:   (0, 0),
       lines:    &[],
       creators: Creators::Whole(&[
-        r#"<creator role="author"><personname>Ann Able</personname><note class="ltx_note_frontmatter ltx_thanks_note" role="thanks">ann@uni.edu</note><contact class="ltx_author_line" name="Affiliation: " role="affiliation">Univ A, City</contact></creator>"#,
+        r#"<creator role="author"><personname>Ann Able</personname><note class="ltx_note_frontmatter ltx_thanks_note" mark="*" role="thanks">ann@uni.edu</note><contact class="ltx_author_line" name="Affiliation: " role="affiliation">Univ A, City</contact></creator>"#,
       ]),
     },
     Row {
@@ -238,9 +238,9 @@ fn hollow_guards_restored_read_as_printed() {
       counts:   (0, 0),
       lines:    &[],
       creators: Creators::Whole(&[
-        r#"<creator role="author"><personname>Ann Able</personname><note class="ltx_note_frontmatter ltx_thanks_note" role="thanks">E-mail: ann@x.fi</note><contact class="ltx_author_line" name="Affiliation: " role="affiliation">Univ X, Helsinki, Finland</contact></creator>"#,
-        r#"<creator before="  " role="author"><personname>Bob Baker</personname><note class="ltx_note_frontmatter ltx_thanks_note" role="thanks">E-mail: bob@y.uk</note><contact class="ltx_author_line" name="Affiliation: " role="affiliation">Univ Y, Liverpool, UK</contact></creator>"#,
-        r#"<creator before="  " role="author"><personname>Cy Cole</personname><note class="ltx_note_frontmatter ltx_thanks_note" role="thanks">E-mail: cy@x.fi</note><contact class="ltx_author_line" name="Affiliation: " role="affiliation">Univ X, Helsinki, Finland.</contact></creator>"#,
+        r#"<creator role="author"><personname>Ann Able</personname><note class="ltx_note_frontmatter ltx_thanks_note" mark="*" role="thanks">E-mail: ann@x.fi</note><contact class="ltx_author_line" name="Affiliation: " role="affiliation">Univ X, Helsinki, Finland</contact></creator>"#,
+        r#"<creator before="  " role="author"><personname>Bob Baker</personname><note class="ltx_note_frontmatter ltx_thanks_note" mark="†" role="thanks">E-mail: bob@y.uk</note><contact class="ltx_author_line" name="Affiliation: " role="affiliation">Univ Y, Liverpool, UK</contact></creator>"#,
+        r#"<creator before="  " role="author"><personname>Cy Cole</personname><note class="ltx_note_frontmatter ltx_thanks_note" mark="‡" role="thanks">E-mail: cy@x.fi</note><contact class="ltx_author_line" name="Affiliation: " role="affiliation">Univ X, Helsinki, Finland.</contact></creator>"#,
       ]),
     },
     Row {
@@ -362,8 +362,8 @@ fn marked_blocks_restored_read_as_printed() {
       counts:   (0, 0),
       lines:    &[],
       creators: Creators::Whole(&[
-        r#"<creator role="author"><personname>Ann (Al) Able*</personname><contact name="Affiliation: " role="affiliation">University of X, City</contact><contact name="Email: " role="email">ann@x.edu</contact><note class="ltx_note_frontmatter ltx_thanks_contribution" role="thanks">*The first two authors contributed equally to this work.</note></creator>"#,
-        r#"<creator before="  " role="author"><personname>Bob Baker*</personname><contact name="Affiliation: " role="affiliation">University of X, City</contact><contact name="Email: " role="email">bob@x.edu</contact><note class="ltx_note_frontmatter ltx_thanks_contribution" role="thanks">*The first two authors contributed equally to this work.</note></creator>"#,
+        r#"<creator role="author"><personname>Ann (Al) Able*</personname><contact name="Affiliation: " role="affiliation">University of X, City</contact><contact name="Email: " role="email">ann@x.edu</contact><note class="ltx_note_frontmatter ltx_thanks_contribution" mark="*" role="thanks">The first two authors contributed equally to this work.</note></creator>"#,
+        r#"<creator before="  " role="author"><personname>Bob Baker*</personname><contact name="Affiliation: " role="affiliation">University of X, City</contact><contact name="Email: " role="email">bob@x.edu</contact><note class="ltx_note_frontmatter ltx_thanks_contribution" mark="*" role="thanks">The first two authors contributed equally to this work.</note></creator>"#,
         r#"<creator before="  " role="author"><personname>Cy Cole</personname><contact name="Affiliation: " role="affiliation">University of X, City</contact><contact name="Email: " role="email">cy@x.edu</contact></creator>"#,
       ]),
     },
@@ -373,7 +373,7 @@ fn marked_blocks_restored_read_as_printed() {
       counts:   (0, 0),
       lines:    &[],
       creators: Creators::Whole(&[
-        r#"<creator role="author"><personname>Ann Able</personname><note class="ltx_note_frontmatter ltx_thanks_note" role="thanks">Core.</note></creator>"#,
+        r#"<creator role="author"><personname>Ann Able</personname><note class="ltx_note_frontmatter ltx_thanks_note" mark="*" role="thanks">Core.</note></creator>"#,
         r#"<creator before="  " role="author"><personname>Bob Baker</personname></creator>"#,
         r#"<creator before="  " role="author"><personname>Cat Cole</personname></creator>"#,
         r#"<creator before="  " role="author"><personname>Dan Dee</personname></creator>"#,
@@ -716,11 +716,11 @@ fn marked_blocks_restored_read_as_printed() {
       counts:   (0, 0),
       lines:    &[],
       creators: Creators::Whole(&[
-        r#"<creator role="author"><personname>Ann One<sup><text font="bold">*</text></sup></personname><contact name="Affiliation: " role="affiliation">Stanford University</contact><note class="ltx_note_frontmatter ltx_thanks_contribution" mark="*" role="thanks"><sup>*</sup>Equal contribution</note></creator>"#,
-        r#"<creator before="  " role="author"><personname>Bob Two<sup><text font="bold">*</text></sup></personname><contact name="Affiliation: " role="affiliation">Stanford University</contact><note class="ltx_note_frontmatter ltx_thanks_contribution" mark="*" role="thanks"><sup>*</sup>Equal contribution</note></creator>"#,
+        r#"<creator role="author"><personname>Ann One<sup><text font="bold">*</text></sup></personname><contact name="Affiliation: " role="affiliation">Stanford University</contact><note class="ltx_note_frontmatter ltx_thanks_contribution" mark="*" role="thanks">Equal contribution</note></creator>"#,
+        r#"<creator before="  " role="author"><personname>Bob Two<sup><text font="bold">*</text></sup></personname><contact name="Affiliation: " role="affiliation">Stanford University</contact><note class="ltx_note_frontmatter ltx_thanks_contribution" mark="*" role="thanks">Equal contribution</note></creator>"#,
         r#"<creator before="  " role="author"><personname>Cy Three</personname><contact name="Affiliation: " role="affiliation">Stanford University</contact></creator>"#,
-        r#"<creator before="  " role="author"><personname>Di Four<sup><text font="bold">†</text></sup></personname><contact name="Affiliation: " role="affiliation">Stanford University</contact><note class="ltx_note_frontmatter ltx_thanks_contribution" mark="†" role="thanks"><sup>†</sup>Equal advising</note></creator>"#,
-        r#"<creator before="  " role="author"><personname>Ed Five<sup><text font="bold">†</text></sup></personname><contact name="Affiliation: " role="affiliation">Stanford University</contact><note class="ltx_note_frontmatter ltx_thanks_contribution" mark="†" role="thanks"><sup>†</sup>Equal advising</note></creator>"#,
+        r#"<creator before="  " role="author"><personname>Di Four<sup><text font="bold">†</text></sup></personname><contact name="Affiliation: " role="affiliation">Stanford University</contact><note class="ltx_note_frontmatter ltx_thanks_contribution" mark="†" role="thanks">Equal advising</note></creator>"#,
+        r#"<creator before="  " role="author"><personname>Ed Five<sup><text font="bold">†</text></sup></personname><contact name="Affiliation: " role="affiliation">Stanford University</contact><note class="ltx_note_frontmatter ltx_thanks_contribution" mark="†" role="thanks">Equal advising</note></creator>"#,
       ]),
     },
     Row {
@@ -860,9 +860,9 @@ fn reds_keep_their_counts_and_right_parts() {
       // (the logos' notes whole since LOGO1: a constant template's text is ink, `util_text::printed_own_text`)
       creators: Creators::Hold(&[
         r#"<personname>Ann Able</personname>"#,
-        r#"<personname>Bob Baker</personname><note class="ltx_note_frontmatter ltx_thanks_note" role="thanks"><text class="ltx_LaTeX_logo" cssstyle="letter-spacing:-0.2em; margin-right:0.1em">L<text cssstyle="font-variant:small-caps;" yoffset="0.4ex">a</text>T<text cssstyle="font-variant:small-caps;font-size:120%" yoffset="-0.2ex">e</text>X</text></note></creator>"#,
-        r#"<personname>Cat Cole</personname><note class="ltx_note_frontmatter ltx_thanks_note" role="thanks"><text class="ltx_TeX_logo" cssstyle="letter-spacing:-0.2em; margin-right:0.2em">T<text cssstyle="font-variant:small-caps;font-size:120%;" yoffset="-0.2ex">e</text>X</text></note></creator>"#,
-        r#"<personname>Dan Doe</personname><note class="ltx_note_frontmatter ltx_thanks_note" role="thanks"><text class="ltx_LaTeX_logo" cssstyle="letter-spacing:-0.2em; margin-right:0.1em">L<text cssstyle="font-variant:small-caps;" yoffset="0.4ex">a</text>T<text cssstyle="font-variant:small-caps;font-size:120%" yoffset="-0.2ex">e</text>X 2<text cssstyle="font-style:italic" yoffset="-0.3ex">ε</text></text></note></creator>"#,
+        r#"<personname>Bob Baker</personname><note class="ltx_note_frontmatter ltx_thanks_note" mark="‡" role="thanks"><text class="ltx_LaTeX_logo" cssstyle="letter-spacing:-0.2em; margin-right:0.1em">L<text cssstyle="font-variant:small-caps;" yoffset="0.4ex">a</text>T<text cssstyle="font-variant:small-caps;font-size:120%" yoffset="-0.2ex">e</text>X</text></note></creator>"#,
+        r#"<personname>Cat Cole</personname><note class="ltx_note_frontmatter ltx_thanks_note" mark="§" role="thanks"><text class="ltx_TeX_logo" cssstyle="letter-spacing:-0.2em; margin-right:0.2em">T<text cssstyle="font-variant:small-caps;font-size:120%;" yoffset="-0.2ex">e</text>X</text></note></creator>"#,
+        r#"<personname>Dan Doe</personname><note class="ltx_note_frontmatter ltx_thanks_note" mark="¶" role="thanks"><text class="ltx_LaTeX_logo" cssstyle="letter-spacing:-0.2em; margin-right:0.1em">L<text cssstyle="font-variant:small-caps;" yoffset="0.4ex">a</text>T<text cssstyle="font-variant:small-caps;font-size:120%" yoffset="-0.2ex">e</text>X 2<text cssstyle="font-style:italic" yoffset="-0.3ex">ε</text></text></note></creator>"#,
       ]),
     },
     Row {
@@ -906,7 +906,7 @@ fn reds_keep_their_counts_and_right_parts() {
       ],
       // (Ann's `$\openone$` note written since LOGO1: revsymb's constant template "1" is ink)
       creators: Creators::Hold(&[
-        r#"<personname>Ann Able</personname><note class="ltx_note_frontmatter ltx_thanks_note" role="thanks"><Math mode="inline" tex="\openone" text="1"><XMath><XMTok font="blackboard" role="UNKNOWN">1</XMTok></XMath></Math></note>"#,
+        r#"<personname>Ann Able</personname><note class="ltx_note_frontmatter ltx_thanks_note" mark="*" role="thanks"><Math mode="inline" tex="\openone" text="1"><XMath><XMTok font="blackboard" role="UNKNOWN">1</XMTok></XMath></Math></note>"#,
         r#"<personname>Bob Baker</personname>"#,
         r#"role="author"><personname>Cat Cole</personname></creator>"#,
       ]),
@@ -990,8 +990,8 @@ fn reds_keep_their_counts_and_right_parts() {
       counts:   (0, 0),
       lines:    &[],
       creators: Creators::Hold(&[
-        r#"<personname>Ann Able</personname><note class="ltx_note_frontmatter ltx_thanks_note" role="thanks">x</note>"#,
-        r#"<personname>Bob Baker</personname><note class="ltx_note_frontmatter ltx_thanks_note" role="thanks">y</note>"#,
+        r#"<personname>Ann Able</personname><note class="ltx_note_frontmatter ltx_thanks_note" mark="*" role="thanks">x</note>"#,
+        r#"<personname>Bob Baker</personname><note class="ltx_note_frontmatter ltx_thanks_note" mark="‡" role="thanks">y</note>"#,
         r#"role="affiliation">Dept</contact>"#,
         r#"role="affiliation">Dept Y</contact>"#,
       ]),
@@ -1027,7 +1027,7 @@ fn reds_keep_their_counts_and_right_parts() {
       counts:   (0, 0),
       lines:    &[],
       creators: Creators::Hold(&[
-        r#"<personname>Ann Able</personname><note class="ltx_note_frontmatter ltx_thanks_note" role="thanks">Ann Able is with Univ A.</note>"#,
+        r#"<personname>Ann Able</personname><note class="ltx_note_frontmatter ltx_thanks_note" mark="*" role="thanks">Ann Able is with Univ A.</note>"#,
         r#"<personname>Bob Baker</personname>"#,
         r#"<personname>Cat Cole</personname>"#,
       ]),

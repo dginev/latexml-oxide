@@ -197,7 +197,7 @@ fn kernel_empty_thanks_leave_no_note() {
     &[],
     r#"<creator role="author">
     <personname>A. Able</personname>
-    <note class="ltx_note_frontmatter ltx_thanks_note" role="thanks" xml:id="id1">Univ A</note>
+    <note class="ltx_note_frontmatter ltx_thanks_note" mark="‡" role="thanks" xml:id="id1">Univ A</note>
   </creator>"#,
   );
 }

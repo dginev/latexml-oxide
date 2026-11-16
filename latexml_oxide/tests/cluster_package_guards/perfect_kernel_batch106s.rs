@@ -131,7 +131,7 @@ fn a_runaway_run_leaves_no_ghost_fatal() {
   let tex = repro!("check_run_runaway_leaves_no_ghost_fatal");
   assert_eq!(
     converted(tex, 0),
-    r#"<title>A Title</title> <creator role="author"> <personname>Ann Able</personname> <note class="ltx_note_frontmatter ltx_thanks_note" role="thanks" xml:id="id1">One.</note> <note class="ltx_note_frontmatter ltx_thanks_note" role="thanks" xml:id="id2">Two.</note> <note class="ltx_note_frontmatter ltx_thanks_note" role="thanks" xml:id="id3">Three.</note> </creator> <pubnote role="thanks">Four.</pubnote> <para xml:id="p1"> <p xml:id="p1.1">Text.</p> </para>"#
+    r#"<title>A Title</title> <creator role="author"> <personname>Ann Able</personname> <note class="ltx_note_frontmatter ltx_thanks_note" mark="*" role="thanks" xml:id="id1">One.</note> <note class="ltx_note_frontmatter ltx_thanks_note" mark="†" role="thanks" xml:id="id2">Two.</note> <note class="ltx_note_frontmatter ltx_thanks_note" mark="§" role="thanks" xml:id="id3">Three.</note> </creator> <pubnote role="thanks">Four.</pubnote> <para xml:id="p1"> <p xml:id="p1.1">Text.</p> </para>"#
   );
   let (log, _) = cli_conversion(tex, false);
   assert!(

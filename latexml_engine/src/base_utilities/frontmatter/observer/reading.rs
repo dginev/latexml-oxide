@@ -47,10 +47,56 @@ pub(in crate::base_utilities) fn read_at_flush() -> Result<HeldUndefined> {
   if rehearsal::rehearsing() {
     return Ok(HeldUndefined::default());
   }
+  rehearse_title_first()?;
   let held = read_pending()?;
   // (the flush empties the frontmatter queue: the calls after it are queued from position 0 again)
   with_ledger(|ledger| ledger.flushes += 1);
   Ok(held)
+}
+
+/// The title read before the author blocks, in a class whose `\maketitle` marks its notes (`lx_title_counts_footnotes`;
+/// article.cls:203-214 `\@maketitle` sets `\@title` first): its rehearsal carries the footnote steps its notes make into
+/// the blocks' (`rehearsal::footnotes_carried`). The flush digests the title after its reading, so an author's `\thanks`
+/// under a title's `\thanks{Funded.}` showed ∗ where the PDF prints †, and a `\footnotemark[1]` beside another name
+/// read as that author's note. The last title set is the one printed (`\title` replaces it, latex.ltx `\gdef\@title`);
+/// read as the calls are, its events kept for them.
+fn rehearse_title_first() -> Result<()> {
+  if !lookup_bool("lx_title_counts_footnotes") {
+    return Ok(());
+  }
+  let title = with_ledger(|ledger| {
+    ledger
+      .entries()
+      .iter()
+      .enumerate()
+      .rev()
+      .find_map(|(i, entry)| match entry {
+        Entry::Api(call)
+          if call.tag == "ltx:title" && !call.rehearsed && !call.cleared && !call.inside =>
+        {
+          Some((i, call.content.clone()))
+        },
+        _ => None,
+      })
+  });
+  let Some((i, content)) = title.filter(|(_, content)| !content.is_empty()) else {
+    return Ok(());
+  };
+  if let Rehearsal::Done { value, errors, queued, .. } = rehearse_call(
+    &mut CallRehearsals::default(),
+    content,
+    TitleMarks::Fnsymbol,
+  )? {
+    with_ledger(|ledger| {
+      if let Some(Entry::Api(call)) = ledger.entries_mut().get_mut(i) {
+        call.events = value;
+        call.errors = errors;
+        call.queued = queued;
+        call.rehearsed = true;
+      }
+    });
+  }
+  Ok(())
 }
 
 /// How deep a block's macros are unfolded ([`unfold_held_names`]): `\aut` holding `\autA` holding the names.

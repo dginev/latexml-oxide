@@ -76,9 +76,9 @@ fn a_sublettered_used_mark_is_written_whole() {
 fn a_wrapped_thanks_note_is_written_whole() {
   let expected = [
     "<creator role=\"author\"> <personname>Ann Able</personname> <note class=\"ltx_note_frontmatter \
-     ltx_thanks_note\" role=\"thanks\" xml:id=\"id1\">ORCID https://orcid.org/0000-0001-8817-2744</note> </creator>",
+     ltx_thanks_note\" mark=\"*\" role=\"thanks\" xml:id=\"id1\">ORCID https://orcid.org/0000-0001-8817-2744</note> </creator>",
     "<creator before=\" \" role=\"author\"> <personname>Bob Bee</personname> <note class=\"ltx_note_frontmatter \
-     ltx_thanks_note\" role=\"thanks\" xml:id=\"id2\">ORCID https://orcid.org/0000-0002-6100-8255</note> </creator>",
+     ltx_thanks_note\" mark=\"†\" role=\"thanks\" xml:id=\"id2\">ORCID https://orcid.org/0000-0002-6100-8255</note> </creator>",
   ];
   let warnings = 2;
   let (log, xml) = run(repro!("cl8_wrapped_thanks_note_written_whole"));

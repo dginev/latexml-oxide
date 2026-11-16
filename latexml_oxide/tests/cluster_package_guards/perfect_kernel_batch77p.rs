@@ -114,7 +114,7 @@ fn single_spacing_stays_in_the_name() {
     creator(
       false,
       "Gus Gray",
-      r#"<note class="ltx_note_frontmatter ltx_thanks_note" role="thanks" xml:id="id1">Note G.</note>"#
+      r#"<note class="ltx_note_frontmatter ltx_thanks_note" mark="*" role="thanks" xml:id="id1">Note G.</note>"#
     ),
     creator(false, r#"Hal Hunt<sup xml:id="id2">1</sup>"#, ""),
   ]);
@@ -262,7 +262,7 @@ fn spacing_run_marked_rows() {
       true,
       "Ann Able",
       &format!(
-        r#"<note class="ltx_note_frontmatter ltx_thanks_note" role="thanks" xml:id="id1">Note A.</note> {} {}"#,
+        r#"<note class="ltx_note_frontmatter ltx_thanks_note" mark="*" role="thanks" xml:id="id1">Note A.</note> {} {}"#,
         sized("80%", "id2", "Univ A"),
         small_tt("id3", "able@a.edu")
       )
@@ -468,7 +468,7 @@ fn spacing_run_names_rows() {
       true,
       "Ann Able",
       &format!(
-        r#"<note class="ltx_note_frontmatter ltx_thanks_contribution" role="thanks" xml:id="id1">Equal contribution.</note> {microsoft}"#
+        r#"<note class="ltx_note_frontmatter ltx_thanks_contribution" mark="*" role="thanks" xml:id="id1">Equal contribution.</note> {microsoft}"#
       )
     ),
     creator(false, r#"Bob Baker<sup xml:id="id2">∗</sup>"#, &microsoft),
@@ -1441,7 +1441,7 @@ fn legend_row_shares_the_institution() {
       &format!(
         r#"{} {}"#,
         trimmed("id3", "id4"),
-        r#"<note class="ltx_note_frontmatter ltx_thanks_correspondence" mark="*" role="thanks" xml:id="id5"><sup xml:id="id5.1"><text fontsize="90%" xml:id="id5.1.1">*</text></sup><text fontsize="90%" xml:id="id5.2">Corresponding author: bbaker@x.edu</text></note>"#
+        r#"<note class="ltx_note_frontmatter ltx_thanks_correspondence" mark="*" role="thanks" xml:id="id5"><text fontsize="90%" xml:id="id5.1">Corresponding author: bbaker@x.edu</text></note>"#
       )
     ),
   ]);
@@ -1682,10 +1682,10 @@ fn symbol_lines_after_a_spaced_break_go_by_their_marks() {
   let xml = convert_repro!("author_symbol_lines_after_spaced_break.tex");
   assert_no_merged_names(&xml);
   // (each footnote an e-mail note of its name, before its institution; batch 77y: whole elements, the r8 re-review's
-  // finding 12)
-  let note = |address: &str, id: &str| {
+  // finding 12; the marked `\thanks` note a `\footnote` is in article's title, OD #1053)
+  let note = |mark: &str, address: &str, id: &str| {
     format!(
-      r##"<contact name="Note: " role="note">E-mail: <text color="#008080" font="typewriter" xml:id="{id}">{address}</text></contact>"##
+      r##"<note class="ltx_note_frontmatter ltx_thanks_note" mark="{mark}" role="thanks" xml:id="{id}">E-mail: <text color="#008080" font="typewriter" xml:id="{id}.1">{address}</text></note>"##
     )
   };
   assert_eq!(creators(&xml), vec![
@@ -1694,7 +1694,7 @@ fn symbol_lines_after_a_spaced_break_go_by_their_marks() {
       "Ann Able",
       &format!(
         r#"{} {}"#,
-        note("aable@x.ie", "id1"),
+        note("*", "aable@x.ie", "id1"),
         author_line(affiliation(
           r#"<text font="italic" xml:id="id2">School of Mathematics and Statistics, Univ A, Dublin 4, Republic of Ireland</text>"#
         ))
@@ -1705,7 +1705,7 @@ fn symbol_lines_after_a_spaced_break_go_by_their_marks() {
       "Bob Baker",
       &format!(
         r#"{} {}"#,
-        note("bbaker@y.hk", "id3"),
+        note("†", "bbaker@y.hk", "id3"),
         author_line(affiliation(
           r#"<text font="italic" xml:id="id4">Department of Biostatistics, Univ B, Hong Kong</text>"#
         ))

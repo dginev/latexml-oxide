@@ -108,7 +108,10 @@ fn a_name_a_macro_spells_is_no_lost_name() {
     creator_elements(&xml),
     [
       "<creator role=\"author\"><personname>Ann Able</personname><contact class=\"ltx_author_line\" name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ X, Dept Y</contact></creator>",
-      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker</personname><contact name=\"Note:\u{a0}\" role=\"note\">Zebra note.</contact><contact class=\"ltx_author_line\" name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ Z</contact></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob \
+       Baker</personname><note class=\"ltx_note_frontmatter ltx_thanks_note\" mark=\"*\" \
+       role=\"thanks\" xml:id=\"id1\">Zebra note.</note><contact class=\"ltx_author_line\" \
+       name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ Z</contact></creator>",
       "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Cat Cole</personname><contact class=\"ltx_author_line\" name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ X, Dept Y</contact></creator>"
     ],
     "{xml}"

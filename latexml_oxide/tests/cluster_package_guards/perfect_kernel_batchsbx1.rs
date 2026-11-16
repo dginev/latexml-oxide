@@ -88,10 +88,9 @@ const ROWS: &[(Source, (usize, usize), Expect)] = &[
        list of collaboration members}}\n\\begin{document}\n\\maketitle\nText.\n\\end{document}\n",
     ),
     (0, 0),
-    Expect::Creators(&[&[
-      "sPHENIX Collaboration",
-      "note=See the appendix for the list of collaboration members",
-    ]]),
+    // (the name's `\footnote` is the marked `\thanks` note it is in article's title, which this view leaves out: OD #1053,
+    // `perfect_kernel_batchshmark::a_thanks_note_carries_the_mark_its_title_prints`)
+    Expect::Creators(&[&["sPHENIX Collaboration"]]),
   ),
   // the Error side: "for " opening a legend's text, no group's name after it (review revSBX1)
   (

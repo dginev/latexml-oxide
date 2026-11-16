@@ -110,16 +110,8 @@ fn a_legend_line_is_written_as_the_starred_names_note() {
   assert_eq!(
     default_mode_creators(tex),
     owned(&[
-      &[
-        "Ann Able",
-        "affiliation=Univ X",
-        "note=* Equal contribution"
-      ],
-      &[
-        "Bob Baker",
-        "affiliation=Univ Y",
-        "note=* Equal contribution"
-      ],
+      &["Ann Able", "affiliation=Univ X", "note=Equal contribution"],
+      &["Bob Baker", "affiliation=Univ Y", "note=Equal contribution"],
       &["Cid Cole", "affiliation=Univ Y"],
     ])
   );

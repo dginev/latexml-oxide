@@ -179,12 +179,12 @@ fn batchmln1_mark_led_names_read_as_names() {
         &[
           "Ann Able",
           "affiliation=Inst A",
-          "note:thanks=† Equal contribution",
+          "note:thanks=Equal contribution",
         ],
         &[
           "Bob Baker",
           "affiliation=Inst B",
-          "note:thanks=† Equal contribution",
+          "note:thanks=Equal contribution",
         ],
         &["Cat Cole", "affiliation=Inst B"],
       ],
@@ -260,7 +260,7 @@ fn batchmln1_marked_affiliations_stay_affiliations() {
         &[
           "Ann Able",
           "affiliation=Inst A",
-          "note:thanks=∗ Corresponding author",
+          "note:thanks=Corresponding author",
         ],
         &["Bob Baker", "affiliation=Inst A"],
       ],

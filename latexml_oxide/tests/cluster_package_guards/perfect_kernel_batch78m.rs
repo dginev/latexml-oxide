@@ -72,7 +72,7 @@ fn author_space_before_own_mark_is_the_name() {
     &["role=\"author\""],
     &format!(
       "<creator role=\"author\"><personname>Oleg Lychkovskiy</personname><note class=\"ltx_note_frontmatter \
-     ltx_thanks_note\" role=\"thanks\" xml:id=\"id1\">e-mail: o@x.ru</note><contact class=\"ltx_author_line\" name=\"Affiliation:\u{a0}\" \
+     ltx_thanks_note\" mark=\"*\" role=\"thanks\" xml:id=\"id1\">e-mail: o@x.ru</note><contact class=\"ltx_author_line\" name=\"Affiliation:\u{a0}\" \
      role=\"affiliation\">{sp}<text font=\"italic\" fontsize=\"90%\" xml:id=\"id2\">Institute A</text></contact><contact class=\"ltx_author_line\" \
      name=\"Affiliation:\u{a0}\" role=\"affiliation\">{sp}<text font=\"italic\" fontsize=\"90%\" xml:id=\"id3\">Institute \
      B</text></contact></creator>"
@@ -155,7 +155,7 @@ fn author_enskip_in_name_and_after_note() {
   assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
   assert_creators(&xml, &[
     "<creator role=\"author\"><personname>J.\u{2002}Smith</personname><note class=\"ltx_note_frontmatter \
-     ltx_thanks_correspondence\" role=\"thanks\" xml:id=\"id1\">Corresponding author.</note><contact class=\"ltx_author_line\" \
+     ltx_thanks_correspondence\" mark=\"*\" role=\"thanks\" xml:id=\"id1\">Corresponding author.</note><contact class=\"ltx_author_line\" \
      name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A</contact></creator>",
     "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>K.\u{2002}Jones</personname><contact class=\"ltx_author_line\" \
      name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ B</contact></creator>",

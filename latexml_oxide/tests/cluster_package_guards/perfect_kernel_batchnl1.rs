@@ -6,7 +6,10 @@
 
 use latexml::util::test::{convert_files_with_setup_then, error_count, warning_count};
 
-use super::{perfect_kernel_batch84b::creators, perfect_kernel_batchz4::run};
+use super::{
+  perfect_kernel_batch84b::creators, perfect_kernel_batchshmark::marked_notes,
+  perfect_kernel_batchz4::run,
+};
 
 macro_rules! repro {
   ($name:literal) => {
@@ -151,13 +154,17 @@ fn glued_initials_are_no_surname_before_initials() {
 fn a_collaboration_remark_is_the_names_contact() {
   let tex = repro!("emit_a_collaboration_remark_parted_by_a_note_and_a_box_is_a_contact");
   let two = both(tex, 0);
+  // (the name's `\footnote` the marked `\thanks` note it is in article's title, OD #1053: the notes' view below)
   let want = [vec![
     "Kalanand Mishra",
-    "note=Email: k@x.edu",
     "collaboration=(for the B A B AR collaboration)",
     "affiliation=Univ A",
   ]];
   assert_eq!(two, want);
+  assert_eq!(marked_notes(tex, 0), [vec![
+    "Kalanand Mishra".to_string(),
+    "thanks[*]=Email: k@x.edu".to_string()
+  ]]);
   let babar = "<contact role=\"collaboration\">(for the <text font=\"slanted\">B<text fontsize=\"90%\">A</text>B<text \
                fontsize=\"90%\">AR</text></text> collaboration)</contact>";
   assert_eq!(collaborations(&run(tex).1), [babar]);
@@ -229,7 +236,8 @@ fn a_remark_after_a_note_keeps_its_own_span() {
   let atlas = "<contact role=\"collaboration\">(for the <text font=\"smallcaps\">Atlas</text> Collaboration)</contact>";
   assert_eq!(collaborations(&xml), [atlas]);
   // (her thanks note before the collaboration, as the source prints them)
-  let note = xml.find("<note class=\"ltx_note_frontmatter ltx_thanks_note\" role=\"thanks\"");
+  let note =
+    xml.find("<note class=\"ltx_note_frontmatter ltx_thanks_note\" mark=\"*\" role=\"thanks\"");
   assert!(
     note.is_some_and(|note| collaboration_at(&xml).is_some_and(|c| note < c)),
     "{xml}"

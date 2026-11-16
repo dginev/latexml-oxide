@@ -84,7 +84,7 @@ fn names_in_a_layout_are_reparted() {
     owned(&[
       &["Ann Able", "affiliation=Univ X"],
       &["Bob Baker", "affiliation=Univ Y"],
-      &["Cid Cole", "affiliation=Univ X", "note=∗ Equal advising."],
+      &["Cid Cole", "affiliation=Univ X", "note=Equal advising."],
     ])
   );
   let tex = repro!("author_names_reparted_in_a_tabular_with_a_legend.tex");
@@ -114,7 +114,7 @@ fn names_in_a_layout_are_reparted() {
       &[
         "Cid Cole",
         "affiliation=Univ Y",
-        "note=† Corresponding author"
+        "note=Corresponding author"
       ],
     ])
   );
@@ -447,14 +447,14 @@ fn a_legend_note_shows_its_mark() {
   assert_eq!(reading.3, Value::from(true));
   assert_eq!(
     default_mode_creators(tex),
-    owned(&[&["Ann Able", "note=∗ Equal contribution"], &["Bob Baker"]])
+    owned(&[&["Ann Able", "note=Equal contribution"], &["Bob Baker"]])
   );
   let xml = default_mode_xml(tex);
   assert_eq!(personnames(&xml), [
     "<personname>Ann Able</personname>",
     "<personname>Bob Baker</personname>",
   ]);
-  assert_eq!(notes_with_marks(&xml), ["mark=∗ ∗ Equal contribution"]);
+  assert_eq!(notes_with_marks(&xml), ["mark=∗ Equal contribution"]);
   let tex = repro!("author_names_conceded_creator_legend_note_mark.tex");
   let reading = assert_reading(tex, None, &[
     "C Ann Able [] | line:names",
@@ -466,7 +466,7 @@ fn a_legend_note_shows_its_mark() {
     default_mode_creators(tex),
     owned(&[&["Ann Able"], &[
       "Kitt Peak Observatory",
-      "note=∗ Equal contribution"
+      "note=Equal contribution"
     ]])
   );
   let xml = default_mode_xml(tex);
@@ -474,7 +474,7 @@ fn a_legend_note_shows_its_mark() {
     "<personname>Ann Able</personname>",
     "<personname>Kitt Peak Observatory</personname>",
   ]);
-  assert_eq!(notes_with_marks(&xml), ["mark=∗ ∗ Equal contribution"]);
+  assert_eq!(notes_with_marks(&xml), ["mark=∗ Equal contribution"]);
 }
 
 /// A made item starts after its mark, its switches its own (review rev94a r5 u03, v02, v03; `plan::block_span_tokens`):
@@ -738,8 +738,8 @@ fn a_legend_of_several_symbols_shows_its_mark() {
     "<personname>Bob Baker</personname>",
   ]);
   assert_eq!(notes_with_marks(&xml), [
-    "mark=∗ ∗ Equal contribution",
-    "mark=∗∗ ∗∗ Corresponding author",
+    "mark=∗ Equal contribution",
+    "mark=∗∗ Corresponding author",
   ]);
   // (the rows below, rv15 and rv11, pin a known residual too: a mark formula rewritten into a superscript keeps the
   // formula's italic digits, `<sup><text font="italic">1</text></sup>`, where pdflatex's are upright — since 93a,

@@ -131,7 +131,7 @@ fn a_let_copy_of_a_note_command_is_its_note() {
         "author_let_copy_of_thanks_is_the_note"
       ),
       "<creator role=\"author\">\n    <personname>Ann Able</personname>\n    <note class=\"ltx_note_frontmatter \
-       ltx_thanks_note\" role=\"thanks\">Univ A, ann@a.org</note>\n  </creator>",
+       ltx_thanks_note\" mark=\"*\" role=\"thanks\">Univ A, ann@a.org</note>\n  </creator>",
     ),
     (
       row!(
@@ -139,15 +139,16 @@ fn a_let_copy_of_a_note_command_is_its_note() {
         "author_let_copy_of_thanks_before_renewal_is_the_note"
       ),
       "<creator role=\"author\">\n    <personname>Ann Able</personname>\n    <note class=\"ltx_note_frontmatter \
-       ltx_thanks_note\" role=\"thanks\">Univ A, ann@a.org</note>\n  </creator>",
+       ltx_thanks_note\" mark=\"*\" role=\"thanks\">Univ A, ann@a.org</note>\n  </creator>",
     ),
     (
       row!(
         "sectioning-frontmatter",
         "author_let_copy_of_footnote_is_the_note"
       ),
-      "<creator role=\"author\">\n    <personname>Ann Able</personname>\n    <contact name=\"Note:\u{a0}\" \
-       role=\"note\">Univ A</contact>\n  </creator>",
+      "<creator role=\"author\">\n    <personname>Ann Able</personname>\n    <note \
+       class=\"ltx_note_frontmatter ltx_thanks_note\" mark=\"*\" role=\"thanks\">Univ A</note>\n  \
+       </creator>",
     ),
   ] {
     let (log, xml) = run(tex);

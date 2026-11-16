@@ -2631,7 +2631,7 @@ Hello.
     &xml,
     "creator",
     &[],
-    r#"<creator role="author"><personname>Beichen Wen</personname><note class="ltx_note_frontmatter ltx_thanks_note" role="thanks" xml:id="id1">The authors are with S-Lab</note></creator>"#,
+    r#"<creator role="author"><personname>Beichen Wen</personname><note class="ltx_note_frontmatter ltx_thanks_note" mark="*" role="thanks" xml:id="id1">The authors are with S-Lab</note></creator>"#,
   );
 }
 
@@ -6034,7 +6034,7 @@ Text.
       "<creator role=\"author\"><personname>Sunkanghong Wang<sup xml:id=\"id1\"><text font=\"italic\" xml:id=\"id1.1\">a,e</text></sup></personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id2\"><text font=\"italic\" xml:id=\"id2.1\">a</text></sup>Univ A</contact><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id3\"><text font=\"italic\" xml:id=\"id3.1\">e</text></sup>Univ E</contact></creator>",
       "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Zhengzhong You<sup xml:id=\"id4\"><text font=\"italic\" xml:id=\"id4.1\">b</text></sup></personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id5\"><text font=\"italic\" xml:id=\"id5.1\">b</text></sup>Univ B</contact></creator>",
       // (97e: informs4's family written — the `*` line the legend of Lijun Wei's mark, a correspondence note)
-      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Lijun Wei<sup xml:id=\"id6\"><text font=\"italic\" xml:id=\"id6.1\">e,∗</text></sup></personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id7\"><text font=\"italic\" xml:id=\"id7.1\">e</text></sup>Univ E</contact><note class=\"ltx_note_frontmatter ltx_thanks_correspondence\" mark=\"∗\" role=\"thanks\" xml:id=\"id8\"><sup xml:id=\"id8.1\">∗</sup>Corresponding author</note></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Lijun Wei<sup xml:id=\"id6\"><text font=\"italic\" xml:id=\"id6.1\">e,∗</text></sup></personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id7\"><text font=\"italic\" xml:id=\"id7.1\">e</text></sup>Univ E</contact><note class=\"ltx_note_frontmatter ltx_thanks_correspondence\" mark=\"∗\" role=\"thanks\" xml:id=\"id8\">Corresponding author</note></creator>",
       "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Zhou Xu<sup xml:id=\"id9\"><text font=\"italic\" xml:id=\"id9.1\">a</text></sup></personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id10\"><text font=\"italic\" xml:id=\"id10.1\">a</text></sup>Univ A</contact></creator>",
     ],
     "{xml}"
@@ -6862,7 +6862,7 @@ fn author_marks_link_their_affiliations() {
     // correspondence note of his, as pdflatex prints it under the names: FIDELITY_CHARTER §4 ruling 2)
     [
       "<creator role=\"author\"><personname>Ann Able<sup><text font=\"italic\">a</text></sup></personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup><text font=\"italic\">a</text></sup>Univ A</contact></creator>",
-      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker<sup>*</sup></personname><note class=\"ltx_note_frontmatter ltx_thanks_correspondence\" mark=\"∗\" role=\"thanks\"><sup>∗</sup>Corresponding author</note></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker<sup>*</sup></personname><note class=\"ltx_note_frontmatter ltx_thanks_correspondence\" mark=\"∗\" role=\"thanks\">Corresponding author</note></creator>",
     ]
   );
 }

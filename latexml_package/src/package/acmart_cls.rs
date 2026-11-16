@@ -292,9 +292,43 @@ yysep={,},notesep={, }}}
   DefMacro!("\\country{}",       "\\lx@acm@addresspart{country}{#1}");
 
   // acmart.cls:1708-1720: footnotes of the title and the subtitle, no label (FIDELITY_CHARTER §4, user ruling 2026-10-30; OXIDIZED_DESIGN_DIVERGENCES #921).
-  DefMacro!("\\titlenote{}",    "\\lx@add@pubnote[role=note,name={}]{#1}");
-  DefMacro!("\\subtitlenote{}", "\\lx@add@pubnote[role=note,name={}]{#1}");
-  DefMacro!("\\authornote{}",   "\\lx@add@contact[role=note]{#1}");
+  // Each steps the footnote counter its `\maketitle` prints their marks by, the title's notes first, then the authors'
+  // (acmart.cls:1708-1731 `\stepcounter{footnote}\footnotetext`, :2237 `\@fnsymbol\c@footnote`): an `\authornote`
+  // is the author's note marked so, which `\authornotemark[n]` marks again on another name (acmart.cls:1733-1738,
+  // :2897 `\footnotemark[#1]`), a copy of the note there (`insert::link_marked_notes`; FIDELITY_CHARTER §4, the mark
+  // rule). Perl's `\authornote` is a contact, its `\authornotemark` nothing (acmart.cls.ltxml:116, :123).
+  DefMacro!("\\titlenote{}",    "\\lx@acm@titlenote@step\\lx@add@pubnote[role=note,name={}]{#1}");
+  DefMacro!("\\subtitlenote{}", "\\lx@acm@titlenote@step\\lx@add@pubnote[role=note,name={}]{#1}");
+  DefPrimitive!("\\lx@acm@titlenote@step", {
+    let n = lookup_int("lx_acm_title_notes") + 1;
+    assign_value("lx_acm_title_notes", Stored::Int(n), Some(Scope::Global));
+  });
+  DefPrimitive!("\\authornote{}", sub[(note)] {
+    // (after the title's and the subtitle's notes digested so far; one in a `\title` argument is digested at the flush,
+    // after the `\authornote`s: not counted, 0 of the 30 `\authornotemark` papers of popSHARED have one)
+    let n = lookup_int("lx_acm_author_notes") + 1;
+    assign_value("lx_acm_author_notes", Stored::Int(n), Some(Scope::Global));
+    let mark = acm_note_mark(n + lookup_int("lx_acm_title_notes"))?;
+    let mut call = TokenizeInternal!("\\lx@add@thanks").unlist();
+    if let Some(mark) = mark {
+      call.extend(TokenizeInternal!(TeXString::assembled(s!("[mark={{{mark}}}]"))).unlist());
+    }
+    call.push(T_BEGIN!());
+    call.extend(note.unlist());
+    call.push(T_END!());
+    unread(Tokens::new(call));
+    Ok(Vec::new())
+  });
+  // (a bare `\authornotemark` steps the counter for a note of no text: no mark kept, as before)
+  DefMacro!("\\authornotemark[]", "\\ifx.#1.\\else\\lx@acm@authornotemark#1\\relax\\fi");
+  DefPrimitive!("\\lx@acm@authornotemark Number", sub[(number)] {
+    if let Some(mark) = acm_note_mark(number.value_of())? {
+      unread(TokenizeInternal!(TeXString::assembled(s!(
+        "\\lx@annotate@frontmatter{{ltx:creator}}{{ltx:note}}[role=footnotemark,mark={{{mark}}}]{{{mark}}}"
+      ))));
+    }
+    Ok(Vec::new())
+  });
   // acmart.cls:1707, :1716, :1726: the note lists these three fill, which a document's own copy of them extends
   // (2605.28175's `\authornote`; 2605.16813, 2606.04448 `\g@addto@macro\@authornotes`; OD #1036); `\maketitle` prints
   // them (:2245-2247), each `\footnotetext` a note on the document here (`\lx@frontmatter@footnotes`).
@@ -313,7 +347,6 @@ yysep={,},notesep={, }}}
 
   // Rust-only content preserves (Perl gobbles these)
   DefMacro!("\\shortauthors{}", "\\lx@add@frontmatter{ltx:note}[role=shortauthors]{#1}");
-  def_macro_noop("\\authornotemark[]")?;
   DefMacro!("\\authorsaddresses{}",
     "\\lx@add@frontmatter{ltx:note}[role=authorsaddresses]{#1}");
   def_macro_noop("\\startPage")?;
@@ -1126,4 +1159,13 @@ fn acmart_natbib_option() -> Result<bool> {
     }
   }
   Ok(natbib)
+}
+
+/// The mark acmart's `\maketitle` prints for its `n`-th title note: `\@fnsymbol` (acmart.cls:2237).
+fn acm_note_mark(n: i64) -> Result<Option<String>> {
+  let mark = digest(TokenizeInternal!(TeXString::assembled(s!(
+    "\\@fnsymbol{{{n}}}"
+  ))))?
+  .to_string();
+  Ok(Some(mark.trim().to_string()).filter(|mark| !mark.is_empty()))
 }

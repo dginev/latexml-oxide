@@ -188,7 +188,7 @@ fn a_framed_collaboration_call_is_the_names_contact() {
       article_and("[ATLAS Collaboration]\\thanks{Funded.}"),
       third_creator(
         "<personname>[ATLAS Collaboration]</personname><note class=\"ltx_note_frontmatter ltx_thanks_funding\" \
-         role=\"thanks\" xml:id=\"id1\">Funded.</note>",
+         mark=\"*\" role=\"thanks\" xml:id=\"id1\">Funded.</note>",
       ),
       (0, 0),
     ),

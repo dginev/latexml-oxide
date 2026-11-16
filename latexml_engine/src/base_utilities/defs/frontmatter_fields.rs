@@ -366,16 +366,21 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
   // KNOWN_PERL_ERRORS #1060, OXIDIZED_DESIGN_DIVERGENCES #851). A flush without `\maketitle` typesets no title, and
   // steps nothing.
   DefPrimitive!("\\lx@title@footnote@step", sub[_args] {
-    if lookup_bool("lx_title_counts_footnotes")
-      && lookup_bool("lx_frontmatter_explicit")
-      && matches!(
-        lookup_string("lx_frontmatter_item").as_str(),
-        "ltx:creator" | "ltx:title" | "ltx:date"
-      )
-    {
+    if title_note_steps() {
       step_counter("footnote", false)?;
     }
     Ok(())
+  });
+  // A creator's note as `\lx@add@thanks` and `\lx@add@note` (an author's `\footnote`) make it, after their step: where
+  // the step stepped (`title_note_steps`), with the `mark` it prints (`title_notes_print_marks`; article.cls:205
+  // `\@fnsymbol\c@footnote`), an author's `\footnote` then the `\thanks` note it is (article.cls:241 `\let\footnote
+  // \thanks`); else `\footnote`'s contact, as Perl's (Base_Utility.pool.ltxml:663). 2502.19103, 1911.13299
+  // (FIDELITY_CHARTER §4, the mark rule).
+  DefPrimitive!("\\lx@title@thanks []{}", sub[(attr, body)] {
+    title_note(false, attr, body)?;
+  });
+  DefPrimitive!("\\lx@title@footnote []{}", sub[(attr, body)] {
+    title_note(true, attr, body)?;
   });
   // A script character an author block's rehearsal read outside math, as a piece of the block holds it
   // (`observer::emitter::content`'s `Field::content_cut`): TeX errs there (Missing $), the digestion's recovery prints the
@@ -868,38 +873,85 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
       // best-effort content-kind class `ltx_thanks_<kind>` from `classify_thanks`. Perl
       // keeps the inline contact (SHARED readability gap). Witnesses arXiv 2512.24601
       // (correspondence), 1510.02728 (funding).
-      let kind = classify_thanks(content.clone().untex_string().as_ref());
-      let mut opts = mouth::tokenize_internal(TeXString::assembled(s!(
-        "role=thanks,class=ltx_note_frontmatter ltx_thanks_{kind}"
-      )))
-      .unlist();
-      if let Some(a) = &attr {
-        opts.push(T_OTHER!(","));
-        opts.extend(a.unlist_ref().iter().copied());
-      }
       let mut calls = vec![T_CS!("\\lx@title@footnote@step")];
-      calls.extend(Invocation!(T_CS!("\\lx@annotate@frontmatter"),
-        vec![Some(mouth::tokenize_internal("ltx:creator")),
-             Some(mouth::tokenize_internal("ltx:note")),
-             Some(Tokens::new(opts)), Some(note_body(content))]).unlist());
+      calls.extend(title_note_call(false, attr, note_body(content))?);
       Ok(Tokens::new(calls))
     }
   });
   // An ordinary argument, as `\lx@add@thanks` (an author's `\footnote`; KNOWN_PERL_ERRORS #515).
   DefMacro!("\\lx@add@note [] {}", sub[(attr, content)] {
-    let mut opts = mouth::tokenize_internal("role=note").unlist();
-    if let Some(a) = &attr {
-      opts.push(T_OTHER!(","));
-      opts.extend(a.unlist_ref().iter().copied());
-    }
     let mut calls = vec![T_CS!("\\lx@title@footnote@step")];
-    calls.extend(Invocation!(T_CS!("\\lx@annotate@frontmatter"),
-      vec![Some(mouth::tokenize_internal("ltx:creator")),
-           Some(mouth::tokenize_internal("ltx:contact")),
-           Some(Tokens::new(opts)), Some(note_body(content))]).unlist());
+    calls.extend(title_note_call(true, attr, note_body(content))?);
     Ok(Tokens::new(calls))
   });
   Ok(())
+}
+
+/// `\lx@title@thanks` and `\lx@title@footnote` (`footnote`): the note's call, marked where its title marks it.
+fn title_note(footnote: bool, attr: Option<Tokens>, body: Tokens) -> Result<()> {
+  let mark = if title_note_steps() && title_notes_print_marks() {
+    let mark = digest(Tokens!(T_CS!(crate::latex_constructs::TITLE_THEFOOTNOTE)))?.to_string();
+    Some(mark.trim().to_string()).filter(|mark| !mark.is_empty())
+  } else {
+    None
+  };
+  let (tag, keys) = match mark {
+    None if footnote => ("ltx:contact", s!("role=note")),
+    mark => {
+      let class = classify_thanks(body.clone().untex_string().as_ref());
+      let marked = mark.map_or_else(String::new, |mark| s!(",mark={{{mark}}}"));
+      (
+        "ltx:note",
+        s!("role=thanks,class=ltx_note_frontmatter ltx_thanks_{class}{marked}"),
+      )
+    },
+  };
+  let mut opts = mouth::tokenize_internal(TeXString::assembled(keys)).unlist();
+  if let Some(a) = &attr {
+    opts.push(T_OTHER!(","));
+    opts.extend(a.unlist_ref().iter().copied());
+  }
+  unread(Invocation!(T_CS!("\\lx@annotate@frontmatter"), vec![
+    Some(mouth::tokenize_internal("ltx:creator")),
+    Some(mouth::tokenize_internal(tag)),
+    Some(Tokens::new(opts)),
+    Some(body)
+  ]));
+  Ok(())
+}
+
+/// Whether a note made in the title block steps the footnote counter there (`\lx@title@footnote@step`): the class's
+/// title marks its notes (`lx_title_counts_footnotes`, `latex_constructs::declare_fnsymbol_title_block`) and its
+/// `\maketitle` digests the field (`lx_frontmatter_explicit`) — the title, an author or the date.
+fn title_note_steps() -> bool {
+  lookup_bool("lx_title_counts_footnotes")
+    && lookup_bool("lx_frontmatter_explicit")
+    && matches!(
+      lookup_string("lx_frontmatter_item").as_str(),
+      "ltx:creator" | "ltx:title" | "ltx:date"
+    )
+}
+
+/// Whether the class's title block prints a mark for each note made in it as it declares them, where its `\maketitle`
+/// digests the frontmatter (`lx_frontmatter_explicit`): `latex_constructs::TITLE_THEFOOTNOTE`, article's
+/// `\@fnsymbol\c@footnote` (article.cls:205), REVTeX's `\frontmatter@thefootnote` (revtex4-2.cls:3040). A title page's
+/// (`titlepage`) marks are the body's, which the frontmatter observer does not read (`TitleMarks::Body`): no mark. IEEEtran's `\thanks` prints none (IEEEtran.cls:4757-4758 `\let\@makefnmark\relax`).
+pub(in crate::base_utilities) fn title_notes_print_marks() -> bool {
+  lookup_bool("lx_frontmatter_explicit")
+    && lookup_definition(&T_CS!(crate::latex_constructs::TITLE_THEFOOTNOTE))
+      .ok()
+      .flatten()
+      .is_some()
+}
+
+/// `\lx@title@thanks[attr]{content}`, or `\lx@title@footnote` (`footnote`): a creator's note after its step.
+fn title_note_call(footnote: bool, attr: Option<Tokens>, content: Tokens) -> Result<Vec<Token>> {
+  let cs = if footnote {
+    "\\lx@title@footnote"
+  } else {
+    "\\lx@title@thanks"
+  };
+  Ok(Invocation!(T_CS!(cs), vec![attr, Some(content)]).unlist())
 }
 
 /// The author markup in force for the author content ([`author_markup_begin`]).

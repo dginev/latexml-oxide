@@ -102,6 +102,6 @@ fn a_dedication_is_the_papers_pubnote() {
   );
   assert_eq!(
     converted(repro!("legend_kind_marked_dedication_line"), 0),
-    r##"<title>T</title> <creator role="author"> <personname>Ann Able</personname> <contact class="ltx_author_line" name="Affiliation: " role="affiliation">Univ A, Town</contact> </creator> <creator before=" " role="author"> <personname>Bob Baker</personname> <contact class="ltx_author_line" name="Affiliation: " role="affiliation">Univ A, Town</contact> <note class="ltx_note_frontmatter ltx_thanks_note" mark="†" role="thanks" xml:id="id1"><sup xml:id="id1.1">†</sup>In memory of Bob Baker, who passed away during this work</note> </creator> <para xml:id="p1"> <p xml:id="p1.1">Text.</p> </para>"##
+    r##"<title>T</title> <creator role="author"> <personname>Ann Able</personname> <contact class="ltx_author_line" name="Affiliation: " role="affiliation">Univ A, Town</contact> </creator> <creator before=" " role="author"> <personname>Bob Baker</personname> <contact class="ltx_author_line" name="Affiliation: " role="affiliation">Univ A, Town</contact> <note class="ltx_note_frontmatter ltx_thanks_note" mark="†" role="thanks" xml:id="id1">In memory of Bob Baker, who passed away during this work</note> </creator> <para xml:id="p1"> <p xml:id="p1.1">Text.</p> </para>"##
   );
 }

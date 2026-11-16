@@ -113,17 +113,20 @@ fn each_call_keeps_its_place_on_its_author() {
 }
 
 /// A `\footnote` and a `\thanks` on a name make what they make in an author's content, told apart by the rehearsal's digested fact (0707.1799).
+/// SHMARK (OD #1053): in article's title a `\footnote` is the `\thanks` it is (article.cls:241), both marked notes with
+/// the marks they print, ∗ and †; under a class whose title prints no mark the `\footnote` stays Perl's note contact
+/// (`\lx@title@footnote`). Pin updated.
 #[test]
 fn a_note_keeps_its_kind() {
   let (log, xml) = run(repro!("emit_notes_a_footnote_and_a_thanks_their_kinds"));
   assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
   let emitted = creators_xml(&xml);
   assert!(
-    emitted[0].contains("<contact name=\"Note:\u{a0}\" role=\"note\">A footnote of Ann.</contact>"),
+    emitted[0].contains(r#"mark="*" role="thanks">A footnote of Ann.</note>"#),
     "{emitted:#?}"
   );
   assert!(
-    emitted[1].contains(r#"role="thanks">Funded by the NSF.</note>"#),
+    emitted[1].contains(r#"mark="†" role="thanks">Funded by the NSF.</note>"#),
     "{emitted:#?}"
   );
 }

@@ -65,7 +65,7 @@ fn a_macro_of_names_is_read_as_its_inline_twin() {
       counts:   (0, 0),
       lines:    &[],
       creators: Creators::Whole(&[
-        r#"<creator role="author"><personname>Ann Able</personname><note class="ltx_note_frontmatter ltx_thanks_note" role="thanks">Univ A, <text font="typewriter">ann@a.edu</text></note></creator>"#,
+        r#"<creator role="author"><personname>Ann Able</personname><note class="ltx_note_frontmatter ltx_thanks_note" mark="*" role="thanks">Univ A, <text font="typewriter">ann@a.edu</text></note></creator>"#,
         r#"<creator before="  " role="author"><personname>Bob <emph font="italic">Baker</emph></personname></creator>"#,
       ]),
     },
@@ -79,7 +79,7 @@ fn a_macro_of_names_is_read_as_its_inline_twin() {
       creators: Creators::Whole(&[
         r#"<creator role="author"><personname>Jingbo Lu</personname><contact class="ltx_author_line" name="Affiliation: " role="affiliation"> University of Electronic Science</contact></creator>"#,
         r#"<creator before="  " role="author"><personname>Mu Li</personname><contact class="ltx_author_line" name="Affiliation: " role="affiliation"> Harbin Institute of Technology</contact></creator>"#,
-        r#"<creator before="  " role="author"><personname>Shuhang Gu</personname><note class="ltx_note_frontmatter ltx_thanks_correspondence" role="thanks">Corresponding <text font="bold">author</text>.</note><contact class="ltx_author_line" name="Affiliation: " role="affiliation"> University of Electronic Science</contact><contact class="ltx_author_line" name="Email: " role="email"><text font="typewriter" fontsize="90%">gu@gmail.com</text></contact></creator>"#,
+        r#"<creator before="  " role="author"><personname>Shuhang Gu</personname><note class="ltx_note_frontmatter ltx_thanks_correspondence" mark="*" role="thanks">Corresponding <text font="bold">author</text>.</note><contact class="ltx_author_line" name="Affiliation: " role="affiliation"> University of Electronic Science</contact><contact class="ltx_author_line" name="Email: " role="email"><text font="typewriter" fontsize="90%">gu@gmail.com</text></contact></creator>"#,
       ]),
     },
     Row {
@@ -217,7 +217,7 @@ fn a_declaration_is_replayed_as_far_as_its_call_read() {
       lines:    &[],
       creators: Creators::Whole(&[
         r#"<creator role="author"><personname>Ann Able</personname><contact class="ltx_author_line" name="Affiliation: " role="affiliation"><text font="italic">Univ A</text></contact></creator>"#,
-        r#"<creator before="  " role="author"><personname>Bob Baker</personname><note class="ltx_note_frontmatter ltx_thanks_correspondence" role="thanks"><sup>∗</sup>Corresponding author. Email: bob@a.edu</note><contact class="ltx_author_line" name="Affiliation: " role="affiliation"><text font="italic">Univ A</text></contact></creator>"#,
+        r#"<creator before="  " role="author"><personname>Bob Baker</personname><note class="ltx_note_frontmatter ltx_thanks_correspondence" mark="∗" role="thanks">Corresponding author. Email: bob@a.edu</note><contact class="ltx_author_line" name="Affiliation: " role="affiliation"><text font="italic">Univ A</text></contact></creator>"#,
         r#"<creator before="  " role="author"><personname>Cy Cole</personname><contact class="ltx_author_line" name="Affiliation: " role="affiliation"><text font="italic">Univ B</text></contact></creator>"#,
       ]),
     },
