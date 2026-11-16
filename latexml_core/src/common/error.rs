@@ -518,7 +518,10 @@ pub fn note_status(status: LogStatus, what: Option<&str>) {
     Undefined => {
       // `what` may be lent from the arena; `entry` pins it, which under a lend never moves the buffer (the former
       // re-entrant pin did, and a `\special_relax` family-token name became a phantom undefined).
-      let entry = report.undefined.entry(what.unwrap_or_default()).or_insert(0);
+      let entry = report
+        .undefined
+        .entry(what.unwrap_or_default())
+        .or_insert(0);
       *entry += 1;
     },
     Missing => {

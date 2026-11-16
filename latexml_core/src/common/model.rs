@@ -1367,7 +1367,10 @@ mod wildcard_resolution_tests {
     assert!(allows(&s, "warm") && allows(&s, "warm:up"));
     let (plain, prefixed) = (arena::pin("probe"), arena::pin("probe:prefixed"));
     let before = arena::len();
-    assert!(set_allows(&s, plain), "`*` allows it, as no `!probe` exists");
+    assert!(
+      set_allows(&s, plain),
+      "`*` allows it, as no `!probe` exists"
+    );
     assert!(set_allows(&s, prefixed), "`*:*` allows it");
     assert_eq!(
       arena::len(),

@@ -566,7 +566,10 @@ mod tests {
     });
     assert_eq!(read, "arena_move_text");
     assert!(unmoved, "the buffer moved under the lend");
-    assert_eq!(to_string(pin(format!("{}{filler}", count - 1))).len(), filler.len() + 2);
+    assert_eq!(
+      to_string(pin(format!("{}{filler}", count - 1))).len(),
+      filler.len() + 2
+    );
     assert_eq!(take_overflow_interns(), count);
   }
 
