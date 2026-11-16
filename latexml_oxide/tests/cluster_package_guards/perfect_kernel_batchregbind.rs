@@ -120,3 +120,23 @@ fn bindings_define_the_macros_their_files_define() {
     check(row);
   }
 }
+
+/// Cluster D (2605.07565): the first aid's `\ltx@label#1{\cref@label{#1}}` under amsmath 2025-05-18, re-applied after
+/// the binding reads the raw cleveref.sty — the display's label whole and its math untouched ("a=b", not "a=b3a"
+/// labelled `l`), the text's label taking nothing from the text ("XY", not "X4bY").
+#[test]
+fn cleveref_ltx_label_braces_its_key_under_amsmath() {
+  let (log, xml) = run(repro!(
+    "cross-references/cleveref_ltx_label_braces_its_key_under_amsmath.tex"
+  ));
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  for element in [
+    r#"<document xmlns="http://dlmf.nist.gov/LaTeXML" labels="LABEL:l4b" xml:id="id1">"#,
+    r#"<equation labels="LABEL:l3a" xml:id="S0.E1">"#,
+    r#"<Math mode="display" tex="a=b" text="a = b" xml:id="S0.E1.m1">"#,
+    r#"<p xml:id="p1.1">XY</p>"#,
+  ] {
+    assert_eq!(xml.matches(element).count(), 1, "{element}\n{xml}");
+  }
+}
+

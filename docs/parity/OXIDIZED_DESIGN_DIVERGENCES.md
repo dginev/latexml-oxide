@@ -19278,7 +19278,10 @@ see). The kernel's first aid for cleveref.sty (latex2e-first-aid-for-external-fi
 labelled `firstaid`) is not registered under cleveref's binding, which replaces the code it repairs (DG 2026-11-14):
 its `label` hook code cost 3.5M instructions a `\label`. It is removed only where the chunk is registered
 (`hook_has_labelled_code`; the chunk dates from 2024-03-22, firstaid changes.txt), as lthooks warns "Cannot remove
-chunk" for a missing one. **Open** (post-merge, catalog): a note steps its counter after its text is digested
+chunk" for a missing one. Its repair of the raw file's amsmath code, which the binding does read (:257-270, a
+`begindocument` chunk under `\IfPackageAtLeastT{amsmath}{2025-05-18}`: cleveref.sty:2620, :2623), is added back with
+it: without it an explicit `\ltx@label{l4b}` took `l` as the key and printed "4b" (2605.07565: 3 Double subscript;
+guard `perfect_kernel_batchregbind::cleveref_ltx_label_braces_its_key_under_amsmath`). **Open** (post-merge, catalog): a note steps its counter after its text is digested
 and an align or gather row after its cells (Perl's order), so a label hook there reads the enclosing counter (or, in an
 align's later row, the previous row's step) where
 latex.ltx's `\@footnotetext` and `\@mpfootnotetext` define it (:17664, :16350) and amsmath has stepped `equation`
