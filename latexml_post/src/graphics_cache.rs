@@ -71,7 +71,8 @@
 //! 3. **Concurrent prunes**: prune holds `flock(LOCK_EX | LOCK_NB)` on `.prune.lock`. If another
 //!    process already holds the lock, this one skips its prune attempt. Only one prune runs at a
 //!    time per machine. The prune itself walks the dir, sorts by mtime, deletes oldest until under
-//!    cap — and tolerates `ENOENT` (another writer could have re-used the entry concurrently).
+//!    cap — and tolerates `ENOENT` (another writer could have re-used the entry concurrently). It
+//!    also removes every `.tmp.` sidecar older than an hour: a killed process's unfinished install.
 //! 4. **Hardlinked dest ↔ cache**: when `link_or_copy` hardlinks the cache file into the
 //!    destination, that hardlink is independent of the cache lifecycle. Even if a prune deletes the
 //!    cache entry afterwards, the destination's hardlink keeps the data alive on the filesystem.
@@ -112,6 +113,8 @@ use std::{
 use sha2::{Digest, Sha256};
 
 const DEFAULT_MAX_MB: u64 = 2048;
+/// How old a `.tmp.` sidecar must be before a prune takes it for a killed install's.
+const STALE_TMP_AGE: std::time::Duration = std::time::Duration::from_secs(3600);
 
 /// Memoised disabled flag (read env once at first call).
 fn disabled() -> bool {
@@ -433,6 +436,16 @@ fn store_digest(
     return;
   };
   let cached = cache_path(&root, &hash, key.ext);
+  install(Path::new(dest), &cached);
+  if let Some(d) = dims {
+    write_dims_sidecar(&dims_sidecar(&cached), d);
+  }
+  // Best-effort LRU prune after insert (process-locked).
+  prune_if_over_cap(&root);
+}
+
+/// Install `dest` as the cache entry `cached`, unless an entry is already there.
+fn install(dest: &Path, cached: &Path) {
   // Atomic install: write to .tmp.<pid>.<nanos>, rename into place.
   // Concurrent writers each get a private tmp and race the rename —
   // last rename wins, both sources are byte-equivalent.
@@ -441,29 +454,25 @@ fn store_digest(
     .duration_since(std::time::UNIX_EPOCH)
     .map(|d| d.as_nanos())
     .unwrap_or(0);
-  let mut tmp = cached.clone();
-  let mut filename = cached
-    .file_name()
-    .map(|n| n.to_string_lossy().into_owned())
-    .unwrap_or_else(|| hash.clone());
-  filename.push_str(&format!(".tmp.{pid}.{nanos}"));
-  tmp.set_file_name(filename);
-  if !link_or_copy(Path::new(dest), &tmp) {
+  let mut tmp = cached.as_os_str().to_owned();
+  tmp.push(format!(".tmp.{pid}.{nanos}"));
+  let tmp = PathBuf::from(tmp);
+  // A failed copy may have left a partial tmp, a failed rename a whole one: neither is reclaimed otherwise but
+  // by the prune's `STALE_TMP_AGE` sweep (33k such files in the fleet's cache by 2026-11-16).
+  if !link_or_copy(dest, &tmp) {
+    let _ = fs::remove_file(&tmp);
     return;
   }
-  if !cached.exists() {
+  if !cached.is_file() {
     // rename is atomic on the same filesystem; failures are non-fatal.
-    let _ = fs::rename(&tmp, &cached);
+    if fs::rename(&tmp, cached).is_err() {
+      let _ = fs::remove_file(&tmp);
+    }
   } else {
     // Cache file already present (race with another writer); clean up.
     let _ = fs::remove_file(&tmp);
-    let _ = touch_now(&cached);
+    let _ = touch_now(cached);
   }
-  if let Some(d) = dims {
-    write_dims_sidecar(&dims_sidecar(&cached), d);
-  }
-  // Best-effort LRU prune after insert (process-locked).
-  prune_if_over_cap(&root);
 }
 
 fn touch_now(p: &Path) -> std::io::Result<()> {
@@ -546,9 +555,21 @@ fn prune_if_over_cap(root: &Path) {
       let Some(name) = path.file_name().and_then(|n| n.to_str()) else {
         continue;
       };
-      // Skip in-flight tmp sidecars and dim metadata (they're tiny
-      // and follow their parent's lifecycle when removed).
-      if name.contains(".tmp.") || name.ends_with(".dims") {
+      // A tmp sidecar is an install in flight, or one a killed process never finished: removed once
+      // older than any install takes. Dim metadata follows its parent's lifecycle.
+      if name.contains(".tmp.") {
+        let stale = entry
+          .metadata()
+          .and_then(|m| m.modified())
+          .ok()
+          .and_then(|modified| modified.elapsed().ok())
+          .is_some_and(|age| age > STALE_TMP_AGE);
+        if stale {
+          let _ = fs::remove_file(&path);
+        }
+        continue;
+      }
+      if name.ends_with(".dims") {
         continue;
       }
       let Ok(meta) = entry.metadata() else { continue };
@@ -1187,5 +1208,56 @@ mod tests {
     let hit = lookup(&src_s, dest_check.to_str().unwrap(), key);
     assert!(hit.is_some(), "follow-up lookup must hit");
     assert_eq!(fs::read(&dest_check).unwrap(), b"final-bytes");
+  }
+
+  /// A shard directory's file names holding `.tmp.`.
+  fn tmp_names(shard: &Path) -> Vec<String> {
+    fs::read_dir(shard)
+      .unwrap()
+      .flatten()
+      .map(|e| e.file_name().to_string_lossy().into_owned())
+      .filter(|name| name.contains(".tmp."))
+      .collect()
+  }
+
+  #[test]
+  fn a_failed_install_leaves_no_tmp_file() {
+    let dir = temp_dir("install");
+    let dest = dir.join("dest.png");
+    write_bytes(&dest, b"png");
+    // Something in the way of the entry (a directory): its rename fails.
+    let cached = dir.join("ab").join("abcdef.png");
+    fs::create_dir_all(cached.join("in-the-way")).unwrap();
+    install(&dest, &cached);
+    assert!(cached.is_dir());
+    assert_eq!(tmp_names(&dir.join("ab")), Vec::<String>::new());
+  }
+
+  #[test]
+  fn a_prune_reclaims_the_tmp_files_of_killed_installs() {
+    let root = temp_dir("prune-tmp");
+    let shard = root.join("ab");
+    let old = shard.join("abcdef.png.tmp.17.1");
+    let old_dims = shard.join("abcdef.png.dims.tmp.17.2");
+    let fresh = shard.join("abcdef.png.tmp.18.3");
+    let entry = shard.join("abcdef.png");
+    for path in [&old, &old_dims, &fresh, &entry] {
+      write_bytes(path, b"bytes");
+    }
+    let two_hours_ago = std::time::SystemTime::now() - std::time::Duration::from_secs(7200);
+    for path in [&old, &old_dims, &entry] {
+      fs::File::options()
+        .write(true)
+        .open(path)
+        .unwrap()
+        .set_modified(two_hours_ago)
+        .unwrap();
+    }
+    prune_if_over_cap(&root);
+    assert_eq!(tmp_names(&shard), vec!["abcdef.png.tmp.18.3".to_string()]);
+    assert!(
+      entry.is_file(),
+      "an entry under the cap is kept, however old"
+    );
   }
 }
