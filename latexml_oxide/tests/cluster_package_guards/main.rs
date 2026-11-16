@@ -619,6 +619,9 @@ mod perfect_kernel_batchra0;
 /// `\author` on (revtex4_cls.rs `switch_off_author_block_after_maketitle`).
 mod perfect_kernel_batchrb1;
 mod perfect_kernel_batchrc1;
+/// REGREHEARSE: LOSTF's rehearsal under the author markup — a title-code command's assignments are no declaration of the
+/// block, OmniBus's `\orcid` one ORCID call; OD #941.
+mod perfect_kernel_batchregrehearse;
 /// RG1: a `\par` in a text group opened mid-paragraph keeps the paragraph, as Perl's open-brace box.
 mod perfect_kernel_batchrg1;
 mod perfect_kernel_batchrv1;

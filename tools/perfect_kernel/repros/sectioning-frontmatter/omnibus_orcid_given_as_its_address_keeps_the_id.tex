@@ -1,0 +1,32 @@
+% mechanism: a raw class defining `\orcid` only inside its own `\author` (IOS-Book-Article.cls:1150-1184), which the
+%   locked kernel `\author` replaces: the author content takes OmniBus's `\orcid` (`\lx@author@markup@provide\orcid
+%   \lx@author@orcid`, OXIDIZED_DESIGN_DIVERGENCES #444), and since LOSTF the observer's rehearsal reads the block
+%   under that markup too (#941). The rehearsal binds `\lx@author@orcid` as it binds a class's own `\orcid`
+%   (`\lx@fm@obs@orcid`), so the call is one ORCID contact, its argument whole: unbound, an iD given as its address
+%   (`orcid.org/…`) was rewritten into unstamped tokens, the contact spanned the bare `\orcid`, and the name's piece
+%   took `\orcid` cut from its argument — `Error:undefined:\@undefined` in the name and an empty iD
+% witness: 2606.13132 (IOS-Book-Article.cls, `\orcid{orcid.org/…}`); here a stand-in of the class's `\author`, in place
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "Yu KIM", "Ann LEE" (the class prints the iDs only in its
+%   abstract's ORCiD line)
+% engines: CUT999 (999af99497d): 2 Errors (`undefined:\@undefined` in Yu Kim's name, `undefined:\orcid` in Ann LEE's),
+%   one ORCID left, `href="https://orcid.org/"`; int171a: 0 Errors, both iDs kept
+% expect:  0 Errors, 0 Warnings; "Yu Kim" with the ORCID 0, "Ann Lee" with 0000-0001-2345-6789
+% status:  RED (999af99497d) -> GREEN (REGREHEARSE)
+% preload: ar5iv.sty
+\begin{filecontents*}[overwrite]{iosauthor.cls}
+% A stand-in for IOS-Book-Article.cls's author markup (:1146-1205), written for a latexml-oxide test: `\author` prints
+% its name in place, in a group defining `\fnms`, `\snm` and `\orcid` (which stores the iD) only there.
+\NeedsTeXFormat{LaTeX2e}\ProvidesClass{iosauthor}[2026/11/16 stand-in]
+\LoadClass{article}
+\def\author{\@ifnextchar[{\author@optarg}{\author@optarg[]}}
+\def\author@optarg[#1]#2{\par\begingroup
+  \def\fnms##1{##1}\def\snm##1{\MakeUppercase{##1}}%
+  \def\orcid##1{\global\@namedef{orcid@#1}{##1}}%
+  \centering\hbox{#2}\par\endgroup}
+\end{filecontents*}
+\documentclass{iosauthor}
+\begin{document}
+\author[A]{\fnms{Yu}~\snm{Kim}\orcid{orcid.org/0}}
+\author[B]{\fnms{Ann}~\snm{Lee}\orcid{https://orcid.org/0000-0001-2345-6789}}
+Text.
+\end{document}
