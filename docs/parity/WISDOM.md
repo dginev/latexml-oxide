@@ -3162,7 +3162,6 @@ is a genuine tie (user ruling 2026-11-05). Guards
 `base_utilities::author_split_tests::a_name_spells_by_its_base_letters_and_its_transliteration`,
 `perfect_kernel_batch107a`; OXIDIZED_DESIGN_DIVERGENCES #970.
 
-
 ## 104. mutool's `%d` is its output page counter, not the source page — find a converter's output by a private directory
 
 `mutool convert -F svg -o pg%d.svg f.pdf 2` writes `pg1.svg` (mutool 1.27; without `%d` it inserts the counter

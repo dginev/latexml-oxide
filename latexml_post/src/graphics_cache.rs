@@ -114,8 +114,9 @@ use sha2::{Digest, Sha256};
 
 const DEFAULT_MAX_MB: u64 = 2048;
 
-/// Mixed into every SVG key: an SVG cached before mutool's page ≥ 2 fix is pdftocairo's render (DG
-/// 2026-11-16), so those keys must miss. Change it whenever cached SVGs must not be served again.
+/// Mixed into every SVG key (DG 2026-11-16): before mutool's page ≥ 2 fix, a page ≥ 2 SVG was pdftocairo's
+/// render; every SVG key is retired so each page comes from the same converter (the fleet re-renders
+/// each vector SVG once). Change it whenever cached SVGs must not be served again.
 const SVG_KEY_VERSION: &str = "mutool-page-fix-2026-11-16";
 
 /// Memoised disabled flag (read env once at first call).
