@@ -281,8 +281,7 @@ pub fn pin_char(c: char) -> SymStr {
   if code < 128 {
     let cached = ASCII_CHAR_SYM[code as usize].get();
     if cached != u32::MAX {
-      // SAFETY: cached was produced by a prior successful `pin` below, so
-      // the SymStr is valid for this arena.
+      // (a prior `pin` below cached it, and `reset` clears the cache with the arena)
       return SymStr::try_from_usize(cached as usize).expect("invalid cached ASCII SymStr");
     }
   }

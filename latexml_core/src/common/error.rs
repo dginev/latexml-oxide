@@ -516,17 +516,13 @@ pub fn note_status(status: LogStatus, what: Option<&str>) {
       report.fatal = true;
     },
     Undefined => {
-      // `what` may borrow the arena buffer; `entry` re-interns via `arena::pin`,
-      // which can REALLOCATE that buffer and invalidate `what` mid-read, then
-      // intern whatever bytes now occupy the slot (e.g. a freshly-interned
-      // `\special_relax` family-token name → phantom undefined). Copy out first.
-      let key = what.unwrap_or_default().to_string();
-      let entry = report.undefined.entry(&key).or_insert(0);
+      // `what` may be lent from the arena; `entry` pins it, which under a lend never moves the buffer (the former
+      // re-entrant pin did, and a `\special_relax` family-token name became a phantom undefined).
+      let entry = report.undefined.entry(what.unwrap_or_default()).or_insert(0);
       *entry += 1;
     },
     Missing => {
-      let key = what.unwrap_or_default().to_string();
-      let entry = report.missing.entry(&key).or_insert(0);
+      let entry = report.missing.entry(what.unwrap_or_default()).or_insert(0);
       *entry += 1;
     },
   }

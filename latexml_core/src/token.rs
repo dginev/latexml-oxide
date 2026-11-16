@@ -1305,12 +1305,9 @@ impl Token {
   #[cold]
   #[inline(never)]
   fn shadowed_by_noexpand(&self) -> Option<Token> {
-    // Compute the owned shadowed name + its catcode INSIDE the `with_str`
-    // borrow, then `arena::pin` it OUTSIDE. `with_str`'s `s` (hence `rest`)
-    // aliases the arena's append-only buffer; a re-entrant `arena::pin(rest)`
-    // could reallocate that buffer mid-intern and read freed memory. Owning the
-    // name first (and pinning after the borrow ends) removes the hazard — and
-    // satisfies clippy::unnecessary_to_owned, which can't see the aliasing.
+    // The owned shadowed name + its catcode, computed INSIDE the `with_str`
+    // lend and pinned after it, so the name goes to the arena's buffer, not its
+    // overflow page (clippy::unnecessary_to_owned cannot see that).
     let (name, code) = self.with_str(|s| {
       let rest = s.strip_prefix(NOEXPAND_PREFIX)?;
       let rest = rest.strip_prefix(NOEXPAND_SEP as char)?;
