@@ -377,8 +377,9 @@ while a re-entrant `pin` inside the closure took `&mut *ptr` through a cached ra
 that `Vec` (a use-after-free; Miri rejected even a nested `with` or `get` under a lend). Fix (`latexml_core/src/common/arena.rs`):
 a lend holds a shared `RefCell` borrow; an intern while one is live goes to an overflow page of `Rc<str>` with symbols
 from `1 << 31` (the buffer refuses a string that would start at or past 2 GiB), deduplicated across both tiers (a later
-pin outside any lend returns the overflow symbol); outside a lend the intern is the old `get_or_intern`, with a 256 × 64-bit filter (last byte,
-length) so only a possible page string probes the page. `arena.rs` `unsafe` 10 → 1; `with_copy` folded back into
+pin outside any lend returns the overflow symbol); outside a lend an intern looks the string up in the buffer, on a
+miss on the page, and only then adds it to the buffer (ARENARb: the first version's 256 × 64-bit page filter cost
+0.14-0.37 % more instructions). `arena.rs` `unsafe` 10 → 1; `with_copy` folded back into
 `with`. Every document overflows: hello-world 1 string, b250 50, 2308.04512 399, siunitx papers 105-139 (the
 conversion's end reports the count as a Debug line, `arena:overflow`, not an `Info:` line in every log). Cost,
 `instructions:u` best of 3 interleaved against INTPERF5 (`kit/perf_ab_cycles.sh`, `HTML=1 STAT=min`): 2308.04512 +0.24 %, b250 +0.18 %, amsldoc +0.13 %, 2604.01119
