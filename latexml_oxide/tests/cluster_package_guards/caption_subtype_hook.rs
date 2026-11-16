@@ -116,3 +116,41 @@ R4: \thehk.
     "{xml}"
   );
 }
+
+/// What the hook typesets is kept where it runs (pdflatex: "INKA" in the sub-float, "INKC" in the minipage).
+#[test]
+fn subtype_hook_material_is_kept() {
+  let xml = convert(
+    r"\documentclass{article}
+\usepackage{subcaption}
+\makeatletter\g@addto@macro\caption@subtypehook{INK}\makeatother
+\begin{document}
+\begin{figure}\begin{subfigure}{.4\textwidth}A\caption{a}\end{subfigure}
+\begin{minipage}{.4\textwidth}\phantomsubcaption C\end{minipage}\caption{F}\end{figure}
+\end{document}",
+  );
+  assert_element(
+    &xml,
+    "figure",
+    &[r#"xml:id="S0.F1""#],
+    r#"<figure class="ltx_panels_gallery" inlist="lof" panelcols="2" panelrows="1" xml:id="S0.F1">
+      <tags>
+        <tag>Figure 1</tag>
+        <tag role="refnum">1</tag>
+        <tag role="typerefnum">Figure 1</tag>
+      </tags>
+      <figure class="ltx_figure_panel" inlist="lof" xml:id="S0.F1.sf1">
+        <tags>
+          <tag><text fontsize="90%">(a)</text></tag>
+          <tag role="refnum">1a</tag>
+        </tags>
+        <p>INKA</p>
+        <toccaption><tag close=" ">a</tag>a</toccaption>
+        <caption><tag close=" "><text fontsize="90%">(a)</text></tag><text fontsize="90%">a</text></caption>
+      </figure>
+      <p class="ltx_figure_panel ltx_minipage" panelwidth="0.4" vattach="middle" width="138.0pt">INKC</p>
+      <toccaption><tag close=" ">1</tag>F</toccaption>
+      <caption><tag close=": ">Figure 1</tag>F</caption>
+    </figure>"#,
+  );
+}

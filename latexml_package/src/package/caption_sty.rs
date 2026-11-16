@@ -25,10 +25,15 @@ pub fn class_caption_fonts() -> bool { lookup_bool(CLASS_CAPTION_FONTS) }
 
 /// caption.sty:314 `\@nameuse{caption@#1typehook}` in `\caption@@settype{sub}`: entering a sub-type (a sub-float, a
 /// `{subcaptiongroup}`, a `\subcaption`, a `\phantomsubcaption`) runs what packages added to `\caption@subtypehook`, in
-/// the sub-type's group.
-pub fn run_caption_subtype_hook() -> Result<()> {
-  Digest!(caption_subtype_hook())?;
-  Ok(())
+/// the sub-type's group; what it typesets is returned to stand where it ran. Not inside a sub-type already (caption.sty:327
+/// `\caption@ifsubtype`): callers run it only when `\@captype` was not `sub…`.
+pub fn run_caption_subtype_hook() -> Result<Vec<Digested>> {
+  let ink = digest(caption_subtype_hook())?;
+  Ok(if ink.is_empty()? {
+    Vec::new()
+  } else {
+    vec![ink]
+  })
 }
 
 /// `\@nameuse{caption@subtypehook}`, for a macro entering the sub-type.
