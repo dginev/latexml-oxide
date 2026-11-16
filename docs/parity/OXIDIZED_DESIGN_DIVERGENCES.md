@@ -19534,10 +19534,7 @@ f:shared-creator-note`). The first copy of a group of two or more renders in ful
 `ltx_note_shared`; each later copy is `span.ltx_note.ltx_role_footnotemark.ltx_note_shared` holding only its mark,
 linked to the first copy's id. `LaTeXML-structure-xhtml.xsl` puts every marked note in `span.ltx_annotated_personname`
 after the name, in document order with an ORCID badge, and there the name drops its trailing newline, so no line breaks
-between a name and its mark; unmarked notes (an empty `@mark` too) follow the name as before. Copies of an unmarked
-author note — the same block, `@role` and `normalize-space(.)`, none holding an image (`xsl:key
-f:unmarked-creator-note`) — print once, at the first carrier; later copies render nothing, carrying no mark to link
-(2602.18802: spconf's unlifted `$^{\ast}$` "Equal contribution" `\thanks` on two names printed twice). A personname holds the
+between a name and its mark; unmarked notes (an empty `@mark` too) follow the name as before. A personname holds the
 name alone (DG 2026-11-16), so the wrapper takes every marked note of any role, mark-only `role="footnotemark"` notes
 too (PURE's unanswered marks, Perl's `\footnotemark` leftovers): each renders as its `sup.ltx_note_mark` alone, no empty
 "footnotemark: " pop-up, linked and classed `ltx_note_shared` only when its mark is a symbol (no ASCII letter or digit)
@@ -19567,8 +19564,7 @@ unmarked Asilomar/NSF note in the margin, not under Azadeh Vosoughi's name, wher
 `a` before the `*` note Kardoš shares with Miškuf: "Kardošᵃ*" as the PDF prints, was "Kardoš* a"). **Guards**:
 `integration::a_shared_author_note_prints_once_and_its_repeats_are_linked_marks`,
 `integration::a_pure_name_carries_every_mark_after_it_in_order`,
-`integration::a_letter_or_digit_mark_names_no_other_authors_note`,
-`integration::an_unmarked_note_several_authors_carry_prints_once` (latexml_post),
+`integration::a_letter_or_digit_mark_names_no_other_authors_note` (latexml_post),
 `xslt::witnessed_css_delta::shared_author_note_delta_stays_present`,
 `cluster_cli::browser_render_author_lines::a_shared_note_prints_once_under_its_first_author` (local).
 
