@@ -1,0 +1,20 @@
+% mechanism: a formula's comma glued between two given `\footnotemark`s nearer the next name is ink of their run, not
+%   other ink apart from both names: the run is Bob's (`resolver::mark_ledger`), the comma written between them
+% witness:  none (review revSHGNEXT S1; the shape of 1703.08733's `\endnotemark[1]$^,$\endnotemark[2]`)
+% oracle:   pdflatex 0 errors; "Ann Able∗ (27.3pt) ∗,† (7.8pt) Bob Baker Carl Cole" (pdftotext -bbox; Ann's `\thanks`
+%   mark ∗ on her name, the `\footnotemark[1]` ∗, the comma and † over Bob's)
+% engines:  rust merge 6115962c1de: 0 errors, 1 Warning ("lost: *, †"), Bob no mark; perl 0.8.8: 0 errors, one creator Ann
+%   Able, marks 1, 2 and "Bob BakerCarl Cole" an affiliation
+% expect:   0 errors, 0 Warnings; XML Ann Able ; thanks[*]=X / Bob Baker ; footnotemark[†]= ; thanks[*]=X (Bob's ∗ a copy of
+%   the note it marks, OD #1053); HTML Ann Able ; *→note / Bob Baker ; *→note ; † plain
+% status:   RED (merge 6115962c1de) ->
+%   GREEN (perfect_kernel_batchfmmarks::a_mark_past_spacing_is_the_nearer_names, XML and HTML)
+% preload: ar5iv.sty
+\documentclass{article}
+\title{T}
+\author{Ann Able\thanks{X} \qquad \footnotemark[1]$^,$\footnotemark[2] \ Bob Baker \and Carl Cole}
+\date{}
+\begin{document}
+\maketitle
+Text.
+\end{document}

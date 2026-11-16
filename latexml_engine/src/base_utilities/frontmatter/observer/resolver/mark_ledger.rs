@@ -1,17 +1,6 @@
-//! The mark ledger (advisor T2; DG rulings 2026-11-16): which name a `\footnotemark` or a note printed beside spacing
-//! belongs to, read once from a block's events for every consumer — the reading's requests and notes
-//! (`Resolver::names_line`) and the writer's runs (`emitter::emit::block_names`).
-//!
-//! The rule: a mark between two names belongs to the nearer one, measured by the glue TeX sets between inks, a tie to
-//! the following name. The marks and notes between two names on a line are parted where the widest glue between them
-//! is (a mark is as near a name as the widest blank on the way to it): `Ann (7.8pt) ∗ (23.1pt) Bob (27.3pt) † (4.0pt)
-//! Carl` gives ∗ to Ann and † to Carl, `Ann (7.8) ∗ (73.8) † (11.9) Bob` parts the run, `Ann (27) ∗ (6.7) † (23.5) Bob`
-//! gives both to Bob (repros `fmmarks_marks_*`, `ne2h_*`). Past a name with no name after it on its line (a separator,
-//! `\\`, the block's end) they are that name's (1911.13299's `\ \footnotemark[3]\and`); in a cell an `\and` or `&`
-//! opens, the next name's. A fill's width is the line's: it is read at its natural width and at any wider, and decides
-//! only where both part the run alike (`Ann Able\thanks{X} \hfill \footnotemark Bob`: the mark glued to Bob is his,
-//! whatever the fill). Anything else is undecided, the writer's counted loss: a run holding other ink (an ORCID, a
-//! `\cite`, a formula's mark) set apart from both names, glue nowhere, two fills, a run after a comma or opening a line.
+//! The mark ledger: the name each `\footnotemark` or note printed beside spacing goes to, the nearer by TeX's glue, a tie
+//! the next's, read once per block for the reading and the writer (OXIDIZED_DESIGN_DIVERGENCES #1057; 2412.20504,
+//! 1911.13299, 1807.02791, 1703.08733, 1111.1979).
 
 use super::*;
 
@@ -65,15 +54,14 @@ pub(in crate::base_utilities::frontmatter::observer) struct MarkLedger {
 }
 
 impl MarkLedger {
+  /// The record of the mark or note with span `span`.
+  pub fn record_of(&self, span: Option<(u16, u16)>) -> Option<&MarkRecord> {
+    span.and_then(|span| self.records.iter().find(|r| r.span == Some(span)))
+  }
+
   /// The decided side of the mark or note with span `span`.
   pub fn side_of(&self, span: Option<(u16, u16)>) -> Option<Side> {
-    span.and_then(|span| {
-      self
-        .records
-        .iter()
-        .find(|r| r.span == Some(span))
-        .and_then(|r| r.side)
-    })
+    self.record_of(span).and_then(|r| r.side)
   }
 
   /// The records past the Name event at `name`, before the next name, each with its side.
@@ -230,10 +218,22 @@ fn decide(
     .take_while(|g| g.width == 0.0 && !g.fill)
     .count();
   let glued_to_next = |i: usize| next.is_some() && i + glued_after >= pieces.len();
+  // (a formula's separator glued between two movable pieces is ink of their run: `\footnotemark[1]$^,$\footnotemark[2]`,
+  // 1703.08733)
+  let in_run = |i: usize| {
+    events[pieces[i].0].role.as_deref() == Some("math")
+      && matches!(events[pieces[i].0].kind, EventKind::Sep(_))
+      && i > 0
+      && pieces.get(i + 1).is_some_and(|&(_, movable)| movable)
+      && pieces[i - 1].1
+      && [glues[i], glues[i + 1]]
+        .iter()
+        .all(|g| g.width == 0.0 && !g.fill)
+  };
   let stray = pieces
     .iter()
     .enumerate()
-    .any(|(i, &(_, movable))| !movable && i >= glued_before && !glued_to_next(i));
+    .any(|(i, &(_, movable))| !movable && i >= glued_before && !glued_to_next(i) && !in_run(i));
   // (the place of the widest glue, the first of equal ones: a tie the next name's; with the run's one fill read at its
   // natural width and at any wider, `None` where the two differ)
   let parted_at = || {
@@ -360,6 +360,29 @@ mod tests {
     past.push(Event::new(EventKind::Sep(SepKind::And("\\and"))));
     past.push(bob.clone());
     assert_eq!(sides(&past), [Some(Before)]);
+    // (a formula's comma glued between two marks is ink of their run, 1703.08733's shape; glued after the run alone, it
+    // is other ink apart from both names: undecided)
+    let mut comma = Event::new(EventKind::Sep(SepKind::Comma));
+    comma.role = Some("math".to_string());
+    let between = [
+      ann.clone(),
+      gap(2.33, false),
+      mark(),
+      comma.clone(),
+      mark(),
+      gap(0.67, false),
+      bob.clone(),
+    ];
+    assert_eq!(sides(&between), [Some(After), Some(After)]);
+    let after = [
+      ann.clone(),
+      gap(2.33, false),
+      mark(),
+      comma,
+      gap(0.67, false),
+      bob.clone(),
+    ];
+    assert_eq!(sides(&after), [None]);
     // (an ORCID apart from both names: undecided)
     let mut orcid = Event::new(EventKind::Contact);
     orcid.role = Some("orcid".to_string());

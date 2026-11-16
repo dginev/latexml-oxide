@@ -589,11 +589,11 @@ fn a_mark_beside_spacing_is_the_nearer_names() {
       three(&["*", "†"], &[], &["‡"]),
     ),
     (
-      repro!("ne2h_marks_run_wider_before_is_undecided"),
+      repro!("ne2h_marks_run_wider_before_goes_to_the_next_name"),
       three(&[], &["*", "†"], &[]),
     ),
     (
-      repro!("ne2h_marks_run_narrower_after_is_undecided"),
+      repro!("ne2h_marks_run_parted_at_its_widest_gap"),
       three(&["*"], &["†"], &[]),
     ),
     (

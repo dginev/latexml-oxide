@@ -1,0 +1,18 @@
+% mechanism: two given `\footnotemark`s a space after a name, glued to each other, before `\and`: the name's, each written
+%   once (`emit::own_span`; the space before the first no mark's)
+% witness:  none (review revSHGNEXT P1's k03)
+% oracle:   pdflatex 0 errors; "Ann Able ∗† Bob Baker" (the marks 4.0pt past Ann's name)
+% engines:  rust fd43c364eb6 and merge 6115962c1de: 0 errors, 0 Warnings, Ann ∗ ∗ †; perl 0.8.8: 0 errors, Ann's
+%   personname with marks 1, 2
+% expect:   0 errors, 0 Warnings; XML Ann Able ; footnotemark[*]= ; footnotemark[†]=; HTML Ann Able ; * plain ; † plain
+% status:   RED (merge 6115962c1de) ->
+%   GREEN (perfect_kernel_batchfmmarks::a_mark_past_spacing_is_the_nearer_names, XML and HTML)
+% preload: ar5iv.sty
+\documentclass{article}
+\title{T}
+\author{Ann Able \footnotemark[1]\footnotemark[2] \and Bob Baker}
+\date{}
+\begin{document}
+\maketitle
+Text.
+\end{document}

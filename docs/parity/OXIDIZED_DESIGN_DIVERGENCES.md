@@ -19752,20 +19752,32 @@ block's end) they are that name's (1911.13299's `\ \footnotemark[3]\and`); openi
 cell) they are the next name's. A fill's width is the line's (its natural width at a `tabular` row that sets the
 column, else wider): it decides only where its natural width and any wider part the run alike, so a mark glued to the
 next name is that name's past `\hfill`, and `Ann Able \hfill \footnotemark[2] \quad Bob Baker` is undecided. Other ink
-glued to a name is that name's; set apart from both names beside a mark (an ORCID, a `\cite`, a formula's mark) it
+glued to a name is that name's, a formula's separator glued between two marks their run's (`\footnotemark[1]$^,$
+\footnotemark[2]`, 1703.08733); set apart from both names beside a mark (an ORCID, a `\cite`, a formula's mark) it
 leaves the run undecided, and so does glue nowhere or two fills: an undecided mark is the counted loss (a wrong glyph
 is worse than none). A bare `\footnotemark` no name writes (one on the line a `\\` opens: no name's, ruling 4) keeps its
-footnote step where it prints, its glyph counted lost, so the marks after it print theirs.
+footnote step where it prints, its glyph counted lost, so the marks after it print theirs. The title's
+`\@makefnmark` is an `\rlap` (article.cls:206): a mark's ink lies over the glue after it, so its distance to the next
+name is read from where it starts, as the print shows it (review revSHGNEXT's a05).
 **Perl.** The mark stays in the personname of the `\and` segment it is typed in (Base_Utility.pool.ltxml's creator per
 `\and`), its owner the source's order; no glue is read.
-**Rust.** `resolver::mark_ledger` reads a block's events once into one record per text `\footnotemark` and note beside
+**Rust.** `resolver::mark_ledger` reads a block's events once (`Resolver::block`, the whole block, before an IJCAI
+address-section cut) into one record per text `\footnotemark` and note beside
 a name (its event, the widest glue back to the previous name's last ink and on to the next name's first ink from the
 lexer's `SepKind::Gap` widths and its `space_before`/`space_after` interword spaces, the side or none), and every
-consumer reads it: the reading (`Resolver::names_line`) gives a mark's request and a note to the name it names, and
-the writer (`emit::block_names`) carries the previous name's pieces past its run (over spacing, font changes and the
+consumer reads that one ledger (`Resolved::mark_ledgers`): the reading (`Resolver::names_line`) gives a mark's request
+and a note to the name it names — a mark it leaves undecided is no name's request, with no second rule (the old
+reader's `mark_goes_next` reads only marks the ledger holds no record of) — and the writer (`emit::block_names`)
+carries the previous name's pieces past its run (over spacing, font changes and the
 pieces alone: an item the reading writes apart, an affiliation's contact before the mark, stops it) and writes the next
 name's before its text in print order — a mark's own balanced tokens in a group of their own, cut from the previous
-name's run where a group took them, a note's footnote step where it prints. Only marks and notes move; an undecided mark is
+name's run where a group took them, a note's footnote step where it prints. Every writer of a mark's tokens (the
+next name's prefix, the pieces past a name, a dropped bare mark's step) takes them from the mark's own first token
+(`emit::own_span`): an event's span starts where the box before it began — the `\qquad` before it, the mark before
+it —, so each is cut at the end of the piece or spacing read before it and of the run written before it, a mark the
+runs before it hold written by them (review revSHGNEXT B1: `\qquad \footnotemark[1]\footnotemark[2] \ Bob` gave Bob
+∗ ∗ †; P1, older: `Ann Able\footnotemark[1]\footnotemark[2] \and Bob` gave Ann ∗ ∗ †, Perl 0.8.8 two). Only marks and
+notes move; an undecided mark is
 `mark_dropped`'s: one given its number re-references a note written already and is counted lost (user ruling
 2026-11-09), a bare one's step is written where it prints on the creator before it (`\lx@title@mark@step{\footnotemark}`,
 `frontmatter_fields.rs`: the mark typed into a box no one uses) and its glyph counted lost — the block was written whole,
@@ -19773,6 +19785,9 @@ its names clumped into one creator; one Warning per block names every lost mark.
 with a name after it keeps the whole block: the reading takes such a cell for a labelled line (`Ann Able\thanks{X}
 \and \footnotemark Bob Baker` read Bob as Ann's affiliation). The two other readers of marks
 (`insert::mark_creator_notes`/`strip_bare_mark`, the list-box first ink) keep their own reading for now (advisor T2).
+The writer's check for dropped marks runs after `names_overlap` and `declaration_reads_past`: a block where a mark drops
+and the reading reads past a declaration is written as Perl splits it (`fallback::perl_author_calls`, each mark in its
+piece, no loss counted), where before the dropped mark wrote it whole (Perl's tabular branch).
 **Residuals.** The 0pt fill of a single-row author `tabular` (article.cls:181-183 sets `\@author` in `\begin{tabular}[t]{c}`
 per `\and`) needs the class's own `\maketitle` known to be in force: until then such a fill is undecided
 (`fmmarks_mark_then_hfill_before_next_red`, `ne2g_mark_past_hfill_undecided`). A mark beside an ORCID, a `\cite` or a
@@ -19782,13 +19797,14 @@ note prints no `space_before` event: a run with no other glue is undecided. A ce
 its name is read as a labelled line (`ne2i_bare_mark_opening_a_cell_writes_the_block_whole`; given its number, Bob an
 affiliation as at the base). A mark after a name's comma and its label (`Igor Pikovski,$^{1, 2}$\footnotemark`,
 1111.1979: COMMAMARK) is undecided: its names now split, its glyph counted lost.
-**Witnesses.** 1911.13299, 2412.20504 (green before and after); the FMRG suite's spacing family
-(`perfect_kernel_batchfmmarks::a_mark_past_spacing_is_the_nearer_names`).
+**Witnesses.** 1911.13299, 2412.20504 (green before and after), 1703.08733 (its separator's shape); the FMRG suite's
+spacing family (`perfect_kernel_batchfmmarks::a_mark_past_spacing_is_the_nearer_names`, XML and HTML: its `ne2j_*`
+rows the writers' runs and the separator).
 **Guards**: `perfect_kernel_batchne2::{a_mark_beside_spacing_is_the_nearer_names,
 a_note_beside_spacing_goes_to_the_nearer_name, a_mark_nearer_the_next_name_moves_alone,
 a_mark_a_name_follows_past_spacing_is_not_carried_back, a_mark_on_no_name_keeps_its_footnote_step,
-a_given_mark_on_no_name_keeps_the_creators}`; the unit test
-`resolver::mark_ledger::tests::a_run_between_two_names_is_parted_at_its_widest_glue`.
+a_given_mark_on_no_name_keeps_the_creators}`, `perfect_kernel_batchfmmarks::a_mark_past_spacing_is_the_nearer_names`;
+the unit test `resolver::mark_ledger::tests::a_run_between_two_names_is_parted_at_its_widest_glue`.
 ---
 
 ## TeX-source fidelity family (TEXSRC)
