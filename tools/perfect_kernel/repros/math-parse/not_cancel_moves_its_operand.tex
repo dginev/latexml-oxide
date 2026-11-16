@@ -1,8 +1,9 @@
-% witness: revPERFF (synthetic; confirmed against Perl on the same host); the cancel path of math_common's `\not`
+% witness: revPERFF (synthetic; confirmed against Perl on the same host); arXiv 1611.10101 (`\not\not=`),
+%          1009.4552 / 2001.07246 (`\not\not\in`), 1701.02906 / 2209.02767 (box and font); the cancel path of math_common's `\not`
 %          rewrite copied its operand (Perl appendChild moves it, math_common.pool.ltxml:341, the token path :354)
 % oracle:  pdflatex 0 errors (TL 2025): each `\not` overstrikes the next atom, nested ones too
 % engines: rust 6a28795bcab: W1 a bare `／`, a plain `=` and an invisible times at depth 3; W2 fontsize 49%; `\not\not=`
-%          "not-not = absent"; Perl 0.8.8 `≠` at every depth, 70%, `≠` (whole document byte-identical after the fix)
+%          "not-not = absent"; Perl 0.8.8 `≠` at every depth, 70%, `≠` (after the fix every XMath equals Perl's, ids aside)
 % expect:  0 errors 0 warnings; every formula's XMath is Perl's (the guard lists them; ids aside: Rust numbers the
 %          binom's XMRef targets in another order, pre-existing), every XMRef resolves
 % status:  RED (6a28795bcab) -> GREEN (NOTCANCEL)

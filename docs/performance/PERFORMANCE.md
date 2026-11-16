@@ -770,11 +770,11 @@ Not taken: `\not`'s rule runs twice in every LaTeX document because `latex_const
 and `math_common` (Perl `latex_constructs.pool.ltxml` L19-21, L38, which Perl does too), re-pushing math_common's
 `DefRewrite` and its three ligatures. The double registration stays, and since NOTCANCEL its second `\not` pass is idle:
 both paths of the rule put their operand back by moving it, as Perl's `appendChild` does (`math_common.pool.ltxml:341`,
-`:354`). They copied it (`append_tree`), which left a `\not` nested in the operand out of the tree for the pass that
-had selected it, so the second registration repaired depth 2 only (`$\not\sqrt{\not\sqrt{a\not=b}}$` kept a bare `／`,
+`:354`). They copied it (`append_tree`), which left a `\not` the pass had selected out of the tree — nested in the cancel
+path's operand, or the operand itself on the token path (`\not\not=`) — so the second registration repaired depth 2 only (`$\not\sqrt{\not\sqrt{a\not=b}}$` kept a bare `／`,
 a plain `=` and an invisible times; revPERFF). The cancel `XMApp` now takes the `\not`'s box and font (Perl `_box`), so
-`$\not\frac{\not\sqrt{a\not=b}}{c}$` keeps Perl's 70 % (it was 49 %). Guards `perfect_kernel_batchnotcancel::*` (plain TeX, one registration,
-gives the LaTeX run's `XMath`).
+`$\not\frac{\not\sqrt{a\not=b}}{c}$` keeps Perl's 70 % (it was 49 %). Guards `perfect_kernel_batchnotcancel::*`
+(plain TeX, one registration, gives the LaTeX run's `XMath`).
 
 ### 2026-11-15 — post's whole-document queries wrap only their matches (PERFD, PERF1 lever L5)
 

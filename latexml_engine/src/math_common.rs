@@ -676,7 +676,7 @@ LoadDefinitions!({
     if text.chars().count() != 1 { // Not simple char token.
       // Wrap with a cancel op. Perl's `_box => $box` gives both nodes the `\not`'s box and font,
       // so the rewrite's font merge has no size left to scale (revPERFF:
-      // `\not\frac{\not\sqrt{a\not=b}}{c}` keeps 70%, not 49%).
+      // `\not\frac{\not\sqrt{a\not=b}}{c}` keeps 70%, not 49%; arXiv 1701.02906, 2209.02767).
       let not_box = document.get_node_box(not_node);
       let has_box = not_box.is_some();
       if has_box {
@@ -698,7 +698,8 @@ LoadDefinitions!({
         document.set_attribute(&mut strike, "xml:id", &id)?;
       }
       // MOVE the operand (Perl appendChild, math_common.pool.ltxml:341; Replace unlinked it): a
-      // copy would strand a nested `\not` this pass already selected outside the tree (revPERFF).
+      // copy would strand a nested `\not` this pass already selected outside the tree (revPERFF;
+      // arXiv 1009.4552, 2001.07246).
       document.get_node_mut().add_child(thing)?;
       document.close_element("ltx:XMApp")?;
     } else {
@@ -729,7 +730,7 @@ LoadDefinitions!({
       };
       thing.append_text(&new)?;
       // and put the node itself back in (Perl appendChild, :354): a `\not` this pass selected
-      // stays in the tree, so `\not\not=` ends as `≠`, as in Perl.
+      // stays in the tree, so `\not\not=` ends as `≠`, as in Perl (arXiv 1611.10101).
       document.get_node_mut().add_child(thing)?;
       // Since the <not> element is disappearing, if it had an id that was referenced...!?!?
       if let Some(id) = not_node.get_attribute_ns("id",XML_NS) {
