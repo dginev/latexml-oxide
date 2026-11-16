@@ -762,16 +762,8 @@
            would drop to its own line). The badge is NOT inside the personname span,
            and every other contact (affiliation, email, thanks, …) still goes to
            the author-notes group. html_feedback #6571, #4958, #4930, #1211. -->
-      <!-- SURPASS (latexml-oxide OXIDIZED_DESIGN #156, #1052): an author-attached \thanks is a
-           marked <ltx:note> child of the creator. The personname is the name alone (DG 2026-11-16), so
-           every mark printed on it is a marked note after it, of any role: each goes in the wrapper
-           after the name, in document order with the badge and with no space before it, so its
-           mark sits on the name (0801.1438's "Kardoš", mark-only "a", shared "*"). The ltx:note
-           template puts a superscript mark on the author and the content in a margin/footnote; a
-           shared note's later copies, and mark-only notes (role="footnotemark"), are marks. Content-kind
-           class hooks (ltx_thanks_*) ride on the note's @class. Unmarked notes (an empty @mark too)
-           follow the name, as before. author_notes below selects only ltx:contact, so there is no
-           double-render. -->
+      <!-- SURPASS (latexml-oxide OXIDIZED_DESIGN #156, #1052): the name is the name alone, so every marked note, of any
+           role, follows it here in document order with the badge, its mark on the name (0801.1438). -->
       <xsl:variable name="annotations"
                     select="ltx:contact[@role='orcid'] | ltx:note[normalize-space(@mark)]"/>
       <xsl:choose>

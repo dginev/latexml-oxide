@@ -1436,7 +1436,7 @@ mod witnessed_css_delta {
       ".ltx_annotated_personname:has(> .ltx_note) { display:inline; }".to_string(),
       ".ltx_note_shared > .ltx_note_mark > a { color:inherit; text-decoration:none; }".to_string(),
       format!("{lines} {{ display:inline; }}"),
-      format!("{lines} .ltx_note_content {{\n    display:block; position:static; float:left; clear:both; width:100%;"),
+      format!("{lines} .ltx_note_content {{\n    display:block; position:static; float:inline-start; clear:both; width:100%;"),
       format!("{lines} .ltx_note_content .ltx_note_mark {{ position:static; }}"),
       format!(
         "{lines} .ltx_note_type,\n{lines}:not(.ltx_note_shared):not(.ltx_role_footnotemark) .ltx_note_mark {{ \
