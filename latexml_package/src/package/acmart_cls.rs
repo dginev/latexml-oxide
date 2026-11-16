@@ -297,16 +297,12 @@ yysep={,},notesep={, }}}
   DefMacro!("\\authornote{}",   "\\lx@add@contact[role=note]{#1}");
   // acmart.cls:1707, :1716, :1726: the note lists these three fill, which a document's own copy of them extends
   // (2605.28175's `\authornote`; 2605.16813, 2606.04448 `\g@addto@macro\@authornotes`; OD #1036); `\maketitle` prints
-  // them (:2245-2247), each `\footnotetext` a note on the document here (`\lx@frontmatter@footnotes`), and sets the
-  // footnote count back to 0 after them (:2243, :2330: 2605.28175's body footnotes are 1, 2, … in the PDF).
+  // them (:2245-2247), each `\footnotetext` a note on the document here (`\lx@frontmatter@footnotes`).
   // :2894 `\def\@setaddresses{}`: amsart's address list at the end (ams_core_cls.rs `\enddoc@text`) is never set;
   // acmart reads `\addresses` only in `\maketitle`, where the `\@currentauthors` a document's `\@authornotemark` there
   // extends is defined (:2723-2729; 2605.28175).
   RawTeX!(r"\def\@titlenotes{}\def\@subtitlenotes{}\def\@authornotes{}\def\@setaddresses{}");
-  AddToMacro!(
-    "\\lx@maketitle@body",
-    r"\lx@frontmatter@footnotes{\@titlenotes\@subtitlenotes\@authornotes}\setcounter{footnote}{0}"
-  );
+  AddToMacro!("\\lx@maketitle@body", r"\lx@frontmatter@footnotes{\@titlenotes\@subtitlenotes\@authornotes}");
   // acmart 2026 (acmart.cls:1683-1686): `\correspondingauthor` marks the current author the corresponding one, an
   // envelope (`\ding{41}`) after the name, outside anonymous mode. 76 2609 papers (2609.06664, 2609.07038).
   DefMacro!("\\correspondingauthor",
