@@ -37,7 +37,7 @@ use crate::base_utilities::{
       PerlAuthorBranch, PerlCalls, perl_author_branch, perl_author_calls,
       tabular_juggles_in_a_whole_block, whole_block_author,
     },
-    insert::{MARK_IN_TEXT, NAME_PRINTED},
+    insert::{MARK_FROM_COUNTER, MARK_IN_TEXT, NAME_PRINTED},
     observer::{
       events::{
         self as events, BreakKind, EventKind, Formula, InkTable, SepKind, font_declaration, inked,
@@ -1516,12 +1516,13 @@ fn by_text(why: Option<&str>, text: &str) -> Vec<Token> {
 /// a note's with the one it shows on its name ([`shown_mark`]), a `\footnote` so marked the `\thanks` note it is there
 /// (`\lx@title@footnote`). Its footnote step is its creator's, where the note prints ([`note_steps`]); an unmarked
 /// `\footnote` `given` its number steps none (`GIVEN_PART`, the front-matter footnotes' count: OD #1054). A mark read off
-/// the text's bare head ([`requested_mark`]) is flagged so (`insert::MARK_IN_TEXT`), for the copy to be taken out there.
+/// the text's bare head ([`requested_mark`]) is flagged so (`insert::MARK_IN_TEXT`), for the copy to be taken out there,
+/// one its command prints so (`insert::MARK_FROM_COUNTER`), no typed glyph on the name being it.
 fn note_call(
   footnote: bool,
   given: bool,
   mark: Option<&str>,
-  in_text: bool,
+  from: MarkFrom,
   label: &str,
   content: Vec<Token>,
 ) -> Tokens {
@@ -1531,12 +1532,12 @@ fn note_call(
   ))
   .unlist_ref()]);
   let marked = mark.map_or_else(String::new, |mark| {
-    let in_text = if in_text {
-      s!("{MARK_IN_TEXT}=true,")
-    } else {
-      String::new()
+    let from = match from {
+      MarkFrom::Counter => s!("{MARK_FROM_COUNTER}=true,"),
+      MarkFrom::Legend => String::new(),
+      MarkFrom::Text => s!("{MARK_IN_TEXT}=true,"),
     };
-    s!("mark={{{mark}}},{in_text}")
+    s!("mark={{{mark}}},{from}")
   });
   if footnote && mark.is_none() {
     let given = if given {
@@ -1554,6 +1555,18 @@ fn note_call(
       s!("role=thanks,class=ltx_note_frontmatter ltx_thanks_{kind},{marked}label={{{label}}}");
     annotate_now("ltx:note", &keys, &body)
   }
+}
+
+/// Where the `mark` of a note's call ([`note_call`]) comes from.
+#[derive(Clone, Copy, Default)]
+enum MarkFrom {
+  /// The mark its command prints at its step ([`shown_mark`]).
+  #[default]
+  Counter,
+  /// A legend's mark or label, printed apart from its text.
+  Legend,
+  /// The bare symbol its text opens with ([`requested_mark`]).
+  Text,
 }
 
 /// The mark a note event shows on its name (`resolver::note_shows`, the rehearsal's `\thefootnote` at its step), where
@@ -2314,20 +2327,25 @@ fn item_call(
   if role == "legend"
     && let Some((index, None)) = assoc.source
     && let Some(call) = api_call(index)
-    && let Some((mark, in_text)) = call
+    && let Some((mark, from)) = call
       .events
       .iter()
       .find(|e| e.kind == EventKind::Mark)
-      .map(|e| (e.text.as_str(), true))
+      .map(|e| (e.text.as_str(), MarkFrom::Text))
       // (or the label its binding prints: `\\affil[*]{Corresponding author.}`, 2107.01943, 1812.03816)
-      .or(assoc.label.as_deref().map(|label| (label, false)))
+      .or(
+        assoc
+          .label
+          .as_deref()
+          .map(|label| (label, MarkFrom::Legend)),
+      )
   {
     whole.insert(index);
     return Ok(note_call(
       false,
       false,
       Some(mark),
-      in_text,
+      from,
       label,
       call.content.unlist_ref().to_vec(),
     ));
@@ -2409,7 +2427,14 @@ fn item_call(
   }
   let wrap = |content: &[Token]| -> Tokens {
     if note {
-      note_call(false, false, None, false, label, content.to_vec())
+      note_call(
+        false,
+        false,
+        None,
+        MarkFrom::Legend,
+        label,
+        content.to_vec(),
+      )
     } else if key.0 == Kind::Affiliation {
       kinded_affiliation(&keys, line_class, content)
     } else {
@@ -2495,13 +2520,13 @@ fn item_call(
       {
         let content = argument;
         // (or the symbol its text opens with bare that its names show)
-        let (mark, in_text) = event_at(
+        let (mark, from) = event_at(
           index,
           span,
           |e| e.kind == EventKind::Note,
           |e| match shown_mark(e) {
-            Some(mark) => (Some(mark), false),
-            None => (requested_mark(e, requested), true),
+            Some(mark) => (Some(mark), MarkFrom::Counter),
+            None => (requested_mark(e, requested), MarkFrom::Text),
           },
         )
         .unwrap_or_default();
@@ -2509,7 +2534,7 @@ fn item_call(
           footnote,
           given,
           mark.as_deref(),
-          in_text,
+          from,
           label,
           content.unwrap_or_else(|| by_text(Some("note no argument"), &assoc.text)),
         ));
@@ -2817,7 +2842,14 @@ fn item_call(
         // (its run grown to the mark: `*equally contributed`, 2609.16600)
         let legend = mark.as_deref().filter(|_| role == "legend");
         let tokens = in_its_font(font, tokens).unlist();
-        return Ok(note_call(false, false, legend, true, label, tokens));
+        return Ok(note_call(
+          false,
+          false,
+          legend,
+          MarkFrom::Text,
+          label,
+          tokens,
+        ));
       }
       if key.0 != Kind::Affiliation {
         return Ok(wrap(&tokens));
@@ -2854,7 +2886,7 @@ fn item_call(
           footnote,
           given,
           mark.as_deref(),
-          false,
+          MarkFrom::Counter,
           label,
           argument,
         ));

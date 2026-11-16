@@ -115,7 +115,8 @@ missing image, a broken `\ref` or `\cite`, and the like — the fixes are usuall
 - **The marks shown on a name are its requests for labelled affiliations**; a name's label is the name alone
   (2026-10-21, rank 93). `ltx:personname` is pure semantic markup and no mark is lost — one rule (2026-11-16): each mark
   printed on a name is the `mark` of the note it answers, the label its attached contact consumes (no institution marks
-  for now), or a mark-only note after the name, `<note role="footnotemark" mark="…"/>` (OD #1055).
+  for now), or a mark-only note after the name, `<note role="footnotemark" mark="…"/>` (OD #1055). A note whose own
+  command prints its mark (a `\thanks`'s counter) answers no typed glyph: `Ann Able*\thanks{…}` prints both, "*∗".
 - **All asterisks are one label key** (2026-11-02, user: "all asterisks are the same key, they are visually identical
   to readers"): `*`, `\ast`, `\textasteriskcentered`, ∗ U+2217, ⁎ U+204E, ✱ U+2731 and ＊ U+FF0A key the same label, for a
   name's request and a line's label alike (`clean_frontmatter_labels`); the printed glyph stays as written. Labels key by

@@ -1105,6 +1105,14 @@ const API_KEYS_OUTSIDE_PERLS: &[(&str, usize)] = &[
   // `insert::strip_bare_mark` takes out — never one a class prints beside its own text, review revSHMARK S2. Perl's API
   // has no key for "the mark is the text's own"; internal, never written out: OD #1053)
   ("const _markintext base_utilities/frontmatter/insert.rs", 1),
+  // (INTREC2, 0 -> 1, raised with its reason: a note whose mark its own command prints — the title's footnote counter,
+  // REVTeX's numbered footnotes — answers no glyph typed on the name, `Ann Able*\thanks{…}` printing "*∗"
+  // (`pure_names::answer`); Perl's API has no key for it, Perl leaves the marks in the name; internal, never written out:
+  // OD #1055)
+  (
+    "const _markfromcounter base_utilities/frontmatter/insert.rs",
+    1,
+  ),
   // (SHREST, 0 -> 1, raised with its reason: the mark a class prints for a creator's footnote text, elsarticle's `\fntext`
   // number, REVTeX's joined footnote's symbol, on the contact its binding makes — a contact has no `mark` in the schema —,
   // read where two creators hold it to make it their marked note, OD #1054; internal, never written out)

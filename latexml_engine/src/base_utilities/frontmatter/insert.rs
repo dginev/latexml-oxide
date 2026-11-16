@@ -701,6 +701,11 @@ fn mark_creator_notes(document: &mut Document) -> Result<()> {
 /// [`strip_bare_mark`] takes out.
 pub(in crate::base_utilities) const MARK_IN_TEXT: &str = "_markintext";
 
+/// The flag on a creator's note whose `mark` its own command prints (the title's footnote counter, `\@fnsymbol` at
+/// article.cls:205; REVTeX's numbered front-matter footnotes): no glyph typed on the name is that mark, `Ann Able*\thanks{…}`
+/// printing "*∗" (`pure_names::answer`). Finalize drops it with the other `_` attributes.
+pub(in crate::base_utilities) const MARK_FROM_COUNTER: &str = "_markfromcounter";
+
 /// The bare copy of its mark a note's text opens with, taken out where the mark was read off it ([`MARK_IN_TEXT`]):
 /// ieeeconf's `\thanks{*Authors to whom correspondence should be addressed.}` (2606.00397). Whether it was.
 fn strip_bare_mark(note: &mut Node) -> Result<bool> {

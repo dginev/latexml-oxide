@@ -2,7 +2,7 @@
 //! "a name's label is the name alone", 2026-10-21; DG 2026-11-16: purity and no lost mark are one rule).
 
 use super::{
-  insert::{drop_emptied_wrappers, mark_form},
+  insert::{MARK_FROM_COUNTER, drop_emptied_wrappers, mark_form},
   observer::marks::glued_in_a_word,
   *,
 };
@@ -97,7 +97,8 @@ pub(in crate::base_utilities) fn keep_personnames_pure(document: &mut Document) 
 /// is answered on its creator: a note marked so; a contact keyed so (`held`); or an unmarked note whose text opens with
 /// a copy of it (a legend: `\thanks{*Equal Contribution}`, 1904.03977), which takes it as its `mark` ([`leading_mark`]).
 /// A symbol beside a `\thanks` is no `\thanks`'s mark: the `\thanks` prints its own (`Haoran Li$^{*}$\thanks{…}` prints
-/// "∗†", 2406.11149).
+/// "∗†", 2406.11149), the same glyph too (`Ann Able*\thanks{…}` prints "*∗": a note its command marks,
+/// [`MARK_FROM_COUNTER`], answers no typed glyph).
 fn answer(
   document: &mut Document,
   notes: &[Node],
@@ -107,9 +108,10 @@ fn answer(
   keys: &[String],
 ) -> Result<bool> {
   if notes.iter().any(|note| {
-    note
-      .get_attribute("mark")
-      .is_some_and(|mark| mark_form(&mark) == key)
+    note.get_attribute(MARK_FROM_COUNTER).is_none()
+      && note
+        .get_attribute("mark")
+        .is_some_and(|mark| mark_form(&mark) == key)
   }) {
     return Ok(true);
   }

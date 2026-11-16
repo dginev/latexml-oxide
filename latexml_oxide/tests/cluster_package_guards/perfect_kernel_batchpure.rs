@@ -105,17 +105,19 @@ fn body_affiliation_labels_are_mark_only_notes() {
       Some(PRELOAD),
     ),
     &[
-      r#"<creator role="author"><personname>Ann Able</personname><note mark="a" role="footnotemark"/><contact name="Note: " role="note">Ann is supported by grant A.</contact></creator>"#,
-      r#"<creator before=" " role="author"><personname>Bob Baker</personname><note mark="b" role="footnotemark"/><contact name="Note: " role="note">Bob is supported by grant B.</contact></creator>"#,
-      r#"<creator before=" " role="author"><personname>Cy Cole</personname><note mark="a" role="footnotemark"/><note mark="*" role="footnotemark"><tags><tag>*</tag><tag role="refnum">*</tag><tag role="typerefnum">footnote *</tag></tags></note></creator>"#,
-      r#"<creator before=" " role="author"><personname>Dan Dorn</personname><note mark="c" role="footnotemark"/><contact name="Note: " role="note">Dan is supported by grant D.</contact></creator>"#,
+      r#"<creator role="author"><personname>Ann Able</personname><note mark="a" role="footnotemark"/><note class="ltx_note_frontmatter ltx_thanks_funding" mark="*" role="thanks">Ann is supported by grant A.</note></creator>"#,
+      r#"<creator before=" " role="author"><personname>Bob Baker</personname><note mark="b" role="footnotemark"/><note class="ltx_note_frontmatter ltx_thanks_funding" mark="†" role="thanks">Bob is supported by grant B.</note></creator>"#,
+      r#"<creator before=" " role="author"><personname>Cy Cole</personname><note mark="a" role="footnotemark"/><note class="ltx_note_frontmatter ltx_thanks_funding" mark="*" role="thanks">Ann is supported by grant A.</note></creator>"#,
+      r#"<creator before=" " role="author"><personname>Dan Dorn</personname><note mark="c" role="footnotemark"/><note class="ltx_note_frontmatter ltx_thanks_funding" mark="‡" role="thanks">Dan is supported by grant D.</note></creator>"#,
     ],
   );
 }
 
 /// 2406.11149's `Haoran Li$^{*}$\thanks{\quad Corresponding Author}` (and `Ann Able*\thanks{…}`; 2506.02863): a symbol
 /// typed beside a `\thanks` is no mark of the `\thanks`, which prints its own (pdflatex "Haoran Li∗†"): a mark-only note
-/// after the name, the `\thanks`'s note its own. Red (PURE round 1, revPURE B1): the typed ∗ the note's `mark`.
+/// after the name, the `\thanks`'s note its own. Red (PURE round 1, revPURE B1): the typed ∗ the note's `mark`. Ann's
+/// row is the same glyph as her `\thanks`'s own counter mark (pdflatex "Ann Able*∗"): still two marks, the counter-marked
+/// note answering no typed glyph (`insert::MARK_FROM_COUNTER`); red on the PURE × SHMARK merge, one mark kept (INTREC2).
 #[test]
 fn a_typed_symbol_beside_a_thanks_is_a_mark_only_note() {
   assert_creators(
@@ -124,8 +126,8 @@ fn a_typed_symbol_beside_a_thanks_is_a_mark_only_note() {
       Some(PRELOAD),
     ),
     &[
-      r#"<creator role="author"><personname>Ann Able</personname><note mark="∗" role="footnotemark"/><note class="ltx_note_frontmatter ltx_thanks_correspondence" role="thanks">Corresponding author.</note></creator>"#,
-      r#"<creator before=" " role="author"><personname>Bob Baker</personname><note mark="∗" role="footnotemark"/><note class="ltx_note_frontmatter ltx_thanks_correspondence" role="thanks"> Corresponding author.</note></creator>"#,
+      r#"<creator role="author"><personname>Ann Able</personname><note mark="∗" role="footnotemark"/><note class="ltx_note_frontmatter ltx_thanks_correspondence" mark="*" role="thanks">Corresponding author.</note></creator>"#,
+      r#"<creator before=" " role="author"><personname>Bob Baker</personname><note mark="∗" role="footnotemark"/><note class="ltx_note_frontmatter ltx_thanks_correspondence" mark="†" role="thanks"> Corresponding author.</note></creator>"#,
       r#"<creator before=" " role="author"><personname>Cy Cole</personname></creator>"#,
     ],
   );
@@ -142,9 +144,9 @@ fn a_notes_opening_word_is_no_copy_of_the_mark() {
       Some(PRELOAD),
     ),
     &[
-      r#"<creator role="author"><personname>Ann Able</personname><note mark="a" role="footnotemark"/><note class="ltx_note_frontmatter ltx_thanks_note" role="thanks">a visitor at the Institute.</note></creator>"#,
-      r#"<creator before=" " role="author"><personname>Bob Baker</personname><note class="ltx_note_frontmatter ltx_thanks_note" role="thanks"><sup><text font="italic">b</text></sup>Visitor at the Lab.</note></creator>"#,
-      r#"<creator before=" " role="author"><personname>Cy Cole</personname><note mark="1" role="footnotemark"/><note class="ltx_note_frontmatter ltx_thanks_note" role="thanks">1 year at Univ C.</note></creator>"#,
+      r#"<creator role="author"><personname>Ann Able</personname><note mark="a" role="footnotemark"/><note class="ltx_note_frontmatter ltx_thanks_note" mark="*" role="thanks">a visitor at the Institute.</note></creator>"#,
+      r#"<creator before=" " role="author"><personname>Bob Baker</personname><note class="ltx_note_frontmatter ltx_thanks_note" mark="†" role="thanks"><sup><text font="italic">b</text></sup>Visitor at the Lab.</note></creator>"#,
+      r#"<creator before=" " role="author"><personname>Cy Cole</personname><note mark="1" role="footnotemark"/><note class="ltx_note_frontmatter ltx_thanks_note" mark="‡" role="thanks">1 year at Univ C.</note></creator>"#,
     ],
   );
 }

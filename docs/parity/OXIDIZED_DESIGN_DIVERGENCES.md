@@ -19716,7 +19716,10 @@ superscript its text opens with, inside its font wrappers too — consumes it (r
 letters and digits parts where one part is a held label (`$^{a1}$`: address a consumed, 1 left; hep-ph0011101). Any other
 mark is `<note role="footnotemark" mark="…"/>` right after the name (0801.1438), flagged `_namemark` so no body
 `\footnotetext` pairs with it (`relocate_footnote`, 2208.09944). A symbol typed beside a `\thanks` is such a note, never the
-`\thanks`'s mark: the `\thanks` prints its own (`Haoran Li$^{*}$\thanks{…}` prints "∗†", 2406.11149, 2506.02863). Kept in
+`\thanks`'s mark: the `\thanks` prints its own (`Haoran Li$^{*}$\thanks{…}` prints "∗†", 2406.11149, 2506.02863), its
+glyph the typed one too — a note its own command marks (`_markfromcounter`: the title's footnote counter, set by
+`\lx@title@thanks` and the emitter's note call; REVTeX's numbered footnotes, `number_footnote_parts`) answers no typed
+glyph, so `Ann Able*\thanks{…}` keeps both marks of "*∗" (INTREC2, the PURE × SHMARK merge). Kept in
 the name: superscripts that are name ink (`M\textsuperscript{c}Kernan`, `1\textsuperscript{st}`, an isotope prescript),
 formulas on a base, a mark a reference or an icon prints (cmpj's `\refaddr`, an ORCID link in a mark: 2205.05709), and
 every mark of a personname holding more than a name (a mark with name ink on both sides: an author block written whole,
