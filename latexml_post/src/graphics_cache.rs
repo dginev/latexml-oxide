@@ -436,16 +436,18 @@ fn store_digest(
     return;
   };
   let cached = cache_path(&root, &hash, key.ext);
-  install(Path::new(dest), &cached);
-  if let Some(d) = dims {
+  // A sidecar without its entry is never reclaimed: the prune removes one only with its entry.
+  if install(Path::new(dest), &cached)
+    && let Some(d) = dims
+  {
     write_dims_sidecar(&dims_sidecar(&cached), d);
   }
   // Best-effort LRU prune after insert (process-locked).
   prune_if_over_cap(&root);
 }
 
-/// Install `dest` as the cache entry `cached`, unless an entry is already there.
-fn install(dest: &Path, cached: &Path) {
+/// Install `dest` as the cache entry `cached`, unless an entry is already there; whether an entry is in place after.
+fn install(dest: &Path, cached: &Path) -> bool {
   // Atomic install: write to .tmp.<pid>.<nanos>, rename into place.
   // Concurrent writers each get a private tmp and race the rename —
   // last rename wins, both sources are byte-equivalent.
@@ -461,7 +463,7 @@ fn install(dest: &Path, cached: &Path) {
   // by the prune's `STALE_TMP_AGE` sweep (33k such files in the fleet's cache by 2026-11-16).
   if !link_or_copy(dest, &tmp) {
     let _ = fs::remove_file(&tmp);
-    return;
+    return cached.is_file();
   }
   if !cached.is_file() {
     // rename is atomic on the same filesystem; failures are non-fatal.
@@ -473,6 +475,7 @@ fn install(dest: &Path, cached: &Path) {
     let _ = fs::remove_file(&tmp);
     let _ = touch_now(cached);
   }
+  cached.is_file()
 }
 
 fn touch_now(p: &Path) -> std::io::Result<()> {
@@ -1220,17 +1223,53 @@ mod tests {
       .collect()
   }
 
+  /// A store whose install fails leaves neither its tmp file nor a `.dims` sidecar, which the prune
+  /// reclaims only with its entry: a missing output (the copy fails before the tmp exists), an output
+  /// that fails mid-copy (a partial tmp), a directory in the entry's place (the rename fails).
   #[test]
-  fn a_failed_install_leaves_no_tmp_file() {
+  fn a_failed_install_leaves_neither_tmp_nor_dims() {
+    let root = shared_cache_dir();
     let dir = temp_dir("install");
-    let dest = dir.join("dest.png");
-    write_bytes(&dest, b"png");
-    // Something in the way of the entry (a directory): its rename fails.
-    let cached = dir.join("ab").join("abcdef.png");
-    fs::create_dir_all(cached.join("in-the-way")).unwrap();
-    install(&dest, &cached);
-    assert!(cached.is_dir());
-    assert_eq!(tmp_names(&dir.join("ab")), Vec::<String>::new());
+    let key = RenderKey {
+      page:    None,
+      density: 90,
+      ext:     "png",
+    };
+    let missing = dir.join("missing.png");
+    let in_the_way = dir.join("in-the-way.png");
+    write_bytes(&in_the_way, b"png");
+    let mut cases = vec![("missing", missing), ("in-the-way", in_the_way)];
+    // Reading `/proc/self/mem` at offset 0 (unmapped) fails with EIO after the copy has created its target.
+    if cfg!(target_os = "linux") {
+      cases.push(("unreadable", PathBuf::from("/proc/self/mem")));
+    }
+    for (label, dest) in cases {
+      let src = dir.join(format!("{label}.src"));
+      write_bytes(&src, &unique_source_bytes(label));
+      let cached = cache_path(root, &hash_key(&src, key).unwrap(), key.ext);
+      if label == "in-the-way" {
+        fs::create_dir_all(cached.join("occupied")).unwrap();
+      }
+      store(
+        src.to_str().unwrap(),
+        dest.to_str().unwrap(),
+        key,
+        Some(CachedDims { width: 1, height: 2 }),
+      );
+      let entry = cached.file_name().unwrap().to_string_lossy().into_owned();
+      let shard = cached.parent().unwrap();
+      let leftovers: Vec<String> = fs::read_dir(shard)
+        .unwrap()
+        .flatten()
+        .map(|e| e.file_name().to_string_lossy().into_owned())
+        .filter(|name| name.starts_with(&entry) && *name != entry)
+        .collect();
+      assert_eq!(leftovers, Vec::<String>::new(), "{label}");
+      assert_eq!(cached.is_dir(), label == "in-the-way", "{label}");
+      if label == "in-the-way" {
+        fs::remove_dir_all(&cached).unwrap();
+      }
+    }
   }
 
   #[test]
