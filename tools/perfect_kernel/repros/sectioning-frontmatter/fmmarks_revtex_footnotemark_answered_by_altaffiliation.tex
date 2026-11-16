@@ -3,15 +3,18 @@
 % witness:  2301.00155 (`\author{Xuan Bu\footnotemark[1]}\altaffiliation{These authors contribute equally…}`, `\alph`
 %   footnotes)
 % oracle:   pdflatex 0 errors; "Ann Ablea,1,∗ Bob Bakera,2,∗ and Cat Cole1,†"
-% engines:  rust INTREC (3af622aca64) = 0 errors, 0 Warnings; Ann Able ; footnotemark[*]= | altaffiliation=These
-%   authors contribute equally to this work. ; affiliation=Univ A, Town / Bob Baker ; footnotemark[*]= |
-%   altaffiliation=These authors contribute equally to this work. ; affiliation=Univ B, City / Cat Cole |
-%   email=cat@a.edu ; affiliation=Univ A, Town
-% expect:   0 errors, 0 Warnings; Ann Able ; footnotemark[*]= | altaffiliation=These authors contribute equally to
+% engines:  rust int/frontmatter 10997fdf9a0 = 0 errors, 0 Warnings; XML Ann Able ; footnotemark[*]= |
+%   altaffiliation=These authors contribute equally to this work. ; affiliation=Univ A, Town / Bob Baker ;
+%   footnotemark[*]= | altaffiliation=These authors contribute equally to this work. ; affiliation=Univ B,
+%   City / Cat Cole | email=cat@a.edu ; affiliation=Univ A, Town; HTML Ann Able ; * plain / Bob Baker ; *
+%   plain / Cat Cole
+% expect:   0 errors, 0 Warnings; XML Ann Able ; footnotemark[*]= | altaffiliation=These authors contribute equally to
 %   this work. ; affiliation=Univ A, Town / Bob Baker ; footnotemark[*]= | altaffiliation=These authors
 %   contribute equally to this work. ; affiliation=Univ B, City / Cat Cole | email=cat@a.edu ;
-%   affiliation=Univ A, Town (guard canon: name ; note role[mark]=text, sorted | contacts)
-% status:   GREEN (INTREC 3af622aca64; perfect_kernel_batchfmmarks::revtex_marks_follow_its_numbering)
+%   affiliation=Univ A, Town; HTML Ann Able ; * plain / Bob Baker ; * plain / Cat Cole (the guard's XML and
+%   HTML lines)
+% status:   GREEN XML GREEN, HTML GREEN (int/frontmatter 10997fdf9a0;
+%   perfect_kernel_batchfmmarks::revtex_marks_follow_its_numbering)
 % preload: ar5iv.sty
 \documentclass[aps,prb,superscriptaddress]{revtex4-1}
 \renewcommand{\thefootnote}{\alph{footnote}}

@@ -1,0 +1,38 @@
+% mechanism: twelve names on two lines with typed affiliation labels and two legend marks: `∗` shared by two names, `†`
+%   one name's
+% witness:  2602.18802 (spconf: `Youjun Chen$^{\ast,1}$, Guinan Li$^{\ast,1}$, …, Xurong Xie$^{\dagger,3}$`, twelve
+%   names on two lines)
+% oracle:   pdflatex 0 errors; "Ann Able∗,1, Bob Baker∗,1, Cat Cole2, Dan Dorn†,3, …, Lee Lord3", the three
+%   affiliation lines, "∗Equal contribution †Corresponding author"
+% engines:  rust int/frontmatter 10997fdf9a0 = 0 errors, 0 Warnings; XML Ann Able ; thanks[*]=Equal contribution |
+%   affiliation=Univ A, Town / Bob Baker ; thanks[*]=Equal contribution | affiliation=Univ A, Town / Cat Cole
+%   | affiliation=Univ B, City / Dan Dorn ; thanks[†]=Corresponding author | affiliation=Lab C, Village / Eve
+%   Ezra | affiliation=Univ A, Town / Fay Fox | affiliation=Univ A, Town / Gil Gray | affiliation=Univ A, Town
+%   / Hal Hunt | affiliation=Univ A, Town / Ida Irwin | affiliation=Univ A, Town / Jay Judd | affiliation=Univ
+%   B, City / Kim Kent | affiliation=Univ A, Town ; affiliation=Lab C, Village / Lee Lord | affiliation=Lab C,
+%   Village; HTML Ann Able ; *→note / Bob Baker ; *→note / Cat Cole / Dan Dorn | under: Corresponding author /
+%   Eve Ezra / Fay Fox / Gil Gray / Hal Hunt / Ida Irwin / Jay Judd / Kim Kent / Lee Lord / margin: Equal
+%   contribution
+% expect:   0 errors, 0 Warnings; XML Ann Able ; thanks[*]=Equal contribution | affiliation=Univ A, Town / Bob Baker ;
+%   thanks[*]=Equal contribution | affiliation=Univ A, Town / Cat Cole | affiliation=Univ B, City / Dan Dorn ;
+%   thanks[†]=Corresponding author | affiliation=Lab C, Village / Eve Ezra | affiliation=Univ A, Town / Fay
+%   Fox | affiliation=Univ A, Town / Gil Gray | affiliation=Univ A, Town / Hal Hunt | affiliation=Univ A, Town
+%   / Ida Irwin | affiliation=Univ A, Town / Jay Judd | affiliation=Univ B, City / Kim Kent | affiliation=Univ
+%   A, Town ; affiliation=Lab C, Village / Lee Lord | affiliation=Lab C, Village; HTML Ann Able ; *→note / Bob
+%   Baker ; *→note / Cat Cole / Dan Dorn | under: Corresponding author / Eve Ezra / Fay Fox / Gil Gray / Hal
+%   Hunt / Ida Irwin / Jay Judd / Kim Kent / Lee Lord / margin: Equal contribution (the guard's XML and HTML
+%   lines)
+% status:   GREEN XML GREEN, HTML GREEN (int/frontmatter 10997fdf9a0;
+%   perfect_kernel_batchfmmarks::shared_notes_are_a_marked_copy_per_carrier)
+% preload: ar5iv.sty
+\documentclass{article}
+\title{T}
+\author{Ann Able$^{\ast,1}$, Bob Baker$^{\ast,1}$, Cat Cole$^{2}$, Dan Dorn$^{\dagger,3}$, Eve Ezra$^{1}$, Fay Fox$^{1}$, Gil Gray$^{1}$,\\
+Hal Hunt$^{1}$, Ida Irwin$^{1}$, Jay Judd$^{2}$, Kim Kent$^{1,3}$, Lee Lord$^{3}$\\
+$^{1}$Univ A, Town \quad $^{2}$Univ B, City \quad $^{3}$Lab C, Village\\
+$^{\ast}$Equal contribution \quad $^{\dagger}$Corresponding author}
+\date{}
+\begin{document}
+\maketitle
+Text.
+\end{document}

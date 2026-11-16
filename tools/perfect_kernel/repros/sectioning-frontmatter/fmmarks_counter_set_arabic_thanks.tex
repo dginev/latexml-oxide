@@ -2,11 +2,12 @@
 %   `\@fnsymbol`, from 3
 % witness:  revSHMARK p2
 % oracle:   pdflatex 0 errors; "Ann Able‡ Bob Baker§", footnotes "‡ First note.", "§ Second note."
-% engines:  rust INTREC (3af622aca64) = 0 errors, 0 Warnings; Ann Able ; thanks[‡]=First note. / Bob Baker ;
-%   thanks[§]=Second note.
-% expect:   0 errors, 0 Warnings; Ann Able ; thanks[‡]=First note. / Bob Baker ; thanks[§]=Second note. (guard canon:
-%   name ; note role[mark]=text, sorted | contacts)
-% status:   GREEN (INTREC 3af622aca64; perfect_kernel_batchfmmarks::a_mark_on_a_name_is_a_copy_of_its_note)
+% engines:  rust int/frontmatter 10997fdf9a0 = 0 errors, 0 Warnings; XML Ann Able ; thanks[‡]=First note. / Bob Baker
+%   ; thanks[§]=Second note.; HTML Ann Able | under: First note. / Bob Baker | under: Second note.
+% expect:   0 errors, 0 Warnings; XML Ann Able ; thanks[‡]=First note. / Bob Baker ; thanks[§]=Second note.; HTML Ann
+%   Able | under: First note. / Bob Baker | under: Second note. (the guard's XML and HTML lines)
+% status:   GREEN XML GREEN, HTML GREEN (int/frontmatter 10997fdf9a0;
+%   perfect_kernel_batchfmmarks::a_mark_on_a_name_is_a_copy_of_its_note)
 % preload: ar5iv.sty
 \documentclass{article}
 \setcounter{footnote}{2}

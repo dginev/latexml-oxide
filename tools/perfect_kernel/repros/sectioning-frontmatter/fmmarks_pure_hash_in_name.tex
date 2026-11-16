@@ -1,9 +1,10 @@
 % mechanism: name ink is no mark: `The C\# Team` stays whole
 % witness:  revPURE p7_hash (control)
 % oracle:   pdflatex 0 errors; "The C# Team"
-% engines:  rust INTREC (3af622aca64) = 0 errors, 0 Warnings; The C# Team
-% expect:   0 errors, 0 Warnings; The C# Team (guard canon: name ; note role[mark]=text, sorted | contacts)
-% status:   GREEN (INTREC 3af622aca64; perfect_kernel_batchfmmarks::name_marks_live_outside_the_personname)
+% engines:  rust int/frontmatter 10997fdf9a0 = 0 errors, 0 Warnings; XML The C# Team; HTML The C# Team
+% expect:   0 errors, 0 Warnings; XML The C# Team; HTML The C# Team (the guard's XML and HTML lines)
+% status:   GREEN XML GREEN, HTML GREEN (int/frontmatter 10997fdf9a0;
+%   perfect_kernel_batchfmmarks::name_marks_live_outside_the_personname)
 % preload: ar5iv.sty
 \documentclass{article}
 \title{T}

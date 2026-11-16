@@ -2,11 +2,15 @@
 %   sits on the next name, a tie goes to it
 % witness:  revSHGIVENc r4interword (row R: a single interword space is no Gap)
 % oracle:   pdflatex 0 errors; "Ann Able †Bob Baker Carl Cole"
-% engines:  rust INTREC (3af622aca64) = 0 errors, 0 Warnings; Ann Able ; footnotemark[†]= / Bob Baker / Carl Cole
-% expect:   0 errors, 0 Warnings; Ann Able / Bob Baker ; footnotemark[†]= / Carl Cole (guard canon: name ; note
-%   role[mark]=text, sorted | contacts)
-% moves:    row R SHGIVENNEXT (a mark nearer the next name, or a bare one; today the counted loss or the whole block)
-% status:   RED (INTREC 3af622aca64; perfect_kernel_batchfmmarks::a_mark_past_spacing_is_the_nearer_names_red)
+% engines:  rust int/frontmatter 10997fdf9a0 = 0 errors, 0 Warnings; XML Ann Able ; footnotemark[†]= / Bob Baker /
+%   Carl Cole; HTML Ann Able ; † plain / Bob Baker / Carl Cole
+% expect:   0 errors, 0 Warnings; XML Ann Able / Bob Baker ; footnotemark[†]= / Carl Cole; HTML Ann Able / Bob Baker ;
+%   † plain / Carl Cole (the guard's XML and HTML lines)
+% moves:    XML row R SHGIVENNEXT (a mark nearer the next name, or a bare one; today the counted loss or the whole
+%   block); HTML the XML layer's: row R SHGIVENNEXT (a mark nearer the next name, or a bare one; today the
+%   counted loss or the whole block)
+% status:   RED XML RED, HTML RED (int/frontmatter 10997fdf9a0;
+%   perfect_kernel_batchfmmarks::a_mark_past_spacing_is_the_nearer_names and _red)
 % preload: ar5iv.sty
 \documentclass{article}
 \title{T}

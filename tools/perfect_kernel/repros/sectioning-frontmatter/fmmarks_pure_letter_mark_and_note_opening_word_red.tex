@@ -2,12 +2,15 @@
 %   opening "a" its first word
 % witness:  revPURE p3_lead (review revPURE B2)
 % oracle:   pdflatex 0 errors; "Ann Ablea∗", footnote "∗ a visitor at the Institute."
-% engines:  rust INTREC (3af622aca64) = 0 errors, 0 Warnings; Ann Able a ; thanks[*]=a visitor at the Institute.
-% expect:   0 errors, 0 Warnings; Ann Able ; footnotemark[a]= ; thanks[*]=a visitor at the Institute. (guard canon:
-%   name ; note role[mark]=text, sorted | contacts)
-% moves:    PURE (fix/pure-personname: the marks out of the personname) (PUREb B2: a note's opening letter is its
-%   word)
-% status:   RED (INTREC 3af622aca64; perfect_kernel_batchfmmarks::name_marks_live_outside_the_personname_red)
+% engines:  rust int/frontmatter 10997fdf9a0 = 0 errors, 0 Warnings; XML Ann Able a ; thanks[*]=a visitor at the
+%   Institute.; HTML Ann Able a | under: a visitor at the Institute.
+% expect:   0 errors, 0 Warnings; XML Ann Able ; footnotemark[a]= ; thanks[*]=a visitor at the Institute.; HTML Ann
+%   Able ; a plain | under: a visitor at the Institute. (the guard's XML and HTML lines)
+% moves:    XML PURE (fix/pure-personname: the marks out of the personname) (PUREb B2: a note's opening letter is its
+%   word); HTML the XML layer's: PURE (fix/pure-personname: the marks out of the personname) (PUREb B2: a
+%   note's opening letter is its word)
+% status:   RED XML RED, HTML RED (int/frontmatter 10997fdf9a0;
+%   perfect_kernel_batchfmmarks::name_marks_live_outside_the_personname and _red)
 % preload: ar5iv.sty
 \documentclass{article}
 \title{T}

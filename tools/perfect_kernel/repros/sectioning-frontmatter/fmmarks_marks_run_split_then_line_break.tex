@@ -2,11 +2,12 @@
 %   run)
 % witness:  revSHGIVENe q10
 % oracle:   pdflatex 0 errors; "Ann Able ∗ (73.8pt) †  Bob Baker", "Univ A" under Ann
-% engines:  rust INTREC (3af622aca64) = 0 errors, 0 Warnings; Ann Able ; footnotemark[*]= ; footnotemark[†]= |
-%   affiliation=Univ A / Bob Baker
-% expect:   0 errors, 0 Warnings; Ann Able ; footnotemark[*]= ; footnotemark[†]= | affiliation=Univ A / Bob Baker
-%   (guard canon: name ; note role[mark]=text, sorted | contacts)
-% status:   GREEN (INTREC 3af622aca64; perfect_kernel_batchfmmarks::a_mark_past_spacing_is_the_nearer_names)
+% engines:  rust int/frontmatter 10997fdf9a0 = 0 errors, 0 Warnings; XML Ann Able ; footnotemark[*]= ;
+%   footnotemark[†]= | affiliation=Univ A / Bob Baker; HTML Ann Able ; * plain ; † plain / Bob Baker
+% expect:   0 errors, 0 Warnings; XML Ann Able ; footnotemark[*]= ; footnotemark[†]= | affiliation=Univ A / Bob Baker;
+%   HTML Ann Able ; * plain ; † plain / Bob Baker (the guard's XML and HTML lines)
+% status:   GREEN XML GREEN, HTML GREEN (int/frontmatter 10997fdf9a0;
+%   perfect_kernel_batchfmmarks::a_mark_past_spacing_is_the_nearer_names)
 % preload: ar5iv.sty
 \documentclass{article}
 \title{T}

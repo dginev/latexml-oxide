@@ -3,11 +3,14 @@
 % witness:  revSHMARK p1
 % oracle:   pdflatex 0 errors; "A Title∗", "Ann Able† Bob Baker† Cy Cole∗", footnotes "∗ Funded by X.", "† Equal
 %   contribution."
-% engines:  rust INTREC (3af622aca64) = 0 errors, 0 Warnings; Ann Able ; thanks[†]=Equal contribution. / Bob Baker ;
-%   thanks[†]=Equal contribution. / Cy Cole ; footnotemark[*]=
-% expect:   0 errors, 0 Warnings; Ann Able ; thanks[†]=Equal contribution. / Bob Baker ; thanks[†]=Equal contribution.
-%   / Cy Cole ; footnotemark[*]= (guard canon: name ; note role[mark]=text, sorted | contacts)
-% status:   GREEN (INTREC 3af622aca64; perfect_kernel_batchfmmarks::a_mark_on_a_name_is_a_copy_of_its_note)
+% engines:  rust int/frontmatter 10997fdf9a0 = 0 errors, 0 Warnings; XML Ann Able ; thanks[†]=Equal contribution. /
+%   Bob Baker ; thanks[†]=Equal contribution. / Cy Cole ; footnotemark[*]=; HTML Ann Able ; †→note / Bob Baker
+%   ; †→note / Cy Cole ; * plain / margin: Equal contribution.
+% expect:   0 errors, 0 Warnings; XML Ann Able ; thanks[†]=Equal contribution. / Bob Baker ; thanks[†]=Equal
+%   contribution. / Cy Cole ; footnotemark[*]=; HTML Ann Able ; †→note / Bob Baker ; †→note / Cy Cole ; *
+%   plain / margin: Equal contribution. (the guard's XML and HTML lines)
+% status:   GREEN XML GREEN, HTML GREEN (int/frontmatter 10997fdf9a0;
+%   perfect_kernel_batchfmmarks::a_mark_on_a_name_is_a_copy_of_its_note)
 % preload: ar5iv.sty
 \documentclass{article}
 \title{A Title\thanks{Funded by X.}}

@@ -1,12 +1,16 @@
 % mechanism: a given mark then `$^{b}$` glued to the next name: both that name's marks, outside its personname
 % witness:  revSHGIVENc r8supbob (revSHGIVENd e4)
 % oracle:   pdflatex 0 errors; "Ann Able (27.3pt) † (4.0pt) bBob Baker Carl Cole"
-% engines:  rust INTREC (3af622aca64) = 0 errors, 1 Warning; Ann Able / Bob Baker b / Carl Cole
-% expect:   0 errors, 0 Warnings; Ann Able / Bob Baker ; footnotemark[b]= ; footnotemark[†]= / Carl Cole (guard canon:
-%   name ; note role[mark]=text, sorted | contacts)
-% moves:    row R SHGIVENNEXT (a mark nearer the next name, or a bare one; today the counted loss or the whole block);
-%   PURE (fix/pure-personname: the marks out of the personname)
-% status:   RED (INTREC 3af622aca64; perfect_kernel_batchfmmarks::a_mark_past_spacing_is_the_nearer_names_red)
+% engines:  rust int/frontmatter 10997fdf9a0 = 0 errors, 1 Warning; XML Ann Able / Bob Baker b / Carl Cole; HTML Ann
+%   Able / Bob Baker b / Carl Cole
+% expect:   0 errors, 0 Warnings; XML Ann Able / Bob Baker ; footnotemark[b]= ; footnotemark[†]= / Carl Cole; HTML Ann
+%   Able / Bob Baker ; † plain ; b plain / Carl Cole (the guard's XML and HTML lines)
+% moves:    XML row R SHGIVENNEXT (a mark nearer the next name, or a bare one; today the counted loss or the whole
+%   block); PURE (fix/pure-personname: the marks out of the personname); HTML the XML layer's: row R
+%   SHGIVENNEXT (a mark nearer the next name, or a bare one; today the counted loss or the whole block); PURE
+%   (fix/pure-personname: the marks out of the personname)
+% status:   RED XML RED, HTML RED (int/frontmatter 10997fdf9a0;
+%   perfect_kernel_batchfmmarks::a_mark_past_spacing_is_the_nearer_names and _red)
 % preload: ar5iv.sty
 \documentclass{article}
 \title{T}

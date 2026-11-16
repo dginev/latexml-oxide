@@ -2,12 +2,17 @@
 % witness:  revSHGIVENc r10notegap
 % oracle:   pdflatex 0 errors; "Ann Able∗ (23.1pt) †‡ (4.0pt) Bob Baker Carl Cole", footnotes "∗ Ann note body", "‡
 %   Floating body"
-% engines:  rust INTREC (3af622aca64) = 0 errors, 1 Warning; Ann Able Bob Baker and Carl Cole ; footnotemark[†]= ;
-%   thanks[*]=Ann note body ; thanks[‡]=Floating body
-% expect:   0 errors, 0 Warnings; Ann Able ; thanks[*]=Ann note body / Bob Baker ; footnotemark[†]= ;
-%   thanks[‡]=Floating body / Carl Cole (guard canon: name ; note role[mark]=text, sorted | contacts)
-% moves:    row R SHGIVENNEXT (a mark nearer the next name, or a bare one; today the counted loss or the whole block)
-% status:   RED (INTREC 3af622aca64; perfect_kernel_batchfmmarks::a_mark_past_spacing_is_the_nearer_names_red)
+% engines:  rust int/frontmatter 10997fdf9a0 = 0 errors, 1 Warning; XML Ann Able Bob Baker and Carl Cole ;
+%   footnotemark[†]= ; thanks[*]=Ann note body ; thanks[‡]=Floating body; HTML Ann Able Bob Baker and Carl
+%   Cole ; † plain | under: Ann note body ; Floating body
+% expect:   0 errors, 0 Warnings; XML Ann Able ; thanks[*]=Ann note body / Bob Baker ; footnotemark[†]= ;
+%   thanks[‡]=Floating body / Carl Cole; HTML Ann Able | under: Ann note body / Bob Baker ; † plain | under:
+%   Floating body / Carl Cole (the guard's XML and HTML lines)
+% moves:    XML row R SHGIVENNEXT (a mark nearer the next name, or a bare one; today the counted loss or the whole
+%   block); HTML the XML layer's: row R SHGIVENNEXT (a mark nearer the next name, or a bare one; today the
+%   counted loss or the whole block)
+% status:   RED XML RED, HTML RED (int/frontmatter 10997fdf9a0;
+%   perfect_kernel_batchfmmarks::a_mark_past_spacing_is_the_nearer_names and _red)
 % preload: ar5iv.sty
 \documentclass{article}
 \title{T}
