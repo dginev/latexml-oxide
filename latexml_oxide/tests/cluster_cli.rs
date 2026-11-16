@@ -2917,10 +2917,11 @@ mod browser_render_author_lines {
     else {
       return;
     };
-    // Before (Chrome and Firefox, 1280/375): each author a blue `*` whose hover pop-up held its lines.
+    // Before (Chrome and Firefox, 1280/375): each author a blue `*` whose hover pop-up held its lines. Ann's `\thanks`
+    // is one author's note: under the name with no mark (#1052; before, its mark with the text in its pop-up).
     for (key, run) in creators(&stdout) {
       let expected = serde_json::json!([
-        { "name": "Ann Able", "star": "none", "notes": [{ "mark": true, "content": false }],
+        { "name": "Ann Able", "star": "none", "notes": [{ "mark": false, "content": true }],
           "contacts": [{ "text": "Univ. of A", "visible": true, "belowName": true, "hover": true },
                        { "text": "Dept. of Physics", "visible": true, "belowName": true, "hover": true }],
           "overlaps": [] },
@@ -2968,7 +2969,7 @@ mod browser_render_author_lines {
         "a note beside a \\thanks",
         THANKS_NOTE,
         serde_json::json!({ "name": "Ann Able", "star": "\"*\"",
-        "notes": [{ "mark": true, "content": false }],
+        "notes": [{ "mark": false, "content": true }],
         "contacts": [note("Note:\u{a0}A note on Ann."), line("Univ. of A"), line("Dept. of Physics")],
         "overlaps": [] }),
       ),
@@ -3011,6 +3012,33 @@ mod browser_render_author_lines {
           .all(|c| c["visible"] == false),
         "a contact of the pop-up shows ({key}): {stdout}"
       );
+    }
+  }
+
+  /// A note two authors share prints once in the card (#1052, DG's rulings of 2026-11-16): the legend's `∗` note
+  /// under Ann with its mark on her name and at its head, Bob's copy a mark linked to it, no note on Cat (the kernel
+  /// legend line's shape of 2407.07614; 2606.00446 the authblk one).
+  #[test]
+  fn a_shared_note_prints_once_under_its_first_author() {
+    const SHARED: &str = "\\documentclass{article}\n\\title{T}\n\
+       \\author{Ann Able$^{1,*}$, Bob Baker$^{1,*}$, Cat Cole$^{1}$\\\\ $^1$Univ A, Town\\\\ $^*$Equal contribution}\n\
+       \\date{}\n\\begin{document}\n\\maketitle\nText.\n\\end{document}\n";
+    let Some(stdout) =
+      super::browser_harness::render_and_measure("#1052", SHARED, "measure_authors.js")
+    else {
+      return;
+    };
+    let line = serde_json::json!({ "text": "Univ A, Town", "visible": true, "belowName": true, "hover": true });
+    // Before: Ann's and Bob's notes each their own `∗` and pop-up, the text twice.
+    for (key, run) in creators(&stdout) {
+      let expected = serde_json::json!([
+        { "name": "Ann Able", "star": "none", "notes": [{ "mark": true, "content": true }],
+          "contacts": [line], "overlaps": [] },
+        { "name": "Bob Baker", "star": "none", "notes": [{ "mark": true, "content": false }],
+          "contacts": [line], "overlaps": [] },
+        { "name": "Cat Cole", "star": "none", "notes": [], "contacts": [line], "overlaps": [] }
+      ]);
+      assert_eq!(run, expected, "the shared note ({key}): {stdout}");
     }
   }
 }
