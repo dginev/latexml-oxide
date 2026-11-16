@@ -330,7 +330,7 @@ pub struct Event {
   /// a footnote Mark's: it is given its number (`\footnotemark[1]`, a document's `\samethanks[1]`, 1912.01737,
   /// 1811.08622), latex.ltx's `\@xfootnotemark`, which sets the counter in a group of its own and steps nothing — it
   /// re-references a note written already; a bare `\footnotemark` steps the counter (`\stepcounter\@mpfn`). A Note's:
-  /// its `\thanks[<n>]` or `\footnote[<n>]` shows <n>'s mark, whatever the counter the block steps (1607.07280). Not in a
+  /// its `\thanks[<n>]` or `\footnote[<n>]` shows the mark of its given `<n>`, whatever the counter the block steps (1607.07280). Not in a
   /// dump: only the emitter reads it (`emitter::emit::mark_dropped`, `emitter::emit::shown_mark`)
   pub given_number:   bool,
   /// a Name's: the block's creator call that printed it, its place among the rehearsal's (`creator_roles`;
