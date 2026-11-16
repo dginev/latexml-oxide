@@ -138,7 +138,7 @@ LoadDefinitions!({
   // fonts, bold in each of the class's styles (2 papers: 2309.05250); their sizes and colours are print layout.
   RawTeX!(r"\def\secsize{\bfseries}\def\subsecsize{\bfseries}\def\subsubsecsize{\bfseries}");
   // :813 `\ps@opening`, the first page's style `\maketitle` selects (:1178), which documents extend (2606.29739
-  // `\g@addto@macro\ps@opening`), as defined in TeX (OD #1036): empty, its head and foot are print layout.
+  // `\g@addto@macro\ps@opening`; OD #1036): empty, its head and foot are print layout.
   def_macro_noop("\\ps@opening")?;
   // Commands newer copies add (TL 2025's, of 2022, has neither): defined where the paper's copy has them, so a paper
   // whose copy does not can define its own. 2602.07066's copy :1232 `\otherabstract[heading]{text}`, a further

@@ -403,6 +403,23 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
     "\\lx@title@footnote@step\\lx@add@frontmatter{ltx:pubnote}[role=thanks,#1]{#2}"
   );
 
+  // Rust-only: a list of title-page notes a class prints at its `\maketitle` (acmart.cls:2245-2247 `\@authornotes`,
+  // revtex4-2.cls:3020-3022 `\@FMN@list`, amsaddr.sty:113 `\emails`), which a document extends past the binding's
+  // setters: run where the class runs it, each footnote text it sets a note on the document, what else it prints typeset
+  // there, a paragraph of its own, as the class's title page ends one.
+  DefMacro!(
+    "\\lx@frontmatter@footnotes{}",
+    r"\begingroup\let\footnotetext\lx@fm@footnotetext\let\@footnotetext\lx@fm@@footnotetext#1\par\endgroup"
+  );
+  DefMacro!(
+    "\\lx@fm@footnotetext[]{}",
+    "\\lx@add@pubnote[role=note,name={}]{#2}"
+  );
+  DefMacro!(
+    "\\lx@fm@@footnotetext{}",
+    "\\lx@add@pubnote[role=note,name={}]{#1}"
+  );
+
   // Other kinds of notes?
 
   // The following add various forms of contact information to a creator

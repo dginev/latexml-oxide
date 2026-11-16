@@ -1,0 +1,21 @@
+% witness: 2605.16813 (main.tex:282-286 `\g@addto@macro\@authornotes{\footnotetext[2]{Corresponding authors: …}}`),
+%          2606.04448 (main.tex:131-134, two `\stepcounter{footnote}\footnotetext{…}`): acmart.cls:2245-2247 prints the
+%          lists at `\maketitle`
+% oracle:  pdflatex 0 errors; footnotes "1 Equal contribution.", "2 Corresponding authors: ann@x.org."
+% engines: rust=1 (999af99497d: undefined \@authornotes) perl=0 (Warning: \@authornotes not expandable; the notes lost) (2026-11-16)
+% expect:  0 errors, 0 warnings; Ann Able's creator with her affiliation; the notes "Equal contribution." and
+%          "Corresponding authors: ann@x.org." on the document, in that order
+% status:  GREEN
+% preload: ar5iv.sty
+\documentclass[sigconf]{acmart}
+\begin{document}
+\title{Title}
+\author{Ann Able}
+\affiliation{\institution{Univ A}\country{C}}
+\makeatletter
+\g@addto@macro\@authornotes{\stepcounter{footnote}\footnotetext{Equal contribution.}}
+\g@addto@macro\@authornotes{\footnotetext[2]{Corresponding authors: ann@x.org.}}
+\makeatother
+\maketitle
+Text.
+\end{document}

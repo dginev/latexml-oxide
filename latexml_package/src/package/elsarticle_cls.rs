@@ -96,11 +96,17 @@ LoadDefinitions!({
   // title-page check (`\lx@note@title@page`, when no `\maketitle` noted one; nothing typeset), so a word the document
   // adds to the title page after its setters is counted (2312.03765's `\subjclass`, `\gdef\@title{\@oldtitle
   // \footnotetext{…}}`; OXIDIZED_DESIGN_DIVERGENCES #953 "107d").
-  Let!("\\end{frontmatter}", "\\lx@note@title@page");
-  // elsarticle.cls:178-179, :294: the correspondence marks and notes and the address list the class prints with its
-  // title (:766, :806), which this binding's frontmatter replaces; a journal style's own `\cortext` (cnf.sty:585:
-  // 2605.08232, 2606.15628) and a document (2605.22682) extend them, as defined in TeX (OD #1036).
-  RawTeX!(r"\let\@cormark\@empty\let\@cornotes\@empty\def\elsaddress{}");
+  // elsarticle.cls:178-179, :294: the correspondence marks and notes and the address list, which this binding's
+  // `\cortext` and `\address` do not fill (frontmatter notes and contacts) but a journal style's own `\cortext`
+  // (cnf.sty:585: 2605.08232, 2606.15628) and a document (2605.22682 `\g@addto@macro\elsaddress`) extend (OD #1036).
+  // The class's `\maketitle` prints the address list under the names (:806) and the notes at the page foot (:766);
+  // here both after the frontmatter, once, where the class prints its title page (`\end{frontmatter}`, `\maketitle`),
+  // each `\footnotetext` a note on the document (`\lx@frontmatter@footnotes`).
+  RawTeX!(r"\let\@cormark\@empty\let\@cornotes\@empty\def\elsaddress{}
+\def\lx@els@print@lists{\lx@frontmatter@footnotes{\elsaddress\@cornotes}\global\let\elsaddress\@empty\global\let\@cornotes\@empty}
+\def\lx@els@end@frontmatter{\lx@els@print@lists\lx@note@title@page}");
+  Let!("\\end{frontmatter}", "\\lx@els@end@frontmatter");
+  AddToMacro!("\\lx@maketitle@body", "\\lx@els@print@lists");
   // elsarticle.cls:656-668: a labelled `\address[a]{…}` goes to the address list under the names (`\elsaddress`), an
   // unlabelled one into the names list itself (`\@address` into `\elsauthors`), printed with the names, above every
   // labelled one — its print zone the names' (`_zone=names`, OXIDIZED_DESIGN_DIVERGENCES #954; 1710.03753, where the

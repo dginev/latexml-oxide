@@ -16,6 +16,6 @@ LoadDefinitions!({
   );
   // enumerate.sty:66 `\providecommand\@enhook{}`, the hook its label parser calls on a character it does not know
   // (:63), which this binding's parser does not call; a package extends it (misccorr.sty:22 `\g@addto@macro`,
-  // 2606.12178, 2606.17008), as defined in TeX (OD #1036).
+  // 2606.12178, 2606.17008; OD #1036): code it runs, no text it prints.
   RawTeX!(r"\providecommand\@enhook{}");
 });

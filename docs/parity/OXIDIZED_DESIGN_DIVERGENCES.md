@@ -19002,6 +19002,22 @@ is left alone (TeX's `\expandafter` leaves a `\relax` cs unexpanded, so its `\xd
 **Guard**: `perfect_kernel_batchmacsync::add_to_macro_on_an_undefined_cs_errs` (repro
 `macro-state/g_addto_macro_undefined_defines.tex`).
 
+So a binding defines the lists and hooks its real class or package defines, which documents extend (REGBIND, 17 papers
+of the 2605/2606 reruns: enumerate's `\@enhook`, threeparttable's `\TPT@defaults`, oup-authoring-template's
+`\ps@opening`, and the lists below). Where the class prints such a list with its title page and the binding's own
+setters do not fill it, the binding prints it there too, or what a document adds to it is lost without a word (Perl:
+dropped, with the Warning above): `\lx@frontmatter@footnotes{<list>}` runs it where the class runs it, each
+`\footnotetext`/`\@footnotetext` in it an `ltx:pubnote` (role `note`), what else it prints typeset after the
+frontmatter. acmart's `\@titlenotes`, `\@subtitlenotes`, `\@authornotes` at `\maketitle` (acmart.cls:2245-2247;
+2605.28175, 2605.16813, 2606.04448); amsaddr's `\emails` as its footnote (amsaddr.sty:102-113; 2606.23853, 2606.25954,
+2212.11488, 1801.06576, 2307.06418); elsarticle's `\elsaddress` and `\@cornotes` at `\end{frontmatter}` or
+`\maketitle` (elsarticle.cls:766, :806; 2605.22682, cnf.sty's `\cortext` 2605.08232, 2606.15628); REVTeX's
+`\prep@absbox`, `\post@absbox`, `\mini@notes` and `\@FMN@list` at `\maketitle` (revtex4-2.cls:2648-2652, :3020-3022;
+2606.06621, 2605.00976); and the text a document adds to icml's `\icmlcorrespondingauthor@text`, whose names and
+addresses are the contacts (icml2026.sty:529-530; 2605.04712, 2605.21190, 2606.01172). **Guard**:
+`perfect_kernel_batchregbind::{bindings_define_the_macros_their_files_define,
+bindings_print_the_title_page_lists_their_files_print}`.
+
 ### 1026. → KNOWN_PERL_ERRORS #1241 (`page=` on a single-page format (SVG, PNG, JPEG) selects nothing: the source is copied as it is (#791))
 
 ### 1027. The no-dump expl3-code.tex reload counts what it mutes (#825)

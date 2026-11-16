@@ -243,13 +243,23 @@ LoadDefinitions!({
   Digest!("\\InputIfFileExists{\\jobname.rty}{}{}")?;
 });
 
-/// The lists of front matter notes REVTeX's `\maketitle` prints (revtex4-2.cls:3021, :7114; revtex4-1.cls alike;
-/// revtex4.cls:5008), which this binding's frontmatter replaces and a document extends before `\maketitle` (2605.00976
-/// `\g@addto@macro\@FMN@list`), as defined in TeX (OD #1036): `\@FMN@list` emptied at `\begin{document}`
-/// (revtex4-2.cls:2115, :2497-2499; revtex4-1.cls:2094, :2476-2478; revtex4.cls:3797-3799, :4582-4584), `\mini@notes`
-/// at load (revtex4-2.cls:7201, revtex4-1.cls:7180, revtex4.cls:5650).
+/// The lists of front matter notes, which this binding's `\thanks` and `\altaffiliation` do not fill (frontmatter
+/// contacts) but a document extends before `\maketitle` (2605.00976 `\g@addto@macro\@FMN@list`; OD #1036):
+/// `\@FMN@list` emptied at `\begin{document}` (revtex4-2.cls:2115, :2497-2499; revtex4-1.cls:2094, :2476-2478;
+/// revtex4.cls:3797-3799, :4582-4584), `\mini@notes` at load (revtex4-2.cls:7201, revtex4-1.cls:7180,
+/// revtex4.cls:5650). REVTeX's `\maketitle` prints them, `\mini@notes` under the abstract (revtex4-2.cls:2652,
+/// revtex4.cls:4689) and the list as footnotes (:3020-3022, revtex4.cls:5006-5009), with what a document adds to the
+/// code around the abstract (`\prep@absbox`, `\post@absbox`, revtex4-2.cls:2648-2650: 2606.06621's text): here after
+/// the frontmatter, each footnote text a note on the document (`\lx@frontmatter@footnotes`).
 pub(crate) fn define_frontmatter_note_lists() -> Result<()> {
-  RawTeX!(r"\let\mini@notes\@empty\AtBeginDocument{\global\let\@FMN@list\@empty}");
+  RawTeX!(
+    r"\let\mini@notes\@empty\AtBeginDocument{\global\let\@FMN@list\@empty}
+\def\lx@revtex@fm@note#1#2{\footnotetext{#2}}\long\def\lx@revtex@@footnotetext#1{\@footnotetext}
+\def\lx@revtex@print@notes{\lx@frontmatter@footnotes{\let\@@footnotetext\lx@revtex@@footnotetext
+  \ifdefined\prep@absbox\prep@absbox\post@absbox\fi\mini@notes\let\@TBN@opr\lx@revtex@fm@note\@FMN@list}%
+  \global\let\@FMN@list\@empty}"
+  );
+  AddToMacro!("\\lx@maketitle@body", "\\lx@revtex@print@notes");
   Ok(())
 }
 

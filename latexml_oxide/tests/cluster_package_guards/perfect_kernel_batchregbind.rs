@@ -3,6 +3,8 @@
 //!   `\g@addto@macro`: an undefined one stays an Error, as in TeX (OXIDIZED_DESIGN_DIVERGENCES #1036), so the binding,
 //!   not the Error, is what changes. One row per binding: each is its own code path (two classes' and four packages'
 //!   bindings, revtex's shared helper, icml's version gate).
+//! - A binding that defines a list its class prints with the title page prints it too (the text a document adds to it,
+//!   dropped silently once the Error went): one row per print site and real paper's shape.
 //! - cleveref's binding re-applies the kernel first aid's repair of the raw cleveref.sty's amsmath code (content: an
 //!   explicit `\ltx@label` lost its key's first character to the text).
 //! - pdfcomment's binding allocates the soulpos registers a document's copy of soulpos's end pass reads.
@@ -30,28 +32,6 @@ struct Row {
 }
 
 const BINDING_ROWS: &[Row] = &[
-  // acmart.cls:1707, :1716, :1726 the title page's note lists; :2894 no address list at the end, where a document's
-  // `\@authornotemark` would add to `\@currentauthors`, which only `\maketitle` defines (2605.28175, 2605.16813).
-  Row {
-    name:     "acmart",
-    tex:      repro!("class-bindings/acmart_note_lists_are_the_class_macros.tex"),
-    creators: &[&["Ann Able", "affiliation=Univ A , C"]],
-    elements: &[r#"<p xml:id="p1.1">Text.</p>"#],
-  },
-  // elsarticle.cls:178-179, :294 (2605.08232, 2606.15628's cnf.sty `\cortext`; 2605.22682).
-  Row {
-    name:     "elsarticle",
-    tex:      repro!("class-bindings/elsarticle_note_and_address_lists_are_the_class_macros.tex"),
-    creators: &[&["Ann Able", "address=Univ A"]],
-    elements: &[r#"<p xml:id="p1.1">Text.</p>"#],
-  },
-  // revtex4-2.cls:2497-2499 `\@FMN@list` at `\begin{document}`, :2656-2657, :7201 (2605.00976, 2606.06621).
-  Row {
-    name:     "revtex4-2",
-    tex:      repro!("class-bindings/revtex_frontmatter_note_lists_are_the_class_macros.tex"),
-    creators: &[&["Ann Able", "affiliation=Univ A"]],
-    elements: &[r#"<p xml:id="p1.1">Text.</p>"#],
-  },
   // oup-authoring-template.cls:813 `\ps@opening` (2606.29739).
   Row {
     name:     "oup-authoring-template",
@@ -69,13 +49,6 @@ const BINDING_ROWS: &[Row] = &[
       r#"<p xml:id="p1.1">Hooked.</p>"#,
     ],
   },
-  // amsaddr.sty:43 `\emails` (2606.23853, 2606.25954): the document's own `\email` fills it.
-  Row {
-    name:     "amsaddr",
-    tex:      repro!("package-bindings/amsaddr_emails_is_the_package_macro.tex"),
-    creators: &[&["Ann Able"]],
-    elements: &[r#"<p xml:id="p1.1">Listed: ann@x.org, bob@x.org.</p>"#],
-  },
   // threeparttable.sty:302-303 `\TPT@defaults` (2605.22976).
   Row {
     name:     "threeparttable",
@@ -83,15 +56,125 @@ const BINDING_ROWS: &[Row] = &[
     creators: &[],
     elements: &[r#"<p xml:id="S0.I1.ix1.p1.1">Note.</p>"#],
   },
-  // icml2026.sty:490-499: `\icmlcorrespondingauthor` builds `\icmlcorrespondingauthor@text` (2605.04712, 2605.21190,
-  // 2606.01172) and still gives the e-mail contact.
+];
+
+/// The lists the class or package prints with its title page, which a document extends past the binding's setters: each
+/// is printed where the class prints it, each footnote text a note on the document (`\lx@frontmatter@footnotes`), the
+/// rest typeset after the frontmatter. One row per binding's print site, and per real paper's shape where it differs.
+const PRINTED_LIST_ROWS: &[Row] = &[
+  // acmart.cls:1726, :2245-2247: a document's own `\authornote` (2605.28175, its footnote in a group).
+  Row {
+    name:     "acmart",
+    tex:      repro!("class-bindings/acmart_note_lists_are_the_class_macros.tex"),
+    creators: &[&["Ann Able", "affiliation=Univ A , C"]],
+    elements: &[
+      r#"<pubnote role="note">Corresponding author.</pubnote>"#,
+      r#"<p xml:id="p1.1">Text.</p>"#,
+    ],
+  },
+  // acmart: `\g@addto@macro\@authornotes` with `\footnotetext[2]` (2605.16813) and two `\footnotetext`s (2606.04448).
+  Row {
+    name:     "acmart (document footnotes)",
+    tex:      repro!("class-bindings/acmart_document_footnotes_in_the_note_lists_print.tex"),
+    creators: &[&["Ann Able", "affiliation=Univ A , C"]],
+    elements: &[
+      r#"<pubnote role="note">Equal contribution.</pubnote>"#,
+      r#"<pubnote role="note">Corresponding authors: ann@x.org.</pubnote>"#,
+      r#"<p xml:id="p1.1">Text.</p>"#,
+    ],
+  },
+  // elsarticle.cls:178-179, :294, printed at :766, :806 (`\end{frontmatter}`): the class's own `\cortext` shape, an
+  // `\elsaddress` paragraph.
+  Row {
+    name:     "elsarticle",
+    tex:      repro!("class-bindings/elsarticle_note_and_address_lists_are_the_class_macros.tex"),
+    creators: &[&["Ann Able", "address=Univ A"]],
+    elements: &[
+      r#"<pubnote role="note">Corresponding author.</pubnote>"#,
+      r#"<p xml:id="p1.1">Preprint note.</p>"#,
+      r#"<p xml:id="p2.1">Text.</p>"#,
+    ],
+  },
+  // elsarticle: cnf.sty's `\cortext` text in `\@cornotes` (2605.08232, 2606.15628), a boxed preprint notice in
+  // `\elsaddress` (2605.22682).
+  Row {
+    name:     "elsarticle (journal style)",
+    tex:      repro!(
+      "class-bindings/elsarticle_journal_style_lists_print_after_the_frontmatter.tex"
+    ),
+    creators: &[&["Ann Able", "address=Univ A"]],
+    elements: &[
+      ELS_NOTICE,
+      ELS_CORRESPONDENCE,
+      r#"<p xml:id="p3.1">Text.</p>"#,
+    ],
+  },
+  // revtex4-2.cls:2648-2652, :3020-3022: `\prep@absbox` text (2606.06621), `\mini@notes`, `\@FMN@list` (2605.00976).
+  Row {
+    name:     "revtex4-2",
+    tex:      repro!("class-bindings/revtex_frontmatter_note_lists_are_the_class_macros.tex"),
+    creators: &[&["Ann Able", "affiliation=Univ A"]],
+    elements: &[
+      r#"<pubnote role="note">Mini note.</pubnote>"#,
+      r#"<pubnote role="note">Joint work.</pubnote>"#,
+      REVTEX_PREP_ABSBOX,
+      r#"<p xml:id="p2.1">Text.</p>"#,
+    ],
+  },
+  // amsaddr.sty:43, :102-113: a document's own `\email` with marks (2606.23853, 2606.25954, 2212.11488, 1801.06576,
+  // 2307.06418), "E-mail addresses" for two `\author`s.
+  Row {
+    name:     "amsaddr",
+    tex:      repro!("package-bindings/amsaddr_emails_is_the_package_macro.tex"),
+    creators: &[&["Ann Able", "address=Univ A"], &[
+      "Bob Baker",
+      "address=Univ B",
+    ]],
+    elements: &[AMSADDR_EMAILS, r#"<p xml:id="p1.1">Text.</p>"#],
+  },
+  // icml2026.sty:490-499, :529-530: `\icmlcorrespondingauthor` builds `\icmlcorrespondingauthor@text` (2605.04712,
+  // 2605.21190, 2606.01172) and still gives the e-mail contact; what the document added to it is a note.
   Row {
     name:     "icml2026",
     tex:      repro!("package-bindings/icml_corresponding_author_text_is_built.tex"),
     creators: &[&["Ann Able", "affiliation=Univ A", "email=ann@x.org"]],
-    elements: &[r#"<p xml:id="p1.1">Listed: Ann Able &lt;ann@x.org&gt;. Code at X.</p>"#],
+    elements: &[
+      r#"<pubnote role="note">Code at X</pubnote>"#,
+      r#"<p xml:id="p1.1">Listed: Ann Able &lt;ann@x.org&gt;. Code at X.</p>"#,
+    ],
   },
 ];
+
+/// 2605.22682's notice, boxed into `\elsaddress`.
+const ELS_NOTICE: &str = concat!(
+  r#"<p align="center" xml:id="p1.1"><text font="bold" fontsize="90%" xml:id="p1.1.1">Authors’ preprint version"#,
+  r#"<break cssstyle="--ltx-break-space:4.6pt"/><text font="medium" xml:id="p1.1.1.1">"#,
+  "\nThis is the authors’ preprint.</text></text></p>"
+);
+/// cnf.sty's `\cortext` text (2605.08232), its mark and a no-break space before it.
+const ELS_CORRESPONDENCE: &str = concat!(
+  r#"<p xml:id="p2.1"><Math mode="inline" tex="\ast" text="ast" xml:id="p2.m1">"#,
+  "\n        <XMath xml:id=\"p2.m1.1\">\n          <XMTok name=\"ast\" role=\"MULOP\">∗</XMTok>",
+  "\n        </XMath>\n      </Math>\u{a0}Corresponding author: Univ A.</p>"
+);
+/// 2606.06621's `\prep@absbox` text.
+const REVTEX_PREP_ABSBOX: &str = concat!(
+  r#"<p align="center" xml:id="p1.1"><sup xml:id="p1.1.1"><text fontsize="90%" xml:id="p1.1.1.1">‡</text></sup>"#,
+  r#"<text fontsize="90%" xml:id="p1.1.2"> These authors contributed equally.</text></p>"#
+);
+/// amsaddr's footnote, its marks and addresses as the document gave them (2606.23853).
+const AMSADDR_EMAILS: &str = concat!(
+  r#"<pubnote role="note"><text xml:id="id1"><text font="italic" xml:id="id1.1">E-mail addresses</text>: </text>("#,
+  r#"<Math mode="inline" tex="\dagger" text="dagger" xml:id="m1">"#,
+  "\n      <XMath xml:id=\"m1.1\">\n        <XMTok name=\"dagger\" role=\"MULOP\">†</XMTok>\n      </XMath>",
+  "\n    </Math>)",
+  r#"<text font="typewriter" xml:id="id2"> ann@x.org, </text>("#,
+  r#"<Math mode="inline" tex="\ddagger" text="ddagger" xml:id="m2">"#,
+  "\n      <XMath xml:id=\"m2.1\">\n        <XMTok name=\"ddagger\" role=\"MULOP\">‡</XMTok>\n      </XMath>",
+  "\n    </Math>)",
+  r#"<text font="typewriter" xml:id="id3"> bob@x.org</text>."#,
+  "\n</pubnote>"
+);
 
 fn check(row: &Row) {
   let (log, xml) = run(row.tex);
@@ -107,8 +190,13 @@ fn check(row: &Row) {
     .map(|c| c.iter().map(|s| (*s).to_string()).collect())
     .collect();
   assert_eq!(creators(&xml), want, "{name}: {xml}");
+  // (each once, in document order)
+  let mut from = 0;
   for element in row.elements {
     assert_eq!(xml.matches(element).count(), 1, "{name}: {element}\n{xml}");
+    let at = xml.find(element).unwrap_or_default();
+    assert!(at >= from, "{name}: {element} out of order\n{xml}");
+    from = at;
   }
 }
 
@@ -117,6 +205,15 @@ fn check(row: &Row) {
 #[test]
 fn bindings_define_the_macros_their_files_define() {
   for row in BINDING_ROWS {
+    check(row);
+  }
+}
+
+/// Cluster A, the lists printed: a binding that defines a list its class prints at `\maketitle` prints it too, so the
+/// text a document adds to it is in the output (it was dropped silently once the Error went: review B1).
+#[test]
+fn bindings_print_the_title_page_lists_their_files_print() {
+  for row in PRINTED_LIST_ROWS {
     check(row);
   }
 }
