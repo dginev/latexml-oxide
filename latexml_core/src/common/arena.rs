@@ -320,18 +320,12 @@ pub fn pin_char(c: char) -> SymStr {
 /// Resolve a symbol and call the closure with a `&str` reference. The closure may intern (`pin()`, `pin_char()`, …):
 /// the text is lent under a shared borrow of the arena, so a string new during the lend goes to the overflow page
 /// instead of growing (and moving) the buffer the text lives in (string-interner 0.20 `buffer.rs:144`).
+/// An overflow symbol's lend holds the borrow too, so every lend is one where a [`reset`] panics.
 #[inline]
 pub fn with<R, FnR>(sym: SymStr, caller: FnR) -> R
 where FnR: FnOnce(&str) -> R {
-  let (page, arena);
-  let text = if is_paged(sym) {
-    page = page_text(sym);
-    &*page
-  } else {
-    arena = ARENA.borrow();
-    buffer_text(&arena, sym)
-  };
-  caller(text)
+  let arena = ARENA.borrow();
+  caller(&text(&arena, sym))
 }
 
 /// The first `N` bytes of `sym`'s text, if it has as many, for a test by name on a hot path.
@@ -668,5 +662,14 @@ mod tests {
   fn reset_inside_a_lend_panics() {
     let lent = pin("arena_reset_inside");
     with(lent, |_| reset());
+  }
+
+  /// So does `reset` inside the lend of an overflow symbol, whose text is its own `Rc`: every lend borrows the arena.
+  #[test]
+  #[should_panic(expected = "arena::reset inside a lend")]
+  fn reset_inside_an_overflow_lend_panics() {
+    let lent = pin("arena_reset_inside_page");
+    let paged = with(lent, |_| pin("arena_reset_inside_paged"));
+    with(paged, |_| reset());
   }
 }

@@ -376,12 +376,12 @@ Defect (a soundness fix, not a lever): `arena::with` lent a `&str` from string-i
 while a re-entrant `pin` inside the closure took `&mut *ptr` through a cached raw pointer and could grow, and move,
 that `Vec` (a use-after-free; Miri rejected even a nested `with` or `get` under a lend). Fix (`latexml_core/src/common/arena.rs`):
 a lend holds a shared `RefCell` borrow; an intern while one is live goes to an overflow page of `Rc<str>` with symbols
-from `1 << 31` (the buffer refuses to reach 2 GiB), deduplicated across both tiers (a later pin outside any lend returns
-the overflow symbol); outside a lend the intern is the old `get_or_intern`, with a 256 × 64-bit filter (last byte,
+from `1 << 31` (the buffer refuses a string that would start at or past 2 GiB), deduplicated across both tiers (a later
+pin outside any lend returns the overflow symbol); outside a lend the intern is the old `get_or_intern`, with a 256 × 64-bit filter (last byte,
 length) so only a possible page string probes the page. `arena.rs` `unsafe` 10 → 1; `with_copy` folded back into
 `with`. Every document overflows: hello-world 1 string, b250 50, 2308.04512 399, siunitx papers 105-139 (the
-conversion's end reports the count as a Debug line, `arena:overflow`, not an `Info:` line in every log). Cost, `instructions:u` best of 3 interleaved against
-INTPERF5 (`kit/perf_ab_cycles.sh`, `HTML=1 STAT=min`): 2308.04512 +0.24 %, b250 +0.18 %, amsldoc +0.13 %, 2604.01119
+conversion's end reports the count as a Debug line, `arena:overflow`, not an `Info:` line in every log). Cost,
+`instructions:u` best of 3 interleaved against INTPERF5 (`kit/perf_ab_cycles.sh`, `HTML=1 STAT=min`): 2308.04512 +0.24 %, b250 +0.18 %, amsldoc +0.13 %, 2604.01119
 +0.07 %, 10 typical papers (`popPERFBs`) −0.35 … +0.14 %; `cycles:u` −5.3 … +2.6 % (within the loaded host's spread).
 About 4 instructions per arena call (2308.04512: 95 M lends, 51 M interns, 25 M probes): the `RefCell` borrow every lend
 now takes. Output byte-identical: the 14 documents (whole HTML destination) and `popARENAR` (50 siunitx, 39 biblatex, 20
