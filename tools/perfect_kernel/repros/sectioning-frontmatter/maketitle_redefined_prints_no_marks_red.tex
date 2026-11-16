@@ -3,9 +3,10 @@
 %   of the marks a `\maketitle` prints (OD #1053's open item)
 % witness: review revSHMARK S3 (p8.tex)
 % oracle:  pdflatex 0 errors: "Ann Able Bob Baker", footnotes "First note.", "Second note." with no mark
-% engines: rust SHMARKb = notes mark="*" and mark="†"
+% engines: rust SHMARKb = notes mark="*" and mark="†"; MARKSAFE = notes with no mark (the class's `\maketitle` is
+%   not in force, `latex_constructs::class_maketitle_in_force`)
 % expect:  0 errors 0 warnings; notes with no mark
-% status:  RED (SHMARKb)
+% status:  RED (SHMARKb) -> GREEN (perfect_kernel_batchshmark::marks_only_where_the_classs_maketitle_runs)
 % moves:   row R SHAUTO
 % preload: ar5iv.sty
 \documentclass{article}

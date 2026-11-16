@@ -1,0 +1,34 @@
+% mechanism: authblk labels: `*` a legend shared by two names, `**` a two-character legend, `§` answered only by the
+%   `\date` line
+% witness:  2606.00446 (`\author[1,*,§]{Jared Benson}`, `\affil[**]{Present address…}`,
+%   `\date{\textsuperscript{§}Email: …}`)
+% oracle:   pdflatex 0 errors; "Ann Able1,*,§, Bob Baker1,*, and Cat Cole1,**", "*These authors contributed equally…",
+%   "**Present address: Lab B, City", "§Email: ann@a.edu" (the date)
+% engines:  rust INTREC (3af622aca64) = 0 errors, 0 Warnings; Ann Able ; thanks[*]=These authors contributed equally
+%   to this work. | affiliation=Univ A, Town / Bob Baker ; thanks[*]=These authors contributed equally to this
+%   work. | affiliation=Univ A, Town / Cat Cole | affiliation=Univ A, Town ; affiliation=Present address: Lab
+%   B, City
+% expect:   0 errors, 0 Warnings; Ann Able ; footnotemark[§]= ; thanks[*]=These authors contributed equally to this
+%   work. | affiliation=Univ A, Town / Bob Baker ; thanks[*]=These authors contributed equally to this work. |
+%   affiliation=Univ A, Town / Cat Cole | affiliation=Univ A, Town ; affiliation=Present address: Lab B, City
+%   (guard canon: name ; note role[mark]=text, sorted | contacts)
+% moves:    NEITHER: reported to main (the `§` label no `\affil` answers is dropped with no Warning)
+% status:   RED (NEITHER: no recorded gap, reported to main) (INTREC 3af622aca64;
+%   perfect_kernel_batchfmmarks::shared_notes_are_a_marked_copy_per_carrier_red); MARKSAFE counts the lost `§` (1
+%   Warning, `insert::count_lost_symbol_labels`; perfect_kernel_batchshmark::a_class_label_no_entry_answers_is_counted),
+%   the mark-only note still RED
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{authblk}
+\author[1,*,\S]{Ann Able}
+\author[1,*]{Bob Baker}
+\author[1,**]{Cat Cole}
+\affil[1]{Univ A, Town}
+\affil[*]{These authors contributed equally to this work.}
+\affil[**]{Present address: Lab B, City}
+\title{T}
+\date{\textsuperscript{\S}Email: ann@a.edu}
+\begin{document}
+\maketitle
+Text.
+\end{document}

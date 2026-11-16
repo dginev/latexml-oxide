@@ -1,0 +1,34 @@
+% mechanism: acmart `\authornotemark[n]`: [1] a copy of the first `\authornote`, [2] answered by none a mark-only note
+% witness:  2607.15705 (`\authornote{…}` on Hertel, `\authornotemark[1]\authornotemark[2]` on Pütz, no second
+%   `\authornote`)
+% oracle:   pdflatex 0 errors; "Ann Able∗ Bob Baker∗† Cat Cole"
+% engines:  rust INTREC (3af622aca64) = 0 errors, 0 Warnings; Ann Able ; thanks[*]=Ann Able and Bob Baker contributed
+%   equally. | email=ann@a.edu ; affiliation=Univ A , Town , Land / Bob Baker ; footnotemark[†]=† ;
+%   thanks[*]=Ann Able and Bob Baker contributed equally. | email=bob@a.edu ; affiliation=Univ A , Town , Land
+%   / Cat Cole | email=cat@a.edu ; affiliation=Univ A , Town , Land
+% expect:   0 errors, 0 Warnings; Ann Able ; thanks[*]=Ann Able and Bob Baker contributed equally. | email=ann@a.edu ;
+%   affiliation=Univ A , Town , Land / Bob Baker ; footnotemark[†]= ; thanks[*]=Ann Able and Bob Baker
+%   contributed equally. | email=bob@a.edu ; affiliation=Univ A , Town , Land / Cat Cole | email=cat@a.edu ;
+%   affiliation=Univ A , Town , Land (guard canon: name ; note role[mark]=text, sorted | contacts)
+% moves:    NEITHER: reported to main (the mark-only note holds the glyph as its text)
+% status:   RED (NEITHER: no recorded gap, reported to main) (INTREC 3af622aca64;
+%   perfect_kernel_batchfmmarks::a_mark_on_a_name_is_a_copy_of_its_note_red) -> GREEN (MARKSAFE: a mark alone keeps its
+%   glyph in `mark` only, `insert::link_marked_notes`; perfect_kernel_batchshmark::a_mark_on_a_name_is_a_copy_of_the_note_it_marks)
+% preload: ar5iv.sty
+\documentclass[sigconf]{acmart}
+\begin{document}
+\title{T}
+\author{Ann Able}
+\authornote{Ann Able and Bob Baker contributed equally.}
+\email{ann@a.edu}
+\author{Bob Baker}
+\authornotemark[1]
+\authornotemark[2]
+\email{bob@a.edu}
+\author{Cat Cole}
+\email{cat@a.edu}
+\affiliation{\institution{Univ A}\city{Town}\country{Land}}
+\begin{abstract}Abs.\end{abstract}
+\maketitle
+Text.
+\end{document}
