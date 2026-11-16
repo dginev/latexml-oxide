@@ -465,8 +465,9 @@ impl Lead {
   }
 }
 
-/// The copy of `piece` `note`'s printed text opens with ([`Lead`]), where the mark ends there (`1 These authors …`,
-/// not `10`; `*`, not `**`).
+/// The copy of `piece` `note`'s printed text opens with ([`Lead`]): a superscript or a formula of scripts alone printing
+/// it, or, for a symbol, the head of its text where the mark ends there (`*`, not `**`) — a letter or a number in the
+/// text is the note's own word (`\thanks{a visitor …}` under `Ann Able$^{a}$`).
 fn leading_mark(note: &Node, piece: &str) -> Option<Lead> {
   // (its first printed text node, or the formula it opens with)
   fn first_ink(node: &Node) -> Option<Node> {
@@ -506,6 +507,9 @@ fn leading_mark(note: &Node, piece: &str) -> Option<Lead> {
     }
     up = parent.get_parent();
   }
+  if piece.chars().any(char::is_alphanumeric) {
+    return None;
+  }
   let content = text.get_content();
   let head = content.trim_start();
   let skipped = content.len() - head.len();
@@ -514,13 +518,11 @@ fn leading_mark(note: &Node, piece: &str) -> Option<Lead> {
     .find(|(at, _)| mark_form(&head[..*at]) == key && *at > 0)
     .map(|(at, _)| at)
     .or_else(|| (mark_form(head) == key).then_some(head.len()))?;
-  // (and not the head of a longer mark: `10`, `**`)
+  // (and not the head of a longer mark: `**`)
   let next = head[glyph..].chars().next();
-  let continues = match piece.chars().next_back() {
-    Some(last) if last.is_alphanumeric() => next.is_some_and(char::is_alphanumeric),
-    Some(last) => next.is_some_and(|c| mark_form(&c.to_string()) == mark_form(&last.to_string())),
-    None => true,
-  };
+  let continues = piece.chars().next_back().is_none_or(|last| {
+    next.is_some_and(|c| mark_form(&c.to_string()) == mark_form(&last.to_string()))
+  });
   if continues {
     return None;
   }
