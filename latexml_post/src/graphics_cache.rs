@@ -39,7 +39,7 @@
 //!
 //! The page/density bytes are appended as 4-byte little-endian; the
 //! extension is appended as ASCII lower-case bytes, and an `svg` key ends
-//! with [`SVG_KEY_VERSION`], which retires cached SVGs. Bytes-only keying
+//! with `SVG_KEY_VERSION`, which retires cached SVGs. Bytes-only keying
 //! makes the cache reproducible across machines and gives near-zero
 //! collision risk for our use.
 //!
