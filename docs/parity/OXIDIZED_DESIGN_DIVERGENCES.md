@@ -19537,7 +19537,7 @@ after the name, in document order with an ORCID badge, and there the name drops 
 between a name and its mark; unmarked notes (an empty `@mark` too) follow the name as before. A personname holds the
 name alone (DG 2026-11-16), so the wrapper takes every marked note of any role, mark-only `role="footnotemark"` notes
 too (PURE's unanswered marks, Perl's `\footnotemark` leftovers): each renders as its `sup.ltx_note_mark` alone, no empty
-"footnotemark: " pop-up, linked and classed `ltx_note_shared` only when its mark is a symbol (no ASCII letter or digit)
+"footnotemark: " pop-up, linked and classed `ltx_note_shared` only when its mark is a symbol (no Latin or Greek letter, no digit)
 or Perl's tagged leftover (`f:creator-mark-only`) and names one author's note of the block (`xsl:key
 f:creator-note-by-mark`, every candidate a copy of one note), else the plain glyph (Perl's tag, else `@mark`): a letter
 or digit is as often an affiliation label as a footnote number, and a wrong link is worse than none (review revREND2: a
