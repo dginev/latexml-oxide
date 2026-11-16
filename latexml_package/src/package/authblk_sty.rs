@@ -459,15 +459,25 @@ const NAME_LABELS: &str = "lx_AB_name_labels";
 const LINE_LABELS: &str = "lx_AB_line_labels";
 const LINE_UNLABELLED: &str = "lx_AB_line_unlabelled";
 
-/// Note each comma piece of `label` under `key` ([`NAME_LABELS`], [`LINE_LABELS`]), as authblk prints it whole: one
-/// that is characters or one command (`2`, `**`, `\S`); a group, a note or a command glued to letters (`\dag a`, read
-/// back `\daga`) is no mark compared here.
+/// Note each comma piece of `label` under `key` ([`NAME_LABELS`], [`LINE_LABELS`]), as authblk prints it whole, a formula
+/// round it aside (`$\dag$` is `\dag`): one that is letters and digits, symbols (`**`, `§`) or one command (`\S`); a
+/// group, a note, a mixed piece (`1$^*$`, 2412.03338) or a command glued to letters (`\dag a`, read back `\daga`) is no
+/// mark compared here.
 fn note_labels(key: &str, label: &Tokens) {
   let text = label.clone().untex_string().to_string();
   let mut kept = lookup_string(key);
   for piece in text.split(',').map(str::trim) {
+    let piece = piece
+      .strip_prefix('$')
+      .and_then(|p| p.strip_suffix('$'))
+      .map_or(piece, str::trim);
+    let symbol = |c: char| {
+      c == '*' || c == '#' || (!c.is_ascii() && !c.is_alphanumeric() && !c.is_whitespace())
+    };
     let single = match piece.strip_prefix('\\') {
-      None => !piece.is_empty() && !piece.contains(['\\', '{', '}', ' ']),
+      None => {
+        !piece.is_empty() && (piece.chars().all(char::is_alphanumeric) || piece.chars().all(symbol))
+      },
       Some(name) => {
         !name.is_empty() && (name.chars().all(char::is_alphabetic) || name.chars().count() == 1)
       },

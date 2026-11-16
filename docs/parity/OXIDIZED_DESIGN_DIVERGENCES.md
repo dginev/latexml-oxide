@@ -19638,7 +19638,9 @@ latex_constructs.pool.ltxml:503-527); acmart's `\authornote` is a contact, `\aut
   authblk prints on a name (`\AB@authnote`, authblk.sty:120-133) that no `\affil` prints before its line is a mark the
   frontmatter places nowhere, counted at `\maketitle` (`authblk_sty::count_lost_labels`, one Warning listing them:
   2606.00446's `\author[1,*,\S]`, whose `§` only the `\date` line explains; not where an `\affil` is unlabelled, its
-  `\AB@thenote` number possibly the answer, nor for a piece that is a group or a command glued to letters, `\dag a`);
+  `\AB@thenote` number possibly the answer, nor for a piece that is a group, mixes letters with symbols (`1$^*$`,
+  2412.03338) or glues a command to letters, `\dag a`; a formula round a piece is aside, `\affil[$\dag$]` answers
+  `\author[\dag]`, 2201.10988);
   writing the mark as a mark-only note is the PURE branch's re-homing. A generic count over the placed creators was
   tried and dropped: a macro-held label (`\author[\udem]`), a legend under several labels (`\affil[1,2]`) and a
   single-carrier note contact (jheppub's `\note[*]`) answer a request with no label the XML keeps.
