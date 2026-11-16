@@ -762,14 +762,25 @@
            would drop to its own line). The badge is NOT inside the personname span,
            and every other contact (affiliation, email, thanks, …) still goes to
            the author-notes group. html_feedback #6571, #4958, #4930, #1211. -->
+      <!-- SURPASS (latexml-oxide OXIDIZED_DESIGN #156, #1052): an author-attached \thanks is a
+           marked <ltx:note> child of the creator. A marked note goes in the wrapper after the
+           name, in document order with the badge, so its mark sits on the name: the ltx:note
+           template puts a superscript mark on the author and the content in a margin/footnote,
+           and a shared note's later copies are marks linked to its first. Content-kind class
+           hooks (ltx_thanks_*) ride on the note's @class. Unmarked notes (an empty @mark too) and
+           Perl's leftover role="footnotemark" notes follow the name, as before. author_notes below selects
+           only ltx:contact, so there is no double-render. -->
+      <xsl:variable name="annotations"
+                    select="ltx:contact[@role='orcid'] | ltx:note[normalize-space(@mark)][not(@role='footnotemark')]"/>
       <xsl:choose>
-        <xsl:when test="ltx:contact[@role='orcid']">
+        <xsl:when test="$annotations">
           <xsl:element name="span" namespace="{$html_ns}">
             <xsl:attribute name="class">ltx_annotated_personname</xsl:attribute>
             <xsl:apply-templates select="ltx:personname">
               <xsl:with-param name="context" select="$innercontext"/>
+              <xsl:with-param name="trailing_newline" select="not(ltx:note[normalize-space(@mark)][not(@role='footnotemark')])"/>
             </xsl:apply-templates>
-            <xsl:apply-templates select="ltx:contact[@role='orcid']">
+            <xsl:apply-templates select="$annotations">
               <xsl:with-param name="context" select="$innercontext"/>
             </xsl:apply-templates>
           </xsl:element>
@@ -780,13 +791,7 @@
           </xsl:apply-templates>
         </xsl:otherwise>
       </xsl:choose>
-      <!-- SURPASS (latexml-oxide OXIDIZED_DESIGN #156): an author-attached \thanks is a
-           marked <ltx:note> child of the creator. Render it as a name-sibling (like the
-           orcid badge) so the existing ltx:note footnote template puts a superscript mark
-           on the author and the content in a margin/footnote. Content-kind class hooks
-           (ltx_thanks_*) ride on the note's @class. author_notes below selects only
-           ltx:contact, so there is no double-render. -->
-      <xsl:apply-templates select="ltx:note">
+      <xsl:apply-templates select="ltx:note[not(normalize-space(@mark)) or @role='footnotemark']">
         <xsl:with-param name="context" select="$innercontext"/>
       </xsl:apply-templates>
       <!-- the author's metadata: hidden RDFa spans (span.ltx_rdf), OXIDIZED_DESIGN #479 -->
@@ -829,6 +834,9 @@
   <xsl:preserve-space elements="ltx:personname"/>
   <xsl:template match="ltx:personname">
     <xsl:param name="context"/>
+    <!-- (latexml-oxide #1052) false before a note's mark: no space between the name and its mark,
+         which a line may not break there -->
+    <xsl:param name="trailing_newline" select="true()"/>
     <xsl:text>&#x0A;</xsl:text>
     <xsl:element name="span" namespace="{$html_ns}">
       <xsl:variable name="innercontext" select="'inline'"/><!-- override -->
@@ -852,7 +860,9 @@
           </xsl:apply-templates>
         </xsl:otherwise>
       </xsl:choose>
-      <xsl:text>&#x0A;</xsl:text>
+      <xsl:if test="$trailing_newline">
+        <xsl:text>&#x0A;</xsl:text>
+      </xsl:if>
       <xsl:apply-templates select="." mode="end">
         <xsl:with-param name="context" select="$innercontext"/>
       </xsl:apply-templates>

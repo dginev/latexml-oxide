@@ -85,12 +85,65 @@
     </xsl:element>
   </xsl:template>
 
-  <xsl:template match="ltx:note">
+  <!-- SURPASS (latexml-oxide OXIDIZED_DESIGN_DIVERGENCES #1052): a note shared by several authors is copied onto each
+       carrier, each copy with its @mark (Perl's model: relocateAnnotations, Base_Utility.pool.ltxml:895-901). The page
+       prints it once (DG 2026-11-16, rulings 1-2): the first copy in full, with class ltx_note_shared; every later copy
+       of the same block, role, mark and text is a mark linked to it (2606.00446, 2407.07614, 1706.03762). Only an
+       author's notes render, so only theirs are keyed (an editor's copy first would link to no page element); a note
+       with no mark or no text is never a repeat (two image-only notes are two notes). Perl's leftover
+       role="footnotemark" notes are not copies of a note, and render as before. -->
+  <xsl:key name="f:shared-creator-note"
+           match="ltx:creator[@role='author']/ltx:note[normalize-space(@mark)][normalize-space(.)][not(@role='footnotemark')]"
+           use="concat(generate-id(../..),'&#x9;',@role,'&#x9;',@mark,'&#x9;',normalize-space(.))"/>
+
+  <xsl:template
+      match="ltx:creator[@role='author']/ltx:note[normalize-space(@mark)][normalize-space(.)][not(@role='footnotemark')]">
     <xsl:param name="context"/>
+    <xsl:variable name="copies"
+                  select="key('f:shared-creator-note',
+                              concat(generate-id(../..),'&#x9;',@role,'&#x9;',@mark,'&#x9;',normalize-space(.)))"/>
+    <xsl:choose>
+      <xsl:when test="count($copies) = 1">
+        <xsl:call-template name="note">
+          <xsl:with-param name="context" select="$context"/>
+        </xsl:call-template>
+      </xsl:when>
+      <xsl:when test="generate-id() = generate-id($copies[1])">
+        <xsl:call-template name="note">
+          <xsl:with-param name="context" select="$context"/>
+          <xsl:with-param name="extra_classes" select="'ltx_note_shared'"/>
+        </xsl:call-template>
+      </xsl:when>
+      <xsl:otherwise>
+        <xsl:element name="span" namespace="{$html_ns}">
+          <xsl:call-template name="add_id"/>
+          <xsl:attribute name="class">ltx_note ltx_role_footnotemark ltx_note_shared</xsl:attribute>
+          <xsl:element name="sup" namespace="{$html_ns}">
+            <xsl:attribute name="class">ltx_note_mark</xsl:attribute>
+            <xsl:choose>
+              <xsl:when test="$copies[1]/@fragid">
+                <xsl:element name="a" namespace="{$html_ns}">
+                  <xsl:attribute name="href">#<xsl:value-of select="$copies[1]/@fragid"/></xsl:attribute>
+                  <xsl:value-of select="@mark"/>
+                </xsl:element>
+              </xsl:when>
+              <xsl:otherwise><xsl:value-of select="@mark"/></xsl:otherwise>
+            </xsl:choose>
+          </xsl:element>
+        </xsl:element>
+      </xsl:otherwise>
+    </xsl:choose>
+  </xsl:template>
+
+  <xsl:template match="ltx:note" name="note">
+    <xsl:param name="context"/>
+    <xsl:param name="extra_classes" select="''"/>
     <xsl:element name="span" namespace="{$html_ns}">
       <xsl:variable name="innercontext" select="'inline'"/><!-- override -->
       <xsl:call-template name="add_id"/>
-      <xsl:call-template name="add_attributes"/>
+      <xsl:call-template name="add_attributes">
+        <xsl:with-param name="extra_classes" select="$extra_classes"/>
+      </xsl:call-template>
       <xsl:apply-templates select="." mode="begin">
         <xsl:with-param name="context" select="$innercontext"/>
       </xsl:apply-templates>

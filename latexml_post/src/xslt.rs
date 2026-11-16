@@ -1419,6 +1419,39 @@ mod witnessed_css_delta {
   }
 
   #[test]
+  fn shared_author_note_delta_stays_present() {
+    // OXIDIZED_DESIGN_DIVERGENCES #1052 (DG's rulings of 2026-11-16): a marked author note follows the name, set as
+    // text; where an author's lines show under the name (the #783 card, ltx_authors_multiline) its marked notes show
+    // there, one author's with no mark and a shared one headed by its mark (2606.00446, 2407.07614, 1706.03762). An
+    // unmarked note is no one author's (IEEEtran's \thanks, 1510.02728): no rule shows it under the name. The browser
+    // half is `cluster_cli::browser_render_author_lines`.
+    const CARD: &str = ".ltx_document:not(.ltx_authors_multiline) .ltx_creator:has(.ltx_author_line):not(:has(\
+                        .ltx_contact:not(.ltx_author_line):not(.ltx_role_note):not(.ltx_role_thanks)))";
+    let card = format!(":is({CARD}, .ltx_authors_multiline .ltx_creator)");
+    let lines = format!("{card} .ltx_annotated_personname > .ltx_note");
+    let css = bundled_latexml_css();
+    for rule in [
+      ".ltx_annotated_personname:has(> .ltx_note) { display:inline; }".to_string(),
+      ".ltx_note_shared > .ltx_note_mark > a { color:inherit; text-decoration:none; }".to_string(),
+      format!("{lines} {{ display:inline; }}"),
+      format!("{lines} .ltx_note_content {{\n    display:block; position:static;"),
+      format!("{lines} .ltx_note_content .ltx_note_mark {{ position:static; }}"),
+      format!(
+        "{lines} .ltx_note_type,\n{lines}:not(.ltx_note_shared) .ltx_note_mark {{ display:none; }}"
+      ),
+    ] {
+      assert!(
+        css.contains("#1052") && css.contains(&rule),
+        "LaTeXML.css lost the shared author note rule `{rule}` (#1052)"
+      );
+    }
+    assert!(
+      !css.contains(&format!("{card} > .ltx_note")),
+      "LaTeXML.css shows an unmarked author note under the name (#1052, 1510.02728)"
+    );
+  }
+
+  #[test]
   fn constrained_equation_overflow_delta_stays_present() {
     let css = bundled_latexml_css();
     assert!(

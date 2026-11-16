@@ -4057,7 +4057,8 @@ the same kind as "Corresponding author": FIDELITY_CHARTER §4, batch 100a, #955)
 kind. Requires: adding `ltx:note` to `ltx:creator`'s content model
 (`LaTeXML.model` + `LaTeXML-structure.rng`/`.rnc`) — else `open_element` auto-closes the creator
 and the note detaches; and an XSLT addition rendering the creator's `ltx:note` child as a
-name-sibling (`LaTeXML-structure-xhtml.xsl`). A surpass over the shared inline-contact behavior.
+name-sibling (`LaTeXML-structure-xhtml.xsl`; since #1052 a marked note inside `ltx_annotated_personname`, a shared
+one printed once). A surpass over the shared inline-contact behavior.
 
 **Why it's safe.** The classifier only picks a CSS hook, never core semantics (since then the author block's line
 readers also ask it whether a line is a note rather than an institution, and the frontmatter observer's resolver reads
@@ -19504,11 +19505,54 @@ author whose contacts are all such lines or notes is an `inline-block` card with
 hidden; a note contact (`\footnote` in `\author` is `\thanks`, article.cls:241, Perl's role=note contact,
 Base_Utility.pool.ltxml:331) keeps the star and shows on hover in the card's flow, so two notes, or a note and the
 lines, never cover one another (1112.2930, math0111266), and with no note there is no star; an author
-with any other contact keeps the pop-up, its labels shown; a `\thanks` note keeps its mark and pop-up. Chrome and
+with any other contact keeps the pop-up, its labels shown; a marked `\thanks` note shows under the name, with no mark
+unless shared, and an unmarked one keeps its mark and pop-up (#1052). Chrome and
 Firefox at 1280/375 px. ar5iv.css already shows every
 author's contacts (`css/ar5iv.css:920`, `:940` at ar5iv-css `6dc3e97`; it does not load LaTeXML.css): no change. Offered upstream. **Guards**:
 `06_cluster_frontmatter::frontmatter_author_lines_783` (repros `sectioning-frontmatter/author_lines_783_*.tex`),
 `xslt::witnessed_css_delta::author_line_delta_stays_present`, `cluster_cli::browser_render_author_lines` (local).
+
+### 1052. A note several authors share prints once: the first copy in full, each other copy a mark linked to it (DG 2026-11-16, rulings 1-2)
+
+**Rule.** "One copy" is a page rule: the XML keeps a full copy of a shared author note on every carrier, each with its
+`mark` (Perl's model: `relocateAnnotations`, Base_Utility.pool.ltxml:895-901, and `relocateFootnote`,
+latex_constructs.pool.ltxml:503-527, both clone), and the HTML prints it once. Marks follow placement: a note of one
+author sits under the name with no mark; a shared note carries its mark on every name and at its head, in the side
+margin where there is one; margin notes never overlap. An UNMARKED note is no one author's (review SHREND B1): the PDF
+prints it with no mark as a footnote of the paper — IEEEtran's `\maketitle` sets `\let\@makefnmark\relax`
+(IEEEtran.cls:4758), so its `\thanks` is the funding or "manuscript received" note — so it never sits under a name: the
+margin where there is one, else in flow in the block. Once every note the PDF marks carries `mark` (the kernel
+`\thanks` its `\@fnsymbol`, a legend its symbol), the rule is complete; until then a markless kernel `\thanks` goes to
+the margin, as in ar5iv-css 0.9.3.
+**Perl.** Every copy renders in full with its own mark (`LaTeXML-meta-xhtml.xsl`'s note template), so a note shared by
+n authors prints n times.
+**Rust.** `LaTeXML-meta-xhtml.xsl` keys `ltx:creator[@role='author']/ltx:note` with a non-empty `@mark` and text —
+not an editor's note, which never renders (its first copy would leave the authors' marks linking to no element), not
+an image-only note (two would merge, the second image lost), not Perl's leftover `role="footnotemark"` notes, which are
+no copies — by the creator's parent block, `@role`, `@mark` and `normalize-space(.)` (`xsl:key
+f:shared-creator-note`). The first copy of a group of two or more renders in full with class
+`ltx_note_shared`; each later copy is `span.ltx_note.ltx_role_footnotemark.ltx_note_shared` holding only its mark,
+linked to the first copy's id. `LaTeXML-structure-xhtml.xsl` puts every marked note in `span.ltx_annotated_personname`
+after the name, in document order with an ORCID badge, and there the name drops its trailing newline, so no line breaks
+between a name and its mark; unmarked notes (an empty `@mark` too) and the footnotemark leftovers follow the name as
+before. LaTeXML.css (local delta after the ORCID wrapper rules): a name with notes is set as text; where the author's
+lines show under the name (#1051's card, `ltx_authors_multiline`) its marked notes show there, one author's with no
+mark, a shared one headed by its mark; an unmarked note, and every note elsewhere, keeps its mark and pop-up.
+ar5iv-css (`fix/shared-notes`): a marked note of one author on a row under the name with no mark; a shared note's marks
+shown, its body in the side margin on wide screens; an unmarked note's body in the same margin, with no mark. Each
+margin note is placed under the one before by CSS anchor positioning (the last earlier box of the same anchor name), so
+none overlaps whatever its height. Phones, and browsers without anchor positioning, keep a shared note in flow under its
+first author and an unmarked one after its author's lines, start-aligned as a note. A block with a note under a name
+aligns its names on one baseline, as the PDF's top-aligned author tabulars do. It replaces 0.9.3's fixed 10rem slots,
+which overlapped (1706.03762).
+**Witnesses.** 2606.00446 (authblk `\affil[*]`: two copies, one printed); 2407.07614 (the legend line's `*` and `+`,
+three copies each, one printed each; `†` one author's, under the name); 2606.00397 (ieeeconf: the correspondence
+note, markless until the kernel `\thanks` carries its mark, in the margin as in 0.9.3); 1510.02728 (IEEEtran: the
+unmarked Asilomar/NSF note in the margin, not under Azadeh Vosoughi's name, where it read as her affiliation);
+1706.03762 (the tall shared note, in the margin; Chrome and Firefox at 1800 and 375 px). **Guards**:
+`integration::a_shared_author_note_prints_once_and_its_repeats_are_linked_marks` (latexml_post),
+`xslt::witnessed_css_delta::shared_author_note_delta_stays_present`,
+`cluster_cli::browser_render_author_lines::a_shared_note_prints_once_under_its_first_author` (local).
 
 ---
 
