@@ -140,3 +140,17 @@ fn cleveref_ltx_label_braces_its_key_under_amsmath() {
   }
 }
 
+/// Cluster F (2606.00625): pdfcomment's binding allocates soulpos's `\ulp@cnt`, `\ulp@out` (soulpos.sty:12-16), which
+/// a document's `enddocument/afterlastpage` copy of soulpos's end pass reads.
+#[test]
+fn pdfcomment_allocates_the_soulpos_registers() {
+  let (log, xml) = run(repro!(
+    "package-bindings/pdfcomment_allocates_the_soulpos_registers.tex"
+  ));
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  assert_eq!(
+    xml.matches(r#"<p xml:id="p1.1">Text.</p>"#).count(),
+    1,
+    "{xml}"
+  );
+}

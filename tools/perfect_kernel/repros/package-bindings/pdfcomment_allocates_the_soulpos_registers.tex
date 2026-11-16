@@ -1,0 +1,11 @@
+% witness: 2606.00625 (nice.tex:5-12, soulpos's end-of-document pass in `enddocument/afterlastpage`): pdfcomment.sty:1350
+%          loads soulpos, whose soulpos.sty:12-16 allocate `\ulp@cnt`, `\ulp@out`
+% oracle:  pdflatex 0 errors; "Text."
+% engines: rust=2 (999af99497d: undefined \ulp@cnt, \ulp@out) perl=0 (2026-11-16)
+% expect:  0 errors, 0 warnings; "Text."
+% status:  GREEN
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{pdfcomment}
+\makeatletter\AddToHook{enddocument/afterlastpage}{\ulp@cnt\z@\immediate\openout\ulp@out=\jobname.upb\immediate\closeout\ulp@out}\makeatother
+\begin{document}Text.\end{document}
