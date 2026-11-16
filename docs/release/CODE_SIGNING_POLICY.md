@@ -1,0 +1,40 @@
+# Code signing policy
+
+Free code signing provided by [SignPath.io](https://about.signpath.io), certificate by [SignPath Foundation](https://signpath.org).
+
+**Status:** signing is being set up (applied 2026-11-16; GitHub issue 775). The first signed release will be named here.
+Until then, the Windows binary is unsigned; the [installation guide](https://github.com/dginev/latexml-oxide/blob/main/docs/INSTALL.md) says how to unblock it.
+
+## What is signed
+
+- **Signed:** the Windows executable `latexml_oxide.exe`, inside the `latexml-oxide-<version>-x86_64-pc-windows-msvc.zip` asset of each final release on the [Releases page](https://github.com/dginev/latexml-oxide/releases). Release candidates (`-rcN` tags) are not signed.
+- **How it is built:** from this repository's source, by the [`release.yml`](https://github.com/dginev/latexml-oxide/blob/main/.github/workflows/release.yml) GitHub Actions workflow on GitHub-hosted runners. SignPath verifies that origin before it signs.
+- **Approval:** a person approves every signing request by hand.
+- **Only our own binary:** we sign only the executable this project builds. The third-party libraries statically linked into it (libxml2, libxslt, libkpathsea and libmarpa; see [`THIRD-PARTY-NOTICES`](https://github.com/dginev/latexml-oxide/blob/main/THIRD-PARTY-NOTICES)) are compiled from their published sources in that same workflow.
+
+## Team roles
+
+| Role | Who |
+|---|---|
+| Authors (committers) | [the repository's maintainers](https://github.com/dginev/latexml-oxide/graphs/contributors) with write access: Deyan Ginev |
+| Reviewers | every change lands through a reviewed pull request: Deyan Ginev |
+| Approvers (signing requests) | Deyan Ginev |
+
+All team members use multi-factor authentication for GitHub and for SignPath.
+
+## Privacy policy
+
+This program will not transfer any information to other networked systems unless specifically requested by the user or the person installing or operating it.
+
+latexml-oxide reads files through the user's own TeX distribution (TeX Live or MiKTeX). It may also run image tools the user has installed: ImageMagick, Ghostscript, MuPDF or Poppler. What those programs do follows their own settings; for example, MiKTeX can be configured to download missing packages.
+
+## System changes
+
+- **No installer.** latexml-oxide is a single executable. Unpacking the zip installs it, and deleting the folder uninstalls it.
+- **No system changes.** It does not change the registry, services, environment variables or `PATH`.
+- **What it writes:**
+  - the converted output, where the user directs it;
+  - a cache of compiled TeX formats, under `%XDG_CACHE_HOME%` or `%HOME%\.cache` when one of them is set, and otherwise under `%TEMP%`;
+  - when `HOME` or `XDG_CACHE_HOME` is set, a cache of converted images in `latexml-oxide\graphics` under that folder.
+
+  These caches are safe to delete at any time.
