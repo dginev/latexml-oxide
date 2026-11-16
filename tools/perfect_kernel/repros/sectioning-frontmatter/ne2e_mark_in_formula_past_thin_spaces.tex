@@ -1,0 +1,19 @@
+% mechanism: the carry past a Gap (ne2e_mark_past_spacing_is_its_names) is text-mode only: a mark inside a formula with
+%   a note is written with the formula whole, so carried, the `\thanks` would be written twice; it stays
+%   `mark_dropped`'s, lost and counted
+% witness: 2511.12633 (`Xunzhi Xiang$^{1}\thanks{…}\,\,\footnotemark[2]$`)
+% oracle:  pdflatex 0 errors; "Ann Able1∗∗ Bob Baker", "∗X" (pdftotext)
+% engines: rust REGFIX: 0 errors, Ann Able¹ with the note, 1 Warning "lost: ∗"; the carry without its text-mode test:
+%   the note written twice, a content-check Warning; perl 0.8.8: 0 errors, one creator, the note a thanks contact
+% expect:  REGFIX's: 0 errors, 1 Warning "lost: ∗", the note once
+% status:  GREEN (perfect_kernel_batchne2::a_mark_a_name_follows_past_spacing_is_not_carried_back; red if the carry
+%   drops its text-mode test)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{Ann Able$^{1}\thanks{X}\,\,\footnotemark[1]$ \and Bob Baker}
+\date{}
+\maketitle
+Text.
+\end{document}

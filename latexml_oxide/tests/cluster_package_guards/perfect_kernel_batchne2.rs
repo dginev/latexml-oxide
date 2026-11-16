@@ -179,6 +179,15 @@ fn footnotemarks(xml: &str) -> Vec<&str> {
     .collect()
 }
 
+/// Each creator's [`footnotemarks`], in document order: a mark that moved to a neighbouring creator fails.
+fn marks_by_creator(xml: &str) -> Vec<Vec<&str>> {
+  xml
+    .split("<creator ")
+    .skip(1)
+    .map(|c| footnotemarks(&c[..c.find("</creator>").expect("a creator's end")]))
+    .collect()
+}
+
 /// A mark a name prints past its note stays with the name, in source order, the note's footnote step before it: `=2`'s
 /// past-marks scan stopped at the note, so Ann Able's `\footnotemark` was dropped with no Warning and the next name's mark
 /// printed one symbol short (Bob †, Carl ‡). Each shape off and at `=2` as pdflatex prints it: glued, past `\ `, `~` and
@@ -205,21 +214,6 @@ fn a_mark_after_its_names_note_stays_with_it() {
       repro!("ne2c_mark_after_note_spaced"),
       vec![row(&["Ann Able"]), row(&["Bob Baker"]), row(&["Carl Cole"])],
       vec![mark("†", "footnote2"), mark("§", "footnote4")],
-    ),
-    (
-      repro!("ne2e_mark_past_spacing_is_its_names"),
-      vec![
-        row(&["Ann Able"]),
-        row(&["Bob Baker"]),
-        row(&["Carl Cole"]),
-        row(&["Dan Dory"]),
-      ],
-      vec![
-        mark("†", "footnote2"),
-        mark("*", "footnotex1"),
-        mark("†", "footnotex2"),
-        mark("‡", "footnote3"),
-      ],
     ),
     (
       repro!("ne2c_mark_after_note_numbered"),
@@ -260,6 +254,25 @@ fn a_mark_after_its_names_note_stays_with_it() {
     assert_eq!(creators(&xml), expected);
     assert_eq!(footnotemarks(&xml), marks, "{xml}");
   }
+  // (past spacing, each creator its own marks: Ann † bare, after her note's step; Bob * and Carl † given; Dan ‡ bare)
+  let (log, xml) = run(repro!("ne2e_mark_past_spacing_is_its_names"));
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  assert_eq!(creators(&xml), [
+    row(&["Ann Able"]),
+    row(&["Bob Baker"]),
+    row(&["Carl Cole"]),
+    row(&["Dan Dory"]),
+  ]);
+  assert_eq!(
+    marks_by_creator(&xml),
+    [
+      vec![mark("†", "footnote2")],
+      vec![mark("*", "footnotex1")],
+      vec![mark("†", "footnotex2")],
+      vec![mark("‡", "footnote3")],
+    ],
+    "{xml}"
+  );
 }
 
 /// A `\footnotemark` no name of the `=2` reading writes and no item holds (on the line a `\\` opens under Ann Able's name;
@@ -325,18 +338,10 @@ fn a_given_mark_on_no_name_keeps_the_creators() {
   ]);
   // (each creator's marks, in order: Ann †, Bob * ‡, Dan ‡ — pdflatex's "Ann Able ∗ †  Bob Baker ∗ ‡  Cat Cole † ‡  Dan
   // Dorn ‡", whose ∗ of Ann and † ‡ of Cat are their `\thanks` notes')
-  let marks: Vec<Vec<&str>> = xml
-    .split("<creator ")
-    .skip(1)
-    .map(|c| {
-      let c = &c[..c.find("</creator>").expect("a creator's end")];
-      footnotemarks(c)
-    })
-    .collect();
   let mark =
     |m: &str, n: &str| format!(r#"<note mark="{m}" role="footnotemark" xml:id="footnotex{n}""#);
   assert_eq!(
-    marks,
+    marks_by_creator(&xml),
     [
       vec![mark("†", "1")],
       vec![mark("*", "2"), mark("‡", "3")],
@@ -393,4 +398,63 @@ fn a_given_mark_on_no_name_keeps_the_creators() {
     ],
     "{xml}"
   );
+}
+
+/// The carry past spacing (`a_mark_after_its_names_note_stays_with_it`'s ne2e row, DG ruling 2026-11-16, 4) takes a
+/// `\footnotemark` back onto the name before it only when a separator, a `\\` or the block's end follows the mark's run
+/// of marks and notes: a mark a name follows is that name's prefix (`Ann Able \quad \footnotemark[2]Bob Baker`,
+/// pdflatex's "†Bob Baker"; review revSHGIVEN 1), so each keeps REGFIX's output and its counts, never a mark invented
+/// on the previous name. Nor does it take a mark inside a formula, written with the formula whole, its `\thanks` twice:
+/// 2511.12633's `Xunzhi Xiang$^{1}\thanks{…}\,\,\footnotemark[2]$` stays lost and counted. Distinct from the ne2e row:
+/// the carry's two exclusions. REGFIX's prefix Warnings ("lost: †" though Bob carries †) over-count: pinned by count.
+#[test]
+fn a_mark_a_name_follows_past_spacing_is_not_carried_back() {
+  let mark = |m: &str, n: &str| format!(r#"<note mark="{m}" role="footnotemark" xml:id="{n}""#);
+  let thanks = r#"<note class="ltx_note_frontmatter ltx_thanks_note" role="thanks""#;
+  for (tex, (warnings, says), expected, marks, notes) in [
+    (
+      repro!("ne2e_prefix_mark_past_spacing_before_and"),
+      (1, ""),
+      vec![row(&["Ann Able"]), row(&["Bob Baker"]), row(&["Carl Cole"])],
+      vec![vec![], vec![mark("†", "footnotex1")], vec![]],
+      0,
+    ),
+    (
+      repro!("ne2e_prefix_marks_past_quad"),
+      (2, ""),
+      vec![row(&["Ann Able"]), row(&["Bob Baker"]), row(&["Carl Cole"])],
+      vec![
+        vec![mark("*", "footnotex1")],
+        vec![mark("†", "footnotex2")],
+        vec![mark("*", "footnotex3")],
+      ],
+      0,
+    ),
+    (
+      // (no place for Bob's prefix: the block written whole, `mark_dropped`'s Warning)
+      repro!("ne2e_prefix_mark_past_hfill"),
+      (1, "on no name and no item; the block is written whole"),
+      vec![row(&["Ann Able Bob Baker"])],
+      vec![vec![mark("†", "footnote2")]],
+      1,
+    ),
+    (
+      repro!("ne2e_mark_in_formula_past_thin_spaces"),
+      (1, "on no name and no item; lost: ∗"),
+      vec![row(&["Ann Able1"]), row(&["Bob Baker"])],
+      vec![vec![], vec![]],
+      1,
+    ),
+  ] {
+    let (log, xml) = run(tex);
+    assert_eq!(
+      (error_count(&log), warning_count(&log)),
+      (0, warnings),
+      "{log}"
+    );
+    assert!(log.contains(says), "{log}");
+    assert_eq!(creators(&xml), expected);
+    assert_eq!(marks_by_creator(&xml), marks, "{xml}");
+    assert_eq!(xml.matches(thanks).count(), notes, "{xml}");
+  }
 }
