@@ -19534,10 +19534,20 @@ f:shared-creator-note`). The first copy of a group of two or more renders in ful
 `ltx_note_shared`; each later copy is `span.ltx_note.ltx_role_footnotemark.ltx_note_shared` holding only its mark,
 linked to the first copy's id. `LaTeXML-structure-xhtml.xsl` puts every marked note in `span.ltx_annotated_personname`
 after the name, in document order with an ORCID badge, and there the name drops its trailing newline, so no line breaks
-between a name and its mark; unmarked notes (an empty `@mark` too) and the footnotemark leftovers follow the name as
-before. LaTeXML.css (local delta after the ORCID wrapper rules): a name with notes is set as text; where the author's
+between a name and its mark; unmarked notes (an empty `@mark` too) follow the name as before. A personname holds the
+name alone (DG 2026-11-16), so the wrapper takes every marked note of any role, mark-only `role="footnotemark"` notes
+too (PURE's unanswered marks, Perl's `\footnotemark` leftovers): each renders as its `sup.ltx_note_mark` alone, no empty
+"footnotemark: " pop-up, linked and classed `ltx_note_shared` only when its mark is a symbol (no Latin or Greek letter, no digit)
+or Perl's tagged leftover (`f:creator-mark-only`) and names one author's note of the block (`xsl:key
+f:creator-note-by-mark`, every candidate a copy of one note), else the plain glyph (Perl's tag, else `@mark`): a letter
+or digit is as often an affiliation label as a footnote number, and a wrong link is worse than none (review revREND2: a
+mark-only `1` linked another author's own footnote `1`). Such a linkable mark-only note pointing at a one-author note
+makes it shared, so it prints in the margin with its mark. LaTeXML.css (local delta after the ORCID wrapper rules): a name with notes is set as text; where the author's
 lines show under the name (#1051's card, `ltx_authors_multiline`) its marked notes show there, one author's with no
-mark, a shared one headed by its mark; an unmarked note, and every note elsewhere, keeps its mark and pop-up.
+mark, a shared one headed by its mark, a mark-only note's mark kept; an unmarked note, and every note elsewhere, keeps
+its mark and pop-up. In both stylesheets a body under the name floats, full width, in a flow-root wrapper, so a mark
+after it stays on the name's line, and consecutive shown marks are parted by a superscript comma ("1,2", not "12";
+PURE splits an author's `$^{1,2}$` into two notes).
 ar5iv-css (`fix/shared-notes`): a marked note of one author on a row under the name with no mark; a shared note's marks
 shown, its body in the side margin on wide screens; an unmarked note's body in the same margin, with no mark. Each
 margin note is placed under the one before by CSS anchor positioning (the last earlier box of the same anchor name), so
@@ -19550,8 +19560,11 @@ three copies each, one printed each; `†` one author's, under the name); 2606.0
 mark; the correspondence note's `*` is the authors' own text on the name and the note, so it is Murali Babu's marked
 note once SHMARK lifts that typed `*`, and a plain unmarked `\thanks` stays in the margin); 1510.02728 (IEEEtran: the
 unmarked Asilomar/NSF note in the margin, not under Azadeh Vosoughi's name, where it read as her affiliation);
-1706.03762 (the tall shared note, in the margin; Chrome and Firefox at 1800 and 375 px). **Guards**:
-`integration::a_shared_author_note_prints_once_and_its_repeats_are_linked_marks` (latexml_post),
+1706.03762 (the tall shared note, in the margin; Chrome and Firefox at 1800 and 375 px); 0801.1438 (PURE's mark-only
+`a` before the `*` note Kardoš shares with Miškuf: "Kardošᵃ*" as the PDF prints, was "Kardoš* a"). **Guards**:
+`integration::a_shared_author_note_prints_once_and_its_repeats_are_linked_marks`,
+`integration::a_pure_name_carries_every_mark_after_it_in_order`,
+`integration::a_letter_or_digit_mark_names_no_other_authors_note` (latexml_post),
 `xslt::witnessed_css_delta::shared_author_note_delta_stays_present`,
 `cluster_cli::browser_render_author_lines::a_shared_note_prints_once_under_its_first_author` (local).
 

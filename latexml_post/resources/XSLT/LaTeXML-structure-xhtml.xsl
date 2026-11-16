@@ -762,23 +762,17 @@
            would drop to its own line). The badge is NOT inside the personname span,
            and every other contact (affiliation, email, thanks, …) still goes to
            the author-notes group. html_feedback #6571, #4958, #4930, #1211. -->
-      <!-- SURPASS (latexml-oxide OXIDIZED_DESIGN #156, #1052): an author-attached \thanks is a
-           marked <ltx:note> child of the creator. A marked note goes in the wrapper after the
-           name, in document order with the badge, so its mark sits on the name: the ltx:note
-           template puts a superscript mark on the author and the content in a margin/footnote,
-           and a shared note's later copies are marks linked to its first. Content-kind class
-           hooks (ltx_thanks_*) ride on the note's @class. Unmarked notes (an empty @mark too) and
-           Perl's leftover role="footnotemark" notes follow the name, as before. author_notes below selects
-           only ltx:contact, so there is no double-render. -->
+      <!-- SURPASS (latexml-oxide OXIDIZED_DESIGN #156, #1052): the name is the name alone, so every marked note, of any
+           role, follows it here in document order with the badge, its mark on the name (0801.1438). -->
       <xsl:variable name="annotations"
-                    select="ltx:contact[@role='orcid'] | ltx:note[normalize-space(@mark)][not(@role='footnotemark')]"/>
+                    select="ltx:contact[@role='orcid'] | ltx:note[normalize-space(@mark)]"/>
       <xsl:choose>
         <xsl:when test="$annotations">
           <xsl:element name="span" namespace="{$html_ns}">
             <xsl:attribute name="class">ltx_annotated_personname</xsl:attribute>
             <xsl:apply-templates select="ltx:personname">
               <xsl:with-param name="context" select="$innercontext"/>
-              <xsl:with-param name="trailing_newline" select="not(ltx:note[normalize-space(@mark)][not(@role='footnotemark')])"/>
+              <xsl:with-param name="trailing_newline" select="not(ltx:note[normalize-space(@mark)])"/>
             </xsl:apply-templates>
             <xsl:apply-templates select="$annotations">
               <xsl:with-param name="context" select="$innercontext"/>
@@ -791,7 +785,7 @@
           </xsl:apply-templates>
         </xsl:otherwise>
       </xsl:choose>
-      <xsl:apply-templates select="ltx:note[not(normalize-space(@mark)) or @role='footnotemark']">
+      <xsl:apply-templates select="ltx:note[not(normalize-space(@mark))]">
         <xsl:with-param name="context" select="$innercontext"/>
       </xsl:apply-templates>
       <!-- the author's metadata: hidden RDFa spans (span.ltx_rdf), OXIDIZED_DESIGN #479 -->
