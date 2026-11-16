@@ -19532,8 +19532,13 @@ latex_constructs.pool.ltxml:503-527); acmart's `\authornote` is a contact, `\aut
   into theirs, `rehearsal::footnotes_carried`: article.cls:203-214 sets the title first, so `\title{T\thanks{Funded.}}`
   takes ∗ and the first author's `\thanks` †, and a `\footnotemark[1]` beside another name is the title's note, not an
   author's; the last `\title` is the one printed, latex.ltx `\gdef\@title`). A name's `\footnote` takes the title's
-  mark only where the class sets it there: REVTeX 4.0 does (revtex4.cls:4726-4729, `\let\thefootnote
-  \frontmatter@thefootnote`: 1607.07280's ∗); REVTeX 4.1 and 4.2 set it in their title block's minipage letters
+  mark only where the class sets it there and the reading knows which: REVTeX 4.0 sets it there (revtex4.cls:4726-4729,
+  `\let\thefootnote\frontmatter@thefootnote`) at a counter its `\thanks`, `\email` and `\altaffiliation` step too
+  (`\frontmatter@footnote`, :4558-4583), which the reading does not count (`\author{Ann Able}\thanks{…}` then `\author{Bob
+  Baker\footnote{…}}` prints "Bob Baker†"), so its binding declares `lx_title_footnote_given_marks_only`: a
+  `\footnote[n]` is marked with n's symbol (the rehearsal's `shows`, `Event::given_number`: 1607.07280's ∗), an
+  unnumbered one stays Perl's `role=note` contact, no mark (a wrong glyph is worse than none; counting those steps is
+  row R SHAUTO); REVTeX 4.1 and 4.2 set it in their title block's minipage letters
   (revtex4-1.cls:466-467, revtex4-2.cls:487-488 `\@alph\c@mpfootnote`: 2301.00220's "Wei Tao a", revtex4-2
   `preprint`'s "Bob Bakerᵇ"), or drop mark and text (revtex4-2 `reprint`), so their bindings declare
   `lx_title_footnote_own_marks` and the note stays Perl's `role=note` contact, no mark — the letters are not derived
@@ -19583,8 +19588,8 @@ author_block_symbol_legend_note_mark_not_in_its_text, thanks_bare_symbol_is_the_
 author_footnote_is_the_marked_thanks_note, author_thanks_mark_after_a_title_thanks,
 author_samethanks_is_a_copy_of_the_marked_note, acmart_authornotemark_is_a_copy_of_the_marked_note,
 author_thanks_shared_by_footnotemark_marks_kept, revtex_affiliation_footnotemark_link_is_no_note,
-revtex41_name_footnote_is_its_note_contact, revtex42_name_footnote_is_its_note_contact,
-thanks_leading_symbol_text_is_no_mark_copy, ieee_thanks_leading_label_is_no_mark}.tex`);
+revtex40_name_footnote_unnumbered_is_its_note_contact, revtex41_name_footnote_is_its_note_contact,
+revtex42_name_footnote_is_its_note_contact, thanks_leading_symbol_text_is_no_mark_copy, ieee_thanks_leading_label_is_no_mark}.tex`);
 `perfect_kernel_batchsbx1::sandbox_2605_rows` (the collaboration's marked note, whole).
 
 ---
