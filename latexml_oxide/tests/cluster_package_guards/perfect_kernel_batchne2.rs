@@ -561,7 +561,8 @@ fn a_mark_between_two_names_is_the_nearer_ones() {
 /// prints it 0pt). Distinct from `a_mark_between_two_names_is_the_nearer_ones`: the growth's limits, not its widths.
 #[test]
 fn the_nearer_name_rule_grows_over_marks_notes_and_spacing_only() {
-  let lost = &["given their number (a note's, written already) on no name and no item; lost: †"][..];
+  let lost =
+    &["given their number (a note's, written already) on no name and no item; lost: †"][..];
   let three = |ann: &[&str]| vec![row(ann), row(&["Bob Baker"]), row(&["Carl Cole"])];
   for (tex, expected) in [
     (
@@ -577,10 +578,10 @@ fn the_nearer_name_rule_grows_over_marks_notes_and_spacing_only() {
       three(&["Ann Able"]),
     ),
     (repro!("ne2g_mark_in_its_own_group"), three(&["Ann Able"])),
-    (
-      repro!("ne2g_mark_past_hfill_undecided"),
-      vec![row(&["Ann Able"]), row(&["Bob Baker"])],
-    ),
+    (repro!("ne2g_mark_past_hfill_undecided"), vec![
+      row(&["Ann Able"]),
+      row(&["Bob Baker"]),
+    ]),
   ] {
     let (log, xml) = run(tex);
     assert_eq!((error_count(&log), warning_count(&log)), (0, 1), "{log}");
@@ -589,7 +590,15 @@ fn the_nearer_name_rule_grows_over_marks_notes_and_spacing_only() {
     }
     assert_eq!(creators(&xml), expected, "{xml}");
     assert!(marks_by_creator(&xml).iter().all(Vec::is_empty), "{xml}");
-    assert_eq!(xml.matches("<sup").count(), usize::from(tex.contains("$^{a}$")), "{xml}");
-    assert_eq!(xml.matches("orcid.org").count(), usize::from(tex.contains("orcidlink{")), "{xml}");
+    assert_eq!(
+      xml.matches("<sup").count(),
+      usize::from(tex.contains("$^{a}$")),
+      "{xml}"
+    );
+    assert_eq!(
+      xml.matches("orcid.org").count(),
+      usize::from(tex.contains("orcidlink{")),
+      "{xml}"
+    );
   }
 }

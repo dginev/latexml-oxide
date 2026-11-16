@@ -994,27 +994,37 @@ fn block_names(
       // (a text `\footnotemark` with spacing on both sides is the nearer name's ([`nearer_before`]), so one nearer this
       // name, or as near as the one before, is its prefix, the run grown over the spacing between: `Ann Able \qquad
       // \footnotemark[2] \ Bob Baker`, pdflatex's 27pt | 4pt, "†Bob Baker" (DG ruling 2026-11-16; review revSHGIVENb).
-      // Text only: a mark in a formula is written with the formula whole)
+      // Grown over text `\footnotemark`s, notes and spacing only, never past a group's close or into one: any other event
+      // between, a superscript, an ORCID, a `\cite`, stays where REGFIX writes it, and so does the mark, a counted loss
+      // (review revSHGIVENc)
       let in_text = |e: &Event| {
         e.span
           .and_then(|span| at(span.0))
           .is_some_and(|s| field.formula_start(s) == s)
       };
-      let spaced_mark = |m: usize| {
-        let e = &read[m];
-        e.kind == EventKind::Mark
-          && e.role.as_deref() == Some("footnotemark")
-          && in_text(e)
-          && gaps_width(&read[spacing_from(&read, m)..m]).is_some()
+      let footnote_mark = |e: &Event| {
+        e.kind == EventKind::Mark && e.role.as_deref() == Some("footnotemark") && in_text(e)
+      };
+      let spaced_mark =
+        |m: usize| footnote_mark(&read[m]) && gaps(&read[spacing_from(&read, m)..m]).is_some();
+      let balanced = |m: usize| {
+        let (s, t) = (at(read[m].span?.0)?, at(read[at_name].span?.0)?);
+        let depths = field.tokens.get(s..t)?.iter().scan(0, |depth, t| {
+          *depth += t.group_step();
+          Some(*depth)
+        });
+        let (lowest, last) = depths.fold((0, 0), |(lowest, _), d| (lowest.min(d), d));
+        Some(lowest == 0 && last == 0)
       };
       let window = read[..at_name]
         .iter()
-        .rposition(|e| !(beside(&e) || spacing(e)))
+        .rposition(|e| !(footnote_mark(e) || spacing(e)))
         .map_or(0, |p| p + 1);
       if let Some(m) = (window..at_name).find(|&m| {
         spaced_mark(m)
-          && gaps_width(&read[spacing_from(&read, at_name)..at_name]).is_some()
-          && !nearer_before(&read, m, |e| beside(&e))
+          && gaps(&read[spacing_from(&read, at_name)..at_name]).is_some()
+          && nearer_before(&read, m, |e| beside(&e)) == Some(false)
+          && balanced(m) == Some(true)
       }) {
         grown.0 = grown.0.min(at(read[m].span?.0)?);
       }
@@ -1083,7 +1093,7 @@ fn block_names(
       let spacing_before_mark = |i: usize| {
         (i..read.len())
           .find(|&m| !spacing(&read[m]))
-          .is_some_and(|m| spaced_mark(m) && nearer_before(&read, m, |e| beside(&e)))
+          .is_some_and(|m| spaced_mark(m) && nearer_before(&read, m, |e| beside(&e)) == Some(true))
       };
       let scan_end = (after_name..read.len())
         .find(|&i| !(past_note(&&read[i]) || (gap(&read[i]) && spacing_before_mark(i))))
@@ -1314,16 +1324,27 @@ fn spacing_from(read: &[Event], at: usize) -> usize {
     .map_or(0, |p| p + 1)
 }
 
-/// The natural width (em) of the spacing runs among `events`, fill glue the widest; `None` for no spacing run.
-fn gaps_width(events: &[Event]) -> Option<f64> {
+/// What the spacing runs among `events` print: a natural width (em), or a fill's, the line's (0pt on a centred line:
+/// `Ann Able \hfill \footnotemark[2] \quad Bob Baker`, review revSHGIVENc), which no reading of the tokens knows.
+#[derive(Clone, Copy)]
+enum Gaps {
+  Width(f64),
+  Fill,
+}
+
+/// The spacing runs among `events` ([`Gaps`]); `None` for none.
+fn gaps(events: &[Event]) -> Option<Gaps> {
   events
     .iter()
     .filter_map(|e| match e.kind {
-      EventKind::Sep(SepKind::Gap { fill: true, .. }) => Some(f64::INFINITY),
-      EventKind::Sep(SepKind::Gap { width, .. }) => Some(width),
+      EventKind::Sep(SepKind::Gap { fill: true, .. }) => Some(Gaps::Fill),
+      EventKind::Sep(SepKind::Gap { width, .. }) => Some(Gaps::Width(width)),
       _ => None,
     })
-    .reduce(|a, b| a + b)
+    .reduce(|a, b| match (a, b) {
+      (Gaps::Width(a), Gaps::Width(b)) => Gaps::Width(a + b),
+      _ => Gaps::Fill,
+    })
 }
 
 /// Whether the mark at `m`, past a spacing run, is the name's before it: pdflatex prints it nearer that name. Past its
@@ -1331,30 +1352,34 @@ fn gaps_width(events: &[Event]) -> Option<f64> {
 /// \and`), or a spacing run, and then a name only when that run is the wider (2412.20504's `\ \footnotemark[2] \quad
 /// Qingyi Si`). A mark the next name follows with no spacing run (glued to it) or one no wider (`Ann \quad † \quad Bob`,
 /// a tie) is that name's prefix (DG ruling 2026-11-16: the nearer name by the gaps' TeX widths, the next one's on a tie).
-fn nearer_before(read: &[Event], m: usize, beside: impl Fn(&Event) -> bool) -> bool {
+/// `None`, undecided, where either run holds a fill: its width is the line's, so no owner is guessed (review revSHGIVENc).
+fn nearer_before(read: &[Event], m: usize, beside: impl Fn(&Event) -> bool) -> Option<bool> {
   let Some(after) =
     (m + 1..read.len()).find(|&j| !(beside(&read[j]) || read[j].kind == EventKind::Note))
   else {
-    return true;
+    return Some(true);
   };
   match read[after].kind {
     EventKind::Sep(SepKind::Gap { .. }) => {},
-    EventKind::Sep(_) | EventKind::Break => return true,
-    _ => return false,
+    EventKind::Sep(_) | EventKind::Break => return Some(true),
+    _ => return Some(false),
   }
   let next = (after..read.len()).find(|&j| !(spacing(&read[j]) || beside(&read[j])));
   if next.is_none_or(|j| read[j].kind != EventKind::Name) {
-    return true;
+    return Some(true);
   }
   let gap_end = (after..read.len())
     .find(|&j| !spacing(&read[j]))
     .unwrap_or(read.len());
   match (
-    gaps_width(&read[after..gap_end]),
-    gaps_width(&read[spacing_from(read, m)..m]),
+    gaps(&read[after..gap_end]),
+    gaps(&read[spacing_from(read, m)..m]),
   ) {
-    (Some(width_after), Some(width_before)) => width_after > width_before,
-    _ => false,
+    (Some(Gaps::Width(width_after)), Some(Gaps::Width(width_before))) => {
+      Some(width_after > width_before)
+    },
+    (Some(Gaps::Fill), _) | (_, Some(Gaps::Fill)) => None,
+    _ => Some(false),
   }
 }
 
