@@ -740,25 +740,22 @@ pub fn class_maketitle_in_force() -> bool {
   ) else {
     return false;
   };
-  // (by a copy: `\maketitle` itself in its new body would call the new one, so a raw class's own, which ends with
-  // `\let\maketitle\relax` and names it `\string\maketitle` in its messages, scrartcl.cls:2933, :3041, calls nothing)
-  let maketitle = T_CS!("\\maketitle");
   matches!(
     dropped.get_expansion(),
     Some(ExpansionBody::Tokens(body))
-      if body.unlist_ref().iter().any(|t| {
-        *t != maketitle && definition(t).is_some_and(|d| Rc::ptr_eq(&d, &class))
-      })
+      if body.unlist_ref().iter().any(|t| definition(t).is_some_and(|d| Rc::ptr_eq(&d, &class)))
   )
 }
 
-/// Are the marks the title prints unknown here, for a name's notes (`name`) or any other's? Where the `\maketitle` that
-/// runs is not the class's own ([`class_maketitle_in_force`]: a document's, a package's, a raw class's — scrartcl's
-/// prints `\fnsymbol` where Perl's number key read "1"), and for a name's notes under a class that sets them apart
-/// (`lx_title_footnote_own_marks`: REVTeX 4.1/4.2's minipage letters, "Ann Ablea", revtex4-2.cls:2555-2557) or past a
-/// `\thefootnote` declared in no known cell ([`title_cell_declared`]). OD #1053.
+/// Are the marks the title prints unknown here, for a name's notes (`name`) or any other's? Where a binding declares its
+/// title's marks ([`TITLE_THEFOOTNOTE`]) but its `\maketitle` is not in force ([`class_maketitle_in_force`]: a
+/// document's own); where none does and a raw file's `\maketitle` runs (an unbound class's: scrartcl's prints `\fnsymbol`
+/// where Perl's number key read `\footnotemark[1]` "1", the advisor's I-3); and for a name's notes under a class that
+/// sets them apart (`lx_title_footnote_own_marks`: REVTeX 4.1/4.2's minipage letters, "Ann Ablea", revtex4-2.cls:2555-2557)
+/// or past a `\thefootnote` declared in no known cell ([`title_cell_declared`]). OD #1053.
 pub fn title_marks_unknown(name: bool) -> bool {
-  !class_maketitle_in_force()
+  let raw_maketitle = || lookup_bool("\\maketitle:redefined");
+  (if title_marks_hook() { !class_maketitle_in_force() } else { raw_maketitle() })
     || (name && (lookup_bool("lx_title_footnote_own_marks") || lookup_bool(CELL_UNKNOWN)))
 }
 

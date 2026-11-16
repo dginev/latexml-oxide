@@ -19639,12 +19639,12 @@ latex_constructs.pool.ltxml:503-527); acmart's `\authornote` is a contact, `\aut
 - *Fail-safes* (DG 2026-11-16: "a wrong glyph is worse than none; unbound classes get no automatic mark until T1
   measures the real glyph"). The class's marks hold only where its own `\maketitle` runs
   (`latex_constructs::class_maketitle_in_force`: no raw file or document took it over — the lock's
-  `\maketitle:redefined`, state.rs — or the redefinition calls the class's by meaning through a copy, `\let\oldmt
-  \maketitle \renewcommand\maketitle{\oldmt…}`; the name `\maketitle` in the dropped body is no call, as the new body
-  would call itself: a raw class's own ends with `\let\maketitle\relax`, scrartcl.cls:2933, :3041): a document's, a
-  package's or an unbound class's own prints marks unknown here (`\let\@makefnmark\relax`: none;
-  `\def\thefootnote{\arabic{footnote}}`: 1, 2; scrartcl's `\fnsymbol`, where Perl's number key wrote `\footnotemark[1]`
-  "1", the advisor's I-3), so no `\thanks` note (`title_marks_declared`), no kernel `\footnotemark`/`\footnote`/
+  `\maketitle:redefined`, state.rs — or the redefinition calls the class's by meaning, `\let\oldmt\maketitle
+  \renewcommand\maketitle{\oldmt…}`): a document's own prints marks unknown here (`\let\@makefnmark\relax`: none;
+  `\def\thefootnote{\arabic{footnote}}`: 1, 2). Under a class no binding declares the marks of, a raw file's
+  `\maketitle` is unknown too (`title_marks_unknown`: an unbound class's, scrartcl's `\fnsymbol`, where Perl's number key
+  wrote `\footnotemark[1]` "1", the advisor's I-3; a bound class's own `\maketitle`, elsarticle's or llncs's, keeps
+  Perl's marks). So no `\thanks` note (`title_marks_declared`), no kernel `\footnotemark`/`\footnote`/
   `\footnotetext` of a title field (`drop_unknown_title_mark`: no `mark`, no tags, its text paired by the counter value
   `_fnvalue`) and no acmart `\authornote` (`acm_note_mark`) carries one — unless the document set `\thefootnote` itself
   in the field since it began (aiaa-tc's `\thanksibid{2}`, `\renewcommand\thefootnote{\fnsymbol{aiaa@cthanks}}
