@@ -754,9 +754,12 @@ pub fn class_maketitle_in_force() -> bool {
 /// sets them apart (`lx_title_footnote_own_marks`: REVTeX 4.1/4.2's minipage letters, "Ann Ablea", revtex4-2.cls:2555-2557)
 /// or past a `\thefootnote` declared in no known cell ([`title_cell_declared`]). OD #1053.
 pub fn title_marks_unknown(name: bool) -> bool {
-  let raw_maketitle = || lookup_bool("\\maketitle:redefined");
-  (if title_marks_hook() { !class_maketitle_in_force() } else { raw_maketitle() })
-    || (name && (lookup_bool("lx_title_footnote_own_marks") || lookup_bool(CELL_UNKNOWN)))
+  let unknown = if title_marks_hook() {
+    !class_maketitle_in_force()
+  } else {
+    lookup_bool("\\maketitle:redefined")
+  };
+  unknown || (name && (lookup_bool("lx_title_footnote_own_marks") || lookup_bool(CELL_UNKNOWN)))
 }
 
 /// Is the mark a note made here prints unknown ([`title_marks_unknown`]), in a field of the title block? Not where the
