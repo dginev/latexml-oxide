@@ -1012,7 +1012,8 @@ fn a_pure_name_carries_every_mark_after_it_in_order() {
 /// (OXIDIZED_DESIGN_DIVERGENCES #1052; DG 2026-11-16: a wrong link is worse than none). A letter or digit is an
 /// affiliation label as often as a footnote number, so a mark-only `1` or `a` is its plain glyph: it links to no note
 /// and makes none shared (review revREND2: Bob's `1` linked Ann's own footnote `1` and sent it to the margin as shared;
-/// Dee's `a`, Cy's thanks `a`). Fay's tagged leftover `2` still links Eve's note `2`, which is then shared.
+/// Dee's `a`, Cy's thanks `a`; a Greek `α` likewise, revREND2b). Fay's tagged leftover `2` still links Eve's note `2`,
+/// which is then shared.
 #[test]
 fn a_letter_or_digit_mark_names_no_other_authors_note() {
   const MARKS: &str = r#"<?xml version="1.0" encoding="UTF-8"?>
@@ -1043,6 +1044,14 @@ fn a_letter_or_digit_mark_names_no_other_authors_note() {
     <personname>Fay Ford</personname>
     <note mark="2" role="footnotemark" xml:id="footnotex1" fragid="footnotex1"><tags><tag>2</tag><tag role="refnum">2</tag></tags></note>
   </creator>
+  <creator role="author">
+    <personname>Gil Gray</personname>
+    <note mark="α" role="footnote" xml:id="id5" fragid="id5">Gil's own Greek-lettered footnote.</note>
+  </creator>
+  <creator role="author">
+    <personname>Hu Hale</personname>
+    <note mark="α" role="footnotemark"/>
+  </creator>
 </document>"#;
   // Before (revREND2's p1.xml): Ann's and Cy's notes classed ltx_note_shared, Bob's `1` and Dee's `a` links to them.
   let html = authors_html(MARKS);
@@ -1071,6 +1080,14 @@ fn a_letter_or_digit_mark_names_no_other_authors_note() {
     "\n",
     r##"<span class="ltx_creator ltx_role_author"><span class="ltx_annotated_personname">"##,
     "\n",
-    r##"<span class="ltx_personname">Fay Ford</span><span id="footnotex1" class="ltx_note ltx_role_footnotemark ltx_note_shared"><sup class="ltx_note_mark"><a href="#id4">2</a></sup></span></span></span></div>"##,
+    r##"<span class="ltx_personname">Fay Ford</span><span id="footnotex1" class="ltx_note ltx_role_footnotemark ltx_note_shared"><sup class="ltx_note_mark"><a href="#id4">2</a></sup></span></span></span>"##,
+    "\n",
+    r##"<span class="ltx_creator ltx_role_author"><span class="ltx_annotated_personname">"##,
+    "\n",
+    r##"<span class="ltx_personname">Gil Gray</span><span id="id5" class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">α</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">α</sup>Gil's own Greek-lettered footnote.</span></span></span></span></span>"##,
+    "\n",
+    r##"<span class="ltx_creator ltx_role_author"><span class="ltx_annotated_personname">"##,
+    "\n",
+    r##"<span class="ltx_personname">Hu Hale</span><span class="ltx_note ltx_role_footnotemark"><sup class="ltx_note_mark">α</sup></span></span></span></div>"##,
   ),]);
 }

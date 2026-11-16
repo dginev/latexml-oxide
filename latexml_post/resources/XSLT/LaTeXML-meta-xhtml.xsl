@@ -97,14 +97,14 @@
   <!-- The same notes by block and mark alone, and the mark-only notes (role="footnotemark": a mark printed on a name
        that no note of its own answers, an affiliation letter, an unpaired \footnotemark; 0801.1438) by block and
        mark. A mark-only note links to the note its mark names in the block (one note, however many copies), which it
-       then makes shared, but only a symbol mark or Perl's tagged leftover: a letter or digit is as often an
-       affiliation label, and a wrong link is worse than none (revREND2). -->
+       then makes shared, but only a symbol mark or Perl's tagged leftover: a letter (Latin or Greek) or digit is as
+       often an affiliation label, and a wrong link is worse than none (revREND2). -->
   <xsl:key name="f:creator-note-by-mark"
            match="ltx:creator[@role='author']/ltx:note[normalize-space(@mark)][normalize-space(.)][not(@role='footnotemark')]"
            use="concat(generate-id(../..),'&#x9;',normalize-space(@mark))"/>
   <xsl:key name="f:creator-mark-only"
            match="ltx:creator[@role='author']/ltx:note[@role='footnotemark'][normalize-space(@mark)]
-                  [ltx:tags or translate(normalize-space(@mark),'0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ','')
+                  [ltx:tags or translate(normalize-space(@mark),'0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZαβγδεζηθικλμνξοπρςστυφχψωΑΒΓΔΕΖΗΘΙΚΛΜΝΞΟΠΡΣΤΥΦΧΨΩ','')
                                = normalize-space(@mark)]"
            use="concat(generate-id(../..),'&#x9;',normalize-space(@mark))"/>
 
