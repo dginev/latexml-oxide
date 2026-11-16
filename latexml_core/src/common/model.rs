@@ -1049,10 +1049,8 @@ fn namespace_wildcard_sym(tag: SymStr) -> Option<SymStr> {
 /// wildcard first — a cached `pin!` for `*` / `*:*`, no allocation — and build a
 /// `!key` / `ns:*` probe string only when it can still change the answer. So the
 /// serializer's hot `can_contain(<block element>, #PCDATA)` query, whose model
-/// carries no `*`, returns here having interned nothing. Any owned probe string
-/// is built inside `arena::with` and interned only AFTER that borrow is released:
-/// the `BufferBackend` interner can realloc on a new intern, which would dangle a
-/// resolved `&str` still held from `key`.
+/// carries no `*`, returns here having interned nothing. A probe string is looked
+/// up, never interned ([`set_holds`]).
 fn set_allows(set: &HashSet<SymStr>, key: SymStr) -> bool {
   if set.contains(&key) {
     return true; // exact hit — the common case, interns nothing
@@ -1070,29 +1068,34 @@ fn set_allows(set: &HashSet<SymStr>, key: SymStr) -> bool {
     }
     // `*` allows it unless an explicit `!key` excludes it — build that one probe.
     let negated = arena::with(key, |k| s!("!{k}"));
-    return !set.contains(&arena::pin(&negated));
+    return !set_holds(set, &negated);
   }
   // Prefixed key (cold path — the serializer never queries one). Perl order:
-  // !key, ns:*, !ns:*, !*:*, *:*. Each probe string is built inside `arena::with`
-  // and interned only after that borrow drops (BufferBackend may realloc).
+  // !key, ns:*, !ns:*, !*:*, *:*.
   let negated = arena::with(key, |k| s!("!{k}"));
-  if set.contains(&arena::pin(&negated)) {
+  if set_holds(set, &negated) {
     return false;
   }
   let (ns_star, neg_ns_star) = arena::with(key, |k| {
     let ns = k.split_once(':').map_or("", |(ns, _)| ns);
     (s!("{ns}:*"), s!("!{ns}:*"))
   });
-  if set.contains(&arena::pin(&ns_star)) {
+  if set_holds(set, &ns_star) {
     return true;
   }
-  if set.contains(&arena::pin(&neg_ns_star)) {
+  if set_holds(set, &neg_ns_star) {
     return false;
   }
   if set.contains(&pin!("!*:*")) {
     return false;
   }
   set.contains(&pin!("*:*"))
+}
+
+/// Whether `set` holds the string `probe`. A string never interned cannot be in the set, so it is looked up
+/// (`arena::get`), not pinned: a pin would keep every new probe string in the arena for good.
+fn set_holds(set: &HashSet<SymStr>, probe: &str) -> bool {
+  arena::get(probe).is_some_and(|sym| set.contains(&sym))
 }
 
 pub fn can_have_attribute(tag: SymStr, attrib: SymStr) -> bool {
@@ -1354,6 +1357,22 @@ mod wildcard_resolution_tests {
     assert!(
       allows(&star_but_excluded, "id"),
       "* still allows an unexcluded name"
+    );
+  }
+
+  #[test]
+  fn the_probes_intern_nothing() {
+    let s = set_of(&["*", "*:*", "!svg:width"]);
+    // (the first calls pin the call sites' cached literals, `!*` and `!*:*`)
+    assert!(allows(&s, "warm") && allows(&s, "warm:up"));
+    let (plain, prefixed) = (arena::pin("probe"), arena::pin("probe:prefixed"));
+    let before = arena::len();
+    assert!(set_allows(&s, plain), "`*` allows it, as no `!probe` exists");
+    assert!(set_allows(&s, prefixed), "`*:*` allows it");
+    assert_eq!(
+      arena::len(),
+      before,
+      "`!probe`, `!probe:prefixed`, `probe:*` and `!probe:*` were looked up, not pinned"
     );
   }
 }
