@@ -2589,8 +2589,11 @@ pub fn decode_string(string: SymStr, encoding_opt: Option<&str>, implicit: bool)
     None
   };
 
-  let mut result_string: String = String::new();
-  arena::with(string, |str| {
+  // The decoding is spelled in a reused buffer (a String per call was one allocation per digested character, MEM1
+  // L4a); taken out of its cell, so a nested call would only allocate its own.
+  let mut result_string = DECODED.take();
+  result_string.clear();
+  let unchanged = arena::with(string, |str| {
     for c in str.chars() {
       if implicit {
         if let Some(ref map_ref) = map {
@@ -2626,8 +2629,20 @@ pub fn decode_string(string: SymStr, encoding_opt: Option<&str>, implicit: bool)
         }
       }
     }
+    result_string == str
   });
-  arena::pin(result_string)
+  let decoded = if unchanged {
+    string
+  } else {
+    arena::pin(result_string.as_str())
+  };
+  DECODED.set(result_string);
+  decoded
+}
+
+thread_local! {
+  /// [`decode_string`]'s buffer.
+  static DECODED: std::cell::Cell<String> = const { std::cell::Cell::new(String::new()) };
 }
 
 /// Convert stanard font size names, such as `tiny`, `Huge`, etc to f64

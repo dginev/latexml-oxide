@@ -6,7 +6,7 @@
 //! Supports permuted indexes, splitting by initial, see-also references,
 //! range-style page references, and glossary entry formatting.
 
-use latexml_core::common::cleaners::clean_class_name;
+use latexml_core::common::{cleaners::clean_class_name, xml::name_is};
 use libxml::tree::{Node, NodeType};
 use rustc_hash::FxHashMap as HashMap;
 use unicode_normalization::UnicodeNormalization;
@@ -865,7 +865,7 @@ impl Processor for MakeIndex {
         let lists = node
           .get_attribute("lists")
           .unwrap_or_else(|| "glossary".to_string());
-        let list_unreferenced = node.get_attribute("role").as_deref() == Some("nomenclature");
+        let list_unreferenced = node.with_attribute(c"role", |v| v == "nomenclature") == Some(true);
         let entries = self.get_glossary_entries(&lists, &id, list_unreferenced);
         if !entries.is_empty() {
           let glist = self.make_glossary_list(&entries);
@@ -1099,7 +1099,7 @@ fn trimmed_child_nodes(node: &Node) -> Vec<NodeData> {
 /// `descendant-or-self::ltx:ref` before warning about an unresolved
 /// see-also phrase.)
 fn node_has_ref_descendant(node: &Node) -> bool {
-  if node.get_type() == Some(NodeType::ElementNode) && node.get_name() == "ref" {
+  if node.get_type() == Some(NodeType::ElementNode) && name_is(node, "ref") {
     return true;
   }
   node.get_child_nodes().iter().any(node_has_ref_descendant)

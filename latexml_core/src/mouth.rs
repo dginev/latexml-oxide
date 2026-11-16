@@ -1,10 +1,11 @@
-use core::ops::RangeBounds;
+use core::ops::{Range, RangeBounds};
 use std::{
   collections::VecDeque,
   fmt,
   fs::File,
   io,
   io::{BufReader, prelude::*},
+  rc::Rc,
   str,
 };
 
@@ -127,7 +128,11 @@ pub struct Mouth {
   // pub handle : Option<File>,
   chars:                  VecDeque<char>,
   buffer:                 VecDeque<String>,
-  raw_buffer:             VecDeque<Vec<u8>>,
+  /// The lines of `raw_bytes` not yet decoded, as ranges into it: a file is held once, not as a `Vec` per line.
+  raw_buffer:             VecDeque<Range<usize>>,
+  raw_bytes:              Rc<[u8]>,
+  /// The name of the control sequence being read ([`Self::handle_escape`]), spelled in a buffer reused across tokens.
+  cs_name:                String,
   reader:                 Option<BufReader<File>>,
   /// This mouth reads input BYTES (a file, or a document handed over as content),
   /// not an engine string: see [`eight_bit_input_char`].
@@ -184,6 +189,8 @@ impl Mouth {
       chars: self.chars.clone(),
       buffer: self.buffer.clone(),
       raw_buffer: self.raw_buffer.clone(),
+      raw_bytes: Rc::clone(&self.raw_bytes),
+      cs_name: String::new(),
       reader,
       reads_input_bytes: self.reads_input_bytes,
       buffered_line_is_bytes: self.buffered_line_is_bytes,
@@ -230,6 +237,8 @@ impl Default for Mouth {
       saved_include_comments: None,
       buffer:                 VecDeque::new(),
       raw_buffer:             VecDeque::new(),
+      raw_bytes:              Rc::from([]),
+      cs_name:                String::new(),
       reader:                 None,
       reads_input_bytes:      false,
       buffered_line_is_bytes: false,
@@ -731,6 +740,7 @@ impl Mouth {
       self.reads_input_bytes = true;
       self.buffer = VecDeque::new();
       self.raw_buffer = VecDeque::new();
+      self.raw_bytes = Rc::from([]);
     }
     Ok(())
   }
@@ -739,6 +749,7 @@ impl Mouth {
       // A document handed over as content: bytes, decoded per line on read
       // (`get_next_line`), like a file.
       self.raw_buffer = Mouth::split_raw_lines(content.as_bytes());
+      self.raw_bytes = Rc::from(content.as_bytes());
       self.reads_input_bytes = true;
     } else {
       self.buffer = Mouth::split_lines(content);
@@ -815,6 +826,7 @@ impl Mouth {
   pub fn stop_reading(&mut self) {
     self.buffer = VecDeque::new();
     self.raw_buffer = VecDeque::new();
+    self.raw_bytes = Rc::from([]);
     self.chars = VecDeque::new();
     self.line_is_bytes = false;
     self.caret_bytes.clear();
@@ -859,27 +871,27 @@ impl Mouth {
     lines
   }
 
-  /// Split raw bytes into lines without decoding, splitting on \r\n, \r, or \n.
-  fn split_raw_lines(bytes: &[u8]) -> VecDeque<Vec<u8>> {
+  /// Split raw bytes into lines without decoding, splitting on \r\n, \r, or \n: the lines' ranges in `bytes`.
+  fn split_raw_lines(bytes: &[u8]) -> VecDeque<Range<usize>> {
     let mut lines = VecDeque::new();
     let mut start = 0;
     let mut i = 0;
     while i < bytes.len() {
       if bytes[i] == b'\r' {
-        lines.push_back(bytes[start..i].to_vec());
+        lines.push_back(start..i);
         if i + 1 < bytes.len() && bytes[i + 1] == b'\n' {
           i += 1; // skip \n after \r
         }
         start = i + 1;
       } else if bytes[i] == b'\n' {
-        lines.push_back(bytes[start..i].to_vec());
+        lines.push_back(start..i);
         start = i + 1;
       }
       i += 1;
     }
     // Add remaining bytes (last line without trailing newline)
     if start < bytes.len() {
-      lines.push_back(bytes[start..].to_vec());
+      lines.push_back(start..bytes.len());
     }
     lines
   }
@@ -1000,7 +1012,8 @@ impl Mouth {
       // that is active at the time the line is read, allowing inputenc to
       // change encoding mid-file.
       if let Some(raw_line) = self.raw_buffer.pop_front() {
-        let (decoded, is_bytes) = Mouth::decode_bytes(&raw_line, || self.get_location());
+        let (decoded, is_bytes) =
+          Mouth::decode_bytes(&self.raw_bytes[raw_line], || self.get_location());
         self.buffered_line_is_bytes = is_bytes;
         self.buffer.push_back(decoded);
       }
@@ -1023,9 +1036,11 @@ impl Mouth {
       // Split raw bytes into lines without decoding (preserving raw bytes).
       // Each line is decoded lazily via decode_bytes() using the CURRENT encoding.
       self.raw_buffer = Mouth::split_raw_lines(&file_bytes);
+      self.raw_bytes = Rc::from(file_bytes);
       // Decode the first line now
       if let Some(raw_line) = self.raw_buffer.pop_front() {
-        let (decoded, is_bytes) = Mouth::decode_bytes(&raw_line, || self.get_location());
+        let (decoded, is_bytes) =
+          Mouth::decode_bytes(&self.raw_bytes[raw_line], || self.get_location());
         self.buffered_line_is_bytes = is_bytes;
         self.buffer.push_back(decoded);
       }
@@ -1243,7 +1258,8 @@ impl Mouth {
           line.push(ch);
         }
 
-        self.chars = line.chars().collect::<VecDeque<char>>();
+        self.chars.clear();
+        self.chars.extend(line.chars());
         self.nchars = self.chars.len();
         // In state N, skip leading spaces & ignored, possibly decoding (trailing space removed
         // above)
@@ -1415,7 +1431,8 @@ impl Mouth {
     if let Some(ch) = endline_char() {
       line.push(ch);
     }
-    self.chars = line.chars().collect();
+    self.chars.clear();
+    self.chars.extend(line.chars());
     self.nchars = self.chars.len();
     self.colno = 0;
     self.caret_bytes.clear();
@@ -1452,7 +1469,7 @@ impl Mouth {
     let raw = self
       .raw_buffer
       .iter()
-      .map(|line| String::from_utf8_lossy(line));
+      .map(|line| String::from_utf8_lossy(&self.raw_bytes[line.clone()]));
     for line in decoded.chain(raw).take(max_lines) {
       if room == 0 {
         break;
@@ -1491,7 +1508,8 @@ impl Mouth {
           // Strip trailing spaces (Perl: s/ *$//s)
           line = next_line.trim_end_matches(' ').to_string();
           self.lineno += 1;
-          self.chars = line.chars().collect();
+          self.chars.clear();
+          self.chars.extend(line.chars());
           self.nchars = self.chars.len();
           self.colno = self.nchars;
         },
@@ -1592,15 +1610,16 @@ impl Mouth {
   fn handle_comment(&mut self) -> Option<Token> {
     let n = self.colno;
     self.colno = self.nchars;
-    let mut comment = String::new();
-    for c in self.chars.iter().skip(n).take(self.nchars - n) {
-      comment.push(*c);
+    // the comment's text is spelled only when comments are kept (`--nocomments`, cortex's default, drops them)
+    if lookup_bool_sym(crate::pin!("INCLUDE_COMMENTS")) {
+      let comment: String = self.chars.iter().skip(n).take(self.nchars - n).collect();
+      let trimmed_comment = comment.trim();
+      if !trimmed_comment.is_empty() {
+        // Perl T_COMMENT prepends '%' to the comment text (Token.pm L81)
+        return Some(T_COMMENT!(s!("%{}", trimmed_comment)));
+      }
     }
-    let trimmed_comment = comment.trim();
-    if !trimmed_comment.is_empty() && lookup_bool("INCLUDE_COMMENTS") {
-      // Perl T_COMMENT prepends '%' to the comment text (Token.pm L81)
-      Some(T_COMMENT!(s!("%{}", trimmed_comment)))
-    } else if lookup_int("PRESERVE_NEWLINES") > 1 {
+    if lookup_int("PRESERVE_NEWLINES") > 1 {
       Some(T_MARKER!("EOL")) // Required EOL during \read
     } else {
       None
@@ -1617,7 +1636,10 @@ impl Mouth {
     if let Some((ch, mut cc)) = self.get_next_char() {
       // Knuth, p.46 says that Newlines are converted to spaces,
       // Bit I believe that he does NOT mean within control sequences
-      let mut cs = s!("\\{}", ch);
+      let mut cs = std::mem::take(&mut self.cs_name);
+      cs.clear();
+      cs.push('\\');
+      cs.push(ch);
       if cc == Catcode::LETTER {
         // For letter, read more letters for csname.
         while let Some((nch, ncc)) = self.get_next_char() {
@@ -1634,7 +1656,9 @@ impl Mouth {
           self.colno -= 1;
         }
       }
-      Some(T_CS!(cs))
+      let token = T_CS!(&cs);
+      self.cs_name = cs;
+      Some(token)
     } else {
       None
     }
@@ -1832,9 +1856,15 @@ mod newline_tests {
   /// never reaches the catcode machinery).
   #[test]
   fn split_raw_lines_universal_newlines() {
-    let lf = Mouth::split_raw_lines(b"a\nb\nc");
-    let crlf = Mouth::split_raw_lines(b"a\r\nb\r\nc");
-    let cr = Mouth::split_raw_lines(b"a\rb\rc");
+    let lines = |bytes: &[u8]| -> Vec<Vec<u8>> {
+      Mouth::split_raw_lines(bytes)
+        .into_iter()
+        .map(|range| bytes[range].to_vec())
+        .collect()
+    };
+    let lf = lines(b"a\nb\nc");
+    let crlf = lines(b"a\r\nb\r\nc");
+    let cr = lines(b"a\rb\rc");
     assert_eq!(lf, crlf, "CRLF must split identically to LF");
     assert_eq!(lf, cr, "bare CR must split identically to LF");
     assert_eq!(lf.len(), 3);

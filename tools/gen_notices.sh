@@ -106,7 +106,8 @@ trap 'rm -f "$rust_section" "$copyleft_section" "$provenance_section"' EXIT
 # cargo-about already resolved the graph above, so Cargo.lock exists by now.
 # libmarpa is vendored by the published `libmarpa-asf-sys` crate (formerly a git
 # dep). A crates.io version is an immutable, reproducible input, so record the
-# resolved version rather than a git commit.
+# resolved version rather than a git commit. From 0.3.1 it builds one modified
+# file, c/marpa_obs.c (tools/audit_vendored_natives.py audits 0.3.1 only).
 marpa_ver="$(sed -n '/^name = "libmarpa-asf-sys"/{n;s|^version = "\(.*\)"$|\1|p;}' \
   Cargo.lock 2>/dev/null | head -1)"
 kpse_ref="$(sed -n 's|^KPSE_REF="${KPSE_REF:-\(.*\)}"$|\1|p' \
@@ -131,7 +132,9 @@ self_rev="${LATEXML_SELF_REV:-$(git rev-parse HEAD 2>/dev/null || echo "unknown"
   echo "      commit: ${self_rev}"
   echo
   echo "  libmarpa 8.6.2 -- MIT (Kegler) + LGPL-3.0/LGPL-2.1 parts (sec 3.3)"
-  echo "      vendored verbatim as libmarpa-8.6.2.tar.gz in the libmarpa-asf-sys crate"
+  echo "      vendored as libmarpa-8.6.2.tar.gz in the libmarpa-asf-sys crate and built"
+  echo "      with one modified file, c/marpa_obs.c (LGPL-2.1+, modification notice in"
+  echo "      its header; since libmarpa-asf-sys 0.3.1), shipped in the same crate"
   echo "      https://crates.io/crates/libmarpa-asf-sys  (fork: https://github.com/dginev/marpa)"
   echo "      version: libmarpa-asf-sys ${marpa_ver:-unresolved}"
   echo

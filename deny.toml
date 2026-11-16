@@ -50,6 +50,15 @@ allow = [
   "MPL-2.0", # weak (per-file) copyleft — safe to depend on for a CC0 binary
 ]
 
+# libmarpa-asf-sys bundles libmarpa 8.6.2's C, statically linked: mostly MIT, but its obstack
+# (marpa_obs.[ch], from GNU obstack; also the crate's modified c/marpa_obs.c) is LGPL-2.1-or-later
+# and its AVL code (marpa_avl.[ch], marpa_tavl.[ch], from GNU libavl) LGPL-3.0-or-later. Linked
+# since marpa 0.3.0; the crate's license field names them from 0.3.1. Allowed for this crate only
+# (DG 2026-11-15) until marpa replaces those files with MIT code, which removes this exception.
+[[licenses.exceptions]]
+crate = "libmarpa-asf-sys"
+allow = ["LGPL-2.1-or-later", "LGPL-3.0-or-later"]
+
 [bans]
 # Surface (but don't fail on) duplicate versions and wildcard version reqs.
 multiple-versions = "warn"

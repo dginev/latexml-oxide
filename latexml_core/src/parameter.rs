@@ -575,7 +575,7 @@ impl Parameter {
     _fordefn: Option<&Constructor>,
   ) -> Result<Option<Digested>> {
     // Perl Parameter.pm lines 122,139-141: capture MODE, check after digest
-    let mode = lookup_string_from_sym(crate::pin!("MODE"));
+    let mode = lookup_mode();
     // If semiverbatim, Expand (before digest), so tokens can be neutralized; BLECH!!!!
     if self.semiverbatim.is_some() {
       // Digest-time protection applies to ExpandedSemiverbatim too (its
@@ -688,8 +688,7 @@ impl Parameter {
     }
 
     // Perl Parameter.pm lines 139-141: avoid mode change leaking out of parameter digestion
-    let newmode = lookup_string_from_sym(crate::pin!("MODE"));
-    if mode != newmode && mode != "horizontal" {
+    if mode != lookup_mode() && mode != crate::pin!("horizontal") {
       crate::stomach::leave_horizontal_internal();
     }
 
@@ -810,7 +809,7 @@ fn trace_argument(definition: &dyn Definition, parameter: &Parameter, values: &A
 impl Parameters {
   pub fn new(params: Vec<Parameter>) -> Self { Parameters(params) }
   pub fn get_num_args(&self) -> usize { self.0.iter().filter(|&p| !p.novalue).count() }
-  pub fn get_parameters(&self) -> Vec<&Parameter> { self.0.iter().collect() }
+  pub fn get_parameters(&self) -> &[Parameter] { &self.0 }
   pub fn take_parameters(self) -> Vec<Parameter> { self.0 }
   /// Revert `args`, one per valued parameter: a novalue parameter (an
   /// environment's leading `SkipSpaces`, a `Match` delimiter) stored no

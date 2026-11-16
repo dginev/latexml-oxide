@@ -12,6 +12,7 @@
 
 use std::cell::Cell;
 
+use latexml_core::common::xml::name_is;
 use libxml::tree::Node;
 use rustc_hash::FxHashMap as HashMap;
 
@@ -1361,7 +1362,7 @@ fn pmml_token_inner(doc: &PostDocument, node: &Node, role_override: Option<&str>
   if tag == "m:mo" {
     let props = operator_dictionary::opdict_lookup(&text, &role);
     // Perl L697-704: implied attributes.
-    let mut stretchy = node.get_attribute("stretchy").as_deref() == Some("true");
+    let mut stretchy = node.with_attribute(c"stretchy", |v| v == "true") == Some(true);
     let is_fence = matches!(role.as_str(), "OPEN" | "CLOSE" | "MIDDLE");
     let is_sep = role == "PUNCT";
     let is_largeop = matches!(role.as_str(), "SUMOP" | "INTOP");
@@ -1843,7 +1844,7 @@ fn pmml_infix(doc: &PostDocument, op: &Node, args: &[Node]) -> NodeData {
     // `−`.lspace, collapsing the gap (issue #535). A non-token (embellished)
     // operator renders normally, exactly as Perl's ternary does.
     [arg] => {
-      let op_prefix = if op.get_name() == "XMTok" {
+      let op_prefix = if name_is(op, "XMTok") {
         pmml_token_inner(doc, op, Some("OPERATOR"))
       } else {
         pmml(doc, op)
@@ -1870,10 +1871,10 @@ fn pmml_infix(doc: &PostDocument, op: &Node, args: &[Node]) -> NodeData {
 /// the right operand for postfix-relop rules. Used by `pmml_infix`
 /// to suppress materialization in Presentation MathML. Task #264.
 fn is_absent_operand(node: &Node) -> bool {
-  if node.get_name() != "XMTok" {
+  if !name_is(node, "XMTok") {
     return false;
   }
-  node.get_attribute("meaning").as_deref() == Some("absent")
+  node.with_attribute(c"meaning", |v| v == "absent") == Some(true)
 }
 
 /// Big operator with possible limits.
@@ -2396,7 +2397,7 @@ fn apply_multi_scripts(
 fn pmml_cfrac(doc: &PostDocument, op: &Node, numer: &Node, denom: &Node) -> NodeData {
   // Perl registration (L1954-1960): only the `cfrac-inline` variant unrolls
   // via do_cfrac; display cfrac is a plain (recursively converted) mfrac.
-  if op.get_attribute("name").as_deref() == Some("cfrac-inline") {
+  if op.with_attribute(c"name", |v| v == "cfrac-inline") == Some(true) {
     return pmml_row(do_cfrac(doc, numer, denom));
   }
   NodeData::Element {
@@ -2417,7 +2418,7 @@ fn do_cfrac(doc: &PostDocument, numer: &Node, denom: &Node) -> Vec<NodeData> {
     if dchildren.len() >= 2 {
       let denomop = &dchildren[0];
       let denomargs = &dchildren[1..];
-      if denomop.get_attribute("role").as_deref() == Some("ADDOP")
+      if denomop.with_attribute(c"role", |v| v == "ADDOP") == Some(true)
         || denomop.get_content() == "\u{22EF}"
       {
         let (rest, last) = denomargs.split_at(denomargs.len() - 1);
@@ -2447,7 +2448,7 @@ fn do_cfrac(doc: &PostDocument, numer: &Node, denom: &Node) -> Vec<NodeData> {
             if lchildren.len() >= 2 {
               let lastop = &lchildren[0];
               let lastargs = &lchildren[1..];
-              if lastop.get_attribute("meaning").as_deref() == Some("continued-fraction")
+              if lastop.with_attribute(c"meaning", |v| v == "continued-fraction") == Some(true)
                 && lastargs.len() >= 2
               {
                 // Denominator ends with a cfrac: unroll it to toplevel.

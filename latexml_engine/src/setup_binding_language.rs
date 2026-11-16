@@ -253,7 +253,7 @@ macro_rules! DefMathLigature {
           return Ok(None);
         };
         if model::with_node_qname(&current, |qname| qname != "ltx:XMTok") ||
-           current.get_content() != c.to_string() {
+           current.as_readonly().with_content(|text| text != c.encode_utf8(&mut [0; 4])) {
           return Ok(None);
         }
         node = current.get_prev_sibling();

@@ -1,6 +1,6 @@
 use latexml::util::test::{lex_single_tex_formula, new_test_engine};
 use latexml_core::common::model;
-use latexml_math_parser::MathParser;
+use latexml_math_parser::{MathGrammar, MathParser};
 
 #[test]
 fn basic_1() {
@@ -63,6 +63,31 @@ fn basic_1() {
   assert_eq!(
     doc.get_document().node_to_string(&parsed_xml),
     expected_xmath_after
+  );
+}
+
+/// A streamed conversion's parsers share one precomputed `MathGrammar`, each segment's parser handing
+/// it to the next (`streaming_pass2`): a parser over the handed-on grammar reads as a freshly built one.
+/// A smoke test of the hand-off after a soft parse failure; libmarpa's fatal flag (the case the
+/// hand-off's trivial-parse gate exists for) cannot be forced cheaply here.
+#[test]
+fn shared_grammar_parses_like_a_fresh_one() {
+  let ambiguous = "UNKNOWN:f:1 OPEN:(:2 UNKNOWN:x:3 CLOSE:):4 ADDOP:plus:5 UNKNOWN:y:6 ";
+  let fresh = MathParser::default().count_raw_trees(ambiguous);
+  assert!(
+    fresh.is_some_and(|n| n > 1),
+    "the input is ambiguous: {fresh:?}"
+  );
+  let mut first = MathParser::with_grammar(&MathGrammar::new().expect("the math grammar builds"));
+  assert_eq!(first.count_raw_trees(ambiguous), fresh);
+  assert!(
+    !first.recognizes("NOSUCHROLE:x:1 "),
+    "an unknown role is no lexeme"
+  );
+  let mut second = MathParser::with_grammar(&first.grammar().expect("the grammar is handed on"));
+  assert_eq!(second.count_raw_trees(ambiguous), fresh);
+  assert!(
+    second.recognizes("UNKNOWN:D:1 start_POSTSUBSCRIPT:start:2 ATOM:r:3 end_POSTSUBSCRIPT:end:4 ")
   );
 }
 

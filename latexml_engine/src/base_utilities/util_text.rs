@@ -1021,7 +1021,7 @@ fn settings_arguments(w: &Whatsit) -> Vec<bool> {
     .map(|params| {
       params
         .get_parameters()
-        .into_iter()
+        .iter()
         .filter(|p| !p.novalue)
         .map(|p| p.name)
         .collect()
@@ -1054,7 +1054,7 @@ fn argument_kinds(w: &Whatsit) -> Option<Vec<u8>> {
     .map(|params| {
       params
         .get_parameters()
-        .into_iter()
+        .iter()
         .filter(|p| !p.novalue)
         .map(|p| p.name)
         .collect()

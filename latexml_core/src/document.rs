@@ -9,7 +9,10 @@ use std::{
   rc::Rc,
 };
 
-use libxml::tree::{Document as XmlDoc, Namespace, Node, NodeType};
+use libxml::{
+  readonly::RoNode,
+  tree::{Document as XmlDoc, Namespace, Node, NodeType},
+};
 use once_cell::sync::Lazy;
 use regex::Regex;
 use rustc_hash::{FxHashMap as HashMap, FxHashSet as HashSet};
@@ -25,7 +28,7 @@ use crate::{
     numeric_ops::NumericOps,
     object::Object,
     store::Stored,
-    xml::{self, XML_NS, XPath},
+    xml::{self, XML_NS, XPath, name_is},
   },
   definition::FontDirective,
   document::{
@@ -580,11 +583,7 @@ enum Placement_ {
 /// every resident root child on every yield (roadmap stream C, 2026-09-25).
 fn subtree_holds_prose(node: &Node) -> bool {
   fn is_ltx(node: &Node, local: &str) -> bool {
-    node.get_type() == Some(NodeType::ElementNode)
-      && node.get_name() == local
-      && node
-        .get_namespace()
-        .is_some_and(|ns| ns.get_href() == model::LTX_NAMESPACE)
+    node.get_type() == Some(NodeType::ElementNode) && xml::is_ltx_element(node, local)
   }
   fn text_outside_pictures(node: &Node) -> bool {
     let mut child = node.get_first_child();
@@ -752,7 +751,12 @@ impl Document {
         None => return Vec::new(),
       },
     };
-    self.get_xpath().findnodes(xpath, Some(&node))
+    self.get_xpath();
+    let context = self.context.as_mut().expect("get_xpath made it");
+    match context.walk(&self.document, xpath, Some(&node)) {
+      Some(found) => found,
+      None => context.findnodes(xpath, Some(&node)),
+    }
   }
 
   /// Get an XPath context that knows about our namespace mappings.
@@ -788,7 +792,14 @@ impl Document {
 
   /// Like findnodes, but only returns the first matched node
   pub fn findnode(&mut self, xpath: &str, node: Option<&Node>) -> Option<Node> {
-    let mut nodes = self.get_xpath().findnodes(xpath, node);
+    self.get_xpath();
+    let context = self.context.as_mut().expect("get_xpath made it");
+    if let Some(node) = node
+      && let Some(first) = context.walk_first(&self.document, xpath, Some(node))
+    {
+      return first;
+    }
+    let mut nodes = context.findnodes(xpath, node);
     if nodes.is_empty() {
       None
     } else {
@@ -1143,14 +1154,17 @@ impl Document {
           // no-scrap path (this is the streaming hot path — see the
           // `get_attributes` note above). `_lxfragment` is not one.
           // The engine's field marks (processing instructions, [`FIELD_MARK_TARGET`]) are scaffolding too.
+          // (read-only: only a scrap is wrapped as a `Node`)
           let scraps: Vec<Node> = current
+            .as_readonly()
             .get_child_nodes()
             .into_iter()
             .filter(|c| match c.get_type() {
-              Some(NodeType::ElementNode) => c.get_name().ends_with("_Capture_"),
-              Some(NodeType::PiNode) => c.get_name() == FIELD_MARK_TARGET,
+              Some(NodeType::ElementNode) => c.with_name(|name| name.ends_with("_Capture_")),
+              Some(NodeType::PiNode) => c.with_name(|name| name == FIELD_MARK_TARGET),
               _ => false,
             })
+            .map(|c| current.node_from_readonly(c))
             .collect();
           for scrap in scraps {
             if scrap.get_type() == Some(NodeType::PiNode) {
@@ -1163,12 +1177,14 @@ impl Document {
               self.remove_node(scrap);
             }
           }
-          let children = current.get_child_nodes();
+          // (read-only; a child is wrapped as a `Node` where it becomes work)
+          let children = current.as_readonly().get_child_nodes();
           // Collect work items forward, then push in reverse for left-to-right processing
           let mut child_work: Vec<Work> = Vec::new();
-          for child in &children {
-            let child_type = child.get_type();
+          for &ro_child in &children {
+            let child_type = ro_child.get_type();
             if child_type == Some(NodeType::ElementNode) {
+              let child = current.node_from_readonly(ro_child);
               let was_forcefont = child.has_attribute("_force_font");
               // Enter first, PostElement after (reversed when pushed to stack)
               child_work.push(Work::Enter(child.clone()));
@@ -1190,7 +1206,9 @@ impl Document {
               }
               if can_contain(&current, FONT_ELEMENT_NAME)
                 && !pending_declaration.is_empty()
-                && let Some(mut text) = self.wrap_nodes(FONT_ELEMENT_NAME, vec![child.clone()])?
+                && let Some(mut text) = self.wrap_nodes(FONT_ELEMENT_NAME, vec![
+                  current.node_from_readonly(ro_child),
+                ])?
               {
                 for (key, (value, _properties)) in pending_declaration.iter() {
                   self.set_attribute(&mut text, key, value)?;
@@ -1248,18 +1266,23 @@ impl Document {
           // carries ACROSS segments (read back after each segment — see
           // `streaming_pass2`).
           if get_node_qname(&node) != pin!("ltx:_lxfragment") {
-            let attrs_now = node.get_attributes();
-            let total_attrs = attrs_now.len();
-            let bookkeeping_attrs: Vec<&String> = attrs_now
-              .keys()
-              .filter(|name| name.starts_with('_'))
-              .collect();
-            let bookkeeping_count = bookkeeping_attrs.len();
-            for name in bookkeeping_attrs {
+            // (one removal per local name, as `get_attributes()`' map named them)
+            let mut has_visible = false;
+            let mut bookkeeping_attrs: Vec<String> = Vec::new();
+            node.as_readonly().for_each_property(|name, _| {
+              if name.starts_with('_') {
+                if !bookkeeping_attrs.iter().any(|seen| seen == name) {
+                  bookkeeping_attrs.push(name.to_owned());
+                }
+              } else {
+                has_visible = true;
+              }
+            });
+            for name in &bookkeeping_attrs {
               let _ = node.remove_attribute(name);
             }
             // If all attributes were bookkeeping, the node now has empty attrs.
-            if total_attrs <= bookkeeping_count {
+            if !has_visible {
               empty_attr_nodes.insert(node.to_hashable());
             }
           }
@@ -2558,7 +2581,13 @@ impl Document {
     heuristic: bool,
   ) -> String {
     let mut serialized = String::new();
-    self.serialize_into(&mut serialized, node, depth, noindent, heuristic);
+    self.serialize_into(
+      &mut serialized,
+      node.as_readonly(),
+      depth,
+      noindent,
+      heuristic,
+    );
     serialized
   }
 
@@ -2627,11 +2656,12 @@ impl Document {
   /// Buffer-threaded core of [`serialize_aux`]. Writes the subtree directly into
   /// `out` instead of building (and re-copying) a fresh `String` per node — the
   /// recursive return-a-String pattern was the single largest byte source in the
-  /// allocation profile (~2.8 GB across the witness corpus). Output is identical.
+  /// allocation profile (~2.8 GB across the witness corpus). Output is identical. The walk is read-only, so it
+  /// wraps no `Node`s: a wrapper is a registry entry kept until the document drops (PERF2 R5).
   fn serialize_into(
     &self,
     out: &mut String,
-    node: &Node,
+    node: RoNode,
     depth: usize,
     noindent: bool,
     heuristic: bool,
@@ -2653,18 +2683,15 @@ impl Document {
     match node.get_type() {
       Some(NodeType::DocumentNode) => {
         out.push_str("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n");
-        if let Some(child) = node.get_first_child() {
-          self.serialize_into(out, &child, depth, noindent, heuristic);
-          let mut current_child = child;
-          while let Some(sibling) = current_child.get_next_sibling() {
-            self.serialize_into(out, &sibling, depth, noindent, heuristic);
-            current_child = sibling;
-          }
+        let mut child = node.get_first_child();
+        while let Some(current) = child {
+          self.serialize_into(out, current, depth, noindent, heuristic);
+          child = current.get_next_sibling();
         }
       },
       Some(NodeType::ElementNode) => {
         // Get the qualified name (prefix:localname) for namespace-prefixed elements
-        let local_name = node.get_name();
+        let local_name = node.with_name(str::to_owned);
         // Streaming assembly: a spill placeholder serializes as the processed
         // segment's text, spliced verbatim from disk (same depth/noindent by
         // construction — the segment was serialized with the exact values this
@@ -2701,54 +2728,39 @@ impl Document {
         }
         // (a literal_placeholders doc falls through: the placeholder is an
         // ordinary childless element and serializes as itself)
-        let tag = if let Some(ns) = node.get_namespace() {
-          let prefix = ns.get_prefix();
-          if prefix.is_empty() {
-            local_name
-          } else {
-            s!("{}:{}", prefix, local_name)
-          }
-        } else {
-          local_name
-        };
+        let tag = node.with_namespace_prefix(|prefix| match prefix {
+          Some(prefix) if !prefix.is_empty() => s!("{}:{}", prefix, local_name),
+          _ => local_name,
+        });
         let children = node.get_child_nodes();
-        let mut open_tag = s!("<{tag}");
 
-        let nsnodes = node.get_namespace_declarations();
-        for ns in nsnodes {
-          let prefix = ns.get_prefix();
-          let prefix_declaration = if prefix.is_empty() {
-            s!("xmlns")
-          } else {
-            s!("xmlns:{}", prefix)
-          };
-          let href = ns.get_href();
-          write!(open_tag, " {prefix_declaration}=\"{href}\"").ok();
+        // Every attribute's local name, document qname and value, in libxml2's order. A local name
+        // keys one attribute, as `get_attributes()`'s map did: the qname of the first that has it
+        // (`get_attribute_node`), the value of the last. `get_node_document_qname` resolves the attribute's
+        // NAMESPACE, so it returns "xml:id" for an `xml:id` and "id" for a genuine plain `id`, which the model
+        // really does declare (see `LaTeXML-bib.rnc:335,353`: `ltx:bib-identifier/@id`, `ltx:bib-review/@id`);
+        // SERIALIZE that qname. Ordering stays keyed on the local name, which is what the goldens encode
+        // (`xml:lang` files under "lang", so it precedes `role`), with `xml:id` forced last -- the previous
+        // code got that by appending it separately, which is also what rewrote every plain `id` into an
+        // invalid-NCName `xml:id` (witness arXiv 2508.17585).
+        let mut anodes: Vec<(String, SymStr, String)> = Vec::new();
+        node.for_each_property_ns(|key, href, value| {
+          anodes.push((
+            key.to_owned(),
+            model::document_qname(href, key),
+            value.to_owned(),
+          ));
+        });
+        if anodes.len() > 1 {
+          anodes.sort_by(|(a, ..), (b, ..)| a.cmp(b));
+          anodes.dedup_by(|later, first| {
+            let same = later.0 == first.0;
+            if same {
+              std::mem::swap(&mut first.2, &mut later.2);
+            }
+            same
+          });
         }
-
-        let anodes = node.get_attributes();
-        // `get_attributes()` reports LOCAL names, so an `xml:id` attribute comes
-        // back keyed as "id" -- by name alone indistinguishable from a genuine
-        // plain `id`, which the model really does declare (see
-        // `LaTeXML-bib.rnc:335,353`: `ltx:bib-identifier/@id`,
-        // `ltx:bib-review/@id`). `get_node_document_qname` resolves the
-        // attribute's NAMESPACE, so it returns "xml:id" for the former and "id"
-        // for the latter; SERIALIZE that qname. Ordering stays keyed on the
-        // local name, which is what the goldens encode (`xml:lang` files under
-        // "lang", so it precedes `role`), with `xml:id` forced last -- the
-        // previous code got that by appending it separately, which is also what
-        // rewrote every plain `id` into an invalid-NCName `xml:id`
-        // (witness arXiv 2508.17585).
-        let mut anodes_keys: Vec<(SymStr, &String)> = anodes
-          .keys()
-          .map(|key| {
-            let qname = node
-              .get_attribute_node(key)
-              .map(|a| model::get_node_document_qname(&a))
-              .unwrap_or_else(|| arena::pin(key));
-            (qname, key)
-          })
-          .collect();
         // Rank: xmlns:* declarations first (matching Perl's output order), then
         // the ordinary attributes by local name, then xml:id last.
         let rank = |qname: SymStr, key: &String| -> u8 {
@@ -2760,24 +2772,11 @@ impl Document {
             1
           }
         };
-        anodes_keys.sort_by(|(a_sym, a_key), (b_sym, b_key)| {
+        anodes.sort_by(|(a_key, a_sym, _), (b_key, b_sym, _)| {
           rank(*a_sym, a_key)
             .cmp(&rank(*b_sym, b_key))
             .then_with(|| a_key.cmp(b_key))
         });
-        for (key_sym, key) in anodes_keys {
-          // Reuse the value already in `anodes` instead of re-fetching it with
-          // `get_property` — `get_attributes()` read each value from the
-          // attribute node directly, so a by-name `xmlGetProp` re-scan (plus a
-          // fresh `CString` and result `String`) here is pure redundant FFI
-          // churn (top `get_property` caller in the alloc profile).
-          let val_serialized = serialize_attr(anodes.get(key).map(String::as_str).unwrap_or(""));
-          arena::with(key_sym, |key_str| {
-            write!(open_tag, " {key_str}=\"{val_serialized}\"")
-          })
-          .ok();
-        }
-
         let noindent_children: bool = if heuristic {
           // libxml2's heuristic: inline (noindent) if ANY direct child is a text node.
           // Crucially, this does NOT propagate the parent's noindent — each element
@@ -2787,7 +2786,7 @@ impl Document {
             .any(|e| e.get_type() == Some(NodeType::TextNode))
         } else {
           // This is the "Correct" way to determine whether to add indentation
-          let node_qname = get_node_qname(node);
+          let node_qname = model::get_ro_node_qname(node);
           model::can_contain_sym(node_qname, pin!("#PCDATA"))
         };
 
@@ -2795,7 +2794,25 @@ impl Document {
         if !noindent {
           push_indent(out, depth);
         }
-        out.push_str(&open_tag);
+        // The open tag, written in place: its namespace declarations, then the attributes, each value escaped.
+        out.push('<');
+        out.push_str(&tag);
+        for ns in node.get_namespace_declarations() {
+          let prefix = ns.get_prefix();
+          out.push_str(" xmlns");
+          if !prefix.is_empty() {
+            out.push(':');
+            out.push_str(&prefix);
+          }
+          write!(out, "=\"{}\"", ns.get_href()).ok();
+        }
+        for (_, key_sym, value) in anodes {
+          out.push(' ');
+          arena::with(key_sym, |key_str| out.push_str(key_str));
+          out.push_str("=\"");
+          push_escaped_attr(out, &value);
+          out.push('"');
+        }
         // Perl serializes elements with children (including empty text nodes) as
         // <tag>...</tag>, and truly childless elements as <tag/>. Match this behavior.
         if !children.is_empty() {
@@ -2805,7 +2822,7 @@ impl Document {
             out.push('\n');
           }
           for child in children {
-            self.serialize_into(out, &child, depth + 1, noindent_children, heuristic);
+            self.serialize_into(out, child, depth + 1, noindent_children, heuristic);
           }
           if !noindent_children {
             push_indent(out, depth);
@@ -2820,20 +2837,22 @@ impl Document {
         }
       },
       Some(NodeType::TextNode) => {
-        out.push_str(&serialize_string(&node.get_content()));
+        node.with_content(|text| push_escaped_text(out, text));
       },
       Some(NodeType::PiNode) => {
         // should code this by hand, as well...
         if !noindent {
           push_indent(out, depth);
         }
-        out.push_str(&self.document.node_to_string(node));
+        out.push_str(&self.document.ronode_to_string(&node));
         if !noindent {
           out.push('\n');
         }
       },
       Some(NodeType::CommentNode) => {
-        write!(out, "<!-- {}-->", serialize_string(&node.get_content())).ok();
+        out.push_str("<!-- ");
+        node.with_content(|text| push_escaped_text(out, text));
+        out.push_str("-->");
       },
       _ => {},
     }
@@ -3321,7 +3340,10 @@ impl Document {
       } else {
         match &ligated {
           Some((ligated_node, len)) if *ligated_node == outnode => *len,
-          _ => outnode.get_content().len().saturating_sub(text.len()),
+          _ => outnode
+            .as_readonly()
+            .with_content(str::len)
+            .saturating_sub(text.len()),
         }
       };
       self.text_run_font = Some((outnode.clone(), font.clone(), start));
@@ -3389,7 +3411,10 @@ impl Document {
         _ => (self.get_node_font(&parent).clone(), 0),
       };
       self.apply_text_ligatures(&font, start)?;
-      self.ligated_text = Some((self.node.clone(), self.node.get_content().len()));
+      self.ligated_text = Some((
+        self.node.clone(),
+        self.node.as_readonly().with_content(str::len),
+      ));
       self.node = parent.clone(); // Effectively closed (->setNode, but don't recurse)
       Ok(parent)
     } else {
@@ -3578,7 +3603,7 @@ impl Document {
       );
 
       let parent = self.node.get_parent().unwrap();
-      if self.box_to_absorb.is_some() && parent.get_attribute("_autoopened").is_some() {
+      if self.box_to_absorb.is_some() && parent.has_attribute("_autoopened") {
         // Perl L1136-1137: appendNodeBox to accumulate boxes for autoopened elements
         let bta = self.box_to_absorb.clone().unwrap();
         self.append_node_box(&parent, &bta);
@@ -3622,7 +3647,7 @@ impl Document {
       // or text allowed here
       let mut point = self.find_insertion_point("#PCDATA", None)?;
       // Perl L1149-1150: appendNodeBox for autoopened insertion points
-      if self.box_to_absorb.is_some() && point.get_attribute("_autoopened").is_some() {
+      if self.box_to_absorb.is_some() && point.has_attribute("_autoopened") {
         let bta = self.box_to_absorb.clone().unwrap();
         self.append_node_box(&point, &bta);
       }
@@ -4443,7 +4468,7 @@ impl Document {
     } else {
       Cow::Borrowed(node)
     };
-    let is_capture = first.get_name() == "_Capture_";
+    let is_capture = name_is(&first, "_Capture_");
 
     if first.get_type() != Some(NodeType::DocumentNode) && !is_capture {
       nodes.push(first.clone().into_owned());
@@ -4454,7 +4479,7 @@ impl Document {
       let mut current_opt = Some(Cow::Borrowed(node));
       while let Some(current) = current_opt {
         current_opt = current.get_prev_sibling().map(Cow::Owned);
-        if current.get_name() == "_Capture_" {
+        if name_is(&current, "_Capture_") {
           nodes.extend(xml::element_nodes(&current));
         } else {
           nodes.push(current.into_owned());
@@ -4471,7 +4496,7 @@ impl Document {
       if node_type.is_none() || node_type == Some(NodeType::DocumentNode) {
         break;
       }
-      if element_node.get_name() == "_Capture_" {
+      if name_is(&element_node, "_Capture_") {
         nodes.extend(xml::element_nodes(&element_node));
       } else {
         nodes.push(element_node.into_owned());
@@ -4946,7 +4971,7 @@ impl Document {
   /// `perfect_kernel_batch57::rebuilt_math_pictures_keep_their_svg_ids`.
   pub fn record_svg_ids(&mut self, root: &Node) -> Result<()> {
     use rustc_hash::FxHashMap;
-    if root.get_attribute("_svgid").is_some() {
+    if root.has_attribute("_svgid") {
       return Ok(());
     }
     let mut in_effect: FxHashMap<String, String> = FxHashMap::default();
@@ -4955,7 +4980,7 @@ impl Document {
       if !is_svg {
         continue;
       }
-      let walked = node.get_attribute("_svgid").is_some();
+      let walked = node.has_attribute("_svgid");
       if !walked {
         node.set_attribute("_svgid", "1")?;
       }
@@ -5142,9 +5167,7 @@ impl Document {
         let elem_kids: Vec<Node> = parent
           .get_child_nodes()
           .into_iter()
-          .filter(|c| {
-            c.get_type() == Some(NodeType::ElementNode) && c.get_name() != SPILL_PLACEHOLDER
-          })
+          .filter(|c| c.get_type() == Some(NodeType::ElementNode) && !name_is(c, SPILL_PLACEHOLDER))
           .collect();
         elem_kids.len() == 1 && get_node_qname(&elem_kids[0]) == pin!("ltx:text")
       };
@@ -5161,7 +5184,7 @@ impl Document {
           .as_ref()
           .is_some_and(|prev| prev.as_ref() == Some(&child));
         let eligible = child.get_type() == Some(NodeType::ElementNode)
-          && child.get_name() != SPILL_PLACEHOLDER
+          && !name_is(&child, SPILL_PLACEHOLDER)
           && !pending
           && !parent_is_collapse_frame
           && (level > 0 || ROOT_SPILLABLE.contains(&child.get_name().as_str()))
@@ -5196,7 +5219,7 @@ impl Document {
           // rest of it (`spill_prose_free_children`).
           let resident_root_child = level == 0
             && child.get_type() == Some(NodeType::ElementNode)
-            && child.get_name() != SPILL_PLACEHOLDER
+            && !name_is(&child, SPILL_PLACEHOLDER)
             && !ROOT_SPILLABLE.contains(&child.get_name().as_str())
             && !ROOT_FRONTMATTER.contains(&child.get_name().as_str());
           if resident_root_child {
@@ -5261,7 +5284,7 @@ impl Document {
       // content (a spilled `ltx:sup` from a root-level `ltx:note` failed
       // there: tests/cluster_regressions/frontmatter_spconf_name).
       let is_element = child.get_type() == Some(NodeType::ElementNode)
-        && child.get_name() != SPILL_PLACEHOLDER
+        && !name_is(&child, SPILL_PLACEHOLDER)
         && model::can_contain_sym(pin!("ltx:para"), get_node_qname(&child));
       // Prose = an `ltx:p` outside any picture that holds non-space text
       // outside any picture. A text-less `ltx:p` — an inline centered picture
@@ -5510,7 +5533,7 @@ impl Document {
         self.literal_placeholders,
         "spill_run must serialize placeholders literally (set for all of pass 1)"
       );
-      self.serialize_into(&mut xml, &node, depth, noindent, false);
+      self.serialize_into(&mut xml, node.as_readonly(), depth, noindent, false);
       chunk.push(node);
       let last = i + 1 == total;
       if xml.len() >= chunk_ceiling || last {
@@ -5895,7 +5918,7 @@ impl Document {
     };
     let mut last_resource: Option<Node> = None;
     for child in root.get_child_nodes() {
-      if child.get_type() == Some(NodeType::ElementNode) && child.get_name() == "resource" {
+      if child.get_type() == Some(NodeType::ElementNode) && name_is(&child, "resource") {
         last_resource = Some(child);
       }
     }
@@ -7557,7 +7580,7 @@ impl Document {
   /// descends into an inline `\verb` at a paragraph edge and trims its
   /// leading space (tokenize/verb.t), and we keep that parity.
   fn is_typewriter_wrapper(&self, node: &Node) -> bool {
-    if node.get_name() == "verbatim" {
+    if name_is(node, "verbatim") {
       return false;
     }
     if node
@@ -7630,7 +7653,7 @@ impl Document {
     let mut candidate = node.get_last_child();
     while let Some(ref child) = candidate {
       if (child.get_type() == Some(NodeType::ElementNode)
-        && child.get_name() == "text"
+        && name_is(child, "text")
         && child.get_first_child().is_none()
         && child.has_attribute("_noautoclose"))
         // …and an empty construction-time marker (`trim_node_left_whitespace`)
@@ -8381,8 +8404,11 @@ impl Document {
     for child in data {
       match child.get_type() {
         Some(NodeType::ElementNode) => {
-          let mut attributes: HashMap<String, String> =
-            child.get_attributes().into_iter().collect();
+          // (as `get_attributes()` keys them: by local name, the last of a name wins)
+          let mut attributes: HashMap<String, String> = HashMap::default();
+          child.as_readonly().for_each_property(|name, value| {
+            attributes.insert(name.to_owned(), value.to_owned());
+          });
           // Perl appendTree: REMOVE xml:id from source node before re-creation.
           // This prevents duplicate ID registration. The ID will be re-registered
           // by open_element_at when the new node is created with the same ID.
@@ -8414,7 +8440,9 @@ impl Document {
           self.append_tree(node, child.get_child_nodes())?;
         },
         Some(NodeType::TextNode) => {
-          node.append_text(&child.get_content())?;
+          child
+            .as_readonly()
+            .with_content(|text| node.append_text(text))?;
         },
         other => {
           log::debug!("append_tree: unhandled libxml NodeType {other:?}");
@@ -8521,21 +8549,32 @@ fn xml_sanitize(value: &str) -> Cow<'_, str> {
   }
 }
 
-fn serialize_string(string: &str) -> String {
-  // Basic entities
-  let mut serialized = string.replace('&', "&amp;");
-  serialized = serialized.replace('>', "&gt;");
-  serialized = serialized.replace('<', "&lt;");
-  serialized
-}
+/// Text content with its basic entities escaped (`&`, `>`, `<`), appended to `out` in one pass. No replacement
+/// contains a character escaped, so this equals replacing `&` first and the rest after (the guard
+/// `serializer_escape_matches_sequential_replace`).
+fn push_escaped_text(out: &mut String, string: &str) { push_escaped(out, string, false) }
 
-fn serialize_attr(string: &str) -> String {
-  let mut serialized = serialize_string(string);
-  // And escape any remaining special code points
-  serialized = serialized.replace('\"', "&quot;");
-  serialized = serialized.replace('\n', "&#10;");
-  serialized = serialized.replace('\t', "&#9;");
-  serialized
+/// An attribute value escaped as [`push_escaped_text`], and `"`, newline and tab too.
+fn push_escaped_attr(out: &mut String, string: &str) { push_escaped(out, string, true) }
+
+fn push_escaped(out: &mut String, string: &str, attr: bool) {
+  let mut rest = string;
+  // Copy each run up to the next escaped character whole; every escaped character is ASCII.
+  while let Some(at) =
+    rest.find(|c| matches!(c, '&' | '<' | '>') || (attr && matches!(c, '"' | '\n' | '\t')))
+  {
+    out.push_str(&rest[..at]);
+    out.push_str(match rest.as_bytes()[at] {
+      b'&' => "&amp;",
+      b'<' => "&lt;",
+      b'>' => "&gt;",
+      b'"' => "&quot;",
+      b'\n' => "&#10;",
+      _ => "&#9;",
+    });
+    rest = &rest[at + 1..];
+  }
+  out.push_str(rest);
 }
 
 pub trait IntoVDQS {
@@ -8888,14 +8927,21 @@ fn push_onto_node_box(list: &Digested, thisbox: &Digested) -> bool {
   let Ok(mut list) = cell.try_borrow_mut() else {
     return false;
   };
-  let pushed = flatten_horizontal(thisbox);
+  // `flatten_horizontal`, without a Vec for the one box that is not a list (MEM1 L4e).
+  let unlisted;
+  let pushed = if matches!(thisbox.data(), DigestedData::List(_)) && flattens(box_mode(thisbox)) {
+    unlisted = unlist(thisbox);
+    unlisted.as_slice()
+  } else {
+    std::slice::from_ref(thisbox)
+  };
   // Pushing the list into itself would make it contain itself.
   if !list.properties.contains_key_sym(&pin!("node_box"))
     || pushed.iter().any(|b| b.as_ptr() == own)
   {
     return false;
   }
-  list.push_boxes(pushed);
+  list.push_boxes(pushed.iter().cloned());
   for cached in [
     pin!("cached_width"),
     pin!("cached_height"),
@@ -8955,14 +9001,14 @@ fn namespace_prefixes_in_use<'p>(root: &Node, prefixes: &[&'p str]) -> HashSet<&
     return found;
   }
   let note_attributes = |node: &Node, found: &mut HashSet<&'p str>| {
-    for key in node.get_attributes().into_keys() {
+    node.as_readonly().for_each_property(|key, _| {
       for &prefix in prefixes {
         let plen = prefix.len();
         if key.len() > plen && key.starts_with(prefix) && key.as_bytes()[plen] == b':' {
           found.insert(prefix);
         }
       }
-    }
+    });
   };
   note_attributes(root, &mut found);
   let mut cur = root.get_first_child();
@@ -9124,5 +9170,59 @@ mod attribute_cleaners {
       crate::common::cleaners::clean_id("S2.I10.i1\\par"),
       "S2.I10.i1par"
     );
+  }
+}
+
+#[cfg(test)]
+mod serializer_escape {
+  use super::{push_escaped_attr, push_escaped_text};
+
+  /// The one-pass escape writes exactly what the sequential `replace` chain wrote (`&` first, then `>`, `<`, and for an
+  /// attribute `"`, newline, tab), on strings made of every escaped character, the unescaped `\r` and `'`, entities
+  /// already escaped, and non-ASCII text around them.
+  #[test]
+  fn serializer_escape_matches_sequential_replace() {
+    fn text_by_replace(s: &str) -> String {
+      s.replace('&', "&amp;")
+        .replace('>', "&gt;")
+        .replace('<', "&lt;")
+    }
+    fn attr_by_replace(s: &str) -> String {
+      text_by_replace(s)
+        .replace('"', "&quot;")
+        .replace('\n', "&#10;")
+        .replace('\t', "&#9;")
+    }
+    let alphabet = [
+      "&", "<", ">", "\"", "'", "\r", "\t", "\n", "a", "é", "∑", "&amp;", "&lt;", "&#10;",
+      "&quot;", ";", "#",
+    ];
+    let mut cases: Vec<String> = vec![
+      String::new(),
+      "plain".into(),
+      "&amp;&amp;amp;".into(),
+      "a<b>&c\"d'e\r\nf\tg".into(),
+      "x\u{1F600}&\u{0300}<".into(),
+    ];
+    // Every string of up to three pieces of the alphabet.
+    for a in alphabet {
+      for b in alphabet {
+        for c in alphabet {
+          cases.push(format!("{a}{b}{c}"));
+        }
+      }
+    }
+    for case in &cases {
+      let mut text = String::from("prefix");
+      push_escaped_text(&mut text, case);
+      assert_eq!(
+        text,
+        format!("prefix{}", text_by_replace(case)),
+        "text {case:?}"
+      );
+      let mut attr = String::new();
+      push_escaped_attr(&mut attr, case);
+      assert_eq!(attr, attr_by_replace(case), "attribute {case:?}");
+    }
   }
 }

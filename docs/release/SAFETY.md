@@ -49,6 +49,9 @@ depends on (the one caveat is category E's *test-only* `EnvGuard`, which
 documents the env data-race invariant but carries a `FIXME` that the default
 test harness does not yet *enforce* single-threaded env access).
 
+2026-11-15 (ARENAR): `latexml_core/src/common/arena.rs` 10 blocks → 1 (category B's eight resolves and
+`first_bytes`'s raw read fold into one; category C is gone).
+
 Counts and exact line numbers drift as the tree changes — this is a
 point-in-time reconciliation, not a live index. Regenerate the authoritative
 enumeration with:
@@ -78,40 +81,36 @@ deliberately single-threaded-per-conversion design, adds Mutex acquisition
 to the hot path, and would not improve safety — the existing markers are
 sound because the runtime guarantees the invariant by construction.
 
-### B. Arena `resolve_unchecked` — performance carve-out (8 sites)
+### B. Arena `resolve_unchecked` — performance carve-out (1 site)
 
-All in `latexml_core/src/common/arena.rs`, inside `with`, `with2`, `with3`,
-`with_many`, and `to_string`. They use `string-interner`'s unchecked
-`Symbol → &str` lookup.
+In `latexml_core/src/common/arena.rs`, the private `buffer_text()` that every lend (`with`, `with2`, `with3`,
+`with_many`, `to_string`, `first_bytes`) resolves a buffer symbol through. It uses `string-interner`'s unchecked
+`Symbol → &str` lookup on the arena's buffer, under the lend's shared `RefCell` borrow.
 
-The safety invariant is **append-only buffer**: every `SymStr` in the
-codebase originates from a successful `get_or_intern(_static|_char)` call
-on a valid `&str`. Symbols are never invalidated, so the unchecked lookup
-is a valid bounds-skip.
+The safety invariant is **append-only buffer, never grown under a lend**: every symbol below the overflow base
+(`1 << 31`) comes from the buffer's `get_or_intern` of a valid `&str`, symbols are never invalidated between `reset`s, and an
+overflow symbol never reaches the unchecked lookup (it resolves to the overflow page's own `Rc<str>`). A string interned
+while a lend is live goes to the overflow page instead of the buffer, so the buffer cannot move under a lent `&str`;
+`reset` inside any lend, an overflow symbol's included, panics (its `try_borrow_mut` fails). Miri checks the arena tests
+under Stacked and Tree Borrows (`tools/miri_check.sh`).
 
 **Why we accept the `unsafe`**: callgrind measured the checked `resolve`
 (`from_utf8` validation per call) at ~3% of total instruction count. The
 arena is the hottest read site in the engine — every Token-to-string
 serialisation goes through it.
 
-**Refactor option**: replace each `arena.resolve_unchecked(sym)` with
-`arena.resolve(sym).expect("interned")`. This is mechanical and eliminates
-eight `unsafe` blocks. The cost is a re-validating `from_utf8` per lookup,
-~3% of total runtime.
+**Refactor option**: replace the `arena.resolve_unchecked(sym)` with `arena.resolve(sym).expect("interned")`. This is
+mechanical and eliminates the block. The cost is a re-validating `from_utf8` per lookup, ~3% of total runtime.
 
-### C. Arena re-entrant `&mut *ptr` (1 site)
+### C. Arena re-entrant `&mut *ptr` — removed (0 sites)
 
-`latexml_core/src/common/arena.rs` — inside `with_arena_mut`. The outermost
-caller acquires `RefCell::borrow_mut()` and caches a raw pointer to the
-interner; nested re-entrant callers on the same thread reuse the pointer and
-skip the `RefCell` guard, which would otherwise panic ("already borrowed").
-
-The safety invariant is documented in the function header: re-entrance is
-nested on the same stack and same thread (`#[thread_local]`), an
-`ArenaCleanup` guard clears the pointer before the outer `RefMut` drops.
-
-**Cannot be refactored without changing semantics** — there is no safe
-mechanism for nested re-entrant mutable access through `RefCell`.
+Removed 2026-11-15 (ARENAR). `with_arena_mut` cached a raw pointer to the interner on its outermost call, and a
+re-entrant call (a `pin` inside a `with` closure) took `&mut *ptr` while the closure held a `&str` into the buffer: a
+new string could grow and move the buffer under that `&str` (a use-after-free; Stacked Borrows rejected even a nested
+`with` or `get` under a lend). The lends now hold a shared borrow and an intern under one goes to the overflow page
+(category B above); `first_bytes`'s raw-pointer read went with it. Guard:
+`latexml_core::common::arena::tests::lend_survives_interning_many_new_strings` (failed under Miri on the old code at
+the re-entrant `&mut *ptr`).
 
 ### D. Binary entry-point FFI — env + rusage + crash-handler (~7 sites)
 
@@ -249,7 +248,7 @@ When adding `unsafe`:
    prove the same.
 5. **Reconcile this inventory and run Miri.** When the `unsafe` count
    changes, refresh the budget section (the `rg` one-liner above). If you
-   touch the FFI-free pure-Rust `unsafe` (the arena/interner, cat. B/C),
+   touch the FFI-free pure-Rust `unsafe` (the arena/interner, cat. B),
    run `tools/miri_check.sh` — it UB-checks those sites under Miri (CI runs
    it as the `miri` job). The FFI sites (cat. D–H) can't run under Miri;
    their safety rests on the documented invariants, not interpretation.

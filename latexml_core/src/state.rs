@@ -165,8 +165,49 @@ pub enum Catcodes {
   None,
 }
 
-/// Ledger for stacked assignments
-pub type AssignmentCount = HashMap<SymStr, usize>;
+/// Ledger for stacked assignments: how many bindings of each key a frame made (Perl's `$$frame{$table}{$key}`).
+#[derive(Debug, Clone, Default)]
+pub struct AssignmentCount {
+  counts: HashMap<SymStr, usize>,
+  /// A bit per key ever counted here, never cleared: a clear bit proves the key absent, so a `\global` assignment's
+  /// walk over the frames skips the probe (2205.15714, circuitikzmanual).
+  seen:   [u64; 4],
+}
+
+// (the map's own methods; every insertion sets the key's bit)
+impl AssignmentCount {
+  #[inline]
+  fn bit(key: SymStr) -> (usize, u64) {
+    use string_interner::Symbol;
+    let index = key.to_usize();
+    ((index >> 6) & 3, 1 << (index & 63))
+  }
+  #[inline]
+  fn note(&mut self, key: SymStr) {
+    let (word, bit) = Self::bit(key);
+    self.seen[word] |= bit;
+  }
+  /// `false` when `key` was certainly never counted here.
+  #[inline]
+  pub fn may_hold(&self, key: SymStr) -> bool {
+    let (word, bit) = Self::bit(key);
+    self.seen[word] & bit != 0
+  }
+  pub fn get(&self, key: &SymStr) -> Option<&usize> { self.counts.get(key) }
+  pub fn contains_key(&self, key: &SymStr) -> bool { self.counts.contains_key(key) }
+  pub fn insert(&mut self, key: SymStr, count: usize) -> Option<usize> {
+    self.note(key);
+    self.counts.insert(key, count)
+  }
+  pub fn remove(&mut self, key: &SymStr) -> Option<usize> { self.counts.remove(key) }
+  pub fn entry(&mut self, key: SymStr) -> std::collections::hash_map::Entry<'_, SymStr, usize> {
+    self.note(key);
+    self.counts.entry(key)
+  }
+  pub fn iter(&self) -> std::collections::hash_map::Iter<'_, SymStr, usize> { self.counts.iter() }
+  pub fn keys(&self) -> std::collections::hash_map::Keys<'_, SymStr, usize> { self.counts.keys() }
+  pub fn is_empty(&self) -> bool { self.counts.is_empty() }
+}
 /// The `(table_name, key, value)` contents of a stored table of assignments
 pub type StashTable = Vec<(TableName, SymStr, Stored)>;
 #[derive(Debug, Clone)]
@@ -1356,37 +1397,29 @@ impl State {
     self.journal_touch_assignment(table_name, key, matches!(scope, Scope::Global));
     match scope {
       Scope::Global => {
+        // Remove bindings made in all frames down-to & including the next lower locked frame (State.pm:156-168);
+        // the last frame's count is read and set to 1 in one probe, and a frame that never counted the key is not probed.
         let mut undo_count = 0;
-
-        // Remove bindings made in all frames down-to & including the next lower locked frame
-        let mut last_frame = None;
-        for frame in &mut self.undo {
-          let is_locked = frame.locked;
+        let depth = self.undo.len();
+        for (index, frame) in self.undo.iter_mut().enumerate() {
+          let is_last = frame.locked || index + 1 == depth;
           let frame_table = frame.table_mut(table_name);
-          if let Some(n) = frame_table.remove(&key) {
+          if is_last {
+            // whatever is left -- if anything -- should be bindings below the locked frame.
+            undo_count += frame_table.insert(key, 1).unwrap_or(0);
+            break;
+          } else if frame_table.may_hold(key)
+            && let Some(n) = frame_table.remove(&key)
+          {
             undo_count += n;
           }
-          last_frame = Some(frame);
-          if is_locked {
-            break;
-          }
         }
-        // whatever is left -- if anything -- should be bindings below the locked frame.
-        if let Some(frame) = last_frame {
-          frame.table_mut(table_name).insert(key, 1); // Note that there's only one
-          // value in the stack, now
+        // Undo the bindings `key` had in those frames, then push the new one: one probe of the state table.
+        let defs = self.table_mut(table_name).entry(key).or_default();
+        for _ in 0..undo_count {
+          defs.pop_front();
         }
-
-        // Undo the bindings, if `key` was bound in this frame
-        let state_table = self.table_mut(table_name);
-        if let Some(defs) = state_table.get_mut(&key) {
-          for _ in 1..=undo_count {
-            defs.pop_front();
-          }
-        }
-
-        let table_entry = state_table.entry(key).or_default();
-        table_entry.push_front(value);
+        defs.push_front(value);
       },
       Scope::Local => self.assign_local_unconditional(table_name, key, value),
       Scope::InPlace => {
@@ -4609,6 +4642,26 @@ pub fn lookup_string_from_sym(key: SymStr) -> String {
     Some(v) => v.into(),
   }
 }
+
+/// [`lookup_string_from_sym`]'s value as its interned symbol (`pin!("")` when unset), without the `String`.
+pub fn lookup_string_sym_from_sym(key: SymStr) -> SymStr {
+  let state = state!();
+  match state.lookup_value_sym(key) {
+    None => pin!(""),
+    Some(Stored::String(v)) => *v,
+    Some(other) => arena::pin(String::from(other)),
+  }
+}
+
+/// The current `MODE`, for the mode tests on every digested token: compare with `pin!("horizontal")`, or use
+/// [`mode_ends_with`].
+pub fn lookup_mode() -> SymStr { lookup_string_sym_from_sym(pin!("MODE")) }
+
+/// Whether the current `MODE` ends with `suffix` (Perl's `lookupValue('MODE') =~ /vertical$/`).
+pub fn mode_ends_with(suffix: &str) -> bool {
+  arena::with(lookup_mode(), |mode| mode.ends_with(suffix))
+}
+
 /// like `lookup_value`, but casts the entry into a SymStr from the string interner
 ///  (`pin!("")` if None)
 pub fn lookup_string_sym(key: &str) -> SymStr {
@@ -4892,10 +4945,9 @@ pub fn lookup_tokens(key: &str) -> Option<Tokens> {
     Some(Stored::Token(v)) => Some(Tokens::new(vec![*v])),
     Some(Stored::String(sym)) => {
       // Release the state borrow first, then read the interned string through
-      // the re-entrant arena. The copy is unavoidable: an arena `&str` is not
-      // `'static` (it dangles across a realloc — see WISDOM), and `TeXString`
-      // borrows only `'static`, so the value has to be owned to cross into the
-      // tokenizer. `Mouth::new` copies its input anyway.
+      // the arena. The copy is unavoidable: an arena `&str` lives only for the
+      // lend, and `TeXString` borrows only `'static`, so the value has to be owned
+      // to cross into the tokenizer. `Mouth::new` copies its input anyway.
       let sym = *sym;
       drop(state);
       arena::with(sym, |astr| {
@@ -5933,7 +5985,7 @@ fn copy_default(definition: &Stored) -> Option<Tokens> {
     return lookup_meaning(&inner).and_then(|inner| copy_default(&inner));
   }
   definition_parameters(definition)
-    .and_then(|params| params.get_parameters().into_iter().next())
+    .and_then(|params| params.get_parameters().first())
     .filter(|param| param.optional)
     .and_then(|param| param.extra.first().cloned())
 }
@@ -5971,12 +6023,7 @@ pub fn owns_calls(cs: &Token, binding: &Stored) -> bool {
     _ => None,
   };
   params
-    .and_then(|params| {
-      params
-        .get_parameters()
-        .into_iter()
-        .find(|param| !param.optional)
-    })
+    .and_then(|params| params.get_parameters().iter().find(|param| !param.optional))
     .is_some_and(|param| arena::with(param.name, |name| BRACED_ARGUMENT_TYPES.contains(&name)))
 }
 
@@ -6087,7 +6134,7 @@ pub fn call_openers(binding: &Token) -> Vec<Token> {
   if let Some(params) = defn.get_parameters() {
     for param in params
       .get_parameters()
-      .into_iter()
+      .iter()
       .take_while(|param| param.optional)
     {
       if arena::with(param.name, |name| name == "OptionalMatch") {

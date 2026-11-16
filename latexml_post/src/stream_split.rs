@@ -74,6 +74,7 @@ use std::{
   path::{Path, PathBuf},
 };
 
+use latexml_core::common::xml::name_is;
 use libxml::{
   reader::{ReaderEvent, TextReader},
   tree::{Document, Namespace, Node, NodeType},
@@ -974,7 +975,7 @@ impl Splitter {
     let has_direct_date = page
       .get_child_elements()
       .iter()
-      .any(|c| c.get_name() == "date" && is_ltx(c));
+      .any(|c| name_is(c, "date") && is_ltx(c));
     let mut trailer = String::new();
     for r in &self.resources_xml {
       trailer.push_str(r);
@@ -995,7 +996,7 @@ impl Splitter {
     {
       extra_attrs.push(("xml:lang".to_string(), l.clone()));
     }
-    if page.get_attribute("backgroundcolor").is_none()
+    if !page.has_attribute("backgroundcolor")
       && let Some(b) = &effective_bg
     {
       extra_attrs.push(("backgroundcolor".to_string(), b.clone()));
@@ -1003,7 +1004,7 @@ impl Splitter {
     let mut class_appended = false;
     let mut class_merge: Option<String> = None;
     if let Some(pclass) = &self.root_class {
-      if page.get_attribute("class").is_some() {
+      if page.has_attribute("class") {
         class_merge = Some(pclass.clone());
       } else {
         extra_attrs.push(("class".to_string(), pclass.clone()));
@@ -1398,7 +1399,7 @@ fn collect_ltx_descendants(node: &Node, localname: &str, out: &mut Vec<Node>) {
   let mut child = node.get_first_child();
   while let Some(c) = child {
     if c.get_type() == Some(NodeType::ElementNode) {
-      if c.get_name() == localname && is_ltx(&c) {
+      if name_is(&c, localname) && is_ltx(&c) {
         out.push(c.clone());
       }
       collect_ltx_descendants(&c, localname, out);
@@ -1423,9 +1424,9 @@ fn has_lists_toc_descendant(node: &Node) -> bool {
 
 fn has_lists_toc_node(node: &Node) -> bool {
   node.get_type() == Some(NodeType::ElementNode)
-    && node.get_name() == "TOC"
+    && name_is(node, "TOC")
     && is_ltx(node)
-    && node.get_attribute("lists").as_deref() == Some("toc")
+    && node.with_attribute(c"lists", |v| v == "toc") == Some(true)
 }
 
 /// Find the end of the first tag in a well-formed serialized element: the

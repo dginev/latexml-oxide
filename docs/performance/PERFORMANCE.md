@@ -201,7 +201,8 @@ The canonical corpus phase bands (digest 19.7%, math_parse 19.2%, build 18.1%, x
   materializes complete core XML as a `String`; TeX-to-HTML passes that string
   to post, which may immediately spill it to disk. Pass 2 also clones the
   conversion-global font map and rewrite rules per segment and constructs an
-  unused XML scaffold per fragment.
+  unused XML scaffold per fragment. (The math grammar is shared since 2026-11-15:
+  audit log, PERFA.)
 * **Fix:** add a writer/file-backed conversion API while retaining the current
   string API as a compatibility wrapper. Hand the CLI's file directly to post.
   Independently, share immutable pass-2 data, use fragment-local overlays, make
@@ -314,12 +315,13 @@ copy, single-text values read in place, a `str::from_utf8` fast path, child list
 wrapping elements only). Left, each with its basis (exact call counts × gdb-stepped instructions per call):
 * `get_properties` callers that read only names or a count — `namespace_prefixes_in_use` (`document.rs` ~:8744,
   0.51 %), `finalize_rec` (~:1218, 0.51 %; `_`-prefixed names and the count), `append_tree` (~:8171, 0.45 %),
-  `serialize_into` (~:2696, 0.24 %): ≈1.9 % with a borrowed attribute walk — a latexml-side change, needing an additive
-  rust-libxml visitor (no public-API break).
+  `serialize_into` (~:2696, 0.24 %): done 2026-11-15 (PERFG, rust-libxml's `RoNode::for_each_property`, below).
 * `get_name` behind `get_node_qname` (`common/model.rs:723`) and `collect_named` (`latexml_math_parser/src/util.rs:946`):
-  0.72 % of String copies, 2.56 M calls — a borrowed name read (additive API) on the latexml side.
+  0.72 % of String copies, 2.56 M calls — `get_node_qname` done 2026-11-15 (PERFG); `collect_named` left.
 * `Node::_wrap`'s `NodeMap` probe + `Rc` clone on every traversal step (5.27 M hits, 0.48 %): a `_private` back-pointer
-  would remove the probe, but collides with P11 option 2 — design decision, not taken.
+  would remove the probe, but collides with P11 option 2 — design decision, not taken. Core's and post's
+  `findnodes` answer their common shapes by a `RoNode` walk that wraps only the matches (2026-11-15, PERFD, PERFE);
+  `serialize_into`, post's id scan and finalize's child scan walk `RoNode`s (2026-11-15, PERFG).
 * `_autoopened` presence tests (`document.rs` ~:3540, ~:3584, `get_attribute("_autoopened").is_some()`) copy the value
   into a `String` only to test it exists: 2.93 M calls, 0.79 % with the wrapper (perf453c basis); `has_attribute` is
   allocation-free on 0.3.23 — a one-lever run, measured alone.
@@ -341,10 +343,505 @@ code on AMD (skid), so the figures are counts × stepped instructions.
   twice. Use a borrowed path view and prebuilt exact plus lowercase indexes after
   collecting miss-count telemetry (audit F9).
 
+### P13 — Toward one pdflatex pass per paper: avenues, not scheduled (advisor study, 2026-11-15)
+
+DG 2026-11-15: recorded as avenues to explore, not work items. The speed at int/perf (PR 885) is release-acceptable.
+
+**Where we stand.** 32 arXiv papers, the ar5iv HTML recipe, one core, best of 3 (PDFCMP):
+- latexml-oxide takes median 0.53 s per paper (mean 1.76 s).
+- One pdflatex pass takes 0.40 s (mean 1.20 s); a full pdflatex + bibtex + 2× pdflatex build takes 1.23 s (mean 3.64 s).
+- Per paper, that is X/P1 median 1.24 (geomean 1.22) and X/full build 0.41.
+- Without the two known outliers the geomean is 1.05: 2106.09072 (row R MATHTAIL) and 2308.04512.
+
+**Where the time goes** (`perf stat -e instructions:u`, release binary):
+- **Fixed cost is already lower than pdflatex's.** A trivial article costs 0.97 G instructions (~122 ms) against pdflatex's 1.35 G (~137 ms). With amsmath, amssymb, graphicx and hyperref it is 1.18 G against 2.28 G.
+- **The gap is per formula.** A mid-size formula costs ~22 M instructions (~1.6 ms: parse 13.5 M, digest/build 3 M, post 5.7 M) against pdflatex's 0.33 M. The median paper has ~290 formulas.
+- **Shares over 30 papers (median / mean):**
+  - fixed floor 25 / 28 %, of which kpathsea is 10 / 11 %;
+  - math parse 21 / 22 %;
+  - post 16 / 19 %;
+  - the rest of core ~35 %.
+
+**Avenues.** Per-paper gains are modelled from these shares, never built:
+- **kpathsea's `ls-R` build** — about −10.5 % geomean; alone it brings the median paper to ~1.0×.
+  - `kpathsea_init_db` parses the 5.6 MB `ls-R` (251k entries) on the first lookup through `Kpaths::new` (`latexml_core/src/util/pathname.rs:237`). That is ~50 ms, 43 % of the fixed floor; one `kpsewhich` lookup takes 40-60 ms, and pdflatex pays the same.
+  - Lever: persist the lookup memo (`pathname.rs:1063`) per TeX Live tree, stamped like the dumps, and initialise kpathsea only on a miss. Never persist hits in the paper's own directory, or negative answers.
+  - This is not the raw `ls-R` emulation that WISDOM #57 warns against.
+  - First step: log every `pathname::kpsewhich` call over ~200 sandbox papers, to count memo hits against novel negatives.
+- **A formula memo** (P3's BP-5) — about −5.5 % (math parse −25 %).
+  - 101 identical formulas cost linearly today. Repeats are 46 % of formulas by count, 26-29 % by TeX length (median), but only 4-5 % on some papers.
+  - It assumes a parse depends only on its lexemes; check `maybe_functions` (`latexml_math_parser/src/parser.rs:605`). Math is parked, so this needs a ruling even when output-identical.
+- **One terminal per lexeme** instead of one earleme per byte (P3's remaining lever) — about −3 to −9 % (math parse −15 to −40 %; the advisor lowered its own estimate to −25 %).
+  - libmarpa is 48 % of math-parse cycles on cond-mat0505497.
+  - It changes the marpa-asf interface, and routing thresholds must be preserved for byte-identity.
+  - Adding 18 content bytes cost only ~10k instructions per byte against a 43k average, so the gain is uncertain.
+- **XSLT per-node cost** — about −3 % if XSLT drops 30 %.
+  - XSLT is 55-64 % of post, ~27k cycles per output MathML element.
+  - The O(n²) audit (principle 6) holds; the per-node cost has not been examined. Profile with `xsltproc --profile` first.
+- **A binary or parallel dump** — at most −2 to −3 %. Still declined: dump load is now ~13-20 ms, not June's 85 ms (`archive/STARTUP_COST_ANALYSIS_2026-06-21.md`).
+
+The kpathsea memo, the formula memo and one terminal per lexeme together model at −20 % geomean (1.22 → ~0.99). PGO and target-cpu stay closed.
+
 
 ---
 
 ## Audit log (periodic passes; newest first)
+
+### 2026-11-15 — owned names, attribute values and text read only to compare (MEMC, MEM1 lever L12)
+
+Defect (dhat, `agent_reports/report_MEM1.md` L12): rust-libxml's `get_name` / `get_attribute` / `get_content` copy
+into a `String` (`c_str_to_string`), and the hot callers only compared, measured or re-appended the copy: element-name
+tests in the math parser, the post-processor and core's `document.rs` (`is_ltx_element`, `resolve_xmref`,
+`collect_named`, `PostDocument::get_qname`/`is_qname`/`qname_prefix`), `get_attribute(..).is_some()` presence tests
+(`open_text_internal`'s `_autoopened`, per character) and `get_attribute(..).as_deref() == Some(..)`, and text content
+in `append_tree`, `open_text`/`close_text_internal` (its length), and the per-character `String` of `DefMathLigature`'s matcher (its
+`XMTok` content stays an owned read). Fix: the rust-libxml
+0.3.24 borrowed reads (copy on the stack): `common::xml::name_is` over `RoNode::with_name`, `with_namespace_href`,
+`has_attribute` (the `xmlHasProp` lookup `get_attribute` makes first), `with_attribute(c"..", ..)`, `with_content`.
+Measured: instructions:u, best of 3 interleaved, base INTPERF5 `304ec7d5157`, cortex's ar5iv HTML recipe unless xml.
+The three commits (names / attributes / text) together: b250 xml / html −0.34 / −0.39 %, 2308.04512 xml / html −0.39 /
+−0.17 %, 2604.01119 −0.41 %, amsldoc xml −0.51 %, ten typical papers (popPERFBs.tsv) −0.18 to −0.49 %; alone, names
+−0.06 to −0.29 %, attributes +0.04 to −0.24 %, text −0.01 to −0.13 %. Cycles:u moved ±1-10 % between runs on the
+shared host, below resolution. Output byte-identical (HTML and every aux file, XML) on all 16 measured runs (base
+twice) and on `popMEMC.tsv` (120 papers, 60 controls): raw XML 180/180, HTML recipe 177/180, E/F/W equal; the three
+(2409.06317, 2403.20315, 2006.01789) wrote a different number of image files under the A/B's load and are identical
+alone, two runs per side. Peak RSS (HTML): book790 4,458,276 → 4,455,864 KB, b1000 1,364,376 → 1,367,620 KB. Dropped: L17 (`decode_qname` borrowing its
+localname) −0.01 to −0.08 %; L14's attribute map already reads borrowed (PERFG) and stays owned because
+`open_element_at` takes a `HashMap<String, String>`; `generate_id`'s xml:id and `get_xml_id`'s values are kept, not compared.
+
+### 2026-11-15 — the string arena made lend-sound (ARENAR, design R+)
+
+Defect (a soundness fix, not a lever): `arena::with` lent a `&str` from string-interner 0.20 `BufferBackend`'s `Vec<u8>`
+while a re-entrant `pin` inside the closure took `&mut *ptr` through a cached raw pointer and could grow, and move,
+that `Vec` (a use-after-free; Miri rejected even a nested `with` or `get` under a lend). Fix (`latexml_core/src/common/arena.rs`):
+a lend holds a shared `RefCell` borrow; an intern while one is live goes to an overflow page of `Rc<str>` with symbols
+from `1 << 31` (the buffer refuses a string that would start at or past 2 GiB), deduplicated across both tiers (a later
+pin outside any lend returns the overflow symbol); outside a lend an intern looks the string up in the buffer, on a
+miss on the page, and only then adds it to the buffer (ARENARb: the first version's 256 × 64-bit page filter cost
+0.14-0.37 % more instructions). `arena.rs` `unsafe` 10 → 1; `with_copy` folded back into
+`with`. Every document overflows: hello-world 1 string, b250 50, 2308.04512 399, siunitx papers 105-139 (the
+conversion's end reports the count as a Debug line, `arena:overflow`, not an `Info:` line in every log). Cost,
+`instructions:u` best of 3 interleaved against INTPERF5 (`kit/perf_ab_cycles.sh`, `HTML=1 STAT=min`): 2308.04512 +0.24 %, b250 +0.18 %, amsldoc +0.13 %, 2604.01119
++0.07 %, 10 typical papers (`popPERFBs`) −0.35 … +0.14 %; `cycles:u` −5.3 … +2.6 % (within the loaded host's spread).
+About 4 instructions per arena call (2308.04512: 95 M lends, 51 M interns, 25 M probes): the `RefCell` borrow every lend
+now takes. Output byte-identical: the 14 documents (whole HTML destination) and `popARENAR` (50 siunitx, 39 biblatex, 20
+xkeyval/kvoptions, 18 pgfplots, 60 controls) XML 187 / 187 and HTML 187 / 187. Guards: the arena's unit tests
+(`lend_survives_interning_many_new_strings`, red under Miri on the old code), run under Stacked and Tree Borrows by
+`tools/miri_check.sh`.
+
+Fix round (ARENARb): every lend borrows the arena, an overflow symbol's too (so a `reset` inside any lend panics);
+the 2 GiB guard covers `get` and the cold path's buffer probe; the page filter is gone (above); `with` resolves in one
+branch (resolving through `text()` and matching its `Text` again cost 0.04-0.21 %); model `set_allows` looks its
+probe strings up instead of pinning them. Net against INTPERF's head with ARENAR (ARENARb0), `instructions:u` best of
+3 interleaved, `HTML=1 STAT=min`: 2308.04512 −0.48 %, b250 −0.24 %, amsldoc −0.45 %, 2604.01119 −0.39 %, the 10
+`popPERFBs` papers −0.22 … −0.52 %; the 14 HTML destinations and `popARENAR` byte-identical. Guards:
+`lend_survives_more_new_bytes_than_the_buffer_holds` (native: 1.77 MB interned under a lend, past the buffer's
+capacity, and the lent text has not moved; skipped under Miri, where it takes 13 min under Tree Borrows),
+`reset_inside_an_overflow_lend_panics`, `model::wildcard_resolution_tests::the_probes_intern_nothing`.
+
+### 2026-11-15 — per-character and serializer allocations (MEMB, MEM1 levers L4a/b/e, L7, L10, L18)
+
+Defects (allocation counts of `agent_reports/report_MEM1.md`): every digested letter paid a `String` in
+`font::decode_string`'s result (L4a), a `String` copy of the box's text in `Tbox::be_absorbed` (L4b) and a one-box
+`Vec` in `push_onto_node_box`'s flattening (L4e); the serializer ran 3 `replace` passes over every text node and 6 over
+every attribute value, each a new `String`, and built each open tag in a `String` of its own (L7); `dump_reader`'s
+`url_decode` returned a new `String` for every dump field, ~68k per conversion (L18); `store_setters::setter_definition`
+formatted and pinned `"\\{name}"` for each table setter twice per binding load (L10). Fixes: `decode_string` spells into a
+reused thread-local buffer and returns its input symbol when the decoding changed nothing; `be_absorbed` reads its text
+through the new `arena::with_copy` (copied to the stack when ≤ 64 bytes — the absorbing interns, so the text could not be
+read under an `arena::with` borrow, whose buffer a new symbol could move; folded back into `arena::with` by ARENAR); `List::push_boxes` takes an iterator and the
+lone box goes in as a slice; `push_escaped_text`/`push_escaped_attr` append in one pass (no replacement contains an
+escaped character, so one pass equals the chain with `&` first); `url_decode` returns a `Cow`; the setter probe is `arena::get_suffixed("\\", name)` (a name never interned has no definition).
+Guard: `latexml_core` `document::serializer_escape::serializer_escape_matches_sequential_replace` (every 3-piece string
+of `& < > " ' \r \t \n`, already-escaped entities and non-ASCII text, against the old `replace` chain).
+Measured: instructions:u, best of 3 interleaved, each lever against the commit before it, base INTPERF4 `e4ab916a806`,
+cortex's ar5iv HTML recipe unless XML:
+
+| Document | L18 | L10 | L7 | L4a/b/e | all |
+|---|---:|---:|---:|---:|---:|
+| b250 xml / html | −0.04 / −0.06 % | −0.01 / +0.01 % | −0.93 / −0.65 % | −0.06 / −0.04 % | −1.04 / −0.74 % |
+| 2308.04512 xml / html | +0.03 / +0.01 % | +0.16 / +0.15 % | −0.91 / −0.74 % | −0.09 / −0.08 % | −0.81 / −0.66 % |
+| 2604.01119 html | −0.11 % | −0.04 % | −0.37 % | −0.62 % | −1.14 % |
+| amsldoc xml | −0.18 % | −0.08 % | −0.40 % | −0.72 % | −1.37 % |
+| ten typical papers (popPERFBs.tsv) | −0.10 to −0.49 % | +0.05 to −0.37 % | −0.05 to −0.50 % | −0.02 to −0.54 % | −0.69 to −1.07 % |
+
+Peak RSS (HTML, the issue-790 book): +2.8 to +3.9 % (4.35-4.40 → 4.52 GB, two runs each), from mimalloc's delayed,
+time-based release of freed pages: with `MIMALLOC_PURGE_DELAY=0` both peak at 4.34 GB, the candidate 1.3 MB (−0.03 %)
+lower; no live-memory increase (by the review: mimalloc's page count lower, heaptrack's glibc/libxml2 profile identical,
+the half book 4.5 MB lower). Reserving each escape's length first buys no memory and costs 0.2-0.3 % (b250 xml −0.70 %
+against −1.03 %, 2308.04512 −0.51 % against −0.69 %), so the escape runs unreserved and the open tag is written in
+place. Run-to-run spread ≤ 0.03 % on every document but t_1109.6643 (0.14 %); L10's +0.15 % on 2308.04512 is the build's
+code placement, not work (the change only removes a format per setter). Cycles:u moved ±10-19 % between runs of one
+binary on the shared host, below resolution for these levers. Output byte-identical on the 16 measured runs (every rep)
+and on the A/B population `popMEMB.tsv` (160 papers, 60 controls), raw XML and the HTML recipe with every auxiliary
+file; the final build hashes identical (every output file) on b250, 2308.04512, 2604.01119 and the book, XML and HTML.
+Left (MEM1, not taken): L4c `tbox.rs` `vec![node]` and L4f `stomach.rs` result `Vec` (return shapes), L4d
+`text_run_font`'s `Font` clone (`Rc<Font>` through `open_text`'s eight callers) — each ≤ 0.06-0.08 % by MEM1's estimate.
+
+### 2026-11-15 — the token path's per-token allocations (MEMA, MEM1 levers L1-L3, L5, L6, L8, L9, L19)
+
+Defect: dhat (MEM1, on `e4ab916a806`) found short-lived heap blocks on every digested or read token: a `String` per `MODE` test
+(`lookup_string_from_sym(pin!("MODE"))` only to call `ends_with("vertical")`), a temporary `Vec` per piece of
+`Tokens!`, a `String` per control sequence read by the Mouth and per `\csname`, a `Vec<u8>` and a fresh `VecDeque<char>`
+per source line, a `Vec` and a `String` per `read_keyword` attempt (`read_unit` tries ten units), a `String` per token in
+`untex`, and a `Vec<&Parameter>` collected for `.first()`. Fix, one buffer or borrow each:
+* **L1** `state::lookup_mode` / `mode_ends_with` / `lookup_string_sym_from_sym` read the stored symbol (compare with
+  `pin!("horizontal")`); every hot `MODE`/`BOUND_MODE` test in the stomach, parameters, constructors and the engine.
+* **L2, L8, L9** `Tokens!` converts a single piece once and appends several through `TokensPiece`; `untex` spells each
+  token in one reused `String`; `Parameters::get_parameters` returns `&[Parameter]`.
+* **L3, L5** the Mouth keeps a file (or lazily decoded content) once, with line ranges, refills its `chars` in place,
+  spells a control sequence in a Mouth-owned `String`, and collects a comment only when `INCLUDE_COMMENTS` keeps it.
+* **L6, L19** `read_keyword` reuses one token buffer and returns the matched `&str`; `read_cs_name_inner` spells the
+  name in a thread-local buffer (a nested `\csname` takes an empty one).
+Measured (release, best of 3 interleaved, each group against its parent commit; base INTPERF4 `e4ab916a806`; mix
+documents XML with ar5iv.sty unless html, typical papers in cortex's HTML recipe), instructions:u Δ %:
+
+| Document | L1 | L2+L8+L9 | L3+L5 | L6+L19 |
+|---|---:|---:|---:|---:|
+| 2308.04512 xml / html | −0.45 / −0.37 | −1.10 / −0.91 | −0.13 / −0.09 | −0.20 / −0.16 |
+| b250, 2604.01119 | −0.10, −0.62 | −0.40, −0.60 | −0.00, −0.35 | +0.02, −0.03 |
+| amsldoc, 2010.05701 | −0.58, −0.42 | −0.53, −1.82 | −0.40, −0.33 | −0.01, −0.48 |
+| 10 typical (popPERFBs) | −0.12 to −0.67 | −0.22 to −0.75 | +0.07 to −1.61 | −0.02 to −0.13 |
+
+1106.3601 moves ±0.7-5 % between its own runs. cycles:u (best of 3, ten lanes in parallel on the loaded host, ±2-10 %
+per run): 2308.04512 html −1.9, −2.3, −2.1, −4.1 %; typical papers −8.1 to +5.7 % per group. Cumulatively the typical
+papers lose 0.4-3.1 % of their instructions; L6+L19 clears the 0.3 % bar on 2010.05701 alone. No new guard (no output
+change): the suite and the A/B are the check. Output byte-identical on every measured run, on a probe with `--comments`,
+a latin1 `\input` file, `\csname`, `calc` and glue keywords, and on 204 arXiv papers (144 using `\csname`, calc, multido, tabu, algorithm2e, glossaries,
+caption, babel-french, `\inputencoding`, `\scantokens` or `\obeylines`; 60 controls; `popMEMA.tsv`): raw XML 204/204
+and the HTML recipe with every auxiliary file 204/204, E/F/W equal; the base agrees with itself on XML 204/204 and HTML
+200/203 (three papers write a different number of image files between two base runs). Peak RSS (html): book790
+4,346,352 → 4,301,936 KB, b1000 1,358,180 → 1,355,624 KB, outputs identical.
+
+### 2026-11-15 — libmarpa's obstack chunks: 16 KiB, recycled per thread (PERF2 R8, batch PERFJ)
+
+Defect: libmarpa 8.6.2's `marpa_obs.c` gives every obstack it begins (one per earleme in `marpa_r_earleme_complete`,
+one per recognizer, bocage, order and value) a fresh 4 KiB `malloc`, adds a fresh chunk each time one fills, gives an
+object over 4 KiB a chunk of its own, and frees every chunk to glibc (4 KiB requests miss its tcache). Counted on b250:
+696 k obstacks, 979 k further chunks, 92 k of them oversize. Fix, in `~/git/marpa` (`libmarpa-asf-sys`, branch
+`perf/obstack-reuse`; consumed through the root `Cargo.toml`'s TEMP `[patch.crates-io]` until a release):
+`marpa_obs.c` is built from the crate's modified copy `libmarpa-sys/c/marpa_obs.c`. Its chunks are 16 KiB (b250: 239 k
+further chunks, 7 oversize), and a freed default-size chunk goes onto a per-thread LIFO list of at most 64 (1 MiB) that
+the next obstack takes from. The list is a heap struct whose only owner is a pthread key (no `_Thread_local`: macOS frees
+that storage in its own key destructor, which may run first); the key's destructor frees it at thread exit and leaves a
+static "retired" marker, so a libmarpa call from a later TSD destructor bypasses the cache and allocates nothing that
+could leak. Windows and wasm keep plain `malloc`/`free`. Allocation only: no grammar, recognizer or value change.
+Each half alone on b250: the cache (4 KiB chunks) −1.23 %, 16 KiB chunks −1.01 %; caps of 64, 128 and 256 chunks measure the same. Guard: the marpa crate's
+`tests/obstack_chunk_cache.rs`, reading the test-only `chunk-cache-stats` counters: on 4 threads that exit with full
+caches, every result equals the first, the cache serves chunks, fills to its cap and overflows, and objects over 16 KiB
+are requested while it holds chunks; a parse from a TSD destructor after the cache's own gets no cache. A cache that
+served a wrong-size request fails it (SIGSEGV; heap-buffer-overflow under ASan); the marpa CI runs it under ASan on
+Linux and macOS (LeakSanitizer clean on Linux).
+
+Basis: release, `kit/perf_ab_cycles.sh` (base and candidate interleaved, best of 3, one core each); the mix in XML
+(`ar5iv.sty`; amsldoc `[rawstyles,rawclasses]latexml.sty`), the book and the typical papers (`ab_66bundle/popPERFBs.tsv`)
+in cortex's HTML recipe. The output was byte-identical in every run (XML, or the whole HTML destination directory).
+Cycles spread 2-60 % on a shared host; instructions spread ≤ 0.2 %.
+
+| Document | instructions (G) | Δ | cycles (G) | Δ |
+|---|---:|---:|---:|---:|
+| b500 | 73.291 → 71.727 | −2.13 % | 41.685 → 40.652 | −2.48 % |
+| b250 | 37.161 → 36.383 | −2.09 % | 20.428 → 20.038 | −1.91 % |
+| the issue-790 book (HTML) | 800.748 → 791.440 | −1.16 % | 480.451 → 473.779 | −1.39 % |
+| 2308.04512 | 259.005 → 256.946 | −0.80 % | 100.888 → 97.511 | −3.35 % |
+| 10 typical papers (HTML) | | −0.02 to −1.46 % (median −1.0 %) | | −14.6 to +5.9 % |
+| amsldoc (control) | 5.743 → 5.698 | −0.77 % | 2.984 → 2.947 | −1.23 % |
+| 2010.05701 (control) | 266.987 → 266.978 | −0.00 % | 87.364 → 87.243 | −0.14 % |
+
+The table measured the cache in `_Thread_local` storage; the shipped key-held cache (`pthread_getspecific` per chunk)
+re-measured, instructions best of 3: b250 37.174 → 36.459 (−1.92 %), 2308.04512 −0.76 % (XML) and −0.60 % (HTML); the
+10 typical papers +0.04 to −1.52 % (one run each), every output byte-identical to the base.
+1106.3601 (+2.26 %) stays out: its instructions vary by 2-24 % between runs of one binary (ASF wall deadlines).
+Peak RSS (KB, `/usr/bin/time`, cortex's HTML recipe, two runs per side, the shipped 64-chunk cap): the book 6,376,012 /
+6,883,068 → 6,833,516 / 6,872,104 (the base alone spreads 0.5 GB), b1000 1,436,040 / 1,415,768 → 1,424,048 / 1,424,988:
+within noise, and the HTML byte-identical. A/B (`popPERFI`: 130 math-heavy
+papers, 3 witnesses, 60 controls; `AB_XMLSIG=raw`): base against base 0 of 193 changed; base against candidate
+0 of 193 changed, E/F/W equal (2311.05131 lost one parse in an earlier run under load: alone, both binaries give the same
+XML twice).
+
+### 2026-11-15 — the ASF traversal's readings share their subtrees (PERFI, PERF2 lever R10)
+
+Defect: `MathTraverser` (`latexml_math_parser/src/asf_traverser.rs`) clones each child glade's readings into every
+combination its parent tries (the passthrough's `alt.clone()`, `dispatch_action`'s combos), and an XM tree owned its
+children (`Box<XM>`, `Vec`), so each clone copied the whole subtree: a formula paid its size times its depth, and every
+reading the glade cache holds kept a private copy. Fix (`semantics/tree.rs`): the children of `Operator`, `Args`,
+`Dual`, `Wrap`, `Arg` and `Choices` are `Shared<…>`, an `Rc` that a clone shares and a write (`DerefMut` =
+`Rc::make_mut`) copies one level first, so each combination's changes stay its own; moves out of a subtree are
+`into_inner()` (`Rc::unwrap_or_clone`). Equality, hashing and `Debug` are the value's, as before, so the parse-tree
+dedup and the pragmas see the same trees. No grammar, semantics or lexing change (DG 2026-11-15, math PARKED exception).
+Guard: `latexml_math_parser` `semantics::tree::tests::a_shared_subtree_takes_writes_privately`.
+Measured (release, best of 3 interleaved against INTPERF `95042553f8b`, cortex's ar5iv HTML recipe unless XML):
+
+| Document | instructions:u | cycles:u | peak RSS |
+|---|---:|---:|---:|
+| t_1109.6643 html | 32.02 → 27.12 G (−15.3 %) | 28.44 → 16.52 G (−41.9 %) | 1.95 → 0.34 GB |
+| the issue-790 book html | 795.3 → 764.7 G (−3.8 %) | 572.7 → 475.7 G (−16.9 %) | 6.37-6.87 → 4.53-4.58 GB |
+| 1106.3601 html | −1.1 % (its own spread ±2-20 %) | −1.0 % | 428 → 376 MB |
+| 2308.04512 html, b1000 html, b250 xml | −0.2 %, −0.03 %, −0.01 % | −0.3 %, −3.5 %, −3.4 % | unchanged |
+| controls amsldoc xml, 2010.05701 html | −0.1 %, +0.1 % | −0.2 %, −1.0 % | unchanged |
+
+Nine typical papers (popPERFBs.tsv): instructions −0.95 to +0.12 %; their cycles (1-16 G) move ±10 % between runs either
+way. Output byte-identical on the 17 documents (every run) and on 193 arXiv papers (130 with the most math in a 10k
+sample, the three witnesses, 60 controls), raw XML and the HTML recipe with every auxiliary file; the base agrees with
+itself on all 193 (XML). One HTML run (2607.14668) left eight MuPDF temporary SVGs beside identical outputs under load;
+alone, twice, its files are identical.
+
+### 2026-11-15 — one read-only XPath walk for core and post (PERFE, PERF2 levers R1 + R3)
+
+Defect: after PERFD, post still sent its subtree and path shapes to libxml2 (`//ltx:ref//*[@fragid]`, the cref
+conjunctions' `contains(concat(' ', @class, ' '), …)`, `descendant::*[@decl_id or @meaning]`, `//*[@xml:id]`), and
+core sent all of its own: `Document::finalize`'s `mark_xmnode_visibility` (`//ltx:XMath/*`, then
+`descendant-or-self::*[@_pvis or @_cvis]` per formula), prune_xmduals' `findnode`s, `cleanup_scripts`, the XMDual
+`after_close_late` (`base_xmath.rs`) and `resolve_xmkeys` (2 + R `descendant::` scans per key attribute and formula,
+`parser.rs`); libxml2 builds a node set over every element it passes and rust-libxml wraps every result (PERF2:
+`XPath::findnodes` 4.1 % of the mix's instructions, 8.9 % of typical papers' cycles). Fix:
+`latexml_core::common::xml_walk::WalkQuery`, used by core `Document::findnodes` / `findnode` (parsed once per
+expression, `XPath::walk`) and post `findnodes_at` / `findnode(_at)`. A union of `//STEP`, `//A//STEP`, `//A/STEP`,
+`descendant::STEP`, `.//STEP` or `descendant-or-self::STEP` arms, `STEP` being `*` or `ltx:NAME` with one predicate
+of top-level `or`/`and` over `@a`, `@xml:a`, `not(@a)`, `not(ancestor::ltx:N)`, `not(ltx:N)` and `contains(…)` over
+attributes, `concat` and literals. Matches are tested on `RoNode`s, names and namespaces read borrowed, and only the
+matches are wrapped (rust-libxml's additive borrowed reads, `Document::node_from_readonly`, `RoNode::with_name`);
+`findnode` stops at the first. `resolve_xmkeys` is one
+`descendant::*[@KEY]` walk per key attribute; a key's target is the first non-XMRef carrying it, as before. The walk
+answers only where it equals XPath (the same nodes, document order, each once) and declines otherwise: any other
+shape; a document with a DTD (default attributes, entity references); a context outside the document's tree (a
+foreign `.bib.xml` entry, a detached or null node). It keeps no state between queries.
+
+Basis: `perf stat -e instructions:u,cycles:u`, release, best of 3 interleaved against INTPERF (`95042553f8b`), cores
+0-31; HTML in cortex's recipe. Step 1 = the walk shared and post widened (R3); step 2 = core's callers (R1); final =
+names and namespaces read borrowed.
+
+| Document | instructions (G) | step 1 | steps 1 + 2 | final |
+|---|---:|---:|---:|---:|
+| the issue-790 book html | 798.8 | −0.31 % | −4.18 % | −4.18 % |
+| b500 xml | 73.3 | −0.01 % | −4.14 % | −4.10 % |
+| b1000 html | 208.0 | −0.69 % | −3.59 % | −3.80 % |
+| 2308.04512 xml | 259.0 | +0.12 % | −1.31 % | −1.30 % |
+| 2308.04512 html | 322.7 | +0.20 % | −0.95 % | −1.26 % |
+| 2103.04797 html | 8.1 | −0.15 % | −1.20 % | −1.36 % |
+| amsldoc xml (control) | 5.7 | +0.05 % | −2.62 % | −2.65 % |
+| 2010.05701 xml (control) | 267.2 | −0.08 % | −0.18 % | −0.19 % |
+| 10 typical papers html (`popPERFBs`) | 2.0–32.0 | −0.25 … +0.20 % | −0.60 … −3.42 % | −0.16 … −3.80 %, median −1.79 % |
+
+Cycles could not be measured: CPUs n and n+64 are SMT siblings and the siblings ran another writer's load, so the
+base's own cycles varied by up to 143 % between its three runs (instructions ≤ 0.23 %, 1109.6643 2.5 %). Peak RSS
+(book html, b1000 html): unchanged (6,883,352 → 6,876,764 KB; b1000 1,417,628–1,427,092 → 1,420,940–1,422,700 KB, three
+and two runs). Output: XML, HTML and every auxiliary file byte-identical on the 18 runs above in
+all three reps, and on the A/B `popPERFE` (139 papers by `\cref`, `thebibliography`, display math with braces/fractions,
+index/glossary packages, plus 60 controls): 0 of 199 changed in XML and in HTML (sha256 over every output file), E/F/W
+equal (321/4/2542 XML, 321/4/2559 HTML). Guards (`latexml_core` `common::xml_walk::tests`):
+`walk_agrees_with_xpath_on_every_supported_shape` (28 shapes at six contexts — the root, element, document, text and
+attribute nodes — against libxml2's answer, with namespaced and no-namespace look-alikes, and `find_first`),
+`unsupported_shapes_are_not_claimed_by_the_walk` (incl. a one-argument `concat`, an XPath arity error),
+`walk_declines_where_xpath_must_answer` (it replaces PERFD's entity-retrace guard: a DTD document now goes to XPath,
+whose answer does not enter entity content), `walk_answers_from_the_live_tree_after_mutation`.
+
+Output changes, all outside arXiv runs (the core never writes a DTD, nor a namespaced `idref`/`labelref`/`fragid`); seen
+only on hand-made XML read with `--whatsin=xml`, and documented, not reverted. Cause: the walk tests `@a` with no
+namespace (`has_attribute_no_ns`, as XPath's `@a`), where PERFD's walk used `xmlHasProp` (any namespace, plus DTD
+default attributes); and a DTD document now goes to XPath. (a) A `<ref o:idref="S1">` is no longer resolved to a link:
+`<a href="#S1">` before, `<span class="ltx_ref ltx_ref_self">` now, as Perl `latexmlpost`. (b) A DTD default attribute
+(`<!ATTLIST text labelref CDATA "LABEL:sec">`) no longer drives cross-referencing: `--post` XML no longer adds
+`idref`/`href`/`title` to every `<text>`, as Perl's XML; the HTML is unchanged. (c) A `<graphics>` inside an internal
+entity no longer logs "No graphic source found"; the entity's content is dropped from the HTML before and now, and by
+Perl — whose parser expands entities, so Perl agrees on the HTML only, not on the reason. The planned fix (DG, after
+the cutoff): XML input expands entities at parse time. (d) Above libxml2's node-set ceiling (10M nodes), a core or
+relative query that logged an Error and returned nothing now answers.
+
+Left: rust-libxml 0.3.24 must be released before the `[patch]` path entry can go. Commits `0b1388e9f37..6e0b6ce366b`
+need the since-abandoned rust-libxml `perf/readonly-handles` branch; the series is squash-merged.
+
+### 2026-11-15 — borrowed reads through rust-libxml: no wrapper, map or String per node (PERFG, PERF2 R5-R7, PERF1 L4)
+
+Defects: every node a read-only walk met was wrapped as a `Node` (rust-libxml `Node::_wrap`: a `NodeMap` probe, on first
+sight an insert and an `Rc` kept until the document drops); `get_properties` copied every attribute into a
+`HashMap<String,String>` for callers that read names, a count or each value once; `get_node_qname` copied the name and
+the namespace prefix into Strings and spelled `prefix:local` into a third. Fix: additive rust-libxml API (local branch
+`perf/borrowed-reads`, consumed through a `[patch.crates-io]` path entry until libxml 0.3.24 is released):
+`Node::as_readonly` / `node_from_readonly`, `RoNode::for_each_property(_ns)`, `with_name`, `with_namespace_prefix`,
+`with_content`, each borrowing libxml2's strings (checked by `str::from_utf8` before the lossy decoder). Moved: R7
+`model::get_node_qname` (via `get_ro_node_qname`, the qname spelled in `arena::pin_qname`'s reused buffer); R6
+`serialize_into`, `finalize_rec`'s bookkeeping strip, `append_tree`, `namespace_prefixes_in_use` (the map's keying kept
+where it showed: one attribute per local name, the first's qname and the last's value); R5 `serialize_into`, post's
+`scan_ids_and_pis` (an element is wrapped only when it has a property named `id` or `xml:id`, `get_xml_id`'s own
+condition without a DTD; with a DTD every element is asked) and `finalize_rec`'s child scan (a child is wrapped where
+it becomes work).
+
+Basis: release, `perf stat -e instructions:u,cycles:u`, 3 interleaved runs per side on one core (`kit/perf_ab_cycles.sh`),
+base `INTPERF` (95042553f8b), the ar5iv recipe for `html`, the 10 papers from `popPERFBs`; instructions vary < 0.1 %
+within a pair (up to 0.4 % between sessions, 2010.05701); cycles under the shared host's load vary 5-40 % per run, so only the total's (the minimum of 3) are given:
+
+| Document | R7 | R6 | R5 | total instructions | total cycles |
+|---|---:|---:|---:|---:|---:|
+| book790 html | −0.92 % | −1.20 % | −1.07 % | 800.9 → 776.0 G, −3.11 % | −5.34 % |
+| b1000 html | −0.82 % | −1.44 % | −1.10 % | 208.1 → 201.1 G, −3.35 % | −0.31 % |
+| b500 xml | −1.23 % | −1.91 % | −0.67 % | 73.26 → 70.51 G, −3.75 % | −4.08 % |
+| 2308.04512 html | −0.51 % | −1.01 % | −0.56 % | 322.7 → 316.1 G, −2.06 % | −1.56 % |
+| amsldoc (raw) | −0.62 % | −0.92 % | −0.22 % | 6.250 → 6.146 G, −1.67 % | −4.11 % |
+| 10 random papers (html; 8 per lever) | −0.14 … −0.75 % | −0.37 … −1.22 % | −0.12 … −1.25 % | −0.53 … −3.07 % (median −2.06 %) | −0.59 … −8.91 % |
+| 2010.05701 (control) | −0.02 % | −0.43 % | +0.46 % | 267.00 → 266.97 G, −0.01 % | −0.11 % |
+| circuitikzmanual (control) | −0.18 % | −0.57 % | +0.25 % | 670.3 → 667.1 G, −0.47 % | +3.24 % |
+
+R5 is its walk commit plus `with_name`/`with_content` in `serialize_into` (the `RoNode` copies decode lossily). The
+controls' R5 cost is codegen, not the walk: an `instructions:u` profile of 2010.05701 (frame pointers) moves only gullet
+symbols (`Parameter::read_with` +0.71, `read_x_token` +0.65, `read_token` −0.51 points), and no document-build symbol
+reaches 1.5 % inclusive on either side. Peak RSS (html): b1000 1,419,756 → 1,368,008 KB (−3.6 %), book790 6,883,488 →
+6,885,544 KB (its peak is one formula's parse). Output: XML or HTML with every aux file byte-identical on the mix and on
+an A/B of 180 arXiv papers (`popPERFG`: 120 of `popPERFB` + 60 controls, ar5iv recipe), E/F/W 417/0/16591 on both; the
+base run twice differed on 4 (1203.4558, 2409.06317, 2403.20315, 2006.01789: their image aux files). Guards: the crate's
+`tests/borrowed_reads_tests.rs` (each read against its copying accessor; namespaced and same-name properties; a node
+created or unlinked mid-walk); the suite's serialization goldens. Left: `xml::descendant_or_self_elements`
+(`Document::find_elements`) still wraps every element for its `FnMut(&Node)` predicate, left to the shared read-only walk
+(PERFE); a qname memo keyed by libxml2's name pointers (PERF2 R7's second half) was not taken: a name freed and
+reallocated would hit a stale entry.
+
+### 2026-11-15 — an unsplit document's page kept resident between post's passes (PERFH, PERF2 R2)
+
+Defect: post's whole-DOM front-end serialized every scanned page to the staging directory and parsed it back for the
+MakeIndex and MakeBibliography sweeps and again for the render (`latexml_oxide/src/post.rs`, pass A/B), a staging built
+for 40k-page split sites; an unsplit document paid a serialize, a file round trip and one to three parses for nothing.
+Perl keeps the document resident (LaTeXML.pm L445, Post.pm L682-686 `setDocument_internal`). Fix: when the run does not
+split and libxml2 parsed the page cleanly (rust-libxml `Document::is_well_formed` and `is_ns_valid`, the parser's
+`XML_DOC_WELLFORMED`/`XML_DOC_NSVALID`), the page stays in memory as `SpilledPage::resident`, rewrapped as a fresh parse
+would return it (`PostDocument::new` over the same libxml document: ids, namespaces, PIs, memos rebuilt; `source` and
+`source_directory` from `PostDocument::file_options` of the staging path; `Document::trim_node_cache` drops pass
+A's node wrappers). Why that is the reparse's DOM: a clean parse reparses to the same tree, and Scan's only edit is the
+root's `xml:id`. A sweep that changes the page still re-parses it, from a string instead of a file, because a
+processor's edits can differ from their reparse (adjacent text nodes, an invalid character dropped). A recovered parse,
+a split run and the streaming front-end stage on disk as before. Guard:
+`117_post_2gib_handoff::resident_page_renders_as_the_disk_staged_one` (index + `.bib` bibliography; the disk path forced
+by the test-only `LATEXML_POST_SPILL_PAGE=1`).
+
+Basis: release, production HTML recipe (`--preload=ar5iv.sty --format=html5 --nodefaultresources --pmml --mathtex
+--noinvisibletimes`), median of 3 interleaved runs per side (`kit/perf_ab_cycles.sh` `HTML=1 COPYDIR=1`, base INTPERF
+`95042553f8b`); every destination directory (HTML and every aux file) byte-identical. Cycles carry the load of three
+other writers' runs on the host.
+
+| Document | instructions base → cand (G) | Δ instr | Δ cycles |
+|---|---:|---:|---:|
+| b1000 | 208.08 → 202.94 | −2.47 % | −3.67 % |
+| 2308.04512 | 322.86 → 318.25 | −1.43 % | −2.95 % |
+| 2604.01119 | 9.349 → 9.215 | −1.43 % | −3.78 % |
+| 2103.04797 | 8.100 → 8.042 | −0.72 % | +4.1 % (noise) |
+| amsldoc (control; unsplit too) | 9.138 → 9.002 | −1.49 % | −11 % |
+| 2010.05701 (control) | 267.83 → 267.78 | −0.02 % | +0.24 % |
+| 10 typical papers (`popPERFBs`) | | −0.38 … −2.03 %, mean −1.32 % | −5.5 … +0.7 % |
+
+Peak RSS: book790 6,880,408-6,882,604 → 6,867,564-6,868,032 KB, b1000 1,421,528-1,421,584 → 1,422,724-1,423,436 KB
+(without `trim_node_cache`, b1000 rose 21 MB: the wrapper cache keeps one `Node` per node Scan visited). A/B
+(`popPERFH`, production HTML, every output file hashed: 40 `\printindex`/glossary, 80 `\bibliography`, 39
+`thebibliography`, 30 `\includegraphics`, 20 footnotes, 19 tabular, 60 controls): 0 of 286 changed, E/F/W equal; the
+base against itself first, also 0. ImageMagick stamps each PNG with the clock, so image papers compare only under a fixed
+`SOURCE_DATE_EPOCH` (both kit scripts default it).
+
+### 2026-11-15 — four easy levers of PERF2 (R4, R6a, R11, R12; batch PERFF)
+
+Basis for every figure: `instructions:u`, release, best of 3 interleaved on one core (`kit/perf_ab_cycles.sh`, `HTML=1
+STAT=min`: cortex's recipe, the whole destination
+directory compared), each lever against its parent commit; base INTPERF (`95042553f8b`). Every run byte-identical.
+`cycles:u` (best of 5, four lanes on separate cores; 12 parallel runs on the loaded host spread ±5-20 %) per lever
+below.
+* **R4, rewrites.** `base_xmath`'s thousands-separator rule was registered 4 times, each a whole-document
+  `descendant-or-self::ltx:XMTok[…]` XPath (book790: 2.82 s of its 4.37 s of rewrites). Now one rule with the Rust-only
+  `RewriteOptions::passes` (`latexml_core/src/rewrite.rs` `Rewrite::invoke`): pass k+1 evaluates the select only on the
+  nodes pass k inserted. Identical by construction — no rule runs between the passes, and a merge changes the
+  selector's window only for the merged token. b1000 −1.01 % (cycles −3.7 %), book790 −1.55 %, typical −0.01 to −1.05 %
+  (2301.03725; cycles −6.2 %).
+  Guard: `06_cluster_math::cluster_thousands_separator_us_default`. `\not`'s second registration stays (below).
+* **R6a, `get_xml_id`** (`latexml_post/src/document.rs`): the fallback built the whole `get_properties` map for every
+  node without an `xml:id`; it now builds it only when `has_property("id")` (`xmlHasProp`, any namespace) finds one, so
+  the map's "last `id` wins" is kept. Typical −0.09 to −0.64 %, 2604.01119 −0.30 %, book790 −0.30 %; by cycles within
+  noise (+0.1/+0.3 %).
+* **R11, graphics hashing** (`graphics_cache::SourceDigest`): the SHA-256 state after a source's bytes gives both the
+  dedupe key (was a SipHash read, `JobKey`/`CopyKey` equality only) and, extended by the `RenderKey`, the cache key
+  (byte-for-byte the old `hash_key`, so existing cache entries still hit); a convert job carries its planning digest to
+  `with_cache_dims`, so a converted source is read once instead of 2 (hit) or 3 (miss) times. 2605.23075 −4.35 %
+  (cycles −3.5 %), 2604.01119 −0.30 % (cycles −1.9 %), 2507.16680 −0.31 %, papers with no converted image ±0.04 %.
+* **R12, fontmap key memos** (`latexml_core/src/binding/content.rs`): `fontmap_key_syms` and `fontmap_family_key_syms`
+  (several probes per decoded glyph; the family one built two `String` keys per probe) answer from their last hit.
+  2103.04797 −0.94 % (cycles −0.5 %), 2604.01119 −0.68 %, 2601.13118 −0.61 %, 1704.02085 −0.43 %, the other typical
+  −0.07 to −0.36 %.
+
+Peak RSS (html): book790 6,882,084 → 6,888,084 KB, b1000 1,420,684 → 1,427,896 KB. A/B (`popPERFF`: 9 mix witnesses, 40
+revtex, 30 elsarticle, 30 subfigure/subcaption, 25 `\not`
+users, 60 controls): HTML and every aux file identical on 193 of 193 (one has no main file), raw XML (`rowsig`) on 193
+of 193, E/F/W equal.
+Not taken: `\not`'s rule runs twice in every LaTeX document because `latex_constructs` force-reloads `plain_constructs`
+and `math_common` (Perl `latex_constructs.pool.ltxml` L19-21, L38, which Perl does too), re-pushing math_common's
+`DefRewrite` and its three ligatures. The second `\not` pass is not idle: the cancel path's `append_tree` copies its
+operand (Perl moves it, `appendChild`), so a `\not` inside it (`$\not\sqrt{a\not=b}$`) is rewritten only by the second
+registration; registering it once changes that output. The second pass repairs nesting depth 2 only: at depth 3
+(`$\not\sqrt{\not\sqrt{a\not=b}}$`) Perl gives `≠` while Rust leaves a bare `／`, a plain `=` and an extra invisible
+times, and `$\not\frac{\not\sqrt{a\not=b}}{c}$` gets `fontsize="49%"` against Perl's `70%` (revPERFF, both binaries;
+pre-existing). The fix is the move Perl makes, then one registration (row R).
+
+### 2026-11-15 — post's whole-document queries wrap only their matches (PERFD, PERF1 lever L5)
+
+Defect: every whole-document `//NAME[pred]` query post answers by traversal (`PostDocument::findnodes`, ≈20 per HTML
+document, one or two per processor) wrapped EVERY node it passed as a `Node` (a `NodeMap` probe and an `Rc` per node):
+2/3 of a query (2308.04512: 160 ms of which a read-only walk is 45 ms). Fix (`latexml_post/src/document.rs`
+`collect_walk_matches`): the arms are tested on `RoNode`s, then `Node` handles are made only for the children of the
+matches' ancestors (the matches and every sibling and text node beside them on the route). Both passes read the live
+tree, so no state outlives a query and mutation between queries cannot make one stale; a match the second pass does not
+meet on its parent route (an entity's content) is wrapped along the first pass's route; the union guard asserts the
+route itself serves every match. Measured by in-process timing of every query: 2308.04512 html 4.36 → 2.13 s, the
+issue-790 book html 11.7 → 5.5 s. `instructions:u` (release, best of 3, interleaved against MAIN884): 2308.04512 html
+−0.46 %, the book html −0.28 % (best of 5; median −0.63 %), 2103.04797 html −0.31 %, amsldoc html −0.71 %; XML controls
+(2010.05701, 1106.3601) within their run-to-run spread (±0.1 %, 1106.3601 ±20 %). Peak RSS unchanged (book html 6.88 GB,
+b1000 html 1.43 GB). HTML and every auxiliary file byte-identical on the four and on 200 arXiv papers (140 by bibitems,
+Math count and length, 60 controls). Guards: `walk_union_agrees_with_xpath_on_every_supported_shape` (now with nested
+and root matches, and `//*`), `walk_retraces_into_entity_content_like_the_reference_walk`,
+`walk_answers_from_the_live_tree_after_mutation` (against a future cross-query cache).
+A cross-query element index (by name, built once) was not taken: processors insert and remove elements through `Node`
+directly, between and inside their queries, and nothing tells the document. Left: the queries outside the walk's
+grammar go to libxml2 XPath (`descendant::*[@decl_id or @meaning]`, `//ltx:text[contains(…)]` — both walked since
+PERFE, below — and `//ltx:picture[child::…]`, 0.2–0.5 s each on the book); the core's `xml::descendant_or_self_elements`
+(`Document::find_elements`, #865) wraps every element the same way.
+
+### 2026-11-15 — a `\global` assignment's walk over the undo frames (PERFC)
+
+Defect: `State::assign_internal`'s `Scope::Global` branch (State.pm:156-168) probed every frame's count table down to the
+locked one with a hashbrown `remove`, then removed and re-inserted the key in the last frame and probed the state table
+twice; under pgf/TikZ (`\global` register and `\let` assignments in deep groups) that was `remove_entry` 2.0 % +
+`assign_internal` self 1.7 % of 2205.15714's instructions. Fix: `AssignmentCount` (a frame's counts for one table) keeps a
+256-bit filter of the keys it ever counted, set by every insertion and never cleared, so the walk skips a frame whose bit
+is clear; the last frame's count is read and replaced in one `insert`; the state table is probed once. What a later group
+end restores is unchanged. Guard: `00_unit_state::global_assignment_undo_frames_restore_at_each_group_end` (red against
+three broken variants: the last frame's count dropped, the inner frames' kept, the filter always clear).
+
+Basis: `perf stat -e instructions:u`, release, min of 3 (base) and 2 (candidate) runs (`kit/probe.sh`, `PERF=1`,
+`ar5iv.sty`; circuitikzmanual and amsldoc under `[rawstyles,rawclasses]latexml.sty`), XML byte-identical on every run.
+
+| Document | MAIN884 (G) | PERFC (G) | Δ |
+|---|---:|---:|---:|
+| 2205.15714 | 42.637 | 42.130 | −1.19 % |
+| circuitikzmanual | 693.788 | 686.809 | −1.01 % |
+| 2010.05701 | 268.736 | 266.927 | −0.67 % |
+| 2308.04512 | 284.500 | 282.633 | −0.66 % |
+| b250 (control) | 37.133 | 37.168 | +0.09 % |
+| amsldoc (control) | 5.739 | 5.741 | +0.03 % |
+
+The empty-table check and the single last-frame probe alone gained 0.03-0.22 %: pgf's frames are rarely empty. The
+controls' cost is the frame's larger default (10 × 32 bytes) and the bit set per local assignment. Peak RSS: book790
+6,883,732 → 6,884,868 KB, b1000 1,419,424 → 1,421,120 KB. A/B (`popPERFC`: 80 pgfplots/circuitikz, 59 tikzpicture, 60
+controls): 0 of 199 changed, E/F/W equal.
+
+### 2026-11-15 — the math grammar built once per streamed conversion (PERF1 L1, batch PERFA)
+
+Defect: `streaming_pass2` (`latexml_oxide/src/core_interface.rs`) made a `MathParser::default()` per spilled segment,
+and each ran `init_grammar()` and re-precomputed the whole Marpa grammar (≈60 M instructions; 253 segments on
+2308.04512, 442 on circuitikzmanual). Fix: `latexml_math_parser::MathGrammar` holds the grammar precomputed once with
+its rule actions (fn items, no captured state) and tree builder (rule-id sets); each segment gets a fresh
+`MathParser::with_grammar` (its own warned-formula set, counters, engine) and hands the grammar on with
+`MathParser::grammar()`, which returns it only if it passes `try_reset_clone_path`'s trivial parse (a grammar
+`reset_engine` rebuilt is handed on). The eager path and the spine keep `MathParser::default()`. Guard:
+`cluster_units` `parse::shared_grammar_parses_like_a_fresh_one`.
+Measured (release, best of 3 interleaved, `instructions:u`, base MAIN884 ab9e1a4474d; XML byte-identical in every run):
+2308.04512 284.50 → 261.11 G (−8.22 %), circuitikzmanual 693.94 → 677.62 G (−2.35 %); unstreamed documents within +0.09 % (the issue-790 book +0.09 %, b1000
++0.04 %, b250 +0.06 %, amsldoc +0.07 %, 2205.15714 −0.01 %; 1106.3601's own spread is ±5 %, ASF second-chance wall
+deadlines); peak RSS unchanged. Byte identity: an A/B of 130 math-heavy papers + 59 controls, all forced to stream with
+many segments (`LATEXML_STREAMING=true LATEXML_SPILL_AT_MIB=1 LATEXML_SOFT_YIELD_MIN_BOXES=64`), raw XML identical on all 189.
+PERF1's L4 (a borrowed attribute walk for `get_properties`' name/count-only callers, P12): done by PERFG (above).
 
 ### 2026-11-13 — the AASTeX many-author regression (batch AAS1)
 
@@ -744,7 +1241,8 @@ name (all-`???` annotation) on this box — use perf instead.
   `remove_entry` 1.85%) is faithful Perl State semantics (Perl also
   Global-assigns `if_count` per conditional) — a typed `State` field for
   LaTeXML-internal counters would be the "meaningful Rust types" translation
-  (done for `if_count` and, in 59a, `if_stack`).
+  (done for `if_count` and, in 59a, `if_stack`; the walk itself skips frames
+  that never counted the key since 2026-11-15, PERFC).
 
 ### 2026-07-06 — CrossRef O(n²)→O(n) on very-large split docs
 
@@ -1054,7 +1552,8 @@ structural math output on math-heavy fixtures before treating it as a win.
 ## Graphics — completed work (breadcrumbs for regression triage)
 
 - **In-doc coalescing** (`48fd96ac75`) — `Plan::Copy`/`Plan::Convert` key on
-  `(SipHash(content), graphicx_options)`. arXiv:2402.01336 1083 nodes → 17 files.
+  `(SHA-256(content), graphicx_options)` (SipHash until PERFF, whose `SourceDigest` also keys the cache).
+  arXiv:2402.01336 1083 nodes → 17 files.
 - **Persistent on-disk cache** — SHA-256 of `source‖page‖density‖target-ext` at
   `$XDG_CACHE_HOME/latexml-oxide/graphics/<aa>/<hash>.<ext>` + `.dims` sidecar
   (Perl `LaTeXML.cache` parity). Multi-process safe (tmp+atomic rename,

@@ -671,32 +671,18 @@ impl Graphics {
     (w.max(1.0) as u32, h.max(1.0) as u32)
   }
 
-  /// Content fingerprint for graphics-asset deduplication. SipHash
-  /// (`std::collections::hash_map::DefaultHasher`) over the file's
-  /// raw bytes. Returns `None` if the file can't be opened.
-  ///
-  /// Collisions are theoretically possible but astronomically unlikely
-  /// for paper-sized graphics dirs (worst case: a few hundred files
-  /// per paper, all under 50 MB). We use a u64 hash as the dedup key.
+  /// Content fingerprint for graphics-asset deduplication: the SHA-256 of the
+  /// file's bytes ([`crate::graphics_cache::SourceDigest`], whose state also
+  /// keys the conversion cache, so a converted source is read once). Returns
+  /// `None` if the file can't be opened.
   ///
   /// Purpose: byte-identical files `x1.pdf` and `x2.pdf` (e.g. shared
   /// figures across subsections, or duplicated by the author) should
   /// share one rasterized PNG/SVG in the output bundle. Both `<img>`
   /// tags then reference the first-seen filename's stem — saves both
   /// conversion time AND output-bundle disk space.
-  fn hash_file_content(path: &str) -> Option<u64> {
-    use std::{hash::Hasher, io::Read};
-    let mut file = std::fs::File::open(path).ok()?;
-    let mut hasher = std::collections::hash_map::DefaultHasher::new();
-    let mut buf = [0u8; 65536];
-    loop {
-      let n = file.read(&mut buf).ok()?;
-      if n == 0 {
-        break;
-      }
-      hasher.write(&buf[..n]);
-    }
-    Some(hasher.finish())
+  fn digest_file_content(path: &str) -> Option<crate::graphics_cache::SourceDigest> {
+    crate::graphics_cache::SourceDigest::of_file(Path::new(path))
   }
 
   /// Derive the destination stem for a CONVERTED graphic.
@@ -2362,6 +2348,8 @@ impl Processor for Graphics {
     struct ConvertJob {
       job_id:       usize,
       source:       String,
+      /// The source's content digest, read at planning: the cache keys come from it.
+      digest:       Option<crate::graphics_cache::SourceDigest>,
       page:         Option<u32>,
       rel_dest:     String,
       abs_dest_str: String,
@@ -2398,7 +2386,7 @@ impl Processor for Graphics {
     // end up pointing to that same rel_dest.
     #[derive(Hash, Eq, PartialEq)]
     enum JobKey {
-      Hashed(u64, Option<u32>, String),
+      Hashed([u8; 32], Option<u32>, String),
       Pathy(String, Option<u32>, String),
     }
     let mut convert_job_ids: HashMap<JobKey, usize> = HashMap::default();
@@ -2407,7 +2395,7 @@ impl Processor for Graphics {
     // (crop, turn) is a Plan::Convert job with its own file.
     #[derive(Hash, Eq, PartialEq)]
     enum CopyKey {
-      Hashed(u64, String),
+      Hashed([u8; 32], String),
       Pathy(String, String),
     }
     let mut copy_dedup: HashMap<CopyKey, String> = HashMap::default();
@@ -2485,9 +2473,9 @@ impl Processor for Graphics {
       };
       let transform = !ops.is_empty();
       if needs_conversion || has_page || transform {
-        let content_hash = Self::hash_file_content(&source);
-        let job_key = match content_hash {
-          Some(h) => JobKey::Hashed(h, page, options.clone()),
+        let digest = Self::digest_file_content(&source);
+        let job_key = match &digest {
+          Some(d) => JobKey::Hashed(d.content(), page, options.clone()),
           None => JobKey::Pathy(source.clone(), page, options.clone()),
         };
         let job_id = if let Some(&job_id) = convert_job_ids.get(&job_key) {
@@ -2540,6 +2528,7 @@ impl Processor for Graphics {
           convert_jobs.push(ConvertJob {
             job_id,
             source: source.clone(),
+            digest,
             page,
             rel_dest,
             abs_dest_str,
@@ -2639,6 +2628,7 @@ impl Processor for Graphics {
                     let ConvertJob {
                       job_id,
                       source,
+                      digest,
                       page,
                       rel_dest,
                       abs_dest_str,
@@ -2668,6 +2658,7 @@ impl Processor for Graphics {
                       let svg_res = crate::graphics_cache::with_cache_dims(
                         cache_policy,
                         source,
+                        digest.as_ref(),
                         abs_svg,
                         svg_key,
                         || {
@@ -2768,6 +2759,7 @@ impl Processor for Graphics {
                       crate::graphics_cache::with_cache_dims(
                         cache_policy,
                         source,
+                        digest.as_ref(),
                         abs_dest_str,
                         raster_key,
                         || {
@@ -2933,9 +2925,8 @@ impl Processor for Graphics {
           // node at the same rel. Avoids both duplicate I/O and a
           // duplicate output file in the bundle. Fall back to source-
           // path keying when the file can't be hashed.
-          let hash_opt = Self::hash_file_content(source);
-          let key = match hash_opt {
-            Some(h) => CopyKey::Hashed(h, options.clone()),
+          let key = match Self::digest_file_content(source) {
+            Some(d) => CopyKey::Hashed(d.content(), options.clone()),
             None => CopyKey::Pathy(source.clone(), options.clone()),
           };
           let rel = if let Some(existing) = copy_dedup.get(&key) {

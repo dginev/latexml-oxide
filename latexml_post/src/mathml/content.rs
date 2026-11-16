@@ -299,7 +299,7 @@ fn cmml_impl(doc: &PostDocument, node: &Node) -> NodeData {
         return cmml_token_by_meaning(&meaning, node);
       }
       // Check if role=ID (decorated symbol)
-      if node.get_attribute("role").as_deref() == Some("ID") {
+      if node.with_attribute(c"role", |v| v == "ID") == Some(true) {
         return cmml_decorated_symbol(doc, node);
       }
       // Normal application
@@ -971,7 +971,7 @@ fn cmml_unparsed(doc: &PostDocument, nodes: &[Node]) -> NodeData {
 
   for node in nodes {
     let tag = doc.get_qname(node).unwrap_or_default();
-    if tag == "ltx:XMTok" && node.get_attribute("role").as_deref() == Some("UNKNOWN") {
+    if tag == "ltx:XMTok" && node.with_attribute(c"role", |v| v == "UNKNOWN") == Some(true) {
       results.push(NodeData::Element {
         tag:        "m:csymbol".to_string(),
         attributes: Some(HashMap::from_iter([(

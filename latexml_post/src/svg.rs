@@ -60,7 +60,7 @@ impl SVG {
     // Build the outer svg:svg element
     let width = node.get_attribute("width").map(|s| to_px(&s));
     let height = node.get_attribute("height").map(|s| to_px(&s));
-    let clip = node.get_attribute("clip").as_deref() == Some("true");
+    let clip = node.with_attribute(c"clip", |v| v == "true") == Some(true);
 
     // `SVG.pm::ProcessSVG` L96-97: the picture's own attributes that are
     // valid on `svg:svg` move onto it (`copy_valid_attributes`, model-checked
@@ -155,8 +155,8 @@ impl SVG {
   fn convert_g(&self, doc: &PostDocument, node: &Node) -> Option<NodeData> {
     let mut attrs = self.copy_valid_attrs(node);
     // Check for framed+fillframe
-    if node.get_attribute("framed").as_deref() == Some("true")
-      && node.get_attribute("fillframe").as_deref() == Some("true")
+    if node.with_attribute(c"framed", |v| v == "true") == Some(true)
+      && node.with_attribute(c"fillframe", |v| v == "true") == Some(true)
     {
       let fill = node
         .get_attribute("fill")
@@ -290,7 +290,7 @@ impl SVG {
         );
       }
     }
-    if node.get_attribute("displayedpoints").is_some() {
+    if node.has_attribute("displayedpoints") {
       attrs.insert("stroke-dasharray".to_string(), "2".to_string());
     }
     Some(NodeData::Element {

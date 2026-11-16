@@ -364,7 +364,7 @@ LoadDefinitions!({
         "version",
         "revision",
       ])?;
-      if keyword.as_deref() == Some("creationdate") {
+      if keyword == Some("creationdate") {
         return latexml_engine::pdftex::pdf_creation_date();
       }
       Ok(Tokens!(T_OTHER!("0")))

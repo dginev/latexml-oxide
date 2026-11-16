@@ -598,7 +598,7 @@ fn copy_balanced_group(chars: &mut std::iter::Peekable<std::str::Chars>, out: &m
 fn bib_field_source(value: &str, handler: &Rc<dyn Definition>) -> String {
   let first = handler
     .get_parameters()
-    .and_then(|params| params.get_parameters().first().cloned());
+    .and_then(|params| params.get_parameters().first());
   match first {
     Some(p) if reads_field_raw(p) && with(p.name, |name| name != "Verbatim") => {
       identifier_data(value)

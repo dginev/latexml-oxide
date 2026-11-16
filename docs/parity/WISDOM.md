@@ -112,7 +112,8 @@ heap-allocates a new `String`; `arena::with(sym, |s| …)` (and `with2` for two
 symbols) borrows the `&str` for the closure's duration, zero-alloc. Prefer `with`
 whenever the use is short-lived (comparisons, `set_property`, formatting) — in
 per-token/column/row hot paths the allocations add up. Use `to_string` only for an
-owned `String` that outlives the scope (e.g. a `HashMap<String,…>` key).
+owned `String` that outlives the scope (e.g. a `HashMap<String,…>` key). The closure may intern: a string new
+during the lend goes to the arena's overflow page, so the lent `&str` never moves (`arena.rs`, ARENAR).
 
 ---
 

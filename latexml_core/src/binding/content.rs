@@ -5950,10 +5950,10 @@ pub fn def_color_model(model: &str, coremodel: &str) {
 /// Perl `Digest` (Package.pm:393-402): digest with side effects and mode changes, then leave a horizontal mode the
 /// digestion entered (`leaveHorizontal_internal`), as [`crate::parameter::Parameter::digest`] does for an argument.
 pub fn binding_digest<T: Into<Tokens>>(tokens: T) -> Result<Digested> {
-  let mode = lookup_string_from_sym(crate::pin!("MODE"));
+  let mode = lookup_mode();
   let value = digest(tokens)?;
-  let nmode = lookup_string_from_sym(crate::pin!("MODE"));
-  if mode != nmode && nmode == "horizontal" {
+  let nmode = lookup_mode();
+  if mode != nmode && nmode == crate::pin!("horizontal") {
     leave_horizontal_internal();
   }
   Ok(value)
@@ -6585,7 +6585,16 @@ thread_local! {
     std::cell::RefCell::new(HashMap::default());
   static FONTMAP_FAMILY_KEY_MEMO: std::cell::RefCell<HashMap<(String, String), (SymStr, SymStr)>> =
     std::cell::RefCell::new(HashMap::default());
+  /// The last answers of the two memos: text decodes glyph after glyph in one font, a few probes per glyph
+  /// (2103.04797, 1704.02085), and a string compare is cheaper than a hash probe (the family one built two keys).
+  static FONTMAP_KEY_LAST: std::cell::RefCell<Option<(String, FontmapKeySyms)>> =
+    const { std::cell::RefCell::new(None) };
+  static FONTMAP_FAMILY_KEY_LAST: std::cell::RefCell<Option<(String, String, FamilyKeySyms)>> =
+    const { std::cell::RefCell::new(None) };
 }
+
+/// `fontmap_family_key_syms`' answer: the family map's key and its multichar table's.
+type FamilyKeySyms = (SymStr, SymStr);
 
 #[derive(Clone, Copy)]
 pub struct FontmapKeySyms {
@@ -6599,7 +6608,15 @@ pub struct FontmapKeySyms {
 
 /// The memoized key symbols for `encoding`'s fontmap Value-table entries.
 pub fn fontmap_key_syms(encoding: &str) -> FontmapKeySyms {
-  FONTMAP_KEY_MEMO.with(|m| {
+  if let Some(keys) = FONTMAP_KEY_LAST.with_borrow(|last| {
+    last
+      .as_ref()
+      .filter(|(e, _)| e == encoding)
+      .map(|(_, keys)| *keys)
+  }) {
+    return keys;
+  }
+  let keys = FONTMAP_KEY_MEMO.with(|m| {
     if let Some(keys) = m.borrow().get(encoding) {
       return *keys;
     }
@@ -6610,12 +6627,30 @@ pub fn fontmap_key_syms(encoding: &str) -> FontmapKeySyms {
     };
     m.borrow_mut().insert(encoding.to_string(), keys);
     keys
-  })
+  });
+  FONTMAP_KEY_LAST.with_borrow_mut(|last| match last {
+    // Reuse the buffer: text and math glyphs alternate encodings (OT1, OML).
+    Some((e, k)) => {
+      e.clear();
+      e.push_str(encoding);
+      *k = keys;
+    },
+    None => *last = Some((encoding.to_string(), keys)),
+  });
+  keys
 }
 
 /// The memoized `"{encoding}_{family}_fontmap"` and `"{encoding}_{family}_fontmap_multichar"` key symbols.
 pub fn fontmap_family_key_syms(encoding: &str, family: &str) -> (SymStr, SymStr) {
-  FONTMAP_FAMILY_KEY_MEMO.with(|m| {
+  if let Some(syms) = FONTMAP_FAMILY_KEY_LAST.with_borrow(|last| {
+    last
+      .as_ref()
+      .filter(|(e, f, _)| e == encoding && f == family)
+      .map(|(_, _, syms)| *syms)
+  }) {
+    return syms;
+  }
+  let syms = FONTMAP_FAMILY_KEY_MEMO.with(|m| {
     if let Some(syms) = m.borrow().get(&(encoding.to_string(), family.to_string())) {
       return *syms;
     }
@@ -6626,7 +6661,18 @@ pub fn fontmap_family_key_syms(encoding: &str, family: &str) -> (SymStr, SymStr)
     m.borrow_mut()
       .insert((encoding.to_string(), family.to_string()), syms);
     syms
-  })
+  });
+  FONTMAP_FAMILY_KEY_LAST.with_borrow_mut(|last| match last {
+    Some((e, f, k)) => {
+      e.clear();
+      e.push_str(encoding);
+      f.clear();
+      f.push_str(family);
+      *k = syms;
+    },
+    None => *last = Some((encoding.to_string(), family.to_string(), syms)),
+  });
+  syms
 }
 
 /// Clear the fontmap key-symbol memos. Companion to `arena::reset()` — the
@@ -6634,6 +6680,8 @@ pub fn fontmap_family_key_syms(encoding: &str, family: &str) -> (SymStr, SymStr)
 pub fn reset_fontmap_key_memo() {
   FONTMAP_KEY_MEMO.with(|m| m.borrow_mut().clear());
   FONTMAP_FAMILY_KEY_MEMO.with(|m| m.borrow_mut().clear());
+  FONTMAP_KEY_LAST.set(None);
+  FONTMAP_FAMILY_KEY_LAST.set(None);
 }
 
 pub fn load_font_map(encoding: &str) -> Option<Fontmap> {

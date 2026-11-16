@@ -200,7 +200,8 @@ no-dynamic-clib CI assertion (release).
 ### D.2 Vendored native libraries — the cargo-about blind spot
 
 In each row **the crate manifest's license is not the license of the code that
-ships**, so cargo-deny (§A) cannot catch any of them. Audited by hand here,
+ships**, so cargo-deny (§A) cannot catch any of them — except libmarpa from
+`libmarpa-asf-sys` 0.3.1, whose manifest now names the combination. Audited by hand here,
 attributed in `THIRD-PARTY-NOTICES` §3.
 
 "Vendored **native**" understates the class: the defining trait is *a manifest that
@@ -211,15 +212,15 @@ original five signals despite being the largest native surface in the binary.
 
 | Native lib | Carrier crate | Crate declares | What actually links in | Notice |
 |---|---|---|---|---|
-| **libmarpa 8.6.2** | `libmarpa-sys` (git, `dginev/marpa`) | `MIT OR Apache-2.0` | `marpa.c`/`marpa_ami.c`/`marpa_codes.c` → **MIT** © 2018 Jeffrey Kegler; `marpa_avl.c`/`marpa_tavl.c` (Ben Pfaff's libavl) → **LGPL-3.0+** © FSF; `marpa_obs.c` (GNU obstack) → **LGPL-2.1+** © FSF | §3.3 |
+| **libmarpa 8.6.2** | `libmarpa-asf-sys` 0.3.1 (crates.io; fork `dginev/marpa`) | from 0.3.1 `(MIT OR Apache-2.0) AND MIT AND LGPL-2.1-or-later AND LGPL-3.0-or-later` (0.3.0: `MIT OR Apache-2.0`); `deny.toml` allows the two LGPLs for this crate only (DG 2026-11-15) until marpa replaces those files with MIT code | `marpa.c`/`marpa_ami.c`/`marpa_codes.c` → **MIT** © 2018 Jeffrey Kegler; `marpa_avl.c`/`marpa_tavl.c` (Ben Pfaff's libavl) → **LGPL-3.0+** © FSF; `marpa_obs.c` (GNU obstack) → **LGPL-2.1+** © FSF, built with one modified file, `c/marpa_obs.c` (16 KiB chunks, a per-thread chunk cache), modification notice in its header | §3.3 |
 | **mimalloc** | `libmimalloc-sys` | `MIT` + crate-root `LICENSE.txt` © 2019 **Octavian Oncescu** (the wrapper author) | `c_src/mimalloc/**` → **MIT** © 2018-2025 **Microsoft Corporation, Daan Leijen** — a different holder than the harvested text | §3.4 |
 | **libkpathsea** | `kpathsea_sys` | `MIT OR Apache-2.0`, **no LICENSE file** | kpathsea C at `KPSE_REF` → **LGPL-2.1+** © Karl Berry, Olaf Weber et al. | §3.2 |
 | libxml2 / libxslt | `libxml` / `libxslt` | `MIT` (naming the wrapper, not Veillard) | system libxml2/libxslt/libexslt → **MIT** © Daniel Veillard — static in release | §3.1 |
 
 How each evades the automated gate:
-- **libmarpa** vendors a **tarball**, so its `COPYING`/`COPYING.LESSER` are invisible
-  to cargo-about's file scan — and a per-file license split is not expressible in a
-  manifest field anyway.
+- **libmarpa** vendors a **tarball** (plus the loose modified `c/marpa_obs.c`), so its
+  `COPYING`/`COPYING.LESSER` are invisible to cargo-about's file scan. From 0.3.1 the manifest's SPDX expression names
+  the licenses (not which file has which; the crate's README lists that), so cargo-deny sees them.
 - **mimalloc** *does* ship a crate-root `LICENSE.txt` — which is what makes it
   dangerous: cargo-about harvests it and emits a plausible MIT text naming the
   **wrong holder**.
@@ -237,8 +238,9 @@ Re-verify: `python3 tools/audit_vendored_natives.py --verbose` (F4).
 `libkpathsea` (D.1), part of `libmarpa` (D.2), and Windows' `libiconv` (D.1) are
 **statically linked LGPL**. LGPL-2.1 §6 / LGPL-3.0 §4 permit that provided a
 recipient can relink against a modified library. Every input is public and pinned:
-our source is CC0; libmarpa 8.6.2 is vendored verbatim in `libmarpa-sys`; kpathsea
-is pinned at `KPSE_REF`; libiconv comes from a versioned vcpkg port.
+our source is CC0; libmarpa 8.6.2 is built from the `libmarpa-asf-sys` 0.3.1 crate with one
+modified file, `c/marpa_obs.c` (LGPL-2.1+, modification notice in its header), the modified
+source shipped in the crates.io crate itself; kpathsea is pinned at `KPSE_REF`; libiconv comes from a versioned vcpkg port.
 `THIRD-PARTY-NOTICES` §3.5 states this and points at the sources; §6 ships the
 verbatim LGPL-2.1, LGPL-3.0 **and GPL-3.0** texts (LGPL-3.0 is additional
 permissions on top of GPL-3.0, so it is not self-contained — both are required).
@@ -253,7 +255,9 @@ refuses to emit an unresolved pointer.
 **Position (owner-approved 2026-07-14).** The relink obligation is discharged by
 **source availability**: our source is CC0 and public, and every input commit is
 recorded per-artifact in §7. Both sides being open, a recipient can rebuild the
-combined work against a modified library. We therefore do **not** ship prelinkable
+combined work against a modified library. This holds for libmarpa only once
+`libmarpa-asf-sys` 0.3.1 is on crates.io: until then the modified `marpa_obs.c` comes from
+the TEMP `[patch.crates-io]` path in `Cargo.toml`, and no artifact may be released from it. We therefore do **not** ship prelinkable
 object files or a written offer — the heavier alternatives LGPL permits for
 distributors who cannot provide source.
 

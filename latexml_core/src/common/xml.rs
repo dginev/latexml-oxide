@@ -6,7 +6,7 @@ use libxml::{
 };
 use rustc_hash::FxHashMap as HashMap;
 
-use crate::common::error::Result;
+use crate::common::{error::Result, xml_walk::WalkQuery};
 
 pub const XMLNS_NS: &str = "http://www.w3.org/2000/xmlns/";
 pub const XML_NS: &str = "http://www.w3.org/XML/1998/namespace";
@@ -140,7 +140,7 @@ pub fn parse_fragment(markup: &str) -> std::result::Result<ParsedFragment, Strin
 pub fn is_parse_artifact(node: &Node) -> bool {
   match node.get_type() {
     Some(NodeType::DocumentNode) => true,
-    Some(NodeType::ElementNode) => node.get_name() == FRAGMENT_WRAPPER,
+    Some(NodeType::ElementNode) => name_is(node, FRAGMENT_WRAPPER),
     _ => false,
   }
 }
@@ -191,6 +191,8 @@ pub struct XPath {
   /// Each expression compiled once: a document asks some 60 distinct expressions 15k–32k times, and libxml2's string
   /// evaluators compile on every call (docs/performance/PERFORMANCE.md P10).
   compiled: HashMap<Box<str>, Expression>,
+  /// Each expression parsed once as a read-only walk (`None`: outside the walk's grammar), under the same limit.
+  walks:    HashMap<Box<str>, Option<WalkQuery>>,
 }
 
 /// How many compiled expressions an [`XPath`] keeps: an expression built from data (an id, a label) past it is
@@ -220,7 +222,36 @@ impl XPath {
     XPath {
       context,
       compiled: HashMap::default(),
+      walks: HashMap::default(),
     }
+  }
+
+  /// `xpath` at `node` answered by a read-only walk ([`WalkQuery`]): `None` when it is outside the walk's grammar
+  /// or `doc` cannot let the walk vouch for XPath's answer, and the caller evaluates it as XPath.
+  pub fn walk(&mut self, doc: &Document, xpath: &str, node: Option<&Node>) -> Option<Vec<Node>> {
+    if !self.walks.contains_key(xpath) {
+      if self.walks.len() >= COMPILED_XPATH_LIMIT {
+        return WalkQuery::parse(xpath)?.find(doc, node);
+      }
+      self.walks.insert(xpath.into(), WalkQuery::parse(xpath));
+    }
+    self.walks.get(xpath)?.as_ref()?.find(doc, node)
+  }
+
+  /// The first node of [`walk`](Self::walk)'s answer (`Some(None)`: none), the walk stopping there.
+  pub fn walk_first(
+    &mut self,
+    doc: &Document,
+    xpath: &str,
+    node: Option<&Node>,
+  ) -> Option<Option<Node>> {
+    if !self.walks.contains_key(xpath) {
+      if self.walks.len() >= COMPILED_XPATH_LIMIT {
+        return WalkQuery::parse(xpath)?.find_first(doc, node);
+      }
+      self.walks.insert(xpath.into(), WalkQuery::parse(xpath));
+    }
+    self.walks.get(xpath)?.as_ref()?.find_first(doc, node)
   }
 
   pub fn register_namespace(&mut self, codeprefix: &str, namespace: &str) -> Result<()> {
@@ -413,11 +444,13 @@ pub fn descendant_or_self_elements(root: &Node, mut keep: impl FnMut(&Node) -> b
 /// XPath's `ltx:<local>` name test: a LaTeXML-namespace element named `local`. Unlike `get_node_qname`, it rejects a
 /// namespace-less element of that name, as the XPath it replaces does.
 pub fn is_ltx_element(node: &Node, local: &str) -> bool {
-  node.get_name() == local
-    && node
-      .get_namespace()
-      .is_some_and(|ns| ns.get_href() == crate::common::model::LTX_NAMESPACE)
+  let node = node.as_readonly();
+  node.with_name(|name| name == local)
+    && node.with_namespace_href(|href| href == Some(crate::common::model::LTX_NAMESPACE))
 }
+
+/// `node.get_name() == name`, read without an owned `String` (MEM1 L12).
+pub fn name_is(node: &Node, name: &str) -> bool { node.as_readonly().with_name(|n| n == name) }
 
 /// obtains all content children of `node` (`Element` and `Text`), ignoring all other node types
 pub fn content_nodes(node: &Node) -> Vec<Node> {
@@ -751,7 +784,7 @@ mod parse_fragment_tests {
   fn the_wrapper_never_enters_the_result() {
     let f = parse_fragment("<b>a</b><i>b</i>").unwrap();
     assert!(
-      !f.nodes().iter().any(|n| n.get_name() == FRAGMENT_WRAPPER),
+      !f.nodes().iter().any(|n| name_is(n, FRAGMENT_WRAPPER)),
       "the throwaway wrapper must not be handed back"
     );
   }

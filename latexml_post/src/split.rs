@@ -254,7 +254,7 @@ impl Split {
         let page = entry.node.clone();
 
         // If any pages go in toc, assume siblings should too
-        if intoc && page.get_attribute("inlist").is_none() {
+        if intoc && !page.has_attribute("inlist") {
           let mut page_mut = page.clone();
           page_mut.set_attribute("inlist", "toc").ok();
         }

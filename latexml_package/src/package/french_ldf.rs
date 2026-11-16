@@ -266,7 +266,7 @@ LoadDefinitions!({
   // space (guard `perfect_kernel_gemini::french_high_punctuation_unskips_the_space`; witness
   // matapli/matapli-doc).
   fn unskip_before_high_punct() {
-    if !lookup_string_from_sym(pin!("MODE")).ends_with("horizontal") {
+    if !mode_ends_with("horizontal") {
       return;
     }
     // `\lastskip>1sp`: a 0pt glue (`\hfil`, `\hspace{0pt}`) stays.

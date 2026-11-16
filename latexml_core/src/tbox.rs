@@ -215,6 +215,63 @@ impl Tbox {
     };
     Dimension(h + d)
   }
+
+  /// Perl `Box::beAbsorbed`'s text: a math token in math, else text.
+  fn absorb_text(&self, text: &str, document: &mut Document) -> Result<Vec<Node>> {
+    let font = &self.font;
+    let mode = match self.properties.get("mode") {
+      Some(Stored::String(s)) => *s,
+      _ => pin!("text"),
+    };
+
+    if !text.is_empty() {
+      // Perl Box::isMath: `mode =~ /math$/` matches "math" / "inline_math" / "display_math".
+      let mode_is_math = arena::with(mode, |m| m.ends_with("math"));
+      if mode_is_math {
+        // Perl: DefMath ?#isMath — in text context, produce plain text.
+        // Check if we're inside a math element by walking up the DOM.
+        // This handles \And in author frontmatter (text) while preserving
+        // \times inside XMText within math.
+        let in_math_context = {
+          let mut node = document.node.clone();
+          let mut found = false;
+          loop {
+            let qname = crate::document::get_node_qname(&node);
+            let hit = arena::with(qname, |s| s.contains("XM") || s.contains("Math"));
+            if hit {
+              found = true;
+              break;
+            }
+            match node.get_parent() {
+              Some(parent) => node = parent,
+              None => break,
+            }
+          }
+          found
+        };
+        if in_math_context {
+          Ok(vec![document.insert_math_token(
+            text,
+            Stored::cast_to_string_hash(&self.properties),
+            Some(font),
+          )?])
+        } else {
+          // Text fallback: produce plain text (Perl's ?#isMath else branch)
+          match document.open_text(text, font)? {
+            None => Ok(Vec::new()),
+            Some(node) => Ok(vec![node]),
+          }
+        }
+      } else {
+        match document.open_text(text, font)? {
+          None => Ok(Vec::new()),
+          Some(node) => Ok(vec![node]),
+        }
+      }
+    } else {
+      Ok(Vec::new())
+    }
+  }
 }
 
 impl BoxOps for Tbox {
@@ -262,60 +319,8 @@ impl BoxOps for Tbox {
   }
 
   fn be_absorbed(&self, document: &mut Document) -> Result<Vec<Node>> {
-    let text = self.get_string()?;
-    let font = &self.font;
-    let mode = match self.properties.get("mode") {
-      Some(Stored::String(s)) => *s,
-      _ => pin!("text"),
-    };
-
-    if !text.is_empty() {
-      // Perl Box::isMath: `mode =~ /math$/` matches "math" / "inline_math" / "display_math".
-      let mode_is_math = arena::with(mode, |m| m.ends_with("math"));
-      if mode_is_math {
-        // Perl: DefMath ?#isMath — in text context, produce plain text.
-        // Check if we're inside a math element by walking up the DOM.
-        // This handles \And in author frontmatter (text) while preserving
-        // \times inside XMText within math.
-        let in_math_context = {
-          let mut node = document.node.clone();
-          let mut found = false;
-          loop {
-            let qname = crate::document::get_node_qname(&node);
-            let hit = arena::with(qname, |s| s.contains("XM") || s.contains("Math"));
-            if hit {
-              found = true;
-              break;
-            }
-            match node.get_parent() {
-              Some(parent) => node = parent,
-              None => break,
-            }
-          }
-          found
-        };
-        if in_math_context {
-          Ok(vec![document.insert_math_token(
-            &text,
-            Stored::cast_to_string_hash(&self.properties),
-            Some(font),
-          )?])
-        } else {
-          // Text fallback: produce plain text (Perl's ?#isMath else branch)
-          match document.open_text(&text, font)? {
-            None => Ok(Vec::new()),
-            Some(node) => Ok(vec![node]),
-          }
-        }
-      } else {
-        match document.open_text(&text, font)? {
-          None => Ok(Vec::new()),
-          Some(node) => Ok(vec![node]),
-        }
-      }
-    } else {
-      Ok(Vec::new())
-    }
+    // The text lent from the arena, not copied into a new String per box (MEM1 L4b).
+    arena::with(self.text, |text| self.absorb_text(text, document))
   }
 
   fn get_font(&self) -> Result<Option<Rc<Font>>> { Ok(Some(Rc::clone(&self.font))) }

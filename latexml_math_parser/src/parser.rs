@@ -4,6 +4,7 @@ use std::{
   collections::HashSet,
   hash::{Hash, Hasher},
   io::Cursor,
+  rc::Rc,
 };
 
 use latexml_core::{
@@ -11,7 +12,7 @@ use latexml_core::{
   common::{
     arena::{self, SymHashMap},
     error::{Result, note_begin, note_end, note_progress},
-    xml::*,
+    xml::{name_is, *},
   },
   document::{Document, get_node_qname, sym_can_have_attribute, with_node_qname},
   fatal, map, pin, s, state, static_map, sym_map,
@@ -376,7 +377,7 @@ static PARSE_VIA_ASF: Lazy<bool> = Lazy::new(|| !*PARSE_VIA_LEGACY);
 /// the caller falls to the token-preserving kludge / `ltx_math_unparsed`.
 struct CountingTokens<I> {
   inner: I,
-  count: std::rc::Rc<std::cell::Cell<usize>>,
+  count: Rc<std::cell::Cell<usize>>,
 }
 
 impl<I: Iterator> Iterator for CountingTokens<I> {
@@ -562,10 +563,33 @@ fn record_ambiguity_metric(metric: i32, input: &str) {
   });
 }
 
+/// The math grammar, built and precomputed once, with its rule actions and tree builder: none
+/// changes while parsing, so the parsers of one conversion share it (a streamed conversion makes
+/// a parser per segment, which rebuilt and re-precomputed the grammar each time).
+#[derive(Clone)]
+pub struct MathGrammar {
+  grammar: ThinGrammar,
+  actions: Rc<Actions>,
+  builder: Rc<TreeBuilder>,
+}
+
+impl MathGrammar {
+  pub fn new() -> marpa::result::Result<Self> {
+    let (grammar, actions, builder) = init_grammar()?;
+    let mut grammar = grammar.unwrap();
+    grammar.precompute()?;
+    Ok(MathGrammar {
+      grammar,
+      actions: Rc::new(actions),
+      builder: Rc::new(builder),
+    })
+  }
+}
+
 pub struct MathParser {
   grammar:                   ThinGrammar,
-  actions:                   Actions,
-  builder:                   TreeBuilder,
+  actions:                   Rc<Actions>,
+  builder:                   Rc<TreeBuilder>,
   engine:                    Parser,
   pub expert_pragmatics:     Vec<ValidationPragmatics>,
   pub student_pragmatics:    Vec<ValidationPragmatics>,
@@ -664,8 +688,44 @@ impl Default for MathParser {
     let (grammar, actions, builder) = init_grammar().unwrap();
     let thin_grammar = grammar.unwrap();
     let engine = Parser::with_grammar(thin_grammar.clone());
+    MathParser::with_engine(thin_grammar, engine, Rc::new(actions), Rc::new(builder))
+  }
+}
+
+impl MathParser {
+  /// A parser over a grammar already built and precomputed, with this parser's own state.
+  pub fn with_grammar(shared: &MathGrammar) -> Self {
+    let engine = Parser::with_precomputed_grammar(shared.grammar.clone());
+    MathParser::with_engine(
+      shared.grammar.clone(),
+      engine,
+      Rc::clone(&shared.actions),
+      Rc::clone(&shared.builder),
+    )
+  }
+
+  /// The grammar this parser holds (rebuilt by `reset_engine` if a failed parse broke it), for the
+  /// next parser of the conversion; `None` unless it passes `try_reset_clone_path`'s trivial parse.
+  pub fn grammar(&self) -> Option<MathGrammar> {
+    let mut probe = Parser::with_precomputed_grammar(self.grammar.clone());
+    probe
+      .run_recognizer(ByteScanner::new(Cursor::new("NUMBER:1:1 ")))
+      .ok()?;
+    Some(MathGrammar {
+      grammar: self.grammar.clone(),
+      actions: Rc::clone(&self.actions),
+      builder: Rc::clone(&self.builder),
+    })
+  }
+
+  fn with_engine(
+    grammar: ThinGrammar,
+    engine: Parser,
+    actions: Rc<Actions>,
+    builder: Rc<TreeBuilder>,
+  ) -> Self {
     MathParser {
-      grammar: thin_grammar,
+      grammar,
       engine,
       actions,
       builder,
@@ -797,10 +857,12 @@ impl MathParser {
   /// Recovery ladder:
   /// 1. Clone `self.grammar` + trivial parse — cheap, common case.
   /// 2. Re-clone and retry once — covers transient marpa state hiccups.
-  /// 3. Full `init_grammar()` rebuild — expensive, but some grammar corruption patterns (observed
-  ///    on the `testscripts` regression fixture) only recover after a fresh precompute. The D5
-  ///    "avoid init_grammar fallback" item turned out to describe the ideal, not the floor —
-  ///    legitimate callers still hit step 3.
+  /// 3. Full `init_grammar()` rebuild — expensive. The "grammar corruption" once seen here (the
+  ///    `testscripts` fixture, 2026-04) was steps 1-2 re-running `marpa_g_precompute` on the
+  ///    precomputed grammar, which libmarpa refuses (`MARPA_ERR_PRECOMPUTED`), so every reset fell
+  ///    through to step 3; `with_precomputed_grammar` removed that (30bfb5bd1b5, 2026-06-21). Step 3
+  ///    is now reached only through libmarpa's fatal flag (`MARPA_ERR_YIM_COUNT`, an Earley set of
+  ///    65,534 items), which the trivial parse detects at bocage/tree creation.
   /// 4. Log + keep previous engine. Subsequent `parse_math` / `recognizes` will fail gracefully (0
   ///    trees, no panic); better than crashing the whole conversion.
   ///
@@ -814,9 +876,8 @@ impl MathParser {
     if self.try_reset_clone_path().is_ok() {
       return;
     }
-    // Both clone attempts failed — reach for a full rebuild. Expensive,
-    // but the testscripts regression fixture demonstrates that some
-    // corruption patterns only clear after a fresh precompute.
+    // Both clone attempts failed: the shared grammar carries libmarpa's
+    // fatal flag (see the ladder above), so only a fresh precompute recovers.
     match init_grammar() {
       Ok((grammar, _actions, _builder)) => {
         let thin_grammar = grammar.unwrap();
@@ -975,7 +1036,7 @@ impl MathParser {
         // Find the ancestor ltx:Math of this XMath node and set _parsetrees.
         if self.last_parsetrees_count > 0
           && let Some(mut math_parent) = math_ref.get_parent()
-          && math_parent.get_name() == "Math"
+          && name_is(&math_parent, "Math")
         {
           let _ = math_parent.set_attribute("_parsetrees", &self.last_parsetrees_count.to_string());
         }
@@ -1011,12 +1072,12 @@ impl MathParser {
         }
         let has_direct_open = child_elems.iter().any(|ch| {
           let role = ch.get_attribute("role").unwrap_or_default();
-          (role == "OPEN" || role == "CLOSE") && ch.get_name() == "XMTok"
+          (role == "OPEN" || role == "CLOSE") && name_is(ch, "XMTok")
         });
         // Also check for XMArray with adjacent XMTok (unparsed aligned-in-fenced)
         let has_array_with_tok = !has_direct_open
-          && child_elems.iter().any(|ch| ch.get_name() == "XMArray")
-          && child_elems.iter().any(|ch| ch.get_name() == "XMTok");
+          && child_elems.iter().any(|ch| name_is(ch, "XMArray"))
+          && child_elems.iter().any(|ch| name_is(ch, "XMTok"));
         if has_direct_open || has_array_with_tok {
           let mut xm = xmath;
           self.parse_kludge(&mut xm, document)?;
@@ -1188,7 +1249,7 @@ impl MathParser {
       // XMHint branch — clone the ephemeral hint without id — is not
       // mirrored: a hint as the sole script child does not occur in the
       // XM stream this pass sees.)
-      let script_id = if script.get_name() == "XMRef" {
+      let script_id = if name_is(&script, "XMRef") {
         match script.get_attribute("idref") {
           Some(idref) => idref,
           None => continue,
@@ -1817,7 +1878,7 @@ impl MathParser {
     let mut replacements = Vec::new();
     let mut unwrapped_shells = Vec::new();
     for node in result_nodes {
-      if node.get_name() == "XMWrap" {
+      if name_is(&node, "XMWrap") {
         // Unwrap: extract children; the shell is garbage once they are
         // re-attached below (freed there, after the severing).
         for child in node.get_child_nodes() {
@@ -2382,7 +2443,7 @@ impl MathParser {
         letter_readings: holds_letter_readings(input),
         differential_letters: holds_differential_letters(input),
       };
-      let consumed = std::rc::Rc::new(std::cell::Cell::new(0usize));
+      let consumed = Rc::new(std::cell::Cell::new(0usize));
       // The AND-node count of a bocage read by the tree iterator (`AmbiguousTree`), if it was.
       let mut sampled_and_nodes: Option<usize> = None;
       // The tree iterator stopped at `max_unique` distinct readings with trees still to come.
@@ -2427,7 +2488,7 @@ impl MathParser {
           let tree_outcome = match tree_iter.next() {
             Some(val) => {
               match self.actions.get_tree(
-                self.builder.clone(),
+                TreeBuilder::clone(&self.builder),
                 val,
                 self.expert_pragmatics.as_slice(),
                 ActionContext { nodes, document },
@@ -2472,7 +2533,7 @@ impl MathParser {
               pruned_trees,
             );
           }
-          let alts_vec = std::rc::Rc::try_unwrap(alts).unwrap_or_else(|rc| (*rc).clone());
+          let alts_vec = Rc::try_unwrap(alts).unwrap_or_else(|rc| (*rc).clone());
           for tree in alts_vec.into_iter().flatten() {
             if parses.insert(tree) {
               ok_trees += 1;
@@ -2528,7 +2589,7 @@ impl MathParser {
               break;
             }
             match self.actions.get_tree(
-              self.builder.clone(),
+              TreeBuilder::clone(&self.builder),
               val,
               self.expert_pragmatics.as_slice(),
               ActionContext { nodes, document },
@@ -2625,7 +2686,7 @@ impl MathParser {
           letter_readings: holds_letter_readings(input),
           differential_letters: holds_differential_letters(input),
         };
-        let consumed = std::rc::Rc::new(std::cell::Cell::new(0usize));
+        let consumed = Rc::new(std::cell::Cell::new(0usize));
         let second_chance_result = self.engine.parse_hybrid_with_and_node_limit(
           CountingTokens {
             inner: ByteScanner::new(Cursor::new(input)),
@@ -2658,7 +2719,7 @@ impl MathParser {
             second_chance = Some("budget spent".to_string())
           },
           Ok(HybridParseResult::Ambiguous(alts, _state)) => {
-            let alts_vec = std::rc::Rc::try_unwrap(alts).unwrap_or_else(|rc| (*rc).clone());
+            let alts_vec = Rc::try_unwrap(alts).unwrap_or_else(|rc| (*rc).clone());
             // ASF read the whole bocage: the readings the sample missed join it, after the
             // sample's own and in ASF's order, and the counts are ASF's, so the formula reports as
             // through ASF alone. The sample's order stays first: where the student pragmas leave
@@ -2732,7 +2793,7 @@ impl MathParser {
         letter_readings: holds_letter_readings(input),
         differential_letters: holds_differential_letters(input),
       };
-      let consumed = std::rc::Rc::new(std::cell::Cell::new(0usize));
+      let consumed = Rc::new(std::cell::Cell::new(0usize));
       let asf_result = self.engine.parse_and_traverse_forest(
         CountingTokens {
           inner: ByteScanner::new(Cursor::new(input)),
@@ -2772,7 +2833,7 @@ impl MathParser {
           // holds a copy in its cache (it returned its own clone via
           // `cache.insert(peak, output.clone())`), so fall back to
           // deep clone on the cold path.
-          let alts_vec = std::rc::Rc::try_unwrap(alts).unwrap_or_else(|rc| (*rc).clone());
+          let alts_vec = Rc::try_unwrap(alts).unwrap_or_else(|rc| (*rc).clone());
           for tree in alts_vec.into_iter().flatten() {
             if parses.insert(tree) {
               ok_trees += 1;
@@ -2889,7 +2950,7 @@ impl MathParser {
         // even after extended time — valid parses can appear late in the
         // enumeration (tree #3585 of 3713 for complex multi-equation formulas).
         match self.actions.get_tree(
-          self.builder.clone(),
+          TreeBuilder::clone(&self.builder),
           val,
           self.expert_pragmatics.as_slice(),
           ActionContext { nodes, document },
@@ -3013,7 +3074,7 @@ impl MathParser {
         // exact: moved after another pragma, or softened, a letter reading could beat a typed one that a typed
         // stream would have given alone. Then Perl's rule (divergence #350): the fewest evaluation bars
         // inside single-bar pairs.
-        let mut reduced_forest = XM::Choices(parses.into_vec())
+        let mut reduced_forest = XM::Choices(Shared::new(parses.into_vec()))
           .soft_prune_choices(ValidationPragmatics::ExpectationLettersAreFallbacks)
           .prefer_fewest_evaluation_bars_inside();
         // A specific Dirac reading beats a fence around the same bars before the student pragmas
@@ -3348,7 +3409,7 @@ fn new_script_node(
   // For XMApp bases, check the inner operator's scriptpos too
   let rbase_sp = {
     let mut sp = base.get_attribute("scriptpos").unwrap_or_default();
-    if sp.is_empty() && base.get_name() == "XMApp" {
+    if sp.is_empty() && name_is(&base, "XMApp") {
       // Check inner operator (first child) for scriptpos
       if let Some(op) = base.get_child_elements().first() {
         sp = op.get_attribute("scriptpos").unwrap_or_default();
@@ -3377,7 +3438,7 @@ fn new_script_node(
   };
 
   // Perl: if base was a float script, bump level
-  if base.get_attribute("_wasfloat").is_some() {
+  if base.has_attribute("_wasfloat") {
     l += 1;
   } else if let Some(bump_str) = base.get_attribute("_bumplevel")
     && let Ok(bump) = bump_str.parse::<u32>()
@@ -3448,13 +3509,13 @@ fn new_script_node(
   if x == "pre" {
     if let Some(lpad) = script_node.get_attribute("lpadding")
       && !lpad.is_empty()
-      && app_node.get_attribute("lpadding").is_none()
+      && !app_node.has_attribute("lpadding")
     {
       app_node.set_attribute("lpadding", &lpad).ok();
     }
   } else if let Some(rpad) = script_node.get_attribute("rpadding")
     && !rpad.is_empty()
-    && app_node.get_attribute("rpadding").is_none()
+    && !app_node.has_attribute("rpadding")
   {
     app_node.set_attribute("rpadding", &rpad).ok();
   }
@@ -4023,25 +4084,41 @@ fn resolve_xmkeys(
   document: &mut Document,
 ) -> std::result::Result<(), Box<dyn std::error::Error>> {
   // Resolve both _xmkey (from existing infrastructure) and _pxmkey (from parser)
-  for attr_name in &["_xmkey", "_pxmkey"] {
-    let refs = document.findnodes(
-      &format!("descendant::ltx:XMRef[@{}]", attr_name),
-      Some(mathnode),
-    );
-    for mut ref_node in refs {
+  for attr_name in ["_xmkey", "_pxmkey"] {
+    // One walk per key attribute: the refs are its `ltx:XMRef`s, a key's target the first non-XMRef carrying it in
+    // document order, as the per-ref `descendant::*[@KEY='key'][not(local-name()='XMRef')]` found it (nothing below
+    // adds or removes a key before the cleanup).
+    let keyed = document.findnodes(&format!("descendant::*[@{attr_name}]"), Some(mathnode));
+    let mut targets: HashMap<String, &Node> = HashMap::default();
+    for node in &keyed {
+      if !name_is(node, "XMRef")
+        && let Some(key) = node.get_attribute(attr_name)
+      {
+        targets.entry(key).or_insert(node);
+      }
+    }
+    for mut ref_node in keyed
+      .iter()
+      .filter(|node| get_node_qname(node) == pin!("ltx:XMRef"))
+      .cloned()
+    {
       let key = match ref_node.get_attribute(attr_name) {
         Some(k) => k,
         None => continue,
       };
-      // Find the element with matching key (non-XMRef)
+      // Find the element with matching key (non-XMRef); a key XPath cannot quote still errs as XPath.
       // Note: not(self::ltx:XMRef) may fail with namespace prefix in nested
       // predicates (XPath bug). Use local-name() check instead.
-      let xpath = format!(
-        "descendant::*[@{}='{}'][not(local-name()='XMRef')]",
-        attr_name, key
-      );
-      let targets = document.findnodes(&xpath, Some(mathnode));
-      if let Some(mut target) = targets.into_iter().next() {
+      let target = if key.contains('\'') {
+        let xpath = format!("descendant::*[@{attr_name}='{key}'][not(local-name()='XMRef')]");
+        document
+          .findnodes(&xpath, Some(mathnode))
+          .into_iter()
+          .next()
+      } else {
+        targets.get(&key).map(|node| (*node).clone())
+      };
+      if let Some(mut target) = target {
         // Ensure target has xml:id
         let target_id = if let Some(id) = target
           .get_attribute("xml:id")
@@ -4062,7 +4139,7 @@ fn resolve_xmkeys(
       let _ = ref_node.remove_attribute(attr_name);
     }
     // Clean up from non-ref elements
-    for mut node in document.findnodes(&format!("descendant::*[@{}]", attr_name), Some(mathnode)) {
+    for mut node in keyed {
       let _ = node.remove_attribute(attr_name);
     }
   }
@@ -4163,7 +4240,7 @@ fn expectation_operators(nodes: &[Node], document: &Document) -> Vec<Node> {
   let levels = std::cell::OnceCell::new();
   for (index, node) in nodes.iter().enumerate() {
     let token = crate::data::resolve_xmref(node).unwrap_or_else(|| node.clone());
-    if token.get_name() != "XMTok"
+    if !name_is(&token, "XMTok")
       || !matches!(
         token.get_attribute("role").as_deref(),
         None | Some("UNKNOWN")
@@ -4192,7 +4269,7 @@ fn expectation_operators(nodes: &[Node], document: &Document) -> Vec<Node> {
     let realized = |node: &Node| crate::data::resolve_xmref(node).unwrap_or_else(|| node.clone());
     let role = |node: &Node| node.get_attribute("role");
     let is_script = |node: &Node| {
-      node.get_name() == "XMApp"
+      name_is(node, "XMApp")
         && matches!(
           role(node).as_deref(),
           Some("POSTSUBSCRIPT" | "POSTSUPERSCRIPT")
@@ -4260,14 +4337,14 @@ fn expectation_operators(nodes: &[Node], document: &Document) -> Vec<Node> {
 
 /// A superscript whose argument holds numbers only: `^2`, `^{3}`.
 fn is_numeric_superscript(script: &Node) -> bool {
-  if script.get_attribute("role").as_deref() != Some("POSTSUPERSCRIPT") {
+  if script.with_attribute(c"role", |v| v == "POSTSUPERSCRIPT") != Some(true) {
     return false;
   }
   let mut tokens = Vec::new();
   collect_tokens(script, &mut tokens);
   tokens
     .iter()
-    .any(|token| token.get_attribute("role").as_deref() == Some("NUMBER"))
+    .any(|token| token.with_attribute(c"role", |v| v == "NUMBER") == Some(true))
     && tokens.iter().all(|token| {
       token
         .get_attribute("role")
@@ -4280,7 +4357,7 @@ fn is_numeric_superscript(script: &Node) -> bool {
 /// its XMWrap).
 fn opens_a_group(node: &Node) -> bool {
   match node.get_name().as_str() {
-    "XMTok" => node.get_attribute("role").as_deref() == Some("OPEN"),
+    "XMTok" => node.with_attribute(c"role", |v| v == "OPEN") == Some(true),
     "XMDual" => node.get_child_elements().get(1).is_some_and(opens_a_group),
     "XMWrap" => node
       .get_first_element_child()
@@ -4315,7 +4392,7 @@ fn is_an_argument(next: &Node) -> bool {
 
 fn collect_tokens(node: &Node, tokens: &mut Vec<Node>) {
   for child in node.get_child_elements() {
-    if child.get_name() == "XMTok" {
+    if name_is(&child, "XMTok") {
       tokens.push(child);
     } else {
       collect_tokens(&child, tokens);
@@ -4526,7 +4603,7 @@ mod tests {
   // formula `\{u | a = b, c = d\}` triggers `Empty` (ASF) vs
   // `Rejected(...)` (Tree) — see marpa/docs/ASF_PERFORMANCE_FINDINGS.md.
 
-  fn lex(name: &str) -> XM { XM::Lexeme(std::rc::Rc::from(name), metadata::Meta::default()) }
+  fn lex(name: &str) -> XM { XM::Lexeme(Rc::from(name), metadata::Meta::default()) }
 
   #[test]
   fn parity_outcomes_compatible_both_empty_is_ok() {

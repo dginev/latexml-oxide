@@ -58,7 +58,7 @@ LoadDefinitions!({
       },
       None => Tokens!(T_CS!("\\linewidth")),
     };
-    if lookup_string_from_sym(pin!("MODE")).ends_with("math") {
+    if mode_ends_with("math") {
       let_i(&T_CS!("\\endtabu"), &T_CS!("\\endarray"), None);
       unread(Tokens!(T_CS!("\\array")));
     } else {
