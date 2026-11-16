@@ -19502,13 +19502,64 @@ several names (`\author{Ann, Bob, Cy \\ CMU}`) is repeated under each name, each
 (DG 2026-11-14; 2104.07210). LaTeXML.css (local delta after the multiline rules): outside `ltx_authors_multiline`, an
 author whose contacts are all such lines or notes is an `inline-block` card with the lines under the name, their labels
 hidden; a note contact (`\footnote` in `\author` is `\thanks`, article.cls:241, Perl's role=note contact,
-Base_Utility.pool.ltxml:331) keeps the star and shows on hover in the card's flow, so two notes, or a note and the
+Base_Utility.pool.ltxml:331; under a class whose title marks it, the marked `\thanks` note since #1053) keeps the star and shows on hover in the card's flow, so two notes, or a note and the
 lines, never cover one another (1112.2930, math0111266), and with no note there is no star; an author
 with any other contact keeps the pop-up, its labels shown; a `\thanks` note keeps its mark and pop-up. Chrome and
 Firefox at 1280/375 px. ar5iv.css already shows every
 author's contacts (`css/ar5iv.css:920`, `:940` at ar5iv-css `6dc3e97`; it does not load LaTeXML.css): no change. Offered upstream. **Guards**:
 `06_cluster_frontmatter::frontmatter_author_lines_783` (repros `sectioning-frontmatter/author_lines_783_*.tex`),
 `xslt::witnessed_css_delta::author_line_delta_stays_present`, `cluster_cli::browser_render_author_lines` (local).
+
+---
+
+### 1053. A creator's note carries the mark it prints, never repeated in its text; a mark on a name is a copy of the note it marks; no affiliation-linking mark (DG rulings 1-3 of 2026-11-16)
+
+**Principle.** FIDELITY_CHARTER §4, the mark rule: every note a creator holds whose mark the PDF prints carries it as
+`mark`, its text opening with no copy of it; the XML keeps a copy per carrier (Perl's model) and the XSLT prints a
+shared note once (#1052). Related: #156 (a `\thanks` is a note), #961 (a legend is its carriers' note), #1001 (a name's
+note beside it), #1051 (a note contact under a class that prints no mark).
+**Perl.** An author's `\thanks` and `\footnote` are contacts with no mark (Base_Utility.pool.ltxml:661-664); a
+`\footnotemark[n]` on a name stays a mark-only note unless a `\footnotetext[n]` fills it (`relocateFootnote`,
+latex_constructs.pool.ltxml:503-527); acmart's `\authornote` is a contact, `\authornotemark` nothing
+(acmart.cls.ltxml:116, :123).
+**Rust.**
+- *The marks.* A class that declares its title's marks (`latex_constructs::TITLE_THEFOOTNOTE`: article, report, book
+  without `titlepage`, `\@fnsymbol\c@footnote`; REVTeX's `\frontmatter@thefootnote`) writes each title-block note with
+  the mark it prints: `\lx@title@thanks` and `\lx@title@footnote` after `\lx@title@footnote@step` (an author's
+  `\thanks`; an author's `\footnote`, then the `\thanks` note it is, article.cls:241), and the emitter's `note_call` with the rehearsal's `shows`
+  (`shown_mark`), counted after the title's own notes (`reading::rehearse_title_first` reads the title before the blocks: article.cls:203-214
+  sets the title first, so `\title{T\thanks{Funded.}}` takes ∗ and the first author's `\thanks` †). acmart's
+  `\authornote` is `\lx@add@thanks` marked `\@fnsymbol` after the title's and subtitle's notes digested before it
+  (acmart.cls:1727, :2237, :2245-2247; a `\titlenote` in the `\title` argument is digested at the flush, after: not
+  counted, 0 of popSHARED's 30 `\authornotemark` papers), `\authornotemark[n]` a mark-only note of mark n (:1733-1738,
+  :2897). A title page's marks
+  (`titlepage`: the body's arabic ones) are none (the observer reads no `TitleMarks::Body` marks); IEEEtran's `\thanks`
+  prints none (IEEEtran.cls:4757-4758).
+- *The mark rule's pass* (`insert::mark_creator_notes`, once every route has placed the notes): a thanks note's leading
+  superscript or mark formula (`$^{*}$`, `fm_read_formula`) is its mark where it has none (IEEEtran's `\thanks{$^{*}$Equal
+  contribution}`, 2312.10807) and is taken out where it repeats the one it has (a legend line's `$^*$Equal
+  contribution`, 2407.07614, 2105.14239); a leading bare copy of the mark goes too (`strip_bare_mark`), the mark the
+  emitter gave from the symbol every carrying name shows (`requested_mark`: ieeeconf's `Murali Babu$^{1}$*` under
+  `\thanks{*Authors to whom correspondence should be addressed.}`, 2606.00397). A superscript of several marks
+  (`$^{1,*}$`) or of more than three characters is no mark.
+- *The Link step* (`insert::link_marked_notes`): a mark-only note (`role="footnotemark"`, its text its tags or its mark)
+  on a name whose mark another creator's note carries (label keys: `*` = `∗`) becomes a full copy of that note — its
+  role, class, mark and content, its own id kept, as `relocateFootnote_aux` fills a mark: a document's `\samethanks[1]`
+  (2502.19103), 1911.13299's `\footnotemark[1]`, acmart's `\authornotemark[1]`. A mark its own creator's note carries,
+  or no creator's note (a title's `\thanks`, a later `\footnotetext`), stays as Perl leaves it.
+- *No affiliation-linking mark*: a mark-only `\footnotemark` that leads an affiliation (`queue_digest::LEADS_CONTACT`,
+  set by `lift_notes_beside`), which the reading paired the entry by (`resolver/blocks.rs` `mark:footnote`), is removed
+  where a note of a creator carries its mark or its creator's name holds the same mark (1607.07280's REVTeX
+  `\affiliation{\footnotemark[1]Univ A}` under `Shun'ya Mizoguchi\footnote[1]{E-mail:…}`).
+Known residual: REVTeX 4.1/4.2 print a name's `\footnote` as a minipage footnote (`a`, `b` under `preprint`, none under
+`reprint`), not `\frontmatter@thefootnote`'s ∗ the binding declares, which REVTeX 4 prints; the note then carries ∗.
+**Guards**: `perfect_kernel_batchshmark::{a_notes_mark_is_never_in_its_text,
+a_thanks_note_carries_the_mark_its_title_prints, a_mark_on_a_name_is_a_copy_of_the_note_it_marks,
+an_affiliations_linking_mark_is_no_note}` (repros `sectioning-frontmatter/{ieee_thanks_symbol_legend_note_mark_lifted,
+author_block_symbol_legend_note_mark_not_in_its_text, thanks_bare_symbol_is_the_notes_mark,
+author_footnote_is_the_marked_thanks_note, author_thanks_mark_after_a_title_thanks,
+author_samethanks_is_a_copy_of_the_marked_note, acmart_authornotemark_is_a_copy_of_the_marked_note,
+author_thanks_shared_by_footnotemark_marks_kept, revtex_affiliation_footnotemark_link_is_no_note}.tex`).
 
 ---
 
