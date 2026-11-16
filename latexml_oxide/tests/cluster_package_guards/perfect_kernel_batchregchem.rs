@@ -24,10 +24,7 @@ fn mhchem_macro_math_shift_is_mhchems_own_output() {
     &[],
     Some("ar5iv.sty"),
     |xml, source_dir| {
-      super::perfect_kernel_batch64zf::post_logged(
-        xml,
-        source_dir.to_str().expect("a UTF-8 path"),
-      )
+      super::perfect_kernel_batch64zf::post_logged(xml, source_dir.to_str().expect("a UTF-8 path"))
     },
   );
   assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
@@ -41,10 +38,16 @@ fn mhchem_macro_math_shift_is_mhchems_own_output() {
       let mut rest = p;
       while let Some(open) = rest.find("<annotation") {
         visible.push_str(&rest[..open]);
-        rest = &rest[open + rest[open..].find("</annotation>").expect("a closed annotation")..];
+        rest = &rest[open
+          + rest[open..]
+            .find("</annotation>")
+            .expect("a closed annotation")..];
       }
       visible.push_str(rest);
-      text(&visible).split_whitespace().collect::<Vec<_>>().join(" ")
+      text(&visible)
+        .split_whitespace()
+        .collect::<Vec<_>>()
+        .join(" ")
     })
     .collect();
   let alttexts: Vec<&str> = html
