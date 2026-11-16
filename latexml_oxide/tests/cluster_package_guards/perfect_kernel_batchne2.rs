@@ -6,9 +6,10 @@
 //! characters (1910.05766) is the unit test `emitter::emit::tests::a_creators_labels_are_plain_characters`. NE2b (review
 //! revNE2): a counter move no name carries writes the block whole, with its Warning (1507.05018's Ombao, A1); a note
 //! before every name steps before the first name (A2). NE2c (review revNE2r2 Q2): a mark a name prints past its note stays
-//! with it, the note's step before it (1610.06031); a `\footnotemark` no name and no item writes writes the block whole,
-//! with its Warning (1911.13299). NE2d (user ruling 2026-11-09): only a dropped mark that steps the counter declines; one
-//! given its number (`\samethanks[1]`, 1912.01737; 1811.08622) keeps the creators, its loss counted.
+//! with it, the note's step before it (1610.06031), and so does one past spacing (1911.13299's `\ \footnotemark[2]`; DG
+//! ruling 2026-11-16); a `\footnotemark` no name and no item writes (on the line a `\\` opens) writes the block whole,
+//! with its Warning. NE2d (user ruling 2026-11-09): only a dropped mark that steps the counter declines; one given its
+//! number (`\samethanks[1]`, 1912.01737; 1811.08622) keeps the creators, its loss counted.
 
 use latexml::util::test::{convert_files_with_setup_then, error_count, warning_count};
 
@@ -184,7 +185,10 @@ fn footnotemarks(xml: &str) -> Vec<&str> {
 /// `\,`, a given `\footnotemark[1]`, past a `\footnote`, past a formula's `$^,$` (1610.06031's `G.
 /// Citti\thanks{...}\footnotemark[1]`, review revNE2r2 Q2; 1703.08733's
 /// `\protect\endnotemark[1]$^,$\protect\endnotemark[2]`). Distinct from `a_notes_footnote_step_runs_where_it_prints`:
-/// the note's step inside the name's tokens, between its text and its mark.
+/// the note's step inside the name's tokens, between its text and its mark. SHGIVEN (DG ruling 2026-11-16, 4): a mark
+/// past a spacing run (` \ `, `\quad`, `~~`, `\hspace`: a Gap) is its name's too — a bare one wrote the block whole
+/// with a Warning (1911.13299's shape, `ne2e_mark_past_spacing_is_its_names`); the given ones are
+/// `a_given_mark_on_no_name_keeps_the_creators`'.
 /// FN1 (OD #1001; the user's ruling 2026-11-11): the note the name held is the creator's, right after
 /// `</personname>`, so the name reads without its tags; the notes and marks are asserted kept below; pin updated (the
 /// note's move only).
@@ -201,6 +205,21 @@ fn a_mark_after_its_names_note_stays_with_it() {
       repro!("ne2c_mark_after_note_spaced"),
       vec![row(&["Ann Able"]), row(&["Bob Baker"]), row(&["Carl Cole"])],
       vec![mark("†", "footnote2"), mark("§", "footnote4")],
+    ),
+    (
+      repro!("ne2e_mark_past_spacing_is_its_names"),
+      vec![
+        row(&["Ann Able"]),
+        row(&["Bob Baker"]),
+        row(&["Carl Cole"]),
+        row(&["Dan Dory"]),
+      ],
+      vec![
+        mark("†", "footnote2"),
+        mark("*", "footnotex1"),
+        mark("†", "footnotex2"),
+        mark("‡", "footnote3"),
+      ],
     ),
     (
       repro!("ne2c_mark_after_note_numbered"),
@@ -243,8 +262,8 @@ fn a_mark_after_its_names_note_stays_with_it() {
   }
 }
 
-/// A `\footnotemark` no name of the `=2` reading writes and no item holds (on the line a `\\` opens under Ann Able's name,
-/// 1911.13299's `Vivek Ramanujan \thanks{equal contribution} \\ \footnotemark[2]`) was dropped with no Warning, Bob
+/// A `\footnotemark` no name of the `=2` reading writes and no item holds (on the line a `\\` opens under Ann Able's name;
+/// 1911.13299, first read as this shape, prints `\ \footnotemark[2]`, its name's: SHGIVEN) was dropped with no Warning, Bob
 /// Baker's mark one symbol short. The block is written whole, Perl's whole-block creator, its tokens digested in order:
 /// Ann †, Bob ‡, the note kept, the counted Warning (review revNE2r2 Q2: never a silent loss). Off reads Ann's † as the
 /// mark of an affiliation line of hers. Distinct from `a_counter_move_no_name_carries_writes_the_block_as_perl_splits_it`: a mark, not
@@ -288,8 +307,44 @@ fn a_mark_on_no_name_writes_the_block_whole() {
 /// `a_mark_on_no_name_writes_the_block_whole`: the dropped mark's step decides, the same check's other branch.
 /// FN1 (OD #1001; the user's ruling 2026-11-11, which accepts this shape): a block written whole holds its notes
 /// after the joint name, each with its mark, so the name reads without their tags; pin updated (the notes' move only).
+/// SHGIVEN (DG ruling 2026-11-16, 4, refining the 2026-11-09 one): a given mark only spacing parts from its name is that
+/// name's, as pdflatex prints it and Perl keeps it — 1911.13299's `Vivek Ramanujan \thanks{…} \ \footnotemark[2]`, its
+/// four marks lost with a Warning ("lost: †, ‡, ‡, ‡"), now each on its name with no Warning (asserted first); a given
+/// mark past a name's comma (the rows after) is still no name's, its loss counted.
 #[test]
 fn a_given_mark_on_no_name_keeps_the_creators() {
+  let (log, xml) = run(repro!(
+    "author_thanks_shared_by_footnotemark_marks_kept_red"
+  ));
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  assert_eq!(creators(&xml), [
+    row(&["Ann Able"]),
+    row(&["Bob Baker"]),
+    row(&["Cat Cole"]),
+    row(&["Dan Dorn"]),
+  ]);
+  // (each creator's marks, in order: Ann †, Bob * ‡, Dan ‡ — pdflatex's "Ann Able ∗ †  Bob Baker ∗ ‡  Cat Cole † ‡  Dan
+  // Dorn ‡", whose ∗ of Ann and † ‡ of Cat are their `\thanks` notes')
+  let marks: Vec<Vec<&str>> = xml
+    .split("<creator ")
+    .skip(1)
+    .map(|c| {
+      let c = &c[..c.find("</creator>").expect("a creator's end")];
+      footnotemarks(c)
+    })
+    .collect();
+  let mark =
+    |m: &str, n: &str| format!(r#"<note mark="{m}" role="footnotemark" xml:id="footnotex{n}""#);
+  assert_eq!(
+    marks,
+    [
+      vec![mark("†", "1")],
+      vec![mark("*", "2"), mark("‡", "3")],
+      vec![],
+      vec![mark("‡", "4")],
+    ],
+    "{xml}"
+  );
   let names = |carl: &str| {
     vec![
       row(&["Ann Able", "affiliation=Univ A"]),
