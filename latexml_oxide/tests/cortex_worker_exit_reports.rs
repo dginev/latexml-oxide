@@ -41,6 +41,8 @@ struct Dispatcher {
   source:      String,
   sink:        String,
   leased_to:   Arc<std::sync::Mutex<Option<String>>>,
+  /// While set, the lease waits: the child that asked is alive, blocked on the reply.
+  hold:        Arc<AtomicBool>,
   stop:        Arc<AtomicBool>,
   ventilator:  Option<thread::JoinHandle<()>>,
   sink_socket: zmq::Socket,
@@ -48,7 +50,10 @@ struct Dispatcher {
 }
 
 impl Dispatcher {
-  fn start() -> Self {
+  fn start() -> Self { Self::start_holding(false) }
+
+  /// A dispatcher whose lease waits for [`Dispatcher::release`] when `hold`.
+  fn start_holding(hold: bool) -> Self {
     let context = zmq::Context::new();
     let router = context.socket(zmq::ROUTER).unwrap();
     router.bind("tcp://127.0.0.1:*").unwrap();
@@ -58,8 +63,10 @@ impl Dispatcher {
     let sink = sink_socket.get_last_endpoint().unwrap().unwrap();
     router.set_rcvtimeo(200).unwrap();
     let leased_to = Arc::new(std::sync::Mutex::new(None));
+    let hold = Arc::new(AtomicBool::new(hold));
     let stop = Arc::new(AtomicBool::new(false));
-    let (leased, stopping) = (Arc::clone(&leased_to), Arc::clone(&stop));
+    let (leased, holding, stopping) =
+      (Arc::clone(&leased_to), Arc::clone(&hold), Arc::clone(&stop));
     let ventilator = thread::spawn(move || {
       while !stopping.load(Ordering::Acquire) {
         let Ok(request) = router.recv_multipart(0) else {
@@ -69,6 +76,10 @@ impl Dispatcher {
         let mut leased = leased.lock().unwrap();
         if leased.is_none() {
           *leased = Some(String::from_utf8_lossy(&identity).into_owned());
+          drop(leased);
+          while holding.load(Ordering::Acquire) && !stopping.load(Ordering::Acquire) {
+            thread::sleep(Duration::from_millis(10));
+          }
           router
             .send_multipart([identity, TASK_ID.as_bytes().to_vec(), task_archive()], 0)
             .unwrap();
@@ -83,12 +94,16 @@ impl Dispatcher {
       source,
       sink,
       leased_to,
+      hold,
       stop,
       ventilator: Some(ventilator),
       sink_socket,
       _context: context,
     }
   }
+
+  /// Let a held lease go.
+  fn release(&self) { self.hold.store(false, Ordering::Release); }
 
   /// The next result the sink receives, within `timeout`.
   fn receive(&self, timeout: Duration) -> Option<Report> {
@@ -188,7 +203,7 @@ impl Harness {
       .args(["--timeout", &timeout_secs.to_string()])
       .args(["--child-mem-limit-mb", &mem_limit_mb.to_string()])
       .args(extra)
-      .env("CORTEX_WORKER_TEST_FAULT", fault)
+      .envs((!fault.is_empty()).then_some(("CORTEX_WORKER_TEST_FAULT", fault)))
       .env("TMPDIR", tmp.path())
       .envs(env.iter().copied())
       .stdin(Stdio::null())
@@ -229,20 +244,48 @@ impl Harness {
 
   fn output(&self) -> String { fs::read_to_string(&self.log).unwrap_or_default() }
 
-  /// pericortex's per-task directories (`cortex_task*`, in the harness's private TMPDIR) still
-  /// holding the leased archive: the dead child's, which its exit should have swept.
+  /// pericortex's per-task directories (`cortex_task*`, in the harness's private TMPDIR or a slot's)
+  /// still holding the leased archive: the dead child's, which its exit should have swept.
   fn leased_archive_dirs(&self) -> Vec<PathBuf> {
-    fs::read_dir(self.tmp.path())
+    let mut tmpdirs = vec![self.tmp.path().to_path_buf()];
+    tmpdirs.extend(self.slot_tmpdirs());
+    tmpdirs
+      .iter()
+      .flat_map(|tmp| task_dirs(tmp))
+      .filter(|dir| dir.join(format!("{TASK_ID}.zip")).exists())
+      .collect()
+  }
+
+  /// The slots' TMPDIRs (`slot-NN` in the exit-report directory).
+  fn slot_tmpdirs(&self) -> Vec<PathBuf> {
+    self
+      .exit_report_dir()
+      .and_then(|dir| fs::read_dir(dir).ok())
       .into_iter()
       .flatten()
       .flatten()
-      .map(|entry| entry.path())
-      .filter(|dir| {
-        dir
-          .file_name()
-          .and_then(|name| name.to_str())
-          .is_some_and(|name| name.starts_with("cortex_task"))
-          && dir.join(format!("{TASK_ID}.zip")).exists()
+      .filter(|e| e.file_name().to_string_lossy().starts_with("slot-"))
+      .map(|e| e.path())
+      .collect()
+  }
+
+  /// The pids of the children holding a claim (live or not yet reaped by the reporter).
+  fn claiming_pids(&self) -> Vec<i32> {
+    self
+      .exit_report_dir()
+      .and_then(|dir| fs::read_dir(dir).ok())
+      .into_iter()
+      .flatten()
+      .flatten()
+      .filter_map(|e| {
+        let name = e.file_name().to_string_lossy().into_owned();
+        name
+          .strip_prefix("child-")?
+          .strip_suffix(".claim")?
+          .split('-')
+          .next()?
+          .parse()
+          .ok()
       })
       .collect()
   }
@@ -279,6 +322,34 @@ impl Drop for Harness {
   }
 }
 
+/// pericortex's per-task directories (`cortex_task*`) in `tmp`.
+fn task_dirs(tmp: &Path) -> Vec<PathBuf> {
+  fs::read_dir(tmp)
+    .into_iter()
+    .flatten()
+    .flatten()
+    .map(|entry| entry.path())
+    .filter(|dir| {
+      dir
+        .file_name()
+        .and_then(|name| name.to_str())
+        .is_some_and(|name| name.starts_with("cortex_task"))
+    })
+    .collect()
+}
+
+/// Poll `probe` every 50 ms until it yields, or `within` passes.
+fn wait_for<T>(within: Duration, mut probe: impl FnMut() -> Option<T>) -> Option<T> {
+  let deadline = Instant::now() + within;
+  while Instant::now() < deadline {
+    if let Some(found) = probe() {
+      return Some(found);
+    }
+    thread::sleep(Duration::from_millis(50));
+  }
+  None
+}
+
 /// Run one case: start a harness whose child meets `fault`, optionally signal the converting child,
 /// and return the report the sink receives with the harness's output (for failure messages).
 fn report_for(
@@ -304,6 +375,77 @@ fn report_for(
   let leased_to = dispatcher.leased_to.lock().unwrap().clone().unwrap();
   let output = harness.output();
   (report, leased_to, output, harness)
+}
+
+/// [`report_for`] for a child that dies of `fault` on its own, once its exit has swept pericortex's
+/// directory for the leased archive (its `cortex_task*`, in the child's slot): the exit skips the
+/// `TempDir`'s drop, and a cortex_worker run without the harness has no respawn to empty its TMPDIR
+/// (565,483 such directories on the fleet by 2026-10-14). The respawn empties the slot about a second
+/// after the reap, so the check must precede it: a marker planted in the slot while the child waits on
+/// its lease, and still there after the check, shows no respawn did the sweep.
+fn report_after_exit_sweep(
+  fault: &str,
+  timeout_secs: u64,
+  mem_limit_mb: u64,
+) -> (Report, String, String, Harness) {
+  let dispatcher = Dispatcher::start_holding(true);
+  let harness = Harness::start(&dispatcher, fault, timeout_secs, mem_limit_mb, &[]);
+  wait_for(Duration::from_secs(120), || {
+    dispatcher.leased_to.lock().unwrap().clone()
+  })
+  .unwrap_or_else(|| {
+    panic!(
+      "no child asked for the task:
+{}",
+      harness.output()
+    )
+  });
+  let pid = match harness.claiming_pids().as_slice() {
+    [pid] => *pid,
+    pids => panic!("one child claims: {pids:?}\n{}", harness.output()),
+  };
+  let marker = harness
+    .exit_report_dir()
+    .expect("the exit-report directory")
+    .join("slot-01")
+    .join("planted-in-the-dying-childs-slot");
+  fs::write(&marker, b"").unwrap();
+  assert!(
+    running(pid),
+    "the child waiting on its lease is alive:\n{}",
+    harness.output()
+  );
+  dispatcher.release();
+  wait_for(Duration::from_secs(timeout_secs + 120), || {
+    (!running(pid)).then_some(())
+  })
+  .unwrap_or_else(|| panic!("the child did not die of {fault}:\n{}", harness.output()));
+  let leased = harness.leased_archive_dirs();
+  assert!(
+    marker.exists(),
+    "the slot was respawned before the check, which then proves nothing about the exit's sweep:\n{}",
+    harness.output()
+  );
+  assert!(
+    leased.is_empty(),
+    "the leased archive's directory outlived the exit: {leased:?}"
+  );
+  let report = dispatcher
+    .receive(Duration::from_secs(180))
+    .unwrap_or_else(|| panic!("no result reached the sink:\n{}", harness.output()));
+  let leased_to = dispatcher.leased_to.lock().unwrap().clone().unwrap();
+  let output = harness.output();
+  (report, leased_to, output, harness)
+}
+
+/// Whether process `pid` runs: neither reaped nor a zombie (`/proc/<pid>/stat`'s state field).
+fn running(pid: i32) -> bool {
+  fs::read_to_string(format!("/proc/{pid}/stat")).is_ok_and(|stat| {
+    stat
+      .rsplit_once(") ")
+      .and_then(|(_, rest)| rest.chars().next())
+      .is_some_and(|state| state != 'Z' && state != 'X')
+  })
 }
 
 /// Whether a report carries CorTeX's retryable tag (user ruling 2026-10-12: a timeout, a shed
@@ -347,7 +489,7 @@ fn fatal_of(report: &Report, leased_to: &str, output: &str) -> String {
 
 #[test]
 fn a_watchdog_timeout_is_reported_as_fatal_timeout() {
-  let (report, leased_to, output, harness) = report_for("sleep", 3, 0, None);
+  let (report, leased_to, output, harness) = report_after_exit_sweep("sleep", 3, 0);
   let fatal = fatal_of(&report, &leased_to, &output);
   assert!(
     retry_tagged(&report),
@@ -357,13 +499,6 @@ fn a_watchdog_timeout_is_reported_as_fatal_timeout() {
   assert!(
     fatal.starts_with("Fatal:timeout:wallclock ") && fatal.contains("3s"),
     "{fatal}\n{output}"
-  );
-  // The exit skips destructors, so pericortex's own `TempDir` for the leased archive is swept
-  // with the run's trees, not left in the scratch directory (565,483 of them on the fleet).
-  assert!(
-    harness.leased_archive_dirs().is_empty(),
-    "the leased archive's directory outlived the exit: {:?}",
-    harness.leased_archive_dirs()
   );
   // The reporter consumed the dead child's claim: none left names the task.
   thread::sleep(Duration::from_millis(500));
@@ -383,7 +518,7 @@ fn a_watchdog_timeout_is_reported_as_fatal_timeout() {
 
 #[test]
 fn an_allocation_past_rlimit_as_is_reported_as_fatal_oom() {
-  let (report, leased_to, output, harness) = report_for("alloc", 60, 4096, None);
+  let (report, leased_to, output, _harness) = report_after_exit_sweep("alloc", 60, 4096);
   let fatal = fatal_of(&report, &leased_to, &output);
   assert!(
     !retry_tagged(&report),
@@ -393,11 +528,6 @@ fn an_allocation_past_rlimit_as_is_reported_as_fatal_oom() {
   assert!(
     fatal.starts_with("Fatal:oom:alloc_failed ") && fatal.contains("1099511627776 bytes"),
     "{fatal}\n{output}"
-  );
-  assert!(
-    harness.leased_archive_dirs().is_empty(),
-    "the leased archive's directory outlived the exit: {:?}",
-    harness.leased_archive_dirs()
   );
 }
 
@@ -581,5 +711,75 @@ fn a_shutdown_mid_conversion_reports_nothing() {
   assert!(
     !Path::new(&dir).exists(),
     "the directory outlived the harness"
+  );
+}
+
+/// Each child runs in its slot's own TMPDIR (`slot-NN` in the exit-report directory), emptied before
+/// every spawn: what a SIGKILLed child leaves there goes with its respawn. The killed child is the idle
+/// one, which the unresponsive-worker watchdog kills (an idle child's CPU time does not move); pericortex
+/// 0.2.9 holds a `cortex_task*` directory while it waits for work (worker.rs:216), and ~11k such empty
+/// directories a day piled up in the fleet's shared TMPDIR. A conversion runs there, Error-free.
+#[test]
+fn a_respawned_slot_starts_with_an_empty_tmpdir() {
+  let dispatcher = Dispatcher::start();
+  let harness = Harness::start(&dispatcher, "", 120, 0, &[]);
+  let report = dispatcher
+    .receive(Duration::from_secs(180))
+    .unwrap_or_else(|| panic!("no result reached the sink:\n{}", harness.output()));
+  let output = harness.output();
+  assert_eq!(report.taskid, TASK_ID, "{output}");
+  assert!(
+    matches!(
+      report.status.as_str(),
+      "Status:conversion:0" | "Status:conversion:1"
+    ) && !report
+      .log
+      .lines()
+      .any(|line| line.starts_with("Error:") || line.starts_with("Fatal:")),
+    "the conversion is Error-free ({}):\n{}",
+    report.status,
+    report.log
+  );
+  let slot = harness
+    .exit_report_dir()
+    .expect("the exit-report directory")
+    .join("slot-01");
+  let killed = match harness.claiming_pids().as_slice() {
+    [pid] => *pid,
+    pids => panic!("one child claims: {pids:?}\n{}", harness.output()),
+  };
+  // Every temporary file of the child and its subprocesses (ImageMagick reads its own two first) goes to the slot.
+  let environ = fs::read(format!("/proc/{killed}/environ")).unwrap();
+  for name in ["TMPDIR", "MAGICK_TEMPORARY_PATH", "MAGICK_TMPDIR"] {
+    let value = environ
+      .split(|byte| *byte == 0)
+      .find_map(|entry| entry.strip_prefix(format!("{name}=").as_bytes()))
+      .map(|value| PathBuf::from(String::from_utf8_lossy(value).into_owned()));
+    assert_eq!(
+      value.as_deref(),
+      Some(slot.as_path()),
+      "the child's {name} is its slot's"
+    );
+  }
+  let leftover = slot.join("magick-leftover");
+  fs::write(&leftover, b"a delegate file of a killed convert").unwrap();
+  // SAFETY: signalling the harness's child, as the unresponsive-worker watchdog does.
+  unsafe {
+    libc::kill(killed, libc::SIGKILL);
+  }
+  wait_for(Duration::from_secs(60), || {
+    harness
+      .claiming_pids()
+      .iter()
+      .any(|pid| *pid != killed)
+      .then_some(())
+  })
+  .unwrap_or_else(|| panic!("the slot was not respawned:\n{}", harness.output()));
+  assert!(
+    slot.is_dir() && !leftover.exists(),
+    "the respawned slot's TMPDIR still holds the killed child's files: {:?}",
+    fs::read_dir(&slot)
+      .map(|entries| entries.flatten().map(|e| e.file_name()).collect::<Vec<_>>())
+      .unwrap_or_default()
   );
 }
