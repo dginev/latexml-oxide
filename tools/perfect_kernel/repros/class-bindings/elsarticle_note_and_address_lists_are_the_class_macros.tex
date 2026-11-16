@@ -2,8 +2,8 @@
 %          document: elsarticle.cls:178-179, :294 define the lists; `\maketitle` prints them (:766, :806)
 % oracle:  pdflatex 0 errors; "Univ A Preprint note.", footnote "∗ Corresponding author."
 % engines: rust=3 (999af99497d: undefined \elsaddress, \@cormark, \@cornotes) perl=0 (2 Warnings; the text lost) (2026-11-16)
-% expect:  0 errors, 0 warnings; Ann Able's creator with her address; the paragraph "Preprint note." after the
-%          frontmatter and the note "Corresponding author." on the document
+% expect:  0 errors, 0 warnings; Ann Able's creator with her address and the note "Preprint note." (OD #1054; a body
+%          paragraph after the frontmatter before); the note "Corresponding author." on the document
 % status:  GREEN
 % preload: ar5iv.sty
 \documentclass{elsarticle}

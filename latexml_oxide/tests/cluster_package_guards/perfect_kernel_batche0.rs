@@ -1093,6 +1093,20 @@ const API_KEYS_OUTSIDE_PERLS: &[(&str, usize)] = &[
     1,
   ),
   ("const _linklabel base_utilities/frontmatter/insert.rs", 1),
+  // (SHREST, 0 -> 1, raised with its reason: the mark a class prints for a creator's footnote text, elsarticle's `\fntext`
+  // number, REVTeX's joined footnote's symbol, on the contact its binding makes — a contact has no `mark` in the schema —,
+  // read where two creators hold it to make it their marked note, OD #1054; internal, never written out)
+  (
+    "const _fnmark base_utilities/frontmatter/shared_notes.rs",
+    1,
+  ),
+  // (SHREST, 0 -> 1, raised with its reason: a title-page list note placed on the names showing its leading mark carries
+  // that mark, to take it from the note's text and the names, as a legend's answered mark goes, OD #1054; Perl's API has
+  // no key for it; internal, never written out)
+  (
+    "const _listmark base_utilities/frontmatter/shared_notes.rs",
+    1,
+  ),
   // (LO2, 0 -> 1: an emitted entry's first mark read, a fact kept on its pending entry as Perl keeps its labels there
   // (Base_Utility.pool.ltxml:502-508), where LO1 kept a State flag; internal, never written out)
   ("const _markread base_utilities/defs/author_macros.rs", 1),
@@ -2268,6 +2282,10 @@ const PASSES_AFTER_THE_EMITTER: &[(&str, PassMay)] = &[
   ("write_role_notes", PassMay::ChangeKind),
   ("show_line_marks", PassMay::ChangeText),
   ("kind_dedication_lines", PassMay::ChangeKind),
+  // (SHREST, OD #1054: a footnote text two creators already hold under one mark, made their note — its kind; a list note's
+  // mark taken from its text and its holder's name, which its `mark` shows — text; the note was placed by its label)
+  ("kind_shared_marked_contacts", PassMay::ChangeKind),
+  ("show_list_note_marks", PassMay::ChangeText),
   ("kind_legend_contacts", PassMay::ChangeKind),
   // (the URL part moves a link to the block: Z9's; the grade part is a kind)
   ("kind_link_and_grade_contacts", PassMay::OwnerDebt),

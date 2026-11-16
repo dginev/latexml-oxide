@@ -114,6 +114,10 @@ pub fn insert_frontmatter(document: &mut Document) -> Result<()> {
   }
   // (an affiliation's dedication lines, read once every route has placed it: the paper's dedication, 107c)
   kind_dedication_lines(document)?;
+  // (a footnote text a class prints once for several names, read once every route has placed it: their marked note; a
+  // name's mark its title-page list note carries, that note's: OD #1054)
+  kind_shared_marked_contacts(document)?;
+  show_list_note_marks(document)?;
   // (an affiliation that is a legend, read once every route has placed it: its carriers' note, OD #961)
   kind_legend_contacts(document)?;
   // (an affiliation that is a link or a membership grade, read where the legend's is: the block's link, its carriers'

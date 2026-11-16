@@ -154,7 +154,8 @@ fn icml_support(follow_paper_copy: bool) -> Result<()> {
   DefMacro!("\\printAffiliationsAndWorkNotice{}",
     "\\lx@add@frontmatter{ltx:note}[role=affiliationnotice]{#1}\\lx@icml@corr@added");
   // (the line past what this binding's `\icmlcorrespondingauthor` built, `\lx@icml@corr@built`, without the
-  // punctuation it starts with; the whole line, as printed, when the document replaced it)
+  // punctuation it starts with; the whole line, as printed, when the document replaced it — or set it without calling
+  // `\icmlcorrespondingauthor`, which leaves `\lx@icml@corr@built` undefined)
   DefMacro!("\\lx@icml@corr@added", sub[_args] {
     let body = |cs: &str| match lookup_meaning(&T_CS!(cs)) {
       Some(Stored::Expandable(d)) => match d.get_expansion() {
@@ -164,8 +165,8 @@ fn icml_support(follow_paper_copy: bool) -> Result<()> {
       _ => None,
     };
     let Some(text) = body(r"\icmlcorrespondingauthor@text") else { return Ok(Tokens::default()) };
-    let built = body(r"\lx@icml@corr@built").unwrap_or_default();
-    let (note, added) = match text.strip_prefix(built.as_slice()) {
+    let built = body(r"\lx@icml@corr@built");
+    let (note, added) = match built.and_then(|built| text.strip_prefix(built.as_slice())) {
       Some(added) => (r"\lx@add@pubnote[role=note,name={}]", added),
       None => (r"\lx@add@pubnote[role=note,name={Correspondence to: }]", text.as_slice()),
     };

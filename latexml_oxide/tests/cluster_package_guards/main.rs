@@ -636,6 +636,7 @@ mod perfect_kernel_batchsbx1;
 /// SEP1: the rehearsal binds a `\let` copy of `\and`, `\\`, `\thanks` or `\footnote` by its meaning, as the command it
 /// copies (`\let\nx\and` parts the names; OD #994).
 mod perfect_kernel_batchsep1;
+mod perfect_kernel_batchshrest;
 /// ST1: RED catalog repros already matching their `expect` on int159a, green rows of two concern tables.
 mod perfect_kernel_batchst1;
 /// ST3: a document converted after others on one thread (a persistent cortex_worker's papers) is the document alone.

@@ -10,12 +10,14 @@ LoadDefinitions!({
   for option in [
     "endfloat", "endfloats", "numafflabel",
     "oneside", "twoside", "onecolumn", "twocolumn",
-    "lefttitle", "centertitle", "reversenotenum",
+    "lefttitle", "centertitle",
     "symbold", "ussrhead", "nameyear",
     "doublespacing", "reviewcopy"].iter()
   {
     DeclareOption!(*option, None);
   }
+  // elsarticle.cls:106-109: `reversenotenum` numbers the `\fntext` notes by letter (`\thefnote`, below)
+  DeclareOption!("reversenotenum", { assign_value("@elsarticle@reversenotenum", true, Scope::Global); });
   // elsarticle.cls defines `\newif\ifpreprint`, set by its options (true for `preprint` and `review`, false for
   // `final` and the journal layouts) and true by default (`\ExecuteOptions{…,preprint,…}`, elsarticle.cls:112).
   // Journal styles test it (ycviu.sty:60, 298); without it they saw an undefined CS and cascaded (2311.04591).
@@ -268,6 +270,25 @@ LoadDefinitions!({
   // `\nonumnote{<text>}` (:153-155) adds an unnumbered title-page footnote: a note. Perl's elsarticle binding lacks
   // them. Witnesses 2609.13494, 2302.09410, 2106.01129.
   DefMacro!("\\fnmark[]", "\\fnref{#1}");
+  // elsarticle.cls:157-171: each `\fntext[<key>]{…}` steps the counter `fnote` and prints its text under `\thefnote`
+  // (a number; a letter under `reversenotenum`), the mark every `\fnref{<key>}` prints on its names — a note several
+  // names share printed once, its mark on each (`shared_notes::kind_shared_marked_contacts`, OD #1054).
+  DefMacro!("\\fntext OptionalSemiverbatim {}", sub[(key, text)] {
+    let n = lookup_int("@elsarticle@fnote") + 1;
+    assign_value("@elsarticle@fnote", n, Scope::Global);
+    let mark = match u8::try_from(n) {
+      Ok(n @ 1..=26) if lookup_bool("@elsarticle@reversenotenum") => char::from(b'a' + n - 1).to_string(),
+      _ => n.to_string(),
+    };
+    let key = key.map(|key| key.to_string()).unwrap_or_default();
+    let mut call = mouth::tokenize_internal(TeXString::assembled(s!(
+      "\\lx@add@contact[label={{fn:{key}}},role=note]{{\\lx@fm@entry@attr{{_fnmark}}{{{mark}}}"
+    )))
+    .unlist();
+    call.extend(text.unlist());
+    call.push(T_END!());
+    Ok(Tokens::new(call))
+  });
   DefMacro!("\\cormark[]", "\\corref{#1}");
   DefMacro!("\\nonumnote{}", "\\@add@frontmatter{ltx:note}[role=thanks]{#1}");
   // The 2020+ copies' `\newpageafter{title|author|abstract}` (16 of 35 sampled), a page break in the title block: a

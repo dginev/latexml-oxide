@@ -229,20 +229,21 @@ fn babel_ini_caption_template_needs_fnum() {
   );
 }
 
-/// revtex4-2's `\frontmatter@footnote` as a document calls it for a note on several authors (2605.04155).
+/// revtex4-2's `\frontmatter@footnote` as a document calls it for a note on several authors (2605.04155): printed once,
+/// its mark ∗ on both names, so each author's copy is their note marked ∗ (OD #1054; a thanks contact each before).
 #[test]
 fn revtex_frontmatter_footnote_on_two_authors() {
   let (log, xml) = convert_counted(include_str!(
     "../../../tools/perfect_kernel/repros/sectioning-frontmatter/revtex_frontmatter_footnote_on_two_authors.tex"
   ));
   assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
-  assert_eq!(
-    xml
-      .matches(r#"role="thanks">These two authors contributed equally to this work.</contact>"#)
-      .count(),
-    2,
-    "{xml}"
-  );
+  for id in ["id1", "id2"] {
+    let note = format!(
+      r#"<note class="ltx_note_frontmatter ltx_thanks_contribution" mark="∗" role="thanks" xml:id="{id}">These two authors contributed equally to this work.</note>"#
+    );
+    assert_eq!(xml.matches(&note).count(), 1, "{note}\n{xml}");
+  }
+  assert!(!xml.contains("<contact name=\"Thanks: \""), "{xml}");
 }
 
 /// float.sty's `\newfloat` is a macro scrhack's floatbytocbasic can patch (2606.04906, 2606.11358).
