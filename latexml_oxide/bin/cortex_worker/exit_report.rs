@@ -29,12 +29,13 @@
 //! claim is idle by then); there the dispatcher's lease reaper stays the net, as before.
 
 use std::{
+  collections::BTreeSet,
   fs::{self, File, OpenOptions},
   io::{self, Read, Seek, SeekFrom, Write},
   os::unix::io::AsRawFd,
   path::{Path, PathBuf},
   sync::{
-    OnceLock,
+    Mutex, OnceLock,
     atomic::{AtomicI32, Ordering},
   },
   thread,
@@ -627,9 +628,22 @@ impl HarnessDir {
 /// go even when a SIGKILL skipped every destructor. Removed with `dir` ([`HarnessDir::remove`],
 /// [`remove_stale_dirs`]).
 pub fn fresh_slot_tmpdir(dir: &Path, index: usize) -> io::Result<PathBuf> {
+  /// The slots that said they could not be emptied: a persistent obstacle is told once, not at every respawn.
+  static UNEMPTIED: Mutex<BTreeSet<PathBuf>> = Mutex::new(BTreeSet::new());
   let slot = dir.join(format!("slot-{index:02}"));
   // What cannot be removed now (an orphaned subprocess still writing) goes with the next spawn.
-  let _ = fs::remove_dir_all(&slot);
+  if let Err(e) = fs::remove_dir_all(&slot)
+    && e.kind() != io::ErrorKind::NotFound
+    && UNEMPTIED
+      .lock()
+      .unwrap_or_else(|poisoned| poisoned.into_inner())
+      .insert(slot.clone())
+  {
+    eprintln!(
+      "worker #{index}: could not empty its TMPDIR {} ({e}); what is left stays until a respawn can",
+      slot.display()
+    );
+  }
   fs::create_dir_all(&slot)?;
   Ok(slot)
 }
