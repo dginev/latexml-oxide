@@ -73,7 +73,10 @@ const ROWS: &[Row] = &[
     tex:      repro!("sectioning-frontmatter/astlb_title_code_address_marks_keep_the_names.tex"),
     files:    &[],
     counts:   (0, 2),
-    creators: &[&["Ann Able", "email=*", "email=ann@a.org"], &["Bob Baker"]],
+    creators: &[&["Ann Able", "mark=1", "email=*", "email=ann@a.org"], &[
+      "Bob Baker",
+      "mark=1,2",
+    ]],
     holds:    &[
       r#"role="thanks" xml:id="id4">Univ A, Moscow</note>"#,
       r#"role="thanks" xml:id="id5">Univ B, Boston</note>"#,

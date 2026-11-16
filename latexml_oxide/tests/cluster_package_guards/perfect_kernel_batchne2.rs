@@ -43,7 +43,10 @@ fn run(tex: &str) -> (String, String) {
 fn a_notes_footnote_step_runs_where_it_prints() {
   let (log, xml) = run(repro!("ne2_thanks_addtocounter_order"));
   assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
-  assert_eq!(creators(&xml), [row(&["Ann Able"]), row(&["Bob Baker"])]);
+  assert_eq!(creators(&xml), [
+    row(&["Ann Able"]),
+    row(&["Bob Baker", "mark=*"])
+  ]);
   let notes: Vec<&str> = xml
     .match_indices("<note ")
     .map(|(at, _)| &xml[at..at + xml[at..].find('>').expect("a note's tag")])
@@ -124,7 +127,11 @@ fn representing_a_collaboration_is_its_contact() {
 /// note's move only).
 #[test]
 fn a_counter_move_no_name_carries_writes_the_block_as_perl_splits_it() {
-  let expected = vec![row(&["Ann Able"]), row(&["Bob Baker"]), row(&["Carl Cole"])];
+  let expected = vec![
+    row(&["Ann Able", "mark=†"]),
+    row(&["Bob Baker"]),
+    row(&["Carl Cole", "mark=*"]),
+  ];
   let warnings = 1;
   let (log, xml) = run(repro!("ne2b_counter_moved_between_notes"));
   assert_eq!(
@@ -166,7 +173,10 @@ fn a_counter_move_no_name_carries_writes_the_block_as_perl_splits_it() {
 fn a_note_before_every_name_steps_before_it() {
   let (log, xml) = run(repro!("ne2b_note_before_every_name"));
   assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
-  assert_eq!(creators(&xml), [row(&["Ann Able"]), row(&["Bob Baker"])]);
+  assert_eq!(creators(&xml), [
+    row(&["Ann Able", "mark=†"]),
+    row(&["Bob Baker"])
+  ]);
 }
 
 /// The marks' notes of `xml` (a `\footnotemark`'s, an `\endnotemark`'s), each its opening tag, in document order.
@@ -194,25 +204,33 @@ fn a_mark_after_its_names_note_stays_with_it() {
   for (tex, expected, marks) in [
     (
       repro!("ne2c_mark_after_note"),
-      vec![row(&["Ann Able"]), row(&["Bob Baker"])],
+      vec![row(&["Ann Able", "mark=†"]), row(&["Bob Baker", "mark=‡"])],
       vec![mark("†", "footnote2"), mark("‡", "footnote3")],
     ),
     (
       repro!("ne2c_mark_after_note_spaced"),
-      vec![row(&["Ann Able"]), row(&["Bob Baker"]), row(&["Carl Cole"])],
+      vec![
+        row(&["Ann Able", "mark=†"]),
+        row(&["Bob Baker"]),
+        row(&["Carl Cole", "mark=§"]),
+      ],
       vec![mark("†", "footnote2"), mark("§", "footnote4")],
     ),
     (
       repro!("ne2c_mark_after_note_numbered"),
-      vec![row(&["Ann Able"]), row(&["Bob Baker"]), row(&["Carl Cole"])],
+      vec![
+        row(&["Ann Able", "mark=*"]),
+        row(&["Bob Baker", "mark=*"]),
+        row(&["Carl Cole"]),
+      ],
       vec![mark("*", "footnotex1"), mark("*", "footnotex2")],
     ),
     (
       repro!("ne2c_mark_after_footnote_glued"),
       vec![
-        row(&["Ann Able"]),
-        row(&["Bob Baker", "note=Univ Y."]),
-        row(&["Carl Cole"]),
+        row(&["Ann Able", "mark=†"]),
+        row(&["Bob Baker", "mark=*", "note=Univ Y."]),
+        row(&["Carl Cole", "mark=§"]),
       ],
       vec![
         mark("†", "footnote2"),
@@ -223,9 +241,9 @@ fn a_mark_after_its_names_note_stays_with_it() {
     (
       repro!("ne2c_mark_after_math_comma"),
       vec![
-        row(&["Ann Able"]),
+        row(&["Ann Able", "mark=1"]),
         // (the endnote marks beside the name too; the `$^,$` printed between them is left at the name's end)
-        row(&["Bob Baker"]),
+        row(&["Bob Baker", "mark=1", "mark=2"]),
       ],
       ["1", "2", "3"]
         .iter()
@@ -253,7 +271,7 @@ fn a_mark_after_its_names_note_stays_with_it() {
 /// after the joint name, each with its mark, so the name reads without their tags; pin updated (the notes' move only).
 #[test]
 fn a_mark_on_no_name_writes_the_block_whole() {
-  let expected = vec![row(&["Ann Able and Bob Baker"])];
+  let expected = vec![row(&["Ann Able and Bob Baker", "mark=†", "mark=‡"])];
   let warnings = 1;
   let (log, xml) = run(repro!("ne2c_mark_on_no_name_writes_the_block_whole"));
   assert_eq!(
@@ -320,6 +338,9 @@ fn a_given_mark_on_no_name_keeps_the_creators() {
   // (a bare `\footnotemark` dropped too: the block written whole, every mark kept, its Warning)
   let expected = vec![row(&[
     "Ann Able, 1 Bob Baker, 1 Carl Cole, 2 Dan Dory 2 1 Univ A 2 Univ B",
+    "mark=*",
+    "mark=†",
+    "mark=‡",
   ])];
   let (log, xml) = run(repro!("ne2d_given_and_fresh_mark_dropped"));
   assert_eq!((error_count(&log), warning_count(&log)), (0, 1), "{log}");

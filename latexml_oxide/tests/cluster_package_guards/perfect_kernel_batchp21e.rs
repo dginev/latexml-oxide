@@ -96,10 +96,10 @@ fn a_paragraph_in_a_box_keeps_a_contacts_markup() {
       repro!("mnras_parbox_paragraph_keeps_a_mailto_link"),
       (0, 2),
       rows(&[
-        &["Team X: Ann Able", "email=team@x.org"],
+        &["Team X: Ann Able", "mark=1", "email=team@x.org"],
         // (the `\footnotemark`'s note beside the name, FN1; its tags' text was in the name on int157a)
-        &["Bob Baker"],
-        &["Cy Cole"],
+        &["Bob Baker", "mark=2", "mark=1"],
+        &["Cy Cole", "mark=3"],
       ]),
       "<contact name=\"Email:\u{a0}\" role=\"email\"><ref class=\"ltx_href\" href=\"mailto:team@x.org\">team@x.org</ref></contact>",
     ),

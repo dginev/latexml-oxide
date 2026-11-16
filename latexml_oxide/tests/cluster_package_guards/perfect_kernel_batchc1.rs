@@ -221,7 +221,7 @@ fn queued_marks_read_as_digested() {
     // (the twins: each name shows the marks it prints (P4b2b; Bob Two 2,3); Cy Three's authblk-generated 1 is RED
     // `authblk_labelled_marks_dropped_red`; the nameless "First Univ" RED `authblk_noblocks_trailing_note_list_red`)
     (repro!("queue_marks_flexisym_authblk_noblocks_list"), 0, &[
-      &["Ann One"],
+      &["Ann One", "mark=1"],
       &[
         "Bob Two",
         "affiliation=2 Second Univ",
@@ -231,7 +231,7 @@ fn queued_marks_read_as_digested() {
       &["affiliation=First Univ"],
     ]),
     (repro!("queue_marks_authblk_noblocks_list"), 0, &[
-      &["Ann One"],
+      &["Ann One", "mark=1"],
       &[
         "Bob Two",
         "affiliation=2 Second Univ",
@@ -251,7 +251,7 @@ fn queued_marks_read_as_digested() {
       &["Bob Two", "affiliation=Second Univ"],
     ]),
     (repro!("queue_marks_flexisym_letter_symbol_marks"), 0, &[
-      &["Ann One", "affiliation=First Univ"],
+      &["Ann One", "affiliation=First Univ", "mark=∗"],
       &["Bob Two", "affiliation=Second Univ"],
     ]),
     // (P4b2: the Cut's decision reads the list's marks as digested, `requested_entry_labels` — marks a document macro
@@ -335,7 +335,11 @@ fn queued_marks_read_as_digested() {
       llncs!("llncs_institute_macro_marks_tabular_rows_red"),
       1,
       &[
-        &["Ann Able", "affiliation=1 Univ A 2 Univ B 3 Univ C"],
+        &[
+          "Ann Able",
+          "mark=1",
+          "affiliation=1 Univ A 2 Univ B 3 Univ C",
+        ],
         &["Bob Baker", "affiliation=2 Univ B"],
         &["Cy Cole", "affiliation=3 Univ C"],
       ],
@@ -601,8 +605,12 @@ fn marked_list_cut_as_its_binding_declares() {
       // (since MLN1 the names line its `*` marks lead is names, each entry on the name its mark requests and the legend
       // on the two names showing `*`, as pdflatex prints it — the base's nameless fourth creator gone)
       &[
-        &["Ann Able", "affiliation=† Univ A (A*STAR), Town A"],
-        &["Bob Baker", "affiliation=‡ Univ B, Town B"],
+        &[
+          "Ann Able",
+          "affiliation=† Univ A (A*STAR), Town A",
+          "mark=*",
+        ],
+        &["Bob Baker", "affiliation=‡ Univ B, Town B", "mark=*"],
         &["Cy Cole", "affiliation=† Univ A (A*STAR), Town A"],
       ],
       &[
@@ -616,6 +624,7 @@ fn marked_list_cut_as_its_binding_declares() {
       &[&["Ann Able"], &["Bob Baker"], &[
         "Cy Cole",
         "affiliation=School A , Univ A , Town A",
+        "mark=†",
       ]],
       &["note:thanks=† Corresponding Author. E-mail: cy@a.edu"],
     ),
@@ -625,11 +634,14 @@ fn marked_list_cut_as_its_binding_declares() {
       &[
         &[
           "Ann Able",
+          "mark=*",
           "affiliation=* Univ A, Town A",
+          "mark=§",
           "affiliation=Accepted at a conference (DOI pending)",
         ],
         &[
           "Bob Baker",
+          "mark=*",
           "affiliation=* Univ A, Town A",
           "affiliation=Accepted at a conference (DOI pending)",
         ],
@@ -691,16 +703,19 @@ fn marked_list_cut_as_its_binding_declares() {
           "Ann Able",
           "affiliation=Cisco Systems, Town",
           "email=ann@c.com",
+          "mark=*",
         ],
         &[
           "Bob Baker",
           "affiliation=Cisco Systems, Town",
           "email=bob@c.com",
+          "mark=*",
         ],
         &[
           "Cy Cole",
           "affiliation=Cisco Systems, Town",
           "email=cy@c.com",
+          "mark=†",
         ],
       ],
       &[
@@ -919,6 +934,7 @@ fn marked_list_cut_as_its_binding_declares() {
       &[
         &[
           "Ann Able",
+          "mark=(🖂)",
           "affiliation=Univ A, Town A",
           "affiliation=Univ B, Town B",
         ],
@@ -931,6 +947,7 @@ fn marked_list_cut_as_its_binding_declares() {
       0,
       &[&["Ann Able", "affiliation=1 Univ A, Town A"], &[
         "Bob Baker",
+        "mark=⋆",
         "affiliation=2 Univ B, Town B",
       ]],
       &[],
@@ -985,9 +1002,9 @@ fn marked_list_cut_as_its_binding_declares() {
       repro!("apa6_marked_list_entries_in_boxes"),
       0,
       &[
-        &["Ann Able", "affiliation=1 Univ A, Town"],
-        &["Bob Baker", "affiliation=2 Univ B, City"],
-        &["Cy Cole", "affiliation=3 Univ C, Ville"],
+        &["Ann Able", "affiliation=1 Univ A, Town", "mark=∗"],
+        &["Bob Baker", "affiliation=2 Univ B, City", "mark=∗"],
+        &["Cy Cole", "affiliation=3 Univ C, Ville", "mark=∗"],
       ],
       &[
         "note:thanks=∗ Equal contribution",
@@ -1158,12 +1175,12 @@ fn authblk_names_show_their_printed_marks() {
       &["Bob Baker", "affiliation=1 Univ A, Town A"],
     ]),
     (repro!("authblk_labelled_author_hand_mark_kept"), 0, &[
-      &["Ann Able", "affiliation=Univ A, Town A"],
+      &["Ann Able", "mark=*", "affiliation=Univ A, Town A"],
       &["Bob Baker", "affiliation=Univ B, Town B"],
     ]),
     // (a mark no entry answers and no request could show, printed: rev108a B2's shape, 1 Warning on P4b2)
     (repro!("authblk_unanswered_unshowable_mark_printed"), 0, &[
-      &["Ann Able"],
+      &["Ann Able", "mark=a-b"],
       &["Bob Baker"],
     ]),
     // (PMK1: a mark's call written with its argument — a robust command's, a parameterless macro's tail call's; red on
@@ -1325,6 +1342,7 @@ fn group_rule_reads_marks_as_digested() {
   const HEAD_OVER_LINES: &[&[&str]] = &[
     &[
       "Ann Able",
+      "mark=1",
       "affiliation=Univ A, Town A",
       "affiliation=2 Univ B, Town B",
     ],
@@ -1355,9 +1373,14 @@ fn group_rule_reads_marks_as_digested() {
       repro!("aastex_macro_names_over_unlabelled_lines_are_no_group"),
       0,
       &[
-        &["Ann Able", "affiliation=Uni One"],
-        &["Bob Baker", "affiliation=Uni One"],
-        &["Cat Cole", "affiliation=Uni One", "affiliation=Uni Two"],
+        &["Ann Able", "mark=1", "affiliation=Uni One"],
+        &["Bob Baker", "mark=1", "affiliation=Uni One"],
+        &[
+          "Cat Cole",
+          "mark=1,2",
+          "affiliation=Uni One",
+          "affiliation=Uni Two",
+        ],
       ],
     ),
     // (CST2: the marks gate reads a name past its tie and accents to the macro printing its mark, 1901.01540's tied names)
@@ -1365,9 +1388,14 @@ fn group_rule_reads_marks_as_digested() {
       repro!("aastex_tied_accented_macro_marked_names_are_no_group"),
       0,
       &[
-        &["A. Müller", "affiliation=Uni One"],
-        &["B. Baça", "affiliation=Uni One"],
-        &["C. Colé", "affiliation=Uni One", "affiliation=Uni Two"],
+        &["A. Müller", "mark=1", "affiliation=Uni One"],
+        &["B. Baça", "mark=1", "affiliation=Uni One"],
+        &[
+          "C. Colé",
+          "mark=1,2",
+          "affiliation=Uni One",
+          "affiliation=Uni Two",
+        ],
       ],
     ),
     // (CST2, revCST2 finding 1: a `*` typed after a tie or an accent is the name's text, as the untied `A. Smith*`; the PDF
@@ -1378,11 +1406,13 @@ fn group_rule_reads_marks_as_digested() {
       &[
         &[
           "A. Smith",
+          "mark=*",
           "affiliation=1 Uni One, Town",
           "affiliation=2 Uni Two, Town",
         ],
         &[
           "José Jones",
+          "mark=*",
           "affiliation=1 Uni One, Town",
           "affiliation=2 Uni Two, Town",
         ],
@@ -1393,7 +1423,7 @@ fn group_rule_reads_marks_as_digested() {
     (
       repro!("revtex_macro_and_chardef_printed_stars_are_marks"),
       0,
-      &[&["A. Smith"], &["B. Jones"], &[
+      &[&["A. Smith", "mark=*"], &["B. Jones", "mark=*"], &[
         "affiliation=1 Uni One, Town",
         "affiliation=2 Uni Two, Town",
       ]],
@@ -1415,6 +1445,7 @@ fn group_rule_reads_marks_as_digested() {
     (repro!("revtex_symbol_first_mark_head_over_lines"), 0, &[
       &[
         "Ann Able",
+        "mark=∗,1",
         "affiliation=Univ A, Town A",
         "affiliation=2 Univ B, Town B",
       ],
@@ -1430,11 +1461,13 @@ fn group_rule_reads_marks_as_digested() {
       &[
         &[
           "Ann Able",
+          "mark=∗,1",
           "affiliation=Univ A, Town A",
           "affiliation=2 Univ B, Town B",
         ],
         &[
           "Bob Baker",
+          "mark=†",
           "affiliation=2 Univ B, Town B",
           "affiliation=3 Univ C, Town C",
         ],
@@ -1443,11 +1476,13 @@ fn group_rule_reads_marks_as_digested() {
     (repro!("revtex_symbol_glued_mark_head_over_lines"), 0, &[
       &[
         "Ann Able",
+        "mark=†,1",
         "affiliation=Univ A, Town A",
         "affiliation=2 Univ B, Town B",
       ],
       &[
         "Bob Baker",
+        "mark=‡",
         "affiliation=2 Univ B, Town B",
         "affiliation=3 Univ C, Town C",
       ],
@@ -1461,6 +1496,7 @@ fn group_rule_reads_marks_as_digested() {
       &[
         &[
           "Ann Able",
+          "mark=1,∗",
           "affiliation=Univ A, Town A",
           "affiliation=2 Univ B, Town B",
         ],
@@ -1477,6 +1513,7 @@ fn group_rule_reads_marks_as_digested() {
       &[
         &[
           "Ann Able",
+          "mark=a,∗",
           "affiliation=Univ A, Town A",
           "affiliation=b Univ B, Town B",
         ],
@@ -1493,6 +1530,7 @@ fn group_rule_reads_marks_as_digested() {
       &[
         &[
           "Ann Able",
+          "mark=∗",
           "affiliation=1 Univ A, Town A",
           "affiliation=2 Univ B, Town B",
         ],

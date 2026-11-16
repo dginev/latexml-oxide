@@ -285,15 +285,26 @@ fn an_entrys_addresses_are_cut_where_its_line_is_made() {
   assert_eq!(json["readback"]["difference"], Value::Null, "{json}");
   assert_eq!(json["readback"]["given_back"], Value::Null, "{json}");
   creators_are(&xml, &[
-    &["Ann Able", "affiliation=Univ A", "email=ann@a.org"],
-    &["Bob Baker", "affiliation=Univ B", "email=bob@b.org"],
+    &[
+      "Ann Able",
+      "mark=†",
+      "affiliation=Univ A",
+      "email=ann@a.org",
+    ],
+    &[
+      "Bob Baker",
+      "mark=‡",
+      "affiliation=Univ B",
+      "email=bob@b.org",
+    ],
   ]);
   for (author, _, expected) in [
     (
       r"\IEEEauthorblockN{Ann Able$^\dagger$, Bob Baker$^\ddagger$ \IEEEauthorblockA{$^\dagger$Univ A\\ $^\ddagger$Univ B, bob@b.org}}",
       "written",
-      &[&["Ann Able", "affiliation=Univ A"][..], &[
+      &[&["Ann Able", "mark=†", "affiliation=Univ A"][..], &[
         "Bob Baker",
+        "mark=‡",
         "affiliation=Univ B",
         "email=bob@b.org",
       ]][..],
@@ -305,8 +316,8 @@ fn an_entrys_addresses_are_cut_where_its_line_is_made() {
       // comparing)
       "marks answered, addresses the block's",
       &[
-        &["Ann Able", "affiliation=Univ A"][..],
-        &["Bob Baker", "affiliation=Univ B"],
+        &["Ann Able", "mark=†", "affiliation=Univ A"][..],
+        &["Bob Baker", "mark=‡", "affiliation=Univ B"],
         &["email=x@a.org", "email=y@b.org"],
       ][..],
     ),

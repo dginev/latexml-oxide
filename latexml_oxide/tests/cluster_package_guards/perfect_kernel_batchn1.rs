@@ -100,7 +100,12 @@ fn a_mark_reaching_no_contact_is_counted() {
   );
   assert_eq!(creators(&xml), [
     vec!["Ann Able", "affiliation=Univ A, Town", "email=ann@a.org"],
-    vec!["Bob Baker", "affiliation=Univ A, Town", "email=bob@b.org"],
+    vec![
+      "Bob Baker",
+      "mark=2",
+      "affiliation=Univ A, Town",
+      "email=bob@b.org"
+    ],
     vec!["Cat Cole", "affiliation=Univ C, City", "email=cat@c.org"],
   ]);
 }

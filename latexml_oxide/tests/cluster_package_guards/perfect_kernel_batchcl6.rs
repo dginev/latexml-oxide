@@ -51,7 +51,7 @@ fn paragraphs(xml: &str) -> Vec<String> {
 /// a `<pubnote>` and the deposit dropped, with an "open groups" Warning.
 #[test]
 fn a_two_argument_affil_keeps_its_meaning_and_closes_its_groups() {
-  let names = vec![row(&["Ann Able"])];
+  let names = vec![row(&["Ann Able", "mark=∗"])];
   let (log, xml) = in_a_directory(repro!("cl6_pnas_affil_group.tex"), &[CLASS], &[]);
   assert_eq!((error_count(&log), warning_count(&log)), (0, 1), "{log}");
   assert!(log.contains("GROUPLEVEL=1"), "{log}");
@@ -78,7 +78,7 @@ fn a_two_argument_affil_keeps_its_meaning_and_closes_its_groups() {
 /// `\and` (CR7, OD #988: it was one creator "Ann Able ∗ and Bob Baker †"), two creators as pdflatex prints them.
 #[test]
 fn the_contributor_line_is_in_the_title_page_deposit() {
-  let names = vec![row(&["Ann Able"]), row(&["Bob Baker"])];
+  let names = vec![row(&["Ann Able", "mark=∗"]), row(&["Bob Baker", "mark=†"])];
   let (log, xml) = in_a_directory(repro!("cl6_pnas_contributor.tex"), &[CLASS], &[]);
   assert_eq!((error_count(&log), warning_count(&log)), (0, 1), "{log}");
   assert!(!log.contains("unclaimed"), "{log}");

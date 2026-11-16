@@ -37,6 +37,11 @@ pub(super) fn creator_notes(tex: &str) -> Vec<Vec<String>> {
           .nth(1)
           .and_then(|m| m.split('"').next())
           .unwrap_or("");
+        // (a mark-only note, `<note mark="a" role="footnotemark"/>`: its mark, PURE)
+        if creator[..open_end].ends_with('/') {
+          out.push(format!("mark={mark}"));
+          continue;
+        }
         let close = open_end + creator[open_end..].find("</note>").expect("closed note");
         out.push(format!(
           "note[{mark}]={}",

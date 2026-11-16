@@ -135,11 +135,17 @@ fn the_link_chain_over_an_entrys_addresses() {
     &[
       &[
         "Ann Able",
+        "mark=*",
         "affiliation=Univ X, Town",
         "email=ann.able@x.org",
       ],
       &["Bob Baker", "affiliation=Univ X, Town"],
-      &["Cat Cole", "affiliation=Univ Y, Town", "email=qz77@y.org"],
+      &[
+        "Cat Cole",
+        "mark=*",
+        "affiliation=Univ Y, Town",
+        "email=qz77@y.org",
+      ],
     ],
   );
 }

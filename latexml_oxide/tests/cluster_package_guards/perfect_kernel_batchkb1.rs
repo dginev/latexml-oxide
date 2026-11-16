@@ -22,6 +22,7 @@ fn a_glued_address_and_note_mark_parts_at_emit_2() {
   assert_eq!(creators(&xml), [
     vec![
       "Maarten Golterman",
+      "mark=1",
       "address=a Department of Physics, Washington University, St. Louis MO 63130, USA",
       "email=maarten@aapje.wustl.edu"
     ],

@@ -61,6 +61,7 @@ fn a_control_return_parts_marked_entries() {
         // (the glued star of `$^{1,2*}$` a superscript of its own since 108a r2, its math glyph as printed: `glued_marks`,
         // `keepsup_in_math`)
         "Ann Able",
+        "mark=∗",
         "affiliation=1 Univ A , X",
         "affiliation=2 Univ B , X"
       ],

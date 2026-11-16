@@ -42,8 +42,8 @@ fn note_tags(xml: &str) -> Vec<&str> {
 #[test]
 fn a_legends_mark_is_written_as_characters() {
   let expected = [
-    row(&["Ann Able", "affiliation=Univ A, City A"]),
-    row(&["Bob Baker", "affiliation=Univ B, City B"]),
+    row(&["Ann Able", "affiliation=Univ A, City A", "mark=*"]),
+    row(&["Bob Baker", "affiliation=Univ B, City B", "mark=#"]),
   ];
   let (log, xml) = run(repro!("ne3_mark_hash"));
   assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");

@@ -130,8 +130,13 @@ fn a_whole_list_entry_holds_a_position_a_name() {
 #[test]
 fn a_star_after_an_inst_mark_is_the_names_text() {
   let expected = rows(&[
-    &["Ann Able", "affiliation=Univ A", "affiliation=Univ B"],
-    &["Bob Baker", "affiliation=Univ A"],
+    &[
+      "Ann Able",
+      "mark=*",
+      "affiliation=Univ A",
+      "affiliation=Univ B",
+    ],
+    &["Bob Baker", "mark=∗", "affiliation=Univ A"],
     &["Cy Coe", "affiliation=Univ B"],
   ]);
   for (name, tex, counts) in [

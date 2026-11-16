@@ -52,7 +52,7 @@ fn a_declaration_reading_past_its_span_writes_the_block_as_perl_splits_it() {
     [
       row(&["Ann Able", "note=Univ A. Email: ann@a.at."]),
       row(&["Bob Baker", "note=Univ B. Emails: bob@b.il, cat@b.il."]),
-      row(&["Cat Cole"]),
+      row(&["Cat Cole", "mark=†"]),
       row(&["Dan Dunn", "note=Univ C."]),
       row(&["Eve Ernst", "note=Univ D."]),
     ],

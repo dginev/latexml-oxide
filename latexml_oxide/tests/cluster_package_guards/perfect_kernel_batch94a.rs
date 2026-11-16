@@ -67,7 +67,7 @@ fn names_in_a_layout_are_reparted() {
   let xml: &[&[&str]] = &[
     &["Ann Able", "affiliation=Univ X"],
     &["Bob Baker", "affiliation=Univ Y"],
-    &["Cid Cole", "affiliation=Univ X"],
+    &["Cid Cole", "affiliation=Univ X", "mark=∗"],
   ];
   let reading = assert_reading(tex, Some(xml), &[
     "C Ann Able [1] | line:names",
@@ -84,7 +84,12 @@ fn names_in_a_layout_are_reparted() {
     owned(&[
       &["Ann Able", "affiliation=Univ X"],
       &["Bob Baker", "affiliation=Univ Y"],
-      &["Cid Cole", "affiliation=Univ X", "note=∗ Equal advising."],
+      &[
+        "Cid Cole",
+        "affiliation=Univ X",
+        "mark=∗",
+        "note=∗ Equal advising."
+      ],
     ])
   );
   let tex = repro!("author_names_reparted_in_a_tabular_with_a_legend.tex");
@@ -93,7 +98,7 @@ fn names_in_a_layout_are_reparted() {
     Some(&[
       &["Ann Able", "affiliation=Univ X"],
       &["Bob Baker", "affiliation=Univ Y"],
-      &["Cid Cole", "affiliation=Univ Y"],
+      &["Cid Cole", "affiliation=Univ Y", "mark=†"],
     ]),
     &[
       "C Ann Able [1] | line:names",
@@ -114,6 +119,7 @@ fn names_in_a_layout_are_reparted() {
       &[
         "Cid Cole",
         "affiliation=Univ Y",
+        "mark=†",
         "note=† Corresponding author"
       ],
     ])
@@ -447,7 +453,9 @@ fn a_legend_note_shows_its_mark() {
   assert_eq!(reading.3, Value::from(true));
   assert_eq!(
     default_mode_creators(tex),
-    owned(&[&["Ann Able", "note=∗ Equal contribution"], &["Bob Baker"]])
+    owned(&[&["Ann Able", "mark=∗", "note=∗ Equal contribution"], &[
+      "Bob Baker"
+    ]])
   );
   let xml = default_mode_xml(tex);
   assert_eq!(personnames(&xml), [
@@ -466,6 +474,7 @@ fn a_legend_note_shows_its_mark() {
     default_mode_creators(tex),
     owned(&[&["Ann Able"], &[
       "Kitt Peak Observatory",
+      "mark=∗",
       "note=∗ Equal contribution"
     ]])
   );

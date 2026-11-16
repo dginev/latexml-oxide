@@ -210,8 +210,8 @@ fn an_elsarticle_key_answers_no_footnote_mark() {
     Some(&[
       &["Ann Able", "address=Univ A, Town A"],
       // (the footnote mark "1" — the kernel's marks printed "∗" — beside the name, FN1)
-      &["Bob Baker", "address=Univ B, Town B"],
-      &["Cy Cole", "address=Univ A, Town A"],
+      &["Bob Baker", "mark=1", "address=Univ B, Town B"],
+      &["Cy Cole", "mark=a", "address=Univ A, Town A"],
       &["address=current address"],
     ]),
     &[

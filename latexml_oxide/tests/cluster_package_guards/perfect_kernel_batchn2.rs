@@ -181,7 +181,11 @@ fn a_clean_block_counts_nothing() {
     ]),
     (
       repro!("emit_content_a_footnote_mark_on_several_names"),
-      vec![row(&["Ann Able"]), row(&["Bob Baker"]), row(&["Cat Cole"])],
+      vec![
+        row(&["Ann Able", "mark=*"]),
+        row(&["Bob Baker", "mark=*"]),
+        row(&["Cat Cole", "mark=*"]),
+      ],
     ),
     (
       repro!("emit_content_aas_altaffilmark_on_several_names"),

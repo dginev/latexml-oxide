@@ -96,7 +96,11 @@ fn llncs_sole_institute_is_every_authors() {
 #[test]
 fn llncs_sole_institute_before_the_authors() {
   assert_creators(repro!("llncs_sole_institute_before_the_authors.tex"), &[
-    &["Ann Able", "affiliation=University of Somewhere, Town"],
+    &[
+      "Ann Able",
+      "mark=*",
+      "affiliation=University of Somewhere, Town",
+    ],
     &["Bob Baker", "affiliation=University of Somewhere, Town"],
     &["email=info@x.edu"],
   ]);
@@ -160,8 +164,8 @@ fn llncs_several_or_empty_institutes_are_not_shared() {
     ]],
   );
   let xml = assert_creators(repro!("llncs_empty_institute_keeps_the_inst_marks.tex"), &[
-    &["Ann Able"],
-    &["Bob Baker"],
+    &["Ann Able", "mark=1"],
+    &["Bob Baker", "mark=2"],
   ]);
   assert!(xml.contains("<personname>Ann Able</personname>"), "{xml}");
 }

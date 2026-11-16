@@ -63,7 +63,7 @@ fn a_name_inside_a_macro_call_is_written_from_the_call() {
         "<personname>Bob Baker</personname>",
       ],
       vec![
-        vec!["Yoshiharu Kawamura", "affiliation=1 Univ A, Town"],
+        vec!["Yoshiharu Kawamura", "mark=∗", "affiliation=1 Univ A, Town"],
         vec!["Bob Baker", "affiliation=2 Univ B, City"],
       ],
     ),

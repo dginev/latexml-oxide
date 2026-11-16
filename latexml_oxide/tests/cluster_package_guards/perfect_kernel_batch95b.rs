@@ -142,8 +142,8 @@ fn a_label_spelled_with_a_command_is_read_to_it() {
       &["Ann Able", "affiliation=Univ X"],
       // (the starred legend each starred name's note since 103c, which this view of contacts does not list — the
       // notes' view below pins it; the reading's tuples still give it to both: `insert::kind_legend_contacts`, OD #961)
-      &["Bob Baker", "affiliation=Univ Y"],
-      &["Cid Cole", "affiliation=Univ X"],
+      &["Bob Baker", "affiliation=Univ Y", "mark=*"],
+      &["Cid Cole", "affiliation=Univ X", "mark=*"],
       &["Dee Dunn", "affiliation=Univ Z"],
     ],
     &[

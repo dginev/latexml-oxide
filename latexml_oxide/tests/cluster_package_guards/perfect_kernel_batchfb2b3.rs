@@ -33,11 +33,11 @@ fn a_mark_after_a_group_of_names_is_the_last_names() {
 
   let two = both(tex, 0);
   let want = [
-    vec!["Ann Able"],
-    vec!["Bob Baker"],
-    vec!["Cat López"],
-    vec!["Dan Dorn"],
-    vec!["Eve Ess"],
+    vec!["Ann Able", "mark=⋆"],
+    vec!["Bob Baker", "mark=♭"],
+    vec!["Cat López", "mark=♯"],
+    vec!["Dan Dorn", "mark=♭"],
+    vec!["Eve Ess", "mark=†⋆"],
   ];
   assert_eq!(two, want);
   // (pdflatex: "Ann Able⋆ , Bob Baker♭ , Cat Cole♯ , Dan Dorn♭ , and Eve Ess†")
@@ -48,11 +48,11 @@ fn a_mark_after_a_group_of_names_is_the_last_names() {
     0,
   );
   let want = [
-    vec!["Ann Able"],
-    vec!["Bob Baker"],
-    vec!["Cat Cole"],
-    vec!["Dan Dorn"],
-    vec!["Eve Ess"],
+    vec!["Ann Able", "mark=⋆"],
+    vec!["Bob Baker", "mark=♭"],
+    vec!["Cat Cole", "mark=♯"],
+    vec!["Dan Dorn", "mark=♭"],
+    vec!["Eve Ess", "mark=†"],
   ];
   assert_eq!(two, want);
   // (pdflatex: "Ann Able⋆ , Bob Baker♭")
@@ -61,7 +61,7 @@ fn a_mark_after_a_group_of_names_is_the_last_names() {
      Able}$^{\\star}$, Bob Baker$^{\\flat}$}}\n\\maketitle\nx\n\\end{document}\n",
     0,
   );
-  let want = [vec!["Ann Able"], vec!["Bob Baker"]];
+  let want = [vec!["Ann Able", "mark=⋆"], vec!["Bob Baker", "mark=♭"]];
   assert_eq!(two, want);
   // (a name inside a formula, its mark there: the run takes the formula whole, the `}` of the `{\rm` the name opens in
   // no names group's close — at `=2` the mark and the name written twice, 4 Maths and W=2, review revH5 finding 2;

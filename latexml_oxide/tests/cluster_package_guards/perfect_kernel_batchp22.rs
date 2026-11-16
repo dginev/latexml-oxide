@@ -112,7 +112,7 @@ fn an_institute_list_split_by_spelling_today() {
       "omnibus trailing and",
       repro!("omnibus_institute_list_trailing_and"),
       (0, 1),
-      rows(&[&["Ann Able", "affiliation=Univ A"], &["Bob Baker"]]),
+      rows(&[&["Ann Able", "affiliation=Univ A"], &["Bob Baker", "mark=2"]]),
       vec![s(a, "Univ A</contact>")],
     ),
     (

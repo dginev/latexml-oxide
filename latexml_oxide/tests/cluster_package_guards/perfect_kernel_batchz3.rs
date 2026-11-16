@@ -79,7 +79,7 @@ fn a_mark_in_its_wrapper_is_read_by_its_own_print() {
     &["Ann Able", "affiliation=Univ X"],
     &["Bob Baker", "affiliation=Univ Y"],
     &["Cat Cole", "affiliation=Univ Z"],
-    &[],
+    &["mark=∗"],
   ]);
   assert!(
     xml.contains("<note") && xml.contains("Equal Contribution"),
@@ -187,7 +187,7 @@ fn a_group_a_mark_opens_at_a_lines_start_starts_at_its_brace() {
       (0, 0),
       "{row}: {log}"
     );
-    creators_are(&xml, &[ann, bob, &["Cat Cole"]]);
+    creators_are(&xml, &[ann, bob, &["Cat Cole", "mark=3"]]);
   }
   let (xml, _) = dump(&template.replace(field, "~\\\\ {$^1$Univ X,} Moscow\\\\ {$^2$H} Lab, Rome"));
   creators_are(&xml, &[
@@ -197,7 +197,7 @@ fn a_group_a_mark_opens_at_a_lines_start_starts_at_its_brace() {
       "affiliation=1 Univ X, Moscow",
       "affiliation=2 H Lab, Rome",
     ],
-    &["Cat Cole"],
+    &["Cat Cole", "mark=3"],
   ]);
 }
 
@@ -307,8 +307,9 @@ fn affiliation_cut_group_siblings_stay_uncut_red() {
 fn a_symbols_group_is_a_marks_own() {
   let tex = repro!("address_symbol_mark_in_its_own_group");
   let (xml, _) = dump(tex);
-  creators_are(&xml, &[&["Ann Able", "address=* Univ X"], &[
+  creators_are(&xml, &[&["Ann Able", "mark=*", "address=* Univ X"], &[
     "Bob Baker",
+    "mark=**",
     "address=** Univ Y",
   ]]);
 }

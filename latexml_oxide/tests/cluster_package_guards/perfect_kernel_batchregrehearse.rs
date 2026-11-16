@@ -54,7 +54,10 @@ fn title_code_command_assigning_is_no_declaration() {
     assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
     assert_eq!(
       creators(&xml),
-      [vec!["Ann Able".to_string()], vec!["Bob Baker".to_string()]],
+      [vec!["Ann Able".to_string(), "mark=1".to_string()], vec![
+        "Bob Baker".to_string(),
+        "mark=2".to_string()
+      ]],
       "{xml}"
     );
     assert_eq!(
@@ -86,7 +89,10 @@ fn title_code_command_in_a_papers_macro_keeps_its_other_definitions() {
   );
   assert_eq!(
     creators(&xml),
-    [vec!["Ann Able".to_string()], vec!["Bob Baker".to_string()]],
+    [vec!["Ann Able".to_string(), "mark=1".to_string()], vec![
+      "Bob Baker".to_string(),
+      "mark=2".to_string()
+    ]],
     "{xml}"
   );
   assert_eq!(

@@ -70,8 +70,8 @@ fn batchdel3_sv_support_institute_in_a_piece_numbers_its_list() {
 #[test]
 fn batchdel3_sv_support_marked_institute_lines_go_by_the_names_marks() {
   let xml = creators_are(repro!("list_setter_in_block_sv_marked"), &[
-    &["Ann Able", "affiliation=Univ X, Town"],
-    &["Bob Baker", "affiliation=Lab Y, City"],
+    &["Ann Able", "mark=1", "affiliation=Univ X, Town"],
+    &["Bob Baker", "mark=2", "affiliation=Lab Y, City"],
   ]);
   names_alone(&xml, &["Ann Able", "Bob Baker"]);
 }

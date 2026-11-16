@@ -206,16 +206,26 @@ fn aastex_unlabelled_lines_under_marked_names() {
   ]);
   let xml = both_ways(repro!("aastex_symbol_marked_names_share_affil_lines"));
   assert_eq!(creators(&xml), [
-    vec!["Ann Able", "affiliation=Uni One", "affiliation=Uni Two"],
+    vec![
+      "Ann Able",
+      "mark=*",
+      "affiliation=Uni One",
+      "affiliation=Uni Two"
+    ],
     vec!["Bob Baker", "affiliation=Uni One", "affiliation=Uni Two"],
   ]);
   let xml = both_ways(repro!(
     "aastex_sup_names_over_unlabelled_lines_are_no_group"
   ));
   assert_eq!(creators(&xml), [
-    vec!["Ann Able", "affiliation=Uni One"],
-    vec!["Bob Baker", "affiliation=Uni One"],
-    vec!["Cat Cole", "affiliation=Uni One", "affiliation=Uni Two"],
+    vec!["Ann Able", "mark=1", "affiliation=Uni One"],
+    vec!["Bob Baker", "mark=1", "affiliation=Uni One"],
+    vec![
+      "Cat Cole",
+      "mark=1,2",
+      "affiliation=Uni One",
+      "affiliation=Uni Two"
+    ],
   ]);
 }
 

@@ -510,8 +510,8 @@ fn an_optional_caption_names_the_line() {
       "email=ann@a.edu",
     ],
     &["Bob Baker", "address=Univ B, City"],
-    &["Cy Cole", "address=Lab D, Place", "mark=b"],
-    &["Dan Doe", "address=Lab E, Place", "mark=a"],
+    &["Cy Cole", "mark=b", "address=Lab D, Place"],
+    &["Dan Doe", "mark=a", "address=Lab E, Place"],
   ];
   assert_eq!(default_mode_creators(tex), owned(xml));
   for streaming in [false, true] {

@@ -58,8 +58,9 @@ fn the_fail_safe_fires_only_for_labelled_lines() {
   ]);
   let xml = both_ways(repro!("revtex_marks_inside_one_line_are_the_groups_entry"));
   let line = "affiliation=Joint Institute, 1 Univ A and 2 Univ B, City";
-  assert_eq!(creators(&xml), [vec!["Ann Able", line], vec![
+  assert_eq!(creators(&xml), [vec!["Ann Able", "mark=1", line], vec![
     "Bob Baker",
+    "mark=2",
     line
   ]]);
 }

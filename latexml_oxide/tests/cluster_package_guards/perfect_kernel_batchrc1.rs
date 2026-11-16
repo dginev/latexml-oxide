@@ -89,7 +89,7 @@ fn an_unread_calls_words_are_counted() {
     "{log}"
   );
   assert_eq!(creators(&xml), [
-    row(&["Ann Able"]),
+    row(&["Ann Able", "mark=*"]),
     row(&["Bob Baker", "affiliation=† Univ Beta"]),
   ]);
 }
@@ -168,7 +168,7 @@ fn an_unread_calls_accented_words_count_whole() {
     "{log}"
   );
   assert_eq!(creators(&xml), [
-    row(&["Ann Able"]),
+    row(&["Ann Able", "mark=*"]),
     row(&["Bob Baker", "affiliation=† Univ Beta"]),
   ]);
 }
