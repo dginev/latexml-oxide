@@ -260,7 +260,7 @@ AUDITED = {
         "`bundled` sqlite it is not even consulted at build time. Flagged only for "
         "its test fixtures. No code enters the shipped binary; no notice owed."
     ),
-    "libsqlite3-sys": (("0.38.1", "0.38.2", "0.39.1"),
+    "libsqlite3-sys": (("0.38.1", "0.38.2", "0.39.1", "0.40.0"),
         "Bundles the SQLite amalgamation (sqlite3.c) behind rusqlite's `bundled` "
         "feature, compiled in for the ObjectDB --dbfile store. SQLite is PUBLIC "
         "DOMAIN by explicit dedication (the 'blessing' header in sqlite3.c) -- no "
@@ -274,7 +274,11 @@ AUDITED = {
         "header, the same sqlite3/ file set; license MIT unchanged; build.rs gains a "
         "cfg_select! source-dir choice for the `bundled-sqlcipher` feature (not "
         "enabled here) and rustfmt reflows -- the shipped closure is still SQLite "
-        "alone, public domain, no notice owed."
+        "alone, public domain, no notice owed. 0.39.1 -> 0.40.0 diffed 2026-11-16 "
+        "(rusqlite 0.42.0, dependabot #890): sqlite3/sqlite3.c byte-identical (SQLite "
+        "3.54.1), the same native file set, build.rs identical, license MIT; only "
+        "metadata and the optional sqlcipher pieces (bindgen file, sqlcipher-src pin, "
+        "not enabled here) changed -- no native-code or link change."
     ),
     "psm": (("0.1.31", "0.1.32"),
         "Compiles its own portable stack-manipulation asm shims, and ships a prebuilt "
