@@ -4470,7 +4470,8 @@ fn answered_labels(document: &mut Document) -> HashSet<String> {
 /// An author's affiliation mark that no entry answers stays in the name, as LaTeX prints it (`Ann Able$^*$ and Bob
 /// Bee$^1$` with no `$^1$` line; `Gus Gray\IEEEauthorrefmark{1}` whose legend is a `\thanks`, 2408.02464): read as
 /// a request, it was taken out of the name to link an affiliation that is not there. A mark the name already shows
-/// is not repeated. (Perl drops it too; repro sectioning-frontmatter/author_unmatched_numeric_mark.)
+/// is not repeated. (Perl drops it too; repro sectioning-frontmatter/author_unmatched_numeric_mark.) The last step,
+/// `keep_personnames_pure`, sets it after the name as a mark-only note (PURE).
 ///
 /// Returns the marks it could not show ([`unanswered_mark_text`]: a composite label), for [`count_lost_marks`].
 fn show_unanswered_marks(
