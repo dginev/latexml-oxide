@@ -533,9 +533,12 @@ fn release_prune_lock(root: &Path, _f: fs::File) {
 /// prune at a time (advisory lock). Without a cap (`0`) it returns at
 /// once, so stale tmp files stay too.
 fn prune_if_over_cap(root: &Path) {
-  if let Some(stale_before) = std::time::SystemTime::now().checked_sub(STALE_TMP_AGE) {
-    prune_if_over_cap_at(root, stale_before);
-  }
+  // A clock under an hour past the epoch has no stale tmp; the size cap still applies.
+  let now = std::time::SystemTime::now();
+  let stale_before = now
+    .checked_sub(STALE_TMP_AGE)
+    .unwrap_or(std::time::UNIX_EPOCH);
+  prune_if_over_cap_at(root, stale_before);
 }
 
 /// When a file's inode last changed: a tmp hard-linked from an old output keeps the output's mtime,
