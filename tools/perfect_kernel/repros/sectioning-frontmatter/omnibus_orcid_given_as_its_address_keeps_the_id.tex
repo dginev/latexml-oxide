@@ -6,11 +6,14 @@
 %   (`orcid.org/…`) was rewritten into unstamped tokens, the contact spanned the bare `\orcid`, and the name's piece
 %   took `\orcid` cut from its argument — `Error:undefined:\@undefined` in the name and an empty iD
 % witness: 2606.13132 (IOS-Book-Article.cls, `\orcid{orcid.org/…}`); here a stand-in of the class's `\author`, in place
-% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "Yu KIM", "Ann LEE" (the class prints the iDs only in its
-%   abstract's ORCiD line)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "Yu KIM", "Ann LEE", "Cy NG" (the class prints the iDs only in
+%   its abstract's ORCiD line)
 % engines: CUT999 (999af99497d): 2 Errors (`undefined:\@undefined` in Yu Kim's name, `undefined:\orcid` in Ann LEE's),
 %   one ORCID left, `href="https://orcid.org/"`; int171a: 0 Errors, both iDs kept
-% expect:  0 Errors, 0 Warnings; "Yu Kim" with the ORCID 0, "Ann Lee" with 0000-0001-2345-6789
+%   (round 2, review revREGREHEARSE p2/d.tex) an `http://` address: CUT999 1 Error; round 1 the Warning "1 words … missing
+%   …: http" (`placed::without_scheme`)
+% expect:  0 Errors, 0 Warnings; "Yu Kim" with the ORCID 0, "Ann Lee" with 0000-0001-2345-6789, "Cy Ng" with
+%   0000-0002-1825-0097
 % status:  RED (999af99497d) -> GREEN (REGREHEARSE)
 % preload: ar5iv.sty
 \begin{filecontents*}[overwrite]{iosauthor.cls}
@@ -28,5 +31,6 @@
 \begin{document}
 \author[A]{\fnms{Yu}~\snm{Kim}\orcid{orcid.org/0}}
 \author[B]{\fnms{Ann}~\snm{Lee}\orcid{https://orcid.org/0000-0001-2345-6789}}
+\author[C]{\fnms{Cy}~\snm{Ng}\orcid{http://orcid.org/0000-0002-1825-0097}}
 Text.
 \end{document}
