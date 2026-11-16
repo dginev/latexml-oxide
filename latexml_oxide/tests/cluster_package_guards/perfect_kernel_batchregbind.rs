@@ -63,14 +63,15 @@ const BINDING_ROWS: &[Row] = &[
 /// is printed where the class prints it, each footnote text a note on the document (`\lx@frontmatter@footnotes`), the
 /// rest typeset after the frontmatter. One row per binding's print site, and per real paper's shape where it differs.
 const PRINTED_LIST_ROWS: &[Row] = &[
-  // acmart.cls:1726, :2245-2247: a document's own `\authornote` (2605.28175, its footnote in a group).
+  // acmart.cls:1726, :2245-2247: a document's own `\authornote` (2605.28175, its footnote in a group); the count of
+  // footnotes back to 0 after them (:2330), the body's first footnote 1.
   Row {
     name:     "acmart",
     tex:      repro!("class-bindings/acmart_note_lists_are_the_class_macros.tex"),
     creators: &[&["Ann Able", "affiliation=Univ A , C"]],
     elements: &[
       r#"<pubnote role="note">Corresponding author.</pubnote>"#,
-      r#"<p xml:id="p1.1">Text.</p>"#,
+      r#"<p xml:id="p1.1">Text.<note mark="1" role="footnote" xml:id="footnote1">"#,
     ],
   },
   // acmart: `\g@addto@macro\@authornotes` with `\footnotetext[2]` (2605.16813) and two `\footnotetext`s (2606.04448).

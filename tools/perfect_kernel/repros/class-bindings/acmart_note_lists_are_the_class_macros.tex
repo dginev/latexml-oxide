@@ -1,9 +1,10 @@
 % witness: 2605.28175 (sample-sigconf.tex:106-118, its own `\authornote`/`\@authornotemark`): acmart.cls:1707, :1716,
 %          :1726 define the note lists, :2894 `\@setaddresses`; `\maketitle` prints them (:2245-2247)
-% oracle:  pdflatex 0 errors; "Ann Able*", footnote "* Corresponding author."
+% oracle:  pdflatex 0 errors; "Ann Able*", footnote "* Corresponding author."; the body's footnote "1 A note."
+%          (acmart.cls:2330 sets the count back to 0 after the title page's notes)
 % engines: rust=4 (999af99497d: undefined \@titlenotes, \@subtitlenotes, \@authornotes, \@currentauthors at the end) perl=0 (Warning: \@authornotes not expandable; the note lost) (2026-11-16)
 % expect:  0 errors, 0 warnings; Ann Able's creator with her affiliation; the note "Corresponding author." on the
-%          document
+%          document; the body's footnote marked 1
 % status:  GREEN
 % preload: ar5iv.sty
 \documentclass[sigconf]{acmart}
@@ -18,5 +19,5 @@
 \author{Ann Able}\authornote{Corresponding author.}
 \affiliation{\institution{Univ A}\country{C}}
 \maketitle
-Text.
+Text.\footnote{A note.}
 \end{document}
