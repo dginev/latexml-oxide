@@ -263,9 +263,10 @@ fn a_revtex_name_footnote_takes_its_number_unmarked() {
     tex:      repro!(
       "sectioning-frontmatter/revtex_name_footnotemark_leaves_the_marks_unknown.tex"
     ),
-    // (Ann's `\footnotemark` Perl's leftover note, marked by our counter `*` where pdflatex prints `a`: unchanged here)
+    // (Ann's `\footnotemark` Perl's leftover note, which pdflatex marks `a`: unmarked, its glyph unknown (MARKSAFE,
+    // `perfect_kernel_batchshmark::a_names_mark_revtex_sets_apart_is_unknown`))
     creators: &[
-      &["Ann Able", "mark=*", "affiliation=Univ A"],
+      &["Ann Able", "affiliation=Univ A"],
       &[
         "Bob Baker",
         "thanks=Equal contribution.",

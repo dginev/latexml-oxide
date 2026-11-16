@@ -534,6 +534,8 @@ pub fn digest_front_matter() -> Result<()> {
   // every path out, an `Err` one too)
   let recorder = FlushMeanings::begin();
   bgroup();
+  // (the `\thefootnote` in force, which a title field's marks are told against: `enter_title_footnotes`)
+  crate::latex_constructs::begin_title_footnotes();
   // INTENTIONAL DIVERGENCE from Perl PR #2767 (KNOWN_PERL_ERRORS #30,
   // OXIDIZED_DESIGN): clear the queue BEFORE digesting. Perl digests
   // from the live queue and wipes it after the loop — but when a queued

@@ -587,22 +587,125 @@ pub fn declare_fnsymbol_title_block(class: &str, titlepage_default: Option<bool>
 /// (`ledger::class_maketitle_runs`, `MaketitleRuns::WithoutTitlepage`, TP1c).
 pub fn class_titlepage_key(class: &str) -> String { s!("lx_class_titlepage:{class}") }
 
-/// Before a note is made in the title block (a field the frontmatter digests: the title, an author, the date) of a
-/// class whose title marks its notes in a `\thefootnote` of its own ([`TITLE_THEFOOTNOTE`],
-/// `declare_fnsymbol_title_block`): `\thefootnote` is that one for the rest of the field, as in the class's
-/// `\maketitle` group.
-pub(crate) fn enter_title_footnotes() -> Result<()> {
+/// The `\thefootnote` a frontmatter flush's next title field is told against (`place::digest_front_matter`):
+/// the one in force as the flush began ([`begin_title_footnotes`]), then the one a name's field last kept
+/// ([`title_field_footnotes`]).
+const FLUSH_THEFOOTNOTE: &str = "\\lx@flush@thefootnote";
+
+/// A frontmatter flush begins: the `\thefootnote` in force kept ([`FLUSH_THEFOOTNOTE`]).
+pub(crate) fn begin_title_footnotes() {
+  let_i(
+    &T_CS!(FLUSH_THEFOOTNOTE),
+    &T_CS!("\\thefootnote"),
+    Some(Scope::Global),
+  );
+}
+
+/// Before the group of a field of the title block (`tag`: the title, an author, the date, a contact), at the flush's
+/// level: does the field take the class's `\thefootnote` ([`enter_title_footnotes`])? Under a class declaring its title's
+/// marks ([`TITLE_THEFOOTNOTE`], `declare_fnsymbol_title_block`) whose `\maketitle` is in force
+/// ([`title_marks_declared`]), yes, as the class's `\maketitle` group sets it before `\@author` expands
+/// (article.cls:203-205) — unless an author block's declaration the flush ran before its names
+/// (`emit::declarations`) redefined it: as in TeX, that holds in the name it is written with, its cell of the
+/// `\@author` tabular (1807.02791's `\renewcommand{\thefootnote}{\arabic{footnote}}` in `\author`, its
+/// `\footnotemark[1]` "1"), so the next name's field keeps it and the names after take the class's again ("Ann Able1
+/// Bob Baker†"). A redefinition inside a field holds there, after the field's own setting.
+pub(crate) fn title_field_footnotes(tag: &str) -> bool {
+  if !matches!(
+    tag,
+    "ltx:creator" | "ltx:title" | "ltx:date" | "ltx:contact"
+  ) || !title_marks_declared()
+  {
+    return false;
+  }
+  if tag == "ltx:creator" && flush_redefined_thefootnote() {
+    // (global: the entry's call may digest in a group of its own)
+    let_i(
+      &T_CS!(FLUSH_THEFOOTNOTE),
+      &T_CS!("\\thefootnote"),
+      Some(Scope::Global),
+    );
+    return false;
+  }
+  true
+}
+
+/// As a field of the title block begins, in its group, where it takes the class's marks ([`title_field_footnotes`]):
+/// `\thefootnote` is the class's ([`TITLE_THEFOOTNOTE`]) for the field.
+pub(crate) fn enter_title_footnotes() {
   // (the title block's contacts too — an affiliation, an address: the class prints them inside its title, under the same
   // marks; revtex's `\affiliation{\footnotemark[2]Lab … \footnotetext[2]{\tt volkov@…}}` answers the `\author{Mikhail S.
   // Volkov\footnotemark[2]}` above it with the same †, hep-th0302032)
-  if matches!(
+  let_i(&T_CS!("\\thefootnote"), &T_CS!(TITLE_THEFOOTNOTE), None);
+}
+
+/// Has `\thefootnote` been redefined, by meaning, since the flush began or a name's field last kept it
+/// ([`FLUSH_THEFOOTNOTE`])?
+fn flush_redefined_thefootnote() -> bool {
+  let definition = |cs: &str| lookup_definition(&T_CS!(cs)).ok().flatten();
+  match (definition(FLUSH_THEFOOTNOTE), definition("\\thefootnote")) {
+    (Some(before), Some(now)) => !Rc::ptr_eq(&before, &now),
+    _ => false,
+  }
+}
+
+/// Is the frontmatter digesting a field of the title block ([`enter_title_footnotes`])?
+fn in_title_field() -> bool {
+  matches!(
     lookup_string("lx_frontmatter_item").as_str(),
     "ltx:creator" | "ltx:title" | "ltx:date" | "ltx:contact"
-  ) && has_meaning(&T_CS!(TITLE_THEFOOTNOTE))
-  {
-    let_i(&T_CS!("\\thefootnote"), &T_CS!(TITLE_THEFOOTNOTE), None);
+  )
+}
+
+/// Does the title block print the marks its class declares ([`TITLE_THEFOOTNOTE`])? Only where the class's own
+/// `\maketitle` is the one in force ([`class_maketitle_in_force`]): a wrong glyph is worse than none (DG 2026-11-16;
+/// OXIDIZED_DESIGN_DIVERGENCES #1053).
+pub fn title_marks_declared() -> bool { title_marks_hook() && class_maketitle_in_force() }
+
+/// Does a binding declare its title's marks ([`TITLE_THEFOOTNOTE`] defined)?
+fn title_marks_hook() -> bool { has_meaning(&T_CS!(TITLE_THEFOOTNOTE)) }
+
+/// Is the `\maketitle` that runs the class's own? Yes unless a raw file or the document took it over (the lock's
+/// record, `\maketitle:redefined`, state.rs), except a redefinition that calls the class's by meaning (`\let\oldmt
+/// \maketitle \renewcommand\maketitle{\oldmt…}`), whose page and marks are the class's. A document's own
+/// `\maketitle` prints whatever marks it sets (`\let\@makefnmark\relax`: none), unknown here.
+pub fn class_maketitle_in_force() -> bool {
+  if !lookup_bool("\\maketitle:redefined") {
+    return true;
   }
-  Ok(())
+  let definition = |cs: &Token| lookup_definition(cs).ok().flatten();
+  let (Some(class), Some(dropped)) = (
+    definition(&T_CS!("\\maketitle")),
+    definition(&T_CS!("\\lx@dropped@maketitle")),
+  ) else {
+    return false;
+  };
+  matches!(
+    dropped.get_expansion(),
+    Some(ExpansionBody::Tokens(body))
+      if body.unlist_ref().iter().any(|t| definition(t).is_some_and(|d| Rc::ptr_eq(&d, &class)))
+  )
+}
+
+/// Is the mark a note made here prints unknown? In a field of the title block of a class declaring its marks
+/// ([`TITLE_THEFOOTNOTE`]) when its `\maketitle` is not in force ([`class_maketitle_in_force`]), or in a name under a
+/// class that sets a name's notes apart (`lx_title_footnote_own_marks`: REVTeX 4.1/4.2's minipage letters, "Ann Ablea",
+/// revtex4-2.cls:2555-2557): such a note keeps no mark ([`drop_unknown_title_mark`]).
+fn title_mark_unknown() -> bool {
+  in_title_field()
+    && title_marks_hook()
+    && (!class_maketitle_in_force()
+      || (lookup_string("lx_frontmatter_item") == "ltx:creator"
+        && lookup_bool("lx_title_footnote_own_marks")))
+}
+
+/// A note made where its printed mark is unknown ([`title_mark_unknown`]) keeps none: no `mark`, no tags; it pairs with
+/// its text by the counter value (`_fnvalue`, [`relocate_footnote`]).
+pub(crate) fn drop_unknown_title_mark(props: &mut SymHashMap<Stored>) {
+  if title_mark_unknown() {
+    props.remove("mark");
+    props.remove("tags");
+  }
 }
 
 /// A footnote's mark given as `[<n>]`: latex.ltx:17652-17657 `\@xfootnote`, :17678-17682 `\@xfootnotemark` and

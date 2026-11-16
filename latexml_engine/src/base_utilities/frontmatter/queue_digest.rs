@@ -15,10 +15,15 @@ pub(in crate::base_utilities) fn digest_frontmatter_item(
   tag: &str,
   item: Tokens,
 ) -> Result<Digested> {
+  // (the title block's `\thefootnote`, as the class's `\maketitle` sets it before the field: 1807.02791)
+  let class_marks = crate::latex_constructs::title_field_footnotes(tag);
   bgroup();
   // the field being made, for the commands a class's own setter of it defines for its argument
   // (frontmatter_stores.rs `refused_environment_definition`: vmsta.cls's `\author` and its `\fnm`)
   assign_value("lx_frontmatter_item", tag.to_string(), Some(Scope::Local));
+  if class_marks {
+    crate::latex_constructs::enter_title_footnotes();
+  }
   // the counter step in scope as the item starts, which a `\label` naming a step of its own does not name
   // (`\lx@set@frontmatter@label`)
   assign_value(

@@ -12,7 +12,11 @@ LoadDefinitions!({
   def_macro_noop("\\maketitlehookb")?;
   def_macro_noop("\\maketitlehookc")?;
   def_macro_noop("\\maketitlehookd")?;
-  def_macro_noop("\\thanksmarkseries{}")?;
+  // titling.sty:60-62: the series of the title's marks, `\@nameuse{#1}{footnote}`, which its `\maketitle` sets as
+  // `\thefootnote` (:121, :145): the class's declared title marks (`latex_constructs::TITLE_THEFOOTNOTE`), where it
+  // declares them (`\thanksmarkseries{arabic}`: "Ann Able1", the note "1", not article's "∗").
+  RawTeX!(r"\def\thanksmarkseries#1{\@ifundefined{lx@title@thefootnote}{}{\def\lx@title@thefootnote{\@nameuse{#1}{footnote}}}}");
+  // (`\symbolthanksmark`, :62, passes `\fnsymbol`, which `\@nameuse` cannot name: pdflatex errs, the marks unchanged here)
   def_macro_noop("\\symbolthanksmark")?;
   def_macro_noop("\\@bscontmark")?;
   def_macro_noop("\\continuousmarks")?;

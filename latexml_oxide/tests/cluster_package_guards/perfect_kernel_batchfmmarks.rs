@@ -1413,7 +1413,7 @@ const LINK: &[Row] = &[
       r#"Bob Baker ; footnotemark[†]= ; thanks[*]=Ann Able and Bob Baker contributed equally. | email=bob@a.edu ; affiliation=Univ A , Town , Land"#,
       r#"Cat Cole | email=cat@a.edu ; affiliation=Univ A , Town , Land"#,
     ],
-    moves:      r#"MARKSAFE (NEITHER in phase 1: acmart's mark-only note holds the glyph as its text)"#,
+    moves:      r#""#,
     page:       &[
       r#"Ann Able ; *→note"#,
       r#"Bob Baker ; *→note ; † plain"#,
@@ -2086,9 +2086,9 @@ const SPACING: &[Row] = &[
     tex:        repro!("fmmarks_single_name_marks_after_newline_thin_spaces_red"),
     warnings:   0,
     creators:   &[r#"Ann Able ; footnotemark[1]= ; footnotemark[2]="#],
-    moves:      r#"MARKSAFE (NEITHER in phase 1: `\thefootnote` set arabic inside `\author`; the marks written * and †, not the printed 1 and 2)"#,
+    moves:      r#""#,
     page:       &[r#"Ann Able ; 1 plain ; 2 plain"#],
-    page_moves: r#"the XML layer's: MARKSAFE (NEITHER in phase 1: `\thefootnote` set arabic inside `\author`; the marks written * and †, not the printed 1 and 2)"#,
+    page_moves: r#""#,
   },
 ];
 /// Marks after spacing (ruling 4 and the nearer-name rule): a mark spacing parts from the names is the nearer name's by
@@ -2317,17 +2317,17 @@ const REVTEX: &[Row] = &[
     tex:        repro!("fmmarks_revtex_footnotemark_answered_by_altaffiliation"),
     warnings:   0,
     creators:   &[
-      r#"Ann Able ; footnotemark[*]= | altaffiliation=These authors contribute equally to this work. ; affiliation=Univ A, Town"#,
-      r#"Bob Baker ; footnotemark[*]= | altaffiliation=These authors contribute equally to this work. ; affiliation=Univ B, City"#,
+      r#"Ann Able ; footnotemark[a]= | altaffiliation=These authors contribute equally to this work. ; affiliation=Univ A, Town"#,
+      r#"Bob Baker ; footnotemark[a]= | altaffiliation=These authors contribute equally to this work. ; affiliation=Univ B, City"#,
       r#"Cat Cole | email=cat@a.edu ; affiliation=Univ A, Town"#,
     ],
-    moves:      r#""#,
+    moves:      r#"row R REVLETTERS (REVTeX 4.1/4.2 print a name's mark in their minipage letters, "a", unknown here: MARKSAFE writes none)"#,
     page:       &[
-      r#"Ann Able ; * plain"#,
-      r#"Bob Baker ; * plain"#,
+      r#"Ann Able ; a plain"#,
+      r#"Bob Baker ; a plain"#,
       r#"Cat Cole"#,
     ],
-    page_moves: r#""#,
+    page_moves: r#"the XML layer's: row R REVLETTERS"#,
   },
   Row {
     repro:      "revtex_affiliation_thanks_before_a_shared_note_red",

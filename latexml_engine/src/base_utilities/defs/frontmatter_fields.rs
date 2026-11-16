@@ -1001,9 +1001,10 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
 
 /// `\lx@title@thanks` and `\lx@title@footnote` (`footnote`): the note's call, marked where its title marks it.
 fn title_note(footnote: bool, attr: Option<Tokens>, body: Tokens) -> Result<()> {
-  // (the counter's mark after the step, never a given number's: `\footnote[2]` is not marked so here)
+  // (the counter's mark after the step, never a given number's: `\footnote[2]` is not marked so here; `\thefootnote`, the
+  // class's as the field began, `latex_constructs::enter_title_footnotes`, or the field's own: 1807.02791)
   let mark = if title_note_steps() && title_notes_print_marks(footnote, false) {
-    let mark = digest(Tokens!(T_CS!(crate::latex_constructs::TITLE_THEFOOTNOTE)))?.to_string();
+    let mark = digest(Tokens!(T_CS!("\\thefootnote")))?.to_string();
     Some(mark.trim().to_string()).filter(|mark| !mark.is_empty())
   } else {
     None
@@ -1052,17 +1053,16 @@ fn title_note_steps() -> bool {
 /// no number (`given`), at a counter other commands step that the reading does not count
 /// (`lx_title_footnote_given_marks_only`: REVTeX 4.0's `\thanks`, `\email`, `\altaffiliation`). OD #1053. Under a
 /// binding that numbers its front-matter footnotes ([`FOOTNOTE_MARKS`], REVTeX's `\@AF@join`), only a number given in
-/// the source: the rest are that binding's pass's (`number_footnote_parts`, OD #1054), a name's `\thanks` unmarked.
+/// the source: the rest are that binding's pass's (`number_footnote_parts`, OD #1054), a name's `\thanks` unmarked. Only
+/// under the class's own `\maketitle` ([`title_marks_declared`](crate::latex_constructs::title_marks_declared)): a
+/// document's or a package's prints marks unknown here, none written (`maketitle_redefined_prints_no_marks`).
 pub(in crate::base_utilities) fn title_notes_print_marks(footnote: bool, given: bool) -> bool {
   lookup_bool("lx_frontmatter_explicit")
     && (given || lookup_string(FOOTNOTE_MARKS).is_empty())
     && !(footnote
       && (lookup_bool("lx_title_footnote_own_marks")
         || (!given && lookup_bool("lx_title_footnote_given_marks_only"))))
-    && lookup_definition(&T_CS!(crate::latex_constructs::TITLE_THEFOOTNOTE))
-      .ok()
-      .flatten()
-      .is_some()
+    && crate::latex_constructs::title_marks_declared()
 }
 
 /// `\lx@title@thanks[attr]{content}`, or `\lx@title@footnote` (`footnote`): a creator's note after its step.

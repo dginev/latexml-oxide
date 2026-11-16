@@ -831,6 +831,13 @@ fn link_marked_notes(document: &mut Document) -> Result<()> {
     let Some(key) = mark_alone(&mark_note) else {
       continue;
     };
+    // (its glyph is its `mark` alone: a copy in its text would show twice, 2607.15705's `\authornotemark[2]` that no note
+    // answers; its tags stay, as Perl's leftover `\footnotemark`'s)
+    for child in mark_note.get_child_nodes() {
+      if child.get_name() != "tags" {
+        document.remove_node(child);
+      }
+    }
     let creator = mark_note.get_parent();
     let same = |note: &&Node| {
       note
