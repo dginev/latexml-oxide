@@ -119,8 +119,8 @@ fn an_address_placed_more_often_than_printed_is_counted() {
     "{log}"
   );
   assert_eq!(creators(&xml), [
-    row(&["Ann Able"]),
-    row(&["Bob Baker", "email=bob@b.org"]),
+    row(&["Ann Able", "mark=*"]),
+    row(&["Bob Baker", "email=bob@b.org", "mark=†"]),
   ]);
   assert!(
     xml.contains("Univ A, Town (<text font=\"typewriter\" xml:id=\"id1.1\">ann@a.org</text>"),

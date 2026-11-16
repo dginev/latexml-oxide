@@ -74,7 +74,7 @@ fn the_check_print_ends_words_at_a_kernel_and() {
     vec!["Alice A", "affiliation=Inst X"],
     vec!["Bob B", "affiliation=Inst Y"],
     vec!["Carol C", "affiliation=Inst Z"],
-    vec!["Dan D"],
+    vec!["Dan D", "mark=*"],
     vec!["Eve E", "affiliation=Inst V"],
   ]);
   assert_eq!(xml.matches(">Inst W</note>").count(), 1, "{xml}");

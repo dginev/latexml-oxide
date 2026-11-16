@@ -230,6 +230,7 @@ fn a_remark_after_a_note_keeps_its_own_span() {
   assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
   let want = [vec![
     "Ann Able",
+    "mark=*",
     "collaboration=(for the Atlas Collaboration)",
   ]];
   assert_eq!(creators(&xml), want);

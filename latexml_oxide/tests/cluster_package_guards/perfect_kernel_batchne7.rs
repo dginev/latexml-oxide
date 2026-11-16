@@ -81,7 +81,8 @@ fn tikz_badges_in_frontmatter_contacts_keep_svg_ids() {
   assert_eq!(
     creators(&xml),
     [vec!["Ann Able".to_string(), "url=GH".to_string()], vec![
-      "Bob Baker".to_string()
+      "Bob Baker".to_string(),
+      "mark=*".to_string()
     ]],
     "{context}"
   );

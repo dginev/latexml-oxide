@@ -31,7 +31,10 @@ fn held_once(tex: &str, note: &str, address: &str, warnings: usize, whole: &[&st
     (0, warnings),
     "{log}"
   );
-  let want = vec![vec!["Ann Smith".to_string()], vec!["Bob Jones".to_string()]];
+  // (Ann Smith's `\thanks`, its title mark ∗ printed: OD #1053, listed by the row helper)
+  let want = vec![vec!["Ann Smith".to_string(), "mark=*".to_string()], vec![
+    "Bob Jones".to_string(),
+  ]];
   assert_eq!(creators(&xml), want);
   assert_eq!(creators_xml(&xml), whole, "{tex}");
   let written = creators_xml(&xml).concat();

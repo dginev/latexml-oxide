@@ -62,9 +62,10 @@ fn check(case: &Case) {
 fn a_list_led_by_the_names_mark_is_their_marked_note() {
   check(&Case {
     tex:      repro!("sectioning-frontmatter/list_note_led_by_the_names_mark_is_their_note.tex"),
-    creators: &[&["Ann Able", "affiliation=Univ A"], &[
+    creators: &[&["Ann Able", "affiliation=Univ A", "mark=‡"], &[
       "Bob Baker",
       "affiliation=Univ A",
+      "mark=‡",
     ]],
     elements: &[
       concat!(
@@ -112,8 +113,8 @@ fn an_fntext_two_names_share_is_their_marked_note() {
       "sectioning-frontmatter/elsarticle_fntext_shared_by_two_names_is_their_marked_note.tex"
     ),
     creators: &[
-      &["Ann Able", "address=Univ A"],
-      &["Bob Baker", "address=Univ A"],
+      &["Ann Able", "mark=∗", "mark=1", "address=Univ A"],
+      &["Bob Baker", "mark=∗", "mark=1", "address=Univ A"],
       &["Cat Cole", "note=Visiting Univ B.", "address=Univ A"],
     ],
     elements: &[
@@ -137,6 +138,7 @@ fn a_correspondence_items_label_gives_its_names_the_note() {
     creators: &[&["Ann Able", "affiliation=Univ A"], &[
       "Bob Baker",
       "affiliation=Univ A",
+      "mark=∗",
     ]],
     elements: &[
       r#"<note class="ltx_note_frontmatter ltx_thanks_correspondence" mark="∗" role="thanks" xml:id="id1">Corresponding author: Univ A, Town.</note>"#,
@@ -153,15 +155,16 @@ fn a_list_with_two_marks_is_the_blocks_note() {
   check(&Case {
     tex:      repro!("sectioning-frontmatter/list_note_with_two_marks_is_the_blocks_note.tex"),
     creators: &[
-      &["Ann Able †", "affiliation=Univ A"],
-      &["Bob Baker ∗", "affiliation=Univ A"],
+      &["Ann Able", "mark=†", "affiliation=Univ A"],
+      &["Bob Baker", "mark=∗", "affiliation=Univ A"],
       &[],
     ],
     elements: &[concat!(
       r#"<note role="note" xml:id="id3"><p align="center" xml:id="id3.1"><sup xml:id="id3.1.1">†</sup> Equal.</p>"#,
       r#"<p align="center" xml:id="id3.2"><sup xml:id="id3.2.1">∗</sup> Corresponding.</p></note>"#
     )],
-    absent:   &["mark="],
+    // (no note of the names holds the lines: their marks the names' own, mark-only notes after them, PURE)
+    absent:   &[r#"role="thanks""#],
   });
 }
 
@@ -173,12 +176,17 @@ fn a_list_with_two_marks_is_the_blocks_note() {
 fn revtex_footnotes_are_numbered_as_printed() {
   check(&Case {
     tex:      repro!("sectioning-frontmatter/revtex_footnotes_numbered_as_printed.tex"),
-    creators: &[&["Ann Able", "affiliation=Univ A"], &[
-      "Bob Baker",
-      "affiliation=Univ B",
-      "thanks=Title note.",
-      "email=b@x.org",
-    ]],
+    creators: &[
+      &["Ann Able", "mark=†", "mark=‡", "affiliation=Univ A"],
+      &[
+        "Bob Baker",
+        "affiliation=Univ B",
+        "thanks=Title note.",
+        "mark=†",
+        "mark=‡",
+        "email=b@x.org",
+      ],
+    ],
     elements: &[
       r#"<note class="ltx_note_frontmatter ltx_thanks_contribution" mark="†" role="thanks" xml:id="id1">These authors contributed equally.</note>"#,
       r#"<note class="ltx_note_frontmatter ltx_thanks_note" mark="‡" role="thanks" xml:id="id2">Visiting Univ C.</note>"#,
@@ -238,8 +246,8 @@ fn a_revtex_name_footnote_takes_its_number_unmarked() {
     assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
     let want = [
       &["Ann Able", "note=Visiting Univ C.", "affiliation=Univ A"][..],
-      &["Bob Baker", "affiliation=Univ B"],
-      &["Cy Cole", "affiliation=Univ B"],
+      &["Bob Baker", &format!("mark={mark}"), "affiliation=Univ B"],
+      &["Cy Cole", &format!("mark={mark}"), "affiliation=Univ B"],
     ];
     let want: Vec<Vec<String>> = want
       .iter()
@@ -255,8 +263,9 @@ fn a_revtex_name_footnote_takes_its_number_unmarked() {
     tex:      repro!(
       "sectioning-frontmatter/revtex_name_footnotemark_leaves_the_marks_unknown.tex"
     ),
+    // (Ann's `\footnotemark` Perl's leftover note, marked by our counter `*` where pdflatex prints `a`: unchanged here)
     creators: &[
-      &["Ann Able", "affiliation=Univ A"],
+      &["Ann Able", "mark=*", "affiliation=Univ A"],
       &[
         "Bob Baker",
         "thanks=Equal contribution.",
@@ -289,8 +298,8 @@ fn a_repeated_revtex_thanks_is_the_authors_marked_note() {
         "thanks=These authors contributed equally.",
         "affiliation=Univ A",
       ],
-      &["Bob Baker", "affiliation=Univ A"],
-      &["Cat Cole", "affiliation=Univ A"],
+      &["Bob Baker", "mark=†", "affiliation=Univ A"],
+      &["Cat Cole", "mark=†", "affiliation=Univ A"],
       &["Dan Dole", "altaffiliation=Univ B.", "affiliation=Univ A"],
     ],
     elements: &[

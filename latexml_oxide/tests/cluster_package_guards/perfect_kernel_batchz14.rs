@@ -92,6 +92,7 @@ fn a_marked_list_in_a_plain_author_is_read_digested() {
       "Cat Cole",
       "affiliation=Univ A, Town A",
       "email=cat.cole@a.org",
+      "mark=*",
     ],
   ]);
   let (_, json) = dump(repro!("z14_ieee_marked_entry_with_address_lines"));
@@ -185,7 +186,11 @@ fn a_note_inside_a_link_is_an_event_of_its_own() {
     "  c orcid 0000-0003-4578-5780",
     "  n ann@a.org",
   ]);
-  creators_are(&xml, &[&["Ann Able", "affiliation=Univ A, Town A"]]);
+  creators_are(&xml, &[&[
+    "Ann Able",
+    "mark=*",
+    "affiliation=Univ A, Town A",
+  ]]);
 }
 
 /// A row whose pieces each carry a mark, most of them names and none an institution, is a row of names, its odd piece one too (2409.07809's `Aaron (Ari) Bornstein`).

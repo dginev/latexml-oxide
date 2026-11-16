@@ -158,7 +158,7 @@ fn a_link_printing_a_name_is_the_name() {
 #[test]
 fn a_grade_with_a_long_note_is_the_grade() {
   let tex = repro!("emit_a_grade_with_a_long_note_is_the_grade");
-  let grades = [vec!["Ann Able", "membership=Fellow, IEEE"], vec![
+  let grades = [vec!["Ann Able", "membership=Fellow, IEEE", "mark=*"], vec![
     "Bob Baker",
     "membership=Member, IEEE",
   ]];

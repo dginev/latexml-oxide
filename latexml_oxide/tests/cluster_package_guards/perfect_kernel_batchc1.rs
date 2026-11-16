@@ -243,7 +243,7 @@ fn queued_marks_read_as_digested() {
     // (each name shows its printed mark (P4b2b); Bob Two's whole-name bold is unwrapped by OD #122, no loss: P4b4r's
     // `authblk_font_names_printed_marks`)
     (repro!("queue_marks_flexisym_authblk_boxed_note"), 0, &[
-      &["Ann One", "affiliation=1 First Univ"],
+      &["Ann One", "mark=*", "affiliation=1 First Univ"],
       &["Bob Two", "affiliation=2 Second Univ"],
     ]),
     (repro!("queue_marks_flexisym_ieeetran_line"), 0, &[
