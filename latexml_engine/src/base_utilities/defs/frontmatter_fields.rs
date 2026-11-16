@@ -406,10 +406,10 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
   // Rust-only: a list of title-page notes a class prints at its `\maketitle` (acmart.cls:2245-2247 `\@authornotes`,
   // revtex4-2.cls:3020-3022 `\@FMN@list`, amsaddr.sty:113 `\emails`), which a document extends past the binding's
   // setters: run where the class runs it, each footnote text it sets a note on the document, what else it prints typeset
-  // there, a paragraph of its own, as the class's title page ends one.
+  // there, a paragraph of its own when it begins one, as the class's title page is.
   DefMacro!(
     "\\lx@frontmatter@footnotes{}",
-    r"\begingroup\let\footnotetext\lx@fm@footnotetext\let\@footnotetext\lx@fm@@footnotetext#1\par\endgroup"
+    r"\begingroup\ifvmode\let\lx@fm@par\par\else\let\lx@fm@par\relax\fi\let\footnotetext\lx@fm@footnotetext\let\@footnotetext\lx@fm@@footnotetext#1\lx@fm@par\endgroup"
   );
   DefMacro!(
     "\\lx@fm@footnotetext[]{}",
