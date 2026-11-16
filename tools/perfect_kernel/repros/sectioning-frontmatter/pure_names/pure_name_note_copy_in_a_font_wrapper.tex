@@ -1,0 +1,19 @@
+% mechanism: a note's copy of the name's mark cut from inside a font wrapper takes the emptied wrapper with it
+% witness:  revPURE N3 (`Lead::Sup`'s cut)
+% oracle:   pdflatex 0 errors; "Ann Able⋄", the note "⋄Equal contribution."
+% engines:  rust int/frontmatter fd43c364eb6 = 0 errors; the note `<text font="sansserif"></text>Equal contribution.`
+% expect:   0 errors, 0 Warnings; the note marked ⋄, its text "Equal contribution." with no empty wrapper
+% status:   RED (int/frontmatter fd43c364eb6) -> GREEN (PUREc; perfect_kernel_batchpure::
+%           a_copy_cut_from_a_font_wrapper_leaves_no_empty_wrapper)
+% preload: ar5iv.sty
+\documentclass[conference]{IEEEtran}
+\begin{document}
+\title{T}
+\author{\IEEEauthorblockN{Ann Able$^{\diamond}$\thanks{\textsf{$^{\diamond}$ }Equal contribution.}}
+\IEEEauthorblockA{Univ A\\ ann@a.edu}
+\and
+\IEEEauthorblockN{Bob Baker}
+\IEEEauthorblockA{Univ B\\ bob@b.edu}}
+\maketitle
+x
+\end{document}

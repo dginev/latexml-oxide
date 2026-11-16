@@ -5,7 +5,7 @@
 //! the name (`<note role="footnotemark" mark="…"/>`). Each guard converts its repro under
 //! `tools/perfect_kernel/repros/sectioning-frontmatter/pure_names/` and asserts no Error or Warning and every creator
 //! whole (`xml:id`s aside, the space between tags collapsed). Witnesses 0707.3527, 0801.1438, 2406.11149, 2506.02863, 1904.03977,
-//! 2007.16032, math0610203, 2211.11758.
+//! 2007.16032, math0610203, 2211.11758, 2508.13181.
 use latexml::util::test::{convert_files_with, convert_with};
 
 use super::perfect_kernel_batch46::{error_count, warning_count};
@@ -216,4 +216,39 @@ fn a_mark_only_note_takes_no_body_footnotetext() {
   for text in ["Body note one.", "Body note two."] {
     assert_eq!(xml.matches(text).count(), 1, "{xml}");
   }
+}
+
+/// 2508.13181's `Dominik Loroch\IEEEauthorrefmark{2}\IEEEauthorrefmark{1}\textsuperscript{\textsection}` over held
+/// affiliations 2 and 1 and a body `\footnotetext` marked §: a reference mark's number keys only the glyph it printed
+/// (`_refmarkshown`), so † and ∗ are consumed by their affiliations and the § is a mark-only note after the name, paired
+/// with no body footnote. Red (int/frontmatter fd43c364eb6, revPURE B1): the run's numbers keyed the §, lost.
+#[test]
+fn a_reference_marks_number_keys_only_its_own_glyph() {
+  let (log, xml) = convert_with(
+    repro!("pure_name_refmark_beside_a_typed_section_mark.tex"),
+    Some(PRELOAD),
+  );
+  assert_creators((log, xml.clone()), &[
+    r#"<creator role="author"><personname>Ann Able</personname><note mark="§" role="footnotemark"/><contact name="Affiliation: " role="affiliation"><sup>†</sup>Lab B</contact><contact name="Affiliation: " role="affiliation"><sup>*</sup>Univ A</contact></creator>"#,
+    r#"<creator before=" " role="author"><personname>Bob Baker</personname><note mark="§" role="footnotemark"/><contact name="Affiliation: " role="affiliation"><sup>*</sup>Univ A</contact></creator>"#,
+    r#"<creator before=" " role="author"><personname>Cy Cole</personname><contact name="Affiliation: " role="affiliation"><sup>*</sup>Univ A</contact></creator>"#,
+  ]);
+  assert_eq!(xml.matches("Equal contribution.").count(), 1, "{xml}");
+}
+
+/// `Ann Able$^{\diamond}$\thanks{\textsf{$^{\diamond}$ }Equal contribution.}` (IEEEtran, the note unmarked until the
+/// pass): the note takes the ⋄ and its copy is cut with the font wrapper it empties (`Lead::cut`). Red (int/frontmatter
+/// fd43c364eb6, revPURE N3): `<text font="sansserif"></text>Equal contribution.`.
+#[test]
+fn a_copy_cut_from_a_font_wrapper_leaves_no_empty_wrapper() {
+  assert_creators(
+    convert_with(
+      repro!("pure_name_note_copy_in_a_font_wrapper.tex"),
+      Some(PRELOAD),
+    ),
+    &[
+      r#"<creator role="author"><personname>Ann Able</personname><contact name="Affiliation: " role="affiliation">Univ A</contact><contact name="Email: " role="email">ann@a.edu</contact><note class="ltx_note_frontmatter ltx_thanks_contribution" mark="⋄" role="thanks">Equal contribution.</note></creator>"#,
+      r#"<creator before=" " role="author"><personname>Bob Baker</personname><contact name="Affiliation: " role="affiliation">Univ B</contact><contact name="Email: " role="email">bob@b.edu</contact></creator>"#,
+    ],
+  );
 }

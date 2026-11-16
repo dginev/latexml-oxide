@@ -1,0 +1,16 @@
+% mechanism: a `#` at a name's end is its ink, no footnote symbol (`\@fnsymbol` has none); a `*` typed there is a mark
+% witness:  revPURE probe hash (`Team C\#`); 2007.16032 (`Yuan Yuan*`)
+% oracle:   pdflatex 0 errors; "Team C#", "Bob Baker*"
+% engines:  rust int/frontmatter fd43c364eb6 = 0 errors; "Team C" and a mark-only #
+% expect:   0 errors, 0 Warnings; Team C# whole; Bob's * a mark-only note
+% status:   RED (int/frontmatter fd43c364eb6) -> GREEN (PUREc; perfect_kernel_batchfmmarks::
+%           name_marks_live_outside_the_personname)
+% preload: ar5iv.sty
+\documentclass{article}
+\title{T}
+\author{Team C\# \and Bob Baker*}
+\date{}
+\begin{document}
+\maketitle
+Text.
+\end{document}

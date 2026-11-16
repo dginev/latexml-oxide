@@ -1,0 +1,19 @@
+% mechanism: glued digits are one number: `$^{12}$` beside held affiliations 1 and 2 is not parted into them
+% witness:  revPURE probe ab12
+% oracle:   pdflatex 0 errors; "Ann Able12 1,2" over "1 Univ A", "2 Univ B"
+% engines:  rust int/frontmatter fd43c364eb6 = 0 errors; the 12 lost (read as 1 and 2, each consumed)
+% expect:   0 errors, 0 Warnings; 12 a mark-only note; both affiliations held
+% status:   RED (int/frontmatter fd43c364eb6) -> GREEN (PUREc; perfect_kernel_batchfmmarks::
+%           name_marks_live_outside_the_personname)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{authblk}
+\begin{document}
+\title{T}
+\author[1,2]{Ann Able$^{12}$}
+\affil[1]{Univ A}
+\affil[2]{Univ B}
+\date{}
+\maketitle
+Text.
+\end{document}
