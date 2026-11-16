@@ -1966,7 +1966,7 @@ fn run_harness(cli: &Cli) -> Result<(), Box<dyn Error>> {
   // Exit reports: each child claims its in-flight task in this directory, and the reporter thread
   // returns a `Status:conversion:3` result, with the cause, for the task of every child that dies
   // mid-conversion (`exit_report`). Without the directory the fleet runs as before, its dead
-  // children's tasks left to the dispatcher's lease reaper.
+  // children's tasks left to the dispatcher's lease reaper, and its children in the inherited TMPDIR.
   let tmp = std::env::temp_dir();
   exit_report::remove_stale_dirs(&tmp);
   let exit_report_dir = match exit_report::HarnessDir::create(&tmp) {
@@ -1974,7 +1974,7 @@ fn run_harness(cli: &Cli) -> Result<(), Box<dyn Error>> {
     Err(e) => {
       eprintln!(
         "exit report: could not create a directory in {} ({e}); dead workers' tasks are left to \
-         the lease reaper",
+         the lease reaper, and the workers keep the inherited TMPDIR (no per-slot cleanup)",
         tmp.display()
       );
       None
