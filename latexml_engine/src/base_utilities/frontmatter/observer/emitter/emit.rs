@@ -2832,7 +2832,7 @@ fn rehearsed_with_expansions(content: &[Token]) -> Result<Option<(CallRead, Vec<
   }
   let stamped = field_stamped(2, 0, content);
   Ok(
-    match rehearse(stamped, TitleMarks::Fnsymbol, &[], lex_with_inks)? {
+    match rehearse(stamped, None, TitleMarks::Fnsymbol, &[], lex_with_inks)? {
       Rehearsal::Done {
         value: (events, formulas, inks),
         environments,

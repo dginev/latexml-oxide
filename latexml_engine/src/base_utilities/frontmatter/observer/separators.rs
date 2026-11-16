@@ -210,6 +210,7 @@ pub(in crate::base_utilities) fn read_argument(arg: &Tokens) -> Result<Option<Ar
   let read = for_a_query(|| {
     rehearse(
       field_stamped(2, 0, content),
+      None,
       TitleMarks::Fnsymbol,
       &[],
       lex_events,

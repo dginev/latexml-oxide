@@ -143,6 +143,9 @@ pub struct FieldNotes {
   /// the runs of a kernel's or a binding's macro a paper's macro reached, being read ([`close_runs`]): the position they take
   /// and how many tokens the pushback held before each
   kernel_runs:       Vec<(u16, usize)>,
+  /// the commands of the class's title code the author markup defines for an author block (`AuthorMarkup::title_code`),
+  /// which assign on the title code's account ([`keep_declared`])
+  title_code:        Vec<Token>,
   /// where the prefixes waiting for their command start (`\global`, `\long`). With the `\expandafter`s expanded right before
   /// it they lead to a declaration ([`read_lead`]), since a content read of its span without them would be another definition,
   /// or run `\csname` on its own (`\expandafter\def\csname ww\endcsname{1}`, repro `event_declaration_span_holds_its_lead`).
@@ -344,7 +347,11 @@ thread_local! {
 
 /// Begin the notes of the tokens about to be digested, `tokens` the field's (a rehearsal's; rehearsals are not nested,
 /// their journals not being: `state::begin_assignment_journal`). Their positions' end bounds what the last of them read.
-pub fn field_notes_begin(tokens: &Tokens, block_breaks: &[(&str, BreakKind)]) {
+pub fn field_notes_begin(
+  tokens: &Tokens,
+  block_breaks: &[(&str, BreakKind)],
+  title_code: &[Token],
+) {
   let mut field: Vec<Option<Token>> = Vec::new();
   for token in tokens.unlist_ref().iter().filter(|t| t.prov != 0) {
     let pos = usize::from(field_prov_pos(token.prov));
@@ -368,6 +375,7 @@ pub fn field_notes_begin(tokens: &Tokens, block_breaks: &[(&str, BreakKind)]) {
         .iter()
         .map(|(command, kind)| (T_CS!(*command), *kind))
         .collect(),
+      title_code: title_code.to_vec(),
       ..FieldNotes::default()
     };
   });
@@ -593,7 +601,11 @@ const MACROS_READ_FOR_NAMES: usize = 64;
 /// and `\newcommand\m{\@ifundefined{qq}{\def\qq{1}}{}}` declare `\qq` ([`names_in_a_papers_macro`]). A kernel's or a binding's
 /// macro called there assigns on its own account likewise (a font switch's `\f@series`, `\centering`'s `\\`, an environment's
 /// `\@currenvir`): only the names the field handed it are the paper's (`\newcount\nn`, `\newsavebox\bb`, whose arguments the
-/// expansion reads).
+/// expansion reads). So does a command of the class's title code the author markup defines (`title_code`), called there, and
+/// a paper's macro calling one declares only what it names: pdflatex runs the command inside the group `\@author` is read
+/// in, the digestion inside the creator's `\lx@author@withinst`, so what else it assigns is no declaration replayed apart,
+/// where it is undefined — klmm.sty's `\def\instref##1{\textsuperscript{##1}\def\current@has@affil{1}}` (2606.12100,
+/// 2606.12130, 2606.12144, 2606.22997, 2606.26035).
 #[cold]
 #[inline(never)]
 fn keep_declared(
@@ -602,6 +614,7 @@ fn keep_declared(
   reach: u16,
   inside: bool,
   field: &[Option<Token>],
+  title_code: &[Token],
   assigned: &mut Vec<MeaningAssigned>,
 ) {
   let Some(Some(call)) = field.get(usize::from(pos)) else {
@@ -611,7 +624,9 @@ fn keep_declared(
   let direct = call == token;
   match state::lookup_meaning(call) {
     Some(Stored::Expandable(_)) if direct => assigned.clear(),
-    Some(Stored::Expandable(definition)) if definition.get_origin().is_latexml_owned() => {
+    Some(Stored::Expandable(definition))
+      if definition.get_origin().is_latexml_owned() || title_code.contains(call) =>
+    {
       let handed = handed_to_a_call(field, pos, reach);
       assigned.retain(|assignment| {
         handed
@@ -621,8 +636,13 @@ fn keep_declared(
       });
     },
     Some(Stored::Expandable(definition)) => {
-      if inside {
-        let named = names_in_a_papers_macro(&definition);
+      let named = (inside || !title_code.is_empty()).then(|| names_in_a_papers_macro(&definition));
+      if let Some(named) = named.filter(|named| {
+        inside
+          || title_code
+            .iter()
+            .any(|command| named.contains(&state::meaning_key(command)))
+      }) {
         let handed = handed_to_a_call(field, pos, reach);
         assigned.retain(|assignment| {
           named.contains(&assignment.key)
@@ -965,7 +985,15 @@ fn field_invocation(token: &Token, cover: FieldCover, result: &[Digested]) {
     }
     // (an enclosing invocation still running assigned the others: `\begin{minipage}`'s, which digests its body)
     assigned.retain(|assignment| assignment.by == *token);
-    keep_declared(token, pos, reach, inside, &notes.field, &mut assigned);
+    keep_declared(
+      token,
+      pos,
+      reach,
+      inside,
+      &notes.field,
+      &notes.title_code,
+      &mut assigned,
+    );
     if assigned.is_empty() {
       return;
     }

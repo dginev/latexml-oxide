@@ -80,7 +80,7 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
     "\\lx@author@markup@provide{}{}",
     "\\ifx#1\\@undefined\\let#1#2\\expandafter\\def\\expandafter\\lx@author@markup@unprovide\\expandafter{\\lx@author@markup@unprovide\\let#1\\@undefined}\\fi"
   );
-  DefMacro!("\\lx@author@markup@begin", sub[()] { author_markup_begin(false) });
+  DefMacro!("\\lx@author@markup@begin", sub[()] { Ok(author_markup_begin(false)?.begin) });
   DefMacro!("\\lx@author@markup@run{}{}", "#2#1");
   DefMacro!("\\lx@author@orcid[]{}", "\\lx@add@orcid{#2}");
   DefMacro!("\\lx@inst@mark{}", sub[(label)] {
@@ -887,10 +887,18 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
   Ok(())
 }
 
+/// The author markup in force for the author content ([`author_markup_begin`]).
+pub(in crate::base_utilities) struct AuthorMarkup {
+  /// `\lx@author@markup@begin`'s expansion
+  pub begin:      Tokens,
+  /// the commands of the class's title code it defines
+  pub title_code: Vec<Token>,
+}
+
 /// `\lx@author@markup@begin`: the author markup in force for the author content; with `rehearsal`, the frontmatter
 /// observer's rehearsal's (observer/reading.rs), in which a title-code definition reading no argument stays undefined,
 /// its held Error the reading's (`reads_arguments`; OXIDIZED_DESIGN_DIVERGENCES #802, #941).
-pub(in crate::base_utilities) fn author_markup_begin(rehearsal: bool) -> Result<Tokens> {
+pub(in crate::base_utilities) fn author_markup_begin(rehearsal: bool) -> Result<AuthorMarkup> {
   // A binding's author markup for a class that defines its own only where its title code prints the author list
   // (`\lx@author@markup@class`, `\lx@author@markup@provide` calls: vmsta.cls:278-291 `\name@m@front`, which prints
   // `\fnm`/`\snm` as "Yuliya~Mishura" and drops `\inits`; latexml_contrib vmsta_cls.rs) comes first, before
@@ -921,10 +929,12 @@ pub(in crate::base_utilities) fn author_markup_begin(rehearsal: bool) -> Result<
       lookup_meaning(definee).is_none() && (!rehearsal || reads_arguments(definee, statement))
     })
     .collect();
+  let mut title_code = Vec::new();
   for ((definee, statement), applies) in definitions.into_iter().zip(applies) {
     if !applies {
       continue;
     }
+    title_code.push(definee);
     out.extend(statement);
     out.extend(
       TokenizeInternal!(r"\expandafter\def\expandafter\lx@author@markup@unprovide\expandafter{\lx@author@markup@unprovide\let")
@@ -932,7 +942,10 @@ pub(in crate::base_utilities) fn author_markup_begin(rehearsal: bool) -> Result<
     );
     out.extend([definee, T_CS!("\\@undefined"), T_END!()]);
   }
-  Ok(Tokens::new(out))
+  Ok(AuthorMarkup {
+    begin: Tokens::new(out),
+    title_code,
+  })
 }
 
 /// `\lx@add@author[attr]{name}` and `\lx@add@creator[attr]{name}` (Base_Utility.pool.ltxml `\lx@add@creator`): the
