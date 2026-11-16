@@ -143,6 +143,23 @@
     </xsl:choose>
   </xsl:template>
 
+  <!-- An unmarked author note is the paper's (ruling 2), so copies of one in a block (same role and text; none holding an
+       image, which its text does not name) print once, at the first; later ones render nothing (2602.18802). -->
+  <xsl:key name="f:unmarked-creator-note"
+           match="ltx:creator[@role='author']/ltx:note[not(normalize-space(@mark))][normalize-space(.)]
+                  [not(@role='footnotemark')][not(.//ltx:graphics or .//ltx:picture)]"
+           use="concat(generate-id(../..),'&#x9;',@role,'&#x9;',normalize-space(.))"/>
+  <xsl:template match="ltx:creator[@role='author']/ltx:note[not(normalize-space(@mark))][normalize-space(.)]
+                       [not(@role='footnotemark')][not(.//ltx:graphics or .//ltx:picture)]">
+    <xsl:param name="context"/>
+    <xsl:if test="generate-id() = generate-id(key('f:unmarked-creator-note',
+                    concat(generate-id(../..),'&#x9;',@role,'&#x9;',normalize-space(.)))[1])">
+      <xsl:call-template name="note">
+        <xsl:with-param name="context" select="$context"/>
+      </xsl:call-template>
+    </xsl:if>
+  </xsl:template>
+
   <!-- A creator's mark-only note is its mark alone, with no empty "footnotemark: " pop-up: linked, and shared, when it
        is an author's linkable mark (f:creator-mark-only) and its mark names one author's note in the block; else the
        plain glyph. Its glyph is note-mark's (Perl's tag, else @mark). -->
