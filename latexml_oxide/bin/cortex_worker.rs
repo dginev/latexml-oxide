@@ -357,7 +357,9 @@ impl LatexmlWorker {
     inject_test_fault()?;
 
     // 1. Unpack the input archive
-    let (tempdir, main_tex) = unpack_archive(input_path)?;
+    // Removed by the watchdog's and the allocation hook's exits too, which skip the `TempDir`'s drop: a timed-out
+    // paper left its source tree in the worker's scratch directory for the life of the container.
+    let (tempdir, _sources_on_exit, main_tex) = unpack_archive(input_path)?;
     // The paper's date (`latexml::source_date`), ar5iv's archival clock for `\today`: read from the archive's entries,
     // as the CLI does, since the extracted files carry the extraction's clock.
     let main_in_archive = Path::new(&main_tex)
@@ -365,9 +367,6 @@ impl LatexmlWorker {
       .ok()
       .map(|p| p.to_string_lossy().into_owned());
     let bundle_date = latexml::source_date::of_archive(input_path, main_in_archive.as_deref());
-    // Removed by the watchdog's and the allocation hook's exits too, which skip the `TempDir`'s drop: a timed-out
-    // paper left its source tree in the worker's scratch directory for the life of the container.
-    let _sources_on_exit = latexml_core::watchdog::remove_on_exit(tempdir.path());
     let source_dir = tempdir.path().to_string_lossy().to_string();
 
     // 2. Set up the converter with the profile
@@ -1110,8 +1109,13 @@ fn parse_address_space(status: &str, limits: &str) -> Option<(u64, u64)> {
 
 // --- Helper functions (shared with latexml_oxide.rs) ---
 
-fn unpack_archive(archive_path: &Path) -> Result<(TempDir, String), Box<dyn Error>> {
+/// The unpacked tree, registered for removal by the exits that skip its drop from its creation on (an extraction or
+/// `source_date::of_archive` the watchdog ends must not leave it), and the main `.tex` in it.
+fn unpack_archive(
+  archive_path: &Path,
+) -> Result<(TempDir, latexml_core::watchdog::RemoveOnExit, String), Box<dyn Error>> {
   let tempdir = TempDir::new()?;
+  let on_exit = latexml_core::watchdog::remove_on_exit(tempdir.path());
   let dest = tempdir.path();
 
   let path_str = archive_path.to_string_lossy();
@@ -1133,7 +1137,7 @@ fn unpack_archive(archive_path: &Path) -> Result<(TempDir, String), Box<dyn Erro
   }
 
   let main_tex = find_main_tex(dest)?;
-  Ok((tempdir, main_tex))
+  Ok((tempdir, on_exit, main_tex))
 }
 
 /// Faithful port of Perl Pack.pm detect_source / arXiv::FileGuess.
@@ -1962,7 +1966,7 @@ fn run_harness(cli: &Cli) -> Result<(), Box<dyn Error>> {
   // Exit reports: each child claims its in-flight task in this directory, and the reporter thread
   // returns a `Status:conversion:3` result, with the cause, for the task of every child that dies
   // mid-conversion (`exit_report`). Without the directory the fleet runs as before, its dead
-  // children's tasks left to the dispatcher's lease reaper.
+  // children's tasks left to the dispatcher's lease reaper, and its children in the inherited TMPDIR.
   let tmp = std::env::temp_dir();
   exit_report::remove_stale_dirs(&tmp);
   let exit_report_dir = match exit_report::HarnessDir::create(&tmp) {
@@ -1970,7 +1974,7 @@ fn run_harness(cli: &Cli) -> Result<(), Box<dyn Error>> {
     Err(e) => {
       eprintln!(
         "exit report: could not create a directory in {} ({e}); dead workers' tasks are left to \
-         the lease reaper",
+         the lease reaper, and the workers keep the inherited TMPDIR (no per-slot cleanup)",
         tmp.display()
       );
       None
@@ -2007,8 +2011,28 @@ fn run_harness(cli: &Cli) -> Result<(), Box<dyn Error>> {
     .and(exit_report_dir.as_ref())
     .map(|dir| dir.path().to_path_buf());
 
+  // Each child's TMPDIR is its slot's, emptied before every spawn (`fresh_slot_tmpdir`). The temp dir's caches
+  // (`latexml-oxide-dumps-*`, the embedded dump decompressed when no dump is on disk; the Lua prelude) then
+  // live per child: one gunzip and write each, which the fleet, with its dumps on disk, does not pay.
+  let slot_tmp_parent = exit_report_dir.as_ref().map(|dir| dir.path().to_path_buf());
+
   let supervised = supervise(&config, move |index| {
     let mut cmd = process::Command::new(&exe);
+    if let Some(parent) = &slot_tmp_parent {
+      match exit_report::fresh_slot_tmpdir(parent, index) {
+        // ImageMagick reads MAGICK_TEMPORARY_PATH and MAGICK_TMPDIR before TMPDIR (MagickCore/resource.c).
+        Ok(tmp) => {
+          cmd
+            .env("TMPDIR", &tmp)
+            .env("MAGICK_TEMPORARY_PATH", &tmp)
+            .env("MAGICK_TMPDIR", &tmp);
+        },
+        Err(e) => eprintln!(
+          "worker #{index}: could not prepare its TMPDIR in {} ({e}); it uses the harness's",
+          parent.display()
+        ),
+      }
+    }
     // jemalloc tuning for children (read at allocator init, so it must be set by
     // us before exec — too late from inside the child). Enable the background
     // purge thread and a short dirty-page decay so a worker returns freed memory

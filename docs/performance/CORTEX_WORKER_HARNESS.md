@@ -252,6 +252,13 @@ dispatcher's lease reaper, be re-leased, and after the retry budget end as
   dispatcher re-leases the task). A clean exit removes its claim. The harness removes its
   directory on shutdown and, when it starts, every `cortex_harness_*` whose lock nobody holds,
   without reporting from it (that fleet is gone; the dispatcher re-leases its tasks).
+* Each child's `TMPDIR` (and ImageMagick's `MAGICK_TEMPORARY_PATH` and `MAGICK_TMPDIR`, which it reads first) is
+  its slot's `slot-NN/` in that directory, emptied before every spawn (`exit_report::fresh_slot_tmpdir`), so what a
+  SIGKILLed child leaves goes with its respawn: the `cortex_task*` directory pericortex holds while it waits for
+  work (the unresponsive-worker watchdog kills idle children: ~11k empty ones a day in the fleet's shared
+  `TMPDIR`, 2026-11-16), the sources, destination and output zip, `magick-*` delegate files. A harness without
+  the directory leaves its children the inherited `TMPDIR`. Guard:
+  `cortex_worker_exit_reports::a_respawned_slot_starts_with_an_empty_tmpdir`.
 * A cause is recorded only by the claim's owner process (not by a subprocess between `fork` and
   `exec`, which inherits the handlers), and the allocation-failure hook records it before
   anything that could allocate.

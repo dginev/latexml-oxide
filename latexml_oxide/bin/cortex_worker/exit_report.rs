@@ -29,12 +29,13 @@
 //! claim is idle by then); there the dispatcher's lease reaper stays the net, as before.
 
 use std::{
+  collections::BTreeSet,
   fs::{self, File, OpenOptions},
   io::{self, Read, Seek, SeekFrom, Write},
   os::unix::io::AsRawFd,
   path::{Path, PathBuf},
   sync::{
-    OnceLock,
+    Mutex, OnceLock,
     atomic::{AtomicI32, Ordering},
   },
   thread,
@@ -621,6 +622,32 @@ impl HarnessDir {
   pub fn remove(self) { let _ = fs::remove_dir_all(&self.path); }
 }
 
+/// The TMPDIR of the harness's slot `index` (1-based), `slot-NN` in its directory `dir` (not `child-*`,
+/// the claims' names), emptied for the slot's next child: the temporary files of its predecessor
+/// (pericortex's `cortex_task*`, the sources, destination and output zip, ImageMagick's and Ghostscript's)
+/// go even when a SIGKILL skipped every destructor. Removed with `dir` ([`HarnessDir::remove`],
+/// [`remove_stale_dirs`]).
+pub fn fresh_slot_tmpdir(dir: &Path, index: usize) -> io::Result<PathBuf> {
+  /// The slots that said they could not be emptied: a persistent obstacle is told once, not at every respawn.
+  static UNEMPTIED: Mutex<BTreeSet<PathBuf>> = Mutex::new(BTreeSet::new());
+  let slot = dir.join(format!("slot-{index:02}"));
+  // What cannot be removed now (an orphaned subprocess still writing) goes with the next spawn.
+  if let Err(e) = fs::remove_dir_all(&slot)
+    && e.kind() != io::ErrorKind::NotFound
+    && UNEMPTIED
+      .lock()
+      .unwrap_or_else(|poisoned| poisoned.into_inner())
+      .insert(slot.clone())
+  {
+    eprintln!(
+      "worker #{index}: could not empty its TMPDIR {} ({e}); what is left stays until a respawn can",
+      slot.display()
+    );
+  }
+  fs::create_dir_all(&slot)?;
+  Ok(slot)
+}
+
 /// Remove the exit-report directories in `tmp` that no live harness holds (a harness that was
 /// killed, rather than stopped, leaves its directory, its children's claims and partial logs
 /// behind). Nothing in them is reported: their tasks belong to a fleet that is gone, and the
@@ -1072,6 +1099,26 @@ mod tests {
     // Two harnesses never share a directory.
     let second = HarnessDir::create(tmp.path()).unwrap();
     assert_ne!(second.path(), live.path());
+  }
+
+  #[test]
+  fn a_slots_tmpdir_is_emptied_for_each_spawn() {
+    let tmp = tempfile::tempdir().unwrap();
+    let harness = HarnessDir::create(tmp.path()).unwrap();
+    let slot = fresh_slot_tmpdir(harness.path(), 3).unwrap();
+    assert_eq!(slot, harness.path().join("slot-03"));
+    fs::create_dir(slot.join("cortex_task1")).unwrap();
+    fs::write(slot.join("cortex_task1/4242.zip"), b"zip").unwrap();
+    fs::write(slot.join("magick-1"), b"delegate").unwrap();
+    assert_eq!(fresh_slot_tmpdir(harness.path(), 3).unwrap(), slot);
+    assert_eq!(
+      fs::read_dir(&slot).unwrap().count(),
+      0,
+      "a respawn's TMPDIR starts empty"
+    );
+    let path = harness.path().to_path_buf();
+    harness.remove();
+    assert!(!path.exists(), "the slots go with the harness's directory");
   }
 
   #[test]

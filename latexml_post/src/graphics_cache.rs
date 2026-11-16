@@ -72,7 +72,9 @@
 //! 3. **Concurrent prunes**: prune holds `flock(LOCK_EX | LOCK_NB)` on `.prune.lock`. If another
 //!    process already holds the lock, this one skips its prune attempt. Only one prune runs at a
 //!    time per machine. The prune itself walks the dir, sorts by mtime, deletes oldest until under
-//!    cap — and tolerates `ENOENT` (another writer could have re-used the entry concurrently).
+//!    cap — and tolerates `ENOENT` (another writer could have re-used the entry concurrently). It
+//!    also removes every `.tmp.` sidecar changed (ctime on Unix) over an hour ago: a killed process's
+//!    unfinished install.
 //! 4. **Hardlinked dest ↔ cache**: when `link_or_copy` hardlinks the cache file into the
 //!    destination, that hardlink is independent of the cache lifecycle. Even if a prune deletes the
 //!    cache entry afterwards, the destination's hardlink keeps the data alive on the filesystem.
@@ -113,6 +115,8 @@ use std::{
 use sha2::{Digest, Sha256};
 
 const DEFAULT_MAX_MB: u64 = 2048;
+/// How old a `.tmp.` sidecar must be before a prune takes it for a killed install's.
+const STALE_TMP_AGE: std::time::Duration = std::time::Duration::from_secs(3600);
 
 /// Mixed into every SVG key (DG 2026-11-16): before mutool's page ≥ 2 fix, a page ≥ 2 SVG was pdftocairo's
 /// render; every SVG key is retired so each page comes from the same converter (the fleet re-renders
@@ -442,6 +446,18 @@ fn store_digest(
     return;
   };
   let cached = cache_path(&root, &hash, key.ext);
+  // A sidecar without its entry is never reclaimed: the prune removes one only with its entry.
+  if install(Path::new(dest), &cached)
+    && let Some(d) = dims
+  {
+    write_dims_sidecar(&dims_sidecar(&cached), d);
+  }
+  // Best-effort LRU prune after insert (process-locked).
+  prune_if_over_cap(&root);
+}
+
+/// Install `dest` as the cache entry `cached`, unless an entry is already there; whether an entry is in place after.
+fn install(dest: &Path, cached: &Path) -> bool {
   // Atomic install: write to .tmp.<pid>.<nanos>, rename into place.
   // Concurrent writers each get a private tmp and race the rename —
   // last rename wins, both sources are byte-equivalent.
@@ -450,29 +466,26 @@ fn store_digest(
     .duration_since(std::time::UNIX_EPOCH)
     .map(|d| d.as_nanos())
     .unwrap_or(0);
-  let mut tmp = cached.clone();
-  let mut filename = cached
-    .file_name()
-    .map(|n| n.to_string_lossy().into_owned())
-    .unwrap_or_else(|| hash.clone());
-  filename.push_str(&format!(".tmp.{pid}.{nanos}"));
-  tmp.set_file_name(filename);
-  if !link_or_copy(Path::new(dest), &tmp) {
-    return;
+  let mut tmp = cached.as_os_str().to_owned();
+  tmp.push(format!(".tmp.{pid}.{nanos}"));
+  let tmp = PathBuf::from(tmp);
+  // A failed copy may have left a partial tmp, a failed rename a whole one: neither is reclaimed otherwise but
+  // by the prune's `STALE_TMP_AGE` sweep (33k such files in the fleet's cache by 2026-11-16).
+  if !link_or_copy(dest, &tmp) {
+    let _ = fs::remove_file(&tmp);
+    return cached.is_file();
   }
-  if !cached.exists() {
+  if !cached.is_file() {
     // rename is atomic on the same filesystem; failures are non-fatal.
-    let _ = fs::rename(&tmp, &cached);
+    if fs::rename(&tmp, cached).is_err() {
+      let _ = fs::remove_file(&tmp);
+    }
   } else {
     // Cache file already present (race with another writer); clean up.
     let _ = fs::remove_file(&tmp);
-    let _ = touch_now(&cached);
+    let _ = touch_now(cached);
   }
-  if let Some(d) = dims {
-    write_dims_sidecar(&dims_sidecar(&cached), d);
-  }
-  // Best-effort LRU prune after insert (process-locked).
-  prune_if_over_cap(&root);
+  cached.is_file()
 }
 
 fn touch_now(p: &Path) -> std::io::Result<()> {
@@ -524,9 +537,36 @@ fn release_prune_lock(root: &Path, _f: fs::File) {
 }
 
 /// Walk the cache, total up sizes, and if over the cap delete oldest
-/// entries (by mtime) until under. Errors are non-fatal. Only one
-/// process performs a prune at a time (advisory lock).
+/// entries (by mtime) until under; remove the `.tmp.` files older than
+/// [`STALE_TMP_AGE`]. Errors are non-fatal. Only one process performs a
+/// prune at a time (advisory lock). Without a cap (`0`) it returns at
+/// once, so stale tmp files stay too.
 fn prune_if_over_cap(root: &Path) {
+  // A clock under an hour past the epoch has no stale tmp; the size cap still applies.
+  let now = std::time::SystemTime::now();
+  let stale_before = now
+    .checked_sub(STALE_TMP_AGE)
+    .unwrap_or(std::time::UNIX_EPOCH);
+  prune_if_over_cap_at(root, stale_before);
+}
+
+/// When a file's inode last changed: a tmp hard-linked from an old output keeps the output's mtime,
+/// but `link()` sets its ctime.
+#[cfg(unix)]
+fn changed(meta: &fs::Metadata) -> Option<std::time::SystemTime> {
+  use std::os::unix::fs::MetadataExt;
+  let since_epoch = std::time::Duration::new(
+    u64::try_from(meta.ctime()).ok()?,
+    u32::try_from(meta.ctime_nsec()).ok()?,
+  );
+  std::time::UNIX_EPOCH.checked_add(since_epoch)
+}
+
+#[cfg(not(unix))]
+fn changed(meta: &fs::Metadata) -> Option<std::time::SystemTime> { meta.modified().ok() }
+
+/// [`prune_if_over_cap`], taking the `.tmp.` files changed before `stale_before` for stale.
+fn prune_if_over_cap_at(root: &Path, stale_before: std::time::SystemTime) {
   let cap = max_bytes();
   if cap == 0 {
     return;
@@ -555,9 +595,20 @@ fn prune_if_over_cap(root: &Path) {
       let Some(name) = path.file_name().and_then(|n| n.to_str()) else {
         continue;
       };
-      // Skip in-flight tmp sidecars and dim metadata (they're tiny
-      // and follow their parent's lifecycle when removed).
-      if name.contains(".tmp.") || name.ends_with(".dims") {
+      // A tmp sidecar is an install in flight, or one a killed process never finished: removed once
+      // older than any install takes. Dim metadata follows its parent's lifecycle.
+      if name.contains(".tmp.") {
+        let stale = entry
+          .metadata()
+          .ok()
+          .and_then(|meta| changed(&meta))
+          .is_some_and(|changed| changed < stale_before);
+        if stale {
+          let _ = fs::remove_file(&path);
+        }
+        continue;
+      }
+      if name.ends_with(".dims") {
         continue;
       }
       let Ok(meta) = entry.metadata() else { continue };
@@ -1224,5 +1275,98 @@ mod tests {
     let hit = lookup(&src_s, dest_check.to_str().unwrap(), key);
     assert!(hit.is_some(), "follow-up lookup must hit");
     assert_eq!(fs::read(&dest_check).unwrap(), b"final-bytes");
+  }
+
+  /// A shard directory's file names holding `.tmp.`.
+  fn tmp_names(shard: &Path) -> Vec<String> {
+    fs::read_dir(shard)
+      .unwrap()
+      .flatten()
+      .map(|e| e.file_name().to_string_lossy().into_owned())
+      .filter(|name| name.contains(".tmp."))
+      .collect()
+  }
+
+  /// A store whose install fails leaves neither its tmp file nor a `.dims` sidecar, which the prune
+  /// reclaims only with its entry: a missing output (the copy fails before the tmp exists), an output
+  /// that fails mid-copy (a partial tmp), a directory in the entry's place (the rename fails).
+  #[test]
+  fn a_failed_install_leaves_neither_tmp_nor_dims() {
+    let root = shared_cache_dir();
+    let dir = temp_dir("install");
+    let key = RenderKey {
+      page:    None,
+      density: 90,
+      ext:     "png",
+    };
+    let missing = dir.join("missing.png");
+    let in_the_way = dir.join("in-the-way.png");
+    write_bytes(&in_the_way, b"png");
+    let mut cases = vec![("missing", missing), ("in-the-way", in_the_way)];
+    // Reading `/proc/self/mem` at offset 0 (unmapped) fails with EIO after the copy has created its target.
+    if cfg!(target_os = "linux") {
+      cases.push(("unreadable", PathBuf::from("/proc/self/mem")));
+    }
+    for (label, dest) in cases {
+      let src = dir.join(format!("{label}.src"));
+      write_bytes(&src, &unique_source_bytes(label));
+      let cached = cache_path(root, &hash_key(&src, key).unwrap(), key.ext);
+      if label == "in-the-way" {
+        fs::create_dir_all(cached.join("occupied")).unwrap();
+      }
+      store(
+        src.to_str().unwrap(),
+        dest.to_str().unwrap(),
+        key,
+        Some(CachedDims { width: 1, height: 2 }),
+      );
+      let entry = cached.file_name().unwrap().to_string_lossy().into_owned();
+      let shard = cached.parent().unwrap();
+      let leftovers: Vec<String> = fs::read_dir(shard)
+        .unwrap()
+        .flatten()
+        .map(|e| e.file_name().to_string_lossy().into_owned())
+        .filter(|name| name.starts_with(&entry) && *name != entry)
+        .collect();
+      assert_eq!(leftovers, Vec::<String>::new(), "{label}");
+      assert_eq!(cached.is_dir(), label == "in-the-way", "{label}");
+      if label == "in-the-way" {
+        fs::remove_dir_all(&cached).unwrap();
+      }
+    }
+  }
+
+  #[test]
+  fn a_prune_reclaims_the_tmp_files_of_killed_installs() {
+    let root = temp_dir("prune-tmp");
+    let shard = root.join("ab");
+    let old = shard.join("abcdef.png.tmp.17.1");
+    let old_dims = shard.join("abcdef.png.dims.tmp.17.2");
+    let entry = shard.join("abcdef.png");
+    let output = root.join("out.png");
+    for path in [&old, &old_dims, &entry, &output] {
+      write_bytes(path, b"bytes");
+    }
+    let two_hours_ago = std::time::SystemTime::now() - std::time::Duration::from_secs(7200);
+    for path in [&entry, &output] {
+      fs::File::options()
+        .write(true)
+        .open(path)
+        .unwrap()
+        .set_modified(two_hours_ago)
+        .unwrap();
+    }
+    // The kernel stamps inode times from a coarse clock: a margin on each side of the cutoff.
+    std::thread::sleep(std::time::Duration::from_millis(50));
+    let stale_before = std::time::SystemTime::now();
+    std::thread::sleep(std::time::Duration::from_millis(50));
+    // An install in flight, hard-linked from an old output: its mtime is the output's, its ctime the link's.
+    fs::hard_link(&output, shard.join("abcdef.png.tmp.18.3")).unwrap();
+    prune_if_over_cap_at(&root, stale_before);
+    assert_eq!(tmp_names(&shard), vec!["abcdef.png.tmp.18.3".to_string()]);
+    assert!(
+      entry.is_file(),
+      "an entry under the cap is kept, however old"
+    );
   }
 }
