@@ -1046,12 +1046,34 @@ fn block_names(
       let math_sep =
         |e: &Event| matches!(e.kind, EventKind::Sep(_)) && e.role.as_deref() == Some("math");
       let past_note = |e: &&Event| beside(e) || e.kind == EventKind::Note || math_sep(e);
+      // (and past a spacing run before a `\footnotemark` that only spacing and notes part from the name: pdflatex prints it
+      // after the name, and Perl's personname keeps it — `Vivek Ramanujan \thanks{…} \ \footnotemark[2]`, `Ali Farhadi
+      // \ \footnotemark[3]`, 1911.13299 (DG ruling 2026-11-16); one on the line a `\\` opens is no name's, a Break parts it.
+      // Text spacing only: a mark in a formula is written with the formula whole, a note in it twice — `Xunzhi
+      // Xiang$^{1}\thanks{…}\,\,\footnotemark[2]$`, 2511.12633, stays `mark_dropped`'s)
+      let gap = |e: &Event| matches!(e.kind, EventKind::Sep(SepKind::Gap { .. }));
+      let in_text = |e: &Event| {
+        e.span
+          .and_then(|span| at(span.0))
+          .is_some_and(|s| field.formula_start(s) == s)
+      };
+      let spacing_before_mark = |i: usize| {
+        read[i..]
+          .iter()
+          .find(|e| !(gap(e) || e.kind == EventKind::Note))
+          .is_some_and(|e| {
+            e.kind == EventKind::Mark && e.role.as_deref() == Some("footnotemark") && in_text(e)
+          })
+      };
+      let scan_end = (after_name..read.len())
+        .find(|&i| !(past_note(&&read[i]) || (gap(&read[i]) && spacing_before_mark(i))))
+        .unwrap_or(read.len());
       let steps_counter = |e: &Event| e.role.as_deref().is_some_and(|r| r.starts_with("thanks"));
       let mut apart: Vec<Token> = Vec::new();
       let mut apart_runs: Vec<(usize, usize)> = Vec::new();
       let (mut passed, mut stepped): (Vec<usize>, Vec<usize>) = (Vec::new(), Vec::new());
       let mut seps: Vec<(usize, usize)> = Vec::new();
-      for e in read[after_name..].iter().take_while(past_note) {
+      for e in &read[after_name..scan_end] {
         if e.kind == EventKind::Note {
           if steps_counter(e)
             && let Some(s) = e.span.and_then(|span| at(span.0))
@@ -1170,9 +1192,8 @@ fn block_names(
       // Leader.}\equalcorres,` (2508.21091), `E.Prandini\from{ins:x}\thanks{…}\ETC,` (1101.4098). The reading's
       // segmentation stays: only what prints nothing joins the name (OXIDIZED_DESIGN_DIVERGENCES #983; repro
       // sectioning-frontmatter/emitter_undefined_command_in_author_errs_once))
-      let next_at = read[after_name..]
-        .iter()
-        .find(|e| !past_note(e))
+      let next_at = read
+        .get(scan_end)
         .and_then(|e| at(e.span?.0))
         .unwrap_or(field.tokens.len());
       let covered = |i: usize| {
@@ -3689,9 +3710,9 @@ fn unwritten(
 }
 
 /// Whether the author block at ledger index `index` prints a `\footnotemark` that neither a name its reading writes nor an
-/// item holds: one past a line break under a name (`Vivek Ramanujan \thanks{…} \\ \footnotemark[2]`, 1911.13299), past
-/// a name's separating comma (`Colin P.~McNally,$^{1}$\footnotemark[…]`, 2101.04763), inside a formula with a note
-/// (`Xunzhi Xiang$^{1}\thanks{…}\,\,\footnotemark[2]$`, 2511.12633). A dropped mark that steps the counter (a bare
+/// item holds: one past a line break under a name (`Ann Able\thanks{…} \\ \footnotemark`), past a name's separating
+/// comma (`Colin P.~McNally,$^{1}$\footnotemark[…]`, 2101.04763), inside a formula with a note (`Xunzhi
+/// Xiang$^{1}\thanks{…}\,\,\footnotemark[2]$`, 2511.12633). A dropped mark that steps the counter (a bare
 /// `\footnotemark`, `\stepcounter\@mpfn`) loses its symbol and steps the counter no more, so a later mark prints one
 /// symbol short: the block is written whole, Perl's whole-block creator, its tokens digested in order, with a counted
 /// Warning, once per block over the flushes (review revNE2r2 Q2: never a silent loss). A dropped mark given its number
@@ -3700,7 +3721,8 @@ fn unwritten(
 /// Warning naming it, once per block over the flushes (`D. R. G. Schleicher,$^{1}$\samethanks[1]`, 1912.01737; `Cheng
 /// Xu\textsuperscript{1},\footnotemark[1]`, 1811.08622 — user ruling 2026-11-09: a decline never throws away a right
 /// reading): their printed labels go to `given_lost`, the Warning's ([`warn_given_marks_lost`]) where no other decline
-/// writes the block whole. A mark past its name's note is carried (`block_names`: 1610.06031).
+/// writes the block whole. A mark past its name's note is carried (`block_names`: 1610.06031), as is one past spacing
+/// (1911.13299's `\ \footnotemark[2]`, DG ruling 2026-11-16).
 fn mark_dropped(index: usize, resolved: &Resolved, given_lost: &mut Vec<String>) -> bool {
   let marks: Vec<(usize, usize, bool, String)> = with_block(index, Vec::new(), |block, events| {
     let at = |p: u16| usize::from(p).checked_sub(block.range.0);
