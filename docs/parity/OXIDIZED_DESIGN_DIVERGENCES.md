@@ -5616,11 +5616,14 @@ listed command to `\@notprerr` (DG ruling (b), 2026-11-15), except Perl's 7 load
   What such a load records with `\@onlypreamble` is dropped (`\@preamblecmds` is `\@notprerr` after), so lppl.tex:44's
   probe stays true. A loader inside one is no Error (`\@currext` `sty`/`cls`, `inPreamble`).
 - A binding's lock (`:locked`, `:locked@files`) goes aside with the meaning it protects and comes back with it:
-  `\@notprerr` is no binding's, so the body's `\renewcommand` of a walked command stands as in TeX (imsart.sty:1223
-  `\@onlypreamble\doi` over OmniBus's locked `\doi`, the natbib `.bbl`'s `\renewcommand{\doi}`: 2606.22730, 36
-  false Errors; its DOIs print "doi: 10.…" as pdflatex does, where Perl, which walks nothing, keeps OmniBus's DOI link and
-  refuses the redefinition, #408). A command the body has redefined is no longer the walk's: a later body load neither reopens nor
-  disables it again. The locked commands the walk meets (1406 papers: a random 700, imsart's 70, the 696 using
+  `\@notprerr` is no binding's, so the body's `\renewcommand` of a walked command stands, as in TeX and in Perl
+  (settled 2026-11-16: the document's redefinition takes effect). 2606.22730: imsart.sty:1223 `\@onlypreamble\doi`
+  over OmniBus's `\doi`, which only our #408 locks (omnibus_cls.rs), so the natbib `.bbl`'s `\renewcommand{\doi}` was
+  refused (36 false Errors); now its DOIs read "doi: " and the `.bbl`'s `\Url` ref, 0 Errors, the same as Perl (whose
+  `\doi` is a plain `DefMacro` with no lock, OmniBus.cls.ltxml:154, and which walks nothing) and pdflatex ("doi:
+  10.1/x", no link). Within a body load the lock is back: a raw package's `\def\doi` is refused and its
+  `\let\savedoi\doi` gets OmniBus's link (Perl `--includestyles`: the package's `\doi`). A command the body has
+  redefined is no longer the walk's: a later body load neither reopens nor disables it again. The locked commands the walk meets (1406 papers: a random 700, imsart's 70, the 696 using
   `\@onlypreamble`): latex.ltx's six `\DeclareText…` declarers in every paper, `\DeclareTextCommand` in 233,
   imsart's `\doi` in 21, and the kernel's `\title`/`\author` under a raw class's `\@onlypreamble` in 8
   (cup-journal.cls, kaist-ucs.cls; cc.cls's 1507.02955).
@@ -5638,7 +5641,8 @@ Guards `preamblecmds_is_notprerr_inside_a_running_document`, `error_boundary::pe
 (rows "preamble-only commands in the body/preamble", "a second \begin{document}", "under an unknown class",
 "a body package's \@onlypreamble", "a preamble-only command is \@notprerr", "a document's \@onlypreamble macro",
 "a body \includeonly", "a package read in the body", "a locked preamble-only command redefined in the body", "a body
-load after the body redefined a preamble-only command", "a subfile's preamble", "a standalone sub-file's preamble",
+load after the body redefined a preamble-only command", "a binding's lock round-trips through a body load", "a
+subfile's preamble", "a standalone sub-file's preamble",
 "a standalone sub-file with no \begin{document}", "a subfile with no \begin{document}").
 
 ### 227. → SYNC_STATUS "Rust Error Fixes" (a port-bug fix: a `filecontents` capture ends at `\end{<current environment>}`)
