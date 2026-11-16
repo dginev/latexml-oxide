@@ -268,7 +268,7 @@ mod local_stylesheet_tests {
     assert!(apply(&mine).contains("<out>SPACED-COMMON</out>"));
 
     // A path as a `file:` URL's path: `/`-separated and rooted, `/C:/…` on Windows (`file:///C:/…`).
-    let url_path = |path: &std::path::Path| {
+    let file_url_path = |path: &std::path::Path| {
       let path = path.to_str().unwrap().replace('\\', "/");
       if path.starts_with('/') {
         path
@@ -277,7 +277,7 @@ mod local_stylesheet_tests {
       }
     };
     let abs = common.to_str().unwrap();
-    let escaped = url_path(&common).replace(' ', "%20");
+    let escaped = file_url_path(&common).replace(' ', "%20");
     for url in [
       abs.to_string(),
       format!("file://{escaped}"),
@@ -300,7 +300,7 @@ mod local_stylesheet_tests {
         "{name}"
       );
       // In a `file:` URL the `%` is escaped.
-      let url = format!("file://{}", url_path(&html5).replace('%', "%25"));
+      let url = format!("file://{}", file_url_path(&html5).replace('%', "%25"));
       // (`Path` equality is by component: Windows' `C:/…` is `C:\…`.)
       assert_eq!(super::embedded_xslt::disk_path(&url), Some(html5), "{url}");
     }
@@ -1063,7 +1063,7 @@ mod embedded_xslt {
   /// The path an absolute path or a `file:` URL (`file:///p`, `file://localhost/p`, `file:/p`,
   /// percent-encoded; `file://server/share/p` on Windows) names. A plain path is taken as written:
   /// its `%` is a character, not an escape (`/w/100%/LaTeXML-html5.xsl`).
-  pub fn url_path(url: &str) -> Option<std::path::PathBuf> {
+  pub(super) fn url_path(url: &str) -> Option<std::path::PathBuf> {
     let path = match url.strip_prefix("file:") {
       None => url.to_string(),
       Some(rest) => {

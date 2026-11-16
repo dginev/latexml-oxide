@@ -599,7 +599,9 @@ LoadDefinitions!({
   // clears a pending continuation and makes the type the current float's (:302,
   // `\caption@clrflags`; `\lx@caption@settype`, `latex_constructs::begin_float_continuation`).
   // Its `\caption@@settype{}` runs the main type's hook (caption.sty:314, `\caption@typehook`), as a sub-type runs
-  // `\caption@subtypehook` (`run_caption_subtype_hook`).
+  // `\caption@subtypehook` (`run_caption_subtype_hook`) — here only via `type=`, `\setcaptiontype` and the packages
+  // calling it: a float's own `\caption@xfloat` → `\caption@settype` (caption.sty:273) is not bound, and current
+  // caption.sty neither defines nor adds to `\caption@typehook` (only its rollback copies, `caption_2019-09-01.sty:831`).
   RawTeX!(r"\def\caption@settype#1{\edef\@captype{#1}\expandafter\lx@caption@settype\expandafter{\@captype}\@nameuse{caption@typehook}}");
   DefPrimitive!("\\lx@caption@settype{}", sub[(float_type)] {
     engine::latex_constructs::begin_float_continuation(&float_type.to_string());
