@@ -323,8 +323,8 @@ fn symbol_mark_shown_on_each_author() {
     "../../../tools/perfect_kernel/repros/sectioning-frontmatter/symbol_mark_shown_on_each_author.tex"
   ));
   assert_eq!(creators(&xml), vec![
-    "<creator role=\"author\"><personname>Ann Able</personname><note class=\"ltx_note_frontmatter ltx_thanks_correspondence\" mark=\"†\" role=\"thanks\" xml:id=\"id1\">Corresponding author.</note></creator>",
-    "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker</personname><note mark=\"†\" role=\"footnotemark\" xml:id=\"id2\"/></creator>",
+    "<creator role=\"author\"><personname>Ann Able</personname><note mark=\"†\" role=\"footnotemark\" xml:id=\"id1\"/><note class=\"ltx_note_frontmatter ltx_thanks_correspondence\" role=\"thanks\" xml:id=\"id2\">Corresponding author.</note></creator>",
+    "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker</personname><note mark=\"†\" role=\"footnotemark\" xml:id=\"id3\"/></creator>",
   ]);
 }
 

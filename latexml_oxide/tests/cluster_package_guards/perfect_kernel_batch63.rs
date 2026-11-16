@@ -881,7 +881,7 @@ fn author_symbol_mark_piece_stays_with_the_name() {
       "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_symbol_mark_piece_stays_with_the_name.tex"
     ),
     &[
-      "<creator role=\"author\"><personname>Ann Able</personname><note class=\"ltx_note_frontmatter ltx_thanks_contribution\" mark=\"∗\" role=\"thanks\" xml:id=\"id1\">Equal contribution</note></creator>",
+      "<creator role=\"author\"><personname>Ann Able</personname><note mark=\"∗\" role=\"footnotemark\" xml:id=\"id1\"/><note class=\"ltx_note_frontmatter ltx_thanks_contribution\" role=\"thanks\" xml:id=\"id2\">Equal contribution</note></creator>",
       "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker</personname></creator>",
     ],
   );

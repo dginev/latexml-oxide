@@ -448,7 +448,7 @@ fn marked_blocks_restored_read_as_printed() {
       lines:    &[],
       creators: Creators::Whole(&[
         r#"<creator role="author"><personname>Ann Able</personname><note mark="∗" role="footnotemark"/><contact name="Affiliation: " role="affiliation">Univ A, Tokyo</contact><contact name="Email: " role="email">ann@example.org</contact></creator>"#,
-        r#"<creator before="  " role="author"><personname>Bob Baker</personname><note class="ltx_note_frontmatter ltx_thanks_address" mark="†" role="thanks">Present address: Lab C</note><contact name="Affiliation: " role="affiliation">Lab B, Kyoto</contact><contact name="Email: " role="email">bob@example.org</contact></creator>"#,
+        r#"<creator before="  " role="author"><personname>Bob Baker</personname><note mark="†" role="footnotemark"/><note class="ltx_note_frontmatter ltx_thanks_address" role="thanks">Present address: Lab C</note><contact name="Affiliation: " role="affiliation">Lab B, Kyoto</contact><contact name="Email: " role="email">bob@example.org</contact></creator>"#,
       ]),
     },
     Row {

@@ -124,7 +124,7 @@ fn a_typed_symbol_beside_a_thanks_is_a_mark_only_note() {
       Some(PRELOAD),
     ),
     &[
-      r#"<creator role="author"><personname>Ann Able</personname><note mark="*" role="footnotemark"/><note class="ltx_note_frontmatter ltx_thanks_correspondence" role="thanks">Corresponding author.</note></creator>"#,
+      r#"<creator role="author"><personname>Ann Able</personname><note mark="∗" role="footnotemark"/><note class="ltx_note_frontmatter ltx_thanks_correspondence" role="thanks">Corresponding author.</note></creator>"#,
       r#"<creator before=" " role="author"><personname>Bob Baker</personname><note mark="∗" role="footnotemark"/><note class="ltx_note_frontmatter ltx_thanks_correspondence" role="thanks"> Corresponding author.</note></creator>"#,
       r#"<creator before=" " role="author"><personname>Cy Cole</personname></creator>"#,
     ],
