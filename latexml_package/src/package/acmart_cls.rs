@@ -1161,8 +1161,12 @@ fn acmart_natbib_option() -> Result<bool> {
   Ok(natbib)
 }
 
-/// The mark acmart's `\maketitle` prints for its `n`-th title note: `\@fnsymbol` (acmart.cls:2237).
+/// The mark acmart's `\maketitle` prints for its `n`-th title note: `\@fnsymbol` (acmart.cls:2237); none where a
+/// document's own `\maketitle` runs instead (`class_maketitle_in_force`: its marks unknown, OD #1053).
 fn acm_note_mark(n: i64) -> Result<Option<String>> {
+  if !engine::latex_constructs::class_maketitle_in_force() {
+    return Ok(None);
+  }
   let mark = digest(TokenizeInternal!(TeXString::assembled(s!(
     "\\@fnsymbol{{{n}}}"
   ))))?
