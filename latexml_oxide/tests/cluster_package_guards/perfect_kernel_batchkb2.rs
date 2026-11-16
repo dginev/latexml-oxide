@@ -34,11 +34,7 @@ fn emitted(tex: &str) -> Vec<String> {
 #[test]
 fn a_cut_never_strands_the_phrase_its_address_completes() {
   assert_eq!(emitted(repro!("emit_a_cut_never_strands_its_phrase")), [
-    "<creator role=\"author\">\n    <personname>Alain J.\u{a0}Brizard<sup><text \
-      font=\"italic\">a</text></sup></personname>\n    <contact name=\"Affiliation:\u{a0}\" \
-      role=\"affiliation\">Department of Physics, Saint Michael’s College, VT 05439, USA <break/><sup><text \
-      font=\"italic\">a</text></sup>Author to whom correspondence should be addressed: \
-      abrizard@smcvt.edu</contact>\n  </creator>"
+    "<creator role=\"author\">\n    <personname>Alain J.\u{a0}Brizard</personname>\n    <note mark=\"a\" role=\"footnotemark\"/>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Department of Physics, Saint Michael’s College, VT 05439, USA <break/><sup><text font=\"italic\">a</text></sup>Author to whom correspondence should be addressed: abrizard@smcvt.edu</contact>\n  </creator>"
   ]);
 }
 

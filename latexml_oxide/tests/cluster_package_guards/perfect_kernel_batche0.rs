@@ -2324,6 +2324,9 @@ const PASSES_AFTER_THE_EMITTER: &[(&str, PassMay)] = &[
   ("link_marked_notes", PassMay::ChangeText),
   ("flag_merged_creators", PassMay::ChangeNothing),
   ("keep_unclaimed_net_notes", PassMay::Drop),
+  // (the name alone: a name's marks to its notes' `mark`, consumed by its contacts, or mark-only notes after it — the
+  // creator's own items, no owner moved; PURE)
+  ("keep_personnames_pure", PassMay::ChangeText),
   // (the content invariant on the placed output, under `=2`: it counts, N2)
   ("check_placed_content", PassMay::ChangeNothing),
 ];

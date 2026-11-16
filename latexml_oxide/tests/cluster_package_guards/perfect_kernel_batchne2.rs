@@ -50,7 +50,10 @@ fn run(tex: &str) -> (String, String) {
 fn a_notes_footnote_step_runs_where_it_prints() {
   let (log, xml) = run(repro!("ne2_thanks_addtocounter_order"));
   assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
-  assert_eq!(creators(&xml), [row(&["Ann Able"]), row(&["Bob Baker"])]);
+  assert_eq!(creators(&xml), [
+    row(&["Ann Able", "mark=*", "mark=†"]),
+    row(&["Bob Baker", "mark=*"])
+  ]);
   let notes: Vec<&str> = xml
     .match_indices("<note ")
     .map(|(at, _)| &xml[at..at + xml[at..].find('>').expect("a note's tag")])
@@ -99,10 +102,10 @@ fn initials_a_thin_space_joins_are_a_name_of_their_own() {
   let lab = "affiliation=∗ Lab A, Los Alamos";
   let dept = "affiliation=† Dept B, Boston";
   let expected = [
-    row(&["Yongmin Kim *", lab]),
-    row(&["F. M. Munteanu ∗,†", lab, dept]),
-    row(&["C. H. Perry ∗,†", lab, dept]),
-    row(&["D. G. Rickel *", lab]),
+    row(&["Yongmin Kim", lab]),
+    row(&["F. M. Munteanu", lab, dept]),
+    row(&["C. H. Perry", lab, dept]),
+    row(&["D. G. Rickel", lab]),
   ];
   let (log, xml) = run(repro!("ne2_merged_kim"));
   assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
@@ -134,7 +137,11 @@ fn representing_a_collaboration_is_its_contact() {
 /// note's move only).
 #[test]
 fn a_counter_move_no_name_carries_writes_the_block_as_perl_splits_it() {
-  let expected = vec![row(&["Ann Able"]), row(&["Bob Baker"]), row(&["Carl Cole"])];
+  let expected = vec![
+    row(&["Ann Able", "mark=†", "mark=*"]),
+    row(&["Bob Baker", "mark=‡", "mark=†"]),
+    row(&["Carl Cole", "mark=*"]),
+  ];
   let warnings = 1;
   let (log, xml) = run(repro!("ne2b_counter_moved_between_notes"));
   assert_eq!(
@@ -181,7 +188,10 @@ fn a_counter_move_no_name_carries_writes_the_block_as_perl_splits_it() {
 fn a_note_before_every_name_steps_before_it() {
   let (log, xml) = run(repro!("ne2b_note_before_every_name"));
   assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
-  assert_eq!(creators(&xml), [row(&["Ann Able"]), row(&["Bob Baker"])]);
+  assert_eq!(creators(&xml), [
+    row(&["Ann Able", "mark=†", "mark=*"]),
+    row(&["Bob Baker"])
+  ]);
 }
 
 /// The marks' notes of `xml` (a `\footnotemark`'s, an `\endnotemark`'s), each its opening tag, in document order.
@@ -189,6 +199,8 @@ fn footnotemarks(xml: &str) -> Vec<&str> {
   xml
     .match_indices("<note ")
     .map(|(at, _)| &xml[at..at + xml[at..].find('>').expect("a note's tag")])
+    // (a mark-only note's tag closes itself, `<note mark="1" role="footnotemark" xml:id="id1"/>`: PURE)
+    .map(|tag| tag.trim_end_matches('/'))
     .filter(|tag| tag.contains(" mark="))
     .collect()
 }
@@ -227,7 +239,10 @@ fn a_mark_after_its_names_note_stays_with_it() {
   for (tex, expected, marks) in [
     (
       repro!("ne2c_mark_after_note"),
-      vec![row(&["Ann Able"]), row(&["Bob Baker"])],
+      vec![
+        row(&["Ann Able", "mark=†", "mark=*"]),
+        row(&["Bob Baker", "mark=‡"]),
+      ],
       vec![
         mark("†", "footnote2"),
         thanks("*", "id1"),
@@ -236,7 +251,11 @@ fn a_mark_after_its_names_note_stays_with_it() {
     ),
     (
       repro!("ne2c_mark_after_note_spaced"),
-      vec![row(&["Ann Able"]), row(&["Bob Baker"]), row(&["Carl Cole"])],
+      vec![
+        row(&["Ann Able", "mark=†", "mark=*"]),
+        row(&["Bob Baker", "mark=‡"]),
+        row(&["Carl Cole", "mark=§"]),
+      ],
       vec![
         mark("†", "footnote2"),
         thanks("*", "id1"),
@@ -246,7 +265,11 @@ fn a_mark_after_its_names_note_stays_with_it() {
     ),
     (
       repro!("ne2c_mark_after_note_numbered"),
-      vec![row(&["Ann Able"]), row(&["Bob Baker"]), row(&["Carl Cole"])],
+      vec![
+        row(&["Ann Able", "mark=*", "mark=*"]),
+        row(&["Bob Baker", "mark=*"]),
+        row(&["Carl Cole", "mark=†"]),
+      ],
       vec![
         mark("*", "footnotex1"),
         thanks("*", "id1"),
@@ -256,8 +279,11 @@ fn a_mark_after_its_names_note_stays_with_it() {
     ),
     (
       repro!("ne2c_mark_after_footnote_glued"),
-      // (Bob Baker's `\footnote` the `\thanks` note it is in article's title, ‡, his `\footnotemark[1]` Ann Able's ∗)
-      vec![row(&["Ann Able"]), row(&["Bob Baker"]), row(&["Carl Cole"])],
+      vec![
+        row(&["Ann Able", "mark=†", "mark=*"]),
+        row(&["Bob Baker", "mark=*", "mark=‡"]),
+        row(&["Carl Cole", "mark=§"]),
+      ],
       vec![
         mark("†", "footnote2"),
         thanks("*", "id1"),
@@ -269,9 +295,9 @@ fn a_mark_after_its_names_note_stays_with_it() {
     (
       repro!("ne2c_mark_after_math_comma"),
       vec![
-        row(&["Ann Able"]),
+        row(&["Ann Able", "mark=1"]),
         // (the endnote marks beside the name too; the `$^,$` printed between them is left at the name's end)
-        row(&["Bob Baker ,"]),
+        row(&["Bob Baker", "mark=1", "mark=2"]),
       ],
       ["1", "2", "3"]
         .iter()
@@ -292,10 +318,10 @@ fn a_mark_after_its_names_note_stays_with_it() {
   let (log, xml) = run(repro!("ne2e_mark_past_spacing_is_its_names"));
   assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
   assert_eq!(creators(&xml), [
-    row(&["Ann Able"]),
-    row(&["Bob Baker"]),
-    row(&["Carl Cole"]),
-    row(&["Dan Dory"]),
+    row(&["Ann Able", "mark=†", "mark=*"]),
+    row(&["Bob Baker", "mark=*"]),
+    row(&["Carl Cole", "mark=†"]),
+    row(&["Dan Dory", "mark=‡"]),
   ]);
   assert_eq!(
     marks_by_creator(&xml),
@@ -319,7 +345,12 @@ fn a_mark_after_its_names_note_stays_with_it() {
 /// after the joint name, each with its mark, so the name reads without their tags; pin updated (the notes' move only).
 #[test]
 fn a_mark_on_no_name_writes_the_block_whole() {
-  let expected = vec![row(&["Ann Able and Bob Baker"])];
+  let expected = vec![row(&[
+    "Ann Able and Bob Baker",
+    "mark=†",
+    "mark=‡",
+    "mark=*",
+  ])];
   let warnings = 1;
   let (log, xml) = run(repro!("ne2c_mark_on_no_name_writes_the_block_whole"));
   assert_eq!(
@@ -365,10 +396,10 @@ fn a_given_mark_on_no_name_keeps_the_creators() {
   let (log, xml) = run(repro!("author_thanks_shared_by_footnotemark_marks_kept"));
   assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
   assert_eq!(creators(&xml), [
-    row(&["Ann Able"]),
-    row(&["Bob Baker"]),
-    row(&["Cat Cole"]),
-    row(&["Dan Dorn"]),
+    row(&["Ann Able", "mark=†", "mark=*"]),
+    row(&["Bob Baker", "mark=*", "mark=‡"]),
+    row(&["Cat Cole", "mark=†", "mark=‡"]),
+    row(&["Dan Dorn", "mark=‡"]),
   ]);
   // (pdflatex's "Ann Able ∗ †  Bob Baker ∗ ‡  Cat Cole † ‡  Dan Dorn ‡": each carried mark on its name as a copy of
   // the note it marks, SHMARK's Link step, OD #1053 — Ann's † and Dan's ‡ the carry's; a name's own `\thanks` note
@@ -389,7 +420,7 @@ fn a_given_mark_on_no_name_keeps_the_creators() {
   ]);
   let names = |carl: &str| {
     vec![
-      row(&["Ann Able", "affiliation=Univ A"]),
+      row(&["Ann Able", "mark=*", "affiliation=Univ A"]),
       row(&["Bob Baker", "affiliation=Univ A"]),
       row(&[carl, "affiliation=Univ B"]),
       row(&["Dan Dory", "affiliation=Univ B"]),
@@ -420,6 +451,10 @@ fn a_given_mark_on_no_name_keeps_the_creators() {
   // (a bare `\footnotemark` dropped too: the block written whole, every mark kept, its Warning)
   let expected = vec![row(&[
     "Ann Able, 1 Bob Baker, 1 Carl Cole, 2 Dan Dory 2 1 Univ A 2 Univ B",
+    "mark=*",
+    "mark=†",
+    "mark=‡",
+    "mark=*",
   ])];
   let (log, xml) = run(repro!("ne2d_given_and_fresh_mark_dropped"));
   assert_eq!((error_count(&log), warning_count(&log)), (0, 1), "{log}");
@@ -464,7 +499,11 @@ fn a_mark_a_name_follows_past_spacing_is_not_carried_back() {
         1,
         &["given their number (a note's, written already) on no name and no item; lost: †"][..],
       ),
-      vec![row(&["Ann Able"]), row(&["Bob Baker"]), row(&["Carl Cole"])],
+      vec![
+        row(&["Ann Able"]),
+        row(&["Bob Baker", "mark=†"]),
+        row(&["Carl Cole"]),
+      ],
       vec![vec![], vec![mark("†", "footnotex1")], vec![]],
       0,
     ),
@@ -477,7 +516,11 @@ fn a_mark_a_name_follows_past_spacing_is_not_carried_back() {
           "reaches no contact carrying its label, or a labelled contact no name's mark reaches (*)",
         ][..],
       ),
-      vec![row(&["Ann Able"]), row(&["Bob Baker"]), row(&["Carl Cole"])],
+      vec![
+        row(&["Ann Able", "mark=*"]),
+        row(&["Bob Baker", "mark=†"]),
+        row(&["Carl Cole", "mark=*"]),
+      ],
       vec![
         vec![mark("*", "footnotex1")],
         vec![mark("†", "footnotex2")],
@@ -492,15 +535,15 @@ fn a_mark_a_name_follows_past_spacing_is_not_carried_back() {
         1,
         &["on no name and no item; the block is written whole"][..],
       ),
-      vec![row(&["Ann Able Bob Baker"])],
+      vec![row(&["Ann Able Bob Baker", "mark=†", "mark=*"])],
       vec![vec![mark("†", "footnote2"), thanks("*", "id1")]],
       1,
     ),
     (
       repro!("ne2e_mark_in_formula_past_thin_spaces"),
       (1, &["on no name and no item; lost: ∗"][..]),
-      vec![row(&["Ann Able 1"]), row(&["Bob Baker"])],
-      vec![vec![thanks("*", "id2")], vec![]],
+      vec![row(&["Ann Able", "mark=1", "mark=*"]), row(&["Bob Baker"])],
+      vec![vec![mark("1", "id1"), thanks("*", "id2")], vec![]],
       1,
     ),
   ] {
@@ -552,6 +595,14 @@ fn a_marks_run_is_carried_back_whole_or_left() {
     )
   };
   let three = || vec![row(&["Ann Able"]), row(&["Bob Baker"]), row(&["Carl Cole"])];
+  // (Ann's carried run, her marks' notes listed in her row)
+  let ann_marked = || {
+    vec![
+      row(&["Ann Able", "mark=*", "mark=†"]),
+      row(&["Bob Baker"]),
+      row(&["Carl Cole"]),
+    ]
+  };
   let none = || vec![vec![], vec![], vec![]];
   let given = "given their number (a note's, written already) on no name and no item; lost: ";
   let whole = "on no name and no item; the block is written whole, as Perl's whole-block creator";
@@ -581,7 +632,12 @@ fn a_marks_run_is_carried_back_whole_or_left() {
     (
       repro!("ne2f_mark_and_note_nearer_next"),
       Some(whole.to_string()),
-      vec![row(&["Ann Able Bob Baker and Carl Cole"])],
+      vec![row(&[
+        "Ann Able Bob Baker and Carl Cole",
+        "mark=†",
+        "mark=*",
+        "mark=‡",
+      ])],
       vec![vec![
         mark("†", "footnote2"),
         thanks("*", "id1"),
@@ -592,7 +648,7 @@ fn a_marks_run_is_carried_back_whole_or_left() {
     (
       repro!("ne2f_bare_mark_nearer_next_past_quads"),
       Some(whole.to_string()),
-      vec![row(&["Ann Able Bob Baker"])],
+      vec![row(&["Ann Able Bob Baker", "mark=†", "mark=‡", "mark=*"])],
       vec![vec![
         mark("†", "footnote2"),
         mark("‡", "footnote3"),
@@ -603,7 +659,7 @@ fn a_marks_run_is_carried_back_whole_or_left() {
     (
       repro!("ne2f_marks_wider_after_and_tied"),
       lost("‡"),
-      three(),
+      ann_marked(),
       vec![
         vec![mark("*", "footnotex1"), mark("†", "footnotex2")],
         vec![],
@@ -628,7 +684,7 @@ fn a_marks_run_is_carried_back_whole_or_left() {
     (
       repro!("ne2h_marks_run_carried_back_whole"),
       None,
-      three(),
+      ann_marked(),
       vec![
         vec![mark("*", "footnotex1"), mark("†", "footnotex2")],
         vec![],
@@ -666,7 +722,7 @@ fn a_mark_nearer_the_next_name_moves_nothing_into_it() {
   for (tex, expected) in [
     (
       repro!("ne2g_mark_then_superscript_nearer_next"),
-      three(&["Ann Able a"]),
+      three(&["Ann Able", "mark=a"]),
     ),
     (
       repro!("ne2g_mark_then_orcid_nearer_next"),
@@ -688,10 +744,18 @@ fn a_mark_nearer_the_next_name_moves_nothing_into_it() {
       assert!(log.contains(says), "{says}: {log}");
     }
     assert_eq!(creators(&xml), expected, "{xml}");
-    assert!(marks_by_creator(&xml).iter().all(Vec::is_empty), "{xml}");
+    // (no mark moved onto a name; the superscript `a` Ann's, outside her name: PURE's mark-only note, OD #1055)
+    let a_mark = r#"<note mark="a" role="footnotemark""#;
+    assert!(
+      marks_by_creator(&xml)
+        .iter()
+        .flatten()
+        .all(|tag| tag.starts_with(a_mark)),
+      "{xml}"
+    );
     assert_eq!(
-      xml.matches("<sup").count(),
-      usize::from(tex.contains("$^{a}$")),
+      (xml.matches(a_mark).count(), xml.matches("<sup").count()),
+      (usize::from(tex.contains("$^{a}$")), 0),
       "{xml}"
     );
     assert_eq!(

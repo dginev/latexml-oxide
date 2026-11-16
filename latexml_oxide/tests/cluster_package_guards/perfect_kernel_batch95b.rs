@@ -47,9 +47,9 @@ fn ieeetran_is_written() {
   let (..) = assert_reading(
     tex,
     Some(&[
-      &["Ann Able 1", "affiliation=1 Univ X", "email=ann.able@x.org"],
-      &["Bob Baker 1", "affiliation=1 Univ X", "email=bbaker@x.org"],
-      &["Cid Cole 2", "affiliation=2 Univ Y", "email=cid@y.org"],
+      &["Ann Able", "affiliation=1 Univ X", "email=ann.able@x.org"],
+      &["Bob Baker", "affiliation=1 Univ X", "email=bbaker@x.org"],
+      &["Cid Cole", "affiliation=2 Univ Y", "email=cid@y.org"],
     ]),
     &[
       "C Ann Able [1] | line:names",
@@ -142,8 +142,8 @@ fn a_label_spelled_with_a_command_is_read_to_it() {
       &["Ann Able", "affiliation=Univ X"],
       // (the starred legend each starred name's note since 103c, which this view of contacts does not list — the
       // notes' view below pins it; the reading's tuples still give it to both: `insert::kind_legend_contacts`, OD #961)
-      &["Bob Baker*", "affiliation=Univ Y"],
-      &["Cid Cole*", "affiliation=Univ X"],
+      &["Bob Baker", "affiliation=Univ Y", "mark=*"],
+      &["Cid Cole", "affiliation=Univ X", "mark=*"],
       &["Dee Dunn", "affiliation=Univ Z"],
     ],
     &[
@@ -166,8 +166,8 @@ fn a_label_spelled_with_a_command_is_read_to_it() {
     )),
     [
       vec!["Ann Able"],
-      vec!["Bob Baker*", "note[*]=Equal contribution."],
-      vec!["Cid Cole*", "note[*]=Equal contribution."],
+      vec!["Bob Baker", "note[*]=Equal contribution."],
+      vec!["Cid Cole", "note[*]=Equal contribution."],
       vec!["Dee Dunn"],
     ]
   );

@@ -40,12 +40,13 @@ fn creators_are(tex: &str, expected: &[&[&str]]) -> String {
   xml
 }
 
-/// Each name of `xml` in `names` carries its mark as the `<sup>` it prints, in the personname (`Ann Able<sup …>1`).
+/// Each name of `xml` in `names` is the name alone, the mark it prints the label its affiliation consumes (DG 2026-11-16,
+/// ruling 3; the mark was in the personname, `Ann Able<sup …>1`, before PURE).
 #[track_caller]
-fn marks_printed(xml: &str, names: &[&str]) {
+fn names_alone(xml: &str, names: &[&str]) {
   for name in names {
     assert!(
-      xml.contains(&format!("<personname>{name}<sup")),
+      xml.contains(&format!("<personname>{name}</personname>")),
       "{name}\n{xml}"
     );
   }
@@ -64,26 +65,27 @@ fn batchdel3_sv_support_institute_in_a_piece_numbers_its_list() {
 
 /// 2502.07804's shape: the institute's lines each labelled by its mark (`\lx@sv@institute@unlabelled`'s marked list),
 /// which the names' hand-typed `${}^{1}$` request, the names parted at the comma by the reading; the call is the
-/// reading's (no setter call written), and the names keep the marks they print, as pdflatex, off and Perl (review
-/// revDEL3 B1: DEL3 dropped them).
+/// reading's (no setter call written), and each mark the names print is the label its affiliation consumes (review
+/// revDEL3 B1: DEL3 dropped them; since PURE the name alone, DG 2026-11-16 ruling 3).
 #[test]
 fn batchdel3_sv_support_marked_institute_lines_go_by_the_names_marks() {
   let xml = creators_are(repro!("list_setter_in_block_sv_marked"), &[
-    &["Ann Able 1", "affiliation=Univ X, Town"],
-    &["Bob Baker 2", "affiliation=Lab Y, City"],
+    &["Ann Able", "mark=1", "affiliation=Univ X, Town"],
+    &["Bob Baker", "mark=2", "affiliation=Lab Y, City"],
   ]);
-  marks_printed(&xml, &["Ann Able", "Bob Baker"]);
+  names_alone(&xml, &["Ann Able", "Bob Baker"]);
 }
 
 /// Hand-typed marks on the names of a block whose setter call is written as it is (`\and {Bob Baker${}^{2}$\institute{…}}`):
-/// the names keep the marks pdflatex prints — no block's marks forced off (review revDEL3 B1's sibling).
+/// the marks pdflatex prints label their affiliations — no block's marks forced off (review revDEL3 B1's sibling), each
+/// consumed by its affiliation since PURE.
 #[test]
 fn batchdel3_typed_marks_stay_on_the_names_of_a_written_setter_call() {
   let xml = creators_are(repro!("list_setter_in_block_sv_marked_typed"), &[
-    &["Ann Able 1", "affiliation=Univ X, Town"],
-    &["Bob Baker 2", "affiliation=Lab Y, City"],
+    &["Ann Able", "affiliation=Univ X, Town"],
+    &["Bob Baker", "affiliation=Lab Y, City"],
   ]);
-  marks_printed(&xml, &["Ann Able", "Bob Baker"]);
+  names_alone(&xml, &["Ann Able", "Bob Baker"]);
 }
 
 /// A document's `\institute{Old Place, Nowhere}` before cond-mat0605195's shape: the block's call replaces it, as pdflatex

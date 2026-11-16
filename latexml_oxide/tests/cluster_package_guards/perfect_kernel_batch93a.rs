@@ -22,8 +22,8 @@ macro_rules! repro {
   };
 }
 
-/// Each creator's personname and contacts (`creators`), then its own notes (`note=<text>`, the `ltx:note` children
-/// outside its personname).
+/// Each creator's personname, contacts and note marks (`creators`), then its own notes (`note=<text>`, the `ltx:note`
+/// children outside its personname; a mark-only note none).
 pub(super) fn creators_with_notes(xml: &str) -> Vec<Vec<String>> {
   let mut all = creators(xml);
   for (creator, (start, _)) in all.iter_mut().zip(xml.match_indices("<creator ")) {
@@ -34,6 +34,10 @@ pub(super) fn creators_with_notes(xml: &str) -> Vec<Vec<String>> {
       .map_or(body, |at| &body[at + "</personname>".len()..]);
     for (at, _) in outside.match_indices("<note ") {
       let open_end = at + outside[at..].find('>').expect("note tag");
+      // (a mark-only note, `<note mark="a" role="footnotemark"/>`: its `mark=…` is `creators`'s, PURE)
+      if outside[..open_end].ends_with('/') {
+        continue;
+      }
       let close = open_end + outside[open_end..].find("</note>").expect("closed note");
       creator.push(format!("note={}", text(&outside[open_end + 1..close])));
     }
@@ -110,8 +114,18 @@ fn a_legend_line_is_written_as_the_starred_names_note() {
   assert_eq!(
     default_mode_creators(tex),
     owned(&[
-      &["Ann Able", "affiliation=Univ X", "note=Equal contribution"],
-      &["Bob Baker", "affiliation=Univ Y", "note=Equal contribution"],
+      &[
+        "Ann Able",
+        "affiliation=Univ X",
+        "mark=*",
+        "note=Equal contribution"
+      ],
+      &[
+        "Bob Baker",
+        "affiliation=Univ Y",
+        "mark=*",
+        "note=Equal contribution"
+      ],
       &["Cid Cole", "affiliation=Univ Y"],
     ])
   );

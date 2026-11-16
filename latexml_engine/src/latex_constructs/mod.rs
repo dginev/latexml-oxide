@@ -871,8 +871,12 @@ pub fn relocate_footnote(document: &mut Document, node: &mut Node) -> Result<()>
     let mut paired = false;
     if let Some(mark) = node.get_attribute("mark") {
       let key = mark.replace(' ', "");
+      // (a name's mark the frontmatter set after it, `_namemark`, is no `\footnotemark`: a body `\footnotetext[2]` is
+      // not its text, 2208.09944)
       for mut marknote in document.findnodes(
-        &format!(".//ltx:note[@role='{notetype}mark'][translate(@mark,' ','')='{key}']"),
+        &format!(
+          ".//ltx:note[@role='{notetype}mark'][translate(@mark,' ','')='{key}'][not(@_namemark)]"
+        ),
         None,
       ) {
         if is_descendant_or_self(&marknote, node) || !same_count(document, &marknote, node, BY_MARK)

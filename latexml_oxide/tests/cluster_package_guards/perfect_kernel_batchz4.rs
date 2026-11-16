@@ -57,15 +57,19 @@ fn the_emit_is_the_old_markup() {
   same_markup(
     repro!("emit_marks_a_per_author_class_keeps_on_its_names"),
     &[
-      r#"<personname>Ann Able<sup><text font="italic">1</text></sup></personname>"#,
+      // (the name alone, its label consumed by the affiliation it holds, PURE)
+      "<personname>Ann Able</personname>",
       // (P4c: the list's printed mark shown, as pdflatex prints it — P4S Q1)
       "<contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup><text font=\"italic\">2</text></sup>Univ B</contact>",
     ],
   );
   same_markup(repro!("emit_marks_a_block_answers_or_shows"), &[
     "<personname>Ann Able</personname>",
-    "<personname>Bob Baker<sup>∗</sup></personname>",
-    "<personname>Cat Cole<sup>3</sup></personname>",
+    // (a mark nothing answers a mark-only note after the name, PURE)
+    "<personname>Bob Baker</personname>",
+    r#"<note mark="∗" role="footnotemark"/>"#,
+    "<personname>Cat Cole</personname>",
+    r#"<note mark="3" role="footnotemark"/>"#,
   ]);
   same_markup(repro!("emit_fonts_a_group_before_a_mark"), &[
     r#"<text fontsize="90%">Univ A, Town</text>"#,
@@ -191,7 +195,7 @@ fn the_whole_block_queue_still_reads() {
   let (log, xml) = run(repro!("emit_marks_a_block_answers_or_shows"));
   assert_eq!(error_count(&log), 0, "{log}");
   let names: Vec<String> = creators(&xml).iter().map(|c| c[0].clone()).collect();
-  assert_eq!(names, ["Ann Able", "Bob Baker ∗", "Cat Cole 3"]);
+  assert_eq!(names, ["Ann Able", "Bob Baker", "Cat Cole"]);
 }
 
 /// The shape of `affiliation_cut_environments_by_spelling` each row of [`ENVIRONMENT_ROWS`] replaces.

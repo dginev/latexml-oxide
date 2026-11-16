@@ -45,9 +45,9 @@ fn author_thanks_inside_a_mark_keeps_the_mark_and_the_note() {
   assert_creators(
     repro!("sectioning-frontmatter/author_thanks_inside_a_mark_keeps_the_mark_and_the_note.tex"),
     &[
-      r#"<creator role="author"><personname>Ann Alpha<sup xml:id="id1">1</sup></personname></creator>"#,
-      r#"<creator before="  " role="author"><personname>Bob Beta<sup xml:id="id2">1,2</sup></personname><note class="ltx_note_frontmatter ltx_thanks_contribution" mark="*" role="thanks" xml:id="id3">Work done during an internship.</note></creator>"#,
-      r#"<creator before="  " role="author"><personname>Cy Gamma<sup xml:id="id4">1</sup></personname></creator>"#,
+      r#"<creator role="author"><personname>Ann Alpha</personname><note mark="1" role="footnotemark" xml:id="id1"/></creator>"#,
+      r#"<creator before="  " role="author"><personname>Bob Beta</personname><note mark="1,2" role="footnotemark" xml:id="id2"/><note class="ltx_note_frontmatter ltx_thanks_contribution" mark="*" role="thanks" xml:id="id3">Work done during an internship.</note></creator>"#,
+      r#"<creator before="  " role="author"><personname>Cy Gamma</personname><note mark="1" role="footnotemark" xml:id="id4"/></creator>"#,
     ],
   );
 }

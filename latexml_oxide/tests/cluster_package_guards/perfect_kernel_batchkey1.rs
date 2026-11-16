@@ -38,7 +38,7 @@ fn an_unrequested_leading_mark_keeps_its_calls_placement() {
   let want = [
     vec!["Ann Able", "affiliation=Univ A, City A"],
     vec!["Bob Baker", "affiliation=† Univ B, City B"],
-    vec!["Cat Cole *", "affiliation=Univ C, City C"],
+    vec!["Cat Cole", "mark=*", "affiliation=Univ C, City C"],
   ];
   assert_eq!(on, want);
   let on = both(repro!("unrequested_numbered_address_keeps_its_call"));
@@ -99,10 +99,11 @@ fn a_marked_thanks_is_its_marks_affiliations() {
   assert_eq!(on, want);
   let on = both(repro!("marked_thanks_legend_glyph_is_its_text"));
   assert_eq!(on, vec![
-    vec!["Ann Able ∗", "affiliation=Univ A, Japan."],
+    vec!["Ann Able", "mark=∗", "affiliation=Univ A, Japan."],
     vec!["Bob Baker", "affiliation=Univ B, Japan"],
     vec![
-      "Cat Cole ∗",
+      "Cat Cole",
+      "mark=∗",
       "affiliation=Univ A, Japan.",
       "affiliation=Univ C, Japan. cat@c.edu *Corresponding authors"
     ]
@@ -110,7 +111,7 @@ fn a_marked_thanks_is_its_marks_affiliations() {
   // (each piece the reading cut written from its own span, not re-cut by the writer: review revG5 finding 1, where the
   // third piece, "Corresponding author" and its address, was lost at `=2`, counted by 2 Warnings)
   let on = both(repro!("marked_thanks_piece_is_written_as_read"));
-  let want = [vec!["Ann Able ∗", "affiliation=Univ A"], vec![
+  let want = [vec!["Ann Able", "mark=∗", "affiliation=Univ A"], vec![
     "Bob Baker",
     "affiliation=Univ B. * Corresponding author.",
   ]];
@@ -118,7 +119,7 @@ fn a_marked_thanks_is_its_marks_affiliations() {
   let tex = repro!("marked_thanks_piece_with_address_is_written_as_read");
   let on = both(tex);
   let want = [
-    vec!["Ann Able ∗", "affiliation=Univ A", "email=a@x.org"],
+    vec!["Ann Able", "affiliation=Univ A", "mark=*", "email=a@x.org"],
     vec!["Bob Baker", "affiliation=Univ B."],
   ];
   assert_eq!(on, want);

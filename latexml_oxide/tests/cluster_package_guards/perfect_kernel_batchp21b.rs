@@ -32,9 +32,9 @@ macro_rules! repro {
 #[test]
 fn sv_institute_list_reads_a_whole_author_entry_by_its_names() {
   let expected: Vec<Vec<String>> = [
-    &["Ann Able 1", "email=ann@x.edu"][..],
-    &["Bob Baker 1", "email=bob@x.edu"],
-    &["Cid Cole 2", "email=cid@y.edu"],
+    &["Ann Able", "mark=1", "email=ann@x.edu"][..],
+    &["Bob Baker", "mark=1", "email=bob@x.edu"],
+    &["Cid Cole", "mark=2", "email=cid@y.edu"],
     &["affiliation=1 item 1 University of X 2 item 2 University of Y"],
   ]
   .iter()

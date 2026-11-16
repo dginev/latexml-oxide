@@ -97,10 +97,11 @@ fn gretsi_auteurs_trim_a_macro_held_and() {
   // (P4c: the lists' printed marks shown in the pins below, as pdflatex prints them — P4S Q1)
   assert_rows(
     &[row!("gretsi_written_and"), row!("gretsi_macro_held_and")],
-    &[
-      &["Ann Able 1", "email=ann@a.edu", "affiliation=1 Univ A"],
-      &["Bob Baker 2", "email=bob@b.edu", "affiliation=2 Univ B"],
-    ],
+    &[&["Ann Able", "email=ann@a.edu", "affiliation=1 Univ A"], &[
+      "Bob Baker",
+      "email=bob@b.edu",
+      "affiliation=2 Univ B",
+    ]],
   );
 }
 

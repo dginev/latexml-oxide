@@ -90,6 +90,7 @@ fn a_name_run_grown_over_other_names_is_its_text() {
   let expected = [
     row(&[
       "Ann Able",
+      "mark=*",
       "affiliation=Univ A, City A",
       "affiliation=Univ B, City B",
     ]),

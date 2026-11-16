@@ -71,8 +71,8 @@ fn aastex_unmarked_email_line_under_marked_names_is_the_blocks() {
     let (log, xml) = run(tex);
     assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
     assert_creators(&xml, &[
-      &["Ann Able 1", "affiliation=1 Univ A"],
-      &["Bob Baker 1", "affiliation=1 Univ A"],
+      &["Ann Able", "affiliation=1 Univ A"],
+      &["Bob Baker", "affiliation=1 Univ A"],
       &["email=zz@x.org"],
     ]);
     assert_eq!(
@@ -94,8 +94,8 @@ fn aastex_unmarked_correspondence_link_line_under_marked_names_is_the_blocks() {
   ));
   assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
   assert_creators(&xml, &[
-    &["Ann Able 1", "affiliation=1 Univ A"],
-    &["Bob Baker 1", "affiliation=1 Univ A"],
+    &["Ann Able", "affiliation=1 Univ A"],
+    &["Bob Baker", "affiliation=1 Univ A"],
     &["email=zz@x.org"],
   ]);
   assert_eq!(
@@ -119,13 +119,13 @@ fn aastex_unrequested_symbol_email_line_under_marked_names_is_the_blocks() {
   ));
   assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
   assert_creators(&xml, &[
-    &["Ann Able 1", "affiliation=1 Uni One"],
-    &["Bob Baker 1", "affiliation=1 Uni One"],
+    &["Ann Able", "affiliation=1 Uni One"],
+    &["Bob Baker", "affiliation=1 Uni One"],
     &["email=∗ zz@uni.edu"],
   ]);
   assert_eq!(
     email_contacts(&xml),
-    ["<contact name=\"Email: \" role=\"email\"><sup xml:id=\"id5\">∗</sup>zz@uni.edu</contact>"],
+    ["<contact name=\"Email: \" role=\"email\"><sup xml:id=\"id3\">∗</sup>zz@uni.edu</contact>"],
     "{xml}"
   );
 }
@@ -163,8 +163,8 @@ fn aastex_mailbox_link_line_is_an_email() {
     let (name, href, printed) = email;
     let printed_contact = format!("email={printed}");
     assert_creators(&xml, &[
-      &["Ann Able 1", "affiliation=1 Univ A"],
-      &["Bob Baker 1", "affiliation=1 Univ A"],
+      &["Ann Able", "affiliation=1 Univ A"],
+      &["Bob Baker", "affiliation=1 Univ A"],
       &[printed_contact.as_str()],
     ]);
     assert_eq!(

@@ -169,8 +169,8 @@ fn a_sequenced_contact_never_invents_a_creator() {
 #[test]
 fn a_setter_inside_the_author_block_is_counted() {
   let emitted = [
-    "<creator role=\"author\"> <personname>Ann Able<sup xml:id=\"id1\">1</sup></personname> </creator>",
-    "<creator before=\" \" role=\"author\"> <personname>Bob Baker<sup xml:id=\"id2\">2</sup></personname> </creator>",
+    "<creator role=\"author\"> <personname>Ann Able</personname> <note mark=\"1\" role=\"footnotemark\" xml:id=\"id1\"/> </creator>",
+    "<creator before=\" \" role=\"author\"> <personname>Bob Baker</personname> <note mark=\"2\" role=\"footnotemark\" xml:id=\"id2\"/> </creator>",
   ];
   let (log, xml) = run(repro!("cl9_date_inside_author_counted"));
   assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");

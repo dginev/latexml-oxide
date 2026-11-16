@@ -89,6 +89,6 @@ fn date_inside_author_inside_title_is_the_date() {
     "<date role=\"creation\"><sup xml:id=\"id3\">1</sup> School of Zebrawords, Northeast Normal University, Changchun 130024, China</date>",
   ]);
   assert_eq!(elements(&xml, "creator"), vec![
-    "<creator role=\"author\">\n    <personname>Ann Able<sup xml:id=\"id2\">1</sup></personname>\n  </creator>",
+    "<creator role=\"author\">\n    <personname>Ann Able</personname>\n    <note mark=\"1\" role=\"footnotemark\" xml:id=\"id2\"/>\n  </creator>",
   ]);
 }

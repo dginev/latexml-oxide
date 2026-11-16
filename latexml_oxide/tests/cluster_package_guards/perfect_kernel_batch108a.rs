@@ -124,7 +124,7 @@ fn parted_marked_names_ask_their_own_affiliations() {
   // (P4b2b: the names' printed marks, as pdflatex prints them)
   assert_eq!(
     converted(repro!("authblk_parted_marked_names_ask_theirs"), 0),
-    r##"<title>T</title> <creator role="author"> <personname>Ann Able<sup xml:id="id1"><text font="italic" xml:id="id1.1">1</text></sup></personname> <contact name="Affiliation: " role="affiliation"><sup xml:id="id2"><text font="italic" xml:id="id2.1">1</text></sup>Univ X</contact> </creator> <creator before=" " role="author"> <personname>Bob Baker<sup xml:id="id3"><text font="italic" xml:id="id3.1">2</text></sup></personname> <contact name="Affiliation: " role="affiliation"><sup xml:id="id4"><text font="italic" xml:id="id4.1">2</text></sup>Univ Y</contact> </creator> <para xml:id="p1"> <p xml:id="p1.1">Text.</p> </para>"##
+    r##"<title>T</title> <creator role="author"> <personname>Ann Able</personname> <contact name="Affiliation: " role="affiliation"><sup xml:id="id1"><text font="italic" xml:id="id1.1">1</text></sup>Univ X</contact> </creator> <creator before=" " role="author"> <personname>Bob Baker</personname> <contact name="Affiliation: " role="affiliation"><sup xml:id="id2"><text font="italic" xml:id="id2.1">2</text></sup>Univ Y</contact> </creator> <para xml:id="p1"> <p xml:id="p1.1">Text.</p> </para>"##
   );
 }
 
@@ -164,7 +164,7 @@ fn the_affil_run_is_every_creator_of_the_call() {
   // (P4b2b: the name's printed mark, `\textsuperscript{*}` an asterisk, as pdflatex prints it)
   assert_eq!(
     converted(repro!("authblk_first_row_keeps_run_affil"), 0),
-    r##"<title>T</title> <creator role="author"> <personname>Ann Able<sup xml:id="id1">*</sup></personname> <contact name="Affiliation: " role="affiliation">Univ X</contact> </creator> <creator before=" " role="author"> <personname>Bob Baker<sup xml:id="id2">*</sup></personname> <contact name="Affiliation: " role="affiliation">Univ X</contact> </creator> <creator before=" " role="author"> <personname>Cat Cole<sup xml:id="id3"><Math mode="inline" tex="\dagger" text="dagger" xml:id="m1"> <XMath xml:id="m1.1"> <XMTok name="dagger" role="MULOP">†</XMTok> </XMath> </Math></sup></personname> <contact name="Affiliation: " role="affiliation">Univ X</contact> </creator> <para xml:id="p1"> <p xml:id="p1.1">Text.</p> </para>"##
+    r##"<title>T</title> <creator role="author"> <personname>Ann Able</personname> <note mark="*" role="footnotemark" xml:id="id1"/> <contact name="Affiliation: " role="affiliation">Univ X</contact> </creator> <creator before=" " role="author"> <personname>Bob Baker</personname> <note mark="*" role="footnotemark" xml:id="id2"/> <contact name="Affiliation: " role="affiliation">Univ X</contact> </creator> <creator before=" " role="author"> <personname>Cat Cole</personname> <note mark="†" role="footnotemark" xml:id="id3"/> <contact name="Affiliation: " role="affiliation">Univ X</contact> </creator> <para xml:id="p1"> <p xml:id="p1.1">Text.</p> </para>"##
   );
 }
 
@@ -174,7 +174,7 @@ fn the_affil_run_is_every_creator_of_the_call() {
 fn a_glued_mark_in_a_list_or_leading_a_line() {
   assert_eq!(
     converted(repro!("author_glued_mark_in_a_list"), 0),
-    r##"<title>T</title> <creator role="author"> <personname>Ann Able<sup xml:id="id1">∗</sup></personname> <contact class="ltx_author_line" name="Affiliation: " role="affiliation">Univ X</contact> <contact class="ltx_author_line" name="Affiliation: " role="affiliation">Univ Y</contact> </creator> <creator before=" " role="author"> <personname>Bob Baker</personname> <contact class="ltx_author_line" name="Affiliation: " role="affiliation">Univ Y</contact> </creator> <para xml:id="p1"> <p xml:id="p1.1">Text.</p> </para>"##
+    r##"<title>T</title> <creator role="author"> <personname>Ann Able</personname> <note mark="∗" role="footnotemark" xml:id="id1"/> <contact class="ltx_author_line" name="Affiliation: " role="affiliation">Univ X</contact> <contact class="ltx_author_line" name="Affiliation: " role="affiliation">Univ Y</contact> </creator> <creator before=" " role="author"> <personname>Bob Baker</personname> <contact class="ltx_author_line" name="Affiliation: " role="affiliation">Univ Y</contact> </creator> <para xml:id="p1"> <p xml:id="p1.1">Text.</p> </para>"##
   );
 }
 
@@ -289,10 +289,7 @@ fn a_class_store_makes_no_printed_note() {
   assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
   // (P4b2b: the names' printed marks, as pdflatex prints them; P4f: the store's entries theirs, "1 Univ A", "2 Univ B")
   assert_eq!(creators(&xml), vec![
-    vec!["Ann Able 1".to_string(), "affiliation=1 Univ A".to_string()],
-    vec![
-      "Bob Baker 2".to_string(),
-      "affiliation=2 Univ B".to_string()
-    ],
+    vec!["Ann Able".to_string(), "affiliation=1 Univ A".to_string()],
+    vec!["Bob Baker".to_string(), "affiliation=2 Univ B".to_string()],
   ]);
 }

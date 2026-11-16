@@ -53,13 +53,14 @@ fn the_fail_safe_fires_only_for_labelled_lines() {
   // (P4c: the lists' printed marks shown in the pins below, as pdflatex prints them — P4S Q1)
   let xml = both_ways(repro!("revtex_unread_mark_lines_go_by_their_marks"));
   assert_eq!(creators(&xml), [
-    vec!["Ann Able 1", "affiliation=1 Univ A, Town"],
-    vec!["Bob Baker 2", "affiliation=2 Univ B, City"],
+    vec!["Ann Able", "affiliation=1 Univ A, Town"],
+    vec!["Bob Baker", "affiliation=2 Univ B, City"],
   ]);
   let xml = both_ways(repro!("revtex_marks_inside_one_line_are_the_groups_entry"));
   let line = "affiliation=Joint Institute, 1 Univ A and 2 Univ B, City";
-  assert_eq!(creators(&xml), [vec!["Ann Able 1", line], vec![
-    "Bob Baker 2",
+  assert_eq!(creators(&xml), [vec!["Ann Able", "mark=1", line], vec![
+    "Bob Baker",
+    "mark=2",
     line
   ]]);
 }
@@ -75,34 +76,34 @@ fn a_mark_on_a_spacing_nucleus_leads_its_line() {
     // (each e-mail after the departments: REVTeX prints `\email` in the front matter's footnotes, its print zone the
     // footer's — 99a r3, OXIDIZED_DESIGN_DIVERGENCES #954)
     vec![
-      "Ann Able 1 , 2",
+      "Ann Able",
       "affiliation=1 Department of Mathematics",
       "affiliation=and 2 Department of Physics, The Univ, City, USA",
       "email=able@x.edu",
     ],
     vec![
-      "Bob Baker 1",
+      "Bob Baker",
       "affiliation=1 Department of Mathematics",
       "email=baker@x.edu",
     ],
   ]);
   let xml = both_ways(repro!("revtex_boxed_nucleus_marks_lead_their_lines"));
   assert_eq!(creators(&xml), [
-    vec!["Ann Able 1", "affiliation=1 Univ A, Town"],
-    vec!["Bob Baker 2", "affiliation=2 Univ B, City"],
+    vec!["Ann Able", "affiliation=1 Univ A, Town"],
+    vec!["Bob Baker", "affiliation=2 Univ B, City"],
   ]);
   // (the script braced whole, `${^1}$`: 2208.09667's lines after its first)
   let xml = both_ways(repro!("revtex_braced_script_marks_lead_their_lines"));
   assert_eq!(creators(&xml), [
-    vec!["Ann Able 1", "affiliation=1 Univ A, Town"],
-    vec!["Bob Baker 2", "affiliation=2 Univ B, City"],
+    vec!["Ann Able", "affiliation=1 Univ A, Town"],
+    vec!["Bob Baker", "affiliation=2 Univ B, City"],
   ]);
   // (spacing unbraced, `$~^{1}$`: 1211.5032)
   let xml = both_ways(repro!("revtex_tie_nucleus_marks_lead_their_lines"));
   assert_eq!(creators(&xml), [
-    vec!["Ann Able 1", "affiliation=1 Univ A, Town"],
+    vec!["Ann Able", "affiliation=1 Univ A, Town"],
     vec![
-      "Bob Baker 1,2",
+      "Bob Baker",
       "affiliation=1 Univ A, Town",
       "affiliation=2 Univ B, City",
     ],

@@ -67,7 +67,7 @@ fn names_in_a_layout_are_reparted() {
   let xml: &[&[&str]] = &[
     &["Ann Able", "affiliation=Univ X"],
     &["Bob Baker", "affiliation=Univ Y"],
-    &["Cid Cole", "affiliation=Univ X"],
+    &["Cid Cole", "affiliation=Univ X", "mark=∗"],
   ];
   let reading = assert_reading(tex, Some(xml), &[
     "C Ann Able [1] | line:names",
@@ -84,7 +84,12 @@ fn names_in_a_layout_are_reparted() {
     owned(&[
       &["Ann Able", "affiliation=Univ X"],
       &["Bob Baker", "affiliation=Univ Y"],
-      &["Cid Cole", "affiliation=Univ X", "note=Equal advising."],
+      &[
+        "Cid Cole",
+        "affiliation=Univ X",
+        "mark=∗",
+        "note=Equal advising."
+      ],
     ])
   );
   let tex = repro!("author_names_reparted_in_a_tabular_with_a_legend.tex");
@@ -93,7 +98,7 @@ fn names_in_a_layout_are_reparted() {
     Some(&[
       &["Ann Able", "affiliation=Univ X"],
       &["Bob Baker", "affiliation=Univ Y"],
-      &["Cid Cole", "affiliation=Univ Y"],
+      &["Cid Cole", "affiliation=Univ Y", "mark=†"],
     ]),
     &[
       "C Ann Able [1] | line:names",
@@ -114,6 +119,7 @@ fn names_in_a_layout_are_reparted() {
       &[
         "Cid Cole",
         "affiliation=Univ Y",
+        "mark=†",
         "note=Corresponding author"
       ],
     ])
@@ -300,16 +306,24 @@ fn a_repart_that_reads_otherwise_is_taken_back() {
 #[test]
 fn phantom_ink_is_no_name() {
   let tex = repro!("author_names_phantom_is_no_ink.tex");
-  let reading = assert_reading(tex, Some(&[&["Ann Able"], &["Bob Baker"]]), &[
-    "C Ann Able [] | line:names",
-    "  n A | note:adjacent",
-    "C Bob Baker [] | line:names sep:word",
-    "  n B | note:adjacent",
-  ]);
+  let reading = assert_reading(
+    tex,
+    Some(&[&["Ann Able", "mark=*"], &["Bob Baker", "mark=†"]]),
+    &[
+      "C Ann Able [] | line:names",
+      "  n A | note:adjacent",
+      "C Bob Baker [] | line:names sep:word",
+      "  n B | note:adjacent",
+    ],
+  );
   assert_eq!(reading.3, Value::from(true));
   assert_eq!(
     default_mode_creators(tex),
-    owned(&[&["Ann Able", "note=A"], &["Bob Baker", "note=B"]])
+    owned(&[&["Ann Able", "mark=*", "note=A"], &[
+      "Bob Baker",
+      "mark=†",
+      "note=B"
+    ]])
   );
   let xml = default_mode_xml(tex);
   assert!(!xml.contains("ltx_phantom"), "{xml}");
@@ -435,7 +449,7 @@ fn a_legend_of_several_marks_is_each_carriers() {
 /// A legend written as a note shows its printed mark (review rev94a r5, `apply::show_legend_mark`): the note's `mark` is
 /// the symbol its line prints, and the name shows it no more — 94a r1-r5 left the note without one, so the page set
 /// the default dagger beside the name's own star ("Observatory*†"). The cut legend line beside a name (k01), and the
-/// legend of a conceded creator's mark, its superscript kept in the name today's (f08).
+/// legend of a conceded creator's mark, its superscript kept, a mark-only note after the name since PURE (f08).
 #[test]
 fn a_legend_note_shows_its_mark() {
   let tex = repro!("author_names_legend_note_shows_its_mark.tex");
@@ -447,7 +461,9 @@ fn a_legend_note_shows_its_mark() {
   assert_eq!(reading.3, Value::from(true));
   assert_eq!(
     default_mode_creators(tex),
-    owned(&[&["Ann Able", "note=Equal contribution"], &["Bob Baker"]])
+    owned(&[&["Ann Able", "mark=∗", "note=Equal contribution"], &[
+      "Bob Baker"
+    ]])
   );
   let xml = default_mode_xml(tex);
   assert_eq!(personnames(&xml), [
@@ -466,6 +482,7 @@ fn a_legend_note_shows_its_mark() {
     default_mode_creators(tex),
     owned(&[&["Ann Able"], &[
       "Kitt Peak Observatory",
+      "mark=∗",
       "note=Equal contribution"
     ]])
   );
@@ -684,7 +701,7 @@ fn an_ieee_affiliation_block_after_a_marked_block_is_the_next_names() {
   // (P4c: the lists' printed marks shown in the pins below, as pdflatex prints them — P4S Q1)
   let tex = repro!("ieee_affil_block_after_a_marked_block.tex");
   let xml: &[&[&str]] = &[
-    &["Ann Able *", "affiliation=* Univ X"],
+    &["Ann Able", "affiliation=* Univ X"],
     &["Bob Baker", "affiliation=Univ Y"],
     &["Cid Cole", "affiliation=Univ Y"],
   ];
@@ -700,7 +717,7 @@ fn an_ieee_affiliation_block_after_a_marked_block_is_the_next_names() {
   let tex = repro!("ieee_affil_block_after_a_marked_block_of_two.tex");
   // (the writer's re-part shows a reference mark's number, "1", where IEEEtran prints `∗`: a residual of 106b, SYNC row
   // 106b — no real paper of its A/B shows one)
-  let xml: &[&[&str]] = &[&["Ann Able 1", "affiliation=1 Univ X"], &["Bob Baker"], &[
+  let xml: &[&[&str]] = &[&["Ann Able", "affiliation=1 Univ X"], &["Bob Baker"], &[
     "Cid Cole",
     "affiliation=Univ Y",
   ]];

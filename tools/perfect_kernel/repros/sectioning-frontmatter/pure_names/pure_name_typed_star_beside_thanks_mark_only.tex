@@ -1,0 +1,17 @@
+% witness: 2406.11149 (acl: `Wei Fan$^{*}$, Haoran Li$^{*}$\thanks{\quad Corresponding Author}`, pdflatex "Wei Fan∗,
+%          Haoran Li∗†", footnotes "∗ Equal Contribution", "† Corresponding Author"), 2506.02863
+% oracle:  pdflatex 0 errors: "Ann Able*∗ Bob Baker∗† Cy Cole", footnotes "∗ Corresponding author." and "† Corresponding
+%          author."
+% engines: rust REGFIX = <personname>Ann Able<sup>∗</sup></personname> beside an unmarked thanks note; PURE round 1 =
+%          the typed symbol taken as the note's mark (∗ on Bob's "Corresponding author.", the PDF's †: revPURE B1)
+% expect:  0 errors; each name the name alone; the symbol typed beside a \thanks is no mark of it — a mark-only note
+%          after the name, <note role="footnotemark" mark="∗"/>, the \thanks's note its own (its mark the \thanks's
+%          printed one, SHMARK)
+% status:  RED (PURE round 1) -> GREEN (PUREb)
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{Ann Able*\thanks{Corresponding author.} \and Bob Baker$^{*}$\thanks{\quad Corresponding author.} \and Cy Cole}
+\maketitle
+x
+\end{document}

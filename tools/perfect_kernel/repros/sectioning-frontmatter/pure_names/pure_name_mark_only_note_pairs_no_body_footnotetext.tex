@@ -1,0 +1,17 @@
+% witness: 2208.09944 (`Gert Desmet\textsuperscript{2}` in the author line; a table's `GC\footnotemark[1]`,
+%          `DLM\footnotemark[2]` and their `\footnotetext[1]`/`\footnotetext[2]` in the body)
+% oracle:  pdflatex 0 errors: "Ann Able1 and Bob Baker2", the body "x1 y2" over the footnotes "1 Body note one." and
+%          "2 Body note two."
+% engines: rust PURE before this fix = the mark-only notes `mark="1"`, `mark="2"` after the names took the body's
+%          footnote texts (relocate_footnote pairs a footnotemark note with a footnotetext by mark)
+% expect:  0 errors; each name's mark a mark-only note holding nothing; each body footnote whole at its own mark
+% status:  RED (PURE round 1) -> GREEN (PURE)
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{Ann Able\textsuperscript{1} and Bob Baker\textsuperscript{2}}
+\maketitle
+x\footnotemark[1] y\footnotemark[2]
+\footnotetext[1]{Body note one.}
+\footnotetext[2]{Body note two.}
+\end{document}

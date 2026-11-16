@@ -137,6 +137,8 @@ pub fn insert_frontmatter(document: &mut Document) -> Result<()> {
   flag_merged_creators(document)?;
   // (the unclaimed-text net's notes: their lines no frontmatter field and no text already set holds)
   keep_unclaimed_net_notes(document)?;
+  // (the name alone: every mark printed on a name is its note's, its contact's or a mark-only note after it, DG 2026-11-16)
+  keep_personnames_pure(document)?;
   // (the content invariant on the placed output, under the emitter's `=2`: every printed word placed once or counted, OD #980)
   check_placed_content(document);
   Ok(())
@@ -1686,7 +1688,7 @@ fn label_key(label: &str) -> String { label.chars().filter(|c| *c != '$' && *c !
 
 /// A mark as [`kind_legend_contacts`] compares it with the marks a name shows: its label key ([`label_key`]), trimmed,
 /// the math asterisk read as the text one (`$^{1,*}$` prints `∗`, the label is `*`: 2503.10710).
-fn mark_form(mark: &str) -> String { label_key(mark.trim()).replace('∗', "*") }
+pub(super) fn mark_form(mark: &str) -> String { label_key(mark.trim()).replace('∗', "*") }
 
 /// A contact of no content — a template's `\curraddr{}`, `\urladdr{}`, `\dedicatory{}`, aastex's `\nocollaboration` —
 /// is no contact: its name label printed over nothing ("Current address:"), where pdflatex prints nothing (58 of the
@@ -3411,7 +3413,7 @@ impl LineText {
 /// leaves so. Each parent is read once (two cut nodes of one wrapper name it twice: `{\small\\ Email: a@x}`), and every
 /// removal is decided before any is made, the outermost of each emptied chain removed — so no node is read after it is
 /// freed (review rev107c S4).
-fn drop_emptied_wrappers(document: &mut Document, parents: Vec<Node>) {
+pub(super) fn drop_emptied_wrappers(document: &mut Document, parents: Vec<Node>) {
   let mut seen: HashSet<_> = HashSet::default();
   let mut gone: HashSet<_> = HashSet::default();
   let mut emptied: Vec<Node> = Vec::new();
@@ -4704,7 +4706,8 @@ fn answered_labels(document: &mut Document) -> HashSet<String> {
 /// An author's affiliation mark that no entry answers stays in the name, as LaTeX prints it (`Ann Able$^*$ and Bob
 /// Bee$^1$` with no `$^1$` line; `Gus Gray\IEEEauthorrefmark{1}` whose legend is a `\thanks`, 2408.02464): read as
 /// a request, it was taken out of the name to link an affiliation that is not there. A mark the name already shows
-/// is not repeated. (Perl drops it too; repro sectioning-frontmatter/author_unmatched_numeric_mark.)
+/// is not repeated. (Perl drops it too; repro sectioning-frontmatter/author_unmatched_numeric_mark.) The last step,
+/// `keep_personnames_pure`, sets it after the name as a mark-only note (PURE).
 ///
 /// Returns the marks it could not show ([`unanswered_mark_text`]: a composite label), for [`count_lost_marks`].
 fn show_unanswered_marks(

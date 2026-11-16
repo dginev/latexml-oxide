@@ -56,7 +56,7 @@ fn date_inside_author_is_the_date() {
     "<date role=\"creation\"><sup xml:id=\"id2\">1</sup> School of Zebrawords, Northeast Normal University, Changchun 130024, China</date>",
   ]);
   assert_eq!(elements(&xml, "creator"), vec![
-    "<creator role=\"author\">\n    <personname>Ann Able<sup xml:id=\"id1\">1</sup></personname>\n  </creator>",
+    "<creator role=\"author\">\n    <personname>Ann Able</personname>\n    <note mark=\"1\" role=\"footnotemark\" xml:id=\"id1\"/>\n  </creator>",
   ]);
 }
 
@@ -93,8 +93,8 @@ fn revtex3_minipage_address_keeps_contact_order() {
   );
   let xml = convert_clean(tex);
   assert_eq!(elements(&xml, "creator"), vec![
-    "<creator role=\"author\">\n    <personname>Ann Able<sup xml:id=\"id1\">*</sup></personname>\n    <contact name=\"Address:\u{a0}\" role=\"address\">Department of Zebrawords, Univ A, Budapest, Hungary </contact>\n    <contact name=\"Email:\u{a0}\" role=\"email\"><text font=\"typewriter\" xml:id=\"id2\">ann@zebra.hu</text></contact>\n    <contact name=\"Address:\u{a0}\" role=\"address\">\u{a0}<break/><text fontsize=\"120%\" xml:id=\"id3\">Physical Review Letters <text font=\"bold\" xml:id=\"id3.1\">75</text>, 374-377 (1995)</text></contact>\n  </creator>",
-    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Bob Baker<sup xml:id=\"id4\">\u{2020}</sup></personname>\n    <contact name=\"Address:\u{a0}\" role=\"address\">Department of Zebrawords, Univ A, Budapest, Hungary </contact>\n    <contact name=\"Email:\u{a0}\" role=\"email\"><text font=\"typewriter\" xml:id=\"id5\">bob@zebra.hu</text></contact>\n    <contact name=\"Address:\u{a0}\" role=\"address\">\u{a0}<break/><text fontsize=\"120%\" xml:id=\"id6\">Physical Review Letters <text font=\"bold\" xml:id=\"id6.1\">75</text>, 374-377 (1995)</text></contact>\n  </creator>",
+    "<creator role=\"author\">\n    <personname>Ann Able</personname>\n    <note mark=\"*\" role=\"footnotemark\" xml:id=\"id1\"/>\n    <contact name=\"Address:\u{a0}\" role=\"address\">Department of Zebrawords, Univ A, Budapest, Hungary </contact>\n    <contact name=\"Email:\u{a0}\" role=\"email\"><text font=\"typewriter\" xml:id=\"id2\">ann@zebra.hu</text></contact>\n    <contact name=\"Address:\u{a0}\" role=\"address\">\u{a0}<break/><text fontsize=\"120%\" xml:id=\"id3\">Physical Review Letters <text font=\"bold\" xml:id=\"id3.1\">75</text>, 374-377 (1995)</text></contact>\n  </creator>",
+    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Bob Baker</personname>\n    <note mark=\"†\" role=\"footnotemark\" xml:id=\"id4\"/>\n    <contact name=\"Address:\u{a0}\" role=\"address\">Department of Zebrawords, Univ A, Budapest, Hungary </contact>\n    <contact name=\"Email:\u{a0}\" role=\"email\"><text font=\"typewriter\" xml:id=\"id5\">bob@zebra.hu</text></contact>\n    <contact name=\"Address:\u{a0}\" role=\"address\">\u{a0}<break/><text fontsize=\"120%\" xml:id=\"id6\">Physical Review Letters <text font=\"bold\" xml:id=\"id6.1\">75</text>, 374-377 (1995)</text></contact>\n  </creator>",
   ]);
   assert_eq!(elements(&xml, "abstract"), vec![
     "<abstract inlist=\"toc\" name=\"Abstract\" xml:id=\"abstract1\">\n    <p xml:id=\"abstract1.1\">We study an extended Hubbard zebraword model.</p>\n  </abstract>",
