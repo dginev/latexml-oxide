@@ -3161,3 +3161,14 @@ it weighs the same as a literal one — an address carries no umlaut, so `muelle
 is a genuine tie (user ruling 2026-11-05). Guards
 `base_utilities::author_split_tests::a_name_spells_by_its_base_letters_and_its_transliteration`,
 `perfect_kernel_batch107a`; OXIDIZED_DESIGN_DIVERGENCES #970.
+
+## 104. mutool's `%d` is its output page counter, not the source page — find a converter's output by a private directory
+
+`mutool convert -F svg -o pg%d.svg f.pdf 2` writes `pg1.svg` (mutool 1.27; without `%d` it inserts the counter
+anyway), while `mutool draw -o d%d.png f.pdf 2` writes `d2.png` and `-o d.png` writes `d.png`. A converter that
+predicts its output's name from the page it asked for misses on page ≥ 2 and reads a success as a failure: the next
+converter runs and the real output is left where it was written (2305.12780, 1709.02311 and three more). Have the tool
+write into a private directory beside the destination (`create_dir`, not `_all`; same filesystem, so the rename stays
+atomic), take its one file and remove the directory whatever happened. A shared output cache keyed on the inputs hides
+such a miss on a hit, so retire the affected keys with a version salt (`graphics_cache.rs` `SVG_KEY_VERSION`). Guards
+`graphics::tests::vector_svg_of_page_two_is_page_two`, `graphics_cache::tests::svg_keys_are_salted_and_png_keys_are_not`.

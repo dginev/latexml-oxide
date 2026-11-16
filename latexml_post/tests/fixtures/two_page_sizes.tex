@@ -1,0 +1,17 @@
+% Source of two_page_sizes.pdf: `pdftex -no-shell-escape two_page_sizes.tex` (TeX Live 2025): page 1 is
+% 300x100 bp, page 2 is 100x300 bp, each filled by a rule of its own size; the guard is
+% graphics::tests::vector_svg_of_page_two_is_page_two.
+\pdfcompresslevel=9 \pdfobjcompresslevel=2
+\pdfinfoomitdate=1 \pdftrailerid{} \pdfsuppressptexinfo=-1
+\pdfpagewidth=300bp \pdfpageheight=100bp
+\hoffset=-1in \voffset=-1in
+\topskip=0pt \parindent=0pt \parskip=0pt
+\nopagenumbers
+\vsize=100bp \hsize=300bp
+\noindent\vrule width 300bp height 100bp depth 0pt
+\vfill\eject
+\pdfpagewidth=100bp \pdfpageheight=300bp
+\vsize=300bp \hsize=100bp
+\noindent\vrule width 100bp height 300bp depth 0pt
+\vfill\eject
+\bye
