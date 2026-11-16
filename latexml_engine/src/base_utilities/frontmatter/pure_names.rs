@@ -25,16 +25,7 @@ const HAND_MARKS: [char; 7] = [
 /// Witnesses 0707.3527 (`M.Das$^1$` over its iaus `\affiliation`), 0801.1438 (`Kardo\v s$^{a}$`, its affiliations set in
 /// the body). Guards `perfect_kernel_batchpure`.
 pub(in crate::base_utilities) fn keep_personnames_pure(document: &mut Document) -> Result<()> {
-  let creators = document.findnodes("//ltx:creator[ltx:personname]", None);
-  // (a mark some creator's contact is keyed by labels contacts in this document, never a note: 2304.07689's
-  // `\IEEEauthorrefmark{1}\thanks{Copyright …}`, whose ∗ is the Cincinnati affiliation's)
-  let mut contact_marks: HashSet<String> = HashSet::default();
-  for creator in &creators {
-    for contact in children_named(creator, "contact") {
-      contact_marks.extend(contact_keys(&contact));
-    }
-  }
-  for creator in creators {
+  for creator in document.findnodes("//ltx:creator[ltx:personname]", None) {
     for personname in children_named(&creator, "personname") {
       let groups = mark_groups(&personname);
       if groups.is_empty() {
@@ -59,7 +50,7 @@ pub(in crate::base_utilities) fn keep_personnames_pure(document: &mut Document) 
           let keys: Vec<String> = std::iter::once(key.clone())
             .chain(group.refmarks.iter().cloned())
             .collect();
-          let answered = answer(document, &notes, &held, &contact_marks, piece, &key, &keys)?;
+          let answered = answer(document, &notes, &held, piece, &key, &keys)?;
           // (a run of glued labels, each a held contact's: `$^{ab}$` over `$^a$Univ A`, `$^b$Univ B`, revtex3's)
           let glued = piece.chars().count() > 1
             && piece.chars().all(char::is_alphanumeric)
@@ -97,15 +88,14 @@ pub(in crate::base_utilities) fn keep_personnames_pure(document: &mut Document) 
 }
 
 /// Whether `piece` (keyed `key`; `keys` with an author reference mark's numbers, `\IEEEauthorrefmark{4}` printing `§`)
-/// is answered on its creator: a note marked so; a contact keyed so (`held`); an unmarked note whose text opens with it
-/// (a legend: `\thanks{*Equal Contribution}`, 1904.03977), which takes it as its `mark`; or a symbol no contact of the
-/// document is keyed by, on a name holding one unmarked `\thanks` (`Haoran Li$^{*}$\thanks{\quad Corresponding
-/// Author}`, 2406.11149), which takes it as its mark too.
+/// is answered on its creator: a note marked so; a contact keyed so (`held`); or an unmarked note whose text opens with
+/// a copy of it (a legend: `\thanks{*Equal Contribution}`, 1904.03977), which takes it as its `mark` ([`leading_mark`]).
+/// A symbol beside a `\thanks` is no `\thanks`'s mark: the `\thanks` prints its own (`Haoran Li$^{*}$\thanks{…}` prints
+/// "∗†", 2406.11149).
 fn answer(
   document: &mut Document,
   notes: &[Node],
   held: &HashSet<String>,
-  contact_marks: &HashSet<String>,
   piece: &str,
   key: &str,
   keys: &[String],
@@ -120,32 +110,19 @@ fn answer(
   if keys.iter().any(|key| held.contains(key)) {
     return Ok(true);
   }
-  let unmarked: Vec<Node> = notes
-    .iter()
-    .filter(|note| {
-      note
-        .get_attribute("mark")
-        .is_none_or(|mark| mark.trim().is_empty())
-    })
-    .cloned()
-    .collect();
-  for note in &unmarked {
+  for note in notes {
+    if note
+      .get_attribute("mark")
+      .is_some_and(|mark| !mark.trim().is_empty())
+    {
+      continue;
+    }
     if let Some(lead) = leading_mark(note, piece) {
       let mut note = note.clone();
       document.set_attribute(&mut note, "mark", piece)?;
       lead.cut(document);
       return Ok(true);
     }
-  }
-  let symbol = !piece.chars().any(char::is_alphanumeric);
-  if let [note] = unmarked.as_slice()
-    && symbol
-    && !contact_marks.contains(key)
-    && note.get_attribute("role").as_deref() == Some("thanks")
-  {
-    let mut note = note.clone();
-    document.set_attribute(&mut note, "mark", piece)?;
-    return Ok(true);
   }
   Ok(false)
 }
