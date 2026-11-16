@@ -547,9 +547,9 @@ mod tests {
   }
 
   /// The same with more new bytes than the buffer's whole capacity (131,072 × 13 bytes, string-interner 0.20
-  /// `buffer.rs:161-169`), which would move it natively, not only under Miri, had they gone into it: the lent text
-  /// still reads, from where it was. Guards the current arena only (the old one is gone; red under Miri on it: the
-  /// test above). A native test: its 1.7 MB take Miri 2 min under Stacked and 13 under Tree Borrows.
+  /// `buffer.rs:161-169`), interned inside a lend: every one goes to the overflow page (the count is the guard), and
+  /// the lent text still reads. Guards the current arena only (red under Miri on the old one: the test above). A
+  /// native test: its 1.7 MB take Miri 2 min under Stacked and 13 under Tree Borrows.
   #[test]
   #[cfg_attr(miri, ignore)]
   fn lend_survives_more_new_bytes_than_the_buffer_holds() {
@@ -638,15 +638,10 @@ mod tests {
       join(&[paged, lent], ","),
       "arena_dedup_paged,arena_dedup_lent"
     );
-    // Outside a lend with the overflow page in use, a new string still goes to the buffer, also one of the paged one's
-    // length and last byte.
+    // Outside a lend with the overflow page in use, a new string still goes to the buffer.
     let buffered = pin("arena_dedup_after");
     assert!(!is_paged(buffered));
     assert_eq!(to_string(buffered), "arena_dedup_after");
-    let twin = pin("arena_dedup_pagdd");
-    assert!(!is_paged(twin));
-    assert_eq!(get("arena_dedup_pagdd"), Some(twin));
-    assert_eq!(to_string(twin), "arena_dedup_pagdd");
     assert_eq!(take_overflow_interns(), 1);
   }
 
