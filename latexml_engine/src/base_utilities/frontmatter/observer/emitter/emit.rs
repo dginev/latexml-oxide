@@ -991,6 +991,33 @@ fn block_names(
           grown.0 = grown.0.min(at(e.span?.0)?);
         }
       }
+      // (a text `\footnotemark` with spacing on both sides is the nearer name's ([`nearer_before`]), so one nearer this
+      // name, or as near as the one before, is its prefix, the run grown over the spacing between: `Ann Able \qquad
+      // \footnotemark[2] \ Bob Baker`, pdflatex's 27pt | 4pt, "†Bob Baker" (DG ruling 2026-11-16; review revSHGIVENb).
+      // Text only: a mark in a formula is written with the formula whole)
+      let in_text = |e: &Event| {
+        e.span
+          .and_then(|span| at(span.0))
+          .is_some_and(|s| field.formula_start(s) == s)
+      };
+      let spaced_mark = |m: usize| {
+        let e = &read[m];
+        e.kind == EventKind::Mark
+          && e.role.as_deref() == Some("footnotemark")
+          && in_text(e)
+          && gaps_width(&read[spacing_from(&read, m)..m]).is_some()
+      };
+      let window = read[..at_name]
+        .iter()
+        .rposition(|e| !(beside(&e) || spacing(e)))
+        .map_or(0, |p| p + 1);
+      if let Some(m) = (window..at_name).find(|&m| {
+        spaced_mark(m)
+          && gaps_width(&read[spacing_from(&read, at_name)..at_name]).is_some()
+          && !nearer_before(&read, m, |e| beside(&e))
+      }) {
+        grown.0 = grown.0.min(at(read[m].span?.0)?);
+      }
       // (a kept mark whose cover holds the name's is the mark of the call that printed both, which is written whole, as it
       // digests to the name and its marks: ptephy's `\\name{Bob Baker}{2}` glued to the block's end, whose name's cover
       // stops short of the call, its arguments being the field's last tokens; written from inside the call, its marks'
@@ -1046,27 +1073,17 @@ fn block_names(
       let math_sep =
         |e: &Event| matches!(e.kind, EventKind::Sep(_)) && e.role.as_deref() == Some("math");
       let past_note = |e: &&Event| beside(e) || e.kind == EventKind::Note || math_sep(e);
-      // (and past a spacing run before a `\footnotemark` that only spacing and notes part from the name: pdflatex prints it
-      // after the name, and Perl's personname keeps it — `Vivek Ramanujan \thanks{…} \ \footnotemark[2]`, `Ali Farhadi
-      // \ \footnotemark[3]`, 1911.13299 (DG ruling 2026-11-16); one on the line a `\\` opens is no name's, a Break parts it.
-      // Text spacing only: a mark in a formula is written with the formula whole, a note in it twice — `Xunzhi
-      // Xiang$^{1}\thanks{…}\,\,\footnotemark[2]$`, 2511.12633, stays `mark_dropped`'s. Never a mark a name follows,
-      // that name's prefix: `Ann Able \quad \footnotemark[2]Bob Baker`, pdflatex's "†Bob Baker" (review revSHGIVEN 1))
+      // (and past a spacing run before a text `\footnotemark` nearer this name than the next ([`nearer_before`]): pdflatex
+      // prints it after the name, and Perl's personname keeps it — `Vivek Ramanujan \thanks{…} \ \footnotemark[2]`, `Ali
+      // Farhadi \ \footnotemark[3]`, 1911.13299; `Xiao Wang\textsuperscript{1}\footnotemark[1] \ \footnotemark[2] \quad
+      // Qingyi Si`, 2412.20504 (DG rulings 2026-11-16); one on the line a `\\` opens is no name's, a Break parts it. A mark
+      // in a formula is written with the formula whole, a note in it twice — `Xunzhi Xiang$^{1}\thanks{…}\,\,
+      // \footnotemark[2]$`, 2511.12633, stays `mark_dropped`'s)
       let gap = |e: &Event| matches!(e.kind, EventKind::Sep(SepKind::Gap { .. }));
-      let in_text = |e: &Event| {
-        e.span
-          .and_then(|span| at(span.0))
-          .is_some_and(|s| field.formula_start(s) == s)
-      };
       let spacing_before_mark = |i: usize| {
-        let mut rest = read[i..]
-          .iter()
-          .skip_while(|e| gap(e) || e.kind == EventKind::Note);
-        rest.next().is_some_and(|e| {
-          e.kind == EventKind::Mark && e.role.as_deref() == Some("footnotemark") && in_text(e)
-        }) && rest
-          .find(|e| !(beside(e) || e.kind == EventKind::Note))
-          .is_none_or(|e| matches!(e.kind, EventKind::Sep(_) | EventKind::Break))
+        (i..read.len())
+          .find(|&m| !spacing(&read[m]))
+          .is_some_and(|m| spaced_mark(m) && nearer_before(&read, m, |e| beside(&e)))
       };
       let scan_end = (after_name..read.len())
         .find(|&i| !(past_note(&&read[i]) || (gap(&read[i]) && spacing_before_mark(i))))
@@ -1282,6 +1299,63 @@ fn block_names(
     };
     names.iter().map(&mut tokens_of).collect()
   })
+}
+
+/// Whether `e` is spacing between a name and its marks: a spacing run (`SepKind::Gap`) or a note, which prints a mark only.
+fn spacing(e: &Event) -> bool {
+  e.kind == EventKind::Note || matches!(e.kind, EventKind::Sep(SepKind::Gap { .. }))
+}
+
+/// Where the run of [`spacing`] events ending before `at` starts.
+fn spacing_from(read: &[Event], at: usize) -> usize {
+  read[..at]
+    .iter()
+    .rposition(|e| !spacing(e))
+    .map_or(0, |p| p + 1)
+}
+
+/// The natural width (em) of the spacing runs among `events`, fill glue the widest; `None` for no spacing run.
+fn gaps_width(events: &[Event]) -> Option<f64> {
+  events
+    .iter()
+    .filter_map(|e| match e.kind {
+      EventKind::Sep(SepKind::Gap { fill: true, .. }) => Some(f64::INFINITY),
+      EventKind::Sep(SepKind::Gap { width, .. }) => Some(width),
+      _ => None,
+    })
+    .reduce(|a, b| a + b)
+}
+
+/// Whether the mark at `m`, past a spacing run, is the name's before it: pdflatex prints it nearer that name. Past its
+/// own marks and notes (`beside`), a separator, a `\\` or the block's end follows it (1911.13299's `\ \footnotemark[3]
+/// \and`), or a spacing run, and then a name only when that run is the wider (2412.20504's `\ \footnotemark[2] \quad
+/// Qingyi Si`). A mark the next name follows with no spacing run (glued to it) or one no wider (`Ann \quad † \quad Bob`,
+/// a tie) is that name's prefix (DG ruling 2026-11-16: the nearer name by the gaps' TeX widths, the next one's on a tie).
+fn nearer_before(read: &[Event], m: usize, beside: impl Fn(&Event) -> bool) -> bool {
+  let Some(after) =
+    (m + 1..read.len()).find(|&j| !(beside(&read[j]) || read[j].kind == EventKind::Note))
+  else {
+    return true;
+  };
+  match read[after].kind {
+    EventKind::Sep(SepKind::Gap { .. }) => {},
+    EventKind::Sep(_) | EventKind::Break => return true,
+    _ => return false,
+  }
+  let next = (after..read.len()).find(|&j| !(spacing(&read[j]) || beside(&read[j])));
+  if next.is_none_or(|j| read[j].kind != EventKind::Name) {
+    return true;
+  }
+  let gap_end = (after..read.len())
+    .find(|&j| !spacing(&read[j]))
+    .unwrap_or(read.len());
+  match (
+    gaps_width(&read[after..gap_end]),
+    gaps_width(&read[spacing_from(read, m)..m]),
+  ) {
+    (Some(width_after), Some(width_before)) => width_after > width_before,
+    _ => false,
+  }
 }
 
 /// The emitter's own reason to stay out ([`stays_out`]), beside the blocks' `SkipReason`s.

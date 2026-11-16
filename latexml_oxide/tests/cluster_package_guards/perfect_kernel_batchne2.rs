@@ -404,7 +404,8 @@ fn a_given_mark_on_no_name_keeps_the_creators() {
 
 /// The carry past spacing (`a_mark_after_its_names_note_stays_with_it`'s ne2e row, DG ruling 2026-11-16, 4) takes a
 /// `\footnotemark` back onto the name before it only when a separator, a `\\` or the block's end follows the mark's run
-/// of marks and notes: a mark a name follows is that name's prefix (`Ann Able \quad \footnotemark[2]Bob Baker`,
+/// of marks and notes, or a spacing run wider than the one before it (`a_mark_between_two_names_is_the_nearer_ones`): a
+/// mark a name follows glued is that name's prefix (`Ann Able \quad \footnotemark[2]Bob Baker`,
 /// pdflatex's "†Bob Baker"; review revSHGIVEN 1), so each keeps REGFIX's output and its counts, never a mark invented
 /// on the previous name. Nor does it take a mark inside a formula, written with the formula whole, its `\thanks` twice:
 /// 2511.12633's `Xunzhi Xiang$^{1}\thanks{…}\,\,\footnotemark[2]$` stays lost and counted. Distinct from the ne2e row:
