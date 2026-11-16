@@ -123,7 +123,12 @@ impl EpubManifest {
     let resources: Vec<ResourceEntry> = files
       .iter()
       .filter_map(|path| {
-        let href = path.strip_prefix(&ops).ok()?.to_string_lossy().into_owned();
+        // A manifest href is a URL: `/` separates its segments on every OS.
+        let href = path
+          .strip_prefix(&ops)
+          .ok()?
+          .to_string_lossy()
+          .replace(std::path::MAIN_SEPARATOR, "/");
         let ext = path.extension().and_then(|e| e.to_str()).unwrap_or("");
         if ext == "xhtml" || href == "content.opf" || path.ends_with("LaTeXML.cache") {
           return None;

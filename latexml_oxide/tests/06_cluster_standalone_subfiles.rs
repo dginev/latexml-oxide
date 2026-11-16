@@ -406,6 +406,9 @@ fn subimport_absolute_path_resolves_like_real_latex() {
   let dir = tempfile::tempdir().expect("tempdir");
   let child = dir.path().join("child");
   std::fs::create_dir_all(&child).expect("mk child");
+  // The long canonical form: a Windows 8.3 temp path (`C:\Users\RUNNER~1\…`, GitHub's runners) carries a `~`, active
+  // in TeX source (`\lx@NBSP`), so pdflatex could not read that spelling either.
+  let child = latexml_core::util::pathname::canonicalize(&child).expect("canonical child");
   std::fs::write(
     child.join("index.tex"),
     "\\documentclass{article}\\begin{document}ABSOLUTEsubimportBODY\\end{document}",

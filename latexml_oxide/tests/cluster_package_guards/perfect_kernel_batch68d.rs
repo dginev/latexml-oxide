@@ -157,20 +157,22 @@ fn in_tex_live(file: &str) -> bool {
       .map(|out| String::from_utf8_lossy(&out.stdout).trim().to_string())
       .unwrap_or_default()
   };
-  static LOCAL: std::sync::OnceLock<Vec<String>> = std::sync::OnceLock::new();
+  // kpathsea's brace list and its output's OS path separator (`;` on Windows, where `:` follows a drive letter).
+  static LOCAL: std::sync::OnceLock<Vec<std::path::PathBuf>> = std::sync::OnceLock::new();
   let local = LOCAL.get_or_init(|| {
-    let trees = kpsewhich(&["-expand-path=$TEXMFLOCAL:$TEXMFHOME"]);
-    trees
-      .split(':')
-      .filter(|tree| !tree.is_empty())
-      .map(str::to_string)
+    std::env::split_paths(&kpsewhich(&["-expand-path={$TEXMFLOCAL,$TEXMFHOME}"]))
+      .filter(|tree| !tree.as_os_str().is_empty())
       .collect()
   });
-  kpsewhich(&["-all", file]).lines().any(|path| {
-    !local
-      .iter()
-      .any(|tree| std::path::Path::new(path).starts_with(tree))
-  })
+  kpsewhich(&["-all", file])
+    .lines()
+    .map(std::path::Path::new)
+    .any(|path| {
+      // The file of that very name: a case-insensitive file system (Windows, macOS) finds TL's `IEEEconf.cls` for
+      // `ieeeconf.cls`, which TeX Live does not distribute.
+      path.file_name().is_some_and(|name| name == file)
+        && !local.iter().any(|tree| path.starts_with(tree))
+    })
 }
 
 /// The stand-ins a TeX Live after 2025 distributes: TL 2026's rasti.cls (rasti-journal).

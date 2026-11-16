@@ -88,7 +88,7 @@ ALLOWLIST = {
 
 
 def sh(*args):
-    return subprocess.run(args, capture_output=True, text=True).stdout.strip()
+    return subprocess.run(args, capture_output=True, encoding="utf-8").stdout.strip()
 
 
 def load_glyphtounicode():
@@ -97,7 +97,7 @@ def load_glyphtounicode():
     if not path:
         sys.exit("FATAL: glyphtounicode.tex not found (is pdftex installed?)")
     table = {}
-    for m in re.finditer(r"\\pdfglyphtounicode\{([^}]+)\}\{([0-9A-Fa-f]+)\}", Path(path).read_text()):
+    for m in re.finditer(r"\\pdfglyphtounicode\{([^}]+)\}\{([0-9A-Fa-f]+)\}", Path(path).read_text(encoding="utf-8")):
         table[m.group(1)] = int(m.group(2), 16)
     return table
 
@@ -117,7 +117,7 @@ def glyph_to_cp(name, g2u):
 
 def parse_enc(enc_path):
     """.enc (dvips PostScript) -> list of 256 glyph names in slot order."""
-    text = Path(enc_path).read_text()
+    text = Path(enc_path).read_text(encoding="utf-8")
     # Strip PostScript % comments, then take the tokens inside the [...] array.
     text = re.sub(r"%[^\n]*", "", text)
     m = re.search(r"\[(.*)\]", text, re.DOTALL)
@@ -132,7 +132,7 @@ _CHAR_RE = re.compile(r"'(\\u\{([0-9A-Fa-f]+)\}|\\(.)|([^'\\]))'")
 
 def parse_fontmap(rs_path):
     """*_fontmap.rs -> (name, [256 codepoints]). None if not a DeclareFontMap."""
-    text = rs_path.read_text()
+    text = rs_path.read_text(encoding="utf-8")
     m = re.search(r'DeclareFontMap!\("([^"]+)",\s*mixrc!\[(.*?)\]\s*\)', text, re.DOTALL)
     if not m:
         return None

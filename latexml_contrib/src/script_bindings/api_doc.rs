@@ -3425,11 +3425,13 @@ impl MacroHome {
 /// Every `macro_rules!` of the crates that define the binding macros; a macro's export attribute may sit above its
 /// doc comment or below it.
 pub(super) fn workspace_macros() -> Vec<MacroHome> {
-  fn walk(dir: &std::path::Path, krate: &'static str, out: &mut Vec<MacroHome>) {
+  use std::path::Path;
+  /// `src` is the crate's source root, `dir` the directory read under it.
+  fn walk(src: &Path, dir: &Path, krate: &'static str, out: &mut Vec<MacroHome>) {
     for entry in std::fs::read_dir(dir).into_iter().flatten().flatten() {
       let path = entry.path();
       if path.is_dir() {
-        walk(&path, krate, out);
+        walk(src, &path, krate, out);
       } else if path.extension().is_some_and(|e| e == "rs") {
         let text = std::fs::read_to_string(&path).unwrap_or_default();
         let lines: Vec<&str> = text.lines().map(str::trim_start).collect();
@@ -3446,11 +3448,14 @@ pub(super) fn workspace_macros() -> Vec<MacroHome> {
             .chars()
             .take_while(|c| c.is_ascii_alphanumeric() || *c == '_')
             .collect();
-          let file = path.to_string_lossy();
-          let file = file
-            .rsplit_once("/../")
-            .map_or(&*file, |(_, f)| f)
-            .to_string();
+          // `<krate>/src/<dirs>/<file>.rs`, `/`-separated on every OS.
+          let file = path
+            .strip_prefix(src)
+            .unwrap_or(&path)
+            .components()
+            .fold(format!("{krate}/src"), |file, part| {
+              format!("{file}/{}", part.as_os_str().to_string_lossy())
+            });
           out.push(MacroHome(name, exported.then_some(krate), file));
         }
       }
@@ -3458,11 +3463,11 @@ pub(super) fn workspace_macros() -> Vec<MacroHome> {
   }
   let mut out = Vec::new();
   for krate in ["latexml_core", "latexml_engine", "latexml_package"] {
-    let src = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+    let src = Path::new(env!("CARGO_MANIFEST_DIR"))
       .join("..")
       .join(krate)
       .join("src");
-    walk(&src, krate, &mut out);
+    walk(&src, &src, krate, &mut out);
   }
   out
 }

@@ -802,7 +802,14 @@ impl State {
     // ending in `//` is the kpsewhich recursive-search marker; preserve it
     // across canonicalization (strip it, canonicalize the base, re-append) so
     // `candidate_pathnames` can expand the marker to the whole subtree.
-    let search_paths: VecDeque<String> = std::iter::once(String::from("."))
+    // `.` is the working directory by its physical name, as `SOURCEDIRECTORY` is (`pathname::canonicalize`): Unix's
+    // `getcwd` already is, while Windows' may be an 8.3 alias (`C:\Users\RUNNER~1\…`, GitHub's runners) of the long
+    // name, under which one file was found twice — an image listed again as `../../RUNNER~1/…`. The `--path`
+    // directories stay as written: resolving their symlinks would change what Linux prints.
+    let cwd = pathname::canonicalize(".")
+      .map(|cwd| cwd.to_string_lossy().into_owned())
+      .unwrap_or_else(|_| String::from("."));
+    let search_paths: VecDeque<String> = std::iter::once(cwd)
       .chain(options.search_paths.into_iter().flatten())
       .map(|p| match p.strip_suffix("//") {
         Some(base) => format!("{}//", pathname::absolute(&pathname::canonical(base))),

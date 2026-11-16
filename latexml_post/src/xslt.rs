@@ -267,8 +267,17 @@ mod local_stylesheet_tests {
     .unwrap();
     assert!(apply(&mine).contains("<out>SPACED-COMMON</out>"));
 
+    // A path as a `file:` URL's path: `/`-separated and rooted, `/C:/…` on Windows (`file:///C:/…`).
+    let file_url_path = |path: &std::path::Path| {
+      let path = path.to_str().unwrap().replace('\\', "/");
+      if path.starts_with('/') {
+        path
+      } else {
+        format!("/{path}")
+      }
+    };
     let abs = common.to_str().unwrap();
-    let escaped = abs.replace(' ', "%20");
+    let escaped = file_url_path(&common).replace(' ', "%20");
     for url in [
       abs.to_string(),
       format!("file://{escaped}"),
@@ -291,17 +300,16 @@ mod local_stylesheet_tests {
         "{name}"
       );
       // In a `file:` URL the `%` is escaped.
-      let url = format!("file://{}", html5.to_str().unwrap().replace('%', "%25"));
+      let url = format!("file://{}", file_url_path(&html5).replace('%', "%25"));
+      // (`Path` equality is by component: Windows' `C:/…` is `C:\…`.)
       assert_eq!(super::embedded_xslt::disk_path(&url), Some(html5), "{url}");
     }
-    // A host other than localhost is a UNC share, which only Windows paths can name.
-    let unc = format!(
-      "file://server{}",
-      common.to_str().unwrap().replace(' ', "%20")
-    );
+    // A host other than localhost is a UNC share, which only Windows paths can name (the mapping
+    // alone: a share is no file of this host).
+    let unc = "file://server/share/a%20b/LaTeXML-common.xsl";
     assert_eq!(
-      super::embedded_xslt::disk_path(&unc).is_some(),
-      cfg!(windows),
+      super::embedded_xslt::url_path(unc),
+      cfg!(windows).then(|| std::path::PathBuf::from("//server/share/a b/LaTeXML-common.xsl")),
       "{unc}"
     );
     // Relative to this crate's directory, where the engine's own sources sit.
@@ -1047,10 +1055,15 @@ mod embedded_xslt {
     lookup(name)
   }
 
-  /// The file an absolute path or a `file:` URL (`file:///p`, `file://localhost/p`, `file:/p`,
-  /// percent-encoded; `file://server/share/p` on Windows) names, when it exists. A plain path is
-  /// taken as written: its `%` is a character, not an escape (`/w/100%/LaTeXML-html5.xsl`).
+  /// The file an absolute path or a `file:` URL names, when it exists (`url_path`).
   pub fn disk_path(url: &str) -> Option<std::path::PathBuf> {
+    url_path(url).filter(|path| path.is_absolute() && path.is_file())
+  }
+
+  /// The path an absolute path or a `file:` URL (`file:///p`, `file://localhost/p`, `file:/p`,
+  /// percent-encoded; `file://server/share/p` on Windows) names. A plain path is taken as written:
+  /// its `%` is a character, not an escape (`/w/100%/LaTeXML-html5.xsl`).
+  pub(super) fn url_path(url: &str) -> Option<std::path::PathBuf> {
     let path = match url.strip_prefix("file:") {
       None => url.to_string(),
       Some(rest) => {
@@ -1071,8 +1084,7 @@ mod embedded_xslt {
         }
       },
     };
-    let path = std::path::PathBuf::from(path);
-    (path.is_absolute() && path.is_file()).then_some(path)
+    Some(std::path::PathBuf::from(path))
   }
 
   fn percent_decode(s: &str) -> Option<String> {
