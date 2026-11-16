@@ -96,13 +96,16 @@
            use="concat(generate-id(../..),'&#x9;',@role,'&#x9;',@mark,'&#x9;',normalize-space(.))"/>
   <!-- The same notes by block and mark alone, and the mark-only notes (role="footnotemark": a mark printed on a name
        that no note of its own answers, an affiliation letter, an unpaired \footnotemark; 0801.1438) by block and
-       mark. A mark-only note links to the note its mark names in the block: one note, however many copies. Another
-       author's mark-only note makes a one-author note shared, so it too prints in the margin with its mark. -->
+       mark. A mark-only note links to the note its mark names in the block (one note, however many copies), which it
+       then makes shared, but only a symbol mark or Perl's tagged leftover: a letter or digit is as often an
+       affiliation label, and a wrong link is worse than none (revREND2). -->
   <xsl:key name="f:creator-note-by-mark"
            match="ltx:creator[@role='author']/ltx:note[normalize-space(@mark)][normalize-space(.)][not(@role='footnotemark')]"
            use="concat(generate-id(../..),'&#x9;',normalize-space(@mark))"/>
   <xsl:key name="f:creator-mark-only"
-           match="ltx:creator[@role='author']/ltx:note[@role='footnotemark'][normalize-space(@mark)]"
+           match="ltx:creator[@role='author']/ltx:note[@role='footnotemark'][normalize-space(@mark)]
+                  [ltx:tags or translate(normalize-space(@mark),'0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ','')
+                               = normalize-space(@mark)]"
            use="concat(generate-id(../..),'&#x9;',normalize-space(@mark))"/>
 
   <xsl:template
@@ -140,12 +143,14 @@
     </xsl:choose>
   </xsl:template>
 
-  <!-- A creator's mark-only note is its mark alone, with no empty "footnotemark: " pop-up: linked, and shared, when its
-       mark names one author's note in the block; else the plain glyph. Its glyph is note-mark's (Perl's tag, else
-       @mark). -->
+  <!-- A creator's mark-only note is its mark alone, with no empty "footnotemark: " pop-up: linked, and shared, when it
+       is an author's linkable mark (f:creator-mark-only) and its mark names one author's note in the block; else the
+       plain glyph. Its glyph is note-mark's (Perl's tag, else @mark). -->
   <xsl:template match="ltx:creator/ltx:note[@role='footnotemark'][normalize-space(@mark)]">
+    <xsl:variable name="by_mark" select="concat(generate-id(../..),'&#x9;',normalize-space(@mark))"/>
     <xsl:variable name="notes"
-                  select="key('f:creator-note-by-mark',concat(generate-id(../..),'&#x9;',normalize-space(@mark)))"/>
+                  select="key('f:creator-note-by-mark',$by_mark)[count(key('f:creator-mark-only',$by_mark) | current())
+                                                                 = count(key('f:creator-mark-only',$by_mark))]"/>
     <xsl:variable name="target"
                   select="$notes[1][count($notes) = count(key('f:shared-creator-note',
                             concat(generate-id(../..),'&#x9;',@role,'&#x9;',@mark,'&#x9;',normalize-space(.))))]"/>
