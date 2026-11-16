@@ -927,6 +927,49 @@ const BOUNDARY: &[Row] = &[
     )],
   ),
   (
+    "a binding's lock round-trips through a body load (repro \
+     loader/locked_preamble_command_redefined_in_the_body/locked_preamble_command_round_trip_through_a_body_load; red \
+     on CUT999: 5 errors, \"c w d v\")",
+    "pdflatex 5 `!` (Can be used only in preamble: 3 \\usepackage; Undefined control sequence: \\savedoi, \\foo), \"a \
+     doipkg savedoipkg b in-epkg c D:w doipkg d D:v\"; Perl 3 errors (unexpected:\\usepackage, --includestyles)",
+    include_str!(
+      "../../../tools/perfect_kernel/repros/loader/locked_preamble_command_redefined_in_the_body/locked_preamble_command_round_trip_through_a_body_load.tex"
+    ),
+    &[
+      (
+        "imsart.cls",
+        include_str!(
+          "../../../tools/perfect_kernel/repros/loader/locked_preamble_command_redefined_in_the_body/imsart.cls"
+        ),
+      ),
+      (
+        "imsart.sty",
+        include_str!(
+          "../../../tools/perfect_kernel/repros/loader/locked_preamble_command_redefined_in_the_body/imsart.sty"
+        ),
+      ),
+      (
+        "doipkg.sty",
+        include_str!(
+          "../../../tools/perfect_kernel/repros/loader/locked_preamble_command_redefined_in_the_body/doipkg.sty"
+        ),
+      ),
+      (
+        "savedoipkg.sty",
+        include_str!(
+          "../../../tools/perfect_kernel/repros/loader/locked_preamble_command_redefined_in_the_body/savedoipkg.sty"
+        ),
+      ),
+    ],
+    (3, 0),
+    &[NOTPRERR, NOTPRERR, NOTPRERR],
+    &[(
+      "p",
+      "p1.1",
+      "<p xml:id=\"p1.1\">a\nb <ref href=\"https://doi.org/in-epkg\">in-epkg</ref> FOO\nc D:w\nd D:v</p>",
+    )],
+  ),
+  (
     "a standalone sub-file's preamble (repro loader/standalone_preamble)",
     "pdflatex 0 `!` (standalone.sty skips the preamble), \"Main. Sub text. After yes yes.\"; Perl 0 errors",
     include_str!(
