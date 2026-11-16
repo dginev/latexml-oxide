@@ -14,16 +14,8 @@ const HAND_MARKS: [char; 7] = [
   '*', '\u{2217}', '\u{2020}', '\u{2021}', '\u{A7}', '\u{B6}', '#',
 ];
 
-/// Every mark printed on a creator's name leaves its `ltx:personname`, once every route has placed the creator's
-/// contacts and notes: a mark a note of the creator answers is that note's `mark` (set where it has none, its
-/// content's leading copy cut), a label of a contact the creator holds is consumed (the contact is its meaning,
-/// ruling 3), and any other is a mark-only note after the name (`<note role="footnotemark" mark="a"/>`, Perl's shape
-/// for a `\footnotemark`) — never dropped. A mark is an `ltx:sup` (`$^1$`, `\textsuperscript`), a formula of scripts
-/// alone, or a footnote symbol typed at the name's end ([`HAND_MARKS`]). Stay: a superscript that is the name's own ink
-/// (`M\textsuperscript{c}Kernan`, IEEE's `1\textsuperscript{st}`, an isotope's `$^{3}$He` inside a collaboration's
-/// name), any other formula, a mark a reference prints, and the marks of a personname holding more than a name.
-/// Witnesses 0707.3527 (`M.Das$^1$` over its iaus `\affiliation`), 0801.1438 (`Kardo\v s$^{a}$`, its affiliations set in
-/// the body). Guards `perfect_kernel_batchpure`.
+/// Takes every mark off each creator's personname: its note's `mark`, the label of a contact it holds (consumed), or a
+/// mark-only note after the name; never dropped. OXIDIZED_DESIGN_DIVERGENCES #1055, guards `perfect_kernel_batchpure`.
 pub(in crate::base_utilities) fn keep_personnames_pure(document: &mut Document) -> Result<()> {
   for creator in document.findnodes("//ltx:creator[ltx:personname]", None) {
     for personname in children_named(&creator, "personname") {
@@ -44,22 +36,36 @@ pub(in crate::base_utilities) fn keep_personnames_pure(document: &mut Document) 
       for group in groups {
         let printed = group.printed.trim().to_string();
         let pieces = mark_pieces(&printed);
-        let mut left: Vec<&str> = Vec::new();
+        let mut left: Vec<String> = Vec::new();
+        let mut taken = false;
         for piece in &pieces {
           let key = mark_form(piece);
           let keys: Vec<String> = std::iter::once(key.clone())
             .chain(group.refmarks.iter().cloned())
             .collect();
-          let answered = answer(document, &notes, &held, piece, &key, &keys)?;
-          // (a run of glued labels, each a held contact's: `$^{ab}$` over `$^a$Univ A`, `$^b$Univ B`, revtex3's)
-          let glued = piece.chars().count() > 1
-            && piece.chars().all(char::is_alphanumeric)
-            && piece
-              .chars()
-              .all(|c| held.contains(&mark_form(&c.to_string())));
-          if !answered && !glued {
-            left.push(piece);
+          if answer(document, &notes, &held, piece, &key, &keys)? {
+            taken = true;
+            continue;
           }
+          // (a run of glued labels: each a held contact's, `$^{ab}$` over `$^a$Univ A`, `$^b$Univ B`, revtex3's; or a
+          // label glued to a note's number, `$^{a1}$` over `$^a$Department …` (hep-ph0011101), the number left)
+          let held_part = |part: &str| held.contains(&mark_form(part));
+          let glued: Vec<String> = if piece.chars().count() > 1
+            && piece.chars().all(char::is_alphanumeric)
+            && piece.chars().all(|c| held_part(&c.to_string()))
+          {
+            Vec::new()
+          } else {
+            let parts = letter_digit_runs(piece);
+            if parts.len() > 1 && parts.iter().any(|part| held_part(part)) {
+              parts.into_iter().filter(|part| !held_part(part)).collect()
+            } else {
+              left.push(piece.clone());
+              continue;
+            }
+          };
+          taken = true;
+          left.extend(glued);
         }
         let shown = left.join(",");
         DebugFeature!(
@@ -70,7 +76,7 @@ pub(in crate::base_utilities) fn keep_personnames_pure(document: &mut Document) 
         if !left.is_empty() {
           // (as printed where nothing was answered, `(a,b)`, or a range was printed, `1-3`; else the marks left, a list)
           let ranged = printed.contains(['-', '\u{2013}', '\u{2212}']);
-          let mark = if left.len() == pieces.len() || ranged {
+          let mark = if !taken || ranged {
             printed.clone()
           } else {
             left.join(",")
@@ -127,6 +133,21 @@ fn answer(
   Ok(false)
 }
 
+/// The runs of letters and of digits `piece` parts into (`a1`: `a`, `1`), each its own mark where one is a label.
+fn letter_digit_runs(piece: &str) -> Vec<String> {
+  let mut runs: Vec<String> = Vec::new();
+  let mut last_digit = None;
+  for c in piece.chars() {
+    let digit = c.is_ascii_digit();
+    match runs.last_mut() {
+      Some(run) if last_digit == Some(digit) => run.push(c),
+      _ => runs.push(c.to_string()),
+    }
+    last_digit = Some(digit);
+  }
+  runs
+}
+
 /// The element children of `node` named `name` (in the LaTeXML namespace).
 fn children_named(node: &Node, name: &str) -> Vec<Node> {
   node
@@ -139,7 +160,7 @@ fn children_named(node: &Node, name: &str) -> Vec<Node> {
 /// The mark keys a contact is placed by or prints ([`mark_form`]): its labels (`_label`, `_bymark`, the printed label
 /// of an emitted entry, [`PRINTED_LABEL`]) — an affiliation's, or one of no kind, a command's spelling as its glyph
 /// (`\dag`: †, [`unanswered_mark_text`]) — and the superscript its text opens with (`$^1$Raman Research Institute`,
-/// 0707.3527).
+/// 0707.3527), inside its font wrappers too.
 fn contact_keys(contact: &Node) -> Vec<String> {
   let mut keys = Vec::new();
   for attribute in ["_label", "_bymark", PRINTED_LABEL] {
@@ -156,9 +177,19 @@ fn contact_keys(contact: &Node) -> Vec<String> {
       keys.push(mark_form(&key));
     }
   }
-  let opening = contact.get_child_nodes().into_iter().find(|child| {
-    child.get_type() != Some(NodeType::TextNode) || !child.get_content().trim().is_empty()
-  });
+  // (through the font or box wrappers it opens with: authblk's `\textsuperscript{\(*\)}`, `<text><sup>…`)
+  let first = |node: &Node| {
+    node.get_child_nodes().into_iter().find(|child| {
+      child.get_type() != Some(NodeType::TextNode) || !child.get_content().trim().is_empty()
+    })
+  };
+  let mut opening = first(contact);
+  while let Some(node) = opening
+    .as_ref()
+    .filter(|node| node.get_type() == Some(NodeType::ElementNode) && node.get_name() == "text")
+  {
+    opening = first(node);
+  }
   let printed = opening
     .filter(|node| node.get_type() == Some(NodeType::ElementNode))
     .and_then(|node| match node.get_name().as_str() {
