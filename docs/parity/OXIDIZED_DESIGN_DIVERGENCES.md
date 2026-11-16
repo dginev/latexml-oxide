@@ -19212,6 +19212,11 @@ formula's `tex=` is the rewritten math, not `\ce{â€¦}`. Cost (instructions:u): â
 parse is the price). **Guard**: `mhchem_formula::mhchem_formula_units_are_chemistry` (repros
 `package-bindings/mhchem_formula_units.tex`, `mhchem_formula_text_font.tex`, `mhchem_formula_state.tex`,
 `mhchem_formula_amount.tex`, `mhchem_formula_juxtaposed.tex`; witnesses issue 824, 2206.12015).
+
+Residual (revREGCHEM): the decline's scan follows unprotected macros only, so a *protected* user macro hiding a math shift
+(`\NewDocumentCommand`, `\protected\def`) still sets the shift in math and errs ("Missing $ inserted"); the skip is load-bearing
+(`\@ensuremath` is protected and its `\else` reaches `\@ensuredmath`'s `$`). Row R MHCHEMPROT.
+
 ### 1050. The glue between two paragraphs is `--ltx-skip-before` on the second (QAB8, QA26)
 
 **Principle:** TeX's vertical list decides what lies between two paragraphs; Perl's own comment asks for it
