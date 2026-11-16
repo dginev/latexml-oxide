@@ -12,8 +12,8 @@ pub(in crate::base_utilities) const LIST_MARK: &str = "_listmark";
 /// `\fntext`, REVTeX's `\thanks`).
 pub(in crate::base_utilities) const PRINTED_MARK: &str = "_fnmark";
 
-/// The attribute of a creator's contact that is part of a class's front-matter footnote, which
-/// [`number_footnote_parts`] numbers: `title`, `own`, `join` (the name's joined footnote) or `affil:<n>`.
+/// The attribute of a creator's contact that is part of a class's front-matter footnote, which `number_footnote_parts`
+/// numbers: `title`, `own`, `join` (the name's joined footnote) or `affil:<n>`.
 pub const FOOTNOTE_PART: &str = "_fnpart";
 /// How a class that writes [`FOOTNOTE_PART`]s marks its front-matter footnotes: `fnsymbol` or `alph`.
 pub const FOOTNOTE_MARKS: &str = "lx_fm_footnote_marks";
