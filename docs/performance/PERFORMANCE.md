@@ -380,7 +380,7 @@ from `1 << 31` (the buffer refuses to reach 2 GiB), deduplicated across both tie
 the overflow symbol); outside a lend the intern is the old `get_or_intern`, with a 256 × 64-bit filter (last byte,
 length) so only a possible page string probes the page. `arena.rs` `unsafe` 10 → 1; `with_copy` folded back into
 `with`. Every document overflows: hello-world 1 string, b250 50, 2308.04512 399, siunitx papers 105-139 (the
-conversion's end reports the count as one `Info:arena:overflow`). Cost, `instructions:u` best of 3 interleaved against
+conversion's end reports the count as a Debug line, `arena:overflow`, not an `Info:` line in every log). Cost, `instructions:u` best of 3 interleaved against
 INTPERF5 (`kit/perf_ab_cycles.sh`, `HTML=1 STAT=min`): 2308.04512 +0.24 %, b250 +0.18 %, amsldoc +0.13 %, 2604.01119
 +0.07 %, 10 typical papers (`popPERFBs`) −0.35 … +0.14 %; `cycles:u` −5.3 … +2.6 % (within the loaded host's spread).
 About 4 instructions per arena call (2308.04512: 95 M lends, 51 M interns, 25 M probes): the `RefCell` borrow every lend

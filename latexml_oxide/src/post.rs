@@ -506,6 +506,8 @@ fn run_post_processing_impl(
   opts: &PostOptions,
   written: &mut Vec<String>,
 ) -> String {
+  // A conversion entry point: the arena's overflow count starts at zero, as in `Converter::convert`.
+  latexml_core::common::arena::take_overflow_interns();
   // Oversized in-memory handoff → spill + streaming file parse (see
   // `post_mem_parse_limit`). The temp file is removed on every exit path by
   // the guard; a spill failure falls through to the memory parse, whose own

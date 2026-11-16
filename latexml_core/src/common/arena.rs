@@ -369,8 +369,8 @@ pub fn join(syms: &[SymStr], sep: &str) -> String { with_many(syms, |strs| strs.
 
 pub fn len() -> usize { ARENA.borrow().len() + OVERFLOW.borrow().texts.len() }
 
-/// The number of strings the overflow page took (interned while a lend was live) since the last call: the conversion's
-/// end reports it.
+/// The number of strings the overflow page took (interned while a lend was live) since the last call: every conversion
+/// entry point takes it at its start, and the conversion's end reports it as a Debug line.
 pub fn take_overflow_interns() -> usize { std::mem::take(&mut OVERFLOW.borrow_mut().fresh) }
 
 /// Free every interned string on this thread, returning the arena to a

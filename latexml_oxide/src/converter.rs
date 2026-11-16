@@ -662,6 +662,8 @@ impl Converter {
   pub fn flush_log(&mut self) -> String { latexml_core::util::logger::flush_log() }
 
   pub fn convert(mut self, source: String) -> ConversionResponse {
+    // This conversion's count of overflow interns starts at zero (`finish_response` reports it).
+    arena::take_overflow_interns();
     // 1 Prepare for conversion
     // 1.1 Initialize session if needed:
     if !self.ready {
@@ -1014,17 +1016,15 @@ impl Converter {
   fn finish_response(&mut self, serialized: String) -> ConversionResponse {
     self.runtime.status = get_status_message();
     self.runtime.status_code = get_status_code();
-    // (the function form: the conversion's end has no source position to locate it at)
+    // (taken at every conversion's start too, so a count never carries over; a Debug line, as every document has one)
     let lent_interns = arena::take_overflow_interns();
-    if lent_interns > 0 {
-      emit_info(
-        "arena",
-        "overflow",
-        &s!("{lent_interns} strings interned while a text was lent went to the overflow page"),
-      );
-    }
     if self.opts.verbosity >= 0 {
       Debug!("arena", "strings_allocated", arena::len());
+      Debug!(
+        "arena",
+        "overflow",
+        s!("{lent_interns} strings interned while a text was lent went to the overflow page")
+      );
       // Final token-read progress: the calibration basis for `token_limit`
       // and `CYCLE_GUARD_ACTIVATE` (the read-checkpoint accounting changed
       // in PR #249 — read_x_token/read_balanced now count too — so limits
@@ -1083,6 +1083,8 @@ impl Converter {
     name: &str,
     content: String,
   ) -> ConversionResponse {
+    // (no count carried in from an earlier conversion on this thread: see `convert`)
+    arena::take_overflow_interns();
     // Load + digest through the shared top-level loader, so the source-context
     // setup is not duplicated here.
     let digested = match self.digest_content_with_provenance(name, content) {
