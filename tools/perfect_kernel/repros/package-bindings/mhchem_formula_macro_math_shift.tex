@@ -1,0 +1,27 @@
+% witness: 2606.03586 (`\ce{\alphasic} and \ce{\betagox}`, `\alphasic` = `$\alpha$-\ce{SiC}`, `\betagox` =
+%          `$\beta$-{\ce{Ga2O3}}`; runs 375/376 0 errors, 377/378 after #850 "Missing $ inserted")
+% oracle:  pdflatex 0 errors: α-SiC, β-Ga2O3, H2O, H2α-SiC, 2α-SiC, α−SiC2+, H2Oα-SiC, α-SiC, x, xH2O
+% engines: rust 999af99497d = 8 errors (`\mathrm{$\alpha$-…}$$`: #850's units set the macro in math, where mhchem's
+%          text-mode `\ce` sets it in `\text{…}`); rust int171a (before #850) = 0 errors; Perl hangs on raw mhchem
+% expect:  0 errors; a formula holding a macro that expands to a math shift is mhchem's own output (the α and SiC kept, no
+%          `$` in any alttext); `\ce{\mm}` (`\ensuremath`, protected) and the literal `{$x$}` stay chemistry math
+% status:  RED (999af99497d) -> GREEN (REGCHEM)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage[version=4]{mhchem}
+\newcommand{\alphasic}{$\alpha$-\ce{SiC}}
+\newcommand{\betagox}{$\beta$-{\ce{Ga2O3}}}
+\newcommand{\wrapped}{\alphasic}
+\DeclareRobustCommand{\robust}{$\alpha$-\ce{SiC}}
+\newcommand{\mm}{\ensuremath{x}}
+\begin{document}
+\ce{\alphasic} and \ce{\betagox}
+
+\ce{H2\alphasic} and \ce{2\alphasic}
+
+\ce{\alphasic^{2+}} and \ce{H2O\alphasic}
+
+\ce{\wrapped} and \ce{\robust}
+
+\ce{\mm} and \ce{{$x$}H2O}
+\end{document}
