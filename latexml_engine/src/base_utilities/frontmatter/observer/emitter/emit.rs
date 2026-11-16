@@ -991,43 +991,6 @@ fn block_names(
           grown.0 = grown.0.min(at(e.span?.0)?);
         }
       }
-      // (a text `\footnotemark` with spacing on both sides is the nearer name's ([`nearer_before`]), so one nearer this
-      // name, or as near as the one before, is its prefix, the run grown over the spacing between: `Ann Able \qquad
-      // \footnotemark[2] \ Bob Baker`, pdflatex's 27pt | 4pt, "†Bob Baker" (DG ruling 2026-11-16; review revSHGIVENb).
-      // Grown over text `\footnotemark`s, notes and spacing only, never past a group's close or into one: any other event
-      // between, a superscript, an ORCID, a `\cite`, stays where REGFIX writes it, and so does the mark, a counted loss
-      // (review revSHGIVENc)
-      let in_text = |e: &Event| {
-        e.span
-          .and_then(|span| at(span.0))
-          .is_some_and(|s| field.formula_start(s) == s)
-      };
-      let footnote_mark = |e: &Event| {
-        e.kind == EventKind::Mark && e.role.as_deref() == Some("footnotemark") && in_text(e)
-      };
-      let spaced_mark =
-        |m: usize| footnote_mark(&read[m]) && gaps(&read[spacing_from(&read, m)..m]).is_some();
-      let balanced = |m: usize| {
-        let (s, t) = (at(read[m].span?.0)?, at(read[at_name].span?.0)?);
-        let depths = field.tokens.get(s..t)?.iter().scan(0, |depth, t| {
-          *depth += t.group_step();
-          Some(*depth)
-        });
-        let (lowest, last) = depths.fold((0, 0), |(lowest, _), d| (lowest.min(d), d));
-        Some(lowest == 0 && last == 0)
-      };
-      let window = read[..at_name]
-        .iter()
-        .rposition(|e| !(footnote_mark(e) || spacing(e)))
-        .map_or(0, |p| p + 1);
-      if let Some(m) = (window..at_name).find(|&m| {
-        spaced_mark(m)
-          && gaps(&read[spacing_from(&read, at_name)..at_name]).is_some()
-          && nearer_before(&read, m, |e| beside(&e)) == Some(false)
-          && balanced(m) == Some(true)
-      }) {
-        grown.0 = grown.0.min(at(read[m].span?.0)?);
-      }
       // (a kept mark whose cover holds the name's is the mark of the call that printed both, which is written whole, as it
       // digests to the name and its marks: ptephy's `\\name{Bob Baker}{2}` glued to the block's end, whose name's cover
       // stops short of the call, its arguments being the field's last tokens; written from inside the call, its marks'
@@ -1083,21 +1046,45 @@ fn block_names(
       let math_sep =
         |e: &Event| matches!(e.kind, EventKind::Sep(_)) && e.role.as_deref() == Some("math");
       let past_note = |e: &&Event| beside(e) || e.kind == EventKind::Note || math_sep(e);
-      // (and past a spacing run before a text `\footnotemark` nearer this name than the next ([`nearer_before`]): pdflatex
-      // prints it after the name, and Perl's personname keeps it — `Vivek Ramanujan \thanks{…} \ \footnotemark[2]`, `Ali
-      // Farhadi \ \footnotemark[3]`, 1911.13299; `Xiao Wang\textsuperscript{1}\footnotemark[1] \ \footnotemark[2] \quad
-      // Qingyi Si`, 2412.20504 (DG rulings 2026-11-16); one on the line a `\\` opens is no name's, a Break parts it. A mark
-      // in a formula is written with the formula whole, a note in it twice — `Xunzhi Xiang$^{1}\thanks{…}\,\,
-      // \footnotemark[2]$`, 2511.12633, stays `mark_dropped`'s)
-      let gap = |e: &Event| matches!(e.kind, EventKind::Sep(SepKind::Gap { .. }));
-      let spacing_before_mark = |i: usize| {
-        (i..read.len())
-          .find(|&m| !spacing(&read[m]))
-          .is_some_and(|m| spaced_mark(m) && nearer_before(&read, m, |e| beside(&e)) == Some(true))
+      // (and past a run of text `\footnotemark`s, notes and spacing that pdflatex prints nearer this name than the
+      // next ([`carried_run`]): Perl's personname keeps them — `Vivek Ramanujan \thanks{…} \ \footnotemark[2]`, `Ali
+      // Farhadi \ \footnotemark[3]`, 1911.13299; `Xiao Wang\textsuperscript{1}\footnotemark[1] \ \footnotemark[2]
+      // \quad Qingyi Si`, 2412.20504 (DG rulings 2026-11-16). One on the line a `\\` opens is no name's, a Break parts
+      // it; one in a formula is written with the formula whole, a note in it twice — `Xunzhi
+      // Xiang$^{1}\thanks{…}\,\,\footnotemark[2]$`, 2511.12633, stays `mark_dropped`'s)
+      let in_text = |e: &Event| {
+        e.span
+          .and_then(|span| at(span.0))
+          .is_some_and(|s| field.formula_start(s) == s)
       };
-      let scan_end = (after_name..read.len())
-        .find(|&i| !(past_note(&&read[i]) || (gap(&read[i]) && spacing_before_mark(i))))
+      let footnote_mark = |e: &Event| {
+        e.kind == EventKind::Mark && e.role.as_deref() == Some("footnotemark") && in_text(e)
+      };
+      // (the run's tokens, from its first mark to where it ends, neither close a group opened before them nor leave one
+      // open: `{Ann Able \qquad \footnotemark[2]} \ Bob`, review revSHGIVENc)
+      let balanced = |(s, t): (usize, usize)| {
+        let depths = field.tokens.get(s..t)?.iter().scan(0, |depth, t| {
+          *depth += t.group_step();
+          Some(*depth)
+        });
+        let (lowest, last) = depths.fold((0, 0), |(lowest, _), d| (lowest.min(d), d));
+        Some(lowest == 0 && last == 0)
+      };
+      let glued_end = (after_name..read.len())
+        .find(|&i| !past_note(&&read[i]))
         .unwrap_or(read.len());
+      let scan_end = carried_run(&read, glued_end, footnote_mark)
+        .filter(|&(first, _, end)| {
+          let from = read[first].span.and_then(|span| at(span.0));
+          let to = read
+            .get(end)
+            .map_or(Some(field.tokens.len()), |e| at(e.span?.0));
+          from
+            .zip(to)
+            .and_then(|(s, t)| balanced((s, t.max(s))))
+            .unwrap_or(false)
+        })
+        .map_or(glued_end, |(_, last, _)| last + 1);
       let steps_counter = |e: &Event| e.role.as_deref().is_some_and(|r| r.starts_with("thanks"));
       let mut apart: Vec<Token> = Vec::new();
       let mut apart_runs: Vec<(usize, usize)> = Vec::new();
@@ -1316,14 +1303,6 @@ fn spacing(e: &Event) -> bool {
   e.kind == EventKind::Note || matches!(e.kind, EventKind::Sep(SepKind::Gap { .. }))
 }
 
-/// Where the run of [`spacing`] events ending before `at` starts.
-fn spacing_from(read: &[Event], at: usize) -> usize {
-  read[..at]
-    .iter()
-    .rposition(|e| !spacing(e))
-    .map_or(0, |p| p + 1)
-}
-
 /// What the spacing runs among `events` print: a natural width (em), or a fill's, the line's (0pt on a centred line:
 /// `Ann Able \hfill \footnotemark[2] \quad Bob Baker`, review revSHGIVENc), which no reading of the tokens knows.
 #[derive(Clone, Copy)]
@@ -1347,39 +1326,39 @@ fn gaps(events: &[Event]) -> Option<Gaps> {
     })
 }
 
-/// Whether the mark at `m`, past a spacing run, is the name's before it: pdflatex prints it nearer that name. Past its
-/// own marks and notes (`beside`), a separator, a `\\` or the block's end follows it (1911.13299's `\ \footnotemark[3]
-/// \and`), or a spacing run, and then a name only when that run is the wider (2412.20504's `\ \footnotemark[2] \quad
-/// Qingyi Si`). A mark the next name follows with no spacing run (glued to it) or one no wider (`Ann \quad † \quad Bob`,
-/// a tie) is that name's prefix (DG ruling 2026-11-16: the nearer name by the gaps' TeX widths, the next one's on a tie).
-/// `None`, undecided, where either run holds a fill: its width is the line's, so no owner is guessed (review revSHGIVENc).
-fn nearer_before(read: &[Event], m: usize, beside: impl Fn(&Event) -> bool) -> Option<bool> {
-  let Some(after) =
-    (m + 1..read.len()).find(|&j| !(beside(&read[j]) || read[j].kind == EventKind::Note))
-  else {
-    return Some(true);
-  };
-  match read[after].kind {
-    EventKind::Sep(SepKind::Gap { .. }) => {},
-    EventKind::Sep(_) | EventKind::Break => return Some(true),
-    _ => return Some(false),
-  }
-  let next = (after..read.len()).find(|&j| !(spacing(&read[j]) || beside(&read[j])));
-  if next.is_none_or(|j| read[j].kind != EventKind::Name) {
-    return Some(true);
-  }
-  let gap_end = (after..read.len())
-    .find(|&j| !spacing(&read[j]))
+/// The run past a name's own marks and notes, from `from` (main's SHGIVEN fallback, 2026-11-16): the consecutive
+/// text `\footnotemark`s (`mark`), notes and spacing before the next name, a separator, a `\\` or the block's end;
+/// anything else ends it undecided. `(first, last, end)`, its first and last mark or note and where it ends, when it
+/// goes back whole to the name before: a separator, a `\\` or the block's end follows it (1911.13299's `\
+/// \footnotemark[3]\and`), or the next name past a gap wider than the one from the name's last ink to the run's first
+/// mark (2412.20504's `\ \footnotemark[2] \quad Qingyi Si`). A gap no wider, or a fill (its width the line's), leaves
+/// it undecided, REGFIX's counted loss: a mark is never written on the next name (its prefix by nearness waits for row
+/// R SHGIVENNEXT).
+fn carried_run(
+  read: &[Event],
+  from: usize,
+  mark: impl Fn(&Event) -> bool,
+) -> Option<(usize, usize, usize)> {
+  let inked = |e: &Event| e.kind == EventKind::Note || mark(e);
+  let end = (from..read.len())
+    .find(|&i| !(spacing(&read[i]) || mark(&read[i])))
     .unwrap_or(read.len());
-  match (
-    gaps(&read[after..gap_end]),
-    gaps(&read[spacing_from(read, m)..m]),
-  ) {
-    (Some(Gaps::Width(width_after)), Some(Gaps::Width(width_before))) => {
-      Some(width_after > width_before)
+  // (a run holding a mark: notes alone stay where the reading routes them)
+  if !read[from..end].iter().any(&mark) {
+    return None;
+  }
+  let first = (from..end).find(|&i| inked(&read[i]))?;
+  let last = (from..end).rfind(|&i| inked(&read[i]))?;
+  match read.get(end).map(|e| (&e.kind, e.role.as_deref())) {
+    None | Some((EventKind::Break, _)) => Some((first, last, end)),
+    Some((EventKind::Sep(_), role)) if role != Some("math") => Some((first, last, end)),
+    Some((EventKind::Name, _)) => match (gaps(&read[from..first]), gaps(&read[last + 1..end])) {
+      (Some(Gaps::Width(before)), Some(Gaps::Width(after))) if after > before => {
+        Some((first, last, end))
+      },
+      _ => None,
     },
-    (Some(Gaps::Fill), _) | (_, Some(Gaps::Fill)) => None,
-    _ => Some(false),
+    _ => None,
   }
 }
 
@@ -3823,8 +3802,9 @@ fn unwritten(
 /// Warning naming it, once per block over the flushes (`D. R. G. Schleicher,$^{1}$\samethanks[1]`, 1912.01737; `Cheng
 /// Xu\textsuperscript{1},\footnotemark[1]`, 1811.08622 — user ruling 2026-11-09: a decline never throws away a right
 /// reading): their printed labels go to `given_lost`, the Warning's ([`warn_given_marks_lost`]) where no other decline
-/// writes the block whole. A mark past its name's note is carried (`block_names`: 1610.06031), as is one past spacing
-/// (1911.13299's `\ \footnotemark[2]`, DG ruling 2026-11-16).
+/// writes the block whole. A mark past its name's note is carried (`block_names`: 1610.06031), as is a run past spacing
+/// [`carried_run`] takes back (1911.13299's `\ \footnotemark[2]`, DG ruling 2026-11-16); one it leaves undecided, the
+/// next name nearer, is dropped here (main's SHGIVEN fallback, 2026-11-16).
 fn mark_dropped(index: usize, resolved: &Resolved, given_lost: &mut Vec<String>) -> bool {
   let marks: Vec<(usize, usize, bool, String)> = with_block(index, Vec::new(), |block, events| {
     let at = |p: u16| usize::from(p).checked_sub(block.range.0);
