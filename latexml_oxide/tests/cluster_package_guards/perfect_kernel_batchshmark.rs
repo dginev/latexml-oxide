@@ -197,7 +197,8 @@ Text.
 /// first: the reading's `rehearse_title_first`), so a `\footnotemark[1]` beside a name is the title's note — no
 /// creator's, it stays the mark it is; under `titlepage` the body's arabic marks, which the observer does not read: no
 /// mark, nor under a class whose `\maketitle` prints none (IEEEtran), nor on a REVTeX 4.1/4.2 name's `\footnote`, set
-/// in the class's own letters (2301.00220). Distinct from the Link step's guard: the mark each note is written with.
+/// in the class's own letters (2301.00220), nor on a REVTeX 4.0 one given no number, at a counter the reading does not
+/// count (review revSHMARKb). Distinct from the Link step's guard: the mark each note is written with.
 #[test]
 fn a_thanks_note_carries_the_mark_its_title_prints() {
   assert_eq!(
@@ -224,8 +225,8 @@ fn a_thanks_note_carries_the_mark_its_title_prints() {
     ]
   );
   // (REVTeX 4.1/4.2 set a name's `\footnote` in their minipage letters, or drop it under revtex4-2's `reprint`, not in
-  // the title's symbols: Perl's note contact, no mark — 2301.00220, review revSHMARK B1; REVTeX 4.0's ∗ is
-  // `an_affiliations_linking_mark_is_no_note`'s)
+  // the title's symbols: Perl's note contact, no mark — 2301.00220, review revSHMARK B1; REVTeX 4.0's given
+  // `\footnote[1]` ∗ is `an_affiliations_linking_mark_is_no_note`'s)
   let preprint = repro!("revtex42_name_footnote_is_its_note_contact");
   let reprint = preprint.replace("[aps,prl,preprint]", "[aps,prl,reprint]");
   for tex in [preprint, reprint.as_str()] {
@@ -275,12 +276,15 @@ fn a_thanks_note_carries_the_mark_its_title_prints() {
     0,
   );
   assert_eq!(notes_in(&xml), [row(&["Ann Able"]), row(&["Bob Baker"])]);
-  assert_eq!(creators(&xml), [ann(""), row(&[
-    "Bob Baker",
-    "note=Visiting Univ C.",
-    "note=Second.",
-    "affiliation=Univ B"
-  ])]);
+  assert_eq!(creators(&xml), [
+    ann(""),
+    row(&[
+      "Bob Baker",
+      "note=Visiting Univ C.",
+      "note=Second.",
+      "affiliation=Univ B"
+    ])
+  ]);
   assert_eq!(
     marked_notes(
       &r40.replace(r"\footnote{Visiting", r"\footnote[2]{Visiting"),

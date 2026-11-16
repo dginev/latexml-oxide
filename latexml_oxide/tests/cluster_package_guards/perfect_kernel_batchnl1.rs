@@ -154,17 +154,16 @@ fn glued_initials_are_no_surname_before_initials() {
 fn a_collaboration_remark_is_the_names_contact() {
   let tex = repro!("emit_a_collaboration_remark_parted_by_a_note_and_a_box_is_a_contact");
   let two = both(tex, 0);
-  // (the name's `\footnote` the marked `\thanks` note it is in article's title, OD #1053: the notes' view below)
+  // (REVTeX 4.0's unnumbered name `\footnote`, whose mark counts steps the reading does not: Perl's note contact, no
+  // creator note — OD #1053, review revSHMARKb)
   let want = [vec![
     "Kalanand Mishra",
+    "note=Email: k@x.edu",
     "collaboration=(for the B A B AR collaboration)",
     "affiliation=Univ A",
   ]];
   assert_eq!(two, want);
-  assert_eq!(marked_notes(tex, 0), [vec![
-    "Kalanand Mishra".to_string(),
-    "thanks[*]=Email: k@x.edu".to_string()
-  ]]);
+  assert_eq!(marked_notes(tex, 0), [vec!["Kalanand Mishra".to_string()]]);
   let babar = "<contact role=\"collaboration\">(for the <text font=\"slanted\">B<text fontsize=\"90%\">A</text>B<text \
                fontsize=\"90%\">AR</text></text> collaboration)</contact>";
   assert_eq!(collaborations(&run(tex).1), [babar]);

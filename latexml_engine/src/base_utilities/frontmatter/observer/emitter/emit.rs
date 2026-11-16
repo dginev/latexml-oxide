@@ -1440,10 +1440,10 @@ fn note_call(
 
 /// The mark a note event shows on its name (`resolver::note_shows`, the rehearsal's `\thefootnote` at its step), where
 /// its class's title block prints one for it ([`title_notes_print_marks`]): the `\thanks` of article (article.cls:205
-/// `\@fnsymbol\c@footnote`), REVTeX 4.0's name `\footnote` (revtex4.cls:4729 `\frontmatter@thefootnote`). 2502.19103,
-/// 1911.13299, 1607.07280 (FIDELITY_CHARTER §4, the mark rule).
+/// `\@fnsymbol\c@footnote`), REVTeX 4.0's name `\footnote` given its number (revtex4.cls:4729
+/// `\frontmatter@thefootnote`). 2502.19103, 1911.13299, 1607.07280 (FIDELITY_CHARTER §4, the mark rule).
 fn shown_mark(note: &Event) -> Option<String> {
-  title_notes_print_marks(note.footnote)
+  title_notes_print_marks(note.footnote, note.given_number)
     .then(|| note_shows(note).map(String::from))
     .flatten()
 }

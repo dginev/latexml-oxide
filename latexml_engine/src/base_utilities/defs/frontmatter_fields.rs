@@ -886,7 +886,8 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
 
 /// `\lx@title@thanks` and `\lx@title@footnote` (`footnote`): the note's call, marked where its title marks it.
 fn title_note(footnote: bool, attr: Option<Tokens>, body: Tokens) -> Result<()> {
-  let mark = if title_note_steps() && title_notes_print_marks(footnote) {
+  // (the counter's mark after the step, never a given number's: `\footnote[2]` is not marked so here)
+  let mark = if title_note_steps() && title_notes_print_marks(footnote, false) {
     let mark = digest(Tokens!(T_CS!(crate::latex_constructs::TITLE_THEFOOTNOTE)))?.to_string();
     Some(mark.trim().to_string()).filter(|mark| !mark.is_empty())
   } else {
@@ -930,10 +931,14 @@ fn title_note_steps() -> bool {
 }
 
 /// Whether the title block prints its declared mark (`latex_constructs::TITLE_THEFOOTNOTE`) for a note made in it, a
-/// name's `\footnote` (`footnote`) unless the class marks those its own way (`lx_title_footnote_own_marks`). OD #1053.
-pub(in crate::base_utilities) fn title_notes_print_marks(footnote: bool) -> bool {
+/// name's `\footnote` (`footnote`) unless the class marks those its own way (`lx_title_footnote_own_marks`), or, given
+/// no number (`given`), at a counter other commands step that the reading does not count
+/// (`lx_title_footnote_given_marks_only`: REVTeX 4.0's `\thanks`, `\email`, `\altaffiliation`). OD #1053.
+pub(in crate::base_utilities) fn title_notes_print_marks(footnote: bool, given: bool) -> bool {
   lookup_bool("lx_frontmatter_explicit")
-    && !(footnote && lookup_bool("lx_title_footnote_own_marks"))
+    && !(footnote
+      && (lookup_bool("lx_title_footnote_own_marks")
+        || (!given && lookup_bool("lx_title_footnote_given_marks_only"))))
     && lookup_definition(&T_CS!(crate::latex_constructs::TITLE_THEFOOTNOTE))
       .ok()
       .flatten()

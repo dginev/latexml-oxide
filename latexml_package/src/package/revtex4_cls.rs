@@ -183,6 +183,10 @@ LoadDefinitions!({
   // REVTeX 4.0's own rule for printing a `\preprint` (revtex4_support_sty.rs `preprint_printed`).
   if revtex4_0 {
     assign_value("revtex@preprint@v4.0", true, Some(Scope::Global));
+    // A name's `\footnote` prints `\frontmatter@thefootnote` (revtex4.cls:4729) at a counter `\thanks`, `\email` and
+    // `\altaffiliation` step too (`\frontmatter@footnote`, :4558-4583), uncounted here: marked only given its number
+    // (OD #1053; 1607.07280's `\footnote[1]`; review revSHMARKb)
+    assign_value("lx_title_footnote_given_marks_only", true, Some(Scope::Global));
   } else {
     // REVTeX 4.2 sets a name's `\footnote` in its minipage letters (revtex4-2.cls:487-488), or drops it under `reprint`,
     // not in 4.0's `\frontmatter@thefootnote` (revtex4.cls:4726-4729): no title mark (OD #1053; 2301.00220)
