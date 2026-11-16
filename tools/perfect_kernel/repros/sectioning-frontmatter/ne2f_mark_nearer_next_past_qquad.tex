@@ -1,0 +1,20 @@
+% mechanism: a `\footnotemark` with spacing on both sides between two names is the nearer name's, by the TeX widths of
+%   the two gaps (DG ruling 2026-11-16): `block_names`' carry past a Gap took it back onto Ann whenever a Gap followed
+%   it (review revSHGIVENb); it carries it only when the Gap after is the wider, else the next name grows over it
+% witness: none (review revSHGIVENb's n1; the sibling of 1911.13299's `\ \footnotemark[2]` and 2412.20504's
+%   `\footnotemark[1] \ \footnotemark[2] \quad Qingyi Si`)
+% oracle:  pdflatex 0 errors; "† / Ann Able   Bob Baker   Carl Cole", the † over Bob's name (pdftotext -bbox: 27.3pt
+%   before it, 4.0pt after; TeX's glue `\ ` + `\qquad` 23.3pt, ` \ ` 6.7pt)
+% engines: rust REGFIX: 0 errors, 1 Warning ("lost: †"), no creator carries †; SHGIVENb 80ffc5f84b4: 0 errors, † on
+%   Ann; perl 0.8.8: 0 errors; Ann, Bob with the prefix mark, Carl
+% expect:  0 errors, 0 warnings; Ann, Bob †, Carl
+% status:  RED (80ffc5f84b4) -> GREEN (perfect_kernel_batchne2::a_mark_between_two_names_is_the_nearer_ones)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{Ann Able \qquad \footnotemark[2] \ Bob Baker \and Carl Cole}
+\date{}
+\maketitle
+Text.
+\end{document}

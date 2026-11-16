@@ -1,0 +1,17 @@
+% mechanism: as ne2f_mark_nearer_next_past_qquad, the Gap after the mark two ties (`~~`)
+% witness: none (review revSHGIVENb's n3)
+% oracle:  pdflatex 0 errors; the † over Bob's name (pdftotext -bbox: 15.6pt before it, 4.0pt after; TeX's glue ` \quad`
+%   13.3pt, `~~` 6.7pt)
+% engines: rust REGFIX: 0 errors, 1 Warning ("lost: †"), no creator carries †; SHGIVENb 80ffc5f84b4: 0 errors, † on
+%   Ann; perl 0.8.8: 0 errors; Ann, Bob with the prefix mark, Carl
+% expect:  0 errors, 0 warnings; Ann, Bob †, Carl
+% status:  RED (80ffc5f84b4) -> GREEN (perfect_kernel_batchne2::a_mark_between_two_names_is_the_nearer_ones)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{Ann Able \quad \footnotemark[2]~~Bob Baker \and Carl Cole}
+\date{}
+\maketitle
+Text.
+\end{document}

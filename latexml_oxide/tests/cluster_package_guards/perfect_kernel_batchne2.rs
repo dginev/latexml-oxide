@@ -9,7 +9,9 @@
 //! with it, the note's step before it (1610.06031), and so does one past spacing (1911.13299's `\ \footnotemark[2]`; DG
 //! ruling 2026-11-16); a `\footnotemark` no name and no item writes (on the line a `\\` opens) writes the block whole,
 //! with its Warning. NE2d (user ruling 2026-11-09): only a dropped mark that steps the counter declines; one given its
-//! number (`\samethanks[1]`, 1912.01737; 1811.08622) keeps the creators, its loss counted.
+//! number (`\samethanks[1]`, 1912.01737; 1811.08622) keeps the creators, its loss counted. NE2f (DG ruling 2026-11-16):
+//! a mark with spacing on both sides between two names is the nearer name's by the gaps' TeX widths, the next one's on
+//! a tie (review revSHGIVENb; 2412.20504).
 
 use latexml::util::test::{convert_files_with_setup_then, error_count, warning_count};
 
@@ -414,14 +416,23 @@ fn a_mark_a_name_follows_past_spacing_is_not_carried_back() {
   for (tex, (warnings, says), expected, marks, notes) in [
     (
       repro!("ne2e_prefix_mark_past_spacing_before_and"),
-      (1, ""),
+      (
+        1,
+        &["given their number (a note's, written already) on no name and no item; lost: †"][..],
+      ),
       vec![row(&["Ann Able"]), row(&["Bob Baker"]), row(&["Carl Cole"])],
       vec![vec![], vec![mark("†", "footnotex1")], vec![]],
       0,
     ),
     (
       repro!("ne2e_prefix_marks_past_quad"),
-      (2, ""),
+      (
+        2,
+        &[
+          "lost: †, *",
+          "reaches no contact carrying its label, or a labelled contact no name's mark reaches (*)",
+        ][..],
+      ),
       vec![row(&["Ann Able"]), row(&["Bob Baker"]), row(&["Carl Cole"])],
       vec![
         vec![mark("*", "footnotex1")],
@@ -433,14 +444,17 @@ fn a_mark_a_name_follows_past_spacing_is_not_carried_back() {
     (
       // (no place for Bob's prefix: the block written whole, `mark_dropped`'s Warning)
       repro!("ne2e_prefix_mark_past_hfill"),
-      (1, "on no name and no item; the block is written whole"),
+      (
+        1,
+        &["on no name and no item; the block is written whole"][..],
+      ),
       vec![row(&["Ann Able Bob Baker"])],
       vec![vec![mark("†", "footnote2")]],
       1,
     ),
     (
       repro!("ne2e_mark_in_formula_past_thin_spaces"),
-      (1, "on no name and no item; lost: ∗"),
+      (1, &["on no name and no item; lost: ∗"][..]),
       vec![row(&["Ann Able 1"]), row(&["Bob Baker"])],
       vec![vec![], vec![]],
       1,
@@ -452,9 +466,87 @@ fn a_mark_a_name_follows_past_spacing_is_not_carried_back() {
       (0, warnings),
       "{log}"
     );
-    assert!(log.contains(says), "{log}");
+    for says in says {
+      assert!(log.contains(says), "{says}: {log}");
+    }
     assert_eq!(creators(&xml), expected);
     assert_eq!(marks_by_creator(&xml), marks, "{xml}");
     assert_eq!(xml.matches(thanks).count(), notes, "{xml}");
+  }
+}
+
+/// Each creator's count of `\thanks` notes, in document order.
+fn thanks_by_creator(xml: &str) -> Vec<usize> {
+  xml
+    .split("<creator ")
+    .skip(1)
+    .map(|c| {
+      c[..c.find("</creator>").expect("a creator's end")]
+        .matches(r#"role="thanks""#)
+        .count()
+    })
+    .collect()
+}
+
+/// A `\footnotemark` with spacing on both sides between two names is the nearer name's, by the TeX widths of the two
+/// gaps as pdflatex prints them; on a tie, the next name's prefix (DG ruling 2026-11-16). The carry past spacing took it
+/// back onto the name before whenever a Gap followed it (review revSHGIVENb, `Ann Able \qquad \footnotemark[2] \ Bob
+/// Baker`: pdflatex's 27pt | 4pt, Bob's), and REGFIX lost it with a Warning or wrote the block whole. Rows: the Gap after
+/// the narrower (` \ `, `~~`, `\quad`; a bare mark and a `\thanks` together; a bare mark past a note, its counter step
+/// in order), the Gap after the wider (2412.20504's `\footnotemark[1] \ \footnotemark[2] \quad Qingyi Si`) and the tie.
+/// Distinct from `a_mark_a_name_follows_past_spacing_is_not_carried_back`: a Gap on both sides of the mark, which grows
+/// the next name's run over the gap after it.
+#[test]
+fn a_mark_between_two_names_is_the_nearer_ones() {
+  let mark = |m: &str, n: &str| format!(r#"<note mark="{m}" role="footnotemark" xml:id="{n}""#);
+  let three = || vec![row(&["Ann Able"]), row(&["Bob Baker"]), row(&["Carl Cole"])];
+  let bobs = || vec![vec![], vec![mark("†", "footnotex1")], vec![]];
+  for (tex, expected, marks, thanks) in [
+    (
+      repro!("ne2f_mark_nearer_next_past_qquad"),
+      three(),
+      bobs(),
+      vec![0, 0, 0],
+    ),
+    (
+      repro!("ne2f_mark_nearer_next_past_ties"),
+      three(),
+      bobs(),
+      vec![0, 0, 0],
+    ),
+    (
+      repro!("ne2f_mark_nearer_next_past_quads"),
+      three(),
+      bobs(),
+      vec![0, 0, 0],
+    ),
+    (
+      repro!("ne2f_mark_and_note_nearer_next"),
+      three(),
+      vec![vec![], vec![mark("†", "footnote2")], vec![]],
+      vec![1, 1, 0],
+    ),
+    (
+      repro!("ne2f_bare_mark_nearer_next_past_quads"),
+      vec![row(&["Ann Able"]), row(&["Bob Baker"])],
+      vec![vec![], vec![mark("†", "footnote2"), mark("‡", "footnote3")]],
+      vec![1, 0],
+    ),
+    (
+      repro!("ne2f_marks_wider_after_and_tied"),
+      three(),
+      vec![
+        vec![mark("*", "footnotex1"), mark("†", "footnotex2")],
+        vec![],
+        vec![mark("‡", "footnotex3")],
+      ],
+      vec![0, 0, 0],
+    ),
+  ] {
+    let (log, xml) = run(tex);
+    assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+    assert_eq!(creators(&xml), expected);
+    assert_eq!(marks_by_creator(&xml), marks, "{xml}");
+    assert_eq!(thanks_by_creator(&xml), thanks, "{xml}");
   }
 }
