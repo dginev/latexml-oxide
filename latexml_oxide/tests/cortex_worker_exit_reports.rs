@@ -715,9 +715,9 @@ fn a_shutdown_mid_conversion_reports_nothing() {
 }
 
 /// Each child runs in its slot's own TMPDIR (`slot-NN` in the exit-report directory), emptied before
-/// every spawn: what a SIGKILLed child leaves there goes with its respawn. The witness is the idle
-/// child, which holds pericortex's `cortex_task*` directory while it waits for work and is what the
-/// unresponsive-worker watchdog kills (an idle child's CPU time does not move): ~11k such empty
+/// every spawn: what a SIGKILLed child leaves there goes with its respawn. The killed child is the idle
+/// one, which the unresponsive-worker watchdog kills (an idle child's CPU time does not move); pericortex
+/// 0.2.9 holds a `cortex_task*` directory while it waits for work (worker.rs:216), and ~11k such empty
 /// directories a day piled up in the fleet's shared TMPDIR. A conversion runs there, Error-free.
 #[test]
 fn a_respawned_slot_starts_with_an_empty_tmpdir() {
@@ -744,25 +744,25 @@ fn a_respawned_slot_starts_with_an_empty_tmpdir() {
     .exit_report_dir()
     .expect("the exit-report directory")
     .join("slot-01");
-  // The child asks for its next task, holding its next `cortex_task*` directory: in its slot.
-  let idle_task_dir =
-    wait_for(Duration::from_secs(60), || task_dirs(&slot).pop()).unwrap_or_else(|| {
-      panic!(
-        "no cortex_task directory in the slot's TMPDIR {}:\n{}",
-        slot.display(),
-        harness.output()
-      )
-    });
-  assert!(
-    task_dirs(harness.tmp.path()).is_empty(),
-    "a child used the harness's own TMPDIR"
-  );
-  let leftover = slot.join("magick-leftover");
-  fs::write(&leftover, b"a delegate file of a killed convert").unwrap();
   let killed = match harness.claiming_pids().as_slice() {
     [pid] => *pid,
     pids => panic!("one child claims: {pids:?}\n{}", harness.output()),
   };
+  // Every temporary file of the child and its subprocesses (ImageMagick reads its own two first) goes to the slot.
+  let environ = fs::read(format!("/proc/{killed}/environ")).unwrap();
+  for name in ["TMPDIR", "MAGICK_TEMPORARY_PATH", "MAGICK_TMPDIR"] {
+    let value = environ
+      .split(|byte| *byte == 0)
+      .find_map(|entry| entry.strip_prefix(format!("{name}=").as_bytes()))
+      .map(|value| PathBuf::from(String::from_utf8_lossy(value).into_owned()));
+    assert_eq!(
+      value.as_deref(),
+      Some(slot.as_path()),
+      "the child's {name} is its slot's"
+    );
+  }
+  let leftover = slot.join("magick-leftover");
+  fs::write(&leftover, b"a delegate file of a killed convert").unwrap();
   // SAFETY: signalling the harness's child, as the unresponsive-worker watchdog does.
   unsafe {
     libc::kill(killed, libc::SIGKILL);
@@ -776,7 +776,7 @@ fn a_respawned_slot_starts_with_an_empty_tmpdir() {
   })
   .unwrap_or_else(|| panic!("the slot was not respawned:\n{}", harness.output()));
   assert!(
-    slot.is_dir() && !idle_task_dir.exists() && !leftover.exists(),
+    slot.is_dir() && !leftover.exists(),
     "the respawned slot's TMPDIR still holds the killed child's files: {:?}",
     fs::read_dir(&slot)
       .map(|entries| entries.flatten().map(|e| e.file_name()).collect::<Vec<_>>())
