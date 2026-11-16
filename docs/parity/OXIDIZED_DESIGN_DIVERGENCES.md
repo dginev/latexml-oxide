@@ -19572,7 +19572,7 @@ latex_constructs.pool.ltxml:503-527); acmart's `\authornote` is a contact, `\aut
   without `titlepage`, `\@fnsymbol\c@footnote`; REVTeX's `\frontmatter@thefootnote`) writes each title-block note with
   the mark it prints (`frontmatter_fields::title_notes_print_marks`): `\lx@title@thanks` and `\lx@title@footnote` after
   `\lx@title@footnote@step` (an author's `\thanks`; an author's `\footnote`, then the `\thanks` note it is,
-  article.cls:241), and the emitter's `note_call` with the rehearsal's `shows` (`shown_mark`), counted after the title's
+  article.cls:241) — under REVTeX only a number given in the source, its counted notes #1054's pass's —, and the emitter's `note_call` with the rehearsal's `shows` (`shown_mark`), counted after the title's
   own notes (`reading::rehearse_title_first` rehearses the last title set before the blocks, its footnote steps carried
   into theirs, `rehearsal::footnotes_carried`: article.cls:203-214 sets the title first, so `\title{T\thanks{Funded.}}`
   takes ∗ and the first author's `\thanks` †, and a `\footnotemark[1]` beside another name is the title's note, not an
@@ -19674,7 +19674,9 @@ Warning; elsarticle's `\fntext`/`\cortext` and REVTeX's `\thanks` are a contact 
   (pdflatex "Ann Able∗ / Bob Baker† Cy Cole†" in revtex4, "Ann Ablea" in 4-2's minipage letters): its own footnote, never
   shared, its contact unmarked; given its number it steps nothing (1607.07280's shape, the `given` part). A kernel thanks
   note in a name, which REVTeX neither prints nor counts (2407.11130's `\author{Isaac H. Kim \thanks{corresponding
-  author}}`; revtex4, 4-1 and 4-2), is kept unmarked and takes no number. An affiliation's
+  author}}`; revtex4, 4-1 and 4-2), is kept unmarked and takes no number. This pass alone marks REVTeX's counted
+  notes: #1053's title marks (`title_notes_print_marks`) yield to it wherever `FOOTNOTE_MARKS` is set and keep only a
+  number given in the source (1607.07280's `\footnote[1]`). An affiliation's
   footnote prints after its group's names (grouped) or after every name (`superscriptaddress`): a mark is given only where
   both orders agree. The marks are `\@fnsymbol`'s, `\@alph`'s under `altaffilletter` (`FOOTNOTE_MARKS`). 118 REVTeX papers
   of the 30k sample repeat a `\thanks` (0706.3893, 0804.0875, 1308.0465).

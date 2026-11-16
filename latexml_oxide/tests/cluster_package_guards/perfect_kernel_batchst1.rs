@@ -208,7 +208,7 @@ fn cut_runs_and_counts_read_as_printed() {
       (1, 0),
       &["Package ifthen Error: Boolean ob undefined"],
       &[
-        r#"<creator role="author"><personname>Ann Able</personname><note class="ltx_note_frontmatter ltx_thanks_note" mark="*" role="thanks">note</note><contact name="Affiliation: " role="affiliation"><sup><text font="italic">1</text></sup>Univ X a</contact><contact name="Affiliation: " role="affiliation"><sup><text font="italic">2</text></sup>Univ Y</contact></creator>"#,
+        r#"<creator role="author"><personname>Ann Able</personname><note class="ltx_note_frontmatter ltx_thanks_note" role="thanks">note</note><contact name="Affiliation: " role="affiliation"><sup><text font="italic">1</text></sup>Univ X a</contact><contact name="Affiliation: " role="affiliation"><sup><text font="italic">2</text></sup>Univ Y</contact></creator>"#,
       ],
     ),
   ]);

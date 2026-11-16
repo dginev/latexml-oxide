@@ -1048,9 +1048,12 @@ fn title_note_steps() -> bool {
 /// Whether the title block prints its declared mark (`latex_constructs::TITLE_THEFOOTNOTE`) for a note made in it, a
 /// name's `\footnote` (`footnote`) unless the class marks those its own way (`lx_title_footnote_own_marks`), or, given
 /// no number (`given`), at a counter other commands step that the reading does not count
-/// (`lx_title_footnote_given_marks_only`: REVTeX 4.0's `\thanks`, `\email`, `\altaffiliation`). OD #1053.
+/// (`lx_title_footnote_given_marks_only`: REVTeX 4.0's `\thanks`, `\email`, `\altaffiliation`). OD #1053. Under a
+/// binding that numbers its front-matter footnotes ([`FOOTNOTE_MARKS`], REVTeX's `\@AF@join`), only a number given in
+/// the source: the rest are that binding's pass's (`number_footnote_parts`, OD #1054), a name's `\thanks` unmarked.
 pub(in crate::base_utilities) fn title_notes_print_marks(footnote: bool, given: bool) -> bool {
   lookup_bool("lx_frontmatter_explicit")
+    && (given || lookup_string(FOOTNOTE_MARKS).is_empty())
     && !(footnote
       && (lookup_bool("lx_title_footnote_own_marks")
         || (!given && lookup_bool("lx_title_footnote_given_marks_only"))))
