@@ -19538,13 +19538,16 @@ Warning; elsarticle's `\fntext`/`\cortext` and REVTeX's `\thanks` are a contact 
   `\thanks`, `\altaffiliation` joins the footnote of the title, author or affiliation last given (`\@AF@join`, :2120,
   :2160, :2236); a name prints its own `\frontmatter@footnote` before its joined one (`\doauthor`, :2446-2450); a text
   printed before keeps its number (`\y@match`). The binding records each contact's part (`_fnpart`: `title`, `own`,
-  `join`, `affil:<n>`; an e-mail's added to its queued call, `queue::tag_last_queued_contact`, which the emitter keeps),
+  `join`, `affil:<n>`, and `given` for a name's `\footnote[1]{…}`; an e-mail's added to its queued call,
+  `queue::tag_last_queued_contact`, which the emitter keeps),
   and `shared_notes::number_footnote_parts`, once the annotations are placed and before an e-mail's label becomes a note
   (`write_role_notes`), numbers the footnotes in print order on the creators — a call digested inside a name or entry is
   its holder's own (2605.04155's `\author{Zhenyu Xiao\equalcontrib}`, ∗ as pdflatex prints it; it read the last author's
-  footnotes when the marks were reckoned at the flush). A kernel thanks note in a name, which REVTeX prints nowhere
-  (2407.11130's `\author{Isaac H. Kim \thanks{corresponding author}}`), is numbered after the printed footnotes, one mark
-  for one text (the content kept; the printed marks undisturbed). An affiliation's
+  footnotes when the marks were reckoned at the flush). A name's `\footnote` steps the counter where the name prints
+  (pdflatex "Ann Able∗ / Bob Baker† Cy Cole†" in revtex4, "Ann Ablea" in 4-2's minipage letters): its own footnote, never
+  shared, its contact unmarked; given its number it steps nothing (1607.07280's shape, the `given` part). A kernel thanks
+  note in a name, which REVTeX neither prints nor counts (2407.11130's `\author{Isaac H. Kim \thanks{corresponding
+  author}}`; revtex4, 4-1 and 4-2), is kept unmarked and takes no number. An affiliation's
   footnote prints after its group's names (grouped) or after every name (`superscriptaddress`): a mark is given only where
   both orders agree. The marks are `\@fnsymbol`'s, `\@alph`'s under `altaffilletter` (`FOOTNOTE_MARKS`). 118 REVTeX papers
   of the 30k sample repeat a `\thanks` (0706.3893, 0804.0875, 1308.0465).
@@ -19554,14 +19557,17 @@ Warning; elsarticle's `\fntext`/`\cortext` and REVTeX's `\thanks` are a contact 
 it), numbered as the title's; an `\email` after `\affiliation` stays its author's contact (REVTeX joins it to the
 affiliation line), numbered as the affiliation's. A footnote-making contact without a part (an `\email` inside a name or
 an affiliation; an item the frontmatter emitter writes anew under another role, 2609.13744's `\altaffiliation{Email: …}`
-an e-mail) leaves the whole document unmarked; grouped authors whose affiliations recur non-adjacently print in
-group order, which the numbering does not follow. AASTeX (built on REVTeX 4.1) numbers otherwise — AASTeX 7's `\email`
+an e-mail), a name's `\footnotemark` (stepping or not, its note no longer tells) or a part placed outside the creators
+leaves the whole document unmarked; grouped authors whose affiliations recur non-adjacently print in
+group order, which the numbering does not follow, and an affiliation's `\thanks` before another group's shared note
+leaves both orders disagreeing, so neither is marked (pdflatex prints the group order: repro
+`revtex_affiliation_thanks_before_a_shared_note_red`). AASTeX (built on REVTeX 4.1) numbers otherwise — AASTeX 7's `\email`
 is no footnote (pdflatex on aastex701) — and gets no parts; revtex3 neither.
 **Guards**: `perfect_kernel_batchshrest::{a_list_led_by_the_names_mark_is_their_marked_note,
 a_lists_plain_text_is_the_blocks_note, a_list_with_two_marks_is_the_blocks_note,
 a_correspondence_items_label_gives_its_names_the_note, an_fntext_two_names_share_is_their_marked_note,
 a_repeated_revtex_thanks_is_the_authors_marked_note, revtex_footnotes_are_numbered_as_printed,
-a_revtex_thanks_in_a_name_is_numbered_as_its_footnote}`, `perfect_kernel_batch66h::revtex_frontmatter_footnote_on_two_authors`,
+a_revtex_thanks_in_a_name_stays_unmarked, a_revtex_name_footnote_takes_its_number_unmarked}`, `perfect_kernel_batch66h::revtex_frontmatter_footnote_on_two_authors`,
 `perfect_kernel_batchregbind::bindings_print_the_title_page_lists_their_files_print`.
 
 ---
