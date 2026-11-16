@@ -80,7 +80,7 @@
 <a href=#80 id=80 data-nosnippet>80</a>    <span class="string">"\\lx@author@markup@provide{}{}"</span>,
 <a href=#81 id=81 data-nosnippet>81</a>    <span class="string">"\\ifx#1\\@undefined\\let#1#2\\expandafter\\def\\expandafter\\lx@author@markup@unprovide\\expandafter{\\lx@author@markup@unprovide\\let#1\\@undefined}\\fi"
 <a href=#82 id=82 data-nosnippet>82</a>  </span>);
-<a href=#83 id=83 data-nosnippet>83</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\lx@author@markup@begin"</span>, sub[()] { author_markup_begin(<span class="bool-val">false</span>) });
+<a href=#83 id=83 data-nosnippet>83</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\lx@author@markup@begin"</span>, sub[()] { <span class="prelude-val">Ok</span>(author_markup_begin(<span class="bool-val">false</span>)<span class="question-mark">?</span>.begin) });
 <a href=#84 id=84 data-nosnippet>84</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\lx@author@markup@run{}{}"</span>, <span class="string">"#2#1"</span>);
 <a href=#85 id=85 data-nosnippet>85</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\lx@author@orcid[]{}"</span>, <span class="string">"\\lx@add@orcid{#2}"</span>);
 <a href=#86 id=86 data-nosnippet>86</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\lx@inst@mark{}"</span>, sub[(label)] {
@@ -403,682 +403,723 @@
 <a href=#403 id=403 data-nosnippet>403</a>    <span class="string">"\\lx@title@footnote@step\\lx@add@frontmatter{ltx:pubnote}[role=thanks,#1]{#2}"
 <a href=#404 id=404 data-nosnippet>404</a>  </span>);
 <a href=#405 id=405 data-nosnippet>405</a>
-<a href=#406 id=406 data-nosnippet>406</a>  <span class="comment">// Other kinds of notes?
-<a href=#407 id=407 data-nosnippet>407</a>
-<a href=#408 id=408 data-nosnippet>408</a>  // The following add various forms of contact information to a creator
-<a href=#409 id=409 data-nosnippet>409</a>  </span><span class="macro">DefMacro!</span>(
-<a href=#410 id=410 data-nosnippet>410</a>    <span class="string">"\\lx@add@contact []{}"</span>,
-<a href=#411 id=411 data-nosnippet>411</a>    <span class="string">"\\lx@annotate@frontmatter{ltx:creator}{ltx:contact}[#1]{#2}"
-<a href=#412 id=412 data-nosnippet>412</a>  </span>);
-<a href=#413 id=413 data-nosnippet>413</a>
-<a href=#414 id=414 data-nosnippet>414</a>  <span class="macro">DefMacro!</span>(
-<a href=#415 id=415 data-nosnippet>415</a>    <span class="string">"\\lx@add@affiliation[]{}"</span>,
-<a href=#416 id=416 data-nosnippet>416</a>    <span class="string">"\\lx@annotate@frontmatter{ltx:creator}{ltx:contact}[role=affiliation,#1]{\\lx@affiliation@withinst{#2}}"
-<a href=#417 id=417 data-nosnippet>417</a>  </span>);
-<a href=#418 id=418 data-nosnippet>418</a>  <span class="comment">// The affiliation-side twin of `\lx@author@withinst`: inside affiliation
-<a href=#419 id=419 data-nosnippet>419</a>  // content `\inst{n}` SETS the affiliation's label (beamerbasetitle.sty:148
-<a href=#420 id=420 data-nosnippet>420</a>  // `\institute{\inst{1}Univ A \and \inst{2}Univ B}` marks each institute
-<a href=#421 id=421 data-nosnippet>421</a>  // with the number the authors' `\inst{1}` request) — the meaning
-<a href=#422 id=422 data-nosnippet>422</a>  // `\lx@affiliation@withsup` gives a `\textsuperscript` mark, never a
-<a href=#423 id=423 data-nosnippet>423</a>  // typeset `&lt;sup&gt;`; `\def`, as in `\lx@author@withinst` (a class's
-<a href=#424 id=424 data-nosnippet>424</a>  // document-level `\inst` is the affiliation LIST, not a label). The author markup is in force here too: an
-<a href=#425 id=425 data-nosnippet>425</a>  // affiliation line of the author block is author content (`$^{3}$Chan Zuckerberg Biohub \\ \email Correspondence:
-<a href=#426 id=426 data-nosnippet>426</a>  // …` under auth_detailed.sty's `\@maketitle` definitions, 2406.07496).
-<a href=#427 id=427 data-nosnippet>427</a>  </span><span class="macro">DefMacro!</span>(
-<a href=#428 id=428 data-nosnippet>428</a>    <span class="string">"\\lx@affiliation@withinst{}"</span>,
-<a href=#429 id=429 data-nosnippet>429</a>    <span class="string">"\\let\\lx@saved@inst\\inst\\def\\inst##1{\\lx@sup@setlabel@affiliation{##1}}\\lx@author@markup@begin\\expandafter\\lx@author@markup@run\\expandafter{\\lx@author@markup@unprovide}{#1}\\let\\inst\\lx@saved@inst"
-<a href=#430 id=430 data-nosnippet>430</a>  </span>);
-<a href=#431 id=431 data-nosnippet>431</a>  <span class="macro">DefMacro!</span>(
-<a href=#432 id=432 data-nosnippet>432</a>    <span class="string">"\\lx@add@altaffiliation[]{}"</span>,
-<a href=#433 id=433 data-nosnippet>433</a>    <span class="string">"\\lx@annotate@frontmatter{ltx:creator}{ltx:contact}[role=altaffiliation,#1]{#2}"
-<a href=#434 id=434 data-nosnippet>434</a>  </span>);
-<a href=#435 id=435 data-nosnippet>435</a>  <span class="macro">DefMacro!</span>(
-<a href=#436 id=436 data-nosnippet>436</a>    <span class="string">"\\lx@add@address[]{}"</span>,
-<a href=#437 id=437 data-nosnippet>437</a>    <span class="string">"\\lx@annotate@frontmatter{ltx:creator}{ltx:contact}[role=address,#1]{#2}"
-<a href=#438 id=438 data-nosnippet>438</a>  </span>);
-<a href=#439 id=439 data-nosnippet>439</a>  <span class="macro">DefMacro!</span>(
-<a href=#440 id=440 data-nosnippet>440</a>    <span class="string">"\\lx@add@altaddress[]{}"</span>,
-<a href=#441 id=441 data-nosnippet>441</a>    <span class="string">"\\lx@annotate@frontmatter{ltx:creator}{ltx:contact}[role=altaddress,#1]{#2}"
-<a href=#442 id=442 data-nosnippet>442</a>  </span>);
-<a href=#443 id=443 data-nosnippet>443</a>  <span class="macro">DefMacro!</span>(
-<a href=#444 id=444 data-nosnippet>444</a>    <span class="string">"\\lx@add@currentaddress[]{}"</span>,
-<a href=#445 id=445 data-nosnippet>445</a>    <span class="string">"\\lx@annotate@frontmatter{ltx:creator}{ltx:contact}[role=currentaddress,#1]{#2}"
-<a href=#446 id=446 data-nosnippet>446</a>  </span>);
-<a href=#447 id=447 data-nosnippet>447</a>  <span class="comment">// (Rust-only, OXIDIZED_DESIGN_DIVERGENCES #972: the address as TeX prints it, a brace set in math a brace —
-<a href=#448 id=448 data-nosnippet>448</a>  // `\email{$\{$a,b$\}$@x}` prints "{a,b}@x", which the class's verbatim reading kept as "${$a,b$}$@x": llncs's
-<a href=#449 id=449 data-nosnippet>449</a>  // 1106.2694, 2308.00146, 1602.04934 — [`math_braces_as_printed`]; a formula of glyphs its glyphs, `$\sim$` "∼",
-<a href=#450 id=450 data-nosnippet>450</a>  // 1301.1466, math0608476 — [`address_as_printed`])
-<a href=#451 id=451 data-nosnippet>451</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\lx@add@email [] Semiverbatim"</span>, sub[(attr, address)] {
-<a href=#452 id=452 data-nosnippet>452</a>    <span class="kw">let </span>address: Tokens = address;
-<a href=#453 id=453 data-nosnippet>453</a>    <span class="kw">let </span><span class="kw-2">mut </span>keyvals: Vec&lt;Token&gt; = mouth::tokenize_internal(<span class="string">"role=email,"</span>).unlist();
-<a href=#454 id=454 data-nosnippet>454</a>    <span class="kw">if let </span><span class="prelude-val">Some</span>(attr) = attr {
-<a href=#455 id=455 data-nosnippet>455</a>      keyvals.extend(attr.unlist());
-<a href=#456 id=456 data-nosnippet>456</a>    }
-<a href=#457 id=457 data-nosnippet>457</a>    <span class="prelude-val">Ok</span>(<span class="macro">Invocation!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\lx@annotate@frontmatter"</span>), <span class="macro">vec!</span>[
-<a href=#458 id=458 data-nosnippet>458</a>      <span class="prelude-val">Some</span>(mouth::tokenize_internal(<span class="string">"ltx:creator"</span>)),
-<a href=#459 id=459 data-nosnippet>459</a>      <span class="prelude-val">Some</span>(mouth::tokenize_internal(<span class="string">"ltx:contact"</span>)),
-<a href=#460 id=460 data-nosnippet>460</a>      <span class="prelude-val">Some</span>(Tokens::new(keyvals)),
-<a href=#461 id=461 data-nosnippet>461</a>      <span class="prelude-val">Some</span>(address_as_printed(<span class="kw-2">&amp;</span>address))
-<a href=#462 id=462 data-nosnippet>462</a>    ]))
-<a href=#463 id=463 data-nosnippet>463</a>  });
-<a href=#464 id=464 data-nosnippet>464</a>  <span class="comment">// Rust-only (OXIDIZED_DESIGN_DIVERGENCES #901): an address of the e-mail line under a whole row of names, placed by
-<a href=#465 id=465 data-nosnippet>465</a>  // the label the frontmatter emitter gives it (`classify::entry_email_cut`), `#2` set in the class command's font. A
-<a href=#466 id=466 data-nosnippet>466</a>  // class whose own e-mail contact has a name of its own sets it here (llncs's `\emailname`).
-<a href=#467 id=467 data-nosnippet>467</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\lx@row@email{}{}"</span>, <span class="string">"\\lx@add@email[label={#1}]{#2}"</span>);
-<a href=#468 id=468 data-nosnippet>468</a>  <span class="comment">// Rust-only (OXIDIZED_DESIGN_DIVERGENCES #901): such an address under the e-mail label printed before it (`Email:
-<a href=#469 id=469 data-nosnippet>469</a>  // \email{\{a,b\}@x}`, 2602.18622), which names it whatever name the class's own e-mail contact has, as an e-mail
-<a href=#470 id=470 data-nosnippet>470</a>  // line's label names its contacts (`named_email_calls`): `#2` the label.
-<a href=#471 id=471 data-nosnippet>471</a>  </span><span class="macro">DefMacro!</span>(
-<a href=#472 id=472 data-nosnippet>472</a>    <span class="string">"\\lx@row@email@named{}{}{}"</span>,
-<a href=#473 id=473 data-nosnippet>473</a>    <span class="string">"\\lx@add@email[name={#2~},label={#1}]{#3}"
-<a href=#474 id=474 data-nosnippet>474</a>  </span>);
-<a href=#475 id=475 data-nosnippet>475</a>  <span class="comment">// Rust-only: a contact a class's command gives apart from the names (OSA's `\email{x@y}` and `\homepage{…}` after
-<a href=#476 id=476 data-nosnippet>476</a>  // the author groups, opex3.sty:52/:57), placed among the queued authors by [`placed_contact_owner`] (`label=author:N`,
-<a href=#477 id=477 data-nosnippet>477</a>  // or the mark's own label, or `label=addresses:block`, the shared creator of #159). `#1` is the contact's keyvals
-<a href=#478 id=478 data-nosnippet>478</a>  // (its `role`, its `name`), `#2` the operand of the mark written on it (`$^*$x@y`: `*`; empty for none), `#3` its
-<a href=#479 id=479 data-nosnippet>479</a>  // content, already read.
-<a href=#480 id=480 data-nosnippet>480</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\lx@add@contact@placed[]{}{}"</span>, sub[(attr, mark, content)] {
-<a href=#481 id=481 data-nosnippet>481</a>    <span class="kw">let </span>mark: Tokens = mark;
-<a href=#482 id=482 data-nosnippet>482</a>    <span class="kw">let </span>content: Tokens = content;
-<a href=#483 id=483 data-nosnippet>483</a>    <span class="comment">// (`owner=first` in the keyvals: a contact that names no one goes to the group's first author, not to the block —
-<a href=#484 id=484 data-nosnippet>484</a>    // AASTeX's `\authoremail` given before the authors, aas_support_sty.rs)
-<a href=#485 id=485 data-nosnippet>485</a>    </span><span class="kw">let </span>attr_text = attr.as_ref().map(ToString::to_string).unwrap_or_default();
-<a href=#486 id=486 data-nosnippet>486</a>    <span class="kw">let </span>owner_first = attr_text.split(<span class="string">','</span>).any(|kv| kv.trim() == <span class="string">"owner=first"</span>);
-<a href=#487 id=487 data-nosnippet>487</a>    <span class="comment">// (`owner=sequence`: one of a class's list of addresses printed apart from the names, in the order the document
-<a href=#488 id=488 data-nosnippet>488</a>    // gives them — jheppub's `\emailAdd`, iopart's `\ead`: placed as below unless the list proves to be the authors'
-<a href=#489 id=489 data-nosnippet>489</a>    // in order, which the frontmatter's flush decides, `sequenced_contact_labels`)
-<a href=#490 id=490 data-nosnippet>490</a>    </span><span class="kw">let </span>owner_sequence = attr_text.split(<span class="string">','</span>).any(|kv| kv.trim() == <span class="string">"owner=sequence"</span>);
-<a href=#491 id=491 data-nosnippet>491</a>    <span class="comment">// (`mark=address`: a contact the class prints as an address block of its own right after the address before it —
-<a href=#492 id=492 data-nosnippet>492</a>    // iopart's `\ead`, iopart.cls:363 `\def\ead#1{\vspace*{5pt}\address{E-mail: \mailto{#1}}}` —, whose mark is that
-<a href=#493 id=493 data-nosnippet>493</a>    // address's (`\lx@address@mark@set`): weaker evidence than the spelling, so it places only an address that spells
-<a href=#494 id=494 data-nosnippet>494</a>    // no one)
-<a href=#495 id=495 data-nosnippet>495</a>    </span><span class="kw">let </span>flushing = lookup_bool(<span class="string">"lx_frontmatter_flushing"</span>);
-<a href=#496 id=496 data-nosnippet>496</a>    <span class="kw">let </span>under_address = attr_text.split(<span class="string">','</span>).any(|kv| kv.trim() == <span class="string">"mark=address"</span>);
-<a href=#497 id=497 data-nosnippet>497</a>    <span class="kw">let </span>attr_rest: Vec&lt;<span class="kw-2">&amp;</span>str&gt; = attr_text
-<a href=#498 id=498 data-nosnippet>498</a>      .split(<span class="string">','</span>)
-<a href=#499 id=499 data-nosnippet>499</a>      .map(str::trim)
-<a href=#500 id=500 data-nosnippet>500</a>      .filter(|kv| !kv.is_empty() &amp;&amp; ![<span class="string">"owner=first"</span>, <span class="string">"owner=sequence"</span>, <span class="string">"mark=address"</span>].contains(kv))
-<a href=#501 id=501 data-nosnippet>501</a>      .collect();
-<a href=#502 id=502 data-nosnippet>502</a>    <span class="kw">let </span>(mark, weak_mark) = <span class="kw">match </span>lookup_value(<span class="string">"lx_address_mark"</span>) {
-<a href=#503 id=503 data-nosnippet>503</a>      <span class="prelude-val">Some</span>(Stored::Tokens(address_mark)) <span class="kw">if </span>under_address &amp;&amp; mark.is_empty() &amp;&amp; !flushing =&gt; {
-<a href=#504 id=504 data-nosnippet>504</a>        (address_mark, <span class="bool-val">true</span>)
-<a href=#505 id=505 data-nosnippet>505</a>      },
-<a href=#506 id=506 data-nosnippet>506</a>      <span class="kw">_ </span>=&gt; (mark, <span class="bool-val">false</span>),
-<a href=#507 id=507 data-nosnippet>507</a>    };
-<a href=#508 id=508 data-nosnippet>508</a>    <span class="comment">// (an address list's contact digested within another entry, `\author[a]{Ann Able \emailAdd{x}}`, `\address{…
-<a href=#509 id=509 data-nosnippet>509</a>    // \ead{x}}`, is that entry's, as any contact digested there: no list's and placed by nothing of its own, rev78f
-<a href=#510 id=510 data-nosnippet>510</a>    // probes j13, i04)
-<a href=#511 id=511 data-nosnippet>511</a>    </span><span class="kw">if </span>owner_sequence &amp;&amp; flushing {
-<a href=#512 id=512 data-nosnippet>512</a>      <span class="kw">return </span><span class="prelude-val">Ok</span>(<span class="macro">Invocation!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\lx@annotate@frontmatter"</span>), <span class="macro">vec!</span>[
-<a href=#513 id=513 data-nosnippet>513</a>        <span class="prelude-val">Some</span>(mouth::tokenize_internal(<span class="string">"ltx:creator"</span>)),
-<a href=#514 id=514 data-nosnippet>514</a>        <span class="prelude-val">Some</span>(mouth::tokenize_internal(<span class="string">"ltx:contact"</span>)),
-<a href=#515 id=515 data-nosnippet>515</a>        <span class="prelude-val">Some</span>(mouth::tokenize_internal(TeXString::assembled(attr_rest.join(<span class="string">","</span>)))),
-<a href=#516 id=516 data-nosnippet>516</a>        <span class="prelude-val">Some</span>(content)
-<a href=#517 id=517 data-nosnippet>517</a>      ]));
-<a href=#518 id=518 data-nosnippet>518</a>    }
-<a href=#519 id=519 data-nosnippet>519</a>    <span class="comment">// (`label=` and `_answers=` are fixed text; a value is a mark's label and is text: tokenized, `$^{1\#}$`'s `#` was
-<a href=#520 id=520 data-nosnippet>520</a>    // a parameter token and a `%` a comment, so each of its characters is taken as it is)
-<a href=#521 id=521 data-nosnippet>521</a>    </span><span class="kw">let </span>(value, answers) = <span class="kw">match </span>placed_contact_owner(<span class="kw-2">&amp;</span>mark, <span class="kw-2">&amp;</span>content, weak_mark)<span class="question-mark">? </span>{
-<a href=#522 id=522 data-nosnippet>522</a>      ContactOwner::Mark(label) =&gt; (label, <span class="prelude-val">None</span>),
-<a href=#523 id=523 data-nosnippet>523</a>      <span class="comment">// (placed by a footnote-symbol mark its author requests: the contact answers that mark on that author,
-<a href=#524 id=524 data-nosnippet>524</a>      // `show_unanswered_marks`)
-<a href=#525 id=525 data-nosnippet>525</a>      </span>ContactOwner::Author(author) =&gt; (<span class="macro">s!</span>(<span class="string">"author:{author}"</span>), answered_symbol_key(mark.unlist_ref())),
-<a href=#526 id=526 data-nosnippet>526</a>      ContactOwner::Block <span class="kw">if </span>owner_first =&gt; (<span class="macro">s!</span>(<span class="string">"author:{}"</span>, frontmatter_group_first()), <span class="prelude-val">None</span>),
-<a href=#527 id=527 data-nosnippet>527</a>      ContactOwner::Block =&gt; (<span class="macro">s!</span>(<span class="string">"addresses:block"</span>), <span class="prelude-val">None</span>),
-<a href=#528 id=528 data-nosnippet>528</a>    };
-<a href=#529 id=529 data-nosnippet>529</a>    <span class="kw">let </span><span class="kw-2">mut </span>keyvals: Vec&lt;Token&gt; = mouth::tokenize_internal(<span class="string">"label="</span>).unlist();
-<a href=#530 id=530 data-nosnippet>530</a>    keyvals.extend(text_tokens(<span class="kw-2">&amp;</span>value));
-<a href=#531 id=531 data-nosnippet>531</a>    <span class="kw">if let </span><span class="prelude-val">Some</span>(key) = answers {
-<a href=#532 id=532 data-nosnippet>532</a>      keyvals.extend(mouth::tokenize_internal(<span class="string">",_answers="</span>).unlist());
-<a href=#533 id=533 data-nosnippet>533</a>      keyvals.extend(text_tokens(<span class="kw-2">&amp;</span>key));
-<a href=#534 id=534 data-nosnippet>534</a>    }
-<a href=#535 id=535 data-nosnippet>535</a>    <span class="kw">if </span>owner_sequence {
-<a href=#536 id=536 data-nosnippet>536</a>      keyvals.extend(
-<a href=#537 id=537 data-nosnippet>537</a>        mouth::tokenize_internal(TeXString::assembled(<span class="macro">format!</span>(<span class="string">",_sequence={}"</span>, lookup_int(<span class="string">"lx_sequence_call"</span>))))
-<a href=#538 id=538 data-nosnippet>538</a>          .unlist(),
-<a href=#539 id=539 data-nosnippet>539</a>      );
-<a href=#540 id=540 data-nosnippet>540</a>      <span class="comment">// (the authors it may be of, for the corresponding-author step of `sequenced_contact_labels`, as queue
-<a href=#541 id=541 data-nosnippet>541</a>      // positions: its author group's, where the class marks groups (iopart's `\author`,
-<a href=#542 id=542 data-nosnippet>542</a>      // `\lx@frontmatter@group@start`), and those requesting the mark of the address it is printed under (`_marks`,
-<a href=#543 id=543 data-nosnippet>543</a>      // read where the document writes an e-mail between its addresses); rev78f2 probes i1, i2)
-<a href=#544 id=544 data-nosnippet>544</a>      </span><span class="kw">if </span>lookup_value(<span class="string">"lx_frontmatter_group_first"</span>).is_some() {
-<a href=#545 id=545 data-nosnippet>545</a>        <span class="kw">let </span>group: Vec&lt;String&gt; = (frontmatter_group_first()..=queued_author_positions()<span class="question-mark">?</span>)
-<a href=#546 id=546 data-nosnippet>546</a>          .map(|at| at.to_string())
-<a href=#547 id=547 data-nosnippet>547</a>          .collect();
-<a href=#548 id=548 data-nosnippet>548</a>        keyvals.extend(mouth::tokenize_internal(<span class="string">",_group="</span>).unlist());
-<a href=#549 id=549 data-nosnippet>549</a>        keyvals.extend(text_tokens(<span class="kw-2">&amp;</span>group.join(<span class="string">";"</span>)));
-<a href=#550 id=550 data-nosnippet>550</a>      }
-<a href=#551 id=551 data-nosnippet>551</a>      <span class="kw">if </span>weak_mark {
-<a href=#552 id=552 data-nosnippet>552</a>        <span class="kw">let </span>requesting: Vec&lt;String&gt; = queued_requesters(mark.unlist_ref())<span class="question-mark">?
-<a href=#553 id=553 data-nosnippet>553</a>          </span>.iter()
-<a href=#554 id=554 data-nosnippet>554</a>          .map(ToString::to_string)
-<a href=#555 id=555 data-nosnippet>555</a>          .collect();
-<a href=#556 id=556 data-nosnippet>556</a>        <span class="kw">if </span>!requesting.is_empty() {
-<a href=#557 id=557 data-nosnippet>557</a>          keyvals.extend(mouth::tokenize_internal(<span class="string">",_marks="</span>).unlist());
-<a href=#558 id=558 data-nosnippet>558</a>          keyvals.extend(text_tokens(<span class="kw-2">&amp;</span>requesting.join(<span class="string">";"</span>)));
-<a href=#559 id=559 data-nosnippet>559</a>        }
-<a href=#560 id=560 data-nosnippet>560</a>      }
-<a href=#561 id=561 data-nosnippet>561</a>      <span class="comment">// (placed by its address's mark: where it goes without it, for a document whose addresses are all before its
-<a href=#562 id=562 data-nosnippet>562</a>      // e-mails, `sequenced_contact_labels`)
-<a href=#563 id=563 data-nosnippet>563</a>      </span><span class="kw">if </span>weak_mark {
-<a href=#564 id=564 data-nosnippet>564</a>        <span class="kw">let </span>unmarked = <span class="kw">match </span>placed_contact_owner(<span class="kw-2">&amp;</span>Tokens::new(Vec::new()), <span class="kw-2">&amp;</span>content, <span class="bool-val">false</span>)<span class="question-mark">? </span>{
-<a href=#565 id=565 data-nosnippet>565</a>          ContactOwner::Author(author) =&gt; <span class="macro">s!</span>(<span class="string">"author:{author}"</span>),
-<a href=#566 id=566 data-nosnippet>566</a>          ContactOwner::Mark(label) =&gt; label,
-<a href=#567 id=567 data-nosnippet>567</a>          ContactOwner::Block =&gt; <span class="macro">s!</span>(<span class="string">"addresses:block"</span>),
-<a href=#568 id=568 data-nosnippet>568</a>        };
-<a href=#569 id=569 data-nosnippet>569</a>        <span class="kw">if </span>unmarked != value {
-<a href=#570 id=570 data-nosnippet>570</a>          keyvals.extend(mouth::tokenize_internal(<span class="string">",_unmarked="</span>).unlist());
-<a href=#571 id=571 data-nosnippet>571</a>          keyvals.extend(text_tokens(<span class="kw-2">&amp;</span>unmarked));
-<a href=#572 id=572 data-nosnippet>572</a>        }
-<a href=#573 id=573 data-nosnippet>573</a>      }
-<a href=#574 id=574 data-nosnippet>574</a>    }
-<a href=#575 id=575 data-nosnippet>575</a>    <span class="kw">if </span>owner_first || owner_sequence || under_address {
-<a href=#576 id=576 data-nosnippet>576</a>      <span class="kw">if </span>!attr_rest.is_empty() {
-<a href=#577 id=577 data-nosnippet>577</a>        keyvals.push(<span class="macro">T_OTHER!</span>(<span class="string">","</span>));
-<a href=#578 id=578 data-nosnippet>578</a>        keyvals.extend(mouth::tokenize_internal(TeXString::assembled(attr_rest.join(<span class="string">","</span>))).unlist());
-<a href=#579 id=579 data-nosnippet>579</a>      }
-<a href=#580 id=580 data-nosnippet>580</a>    } <span class="kw">else if let </span><span class="prelude-val">Some</span>(attr) = attr.as_ref().filter(|a| !a.is_empty()) {
-<a href=#581 id=581 data-nosnippet>581</a>      keyvals.push(<span class="macro">T_OTHER!</span>(<span class="string">","</span>));
-<a href=#582 id=582 data-nosnippet>582</a>      keyvals.extend(attr.unlist_ref().iter().copied());
-<a href=#583 id=583 data-nosnippet>583</a>    }
-<a href=#584 id=584 data-nosnippet>584</a>    <span class="prelude-val">Ok</span>(<span class="macro">Invocation!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\lx@annotate@frontmatter"</span>), <span class="macro">vec!</span>[
-<a href=#585 id=585 data-nosnippet>585</a>      <span class="prelude-val">Some</span>(mouth::tokenize_internal(<span class="string">"ltx:creator"</span>)),
-<a href=#586 id=586 data-nosnippet>586</a>      <span class="prelude-val">Some</span>(mouth::tokenize_internal(<span class="string">"ltx:contact"</span>)),
-<a href=#587 id=587 data-nosnippet>587</a>      <span class="prelude-val">Some</span>(Tokens::new(keyvals)),
-<a href=#588 id=588 data-nosnippet>588</a>      <span class="prelude-val">Some</span>(content)
-<a href=#589 id=589 data-nosnippet>589</a>    ]))
-<a href=#590 id=590 data-nosnippet>590</a>  });
-<a href=#591 id=591 data-nosnippet>591</a>  <span class="comment">// Rust-only (OXIDIZED_DESIGN_DIVERGENCES #808): the mark of a class's address block, for the contact the class prints
-<a href=#592 id=592 data-nosnippet>592</a>  // right after it as a block of its own (`\lx@add@contact@placed[mark=address]`: iopart's `\ead` after its `\address`,
-<a href=#593 id=593 data-nosnippet>593</a>  // iopart.cls:240-248, :363): the operand of the block's one leading mark (`$^1$ Waseda University`: 1), else none — an
-<a href=#594 id=594 data-nosnippet>594</a>  // unmarked block, or one of several marked lines (`\address{$^1$ A \\ $^2$ B}`), names no one. `\lx@address@mark@set{}`
-<a href=#595 id=595 data-nosnippet>595</a>  // clears it (a class's `\author`, after which an address-list contact is under no address).
-<a href=#596 id=596 data-nosnippet>596</a>  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\lx@address@mark@set{}"</span>, sub[(line)] {
-<a href=#597 id=597 data-nosnippet>597</a>    <span class="kw">let </span>line: Tokens = line;
-<a href=#598 id=598 data-nosnippet>598</a>    <span class="kw">let </span>marks = author_mark_operands(line.unlist_ref());
-<a href=#599 id=599 data-nosnippet>599</a>    <span class="kw">let </span>text = |m: <span class="kw-2">&amp;</span>Vec&lt;Token&gt;| Tokens::new(m.clone()).to_string();
-<a href=#600 id=600 data-nosnippet>600</a>    <span class="kw">let </span>one = marker_leads(<span class="kw-2">&amp;</span>line)
-<a href=#601 id=601 data-nosnippet>601</a>      &amp;&amp; marks.first().is_some_and(|first| marks.iter().all(|m| text(m) == text(first)));
-<a href=#602 id=602 data-nosnippet>602</a>    <span class="kw">let </span>mark = <span class="kw">if </span>one { Tokens::new(marks[<span class="number">0</span>].clone()) } <span class="kw">else </span>{ Tokens::new(Vec::new()) };
-<a href=#603 id=603 data-nosnippet>603</a>    assign_value(<span class="string">"lx_address_mark"</span>, Stored::Tokens(mark), <span class="prelude-val">Some</span>(Scope::Global));
-<a href=#604 id=604 data-nosnippet>604</a>  });
-<a href=#605 id=605 data-nosnippet>605</a>  <span class="comment">// Rust-only: one call of a class's address-list command (jheppub's `\emailAdd{a, b}`, iopart's `\ead`), whose
-<a href=#606 id=606 data-nosnippet>606</a>  // addresses `\lx@add@contact@placed[owner=sequence]` places: the n-th call is the n-th author's when the list is the
-<a href=#607 id=607 data-nosnippet>607</a>  // authors' in order (`sequenced_contact_labels`).
-<a href=#608 id=608 data-nosnippet>608</a>  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\lx@sequence@call"</span>, {
-<a href=#609 id=609 data-nosnippet>609</a>    <span class="kw">let </span>call = lookup_int(<span class="string">"lx_sequence_call"</span>) + <span class="number">1</span>;
-<a href=#610 id=610 data-nosnippet>610</a>    assign_value(<span class="string">"lx_sequence_call"</span>, Stored::Int(call), <span class="prelude-val">Some</span>(Scope::Global));
-<a href=#611 id=611 data-nosnippet>611</a>  });
-<a href=#612 id=612 data-nosnippet>612</a>  <span class="comment">// Rust-only: a class's address-list command's body (`\emailAdd{#1}` = `\lx@add@contact@list{\lx@jhep@email}{#1}`):
-<a href=#613 id=613 data-nosnippet>613</a>  // one call (`\lx@sequence@call`) of `op{address}` for each address of the list (`\lx@split@addresses`). A frontmatter
-<a href=#614 id=614 data-nosnippet>614</a>  // call by its name, so an author line holding the command (`\author[a]{Ann Able \emailAdd{x}}`) keeps it as the
-<a href=#615 id=615 data-nosnippet>615</a>  // name's annotation, as the `\lx@add@contact` body it replaced was (`adds_to_frontmatter`, `is_note_macro`).
-<a href=#616 id=616 data-nosnippet>616</a>  </span><span class="macro">DefMacro!</span>(
-<a href=#617 id=617 data-nosnippet>617</a>    <span class="string">"\\lx@add@contact@list{}{}"</span>,
-<a href=#618 id=618 data-nosnippet>618</a>    <span class="string">"\\lx@sequence@call\\lx@split@addresses{#1}{#2}"
-<a href=#619 id=619 data-nosnippet>619</a>  </span>);
-<a href=#620 id=620 data-nosnippet>620</a>  <span class="comment">// Rust-only: the start of an author group of a class whose `\author` adds a group per call (OSA's, each typesetting
-<a href=#621 id=621 data-nosnippet>621</a>  // its names where it stands): a contact placed after it ([`placed_contact_owner`]) is the group's only author's
-<a href=#622 id=622 data-nosnippet>622</a>  // (`\author{D. L. Boiko}\address{…}\email{…}\author{N. J. Gunther}…`, 0906.4563; guard
-<a href=#623 id=623 data-nosnippet>623</a>  // `perfect_kernel_batch64u::osa_group_only_author_owns_the_email`).
-<a href=#624 id=624 data-nosnippet>624</a>  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\lx@frontmatter@group@start"</span>, {
-<a href=#625 id=625 data-nosnippet>625</a>    <span class="kw">let </span>first = queued_author_positions()<span class="question-mark">? </span>+ <span class="number">1</span>;
-<a href=#626 id=626 data-nosnippet>626</a>    assign_value(
-<a href=#627 id=627 data-nosnippet>627</a>      <span class="string">"lx_frontmatter_group_first"</span>,
-<a href=#628 id=628 data-nosnippet>628</a>      Stored::Number(Number::new(first <span class="kw">as </span>i64)),
-<a href=#629 id=629 data-nosnippet>629</a>      <span class="prelude-val">Some</span>(Scope::Global),
-<a href=#630 id=630 data-nosnippet>630</a>    );
-<a href=#631 id=631 data-nosnippet>631</a>  });
-<a href=#632 id=632 data-nosnippet>632</a>  <span class="comment">// Rust-only (OXIDIZED_DESIGN #479): what the document says about an author but does not print (AASTeX 7's `\email`
-<a href=#633 id=633 data-nosnippet>633</a>  // without `[show]`, aastex701.cls:13341-13353; 2608.05283) — an `ltx:rdf` annotation of the creator, `property` the
-<a href=#634 id=634 data-nosnippet>634</a>  // RDFa term and `content` the value, hidden in HTML. An empty value records nothing (AASTeX 7's `\email{}` placeholder).
-<a href=#635 id=635 data-nosnippet>635</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\lx@add@creator@rdf [] {} Semiverbatim"</span>, sub[(attr, property, value)] {
-<a href=#636 id=636 data-nosnippet>636</a>    <span class="comment">// The value as written, without the spaces around it (2608.13718 `\email{koberg@cfa.harvard.edu }`)
-<a href=#637 id=637 data-nosnippet>637</a>    </span><span class="kw">let </span><span class="kw-2">mut </span>value = value.unlist();
-<a href=#638 id=638 data-nosnippet>638</a>    <span class="kw">while </span>value.last().is_some_and(|t| t.get_catcode() == Catcode::SPACE) {
-<a href=#639 id=639 data-nosnippet>639</a>      value.pop();
-<a href=#640 id=640 data-nosnippet>640</a>    }
-<a href=#641 id=641 data-nosnippet>641</a>    <span class="kw">let </span>lead = value.iter().take_while(|t| t.get_catcode() == Catcode::SPACE).count();
-<a href=#642 id=642 data-nosnippet>642</a>    value.drain(..lead);
-<a href=#643 id=643 data-nosnippet>643</a>    <span class="kw">if </span>value.is_empty() {
-<a href=#644 id=644 data-nosnippet>644</a>      <span class="kw">return </span><span class="prelude-val">Ok</span>(<span class="macro">Tokens!</span>());
-<a href=#645 id=645 data-nosnippet>645</a>    }
-<a href=#646 id=646 data-nosnippet>646</a>    <span class="kw">let </span><span class="kw-2">mut </span>opts = mouth::tokenize_internal(<span class="string">"property="</span>).unlist();
-<a href=#647 id=647 data-nosnippet>647</a>    opts.push(<span class="macro">T_BEGIN!</span>());
-<a href=#648 id=648 data-nosnippet>648</a>    opts.extend(property.unlist());
-<a href=#649 id=649 data-nosnippet>649</a>    opts.push(<span class="macro">T_END!</span>());
-<a href=#650 id=650 data-nosnippet>650</a>    opts.extend(mouth::tokenize_internal(<span class="string">",content="</span>).unlist());
-<a href=#651 id=651 data-nosnippet>651</a>    opts.push(<span class="macro">T_BEGIN!</span>());
-<a href=#652 id=652 data-nosnippet>652</a>    opts.extend(value);
-<a href=#653 id=653 data-nosnippet>653</a>    opts.push(<span class="macro">T_END!</span>());
-<a href=#654 id=654 data-nosnippet>654</a>    <span class="kw">if let </span><span class="prelude-val">Some</span>(a) = attr.as_ref().filter(|a| !a.is_empty()) {
-<a href=#655 id=655 data-nosnippet>655</a>      opts.push(<span class="macro">T_OTHER!</span>(<span class="string">","</span>));
-<a href=#656 id=656 data-nosnippet>656</a>      opts.extend(a.unlist_ref().iter().copied());
-<a href=#657 id=657 data-nosnippet>657</a>    }
-<a href=#658 id=658 data-nosnippet>658</a>    <span class="prelude-val">Ok</span>(<span class="macro">Invocation!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\lx@annotate@frontmatter"</span>),
-<a href=#659 id=659 data-nosnippet>659</a>      <span class="macro">vec!</span>[<span class="prelude-val">Some</span>(mouth::tokenize_internal(<span class="string">"ltx:creator"</span>)),
-<a href=#660 id=660 data-nosnippet>660</a>           <span class="prelude-val">Some</span>(mouth::tokenize_internal(<span class="string">"ltx:rdf"</span>)),
-<a href=#661 id=661 data-nosnippet>661</a>           <span class="prelude-val">Some</span>(Tokens::new(opts)), <span class="prelude-val">Some</span>(<span class="macro">Tokens!</span>())]))
-<a href=#662 id=662 data-nosnippet>662</a>  });
-<a href=#663 id=663 data-nosnippet>663</a>  <span class="macro">DefMacro!</span>(
-<a href=#664 id=664 data-nosnippet>664</a>    <span class="string">"\\lx@add@email@metadata [] Semiverbatim"</span>,
-<a href=#665 id=665 data-nosnippet>665</a>    <span class="string">"\\lx@add@creator@rdf[#1]{schema:email}{#2}"
-<a href=#666 id=666 data-nosnippet>666</a>  </span>);
-<a href=#667 id=667 data-nosnippet>667</a>  <span class="comment">// (Rust-only, OXIDIZED_DESIGN_DIVERGENCES #972: the address as TeX prints it, a formula of glyphs its glyphs —
-<a href=#668 id=668 data-nosnippet>668</a>  // `http://www.zebra.edu/$\sim$ann` prints "http://www.zebra.edu/∼ann", the Semiverbatim reading kept the dollars:
-<a href=#669 id=669 data-nosnippet>669</a>  // 1301.1466, math0608476 — [`address_as_printed`])
-<a href=#670 id=670 data-nosnippet>670</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\lx@add@url [] Semiverbatim"</span>, sub[(attr, address)] {
-<a href=#671 id=671 data-nosnippet>671</a>    <span class="kw">let </span>address: Tokens = address;
-<a href=#672 id=672 data-nosnippet>672</a>    <span class="kw">let </span><span class="kw-2">mut </span>keyvals: Vec&lt;Token&gt; = mouth::tokenize_internal(<span class="string">"role=url,"</span>).unlist();
-<a href=#673 id=673 data-nosnippet>673</a>    <span class="kw">if let </span><span class="prelude-val">Some</span>(attr) = attr {
-<a href=#674 id=674 data-nosnippet>674</a>      keyvals.extend(attr.unlist());
-<a href=#675 id=675 data-nosnippet>675</a>    }
-<a href=#676 id=676 data-nosnippet>676</a>    <span class="prelude-val">Ok</span>(<span class="macro">Invocation!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\lx@annotate@frontmatter"</span>), <span class="macro">vec!</span>[
-<a href=#677 id=677 data-nosnippet>677</a>      <span class="prelude-val">Some</span>(mouth::tokenize_internal(<span class="string">"ltx:creator"</span>)),
-<a href=#678 id=678 data-nosnippet>678</a>      <span class="prelude-val">Some</span>(mouth::tokenize_internal(<span class="string">"ltx:contact"</span>)),
-<a href=#679 id=679 data-nosnippet>679</a>      <span class="prelude-val">Some</span>(Tokens::new(keyvals)),
-<a href=#680 id=680 data-nosnippet>680</a>      <span class="prelude-val">Some</span>(address_as_printed(<span class="kw-2">&amp;</span>address))
-<a href=#681 id=681 data-nosnippet>681</a>    ]))
-<a href=#682 id=682 data-nosnippet>682</a>  });
-<a href=#683 id=683 data-nosnippet>683</a>  <span class="comment">// Rust-only (OXIDIZED_DESIGN_DIVERGENCES #972): an address a binding prints itself, as the e-mail and URL contacts read
-<a href=#684 id=684 data-nosnippet>684</a>  // it ([`address_as_printed`]: a formula of glyphs its glyphs) — imsart's `\printead` in an address printed in place.
-<a href=#685 id=685 data-nosnippet>685</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\lx@address@printed Semiverbatim"</span>, sub[(address)] {
-<a href=#686 id=686 data-nosnippet>686</a>    <span class="prelude-val">Ok</span>(address_as_printed(<span class="kw-2">&amp;</span>address))
-<a href=#687 id=687 data-nosnippet>687</a>  });
-<a href=#688 id=688 data-nosnippet>688</a>  <span class="comment">// Rust-only: an email or web address set as a class sets it with `\url`, `\texttt` or `\ttfamily` — url.sty's
-<a href=#689 id=689 data-nosnippet>689</a>  // `\UrlFont` (url_sty.rs `\UrlFont`): the typewriter family, in the identity ASCII encoding. A class that reads the
-<a href=#690 id=690 data-nosnippet>690</a>  // address with `_` and `~` made other (revtex4.cls:4476-4493 `\sanitize@url` … `\href{mailto:#2}{#2}`, `\href` the
-<a href=#691 id=691 data-nosnippet>691</a>  // `\url` = `\texttt` of :4490-4493) prints them as cmtt does, '_' and '~'; the same characters in the roman OT1 font
-<a href=#692 id=692 data-nosnippet>692</a>  // are its dot and tilde accents (Perl TeX_Fonts.pool.ltxml:214), "ann˙able@a.edu" (1001.1076). A class binding
-<a href=#693 id=693 data-nosnippet>693</a>  // passes its address through this only where the class sets it in typewriter type.
-<a href=#694 id=694 data-nosnippet>694</a>  </span><span class="macro">DefMacro!</span>(
-<a href=#695 id=695 data-nosnippet>695</a>    <span class="string">"\\lx@address@urlfont{}"</span>,
-<a href=#696 id=696 data-nosnippet>696</a>    <span class="string">"{\\lx@fontencoding{ASCII}\\ttfamily #1}"
-<a href=#697 id=697 data-nosnippet>697</a>  </span>);
-<a href=#698 id=698 data-nosnippet>698</a>  <span class="comment">// Rust-only: an email or web address a class sets in the current (roman) font — revtex4-1/4-2's `\href`, which
-<a href=#699 id=699 data-nosnippet>699</a>  // without hyperref is `\@href` (revtex4-1.cls:1959-1961), AASTeX's, svjour3's, jmlr's — in that font, but in the
-<a href=#700 id=700 data-nosnippet>700</a>  // identity ASCII encoding: its `_` and `~` print as typed. In the OT1 font pdflatex prints them as the dot and tilde
-<a href=#701 id=701 data-nosnippet>701</a>  // accents ("ann˙able@a.edu", 2301.03570, 2301.03067); the address is the author's, not the accident of the font (user
-<a href=#702 id=702 data-nosnippet>702</a>  // ruling 2026-10-11).
-<a href=#703 id=703 data-nosnippet>703</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\lx@address@textfont{}"</span>, <span class="string">"{\\lx@fontencoding{ASCII}#1}"</span>);
-<a href=#704 id=704 data-nosnippet>704</a>  <span class="comment">// The ORCID iD logo — the green "iD" badge — as ONE self-contained SVG asset,
-<a href=#705 id=705 data-nosnippet>705</a>  // defined in the kernel so every orcid rendering path reuses it (orcidlink.sty's
-<a href=#706 id=706 data-nosnippet>706</a>  // \orcidlogo aliases this; \lx@add@orcid embeds it). Adapted from
-<a href=#707 id=707 data-nosnippet>707</a>  // https://orcid.org/assets/vectors/orcid.logo.icon.svg; the viewBox exactly
-<a href=#708 id=708 data-nosnippet>708</a>  // frames the 72×72 disk and the `.ltx_orcidlogo` CSS rule sizes it to the text
-<a href=#709 id=709 data-nosnippet>709</a>  // (1em), so it renders as an inline glyph — not the oversized 1.7em badge that
-<a href=#710 id=710 data-nosnippet>710</a>  // overflowed the line (html_feedback #6895, #6016, #5789, #2176, #5615).
-<a href=#711 id=711 data-nosnippet>711</a>  </span><span class="macro">DefConstructor!</span>(<span class="string">"\\lx@orcidlogo"</span>, sub[document, _args, _props] {
-<a href=#712 id=712 data-nosnippet>712</a>    document.open_element(<span class="string">"svg:svg"</span>, <span class="prelude-val">Some</span>(<span class="macro">string_map!</span>(
-<a href=#713 id=713 data-nosnippet>713</a>      <span class="string">"class" </span>=&gt; <span class="string">"ltx_orcidlogo"</span>, <span class="string">"width" </span>=&gt; <span class="string">"1em"</span>, <span class="string">"height" </span>=&gt; <span class="string">"1em"</span>,
-<a href=#714 id=714 data-nosnippet>714</a>      <span class="string">"viewBox" </span>=&gt; <span class="string">"0 0 72 72"</span>, <span class="string">"version" </span>=&gt; <span class="string">"1.1"</span>)), <span class="prelude-val">None</span>)<span class="question-mark">?</span>;
-<a href=#715 id=715 data-nosnippet>715</a>    document.open_element(<span class="string">"svg:path"</span>, <span class="prelude-val">Some</span>(<span class="macro">string_map!</span>(
-<a href=#716 id=716 data-nosnippet>716</a>      <span class="string">"fill" </span>=&gt; <span class="string">"#A6CE39"</span>,
-<a href=#717 id=717 data-nosnippet>717</a>      <span class="string">"d" </span>=&gt; <span class="string">"M72,36 C72,55.884375 55.884375,72 36,72 C16.115625,72 0,55.884375 0,36 C0,16.115625 16.115625,0 36,0 C55.884375,0 72,16.115625 72,36 Z"</span>)), <span class="prelude-val">None</span>)<span class="question-mark">?</span>;
-<a href=#718 id=718 data-nosnippet>718</a>    document.close_element(<span class="string">"svg:path"</span>)<span class="question-mark">?</span>;
-<a href=#719 id=719 data-nosnippet>719</a>    document.open_element(<span class="string">"svg:g"</span>, <span class="prelude-val">Some</span>(<span class="macro">string_map!</span>(
-<a href=#720 id=720 data-nosnippet>720</a>      <span class="string">"fill" </span>=&gt; <span class="string">"#FFFFFF"</span>, <span class="string">"transform" </span>=&gt; <span class="string">"translate(18.868966, 12.910345)"</span>)), <span class="prelude-val">None</span>)<span class="question-mark">?</span>;
-<a href=#721 id=721 data-nosnippet>721</a>    document.open_element(<span class="string">"svg:polygon"</span>, <span class="prelude-val">Some</span>(<span class="macro">string_map!</span>(
-<a href=#722 id=722 data-nosnippet>722</a>      <span class="string">"points" </span>=&gt; <span class="string">"5.03734929 39.1250878 0.695429861 39.1250878 0.695429861 9.14431787 5.03734929 9.14431787 5.03734929 22.6930505 5.03734929 39.1250878"</span>)), <span class="prelude-val">None</span>)<span class="question-mark">?</span>;
-<a href=#723 id=723 data-nosnippet>723</a>    document.close_element(<span class="string">"svg:polygon"</span>)<span class="question-mark">?</span>;
-<a href=#724 id=724 data-nosnippet>724</a>    document.open_element(<span class="string">"svg:path"</span>, <span class="prelude-val">Some</span>(<span class="macro">string_map!</span>(
-<a href=#725 id=725 data-nosnippet>725</a>      <span class="string">"d" </span>=&gt; <span class="string">"M11.409257,9.14431787 L23.1380784,9.14431787 C34.303014,9.14431787 39.2088191,17.0664074 39.2088191,24.1486995 C39.2088191,31.846843 33.1470485,39.1530811 23.1944669,39.1530811 L11.409257,39.1530811 L11.409257,9.14431787 Z M15.7511765,35.2620194 L22.6587756,35.2620194 C32.49858,35.2620194 34.7541226,27.8438084 34.7541226,24.1486995 C34.7541226,18.1301509 30.8915059,13.0353795 22.4332213,13.0353795 L15.7511765,13.0353795 L15.7511765,35.2620194 Z"</span>)), <span class="prelude-val">None</span>)<span class="question-mark">?</span>;
-<a href=#726 id=726 data-nosnippet>726</a>    document.close_element(<span class="string">"svg:path"</span>)<span class="question-mark">?</span>;
-<a href=#727 id=727 data-nosnippet>727</a>    document.open_element(<span class="string">"svg:path"</span>, <span class="prelude-val">Some</span>(<span class="macro">string_map!</span>(
-<a href=#728 id=728 data-nosnippet>728</a>      <span class="string">"d" </span>=&gt; <span class="string">"M5.71401206,2.90182329 C5.71401206,4.441452 4.44526937,5.72914146 2.86638958,5.72914146 C1.28750978,5.72914146 0.0187670918,4.441452 0.0187670918,2.90182329 C0.0187670918,1.33420133 1.28750978,0.0745051096 2.86638958,0.0745051096 C4.44526937,0.0745051096 5.71401206,1.36219458 5.71401206,2.90182329 Z"</span>)), <span class="prelude-val">None</span>)<span class="question-mark">?</span>;
-<a href=#729 id=729 data-nosnippet>729</a>    document.close_element(<span class="string">"svg:path"</span>)<span class="question-mark">?</span>;
-<a href=#730 id=730 data-nosnippet>730</a>    document.close_element(<span class="string">"svg:g"</span>)<span class="question-mark">?</span>;
-<a href=#731 id=731 data-nosnippet>731</a>    document.close_element(<span class="string">"svg:svg"</span>)<span class="question-mark">?</span>;
-<a href=#732 id=732 data-nosnippet>732</a>  });
-<a href=#733 id=733 data-nosnippet>733</a>  <span class="comment">// A link to https://orcid.org/&lt;#1&gt; wrapping content #2 (class ltx_orcid). Shared
-<a href=#734 id=734 data-nosnippet>734</a>  // by \lx@add@orcid and orcidlink.sty's \orcidlink family. Perl orcidlink #2681.
-<a href=#735 id=735 data-nosnippet>735</a>  </span><span class="macro">DefConstructor!</span>(
-<a href=#736 id=736 data-nosnippet>736</a>    <span class="string">"\\lx@orcidlink{}{}"</span>,
-<a href=#737 id=737 data-nosnippet>737</a>    <span class="string">"&lt;ltx:ref title='ORCID #1' class='ltx_orcid' href='https://orcid.org/#1'&gt;#2&lt;/ltx:ref&gt;"
-<a href=#738 id=738 data-nosnippet>738</a>  </span>);
-<a href=#739 id=739 data-nosnippet>739</a>  <span class="comment">// The single canonical author-ORCID frontmatter macro: a `ltx:contact[role=orcid]`
-<a href=#740 id=740 data-nosnippet>740</a>  // (consistent with \lx@add@email / \lx@add@affiliation &amp;c.) whose value is the iD
-<a href=#741 id=741 data-nosnippet>741</a>  // logo linked to the author's orcid.org page. The id is preserved in the href for
-<a href=#742 id=742 data-nosnippet>742</a>  // the metadata. Every class binding routes its \orcid here (html_feedback #6571).
-<a href=#743 id=743 data-nosnippet>743</a>  // An iD given as its orcid.org address (`https://orcid.org/0000-…`, with or without the scheme or `www.`) is the iD:
-<a href=#744 id=744 data-nosnippet>744</a>  // its link was `https://orcid.org/https://orcid.org/0000-…` (2104.12510, 2304.13458, 2407.18715 `\orcidauthor`;
-<a href=#745 id=745 data-nosnippet>745</a>  // DIVERGENCES #616). Perl's contact holds the text as given (Base_Utility.pool.ltxml:659-660).
-<a href=#746 id=746 data-nosnippet>746</a>  </span><span class="macro">DefMacro!</span>(
-<a href=#747 id=747 data-nosnippet>747</a>    <span class="string">"\\lx@add@orcid [] Semiverbatim"</span>,
-<a href=#748 id=748 data-nosnippet>748</a>    <span class="string">"\\lx@annotate@frontmatter{ltx:creator}{ltx:contact}[role=orcid,#1]{\\expandafter\\lx@orcidlink\\expandafter{\\lx@orcid@id{#2}}{\\lx@orcidlogo}}"
-<a href=#749 id=749 data-nosnippet>749</a>  </span>);
-<a href=#750 id=750 data-nosnippet>750</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\lx@orcid@id Semiverbatim"</span>, sub[(id)] { <span class="prelude-val">Ok</span>(orcid_id(id)) });
-<a href=#751 id=751 data-nosnippet>751</a>  <span class="comment">// (the iD's link of [`orcid_icon_link`], the icon as printed)
-<a href=#752 id=752 data-nosnippet>752</a>  </span><span class="macro">DefMacro!</span>(
-<a href=#753 id=753 data-nosnippet>753</a>    <span class="string">"\\lx@orcid@href[]{}{}"</span>,
-<a href=#754 id=754 data-nosnippet>754</a>    <span class="string">"\\expandafter\\lx@orcidlink\\expandafter{\\lx@orcid@known}{#3}"
-<a href=#755 id=755 data-nosnippet>755</a>  </span>);
-<a href=#756 id=756 data-nosnippet>756</a>
-<a href=#757 id=757 data-nosnippet>757</a>  <span class="comment">// Rust-only (OXIDIZED_DESIGN_DIVERGENCES #960): an `\href` to an ORCID record in an author's name that prints no
-<a href=#758 id=758 data-nosnippet>758</a>  // word — the TikZ "iD" icon of the `\orcidicon` template (`\newcommand{\orcidA}{\href{https://orcid.org/…}
-<a href=#759 id=759 data-nosnippet>759</a>  // {\orcidicon}}`, `\author{M. Ahumada \orcidA{}}`: 2507.12319, 2503.04867, 2406.08258), a logo graphic — is the
-<a href=#760 id=760 data-nosnippet>760</a>  // author's ORCID, the contact `\lx@add@orcid` makes, and its ink no part of the name (Perl: the link and its picture
-<a href=#761 id=761 data-nosnippet>761</a>  // stay in the personname). One printing a letter or a digit outside a picture is printed text and stays: the linked
-<a href=#762 id=762 data-nosnippet>762</a>  // name (`\href{https://orcid.org/…}{T.J.C. Bezerra}`, 2606.03745; 2301.02927, 2312.16289, 2601.06085), the ORCID read
-<a href=#763 id=763 data-nosnippet>763</a>  // off it as before, or the iD printed (`\href{https://orcid.org/0000-0002-1825-0097}{0000-0002-1825-0097}`, review
-<a href=#764 id=764 data-nosnippet>764</a>  // rev103b S1). A creator holding the iD already keeps one contact of it (`drop_repeated_orcids`: acmart's `\orcid{…}`
-<a href=#765 id=765 data-nosnippet>765</a>  // beside the name's link, 2501.02380). In force for the name's content only (`\lx@author@withinst`), not for a note
-<a href=#766 id=766 data-nosnippet>766</a>  // or contact digested inside it (`creator_name_in_progress`: `\thanks{See \href{https://orcid.org/…}{his record}.}`
-<a href=#767 id=767 data-nosnippet>767</a>  // keeps its words), nor for a mark — a label's operand read for its printed text (`reading_label`:
-<a href=#768 id=768 data-nosnippet>768</a>  // `\inst{1,\href{…}{iD}}`), a mark's math, which the marks reader shows again from its tokens
-<a href=#769 id=769 data-nosnippet>769</a>  // (`$^{1,\href{…}{\orcidicon}}$`) — where a contact made was lost: the mark keeps what it printed before. Any other
-<a href=#770 id=770 data-nosnippet>770</a>  // link — another address, `\href`'s options — is the `\href` it was. A primitive: what the ink prints is read by
-<a href=#771 id=771 data-nosnippet>771</a>  // digesting it (`ink_prints_text`). A separator the ink prints after the icon (`{icon, }` between two names,
-<a href=#772 id=772 data-nosnippet>772</a>  // 2110.07418) stays where it prints.
-<a href=#773 id=773 data-nosnippet>773</a>  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\lx@author@href[]{}{}"</span>, sub[(options, url, ink)] {
-<a href=#774 id=774 data-nosnippet>774</a>    <span class="kw">if </span>options.is_none()
-<a href=#775 id=775 data-nosnippet>775</a>      &amp;&amp; !lookup_bool(<span class="string">"IN_MATH"</span>)
-<a href=#776 id=776 data-nosnippet>776</a>      &amp;&amp; !reading_label()
-<a href=#777 id=777 data-nosnippet>777</a>      &amp;&amp; creator_name_in_progress()
-<a href=#778 id=778 data-nosnippet>778</a>      &amp;&amp; url.to_string().to_ascii_lowercase().contains(<span class="string">"orcid.org/"</span>)
-<a href=#779 id=779 data-nosnippet>779</a>    {
-<a href=#780 id=780 data-nosnippet>780</a>      <span class="comment">// (the address expanded, as hyperref expands it: the template's `\xdef` ran before the iD's macro was defined,
-<a href=#781 id=781 data-nosnippet>781</a>      // `https://orcid.org/\orcidauthorA`, 2507.12319)
-<a href=#782 id=782 data-nosnippet>782</a>      </span><span class="kw">let </span>address = <span class="macro">Expand!</span>(url.clone());
-<a href=#783 id=783 data-nosnippet>783</a>      <span class="kw">let </span>id = orcid_id(address.clone());
-<a href=#784 id=784 data-nosnippet>784</a>      <span class="kw">if </span>!id.unlist_ref().is_empty()
-<a href=#785 id=785 data-nosnippet>785</a>        &amp;&amp; id.to_string() != address.to_string()
-<a href=#786 id=786 data-nosnippet>786</a>        &amp;&amp; ink_prints_text(<span class="kw-2">&amp;</span>ink)<span class="question-mark">? </span>== <span class="prelude-val">Some</span>(<span class="bool-val">false</span>)
-<a href=#787 id=787 data-nosnippet>787</a>      {
-<a href=#788 id=788 data-nosnippet>788</a>        <span class="comment">// (a separator the link prints after its icon is the name list's, kept where it prints: `\href{…}{icon, }`
-<a href=#789 id=789 data-nosnippet>789</a>        // between two names, 2110.07418 — its ", " was lost with the link)
-<a href=#790 id=790 data-nosnippet>790</a>        </span><span class="kw">let </span>v = ink.unlist_ref();
-<a href=#791 id=791 data-nosnippet>791</a>        <span class="kw">let </span>tail = v.len()
-<a href=#792 id=792 data-nosnippet>792</a>          - v
-<a href=#793 id=793 data-nosnippet>793</a>            .iter()
-<a href=#794 id=794 data-nosnippet>794</a>            .rev()
-<a href=#795 id=795 data-nosnippet>795</a>            .take_while(|t| <span class="kw-2">**</span>t == <span class="macro">T_SPACE!</span>() || <span class="kw-2">**</span>t == <span class="macro">T_OTHER!</span>(<span class="string">","</span>) || <span class="kw-2">**</span>t == <span class="macro">T_OTHER!</span>(<span class="string">";"</span>))
-<a href=#796 id=796 data-nosnippet>796</a>            .count();
-<a href=#797 id=797 data-nosnippet>797</a>        <span class="kw">let </span><span class="kw-2">mut </span>out = <span class="macro">Invocation!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\lx@add@orcid"</span>), <span class="macro">vec!</span>[<span class="prelude-val">None</span>, <span class="prelude-val">Some</span>(id)]).unlist();
-<a href=#798 id=798 data-nosnippet>798</a>        <span class="kw">if </span>v[tail..].iter().any(|t| <span class="kw-2">*</span>t != <span class="macro">T_SPACE!</span>()) {
-<a href=#799 id=799 data-nosnippet>799</a>          out.extend_from_slice(<span class="kw-2">&amp;</span>v[tail..]);
-<a href=#800 id=800 data-nosnippet>800</a>        }
-<a href=#801 id=801 data-nosnippet>801</a>        unread(Tokens::new(out));
-<a href=#802 id=802 data-nosnippet>802</a>        <span class="kw">return </span><span class="prelude-val">Ok</span>(Vec::new());
-<a href=#803 id=803 data-nosnippet>803</a>      }
-<a href=#804 id=804 data-nosnippet>804</a>    }
-<a href=#805 id=805 data-nosnippet>805</a>    <span class="kw">let </span><span class="kw-2">mut </span>out = <span class="macro">vec!</span>[<span class="macro">T_CS!</span>(<span class="string">"\\lx@saved@href"</span>)];
-<a href=#806 id=806 data-nosnippet>806</a>    <span class="kw">if let </span><span class="prelude-val">Some</span>(options) = options {
-<a href=#807 id=807 data-nosnippet>807</a>      out.push(<span class="macro">T_OTHER!</span>(<span class="string">"["</span>));
-<a href=#808 id=808 data-nosnippet>808</a>      out.extend(options.unlist());
-<a href=#809 id=809 data-nosnippet>809</a>      out.push(<span class="macro">T_OTHER!</span>(<span class="string">"]"</span>));
-<a href=#810 id=810 data-nosnippet>810</a>    }
-<a href=#811 id=811 data-nosnippet>811</a>    out.push(<span class="macro">T_BEGIN!</span>());
-<a href=#812 id=812 data-nosnippet>812</a>    out.extend(url.unlist());
-<a href=#813 id=813 data-nosnippet>813</a>    out.push(<span class="macro">T_END!</span>());
-<a href=#814 id=814 data-nosnippet>814</a>    out.push(<span class="macro">T_BEGIN!</span>());
-<a href=#815 id=815 data-nosnippet>815</a>    out.extend(ink.unlist());
-<a href=#816 id=816 data-nosnippet>816</a>    out.push(<span class="macro">T_END!</span>());
-<a href=#817 id=817 data-nosnippet>817</a>    unread(Tokens::new(out));
-<a href=#818 id=818 data-nosnippet>818</a>  });
-<a href=#819 id=819 data-nosnippet>819</a>  <span class="comment">// Beyond-Perl (OXIDIZED_DESIGN #52): the arXiv "\thanks abuse" idiom smuggles
-<a href=#820 id=820 data-nosnippet>820</a>  // affiliations into an author \thanks{...}, linking them to authors by a
-<a href=#821 id=821 data-nosnippet>821</a>  // leading superscript mark ($^{n}$ / \textsuperscript{n}). \thanks is
-<a href=#822 id=822 data-nosnippet>822</a>  // semantically an acknowledgement, so we re-route ONLY when the content BEGINS
-<a href=#823 id=823 data-nosnippet>823</a>  // with such a mark (the abuse signature — a genuine acknowledgement never
-<a href=#824 id=824 data-nosnippet>824</a>  // starts with a bare superscript); every other \thanks stays a role=thanks
-<a href=#825 id=825 data-nosnippet>825</a>  // note. When detected we feed each $^{n}$-delimited segment through
-<a href=#826 id=826 data-nosnippet>826</a>  // \lx@affiliation@withsup, which sets the affiliation:N label that the authors'
-<a href=#827 id=827 data-nosnippet>827</a>  // own marks already request (relocate_annotations then links
-<a href=#828 id=828 data-nosnippet>828</a>  // author&lt;-&gt;affiliation). Witness arXiv:2606.00313.
-<a href=#829 id=829 data-nosnippet>829</a>  // The argument is an ordinary one, as LaTeX's `\thanks` reads it and as a title's `\thanks`
-<a href=#830 id=830 data-nosnippet>830</a>  // (`\lx@add@pubnote@thanks`) does: Perl's Semiverbatim (Base_Utility.pool.ltxml:661) froze `$`, `^`, `_` to
-<a href=#831 id=831 data-nosnippet>831</a>  // catcode other, so an author's `\thanks{... 10 m$^{2}$ lab.}` printed its math as text (KNOWN_PERL_ERRORS #515;
-<a href=#832 id=832 data-nosnippet>832</a>  // repro sectioning-frontmatter/author_thanks_and_footnote_keep_their_math).
-<a href=#833 id=833 data-nosnippet>833</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\lx@add@thanks [] {}"</span>, sub[(attr, content)] {
-<a href=#834 id=834 data-nosnippet>834</a>    <span class="kw">if </span>starts_with_affiliation_mark(<span class="kw-2">&amp;</span>content) {
-<a href=#835 id=835 data-nosnippet>835</a>      <span class="kw">let </span><span class="kw-2">mut </span>calls: Vec&lt;Token&gt; = <span class="macro">vec!</span>[<span class="macro">T_CS!</span>(<span class="string">"\\lx@title@footnote@step"</span>)];
-<a href=#836 id=836 data-nosnippet>836</a>      <span class="kw">for </span>seg <span class="kw">in </span>split_wrapped_affiliation_marks(content)<span class="question-mark">? </span>{
-<a href=#837 id=837 data-nosnippet>837</a>        <span class="kw">if </span>spacing_end(seg.unlist_ref()) == <span class="number">0 </span>{
-<a href=#838 id=838 data-nosnippet>838</a>          <span class="kw">continue</span>;
-<a href=#839 id=839 data-nosnippet>839</a>        }
-<a href=#840 id=840 data-nosnippet>840</a>        <span class="kw">let </span>withsup = <span class="macro">Invocation!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\lx@affiliation@withsup"</span>), <span class="macro">vec!</span>[<span class="prelude-val">Some</span>(seg)]);
-<a href=#841 id=841 data-nosnippet>841</a>        calls.extend(
-<a href=#842 id=842 data-nosnippet>842</a>          <span class="macro">Invocation!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\lx@add@affiliation"</span>), <span class="macro">vec!</span>[<span class="prelude-val">None</span>, <span class="prelude-val">Some</span>(withsup)]).unlist());
-<a href=#843 id=843 data-nosnippet>843</a>      }
-<a href=#844 id=844 data-nosnippet>844</a>      <span class="prelude-val">Ok</span>(Tokens::new(calls))
-<a href=#845 id=845 data-nosnippet>845</a>    } <span class="kw">else </span>{
-<a href=#846 id=846 data-nosnippet>846</a>      <span class="comment">// SURPASS over Perl (OXIDIZED_DESIGN #156): render an author-attached `\thanks`
-<a href=#847 id=847 data-nosnippet>847</a>      // as a MARKED note (a superscript mark on the author name + margin/footnote
-<a href=#848 id=848 data-nosnippet>848</a>      // content) instead of a `role=thanks` CONTACT that reads inline like an
-<a href=#849 id=849 data-nosnippet>849</a>      // affiliation next to the name. Route to `&lt;ltx:note role="thanks"&gt;` so the
-<a href=#850 id=850 data-nosnippet>850</a>      // existing `ltx:note` footnote template (mark + `ltx_note_outer`/`ltx_note_content`)
-<a href=#851 id=851 data-nosnippet>851</a>      // renders it, and attach semantic CSS hooks so a theme can style each kind of
-<a href=#852 id=852 data-nosnippet>852</a>      // thanks content: `ltx_note_frontmatter` (the ar5iv frontmatter-note hook) plus a
-<a href=#853 id=853 data-nosnippet>853</a>      // best-effort content-kind class `ltx_thanks_&lt;kind&gt;` from `classify_thanks`. Perl
-<a href=#854 id=854 data-nosnippet>854</a>      // keeps the inline contact (SHARED readability gap). Witnesses arXiv 2512.24601
-<a href=#855 id=855 data-nosnippet>855</a>      // (correspondence), 1510.02728 (funding).
-<a href=#856 id=856 data-nosnippet>856</a>      </span><span class="kw">let </span>kind = classify_thanks(content.clone().untex_string().as_ref());
-<a href=#857 id=857 data-nosnippet>857</a>      <span class="kw">let </span><span class="kw-2">mut </span>opts = mouth::tokenize_internal(TeXString::assembled(<span class="macro">s!</span>(
-<a href=#858 id=858 data-nosnippet>858</a>        <span class="string">"role=thanks,class=ltx_note_frontmatter ltx_thanks_{kind}"
-<a href=#859 id=859 data-nosnippet>859</a>      </span>)))
-<a href=#860 id=860 data-nosnippet>860</a>      .unlist();
-<a href=#861 id=861 data-nosnippet>861</a>      <span class="kw">if let </span><span class="prelude-val">Some</span>(a) = <span class="kw-2">&amp;</span>attr {
-<a href=#862 id=862 data-nosnippet>862</a>        opts.push(<span class="macro">T_OTHER!</span>(<span class="string">","</span>));
-<a href=#863 id=863 data-nosnippet>863</a>        opts.extend(a.unlist_ref().iter().copied());
-<a href=#864 id=864 data-nosnippet>864</a>      }
-<a href=#865 id=865 data-nosnippet>865</a>      <span class="kw">let </span><span class="kw-2">mut </span>calls = <span class="macro">vec!</span>[<span class="macro">T_CS!</span>(<span class="string">"\\lx@title@footnote@step"</span>)];
-<a href=#866 id=866 data-nosnippet>866</a>      calls.extend(<span class="macro">Invocation!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\lx@annotate@frontmatter"</span>),
-<a href=#867 id=867 data-nosnippet>867</a>        <span class="macro">vec!</span>[<span class="prelude-val">Some</span>(mouth::tokenize_internal(<span class="string">"ltx:creator"</span>)),
-<a href=#868 id=868 data-nosnippet>868</a>             <span class="prelude-val">Some</span>(mouth::tokenize_internal(<span class="string">"ltx:note"</span>)),
-<a href=#869 id=869 data-nosnippet>869</a>             <span class="prelude-val">Some</span>(Tokens::new(opts)), <span class="prelude-val">Some</span>(note_body(content))]).unlist());
-<a href=#870 id=870 data-nosnippet>870</a>      <span class="prelude-val">Ok</span>(Tokens::new(calls))
-<a href=#871 id=871 data-nosnippet>871</a>    }
-<a href=#872 id=872 data-nosnippet>872</a>  });
-<a href=#873 id=873 data-nosnippet>873</a>  <span class="comment">// An ordinary argument, as `\lx@add@thanks` (an author's `\footnote`; KNOWN_PERL_ERRORS #515).
-<a href=#874 id=874 data-nosnippet>874</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\lx@add@note [] {}"</span>, sub[(attr, content)] {
-<a href=#875 id=875 data-nosnippet>875</a>    <span class="kw">let </span><span class="kw-2">mut </span>opts = mouth::tokenize_internal(<span class="string">"role=note"</span>).unlist();
-<a href=#876 id=876 data-nosnippet>876</a>    <span class="kw">if let </span><span class="prelude-val">Some</span>(a) = <span class="kw-2">&amp;</span>attr {
-<a href=#877 id=877 data-nosnippet>877</a>      opts.push(<span class="macro">T_OTHER!</span>(<span class="string">","</span>));
-<a href=#878 id=878 data-nosnippet>878</a>      opts.extend(a.unlist_ref().iter().copied());
-<a href=#879 id=879 data-nosnippet>879</a>    }
-<a href=#880 id=880 data-nosnippet>880</a>    <span class="kw">let </span><span class="kw-2">mut </span>calls = <span class="macro">vec!</span>[<span class="macro">T_CS!</span>(<span class="string">"\\lx@title@footnote@step"</span>)];
-<a href=#881 id=881 data-nosnippet>881</a>    calls.extend(<span class="macro">Invocation!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\lx@annotate@frontmatter"</span>),
-<a href=#882 id=882 data-nosnippet>882</a>      <span class="macro">vec!</span>[<span class="prelude-val">Some</span>(mouth::tokenize_internal(<span class="string">"ltx:creator"</span>)),
-<a href=#883 id=883 data-nosnippet>883</a>           <span class="prelude-val">Some</span>(mouth::tokenize_internal(<span class="string">"ltx:contact"</span>)),
-<a href=#884 id=884 data-nosnippet>884</a>           <span class="prelude-val">Some</span>(Tokens::new(opts)), <span class="prelude-val">Some</span>(note_body(content))]).unlist());
-<a href=#885 id=885 data-nosnippet>885</a>    <span class="prelude-val">Ok</span>(Tokens::new(calls))
-<a href=#886 id=886 data-nosnippet>886</a>  });
-<a href=#887 id=887 data-nosnippet>887</a>  <span class="prelude-val">Ok</span>(())
-<a href=#888 id=888 data-nosnippet>888</a>}
-<a href=#889 id=889 data-nosnippet>889</a>
-<a href=#890 id=890 data-nosnippet>890</a><span class="doccomment">/// `\lx@author@markup@begin`: the author markup in force for the author content; with `rehearsal`, the frontmatter
-<a href=#891 id=891 data-nosnippet>891</a>/// observer's rehearsal's (observer/reading.rs), in which a title-code definition reading no argument stays undefined,
-<a href=#892 id=892 data-nosnippet>892</a>/// its held Error the reading's (`reads_arguments`; OXIDIZED_DESIGN_DIVERGENCES #802, #941).
-<a href=#893 id=893 data-nosnippet>893</a></span><span class="kw">pub</span>(<span class="kw">in </span><span class="kw">crate</span>::base_utilities) <span class="kw">fn </span>author_markup_begin(rehearsal: bool) -&gt; <span class="prelude-ty">Result</span>&lt;Tokens&gt; {
-<a href=#894 id=894 data-nosnippet>894</a>  <span class="comment">// A binding's author markup for a class that defines its own only where its title code prints the author list
-<a href=#895 id=895 data-nosnippet>895</a>  // (`\lx@author@markup@class`, `\lx@author@markup@provide` calls: vmsta.cls:278-291 `\name@m@front`, which prints
-<a href=#896 id=896 data-nosnippet>896</a>  // `\fnm`/`\snm` as "Yuliya~Mishura" and drops `\inits`; latexml_contrib vmsta_cls.rs) comes first, before
-<a href=#897 id=897 data-nosnippet>897</a>  // OmniBus's identity meanings would take the names it gives.
-<a href=#898 id=898 data-nosnippet>898</a>  </span><span class="kw">let </span><span class="kw-2">mut </span>out = <span class="macro">TokenizeInternal!</span>(<span class="string">r"\def\lx@author@markup@unprovide{}"</span>).unlist();
-<a href=#899 id=899 data-nosnippet>899</a>  <span class="kw">if </span><span class="macro">IsDefined!</span>(<span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="string">"\\lx@author@markup@class"</span>)) {
-<a href=#900 id=900 data-nosnippet>900</a>    out.push(<span class="macro">T_CS!</span>(<span class="string">"\\lx@author@markup@class"</span>));
-<a href=#901 id=901 data-nosnippet>901</a>  }
-<a href=#902 id=902 data-nosnippet>902</a>  out.extend(<span class="kw">if </span>lookup_bool(<span class="string">"\\author:redefined"</span>) {
-<a href=#903 id=903 data-nosnippet>903</a>    <span class="macro">TokenizeInternal!</span>(
-<a href=#904 id=904 data-nosnippet>904</a>      <span class="string">r"\lx@author@markup@provide\prefix\@firstofone\lx@author@markup@provide\suffix\@firstofone\lx@author@markup@provide\particle\@firstofone\lx@author@markup@provide\fnms\@firstofone\lx@author@markup@provide\snm\@firstofone\lx@author@markup@provide\inits\@firstofone\lx@author@markup@provide\degs\@firstofone\lx@author@markup@provide\roles\@firstofone\lx@author@markup@provide\orcid\lx@author@orcid"
-<a href=#905 id=905 data-nosnippet>905</a>    </span>)
-<a href=#906 id=906 data-nosnippet>906</a>    .unlist()
-<a href=#907 id=907 data-nosnippet>907</a>  } <span class="kw">else </span>{
-<a href=#908 id=908 data-nosnippet>908</a>    Vec::new()
-<a href=#909 id=909 data-nosnippet>909</a>  });
-<a href=#910 id=910 data-nosnippet>910</a>  <span class="comment">// The author markup a class defines only where its title code reads `\@author` is in force for the author content
-<a href=#911 id=911 data-nosnippet>911</a>  // too: melba.cls:279-283 `{\def\aff{…}\def\name{…}\@author …}` (2405.09787, 2407.21368, 2105.14711), dmlr2e.sty:
-<a href=#912 id=912 data-nosnippet>912</a>  // 249-251 (2404.08403), amta2024.sty:77-78 (2405.16969), ssArxiv.sty:109-111 (2503.22625), a preamble's own
-<a href=#913 id=913 data-nosnippet>913</a>  // `\@maketitle` (2601.05137). In pdflatex `\@author` expands inside that group, while here the author content is
-<a href=#914 id=914 data-nosnippet>914</a>  // read at the frontmatter, before the title code runs. Each definition of a control sequence still undefined runs,
-<a href=#915 id=915 data-nosnippet>915</a>  // in source order, for the author content, which it is undefined again after, as the OmniBus author markup is
-<a href=#916 id=916 data-nosnippet>916</a>  // (#444); a definition already in force stands. Perl errs the same (`undefined:\name`).
-<a href=#917 id=917 data-nosnippet>917</a>  </span><span class="kw">let </span>definitions = title_code_author_definitions();
-<a href=#918 id=918 data-nosnippet>918</a>  <span class="kw">let </span>applies: Vec&lt;bool&gt; = definitions
-<a href=#919 id=919 data-nosnippet>919</a>    .iter()
-<a href=#920 id=920 data-nosnippet>920</a>    .map(|(definee, statement)| {
-<a href=#921 id=921 data-nosnippet>921</a>      lookup_meaning(definee).is_none() &amp;&amp; (!rehearsal || reads_arguments(definee, statement))
-<a href=#922 id=922 data-nosnippet>922</a>    })
-<a href=#923 id=923 data-nosnippet>923</a>    .collect();
-<a href=#924 id=924 data-nosnippet>924</a>  <span class="kw">for </span>((definee, statement), applies) <span class="kw">in </span>definitions.into_iter().zip(applies) {
-<a href=#925 id=925 data-nosnippet>925</a>    <span class="kw">if </span>!applies {
-<a href=#926 id=926 data-nosnippet>926</a>      <span class="kw">continue</span>;
-<a href=#927 id=927 data-nosnippet>927</a>    }
-<a href=#928 id=928 data-nosnippet>928</a>    out.extend(statement);
-<a href=#929 id=929 data-nosnippet>929</a>    out.extend(
-<a href=#930 id=930 data-nosnippet>930</a>      <span class="macro">TokenizeInternal!</span>(<span class="string">r"\expandafter\def\expandafter\lx@author@markup@unprovide\expandafter{\lx@author@markup@unprovide\let"</span>)
-<a href=#931 id=931 data-nosnippet>931</a>        .unlist(),
-<a href=#932 id=932 data-nosnippet>932</a>    );
-<a href=#933 id=933 data-nosnippet>933</a>    out.extend([definee, <span class="macro">T_CS!</span>(<span class="string">"\\@undefined"</span>), <span class="macro">T_END!</span>()]);
-<a href=#934 id=934 data-nosnippet>934</a>  }
-<a href=#935 id=935 data-nosnippet>935</a>  <span class="prelude-val">Ok</span>(Tokens::new(out))
-<a href=#936 id=936 data-nosnippet>936</a>}
-<a href=#937 id=937 data-nosnippet>937</a>
-<a href=#938 id=938 data-nosnippet>938</a><span class="doccomment">/// `\lx@add@author[attr]{name}` and `\lx@add@creator[attr]{name}` (Base_Utility.pool.ltxml `\lx@add@creator`): the
-<a href=#939 id=939 data-nosnippet>939</a>/// creator `\lx@add@frontmatter{ltx:creator}[role=author,attr]{\lx@personname{\lx@author@withinst{name}}}`, its
-<a href=#940 id=940 data-nosnippet>940</a>/// name's written membership grade taken out as its contact ([`membership_read_out`]). A collaboration a creator's
-<a href=#941 id=941 data-nosnippet>941</a>/// content names is the reading's to read (`resolver::lines::frames_the_names`).
-<a href=#942 id=942 data-nosnippet>942</a></span><span class="kw">fn </span>creator_call(attr: <span class="prelude-ty">Option</span>&lt;Tokens&gt;, name: Tokens) -&gt; <span class="prelude-ty">Result</span>&lt;Tokens&gt; {
-<a href=#943 id=943 data-nosnippet>943</a>  <span class="kw">let </span>name = membership_read_out(name);
-<a href=#944 id=944 data-nosnippet>944</a>  <span class="kw">let </span><span class="kw-2">mut </span>out = <span class="macro">TokenizeInternal!</span>(<span class="string">r"\lx@add@frontmatter{ltx:creator}[role=author,"</span>).unlist();
-<a href=#945 id=945 data-nosnippet>945</a>  <span class="kw">if let </span><span class="prelude-val">Some</span>(attr) = attr {
-<a href=#946 id=946 data-nosnippet>946</a>    out.extend(attr.unlist());
-<a href=#947 id=947 data-nosnippet>947</a>  }
-<a href=#948 id=948 data-nosnippet>948</a>  out.extend(<span class="macro">TokenizeInternal!</span>(<span class="string">r"]{\lx@personname{\lx@author@withinst{"</span>).unlist());
-<a href=#949 id=949 data-nosnippet>949</a>  out.extend(name.unlist());
-<a href=#950 id=950 data-nosnippet>950</a>  out.extend([<span class="macro">T_END!</span>(), <span class="macro">T_END!</span>(), <span class="macro">T_END!</span>()]);
-<a href=#951 id=951 data-nosnippet>951</a>  <span class="prelude-val">Ok</span>(Tokens::new(out))
-<a href=#952 id=952 data-nosnippet>952</a>}
-<a href=#953 id=953 data-nosnippet>953</a>
-<a href=#954 id=954 data-nosnippet>954</a><span class="doccomment">/// An address as TeX prints it where its argument holds a formula ([`math_braces_as_printed`], then
-<a href=#955 id=955 data-nosnippet>955</a>/// [`math_glyphs_as_printed`]): the reading of every e-mail and URL contact (`\lx@add@email`, `\lx@add@url`), for
-<a href=#956 id=956 data-nosnippet>956</a>/// every binding (OXIDIZED_DESIGN_DIVERGENCES #972).
-<a href=#957 id=957 data-nosnippet>957</a></span><span class="kw">pub</span>(<span class="kw">in </span><span class="kw">crate</span>::base_utilities) <span class="kw">fn </span>address_as_printed(address: <span class="kw-2">&amp;</span>Tokens) -&gt; Tokens {
-<a href=#958 id=958 data-nosnippet>958</a>  math_glyphs_as_printed(<span class="kw-2">&amp;</span>math_braces_as_printed(address))
-<a href=#959 id=959 data-nosnippet>959</a>}
-<a href=#960 id=960 data-nosnippet>960</a>
-<a href=#961 id=961 data-nosnippet>961</a><span class="doccomment">/// An address's formula as TeX prints it where the formula is glyphs: a pair of math shifts — read as characters (a
-<a href=#962 id=962 data-nosnippet>962</a>/// Semiverbatim argument made `$` other: the API's `\lx@add@url`/`\lx@add@email`, Perl's `neutralize`) or as shifts —
-<a href=#963 id=963 data-nosnippet>963</a>/// round a run of characters, of character commands ([`text_glyph`]: `\_`, `\{`) and of math symbols that each print
-<a href=#964 id=964 data-nosnippet>964</a>/// one glyph ([`math_symbol_glyph`]: `\sim`, `\cdot`) is the run, each command its glyph, the shifts and spaces dropped as math drops spaces:
-<a href=#965 id=965 data-nosnippet>965</a>/// `http://www.zebra.edu/$\sim$ann` prints "http://www.zebra.edu/∼ann", as pdflatex, where the dollars printed
-<a href=#966 id=966 data-nosnippet>966</a>/// (1301.1466's `\ead[label=u2,url]{http://www.math.duke.edu/$\sim$omer}`, math0608476's
-<a href=#967 id=967 data-nosnippet>967</a>/// `www.math.wisc.edu/$\sim$swanson`). The glyph is a character of the address, in its font (TeX takes it from the
-<a href=#968 id=968 data-nosnippet>968</a>/// math font), so the address stays one text and its link whole. The shifts pair left to right, as TeX pairs them: a
-<a href=#969 id=969 data-nosnippet>969</a>/// pair round a script (`^`, `_`: `$^*$x@y`'s mark), a command of another kind or nothing (`$$`) stays as it is,
-<a href=#970 id=970 data-nosnippet>970</a>/// whole, and the next pair opens after its closing shift — `$^a$a@x, $^b$b@y` keeps both marks and the text between
-<a href=#971 id=971 data-nosnippet>971</a>/// them (2508.20055's `ej$_$dresselhaus@berkeley.edu, s$_$g@berkeley.edu`). A pair round spacing alone
-<a href=#972 id=972 data-nosnippet>972</a>/// ([`spacing_formulas_as_space`]: `$~\quad$`, `$\,$`) is glue, no glyph: a space between printed text, none at an
-<a href=#973 id=973 data-nosnippet>973</a>/// edge (2205.14113's `$~\quad~~$`).
-<a href=#974 id=974 data-nosnippet>974</a></span><span class="kw">pub</span>(<span class="kw">in </span><span class="kw">crate</span>::base_utilities) <span class="kw">fn </span>math_glyphs_as_printed(address: <span class="kw-2">&amp;</span>Tokens) -&gt; Tokens {
-<a href=#975 id=975 data-nosnippet>975</a>  <span class="kw">let </span>address = spacing_formulas_as_space(address.clone());
-<a href=#976 id=976 data-nosnippet>976</a>  <span class="kw">let </span>v = address.unlist_ref();
-<a href=#977 id=977 data-nosnippet>977</a>  <span class="kw">let </span>shift = |t: <span class="kw-2">&amp;</span>Token| <span class="kw-2">*</span>t == <span class="macro">T_OTHER!</span>(<span class="string">"$"</span>) || t.get_catcode() == Catcode::MATH;
-<a href=#978 id=978 data-nosnippet>978</a>  <span class="kw">let </span>script = |t: <span class="kw-2">&amp;</span>Token| [<span class="macro">T_OTHER!</span>(<span class="string">"^"</span>), <span class="macro">T_OTHER!</span>(<span class="string">"_"</span>)].contains(t);
-<a href=#979 id=979 data-nosnippet>979</a>  <span class="kw">let </span>glyphs = |t: <span class="kw-2">&amp;</span>Token| -&gt; <span class="prelude-ty">Option</span>&lt;Vec&lt;Token&gt;&gt; {
-<a href=#980 id=980 data-nosnippet>980</a>    <span class="kw">match </span>t.get_catcode() {
-<a href=#981 id=981 data-nosnippet>981</a>      Catcode::SPACE =&gt; <span class="prelude-val">Some</span>(Vec::new()),
-<a href=#982 id=982 data-nosnippet>982</a>      Catcode::LETTER | Catcode::OTHER <span class="kw">if </span>!shift(t) &amp;&amp; !script(t) =&gt; <span class="prelude-val">Some</span>(<span class="macro">vec!</span>[<span class="kw-2">*</span>t]),
-<a href=#983 id=983 data-nosnippet>983</a>      Catcode::CS =&gt; text_glyph(t)
-<a href=#984 id=984 data-nosnippet>984</a>        .map(|glyph| <span class="macro">vec!</span>[glyph])
-<a href=#985 id=985 data-nosnippet>985</a>        .or_else(|| math_symbol_glyph(t).map(|glyph| text_tokens(<span class="kw-2">&amp;</span>glyph))),
-<a href=#986 id=986 data-nosnippet>986</a>      <span class="kw">_ </span>=&gt; <span class="prelude-val">None</span>,
-<a href=#987 id=987 data-nosnippet>987</a>    }
-<a href=#988 id=988 data-nosnippet>988</a>  };
-<a href=#989 id=989 data-nosnippet>989</a>  <span class="kw">let </span><span class="kw-2">mut </span>out: Vec&lt;Token&gt; = Vec::with_capacity(v.len());
-<a href=#990 id=990 data-nosnippet>990</a>  <span class="kw">let </span><span class="kw-2">mut </span>at = <span class="number">0</span>;
-<a href=#991 id=991 data-nosnippet>991</a>  <span class="kw">while </span>at &lt; v.len() {
-<a href=#992 id=992 data-nosnippet>992</a>    <span class="comment">// the shifts pair left to right, as TeX pairs them: a pair that is not glyphs (a script, the empty `$$`) stays as
-<a href=#993 id=993 data-nosnippet>993</a>    // read, whole, and the next pair starts after its closing shift (2508.20055's `ej$_$d@x, s$_$g@y`)
-<a href=#994 id=994 data-nosnippet>994</a>    </span><span class="kw">if </span>shift(<span class="kw-2">&amp;</span>v[at])
-<a href=#995 id=995 data-nosnippet>995</a>      &amp;&amp; <span class="kw">let </span><span class="prelude-val">Some</span>(len) = v[at + <span class="number">1</span>..].iter().position(shift)
-<a href=#996 id=996 data-nosnippet>996</a>    {
-<a href=#997 id=997 data-nosnippet>997</a>      <span class="kw">let </span>pair = <span class="kw-2">&amp;</span>v[at..at + len + <span class="number">2</span>];
-<a href=#998 id=998 data-nosnippet>998</a>      <span class="kw">match </span>pair[<span class="number">1</span>..=len]
-<a href=#999 id=999 data-nosnippet>999</a>        .iter()
-<a href=#1000 id=1000 data-nosnippet>1000</a>        .map(glyphs)
-<a href=#1001 id=1001 data-nosnippet>1001</a>        .collect::&lt;<span class="prelude-ty">Option</span>&lt;Vec&lt;Vec&lt;Token&gt;&gt;&gt;&gt;()
-<a href=#1002 id=1002 data-nosnippet>1002</a>      {
-<a href=#1003 id=1003 data-nosnippet>1003</a>        <span class="prelude-val">Some</span>(printed) <span class="kw">if </span>printed.iter().any(|glyph| !glyph.is_empty()) =&gt; {
-<a href=#1004 id=1004 data-nosnippet>1004</a>          out.extend(printed.into_iter().flatten())
-<a href=#1005 id=1005 data-nosnippet>1005</a>        },
-<a href=#1006 id=1006 data-nosnippet>1006</a>        <span class="kw">_ </span>=&gt; out.extend_from_slice(pair),
-<a href=#1007 id=1007 data-nosnippet>1007</a>      }
-<a href=#1008 id=1008 data-nosnippet>1008</a>      at += len + <span class="number">2</span>;
-<a href=#1009 id=1009 data-nosnippet>1009</a>      <span class="kw">continue</span>;
-<a href=#1010 id=1010 data-nosnippet>1010</a>    }
-<a href=#1011 id=1011 data-nosnippet>1011</a>    out.push(v[at]);
-<a href=#1012 id=1012 data-nosnippet>1012</a>    at += <span class="number">1</span>;
-<a href=#1013 id=1013 data-nosnippet>1013</a>  }
-<a href=#1014 id=1014 data-nosnippet>1014</a>  Tokens::new(out)
-<a href=#1015 id=1015 data-nosnippet>1015</a>}
-<a href=#1016 id=1016 data-nosnippet>1016</a>
-<a href=#1017 id=1017 data-nosnippet>1017</a><span class="doccomment">/// The command a character command prints its character with in text, where it prints the same character in math
-<a href=#1018 id=1018 data-nosnippet>1018</a>/// (latex.ltx's `\_`, `\{`, `\}`, `\#`, `\%`, `\&amp;`; `\lbrace` and `\rbrace` the braces): `$\{a,b\}$@w.edu` prints
-<a href=#1019 id=1019 data-nosnippet>1019</a>/// "{a,b}@w.edu", `p$\_$r` "p_r". `None` for any other command.
-<a href=#1020 id=1020 data-nosnippet>1020</a></span><span class="kw">fn </span>text_glyph(t: <span class="kw-2">&amp;</span>Token) -&gt; <span class="prelude-ty">Option</span>&lt;Token&gt; {
-<a href=#1021 id=1021 data-nosnippet>1021</a>  <span class="comment">// (each command and the one it prints with in text)
-<a href=#1022 id=1022 data-nosnippet>1022</a>  </span><span class="kw">const </span>GLYPHS: [(<span class="kw-2">&amp;</span>str, <span class="kw-2">&amp;</span>str); <span class="number">8</span>] = [
-<a href=#1023 id=1023 data-nosnippet>1023</a>    (<span class="string">"\\_"</span>, <span class="string">"\\_"</span>),
-<a href=#1024 id=1024 data-nosnippet>1024</a>    (<span class="string">"\\{"</span>, <span class="string">"\\{"</span>),
-<a href=#1025 id=1025 data-nosnippet>1025</a>    (<span class="string">"\\}"</span>, <span class="string">"\\}"</span>),
-<a href=#1026 id=1026 data-nosnippet>1026</a>    (<span class="string">"\\#"</span>, <span class="string">"\\#"</span>),
-<a href=#1027 id=1027 data-nosnippet>1027</a>    (<span class="string">"\\%"</span>, <span class="string">"\\%"</span>),
-<a href=#1028 id=1028 data-nosnippet>1028</a>    (<span class="string">"\\&amp;"</span>, <span class="string">"\\&amp;"</span>),
-<a href=#1029 id=1029 data-nosnippet>1029</a>    (<span class="string">"\\lbrace"</span>, <span class="string">"\\{"</span>),
-<a href=#1030 id=1030 data-nosnippet>1030</a>    (<span class="string">"\\rbrace"</span>, <span class="string">"\\}"</span>),
-<a href=#1031 id=1031 data-nosnippet>1031</a>  ];
-<a href=#1032 id=1032 data-nosnippet>1032</a>  GLYPHS
-<a href=#1033 id=1033 data-nosnippet>1033</a>    .iter()
-<a href=#1034 id=1034 data-nosnippet>1034</a>    .find(|(command, <span class="kw">_</span>)| <span class="kw-2">*</span>t == <span class="macro">T_CS!</span>(<span class="kw-2">*</span>command))
-<a href=#1035 id=1035 data-nosnippet>1035</a>    .map(|(<span class="kw">_</span>, glyph)| <span class="macro">T_CS!</span>(<span class="kw-2">*</span>glyph))
-<a href=#1036 id=1036 data-nosnippet>1036</a>}
-<a href=#1037 id=1037 data-nosnippet>1037</a>
-<a href=#1038 id=1038 data-nosnippet>1038</a><span class="doccomment">/// The glyph a math symbol prints: the text of the one box a math primitive without arguments makes (`\sim` "∼",
-<a href=#1039 id=1039 data-nosnippet>1039</a>/// `def_math_primitive`), which reads the current font and changes nothing. `None` for any other command.
-<a href=#1040 id=1040 data-nosnippet>1040</a></span><span class="kw">fn </span>math_symbol_glyph(t: <span class="kw-2">&amp;</span>Token) -&gt; <span class="prelude-ty">Option</span>&lt;String&gt; {
-<a href=#1041 id=1041 data-nosnippet>1041</a>  <span class="kw">let </span><span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(Stored::MathPrimitive(math))) = lookup_definition_stored(t) <span class="kw">else </span>{
-<a href=#1042 id=1042 data-nosnippet>1042</a>    <span class="kw">return </span><span class="prelude-val">None</span>;
-<a href=#1043 id=1043 data-nosnippet>1043</a>  };
-<a href=#1044 id=1044 data-nosnippet>1044</a>  <span class="kw">if </span>math.nargs.unwrap_or(<span class="number">0</span>) != <span class="number">0 </span>{
-<a href=#1045 id=1045 data-nosnippet>1045</a>    <span class="kw">return </span><span class="prelude-val">None</span>;
-<a href=#1046 id=1046 data-nosnippet>1046</a>  }
-<a href=#1047 id=1047 data-nosnippet>1047</a>  <span class="kw">let </span>boxes = (math.replacement.as_ref()<span class="question-mark">?</span>)(Vec::new()).ok()<span class="question-mark">?</span>;
-<a href=#1048 id=1048 data-nosnippet>1048</a>  <span class="kw">match </span>boxes.as_slice() {
-<a href=#1049 id=1049 data-nosnippet>1049</a>    [only] =&gt; <span class="kw">match </span>only.data() {
-<a href=#1050 id=1050 data-nosnippet>1050</a>      DigestedData::TBox(b) =&gt; {
-<a href=#1051 id=1051 data-nosnippet>1051</a>        <span class="kw">let </span>text = b.borrow().get_string().ok()<span class="question-mark">?</span>.to_string();
-<a href=#1052 id=1052 data-nosnippet>1052</a>        (!text.is_empty() &amp;&amp; text.chars().count() == <span class="number">1</span>).then_some(text)
-<a href=#1053 id=1053 data-nosnippet>1053</a>      },
-<a href=#1054 id=1054 data-nosnippet>1054</a>      <span class="kw">_ </span>=&gt; <span class="prelude-val">None</span>,
-<a href=#1055 id=1055 data-nosnippet>1055</a>    },
-<a href=#1056 id=1056 data-nosnippet>1056</a>    <span class="kw">_ </span>=&gt; <span class="prelude-val">None</span>,
-<a href=#1057 id=1057 data-nosnippet>1057</a>  }
-<a href=#1058 id=1058 data-nosnippet>1058</a>}
-<a href=#1059 id=1059 data-nosnippet>1059</a>
-<a href=#1060 id=1060 data-nosnippet>1060</a><span class="doccomment">/// Rust-only (OXIDIZED_DESIGN_DIVERGENCES #960): an ORCID contact whose link prints no word (`\href{https://orcid.org/…}
-<a href=#1061 id=1061 data-nosnippet>1061</a>/// {\orcidicon}`, the TikZ "iD" icon of the `\orcidicon` template, a logo graphic), as the frontmatter emitter writes it
-<a href=#1062 id=1062 data-nosnippet>1062</a>/// from the document's `tokens`: the kernel's ORCID link to `id`, the iD the reading read (a template's `\xdef` may leave
-<a href=#1063 id=1063 data-nosnippet>1063</a>/// the iD's macro in the address, `https://orcid.org/\orcidauthorSKP`), its iD in the link and its title, the icon as
-<a href=#1064 id=1064 data-nosnippet>1064</a>/// printed — `\href` let to `\lx@orcid@href` for the contact, as `\lx@author@href` makes a name's link the contact
-<a href=#1065 id=1065 data-nosnippet>1065</a>/// (2008.02173, 2009.11534; the link had been written plain, the iD's title lost).
-<a href=#1066 id=1066 data-nosnippet>1066</a></span><span class="kw">pub</span>(<span class="kw">in </span><span class="kw">crate</span>::base_utilities) <span class="kw">fn </span>orcid_icon_link(id: <span class="kw-2">&amp;</span>str, tokens: <span class="kw-2">&amp;</span>[Token]) -&gt; Vec&lt;Token&gt; {
-<a href=#1067 id=1067 data-nosnippet>1067</a>  <span class="kw">let </span><span class="kw-2">mut </span>content = <span class="macro">vec!</span>[
-<a href=#1068 id=1068 data-nosnippet>1068</a>    <span class="macro">T_BEGIN!</span>(),
-<a href=#1069 id=1069 data-nosnippet>1069</a>    <span class="macro">T_CS!</span>(<span class="string">"\\def"</span>),
-<a href=#1070 id=1070 data-nosnippet>1070</a>    <span class="macro">T_CS!</span>(<span class="string">"\\lx@orcid@known"</span>),
-<a href=#1071 id=1071 data-nosnippet>1071</a>    <span class="macro">T_BEGIN!</span>(),
+<a href=#406 id=406 data-nosnippet>406</a>  <span class="comment">// Rust-only: run a title-page note list where the class prints it (acmart.cls:2245-2247, revtex4-2.cls:3020-3022,
+<a href=#407 id=407 data-nosnippet>407</a>  // amsaddr.sty:113): footnote texts become notes, the footnote count is restored (OD #1036; 2605.28175, 2402.16516).
+<a href=#408 id=408 data-nosnippet>408</a>  </span><span class="macro">DefMacro!</span>(
+<a href=#409 id=409 data-nosnippet>409</a>    <span class="string">"\\lx@frontmatter@footnotes{}"</span>,
+<a href=#410 id=410 data-nosnippet>410</a>    <span class="string">r"\edef\lx@fm@footnote{\the\c@footnote}\begingroup\ifvmode\let\lx@fm@par\par\else\let\lx@fm@par\relax\fi\let\footnotetext\lx@fm@footnotetext\let\@footnotetext\lx@fm@@footnotetext#1\ifhmode\lx@fm@par\fi\endgroup\global\c@footnote\lx@fm@footnote\relax"
+<a href=#411 id=411 data-nosnippet>411</a>  </span>);
+<a href=#412 id=412 data-nosnippet>412</a>  <span class="macro">DefMacro!</span>(
+<a href=#413 id=413 data-nosnippet>413</a>    <span class="string">"\\lx@fm@footnotetext[]{}"</span>,
+<a href=#414 id=414 data-nosnippet>414</a>    <span class="string">"\\lx@add@pubnote[role=note,name={}]{#2}"
+<a href=#415 id=415 data-nosnippet>415</a>  </span>);
+<a href=#416 id=416 data-nosnippet>416</a>  <span class="macro">DefMacro!</span>(
+<a href=#417 id=417 data-nosnippet>417</a>    <span class="string">"\\lx@fm@@footnotetext{}"</span>,
+<a href=#418 id=418 data-nosnippet>418</a>    <span class="string">"\\lx@add@pubnote[role=note,name={}]{#1}"
+<a href=#419 id=419 data-nosnippet>419</a>  </span>);
+<a href=#420 id=420 data-nosnippet>420</a>
+<a href=#421 id=421 data-nosnippet>421</a>  <span class="comment">// Other kinds of notes?
+<a href=#422 id=422 data-nosnippet>422</a>
+<a href=#423 id=423 data-nosnippet>423</a>  // The following add various forms of contact information to a creator
+<a href=#424 id=424 data-nosnippet>424</a>  </span><span class="macro">DefMacro!</span>(
+<a href=#425 id=425 data-nosnippet>425</a>    <span class="string">"\\lx@add@contact []{}"</span>,
+<a href=#426 id=426 data-nosnippet>426</a>    <span class="string">"\\lx@annotate@frontmatter{ltx:creator}{ltx:contact}[#1]{#2}"
+<a href=#427 id=427 data-nosnippet>427</a>  </span>);
+<a href=#428 id=428 data-nosnippet>428</a>
+<a href=#429 id=429 data-nosnippet>429</a>  <span class="macro">DefMacro!</span>(
+<a href=#430 id=430 data-nosnippet>430</a>    <span class="string">"\\lx@add@affiliation[]{}"</span>,
+<a href=#431 id=431 data-nosnippet>431</a>    <span class="string">"\\lx@annotate@frontmatter{ltx:creator}{ltx:contact}[role=affiliation,#1]{\\lx@affiliation@withinst{#2}}"
+<a href=#432 id=432 data-nosnippet>432</a>  </span>);
+<a href=#433 id=433 data-nosnippet>433</a>  <span class="comment">// The affiliation-side twin of `\lx@author@withinst`: inside affiliation
+<a href=#434 id=434 data-nosnippet>434</a>  // content `\inst{n}` SETS the affiliation's label (beamerbasetitle.sty:148
+<a href=#435 id=435 data-nosnippet>435</a>  // `\institute{\inst{1}Univ A \and \inst{2}Univ B}` marks each institute
+<a href=#436 id=436 data-nosnippet>436</a>  // with the number the authors' `\inst{1}` request) — the meaning
+<a href=#437 id=437 data-nosnippet>437</a>  // `\lx@affiliation@withsup` gives a `\textsuperscript` mark, never a
+<a href=#438 id=438 data-nosnippet>438</a>  // typeset `&lt;sup&gt;`; `\def`, as in `\lx@author@withinst` (a class's
+<a href=#439 id=439 data-nosnippet>439</a>  // document-level `\inst` is the affiliation LIST, not a label). The author markup is in force here too: an
+<a href=#440 id=440 data-nosnippet>440</a>  // affiliation line of the author block is author content (`$^{3}$Chan Zuckerberg Biohub \\ \email Correspondence:
+<a href=#441 id=441 data-nosnippet>441</a>  // …` under auth_detailed.sty's `\@maketitle` definitions, 2406.07496).
+<a href=#442 id=442 data-nosnippet>442</a>  </span><span class="macro">DefMacro!</span>(
+<a href=#443 id=443 data-nosnippet>443</a>    <span class="string">"\\lx@affiliation@withinst{}"</span>,
+<a href=#444 id=444 data-nosnippet>444</a>    <span class="string">"\\let\\lx@saved@inst\\inst\\def\\inst##1{\\lx@sup@setlabel@affiliation{##1}}\\lx@author@markup@begin\\expandafter\\lx@author@markup@run\\expandafter{\\lx@author@markup@unprovide}{#1}\\let\\inst\\lx@saved@inst"
+<a href=#445 id=445 data-nosnippet>445</a>  </span>);
+<a href=#446 id=446 data-nosnippet>446</a>  <span class="macro">DefMacro!</span>(
+<a href=#447 id=447 data-nosnippet>447</a>    <span class="string">"\\lx@add@altaffiliation[]{}"</span>,
+<a href=#448 id=448 data-nosnippet>448</a>    <span class="string">"\\lx@annotate@frontmatter{ltx:creator}{ltx:contact}[role=altaffiliation,#1]{#2}"
+<a href=#449 id=449 data-nosnippet>449</a>  </span>);
+<a href=#450 id=450 data-nosnippet>450</a>  <span class="macro">DefMacro!</span>(
+<a href=#451 id=451 data-nosnippet>451</a>    <span class="string">"\\lx@add@address[]{}"</span>,
+<a href=#452 id=452 data-nosnippet>452</a>    <span class="string">"\\lx@annotate@frontmatter{ltx:creator}{ltx:contact}[role=address,#1]{#2}"
+<a href=#453 id=453 data-nosnippet>453</a>  </span>);
+<a href=#454 id=454 data-nosnippet>454</a>  <span class="macro">DefMacro!</span>(
+<a href=#455 id=455 data-nosnippet>455</a>    <span class="string">"\\lx@add@altaddress[]{}"</span>,
+<a href=#456 id=456 data-nosnippet>456</a>    <span class="string">"\\lx@annotate@frontmatter{ltx:creator}{ltx:contact}[role=altaddress,#1]{#2}"
+<a href=#457 id=457 data-nosnippet>457</a>  </span>);
+<a href=#458 id=458 data-nosnippet>458</a>  <span class="macro">DefMacro!</span>(
+<a href=#459 id=459 data-nosnippet>459</a>    <span class="string">"\\lx@add@currentaddress[]{}"</span>,
+<a href=#460 id=460 data-nosnippet>460</a>    <span class="string">"\\lx@annotate@frontmatter{ltx:creator}{ltx:contact}[role=currentaddress,#1]{#2}"
+<a href=#461 id=461 data-nosnippet>461</a>  </span>);
+<a href=#462 id=462 data-nosnippet>462</a>  <span class="comment">// (Rust-only, OXIDIZED_DESIGN_DIVERGENCES #972: the address as TeX prints it, a brace set in math a brace —
+<a href=#463 id=463 data-nosnippet>463</a>  // `\email{$\{$a,b$\}$@x}` prints "{a,b}@x", which the class's verbatim reading kept as "${$a,b$}$@x": llncs's
+<a href=#464 id=464 data-nosnippet>464</a>  // 1106.2694, 2308.00146, 1602.04934 — [`math_braces_as_printed`]; a formula of glyphs its glyphs, `$\sim$` "∼",
+<a href=#465 id=465 data-nosnippet>465</a>  // 1301.1466, math0608476 — [`address_as_printed`])
+<a href=#466 id=466 data-nosnippet>466</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\lx@add@email [] Semiverbatim"</span>, sub[(attr, address)] {
+<a href=#467 id=467 data-nosnippet>467</a>    <span class="kw">let </span>address: Tokens = address;
+<a href=#468 id=468 data-nosnippet>468</a>    <span class="kw">let </span><span class="kw-2">mut </span>keyvals: Vec&lt;Token&gt; = mouth::tokenize_internal(<span class="string">"role=email,"</span>).unlist();
+<a href=#469 id=469 data-nosnippet>469</a>    <span class="kw">if let </span><span class="prelude-val">Some</span>(attr) = attr {
+<a href=#470 id=470 data-nosnippet>470</a>      keyvals.extend(attr.unlist());
+<a href=#471 id=471 data-nosnippet>471</a>    }
+<a href=#472 id=472 data-nosnippet>472</a>    <span class="prelude-val">Ok</span>(<span class="macro">Invocation!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\lx@annotate@frontmatter"</span>), <span class="macro">vec!</span>[
+<a href=#473 id=473 data-nosnippet>473</a>      <span class="prelude-val">Some</span>(mouth::tokenize_internal(<span class="string">"ltx:creator"</span>)),
+<a href=#474 id=474 data-nosnippet>474</a>      <span class="prelude-val">Some</span>(mouth::tokenize_internal(<span class="string">"ltx:contact"</span>)),
+<a href=#475 id=475 data-nosnippet>475</a>      <span class="prelude-val">Some</span>(Tokens::new(keyvals)),
+<a href=#476 id=476 data-nosnippet>476</a>      <span class="prelude-val">Some</span>(address_as_printed(<span class="kw-2">&amp;</span>address))
+<a href=#477 id=477 data-nosnippet>477</a>    ]))
+<a href=#478 id=478 data-nosnippet>478</a>  });
+<a href=#479 id=479 data-nosnippet>479</a>  <span class="comment">// Rust-only (OXIDIZED_DESIGN_DIVERGENCES #901): an address of the e-mail line under a whole row of names, placed by
+<a href=#480 id=480 data-nosnippet>480</a>  // the label the frontmatter emitter gives it (`classify::entry_email_cut`), `#2` set in the class command's font. A
+<a href=#481 id=481 data-nosnippet>481</a>  // class whose own e-mail contact has a name of its own sets it here (llncs's `\emailname`).
+<a href=#482 id=482 data-nosnippet>482</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\lx@row@email{}{}"</span>, <span class="string">"\\lx@add@email[label={#1}]{#2}"</span>);
+<a href=#483 id=483 data-nosnippet>483</a>  <span class="comment">// Rust-only (OXIDIZED_DESIGN_DIVERGENCES #901): such an address under the e-mail label printed before it (`Email:
+<a href=#484 id=484 data-nosnippet>484</a>  // \email{\{a,b\}@x}`, 2602.18622), which names it whatever name the class's own e-mail contact has, as an e-mail
+<a href=#485 id=485 data-nosnippet>485</a>  // line's label names its contacts (`named_email_calls`): `#2` the label.
+<a href=#486 id=486 data-nosnippet>486</a>  </span><span class="macro">DefMacro!</span>(
+<a href=#487 id=487 data-nosnippet>487</a>    <span class="string">"\\lx@row@email@named{}{}{}"</span>,
+<a href=#488 id=488 data-nosnippet>488</a>    <span class="string">"\\lx@add@email[name={#2~},label={#1}]{#3}"
+<a href=#489 id=489 data-nosnippet>489</a>  </span>);
+<a href=#490 id=490 data-nosnippet>490</a>  <span class="comment">// Rust-only: a contact a class's command gives apart from the names (OSA's `\email{x@y}` and `\homepage{…}` after
+<a href=#491 id=491 data-nosnippet>491</a>  // the author groups, opex3.sty:52/:57), placed among the queued authors by [`placed_contact_owner`] (`label=author:N`,
+<a href=#492 id=492 data-nosnippet>492</a>  // or the mark's own label, or `label=addresses:block`, the shared creator of #159). `#1` is the contact's keyvals
+<a href=#493 id=493 data-nosnippet>493</a>  // (its `role`, its `name`), `#2` the operand of the mark written on it (`$^*$x@y`: `*`; empty for none), `#3` its
+<a href=#494 id=494 data-nosnippet>494</a>  // content, already read.
+<a href=#495 id=495 data-nosnippet>495</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\lx@add@contact@placed[]{}{}"</span>, sub[(attr, mark, content)] {
+<a href=#496 id=496 data-nosnippet>496</a>    <span class="kw">let </span>mark: Tokens = mark;
+<a href=#497 id=497 data-nosnippet>497</a>    <span class="kw">let </span>content: Tokens = content;
+<a href=#498 id=498 data-nosnippet>498</a>    <span class="comment">// (`owner=first` in the keyvals: a contact that names no one goes to the group's first author, not to the block —
+<a href=#499 id=499 data-nosnippet>499</a>    // AASTeX's `\authoremail` given before the authors, aas_support_sty.rs)
+<a href=#500 id=500 data-nosnippet>500</a>    </span><span class="kw">let </span>attr_text = attr.as_ref().map(ToString::to_string).unwrap_or_default();
+<a href=#501 id=501 data-nosnippet>501</a>    <span class="kw">let </span>owner_first = attr_text.split(<span class="string">','</span>).any(|kv| kv.trim() == <span class="string">"owner=first"</span>);
+<a href=#502 id=502 data-nosnippet>502</a>    <span class="comment">// (`owner=sequence`: one of a class's list of addresses printed apart from the names, in the order the document
+<a href=#503 id=503 data-nosnippet>503</a>    // gives them — jheppub's `\emailAdd`, iopart's `\ead`: placed as below unless the list proves to be the authors'
+<a href=#504 id=504 data-nosnippet>504</a>    // in order, which the frontmatter's flush decides, `sequenced_contact_labels`)
+<a href=#505 id=505 data-nosnippet>505</a>    </span><span class="kw">let </span>owner_sequence = attr_text.split(<span class="string">','</span>).any(|kv| kv.trim() == <span class="string">"owner=sequence"</span>);
+<a href=#506 id=506 data-nosnippet>506</a>    <span class="comment">// (`mark=address`: a contact the class prints as an address block of its own right after the address before it —
+<a href=#507 id=507 data-nosnippet>507</a>    // iopart's `\ead`, iopart.cls:363 `\def\ead#1{\vspace*{5pt}\address{E-mail: \mailto{#1}}}` —, whose mark is that
+<a href=#508 id=508 data-nosnippet>508</a>    // address's (`\lx@address@mark@set`): weaker evidence than the spelling, so it places only an address that spells
+<a href=#509 id=509 data-nosnippet>509</a>    // no one)
+<a href=#510 id=510 data-nosnippet>510</a>    </span><span class="kw">let </span>flushing = lookup_bool(<span class="string">"lx_frontmatter_flushing"</span>);
+<a href=#511 id=511 data-nosnippet>511</a>    <span class="kw">let </span>under_address = attr_text.split(<span class="string">','</span>).any(|kv| kv.trim() == <span class="string">"mark=address"</span>);
+<a href=#512 id=512 data-nosnippet>512</a>    <span class="kw">let </span>attr_rest: Vec&lt;<span class="kw-2">&amp;</span>str&gt; = attr_text
+<a href=#513 id=513 data-nosnippet>513</a>      .split(<span class="string">','</span>)
+<a href=#514 id=514 data-nosnippet>514</a>      .map(str::trim)
+<a href=#515 id=515 data-nosnippet>515</a>      .filter(|kv| !kv.is_empty() &amp;&amp; ![<span class="string">"owner=first"</span>, <span class="string">"owner=sequence"</span>, <span class="string">"mark=address"</span>].contains(kv))
+<a href=#516 id=516 data-nosnippet>516</a>      .collect();
+<a href=#517 id=517 data-nosnippet>517</a>    <span class="kw">let </span>(mark, weak_mark) = <span class="kw">match </span>lookup_value(<span class="string">"lx_address_mark"</span>) {
+<a href=#518 id=518 data-nosnippet>518</a>      <span class="prelude-val">Some</span>(Stored::Tokens(address_mark)) <span class="kw">if </span>under_address &amp;&amp; mark.is_empty() &amp;&amp; !flushing =&gt; {
+<a href=#519 id=519 data-nosnippet>519</a>        (address_mark, <span class="bool-val">true</span>)
+<a href=#520 id=520 data-nosnippet>520</a>      },
+<a href=#521 id=521 data-nosnippet>521</a>      <span class="kw">_ </span>=&gt; (mark, <span class="bool-val">false</span>),
+<a href=#522 id=522 data-nosnippet>522</a>    };
+<a href=#523 id=523 data-nosnippet>523</a>    <span class="comment">// (an address list's contact digested within another entry, `\author[a]{Ann Able \emailAdd{x}}`, `\address{…
+<a href=#524 id=524 data-nosnippet>524</a>    // \ead{x}}`, is that entry's, as any contact digested there: no list's and placed by nothing of its own, rev78f
+<a href=#525 id=525 data-nosnippet>525</a>    // probes j13, i04)
+<a href=#526 id=526 data-nosnippet>526</a>    </span><span class="kw">if </span>owner_sequence &amp;&amp; flushing {
+<a href=#527 id=527 data-nosnippet>527</a>      <span class="kw">return </span><span class="prelude-val">Ok</span>(<span class="macro">Invocation!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\lx@annotate@frontmatter"</span>), <span class="macro">vec!</span>[
+<a href=#528 id=528 data-nosnippet>528</a>        <span class="prelude-val">Some</span>(mouth::tokenize_internal(<span class="string">"ltx:creator"</span>)),
+<a href=#529 id=529 data-nosnippet>529</a>        <span class="prelude-val">Some</span>(mouth::tokenize_internal(<span class="string">"ltx:contact"</span>)),
+<a href=#530 id=530 data-nosnippet>530</a>        <span class="prelude-val">Some</span>(mouth::tokenize_internal(TeXString::assembled(attr_rest.join(<span class="string">","</span>)))),
+<a href=#531 id=531 data-nosnippet>531</a>        <span class="prelude-val">Some</span>(content)
+<a href=#532 id=532 data-nosnippet>532</a>      ]));
+<a href=#533 id=533 data-nosnippet>533</a>    }
+<a href=#534 id=534 data-nosnippet>534</a>    <span class="comment">// (`label=` and `_answers=` are fixed text; a value is a mark's label and is text: tokenized, `$^{1\#}$`'s `#` was
+<a href=#535 id=535 data-nosnippet>535</a>    // a parameter token and a `%` a comment, so each of its characters is taken as it is)
+<a href=#536 id=536 data-nosnippet>536</a>    </span><span class="kw">let </span>(value, answers) = <span class="kw">match </span>placed_contact_owner(<span class="kw-2">&amp;</span>mark, <span class="kw-2">&amp;</span>content, weak_mark)<span class="question-mark">? </span>{
+<a href=#537 id=537 data-nosnippet>537</a>      ContactOwner::Mark(label) =&gt; (label, <span class="prelude-val">None</span>),
+<a href=#538 id=538 data-nosnippet>538</a>      <span class="comment">// (placed by a footnote-symbol mark its author requests: the contact answers that mark on that author,
+<a href=#539 id=539 data-nosnippet>539</a>      // `show_unanswered_marks`)
+<a href=#540 id=540 data-nosnippet>540</a>      </span>ContactOwner::Author(author) =&gt; (<span class="macro">s!</span>(<span class="string">"author:{author}"</span>), answered_symbol_key(mark.unlist_ref())),
+<a href=#541 id=541 data-nosnippet>541</a>      ContactOwner::Block <span class="kw">if </span>owner_first =&gt; (<span class="macro">s!</span>(<span class="string">"author:{}"</span>, frontmatter_group_first()), <span class="prelude-val">None</span>),
+<a href=#542 id=542 data-nosnippet>542</a>      ContactOwner::Block =&gt; (<span class="macro">s!</span>(<span class="string">"addresses:block"</span>), <span class="prelude-val">None</span>),
+<a href=#543 id=543 data-nosnippet>543</a>    };
+<a href=#544 id=544 data-nosnippet>544</a>    <span class="kw">let </span><span class="kw-2">mut </span>keyvals: Vec&lt;Token&gt; = mouth::tokenize_internal(<span class="string">"label="</span>).unlist();
+<a href=#545 id=545 data-nosnippet>545</a>    keyvals.extend(text_tokens(<span class="kw-2">&amp;</span>value));
+<a href=#546 id=546 data-nosnippet>546</a>    <span class="kw">if let </span><span class="prelude-val">Some</span>(key) = answers {
+<a href=#547 id=547 data-nosnippet>547</a>      keyvals.extend(mouth::tokenize_internal(<span class="string">",_answers="</span>).unlist());
+<a href=#548 id=548 data-nosnippet>548</a>      keyvals.extend(text_tokens(<span class="kw-2">&amp;</span>key));
+<a href=#549 id=549 data-nosnippet>549</a>    }
+<a href=#550 id=550 data-nosnippet>550</a>    <span class="kw">if </span>owner_sequence {
+<a href=#551 id=551 data-nosnippet>551</a>      keyvals.extend(
+<a href=#552 id=552 data-nosnippet>552</a>        mouth::tokenize_internal(TeXString::assembled(<span class="macro">format!</span>(<span class="string">",_sequence={}"</span>, lookup_int(<span class="string">"lx_sequence_call"</span>))))
+<a href=#553 id=553 data-nosnippet>553</a>          .unlist(),
+<a href=#554 id=554 data-nosnippet>554</a>      );
+<a href=#555 id=555 data-nosnippet>555</a>      <span class="comment">// (the authors it may be of, for the corresponding-author step of `sequenced_contact_labels`, as queue
+<a href=#556 id=556 data-nosnippet>556</a>      // positions: its author group's, where the class marks groups (iopart's `\author`,
+<a href=#557 id=557 data-nosnippet>557</a>      // `\lx@frontmatter@group@start`), and those requesting the mark of the address it is printed under (`_marks`,
+<a href=#558 id=558 data-nosnippet>558</a>      // read where the document writes an e-mail between its addresses); rev78f2 probes i1, i2)
+<a href=#559 id=559 data-nosnippet>559</a>      </span><span class="kw">if </span>lookup_value(<span class="string">"lx_frontmatter_group_first"</span>).is_some() {
+<a href=#560 id=560 data-nosnippet>560</a>        <span class="kw">let </span>group: Vec&lt;String&gt; = (frontmatter_group_first()..=queued_author_positions()<span class="question-mark">?</span>)
+<a href=#561 id=561 data-nosnippet>561</a>          .map(|at| at.to_string())
+<a href=#562 id=562 data-nosnippet>562</a>          .collect();
+<a href=#563 id=563 data-nosnippet>563</a>        keyvals.extend(mouth::tokenize_internal(<span class="string">",_group="</span>).unlist());
+<a href=#564 id=564 data-nosnippet>564</a>        keyvals.extend(text_tokens(<span class="kw-2">&amp;</span>group.join(<span class="string">";"</span>)));
+<a href=#565 id=565 data-nosnippet>565</a>      }
+<a href=#566 id=566 data-nosnippet>566</a>      <span class="kw">if </span>weak_mark {
+<a href=#567 id=567 data-nosnippet>567</a>        <span class="kw">let </span>requesting: Vec&lt;String&gt; = queued_requesters(mark.unlist_ref())<span class="question-mark">?
+<a href=#568 id=568 data-nosnippet>568</a>          </span>.iter()
+<a href=#569 id=569 data-nosnippet>569</a>          .map(ToString::to_string)
+<a href=#570 id=570 data-nosnippet>570</a>          .collect();
+<a href=#571 id=571 data-nosnippet>571</a>        <span class="kw">if </span>!requesting.is_empty() {
+<a href=#572 id=572 data-nosnippet>572</a>          keyvals.extend(mouth::tokenize_internal(<span class="string">",_marks="</span>).unlist());
+<a href=#573 id=573 data-nosnippet>573</a>          keyvals.extend(text_tokens(<span class="kw-2">&amp;</span>requesting.join(<span class="string">";"</span>)));
+<a href=#574 id=574 data-nosnippet>574</a>        }
+<a href=#575 id=575 data-nosnippet>575</a>      }
+<a href=#576 id=576 data-nosnippet>576</a>      <span class="comment">// (placed by its address's mark: where it goes without it, for a document whose addresses are all before its
+<a href=#577 id=577 data-nosnippet>577</a>      // e-mails, `sequenced_contact_labels`)
+<a href=#578 id=578 data-nosnippet>578</a>      </span><span class="kw">if </span>weak_mark {
+<a href=#579 id=579 data-nosnippet>579</a>        <span class="kw">let </span>unmarked = <span class="kw">match </span>placed_contact_owner(<span class="kw-2">&amp;</span>Tokens::new(Vec::new()), <span class="kw-2">&amp;</span>content, <span class="bool-val">false</span>)<span class="question-mark">? </span>{
+<a href=#580 id=580 data-nosnippet>580</a>          ContactOwner::Author(author) =&gt; <span class="macro">s!</span>(<span class="string">"author:{author}"</span>),
+<a href=#581 id=581 data-nosnippet>581</a>          ContactOwner::Mark(label) =&gt; label,
+<a href=#582 id=582 data-nosnippet>582</a>          ContactOwner::Block =&gt; <span class="macro">s!</span>(<span class="string">"addresses:block"</span>),
+<a href=#583 id=583 data-nosnippet>583</a>        };
+<a href=#584 id=584 data-nosnippet>584</a>        <span class="kw">if </span>unmarked != value {
+<a href=#585 id=585 data-nosnippet>585</a>          keyvals.extend(mouth::tokenize_internal(<span class="string">",_unmarked="</span>).unlist());
+<a href=#586 id=586 data-nosnippet>586</a>          keyvals.extend(text_tokens(<span class="kw-2">&amp;</span>unmarked));
+<a href=#587 id=587 data-nosnippet>587</a>        }
+<a href=#588 id=588 data-nosnippet>588</a>      }
+<a href=#589 id=589 data-nosnippet>589</a>    }
+<a href=#590 id=590 data-nosnippet>590</a>    <span class="kw">if </span>owner_first || owner_sequence || under_address {
+<a href=#591 id=591 data-nosnippet>591</a>      <span class="kw">if </span>!attr_rest.is_empty() {
+<a href=#592 id=592 data-nosnippet>592</a>        keyvals.push(<span class="macro">T_OTHER!</span>(<span class="string">","</span>));
+<a href=#593 id=593 data-nosnippet>593</a>        keyvals.extend(mouth::tokenize_internal(TeXString::assembled(attr_rest.join(<span class="string">","</span>))).unlist());
+<a href=#594 id=594 data-nosnippet>594</a>      }
+<a href=#595 id=595 data-nosnippet>595</a>    } <span class="kw">else if let </span><span class="prelude-val">Some</span>(attr) = attr.as_ref().filter(|a| !a.is_empty()) {
+<a href=#596 id=596 data-nosnippet>596</a>      keyvals.push(<span class="macro">T_OTHER!</span>(<span class="string">","</span>));
+<a href=#597 id=597 data-nosnippet>597</a>      keyvals.extend(attr.unlist_ref().iter().copied());
+<a href=#598 id=598 data-nosnippet>598</a>    }
+<a href=#599 id=599 data-nosnippet>599</a>    <span class="prelude-val">Ok</span>(<span class="macro">Invocation!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\lx@annotate@frontmatter"</span>), <span class="macro">vec!</span>[
+<a href=#600 id=600 data-nosnippet>600</a>      <span class="prelude-val">Some</span>(mouth::tokenize_internal(<span class="string">"ltx:creator"</span>)),
+<a href=#601 id=601 data-nosnippet>601</a>      <span class="prelude-val">Some</span>(mouth::tokenize_internal(<span class="string">"ltx:contact"</span>)),
+<a href=#602 id=602 data-nosnippet>602</a>      <span class="prelude-val">Some</span>(Tokens::new(keyvals)),
+<a href=#603 id=603 data-nosnippet>603</a>      <span class="prelude-val">Some</span>(content)
+<a href=#604 id=604 data-nosnippet>604</a>    ]))
+<a href=#605 id=605 data-nosnippet>605</a>  });
+<a href=#606 id=606 data-nosnippet>606</a>  <span class="comment">// Rust-only (OXIDIZED_DESIGN_DIVERGENCES #808): the mark of a class's address block, for the contact the class prints
+<a href=#607 id=607 data-nosnippet>607</a>  // right after it as a block of its own (`\lx@add@contact@placed[mark=address]`: iopart's `\ead` after its `\address`,
+<a href=#608 id=608 data-nosnippet>608</a>  // iopart.cls:240-248, :363): the operand of the block's one leading mark (`$^1$ Waseda University`: 1), else none — an
+<a href=#609 id=609 data-nosnippet>609</a>  // unmarked block, or one of several marked lines (`\address{$^1$ A \\ $^2$ B}`), names no one. `\lx@address@mark@set{}`
+<a href=#610 id=610 data-nosnippet>610</a>  // clears it (a class's `\author`, after which an address-list contact is under no address).
+<a href=#611 id=611 data-nosnippet>611</a>  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\lx@address@mark@set{}"</span>, sub[(line)] {
+<a href=#612 id=612 data-nosnippet>612</a>    <span class="kw">let </span>line: Tokens = line;
+<a href=#613 id=613 data-nosnippet>613</a>    <span class="kw">let </span>marks = author_mark_operands(line.unlist_ref());
+<a href=#614 id=614 data-nosnippet>614</a>    <span class="kw">let </span>text = |m: <span class="kw-2">&amp;</span>Vec&lt;Token&gt;| Tokens::new(m.clone()).to_string();
+<a href=#615 id=615 data-nosnippet>615</a>    <span class="kw">let </span>one = marker_leads(<span class="kw-2">&amp;</span>line)
+<a href=#616 id=616 data-nosnippet>616</a>      &amp;&amp; marks.first().is_some_and(|first| marks.iter().all(|m| text(m) == text(first)));
+<a href=#617 id=617 data-nosnippet>617</a>    <span class="kw">let </span>mark = <span class="kw">if </span>one { Tokens::new(marks[<span class="number">0</span>].clone()) } <span class="kw">else </span>{ Tokens::new(Vec::new()) };
+<a href=#618 id=618 data-nosnippet>618</a>    assign_value(<span class="string">"lx_address_mark"</span>, Stored::Tokens(mark), <span class="prelude-val">Some</span>(Scope::Global));
+<a href=#619 id=619 data-nosnippet>619</a>  });
+<a href=#620 id=620 data-nosnippet>620</a>  <span class="comment">// Rust-only: one call of a class's address-list command (jheppub's `\emailAdd{a, b}`, iopart's `\ead`), whose
+<a href=#621 id=621 data-nosnippet>621</a>  // addresses `\lx@add@contact@placed[owner=sequence]` places: the n-th call is the n-th author's when the list is the
+<a href=#622 id=622 data-nosnippet>622</a>  // authors' in order (`sequenced_contact_labels`).
+<a href=#623 id=623 data-nosnippet>623</a>  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\lx@sequence@call"</span>, {
+<a href=#624 id=624 data-nosnippet>624</a>    <span class="kw">let </span>call = lookup_int(<span class="string">"lx_sequence_call"</span>) + <span class="number">1</span>;
+<a href=#625 id=625 data-nosnippet>625</a>    assign_value(<span class="string">"lx_sequence_call"</span>, Stored::Int(call), <span class="prelude-val">Some</span>(Scope::Global));
+<a href=#626 id=626 data-nosnippet>626</a>  });
+<a href=#627 id=627 data-nosnippet>627</a>  <span class="comment">// Rust-only: a class's address-list command's body (`\emailAdd{#1}` = `\lx@add@contact@list{\lx@jhep@email}{#1}`):
+<a href=#628 id=628 data-nosnippet>628</a>  // one call (`\lx@sequence@call`) of `op{address}` for each address of the list (`\lx@split@addresses`). A frontmatter
+<a href=#629 id=629 data-nosnippet>629</a>  // call by its name, so an author line holding the command (`\author[a]{Ann Able \emailAdd{x}}`) keeps it as the
+<a href=#630 id=630 data-nosnippet>630</a>  // name's annotation, as the `\lx@add@contact` body it replaced was (`adds_to_frontmatter`, `is_note_macro`).
+<a href=#631 id=631 data-nosnippet>631</a>  </span><span class="macro">DefMacro!</span>(
+<a href=#632 id=632 data-nosnippet>632</a>    <span class="string">"\\lx@add@contact@list{}{}"</span>,
+<a href=#633 id=633 data-nosnippet>633</a>    <span class="string">"\\lx@sequence@call\\lx@split@addresses{#1}{#2}"
+<a href=#634 id=634 data-nosnippet>634</a>  </span>);
+<a href=#635 id=635 data-nosnippet>635</a>  <span class="comment">// Rust-only: the start of an author group of a class whose `\author` adds a group per call (OSA's, each typesetting
+<a href=#636 id=636 data-nosnippet>636</a>  // its names where it stands): a contact placed after it ([`placed_contact_owner`]) is the group's only author's
+<a href=#637 id=637 data-nosnippet>637</a>  // (`\author{D. L. Boiko}\address{…}\email{…}\author{N. J. Gunther}…`, 0906.4563; guard
+<a href=#638 id=638 data-nosnippet>638</a>  // `perfect_kernel_batch64u::osa_group_only_author_owns_the_email`).
+<a href=#639 id=639 data-nosnippet>639</a>  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\lx@frontmatter@group@start"</span>, {
+<a href=#640 id=640 data-nosnippet>640</a>    <span class="kw">let </span>first = queued_author_positions()<span class="question-mark">? </span>+ <span class="number">1</span>;
+<a href=#641 id=641 data-nosnippet>641</a>    assign_value(
+<a href=#642 id=642 data-nosnippet>642</a>      <span class="string">"lx_frontmatter_group_first"</span>,
+<a href=#643 id=643 data-nosnippet>643</a>      Stored::Number(Number::new(first <span class="kw">as </span>i64)),
+<a href=#644 id=644 data-nosnippet>644</a>      <span class="prelude-val">Some</span>(Scope::Global),
+<a href=#645 id=645 data-nosnippet>645</a>    );
+<a href=#646 id=646 data-nosnippet>646</a>  });
+<a href=#647 id=647 data-nosnippet>647</a>  <span class="comment">// Rust-only (OXIDIZED_DESIGN #479): what the document says about an author but does not print (AASTeX 7's `\email`
+<a href=#648 id=648 data-nosnippet>648</a>  // without `[show]`, aastex701.cls:13341-13353; 2608.05283) — an `ltx:rdf` annotation of the creator, `property` the
+<a href=#649 id=649 data-nosnippet>649</a>  // RDFa term and `content` the value, hidden in HTML. An empty value records nothing (AASTeX 7's `\email{}` placeholder).
+<a href=#650 id=650 data-nosnippet>650</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\lx@add@creator@rdf [] {} Semiverbatim"</span>, sub[(attr, property, value)] {
+<a href=#651 id=651 data-nosnippet>651</a>    <span class="comment">// The value as written, without the spaces around it (2608.13718 `\email{koberg@cfa.harvard.edu }`)
+<a href=#652 id=652 data-nosnippet>652</a>    </span><span class="kw">let </span><span class="kw-2">mut </span>value = value.unlist();
+<a href=#653 id=653 data-nosnippet>653</a>    <span class="kw">while </span>value.last().is_some_and(|t| t.get_catcode() == Catcode::SPACE) {
+<a href=#654 id=654 data-nosnippet>654</a>      value.pop();
+<a href=#655 id=655 data-nosnippet>655</a>    }
+<a href=#656 id=656 data-nosnippet>656</a>    <span class="kw">let </span>lead = value.iter().take_while(|t| t.get_catcode() == Catcode::SPACE).count();
+<a href=#657 id=657 data-nosnippet>657</a>    value.drain(..lead);
+<a href=#658 id=658 data-nosnippet>658</a>    <span class="kw">if </span>value.is_empty() {
+<a href=#659 id=659 data-nosnippet>659</a>      <span class="kw">return </span><span class="prelude-val">Ok</span>(<span class="macro">Tokens!</span>());
+<a href=#660 id=660 data-nosnippet>660</a>    }
+<a href=#661 id=661 data-nosnippet>661</a>    <span class="kw">let </span><span class="kw-2">mut </span>opts = mouth::tokenize_internal(<span class="string">"property="</span>).unlist();
+<a href=#662 id=662 data-nosnippet>662</a>    opts.push(<span class="macro">T_BEGIN!</span>());
+<a href=#663 id=663 data-nosnippet>663</a>    opts.extend(property.unlist());
+<a href=#664 id=664 data-nosnippet>664</a>    opts.push(<span class="macro">T_END!</span>());
+<a href=#665 id=665 data-nosnippet>665</a>    opts.extend(mouth::tokenize_internal(<span class="string">",content="</span>).unlist());
+<a href=#666 id=666 data-nosnippet>666</a>    opts.push(<span class="macro">T_BEGIN!</span>());
+<a href=#667 id=667 data-nosnippet>667</a>    opts.extend(value);
+<a href=#668 id=668 data-nosnippet>668</a>    opts.push(<span class="macro">T_END!</span>());
+<a href=#669 id=669 data-nosnippet>669</a>    <span class="kw">if let </span><span class="prelude-val">Some</span>(a) = attr.as_ref().filter(|a| !a.is_empty()) {
+<a href=#670 id=670 data-nosnippet>670</a>      opts.push(<span class="macro">T_OTHER!</span>(<span class="string">","</span>));
+<a href=#671 id=671 data-nosnippet>671</a>      opts.extend(a.unlist_ref().iter().copied());
+<a href=#672 id=672 data-nosnippet>672</a>    }
+<a href=#673 id=673 data-nosnippet>673</a>    <span class="prelude-val">Ok</span>(<span class="macro">Invocation!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\lx@annotate@frontmatter"</span>),
+<a href=#674 id=674 data-nosnippet>674</a>      <span class="macro">vec!</span>[<span class="prelude-val">Some</span>(mouth::tokenize_internal(<span class="string">"ltx:creator"</span>)),
+<a href=#675 id=675 data-nosnippet>675</a>           <span class="prelude-val">Some</span>(mouth::tokenize_internal(<span class="string">"ltx:rdf"</span>)),
+<a href=#676 id=676 data-nosnippet>676</a>           <span class="prelude-val">Some</span>(Tokens::new(opts)), <span class="prelude-val">Some</span>(<span class="macro">Tokens!</span>())]))
+<a href=#677 id=677 data-nosnippet>677</a>  });
+<a href=#678 id=678 data-nosnippet>678</a>  <span class="macro">DefMacro!</span>(
+<a href=#679 id=679 data-nosnippet>679</a>    <span class="string">"\\lx@add@email@metadata [] Semiverbatim"</span>,
+<a href=#680 id=680 data-nosnippet>680</a>    <span class="string">"\\lx@add@creator@rdf[#1]{schema:email}{#2}"
+<a href=#681 id=681 data-nosnippet>681</a>  </span>);
+<a href=#682 id=682 data-nosnippet>682</a>  <span class="comment">// (Rust-only, OXIDIZED_DESIGN_DIVERGENCES #972: the address as TeX prints it, a formula of glyphs its glyphs —
+<a href=#683 id=683 data-nosnippet>683</a>  // `http://www.zebra.edu/$\sim$ann` prints "http://www.zebra.edu/∼ann", the Semiverbatim reading kept the dollars:
+<a href=#684 id=684 data-nosnippet>684</a>  // 1301.1466, math0608476 — [`address_as_printed`])
+<a href=#685 id=685 data-nosnippet>685</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\lx@add@url [] Semiverbatim"</span>, sub[(attr, address)] {
+<a href=#686 id=686 data-nosnippet>686</a>    <span class="kw">let </span>address: Tokens = address;
+<a href=#687 id=687 data-nosnippet>687</a>    <span class="kw">let </span><span class="kw-2">mut </span>keyvals: Vec&lt;Token&gt; = mouth::tokenize_internal(<span class="string">"role=url,"</span>).unlist();
+<a href=#688 id=688 data-nosnippet>688</a>    <span class="kw">if let </span><span class="prelude-val">Some</span>(attr) = attr {
+<a href=#689 id=689 data-nosnippet>689</a>      keyvals.extend(attr.unlist());
+<a href=#690 id=690 data-nosnippet>690</a>    }
+<a href=#691 id=691 data-nosnippet>691</a>    <span class="prelude-val">Ok</span>(<span class="macro">Invocation!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\lx@annotate@frontmatter"</span>), <span class="macro">vec!</span>[
+<a href=#692 id=692 data-nosnippet>692</a>      <span class="prelude-val">Some</span>(mouth::tokenize_internal(<span class="string">"ltx:creator"</span>)),
+<a href=#693 id=693 data-nosnippet>693</a>      <span class="prelude-val">Some</span>(mouth::tokenize_internal(<span class="string">"ltx:contact"</span>)),
+<a href=#694 id=694 data-nosnippet>694</a>      <span class="prelude-val">Some</span>(Tokens::new(keyvals)),
+<a href=#695 id=695 data-nosnippet>695</a>      <span class="prelude-val">Some</span>(address_as_printed(<span class="kw-2">&amp;</span>address))
+<a href=#696 id=696 data-nosnippet>696</a>    ]))
+<a href=#697 id=697 data-nosnippet>697</a>  });
+<a href=#698 id=698 data-nosnippet>698</a>  <span class="comment">// Rust-only (OXIDIZED_DESIGN_DIVERGENCES #972): an address a binding prints itself, as the e-mail and URL contacts read
+<a href=#699 id=699 data-nosnippet>699</a>  // it ([`address_as_printed`]: a formula of glyphs its glyphs) — imsart's `\printead` in an address printed in place.
+<a href=#700 id=700 data-nosnippet>700</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\lx@address@printed Semiverbatim"</span>, sub[(address)] {
+<a href=#701 id=701 data-nosnippet>701</a>    <span class="prelude-val">Ok</span>(address_as_printed(<span class="kw-2">&amp;</span>address))
+<a href=#702 id=702 data-nosnippet>702</a>  });
+<a href=#703 id=703 data-nosnippet>703</a>  <span class="comment">// Rust-only: an email or web address set as a class sets it with `\url`, `\texttt` or `\ttfamily` — url.sty's
+<a href=#704 id=704 data-nosnippet>704</a>  // `\UrlFont` (url_sty.rs `\UrlFont`): the typewriter family, in the identity ASCII encoding. A class that reads the
+<a href=#705 id=705 data-nosnippet>705</a>  // address with `_` and `~` made other (revtex4.cls:4476-4493 `\sanitize@url` … `\href{mailto:#2}{#2}`, `\href` the
+<a href=#706 id=706 data-nosnippet>706</a>  // `\url` = `\texttt` of :4490-4493) prints them as cmtt does, '_' and '~'; the same characters in the roman OT1 font
+<a href=#707 id=707 data-nosnippet>707</a>  // are its dot and tilde accents (Perl TeX_Fonts.pool.ltxml:214), "ann˙able@a.edu" (1001.1076). A class binding
+<a href=#708 id=708 data-nosnippet>708</a>  // passes its address through this only where the class sets it in typewriter type.
+<a href=#709 id=709 data-nosnippet>709</a>  </span><span class="macro">DefMacro!</span>(
+<a href=#710 id=710 data-nosnippet>710</a>    <span class="string">"\\lx@address@urlfont{}"</span>,
+<a href=#711 id=711 data-nosnippet>711</a>    <span class="string">"{\\lx@fontencoding{ASCII}\\ttfamily #1}"
+<a href=#712 id=712 data-nosnippet>712</a>  </span>);
+<a href=#713 id=713 data-nosnippet>713</a>  <span class="comment">// Rust-only: an email or web address a class sets in the current (roman) font — revtex4-1/4-2's `\href`, which
+<a href=#714 id=714 data-nosnippet>714</a>  // without hyperref is `\@href` (revtex4-1.cls:1959-1961), AASTeX's, svjour3's, jmlr's — in that font, but in the
+<a href=#715 id=715 data-nosnippet>715</a>  // identity ASCII encoding: its `_` and `~` print as typed. In the OT1 font pdflatex prints them as the dot and tilde
+<a href=#716 id=716 data-nosnippet>716</a>  // accents ("ann˙able@a.edu", 2301.03570, 2301.03067); the address is the author's, not the accident of the font (user
+<a href=#717 id=717 data-nosnippet>717</a>  // ruling 2026-10-11).
+<a href=#718 id=718 data-nosnippet>718</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\lx@address@textfont{}"</span>, <span class="string">"{\\lx@fontencoding{ASCII}#1}"</span>);
+<a href=#719 id=719 data-nosnippet>719</a>  <span class="comment">// The ORCID iD logo — the green "iD" badge — as ONE self-contained SVG asset,
+<a href=#720 id=720 data-nosnippet>720</a>  // defined in the kernel so every orcid rendering path reuses it (orcidlink.sty's
+<a href=#721 id=721 data-nosnippet>721</a>  // \orcidlogo aliases this; \lx@add@orcid embeds it). Adapted from
+<a href=#722 id=722 data-nosnippet>722</a>  // https://orcid.org/assets/vectors/orcid.logo.icon.svg; the viewBox exactly
+<a href=#723 id=723 data-nosnippet>723</a>  // frames the 72×72 disk and the `.ltx_orcidlogo` CSS rule sizes it to the text
+<a href=#724 id=724 data-nosnippet>724</a>  // (1em), so it renders as an inline glyph — not the oversized 1.7em badge that
+<a href=#725 id=725 data-nosnippet>725</a>  // overflowed the line (html_feedback #6895, #6016, #5789, #2176, #5615).
+<a href=#726 id=726 data-nosnippet>726</a>  </span><span class="macro">DefConstructor!</span>(<span class="string">"\\lx@orcidlogo"</span>, sub[document, _args, _props] {
+<a href=#727 id=727 data-nosnippet>727</a>    document.open_element(<span class="string">"svg:svg"</span>, <span class="prelude-val">Some</span>(<span class="macro">string_map!</span>(
+<a href=#728 id=728 data-nosnippet>728</a>      <span class="string">"class" </span>=&gt; <span class="string">"ltx_orcidlogo"</span>, <span class="string">"width" </span>=&gt; <span class="string">"1em"</span>, <span class="string">"height" </span>=&gt; <span class="string">"1em"</span>,
+<a href=#729 id=729 data-nosnippet>729</a>      <span class="string">"viewBox" </span>=&gt; <span class="string">"0 0 72 72"</span>, <span class="string">"version" </span>=&gt; <span class="string">"1.1"</span>)), <span class="prelude-val">None</span>)<span class="question-mark">?</span>;
+<a href=#730 id=730 data-nosnippet>730</a>    document.open_element(<span class="string">"svg:path"</span>, <span class="prelude-val">Some</span>(<span class="macro">string_map!</span>(
+<a href=#731 id=731 data-nosnippet>731</a>      <span class="string">"fill" </span>=&gt; <span class="string">"#A6CE39"</span>,
+<a href=#732 id=732 data-nosnippet>732</a>      <span class="string">"d" </span>=&gt; <span class="string">"M72,36 C72,55.884375 55.884375,72 36,72 C16.115625,72 0,55.884375 0,36 C0,16.115625 16.115625,0 36,0 C55.884375,0 72,16.115625 72,36 Z"</span>)), <span class="prelude-val">None</span>)<span class="question-mark">?</span>;
+<a href=#733 id=733 data-nosnippet>733</a>    document.close_element(<span class="string">"svg:path"</span>)<span class="question-mark">?</span>;
+<a href=#734 id=734 data-nosnippet>734</a>    document.open_element(<span class="string">"svg:g"</span>, <span class="prelude-val">Some</span>(<span class="macro">string_map!</span>(
+<a href=#735 id=735 data-nosnippet>735</a>      <span class="string">"fill" </span>=&gt; <span class="string">"#FFFFFF"</span>, <span class="string">"transform" </span>=&gt; <span class="string">"translate(18.868966, 12.910345)"</span>)), <span class="prelude-val">None</span>)<span class="question-mark">?</span>;
+<a href=#736 id=736 data-nosnippet>736</a>    document.open_element(<span class="string">"svg:polygon"</span>, <span class="prelude-val">Some</span>(<span class="macro">string_map!</span>(
+<a href=#737 id=737 data-nosnippet>737</a>      <span class="string">"points" </span>=&gt; <span class="string">"5.03734929 39.1250878 0.695429861 39.1250878 0.695429861 9.14431787 5.03734929 9.14431787 5.03734929 22.6930505 5.03734929 39.1250878"</span>)), <span class="prelude-val">None</span>)<span class="question-mark">?</span>;
+<a href=#738 id=738 data-nosnippet>738</a>    document.close_element(<span class="string">"svg:polygon"</span>)<span class="question-mark">?</span>;
+<a href=#739 id=739 data-nosnippet>739</a>    document.open_element(<span class="string">"svg:path"</span>, <span class="prelude-val">Some</span>(<span class="macro">string_map!</span>(
+<a href=#740 id=740 data-nosnippet>740</a>      <span class="string">"d" </span>=&gt; <span class="string">"M11.409257,9.14431787 L23.1380784,9.14431787 C34.303014,9.14431787 39.2088191,17.0664074 39.2088191,24.1486995 C39.2088191,31.846843 33.1470485,39.1530811 23.1944669,39.1530811 L11.409257,39.1530811 L11.409257,9.14431787 Z M15.7511765,35.2620194 L22.6587756,35.2620194 C32.49858,35.2620194 34.7541226,27.8438084 34.7541226,24.1486995 C34.7541226,18.1301509 30.8915059,13.0353795 22.4332213,13.0353795 L15.7511765,13.0353795 L15.7511765,35.2620194 Z"</span>)), <span class="prelude-val">None</span>)<span class="question-mark">?</span>;
+<a href=#741 id=741 data-nosnippet>741</a>    document.close_element(<span class="string">"svg:path"</span>)<span class="question-mark">?</span>;
+<a href=#742 id=742 data-nosnippet>742</a>    document.open_element(<span class="string">"svg:path"</span>, <span class="prelude-val">Some</span>(<span class="macro">string_map!</span>(
+<a href=#743 id=743 data-nosnippet>743</a>      <span class="string">"d" </span>=&gt; <span class="string">"M5.71401206,2.90182329 C5.71401206,4.441452 4.44526937,5.72914146 2.86638958,5.72914146 C1.28750978,5.72914146 0.0187670918,4.441452 0.0187670918,2.90182329 C0.0187670918,1.33420133 1.28750978,0.0745051096 2.86638958,0.0745051096 C4.44526937,0.0745051096 5.71401206,1.36219458 5.71401206,2.90182329 Z"</span>)), <span class="prelude-val">None</span>)<span class="question-mark">?</span>;
+<a href=#744 id=744 data-nosnippet>744</a>    document.close_element(<span class="string">"svg:path"</span>)<span class="question-mark">?</span>;
+<a href=#745 id=745 data-nosnippet>745</a>    document.close_element(<span class="string">"svg:g"</span>)<span class="question-mark">?</span>;
+<a href=#746 id=746 data-nosnippet>746</a>    document.close_element(<span class="string">"svg:svg"</span>)<span class="question-mark">?</span>;
+<a href=#747 id=747 data-nosnippet>747</a>  });
+<a href=#748 id=748 data-nosnippet>748</a>  <span class="comment">// A link to https://orcid.org/&lt;#1&gt; wrapping content #2 (class ltx_orcid). Shared
+<a href=#749 id=749 data-nosnippet>749</a>  // by \lx@add@orcid and orcidlink.sty's \orcidlink family. Perl orcidlink #2681.
+<a href=#750 id=750 data-nosnippet>750</a>  </span><span class="macro">DefConstructor!</span>(
+<a href=#751 id=751 data-nosnippet>751</a>    <span class="string">"\\lx@orcidlink{}{}"</span>,
+<a href=#752 id=752 data-nosnippet>752</a>    <span class="string">"&lt;ltx:ref title='ORCID #1' class='ltx_orcid' href='https://orcid.org/#1'&gt;#2&lt;/ltx:ref&gt;"
+<a href=#753 id=753 data-nosnippet>753</a>  </span>);
+<a href=#754 id=754 data-nosnippet>754</a>  <span class="comment">// The single canonical author-ORCID frontmatter macro: a `ltx:contact[role=orcid]`
+<a href=#755 id=755 data-nosnippet>755</a>  // (consistent with \lx@add@email / \lx@add@affiliation &amp;c.) whose value is the iD
+<a href=#756 id=756 data-nosnippet>756</a>  // logo linked to the author's orcid.org page. The id is preserved in the href for
+<a href=#757 id=757 data-nosnippet>757</a>  // the metadata. Every class binding routes its \orcid here (html_feedback #6571).
+<a href=#758 id=758 data-nosnippet>758</a>  // An iD given as its orcid.org address (`https://orcid.org/0000-…`, with or without the scheme or `www.`) is the iD:
+<a href=#759 id=759 data-nosnippet>759</a>  // its link was `https://orcid.org/https://orcid.org/0000-…` (2104.12510, 2304.13458, 2407.18715 `\orcidauthor`;
+<a href=#760 id=760 data-nosnippet>760</a>  // DIVERGENCES #616). Perl's contact holds the text as given (Base_Utility.pool.ltxml:659-660).
+<a href=#761 id=761 data-nosnippet>761</a>  </span><span class="macro">DefMacro!</span>(
+<a href=#762 id=762 data-nosnippet>762</a>    <span class="string">"\\lx@add@orcid [] Semiverbatim"</span>,
+<a href=#763 id=763 data-nosnippet>763</a>    <span class="string">"\\lx@annotate@frontmatter{ltx:creator}{ltx:contact}[role=orcid,#1]{\\expandafter\\lx@orcidlink\\expandafter{\\lx@orcid@id{#2}}{\\lx@orcidlogo}}"
+<a href=#764 id=764 data-nosnippet>764</a>  </span>);
+<a href=#765 id=765 data-nosnippet>765</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\lx@orcid@id Semiverbatim"</span>, sub[(id)] { <span class="prelude-val">Ok</span>(orcid_id(id)) });
+<a href=#766 id=766 data-nosnippet>766</a>  <span class="comment">// (the iD's link of [`orcid_icon_link`], the icon as printed)
+<a href=#767 id=767 data-nosnippet>767</a>  </span><span class="macro">DefMacro!</span>(
+<a href=#768 id=768 data-nosnippet>768</a>    <span class="string">"\\lx@orcid@href[]{}{}"</span>,
+<a href=#769 id=769 data-nosnippet>769</a>    <span class="string">"\\expandafter\\lx@orcidlink\\expandafter{\\lx@orcid@known}{#3}"
+<a href=#770 id=770 data-nosnippet>770</a>  </span>);
+<a href=#771 id=771 data-nosnippet>771</a>
+<a href=#772 id=772 data-nosnippet>772</a>  <span class="comment">// Rust-only (OXIDIZED_DESIGN_DIVERGENCES #960): an `\href` to an ORCID record in an author's name that prints no
+<a href=#773 id=773 data-nosnippet>773</a>  // word — the TikZ "iD" icon of the `\orcidicon` template (`\newcommand{\orcidA}{\href{https://orcid.org/…}
+<a href=#774 id=774 data-nosnippet>774</a>  // {\orcidicon}}`, `\author{M. Ahumada \orcidA{}}`: 2507.12319, 2503.04867, 2406.08258), a logo graphic — is the
+<a href=#775 id=775 data-nosnippet>775</a>  // author's ORCID, the contact `\lx@add@orcid` makes, and its ink no part of the name (Perl: the link and its picture
+<a href=#776 id=776 data-nosnippet>776</a>  // stay in the personname). One printing a letter or a digit outside a picture is printed text and stays: the linked
+<a href=#777 id=777 data-nosnippet>777</a>  // name (`\href{https://orcid.org/…}{T.J.C. Bezerra}`, 2606.03745; 2301.02927, 2312.16289, 2601.06085), the ORCID read
+<a href=#778 id=778 data-nosnippet>778</a>  // off it as before, or the iD printed (`\href{https://orcid.org/0000-0002-1825-0097}{0000-0002-1825-0097}`, review
+<a href=#779 id=779 data-nosnippet>779</a>  // rev103b S1). A creator holding the iD already keeps one contact of it (`drop_repeated_orcids`: acmart's `\orcid{…}`
+<a href=#780 id=780 data-nosnippet>780</a>  // beside the name's link, 2501.02380). In force for the name's content only (`\lx@author@withinst`), not for a note
+<a href=#781 id=781 data-nosnippet>781</a>  // or contact digested inside it (`creator_name_in_progress`: `\thanks{See \href{https://orcid.org/…}{his record}.}`
+<a href=#782 id=782 data-nosnippet>782</a>  // keeps its words), nor for a mark — a label's operand read for its printed text (`reading_label`:
+<a href=#783 id=783 data-nosnippet>783</a>  // `\inst{1,\href{…}{iD}}`), a mark's math, which the marks reader shows again from its tokens
+<a href=#784 id=784 data-nosnippet>784</a>  // (`$^{1,\href{…}{\orcidicon}}$`) — where a contact made was lost: the mark keeps what it printed before. Any other
+<a href=#785 id=785 data-nosnippet>785</a>  // link — another address, `\href`'s options — is the `\href` it was. A primitive: what the ink prints is read by
+<a href=#786 id=786 data-nosnippet>786</a>  // digesting it (`ink_prints_text`). A separator the ink prints after the icon (`{icon, }` between two names,
+<a href=#787 id=787 data-nosnippet>787</a>  // 2110.07418) stays where it prints.
+<a href=#788 id=788 data-nosnippet>788</a>  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\lx@author@href[]{}{}"</span>, sub[(options, url, ink)] {
+<a href=#789 id=789 data-nosnippet>789</a>    <span class="kw">if </span>options.is_none()
+<a href=#790 id=790 data-nosnippet>790</a>      &amp;&amp; !lookup_bool(<span class="string">"IN_MATH"</span>)
+<a href=#791 id=791 data-nosnippet>791</a>      &amp;&amp; !reading_label()
+<a href=#792 id=792 data-nosnippet>792</a>      &amp;&amp; creator_name_in_progress()
+<a href=#793 id=793 data-nosnippet>793</a>      &amp;&amp; url.to_string().to_ascii_lowercase().contains(<span class="string">"orcid.org/"</span>)
+<a href=#794 id=794 data-nosnippet>794</a>    {
+<a href=#795 id=795 data-nosnippet>795</a>      <span class="comment">// (the address expanded, as hyperref expands it: the template's `\xdef` ran before the iD's macro was defined,
+<a href=#796 id=796 data-nosnippet>796</a>      // `https://orcid.org/\orcidauthorA`, 2507.12319)
+<a href=#797 id=797 data-nosnippet>797</a>      </span><span class="kw">let </span>address = <span class="macro">Expand!</span>(url.clone());
+<a href=#798 id=798 data-nosnippet>798</a>      <span class="kw">let </span>id = orcid_id(address.clone());
+<a href=#799 id=799 data-nosnippet>799</a>      <span class="kw">if </span>!id.unlist_ref().is_empty()
+<a href=#800 id=800 data-nosnippet>800</a>        &amp;&amp; id.to_string() != address.to_string()
+<a href=#801 id=801 data-nosnippet>801</a>        &amp;&amp; ink_prints_text(<span class="kw-2">&amp;</span>ink)<span class="question-mark">? </span>== <span class="prelude-val">Some</span>(<span class="bool-val">false</span>)
+<a href=#802 id=802 data-nosnippet>802</a>      {
+<a href=#803 id=803 data-nosnippet>803</a>        <span class="comment">// (a separator the link prints after its icon is the name list's, kept where it prints: `\href{…}{icon, }`
+<a href=#804 id=804 data-nosnippet>804</a>        // between two names, 2110.07418 — its ", " was lost with the link)
+<a href=#805 id=805 data-nosnippet>805</a>        </span><span class="kw">let </span>v = ink.unlist_ref();
+<a href=#806 id=806 data-nosnippet>806</a>        <span class="kw">let </span>tail = v.len()
+<a href=#807 id=807 data-nosnippet>807</a>          - v
+<a href=#808 id=808 data-nosnippet>808</a>            .iter()
+<a href=#809 id=809 data-nosnippet>809</a>            .rev()
+<a href=#810 id=810 data-nosnippet>810</a>            .take_while(|t| <span class="kw-2">**</span>t == <span class="macro">T_SPACE!</span>() || <span class="kw-2">**</span>t == <span class="macro">T_OTHER!</span>(<span class="string">","</span>) || <span class="kw-2">**</span>t == <span class="macro">T_OTHER!</span>(<span class="string">";"</span>))
+<a href=#811 id=811 data-nosnippet>811</a>            .count();
+<a href=#812 id=812 data-nosnippet>812</a>        <span class="kw">let </span><span class="kw-2">mut </span>out = <span class="macro">Invocation!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\lx@add@orcid"</span>), <span class="macro">vec!</span>[<span class="prelude-val">None</span>, <span class="prelude-val">Some</span>(id)]).unlist();
+<a href=#813 id=813 data-nosnippet>813</a>        <span class="kw">if </span>v[tail..].iter().any(|t| <span class="kw-2">*</span>t != <span class="macro">T_SPACE!</span>()) {
+<a href=#814 id=814 data-nosnippet>814</a>          out.extend_from_slice(<span class="kw-2">&amp;</span>v[tail..]);
+<a href=#815 id=815 data-nosnippet>815</a>        }
+<a href=#816 id=816 data-nosnippet>816</a>        unread(Tokens::new(out));
+<a href=#817 id=817 data-nosnippet>817</a>        <span class="kw">return </span><span class="prelude-val">Ok</span>(Vec::new());
+<a href=#818 id=818 data-nosnippet>818</a>      }
+<a href=#819 id=819 data-nosnippet>819</a>    }
+<a href=#820 id=820 data-nosnippet>820</a>    <span class="kw">let </span><span class="kw-2">mut </span>out = <span class="macro">vec!</span>[<span class="macro">T_CS!</span>(<span class="string">"\\lx@saved@href"</span>)];
+<a href=#821 id=821 data-nosnippet>821</a>    <span class="kw">if let </span><span class="prelude-val">Some</span>(options) = options {
+<a href=#822 id=822 data-nosnippet>822</a>      out.push(<span class="macro">T_OTHER!</span>(<span class="string">"["</span>));
+<a href=#823 id=823 data-nosnippet>823</a>      out.extend(options.unlist());
+<a href=#824 id=824 data-nosnippet>824</a>      out.push(<span class="macro">T_OTHER!</span>(<span class="string">"]"</span>));
+<a href=#825 id=825 data-nosnippet>825</a>    }
+<a href=#826 id=826 data-nosnippet>826</a>    out.push(<span class="macro">T_BEGIN!</span>());
+<a href=#827 id=827 data-nosnippet>827</a>    out.extend(url.unlist());
+<a href=#828 id=828 data-nosnippet>828</a>    out.push(<span class="macro">T_END!</span>());
+<a href=#829 id=829 data-nosnippet>829</a>    out.push(<span class="macro">T_BEGIN!</span>());
+<a href=#830 id=830 data-nosnippet>830</a>    out.extend(ink.unlist());
+<a href=#831 id=831 data-nosnippet>831</a>    out.push(<span class="macro">T_END!</span>());
+<a href=#832 id=832 data-nosnippet>832</a>    unread(Tokens::new(out));
+<a href=#833 id=833 data-nosnippet>833</a>  });
+<a href=#834 id=834 data-nosnippet>834</a>  <span class="comment">// Beyond-Perl (OXIDIZED_DESIGN #52): the arXiv "\thanks abuse" idiom smuggles
+<a href=#835 id=835 data-nosnippet>835</a>  // affiliations into an author \thanks{...}, linking them to authors by a
+<a href=#836 id=836 data-nosnippet>836</a>  // leading superscript mark ($^{n}$ / \textsuperscript{n}). \thanks is
+<a href=#837 id=837 data-nosnippet>837</a>  // semantically an acknowledgement, so we re-route ONLY when the content BEGINS
+<a href=#838 id=838 data-nosnippet>838</a>  // with such a mark (the abuse signature — a genuine acknowledgement never
+<a href=#839 id=839 data-nosnippet>839</a>  // starts with a bare superscript); every other \thanks stays a role=thanks
+<a href=#840 id=840 data-nosnippet>840</a>  // note. When detected we feed each $^{n}$-delimited segment through
+<a href=#841 id=841 data-nosnippet>841</a>  // \lx@affiliation@withsup, which sets the affiliation:N label that the authors'
+<a href=#842 id=842 data-nosnippet>842</a>  // own marks already request (relocate_annotations then links
+<a href=#843 id=843 data-nosnippet>843</a>  // author&lt;-&gt;affiliation). Witness arXiv:2606.00313.
+<a href=#844 id=844 data-nosnippet>844</a>  // The argument is an ordinary one, as LaTeX's `\thanks` reads it and as a title's `\thanks`
+<a href=#845 id=845 data-nosnippet>845</a>  // (`\lx@add@pubnote@thanks`) does: Perl's Semiverbatim (Base_Utility.pool.ltxml:661) froze `$`, `^`, `_` to
+<a href=#846 id=846 data-nosnippet>846</a>  // catcode other, so an author's `\thanks{... 10 m$^{2}$ lab.}` printed its math as text (KNOWN_PERL_ERRORS #515;
+<a href=#847 id=847 data-nosnippet>847</a>  // repro sectioning-frontmatter/author_thanks_and_footnote_keep_their_math).
+<a href=#848 id=848 data-nosnippet>848</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\lx@add@thanks [] {}"</span>, sub[(attr, content)] {
+<a href=#849 id=849 data-nosnippet>849</a>    <span class="kw">if </span>starts_with_affiliation_mark(<span class="kw-2">&amp;</span>content) {
+<a href=#850 id=850 data-nosnippet>850</a>      <span class="kw">let </span><span class="kw-2">mut </span>calls: Vec&lt;Token&gt; = <span class="macro">vec!</span>[<span class="macro">T_CS!</span>(<span class="string">"\\lx@title@footnote@step"</span>)];
+<a href=#851 id=851 data-nosnippet>851</a>      <span class="kw">for </span>seg <span class="kw">in </span>split_wrapped_affiliation_marks(content)<span class="question-mark">? </span>{
+<a href=#852 id=852 data-nosnippet>852</a>        <span class="kw">if </span>spacing_end(seg.unlist_ref()) == <span class="number">0 </span>{
+<a href=#853 id=853 data-nosnippet>853</a>          <span class="kw">continue</span>;
+<a href=#854 id=854 data-nosnippet>854</a>        }
+<a href=#855 id=855 data-nosnippet>855</a>        <span class="kw">let </span>withsup = <span class="macro">Invocation!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\lx@affiliation@withsup"</span>), <span class="macro">vec!</span>[<span class="prelude-val">Some</span>(seg)]);
+<a href=#856 id=856 data-nosnippet>856</a>        calls.extend(
+<a href=#857 id=857 data-nosnippet>857</a>          <span class="macro">Invocation!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\lx@add@affiliation"</span>), <span class="macro">vec!</span>[<span class="prelude-val">None</span>, <span class="prelude-val">Some</span>(withsup)]).unlist());
+<a href=#858 id=858 data-nosnippet>858</a>      }
+<a href=#859 id=859 data-nosnippet>859</a>      <span class="prelude-val">Ok</span>(Tokens::new(calls))
+<a href=#860 id=860 data-nosnippet>860</a>    } <span class="kw">else </span>{
+<a href=#861 id=861 data-nosnippet>861</a>      <span class="comment">// SURPASS over Perl (OXIDIZED_DESIGN #156): render an author-attached `\thanks`
+<a href=#862 id=862 data-nosnippet>862</a>      // as a MARKED note (a superscript mark on the author name + margin/footnote
+<a href=#863 id=863 data-nosnippet>863</a>      // content) instead of a `role=thanks` CONTACT that reads inline like an
+<a href=#864 id=864 data-nosnippet>864</a>      // affiliation next to the name. Route to `&lt;ltx:note role="thanks"&gt;` so the
+<a href=#865 id=865 data-nosnippet>865</a>      // existing `ltx:note` footnote template (mark + `ltx_note_outer`/`ltx_note_content`)
+<a href=#866 id=866 data-nosnippet>866</a>      // renders it, and attach semantic CSS hooks so a theme can style each kind of
+<a href=#867 id=867 data-nosnippet>867</a>      // thanks content: `ltx_note_frontmatter` (the ar5iv frontmatter-note hook) plus a
+<a href=#868 id=868 data-nosnippet>868</a>      // best-effort content-kind class `ltx_thanks_&lt;kind&gt;` from `classify_thanks`. Perl
+<a href=#869 id=869 data-nosnippet>869</a>      // keeps the inline contact (SHARED readability gap). Witnesses arXiv 2512.24601
+<a href=#870 id=870 data-nosnippet>870</a>      // (correspondence), 1510.02728 (funding).
+<a href=#871 id=871 data-nosnippet>871</a>      </span><span class="kw">let </span>kind = classify_thanks(content.clone().untex_string().as_ref());
+<a href=#872 id=872 data-nosnippet>872</a>      <span class="kw">let </span><span class="kw-2">mut </span>opts = mouth::tokenize_internal(TeXString::assembled(<span class="macro">s!</span>(
+<a href=#873 id=873 data-nosnippet>873</a>        <span class="string">"role=thanks,class=ltx_note_frontmatter ltx_thanks_{kind}"
+<a href=#874 id=874 data-nosnippet>874</a>      </span>)))
+<a href=#875 id=875 data-nosnippet>875</a>      .unlist();
+<a href=#876 id=876 data-nosnippet>876</a>      <span class="kw">if let </span><span class="prelude-val">Some</span>(a) = <span class="kw-2">&amp;</span>attr {
+<a href=#877 id=877 data-nosnippet>877</a>        opts.push(<span class="macro">T_OTHER!</span>(<span class="string">","</span>));
+<a href=#878 id=878 data-nosnippet>878</a>        opts.extend(a.unlist_ref().iter().copied());
+<a href=#879 id=879 data-nosnippet>879</a>      }
+<a href=#880 id=880 data-nosnippet>880</a>      <span class="kw">let </span><span class="kw-2">mut </span>calls = <span class="macro">vec!</span>[<span class="macro">T_CS!</span>(<span class="string">"\\lx@title@footnote@step"</span>)];
+<a href=#881 id=881 data-nosnippet>881</a>      calls.extend(<span class="macro">Invocation!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\lx@annotate@frontmatter"</span>),
+<a href=#882 id=882 data-nosnippet>882</a>        <span class="macro">vec!</span>[<span class="prelude-val">Some</span>(mouth::tokenize_internal(<span class="string">"ltx:creator"</span>)),
+<a href=#883 id=883 data-nosnippet>883</a>             <span class="prelude-val">Some</span>(mouth::tokenize_internal(<span class="string">"ltx:note"</span>)),
+<a href=#884 id=884 data-nosnippet>884</a>             <span class="prelude-val">Some</span>(Tokens::new(opts)), <span class="prelude-val">Some</span>(note_body(content))]).unlist());
+<a href=#885 id=885 data-nosnippet>885</a>      <span class="prelude-val">Ok</span>(Tokens::new(calls))
+<a href=#886 id=886 data-nosnippet>886</a>    }
+<a href=#887 id=887 data-nosnippet>887</a>  });
+<a href=#888 id=888 data-nosnippet>888</a>  <span class="comment">// An ordinary argument, as `\lx@add@thanks` (an author's `\footnote`; KNOWN_PERL_ERRORS #515).
+<a href=#889 id=889 data-nosnippet>889</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\lx@add@note [] {}"</span>, sub[(attr, content)] {
+<a href=#890 id=890 data-nosnippet>890</a>    <span class="kw">let </span><span class="kw-2">mut </span>opts = mouth::tokenize_internal(<span class="string">"role=note"</span>).unlist();
+<a href=#891 id=891 data-nosnippet>891</a>    <span class="kw">if let </span><span class="prelude-val">Some</span>(a) = <span class="kw-2">&amp;</span>attr {
+<a href=#892 id=892 data-nosnippet>892</a>      opts.push(<span class="macro">T_OTHER!</span>(<span class="string">","</span>));
+<a href=#893 id=893 data-nosnippet>893</a>      opts.extend(a.unlist_ref().iter().copied());
+<a href=#894 id=894 data-nosnippet>894</a>    }
+<a href=#895 id=895 data-nosnippet>895</a>    <span class="kw">let </span><span class="kw-2">mut </span>calls = <span class="macro">vec!</span>[<span class="macro">T_CS!</span>(<span class="string">"\\lx@title@footnote@step"</span>)];
+<a href=#896 id=896 data-nosnippet>896</a>    calls.extend(<span class="macro">Invocation!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\lx@annotate@frontmatter"</span>),
+<a href=#897 id=897 data-nosnippet>897</a>      <span class="macro">vec!</span>[<span class="prelude-val">Some</span>(mouth::tokenize_internal(<span class="string">"ltx:creator"</span>)),
+<a href=#898 id=898 data-nosnippet>898</a>           <span class="prelude-val">Some</span>(mouth::tokenize_internal(<span class="string">"ltx:contact"</span>)),
+<a href=#899 id=899 data-nosnippet>899</a>           <span class="prelude-val">Some</span>(Tokens::new(opts)), <span class="prelude-val">Some</span>(note_body(content))]).unlist());
+<a href=#900 id=900 data-nosnippet>900</a>    <span class="prelude-val">Ok</span>(Tokens::new(calls))
+<a href=#901 id=901 data-nosnippet>901</a>  });
+<a href=#902 id=902 data-nosnippet>902</a>  <span class="prelude-val">Ok</span>(())
+<a href=#903 id=903 data-nosnippet>903</a>}
+<a href=#904 id=904 data-nosnippet>904</a>
+<a href=#905 id=905 data-nosnippet>905</a><span class="doccomment">/// The author markup in force for the author content ([`author_markup_begin`]).
+<a href=#906 id=906 data-nosnippet>906</a></span><span class="kw">pub</span>(<span class="kw">in </span><span class="kw">crate</span>::base_utilities) <span class="kw">struct </span>AuthorMarkup {
+<a href=#907 id=907 data-nosnippet>907</a>  <span class="doccomment">/// `\lx@author@markup@begin`'s expansion
+<a href=#908 id=908 data-nosnippet>908</a>  </span><span class="kw">pub </span>begin:      Tokens,
+<a href=#909 id=909 data-nosnippet>909</a>  <span class="doccomment">/// the commands of the class's title code it defines
+<a href=#910 id=910 data-nosnippet>910</a>  </span><span class="kw">pub </span>title_code: Vec&lt;Token&gt;,
+<a href=#911 id=911 data-nosnippet>911</a>}
+<a href=#912 id=912 data-nosnippet>912</a>
+<a href=#913 id=913 data-nosnippet>913</a><span class="doccomment">/// `content` under the author markup, as `\lx@author@withinst` digests the author content: its definitions undone after it,
+<a href=#914 id=914 data-nosnippet>914</a>/// the list of them taken before it runs (a nested author keeps it).
+<a href=#915 id=915 data-nosnippet>915</a></span><span class="kw">pub</span>(<span class="kw">in </span><span class="kw">crate</span>::base_utilities) <span class="kw">fn </span>under_author_markup(content: Vec&lt;Token&gt;) -&gt; Vec&lt;Token&gt; {
+<a href=#916 id=916 data-nosnippet>916</a>  <span class="kw">let </span><span class="kw-2">mut </span>out = <span class="macro">TokenizeInternal!</span>(
+<a href=#917 id=917 data-nosnippet>917</a>    <span class="string">r"\lx@author@markup@begin\expandafter\lx@author@markup@run\expandafter{\lx@author@markup@unprovide}"
+<a href=#918 id=918 data-nosnippet>918</a>  </span>)
+<a href=#919 id=919 data-nosnippet>919</a>  .unlist();
+<a href=#920 id=920 data-nosnippet>920</a>  out.push(<span class="macro">T_BEGIN!</span>());
+<a href=#921 id=921 data-nosnippet>921</a>  out.extend(content);
+<a href=#922 id=922 data-nosnippet>922</a>  out.push(<span class="macro">T_END!</span>());
+<a href=#923 id=923 data-nosnippet>923</a>  out
+<a href=#924 id=924 data-nosnippet>924</a>}
+<a href=#925 id=925 data-nosnippet>925</a>
+<a href=#926 id=926 data-nosnippet>926</a><span class="doccomment">/// `\lx@author@markup@begin`: the author markup in force for the author content; with `rehearsal`, the frontmatter
+<a href=#927 id=927 data-nosnippet>927</a>/// observer's rehearsal's (observer/reading.rs), in which a title-code definition reading no argument stays undefined,
+<a href=#928 id=928 data-nosnippet>928</a>/// its held Error the reading's (`reads_arguments`; OXIDIZED_DESIGN_DIVERGENCES #802, #941).
+<a href=#929 id=929 data-nosnippet>929</a></span><span class="kw">pub</span>(<span class="kw">in </span><span class="kw">crate</span>::base_utilities) <span class="kw">fn </span>author_markup_begin(rehearsal: bool) -&gt; <span class="prelude-ty">Result</span>&lt;AuthorMarkup&gt; {
+<a href=#930 id=930 data-nosnippet>930</a>  <span class="comment">// A binding's author markup for a class that defines its own only where its title code prints the author list
+<a href=#931 id=931 data-nosnippet>931</a>  // (`\lx@author@markup@class`, `\lx@author@markup@provide` calls: vmsta.cls:278-291 `\name@m@front`, which prints
+<a href=#932 id=932 data-nosnippet>932</a>  // `\fnm`/`\snm` as "Yuliya~Mishura" and drops `\inits`; latexml_contrib vmsta_cls.rs) comes first, before
+<a href=#933 id=933 data-nosnippet>933</a>  // OmniBus's identity meanings would take the names it gives.
+<a href=#934 id=934 data-nosnippet>934</a>  </span><span class="kw">let </span><span class="kw-2">mut </span>out = <span class="macro">TokenizeInternal!</span>(<span class="string">r"\def\lx@author@markup@unprovide{}"</span>).unlist();
+<a href=#935 id=935 data-nosnippet>935</a>  <span class="kw">if </span><span class="macro">IsDefined!</span>(<span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="string">"\\lx@author@markup@class"</span>)) {
+<a href=#936 id=936 data-nosnippet>936</a>    out.push(<span class="macro">T_CS!</span>(<span class="string">"\\lx@author@markup@class"</span>));
+<a href=#937 id=937 data-nosnippet>937</a>  }
+<a href=#938 id=938 data-nosnippet>938</a>  out.extend(<span class="kw">if </span>lookup_bool(<span class="string">"\\author:redefined"</span>) {
+<a href=#939 id=939 data-nosnippet>939</a>    <span class="macro">TokenizeInternal!</span>(
+<a href=#940 id=940 data-nosnippet>940</a>      <span class="string">r"\lx@author@markup@provide\prefix\@firstofone\lx@author@markup@provide\suffix\@firstofone\lx@author@markup@provide\particle\@firstofone\lx@author@markup@provide\fnms\@firstofone\lx@author@markup@provide\snm\@firstofone\lx@author@markup@provide\inits\@firstofone\lx@author@markup@provide\degs\@firstofone\lx@author@markup@provide\roles\@firstofone\lx@author@markup@provide\orcid\lx@author@orcid"
+<a href=#941 id=941 data-nosnippet>941</a>    </span>)
+<a href=#942 id=942 data-nosnippet>942</a>    .unlist()
+<a href=#943 id=943 data-nosnippet>943</a>  } <span class="kw">else </span>{
+<a href=#944 id=944 data-nosnippet>944</a>    Vec::new()
+<a href=#945 id=945 data-nosnippet>945</a>  });
+<a href=#946 id=946 data-nosnippet>946</a>  <span class="comment">// The author markup a class defines only where its title code reads `\@author` is in force for the author content
+<a href=#947 id=947 data-nosnippet>947</a>  // too: melba.cls:279-283 `{\def\aff{…}\def\name{…}\@author …}` (2405.09787, 2407.21368, 2105.14711), dmlr2e.sty:
+<a href=#948 id=948 data-nosnippet>948</a>  // 249-251 (2404.08403), amta2024.sty:77-78 (2405.16969), ssArxiv.sty:109-111 (2503.22625), a preamble's own
+<a href=#949 id=949 data-nosnippet>949</a>  // `\@maketitle` (2601.05137). In pdflatex `\@author` expands inside that group, while here the author content is
+<a href=#950 id=950 data-nosnippet>950</a>  // read at the frontmatter, before the title code runs. Each definition of a control sequence still undefined runs,
+<a href=#951 id=951 data-nosnippet>951</a>  // in source order, for the author content, which it is undefined again after, as the OmniBus author markup is
+<a href=#952 id=952 data-nosnippet>952</a>  // (#444); a definition already in force stands. Perl errs the same (`undefined:\name`).
+<a href=#953 id=953 data-nosnippet>953</a>  </span><span class="kw">let </span>definitions = title_code_author_definitions();
+<a href=#954 id=954 data-nosnippet>954</a>  <span class="kw">let </span>applies: Vec&lt;bool&gt; = definitions
+<a href=#955 id=955 data-nosnippet>955</a>    .iter()
+<a href=#956 id=956 data-nosnippet>956</a>    .map(|(definee, statement)| {
+<a href=#957 id=957 data-nosnippet>957</a>      lookup_meaning(definee).is_none() &amp;&amp; (!rehearsal || reads_arguments(definee, statement))
+<a href=#958 id=958 data-nosnippet>958</a>    })
+<a href=#959 id=959 data-nosnippet>959</a>    .collect();
+<a href=#960 id=960 data-nosnippet>960</a>  <span class="kw">let </span><span class="kw-2">mut </span>title_code = Vec::new();
+<a href=#961 id=961 data-nosnippet>961</a>  <span class="kw">for </span>((definee, statement), applies) <span class="kw">in </span>definitions.into_iter().zip(applies) {
+<a href=#962 id=962 data-nosnippet>962</a>    <span class="kw">if </span>!applies {
+<a href=#963 id=963 data-nosnippet>963</a>      <span class="kw">continue</span>;
+<a href=#964 id=964 data-nosnippet>964</a>    }
+<a href=#965 id=965 data-nosnippet>965</a>    title_code.push(definee);
+<a href=#966 id=966 data-nosnippet>966</a>    out.extend(statement);
+<a href=#967 id=967 data-nosnippet>967</a>    out.extend(
+<a href=#968 id=968 data-nosnippet>968</a>      <span class="macro">TokenizeInternal!</span>(<span class="string">r"\expandafter\def\expandafter\lx@author@markup@unprovide\expandafter{\lx@author@markup@unprovide\let"</span>)
+<a href=#969 id=969 data-nosnippet>969</a>        .unlist(),
+<a href=#970 id=970 data-nosnippet>970</a>    );
+<a href=#971 id=971 data-nosnippet>971</a>    out.extend([definee, <span class="macro">T_CS!</span>(<span class="string">"\\@undefined"</span>), <span class="macro">T_END!</span>()]);
+<a href=#972 id=972 data-nosnippet>972</a>  }
+<a href=#973 id=973 data-nosnippet>973</a>  <span class="prelude-val">Ok</span>(AuthorMarkup {
+<a href=#974 id=974 data-nosnippet>974</a>    begin: Tokens::new(out),
+<a href=#975 id=975 data-nosnippet>975</a>    title_code,
+<a href=#976 id=976 data-nosnippet>976</a>  })
+<a href=#977 id=977 data-nosnippet>977</a>}
+<a href=#978 id=978 data-nosnippet>978</a>
+<a href=#979 id=979 data-nosnippet>979</a><span class="doccomment">/// `\lx@add@author[attr]{name}` and `\lx@add@creator[attr]{name}` (Base_Utility.pool.ltxml `\lx@add@creator`): the
+<a href=#980 id=980 data-nosnippet>980</a>/// creator `\lx@add@frontmatter{ltx:creator}[role=author,attr]{\lx@personname{\lx@author@withinst{name}}}`, its
+<a href=#981 id=981 data-nosnippet>981</a>/// name's written membership grade taken out as its contact ([`membership_read_out`]). A collaboration a creator's
+<a href=#982 id=982 data-nosnippet>982</a>/// content names is the reading's to read (`resolver::lines::frames_the_names`).
+<a href=#983 id=983 data-nosnippet>983</a></span><span class="kw">fn </span>creator_call(attr: <span class="prelude-ty">Option</span>&lt;Tokens&gt;, name: Tokens) -&gt; <span class="prelude-ty">Result</span>&lt;Tokens&gt; {
+<a href=#984 id=984 data-nosnippet>984</a>  <span class="kw">let </span>name = membership_read_out(name);
+<a href=#985 id=985 data-nosnippet>985</a>  <span class="kw">let </span><span class="kw-2">mut </span>out = <span class="macro">TokenizeInternal!</span>(<span class="string">r"\lx@add@frontmatter{ltx:creator}[role=author,"</span>).unlist();
+<a href=#986 id=986 data-nosnippet>986</a>  <span class="kw">if let </span><span class="prelude-val">Some</span>(attr) = attr {
+<a href=#987 id=987 data-nosnippet>987</a>    out.extend(attr.unlist());
+<a href=#988 id=988 data-nosnippet>988</a>  }
+<a href=#989 id=989 data-nosnippet>989</a>  out.extend(<span class="macro">TokenizeInternal!</span>(<span class="string">r"]{\lx@personname{\lx@author@withinst{"</span>).unlist());
+<a href=#990 id=990 data-nosnippet>990</a>  out.extend(name.unlist());
+<a href=#991 id=991 data-nosnippet>991</a>  out.extend([<span class="macro">T_END!</span>(), <span class="macro">T_END!</span>(), <span class="macro">T_END!</span>()]);
+<a href=#992 id=992 data-nosnippet>992</a>  <span class="prelude-val">Ok</span>(Tokens::new(out))
+<a href=#993 id=993 data-nosnippet>993</a>}
+<a href=#994 id=994 data-nosnippet>994</a>
+<a href=#995 id=995 data-nosnippet>995</a><span class="doccomment">/// An address as TeX prints it where its argument holds a formula ([`math_braces_as_printed`], then
+<a href=#996 id=996 data-nosnippet>996</a>/// [`math_glyphs_as_printed`]): the reading of every e-mail and URL contact (`\lx@add@email`, `\lx@add@url`), for
+<a href=#997 id=997 data-nosnippet>997</a>/// every binding (OXIDIZED_DESIGN_DIVERGENCES #972).
+<a href=#998 id=998 data-nosnippet>998</a></span><span class="kw">pub</span>(<span class="kw">in </span><span class="kw">crate</span>::base_utilities) <span class="kw">fn </span>address_as_printed(address: <span class="kw-2">&amp;</span>Tokens) -&gt; Tokens {
+<a href=#999 id=999 data-nosnippet>999</a>  math_glyphs_as_printed(<span class="kw-2">&amp;</span>math_braces_as_printed(address))
+<a href=#1000 id=1000 data-nosnippet>1000</a>}
+<a href=#1001 id=1001 data-nosnippet>1001</a>
+<a href=#1002 id=1002 data-nosnippet>1002</a><span class="doccomment">/// An address's formula as TeX prints it where the formula is glyphs: a pair of math shifts — read as characters (a
+<a href=#1003 id=1003 data-nosnippet>1003</a>/// Semiverbatim argument made `$` other: the API's `\lx@add@url`/`\lx@add@email`, Perl's `neutralize`) or as shifts —
+<a href=#1004 id=1004 data-nosnippet>1004</a>/// round a run of characters, of character commands ([`text_glyph`]: `\_`, `\{`) and of math symbols that each print
+<a href=#1005 id=1005 data-nosnippet>1005</a>/// one glyph ([`math_symbol_glyph`]: `\sim`, `\cdot`) is the run, each command its glyph, the shifts and spaces dropped as math drops spaces:
+<a href=#1006 id=1006 data-nosnippet>1006</a>/// `http://www.zebra.edu/$\sim$ann` prints "http://www.zebra.edu/∼ann", as pdflatex, where the dollars printed
+<a href=#1007 id=1007 data-nosnippet>1007</a>/// (1301.1466's `\ead[label=u2,url]{http://www.math.duke.edu/$\sim$omer}`, math0608476's
+<a href=#1008 id=1008 data-nosnippet>1008</a>/// `www.math.wisc.edu/$\sim$swanson`). The glyph is a character of the address, in its font (TeX takes it from the
+<a href=#1009 id=1009 data-nosnippet>1009</a>/// math font), so the address stays one text and its link whole. The shifts pair left to right, as TeX pairs them: a
+<a href=#1010 id=1010 data-nosnippet>1010</a>/// pair round a script (`^`, `_`: `$^*$x@y`'s mark), a command of another kind or nothing (`$$`) stays as it is,
+<a href=#1011 id=1011 data-nosnippet>1011</a>/// whole, and the next pair opens after its closing shift — `$^a$a@x, $^b$b@y` keeps both marks and the text between
+<a href=#1012 id=1012 data-nosnippet>1012</a>/// them (2508.20055's `ej$_$dresselhaus@berkeley.edu, s$_$g@berkeley.edu`). A pair round spacing alone
+<a href=#1013 id=1013 data-nosnippet>1013</a>/// ([`spacing_formulas_as_space`]: `$~\quad$`, `$\,$`) is glue, no glyph: a space between printed text, none at an
+<a href=#1014 id=1014 data-nosnippet>1014</a>/// edge (2205.14113's `$~\quad~~$`).
+<a href=#1015 id=1015 data-nosnippet>1015</a></span><span class="kw">pub</span>(<span class="kw">in </span><span class="kw">crate</span>::base_utilities) <span class="kw">fn </span>math_glyphs_as_printed(address: <span class="kw-2">&amp;</span>Tokens) -&gt; Tokens {
+<a href=#1016 id=1016 data-nosnippet>1016</a>  <span class="kw">let </span>address = spacing_formulas_as_space(address.clone());
+<a href=#1017 id=1017 data-nosnippet>1017</a>  <span class="kw">let </span>v = address.unlist_ref();
+<a href=#1018 id=1018 data-nosnippet>1018</a>  <span class="kw">let </span>shift = |t: <span class="kw-2">&amp;</span>Token| <span class="kw-2">*</span>t == <span class="macro">T_OTHER!</span>(<span class="string">"$"</span>) || t.get_catcode() == Catcode::MATH;
+<a href=#1019 id=1019 data-nosnippet>1019</a>  <span class="kw">let </span>script = |t: <span class="kw-2">&amp;</span>Token| [<span class="macro">T_OTHER!</span>(<span class="string">"^"</span>), <span class="macro">T_OTHER!</span>(<span class="string">"_"</span>)].contains(t);
+<a href=#1020 id=1020 data-nosnippet>1020</a>  <span class="kw">let </span>glyphs = |t: <span class="kw-2">&amp;</span>Token| -&gt; <span class="prelude-ty">Option</span>&lt;Vec&lt;Token&gt;&gt; {
+<a href=#1021 id=1021 data-nosnippet>1021</a>    <span class="kw">match </span>t.get_catcode() {
+<a href=#1022 id=1022 data-nosnippet>1022</a>      Catcode::SPACE =&gt; <span class="prelude-val">Some</span>(Vec::new()),
+<a href=#1023 id=1023 data-nosnippet>1023</a>      Catcode::LETTER | Catcode::OTHER <span class="kw">if </span>!shift(t) &amp;&amp; !script(t) =&gt; <span class="prelude-val">Some</span>(<span class="macro">vec!</span>[<span class="kw-2">*</span>t]),
+<a href=#1024 id=1024 data-nosnippet>1024</a>      Catcode::CS =&gt; text_glyph(t)
+<a href=#1025 id=1025 data-nosnippet>1025</a>        .map(|glyph| <span class="macro">vec!</span>[glyph])
+<a href=#1026 id=1026 data-nosnippet>1026</a>        .or_else(|| math_symbol_glyph(t).map(|glyph| text_tokens(<span class="kw-2">&amp;</span>glyph))),
+<a href=#1027 id=1027 data-nosnippet>1027</a>      <span class="kw">_ </span>=&gt; <span class="prelude-val">None</span>,
+<a href=#1028 id=1028 data-nosnippet>1028</a>    }
+<a href=#1029 id=1029 data-nosnippet>1029</a>  };
+<a href=#1030 id=1030 data-nosnippet>1030</a>  <span class="kw">let </span><span class="kw-2">mut </span>out: Vec&lt;Token&gt; = Vec::with_capacity(v.len());
+<a href=#1031 id=1031 data-nosnippet>1031</a>  <span class="kw">let </span><span class="kw-2">mut </span>at = <span class="number">0</span>;
+<a href=#1032 id=1032 data-nosnippet>1032</a>  <span class="kw">while </span>at &lt; v.len() {
+<a href=#1033 id=1033 data-nosnippet>1033</a>    <span class="comment">// the shifts pair left to right, as TeX pairs them: a pair that is not glyphs (a script, the empty `$$`) stays as
+<a href=#1034 id=1034 data-nosnippet>1034</a>    // read, whole, and the next pair starts after its closing shift (2508.20055's `ej$_$d@x, s$_$g@y`)
+<a href=#1035 id=1035 data-nosnippet>1035</a>    </span><span class="kw">if </span>shift(<span class="kw-2">&amp;</span>v[at])
+<a href=#1036 id=1036 data-nosnippet>1036</a>      &amp;&amp; <span class="kw">let </span><span class="prelude-val">Some</span>(len) = v[at + <span class="number">1</span>..].iter().position(shift)
+<a href=#1037 id=1037 data-nosnippet>1037</a>    {
+<a href=#1038 id=1038 data-nosnippet>1038</a>      <span class="kw">let </span>pair = <span class="kw-2">&amp;</span>v[at..at + len + <span class="number">2</span>];
+<a href=#1039 id=1039 data-nosnippet>1039</a>      <span class="kw">match </span>pair[<span class="number">1</span>..=len]
+<a href=#1040 id=1040 data-nosnippet>1040</a>        .iter()
+<a href=#1041 id=1041 data-nosnippet>1041</a>        .map(glyphs)
+<a href=#1042 id=1042 data-nosnippet>1042</a>        .collect::&lt;<span class="prelude-ty">Option</span>&lt;Vec&lt;Vec&lt;Token&gt;&gt;&gt;&gt;()
+<a href=#1043 id=1043 data-nosnippet>1043</a>      {
+<a href=#1044 id=1044 data-nosnippet>1044</a>        <span class="prelude-val">Some</span>(printed) <span class="kw">if </span>printed.iter().any(|glyph| !glyph.is_empty()) =&gt; {
+<a href=#1045 id=1045 data-nosnippet>1045</a>          out.extend(printed.into_iter().flatten())
+<a href=#1046 id=1046 data-nosnippet>1046</a>        },
+<a href=#1047 id=1047 data-nosnippet>1047</a>        <span class="kw">_ </span>=&gt; out.extend_from_slice(pair),
+<a href=#1048 id=1048 data-nosnippet>1048</a>      }
+<a href=#1049 id=1049 data-nosnippet>1049</a>      at += len + <span class="number">2</span>;
+<a href=#1050 id=1050 data-nosnippet>1050</a>      <span class="kw">continue</span>;
+<a href=#1051 id=1051 data-nosnippet>1051</a>    }
+<a href=#1052 id=1052 data-nosnippet>1052</a>    out.push(v[at]);
+<a href=#1053 id=1053 data-nosnippet>1053</a>    at += <span class="number">1</span>;
+<a href=#1054 id=1054 data-nosnippet>1054</a>  }
+<a href=#1055 id=1055 data-nosnippet>1055</a>  Tokens::new(out)
+<a href=#1056 id=1056 data-nosnippet>1056</a>}
+<a href=#1057 id=1057 data-nosnippet>1057</a>
+<a href=#1058 id=1058 data-nosnippet>1058</a><span class="doccomment">/// The command a character command prints its character with in text, where it prints the same character in math
+<a href=#1059 id=1059 data-nosnippet>1059</a>/// (latex.ltx's `\_`, `\{`, `\}`, `\#`, `\%`, `\&amp;`; `\lbrace` and `\rbrace` the braces): `$\{a,b\}$@w.edu` prints
+<a href=#1060 id=1060 data-nosnippet>1060</a>/// "{a,b}@w.edu", `p$\_$r` "p_r". `None` for any other command.
+<a href=#1061 id=1061 data-nosnippet>1061</a></span><span class="kw">fn </span>text_glyph(t: <span class="kw-2">&amp;</span>Token) -&gt; <span class="prelude-ty">Option</span>&lt;Token&gt; {
+<a href=#1062 id=1062 data-nosnippet>1062</a>  <span class="comment">// (each command and the one it prints with in text)
+<a href=#1063 id=1063 data-nosnippet>1063</a>  </span><span class="kw">const </span>GLYPHS: [(<span class="kw-2">&amp;</span>str, <span class="kw-2">&amp;</span>str); <span class="number">8</span>] = [
+<a href=#1064 id=1064 data-nosnippet>1064</a>    (<span class="string">"\\_"</span>, <span class="string">"\\_"</span>),
+<a href=#1065 id=1065 data-nosnippet>1065</a>    (<span class="string">"\\{"</span>, <span class="string">"\\{"</span>),
+<a href=#1066 id=1066 data-nosnippet>1066</a>    (<span class="string">"\\}"</span>, <span class="string">"\\}"</span>),
+<a href=#1067 id=1067 data-nosnippet>1067</a>    (<span class="string">"\\#"</span>, <span class="string">"\\#"</span>),
+<a href=#1068 id=1068 data-nosnippet>1068</a>    (<span class="string">"\\%"</span>, <span class="string">"\\%"</span>),
+<a href=#1069 id=1069 data-nosnippet>1069</a>    (<span class="string">"\\&amp;"</span>, <span class="string">"\\&amp;"</span>),
+<a href=#1070 id=1070 data-nosnippet>1070</a>    (<span class="string">"\\lbrace"</span>, <span class="string">"\\{"</span>),
+<a href=#1071 id=1071 data-nosnippet>1071</a>    (<span class="string">"\\rbrace"</span>, <span class="string">"\\}"</span>),
 <a href=#1072 id=1072 data-nosnippet>1072</a>  ];
-<a href=#1073 id=1073 data-nosnippet>1073</a>  content.extend(mouth::tokenize_internal(TeXString::assembled(id.to_string())).unlist());
-<a href=#1074 id=1074 data-nosnippet>1074</a>  content.extend([
-<a href=#1075 id=1075 data-nosnippet>1075</a>    <span class="macro">T_END!</span>(),
-<a href=#1076 id=1076 data-nosnippet>1076</a>    <span class="macro">T_CS!</span>(<span class="string">"\\let"</span>),
-<a href=#1077 id=1077 data-nosnippet>1077</a>    <span class="macro">T_CS!</span>(<span class="string">"\\href"</span>),
-<a href=#1078 id=1078 data-nosnippet>1078</a>    <span class="macro">T_CS!</span>(<span class="string">"\\lx@orcid@href"</span>),
-<a href=#1079 id=1079 data-nosnippet>1079</a>  ]);
-<a href=#1080 id=1080 data-nosnippet>1080</a>  content.extend_from_slice(tokens);
-<a href=#1081 id=1081 data-nosnippet>1081</a>  content.push(<span class="macro">T_END!</span>());
-<a href=#1082 id=1082 data-nosnippet>1082</a>  content
-<a href=#1083 id=1083 data-nosnippet>1083</a>}
+<a href=#1073 id=1073 data-nosnippet>1073</a>  GLYPHS
+<a href=#1074 id=1074 data-nosnippet>1074</a>    .iter()
+<a href=#1075 id=1075 data-nosnippet>1075</a>    .find(|(command, <span class="kw">_</span>)| <span class="kw-2">*</span>t == <span class="macro">T_CS!</span>(<span class="kw-2">*</span>command))
+<a href=#1076 id=1076 data-nosnippet>1076</a>    .map(|(<span class="kw">_</span>, glyph)| <span class="macro">T_CS!</span>(<span class="kw-2">*</span>glyph))
+<a href=#1077 id=1077 data-nosnippet>1077</a>}
+<a href=#1078 id=1078 data-nosnippet>1078</a>
+<a href=#1079 id=1079 data-nosnippet>1079</a><span class="doccomment">/// The glyph a math symbol prints: the text of the one box a math primitive without arguments makes (`\sim` "∼",
+<a href=#1080 id=1080 data-nosnippet>1080</a>/// `def_math_primitive`), which reads the current font and changes nothing. `None` for any other command.
+<a href=#1081 id=1081 data-nosnippet>1081</a></span><span class="kw">fn </span>math_symbol_glyph(t: <span class="kw-2">&amp;</span>Token) -&gt; <span class="prelude-ty">Option</span>&lt;String&gt; {
+<a href=#1082 id=1082 data-nosnippet>1082</a>  <span class="kw">let </span><span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(Stored::MathPrimitive(math))) = lookup_definition_stored(t) <span class="kw">else </span>{
+<a href=#1083 id=1083 data-nosnippet>1083</a>    <span class="kw">return </span><span class="prelude-val">None</span>;
+<a href=#1084 id=1084 data-nosnippet>1084</a>  };
+<a href=#1085 id=1085 data-nosnippet>1085</a>  <span class="kw">if </span>math.nargs.unwrap_or(<span class="number">0</span>) != <span class="number">0 </span>{
+<a href=#1086 id=1086 data-nosnippet>1086</a>    <span class="kw">return </span><span class="prelude-val">None</span>;
+<a href=#1087 id=1087 data-nosnippet>1087</a>  }
+<a href=#1088 id=1088 data-nosnippet>1088</a>  <span class="kw">let </span>boxes = (math.replacement.as_ref()<span class="question-mark">?</span>)(Vec::new()).ok()<span class="question-mark">?</span>;
+<a href=#1089 id=1089 data-nosnippet>1089</a>  <span class="kw">match </span>boxes.as_slice() {
+<a href=#1090 id=1090 data-nosnippet>1090</a>    [only] =&gt; <span class="kw">match </span>only.data() {
+<a href=#1091 id=1091 data-nosnippet>1091</a>      DigestedData::TBox(b) =&gt; {
+<a href=#1092 id=1092 data-nosnippet>1092</a>        <span class="kw">let </span>text = b.borrow().get_string().ok()<span class="question-mark">?</span>.to_string();
+<a href=#1093 id=1093 data-nosnippet>1093</a>        (!text.is_empty() &amp;&amp; text.chars().count() == <span class="number">1</span>).then_some(text)
+<a href=#1094 id=1094 data-nosnippet>1094</a>      },
+<a href=#1095 id=1095 data-nosnippet>1095</a>      <span class="kw">_ </span>=&gt; <span class="prelude-val">None</span>,
+<a href=#1096 id=1096 data-nosnippet>1096</a>    },
+<a href=#1097 id=1097 data-nosnippet>1097</a>    <span class="kw">_ </span>=&gt; <span class="prelude-val">None</span>,
+<a href=#1098 id=1098 data-nosnippet>1098</a>  }
+<a href=#1099 id=1099 data-nosnippet>1099</a>}
+<a href=#1100 id=1100 data-nosnippet>1100</a>
+<a href=#1101 id=1101 data-nosnippet>1101</a><span class="doccomment">/// Rust-only (OXIDIZED_DESIGN_DIVERGENCES #960): an ORCID contact whose link prints no word (`\href{https://orcid.org/…}
+<a href=#1102 id=1102 data-nosnippet>1102</a>/// {\orcidicon}`, the TikZ "iD" icon of the `\orcidicon` template, a logo graphic), as the frontmatter emitter writes it
+<a href=#1103 id=1103 data-nosnippet>1103</a>/// from the document's `tokens`: the kernel's ORCID link to `id`, the iD the reading read (a template's `\xdef` may leave
+<a href=#1104 id=1104 data-nosnippet>1104</a>/// the iD's macro in the address, `https://orcid.org/\orcidauthorSKP`), its iD in the link and its title, the icon as
+<a href=#1105 id=1105 data-nosnippet>1105</a>/// printed — `\href` let to `\lx@orcid@href` for the contact, as `\lx@author@href` makes a name's link the contact
+<a href=#1106 id=1106 data-nosnippet>1106</a>/// (2008.02173, 2009.11534; the link had been written plain, the iD's title lost).
+<a href=#1107 id=1107 data-nosnippet>1107</a></span><span class="kw">pub</span>(<span class="kw">in </span><span class="kw">crate</span>::base_utilities) <span class="kw">fn </span>orcid_icon_link(id: <span class="kw-2">&amp;</span>str, tokens: <span class="kw-2">&amp;</span>[Token]) -&gt; Vec&lt;Token&gt; {
+<a href=#1108 id=1108 data-nosnippet>1108</a>  <span class="kw">let </span><span class="kw-2">mut </span>content = <span class="macro">vec!</span>[
+<a href=#1109 id=1109 data-nosnippet>1109</a>    <span class="macro">T_BEGIN!</span>(),
+<a href=#1110 id=1110 data-nosnippet>1110</a>    <span class="macro">T_CS!</span>(<span class="string">"\\def"</span>),
+<a href=#1111 id=1111 data-nosnippet>1111</a>    <span class="macro">T_CS!</span>(<span class="string">"\\lx@orcid@known"</span>),
+<a href=#1112 id=1112 data-nosnippet>1112</a>    <span class="macro">T_BEGIN!</span>(),
+<a href=#1113 id=1113 data-nosnippet>1113</a>  ];
+<a href=#1114 id=1114 data-nosnippet>1114</a>  content.extend(mouth::tokenize_internal(TeXString::assembled(id.to_string())).unlist());
+<a href=#1115 id=1115 data-nosnippet>1115</a>  content.extend([
+<a href=#1116 id=1116 data-nosnippet>1116</a>    <span class="macro">T_END!</span>(),
+<a href=#1117 id=1117 data-nosnippet>1117</a>    <span class="macro">T_CS!</span>(<span class="string">"\\let"</span>),
+<a href=#1118 id=1118 data-nosnippet>1118</a>    <span class="macro">T_CS!</span>(<span class="string">"\\href"</span>),
+<a href=#1119 id=1119 data-nosnippet>1119</a>    <span class="macro">T_CS!</span>(<span class="string">"\\lx@orcid@href"</span>),
+<a href=#1120 id=1120 data-nosnippet>1120</a>  ]);
+<a href=#1121 id=1121 data-nosnippet>1121</a>  content.extend_from_slice(tokens);
+<a href=#1122 id=1122 data-nosnippet>1122</a>  content.push(<span class="macro">T_END!</span>());
+<a href=#1123 id=1123 data-nosnippet>1123</a>  content
+<a href=#1124 id=1124 data-nosnippet>1124</a>}
 </code></pre></div></section></main></body></html>

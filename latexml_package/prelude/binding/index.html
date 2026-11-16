@@ -15,7 +15,9 @@ be one the LaTeX kernel defines.</dd><dt><a class="mod" href="preamble_commands/
 command IS <code>\@notprerr</code>, which raw code tests with <code>\ifx</code> (ltnews23.tex:42-43). LaTeXML also reads a package, class
 or sub-file preamble in the body (Perl’s recovery for a body <code>\usepackage</code>, a binding’s load, standalone and
 subfiles), which pdflatex never does: there the walk’s commands are reopened, and disabled again after it. The walk
-keeps each meaning under <code>\lx@onlypreamble@&lt;name&gt;</code>; the State holds the list (OXIDIZED_DESIGN_DIVERGENCES #226).</dd><dt><a class="mod" href="store_setters/index.html" title="mod latexml_package::prelude::binding::store_setters">store_<wbr>setters</a></dt><dd>K11’s table of title-page setters (<code>latexml_engine/src/frontmatter_stores.rs</code> reroutes a raw
+keeps each meaning under <code>\lx@onlypreamble@&lt;name&gt;</code>; the State holds the list (OXIDIZED_DESIGN_DIVERGENCES #226).
+A binding’s lock goes aside with its meaning: <code>\@notprerr</code> is no binding’s, and the body’s <code>\renewcommand</code> of it
+stands as in TeX (imsart.sty:1223 <code>\@onlypreamble\doi</code> over OmniBus’s locked <code>\doi</code>, 2606.22730).</dd><dt><a class="mod" href="store_setters/index.html" title="mod latexml_package::prelude::binding::store_setters">store_<wbr>setters</a></dt><dd>K11’s table of title-page setters (<code>latexml_engine/src/frontmatter_stores.rs</code> reroutes a raw
 class’s — or package’s — stores through it), and which of them a binding defined: a setter whose definition
 changed while a binding loaded is the binding’s own (acmart.cls’s <code>\copyrightyear</code>, ported as the
 class’s store), never a raw class’s store, though a raw class that loads the binding

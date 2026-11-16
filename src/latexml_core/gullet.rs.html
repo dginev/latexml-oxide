@@ -5477,658 +5477,659 @@
 <a href=#5477 id=5477 data-nosnippet>5477</a>}
 <a href=#5478 id=5478 data-nosnippet>5478</a>
 <a href=#5479 id=5479 data-nosnippet>5479</a><span class="doccomment">/// The mouths open: the one in reading ([`Gullet::runtime`]) and those under it. [`open_mouth`] pushes nothing on the stack
-<a href=#5480 id=5480 data-nosnippet>5480</a>/// when none is in reading, so the stack alone doesn't count them.
-<a href=#5481 id=5481 data-nosnippet>5481</a></span><span class="kw">fn </span>mouth_depth() -&gt; usize {
-<a href=#5482 id=5482 data-nosnippet>5482</a>  <span class="kw">let </span>g = <span class="macro">gullet!</span>();
-<a href=#5483 id=5483 data-nosnippet>5483</a>  g.mouthstack.len() + usize::from(g.runtime.is_some())
-<a href=#5484 id=5484 data-nosnippet>5484</a>}
-<a href=#5485 id=5485 data-nosnippet>5485</a>
-<a href=#5486 id=5486 data-nosnippet>5486</a><span class="macro">thread_local!</span> {
-<a href=#5487 id=5487 data-nosnippet>5487</a>  <span class="doccomment">/// The conversion's "Mouth is unexpectedly already closed" errors ([`reading_from_mouth`]'s budget).
-<a href=#5488 id=5488 data-nosnippet>5488</a>  </span><span class="kw">static </span>MOUTH_CLOSED_ERRORS: Cell&lt;usize&gt; = <span class="kw">const </span>{ Cell::new(<span class="number">0</span>) };
-<a href=#5489 id=5489 data-nosnippet>5489</a>}
-<a href=#5490 id=5490 data-nosnippet>5490</a>
-<a href=#5491 id=5491 data-nosnippet>5491</a><span class="doccomment">/// Forgets the mouth-closed errors counted: a predecessor that spent the budget (0906.1883) silenced the next paper's
-<a href=#5492 id=5492 data-nosnippet>5492</a>/// first ten and made its first a Fatal.
-<a href=#5493 id=5493 data-nosnippet>5493</a></span><span class="kw">pub fn </span>reset_mouth_closed_errors() { MOUTH_CLOSED_ERRORS.with(|c| c.set(<span class="number">0</span>)); }
-<a href=#5494 id=5494 data-nosnippet>5494</a>
-<a href=#5495 id=5495 data-nosnippet>5495</a><span class="doccomment">/// Do something, while reading tokens from a specific Mouth.
-<a href=#5496 id=5496 data-nosnippet>5496</a>///
-<a href=#5497 id=5497 data-nosnippet>5497</a>/// This reads ONLY from that mouth (or any mouth openned by code in that source),
-<a href=#5498 id=5498 data-nosnippet>5498</a>/// and the mouth should end up empty afterwards, and only be closed here.
-<a href=#5499 id=5499 data-nosnippet>5499</a></span><span class="kw">pub fn </span>reading_from_mouth&lt;R, FnR&gt;(mouth: Mouth, reader: FnR) -&gt; <span class="prelude-ty">Result</span>&lt;R&gt;
-<a href=#5500 id=5500 data-nosnippet>5500</a><span class="kw">where </span>FnR: FnOnce() -&gt; <span class="prelude-ty">Result</span>&lt;R&gt; {
-<a href=#5501 id=5501 data-nosnippet>5501</a>  <span class="kw">let </span>context_mouth_source = arena::pin(mouth.get_source());
-<a href=#5502 id=5502 data-nosnippet>5502</a>  <span class="kw">let </span>outer_mouths = mouth_depth();
-<a href=#5503 id=5503 data-nosnippet>5503</a>  <span class="comment">// A cycle is only a cycle WITHIN one expansion context. Rather than
-<a href=#5504 id=5504 data-nosnippet>5504</a>  // resetting the guard history here (an earlier fix that also BLINDED the
-<a href=#5505 id=5505 data-nosnippet>5505</a>  // guard to outer loops whose body calls `do_expand` each iteration), give
-<a href=#5506 id=5506 data-nosnippet>5506</a>  // this reading context a fresh SERIAL that `read_internal_token_checked`
-<a href=#5507 id=5507 data-nosnippet>5507</a>  // mixes into every fingerprint: windows can never match across contexts, so
-<a href=#5508 id=5508 data-nosnippet>5508</a>  // consecutive identical short expansions — the math0402448 xymatrix
-<a href=#5509 id=5509 data-nosnippet>5509</a>  // per-cell `get_xmarg_id` stream that false-positived as a "loop" — stay
-<a href=#5510 id=5510 data-nosnippet>5510</a>  // inert, while the OUTER context's serial (restored on exit) keeps outer
-<a href=#5511 id=5511 data-nosnippet>5511</a>  // periodicity intact and detectable. PR #249 review P2-7.
-<a href=#5512 id=5512 data-nosnippet>5512</a>  </span>{
-<a href=#5513 id=5513 data-nosnippet>5513</a>    <span class="kw">let </span><span class="kw-2">mut </span>g = <span class="macro">gullet_mut!</span>();
-<a href=#5514 id=5514 data-nosnippet>5514</a>    <span class="kw">let </span>outer = g.ctx_serial;
-<a href=#5515 id=5515 data-nosnippet>5515</a>    g.ctx_stack.push(outer);
-<a href=#5516 id=5516 data-nosnippet>5516</a>    g.ctx_next += <span class="number">1</span>;
-<a href=#5517 id=5517 data-nosnippet>5517</a>    g.ctx_serial = g.ctx_next;
-<a href=#5518 id=5518 data-nosnippet>5518</a>  }
-<a href=#5519 id=5519 data-nosnippet>5519</a>  open_mouth(mouth, <span class="bool-val">false</span>); <span class="comment">// only allow mouth to be explicitly closed here.
-<a href=#5520 id=5520 data-nosnippet>5520</a>  </span><span class="kw">let </span>reader_result = reader();
-<a href=#5521 id=5521 data-nosnippet>5521</a>  <span class="comment">// Reading in this context is over (whether Ok or Err): restore the outer
-<a href=#5522 id=5522 data-nosnippet>5522</a>  // context's serial before any cleanup/return path below.
-<a href=#5523 id=5523 data-nosnippet>5523</a>  </span>{
-<a href=#5524 id=5524 data-nosnippet>5524</a>    <span class="kw">let </span><span class="kw-2">mut </span>g = <span class="macro">gullet_mut!</span>();
-<a href=#5525 id=5525 data-nosnippet>5525</a>    <span class="kw">let </span>restored = g.ctx_stack.pop().unwrap_or(<span class="number">0</span>);
-<a href=#5526 id=5526 data-nosnippet>5526</a>    g.ctx_serial = restored;
-<a href=#5527 id=5527 data-nosnippet>5527</a>  }
-<a href=#5528 id=5528 data-nosnippet>5528</a>  <span class="comment">// If the reader returned an error (e.g., Fatal from token limit),
-<a href=#5529 id=5529 data-nosnippet>5529</a>  // we STILL need to clean up the mouth to preserve the caller's state.
-<a href=#5530 id=5530 data-nosnippet>5530</a>  </span><span class="kw">let </span>results: R = <span class="kw">match </span>reader_result {
-<a href=#5531 id=5531 data-nosnippet>5531</a>    <span class="prelude-val">Ok</span>(v) =&gt; v,
-<a href=#5532 id=5532 data-nosnippet>5532</a>    <span class="prelude-val">Err</span>(e) =&gt; {
-<a href=#5533 id=5533 data-nosnippet>5533</a>      <span class="comment">// Force-close our mouth and any mouth above it, by depth: another of the same name above ours (an "Anonymous
-<a href=#5534 id=5534 data-nosnippet>5534</a>      // String", a `\scantokens`'s in a discarded run) is not ours, and stopping at it left ours open and took the
-<a href=#5535 id=5535 data-nosnippet>5535</a>      // document's text next (`perfect_kernel_batchr1::a_run_over_budget_leaves_no_trace`).
-<a href=#5536 id=5536 data-nosnippet>5536</a>      </span><span class="kw">while </span>mouth_depth() &gt; outer_mouths {
-<a href=#5537 id=5537 data-nosnippet>5537</a>        close_mouth(<span class="bool-val">true</span>).ok();
-<a href=#5538 id=5538 data-nosnippet>5538</a>      }
-<a href=#5539 id=5539 data-nosnippet>5539</a>      <span class="comment">// Reset progress counter so subsequent processing isn't immediately killed
-<a href=#5540 id=5540 data-nosnippet>5540</a>      </span><span class="kw">let </span><span class="kw-2">mut </span>g = <span class="macro">gullet_mut!</span>();
-<a href=#5541 id=5541 data-nosnippet>5541</a>      <span class="comment">// (what a budgeted run has left stays what it has left: [`read_budget`])
-<a href=#5542 id=5542 data-nosnippet>5542</a>      </span><span class="kw">let </span>progress = g.progress;
-<a href=#5543 id=5543 data-nosnippet>5543</a>      g.read_budget_at = g.read_budget_at.map(|at| at.saturating_sub(progress));
-<a href=#5544 id=5544 data-nosnippet>5544</a>      g.progress = <span class="number">0</span>;
-<a href=#5545 id=5545 data-nosnippet>5545</a>      g.full_read_at = <span class="number">0</span>;
-<a href=#5546 id=5546 data-nosnippet>5546</a>      drop(g);
-<a href=#5547 id=5547 data-nosnippet>5547</a>      <span class="kw">return </span><span class="prelude-val">Err</span>(e);
-<a href=#5548 id=5548 data-nosnippet>5548</a>    },
-<a href=#5549 id=5549 data-nosnippet>5549</a>  };
-<a href=#5550 id=5550 data-nosnippet>5550</a>  <span class="comment">// `mouth` must still be open, with (at worst) empty autoclosable mouths in front of it.
-<a href=#5551 id=5551 data-nosnippet>5551</a>  // Rate-limit the "mouth closed" error — when the gullet gets into a state
-<a href=#5552 id=5552 data-nosnippet>5552</a>  // where the cleanup loop keeps finding stale mouths above the target, the
-<a href=#5553 id=5553 data-nosnippet>5553</a>  // same error can fire on EVERY caller of reading_from_mouth. Arxiv 0906.1883
-<a href=#5554 id=5554 data-nosnippet>5554</a>  // (birkmult + local .cls) can trigger 10K+ such firings, one per stack frame.
-<a href=#5555 id=5555 data-nosnippet>5555</a>  // Fatal out after 50 repeat firings so the process surfaces a clear "we lost
-<a href=#5556 id=5556 data-nosnippet>5556</a>  // the mouth stack" signal instead of filling the log with identical messages.
-<a href=#5557 id=5557 data-nosnippet>5557</a>  </span><span class="kw">fn </span>record_mouth_closed_error() { MOUTH_CLOSED_ERRORS.with(|c| c.set(c.get().saturating_add(<span class="number">1</span>))); }
-<a href=#5558 id=5558 data-nosnippet>5558</a>  <span class="kw">fn </span>should_emit_mouth_closed() -&gt; bool { MOUTH_CLOSED_ERRORS.with(|c| c.get() &lt; <span class="number">10</span>) }
-<a href=#5559 id=5559 data-nosnippet>5559</a>  <span class="kw">fn </span>mouth_closed_budget_exhausted() -&gt; bool { MOUTH_CLOSED_ERRORS.with(|c| c.get() &gt;= <span class="number">50</span>) }
-<a href=#5560 id=5560 data-nosnippet>5560</a>  <span class="kw">loop </span>{
-<a href=#5561 id=5561 data-nosnippet>5561</a>    <span class="kw">let </span>mouth_source = <span class="macro">gullet!</span>()
-<a href=#5562 id=5562 data-nosnippet>5562</a>      .runtime
-<a href=#5563 id=5563 data-nosnippet>5563</a>      .as_ref()
-<a href=#5564 id=5564 data-nosnippet>5564</a>      .map(|r| arena::pin(r.mouth.get_source()));
-<a href=#5565 id=5565 data-nosnippet>5565</a>    <span class="kw">if </span>mouth_source == <span class="prelude-val">Some</span>(context_mouth_source) {
-<a href=#5566 id=5566 data-nosnippet>5566</a>      close_mouth(<span class="bool-val">true</span>)<span class="question-mark">?</span>;
-<a href=#5567 id=5567 data-nosnippet>5567</a>      <span class="kw">break</span>;
-<a href=#5568 id=5568 data-nosnippet>5568</a>    } <span class="kw">else if </span><span class="macro">gullet!</span>().mouthstack.is_empty() {
-<a href=#5569 id=5569 data-nosnippet>5569</a>      <span class="kw">if </span>should_emit_mouth_closed() {
-<a href=#5570 id=5570 data-nosnippet>5570</a>        <span class="comment">// `arena::to_string` clones the resolved &amp;str into an owned String
-<a href=#5571 id=5571 data-nosnippet>5571</a>        // BEFORE we hand it to Error! — a following `arena::pin` triggered
-<a href=#5572 id=5572 data-nosnippet>5572</a>        // deep inside generate_message!/get_location() can grow the
-<a href=#5573 id=5573 data-nosnippet>5573</a>        // interner's buffer and invalidate a borrowed &amp;str (observed as
-<a href=#5574 id=5574 data-nosnippet>5574</a>        // garbled, buffer-adjacent symbol content in 0906.1883 errors).
-<a href=#5575 id=5575 data-nosnippet>5575</a>        </span><span class="kw">let </span>src = arena::to_string(context_mouth_source);
-<a href=#5576 id=5576 data-nosnippet>5576</a>        <span class="macro">Error!</span>(
-<a href=#5577 id=5577 data-nosnippet>5577</a>          <span class="string">"unexpected"</span>,
-<a href=#5578 id=5578 data-nosnippet>5578</a>          <span class="string">"&lt;closed&gt;"</span>,
-<a href=#5579 id=5579 data-nosnippet>5579</a>          <span class="string">"Mouth is unexpectedly already closed"</span>,
-<a href=#5580 id=5580 data-nosnippet>5580</a>          <span class="macro">s!</span>(<span class="string">"Reading from {src}, but it has already been closed."</span>)
-<a href=#5581 id=5581 data-nosnippet>5581</a>        );
-<a href=#5582 id=5582 data-nosnippet>5582</a>      }
-<a href=#5583 id=5583 data-nosnippet>5583</a>      record_mouth_closed_error();
-<a href=#5584 id=5584 data-nosnippet>5584</a>      <span class="kw">if </span>mouth_closed_budget_exhausted() {
-<a href=#5585 id=5585 data-nosnippet>5585</a>        <span class="macro">Fatal!</span>(
-<a href=#5586 id=5586 data-nosnippet>5586</a>          Stomach,
-<a href=#5587 id=5587 data-nosnippet>5587</a>          Recursion,
-<a href=#5588 id=5588 data-nosnippet>5588</a>          <span class="string">"Too many unexpectedly-closed mouth errors (&gt;50); gullet mouth-stack state is inconsistent"
-<a href=#5589 id=5589 data-nosnippet>5589</a>        </span>);
-<a href=#5590 id=5590 data-nosnippet>5590</a>      }
-<a href=#5591 id=5591 data-nosnippet>5591</a>      <span class="kw">break</span>;
-<a href=#5592 id=5592 data-nosnippet>5592</a>    } <span class="kw">else </span>{
-<a href=#5593 id=5593 data-nosnippet>5593</a>      <span class="kw">let </span>is_autoclosable = <span class="macro">gullet!</span>()
-<a href=#5594 id=5594 data-nosnippet>5594</a>        .runtime
-<a href=#5595 id=5595 data-nosnippet>5595</a>        .as_ref()
-<a href=#5596 id=5596 data-nosnippet>5596</a>        .map(|r| r.autoclose)
-<a href=#5597 id=5597 data-nosnippet>5597</a>        .unwrap_or(<span class="bool-val">false</span>);
-<a href=#5598 id=5598 data-nosnippet>5598</a>      <span class="kw">if </span>is_autoclosable {
-<a href=#5599 id=5599 data-nosnippet>5599</a>        <span class="comment">// Auto-closable mouth (e.g. from \scantokens, raw_tex) — safe to close
-<a href=#5600 id=5600 data-nosnippet>5600</a>        </span>close_mouth(<span class="bool-val">true</span>)<span class="question-mark">?</span>;
-<a href=#5601 id=5601 data-nosnippet>5601</a>      } <span class="kw">else </span>{
-<a href=#5602 id=5602 data-nosnippet>5602</a>        <span class="comment">// Non-autoclosable mouth that isn't our target — this means our target
-<a href=#5603 id=5603 data-nosnippet>5603</a>        // mouth was already consumed. Don't close this mouth (it belongs to an
-<a href=#5604 id=5604 data-nosnippet>5604</a>        // outer reading_from_mouth call). Just error and stop.
-<a href=#5605 id=5605 data-nosnippet>5605</a>        </span><span class="kw">if </span>should_emit_mouth_closed() {
-<a href=#5606 id=5606 data-nosnippet>5606</a>          <span class="kw">let </span>src = arena::to_string(context_mouth_source);
-<a href=#5607 id=5607 data-nosnippet>5607</a>          <span class="macro">Error!</span>(
-<a href=#5608 id=5608 data-nosnippet>5608</a>            <span class="string">"unexpected"</span>,
-<a href=#5609 id=5609 data-nosnippet>5609</a>            <span class="string">"&lt;closed&gt;"</span>,
-<a href=#5610 id=5610 data-nosnippet>5610</a>            <span class="string">"Mouth is unexpectedly already closed"</span>,
-<a href=#5611 id=5611 data-nosnippet>5611</a>            <span class="macro">s!</span>(
-<a href=#5612 id=5612 data-nosnippet>5612</a>              <span class="string">"Reading from {src}, but it has already been closed (found different non-closable mouth on top)."
-<a href=#5613 id=5613 data-nosnippet>5613</a>            </span>)
-<a href=#5614 id=5614 data-nosnippet>5614</a>          );
-<a href=#5615 id=5615 data-nosnippet>5615</a>        }
-<a href=#5616 id=5616 data-nosnippet>5616</a>        record_mouth_closed_error();
-<a href=#5617 id=5617 data-nosnippet>5617</a>        <span class="kw">if </span>mouth_closed_budget_exhausted() {
-<a href=#5618 id=5618 data-nosnippet>5618</a>          <span class="macro">Fatal!</span>(
-<a href=#5619 id=5619 data-nosnippet>5619</a>            Stomach,
-<a href=#5620 id=5620 data-nosnippet>5620</a>            Recursion,
-<a href=#5621 id=5621 data-nosnippet>5621</a>            <span class="string">"Too many unexpectedly-closed mouth errors (&gt;50); gullet mouth-stack state is inconsistent"
-<a href=#5622 id=5622 data-nosnippet>5622</a>          </span>);
-<a href=#5623 id=5623 data-nosnippet>5623</a>        }
-<a href=#5624 id=5624 data-nosnippet>5624</a>        <span class="kw">break</span>;
-<a href=#5625 id=5625 data-nosnippet>5625</a>      }
-<a href=#5626 id=5626 data-nosnippet>5626</a>    }
-<a href=#5627 id=5627 data-nosnippet>5627</a>  }
-<a href=#5628 id=5628 data-nosnippet>5628</a>  <span class="prelude-val">Ok</span>(results)
-<a href=#5629 id=5629 data-nosnippet>5629</a>}
-<a href=#5630 id=5630 data-nosnippet>5630</a>
-<a href=#5631 id=5631 data-nosnippet>5631</a><span class="doccomment">/// The reading context tokens are read in now, as `(serial, depth)`: the serial [`reading_from_mouth`] gives each
-<a href=#5632 id=5632 data-nosnippet>5632</a>/// isolated context (a constructor's argument digested on its own; 0 for the document's own input, `\input` files
-<a href=#5633 id=5633 data-nosnippet>5633</a>/// included), and how many such contexts are open. A `\left` records it (stomach.rs `record_left_group_input`), so that
-<a href=#5634 id=5634 data-nosnippet>5634</a>/// only the end of the input it was read in closes its group (OXIDIZED_DESIGN #530).
-<a href=#5635 id=5635 data-nosnippet>5635</a></span><span class="kw">pub fn </span>reading_context() -&gt; (u64, usize) {
-<a href=#5636 id=5636 data-nosnippet>5636</a>  <span class="kw">let </span>g = <span class="macro">gullet!</span>();
-<a href=#5637 id=5637 data-nosnippet>5637</a>  (g.ctx_serial, g.ctx_stack.len())
-<a href=#5638 id=5638 data-nosnippet>5638</a>}
-<a href=#5639 id=5639 data-nosnippet>5639</a>
-<a href=#5640 id=5640 data-nosnippet>5640</a><span class="doccomment">/// Whether the token just read ends an isolated reading context ([`reading_from_mouth`]: a token list digested on its
-<a href=#5641 id=5641 data-nosnippet>5641</a>/// own, such as a constructor's argument `{$x}`, which may come wrapped in a further brace pair): only `}`s left in
-<a href=#5642 id=5642 data-nosnippet>5642</a>/// its pushback and its mouth exhausted. A `}` read here is the argument's own closing brace, which TeX strips with the
-<a href=#5643 id=5643 data-nosnippet>5643</a>/// argument — one end of a construct digested as a unit (stomach.rs `formula_ends_with_its_unit`, OXIDIZED_DESIGN
-<a href=#5644 id=5644 data-nosnippet>5644</a>/// #553). `false` whenever a mouth of its own is still open in the context.
-<a href=#5645 id=5645 data-nosnippet>5645</a></span><span class="kw">pub fn </span>isolated_input_ends_here() -&gt; bool {
-<a href=#5646 id=5646 data-nosnippet>5646</a>  <span class="kw">let </span><span class="kw-2">mut </span>g = <span class="macro">gullet_mut!</span>();
-<a href=#5647 id=5647 data-nosnippet>5647</a>  <span class="kw">if </span>g.ctx_stack.is_empty() {
-<a href=#5648 id=5648 data-nosnippet>5648</a>    <span class="kw">return </span><span class="bool-val">false</span>;
-<a href=#5649 id=5649 data-nosnippet>5649</a>  }
-<a href=#5650 id=5650 data-nosnippet>5650</a>  <span class="kw">match </span>g.runtime.as_mut() {
-<a href=#5651 id=5651 data-nosnippet>5651</a>    <span class="prelude-val">Some</span>(runtime) =&gt; {
-<a href=#5652 id=5652 data-nosnippet>5652</a>      !runtime.autoclose
-<a href=#5653 id=5653 data-nosnippet>5653</a>        &amp;&amp; runtime
-<a href=#5654 id=5654 data-nosnippet>5654</a>          .pushback
-<a href=#5655 id=5655 data-nosnippet>5655</a>          .iter()
-<a href=#5656 id=5656 data-nosnippet>5656</a>          .all(|t| t.get_catcode() == Catcode::END)
-<a href=#5657 id=5657 data-nosnippet>5657</a>        &amp;&amp; !runtime.mouth.has_more_input()
-<a href=#5658 id=5658 data-nosnippet>5658</a>    },
-<a href=#5659 id=5659 data-nosnippet>5659</a>    <span class="prelude-val">None </span>=&gt; <span class="bool-val">false</span>,
-<a href=#5660 id=5660 data-nosnippet>5660</a>  }
-<a href=#5661 id=5661 data-nosnippet>5661</a>}
-<a href=#5662 id=5662 data-nosnippet>5662</a>
-<a href=#5663 id=5663 data-nosnippet>5663</a><span class="doccomment">/// The tokens the current input holds next, without reading them: the pushback, next-read first, then the current
-<a href=#5664 id=5664 data-nosnippet>5664</a>/// mouth's next `max_lines` source lines (at most `max_chars` characters of them, [`Mouth::peek_text`]) tokenized by
-<a href=#5665 id=5665 data-nosnippet>5665</a>/// a scratch mouth under the current catcodes as the iterator is drawn on, `max_tokens` in all. Nothing is read,
-<a href=#5666 id=5666 data-nosnippet>5666</a>/// expanded or moved, so a catcode change the look-ahead runs past still applies to the text when it is really read.
-<a href=#5667 id=5667 data-nosnippet>5667</a>/// Only the current mouth: the input levels outside it are not reached. The cost is bounded by the limits, not by the
-<a href=#5668 id=5668 data-nosnippet>5668</a>/// length of the line or of the pending expansion. A look-ahead for a decision about what follows (stomach.rs
-<a href=#5669 id=5669 data-nosnippet>5669</a>/// `formula_continues_past_par`, OXIDIZED_DESIGN #553).
-<a href=#5670 id=5670 data-nosnippet>5670</a></span><span class="kw">pub fn </span>peek_upcoming_tokens(
-<a href=#5671 id=5671 data-nosnippet>5671</a>  max_lines: usize,
-<a href=#5672 id=5672 data-nosnippet>5672</a>  max_chars: usize,
-<a href=#5673 id=5673 data-nosnippet>5673</a>  max_tokens: usize,
-<a href=#5674 id=5674 data-nosnippet>5674</a>) -&gt; <span class="kw">impl </span>Iterator&lt;Item = Token&gt; {
-<a href=#5675 id=5675 data-nosnippet>5675</a>  <span class="kw">let </span>(pending, text) = {
-<a href=#5676 id=5676 data-nosnippet>5676</a>    <span class="kw">let </span>gullet = <span class="macro">gullet!</span>();
-<a href=#5677 id=5677 data-nosnippet>5677</a>    <span class="kw">match </span>gullet.runtime.as_ref() {
-<a href=#5678 id=5678 data-nosnippet>5678</a>      <span class="prelude-val">Some</span>(runtime) =&gt; (
-<a href=#5679 id=5679 data-nosnippet>5679</a>        runtime
-<a href=#5680 id=5680 data-nosnippet>5680</a>          .pushback
-<a href=#5681 id=5681 data-nosnippet>5681</a>          .iter()
-<a href=#5682 id=5682 data-nosnippet>5682</a>          .rev()
-<a href=#5683 id=5683 data-nosnippet>5683</a>          .take(max_tokens)
-<a href=#5684 id=5684 data-nosnippet>5684</a>          .copied()
-<a href=#5685 id=5685 data-nosnippet>5685</a>          .collect::&lt;Vec&lt;Token&gt;&gt;(),
-<a href=#5686 id=5686 data-nosnippet>5686</a>        runtime.mouth.peek_text(max_lines, max_chars),
-<a href=#5687 id=5687 data-nosnippet>5687</a>      ),
-<a href=#5688 id=5688 data-nosnippet>5688</a>      <span class="prelude-val">None </span>=&gt; (Vec::new(), String::new()),
-<a href=#5689 id=5689 data-nosnippet>5689</a>    }
-<a href=#5690 id=5690 data-nosnippet>5690</a>  };
-<a href=#5691 id=5691 data-nosnippet>5691</a>  <span class="kw">let </span><span class="kw-2">mut </span>scratch = <span class="kw">if </span>pending.len() &lt; max_tokens &amp;&amp; !text.is_empty() {
-<a href=#5692 id=5692 data-nosnippet>5692</a>    Mouth::new(<span class="kw-2">&amp;</span>text, <span class="prelude-val">None</span>).ok()
-<a href=#5693 id=5693 data-nosnippet>5693</a>  } <span class="kw">else </span>{
-<a href=#5694 id=5694 data-nosnippet>5694</a>    <span class="prelude-val">None
-<a href=#5695 id=5695 data-nosnippet>5695</a>  </span>};
-<a href=#5696 id=5696 data-nosnippet>5696</a>  pending
-<a href=#5697 id=5697 data-nosnippet>5697</a>    .into_iter()
-<a href=#5698 id=5698 data-nosnippet>5698</a>    .chain(std::iter::from_fn(<span class="kw">move </span>|| scratch.as_mut()<span class="question-mark">?</span>.read_token()))
-<a href=#5699 id=5699 data-nosnippet>5699</a>    .take(max_tokens)
-<a href=#5700 id=5700 data-nosnippet>5700</a>}
-<a href=#5701 id=5701 data-nosnippet>5701</a>
-<a href=#5702 id=5702 data-nosnippet>5702</a><span class="doccomment">/// Check if there is more input to be read from the current mouth
-<a href=#5703 id=5703 data-nosnippet>5703</a></span><span class="kw">pub fn </span>has_more_input() -&gt; bool {
-<a href=#5704 id=5704 data-nosnippet>5704</a>  <span class="kw">match </span><span class="macro">runtime!</span>() {
-<a href=#5705 id=5705 data-nosnippet>5705</a>    <span class="prelude-val">Some</span>(<span class="kw-2">ref mut </span>runtime) =&gt; runtime.mouth.has_more_input(),
-<a href=#5706 id=5706 data-nosnippet>5706</a>    <span class="prelude-val">None </span>=&gt; <span class="bool-val">false</span>,
-<a href=#5707 id=5707 data-nosnippet>5707</a>  }
-<a href=#5708 id=5708 data-nosnippet>5708</a>}
-<a href=#5709 id=5709 data-nosnippet>5709</a>
-<a href=#5710 id=5710 data-nosnippet>5710</a><span class="macro">thread_local!</span> {
-<a href=#5711 id=5711 data-nosnippet>5711</a>  <span class="doccomment">/// How many speculative digestions are running ([`speculative_digestion`]).
-<a href=#5712 id=5712 data-nosnippet>5712</a>  </span><span class="kw">static </span>SPECULATIVE_DIGESTIONS: Cell&lt;usize&gt; = <span class="kw">const </span>{ Cell::new(<span class="number">0</span>) };
-<a href=#5713 id=5713 data-nosnippet>5713</a>}
-<a href=#5714 id=5714 data-nosnippet>5714</a>
-<a href=#5715 id=5715 data-nosnippet>5715</a><span class="doccomment">/// A speculative digestion runs while this lives ([`speculative_digestion`]).
-<a href=#5716 id=5716 data-nosnippet>5716</a></span><span class="kw">pub struct </span>SpeculativeDigestion;
-<a href=#5717 id=5717 data-nosnippet>5717</a>
-<a href=#5718 id=5718 data-nosnippet>5718</a><span class="kw">impl </span>Drop <span class="kw">for </span>SpeculativeDigestion {
-<a href=#5719 id=5719 data-nosnippet>5719</a>  <span class="kw">fn </span>drop(<span class="kw-2">&amp;mut </span><span class="self">self</span>) { SPECULATIVE_DIGESTIONS.with(|runs| runs.set(runs.get() - <span class="number">1</span>)); }
-<a href=#5720 id=5720 data-nosnippet>5720</a>}
-<a href=#5721 id=5721 data-nosnippet>5721</a>
-<a href=#5722 id=5722 data-nosnippet>5722</a><span class="doccomment">/// A run of digestion whose output and assignments are all discarded starts (latexml_engine sect05.rs `speculative_run_read`,
-<a href=#5723 id=5723 data-nosnippet>5723</a>/// the observer's rehearsal, `queue_digest::speculative_label_ink`), until the guard drops: the document does not end
-<a href=#5724 id=5724 data-nosnippet>5724</a>/// in it. A `\end{document}`, `\enddocument`, `\@@end` or `\bye` it reads does nothing ([`flush`], the kernel's document
-<a href=#5725 id=5725 data-nosnippet>5725</a>/// end), whatever text brought it there: a stored argument, `\closing{\end{document}}`, ended the real document with the
-<a href=#5726 id=5726 data-nosnippet>5726</a>/// run otherwise, and took the whole body with it.
-<a href=#5727 id=5727 data-nosnippet>5727</a></span><span class="attr">#[must_use]
-<a href=#5728 id=5728 data-nosnippet>5728</a></span><span class="kw">pub fn </span>speculative_digestion() -&gt; SpeculativeDigestion {
-<a href=#5729 id=5729 data-nosnippet>5729</a>  SPECULATIVE_DIGESTIONS.with(|runs| runs.set(runs.get() + <span class="number">1</span>));
-<a href=#5730 id=5730 data-nosnippet>5730</a>  SpeculativeDigestion
-<a href=#5731 id=5731 data-nosnippet>5731</a>}
-<a href=#5732 id=5732 data-nosnippet>5732</a>
-<a href=#5733 id=5733 data-nosnippet>5733</a><span class="doccomment">/// Is a speculative digestion running ([`speculative_digestion`])?
-<a href=#5734 id=5734 data-nosnippet>5734</a></span><span class="kw">pub fn </span>in_speculative_digestion() -&gt; bool { SPECULATIVE_DIGESTIONS.with(|runs| runs.get() != <span class="number">0</span>) }
-<a href=#5735 id=5735 data-nosnippet>5735</a>
-<a href=#5736 id=5736 data-nosnippet>5736</a><span class="doccomment">/// Obscure, but the only way I can think of to End!! (see \bye or \end{document})
-<a href=#5737 id=5737 data-nosnippet>5737</a>/// Flush all sources (close all pending mouth's)
-<a href=#5738 id=5738 data-nosnippet>5738</a>///
-<a href=#5739 id=5739 data-nosnippet>5739</a>/// In a speculative digestion ([`speculative_digestion`]) it does nothing: what a discarded run reads is not the end of
-<a href=#5740 id=5740 data-nosnippet>5740</a>/// the document's input.
-<a href=#5741 id=5741 data-nosnippet>5741</a></span><span class="kw">pub fn </span>flush() {
-<a href=#5742 id=5742 data-nosnippet>5742</a>  <span class="kw">if </span>in_speculative_digestion() {
-<a href=#5743 id=5743 data-nosnippet>5743</a>    <span class="kw">return</span>;
-<a href=#5744 id=5744 data-nosnippet>5744</a>  }
-<a href=#5745 id=5745 data-nosnippet>5745</a>  <span class="kw">let </span><span class="kw-2">mut </span>g = <span class="macro">gullet_mut!</span>();
-<a href=#5746 id=5746 data-nosnippet>5746</a>  <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref mut </span>runtime) = g.runtime {
-<a href=#5747 id=5747 data-nosnippet>5747</a>    runtime.mouth.finish();
-<a href=#5748 id=5748 data-nosnippet>5748</a>  }
-<a href=#5749 id=5749 data-nosnippet>5749</a>  <span class="kw">while </span>!g.mouthstack.is_empty() {
-<a href=#5750 id=5750 data-nosnippet>5750</a>    <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">mut </span>entry) = g.mouthstack.pop_front() {
-<a href=#5751 id=5751 data-nosnippet>5751</a>      entry.mouth.finish();
-<a href=#5752 id=5752 data-nosnippet>5752</a>    }
-<a href=#5753 id=5753 data-nosnippet>5753</a>  }
-<a href=#5754 id=5754 data-nosnippet>5754</a>  g.runtime = <span class="prelude-val">Some</span>(MouthRuntime {
-<a href=#5755 id=5755 data-nosnippet>5755</a>    mouth:           Mouth::default(),
-<a href=#5756 id=5756 data-nosnippet>5756</a>    pushback:        Vec::with_capacity(<span class="number">128</span>),
-<a href=#5757 id=5757 data-nosnippet>5757</a>    autoclose:       <span class="bool-val">true</span>,
-<a href=#5758 id=5758 data-nosnippet>5758</a>    boundary:        BalancedBoundary::Transparent,
-<a href=#5759 id=5759 data-nosnippet>5759</a>    insert_everyeof: <span class="bool-val">false</span>,
-<a href=#5760 id=5760 data-nosnippet>5760</a>    eof_seen:        <span class="bool-val">false</span>,
-<a href=#5761 id=5761 data-nosnippet>5761</a>    watch:           PushbackWatch::default(),
-<a href=#5762 id=5762 data-nosnippet>5762</a>  });
-<a href=#5763 id=5763 data-nosnippet>5763</a>  g.mouthstack = VecDeque::new();
-<a href=#5764 id=5764 data-nosnippet>5764</a>  note_current_mouth(<span class="kw-2">&amp;</span>g);
-<a href=#5765 id=5765 data-nosnippet>5765</a>}
-<a href=#5766 id=5766 data-nosnippet>5766</a>
-<a href=#5767 id=5767 data-nosnippet>5767</a><span class="doccomment">/// Execute a function with a mutable reference to the current mouth
-<a href=#5768 id=5768 data-nosnippet>5768</a></span><span class="kw">pub fn </span>with_mouth_mut&lt;FnR, R&gt;(caller: FnR) -&gt; R
-<a href=#5769 id=5769 data-nosnippet>5769</a><span class="kw">where </span>FnR: FnOnce(<span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;mut </span>Mouth&gt;) -&gt; R {
-<a href=#5770 id=5770 data-nosnippet>5770</a>  <span class="kw">let </span><span class="kw-2">mut </span>gullet = <span class="macro">gullet_mut!</span>();
-<a href=#5771 id=5771 data-nosnippet>5771</a>  <span class="kw">let </span>mouth_opt = <span class="kw">match </span>gullet.runtime {
-<a href=#5772 id=5772 data-nosnippet>5772</a>    <span class="prelude-val">None </span>=&gt; <span class="prelude-val">None</span>,
-<a href=#5773 id=5773 data-nosnippet>5773</a>    <span class="prelude-val">Some</span>(<span class="kw-2">ref mut </span>runtime) =&gt; <span class="prelude-val">Some</span>(<span class="kw-2">&amp;mut </span>runtime.mouth),
-<a href=#5774 id=5774 data-nosnippet>5774</a>  };
-<a href=#5775 id=5775 data-nosnippet>5775</a>  caller(mouth_opt)
-<a href=#5776 id=5776 data-nosnippet>5776</a>}
-<a href=#5777 id=5777 data-nosnippet>5777</a>
-<a href=#5778 id=5778 data-nosnippet>5778</a><span class="attr">#[cfg(test)]
-<a href=#5779 id=5779 data-nosnippet>5779</a></span><span class="kw">mod </span>token_limit_tests {
-<a href=#5780 id=5780 data-nosnippet>5780</a>  <span class="kw">use super</span>::<span class="kw-2">*</span>;
-<a href=#5781 id=5781 data-nosnippet>5781</a>
-<a href=#5782 id=5782 data-nosnippet>5782</a>  <span class="doccomment">/// A budget refuses the read past it and each one after, leaves the count as the reads made it, and leaves no due count
-<a href=#5783 id=5783 data-nosnippet>5783</a>  /// on the fast path once it is off; a failed inner reading context keeps what is left of it.
-<a href=#5784 id=5784 data-nosnippet>5784</a>  </span><span class="attr">#[test]
-<a href=#5785 id=5785 data-nosnippet>5785</a>  </span><span class="kw">fn </span>a_read_budget_ends_at_its_read_and_counts_what_was_read() {
-<a href=#5786 id=5786 data-nosnippet>5786</a>    <span class="kw">let </span>tokens = || Tokens::new(<span class="macro">vec!</span>[<span class="macro">T_LETTER!</span>(<span class="string">"a"</span>); <span class="number">10</span>]);
-<a href=#5787 id=5787 data-nosnippet>5787</a>    reading_from_mouth(Mouth::default(), || {
-<a href=#5788 id=5788 data-nosnippet>5788</a>      unread(tokens());
-<a href=#5789 id=5789 data-nosnippet>5789</a>      <span class="kw">let </span>start = token_progress();
-<a href=#5790 id=5790 data-nosnippet>5790</a>      <span class="kw">let </span>budget = read_budget(<span class="number">3</span>);
-<a href=#5791 id=5791 data-nosnippet>5791</a>      <span class="kw">for _ in </span><span class="number">0</span>..<span class="number">3 </span>{
-<a href=#5792 id=5792 data-nosnippet>5792</a>        <span class="macro">assert!</span>(read_token()<span class="question-mark">?</span>.is_some());
-<a href=#5793 id=5793 data-nosnippet>5793</a>      }
-<a href=#5794 id=5794 data-nosnippet>5794</a>      <span class="kw">for _ in </span><span class="number">0</span>..<span class="number">2 </span>{
-<a href=#5795 id=5795 data-nosnippet>5795</a>        <span class="kw">let </span>failed = read_token().unwrap_err();
-<a href=#5796 id=5796 data-nosnippet>5796</a>        <span class="macro">assert!</span>(<span class="macro">matches!</span>(failed.category, ErrorCategory::ReadBudget));
-<a href=#5797 id=5797 data-nosnippet>5797</a>      }
-<a href=#5798 id=5798 data-nosnippet>5798</a>      <span class="macro">assert_eq!</span>(budget.end(), ReadBudgetEnd { reads: <span class="number">3</span>, over: <span class="bool-val">true </span>});
-<a href=#5799 id=5799 data-nosnippet>5799</a>      <span class="macro">assert_eq!</span>(token_progress(), start + <span class="number">3</span>);
-<a href=#5800 id=5800 data-nosnippet>5800</a>      <span class="macro">assert!</span>(read_token()<span class="question-mark">?</span>.is_some());
-<a href=#5801 id=5801 data-nosnippet>5801</a>      <span class="macro">assert_eq!</span>(token_progress(), start + <span class="number">4</span>);
-<a href=#5802 id=5802 data-nosnippet>5802</a>
-<a href=#5803 id=5803 data-nosnippet>5803</a>      <span class="comment">// An inner context's failure resets the count, and takes nothing off what the budget has left.
-<a href=#5804 id=5804 data-nosnippet>5804</a>      </span><span class="kw">let </span>start = token_progress();
-<a href=#5805 id=5805 data-nosnippet>5805</a>      <span class="kw">let </span>budget = read_budget(<span class="number">4</span>);
-<a href=#5806 id=5806 data-nosnippet>5806</a>      <span class="macro">assert!</span>(read_token()<span class="question-mark">?</span>.is_some());
-<a href=#5807 id=5807 data-nosnippet>5807</a>      <span class="kw">let </span>inner: <span class="prelude-ty">Result</span>&lt;()&gt; = reading_from_mouth(Mouth::default(), || {
-<a href=#5808 id=5808 data-nosnippet>5808</a>        unread(tokens());
-<a href=#5809 id=5809 data-nosnippet>5809</a>        <span class="macro">assert!</span>(read_token()<span class="question-mark">?</span>.is_some());
-<a href=#5810 id=5810 data-nosnippet>5810</a>        fatal_free_failure()
-<a href=#5811 id=5811 data-nosnippet>5811</a>      });
-<a href=#5812 id=5812 data-nosnippet>5812</a>      <span class="macro">assert!</span>(inner.is_err());
-<a href=#5813 id=5813 data-nosnippet>5813</a>      <span class="macro">assert_eq!</span>(token_progress(), <span class="number">0</span>);
-<a href=#5814 id=5814 data-nosnippet>5814</a>      <span class="macro">assert!</span>(read_token()<span class="question-mark">?</span>.is_some());
+<a href=#5480 id=5480 data-nosnippet>5480</a>/// when none is in reading, so the stack alone doesn't count them. A [`pushback_len`] compares only at one depth: a
+<a href=#5481 id=5481 data-nosnippet>5481</a>/// constructor digests its argument in a mouth of its own (a rehearsal's notes, `token::FieldNotesHook`).
+<a href=#5482 id=5482 data-nosnippet>5482</a></span><span class="kw">pub fn </span>mouth_depth() -&gt; usize {
+<a href=#5483 id=5483 data-nosnippet>5483</a>  <span class="kw">let </span>g = <span class="macro">gullet!</span>();
+<a href=#5484 id=5484 data-nosnippet>5484</a>  g.mouthstack.len() + usize::from(g.runtime.is_some())
+<a href=#5485 id=5485 data-nosnippet>5485</a>}
+<a href=#5486 id=5486 data-nosnippet>5486</a>
+<a href=#5487 id=5487 data-nosnippet>5487</a><span class="macro">thread_local!</span> {
+<a href=#5488 id=5488 data-nosnippet>5488</a>  <span class="doccomment">/// The conversion's "Mouth is unexpectedly already closed" errors ([`reading_from_mouth`]'s budget).
+<a href=#5489 id=5489 data-nosnippet>5489</a>  </span><span class="kw">static </span>MOUTH_CLOSED_ERRORS: Cell&lt;usize&gt; = <span class="kw">const </span>{ Cell::new(<span class="number">0</span>) };
+<a href=#5490 id=5490 data-nosnippet>5490</a>}
+<a href=#5491 id=5491 data-nosnippet>5491</a>
+<a href=#5492 id=5492 data-nosnippet>5492</a><span class="doccomment">/// Forgets the mouth-closed errors counted: a predecessor that spent the budget (0906.1883) silenced the next paper's
+<a href=#5493 id=5493 data-nosnippet>5493</a>/// first ten and made its first a Fatal.
+<a href=#5494 id=5494 data-nosnippet>5494</a></span><span class="kw">pub fn </span>reset_mouth_closed_errors() { MOUTH_CLOSED_ERRORS.with(|c| c.set(<span class="number">0</span>)); }
+<a href=#5495 id=5495 data-nosnippet>5495</a>
+<a href=#5496 id=5496 data-nosnippet>5496</a><span class="doccomment">/// Do something, while reading tokens from a specific Mouth.
+<a href=#5497 id=5497 data-nosnippet>5497</a>///
+<a href=#5498 id=5498 data-nosnippet>5498</a>/// This reads ONLY from that mouth (or any mouth openned by code in that source),
+<a href=#5499 id=5499 data-nosnippet>5499</a>/// and the mouth should end up empty afterwards, and only be closed here.
+<a href=#5500 id=5500 data-nosnippet>5500</a></span><span class="kw">pub fn </span>reading_from_mouth&lt;R, FnR&gt;(mouth: Mouth, reader: FnR) -&gt; <span class="prelude-ty">Result</span>&lt;R&gt;
+<a href=#5501 id=5501 data-nosnippet>5501</a><span class="kw">where </span>FnR: FnOnce() -&gt; <span class="prelude-ty">Result</span>&lt;R&gt; {
+<a href=#5502 id=5502 data-nosnippet>5502</a>  <span class="kw">let </span>context_mouth_source = arena::pin(mouth.get_source());
+<a href=#5503 id=5503 data-nosnippet>5503</a>  <span class="kw">let </span>outer_mouths = mouth_depth();
+<a href=#5504 id=5504 data-nosnippet>5504</a>  <span class="comment">// A cycle is only a cycle WITHIN one expansion context. Rather than
+<a href=#5505 id=5505 data-nosnippet>5505</a>  // resetting the guard history here (an earlier fix that also BLINDED the
+<a href=#5506 id=5506 data-nosnippet>5506</a>  // guard to outer loops whose body calls `do_expand` each iteration), give
+<a href=#5507 id=5507 data-nosnippet>5507</a>  // this reading context a fresh SERIAL that `read_internal_token_checked`
+<a href=#5508 id=5508 data-nosnippet>5508</a>  // mixes into every fingerprint: windows can never match across contexts, so
+<a href=#5509 id=5509 data-nosnippet>5509</a>  // consecutive identical short expansions — the math0402448 xymatrix
+<a href=#5510 id=5510 data-nosnippet>5510</a>  // per-cell `get_xmarg_id` stream that false-positived as a "loop" — stay
+<a href=#5511 id=5511 data-nosnippet>5511</a>  // inert, while the OUTER context's serial (restored on exit) keeps outer
+<a href=#5512 id=5512 data-nosnippet>5512</a>  // periodicity intact and detectable. PR #249 review P2-7.
+<a href=#5513 id=5513 data-nosnippet>5513</a>  </span>{
+<a href=#5514 id=5514 data-nosnippet>5514</a>    <span class="kw">let </span><span class="kw-2">mut </span>g = <span class="macro">gullet_mut!</span>();
+<a href=#5515 id=5515 data-nosnippet>5515</a>    <span class="kw">let </span>outer = g.ctx_serial;
+<a href=#5516 id=5516 data-nosnippet>5516</a>    g.ctx_stack.push(outer);
+<a href=#5517 id=5517 data-nosnippet>5517</a>    g.ctx_next += <span class="number">1</span>;
+<a href=#5518 id=5518 data-nosnippet>5518</a>    g.ctx_serial = g.ctx_next;
+<a href=#5519 id=5519 data-nosnippet>5519</a>  }
+<a href=#5520 id=5520 data-nosnippet>5520</a>  open_mouth(mouth, <span class="bool-val">false</span>); <span class="comment">// only allow mouth to be explicitly closed here.
+<a href=#5521 id=5521 data-nosnippet>5521</a>  </span><span class="kw">let </span>reader_result = reader();
+<a href=#5522 id=5522 data-nosnippet>5522</a>  <span class="comment">// Reading in this context is over (whether Ok or Err): restore the outer
+<a href=#5523 id=5523 data-nosnippet>5523</a>  // context's serial before any cleanup/return path below.
+<a href=#5524 id=5524 data-nosnippet>5524</a>  </span>{
+<a href=#5525 id=5525 data-nosnippet>5525</a>    <span class="kw">let </span><span class="kw-2">mut </span>g = <span class="macro">gullet_mut!</span>();
+<a href=#5526 id=5526 data-nosnippet>5526</a>    <span class="kw">let </span>restored = g.ctx_stack.pop().unwrap_or(<span class="number">0</span>);
+<a href=#5527 id=5527 data-nosnippet>5527</a>    g.ctx_serial = restored;
+<a href=#5528 id=5528 data-nosnippet>5528</a>  }
+<a href=#5529 id=5529 data-nosnippet>5529</a>  <span class="comment">// If the reader returned an error (e.g., Fatal from token limit),
+<a href=#5530 id=5530 data-nosnippet>5530</a>  // we STILL need to clean up the mouth to preserve the caller's state.
+<a href=#5531 id=5531 data-nosnippet>5531</a>  </span><span class="kw">let </span>results: R = <span class="kw">match </span>reader_result {
+<a href=#5532 id=5532 data-nosnippet>5532</a>    <span class="prelude-val">Ok</span>(v) =&gt; v,
+<a href=#5533 id=5533 data-nosnippet>5533</a>    <span class="prelude-val">Err</span>(e) =&gt; {
+<a href=#5534 id=5534 data-nosnippet>5534</a>      <span class="comment">// Force-close our mouth and any mouth above it, by depth: another of the same name above ours (an "Anonymous
+<a href=#5535 id=5535 data-nosnippet>5535</a>      // String", a `\scantokens`'s in a discarded run) is not ours, and stopping at it left ours open and took the
+<a href=#5536 id=5536 data-nosnippet>5536</a>      // document's text next (`perfect_kernel_batchr1::a_run_over_budget_leaves_no_trace`).
+<a href=#5537 id=5537 data-nosnippet>5537</a>      </span><span class="kw">while </span>mouth_depth() &gt; outer_mouths {
+<a href=#5538 id=5538 data-nosnippet>5538</a>        close_mouth(<span class="bool-val">true</span>).ok();
+<a href=#5539 id=5539 data-nosnippet>5539</a>      }
+<a href=#5540 id=5540 data-nosnippet>5540</a>      <span class="comment">// Reset progress counter so subsequent processing isn't immediately killed
+<a href=#5541 id=5541 data-nosnippet>5541</a>      </span><span class="kw">let </span><span class="kw-2">mut </span>g = <span class="macro">gullet_mut!</span>();
+<a href=#5542 id=5542 data-nosnippet>5542</a>      <span class="comment">// (what a budgeted run has left stays what it has left: [`read_budget`])
+<a href=#5543 id=5543 data-nosnippet>5543</a>      </span><span class="kw">let </span>progress = g.progress;
+<a href=#5544 id=5544 data-nosnippet>5544</a>      g.read_budget_at = g.read_budget_at.map(|at| at.saturating_sub(progress));
+<a href=#5545 id=5545 data-nosnippet>5545</a>      g.progress = <span class="number">0</span>;
+<a href=#5546 id=5546 data-nosnippet>5546</a>      g.full_read_at = <span class="number">0</span>;
+<a href=#5547 id=5547 data-nosnippet>5547</a>      drop(g);
+<a href=#5548 id=5548 data-nosnippet>5548</a>      <span class="kw">return </span><span class="prelude-val">Err</span>(e);
+<a href=#5549 id=5549 data-nosnippet>5549</a>    },
+<a href=#5550 id=5550 data-nosnippet>5550</a>  };
+<a href=#5551 id=5551 data-nosnippet>5551</a>  <span class="comment">// `mouth` must still be open, with (at worst) empty autoclosable mouths in front of it.
+<a href=#5552 id=5552 data-nosnippet>5552</a>  // Rate-limit the "mouth closed" error — when the gullet gets into a state
+<a href=#5553 id=5553 data-nosnippet>5553</a>  // where the cleanup loop keeps finding stale mouths above the target, the
+<a href=#5554 id=5554 data-nosnippet>5554</a>  // same error can fire on EVERY caller of reading_from_mouth. Arxiv 0906.1883
+<a href=#5555 id=5555 data-nosnippet>5555</a>  // (birkmult + local .cls) can trigger 10K+ such firings, one per stack frame.
+<a href=#5556 id=5556 data-nosnippet>5556</a>  // Fatal out after 50 repeat firings so the process surfaces a clear "we lost
+<a href=#5557 id=5557 data-nosnippet>5557</a>  // the mouth stack" signal instead of filling the log with identical messages.
+<a href=#5558 id=5558 data-nosnippet>5558</a>  </span><span class="kw">fn </span>record_mouth_closed_error() { MOUTH_CLOSED_ERRORS.with(|c| c.set(c.get().saturating_add(<span class="number">1</span>))); }
+<a href=#5559 id=5559 data-nosnippet>5559</a>  <span class="kw">fn </span>should_emit_mouth_closed() -&gt; bool { MOUTH_CLOSED_ERRORS.with(|c| c.get() &lt; <span class="number">10</span>) }
+<a href=#5560 id=5560 data-nosnippet>5560</a>  <span class="kw">fn </span>mouth_closed_budget_exhausted() -&gt; bool { MOUTH_CLOSED_ERRORS.with(|c| c.get() &gt;= <span class="number">50</span>) }
+<a href=#5561 id=5561 data-nosnippet>5561</a>  <span class="kw">loop </span>{
+<a href=#5562 id=5562 data-nosnippet>5562</a>    <span class="kw">let </span>mouth_source = <span class="macro">gullet!</span>()
+<a href=#5563 id=5563 data-nosnippet>5563</a>      .runtime
+<a href=#5564 id=5564 data-nosnippet>5564</a>      .as_ref()
+<a href=#5565 id=5565 data-nosnippet>5565</a>      .map(|r| arena::pin(r.mouth.get_source()));
+<a href=#5566 id=5566 data-nosnippet>5566</a>    <span class="kw">if </span>mouth_source == <span class="prelude-val">Some</span>(context_mouth_source) {
+<a href=#5567 id=5567 data-nosnippet>5567</a>      close_mouth(<span class="bool-val">true</span>)<span class="question-mark">?</span>;
+<a href=#5568 id=5568 data-nosnippet>5568</a>      <span class="kw">break</span>;
+<a href=#5569 id=5569 data-nosnippet>5569</a>    } <span class="kw">else if </span><span class="macro">gullet!</span>().mouthstack.is_empty() {
+<a href=#5570 id=5570 data-nosnippet>5570</a>      <span class="kw">if </span>should_emit_mouth_closed() {
+<a href=#5571 id=5571 data-nosnippet>5571</a>        <span class="comment">// `arena::to_string` clones the resolved &amp;str into an owned String
+<a href=#5572 id=5572 data-nosnippet>5572</a>        // BEFORE we hand it to Error! — a following `arena::pin` triggered
+<a href=#5573 id=5573 data-nosnippet>5573</a>        // deep inside generate_message!/get_location() can grow the
+<a href=#5574 id=5574 data-nosnippet>5574</a>        // interner's buffer and invalidate a borrowed &amp;str (observed as
+<a href=#5575 id=5575 data-nosnippet>5575</a>        // garbled, buffer-adjacent symbol content in 0906.1883 errors).
+<a href=#5576 id=5576 data-nosnippet>5576</a>        </span><span class="kw">let </span>src = arena::to_string(context_mouth_source);
+<a href=#5577 id=5577 data-nosnippet>5577</a>        <span class="macro">Error!</span>(
+<a href=#5578 id=5578 data-nosnippet>5578</a>          <span class="string">"unexpected"</span>,
+<a href=#5579 id=5579 data-nosnippet>5579</a>          <span class="string">"&lt;closed&gt;"</span>,
+<a href=#5580 id=5580 data-nosnippet>5580</a>          <span class="string">"Mouth is unexpectedly already closed"</span>,
+<a href=#5581 id=5581 data-nosnippet>5581</a>          <span class="macro">s!</span>(<span class="string">"Reading from {src}, but it has already been closed."</span>)
+<a href=#5582 id=5582 data-nosnippet>5582</a>        );
+<a href=#5583 id=5583 data-nosnippet>5583</a>      }
+<a href=#5584 id=5584 data-nosnippet>5584</a>      record_mouth_closed_error();
+<a href=#5585 id=5585 data-nosnippet>5585</a>      <span class="kw">if </span>mouth_closed_budget_exhausted() {
+<a href=#5586 id=5586 data-nosnippet>5586</a>        <span class="macro">Fatal!</span>(
+<a href=#5587 id=5587 data-nosnippet>5587</a>          Stomach,
+<a href=#5588 id=5588 data-nosnippet>5588</a>          Recursion,
+<a href=#5589 id=5589 data-nosnippet>5589</a>          <span class="string">"Too many unexpectedly-closed mouth errors (&gt;50); gullet mouth-stack state is inconsistent"
+<a href=#5590 id=5590 data-nosnippet>5590</a>        </span>);
+<a href=#5591 id=5591 data-nosnippet>5591</a>      }
+<a href=#5592 id=5592 data-nosnippet>5592</a>      <span class="kw">break</span>;
+<a href=#5593 id=5593 data-nosnippet>5593</a>    } <span class="kw">else </span>{
+<a href=#5594 id=5594 data-nosnippet>5594</a>      <span class="kw">let </span>is_autoclosable = <span class="macro">gullet!</span>()
+<a href=#5595 id=5595 data-nosnippet>5595</a>        .runtime
+<a href=#5596 id=5596 data-nosnippet>5596</a>        .as_ref()
+<a href=#5597 id=5597 data-nosnippet>5597</a>        .map(|r| r.autoclose)
+<a href=#5598 id=5598 data-nosnippet>5598</a>        .unwrap_or(<span class="bool-val">false</span>);
+<a href=#5599 id=5599 data-nosnippet>5599</a>      <span class="kw">if </span>is_autoclosable {
+<a href=#5600 id=5600 data-nosnippet>5600</a>        <span class="comment">// Auto-closable mouth (e.g. from \scantokens, raw_tex) — safe to close
+<a href=#5601 id=5601 data-nosnippet>5601</a>        </span>close_mouth(<span class="bool-val">true</span>)<span class="question-mark">?</span>;
+<a href=#5602 id=5602 data-nosnippet>5602</a>      } <span class="kw">else </span>{
+<a href=#5603 id=5603 data-nosnippet>5603</a>        <span class="comment">// Non-autoclosable mouth that isn't our target — this means our target
+<a href=#5604 id=5604 data-nosnippet>5604</a>        // mouth was already consumed. Don't close this mouth (it belongs to an
+<a href=#5605 id=5605 data-nosnippet>5605</a>        // outer reading_from_mouth call). Just error and stop.
+<a href=#5606 id=5606 data-nosnippet>5606</a>        </span><span class="kw">if </span>should_emit_mouth_closed() {
+<a href=#5607 id=5607 data-nosnippet>5607</a>          <span class="kw">let </span>src = arena::to_string(context_mouth_source);
+<a href=#5608 id=5608 data-nosnippet>5608</a>          <span class="macro">Error!</span>(
+<a href=#5609 id=5609 data-nosnippet>5609</a>            <span class="string">"unexpected"</span>,
+<a href=#5610 id=5610 data-nosnippet>5610</a>            <span class="string">"&lt;closed&gt;"</span>,
+<a href=#5611 id=5611 data-nosnippet>5611</a>            <span class="string">"Mouth is unexpectedly already closed"</span>,
+<a href=#5612 id=5612 data-nosnippet>5612</a>            <span class="macro">s!</span>(
+<a href=#5613 id=5613 data-nosnippet>5613</a>              <span class="string">"Reading from {src}, but it has already been closed (found different non-closable mouth on top)."
+<a href=#5614 id=5614 data-nosnippet>5614</a>            </span>)
+<a href=#5615 id=5615 data-nosnippet>5615</a>          );
+<a href=#5616 id=5616 data-nosnippet>5616</a>        }
+<a href=#5617 id=5617 data-nosnippet>5617</a>        record_mouth_closed_error();
+<a href=#5618 id=5618 data-nosnippet>5618</a>        <span class="kw">if </span>mouth_closed_budget_exhausted() {
+<a href=#5619 id=5619 data-nosnippet>5619</a>          <span class="macro">Fatal!</span>(
+<a href=#5620 id=5620 data-nosnippet>5620</a>            Stomach,
+<a href=#5621 id=5621 data-nosnippet>5621</a>            Recursion,
+<a href=#5622 id=5622 data-nosnippet>5622</a>            <span class="string">"Too many unexpectedly-closed mouth errors (&gt;50); gullet mouth-stack state is inconsistent"
+<a href=#5623 id=5623 data-nosnippet>5623</a>          </span>);
+<a href=#5624 id=5624 data-nosnippet>5624</a>        }
+<a href=#5625 id=5625 data-nosnippet>5625</a>        <span class="kw">break</span>;
+<a href=#5626 id=5626 data-nosnippet>5626</a>      }
+<a href=#5627 id=5627 data-nosnippet>5627</a>    }
+<a href=#5628 id=5628 data-nosnippet>5628</a>  }
+<a href=#5629 id=5629 data-nosnippet>5629</a>  <span class="prelude-val">Ok</span>(results)
+<a href=#5630 id=5630 data-nosnippet>5630</a>}
+<a href=#5631 id=5631 data-nosnippet>5631</a>
+<a href=#5632 id=5632 data-nosnippet>5632</a><span class="doccomment">/// The reading context tokens are read in now, as `(serial, depth)`: the serial [`reading_from_mouth`] gives each
+<a href=#5633 id=5633 data-nosnippet>5633</a>/// isolated context (a constructor's argument digested on its own; 0 for the document's own input, `\input` files
+<a href=#5634 id=5634 data-nosnippet>5634</a>/// included), and how many such contexts are open. A `\left` records it (stomach.rs `record_left_group_input`), so that
+<a href=#5635 id=5635 data-nosnippet>5635</a>/// only the end of the input it was read in closes its group (OXIDIZED_DESIGN #530).
+<a href=#5636 id=5636 data-nosnippet>5636</a></span><span class="kw">pub fn </span>reading_context() -&gt; (u64, usize) {
+<a href=#5637 id=5637 data-nosnippet>5637</a>  <span class="kw">let </span>g = <span class="macro">gullet!</span>();
+<a href=#5638 id=5638 data-nosnippet>5638</a>  (g.ctx_serial, g.ctx_stack.len())
+<a href=#5639 id=5639 data-nosnippet>5639</a>}
+<a href=#5640 id=5640 data-nosnippet>5640</a>
+<a href=#5641 id=5641 data-nosnippet>5641</a><span class="doccomment">/// Whether the token just read ends an isolated reading context ([`reading_from_mouth`]: a token list digested on its
+<a href=#5642 id=5642 data-nosnippet>5642</a>/// own, such as a constructor's argument `{$x}`, which may come wrapped in a further brace pair): only `}`s left in
+<a href=#5643 id=5643 data-nosnippet>5643</a>/// its pushback and its mouth exhausted. A `}` read here is the argument's own closing brace, which TeX strips with the
+<a href=#5644 id=5644 data-nosnippet>5644</a>/// argument — one end of a construct digested as a unit (stomach.rs `formula_ends_with_its_unit`, OXIDIZED_DESIGN
+<a href=#5645 id=5645 data-nosnippet>5645</a>/// #553). `false` whenever a mouth of its own is still open in the context.
+<a href=#5646 id=5646 data-nosnippet>5646</a></span><span class="kw">pub fn </span>isolated_input_ends_here() -&gt; bool {
+<a href=#5647 id=5647 data-nosnippet>5647</a>  <span class="kw">let </span><span class="kw-2">mut </span>g = <span class="macro">gullet_mut!</span>();
+<a href=#5648 id=5648 data-nosnippet>5648</a>  <span class="kw">if </span>g.ctx_stack.is_empty() {
+<a href=#5649 id=5649 data-nosnippet>5649</a>    <span class="kw">return </span><span class="bool-val">false</span>;
+<a href=#5650 id=5650 data-nosnippet>5650</a>  }
+<a href=#5651 id=5651 data-nosnippet>5651</a>  <span class="kw">match </span>g.runtime.as_mut() {
+<a href=#5652 id=5652 data-nosnippet>5652</a>    <span class="prelude-val">Some</span>(runtime) =&gt; {
+<a href=#5653 id=5653 data-nosnippet>5653</a>      !runtime.autoclose
+<a href=#5654 id=5654 data-nosnippet>5654</a>        &amp;&amp; runtime
+<a href=#5655 id=5655 data-nosnippet>5655</a>          .pushback
+<a href=#5656 id=5656 data-nosnippet>5656</a>          .iter()
+<a href=#5657 id=5657 data-nosnippet>5657</a>          .all(|t| t.get_catcode() == Catcode::END)
+<a href=#5658 id=5658 data-nosnippet>5658</a>        &amp;&amp; !runtime.mouth.has_more_input()
+<a href=#5659 id=5659 data-nosnippet>5659</a>    },
+<a href=#5660 id=5660 data-nosnippet>5660</a>    <span class="prelude-val">None </span>=&gt; <span class="bool-val">false</span>,
+<a href=#5661 id=5661 data-nosnippet>5661</a>  }
+<a href=#5662 id=5662 data-nosnippet>5662</a>}
+<a href=#5663 id=5663 data-nosnippet>5663</a>
+<a href=#5664 id=5664 data-nosnippet>5664</a><span class="doccomment">/// The tokens the current input holds next, without reading them: the pushback, next-read first, then the current
+<a href=#5665 id=5665 data-nosnippet>5665</a>/// mouth's next `max_lines` source lines (at most `max_chars` characters of them, [`Mouth::peek_text`]) tokenized by
+<a href=#5666 id=5666 data-nosnippet>5666</a>/// a scratch mouth under the current catcodes as the iterator is drawn on, `max_tokens` in all. Nothing is read,
+<a href=#5667 id=5667 data-nosnippet>5667</a>/// expanded or moved, so a catcode change the look-ahead runs past still applies to the text when it is really read.
+<a href=#5668 id=5668 data-nosnippet>5668</a>/// Only the current mouth: the input levels outside it are not reached. The cost is bounded by the limits, not by the
+<a href=#5669 id=5669 data-nosnippet>5669</a>/// length of the line or of the pending expansion. A look-ahead for a decision about what follows (stomach.rs
+<a href=#5670 id=5670 data-nosnippet>5670</a>/// `formula_continues_past_par`, OXIDIZED_DESIGN #553).
+<a href=#5671 id=5671 data-nosnippet>5671</a></span><span class="kw">pub fn </span>peek_upcoming_tokens(
+<a href=#5672 id=5672 data-nosnippet>5672</a>  max_lines: usize,
+<a href=#5673 id=5673 data-nosnippet>5673</a>  max_chars: usize,
+<a href=#5674 id=5674 data-nosnippet>5674</a>  max_tokens: usize,
+<a href=#5675 id=5675 data-nosnippet>5675</a>) -&gt; <span class="kw">impl </span>Iterator&lt;Item = Token&gt; {
+<a href=#5676 id=5676 data-nosnippet>5676</a>  <span class="kw">let </span>(pending, text) = {
+<a href=#5677 id=5677 data-nosnippet>5677</a>    <span class="kw">let </span>gullet = <span class="macro">gullet!</span>();
+<a href=#5678 id=5678 data-nosnippet>5678</a>    <span class="kw">match </span>gullet.runtime.as_ref() {
+<a href=#5679 id=5679 data-nosnippet>5679</a>      <span class="prelude-val">Some</span>(runtime) =&gt; (
+<a href=#5680 id=5680 data-nosnippet>5680</a>        runtime
+<a href=#5681 id=5681 data-nosnippet>5681</a>          .pushback
+<a href=#5682 id=5682 data-nosnippet>5682</a>          .iter()
+<a href=#5683 id=5683 data-nosnippet>5683</a>          .rev()
+<a href=#5684 id=5684 data-nosnippet>5684</a>          .take(max_tokens)
+<a href=#5685 id=5685 data-nosnippet>5685</a>          .copied()
+<a href=#5686 id=5686 data-nosnippet>5686</a>          .collect::&lt;Vec&lt;Token&gt;&gt;(),
+<a href=#5687 id=5687 data-nosnippet>5687</a>        runtime.mouth.peek_text(max_lines, max_chars),
+<a href=#5688 id=5688 data-nosnippet>5688</a>      ),
+<a href=#5689 id=5689 data-nosnippet>5689</a>      <span class="prelude-val">None </span>=&gt; (Vec::new(), String::new()),
+<a href=#5690 id=5690 data-nosnippet>5690</a>    }
+<a href=#5691 id=5691 data-nosnippet>5691</a>  };
+<a href=#5692 id=5692 data-nosnippet>5692</a>  <span class="kw">let </span><span class="kw-2">mut </span>scratch = <span class="kw">if </span>pending.len() &lt; max_tokens &amp;&amp; !text.is_empty() {
+<a href=#5693 id=5693 data-nosnippet>5693</a>    Mouth::new(<span class="kw-2">&amp;</span>text, <span class="prelude-val">None</span>).ok()
+<a href=#5694 id=5694 data-nosnippet>5694</a>  } <span class="kw">else </span>{
+<a href=#5695 id=5695 data-nosnippet>5695</a>    <span class="prelude-val">None
+<a href=#5696 id=5696 data-nosnippet>5696</a>  </span>};
+<a href=#5697 id=5697 data-nosnippet>5697</a>  pending
+<a href=#5698 id=5698 data-nosnippet>5698</a>    .into_iter()
+<a href=#5699 id=5699 data-nosnippet>5699</a>    .chain(std::iter::from_fn(<span class="kw">move </span>|| scratch.as_mut()<span class="question-mark">?</span>.read_token()))
+<a href=#5700 id=5700 data-nosnippet>5700</a>    .take(max_tokens)
+<a href=#5701 id=5701 data-nosnippet>5701</a>}
+<a href=#5702 id=5702 data-nosnippet>5702</a>
+<a href=#5703 id=5703 data-nosnippet>5703</a><span class="doccomment">/// Check if there is more input to be read from the current mouth
+<a href=#5704 id=5704 data-nosnippet>5704</a></span><span class="kw">pub fn </span>has_more_input() -&gt; bool {
+<a href=#5705 id=5705 data-nosnippet>5705</a>  <span class="kw">match </span><span class="macro">runtime!</span>() {
+<a href=#5706 id=5706 data-nosnippet>5706</a>    <span class="prelude-val">Some</span>(<span class="kw-2">ref mut </span>runtime) =&gt; runtime.mouth.has_more_input(),
+<a href=#5707 id=5707 data-nosnippet>5707</a>    <span class="prelude-val">None </span>=&gt; <span class="bool-val">false</span>,
+<a href=#5708 id=5708 data-nosnippet>5708</a>  }
+<a href=#5709 id=5709 data-nosnippet>5709</a>}
+<a href=#5710 id=5710 data-nosnippet>5710</a>
+<a href=#5711 id=5711 data-nosnippet>5711</a><span class="macro">thread_local!</span> {
+<a href=#5712 id=5712 data-nosnippet>5712</a>  <span class="doccomment">/// How many speculative digestions are running ([`speculative_digestion`]).
+<a href=#5713 id=5713 data-nosnippet>5713</a>  </span><span class="kw">static </span>SPECULATIVE_DIGESTIONS: Cell&lt;usize&gt; = <span class="kw">const </span>{ Cell::new(<span class="number">0</span>) };
+<a href=#5714 id=5714 data-nosnippet>5714</a>}
+<a href=#5715 id=5715 data-nosnippet>5715</a>
+<a href=#5716 id=5716 data-nosnippet>5716</a><span class="doccomment">/// A speculative digestion runs while this lives ([`speculative_digestion`]).
+<a href=#5717 id=5717 data-nosnippet>5717</a></span><span class="kw">pub struct </span>SpeculativeDigestion;
+<a href=#5718 id=5718 data-nosnippet>5718</a>
+<a href=#5719 id=5719 data-nosnippet>5719</a><span class="kw">impl </span>Drop <span class="kw">for </span>SpeculativeDigestion {
+<a href=#5720 id=5720 data-nosnippet>5720</a>  <span class="kw">fn </span>drop(<span class="kw-2">&amp;mut </span><span class="self">self</span>) { SPECULATIVE_DIGESTIONS.with(|runs| runs.set(runs.get() - <span class="number">1</span>)); }
+<a href=#5721 id=5721 data-nosnippet>5721</a>}
+<a href=#5722 id=5722 data-nosnippet>5722</a>
+<a href=#5723 id=5723 data-nosnippet>5723</a><span class="doccomment">/// A run of digestion whose output and assignments are all discarded starts (latexml_engine sect05.rs `speculative_run_read`,
+<a href=#5724 id=5724 data-nosnippet>5724</a>/// the observer's rehearsal, `queue_digest::speculative_label_ink`), until the guard drops: the document does not end
+<a href=#5725 id=5725 data-nosnippet>5725</a>/// in it. A `\end{document}`, `\enddocument`, `\@@end` or `\bye` it reads does nothing ([`flush`], the kernel's document
+<a href=#5726 id=5726 data-nosnippet>5726</a>/// end), whatever text brought it there: a stored argument, `\closing{\end{document}}`, ended the real document with the
+<a href=#5727 id=5727 data-nosnippet>5727</a>/// run otherwise, and took the whole body with it.
+<a href=#5728 id=5728 data-nosnippet>5728</a></span><span class="attr">#[must_use]
+<a href=#5729 id=5729 data-nosnippet>5729</a></span><span class="kw">pub fn </span>speculative_digestion() -&gt; SpeculativeDigestion {
+<a href=#5730 id=5730 data-nosnippet>5730</a>  SPECULATIVE_DIGESTIONS.with(|runs| runs.set(runs.get() + <span class="number">1</span>));
+<a href=#5731 id=5731 data-nosnippet>5731</a>  SpeculativeDigestion
+<a href=#5732 id=5732 data-nosnippet>5732</a>}
+<a href=#5733 id=5733 data-nosnippet>5733</a>
+<a href=#5734 id=5734 data-nosnippet>5734</a><span class="doccomment">/// Is a speculative digestion running ([`speculative_digestion`])?
+<a href=#5735 id=5735 data-nosnippet>5735</a></span><span class="kw">pub fn </span>in_speculative_digestion() -&gt; bool { SPECULATIVE_DIGESTIONS.with(|runs| runs.get() != <span class="number">0</span>) }
+<a href=#5736 id=5736 data-nosnippet>5736</a>
+<a href=#5737 id=5737 data-nosnippet>5737</a><span class="doccomment">/// Obscure, but the only way I can think of to End!! (see \bye or \end{document})
+<a href=#5738 id=5738 data-nosnippet>5738</a>/// Flush all sources (close all pending mouth's)
+<a href=#5739 id=5739 data-nosnippet>5739</a>///
+<a href=#5740 id=5740 data-nosnippet>5740</a>/// In a speculative digestion ([`speculative_digestion`]) it does nothing: what a discarded run reads is not the end of
+<a href=#5741 id=5741 data-nosnippet>5741</a>/// the document's input.
+<a href=#5742 id=5742 data-nosnippet>5742</a></span><span class="kw">pub fn </span>flush() {
+<a href=#5743 id=5743 data-nosnippet>5743</a>  <span class="kw">if </span>in_speculative_digestion() {
+<a href=#5744 id=5744 data-nosnippet>5744</a>    <span class="kw">return</span>;
+<a href=#5745 id=5745 data-nosnippet>5745</a>  }
+<a href=#5746 id=5746 data-nosnippet>5746</a>  <span class="kw">let </span><span class="kw-2">mut </span>g = <span class="macro">gullet_mut!</span>();
+<a href=#5747 id=5747 data-nosnippet>5747</a>  <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref mut </span>runtime) = g.runtime {
+<a href=#5748 id=5748 data-nosnippet>5748</a>    runtime.mouth.finish();
+<a href=#5749 id=5749 data-nosnippet>5749</a>  }
+<a href=#5750 id=5750 data-nosnippet>5750</a>  <span class="kw">while </span>!g.mouthstack.is_empty() {
+<a href=#5751 id=5751 data-nosnippet>5751</a>    <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">mut </span>entry) = g.mouthstack.pop_front() {
+<a href=#5752 id=5752 data-nosnippet>5752</a>      entry.mouth.finish();
+<a href=#5753 id=5753 data-nosnippet>5753</a>    }
+<a href=#5754 id=5754 data-nosnippet>5754</a>  }
+<a href=#5755 id=5755 data-nosnippet>5755</a>  g.runtime = <span class="prelude-val">Some</span>(MouthRuntime {
+<a href=#5756 id=5756 data-nosnippet>5756</a>    mouth:           Mouth::default(),
+<a href=#5757 id=5757 data-nosnippet>5757</a>    pushback:        Vec::with_capacity(<span class="number">128</span>),
+<a href=#5758 id=5758 data-nosnippet>5758</a>    autoclose:       <span class="bool-val">true</span>,
+<a href=#5759 id=5759 data-nosnippet>5759</a>    boundary:        BalancedBoundary::Transparent,
+<a href=#5760 id=5760 data-nosnippet>5760</a>    insert_everyeof: <span class="bool-val">false</span>,
+<a href=#5761 id=5761 data-nosnippet>5761</a>    eof_seen:        <span class="bool-val">false</span>,
+<a href=#5762 id=5762 data-nosnippet>5762</a>    watch:           PushbackWatch::default(),
+<a href=#5763 id=5763 data-nosnippet>5763</a>  });
+<a href=#5764 id=5764 data-nosnippet>5764</a>  g.mouthstack = VecDeque::new();
+<a href=#5765 id=5765 data-nosnippet>5765</a>  note_current_mouth(<span class="kw-2">&amp;</span>g);
+<a href=#5766 id=5766 data-nosnippet>5766</a>}
+<a href=#5767 id=5767 data-nosnippet>5767</a>
+<a href=#5768 id=5768 data-nosnippet>5768</a><span class="doccomment">/// Execute a function with a mutable reference to the current mouth
+<a href=#5769 id=5769 data-nosnippet>5769</a></span><span class="kw">pub fn </span>with_mouth_mut&lt;FnR, R&gt;(caller: FnR) -&gt; R
+<a href=#5770 id=5770 data-nosnippet>5770</a><span class="kw">where </span>FnR: FnOnce(<span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;mut </span>Mouth&gt;) -&gt; R {
+<a href=#5771 id=5771 data-nosnippet>5771</a>  <span class="kw">let </span><span class="kw-2">mut </span>gullet = <span class="macro">gullet_mut!</span>();
+<a href=#5772 id=5772 data-nosnippet>5772</a>  <span class="kw">let </span>mouth_opt = <span class="kw">match </span>gullet.runtime {
+<a href=#5773 id=5773 data-nosnippet>5773</a>    <span class="prelude-val">None </span>=&gt; <span class="prelude-val">None</span>,
+<a href=#5774 id=5774 data-nosnippet>5774</a>    <span class="prelude-val">Some</span>(<span class="kw-2">ref mut </span>runtime) =&gt; <span class="prelude-val">Some</span>(<span class="kw-2">&amp;mut </span>runtime.mouth),
+<a href=#5775 id=5775 data-nosnippet>5775</a>  };
+<a href=#5776 id=5776 data-nosnippet>5776</a>  caller(mouth_opt)
+<a href=#5777 id=5777 data-nosnippet>5777</a>}
+<a href=#5778 id=5778 data-nosnippet>5778</a>
+<a href=#5779 id=5779 data-nosnippet>5779</a><span class="attr">#[cfg(test)]
+<a href=#5780 id=5780 data-nosnippet>5780</a></span><span class="kw">mod </span>token_limit_tests {
+<a href=#5781 id=5781 data-nosnippet>5781</a>  <span class="kw">use super</span>::<span class="kw-2">*</span>;
+<a href=#5782 id=5782 data-nosnippet>5782</a>
+<a href=#5783 id=5783 data-nosnippet>5783</a>  <span class="doccomment">/// A budget refuses the read past it and each one after, leaves the count as the reads made it, and leaves no due count
+<a href=#5784 id=5784 data-nosnippet>5784</a>  /// on the fast path once it is off; a failed inner reading context keeps what is left of it.
+<a href=#5785 id=5785 data-nosnippet>5785</a>  </span><span class="attr">#[test]
+<a href=#5786 id=5786 data-nosnippet>5786</a>  </span><span class="kw">fn </span>a_read_budget_ends_at_its_read_and_counts_what_was_read() {
+<a href=#5787 id=5787 data-nosnippet>5787</a>    <span class="kw">let </span>tokens = || Tokens::new(<span class="macro">vec!</span>[<span class="macro">T_LETTER!</span>(<span class="string">"a"</span>); <span class="number">10</span>]);
+<a href=#5788 id=5788 data-nosnippet>5788</a>    reading_from_mouth(Mouth::default(), || {
+<a href=#5789 id=5789 data-nosnippet>5789</a>      unread(tokens());
+<a href=#5790 id=5790 data-nosnippet>5790</a>      <span class="kw">let </span>start = token_progress();
+<a href=#5791 id=5791 data-nosnippet>5791</a>      <span class="kw">let </span>budget = read_budget(<span class="number">3</span>);
+<a href=#5792 id=5792 data-nosnippet>5792</a>      <span class="kw">for _ in </span><span class="number">0</span>..<span class="number">3 </span>{
+<a href=#5793 id=5793 data-nosnippet>5793</a>        <span class="macro">assert!</span>(read_token()<span class="question-mark">?</span>.is_some());
+<a href=#5794 id=5794 data-nosnippet>5794</a>      }
+<a href=#5795 id=5795 data-nosnippet>5795</a>      <span class="kw">for _ in </span><span class="number">0</span>..<span class="number">2 </span>{
+<a href=#5796 id=5796 data-nosnippet>5796</a>        <span class="kw">let </span>failed = read_token().unwrap_err();
+<a href=#5797 id=5797 data-nosnippet>5797</a>        <span class="macro">assert!</span>(<span class="macro">matches!</span>(failed.category, ErrorCategory::ReadBudget));
+<a href=#5798 id=5798 data-nosnippet>5798</a>      }
+<a href=#5799 id=5799 data-nosnippet>5799</a>      <span class="macro">assert_eq!</span>(budget.end(), ReadBudgetEnd { reads: <span class="number">3</span>, over: <span class="bool-val">true </span>});
+<a href=#5800 id=5800 data-nosnippet>5800</a>      <span class="macro">assert_eq!</span>(token_progress(), start + <span class="number">3</span>);
+<a href=#5801 id=5801 data-nosnippet>5801</a>      <span class="macro">assert!</span>(read_token()<span class="question-mark">?</span>.is_some());
+<a href=#5802 id=5802 data-nosnippet>5802</a>      <span class="macro">assert_eq!</span>(token_progress(), start + <span class="number">4</span>);
+<a href=#5803 id=5803 data-nosnippet>5803</a>
+<a href=#5804 id=5804 data-nosnippet>5804</a>      <span class="comment">// An inner context's failure resets the count, and takes nothing off what the budget has left.
+<a href=#5805 id=5805 data-nosnippet>5805</a>      </span><span class="kw">let </span>start = token_progress();
+<a href=#5806 id=5806 data-nosnippet>5806</a>      <span class="kw">let </span>budget = read_budget(<span class="number">4</span>);
+<a href=#5807 id=5807 data-nosnippet>5807</a>      <span class="macro">assert!</span>(read_token()<span class="question-mark">?</span>.is_some());
+<a href=#5808 id=5808 data-nosnippet>5808</a>      <span class="kw">let </span>inner: <span class="prelude-ty">Result</span>&lt;()&gt; = reading_from_mouth(Mouth::default(), || {
+<a href=#5809 id=5809 data-nosnippet>5809</a>        unread(tokens());
+<a href=#5810 id=5810 data-nosnippet>5810</a>        <span class="macro">assert!</span>(read_token()<span class="question-mark">?</span>.is_some());
+<a href=#5811 id=5811 data-nosnippet>5811</a>        fatal_free_failure()
+<a href=#5812 id=5812 data-nosnippet>5812</a>      });
+<a href=#5813 id=5813 data-nosnippet>5813</a>      <span class="macro">assert!</span>(inner.is_err());
+<a href=#5814 id=5814 data-nosnippet>5814</a>      <span class="macro">assert_eq!</span>(token_progress(), <span class="number">0</span>);
 <a href=#5815 id=5815 data-nosnippet>5815</a>      <span class="macro">assert!</span>(read_token()<span class="question-mark">?</span>.is_some());
-<a href=#5816 id=5816 data-nosnippet>5816</a>      <span class="macro">assert!</span>(read_token().is_err());
-<a href=#5817 id=5817 data-nosnippet>5817</a>      <span class="macro">assert_eq!</span>(budget.end(), ReadBudgetEnd { reads: <span class="number">4</span>, over: <span class="bool-val">true </span>});
-<a href=#5818 id=5818 data-nosnippet>5818</a>      <span class="macro">assert_eq!</span>(token_progress(), start + <span class="number">4</span>);
-<a href=#5819 id=5819 data-nosnippet>5819</a>
-<a href=#5820 id=5820 data-nosnippet>5820</a>      <span class="comment">// A run the budget did not end leaves the count alone, whatever is left.
-<a href=#5821 id=5821 data-nosnippet>5821</a>      </span><span class="kw">let </span>start = token_progress();
-<a href=#5822 id=5822 data-nosnippet>5822</a>      <span class="kw">let </span>budget = read_budget(<span class="number">100</span>);
-<a href=#5823 id=5823 data-nosnippet>5823</a>      <span class="macro">assert!</span>(read_token()<span class="question-mark">?</span>.is_some());
-<a href=#5824 id=5824 data-nosnippet>5824</a>      <span class="macro">assert_eq!</span>(budget.end(), ReadBudgetEnd { reads: <span class="number">1</span>, over: <span class="bool-val">false </span>});
-<a href=#5825 id=5825 data-nosnippet>5825</a>      <span class="macro">assert_eq!</span>(token_progress(), start + <span class="number">1</span>);
-<a href=#5826 id=5826 data-nosnippet>5826</a>      <span class="prelude-val">Ok</span>(())
-<a href=#5827 id=5827 data-nosnippet>5827</a>    })
-<a href=#5828 id=5828 data-nosnippet>5828</a>    .unwrap();
-<a href=#5829 id=5829 data-nosnippet>5829</a>  }
-<a href=#5830 id=5830 data-nosnippet>5830</a>
-<a href=#5831 id=5831 data-nosnippet>5831</a>  <span class="doccomment">/// An input mark reads "unread" until a token it held is read, though the tokens pushed in their place put an equal
-<a href=#5832 id=5832 data-nosnippet>5832</a>  /// token at its last slot (a space, IEEEtran's `\IEEEauthorblockN{…}⏎\IEEEauthorblockA{…}`: 2401.11731, 1801.03314);
-<a href=#5833 id=5833 data-nosnippet>5833</a>  /// a peek, a token read and put back, and tokens pushed on top leave it unread.
-<a href=#5834 id=5834 data-nosnippet>5834</a>  </span><span class="attr">#[test]
-<a href=#5835 id=5835 data-nosnippet>5835</a>  </span><span class="kw">fn </span>an_input_mark_tells_a_refilled_slot_from_a_peek() {
-<a href=#5836 id=5836 data-nosnippet>5836</a>    reading_from_mouth(Mouth::default(), || {
-<a href=#5837 id=5837 data-nosnippet>5837</a>      unread(Tokens::new(<span class="macro">vec!</span>[<span class="macro">T_SPACE!</span>(), <span class="macro">T_CS!</span>(<span class="string">"\\next"</span>)]));
-<a href=#5838 id=5838 data-nosnippet>5838</a>      <span class="kw">let </span>mark = input_mark();
-<a href=#5839 id=5839 data-nosnippet>5839</a>      <span class="macro">assert!</span>(input_unread_since(<span class="kw-2">&amp;</span>mark));
-<a href=#5840 id=5840 data-nosnippet>5840</a>      <span class="comment">// (a peek, and an expansion pushed on top)
-<a href=#5841 id=5841 data-nosnippet>5841</a>      </span><span class="kw">let </span>peeked = read_token()<span class="question-mark">?</span>.unwrap();
-<a href=#5842 id=5842 data-nosnippet>5842</a>      unread_one(peeked);
-<a href=#5843 id=5843 data-nosnippet>5843</a>      <span class="macro">assert!</span>(input_unread_since(<span class="kw-2">&amp;</span>mark));
-<a href=#5844 id=5844 data-nosnippet>5844</a>      unread(Tokens::new(<span class="macro">vec!</span>[<span class="macro">T_LETTER!</span>(<span class="string">"a"</span>), <span class="macro">T_SPACE!</span>()]));
-<a href=#5845 id=5845 data-nosnippet>5845</a>      <span class="macro">assert!</span>(input_unread_since(<span class="kw-2">&amp;</span>mark));
-<a href=#5846 id=5846 data-nosnippet>5846</a>      <span class="macro">assert_eq!</span>(read_token()<span class="question-mark">?</span>, <span class="prelude-val">Some</span>(<span class="macro">T_LETTER!</span>(<span class="string">"a"</span>)));
-<a href=#5847 id=5847 data-nosnippet>5847</a>      <span class="macro">assert_eq!</span>(read_token()<span class="question-mark">?</span>, <span class="prelude-val">Some</span>(<span class="macro">T_SPACE!</span>()));
-<a href=#5848 id=5848 data-nosnippet>5848</a>      <span class="macro">assert!</span>(input_unread_since(<span class="kw-2">&amp;</span>mark));
-<a href=#5849 id=5849 data-nosnippet>5849</a>      <span class="comment">// (both tokens read, a longer list pushed whose token at the mark's last slot is a space again)
-<a href=#5850 id=5850 data-nosnippet>5850</a>      </span><span class="macro">assert_eq!</span>(read_token()<span class="question-mark">?</span>, <span class="prelude-val">Some</span>(<span class="macro">T_SPACE!</span>()));
-<a href=#5851 id=5851 data-nosnippet>5851</a>      <span class="macro">assert_eq!</span>(read_token()<span class="question-mark">?</span>, <span class="prelude-val">Some</span>(<span class="macro">T_CS!</span>(<span class="string">"\\next"</span>)));
-<a href=#5852 id=5852 data-nosnippet>5852</a>      unread(Tokens::new(<span class="macro">vec!</span>[
-<a href=#5853 id=5853 data-nosnippet>5853</a>        <span class="macro">T_LETTER!</span>(<span class="string">"a"</span>),
-<a href=#5854 id=5854 data-nosnippet>5854</a>        <span class="macro">T_SPACE!</span>(),
-<a href=#5855 id=5855 data-nosnippet>5855</a>        <span class="macro">T_LETTER!</span>(<span class="string">"b"</span>),
-<a href=#5856 id=5856 data-nosnippet>5856</a>      ]));
-<a href=#5857 id=5857 data-nosnippet>5857</a>      <span class="macro">assert!</span>(!input_unread_since(<span class="kw-2">&amp;</span>mark));
-<a href=#5858 id=5858 data-nosnippet>5858</a>      <span class="prelude-val">Ok</span>(())
-<a href=#5859 id=5859 data-nosnippet>5859</a>    })
-<a href=#5860 id=5860 data-nosnippet>5860</a>    .unwrap();
-<a href=#5861 id=5861 data-nosnippet>5861</a>  }
-<a href=#5862 id=5862 data-nosnippet>5862</a>
-<a href=#5863 id=5863 data-nosnippet>5863</a>  <span class="doccomment">/// Marks nest, each answering for its own length: a mark on top of another reads as read once what was pushed
-<a href=#5864 id=5864 data-nosnippet>5864</a>  /// between them is read, the one below it still unread; a `\futurelet`'s two tokens read and put back leave the input
-<a href=#5865 id=5865 data-nosnippet>5865</a>  /// unread, more than [`MARK_HELD`] read and put back read as read (the stricter answer), and a native reader's
-<a href=#5866 id=5866 data-nosnippet>5866</a>  /// consumption (`consume_pushback_to`) as any read. A mark of a mouth since closed reads as read. A list read down
-<a href=#5867 id=5867 data-nosnippet>5867</a>  /// while a mark is taken at each step (an author list a macro holds, `\authorlist` of 3,000 `\author`/`\affiliation`
-<a href=#5868 id=5868 data-nosnippet>5868</a>  /// pairs: revRC1's memory probe) keeps one run on the watch, no copy of the pushback (`InputMark` holds no heap).
-<a href=#5869 id=5869 data-nosnippet>5869</a>  </span><span class="attr">#[test]
-<a href=#5870 id=5870 data-nosnippet>5870</a>  </span><span class="kw">fn </span>input_marks_nest_and_keep_no_copy_of_the_pushback() {
-<a href=#5871 id=5871 data-nosnippet>5871</a>    reading_from_mouth(Mouth::default(), || {
-<a href=#5872 id=5872 data-nosnippet>5872</a>      <span class="kw">let </span>letters = |n: usize| Tokens::new((<span class="number">0</span>..n).map(|<span class="kw">_</span>| <span class="macro">T_LETTER!</span>(<span class="string">"x"</span>)).collect());
-<a href=#5873 id=5873 data-nosnippet>5873</a>      unread(letters(<span class="number">8</span>));
-<a href=#5874 id=5874 data-nosnippet>5874</a>      <span class="kw">let </span>outer = input_mark();
-<a href=#5875 id=5875 data-nosnippet>5875</a>      unread(letters(<span class="number">2</span>));
-<a href=#5876 id=5876 data-nosnippet>5876</a>      <span class="kw">let </span>inner = input_mark();
-<a href=#5877 id=5877 data-nosnippet>5877</a>      unread(letters(<span class="number">1</span>));
-<a href=#5878 id=5878 data-nosnippet>5878</a>      <span class="macro">assert_eq!</span>(read_token()<span class="question-mark">?</span>, <span class="prelude-val">Some</span>(<span class="macro">T_LETTER!</span>(<span class="string">"x"</span>)));
-<a href=#5879 id=5879 data-nosnippet>5879</a>      <span class="macro">assert!</span>(input_unread_since(<span class="kw-2">&amp;</span>inner) &amp;&amp; input_unread_since(<span class="kw-2">&amp;</span>outer));
-<a href=#5880 id=5880 data-nosnippet>5880</a>      read_token()<span class="question-mark">?</span>;
-<a href=#5881 id=5881 data-nosnippet>5881</a>      <span class="macro">assert!</span>(!input_unread_since(<span class="kw-2">&amp;</span>inner));
-<a href=#5882 id=5882 data-nosnippet>5882</a>      <span class="macro">assert!</span>(input_unread_since(<span class="kw-2">&amp;</span>outer));
-<a href=#5883 id=5883 data-nosnippet>5883</a>      <span class="comment">// (a `\futurelet` below the outer mark: two tokens read, put back)
-<a href=#5884 id=5884 data-nosnippet>5884</a>      </span>read_token()<span class="question-mark">?</span>;
-<a href=#5885 id=5885 data-nosnippet>5885</a>      <span class="kw">let </span>(a, b) = (read_token()<span class="question-mark">?</span>.unwrap(), read_token()<span class="question-mark">?</span>.unwrap());
-<a href=#5886 id=5886 data-nosnippet>5886</a>      unread(Tokens::new(<span class="macro">vec!</span>[a, b]));
-<a href=#5887 id=5887 data-nosnippet>5887</a>      <span class="macro">assert!</span>(input_unread_since(<span class="kw-2">&amp;</span>outer));
-<a href=#5888 id=5888 data-nosnippet>5888</a>      <span class="comment">// (five read and put back)
-<a href=#5889 id=5889 data-nosnippet>5889</a>      </span><span class="kw">let </span>five: Vec&lt;Token&gt; = (<span class="number">0</span>..<span class="number">5</span>).map(|<span class="kw">_</span>| read_token().unwrap().unwrap()).collect();
-<a href=#5890 id=5890 data-nosnippet>5890</a>      unread(Tokens::new(five));
-<a href=#5891 id=5891 data-nosnippet>5891</a>      <span class="macro">assert!</span>(!input_unread_since(<span class="kw-2">&amp;</span>outer));
-<a href=#5892 id=5892 data-nosnippet>5892</a>      <span class="kw">let </span>mark = input_mark();
-<a href=#5893 id=5893 data-nosnippet>5893</a>      consume_pushback_to(pushback_len() - <span class="number">1</span>);
-<a href=#5894 id=5894 data-nosnippet>5894</a>      <span class="macro">assert!</span>(!input_unread_since(<span class="kw-2">&amp;</span>mark));
-<a href=#5895 id=5895 data-nosnippet>5895</a>      <span class="comment">// (a mark of a mouth since closed)
-<a href=#5896 id=5896 data-nosnippet>5896</a>      </span><span class="kw">let </span>closed = reading_from_mouth(Mouth::default(), || {
-<a href=#5897 id=5897 data-nosnippet>5897</a>        unread(letters(<span class="number">1</span>));
-<a href=#5898 id=5898 data-nosnippet>5898</a>        <span class="prelude-val">Ok</span>(input_mark())
-<a href=#5899 id=5899 data-nosnippet>5899</a>      })<span class="question-mark">?</span>;
-<a href=#5900 id=5900 data-nosnippet>5900</a>      <span class="macro">assert!</span>(!input_unread_since(<span class="kw-2">&amp;</span>closed));
-<a href=#5901 id=5901 data-nosnippet>5901</a>      <span class="comment">// (a list read down, a mark at each step)
-<a href=#5902 id=5902 data-nosnippet>5902</a>      </span><span class="kw">while </span>read_token()<span class="question-mark">?</span>.is_some() {}
-<a href=#5903 id=5903 data-nosnippet>5903</a>      unread(letters(<span class="number">12_000</span>));
-<a href=#5904 id=5904 data-nosnippet>5904</a>      <span class="kw">let </span><span class="kw-2">mut </span>marks = Vec::new();
-<a href=#5905 id=5905 data-nosnippet>5905</a>      <span class="kw">for _ in </span><span class="number">0</span>..<span class="number">3_000 </span>{
-<a href=#5906 id=5906 data-nosnippet>5906</a>        marks.push(input_mark());
-<a href=#5907 id=5907 data-nosnippet>5907</a>        <span class="kw">for _ in </span><span class="number">0</span>..<span class="number">4 </span>{
-<a href=#5908 id=5908 data-nosnippet>5908</a>          read_token()<span class="question-mark">?</span>;
-<a href=#5909 id=5909 data-nosnippet>5909</a>        }
-<a href=#5910 id=5910 data-nosnippet>5910</a>      }
-<a href=#5911 id=5911 data-nosnippet>5911</a>      <span class="macro">assert!</span>(marks.iter().all(|mark| !input_unread_since(mark)));
-<a href=#5912 id=5912 data-nosnippet>5912</a>      <span class="macro">assert!</span>(
-<a href=#5913 id=5913 data-nosnippet>5913</a>        <span class="macro">gullet!</span>()
-<a href=#5914 id=5914 data-nosnippet>5914</a>          .runtime
-<a href=#5915 id=5915 data-nosnippet>5915</a>          .as_ref()
-<a href=#5916 id=5916 data-nosnippet>5916</a>          .is_some_and(|rt| rt.watch.runs.len() &lt;= <span class="number">1</span>)
-<a href=#5917 id=5917 data-nosnippet>5917</a>      );
-<a href=#5918 id=5918 data-nosnippet>5918</a>      <span class="kw">fn </span>copy&lt;T: Copy&gt;() {}
-<a href=#5919 id=5919 data-nosnippet>5919</a>      copy::&lt;InputMark&gt;();
-<a href=#5920 id=5920 data-nosnippet>5920</a>      <span class="prelude-val">Ok</span>(())
-<a href=#5921 id=5921 data-nosnippet>5921</a>    })
-<a href=#5922 id=5922 data-nosnippet>5922</a>    .unwrap();
-<a href=#5923 id=5923 data-nosnippet>5923</a>  }
-<a href=#5924 id=5924 data-nosnippet>5924</a>
-<a href=#5925 id=5925 data-nosnippet>5925</a>  <span class="doccomment">/// An error that is no Fatal, for an inner context to fail with.
-<a href=#5926 id=5926 data-nosnippet>5926</a>  </span><span class="kw">fn </span>fatal_free_failure() -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; { read_budget_error().map(|<span class="kw">_</span>| ()) }
-<a href=#5927 id=5927 data-nosnippet>5927</a>
-<a href=#5928 id=5928 data-nosnippet>5928</a>  <span class="doccomment">/// The "Mouth is unexpectedly already closed" budget is the conversion's: after a predecessor on the thread spent it
-<a href=#5929 id=5929 data-nosnippet>5929</a>  /// (0906.1883: 10K+), the next conversion's first such error is logged, not a Fatal (`reset_conversion_state`, revST3b).
-<a href=#5930 id=5930 data-nosnippet>5930</a>  </span><span class="attr">#[test]
-<a href=#5931 id=5931 data-nosnippet>5931</a>  </span><span class="kw">fn </span>the_mouth_closed_budget_is_each_conversions() {
-<a href=#5932 id=5932 data-nosnippet>5932</a>    <span class="kw">let </span>closing_its_own_mouth = || reading_from_mouth(Mouth::default(), || close_mouth(<span class="bool-val">true</span>));
-<a href=#5933 id=5933 data-nosnippet>5933</a>    <span class="kw">let </span>counts = || {
-<a href=#5934 id=5934 data-nosnippet>5934</a>      <span class="kw">let </span>c = snapshot_report_counts();
-<a href=#5935 id=5935 data-nosnippet>5935</a>      (c.error, get_status_code())
-<a href=#5936 id=5936 data-nosnippet>5936</a>    };
-<a href=#5937 id=5937 data-nosnippet>5937</a>    initialize_report();
-<a href=#5938 id=5938 data-nosnippet>5938</a>    <span class="kw">let </span>failed: Vec&lt;usize&gt; = (<span class="number">0</span>..<span class="number">50</span>)
-<a href=#5939 id=5939 data-nosnippet>5939</a>      .filter(|<span class="kw">_</span>| closing_its_own_mouth().is_err())
-<a href=#5940 id=5940 data-nosnippet>5940</a>      .collect();
-<a href=#5941 id=5941 data-nosnippet>5941</a>    <span class="macro">assert_eq!</span>(failed, [<span class="number">49</span>], <span class="string">"the 50th is the Fatal"</span>);
-<a href=#5942 id=5942 data-nosnippet>5942</a>    <span class="macro">assert_eq!</span>(counts(), (<span class="number">10</span>, <span class="number">3</span>));
-<a href=#5943 id=5943 data-nosnippet>5943</a>    initialize_report();
-<a href=#5944 id=5944 data-nosnippet>5944</a>    <span class="macro">assert!</span>(closing_its_own_mouth().is_ok());
-<a href=#5945 id=5945 data-nosnippet>5945</a>    <span class="macro">assert_eq!</span>(counts(), (<span class="number">1</span>, <span class="number">2</span>));
-<a href=#5946 id=5946 data-nosnippet>5946</a>  }
-<a href=#5947 id=5947 data-nosnippet>5947</a>
-<a href=#5948 id=5948 data-nosnippet>5948</a>  <span class="doccomment">/// A failed reading context closes its own mouth and those above it, by depth: another of the same name above it (two
-<a href=#5949 id=5949 data-nosnippet>5949</a>  /// `Mouth::default()`, a `\scantokens`'s in a discarded run) is not its own, and the mouth under it stays open. A run
-<a href=#5950 id=5950 data-nosnippet>5950</a>  /// that stopped inside one left its own mouth open, and the next close took the document's.
-<a href=#5951 id=5951 data-nosnippet>5951</a>  </span><span class="attr">#[test]
-<a href=#5952 id=5952 data-nosnippet>5952</a>  </span><span class="kw">fn </span>a_failed_context_closes_its_own_mouths_by_depth() {
-<a href=#5953 id=5953 data-nosnippet>5953</a>    reading_from_mouth(Mouth::default(), || {
-<a href=#5954 id=5954 data-nosnippet>5954</a>      unread(Tokens::new(<span class="macro">vec!</span>[<span class="macro">T_LETTER!</span>(<span class="string">"o"</span>)]));
-<a href=#5955 id=5955 data-nosnippet>5955</a>      <span class="kw">let </span>failed: <span class="prelude-ty">Result</span>&lt;()&gt; = reading_from_mouth(Mouth::default(), || {
-<a href=#5956 id=5956 data-nosnippet>5956</a>        open_mouth(Mouth::default(), <span class="bool-val">false</span>);
+<a href=#5816 id=5816 data-nosnippet>5816</a>      <span class="macro">assert!</span>(read_token()<span class="question-mark">?</span>.is_some());
+<a href=#5817 id=5817 data-nosnippet>5817</a>      <span class="macro">assert!</span>(read_token().is_err());
+<a href=#5818 id=5818 data-nosnippet>5818</a>      <span class="macro">assert_eq!</span>(budget.end(), ReadBudgetEnd { reads: <span class="number">4</span>, over: <span class="bool-val">true </span>});
+<a href=#5819 id=5819 data-nosnippet>5819</a>      <span class="macro">assert_eq!</span>(token_progress(), start + <span class="number">4</span>);
+<a href=#5820 id=5820 data-nosnippet>5820</a>
+<a href=#5821 id=5821 data-nosnippet>5821</a>      <span class="comment">// A run the budget did not end leaves the count alone, whatever is left.
+<a href=#5822 id=5822 data-nosnippet>5822</a>      </span><span class="kw">let </span>start = token_progress();
+<a href=#5823 id=5823 data-nosnippet>5823</a>      <span class="kw">let </span>budget = read_budget(<span class="number">100</span>);
+<a href=#5824 id=5824 data-nosnippet>5824</a>      <span class="macro">assert!</span>(read_token()<span class="question-mark">?</span>.is_some());
+<a href=#5825 id=5825 data-nosnippet>5825</a>      <span class="macro">assert_eq!</span>(budget.end(), ReadBudgetEnd { reads: <span class="number">1</span>, over: <span class="bool-val">false </span>});
+<a href=#5826 id=5826 data-nosnippet>5826</a>      <span class="macro">assert_eq!</span>(token_progress(), start + <span class="number">1</span>);
+<a href=#5827 id=5827 data-nosnippet>5827</a>      <span class="prelude-val">Ok</span>(())
+<a href=#5828 id=5828 data-nosnippet>5828</a>    })
+<a href=#5829 id=5829 data-nosnippet>5829</a>    .unwrap();
+<a href=#5830 id=5830 data-nosnippet>5830</a>  }
+<a href=#5831 id=5831 data-nosnippet>5831</a>
+<a href=#5832 id=5832 data-nosnippet>5832</a>  <span class="doccomment">/// An input mark reads "unread" until a token it held is read, though the tokens pushed in their place put an equal
+<a href=#5833 id=5833 data-nosnippet>5833</a>  /// token at its last slot (a space, IEEEtran's `\IEEEauthorblockN{…}⏎\IEEEauthorblockA{…}`: 2401.11731, 1801.03314);
+<a href=#5834 id=5834 data-nosnippet>5834</a>  /// a peek, a token read and put back, and tokens pushed on top leave it unread.
+<a href=#5835 id=5835 data-nosnippet>5835</a>  </span><span class="attr">#[test]
+<a href=#5836 id=5836 data-nosnippet>5836</a>  </span><span class="kw">fn </span>an_input_mark_tells_a_refilled_slot_from_a_peek() {
+<a href=#5837 id=5837 data-nosnippet>5837</a>    reading_from_mouth(Mouth::default(), || {
+<a href=#5838 id=5838 data-nosnippet>5838</a>      unread(Tokens::new(<span class="macro">vec!</span>[<span class="macro">T_SPACE!</span>(), <span class="macro">T_CS!</span>(<span class="string">"\\next"</span>)]));
+<a href=#5839 id=5839 data-nosnippet>5839</a>      <span class="kw">let </span>mark = input_mark();
+<a href=#5840 id=5840 data-nosnippet>5840</a>      <span class="macro">assert!</span>(input_unread_since(<span class="kw-2">&amp;</span>mark));
+<a href=#5841 id=5841 data-nosnippet>5841</a>      <span class="comment">// (a peek, and an expansion pushed on top)
+<a href=#5842 id=5842 data-nosnippet>5842</a>      </span><span class="kw">let </span>peeked = read_token()<span class="question-mark">?</span>.unwrap();
+<a href=#5843 id=5843 data-nosnippet>5843</a>      unread_one(peeked);
+<a href=#5844 id=5844 data-nosnippet>5844</a>      <span class="macro">assert!</span>(input_unread_since(<span class="kw-2">&amp;</span>mark));
+<a href=#5845 id=5845 data-nosnippet>5845</a>      unread(Tokens::new(<span class="macro">vec!</span>[<span class="macro">T_LETTER!</span>(<span class="string">"a"</span>), <span class="macro">T_SPACE!</span>()]));
+<a href=#5846 id=5846 data-nosnippet>5846</a>      <span class="macro">assert!</span>(input_unread_since(<span class="kw-2">&amp;</span>mark));
+<a href=#5847 id=5847 data-nosnippet>5847</a>      <span class="macro">assert_eq!</span>(read_token()<span class="question-mark">?</span>, <span class="prelude-val">Some</span>(<span class="macro">T_LETTER!</span>(<span class="string">"a"</span>)));
+<a href=#5848 id=5848 data-nosnippet>5848</a>      <span class="macro">assert_eq!</span>(read_token()<span class="question-mark">?</span>, <span class="prelude-val">Some</span>(<span class="macro">T_SPACE!</span>()));
+<a href=#5849 id=5849 data-nosnippet>5849</a>      <span class="macro">assert!</span>(input_unread_since(<span class="kw-2">&amp;</span>mark));
+<a href=#5850 id=5850 data-nosnippet>5850</a>      <span class="comment">// (both tokens read, a longer list pushed whose token at the mark's last slot is a space again)
+<a href=#5851 id=5851 data-nosnippet>5851</a>      </span><span class="macro">assert_eq!</span>(read_token()<span class="question-mark">?</span>, <span class="prelude-val">Some</span>(<span class="macro">T_SPACE!</span>()));
+<a href=#5852 id=5852 data-nosnippet>5852</a>      <span class="macro">assert_eq!</span>(read_token()<span class="question-mark">?</span>, <span class="prelude-val">Some</span>(<span class="macro">T_CS!</span>(<span class="string">"\\next"</span>)));
+<a href=#5853 id=5853 data-nosnippet>5853</a>      unread(Tokens::new(<span class="macro">vec!</span>[
+<a href=#5854 id=5854 data-nosnippet>5854</a>        <span class="macro">T_LETTER!</span>(<span class="string">"a"</span>),
+<a href=#5855 id=5855 data-nosnippet>5855</a>        <span class="macro">T_SPACE!</span>(),
+<a href=#5856 id=5856 data-nosnippet>5856</a>        <span class="macro">T_LETTER!</span>(<span class="string">"b"</span>),
+<a href=#5857 id=5857 data-nosnippet>5857</a>      ]));
+<a href=#5858 id=5858 data-nosnippet>5858</a>      <span class="macro">assert!</span>(!input_unread_since(<span class="kw-2">&amp;</span>mark));
+<a href=#5859 id=5859 data-nosnippet>5859</a>      <span class="prelude-val">Ok</span>(())
+<a href=#5860 id=5860 data-nosnippet>5860</a>    })
+<a href=#5861 id=5861 data-nosnippet>5861</a>    .unwrap();
+<a href=#5862 id=5862 data-nosnippet>5862</a>  }
+<a href=#5863 id=5863 data-nosnippet>5863</a>
+<a href=#5864 id=5864 data-nosnippet>5864</a>  <span class="doccomment">/// Marks nest, each answering for its own length: a mark on top of another reads as read once what was pushed
+<a href=#5865 id=5865 data-nosnippet>5865</a>  /// between them is read, the one below it still unread; a `\futurelet`'s two tokens read and put back leave the input
+<a href=#5866 id=5866 data-nosnippet>5866</a>  /// unread, more than [`MARK_HELD`] read and put back read as read (the stricter answer), and a native reader's
+<a href=#5867 id=5867 data-nosnippet>5867</a>  /// consumption (`consume_pushback_to`) as any read. A mark of a mouth since closed reads as read. A list read down
+<a href=#5868 id=5868 data-nosnippet>5868</a>  /// while a mark is taken at each step (an author list a macro holds, `\authorlist` of 3,000 `\author`/`\affiliation`
+<a href=#5869 id=5869 data-nosnippet>5869</a>  /// pairs: revRC1's memory probe) keeps one run on the watch, no copy of the pushback (`InputMark` holds no heap).
+<a href=#5870 id=5870 data-nosnippet>5870</a>  </span><span class="attr">#[test]
+<a href=#5871 id=5871 data-nosnippet>5871</a>  </span><span class="kw">fn </span>input_marks_nest_and_keep_no_copy_of_the_pushback() {
+<a href=#5872 id=5872 data-nosnippet>5872</a>    reading_from_mouth(Mouth::default(), || {
+<a href=#5873 id=5873 data-nosnippet>5873</a>      <span class="kw">let </span>letters = |n: usize| Tokens::new((<span class="number">0</span>..n).map(|<span class="kw">_</span>| <span class="macro">T_LETTER!</span>(<span class="string">"x"</span>)).collect());
+<a href=#5874 id=5874 data-nosnippet>5874</a>      unread(letters(<span class="number">8</span>));
+<a href=#5875 id=5875 data-nosnippet>5875</a>      <span class="kw">let </span>outer = input_mark();
+<a href=#5876 id=5876 data-nosnippet>5876</a>      unread(letters(<span class="number">2</span>));
+<a href=#5877 id=5877 data-nosnippet>5877</a>      <span class="kw">let </span>inner = input_mark();
+<a href=#5878 id=5878 data-nosnippet>5878</a>      unread(letters(<span class="number">1</span>));
+<a href=#5879 id=5879 data-nosnippet>5879</a>      <span class="macro">assert_eq!</span>(read_token()<span class="question-mark">?</span>, <span class="prelude-val">Some</span>(<span class="macro">T_LETTER!</span>(<span class="string">"x"</span>)));
+<a href=#5880 id=5880 data-nosnippet>5880</a>      <span class="macro">assert!</span>(input_unread_since(<span class="kw-2">&amp;</span>inner) &amp;&amp; input_unread_since(<span class="kw-2">&amp;</span>outer));
+<a href=#5881 id=5881 data-nosnippet>5881</a>      read_token()<span class="question-mark">?</span>;
+<a href=#5882 id=5882 data-nosnippet>5882</a>      <span class="macro">assert!</span>(!input_unread_since(<span class="kw-2">&amp;</span>inner));
+<a href=#5883 id=5883 data-nosnippet>5883</a>      <span class="macro">assert!</span>(input_unread_since(<span class="kw-2">&amp;</span>outer));
+<a href=#5884 id=5884 data-nosnippet>5884</a>      <span class="comment">// (a `\futurelet` below the outer mark: two tokens read, put back)
+<a href=#5885 id=5885 data-nosnippet>5885</a>      </span>read_token()<span class="question-mark">?</span>;
+<a href=#5886 id=5886 data-nosnippet>5886</a>      <span class="kw">let </span>(a, b) = (read_token()<span class="question-mark">?</span>.unwrap(), read_token()<span class="question-mark">?</span>.unwrap());
+<a href=#5887 id=5887 data-nosnippet>5887</a>      unread(Tokens::new(<span class="macro">vec!</span>[a, b]));
+<a href=#5888 id=5888 data-nosnippet>5888</a>      <span class="macro">assert!</span>(input_unread_since(<span class="kw-2">&amp;</span>outer));
+<a href=#5889 id=5889 data-nosnippet>5889</a>      <span class="comment">// (five read and put back)
+<a href=#5890 id=5890 data-nosnippet>5890</a>      </span><span class="kw">let </span>five: Vec&lt;Token&gt; = (<span class="number">0</span>..<span class="number">5</span>).map(|<span class="kw">_</span>| read_token().unwrap().unwrap()).collect();
+<a href=#5891 id=5891 data-nosnippet>5891</a>      unread(Tokens::new(five));
+<a href=#5892 id=5892 data-nosnippet>5892</a>      <span class="macro">assert!</span>(!input_unread_since(<span class="kw-2">&amp;</span>outer));
+<a href=#5893 id=5893 data-nosnippet>5893</a>      <span class="kw">let </span>mark = input_mark();
+<a href=#5894 id=5894 data-nosnippet>5894</a>      consume_pushback_to(pushback_len() - <span class="number">1</span>);
+<a href=#5895 id=5895 data-nosnippet>5895</a>      <span class="macro">assert!</span>(!input_unread_since(<span class="kw-2">&amp;</span>mark));
+<a href=#5896 id=5896 data-nosnippet>5896</a>      <span class="comment">// (a mark of a mouth since closed)
+<a href=#5897 id=5897 data-nosnippet>5897</a>      </span><span class="kw">let </span>closed = reading_from_mouth(Mouth::default(), || {
+<a href=#5898 id=5898 data-nosnippet>5898</a>        unread(letters(<span class="number">1</span>));
+<a href=#5899 id=5899 data-nosnippet>5899</a>        <span class="prelude-val">Ok</span>(input_mark())
+<a href=#5900 id=5900 data-nosnippet>5900</a>      })<span class="question-mark">?</span>;
+<a href=#5901 id=5901 data-nosnippet>5901</a>      <span class="macro">assert!</span>(!input_unread_since(<span class="kw-2">&amp;</span>closed));
+<a href=#5902 id=5902 data-nosnippet>5902</a>      <span class="comment">// (a list read down, a mark at each step)
+<a href=#5903 id=5903 data-nosnippet>5903</a>      </span><span class="kw">while </span>read_token()<span class="question-mark">?</span>.is_some() {}
+<a href=#5904 id=5904 data-nosnippet>5904</a>      unread(letters(<span class="number">12_000</span>));
+<a href=#5905 id=5905 data-nosnippet>5905</a>      <span class="kw">let </span><span class="kw-2">mut </span>marks = Vec::new();
+<a href=#5906 id=5906 data-nosnippet>5906</a>      <span class="kw">for _ in </span><span class="number">0</span>..<span class="number">3_000 </span>{
+<a href=#5907 id=5907 data-nosnippet>5907</a>        marks.push(input_mark());
+<a href=#5908 id=5908 data-nosnippet>5908</a>        <span class="kw">for _ in </span><span class="number">0</span>..<span class="number">4 </span>{
+<a href=#5909 id=5909 data-nosnippet>5909</a>          read_token()<span class="question-mark">?</span>;
+<a href=#5910 id=5910 data-nosnippet>5910</a>        }
+<a href=#5911 id=5911 data-nosnippet>5911</a>      }
+<a href=#5912 id=5912 data-nosnippet>5912</a>      <span class="macro">assert!</span>(marks.iter().all(|mark| !input_unread_since(mark)));
+<a href=#5913 id=5913 data-nosnippet>5913</a>      <span class="macro">assert!</span>(
+<a href=#5914 id=5914 data-nosnippet>5914</a>        <span class="macro">gullet!</span>()
+<a href=#5915 id=5915 data-nosnippet>5915</a>          .runtime
+<a href=#5916 id=5916 data-nosnippet>5916</a>          .as_ref()
+<a href=#5917 id=5917 data-nosnippet>5917</a>          .is_some_and(|rt| rt.watch.runs.len() &lt;= <span class="number">1</span>)
+<a href=#5918 id=5918 data-nosnippet>5918</a>      );
+<a href=#5919 id=5919 data-nosnippet>5919</a>      <span class="kw">fn </span>copy&lt;T: Copy&gt;() {}
+<a href=#5920 id=5920 data-nosnippet>5920</a>      copy::&lt;InputMark&gt;();
+<a href=#5921 id=5921 data-nosnippet>5921</a>      <span class="prelude-val">Ok</span>(())
+<a href=#5922 id=5922 data-nosnippet>5922</a>    })
+<a href=#5923 id=5923 data-nosnippet>5923</a>    .unwrap();
+<a href=#5924 id=5924 data-nosnippet>5924</a>  }
+<a href=#5925 id=5925 data-nosnippet>5925</a>
+<a href=#5926 id=5926 data-nosnippet>5926</a>  <span class="doccomment">/// An error that is no Fatal, for an inner context to fail with.
+<a href=#5927 id=5927 data-nosnippet>5927</a>  </span><span class="kw">fn </span>fatal_free_failure() -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; { read_budget_error().map(|<span class="kw">_</span>| ()) }
+<a href=#5928 id=5928 data-nosnippet>5928</a>
+<a href=#5929 id=5929 data-nosnippet>5929</a>  <span class="doccomment">/// The "Mouth is unexpectedly already closed" budget is the conversion's: after a predecessor on the thread spent it
+<a href=#5930 id=5930 data-nosnippet>5930</a>  /// (0906.1883: 10K+), the next conversion's first such error is logged, not a Fatal (`reset_conversion_state`, revST3b).
+<a href=#5931 id=5931 data-nosnippet>5931</a>  </span><span class="attr">#[test]
+<a href=#5932 id=5932 data-nosnippet>5932</a>  </span><span class="kw">fn </span>the_mouth_closed_budget_is_each_conversions() {
+<a href=#5933 id=5933 data-nosnippet>5933</a>    <span class="kw">let </span>closing_its_own_mouth = || reading_from_mouth(Mouth::default(), || close_mouth(<span class="bool-val">true</span>));
+<a href=#5934 id=5934 data-nosnippet>5934</a>    <span class="kw">let </span>counts = || {
+<a href=#5935 id=5935 data-nosnippet>5935</a>      <span class="kw">let </span>c = snapshot_report_counts();
+<a href=#5936 id=5936 data-nosnippet>5936</a>      (c.error, get_status_code())
+<a href=#5937 id=5937 data-nosnippet>5937</a>    };
+<a href=#5938 id=5938 data-nosnippet>5938</a>    initialize_report();
+<a href=#5939 id=5939 data-nosnippet>5939</a>    <span class="kw">let </span>failed: Vec&lt;usize&gt; = (<span class="number">0</span>..<span class="number">50</span>)
+<a href=#5940 id=5940 data-nosnippet>5940</a>      .filter(|<span class="kw">_</span>| closing_its_own_mouth().is_err())
+<a href=#5941 id=5941 data-nosnippet>5941</a>      .collect();
+<a href=#5942 id=5942 data-nosnippet>5942</a>    <span class="macro">assert_eq!</span>(failed, [<span class="number">49</span>], <span class="string">"the 50th is the Fatal"</span>);
+<a href=#5943 id=5943 data-nosnippet>5943</a>    <span class="macro">assert_eq!</span>(counts(), (<span class="number">10</span>, <span class="number">3</span>));
+<a href=#5944 id=5944 data-nosnippet>5944</a>    initialize_report();
+<a href=#5945 id=5945 data-nosnippet>5945</a>    <span class="macro">assert!</span>(closing_its_own_mouth().is_ok());
+<a href=#5946 id=5946 data-nosnippet>5946</a>    <span class="macro">assert_eq!</span>(counts(), (<span class="number">1</span>, <span class="number">2</span>));
+<a href=#5947 id=5947 data-nosnippet>5947</a>  }
+<a href=#5948 id=5948 data-nosnippet>5948</a>
+<a href=#5949 id=5949 data-nosnippet>5949</a>  <span class="doccomment">/// A failed reading context closes its own mouth and those above it, by depth: another of the same name above it (two
+<a href=#5950 id=5950 data-nosnippet>5950</a>  /// `Mouth::default()`, a `\scantokens`'s in a discarded run) is not its own, and the mouth under it stays open. A run
+<a href=#5951 id=5951 data-nosnippet>5951</a>  /// that stopped inside one left its own mouth open, and the next close took the document's.
+<a href=#5952 id=5952 data-nosnippet>5952</a>  </span><span class="attr">#[test]
+<a href=#5953 id=5953 data-nosnippet>5953</a>  </span><span class="kw">fn </span>a_failed_context_closes_its_own_mouths_by_depth() {
+<a href=#5954 id=5954 data-nosnippet>5954</a>    reading_from_mouth(Mouth::default(), || {
+<a href=#5955 id=5955 data-nosnippet>5955</a>      unread(Tokens::new(<span class="macro">vec!</span>[<span class="macro">T_LETTER!</span>(<span class="string">"o"</span>)]));
+<a href=#5956 id=5956 data-nosnippet>5956</a>      <span class="kw">let </span>failed: <span class="prelude-ty">Result</span>&lt;()&gt; = reading_from_mouth(Mouth::default(), || {
 <a href=#5957 id=5957 data-nosnippet>5957</a>        open_mouth(Mouth::default(), <span class="bool-val">false</span>);
-<a href=#5958 id=5958 data-nosnippet>5958</a>        fatal_free_failure()
-<a href=#5959 id=5959 data-nosnippet>5959</a>      });
-<a href=#5960 id=5960 data-nosnippet>5960</a>      <span class="macro">assert!</span>(failed.is_err());
-<a href=#5961 id=5961 data-nosnippet>5961</a>      <span class="macro">assert_eq!</span>(read_token()<span class="question-mark">?</span>, <span class="prelude-val">Some</span>(<span class="macro">T_LETTER!</span>(<span class="string">"o"</span>)));
-<a href=#5962 id=5962 data-nosnippet>5962</a>      <span class="prelude-val">Ok</span>(())
-<a href=#5963 id=5963 data-nosnippet>5963</a>    })
-<a href=#5964 id=5964 data-nosnippet>5964</a>    .unwrap();
-<a href=#5965 id=5965 data-nosnippet>5965</a>  }
-<a href=#5966 id=5966 data-nosnippet>5966</a>
-<a href=#5967 id=5967 data-nosnippet>5967</a>  <span class="doccomment">/// The count of open mouths holds the one in reading: with none open on entry, [`open_mouth`] pushes nothing on the stack
-<a href=#5968 id=5968 data-nosnippet>5968</a>  /// and a count of the stack alone left the reader's own mouth open (and everything opened above it down to it). A failed
-<a href=#5969 id=5969 data-nosnippet>5969</a>  /// context leaves as many open as it found: none, or one, or one and a stack.
-<a href=#5970 id=5970 data-nosnippet>5970</a>  </span><span class="attr">#[test]
-<a href=#5971 id=5971 data-nosnippet>5971</a>  </span><span class="kw">fn </span>a_failed_context_leaves_as_many_mouths_as_it_found() {
-<a href=#5972 id=5972 data-nosnippet>5972</a>    <span class="kw">let </span>close_all = || {
-<a href=#5973 id=5973 data-nosnippet>5973</a>      <span class="kw">while </span>mouth_depth() &gt; <span class="number">0 </span>{
-<a href=#5974 id=5974 data-nosnippet>5974</a>        close_mouth(<span class="bool-val">true</span>).unwrap();
-<a href=#5975 id=5975 data-nosnippet>5975</a>      }
-<a href=#5976 id=5976 data-nosnippet>5976</a>    };
-<a href=#5977 id=5977 data-nosnippet>5977</a>    close_all();
-<a href=#5978 id=5978 data-nosnippet>5978</a>    <span class="kw">for </span>found <span class="kw">in </span><span class="number">0</span>..<span class="number">3 </span>{
-<a href=#5979 id=5979 data-nosnippet>5979</a>      <span class="kw">for </span>opened_above <span class="kw">in </span><span class="number">0</span>..<span class="number">3 </span>{
-<a href=#5980 id=5980 data-nosnippet>5980</a>        <span class="kw">for _ in </span><span class="number">0</span>..found {
-<a href=#5981 id=5981 data-nosnippet>5981</a>          open_mouth(Mouth::default(), <span class="bool-val">false</span>);
-<a href=#5982 id=5982 data-nosnippet>5982</a>        }
-<a href=#5983 id=5983 data-nosnippet>5983</a>        <span class="macro">assert_eq!</span>(mouth_depth(), found);
-<a href=#5984 id=5984 data-nosnippet>5984</a>        <span class="kw">let </span>failed: <span class="prelude-ty">Result</span>&lt;()&gt; = reading_from_mouth(Mouth::default(), || {
-<a href=#5985 id=5985 data-nosnippet>5985</a>          <span class="kw">for _ in </span><span class="number">0</span>..opened_above {
-<a href=#5986 id=5986 data-nosnippet>5986</a>            open_mouth(Mouth::default(), <span class="bool-val">false</span>);
-<a href=#5987 id=5987 data-nosnippet>5987</a>          }
-<a href=#5988 id=5988 data-nosnippet>5988</a>          fatal_free_failure()
-<a href=#5989 id=5989 data-nosnippet>5989</a>        });
-<a href=#5990 id=5990 data-nosnippet>5990</a>        <span class="macro">assert!</span>(failed.is_err());
-<a href=#5991 id=5991 data-nosnippet>5991</a>        <span class="macro">assert_eq!</span>(
-<a href=#5992 id=5992 data-nosnippet>5992</a>          mouth_depth(),
-<a href=#5993 id=5993 data-nosnippet>5993</a>          found,
-<a href=#5994 id=5994 data-nosnippet>5994</a>          <span class="string">"found {found}, opened {opened_above} above"
-<a href=#5995 id=5995 data-nosnippet>5995</a>        </span>);
-<a href=#5996 id=5996 data-nosnippet>5996</a>        <span class="macro">assert_eq!</span>(<span class="macro">gullet!</span>().runtime.is_none(), found == <span class="number">0</span>);
-<a href=#5997 id=5997 data-nosnippet>5997</a>        close_all();
-<a href=#5998 id=5998 data-nosnippet>5998</a>      }
-<a href=#5999 id=5999 data-nosnippet>5999</a>    }
-<a href=#6000 id=6000 data-nosnippet>6000</a>  }
-<a href=#6001 id=6001 data-nosnippet>6001</a>
-<a href=#6002 id=6002 data-nosnippet>6002</a>  <span class="doccomment">/// What [`read_internal_token_full`] tests per count, spelled as it spells them.
-<a href=#6003 id=6003 data-nosnippet>6003</a>  </span><span class="kw">fn </span>is_due(count: usize, limit: <span class="prelude-ty">Option</span>&lt;usize&gt;, floor: usize) -&gt; bool {
-<a href=#6004 id=6004 data-nosnippet>6004</a>    limit.is_some_and(|limit| count &gt; limit)
-<a href=#6005 id=6005 data-nosnippet>6005</a>      || count &amp; DEADLINE_CHECK_MASK == <span class="number">0
-<a href=#6006 id=6006 data-nosnippet>6006</a>      </span>|| (count &gt; floor
-<a href=#6007 id=6007 data-nosnippet>6007</a>        &amp;&amp; (<span class="number">1</span>..=CYCLE_GUARD_DUTY_ON).contains(<span class="kw-2">&amp;</span>((count - floor) &amp; (CYCLE_GUARD_DUTY_PERIOD - <span class="number">1</span>))))
-<a href=#6008 id=6008 data-nosnippet>6008</a>  }
-<a href=#6009 id=6009 data-nosnippet>6009</a>
-<a href=#6010 id=6010 data-nosnippet>6010</a>  <span class="doccomment">/// Runs `reads` counts from `start` as the read does, and fails if a due count takes the fast path. `change` is what
-<a href=#6011 id=6011 data-nosnippet>6011</a>  /// a writer of the limit or floor does at one count: sets them and resets `full_read_at`.
-<a href=#6012 id=6012 data-nosnippet>6012</a>  </span><span class="kw">fn </span>no_due_count_takes_the_fast_path(
-<a href=#6013 id=6013 data-nosnippet>6013</a>    start: usize,
-<a href=#6014 id=6014 data-nosnippet>6014</a>    reads: usize,
-<a href=#6015 id=6015 data-nosnippet>6015</a>    (<span class="kw-2">mut </span>limit, <span class="kw-2">mut </span>floor): (<span class="prelude-ty">Option</span>&lt;usize&gt;, usize),
-<a href=#6016 id=6016 data-nosnippet>6016</a>    change: <span class="prelude-ty">Option</span>&lt;(usize, <span class="prelude-ty">Option</span>&lt;usize&gt;, usize)&gt;,
-<a href=#6017 id=6017 data-nosnippet>6017</a>  ) {
-<a href=#6018 id=6018 data-nosnippet>6018</a>    <span class="kw">let </span><span class="kw-2">mut </span>full_read_at = <span class="number">0</span>;
-<a href=#6019 id=6019 data-nosnippet>6019</a>    <span class="kw">for </span>count <span class="kw">in </span>start + <span class="number">1</span>..=start + reads {
-<a href=#6020 id=6020 data-nosnippet>6020</a>      <span class="kw">if let </span><span class="prelude-val">Some</span>((at, new_limit, new_floor)) = change
-<a href=#6021 id=6021 data-nosnippet>6021</a>        &amp;&amp; count == at
-<a href=#6022 id=6022 data-nosnippet>6022</a>      {
-<a href=#6023 id=6023 data-nosnippet>6023</a>        (limit, floor, full_read_at) = (new_limit, new_floor, <span class="number">0</span>);
-<a href=#6024 id=6024 data-nosnippet>6024</a>      }
-<a href=#6025 id=6025 data-nosnippet>6025</a>      <span class="kw">if </span>count &lt; full_read_at {
-<a href=#6026 id=6026 data-nosnippet>6026</a>        <span class="macro">assert!</span>(
-<a href=#6027 id=6027 data-nosnippet>6027</a>          !is_due(count, limit, floor),
-<a href=#6028 id=6028 data-nosnippet>6028</a>          <span class="string">"count {count} is due and took the fast path (start {start}, limit {limit:?}, floor {floor})"
-<a href=#6029 id=6029 data-nosnippet>6029</a>        </span>);
-<a href=#6030 id=6030 data-nosnippet>6030</a>      } <span class="kw">else </span>{
-<a href=#6031 id=6031 data-nosnippet>6031</a>        full_read_at = next_due_read(count, limit, floor);
-<a href=#6032 id=6032 data-nosnippet>6032</a>      }
-<a href=#6033 id=6033 data-nosnippet>6033</a>    }
-<a href=#6034 id=6034 data-nosnippet>6034</a>  }
-<a href=#6035 id=6035 data-nosnippet>6035</a>
-<a href=#6036 id=6036 data-nosnippet>6036</a>  <span class="doccomment">/// Around the limit, each multiple of the deadline's period and each window's edges.
-<a href=#6037 id=6037 data-nosnippet>6037</a>  </span><span class="attr">#[test]
-<a href=#6038 id=6038 data-nosnippet>6038</a>  </span><span class="kw">fn </span>a_token_read_skips_only_what_is_not_due() {
-<a href=#6039 id=6039 data-nosnippet>6039</a>    <span class="kw">let </span>limits = [
-<a href=#6040 id=6040 data-nosnippet>6040</a>      <span class="prelude-val">None</span>,
-<a href=#6041 id=6041 data-nosnippet>6041</a>      <span class="prelude-val">Some</span>(<span class="number">0</span>),
-<a href=#6042 id=6042 data-nosnippet>6042</a>      <span class="prelude-val">Some</span>(<span class="number">5</span>),
-<a href=#6043 id=6043 data-nosnippet>6043</a>      <span class="prelude-val">Some</span>(<span class="number">65_535</span>),
-<a href=#6044 id=6044 data-nosnippet>6044</a>      <span class="prelude-val">Some</span>(<span class="number">65_536</span>),
-<a href=#6045 id=6045 data-nosnippet>6045</a>      <span class="prelude-val">Some</span>(<span class="number">65_537</span>),
-<a href=#6046 id=6046 data-nosnippet>6046</a>      <span class="prelude-val">Some</span>(<span class="number">70_000</span>),
-<a href=#6047 id=6047 data-nosnippet>6047</a>    ];
-<a href=#6048 id=6048 data-nosnippet>6048</a>    <span class="kw">let </span>floors = [<span class="number">0</span>, <span class="number">1</span>, <span class="number">16_383</span>, <span class="number">16_384</span>, <span class="number">65_536</span>, <span class="number">100_000</span>];
-<a href=#6049 id=6049 data-nosnippet>6049</a>    <span class="kw">for </span>start <span class="kw">in </span>[<span class="number">0</span>, <span class="number">16_380</span>, <span class="number">65_530</span>, <span class="number">65_535</span>, <span class="number">131_070</span>] {
-<a href=#6050 id=6050 data-nosnippet>6050</a>      <span class="kw">for </span>limit <span class="kw">in </span>limits {
-<a href=#6051 id=6051 data-nosnippet>6051</a>        <span class="kw">for </span>floor <span class="kw">in </span>floors {
-<a href=#6052 id=6052 data-nosnippet>6052</a>          no_due_count_takes_the_fast_path(start, <span class="number">140_000</span>, (limit, floor), <span class="prelude-val">None</span>);
-<a href=#6053 id=6053 data-nosnippet>6053</a>        }
-<a href=#6054 id=6054 data-nosnippet>6054</a>      }
-<a href=#6055 id=6055 data-nosnippet>6055</a>    }
-<a href=#6056 id=6056 data-nosnippet>6056</a>  }
-<a href=#6057 id=6057 data-nosnippet>6057</a>
-<a href=#6058 id=6058 data-nosnippet>6058</a>  <span class="doccomment">/// A limit or floor changed mid-run: `set_token_limit`, `scale_token_limit_to_source`, `raise_cycle_guard_activate`.
-<a href=#6059 id=6059 data-nosnippet>6059</a>  </span><span class="attr">#[test]
-<a href=#6060 id=6060 data-nosnippet>6060</a>  </span><span class="kw">fn </span>a_token_read_follows_a_limit_or_floor_changed_mid_run() {
-<a href=#6061 id=6061 data-nosnippet>6061</a>    <span class="kw">for </span>at <span class="kw">in </span>[<span class="number">1</span>, <span class="number">2_047</span>, <span class="number">2_048</span>, <span class="number">16_385</span>, <span class="number">65_536</span>, <span class="number">65_537</span>] {
-<a href=#6062 id=6062 data-nosnippet>6062</a>      <span class="kw">for </span>(from, to) <span class="kw">in </span>[
-<a href=#6063 id=6063 data-nosnippet>6063</a>        ((<span class="prelude-val">Some</span>(<span class="number">1_000_000</span>), <span class="number">100_000</span>), (<span class="prelude-val">Some</span>(<span class="number">70_000</span>), <span class="number">100_000</span>)),
-<a href=#6064 id=6064 data-nosnippet>6064</a>        ((<span class="prelude-val">Some</span>(<span class="number">70_000</span>), <span class="number">0</span>), (<span class="prelude-val">None</span>, <span class="number">90_000</span>)),
-<a href=#6065 id=6065 data-nosnippet>6065</a>        ((<span class="prelude-val">None</span>, <span class="number">200_000</span>), (<span class="prelude-val">Some</span>(at + <span class="number">3</span>), <span class="number">200_000</span>)),
-<a href=#6066 id=6066 data-nosnippet>6066</a>        ((<span class="prelude-val">None</span>, <span class="number">200_000</span>), (<span class="prelude-val">None</span>, at)),
-<a href=#6067 id=6067 data-nosnippet>6067</a>      ] {
-<a href=#6068 id=6068 data-nosnippet>6068</a>        no_due_count_takes_the_fast_path(<span class="number">0</span>, <span class="number">140_000</span>, from, <span class="prelude-val">Some</span>((at, to.<span class="number">0</span>, to.<span class="number">1</span>)));
-<a href=#6069 id=6069 data-nosnippet>6069</a>      }
-<a href=#6070 id=6070 data-nosnippet>6070</a>    }
-<a href=#6071 id=6071 data-nosnippet>6071</a>  }
-<a href=#6072 id=6072 data-nosnippet>6072</a>
-<a href=#6073 id=6073 data-nosnippet>6073</a>  <span class="doccomment">/// The runaway backstop grows with the bytes of EVERY opened source, not
-<a href=#6074 id=6074 data-nosnippet>6074</a>  /// just the driver (source2e.tex: 15 KB over ~2 MB of `.dtx`).
-<a href=#6075 id=6075 data-nosnippet>6075</a>  /// tex.web §444 `scan_int`: a decimal run, `'` octal, `"` hex, and a
-<a href=#6076 id=6076 data-nosnippet>6076</a>  /// first token that is no numeric constant falls through to the internal-
-<a href=#6077 id=6077 data-nosnippet>6077</a>  /// quantity path (§444's "Missing number, treated as zero" when nothing
-<a href=#6078 id=6078 data-nosnippet>6078</a>  /// there is a number either). The decimal test is a non-allocating digit
-<a href=#6079 id=6079 data-nosnippet>6079</a>  /// peek on the token's text (lever E), so the empty-text OTHER token —
-<a href=#6080 id=6080 data-nosnippet>6080</a>  /// which the old vacuous `all(is_ascii_digit)` mis-read as a decimal and
-<a href=#6081 id=6081 data-nosnippet>6081</a>  /// parsed to `i64::MAX` — now takes the missing-number route.
-<a href=#6082 id=6082 data-nosnippet>6082</a>  </span><span class="attr">#[test]
-<a href=#6083 id=6083 data-nosnippet>6083</a>  </span><span class="kw">fn </span>read_normal_integer_arms_follow_scan_int() {
-<a href=#6084 id=6084 data-nosnippet>6084</a>    reset_thread_state();
-<a href=#6085 id=6085 data-nosnippet>6085</a>    initialize_gullet();
-<a href=#6086 id=6086 data-nosnippet>6086</a>    <span class="kw">let </span>read = |tokens: Vec&lt;Token&gt;| -&gt; <span class="prelude-ty">Option</span>&lt;i64&gt; {
-<a href=#6087 id=6087 data-nosnippet>6087</a>      reading_from_mouth(Mouth::default(), || {
-<a href=#6088 id=6088 data-nosnippet>6088</a>        unread_vec(tokens);
-<a href=#6089 id=6089 data-nosnippet>6089</a>        <span class="kw">let </span>n = read_normal_integer()<span class="question-mark">?</span>.map(|n| n.value_of());
-<a href=#6090 id=6090 data-nosnippet>6090</a>        <span class="comment">// Drain whatever the reader left (an unread non-digit).
-<a href=#6091 id=6091 data-nosnippet>6091</a>        </span><span class="kw">while </span>read_token()<span class="question-mark">?</span>.is_some() {}
-<a href=#6092 id=6092 data-nosnippet>6092</a>        <span class="prelude-val">Ok</span>(n)
-<a href=#6093 id=6093 data-nosnippet>6093</a>      })
-<a href=#6094 id=6094 data-nosnippet>6094</a>      .expect(<span class="string">"no fatal"</span>)
-<a href=#6095 id=6095 data-nosnippet>6095</a>    };
-<a href=#6096 id=6096 data-nosnippet>6096</a>    <span class="kw">let </span>other = |s: <span class="kw-2">&amp;</span>str| Token::new(s, Catcode::OTHER);
-<a href=#6097 id=6097 data-nosnippet>6097</a>    <span class="macro">assert_eq!</span>(read(<span class="macro">vec!</span>[other(<span class="string">"1"</span>), other(<span class="string">"2"</span>), <span class="macro">T_SPACE!</span>()]), <span class="prelude-val">Some</span>(<span class="number">12</span>));
-<a href=#6098 id=6098 data-nosnippet>6098</a>    <span class="macro">assert_eq!</span>(read(<span class="macro">vec!</span>[other(<span class="string">"12"</span>), other(<span class="string">"3"</span>), <span class="macro">T_SPACE!</span>()]), <span class="prelude-val">Some</span>(<span class="number">123</span>));
-<a href=#6099 id=6099 data-nosnippet>6099</a>    <span class="macro">assert_eq!</span>(
-<a href=#6100 id=6100 data-nosnippet>6100</a>      read(<span class="macro">vec!</span>[other(<span class="string">"'"</span>), other(<span class="string">"1"</span>), other(<span class="string">"7"</span>), <span class="macro">T_SPACE!</span>()]),
-<a href=#6101 id=6101 data-nosnippet>6101</a>      <span class="prelude-val">Some</span>(<span class="number">15</span>)
-<a href=#6102 id=6102 data-nosnippet>6102</a>    );
-<a href=#6103 id=6103 data-nosnippet>6103</a>    <span class="macro">assert_eq!</span>(
-<a href=#6104 id=6104 data-nosnippet>6104</a>      read(<span class="macro">vec!</span>[other(<span class="string">"\""</span>), other(<span class="string">"F"</span>), other(<span class="string">"F"</span>), <span class="macro">T_SPACE!</span>()]),
-<a href=#6105 id=6105 data-nosnippet>6105</a>      <span class="prelude-val">Some</span>(<span class="number">255</span>)
-<a href=#6106 id=6106 data-nosnippet>6106</a>    );
-<a href=#6107 id=6107 data-nosnippet>6107</a>    <span class="macro">assert_eq!</span>(read(<span class="macro">vec!</span>[other(<span class="string">"`"</span>), <span class="macro">T_CS!</span>(<span class="string">"\\a"</span>), <span class="macro">T_SPACE!</span>()]), <span class="prelude-val">Some</span>(<span class="number">97</span>));
-<a href=#6108 id=6108 data-nosnippet>6108</a>    <span class="kw">let </span>dot = read(<span class="macro">vec!</span>[other(<span class="string">"."</span>), <span class="macro">T_SPACE!</span>()]);
-<a href=#6109 id=6109 data-nosnippet>6109</a>    <span class="kw">let </span>empty = read(<span class="macro">vec!</span>[other(<span class="string">""</span>), <span class="macro">T_SPACE!</span>()]);
-<a href=#6110 id=6110 data-nosnippet>6110</a>    <span class="macro">assert_eq!</span>(
-<a href=#6111 id=6111 data-nosnippet>6111</a>      dot, empty,
-<a href=#6112 id=6112 data-nosnippet>6112</a>      <span class="string">"an empty-text OTHER token is no more a number than `.`"
-<a href=#6113 id=6113 data-nosnippet>6113</a>    </span>);
-<a href=#6114 id=6114 data-nosnippet>6114</a>    <span class="macro">assert_ne!</span>(empty, <span class="prelude-val">Some</span>(i64::MAX), <span class="string">"never the old fabricated i64::MAX"</span>);
-<a href=#6115 id=6115 data-nosnippet>6115</a>  }
-<a href=#6116 id=6116 data-nosnippet>6116</a>
-<a href=#6117 id=6117 data-nosnippet>6117</a>  <span class="attr">#[test]
-<a href=#6118 id=6118 data-nosnippet>6118</a>  </span><span class="kw">fn </span>token_limit_scales_with_cumulative_source_bytes() {
-<a href=#6119 id=6119 data-nosnippet>6119</a>    <span class="kw">if </span>std::env::var_os(<span class="string">"LATEXML_TOKEN_LIMIT"</span>).is_some() {
-<a href=#6120 id=6120 data-nosnippet>6120</a>      <span class="kw">return</span>;
-<a href=#6121 id=6121 data-nosnippet>6121</a>    }
-<a href=#6122 id=6122 data-nosnippet>6122</a>    initialize_gullet();
-<a href=#6123 id=6123 data-nosnippet>6123</a>    scale_token_limit_to_source(<span class="number">15_000</span>);
-<a href=#6124 id=6124 data-nosnippet>6124</a>    <span class="macro">assert_eq!</span>(GULLET.borrow().token_limit, <span class="prelude-val">Some</span>(DEFAULT_TOKEN_LIMIT));
-<a href=#6125 id=6125 data-nosnippet>6125</a>    <span class="kw">for _ in </span><span class="number">0</span>..<span class="number">40 </span>{
-<a href=#6126 id=6126 data-nosnippet>6126</a>      scale_token_limit_to_source(<span class="number">500_000</span>);
-<a href=#6127 id=6127 data-nosnippet>6127</a>    }
-<a href=#6128 id=6128 data-nosnippet>6128</a>    <span class="macro">assert_eq!</span>(GULLET.borrow().token_limit, <span class="prelude-val">Some</span>(<span class="number">20_015_000 </span>* <span class="number">1000</span>));
-<a href=#6129 id=6129 data-nosnippet>6129</a>    <span class="comment">// A fresh conversion starts over.
-<a href=#6130 id=6130 data-nosnippet>6130</a>    </span>initialize_gullet();
-<a href=#6131 id=6131 data-nosnippet>6131</a>    <span class="macro">assert_eq!</span>(GULLET.borrow().token_limit, <span class="prelude-val">Some</span>(DEFAULT_TOKEN_LIMIT));
-<a href=#6132 id=6132 data-nosnippet>6132</a>  }
-<a href=#6133 id=6133 data-nosnippet>6133</a>}
+<a href=#5958 id=5958 data-nosnippet>5958</a>        open_mouth(Mouth::default(), <span class="bool-val">false</span>);
+<a href=#5959 id=5959 data-nosnippet>5959</a>        fatal_free_failure()
+<a href=#5960 id=5960 data-nosnippet>5960</a>      });
+<a href=#5961 id=5961 data-nosnippet>5961</a>      <span class="macro">assert!</span>(failed.is_err());
+<a href=#5962 id=5962 data-nosnippet>5962</a>      <span class="macro">assert_eq!</span>(read_token()<span class="question-mark">?</span>, <span class="prelude-val">Some</span>(<span class="macro">T_LETTER!</span>(<span class="string">"o"</span>)));
+<a href=#5963 id=5963 data-nosnippet>5963</a>      <span class="prelude-val">Ok</span>(())
+<a href=#5964 id=5964 data-nosnippet>5964</a>    })
+<a href=#5965 id=5965 data-nosnippet>5965</a>    .unwrap();
+<a href=#5966 id=5966 data-nosnippet>5966</a>  }
+<a href=#5967 id=5967 data-nosnippet>5967</a>
+<a href=#5968 id=5968 data-nosnippet>5968</a>  <span class="doccomment">/// The count of open mouths holds the one in reading: with none open on entry, [`open_mouth`] pushes nothing on the stack
+<a href=#5969 id=5969 data-nosnippet>5969</a>  /// and a count of the stack alone left the reader's own mouth open (and everything opened above it down to it). A failed
+<a href=#5970 id=5970 data-nosnippet>5970</a>  /// context leaves as many open as it found: none, or one, or one and a stack.
+<a href=#5971 id=5971 data-nosnippet>5971</a>  </span><span class="attr">#[test]
+<a href=#5972 id=5972 data-nosnippet>5972</a>  </span><span class="kw">fn </span>a_failed_context_leaves_as_many_mouths_as_it_found() {
+<a href=#5973 id=5973 data-nosnippet>5973</a>    <span class="kw">let </span>close_all = || {
+<a href=#5974 id=5974 data-nosnippet>5974</a>      <span class="kw">while </span>mouth_depth() &gt; <span class="number">0 </span>{
+<a href=#5975 id=5975 data-nosnippet>5975</a>        close_mouth(<span class="bool-val">true</span>).unwrap();
+<a href=#5976 id=5976 data-nosnippet>5976</a>      }
+<a href=#5977 id=5977 data-nosnippet>5977</a>    };
+<a href=#5978 id=5978 data-nosnippet>5978</a>    close_all();
+<a href=#5979 id=5979 data-nosnippet>5979</a>    <span class="kw">for </span>found <span class="kw">in </span><span class="number">0</span>..<span class="number">3 </span>{
+<a href=#5980 id=5980 data-nosnippet>5980</a>      <span class="kw">for </span>opened_above <span class="kw">in </span><span class="number">0</span>..<span class="number">3 </span>{
+<a href=#5981 id=5981 data-nosnippet>5981</a>        <span class="kw">for _ in </span><span class="number">0</span>..found {
+<a href=#5982 id=5982 data-nosnippet>5982</a>          open_mouth(Mouth::default(), <span class="bool-val">false</span>);
+<a href=#5983 id=5983 data-nosnippet>5983</a>        }
+<a href=#5984 id=5984 data-nosnippet>5984</a>        <span class="macro">assert_eq!</span>(mouth_depth(), found);
+<a href=#5985 id=5985 data-nosnippet>5985</a>        <span class="kw">let </span>failed: <span class="prelude-ty">Result</span>&lt;()&gt; = reading_from_mouth(Mouth::default(), || {
+<a href=#5986 id=5986 data-nosnippet>5986</a>          <span class="kw">for _ in </span><span class="number">0</span>..opened_above {
+<a href=#5987 id=5987 data-nosnippet>5987</a>            open_mouth(Mouth::default(), <span class="bool-val">false</span>);
+<a href=#5988 id=5988 data-nosnippet>5988</a>          }
+<a href=#5989 id=5989 data-nosnippet>5989</a>          fatal_free_failure()
+<a href=#5990 id=5990 data-nosnippet>5990</a>        });
+<a href=#5991 id=5991 data-nosnippet>5991</a>        <span class="macro">assert!</span>(failed.is_err());
+<a href=#5992 id=5992 data-nosnippet>5992</a>        <span class="macro">assert_eq!</span>(
+<a href=#5993 id=5993 data-nosnippet>5993</a>          mouth_depth(),
+<a href=#5994 id=5994 data-nosnippet>5994</a>          found,
+<a href=#5995 id=5995 data-nosnippet>5995</a>          <span class="string">"found {found}, opened {opened_above} above"
+<a href=#5996 id=5996 data-nosnippet>5996</a>        </span>);
+<a href=#5997 id=5997 data-nosnippet>5997</a>        <span class="macro">assert_eq!</span>(<span class="macro">gullet!</span>().runtime.is_none(), found == <span class="number">0</span>);
+<a href=#5998 id=5998 data-nosnippet>5998</a>        close_all();
+<a href=#5999 id=5999 data-nosnippet>5999</a>      }
+<a href=#6000 id=6000 data-nosnippet>6000</a>    }
+<a href=#6001 id=6001 data-nosnippet>6001</a>  }
+<a href=#6002 id=6002 data-nosnippet>6002</a>
+<a href=#6003 id=6003 data-nosnippet>6003</a>  <span class="doccomment">/// What [`read_internal_token_full`] tests per count, spelled as it spells them.
+<a href=#6004 id=6004 data-nosnippet>6004</a>  </span><span class="kw">fn </span>is_due(count: usize, limit: <span class="prelude-ty">Option</span>&lt;usize&gt;, floor: usize) -&gt; bool {
+<a href=#6005 id=6005 data-nosnippet>6005</a>    limit.is_some_and(|limit| count &gt; limit)
+<a href=#6006 id=6006 data-nosnippet>6006</a>      || count &amp; DEADLINE_CHECK_MASK == <span class="number">0
+<a href=#6007 id=6007 data-nosnippet>6007</a>      </span>|| (count &gt; floor
+<a href=#6008 id=6008 data-nosnippet>6008</a>        &amp;&amp; (<span class="number">1</span>..=CYCLE_GUARD_DUTY_ON).contains(<span class="kw-2">&amp;</span>((count - floor) &amp; (CYCLE_GUARD_DUTY_PERIOD - <span class="number">1</span>))))
+<a href=#6009 id=6009 data-nosnippet>6009</a>  }
+<a href=#6010 id=6010 data-nosnippet>6010</a>
+<a href=#6011 id=6011 data-nosnippet>6011</a>  <span class="doccomment">/// Runs `reads` counts from `start` as the read does, and fails if a due count takes the fast path. `change` is what
+<a href=#6012 id=6012 data-nosnippet>6012</a>  /// a writer of the limit or floor does at one count: sets them and resets `full_read_at`.
+<a href=#6013 id=6013 data-nosnippet>6013</a>  </span><span class="kw">fn </span>no_due_count_takes_the_fast_path(
+<a href=#6014 id=6014 data-nosnippet>6014</a>    start: usize,
+<a href=#6015 id=6015 data-nosnippet>6015</a>    reads: usize,
+<a href=#6016 id=6016 data-nosnippet>6016</a>    (<span class="kw-2">mut </span>limit, <span class="kw-2">mut </span>floor): (<span class="prelude-ty">Option</span>&lt;usize&gt;, usize),
+<a href=#6017 id=6017 data-nosnippet>6017</a>    change: <span class="prelude-ty">Option</span>&lt;(usize, <span class="prelude-ty">Option</span>&lt;usize&gt;, usize)&gt;,
+<a href=#6018 id=6018 data-nosnippet>6018</a>  ) {
+<a href=#6019 id=6019 data-nosnippet>6019</a>    <span class="kw">let </span><span class="kw-2">mut </span>full_read_at = <span class="number">0</span>;
+<a href=#6020 id=6020 data-nosnippet>6020</a>    <span class="kw">for </span>count <span class="kw">in </span>start + <span class="number">1</span>..=start + reads {
+<a href=#6021 id=6021 data-nosnippet>6021</a>      <span class="kw">if let </span><span class="prelude-val">Some</span>((at, new_limit, new_floor)) = change
+<a href=#6022 id=6022 data-nosnippet>6022</a>        &amp;&amp; count == at
+<a href=#6023 id=6023 data-nosnippet>6023</a>      {
+<a href=#6024 id=6024 data-nosnippet>6024</a>        (limit, floor, full_read_at) = (new_limit, new_floor, <span class="number">0</span>);
+<a href=#6025 id=6025 data-nosnippet>6025</a>      }
+<a href=#6026 id=6026 data-nosnippet>6026</a>      <span class="kw">if </span>count &lt; full_read_at {
+<a href=#6027 id=6027 data-nosnippet>6027</a>        <span class="macro">assert!</span>(
+<a href=#6028 id=6028 data-nosnippet>6028</a>          !is_due(count, limit, floor),
+<a href=#6029 id=6029 data-nosnippet>6029</a>          <span class="string">"count {count} is due and took the fast path (start {start}, limit {limit:?}, floor {floor})"
+<a href=#6030 id=6030 data-nosnippet>6030</a>        </span>);
+<a href=#6031 id=6031 data-nosnippet>6031</a>      } <span class="kw">else </span>{
+<a href=#6032 id=6032 data-nosnippet>6032</a>        full_read_at = next_due_read(count, limit, floor);
+<a href=#6033 id=6033 data-nosnippet>6033</a>      }
+<a href=#6034 id=6034 data-nosnippet>6034</a>    }
+<a href=#6035 id=6035 data-nosnippet>6035</a>  }
+<a href=#6036 id=6036 data-nosnippet>6036</a>
+<a href=#6037 id=6037 data-nosnippet>6037</a>  <span class="doccomment">/// Around the limit, each multiple of the deadline's period and each window's edges.
+<a href=#6038 id=6038 data-nosnippet>6038</a>  </span><span class="attr">#[test]
+<a href=#6039 id=6039 data-nosnippet>6039</a>  </span><span class="kw">fn </span>a_token_read_skips_only_what_is_not_due() {
+<a href=#6040 id=6040 data-nosnippet>6040</a>    <span class="kw">let </span>limits = [
+<a href=#6041 id=6041 data-nosnippet>6041</a>      <span class="prelude-val">None</span>,
+<a href=#6042 id=6042 data-nosnippet>6042</a>      <span class="prelude-val">Some</span>(<span class="number">0</span>),
+<a href=#6043 id=6043 data-nosnippet>6043</a>      <span class="prelude-val">Some</span>(<span class="number">5</span>),
+<a href=#6044 id=6044 data-nosnippet>6044</a>      <span class="prelude-val">Some</span>(<span class="number">65_535</span>),
+<a href=#6045 id=6045 data-nosnippet>6045</a>      <span class="prelude-val">Some</span>(<span class="number">65_536</span>),
+<a href=#6046 id=6046 data-nosnippet>6046</a>      <span class="prelude-val">Some</span>(<span class="number">65_537</span>),
+<a href=#6047 id=6047 data-nosnippet>6047</a>      <span class="prelude-val">Some</span>(<span class="number">70_000</span>),
+<a href=#6048 id=6048 data-nosnippet>6048</a>    ];
+<a href=#6049 id=6049 data-nosnippet>6049</a>    <span class="kw">let </span>floors = [<span class="number">0</span>, <span class="number">1</span>, <span class="number">16_383</span>, <span class="number">16_384</span>, <span class="number">65_536</span>, <span class="number">100_000</span>];
+<a href=#6050 id=6050 data-nosnippet>6050</a>    <span class="kw">for </span>start <span class="kw">in </span>[<span class="number">0</span>, <span class="number">16_380</span>, <span class="number">65_530</span>, <span class="number">65_535</span>, <span class="number">131_070</span>] {
+<a href=#6051 id=6051 data-nosnippet>6051</a>      <span class="kw">for </span>limit <span class="kw">in </span>limits {
+<a href=#6052 id=6052 data-nosnippet>6052</a>        <span class="kw">for </span>floor <span class="kw">in </span>floors {
+<a href=#6053 id=6053 data-nosnippet>6053</a>          no_due_count_takes_the_fast_path(start, <span class="number">140_000</span>, (limit, floor), <span class="prelude-val">None</span>);
+<a href=#6054 id=6054 data-nosnippet>6054</a>        }
+<a href=#6055 id=6055 data-nosnippet>6055</a>      }
+<a href=#6056 id=6056 data-nosnippet>6056</a>    }
+<a href=#6057 id=6057 data-nosnippet>6057</a>  }
+<a href=#6058 id=6058 data-nosnippet>6058</a>
+<a href=#6059 id=6059 data-nosnippet>6059</a>  <span class="doccomment">/// A limit or floor changed mid-run: `set_token_limit`, `scale_token_limit_to_source`, `raise_cycle_guard_activate`.
+<a href=#6060 id=6060 data-nosnippet>6060</a>  </span><span class="attr">#[test]
+<a href=#6061 id=6061 data-nosnippet>6061</a>  </span><span class="kw">fn </span>a_token_read_follows_a_limit_or_floor_changed_mid_run() {
+<a href=#6062 id=6062 data-nosnippet>6062</a>    <span class="kw">for </span>at <span class="kw">in </span>[<span class="number">1</span>, <span class="number">2_047</span>, <span class="number">2_048</span>, <span class="number">16_385</span>, <span class="number">65_536</span>, <span class="number">65_537</span>] {
+<a href=#6063 id=6063 data-nosnippet>6063</a>      <span class="kw">for </span>(from, to) <span class="kw">in </span>[
+<a href=#6064 id=6064 data-nosnippet>6064</a>        ((<span class="prelude-val">Some</span>(<span class="number">1_000_000</span>), <span class="number">100_000</span>), (<span class="prelude-val">Some</span>(<span class="number">70_000</span>), <span class="number">100_000</span>)),
+<a href=#6065 id=6065 data-nosnippet>6065</a>        ((<span class="prelude-val">Some</span>(<span class="number">70_000</span>), <span class="number">0</span>), (<span class="prelude-val">None</span>, <span class="number">90_000</span>)),
+<a href=#6066 id=6066 data-nosnippet>6066</a>        ((<span class="prelude-val">None</span>, <span class="number">200_000</span>), (<span class="prelude-val">Some</span>(at + <span class="number">3</span>), <span class="number">200_000</span>)),
+<a href=#6067 id=6067 data-nosnippet>6067</a>        ((<span class="prelude-val">None</span>, <span class="number">200_000</span>), (<span class="prelude-val">None</span>, at)),
+<a href=#6068 id=6068 data-nosnippet>6068</a>      ] {
+<a href=#6069 id=6069 data-nosnippet>6069</a>        no_due_count_takes_the_fast_path(<span class="number">0</span>, <span class="number">140_000</span>, from, <span class="prelude-val">Some</span>((at, to.<span class="number">0</span>, to.<span class="number">1</span>)));
+<a href=#6070 id=6070 data-nosnippet>6070</a>      }
+<a href=#6071 id=6071 data-nosnippet>6071</a>    }
+<a href=#6072 id=6072 data-nosnippet>6072</a>  }
+<a href=#6073 id=6073 data-nosnippet>6073</a>
+<a href=#6074 id=6074 data-nosnippet>6074</a>  <span class="doccomment">/// The runaway backstop grows with the bytes of EVERY opened source, not
+<a href=#6075 id=6075 data-nosnippet>6075</a>  /// just the driver (source2e.tex: 15 KB over ~2 MB of `.dtx`).
+<a href=#6076 id=6076 data-nosnippet>6076</a>  /// tex.web §444 `scan_int`: a decimal run, `'` octal, `"` hex, and a
+<a href=#6077 id=6077 data-nosnippet>6077</a>  /// first token that is no numeric constant falls through to the internal-
+<a href=#6078 id=6078 data-nosnippet>6078</a>  /// quantity path (§444's "Missing number, treated as zero" when nothing
+<a href=#6079 id=6079 data-nosnippet>6079</a>  /// there is a number either). The decimal test is a non-allocating digit
+<a href=#6080 id=6080 data-nosnippet>6080</a>  /// peek on the token's text (lever E), so the empty-text OTHER token —
+<a href=#6081 id=6081 data-nosnippet>6081</a>  /// which the old vacuous `all(is_ascii_digit)` mis-read as a decimal and
+<a href=#6082 id=6082 data-nosnippet>6082</a>  /// parsed to `i64::MAX` — now takes the missing-number route.
+<a href=#6083 id=6083 data-nosnippet>6083</a>  </span><span class="attr">#[test]
+<a href=#6084 id=6084 data-nosnippet>6084</a>  </span><span class="kw">fn </span>read_normal_integer_arms_follow_scan_int() {
+<a href=#6085 id=6085 data-nosnippet>6085</a>    reset_thread_state();
+<a href=#6086 id=6086 data-nosnippet>6086</a>    initialize_gullet();
+<a href=#6087 id=6087 data-nosnippet>6087</a>    <span class="kw">let </span>read = |tokens: Vec&lt;Token&gt;| -&gt; <span class="prelude-ty">Option</span>&lt;i64&gt; {
+<a href=#6088 id=6088 data-nosnippet>6088</a>      reading_from_mouth(Mouth::default(), || {
+<a href=#6089 id=6089 data-nosnippet>6089</a>        unread_vec(tokens);
+<a href=#6090 id=6090 data-nosnippet>6090</a>        <span class="kw">let </span>n = read_normal_integer()<span class="question-mark">?</span>.map(|n| n.value_of());
+<a href=#6091 id=6091 data-nosnippet>6091</a>        <span class="comment">// Drain whatever the reader left (an unread non-digit).
+<a href=#6092 id=6092 data-nosnippet>6092</a>        </span><span class="kw">while </span>read_token()<span class="question-mark">?</span>.is_some() {}
+<a href=#6093 id=6093 data-nosnippet>6093</a>        <span class="prelude-val">Ok</span>(n)
+<a href=#6094 id=6094 data-nosnippet>6094</a>      })
+<a href=#6095 id=6095 data-nosnippet>6095</a>      .expect(<span class="string">"no fatal"</span>)
+<a href=#6096 id=6096 data-nosnippet>6096</a>    };
+<a href=#6097 id=6097 data-nosnippet>6097</a>    <span class="kw">let </span>other = |s: <span class="kw-2">&amp;</span>str| Token::new(s, Catcode::OTHER);
+<a href=#6098 id=6098 data-nosnippet>6098</a>    <span class="macro">assert_eq!</span>(read(<span class="macro">vec!</span>[other(<span class="string">"1"</span>), other(<span class="string">"2"</span>), <span class="macro">T_SPACE!</span>()]), <span class="prelude-val">Some</span>(<span class="number">12</span>));
+<a href=#6099 id=6099 data-nosnippet>6099</a>    <span class="macro">assert_eq!</span>(read(<span class="macro">vec!</span>[other(<span class="string">"12"</span>), other(<span class="string">"3"</span>), <span class="macro">T_SPACE!</span>()]), <span class="prelude-val">Some</span>(<span class="number">123</span>));
+<a href=#6100 id=6100 data-nosnippet>6100</a>    <span class="macro">assert_eq!</span>(
+<a href=#6101 id=6101 data-nosnippet>6101</a>      read(<span class="macro">vec!</span>[other(<span class="string">"'"</span>), other(<span class="string">"1"</span>), other(<span class="string">"7"</span>), <span class="macro">T_SPACE!</span>()]),
+<a href=#6102 id=6102 data-nosnippet>6102</a>      <span class="prelude-val">Some</span>(<span class="number">15</span>)
+<a href=#6103 id=6103 data-nosnippet>6103</a>    );
+<a href=#6104 id=6104 data-nosnippet>6104</a>    <span class="macro">assert_eq!</span>(
+<a href=#6105 id=6105 data-nosnippet>6105</a>      read(<span class="macro">vec!</span>[other(<span class="string">"\""</span>), other(<span class="string">"F"</span>), other(<span class="string">"F"</span>), <span class="macro">T_SPACE!</span>()]),
+<a href=#6106 id=6106 data-nosnippet>6106</a>      <span class="prelude-val">Some</span>(<span class="number">255</span>)
+<a href=#6107 id=6107 data-nosnippet>6107</a>    );
+<a href=#6108 id=6108 data-nosnippet>6108</a>    <span class="macro">assert_eq!</span>(read(<span class="macro">vec!</span>[other(<span class="string">"`"</span>), <span class="macro">T_CS!</span>(<span class="string">"\\a"</span>), <span class="macro">T_SPACE!</span>()]), <span class="prelude-val">Some</span>(<span class="number">97</span>));
+<a href=#6109 id=6109 data-nosnippet>6109</a>    <span class="kw">let </span>dot = read(<span class="macro">vec!</span>[other(<span class="string">"."</span>), <span class="macro">T_SPACE!</span>()]);
+<a href=#6110 id=6110 data-nosnippet>6110</a>    <span class="kw">let </span>empty = read(<span class="macro">vec!</span>[other(<span class="string">""</span>), <span class="macro">T_SPACE!</span>()]);
+<a href=#6111 id=6111 data-nosnippet>6111</a>    <span class="macro">assert_eq!</span>(
+<a href=#6112 id=6112 data-nosnippet>6112</a>      dot, empty,
+<a href=#6113 id=6113 data-nosnippet>6113</a>      <span class="string">"an empty-text OTHER token is no more a number than `.`"
+<a href=#6114 id=6114 data-nosnippet>6114</a>    </span>);
+<a href=#6115 id=6115 data-nosnippet>6115</a>    <span class="macro">assert_ne!</span>(empty, <span class="prelude-val">Some</span>(i64::MAX), <span class="string">"never the old fabricated i64::MAX"</span>);
+<a href=#6116 id=6116 data-nosnippet>6116</a>  }
+<a href=#6117 id=6117 data-nosnippet>6117</a>
+<a href=#6118 id=6118 data-nosnippet>6118</a>  <span class="attr">#[test]
+<a href=#6119 id=6119 data-nosnippet>6119</a>  </span><span class="kw">fn </span>token_limit_scales_with_cumulative_source_bytes() {
+<a href=#6120 id=6120 data-nosnippet>6120</a>    <span class="kw">if </span>std::env::var_os(<span class="string">"LATEXML_TOKEN_LIMIT"</span>).is_some() {
+<a href=#6121 id=6121 data-nosnippet>6121</a>      <span class="kw">return</span>;
+<a href=#6122 id=6122 data-nosnippet>6122</a>    }
+<a href=#6123 id=6123 data-nosnippet>6123</a>    initialize_gullet();
+<a href=#6124 id=6124 data-nosnippet>6124</a>    scale_token_limit_to_source(<span class="number">15_000</span>);
+<a href=#6125 id=6125 data-nosnippet>6125</a>    <span class="macro">assert_eq!</span>(GULLET.borrow().token_limit, <span class="prelude-val">Some</span>(DEFAULT_TOKEN_LIMIT));
+<a href=#6126 id=6126 data-nosnippet>6126</a>    <span class="kw">for _ in </span><span class="number">0</span>..<span class="number">40 </span>{
+<a href=#6127 id=6127 data-nosnippet>6127</a>      scale_token_limit_to_source(<span class="number">500_000</span>);
+<a href=#6128 id=6128 data-nosnippet>6128</a>    }
+<a href=#6129 id=6129 data-nosnippet>6129</a>    <span class="macro">assert_eq!</span>(GULLET.borrow().token_limit, <span class="prelude-val">Some</span>(<span class="number">20_015_000 </span>* <span class="number">1000</span>));
+<a href=#6130 id=6130 data-nosnippet>6130</a>    <span class="comment">// A fresh conversion starts over.
+<a href=#6131 id=6131 data-nosnippet>6131</a>    </span>initialize_gullet();
+<a href=#6132 id=6132 data-nosnippet>6132</a>    <span class="macro">assert_eq!</span>(GULLET.borrow().token_limit, <span class="prelude-val">Some</span>(DEFAULT_TOKEN_LIMIT));
+<a href=#6133 id=6133 data-nosnippet>6133</a>  }
+<a href=#6134 id=6134 data-nosnippet>6134</a>}
 </code></pre></div></section></main></body></html>

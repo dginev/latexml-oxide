@@ -137,79 +137,82 @@
 <a href=#137 id=137 data-nosnippet>137</a>  <span class="comment">// :1676-1720 `\secsize`, `\subsecsize`, `\subsubsecsize` (TL 2025's copy; 2606.05448's :1660-1700), the heading
 <a href=#138 id=138 data-nosnippet>138</a>  // fonts, bold in each of the class's styles (2 papers: 2309.05250); their sizes and colours are print layout.
 <a href=#139 id=139 data-nosnippet>139</a>  </span><span class="macro">RawTeX!</span>(<span class="string">r"\def\secsize{\bfseries}\def\subsecsize{\bfseries}\def\subsubsecsize{\bfseries}"</span>);
-<a href=#140 id=140 data-nosnippet>140</a>  <span class="comment">// Commands newer copies add (TL 2025's, of 2022, has neither): defined where the paper's copy has them, so a paper
-<a href=#141 id=141 data-nosnippet>141</a>  // whose copy does not can define its own. 2602.07066's copy :1232 `\otherabstract[heading]{text}`, a further
-<a href=#142 id=142 data-nosnippet>142</a>  // abstract under its own heading (5 papers), and :1935 `\figalttext[short]{long}`, a figure's alternative text,
-<a href=#143 id=143 data-nosnippet>143</a>  // which the class drops (`\relax`; 4 papers: 2608.22901, 2608.14294, 2609.06413) and which is kept as the image's
-<a href=#144 id=144 data-nosnippet>144</a>  // description, as acmart's `\Description` is (float_description.rs; OXIDIZED_DESIGN_DIVERGENCES #604).
-<a href=#145 id=145 data-nosnippet>145</a>  </span><span class="kw">if let </span><span class="prelude-val">Some</span>(text) = shipped.as_deref() {
-<a href=#146 id=146 data-nosnippet>146</a>    <span class="kw">if </span>class_code_contains(text, <span class="string">"\\newcommand\\otherabstract[2]"</span>) {
-<a href=#147 id=147 data-nosnippet>147</a>      <span class="macro">RawTeX!</span>(
-<a href=#148 id=148 data-nosnippet>148</a>        <span class="string">r"\newcommand\otherabstract[2][Other abstract heading]{\@add@frontmatter{ltx:abstract}[name={#1}]{#2}}"
-<a href=#149 id=149 data-nosnippet>149</a>      </span>);
-<a href=#150 id=150 data-nosnippet>150</a>    }
-<a href=#151 id=151 data-nosnippet>151</a>    <span class="kw">if </span>class_code_contains(text, <span class="string">"\\newcommand\\figalttext[2]"</span>) {
-<a href=#152 id=152 data-nosnippet>152</a>      define_float_description(<span class="string">"\\figalttext"</span>)<span class="question-mark">?</span>;
-<a href=#153 id=153 data-nosnippet>153</a>      <span class="macro">DefMacro!</span>(<span class="string">"\\figalttext[]{}"</span>, sub[(short, long)] {
-<a href=#154 id=154 data-nosnippet>154</a>        <span class="prelude-val">Ok</span>(float_description_tokens(short.as_ref(), <span class="kw-2">&amp;</span>long))
-<a href=#155 id=155 data-nosnippet>155</a>      });
-<a href=#156 id=156 data-nosnippet>156</a>    }
-<a href=#157 id=157 data-nosnippet>157</a>  }
-<a href=#158 id=158 data-nosnippet>158</a>  <span class="comment">// SetCrop/SetTrim/SetBleed are layout configs — gobble.
-<a href=#159 id=159 data-nosnippet>159</a>  </span>def_macro_noop(<span class="string">"\\SetCrop{}{}"</span>)<span class="question-mark">?</span>;
-<a href=#160 id=160 data-nosnippet>160</a>  def_macro_noop(<span class="string">"\\SetTrim{}{}"</span>)<span class="question-mark">?</span>;
-<a href=#161 id=161 data-nosnippet>161</a>  def_macro_noop(<span class="string">"\\SetBleed{}{}"</span>)<span class="question-mark">?</span>;
-<a href=#162 id=162 data-nosnippet>162</a>  <span class="comment">// oup-authoring-template.cls:2733 `\DeclareRobustCommand\ORCID[1]{…\href
-<a href=#163 id=163 data-nosnippet>163</a>  // {https://orcid.org/#1}{\XeTeXLinkBox{…\pic{orcidlogo}…}}}`: the link with
-<a href=#164 id=164 data-nosnippet>164</a>  // the id as its text (the logo picture is out of scope).
-<a href=#165 id=165 data-nosnippet>165</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\ORCID{}"</span>, <span class="string">"\\href{https://orcid.org/#1}{#1}"</span>);
-<a href=#166 id=166 data-nosnippet>166</a>
-<a href=#167 id=167 data-nosnippet>167</a>  <span class="comment">// oup-authoring-template.cls, TL 2025's copy :2423-2435 (2102.02669's :2390-2400): required packages;
-<a href=#168 id=168 data-nosnippet>168</a>  // `\RequirePackage{multirow}` (TL 2025 :2426, 2102.02669 :2391; 39 papers of run 353 with `\multirow` undefined:
-<a href=#169 id=169 data-nosnippet>169</a>  // 2102.02669, 2104.08961, 2206.08262), `{url}` (:2428, :2393), `{mathrsfs}` (:2430, :2395).
-<a href=#170 id=170 data-nosnippet>170</a>  </span><span class="macro">RequirePackage!</span>(<span class="string">"multirow"</span>);
-<a href=#171 id=171 data-nosnippet>171</a>  <span class="macro">RequirePackage!</span>(<span class="string">"url"</span>);
-<a href=#172 id=172 data-nosnippet>172</a>  <span class="macro">RequirePackage!</span>(<span class="string">"mathrsfs"</span>);
-<a href=#173 id=173 data-nosnippet>173</a>  <span class="macro">RequirePackage!</span>(<span class="string">"booktabs"</span>);
-<a href=#174 id=174 data-nosnippet>174</a>  <span class="macro">RequirePackage!</span>(<span class="string">"algorithm"</span>);
-<a href=#175 id=175 data-nosnippet>175</a>  <span class="macro">RequirePackage!</span>(<span class="string">"algorithmicx"</span>);
-<a href=#176 id=176 data-nosnippet>176</a>  <span class="macro">RequirePackage!</span>(<span class="string">"algpseudocode"</span>);
-<a href=#177 id=177 data-nosnippet>177</a>  <span class="macro">RequirePackage!</span>(<span class="string">"listings"</span>);
-<a href=#178 id=178 data-nosnippet>178</a>  <span class="macro">RequirePackage!</span>(<span class="string">"appendix"</span>);
-<a href=#179 id=179 data-nosnippet>179</a>
-<a href=#180 id=180 data-nosnippet>180</a>  <span class="comment">// Table rules and notes
-<a href=#181 id=181 data-nosnippet>181</a>  </span><span class="macro">Let!</span>(<span class="string">"\\botrule"</span>, <span class="string">"\\bottomrule"</span>);
-<a href=#182 id=182 data-nosnippet>182</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\tablenotes[]"</span>, <span class="string">"\\begin{itemize}"</span>);
-<a href=#183 id=183 data-nosnippet>183</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\endtablenotes"</span>, <span class="string">"\\end{itemize}"</span>);
-<a href=#184 id=184 data-nosnippet>184</a>
-<a href=#185 id=185 data-nosnippet>185</a>  <span class="comment">// Organization address fields (oup-authoring-template.cls:1120-1127)
-<a href=#186 id=186 data-nosnippet>186</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\orgdiv{}"</span>, <span class="string">"#1"</span>);
-<a href=#187 id=187 data-nosnippet>187</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\orgname{}"</span>, <span class="string">"#1"</span>);
-<a href=#188 id=188 data-nosnippet>188</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\orgaddress{}"</span>, <span class="string">"#1"</span>);
-<a href=#189 id=189 data-nosnippet>189</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\street{}"</span>, <span class="string">"#1"</span>);
-<a href=#190 id=190 data-nosnippet>190</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\postcode{}"</span>, <span class="string">"#1"</span>);
-<a href=#191 id=191 data-nosnippet>191</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\state{}"</span>, <span class="string">"#1"</span>);
-<a href=#192 id=192 data-nosnippet>192</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\country{}"</span>, <span class="string">"#1"</span>);
-<a href=#193 id=193 data-nosnippet>193</a>
-<a href=#194 id=194 data-nosnippet>194</a>  <span class="comment">// Environments (oup-authoring-template.cls:2098, 2303)
-<a href=#195 id=195 data-nosnippet>195</a>  </span><span class="macro">DefEnvironment!</span>(
-<a href=#196 id=196 data-nosnippet>196</a>    <span class="string">"{unlist}"</span>,
-<a href=#197 id=197 data-nosnippet>197</a>    <span class="string">"&lt;ltx:itemize class='unlist'&gt;#body&lt;/ltx:itemize&gt;"
-<a href=#198 id=198 data-nosnippet>198</a>  </span>);
-<a href=#199 id=199 data-nosnippet>199</a>  <span class="macro">DefEnvironment!</span>(
-<a href=#200 id=200 data-nosnippet>200</a>    <span class="string">"{biography}{}{}"</span>,
-<a href=#201 id=201 data-nosnippet>201</a>    <span class="string">"&lt;ltx:note role='biography'&gt;#1 #2#body&lt;/ltx:note&gt;"</span>,
-<a href=#202 id=202 data-nosnippet>202</a>    before_digest =&gt; {
-<a href=#203 id=203 data-nosnippet>203</a>      <span class="macro">DefMacro!</span>(<span class="string">"\\author{}"</span>, <span class="string">"{\\bfseries #1\\enspace}"</span>);
-<a href=#204 id=204 data-nosnippet>204</a>    },
-<a href=#205 id=205 data-nosnippet>205</a>    mode =&gt; <span class="string">"internal_vertical"
-<a href=#206 id=206 data-nosnippet>206</a>  </span>);
-<a href=#207 id=207 data-nosnippet>207</a>
-<a href=#208 id=208 data-nosnippet>208</a>  <span class="comment">// Predefined theorem styles (oup-authoring-template.cls:2370-2410)
-<a href=#209 id=209 data-nosnippet>209</a>  </span><span class="macro">RequirePackage!</span>(<span class="string">"amsthm"</span>);
-<a href=#210 id=210 data-nosnippet>210</a>  <span class="macro">Let!</span>(<span class="string">"\\th@thmstyleone"</span>, <span class="string">"\\th@plain"</span>);
-<a href=#211 id=211 data-nosnippet>211</a>  <span class="macro">Let!</span>(<span class="string">"\\th@thmstyletwo"</span>, <span class="string">"\\th@plain"</span>);
-<a href=#212 id=212 data-nosnippet>212</a>  <span class="macro">Let!</span>(<span class="string">"\\th@thmstylethree"</span>, <span class="string">"\\th@definition"</span>);
-<a href=#213 id=213 data-nosnippet>213</a>  <span class="macro">Let!</span>(<span class="string">"\\th@thmstylefour"</span>, <span class="string">"\\th@remark"</span>);
-<a href=#214 id=214 data-nosnippet>214</a>});
+<a href=#140 id=140 data-nosnippet>140</a>  <span class="comment">// :813 `\ps@opening`, the first page's style `\maketitle` selects (:1178), which documents extend (2606.29739
+<a href=#141 id=141 data-nosnippet>141</a>  // `\g@addto@macro\ps@opening`; OD #1036): empty, its head and foot are print layout.
+<a href=#142 id=142 data-nosnippet>142</a>  </span>def_macro_noop(<span class="string">"\\ps@opening"</span>)<span class="question-mark">?</span>;
+<a href=#143 id=143 data-nosnippet>143</a>  <span class="comment">// Commands newer copies add (TL 2025's, of 2022, has neither): defined where the paper's copy has them, so a paper
+<a href=#144 id=144 data-nosnippet>144</a>  // whose copy does not can define its own. 2602.07066's copy :1232 `\otherabstract[heading]{text}`, a further
+<a href=#145 id=145 data-nosnippet>145</a>  // abstract under its own heading (5 papers), and :1935 `\figalttext[short]{long}`, a figure's alternative text,
+<a href=#146 id=146 data-nosnippet>146</a>  // which the class drops (`\relax`; 4 papers: 2608.22901, 2608.14294, 2609.06413) and which is kept as the image's
+<a href=#147 id=147 data-nosnippet>147</a>  // description, as acmart's `\Description` is (float_description.rs; OXIDIZED_DESIGN_DIVERGENCES #604).
+<a href=#148 id=148 data-nosnippet>148</a>  </span><span class="kw">if let </span><span class="prelude-val">Some</span>(text) = shipped.as_deref() {
+<a href=#149 id=149 data-nosnippet>149</a>    <span class="kw">if </span>class_code_contains(text, <span class="string">"\\newcommand\\otherabstract[2]"</span>) {
+<a href=#150 id=150 data-nosnippet>150</a>      <span class="macro">RawTeX!</span>(
+<a href=#151 id=151 data-nosnippet>151</a>        <span class="string">r"\newcommand\otherabstract[2][Other abstract heading]{\@add@frontmatter{ltx:abstract}[name={#1}]{#2}}"
+<a href=#152 id=152 data-nosnippet>152</a>      </span>);
+<a href=#153 id=153 data-nosnippet>153</a>    }
+<a href=#154 id=154 data-nosnippet>154</a>    <span class="kw">if </span>class_code_contains(text, <span class="string">"\\newcommand\\figalttext[2]"</span>) {
+<a href=#155 id=155 data-nosnippet>155</a>      define_float_description(<span class="string">"\\figalttext"</span>)<span class="question-mark">?</span>;
+<a href=#156 id=156 data-nosnippet>156</a>      <span class="macro">DefMacro!</span>(<span class="string">"\\figalttext[]{}"</span>, sub[(short, long)] {
+<a href=#157 id=157 data-nosnippet>157</a>        <span class="prelude-val">Ok</span>(float_description_tokens(short.as_ref(), <span class="kw-2">&amp;</span>long))
+<a href=#158 id=158 data-nosnippet>158</a>      });
+<a href=#159 id=159 data-nosnippet>159</a>    }
+<a href=#160 id=160 data-nosnippet>160</a>  }
+<a href=#161 id=161 data-nosnippet>161</a>  <span class="comment">// SetCrop/SetTrim/SetBleed are layout configs — gobble.
+<a href=#162 id=162 data-nosnippet>162</a>  </span>def_macro_noop(<span class="string">"\\SetCrop{}{}"</span>)<span class="question-mark">?</span>;
+<a href=#163 id=163 data-nosnippet>163</a>  def_macro_noop(<span class="string">"\\SetTrim{}{}"</span>)<span class="question-mark">?</span>;
+<a href=#164 id=164 data-nosnippet>164</a>  def_macro_noop(<span class="string">"\\SetBleed{}{}"</span>)<span class="question-mark">?</span>;
+<a href=#165 id=165 data-nosnippet>165</a>  <span class="comment">// oup-authoring-template.cls:2733 `\DeclareRobustCommand\ORCID[1]{…\href
+<a href=#166 id=166 data-nosnippet>166</a>  // {https://orcid.org/#1}{\XeTeXLinkBox{…\pic{orcidlogo}…}}}`: the link with
+<a href=#167 id=167 data-nosnippet>167</a>  // the id as its text (the logo picture is out of scope).
+<a href=#168 id=168 data-nosnippet>168</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\ORCID{}"</span>, <span class="string">"\\href{https://orcid.org/#1}{#1}"</span>);
+<a href=#169 id=169 data-nosnippet>169</a>
+<a href=#170 id=170 data-nosnippet>170</a>  <span class="comment">// oup-authoring-template.cls, TL 2025's copy :2423-2435 (2102.02669's :2390-2400): required packages;
+<a href=#171 id=171 data-nosnippet>171</a>  // `\RequirePackage{multirow}` (TL 2025 :2426, 2102.02669 :2391; 39 papers of run 353 with `\multirow` undefined:
+<a href=#172 id=172 data-nosnippet>172</a>  // 2102.02669, 2104.08961, 2206.08262), `{url}` (:2428, :2393), `{mathrsfs}` (:2430, :2395).
+<a href=#173 id=173 data-nosnippet>173</a>  </span><span class="macro">RequirePackage!</span>(<span class="string">"multirow"</span>);
+<a href=#174 id=174 data-nosnippet>174</a>  <span class="macro">RequirePackage!</span>(<span class="string">"url"</span>);
+<a href=#175 id=175 data-nosnippet>175</a>  <span class="macro">RequirePackage!</span>(<span class="string">"mathrsfs"</span>);
+<a href=#176 id=176 data-nosnippet>176</a>  <span class="macro">RequirePackage!</span>(<span class="string">"booktabs"</span>);
+<a href=#177 id=177 data-nosnippet>177</a>  <span class="macro">RequirePackage!</span>(<span class="string">"algorithm"</span>);
+<a href=#178 id=178 data-nosnippet>178</a>  <span class="macro">RequirePackage!</span>(<span class="string">"algorithmicx"</span>);
+<a href=#179 id=179 data-nosnippet>179</a>  <span class="macro">RequirePackage!</span>(<span class="string">"algpseudocode"</span>);
+<a href=#180 id=180 data-nosnippet>180</a>  <span class="macro">RequirePackage!</span>(<span class="string">"listings"</span>);
+<a href=#181 id=181 data-nosnippet>181</a>  <span class="macro">RequirePackage!</span>(<span class="string">"appendix"</span>);
+<a href=#182 id=182 data-nosnippet>182</a>
+<a href=#183 id=183 data-nosnippet>183</a>  <span class="comment">// Table rules and notes
+<a href=#184 id=184 data-nosnippet>184</a>  </span><span class="macro">Let!</span>(<span class="string">"\\botrule"</span>, <span class="string">"\\bottomrule"</span>);
+<a href=#185 id=185 data-nosnippet>185</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\tablenotes[]"</span>, <span class="string">"\\begin{itemize}"</span>);
+<a href=#186 id=186 data-nosnippet>186</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\endtablenotes"</span>, <span class="string">"\\end{itemize}"</span>);
+<a href=#187 id=187 data-nosnippet>187</a>
+<a href=#188 id=188 data-nosnippet>188</a>  <span class="comment">// Organization address fields (oup-authoring-template.cls:1120-1127)
+<a href=#189 id=189 data-nosnippet>189</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\orgdiv{}"</span>, <span class="string">"#1"</span>);
+<a href=#190 id=190 data-nosnippet>190</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\orgname{}"</span>, <span class="string">"#1"</span>);
+<a href=#191 id=191 data-nosnippet>191</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\orgaddress{}"</span>, <span class="string">"#1"</span>);
+<a href=#192 id=192 data-nosnippet>192</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\street{}"</span>, <span class="string">"#1"</span>);
+<a href=#193 id=193 data-nosnippet>193</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\postcode{}"</span>, <span class="string">"#1"</span>);
+<a href=#194 id=194 data-nosnippet>194</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\state{}"</span>, <span class="string">"#1"</span>);
+<a href=#195 id=195 data-nosnippet>195</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\country{}"</span>, <span class="string">"#1"</span>);
+<a href=#196 id=196 data-nosnippet>196</a>
+<a href=#197 id=197 data-nosnippet>197</a>  <span class="comment">// Environments (oup-authoring-template.cls:2098, 2303)
+<a href=#198 id=198 data-nosnippet>198</a>  </span><span class="macro">DefEnvironment!</span>(
+<a href=#199 id=199 data-nosnippet>199</a>    <span class="string">"{unlist}"</span>,
+<a href=#200 id=200 data-nosnippet>200</a>    <span class="string">"&lt;ltx:itemize class='unlist'&gt;#body&lt;/ltx:itemize&gt;"
+<a href=#201 id=201 data-nosnippet>201</a>  </span>);
+<a href=#202 id=202 data-nosnippet>202</a>  <span class="macro">DefEnvironment!</span>(
+<a href=#203 id=203 data-nosnippet>203</a>    <span class="string">"{biography}{}{}"</span>,
+<a href=#204 id=204 data-nosnippet>204</a>    <span class="string">"&lt;ltx:note role='biography'&gt;#1 #2#body&lt;/ltx:note&gt;"</span>,
+<a href=#205 id=205 data-nosnippet>205</a>    before_digest =&gt; {
+<a href=#206 id=206 data-nosnippet>206</a>      <span class="macro">DefMacro!</span>(<span class="string">"\\author{}"</span>, <span class="string">"{\\bfseries #1\\enspace}"</span>);
+<a href=#207 id=207 data-nosnippet>207</a>    },
+<a href=#208 id=208 data-nosnippet>208</a>    mode =&gt; <span class="string">"internal_vertical"
+<a href=#209 id=209 data-nosnippet>209</a>  </span>);
+<a href=#210 id=210 data-nosnippet>210</a>
+<a href=#211 id=211 data-nosnippet>211</a>  <span class="comment">// Predefined theorem styles (oup-authoring-template.cls:2370-2410)
+<a href=#212 id=212 data-nosnippet>212</a>  </span><span class="macro">RequirePackage!</span>(<span class="string">"amsthm"</span>);
+<a href=#213 id=213 data-nosnippet>213</a>  <span class="macro">Let!</span>(<span class="string">"\\th@thmstyleone"</span>, <span class="string">"\\th@plain"</span>);
+<a href=#214 id=214 data-nosnippet>214</a>  <span class="macro">Let!</span>(<span class="string">"\\th@thmstyletwo"</span>, <span class="string">"\\th@plain"</span>);
+<a href=#215 id=215 data-nosnippet>215</a>  <span class="macro">Let!</span>(<span class="string">"\\th@thmstylethree"</span>, <span class="string">"\\th@definition"</span>);
+<a href=#216 id=216 data-nosnippet>216</a>  <span class="macro">Let!</span>(<span class="string">"\\th@thmstylefour"</span>, <span class="string">"\\th@remark"</span>);
+<a href=#217 id=217 data-nosnippet>217</a>});
 </code></pre></div></section></main></body></html>
