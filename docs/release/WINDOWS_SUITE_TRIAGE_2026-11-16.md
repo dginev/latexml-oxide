@@ -116,6 +116,9 @@ All five classes are fixed on this branch as prescribed.
   in its group, and returns what it typesets: the six sub-float environments (`begin_subfloat_body`, after the minipage
   opened), `{subcaptiongroup}`, `\subcaption` and `\phantomsubcaption` in a box. It does not run again inside a sub-type
   (caption.sty:327 `\caption@ifsubtype`: `\@captype` already `sub…`, e.g. a `{subfigure}` in a `{subcaptiongroup}`).
+  Not mirrored: a second `\phantomsubcaption`, or a `\subcaption` after one, in the same group runs it again (caption's
+  `\@subcaptype`, caption.sty:305-327, is not modelled — row R PHANTOM2), and `\subcaptionbox` runs it once where
+  pdflatex's trial pass runs it twice (OXIDIZED_DESIGN_DIVERGENCES #853).
   `\caption@settype` runs `\caption@typehook`, as caption.sty:314 does. Guards: `caption_subtype_hook::*`
   (OXIDIZED_DESIGN_DIVERGENCES #853). On TL 2025 none of the ~24 papers whose sources reference the hook logged its Error on
   the base: the binding takes over their caption copies, and 1903.10110 uses subfig. The Linux A/B of 530b7763d9c against

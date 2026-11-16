@@ -15358,7 +15358,10 @@ group, keeping what it typesets — a `{subfigure}`/`{subtable}` (after its mini
 `\subcaption` or `\phantomsubcaption` in a box (subcaption.sty:251-252), not again inside a sub-type (caption.sty:325-330,
 `\caption@ifsubtype`, here `\@captype` already `sub…`); `run_caption_subtype_hook` (caption_sty.rs). Not mirrored:
 `\subcaptionbox` runs it once where pdflatex runs it twice (caption.sty:465-489 `\caption@iiiibox`'s `#1*` trial in a
-group, then in the `\parbox`). Guards `caption_subtype_hook::{first_aid_adds_to_the_subtype_hook,
+group, then in the `\parbox`); and a second `\phantomsubcaption`, or a `\subcaption` after one, in the same group runs it
+again where pdflatex does not — `\setcaptionsubtype*` sets `\@subcaptype` for the group (caption.sty:305-327), which our
+gate (`\@captype`, never set by `\phantomsubcaption`) does not model (row R PHANTOM2; harmless for idempotent additions such
+as the first aid's `\let`). Guards `caption_subtype_hook::{first_aid_adds_to_the_subtype_hook,
 subtype_hook_runs_inside_the_sub_float, subtype_hook_runs_once_per_sub_type, subtype_hook_material_is_kept}`.
 
 ### 854. acmart makes its theorems at the end of the preamble, each only when undefined
