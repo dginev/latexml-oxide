@@ -19551,6 +19551,12 @@ latex_constructs.pool.ltxml:503-527); acmart's `\authornote` is a contact, `\aut
   set by `lift_notes_beside`), which the reading paired the entry by (`resolver/blocks.rs` `mark:footnote`), is removed
   where a note of a creator carries its mark or its creator's name holds the same mark (1607.07280's REVTeX
   `\affiliation{\footnotemark[1]Univ A}` under `Shun'ya Mizoguchi\footnote[1]{E-mail:…}`).
+Open (DG's standing guidance, 2026-11-16: the generic path must stand alone): a class with no binding writes no
+automatic `\thanks` mark — scrartcl prints ∗ — since only a binding declares its title's marks; the switch is to test
+the behaviour instead (a class whose `\maketitle` empties `\thefootnote` or relaxes `\@makefnmark`, ieeeconf.cls:3592,
+IEEEtran.cls:4758, prints none), through the title-page replay (`latex_constructs::sect05` `title_page_replay_tokens`).
+The hand-typed legend marks and the Link step are generic already (scrartcl and OmniBus rows of
+`a_notes_mark_is_never_in_its_text`).
 Known residual: REVTeX 4.1/4.2 print a name's `\footnote` as a minipage footnote (`a`, `b` under `preprint`, none under
 `reprint`), not `\frontmatter@thefootnote`'s ∗ the binding declares, which REVTeX 4 prints; the note then carries ∗.
 **Guards**: `perfect_kernel_batchshmark::{a_notes_mark_is_never_in_its_text,

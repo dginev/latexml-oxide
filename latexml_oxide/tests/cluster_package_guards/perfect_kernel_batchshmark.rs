@@ -105,6 +105,34 @@ fn a_notes_mark_is_never_in_its_text() {
       row(&["Bob Baker", "thanks[*]=Corresponding author."]),
     ]
   );
+  // (an unbound class's hand-typed legend, the generic path alone: scrartcl read raw, and an unknown class through
+  // OmniBus, its Warning the missing binding's — the `$^*$` its carriers' mark, out of its text. The `\thanks` is still
+  // unmarked there though scrartcl prints ∗: no binding declares its title marks, the behaviour test is open, OD #1053)
+  // (OmniBus keeps the marks in the name, as printed)
+  for (class, warnings, shown) in [("scrartcl", 0, ""), ("zzunknownclass", 1, " 1,∗")] {
+    let tex = format!(
+      r"\documentclass{{{class}}}
+\title{{T}}
+\author{{Ann Able$^{{1,*}}$\thanks{{Funded by X.}} \and Bob Baker$^{{1,*}}$\\ $^1$Univ A, Town\\ $^*$Equal contribution}}
+\date{{}}
+\begin{{document}}
+\maketitle
+Text.
+\end{{document}}"
+    );
+    assert_eq!(
+      marked_notes(&tex, warnings),
+      [
+        row(&[
+          &format!("Ann Able{shown}"),
+          "thanks[]=Funded by X.",
+          "thanks[∗]=Equal contribution"
+        ]),
+        row(&[&format!("Bob Baker{shown}"), "thanks[∗]=Equal contribution"]),
+      ],
+      "{class}"
+    );
+  }
   // (ieeeconf's `\maketitle` prints no automatic mark, ieeeconf.cls:3592 `\def\thefootnote{}`: a plain `\thanks` has no
   // mark, the hand-typed `*` its name shows is one — review revSHRENDb)
   assert_eq!(
