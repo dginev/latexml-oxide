@@ -1050,7 +1050,8 @@ fn block_names(
       // after the name, and Perl's personname keeps it — `Vivek Ramanujan \thanks{…} \ \footnotemark[2]`, `Ali Farhadi
       // \ \footnotemark[3]`, 1911.13299 (DG ruling 2026-11-16); one on the line a `\\` opens is no name's, a Break parts it.
       // Text spacing only: a mark in a formula is written with the formula whole, a note in it twice — `Xunzhi
-      // Xiang$^{1}\thanks{…}\,\,\footnotemark[2]$`, 2511.12633, stays `mark_dropped`'s)
+      // Xiang$^{1}\thanks{…}\,\,\footnotemark[2]$`, 2511.12633, stays `mark_dropped`'s. Never a mark a name follows,
+      // that name's prefix: `Ann Able \quad \footnotemark[2]Bob Baker`, pdflatex's "†Bob Baker" (review revSHGIVEN 1))
       let gap = |e: &Event| matches!(e.kind, EventKind::Sep(SepKind::Gap { .. }));
       let in_text = |e: &Event| {
         e.span
@@ -1058,12 +1059,14 @@ fn block_names(
           .is_some_and(|s| field.formula_start(s) == s)
       };
       let spacing_before_mark = |i: usize| {
-        read[i..]
+        let mut rest = read[i..]
           .iter()
-          .find(|e| !(gap(e) || e.kind == EventKind::Note))
-          .is_some_and(|e| {
-            e.kind == EventKind::Mark && e.role.as_deref() == Some("footnotemark") && in_text(e)
-          })
+          .skip_while(|e| gap(e) || e.kind == EventKind::Note);
+        rest.next().is_some_and(|e| {
+          e.kind == EventKind::Mark && e.role.as_deref() == Some("footnotemark") && in_text(e)
+        }) && rest
+          .find(|e| !(beside(e) || e.kind == EventKind::Note))
+          .is_none_or(|e| matches!(e.kind, EventKind::Sep(_) | EventKind::Break))
       };
       let scan_end = (after_name..read.len())
         .find(|&i| !(past_note(&&read[i]) || (gap(&read[i]) && spacing_before_mark(i))))

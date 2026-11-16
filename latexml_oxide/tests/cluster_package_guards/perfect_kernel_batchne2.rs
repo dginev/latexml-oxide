@@ -441,7 +441,7 @@ fn a_mark_a_name_follows_past_spacing_is_not_carried_back() {
     (
       repro!("ne2e_mark_in_formula_past_thin_spaces"),
       (1, "on no name and no item; lost: ∗"),
-      vec![row(&["Ann Able1"]), row(&["Bob Baker"])],
+      vec![row(&["Ann Able 1"]), row(&["Bob Baker"])],
       vec![vec![], vec![]],
       1,
     ),
