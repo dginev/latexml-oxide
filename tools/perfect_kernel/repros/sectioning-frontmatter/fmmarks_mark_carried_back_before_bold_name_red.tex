@@ -5,11 +5,8 @@
 %   Able / Bob Baker / Carl Cole
 % expect:   0 errors, 0 Warnings; XML Ann Able ; footnotemark[*]= / Bob Baker / Carl Cole; HTML Ann Able ; * plain /
 %   Bob Baker / Carl Cole (the guard's XML and HTML lines)
-% moves:    XML row R SHGIVENFONT (proposed: a font command opening the next name stops the carry-back; SHGIVENe's
-%   s4); HTML the XML layer's: row R SHGIVENFONT (proposed: a font command opening the next name stops the
-%   carry-back; SHGIVENe's s4)
-% status:   RED XML RED, HTML RED (int/frontmatter 10997fdf9a0;
-%   perfect_kernel_batchfmmarks::a_mark_past_spacing_is_the_nearer_names and _red)
+% status:   GREEN XML, HTML (the mark ledger, SHGNEXT; promoted at SHGNEXTb:
+%   perfect_kernel_batchfmmarks::a_mark_past_spacing_is_the_nearer_names)
 % preload: ar5iv.sty
 \documentclass{article}
 \title{T}

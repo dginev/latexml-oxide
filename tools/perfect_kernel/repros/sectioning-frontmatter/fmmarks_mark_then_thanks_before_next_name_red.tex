@@ -5,11 +5,8 @@
 %   Carl Cole; HTML Ann Able | under: Bob note / Bob Baker / Carl Cole
 % expect:   0 errors, 0 Warnings; XML Ann Able / Bob Baker ; footnotemark[†]= ; thanks[*]=Bob note / Carl Cole; HTML
 %   Ann Able / Bob Baker ; † plain | under: Bob note / Carl Cole (the guard's XML and HTML lines)
-% moves:    XML row R SHGIVENNEXT (a mark nearer the next name, or a bare one; today the counted loss or the whole
-%   block); HTML the XML layer's: row R SHGIVENNEXT (a mark nearer the next name, or a bare one; today the
-%   counted loss or the whole block)
-% status:   RED XML RED, HTML RED (int/frontmatter 10997fdf9a0;
-%   perfect_kernel_batchfmmarks::a_mark_past_spacing_is_the_nearer_names and _red)
+% status:   GREEN XML, HTML (the mark ledger, SHGNEXT; promoted at SHGNEXTb:
+%   perfect_kernel_batchfmmarks::a_mark_past_spacing_is_the_nearer_names)
 % preload: ar5iv.sty
 \documentclass{article}
 \title{T}

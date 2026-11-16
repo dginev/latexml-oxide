@@ -5,7 +5,8 @@
 % oracle:  pdflatex 0 errors; "∗ † ∗ / Ann Able   Bob Baker   Carl Cole" (pdftotext; each mark over its name)
 % engines: rust REGFIX: 0 errors, Ann *, Bob †, Carl *, 2 Warnings; SHGIVEN head 6bc78862253: Ann *,†, Bob †,*, Carl *
 %   (marks invented), 1 Warning; perl 0.8.8: 0 errors, Ann 1, Bob 2, Carl 1
-% expect:  0 errors; Ann *, Bob †, Carl *; REGFIX's 2 Warnings
+% expect:  0 errors; Ann *, Bob †, Carl *; 1 Warning (the labels'; the prefix's false "lost" gone with the mark
+%   ledger, SHGNEXT)
 % status:  RED (6bc78862253) -> GREEN (perfect_kernel_batchne2::a_mark_a_name_follows_past_spacing_is_not_carried_back)
 % preload: ar5iv.sty
 \documentclass{article}

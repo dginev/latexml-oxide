@@ -1,13 +1,13 @@
-% mechanism: as ne2g_mark_in_group_with_previous_name, a mark in a group of its own (`{\small\footnotemark[2]}`):
-%   the growth would cross the group's close, so the mark stays REGFIX's counted loss, and Bob keeps his markup
-%   (his `\textsc`)
+% mechanism: as ne2g_mark_in_group_with_previous_name, a mark in a group of its own (`{\small\footnotemark[2]}`): its
+%   tokens are written in a group of their own before Bob's name, so its `\small` stays its own, Bob's `\textsc` kept
 % witness: none (review revSHGIVENc's r9small)
 % oracle:  pdflatex 0 errors; "† / Ann Able   Bob Baker   Carl Cole", the † over Bob's name
 % engines: rust REGFIX: 0 errors, 1 Warning ("lost: †"); SHGIVENc 5fa111e0674: 2 Warnings, Bob written as plain text
 %   ("its markup lost"); perl 0.8.8: 0 errors, Ann, Bob with the prefix mark, Carl
-% expect:  0 errors, 1 Warning ("lost: †"); REGFIX's creators
-% status:  RED (5fa111e0674) -> GREEN (perfect_kernel_batchne2::a_mark_nearer_the_next_name_moves_nothing_into_it);
-%   since the fallback (main, 2026-11-16) no growth runs at all, the row guards against its return
+% expect:  0 errors, 0 Warnings; Ann, Bob † (in small caps, normal size), Carl
+% status:  RED (5fa111e0674; REGFIX: lost) ->
+%   GREEN (perfect_kernel_batchne2::a_mark_nearer_the_next_name_moves_alone; the FMRG suite, XML and HTML:
+%   perfect_kernel_batchfmmarks::a_mark_past_spacing_is_the_nearer_names)
 % preload: ar5iv.sty
 \documentclass{article}
 \begin{document}

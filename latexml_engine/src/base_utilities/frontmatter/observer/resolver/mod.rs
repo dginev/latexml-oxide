@@ -147,16 +147,16 @@ impl RCreator {
 }
 
 /// A document's resolution.
-#[derive(Debug, Clone, PartialEq, Eq, Default)]
+#[derive(Debug, Clone, PartialEq, Default)]
 pub struct Resolved {
-  pub creators:  Vec<RCreator>,
+  pub creators: Vec<RCreator>,
   /// what no creator owns: the author block's own (a trailing nameless creator in the XML, OD #159)
-  pub block:     Vec<Assoc>,
+  pub block: Vec<Assoc>,
   /// what the rulings dropped: a note whose content all became contacts or nothing in which prints (ruling 4), with
   /// its text — kept for the comparison, which reads today's note there as the ruling's change
-  pub dropped:   Vec<Assoc>,
+  pub dropped: Vec<Assoc>,
   /// per block (ledger index): the declared conventions it ran under (by name)
-  pub policies:  Vec<(usize, &'static str)>,
+  pub policies: Vec<(usize, &'static str)>,
   /// the lines of each entry that unmarked lines under it continued (`line:continued`), each as printed — what today's
   /// prints as one contact a line (the comparison's `part`, review revfms2a2_7 finding 5); `None` read from a dump made
   /// before FM S2a.2 r8, which holds none (review revfms2a2_8 finding 4: an r8 dump's may be empty, `continue_entry`
@@ -165,14 +165,18 @@ pub struct Resolved {
   /// the affiliation entries whose printed e-mail addresses the reading took out (`Resolver::take_out_entry_addresses`,
   /// brief 95c), each as it was — for the emitter's entry cuts, which cut each in place or give it back whole
   /// (`emitter::address_cut::entry_cuts`); not in the dump
-  pub taken:     Vec<Taken>,
+  pub taken: Vec<Taken>,
   /// the words a block prints that the reading drops by its own rule, each its ledger index, its Name event's span and
   /// word (trimmed, lowercased): a byline's "by" read as a separator (`lines::byline_dropped`, the old reader's
   /// `without_leading_by`: `By~~{\scshape Bryna Kra}`, 2603.27258) and every word a take-out cuts that is no address's,
   /// of no event span (its label, an "and" between two addresses: `E-mails: ann@x.org and bob@x.org.`, 1610.05419) —
   /// the one record the checks read: the block checks' as written (`words::Written`), the content check's a Name as its
   /// separator's word, no other Name on its span (review revH3 3, `placed::content_check`); not in the dump
-  pub drops:     Vec<RuleDrop>,
+  pub drops: Vec<RuleDrop>,
+  /// per block (ledger index): its marks and notes beside spacing, each with the name it goes to — the reading's and
+  /// the writer's one decision ([`mark_ledger`]); not in the dump
+  pub(in crate::base_utilities::frontmatter::observer) mark_ledgers:
+    std::collections::BTreeMap<usize, MarkLedger>,
 }
 
 /// A word the reading drops by its own rule ([`Resolved::drops`]): its ledger index, its Name event's span (`None` for a
@@ -271,6 +275,7 @@ pub(in crate::base_utilities::frontmatter::observer) use api::is_creator_call;
 mod blocks;
 mod labels;
 mod lines;
+mod mark_ledger;
 mod net;
 // (the old reader's owner logic, moved unchanged by the plan's row "Knowledge in, driver out, one pass"; re-exported by `observer/mod.rs`)
 pub(in crate::base_utilities) mod owners;
@@ -300,6 +305,10 @@ pub(in crate::base_utilities::frontmatter::observer) use labels::{
 };
 pub(in crate::base_utilities) use lines::reads_as_names;
 use lines::*;
+// (which name a mark beside spacing goes to, the reading's and the writer's one decision)
+pub(in crate::base_utilities::frontmatter::observer) use mark_ledger::{
+  MarkLedger, Side, mark_ledger,
+};
 // (the reading's word check, its block half and what the emitter's call half reads: OD #980)
 pub(in crate::base_utilities::frontmatter::observer) use net::{merged_names, uncoordinated_marks};
 // (the content invariant on the placed output, under the emitter's `=2`: OD #980)
@@ -633,6 +642,8 @@ struct Resolver {
   outside_labels:     Vec<String>,
   /// while a names line its marks lead is read (`names_led_by_marks`): each mark after a separator the next name's
   marks_lead:         bool,
+  /// the block being read's marks and notes beside spacing, each with the name it goes to ([`mark_ledger`])
+  mark_ledger:        MarkLedger,
   /// the pending entries (their place in `pending`) a `_share=authors` call made (llncs's one `\institute`, no `\and`
   /// in it: every author's unless the class's `\inst{n}` picks it), whether the entry holds a mark of its own, and
   /// whether it is a piece its institute's marks split it into (`_markpiece=true`: the numbers shown by hand label the
@@ -755,6 +766,7 @@ impl Resolver {
       fn_requests:        Vec::new(),
       outside_labels:     Vec::new(),
       marks_lead:         false,
+      mark_ledger:        MarkLedger::default(),
       shared:             Vec::new(),
       row_units:          Vec::new(),
       keyed:              Vec::new(),

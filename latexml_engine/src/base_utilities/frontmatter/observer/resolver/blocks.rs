@@ -193,11 +193,21 @@ impl Resolver {
     // reads it, its addresses the API's as off's are, so the reading ends there and no entry goes on over it — it
     // continued `$^2$Univ B` onto the e-mail line, and wrote "Univ B" twice (the entry by its text, the split's call)
     // and the addresses as an affiliation, 2501.02356)
+    // (the mark ledger reads the whole block, as the writer writes it: one decision for both, `Resolved::mark_ledgers`)
+    let all = read_events(events);
+    self.mark_ledger = mark_ledger(&all);
+    self
+      .out
+      .mark_ledgers
+      .insert(index, self.mark_ledger.clone());
+    let cut;
     let events = match address_section(&self.block_markers, events) {
-      Some(end) => &events[..end],
-      None => events,
+      Some(end) => {
+        cut = read_events(&events[..end]);
+        &cut
+      },
+      None => &all,
     };
-    let events = &read_events(events);
     let lines = lines_of(events, and_inline);
     let block_requests: Vec<String> = keyvals
       .and_then(|kv| attr_value(kv, "annotations"))

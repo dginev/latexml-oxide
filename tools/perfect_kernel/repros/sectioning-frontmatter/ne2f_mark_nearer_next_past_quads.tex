@@ -1,13 +1,14 @@
 % mechanism: as ne2f_mark_nearer_next_past_qquad, a `\quad` on each side, the one before the wider by the space
-%   before it: undecided, REGFIX's counted loss
+%   before it: Bob's
 % witness: none (review revSHGIVENb's n5)
 % oracle:  pdflatex 0 errors; the † over Bob's name (pdftotext -bbox: 15.6pt before it, 7.9pt after; TeX's glue
 %   ` \quad` 13.3pt, `\quad` 10pt)
 % engines: rust REGFIX: 0 errors, 1 Warning ("lost: †"), no creator carries †; SHGIVENb 80ffc5f84b4: 0 errors, † on
 %   Ann; perl 0.8.8: 0 errors; Ann, the mark a creator of its own, Bob, Carl
-% expect:  0 errors, 1 Warning ("…given their number (a note's, written already) on no name and no item; lost: †");
-%   Ann, Bob, Carl, no creator carries †
-% status:  RED (80ffc5f84b4: † on Ann) -> GREEN (perfect_kernel_batchne2::a_marks_run_is_carried_back_whole_or_left)
+% expect:  0 errors, 0 Warnings; Ann, Bob †, Carl
+% status:  RED (80ffc5f84b4: † on Ann; REGFIX: lost) ->
+%   GREEN (perfect_kernel_batchne2::a_mark_beside_spacing_is_the_nearer_names; the FMRG suite, XML and HTML:
+%   perfect_kernel_batchfmmarks::a_mark_past_spacing_is_the_nearer_names)
 % preload: ar5iv.sty
 \documentclass{article}
 \begin{document}

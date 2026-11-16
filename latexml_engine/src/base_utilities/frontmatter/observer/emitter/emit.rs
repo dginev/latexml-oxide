@@ -29,7 +29,9 @@ use crate::base_utilities::{
   defs::{
     author_macros::KEPT_WHOLE,
     frontmatter_api::{BLOCK_CREATOR, CORRESPONDING, LABEL_PRINTS, PRINTED_LABEL, STOPGAP_ENTRY},
-    frontmatter_fields::{orcid_icon_link, title_notes_print_marks, under_author_markup},
+    frontmatter_fields::{
+      TITLE_MARK_STEP, orcid_icon_link, title_notes_print_marks, under_author_markup,
+    },
   },
   frontmatter::{
     classify::shared_call_item,
@@ -52,10 +54,10 @@ use crate::base_utilities::{
       reading::{UNFOLD_LEVELS, unfold_held_names},
       rehearsal::{Rehearsal, rehearse},
       resolver::{
-        BlockCheck, LostInk, RCreator, RuleDrop, Written, check_blocks, contact_parts,
-        creator_call, creator_call_level, creator_call_pieces, is_creator_call, labelseq_pieces,
-        merged_names, note_shows, own_email_label, printed_email_label, read_events,
-        shares_the_row, split_pieces, split_pieces_as, uncoordinated_marks, words_of,
+        BlockCheck, LostInk, MarkLedger, RCreator, RuleDrop, Side, Written, check_blocks,
+        contact_parts, creator_call, creator_call_level, creator_call_pieces, is_creator_call,
+        labelseq_pieces, merged_names, note_shows, own_email_label, printed_email_label,
+        read_events, shares_the_row, split_pieces, split_pieces_as, uncoordinated_marks, words_of,
       },
     },
     place::DEFERRED_TO_FLUSH_END,
@@ -700,6 +702,42 @@ fn past_option(tokens: &[Token], at: usize) -> usize {
     .map_or(at, |close| at + close + 1)
 }
 
+/// Where the mark `s..t` of `tokens` ends: past its number (a `\footnotemark`'s, past its span: 2209.15209; one whose
+/// span ends on its option's `[`, past a `\protect` before it: `\protect\endnotemark[2]`, 1703.08733) and past the
+/// arguments of a macro printing it, its span the call alone (aiaa-tc's `\thanksibid{2}`, 1505.07844, 1411.3642,
+/// 1602.00849; a preamble's `\footrecall{uva}`, 2503.21719, 2407.13730, 2606.19583: `content::arguments_end`).
+fn mark_end(tokens: &[Token], s: usize, t: usize) -> usize {
+  let t = past_option(tokens, s + 1)
+    .max(past_option(tokens, t.saturating_sub(1)))
+    .max(t);
+  arguments_end(tokens, s, true)
+    .flatten()
+    .map_or(t, |end| end.max(t))
+}
+
+/// The span of a mark, note or formula separator `events[k]` of a block's field from its own first token (`base` the
+/// field's first position): a span starts where the box before it began (the `\qquad` before it, the mark before it),
+/// so it is cut at the end of the piece or spacing read before it and at `done`, where the run written before it ends;
+/// `None` when nothing is left, the piece inside a run written already (review revSHGNEXT B1, P1).
+fn own_span(events: &[Event], k: usize, base: usize, done: usize) -> Option<(usize, usize)> {
+  let at = |p: u16| usize::from(p).checked_sub(base);
+  let (s, t) = events[k].span.and_then(|(s, t)| Some((at(s)?, at(t)?)))?;
+  let before = events[..k]
+    .iter()
+    .rev()
+    .find(|e| {
+      matches!(
+        e.kind,
+        EventKind::Sep(SepKind::Gap { .. }) | EventKind::Mark | EventKind::Note
+      ) || (matches!(e.kind, EventKind::Sep(_)) && e.role.as_deref() == Some("math"))
+    })
+    .and_then(|e| at(e.span?.1))
+    .filter(|&end| end < t)
+    .unwrap_or(0);
+  let s = s.max(before).max(done);
+  (s < t).then_some((s, t))
+}
+
 /// `start`, or the opening brace of the group `start..end` closes where it starts right after that brace, spaces aside: `{\\large
 /// Olga Kichakova}$^{1}$`, its first box's cover from the switch (1208.4825).
 fn in_a_group(tokens: &[Token], start: usize, end: usize) -> usize {
@@ -879,14 +917,16 @@ type BlockName = (
 /// \footnotemark` at the counter's 0, "Counter too large" (1507.05018, 2505.07115); off digests the `\thanks` in its
 /// creator, as LaTeX's `\maketitle` steps it in place. A note a name's run holds is digested in it, its own step there;
 /// a note before a mark its name prints past it is stepped in the name's tokens, before that mark (`stepped`,
-/// [`block_names`]: 1610.06031).
+/// [`block_names`]: 1610.06031). The steps of the bare `\footnotemark`s no name writes (`drops`, each its place and its
+/// tokens: [`mark_dropped`]) go where they print too, among the notes' in print order.
 fn note_steps(
   index: usize,
   runs: &[(usize, (usize, usize))],
   stepped: &BTreeSet<usize>,
   first: usize,
-) -> BTreeMap<(usize, bool), usize> {
-  let mut steps = BTreeMap::new();
+  drops: &[(usize, Vec<Token>)],
+) -> Steps {
+  let mut steps = Steps::new();
   let notes: Vec<usize> = with_block(index, Vec::new(), |block, events| {
     let at = |p: u16| usize::from(p).checked_sub(block.range.0);
     events
@@ -897,10 +937,11 @@ fn note_steps(
       .filter_map(|e| at(e.span?.0))
       .collect()
   });
-  for at in notes {
-    if stepped.contains(&at) || runs.iter().any(|(_, (from, to))| *from <= at && at < *to) {
-      continue;
-    }
+  let notes = notes
+    .into_iter()
+    .filter(|at| !stepped.contains(at) && !runs.iter().any(|(_, (from, to))| from <= at && at < to))
+    .map(|at| (at, vec![T_CS!(FOOTNOTE_STEP)]));
+  for (at, tokens) in notes.chain(drops.iter().cloned()) {
     // (keyed by the creator and whether the step goes after its name)
     let owner = runs
       .iter()
@@ -908,10 +949,16 @@ fn note_steps(
       .map(|(i, _)| (*i, true))
       .next_back()
       .unwrap_or((first, false));
-    *steps.entry(owner).or_default() += 1;
+    let owned = steps.entry(owner).or_default();
+    owned.push((at, tokens));
+    owned.sort_by_key(|(at, _)| *at);
   }
   steps
 }
+
+/// The footnote counter's steps written beside the names (`note_steps`): per creator and whether after its name, each
+/// step's place in its block and its tokens.
+type Steps = BTreeMap<(usize, bool), Vec<(usize, Vec<Token>)>>;
 
 /// A block's names' tokens: their marks with them where `marks` (a per-author class's block, whose names keep them printed as
 /// Perl does), a `\\footnotemark` (what `relocate_footnote` moves its text to, 2203.12964) and an ORCID written on it, its logo in
@@ -922,6 +969,7 @@ fn note_steps(
 /// in the block: [`note_steps`]).
 fn block_names(
   index: usize,
+  resolved: &Resolved,
   names: &[String],
   marks: bool,
   on_names: &mut BTreeSet<(usize, (u16, u16))>,
@@ -941,6 +989,9 @@ fn block_names(
       return vec![(None, Vec::new(), None, Vec::new(), Vec::new()); names.len()];
     };
     let read = read_events(events);
+    // (which name each mark and note beside spacing goes to: the reading's decision, `resolver::mark_ledger`)
+    let none = MarkLedger::default();
+    let ledger = resolved.mark_ledgers.get(&index).unwrap_or(&none);
     let found: Vec<(usize, &Event)> = read
       .iter()
       .enumerate()
@@ -1047,22 +1098,24 @@ fn block_names(
       let math_sep =
         |e: &Event| matches!(e.kind, EventKind::Sep(_)) && e.role.as_deref() == Some("math");
       let past_note = |e: &&Event| beside(e) || e.kind == EventKind::Note || math_sep(e);
-      // (and past a run of text `\footnotemark`s, notes and spacing that pdflatex prints nearer this name than the
-      // next ([`carried_run`]): Perl's personname keeps them — `Vivek Ramanujan \thanks{…} \ \footnotemark[2]`, `Ali
-      // Farhadi \ \footnotemark[3]`, 1911.13299; `Xiao Wang\textsuperscript{1}\footnotemark[1] \ \footnotemark[2]
-      // \quad Qingyi Si`, 2412.20504 (DG rulings 2026-11-16). One on the line a `\\` opens is no name's, a Break parts
-      // it; one in a formula is written with the formula whole, a note in it twice — `Xunzhi
-      // Xiang$^{1}\thanks{…}\,\,\footnotemark[2]$`, 2511.12633, stays `mark_dropped`'s)
-      let in_text = |e: &Event| {
-        e.span
-          .and_then(|span| at(span.0))
-          .is_some_and(|s| field.formula_start(s) == s)
+      // (and past the marks and notes the mark ledger gives this name past spacing, up to those it gives the next name
+      // (`resolver::mark_ledger`: the nearer name by the glue printed, a tie the next's — DG rulings 2026-11-16): Perl's
+      // personname keeps them — `Vivek Ramanujan \thanks{…} \ \footnotemark[2]`, `Ali Farhadi \ \footnotemark[3]`,
+      // 1911.13299; `Xiao Wang\textsuperscript{1}\footnotemark[1] \ \footnotemark[2] \quad Qingyi Si`, 2412.20504. One on
+      // the line a `\\` opens is no name's; one in a formula is written with the formula whole, a note in it twice —
+      // `Xunzhi Xiang$^{1}\thanks{…}\,\,\footnotemark[2]$`, 2511.12633, stays `mark_dropped`'s)
+      // (its whole span, the spacing before it with it: what a cut or a balance takes; a writer takes `own_run`'s)
+      let mark_run = |e: &Event| -> Option<(usize, usize)> {
+        let span = e.span?;
+        let (s, t) = (at(span.0)?, at(span.1)?);
+        Some((s, mark_end(field.tokens, s, t)))
       };
-      let footnote_mark = |e: &Event| {
-        e.kind == EventKind::Mark && e.role.as_deref() == Some("footnotemark") && in_text(e)
+      // (what a writer writes of the piece `read[k]`: [`own_span`]'s, a mark's to its end)
+      let own_run = |k: usize, done: usize| {
+        own_span(&read, k, block.range.0, done).map(|(s, t)| (s, mark_end(field.tokens, s, t)))
       };
-      // (the run's tokens, from its first mark to where it ends, neither close a group opened before them nor leave one
-      // open: `{Ann Able \qquad \footnotemark[2]} \ Bob`, review revSHGIVENc)
+      // (the tokens from a piece's first to where it ends neither close a group opened before them nor leave one open:
+      // `{Ann Able \qquad \footnotemark[2]} \ Bob`, review revSHGIVENc)
       let balanced = |(s, t): (usize, usize)| {
         let depths = field.tokens.get(s..t)?.iter().scan(0, |depth, t| {
           *depth += t.group_step();
@@ -1071,30 +1124,70 @@ fn block_names(
         let (lowest, last) = depths.fold((0, 0), |(lowest, _), d| (lowest.min(d), d));
         Some(lowest == 0 && last == 0)
       };
-      let glued_end = (after_name..read.len())
-        .find(|&i| !past_note(&&read[i]))
+      let past: Vec<_> = ledger.past(found[to].0).collect();
+      // (the next name's pieces before it, past a cell's opening too: `Ann Able & \footnotemark[2]Bob Baker`)
+      let next_name = (after_name..read.len())
+        .find(|&i| read[i].kind == EventKind::Name)
         .unwrap_or(read.len());
-      let scan_end = carried_run(&read, glued_end, footnote_mark)
-        .filter(|&(first, last, end)| {
-          let from = read[first].span.and_then(|span| at(span.0));
-          // (to the run's last ink: a group the next name opens, or the previous name's wrapper, is not the run's)
-          let to = read[last].span.and_then(|span| at(span.1)).or_else(|| {
-            read
-              .get(end)
-              .map_or(Some(field.tokens.len()), |e| at(e.span?.0))
-          });
+      let next_pieces: Vec<usize> = ledger
+        .records
+        .iter()
+        .filter(|r| r.side == Some(Side::After) && (after_name..next_name).contains(&r.at))
+        .map(|r| r.at)
+        .collect();
+      let first_after = next_pieces.first().copied().unwrap_or(read.len());
+      // (cut from this name's run where its balance took them: `{Ann Able \qquad \footnotemark[2]} \ \textsc{Bob Baker}`)
+      let cuts: Vec<(usize, usize)> = next_pieces
+        .iter()
+        .filter_map(|&at| mark_run(&read[at]))
+        .collect();
+      let glued_end = (after_name..first_after)
+        .find(|&i| !past_note(&&read[i]))
+        .unwrap_or(first_after);
+      let carried = past
+        .iter()
+        .all(|r| r.side.is_some())
+        .then(|| {
+          past
+            .iter()
+            .filter(|r| r.side == Some(Side::Before))
+            .map(|r| r.at)
+            .max()
+        })
+        .flatten()
+        .filter(|&last| last >= glued_end)
+        // (over spacing, the pieces and font changes alone: an item the reading writes apart stops it — `Bob
+        // Baker\affil{2}\comma\corrauth,`, the affiliation's contact before the mark, review of SHGNEXT)
+        .filter(|&last| {
+          read[glued_end..=last].iter().enumerate().all(|(k, e)| {
+            matches!(e.kind, EventKind::Sep(SepKind::Gap { .. }))
+              || e.kind == EventKind::Layout
+              || past.iter().any(|r| r.at == glued_end + k)
+          })
+        });
+      let scan_end = carried
+        .filter(|&last| {
+          // (from the first piece past the glued ones to the last one's end)
+          let from = read[glued_end..=last]
+            .iter()
+            .find(|e| matches!(e.kind, EventKind::Mark | EventKind::Note))
+            .and_then(|e| at(e.span?.0));
+          let to = mark_run(&read[last]).map(|(_, t)| t);
           from
             .zip(to)
             .and_then(|(s, t)| balanced((s, t.max(s))))
             .unwrap_or(false)
         })
-        .map_or(glued_end, |(_, last, _)| last + 1);
+        .map_or(glued_end, |last| last + 1);
       let steps_counter = |e: &Event| e.role.as_deref().is_some_and(|r| r.starts_with("thanks"));
       let mut apart: Vec<Token> = Vec::new();
       let mut apart_runs: Vec<(usize, usize)> = Vec::new();
       let (mut passed, mut stepped): (Vec<usize>, Vec<usize>) = (Vec::new(), Vec::new());
       let mut seps: Vec<(usize, usize)> = Vec::new();
-      for e in &read[after_name..scan_end] {
+      // (where the last piece written ends)
+      let mut done = 0;
+      for k in after_name..scan_end {
+        let e = &read[k];
         if e.kind == EventKind::Note {
           if steps_counter(e)
             && let Some(s) = e.span.and_then(|span| at(span.0))
@@ -1104,8 +1197,8 @@ fn block_names(
           continue;
         }
         if math_sep(e) {
-          if let Some((s, t)) = e.span.and_then(|(s, t)| Some((at(s)?, at(t)?))) {
-            seps.push((s, t));
+          if let Some(run) = own_span(&read, k, block.range.0, done) {
+            seps.push(run);
           }
           continue;
         }
@@ -1113,18 +1206,12 @@ fn block_names(
           continue;
         }
         let span = e.span?;
-        let (s, t) = (at(span.0)?, at(span.1)?);
-        // (a `\\footnotemark`'s number, past its span: 2209.15209; one whose span ends on its option's `[`, past a
-        // `\\protect` before it: `\\protect\\endnotemark[2]`, 1703.08733)
-        let t = past_option(field.tokens, s + 1)
-          .max(past_option(field.tokens, t.saturating_sub(1)))
-          .max(t);
-        // (a mark a macro prints, its span the call alone, is the call with its arguments: aiaa-tc's `\thanksibid{2}`
-        // (1505.07844, 1411.3642, 1602.00849), a preamble's `\footrecall{uva}` (2503.21719, 2407.13730, 2606.19583) —
-        // the call written without them read the author wrapper's `\let` (`content::arguments_end`))
-        let t = arguments_end(field.tokens, s, true)
-          .flatten()
-          .map_or(t, |end| end.max(t));
+        // (its whole span the run of a name or a piece written before it holds)
+        let cover = mark_run(e)?;
+        let Some((s, t)) = own_run(k, done) else {
+          apart_runs.push(cover);
+          continue;
+        };
         // (a mark past the close of a group of names the name's run opens no part of is the last name's, its own run
         // after the name: `{Ann Able$^{\star}$, …, David López-Pérez}$^{\sharp}$`, 2504.02633 — as the old reader's
         // names split, deleted in Z18k2, read it (a wrapper holding names with only marks after it split into them, the
@@ -1154,6 +1241,7 @@ fn block_names(
           || (marks && passed.is_empty() && stepped.is_empty() && past_group() != Some(true))
         {
           grown.1 = grown.1.max(t);
+          done = t;
           seps.clear();
         } else if let Some((tokens, end)) = field.content_of((s, t), 0, s) {
           if e.kind == EventKind::Mark {
@@ -1174,8 +1262,10 @@ fn block_names(
           apart.extend(tokens.unlist());
           // (to where its tokens end: past an undefined command `content::Field::past_held_undefined` grew the piece over,
           // which the scan below then takes no more — `Ann Able\footnotemark\foo{} \and …` wrote `\foo` twice, two
-          // stubs for its one Error, review revERR2c finding 1)
-          apart_runs.push((s, end.max(t)));
+          // stubs for its one Error, review revERR2c finding 1; from its whole span's start, the spacing before it no
+          // one's)
+          apart_runs.push((cover.0.min(s), end.max(t)));
+          done = end.max(t);
         }
         if is_orcid(e) {
           on_names.insert((index, span));
@@ -1186,8 +1276,61 @@ fn block_names(
         events,
         (found[from].1, found[to].1),
         Some(grown),
-        &[],
+        &cuts,
       )?;
+      // (the pieces the mark ledger gives this name from before it, past spacing, written before its text in print order,
+      // a note's footnote step where it prints (its note the reading's item of this name): `Ann Able \qquad
+      // \footnotemark[2] \ Bob Baker`, pdflatex's † over Bob's name; a bare `\footnotemark` keeps its step there, so the
+      // marks after it print theirs. One the name's run holds already is the run's)
+      let mut prefix: Vec<Token> = Vec::new();
+      let (mut done, mut last) = (0, None);
+      for r in ledger.prefix_of(found[from].0) {
+        let e = &read[r.at];
+        let Some(cover) = mark_run(e) else {
+          continue;
+        };
+        // (a glued prefix's span runs into the name's: `\footnotemark[2]Bob Baker`, whose `[2]` the name's cover holds —
+        // written with it, no loss for `mark_dropped` to count)
+        if cover.0 < run_to.max(written_to) && run_from < cover.1 {
+          apart_runs.push(cover);
+          continue;
+        }
+        if e.kind == EventKind::Note {
+          if steps_counter(e) {
+            prefix.push(T_CS!(FOOTNOTE_STEP));
+            stepped.push(cover.0);
+          }
+          last = Some(r.at);
+          continue;
+        }
+        // (a formula's separator between two of them is written before the one after it, as past a name:
+        // `\footnotemark[1]$^,$\footnotemark[2]`, 1703.08733)
+        for j in last.map_or(r.at, |l| l + 1)..r.at {
+          if math_sep(&read[j])
+            && let Some((s, t)) = own_span(&read, j, block.range.0, done)
+            && let Some((sep, end)) = field.content_of((s, t), 0, s)
+          {
+            prefix.extend(sep.unlist());
+            apart_runs.push((s, end.max(t)));
+            done = end.max(t);
+          }
+        }
+        last = Some(r.at);
+        let Some((s, t)) = own_run(r.at, done) else {
+          apart_runs.push(cover);
+          continue;
+        };
+        // (in a group of its own: a switch its group holds stays its own, `{\small\footnotemark[2]} \ \textsc{Bob Baker}`)
+        if balanced((s, t)) == Some(true)
+          && let Some((tokens, end)) = field.content_of((s, t), 0, s)
+        {
+          prefix.push(T_BEGIN!());
+          prefix.extend(tokens.unlist());
+          prefix.push(T_END!());
+          apart_runs.push((cover.0.min(s), end.max(t)));
+          done = end.max(t);
+        }
+      }
       // (a note the name's tokens print is written with it, not again as an item: `\\newcommand{\\ann}{Ann
       // Able\\thanks{…}}`, whose name is the one token `\\ann` — revLO4; a wrapper's note is cut out of the run,
       // `event_run`: P2 B. So is an ORCID link the run prints, the link printing the name (`link_names`): the name's
@@ -1232,11 +1375,12 @@ fn block_names(
         apart_runs.push((i, i + 1));
       }
       // (a footnote symbol in a kept mark is shown apart from its numbers, `rewrite_symbol_superscripts`'s: 1610.06117)
-      let mut out = if marks {
-        rewrite_symbol_superscripts(Tokens::new(tokens)).unlist()
+      let mut out = prefix;
+      if marks {
+        out.extend(rewrite_symbol_superscripts(Tokens::new(tokens)).unlist());
       } else {
-        tokens
-      };
+        out.extend(tokens);
+      }
       if marks && !apart.is_empty() {
         out.extend(rewrite_symbol_superscripts(Tokens::new(apart)).unlist());
       } else {
@@ -1300,71 +1444,6 @@ fn block_names(
     };
     names.iter().map(&mut tokens_of).collect()
   })
-}
-
-/// Whether `e` is spacing between a name and its marks: a spacing run (`SepKind::Gap`) or a note, which prints a mark only.
-fn spacing(e: &Event) -> bool {
-  e.kind == EventKind::Note || matches!(e.kind, EventKind::Sep(SepKind::Gap { .. }))
-}
-
-/// What the spacing runs among `events` print: a natural width (em), or a fill's, the line's (0pt on a centred line:
-/// `Ann Able \hfill \footnotemark[2] \quad Bob Baker`, review revSHGIVENc), which no reading of the tokens knows.
-#[derive(Clone, Copy)]
-enum Gaps {
-  Width(f64),
-  Fill,
-}
-
-/// The spacing runs among `events` ([`Gaps`]); `None` for none.
-fn gaps(events: &[Event]) -> Option<Gaps> {
-  events
-    .iter()
-    .filter_map(|e| match e.kind {
-      EventKind::Sep(SepKind::Gap { fill: true, .. }) => Some(Gaps::Fill),
-      EventKind::Sep(SepKind::Gap { width, .. }) => Some(Gaps::Width(width)),
-      _ => None,
-    })
-    .reduce(|a, b| match (a, b) {
-      (Gaps::Width(a), Gaps::Width(b)) => Gaps::Width(a + b),
-      _ => Gaps::Fill,
-    })
-}
-
-/// The run past a name's own marks and notes, from `from` (main's SHGIVEN fallback, 2026-11-16): the consecutive
-/// text `\footnotemark`s (`mark`), notes and spacing before the next name, a separator, a `\\` or the block's end;
-/// anything else ends it undecided. `(first, last, end)`, its first and last mark or note and where it ends, when it
-/// goes back whole to the name before: a separator, a `\\` or the block's end follows it (1911.13299's `\
-/// \footnotemark[3]\and`), or the next name past a gap wider than all the spacing from the name's last ink to the run's
-/// last mark, inside the run too (2412.20504's `\ \footnotemark[2] \quad Qingyi Si`; review revSHGIVENe's `\
-/// \footnotemark[1] \hspace{6em} \footnotemark[2] \quad Bob`). A gap no wider, or a fill anywhere (its width the
-/// line's), leaves it undecided, REGFIX's counted loss: a mark is never written on the next name (its prefix by nearness waits for row
-/// R SHGIVENNEXT).
-fn carried_run(
-  read: &[Event],
-  from: usize,
-  mark: impl Fn(&Event) -> bool,
-) -> Option<(usize, usize, usize)> {
-  let inked = |e: &Event| e.kind == EventKind::Note || mark(e);
-  let end = (from..read.len())
-    .find(|&i| !(spacing(&read[i]) || mark(&read[i])))
-    .unwrap_or(read.len());
-  // (a run holding a mark: notes alone stay where the reading routes them)
-  if !read[from..end].iter().any(&mark) {
-    return None;
-  }
-  let first = (from..end).find(|&i| inked(&read[i]))?;
-  let last = (from..end).rfind(|&i| inked(&read[i]))?;
-  match read.get(end).map(|e| (&e.kind, e.role.as_deref())) {
-    None | Some((EventKind::Break, _)) => Some((first, last, end)),
-    Some((EventKind::Sep(_), role)) if role != Some("math") => Some((first, last, end)),
-    Some((EventKind::Name, _)) => match (gaps(&read[from..=last]), gaps(&read[last + 1..end])) {
-      (Some(Gaps::Width(before)), Some(Gaps::Width(after))) if after > before => {
-        Some((first, last, end))
-      },
-      _ => None,
-    },
-    _ => None,
-  }
 }
 
 /// The emitter's own reason to stay out ([`stays_out`]), beside the blocks' `SkipReason`s.
@@ -3943,45 +4022,83 @@ fn unwritten(
   let mut on_names = BTreeSet::new();
   // (the emitter's own reading of the names: its `keeps(source)` is `per_author_marks(source)` for every block it writes
   // names of, cached per flush — review revNE2r2's nit)
-  let written: Vec<(usize, usize)> =
-    block_names(index, &spelled, per_author_marks(index), &mut on_names)
-      .into_iter()
-      .flat_map(|(_, _, run, apart, _)| run.into_iter().chain(apart))
-      .collect();
+  let written: Vec<(usize, usize)> = block_names(
+    index,
+    resolved,
+    &spelled,
+    per_author_marks(index),
+    &mut on_names,
+  )
+  .into_iter()
+  .flat_map(|(_, _, run, apart, _)| run.into_iter().chain(apart))
+  .collect();
   spans
     .into_iter()
     .filter(|&(s, t)| !written.iter().any(|&(from, to)| from <= s && t <= to))
     .collect()
 }
 
-/// Whether the author block at ledger index `index` prints a `\footnotemark` that neither a name its reading writes nor an
-/// item holds: one past a line break under a name (`Ann Able\thanks{…} \\ \footnotemark`), past a name's separating
-/// comma (`Colin P.~McNally,$^{1}$\footnotemark[…]`, 2101.04763), inside a formula with a note (`Xunzhi
-/// Xiang$^{1}\thanks{…}\,\,\footnotemark[2]$`, 2511.12633). A dropped mark that steps the counter (a bare
-/// `\footnotemark`, `\stepcounter\@mpfn`) loses its symbol and steps the counter no more, so a later mark prints one
-/// symbol short: the block is written whole, Perl's whole-block creator, its tokens digested in order, with a counted
-/// Warning, once per block over the flushes (review revNE2r2 Q2: never a silent loss). A dropped mark given its number
-/// (`\footnotemark[1]`, a document's `\samethanks[1]`: latex.ltx's `\@xfootnotemark`, `Event::given_number`)
-/// re-references a note written already and moves no later mark: the names are written as read, its loss counted by a
-/// Warning naming it, once per block over the flushes (`D. R. G. Schleicher,$^{1}$\samethanks[1]`, 1912.01737; `Cheng
-/// Xu\textsuperscript{1},\footnotemark[1]`, 1811.08622 — user ruling 2026-11-09: a decline never throws away a right
-/// reading): their printed labels go to `given_lost`, the Warning's ([`warn_given_marks_lost`]) where no other decline
-/// writes the block whole. A mark past its name's note is carried (`block_names`: 1610.06031), as is a run past spacing
-/// [`carried_run`] takes back (1911.13299's `\ \footnotemark[2]`, DG ruling 2026-11-16); one it leaves undecided, the
-/// next name nearer, is dropped here (main's SHGIVEN fallback, 2026-11-16).
-fn mark_dropped(index: usize, resolved: &Resolved, given_lost: &mut Vec<String>) -> bool {
-  let marks: Vec<(usize, usize, bool, String)> = with_block(index, Vec::new(), |block, events| {
+/// The `\footnotemark`s of block `index` no written name or item holds, each counted lost by [`warn_marks_lost`]: a given
+/// one's label to `given_lost`, a bare one's step kept where it prints (`bare_lost`); `true` where the block is written
+/// whole (OXIDIZED_DESIGN_DIVERGENCES #1057; 2101.04763, 2511.12633, 1912.01737, 1811.08622, 1610.06031, 1911.13299,
+/// 2412.20504, 1807.02791, 1703.08733, 1111.1979).
+fn mark_dropped(
+  index: usize,
+  resolved: &Resolved,
+  given_lost: &mut Vec<String>,
+  bare_lost: &mut Vec<(usize, String, Vec<Token>)>,
+) -> bool {
+  type Dropped = (usize, usize, bool, String, Option<Vec<Token>>);
+  let marks: Vec<Dropped> = with_block(index, Vec::new(), |block, events| {
     let at = |p: u16| usize::from(p).checked_sub(block.range.0);
+    let tokens = block.read_tokens().unlist_ref();
+    // (its tokens with their option and arguments, balanced)
+    let run = |s: usize, t: usize| {
+      let run = tokens.get(s..mark_end(tokens, s, t))?;
+      let mut depth = 0;
+      for token in run {
+        depth += token.group_step();
+        if depth < 0 {
+          return None;
+        }
+      }
+      (depth == 0).then(|| run.to_vec())
+    };
+    // (one leading its line or cell with a name after it, which the reading may read as that line's label — `Ann Able
+    // \and \footnotemark Bob Baker`, Bob an affiliation — keeps no step: the block is written whole)
+    let leads_a_name = |k: usize| {
+      let passed = |e: &&Event| {
+        matches!(e.kind, EventKind::Sep(SepKind::Gap { .. }))
+          || (e.kind == EventKind::Layout && e.role.as_deref() != Some("cell"))
+      };
+      let opens = events[..k]
+        .iter()
+        .rev()
+        .find(|e| !passed(e))
+        .is_none_or(|e| {
+          matches!(
+            e.kind,
+            EventKind::Break
+              | EventKind::Sep(SepKind::And(_) | SepKind::Column(_))
+              | EventKind::Layout
+          )
+        });
+      opens
+        && events[k + 1..]
+          .iter()
+          .find(|e| !(passed(e) || matches!(e.kind, EventKind::Mark | EventKind::Note)))
+          .is_some_and(|e| e.kind == EventKind::Name)
+    };
     events
       .iter()
-      .filter(|e| e.kind == EventKind::Mark && e.role.as_deref() == Some("footnotemark"))
-      .filter_map(|e| {
-        Some((
-          at(e.span?.0)?,
-          at(e.span?.1)?,
-          e.given_number,
-          e.text.clone(),
-        ))
+      .enumerate()
+      .filter(|(_, e)| e.kind == EventKind::Mark && e.role.as_deref() == Some("footnotemark"))
+      .filter_map(|(k, e)| {
+        let (s, t) = (at(e.span?.0)?, at(e.span?.1)?);
+        // (its own tokens, not the mark's before it: `own_span`)
+        let own = own_span(events, k, block.range.0, 0).map_or(s, |(own, _)| own);
+        let step = (!leads_a_name(k)).then(|| run(own, t)).flatten();
+        Some((s, t, e.given_number, e.text.clone(), step))
       })
       .collect()
   });
@@ -3998,11 +4115,16 @@ fn mark_dropped(index: usize, resolved: &Resolved, given_lost: &mut Vec<String>)
     .collect();
   let mut on_names = BTreeSet::new();
   // (what the names write, as the emitter reads them — `counter_moved`'s; and what the items hold, each its event's span)
-  let mut written: Vec<(usize, usize)> =
-    block_names(index, &spelled, per_author_marks(index), &mut on_names)
-      .into_iter()
-      .flat_map(|(_, _, run, apart, _)| run.into_iter().chain(apart))
-      .collect();
+  let mut written: Vec<(usize, usize)> = block_names(
+    index,
+    resolved,
+    &spelled,
+    per_author_marks(index),
+    &mut on_names,
+  )
+  .into_iter()
+  .flat_map(|(_, _, run, apart, _)| run.into_iter().chain(apart))
+  .collect();
   written.extend(
     resolved
       .creators
@@ -4014,42 +4136,52 @@ fn mark_dropped(index: usize, resolved: &Resolved, given_lost: &mut Vec<String>)
         _ => None,
       }),
   );
-  let carried = |&(s, t, ..): &(usize, usize, bool, String)| {
-    written.iter().any(|&(from, to)| from <= s && t <= to)
-  };
-  let dropped: Vec<&(usize, usize, bool, String)> = marks.iter().filter(|m| !carried(m)).collect();
-  if dropped.is_empty() {
-    return false;
+  let carried = |&(s, t, ..): &Dropped| written.iter().any(|&(from, to)| from <= s && t <= to);
+  let dropped: Vec<&Dropped> = marks.iter().filter(|m| !carried(m)).collect();
+  if dropped
+    .iter()
+    .any(|(_, _, given, _, run)| !given && run.is_none())
+  {
+    let once = s!("mark|{index}");
+    if lookup_mapping(EMITTED_ITEMS, &once).is_none() {
+      assign_mapping(EMITTED_ITEMS, &once, Some(Stored::Bool(true)));
+      Warn!(
+        "unexpected",
+        "frontmatter",
+        "The frontmatter emitter's reading writes a footnote mark of its author block on no name and no item; the \
+         block is written whole, as Perl's whole-block creator"
+      );
+    }
+    return true;
   }
-  if dropped.iter().all(|&&(_, _, given, _)| given) {
-    given_lost.extend(dropped.iter().map(|m| m.3.clone()));
-    return false;
+  for (s, _, given, label, run) in dropped {
+    match run {
+      Some(run) if !given => {
+        let mut step = vec![T_CS!(TITLE_MARK_STEP), T_BEGIN!()];
+        step.extend(run.iter().copied());
+        step.push(T_END!());
+        bare_lost.push((*s, label.clone(), step));
+      },
+      _ => given_lost.push(label.clone()),
+    }
   }
-  let once = s!("mark|{index}");
-  if lookup_mapping(EMITTED_ITEMS, &once).is_none() {
-    assign_mapping(EMITTED_ITEMS, &once, Some(Stored::Bool(true)));
-    Warn!(
-      "unexpected",
-      "frontmatter",
-      "The frontmatter emitter's reading writes a footnote mark of its author block on no name and no item; the block \
-       is written whole, as Perl's whole-block creator"
-    );
-  }
-  true
+  false
 }
 
-/// The counted Warning of the footnote marks given their number that the author block at ledger index `index`'s reading,
-/// its names written as read, writes on no name and no item (`lost`, their printed labels: [`mark_dropped`]), once per
-/// block over the flushes: never a silent loss.
-fn warn_given_marks_lost(index: usize, lost: &[String]) {
+/// The counted Warning of the footnote marks the author block at ledger index `index`'s reading, its names written as read,
+/// writes on no name and no item ([`mark_dropped`]): those given their number (`given`, their printed labels: a note's,
+/// written already) and the bare ones whose steps are kept where they print (`bare`), once per block over the flushes:
+/// never a silent loss.
+fn warn_marks_lost(index: usize, given: &[String], bare: &[(usize, String, Vec<Token>)]) {
   let once = s!("markgiven|{index}");
-  if lost.is_empty() || lookup_mapping(EMITTED_ITEMS, &once).is_some() {
+  if (given.is_empty() && bare.is_empty()) || lookup_mapping(EMITTED_ITEMS, &once).is_some() {
     return;
   }
   assign_mapping(EMITTED_ITEMS, &once, Some(Stored::Bool(true)));
   // (a mark whose print failed, `\footnotemark[\value{foo}]` of a counter the rehearsal reads no number of: 2101.04763)
-  let labels: Vec<&str> = lost
+  let labels: Vec<&str> = given
     .iter()
+    .chain(bare.iter().map(|(_, label, _)| label))
     .map(|label| {
       if label.is_empty() {
         "a mark printing nothing"
@@ -4058,13 +4190,20 @@ fn warn_given_marks_lost(index: usize, lost: &[String]) {
       }
     })
     .collect();
+  let which = match (given.is_empty(), bare.is_empty()) {
+    (false, true) => "given their number (a note's, written already) on no name and no item",
+    (true, false) => "on no name and no item, their footnote steps kept where they print",
+    _ => {
+      "on no name and no item, those given their number (a note's, written already), the others' footnote steps \
+       kept where they print"
+    },
+  };
   Warn!(
     "unexpected",
     "frontmatter",
     s!(
-      "The frontmatter emitter's reading writes {} footnote mark(s) of its author block given their number (a note's, \
-       written already) on no name and no item; lost: {}",
-      lost.len(),
+      "The frontmatter emitter's reading writes {} footnote mark(s) of its author block {which}; lost: {}",
+      labels.len(),
       labels.join(", ")
     )
   );
@@ -4180,12 +4319,17 @@ fn names_overlap(index: usize, resolved: &Resolved) -> bool {
     return false;
   }
   let mut on_names = BTreeSet::new();
-  let runs: Vec<(usize, usize)> =
-    block_names(index, &spelled, per_author_marks(index), &mut on_names)
-      .into_iter()
-      .filter(|(name, ..)| name.is_some())
-      .filter_map(|(_, _, run, ..)| run)
-      .collect();
+  let runs: Vec<(usize, usize)> = block_names(
+    index,
+    resolved,
+    &spelled,
+    per_author_marks(index),
+    &mut on_names,
+  )
+  .into_iter()
+  .filter(|(name, ..)| name.is_some())
+  .filter_map(|(_, _, run, ..)| run)
+  .collect();
   // (a note two names' runs share: two overlapping runs both holding it — each name's run against the notes, not each two
   // runs against each other)
   let prints_a_note = notes.iter().any(|&(s, t)| {
@@ -5473,21 +5617,27 @@ pub(in crate::base_utilities) fn emit_commands(commands: &mut Vec<RawFrontmatter
   // (a footnote-counter or definition decline writes the block as Perl's `\lx@add@authors` does, split where Perl splits
   // it, its pieces digested in order: `split`, `fallback::perl_author_calls`; the others Perl's tabular branch, whole)
   let mut split: BTreeSet<usize> = BTreeSet::new();
+  // (per block, the footnote steps of the bare `\footnotemark`s no name writes: [`mark_dropped`])
+  let mut drop_steps: BTreeMap<usize, Vec<(usize, Vec<Token>)>> = BTreeMap::new();
   let whole: BTreeSet<usize> = read_blocks
     .into_iter()
     .filter(|&source| {
       let cells = across_cells(source);
       let mut given_lost = Vec::new();
+      let mut bare_lost = Vec::new();
       let (declined, as_perl) = if names_fail(source) || cells {
         (true, false)
       } else if counter_moved(source, resolved) {
         (true, true)
-      } else if mark_dropped(source, resolved, &mut given_lost) || names_overlap(source, resolved) {
+      } else if names_overlap(source, resolved) {
         (true, false)
       } else if declaration_reads_past(source, resolved) {
         (true, true)
       } else {
-        (false, false)
+        (
+          mark_dropped(source, resolved, &mut given_lost, &mut bare_lost),
+          false,
+        )
       };
       let whole = written_whole(source, declined);
       // (the fail-safe: a split stating an owner its marks don't support is the whole block, review revCR7c B1/B2)
@@ -5498,7 +5648,14 @@ pub(in crate::base_utilities) fn emit_commands(commands: &mut Vec<RawFrontmatter
         warn_across_cells(source);
       }
       if !whole {
-        warn_given_marks_lost(source, &given_lost);
+        warn_marks_lost(source, &given_lost, &bare_lost);
+        drop_steps.insert(
+          source,
+          bare_lost
+            .into_iter()
+            .map(|(at, _, tokens)| (at, tokens))
+            .collect(),
+        );
       }
       warn_queued_unwritten(source, whole);
       whole
@@ -5802,14 +5959,14 @@ pub(in crate::base_utilities) fn emit_commands(commands: &mut Vec<RawFrontmatter
   let mut name_runs: BTreeMap<usize, Vec<(usize, usize)>> = BTreeMap::new();
   let mut block_runs = BlockNameRuns::new();
   // (the footnote counter's steps of the notes written apart, on the creator where each prints: `note_steps`)
-  let mut steps: BTreeMap<(usize, bool), usize> = BTreeMap::new();
+  let mut steps = Steps::new();
   let mut on_names: BTreeSet<(usize, (u16, u16))> = BTreeSet::new();
   for (&source, members) in &by_block {
     let spelled: Vec<String> = members
       .iter()
       .map(|&i| resolved.creators[i].name.clone())
       .collect();
-    let tokens = block_names(source, &spelled, keeps(source), &mut on_names);
+    let tokens = block_names(source, resolved, &spelled, keeps(source), &mut on_names);
     // (two names written from runs that overlap each print the other's ink: a macro printing both, `\author{\small
     // \myauthors \\ …}` with `\newcommand{\myauthors}{Xing Shi Cai, Luc Devroye}` under scrartcl, each creator written as the
     // macro, a name of two people twice (2 × merged_creators, 1602.03850; cond-mat9310042). Each is its text, counted — where
@@ -5842,7 +5999,8 @@ pub(in crate::base_utilities) fn emit_commands(commands: &mut Vec<RawFrontmatter
       names.insert(i, (name, cites));
     }
     if let Some(&first) = members.first() {
-      steps.extend(note_steps(source, &runs, &stepped, first));
+      let drops = drop_steps.remove(&source).unwrap_or_default();
+      steps.extend(note_steps(source, &runs, &stepped, first, &drops));
     }
   }
   let without_setters;
@@ -6126,10 +6284,11 @@ pub(in crate::base_utilities) fn emit_commands(commands: &mut Vec<RawFrontmatter
       });
       let item = cs_group("\\lx@frontmatter@item", &[&name]);
       let step = |after: bool| {
-        std::iter::repeat_n(
-          T_CS!(FOOTNOTE_STEP),
-          steps.get(&(i, after)).copied().unwrap_or(0),
-        )
+        steps
+          .get(&(i, after))
+          .into_iter()
+          .flatten()
+          .flat_map(|(_, tokens)| tokens.iter().copied())
       };
       let mut content: Vec<Token> = step(false).collect();
       content.extend(cs_group("\\lx@personname", &[&cs_group(

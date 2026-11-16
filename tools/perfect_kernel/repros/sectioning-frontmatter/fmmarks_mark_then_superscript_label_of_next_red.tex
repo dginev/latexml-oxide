@@ -5,12 +5,10 @@
 %   Able / Bob Baker b / Carl Cole
 % expect:   0 errors, 0 Warnings; XML Ann Able / Bob Baker ; footnotemark[b]= ; footnotemark[†]= / Carl Cole; HTML Ann
 %   Able / Bob Baker ; † plain ; b plain / Carl Cole (the guard's XML and HTML lines)
-% moves:    XML row R SHGIVENNEXT (a mark nearer the next name, or a bare one; today the counted loss or the whole
-%   block); PURE (fix/pure-personname: the marks out of the personname); HTML the XML layer's: row R
-%   SHGIVENNEXT (a mark nearer the next name, or a bare one; today the counted loss or the whole block); PURE
-%   (fix/pure-personname: the marks out of the personname)
-% status:   RED XML RED, HTML RED (int/frontmatter 10997fdf9a0;
-%   perfect_kernel_batchfmmarks::a_mark_past_spacing_is_the_nearer_names and _red)
+% moves:    HTML row R MARKORDER (the notes' document order is not the order the PDF prints their marks; DG
+%   2026-11-16: minor, each mark is on its carrier)
+% status:   GREEN XML (the mark ledger, SHGNEXT; promoted at SHGNEXTb), RED HTML (the marks' order);
+%   perfect_kernel_batchfmmarks::a_mark_past_spacing_is_the_nearer_names and _red
 % preload: ar5iv.sty
 \documentclass{article}
 \title{T}

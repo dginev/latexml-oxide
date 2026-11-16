@@ -1,0 +1,20 @@
+% mechanism: as ne2h_marks_run_wider_before_goes_to_the_next_name, the widest gap between the two marks
+%   (` \qquad `): the run parted there, ∗ Ann's and † Bob's (named ne2h_marks_run_narrower_after_is_undecided until
+%   SHGNEXTb)
+% witness: none (review revSHGIVENd's d3)
+% oracle:  pdflatex 0 errors; "∗   † / Ann Able   Bob Baker   Carl Cole", the marks over the gap between Ann and Bob
+% engines: rust REGFIX: 0 errors, 1 Warning ("lost: *, †"); SHGIVENd 411b4158b63: ∗ lost, † Bob's prefix; perl 0.8.8:
+%   0 errors
+% expect:  0 errors, 0 Warnings; Ann ∗, Bob †, Carl
+% status:  RED (411b4158b63; REGFIX: lost) ->
+%   GREEN (perfect_kernel_batchne2::a_mark_beside_spacing_is_the_nearer_names; the FMRG suite, XML and HTML:
+%   perfect_kernel_batchfmmarks::a_mark_past_spacing_is_the_nearer_names)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{Ann Able \quad \footnotemark[1] \qquad \footnotemark[2] \ Bob Baker \and Carl Cole}
+\date{}
+\maketitle
+Text.
+\end{document}

@@ -377,6 +377,9 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
     }
     Ok(())
   });
+  // The footnote step of a bare mark the title prints that no name writes, its glyph lost and counted: the mark typed
+  // into a box no one uses, so the counter moves as the title's `\footnotemark` moves it (`emit::mark_dropped`, OD #1057).
+  DefMacro!("\\lx@title@mark@step{}", r"{\setbox0\hbox{#1}}");
   // A creator's note after its step, marked as its title prints it (`title_notes_print_marks`; article.cls:205, :241);
   // an unmarked `\footnote` Perl's contact (Base_Utility.pool.ltxml:663). OD #1053; 2502.19103, 1911.13299, 2301.00220.
   DefPrimitive!("\\lx@title@thanks []{}", sub[(attr, body)] {
@@ -1034,6 +1037,9 @@ fn title_note(footnote: bool, attr: Option<Tokens>, body: Tokens) -> Result<()> 
   ]));
   Ok(())
 }
+
+/// The footnote step of a bare mark no name of the title writes (`emit::mark_dropped`): `\lx@title@mark@step{<mark>}`.
+pub(in crate::base_utilities) const TITLE_MARK_STEP: &str = "\\lx@title@mark@step";
 
 /// Whether a note made in the title block steps the footnote counter there (`\lx@title@footnote@step`): the class's
 /// title marks its notes (`lx_title_counts_footnotes`, `latex_constructs::declare_fnsymbol_title_block`) and its
