@@ -655,13 +655,15 @@ fn marked_list_cut_as_its_binding_declares() {
       &["note:thanks=ann@a.edu § Corresponding author"],
     ),
     // (names in a `\parbox`: their marks are the names' own, so the binding cuts the list, the link line after the
-    // entries the last entry's — 2508.17623, red on P4c2: the url in no creator, 1 Warning)
+    // entries the last entry's — 2508.17623, red on P4c2: the url in no creator, 1 Warning. The typed `$^*$` beside a
+    // held `\IEEEauthorrefmark` a mark-only note, as pdflatex prints "Ann Able§∗": PUREc, the refmark's number keys
+    // only its own glyph)
     (
       repro!("ieee_marked_list_url_line_after_entries"),
       0,
       &[
-        &["Ann Able", "affiliation=§ Univ A"],
-        &["Bob Baker", "affiliation=† Univ B"],
+        &["Ann Able", "mark=*", "affiliation=§ Univ A"],
+        &["Bob Baker", "mark=*", "affiliation=† Univ B"],
         &[
           "Cy Cole",
           "affiliation=¶ Univ D",

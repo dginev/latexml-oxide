@@ -1,0 +1,18 @@
+% mechanism: a contact answers one printed mark across the name's mark runs, whatever ink parts them: a graphic (Ann)
+%            or a formula that is no mark (Bob) between a typed ∗ and the author reference mark printing ∗
+% witness:  revPUREc B1′'s siblings (probe q10 with `\includegraphics`, `$\heartsuit$` for the ORCID icon)
+% oracle:   pdflatex 0 errors; "Ann Able∗[image]∗, Bob Baker∗♡∗, and Cy Cole∗" over "∗ Univ A"
+% engines:  rust fix/pure-names-c 496f6195343 = 0 errors; Ann's and Bob's typed ∗ lost (the contact answered both)
+% expect:   0 errors, 0 Warnings; one ∗ each consumed by Univ A, the other a mark-only note after Ann's and Bob's name
+% status:   RED (fix/pure-names-c 496f6195343) -> GREEN (PUREd; perfect_kernel_batchfmmarks::
+%           name_marks_live_outside_the_personname)
+% preload: ar5iv.sty
+\documentclass[conference]{IEEEtran}
+\usepackage{graphicx}
+\begin{document}
+\title{Title}
+\author{\IEEEauthorblockN{Ann Able$^{*}$\includegraphics[height=1ex]{example-image}\IEEEauthorrefmark{1}, Bob Baker$^{*}$$\heartsuit$\IEEEauthorrefmark{1}, and Cy Cole\IEEEauthorrefmark{1}}
+\IEEEauthorblockA{\IEEEauthorrefmark{1}Univ A}}
+\maketitle
+Text.
+\end{document}

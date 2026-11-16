@@ -1103,10 +1103,189 @@ const PURE: &[Row] = &[
     ],
     page_moves: r#"the XML layer's: PURE (fix/pure-personname: the marks out of the personname); row R (a note inside a formula: the in-formula `\footnotemark[1]` counted lost)"#,
   },
+  // (PUREc: an author reference mark's number keys the one mark it printed — 2508.13181's typed §, a typed ∗ or †
+  // beside it, an unheld second refmark, ieeeconf's `\authorrefmark` run of 2011.00594; acmart's counter-marked
+  // `\authornote`; `C\#` at a name's end; glued digits one number beside a two-digit entry; a note's mark answering
+  // one printed mark)
+  Row {
+    repro:      "pure_names/pure_name_refmark_beside_a_typed_section_mark",
+    tex:        repro!("pure_names/pure_name_refmark_beside_a_typed_section_mark"),
+    warnings:   0,
+    creators:   &[
+      r#"Ann Able ; footnotemark[§]= | affiliation=† Lab B ; affiliation=* Univ A"#,
+      r#"Bob Baker ; footnotemark[§]= | affiliation=* Univ A"#,
+      r#"Cy Cole | affiliation=* Univ A"#,
+    ],
+    moves:      r#""#,
+    page:       &[
+      r#"Ann Able ; § plain"#,
+      r#"Bob Baker ; § plain"#,
+      r#"Cy Cole"#,
+    ],
+    page_moves: r#""#,
+  },
+  Row {
+    repro:      "pure_names/pure_name_refmark_beside_typed_marks",
+    tex:        repro!("pure_names/pure_name_refmark_beside_typed_marks"),
+    warnings:   0,
+    creators:   &[
+      r#"Ann Able ; footnotemark[*]= | affiliation=* Univ A"#,
+      r#"Bob Baker ; footnotemark[†]= | affiliation=* Univ A"#,
+      r#"Cy Cole | affiliation=* Univ A"#,
+    ],
+    moves:      r#""#,
+    page:       &[
+      r#"Ann Able ; * plain"#,
+      r#"Bob Baker ; † plain"#,
+      r#"Cy Cole"#,
+    ],
+    page_moves: r#""#,
+  },
+  Row {
+    repro:      "pure_names/pure_name_two_refmarks_one_held",
+    tex:        repro!("pure_names/pure_name_two_refmarks_one_held"),
+    warnings:   0,
+    creators:   &[
+      r#"Ann Able ; footnotemark[†]= | affiliation=* Univ A"#,
+      r#"Bob Baker | affiliation=* Univ A"#,
+    ],
+    moves:      r#""#,
+    page:       &[r#"Ann Able ; † plain"#, r#"Bob Baker"#],
+    page_moves: r#""#,
+  },
+  Row {
+    repro:      "pure_names/pure_name_authorrefmark_comma_run_one_held",
+    tex:        repro!("pure_names/pure_name_authorrefmark_comma_run_one_held"),
+    warnings:   0,
+    creators:   &[
+      r#"Ann Able ; footnotemark[†]= | affiliation=* Univ A"#,
+      r#"Bob Baker | affiliation=* Univ A"#,
+    ],
+    moves:      r#""#,
+    page:       &[r#"Ann Able ; † plain"#, r#"Bob Baker"#],
+    page_moves: r#""#,
+  },
+  Row {
+    repro:      "pure_names/pure_name_acmart_authornote_beside_a_typed_star",
+    tex:        repro!("pure_names/pure_name_acmart_authornote_beside_a_typed_star"),
+    warnings:   0,
+    creators:   &[
+      r#"Ann Able ; footnotemark[*]= ; thanks[*]=Equal. | affiliation=Univ A , X"#,
+      r#"Bob Baker | affiliation=Univ B , X"#,
+    ],
+    moves:      r#""#,
+    page:       &[r#"Ann Able ; * plain | under: Equal."#, r#"Bob Baker"#],
+    page_moves: r#""#,
+  },
+  Row {
+    repro:      "pure_names/pure_name_hash_at_a_names_end",
+    tex:        repro!("pure_names/pure_name_hash_at_a_names_end"),
+    warnings:   0,
+    creators:   &[r#"Team C#"#, r#"Bob Baker ; footnotemark[*]="#],
+    moves:      r#""#,
+    page:       &[r#"Team C#"#, r#"Bob Baker ; * plain"#],
+    page_moves: r#""#,
+  },
+  Row {
+    repro:      "pure_names/pure_name_glued_digits_one_number",
+    tex:        repro!("pure_names/pure_name_glued_digits_one_number"),
+    warnings:   0,
+    creators:   &[
+      r#"Ann Able ; footnotemark[12]= | affiliation=Univ A ; affiliation=Univ B"#,
+      r#"Bob Baker | affiliation=Univ J"#,
+    ],
+    moves:      r#""#,
+    page:       &[r#"Ann Able ; 12 plain"#, r#"Bob Baker"#],
+    page_moves: r#""#,
+  },
+  Row {
+    repro:      "pure_names/pure_name_refmark_legend_note_beside_a_typed_mark",
+    tex:        repro!("pure_names/pure_name_refmark_legend_note_beside_a_typed_mark"),
+    warnings:   0,
+    creators:   &[
+      r#"Ann Able | affiliation=† Univ B"#,
+      r#"Bob Baker ; footnotemark[§]= ; thanks[§]=Equal contribution. | affiliation=† Univ B"#,
+    ],
+    moves:      r#""#,
+    page:       &[
+      r#"Ann Able"#,
+      r#"Bob Baker ; §→note | under: Equal contribution."#,
+    ],
+    page_moves: r#""#,
+  },
+  Row {
+    repro:      "pure_names/pure_name_footnotemark_beside_a_typed_dagger_red",
+    tex:        repro!("pure_names/pure_name_footnotemark_beside_a_typed_dagger_red"),
+    warnings:   0,
+    creators:   &[
+      r#"Ann Able ; thanks[*]=First note."#,
+      r#"Bob Baker ; thanks[†]=Second note."#,
+      r#"Cat Cole ; footnotemark[†]= ; thanks[†]=Second note."#,
+      r#"Dan Dorn ; footnotemark[†]= ; thanks[†]=Second note."#,
+    ],
+    moves:      r#"row R MARKKEY (a typed mark beside a `\footnotemark` of the same glyph: the reader's glyph-as-label request takes it for the note's, resolver/blocks.rs:1279-1287)"#,
+    page:       &[
+      r#"Ann Able | under: First note."#,
+      r#"Bob Baker ; †→note"#,
+      r#"Cat Cole ; †→note ; † plain"#,
+      r#"Dan Dorn ; † plain ; †→note"#,
+      r#"margin: Second note."#,
+    ],
+    page_moves: r#"the XML layer's: row R MARKKEY (a typed mark beside a `\footnotemark` of the same glyph)"#,
+  },
+  // (PUREd: a contact answers one printed mark across the name's mark runs — a number and the glyph its reference mark
+  // printed are one mark —, whatever ink parts the runs: an ORCID icon, a graphic, a formula; acmart's
+  // `\authornotemark[n]` copy is marked by its counter, as `\authornote` is)
+  Row {
+    repro:      "pure_names/pure_name_orcid_between_typed_star_and_refmark",
+    tex:        repro!("pure_names/pure_name_orcid_between_typed_star_and_refmark"),
+    warnings:   0,
+    creators:   &[
+      r#"Ann Able ; footnotemark[*]= | affiliation=* Univ A"#,
+      r#"Bob Baker | affiliation=* Univ A"#,
+    ],
+    moves:      r#""#,
+    page:       &[r#"Ann Able ; * plain"#, r#"Bob Baker"#],
+    page_moves: r#""#,
+  },
+  Row {
+    repro:      "pure_names/pure_name_graphic_between_typed_star_and_refmark",
+    tex:        repro!("pure_names/pure_name_graphic_between_typed_star_and_refmark"),
+    warnings:   0,
+    creators:   &[
+      r#"Ann Able ; footnotemark[*]= | affiliation=* Univ A"#,
+      r#"Bob Baker ♡ ; footnotemark[*]= | affiliation=* Univ A"#,
+      r#"Cy Cole | affiliation=* Univ A"#,
+    ],
+    moves:      r#""#,
+    page:       &[
+      r#"Ann Able ; * plain"#,
+      r#"Bob Baker ♡ ; * plain"#,
+      r#"Cy Cole"#,
+    ],
+    page_moves: r#""#,
+  },
+  Row {
+    repro:      "pure_names/pure_name_acmart_authornotemark_beside_a_typed_star",
+    tex:        repro!("pure_names/pure_name_acmart_authornotemark_beside_a_typed_star"),
+    warnings:   0,
+    creators:   &[
+      r#"Ann Able ; thanks[*]=Equal. | affiliation=Univ A , X"#,
+      r#"Bob Baker ; footnotemark[*]= ; thanks[*]=Equal. | affiliation=Univ B , X"#,
+    ],
+    moves:      r#""#,
+    page:       &[
+      r#"Ann Able ; *→note"#,
+      r#"Bob Baker ; * plain ; *→note"#,
+      r#"margin: Equal."#,
+    ],
+    page_moves: r#""#,
+  },
 ];
 /// Name marks re-homed (DG 2026-11-16, personname purity): a mark typed on a name leaves the personname — the note it
-/// answers, the contact it labels or a mark-only note — while name ink (`The C\# Team`, `$^{3}$He`) stays (revPURE;
-/// 2406.11149, 2506.02863, 0707.3527, 0801.1438).
+/// answers, the contact it labels or a mark-only note — while name ink (`The C\# Team`, `Team C\#`, `$^{3}$He`) stays;
+/// a reference mark's number keys only the mark it printed; a note or a contact answers one printed mark across the
+/// name's runs (revPURE, revPUREc; 2406.11149, 2506.02863, 0707.3527, 0801.1438, 2508.13181, 2011.00594).
 #[test]
 fn name_marks_live_outside_the_personname() { assert_green(PURE); }
 /// The known gaps of [`name_marks_live_outside_the_personname`].

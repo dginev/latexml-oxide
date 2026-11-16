@@ -1,0 +1,20 @@
+% mechanism: acmart's `\authornote` is marked by its footnote counter (`_markfromcounter`): a star typed on the name is
+%            a mark of its own
+% witness:  revPURE probe acm1
+% oracle:   pdflatex 0 errors; "Ann Able∗∗" (the typed ∗, then the `\authornote`'s ∗), the note "∗ Equal."
+% engines:  rust int/frontmatter fd43c364eb6 = 0 errors; one ∗ (the note's mark answered the typed one)
+% expect:   0 errors, 0 Warnings; a mark-only ∗ after the name and the note marked ∗
+% status:   RED (int/frontmatter fd43c364eb6) -> GREEN (PUREc; perfect_kernel_batchfmmarks::
+%           name_marks_live_outside_the_personname)
+% preload: ar5iv.sty
+\documentclass[sigconf]{acmart}
+\begin{document}
+\title{Title}
+\author{Ann Able$^{*}$}
+\authornote{Equal.}
+\affiliation{\institution{Univ A}\country{X}}
+\author{Bob Baker}
+\affiliation{\institution{Univ B}\country{X}}
+\maketitle
+Text.
+\end{document}

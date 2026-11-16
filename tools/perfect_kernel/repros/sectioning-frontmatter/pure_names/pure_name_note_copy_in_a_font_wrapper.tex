@@ -1,0 +1,22 @@
+% mechanism: a note's copy of the name's mark cut with the space after it, which LaTeXML sets in a font wrapper of its
+%            own (`\textsf{$^{\diamond}$ }…`): the emptied wrapper goes too — the mark rule's cut (Ann,
+%            `insert::mark_creator_notes`) and the pure pass's (Bob, `pure_names`' `Lead::cut`)
+% witness:  revPURE N3
+% oracle:   pdflatex 0 errors; "Ann Able⋄", "Bob Bakera"; footnotes "⋄ Equal contribution.", "a Visiting the Lab."
+% engines:  rust int/frontmatter fd43c364eb6 = 0 errors; each note `<text font="sansserif"></text>` before its words
+% expect:   0 errors, 0 Warnings; the notes marked ⋄ and a, their text whole with no empty wrapper
+% status:   RED (int/frontmatter fd43c364eb6) -> GREEN (PUREc; perfect_kernel_batchpure::
+%           a_copy_cut_from_a_font_wrapper_leaves_no_empty_wrapper)
+% preload: ar5iv.sty
+\documentclass[conference]{IEEEtran}
+\IEEEoverridecommandlockouts
+\begin{document}
+\title{T}
+\author{\IEEEauthorblockN{Ann Able$^{\diamond}$\thanks{\textsf{$^{\diamond}$ }Equal contribution.}}
+\IEEEauthorblockA{Univ A\\ ann@a.edu}
+\and
+\IEEEauthorblockN{Bob Baker$^{a}$\thanks{\textsf{\textsuperscript{a} }Visiting the Lab.}}
+\IEEEauthorblockA{Univ B\\ bob@b.edu}}
+\maketitle
+x
+\end{document}

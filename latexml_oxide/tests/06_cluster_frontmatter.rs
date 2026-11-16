@@ -1155,9 +1155,12 @@ fn frontmatter_jmlr_structured_author() {
 #[test]
 fn frontmatter_mrm_author() {
   let x = convert_to_xml_contrib("tests/cluster_regressions/frontmatter_mrm_author.tex");
+  // (the name alone, its hand-typed `*` the mark-only note right after it: PURE, OD #1055)
   assert!(
-    x.contains("<personname>Jakob Asslander</personname>"),
-    "MRM author name missing/unstructured:\n{x}"
+    x.contains(
+      "<personname>Jakob Asslander</personname>\n    <note mark=\"*\" role=\"footnotemark\"/>"
+    ),
+    "MRM author name missing/unstructured, or its mark not re-homed after it:\n{x}"
   );
   assert!(
     !x.contains("\\state")

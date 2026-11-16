@@ -19721,24 +19721,38 @@ pure semantic markup, reusable as metadata, and no printed mark is lost — puri
 affiliation answers it (`relocateAnnotations`, :895-901).
 **Rust.** The last step of `insert_frontmatter`, `keep_personnames_pure` (`frontmatter/pure_names.rs`), runs once every
 route has placed the creator's contacts and notes, and takes every mark off each creator's personname — an `ltx:sup`, a
-formula of scripts alone, a footnote symbol typed at the name's end. A note of the creator marked so keeps it; an unmarked
+formula of scripts alone, a footnote symbol typed at the name's end (not `#`, no `\@fnsymbol` glyph: `Team C\#` keeps
+it; no author block of the census's 35,942 papers types `\#` after a word's letters, its `#` marks are superscripts). A note of the creator marked so keeps it; an unmarked
 note opening with a copy of it takes it as `mark`, the copy cut — a superscript or a formula of scripts alone printing it,
-or for a symbol its text's head (`\thanks{*Equal Contribution}`, 1904.03977); a letter or number opening the text is the
-note's word, never a copy (`\thanks{a visitor …}`). A contact the creator holds keyed by it — its labels, or the
-superscript its text opens with, inside its font wrappers too — consumes it (ruling 3: 0707.3527, 2011.00594); a run of
-letters and digits parts where one part is a held label (`$^{a1}$`: address a consumed, 1 left; hep-ph0011101). Any other
+or for a symbol its text's head (`\thanks{*Equal Contribution}`, 1904.03977), cut with the space after it and a font
+wrapper it leaves empty (`\textsf{$^{\diamond}$ }…`); a letter or number opening the text is the note's word, never a
+copy (`\thanks{a visitor …}`). A contact the creator holds keyed by it — its labels, or the superscript its text opens
+with, inside its font wrappers too — consumes it (ruling 3: 0707.3527, 2011.00594). A note or a contact answers one
+printed mark, across every run of the name: a contact's keys that print one mark — a reference mark's number and the
+glyph it shows (`_refmarkshown`), `1` and `∗` under `∗Univ A` — are spent together (`\IEEEauthorrefmark{1}$^{*}$` over
+`∗Univ A` prints "∗∗": the second ∗ stays; so does it where an ORCID icon, a graphic or a formula parts the two,
+`Ann Able$^{*}$\orcidlink{…}\IEEEauthorrefmark{1}`, revPUREc q10). An author reference mark is keyed by its number too,
+only the mark it printed — the glyph its request shows, each number once, paired over the whole name: 2508.13181's
+`\IEEEauthorrefmark{2}\IEEEauthorrefmark{1}\textsuperscript{\textsection}` keys its § by neither, and the § stays. A run
+of glued labels, each a held one, parts (revtex3's `$^{ab}$`), digits only under single-digit numbering of the name's
+block (the creators of its parent), as the reader parts a request (`glued_request_parts`: 2409.11440's `$^{12}$` under 1
+and 2; beside an entry 10 it is one number and stays); a label glued to a number parts at the boundary (`$^{a1}$`: address a consumed, 1 left; hep-ph0011101). Any other
 mark is `<note role="footnotemark" mark="…"/>` right after the name (0801.1438), flagged `_namemark` so no body
 `\footnotetext` pairs with it (`relocate_footnote`, 2208.09944). A symbol typed beside a `\thanks` is such a note, never the
 `\thanks`'s mark: the `\thanks` prints its own (`Haoran Li$^{*}$\thanks{…}` prints "∗†", 2406.11149, 2506.02863), its
-glyph the typed one too — a note its own command marks (`_markfromcounter`: the title's footnote counter, set by
-`\lx@title@thanks` and the emitter's note call; REVTeX's numbered footnotes, `number_footnote_parts`) answers no typed
-glyph, so `Ann Able*\thanks{…}` keeps both marks of "*∗" (INTREC2, the PURE × SHMARK merge). Kept in
+glyph the typed one too — a note its own command marks (`_markfromcounter`, `insert::MARK_FROM_COUNTER`: the title's
+footnote counter, set by `\lx@title@thanks` and the emitter's note call; REVTeX's numbered footnotes,
+`number_footnote_parts` and `kind_shared_marked_contacts`; acmart's `\authornote`, acmart.cls:2237, and
+`\authornotemark[n]`, :2897, whose flag the Link step's copy of the note keeps — a copy linked by its glyph has none)
+answers no typed glyph, so `Ann Able*\thanks{…}` keeps both marks of "*∗" (INTREC2, the PURE × SHMARK merge) and
+acmart's `Ann Able$^{*}$\authornote{…}` and `Bob Baker$^{*}$\authornotemark[1]` both of "∗∗" (revPUREc q11). Kept in
 the name: superscripts that are name ink (`M\textsuperscript{c}Kernan`, `1\textsuperscript{st}`, an isotope prescript),
 formulas on a base, a mark a reference or an icon prints (cmpj's `\refaddr`, an ORCID link in a mark: 2205.05709), and
 every mark of a personname holding more than a name (a mark with name ink on both sides: an author block written whole,
 merged names, each already counted by its Warning or Error). HTML: the mark-only note renders as its mark beside the name
 through the `ltx_annotated_personname` wrapper (REND2's XSLT); no template renders it as a mark alone before that. **Guards**:
-`perfect_kernel_batchpure` (repros `sectioning-frontmatter/pure_names/`); 287 older guards repinned to the name alone,
+`perfect_kernel_batchpure` (repros `sectioning-frontmatter/pure_names/`),
+`perfect_kernel_batchfmmarks::name_marks_live_outside_the_personname`; 287 older guards repinned to the name alone,
 their rows listing each note's `mark` (`perfect_kernel_batch84b::creators`).
 
 ---

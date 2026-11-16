@@ -2,37 +2,79 @@
 //! "a name's label is the name alone", 2026-10-21; DG 2026-11-16: purity and no lost mark are one rule).
 
 use super::{
-  insert::{MARK_FROM_COUNTER, drop_emptied_wrappers, mark_form},
+  insert::{MARK_FROM_COUNTER, drop_emptied_wrappers, mark_form, trim_space_after},
   observer::marks::glued_in_a_word,
   *,
 };
 use crate::base_utilities::defs::frontmatter_api::PRINTED_LABEL;
 
 /// The footnote symbols a name's end may carry typed by hand (`Yuan Yuan*`, 2007.16032; `Shicheng Wang†`,
-/// math0304301; `D. Hernández Ruipérez¶`, alg-geom9405006).
-const HAND_MARKS: [char; 7] = [
-  '*', '\u{2217}', '\u{2020}', '\u{2021}', '\u{A7}', '\u{B6}', '#',
-];
+/// math0304301; `D. Hernández Ruipérez¶`, alg-geom9405006). No `#`, no `\@fnsymbol` glyph: at a name's end it is its ink
+/// (`Team C\#`); no author block of the census's 35,942 papers types it there, its `#` marks are superscripts (1705.01500).
+const HAND_MARKS: [char; 6] = ['*', '\u{2217}', '\u{2020}', '\u{2021}', '\u{A7}', '\u{B6}'];
 
 /// Takes every mark off each creator's personname: its note's `mark`, the label of a contact it holds (consumed), or a
 /// mark-only note after the name; never dropped. OXIDIZED_DESIGN_DIVERGENCES #1055, guards `perfect_kernel_batchpure`.
 pub(in crate::base_utilities) fn keep_personnames_pure(document: &mut Document) -> Result<()> {
+  // (glued digits part into held labels only under single-digit numbering of the name's author block — the creators of
+  // one parent —, as the reader parts a request (`resolver::glued_request_parts`): 2409.11440's `$^{12}$` under entries
+  // 1 and 2; beside an entry 10, one number)
+  let mut blocks: Vec<(Option<Node>, bool)> = Vec::new();
   for creator in document.findnodes("//ltx:creator[ltx:personname]", None) {
+    let block = creator.get_parent();
+    let single_digits = match blocks.iter().find(|(parent, _)| *parent == block) {
+      Some((_, single)) => *single,
+      None => {
+        let single = !block
+          .iter()
+          .flat_map(|parent| children_named(parent, "creator"))
+          .flat_map(|creator| children_named(&creator, "contact"))
+          .flat_map(|contact| contact_keys(&contact))
+          .any(|key| key.len() > 1 && key.chars().all(|c| c.is_ascii_digit()));
+        blocks.push((block, single));
+        single
+      },
+    };
     for personname in children_named(&creator, "personname") {
       let groups = mark_groups(&personname);
       if groups.is_empty() {
         continue;
       }
-      let held: HashSet<String> = children_named(&creator, "contact")
+      // (each contact's keys, each with the mark it prints — a reference mark's number its glyph, `1` and `∗` one mark;
+      // a note or a contact answers one mark printed on the name, [`Answerer`]: `\IEEEauthorrefmark{1}$^{*}$` over
+      // `∗Univ A` prints two ∗, one the contact's)
+      let shown = refmark_glyphs(&creator);
+      let held: Vec<Vec<(String, String)>> = children_named(&creator, "contact")
         .iter()
-        .flat_map(contact_keys)
+        .map(|contact| {
+          contact_keys(contact)
+            .into_iter()
+            .map(|key| {
+              let printed = shown
+                .get(&key)
+                .map_or_else(|| key.clone(), |glyph| mark_form(glyph));
+              (key, printed)
+            })
+            .collect()
+        })
         .collect();
+      let mut spent: HashSet<(Answerer, String)> = HashSet::default();
       let notes: Vec<Node> = children_named(&creator, "note")
         .into_iter()
         .filter(|note| note.get_attribute("role").as_deref() != Some("footnotemark"))
         .collect();
       let mut after = personname.clone();
       let mut parents: Vec<Node> = Vec::new();
+      // (the name's author reference marks, each with the glyph it printed — over every run: an ORCID icon, a graphic
+      // or a formula parts `Ann Able$^{*}$\orcidlink{…}\IEEEauthorrefmark{1}` in two, revPUREc q10)
+      let mut refmarks: Vec<(String, String)> = groups
+        .iter()
+        .flat_map(|group| &group.refmarks)
+        .filter_map(|(number, sole)| {
+          let glyph = shown.get(number).or(sole.as_ref())?;
+          Some((number.clone(), mark_form(glyph)))
+        })
+        .collect();
       for group in groups {
         let printed = group.printed.trim().to_string();
         let pieces = mark_pieces(&printed);
@@ -40,18 +82,29 @@ pub(in crate::base_utilities) fn keep_personnames_pure(document: &mut Document) 
         let mut taken = false;
         for piece in &pieces {
           let key = mark_form(piece);
-          let keys: Vec<String> = std::iter::once(key.clone())
-            .chain(group.refmarks.iter().cloned())
-            .collect();
-          if answer(document, &notes, &held, piece, &key, &keys)? {
+          // (keyed by the number of the reference mark that printed it, each once — never by the name's other numbers:
+          // 2508.13181's `Dominik Loroch\IEEEauthorrefmark{2}\IEEEauthorrefmark{1}\textsuperscript{\textsection}`
+          // keys its § by none, and the § stays)
+          let printed_by = refmarks
+            .iter()
+            .position(|(_, glyph)| *glyph == key)
+            .map(|at| refmarks.remove(at).0);
+          let keys: Vec<String> = std::iter::once(key.clone()).chain(printed_by).collect();
+          if answer(document, &notes, &held, &mut spent, piece, &key, &keys)? {
             taken = true;
             continue;
           }
-          // (a run of glued labels: each a held contact's, `$^{ab}$` over `$^a$Univ A`, `$^b$Univ B`, revtex3's; or a
-          // label glued to a note's number, `$^{a1}$` over `$^a$Department …` (hep-ph0011101), the number left)
-          let held_part = |part: &str| held.contains(&mark_form(part));
+          // (a run of glued labels, each a held contact's, `$^{ab}$` over `$^a$Univ A`, `$^b$Univ B`, revtex3's — digits
+          // only under single-digit numbering; or a label glued to a note's number, `$^{a1}$` over `$^a$Department …`
+          // (hep-ph0011101), the number left)
+          let held_part = |part: &str| {
+            let part = mark_form(part);
+            held.iter().flatten().any(|(key, _)| *key == part)
+          };
+          let digits = piece.chars().all(|c| c.is_ascii_digit());
           let glued: Vec<String> = if piece.chars().count() > 1
             && piece.chars().all(char::is_alphanumeric)
+            && (single_digits || !digits)
             && piece.chars().all(|c| held_part(&c.to_string()))
           {
             Vec::new()
@@ -93,32 +146,52 @@ pub(in crate::base_utilities) fn keep_personnames_pure(document: &mut Document) 
   Ok(())
 }
 
-/// Whether `piece` (keyed `key`; `keys` with an author reference mark's numbers, `\IEEEauthorrefmark{4}` printing `§`)
-/// is answered on its creator: a note marked so; a contact keyed so (`held`); or an unmarked note whose text opens with
-/// a copy of it (a legend: `\thanks{*Equal Contribution}`, 1904.03977), which takes it as its `mark` ([`leading_mark`]).
+/// Whether `piece` (keyed `key`; `keys` with the number of the author reference mark that printed it,
+/// `\IEEEauthorrefmark{4}` printing `§`) is answered on its creator: a note marked so; a contact keyed so (`held`, each
+/// contact's keys with the mark each prints, spent per printed mark); or an unmarked note whose text opens with a copy
+/// of it (a legend: `\thanks{*Equal Contribution}`, 1904.03977), which takes it as its `mark` ([`leading_mark`]).
 /// A symbol beside a `\thanks` is no `\thanks`'s mark: the `\thanks` prints its own (`Haoran Li$^{*}$\thanks{…}` prints
 /// "∗†", 2406.11149), the same glyph too (`Ann Able*\thanks{…}` prints "*∗": a note its command marks,
 /// [`MARK_FROM_COUNTER`], answers no typed glyph).
 fn answer(
   document: &mut Document,
   notes: &[Node],
-  held: &HashSet<String>,
+  held: &[Vec<(String, String)>],
+  spent: &mut HashSet<(Answerer, String)>,
   piece: &str,
   key: &str,
   keys: &[String],
 ) -> Result<bool> {
-  if notes.iter().any(|note| {
-    note.get_attribute(MARK_FROM_COUNTER).is_none()
-      && note
+  if let Some(at) = (0..notes.len()).find(|&at| {
+    notes[at].get_attribute(MARK_FROM_COUNTER).is_none()
+      && notes[at]
         .get_attribute("mark")
         .is_some_and(|mark| mark_form(&mark) == key)
+      && !spent.contains(&(Answerer::Note(at), key.to_string()))
   }) {
+    spent.insert((Answerer::Note(at), key.to_string()));
     return Ok(true);
   }
-  if keys.iter().any(|key| held.contains(key)) {
+  // (a contact answers each mark it prints once, by any of its keys: under `∗Univ A` keyed `1` and `∗`, of
+  // `Ann Able$^{*}$\orcidlink{…}\IEEEauthorrefmark{1}`'s two ∗ one, revPUREc q10)
+  let answering = |at: usize| {
+    held[at]
+      .iter()
+      .filter(|(held_key, _)| keys.contains(held_key))
+      .map(|(_, printed)| printed.clone())
+      .collect::<Vec<_>>()
+  };
+  if let Some(at) = (0..held.len()).find(|&at| {
+    answering(at)
+      .iter()
+      .any(|printed| !spent.contains(&(Answerer::Contact(at), printed.clone())))
+  }) {
+    for printed in answering(at) {
+      spent.insert((Answerer::Contact(at), printed));
+    }
     return Ok(true);
   }
-  for note in notes {
+  for (at, note) in notes.iter().enumerate() {
     if note
       .get_attribute("mark")
       .is_some_and(|mark| !mark.trim().is_empty())
@@ -129,10 +202,20 @@ fn answer(
       let mut note = note.clone();
       document.set_attribute(&mut note, "mark", piece)?;
       lead.cut(document);
+      spent.insert((Answerer::Note(at), key.to_string()));
       return Ok(true);
     }
   }
   Ok(false)
+}
+
+/// What answered a mark on a name ([`answer`]): a note or a contact of the creator, by its place among them. Each answers
+/// one printed mark, across the name's runs: `Bob Baker\IEEEauthorrefmark{4}\textsuperscript{\textsection}` under
+/// `\thanks{\IEEEauthorrefmark{4}Equal}` prints "§§", the note's and a typed one.
+#[derive(Clone, Copy, PartialEq, Eq, Hash)]
+enum Answerer {
+  Note(usize),
+  Contact(usize),
 }
 
 /// The runs of letters and of digits `piece` parts into (`a1`: `a`, `1`), each its own mark where one is a label.
@@ -206,7 +289,25 @@ fn contact_keys(contact: &Node) -> Vec<String> {
     keys.extend(mark_pieces(&printed).iter().map(|piece| mark_form(piece)));
   }
   keys.retain(|key| !key.is_empty());
+  keys.sort();
+  keys.dedup();
   keys
+}
+
+/// The glyph each author reference mark of `creator` prints, by its number ([`mark_form`]): the requests' `_refmarkshown`
+/// (`affiliation:1=∗;affiliation:2=†`, `author_macros.rs`' `\lx@sup@request@affiliation`), as
+/// `insert::show_unanswered_marks` reads it.
+fn refmark_glyphs(creator: &Node) -> HashMap<String, String> {
+  creator
+    .get_attribute("_refmarkshown")
+    .unwrap_or_default()
+    .split(';')
+    .filter_map(|pair| {
+      let (label, glyph) = pair.split_once('=')?;
+      let number = label.strip_prefix("affiliation:").unwrap_or(label);
+      Some((mark_form(number), glyph.to_string()))
+    })
+    .collect()
 }
 
 /// The marks of a printed mark run, in order: its items at commas and spaces, out of their brackets (`(a,b,∗)`), each
@@ -258,8 +359,9 @@ struct MarkGroup {
   /// its superscripts and formulas
   sups:     Vec<Node>,
   hand:     Option<(Node, usize)>,
-  /// the author reference marks' numbers its superscripts print (`_refmark`, `relocate::sup_marks`)
-  refmarks: Vec<String>,
+  /// the author reference marks' numbers its superscripts print (`_refmark`, `relocate::sup_marks`), each with the
+  /// glyph its superscript prints where it prints that one mark alone
+  refmarks: Vec<(String, Option<String>)>,
 }
 
 impl MarkGroup {
@@ -396,9 +498,16 @@ fn mark_groups(personname: &Node) -> Vec<MarkGroup> {
         }
         group.printed.push_str(content);
         group.sups.push(sup.clone());
-        if let Some(keys) = sup.get_attribute("_refmark") {
-          group.refmarks.extend(keys.split(',').map(mark_form));
-        }
+        // (its own and those of the superscripts inside it)
+        let mut numbers: Vec<String> = Vec::new();
+        refmark_numbers(sup, &mut numbers);
+        let sole = match (numbers.as_slice(), mark_pieces(content).as_slice()) {
+          ([_], [glyph]) => Some(glyph.clone()),
+          _ => None,
+        };
+        group
+          .refmarks
+          .extend(numbers.into_iter().map(|number| (number, sole.clone())));
       },
       Ink::Text(text) => match hand {
         Some((at, cut)) if at == index => {
@@ -418,6 +527,18 @@ fn mark_groups(personname: &Node) -> Vec<MarkGroup> {
   }
   groups.retain(|group| !group.printed.trim().is_empty());
   groups
+}
+
+/// The author reference marks' numbers `node` and the elements inside it print (`_refmark`), in order.
+fn refmark_numbers(node: &Node, out: &mut Vec<String>) {
+  if let Some(keys) = node.get_attribute("_refmark") {
+    out.extend(keys.split(',').map(mark_form));
+  }
+  for child in node.get_child_nodes() {
+    if child.get_type() == Some(NodeType::ElementNode) {
+      refmark_numbers(&child, out);
+    }
+  }
 }
 
 /// Whether `node` holds ink filled in after the conversion: a cross-reference or a citation of no text yet, whose text
@@ -477,17 +598,15 @@ enum Lead {
 }
 
 impl Lead {
+  /// Takes the copy out, and the font wrappers it empties.
   fn cut(self, document: &mut Document) {
+    let parent = match &self {
+      Lead::Sup(node) | Lead::Text(node, _) => node.get_parent(),
+    };
     match self {
       Lead::Sup(sup) => {
         // (and the space it printed before the text, `$^\dagger$ Also with …`)
-        if let Some(mut text) = sup
-          .get_next_sibling()
-          .filter(|next| next.get_type() == Some(NodeType::TextNode))
-        {
-          let content = text.get_content();
-          let _ = text.set_content(content.trim_start());
-        }
+        trim_space_after(document, &sup);
         document.remove_node(sup);
       },
       Lead::Text(mut text, at) => {
@@ -495,6 +614,7 @@ impl Lead {
         let _ = text.set_content(content[at..].trim_start());
       },
     }
+    drop_emptied_wrappers(document, parent.into_iter().collect());
   }
 }
 

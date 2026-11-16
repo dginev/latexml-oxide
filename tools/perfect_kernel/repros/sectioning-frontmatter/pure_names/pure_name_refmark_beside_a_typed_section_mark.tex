@@ -1,0 +1,25 @@
+% mechanism: an author reference mark's number keys only the mark it printed: a typed mark beside it is no contact's
+% witness:  2508.13181 (`Dominik Loroch\IEEEauthorrefmark{2}\IEEEauthorrefmark{1}\textsuperscript{\textsection}`, two
+%           more names `\IEEEauthorrefmark{1}\textsuperscript{\textsection}`, a body `\footnotetext` marked §); revPURE
+%           probe ieee2
+% oracle:   pdflatex 0 errors; "Ann Able†∗ §, Bob Baker∗ §, and Cy Cole∗" over "† Lab B", "∗ Univ A"; the body
+%           footnote "§ Equal contribution."
+% engines:  rust int/frontmatter fd43c364eb6 = 0 errors; the § of Ann and Bob lost (the run's numbers 1, 2 keyed it,
+%           and affiliation 1 is held)
+% expect:   0 errors, 0 Warnings; † and ∗ consumed by Lab B and Univ A; each § a mark-only note after the name, never
+%           paired with the body footnote; HTML "§ plain" (no note of the block is marked §)
+% status:   RED (int/frontmatter fd43c364eb6) -> GREEN (PUREc; perfect_kernel_batchfmmarks::
+%           name_marks_live_outside_the_personname, perfect_kernel_batchpure::a_reference_marks_number_keys_only_its_own_glyph)
+% preload: ar5iv.sty
+\documentclass[conference]{IEEEtran}
+\begin{document}
+\title{Title}
+\author{\IEEEauthorblockN{Ann Able\IEEEauthorrefmark{2}\IEEEauthorrefmark{1}\textsuperscript{\textsection}, Bob Baker\IEEEauthorrefmark{1}\textsuperscript{\textsection}, and Cy Cole\IEEEauthorrefmark{1}}
+\IEEEauthorblockA{\IEEEauthorrefmark{2}Lab B}
+\IEEEauthorblockA{\IEEEauthorrefmark{1}Univ A}}
+\maketitle
+\begingroup\renewcommand\thefootnote{\textsection}
+\footnotetext{Equal contribution.}
+\endgroup
+Text.
+\end{document}

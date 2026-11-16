@@ -1,0 +1,19 @@
+% mechanism: a contact answers one printed mark across the name's mark runs: an ORCID icon parts the typed ∗ from the
+%            author reference mark printing ∗, and the contact keyed by both the number and its glyph answers only one
+% witness:  revPUREc probe q10 (the opposite order, q9: `\IEEEauthorrefmark{1}\orcidlink{…}$^{*}$`, same oracle)
+% oracle:   pdflatex 0 errors; "Ann Able∗[iD]∗, Bob Baker∗" over "∗ Univ A", the footnote "∗ Equal."
+% engines:  rust fix/pure-names-c 496f6195343 = 0 errors; Ann's typed ∗ lost (the contact answered both)
+% expect:   0 errors, 0 Warnings; one ∗ consumed by Univ A, the other a mark-only note after Ann's name
+% status:   RED (fix/pure-names-c 496f6195343) -> GREEN (PUREd; perfect_kernel_batchfmmarks::
+%           name_marks_live_outside_the_personname, perfect_kernel_batchpure)
+% preload: ar5iv.sty
+\documentclass[conference]{IEEEtran}
+\usepackage{orcidlink}
+\begin{document}
+\title{Title}
+\author{\IEEEauthorblockN{Ann Able$^{*}$\orcidlink{0000-0002-1825-0097}\IEEEauthorrefmark{1}, Bob Baker\IEEEauthorrefmark{1}}
+\IEEEauthorblockA{\IEEEauthorrefmark{1}Univ A}}
+\maketitle
+\begingroup\renewcommand\thefootnote{*}\footnotetext{Equal.}\endgroup
+Text.
+\end{document}

@@ -3,7 +3,10 @@
 use latexml_core::definition::origin::{DefinitionOrigin, OriginGuard};
 
 use crate::{
-  engine::latex_constructs::{after_float, before_xfloat},
+  engine::{
+    base_utilities::MARK_FROM_COUNTER,
+    latex_constructs::{after_float, before_xfloat},
+  },
   float_description::{define_float_description, float_description_tokens},
   package::caption_sty,
   prelude::*,
@@ -310,8 +313,11 @@ yysep={,},notesep={, }}}
     assign_value("lx_acm_author_notes", Stored::Int(n), Some(Scope::Global));
     let mark = acm_note_mark(n + lookup_int("lx_acm_title_notes"))?;
     let mut call = TokenizeInternal!("\\lx@add@thanks").unlist();
+    // (its counter's mark, which no glyph typed on the name is: `Ann Able$^{*}$\authornote{…}` prints "∗∗")
     if let Some(mark) = mark {
-      call.extend(TokenizeInternal!(TeXString::assembled(s!("[mark={{{mark}}}]"))).unlist());
+      call.extend(
+        TokenizeInternal!(TeXString::assembled(s!("[mark={{{mark}}},{MARK_FROM_COUNTER}=true]"))).unlist(),
+      );
     }
     call.push(T_BEGIN!());
     call.extend(note.unlist());
@@ -321,10 +327,11 @@ yysep={,},notesep={, }}}
   });
   // (a bare `\authornotemark` steps the counter for a note of no text: no mark kept, as before)
   DefMacro!("\\authornotemark[]", "\\ifx.#1.\\else\\lx@acm@authornotemark#1\\relax\\fi");
+  // (its counter's mark too, carried onto the copy of the note: `Bob Baker$^{*}$\authornotemark[1]` prints "∗∗")
   DefPrimitive!("\\lx@acm@authornotemark Number", sub[(number)] {
     if let Some(mark) = acm_note_mark(number.value_of())? {
       unread(TokenizeInternal!(TeXString::assembled(s!(
-        "\\lx@annotate@frontmatter{{ltx:creator}}{{ltx:note}}[role=footnotemark,mark={{{mark}}}]{{{mark}}}"
+        "\\lx@annotate@frontmatter{{ltx:creator}}{{ltx:note}}[role=footnotemark,mark={{{mark}}},{MARK_FROM_COUNTER}=true]{{{mark}}}"
       ))));
     }
     Ok(Vec::new())
