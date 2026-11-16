@@ -45,7 +45,8 @@ See \subref{fa}.
   );
 }
 
-/// What a package adds to the hook runs inside the sub-float, in its group: defined there, undefined after the float.
+/// What a package adds to the hook runs inside the sub-float, in its group: defined there, undefined after the
+/// sub-float, before the float's own caption (pdflatex: "[IN]", "Mid: undefined.").
 #[test]
 fn subtype_hook_runs_inside_the_sub_float() {
   let xml = convert(
@@ -53,15 +54,16 @@ fn subtype_hook_runs_inside_the_sub_float() {
 \usepackage{subcaption}
 \makeatletter\g@addto@macro\caption@subtypehook{\def\lxmark{IN}}\makeatother
 \begin{document}
-\begin{figure}\begin{subfigure}{.4\textwidth}[\lxmark]\caption{a}\end{subfigure}\caption{F}\end{figure}
-After: \ifdefined\lxmark defined\else undefined\fi.
+\begin{figure}\begin{subfigure}{.4\textwidth}[\lxmark]\caption{a}\end{subfigure}
+Mid: \ifdefined\lxmark defined\else undefined\fi.
+\caption{F}\end{figure}
 \end{document}",
   );
   assert_element(
     &xml,
     "figure",
     &[r#"xml:id="S0.F1.sf1""#],
-    r#"<figure inlist="lof" xml:id="S0.F1.sf1">
+    r#"<figure class="ltx_figure_panel" inlist="lof" xml:id="S0.F1.sf1">
       <tags>
         <tag><text fontsize="90%">(a)</text></tag>
         <tag role="refnum">1a</tag>
@@ -71,7 +73,12 @@ After: \ifdefined\lxmark defined\else undefined\fi.
       <caption><tag close=" "><text fontsize="90%">(a)</text></tag><text fontsize="90%">a</text></caption>
     </figure>"#,
   );
-  assert!(xml.contains("<p>After: undefined.</p>"), "{xml}");
+  assert_element(
+    &xml,
+    "p",
+    &[r#"class="ltx_figure_panel""#],
+    r#"<p class="ltx_figure_panel">Mid: undefined.</p>"#,
+  );
 }
 
 /// caption.sty:325-330 `\@setcaptionsubtype`: entering a sub-type runs the hook once, and not again inside one
