@@ -91,7 +91,7 @@ fn a_printed_label_legend_is_its_carriers_note() {
 #[test]
 fn a_thanks_no_number_leads_is_a_note() {
   let two = both(repro!("emit_thanks_symbol_led_is_its_carriers_note"));
-  let note = "class=\"ltx_note_frontmatter ltx_thanks_note\" role=\"thanks\"><sup>†</sup> Also with the School of \
+  let note = "class=\"ltx_note_frontmatter ltx_thanks_note\" mark=\"†\" role=\"thanks\">Also with the School of \
               Physics, Univ B.</note>";
   let holders = |xml: &[String]| xml.iter().map(|c| c.contains(note)).collect::<Vec<_>>();
   assert_eq!(holders(&two), [true, true, false], "{two:#?}");
@@ -215,7 +215,9 @@ fn a_name_and_its_note_are_written_once() {
     two[2]
   );
   assert!(
-    two[2].contains("ltx_thanks_correspondence\" role=\"thanks\">Corresponding author</note>"),
+    two[2].contains(
+      "ltx_thanks_correspondence\" mark=\"*\" role=\"thanks\">Corresponding author</note>"
+    ),
     "{}",
     two[2]
   );
@@ -227,7 +229,7 @@ fn a_name_and_its_note_are_written_once() {
     two[0]
   );
   assert_eq!(two, vec![
-    "<creator role=\"author\">\n    <personname>Ann Able</personname>\n    <note class=\"ltx_note_frontmatter ltx_thanks_correspondence\" role=\"thanks\">Corresponding author.</note>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A</contact>\n  </creator>",
+    "<creator role=\"author\">\n    <personname>Ann Able</personname>\n    <note class=\"ltx_note_frontmatter ltx_thanks_correspondence\" mark=\"*\" role=\"thanks\">Corresponding author.</note>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A</contact>\n  </creator>",
     "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Bob Baker</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ B</contact>\n  </creator>"
   ]);
 }

@@ -613,8 +613,8 @@ fn marked_list_cut_as_its_binding_declares() {
         &["Cy Cole", "affiliation=† Univ A (A*STAR), Town A"],
       ],
       &[
-        "note:thanks=*equally contributed",
-        "note:thanks=*equally contributed",
+        "note:thanks=equally contributed",
+        "note:thanks=equally contributed",
       ],
     ),
     (
@@ -624,7 +624,7 @@ fn marked_list_cut_as_its_binding_declares() {
         "Cy Cole †",
         "affiliation=School A , Univ A , Town A",
       ]],
-      &["note:thanks=† Corresponding Author. E-mail: cy@a.edu"],
+      &["note:thanks=Corresponding Author. E-mail: cy@a.edu"],
     ),
     (
       repro!("ieee_marked_list_textsuperscript_note_tail"),
@@ -711,9 +711,9 @@ fn marked_list_cut_as_its_binding_declares() {
         ],
       ],
       &[
-        "note:thanks=* Equal Contribution",
-        "note:thanks=* Equal Contribution",
-        "note:thanks=† Senior Author",
+        "note:thanks=Equal Contribution",
+        "note:thanks=Equal Contribution",
+        "note:thanks=Senior Author",
       ],
     ),
     // (the blocks of a `\thanks` after the names, the note before them the document's — 1405.1593, red on P4b2: Bob
@@ -1005,9 +1005,9 @@ fn marked_list_cut_as_its_binding_declares() {
         &["Cy Cole 3 ∗", "affiliation=3 Univ C, Ville"],
       ],
       &[
-        "note:thanks=∗ Equal contribution",
-        "note:thanks=∗ Equal contribution",
-        "note:thanks=∗ Equal contribution",
+        "note:thanks=Equal contribution",
+        "note:thanks=Equal contribution",
+        "note:thanks=Equal contribution",
       ],
     ),
   ];

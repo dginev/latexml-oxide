@@ -46,7 +46,7 @@ fn author_thanks_inside_a_mark_keeps_the_mark_and_the_note() {
     repro!("sectioning-frontmatter/author_thanks_inside_a_mark_keeps_the_mark_and_the_note.tex"),
     &[
       r#"<creator role="author"><personname>Ann Alpha<sup xml:id="id1">1</sup></personname></creator>"#,
-      r#"<creator before="  " role="author"><personname>Bob Beta<sup xml:id="id2">1,2</sup></personname><note class="ltx_note_frontmatter ltx_thanks_contribution" role="thanks" xml:id="id3">Work done during an internship.</note></creator>"#,
+      r#"<creator before="  " role="author"><personname>Bob Beta<sup xml:id="id2">1,2</sup></personname><note class="ltx_note_frontmatter ltx_thanks_contribution" mark="*" role="thanks" xml:id="id3">Work done during an internship.</note></creator>"#,
       r#"<creator before="  " role="author"><personname>Cy Gamma<sup xml:id="id4">1</sup></personname></creator>"#,
     ],
   );
@@ -66,8 +66,8 @@ fn thanks_institution_with_erc_in_a_word_is_no_funding() {
 Body.
 \end{document}",
     &[
-      r#"<creator role="author"><personname>Ann Able</personname><note class="ltx_note_frontmatter ltx_thanks_note" role="thanks" xml:id="id1">Laboratory of Machine Perception, Peking University</note></creator>"#,
-      r#"<creator before="  " role="author"><personname>Bob Baker</personname><note class="ltx_note_frontmatter ltx_thanks_funding" role="thanks" xml:id="id2">Supported by NSF grant 123.</note></creator>"#,
+      r#"<creator role="author"><personname>Ann Able</personname><note class="ltx_note_frontmatter ltx_thanks_note" mark="*" role="thanks" xml:id="id1">Laboratory of Machine Perception, Peking University</note></creator>"#,
+      r#"<creator before="  " role="author"><personname>Bob Baker</personname><note class="ltx_note_frontmatter ltx_thanks_funding" mark="†" role="thanks" xml:id="id2">Supported by NSF grant 123.</note></creator>"#,
     ],
   );
 }

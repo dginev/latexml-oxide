@@ -50,7 +50,7 @@ fn a_link_filling_a_name_slot_is_the_name() {
       repro!("emit_a_link_filling_a_name_slot_is_the_name"),
       &["Ann Able", "Bob Baker", "Cy Cole"][..],
       &[
-        "<creator role=\"author\">\n    <personname><ref class=\"ltx_href\" href=\"http://ann.org\">Ann Able</ref></personname>\n    <note class=\"ltx_note_frontmatter ltx_thanks_funding\" role=\"thanks\">Supported by X.</note>\n  </creator>",
+        "<creator role=\"author\">\n    <personname><ref class=\"ltx_href\" href=\"http://ann.org\">Ann Able</ref></personname>\n    <note class=\"ltx_note_frontmatter ltx_thanks_funding\" mark=\"*\" role=\"thanks\">Supported by X.</note>\n  </creator>",
         "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname><ref class=\"ltx_href\" href=\"http://bob.org/home\">Bob Baker</ref></personname>\n  </creator>",
         "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Cy Cole</personname>\n    <contact class=\"ltx_author_line\" name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ B, City</contact>\n  </creator>",
       ][..],
@@ -59,7 +59,12 @@ fn a_link_filling_a_name_slot_is_the_name() {
       repro!("emit_a_link_filling_a_call_is_the_name"),
       &["Ann Able", "Bob Baker"][..],
       &[
-        "<creator role=\"author\">\n    <personname><ref class=\"ltx_href\" href=\"ann.able@a.org\">Ann Able</ref></personname>\n    <note class=\"ltx_note_frontmatter ltx_thanks_note\" role=\"thanks\">This work was done at Univ A.</note>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A, Town</contact>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ B, City</contact>\n  </creator>",
+        "<creator role=\"author\">\n    <personname><ref class=\"ltx_href\" \
+         href=\"ann.able@a.org\">Ann Able</ref></personname>\n    <note \
+         class=\"ltx_note_frontmatter ltx_thanks_note\" mark=\"*\" role=\"thanks\">This work was \
+         done at Univ A.</note>\n    <contact name=\"Affiliation:\u{a0}\" \
+         role=\"affiliation\">Univ A, Town</contact>\n    <contact name=\"Affiliation:\u{a0}\" \
+         role=\"affiliation\">Univ B, City</contact>\n  </creator>",
         "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Bob Baker</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ B, City</contact>\n  </creator>",
       ][..],
     ),

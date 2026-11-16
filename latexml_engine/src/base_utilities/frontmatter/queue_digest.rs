@@ -126,7 +126,17 @@ pub(in crate::base_utilities) fn lift_notes_beside(
     return Ok(());
   }
   let mut anchor = node.clone();
+  let contact = node.get_name() == "contact";
   for mut note in document.findnodes(".//ltx:note[not(ancestor::ltx:note)]", Some(node)) {
+    // (a mark alone that leads a contact is the mark the reading paired the entry by, `mark:footnote`; `insert` drops it
+    // where a note carries its mark: revtex's `\affiliation{\footnotemark[1]Univ A}`, 1607.07280 — DG ruling 3, no
+    // institution marks)
+    if contact
+      && note.get_attribute("role").as_deref() == Some("footnotemark")
+      && leads(node, &note)
+    {
+      note.set_attribute(LEADS_CONTACT, "true")?;
+    }
     let mut holder = note.get_parent();
     let mut before = note.get_prev_sibling();
     note.unlink();
@@ -145,6 +155,35 @@ pub(in crate::base_utilities) fn lift_notes_beside(
     }
   }
   Ok(())
+}
+
+/// A footnote mark lifted from the head of its contact ([`lift_notes_beside`]): the entry's own mark, which the Link step
+/// drops (`insert::link_marked_notes`).
+pub(in crate::base_utilities) const LEADS_CONTACT: &str = "_leads_contact";
+
+/// Whether nothing printed precedes `target` inside `container` (only spaces, and elements holding nothing else).
+fn leads(container: &Node, target: &Node) -> bool {
+  fn walk(node: &Node, target: &Node) -> Option<bool> {
+    for child in node.get_child_nodes() {
+      if child == *target {
+        return Some(true);
+      }
+      match child.get_type() {
+        Some(NodeType::TextNode) if !child.get_content().trim().is_empty() => return Some(false),
+        Some(NodeType::ElementNode) => {
+          if let Some(found) = walk(&child, target) {
+            return Some(found);
+          }
+          if !child.get_content().trim().is_empty() {
+            return Some(false);
+          }
+        },
+        _ => {},
+      }
+    }
+    None
+  }
+  walk(container, target).unwrap_or(false)
 }
 
 /// The text a lifted note or wrapper stood between is one text again (`Kent-Andre Mardal\footnotemark[1]

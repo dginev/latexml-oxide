@@ -69,7 +69,7 @@ fn author_mark_then_space_separates_names() {
       false,
       "Bob Baker",
       &format!(
-        "<note class=\"ltx_note_frontmatter ltx_thanks_contribution\" role=\"thanks\" xml:id=\"id1\">Equal \
+        "<note class=\"ltx_note_frontmatter ltx_thanks_contribution\" mark=\"*\" role=\"thanks\" xml:id=\"id1\">Equal \
          contribution.</note>{}",
         univ("B")
       ),
@@ -227,12 +227,14 @@ fn author_prefix_marks_then_space_separate_names() {
 #[test]
 fn author_lapped_comma_before_marks() {
   let xml = clean(repro!("author_lapped_comma_before_marks.tex"));
+  // (each `\footnote` the marked `\thanks` note it is in article's title, OD #1053)
   assert_creators(&xml, &[
     "<creator role=\"author\"><personname>Ann\u{a0}<text font=\"smallcaps\" xml:id=\"id1\">Able</text><sup \
-     xml:id=\"id2\">1</sup></personname><contact name=\"Note:\u{a0}\" role=\"note\">E-mail: aa@x.edu</contact></creator>",
+     xml:id=\"id2\">1</sup></personname><note class=\"ltx_note_frontmatter ltx_thanks_note\" mark=\"*\" \
+     role=\"thanks\" xml:id=\"id3\">E-mail: aa@x.edu</note></creator>",
     "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob\u{a0}<text font=\"smallcaps\" \
-     xml:id=\"id3\">Baker</text><sup xml:id=\"id4\">2</sup></personname><contact name=\"Note:\u{a0}\" \
-     role=\"note\">E-mail: bb@y.edu</contact></creator>",
+     xml:id=\"id4\">Baker</text><sup xml:id=\"id5\">2</sup></personname><note class=\"ltx_note_frontmatter \
+     ltx_thanks_note\" mark=\"†\" role=\"thanks\" xml:id=\"id6\">E-mail: bb@y.edu</note></creator>",
   ]);
 }
 
@@ -254,7 +256,7 @@ fn author_grouped_marks_then_space_separate_names() {
   };
   assert_creators(&xml, &[
     "<creator role=\"author\"><personname>Ann Able<sup xml:id=\"id1\">1</sup></personname><note \
-       class=\"ltx_note_frontmatter ltx_thanks_contribution\" role=\"thanks\" xml:id=\"id2\">Equal \
+       class=\"ltx_note_frontmatter ltx_thanks_contribution\" mark=\"*\" role=\"thanks\" xml:id=\"id2\">Equal \
        contribution.</note></creator>",
     &plain(false, "Bob Baker", "2", "id3"),
     &plain(false, "Cat Cole", "2", "id4"),

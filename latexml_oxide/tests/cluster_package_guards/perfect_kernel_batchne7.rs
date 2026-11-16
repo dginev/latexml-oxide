@@ -91,7 +91,7 @@ fn tikz_badges_in_frontmatter_contacts_keep_svg_ids() {
       "https://example.org/a",
     ),
     (
-      r#"<note class="ltx_note_frontmatter ltx_thanks_note" role="thanks" xml:id="id1">"#,
+      r#"<note class="ltx_note_frontmatter ltx_thanks_note" mark="*" role="thanks" xml:id="id1">"#,
       "https://example.org/b",
     ),
   ] {

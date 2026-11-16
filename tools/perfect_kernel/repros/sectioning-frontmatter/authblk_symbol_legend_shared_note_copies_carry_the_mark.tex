@@ -1,0 +1,25 @@
+% mechanism: authblk `\affil[*]{These authors contributed equally…}` (`label={*},_labelprints`) is cloned into every
+%   carrier by relocate.rs `relocate_annotations` (Perl Base_Utility.pool.ltxml:895-901 clones too) and each copy is a
+%   thanks note by `insert::kind_legend_contacts`: per-carrier copies, each with `mark` (DG ruling 1 of 2026-11-16; the
+%   XSLT prints the note once)
+% witness: 2606.00446 (`\author[1,*,§]{Jared Benson}`, `\author[1,*]{Sanghyeok Park}`)
+% oracle:  pdflatex 0 errors: "Ann Able1,*, Bob Baker1,*, and Cat Cole1", "1 Univ A, Town", "* These authors
+%   contributed equally to this work." once
+% engines: rust REGFIX = 0 errors; Able and Baker each hold note mark="*" ltx_thanks_contribution; perl 0.8.8 = an
+%   affiliation contact per carrier
+% expect:  0 errors 0 warnings; Able's and Baker's note mark="*", the same text; Cole none
+% status:  GREEN (REGFIX, ruling 1: the copies stay; guard perfect_kernel_batch103c::an_affiliation_that_is_a_legend_is_its_carriers_note)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{authblk}
+\title{T}
+\author[1,*]{Ann Able}
+\author[1,*]{Bob Baker}
+\author[1]{Cat Cole}
+\affil[1]{Univ A, Town}
+\affil[*]{These authors contributed equally to this work.}
+\date{}
+\begin{document}
+\maketitle
+Text.
+\end{document}

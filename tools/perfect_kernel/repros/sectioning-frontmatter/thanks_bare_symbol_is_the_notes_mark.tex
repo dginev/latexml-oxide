@@ -1,0 +1,20 @@
+% mechanism: a `\thanks` whose text opens with a footnote symbol written bare (`*Corresponding author.`) under a name
+%   showing that symbol after its superscript (`Bob Baker$^{1}$*`): the reading places it on that name by the symbol
+%   (`assoc.label`), which is its mark — the emitter's `note_call` writes it, `insert::strip_bare_mark` takes the copy
+%   out of its text (the mark rule; IEEEtran's `\thanks` prints no mark of its own, IEEEtran.cls:4757-4758)
+% witness: 2606.00397 (ieeeconf: `Saravana Prashanth Murali Babu$^{1}$*`, `\thanks{*Authors to whom correspondence
+%   should be addressed.}`)
+% oracle:  pdflatex 0 errors: "Ann Able1, Bob Baker1*", footnotes "1Univ A, Town", "*Corresponding author."
+% engines: rust REGFIX = Bob's note ltx_thanks_correspondence with no `mark` reading "*Corresponding author."
+% expect:  0 errors 0 warnings; Bob's note mark="*" "Corresponding author."
+% status:  RED (REGFIX) -> GREEN (perfect_kernel_batchshmark::a_notes_mark_is_never_in_its_text)
+% preload: ar5iv.sty
+\documentclass[conference]{IEEEtran}
+\begin{document}
+\title{T}
+\author{Ann Able$^{1}$, Bob Baker$^{1}$*%
+\thanks{$^{1}$Univ A, Town}%
+\thanks{*Corresponding author.}}
+\maketitle
+Text.
+\end{document}

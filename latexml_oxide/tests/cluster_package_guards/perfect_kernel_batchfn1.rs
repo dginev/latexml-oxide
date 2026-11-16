@@ -142,8 +142,9 @@ fn footnote_in_the_author_is_the_creators_note_contact() {
     repro!("author_footnote_in_the_name_is_the_creators_note.tex"),
     0,
     &[
-      "<creator role=\"author\"><personname>Ann Able</personname><contact name=\"Note:\u{a0}\" \
-       role=\"note\">Note A.</contact></creator>"
+      "<creator role=\"author\"><personname>Ann Able</personname><note \
+       class=\"ltx_note_frontmatter ltx_thanks_note\" mark=\"*\" role=\"thanks\">Note \
+       A.</note></creator>"
         .to_string(),
       "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker</personname></creator>".to_string(),
     ],

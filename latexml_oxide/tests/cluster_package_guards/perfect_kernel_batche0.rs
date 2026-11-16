@@ -994,6 +994,9 @@ const API_KEYS_OUTSIDE_PERLS: &[(&str, usize)] = &[
   ("[accumulate] package/ieeetran_cls.rs", 1),
   ("[accumulate] package/ims_support_sty.rs", 1),
   ("[mark] lmcs_cls.rs", 1),
+  // (acmart's `\authornote` and `\authornotemark[n]`: the note's printed mark, the `ltx:note` schema attribute Perl's
+  // `\lx@note` writes too, latex_constructs.pool.ltxml:461 — OD #1053, the mark rule)
+  ("[mark] package/acmart_cls.rs", 1),
   ("[mark] package/iopart_support_sty.rs", 1),
   ("_answers= base_utilities/defs/frontmatter_fields.rs", 1),
   // (P28m3: a new key, distinct from `\lx@sup@setlabel@affiliation`'s `_bymark` (revP28m3): the mark an address under a
@@ -1085,6 +1088,11 @@ const API_KEYS_OUTSIDE_PERLS: &[(&str, usize)] = &[
     1,
   ),
   ("const _latecall base_utilities/frontmatter/insert.rs", 1),
+  // (a mark that led an affiliation, an internal attribute until `insert::drop_linking_marks` drops it: OD #1053)
+  (
+    "const _leads_contact base_utilities/frontmatter/queue_digest.rs",
+    1,
+  ),
   ("const _linefirst base_utilities/frontmatter/insert.rs", 1),
   ("const _linelist base_utilities/frontmatter/insert.rs", 1),
   ("const _linemark base_utilities/frontmatter/insert.rs", 1),
@@ -1093,6 +1101,10 @@ const API_KEYS_OUTSIDE_PERLS: &[(&str, usize)] = &[
     1,
   ),
   ("const _linklabel base_utilities/frontmatter/insert.rs", 1),
+  // (SHMARKb, 0 -> 1: a note whose mark the emitter read off the bare symbol its text opens with, the copy
+  // `insert::strip_bare_mark` takes out — never one a class prints beside its own text, review revSHMARK S2. Perl's API
+  // has no key for "the mark is the text's own"; internal, never written out: OD #1053)
+  ("const _markintext base_utilities/frontmatter/insert.rs", 1),
   // (LO2, 0 -> 1: an emitted entry's first mark read, a fact kept on its pending entry as Perl keeps its labels there
   // (Base_Utility.pool.ltxml:502-508), where LO1 kept a State flag; internal, never written out)
   ("const _markread base_utilities/defs/author_macros.rs", 1),
@@ -2272,6 +2284,12 @@ const PASSES_AFTER_THE_EMITTER: &[(&str, PassMay)] = &[
   // (the URL part moves a link to the block: Z9's; the grade part is a kind)
   ("kind_link_and_grade_contacts", PassMay::OwnerDebt),
   ("drop_repeated_contacts", PassMay::Drop),
+  // (the mark rule, OD #1053: a note's mark lifted out of its text or its copy there dropped; an affiliation's linking
+  // mark, repeating a note's, dropped; a mark alone on a name filled with the text of the note it marks, as Perl's
+  // `relocateFootnote` fills one — the name holds it already)
+  ("mark_creator_notes", PassMay::ChangeText),
+  ("drop_linking_marks", PassMay::Drop),
+  ("link_marked_notes", PassMay::ChangeText),
   ("flag_merged_creators", PassMay::ChangeNothing),
   ("keep_unclaimed_net_notes", PassMay::Drop),
   // (the content invariant on the placed output, under `=2`: it counts, N2)

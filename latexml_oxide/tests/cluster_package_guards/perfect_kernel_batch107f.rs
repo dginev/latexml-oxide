@@ -68,7 +68,7 @@ fn a_role_tag_after_an_address_is_its_owners_note() {
 fn a_held_correspondence_note_keeps_the_email_label() {
   assert_eq!(
     converted(repro!("email_label_correspondence_beside_thanks_note"), 0),
-    r##"<title>T</title> <creator role="author"> <personname>Ann Able</personname> <note class="ltx_note_frontmatter ltx_thanks_correspondence" role="thanks" xml:id="id1">To whom correspondence should be addressed.</note> <contact class="ltx_author_line" name="Affiliation: " role="affiliation">Univ A, Town</contact> <contact class="ltx_author_line" name="Corresponding author: " role="email">aable@a.edu</contact> </creator> <creator before=" " role="author"> <personname>Bob Baker</personname> <contact class="ltx_author_line" name="Affiliation: " role="affiliation">Univ A, Town</contact> </creator> <para xml:id="p1"> <p xml:id="p1.1">Text.</p> </para>"##
+    r##"<title>T</title> <creator role="author"> <personname>Ann Able</personname> <note class="ltx_note_frontmatter ltx_thanks_correspondence" mark="*" role="thanks" xml:id="id1">To whom correspondence should be addressed.</note> <contact class="ltx_author_line" name="Affiliation: " role="affiliation">Univ A, Town</contact> <contact class="ltx_author_line" name="Corresponding author: " role="email">aable@a.edu</contact> </creator> <creator before=" " role="author"> <personname>Bob Baker</personname> <contact class="ltx_author_line" name="Affiliation: " role="affiliation">Univ A, Town</contact> </creator> <para xml:id="p1"> <p xml:id="p1.1">Text.</p> </para>"##
   );
 }
 

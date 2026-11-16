@@ -1,0 +1,26 @@
+% mechanism: REVTeX 4.0 prints a name's `\footnote` with the title's `\frontmatter@thefootnote` symbols (revtex4.cls:4729),
+%   at a counter its `\thanks`, `\email` and `\altaffiliation` step too (`\frontmatter@footnote`, revtex4.cls:4558-4583),
+%   which the reading does not count: an unnumbered one keeps Perl's `role=note` contact, no mark (fail-safe, DG
+%   2026-11-16: a wrong glyph is worse than none). A given number (`\footnote[2]`) prints its own symbol: marked so
+%   (`Event::given_number`; 1607.07280's shape is `revtex_affiliation_footnotemark_link_is_no_note`)
+% witness: review revSHMARKb blocker (r_40.tex, r_40e.tex, r_40n.tex, r_40two.tex); 1607.07280
+% oracle:  pdflatex 0 errors: "Ann Able∗", "Bob Baker†", footnotes "Visiting Univ C.", "Equal contribution."; with
+%   `\email{ann@a.edu}` for the `\thanks` the same ("Electronic address: ann@a.edu"); with neither "Bob Baker∗"; two
+%   footnotes "Bob Baker∗†"; with `\footnote[2]{Visiting …}` "Bob Baker†"
+% engines: rust SHMARKb = Bob's note mark="*" (the PDF prints †); REGFIX = Bob's note contact
+% expect:  0 errors 0 warnings; Bob's `role=note` contact "Visiting Univ C.", no creator note; with `\footnote[2]` Bob's
+%   note mark="†"
+% status:  RED (SHMARKb) -> GREEN (perfect_kernel_batchshmark::a_thanks_note_carries_the_mark_its_title_prints)
+% preload: ar5iv.sty
+\documentclass[aps,prl,preprint]{revtex4}
+\begin{document}
+\title{A Title}
+\author{Ann Able}
+\thanks{Equal contribution.}
+\affiliation{Univ A}
+\author{Bob Baker\footnote{Visiting Univ C.}}
+\affiliation{Univ B}
+\begin{abstract}Abs.\end{abstract}
+\maketitle
+Body\footnote{body note}.
+\end{document}

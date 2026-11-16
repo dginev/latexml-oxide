@@ -1,0 +1,17 @@
+% mechanism: inside article's `\maketitle` an author's `\footnote` is `\thanks` (article.cls:241 `\let\footnote\thanks`):
+%   it prints the title's `\@fnsymbol` mark, so it is the marked thanks note `\thanks` makes (`\lx@title@footnote`, emit.rs
+%   `note_call`), where Perl and REGFIX kept a `contact role=note` (Base_Utility.pool.ltxml:663); a title page's
+%   (`titlepage`) marks are the body's arabic ones, which the observer does not read: no mark there
+% witness: synthetic; 1607.07280's revtex4 name `\footnote` (REVTeX's `\frontmatter@thefootnote`)
+% oracle:  pdflatex 0 errors: "Ann Able∗  Bob Baker", "∗ Univ X"
+% engines: rust REGFIX = Ann's `contact role=note` "Univ X"
+% expect:  0 errors 0 warnings; Ann's note role=thanks mark="*" "Univ X"
+% status:  RED (REGFIX) -> GREEN (perfect_kernel_batchshmark::a_mark_on_a_name_is_a_copy_of_the_note_it_marks)
+% preload: ar5iv.sty
+\documentclass{article}
+\title{T}
+\author{Ann Able\footnote{Univ X} \and Bob Baker}
+\begin{document}
+\maketitle
+Text.
+\end{document}

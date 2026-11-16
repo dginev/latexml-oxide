@@ -1,0 +1,23 @@
+% mechanism: three symbol legends on one line (`*` Equal contribution, `+` Core contributor, `†` Corresponding author)
+%   under a kernel `\author` block: each its carriers' note, a copy per carrier (relocate.rs), each with its mark and
+%   the `\textsuperscript{\textbf{*}}` not repeated in its text (`insert::kind_legend_contacts`, `mark_creator_notes`)
+% witness: 2407.07614 (`He\textsuperscript{1,\textbf{*}}`, `\textsuperscript{2,+}`, `\textsuperscript{1,\textbf{\textdagger}}`)
+% oracle:  pdflatex 0 errors: "Ann Able1,*, Bob Baker2,*, Cat Cole2,+, Dan Dorn1,+, Eve Ezra1,†", "1 Univ A 2 Univ B",
+%   "* Equal contribution  + Core contributor  † Corresponding author", each once
+% engines: rust REGFIX = 0 errors, the notes marked, each text opening with its bold mark
+% expect:  0 errors 0 warnings; Able, Baker mark="*", Cole, Dorn mark="+", Ezra mark="†", no mark in any text
+% status:  GREEN (REGFIX marks; the text opening with the mark is the batch's: guard
+%   perfect_kernel_batchshmark::a_notes_mark_is_never_in_its_text covers the shape)
+% preload: ar5iv.sty
+\documentclass{article}
+\title{T}
+\author{Ann Able\textsuperscript{1,\textbf{*}}, Bob Baker\textsuperscript{2,\textbf{*}}, Cat Cole\textsuperscript{2,+},
+Dan Dorn\textsuperscript{1,+}, Eve Ezra\textsuperscript{1,\textbf{\textdagger}} \\
+\textsuperscript{1}Univ A~~~~\textsuperscript{2}Univ B \\
+\small \textsuperscript{\textbf{*}}Equal contribution~~~~ \small \textsuperscript{\textbf{+}}Core contributor~~~~
+\small \textsuperscript{\textbf{\textdagger}}Corresponding author}
+\date{}
+\begin{document}
+\maketitle
+Text.
+\end{document}

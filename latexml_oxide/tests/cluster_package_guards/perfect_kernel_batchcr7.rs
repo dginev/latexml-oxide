@@ -66,9 +66,10 @@ fn a_counter_decline_writes_the_block_as_perl_splits_it() {
     creator_elements(&xml),
     [
       "<creator role=\"author\"><personname>Ann Able</personname><note class=\"ltx_note_frontmatter \
-       ltx_thanks_note\" role=\"thanks\" xml:id=\"id1\">First.</note></creator>",
-      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker</personname><contact \
-       name=\"Note:\u{a0}\" role=\"note\">Work done at X.</contact></creator>",
+       ltx_thanks_note\" mark=\"*\" role=\"thanks\" xml:id=\"id1\">First.</note></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob \
+       Baker</personname><note class=\"ltx_note_frontmatter ltx_thanks_note\" mark=\"‡\" \
+       role=\"thanks\" xml:id=\"id2\">Work done at X.</note></creator>",
     ],
     "{xml}"
   );
@@ -96,8 +97,9 @@ fn a_definition_decline_writes_the_block_as_perl_splits_it() {
   assert_eq!(
     creator_elements(&xml),
     [
-      "<creator role=\"author\"><personname>Ann Able</personname><contact name=\"Note:\u{a0}\" \
-       role=\"note\">Zebra University.</contact></creator>",
+      "<creator role=\"author\"><personname>Ann Able</personname><note \
+       class=\"ltx_note_frontmatter ltx_thanks_note\" mark=\"*\" role=\"thanks\" \
+       xml:id=\"id1\">Zebra University.</note></creator>",
       "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker</personname></creator>",
     ],
     "{xml}"
@@ -119,9 +121,17 @@ fn a_declined_block_with_marks_takes_perls_marks_branch() {
   );
   assert_eq!(creators(&xml), [
     row(&["Ann Able", "affiliation=Univ X, Dept Y"]),
-    row(&["Bob Baker", "note=Zebra note.", "affiliation=Univ Z"]),
+    row(&["Bob Baker", "affiliation=Univ Z"]),
     row(&["Cat Cole", "affiliation=Univ X, Dept Y"]),
   ]);
+  // (the name's `\footremember` note, the `\thanks` note it is in article's title, its mark printed: OD #1053)
+  assert_eq!(
+    xml
+      .matches(r#"mark="*" role="thanks" xml:id="id1">Zebra note.</note>"#)
+      .count(),
+    1,
+    "{xml}"
+  );
 }
 
 /// Perl's split cuts at the comma before the `\\` lines, so `Ann Able\footremember…\\ Dept of Physics, Univ X, City \and
@@ -132,13 +142,17 @@ fn a_split_keeps_the_commas_of_its_lines() {
   let (log, xml) = run(repro!("cr7_split_lines_keep_commas"));
   assert_eq!((error_count(&log), warning_count(&log)), (0, 1), "{log}");
   assert_eq!(creators(&xml), [
-    row(&[
-      "Ann Able",
-      "note=Zebra note.",
-      "affiliation=Dept of Physics, Univ X, City"
-    ]),
+    row(&["Ann Able", "affiliation=Dept of Physics, Univ X, City"]),
     row(&["Bob Baker", "affiliation=Univ Y"]),
   ]);
+  // (the name's `\footremember` note, the `\thanks` note it is in article's title, its mark printed: OD #1053)
+  assert_eq!(
+    xml
+      .matches(r#"mark="*" role="thanks" xml:id="id1">Zebra note.</note>"#)
+      .count(),
+    1,
+    "{xml}"
+  );
 }
 
 /// A split whose creators are the names the reading read, one for one, gives each name its own label: revtex's
@@ -166,9 +180,10 @@ fn a_split_at_a_linebreak_option_leaves_no_option_text() {
   assert_eq!(
     creator_elements(&xml),
     [
-      "<creator role=\"author\"><personname>Ann Able</personname><contact name=\"Note:\u{a0}\" \
-       role=\"note\">Zebra note.</contact><contact class=\"ltx_author_line\" name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ \
-       X</contact></creator>",
+      "<creator role=\"author\"><personname>Ann Able</personname><note \
+       class=\"ltx_note_frontmatter ltx_thanks_note\" mark=\"*\" role=\"thanks\" \
+       xml:id=\"id1\">Zebra note.</note><contact class=\"ltx_author_line\" \
+       name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ X</contact></creator>",
       "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker</personname><contact class=\"ltx_author_line\" \
        name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ X</contact></creator>",
     ],
@@ -187,9 +202,10 @@ fn a_line_of_no_mark_cut_at_and_starts_an_author() {
   assert_eq!(
     creator_elements(&xml),
     [
-      "<creator role=\"author\"><personname>Ann Able</personname><contact name=\"Note:\u{a0}\" \
-       role=\"note\">Zebra note.</contact><contact class=\"ltx_author_line\" name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ \
-       X</contact></creator>",
+      "<creator role=\"author\"><personname>Ann Able</personname><note \
+       class=\"ltx_note_frontmatter ltx_thanks_note\" mark=\"*\" role=\"thanks\" \
+       xml:id=\"id1\">Zebra note.</note><contact class=\"ltx_author_line\" \
+       name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ X</contact></creator>",
       "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker</personname></creator>",
     ],
     "{xml}"
@@ -238,10 +254,18 @@ fn a_line_started_at_and_is_cut_at_its_commas() {
   let (log, xml) = run(repro!("cr7c_and_line_comma_cut"));
   assert_eq!((error_count(&log), warning_count(&log)), (0, 1), "{log}");
   assert_eq!(creators(&xml), [
-    row(&["Ann Able", "note=Zebra note.", "affiliation=Univ X"]),
+    row(&["Ann Able", "affiliation=Univ X"]),
     row(&["Bob Baker"]),
     row(&["Carl Cole"]),
   ]);
+  // (the name's `\footremember` note, the `\thanks` note it is in article's title, its mark printed: OD #1053)
+  assert_eq!(
+    xml
+      .matches(r#"mark="*" role="thanks" xml:id="id1">Zebra note.</note>"#)
+      .count(),
+    1,
+    "{xml}"
+  );
 }
 
 /// llncs `\author{Ann Able\thanks{Corresponding author} \and Bob Baker\thanks{Univ Y.}\addtocounter{footnote}{-1}…
@@ -319,17 +343,16 @@ fn a_split_giving_a_note_to_a_name_not_printing_its_mark_keeps_the_block_whole()
   );
   assert_eq!(
     creator_elements(&xml),
-    ["<creator role=\"author\">\
-       <personname>Ann Able<sup xml:id=\"id1\">∗</sup>, Bob Baker, Carl Cole<sup xml:id=\"id2\">\
-       <text font=\"italic\" xml:id=\"id2.1\">†</text></sup><break/>\
-       <text font=\"italic\" xml:id=\"id3\">Univ X</text></personname>\
-       <note class=\"ltx_note_frontmatter ltx_thanks_note\" role=\"thanks\" xml:id=\"id4\">\
-       <sup xml:id=\"id4.1\">∗</sup>Permanent address: Univ Z.</note>\
-       <note class=\"ltx_note_frontmatter ltx_thanks_correspondence\" role=\"thanks\" xml:id=\"id5\">\
-       <sup xml:id=\"id5.1\"><text font=\"italic\" xml:id=\"id5.1.1\">†</text>\
-       </sup> Corresponding author.</note>\
-       <note class=\"ltx_note_frontmatter ltx_thanks_note\" role=\"thanks\" xml:id=\"id6\">Visiting.</note>\
-       </creator>",],
+    [
+      "<creator role=\"author\"><personname>Ann Able<sup xml:id=\"id1\">∗</sup>, Bob Baker, Carl \
+      Cole<sup xml:id=\"id2\"><text font=\"italic\" xml:id=\"id2.1\">†</text></sup><break/><text \
+      font=\"italic\" xml:id=\"id3\">Univ X</text></personname><note class=\"ltx_note_frontmatter \
+      ltx_thanks_note\" mark=\"*\" role=\"thanks\" xml:id=\"id4\">Permanent address: Univ \
+      Z.</note><note class=\"ltx_note_frontmatter ltx_thanks_correspondence\" mark=\"†\" \
+      role=\"thanks\" xml:id=\"id5\">Corresponding author.</note><note \
+      class=\"ltx_note_frontmatter ltx_thanks_note\" mark=\"†\" role=\"thanks\" \
+      xml:id=\"id6\">Visiting.</note></creator>",
+    ],
     "{xml}"
   );
 }
@@ -357,8 +380,8 @@ fn a_split_making_an_address_line_a_creator_keeps_the_block_whole() {
        <text font=\"italic\" xml:id=\"id5\">Univ X, Town<break/></text> <sup xml:id=\"id6\">\
        <text font=\"italic\" xml:id=\"id6.1\">b</text></sup>\
        <text font=\"italic\" xml:id=\"id7\">Univ Y, City</text></personname>\
-       <note class=\"ltx_note_frontmatter ltx_thanks_correspondence\" role=\"thanks\" xml:id=\"id8\">Corresponding author.</note>\
-       <note class=\"ltx_note_frontmatter ltx_thanks_note\" role=\"thanks\" xml:id=\"id9\">Visiting.</note>\
+       <note class=\"ltx_note_frontmatter ltx_thanks_correspondence\" mark=\"*\" role=\"thanks\" xml:id=\"id8\">Corresponding author.</note>\
+       <note class=\"ltx_note_frontmatter ltx_thanks_note\" mark=\"*\" role=\"thanks\" xml:id=\"id9\">Visiting.</note>\
        </creator>",
     ],
     "{xml}"
@@ -371,39 +394,40 @@ fn a_split_making_an_address_line_a_creator_keeps_the_block_whole() {
 /// a mark macro defining what the next author reads; the safe sides, no decline: a mark kept on each name, a definition
 /// local to its own group (2602.15181, 0903.4816, 2311.17684), a definition nobody reads (the `\footremember` template:
 /// review revFNR1 u01-u03), a local one past its cell's `\and`, one read where the split would be whole (CR7d).
+/// SHMARK (OD #1053): each `\footnote` the marked `\thanks` note it is in article's title, each recalled mark a copy of
+/// the note it marks (the Link step); pins updated.
 #[test]
 fn a_definition_its_call_prints_takes_effect_in_order() {
   const DECLINE: &str = "The frontmatter emitter can't replay a definition of its author block apart from what the \
                          block prints; the block is written as Perl's \\lx@add@authors splits it at its separators, \
                          its pieces digested in order";
-  const STAR: &str = "<tags><tag>*</tag><tag role=\"refnum\">*</tag><tag role=\"typerefnum\">footnote *</tag></tags>";
   // (the repro, its Warnings, whether it declines, its creators)
   let rows: [(&str, usize, bool, &[String]); 12] = [
     (repro!("footnoterecall_three_authors_spaced_remember"), 1, true, &[
-      "<creator role=\"author\"><personname>Ann One</personname><contact name=\"Note:\u{a0}\" role=\"note\">The \
-       University</contact></creator>"
+      "<creator role=\"author\"><personname>Ann One</personname><note class=\"ltx_note_frontmatter ltx_thanks_note\" \
+       mark=\"*\" role=\"thanks\" xml:id=\"id1\">The University</note></creator>"
         .to_string(),
-      format!(
-        "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Two</personname><note mark=\"*\" \
-         role=\"footnotemark\" xml:id=\"footnotex1\">{STAR}</note></creator>"
-      ),
-      format!(
-        "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Cy Three</personname><note mark=\"*\" \
-         role=\"footnotemark\" xml:id=\"footnotex2\">{STAR}</note></creator>"
-      ),
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Two</personname><note \
+       class=\"ltx_note_frontmatter ltx_thanks_note\" mark=\"*\" role=\"thanks\" xml:id=\"footnotex1\">The \
+       University</note></creator>"
+        .to_string(),
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Cy Three</personname><note \
+       class=\"ltx_note_frontmatter ltx_thanks_note\" mark=\"*\" role=\"thanks\" xml:id=\"footnotex2\">The \
+       University</note></creator>"
+        .to_string(),
     ]),
     (repro!("footnoterecall_two_authors_control"), 1, true, &[
-      "<creator role=\"author\"><personname>A</personname><contact name=\"Note:\u{a0}\" \
-       role=\"note\">X</contact></creator>"
+      "<creator role=\"author\"><personname>A</personname><note class=\"ltx_note_frontmatter ltx_thanks_note\" \
+       mark=\"*\" role=\"thanks\" xml:id=\"id1\">X</note></creator>"
         .to_string(),
-      format!(
-        "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>B</personname><note mark=\"*\" \
-         role=\"footnotemark\" xml:id=\"footnotex1\">{STAR}</note></creator>"
-      ),
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>B</personname><note \
+       class=\"ltx_note_frontmatter ltx_thanks_note\" mark=\"*\" role=\"thanks\" \
+       xml:id=\"footnotex1\">X</note></creator>"
+        .to_string(),
     ]),
     (repro!("author_note_macro_defines_what_a_later_author_reads"), 1, true, &[
-      "<creator role=\"author\"><personname>Ann One</personname><contact name=\"Note:\u{a0}\" role=\"note\">Lab \
-       Alpha.</contact></creator>"
+      "<creator role=\"author\"><personname>Ann One</personname><note class=\"ltx_note_frontmatter ltx_thanks_note\" \
+       mark=\"*\" role=\"thanks\" xml:id=\"id1\">Lab Alpha.</note></creator>"
         .to_string(),
       "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Two (Alpha)</personname></creator>"
         .to_string(),
@@ -415,7 +439,8 @@ fn a_definition_its_call_prints_takes_effect_in_order() {
         .to_string(),
     ]),
     (repro!("author_mark_macro_steps_a_counter_on_each_name"), 0, false, &[
-      "<creator role=\"author\"><personname>Ann One<sup xml:id=\"id1\">1</sup></personname></creator>".to_string(),
+      "<creator role=\"author\"><personname>Ann One<sup xml:id=\"id1\">1</sup></personname></creator>"
+        .to_string(),
       "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Two<sup \
        xml:id=\"id2\">2</sup></personname></creator>"
         .to_string(),
@@ -427,89 +452,89 @@ fn a_definition_its_call_prints_takes_effect_in_order() {
       "<creator role=\"author\"><personname>Ann One</personname><contact name=\"Note:\u{a0}\" \
        role=\"note\">Corresponding Author.</contact></creator>"
         .to_string(),
-      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Two</personname></creator>".to_string(),
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Two</personname></creator>"
+        .to_string(),
     ]),
     // (the recall one level into a document's macro, `\recalluni`)
     (repro!("footnoterecall_held_in_a_document_macro"), 1, true, &[
-      "<creator role=\"author\"><personname>Ann One</personname><contact name=\"Note:\u{a0}\" role=\"note\">The \
-       University</contact></creator>"
+      "<creator role=\"author\"><personname>Ann One</personname><note class=\"ltx_note_frontmatter ltx_thanks_note\" \
+       mark=\"*\" role=\"thanks\" xml:id=\"id1\">The University</note></creator>"
         .to_string(),
-      format!(
-        "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Two</personname><note mark=\"*\" \
-         role=\"footnotemark\" xml:id=\"footnotex1\">{STAR}</note></creator>"
-      ),
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Two</personname><note \
+       class=\"ltx_note_frontmatter ltx_thanks_note\" mark=\"*\" role=\"thanks\" xml:id=\"footnotex1\">The \
+       University</note></creator>"
+        .to_string(),
     ]),
     (repro!("footremember_unread_keeps_the_replay"), 2, false, &row(&[
-      "<creator role=\"author\"><personname>Ann Able</personname><contact name=\"Note:\u{a0}\" role=\"note\">Univ \
-       X.</contact><contact class=\"ltx_author_line\" name=\"Affiliation:\u{a0}\" role=\"affiliation\">Dept of Physics</contact></creator>",
-      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker</personname><contact \
-       name=\"Note:\u{a0}\" role=\"note\">Univ Y.</contact><contact class=\"ltx_author_line\" name=\"Affiliation:\u{a0}\" \
-       role=\"affiliation\">Dept of Physics</contact></creator>",
+      "<creator role=\"author\"><personname>Ann Able</personname><note class=\"ltx_note_frontmatter ltx_thanks_note\" \
+       mark=\"*\" role=\"thanks\" xml:id=\"id1\">Univ X.</note><contact class=\"ltx_author_line\" \
+       name=\"Affiliation:\u{a0}\" role=\"affiliation\">Dept of Physics</contact></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker</personname><note \
+       class=\"ltx_note_frontmatter ltx_thanks_note\" mark=\"\u{2020}\" role=\"thanks\" xml:id=\"id2\">Univ \
+       Y.</note><contact class=\"ltx_author_line\" name=\"Affiliation:\u{a0}\" role=\"affiliation\">Dept of \
+       Physics</contact></creator>",
     ])),
     // (the base's reading kept: the marks on the names as affiliations and the content check's "1 2" are its own)
     (repro!("footremember_unread_on_a_marked_names_line"), 2, false, &row(&[
-      "<creator role=\"author\"><personname>Ann Able</personname>\
-       <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id1\"><text font=\"italic\" \
-       xml:id=\"id1.1\">1</text></sup></contact>\
-       <contact class=\"ltx_author_line\" name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id2\"><text font=\"italic\" \
-       xml:id=\"id2.1\">1</text></sup> Univ X</contact>\
-       <contact class=\"ltx_author_line\" name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id3\"><text font=\"italic\" \
-       xml:id=\"id3.1\">2</text></sup> Univ Y</contact></creator>",
-      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker</personname>\
-       <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id4\"><text font=\"italic\" \
-       xml:id=\"id4.1\">2</text></sup></contact>\
-       <contact name=\"Note:\u{a0}\" role=\"note\">Corresponding author.</contact>\
-       <contact class=\"ltx_author_line\" name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id5\"><text font=\"italic\" \
-       xml:id=\"id5.1\">1</text></sup> Univ X</contact>\
-       <contact class=\"ltx_author_line\" name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id6\"><text font=\"italic\" \
-       xml:id=\"id6.1\">2</text></sup> Univ Y</contact></creator>",
-      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Carl Cole</personname>\
-       <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id7\"><text font=\"italic\" \
-       xml:id=\"id7.1\">1</text></sup></contact>\
-       <contact class=\"ltx_author_line\" name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id8\"><text font=\"italic\" \
-       xml:id=\"id8.1\">1</text></sup> Univ X</contact>\
-       <contact class=\"ltx_author_line\" name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id9\"><text font=\"italic\" \
-       xml:id=\"id9.1\">2</text></sup> Univ Y</contact></creator>",
+      "<creator role=\"author\"><personname>Ann Able</personname><contact name=\"Affiliation:\u{a0}\" \
+       role=\"affiliation\"><sup xml:id=\"id1\"><text font=\"italic\" \
+       xml:id=\"id1.1\">1</text></sup></contact><contact class=\"ltx_author_line\" name=\"Affiliation:\u{a0}\" \
+       role=\"affiliation\"><sup xml:id=\"id2\"><text font=\"italic\" xml:id=\"id2.1\">1</text></sup> Univ \
+       X</contact><contact class=\"ltx_author_line\" name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup \
+       xml:id=\"id3\"><text font=\"italic\" xml:id=\"id3.1\">2</text></sup> Univ Y</contact></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker</personname><contact \
+       name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id4\"><text font=\"italic\" \
+       xml:id=\"id4.1\">2</text></sup></contact><note class=\"ltx_note_frontmatter ltx_thanks_correspondence\" \
+       mark=\"*\" role=\"thanks\" xml:id=\"id5\">Corresponding author.</note><contact class=\"ltx_author_line\" \
+       name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id6\"><text font=\"italic\" \
+       xml:id=\"id6.1\">1</text></sup> Univ X</contact><contact class=\"ltx_author_line\" name=\"Affiliation:\u{a0}\" \
+       role=\"affiliation\"><sup xml:id=\"id7\"><text font=\"italic\" xml:id=\"id7.1\">2</text></sup> Univ \
+       Y</contact></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Carl Cole</personname><contact \
+       name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id8\"><text font=\"italic\" \
+       xml:id=\"id8.1\">1</text></sup></contact><contact class=\"ltx_author_line\" name=\"Affiliation:\u{a0}\" \
+       role=\"affiliation\"><sup xml:id=\"id9\"><text font=\"italic\" xml:id=\"id9.1\">1</text></sup> Univ \
+       X</contact><contact class=\"ltx_author_line\" name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup \
+       xml:id=\"id10\"><text font=\"italic\" xml:id=\"id10.1\">2</text></sup> Univ Y</contact></creator>",
     ])),
     (repro!("footremember_unread_after_a_comma"), 1, false, &row(&[
-      "<creator role=\"author\"><personname>Ann Able<sup xml:id=\"id1\">\u{2217}</sup></personname><contact \
-       name=\"Note:\u{a0}\" role=\"note\">Corresponding author.</contact><contact class=\"ltx_author_line\" name=\"Affiliation:\u{a0}\" \
+      "<creator role=\"author\"><personname>Ann Able<sup xml:id=\"id1\">\u{2217}</sup></personname><note \
+       class=\"ltx_note_frontmatter ltx_thanks_correspondence\" mark=\"*\" role=\"thanks\" \
+       xml:id=\"id2\">Corresponding author.</note><contact class=\"ltx_author_line\" name=\"Affiliation:\u{a0}\" \
        role=\"affiliation\">Univ X</contact></creator>",
-      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker</personname><contact class=\"ltx_author_line\" \
-       name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ X</contact></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker</personname><contact \
+       class=\"ltx_author_line\" name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ X</contact></creator>",
       "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Carl Cole<sup \
-       xml:id=\"id2\">\u{2020}</sup></personname><contact class=\"ltx_author_line\" name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ \
-       X</contact></creator>",
+       xml:id=\"id3\">\u{2020}</sup></personname><contact class=\"ltx_author_line\" name=\"Affiliation:\u{a0}\" \
+       role=\"affiliation\">Univ X</contact></creator>",
     ])),
     (repro!("author_note_macro_local_def_ends_with_its_cell"), 1, false, &row(&[
-      "<creator role=\"author\"><personname>Ann One</personname><contact name=\"Note:\u{a0}\" role=\"note\">Lab \
-       Alpha.</contact></creator>",
+      "<creator role=\"author\"><personname>Ann One</personname><note class=\"ltx_note_frontmatter ltx_thanks_note\" \
+       mark=\"*\" role=\"thanks\" xml:id=\"id1\">Lab Alpha.</note></creator>",
       "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Two</personname></creator>",
     ])),
     // (as the unread line, Carl Cole's recalled mark counted by the given-marks Warning)
     (repro!("footrecall_read_where_the_split_would_be_whole"), 3, false, &row(&[
-      "<creator role=\"author\"><personname>Ann Able</personname>\
-       <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id1\"><text font=\"italic\" \
-       xml:id=\"id1.1\">1</text></sup></contact>\
-       <contact class=\"ltx_author_line\" name=\"Affiliation:\u{a0}\" role=\"affiliation\"> <sup xml:id=\"id2\"><text font=\"italic\" \
-       xml:id=\"id2.1\">1</text></sup> Univ X</contact>\
-       <contact class=\"ltx_author_line\" name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id3\"><text font=\"italic\" \
-       xml:id=\"id3.1\">2</text></sup> Univ Y</contact></creator>",
-      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker</personname>\
-       <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id4\"><text font=\"italic\" \
-       xml:id=\"id4.1\">2</text></sup></contact>\
-       <contact name=\"Note:\u{a0}\" role=\"note\">Corresponding author.</contact>\
-       <contact class=\"ltx_author_line\" name=\"Affiliation:\u{a0}\" role=\"affiliation\"> <sup xml:id=\"id5\"><text font=\"italic\" \
-       xml:id=\"id5.1\">1</text></sup> Univ X</contact>\
-       <contact class=\"ltx_author_line\" name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id6\"><text font=\"italic\" \
-       xml:id=\"id6.1\">2</text></sup> Univ Y</contact></creator>",
-      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Carl Cole</personname>\
-       <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id7\"><text font=\"italic\" \
-       xml:id=\"id7.1\">1</text></sup></contact>\
-       <contact class=\"ltx_author_line\" name=\"Affiliation:\u{a0}\" role=\"affiliation\"> <sup xml:id=\"id8\"><text font=\"italic\" \
-       xml:id=\"id8.1\">1</text></sup> Univ X</contact>\
-       <contact class=\"ltx_author_line\" name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id9\"><text font=\"italic\" \
-       xml:id=\"id9.1\">2</text></sup> Univ Y</contact></creator>",
+      "<creator role=\"author\"><personname>Ann Able</personname><contact name=\"Affiliation:\u{a0}\" \
+       role=\"affiliation\"><sup xml:id=\"id1\"><text font=\"italic\" \
+       xml:id=\"id1.1\">1</text></sup></contact><contact class=\"ltx_author_line\" name=\"Affiliation:\u{a0}\" \
+       role=\"affiliation\"> <sup xml:id=\"id2\"><text font=\"italic\" xml:id=\"id2.1\">1</text></sup> Univ \
+       X</contact><contact class=\"ltx_author_line\" name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup \
+       xml:id=\"id3\"><text font=\"italic\" xml:id=\"id3.1\">2</text></sup> Univ Y</contact></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker</personname><contact \
+       name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id4\"><text font=\"italic\" \
+       xml:id=\"id4.1\">2</text></sup></contact><note class=\"ltx_note_frontmatter ltx_thanks_correspondence\" \
+       mark=\"*\" role=\"thanks\" xml:id=\"id5\">Corresponding author.</note><contact class=\"ltx_author_line\" \
+       name=\"Affiliation:\u{a0}\" role=\"affiliation\"> <sup xml:id=\"id6\"><text font=\"italic\" \
+       xml:id=\"id6.1\">1</text></sup> Univ X</contact><contact class=\"ltx_author_line\" name=\"Affiliation:\u{a0}\" \
+       role=\"affiliation\"><sup xml:id=\"id7\"><text font=\"italic\" xml:id=\"id7.1\">2</text></sup> Univ \
+       Y</contact></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Carl Cole</personname><contact \
+       name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id8\"><text font=\"italic\" \
+       xml:id=\"id8.1\">1</text></sup></contact><contact class=\"ltx_author_line\" name=\"Affiliation:\u{a0}\" \
+       role=\"affiliation\"> <sup xml:id=\"id9\"><text font=\"italic\" xml:id=\"id9.1\">1</text></sup> Univ \
+       X</contact><contact class=\"ltx_author_line\" name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup \
+       xml:id=\"id10\"><text font=\"italic\" xml:id=\"id10.1\">2</text></sup> Univ Y</contact></creator>",
     ])),
   ];
   for (tex, warnings, declines, creators) in rows {

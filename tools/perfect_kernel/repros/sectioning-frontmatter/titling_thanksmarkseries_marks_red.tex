@@ -1,0 +1,20 @@
+% mechanism: a package that owns `\maketitle`'s marks (titling.sty `\thanksmarkseries{arabic}`): the title block prints
+%   1, 2; the binding gate (`frontmatter_fields::title_notes_print_marks`, article's `\lx@title@thefootnote`) still
+%   writes article's symbols. Needs the behaviour-based detection of the marks a `\maketitle` prints (OD #1053's open
+%   item)
+% witness: review revSHMARK S3 (p7.tex)
+% oracle:  pdflatex 0 errors: "Ann Able1 Bob Baker2", footnotes "1 First note.", "2 Second note."
+% engines: rust SHMARKb = notes mark="*" and mark="†"
+% expect:  0 errors 0 warnings; notes mark="1" "First note.", mark="2" "Second note."
+% status:  RED (SHMARKb)
+% moves:   row R SHAUTO
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{titling}
+\thanksmarkseries{arabic}
+\title{A Title}
+\author{Ann Able\thanks{First note.} \and Bob Baker\thanks{Second note.}}
+\begin{document}
+\maketitle
+Body.
+\end{document}

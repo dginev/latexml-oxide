@@ -121,6 +121,11 @@ pub fn insert_frontmatter(document: &mut Document) -> Result<()> {
   kind_link_and_grade_contacts(document)?;
   // (a contact a creator holds twice, once every route and Kind step has placed it: its first, OD #969)
   drop_repeated_contacts(document);
+  // (a creator's note carries the mark it prints, never repeated in its text; a footnote mark on a name is the note it
+  // marks: FIDELITY_CHARTER §4, the mark rule)
+  mark_creator_notes(document)?;
+  drop_linking_marks(document)?;
+  link_marked_notes(document)?;
   // (the authors as written: a name the writer re-parted holds one person, OD #928)
   flag_merged_creators(document)?;
   // (the unclaimed-text net's notes: their lines no frontmatter field and no text already set holds)
@@ -618,6 +623,230 @@ fn kind_legend_contacts(document: &mut Document) -> Result<()> {
       &s!("ltx_note_frontmatter ltx_thanks_{kind}"),
     )?;
     document.set_attribute(&mut note, "mark", &mark)?;
+  }
+  Ok(())
+}
+
+/// The mark rule (FIDELITY_CHARTER §4, OD #1053): a creator's note carries its printed mark, never a copy of it in its
+/// text. 2312.10807, 2407.07614, 2105.14239, 2606.00397.
+fn mark_creator_notes(document: &mut Document) -> Result<()> {
+  for mut note in document.findnodes("//ltx:creator/ltx:note[not(@role='footnotemark')]", None) {
+    if strip_bare_mark(&mut note)? {
+      continue;
+    }
+    let Some(sup) = element_nodes(&note).into_iter().next().filter(|first| {
+      note
+        .get_first_child()
+        .is_some_and(|child| child == *first || child.get_content().trim().is_empty())
+    }) else {
+      continue;
+    };
+    // (a superscript, or a formula that is one, read as digested: `$^{*}$`, `fm_read_formula`)
+    let printed = match sup.get_name().as_str() {
+      "sup" => sup.get_content().trim().to_string(),
+      "Math" => match fm_read_formula(&sup) {
+        FmFormulaMarks::Marks(scripts) if scripts.len() == 1 => scripts[0].trim().to_string(),
+        _ => continue,
+      },
+      _ => continue,
+    };
+    // (a mark set off from words, not the head of a word or formula: `$^*$-algebras`, `$^{3}$He`, review revSHMARK S2)
+    if printed.is_empty()
+      || printed.chars().count() > 3
+      || printed.chars().any(|c| c.is_whitespace() || c == ',')
+      || !words_follow(&sup)
+    {
+      continue;
+    }
+    match note.get_attribute("mark") {
+      Some(mark) if mark_form(&mark) == mark_form(&printed) => {},
+      // (a footnote symbol, or a label its name prints: IEEEtran's `\thanks{$^{*}$Equal contribution}`, 2312.10807)
+      None
+        if note.get_attribute("role").as_deref() == Some("thanks")
+          && (printed.chars().all(events::is_fnsymbol)
+            || name_marks(document, &note).contains(&mark_form(&printed))) =>
+      {
+        document.set_attribute(&mut note, "mark", &printed)?;
+      },
+      _ => continue,
+    }
+    // (the space it was set off by goes with it)
+    let next = sup.get_next_sibling();
+    document.remove_node(sup);
+    if let Some(mut text) = next.filter(|n| n.get_type() == Some(NodeType::TextNode)) {
+      let content = text.get_content();
+      text.set_content(content.trim_start())?;
+    }
+    while let Some(mut first) = note.get_first_child() {
+      if first.get_type() == Some(NodeType::TextNode) && first.get_content().is_empty() {
+        first.unlink();
+      } else {
+        break;
+      }
+    }
+  }
+  Ok(())
+}
+
+/// The emitter's flag on a note whose mark it read off the bare symbol its text opens with (`requested_mark`), the copy
+/// [`strip_bare_mark`] takes out.
+pub(in crate::base_utilities) const MARK_IN_TEXT: &str = "_markintext";
+
+/// The bare copy of its mark a note's text opens with, taken out where the mark was read off it ([`MARK_IN_TEXT`]):
+/// ieeeconf's `\thanks{*Authors to whom correspondence should be addressed.}` (2606.00397). Whether it was.
+fn strip_bare_mark(note: &mut Node) -> Result<bool> {
+  if note.get_attribute(MARK_IN_TEXT).is_none() {
+    return Ok(false);
+  }
+  note.remove_attribute(MARK_IN_TEXT).ok();
+  let Some(mark) = note.get_attribute("mark") else {
+    return Ok(false);
+  };
+  let Some(mut text) = note
+    .get_first_child()
+    .filter(|t| t.get_type() == Some(NodeType::TextNode))
+  else {
+    return Ok(false);
+  };
+  let content = text.get_content();
+  let lead = content.trim_start();
+  let Some(symbol) = lead.chars().next().filter(|c| !c.is_alphanumeric()) else {
+    return Ok(false);
+  };
+  let run: String = lead.chars().take_while(|c| *c == symbol).collect();
+  let rest = &lead[run.len()..];
+  if mark_form(&run) != mark_form(&mark)
+    || !rest.starts_with(|c: char| c.is_whitespace() || c.is_alphabetic())
+    || rest.trim().is_empty()
+  {
+    return Ok(false);
+  }
+  text.set_content(rest.trim_start())?;
+  Ok(true)
+}
+
+/// Whether what follows `node` in its parent opens with a space or a letter (no content following: no).
+fn words_follow(node: &Node) -> bool {
+  std::iter::successors(node.get_next_sibling(), Node::get_next_sibling)
+    .find_map(|next| next.get_content().chars().next())
+    .is_some_and(|c| c.is_whitespace() || c.is_alphabetic())
+}
+
+/// The marks the name of `note`'s creator prints, as [`mark_form`] keys them: its superscripts' marks and the labels it
+/// requests (`_annotations`), as [`legend_mark`] reads a carrier's.
+fn name_marks(document: &mut Document, note: &Node) -> Vec<String> {
+  let Some(creator) = note.get_parent() else {
+    return Vec::new();
+  };
+  let mut marks: Vec<String> = document
+    .findnodes("ltx:personname//ltx:sup", Some(&creator))
+    .iter()
+    .flat_map(|sup| {
+      sup
+        .get_content()
+        .split(',')
+        .map(mark_form)
+        .collect::<Vec<_>>()
+    })
+    .collect();
+  let requests = creator.get_attribute("_annotations").unwrap_or_default();
+  marks.extend(
+    requests
+      .split(',')
+      .map(|label| mark_form(label.split_once(':').map_or(label, |(_, key)| key))),
+  );
+  marks
+}
+
+/// A mark alone a note holds (`role="footnotemark"`, its text its tags or its mark — acmart's `\authornotemark[n]` prints
+/// it), and its mark's label key ([`mark_form`]); `None` for any other note.
+fn mark_alone(note: &Node) -> Option<String> {
+  let key = mark_form(&note.get_attribute("mark")?);
+  let text: String = note
+    .get_child_nodes()
+    .iter()
+    .filter(|child| child.get_name() != "tags")
+    .map(Node::get_content)
+    .collect();
+  (note.get_attribute("role").as_deref() == Some("footnotemark")
+    && element_nodes(note)
+      .iter()
+      .all(|child| child.get_name() == "tags")
+    && (text.trim().is_empty() || mark_form(&text) == key))
+    .then_some(key)
+}
+
+/// No institution marks (OD #1053): an affiliation's leading mark alone (`queue_digest::LEADS_CONTACT`) that a creator's
+/// note carries goes; 1607.07280's REVTeX `\affiliation{\footnotemark[1]Univ A}`.
+fn drop_linking_marks(document: &mut Document) -> Result<()> {
+  let leading = document.findnodes(&s!("//ltx:creator/ltx:note[@{LEADS_CONTACT}]"), None);
+  if leading.is_empty() {
+    return Ok(());
+  }
+  let carried: Vec<(Option<Node>, String)> = document
+    .findnodes(
+      &s!("//ltx:creator/ltx:note[@mark][not(@{LEADS_CONTACT})]"),
+      None,
+    )
+    .iter()
+    .filter_map(|note| Some((note.get_parent(), mark_form(&note.get_attribute("mark")?))))
+    .collect();
+  for mut note in leading {
+    note.remove_attribute(LEADS_CONTACT).ok();
+    let Some(key) = mark_alone(&note) else {
+      continue;
+    };
+    // (a note of another creator, or of its own: a name's mark alone too)
+    if carried.iter().any(|(_, mark)| *mark == key) {
+      document.remove_node(note);
+    }
+  }
+  Ok(())
+}
+
+/// The Link step (OD #1053): a mark alone on a name becomes a full copy of the note another creator holds under that
+/// mark, as Perl's `relocateFootnote_aux` fills a mark (latex_constructs.pool.ltxml:518-527). 1911.13299, 2502.19103.
+fn link_marked_notes(document: &mut Document) -> Result<()> {
+  let marked = document.findnodes(
+    "//ltx:creator/ltx:note[@mark][not(@role='footnotemark')]",
+    None,
+  );
+  for mut mark_note in
+    document.findnodes("//ltx:creator/ltx:note[@role='footnotemark'][@mark]", None)
+  {
+    let Some(key) = mark_alone(&mark_note) else {
+      continue;
+    };
+    let creator = mark_note.get_parent();
+    let same = |note: &&Node| {
+      note
+        .get_attribute("mark")
+        .is_some_and(|mark| mark_form(&mark) == key)
+    };
+    if marked
+      .iter()
+      .filter(same)
+      .any(|note| note.get_parent() == creator)
+    {
+      continue;
+    }
+    let Some(paired) = marked.iter().find(same) else {
+      continue;
+    };
+    for child in mark_note.get_child_nodes() {
+      document.remove_node(child);
+    }
+    for (name, _) in mark_note.get_attributes() {
+      if name != "id" && name != "xml:id" {
+        mark_note.remove_attribute(&name).ok();
+      }
+    }
+    for (name, value) in paired.get_attributes() {
+      if name != "id" && name != "xml:id" && !name.starts_with('_') {
+        document.set_attribute(&mut mark_note, &name, &value)?;
+      }
+    }
+    document.append_clone(&mut mark_note, paired.get_child_nodes())?;
   }
   Ok(())
 }

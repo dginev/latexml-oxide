@@ -6,7 +6,7 @@
 
 use latexml::util::test::{convert_files_with_setup_then, error_count, warning_count};
 
-use super::perfect_kernel_batch84b::creators;
+use super::{perfect_kernel_batch84b::creators, perfect_kernel_batchshmark::marked_notes};
 
 macro_rules! repro {
   ($name:literal) => {
@@ -47,14 +47,16 @@ fn a_declaration_reading_past_its_span_writes_the_block_as_perl_splits_it() {
     ),
     "{log}"
   );
+  // (each `\footremember` the `\thanks` note it is in article's title, its mark printed, and `\footrecall{alley2}` on
+  // Cat Cole a copy of Bob Baker's: OD #1053)
   assert_eq!(
-    creators(&xml),
+    marked_notes(repro!("ne5_decl_reads_past"), 1),
     [
-      row(&["Ann Able", "note=Univ A. Email: ann@a.at."]),
-      row(&["Bob Baker", "note=Univ B. Emails: bob@b.il, cat@b.il."]),
-      row(&["Cat Cole"]),
-      row(&["Dan Dunn", "note=Univ C."]),
-      row(&["Eve Ernst", "note=Univ D."]),
+      row(&["Ann Able", "thanks[*]=Univ A. Email: ann@a.at."]),
+      row(&["Bob Baker", "thanks[†]=Univ B. Emails: bob@b.il, cat@b.il."]),
+      row(&["Cat Cole", "thanks[†]=Univ B. Emails: bob@b.il, cat@b.il."]),
+      row(&["Dan Dunn", "thanks[‡]=Univ C."]),
+      row(&["Eve Ernst", "thanks[§]=Univ D."]),
     ],
     "{xml}"
   );

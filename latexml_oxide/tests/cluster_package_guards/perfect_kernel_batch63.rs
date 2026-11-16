@@ -662,9 +662,10 @@ fn author_thin_space_before_and_separates() {
       "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_thin_space_before_and_separates.tex"
     ),
     &[
-      "<creator role=\"author\"><personname>Aghil Alaee</personname><contact name=\"Note:\u{a0}\" role=\"note\">aak818@mun.ca</contact></creator>",
-      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Hari K. Kunduri</personname><contact name=\"Note:\u{a0}\" role=\"note\">hkkunduri@mun.ca</contact></creator>",
-      "<creator role=\"author\"><contact class=\"ltx_author_line\" name=\"Affiliation:\u{a0}\" role=\"affiliation\"><text font=\"slanted\" fontsize=\"90%\" xml:id=\"id1\"> Department of Mathematics and Statistics, Memorial University of Newfoundland</text></contact></creator>",
+      // (each `\footnote` the marked `\thanks` note it is in article's title, OD #1053)
+      "<creator role=\"author\"><personname>Aghil Alaee</personname><note class=\"ltx_note_frontmatter ltx_thanks_note\" mark=\"*\" role=\"thanks\" xml:id=\"id1\">aak818@mun.ca</note></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Hari K. Kunduri</personname><note class=\"ltx_note_frontmatter ltx_thanks_note\" mark=\"†\" role=\"thanks\" xml:id=\"id2\">hkkunduri@mun.ca</note></creator>",
+      "<creator role=\"author\"><contact class=\"ltx_author_line\" name=\"Affiliation:\u{a0}\" role=\"affiliation\"><text font=\"slanted\" fontsize=\"90%\" xml:id=\"id3\"> Department of Mathematics and Statistics, Memorial University of Newfoundland</text></contact></creator>",
     ],
   );
 }
@@ -881,7 +882,7 @@ fn author_symbol_mark_piece_stays_with_the_name() {
       "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_symbol_mark_piece_stays_with_the_name.tex"
     ),
     &[
-      "<creator role=\"author\"><personname>Ann Able<sup xml:id=\"id1\">∗</sup></personname><note class=\"ltx_note_frontmatter ltx_thanks_contribution\" role=\"thanks\" xml:id=\"id2\">Equal contribution</note></creator>",
+      "<creator role=\"author\"><personname>Ann Able<sup xml:id=\"id1\">∗</sup></personname><note class=\"ltx_note_frontmatter ltx_thanks_contribution\" mark=\"*\" role=\"thanks\" xml:id=\"id2\">Equal contribution</note></creator>",
       "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker</personname></creator>",
     ],
   );
@@ -1026,7 +1027,7 @@ fn author_revtex_affiliation_line_thanks_stays_with_author() {
       "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_revtex_affiliation_line_thanks_stays_with_author.tex"
     ),
     &[
-      "<creator role=\"author\"><personname>Ann Able</personname><contact class=\"ltx_author_line\" name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A</contact><note class=\"ltx_note_frontmatter ltx_thanks_funding\" role=\"thanks\" xml:id=\"id1\">Grant</note></creator>",
+      "<creator role=\"author\"><personname>Ann Able</personname><contact class=\"ltx_author_line\" name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A</contact><note class=\"ltx_note_frontmatter ltx_thanks_funding\" mark=\"*\" role=\"thanks\" xml:id=\"id1\">Grant</note></creator>",
     ],
   );
 }
@@ -2285,7 +2286,7 @@ fn author_email_owner_in_another_group() {
       "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_email_owner_in_another_group.tex"
     ),
     &[
-      "<creator role=\"author\"><personname>Ann Able</personname><note class=\"ltx_note_frontmatter ltx_thanks_contribution\" role=\"thanks\" xml:id=\"id1\">Equal contribution with Bob.</note><contact class=\"ltx_author_line\" name=\"Email:\u{a0}\" role=\"email\"><text font=\"typewriter\" xml:id=\"id2\">aable@x.edu</text></contact></creator>",
+      "<creator role=\"author\"><personname>Ann Able</personname><note class=\"ltx_note_frontmatter ltx_thanks_contribution\" mark=\"*\" role=\"thanks\" xml:id=\"id1\">Equal contribution with Bob.</note><contact class=\"ltx_author_line\" name=\"Email:\u{a0}\" role=\"email\"><text font=\"typewriter\" xml:id=\"id2\">aable@x.edu</text></contact></creator>",
       "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker</personname><contact class=\"ltx_author_line\" name=\"Affiliation:\u{a0}\" role=\"affiliation\">Dept. of CS</contact><contact class=\"ltx_author_line\" name=\"Email:\u{a0}\" role=\"email\"><text font=\"typewriter\" xml:id=\"id3\">bob@x.edu</text></contact></creator>",
       "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Zed Chen</personname><contact class=\"ltx_author_line\" name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ. Z</contact><contact class=\"ltx_author_line\" name=\"Email:\u{a0}\" role=\"email\"><text font=\"typewriter\" xml:id=\"id4\">zc@z.edu</text></contact></creator>",
       "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Chengxi Li</personname><contact class=\"ltx_author_line\" name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ. Y</contact><contact class=\"ltx_author_line\" name=\"Email:\u{a0}\" role=\"email\"><text font=\"typewriter\" xml:id=\"id5\">chengxil@y.edu</text></contact></creator>",
@@ -4097,7 +4098,7 @@ fn author_styled_group_names() {
     "<creator role=\"author\">\n    <personname>Ann Able</personname>\n    <contact class=\"ltx_author_line\" name=\"Affiliation: \" role=\"affiliation\">Univ A</contact>\n  </creator>",
     "<creator before=\"  \" role=\"author\">\n    <personname>Bob Baker</personname>\n    <contact class=\"ltx_author_line\" name=\"Affiliation: \" role=\"affiliation\">Univ B</contact>\n  </creator>",
     "<creator before=\"  \" role=\"author\">\n    <personname>Cat Cole</personname>\n    <contact class=\"ltx_author_line\" name=\"Affiliation: \" role=\"affiliation\">Univ A</contact>\n  </creator>",
-    "<creator before=\"  \" role=\"author\">\n    <personname>Dan Dorn</personname>\n    <note class=\"ltx_note_frontmatter ltx_thanks_correspondence\" role=\"thanks\" xml:id=\"id1\">Corresponding.</note>\n    <contact class=\"ltx_author_line\" name=\"Affiliation: \" role=\"affiliation\">Univ B</contact>\n  </creator>",
+    "<creator before=\"  \" role=\"author\">\n    <personname>Dan Dorn</personname>\n    <note class=\"ltx_note_frontmatter ltx_thanks_correspondence\" mark=\"*\" role=\"thanks\" xml:id=\"id1\">Corresponding.</note>\n    <contact class=\"ltx_author_line\" name=\"Affiliation: \" role=\"affiliation\">Univ B</contact>\n  </creator>",
   ]);
 }
 

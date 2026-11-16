@@ -83,7 +83,7 @@ fn author_blocks_read_as_printed() {
       &[],
       &[
         r#"<creator role="author"><personname>Ann Bee</personname><contact name="Affiliation: " role="affiliation">Univ X</contact></creator>"#,
-        r#"<creator before="  " role="author"><personname>Carl Dee</personname><note class="ltx_note_frontmatter ltx_thanks_correspondence" role="thanks">Corresponding author.</note><contact name="Affiliation: " role="affiliation">Univ X</contact><contact name="Email: " role="email">wr@x.org</contact></creator>"#,
+        r#"<creator before="  " role="author"><personname>Carl Dee</personname><note class="ltx_note_frontmatter ltx_thanks_correspondence" mark="*" role="thanks">Corresponding author.</note><contact name="Affiliation: " role="affiliation">Univ X</contact><contact name="Email: " role="email">wr@x.org</contact></creator>"#,
       ],
     ),
     (
@@ -91,7 +91,7 @@ fn author_blocks_read_as_printed() {
       (0, 0),
       &[],
       &[
-        r#"<creator role="author"><personname>Mariia Drozdova</personname><contact class="ltx_author_line" name="Affiliation: " role="affiliation">University of Geneva</contact><contact class="ltx_author_line" name="Email: " role="email"><text font="typewriter">mariia.drozdova@unige.ch</text></contact><contact name="Note: " role="note">Code available at somewhere</contact></creator>"#,
+        r#"<creator role="author"><personname>Mariia Drozdova</personname><contact class="ltx_author_line" name="Affiliation: " role="affiliation">University of Geneva</contact><contact class="ltx_author_line" name="Email: " role="email"><text font="typewriter">mariia.drozdova@unige.ch</text></contact><note class="ltx_note_frontmatter ltx_thanks_note" mark="*" role="thanks">Code available at somewhere</note></creator>"#,
       ],
     ),
     (row!("authblk_small_hspace_in_name"), (0, 0), &[], &[
@@ -121,9 +121,9 @@ fn author_blocks_read_as_printed() {
       (0, 0),
       &[],
       &[
-        r#"<creator role="author"><personname>Ann Able</personname><contact name="Affiliation: " role="affiliation">University of Alpha</contact><contact class="ltx_author_line" name="Email: " role="email"><text font="typewriter">ann.able@alpha.edu</text></contact><note class="ltx_note_frontmatter ltx_thanks_contribution" mark="∗" role="thanks"><sup>∗</sup>Contributed equally</note></creator>"#,
-        r#"<creator before="  " role="author"><personname>Bo Baker</personname><note class="ltx_note_frontmatter ltx_thanks_contribution" mark="∗" role="thanks"><sup>∗</sup>Contributed equally</note><contact name="Affiliation: " role="affiliation">University of Alpha</contact></creator>"#,
-        r#"<creator before="  " role="author"><personname>Cy Coe</personname><contact name="Affiliation: " role="affiliation">University of Alpha</contact><contact class="ltx_author_line" name="Email: " role="email"><text font="typewriter">cy.coe@alpha.edu</text></contact><note class="ltx_note_frontmatter ltx_thanks_contribution" mark="∗" role="thanks"><sup>∗</sup>Contributed equally</note></creator>"#,
+        r#"<creator role="author"><personname>Ann Able</personname><contact name="Affiliation: " role="affiliation">University of Alpha</contact><contact class="ltx_author_line" name="Email: " role="email"><text font="typewriter">ann.able@alpha.edu</text></contact><note class="ltx_note_frontmatter ltx_thanks_contribution" mark="∗" role="thanks">Contributed equally</note></creator>"#,
+        r#"<creator before="  " role="author"><personname>Bo Baker</personname><note class="ltx_note_frontmatter ltx_thanks_contribution" mark="∗" role="thanks">Contributed equally</note><contact name="Affiliation: " role="affiliation">University of Alpha</contact></creator>"#,
+        r#"<creator before="  " role="author"><personname>Cy Coe</personname><contact name="Affiliation: " role="affiliation">University of Alpha</contact><contact class="ltx_author_line" name="Email: " role="email"><text font="typewriter">cy.coe@alpha.edu</text></contact><note class="ltx_note_frontmatter ltx_thanks_contribution" mark="∗" role="thanks">Contributed equally</note></creator>"#,
         r#"<creator role="author"><contact class="ltx_author_line" name="Email: " role="email"><text font="typewriter">xq.zz@alpha.edu</text></contact><contact class="ltx_author_line" name="Email: " role="email"><text font="typewriter">dd.dunn@alpha.edu</text></contact><contact class="ltx_author_line" name="Email: " role="email"><text font="typewriter">ee.egan@alpha.edu</text></contact></creator>"#,
       ],
     ),
@@ -180,15 +180,15 @@ fn cut_runs_and_counts_read_as_printed() {
       (0, 0),
       &[],
       &[
-        r#"<creator role="author"><personname>Ann Lee</personname><contact class="ltx_author_line" name="Affiliation: " role="affiliation"><text font="bold">Univ A</text></contact><note class="ltx_note_frontmatter ltx_thanks_contribution" mark="∗" role="thanks"><sup>∗</sup> Equal Contribution</note></creator>"#,
-        r#"<creator before="  " role="author"><personname>Bob Ray</personname><contact class="ltx_author_line" name="Affiliation: " role="affiliation"><text font="bold">Univ B, <emph font="italic">Rome</emph></text></contact><note class="ltx_note_frontmatter ltx_thanks_contribution" mark="∗" role="thanks"><sup>∗</sup> Equal Contribution</note></creator>"#,
-        r#"<creator before="  " role="author"><personname>Cy Do</personname><contact class="ltx_author_line" name="Affiliation: " role="affiliation"><text font="bold">Univ B, <emph font="italic">Rome</emph></text></contact><note class="ltx_note_frontmatter ltx_thanks_contribution" mark="†" role="thanks"><sup>†</sup> Project Leader</note></creator>"#,
+        r#"<creator role="author"><personname>Ann Lee</personname><contact class="ltx_author_line" name="Affiliation: " role="affiliation"><text font="bold">Univ A</text></contact><note class="ltx_note_frontmatter ltx_thanks_contribution" mark="∗" role="thanks">Equal Contribution</note></creator>"#,
+        r#"<creator before="  " role="author"><personname>Bob Ray</personname><contact class="ltx_author_line" name="Affiliation: " role="affiliation"><text font="bold">Univ B, <emph font="italic">Rome</emph></text></contact><note class="ltx_note_frontmatter ltx_thanks_contribution" mark="∗" role="thanks">Equal Contribution</note></creator>"#,
+        r#"<creator before="  " role="author"><personname>Cy Do</personname><contact class="ltx_author_line" name="Affiliation: " role="affiliation"><text font="bold">Univ B, <emph font="italic">Rome</emph></text></contact><note class="ltx_note_frontmatter ltx_thanks_contribution" mark="†" role="thanks">Project Leader</note></creator>"#,
       ],
     ),
     (row!("cut_run_nested_wrapper_per_entry"), (0, 0), &[], &[
-      r#"<creator role="author"><personname>Ann Lee</personname><contact class="ltx_author_line" name="Affiliation: " role="affiliation"><text font="bold italic">Univ A</text></contact><note class="ltx_note_frontmatter ltx_thanks_contribution" mark="∗" role="thanks"><sup>∗</sup> Equal Contribution</note></creator>"#,
-      r#"<creator before="  " role="author"><personname>Bob Ray</personname><contact class="ltx_author_line" name="Affiliation: " role="affiliation"><text font="bold italic">Univ B</text></contact><note class="ltx_note_frontmatter ltx_thanks_contribution" mark="∗" role="thanks"><sup>∗</sup> Equal Contribution</note></creator>"#,
-      r#"<creator before="  " role="author"><personname>Cy Do</personname><contact class="ltx_author_line" name="Affiliation: " role="affiliation"><text font="bold italic">Univ B</text></contact><note class="ltx_note_frontmatter ltx_thanks_contribution" mark="†" role="thanks"><sup>†</sup> Project Leader</note></creator>"#,
+      r#"<creator role="author"><personname>Ann Lee</personname><contact class="ltx_author_line" name="Affiliation: " role="affiliation"><text font="bold italic">Univ A</text></contact><note class="ltx_note_frontmatter ltx_thanks_contribution" mark="∗" role="thanks">Equal Contribution</note></creator>"#,
+      r#"<creator before="  " role="author"><personname>Bob Ray</personname><contact class="ltx_author_line" name="Affiliation: " role="affiliation"><text font="bold italic">Univ B</text></contact><note class="ltx_note_frontmatter ltx_thanks_contribution" mark="∗" role="thanks">Equal Contribution</note></creator>"#,
+      r#"<creator before="  " role="author"><personname>Cy Do</personname><contact class="ltx_author_line" name="Affiliation: " role="affiliation"><text font="bold italic">Univ B</text></contact><note class="ltx_note_frontmatter ltx_thanks_contribution" mark="†" role="thanks">Project Leader</note></creator>"#,
     ]),
     (
       row!("check_shipped_class_text_is_not_the_authors"),
@@ -208,7 +208,7 @@ fn cut_runs_and_counts_read_as_printed() {
       (1, 0),
       &["Package ifthen Error: Boolean ob undefined"],
       &[
-        r#"<creator role="author"><personname>Ann Able</personname><note class="ltx_note_frontmatter ltx_thanks_note" role="thanks">note</note><contact name="Affiliation: " role="affiliation"><sup><text font="italic">1</text></sup>Univ X a</contact><contact name="Affiliation: " role="affiliation"><sup><text font="italic">2</text></sup>Univ Y</contact></creator>"#,
+        r#"<creator role="author"><personname>Ann Able</personname><note class="ltx_note_frontmatter ltx_thanks_note" mark="*" role="thanks">note</note><contact name="Affiliation: " role="affiliation"><sup><text font="italic">1</text></sup>Univ X a</contact><contact name="Affiliation: " role="affiliation"><sup><text font="italic">2</text></sup>Univ Y</contact></creator>"#,
       ],
     ),
   ]);

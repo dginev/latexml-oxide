@@ -1586,7 +1586,7 @@ fn frontmatter_author_lines_783() {
     ("and_thanks_email", repro!("and_thanks_email"), 0, vec![
       format!(
         "<creator role=\"author\"><personname>Ann Able</personname><note class=\"ltx_note_frontmatter \
-         ltx_thanks_funding\" role=\"thanks\" xml:id=\"id1\">Supported by X.</note>{L}Univ. of \
+         ltx_thanks_funding\" mark=\"*\" role=\"thanks\" xml:id=\"id1\">Supported by X.</note>{L}Univ. of \
          A</contact>{L}Dept. of Physics</contact></creator>"
       ),
       format!(
@@ -1628,7 +1628,7 @@ fn frontmatter_author_lines_783() {
     ("thanks_affiliation", repro!("thanks_affiliation"), 0, vec![
       format!(
         "<creator role=\"author\"><personname>Ann Able</personname><note class=\"ltx_note_frontmatter \
-       ltx_thanks_note\" role=\"thanks\" xml:id=\"id1\">Univ. of A</note>{L}Dept. of B</contact></creator>"
+       ltx_thanks_note\" mark=\"*\" role=\"thanks\" xml:id=\"id1\">Univ. of A</note>{L}Dept. of B</contact></creator>"
       ),
     ]),
     ("comma_line", repro!("comma_line"), 0, vec![format!(
@@ -1662,19 +1662,22 @@ fn frontmatter_author_lines_783() {
        A.</note></creator>"
         .to_string(),
     ]),
-    // (a `\footnote` is Perl's role=note contact: no class, the line after it still a line; LaTeXML.css exempts it)
+    // (a `\footnote` is the marked `\thanks` note it is in article's title, OD #1053 — Perl's role=note contact where the
+    // title prints no mark; the line after it still a line)
     ("footnote_note", repro!("footnote_note"), 0, vec![
       format!("<creator role=\"author\"><personname>Ann Able</personname>{L}Univ A</contact></creator>"),
       format!(
-        "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker</personname><contact \
-         name=\"Note:\u{a0}\" role=\"note\">X</contact>{L}Univ B</contact></creator>"
+        "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker</personname><note \
+         class=\"ltx_note_frontmatter ltx_thanks_note\" mark=\"*\" role=\"thanks\" xml:id=\"id1\">X</note>{L}Univ \
+         B</contact></creator>"
       ),
     ]),
     // (a block the reading declines, written as Perl's `\lx@add@authors` splits it: fallback.rs)
     ("declined_block", repro!("declined_block"), 1, vec![
       format!(
-        "<creator role=\"author\"><personname>Ann Able</personname><contact name=\"Note:\u{a0}\" \
-         role=\"note\">Zebra University.</contact>{L}Dept. of B</contact></creator>"
+        "<creator role=\"author\"><personname>Ann Able</personname><note class=\"ltx_note_frontmatter \
+         ltx_thanks_note\" mark=\"*\" role=\"thanks\" xml:id=\"id1\">Zebra University.</note>{L}Dept. of \
+         B</contact></creator>"
       ),
       format!(
         "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker</personname>{L}Univ. \

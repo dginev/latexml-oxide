@@ -296,7 +296,7 @@ pub use labels::{
   address_take_out, addresses_in, mark_labels, only_addresses, prints_only_addresses,
 };
 pub(in crate::base_utilities::frontmatter::observer) use labels::{
-  contact_parts, glued_request_parts, label_matches,
+  contact_parts, glued_request_parts, label_matches, note_shows,
 };
 pub(in crate::base_utilities) use lines::reads_as_names;
 use lines::*;

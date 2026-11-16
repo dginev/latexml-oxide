@@ -54,7 +54,7 @@ fn a_mailto_link_in_a_thanks_is_the_notes_alone() {
     "ann@x.org",
     0,
     &[
-      "<creator role=\"author\">\n    <personname>Ann Smith</personname>\n    <note class=\"ltx_note_frontmatter ltx_thanks_correspondence\" role=\"thanks\">Corresponding author: <ref class=\"ltx_href\" href=\"mailto:ann@x.org\">ann@x.org</ref></note>\n  </creator>",
+      "<creator role=\"author\">\n    <personname>Ann Smith</personname>\n    <note class=\"ltx_note_frontmatter ltx_thanks_correspondence\" mark=\"*\" role=\"thanks\">Corresponding author: <ref class=\"ltx_href\" href=\"mailto:ann@x.org\">ann@x.org</ref></note>\n  </creator>",
       "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Bob Jones</personname>\n  </creator>",
     ],
   );
@@ -73,7 +73,7 @@ fn an_own_email_call_in_a_thanks_is_the_notes_alone() {
     "ann@x.org",
     0,
     &[
-      "<creator role=\"author\">\n    <personname>Ann Smith</personname>\n    <note class=\"ltx_note_frontmatter ltx_thanks_correspondence\" role=\"thanks\">Corresponding author: Ann Smith, Univ A (e-mail:\u{a0}<text font=\"typewriter\">ann@x.org</text>).</note>\n  </creator>",
+      "<creator role=\"author\">\n    <personname>Ann Smith</personname>\n    <note class=\"ltx_note_frontmatter ltx_thanks_correspondence\" mark=\"*\" role=\"thanks\">Corresponding author: Ann Smith, Univ A (e-mail:\u{a0}<text font=\"typewriter\">ann@x.org</text>).</note>\n  </creator>",
       "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Bob Jones</personname>\n  </creator>",
     ],
   );

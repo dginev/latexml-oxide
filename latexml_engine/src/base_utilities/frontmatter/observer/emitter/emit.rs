@@ -29,7 +29,7 @@ use crate::base_utilities::{
   defs::{
     author_macros::KEPT_WHOLE,
     frontmatter_api::{BLOCK_CREATOR, CORRESPONDING, LABEL_PRINTS, PRINTED_LABEL, STOPGAP_ENTRY},
-    frontmatter_fields::{orcid_icon_link, under_author_markup},
+    frontmatter_fields::{orcid_icon_link, title_notes_print_marks, under_author_markup},
   },
   frontmatter::{
     classify::shared_call_item,
@@ -37,7 +37,7 @@ use crate::base_utilities::{
       PerlAuthorBranch, PerlCalls, perl_author_branch, perl_author_calls,
       tabular_juggles_in_a_whole_block, whole_block_author,
     },
-    insert::NAME_PRINTED,
+    insert::{MARK_IN_TEXT, NAME_PRINTED},
     observer::{
       events::{
         self as events, BreakKind, EventKind, Formula, InkTable, SepKind, font_declaration, inked,
@@ -54,8 +54,8 @@ use crate::base_utilities::{
       resolver::{
         BlockCheck, LostInk, RCreator, RuleDrop, Written, check_blocks, contact_parts,
         creator_call, creator_call_level, creator_call_pieces, is_creator_call, labelseq_pieces,
-        merged_names, own_email_label, printed_email_label, read_events, shares_the_row,
-        split_pieces, split_pieces_as, uncoordinated_marks, words_of,
+        merged_names, note_shows, own_email_label, printed_email_label, read_events,
+        shares_the_row, split_pieces, split_pieces_as, uncoordinated_marks, words_of,
       },
     },
     place::DEFERRED_TO_FLUSH_END,
@@ -1511,22 +1511,87 @@ fn by_text(why: Option<&str>, text: &str) -> Vec<Token> {
 }
 
 /// A note's call under `label`, as `\lx@add@thanks` and `\lx@add@note` make it (their `Let`s in an author's content,
-/// `digest_frontmatter_item`), on `@now`: what's inside it is the reading's already. A legend's with the `mark` it prints.
-/// Its footnote step is its creator's, where the note prints ([`note_steps`]).
-fn note_call(footnote: bool, mark: Option<&str>, label: &str, content: Vec<Token>) -> Tokens {
+/// `digest_frontmatter_item`), on `@now`: what's inside it is the reading's already. A legend's with the `mark` it prints,
+/// a note's with the one it shows on its name ([`shown_mark`]), a `\footnote` so marked the `\thanks` note it is there
+/// (`\lx@title@footnote`). Its footnote step is its creator's, where the note prints ([`note_steps`]). A mark read off the
+/// text's bare head ([`requested_mark`]) is flagged so (`insert::MARK_IN_TEXT`), for the copy to be taken out there.
+fn note_call(
+  footnote: bool,
+  mark: Option<&str>,
+  in_text: bool,
+  label: &str,
+  content: Vec<Token>,
+) -> Tokens {
   let kind = classify_thanks(Tokens::new(content.clone()).untex_string().as_ref());
   let body = cs_group("\\lx@frontmatter@itemonly", &[note_body(Tokens::new(
     content,
   ))
   .unlist_ref()]);
-  let marked = mark.map_or_else(String::new, |mark| s!("mark={{{mark}}},"));
-  if footnote {
+  let marked = mark.map_or_else(String::new, |mark| {
+    let in_text = if in_text {
+      s!("{MARK_IN_TEXT}=true,")
+    } else {
+      String::new()
+    };
+    s!("mark={{{mark}}},{in_text}")
+  });
+  if footnote && mark.is_none() {
     annotate_now("ltx:contact", &s!("role=note,label={{{label}}}"), &body)
   } else {
     let keys =
       s!("role=thanks,class=ltx_note_frontmatter ltx_thanks_{kind},{marked}label={{{label}}}");
     annotate_now("ltx:note", &keys, &body)
   }
+}
+
+/// The mark a note event shows on its name (`resolver::note_shows`, the rehearsal's `\thefootnote` at its step), where
+/// its class's title block prints one for it ([`title_notes_print_marks`]): the `\thanks` of article (article.cls:205
+/// `\@fnsymbol\c@footnote`), REVTeX 4.0's name `\footnote` given its number (revtex4.cls:4729
+/// `\frontmatter@thefootnote`). 2502.19103, 1911.13299, 1607.07280 (FIDELITY_CHARTER §4, the mark rule).
+fn shown_mark(note: &Event) -> Option<String> {
+  title_notes_print_marks(note.footnote, note.given_number)
+    .then(|| note_shows(note).map(String::from))
+    .flatten()
+}
+
+/// The footnote symbols every name a note goes to shows (their requests, `RCreator::requests`): a symbol its printed
+/// text opens with bare is among them where the reading placed it by that symbol ([`requested_mark`]).
+fn requested_symbols(owners: &[Owner], creators: &[RCreator]) -> Vec<String> {
+  let requests = |owner: &Owner| match owner {
+    Owner::Creator(i) => creators
+      .get(*i)
+      .map(|c| c.requests.clone())
+      .unwrap_or_default(),
+    Owner::Block => Vec::new(),
+  };
+  let Some((first, rest)) = owners.split_first() else {
+    return Vec::new();
+  };
+  requests(first)
+    .into_iter()
+    .filter(|r| !r.is_empty() && r.chars().all(events::is_fnsymbol))
+    .filter(|r| rest.iter().all(|owner| requests(owner).contains(r)))
+    .collect()
+}
+
+/// The footnote symbol a note event's text opens with bare (the mark the lexer sets apart at its head, `line_first`), one
+/// its names show (`requested`, [`requested_symbols`]): its mark, the copy in its text taken out at the placing
+/// (`insert::strip_bare_mark`) — ieeeconf's `Murali Babu$^{1}$*` under `\thanks{*Authors to whom correspondence should be
+/// addressed.}` (2606.00397).
+fn requested_mark(note: &Event, requested: &[String]) -> Option<String> {
+  let symbol = note
+    .inner
+    .iter()
+    .find(|m| m.kind == EventKind::Mark && m.line_first)?
+    .text
+    .trim()
+    .to_string();
+  let form = |mark: &str| mark.trim().replace('\u{2217}', "*");
+  (!symbol.is_empty()
+    && symbol.chars().count() <= 3
+    && symbol.chars().all(events::is_fnsymbol)
+    && requested.iter().any(|r| form(r) == form(&symbol)))
+  .then_some(symbol)
 }
 
 /// A picture's note under `label` ([`events::PICTURE_NOTE`]): a plain frontmatter note, role `note`, holding the picture's
@@ -2163,6 +2228,7 @@ fn item_call(
   memo: &mut CallCuts,
   whole: &mut BTreeSet<usize>,
   cuts: &[EntryCut],
+  requested: &[String],
 ) -> Result<Tokens> {
   let role = assoc.role.as_str();
   // (a contact the block prints on a line of its own under the name, Perl's `\\` line (Base_Utility.pool.ltxml:722-726):
@@ -2196,6 +2262,7 @@ fn item_call(
           memo,
           whole,
           std::slice::from_ref(cut),
+          requested,
         )
       },
       || {
@@ -2235,18 +2302,19 @@ fn item_call(
   if role == "legend"
     && let Some((index, None)) = assoc.source
     && let Some(call) = api_call(index)
-    && let Some(mark) = call
+    && let Some((mark, in_text)) = call
       .events
       .iter()
       .find(|e| e.kind == EventKind::Mark)
-      .map(|e| e.text.as_str())
+      .map(|e| (e.text.as_str(), true))
       // (or the label its binding prints: `\\affil[*]{Corresponding author.}`, 2107.01943, 1812.03816)
-      .or(assoc.label.as_deref())
+      .or(assoc.label.as_deref().map(|label| (label, false)))
   {
     whole.insert(index);
     return Ok(note_call(
       false,
       Some(mark),
+      in_text,
       label,
       call.content.unlist_ref().to_vec(),
     ));
@@ -2328,7 +2396,7 @@ fn item_call(
   }
   let wrap = |content: &[Token]| -> Tokens {
     if note {
-      note_call(false, None, label, content.to_vec())
+      note_call(false, None, false, label, content.to_vec())
     } else if key.0 == Kind::Affiliation {
       kinded_affiliation(&keys, line_class, content)
     } else {
@@ -2408,9 +2476,21 @@ fn item_call(
         && let Some(footnote) = footnote
       {
         let content = argument;
+        // (or the symbol its text opens with bare that its names show)
+        let (mark, in_text) = event_at(
+          index,
+          span,
+          |e| e.kind == EventKind::Note,
+          |e| match shown_mark(e) {
+            Some(mark) => (Some(mark), false),
+            None => (requested_mark(e, requested), true),
+          },
+        )
+        .unwrap_or_default();
         return Ok(note_call(
           footnote,
-          None,
+          mark.as_deref(),
+          in_text,
           label,
           content.unwrap_or_else(|| by_text(Some("note no argument"), &assoc.text)),
         ));
@@ -2715,9 +2795,10 @@ fn item_call(
         return Ok(wrap(&by_text(Some("span no balanced run"), &assoc.text)));
       };
       if note {
+        // (its run grown to the mark: `*equally contributed`, 2609.16600)
         let legend = mark.as_deref().filter(|_| role == "legend");
         let tokens = in_its_font(font, tokens).unlist();
-        return Ok(note_call(false, legend, label, tokens));
+        return Ok(note_call(false, legend, true, label, tokens));
       }
       if key.0 != Kind::Affiliation {
         return Ok(wrap(&tokens));
@@ -2749,8 +2830,8 @@ fn item_call(
       }
       // (a note inside it: its command's argument as written, under the note's own kind, as a block's note — its fonts,
       // links and formulas kept: `\author{Craig Rae\thanks{Note \textit{italic} and $x^2$.}}`, review revG5 3)
-      if note && let Some((footnote, argument)) = call_note(&call, assoc)? {
-        return Ok(note_call(footnote, None, label, argument));
+      if note && let Some((footnote, mark, argument)) = call_note(&call, assoc)? {
+        return Ok(note_call(footnote, mark.as_deref(), false, label, argument));
       }
       let found = match memo.pieces.entry(index) {
         Entry2::Occupied(held) => held.into_mut(),
@@ -3000,9 +3081,12 @@ fn call_contact(call: &ApiCall, assoc: &Assoc, within: bool) -> Result<Option<To
   }
 }
 
-/// The argument of the note command printing `assoc` in `call`'s content (the one by its text, else its only note), and
-/// whether it is a `\\footnote`'s, as [`note_argument`] reads a block's note.
-fn call_note(call: &ApiCall, assoc: &Assoc) -> Result<Option<(bool, Vec<Token>)>> {
+/// A call's note ([`call_note`]): whether it is a `\\footnote`'s, the mark it shows ([`shown_mark`]) and its argument.
+type CallNote = (bool, Option<String>, Vec<Token>);
+
+/// The argument of the note command printing `assoc` in `call`'s content (the one by its text, else its only note),
+/// whether it is a `\\footnote`'s and the mark it shows ([`shown_mark`]), as [`note_argument`] reads a block's note.
+fn call_note(call: &ApiCall, assoc: &Assoc) -> Result<Option<CallNote>> {
   let Some((events, formulas, environments, _)) = rehearsed(call.content.unlist_ref())? else {
     return Ok(None);
   };
@@ -3035,7 +3119,7 @@ fn call_note(call: &ApiCall, assoc: &Assoc) -> Result<Option<(bool, Vec<Token>)>
     field
       .content_of((start, end), 0, start)
       .and_then(|(tokens, _)| note_argument(&tokens, Some(&note.text)))
-      .map(|argument| (note.footnote, argument)),
+      .map(|argument| (note.footnote, shown_mark(note), argument)),
   )
 }
 
@@ -6029,6 +6113,11 @@ pub(in crate::base_utilities) fn emit_commands(commands: &mut Vec<RawFrontmatter
     if let Some(entry) = labelled_entry(&label, item.assoc) {
       with_ledger(|ledger| ledger.labelled.push(entry));
     }
+    let requested = if item.key.0 == Kind::Note {
+      requested_symbols(&item.owners, &resolved.creators)
+    } else {
+      Vec::new()
+    };
     let tokens = item_call(
       &item.key,
       item.assoc,
@@ -6038,6 +6127,7 @@ pub(in crate::base_utilities) fn emit_commands(commands: &mut Vec<RawFrontmatter
       &mut memo,
       &mut written,
       &analysis.cuts,
+      &requested,
     )?;
     let tag = if item.key.0 == Kind::Note {
       "ltx:note"

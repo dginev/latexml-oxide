@@ -65,7 +65,7 @@ fn a_raw_queued_call_feeds_no_symbol_mark_to_the_reading() {
     "<personname>Bob Baker<sup>*</sup></personname>",
     &affiliation("Univ B"),
     "<contact name=\"Email:\u{a0}\" role=\"email\">bob@b.org</contact>",
-    "role=\"thanks\"><sup>*</sup>Corresponding author</note>",
+    "role=\"thanks\">Corresponding author</note>",
   ] {
     assert!(bob.contains(part), "{part} in {bob}");
   }
@@ -154,7 +154,7 @@ fn a_note_in_a_formula_keeps_its_words() {
   );
   assert_eq!(two, vec![
     "<creator role=\"author\">\n    <personname>Ann Able</personname>\n    <contact class=\"ltx_author_line\" name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A</contact>\n  </creator>",
-    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Bob Baker</personname>\n    <note class=\"ltx_note_frontmatter ltx_thanks_contribution\" role=\"thanks\">The first two authors contributed equally</note>\n    <contact class=\"ltx_author_line\" name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A</contact>\n  </creator>"
+    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Bob Baker</personname>\n    <note class=\"ltx_note_frontmatter ltx_thanks_contribution\" mark=\"*\" role=\"thanks\">The first two authors contributed equally</note>\n    <contact class=\"ltx_author_line\" name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A</contact>\n  </creator>"
   ]);
 }
 

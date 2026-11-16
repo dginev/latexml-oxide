@@ -329,8 +329,9 @@ pub struct Event {
   pub footnote:       bool,
   /// a footnote Mark's: it is given its number (`\footnotemark[1]`, a document's `\samethanks[1]`, 1912.01737,
   /// 1811.08622), latex.ltx's `\@xfootnotemark`, which sets the counter in a group of its own and steps nothing — it
-  /// re-references a note written already; a bare `\footnotemark` steps the counter (`\stepcounter\@mpfn`). Not in a
-  /// dump: only the emitter's dropped-mark check reads it (`emitter::emit::mark_dropped`)
+  /// re-references a note written already; a bare `\footnotemark` steps the counter (`\stepcounter\@mpfn`). A Note's:
+  /// its `\thanks[<n>]` or `\footnote[<n>]` shows the mark of its given `<n>`, whatever the counter the block steps (1607.07280). Not in a
+  /// dump: only the emitter reads it (`emitter::emit::mark_dropped`, `emitter::emit::shown_mark`)
   pub given_number:   bool,
   /// a Name's: the block's creator call that printed it, its place among the rehearsal's (`creator_roles`;
   /// `ledger::Outcome::Events::creators`). Not in a dump: only the emitter reads it
@@ -1364,6 +1365,8 @@ impl Walker {
       "\\lx@fm@obs@note" | "\\lx@fm@obs@fnnote" | "\\lx@fm@obs@notetext" => {
         let mut note = Event::new(EventKind::Note);
         note.footnote = cs.ends_with("fnnote");
+        // (`\footnote[<n>]`: the mark it shows is <n>'s, `Event::given_number`)
+        note.given_number = w.get_arg(1).is_some();
         if let Some(body) = w.get_arg(2) {
           note.inkless = leaves_no_ink(body);
           let (events, formulas, inks) = lex_body_with_inks(body);

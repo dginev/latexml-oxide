@@ -1,0 +1,23 @@
+% mechanism: revtex `\affiliation{\footnotemark[1]Univ A}` re-prints the name's `\footnote[1]` mark as a link; the
+%   reading pairs the entry by it (resolver/blocks.rs `mark:footnote`). The name's `\footnote` is its note marked as
+%   REVTeX prints it (`\frontmatter@thefootnote`, the emitter's `shown_mark`), and the mark that led the entry is no note
+%   of its own (`queue_digest::LEADS_CONTACT`, `insert::link_marked_notes`; DG ruling 3: no institution marks)
+% witness: 1607.07280 (revtex4 preprint; `Shun'ya Mizoguchi\footnote[1]{E-mail:…}`, two `\affiliation{\footnotemark[1]…}`)
+% oracle:  pdflatex 0 errors: "Ann Able∗ and Bob Baker†", "∗Univ A, Town", "∗Lab B, City and", "†Univ C, Village",
+%   footnotes "∗ E-mail: ann@a.org", "† E-mail: bob@c.org"
+% engines: rust REGFIX = 0 errors; Ann: note contact, Univ A, footnotemark *, Lab B, footnotemark *; Bob: note
+%   contact, Univ C, footnotemark †
+% expect:  0 errors 0 warnings; Ann: note mark="*" "E-mail: ann@a.org", Univ A, Lab B; Bob: note mark="†", Univ C; no
+%   footnotemark notes
+% status:  RED (REGFIX) -> GREEN (perfect_kernel_batchshmark::an_affiliations_linking_mark_is_no_note)
+% preload: ar5iv.sty
+\documentclass[aps,preprint,nofootinbib]{revtex4}
+\begin{document}
+\title{T}
+\author{Ann Able\footnote[1]{E-mail: ann@a.org} and Bob Baker\footnote[2]{E-mail: bob@c.org}}
+\affiliation{\footnotemark[1]Univ A, Town}
+\affiliation{\footnotemark[1]Lab B, City}
+\affiliation{\footnotemark[2]Univ C, Village}
+\maketitle
+Text.
+\end{document}

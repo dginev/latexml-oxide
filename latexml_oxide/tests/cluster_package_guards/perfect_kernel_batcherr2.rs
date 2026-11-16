@@ -184,7 +184,7 @@ fn an_undefined_command_after_a_footnotemark_writes_one_stub() {
      role=\"typerefnum\">footnote *</tag>\n      </tags></note>\n    <note mark=\"\u{2020}\" role=\"footnotemark\" \
      xml:id=\"footnotex2\"><tags>\n        <tag>\u{2020}</tag>\n        <tag role=\"refnum\">\u{2020}</tag>\n        \
      <tag role=\"typerefnum\">footnote \u{2020}</tag>\n      </tags></note>\n    <note class=\"ltx_note_frontmatter \
-     ltx_thanks_note\" role=\"thanks\">Univ X.</note>\n  </creator>",
+     ltx_thanks_note\" mark=\"*\" role=\"thanks\">Univ X.</note>\n  </creator>",
     "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Bob Baker</personname>\n  </creator>",
   ]);
 }

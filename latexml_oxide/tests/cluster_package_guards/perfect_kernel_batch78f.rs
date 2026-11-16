@@ -240,7 +240,7 @@ fn iopart_ead_corresponding_author_legend() {
   // (P4b2b: the names' printed marks, as pdflatex prints them)
   assert_eq!(creators(&xml), [
     r#"<creator role="author"> <personname>Ann Able<sup xml:id="id1"><text font="italic" xml:id="id1.1">1</text></sup></personname> <contact name="Affiliation: " role="affiliation"><sup xml:id="id2">1</sup> Univ A, Town</contact> </creator>"#,
-    r#"<creator before=" " role="author"> <personname>Bob Baker<sup xml:id="id3"><text font="italic" xml:id="id3.1">1,∗</text></sup></personname> <contact name="Affiliation: " role="affiliation"><sup xml:id="id4">1</sup> Univ A, Town</contact> <contact name="Email: " role="email"><text font="typewriter" xml:id="id5">zq77@x.org</text></contact> <note class="ltx_note_frontmatter ltx_thanks_correspondence" mark="∗" role="thanks" xml:id="id6"><sup xml:id="id6.1">∗</sup> Author to whom any correspondence should be addressed.</note> </creator>"#,
+    r#"<creator before=" " role="author"> <personname>Bob Baker<sup xml:id="id3"><text font="italic" xml:id="id3.1">1,∗</text></sup></personname> <contact name="Affiliation: " role="affiliation"><sup xml:id="id4">1</sup> Univ A, Town</contact> <contact name="Email: " role="email"><text font="typewriter" xml:id="id5">zq77@x.org</text></contact> <note class="ltx_note_frontmatter ltx_thanks_correspondence" mark="∗" role="thanks" xml:id="id6">Author to whom any correspondence should be addressed.</note> </creator>"#,
     r#"<creator before=" " role="author"> <personname>Cat Cole<sup xml:id="id7"><text font="italic" xml:id="id7.1">1</text></sup></personname> <contact name="Affiliation: " role="affiliation"><sup xml:id="id8">1</sup> Univ A, Town</contact> </creator>"#,
   ]);
 }
@@ -522,7 +522,7 @@ fn iopart_ead_corresponding_author_of_another_group() {
       &format!(
         "{} {}",
         contact("affiliation", "ICL, London"),
-        r#"<note class="ltx_note_frontmatter ltx_thanks_correspondence" mark="∗" role="thanks" xml:id="id2"><sup xml:id="id2.1">∗</sup> Author to whom any correspondence should be addressed.</note>"#
+        r#"<note class="ltx_note_frontmatter ltx_thanks_correspondence" mark="∗" role="thanks" xml:id="id2">Author to whom any correspondence should be addressed.</note>"#
       )
     ),
     block(&email("id3", "zq1@kit.edu")),
@@ -544,7 +544,7 @@ fn iopart_ead_corresponding_author_not_under_its_mark() {
   assert_eq!(creators(&xml), [
     r#"<creator role="author"> <personname>Ann Able<sup xml:id="id1"><text font="italic" xml:id="id1.1">2</text></sup></personname> <contact name="Affiliation: " role="affiliation"><sup xml:id="id2">2</sup> Univ B, City</contact> </creator>"#,
     r#"<creator before=" " role="author"> <personname>Bob Baker<sup xml:id="id3"><text font="italic" xml:id="id3.1">2</text></sup></personname> <contact name="Affiliation: " role="affiliation"><sup xml:id="id4">2</sup> Univ B, City</contact> </creator>"#,
-    r#"<creator before=" " role="author"> <personname>Cat Cole<sup xml:id="id5"><text font="italic" xml:id="id5.1">1,∗</text></sup></personname> <contact name="Affiliation: " role="affiliation"><sup xml:id="id6">1</sup> Univ A, Town</contact> <note class="ltx_note_frontmatter ltx_thanks_correspondence" mark="∗" role="thanks" xml:id="id7"><sup xml:id="id7.1">∗</sup> Author to whom any correspondence should be addressed.</note> </creator>"#,
+    r#"<creator before=" " role="author"> <personname>Cat Cole<sup xml:id="id5"><text font="italic" xml:id="id5.1">1,∗</text></sup></personname> <contact name="Affiliation: " role="affiliation"><sup xml:id="id6">1</sup> Univ A, Town</contact> <note class="ltx_note_frontmatter ltx_thanks_correspondence" mark="∗" role="thanks" xml:id="id7">Author to whom any correspondence should be addressed.</note> </creator>"#,
     r#"<creator role="author"> <contact name="Email: " role="email"><text font="typewriter" xml:id="id8">zq77@x.org</text></contact> </creator>"#,
   ]);
 }

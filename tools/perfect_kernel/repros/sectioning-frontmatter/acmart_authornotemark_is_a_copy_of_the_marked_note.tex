@@ -1,0 +1,24 @@
+% mechanism: acmart's `\authornote` is the author's note marked by `\@fnsymbol` of the footnote counter its `\maketitle`
+%   steps (acmart.cls:1727-1731, :2237), `\authornotemark[1]` that mark again on the next name (:1733-1738, :2897
+%   `\footnotemark[#1]`): the name's mark is a full copy of the note it marks (`insert::link_marked_notes`, DG ruling 1
+%   of 2026-11-16). Perl: `\authornote` a contact, `\authornotemark` nothing (acmart.cls.ltxml:116, :123)
+% witness: synthetic (190 of the 30k sample use \authornote + \authornotemark)
+% oracle:  pdflatex: "Ann Able∗  Bob Baker∗  Cat Cole", "∗ Equal contribution." once
+% engines: rust REGFIX = Able a contact role=note, Baker nothing; perl 0.8.8 the same (PERL-ORIGIN)
+% expect:  0 errors 0 warnings; Able and Baker each the note "Equal contribution." mark="*"; Cole none
+% status:  RED (REGFIX) -> GREEN (perfect_kernel_batchshmark::a_mark_on_a_name_is_a_copy_of_the_note_it_marks)
+% preload: ar5iv.sty
+\documentclass[sigconf]{acmart}
+\begin{document}
+\title{T}
+\author{Ann Able}
+\authornote{Equal contribution.}
+\affiliation{\institution{Univ A}\city{Town}\country{X}}
+\author{Bob Baker}
+\authornotemark[1]
+\affiliation{\institution{Univ A}\city{Town}\country{X}}
+\author{Cat Cole}
+\affiliation{\institution{Univ A}\city{Town}\country{X}}
+\maketitle
+Text.
+\end{document}
