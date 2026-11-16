@@ -305,7 +305,15 @@ pub fn pin_char(c: char) -> SymStr {
 pub fn with<R, FnR>(sym: SymStr, caller: FnR) -> R
 where FnR: FnOnce(&str) -> R {
   let arena = ARENA.borrow();
-  caller(&text(&arena, sym))
+  // (one branch, not `text()`'s two: the hottest lend)
+  let page;
+  let text = if is_paged(sym) {
+    page = page_text(sym);
+    &*page
+  } else {
+    buffer_text(&arena, sym)
+  };
+  caller(text)
 }
 
 /// The first `N` bytes of `sym`'s text, if it has as many, for a test by name on a hot path.
