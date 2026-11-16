@@ -35,10 +35,11 @@
 //! ## Cache key
 //!
 //! SHA-256 of:
-//!   `source bytes ‖ page ‖ density ‖ target-extension`
+//!   `source bytes ‖ page ‖ density ‖ target-extension [‖ SVG_KEY_VERSION]`
 //!
-//! The page/density bytes are appended as 8-byte little-endian; the
-//! extension is appended as ASCII lower-case bytes. Bytes-only keying
+//! The page/density bytes are appended as 4-byte little-endian; the
+//! extension is appended as ASCII lower-case bytes, and an `svg` key ends
+//! with [`SVG_KEY_VERSION`], which retires cached SVGs. Bytes-only keying
 //! makes the cache reproducible across machines and gives near-zero
 //! collision risk for our use.
 //!
@@ -112,6 +113,10 @@ use std::{
 use sha2::{Digest, Sha256};
 
 const DEFAULT_MAX_MB: u64 = 2048;
+
+/// Mixed into every SVG key: an SVG cached before mutool's page ≥ 2 fix is pdftocairo's render (DG
+/// 2026-11-16), so those keys must miss. Change it whenever cached SVGs must not be served again.
+const SVG_KEY_VERSION: &str = "mutool-page-fix-2026-11-16";
 
 /// Memoised disabled flag (read env once at first call).
 fn disabled() -> bool {
@@ -263,6 +268,9 @@ impl SourceDigest {
     hasher.update(key.page.unwrap_or(0).to_le_bytes());
     hasher.update(key.density.to_le_bytes());
     hasher.update(key.ext.as_bytes());
+    if key.ext == "svg" {
+      hasher.update(SVG_KEY_VERSION.as_bytes());
+    }
     // sha2 0.11 returns a `hybrid_array::Array`, which (unlike 0.10's
     // `GenericArray`) does not implement `LowerHex`, so `format!("{:x}", _)`
     // no longer compiles. Render the digest to lowercase hex by hand — same
@@ -791,6 +799,34 @@ mod tests {
     .unwrap();
     assert_ne!(h_png, h_svg);
     assert_ne!(h_png, h_page2);
+  }
+
+  /// SVG keys carry [`SVG_KEY_VERSION`], so an SVG cached before mutool's page ≥ 2 fix misses; every
+  /// other key is the unsalted hash of before, so the cached PNGs still hit.
+  #[test]
+  fn svg_keys_are_salted_and_png_keys_are_not() {
+    let dir = temp_dir("salt");
+    let src = dir.join("a.pdf");
+    write_bytes(&src, b"%PDF-1.5 two pages");
+    let unsalted = |key: RenderKey| {
+      let mut hasher = Sha256::new();
+      hasher.update(b"%PDF-1.5 two pages");
+      hasher.update(key.page.unwrap_or(0).to_le_bytes());
+      hasher.update(key.density.to_le_bytes());
+      hasher.update(key.ext.as_bytes());
+      let digest = hasher.finalize();
+      digest
+        .iter()
+        .map(|b| format!("{b:02x}"))
+        .collect::<String>()
+    };
+    for (ext, density, salted) in [("svg", 0, true), ("png", 90, false), ("jpg", 90, false)] {
+      for page in [None, Some(1), Some(2)] {
+        let key = RenderKey { page, density, ext };
+        let hash = hash_key(&src, key).unwrap();
+        assert_eq!(hash != unsalted(key), salted, "{ext} page {page:?}");
+      }
+    }
   }
 
   #[test]
