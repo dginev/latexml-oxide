@@ -768,12 +768,13 @@ users, 60 controls): HTML and every aux file identical on 193 of 193 (one has no
 of 193, E/F/W equal.
 Not taken: `\not`'s rule runs twice in every LaTeX document because `latex_constructs` force-reloads `plain_constructs`
 and `math_common` (Perl `latex_constructs.pool.ltxml` L19-21, L38, which Perl does too), re-pushing math_common's
-`DefRewrite` and its three ligatures. The second `\not` pass is not idle: the cancel path's `append_tree` copies its
-operand (Perl moves it, `appendChild`), so a `\not` inside it (`$\not\sqrt{a\not=b}$`) is rewritten only by the second
-registration; registering it once changes that output. The second pass repairs nesting depth 2 only: at depth 3
-(`$\not\sqrt{\not\sqrt{a\not=b}}$`) Perl gives `≠` while Rust leaves a bare `／`, a plain `=` and an extra invisible
-times, and `$\not\frac{\not\sqrt{a\not=b}}{c}$` gets `fontsize="49%"` against Perl's `70%` (revPERFF, both binaries;
-pre-existing). The fix is the move Perl makes, then one registration (row R).
+`DefRewrite` and its three ligatures. The double registration stays, and since NOTCANCEL its second `\not` pass is idle:
+both paths of the rule put their operand back by moving it, as Perl's `appendChild` does (`math_common.pool.ltxml:341`,
+`:354`). They copied it (`append_tree`), which left a `\not` nested in the operand out of the tree for the pass that
+had selected it, so the second registration repaired depth 2 only (`$\not\sqrt{\not\sqrt{a\not=b}}$` kept a bare `／`,
+a plain `=` and an invisible times; revPERFF). The cancel `XMApp` now takes the `\not`'s box and font (Perl `_box`), so
+`$\not\frac{\not\sqrt{a\not=b}}{c}$` keeps Perl's 70 % (it was 49 %). Guards `perfect_kernel_batchnotcancel::*` (plain TeX, one registration,
+gives the LaTeX run's `XMath`).
 
 ### 2026-11-15 — post's whole-document queries wrap only their matches (PERFD, PERF1 lever L5)
 

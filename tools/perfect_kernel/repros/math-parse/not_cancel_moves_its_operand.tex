@@ -1,0 +1,17 @@
+% witness: revPERFF (synthetic; confirmed against Perl on the same host); the cancel path of math_common's `\not`
+%          rewrite copied its operand (Perl appendChild moves it, math_common.pool.ltxml:341, the token path :354)
+% oracle:  pdflatex 0 errors (TL 2025): each `\not` overstrikes the next atom, nested ones too
+% engines: rust 6a28795bcab: W1 a bare `／`, a plain `=` and an invisible times at depth 3; W2 fontsize 49%; `\not\not=`
+%          "not-not = absent"; Perl 0.8.8 `≠` at every depth, 70%, `≠` (whole document byte-identical after the fix)
+% expect:  0 errors 0 warnings; every formula's XMath is Perl's (the guard lists them; ids aside: Rust numbers the
+%          binom's XMRef targets in another order, pre-existing), every XMRef resolves
+% status:  RED (6a28795bcab) -> GREEN (NOTCANCEL)
+\documentclass{article}
+\usepackage{amsmath}
+\begin{document}
+W1 $\not\sqrt{\not\sqrt{a\not=b}}$ W2 $\not\frac{\not\sqrt{a\not=b}}{c}$
+D4 $\not\sqrt{\not\sqrt{\not\sqrt{a\not=b}}}$ R $x\not\in A$ F $\not\frac{1}{2}$
+S $y_{\not\frac{a}{\not\sqrt{b}}}^{\not\sqrt{\not\sqrt{c\not\subset d}}}$
+L $\not\frac{A\not\subset B}{\not\sqrt{C\not\equiv D}}$ N $\not\not=$
+B $\not\binom{n}{\not\sqrt{k\not\in K}}$
+\end{document}

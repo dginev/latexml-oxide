@@ -674,12 +674,22 @@ LoadDefinitions!({
     });
     // eprintln debug removed
     if text.chars().count() != 1 { // Not simple char token.
-      // Wrap with a cancel op
-      document.open_element("ltx:XMApp",
-        Some(map!("_box" => not_node.to_hashable().to_string())), None)?;
-      let mut strike = document.insert_math_token("",
-        string_map!("role" => "ENCLOSE", "enclose" => "updiagonalstrike",
-        "meaning" => "not", "_box" => not_node.to_hashable()), None)?;
+      // Wrap with a cancel op. Perl's `_box => $box` gives both nodes the `\not`'s box and font,
+      // so the rewrite's font merge has no size left to scale (revPERFF:
+      // `\not\frac{\not\sqrt{a\not=b}}{c}` keeps 70%, not 49%).
+      let not_box = document.get_node_box(not_node);
+      let has_box = not_box.is_some();
+      if has_box {
+        document.set_box_to_absorb(not_box);
+      }
+      let opened = document.open_element("ltx:XMApp", None, None).and_then(|_| {
+        document.insert_math_token("", string_map!("role" => "ENCLOSE",
+          "enclose" => "updiagonalstrike", "meaning" => "not"), None)
+      });
+      if has_box {
+        document.expire_box_to_absorb();
+      }
+      let mut strike = opened?;
       if let Some(id) = not_node.get_attribute_ns("id",XML_NS) {
         // NS-aware remove (the bare form was a silent no-op — masked only
         // because the rewrite discards not_node after this closure).
@@ -687,10 +697,9 @@ LoadDefinitions!({
         document.unrecord_id(&id);
         document.set_attribute(&mut strike, "xml:id", &id)?;
       }
-      // Use append_tree to avoid DOM corruption from add_child on detached nodes
-      let inner_children = vec![thing.clone()];
-      let mut current = document.get_node().clone();
-      document.append_tree(&mut current, inner_children)?;
+      // MOVE the operand (Perl appendChild, math_common.pool.ltxml:341; Replace unlinked it): a
+      // copy would strand a nested `\not` this pass already selected outside the tree (revPERFF).
+      document.get_node_mut().add_child(thing)?;
       document.close_element("ltx:XMApp")?;
     } else {
       // For simple tokens, we'll modify the relevant content & attributes.
@@ -719,10 +728,9 @@ LoadDefinitions!({
         None => Cow::Owned(text + "\u{0338}")
       };
       thing.append_text(&new)?;
-      // Put the modified node back in using append_tree
-      let inner_children = vec![thing.clone()];
-      let mut current = document.get_node().clone();
-      document.append_tree(&mut current, inner_children)?;
+      // and put the node itself back in (Perl appendChild, :354): a `\not` this pass selected
+      // stays in the tree, so `\not\not=` ends as `≠`, as in Perl.
+      document.get_node_mut().add_child(thing)?;
       // Since the <not> element is disappearing, if it had an id that was referenced...!?!?
       if let Some(id) = not_node.get_attribute_ns("id",XML_NS) {
         let idref_xpath = format!("descendant-or-self::ltx:XMRef[@idref='{id}']");

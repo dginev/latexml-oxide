@@ -1,0 +1,10 @@
+% witness: revPERFF (synthetic); plain TeX registers math_common's `\not` rewrite once (latex_constructs' reload of
+%          math_common, Perl latex_constructs.pool.ltxml L19-21/L38, adds the second pass LaTeX runs), so this
+%          document shows what one pass does: with the operand moved it rewrites every level, as Perl's does
+% oracle:  pdftex 0 errors (TL 2025)
+% engines: rust 6a28795bcab: depth 2 already a bare `／` and an invisible times; Perl 0.8.8 `≠` at every depth
+% expect:  0 errors 0 warnings; the XMath of each formula equals the LaTeX run's (repro not_cancel_moves_its_operand)
+% status:  RED (6a28795bcab) -> GREEN (NOTCANCEL)
+D2 $\not\sqrt{a\not=b}$ D4 $\not\sqrt{\not\sqrt{\not\sqrt{a\not=b}}}$
+N $\not\not=$ S $x_{\not\sqrt{y\not\in A}}$
+\bye
