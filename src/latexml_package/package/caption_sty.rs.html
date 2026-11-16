@@ -1151,7 +1151,7 @@
 <a href=#1151 id=1151 data-nosnippet>1151</a>  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\lx@caption@where{}"</span>, sub[args] {
 <a href=#1152 id=1152 data-nosnippet>1152</a>    <span class="kw">let </span>of: Tokens = args.into_iter().next().unwrap().into();
 <a href=#1153 id=1153 data-nosnippet>1153</a>    <span class="kw">let </span>of = !of.is_empty();
-<a href=#1154 id=1154 data-nosnippet>1154</a>    <span class="kw">let </span>auto = <span class="kw">if </span>lookup_string_from_sym(<span class="macro">pin!</span>(<span class="string">"MODE"</span>)).ends_with(<span class="string">"horizontal"</span>) {
+<a href=#1154 id=1154 data-nosnippet>1154</a>    <span class="kw">let </span>auto = <span class="kw">if </span>mode_ends_with(<span class="string">"horizontal"</span>) {
 <a href=#1155 id=1155 data-nosnippet>1155</a>      <span class="string">"bottom"
 <a href=#1156 id=1156 data-nosnippet>1156</a>    </span>} <span class="kw">else if </span>of &amp;&amp; !lookup_bool(<span class="string">"lx@in@float"</span>) {
 <a href=#1157 id=1157 data-nosnippet>1157</a>      <span class="string">"auto@outer"

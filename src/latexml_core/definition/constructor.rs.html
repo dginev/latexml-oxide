@@ -383,154 +383,154 @@
 <a href=#383 id=383 data-nosnippet>383</a>    // `\rotatebox{90}{\parbox…}`). A box that is paragraph material may need to open that
 <a href=#384 id=384 data-nosnippet>384</a>    // paragraph in the document (`insert_block_in_paragraph`, latexml_engine).
 <a href=#385 id=385 data-nosnippet>385</a>    </span><span class="kw">let </span>in_paragraph = <span class="self">self</span>.declared_mode.is_some_and(|mode| mode.enter_horizontal) &amp;&amp; {
-<a href=#386 id=386 data-nosnippet>386</a>      <span class="kw">let </span>mode = lookup_string_from_sym(<span class="macro">crate::pin!</span>(<span class="string">"MODE"</span>));
-<a href=#387 id=387 data-nosnippet>387</a>      mode.ends_with(<span class="string">"vertical"</span>) || mode == <span class="string">"horizontal"
-<a href=#388 id=388 data-nosnippet>388</a>    </span>};
-<a href=#389 id=389 data-nosnippet>389</a>    <span class="kw">let </span><span class="kw-2">mut </span>result = <span class="self">self</span>.execute_before_digest()<span class="question-mark">?</span>;
-<a href=#390 id=390 data-nosnippet>390</a>    <span class="comment">// After the `before` code: `\lx@finalize@document`'s is what ends the document (1611.05714: an
-<a href=#391 id=391 data-nosnippet>391</a>    // itemize left open by a `\description` used as a command).
-<a href=#392 id=392 data-nosnippet>392</a>    </span><span class="kw">let </span>ends_before = <span class="kw">crate</span>::stomach::ends_inside_groups();
-<a href=#393 id=393 data-nosnippet>393</a>
-<a href=#394 id=394 data-nosnippet>394</a>    <span class="comment">// info!("{" + $self-&gt;tracingCSName . "}\n" if $tracing;
-<a href=#395 id=395 data-nosnippet>395</a>    // Get some info before we process arguments...
-<a href=#396 id=396 data-nosnippet>396</a>    </span><span class="kw">let </span>state_font = lookup_font();
-<a href=#397 id=397 data-nosnippet>397</a>    <span class="kw">let </span>ismath = lookup_bool_sym(<span class="macro">crate::pin!</span>(<span class="string">"IN_MATH"</span>));
-<a href=#398 id=398 data-nosnippet>398</a>    <span class="comment">// info!(target: "constructor", "invoke for {:?} ({:?})", self.get_cs(), ismath);
-<a href=#399 id=399 data-nosnippet>399</a>    // Parse AND digest the arguments to the Constructor
-<a href=#400 id=400 data-nosnippet>400</a>    // (and the tokens its length arguments state, where they are kept: `parameter::KEEP_STATED_LENGTHS`)
-<a href=#401 id=401 data-nosnippet>401</a>    </span><span class="kw">let </span><span class="kw-2">mut </span>stated: Vec&lt;(usize, Tokens)&gt; = Vec::new();
-<a href=#402 id=402 data-nosnippet>402</a>    <span class="kw">let </span><span class="kw-2">mut </span>withheld = <span class="bool-val">false</span>;
-<a href=#403 id=403 data-nosnippet>403</a>    <span class="kw">let </span><span class="kw-2">mut </span>args: Vec&lt;<span class="prelude-ty">Option</span>&lt;Digested&gt;&gt; = <span class="kw">match </span><span class="self">self</span>.get_parameters() {
-<a href=#404 id=404 data-nosnippet>404</a>      <span class="prelude-val">None </span>=&gt; Vec::new(),
-<a href=#405 id=405 data-nosnippet>405</a>      <span class="prelude-val">Some</span>(params) =&gt; params.read_arguments_and_digest(<span class="self">self</span>, <span class="kw-2">&amp;mut </span>stated, <span class="kw-2">&amp;mut </span>withheld)<span class="question-mark">?</span>,
-<a href=#406 id=406 data-nosnippet>406</a>    };
-<a href=#407 id=407 data-nosnippet>407</a>    <span class="comment">// info!($self-&gt;tracingArgs(@args) . "\n" if $tracing &amp;&amp; @args;
-<a href=#408 id=408 data-nosnippet>408</a>    </span><span class="kw">let </span>nargs = <span class="self">self</span>.get_num_args();
-<a href=#409 id=409 data-nosnippet>409</a>    args.truncate(nargs);
-<a href=#410 id=410 data-nosnippet>410</a>
-<a href=#411 id=411 data-nosnippet>411</a>    <span class="comment">// Compute any extra Whatsit properties (many end up as element attributes)
-<a href=#412 id=412 data-nosnippet>412</a>
-<a href=#413 id=413 data-nosnippet>413</a>    </span><span class="kw">let </span><span class="kw-2">mut </span>properties = (<span class="self">self</span>.properties)(<span class="kw-2">&amp;</span>args)<span class="question-mark">?</span>;
-<a href=#414 id=414 data-nosnippet>414</a>    <span class="comment">// for (key, value) in properties.iter() {
-<a href=#415 id=415 data-nosnippet>415</a>    //   if (ref $value eq 'CODE') {
-<a href=#416 id=416 data-nosnippet>416</a>    //     $properties{$key} = &amp;$value($stomach, @args); } }
-<a href=#417 id=417 data-nosnippet>417</a>
-<a href=#418 id=418 data-nosnippet>418</a>    </span>properties
-<a href=#419 id=419 data-nosnippet>419</a>      .entry(<span class="string">"font"</span>)
-<a href=#420 id=420 data-nosnippet>420</a>      .or_insert_with(|| <span class="kw">match </span>state_font {
-<a href=#421 id=421 data-nosnippet>421</a>        <span class="prelude-val">Some</span>(f) =&gt; Stored::Font(Rc::clone(<span class="kw-2">&amp;</span>f)),
-<a href=#422 id=422 data-nosnippet>422</a>        <span class="prelude-val">None </span>=&gt; Stored::Font(Rc::new(Font::text_default())), <span class="comment">// should never happen?
-<a href=#423 id=423 data-nosnippet>423</a>      </span>});
-<a href=#424 id=424 data-nosnippet>424</a>    <span class="comment">// $properties{locator} = $stomach-&gt;getGullet-&gt;getMouth-&gt;getLocator unless defined
-<a href=#425 id=425 data-nosnippet>425</a>    // $properties{locator};
-<a href=#426 id=426 data-nosnippet>426</a>    </span>properties
-<a href=#427 id=427 data-nosnippet>427</a>      .entry(<span class="string">"isMath"</span>)
-<a href=#428 id=428 data-nosnippet>428</a>      .or_insert_with(|| Stored::Bool(ismath));
-<a href=#429 id=429 data-nosnippet>429</a>    <span class="comment">// Perl: $mode = $properties{mode} || $state-&gt;lookupValue('MODE') || 'restricted_horizontal';
-<a href=#430 id=430 data-nosnippet>430</a>    // Set mode on whatsit so repackHorizontal can distinguish vertical vs horizontal items.
-<a href=#431 id=431 data-nosnippet>431</a>    </span>properties.entry(<span class="string">"mode"</span>).or_insert_with(|| {
-<a href=#432 id=432 data-nosnippet>432</a>      <span class="kw">let </span>mode = lookup_string_from_sym(<span class="macro">crate::pin!</span>(<span class="string">"MODE"</span>));
-<a href=#433 id=433 data-nosnippet>433</a>      Stored::String(<span class="kw">crate</span>::common::arena::pin(<span class="kw">if </span>mode.is_empty() {
-<a href=#434 id=434 data-nosnippet>434</a>        <span class="string">"restricted_horizontal"
-<a href=#435 id=435 data-nosnippet>435</a>      </span>} <span class="kw">else </span>{
-<a href=#436 id=436 data-nosnippet>436</a>        <span class="kw-2">&amp;</span>mode
-<a href=#437 id=437 data-nosnippet>437</a>      }))
-<a href=#438 id=438 data-nosnippet>438</a>    });
-<a href=#439 id=439 data-nosnippet>439</a>    <span class="kw">if </span>in_paragraph {
-<a href=#440 id=440 data-nosnippet>440</a>      properties.insert(<span class="string">"in_paragraph"</span>, Stored::Bool(<span class="bool-val">true</span>));
-<a href=#441 id=441 data-nosnippet>441</a>    }
-<a href=#442 id=442 data-nosnippet>442</a>    <span class="kw">if </span>!stated.is_empty() {
-<a href=#443 id=443 data-nosnippet>443</a>      <span class="kw">let </span><span class="kw-2">mut </span>lengths: std::collections::VecDeque&lt;Stored&gt; = std::iter::repeat_with(|| Stored::None)
-<a href=#444 id=444 data-nosnippet>444</a>        .take(args.len())
-<a href=#445 id=445 data-nosnippet>445</a>        .collect();
-<a href=#446 id=446 data-nosnippet>446</a>      <span class="kw">for </span>(index, tokens) <span class="kw">in </span>stated {
-<a href=#447 id=447 data-nosnippet>447</a>        <span class="kw">if let </span><span class="prelude-val">Some</span>(slot) = lengths.get_mut(index) {
-<a href=#448 id=448 data-nosnippet>448</a>          <span class="kw-2">*</span>slot = Stored::Tokens(tokens);
-<a href=#449 id=449 data-nosnippet>449</a>        }
-<a href=#450 id=450 data-nosnippet>450</a>      }
-<a href=#451 id=451 data-nosnippet>451</a>      properties.insert(
-<a href=#452 id=452 data-nosnippet>452</a>        <span class="kw">crate</span>::parameter::STATED_LENGTHS,
-<a href=#453 id=453 data-nosnippet>453</a>        Stored::VecDequeStored(lengths),
-<a href=#454 id=454 data-nosnippet>454</a>      );
-<a href=#455 id=455 data-nosnippet>455</a>    }
-<a href=#456 id=456 data-nosnippet>456</a>    <span class="kw">if </span>withheld {
-<a href=#457 id=457 data-nosnippet>457</a>      properties.insert(
-<a href=#458 id=458 data-nosnippet>458</a>        <span class="kw">crate</span>::parameter::STATED_LENGTHS_WITHHELD,
-<a href=#459 id=459 data-nosnippet>459</a>        Stored::Bool(<span class="bool-val">true</span>),
-<a href=#460 id=460 data-nosnippet>460</a>      );
-<a href=#461 id=461 data-nosnippet>461</a>    }
-<a href=#462 id=462 data-nosnippet>462</a>    <span class="comment">// A TeX box's constructor outside math (a declared `restricted_horizontal`): the element it opens is marked for a
-<a href=#463 id=463 data-nosnippet>463</a>    // frontmatter field's print (core `document::FIELD_BOX_PROPERTY`, OXIDIZED_DESIGN #715).
-<a href=#464 id=464 data-nosnippet>464</a>    </span><span class="kw">if </span><span class="self">self</span>.declared_mode.is_some_and(|mode| mode.restricted_box)
-<a href=#465 id=465 data-nosnippet>465</a>      &amp;&amp; !ismath
-<a href=#466 id=466 data-nosnippet>466</a>      &amp;&amp; <span class="kw">crate</span>::document::field_box_marks_live()
-<a href=#467 id=467 data-nosnippet>467</a>    {
-<a href=#468 id=468 data-nosnippet>468</a>      properties.insert(<span class="kw">crate</span>::document::FIELD_BOX_PROPERTY, Stored::Bool(<span class="bool-val">true</span>));
-<a href=#469 id=469 data-nosnippet>469</a>    }
-<a href=#470 id=470 data-nosnippet>470</a>    <span class="comment">// $properties{level}   = $stomach-&gt;getBoxingLevel;
-<a href=#471 id=471 data-nosnippet>471</a>
-<a href=#472 id=472 data-nosnippet>472</a>    // Now create the Whatsit, itself.
-<a href=#473 id=473 data-nosnippet>473</a>    // Every field is named rather than `..Whatsit::default()`: the default
-<a href=#474 id=474 data-nosnippet>474</a>    // builds a placeholder `Rc::new(Expandable::default())` for `definition`
-<a href=#475 id=475 data-nosnippet>475</a>    // that this literal immediately overwrites, so the functional-update form
-<a href=#476 id=476 data-nosnippet>476</a>    // allocated and dropped one `Rc&lt;Expandable&gt;` per constructor invocation
-<a href=#477 id=477 data-nosnippet>477</a>    // (dhat 2026-07-29: 1,215 blocks / 145,800 B, again 1:1 with invocations).
-<a href=#478 id=478 data-nosnippet>478</a>    </span><span class="kw">let </span><span class="kw-2">mut </span>whatsit = Whatsit {
-<a href=#479 id=479 data-nosnippet>479</a>      definition,
-<a href=#480 id=480 data-nosnippet>480</a>      args,
-<a href=#481 id=481 data-nosnippet>481</a>      properties,
-<a href=#482 id=482 data-nosnippet>482</a>      reversion: <span class="prelude-val">None</span>,
-<a href=#483 id=483 data-nosnippet>483</a>      dual_reversion: <span class="prelude-val">None</span>,
-<a href=#484 id=484 data-nosnippet>484</a>      locator: <span class="prelude-val">None</span>,
-<a href=#485 id=485 data-nosnippet>485</a>    };
-<a href=#486 id=486 data-nosnippet>486</a>    <span class="comment">// Perl `Core/Definition/Constructor.pm` L106:
-<a href=#487 id=487 data-nosnippet>487</a>    //   `$props{locator} = $stomach-&gt;getGullet-&gt;getLocator`
-<a href=#488 id=488 data-nosnippet>488</a>    // — capture the construct's source position at digest time. Gated on
-<a href=#489 id=489 data-nosnippet>489</a>    // `--source-map`: the whatsit locator is consumed only by source-map
-<a href=#490 id=490 data-nosnippet>490</a>    // stamping + (untested) error messages, so the corpus/parity path skips
-<a href=#491 id=491 data-nosnippet>491</a>    // the per-construct `get_locator`/`arena::pin` cost and stays
-<a href=#492 id=492 data-nosnippet>492</a>    // byte-identical (the switch gates *all* locator tracking). Without this,
-<a href=#493 id=493 data-nosnippet>493</a>    // constructor-built elements carry `Locator::default()` (source =
-<a href=#494 id=494 data-nosnippet>494</a>    // `locator.rs`) and the source-map user-source filter drops them
-<a href=#495 id=495 data-nosnippet>495</a>    // (~53/265 → 128/… `article.tex` elements stamped once captured).
-<a href=#496 id=496 data-nosnippet>496</a>    </span><span class="kw">if </span>source_map_enabled() {
-<a href=#497 id=497 data-nosnippet>497</a>      <span class="comment">// --source-map: the construct's source extent is the union of its
-<a href=#498 id=498 data-nosnippet>498</a>      // children's spans (fixes the post-expansion eating-disorder, Experiment 2),
-<a href=#499 id=499 data-nosnippet>499</a>      // falling back to the gullet locator when no child carries a position.
-<a href=#500 id=500 data-nosnippet>500</a>      </span>whatsit.locator =
-<a href=#501 id=501 data-nosnippet>501</a>        assemble_locator(<span class="kw-2">&amp;</span>whatsit.args).or_else(|| <span class="prelude-val">Some</span>(<span class="kw">crate</span>::gullet::get_locator()));
-<a href=#502 id=502 data-nosnippet>502</a>    }
-<a href=#503 id=503 data-nosnippet>503</a>
-<a href=#504 id=504 data-nosnippet>504</a>    <span class="comment">// Call any 'After' code.
-<a href=#505 id=505 data-nosnippet>505</a>    </span><span class="kw">let </span><span class="kw-2">mut </span>post = <span class="self">self</span>.execute_after_digest(<span class="kw-2">&amp;mut </span>whatsit)<span class="question-mark">?</span>;
-<a href=#506 id=506 data-nosnippet>506</a>
-<a href=#507 id=507 data-nosnippet>507</a>    <span class="kw">if </span><span class="self">self</span>.capture_body {
-<a href=#508 id=508 data-nosnippet>508</a>      <span class="comment">// tex.web §679 `append_to_vlist`: a vertical body's interline glue follows the `\baselineskip`, `\lineskip`
-<a href=#509 id=509 data-nosnippet>509</a>      // and `\lineskiplimit` in force inside it. The body is measured after its group closed, where an enclosing
-<a href=#510 id=510 data-nosnippet>510</a>      // `\@array`'s zero values reign (a minipage's stacked lines lost their `\lineskip` in a table cell, arXiv
-<a href=#511 id=511 data-nosnippet>511</a>      // 2605.19065), so they are read here, when the body opens, after its begin code (`\@parboxrestore` for a
-<a href=#512 id=512 data-nosnippet>512</a>      // minipage). Unlike the box reader, which reads them at the box's end (base_utilities.rs
-<a href=#513 id=513 data-nosnippet>513</a>      // `predigest_list_in_mode`), a change inside the body (`\small`, `\offinterlineskip`) is not seen: RED
-<a href=#514 id=514 data-nosnippet>514</a>      // kernel-alignment/captured_body_interline_changed_inside. DIVERGENCES #421. Repro
-<a href=#515 id=515 data-nosnippet>515</a>      // kernel-alignment/minipage_in_a_cell_keeps_its_lineskip.
-<a href=#516 id=516 data-nosnippet>516</a>      </span><span class="kw">use </span><span class="kw">crate</span>::common::numeric_ops::NumericOps;
-<a href=#517 id=517 data-nosnippet>517</a>      <span class="comment">// the body's own mode, in force now (the whatsit's `mode` property is the mode it was invoked in)
-<a href=#518 id=518 data-nosnippet>518</a>      </span><span class="kw">let </span>interline: Vec&lt;(<span class="kw-2">&amp;</span>str, <span class="kw">crate</span>::Dimension)&gt; =
-<a href=#519 id=519 data-nosnippet>519</a>        <span class="kw">if </span>lookup_string_from_sym(<span class="macro">crate::pin!</span>(<span class="string">"MODE"</span>)).ends_with(<span class="string">"vertical"</span>) {
-<a href=#520 id=520 data-nosnippet>520</a>          [
-<a href=#521 id=521 data-nosnippet>521</a>            (<span class="string">"baseline"</span>, <span class="string">"\\baselineskip"</span>),
-<a href=#522 id=522 data-nosnippet>522</a>            (<span class="string">"lineskip"</span>, <span class="string">"\\lineskip"</span>),
-<a href=#523 id=523 data-nosnippet>523</a>            (<span class="string">"lineskiplimit"</span>, <span class="string">"\\lineskiplimit"</span>),
-<a href=#524 id=524 data-nosnippet>524</a>          ]
-<a href=#525 id=525 data-nosnippet>525</a>          .into_iter()
-<a href=#526 id=526 data-nosnippet>526</a>          .filter_map(|(key, register)| {
-<a href=#527 id=527 data-nosnippet>527</a>            lookup_register_quiet(register)
-<a href=#528 id=528 data-nosnippet>528</a>              .map(|value| (key, <span class="kw">crate</span>::Dimension::new(value.value_of())))
-<a href=#529 id=529 data-nosnippet>529</a>          })
-<a href=#530 id=530 data-nosnippet>530</a>          .collect()
-<a href=#531 id=531 data-nosnippet>531</a>        } <span class="kw">else </span>{
-<a href=#532 id=532 data-nosnippet>532</a>          Vec::new()
-<a href=#533 id=533 data-nosnippet>533</a>        };
+<a href=#386 id=386 data-nosnippet>386</a>      <span class="kw">let </span>mode = lookup_mode();
+<a href=#387 id=387 data-nosnippet>387</a>      mode == <span class="macro">crate::pin!</span>(<span class="string">"horizontal"</span>)
+<a href=#388 id=388 data-nosnippet>388</a>        || <span class="kw">crate</span>::common::arena::with(mode, |mode| mode.ends_with(<span class="string">"vertical"</span>))
+<a href=#389 id=389 data-nosnippet>389</a>    };
+<a href=#390 id=390 data-nosnippet>390</a>    <span class="kw">let </span><span class="kw-2">mut </span>result = <span class="self">self</span>.execute_before_digest()<span class="question-mark">?</span>;
+<a href=#391 id=391 data-nosnippet>391</a>    <span class="comment">// After the `before` code: `\lx@finalize@document`'s is what ends the document (1611.05714: an
+<a href=#392 id=392 data-nosnippet>392</a>    // itemize left open by a `\description` used as a command).
+<a href=#393 id=393 data-nosnippet>393</a>    </span><span class="kw">let </span>ends_before = <span class="kw">crate</span>::stomach::ends_inside_groups();
+<a href=#394 id=394 data-nosnippet>394</a>
+<a href=#395 id=395 data-nosnippet>395</a>    <span class="comment">// info!("{" + $self-&gt;tracingCSName . "}\n" if $tracing;
+<a href=#396 id=396 data-nosnippet>396</a>    // Get some info before we process arguments...
+<a href=#397 id=397 data-nosnippet>397</a>    </span><span class="kw">let </span>state_font = lookup_font();
+<a href=#398 id=398 data-nosnippet>398</a>    <span class="kw">let </span>ismath = lookup_bool_sym(<span class="macro">crate::pin!</span>(<span class="string">"IN_MATH"</span>));
+<a href=#399 id=399 data-nosnippet>399</a>    <span class="comment">// info!(target: "constructor", "invoke for {:?} ({:?})", self.get_cs(), ismath);
+<a href=#400 id=400 data-nosnippet>400</a>    // Parse AND digest the arguments to the Constructor
+<a href=#401 id=401 data-nosnippet>401</a>    // (and the tokens its length arguments state, where they are kept: `parameter::KEEP_STATED_LENGTHS`)
+<a href=#402 id=402 data-nosnippet>402</a>    </span><span class="kw">let </span><span class="kw-2">mut </span>stated: Vec&lt;(usize, Tokens)&gt; = Vec::new();
+<a href=#403 id=403 data-nosnippet>403</a>    <span class="kw">let </span><span class="kw-2">mut </span>withheld = <span class="bool-val">false</span>;
+<a href=#404 id=404 data-nosnippet>404</a>    <span class="kw">let </span><span class="kw-2">mut </span>args: Vec&lt;<span class="prelude-ty">Option</span>&lt;Digested&gt;&gt; = <span class="kw">match </span><span class="self">self</span>.get_parameters() {
+<a href=#405 id=405 data-nosnippet>405</a>      <span class="prelude-val">None </span>=&gt; Vec::new(),
+<a href=#406 id=406 data-nosnippet>406</a>      <span class="prelude-val">Some</span>(params) =&gt; params.read_arguments_and_digest(<span class="self">self</span>, <span class="kw-2">&amp;mut </span>stated, <span class="kw-2">&amp;mut </span>withheld)<span class="question-mark">?</span>,
+<a href=#407 id=407 data-nosnippet>407</a>    };
+<a href=#408 id=408 data-nosnippet>408</a>    <span class="comment">// info!($self-&gt;tracingArgs(@args) . "\n" if $tracing &amp;&amp; @args;
+<a href=#409 id=409 data-nosnippet>409</a>    </span><span class="kw">let </span>nargs = <span class="self">self</span>.get_num_args();
+<a href=#410 id=410 data-nosnippet>410</a>    args.truncate(nargs);
+<a href=#411 id=411 data-nosnippet>411</a>
+<a href=#412 id=412 data-nosnippet>412</a>    <span class="comment">// Compute any extra Whatsit properties (many end up as element attributes)
+<a href=#413 id=413 data-nosnippet>413</a>
+<a href=#414 id=414 data-nosnippet>414</a>    </span><span class="kw">let </span><span class="kw-2">mut </span>properties = (<span class="self">self</span>.properties)(<span class="kw-2">&amp;</span>args)<span class="question-mark">?</span>;
+<a href=#415 id=415 data-nosnippet>415</a>    <span class="comment">// for (key, value) in properties.iter() {
+<a href=#416 id=416 data-nosnippet>416</a>    //   if (ref $value eq 'CODE') {
+<a href=#417 id=417 data-nosnippet>417</a>    //     $properties{$key} = &amp;$value($stomach, @args); } }
+<a href=#418 id=418 data-nosnippet>418</a>
+<a href=#419 id=419 data-nosnippet>419</a>    </span>properties
+<a href=#420 id=420 data-nosnippet>420</a>      .entry(<span class="string">"font"</span>)
+<a href=#421 id=421 data-nosnippet>421</a>      .or_insert_with(|| <span class="kw">match </span>state_font {
+<a href=#422 id=422 data-nosnippet>422</a>        <span class="prelude-val">Some</span>(f) =&gt; Stored::Font(Rc::clone(<span class="kw-2">&amp;</span>f)),
+<a href=#423 id=423 data-nosnippet>423</a>        <span class="prelude-val">None </span>=&gt; Stored::Font(Rc::new(Font::text_default())), <span class="comment">// should never happen?
+<a href=#424 id=424 data-nosnippet>424</a>      </span>});
+<a href=#425 id=425 data-nosnippet>425</a>    <span class="comment">// $properties{locator} = $stomach-&gt;getGullet-&gt;getMouth-&gt;getLocator unless defined
+<a href=#426 id=426 data-nosnippet>426</a>    // $properties{locator};
+<a href=#427 id=427 data-nosnippet>427</a>    </span>properties
+<a href=#428 id=428 data-nosnippet>428</a>      .entry(<span class="string">"isMath"</span>)
+<a href=#429 id=429 data-nosnippet>429</a>      .or_insert_with(|| Stored::Bool(ismath));
+<a href=#430 id=430 data-nosnippet>430</a>    <span class="comment">// Perl: $mode = $properties{mode} || $state-&gt;lookupValue('MODE') || 'restricted_horizontal';
+<a href=#431 id=431 data-nosnippet>431</a>    // Set mode on whatsit so repackHorizontal can distinguish vertical vs horizontal items.
+<a href=#432 id=432 data-nosnippet>432</a>    </span>properties.entry(<span class="string">"mode"</span>).or_insert_with(|| {
+<a href=#433 id=433 data-nosnippet>433</a>      <span class="kw">let </span>mode = lookup_mode();
+<a href=#434 id=434 data-nosnippet>434</a>      Stored::String(<span class="kw">if </span>mode == <span class="macro">crate::pin!</span>(<span class="string">""</span>) {
+<a href=#435 id=435 data-nosnippet>435</a>        <span class="macro">crate::pin!</span>(<span class="string">"restricted_horizontal"</span>)
+<a href=#436 id=436 data-nosnippet>436</a>      } <span class="kw">else </span>{
+<a href=#437 id=437 data-nosnippet>437</a>        mode
+<a href=#438 id=438 data-nosnippet>438</a>      })
+<a href=#439 id=439 data-nosnippet>439</a>    });
+<a href=#440 id=440 data-nosnippet>440</a>    <span class="kw">if </span>in_paragraph {
+<a href=#441 id=441 data-nosnippet>441</a>      properties.insert(<span class="string">"in_paragraph"</span>, Stored::Bool(<span class="bool-val">true</span>));
+<a href=#442 id=442 data-nosnippet>442</a>    }
+<a href=#443 id=443 data-nosnippet>443</a>    <span class="kw">if </span>!stated.is_empty() {
+<a href=#444 id=444 data-nosnippet>444</a>      <span class="kw">let </span><span class="kw-2">mut </span>lengths: std::collections::VecDeque&lt;Stored&gt; = std::iter::repeat_with(|| Stored::None)
+<a href=#445 id=445 data-nosnippet>445</a>        .take(args.len())
+<a href=#446 id=446 data-nosnippet>446</a>        .collect();
+<a href=#447 id=447 data-nosnippet>447</a>      <span class="kw">for </span>(index, tokens) <span class="kw">in </span>stated {
+<a href=#448 id=448 data-nosnippet>448</a>        <span class="kw">if let </span><span class="prelude-val">Some</span>(slot) = lengths.get_mut(index) {
+<a href=#449 id=449 data-nosnippet>449</a>          <span class="kw-2">*</span>slot = Stored::Tokens(tokens);
+<a href=#450 id=450 data-nosnippet>450</a>        }
+<a href=#451 id=451 data-nosnippet>451</a>      }
+<a href=#452 id=452 data-nosnippet>452</a>      properties.insert(
+<a href=#453 id=453 data-nosnippet>453</a>        <span class="kw">crate</span>::parameter::STATED_LENGTHS,
+<a href=#454 id=454 data-nosnippet>454</a>        Stored::VecDequeStored(lengths),
+<a href=#455 id=455 data-nosnippet>455</a>      );
+<a href=#456 id=456 data-nosnippet>456</a>    }
+<a href=#457 id=457 data-nosnippet>457</a>    <span class="kw">if </span>withheld {
+<a href=#458 id=458 data-nosnippet>458</a>      properties.insert(
+<a href=#459 id=459 data-nosnippet>459</a>        <span class="kw">crate</span>::parameter::STATED_LENGTHS_WITHHELD,
+<a href=#460 id=460 data-nosnippet>460</a>        Stored::Bool(<span class="bool-val">true</span>),
+<a href=#461 id=461 data-nosnippet>461</a>      );
+<a href=#462 id=462 data-nosnippet>462</a>    }
+<a href=#463 id=463 data-nosnippet>463</a>    <span class="comment">// A TeX box's constructor outside math (a declared `restricted_horizontal`): the element it opens is marked for a
+<a href=#464 id=464 data-nosnippet>464</a>    // frontmatter field's print (core `document::FIELD_BOX_PROPERTY`, OXIDIZED_DESIGN #715).
+<a href=#465 id=465 data-nosnippet>465</a>    </span><span class="kw">if </span><span class="self">self</span>.declared_mode.is_some_and(|mode| mode.restricted_box)
+<a href=#466 id=466 data-nosnippet>466</a>      &amp;&amp; !ismath
+<a href=#467 id=467 data-nosnippet>467</a>      &amp;&amp; <span class="kw">crate</span>::document::field_box_marks_live()
+<a href=#468 id=468 data-nosnippet>468</a>    {
+<a href=#469 id=469 data-nosnippet>469</a>      properties.insert(<span class="kw">crate</span>::document::FIELD_BOX_PROPERTY, Stored::Bool(<span class="bool-val">true</span>));
+<a href=#470 id=470 data-nosnippet>470</a>    }
+<a href=#471 id=471 data-nosnippet>471</a>    <span class="comment">// $properties{level}   = $stomach-&gt;getBoxingLevel;
+<a href=#472 id=472 data-nosnippet>472</a>
+<a href=#473 id=473 data-nosnippet>473</a>    // Now create the Whatsit, itself.
+<a href=#474 id=474 data-nosnippet>474</a>    // Every field is named rather than `..Whatsit::default()`: the default
+<a href=#475 id=475 data-nosnippet>475</a>    // builds a placeholder `Rc::new(Expandable::default())` for `definition`
+<a href=#476 id=476 data-nosnippet>476</a>    // that this literal immediately overwrites, so the functional-update form
+<a href=#477 id=477 data-nosnippet>477</a>    // allocated and dropped one `Rc&lt;Expandable&gt;` per constructor invocation
+<a href=#478 id=478 data-nosnippet>478</a>    // (dhat 2026-07-29: 1,215 blocks / 145,800 B, again 1:1 with invocations).
+<a href=#479 id=479 data-nosnippet>479</a>    </span><span class="kw">let </span><span class="kw-2">mut </span>whatsit = Whatsit {
+<a href=#480 id=480 data-nosnippet>480</a>      definition,
+<a href=#481 id=481 data-nosnippet>481</a>      args,
+<a href=#482 id=482 data-nosnippet>482</a>      properties,
+<a href=#483 id=483 data-nosnippet>483</a>      reversion: <span class="prelude-val">None</span>,
+<a href=#484 id=484 data-nosnippet>484</a>      dual_reversion: <span class="prelude-val">None</span>,
+<a href=#485 id=485 data-nosnippet>485</a>      locator: <span class="prelude-val">None</span>,
+<a href=#486 id=486 data-nosnippet>486</a>    };
+<a href=#487 id=487 data-nosnippet>487</a>    <span class="comment">// Perl `Core/Definition/Constructor.pm` L106:
+<a href=#488 id=488 data-nosnippet>488</a>    //   `$props{locator} = $stomach-&gt;getGullet-&gt;getLocator`
+<a href=#489 id=489 data-nosnippet>489</a>    // — capture the construct's source position at digest time. Gated on
+<a href=#490 id=490 data-nosnippet>490</a>    // `--source-map`: the whatsit locator is consumed only by source-map
+<a href=#491 id=491 data-nosnippet>491</a>    // stamping + (untested) error messages, so the corpus/parity path skips
+<a href=#492 id=492 data-nosnippet>492</a>    // the per-construct `get_locator`/`arena::pin` cost and stays
+<a href=#493 id=493 data-nosnippet>493</a>    // byte-identical (the switch gates *all* locator tracking). Without this,
+<a href=#494 id=494 data-nosnippet>494</a>    // constructor-built elements carry `Locator::default()` (source =
+<a href=#495 id=495 data-nosnippet>495</a>    // `locator.rs`) and the source-map user-source filter drops them
+<a href=#496 id=496 data-nosnippet>496</a>    // (~53/265 → 128/… `article.tex` elements stamped once captured).
+<a href=#497 id=497 data-nosnippet>497</a>    </span><span class="kw">if </span>source_map_enabled() {
+<a href=#498 id=498 data-nosnippet>498</a>      <span class="comment">// --source-map: the construct's source extent is the union of its
+<a href=#499 id=499 data-nosnippet>499</a>      // children's spans (fixes the post-expansion eating-disorder, Experiment 2),
+<a href=#500 id=500 data-nosnippet>500</a>      // falling back to the gullet locator when no child carries a position.
+<a href=#501 id=501 data-nosnippet>501</a>      </span>whatsit.locator =
+<a href=#502 id=502 data-nosnippet>502</a>        assemble_locator(<span class="kw-2">&amp;</span>whatsit.args).or_else(|| <span class="prelude-val">Some</span>(<span class="kw">crate</span>::gullet::get_locator()));
+<a href=#503 id=503 data-nosnippet>503</a>    }
+<a href=#504 id=504 data-nosnippet>504</a>
+<a href=#505 id=505 data-nosnippet>505</a>    <span class="comment">// Call any 'After' code.
+<a href=#506 id=506 data-nosnippet>506</a>    </span><span class="kw">let </span><span class="kw-2">mut </span>post = <span class="self">self</span>.execute_after_digest(<span class="kw-2">&amp;mut </span>whatsit)<span class="question-mark">?</span>;
+<a href=#507 id=507 data-nosnippet>507</a>
+<a href=#508 id=508 data-nosnippet>508</a>    <span class="kw">if </span><span class="self">self</span>.capture_body {
+<a href=#509 id=509 data-nosnippet>509</a>      <span class="comment">// tex.web §679 `append_to_vlist`: a vertical body's interline glue follows the `\baselineskip`, `\lineskip`
+<a href=#510 id=510 data-nosnippet>510</a>      // and `\lineskiplimit` in force inside it. The body is measured after its group closed, where an enclosing
+<a href=#511 id=511 data-nosnippet>511</a>      // `\@array`'s zero values reign (a minipage's stacked lines lost their `\lineskip` in a table cell, arXiv
+<a href=#512 id=512 data-nosnippet>512</a>      // 2605.19065), so they are read here, when the body opens, after its begin code (`\@parboxrestore` for a
+<a href=#513 id=513 data-nosnippet>513</a>      // minipage). Unlike the box reader, which reads them at the box's end (base_utilities.rs
+<a href=#514 id=514 data-nosnippet>514</a>      // `predigest_list_in_mode`), a change inside the body (`\small`, `\offinterlineskip`) is not seen: RED
+<a href=#515 id=515 data-nosnippet>515</a>      // kernel-alignment/captured_body_interline_changed_inside. DIVERGENCES #421. Repro
+<a href=#516 id=516 data-nosnippet>516</a>      // kernel-alignment/minipage_in_a_cell_keeps_its_lineskip.
+<a href=#517 id=517 data-nosnippet>517</a>      </span><span class="kw">use </span><span class="kw">crate</span>::common::numeric_ops::NumericOps;
+<a href=#518 id=518 data-nosnippet>518</a>      <span class="comment">// the body's own mode, in force now (the whatsit's `mode` property is the mode it was invoked in)
+<a href=#519 id=519 data-nosnippet>519</a>      </span><span class="kw">let </span>interline: Vec&lt;(<span class="kw-2">&amp;</span>str, <span class="kw">crate</span>::Dimension)&gt; = <span class="kw">if </span>mode_ends_with(<span class="string">"vertical"</span>) {
+<a href=#520 id=520 data-nosnippet>520</a>        [
+<a href=#521 id=521 data-nosnippet>521</a>          (<span class="string">"baseline"</span>, <span class="string">"\\baselineskip"</span>),
+<a href=#522 id=522 data-nosnippet>522</a>          (<span class="string">"lineskip"</span>, <span class="string">"\\lineskip"</span>),
+<a href=#523 id=523 data-nosnippet>523</a>          (<span class="string">"lineskiplimit"</span>, <span class="string">"\\lineskiplimit"</span>),
+<a href=#524 id=524 data-nosnippet>524</a>        ]
+<a href=#525 id=525 data-nosnippet>525</a>        .into_iter()
+<a href=#526 id=526 data-nosnippet>526</a>        .filter_map(|(key, register)| {
+<a href=#527 id=527 data-nosnippet>527</a>          lookup_register_quiet(register)
+<a href=#528 id=528 data-nosnippet>528</a>            .map(|value| (key, <span class="kw">crate</span>::Dimension::new(value.value_of())))
+<a href=#529 id=529 data-nosnippet>529</a>        })
+<a href=#530 id=530 data-nosnippet>530</a>        .collect()
+<a href=#531 id=531 data-nosnippet>531</a>      } <span class="kw">else </span>{
+<a href=#532 id=532 data-nosnippet>532</a>        Vec::new()
+<a href=#533 id=533 data-nosnippet>533</a>      };
 <a href=#534 id=534 data-nosnippet>534</a>      <span class="kw">let </span>captured = digest_next_body(<span class="prelude-val">None</span>)<span class="question-mark">?</span>;
 <a href=#535 id=535 data-nosnippet>535</a>      <span class="comment">// info!(target:"constructor:digest_next_body", "\n{:?}\n----\n",captured);
 <a href=#536 id=536 data-nosnippet>536</a>      </span>post.extend(captured);

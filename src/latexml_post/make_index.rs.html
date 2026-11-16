@@ -6,7 +6,7 @@
 <a href=#6 id=6 data-nosnippet>6</a>//! Supports permuted indexes, splitting by initial, see-also references,
 <a href=#7 id=7 data-nosnippet>7</a>//! range-style page references, and glossary entry formatting.
 <a href=#8 id=8 data-nosnippet>8</a>
-<a href=#9 id=9 data-nosnippet>9</a></span><span class="kw">use </span>latexml_core::common::cleaners::clean_class_name;
+<a href=#9 id=9 data-nosnippet>9</a></span><span class="kw">use </span>latexml_core::common::{cleaners::clean_class_name, xml::name_is};
 <a href=#10 id=10 data-nosnippet>10</a><span class="kw">use </span>libxml::tree::{Node, NodeType};
 <a href=#11 id=11 data-nosnippet>11</a><span class="kw">use </span>rustc_hash::FxHashMap <span class="kw">as </span>HashMap;
 <a href=#12 id=12 data-nosnippet>12</a><span class="kw">use </span>unicode_normalization::UnicodeNormalization;
@@ -865,7 +865,7 @@
 <a href=#865 id=865 data-nosnippet>865</a>        <span class="kw">let </span>lists = node
 <a href=#866 id=866 data-nosnippet>866</a>          .get_attribute(<span class="string">"lists"</span>)
 <a href=#867 id=867 data-nosnippet>867</a>          .unwrap_or_else(|| <span class="string">"glossary"</span>.to_string());
-<a href=#868 id=868 data-nosnippet>868</a>        <span class="kw">let </span>list_unreferenced = node.get_attribute(<span class="string">"role"</span>).as_deref() == <span class="prelude-val">Some</span>(<span class="string">"nomenclature"</span>);
+<a href=#868 id=868 data-nosnippet>868</a>        <span class="kw">let </span>list_unreferenced = node.with_attribute(<span class="string">c"role"</span>, |v| v == <span class="string">"nomenclature"</span>) == <span class="prelude-val">Some</span>(<span class="bool-val">true</span>);
 <a href=#869 id=869 data-nosnippet>869</a>        <span class="kw">let </span>entries = <span class="self">self</span>.get_glossary_entries(<span class="kw-2">&amp;</span>lists, <span class="kw-2">&amp;</span>id, list_unreferenced);
 <a href=#870 id=870 data-nosnippet>870</a>        <span class="kw">if </span>!entries.is_empty() {
 <a href=#871 id=871 data-nosnippet>871</a>          <span class="kw">let </span>glist = <span class="self">self</span>.make_glossary_list(<span class="kw-2">&amp;</span>entries);
@@ -1099,7 +1099,7 @@
 <a href=#1099 id=1099 data-nosnippet>1099</a>/// `descendant-or-self::ltx:ref` before warning about an unresolved
 <a href=#1100 id=1100 data-nosnippet>1100</a>/// see-also phrase.)
 <a href=#1101 id=1101 data-nosnippet>1101</a></span><span class="kw">fn </span>node_has_ref_descendant(node: <span class="kw-2">&amp;</span>Node) -&gt; bool {
-<a href=#1102 id=1102 data-nosnippet>1102</a>  <span class="kw">if </span>node.get_type() == <span class="prelude-val">Some</span>(NodeType::ElementNode) &amp;&amp; node.get_name() == <span class="string">"ref" </span>{
+<a href=#1102 id=1102 data-nosnippet>1102</a>  <span class="kw">if </span>node.get_type() == <span class="prelude-val">Some</span>(NodeType::ElementNode) &amp;&amp; name_is(node, <span class="string">"ref"</span>) {
 <a href=#1103 id=1103 data-nosnippet>1103</a>    <span class="kw">return </span><span class="bool-val">true</span>;
 <a href=#1104 id=1104 data-nosnippet>1104</a>  }
 <a href=#1105 id=1105 data-nosnippet>1105</a>  node.get_child_nodes().iter().any(node_has_ref_descendant)

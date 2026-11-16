@@ -254,7 +254,7 @@
 <a href=#254 id=254 data-nosnippet>254</a>        <span class="kw">let </span>page = entry.node.clone();
 <a href=#255 id=255 data-nosnippet>255</a>
 <a href=#256 id=256 data-nosnippet>256</a>        <span class="comment">// If any pages go in toc, assume siblings should too
-<a href=#257 id=257 data-nosnippet>257</a>        </span><span class="kw">if </span>intoc &amp;&amp; page.get_attribute(<span class="string">"inlist"</span>).is_none() {
+<a href=#257 id=257 data-nosnippet>257</a>        </span><span class="kw">if </span>intoc &amp;&amp; !page.has_attribute(<span class="string">"inlist"</span>) {
 <a href=#258 id=258 data-nosnippet>258</a>          <span class="kw">let </span><span class="kw-2">mut </span>page_mut = page.clone();
 <a href=#259 id=259 data-nosnippet>259</a>          page_mut.set_attribute(<span class="string">"inlist"</span>, <span class="string">"toc"</span>).ok();
 <a href=#260 id=260 data-nosnippet>260</a>        }

@@ -204,7 +204,7 @@
 <a href=#204 id=204 data-nosnippet>204</a>    }},
 <a href=#205 id=205 data-nosnippet>205</a>    <span class="comment">// Perl: leaveHorizontal =&gt; 1
 <a href=#206 id=206 data-nosnippet>206</a>    </span>before_digest =&gt; {
-<a href=#207 id=207 data-nosnippet>207</a>      assign_value(<span class="string">"lx@vskip@in@paragraph"</span>, lookup_string_from_sym(<span class="macro">pin!</span>(<span class="string">"MODE"</span>)) == <span class="string">"horizontal"</span>, <span class="prelude-val">None</span>);
+<a href=#207 id=207 data-nosnippet>207</a>      assign_value(<span class="string">"lx@vskip@in@paragraph"</span>, lookup_mode() == <span class="macro">pin!</span>(<span class="string">"horizontal"</span>), <span class="prelude-val">None</span>);
 <a href=#208 id=208 data-nosnippet>208</a>      leave_horizontal()<span class="question-mark">?</span>;
 <a href=#209 id=209 data-nosnippet>209</a>    },
 <a href=#210 id=210 data-nosnippet>210</a>    <span class="comment">// Perl: height =&gt; $_[1] — stores glue value as height property

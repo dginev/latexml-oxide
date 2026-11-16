@@ -27,7 +27,7 @@
 <a href=#27 id=27 data-nosnippet>27</a>  // nothing, so `\lastpenalty` there is 0 where TeX gives the value (OXIDIZED_DESIGN_DIVERGENCES #419).
 <a href=#28 id=28 data-nosnippet>28</a>  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\penalty Number"</span>, sub[(n)] {
 <a href=#29 id=29 data-nosnippet>29</a>    <span class="kw">let </span>value = n.value_of();
-<a href=#30 id=30 data-nosnippet>30</a>    <span class="kw">if </span>!lookup_string_from_sym(<span class="macro">pin!</span>(<span class="string">"MODE"</span>)).ends_with(<span class="string">"vertical"</span>) {
+<a href=#30 id=30 data-nosnippet>30</a>    <span class="kw">if </span>!mode_ends_with(<span class="string">"vertical"</span>) {
 <a href=#31 id=31 data-nosnippet>31</a>      <span class="kw">return </span><span class="prelude-val">Ok</span>(Vec::new());
 <a href=#32 id=32 data-nosnippet>32</a>    }
 <a href=#33 id=33 data-nosnippet>33</a>    <span class="kw">let </span><span class="kw-2">mut </span>reversion = <span class="macro">vec!</span>[<span class="macro">T_CS!</span>(<span class="string">"\\penalty"</span>)];

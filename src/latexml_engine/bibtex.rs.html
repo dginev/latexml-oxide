@@ -598,7 +598,7 @@
 <a href=#598 id=598 data-nosnippet>598</a></span><span class="kw">fn </span>bib_field_source(value: <span class="kw-2">&amp;</span>str, handler: <span class="kw-2">&amp;</span>Rc&lt;<span class="kw">dyn </span>Definition&gt;) -&gt; String {
 <a href=#599 id=599 data-nosnippet>599</a>  <span class="kw">let </span>first = handler
 <a href=#600 id=600 data-nosnippet>600</a>    .get_parameters()
-<a href=#601 id=601 data-nosnippet>601</a>    .and_then(|params| params.get_parameters().first().cloned());
+<a href=#601 id=601 data-nosnippet>601</a>    .and_then(|params| params.get_parameters().first());
 <a href=#602 id=602 data-nosnippet>602</a>  <span class="kw">match </span>first {
 <a href=#603 id=603 data-nosnippet>603</a>    <span class="prelude-val">Some</span>(p) <span class="kw">if </span>reads_field_raw(p) &amp;&amp; with(p.name, |name| name != <span class="string">"Verbatim"</span>) =&gt; {
 <a href=#604 id=604 data-nosnippet>604</a>      identifier_data(value)

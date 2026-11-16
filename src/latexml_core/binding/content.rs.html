@@ -5950,10 +5950,10 @@
 <a href=#5950 id=5950 data-nosnippet>5950</a><span class="doccomment">/// Perl `Digest` (Package.pm:393-402): digest with side effects and mode changes, then leave a horizontal mode the
 <a href=#5951 id=5951 data-nosnippet>5951</a>/// digestion entered (`leaveHorizontal_internal`), as [`crate::parameter::Parameter::digest`] does for an argument.
 <a href=#5952 id=5952 data-nosnippet>5952</a></span><span class="kw">pub fn </span>binding_digest&lt;T: Into&lt;Tokens&gt;&gt;(tokens: T) -&gt; <span class="prelude-ty">Result</span>&lt;Digested&gt; {
-<a href=#5953 id=5953 data-nosnippet>5953</a>  <span class="kw">let </span>mode = lookup_string_from_sym(<span class="macro">crate::pin!</span>(<span class="string">"MODE"</span>));
+<a href=#5953 id=5953 data-nosnippet>5953</a>  <span class="kw">let </span>mode = lookup_mode();
 <a href=#5954 id=5954 data-nosnippet>5954</a>  <span class="kw">let </span>value = digest(tokens)<span class="question-mark">?</span>;
-<a href=#5955 id=5955 data-nosnippet>5955</a>  <span class="kw">let </span>nmode = lookup_string_from_sym(<span class="macro">crate::pin!</span>(<span class="string">"MODE"</span>));
-<a href=#5956 id=5956 data-nosnippet>5956</a>  <span class="kw">if </span>mode != nmode &amp;&amp; nmode == <span class="string">"horizontal" </span>{
+<a href=#5955 id=5955 data-nosnippet>5955</a>  <span class="kw">let </span>nmode = lookup_mode();
+<a href=#5956 id=5956 data-nosnippet>5956</a>  <span class="kw">if </span>mode != nmode &amp;&amp; nmode == <span class="macro">crate::pin!</span>(<span class="string">"horizontal"</span>) {
 <a href=#5957 id=5957 data-nosnippet>5957</a>    leave_horizontal_internal();
 <a href=#5958 id=5958 data-nosnippet>5958</a>  }
 <a href=#5959 id=5959 data-nosnippet>5959</a>  <span class="prelude-val">Ok</span>(value)
@@ -6585,149 +6585,197 @@
 <a href=#6585 id=6585 data-nosnippet>6585</a>    std::cell::RefCell::new(HashMap::default());
 <a href=#6586 id=6586 data-nosnippet>6586</a>  <span class="kw">static </span>FONTMAP_FAMILY_KEY_MEMO: std::cell::RefCell&lt;HashMap&lt;(String, String), (SymStr, SymStr)&gt;&gt; =
 <a href=#6587 id=6587 data-nosnippet>6587</a>    std::cell::RefCell::new(HashMap::default());
-<a href=#6588 id=6588 data-nosnippet>6588</a>}
-<a href=#6589 id=6589 data-nosnippet>6589</a>
-<a href=#6590 id=6590 data-nosnippet>6590</a><span class="attr">#[derive(Clone, Copy)]
-<a href=#6591 id=6591 data-nosnippet>6591</a></span><span class="kw">pub struct </span>FontmapKeySyms {
-<a href=#6592 id=6592 data-nosnippet>6592</a>  <span class="doccomment">/// `"{encoding}_fontmap"`
-<a href=#6593 id=6593 data-nosnippet>6593</a>  </span><span class="kw">pub </span>map:       SymStr,
-<a href=#6594 id=6594 data-nosnippet>6594</a>  <span class="doccomment">/// `"{encoding}_fontmap_failed_to_load"`
-<a href=#6595 id=6595 data-nosnippet>6595</a>  </span><span class="kw">pub </span>fail:      SymStr,
-<a href=#6596 id=6596 data-nosnippet>6596</a>  <span class="doccomment">/// `"{encoding}_fontmap_multichar"`
-<a href=#6597 id=6597 data-nosnippet>6597</a>  </span><span class="kw">pub </span>multichar: SymStr,
-<a href=#6598 id=6598 data-nosnippet>6598</a>}
-<a href=#6599 id=6599 data-nosnippet>6599</a>
-<a href=#6600 id=6600 data-nosnippet>6600</a><span class="doccomment">/// The memoized key symbols for `encoding`'s fontmap Value-table entries.
-<a href=#6601 id=6601 data-nosnippet>6601</a></span><span class="kw">pub fn </span>fontmap_key_syms(encoding: <span class="kw-2">&amp;</span>str) -&gt; FontmapKeySyms {
-<a href=#6602 id=6602 data-nosnippet>6602</a>  FONTMAP_KEY_MEMO.with(|m| {
-<a href=#6603 id=6603 data-nosnippet>6603</a>    <span class="kw">if let </span><span class="prelude-val">Some</span>(keys) = m.borrow().get(encoding) {
-<a href=#6604 id=6604 data-nosnippet>6604</a>      <span class="kw">return </span><span class="kw-2">*</span>keys;
-<a href=#6605 id=6605 data-nosnippet>6605</a>    }
-<a href=#6606 id=6606 data-nosnippet>6606</a>    <span class="kw">let </span>keys = FontmapKeySyms {
-<a href=#6607 id=6607 data-nosnippet>6607</a>      map:       arena::pin(<span class="macro">s!</span>(<span class="string">"{encoding}_fontmap"</span>)),
-<a href=#6608 id=6608 data-nosnippet>6608</a>      fail:      arena::pin(<span class="macro">s!</span>(<span class="string">"{encoding}_fontmap_failed_to_load"</span>)),
-<a href=#6609 id=6609 data-nosnippet>6609</a>      multichar: arena::pin(<span class="macro">s!</span>(<span class="string">"{encoding}_fontmap_multichar"</span>)),
-<a href=#6610 id=6610 data-nosnippet>6610</a>    };
-<a href=#6611 id=6611 data-nosnippet>6611</a>    m.borrow_mut().insert(encoding.to_string(), keys);
-<a href=#6612 id=6612 data-nosnippet>6612</a>    keys
-<a href=#6613 id=6613 data-nosnippet>6613</a>  })
-<a href=#6614 id=6614 data-nosnippet>6614</a>}
-<a href=#6615 id=6615 data-nosnippet>6615</a>
-<a href=#6616 id=6616 data-nosnippet>6616</a><span class="doccomment">/// The memoized `"{encoding}_{family}_fontmap"` and `"{encoding}_{family}_fontmap_multichar"` key symbols.
-<a href=#6617 id=6617 data-nosnippet>6617</a></span><span class="kw">pub fn </span>fontmap_family_key_syms(encoding: <span class="kw-2">&amp;</span>str, family: <span class="kw-2">&amp;</span>str) -&gt; (SymStr, SymStr) {
-<a href=#6618 id=6618 data-nosnippet>6618</a>  FONTMAP_FAMILY_KEY_MEMO.with(|m| {
-<a href=#6619 id=6619 data-nosnippet>6619</a>    <span class="kw">if let </span><span class="prelude-val">Some</span>(syms) = m.borrow().get(<span class="kw-2">&amp;</span>(encoding.to_string(), family.to_string())) {
-<a href=#6620 id=6620 data-nosnippet>6620</a>      <span class="kw">return </span><span class="kw-2">*</span>syms;
-<a href=#6621 id=6621 data-nosnippet>6621</a>    }
-<a href=#6622 id=6622 data-nosnippet>6622</a>    <span class="kw">let </span>syms = (
-<a href=#6623 id=6623 data-nosnippet>6623</a>      arena::pin(<span class="macro">s!</span>(<span class="string">"{encoding}_{family}_fontmap"</span>)),
-<a href=#6624 id=6624 data-nosnippet>6624</a>      arena::pin(<span class="macro">s!</span>(<span class="string">"{encoding}_{family}_fontmap_multichar"</span>)),
-<a href=#6625 id=6625 data-nosnippet>6625</a>    );
-<a href=#6626 id=6626 data-nosnippet>6626</a>    m.borrow_mut()
-<a href=#6627 id=6627 data-nosnippet>6627</a>      .insert((encoding.to_string(), family.to_string()), syms);
-<a href=#6628 id=6628 data-nosnippet>6628</a>    syms
-<a href=#6629 id=6629 data-nosnippet>6629</a>  })
-<a href=#6630 id=6630 data-nosnippet>6630</a>}
-<a href=#6631 id=6631 data-nosnippet>6631</a>
-<a href=#6632 id=6632 data-nosnippet>6632</a><span class="doccomment">/// Clear the fontmap key-symbol memos. Companion to `arena::reset()` — the
-<a href=#6633 id=6633 data-nosnippet>6633</a>/// cached `SymStr`s dangle after a reset renumbers the arena.
-<a href=#6634 id=6634 data-nosnippet>6634</a></span><span class="kw">pub fn </span>reset_fontmap_key_memo() {
-<a href=#6635 id=6635 data-nosnippet>6635</a>  FONTMAP_KEY_MEMO.with(|m| m.borrow_mut().clear());
-<a href=#6636 id=6636 data-nosnippet>6636</a>  FONTMAP_FAMILY_KEY_MEMO.with(|m| m.borrow_mut().clear());
-<a href=#6637 id=6637 data-nosnippet>6637</a>}
-<a href=#6638 id=6638 data-nosnippet>6638</a>
-<a href=#6639 id=6639 data-nosnippet>6639</a><span class="kw">pub fn </span>load_font_map(encoding: <span class="kw-2">&amp;</span>str) -&gt; <span class="prelude-ty">Option</span>&lt;Fontmap&gt; {
-<a href=#6640 id=6640 data-nosnippet>6640</a>  <span class="kw">let </span>keys = fontmap_key_syms(encoding);
-<a href=#6641 id=6641 data-nosnippet>6641</a>  <span class="kw">let _ </span>= preload_font_map_keyed(encoding, keys); <span class="comment">// infallible in practice; swallow Result
-<a href=#6642 id=6642 data-nosnippet>6642</a>  // with_value avoids the Stored::clone; the Fontmap extraction is a cheap
-<a href=#6643 id=6643 data-nosnippet>6643</a>  // Rc bump on the inner slice regardless.
-<a href=#6644 id=6644 data-nosnippet>6644</a>  </span>with_value_sym(keys.map, |v| v.and_then(|s| s.into()))
-<a href=#6645 id=6645 data-nosnippet>6645</a>}
-<a href=#6646 id=6646 data-nosnippet>6646</a><span class="kw">pub fn </span>preload_font_map(encoding: <span class="kw-2">&amp;</span>str) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
-<a href=#6647 id=6647 data-nosnippet>6647</a>  preload_font_map_keyed(encoding, fontmap_key_syms(encoding))
-<a href=#6648 id=6648 data-nosnippet>6648</a>}
-<a href=#6649 id=6649 data-nosnippet>6649</a><span class="kw">fn </span>preload_font_map_keyed(encoding: <span class="kw-2">&amp;</span>str, keys: FontmapKeySyms) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
-<a href=#6650 id=6650 data-nosnippet>6650</a>  <span class="comment">// This check is done as a "preload" step for mutability reasons.
-<a href=#6651 id=6651 data-nosnippet>6651</a>  </span><span class="kw">if </span>has_value_sym(keys.map) {
-<a href=#6652 id=6652 data-nosnippet>6652</a>    <span class="kw">return </span><span class="prelude-val">Ok</span>(());
-<a href=#6653 id=6653 data-nosnippet>6653</a>  }
-<a href=#6654 id=6654 data-nosnippet>6654</a>  <span class="kw">let </span>failed_flag = lookup_bool_sym(keys.fail);
-<a href=#6655 id=6655 data-nosnippet>6655</a>  <span class="kw">if </span>!failed_flag {
-<a href=#6656 id=6656 data-nosnippet>6656</a>    assign_value_sym(keys.fail, <span class="bool-val">true</span>, <span class="prelude-val">None</span>); <span class="comment">// Stop recursion?
-<a href=#6657 id=6657 data-nosnippet>6657</a>    </span><span class="kw">let _ </span>= input_definitions(<span class="kw-2">&amp;</span>encoding.to_lowercase(), InputDefinitionOptions {
-<a href=#6658 id=6658 data-nosnippet>6658</a>      extension: <span class="prelude-val">Some</span>(Cow::Borrowed(<span class="string">"fontmap"</span>)),
-<a href=#6659 id=6659 data-nosnippet>6659</a>      noerror: <span class="bool-val">true</span>,
-<a href=#6660 id=6660 data-nosnippet>6660</a>      ..InputDefinitionOptions::default()
-<a href=#6661 id=6661 data-nosnippet>6661</a>    });
-<a href=#6662 id=6662 data-nosnippet>6662</a>    <span class="kw">if </span>has_value_sym(keys.map) {
-<a href=#6663 id=6663 data-nosnippet>6663</a>      <span class="comment">// Got map?
-<a href=#6664 id=6664 data-nosnippet>6664</a>      </span>assign_value_sym(keys.fail, <span class="bool-val">false</span>, <span class="prelude-val">None</span>);
-<a href=#6665 id=6665 data-nosnippet>6665</a>    } <span class="kw">else </span>{
-<a href=#6666 id=6666 data-nosnippet>6666</a>      assign_value_sym(keys.fail, <span class="bool-val">true</span>, <span class="prelude-val">Some</span>(Scope::Global));
-<a href=#6667 id=6667 data-nosnippet>6667</a>    }
-<a href=#6668 id=6668 data-nosnippet>6668</a>  }
-<a href=#6669 id=6669 data-nosnippet>6669</a>  <span class="prelude-val">Ok</span>(())
-<a href=#6670 id=6670 data-nosnippet>6670</a>}
-<a href=#6671 id=6671 data-nosnippet>6671</a>
-<a href=#6672 id=6672 data-nosnippet>6672</a><span class="attr">#[cfg(test)]
-<a href=#6673 id=6673 data-nosnippet>6673</a></span><span class="kw">mod </span>declared_info_tests {
-<a href=#6674 id=6674 data-nosnippet>6674</a>  <span class="kw">use super</span>::<span class="kw-2">*</span>;
-<a href=#6675 id=6675 data-nosnippet>6675</a>
-<a href=#6676 id=6676 data-nosnippet>6676</a>  <span class="doccomment">/// A standard-class derivative's read a panic unwinds out of leaves no entry: the next read is no derivative's.
-<a href=#6677 id=6677 data-nosnippet>6677</a>  </span><span class="attr">#[test]
-<a href=#6678 id=6678 data-nosnippet>6678</a>  </span><span class="kw">fn </span>a_derivative_read_a_panic_ends_is_popped() {
-<a href=#6679 id=6679 data-nosnippet>6679</a>    <span class="kw">let </span>unwound = std::panic::catch_unwind(|| {
-<a href=#6680 id=6680 data-nosnippet>6680</a>      <span class="kw">let </span>_read = StandardClassDerivativeRead::enter(HashSet::default());
-<a href=#6681 id=6681 data-nosnippet>6681</a>      <span class="macro">panic!</span>(<span class="string">"a binding's bug"</span>);
-<a href=#6682 id=6682 data-nosnippet>6682</a>    });
-<a href=#6683 id=6683 data-nosnippet>6683</a>    <span class="macro">assert!</span>(unwound.is_err());
-<a href=#6684 id=6684 data-nosnippet>6684</a>    <span class="macro">assert!</span>(STANDARD_CLASS_DERIVATIVE.with(|reads| reads.borrow().is_empty()));
-<a href=#6685 id=6685 data-nosnippet>6685</a>  }
+<a href=#6588 id=6588 data-nosnippet>6588</a>  <span class="doccomment">/// The last answers of the two memos: text decodes glyph after glyph in one font, a few probes per glyph
+<a href=#6589 id=6589 data-nosnippet>6589</a>  /// (2103.04797, 1704.02085), and a string compare is cheaper than a hash probe (the family one built two keys).
+<a href=#6590 id=6590 data-nosnippet>6590</a>  </span><span class="kw">static </span>FONTMAP_KEY_LAST: std::cell::RefCell&lt;<span class="prelude-ty">Option</span>&lt;(String, FontmapKeySyms)&gt;&gt; =
+<a href=#6591 id=6591 data-nosnippet>6591</a>    <span class="kw">const </span>{ std::cell::RefCell::new(<span class="prelude-val">None</span>) };
+<a href=#6592 id=6592 data-nosnippet>6592</a>  <span class="kw">static </span>FONTMAP_FAMILY_KEY_LAST: std::cell::RefCell&lt;<span class="prelude-ty">Option</span>&lt;(String, String, FamilyKeySyms)&gt;&gt; =
+<a href=#6593 id=6593 data-nosnippet>6593</a>    <span class="kw">const </span>{ std::cell::RefCell::new(<span class="prelude-val">None</span>) };
+<a href=#6594 id=6594 data-nosnippet>6594</a>}
+<a href=#6595 id=6595 data-nosnippet>6595</a>
+<a href=#6596 id=6596 data-nosnippet>6596</a><span class="doccomment">/// `fontmap_family_key_syms`' answer: the family map's key and its multichar table's.
+<a href=#6597 id=6597 data-nosnippet>6597</a></span><span class="kw">type </span>FamilyKeySyms = (SymStr, SymStr);
+<a href=#6598 id=6598 data-nosnippet>6598</a>
+<a href=#6599 id=6599 data-nosnippet>6599</a><span class="attr">#[derive(Clone, Copy)]
+<a href=#6600 id=6600 data-nosnippet>6600</a></span><span class="kw">pub struct </span>FontmapKeySyms {
+<a href=#6601 id=6601 data-nosnippet>6601</a>  <span class="doccomment">/// `"{encoding}_fontmap"`
+<a href=#6602 id=6602 data-nosnippet>6602</a>  </span><span class="kw">pub </span>map:       SymStr,
+<a href=#6603 id=6603 data-nosnippet>6603</a>  <span class="doccomment">/// `"{encoding}_fontmap_failed_to_load"`
+<a href=#6604 id=6604 data-nosnippet>6604</a>  </span><span class="kw">pub </span>fail:      SymStr,
+<a href=#6605 id=6605 data-nosnippet>6605</a>  <span class="doccomment">/// `"{encoding}_fontmap_multichar"`
+<a href=#6606 id=6606 data-nosnippet>6606</a>  </span><span class="kw">pub </span>multichar: SymStr,
+<a href=#6607 id=6607 data-nosnippet>6607</a>}
+<a href=#6608 id=6608 data-nosnippet>6608</a>
+<a href=#6609 id=6609 data-nosnippet>6609</a><span class="doccomment">/// The memoized key symbols for `encoding`'s fontmap Value-table entries.
+<a href=#6610 id=6610 data-nosnippet>6610</a></span><span class="kw">pub fn </span>fontmap_key_syms(encoding: <span class="kw-2">&amp;</span>str) -&gt; FontmapKeySyms {
+<a href=#6611 id=6611 data-nosnippet>6611</a>  <span class="kw">if let </span><span class="prelude-val">Some</span>(keys) = FONTMAP_KEY_LAST.with_borrow(|last| {
+<a href=#6612 id=6612 data-nosnippet>6612</a>    last
+<a href=#6613 id=6613 data-nosnippet>6613</a>      .as_ref()
+<a href=#6614 id=6614 data-nosnippet>6614</a>      .filter(|(e, <span class="kw">_</span>)| e == encoding)
+<a href=#6615 id=6615 data-nosnippet>6615</a>      .map(|(<span class="kw">_</span>, keys)| <span class="kw-2">*</span>keys)
+<a href=#6616 id=6616 data-nosnippet>6616</a>  }) {
+<a href=#6617 id=6617 data-nosnippet>6617</a>    <span class="kw">return </span>keys;
+<a href=#6618 id=6618 data-nosnippet>6618</a>  }
+<a href=#6619 id=6619 data-nosnippet>6619</a>  <span class="kw">let </span>keys = FONTMAP_KEY_MEMO.with(|m| {
+<a href=#6620 id=6620 data-nosnippet>6620</a>    <span class="kw">if let </span><span class="prelude-val">Some</span>(keys) = m.borrow().get(encoding) {
+<a href=#6621 id=6621 data-nosnippet>6621</a>      <span class="kw">return </span><span class="kw-2">*</span>keys;
+<a href=#6622 id=6622 data-nosnippet>6622</a>    }
+<a href=#6623 id=6623 data-nosnippet>6623</a>    <span class="kw">let </span>keys = FontmapKeySyms {
+<a href=#6624 id=6624 data-nosnippet>6624</a>      map:       arena::pin(<span class="macro">s!</span>(<span class="string">"{encoding}_fontmap"</span>)),
+<a href=#6625 id=6625 data-nosnippet>6625</a>      fail:      arena::pin(<span class="macro">s!</span>(<span class="string">"{encoding}_fontmap_failed_to_load"</span>)),
+<a href=#6626 id=6626 data-nosnippet>6626</a>      multichar: arena::pin(<span class="macro">s!</span>(<span class="string">"{encoding}_fontmap_multichar"</span>)),
+<a href=#6627 id=6627 data-nosnippet>6627</a>    };
+<a href=#6628 id=6628 data-nosnippet>6628</a>    m.borrow_mut().insert(encoding.to_string(), keys);
+<a href=#6629 id=6629 data-nosnippet>6629</a>    keys
+<a href=#6630 id=6630 data-nosnippet>6630</a>  });
+<a href=#6631 id=6631 data-nosnippet>6631</a>  FONTMAP_KEY_LAST.with_borrow_mut(|last| <span class="kw">match </span>last {
+<a href=#6632 id=6632 data-nosnippet>6632</a>    <span class="comment">// Reuse the buffer: text and math glyphs alternate encodings (OT1, OML).
+<a href=#6633 id=6633 data-nosnippet>6633</a>    </span><span class="prelude-val">Some</span>((e, k)) =&gt; {
+<a href=#6634 id=6634 data-nosnippet>6634</a>      e.clear();
+<a href=#6635 id=6635 data-nosnippet>6635</a>      e.push_str(encoding);
+<a href=#6636 id=6636 data-nosnippet>6636</a>      <span class="kw-2">*</span>k = keys;
+<a href=#6637 id=6637 data-nosnippet>6637</a>    },
+<a href=#6638 id=6638 data-nosnippet>6638</a>    <span class="prelude-val">None </span>=&gt; <span class="kw-2">*</span>last = <span class="prelude-val">Some</span>((encoding.to_string(), keys)),
+<a href=#6639 id=6639 data-nosnippet>6639</a>  });
+<a href=#6640 id=6640 data-nosnippet>6640</a>  keys
+<a href=#6641 id=6641 data-nosnippet>6641</a>}
+<a href=#6642 id=6642 data-nosnippet>6642</a>
+<a href=#6643 id=6643 data-nosnippet>6643</a><span class="doccomment">/// The memoized `"{encoding}_{family}_fontmap"` and `"{encoding}_{family}_fontmap_multichar"` key symbols.
+<a href=#6644 id=6644 data-nosnippet>6644</a></span><span class="kw">pub fn </span>fontmap_family_key_syms(encoding: <span class="kw-2">&amp;</span>str, family: <span class="kw-2">&amp;</span>str) -&gt; (SymStr, SymStr) {
+<a href=#6645 id=6645 data-nosnippet>6645</a>  <span class="kw">if let </span><span class="prelude-val">Some</span>(syms) = FONTMAP_FAMILY_KEY_LAST.with_borrow(|last| {
+<a href=#6646 id=6646 data-nosnippet>6646</a>    last
+<a href=#6647 id=6647 data-nosnippet>6647</a>      .as_ref()
+<a href=#6648 id=6648 data-nosnippet>6648</a>      .filter(|(e, f, <span class="kw">_</span>)| e == encoding &amp;&amp; f == family)
+<a href=#6649 id=6649 data-nosnippet>6649</a>      .map(|(<span class="kw">_</span>, <span class="kw">_</span>, syms)| <span class="kw-2">*</span>syms)
+<a href=#6650 id=6650 data-nosnippet>6650</a>  }) {
+<a href=#6651 id=6651 data-nosnippet>6651</a>    <span class="kw">return </span>syms;
+<a href=#6652 id=6652 data-nosnippet>6652</a>  }
+<a href=#6653 id=6653 data-nosnippet>6653</a>  <span class="kw">let </span>syms = FONTMAP_FAMILY_KEY_MEMO.with(|m| {
+<a href=#6654 id=6654 data-nosnippet>6654</a>    <span class="kw">if let </span><span class="prelude-val">Some</span>(syms) = m.borrow().get(<span class="kw-2">&amp;</span>(encoding.to_string(), family.to_string())) {
+<a href=#6655 id=6655 data-nosnippet>6655</a>      <span class="kw">return </span><span class="kw-2">*</span>syms;
+<a href=#6656 id=6656 data-nosnippet>6656</a>    }
+<a href=#6657 id=6657 data-nosnippet>6657</a>    <span class="kw">let </span>syms = (
+<a href=#6658 id=6658 data-nosnippet>6658</a>      arena::pin(<span class="macro">s!</span>(<span class="string">"{encoding}_{family}_fontmap"</span>)),
+<a href=#6659 id=6659 data-nosnippet>6659</a>      arena::pin(<span class="macro">s!</span>(<span class="string">"{encoding}_{family}_fontmap_multichar"</span>)),
+<a href=#6660 id=6660 data-nosnippet>6660</a>    );
+<a href=#6661 id=6661 data-nosnippet>6661</a>    m.borrow_mut()
+<a href=#6662 id=6662 data-nosnippet>6662</a>      .insert((encoding.to_string(), family.to_string()), syms);
+<a href=#6663 id=6663 data-nosnippet>6663</a>    syms
+<a href=#6664 id=6664 data-nosnippet>6664</a>  });
+<a href=#6665 id=6665 data-nosnippet>6665</a>  FONTMAP_FAMILY_KEY_LAST.with_borrow_mut(|last| <span class="kw">match </span>last {
+<a href=#6666 id=6666 data-nosnippet>6666</a>    <span class="prelude-val">Some</span>((e, f, k)) =&gt; {
+<a href=#6667 id=6667 data-nosnippet>6667</a>      e.clear();
+<a href=#6668 id=6668 data-nosnippet>6668</a>      e.push_str(encoding);
+<a href=#6669 id=6669 data-nosnippet>6669</a>      f.clear();
+<a href=#6670 id=6670 data-nosnippet>6670</a>      f.push_str(family);
+<a href=#6671 id=6671 data-nosnippet>6671</a>      <span class="kw-2">*</span>k = syms;
+<a href=#6672 id=6672 data-nosnippet>6672</a>    },
+<a href=#6673 id=6673 data-nosnippet>6673</a>    <span class="prelude-val">None </span>=&gt; <span class="kw-2">*</span>last = <span class="prelude-val">Some</span>((encoding.to_string(), family.to_string(), syms)),
+<a href=#6674 id=6674 data-nosnippet>6674</a>  });
+<a href=#6675 id=6675 data-nosnippet>6675</a>  syms
+<a href=#6676 id=6676 data-nosnippet>6676</a>}
+<a href=#6677 id=6677 data-nosnippet>6677</a>
+<a href=#6678 id=6678 data-nosnippet>6678</a><span class="doccomment">/// Clear the fontmap key-symbol memos. Companion to `arena::reset()` — the
+<a href=#6679 id=6679 data-nosnippet>6679</a>/// cached `SymStr`s dangle after a reset renumbers the arena.
+<a href=#6680 id=6680 data-nosnippet>6680</a></span><span class="kw">pub fn </span>reset_fontmap_key_memo() {
+<a href=#6681 id=6681 data-nosnippet>6681</a>  FONTMAP_KEY_MEMO.with(|m| m.borrow_mut().clear());
+<a href=#6682 id=6682 data-nosnippet>6682</a>  FONTMAP_FAMILY_KEY_MEMO.with(|m| m.borrow_mut().clear());
+<a href=#6683 id=6683 data-nosnippet>6683</a>  FONTMAP_KEY_LAST.set(<span class="prelude-val">None</span>);
+<a href=#6684 id=6684 data-nosnippet>6684</a>  FONTMAP_FAMILY_KEY_LAST.set(<span class="prelude-val">None</span>);
+<a href=#6685 id=6685 data-nosnippet>6685</a>}
 <a href=#6686 id=6686 data-nosnippet>6686</a>
-<a href=#6687 id=6687 data-nosnippet>6687</a>  <span class="doccomment">/// `\Provides…` text as latex.ltx's `\xdef` leaves it: the kernel's `\space` and `\ ` read as spaces
-<a href=#6688 id=6688 data-nosnippet>6688</a>  /// (cite.sty `[2015/02/27 \space v 5.5]`); a file's own macros (listings.sty:22-23 `\filedate\space\fileversion`,
-<a href=#6689 id=6689 data-nosnippet>6689</a>  /// vmargin's `\Vmargin`) give nothing.
-<a href=#6690 id=6690 data-nosnippet>6690</a>  </span><span class="attr">#[test]
-<a href=#6691 id=6691 data-nosnippet>6691</a>  </span><span class="kw">fn </span>declared_text_expands_like_xdef() {
-<a href=#6692 id=6692 data-nosnippet>6692</a>    <span class="macro">assert_eq!</span>(
-<a href=#6693 id=6693 data-nosnippet>6693</a>      expand_declared(<span class="string">"2015/02/27 \\space v 5.5"</span>).as_deref(),
-<a href=#6694 id=6694 data-nosnippet>6694</a>      <span class="prelude-val">Some</span>(<span class="string">"2015/02/27  v 5.5"</span>)
-<a href=#6695 id=6695 data-nosnippet>6695</a>    );
-<a href=#6696 id=6696 data-nosnippet>6696</a>    <span class="macro">assert_eq!</span>(
-<a href=#6697 id=6697 data-nosnippet>6697</a>      expand_declared(<span class="string">"2015/02/27\\ v5.5"</span>).as_deref(),
-<a href=#6698 id=6698 data-nosnippet>6698</a>      <span class="prelude-val">Some</span>(<span class="string">"2015/02/27 v5.5"</span>)
-<a href=#6699 id=6699 data-nosnippet>6699</a>    );
-<a href=#6700 id=6700 data-nosnippet>6700</a>    <span class="macro">assert_eq!</span>(
-<a href=#6701 id=6701 data-nosnippet>6701</a>      expand_declared(<span class="string">"2015/02/27\\  v5.5"</span>).as_deref(),
-<a href=#6702 id=6702 data-nosnippet>6702</a>      <span class="prelude-val">Some</span>(<span class="string">"2015/02/27 v5.5"</span>)
-<a href=#6703 id=6703 data-nosnippet>6703</a>    );
-<a href=#6704 id=6704 data-nosnippet>6704</a>    <span class="macro">assert_eq!</span>(
-<a href=#6705 id=6705 data-nosnippet>6705</a>      expand_declared(<span class="string">"2024/11/12 v2.9 Span multiple rows"</span>).as_deref(),
-<a href=#6706 id=6706 data-nosnippet>6706</a>      <span class="prelude-val">Some</span>(<span class="string">"2024/11/12 v2.9 Span multiple rows"</span>)
-<a href=#6707 id=6707 data-nosnippet>6707</a>    );
-<a href=#6708 id=6708 data-nosnippet>6708</a>    <span class="macro">assert_eq!</span>(
-<a href=#6709 id=6709 data-nosnippet>6709</a>      expand_declared(<span class="string">"\\filedate\\space\\fileversion\\space(Carsten Heinz)"</span>),
-<a href=#6710 id=6710 data-nosnippet>6710</a>      <span class="prelude-val">None
-<a href=#6711 id=6711 data-nosnippet>6711</a>    </span>);
-<a href=#6712 id=6712 data-nosnippet>6712</a>    <span class="macro">assert_eq!</span>(expand_declared(<span class="string">"\\Vmargin"</span>), <span class="prelude-val">None</span>);
-<a href=#6713 id=6713 data-nosnippet>6713</a>    <span class="macro">assert_eq!</span>(expand_declared(<span class="string">""</span>), <span class="prelude-val">None</span>);
-<a href=#6714 id=6714 data-nosnippet>6714</a>  }
-<a href=#6715 id=6715 data-nosnippet>6715</a>
-<a href=#6716 id=6716 data-nosnippet>6716</a>  <span class="doccomment">/// A `%` comment between the name and the bracket (multirow.sty:25-27); a match without a bracket goes on to the
-<a href=#6717 id=6717 data-nosnippet>6717</a>  /// next `\Provides`.
-<a href=#6718 id=6718 data-nosnippet>6718</a>  </span><span class="attr">#[test]
-<a href=#6719 id=6719 data-nosnippet>6719</a>  </span><span class="kw">fn </span>provided_text_skips_comments_before_the_bracket() {
-<a href=#6720 id=6720 data-nosnippet>6720</a>    <span class="kw">let </span>multirow =
-<a href=#6721 id=6721 data-nosnippet>6721</a>      <span class="string">"\\ProvidesPackage{multirow}%\n  % note\n  [2024/11/12 v2.9 Span multiple rows of a table]\n"</span>;
-<a href=#6722 id=6722 data-nosnippet>6722</a>    <span class="macro">assert_eq!</span>(
-<a href=#6723 id=6723 data-nosnippet>6723</a>      provided_text(multirow, <span class="string">"multirow.sty"</span>).as_deref(),
-<a href=#6724 id=6724 data-nosnippet>6724</a>      <span class="prelude-val">Some</span>(<span class="string">"2024/11/12 v2.9 Span multiple rows of a table"</span>)
-<a href=#6725 id=6725 data-nosnippet>6725</a>    );
-<a href=#6726 id=6726 data-nosnippet>6726</a>    <span class="kw">let </span>twice = <span class="string">"\\ProvidesPackage{x}\n\\ProvidesPackage{x}[2020/01/01 v1]"</span>;
-<a href=#6727 id=6727 data-nosnippet>6727</a>    <span class="macro">assert_eq!</span>(
-<a href=#6728 id=6728 data-nosnippet>6728</a>      provided_text(twice, <span class="string">"x.sty"</span>).as_deref(),
-<a href=#6729 id=6729 data-nosnippet>6729</a>      <span class="prelude-val">Some</span>(<span class="string">"2020/01/01 v1"</span>)
-<a href=#6730 id=6730 data-nosnippet>6730</a>    );
-<a href=#6731 id=6731 data-nosnippet>6731</a>  }
-<a href=#6732 id=6732 data-nosnippet>6732</a>}
+<a href=#6687 id=6687 data-nosnippet>6687</a><span class="kw">pub fn </span>load_font_map(encoding: <span class="kw-2">&amp;</span>str) -&gt; <span class="prelude-ty">Option</span>&lt;Fontmap&gt; {
+<a href=#6688 id=6688 data-nosnippet>6688</a>  <span class="kw">let </span>keys = fontmap_key_syms(encoding);
+<a href=#6689 id=6689 data-nosnippet>6689</a>  <span class="kw">let _ </span>= preload_font_map_keyed(encoding, keys); <span class="comment">// infallible in practice; swallow Result
+<a href=#6690 id=6690 data-nosnippet>6690</a>  // with_value avoids the Stored::clone; the Fontmap extraction is a cheap
+<a href=#6691 id=6691 data-nosnippet>6691</a>  // Rc bump on the inner slice regardless.
+<a href=#6692 id=6692 data-nosnippet>6692</a>  </span>with_value_sym(keys.map, |v| v.and_then(|s| s.into()))
+<a href=#6693 id=6693 data-nosnippet>6693</a>}
+<a href=#6694 id=6694 data-nosnippet>6694</a><span class="kw">pub fn </span>preload_font_map(encoding: <span class="kw-2">&amp;</span>str) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
+<a href=#6695 id=6695 data-nosnippet>6695</a>  preload_font_map_keyed(encoding, fontmap_key_syms(encoding))
+<a href=#6696 id=6696 data-nosnippet>6696</a>}
+<a href=#6697 id=6697 data-nosnippet>6697</a><span class="kw">fn </span>preload_font_map_keyed(encoding: <span class="kw-2">&amp;</span>str, keys: FontmapKeySyms) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
+<a href=#6698 id=6698 data-nosnippet>6698</a>  <span class="comment">// This check is done as a "preload" step for mutability reasons.
+<a href=#6699 id=6699 data-nosnippet>6699</a>  </span><span class="kw">if </span>has_value_sym(keys.map) {
+<a href=#6700 id=6700 data-nosnippet>6700</a>    <span class="kw">return </span><span class="prelude-val">Ok</span>(());
+<a href=#6701 id=6701 data-nosnippet>6701</a>  }
+<a href=#6702 id=6702 data-nosnippet>6702</a>  <span class="kw">let </span>failed_flag = lookup_bool_sym(keys.fail);
+<a href=#6703 id=6703 data-nosnippet>6703</a>  <span class="kw">if </span>!failed_flag {
+<a href=#6704 id=6704 data-nosnippet>6704</a>    assign_value_sym(keys.fail, <span class="bool-val">true</span>, <span class="prelude-val">None</span>); <span class="comment">// Stop recursion?
+<a href=#6705 id=6705 data-nosnippet>6705</a>    </span><span class="kw">let _ </span>= input_definitions(<span class="kw-2">&amp;</span>encoding.to_lowercase(), InputDefinitionOptions {
+<a href=#6706 id=6706 data-nosnippet>6706</a>      extension: <span class="prelude-val">Some</span>(Cow::Borrowed(<span class="string">"fontmap"</span>)),
+<a href=#6707 id=6707 data-nosnippet>6707</a>      noerror: <span class="bool-val">true</span>,
+<a href=#6708 id=6708 data-nosnippet>6708</a>      ..InputDefinitionOptions::default()
+<a href=#6709 id=6709 data-nosnippet>6709</a>    });
+<a href=#6710 id=6710 data-nosnippet>6710</a>    <span class="kw">if </span>has_value_sym(keys.map) {
+<a href=#6711 id=6711 data-nosnippet>6711</a>      <span class="comment">// Got map?
+<a href=#6712 id=6712 data-nosnippet>6712</a>      </span>assign_value_sym(keys.fail, <span class="bool-val">false</span>, <span class="prelude-val">None</span>);
+<a href=#6713 id=6713 data-nosnippet>6713</a>    } <span class="kw">else </span>{
+<a href=#6714 id=6714 data-nosnippet>6714</a>      assign_value_sym(keys.fail, <span class="bool-val">true</span>, <span class="prelude-val">Some</span>(Scope::Global));
+<a href=#6715 id=6715 data-nosnippet>6715</a>    }
+<a href=#6716 id=6716 data-nosnippet>6716</a>  }
+<a href=#6717 id=6717 data-nosnippet>6717</a>  <span class="prelude-val">Ok</span>(())
+<a href=#6718 id=6718 data-nosnippet>6718</a>}
+<a href=#6719 id=6719 data-nosnippet>6719</a>
+<a href=#6720 id=6720 data-nosnippet>6720</a><span class="attr">#[cfg(test)]
+<a href=#6721 id=6721 data-nosnippet>6721</a></span><span class="kw">mod </span>declared_info_tests {
+<a href=#6722 id=6722 data-nosnippet>6722</a>  <span class="kw">use super</span>::<span class="kw-2">*</span>;
+<a href=#6723 id=6723 data-nosnippet>6723</a>
+<a href=#6724 id=6724 data-nosnippet>6724</a>  <span class="doccomment">/// A standard-class derivative's read a panic unwinds out of leaves no entry: the next read is no derivative's.
+<a href=#6725 id=6725 data-nosnippet>6725</a>  </span><span class="attr">#[test]
+<a href=#6726 id=6726 data-nosnippet>6726</a>  </span><span class="kw">fn </span>a_derivative_read_a_panic_ends_is_popped() {
+<a href=#6727 id=6727 data-nosnippet>6727</a>    <span class="kw">let </span>unwound = std::panic::catch_unwind(|| {
+<a href=#6728 id=6728 data-nosnippet>6728</a>      <span class="kw">let </span>_read = StandardClassDerivativeRead::enter(HashSet::default());
+<a href=#6729 id=6729 data-nosnippet>6729</a>      <span class="macro">panic!</span>(<span class="string">"a binding's bug"</span>);
+<a href=#6730 id=6730 data-nosnippet>6730</a>    });
+<a href=#6731 id=6731 data-nosnippet>6731</a>    <span class="macro">assert!</span>(unwound.is_err());
+<a href=#6732 id=6732 data-nosnippet>6732</a>    <span class="macro">assert!</span>(STANDARD_CLASS_DERIVATIVE.with(|reads| reads.borrow().is_empty()));
+<a href=#6733 id=6733 data-nosnippet>6733</a>  }
+<a href=#6734 id=6734 data-nosnippet>6734</a>
+<a href=#6735 id=6735 data-nosnippet>6735</a>  <span class="doccomment">/// `\Provides…` text as latex.ltx's `\xdef` leaves it: the kernel's `\space` and `\ ` read as spaces
+<a href=#6736 id=6736 data-nosnippet>6736</a>  /// (cite.sty `[2015/02/27 \space v 5.5]`); a file's own macros (listings.sty:22-23 `\filedate\space\fileversion`,
+<a href=#6737 id=6737 data-nosnippet>6737</a>  /// vmargin's `\Vmargin`) give nothing.
+<a href=#6738 id=6738 data-nosnippet>6738</a>  </span><span class="attr">#[test]
+<a href=#6739 id=6739 data-nosnippet>6739</a>  </span><span class="kw">fn </span>declared_text_expands_like_xdef() {
+<a href=#6740 id=6740 data-nosnippet>6740</a>    <span class="macro">assert_eq!</span>(
+<a href=#6741 id=6741 data-nosnippet>6741</a>      expand_declared(<span class="string">"2015/02/27 \\space v 5.5"</span>).as_deref(),
+<a href=#6742 id=6742 data-nosnippet>6742</a>      <span class="prelude-val">Some</span>(<span class="string">"2015/02/27  v 5.5"</span>)
+<a href=#6743 id=6743 data-nosnippet>6743</a>    );
+<a href=#6744 id=6744 data-nosnippet>6744</a>    <span class="macro">assert_eq!</span>(
+<a href=#6745 id=6745 data-nosnippet>6745</a>      expand_declared(<span class="string">"2015/02/27\\ v5.5"</span>).as_deref(),
+<a href=#6746 id=6746 data-nosnippet>6746</a>      <span class="prelude-val">Some</span>(<span class="string">"2015/02/27 v5.5"</span>)
+<a href=#6747 id=6747 data-nosnippet>6747</a>    );
+<a href=#6748 id=6748 data-nosnippet>6748</a>    <span class="macro">assert_eq!</span>(
+<a href=#6749 id=6749 data-nosnippet>6749</a>      expand_declared(<span class="string">"2015/02/27\\  v5.5"</span>).as_deref(),
+<a href=#6750 id=6750 data-nosnippet>6750</a>      <span class="prelude-val">Some</span>(<span class="string">"2015/02/27 v5.5"</span>)
+<a href=#6751 id=6751 data-nosnippet>6751</a>    );
+<a href=#6752 id=6752 data-nosnippet>6752</a>    <span class="macro">assert_eq!</span>(
+<a href=#6753 id=6753 data-nosnippet>6753</a>      expand_declared(<span class="string">"2024/11/12 v2.9 Span multiple rows"</span>).as_deref(),
+<a href=#6754 id=6754 data-nosnippet>6754</a>      <span class="prelude-val">Some</span>(<span class="string">"2024/11/12 v2.9 Span multiple rows"</span>)
+<a href=#6755 id=6755 data-nosnippet>6755</a>    );
+<a href=#6756 id=6756 data-nosnippet>6756</a>    <span class="macro">assert_eq!</span>(
+<a href=#6757 id=6757 data-nosnippet>6757</a>      expand_declared(<span class="string">"\\filedate\\space\\fileversion\\space(Carsten Heinz)"</span>),
+<a href=#6758 id=6758 data-nosnippet>6758</a>      <span class="prelude-val">None
+<a href=#6759 id=6759 data-nosnippet>6759</a>    </span>);
+<a href=#6760 id=6760 data-nosnippet>6760</a>    <span class="macro">assert_eq!</span>(expand_declared(<span class="string">"\\Vmargin"</span>), <span class="prelude-val">None</span>);
+<a href=#6761 id=6761 data-nosnippet>6761</a>    <span class="macro">assert_eq!</span>(expand_declared(<span class="string">""</span>), <span class="prelude-val">None</span>);
+<a href=#6762 id=6762 data-nosnippet>6762</a>  }
+<a href=#6763 id=6763 data-nosnippet>6763</a>
+<a href=#6764 id=6764 data-nosnippet>6764</a>  <span class="doccomment">/// A `%` comment between the name and the bracket (multirow.sty:25-27); a match without a bracket goes on to the
+<a href=#6765 id=6765 data-nosnippet>6765</a>  /// next `\Provides`.
+<a href=#6766 id=6766 data-nosnippet>6766</a>  </span><span class="attr">#[test]
+<a href=#6767 id=6767 data-nosnippet>6767</a>  </span><span class="kw">fn </span>provided_text_skips_comments_before_the_bracket() {
+<a href=#6768 id=6768 data-nosnippet>6768</a>    <span class="kw">let </span>multirow =
+<a href=#6769 id=6769 data-nosnippet>6769</a>      <span class="string">"\\ProvidesPackage{multirow}%\n  % note\n  [2024/11/12 v2.9 Span multiple rows of a table]\n"</span>;
+<a href=#6770 id=6770 data-nosnippet>6770</a>    <span class="macro">assert_eq!</span>(
+<a href=#6771 id=6771 data-nosnippet>6771</a>      provided_text(multirow, <span class="string">"multirow.sty"</span>).as_deref(),
+<a href=#6772 id=6772 data-nosnippet>6772</a>      <span class="prelude-val">Some</span>(<span class="string">"2024/11/12 v2.9 Span multiple rows of a table"</span>)
+<a href=#6773 id=6773 data-nosnippet>6773</a>    );
+<a href=#6774 id=6774 data-nosnippet>6774</a>    <span class="kw">let </span>twice = <span class="string">"\\ProvidesPackage{x}\n\\ProvidesPackage{x}[2020/01/01 v1]"</span>;
+<a href=#6775 id=6775 data-nosnippet>6775</a>    <span class="macro">assert_eq!</span>(
+<a href=#6776 id=6776 data-nosnippet>6776</a>      provided_text(twice, <span class="string">"x.sty"</span>).as_deref(),
+<a href=#6777 id=6777 data-nosnippet>6777</a>      <span class="prelude-val">Some</span>(<span class="string">"2020/01/01 v1"</span>)
+<a href=#6778 id=6778 data-nosnippet>6778</a>    );
+<a href=#6779 id=6779 data-nosnippet>6779</a>  }
+<a href=#6780 id=6780 data-nosnippet>6780</a>}
 </code></pre></div></section></main></body></html>

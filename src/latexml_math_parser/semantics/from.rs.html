@@ -2,19 +2,19 @@
 <a href=#2 id=2 data-nosnippet>2</a>
 <a href=#3 id=3 data-nosnippet>3</a><span class="kw">use super</span>::{
 <a href=#4 id=4 data-nosnippet>4</a>  metadata::Meta,
-<a href=#5 id=5 data-nosnippet>5</a>  tree::{Args, Operator, XM, XProps},
+<a href=#5 id=5 data-nosnippet>5</a>  tree::{Args, Operator, Shared, XM, XProps},
 <a href=#6 id=6 data-nosnippet>6</a>};
 <a href=#7 id=7 data-nosnippet>7</a>
 <a href=#8 id=8 data-nosnippet>8</a><span class="kw">impl </span>From&lt;<span class="kw-2">&amp;</span>str&gt; <span class="kw">for </span>Operator {
-<a href=#9 id=9 data-nosnippet>9</a>  <span class="kw">fn </span>from(a: <span class="kw-2">&amp;</span>str) -&gt; Operator { Operator(Box::new(a.into())) }
+<a href=#9 id=9 data-nosnippet>9</a>  <span class="kw">fn </span>from(a: <span class="kw-2">&amp;</span>str) -&gt; Operator { Operator(Shared::new(a.into())) }
 <a href=#10 id=10 data-nosnippet>10</a>}
 <a href=#11 id=11 data-nosnippet>11</a><span class="kw">impl </span>From&lt;String&gt; <span class="kw">for </span>Operator {
-<a href=#12 id=12 data-nosnippet>12</a>  <span class="kw">fn </span>from(a: String) -&gt; Operator { Operator(Box::new(a.as_str().into())) }
+<a href=#12 id=12 data-nosnippet>12</a>  <span class="kw">fn </span>from(a: String) -&gt; Operator { Operator(Shared::new(a.as_str().into())) }
 <a href=#13 id=13 data-nosnippet>13</a>}
 <a href=#14 id=14 data-nosnippet>14</a><span class="kw">impl </span>From&lt;<span class="prelude-ty">Option</span>&lt;XM&gt;&gt; <span class="kw">for </span>Operator {
 <a href=#15 id=15 data-nosnippet>15</a>  <span class="kw">fn </span>from(opt: <span class="prelude-ty">Option</span>&lt;XM&gt;) -&gt; Operator {
 <a href=#16 id=16 data-nosnippet>16</a>    <span class="kw">if let </span><span class="prelude-val">Some</span>(tree) = opt {
-<a href=#17 id=17 data-nosnippet>17</a>      Operator(Box::new(tree))
+<a href=#17 id=17 data-nosnippet>17</a>      Operator(Shared::new(tree))
 <a href=#18 id=18 data-nosnippet>18</a>    } <span class="kw">else </span>{
 <a href=#19 id=19 data-nosnippet>19</a>      <span class="string">"missing_operator"</span>.into()
 <a href=#20 id=20 data-nosnippet>20</a>    }
@@ -23,11 +23,11 @@
 <a href=#23 id=23 data-nosnippet>23</a><span class="kw">impl </span>From&lt;<span class="kw-2">&amp;</span>Node&gt; <span class="kw">for </span>Operator {
 <a href=#24 id=24 data-nosnippet>24</a>  <span class="kw">fn </span>from(node: <span class="kw-2">&amp;</span>Node) -&gt; Operator {
 <a href=#25 id=25 data-nosnippet>25</a>    <span class="kw">let </span>xmnode: XM = node.into();
-<a href=#26 id=26 data-nosnippet>26</a>    Operator(Box::new(xmnode))
+<a href=#26 id=26 data-nosnippet>26</a>    Operator(Shared::new(xmnode))
 <a href=#27 id=27 data-nosnippet>27</a>  }
 <a href=#28 id=28 data-nosnippet>28</a>}
 <a href=#29 id=29 data-nosnippet>29</a><span class="kw">impl </span>From&lt;<span class="prelude-ty">Option</span>&lt;XM&gt;&gt; <span class="kw">for </span>Args {
-<a href=#30 id=30 data-nosnippet>30</a>  <span class="kw">fn </span>from(opt: <span class="prelude-ty">Option</span>&lt;XM&gt;) -&gt; Args { Args(<span class="macro">vec!</span>[opt]) }
+<a href=#30 id=30 data-nosnippet>30</a>  <span class="kw">fn </span>from(opt: <span class="prelude-ty">Option</span>&lt;XM&gt;) -&gt; Args { Args(Shared::new(<span class="macro">vec!</span>[opt])) }
 <a href=#31 id=31 data-nosnippet>31</a>}
 <a href=#32 id=32 data-nosnippet>32</a>
 <a href=#33 id=33 data-nosnippet>33</a><span class="kw">impl </span>From&lt;<span class="kw-2">&amp;</span>str&gt; <span class="kw">for </span>XM {
@@ -37,7 +37,7 @@
 <a href=#37 id=37 data-nosnippet>37</a>  <span class="kw">fn </span>from(a: (<span class="kw-2">&amp;</span>str, <span class="kw-2">&amp;</span>str)) -&gt; XM {
 <a href=#38 id=38 data-nosnippet>38</a>    XM::Apply(
 <a href=#39 id=39 data-nosnippet>39</a>      a.<span class="number">0</span>.into(),
-<a href=#40 id=40 data-nosnippet>40</a>      Args(<span class="macro">vec!</span>[<span class="prelude-val">Some</span>(a.<span class="number">1</span>.into())]),
+<a href=#40 id=40 data-nosnippet>40</a>      Args(Shared::new(<span class="macro">vec!</span>[<span class="prelude-val">Some</span>(a.<span class="number">1</span>.into())])),
 <a href=#41 id=41 data-nosnippet>41</a>      XProps::default(),
 <a href=#42 id=42 data-nosnippet>42</a>      Meta::default(),
 <a href=#43 id=43 data-nosnippet>43</a>    )
@@ -58,7 +58,7 @@
 <a href=#58 id=58 data-nosnippet>58</a>  <span class="kw">fn </span>from(args: (<span class="kw-2">&amp;</span>str, (<span class="kw-2">&amp;</span>str, (<span class="kw-2">&amp;</span>str, <span class="kw-2">&amp;</span>str)))) -&gt; XM {
 <a href=#59 id=59 data-nosnippet>59</a>    XM::Apply(
 <a href=#60 id=60 data-nosnippet>60</a>      args.<span class="number">0</span>.into(),
-<a href=#61 id=61 data-nosnippet>61</a>      Args(<span class="macro">vec!</span>[<span class="prelude-val">Some</span>(args.<span class="number">1</span>.into())]),
+<a href=#61 id=61 data-nosnippet>61</a>      Args(Shared::new(<span class="macro">vec!</span>[<span class="prelude-val">Some</span>(args.<span class="number">1</span>.into())])),
 <a href=#62 id=62 data-nosnippet>62</a>      XProps::default(),
 <a href=#63 id=63 data-nosnippet>63</a>      Meta::default(),
 <a href=#64 id=64 data-nosnippet>64</a>    )
@@ -69,7 +69,7 @@
 <a href=#69 id=69 data-nosnippet>69</a>  <span class="kw">fn </span>from(args: (<span class="kw-2">&amp;</span>str, (<span class="kw-2">&amp;</span>str, (<span class="kw-2">&amp;</span>str, [<span class="kw-2">&amp;</span>str; <span class="number">1</span>])))) -&gt; XM {
 <a href=#70 id=70 data-nosnippet>70</a>    XM::Apply(
 <a href=#71 id=71 data-nosnippet>71</a>      args.<span class="number">0</span>.into(),
-<a href=#72 id=72 data-nosnippet>72</a>      Args(<span class="macro">vec!</span>[<span class="prelude-val">Some</span>(args.<span class="number">1</span>.into())]),
+<a href=#72 id=72 data-nosnippet>72</a>      Args(Shared::new(<span class="macro">vec!</span>[<span class="prelude-val">Some</span>(args.<span class="number">1</span>.into())])),
 <a href=#73 id=73 data-nosnippet>73</a>      XProps::default(),
 <a href=#74 id=74 data-nosnippet>74</a>      Meta::default(),
 <a href=#75 id=75 data-nosnippet>75</a>    )
@@ -79,7 +79,7 @@
 <a href=#79 id=79 data-nosnippet>79</a>  <span class="kw">fn </span>from(args: (<span class="kw-2">&amp;</span>str, (<span class="kw-2">&amp;</span>str, [<span class="kw-2">&amp;</span>str; <span class="number">1</span>]))) -&gt; XM {
 <a href=#80 id=80 data-nosnippet>80</a>    XM::Apply(
 <a href=#81 id=81 data-nosnippet>81</a>      args.<span class="number">0</span>.into(),
-<a href=#82 id=82 data-nosnippet>82</a>      Args(<span class="macro">vec!</span>[<span class="prelude-val">Some</span>(args.<span class="number">1</span>.into())]),
+<a href=#82 id=82 data-nosnippet>82</a>      Args(Shared::new(<span class="macro">vec!</span>[<span class="prelude-val">Some</span>(args.<span class="number">1</span>.into())])),
 <a href=#83 id=83 data-nosnippet>83</a>      XProps::default(),
 <a href=#84 id=84 data-nosnippet>84</a>      Meta::default(),
 <a href=#85 id=85 data-nosnippet>85</a>    )
@@ -89,7 +89,7 @@
 <a href=#89 id=89 data-nosnippet>89</a>  <span class="kw">fn </span>from(args: (<span class="kw-2">&amp;</span>str, [<span class="kw-2">&amp;</span>str; <span class="number">1</span>])) -&gt; XM {
 <a href=#90 id=90 data-nosnippet>90</a>    XM::Apply(
 <a href=#91 id=91 data-nosnippet>91</a>      args.<span class="number">0</span>.into(),
-<a href=#92 id=92 data-nosnippet>92</a>      Args(<span class="macro">vec!</span>[<span class="prelude-val">Some</span>(args.<span class="number">1</span>[<span class="number">0</span>].into())]),
+<a href=#92 id=92 data-nosnippet>92</a>      Args(Shared::new(<span class="macro">vec!</span>[<span class="prelude-val">Some</span>(args.<span class="number">1</span>[<span class="number">0</span>].into())])),
 <a href=#93 id=93 data-nosnippet>93</a>      XProps::default(),
 <a href=#94 id=94 data-nosnippet>94</a>      Meta::default(),
 <a href=#95 id=95 data-nosnippet>95</a>    )
@@ -103,7 +103,7 @@
 <a href=#103 id=103 data-nosnippet>103</a>  <span class="kw">fn </span>from(args: (OP, LEFT, RIGHT)) -&gt; XM {
 <a href=#104 id=104 data-nosnippet>104</a>    XM::Apply(
 <a href=#105 id=105 data-nosnippet>105</a>      args.<span class="number">0</span>.to_string().into(),
-<a href=#106 id=106 data-nosnippet>106</a>      Args(<span class="macro">vec!</span>[<span class="prelude-val">Some</span>(args.<span class="number">1</span>.into()), <span class="prelude-val">Some</span>(args.<span class="number">2</span>.into())]),
+<a href=#106 id=106 data-nosnippet>106</a>      Args(Shared::new(<span class="macro">vec!</span>[<span class="prelude-val">Some</span>(args.<span class="number">1</span>.into()), <span class="prelude-val">Some</span>(args.<span class="number">2</span>.into())])),
 <a href=#107 id=107 data-nosnippet>107</a>      XProps::default(),
 <a href=#108 id=108 data-nosnippet>108</a>      Meta::default(),
 <a href=#109 id=109 data-nosnippet>109</a>    )
@@ -113,7 +113,7 @@
 <a href=#113 id=113 data-nosnippet>113</a>  <span class="kw">fn </span>from(args: (OP, Vec&lt;XM&gt;)) -&gt; XM {
 <a href=#114 id=114 data-nosnippet>114</a>    <span class="kw">let </span>op_str = args.<span class="number">0</span>.to_string();
 <a href=#115 id=115 data-nosnippet>115</a>    <span class="kw">if </span>op_str == <span class="string">"choices" </span>{
-<a href=#116 id=116 data-nosnippet>116</a>      XM::Choices(args.<span class="number">1</span>.to_vec())
+<a href=#116 id=116 data-nosnippet>116</a>      XM::Choices(Shared::new(args.<span class="number">1</span>.to_vec()))
 <a href=#117 id=117 data-nosnippet>117</a>    } <span class="kw">else </span>{
 <a href=#118 id=118 data-nosnippet>118</a>      XM::Apply(
 <a href=#119 id=119 data-nosnippet>119</a>        op_str.into(),

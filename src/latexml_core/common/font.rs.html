@@ -2589,225 +2589,240 @@
 <a href=#2589 id=2589 data-nosnippet>2589</a>    <span class="prelude-val">None
 <a href=#2590 id=2590 data-nosnippet>2590</a>  </span>};
 <a href=#2591 id=2591 data-nosnippet>2591</a>
-<a href=#2592 id=2592 data-nosnippet>2592</a>  <span class="kw">let </span><span class="kw-2">mut </span>result_string: String = String::new();
-<a href=#2593 id=2593 data-nosnippet>2593</a>  arena::with(string, |str| {
-<a href=#2594 id=2594 data-nosnippet>2594</a>    <span class="kw">for </span>c <span class="kw">in </span>str.chars() {
-<a href=#2595 id=2595 data-nosnippet>2595</a>      <span class="kw">if </span>implicit {
-<a href=#2596 id=2596 data-nosnippet>2596</a>        <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref </span>map_ref) = map {
-<a href=#2597 id=2597 data-nosnippet>2597</a>          <span class="kw">let </span>code = c <span class="kw">as </span>u16; <span class="comment">// u16, so that Unicode chars get cast correctly
-<a href=#2598 id=2598 data-nosnippet>2598</a>          </span><span class="kw">if </span>code &lt; <span class="number">128 </span>{
-<a href=#2599 id=2599 data-nosnippet>2599</a>            <span class="comment">// Check multi-char override first
-<a href=#2600 id=2600 data-nosnippet>2600</a>            </span><span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref </span>mc) = multichar_map
-<a href=#2601 id=2601 data-nosnippet>2601</a>              &amp;&amp; <span class="kw">let </span><span class="prelude-val">Some</span>(mc_str) = mc.get(<span class="kw-2">&amp;</span>(code <span class="kw">as </span>u8).to_string())
-<a href=#2602 id=2602 data-nosnippet>2602</a>            {
-<a href=#2603 id=2603 data-nosnippet>2603</a>              result_string.push_str(mc_str);
-<a href=#2604 id=2604 data-nosnippet>2604</a>              <span class="kw">continue</span>;
-<a href=#2605 id=2605 data-nosnippet>2605</a>            }
-<a href=#2606 id=2606 data-nosnippet>2606</a>            <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="prelude-val">Some</span>(mapc_val)) = map_ref.get(code <span class="kw">as </span>usize) {
-<a href=#2607 id=2607 data-nosnippet>2607</a>              push_fontmap_char(<span class="kw-2">&amp;mut </span>result_string, <span class="kw-2">*</span>mapc_val, code <span class="kw">as </span>u8);
+<a href=#2592 id=2592 data-nosnippet>2592</a>  <span class="comment">// The decoding is spelled in a reused buffer (a String per call was one allocation per digested character, MEM1
+<a href=#2593 id=2593 data-nosnippet>2593</a>  // L4a); taken out of its cell, so a nested call would only allocate its own.
+<a href=#2594 id=2594 data-nosnippet>2594</a>  </span><span class="kw">let </span><span class="kw-2">mut </span>result_string = DECODED.take();
+<a href=#2595 id=2595 data-nosnippet>2595</a>  result_string.clear();
+<a href=#2596 id=2596 data-nosnippet>2596</a>  <span class="kw">let </span>unchanged = arena::with(string, |str| {
+<a href=#2597 id=2597 data-nosnippet>2597</a>    <span class="kw">for </span>c <span class="kw">in </span>str.chars() {
+<a href=#2598 id=2598 data-nosnippet>2598</a>      <span class="kw">if </span>implicit {
+<a href=#2599 id=2599 data-nosnippet>2599</a>        <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref </span>map_ref) = map {
+<a href=#2600 id=2600 data-nosnippet>2600</a>          <span class="kw">let </span>code = c <span class="kw">as </span>u16; <span class="comment">// u16, so that Unicode chars get cast correctly
+<a href=#2601 id=2601 data-nosnippet>2601</a>          </span><span class="kw">if </span>code &lt; <span class="number">128 </span>{
+<a href=#2602 id=2602 data-nosnippet>2602</a>            <span class="comment">// Check multi-char override first
+<a href=#2603 id=2603 data-nosnippet>2603</a>            </span><span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref </span>mc) = multichar_map
+<a href=#2604 id=2604 data-nosnippet>2604</a>              &amp;&amp; <span class="kw">let </span><span class="prelude-val">Some</span>(mc_str) = mc.get(<span class="kw-2">&amp;</span>(code <span class="kw">as </span>u8).to_string())
+<a href=#2605 id=2605 data-nosnippet>2605</a>            {
+<a href=#2606 id=2606 data-nosnippet>2606</a>              result_string.push_str(mc_str);
+<a href=#2607 id=2607 data-nosnippet>2607</a>              <span class="kw">continue</span>;
 <a href=#2608 id=2608 data-nosnippet>2608</a>            }
-<a href=#2609 id=2609 data-nosnippet>2609</a>          } <span class="kw">else </span>{
-<a href=#2610 id=2610 data-nosnippet>2610</a>            result_string.push(c);
-<a href=#2611 id=2611 data-nosnippet>2611</a>          }
-<a href=#2612 id=2612 data-nosnippet>2612</a>        } <span class="kw">else </span>{
-<a href=#2613 id=2613 data-nosnippet>2613</a>          result_string.push(c)
-<a href=#2614 id=2614 data-nosnippet>2614</a>        }
-<a href=#2615 id=2615 data-nosnippet>2615</a>      } <span class="kw">else if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref </span>map_ref) = map {
-<a href=#2616 id=2616 data-nosnippet>2616</a>        <span class="kw">let </span>code = c <span class="kw">as </span>u8;
-<a href=#2617 id=2617 data-nosnippet>2617</a>        <span class="comment">// Check multi-char override first
-<a href=#2618 id=2618 data-nosnippet>2618</a>        </span><span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref </span>mc) = multichar_map
-<a href=#2619 id=2619 data-nosnippet>2619</a>          &amp;&amp; <span class="kw">let </span><span class="prelude-val">Some</span>(mc_str) = mc.get(<span class="kw-2">&amp;</span>code.to_string())
-<a href=#2620 id=2620 data-nosnippet>2620</a>        {
-<a href=#2621 id=2621 data-nosnippet>2621</a>          result_string.push_str(mc_str);
-<a href=#2622 id=2622 data-nosnippet>2622</a>          <span class="kw">continue</span>;
-<a href=#2623 id=2623 data-nosnippet>2623</a>        }
-<a href=#2624 id=2624 data-nosnippet>2624</a>        <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="prelude-val">Some</span>(mapc_val)) = map_ref.get(code <span class="kw">as </span>usize) {
-<a href=#2625 id=2625 data-nosnippet>2625</a>          push_fontmap_char(<span class="kw-2">&amp;mut </span>result_string, <span class="kw-2">*</span>mapc_val, code);
+<a href=#2609 id=2609 data-nosnippet>2609</a>            <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="prelude-val">Some</span>(mapc_val)) = map_ref.get(code <span class="kw">as </span>usize) {
+<a href=#2610 id=2610 data-nosnippet>2610</a>              push_fontmap_char(<span class="kw-2">&amp;mut </span>result_string, <span class="kw-2">*</span>mapc_val, code <span class="kw">as </span>u8);
+<a href=#2611 id=2611 data-nosnippet>2611</a>            }
+<a href=#2612 id=2612 data-nosnippet>2612</a>          } <span class="kw">else </span>{
+<a href=#2613 id=2613 data-nosnippet>2613</a>            result_string.push(c);
+<a href=#2614 id=2614 data-nosnippet>2614</a>          }
+<a href=#2615 id=2615 data-nosnippet>2615</a>        } <span class="kw">else </span>{
+<a href=#2616 id=2616 data-nosnippet>2616</a>          result_string.push(c)
+<a href=#2617 id=2617 data-nosnippet>2617</a>        }
+<a href=#2618 id=2618 data-nosnippet>2618</a>      } <span class="kw">else if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref </span>map_ref) = map {
+<a href=#2619 id=2619 data-nosnippet>2619</a>        <span class="kw">let </span>code = c <span class="kw">as </span>u8;
+<a href=#2620 id=2620 data-nosnippet>2620</a>        <span class="comment">// Check multi-char override first
+<a href=#2621 id=2621 data-nosnippet>2621</a>        </span><span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref </span>mc) = multichar_map
+<a href=#2622 id=2622 data-nosnippet>2622</a>          &amp;&amp; <span class="kw">let </span><span class="prelude-val">Some</span>(mc_str) = mc.get(<span class="kw-2">&amp;</span>code.to_string())
+<a href=#2623 id=2623 data-nosnippet>2623</a>        {
+<a href=#2624 id=2624 data-nosnippet>2624</a>          result_string.push_str(mc_str);
+<a href=#2625 id=2625 data-nosnippet>2625</a>          <span class="kw">continue</span>;
 <a href=#2626 id=2626 data-nosnippet>2626</a>        }
-<a href=#2627 id=2627 data-nosnippet>2627</a>      }
-<a href=#2628 id=2628 data-nosnippet>2628</a>    }
-<a href=#2629 id=2629 data-nosnippet>2629</a>  });
-<a href=#2630 id=2630 data-nosnippet>2630</a>  arena::pin(result_string)
-<a href=#2631 id=2631 data-nosnippet>2631</a>}
-<a href=#2632 id=2632 data-nosnippet>2632</a>
-<a href=#2633 id=2633 data-nosnippet>2633</a><span class="doccomment">/// Convert stanard font size names, such as `tiny`, `Huge`, etc to f64
-<a href=#2634 id=2634 data-nosnippet>2634</a></span><span class="kw">pub fn </span>rationalize_font_size(size: <span class="kw-2">&amp;</span>str) -&gt; f64 {
-<a href=#2635 id=2635 data-nosnippet>2635</a>  <span class="kw">if let </span><span class="prelude-val">Some</span>(symbolic) = FONT_SIZE.get(size) {
-<a href=#2636 id=2636 data-nosnippet>2636</a>    <span class="kw-2">*</span>symbolic * defsize()
-<a href=#2637 id=2637 data-nosnippet>2637</a>  } <span class="kw">else </span>{
-<a href=#2638 id=2638 data-nosnippet>2638</a>    <span class="comment">// Perl: return $size — if not a symbolic name, return the numeric value as-is
-<a href=#2639 id=2639 data-nosnippet>2639</a>    </span>size.parse::&lt;f64&gt;().unwrap_or_else(|<span class="kw">_</span>| defsize())
-<a href=#2640 id=2640 data-nosnippet>2640</a>  }
+<a href=#2627 id=2627 data-nosnippet>2627</a>        <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="prelude-val">Some</span>(mapc_val)) = map_ref.get(code <span class="kw">as </span>usize) {
+<a href=#2628 id=2628 data-nosnippet>2628</a>          push_fontmap_char(<span class="kw-2">&amp;mut </span>result_string, <span class="kw-2">*</span>mapc_val, code);
+<a href=#2629 id=2629 data-nosnippet>2629</a>        }
+<a href=#2630 id=2630 data-nosnippet>2630</a>      }
+<a href=#2631 id=2631 data-nosnippet>2631</a>    }
+<a href=#2632 id=2632 data-nosnippet>2632</a>    result_string == str
+<a href=#2633 id=2633 data-nosnippet>2633</a>  });
+<a href=#2634 id=2634 data-nosnippet>2634</a>  <span class="kw">let </span>decoded = <span class="kw">if </span>unchanged {
+<a href=#2635 id=2635 data-nosnippet>2635</a>    string
+<a href=#2636 id=2636 data-nosnippet>2636</a>  } <span class="kw">else </span>{
+<a href=#2637 id=2637 data-nosnippet>2637</a>    arena::pin(result_string.as_str())
+<a href=#2638 id=2638 data-nosnippet>2638</a>  };
+<a href=#2639 id=2639 data-nosnippet>2639</a>  DECODED.set(result_string);
+<a href=#2640 id=2640 data-nosnippet>2640</a>  decoded
 <a href=#2641 id=2641 data-nosnippet>2641</a>}
 <a href=#2642 id=2642 data-nosnippet>2642</a>
-<a href=#2643 id=2643 data-nosnippet>2643</a><span class="doccomment">/// convert size to percent
-<a href=#2644 id=2644 data-nosnippet>2644</a></span><span class="kw">pub fn </span>relative_font_size(newsize: f64, oldsize: f64) -&gt; String {
-<a href=#2645 id=2645 data-nosnippet>2645</a>  <span class="macro">s!</span>(<span class="string">"{}%"</span>, (<span class="number">0.5 </span>+ <span class="number">100.0 </span>* newsize / oldsize).floor())
+<a href=#2643 id=2643 data-nosnippet>2643</a><span class="macro">thread_local!</span> {
+<a href=#2644 id=2644 data-nosnippet>2644</a>  <span class="doccomment">/// [`decode_string`]'s buffer.
+<a href=#2645 id=2645 data-nosnippet>2645</a>  </span><span class="kw">static </span>DECODED: std::cell::Cell&lt;String&gt; = <span class="kw">const </span>{ std::cell::Cell::new(String::new()) };
 <a href=#2646 id=2646 data-nosnippet>2646</a>}
 <a href=#2647 id=2647 data-nosnippet>2647</a>
-<a href=#2648 id=2648 data-nosnippet>2648</a><span class="doccomment">/// A horizontal List with a width is a finished paragraph (`repack_horizontal`), which a text
-<a href=#2649 id=2649 data-nosnippet>2649</a>/// group holding a `\par` carries into the line it sits in (a tikz `align=center` node's `\\`
-<a href=#2650 id=2650 data-nosnippet>2650</a>/// lines, a `{\footnotesize …\par …}` block): measured as one unit on lines of its own — neither
-<a href=#2651 id=2651 data-nosnippet>2651</a>/// opened into the words around it nor run into them (Perl's flat text groups never nest one,
-<a href=#2652 id=2652 data-nosnippet>2652</a>/// Font.pm:731-746). Witnesses 2605.28170 (a prompt box: 486pt, pdflatex 570, run into one line
-<a href=#2653 id=2653 data-nosnippet>2653</a>/// 233), 2605.15377, 2605.01547 (a figure 392.53pt wide as pdflatex; 718.6 before 58b).
-<a href=#2654 id=2654 data-nosnippet>2654</a></span><span class="kw">fn </span>is_finished_paragraph(bx: <span class="kw-2">&amp;</span>Digested) -&gt; bool {
-<a href=#2655 id=2655 data-nosnippet>2655</a>  <span class="macro">matches!</span>(bx.data(), DigestedData::List(<span class="kw">_</span>))
-<a href=#2656 id=2656 data-nosnippet>2656</a>    &amp;&amp; bx.has_property(<span class="string">"width"</span>)
-<a href=#2657 id=2657 data-nosnippet>2657</a>    &amp;&amp; bx
-<a href=#2658 id=2658 data-nosnippet>2658</a>      .get_property(<span class="string">"mode"</span>)
-<a href=#2659 id=2659 data-nosnippet>2659</a>      .is_some_and(|mode| mode.to_string() == <span class="string">"horizontal"</span>)
-<a href=#2660 id=2660 data-nosnippet>2660</a>}
-<a href=#2661 id=2661 data-nosnippet>2661</a>
-<a href=#2662 id=2662 data-nosnippet>2662</a><span class="attr">#[cfg(test)]
-<a href=#2663 id=2663 data-nosnippet>2663</a></span><span class="kw">mod </span>tests {
-<a href=#2664 id=2664 data-nosnippet>2664</a>  <span class="kw">use super</span>::<span class="kw-2">*</span>;
-<a href=#2665 id=2665 data-nosnippet>2665</a>
-<a href=#2666 id=2666 data-nosnippet>2666</a>  <span class="attr">#[test]
-<a href=#2667 id=2667 data-nosnippet>2667</a>  </span><span class="kw">fn </span>relative_font_size_same_is_100() {
-<a href=#2668 id=2668 data-nosnippet>2668</a>    <span class="macro">assert_eq!</span>(relative_font_size(<span class="number">10.0</span>, <span class="number">10.0</span>), <span class="string">"100%"</span>);
-<a href=#2669 id=2669 data-nosnippet>2669</a>    <span class="macro">assert_eq!</span>(relative_font_size(<span class="number">12.0</span>, <span class="number">12.0</span>), <span class="string">"100%"</span>);
-<a href=#2670 id=2670 data-nosnippet>2670</a>  }
-<a href=#2671 id=2671 data-nosnippet>2671</a>
-<a href=#2672 id=2672 data-nosnippet>2672</a>  <span class="attr">#[test]
-<a href=#2673 id=2673 data-nosnippet>2673</a>  </span><span class="kw">fn </span>relative_font_size_doubled_is_200() {
-<a href=#2674 id=2674 data-nosnippet>2674</a>    <span class="macro">assert_eq!</span>(relative_font_size(<span class="number">20.0</span>, <span class="number">10.0</span>), <span class="string">"200%"</span>);
-<a href=#2675 id=2675 data-nosnippet>2675</a>  }
+<a href=#2648 id=2648 data-nosnippet>2648</a><span class="doccomment">/// Convert stanard font size names, such as `tiny`, `Huge`, etc to f64
+<a href=#2649 id=2649 data-nosnippet>2649</a></span><span class="kw">pub fn </span>rationalize_font_size(size: <span class="kw-2">&amp;</span>str) -&gt; f64 {
+<a href=#2650 id=2650 data-nosnippet>2650</a>  <span class="kw">if let </span><span class="prelude-val">Some</span>(symbolic) = FONT_SIZE.get(size) {
+<a href=#2651 id=2651 data-nosnippet>2651</a>    <span class="kw-2">*</span>symbolic * defsize()
+<a href=#2652 id=2652 data-nosnippet>2652</a>  } <span class="kw">else </span>{
+<a href=#2653 id=2653 data-nosnippet>2653</a>    <span class="comment">// Perl: return $size — if not a symbolic name, return the numeric value as-is
+<a href=#2654 id=2654 data-nosnippet>2654</a>    </span>size.parse::&lt;f64&gt;().unwrap_or_else(|<span class="kw">_</span>| defsize())
+<a href=#2655 id=2655 data-nosnippet>2655</a>  }
+<a href=#2656 id=2656 data-nosnippet>2656</a>}
+<a href=#2657 id=2657 data-nosnippet>2657</a>
+<a href=#2658 id=2658 data-nosnippet>2658</a><span class="doccomment">/// convert size to percent
+<a href=#2659 id=2659 data-nosnippet>2659</a></span><span class="kw">pub fn </span>relative_font_size(newsize: f64, oldsize: f64) -&gt; String {
+<a href=#2660 id=2660 data-nosnippet>2660</a>  <span class="macro">s!</span>(<span class="string">"{}%"</span>, (<span class="number">0.5 </span>+ <span class="number">100.0 </span>* newsize / oldsize).floor())
+<a href=#2661 id=2661 data-nosnippet>2661</a>}
+<a href=#2662 id=2662 data-nosnippet>2662</a>
+<a href=#2663 id=2663 data-nosnippet>2663</a><span class="doccomment">/// A horizontal List with a width is a finished paragraph (`repack_horizontal`), which a text
+<a href=#2664 id=2664 data-nosnippet>2664</a>/// group holding a `\par` carries into the line it sits in (a tikz `align=center` node's `\\`
+<a href=#2665 id=2665 data-nosnippet>2665</a>/// lines, a `{\footnotesize …\par …}` block): measured as one unit on lines of its own — neither
+<a href=#2666 id=2666 data-nosnippet>2666</a>/// opened into the words around it nor run into them (Perl's flat text groups never nest one,
+<a href=#2667 id=2667 data-nosnippet>2667</a>/// Font.pm:731-746). Witnesses 2605.28170 (a prompt box: 486pt, pdflatex 570, run into one line
+<a href=#2668 id=2668 data-nosnippet>2668</a>/// 233), 2605.15377, 2605.01547 (a figure 392.53pt wide as pdflatex; 718.6 before 58b).
+<a href=#2669 id=2669 data-nosnippet>2669</a></span><span class="kw">fn </span>is_finished_paragraph(bx: <span class="kw-2">&amp;</span>Digested) -&gt; bool {
+<a href=#2670 id=2670 data-nosnippet>2670</a>  <span class="macro">matches!</span>(bx.data(), DigestedData::List(<span class="kw">_</span>))
+<a href=#2671 id=2671 data-nosnippet>2671</a>    &amp;&amp; bx.has_property(<span class="string">"width"</span>)
+<a href=#2672 id=2672 data-nosnippet>2672</a>    &amp;&amp; bx
+<a href=#2673 id=2673 data-nosnippet>2673</a>      .get_property(<span class="string">"mode"</span>)
+<a href=#2674 id=2674 data-nosnippet>2674</a>      .is_some_and(|mode| mode.to_string() == <span class="string">"horizontal"</span>)
+<a href=#2675 id=2675 data-nosnippet>2675</a>}
 <a href=#2676 id=2676 data-nosnippet>2676</a>
-<a href=#2677 id=2677 data-nosnippet>2677</a>  <span class="attr">#[test]
-<a href=#2678 id=2678 data-nosnippet>2678</a>  </span><span class="kw">fn </span>relative_font_size_half_is_50() {
-<a href=#2679 id=2679 data-nosnippet>2679</a>    <span class="macro">assert_eq!</span>(relative_font_size(<span class="number">5.0</span>, <span class="number">10.0</span>), <span class="string">"50%"</span>);
-<a href=#2680 id=2680 data-nosnippet>2680</a>  }
-<a href=#2681 id=2681 data-nosnippet>2681</a>
-<a href=#2682 id=2682 data-nosnippet>2682</a>  <span class="doccomment">/// #542: NOMINAL_FONT_SIZE is a float, not an integer — the `11pt` class option
-<a href=#2683 id=2683 data-nosnippet>2683</a>  /// is `10.95` (LaTeX's `\@xipt`), which the reader must not truncate. Perl
-<a href=#2684 id=2684 data-nosnippet>2684</a>  /// `DEFSIZE` reads `lookupValue('NOMINAL_FONT_SIZE')` directly as a float
-<a href=#2685 id=2685 data-nosnippet>2685</a>  /// (`Common/Font.pm:44`); the Rust reader used to go through `lookup_int`.
-<a href=#2686 id=2686 data-nosnippet>2686</a>  </span><span class="attr">#[test]
-<a href=#2687 id=2687 data-nosnippet>2687</a>  </span><span class="kw">fn </span>defsize_preserves_fractional_nominal_font_size() {
-<a href=#2688 id=2688 data-nosnippet>2688</a>    <span class="kw">use crate</span>::{
-<a href=#2689 id=2689 data-nosnippet>2689</a>      common::float::Float,
-<a href=#2690 id=2690 data-nosnippet>2690</a>      state::{State, StateOptions, assign_value, set_state},
-<a href=#2691 id=2691 data-nosnippet>2691</a>    };
-<a href=#2692 id=2692 data-nosnippet>2692</a>    set_state(State::new(StateOptions::default()));
-<a href=#2693 id=2693 data-nosnippet>2693</a>    <span class="comment">// Unset → default 10.
-<a href=#2694 id=2694 data-nosnippet>2694</a>    </span><span class="macro">assert_eq!</span>(defsize(), <span class="number">10.0</span>, <span class="string">"defsize defaults to 10 when unset"</span>);
-<a href=#2695 id=2695 data-nosnippet>2695</a>    <span class="comment">// 11pt → 10.95, the fractional value the old lookup_int truncated to 10.
-<a href=#2696 id=2696 data-nosnippet>2696</a>    </span>assign_value(<span class="string">"NOMINAL_FONT_SIZE"</span>, Float(<span class="number">10.95</span>), <span class="prelude-val">None</span>);
-<a href=#2697 id=2697 data-nosnippet>2697</a>    <span class="macro">assert_eq!</span>(
-<a href=#2698 id=2698 data-nosnippet>2698</a>      defsize(),
-<a href=#2699 id=2699 data-nosnippet>2699</a>      <span class="number">10.95</span>,
-<a href=#2700 id=2700 data-nosnippet>2700</a>      <span class="string">"defsize preserves the fractional 11pt size"
-<a href=#2701 id=2701 data-nosnippet>2701</a>    </span>);
-<a href=#2702 id=2702 data-nosnippet>2702</a>    <span class="comment">// An integral float still reads back cleanly.
-<a href=#2703 id=2703 data-nosnippet>2703</a>    </span>assign_value(<span class="string">"NOMINAL_FONT_SIZE"</span>, Float(<span class="number">12.0</span>), <span class="prelude-val">None</span>);
-<a href=#2704 id=2704 data-nosnippet>2704</a>    <span class="macro">assert_eq!</span>(defsize(), <span class="number">12.0</span>, <span class="string">"12pt reads back as 12.0"</span>);
-<a href=#2705 id=2705 data-nosnippet>2705</a>  }
-<a href=#2706 id=2706 data-nosnippet>2706</a>
-<a href=#2707 id=2707 data-nosnippet>2707</a>  <span class="doccomment">/// #638: LaTeXML treats the font `encoding` three different ways, and this
-<a href=#2708 id=2708 data-nosnippet>2708</a>  /// pins all three so the "omit encoding from `relative_to`" fix cannot drift
-<a href=#2709 id=2709 data-nosnippet>2709</a>  /// into collapsing font *identity*. Two fonts that differ ONLY in encoding are:
-<a href=#2710 id=2710 data-nosnippet>2710</a>  ///   - **unequal** (`eq`) and **distinctly hashable** — a T1 span is a
-<a href=#2711 id=2711 data-nosnippet>2711</a>  ///     different font than an OT1 span, so `set_node_font`'s `_font` /
-<a href=#2712 id=2712 data-nosnippet>2712</a>  ///     `node_fonts` keys keep them apart;
-<a href=#2713 id=2713 data-nosnippet>2713</a>  ///   - **distance 0** — encoding alone never opens a font wrapper (Perl's
-<a href=#2714 id=2714 data-nosnippet>2714</a>  ///     `distance` skips it explicitly, `Common/Font.pm`);
-<a href=#2715 id=2715 data-nosnippet>2715</a>  ///   - **empty under `relative_to`** — encoding is a FontMap-lookup key consumed
-<a href=#2716 id=2716 data-nosnippet>2716</a>  ///     at digestion, meaningless as output, so it is omitted from the relativized
-<a href=#2717 id=2717 data-nosnippet>2717</a>  ///     attribute set (otherwise it leaks onto raw `xhtml:*`, whose `attribute *`
-<a href=#2718 id=2718 data-nosnippet>2718</a>  ///     schema wildcard accepts it — the reported bug).
-<a href=#2719 id=2719 data-nosnippet>2719</a>  </span><span class="attr">#[test]
-<a href=#2720 id=2720 data-nosnippet>2720</a>  </span><span class="kw">fn </span>encoding_is_font_identity_but_not_distance_or_output() {
-<a href=#2721 id=2721 data-nosnippet>2721</a>    <span class="kw">use </span><span class="kw">crate</span>::state::{State, StateOptions, set_state};
-<a href=#2722 id=2722 data-nosnippet>2722</a>    set_state(State::new(StateOptions::default()));
-<a href=#2723 id=2723 data-nosnippet>2723</a>
-<a href=#2724 id=2724 data-nosnippet>2724</a>    <span class="kw">let </span>base = Font::default();
-<a href=#2725 id=2725 data-nosnippet>2725</a>    <span class="kw">let </span><span class="kw-2">mut </span>t1 = base.clone();
-<a href=#2726 id=2726 data-nosnippet>2726</a>    t1.encoding = <span class="prelude-val">Some</span>(Cow::Borrowed(<span class="string">"T1"</span>));
-<a href=#2727 id=2727 data-nosnippet>2727</a>    <span class="kw">let </span><span class="kw-2">mut </span>ot1 = base.clone();
-<a href=#2728 id=2728 data-nosnippet>2728</a>    ot1.encoding = <span class="prelude-val">Some</span>(Cow::Borrowed(<span class="string">"OT1"</span>));
-<a href=#2729 id=2729 data-nosnippet>2729</a>
-<a href=#2730 id=2730 data-nosnippet>2730</a>    <span class="comment">// Identity: different encodings ⇒ different fonts.
-<a href=#2731 id=2731 data-nosnippet>2731</a>    </span><span class="macro">assert_ne!</span>(
-<a href=#2732 id=2732 data-nosnippet>2732</a>      t1, ot1,
-<a href=#2733 id=2733 data-nosnippet>2733</a>      <span class="string">"fonts differing only in encoding must not be equal"
-<a href=#2734 id=2734 data-nosnippet>2734</a>    </span>);
-<a href=#2735 id=2735 data-nosnippet>2735</a>    <span class="macro">assert_ne!</span>(
-<a href=#2736 id=2736 data-nosnippet>2736</a>      t1.to_hashable(),
-<a href=#2737 id=2737 data-nosnippet>2737</a>      ot1.to_hashable(),
-<a href=#2738 id=2738 data-nosnippet>2738</a>      <span class="string">"differently-encoded fonts must get distinct `_font` ids"
-<a href=#2739 id=2739 data-nosnippet>2739</a>    </span>);
-<a href=#2740 id=2740 data-nosnippet>2740</a>
-<a href=#2741 id=2741 data-nosnippet>2741</a>    <span class="comment">// Distance: encoding is not a font-switch factor (faithful to Perl).
-<a href=#2742 id=2742 data-nosnippet>2742</a>    </span><span class="macro">assert_eq!</span>(
-<a href=#2743 id=2743 data-nosnippet>2743</a>      t1.distance(<span class="kw-2">&amp;</span>ot1),
-<a href=#2744 id=2744 data-nosnippet>2744</a>      <span class="number">0</span>,
-<a href=#2745 id=2745 data-nosnippet>2745</a>      <span class="string">"encoding alone must not count as a font-switch distance"
-<a href=#2746 id=2746 data-nosnippet>2746</a>    </span>);
-<a href=#2747 id=2747 data-nosnippet>2747</a>
-<a href=#2748 id=2748 data-nosnippet>2748</a>    <span class="comment">// Output: encoding is never emitted as a relativized attribute (#638). Since
-<a href=#2749 id=2749 data-nosnippet>2749</a>    // the two fonts differ only in encoding, the relativized set is empty.
-<a href=#2750 id=2750 data-nosnippet>2750</a>    </span><span class="kw">let </span>rel = t1.relative_to(<span class="kw-2">&amp;</span>ot1);
-<a href=#2751 id=2751 data-nosnippet>2751</a>    <span class="macro">assert!</span>(
-<a href=#2752 id=2752 data-nosnippet>2752</a>      rel.is_empty(),
-<a href=#2753 id=2753 data-nosnippet>2753</a>      <span class="string">"relative_to must not emit @encoding (it leaks onto foreign xhtml); got {rel:?}"
+<a href=#2677 id=2677 data-nosnippet>2677</a><span class="attr">#[cfg(test)]
+<a href=#2678 id=2678 data-nosnippet>2678</a></span><span class="kw">mod </span>tests {
+<a href=#2679 id=2679 data-nosnippet>2679</a>  <span class="kw">use super</span>::<span class="kw-2">*</span>;
+<a href=#2680 id=2680 data-nosnippet>2680</a>
+<a href=#2681 id=2681 data-nosnippet>2681</a>  <span class="attr">#[test]
+<a href=#2682 id=2682 data-nosnippet>2682</a>  </span><span class="kw">fn </span>relative_font_size_same_is_100() {
+<a href=#2683 id=2683 data-nosnippet>2683</a>    <span class="macro">assert_eq!</span>(relative_font_size(<span class="number">10.0</span>, <span class="number">10.0</span>), <span class="string">"100%"</span>);
+<a href=#2684 id=2684 data-nosnippet>2684</a>    <span class="macro">assert_eq!</span>(relative_font_size(<span class="number">12.0</span>, <span class="number">12.0</span>), <span class="string">"100%"</span>);
+<a href=#2685 id=2685 data-nosnippet>2685</a>  }
+<a href=#2686 id=2686 data-nosnippet>2686</a>
+<a href=#2687 id=2687 data-nosnippet>2687</a>  <span class="attr">#[test]
+<a href=#2688 id=2688 data-nosnippet>2688</a>  </span><span class="kw">fn </span>relative_font_size_doubled_is_200() {
+<a href=#2689 id=2689 data-nosnippet>2689</a>    <span class="macro">assert_eq!</span>(relative_font_size(<span class="number">20.0</span>, <span class="number">10.0</span>), <span class="string">"200%"</span>);
+<a href=#2690 id=2690 data-nosnippet>2690</a>  }
+<a href=#2691 id=2691 data-nosnippet>2691</a>
+<a href=#2692 id=2692 data-nosnippet>2692</a>  <span class="attr">#[test]
+<a href=#2693 id=2693 data-nosnippet>2693</a>  </span><span class="kw">fn </span>relative_font_size_half_is_50() {
+<a href=#2694 id=2694 data-nosnippet>2694</a>    <span class="macro">assert_eq!</span>(relative_font_size(<span class="number">5.0</span>, <span class="number">10.0</span>), <span class="string">"50%"</span>);
+<a href=#2695 id=2695 data-nosnippet>2695</a>  }
+<a href=#2696 id=2696 data-nosnippet>2696</a>
+<a href=#2697 id=2697 data-nosnippet>2697</a>  <span class="doccomment">/// #542: NOMINAL_FONT_SIZE is a float, not an integer — the `11pt` class option
+<a href=#2698 id=2698 data-nosnippet>2698</a>  /// is `10.95` (LaTeX's `\@xipt`), which the reader must not truncate. Perl
+<a href=#2699 id=2699 data-nosnippet>2699</a>  /// `DEFSIZE` reads `lookupValue('NOMINAL_FONT_SIZE')` directly as a float
+<a href=#2700 id=2700 data-nosnippet>2700</a>  /// (`Common/Font.pm:44`); the Rust reader used to go through `lookup_int`.
+<a href=#2701 id=2701 data-nosnippet>2701</a>  </span><span class="attr">#[test]
+<a href=#2702 id=2702 data-nosnippet>2702</a>  </span><span class="kw">fn </span>defsize_preserves_fractional_nominal_font_size() {
+<a href=#2703 id=2703 data-nosnippet>2703</a>    <span class="kw">use crate</span>::{
+<a href=#2704 id=2704 data-nosnippet>2704</a>      common::float::Float,
+<a href=#2705 id=2705 data-nosnippet>2705</a>      state::{State, StateOptions, assign_value, set_state},
+<a href=#2706 id=2706 data-nosnippet>2706</a>    };
+<a href=#2707 id=2707 data-nosnippet>2707</a>    set_state(State::new(StateOptions::default()));
+<a href=#2708 id=2708 data-nosnippet>2708</a>    <span class="comment">// Unset → default 10.
+<a href=#2709 id=2709 data-nosnippet>2709</a>    </span><span class="macro">assert_eq!</span>(defsize(), <span class="number">10.0</span>, <span class="string">"defsize defaults to 10 when unset"</span>);
+<a href=#2710 id=2710 data-nosnippet>2710</a>    <span class="comment">// 11pt → 10.95, the fractional value the old lookup_int truncated to 10.
+<a href=#2711 id=2711 data-nosnippet>2711</a>    </span>assign_value(<span class="string">"NOMINAL_FONT_SIZE"</span>, Float(<span class="number">10.95</span>), <span class="prelude-val">None</span>);
+<a href=#2712 id=2712 data-nosnippet>2712</a>    <span class="macro">assert_eq!</span>(
+<a href=#2713 id=2713 data-nosnippet>2713</a>      defsize(),
+<a href=#2714 id=2714 data-nosnippet>2714</a>      <span class="number">10.95</span>,
+<a href=#2715 id=2715 data-nosnippet>2715</a>      <span class="string">"defsize preserves the fractional 11pt size"
+<a href=#2716 id=2716 data-nosnippet>2716</a>    </span>);
+<a href=#2717 id=2717 data-nosnippet>2717</a>    <span class="comment">// An integral float still reads back cleanly.
+<a href=#2718 id=2718 data-nosnippet>2718</a>    </span>assign_value(<span class="string">"NOMINAL_FONT_SIZE"</span>, Float(<span class="number">12.0</span>), <span class="prelude-val">None</span>);
+<a href=#2719 id=2719 data-nosnippet>2719</a>    <span class="macro">assert_eq!</span>(defsize(), <span class="number">12.0</span>, <span class="string">"12pt reads back as 12.0"</span>);
+<a href=#2720 id=2720 data-nosnippet>2720</a>  }
+<a href=#2721 id=2721 data-nosnippet>2721</a>
+<a href=#2722 id=2722 data-nosnippet>2722</a>  <span class="doccomment">/// #638: LaTeXML treats the font `encoding` three different ways, and this
+<a href=#2723 id=2723 data-nosnippet>2723</a>  /// pins all three so the "omit encoding from `relative_to`" fix cannot drift
+<a href=#2724 id=2724 data-nosnippet>2724</a>  /// into collapsing font *identity*. Two fonts that differ ONLY in encoding are:
+<a href=#2725 id=2725 data-nosnippet>2725</a>  ///   - **unequal** (`eq`) and **distinctly hashable** — a T1 span is a
+<a href=#2726 id=2726 data-nosnippet>2726</a>  ///     different font than an OT1 span, so `set_node_font`'s `_font` /
+<a href=#2727 id=2727 data-nosnippet>2727</a>  ///     `node_fonts` keys keep them apart;
+<a href=#2728 id=2728 data-nosnippet>2728</a>  ///   - **distance 0** — encoding alone never opens a font wrapper (Perl's
+<a href=#2729 id=2729 data-nosnippet>2729</a>  ///     `distance` skips it explicitly, `Common/Font.pm`);
+<a href=#2730 id=2730 data-nosnippet>2730</a>  ///   - **empty under `relative_to`** — encoding is a FontMap-lookup key consumed
+<a href=#2731 id=2731 data-nosnippet>2731</a>  ///     at digestion, meaningless as output, so it is omitted from the relativized
+<a href=#2732 id=2732 data-nosnippet>2732</a>  ///     attribute set (otherwise it leaks onto raw `xhtml:*`, whose `attribute *`
+<a href=#2733 id=2733 data-nosnippet>2733</a>  ///     schema wildcard accepts it — the reported bug).
+<a href=#2734 id=2734 data-nosnippet>2734</a>  </span><span class="attr">#[test]
+<a href=#2735 id=2735 data-nosnippet>2735</a>  </span><span class="kw">fn </span>encoding_is_font_identity_but_not_distance_or_output() {
+<a href=#2736 id=2736 data-nosnippet>2736</a>    <span class="kw">use </span><span class="kw">crate</span>::state::{State, StateOptions, set_state};
+<a href=#2737 id=2737 data-nosnippet>2737</a>    set_state(State::new(StateOptions::default()));
+<a href=#2738 id=2738 data-nosnippet>2738</a>
+<a href=#2739 id=2739 data-nosnippet>2739</a>    <span class="kw">let </span>base = Font::default();
+<a href=#2740 id=2740 data-nosnippet>2740</a>    <span class="kw">let </span><span class="kw-2">mut </span>t1 = base.clone();
+<a href=#2741 id=2741 data-nosnippet>2741</a>    t1.encoding = <span class="prelude-val">Some</span>(Cow::Borrowed(<span class="string">"T1"</span>));
+<a href=#2742 id=2742 data-nosnippet>2742</a>    <span class="kw">let </span><span class="kw-2">mut </span>ot1 = base.clone();
+<a href=#2743 id=2743 data-nosnippet>2743</a>    ot1.encoding = <span class="prelude-val">Some</span>(Cow::Borrowed(<span class="string">"OT1"</span>));
+<a href=#2744 id=2744 data-nosnippet>2744</a>
+<a href=#2745 id=2745 data-nosnippet>2745</a>    <span class="comment">// Identity: different encodings ⇒ different fonts.
+<a href=#2746 id=2746 data-nosnippet>2746</a>    </span><span class="macro">assert_ne!</span>(
+<a href=#2747 id=2747 data-nosnippet>2747</a>      t1, ot1,
+<a href=#2748 id=2748 data-nosnippet>2748</a>      <span class="string">"fonts differing only in encoding must not be equal"
+<a href=#2749 id=2749 data-nosnippet>2749</a>    </span>);
+<a href=#2750 id=2750 data-nosnippet>2750</a>    <span class="macro">assert_ne!</span>(
+<a href=#2751 id=2751 data-nosnippet>2751</a>      t1.to_hashable(),
+<a href=#2752 id=2752 data-nosnippet>2752</a>      ot1.to_hashable(),
+<a href=#2753 id=2753 data-nosnippet>2753</a>      <span class="string">"differently-encoded fonts must get distinct `_font` ids"
 <a href=#2754 id=2754 data-nosnippet>2754</a>    </span>);
-<a href=#2755 id=2755 data-nosnippet>2755</a>  }
-<a href=#2756 id=2756 data-nosnippet>2756</a>
-<a href=#2757 id=2757 data-nosnippet>2757</a>  <span class="attr">#[test]
-<a href=#2758 id=2758 data-nosnippet>2758</a>  </span><span class="kw">fn </span>match_font_exact_wildcard_tail() {
-<a href=#2759 id=2759 data-nosnippet>2759</a>    <span class="comment">// Font[family,series,shape,size,...] — '*' matches any single
-<a href=#2760 id=2760 data-nosnippet>2760</a>    // component.
-<a href=#2761 id=2761 data-nosnippet>2761</a>    // match_font(f1, f2) returns true iff f2 matches the pattern f1.
-<a href=#2762 id=2762 data-nosnippet>2762</a>    // f1 with all-wildcards should match any well-formed Font[...].
-<a href=#2763 id=2763 data-nosnippet>2763</a>    </span><span class="macro">assert!</span>(match_font(<span class="string">"Font[*,*,*,*]"</span>, <span class="string">"Font[rm,med,up,10]"</span>));
-<a href=#2764 id=2764 data-nosnippet>2764</a>  }
-<a href=#2765 id=2765 data-nosnippet>2765</a>
-<a href=#2766 id=2766 data-nosnippet>2766</a>  <span class="attr">#[test]
-<a href=#2767 id=2767 data-nosnippet>2767</a>  </span><span class="kw">fn </span>match_font_exact_match() {
-<a href=#2768 id=2768 data-nosnippet>2768</a>    <span class="macro">assert!</span>(match_font(<span class="string">"Font[rm,med,up,10]"</span>, <span class="string">"Font[rm,med,up,10]"</span>));
-<a href=#2769 id=2769 data-nosnippet>2769</a>    <span class="macro">assert!</span>(!match_font(<span class="string">"Font[rm,med,up,10]"</span>, <span class="string">"Font[sf,med,up,10]"</span>));
+<a href=#2755 id=2755 data-nosnippet>2755</a>
+<a href=#2756 id=2756 data-nosnippet>2756</a>    <span class="comment">// Distance: encoding is not a font-switch factor (faithful to Perl).
+<a href=#2757 id=2757 data-nosnippet>2757</a>    </span><span class="macro">assert_eq!</span>(
+<a href=#2758 id=2758 data-nosnippet>2758</a>      t1.distance(<span class="kw-2">&amp;</span>ot1),
+<a href=#2759 id=2759 data-nosnippet>2759</a>      <span class="number">0</span>,
+<a href=#2760 id=2760 data-nosnippet>2760</a>      <span class="string">"encoding alone must not count as a font-switch distance"
+<a href=#2761 id=2761 data-nosnippet>2761</a>    </span>);
+<a href=#2762 id=2762 data-nosnippet>2762</a>
+<a href=#2763 id=2763 data-nosnippet>2763</a>    <span class="comment">// Output: encoding is never emitted as a relativized attribute (#638). Since
+<a href=#2764 id=2764 data-nosnippet>2764</a>    // the two fonts differ only in encoding, the relativized set is empty.
+<a href=#2765 id=2765 data-nosnippet>2765</a>    </span><span class="kw">let </span>rel = t1.relative_to(<span class="kw-2">&amp;</span>ot1);
+<a href=#2766 id=2766 data-nosnippet>2766</a>    <span class="macro">assert!</span>(
+<a href=#2767 id=2767 data-nosnippet>2767</a>      rel.is_empty(),
+<a href=#2768 id=2768 data-nosnippet>2768</a>      <span class="string">"relative_to must not emit @encoding (it leaks onto foreign xhtml); got {rel:?}"
+<a href=#2769 id=2769 data-nosnippet>2769</a>    </span>);
 <a href=#2770 id=2770 data-nosnippet>2770</a>  }
 <a href=#2771 id=2771 data-nosnippet>2771</a>
 <a href=#2772 id=2772 data-nosnippet>2772</a>  <span class="attr">#[test]
-<a href=#2773 id=2773 data-nosnippet>2773</a>  </span><span class="kw">fn </span>match_font_partial_wildcard() {
-<a href=#2774 id=2774 data-nosnippet>2774</a>    <span class="comment">// First position wildcard matches rm, sf, tt, etc.
-<a href=#2775 id=2775 data-nosnippet>2775</a>    </span><span class="macro">assert!</span>(match_font(<span class="string">"Font[*,med,up,10]"</span>, <span class="string">"Font[rm,med,up,10]"</span>));
-<a href=#2776 id=2776 data-nosnippet>2776</a>    <span class="macro">assert!</span>(match_font(<span class="string">"Font[*,med,up,10]"</span>, <span class="string">"Font[sf,med,up,10]"</span>));
-<a href=#2777 id=2777 data-nosnippet>2777</a>    <span class="comment">// But a non-wildcard in series must match.
-<a href=#2778 id=2778 data-nosnippet>2778</a>    </span><span class="macro">assert!</span>(!match_font(<span class="string">"Font[*,bold,up,10]"</span>, <span class="string">"Font[rm,med,up,10]"</span>));
+<a href=#2773 id=2773 data-nosnippet>2773</a>  </span><span class="kw">fn </span>match_font_exact_wildcard_tail() {
+<a href=#2774 id=2774 data-nosnippet>2774</a>    <span class="comment">// Font[family,series,shape,size,...] — '*' matches any single
+<a href=#2775 id=2775 data-nosnippet>2775</a>    // component.
+<a href=#2776 id=2776 data-nosnippet>2776</a>    // match_font(f1, f2) returns true iff f2 matches the pattern f1.
+<a href=#2777 id=2777 data-nosnippet>2777</a>    // f1 with all-wildcards should match any well-formed Font[...].
+<a href=#2778 id=2778 data-nosnippet>2778</a>    </span><span class="macro">assert!</span>(match_font(<span class="string">"Font[*,*,*,*]"</span>, <span class="string">"Font[rm,med,up,10]"</span>));
 <a href=#2779 id=2779 data-nosnippet>2779</a>  }
 <a href=#2780 id=2780 data-nosnippet>2780</a>
 <a href=#2781 id=2781 data-nosnippet>2781</a>  <span class="attr">#[test]
-<a href=#2782 id=2782 data-nosnippet>2782</a>  </span><span class="kw">fn </span>match_font_malformed_input() {
-<a href=#2783 id=2783 data-nosnippet>2783</a>    <span class="comment">// Missing Font[...] wrapper → false.
-<a href=#2784 id=2784 data-nosnippet>2784</a>    </span><span class="macro">assert!</span>(!match_font(<span class="string">"not_a_font"</span>, <span class="string">"Font[rm,med,up,10]"</span>));
+<a href=#2782 id=2782 data-nosnippet>2782</a>  </span><span class="kw">fn </span>match_font_exact_match() {
+<a href=#2783 id=2783 data-nosnippet>2783</a>    <span class="macro">assert!</span>(match_font(<span class="string">"Font[rm,med,up,10]"</span>, <span class="string">"Font[rm,med,up,10]"</span>));
+<a href=#2784 id=2784 data-nosnippet>2784</a>    <span class="macro">assert!</span>(!match_font(<span class="string">"Font[rm,med,up,10]"</span>, <span class="string">"Font[sf,med,up,10]"</span>));
 <a href=#2785 id=2785 data-nosnippet>2785</a>  }
 <a href=#2786 id=2786 data-nosnippet>2786</a>
 <a href=#2787 id=2787 data-nosnippet>2787</a>  <span class="attr">#[test]
-<a href=#2788 id=2788 data-nosnippet>2788</a>  </span><span class="kw">fn </span>font_match_xpaths_all_wildcards_is_attr_only() {
-<a href=#2789 id=2789 data-nosnippet>2789</a>    <span class="kw">let </span>xp = font_match_xpaths(<span class="string">"Font[*,*,*,*]"</span>);
-<a href=#2790 id=2790 data-nosnippet>2790</a>    <span class="comment">// All wildcards → just @_font, no contains(...) fragments.
-<a href=#2791 id=2791 data-nosnippet>2791</a>    </span><span class="macro">assert_eq!</span>(xp, <span class="string">"@_font"</span>);
-<a href=#2792 id=2792 data-nosnippet>2792</a>  }
-<a href=#2793 id=2793 data-nosnippet>2793</a>
-<a href=#2794 id=2794 data-nosnippet>2794</a>  <span class="attr">#[test]
-<a href=#2795 id=2795 data-nosnippet>2795</a>  </span><span class="kw">fn </span>font_match_xpaths_includes_specified_components() {
-<a href=#2796 id=2796 data-nosnippet>2796</a>    <span class="kw">let </span>xp = font_match_xpaths(<span class="string">"Font[rm,bold,*,*]"</span>);
-<a href=#2797 id=2797 data-nosnippet>2797</a>    <span class="comment">// Family and series specified; shape/size wildcarded.
-<a href=#2798 id=2798 data-nosnippet>2798</a>    </span><span class="macro">assert!</span>(xp.contains(<span class="string">"@_font"</span>));
-<a href=#2799 id=2799 data-nosnippet>2799</a>    <span class="macro">assert!</span>(xp.contains(<span class="string">"contains"</span>));
-<a href=#2800 id=2800 data-nosnippet>2800</a>    <span class="macro">assert!</span>(xp.contains(<span class="string">"rm"</span>));
-<a href=#2801 id=2801 data-nosnippet>2801</a>    <span class="macro">assert!</span>(xp.contains(<span class="string">"bold"</span>));
-<a href=#2802 id=2802 data-nosnippet>2802</a>  }
-<a href=#2803 id=2803 data-nosnippet>2803</a>
-<a href=#2804 id=2804 data-nosnippet>2804</a>  <span class="attr">#[test]
-<a href=#2805 id=2805 data-nosnippet>2805</a>  </span><span class="kw">fn </span>font_match_xpaths_malformed_is_empty_or_fallback() {
-<a href=#2806 id=2806 data-nosnippet>2806</a>    <span class="kw">let </span>xp = font_match_xpaths(<span class="string">"garbage"</span>);
-<a href=#2807 id=2807 data-nosnippet>2807</a>    <span class="comment">// Not a Font[...] format → some minimal/fallback output.
-<a href=#2808 id=2808 data-nosnippet>2808</a>    // Implementation detail: we don't over-constrain, just verify
-<a href=#2809 id=2809 data-nosnippet>2809</a>    // it doesn't panic.
-<a href=#2810 id=2810 data-nosnippet>2810</a>    </span><span class="kw">let _ </span>= xp;
-<a href=#2811 id=2811 data-nosnippet>2811</a>  }
-<a href=#2812 id=2812 data-nosnippet>2812</a>}
+<a href=#2788 id=2788 data-nosnippet>2788</a>  </span><span class="kw">fn </span>match_font_partial_wildcard() {
+<a href=#2789 id=2789 data-nosnippet>2789</a>    <span class="comment">// First position wildcard matches rm, sf, tt, etc.
+<a href=#2790 id=2790 data-nosnippet>2790</a>    </span><span class="macro">assert!</span>(match_font(<span class="string">"Font[*,med,up,10]"</span>, <span class="string">"Font[rm,med,up,10]"</span>));
+<a href=#2791 id=2791 data-nosnippet>2791</a>    <span class="macro">assert!</span>(match_font(<span class="string">"Font[*,med,up,10]"</span>, <span class="string">"Font[sf,med,up,10]"</span>));
+<a href=#2792 id=2792 data-nosnippet>2792</a>    <span class="comment">// But a non-wildcard in series must match.
+<a href=#2793 id=2793 data-nosnippet>2793</a>    </span><span class="macro">assert!</span>(!match_font(<span class="string">"Font[*,bold,up,10]"</span>, <span class="string">"Font[rm,med,up,10]"</span>));
+<a href=#2794 id=2794 data-nosnippet>2794</a>  }
+<a href=#2795 id=2795 data-nosnippet>2795</a>
+<a href=#2796 id=2796 data-nosnippet>2796</a>  <span class="attr">#[test]
+<a href=#2797 id=2797 data-nosnippet>2797</a>  </span><span class="kw">fn </span>match_font_malformed_input() {
+<a href=#2798 id=2798 data-nosnippet>2798</a>    <span class="comment">// Missing Font[...] wrapper → false.
+<a href=#2799 id=2799 data-nosnippet>2799</a>    </span><span class="macro">assert!</span>(!match_font(<span class="string">"not_a_font"</span>, <span class="string">"Font[rm,med,up,10]"</span>));
+<a href=#2800 id=2800 data-nosnippet>2800</a>  }
+<a href=#2801 id=2801 data-nosnippet>2801</a>
+<a href=#2802 id=2802 data-nosnippet>2802</a>  <span class="attr">#[test]
+<a href=#2803 id=2803 data-nosnippet>2803</a>  </span><span class="kw">fn </span>font_match_xpaths_all_wildcards_is_attr_only() {
+<a href=#2804 id=2804 data-nosnippet>2804</a>    <span class="kw">let </span>xp = font_match_xpaths(<span class="string">"Font[*,*,*,*]"</span>);
+<a href=#2805 id=2805 data-nosnippet>2805</a>    <span class="comment">// All wildcards → just @_font, no contains(...) fragments.
+<a href=#2806 id=2806 data-nosnippet>2806</a>    </span><span class="macro">assert_eq!</span>(xp, <span class="string">"@_font"</span>);
+<a href=#2807 id=2807 data-nosnippet>2807</a>  }
+<a href=#2808 id=2808 data-nosnippet>2808</a>
+<a href=#2809 id=2809 data-nosnippet>2809</a>  <span class="attr">#[test]
+<a href=#2810 id=2810 data-nosnippet>2810</a>  </span><span class="kw">fn </span>font_match_xpaths_includes_specified_components() {
+<a href=#2811 id=2811 data-nosnippet>2811</a>    <span class="kw">let </span>xp = font_match_xpaths(<span class="string">"Font[rm,bold,*,*]"</span>);
+<a href=#2812 id=2812 data-nosnippet>2812</a>    <span class="comment">// Family and series specified; shape/size wildcarded.
+<a href=#2813 id=2813 data-nosnippet>2813</a>    </span><span class="macro">assert!</span>(xp.contains(<span class="string">"@_font"</span>));
+<a href=#2814 id=2814 data-nosnippet>2814</a>    <span class="macro">assert!</span>(xp.contains(<span class="string">"contains"</span>));
+<a href=#2815 id=2815 data-nosnippet>2815</a>    <span class="macro">assert!</span>(xp.contains(<span class="string">"rm"</span>));
+<a href=#2816 id=2816 data-nosnippet>2816</a>    <span class="macro">assert!</span>(xp.contains(<span class="string">"bold"</span>));
+<a href=#2817 id=2817 data-nosnippet>2817</a>  }
+<a href=#2818 id=2818 data-nosnippet>2818</a>
+<a href=#2819 id=2819 data-nosnippet>2819</a>  <span class="attr">#[test]
+<a href=#2820 id=2820 data-nosnippet>2820</a>  </span><span class="kw">fn </span>font_match_xpaths_malformed_is_empty_or_fallback() {
+<a href=#2821 id=2821 data-nosnippet>2821</a>    <span class="kw">let </span>xp = font_match_xpaths(<span class="string">"garbage"</span>);
+<a href=#2822 id=2822 data-nosnippet>2822</a>    <span class="comment">// Not a Font[...] format → some minimal/fallback output.
+<a href=#2823 id=2823 data-nosnippet>2823</a>    // Implementation detail: we don't over-constrain, just verify
+<a href=#2824 id=2824 data-nosnippet>2824</a>    // it doesn't panic.
+<a href=#2825 id=2825 data-nosnippet>2825</a>    </span><span class="kw">let _ </span>= xp;
+<a href=#2826 id=2826 data-nosnippet>2826</a>  }
+<a href=#2827 id=2827 data-nosnippet>2827</a>}
 </code></pre></div></section></main></body></html>

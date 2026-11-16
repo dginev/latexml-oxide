@@ -60,7 +60,7 @@
 <a href=#60 id=60 data-nosnippet>60</a>    <span class="comment">// Build the outer svg:svg element
 <a href=#61 id=61 data-nosnippet>61</a>    </span><span class="kw">let </span>width = node.get_attribute(<span class="string">"width"</span>).map(|s| to_px(<span class="kw-2">&amp;</span>s));
 <a href=#62 id=62 data-nosnippet>62</a>    <span class="kw">let </span>height = node.get_attribute(<span class="string">"height"</span>).map(|s| to_px(<span class="kw-2">&amp;</span>s));
-<a href=#63 id=63 data-nosnippet>63</a>    <span class="kw">let </span>clip = node.get_attribute(<span class="string">"clip"</span>).as_deref() == <span class="prelude-val">Some</span>(<span class="string">"true"</span>);
+<a href=#63 id=63 data-nosnippet>63</a>    <span class="kw">let </span>clip = node.with_attribute(<span class="string">c"clip"</span>, |v| v == <span class="string">"true"</span>) == <span class="prelude-val">Some</span>(<span class="bool-val">true</span>);
 <a href=#64 id=64 data-nosnippet>64</a>
 <a href=#65 id=65 data-nosnippet>65</a>    <span class="comment">// `SVG.pm::ProcessSVG` L96-97: the picture's own attributes that are
 <a href=#66 id=66 data-nosnippet>66</a>    // valid on `svg:svg` move onto it (`copy_valid_attributes`, model-checked
@@ -155,8 +155,8 @@
 <a href=#155 id=155 data-nosnippet>155</a>  <span class="kw">fn </span>convert_g(<span class="kw-2">&amp;</span><span class="self">self</span>, doc: <span class="kw-2">&amp;</span>PostDocument, node: <span class="kw-2">&amp;</span>Node) -&gt; <span class="prelude-ty">Option</span>&lt;NodeData&gt; {
 <a href=#156 id=156 data-nosnippet>156</a>    <span class="kw">let </span><span class="kw-2">mut </span>attrs = <span class="self">self</span>.copy_valid_attrs(node);
 <a href=#157 id=157 data-nosnippet>157</a>    <span class="comment">// Check for framed+fillframe
-<a href=#158 id=158 data-nosnippet>158</a>    </span><span class="kw">if </span>node.get_attribute(<span class="string">"framed"</span>).as_deref() == <span class="prelude-val">Some</span>(<span class="string">"true"</span>)
-<a href=#159 id=159 data-nosnippet>159</a>      &amp;&amp; node.get_attribute(<span class="string">"fillframe"</span>).as_deref() == <span class="prelude-val">Some</span>(<span class="string">"true"</span>)
+<a href=#158 id=158 data-nosnippet>158</a>    </span><span class="kw">if </span>node.with_attribute(<span class="string">c"framed"</span>, |v| v == <span class="string">"true"</span>) == <span class="prelude-val">Some</span>(<span class="bool-val">true</span>)
+<a href=#159 id=159 data-nosnippet>159</a>      &amp;&amp; node.with_attribute(<span class="string">c"fillframe"</span>, |v| v == <span class="string">"true"</span>) == <span class="prelude-val">Some</span>(<span class="bool-val">true</span>)
 <a href=#160 id=160 data-nosnippet>160</a>    {
 <a href=#161 id=161 data-nosnippet>161</a>      <span class="kw">let </span>fill = node
 <a href=#162 id=162 data-nosnippet>162</a>        .get_attribute(<span class="string">"fill"</span>)
@@ -290,7 +290,7 @@
 <a href=#290 id=290 data-nosnippet>290</a>        );
 <a href=#291 id=291 data-nosnippet>291</a>      }
 <a href=#292 id=292 data-nosnippet>292</a>    }
-<a href=#293 id=293 data-nosnippet>293</a>    <span class="kw">if </span>node.get_attribute(<span class="string">"displayedpoints"</span>).is_some() {
+<a href=#293 id=293 data-nosnippet>293</a>    <span class="kw">if </span>node.has_attribute(<span class="string">"displayedpoints"</span>) {
 <a href=#294 id=294 data-nosnippet>294</a>      attrs.insert(<span class="string">"stroke-dasharray"</span>.to_string(), <span class="string">"2"</span>.to_string());
 <a href=#295 id=295 data-nosnippet>295</a>    }
 <a href=#296 id=296 data-nosnippet>296</a>    <span class="prelude-val">Some</span>(NodeData::Element {

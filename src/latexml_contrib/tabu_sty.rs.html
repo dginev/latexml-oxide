@@ -58,7 +58,7 @@
 <a href=#58 id=58 data-nosnippet>58</a>      },
 <a href=#59 id=59 data-nosnippet>59</a>      <span class="prelude-val">None </span>=&gt; <span class="macro">Tokens!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\linewidth"</span>)),
 <a href=#60 id=60 data-nosnippet>60</a>    };
-<a href=#61 id=61 data-nosnippet>61</a>    <span class="kw">if </span>lookup_string_from_sym(<span class="macro">pin!</span>(<span class="string">"MODE"</span>)).ends_with(<span class="string">"math"</span>) {
+<a href=#61 id=61 data-nosnippet>61</a>    <span class="kw">if </span>mode_ends_with(<span class="string">"math"</span>) {
 <a href=#62 id=62 data-nosnippet>62</a>      let_i(<span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="string">"\\endtabu"</span>), <span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="string">"\\endarray"</span>), <span class="prelude-val">None</span>);
 <a href=#63 id=63 data-nosnippet>63</a>      unread(<span class="macro">Tokens!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\array"</span>)));
 <a href=#64 id=64 data-nosnippet>64</a>    } <span class="kw">else </span>{

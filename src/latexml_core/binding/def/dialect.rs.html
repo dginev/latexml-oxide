@@ -1808,7 +1808,7 @@
 <a href=#1808 id=1808 data-nosnippet>1808</a>        ..Parameter::default()
 <a href=#1809 id=1809 data-nosnippet>1809</a>      };
 <a href=#1810 id=1810 data-nosnippet>1810</a>      <span class="kw">let </span><span class="kw-2">mut </span>params = <span class="macro">vec!</span>[skip_spaces_param];
-<a href=#1811 id=1811 data-nosnippet>1811</a>      params.extend(pl.get_parameters().into_iter().cloned());
+<a href=#1811 id=1811 data-nosnippet>1811</a>      params.extend(pl.get_parameters().iter().cloned());
 <a href=#1812 id=1812 data-nosnippet>1812</a>      <span class="prelude-val">Some</span>(Parameters::new(params))
 <a href=#1813 id=1813 data-nosnippet>1813</a>    },
 <a href=#1814 id=1814 data-nosnippet>1814</a>    <span class="kw">_ </span>=&gt; paramlist.clone(),

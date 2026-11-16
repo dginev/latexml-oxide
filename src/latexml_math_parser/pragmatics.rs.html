@@ -1833,7 +1833,7 @@
 <a href=#1833 id=1833 data-nosnippet>1833</a>
 <a href=#1834 id=1834 data-nosnippet>1834</a>    <span class="kw">use </span><span class="kw">crate</span>::semantics::{
 <a href=#1835 id=1835 data-nosnippet>1835</a>      metadata::Meta,
-<a href=#1836 id=1836 data-nosnippet>1836</a>      tree::{Args, Operator, XProps},
+<a href=#1836 id=1836 data-nosnippet>1836</a>      tree::{Args, Operator, Shared, XProps},
 <a href=#1837 id=1837 data-nosnippet>1837</a>    };
 <a href=#1838 id=1838 data-nosnippet>1838</a>
 <a href=#1839 id=1839 data-nosnippet>1839</a>    <span class="kw">let </span>op_props = XProps {
@@ -1842,7 +1842,7 @@
 <a href=#1842 id=1842 data-nosnippet>1842</a>      content: <span class="prelude-val">Some</span>(Cow::Borrowed(<span class="string">"\u{2062}"</span>)),
 <a href=#1843 id=1843 data-nosnippet>1843</a>      ..XProps::default()
 <a href=#1844 id=1844 data-nosnippet>1844</a>    };
-<a href=#1845 id=1845 data-nosnippet>1845</a>    <span class="kw">let </span>op = Operator(Box::new(XM::Token(op_props, Meta::default())));
+<a href=#1845 id=1845 data-nosnippet>1845</a>    <span class="kw">let </span>op = Operator(Shared::new(XM::Token(op_props, Meta::default())));
 <a href=#1846 id=1846 data-nosnippet>1846</a>    <span class="kw">let </span>args = Args(
 <a href=#1847 id=1847 data-nosnippet>1847</a>      letter_names
 <a href=#1848 id=1848 data-nosnippet>1848</a>        .iter()
@@ -1921,7 +1921,7 @@
 <a href=#1921 id=1921 data-nosnippet>1921</a>
 <a href=#1922 id=1922 data-nosnippet>1922</a>    <span class="kw">use </span><span class="kw">crate</span>::semantics::{
 <a href=#1923 id=1923 data-nosnippet>1923</a>      metadata::Meta,
-<a href=#1924 id=1924 data-nosnippet>1924</a>      tree::{Args, Operator, XProps},
+<a href=#1924 id=1924 data-nosnippet>1924</a>      tree::{Args, Operator, Shared, XProps},
 <a href=#1925 id=1925 data-nosnippet>1925</a>    };
 <a href=#1926 id=1926 data-nosnippet>1926</a>
 <a href=#1927 id=1927 data-nosnippet>1927</a>    <span class="kw">let </span>op_props = XProps {
@@ -1930,8 +1930,8 @@
 <a href=#1930 id=1930 data-nosnippet>1930</a>      content: <span class="prelude-val">Some</span>(Cow::Borrowed(<span class="string">"\u{2062}"</span>)),
 <a href=#1931 id=1931 data-nosnippet>1931</a>      ..XProps::default()
 <a href=#1932 id=1932 data-nosnippet>1932</a>    };
-<a href=#1933 id=1933 data-nosnippet>1933</a>    <span class="kw">let </span>op = Operator(Box::new(XM::Token(op_props, Meta::default())));
-<a href=#1934 id=1934 data-nosnippet>1934</a>    <span class="kw">let </span>args = Args(<span class="macro">vec!</span>[lhs, rhs]);
+<a href=#1933 id=1933 data-nosnippet>1933</a>    <span class="kw">let </span>op = Operator(Shared::new(XM::Token(op_props, Meta::default())));
+<a href=#1934 id=1934 data-nosnippet>1934</a>    <span class="kw">let </span>args = Args(Shared::new(<span class="macro">vec!</span>[lhs, rhs]));
 <a href=#1935 id=1935 data-nosnippet>1935</a>    XM::Apply(op, args, XProps::default(), Meta::default())
 <a href=#1936 id=1936 data-nosnippet>1936</a>  }
 <a href=#1937 id=1937 data-nosnippet>1937</a>
@@ -2049,7 +2049,7 @@
 <a href=#2049 id=2049 data-nosnippet>2049</a>
 <a href=#2050 id=2050 data-nosnippet>2050</a>    <span class="kw">use </span><span class="kw">crate</span>::semantics::{
 <a href=#2051 id=2051 data-nosnippet>2051</a>      metadata::Meta,
-<a href=#2052 id=2052 data-nosnippet>2052</a>      tree::{Args, Operator, XProps},
+<a href=#2052 id=2052 data-nosnippet>2052</a>      tree::{Args, Operator, Shared, XProps},
 <a href=#2053 id=2053 data-nosnippet>2053</a>    };
 <a href=#2054 id=2054 data-nosnippet>2054</a>
 <a href=#2055 id=2055 data-nosnippet>2055</a>    <span class="kw">let </span>op_props = XProps {
@@ -2058,11 +2058,11 @@
 <a href=#2058 id=2058 data-nosnippet>2058</a>      content: <span class="prelude-val">Some</span>(Cow::Borrowed(<span class="string">"+"</span>)),
 <a href=#2059 id=2059 data-nosnippet>2059</a>      ..XProps::default()
 <a href=#2060 id=2060 data-nosnippet>2060</a>    };
-<a href=#2061 id=2061 data-nosnippet>2061</a>    <span class="kw">let </span>op = Operator(Box::new(XM::Token(op_props, Meta::default())));
-<a href=#2062 id=2062 data-nosnippet>2062</a>    <span class="kw">let </span>args = Args(<span class="macro">vec!</span>[
+<a href=#2061 id=2061 data-nosnippet>2061</a>    <span class="kw">let </span>op = Operator(Shared::new(XM::Token(op_props, Meta::default())));
+<a href=#2062 id=2062 data-nosnippet>2062</a>    <span class="kw">let </span>args = Args(Shared::new(<span class="macro">vec!</span>[
 <a href=#2063 id=2063 data-nosnippet>2063</a>      <span class="prelude-val">Some</span>(letter_lexeme(<span class="string">"UNKNOWN:italic-f"</span>, <span class="prelude-val">Some</span>(<span class="string">"parens"</span>))),
 <a href=#2064 id=2064 data-nosnippet>2064</a>      <span class="prelude-val">Some</span>(letter_lexeme(<span class="string">"UNKNOWN:italic-x"</span>, <span class="prelude-val">Some</span>(<span class="string">"parens"</span>))),
-<a href=#2065 id=2065 data-nosnippet>2065</a>    ]);
+<a href=#2065 id=2065 data-nosnippet>2065</a>    ]));
 <a href=#2066 id=2066 data-nosnippet>2066</a>    <span class="kw">let </span>tree = XM::Apply(op, args, XProps::default(), Meta::default());
 <a href=#2067 id=2067 data-nosnippet>2067</a>    <span class="macro">assert!</span>(
 <a href=#2068 id=2068 data-nosnippet>2068</a>      ValidationPragmatics::FencedLettersAreFunctionArguments
@@ -2295,7 +2295,7 @@
 <a href=#2295 id=2295 data-nosnippet>2295</a>
 <a href=#2296 id=2296 data-nosnippet>2296</a>    <span class="kw">use </span><span class="kw">crate</span>::semantics::{
 <a href=#2297 id=2297 data-nosnippet>2297</a>      metadata::Meta,
-<a href=#2298 id=2298 data-nosnippet>2298</a>      tree::{Args, Operator, XProps},
+<a href=#2298 id=2298 data-nosnippet>2298</a>      tree::{Args, Operator, Shared, XProps},
 <a href=#2299 id=2299 data-nosnippet>2299</a>    };
 <a href=#2300 id=2300 data-nosnippet>2300</a>
 <a href=#2301 id=2301 data-nosnippet>2301</a>    <span class="macro">assert!</span>(letter_names.len() &gt;= <span class="number">2</span>, <span class="string">"need at least 2 operands"</span>);
@@ -2307,11 +2307,11 @@
 <a href=#2307 id=2307 data-nosnippet>2307</a>        content: <span class="prelude-val">Some</span>(Cow::Borrowed(<span class="string">"\u{2062}"</span>)),
 <a href=#2308 id=2308 data-nosnippet>2308</a>        ..XProps::default()
 <a href=#2309 id=2309 data-nosnippet>2309</a>      };
-<a href=#2310 id=2310 data-nosnippet>2310</a>      <span class="kw">let </span>op = Operator(Box::new(XM::Token(op_props, Meta::default())));
-<a href=#2311 id=2311 data-nosnippet>2311</a>      <span class="kw">let </span>args = Args(<span class="macro">vec!</span>[
+<a href=#2310 id=2310 data-nosnippet>2310</a>      <span class="kw">let </span>op = Operator(Shared::new(XM::Token(op_props, Meta::default())));
+<a href=#2311 id=2311 data-nosnippet>2311</a>      <span class="kw">let </span>args = Args(Shared::new(<span class="macro">vec!</span>[
 <a href=#2312 id=2312 data-nosnippet>2312</a>        <span class="prelude-val">Some</span>(XM::Lexeme(Rc::from(<span class="kw-2">*</span>name), Meta::default())),
 <a href=#2313 id=2313 data-nosnippet>2313</a>        <span class="prelude-val">Some</span>(acc),
-<a href=#2314 id=2314 data-nosnippet>2314</a>      ]);
+<a href=#2314 id=2314 data-nosnippet>2314</a>      ]));
 <a href=#2315 id=2315 data-nosnippet>2315</a>      acc = XM::Apply(op, args, XProps::default(), Meta::default());
 <a href=#2316 id=2316 data-nosnippet>2316</a>    }
 <a href=#2317 id=2317 data-nosnippet>2317</a>    acc

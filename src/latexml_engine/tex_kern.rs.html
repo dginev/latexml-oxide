@@ -74,7 +74,7 @@
 <a href=#74 id=74 data-nosnippet>74</a>  // `perfect_kernel_batch58::horizontal_kern_has_its_width`.
 <a href=#75 id=75 data-nosnippet>75</a>  </span>properties =&gt; sub[args] {
 <a href=#76 id=76 data-nosnippet>76</a>    <span class="kw">let </span>size = args[<span class="number">0</span>].as_ref().and_then(|d| d.get_dimension()).unwrap_or_default();
-<a href=#77 id=77 data-nosnippet>77</a>    <span class="kw">if </span>lookup_string_from_sym(<span class="macro">pin!</span>(<span class="string">"MODE"</span>)).ends_with(<span class="string">"vertical"</span>) {
+<a href=#77 id=77 data-nosnippet>77</a>    <span class="kw">if </span>mode_ends_with(<span class="string">"vertical"</span>) {
 <a href=#78 id=78 data-nosnippet>78</a>      <span class="prelude-val">Ok</span>(<span class="macro">stored_map!</span>(<span class="string">"height" </span>=&gt; size, <span class="string">"width" </span>=&gt; Dimension::default(),
 <a href=#79 id=79 data-nosnippet>79</a>        <span class="string">"depth" </span>=&gt; Dimension::default(), <span class="string">"isSpace" </span>=&gt; <span class="bool-val">true</span>, <span class="string">"isKern" </span>=&gt; <span class="bool-val">true</span>,
 <a href=#80 id=80 data-nosnippet>80</a>        <span class="string">"isVerticalSpace" </span>=&gt; <span class="bool-val">true</span>, <span class="string">"isBreak" </span>=&gt; <span class="bool-val">true</span>))

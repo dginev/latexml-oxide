@@ -99,63 +99,54 @@
 <a href=#99 id=99 data-nosnippet>99</a>  // nondisplay math mode. \ifmmode          c  is true if TeX is in math or display math mode.
 <a href=#100 id=100 data-nosnippet>100</a>  // \ifvmode          c  is true if TeX is in vertical or internal vertical mode.
 <a href=#101 id=101 data-nosnippet>101</a>
-<a href=#102 id=102 data-nosnippet>102</a>  </span><span class="macro">DefConditional!</span>(<span class="string">"\\ifvmode"</span>, {
-<a href=#103 id=103 data-nosnippet>103</a>    <span class="kw">let </span>mode = lookup_string_from_sym(<span class="macro">pin!</span>(<span class="string">"MODE"</span>));
-<a href=#104 id=104 data-nosnippet>104</a>    mode.ends_with(<span class="string">"vertical"</span>)
-<a href=#105 id=105 data-nosnippet>105</a>  });
-<a href=#106 id=106 data-nosnippet>106</a>  <span class="macro">DefConditional!</span>(<span class="string">"\\ifhmode"</span>, {
-<a href=#107 id=107 data-nosnippet>107</a>    <span class="kw">let </span>mode = lookup_string_from_sym(<span class="macro">pin!</span>(<span class="string">"MODE"</span>));
-<a href=#108 id=108 data-nosnippet>108</a>    mode.ends_with(<span class="string">"horizontal"</span>)
-<a href=#109 id=109 data-nosnippet>109</a>  });
-<a href=#110 id=110 data-nosnippet>110</a>  <span class="comment">// tex.web §211: inner = a box or non-display-math interior. The frame-bound
-<a href=#111 id=111 data-nosnippet>111</a>  // `INNER_BOX` flag (stomach.rs `begin_mode_opt`) carries that sign; the
-<a href=#112 id=112 data-nosnippet>112</a>  // former mode-string test read the document body's `internal_vertical`
-<a href=#113 id=113 data-nosnippet>113</a>  // galley as inner (Perl TeX_Logic.pool:127 identical).
-<a href=#114 id=114 data-nosnippet>114</a>  </span><span class="macro">DefConditional!</span>(<span class="string">"\\ifinner"</span>, { lookup_bool_sym(<span class="macro">pin!</span>(<span class="string">"INNER_BOX"</span>)) });
-<a href=#115 id=115 data-nosnippet>115</a>  <span class="comment">// Perl: LookupValue('MODE') =~ /math$/
-<a href=#116 id=116 data-nosnippet>116</a>  </span><span class="macro">DefConditional!</span>(<span class="string">"\\ifmmode"</span>, {
-<a href=#117 id=117 data-nosnippet>117</a>    <span class="kw">let </span>mode = lookup_string_from_sym(<span class="macro">pin!</span>(<span class="string">"MODE"</span>));
-<a href=#118 id=118 data-nosnippet>118</a>    mode.ends_with(<span class="string">"math"</span>)
-<a href=#119 id=119 data-nosnippet>119</a>  });
-<a href=#120 id=120 data-nosnippet>120</a>
-<a href=#121 id=121 data-nosnippet>121</a>  <span class="comment">//======================================================================
-<a href=#122 id=122 data-nosnippet>122</a>  // I/O testing
-<a href=#123 id=123 data-nosnippet>123</a>  //----------------------------------------------------------------------
-<a href=#124 id=124 data-nosnippet>124</a>  // \ifeof c tests for the end of a file .
-<a href=#125 id=125 data-nosnippet>125</a>  </span><span class="macro">DefConditional!</span>(<span class="string">"\\ifeof Number"</span>, sub[(port)] {
-<a href=#126 id=126 data-nosnippet>126</a>    with_value(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">"input_file:{}"</span>, port), |val_opt|
-<a href=#127 id=127 data-nosnippet>127</a>      <span class="kw">if let </span><span class="prelude-val">Some</span>(Stored::Mouth(mouth)) = val_opt {
-<a href=#128 id=128 data-nosnippet>128</a>        mouth.borrow().at_eof()
-<a href=#129 id=129 data-nosnippet>129</a>      } <span class="kw">else </span>{
-<a href=#130 id=130 data-nosnippet>130</a>        <span class="bool-val">true
-<a href=#131 id=131 data-nosnippet>131</a>      </span>})
-<a href=#132 id=132 data-nosnippet>132</a>  });
-<a href=#133 id=133 data-nosnippet>133</a>});
-<a href=#134 id=134 data-nosnippet>134</a>
-<a href=#135 id=135 data-nosnippet>135</a><span class="kw">fn </span>compare(u: i64, rel: Token, v: i64) -&gt; bool {
-<a href=#136 id=136 data-nosnippet>136</a>  <span class="comment">// NOTE: One would expect this to be best written as an advanced match state::ent
-<a href=#137 id=137 data-nosnippet>137</a>  // however, due to the shallow comparison of Cow&lt;str&gt; the Cow::Borrowed("&lt;") and
-<a href=#138 id=138 data-nosnippet>138</a>  // Cow::Owned("&lt;") variants will NOT be equal via a destructuring match.
-<a href=#139 id=139 data-nosnippet>139</a>  // However, since we've defined our own PartialEq trait over Token, an equality comparison
-<a href=#140 id=140 data-nosnippet>140</a>  // will produce the right behavior
-<a href=#141 id=141 data-nosnippet>141</a>  </span><span class="kw">if </span>rel == <span class="macro">T_OTHER!</span>(<span class="string">"&lt;"</span>) || rel == <span class="macro">T_CS!</span>(<span class="string">"\\@@&lt;"</span>) {
-<a href=#142 id=142 data-nosnippet>142</a>    u &lt; v
-<a href=#143 id=143 data-nosnippet>143</a>  } <span class="kw">else if </span>rel == <span class="macro">T_OTHER!</span>(<span class="string">"="</span>) {
-<a href=#144 id=144 data-nosnippet>144</a>    u == v
-<a href=#145 id=145 data-nosnippet>145</a>  } <span class="kw">else if </span>rel == <span class="macro">T_OTHER!</span>(<span class="string">"&gt;"</span>) || rel == <span class="macro">T_CS!</span>(<span class="string">"\\@@&gt;"</span>) {
-<a href=#146 id=146 data-nosnippet>146</a>    u &gt; v
-<a href=#147 id=147 data-nosnippet>147</a>  } <span class="kw">else </span>{
-<a href=#148 id=148 data-nosnippet>148</a>    <span class="kw">let </span>message = <span class="macro">s!</span>(
-<a href=#149 id=149 data-nosnippet>149</a>      <span class="string">"Expected a relational token for comparision. Got {:?} (cc {:?})"</span>,
-<a href=#150 id=150 data-nosnippet>150</a>      rel,
-<a href=#151 id=151 data-nosnippet>151</a>      rel.get_catcode()
-<a href=#152 id=152 data-nosnippet>152</a>    );
-<a href=#153 id=153 data-nosnippet>153</a>    <span class="kw">let </span>err = || {
-<a href=#154 id=154 data-nosnippet>154</a>      <span class="macro">Error!</span>(<span class="string">"expected"</span>, <span class="string">"&lt;relationaltoken&gt;"</span>, message);
-<a href=#155 id=155 data-nosnippet>155</a>      <span class="prelude-val">Ok</span>(())
-<a href=#156 id=156 data-nosnippet>156</a>    };
-<a href=#157 id=157 data-nosnippet>157</a>    err().ok();
-<a href=#158 id=158 data-nosnippet>158</a>    <span class="bool-val">false
-<a href=#159 id=159 data-nosnippet>159</a>  </span>}
-<a href=#160 id=160 data-nosnippet>160</a>}
+<a href=#102 id=102 data-nosnippet>102</a>  </span><span class="macro">DefConditional!</span>(<span class="string">"\\ifvmode"</span>, { mode_ends_with(<span class="string">"vertical"</span>) });
+<a href=#103 id=103 data-nosnippet>103</a>  <span class="macro">DefConditional!</span>(<span class="string">"\\ifhmode"</span>, { mode_ends_with(<span class="string">"horizontal"</span>) });
+<a href=#104 id=104 data-nosnippet>104</a>  <span class="comment">// tex.web §211: inner = a box or non-display-math interior. The frame-bound
+<a href=#105 id=105 data-nosnippet>105</a>  // `INNER_BOX` flag (stomach.rs `begin_mode_opt`) carries that sign; the
+<a href=#106 id=106 data-nosnippet>106</a>  // former mode-string test read the document body's `internal_vertical`
+<a href=#107 id=107 data-nosnippet>107</a>  // galley as inner (Perl TeX_Logic.pool:127 identical).
+<a href=#108 id=108 data-nosnippet>108</a>  </span><span class="macro">DefConditional!</span>(<span class="string">"\\ifinner"</span>, { lookup_bool_sym(<span class="macro">pin!</span>(<span class="string">"INNER_BOX"</span>)) });
+<a href=#109 id=109 data-nosnippet>109</a>  <span class="comment">// Perl: LookupValue('MODE') =~ /math$/
+<a href=#110 id=110 data-nosnippet>110</a>  </span><span class="macro">DefConditional!</span>(<span class="string">"\\ifmmode"</span>, { mode_ends_with(<span class="string">"math"</span>) });
+<a href=#111 id=111 data-nosnippet>111</a>
+<a href=#112 id=112 data-nosnippet>112</a>  <span class="comment">//======================================================================
+<a href=#113 id=113 data-nosnippet>113</a>  // I/O testing
+<a href=#114 id=114 data-nosnippet>114</a>  //----------------------------------------------------------------------
+<a href=#115 id=115 data-nosnippet>115</a>  // \ifeof c tests for the end of a file .
+<a href=#116 id=116 data-nosnippet>116</a>  </span><span class="macro">DefConditional!</span>(<span class="string">"\\ifeof Number"</span>, sub[(port)] {
+<a href=#117 id=117 data-nosnippet>117</a>    with_value(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">"input_file:{}"</span>, port), |val_opt|
+<a href=#118 id=118 data-nosnippet>118</a>      <span class="kw">if let </span><span class="prelude-val">Some</span>(Stored::Mouth(mouth)) = val_opt {
+<a href=#119 id=119 data-nosnippet>119</a>        mouth.borrow().at_eof()
+<a href=#120 id=120 data-nosnippet>120</a>      } <span class="kw">else </span>{
+<a href=#121 id=121 data-nosnippet>121</a>        <span class="bool-val">true
+<a href=#122 id=122 data-nosnippet>122</a>      </span>})
+<a href=#123 id=123 data-nosnippet>123</a>  });
+<a href=#124 id=124 data-nosnippet>124</a>});
+<a href=#125 id=125 data-nosnippet>125</a>
+<a href=#126 id=126 data-nosnippet>126</a><span class="kw">fn </span>compare(u: i64, rel: Token, v: i64) -&gt; bool {
+<a href=#127 id=127 data-nosnippet>127</a>  <span class="comment">// NOTE: One would expect this to be best written as an advanced match state::ent
+<a href=#128 id=128 data-nosnippet>128</a>  // however, due to the shallow comparison of Cow&lt;str&gt; the Cow::Borrowed("&lt;") and
+<a href=#129 id=129 data-nosnippet>129</a>  // Cow::Owned("&lt;") variants will NOT be equal via a destructuring match.
+<a href=#130 id=130 data-nosnippet>130</a>  // However, since we've defined our own PartialEq trait over Token, an equality comparison
+<a href=#131 id=131 data-nosnippet>131</a>  // will produce the right behavior
+<a href=#132 id=132 data-nosnippet>132</a>  </span><span class="kw">if </span>rel == <span class="macro">T_OTHER!</span>(<span class="string">"&lt;"</span>) || rel == <span class="macro">T_CS!</span>(<span class="string">"\\@@&lt;"</span>) {
+<a href=#133 id=133 data-nosnippet>133</a>    u &lt; v
+<a href=#134 id=134 data-nosnippet>134</a>  } <span class="kw">else if </span>rel == <span class="macro">T_OTHER!</span>(<span class="string">"="</span>) {
+<a href=#135 id=135 data-nosnippet>135</a>    u == v
+<a href=#136 id=136 data-nosnippet>136</a>  } <span class="kw">else if </span>rel == <span class="macro">T_OTHER!</span>(<span class="string">"&gt;"</span>) || rel == <span class="macro">T_CS!</span>(<span class="string">"\\@@&gt;"</span>) {
+<a href=#137 id=137 data-nosnippet>137</a>    u &gt; v
+<a href=#138 id=138 data-nosnippet>138</a>  } <span class="kw">else </span>{
+<a href=#139 id=139 data-nosnippet>139</a>    <span class="kw">let </span>message = <span class="macro">s!</span>(
+<a href=#140 id=140 data-nosnippet>140</a>      <span class="string">"Expected a relational token for comparision. Got {:?} (cc {:?})"</span>,
+<a href=#141 id=141 data-nosnippet>141</a>      rel,
+<a href=#142 id=142 data-nosnippet>142</a>      rel.get_catcode()
+<a href=#143 id=143 data-nosnippet>143</a>    );
+<a href=#144 id=144 data-nosnippet>144</a>    <span class="kw">let </span>err = || {
+<a href=#145 id=145 data-nosnippet>145</a>      <span class="macro">Error!</span>(<span class="string">"expected"</span>, <span class="string">"&lt;relationaltoken&gt;"</span>, message);
+<a href=#146 id=146 data-nosnippet>146</a>      <span class="prelude-val">Ok</span>(())
+<a href=#147 id=147 data-nosnippet>147</a>    };
+<a href=#148 id=148 data-nosnippet>148</a>    err().ok();
+<a href=#149 id=149 data-nosnippet>149</a>    <span class="bool-val">false
+<a href=#150 id=150 data-nosnippet>150</a>  </span>}
+<a href=#151 id=151 data-nosnippet>151</a>}
 </code></pre></div></section></main></body></html>

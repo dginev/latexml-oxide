@@ -60,7 +60,7 @@
 <a href=#60 id=60 data-nosnippet>60</a>      &amp;&amp; parameter
 <a href=#61 id=61 data-nosnippet>61</a>        .inner
 <a href=#62 id=62 data-nosnippet>62</a>        .as_ref()
-<a href=#63 id=63 data-nosnippet>63</a>        .is_none_or(|inner| inner.get_parameters().into_iter().any(shows))
+<a href=#63 id=63 data-nosnippet>63</a>        .is_none_or(|inner| inner.get_parameters().iter().any(shows))
 <a href=#64 id=64 data-nosnippet>64</a>  }
 <a href=#65 id=65 data-nosnippet>65</a>  <span class="kw">fn </span>shown(digested: <span class="kw-2">&amp;</span>Digested, out: <span class="kw-2">&amp;mut </span>String) {
 <a href=#66 id=66 data-nosnippet>66</a>    <span class="kw">match </span>digested.data() {
@@ -81,7 +81,7 @@
 <a href=#81 id=81 data-nosnippet>81</a>            .map(|parameters| {
 <a href=#82 id=82 data-nosnippet>82</a>              parameters
 <a href=#83 id=83 data-nosnippet>83</a>                .get_parameters()
-<a href=#84 id=84 data-nosnippet>84</a>                .into_iter()
+<a href=#84 id=84 data-nosnippet>84</a>                .iter()
 <a href=#85 id=85 data-nosnippet>85</a>                .filter(|p| !p.novalue)
 <a href=#86 id=86 data-nosnippet>86</a>                .collect()
 <a href=#87 id=87 data-nosnippet>87</a>            })

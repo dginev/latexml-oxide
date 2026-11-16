@@ -184,7 +184,7 @@
 <a href=#184 id=184 data-nosnippet>184</a>    properties =&gt; sub[args] {
 <a href=#185 id=185 data-nosnippet>185</a>      <span class="kw">let </span>list = args[<span class="number">0</span>].as_ref().map(|t| t.to_string()).unwrap_or_default();
 <a href=#186 id=186 data-nosnippet>186</a>      <span class="kw">let </span>list = <span class="kw">if </span>list.is_empty() { <span class="string">"main"</span>.to_string() } <span class="kw">else </span>{ list };
-<a href=#187 id=187 data-nosnippet>187</a>      <span class="kw">let </span>math = lookup_string_from_sym(<span class="macro">pin!</span>(<span class="string">"MODE"</span>)).ends_with(<span class="string">"math"</span>);
+<a href=#187 id=187 data-nosnippet>187</a>      <span class="kw">let </span>math = mode_ends_with(<span class="string">"math"</span>);
 <a href=#188 id=188 data-nosnippet>188</a>      <span class="prelude-val">Ok</span>(<span class="macro">stored_map!</span>(<span class="string">"list" </span>=&gt; list, <span class="string">"math" </span>=&gt; math))
 <a href=#189 id=189 data-nosnippet>189</a>    });
 <a href=#190 id=190 data-nosnippet>190</a>

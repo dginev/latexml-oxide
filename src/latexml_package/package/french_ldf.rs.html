@@ -266,7 +266,7 @@
 <a href=#266 id=266 data-nosnippet>266</a>  // space (guard `perfect_kernel_gemini::french_high_punctuation_unskips_the_space`; witness
 <a href=#267 id=267 data-nosnippet>267</a>  // matapli/matapli-doc).
 <a href=#268 id=268 data-nosnippet>268</a>  </span><span class="kw">fn </span>unskip_before_high_punct() {
-<a href=#269 id=269 data-nosnippet>269</a>    <span class="kw">if </span>!lookup_string_from_sym(<span class="macro">pin!</span>(<span class="string">"MODE"</span>)).ends_with(<span class="string">"horizontal"</span>) {
+<a href=#269 id=269 data-nosnippet>269</a>    <span class="kw">if </span>!mode_ends_with(<span class="string">"horizontal"</span>) {
 <a href=#270 id=270 data-nosnippet>270</a>      <span class="kw">return</span>;
 <a href=#271 id=271 data-nosnippet>271</a>    }
 <a href=#272 id=272 data-nosnippet>272</a>    <span class="comment">// `\lastskip&gt;1sp`: a 0pt glue (`\hfil`, `\hspace{0pt}`) stays.

@@ -299,7 +299,7 @@
 <a href=#299 id=299 data-nosnippet>299</a>        <span class="kw">return </span>cmml_token_by_meaning(<span class="kw-2">&amp;</span>meaning, node);
 <a href=#300 id=300 data-nosnippet>300</a>      }
 <a href=#301 id=301 data-nosnippet>301</a>      <span class="comment">// Check if role=ID (decorated symbol)
-<a href=#302 id=302 data-nosnippet>302</a>      </span><span class="kw">if </span>node.get_attribute(<span class="string">"role"</span>).as_deref() == <span class="prelude-val">Some</span>(<span class="string">"ID"</span>) {
+<a href=#302 id=302 data-nosnippet>302</a>      </span><span class="kw">if </span>node.with_attribute(<span class="string">c"role"</span>, |v| v == <span class="string">"ID"</span>) == <span class="prelude-val">Some</span>(<span class="bool-val">true</span>) {
 <a href=#303 id=303 data-nosnippet>303</a>        <span class="kw">return </span>cmml_decorated_symbol(doc, node);
 <a href=#304 id=304 data-nosnippet>304</a>      }
 <a href=#305 id=305 data-nosnippet>305</a>      <span class="comment">// Normal application
@@ -971,7 +971,7 @@
 <a href=#971 id=971 data-nosnippet>971</a>
 <a href=#972 id=972 data-nosnippet>972</a>  <span class="kw">for </span>node <span class="kw">in </span>nodes {
 <a href=#973 id=973 data-nosnippet>973</a>    <span class="kw">let </span>tag = doc.get_qname(node).unwrap_or_default();
-<a href=#974 id=974 data-nosnippet>974</a>    <span class="kw">if </span>tag == <span class="string">"ltx:XMTok" </span>&amp;&amp; node.get_attribute(<span class="string">"role"</span>).as_deref() == <span class="prelude-val">Some</span>(<span class="string">"UNKNOWN"</span>) {
+<a href=#974 id=974 data-nosnippet>974</a>    <span class="kw">if </span>tag == <span class="string">"ltx:XMTok" </span>&amp;&amp; node.with_attribute(<span class="string">c"role"</span>, |v| v == <span class="string">"UNKNOWN"</span>) == <span class="prelude-val">Some</span>(<span class="bool-val">true</span>) {
 <a href=#975 id=975 data-nosnippet>975</a>      results.push(NodeData::Element {
 <a href=#976 id=976 data-nosnippet>976</a>        tag:        <span class="string">"m:csymbol"</span>.to_string(),
 <a href=#977 id=977 data-nosnippet>977</a>        attributes: <span class="prelude-val">Some</span>(HashMap::from_iter([(
