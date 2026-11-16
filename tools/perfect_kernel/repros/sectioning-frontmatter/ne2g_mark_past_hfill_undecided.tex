@@ -1,0 +1,17 @@
+% mechanism: a fill's printed width is the line's, unknown statically, so a gap with fill on either side of the mark
+%   leaves the nearer-name rule (DG ruling 2026-11-16) undecided: no owner is guessed, the mark stays REGFIX's counted loss
+% witness: none (review revSHGIVENc's r6hfill)
+% oracle:  pdflatex 0 errors; "Ann Able † Bob Baker": the centred line leaves the `\hfill` 0pt wide, † nearer Ann
+% engines: rust REGFIX: 0 errors, 1 Warning ("lost: †"); SHGIVENc 5fa111e0674: † on Bob (the fill counted infinite);
+%   perl 0.8.8: 0 errors, the mark in Ann's personname
+% expect:  0 errors, 1 Warning ("lost: †"); REGFIX's creators, no creator carries †
+% status:  RED (5fa111e0674) -> GREEN (perfect_kernel_batchne2::the_nearer_name_rule_grows_over_marks_notes_and_spacing_only)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{Ann Able \hfill \footnotemark[2] \quad Bob Baker}
+\date{}
+\maketitle
+Text.
+\end{document}

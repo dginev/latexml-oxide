@@ -1,0 +1,17 @@
+% mechanism: as ne2g_mark_in_group_with_previous_name, a mark in a group of its own (`{\small\footnotemark[2]}`):
+%   the growth would cross the group's close, so the mark stays REGFIX's counted loss, and Bob keeps his markup
+% witness: none (review revSHGIVENc's r9small)
+% oracle:  pdflatex 0 errors; "† / Ann Able   Bob Baker   Carl Cole", the † over Bob's name
+% engines: rust REGFIX: 0 errors, 1 Warning ("lost: †"); SHGIVENc 5fa111e0674: 2 Warnings, Bob written as plain text
+%   ("its markup lost"); perl 0.8.8: 0 errors, Ann, Bob with the prefix mark, Carl
+% expect:  0 errors, 1 Warning ("lost: †"); REGFIX's creators
+% status:  RED (5fa111e0674) -> GREEN (perfect_kernel_batchne2::the_nearer_name_rule_grows_over_marks_notes_and_spacing_only)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{Ann Able \qquad {\small\footnotemark[2]} \ Bob Baker \and Carl Cole}
+\date{}
+\maketitle
+Text.
+\end{document}

@@ -11,7 +11,8 @@
 //! with its Warning. NE2d (user ruling 2026-11-09): only a dropped mark that steps the counter declines; one given its
 //! number (`\samethanks[1]`, 1912.01737; 1811.08622) keeps the creators, its loss counted. NE2f (DG ruling 2026-11-16):
 //! a mark with spacing on both sides between two names is the nearer name's by the gaps' TeX widths, the next one's on
-//! a tie (review revSHGIVENb; 2412.20504).
+//! a tie (review revSHGIVENb; 2412.20504); NE2g (review revSHGIVENc): its growth runs over marks, notes and spacing
+//! only, never across a group's close, and a fill leaves it undecided.
 
 use latexml::util::test::{convert_files_with_setup_then, error_count, warning_count};
 
@@ -549,5 +550,46 @@ fn a_mark_between_two_names_is_the_nearer_ones() {
     assert_eq!(creators(&xml), expected);
     assert_eq!(marks_by_creator(&xml), marks, "{xml}");
     assert_eq!(thanks_by_creator(&xml), thanks, "{xml}");
+  }
+}
+
+/// The nearer-name rule's growth (`a_mark_between_two_names_is_the_nearer_ones`) runs back from the next name over
+/// `\footnotemark`s, notes and spacing only, never across a group's close, and a fill on either side leaves it
+/// undecided (its printed width is the line's): each of these keeps REGFIX's output, the mark a counted loss, never
+/// another event moved into the next name (review revSHGIVENc: a superscript written on Ann and in Bob's personname, Ann's
+/// ORCID in Bob's personname, Bob's markup lost past a group's close, the `\hfill` counted infinite though pdflatex
+/// prints it 0pt). Distinct from `a_mark_between_two_names_is_the_nearer_ones`: the growth's limits, not its widths.
+#[test]
+fn the_nearer_name_rule_grows_over_marks_notes_and_spacing_only() {
+  let lost = &["given their number (a note's, written already) on no name and no item; lost: †"][..];
+  let three = |ann: &[&str]| vec![row(ann), row(&["Bob Baker"]), row(&["Carl Cole"])];
+  for (tex, expected) in [
+    (
+      repro!("ne2g_mark_then_superscript_nearer_next"),
+      three(&["Ann Able a"]),
+    ),
+    (
+      repro!("ne2g_mark_then_orcid_nearer_next"),
+      three(&["Ann Able", "orcid="]),
+    ),
+    (
+      repro!("ne2g_mark_in_group_with_previous_name"),
+      three(&["Ann Able"]),
+    ),
+    (repro!("ne2g_mark_in_its_own_group"), three(&["Ann Able"])),
+    (
+      repro!("ne2g_mark_past_hfill_undecided"),
+      vec![row(&["Ann Able"]), row(&["Bob Baker"])],
+    ),
+  ] {
+    let (log, xml) = run(tex);
+    assert_eq!((error_count(&log), warning_count(&log)), (0, 1), "{log}");
+    for says in lost {
+      assert!(log.contains(says), "{says}: {log}");
+    }
+    assert_eq!(creators(&xml), expected, "{xml}");
+    assert!(marks_by_creator(&xml).iter().all(Vec::is_empty), "{xml}");
+    assert_eq!(xml.matches("<sup").count(), usize::from(tex.contains("$^{a}$")), "{xml}");
+    assert_eq!(xml.matches("orcid.org").count(), usize::from(tex.contains("orcidlink{")), "{xml}");
   }
 }

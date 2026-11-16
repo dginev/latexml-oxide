@@ -1,0 +1,17 @@
+% mechanism: the nearer-name rule's growth (DG ruling 2026-11-16) runs over `\footnotemark`s, notes and spacing only:
+%   a superscript between the mark and the next name stays out of the name, so the mark stays REGFIX's counted loss
+% witness: none (review revSHGIVENc's r2supmark; the sibling of 1911.13299)
+% oracle:  pdflatex 0 errors; "†a / Ann Able   Bob Baker   Carl Cole", "a" printed once, over Bob's name
+% engines: rust REGFIX: 0 errors, 1 Warning ("lost: †"), Ann's personname "Ann Able" + the sup "a"; SHGIVENc
+%   5fa111e0674: "a" on Ann AND in Bob's personname, † on Bob; perl 0.8.8: 0 errors, Bob and Carl lost
+% expect:  0 errors, 1 Warning ("lost: †"); REGFIX's creators, "a" once (Ann's), Bob's personname "Bob Baker"
+% status:  RED (5fa111e0674) -> GREEN (perfect_kernel_batchne2::the_nearer_name_rule_grows_over_marks_notes_and_spacing_only)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{Ann Able \qquad \footnotemark[2]$^{a}$ \ Bob Baker \and Carl Cole}
+\date{}
+\maketitle
+Text.
+\end{document}
