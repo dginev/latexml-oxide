@@ -143,7 +143,10 @@ missing image, a broken `\ref` or `\cite`, and the like — the fixes are usuall
   with no mark; a shared note goes to the margin, its mark on every carrying name and with the note; margin notes never
   overlap. **No institution marks:** an affiliation's leading `\footnotemark`, the mark the names' note pairs it by
   (1607.07280), is not written; generated per-institution marks are a later feature. A `\ \footnotemark[N]` after a
-  name's note is that name's (1911.13299; a mark alone on its own line after `\\` stays an orphan, 2026-11-09).
+  name's note is that name's (1911.13299; a mark alone on its own line after `\\` stays an orphan, 2026-11-09). A mark
+  or note between two names is the nearer name's by the glue TeX prints, a tie the next name's; one a fill or other ink
+  leaves undecided is a counted loss, never a guess; an orphan bare mark keeps its footnote step, its glyph counted
+  lost (DG 2026-11-16, OD #1057).
 - **The frontmatter exit bar's two rulings** (2026-10-29): a family deferred with its witnesses in
   `DEFERRED_FAMILIES.md` (hand-typeset title pages, ifacconf's `{frontmatter}` box, names stacked under names, …) is
   excluded from the readability bar — its witnesses stay recorded for later work, not dropped; and the archival tier's
