@@ -6,10 +6,27 @@ use crate::{
 
 /// A sub-float environment begins (subcaption.sty:70-80, `\subcaption@minipage`): the kernel float of its sub-type,
 /// pre-incrementing `parent` (Perl subcaption.sty.ltxml `beforeFloat(..., preincrement => ...)`, `double` for the `*`
-/// forms), then caption's `\setcaptionsubtype` entering the sub-type runs `\caption@subtypehook`.
+/// forms). Its `\setcaptionsubtype` enters the sub-type unless `\@captype` is one already (caption.sty:327
+/// `\caption@ifsubtype`: in a `{subcaptiongroup}` or another sub-float); entering it runs `\caption@subtypehook`.
 fn begin_subfloat(float_type: &str, parent: &str, double: bool) -> Result<()> {
+  let entering = !in_caption_subtype()?;
   before_float_ex(float_type, Some(parent), double)?;
-  run_caption_subtype_hook()
+  if entering {
+    run_caption_subtype_hook()?;
+  }
+  Ok(())
+}
+
+/// `\@captype` is a sub-type already (`sub…`): the model's `\caption@ifsubtype` (caption.sty:346), the bindings setting
+/// `\@captype`, not caption's `\@subcaptype`.
+fn in_caption_subtype() -> Result<bool> {
+  Ok(
+    has_meaning(&T_CS!("\\@captype"))
+      && do_expand(Tokens!(T_CS!("\\@captype")))?
+        .to_string()
+        .trim()
+        .starts_with("sub"),
+  )
 }
 
 /// Perl subcaption.sty.ltxml L66/76/86/96: `properties => sub { (width => $_[2]) }`.

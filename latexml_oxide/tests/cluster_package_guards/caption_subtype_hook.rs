@@ -76,7 +76,8 @@ After: \ifdefined\lxmark defined\else undefined\fi.
 
 /// caption.sty:325-330 `\@setcaptionsubtype`: entering a sub-type runs the hook once, and not again inside one
 /// (`\caption@ifsubtype`): a `{subfigure}` (its `\phantomsubcaption` inside it skips), a `\phantomsubcaption` and a
-/// `\subcaption` in a minipage (subcaption.sty:251-252). pdflatex: "R1: 1.", "R2: 2.", "R3: 3.".
+/// `\subcaption` in a minipage (subcaption.sty:251-252), a `{subcaptiongroup}` with a sub-float and a `\subcaption` in it.
+/// pdflatex: "R1: 1.", "R2: 2.", "R3: 3.", "R4: 4.".
 #[test]
 fn subtype_hook_runs_once_per_sub_type() {
   let xml = convert(
@@ -93,6 +94,10 @@ R2: \thehk.
 
 \begin{figure}\begin{minipage}{.3\textwidth}D\subcaption{d}\end{minipage}\caption{F}\end{figure}
 R3: \thehk.
+
+\begin{figure}\begin{subcaptiongroup}\begin{subfigure}{.3\textwidth}A\caption{a}\end{subfigure}
+\begin{minipage}{.3\textwidth}E\subcaption{e}\end{minipage}\end{subcaptiongroup}\caption{F}\end{figure}
+R4: \thehk.
 \end{document}",
   );
   let runs: Vec<&str> = xml
@@ -102,7 +107,12 @@ R3: \thehk.
     .collect();
   assert_eq!(
     runs,
-    ["<p>R1: 1.</p>", "<p>R2: 2.</p>", "<p>R3: 3.</p>"],
+    [
+      "<p>R1: 1.</p>",
+      "<p>R2: 2.</p>",
+      "<p>R3: 3.</p>",
+      "<p>R4: 4.</p>"
+    ],
     "{xml}"
   );
 }
