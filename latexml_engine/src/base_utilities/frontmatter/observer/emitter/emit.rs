@@ -29,7 +29,9 @@ use crate::base_utilities::{
   defs::{
     author_macros::KEPT_WHOLE,
     frontmatter_api::{BLOCK_CREATOR, CORRESPONDING, LABEL_PRINTS, PRINTED_LABEL, STOPGAP_ENTRY},
-    frontmatter_fields::{orcid_icon_link, title_notes_print_marks, under_author_markup},
+    frontmatter_fields::{
+      TITLE_MARK_STEP, orcid_icon_link, title_notes_print_marks, under_author_markup,
+    },
   },
   frontmatter::{
     classify::shared_call_item,
@@ -1123,7 +1125,16 @@ fn block_names(
             .max()
         })
         .flatten()
-        .filter(|&last| last >= glued_end);
+        .filter(|&last| last >= glued_end)
+        // (over spacing, the pieces and font changes alone: an item the reading writes apart stops it — `Bob
+        // Baker\affil{2}\comma\corrauth,`, the affiliation's contact before the mark, review of SHGNEXT)
+        .filter(|&last| {
+          read[glued_end..=last].iter().enumerate().all(|(k, e)| {
+            matches!(e.kind, EventKind::Sep(SepKind::Gap { .. }))
+              || e.kind == EventKind::Layout
+              || past.iter().any(|r| r.at == glued_end + k)
+          })
+        });
       let scan_end = carried
         .filter(|&last| {
           // (from the first piece past the glued ones to the last one's end)
@@ -3940,7 +3951,7 @@ fn unwritten(
 /// Xu\textsuperscript{1},\footnotemark[1]`, 1811.08622 — user ruling 2026-11-09: a decline never throws away a right
 /// reading). A bare one (`\footnotemark`, `\stepcounter\@mpfn`) steps the counter, so a later mark would print one symbol
 /// short without it: its step is kept where it prints, its glyph dropped — its place, its label and its step's tokens
-/// (the mark typeset into a box no one uses, `{\setbox0\hbox{\footnotemark}}`) go to `bare_lost`, the loss counted by
+/// (the mark typeset into a box no one uses: `\lx@title@mark@step`) go to `bare_lost`, the loss counted by
 /// [`warn_marks_lost`] (the counter-step rule, row R SHGIVENNEXT; it wrote the block whole, Perl's whole-block
 /// creator, its names clumped into one). `true` for a bare one whose tokens no balanced run holds, or one leading its line
 /// or cell with a name after it, which the reading may take for that line's label (`Ann Able \and \footnotemark Bob
@@ -4062,15 +4073,9 @@ fn mark_dropped(
   for (s, _, given, label, run) in dropped {
     match run {
       Some(run) if !given => {
-        let mut step = vec![
-          T_BEGIN!(),
-          T_CS!("\\setbox"),
-          T_OTHER!("0"),
-          T_CS!("\\hbox"),
-          T_BEGIN!(),
-        ];
+        let mut step = vec![T_CS!(TITLE_MARK_STEP), T_BEGIN!()];
         step.extend(run.iter().copied());
-        step.extend([T_END!(), T_END!()]);
+        step.push(T_END!());
         bare_lost.push((*s, label.clone(), step));
       },
       _ => given_lost.push(label.clone()),
