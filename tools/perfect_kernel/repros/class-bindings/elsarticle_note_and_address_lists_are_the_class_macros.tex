@@ -1,0 +1,23 @@
+% witness: 2605.22682 (`\g@addto@macro\elsaddress`), the class's own `\cortext` (elsarticle.cls:181-185) copied by a
+%          document: elsarticle.cls:178-179, :294 define the lists; `\maketitle` prints them (:766, :806)
+% oracle:  pdflatex 0 errors; "Univ A Preprint note.", footnote "∗ Corresponding author."
+% engines: rust=3 (999af99497d: undefined \elsaddress, \@cormark, \@cornotes) perl=0 (2 Warnings; the text lost) (2026-11-16)
+% expect:  0 errors, 0 warnings; Ann Able's creator with her address; the paragraph "Preprint note." after the
+%          frontmatter and the note "Corresponding author." on the document
+% status:  GREEN
+% preload: ar5iv.sty
+\documentclass{elsarticle}
+\makeatletter
+\def\cortext[#1]#2{\g@addto@macro\@cornotes{\refstepcounter{cnote}\elsLabel{#1}%
+  \def\thefootnote{\ifcase\thecnote\or$\ast$\or$\ast\ast$\fi}\footnotetext{#2}}}
+\g@addto@macro\elsaddress{\par Preprint note.}
+\g@addto@macro\@cormark{}
+\makeatother
+\begin{document}
+\begin{frontmatter}
+\title{Title}
+\author{Ann Able}\cortext[c]{Corresponding author.}
+\address{Univ A}
+\end{frontmatter}
+Text.
+\end{document}

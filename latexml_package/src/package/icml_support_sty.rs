@@ -120,8 +120,26 @@ fn icml_support(follow_paper_copy: bool) -> Result<()> {
   // \icmlcorrespondingauthor{author}{email}
   // Attempt to use author name as a matching label to connect to author
   // (should be a fuzzy match?)
-  DefMacro!("\\icmlcorrespondingauthor{}{}",
-    "\\lx@add@contact[label={\\ifx.#1.\\else fuzzy:#1\\fi},role=email,name={Correspondence to: }]{#2}");
+  // It also builds the "Correspondence to:" line its notice prints (icml2026.sty:490-499, :529-530; icml2017.sty on,
+  // or the paper's copy), which documents extend (2605.04712, 2605.21190, 2606.01172
+  // `\g@addto@macro\icmlcorrespondingauthor@text`; OD #1036): printed by `\printAffiliationsAndNotice` below.
+  if copy_or(r"\icmlcorrespondingauthor@text", year.is_some_and(|year| year >= 2017)) {
+    DefMacro!("\\icmlcorrespondingauthor{}{}",
+      r"\lx@add@contact[label={\ifx.#1.\else fuzzy:#1\fi},role=email,name={Correspondence to: }]{#2}%
+\ificmlshowauthors
+  \ifdefined\icmlcorrespondingauthor@text
+    \g@addto@macro\icmlcorrespondingauthor@text{, #1 \textless{}#2\textgreater{}}%
+  \else
+    \gdef\icmlcorrespondingauthor@text{#1 \textless{}#2\textgreater{}}%
+  \fi
+\else
+  \gdef\icmlcorrespondingauthor@text{Anonymous Author \textless{}anon.email@domain.com\textgreater{}}%
+\fi
+\global\let\lx@icml@corr@built\icmlcorrespondingauthor@text");
+  } else {
+    DefMacro!("\\icmlcorrespondingauthor{}{}",
+      "\\lx@add@contact[label={\\ifx.#1.\\else fuzzy:#1\\fi},role=email,name={Correspondence to: }]{#2}");
+  }
 
   // \printAffiliationsAndNotice / \printAffiliationsAndWorkNotice emit
   // a re-iteration of the affiliation list + a free-form notice. Since
@@ -129,10 +147,43 @@ fn icml_support(follow_paper_copy: bool) -> Result<()> {
   // captured separately; preserve the notice arg as a ltx:note so the
   // author-supplied "Work done while at X" string survives.
   // Witness: 2502.18679 (icml2025.sty L564).
+  // The notice's "Correspondence to:" line (icml2026.sty:529-530) is the contacts here, but for what a document added to
+  // the line (2605.04712, 2605.21190, 2606.01172 `\g@addto@macro\icmlcorrespondingauthor@text{. Code at …}`): a note.
   DefMacro!("\\printAffiliationsAndNotice{}",
-    "\\lx@add@frontmatter{ltx:note}[role=affiliationnotice]{#1}");
+    "\\lx@add@frontmatter{ltx:note}[role=affiliationnotice]{#1}\\lx@icml@corr@added");
   DefMacro!("\\printAffiliationsAndWorkNotice{}",
-    "\\lx@add@frontmatter{ltx:note}[role=affiliationnotice]{#1}");
+    "\\lx@add@frontmatter{ltx:note}[role=affiliationnotice]{#1}\\lx@icml@corr@added");
+  // (the line past what this binding's `\icmlcorrespondingauthor` built, `\lx@icml@corr@built`, without the
+  // punctuation it starts with; the whole line, as printed, when the document replaced it)
+  DefMacro!("\\lx@icml@corr@added", sub[_args] {
+    let body = |cs: &str| match lookup_meaning(&T_CS!(cs)) {
+      Some(Stored::Expandable(d)) => match d.get_expansion() {
+        Some(ExpansionBody::Tokens(body)) => Some(body.unlist_ref().to_vec()),
+        _ => Some(Vec::new()),
+      },
+      _ => None,
+    };
+    let Some(text) = body(r"\icmlcorrespondingauthor@text") else { return Ok(Tokens::default()) };
+    let built = body(r"\lx@icml@corr@built").unwrap_or_default();
+    let (note, added) = match text.strip_prefix(built.as_slice()) {
+      Some(added) => (r"\lx@add@pubnote[role=note,name={}]", added),
+      None => (r"\lx@add@pubnote[role=note,name={Correspondence to: }]", text.as_slice()),
+    };
+    let punctuation = [T_OTHER!("."), T_OTHER!(","), T_OTHER!(";"), T_OTHER!(":")];
+    let lead = added
+      .iter()
+      .take_while(|t| t.get_catcode() == Catcode::SPACE || punctuation.contains(t))
+      .count();
+    let added = &added[lead..];
+    if added.is_empty() {
+      return Ok(Tokens::default());
+    }
+    let mut out = mouth::tokenize_internal(note).unlist();
+    out.push(T_BEGIN!());
+    out.extend_from_slice(added);
+    out.push(T_END!());
+    Ok(Tokens::new(out))
+  });
   // ICML 2024: simpler `\printAffiliations` no-arg form (newer template
   // emits the affiliation list inline without trailing notice). Witness
   // 2310.18127.

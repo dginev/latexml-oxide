@@ -19016,6 +19016,22 @@ is left alone (TeX's `\expandafter` leaves a `\relax` cs unexpanded, so its `\xd
 **Guard**: `perfect_kernel_batchmacsync::add_to_macro_on_an_undefined_cs_errs` (repro
 `macro-state/g_addto_macro_undefined_defines.tex`).
 
+So a binding defines the lists and hooks its real class or package defines, which documents extend (REGBIND, 17 papers
+of the 2605/2606 reruns: enumerate's `\@enhook`, threeparttable's `\TPT@defaults`, oup-authoring-template's
+`\ps@opening`, and the lists below). Where the class prints such a list with its title page and the binding's own
+setters do not fill it, the binding prints it there too, or what a document adds to it is lost without a word (Perl:
+dropped, with the Warning above): `\lx@frontmatter@footnotes{<list>}` runs it where the class runs it, each
+`\footnotetext`/`\@footnotetext` in it an `ltx:pubnote` (role `note`), what else it prints typeset after the
+frontmatter. acmart's `\@titlenotes`, `\@subtitlenotes`, `\@authornotes` at `\maketitle` (acmart.cls:2245-2247;
+2605.28175, 2605.16813, 2606.04448); amsaddr's `\emails` as its footnote (amsaddr.sty:102-113; 2606.23853, 2606.25954,
+2212.11488, 1801.06576, 2307.06418); elsarticle's `\elsaddress` and `\@cornotes` at `\end{frontmatter}` or
+`\maketitle` (elsarticle.cls:766, :806; 2605.22682, cnf.sty's `\cortext` 2605.08232, 2606.15628); REVTeX's
+`\prep@absbox`, `\post@absbox`, `\mini@notes` and `\@FMN@list` at `\maketitle` (revtex4-2.cls:2648-2652, :3020-3022;
+2606.06621, 2605.00976); and the text a document adds to icml's `\icmlcorrespondingauthor@text`, whose names and
+addresses are the contacts (icml2026.sty:529-530; 2605.04712, 2605.21190, 2606.01172). **Guard**:
+`perfect_kernel_batchregbind::{bindings_define_the_macros_their_files_define,
+bindings_print_the_title_page_lists_their_files_print}`.
+
 ### 1026. → KNOWN_PERL_ERRORS #1241 (`page=` on a single-page format (SVG, PNG, JPEG) selects nothing: the source is copied as it is (#791))
 
 ### 1027. The no-dump expl3-code.tex reload counts what it mutes (#825)
@@ -19301,7 +19317,14 @@ see). The kernel's first aid for cleveref.sty (latex2e-first-aid-for-external-fi
 labelled `firstaid`) is not registered under cleveref's binding, which replaces the code it repairs (DG 2026-11-14):
 its `label` hook code cost 3.5M instructions a `\label`. It is removed only where the chunk is registered
 (`hook_has_labelled_code`; the chunk dates from 2024-03-22, firstaid changes.txt), as lthooks warns "Cannot remove
-chunk" for a missing one. **Open** (post-merge, catalog): a note steps its counter after its text is digested
+chunk" for a missing one. Its repair of the raw file's amsmath code, which the binding does read (:257-270, a
+`begindocument` chunk under `\IfPackageAtLeastT{amsmath}{2025-05-18}`: cleveref.sty:2620, :2623), is added back with
+it: without it an explicit `\ltx@label{l4b}` took `l` as the key and printed "4b" (2605.07565: 3 Double subscript;
+guard `perfect_kernel_batchregbind::cleveref_ltx_label_braces_its_key_under_amsmath`), for the release it repairs
+only (:194 `\FirstAidNeededT`, `\ver@cleveref.sty` v0.21.4). An older copy's `\ltx@label` (v0.19, 2508.14614) is undone
+by amsmath's `\AddToHook{begindocument/end}{\let\ltx@label\label}` (amsmath.sty:1228), which the binding now runs at
+`begindocument/end`, after the copy's `begindocument` code, as there (it ran in `begindocument`, before it; guard
+`perfect_kernel_batchregbind::amsmath_ltx_label_is_label_after_the_begin_document_code`). **Open** (post-merge, catalog): a note steps its counter after its text is digested
 and an align or gather row after its cells (Perl's order), so a label hook there reads the enclosing counter (or, in an
 align's later row, the previous row's step) where
 latex.ltx's `\@footnotetext` and `\@mpfootnotetext` define it (:17664, :16350) and amsmath has stepped `equation`

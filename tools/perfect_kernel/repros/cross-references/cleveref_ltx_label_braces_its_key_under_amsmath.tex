@@ -1,0 +1,14 @@
+% witness: 2605.07565 (neurips_2026.tex:108-117 `\ltx@label{#2}` in its `\markthis`: 3 Double subscript, its labels
+%          cut to their first character): the kernel's first aid (latex2e-first-aid-for-external-files.ltx:257-270)
+%          repairs cleveref.sty:2620, :2623 for amsmath 2025-05-18
+% oracle:  pdflatex 0 errors; "a = b (1)", "XY"
+% engines: rust=0 (999af99497d: equation tex "a=b3a" labelled LABEL:l, text "X4bY") perl=0, the same "a=b3a" and "X4bY" (2026-11-16)
+% expect:  0 errors, 0 warnings; the equation labelled LABEL:l3a with tex "a=b"; the paragraph "XY"
+% status:  GREEN
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{amsmath}\usepackage{cleveref}\makeatletter
+\begin{document}
+\begin{equation} a = b \ltx@label{l3a} \end{equation}
+X\ltx@label{l4b}Y
+\end{document}

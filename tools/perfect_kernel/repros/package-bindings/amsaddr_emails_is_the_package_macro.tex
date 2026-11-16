@@ -1,0 +1,24 @@
+% witness: 2606.23853 (main_arXiv.tex:281-301), 2606.25954 (:244-247), 2212.11488 (:6-10), 1801.06576 (:64-83),
+%          2307.06418 (:239-247): their own `\email` adding to `\emails`, which amsaddr.sty:43 defines and its
+%          `\@maketitle` prints (:102-113)
+% oracle:  pdflatex 0 errors; footnote "E-mail addresses: (†) ann@x.org, (‡) bob@x.org."
+% engines: rust=1 (999af99497d: undefined \emails) perl=1 (\emails undefined where used; the list lost) (2026-11-16)
+% expect:  0 errors, 0 warnings; the creators Ann Able and Bob Baker, each with an address; the note "E-mail addresses:
+%          (†) ann@x.org, (‡) bob@x.org." on the document
+% status:  GREEN
+% preload: ar5iv.sty
+\documentclass{amsart}
+\usepackage[foot]{amsaddr}
+\makeatletter
+\renewcommand{\email}[2][]{%
+  \ifx\emails\@empty\relax\else{\g@addto@macro\emails{,\space}}\fi%
+  \@ifnotempty{#1}{\g@addto@macro\emails{\textrm{(#1)}\space}}%
+  \g@addto@macro\emails{#2}}
+\makeatother
+\begin{document}
+\title{Title}
+\author{Ann Able}\address{Univ A}\email[$\dagger$]{ann@x.org}
+\author{Bob Baker}\address{Univ B}\email[$\ddagger$]{bob@x.org}
+\maketitle
+Text.
+\end{document}

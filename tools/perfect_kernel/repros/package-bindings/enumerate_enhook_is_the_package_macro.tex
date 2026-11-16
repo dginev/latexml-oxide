@@ -1,0 +1,13 @@
+% witness: 2606.12178, 2606.17008 (misccorr.sty:22 `\g@addto@macro\@enhook`): enumerate.sty:66 provides it
+% oracle:  pdflatex 0 errors; "A First." then "Hooked."
+% engines: rust=1 (999af99497d: undefined \@enhook) perl=1 (the addition a Warning; \@enhook undefined where used) (2026-11-16)
+% expect:  0 errors, 0 warnings; the paragraph "Hooked."
+% status:  GREEN
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{enumerate}
+\makeatletter\g@addto@macro\@enhook{Hooked.}\makeatother
+\begin{document}
+\begin{enumerate}[A]\item First.\end{enumerate}
+\makeatletter\@enhook\makeatother
+\end{document}
