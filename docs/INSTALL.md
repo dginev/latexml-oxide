@@ -103,6 +103,10 @@ the binary auto-selects the fast in-process backend on TeX Live, and falls back 
 ImageMagick (`magick`), Ghostscript (`gswin64c` / MiKTeX `mgs`) and MuPDF (`mutool`)
 are optional, for figure conversion.
 
+**If Windows blocks the binary.** The Windows binary is not yet code-signed; signing is being set up ([code signing policy](release/CODE_SIGNING_POLICY.md)). Until then, Windows may stop it:
+- **SmartScreen ("Windows protected your PC"):** choose *More info → Run anyway*. Alternatively, clear the mark that browsers put on downloaded files before unpacking: `Unblock-File latexml-oxide-$VERSION-x86_64-pc-windows-msvc.zip`, then `Expand-Archive` as above.
+- **A Microsoft Defender antivirus detection:** this is a false positive on a new unsigned binary. Please add the detection name to [issue 775](https://github.com/dginev/latexml-oxide/issues/775); we submit each release to Microsoft for analysis.
+
 ## Docker
 
 A batteries-included image (`latexml_oxide` + a reproducible TeX Live + the graphics tools)
