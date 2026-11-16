@@ -72,7 +72,8 @@
 //!    process already holds the lock, this one skips its prune attempt. Only one prune runs at a
 //!    time per machine. The prune itself walks the dir, sorts by mtime, deletes oldest until under
 //!    cap — and tolerates `ENOENT` (another writer could have re-used the entry concurrently). It
-//!    also removes every `.tmp.` sidecar older than an hour: a killed process's unfinished install.
+//!    also removes every `.tmp.` sidecar changed (ctime on Unix) over an hour ago: a killed process's
+//!    unfinished install.
 //! 4. **Hardlinked dest ↔ cache**: when `link_or_copy` hardlinks the cache file into the
 //!    destination, that hardlink is independent of the cache lifecycle. Even if a prune deletes the
 //!    cache entry afterwards, the destination's hardlink keeps the data alive on the filesystem.
@@ -527,9 +528,33 @@ fn release_prune_lock(root: &Path, _f: fs::File) {
 }
 
 /// Walk the cache, total up sizes, and if over the cap delete oldest
-/// entries (by mtime) until under. Errors are non-fatal. Only one
-/// process performs a prune at a time (advisory lock).
+/// entries (by mtime) until under; remove the `.tmp.` files older than
+/// [`STALE_TMP_AGE`]. Errors are non-fatal. Only one process performs a
+/// prune at a time (advisory lock). Without a cap (`0`) it returns at
+/// once, so stale tmp files stay too.
 fn prune_if_over_cap(root: &Path) {
+  if let Some(stale_before) = std::time::SystemTime::now().checked_sub(STALE_TMP_AGE) {
+    prune_if_over_cap_at(root, stale_before);
+  }
+}
+
+/// When a file's inode last changed: a tmp hard-linked from an old output keeps the output's mtime,
+/// but `link()` sets its ctime.
+#[cfg(unix)]
+fn changed(meta: &fs::Metadata) -> Option<std::time::SystemTime> {
+  use std::os::unix::fs::MetadataExt;
+  let since_epoch = std::time::Duration::new(
+    u64::try_from(meta.ctime()).ok()?,
+    u32::try_from(meta.ctime_nsec()).ok()?,
+  );
+  std::time::UNIX_EPOCH.checked_add(since_epoch)
+}
+
+#[cfg(not(unix))]
+fn changed(meta: &fs::Metadata) -> Option<std::time::SystemTime> { meta.modified().ok() }
+
+/// [`prune_if_over_cap`], taking the `.tmp.` files changed before `stale_before` for stale.
+fn prune_if_over_cap_at(root: &Path, stale_before: std::time::SystemTime) {
   let cap = max_bytes();
   if cap == 0 {
     return;
@@ -563,10 +588,9 @@ fn prune_if_over_cap(root: &Path) {
       if name.contains(".tmp.") {
         let stale = entry
           .metadata()
-          .and_then(|m| m.modified())
           .ok()
-          .and_then(|modified| modified.elapsed().ok())
-          .is_some_and(|age| age > STALE_TMP_AGE);
+          .and_then(|meta| changed(&meta))
+          .is_some_and(|changed| changed < stale_before);
         if stale {
           let _ = fs::remove_file(&path);
         }
@@ -1278,13 +1302,13 @@ mod tests {
     let shard = root.join("ab");
     let old = shard.join("abcdef.png.tmp.17.1");
     let old_dims = shard.join("abcdef.png.dims.tmp.17.2");
-    let fresh = shard.join("abcdef.png.tmp.18.3");
     let entry = shard.join("abcdef.png");
-    for path in [&old, &old_dims, &fresh, &entry] {
+    let output = root.join("out.png");
+    for path in [&old, &old_dims, &entry, &output] {
       write_bytes(path, b"bytes");
     }
     let two_hours_ago = std::time::SystemTime::now() - std::time::Duration::from_secs(7200);
-    for path in [&old, &old_dims, &entry] {
+    for path in [&entry, &output] {
       fs::File::options()
         .write(true)
         .open(path)
@@ -1292,7 +1316,13 @@ mod tests {
         .set_modified(two_hours_ago)
         .unwrap();
     }
-    prune_if_over_cap(&root);
+    // The kernel stamps inode times from a coarse clock: a margin on each side of the cutoff.
+    std::thread::sleep(std::time::Duration::from_millis(50));
+    let stale_before = std::time::SystemTime::now();
+    std::thread::sleep(std::time::Duration::from_millis(50));
+    // An install in flight, hard-linked from an old output: its mtime is the output's, its ctime the link's.
+    fs::hard_link(&output, shard.join("abcdef.png.tmp.18.3")).unwrap();
+    prune_if_over_cap_at(&root, stale_before);
     assert_eq!(tmp_names(&shard), vec!["abcdef.png.tmp.18.3".to_string()]);
     assert!(
       entry.is_file(),
