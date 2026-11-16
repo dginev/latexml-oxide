@@ -19546,8 +19546,9 @@ first author and an unmarked one after its author's lines, start-aligned as a no
 aligns its names on one baseline, as the PDF's top-aligned author tabulars do. It replaces 0.9.3's fixed 10rem slots,
 which overlapped (1706.03762).
 **Witnesses.** 2606.00446 (authblk `\affil[*]`: two copies, one printed); 2407.07614 (the legend line's `*` and `+`,
-three copies each, one printed each; `†` one author's, under the name); 2606.00397 (ieeeconf: the correspondence
-note, markless until the kernel `\thanks` carries its mark, in the margin as in 0.9.3); 1510.02728 (IEEEtran: the
+three copies each, one printed each; `†` one author's, under the name); 2606.00397 (ieeeconf: `\maketitle` empties `\thefootnote`, ieeeconf.cls:3592, so no `\thanks` gets an automatic
+mark; the correspondence note's `*` is the authors' own text on the name and the note, so it is Murali Babu's marked
+note once SHMARK lifts that typed `*`, and a plain unmarked `\thanks` stays in the margin); 1510.02728 (IEEEtran: the
 unmarked Asilomar/NSF note in the margin, not under Azadeh Vosoughi's name, where it read as her affiliation);
 1706.03762 (the tall shared note, in the margin; Chrome and Firefox at 1800 and 375 px). **Guards**:
 `integration::a_shared_author_note_prints_once_and_its_repeats_are_linked_marks` (latexml_post),
