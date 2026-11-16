@@ -17,6 +17,7 @@
 //! (`semantic_formula`): elements, isotopes, counts and charges (OXIDIZED_DESIGN_DIVERGENCES #1040).
 //! Arrows, `+` between species, bonds, states and amounts keep mhchem's output (stage 2).
 //! A formula's elements are juxtaposed (no U+2062) and a charge sign is tight (DG 2026-11-14).
+//! A formula holding a macro that expands to a math shift keeps mhchem's output (2606.03586, `shifts_math`).
 //!
 //! This stage-1 markup follows DG's TENTATIVE rulings of 2026-11-14 and awaits Bruce Miller's feedback and
 //! refinements; stage 2 adds MathML `intent`. DG: "We expect further improvements are both possible and needed."
@@ -128,8 +129,11 @@ fn braced(tokens: &mut impl Iterator<Item = Token>) -> Option<Vec<Token>> {
 /// mhchem's math-mode fonts: an element is an ordinary atom (`\mathord`, so `MoO` stays `Mo`,`O`), its
 /// isotope prescripts sit on its first element, the count on its last, and a closing charge goes on the
 /// whole formula (`\ce{^{95}MoO4^{2-}}`, `\ce{Fe(CN)6^{3-}}`). `None` (mhchem's own output) when the list
-/// has no unit or an argument is not braced.
+/// has no unit, an argument is not braced, or a macro of the list expands to a math shift.
 fn semantic_formula(result: &[Token]) -> Option<Vec<Token>> {
+  if shifts_math(result, false, &mut Vec::new()) {
+    return None;
+  }
   let core_five = T_CS!("\\__mhchem_output_coreFive:nnnnnnn");
   let with_font = T_CS!("\\__mhchem_output_withFont:n");
   let amount = T_CS!("\\__mhchem_output_amount:n");
@@ -259,6 +263,35 @@ fn semantic_formula(result: &[Token]) -> Option<Vec<Token>> {
     },
     None => Some(body),
   }
+}
+
+/// Whether a macro of `tokens` expands (as `\edef` would, a protected macro kept) to a math shift, `$`, `\(` or `\)`;
+/// `shift` counts a literal one. mhchem's parser reads a literal `$` of `\ce` itself (`\__mhchem_cg_withinMathTokens:n`,
+/// mhchem.sty:162), a macro's reaches its output unread (2606.03586 `\ce{\alphasic}`, `\alphasic` = `$\alpha$-\ce{SiC}`):
+/// only mhchem's own text-mode layout, `\text{…}` (mhchem.sty:2934), holds it, not the math the units are set in here.
+fn shifts_math(tokens: &[Token], shift: bool, seen: &mut Vec<Token>) -> bool {
+  tokens.iter().any(|t| match t.get_catcode() {
+    Catcode::MATH => shift,
+    Catcode::CS | Catcode::ACTIVE => {
+      if *t == T_CS!("\\(") || *t == T_CS!("\\)") {
+        return shift;
+      }
+      if seen.contains(t)
+        || t.with_str(|s| s.starts_with("\\__mhchem_") || s.starts_with("\\mhchem@"))
+      {
+        return false;
+      }
+      seen.push(*t);
+      match lookup_definition(t) {
+        Ok(Some(defn)) if !defn.is_protected() => match defn.get_expansion() {
+          Some(ExpansionBody::Tokens(body)) => shifts_math(body.unlist_ref(), true, seen),
+          _ => false,
+        },
+        _ => false,
+      }
+    },
+    _ => false,
+  })
 }
 
 /// A formula's elements and brackets are juxtaposed, not multiplied (DG 2026-11-14): a run of them is

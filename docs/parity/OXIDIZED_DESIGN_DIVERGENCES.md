@@ -19202,6 +19202,10 @@ mathvariant="normal">O</mi><mn>4</mn></msub></mrow><mrow><mn>2</mn><mo lspace="0
 for `\ce{^{95}MoO4^{2-}}`. This first markup is TENTATIVE (DG's rulings of 2026-11-14) and awaits Bruce Miller's
 feedback and refinements; stage 2 adds MathML `intent` on these presentation elements (formula, element, count and
 charge each their own element). DG: "We expect further improvements are both possible and needed."
+A formula whose output list holds a macro that expands to a math shift (`$`, `\(`, `\)`; 2606.03586
+`\ce{\alphasic}`, `\alphasic` = `$\alpha$-\ce{SiC}`) keeps mhchem's output: its parser reads a literal `$` itself, a
+macro's reaches the output unread, where only mhchem's text-mode `\text{…}` (mhchem.sty:2934) holds it (REGCHEM; guard
+`perfect_kernel_batchregchem::mhchem_macro_math_shift_is_mhchems_own_output`).
 Arrows, `+` between species, bonds, states and amounts keep mhchem's output (stage 2, SYNC row MHCHEM), and the
 formula's `tex=` is the rewritten math, not `\ce{…}`. Cost (instructions:u): −0.55 % on 2307.12991 (589 `\ce` in its sources),
 −0.04 % on 300 synthetic `\ce`, +0.13 % on 2405.01836 (167; with `--nomathparse` −0.08 %: the formulas'
