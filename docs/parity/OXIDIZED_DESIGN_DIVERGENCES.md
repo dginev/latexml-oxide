@@ -5615,6 +5615,15 @@ listed command to `\@notprerr` (DG ruling (b), 2026-11-15), except Perl's 7 load
   `\begin{document}`, or where a sub-file without one ends: `gullet::unread_after_current_file`), then walks again.
   What such a load records with `\@onlypreamble` is dropped (`\@preamblecmds` is `\@notprerr` after), so lppl.tex:44's
   probe stays true. A loader inside one is no Error (`\@currext` `sty`/`cls`, `inPreamble`).
+- A binding's lock (`:locked`, `:locked@files`) goes aside with the meaning it protects and comes back with it:
+  `\@notprerr` is no binding's, so the body's `\renewcommand` of a walked command stands as in TeX (imsart.sty:1223
+  `\@onlypreamble\doi` over OmniBus's locked `\doi`, the natbib `.bbl`'s `\renewcommand{\doi}`: 2606.22730, 36
+  false Errors; its DOIs print "doi: 10.…" as pdflatex does, where Perl, which walks nothing, keeps OmniBus's DOI link and
+  refuses the redefinition, #408). A command the body has redefined is no longer the walk's: a later body load neither reopens nor
+  disables it again. The locked commands the walk meets (1406 papers: a random 700, imsart's 70, the 696 using
+  `\@onlypreamble`): latex.ltx's six `\DeclareText…` declarers in every paper, `\DeclareTextCommand` in 233,
+  imsart's `\doi` in 21, and the kernel's `\title`/`\author` under a raw class's `\@onlypreamble` in 8
+  (cup-journal.cls, kaist-ucs.cls; cc.cls's 1507.02955).
 - A loader replaced by a binding (docmute_sty.rs, standalone_sty.rs `\documentclass`) stands for its package's re-let
   after the walk (docmute.sty:19, standalone.sty:738). `\document` stays the constructor's alias, whose identity
   `\begin`/`\end` read (sect01.rs): the constructor's second run raises the Error.
@@ -5628,7 +5637,8 @@ takes; 1205.6201's are a conditional's other preambles).
 Guards `preamblecmds_is_notprerr_inside_a_running_document`, `error_boundary::perfect_kernel_error_boundary`
 (rows "preamble-only commands in the body/preamble", "a second \begin{document}", "under an unknown class",
 "a body package's \@onlypreamble", "a preamble-only command is \@notprerr", "a document's \@onlypreamble macro",
-"a body \includeonly", "a package read in the body", "a subfile's preamble", "a standalone sub-file's preamble",
+"a body \includeonly", "a package read in the body", "a locked preamble-only command redefined in the body", "a body
+load after the body redefined a preamble-only command", "a subfile's preamble", "a standalone sub-file's preamble",
 "a standalone sub-file with no \begin{document}", "a subfile with no \begin{document}").
 
 ### 227. → SYNC_STATUS "Rust Error Fixes" (a port-bug fix: a `filecontents` capture ends at `\end{<current environment>}`)

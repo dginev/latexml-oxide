@@ -3,11 +3,14 @@
 //! or sub-file preamble in the body (Perl's recovery for a body `\usepackage`, a binding's load, standalone and
 //! subfiles), which pdflatex never does: there the walk's commands are reopened, and disabled again after it. The walk
 //! keeps each meaning under `\lx@onlypreamble@<name>`; the State holds the list (OXIDIZED_DESIGN_DIVERGENCES #226).
+//! A binding's lock goes aside with its meaning: `\@notprerr` is no binding's, and the body's `\renewcommand` of it
+//! stands as in TeX (imsart.sty:1223 `\@onlypreamble\doi` over OmniBus's locked `\doi`, 2606.22730).
 use crate::{
-  common::store::Stored,
+  common::{arena, store::Stored},
   gullet::unread_after_current_file,
   state::{
-    Scope, assign_meaning, assign_value, lookup_bool, lookup_meaning, lookup_tokens, x_equals,
+    Scope, assign_meaning, assign_value, lookup_bool, lookup_bool_sym, lookup_meaning,
+    lookup_tokens, x_equals,
   },
   token::Token,
   tokens::Tokens,
@@ -34,15 +37,37 @@ fn global_let(to: &Token, from: &Token) {
   );
 }
 
+/// The locks a binding sets on a name (`state::is_name_locked`); the ones qualifying them read nothing without these.
+const LOCKS: [&str; 2] = [":locked", ":locked@files"];
+
+/// Moves the locks `from` carries to `to`, as the walk moves its meaning (probe-only: a name never locked interns
+/// nothing).
+fn move_locks(from: &Token, to: &Token) {
+  let (from, to) = (from.to_string(), to.to_string());
+  for suffix in LOCKS {
+    if let Some(key) = arena::get_suffixed(&from, suffix)
+      && lookup_bool_sym(key)
+    {
+      assign_value(&s!("{from}{suffix}"), false, Some(Scope::Global));
+      assign_value(&s!("{to}{suffix}"), true, Some(Scope::Global));
+    }
+  }
+}
+
 fn let_notprerr(cs: &Token) {
-  global_let(&saved_cs(cs), cs);
+  let saved = saved_cs(cs);
+  global_let(&saved, cs);
+  move_locks(cs, &saved);
   global_let(cs, &T_CS!("\\@notprerr"));
 }
+
+/// Whether the walk still holds `cs`: the body has not redefined it since (a document's `\renewcommand{\doi}`).
+fn held(cs: &Token) -> bool { x_equals(cs, &T_CS!("\\@notprerr")) }
 
 /// The walk's `\global\let<cs>\@notprerr`, its meaning kept for a later [`reopen_preamble_commands`].
 pub fn disable_preamble_command(cs: &Token) {
   // (once: a second `\begin{document}` walks again, sect02.rs)
-  if x_equals(cs, &T_CS!("\\@notprerr")) {
+  if held(cs) {
     return;
   }
   let_notprerr(cs);
@@ -53,8 +78,9 @@ pub fn disable_preamble_command(cs: &Token) {
   assign_value(DISABLED, Tokens::new(list), Some(Scope::Global));
 }
 
-/// Give the disabled commands back their meanings (a body load, a sub-file's preamble); false when there is nothing
-/// to reopen (still in the preamble, or reopened by an enclosing load).
+/// Give the disabled commands back their meanings and locks (a body load, a sub-file's preamble); false when there is
+/// nothing to reopen (still in the preamble, or reopened by an enclosing load). One the body has redefined since is
+/// the body's: the walk no longer holds it, and neither this nor the next walk touches it.
 pub fn reopen_preamble_commands() -> bool {
   if lookup_bool(REOPENED) {
     return false;
@@ -62,9 +88,13 @@ pub fn reopen_preamble_commands() -> bool {
   let Some(list) = lookup_tokens(DISABLED) else {
     return false;
   };
-  for cs in list.unlist_ref() {
-    global_let(cs, &saved_cs(cs));
+  let list: Vec<Token> = list.unlist().into_iter().filter(held).collect();
+  for cs in &list {
+    let saved = saved_cs(cs);
+    global_let(cs, &saved);
+    move_locks(&saved, cs);
   }
+  assign_value(DISABLED, Tokens::new(list), Some(Scope::Global));
   assign_value(REOPENED, true, Some(Scope::Global));
   true
 }
