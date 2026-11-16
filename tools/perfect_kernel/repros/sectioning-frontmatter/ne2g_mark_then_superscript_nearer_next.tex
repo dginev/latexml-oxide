@@ -5,7 +5,8 @@
 % engines: rust REGFIX: 0 errors, 1 Warning ("lost: †"), Ann's personname "Ann Able" + the sup "a"; SHGIVENc
 %   5fa111e0674: "a" on Ann AND in Bob's personname, † on Bob; perl 0.8.8: 0 errors, Bob and Carl lost
 % expect:  0 errors, 1 Warning ("lost: †"); REGFIX's creators, "a" once (Ann's), Bob's personname "Bob Baker"
-% status:  RED (5fa111e0674) -> GREEN (perfect_kernel_batchne2::the_nearer_name_rule_grows_over_marks_notes_and_spacing_only)
+% status:  RED (5fa111e0674) -> GREEN (perfect_kernel_batchne2::a_mark_nearer_the_next_name_moves_nothing_into_it);
+%   since the fallback (main, 2026-11-16) no growth runs at all, the row guards against its return
 % preload: ar5iv.sty
 \documentclass{article}
 \begin{document}

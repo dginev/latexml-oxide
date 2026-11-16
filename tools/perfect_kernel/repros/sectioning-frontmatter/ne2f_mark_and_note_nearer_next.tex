@@ -1,12 +1,15 @@
-% mechanism: as ne2f_mark_nearer_next_past_qquad, a bare `\footnotemark` and a `\thanks` nearer Bob: both are his,
-%   in order, the bare mark's counter step between Ann's note and Bob's
+% mechanism: as ne2f_mark_nearer_next_past_qquad, a bare `\footnotemark` and a `\thanks` nearer Bob: the run is
+%   undecided, and a dropped bare mark steps the counter, so the block is written whole with `mark_dropped`'s Warning
+%   (REGFIX's, the 2026-11-09 ruling for a bare mark no name carries)
 % witness: none (review revSHGIVENb's n2)
 % oracle:  pdflatex 0 errors; "Ann Able∗   †‡ / Bob Baker   Carl Cole", †‡ over Bob's name (pdftotext -bbox: 23pt
 %   before them, 4pt after)
 % engines: rust REGFIX: 0 errors, 1 Warning, the block written whole; SHGIVENb 80ffc5f84b4: 0 errors, † and both notes
 %   on Ann; perl 0.8.8: 0 errors; Ann, Bob with the prefix mark, Carl
-% expect:  0 errors, 0 warnings; Ann * (her note), Bob † and ‡ (his note), Carl
-% status:  RED (80ffc5f84b4) -> GREEN (perfect_kernel_batchne2::a_mark_between_two_names_is_the_nearer_ones)
+% expect:  0 errors, 1 Warning ("…on no name and no item; the block is written whole…"); one creator "Ann Able
+%   Bob Baker and Carl Cole" with † and both notes
+% status:  RED (80ffc5f84b4: † and both notes on Ann) -> GREEN
+%   (perfect_kernel_batchne2::a_marks_run_is_carried_back_whole_or_left)
 % preload: ar5iv.sty
 \documentclass{article}
 \begin{document}

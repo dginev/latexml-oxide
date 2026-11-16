@@ -9,10 +9,10 @@
 //! with it, the note's step before it (1610.06031), and so does one past spacing (1911.13299's `\ \footnotemark[2]`; DG
 //! ruling 2026-11-16); a `\footnotemark` no name and no item writes (on the line a `\\` opens) writes the block whole,
 //! with its Warning. NE2d (user ruling 2026-11-09): only a dropped mark that steps the counter declines; one given its
-//! number (`\samethanks[1]`, 1912.01737; 1811.08622) keeps the creators, its loss counted. NE2f (DG ruling 2026-11-16):
-//! a mark with spacing on both sides between two names is the nearer name's by the gaps' TeX widths, the next one's on
-//! a tie (review revSHGIVENb; 2412.20504); NE2g (review revSHGIVENc): its growth runs over marks, notes and spacing
-//! only, never across a group's close, and a fill leaves it undecided.
+//! number (`\samethanks[1]`, 1912.01737; 1811.08622) keeps the creators, its loss counted. NE2f/NE2h (main's SHGIVEN
+//! fallback, 2026-11-16): the carry past spacing decides per run of marks, notes and spacing between two names, back
+//! onto the name before only when a separator, `\\`, the block's end or the wider gap follows it, else undecided
+//! (REGFIX's counted loss; 2412.20504); NE2g (reviews revSHGIVENc/d): nothing moves into the next name.
 
 use latexml::util::test::{convert_files_with_setup_then, error_count, warning_count};
 
@@ -490,77 +490,120 @@ fn thanks_by_creator(xml: &str) -> Vec<usize> {
     .collect()
 }
 
-/// A `\footnotemark` with spacing on both sides between two names is the nearer name's, by the TeX widths of the two
-/// gaps as pdflatex prints them; on a tie, the next name's prefix (DG ruling 2026-11-16). The carry past spacing took it
-/// back onto the name before whenever a Gap followed it (review revSHGIVENb, `Ann Able \qquad \footnotemark[2] \ Bob
-/// Baker`: pdflatex's 27pt | 4pt, Bob's), and REGFIX lost it with a Warning or wrote the block whole. Rows: the Gap after
-/// the narrower (` \ `, `~~`, `\quad`; a bare mark and a `\thanks` together; a bare mark past a note, its counter step
-/// in order), the Gap after the wider (2412.20504's `\footnotemark[1] \ \footnotemark[2] \quad Qingyi Si`) and the tie.
-/// Distinct from `a_mark_a_name_follows_past_spacing_is_not_carried_back`: a Gap on both sides of the mark, which grows
-/// the next name's run over the gap after it.
+/// The carry past spacing decides per run, the marks, notes and spacing between two names, measured out to the names
+/// (main's SHGIVEN fallback, 2026-11-16): the whole run goes back onto the name before when a separator, a `\\` or the
+/// block's end follows it, or when the gap after it is wider than the gap before it; otherwise it is undecided, REGFIX's
+/// output and its counted loss — a given mark lost with the Warning naming it, a bare one the block written whole
+/// (`mark_dropped`). No mark is ever written on the next name: the nearer-name prefix (SHGIVENc/d's growth; reviews
+/// revSHGIVENc/d: a superscript, an ORCID, Bob's markup moved with it) waits for row R SHGIVENNEXT. Rows: a run the
+/// next name is nearer (` \ `, `~~`, `\quad`; a bare mark and a `\thanks`; a bare mark past a note), a run of two
+/// carried whole and one left whole (the per-mark rule split both), the wider gap after (2412.20504's
+/// `\footnotemark[1] \ \footnotemark[2] \quad Qingyi Si`) and the tie. Distinct from
+/// `a_mark_a_name_follows_past_spacing_is_not_carried_back`: a Gap on both sides of the run.
 #[test]
-fn a_mark_between_two_names_is_the_nearer_ones() {
+fn a_marks_run_is_carried_back_whole_or_left() {
   let mark = |m: &str, n: &str| format!(r#"<note mark="{m}" role="footnotemark" xml:id="{n}""#);
   let three = || vec![row(&["Ann Able"]), row(&["Bob Baker"]), row(&["Carl Cole"])];
-  let bobs = || vec![vec![], vec![mark("†", "footnotex1")], vec![]];
-  for (tex, expected, marks, thanks) in [
+  let none = || vec![vec![], vec![], vec![]];
+  let given = "given their number (a note's, written already) on no name and no item; lost: ";
+  let whole = "on no name and no item; the block is written whole, as Perl's whole-block creator";
+  let lost = |marks: &str| Some(format!("{given}{marks}"));
+  for (tex, says, expected, marks, thanks) in [
     (
       repro!("ne2f_mark_nearer_next_past_qquad"),
+      lost("†"),
       three(),
-      bobs(),
+      none(),
       vec![0, 0, 0],
     ),
     (
       repro!("ne2f_mark_nearer_next_past_ties"),
+      lost("†"),
       three(),
-      bobs(),
+      none(),
       vec![0, 0, 0],
     ),
     (
       repro!("ne2f_mark_nearer_next_past_quads"),
+      lost("†"),
       three(),
-      bobs(),
+      none(),
       vec![0, 0, 0],
     ),
     (
       repro!("ne2f_mark_and_note_nearer_next"),
-      three(),
-      vec![vec![], vec![mark("†", "footnote2")], vec![]],
-      vec![1, 1, 0],
+      Some(whole.to_string()),
+      vec![row(&["Ann Able Bob Baker and Carl Cole"])],
+      vec![vec![mark("†", "footnote2")]],
+      vec![2],
     ),
     (
       repro!("ne2f_bare_mark_nearer_next_past_quads"),
-      vec![row(&["Ann Able"]), row(&["Bob Baker"])],
-      vec![vec![], vec![mark("†", "footnote2"), mark("‡", "footnote3")]],
-      vec![1, 0],
+      Some(whole.to_string()),
+      vec![row(&["Ann Able Bob Baker"])],
+      vec![vec![mark("†", "footnote2"), mark("‡", "footnote3")]],
+      vec![1],
     ),
     (
       repro!("ne2f_marks_wider_after_and_tied"),
+      lost("‡"),
       three(),
       vec![
         vec![mark("*", "footnotex1"), mark("†", "footnotex2")],
         vec![],
-        vec![mark("‡", "footnotex3")],
+        vec![],
+      ],
+      vec![0, 0, 0],
+    ),
+    (
+      repro!("ne2h_marks_run_wider_before_is_undecided"),
+      lost("*, †"),
+      three(),
+      none(),
+      vec![0, 0, 0],
+    ),
+    (
+      repro!("ne2h_marks_run_narrower_after_is_undecided"),
+      lost("*, †"),
+      three(),
+      none(),
+      vec![0, 0, 0],
+    ),
+    (
+      repro!("ne2h_marks_run_carried_back_whole"),
+      None,
+      three(),
+      vec![
+        vec![mark("*", "footnotex1"), mark("†", "footnotex2")],
+        vec![],
+        vec![],
       ],
       vec![0, 0, 0],
     ),
   ] {
     let (log, xml) = run(tex);
-    assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+    assert_eq!(
+      (error_count(&log), warning_count(&log)),
+      (0, usize::from(says.is_some())),
+      "{log}"
+    );
+    if let Some(says) = says {
+      assert!(log.contains(&says), "{says}: {log}");
+    }
     assert_eq!(creators(&xml), expected);
     assert_eq!(marks_by_creator(&xml), marks, "{xml}");
     assert_eq!(thanks_by_creator(&xml), thanks, "{xml}");
   }
 }
 
-/// The nearer-name rule's growth (`a_mark_between_two_names_is_the_nearer_ones`) runs back from the next name over
-/// `\footnotemark`s, notes and spacing only, never across a group's close, and a fill on either side leaves it
-/// undecided (its printed width is the line's): each of these keeps REGFIX's output, the mark a counted loss, never
-/// another event moved into the next name (review revSHGIVENc: a superscript written on Ann and in Bob's personname, Ann's
-/// ORCID in Bob's personname, Bob's markup lost past a group's close, the `\hfill` counted infinite though pdflatex
-/// prints it 0pt). Distinct from `a_mark_between_two_names_is_the_nearer_ones`: the growth's limits, not its widths.
+/// No mark nearer the next name moves anything into it: SHGIVENc/d grew the next name's run back over the spacing to
+/// such a mark, and so wrote a superscript on Ann and in Bob's personname, Ann's ORCID in Bob's personname, and lost
+/// Bob's markup past a group's close (reviews revSHGIVENc/d); a fill on either side leaves a run undecided (its printed
+/// width is the line's). Since the fallback (main, 2026-11-16) no growth runs: each keeps REGFIX's output, the mark a
+/// counted loss, Bob's `\textsc` kept. Distinct from `a_marks_run_is_carried_back_whole_or_left`: another event
+/// between the mark and the next name, a group, a fill.
 #[test]
-fn the_nearer_name_rule_grows_over_marks_notes_and_spacing_only() {
+fn a_mark_nearer_the_next_name_moves_nothing_into_it() {
   let lost =
     &["given their number (a note's, written already) on no name and no item; lost: †"][..];
   let three = |ann: &[&str]| vec![row(ann), row(&["Bob Baker"]), row(&["Carl Cole"])];
@@ -598,6 +641,12 @@ fn the_nearer_name_rule_grows_over_marks_notes_and_spacing_only() {
     assert_eq!(
       xml.matches("orcid.org").count(),
       usize::from(tex.contains("orcidlink{")),
+      "{xml}"
+    );
+    // (Bob's `\textsc` kept in his personname)
+    assert_eq!(
+      xml.matches(r#"<personname><text font="smallcaps""#).count(),
+      usize::from(tex.contains(r"\textsc{Bob Baker}")),
       "{xml}"
     );
   }
