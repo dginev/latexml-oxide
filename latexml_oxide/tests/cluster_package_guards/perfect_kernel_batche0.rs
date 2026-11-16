@@ -1187,6 +1187,22 @@ const API_KEYS_OUTSIDE_PERLS: &[(&str, usize)] = &[
     "declared _labelprints base_utilities/defs/frontmatter_api.rs",
     1,
   ),
+  // (MARKSAFEc, review revMARKSAFEb N1: keys the engine and bindings already pass, declared as `_corresponding` is, so
+  // their use reports no unknown key on every paper that writes one: `_markunknown`, `_markfromcounter` (a creator's
+  // note's flags), `_share`, `_rowshared` (a contact several names share))
+  (
+    "declared _markfromcounter base_utilities/defs/frontmatter_api.rs",
+    1,
+  ),
+  (
+    "declared _markunknown base_utilities/defs/frontmatter_api.rs",
+    1,
+  ),
+  (
+    "declared _rowshared base_utilities/defs/frontmatter_api.rs",
+    1,
+  ),
+  ("declared _share base_utilities/defs/frontmatter_api.rs", 1),
   (
     "declared _blockcreator base_utilities/defs/frontmatter_api.rs",
     1,
@@ -2997,7 +3013,7 @@ const KERNEL_TOKEN_SPELLINGS: &[(&str, usize)] = &[
   ("latexml_engine/src/latex_constructs/sect06.rs", 9),
   ("latexml_engine/src/latex_constructs/sect07.rs", 29),
   // (QAB57, 69 -> 70: `assign_meaning` clearing an environment OmniBus guessed, a write the `meaning(` pattern counts)
-  ("latexml_engine/src/latex_constructs/sect08.rs", 70),
+  ("latexml_engine/src/latex_constructs/sect08.rs", 69),
   ("latexml_engine/src/latex_constructs/sect09.rs", 1),
   ("latexml_engine/src/latex_constructs/sect10.rs", 3),
   ("latexml_engine/src/latex_constructs/sect11.rs", 28),

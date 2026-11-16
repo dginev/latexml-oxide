@@ -3521,10 +3521,20 @@ fn note_class_load_name(key: SymStr) {
 /// file's load, the packages it loads included: [`ClassLoadFrame`]) or `<cs>:redefined@document` (the document's, a
 /// package's it loads). A document's by-meaning wrapper of the class's `\maketitle` (`\let\oldmt\maketitle
 /// \renewcommand\maketitle{\oldmt}`) leaves the class's own title page in force (`latex_constructs::
-/// title_marks_unknown`, OD #1053).
+/// title_marks_unknown`, OD #1053). A format file's drops (latex.ltx over the plain pool's `\newif`) are neither's.
 pub fn note_redefined(token: &Token) {
-  let by_class = !state!().class_load_frames.is_empty();
-  for suffix in ["", if by_class { "@class" } else { "@document" }] {
+  use crate::definition::origin::{DefinitionOrigin, current_origin};
+  let by = if !state!().class_load_frames.is_empty() {
+    Some("@class")
+  } else if matches!(
+    current_origin(),
+    DefinitionOrigin::File | DefinitionOrigin::Document
+  ) {
+    Some("@document")
+  } else {
+    None
+  };
+  for suffix in std::iter::once("").chain(by) {
     let key = arena::pin(token.with_cs_name(|cs| s!("{cs}:redefined{suffix}")));
     state_mut!().assign_internal(
       TableName::Value,
