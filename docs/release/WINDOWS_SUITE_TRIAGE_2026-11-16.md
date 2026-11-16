@@ -112,9 +112,14 @@ assertions; never delete a witness from a comment).
 
 ## Resolution (Windows session, 2026-11-16)
 All five classes are fixed on this branch as prescribed.
-- A: `\caption@subtypehook` is defined in `caption_sty.rs`. `run_caption_subtype_hook` runs it on every subcaption sub-type
-  entry: the six sub-float environments (via `begin_subfloat`), `{subcaptiongroup}` and `\subcaption`.
-  `\caption@settype` runs `\caption@typehook`, as caption.sty:314 does. Guards: `caption_subtype_hook::*`.
+- A: `\caption@subtypehook` is defined in `caption_sty.rs`. `run_caption_subtype_hook` runs it once on entering a sub-type,
+  in its group, and returns what it typesets: the six sub-float environments (`begin_subfloat_body`, after the minipage
+  opened), `{subcaptiongroup}`, `\subcaption` and `\phantomsubcaption` in a box. It does not run again inside a sub-type
+  (caption.sty:327 `\caption@ifsubtype`: `\@captype` already `sub…`, e.g. a `{subfigure}` in a `{subcaptiongroup}`).
+  `\caption@settype` runs `\caption@typehook`, as caption.sty:314 does. Guards: `caption_subtype_hook::*`
+  (OXIDIZED_DESIGN_DIVERGENCES #853). On TL 2025 none of the ~24 papers whose sources reference the hook logged its Error on
+  the base: the binding takes over their caption copies, and 1903.10110 uses subfig. The Linux A/B of 530b7763d9c against
+  INTPERF6 over them and 205 more (`popWINSUITE`) changed no paper.
 - B: `api_doc.rs` uses `strip_prefix(src)` and joins the components with `/`; `epub.rs` replaces `MAIN_SEPARATOR` with `/`.
 - C: `state.rs` seeds `.` with `pathname::canonicalize`. The subimport test canonicalizes its temp directory.
 - D: `in_tex_live` expands `{$TEXMFLOCAL,$TEXMFHOME}`, splits with `std::env::split_paths`, and requires an exact `file_name()`
@@ -125,4 +130,4 @@ All five classes are fixed on this branch as prescribed.
 Verified on Windows 10 / TL 2026 (tlnet r81108). The `ci` profile linked the TL DLL in-process (kpathsea `linked=1`), with
 `TEMP=C:\claude\TMP-RU~1` (an 8.3 path, as on the runners) and 32 test threads. Result: 8207/8207 passed; the 4 skips are
 `jing`, absent locally. `clippy --workspace --all-targets -D warnings` (nightly 2026-11-13) and
-`RUSTDOCFLAGS=-D warnings cargo doc --workspace --no-deps` are clean. The Linux A/B is still to run.
+`RUSTDOCFLAGS=-D warnings cargo doc --workspace --no-deps` are clean. The Linux A/B: under A.

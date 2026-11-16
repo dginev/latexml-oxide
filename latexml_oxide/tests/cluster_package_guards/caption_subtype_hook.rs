@@ -1,7 +1,8 @@
 //! caption.sty's `\caption@subtypehook` (caption.sty:639, run on entering a sub-type at :314): defined by the caption
-//! binding and run by subcaption's sub-floats (`run_caption_subtype_hook`). The kernel's first aid for subcaption v1.6b
-//! (latex2e-first-aid-for-external-files.ltx:197-201, TL 2026) adds to it, so did every paper's own caption copy; the
-//! first aid's line is written into the source here, so the guards hold on any TeX Live.
+//! binding and run once on entering a sub-type, in its group, its material kept (`run_caption_subtype_hook`;
+//! OXIDIZED_DESIGN_DIVERGENCES #853). The kernel's first aid for subcaption v1.6b
+//! (latex2e-first-aid-for-external-files.ltx:197-201, TL 2026) adds to it; the first aid's line is written into the
+//! source here, so the guards hold on any TeX Live.
 use latexml::util::test::{assert_element, convert_with, error_count, warning_count};
 
 fn convert(tex: &str) -> String {
