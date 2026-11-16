@@ -245,6 +245,52 @@ fn a_thanks_note_carries_the_mark_its_title_prints() {
       row(&["Cy Cole", "email=cy@b.edu", "affiliation=Univ B"]),
     ]);
   }
+  // (REVTeX 4.0 prints an unnumbered one at a counter its `\thanks`, `\email` and `\altaffiliation` step too, which the
+  // reading does not count: Perl's note contact, no mark, after either or neither, one or two of them — review
+  // revSHMARKb; a given number prints its own symbol, marked so: 1607.07280)
+  let r40 = repro!("revtex40_name_footnote_unnumbered_is_its_note_contact");
+  let thanks = r"\thanks{Equal contribution.}";
+  let ann = |contact: &str| {
+    let mut ann = vec!["Ann Able"];
+    if !contact.is_empty() {
+      ann.push(contact);
+    }
+    ann.push("affiliation=Univ A");
+    row(&ann)
+  };
+  let bob = row(&["Bob Baker", "note=Visiting Univ C.", "affiliation=Univ B"]);
+  for (tex, first) in [
+    (r40.to_string(), "thanks=Equal contribution."),
+    (r40.replace(thanks, r"\email{ann@a.edu}"), "email=ann@a.edu"),
+    (r40.replace(thanks, ""), ""),
+  ] {
+    let xml = converted(&tex, 0);
+    assert_eq!(notes_in(&xml), [row(&["Ann Able"]), row(&["Bob Baker"])]);
+    assert_eq!(creators(&xml), [ann(first), bob.clone()]);
+  }
+  let xml = converted(
+    &r40
+      .replace(thanks, "")
+      .replace(r"Univ C.}", r"Univ C.}\footnote{Second.}"),
+    0,
+  );
+  assert_eq!(notes_in(&xml), [row(&["Ann Able"]), row(&["Bob Baker"])]);
+  assert_eq!(creators(&xml), [ann(""), row(&[
+    "Bob Baker",
+    "note=Visiting Univ C.",
+    "note=Second.",
+    "affiliation=Univ B"
+  ])]);
+  assert_eq!(
+    marked_notes(
+      &r40.replace(r"\footnote{Visiting", r"\footnote[2]{Visiting"),
+      0
+    ),
+    [
+      row(&["Ann Able"]),
+      row(&["Bob Baker", "thanks[†]=Visiting Univ C."])
+    ]
+  );
   let xml = converted(repro!("revtex41_name_footnote_is_its_note_contact"), 0);
   assert_eq!(notes_in(&xml), [row(&["Ann Able"]), row(&["Bob Baker"])]);
   assert_eq!(creators(&xml), [
