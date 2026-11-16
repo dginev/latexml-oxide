@@ -1,0 +1,20 @@
+% mechanism: REVTeX 4.1/4.2 set a name's `\footnote` in their title block's minipage letters (revtex4-1.cls:466-467
+%   `\@alph\c@mpfootnote`), or drop it (revtex4-2 `reprint`): not the title's `\frontmatter@thefootnote` symbols that
+%   REVTeX 4.0 prints there (revtex4.cls:4726-4729). The note keeps Perl's `role=note` contact, no mark
+%   (`frontmatter_fields::title_note_prints_mark`, the binding's `lx_title_footnote_own_marks`)
+% witness: 2301.00220 (revtex4-1 onecolumn notitlepage: "Wei Tao a, Ruilin Zhu b, Zhen-Jun Xiao c")
+% oracle:  pdflatex 0 errors: "Ann Able a1 and Bob Baker b1", footnotes "a ann@a.edu", "b Corresponding author: bob@b.edu"
+% engines: rust SHMARK = notes mark="*" and mark="†" (a glyph the PDF does not print); REGFIX = note contacts
+% expect:  0 errors 0 warnings; each name's `role=note` contact, no creator note
+% status:  RED (SHMARK) -> GREEN (perfect_kernel_batchshmark::a_thanks_note_carries_the_mark_its_title_prints)
+% preload: ar5iv.sty
+\documentclass[onecolumn,aps,prd,superscriptaddress,nofootinbib,notitlepage]{revtex4-1}
+\begin{document}
+\title{A Title}
+\author{Ann Able~\footnote{ann@a.edu}}
+\author{Bob Baker~\footnote{Corresponding author: bob@b.edu}}
+\affiliation{Univ A, Town}
+\begin{abstract}Abs.\end{abstract}
+\maketitle
+Body.
+\end{document}

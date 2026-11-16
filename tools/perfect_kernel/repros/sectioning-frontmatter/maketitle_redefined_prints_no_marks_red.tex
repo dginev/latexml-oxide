@@ -1,0 +1,22 @@
+% mechanism: a document's own `\maketitle` that prints no marks (`\let\@makefnmark\relax`): the binding gate
+%   (`frontmatter_fields::title_notes_print_marks`) still writes article's symbols. Needs the behaviour-based detection
+%   of the marks a `\maketitle` prints (OD #1053's open item)
+% witness: review revSHMARK S3 (p8.tex)
+% oracle:  pdflatex 0 errors: "Ann Able Bob Baker", footnotes "First note.", "Second note." with no mark
+% engines: rust SHMARKb = notes mark="*" and mark="†"
+% expect:  0 errors 0 warnings; notes with no mark
+% status:  RED (SHMARKb)
+% moves:   row R SHAUTO
+% preload: ar5iv.sty
+\documentclass{article}
+\makeatletter
+\renewcommand\maketitle{\begingroup\let\@makefnmark\relax
+ \def\thanks##1{\protected@xdef\@thanks{\@thanks\protect\footnotetext{##1}}}%
+ \begin{center}{\LARGE\@title}\par\begin{tabular}[t]{c}\@author\end{tabular}\end{center}\@thanks\endgroup}
+\makeatother
+\title{A Title}
+\author{Ann Able\thanks{First note.} \and Bob Baker\thanks{Second note.}}
+\begin{document}
+\maketitle
+Body.
+\end{document}

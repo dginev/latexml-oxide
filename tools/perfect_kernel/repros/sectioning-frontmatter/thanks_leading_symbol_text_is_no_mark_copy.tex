@@ -1,0 +1,20 @@
+% mechanism: a `\thanks` text opening with a symbol that is its words, not a copy of the mark its class prints: a
+%   formula followed by `-` (`$^*$-algebras` under the ∗ article prints), a superscript of another label (`$^{3}$He`
+%   under †), and (the guard's variant) a bare `*` the class's ∗ is not. The mark rule's strip takes a leading copy only
+%   where a space or a letter follows it, and a bare copy only where the mark was read off it
+%   (`insert::mark_creator_notes`, the emitter's `requested_mark`)
+% witness: review revSHMARK S2 (p4.tex, p5.tex, p6.tex)
+% oracle:  pdflatex 0 errors: "Ann Able∗ Bob Baker†", footnotes "∗∗-algebras are her field.", "†3He detectors were
+%   funded by X."; with Ann's `\thanks{* marks the starred items.}`: "∗ * marks the starred items."
+% engines: rust SHMARK = Ann "-algebras are her field." (the formula dropped); the variant "marks the starred items."
+% expect:  0 errors 0 warnings; Ann ∗ "∗-algebras are her field." (variant "* marks the starred items."), Bob †
+%   "3He detectors were funded by X."
+% status:  RED (SHMARK) -> GREEN (perfect_kernel_batchshmark::a_notes_mark_is_never_in_its_text)
+% preload: ar5iv.sty
+\documentclass{article}
+\title{A Title}
+\author{Ann Able\thanks{$^*$-algebras are her field.} \and Bob Baker\thanks{$^{3}$He detectors were funded by X.}}
+\begin{document}
+\maketitle
+Body.
+\end{document}
