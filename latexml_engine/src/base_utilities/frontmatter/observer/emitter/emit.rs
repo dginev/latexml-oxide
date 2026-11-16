@@ -1074,11 +1074,14 @@ fn block_names(
         .find(|&i| !past_note(&&read[i]))
         .unwrap_or(read.len());
       let scan_end = carried_run(&read, glued_end, footnote_mark)
-        .filter(|&(first, _, end)| {
+        .filter(|&(first, last, end)| {
           let from = read[first].span.and_then(|span| at(span.0));
-          let to = read
-            .get(end)
-            .map_or(Some(field.tokens.len()), |e| at(e.span?.0));
+          // (to the run's last ink: a group the next name opens, or the previous name's wrapper, is not the run's)
+          let to = read[last].span.and_then(|span| at(span.1)).or_else(|| {
+            read
+              .get(end)
+              .map_or(Some(field.tokens.len()), |e| at(e.span?.0))
+          });
           from
             .zip(to)
             .and_then(|(s, t)| balanced((s, t.max(s))))
@@ -1330,9 +1333,10 @@ fn gaps(events: &[Event]) -> Option<Gaps> {
 /// text `\footnotemark`s (`mark`), notes and spacing before the next name, a separator, a `\\` or the block's end;
 /// anything else ends it undecided. `(first, last, end)`, its first and last mark or note and where it ends, when it
 /// goes back whole to the name before: a separator, a `\\` or the block's end follows it (1911.13299's `\
-/// \footnotemark[3]\and`), or the next name past a gap wider than the one from the name's last ink to the run's first
-/// mark (2412.20504's `\ \footnotemark[2] \quad Qingyi Si`). A gap no wider, or a fill (its width the line's), leaves
-/// it undecided, REGFIX's counted loss: a mark is never written on the next name (its prefix by nearness waits for row
+/// \footnotemark[3]\and`), or the next name past a gap wider than all the spacing from the name's last ink to the run's
+/// last mark, inside the run too (2412.20504's `\ \footnotemark[2] \quad Qingyi Si`; review revSHGIVENe's `\
+/// \footnotemark[1] \hspace{6em} \footnotemark[2] \quad Bob`). A gap no wider, or a fill anywhere (its width the
+/// line's), leaves it undecided, REGFIX's counted loss: a mark is never written on the next name (its prefix by nearness waits for row
 /// R SHGIVENNEXT).
 fn carried_run(
   read: &[Event],
@@ -1352,7 +1356,7 @@ fn carried_run(
   match read.get(end).map(|e| (&e.kind, e.role.as_deref())) {
     None | Some((EventKind::Break, _)) => Some((first, last, end)),
     Some((EventKind::Sep(_), role)) if role != Some("math") => Some((first, last, end)),
-    Some((EventKind::Name, _)) => match (gaps(&read[from..first]), gaps(&read[last + 1..end])) {
+    Some((EventKind::Name, _)) => match (gaps(&read[from..=last]), gaps(&read[last + 1..end])) {
       (Some(Gaps::Width(before)), Some(Gaps::Width(after))) if after > before => {
         Some((first, last, end))
       },
