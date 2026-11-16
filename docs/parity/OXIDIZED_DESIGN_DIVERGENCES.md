@@ -19731,7 +19731,8 @@ with, inside its font wrappers too — consumes it (ruling 3: 0707.3527, 2011.00
 printed mark, across every run of the name: a contact's keys that print one mark — a reference mark's number and the
 glyph it shows (`_refmarkshown`), `1` and `∗` under `∗Univ A` — are spent together (`\IEEEauthorrefmark{1}$^{*}$` over
 `∗Univ A` prints "∗∗": the second ∗ stays; so does it where an ORCID icon, a graphic or a formula parts the two,
-`Ann Able$^{*}$\orcidlink{…}\IEEEauthorrefmark{1}`, revPUREc q10). An author reference mark is keyed by its number too,
+`Ann Able$^{*}$\orcidlink{…}\IEEEauthorrefmark{1}`, pure_name_orcid_between_typed_star_and_refmark). An author
+reference mark is keyed by its number too,
 only the mark it printed — the glyph its request shows, each number once, paired over the whole name: 2508.13181's
 `\IEEEauthorrefmark{2}\IEEEauthorrefmark{1}\textsuperscript{\textsection}` keys its § by neither, and the § stays. A run
 of glued labels, each a held one, parts (revtex3's `$^{ab}$`), digits only under single-digit numbering of the name's
@@ -19745,7 +19746,8 @@ footnote counter, set by `\lx@title@thanks` and the emitter's note call; REVTeX'
 `number_footnote_parts` and `kind_shared_marked_contacts`; acmart's `\authornote`, acmart.cls:2237, and
 `\authornotemark[n]`, :2897, whose flag the Link step's copy of the note keeps — a copy linked by its glyph has none)
 answers no typed glyph, so `Ann Able*\thanks{…}` keeps both marks of "*∗" (INTREC2, the PURE × SHMARK merge) and
-acmart's `Ann Able$^{*}$\authornote{…}` and `Bob Baker$^{*}$\authornotemark[1]` both of "∗∗" (revPUREc q11). Kept in
+acmart's `Ann Able$^{*}$\authornote{…}` and `Bob Baker$^{*}$\authornotemark[1]` both of "∗∗"
+(pure_name_acmart_authornotemark_beside_a_typed_star). Kept in
 the name: superscripts that are name ink (`M\textsuperscript{c}Kernan`, `1\textsuperscript{st}`, an isotope prescript),
 formulas on a base, a mark a reference or an icon prints (cmpj's `\refaddr`, an ORCID link in a mark: 2205.05709), and
 every mark of a personname holding more than a name (a mark with name ink on both sides: an author block written whole,

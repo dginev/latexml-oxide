@@ -66,7 +66,8 @@ pub(in crate::base_utilities) fn keep_personnames_pure(document: &mut Document) 
       let mut after = personname.clone();
       let mut parents: Vec<Node> = Vec::new();
       // (the name's author reference marks, each with the glyph it printed — over every run: an ORCID icon, a graphic
-      // or a formula parts `Ann Able$^{*}$\orcidlink{…}\IEEEauthorrefmark{1}` in two, revPUREc q10)
+      // or a formula parts `Ann Able$^{*}$\orcidlink{…}\IEEEauthorrefmark{1}` in two,
+      // pure_name_orcid_between_typed_star_and_refmark)
       let mut refmarks: Vec<(String, String)> = groups
         .iter()
         .flat_map(|group| &group.refmarks)
@@ -173,7 +174,8 @@ fn answer(
     return Ok(true);
   }
   // (a contact answers each mark it prints once, by any of its keys: under `∗Univ A` keyed `1` and `∗`, of
-  // `Ann Able$^{*}$\orcidlink{…}\IEEEauthorrefmark{1}`'s two ∗ one, revPUREc q10)
+  // `Ann Able$^{*}$\orcidlink{…}\IEEEauthorrefmark{1}`'s two ∗ one,
+  // pure_name_orcid_between_typed_star_and_refmark)
   let answering = |at: usize| {
     held[at]
       .iter()
