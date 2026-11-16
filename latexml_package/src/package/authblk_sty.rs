@@ -398,7 +398,9 @@ pub fn define_author_and_affil() -> Result<()> {
     if label.is_empty() {
       assign_value(LINE_UNLABELLED, true, Some(Scope::Global));
     } else {
-      note_labels(LINE_LABELS, &label)?;
+      // (read as authblk.sty:148 reads `\affil[#1]`, not verbatim: `\affil[$^1$]` prints 1, as `\author[$^{1,2}$]`'s
+      // pieces do, 2106.15893)
+      note_labels(LINE_LABELS, &Tokenize!(TeXString::assembled(label.clone().untex_string().to_string())))?;
     }
     let replay = Invocation!(T_CS!("\\lx@replay@class@setter"), vec![
       Some(Tokens::new(Explode!("affil"))),

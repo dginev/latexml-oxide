@@ -19676,7 +19676,8 @@ latex_constructs.pool.ltxml:503-527); acmart's `\authornote` is a contact, `\aut
   `\AB@thenote` number possibly the answer). Both sides are read by one key, the text the label prints
   (`queue_digest::printed_label_pieces`: `printed_label`'s digested text, compared as `insert::mark_form` compares
   marks): `\author[\affA]` with `\newcommand\affA{1}` is `\affil[1]`'s (review revMARKSAFE S3), `\affil[$\dag$]` answers
-  `\author[\dag]` (2201.10988); a piece mixing letters with symbols (`1$^*$`, 2412.03338) is not compared;
+  `\author[\dag]` (2201.10988), the line's label read as authblk.sty:148 reads it, not verbatim (`\affil[$^1$]` answers
+  `\author[$^{1,2}$]`, 2106.15893); a piece mixing letters with symbols (`1$^*$`, 2412.03338) is not compared;
   writing the mark as a mark-only note is the PURE branch's re-homing. A generic count over the placed creators was
   tried and dropped: a macro-held label (`\author[\udem]`), a legend under several labels (`\affil[1,2]`) and a
   single-carrier note contact (jheppub's `\note[*]`) answer a request with no label the XML keeps.

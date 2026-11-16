@@ -774,4 +774,25 @@ fn a_class_label_no_entry_answers_is_counted() {
   );
   assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
   assert_eq!(creators(&xml), [row(&["Ann Able", "affiliation=Univ A"])]);
+  // (a line's label read as authblk reads it, not verbatim: `\affil[$^1$]` prints 1, as `\author[$^{1,2}$]`'s pieces do,
+  // 2106.15893; pdflatex "Ann Able1,2 Bob Baker⋆,1")
+  let (log, _, ()) = convert_with_setup_then(
+    r"\documentclass{article}
+\usepackage{authblk}
+\author[$^{1,2}$]{Ann Able}
+\author[$^{\star,1}$]{Bob Baker}
+\affil[$^1$]{Univ A}
+\affil[$^2$]{Univ B}
+\affil[$\star$]{corresponding author}
+\title{T}
+\date{}
+\begin{document}
+\maketitle
+Text.
+\end{document}",
+    Some("ar5iv.sty"),
+    || {},
+    |_| {},
+  );
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
 }
