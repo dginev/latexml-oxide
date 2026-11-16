@@ -180,3 +180,20 @@ fn a_superscript_of_the_name_stays() {
     ],
   );
 }
+
+/// 2208.09944: a name's mark-only note is no `\footnotemark` — a body `\footnotetext[2]` of the same mark is not its text
+/// (`relocate_footnote` skips `_namemark`). Red (PURE round 1): each mark-only note took the body footnote's text.
+#[test]
+fn a_mark_only_note_takes_no_body_footnotetext() {
+  let (log, xml) = convert_with(
+    repro!("pure_name_mark_only_note_pairs_no_body_footnotetext.tex"),
+    Some(PRELOAD),
+  );
+  assert_creators((log, xml.clone()), &[
+    r#"<creator role="author"><personname>Ann Able</personname><note mark="1" role="footnotemark"/></creator>"#,
+    r#"<creator before=" " role="author"><personname>Bob Baker</personname><note mark="2" role="footnotemark"/></creator>"#,
+  ]);
+  for text in ["Body note one.", "Body note two."] {
+    assert_eq!(xml.matches(text).count(), 1, "{xml}");
+  }
+}

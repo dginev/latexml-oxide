@@ -550,7 +550,8 @@ fn leading_mark(note: &Node, piece: &str) -> Option<Lead> {
   Some(Lead::Text(text, skipped + glyph))
 }
 
-/// A mark-only note for `mark`, in `personname`'s namespace (Perl's `\footnotemark` note: `role="footnotemark"`).
+/// A mark-only note for `mark`, in `personname`'s namespace (Perl's `\footnotemark` note: `role="footnotemark"`),
+/// flagged `_namemark`: no `\footnotetext` of the body is its text (`relocate_footnote`).
 fn mark_only_note(document: &Document, personname: &Node, mark: &str) -> Result<Node> {
   let mut note = Node::new("note", None, document.get_document())?;
   if let Some(namespace) = personname.get_namespace() {
@@ -558,6 +559,7 @@ fn mark_only_note(document: &Document, personname: &Node, mark: &str) -> Result<
   }
   note.set_attribute("role", "footnotemark")?;
   note.set_attribute("mark", mark)?;
+  note.set_attribute("_namemark", "true")?;
   Ok(note)
 }
 
