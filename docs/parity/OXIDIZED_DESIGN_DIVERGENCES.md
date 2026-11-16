@@ -19539,10 +19539,12 @@ Warning; elsarticle's `\fntext`/`\cortext` and REVTeX's `\thanks` are a contact 
   :2160, :2236); a name prints its own `\frontmatter@footnote` before its joined one (`\doauthor`, :2446-2450); a text
   printed before keeps its number (`\y@match`). The binding records each contact's part (`_fnpart`: `title`, `own`,
   `join`, `affil:<n>`; an e-mail's added to its queued call, `queue::tag_last_queued_contact`, which the emitter keeps),
-  and `shared_notes::number_footnote_parts` numbers the footnotes in print order on the placed creators — a call digested
-  inside a name or entry is its holder's own (2605.04155's `\author{Zhenyu Xiao\equalcontrib}`, ∗ as pdflatex prints it;
-  it read the last author's footnotes when the marks were reckoned at the flush), and so is a kernel thanks note in a name
-  (REVTeX prints none; the content kept, numbered as a name's own: one mark for "Equal." on two names). An affiliation's
+  and `shared_notes::number_footnote_parts`, once the annotations are placed and before an e-mail's label becomes a note
+  (`write_role_notes`), numbers the footnotes in print order on the creators — a call digested inside a name or entry is
+  its holder's own (2605.04155's `\author{Zhenyu Xiao\equalcontrib}`, ∗ as pdflatex prints it; it read the last author's
+  footnotes when the marks were reckoned at the flush). A kernel thanks note in a name, which REVTeX prints nowhere
+  (2407.11130's `\author{Isaac H. Kim \thanks{corresponding author}}`), is numbered after the printed footnotes, one mark
+  for one text (the content kept; the printed marks undisturbed). An affiliation's
   footnote prints after its group's names (grouped) or after every name (`superscriptaddress`): a mark is given only where
   both orders agree. The marks are `\@fnsymbol`'s, `\@alph`'s under `altaffilletter` (`FOOTNOTE_MARKS`). 118 REVTeX papers
   of the 30k sample repeat a `\thanks` (0706.3893, 0804.0875, 1308.0465).
@@ -19551,7 +19553,8 @@ Warning; elsarticle's `\fntext`/`\cortext` and REVTeX's `\thanks` are a contact 
 **Residuals.** A REVTeX title's `\thanks` (before the first `\author`) is a thanks contact of the last author (Perl loses
 it), numbered as the title's; an `\email` after `\affiliation` stays its author's contact (REVTeX joins it to the
 affiliation line), numbered as the affiliation's. A footnote-making contact without a part (an `\email` inside a name or
-an affiliation) leaves the whole document unmarked; grouped authors whose affiliations recur non-adjacently print in
+an affiliation; an item the frontmatter emitter writes anew under another role, 2609.13744's `\altaffiliation{Email: …}`
+an e-mail) leaves the whole document unmarked; grouped authors whose affiliations recur non-adjacently print in
 group order, which the numbering does not follow. AASTeX (built on REVTeX 4.1) numbers otherwise — AASTeX 7's `\email`
 is no footnote (pdflatex on aastex701) — and gets no parts; revtex3 neither.
 **Guards**: `perfect_kernel_batchshrest::{a_list_led_by_the_names_mark_is_their_marked_note,

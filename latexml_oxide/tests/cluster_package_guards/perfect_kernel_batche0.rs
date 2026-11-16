@@ -2284,6 +2284,9 @@ enum PassMay {
 /// entries are placed (the S2b writer's old spot, deleted in DEL4; its witnesses 2012.14750, 2201.02056, 2606.18623,
 /// 1507.02068). An allow-list and a debt: the three owner-moving ones go before the merge.
 const PASSES_AFTER_THE_EMITTER: &[(&str, PassMay)] = &[
+  // (SHRESTb: the marks of a class's front-matter footnotes, numbered in print order on the placed creators — a mark,
+  // `_fnmark` or a thanks note's `mark`, no owner moved)
+  ("number_footnote_parts", PassMay::ChangeText),
   ("count_lost_marks", PassMay::ChangeNothing),
   ("join_split_address_contacts", PassMay::ChangeText),
   ("kind_address_lines", PassMay::ChangeKind),
@@ -2295,9 +2298,6 @@ const PASSES_AFTER_THE_EMITTER: &[(&str, PassMay)] = &[
   ("kind_dedication_lines", PassMay::ChangeKind),
   // (SHREST, OD #1054: a footnote text two creators already hold under one mark, made their note — its kind; a list note's
   // mark taken from its text and its holder's name, which its `mark` shows — text; the note was placed by its label)
-  // (SHRESTb: the marks of a class's front-matter footnotes, numbered in print order on the placed creators — a mark,
-  // `_fnmark` or a thanks note's `mark`, no owner moved)
-  ("number_footnote_parts", PassMay::ChangeText),
   ("kind_shared_marked_contacts", PassMay::ChangeKind),
   ("show_list_note_marks", PassMay::ChangeText),
   ("kind_legend_contacts", PassMay::ChangeKind),

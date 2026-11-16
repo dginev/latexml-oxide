@@ -9,7 +9,7 @@
 //! - a class's footnote text two names carry under one mark is their marked note: elsarticle's `\fntext` and `\cortext`
 //!   (their counters' marks) and REVTeX's `\thanks` (its joined footnote's symbol, distinct when an e-mail joins it);
 //! - REVTeX's front-matter footnotes are numbered as printed (SHRESTb: the title's, a name's own before its joined one, an
-//!   affiliation's at its line; a `\thanks` in a name its own);
+//!   affiliation's at its line; a `\thanks` in a name after them);
 //! - an ORCID iD a line end broke reads whole (2503.20847);
 //! - icml's correspondence line a document set without `\icmlcorrespondingauthor` keeps its label.
 //!
@@ -188,8 +188,8 @@ fn revtex_footnotes_are_numbered_as_printed() {
   });
 }
 
-/// A `\thanks` inside a REVTeX `\author{…}` (the kernel's name note; REVTeX prints none) is numbered as a name's own
-/// footnote: "Equal." ∗ on Ann and Bob, "Other." † — three unmarked notes before.
+/// A `\thanks` inside a REVTeX `\author{…}` (the kernel's name note; REVTeX prints none; 2407.11130) is numbered after the
+/// printed footnotes, one mark for one text: "Equal." ∗ on Ann and Bob, "Other." † — three unmarked notes before.
 #[test]
 fn a_revtex_thanks_in_a_name_is_numbered_as_its_footnote() {
   check(&Case {

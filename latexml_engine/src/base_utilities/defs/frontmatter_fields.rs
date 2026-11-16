@@ -434,7 +434,8 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
     let labels = lookup_string(LIST_LABELS);
     // (or a footnote symbol not raised, where an item sets a label: cnf.sty's `\noindent$\ast$~…`)
     let symbol = |e: &Event| {
-      !labels.is_empty() && !e.text.trim().is_empty() && e.text.trim().chars().all(events::is_fnsymbol)
+      let text = e.text.trim();
+      !labels.is_empty() && !text.is_empty() && text.chars().all(events::is_fnsymbol)
     };
     let led = opening_ink(&opening)
       .filter(|e| (e.kind == EventKind::Mark && marks == 1) || (symbol(e) && marks == 0))

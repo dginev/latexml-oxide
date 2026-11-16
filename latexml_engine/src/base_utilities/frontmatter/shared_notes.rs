@@ -19,9 +19,9 @@ pub const FOOTNOTE_PART: &str = "_fnpart";
 pub const FOOTNOTE_MARKS: &str = "lx_fm_footnote_marks";
 
 /// The marks of a class's front-matter footnotes (REVTeX's `\@AF@join`, revtex4-2.cls:2404-2495), numbered as printed:
-/// the title's, then each name's own (and its thanks notes) and its joined one, an affiliation's after its group's names
-/// or after every name, a text printed before keeping its number (`\y@match`). A mark only where both affiliation orders
-/// agree; none when a footnote contact has no part (OD #1054).
+/// the title's, then each name's own and its joined one, an affiliation's after its group's names or after every name, a
+/// text printed before keeping its number (`\y@match`); a thanks note in a name, which REVTeX prints nowhere, after them.
+/// A mark only where both affiliation orders agree; none when a footnote contact has no part (OD #1054).
 pub(super) fn number_footnote_parts(document: &mut Document) -> Result<()> {
   let style = lookup_string(FOOTNOTE_MARKS);
   if style.is_empty() {
@@ -44,11 +44,11 @@ pub(super) fn number_footnote_parts(document: &mut Document) -> Result<()> {
         .collect::<Vec<_>>()
         .join(" ");
       let part = match entry.get_name().as_str() {
-        "note" => Some(s!("own")),
+        "note" => Some(s!("name")),
         _ => entry.get_attribute(FOOTNOTE_PART),
       };
       match part {
-        Some(part) if part == "own" => parts.push((entry, at, part, text)),
+        Some(part) if part == "own" || part == "name" => parts.push((entry, at, part, text)),
         Some(part) => {
           let name = entry.get_attribute("name").unwrap_or_default();
           parts.push((entry, at, part, s!("{role}\u{2}{name}\u{2}{text}")));
@@ -70,7 +70,10 @@ pub(super) fn number_footnote_parts(document: &mut Document) -> Result<()> {
     _ => s!("join:{at}"),
   };
   let mut joined: HashMap<String, String> = HashMap::default();
-  for (_, at, part, text) in parts.iter().filter(|(_, _, part, _)| part != "own") {
+  for (_, at, part, text) in parts
+    .iter()
+    .filter(|(_, _, part, _)| !matches!(part.as_str(), "own" | "name"))
+  {
     let footnote = joined.entry(group(*at, part)).or_default();
     footnote.push_str(text);
     footnote.push('\u{1}');
@@ -78,7 +81,7 @@ pub(super) fn number_footnote_parts(document: &mut Document) -> Result<()> {
   let footnotes: Vec<String> = parts
     .iter()
     .map(|(_, at, part, text)| match part.as_str() {
-      "own" => text.clone(),
+      "own" | "name" => text.clone(),
       _ => joined[&group(*at, part)].clone(),
     })
     .collect();
@@ -119,6 +122,9 @@ pub(super) fn number_footnote_parts(document: &mut Document) -> Result<()> {
       }
     }
     for footnote in affiliations {
+      add(footnote, &mut order);
+    }
+    for footnote in of(&|_, part| part == "name") {
       add(footnote, &mut order);
     }
     order

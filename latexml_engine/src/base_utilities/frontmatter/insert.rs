@@ -96,6 +96,9 @@ pub fn insert_frontmatter(document: &mut Document) -> Result<()> {
   let unshown_marks = show_unanswered_marks(document, &answered)?;
   drop_empty_contacts(document)?;
   drop_repeated_orcids(document);
+  // (a class's front-matter footnotes, numbered on the placed creators as their binding wrote them, before a later step
+  // makes a note of an e-mail's label: OD #1054)
+  number_footnote_parts(document)?;
   count_lost_marks(document, &unshown_marks);
   // (an entry's line of addresses, read once every route has placed the entry and the observer's writing is done: its
   // addresses the entry's e-mails, placed by the Link step; OD #966)
@@ -116,7 +119,6 @@ pub fn insert_frontmatter(document: &mut Document) -> Result<()> {
   kind_dedication_lines(document)?;
   // (a footnote text a class prints once for several names, read once every route has placed it: their marked note; a
   // name's mark its title-page list note carries, that note's: OD #1054)
-  number_footnote_parts(document)?;
   kind_shared_marked_contacts(document)?;
   show_list_note_marks(document)?;
   // (an affiliation that is a legend, read once every route has placed it: its carriers' note, OD #961)
