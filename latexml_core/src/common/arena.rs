@@ -550,8 +550,9 @@ mod tests {
   /// The same with more new bytes than the buffer's whole capacity (131,072 × 13 bytes, string-interner 0.20
   /// `buffer.rs:161-169`), which would move it natively, not only under Miri, had they gone into it: the lent text
   /// still reads, from where it was. Guards the current arena only (the old one is gone; red under Miri on it: the
-  /// test above).
+  /// test above). A native test: its 1.7 MB take Miri 2 min under Stacked and 13 under Tree Borrows.
   #[test]
+  #[cfg_attr(miri, ignore)]
   fn lend_survives_more_new_bytes_than_the_buffer_holds() {
     reset();
     let lent = pin("arena_move_text");
