@@ -2918,10 +2918,10 @@ mod browser_render_author_lines {
       return;
     };
     // Before (Chrome and Firefox, 1280/375): each author a blue `*` whose hover pop-up held its lines. Ann's `\thanks`
-    // is one author's note: under the name with no mark (#1052; before, its mark with the text in its pop-up).
+    // has no `mark` (SHMARK gives it `\@fnsymbol`'s): no one author's, it keeps its mark and pop-up (#1052, 1510.02728).
     for (key, run) in creators(&stdout) {
       let expected = serde_json::json!([
-        { "name": "Ann Able", "star": "none", "notes": [{ "mark": false, "content": true }],
+        { "name": "Ann Able", "star": "none", "notes": [{ "mark": true, "content": false }],
           "contacts": [{ "text": "Univ. of A", "visible": true, "belowName": true, "hover": true },
                        { "text": "Dept. of Physics", "visible": true, "belowName": true, "hover": true }],
           "overlaps": [] },
@@ -2969,7 +2969,7 @@ mod browser_render_author_lines {
         "a note beside a \\thanks",
         THANKS_NOTE,
         serde_json::json!({ "name": "Ann Able", "star": "\"*\"",
-        "notes": [{ "mark": false, "content": true }],
+        "notes": [{ "mark": true, "content": false }],
         "contacts": [note("Note:\u{a0}A note on Ann."), line("Univ. of A"), line("Dept. of Physics")],
         "overlaps": [] }),
       ),
