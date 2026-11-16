@@ -1423,8 +1423,10 @@ mod witnessed_css_delta {
     // OXIDIZED_DESIGN_DIVERGENCES #1052 (DG's rulings of 2026-11-16): a marked author note follows the name, set as
     // text; where an author's lines show under the name (the #783 card, ltx_authors_multiline) its marked notes show
     // there, one author's with no mark and a shared one headed by its mark (2606.00446, 2407.07614, 1706.03762). An
-    // unmarked note is no one author's (IEEEtran's \thanks, 1510.02728): no rule shows it under the name. The browser
-    // half is `cluster_cli::browser_render_author_lines`.
+    // unmarked note is no one author's (IEEEtran's \thanks, 1510.02728): no rule shows it under the name. A pure name's
+    // mark-only note (ltx_role_footnotemark, 0801.1438) shows its mark there too; a body under the name floats, so the
+    // marks after it stay on the name's line; consecutive marks are parted by a comma. The browser half is
+    // `cluster_cli::browser_render_author_lines`.
     const CARD: &str = ".ltx_document:not(.ltx_authors_multiline) .ltx_creator:has(.ltx_author_line):not(:has(\
                         .ltx_contact:not(.ltx_author_line):not(.ltx_role_note):not(.ltx_role_thanks)))";
     let card = format!(":is({CARD}, .ltx_authors_multiline .ltx_creator)");
@@ -1434,10 +1436,17 @@ mod witnessed_css_delta {
       ".ltx_annotated_personname:has(> .ltx_note) { display:inline; }".to_string(),
       ".ltx_note_shared > .ltx_note_mark > a { color:inherit; text-decoration:none; }".to_string(),
       format!("{lines} {{ display:inline; }}"),
-      format!("{lines} .ltx_note_content {{\n    display:block; position:static;"),
+      format!("{lines} .ltx_note_content {{\n    display:block; position:static; float:inline-start; clear:both; width:100%;"),
       format!("{lines} .ltx_note_content .ltx_note_mark {{ position:static; }}"),
       format!(
-        "{lines} .ltx_note_type,\n{lines}:not(.ltx_note_shared) .ltx_note_mark {{ display:none; }}"
+        "{lines} .ltx_note_type,\n{lines}:not(.ltx_note_shared):not(.ltx_role_footnotemark) .ltx_note_mark {{ \
+         display:none; }}"
+      ),
+      ".ltx_annotated_personname > .ltx_note:has(~ .ltx_note) > .ltx_note_mark::after { content:\",\"; }".to_string(),
+      format!("{lines} > .ltx_note_mark::after {{ content:none; }}"),
+      format!(
+        "{card} .ltx_annotated_personname > :is(.ltx_note_shared, .ltx_role_footnotemark):has(~ \
+         :is(.ltx_note_shared, .ltx_role_footnotemark)) > .ltx_note_mark::after {{ content:\",\"; }}"
       ),
     ] {
       assert!(

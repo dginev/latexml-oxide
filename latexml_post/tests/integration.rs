@@ -736,7 +736,8 @@ fn authors_html(xml: &str) -> Vec<String> {
 /// linked to it. Every marked note sits after its name in `ltx_annotated_personname`, with no space between the two.
 /// A note of one author (Bob's †, under his name with no mark in ar5iv.css), a shared mark of another role or text (Cy's
 /// footnote, Dee's note), an unmarked note (Cy's, Lou's IEEEtran-style "Manuscript received", 1510.02728: outside the
-/// wrapper, for the block or margin) and Perl's leftover `role="footnotemark"` note render as before. Only an author's
+/// wrapper, for the block or margin) render as before; Perl's leftover `role="footnotemark"` note (Cy's `*`, whose mark
+/// names two notes of the block, so it links to neither) is its plain mark after the name. Only an author's
 /// copies count (Ed the editor's first copy leaves Gus's a note of one author); a note with no mark or no text is never
 /// a repeat (Hal's and Ivy's image-only notes all print). Every copy holds its text without the symbol, which is SHMARK's
 /// contract (Max's and Ned's legend note, 2407.07614's shape). Witnesses 2606.00446, 2407.07614, 1706.03762.
@@ -837,7 +838,7 @@ fn a_shared_author_note_prints_once_and_its_repeats_are_linked_marks() {
       "\n",
       r##"<span class="ltx_creator ltx_role_author"><span class="ltx_annotated_personname">"##,
       "\n",
-      r##"<span class="ltx_personname">Cy Cole</span><span id="id4" class="ltx_note ltx_role_footnotemark ltx_note_shared"><sup class="ltx_note_mark"><a href="#id1">*</a></sup></span><span id="id5" class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">*</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">*</sup>These authors contributed equally.</span></span></span></span><span id="id6" class="ltx_note ltx_role_footnotemark"><sup class="ltx_note_mark">*</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">*</sup><span class="ltx_note_type">footnotemark: </span><span class="ltx_tag ltx_tag_note">*</span></span></span></span><span id="id7" class="ltx_note ltx_note_frontmatter ltx_thanks_note ltx_role_thanks"><sup class="ltx_note_mark">†</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">†</sup><span class="ltx_note_type">thanks: </span>An unmarked note.</span></span></span></span>"##,
+      r##"<span class="ltx_personname">Cy Cole</span><span id="id4" class="ltx_note ltx_role_footnotemark ltx_note_shared"><sup class="ltx_note_mark"><a href="#id1">*</a></sup></span><span id="id5" class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">*</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">*</sup>These authors contributed equally.</span></span></span><span id="id6" class="ltx_note ltx_role_footnotemark"><sup class="ltx_note_mark">*</sup></span></span><span id="id7" class="ltx_note ltx_note_frontmatter ltx_thanks_note ltx_role_thanks"><sup class="ltx_note_mark">†</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">†</sup><span class="ltx_note_type">thanks: </span>An unmarked note.</span></span></span></span>"##,
       "\n",
       r##"<span class="ltx_creator ltx_role_author"><span class="ltx_annotated_personname">"##,
       "\n",
@@ -881,4 +882,212 @@ fn a_shared_author_note_prints_once_and_its_repeats_are_linked_marks() {
       r##"<span class="ltx_personname">Fay Ford</span><span id="id10" class="ltx_note ltx_role_footnotemark ltx_note_shared"><sup class="ltx_note_mark"><a href="#id9">*</a></sup></span></span></span></div>"##,
     ),
   ]);
+}
+
+/// A personname holds the name alone (DG 2026-11-16), so every mark printed on it is a note after it, and the HTML puts
+/// them back on the name: `ltx_annotated_personname` holds the name, then every marked note of any role in document
+/// order, with no space before the first (OXIDIZED_DESIGN_DIVERGENCES #1052). A mark-only note (`role="footnotemark"`)
+/// is its mark alone, with no empty "footnotemark: " pop-up: linked, and classed `ltx_note_shared` as a shared note's
+/// repeat is, when its mark names one note of the block (Rae's `¶`, a `\footnotemark` leftover with Perl's tags, makes
+/// Quinn's one-author note shared); otherwise the plain glyph (0801.1438's affiliation letters `a`, `c`; Sam's `1`,
+/// `2`, which the stylesheets part with a comma). Shapes: 0801.1438 under PURE (Kardoš: mark-only `a`, then the `*`
+/// note he shares with Miškuf, the PDF's "Kardošᵃ*"; base: "Kardoš* a", the mark-only note outside the wrapper after a
+/// space, with an empty pop-up); a one-author note before a mark (Pat); a mark before the ORCID badge (Tia, order
+/// kept); a name with no marks (Uma, unchanged).
+#[test]
+fn a_pure_name_carries_every_mark_after_it_in_order() {
+  const MARKS: &str = r#"<?xml version="1.0" encoding="UTF-8"?>
+<?latexml RelaxNGSchema="LaTeXML"?>
+<document xmlns="http://dlmf.nist.gov/LaTeXML" xml:id="Document">
+  <title>Pure names and their marks</title>
+  <creator role="author">
+    <personname>František Kardoš</personname>
+    <note mark="a" role="footnotemark" xml:id="id1" fragid="id1"/>
+    <note class="ltx_note_frontmatter ltx_thanks_funding" mark="*" role="thanks" xml:id="id2" fragid="id2">Supported by grant APVT-20-004104.</note>
+    <contact role="affiliation">Institute of Mathematics, Košice</contact>
+  </creator>
+  <creator role="author">
+    <personname>Jozef Miškuf</personname>
+    <note mark="a" role="footnotemark" xml:id="id3" fragid="id3"/>
+    <note class="ltx_note_frontmatter ltx_thanks_funding" mark="*" role="thanks" xml:id="id4" fragid="id4">Supported by grant APVT-20-004104.</note>
+  </creator>
+  <creator role="author">
+    <personname>Jean-Sébastien Sereni</personname>
+    <note mark="c" role="footnotemark"/>
+    <note class="ltx_note_frontmatter ltx_thanks_funding" mark="‡" role="thanks" xml:id="id5" fragid="id5">Supported by the European project Aeolus.</note>
+  </creator>
+  <creator role="author">
+    <personname>Pat Price</personname>
+    <note class="ltx_note_frontmatter ltx_thanks_note" mark="§" role="thanks" xml:id="id6" fragid="id6">On leave from Univ. of B.</note>
+    <note mark="b" role="footnotemark"/>
+    <contact class="ltx_author_line" role="affiliation">Univ. of P</contact>
+  </creator>
+  <creator role="author">
+    <personname>Quinn Quist</personname>
+    <note class="ltx_note_frontmatter ltx_thanks_correspondence" mark="¶" role="thanks" xml:id="id7" fragid="id7">Corresponding authors.</note>
+  </creator>
+  <creator role="author">
+    <personname>Rae Reed</personname>
+    <note mark="¶" role="footnotemark" xml:id="footnotex1" fragid="footnotex1"><tags><tag>¶</tag><tag role="refnum">¶</tag><tag role="typerefnum">footnote ¶</tag></tags></note>
+  </creator>
+  <creator role="author">
+    <personname>Sam Stone</personname>
+    <note mark="1" role="footnotemark"/>
+    <note mark="2" role="footnotemark"/>
+  </creator>
+  <creator role="author">
+    <personname>Tia Toms</personname>
+    <note mark="1" role="footnotemark"/>
+    <contact role="orcid"><ref class="ltx_orcid" href="https://orcid.org/0000-0002-7315-0515">iD</ref></contact>
+  </creator>
+  <creator role="author">
+    <personname>Uma Udall</personname>
+    <contact role="affiliation">Univ. of U</contact>
+  </creator>
+</document>"#;
+  // Before: each mark-only note outside the wrapper, after the name's line break, with an empty "footnotemark: "
+  // pop-up (Kardoš "* a", Pat's `b` under his note, Tia's `1` after her badge); Quinn's note one author's, with Rae's
+  // `¶` unlinked. Uma's element is the base's.
+  let html = authors_html(MARKS);
+  assert_eq!(html, [concat!(
+    r##"<div class="ltx_authors">"##,
+    "\n",
+    r##"<span class="ltx_creator ltx_role_author"><span class="ltx_annotated_personname">"##,
+    "\n",
+    r##"<span class="ltx_personname">František Kardoš</span><span id="id1" class="ltx_note ltx_role_footnotemark"><sup class="ltx_note_mark">a</sup></span><span id="id2" class="ltx_note ltx_note_frontmatter ltx_thanks_funding ltx_role_thanks ltx_note_shared"><sup class="ltx_note_mark">*</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">*</sup><span class="ltx_note_type">thanks: </span>Supported by grant APVT-20-004104.</span></span></span></span><span class="ltx_author_notes"><span class="ltx_author_notes_content">"##,
+    "\n",
+    r##"<span class="ltx_contact ltx_role_affiliation">Institute of Mathematics, Košice"##,
+    "\n",
+    r##"</span></span></span></span>"##,
+    "\n",
+    r##"<span class="ltx_creator ltx_role_author"><span class="ltx_annotated_personname">"##,
+    "\n",
+    r##"<span class="ltx_personname">Jozef Miškuf</span><span id="id3" class="ltx_note ltx_role_footnotemark"><sup class="ltx_note_mark">a</sup></span><span id="id4" class="ltx_note ltx_role_footnotemark ltx_note_shared"><sup class="ltx_note_mark"><a href="#id2">*</a></sup></span></span></span>"##,
+    "\n",
+    r##"<span class="ltx_creator ltx_role_author"><span class="ltx_annotated_personname">"##,
+    "\n",
+    r##"<span class="ltx_personname">Jean-Sébastien Sereni</span><span class="ltx_note ltx_role_footnotemark"><sup class="ltx_note_mark">c</sup></span><span id="id5" class="ltx_note ltx_note_frontmatter ltx_thanks_funding ltx_role_thanks"><sup class="ltx_note_mark">‡</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">‡</sup><span class="ltx_note_type">thanks: </span>Supported by the European project Aeolus.</span></span></span></span></span>"##,
+    "\n",
+    r##"<span class="ltx_creator ltx_role_author"><span class="ltx_annotated_personname">"##,
+    "\n",
+    r##"<span class="ltx_personname">Pat Price</span><span id="id6" class="ltx_note ltx_note_frontmatter ltx_thanks_note ltx_role_thanks"><sup class="ltx_note_mark">§</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">§</sup><span class="ltx_note_type">thanks: </span>On leave from Univ. of B.</span></span></span><span class="ltx_note ltx_role_footnotemark"><sup class="ltx_note_mark">b</sup></span></span><span class="ltx_author_notes"><span class="ltx_author_notes_content">"##,
+    "\n",
+    r##"<span class="ltx_contact ltx_author_line ltx_role_affiliation">Univ. of P"##,
+    "\n",
+    r##"</span></span></span></span>"##,
+    "\n",
+    r##"<span class="ltx_creator ltx_role_author"><span class="ltx_annotated_personname">"##,
+    "\n",
+    r##"<span class="ltx_personname">Quinn Quist</span><span id="id7" class="ltx_note ltx_note_frontmatter ltx_thanks_correspondence ltx_role_thanks ltx_note_shared"><sup class="ltx_note_mark">¶</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">¶</sup><span class="ltx_note_type">thanks: </span>Corresponding authors.</span></span></span></span></span>"##,
+    "\n",
+    r##"<span class="ltx_creator ltx_role_author"><span class="ltx_annotated_personname">"##,
+    "\n",
+    r##"<span class="ltx_personname">Rae Reed</span><span id="footnotex1" class="ltx_note ltx_role_footnotemark ltx_note_shared"><sup class="ltx_note_mark"><a href="#id7">¶</a></sup></span></span></span>"##,
+    "\n",
+    r##"<span class="ltx_creator ltx_role_author"><span class="ltx_annotated_personname">"##,
+    "\n",
+    r##"<span class="ltx_personname">Sam Stone</span><span class="ltx_note ltx_role_footnotemark"><sup class="ltx_note_mark">1</sup></span><span class="ltx_note ltx_role_footnotemark"><sup class="ltx_note_mark">2</sup></span></span></span>"##,
+    "\n",
+    r##"<span class="ltx_creator ltx_role_author"><span class="ltx_annotated_personname">"##,
+    "\n",
+    r##"<span class="ltx_personname">Tia Toms</span><span class="ltx_note ltx_role_footnotemark"><sup class="ltx_note_mark">1</sup></span>"##,
+    "\n",
+    r##"<span class="ltx_contact ltx_role_orcid"><a href="https://orcid.org/0000-0002-7315-0515" title="" class="ltx_ref ltx_orcid">iD</a>"##,
+    "\n",
+    r##"</span></span></span>"##,
+    "\n",
+    r##"<span class="ltx_creator ltx_role_author">"##,
+    "\n",
+    r##"<span class="ltx_personname">Uma Udall"##,
+    "\n",
+    r##"</span><span class="ltx_author_notes"><span class="ltx_author_notes_content">"##,
+    "\n",
+    r##"<span class="ltx_contact ltx_role_affiliation">Univ. of U"##,
+    "\n",
+    r##"</span></span></span></span></div>"##,
+  ),]);
+}
+
+/// Only a symbol mark (`*`, `†`, `¶`) or Perl's tagged `\footnotemark` leftover names another author's note
+/// (OXIDIZED_DESIGN_DIVERGENCES #1052; DG 2026-11-16: a wrong link is worse than none). A letter or digit is an
+/// affiliation label as often as a footnote number, so a mark-only `1` or `a` is its plain glyph: it links to no note
+/// and makes none shared (review revREND2: Bob's `1` linked Ann's own footnote `1` and sent it to the margin as shared;
+/// Dee's `a`, Cy's thanks `a`; a Greek `α` likewise, revREND2b). Fay's tagged leftover `2` still links Eve's note `2`,
+/// which is then shared.
+#[test]
+fn a_letter_or_digit_mark_names_no_other_authors_note() {
+  const MARKS: &str = r#"<?xml version="1.0" encoding="UTF-8"?>
+<?latexml RelaxNGSchema="LaTeXML"?>
+<document xmlns="http://dlmf.nist.gov/LaTeXML" xml:id="Document">
+  <title>Glyph collision</title>
+  <creator role="author">
+    <personname>Ann Able</personname>
+    <note mark="1" role="footnote" xml:id="id1" fragid="id1">Ann's own numbered footnote.</note>
+  </creator>
+  <creator role="author">
+    <personname>Bob Baker</personname>
+    <note mark="1" role="footnotemark" xml:id="id2" fragid="id2"/>
+  </creator>
+  <creator role="author">
+    <personname>Cy Cole</personname>
+    <note mark="a" role="thanks" xml:id="id3" fragid="id3">Cy's own lettered thanks.</note>
+  </creator>
+  <creator role="author">
+    <personname>Dee Dunn</personname>
+    <note mark="a" role="footnotemark"/>
+  </creator>
+  <creator role="author">
+    <personname>Eve Ennis</personname>
+    <note mark="2" role="footnote" xml:id="id4" fragid="id4">Eve's footnote, which Fay's mark repeats.</note>
+  </creator>
+  <creator role="author">
+    <personname>Fay Ford</personname>
+    <note mark="2" role="footnotemark" xml:id="footnotex1" fragid="footnotex1"><tags><tag>2</tag><tag role="refnum">2</tag></tags></note>
+  </creator>
+  <creator role="author">
+    <personname>Gil Gray</personname>
+    <note mark="α" role="footnote" xml:id="id5" fragid="id5">Gil's own Greek-lettered footnote.</note>
+  </creator>
+  <creator role="author">
+    <personname>Hu Hale</personname>
+    <note mark="α" role="footnotemark"/>
+  </creator>
+</document>"#;
+  // Before (revREND2's p1.xml): Ann's and Cy's notes classed ltx_note_shared, Bob's `1` and Dee's `a` links to them.
+  let html = authors_html(MARKS);
+  assert_eq!(html, [concat!(
+    r##"<div class="ltx_authors">"##,
+    "\n",
+    r##"<span class="ltx_creator ltx_role_author"><span class="ltx_annotated_personname">"##,
+    "\n",
+    r##"<span class="ltx_personname">Ann Able</span><span id="id1" class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">1</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">1</sup>Ann's own numbered footnote.</span></span></span></span></span>"##,
+    "\n",
+    r##"<span class="ltx_creator ltx_role_author"><span class="ltx_annotated_personname">"##,
+    "\n",
+    r##"<span class="ltx_personname">Bob Baker</span><span id="id2" class="ltx_note ltx_role_footnotemark"><sup class="ltx_note_mark">1</sup></span></span></span>"##,
+    "\n",
+    r##"<span class="ltx_creator ltx_role_author"><span class="ltx_annotated_personname">"##,
+    "\n",
+    r##"<span class="ltx_personname">Cy Cole</span><span id="id3" class="ltx_note ltx_role_thanks"><sup class="ltx_note_mark">a</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">a</sup><span class="ltx_note_type">thanks: </span>Cy's own lettered thanks.</span></span></span></span></span>"##,
+    "\n",
+    r##"<span class="ltx_creator ltx_role_author"><span class="ltx_annotated_personname">"##,
+    "\n",
+    r##"<span class="ltx_personname">Dee Dunn</span><span class="ltx_note ltx_role_footnotemark"><sup class="ltx_note_mark">a</sup></span></span></span>"##,
+    "\n",
+    r##"<span class="ltx_creator ltx_role_author"><span class="ltx_annotated_personname">"##,
+    "\n",
+    r##"<span class="ltx_personname">Eve Ennis</span><span id="id4" class="ltx_note ltx_role_footnote ltx_note_shared"><sup class="ltx_note_mark">2</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">2</sup>Eve's footnote, which Fay's mark repeats.</span></span></span></span></span>"##,
+    "\n",
+    r##"<span class="ltx_creator ltx_role_author"><span class="ltx_annotated_personname">"##,
+    "\n",
+    r##"<span class="ltx_personname">Fay Ford</span><span id="footnotex1" class="ltx_note ltx_role_footnotemark ltx_note_shared"><sup class="ltx_note_mark"><a href="#id4">2</a></sup></span></span></span>"##,
+    "\n",
+    r##"<span class="ltx_creator ltx_role_author"><span class="ltx_annotated_personname">"##,
+    "\n",
+    r##"<span class="ltx_personname">Gil Gray</span><span id="id5" class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">α</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">α</sup>Gil's own Greek-lettered footnote.</span></span></span></span></span>"##,
+    "\n",
+    r##"<span class="ltx_creator ltx_role_author"><span class="ltx_annotated_personname">"##,
+    "\n",
+    r##"<span class="ltx_personname">Hu Hale</span><span class="ltx_note ltx_role_footnotemark"><sup class="ltx_note_mark">α</sup></span></span></span></div>"##,
+  ),]);
 }
