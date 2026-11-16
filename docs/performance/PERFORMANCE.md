@@ -343,6 +343,45 @@ code on AMD (skid), so the figures are counts × stepped instructions.
   twice. Use a borrowed path view and prebuilt exact plus lowercase indexes after
   collecting miss-count telemetry (audit F9).
 
+### P13 — Toward one pdflatex pass per paper: avenues, not scheduled (advisor study, 2026-11-15)
+
+DG 2026-11-15: recorded as avenues to explore, not work items. The speed at int/perf (PR 885) is release-acceptable.
+
+**Where we stand.** 32 arXiv papers, the ar5iv HTML recipe, one core, best of 3 (PDFCMP):
+- latexml-oxide takes median 0.53 s per paper (mean 1.76 s).
+- One pdflatex pass takes 0.40 s (mean 1.20 s); a full pdflatex + bibtex + 2× pdflatex build takes 1.23 s (mean 3.64 s).
+- Per paper, that is X/P1 median 1.24 (geomean 1.22) and X/full build 0.41.
+- Without the two known outliers the geomean is 1.05: 2106.09072 (row R MATHTAIL) and 2308.04512.
+
+**Where the time goes** (`perf stat -e instructions:u`, release binary):
+- **Fixed cost is already lower than pdflatex's.** A trivial article costs 0.97 G instructions (~122 ms) against pdflatex's 1.35 G (~137 ms). With amsmath, amssymb, graphicx and hyperref it is 1.18 G against 2.28 G.
+- **The gap is per formula.** A mid-size formula costs ~22 M instructions (~1.6 ms: parse 13.5 M, digest/build 3 M, post 5.7 M) against pdflatex's 0.33 M. The median paper has ~290 formulas.
+- **Shares over 30 papers (median / mean):**
+  - fixed floor 25 / 28 %, of which kpathsea is 10 / 11 %;
+  - math parse 21 / 22 %;
+  - post 16 / 19 %;
+  - the rest of core ~35 %.
+
+**Avenues.** Per-paper gains are modelled from these shares, never built:
+- **kpathsea's `ls-R` build** — about −10.5 % geomean; alone it brings the median paper to ~1.0×.
+  - `kpathsea_init_db` parses the 5.6 MB `ls-R` (251k entries) on the first lookup through `Kpaths::new` (`latexml_core/src/util/pathname.rs:237`). That is ~50 ms, 43 % of the fixed floor; one `kpsewhich` lookup takes 40-60 ms, and pdflatex pays the same.
+  - Lever: persist the lookup memo (`pathname.rs:1063`) per TeX Live tree, stamped like the dumps, and initialise kpathsea only on a miss. Never persist hits in the paper's own directory, or negative answers.
+  - This is not the raw `ls-R` emulation that WISDOM #57 warns against.
+  - First step: log every `pathname::kpsewhich` call over ~200 sandbox papers, to count memo hits against novel negatives.
+- **A formula memo** (P3's BP-5) — about −5.5 % (math parse −25 %).
+  - 101 identical formulas cost linearly today. Repeats are 46 % of formulas by count, 26-29 % by TeX length (median), but only 4-5 % on some papers.
+  - It assumes a parse depends only on its lexemes; check `maybe_functions` (`latexml_math_parser/src/parser.rs:605`). Math is parked, so this needs a ruling even when output-identical.
+- **One terminal per lexeme** instead of one earleme per byte (P3's remaining lever) — about −3 to −9 % (math parse −15 to −40 %; the advisor lowered its own estimate to −25 %).
+  - libmarpa is 48 % of math-parse cycles on cond-mat0505497.
+  - It changes the marpa-asf interface, and routing thresholds must be preserved for byte-identity.
+  - Adding 18 content bytes cost only ~10k instructions per byte against a 43k average, so the gain is uncertain.
+- **XSLT per-node cost** — about −3 % if XSLT drops 30 %.
+  - XSLT is 55-64 % of post, ~27k cycles per output MathML element.
+  - The O(n²) audit (principle 6) holds; the per-node cost has not been examined. Profile with `xsltproc --profile` first.
+- **A binary or parallel dump** — at most −2 to −3 %. Still declined: dump load is now ~13-20 ms, not June's 85 ms (`archive/STARTUP_COST_ANALYSIS_2026-06-21.md`).
+
+The kpathsea memo, the formula memo and one terminal per lexeme together model at −20 % geomean (1.22 → ~0.99). PGO and target-cpu stay closed.
+
 
 ---
 
