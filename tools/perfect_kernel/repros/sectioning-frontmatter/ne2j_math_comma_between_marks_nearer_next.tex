@@ -1,5 +1,6 @@
 % mechanism: a formula's comma glued between two given `\footnotemark`s nearer the next name is ink of their run, not
-%   other ink apart from both names: the run is Bob's (`resolver::mark_ledger`), the comma written between them
+%   other ink apart from both names: the run is Bob's (`resolver::mark_ledger`); the comma reaches Bob's name tokens but
+%   is dropped after them with no Warning (pre-existing; row R SEPRUN, SEP's separator token writes it)
 % witness:  none (review revSHGNEXT S1; the shape of 1703.08733's `\endnotemark[1]$^,$\endnotemark[2]`)
 % oracle:   pdflatex 0 errors; "Ann Able∗ (27.3pt) ∗,† (7.8pt) Bob Baker Carl Cole" (pdftotext -bbox; Ann's `\thanks`
 %   mark ∗ on her name, the `\footnotemark[1]` ∗, the comma and † over Bob's)

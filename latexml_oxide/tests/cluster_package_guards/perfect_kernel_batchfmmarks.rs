@@ -1805,8 +1805,8 @@ const SPACING: &[Row] = &[
     page_moves: r#""#,
   },
   Row {
-    repro:      "ne2c_mark_on_no_name_writes_the_block_whole",
-    tex:        repro!("ne2c_mark_on_no_name_writes_the_block_whole"),
+    repro:      "ne2c_mark_on_no_name_keeps_its_footnote_step",
+    tex:        repro!("ne2c_mark_on_no_name_keeps_its_footnote_step"),
     warnings:   1,
     creators:   &[
       r#"Ann Able ; thanks[*]=Univ X."#,

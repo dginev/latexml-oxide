@@ -347,7 +347,7 @@ fn a_mark_after_its_names_note_stays_with_it() {
 /// no place for.
 #[test]
 fn a_mark_on_no_name_keeps_its_footnote_step() {
-  let (log, xml) = run(repro!("ne2c_mark_on_no_name_writes_the_block_whole"));
+  let (log, xml) = run(repro!("ne2c_mark_on_no_name_keeps_its_footnote_step"));
   assert_eq!((error_count(&log), warning_count(&log)), (0, 1), "{log}");
   assert!(
     log.contains("on no name and no item, their footnote steps kept where they print; lost: †"),

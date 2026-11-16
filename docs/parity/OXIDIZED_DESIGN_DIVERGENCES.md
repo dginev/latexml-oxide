@@ -19815,7 +19815,8 @@ affiliation as at the base). A mark after a name's comma and its label (`Igor Pi
 1111.1979: COMMAMARK) is undecided: its names now split, its glyph counted lost.
 **Witnesses.** 1911.13299, 2412.20504 (green before and after), 1703.08733 (its separator's shape); the FMRG suite's
 spacing family (`perfect_kernel_batchfmmarks::a_mark_past_spacing_is_the_nearer_names`, XML and HTML: its `ne2j_*`
-rows the writers' runs and the separator).
+rows the writers' runs and the separator's place in the run; the formula comma itself reaches the name's tokens and
+is dropped after them with no Warning, pre-existing, row R SEPRUN).
 **Guards**: `perfect_kernel_batchne2::{a_mark_beside_spacing_is_the_nearer_names,
 a_note_beside_spacing_goes_to_the_nearer_name, a_mark_nearer_the_next_name_moves_alone,
 a_mark_a_name_follows_past_spacing_is_not_carried_back, a_mark_on_no_name_keeps_its_footnote_step,
