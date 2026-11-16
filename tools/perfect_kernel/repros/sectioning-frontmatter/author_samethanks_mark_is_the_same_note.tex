@@ -9,7 +9,8 @@
 % engines: rust int130a and 103b: Bob Baker's personname holds `<note mark="*" role="footnotemark">` (the mark only);
 %   perl: the same note, no mark
 % expect:  0 errors, 0 warnings; Bob Baker carries the note "Equal contribution." as Ann Able does
-% status:  RED (int130a, 103b)
+% status:  RED (int130a, 103b) -> GREEN (SHMARK, the Link step; the shape is guarded by
+%   perfect_kernel_batchshmark::a_mark_on_a_name_is_a_copy_of_the_note_it_marks)
 % preload: ar5iv.sty
 \documentclass{article}
 \newcommand*\samethanks[1][\value{footnote}]{\footnotemark[#1]}

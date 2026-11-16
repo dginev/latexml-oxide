@@ -1,0 +1,22 @@
+% mechanism: (1) each `\thanks` note carries the mark it prints (`*`, `†`, `‡`); (2) a `\footnotemark[N]` on a name is a
+%   copy of note N (`insert::link_marked_notes`); (3) `\ \footnotemark[N]` after a control space is SHGIVEN's
+%   (emit.rs `mark_dropped`, DG ruling 4: the mark belongs to the name before it)
+% witness: 1911.13299 (`Vivek Ramanujan \thanks{equal contribution} \ \footnotemark[2]`, CVPR)
+% oracle:  pdflatex 0 errors: "Ann Able ∗ †  Bob Baker ∗ ‡  Cat Cole † ‡  Dan Dorn ‡", "∗ Equal contribution.",
+%   "† Univ A", "‡ Univ B"
+% engines: rust REGFIX = 0 errors, 1 Warning "lost: †, ‡, ‡"; Bob's [1] footnotemark mark="*" kept, 3 marks lost, notes
+%   unmarked; perl 0.8.8 = 0 errors, all 4 marks kept as role=footnotemark — RUST-ONLY loss
+% expect:  0 errors; notes marked *, †, ‡; Bob's [1] a copy of Ann's "*" note; with SHGIVEN: 0 warnings, Ann's †, Bob's
+%   and Dan's ‡ copies of Cat's notes
+% status:  RED (REGFIX) -> partly GREEN (perfect_kernel_batchshmark::a_mark_on_a_name_is_a_copy_of_the_note_it_marks:
+%   the marks and Bob's [1]; the `\ \footnotemark` marks are SHGIVEN's)
+% preload: ar5iv.sty
+\documentclass{article}
+\title{T}
+\author{Ann Able \thanks{Equal contribution.} \ \footnotemark[2] \and Bob Baker \footnotemark[1] \ \footnotemark[3] \and
+Cat Cole \thanks{Univ A} \ \thanks{Univ B} \and Dan Dorn \ \footnotemark[3]}
+\date{}
+\begin{document}
+\maketitle
+Text.
+\end{document}

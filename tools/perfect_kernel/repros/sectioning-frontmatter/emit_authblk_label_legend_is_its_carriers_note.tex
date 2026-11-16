@@ -7,7 +7,8 @@
 % oracle:  pdflatex 0 errors: "Ann Able a,* , Bob Baker a,† , and Cat Cole b,†", "a Univ A", "b Univ B",
 %   "* Corresponding author. E-mail: ann@a.org", "† These authors contributed equally to this work."
 % engines: off = the two legends notes of their carriers, ann@a.org Ann's e-mail; LO4 `=2` = both affiliations
-% expect:  0 errors 0 warnings; `=2` creators = off
+% expect:  0 errors 0 warnings; `=2` creators = off: Ann's note mark="*", Bob's and Cat's copies of the shared note
+%   mark="†", the same text, no mark in it (DG ruling 1 of 2026-11-16, OD #1053; the XSLT prints it once)
 % status:  RED (LO4 `=2`) -> GREEN (P2)
 \documentclass{article}
 \usepackage{authblk}

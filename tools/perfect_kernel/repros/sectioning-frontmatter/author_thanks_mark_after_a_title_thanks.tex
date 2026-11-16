@@ -1,0 +1,18 @@
+% mechanism: article's `\@maketitle` sets the title before the authors, so a title's `\thanks` takes the first mark (∗)
+%   and an author's `\thanks` the next (†): the flush reads the author block before it digests the title, so the
+%   rehearsal counted from ∗ (`reading::rehearse_title_first` reads the title first, its note steps carried); a
+%   `\footnotemark[1]` on a name is then the title's mark, no creator's note — it stays the mark it is
+% witness: synthetic (`\title{…\thanks{…}}` beside authors' `\thanks`)
+% oracle:  pdflatex 0 errors: "T∗", "Ann Able†  Bob Baker∗", "∗ Funded.", "† Note X."
+% engines: rust REGFIX = Ann's note with no mark, Bob's footnotemark mark="*"
+% expect:  0 errors 0 warnings; Ann's note mark="†"; Bob's `<note mark="*" role="footnotemark">`
+% status:  RED (SHMARK first cut: Ann "*", Bob a copy of her note) -> GREEN
+%   (perfect_kernel_batchshmark::a_mark_on_a_name_is_a_copy_of_the_note_it_marks)
+% preload: ar5iv.sty
+\documentclass{article}
+\title{T\thanks{Funded.}}
+\author{Ann Able\thanks{Note X.} \and Bob Baker\footnotemark[1]}
+\begin{document}
+\maketitle
+Text.
+\end{document}
