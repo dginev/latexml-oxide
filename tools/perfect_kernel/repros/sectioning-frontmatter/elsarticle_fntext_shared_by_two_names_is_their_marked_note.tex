@@ -1,21 +1,23 @@
 % witness: elsarticle `\fnref{<key>}` on two or more names and one `\fntext[<key>]{…}` (29 of the 30k sample's 325
 %          elsarticle papers with `\fntext`: 1002.2661, 1312.0669, 1405.7537, 1503.08763, 1802.04963): elsarticle.cls:157-171
 %          numbers each `\fntext` (`\thefnote`), printed once, its mark on every name that refers to it
-% oracle:  pdflatex 0 errors (two runs); "Ann Able a,1 , Bob Baker a,1 , Cat Cole a,2", footnotes "1 These authors contributed
-%          equally." and "2 Visiting Univ B."
+%          and `\cortext[<key>]` on two names, its `\corref` (SHRESTb: elsarticle.cls:178-189, marked ∗ and ∗∗)
+% oracle:  pdflatex 0 errors (two runs); "Ann Able a,1,∗ , Bob Baker a,1,∗ , Cat Cole a,2", footnotes "∗ Corresponding
+%          authors.", "1 These authors contributed equally." and "2 Visiting Univ B."
 % engines: rust=0 (60edb5d0e03: each name a contact role=note, no mark) perl=0 (the same contacts) (2026-11-16)
-% expect:  0 errors, 0 warnings; Ann Able and Bob Baker each with the note "These authors contributed equally." marked 1 (role
-%          thanks) and the address Univ A; Cat Cole with her own contact "Visiting Univ B." (one carrier: under her name) and
+% expect:  0 errors, 0 warnings; Ann Able and Bob Baker each with the notes "Corresponding authors." marked ∗ and "These
+%          authors contributed equally." marked 1 (role thanks) and the address Univ A; Cat Cole with her own contact "Visiting Univ B." (one carrier: under her name) and
 %          Univ A (DG rulings 1-2 of 2026-11-16)
-% status:  RED (60edb5d0e03) -> GREEN (SHREST)
+% status:  RED (60edb5d0e03) -> GREEN (SHREST; the `\cortext`: RED edc515b111f, a contact each -> GREEN SHRESTb)
 % preload: ar5iv.sty
 \documentclass{elsarticle}
 \begin{document}
 \begin{frontmatter}
 \title{Title}
-\author[a]{Ann Able\fnref{eq}}
-\author[a]{Bob Baker\fnref{eq}}
+\author[a]{Ann Able\fnref{eq}\corref{cor}}
+\author[a]{Bob Baker\fnref{eq}\corref{cor}}
 \author[a]{Cat Cole\fnref{vis}}
+\cortext[cor]{Corresponding authors.}
 \fntext[eq]{These authors contributed equally.}
 \fntext[vis]{Visiting Univ B.}
 \address[a]{Univ A}

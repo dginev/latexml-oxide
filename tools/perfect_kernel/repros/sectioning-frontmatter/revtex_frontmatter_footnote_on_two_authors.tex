@@ -1,11 +1,13 @@
-% witness: 2605.04155 (main.tex:32-45)
-% oracle: pdflatex (clean); engine: pdflatex
-% expect: 0 errors; each author carries the note "These two authors contributed equally to this work." marked ∗ (printed
-%   once, its mark on both names: OD #1054; a thanks contact each before)
-% mechanism: revtex4-2.cls:2472-2493 \frontmatter@footnote, the front-matter footnote behind \thanks (one mark for
-%   identical texts), called by the document for a note on several authors; our REVTeX binding lacked it
-%   (Error:undefined). Fixed: revtex4_support_sty.rs, a thanks contact of the current author.
-% status:  GREEN
+% witness: 2605.04155 (main.tex:32-56: `\equalcontrib` on Xiao and Liu, an `\email` on each of the three authors)
+% oracle:  pdflatex 0 errors; "Ann Author∗,1,† Bob Author,2,‡ and Cat Author∗3,§", footnotes "∗ These two authors contributed
+%          equally to this work.", "† a@x.org", "‡ b@x.org", "§ c@x.org" (revtex4-2.cls:2446-2450 `\doauthor`: a name's own
+%          `\frontmatter@footnote` before its joined `\email`; :2472-2495 one mark for identical texts)
+% engines: rust=0 (edc515b111f: both notes marked ‡, Bob's e-mail's mark: the name digested at the flush read the last
+%          author's footnotes) perl=0 (an undefined `\frontmatter@footnote`) (2026-11-16)
+% expect:  0 errors, 0 warnings; Ann and Cat each with the note "These two authors contributed equally to this work." marked ∗
+%          (OD #1054), every author with an e-mail contact and an affiliation
+% status:  RED (edc515b111f) -> GREEN (SHRESTb)
+% preload: ar5iv.sty
 \documentclass[aps,prl,superscriptaddress]{revtex4-2}
 \makeatletter
 \newcommand{\equalcontrib}{\frontmatter@footnote{These two authors contributed equally to this work.}}
@@ -13,9 +15,14 @@
 \begin{document}
 \title{T}
 \author{Ann Author\equalcontrib}
-\affiliation{Some University}
-\author{Bob Author\equalcontrib}
-\affiliation{Some University}
+\email{a@x.org}
+\affiliation{Univ A}
+\author{Bob Author}
+\email{b@x.org}
+\affiliation{Univ B}
+\author{Cat Author\equalcontrib}
+\email{c@x.org}
+\affiliation{Univ C}
 \maketitle
 Text.
 \end{document}

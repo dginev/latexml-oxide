@@ -1,0 +1,23 @@
+% witness: a REVTeX `\thanks` inside `\author{…}` (the shape of 1308.0465's repeated thanks, written in the names): the
+%          kernel's name note (`\lx@personname` lets `\thanks` be `\lx@add@thanks`), here numbered as REVTeX numbers a name's own
+%          footnote (revtex4-2.cls:2472-2495, one mark for identical texts)
+% oracle:  pdflatex 0 errors; "Ann Able, Bob Baker, and Cat Cole", "Univ A": REVTeX prints no mark and no footnote for a
+%          `\thanks` in a name (its `\@AF@join` is the last affiliation's by then)
+% engines: rust=0 (edc515b111f: three unmarked thanks notes) perl=0 (the same notes, no marks) (2026-11-16)
+% expect:  0 errors, 0 warnings; Ann and Bob each with the note "Equal." marked ∗, Cat with "Other." marked † (the content
+%          pdflatex loses kept, as REVTeX numbers a name's own footnote: OD #1054)
+% status:  RED (edc515b111f) -> GREEN (SHRESTb)
+% preload: ar5iv.sty
+\documentclass{revtex4-2}
+\begin{document}
+\title{Title}
+\author{Ann Able\thanks{Equal.}}
+\affiliation{Univ A}
+\author{Bob Baker\thanks{Equal.}}
+\affiliation{Univ A}
+\author{Cat Cole\thanks{Other.}}
+\affiliation{Univ A}
+\begin{abstract}Abstract.\end{abstract}
+\maketitle
+Text.
+\end{document}
