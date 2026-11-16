@@ -5,18 +5,18 @@ x86_64-pc-windows-msvc, TeX Live 2026 from setup-texlive-action). All 11 shards 
 of ~600-1100. PR runs of Windows CI pass because they only `cargo check`. Root-caused read-only from the shard logs.
 
 ## Scope of this branch (`fix/windows-suite`)
-Fix classes **B, C (EPS only), D, E** below: 6 tests, all Windows-specific. Do **not** fix:
-- **Class A (26 tests):** not Windows. It is being fixed on Linux in a separate PR, branch `fix/caption-subtypehook`. Once that merges into
-  main, merge main into this branch; those 26 should go green with no Windows change.
-- **The `~`-in-file-name engine gap** behind `subimport_absolute_path_resolves_like_real_latex`: it is SHARED (it reproduces on Linux) and
-  changes Linux output. Here, only use the test-side alternative given under C.
+Fix all five classes below (DG 2026-11-16), including class A, which is not Windows-specific (26 tests), plus B, C, D and E (6 tests).
+Do not fix the shared `~`-in-file-name engine gap behind `subimport_absolute_path_resolves_like_real_latex`. It reproduces on Linux and
+changes Linux output, so it stays a row R item. Here, use only the test-side alternative given under C.
 
-Every change must leave Linux output byte-identical. Repo rules: `CLAUDE.md` (no `unsafe` in our code; portable tests skip visibly;
-whole-element assertions; never delete a witness from a comment).
+Linux output must stay byte-identical, with one exception: class A's fix may remove an Error in the ~24 TL 2025 papers that ship their
+own caption/subcaption copies referencing `\caption@subtypehook` (2303.00383, 2211.08160, 1903.10110, …). That is the change it
+should make, and nothing beyond it. Repo rules: `CLAUDE.md` (no `unsafe` in our code; portable tests skip visibly; whole-element
+assertions; never delete a witness from a comment).
 
 ## Classes
 
-### A. TL 2026's first aid for subcaption meets our caption binding — NOT Windows (26 tests; fixed elsewhere)
+### A. TL 2026's first aid for subcaption meets our caption binding — NOT Windows (26 tests)
 - `latex2e-first-aid-for-external-files.dtx` v1.1z (2026/09/27, latex2e gh/2172) runs `\g@addto@macro\caption@subtypehook{…}` when
   subcaption.sty v1.6b loads.
 - Our `caption_sty.rs` lacks caption.sty's `\caption@subtypehook` (caption.sty:639, run at :314). Since #829, `\g@addto@macro` on an
@@ -32,6 +32,29 @@ whole-element assertions; never delete a witness from a comment).
   - `batch67u::bmvc2k_class_copy_loads_its_subfigure_package`
   - `batch78v`, `batch92e`, `batchp25`, `batch61::the_2609_classes…`, `batchint23::mdpi_loads_cleveref…`
   - `batch56::bytedance_author_is_a_creator`, `batchsbx1::sandbox_2605_rows`
+- Classification: RUST-ONLY. Perl gives 0 errors and 1 warning; pdflatex is clean. The fleet's Debian TL and TL 2025 lack this first-aid
+  entry, so today the error shows only on up-to-date TL 2026 hosts. There it hits every subcaption paper, about 15 % of arXiv.
+- Fix:
+  - Define `\caption@subtypehook` empty in `latexml_package/src/package/caption_sty.rs` (the hook block, ~:583-588; caption.sty:639).
+  - Run it where the binding enters a sub-float type, the analog of caption.sty:314 `\@nameuse{caption@#1typehook}` in
+    `\caption@@settype`. The likely site is `subcaption_sty.rs:~210` `\lx@subcaption@type`.
+  - Follow the same generic `\caption@<type>typehook` for the main float types where caption.sty does.
+  - Read caption.sty, caption3.sty, subcaption.sty, zref-clever.sty:5692-5695 (which also adds to the hook) and Perl's caption bindings
+    first.
+- Guard (TL-portable; inject the first aid's line so it fails on any TL):
+  ```
+  \documentclass{article}
+  \usepackage{subcaption}
+  \makeatletter\g@addto@macro\caption@subtypehook{\let\ltx@label\label}\makeatother
+  \begin{document}
+  \begin{figure}\begin{subfigure}{.4\textwidth}A\caption{a}\label{fa}\end{subfigure}\caption{F}\end{figure}
+  See \subref{fa}.
+  \end{document}
+  ```
+  pdflatex prints "See a." with no `!`. Expect 0 errors and `<ref labelref="LABEL:fa"/>` resolved to the sub-figure. Add one test that a
+  hook addition actually runs inside the sub-float.
+- Linux A/B: ≥ 120 subcaption papers, the ~24 papers whose shipped copies reference the hook, and zref-clever papers. Only those papers
+  may change.
 
 ### B. Windows `\` path separator (2 tests)
 - **`latexml_contrib script_bindings::tests::api_reference_is_up_to_date`.**
@@ -84,5 +107,5 @@ whole-element assertions; never delete a witness from a comment).
 ## Verify
 - On Windows: `cargo nextest run --workspace` (TL 2026 on PATH), or the targeted tests above.
 - Then dispatch `gh workflow run windows-ci-manual-trigger.yml --ref fix/windows-suite -f require_guards=true` (~40 min).
-- Expect green on B/C/D/E now, and on A once main (with `fix/caption-subtypehook`) is merged in.
+- Expect all 32 green except the `subimport` test, which needs its test-side change under C.
 - On Linux the full gates must stay green with byte-identical output.
