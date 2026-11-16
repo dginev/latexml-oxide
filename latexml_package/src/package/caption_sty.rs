@@ -24,10 +24,21 @@ pub const CLASS_CAPTION_FONTS: &str = "CLASS_CAPTION_FONTS";
 pub fn class_caption_fonts() -> bool { lookup_bool(CLASS_CAPTION_FONTS) }
 
 /// caption.sty:314 `\@nameuse{caption@#1typehook}` in `\caption@@settype{sub}`: entering a sub-type (a sub-float, a
-/// `{subcaptiongroup}`, a `\subcaption`) runs what packages added to `\caption@subtypehook`, in the sub-type's group.
+/// `{subcaptiongroup}`, a `\subcaption`, a `\phantomsubcaption`) runs what packages added to `\caption@subtypehook`, in
+/// the sub-type's group.
 pub fn run_caption_subtype_hook() -> Result<()> {
-  Digest!(r"\@nameuse{caption@subtypehook}")?;
+  Digest!(caption_subtype_hook())?;
   Ok(())
+}
+
+/// `\@nameuse{caption@subtypehook}`, for a macro entering the sub-type.
+fn caption_subtype_hook() -> Tokens {
+  Tokens!(
+    T_CS!("\\@nameuse"),
+    T_BEGIN!(),
+    Explode!("caption@subtypehook"),
+    T_END!()
+  )
 }
 
 /// Environments whose body is read VERBATIM from the raw input, so `\captionof`
@@ -1015,8 +1026,8 @@ LoadDefinitions!({
     remove_value(&s!("{captype}_inlist"));
   });
   // subcaption.sty:252 `\phantomsubcaption` = `\setcaptionsubtype*\phantomcaption`: the sub-type's
-  // counter (`sub<captype>`) steps — `\phantomcaption` itself inside a sub-float, whose
-  // `\@captype` is already the sub-type.
+  // counter (`sub<captype>`) steps, after `\caption@subtypehook` — `\phantomcaption` itself inside a
+  // sub-float, whose `\@captype` is already the sub-type (the hook ran on entering it).
   DefMacro!("\\phantomsubcaption", sub[_args] {
     if !has_meaning(&T_CS!("\\@captype")) {
       return Ok(Tokens!());
@@ -1025,7 +1036,11 @@ LoadDefinitions!({
     Ok(if captype.trim().starts_with("sub") {
       Tokens!(T_CS!("\\phantomcaption"))
     } else {
-      Tokens!(T_CS!("\\refstepcounter"), T_BEGIN!(), Explode!("sub"), T_CS!("\\@captype"), T_END!())
+      let mut tokens = caption_subtype_hook().unlist();
+      tokens.extend(
+        Tokens!(T_CS!("\\refstepcounter"), T_BEGIN!(), Explode!("sub"), T_CS!("\\@captype"), T_END!()).unlist(),
+      );
+      Tokens::new(tokens)
     })
   });
   // caption.sty:633-638 `\subcaptionsetup*[<type>]{<options>}` = `\captionsetup*[sub<type>]{<options>}`: the

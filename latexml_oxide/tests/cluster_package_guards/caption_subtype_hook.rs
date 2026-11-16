@@ -2,11 +2,11 @@
 //! binding and run by subcaption's sub-floats (`run_caption_subtype_hook`). The kernel's first aid for subcaption v1.6b
 //! (latex2e-first-aid-for-external-files.ltx:197-201, TL 2026) adds to it, so did every paper's own caption copy; the
 //! first aid's line is written into the source here, so the guards hold on any TeX Live.
-use latexml::util::test::{assert_element, convert_with, error_count};
+use latexml::util::test::{assert_element, convert_with, error_count, warning_count};
 
 fn convert(tex: &str) -> String {
   let (log, xml) = convert_with(tex, None);
-  assert_eq!(error_count(&log), 0, "{log}");
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
   xml
 }
 
@@ -72,4 +72,37 @@ After: \ifdefined\lxmark defined\else undefined\fi.
     </figure>"#,
   );
   assert!(xml.contains("<p>After: undefined.</p>"), "{xml}");
+}
+
+/// caption.sty:325-330 `\@setcaptionsubtype`: entering a sub-type runs the hook once, and not again inside one
+/// (`\caption@ifsubtype`): a `{subfigure}` (its `\phantomsubcaption` inside it skips), a `\phantomsubcaption` and a
+/// `\subcaption` in a minipage (subcaption.sty:251-252). pdflatex: "R1: 1.", "R2: 2.", "R3: 3.".
+#[test]
+fn subtype_hook_runs_once_per_sub_type() {
+  let xml = convert(
+    r"\documentclass{article}
+\usepackage{subcaption}
+\newcounter{hk}
+\makeatletter\g@addto@macro\caption@subtypehook{\stepcounter{hk}}\makeatother
+\begin{document}
+\begin{figure}\begin{subfigure}{.3\textwidth}A\phantomsubcaption\end{subfigure}\caption{F}\end{figure}
+R1: \thehk.
+
+\begin{figure}\begin{minipage}{.3\textwidth}C\phantomsubcaption\end{minipage}\caption{F}\end{figure}
+R2: \thehk.
+
+\begin{figure}\begin{minipage}{.3\textwidth}D\subcaption{d}\end{minipage}\caption{F}\end{figure}
+R3: \thehk.
+\end{document}",
+  );
+  let runs: Vec<&str> = xml
+    .lines()
+    .map(str::trim)
+    .filter(|line| line.starts_with("<p>R"))
+    .collect();
+  assert_eq!(
+    runs,
+    ["<p>R1: 1.</p>", "<p>R2: 2.</p>", "<p>R3: 3.</p>"],
+    "{xml}"
+  );
 }
