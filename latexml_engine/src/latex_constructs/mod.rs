@@ -630,8 +630,9 @@ pub(crate) fn enter_title_footnotes() {
 /// `\lx@title@cell@declared{<flush>:<creator>}`, after an author block's declaration the flush runs ahead of its names
 /// (`emit::declarations`): a `\thefootnote` it redefined holds in its cell of the `\@author` tabular alone, which `\and`,
 /// `\\` and `&` end (latex.ltx:17219-17222) — the name `key` names keeps it ([`title_cell_enter`]; 1807.02791's
-/// `\renewcommand{\thefootnote}{\arabic{footnote}}` before its one name, "1 2"), a key naming none leaves every name's
-/// mark unknown ([`title_mark_unknown`]), and the flush goes on with the one before it.
+/// `\renewcommand{\thefootnote}{\arabic{footnote}}` before its one name, "1 2"), a cell of several names leaves every
+/// name's mark unknown ([`title_mark_unknown`]), one of no name (a line's, `-`) none, and the flush goes on with the one
+/// before it.
 pub(crate) fn title_cell_declared(key: &str) {
   let definition = |cs: &Token| lookup_definition(cs).ok().flatten();
   let thefootnote = T_CS!("\\thefootnote");
@@ -644,9 +645,10 @@ pub(crate) fn title_cell_declared(key: &str) {
   if Rc::ptr_eq(&before, &now) {
     return;
   }
+  // (a cell of several names: which one's, unknown; of none, a line's, which prints no name's mark)
   if key.ends_with(':') {
     assign_value(CELL_UNKNOWN, true, Some(Scope::Global));
-  } else {
+  } else if !key.ends_with(":-") {
     let_i(&cell_thefootnote(key), &thefootnote, Some(Scope::Global));
   }
   let_i(&thefootnote, &T_CS!(FLUSH_THEFOOTNOTE), None);
@@ -680,8 +682,8 @@ pub(crate) fn enter_title_cell(tag: &str) {
   }
 }
 
-/// The command after an author block's declaration the flush runs ahead of its names ([`title_cell_declared`]), and the
-/// one before the field of a name whose cell declared a `\thefootnote` ([`title_cell_enter`]): `emit::declarations`
+/// The command after an author block's declaration the flush runs ahead of its names (`title_cell_declared`), and the
+/// one before the field of a name whose cell declared a `\thefootnote` (`title_cell_enter`): `emit::declarations`
 /// writes them.
 pub const TITLE_CELL_DECLARED: &str = "\\lx@title@cell@declared";
 pub const TITLE_CELL_ENTER: &str = "\\lx@title@cell@enter";
@@ -752,7 +754,7 @@ pub fn class_maketitle_in_force() -> bool {
 /// document's own); where none does and a raw file's `\maketitle` runs (an unbound class's: scrartcl's prints `\fnsymbol`
 /// where Perl's number key read `\footnotemark[1]` "1", the advisor's I-3); and for a name's notes under a class that
 /// sets them apart (`lx_title_footnote_own_marks`: REVTeX 4.1/4.2's minipage letters, "Ann Ablea", revtex4-2.cls:2555-2557)
-/// or past a `\thefootnote` declared in no known cell ([`title_cell_declared`]). OD #1053.
+/// or past a `\thefootnote` declared in no known cell (`title_cell_declared`). OD #1053.
 pub fn title_marks_unknown(name: bool) -> bool {
   let unknown = if title_marks_hook() {
     !class_maketitle_in_force()

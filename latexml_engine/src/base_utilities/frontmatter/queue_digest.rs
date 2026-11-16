@@ -371,10 +371,10 @@ pub(in crate::base_utilities) fn frontmatter_label_keys(
   Ok(frontmatter_label_request(operand, prefix)?.0)
 }
 
-/// The labels a mark's operand prints, each comma piece whole: [`printed_label`]'s text, else its spelling, read by
-/// [`clean_frontmatter_labels`] and compared as marks are (`insert::mark_form`: no math shift, one asterisk). One key for
+/// The labels a mark's operand prints, each comma piece whole: `printed_label`'s text, else its spelling, read by
+/// `clean_frontmatter_labels` and compared as marks are (`insert::mark_form`: no math shift, one asterisk). One key for
 /// both sides of a label match a binding counts: authblk's `\author[\affA]` with `\newcommand\affA{1}` prints 1, as
-/// its `\affil[1]` does (review revMARKSAFE S3; [`frontmatter_label_keys`] parts the pieces further).
+/// its `\affil[1]` does (review revMARKSAFE S3; `frontmatter_label_keys` parts the pieces further).
 pub fn printed_label_pieces(operand: &Tokens) -> Result<Vec<String>> {
   let text = match printed_label(operand)? {
     Some(printed) => printed.text,

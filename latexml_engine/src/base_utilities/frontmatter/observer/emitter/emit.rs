@@ -3426,8 +3426,9 @@ fn kept_breaks(piece: &[Event]) -> Vec<usize> {
 /// markup the blocks are digested under (`under_author_markup`), as pdflatex runs them inside the title code's group: a
 /// paper's macro calling a title-code command declares there (`\newcommand\setaff[1]{\instref{#1}\gdef\affA{…}}`, klmm.sty's
 /// `\instref`, 2606.12100), where apart it erred undefined. Each is followed by `\lx@title@cell@declared{<flush>:<creator>}`,
-/// the one name its cell of the `\@author` tabular holds (`<flush>:` for none or several): a `\thefootnote` it sets holds
-/// in that name's field alone (`latex_constructs::title_cell_declared`); the names so keyed go in `keyed`.
+/// the one name its cell of the `\@author` tabular holds (`<flush>:-` for none, a line's; `<flush>:` for several): a
+/// `\thefootnote` it sets holds in that name's field alone (`latex_constructs::title_cell_declared`); the names so keyed go
+/// in `keyed`.
 fn declarations(
   by_block: &BTreeMap<usize, Vec<usize>>,
   name_runs: &BTreeMap<usize, Vec<(usize, usize)>>,
@@ -3456,19 +3457,22 @@ fn declarations(
         })
         .filter_map(|e| at(e.span?.0))
         .collect();
-      let cell_name = |offset: usize| {
+      // (the names whose run starts in the cell holding `offset`)
+      let cell_names = |offset: usize| -> Vec<usize> {
         let from = ends.iter().copied().filter(|&end| end <= offset).max();
         let to = ends.iter().copied().filter(|&end| end > offset).min();
-        let mut names = members.iter().copied().filter(|i| {
-          name_runs
-            .get(i)
-            .and_then(|runs| runs.first())
-            .is_some_and(|&(start, _)| {
-              from.is_none_or(|from| start > from) && to.is_none_or(|to| start < to)
-            })
-        });
-        let name = names.next()?;
-        names.next().is_none().then_some(name)
+        members
+          .iter()
+          .copied()
+          .filter(|i| {
+            name_runs
+              .get(i)
+              .and_then(|runs| runs.first())
+              .is_some_and(|&(start, _)| {
+                from.is_none_or(|from| start > from) && to.is_none_or(|to| start < to)
+              })
+          })
+          .collect()
       };
       let spanned: Vec<&Event> = declarations.iter().filter(|e| e.span.is_some()).collect();
       for (event, span) in spanned
@@ -3479,12 +3483,15 @@ fn declarations(
           continue;
         };
         out.extend_from_slice(span);
-        let name = event
-          .span
-          .and_then(|(start, _)| at(start))
-          .and_then(cell_name);
-        keyed.extend(name);
-        let key = name.map_or_else(|| s!("{flush}:"), |i| s!("{flush}:{i}"));
+        let names = event.span.and_then(|(start, _)| at(start)).map(cell_names);
+        let key = match names.as_deref() {
+          Some([name]) => {
+            keyed.insert(*name);
+            s!("{flush}:{name}")
+          },
+          Some([]) => s!("{flush}:-"),
+          _ => s!("{flush}:"),
+        };
         out.extend(cs_group(TITLE_CELL_DECLARED, &[&internal(&key)]));
       }
     }

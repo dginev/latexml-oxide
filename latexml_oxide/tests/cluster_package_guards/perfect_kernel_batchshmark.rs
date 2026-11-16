@@ -595,6 +595,24 @@ Text.
       row(&["Cat Cole", "thanks[‡]=Note C."]),
     ]
   );
+  // (one in a line's cell, which holds no name, renumbers no name: pdflatex "Ann Able∗ Bob Baker†")
+  assert_eq!(
+    marked_notes(
+      r"\documentclass{article}
+\title{T}
+\author{Ann Able\footnotemark[1] \\ \renewcommand{\thefootnote}{\arabic{footnote}}Univ A \and Bob Baker\footnotemark[2]}
+\date{}
+\begin{document}
+\maketitle
+Body.
+\end{document}",
+      0
+    ),
+    [
+      row(&["Ann Able", "footnotemark[*]="]),
+      row(&["Bob Baker", "footnotemark[†]="]),
+    ]
+  );
 }
 
 /// A name's mark the class sets apart, which no reading knows, is written with none (`latex_constructs::

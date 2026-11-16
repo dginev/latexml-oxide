@@ -19660,8 +19660,8 @@ latex_constructs.pool.ltxml:503-527); acmart's `\authornote` is a contact, `\aut
   (latex.ltx:17219-17222), for both readers of the marks: the flush runs the block's declarations ahead of its names
   (`emit::declarations`), each followed by `\lx@title@cell@declared{<flush>:<creator>}`, keyed to the one name its cell
   holds; a `\thefootnote` it set is that name's (`\lx@title@cell@enter`, `latex_constructs::enter_title_cell`) and the
-  flush goes on with the one before it; a cell holding no name or several leaves every name's mark of the flush
-  unknown. The rehearsal, which reads the `\thanks` marks, starts each cell with the title's marks again
+  flush goes on with the one before it; a cell of several names leaves every name's mark of the flush unknown, one of
+  no name (a line's: `\\ \renewcommand…Univ A`, pdflatex "Ann Able∗ Bob Baker†") renumbers none. The rehearsal, which reads the `\thanks` marks, starts each cell with the title's marks again
   (`latex_constructs::rehearsal_cell_ends` at `\and` and `\\`). 1807.02791's `\renewcommand{\thefootnote}{\arabic
   {footnote}}` before its one name prints "Andrea Roccaverde 1 2"; `\author{Ann\footnotemark[1] \and \renewcommand…
   Bob\footnotemark[2] \and Cy\footnotemark[3]}` "Ann Able∗ Bob Baker2 Cy Cole‡"; `\author{\renewcommand…Ann\thanks{…}
