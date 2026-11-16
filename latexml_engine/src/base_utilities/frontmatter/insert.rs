@@ -706,6 +706,51 @@ pub(in crate::base_utilities) const MARK_IN_TEXT: &str = "_markintext";
 /// printing "*∗" (`pure_names::answer`). Finalize drops it with the other `_` attributes.
 pub(in crate::base_utilities) const MARK_FROM_COUNTER: &str = "_markfromcounter";
 
+/// The flag on a creator's note written with no mark because the mark its title prints is unknown here
+/// (`latex_constructs::title_marks_unknown`), which [`count_unknown_marks`] reads at the document's end.
+pub(in crate::base_utilities) const MARK_UNKNOWN: &str = "_markunknown";
+
+/// The authors' notes written with no mark, their glyph unknown ([`MARK_UNKNOWN`]), once the document is built: a note
+/// whose text never came (a `\footnotemark[1]` whose note no number key names yet, a scrartcl name's under Ann's
+/// `\thanks`) is a mark lost, counted as `count_lost_marks` counts one; those placed under their author, an Info (DG
+/// 2026-11-16: the association known, the glyph not). OD #1053.
+pub(in crate::base_utilities) fn count_unknown_marks(document: &mut Document) {
+  let notes = document.findnodes(&s!(".//ltx:creator/ltx:note[@{MARK_UNKNOWN}]"), None);
+  if notes.is_empty() {
+    return;
+  }
+  let mut placed = 0;
+  for note in &notes {
+    let holds_text = note.get_child_nodes().iter().any(|child| {
+      if child.get_type() == Some(NodeType::ElementNode) {
+        child.get_name() != "tags"
+      } else {
+        !child.get_content().trim().is_empty()
+      }
+    });
+    if holds_text {
+      placed += 1;
+    } else {
+      Warn!(
+        "frontmatter",
+        "unanswered_mark_lost",
+        "A footnote mark on an author's name whose note cannot be identified, its glyph unknown here, is written with \
+         none"
+      );
+    }
+  }
+  if placed > 0 {
+    Info!(
+      "frontmatter",
+      "unknown_mark",
+      s!(
+        "{placed} author note(s) written with no mark, the mark the title prints being unknown here: each under its \
+         author"
+      )
+    );
+  }
+}
+
 /// The bare copy of its mark a note's text opens with, taken out where the mark was read off it ([`MARK_IN_TEXT`]):
 /// ieeeconf's `\thanks{*Authors to whom correspondence should be addressed.}` (2606.00397). Whether it was.
 fn strip_bare_mark(note: &mut Node) -> Result<bool> {

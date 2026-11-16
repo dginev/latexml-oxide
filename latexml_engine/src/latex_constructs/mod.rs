@@ -587,47 +587,35 @@ pub fn declare_fnsymbol_title_block(class: &str, titlepage_default: Option<bool>
 /// (`ledger::class_maketitle_runs`, `MaketitleRuns::WithoutTitlepage`, TP1c).
 pub fn class_titlepage_key(class: &str) -> String { s!("lx_class_titlepage:{class}") }
 
-/// The `\thefootnote` a frontmatter flush's next title field is told against (`place::digest_front_matter`):
-/// the one in force as the flush began ([`begin_title_footnotes`]), then the one a name's field last kept
-/// ([`title_field_footnotes`]).
+/// The `\thefootnote` in force as a frontmatter flush began (`place::digest_front_matter`), which an author block's
+/// declarations the flush runs ahead of its names are told against ([`title_cell_declared`]).
 const FLUSH_THEFOOTNOTE: &str = "\\lx@flush@thefootnote";
+/// The name whose field comes next and takes its cell's `\thefootnote` ([`title_cell_enter`]), and whether a
+/// declaration of no known cell redefined it in this flush ([`title_cell_declared`]).
+const CELL_PENDING: &str = "lx_title_cell_pending";
+const CELL_UNKNOWN: &str = "lx_title_cell_unknown";
 
-/// A frontmatter flush begins: the `\thefootnote` in force kept ([`FLUSH_THEFOOTNOTE`]).
+/// The `\thefootnote` an author block's cell `key` (`<flush>:<creator>`) declared.
+fn cell_thefootnote(key: &str) -> Token { T_CS!(s!("\\lx@title@cell@thefootnote@{key}")) }
+
+/// A frontmatter flush begins: the `\thefootnote` in force kept ([`FLUSH_THEFOOTNOTE`]), no cell's pending.
 pub(crate) fn begin_title_footnotes() {
   let_i(
     &T_CS!(FLUSH_THEFOOTNOTE),
     &T_CS!("\\thefootnote"),
     Some(Scope::Global),
   );
+  assign_value(CELL_PENDING, Stored::String(pin("")), Some(Scope::Global));
+  assign_value(CELL_UNKNOWN, false, Some(Scope::Global));
 }
 
-/// Before the group of a field of the title block (`tag`: the title, an author, the date, a contact), at the flush's
-/// level: does the field take the class's `\thefootnote` ([`enter_title_footnotes`])? Under a class declaring its title's
-/// marks ([`TITLE_THEFOOTNOTE`], `declare_fnsymbol_title_block`) whose `\maketitle` is in force
-/// ([`title_marks_declared`]), yes, as the class's `\maketitle` group sets it before `\@author` expands
-/// (article.cls:203-205) — unless an author block's declaration the flush ran before its names
-/// (`emit::declarations`) redefined it: as in TeX, that holds in the name it is written with, its cell of the
-/// `\@author` tabular (1807.02791's `\renewcommand{\thefootnote}{\arabic{footnote}}` in `\author`, its
-/// `\footnotemark[1]` "1"), so the next name's field keeps it and the names after take the class's again ("Ann Able1
-/// Bob Baker†"). A redefinition inside a field holds there, after the field's own setting.
+/// Does a field of the title block (`tag`) take the class's `\thefootnote` ([`enter_title_footnotes`]), as its
+/// `\maketitle` sets it before `\@author` expands (article.cls:203-205)? OXIDIZED_DESIGN_DIVERGENCES #1053.
 pub(crate) fn title_field_footnotes(tag: &str) -> bool {
-  if !matches!(
+  matches!(
     tag,
     "ltx:creator" | "ltx:title" | "ltx:date" | "ltx:contact"
-  ) || !title_marks_declared()
-  {
-    return false;
-  }
-  if tag == "ltx:creator" && flush_redefined_thefootnote() {
-    // (global: the entry's call may digest in a group of its own)
-    let_i(
-      &T_CS!(FLUSH_THEFOOTNOTE),
-      &T_CS!("\\thefootnote"),
-      Some(Scope::Global),
-    );
-    return false;
-  }
-  true
+  ) && title_marks_declared()
 }
 
 /// As a field of the title block begins, in its group, where it takes the class's marks ([`title_field_footnotes`]):
@@ -639,13 +627,85 @@ pub(crate) fn enter_title_footnotes() {
   let_i(&T_CS!("\\thefootnote"), &T_CS!(TITLE_THEFOOTNOTE), None);
 }
 
-/// Has `\thefootnote` been redefined, by meaning, since the flush began or a name's field last kept it
-/// ([`FLUSH_THEFOOTNOTE`])?
-fn flush_redefined_thefootnote() -> bool {
-  let definition = |cs: &str| lookup_definition(&T_CS!(cs)).ok().flatten();
-  match (definition(FLUSH_THEFOOTNOTE), definition("\\thefootnote")) {
-    (Some(before), Some(now)) => !Rc::ptr_eq(&before, &now),
-    _ => false,
+/// `\lx@title@cell@declared{<flush>:<creator>}`, after an author block's declaration the flush runs ahead of its names
+/// (`emit::declarations`): a `\thefootnote` it redefined holds in its cell of the `\@author` tabular alone, which `\and`,
+/// `\\` and `&` end (latex.ltx:17219-17222) — the name `key` names keeps it ([`title_cell_enter`]; 1807.02791's
+/// `\renewcommand{\thefootnote}{\arabic{footnote}}` before its one name, "1 2"), a key naming none leaves every name's
+/// mark unknown ([`title_mark_unknown`]), and the flush goes on with the one before it.
+pub(crate) fn title_cell_declared(key: &str) {
+  let definition = |cs: &Token| lookup_definition(cs).ok().flatten();
+  let thefootnote = T_CS!("\\thefootnote");
+  let (Some(before), Some(now)) = (
+    definition(&T_CS!(FLUSH_THEFOOTNOTE)),
+    definition(&thefootnote),
+  ) else {
+    return;
+  };
+  if Rc::ptr_eq(&before, &now) {
+    return;
+  }
+  if key.ends_with(':') {
+    assign_value(CELL_UNKNOWN, true, Some(Scope::Global));
+  } else {
+    let_i(&cell_thefootnote(key), &thefootnote, Some(Scope::Global));
+  }
+  let_i(&thefootnote, &T_CS!(FLUSH_THEFOOTNOTE), None);
+}
+
+/// `\lx@title@cell@enter{<flush>:<creator>}`, before the field of a name whose cell declared its `\thefootnote`
+/// ([`title_cell_declared`]): the field takes it ([`enter_title_cell`]).
+pub(crate) fn title_cell_enter(key: &str) {
+  assign_value(CELL_PENDING, Stored::String(pin(key)), Some(Scope::Global));
+}
+
+/// The `\thefootnote` a field of the title block began with, before any declaration of its own ([`enter_title_cell`]).
+const FIELD_THEFOOTNOTE: &str = "\\lx@field@thefootnote";
+
+/// As a name's field begins, in its group, after the class's marks ([`enter_title_footnotes`]): its cell's
+/// `\thefootnote` ([`title_cell_enter`]), as TeX sets the declaration after the class's in that cell. The one the field
+/// began with is kept ([`FIELD_THEFOOTNOTE`]): a mark made under another is the document's own ([`title_mark_unknown`]).
+pub(crate) fn enter_title_cell(tag: &str) {
+  let_i(&T_CS!(FIELD_THEFOOTNOTE), &T_CS!("\\thefootnote"), None);
+  if tag != "ltx:creator" {
+    return;
+  }
+  let key = lookup_string(CELL_PENDING);
+  if key.is_empty() {
+    return;
+  }
+  assign_value(CELL_PENDING, Stored::String(pin("")), Some(Scope::Global));
+  let cell = cell_thefootnote(&key);
+  if lookup_definition(&cell).ok().flatten().is_some() {
+    let_i(&T_CS!("\\thefootnote"), &cell, None);
+  }
+}
+
+/// The command after an author block's declaration the flush runs ahead of its names ([`title_cell_declared`]), and the
+/// one before the field of a name whose cell declared a `\thefootnote` ([`title_cell_enter`]): `emit::declarations`
+/// writes them.
+pub const TITLE_CELL_DECLARED: &str = "\\lx@title@cell@declared";
+pub const TITLE_CELL_ENTER: &str = "\\lx@title@cell@enter";
+
+/// The title's marks a rehearsal of an author block binds (`rehearsal::install_event_bindings`), which each cell of the
+/// block starts with ([`rehearsal_cell_ends`]).
+const REHEARSAL_CELL_THEFOOTNOTE: &str = "\\lx@fm@obs@cell@thefootnote";
+
+/// A rehearsal's `\thefootnote` is bound: each cell of the block starts with it ([`rehearsal_cell_ends`]).
+pub fn rehearsal_cells_begin() {
+  let_i(
+    &T_CS!(REHEARSAL_CELL_THEFOOTNOTE),
+    &T_CS!("\\thefootnote"),
+    None,
+  );
+}
+
+/// A cell of the `\@author` tabular a rehearsal reads ends (`\and`, `\\`): a `\thefootnote` declared in it ends with it,
+/// as its group does in TeX (latex.ltx:17219-17222): `\author{\renewcommand\thefootnote{\arabic{footnote}}Ann\thanks{…}
+/// \and Bob\thanks{…}}` prints "Ann1 Bob†" (review revMARKSAFE S1).
+pub fn rehearsal_cell_ends() {
+  let cell = T_CS!(REHEARSAL_CELL_THEFOOTNOTE);
+  if lookup_definition(&cell).ok().flatten().is_some() {
+    let_i(&T_CS!("\\thefootnote"), &cell, None);
   }
 }
 
@@ -680,31 +740,51 @@ pub fn class_maketitle_in_force() -> bool {
   ) else {
     return false;
   };
+  // (by a copy: `\maketitle` itself in its new body would call the new one, so a raw class's own, which ends with
+  // `\let\maketitle\relax` and names it `\string\maketitle` in its messages, scrartcl.cls:2933, :3041, calls nothing)
+  let maketitle = T_CS!("\\maketitle");
   matches!(
     dropped.get_expansion(),
     Some(ExpansionBody::Tokens(body))
-      if body.unlist_ref().iter().any(|t| definition(t).is_some_and(|d| Rc::ptr_eq(&d, &class)))
+      if body.unlist_ref().iter().any(|t| {
+        *t != maketitle && definition(t).is_some_and(|d| Rc::ptr_eq(&d, &class))
+      })
   )
 }
 
-/// Is the mark a note made here prints unknown? In a field of the title block of a class declaring its marks
-/// ([`TITLE_THEFOOTNOTE`]) when its `\maketitle` is not in force ([`class_maketitle_in_force`]), or in a name under a
-/// class that sets a name's notes apart (`lx_title_footnote_own_marks`: REVTeX 4.1/4.2's minipage letters, "Ann Ablea",
-/// revtex4-2.cls:2555-2557): such a note keeps no mark ([`drop_unknown_title_mark`]).
-fn title_mark_unknown() -> bool {
-  in_title_field()
-    && title_marks_hook()
-    && (!class_maketitle_in_force()
-      || (lookup_string("lx_frontmatter_item") == "ltx:creator"
-        && lookup_bool("lx_title_footnote_own_marks")))
+/// Are the marks the title prints unknown here, for a name's notes (`name`) or any other's? Where the `\maketitle` that
+/// runs is not the class's own ([`class_maketitle_in_force`]: a document's, a package's, a raw class's — scrartcl's
+/// prints `\fnsymbol` where Perl's number key read "1"), and for a name's notes under a class that sets them apart
+/// (`lx_title_footnote_own_marks`: REVTeX 4.1/4.2's minipage letters, "Ann Ablea", revtex4-2.cls:2555-2557) or past a
+/// `\thefootnote` declared in no known cell ([`title_cell_declared`]). OD #1053.
+pub fn title_marks_unknown(name: bool) -> bool {
+  !class_maketitle_in_force()
+    || (name && (lookup_bool("lx_title_footnote_own_marks") || lookup_bool(CELL_UNKNOWN)))
 }
 
-/// A note made where its printed mark is unknown ([`title_mark_unknown`]) keeps none: no `mark`, no tags; it pairs with
-/// its text by the counter value (`_fnvalue`, [`relocate_footnote`]).
+/// Is the mark a note made here prints unknown ([`title_marks_unknown`]), in a field of the title block? Not where the
+/// document set `\thefootnote` itself since the field began, its cell's declaration or a macro's (aiaa-tc's
+/// `\thanksibid{2}`, `\renewcommand\thefootnote{\fnsymbol{aiaa@cthanks}}\footnotemark`, "†": 1505.07844), which TeX
+/// prints whatever the `\maketitle`.
+fn title_mark_unknown() -> bool {
+  let definition = |cs: &str| lookup_definition(&T_CS!(cs)).ok().flatten();
+  let own = match (definition(FIELD_THEFOOTNOTE), definition("\\thefootnote")) {
+    (Some(field), Some(now)) => !Rc::ptr_eq(&field, &now),
+    _ => false,
+  };
+  in_title_field()
+    && !own
+    && title_marks_unknown(lookup_string("lx_frontmatter_item") == "ltx:creator")
+}
+
+/// A note made where its printed mark is unknown ([`title_mark_unknown`]) keeps none: no `mark`, no tags, flagged so
+/// (`insert::MARK_UNKNOWN`, counted at the document's end); it pairs with its text by the counter value (`_fnvalue`,
+/// [`relocate_footnote`]).
 pub(crate) fn drop_unknown_title_mark(props: &mut SymHashMap<Stored>) {
   if title_mark_unknown() {
     props.remove("mark");
     props.remove("tags");
+    props.insert("markunknown", Stored::String(pin("true")));
   }
 }
 

@@ -1,0 +1,17 @@
+% mechanism: a `\thefootnote` declared in Bob's cell ends at its `\\` and at the `\and`: the line after it and the next
+%   name take the class's marks again
+% witness:  review revMARKSAFE S1 (the brief's probe)
+% oracle:   pdflatex 0 errors; "Ann Able∗ Bob Baker2 Cat Cole‡", "Univ B∗" under Bob
+% engines:  rust MARKSAFEb merge 16e5e53b4a4 = 0 errors, 1 Warning (Univ B's mark lost, counted); Ann "∗", Bob "2", Cat "3"
+% expect:   0 errors, 1 Warning (the same); Ann "∗", Bob "2", Cat "‡"
+% status:   RED -> GREEN (MARKSAFEb: perfect_kernel_batchshmark::a_thefootnote_the_author_block_sets_holds_for_its_name);
+%   Univ B's printed ∗ lost with a Warning (a mark on a contact line: the emitter writes it on no name)
+% preload:  ar5iv.sty
+\documentclass{article}
+\title{T}
+\author{Ann Able\thanks{Note A.} \and \renewcommand{\thefootnote}{\arabic{footnote}}Bob Baker\thanks{Note B.} \\ Univ B\footnotemark[1] \and Cat Cole\thanks{Note C.}}
+\date{}
+\begin{document}
+\maketitle
+Body.
+\end{document}

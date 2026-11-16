@@ -1,0 +1,16 @@
+% mechanism: an unbound class's name `\footnote` stays its name's note contact (Perl's, Base_Utility.pool.ltxml:663),
+%   no glyph shown: the sibling of the unknown-mark fail-safe on the contact path
+% witness:  sibling of review revMARKSAFE / ADVGEN I-3
+% oracle:   pdflatex 0 errors; "Ann Able∗ Bob Baker", footnote "∗ Note A."
+% engines:  rust MARKSAFEb merge 16e5e53b4a4 = 0 errors, 0 Warnings; Ann's contact role=note "Note A."
+% expect:   0 errors, 0 Warnings; the contact; HTML no glyph
+% status:   GREEN (perfect_kernel_batchfmmarks::notes_are_marked_only_where_the_class_prints_marks)
+% preload:  ar5iv.sty
+\documentclass{scrartcl}
+\title{T}
+\author{Ann Able\footnote{Note A.} \and Bob Baker}
+\date{}
+\begin{document}
+\maketitle
+Body.
+\end{document}

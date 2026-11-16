@@ -357,7 +357,7 @@ pub fn define_author_and_affil() -> Result<()> {
     // authblk's bookkeeping after the author (`\lx@AB@author@state`, below).
     let mut state = vec![T_CS!("\\lx@AB@author@state"), T_BEGIN!()];
     if let Some(label) = label.as_ref() {
-      note_labels(NAME_LABELS, label);
+      note_labels(NAME_LABELS, label)?;
       state.extend(label.unlist_ref().iter().copied());
     }
     state.push(T_END!());
@@ -398,7 +398,7 @@ pub fn define_author_and_affil() -> Result<()> {
     if label.is_empty() {
       assign_value(LINE_UNLABELLED, true, Some(Scope::Global));
     } else {
-      note_labels(LINE_LABELS, &label);
+      note_labels(LINE_LABELS, &label)?;
     }
     let replay = Invocation!(T_CS!("\\lx@replay@class@setter"), vec![
       Some(Tokens::new(Explode!("affil"))),
@@ -459,25 +459,18 @@ const NAME_LABELS: &str = "lx_AB_name_labels";
 const LINE_LABELS: &str = "lx_AB_line_labels";
 const LINE_UNLABELLED: &str = "lx_AB_line_unlabelled";
 
-/// Note each comma piece of `label` under `key` ([`NAME_LABELS`], [`LINE_LABELS`]), as authblk prints it whole, a formula
-/// round it aside (`$\dag$` is `\dag`): one that is letters and digits, symbols (`**`, `§`) or one command (`\S`); a
-/// group, a note, a mixed piece (`1$^*$`, 2412.03338) or a command glued to letters (`\dag a`, read back `\daga`) is no
-/// mark compared here.
-fn note_labels(key: &str, label: &Tokens) {
-  let text = label.clone().untex_string().to_string();
+/// Note each comma piece of `label` under `key` ([`NAME_LABELS`], [`LINE_LABELS`]) by the text it prints, both sides read
+/// alike (`printed_label_pieces`: `\author[\affA]` with `\newcommand\affA{1}` is `\affil[1]`'s 1, `$\dag$` and `\dag`
+/// one †): one that is letters and digits, or symbols (`**`, `§`); a mixed piece (`1$^*$`, 2412.03338), or one read by
+/// its spelling holding more than one command, is no mark compared here.
+fn note_labels(key: &str, label: &Tokens) -> Result<()> {
   let mut kept = lookup_string(key);
-  for piece in text.split(',').map(str::trim) {
-    let piece = piece
-      .strip_prefix('$')
-      .and_then(|p| p.strip_suffix('$'))
-      .map_or(piece, str::trim);
+  for piece in printed_label_pieces(label)? {
     let symbol = |c: char| {
       c == '*' || c == '#' || (!c.is_ascii() && !c.is_alphanumeric() && !c.is_whitespace())
     };
     let single = match piece.strip_prefix('\\') {
-      None => {
-        !piece.is_empty() && (piece.chars().all(char::is_alphanumeric) || piece.chars().all(symbol))
-      },
+      None => piece.chars().all(char::is_alphanumeric) || piece.chars().all(symbol),
       Some(name) => {
         !name.is_empty() && (name.chars().all(char::is_alphabetic) || name.chars().count() == 1)
       },
@@ -486,10 +479,11 @@ fn note_labels(key: &str, label: &Tokens) {
       if !kept.is_empty() {
         kept.push('\u{1}');
       }
-      kept.push_str(piece);
+      kept.push_str(&piece);
     }
   }
   assign_value(key, Stored::String(pin(&kept)), Some(Scope::Global));
+  Ok(())
 }
 
 /// authblk prints each name's labels (`\AB@authnote`, authblk.sty:120-133) and each line's before it
@@ -506,8 +500,8 @@ fn count_lost_labels() {
       .collect();
     if !lost.is_empty() {
       Warn!(
-        "unexpected",
         "frontmatter",
+        "unanswered_mark_lost",
         s!(
           "authblk prints {} label(s) of the names no \\affil explains, written on no name: {}",
           lost.len(),

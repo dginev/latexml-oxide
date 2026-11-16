@@ -11,7 +11,7 @@ pub(in crate::base_utilities) use names::*;
 use crate::base_utilities::{
   defs::frontmatter_api::spacing_formulas_as_space,
   frontmatter::{
-    LIST_MARK, MARK_FROM_COUNTER,
+    LIST_MARK, MARK_FROM_COUNTER, MARK_UNKNOWN,
     classify::title_code::{reads_arguments, title_code_author_definitions},
     observer::events::{
       self, Event, EventKind, events_text, lex_body_with_inks, lex_events, opening_ink,
@@ -376,6 +376,15 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
       step_counter("footnote", false)?;
     }
     Ok(())
+  });
+  // An author block's `\thefootnote` declaration holds in its cell of the `\@author` tabular (latex.ltx:17219-17222):
+  // the emitter keys each one it runs ahead of the names to its cell's name, `<flush>:<creator>`
+  // (`latex_constructs::title_cell_declared`, `title_cell_enter`; 1807.02791).
+  DefPrimitive!("\\lx@title@cell@declared Semiverbatim", sub[(key)] {
+    crate::latex_constructs::title_cell_declared(&key.to_string());
+  });
+  DefPrimitive!("\\lx@title@cell@enter Semiverbatim", sub[(key)] {
+    crate::latex_constructs::title_cell_enter(&key.to_string());
   });
   // A creator's note after its step, marked as its title prints it (`title_notes_print_marks`; article.cls:205, :241);
   // an unmarked `\footnote` Perl's contact (Base_Utility.pool.ltxml:663). OD #1053; 2502.19103, 1911.13299, 2301.00220.
@@ -1013,9 +1022,17 @@ fn title_note(footnote: bool, attr: Option<Tokens>, body: Tokens) -> Result<()> 
     None if footnote => ("ltx:contact", s!("role=note")),
     mark => {
       let class = classify_thanks(body.clone().untex_string().as_ref());
-      let marked = mark.map_or_else(String::new, |mark| {
-        s!(",mark={{{mark}}},{MARK_FROM_COUNTER}=true")
-      });
+      // (none where the mark the title prints is unknown here, flagged so: `insert::count_unknown_marks`)
+      let marked = mark.map_or_else(
+        || {
+          if crate::latex_constructs::title_marks_unknown(false) {
+            s!(",{MARK_UNKNOWN}=true")
+          } else {
+            String::new()
+          }
+        },
+        |mark| s!(",mark={{{mark}}},{MARK_FROM_COUNTER}=true"),
+      );
       (
         "ltx:note",
         s!("role=thanks,class=ltx_note_frontmatter ltx_thanks_{class}{marked}"),

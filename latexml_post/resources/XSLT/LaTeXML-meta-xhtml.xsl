@@ -56,23 +56,39 @@
     </xsl:element>
   </xsl:template>
 
-  <!-- SURPASS (latexml-oxide OXIDIZED_DESIGN_DIVERGENCES #990): an unmarked frontmatter
-       picture note — an author's ltx:note role="note" with no @mark that holds a picture or
-       graphics — prints no mark in the PDF: a picture, a logo, an ORCID icon (2107.13277),
-       2404.13552's page-overlay notice. Only those: a leftover-ink note with no mark that
-       holds text (a \titlenote's "Corresponding author…", 1003.2281; \pacs codes, 0803.0204)
-       stands for a mark pdflatex prints or a line printed elsewhere, so it keeps the dagger
-       (review revCR8c finding 1). User ruling 2026-11-10, "No
-       dagger for unmarked notes": no mark and no hidden ltx_note_content (LaTeXML.css hides
-       it until hover, which would leave the note's content invisible); its content inline,
-       with no "note: " type label. A \thanks note (role thanks, OXIDIZED_DESIGN #156) keeps
-       its dagger: it stands for the footnote mark pdflatex prints. -->
-  <xsl:template match="ltx:creator/ltx:note[@role='note' and not(@mark) and not(ltx:tags/ltx:tag[not(@role)]) and (.//ltx:picture or .//ltx:graphics)]" priority="1">
+  <!-- SURPASS (latexml-oxide OXIDIZED_DESIGN_DIVERGENCES #990): an author's note with no mark (no @mark, no tag)
+       prints no glyph: its mark is unknown here (an unbound class's \thanks, a document's own \maketitle) or none is
+       printed (a picture, an ORCID icon, 2107.13277), and the frontmatter never invents one: note-mark's dagger below
+       (Perl's) put another author's glyph on 1807.01940's name (DG 2026-11-16: a wrong or invented glyph is worse
+       than none). So no ltx_note_mark and no hidden ltx_note_content (shown on hovering the mark): its content inline,
+       with no "note: " type label, after its author's name (class ltx_note_unmarked). A mark-only note with no
+       glyph (role footnotemark, its text never placed) shows nothing; its id stays. -->
+  <xsl:template match="ltx:creator/ltx:note[not(normalize-space(@mark)) and not(ltx:tags/ltx:tag[not(@role)])]" priority="1">
+    <xsl:param name="context"/>
+    <xsl:choose>
+      <xsl:when test="@role='footnotemark' and not(node()[not(self::ltx:tags)][normalize-space(.) or self::*])">
+        <xsl:if test="@xml:id">
+          <xsl:element name="span" namespace="{$html_ns}">
+            <xsl:call-template name="add_id"/>
+          </xsl:element>
+        </xsl:if>
+      </xsl:when>
+      <xsl:otherwise>
+        <xsl:call-template name="unmarked-creator-note">
+          <xsl:with-param name="context" select="$context"/>
+        </xsl:call-template>
+      </xsl:otherwise>
+    </xsl:choose>
+  </xsl:template>
+
+  <xsl:template name="unmarked-creator-note">
     <xsl:param name="context"/>
     <xsl:element name="span" namespace="{$html_ns}">
       <xsl:variable name="innercontext" select="'inline'"/><!-- override -->
       <xsl:call-template name="add_id"/>
-      <xsl:call-template name="add_attributes"/>
+      <xsl:call-template name="add_attributes">
+        <xsl:with-param name="extra_classes" select="'ltx_note_unmarked'"/>
+      </xsl:call-template>
       <xsl:apply-templates select="." mode="begin">
         <xsl:with-param name="context" select="$innercontext"/>
       </xsl:apply-templates>

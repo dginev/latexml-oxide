@@ -185,7 +185,7 @@ pub(crate) fn load() -> Result<()> {
   def_macro_noop("\\lx@note@reset")?;
   def_macro_noop("\\ext@footnote")?;
   DefConstructor!("\\lx@note[]{} OptionalUndigested {}",
-  "^<ltx:note role='#role' mark='#mark' _fnvalue='#fnvalue' _fncounted='#fncounted' xml:id='#id' inlist='#list'>#tags#4</ltx:note>",
+  "^<ltx:note role='#role' mark='#mark' _fnvalue='#fnvalue' _fncounted='#fncounted' _markunknown='#markunknown' xml:id='#id' inlist='#list'>#tags#4</ltx:note>",
   // Perl #2798: footnotes are inline blocks — internal_vertical, no leaveHorizontal.
   mode         => "inline_internal_vertical",
   sizer        => sub[whatsit] { note_size_in_line(whatsit) },
@@ -212,7 +212,7 @@ pub(crate) fn load() -> Result<()> {
   reversion => "");
 
   DefConstructor!("\\lx@notemark[]{} OptionalUndigested",
-  "^<ltx:note role='#role' mark='#mark' _fnvalue='#fnvalue' _fncounted='#fncounted' xml:id='#id' inlist='#list'>#tags</ltx:note>",
+  "^<ltx:note role='#role' mark='#mark' _fnvalue='#fnvalue' _fncounted='#fncounted' _markunknown='#markunknown' xml:id='#id' inlist='#list'>#tags</ltx:note>",
   mode       => "text", enter_horizontal => true,
   sizer => sub[whatsit] { note_size_in_line(whatsit) },
   // In a class's title block the marks are its own (`enter_title_footnotes`, as the field begins); `[<n>]` is
@@ -248,7 +248,7 @@ pub(crate) fn load() -> Result<()> {
   // most of the 79-paper math-mode-first cluster (SHARED-FAILURE
   // classification in SYNC_STATUS — this is the surpass-Perl path).
   DefConstructor!("\\lx@notetext OptionalSemiverbatim {} OptionalUndigested {}",
-  "^<ltx:note role='#role' mark='#mark' _fnvalue='#fnvalue' _fncounted='#fncounted' xml:id='#id'>#4</ltx:note>",
+  "^<ltx:note role='#role' mark='#mark' _fnvalue='#fnvalue' _fncounted='#fncounted' _markunknown='#markunknown' xml:id='#id'>#4</ltx:note>",
   // Perl #2798: footnote text is an inline block — internal_vertical, no leaveHorizontal.
   mode       => "inline_internal_vertical",
   sizer      => sub[_whatsit] { Ok(out_of_line_size()) },

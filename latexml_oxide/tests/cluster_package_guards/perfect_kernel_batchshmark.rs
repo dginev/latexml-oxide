@@ -11,7 +11,10 @@
 //! only, a printed label no entry answers counted. Witnesses 1807.02791, 2607.15705, 2606.00446.
 use latexml::util::test::{convert_with_setup_then, error_count, warning_count};
 
-use super::perfect_kernel_batch84b::{creators, text};
+use super::{
+  perfect_kernel_batch84b::{creators, text},
+  perfect_kernel_batchfmmarks::{page_lines, page_of},
+};
 
 macro_rules! repro {
   ($name:literal) => {
@@ -515,11 +518,14 @@ Body.
   );
 }
 
-/// A `\renewcommand\thefootnote` in an author block holds for the name it is written with, as in TeX: the class's
-/// `\maketitle` sets `\thefootnote` before `\@author` expands, the redefinition after it, in that name's cell of the
-/// tabular (`latex_constructs::title_field_footnotes`): 1807.02791's `\arabic` (pdflatex "Ann Able 1 2"), the next name
-/// the class's mark again ("Ann Able1 Bob Baker†"); one in the preamble the class's `\maketitle` overrides ("∗", "†").
-/// Distinct from the class's gate: which `\thefootnote` a field's marks are made by.
+/// A `\renewcommand\thefootnote` in an author block holds in its cell of the `\@author` tabular alone, which `\and`, `\\`
+/// and `&` end (latex.ltx:17219-17222), as in TeX: the class's `\maketitle` sets `\thefootnote` before `\@author` expands,
+/// the redefinition after it. Both readers of the marks keep it there: the flush, which runs a block's declarations ahead of
+/// its names (`emit::declarations` keys each to its cell's name, `latex_constructs::title_cell_declared`: 1807.02791's
+/// `\arabic` before its one name, pdflatex "Ann Able 1 2"; one in Bob's cell renumbers Bob alone, "Ann Able∗ Bob Baker2
+/// Cy Cole‡"), and the rehearsal, whose `\thanks` marks end with the cell (`rehearsal::end_of_cell`: "Ann Able1 Bob
+/// Baker†"; past Bob's `\\` and `\and`, "Cat Cole‡"). One in the preamble the class's `\maketitle` overrides ("∗", "†").
+/// Distinct from the class's gate: which `\thefootnote` a field's marks are made by (review revMARKSAFE S1).
 #[test]
 fn a_thefootnote_the_author_block_sets_holds_for_its_name() {
   assert_eq!(
@@ -562,6 +568,33 @@ Text.
       row(&["Bob Baker", "footnotemark[†]="]),
     ]
   );
+  assert_eq!(
+    marked_notes(repro!("marksafe_thefootnote_set_in_a_cell_holds_there"), 0),
+    [
+      row(&["Ann Able", "footnotemark[*]="]),
+      row(&["Bob Baker", "footnotemark[2]="]),
+      row(&["Cy Cole", "footnotemark[‡]="]),
+    ]
+  );
+  assert_eq!(
+    marked_notes(repro!("marksafe_thefootnote_set_in_a_cell_thanks"), 0),
+    [
+      row(&["Ann Able", "thanks[1]=Note A."]),
+      row(&["Bob Baker", "thanks[†]=Note B."]),
+    ]
+  );
+  // (Univ B's `\footnotemark[1]`, "∗" on its line, is a mark the emitter writes on no name: counted)
+  assert_eq!(
+    marked_notes(
+      repro!("marksafe_thefootnote_set_in_a_cell_ends_at_its_line"),
+      1
+    ),
+    [
+      row(&["Ann Able", "thanks[*]=Note A."]),
+      row(&["Bob Baker", "thanks[2]=Note B."]),
+      row(&["Cat Cole", "thanks[‡]=Note C."]),
+    ]
+  );
 }
 
 /// A name's mark the class sets apart, which no reading knows, is written with none (`latex_constructs::
@@ -570,15 +603,21 @@ Text.
 /// by the counter. Distinct from the class's gate: the class's `\maketitle` runs, its name marks are another series.
 #[test]
 fn a_names_mark_revtex_sets_apart_is_unknown() {
+  // (its note never placed, nothing names it: one counted Warning, `insert::count_unknown_marks`)
   let xml = converted(
     repro!("revtex_name_footnotemark_leaves_the_marks_unknown"),
-    0,
+    1,
   );
   assert_eq!(notes_in(&xml), [
     row(&["Ann Able", "footnotemark[]="]),
     row(&["Bob Baker"]),
     row(&["Cy Cole"]),
   ]);
+  // (and on the page no glyph: not the XSLT's `†`, revMARKSAFE B1 — the unmarked mark-only note shows nothing)
+  assert_eq!(
+    page_lines(&page_of(&xml)),
+    (row(&["Ann Able", "Bob Baker", "Cy Cole"]), Vec::new())
+  );
   assert_eq!(
     xml
       .matches(r#"<note role="footnotemark" xml:id="footnote1"/>"#)
@@ -610,9 +649,89 @@ Body.
   );
 }
 
+/// A mark whose glyph is unknown here prints none, in the XML or on the page (DG 2026-11-16: a wrong or invented glyph is
+/// worse than none; the generic engine never invents one): under an unbound class (scrartcl's own `\maketitle` prints
+/// `\fnsymbol`, `latex_constructs::title_marks_unknown`) a name's `\thanks` is written unmarked and the XSLT shows its text
+/// under the name with no `†` (`LaTeXML-meta-xhtml.xsl`'s unmarked creator note, OD #990; revMARKSAFE B1); a name's
+/// `\footnotemark[1]` is no "1" (Perl's number key, the advisor's I-3) — its note no number key names yet, a counted
+/// Warning, or its `\footnotetext[1]` paired by the number, an Info (`insert::count_unknown_marks`). Distinct from the
+/// class's gate: an unbound class's marks, and what the page shows of a note with none.
+#[test]
+fn a_mark_whose_glyph_is_unknown_prints_none() {
+  let case = |tex: &str, warnings: usize| {
+    let (log, xml, ()) = convert_with_setup_then(tex, Some("ar5iv.sty"), || {}, |_| {});
+    assert_eq!(
+      (error_count(&log), warning_count(&log)),
+      (0, warnings),
+      "{log}"
+    );
+    let html = page_of(&xml);
+    let block = &html[html.find("ltx_authors").expect("an author block")..];
+    assert!(!block.contains("ltx_note_mark"), "{html}");
+    (log, notes_in(&xml), page_lines(&html))
+  };
+  let (log, notes, page) = case(repro!("marksafe_unbound_class_thanks_print_no_glyph"), 0);
+  assert_eq!(notes, [
+    row(&["Ann Able", "thanks[]=Note A."]),
+    row(&["Bob Baker", "thanks[]=Note B."]),
+  ]);
+  assert_eq!(
+    page,
+    (
+      row(&["Ann Able | under: Note A.", "Bob Baker | under: Note B."]),
+      Vec::new()
+    )
+  );
+  assert!(
+    log.contains(
+      "Info:frontmatter:unknown_mark 2 author note(s) written with no mark, the mark the title prints being unknown \
+       here: each under its author"
+    ),
+    "{log}"
+  );
+  let (log, notes, page) = case(
+    repro!("marksafe_unbound_class_footnotemark_given_number_unknown"),
+    1,
+  );
+  assert!(
+    log.contains(
+      "Warning:frontmatter:unanswered_mark_lost A footnote mark on an author's name whose note cannot be identified, \
+       its glyph unknown here, is written with none"
+    ),
+    "{log}"
+  );
+  assert_eq!(notes, [
+    row(&["Ann Able", "thanks[]=Equal contribution."]),
+    row(&["Bob Baker", "footnotemark[]="]),
+  ]);
+  assert_eq!(
+    page,
+    (
+      row(&["Ann Able | under: Equal contribution.", "Bob Baker"]),
+      Vec::new()
+    )
+  );
+  let (_, notes, page) = case(
+    repro!("marksafe_unbound_class_footnotemark_answered_by_its_text"),
+    0,
+  );
+  assert_eq!(notes, [
+    row(&["Ann Able", "footnote[]=Note A."]),
+    row(&["Bob Baker", "footnote[]=Note B."]),
+  ]);
+  assert_eq!(
+    page,
+    (
+      row(&["Ann Able | under: Note A.", "Bob Baker | under: Note B."]),
+      Vec::new()
+    )
+  );
+}
+
 /// A label authblk prints on a name that no `\affil` prints is a mark the frontmatter places nowhere, counted
 /// (`authblk_sty::count_lost_labels`; FIDELITY_CHARTER: no silent loss): `\author[1,*,\S]` whose `\S` only the `\date`
-/// line explains (2606.00446; pdflatex "Ann Able1,*,§"), one Warning; its answered `*` a note of each carrier.
+/// line explains (2606.00446; pdflatex "Ann Able1,*,§"), one Warning; its answered `*` a note of each carrier. Both
+/// sides are read as printed (`printed_label_pieces`), so a label a macro prints is the line's (`\author[\affA]`).
 #[test]
 fn a_class_label_no_entry_answers_is_counted() {
   let tex = repro!("fmmarks_authblk_double_star_label_and_date_note_red");
@@ -620,8 +739,8 @@ fn a_class_label_no_entry_answers_is_counted() {
   assert_eq!((error_count(&log), warning_count(&log)), (0, 1), "{log}");
   assert!(
     log.contains(
-      "Warning:unexpected:frontmatter authblk prints 1 label(s) of the names no \\affil explains, written on \
-       no name: \\S"
+      "Warning:frontmatter:unanswered_mark_lost authblk prints 1 label(s) of the names no \\affil explains, \
+       written on no name: §"
     ),
     "{log}"
   );
@@ -645,4 +764,14 @@ fn a_class_label_no_entry_answers_is_counted() {
       "affiliation=Present address: Lab B, City"
     ]),
   ]);
+  // (both sides compared as printed, `printed_label_pieces`: `\author[\affA]`, `\affA` 1, is `\affil[1]`'s; review
+  // revMARKSAFE S3)
+  let (log, xml, ()) = convert_with_setup_then(
+    repro!("authblk_macro_label_is_its_printed_text"),
+    Some("ar5iv.sty"),
+    || {},
+    |_| {},
+  );
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  assert_eq!(creators(&xml), [row(&["Ann Able", "affiliation=Univ A"])]);
 }

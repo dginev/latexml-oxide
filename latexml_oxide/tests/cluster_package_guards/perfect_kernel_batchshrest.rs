@@ -259,28 +259,34 @@ fn a_revtex_name_footnote_takes_its_number_unmarked() {
     }
     assert_eq!(xml.matches("mark=").count(), 2, "{xml}");
   }
-  check(&Case {
-    tex:      repro!(
-      "sectioning-frontmatter/revtex_name_footnotemark_leaves_the_marks_unknown.tex"
-    ),
-    // (Ann's `\footnotemark` Perl's leftover note, which pdflatex marks `a`: unmarked, its glyph unknown (MARKSAFE,
-    // `perfect_kernel_batchshmark::a_names_mark_revtex_sets_apart_is_unknown`))
-    creators: &[
-      &["Ann Able", "affiliation=Univ A"],
-      &[
-        "Bob Baker",
-        "thanks=Equal contribution.",
-        "affiliation=Univ B",
-      ],
-      &[
-        "Cy Cole",
-        "thanks=Equal contribution.",
-        "affiliation=Univ B",
-      ],
+  // (Ann's `\footnotemark` Perl's leftover note, which pdflatex marks `a`: unmarked, its glyph unknown, and its note
+  // never placed, one counted Warning (MARKSAFE, `perfect_kernel_batchshmark::a_names_mark_revtex_sets_apart_is_unknown`))
+  let (log, xml) = convert_with(
+    repro!("sectioning-frontmatter/revtex_name_footnotemark_leaves_the_marks_unknown.tex"),
+    Some("ar5iv.sty"),
+  );
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 1), "{log}");
+  let want = [
+    &["Ann Able", "affiliation=Univ A"][..],
+    &[
+      "Bob Baker",
+      "thanks=Equal contribution.",
+      "affiliation=Univ B",
     ],
-    elements: &[],
-    absent:   &["mark=\"†\"", "mark=\"∗\""],
-  });
+    &[
+      "Cy Cole",
+      "thanks=Equal contribution.",
+      "affiliation=Univ B",
+    ],
+  ];
+  let want: Vec<Vec<String>> = want
+    .iter()
+    .map(|c| c.iter().map(|s| (*s).to_string()).collect())
+    .collect();
+  assert_eq!(creators(&xml), want, "{xml}");
+  for text in ["mark=\"†\"", "mark=\"∗\""] {
+    assert!(!xml.contains(text), "{text}\n{xml}");
+  }
 }
 
 /// revtex4-2.cls:2404-2495: an author's `\email` and `\thanks` are one footnote, and a footnote another author's text

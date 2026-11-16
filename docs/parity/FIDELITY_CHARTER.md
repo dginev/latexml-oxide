@@ -139,9 +139,11 @@ missing image, a broken `\ref` or `\cite`, and the like — the fixes are usuall
   `\thanks{$^{*}$…}`, a bare `*` the names show) — and its text never opens with a copy of it. A symbol that is the
   text's own — a formula or word it heads (`$^*$-algebras`, `$^{3}$He`), a bare `*` beside the class's mark — stays.
   **A wrong glyph is worse than none** (DG 2026-11-16): a class's automatic mark is written only where its own
-  `\maketitle` runs (a document's or a package's own prints marks unknown here), never for a name's mark the class sets
-  apart (REVTeX 4.1/4.2's letters); a `\renewcommand\thefootnote` in the author block holds for its name, as in TeX
-  (1807.02791); a mark alone keeps its glyph in `mark` only; a printed mark the conversion loses is counted, a Warning
+  `\maketitle` runs (a document's, a package's or an unbound class's own prints marks unknown here: scrartcl's
+  `\footnotemark[1]` is no "1"), never for a name's mark the class sets apart (REVTeX 4.1/4.2's letters), unless the
+  document sets `\thefootnote` there itself; a `\renewcommand\thefootnote` in the author block holds in its tabular
+  cell, as in TeX (1807.02791); a mark alone keeps its glyph in `mark` only; where the glyph is unknown and the note
+  known, an Info; a printed mark whose note cannot be identified, or that the conversion loses, is counted, a Warning
   (2606.00446's `§`). **"One copy" is a page rule:** the XML keeps a full copy of a
   shared note on every carrier (Perl's `relocateAnnotations`, Base_Utility.pool.ltxml:895-901, and
   `relocateFootnote`, latex_constructs.pool.ltxml:503-527, both clone), each with the same `mark` and text; a
@@ -200,10 +202,13 @@ missing image, a broken `\ref` or `\cite`, and the like — the fixes are usuall
   block note on no author). A divergence from Perl's placement (OD #989).
 - **"No dagger for unmarked notes"** (user 2026-11-10): an unmarked frontmatter note renders with no dagger — the meta
   XSLT must not invent a † or an anchor for a note with no `@mark`, and since `LaTeXML.css` hides note content until
-  hover, the note shows its content inline, as print does. A divergence from Perl's XSLT (OD #990). Applied to the
-  notes pdflatex prints unmarked where they stand (picture notes: 2404.13552, 2107.13277); a leftover note that stands
-  for a mark pdflatex prints or a line printed elsewhere (a `\titlenote`, `\pacs` codes: 1003.2281, 0803.0204,
-  1009.5642) and a `\thanks` note keep their dagger (OD #990, review revCR8c finding 1).
+  hover, the note shows its content inline, as print does. A divergence from Perl's XSLT (OD #990). First applied to the
+  notes pdflatex prints unmarked where they stand (picture notes: 2404.13552, 2107.13277), a `\thanks` note and a
+  leftover note (`\titlenote`, `\pacs`: 1003.2281, 0803.0204, 1009.5642) keeping their dagger (review revCR8c finding 1);
+  **that carve-out is reversed** (DG 2026-11-16): the frontmatter never prints the XSLT's `†` fallback, an unmarked note
+  of one author shows its text under its name with no glyph (1807.01940's dagger was another author's), and the generic
+  engine never invents a glyph; a binding may write one to keep an association it knows, the XSLT one for a note several
+  authors share unmarked.
 - **The rest of the old engine: "Plan A: move now, reroute in C"** (user 2026-11-10; plan
   `agent_reports/2026-11-10_Z18P_report.md`): only eptcs, omnibus and aas are rerouted inside Z18; everything else
   leaves `author_block/` by a byte-identical move and the module is deleted; authblk, IEEEtran, IJCAI, `@marked`, the

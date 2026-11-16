@@ -1,0 +1,19 @@
+% mechanism: a name's `\footnotemark[1]` under an unbound class (scrartcl) is no number glyph: Perl's number key "1"
+%   shown as the mark, where pdflatex prints ∗ (the advisor's I-3); its note no number key names yet, so it is counted
+% witness:  review revMARKSAFE / ADVGEN I-3
+% oracle:   pdflatex 0 errors; "Ann Able∗ Bob Baker∗", one footnote "∗ Equal contribution."
+% engines:  rust MARKSAFEb merge 16e5e53b4a4 = 0 errors, 0 Warnings; Bob's mark-only note mark="1"; HTML Ann "†",
+%   Bob "1"
+% expect:   0 errors, 1 Warning (a mark whose note cannot be identified), 1 Info; Bob's note unmarked, empty; HTML no
+%   glyph on either name, Ann's text under her name
+% status:   RED -> GREEN no glyph (MARKSAFEb: perfect_kernel_batchshmark::a_mark_whose_glyph_is_unknown_prints_none);
+%   the shared ∗ RED (row R MARKKEY: a mark paired by its number; row R SHAUTO)
+% preload:  ar5iv.sty
+\documentclass{scrartcl}
+\title{T}
+\author{Ann Able\thanks{Equal contribution.} \and Bob Baker\footnotemark[1]}
+\date{}
+\begin{document}
+\maketitle
+Body.
+\end{document}

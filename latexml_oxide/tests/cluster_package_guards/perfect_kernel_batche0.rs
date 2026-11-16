@@ -1113,6 +1113,11 @@ const API_KEYS_OUTSIDE_PERLS: &[(&str, usize)] = &[
     "const _markfromcounter base_utilities/frontmatter/insert.rs",
     1,
   ),
+  // (MARKSAFEb, 0 -> 1, raised with its reason: a creator's note written with no mark because the mark its title prints is
+  // unknown here (an unbound class's or a document's own `\maketitle`, REVTeX's name letters), counted at the document's
+  // end — a Warning where its note never came, an Info where it is placed (DG 2026-11-16); Perl's API has no key for
+  // "the glyph is unknown"; internal, never written out: OD #1053)
+  ("const _markunknown base_utilities/frontmatter/insert.rs", 1),
   // (SHREST, 0 -> 1, raised with its reason: the mark a class prints for a creator's footnote text, elsarticle's `\fntext`
   // number, REVTeX's joined footnote's symbol, on the contact its binding makes — a contact has no `mark` in the schema —,
   // read where two creators hold it to make it their marked note, OD #1054; internal, never written out)
