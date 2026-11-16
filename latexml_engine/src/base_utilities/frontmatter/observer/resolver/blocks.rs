@@ -198,6 +198,7 @@ impl Resolver {
       None => events,
     };
     let events = &read_events(events);
+    self.mark_ledger = mark_ledger(events);
     let lines = lines_of(events, and_inline);
     let block_requests: Vec<String> = keyvals
       .and_then(|kv| attr_value(kv, "annotations"))

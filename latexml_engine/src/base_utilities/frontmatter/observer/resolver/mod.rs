@@ -271,6 +271,7 @@ pub(in crate::base_utilities::frontmatter::observer) use api::is_creator_call;
 mod blocks;
 mod labels;
 mod lines;
+mod mark_ledger;
 mod net;
 // (the old reader's owner logic, moved unchanged by the plan's row "Knowledge in, driver out, one pass"; re-exported by `observer/mod.rs`)
 pub(in crate::base_utilities) mod owners;
@@ -300,6 +301,10 @@ pub(in crate::base_utilities::frontmatter::observer) use labels::{
 };
 pub(in crate::base_utilities) use lines::reads_as_names;
 use lines::*;
+// (which name a mark beside spacing goes to, the reading's and the writer's one decision)
+pub(in crate::base_utilities::frontmatter::observer) use mark_ledger::{
+  MarkLedger, Side, mark_ledger,
+};
 // (the reading's word check, its block half and what the emitter's call half reads: OD #980)
 pub(in crate::base_utilities::frontmatter::observer) use net::{merged_names, uncoordinated_marks};
 // (the content invariant on the placed output, under the emitter's `=2`: OD #980)
@@ -633,6 +638,8 @@ struct Resolver {
   outside_labels:     Vec<String>,
   /// while a names line its marks lead is read (`names_led_by_marks`): each mark after a separator the next name's
   marks_lead:         bool,
+  /// the block being read's marks and notes beside spacing, each with the name it goes to ([`mark_ledger`])
+  mark_ledger:        MarkLedger,
   /// the pending entries (their place in `pending`) a `_share=authors` call made (llncs's one `\institute`, no `\and`
   /// in it: every author's unless the class's `\inst{n}` picks it), whether the entry holds a mark of its own, and
   /// whether it is a piece its institute's marks split it into (`_markpiece=true`: the numbers shown by hand label the
@@ -755,6 +762,7 @@ impl Resolver {
       fn_requests:        Vec::new(),
       outside_labels:     Vec::new(),
       marks_lead:         false,
+      mark_ledger:        MarkLedger::default(),
       shared:             Vec::new(),
       row_units:          Vec::new(),
       keyed:              Vec::new(),
