@@ -46,7 +46,7 @@ Prebuilt, self-contained binaries for Linux, macOS and Windows are on the
 [Releases page](https://github.com/dginev/latexml-oxide/releases); Homebrew, a `.deb`, Docker and
 `cargo install latexml` work too. A TeX installation (TeX Live or MiKTeX) is needed at runtime.
 Per-platform steps and the system dependencies: [docs/INSTALL.md](https://github.com/dginev/latexml-oxide/blob/main/docs/INSTALL.md).
-Windows release binaries are code-signed through SignPath Foundation: see the [code signing policy](https://github.com/dginev/latexml-oxide/blob/main/docs/release/CODE_SIGNING_POLICY.md).
+Windows release binaries are being set up for code signing through SignPath Foundation: see the [code signing policy](https://github.com/dginev/latexml-oxide/blob/main/docs/release/CODE_SIGNING_POLICY.md).
 
 ## Extending: runtime bindings (Rhai)
 
