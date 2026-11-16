@@ -19297,7 +19297,11 @@ its `label` hook code cost 3.5M instructions a `\label`. It is removed only wher
 chunk" for a missing one. Its repair of the raw file's amsmath code, which the binding does read (:257-270, a
 `begindocument` chunk under `\IfPackageAtLeastT{amsmath}{2025-05-18}`: cleveref.sty:2620, :2623), is added back with
 it: without it an explicit `\ltx@label{l4b}` took `l` as the key and printed "4b" (2605.07565: 3 Double subscript;
-guard `perfect_kernel_batchregbind::cleveref_ltx_label_braces_its_key_under_amsmath`). **Open** (post-merge, catalog): a note steps its counter after its text is digested
+guard `perfect_kernel_batchregbind::cleveref_ltx_label_braces_its_key_under_amsmath`), for the release it repairs
+only (:194 `\FirstAidNeededT`, `\ver@cleveref.sty` v0.21.4). An older copy's `\ltx@label` (v0.19, 2508.14614) is undone
+by amsmath's `\AddToHook{begindocument/end}{\let\ltx@label\label}` (amsmath.sty:1228), which the binding now runs at
+`begindocument/end`, after the copy's `begindocument` code, as there (it ran in `begindocument`, before it; guard
+`perfect_kernel_batchregbind::amsmath_ltx_label_is_label_after_the_begin_document_code`). **Open** (post-merge, catalog): a note steps its counter after its text is digested
 and an align or gather row after its cells (Perl's order), so a label hook there reads the enclosing counter (or, in an
 align's later row, the previous row's step) where
 latex.ltx's `\@footnotetext` and `\@mpfootnotetext` define it (:17664, :16350) and amsmath has stepped `equation`

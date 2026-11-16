@@ -6,7 +6,8 @@
 //! - A binding that defines a list its class prints with the title page prints it too (the text a document adds to it,
 //!   dropped silently once the Error went): one row per print site and real paper's shape.
 //! - cleveref's binding re-applies the kernel first aid's repair of the raw cleveref.sty's amsmath code (content: an
-//!   explicit `\ltx@label` lost its key's first character to the text).
+//!   explicit `\ltx@label` lost its key's first character to the text), for the release it repairs; amsmath's
+//!   `begindocument/end` resets `\ltx@label` after an older copy's.
 //! - pdfcomment's binding allocates the soulpos registers a document's copy of soulpos's end pass reads.
 //!
 //! Each converts its repro and asserts the exact Error and Warning counts, every creator's name and contacts in order
@@ -225,6 +226,25 @@ fn bindings_print_the_title_page_lists_their_files_print() {
 fn cleveref_ltx_label_braces_its_key_under_amsmath() {
   let (log, xml) = run(repro!(
     "cross-references/cleveref_ltx_label_braces_its_key_under_amsmath.tex"
+  ));
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  for element in [
+    r#"<document xmlns="http://dlmf.nist.gov/LaTeXML" labels="LABEL:l4b" xml:id="id1">"#,
+    r#"<equation labels="LABEL:l3a" xml:id="S0.E1">"#,
+    r#"<Math mode="display" tex="a=b" text="a = b" xml:id="S0.E1.m1">"#,
+    r#"<p xml:id="p1.1">XY</p>"#,
+  ] {
+    assert_eq!(xml.matches(element).count(), 1, "{element}\n{xml}");
+  }
+}
+
+/// amsmath.sty:1228 lets `\ltx@label` be `\label` at `begindocument/end`, after every `begindocument` code: a v0.19
+/// cleveref.sty's `\def\ltx@label#1{\cref@label#1}` there (2508.14614's copy), which the first aid leaves alone (it
+/// repairs v0.21.4 only, review S2), is undone as in pdflatex ("XY", the display's math "a=b").
+#[test]
+fn amsmath_ltx_label_is_label_after_the_begin_document_code() {
+  let (log, xml) = run(repro!(
+    "cross-references/amsmath_ltx_label_is_label_after_begin_document_code.tex"
   ));
   assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
   for element in [
