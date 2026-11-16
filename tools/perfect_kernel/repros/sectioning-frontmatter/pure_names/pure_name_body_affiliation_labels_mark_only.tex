@@ -1,0 +1,23 @@
+% witness: 0801.1438 (`\author{Franti\v sek Kardo\v s$^{a }$\footnote{…}, …, Jozef Mi\v skuf\hskip 1pt$^{a
+%          }$\footnotemark[1], \\Jean-S\'ebastien Sereni$^{c }$\footnote{…}}`, the affiliations `$^a$ Institute of
+%          Mathematics…` set in a `center` after \maketitle)
+% oracle:  pdflatex 0 errors: "Ann Ablea∗, Bob Bakerb†, Cy Cole a∗, Dan Dornc‡" (each letter a label of a line set in
+%          the body, each symbol a footnote)
+% engines: rust REGFIX = <personname>Ann Able<sup>a</sup></personname>, the label inside the name
+% expect:  0 errors; each name the name alone; a label nothing in the frontmatter answers a mark-only note right after
+%          the name, `<note role="footnotemark" mark="a"/>`, never dropped (DG 2026-11-16); the footnotes as they were
+% status:  RED (REGFIX) -> GREEN (PURE)
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{Ann Able$^{a }$\footnote{Ann is supported by grant A.}, Bob Baker$^{b }$\footnote{Bob is supported by
+grant B.}, Cy Cole\hskip 1pt$^{a }$\footnotemark[1], \\Dan Dorn$^{c }$\footnote{Dan is supported by grant D.}}
+\date{}
+\maketitle
+\begin{center}
+$^a$ Univ A, Town A\\
+$^b$ Univ B, Town B\\
+$^c$ Univ C, Town C
+\end{center}
+x
+\end{document}

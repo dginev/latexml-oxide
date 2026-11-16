@@ -1,0 +1,14 @@
+% witness: 2406.11149 (`Haoran Li$^{*}$\thanks{\quad Corresponding Author}`)
+% oracle:  pdflatex 0 errors: "Ann Able*∗ Bob Baker∗† Cy Cole", footnotes "∗ Corresponding author." and "† Corresponding
+%          author."
+% engines: rust REGFIX = <personname>Ann Able<sup>∗</sup></personname> beside an unmarked thanks note
+% expect:  0 errors; each name the name alone; the symbol typed on a name holding one unmarked \thanks, keyed by no
+%          contact, is that note's `mark` (DG 2026-11-16): <note role="thanks" mark="∗">Corresponding author.</note>
+% status:  RED (REGFIX) -> GREEN (PURE)
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{Ann Able*\thanks{Corresponding author.} \and Bob Baker$^{*}$\thanks{\quad Corresponding author.} \and Cy Cole}
+\maketitle
+x
+\end{document}

@@ -1,0 +1,14 @@
+% witness: the shape of sectioning-frontmatter/author_unmatched_numeric_mark (63x), the 109 of 169 popPURE papers whose
+%          names hold a label nothing in the frontmatter answers
+% oracle:  pdflatex 0 errors: "Ann Able∗ and Bob Bee1"
+% engines: rust REGFIX = <personname>Ann Able<sup>∗</sup></personname>, <personname>Bob Bee<sup>1</sup></personname>
+% expect:  0 errors; each name the name alone, each mark a mark-only note right after it:
+%          <personname>Bob Bee</personname><note role="footnotemark" mark="1"/> (DG 2026-11-16)
+% status:  RED (REGFIX) -> GREEN (PURE)
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{Ann Able$^*$ and Bob Bee$^1$}
+\maketitle
+x
+\end{document}
