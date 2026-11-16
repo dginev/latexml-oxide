@@ -23,6 +23,13 @@ pub const CLASS_CAPTION_FONTS: &str = "CLASS_CAPTION_FONTS";
 /// Whether a class binding sets its caption fonts ([`CLASS_CAPTION_FONTS`]), read as the class loads.
 pub fn class_caption_fonts() -> bool { lookup_bool(CLASS_CAPTION_FONTS) }
 
+/// caption.sty:314 `\@nameuse{caption@#1typehook}` in `\caption@@settype{sub}`: entering a sub-type (a sub-float, a
+/// `{subcaptiongroup}`, a `\subcaption`) runs what packages added to `\caption@subtypehook`, in the sub-type's group.
+pub fn run_caption_subtype_hook() -> Result<()> {
+  Digest!(r"\@nameuse{caption@subtypehook}")?;
+  Ok(())
+}
+
 /// Environments whose body is read VERBATIM from the raw input, so `\captionof`
 /// must not open one to host its caption — the terminator it would need is in
 /// the token stream, where such an environment never looks. See
@@ -575,7 +582,9 @@ LoadDefinitions!({
   // here, the raw package's calls stood as errors and the caption lost its type. It also
   // clears a pending continuation and makes the type the current float's (:302,
   // `\caption@clrflags`; `\lx@caption@settype`, `latex_constructs::begin_float_continuation`).
-  RawTeX!(r"\def\caption@settype#1{\edef\@captype{#1}\expandafter\lx@caption@settype\expandafter{\@captype}}");
+  // Its `\caption@@settype{}` runs the main type's hook (caption.sty:314, `\caption@typehook`), as a sub-type runs
+  // `\caption@subtypehook` (`run_caption_subtype_hook`).
+  RawTeX!(r"\def\caption@settype#1{\edef\@captype{#1}\expandafter\lx@caption@settype\expandafter{\@captype}\@nameuse{caption@typehook}}");
   DefPrimitive!("\\lx@caption@settype{}", sub[(float_type)] {
     engine::latex_constructs::begin_float_continuation(&float_type.to_string());
   });
@@ -585,6 +594,12 @@ LoadDefinitions!({
   RawTeX!(r"\def\caption@xfloat@hook{}");
   RawTeX!(r"\def\caption@xdblfloat@hook{}");
   RawTeX!(r"\def\caption@subtype@hook{}");
+  // caption.sty:639 `\caption@subtypehook`: what entering a sub-type runs (`\caption@@settype{sub}`, :314). Its own
+  // body is modelled by the bindings (the sub-float's counter, list entry and options); what packages add to it runs
+  // (`run_caption_subtype_hook`) — the kernel's first aid for subcaption v1.6b (`\let\ltx@label\label`,
+  // latex2e-first-aid-for-external-files.ltx:197-201), zref-clever's `subref` property (zref-clever.sty:5692-5695), a
+  // paper's own caption copy. Undefined, each `\g@addto@macro` on it was an Error (lipics-v2021 on TL 2026).
+  RawTeX!(r"\def\caption@subtypehook{}");
   RawTeX!(r"\def\caption@calcmargin@hook{}");
   // caption.sty:496-536 `\continuedfloat[*]` (`\ContinuedFloat`): the float continues the one
   // stepped before it — the same number, the sub-float letters going on — its parts counted in

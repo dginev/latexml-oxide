@@ -1,0 +1,75 @@
+//! caption.sty's `\caption@subtypehook` (caption.sty:639, run on entering a sub-type at :314): defined by the caption
+//! binding and run by subcaption's sub-floats (`run_caption_subtype_hook`). The kernel's first aid for subcaption v1.6b
+//! (latex2e-first-aid-for-external-files.ltx:197-201, TL 2026) adds to it, so did every paper's own caption copy; the
+//! first aid's line is written into the source here, so the guards hold on any TeX Live.
+use latexml::util::test::{assert_element, convert_with, error_count};
+
+fn convert(tex: &str) -> String {
+  let (log, xml) = convert_with(tex, None);
+  assert_eq!(error_count(&log), 0, "{log}");
+  xml
+}
+
+/// The first aid's addition (`\let\ltx@label\label`) is no Error, and the sub-figure keeps its label (pdflatex: "See a.",
+/// no `!`).
+#[test]
+fn first_aid_adds_to_the_subtype_hook() {
+  let xml = convert(
+    r"\documentclass{article}
+\usepackage{subcaption}
+\makeatletter\g@addto@macro\caption@subtypehook{\let\ltx@label\label}\makeatother
+\begin{document}
+\begin{figure}\begin{subfigure}{.4\textwidth}A\caption{a}\label{fa}\end{subfigure}\caption{F}\end{figure}
+See \subref{fa}.
+\end{document}",
+  );
+  assert_element(
+    &xml,
+    "figure",
+    &[r#"xml:id="S0.F1.sf1""#],
+    r#"<figure inlist="lof" labels="LABEL:fa" xml:id="S0.F1.sf1">
+      <tags>
+        <tag><text fontsize="90%">(a)</text></tag>
+        <tag role="refnum">1a</tag>
+      </tags>
+      <p>A</p>
+      <toccaption><tag close=" ">a</tag>a</toccaption>
+      <caption><tag close=" "><text fontsize="90%">(a)</text></tag><text fontsize="90%">a</text></caption>
+    </figure>"#,
+  );
+  assert_element(
+    &xml,
+    "ref",
+    &[r#"labelref="LABEL:fa""#],
+    r#"<ref labelref="LABEL:fa"/>"#,
+  );
+}
+
+/// What a package adds to the hook runs inside the sub-float, in its group: defined there, undefined after the float.
+#[test]
+fn subtype_hook_runs_inside_the_sub_float() {
+  let xml = convert(
+    r"\documentclass{article}
+\usepackage{subcaption}
+\makeatletter\g@addto@macro\caption@subtypehook{\def\lxmark{IN}}\makeatother
+\begin{document}
+\begin{figure}\begin{subfigure}{.4\textwidth}[\lxmark]\caption{a}\end{subfigure}\caption{F}\end{figure}
+After: \ifdefined\lxmark defined\else undefined\fi.
+\end{document}",
+  );
+  assert_element(
+    &xml,
+    "figure",
+    &[r#"xml:id="S0.F1.sf1""#],
+    r#"<figure inlist="lof" xml:id="S0.F1.sf1">
+      <tags>
+        <tag><text fontsize="90%">(a)</text></tag>
+        <tag role="refnum">1a</tag>
+      </tags>
+      <p>[IN]</p>
+      <toccaption><tag close=" ">a</tag>a</toccaption>
+      <caption><tag close=" "><text fontsize="90%">(a)</text></tag><text fontsize="90%">a</text></caption>
+    </figure>"#,
+  );
+  assert!(xml.contains("<p>After: undefined.</p>"), "{xml}");
+}

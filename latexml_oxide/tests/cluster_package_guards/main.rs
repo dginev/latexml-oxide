@@ -31,6 +31,7 @@ mod binding_singletons_56;
 mod bindings_batch2;
 mod box_primitives;
 mod braced_quantity_tail;
+mod caption_subtype_hook;
 mod case_change_equivalents;
 mod cleveref_class_stubs;
 mod currsize_default;

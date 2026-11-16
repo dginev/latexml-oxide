@@ -109,3 +109,20 @@ assertions; never delete a witness from a comment).
 - Then dispatch `gh workflow run windows-ci-manual-trigger.yml --ref fix/windows-suite -f require_guards=true` (~40 min).
 - Expect all 32 green except the `subimport` test, which needs its test-side change under C.
 - On Linux the full gates must stay green with byte-identical output.
+
+## Resolution (Windows session, 2026-11-16)
+All five classes are fixed on this branch as prescribed.
+- A: `\caption@subtypehook` is defined in `caption_sty.rs`. `run_caption_subtype_hook` runs it on every subcaption sub-type
+  entry: the six sub-float environments (via `begin_subfloat`), `{subcaptiongroup}` and `\subcaption`.
+  `\caption@settype` runs `\caption@typehook`, as caption.sty:314 does. Guards: `caption_subtype_hook::*`.
+- B: `api_doc.rs` uses `strip_prefix(src)` and joins the components with `/`; `epub.rs` replaces `MAIN_SEPARATOR` with `/`.
+- C: `state.rs` seeds `.` with `pathname::canonicalize`. The subimport test canonicalizes its temp directory.
+- D: `in_tex_live` expands `{$TEXMFLOCAL,$TEXMFHOME}`, splits with `std::env::split_paths`, and requires an exact `file_name()`
+  match. Checked: `\documentclass{ieeeconf}` on Windows loads `ieeeconf_cls.rs`, not TL's `IEEEconf.cls`.
+- E: the test builds `file:///C:/…` URLs. `url_path` (the mapping) is factored out of `disk_path`, so the UNC case is
+  asserted without a share.
+
+Verified on Windows 10 / TL 2026 (tlnet r81108). The `ci` profile linked the TL DLL in-process (kpathsea `linked=1`), with
+`TEMP=C:\claude\TMP-RU~1` (an 8.3 path, as on the runners) and 32 test threads. Result: 8207/8207 passed; the 4 skips are
+`jing`, absent locally. `clippy --workspace --all-targets -D warnings` (nightly 2026-11-13) and
+`RUSTDOCFLAGS=-D warnings cargo doc --workspace --no-deps` are clean. The Linux A/B is still to run.

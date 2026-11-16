@@ -2,6 +2,20 @@
 
 ## Unreleased
 
+  - **subcaption papers convert error-free on the current TeX Live 2026, and the suite passes on Windows.**
+    TL 2026's first aid for subcaption v1.6b adds to caption's `\caption@subtypehook`, which the
+    caption binding did not define, so every subcaption paper there (lipics-v2021 among them)
+    logged an `Error:undefined`. The binding now defines it, and subcaption's sub-floats,
+    `{subcaptiongroup}` and `\subcaption` run it as caption.sty does. Papers shipping their own
+    caption copies that add to it gain the same fix. On Windows, an EPUB manifest names a
+    resource in a subdirectory `sub/x.css`, not `sub\x.css`. An image in the working directory is
+    no longer listed twice when the directory's 8.3 short name (`RUNNER~1`) differs from its long
+    name. The Windows full-suite job's test-side portability gaps are closed too (path separators,
+    case-insensitive `kpsewhich` hits, `file:` URLs). Guards
+    `caption_subtype_hook::{first_aid_adds_to_the_subtype_hook,subtype_hook_runs_inside_the_sub_float}`,
+    `cluster_cli::whatsinout::format_epub_ar5iv_preload_carries_the_css_param`,
+    `perfect_kernel_batch56::eps_bounding_boxes_are_read_as_bytes`
+    (`docs/release/WINDOWS_SUITE_TRIAGE_2026-11-16.md`).
   - **An author's `\\` lines print under the name** (issue 783). `\author{name\\school\\dept}`
     makes each line a contact, which LaTeXML.css showed only in a hover pop-up behind a blue star.
     Each such contact now carries class `ltx_author_line`, and an author whose contacts are all
