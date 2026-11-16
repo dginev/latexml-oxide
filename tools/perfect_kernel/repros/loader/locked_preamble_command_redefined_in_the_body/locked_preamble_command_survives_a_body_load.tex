@@ -1,0 +1,17 @@
+% mechanism: a body load reopens the preamble-only commands the walk still holds (latex.ltx:9521; core
+%   binding::preamble_commands): one the body redefined since (`\renewcommand{\doi}`) is the body's, and the load
+%   neither restores the binding's meaning nor walks it to `\@notprerr` again
+% witness: synthetic (the sibling of 2606.22730's shape behind a body `\usepackage`, Perl's recovery)
+% oracle:  pdflatex 2 `!` (Can be used only in preamble: \usepackage; Undefined control sequence: \lockpkgval),
+%          "x lockpkg y doi: 10.1/x"; Perl 1 error (unexpected:\usepackage)
+% engines: rust CUT999 2 errors, "y 10.1/x loaded" (the reopening put the binding's `\doi` back and closed it again)
+% expect:  1 error (the loader's), 0 warnings; "y doi: " and a Url ref 10.1/x, then "loaded"
+% status:  GREEN (reopen_preamble_commands skips a command the walk no longer holds; OD #226)
+\documentclass{imsart}
+\usepackage{url}
+\begin{document}
+x
+\renewcommand{\doi}{doi: \begingroup \urlstyle{rm}\Url}
+\usepackage{lockpkg}
+y \doi{10.1/x} \lockpkgval
+\end{document}

@@ -1,0 +1,6 @@
+% imsart.sty's preamble-only \doi (imsart.sty:1215-1223 of 2606.22730's copy), which the imsart binding reads raw
+% under OmniBus's locked \doi (omnibus_cls.rs).
+\NeedsTeXFormat{LaTeX2e}
+\ProvidesPackage{imsart}[2026/01/01]
+\def\doi#1{\gdef\doi@text{DOI: #1}}
+\@onlypreamble\doi

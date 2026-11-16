@@ -1,0 +1,15 @@
+% mechanism: latex.ltx:9521 `\global\let\doi\@notprerr` over a name a binding locks (OmniBus's `\doi`, which imsart.sty's
+%   `\def\doi` and `\@onlypreamble\doi` meet, imsart.sty:1215-1223): the lock goes aside with the binding's meaning, so
+%   the body's `\renewcommand{\doi}` (natbib .bbl idiom) stands as in TeX, and a call before it still errs
+% witness: 2606.22730 (36 errors on CUT999, 0 on runs 375/376; imsart.cls/.sty beside it are a minimal stand-in)
+% oracle:  pdflatex 1 `!` (Can be used only in preamble), "x 10.1/a y doi: 10.1/x"; Perl 0 errors
+% engines: rust CUT999 2 errors (the second: the refused `\renewcommand`), "x 10.1/a y 10.1/x"
+% expect:  1 error (the first `\doi`), 0 warnings; "y doi: " and a Url ref 10.1/x
+% status:  GREEN (core binding::preamble_commands moves the locks with the meaning; OD #226)
+\documentclass{imsart}
+\usepackage{url}
+\begin{document}
+x \doi{10.1/a}
+\renewcommand{\doi}{doi: \begingroup \urlstyle{rm}\Url}
+y \doi{10.1/x}
+\end{document}
