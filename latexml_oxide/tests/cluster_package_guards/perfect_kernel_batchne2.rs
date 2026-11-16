@@ -16,7 +16,10 @@
 
 use latexml::util::test::{convert_files_with_setup_then, error_count, warning_count};
 
-use super::{perfect_kernel_batch84b::creators, perfect_kernel_batchz3::in_a_directory};
+use super::{
+  perfect_kernel_batch84b::creators, perfect_kernel_batchshmark::notes_in,
+  perfect_kernel_batchz3::in_a_directory,
+};
 
 macro_rules! repro {
   ($name:literal) => {
@@ -284,7 +287,8 @@ fn a_mark_after_its_names_note_stays_with_it() {
     assert_eq!(creators(&xml), expected);
     assert_eq!(footnotemarks(&xml), marks, "{xml}");
   }
-  // (past spacing, each creator its own marks: Ann † bare, after her note's step; Bob * and Carl † given; Dan ‡ bare)
+  // (past spacing, each creator its own marks: Ann † bare, after her note's step; Bob * and Carl † given; Dan ‡ bare;
+  // Bob's `[1]` a copy of Ann's `\thanks` note, OD #1053's Link step; Carl's `[2]` marks a bare mark, no note to copy)
   let (log, xml) = run(repro!("ne2e_mark_past_spacing_is_its_names"));
   assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
   assert_eq!(creators(&xml), [
@@ -296,8 +300,8 @@ fn a_mark_after_its_names_note_stays_with_it() {
   assert_eq!(
     marks_by_creator(&xml),
     [
-      vec![mark("†", "footnote2")],
-      vec![mark("*", "footnotex1")],
+      vec![mark("†", "footnote2"), thanks("*", "id1")],
+      vec![thanks("*", "footnotex1")],
       vec![mark("†", "footnotex2")],
       vec![mark("‡", "footnote3")],
     ],
@@ -353,13 +357,12 @@ fn a_mark_on_no_name_writes_the_block_whole() {
 /// after the joint name, each with its mark, so the name reads without their tags; pin updated (the notes' move only).
 /// SHGIVEN (DG ruling 2026-11-16, 4, refining the 2026-11-09 one): a given mark only spacing parts from its name is that
 /// name's, as pdflatex prints it and Perl keeps it — 1911.13299's `Vivek Ramanujan \thanks{…} \ \footnotemark[2]`, its
-/// four marks lost with a Warning ("lost: †, ‡, ‡, ‡"), now each on its name with no Warning (asserted first); a given
-/// mark past a name's comma (the rows after) is still no name's, its loss counted.
+/// four marks lost with a Warning ("lost: †, ‡, ‡, ‡"), now each on its name with no Warning (asserted first), each a
+/// copy of the note it marks (SHMARK's Link step, OD #1053; pin updated at the merge); a given mark past a name's comma
+/// (the rows after) is still no name's, its loss counted.
 #[test]
 fn a_given_mark_on_no_name_keeps_the_creators() {
-  let (log, xml) = run(repro!(
-    "author_thanks_shared_by_footnotemark_marks_kept_red"
-  ));
+  let (log, xml) = run(repro!("author_thanks_shared_by_footnotemark_marks_kept"));
   assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
   assert_eq!(creators(&xml), [
     row(&["Ann Able"]),
@@ -367,20 +370,23 @@ fn a_given_mark_on_no_name_keeps_the_creators() {
     row(&["Cat Cole"]),
     row(&["Dan Dorn"]),
   ]);
-  // (each creator's marks, in order: Ann †, Bob * ‡, Dan ‡ — pdflatex's "Ann Able ∗ †  Bob Baker ∗ ‡  Cat Cole † ‡  Dan
-  // Dorn ‡", whose ∗ of Ann and † ‡ of Cat are their `\thanks` notes')
-  let mark =
-    |m: &str, n: &str| format!(r#"<note mark="{m}" role="footnotemark" xml:id="footnotex{n}""#);
-  assert_eq!(
-    marks_by_creator(&xml),
-    [
-      vec![mark("†", "1")],
-      vec![mark("*", "2"), mark("‡", "3")],
-      vec![],
-      vec![mark("‡", "4")],
-    ],
-    "{xml}"
-  );
+  // (pdflatex's "Ann Able ∗ †  Bob Baker ∗ ‡  Cat Cole † ‡  Dan Dorn ‡": each carried mark on its name as a copy of
+  // the note it marks, SHMARK's Link step, OD #1053 — Ann's † and Dan's ‡ the carry's; a name's own `\thanks` note
+  // after the marks its tokens write, as REGFIX orders them)
+  assert_eq!(notes_in(&xml), [
+    row(&[
+      "Ann Able",
+      "thanks[†]=Univ A",
+      "thanks[*]=Equal contribution."
+    ]),
+    row(&[
+      "Bob Baker",
+      "thanks[*]=Equal contribution.",
+      "thanks[‡]=Univ B"
+    ]),
+    row(&["Cat Cole", "thanks[†]=Univ A", "thanks[‡]=Univ B"]),
+    row(&["Dan Dorn", "thanks[‡]=Univ B"]),
+  ]);
   let names = |carl: &str| {
     vec![
       row(&["Ann Able", "affiliation=Univ A"]),
@@ -446,7 +452,11 @@ fn a_given_mark_on_no_name_keeps_the_creators() {
 #[test]
 fn a_mark_a_name_follows_past_spacing_is_not_carried_back() {
   let mark = |m: &str, n: &str| format!(r#"<note mark="{m}" role="footnotemark" xml:id="{n}""#);
-  let thanks = r#"<note class="ltx_note_frontmatter ltx_thanks_note" role="thanks""#;
+  let thanks = |m: &str, n: &str| {
+    format!(
+      r#"<note class="ltx_note_frontmatter ltx_thanks_note" mark="{m}" role="thanks" xml:id="{n}""#
+    )
+  };
   for (tex, (warnings, says), expected, marks, notes) in [
     (
       repro!("ne2e_prefix_mark_past_spacing_before_and"),
@@ -483,14 +493,14 @@ fn a_mark_a_name_follows_past_spacing_is_not_carried_back() {
         &["on no name and no item; the block is written whole"][..],
       ),
       vec![row(&["Ann Able Bob Baker"])],
-      vec![vec![mark("†", "footnote2")]],
+      vec![vec![mark("†", "footnote2"), thanks("*", "id1")]],
       1,
     ),
     (
       repro!("ne2e_mark_in_formula_past_thin_spaces"),
       (1, &["on no name and no item; lost: ∗"][..]),
       vec![row(&["Ann Able 1"]), row(&["Bob Baker"])],
-      vec![vec![], vec![]],
+      vec![vec![thanks("*", "id2")], vec![]],
       1,
     ),
   ] {
@@ -505,7 +515,7 @@ fn a_mark_a_name_follows_past_spacing_is_not_carried_back() {
     }
     assert_eq!(creators(&xml), expected);
     assert_eq!(marks_by_creator(&xml), marks, "{xml}");
-    assert_eq!(xml.matches(thanks).count(), notes, "{xml}");
+    assert_eq!(xml.matches(r#" role="thanks""#).count(), notes, "{xml}");
   }
 }
 
@@ -535,6 +545,12 @@ fn thanks_by_creator(xml: &str) -> Vec<usize> {
 #[test]
 fn a_marks_run_is_carried_back_whole_or_left() {
   let mark = |m: &str, n: &str| format!(r#"<note mark="{m}" role="footnotemark" xml:id="{n}""#);
+  // (each `\thanks` note with the mark it prints, OD #1053)
+  let thanks = |m: &str, n: &str| {
+    format!(
+      r#"<note class="ltx_note_frontmatter ltx_thanks_note" mark="{m}" role="thanks" xml:id="{n}""#
+    )
+  };
   let three = || vec![row(&["Ann Able"]), row(&["Bob Baker"]), row(&["Carl Cole"])];
   let none = || vec![vec![], vec![], vec![]];
   let given = "given their number (a note's, written already) on no name and no item; lost: ";
@@ -566,14 +582,22 @@ fn a_marks_run_is_carried_back_whole_or_left() {
       repro!("ne2f_mark_and_note_nearer_next"),
       Some(whole.to_string()),
       vec![row(&["Ann Able Bob Baker and Carl Cole"])],
-      vec![vec![mark("†", "footnote2")]],
+      vec![vec![
+        mark("†", "footnote2"),
+        thanks("*", "id1"),
+        thanks("‡", "id2"),
+      ]],
       vec![2],
     ),
     (
       repro!("ne2f_bare_mark_nearer_next_past_quads"),
       Some(whole.to_string()),
       vec![row(&["Ann Able Bob Baker"])],
-      vec![vec![mark("†", "footnote2"), mark("‡", "footnote3")]],
+      vec![vec![
+        mark("†", "footnote2"),
+        mark("‡", "footnote3"),
+        thanks("*", "id1"),
+      ]],
       vec![1],
     ),
     (

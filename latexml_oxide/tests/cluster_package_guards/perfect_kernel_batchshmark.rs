@@ -40,7 +40,7 @@ fn converted(tex: &str, warnings: usize) -> String {
 }
 
 /// The notes of `xml`'s creators, as [`marked_notes`] lists them.
-fn notes_in(xml: &str) -> Vec<Vec<String>> {
+pub(super) fn notes_in(xml: &str) -> Vec<Vec<String>> {
   xml
     .match_indices("<creator ")
     .map(|(start, _)| {
@@ -329,7 +329,8 @@ Text.
 /// full copy of that note, as Perl's `relocateFootnote_aux` fills a mark (latex_constructs.pool.ltxml:518-527) — a
 /// document's `\samethanks[1]` (2502.19103), acmart's `\authornotemark[1]` (acmart.cls:1733-1738, the binding's marked
 /// `\authornote`), 1911.13299's `\footnotemark[1]`; the copy carries the note's mark, so the XSLT prints the note once.
-/// 1911.13299's `\ \footnotemark[N]` marks, lost with 1 Warning here, are SHGIVEN's (DG ruling 4).
+/// 1911.13299's `\ \footnotemark[N]` marks, which SHGIVEN carries back to the name before (DG ruling 4), are copies too:
+/// Ann's †, Bob's and Dan's ‡, no Warning (pin updated at the merge: alone this branch lost them with 1 Warning).
 #[test]
 fn a_mark_on_a_name_is_a_copy_of_the_note_it_marks() {
   assert_eq!(
@@ -352,12 +353,20 @@ fn a_mark_on_a_name_is_a_copy_of_the_note_it_marks() {
     ]
   );
   assert_eq!(
-    marked_notes(repro!("author_thanks_shared_by_footnotemark_marks_kept"), 1),
+    marked_notes(repro!("author_thanks_shared_by_footnotemark_marks_kept"), 0),
     [
-      row(&["Ann Able", "thanks[*]=Equal contribution."]),
-      row(&["Bob Baker", "thanks[*]=Equal contribution."]),
+      row(&[
+        "Ann Able",
+        "thanks[†]=Univ A",
+        "thanks[*]=Equal contribution."
+      ]),
+      row(&[
+        "Bob Baker",
+        "thanks[*]=Equal contribution.",
+        "thanks[‡]=Univ B"
+      ]),
       row(&["Cat Cole", "thanks[†]=Univ A", "thanks[‡]=Univ B"]),
-      row(&["Dan Dorn"]),
+      row(&["Dan Dorn", "thanks[‡]=Univ B"]),
     ]
   );
 }

@@ -6,10 +6,12 @@
 %   "† Univ A", "‡ Univ B"
 % engines: rust REGFIX = 0 errors, 1 Warning "lost: †, ‡, ‡"; Bob's [1] footnotemark mark="*" kept, 3 marks lost, notes
 %   unmarked; perl 0.8.8 = 0 errors, all 4 marks kept as role=footnotemark — RUST-ONLY loss
-% expect:  0 errors; notes marked *, †, ‡; Bob's [1] a copy of Ann's "*" note; with SHGIVEN: 0 warnings, Ann's †, Bob's
-%   and Dan's ‡ copies of Cat's notes
-% status:  RED (REGFIX) -> partly GREEN (perfect_kernel_batchshmark::a_mark_on_a_name_is_a_copy_of_the_note_it_marks:
-%   the marks and Bob's [1]; the `\ \footnotemark` marks are SHGIVEN's)
+% expect:  0 errors 0 warnings; notes marked *, †, ‡; every mark on its name, each `\footnotemark[N]` a copy of note N:
+%   Ann † (Univ A) then her * note, Bob * ‡, Cat † ‡, Dan ‡ (the `\ \footnotemark` carry is SHGIVEN's)
+% status:  RED (REGFIX) -> GREEN on int/frontmatter (the copies:
+%   perfect_kernel_batchshmark::a_mark_on_a_name_is_a_copy_of_the_note_it_marks; the carry:
+%   perfect_kernel_batchne2::a_given_mark_on_no_name_keeps_the_creators; formerly also
+%   `author_thanks_shared_by_footnotemark_marks_kept_red`, the same input)
 % preload: ar5iv.sty
 \documentclass{article}
 \title{T}
