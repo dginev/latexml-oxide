@@ -1,0 +1,23 @@
+% witness: the minimal shape of 2606.06621's, 2605.22682's and cnf.sty's (2605.08232, 2606.15628) plain list text: acmart's
+%          `\g@addto@macro\@authornotes{…}` (acmart.cls:1726), printed with the title page (:2245-2247)
+% oracle:  pdflatex 0 errors; "Both authors are with the Lab." under the two authors, in the title block
+% engines: rust=0 (60edb5d0e03: a body paragraph after the frontmatter) perl=0 (Warning: \@authornotes not expandable; the
+%          text lost) (2026-11-16)
+% expect:  0 errors, 0 warnings; Ann Able (Univ A, C) and Bob Baker (Univ B, C); the author block's nameless creator holding the
+%          note "Both authors are with the Lab." (role note; FIDELITY_CHARTER §4, unclaimed title-page text at the block as an
+%          `ltx:note`); no body paragraph of it
+% status:  RED (60edb5d0e03) -> GREEN (SHREST)
+% preload: ar5iv.sty
+\documentclass[sigconf]{acmart}
+\makeatletter
+\g@addto@macro\@authornotes{Both authors are with the Lab.}
+\makeatother
+\begin{document}
+\title{Title}
+\author{Ann Able}
+\affiliation{\institution{Univ A}\country{C}}
+\author{Bob Baker}
+\affiliation{\institution{Univ B}\country{C}}
+\maketitle
+Text.
+\end{document}

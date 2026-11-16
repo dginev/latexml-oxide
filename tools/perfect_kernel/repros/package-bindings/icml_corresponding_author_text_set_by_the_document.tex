@@ -1,0 +1,20 @@
+% witness: revREGBINDb NIT (synthetic): a document `\gdef`ing `\icmlcorrespondingauthor@text` without calling
+%          `\icmlcorrespondingauthor`, which icml2026.sty:529-530 prints after "Correspondence to: "
+% oracle:  pdflatex (with 2605.04712's icml2026.sty) 0 errors; the notice's footnote "Univ A. Correspondence to: Ann Able, Bob
+%          Baker."
+% engines: rust=0 (60edb5d0e03: the pubnote "Ann Able, Bob Baker" without its name) perl=0 (the line lost)
+%          (2026-11-16)
+% expect:  0 errors, 0 warnings; Ann Able's creator with her affiliation; the pubnote named "Correspondence to:" holding "Ann
+%          Able, Bob Baker"
+% status:  RED (60edb5d0e03) -> GREEN (SHREST)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage[accepted]{icml2026}
+\begin{document}
+\twocolumn[\icmltitle{Title}
+\begin{icmlauthorlist}\icmlauthor{Ann Able}{a}\end{icmlauthorlist}
+\icmlaffiliation{a}{Univ A}]
+\makeatletter\gdef\icmlcorrespondingauthor@text{Ann Able, Bob Baker}\makeatother
+\printAffiliationsAndNotice{}
+Text.
+\end{document}
