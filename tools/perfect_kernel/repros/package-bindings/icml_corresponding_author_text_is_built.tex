@@ -1,0 +1,20 @@
+% witness: 2605.04712 (main.tex:54), 2605.21190 (:132), 2606.01172 (:141) `\g@addto@macro\icmlcorrespondingauthor@text`,
+%          which icml2026.sty:490-499's `\icmlcorrespondingauthor` builds (icml2017.sty on)
+% oracle:  pdflatex (with 2605.04712's icml2026.sty) 0 errors; "Listed: Ann Able <ann@x.org>. Code at X."; the
+%          notice's footnote "Correspondence to: Ann Able <ann@x.org>. Code at X." (icml2026.sty:529-530)
+% engines: rust=1 (999af99497d: undefined \icmlcorrespondingauthor@text) perl=1 (\icmlcorrespondingauthor@text undefined where used) (2026-11-16)
+% expect:  0 errors, 0 warnings; the paragraph "Listed: Ann Able <ann@x.org>. Code at X."; Ann Able's creator with
+%          her affiliation and e-mail; the note "Code at X" on the document, what the document added to the line
+% status:  GREEN
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage[accepted]{icml2026}
+\begin{document}
+\twocolumn[\icmltitle{Title}
+\begin{icmlauthorlist}\icmlauthor{Ann Able}{a}\end{icmlauthorlist}
+\icmlaffiliation{a}{Univ A}
+\icmlcorrespondingauthor{Ann Able}{ann@x.org}]
+\makeatletter\g@addto@macro\icmlcorrespondingauthor@text{. Code at X}\makeatother
+\printAffiliationsAndNotice{}
+\makeatletter Listed: \icmlcorrespondingauthor@text.\makeatother
+\end{document}

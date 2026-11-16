@@ -14,6 +14,10 @@ LoadDefinitions!({
   DefMacro!("\\TPToverlap{}",    None);
 
   DefMacro!("\\TPTdoTablenotes", None);
+  // threeparttable.sty:302-303 `\TPT@opt@normal`: the settings `{tablenotes}` begins with (:258), which its options
+  // extend (:310-337) and a document too (2605.22976 `\g@addto@macro\TPT@defaults`; OD #1036): font and layout
+  // settings, which this binding's `{tablenotes}` does not run.
+  RawTeX!(r"\gdef\TPT@defaults{}");
 
   // We SHOULD be playing games to link up the \tnote to the item...
   DefMacro!("\\tnote{}", "\\TPToverlap{\\textsuperscript{\\TPTtagStyle{#1}}}");

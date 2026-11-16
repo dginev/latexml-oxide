@@ -80,7 +80,7 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
     "\\lx@author@markup@provide{}{}",
     "\\ifx#1\\@undefined\\let#1#2\\expandafter\\def\\expandafter\\lx@author@markup@unprovide\\expandafter{\\lx@author@markup@unprovide\\let#1\\@undefined}\\fi"
   );
-  DefMacro!("\\lx@author@markup@begin", sub[()] { author_markup_begin(false) });
+  DefMacro!("\\lx@author@markup@begin", sub[()] { Ok(author_markup_begin(false)?.begin) });
   DefMacro!("\\lx@author@markup@run{}{}", "#2#1");
   DefMacro!("\\lx@author@orcid[]{}", "\\lx@add@orcid{#2}");
   DefMacro!("\\lx@inst@mark{}", sub[(label)] {
@@ -401,6 +401,21 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
   DefMacro!(
     "\\lx@add@pubnote@thanks[]{}",
     "\\lx@title@footnote@step\\lx@add@frontmatter{ltx:pubnote}[role=thanks,#1]{#2}"
+  );
+
+  // Rust-only: run a title-page note list where the class prints it (acmart.cls:2245-2247, revtex4-2.cls:3020-3022,
+  // amsaddr.sty:113): footnote texts become notes, the footnote count is restored (OD #1036; 2605.28175, 2402.16516).
+  DefMacro!(
+    "\\lx@frontmatter@footnotes{}",
+    r"\edef\lx@fm@footnote{\the\c@footnote}\begingroup\ifvmode\let\lx@fm@par\par\else\let\lx@fm@par\relax\fi\let\footnotetext\lx@fm@footnotetext\let\@footnotetext\lx@fm@@footnotetext#1\ifhmode\lx@fm@par\fi\endgroup\global\c@footnote\lx@fm@footnote\relax"
+  );
+  DefMacro!(
+    "\\lx@fm@footnotetext[]{}",
+    "\\lx@add@pubnote[role=note,name={}]{#2}"
+  );
+  DefMacro!(
+    "\\lx@fm@@footnotetext{}",
+    "\\lx@add@pubnote[role=note,name={}]{#1}"
   );
 
   // Other kinds of notes?
@@ -887,10 +902,31 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
   Ok(())
 }
 
+/// The author markup in force for the author content ([`author_markup_begin`]).
+pub(in crate::base_utilities) struct AuthorMarkup {
+  /// `\lx@author@markup@begin`'s expansion
+  pub begin:      Tokens,
+  /// the commands of the class's title code it defines
+  pub title_code: Vec<Token>,
+}
+
+/// `content` under the author markup, as `\lx@author@withinst` digests the author content: its definitions undone after it,
+/// the list of them taken before it runs (a nested author keeps it).
+pub(in crate::base_utilities) fn under_author_markup(content: Vec<Token>) -> Vec<Token> {
+  let mut out = TokenizeInternal!(
+    r"\lx@author@markup@begin\expandafter\lx@author@markup@run\expandafter{\lx@author@markup@unprovide}"
+  )
+  .unlist();
+  out.push(T_BEGIN!());
+  out.extend(content);
+  out.push(T_END!());
+  out
+}
+
 /// `\lx@author@markup@begin`: the author markup in force for the author content; with `rehearsal`, the frontmatter
 /// observer's rehearsal's (observer/reading.rs), in which a title-code definition reading no argument stays undefined,
 /// its held Error the reading's (`reads_arguments`; OXIDIZED_DESIGN_DIVERGENCES #802, #941).
-pub(in crate::base_utilities) fn author_markup_begin(rehearsal: bool) -> Result<Tokens> {
+pub(in crate::base_utilities) fn author_markup_begin(rehearsal: bool) -> Result<AuthorMarkup> {
   // A binding's author markup for a class that defines its own only where its title code prints the author list
   // (`\lx@author@markup@class`, `\lx@author@markup@provide` calls: vmsta.cls:278-291 `\name@m@front`, which prints
   // `\fnm`/`\snm` as "Yuliya~Mishura" and drops `\inits`; latexml_contrib vmsta_cls.rs) comes first, before
@@ -921,10 +957,12 @@ pub(in crate::base_utilities) fn author_markup_begin(rehearsal: bool) -> Result<
       lookup_meaning(definee).is_none() && (!rehearsal || reads_arguments(definee, statement))
     })
     .collect();
+  let mut title_code = Vec::new();
   for ((definee, statement), applies) in definitions.into_iter().zip(applies) {
     if !applies {
       continue;
     }
+    title_code.push(definee);
     out.extend(statement);
     out.extend(
       TokenizeInternal!(r"\expandafter\def\expandafter\lx@author@markup@unprovide\expandafter{\lx@author@markup@unprovide\let")
@@ -932,7 +970,10 @@ pub(in crate::base_utilities) fn author_markup_begin(rehearsal: bool) -> Result<
     );
     out.extend([definee, T_CS!("\\@undefined"), T_END!()]);
   }
-  Ok(Tokens::new(out))
+  Ok(AuthorMarkup {
+    begin: Tokens::new(out),
+    title_code,
+  })
 }
 
 /// `\lx@add@author[attr]{name}` and `\lx@add@creator[attr]{name}` (Base_Utility.pool.ltxml `\lx@add@creator`): the

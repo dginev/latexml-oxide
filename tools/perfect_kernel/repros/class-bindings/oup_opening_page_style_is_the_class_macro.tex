@@ -1,0 +1,23 @@
+% witness: 2606.29739 (main.tex:28 `\g@addto@macro\ps@opening`, through ima-authoring-template.cls's
+%          `\LoadClass{oup-authoring-template}`): oup-authoring-template.cls:813 defines it
+% oracle:  pdflatex 0 errors
+% engines: rust=1 (999af99497d: undefined \ps@opening) perl=5 (no binding: \journaltitle, \DOI, ... undefined) (2026-11-16)
+% expect:  0 errors, 0 warnings; Ann Able's creator; "Text."
+% status:  GREEN
+% preload: ar5iv.sty
+\documentclass[unnumsec,webpdf,contemporary,large]{oup-authoring-template}
+\makeatletter\g@addto@macro\ps@opening{\def\@oddhead{}}\makeatother
+\begin{document}
+\journaltitle{Journal}
+\copyrightyear{2026}
+\pubyear{2026}
+\DOI{10.1000/x}
+\access{Advance Access}
+\appnotes{Paper}
+\title{Title}
+\author[1]{Ann Able}
+\address[1]{\orgname{Univ A}}
+\abstract{Abstract.}
+\maketitle
+Text.
+\end{document}

@@ -1,0 +1,25 @@
+% mechanism: a binding's lock makes the round trip with the walk (core binding::preamble_commands): a body load's
+%   reopening gives OmniBus's `\doi` back with its lock, so doipkg's `\def\doi` is refused, savedoipkg's
+%   `\let\savedoi\doi` gets OmniBus's link and its `\DeclareTextCommand` (a walked, locked declarer) works; after it
+%   the body's `\renewcommand{\doi}` stands, and a second body load neither restores nor disables it
+% witness: synthetic (2606.22730's shape behind body `\usepackage`s; doipkg/savedoipkg stand in for a raw package)
+% oracle:  pdflatex 5 `!` (3 Can be used only in preamble: \usepackage; 2 Undefined control sequence: \savedoi, \foo),
+%          "a doipkg savedoipkg b in-epkg c D:w doipkg d D:v"; Perl 3 errors (unexpected:\usepackage) with
+%          --includestyles, "b PKG:in-epkg FOO c D:w d D:v" (no lock on Perl's `\doi`, OmniBus.cls.ltxml:154); without
+%          it 5 errors (+ undefined \savedoi, \foo: the raw packages unread)
+% engines: rust CUT999 5 errors (the `\renewcommand` silently refused under the lock left on `\doi`, then
+%          `\doi{w}` and `\doi{v}` meet `\@notprerr`), "c w d v"; the lock part ("b" link, "FOO") already as here
+% expect:  3 errors (the loader's), 0 warnings; "b" OmniBus's link in-epkg, "FOO", "c D:w", "d D:v"
+% status:  GREEN (move_locks both ways in binding::preamble_commands; OD #226)
+\documentclass{imsart}
+\usepackage{url}
+\begin{document}
+a
+\usepackage{doipkg}
+\usepackage{savedoipkg}
+b \savedoi{in-epkg} \foo
+\renewcommand{\doi}[1]{D:#1}
+c \doi{w}
+\usepackage{doipkg}
+d \doi{v}
+\end{document}

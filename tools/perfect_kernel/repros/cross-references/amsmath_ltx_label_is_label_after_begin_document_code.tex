@@ -1,0 +1,17 @@
+% witness: the v0.19 cleveref.sty copies 2508.14614, 2508.09511, 1405.2249 ship (:2455-2463, `\AtBeginDocument{…
+%          \def\ltx@label#1{\cref@label#1}}`, which the first aid does not repair: latex2e-first-aid-for-external-
+%          files.ltx:194 `\FirstAidNeededT` wants v0.21.4): amsmath.sty:1228 lets `\ltx@label` be `\label` again at
+%          `begindocument/end`, after every `begindocument` code
+% oracle:  pdflatex 0 errors; "XY", "(1)" for the equation, `\ref{l4b}` and `\ref{l3a}` resolved
+% engines: rust=0 (999af99497d: "XwrongY", the display's math "a=bwrong") perl=0 (same) (2026-11-16)
+% expect:  0 errors, 0 warnings; the paragraph "XY" labelled l4b, the equation labelled l3a with its math "a=b"
+% status:  GREEN
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{amsmath}
+\makeatletter
+\AtBeginDocument{\def\ltx@label#1{wrong}}
+\begin{document}
+\begin{equation} a = b \ltx@label{l3a} \end{equation}
+X\ltx@label{l4b}Y
+\end{document}

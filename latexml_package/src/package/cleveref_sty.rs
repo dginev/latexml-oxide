@@ -182,13 +182,28 @@ LoadDefinitions!({
   // `package/cleveref/after` code labelled `firstaid`) repairs the raw file's `\label` and `\cref` machinery, which this
   // binding replaces: not registered (DG 2026-11-14), so `\label` keeps no `label` hook code of it (QAB1b). Removed only
   // where registered: the chunk dates from 2024-03-22 (firstaid changes.txt); an older kernel warns "Cannot remove chunk".
-  if hook_has_labelled_code("package/cleveref/after", "firstaid") {
+  let first_aid = hook_has_labelled_code("package/cleveref/after", "firstaid");
+  if first_aid {
     RawTeX!(r"\RemoveFromHook{package/cleveref/after}[firstaid]");
   }
   with_pretended_load("amsmath.sty", || -> Result<()> {
     InputDefinitions!("cleveref", noltxml => true, extension => Some(Cow::Borrowed("sty")));
     Ok(())
   })?;
+  // Its repair of the raw file's amsmath code (:257-270), which this binding reads: cleveref.sty:2623
+  // `\def\ltx@label#1{\cref@label#1}` takes an explicit `\ltx@label{l4b}`'s first character as the key and sets the
+  // rest ("X4bY"; a `_` there, in a display, is a Double subscript: 2605.07565), and :2620 braces a display's key twice
+  // for amsmath 2025-05-18 (amsmath.sty:1230-1236). Only for the release it repairs (:194 `\FirstAidNeededT`, the
+  // `\ver@cleveref.sty` the file provides): a paper's copy of another release is read as it is.
+  if first_aid {
+    RawTeX!(r"\def\lx@cref@firstaid@release{2018/03/27 v0.21.4 Intelligent cross-referencing}%
+\expandafter\ifx\csname ver@cleveref.sty\endcsname\lx@cref@firstaid@release
+\AddToHook{begindocument}[cleveref]{\IfPackageAtLeastT{amsmath}{2025-05-18}{%
+  \def\ltx@label#1{\cref@label{#1}}%
+  \def\label@in@display@noarg#1{\cref@old@label@in@display{#1}}%
+  \def\label@in@mmeasure@noarg#1{\begingroup\measuring@false\cref@old@label@in@display{#1}\endgroup}}}%
+\fi");
+  }
   // (the document's formats noted, `\lx@cref@noteformat`, above; cleveref's own `\begin{document}` code, which builds
   // the defaults, bracketed by `\lx@cref@building`, its first hook before the file's and its last after: cleveref's
   // builders are left as they are, which packages patch (clevethm's `\patchcmd\@crefdefineformat`, 2608.12136))

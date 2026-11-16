@@ -5615,6 +5615,18 @@ listed command to `\@notprerr` (DG ruling (b), 2026-11-15), except Perl's 7 load
   `\begin{document}`, or where a sub-file without one ends: `gullet::unread_after_current_file`), then walks again.
   What such a load records with `\@onlypreamble` is dropped (`\@preamblecmds` is `\@notprerr` after), so lppl.tex:44's
   probe stays true. A loader inside one is no Error (`\@currext` `sty`/`cls`, `inPreamble`).
+- A binding's lock (`:locked`, `:locked@files`) goes aside with the meaning it protects and comes back with it:
+  `\@notprerr` is no binding's, so the body's `\renewcommand` of a walked command stands, as in TeX and in Perl
+  (settled 2026-11-16: the document's redefinition takes effect). 2606.22730: imsart.sty:1223 `\@onlypreamble\doi`
+  over OmniBus's `\doi`, which only our #408 locks (omnibus_cls.rs), so the natbib `.bbl`'s `\renewcommand{\doi}` was
+  refused (36 false Errors); now its DOIs read "doi: " and the `.bbl`'s `\Url` ref, 0 Errors, the same as Perl (whose
+  `\doi` is a plain `DefMacro` with no lock, OmniBus.cls.ltxml:154, and which walks nothing) and pdflatex ("doi:
+  10.1/x", no link). Within a body load the lock is back: a raw package's `\def\doi` is refused and its
+  `\let\savedoi\doi` gets OmniBus's link (Perl `--includestyles`: the package's `\doi`). A command the body has
+  redefined is no longer the walk's: a later body load neither reopens nor disables it again. The locked commands the walk meets (1406 papers: a random 700, imsart's 70, the 696 using
+  `\@onlypreamble`): latex.ltx's six `\DeclareText…` declarers in every paper, `\DeclareTextCommand` in 233,
+  imsart's `\doi` in 21, and the kernel's `\title`/`\author` under a raw class's `\@onlypreamble` in 8
+  (cup-journal.cls, kaist-ucs.cls; cc.cls's 1507.02955).
 - A loader replaced by a binding (docmute_sty.rs, standalone_sty.rs `\documentclass`) stands for its package's re-let
   after the walk (docmute.sty:19, standalone.sty:738). `\document` stays the constructor's alias, whose identity
   `\begin`/`\end` read (sect01.rs): the constructor's second run raises the Error.
@@ -5628,7 +5640,9 @@ takes; 1205.6201's are a conditional's other preambles).
 Guards `preamblecmds_is_notprerr_inside_a_running_document`, `error_boundary::perfect_kernel_error_boundary`
 (rows "preamble-only commands in the body/preamble", "a second \begin{document}", "under an unknown class",
 "a body package's \@onlypreamble", "a preamble-only command is \@notprerr", "a document's \@onlypreamble macro",
-"a body \includeonly", "a package read in the body", "a subfile's preamble", "a standalone sub-file's preamble",
+"a body \includeonly", "a package read in the body", "a locked preamble-only command redefined in the body", "a body
+load after the body redefined a preamble-only command", "a binding's lock round-trips through a body load", "a
+subfile's preamble", "a standalone sub-file's preamble",
 "a standalone sub-file with no \begin{document}", "a subfile with no \begin{document}").
 
 ### 227. → SYNC_STATUS "Rust Error Fixes" (a port-bug fix: a `filecontents` capture ends at `\end{<current environment>}`)
@@ -17829,9 +17843,19 @@ it whole as one `\lx@add@author` (Base_Utility.pool.ltxml:687-693), else `SplitT
 - *Queue.* Every call queues its block whole (`defs/author_macros.rs:35 whole_block_call`); the ledger records it with
   its stamped position range (`observer/ledger.rs`).
 - *Flush.* `place.rs:520 digest_front_matter` rehearses and lexes every block not read yet (`observer/reading.rs`;
-  `observer/rehearsal.rs`; each block under the author markup its digestion runs, `reading.rs:252`,
-  `defs/frontmatter_fields.rs:893 author_markup_begin`: a binding's class markup, OmniBus's, the title code's
-  definitions that read arguments — formerly in #802's and #941's records; `events/mod.rs:2774 lex_with_formulas`
+  `observer/rehearsal.rs`; each block under the author markup its digestion runs, `reading.rs:254`,
+  `defs/frontmatter_fields.rs:901 author_markup_begin`: a binding's class markup, OmniBus's, the title code's
+  definitions that read arguments — formerly in #802's and #941's records. What a title-code command assigns besides
+  printing, called from the block or in the run a paper's macro reached it in, is no declaration of the block
+  (`field_notes.rs:613 keep_declared`, `:686 field_expansion`; the run lasts while its expansion is read, a mouth its
+  `\textsuperscript` digests its argument in included, `close_runs`): pdflatex runs it inside the title code's group,
+  so its replay apart erred undefined (klmm.sty's `\instref`, 2606.12100, 2606.12130, 2606.12144, 2606.22997,
+  2606.26035). Every other definition of that macro, a name built at run time too, is the block's (not one it passes as
+  the title-code command's argument: row R REHEARSEARG), replayed under the
+  author markup (`emitter/emit.rs:3150 declarations`, `frontmatter_fields.rs under_author_markup`), as pdflatex runs it
+  in that group; OmniBus's `\orcid` is bound as a class's own
+  `\orcid` (`rehearsal.rs:613`, `\lx@author@orcid`), one contact with its argument whole (2606.13132's `\orcid{orcid.org/…}`
+  had lost its iD); `events/mod.rs:2774 lex_with_formulas`
   reads a span's content from the digested list, a speculative run's in-place edits undone — formerly #978), then calls
   `emitter/emit.rs:5001 emit_commands` (place.rs:589).
 - *Resolve.* `observer/resolver/mod.rs:1257 resolve` applies the rules its module doc numbers 1-10 under the family's
@@ -19002,6 +19026,22 @@ is left alone (TeX's `\expandafter` leaves a `\relax` cs unexpanded, so its `\xd
 **Guard**: `perfect_kernel_batchmacsync::add_to_macro_on_an_undefined_cs_errs` (repro
 `macro-state/g_addto_macro_undefined_defines.tex`).
 
+So a binding defines the lists and hooks its real class or package defines, which documents extend (REGBIND, 17 papers
+of the 2605/2606 reruns: enumerate's `\@enhook`, threeparttable's `\TPT@defaults`, oup-authoring-template's
+`\ps@opening`, and the lists below). Where the class prints such a list with its title page and the binding's own
+setters do not fill it, the binding prints it there too, or what a document adds to it is lost without a word (Perl:
+dropped, with the Warning above): `\lx@frontmatter@footnotes{<list>}` runs it where the class runs it, each
+`\footnotetext`/`\@footnotetext` in it an `ltx:pubnote` (role `note`), what else it prints typeset after the
+frontmatter. acmart's `\@titlenotes`, `\@subtitlenotes`, `\@authornotes` at `\maketitle` (acmart.cls:2245-2247;
+2605.28175, 2605.16813, 2606.04448); amsaddr's `\emails` as its footnote (amsaddr.sty:102-113; 2606.23853, 2606.25954,
+2212.11488, 1801.06576, 2307.06418); elsarticle's `\elsaddress` and `\@cornotes` at `\end{frontmatter}` or
+`\maketitle` (elsarticle.cls:766, :806; 2605.22682, cnf.sty's `\cortext` 2605.08232, 2606.15628); REVTeX's
+`\prep@absbox`, `\post@absbox`, `\mini@notes` and `\@FMN@list` at `\maketitle` (revtex4-2.cls:2648-2652, :3020-3022;
+2606.06621, 2605.00976); and the text a document adds to icml's `\icmlcorrespondingauthor@text`, whose names and
+addresses are the contacts (icml2026.sty:529-530; 2605.04712, 2605.21190, 2606.01172). **Guard**:
+`perfect_kernel_batchregbind::{bindings_define_the_macros_their_files_define,
+bindings_print_the_title_page_lists_their_files_print}`.
+
 ### 1026. → KNOWN_PERL_ERRORS #1241 (`page=` on a single-page format (SVG, PNG, JPEG) selects nothing: the source is copied as it is (#791))
 
 ### 1027. The no-dump expl3-code.tex reload counts what it mutes (#825)
@@ -19202,12 +19242,21 @@ mathvariant="normal">O</mi><mn>4</mn></msub></mrow><mrow><mn>2</mn><mo lspace="0
 for `\ce{^{95}MoO4^{2-}}`. This first markup is TENTATIVE (DG's rulings of 2026-11-14) and awaits Bruce Miller's
 feedback and refinements; stage 2 adds MathML `intent` on these presentation elements (formula, element, count and
 charge each their own element). DG: "We expect further improvements are both possible and needed."
+A formula whose output list holds a macro that expands to a math shift (`$`, `\(`, `\)`; 2606.03586
+`\ce{\alphasic}`, `\alphasic` = `$\alpha$-\ce{SiC}`) keeps mhchem's output: its parser reads a literal `$` itself, a
+macro's reaches the output unread, where only mhchem's text-mode `\text{…}` (mhchem.sty:2934) holds it (REGCHEM; guard
+`perfect_kernel_batchregchem::mhchem_macro_math_shift_is_mhchems_own_output`).
 Arrows, `+` between species, bonds, states and amounts keep mhchem's output (stage 2, SYNC row MHCHEM), and the
 formula's `tex=` is the rewritten math, not `\ce{…}`. Cost (instructions:u): −0.55 % on 2307.12991 (589 `\ce` in its sources),
 −0.04 % on 300 synthetic `\ce`, +0.13 % on 2405.01836 (167; with `--nomathparse` −0.08 %: the formulas'
 parse is the price). **Guard**: `mhchem_formula::mhchem_formula_units_are_chemistry` (repros
 `package-bindings/mhchem_formula_units.tex`, `mhchem_formula_text_font.tex`, `mhchem_formula_state.tex`,
 `mhchem_formula_amount.tex`, `mhchem_formula_juxtaposed.tex`; witnesses issue 824, 2206.12015).
+
+Residual (revREGCHEM): the decline's scan follows unprotected macros only, so a *protected* user macro hiding a math shift
+(`\NewDocumentCommand`, `\protected\def`) still sets the shift in math and errs ("Missing $ inserted"); the skip is load-bearing
+(`\@ensuremath` is protected and its `\else` reaches `\@ensuredmath`'s `$`). Row R MHCHEMPROT.
+
 ### 1050. The glue between two paragraphs is `--ltx-skip-before` on the second (QAB8, QA26)
 
 **Principle:** TeX's vertical list decides what lies between two paragraphs; Perl's own comment asks for it
@@ -19278,7 +19327,14 @@ see). The kernel's first aid for cleveref.sty (latex2e-first-aid-for-external-fi
 labelled `firstaid`) is not registered under cleveref's binding, which replaces the code it repairs (DG 2026-11-14):
 its `label` hook code cost 3.5M instructions a `\label`. It is removed only where the chunk is registered
 (`hook_has_labelled_code`; the chunk dates from 2024-03-22, firstaid changes.txt), as lthooks warns "Cannot remove
-chunk" for a missing one. **Open** (post-merge, catalog): a note steps its counter after its text is digested
+chunk" for a missing one. Its repair of the raw file's amsmath code, which the binding does read (:257-270, a
+`begindocument` chunk under `\IfPackageAtLeastT{amsmath}{2025-05-18}`: cleveref.sty:2620, :2623), is added back with
+it: without it an explicit `\ltx@label{l4b}` took `l` as the key and printed "4b" (2605.07565: 3 Double subscript;
+guard `perfect_kernel_batchregbind::cleveref_ltx_label_braces_its_key_under_amsmath`), for the release it repairs
+only (:194 `\FirstAidNeededT`, `\ver@cleveref.sty` v0.21.4). An older copy's `\ltx@label` (v0.19, 2508.14614) is undone
+by amsmath's `\AddToHook{begindocument/end}{\let\ltx@label\label}` (amsmath.sty:1228), which the binding now runs at
+`begindocument/end`, after the copy's `begindocument` code, as there (it ran in `begindocument`, before it; guard
+`perfect_kernel_batchregbind::amsmath_ltx_label_is_label_after_the_begin_document_code`). **Open** (post-merge, catalog): a note steps its counter after its text is digested
 and an align or gather row after its cells (Perl's order), so a label hook there reads the enclosing counter (or, in an
 align's later row, the previous row's step) where
 latex.ltx's `\@footnotetext` and `\@mpfootnotetext` define it (:17664, :16350) and amsmath has stepped `equation`

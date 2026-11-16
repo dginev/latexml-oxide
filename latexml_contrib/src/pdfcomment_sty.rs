@@ -28,6 +28,10 @@ LoadDefinitions!({
   RequirePackage!("marginnote");
   RequirePackage!("ifpdf");
   RequirePackage!("ifluatex");
+  // pdfcomment.sty:1350 `\RequirePackage{soulpos}`: the registers soulpos.sty:12-16 allocates, which a document's
+  // own copy of its end-of-document pass reads (2606.00625 `\AddToHook{enddocument/afterlastpage}{\ulp@cnt\z@…}`);
+  // the annotations it places are this binding's notes, so the package itself (and its soulutf8) is not loaded.
+  RawTeX!(r"\newcount\ulp@subcnt\newcount\ulp@cnt\newwrite\ulp@out\newread\ulp@in");
   RequirePackage!("hyperref");
   // pd1enc.def:82 `\DeclareTextCommand{\textCR}{PD1}{\015}` — a line break
   // inside an annotation's text (example.tex:144).

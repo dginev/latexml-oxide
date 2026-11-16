@@ -1,0 +1,28 @@
+% witness: 2605.08232, 2606.15628 (cnf.sty:585-593: a journal style's `\cortext` adds its text to `\@cornotes`, which
+%          its title page prints under the abstract, cnf.sty:435), 2605.22682 (Gabryszewski…preprint.tex:33-45: a
+%          preprint notice boxed into `\elsaddress`, printed under the addresses, elsarticle.cls:806)
+% oracle:  pdflatex 0 errors; "Authors' preprint version", "This is the authors' preprint.", "∗ Corresponding author:
+%          Univ A."
+% engines: rust=2 (999af99497d: undefined \elsaddress, \@cornotes) perl=0 (2 Warnings; the text lost) (2026-11-16)
+% expect:  0 errors, 0 warnings; Ann Able's creator with her address; after the frontmatter, the notice's text and the
+%          correspondence text
+% status:  GREEN
+% preload: ar5iv.sty
+\documentclass{elsarticle}
+\makeatletter
+\def\cortext[#1]#2{\g@addto@macro\@cornotes{\refstepcounter{cnote}\elsLabel{#1}%
+  \noindent\ifcase\thecnote\or$\ast$\or$\ast\ast$\fi~#2}}
+\makeatother
+\begin{document}
+\begin{frontmatter}
+\title{Title}
+\author[a]{Ann Able}\cortext[c]{Corresponding author: Univ A.}
+\address[a]{Univ A}
+\makeatletter
+\g@addto@macro\elsaddress{\par\vspace{2em}\vbox{\centering\normalfont\small
+  \textbf{Authors' preprint version}\\[0.5em]
+  This is the authors' preprint.\par}\vspace{1em}}
+\makeatother
+\end{frontmatter}
+Text.
+\end{document}
