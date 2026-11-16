@@ -3061,8 +3061,16 @@ mod browser_render_fmmarks {
     };
   }
 
-  /// (row, document, the marks shown on names in order as (name, mark), the names a shown body prints under).
-  const ROWS: [(&str, &str, &[(&str, &str)], &[&str]); 5] = [
+  /// A row: its label, its document, the marks shown on names in order as (name, mark), and the names a shown body
+  /// prints under.
+  type Row = (
+    &'static str,
+    &'static str,
+    &'static [(&'static str, &'static str)],
+    &'static [&'static str],
+  );
+
+  const ROWS: [Row; 5] = [
     (
       "a shared legend note (2407.07614's shape)",
       repro!("author_block_symbol_legend_note_mark_not_in_its_text"),
