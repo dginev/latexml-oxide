@@ -21837,3 +21837,22 @@ as `\leavevmode\vrule…\par` already was; in a float that rule is no panel and 
 Perl's standalone paragraph did (`arrange_panels`; 2302.11635; fixture `structure/vspace_closes_leader_para`). Not ported: Perl's copies of a box filler to a box's known width (:889-894).
 Guards `perfect_kernel_batch58::leaders_rule_keeps_the_paragraph`, `30_script_bindings`
 `lookup_definition_pushes_construct_hooks_end_to_end`. An upstream offer (#2882).
+
+## 1283. A note a document adds to a class's title-page list is never printed
+
+acmart, REVTeX, elsarticle and amsaddr keep title-page notes in a list their `\maketitle` prints (acmart.cls:1726
+`\@authornotes`, printed :2245-2247; revtex4-2.cls:2498 `\@FMN@list`, :3020-3022; elsarticle.cls:179 `\@cornotes`, :294
+`\elsaddress`; amsaddr.sty:43 `\emails`, :113). Perl's bindings define none of these lists, so a document appending to
+one gets a Warning (amsaddr's `\emails`: none) and the note is lost. Minimal trigger (pdflatex 0 errors, prints the note):
+
+```latex
+\documentclass[sigconf]{acmart}
+\makeatletter\g@addto@macro\@authornotes{\footnotetext{Both authors contributed equally.}}\makeatother
+\begin{document}\title{T}\author{Ann Able}\affiliation{\institution{Uni}\country{X}}\maketitle Body.\end{document}
+% Perl: Warning:unexpected:\@authornotes "is not an expandable control sequence"; the note is absent
+```
+
+Rust (cutoff regression cluster A): the bindings define each list where its class does, and `\lx@frontmatter@footnotes`
+runs it where the class prints it — a `\footnotetext` becomes a pubnote, the footnote count is restored (OD #1036;
+2605.28175, 2606.06621, 2606.23853); other text is typeset after the frontmatter (row R FMLISTNOTE). Guard
+`perfect_kernel_batchregbind::bindings_print_the_title_page_lists_their_files_print`.
