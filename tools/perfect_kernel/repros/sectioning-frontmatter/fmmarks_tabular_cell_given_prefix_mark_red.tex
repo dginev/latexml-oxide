@@ -1,0 +1,18 @@
+% mechanism: a given `\footnotemark[2]` opening a `tabular` cell, glued to its name: that name's
+% witness:  revSHGIVEN p3tab
+% oracle:   pdflatex 0 errors; "Ann Able (12.0pt) †Bob Baker"
+% engines:  rust INTREC (3af622aca64) = 0 errors, 0 Warnings; Ann Able ; footnotemark[†]= / Bob Baker
+% expect:   0 errors, 0 Warnings; Ann Able / Bob Baker ; footnotemark[†]= (guard canon: name ; note role[mark]=text,
+%   sorted | contacts)
+% moves:    NEITHER: reported to main (carried back across the cell boundary to Ann, no Warning)
+% status:   RED (NEITHER: no recorded gap, reported to main) (INTREC 3af622aca64;
+%   perfect_kernel_batchfmmarks::a_mark_past_spacing_is_the_nearer_names_red)
+% preload: ar5iv.sty
+\documentclass{article}
+\title{T}
+\author{\begin{tabular}{cc}Ann Able & \footnotemark[2]Bob Baker\end{tabular}}
+\date{}
+\begin{document}
+\maketitle
+Text.
+\end{document}

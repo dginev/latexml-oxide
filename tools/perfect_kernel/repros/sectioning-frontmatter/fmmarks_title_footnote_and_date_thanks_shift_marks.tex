@@ -1,0 +1,18 @@
+% mechanism: a title `\footnote` and a second title `\thanks` step before the authors, a `\date` `\thanks` after: Ann
+%   ‡, `\footnotemark[3]` a copy, `\footnotemark[1]` the title's
+% witness:  revSHMARK p9
+% oracle:   pdflatex 0 errors; title "∗", "†"; "Ann Able‡ Bob Baker‡ Cy Cole∗"; the date "§"
+% engines:  rust INTREC (3af622aca64) = 0 errors, 0 Warnings; Ann Able ; thanks[‡]=Equal contribution. / Bob Baker ;
+%   thanks[‡]=Equal contribution. / Cy Cole ; footnotemark[*]=
+% expect:   0 errors, 0 Warnings; Ann Able ; thanks[‡]=Equal contribution. / Bob Baker ; thanks[‡]=Equal contribution.
+%   / Cy Cole ; footnotemark[*]= (guard canon: name ; note role[mark]=text, sorted | contacts)
+% status:   GREEN (INTREC 3af622aca64; perfect_kernel_batchfmmarks::a_mark_on_a_name_is_a_copy_of_its_note)
+% preload: ar5iv.sty
+\documentclass{article}
+\title{A Title\footnote{Title note.}\\ with \textbf{Two} Lines\thanks{Second title note.}}
+\author{Ann Able\thanks{Equal contribution.} \and Bob Baker\footnotemark[3] \and Cy Cole\footnotemark[1]}
+\date{\today\thanks{Date note.}}
+\begin{document}
+\maketitle
+Body\footnote{Body note.}.
+\end{document}

@@ -1,0 +1,19 @@
+% mechanism: a bare mark and a `\thanks` in the gap between two names, nearer the next: both its
+% witness:  revSHGIVENc r10notegap
+% oracle:   pdflatex 0 errors; "Ann Able∗ (23.1pt) †‡ (4.0pt) Bob Baker Carl Cole", footnotes "∗ Ann note body", "‡
+%   Floating body"
+% engines:  rust INTREC (3af622aca64) = 0 errors, 1 Warning; Ann Able Bob Baker and Carl Cole ; footnotemark[†]= ;
+%   thanks[*]=Ann note body ; thanks[‡]=Floating body
+% expect:   0 errors, 0 Warnings; Ann Able ; thanks[*]=Ann note body / Bob Baker ; footnotemark[†]= ;
+%   thanks[‡]=Floating body / Carl Cole (guard canon: name ; note role[mark]=text, sorted | contacts)
+% moves:    row R SHGIVENNEXT (a mark nearer the next name, or a bare one; today the counted loss or the whole block)
+% status:   RED (INTREC 3af622aca64; perfect_kernel_batchfmmarks::a_mark_past_spacing_is_the_nearer_names_red)
+% preload: ar5iv.sty
+\documentclass{article}
+\title{T}
+\author{Ann Able\thanks{Ann note body} \qquad \footnotemark \ \thanks{Floating body} \ Bob Baker \and Carl Cole}
+\date{}
+\begin{document}
+\maketitle
+Text.
+\end{document}

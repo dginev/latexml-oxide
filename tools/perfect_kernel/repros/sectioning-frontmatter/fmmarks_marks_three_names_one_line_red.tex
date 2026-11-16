@@ -1,0 +1,17 @@
+% mechanism: one line, no `\and`: a mark after Ann (`\ `), another before Carl (`\qquad` … `\ `)
+% witness:  revSHGIVENd d7
+% oracle:   pdflatex 0 errors; "Ann Able (7.8pt) ∗ (23.1pt) Bob Baker (27.3pt) † (4.0pt) Carl Cole"
+% engines:  rust INTREC (3af622aca64) = 0 errors, 1 Warning; Ann Able ; footnotemark[*]= / Bob Baker / Carl Cole
+% expect:   0 errors, 0 Warnings; Ann Able ; footnotemark[*]= / Bob Baker / Carl Cole ; footnotemark[†]= (guard canon:
+%   name ; note role[mark]=text, sorted | contacts)
+% moves:    row R SHGIVENNEXT (a mark nearer the next name, or a bare one; today the counted loss or the whole block)
+% status:   RED (INTREC 3af622aca64; perfect_kernel_batchfmmarks::a_mark_past_spacing_is_the_nearer_names_red)
+% preload: ar5iv.sty
+\documentclass{article}
+\title{T}
+\author{Ann Able \ \footnotemark[1] \qquad Bob Baker \qquad \footnotemark[2] \ Carl Cole}
+\date{}
+\begin{document}
+\maketitle
+Text.
+\end{document}

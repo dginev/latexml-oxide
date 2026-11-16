@@ -1,0 +1,16 @@
+% mechanism: a mark past `\ ` inside the name's own font group (`{\large Ann Able \ \footnotemark[1]}`): the name's
+% witness:  revSHGIVENe s1 (s2, s3)
+% oracle:   pdflatex 0 errors; "Ann Able ∗ Bob Baker"
+% engines:  rust INTREC (3af622aca64) = 0 errors, 0 Warnings; Ann Able ; footnotemark[*]= / Bob Baker
+% expect:   0 errors, 0 Warnings; Ann Able ; footnotemark[*]= / Bob Baker (guard canon: name ; note role[mark]=text,
+%   sorted | contacts)
+% status:   GREEN (INTREC 3af622aca64; perfect_kernel_batchfmmarks::a_mark_past_spacing_is_the_nearer_names)
+% preload: ar5iv.sty
+\documentclass{article}
+\title{T}
+\author{{\large Ann Able \ \footnotemark[1]} \and {\large Bob Baker}}
+\date{}
+\begin{document}
+\maketitle
+Text.
+\end{document}

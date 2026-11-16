@@ -1,0 +1,23 @@
+% mechanism: REVTeX 4.0: an `\email` steps the shared counter, so the unnumbered name `\footnote` prints †; one
+%   carrier, so Perl's note contact (no mark) is the ruling's "under the name"
+% witness:  revSHMARKb r_40e
+% oracle:   pdflatex 0 errors; "Ann Able∗ … Bob Baker†", "† Visiting Univ C.", "∗ Electronic address: ann@a.edu" (page
+%   2)
+% engines:  rust INTREC (3af622aca64) = 0 errors, 0 Warnings; Ann Able | email=ann@a.edu ; affiliation=Univ A / Bob
+%   Baker | note=Visiting Univ C. ; affiliation=Univ B
+% expect:   0 errors, 0 Warnings; Ann Able | email=ann@a.edu ; affiliation=Univ A / Bob Baker | note=Visiting Univ C.
+%   ; affiliation=Univ B (guard canon: name ; note role[mark]=text, sorted | contacts)
+% status:   GREEN (INTREC 3af622aca64; perfect_kernel_batchfmmarks::revtex_marks_follow_its_numbering)
+% preload: ar5iv.sty
+\documentclass[aps,prl,preprint]{revtex4}
+\begin{document}
+\title{A Title}
+\author{Ann Able}
+\email{ann@a.edu}
+\affiliation{Univ A}
+\author{Bob Baker\footnote{Visiting Univ C.}}
+\affiliation{Univ B}
+\begin{abstract}Abs.\end{abstract}
+\maketitle
+Body\footnote{body note}.
+\end{document}
