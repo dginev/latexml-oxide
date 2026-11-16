@@ -2918,9 +2918,12 @@ fn call_contact(call: &ApiCall, assoc: &Assoc, within: bool) -> Result<Option<To
   }
 }
 
+/// Whether a note is a `\\footnote`'s and one given its number ([`given_footnote`]), and its argument.
+type FootnoteArgument = ((bool, bool), Vec<Token>);
+
 /// The argument of the note command printing `assoc` in `call`'s content (the one by its text, else its only note), and
 /// whether it is a `\\footnote`'s and one given its number, as [`note_argument`] reads a block's note.
-fn call_note(call: &ApiCall, assoc: &Assoc) -> Result<Option<((bool, bool), Vec<Token>)>> {
+fn call_note(call: &ApiCall, assoc: &Assoc) -> Result<Option<FootnoteArgument>> {
   let Some((events, formulas, environments, _)) = rehearsed(call.content.unlist_ref())? else {
     return Ok(None);
   };
