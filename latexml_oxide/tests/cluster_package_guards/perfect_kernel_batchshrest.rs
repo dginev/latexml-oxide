@@ -221,9 +221,18 @@ fn a_revtex_name_footnote_takes_its_number_unmarked() {
     )
   };
   for (tex, mark) in [
-    (repro!("sectioning-frontmatter/revtex4_name_footnote_takes_its_number.tex"), "†"),
-    (repro!("sectioning-frontmatter/revtex_name_footnote_takes_its_number.tex"), "†"),
-    (repro!("sectioning-frontmatter/revtex_name_footnote_given_its_number_steps_nothing.tex"), "∗"),
+    (
+      repro!("sectioning-frontmatter/revtex4_name_footnote_takes_its_number.tex"),
+      "†",
+    ),
+    (
+      repro!("sectioning-frontmatter/revtex_name_footnote_takes_its_number.tex"),
+      "†",
+    ),
+    (
+      repro!("sectioning-frontmatter/revtex_name_footnote_given_its_number_steps_nothing.tex"),
+      "∗",
+    ),
   ] {
     let (log, xml) = convert_with(tex, Some("ar5iv.sty"));
     assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
@@ -243,11 +252,21 @@ fn a_revtex_name_footnote_takes_its_number_unmarked() {
     assert_eq!(xml.matches("mark=").count(), 2, "{xml}");
   }
   check(&Case {
-    tex:      repro!("sectioning-frontmatter/revtex_name_footnotemark_leaves_the_marks_unknown.tex"),
+    tex:      repro!(
+      "sectioning-frontmatter/revtex_name_footnotemark_leaves_the_marks_unknown.tex"
+    ),
     creators: &[
       &["Ann Able", "affiliation=Univ A"],
-      &["Bob Baker", "thanks=Equal contribution.", "affiliation=Univ B"],
-      &["Cy Cole", "thanks=Equal contribution.", "affiliation=Univ B"],
+      &[
+        "Bob Baker",
+        "thanks=Equal contribution.",
+        "affiliation=Univ B",
+      ],
+      &[
+        "Cy Cole",
+        "thanks=Equal contribution.",
+        "affiliation=Univ B",
+      ],
     ],
     elements: &[],
     absent:   &["mark=\"†\"", "mark=\"∗\""],

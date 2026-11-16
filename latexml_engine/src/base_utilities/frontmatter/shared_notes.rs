@@ -13,15 +13,19 @@ pub(in crate::base_utilities) const LIST_MARK: &str = "_listmark";
 pub(in crate::base_utilities) const PRINTED_MARK: &str = "_fnmark";
 
 /// The attribute of a creator's contact that is part of a class's front-matter footnote, which `number_footnote_parts`
-/// numbers: `title`, `own`, `join` (the name's joined footnote) or `affil:<n>`.
+/// numbers: `title`, `own`, `join` (the name's joined footnote), `affil:<n>` or [`GIVEN_PART`].
 pub const FOOTNOTE_PART: &str = "_fnpart";
+/// The [`FOOTNOTE_PART`] of a name's `\footnote` given its number (`\footnote[1]{…}`), which steps no counter.
+pub const GIVEN_PART: &str = "given";
 /// How a class that writes [`FOOTNOTE_PART`]s marks its front-matter footnotes: `fnsymbol` or `alph`.
 pub const FOOTNOTE_MARKS: &str = "lx_fm_footnote_marks";
 
 /// The marks of a class's front-matter footnotes (REVTeX's `\@AF@join`, revtex4-2.cls:2404-2495), numbered as printed:
 /// the title's, then each name's own and its joined one, an affiliation's after its group's names or after every name, a
-/// text printed before keeping its number (`\y@match`); a thanks note in a name, which REVTeX prints nowhere, after them.
-/// A mark only where both affiliation orders agree; none when a footnote contact has no part (OD #1054).
+/// text printed before keeping its number (`\y@match`). A `\footnote` in a name steps the counter where the name prints
+/// and keeps its contact, unmarked; a `\thanks` there, which REVTeX prints nowhere, takes no number and no mark. A mark
+/// only where both affiliation orders agree; none when a footnote's step is unknown — a footnote contact with no part, a
+/// name's `\footnotemark`, a part outside the creators (OD #1054).
 pub(super) fn number_footnote_parts(document: &mut Document) -> Result<()> {
   let style = lookup_string(FOOTNOTE_MARKS);
   if style.is_empty() {
@@ -30,10 +34,18 @@ pub(super) fn number_footnote_parts(document: &mut Document) -> Result<()> {
   let creators = document.findnodes("//ltx:creator", None);
   // (each part: its node, its creator, its part, its text — an own part's as printed, a joined one's with its role)
   let mut parts: Vec<(Node, usize, String, String)> = Vec::new();
-  let mut unknown = false;
+  // (a part a route placed outside the creators — a title's or a pubnote's — is a step not counted here)
+  let mut unknown = !document
+    .findnodes(
+      &s!(
+        "//*[@{FOOTNOTE_PART} and @{FOOTNOTE_PART}!='{GIVEN_PART}' and not(ancestor::ltx:creator)]"
+      ),
+      None,
+    )
+    .is_empty();
   for (at, creator) in creators.iter().enumerate() {
     let entries = document.findnodes(
-      &s!("ltx:contact | ltx:note[@role='thanks' and not(@{LIST_MARK})]"),
+      "ltx:contact | ltx:note[@role='footnotemark']",
       Some(creator),
     );
     for entry in entries {
@@ -43,17 +55,25 @@ pub(super) fn number_footnote_parts(document: &mut Document) -> Result<()> {
         .split_whitespace()
         .collect::<Vec<_>>()
         .join(" ");
-      let part = match entry.get_name().as_str() {
-        "note" => Some(s!("name")),
-        _ => entry.get_attribute(FOOTNOTE_PART),
-      };
-      match part {
-        Some(part) if part == "own" || part == "name" => parts.push((entry, at, part, text)),
-        Some(part) => {
+      match (entry.get_attribute(FOOTNOTE_PART), role.as_str()) {
+        // (a given number, `\footnote[1]{…}`, steps nothing: 1607.07280)
+        (Some(part), _) if part == GIVEN_PART => {},
+        (Some(part), _) if part == "own" => parts.push((entry, at, part, text)),
+        (Some(part), _) => {
           let name = entry.get_attribute("name").unwrap_or_default();
           parts.push((entry, at, part, s!("{role}\u{2}{name}\u{2}{text}")));
         },
-        None => unknown |= matches!(role.as_str(), "thanks" | "email" | "url" | "altaffiliation"),
+        // (a name's `\footnote`, its own footnote where the name prints, never shared: "Ann Able∗ / Bob Baker† Cy Cole†"
+        // in REVTeX 4.0, "Ann Ablea" in 4.2's minipage letters)
+        (None, "note") => {
+          let own = s!("\u{3}{}", parts.len());
+          parts.push((entry, at, s!("own"), own));
+        },
+        // (a name's `\footnotemark` steps the counter unless given a number, which its note no longer tells)
+        (None, "footnotemark") => unknown = true,
+        (None, _) => {
+          unknown |= matches!(role.as_str(), "thanks" | "email" | "url" | "altaffiliation")
+        },
       }
     }
   }
@@ -70,10 +90,7 @@ pub(super) fn number_footnote_parts(document: &mut Document) -> Result<()> {
     _ => s!("join:{at}"),
   };
   let mut joined: HashMap<String, String> = HashMap::default();
-  for (_, at, part, text) in parts
-    .iter()
-    .filter(|(_, _, part, _)| !matches!(part.as_str(), "own" | "name"))
-  {
+  for (_, at, part, text) in parts.iter().filter(|(_, _, part, _)| part != "own") {
     let footnote = joined.entry(group(*at, part)).or_default();
     footnote.push_str(text);
     footnote.push('\u{1}');
@@ -81,7 +98,7 @@ pub(super) fn number_footnote_parts(document: &mut Document) -> Result<()> {
   let footnotes: Vec<String> = parts
     .iter()
     .map(|(_, at, part, text)| match part.as_str() {
-      "own" | "name" => text.clone(),
+      "own" => text.clone(),
       _ => joined[&group(*at, part)].clone(),
     })
     .collect();
@@ -122,9 +139,6 @@ pub(super) fn number_footnote_parts(document: &mut Document) -> Result<()> {
       }
     }
     for footnote in affiliations {
-      add(footnote, &mut order);
-    }
-    for footnote in of(&|_, part| part == "name") {
       add(footnote, &mut order);
     }
     order

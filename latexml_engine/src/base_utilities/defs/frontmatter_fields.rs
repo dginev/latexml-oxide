@@ -990,12 +990,17 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
       Ok(Tokens::new(calls))
     }
   });
-  // An ordinary argument, as `\lx@add@thanks` (an author's `\footnote`; KNOWN_PERL_ERRORS #515).
+  // An ordinary argument, as `\lx@add@thanks` (an author's `\footnote`; KNOWN_PERL_ERRORS #515). Its keys are the
+  // `\footnote`'s number where the author's `Let` gives one (`\footnote[1]{…}`), a footnote that steps no counter
+  // (`GIVEN_PART`, the front-matter footnotes' count: OD #1054).
   DefMacro!("\\lx@add@note [] {}", sub[(attr, content)] {
     let mut opts = mouth::tokenize_internal("role=note").unlist();
     if let Some(a) = &attr {
       opts.push(T_OTHER!(","));
       opts.extend(a.unlist_ref().iter().copied());
+      if !a.clone().untex().contains('=') {
+        opts.extend(mouth::tokenize_internal(TeXString::assembled(s!(",{FOOTNOTE_PART}={GIVEN_PART}"))).unlist());
+      }
     }
     let mut calls = vec![T_CS!("\\lx@title@footnote@step")];
     calls.extend(Invocation!(T_CS!("\\lx@annotate@frontmatter"),
