@@ -81,7 +81,9 @@ fn may_be_on_page(text: &str) -> bool {
   ON_PAGE[word].get() & bit != 0
 }
 
-/// A symbol of the arena's buffer, refusing one past the 2 GiB the overflow symbols start at.
+/// A symbol of the arena's buffer, refusing one past the 2 GiB the overflow symbols start at. Lookups pass theirs
+/// through too: a string interned past 2 GiB stays in the buffer after the panic is caught, never to read as an
+/// overflow symbol.
 #[inline]
 fn in_buffer(sym: SymStr) -> SymStr {
   assert!(
@@ -108,7 +110,7 @@ fn intern(text: &str) -> SymStr {
 #[inline(never)]
 fn intern_cold(text: &str) -> SymStr {
   if let Some(sym) = ARENA.borrow().get(text) {
-    return sym;
+    return in_buffer(sym);
   }
   let mut overflow = OVERFLOW.borrow_mut();
   if let Some(&sym) = overflow.symbols.get(text) {
@@ -252,7 +254,7 @@ pub fn pin<S: AsRef<str>>(text: S) -> SymStr { intern(text.as_ref()) }
 /// with one probe-key twin per defined control sequence (2026-08-23 audit R6).
 pub fn get<S: AsRef<str>>(text: S) -> Option<SymStr> {
   let text = text.as_ref();
-  let found = ARENA.borrow().get(text);
+  let found = ARENA.borrow().get(text).map(in_buffer);
   if found.is_none() && may_be_on_page(text) {
     return OVERFLOW.borrow().symbols.get(text).copied();
   }
