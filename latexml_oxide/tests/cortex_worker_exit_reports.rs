@@ -188,7 +188,7 @@ impl Harness {
       .args(["--timeout", &timeout_secs.to_string()])
       .args(["--child-mem-limit-mb", &mem_limit_mb.to_string()])
       .args(extra)
-      .env("CORTEX_WORKER_TEST_FAULT", fault)
+      .envs((!fault.is_empty()).then_some(("CORTEX_WORKER_TEST_FAULT", fault)))
       .env("TMPDIR", tmp.path())
       .envs(env.iter().copied())
       .stdin(Stdio::null())
@@ -229,20 +229,48 @@ impl Harness {
 
   fn output(&self) -> String { fs::read_to_string(&self.log).unwrap_or_default() }
 
-  /// pericortex's per-task directories (`cortex_task*`, in the harness's private TMPDIR) still
-  /// holding the leased archive: the dead child's, which its exit should have swept.
+  /// pericortex's per-task directories (`cortex_task*`, in the harness's private TMPDIR or a slot's)
+  /// still holding the leased archive: the dead child's, which its exit should have swept.
   fn leased_archive_dirs(&self) -> Vec<PathBuf> {
-    fs::read_dir(self.tmp.path())
+    let mut tmpdirs = vec![self.tmp.path().to_path_buf()];
+    tmpdirs.extend(self.slot_tmpdirs());
+    tmpdirs
+      .iter()
+      .flat_map(|tmp| task_dirs(tmp))
+      .filter(|dir| dir.join(format!("{TASK_ID}.zip")).exists())
+      .collect()
+  }
+
+  /// The slots' TMPDIRs (`slot-NN` in the exit-report directory).
+  fn slot_tmpdirs(&self) -> Vec<PathBuf> {
+    self
+      .exit_report_dir()
+      .and_then(|dir| fs::read_dir(dir).ok())
       .into_iter()
       .flatten()
       .flatten()
-      .map(|entry| entry.path())
-      .filter(|dir| {
-        dir
-          .file_name()
-          .and_then(|name| name.to_str())
-          .is_some_and(|name| name.starts_with("cortex_task"))
-          && dir.join(format!("{TASK_ID}.zip")).exists()
+      .filter(|e| e.file_name().to_string_lossy().starts_with("slot-"))
+      .map(|e| e.path())
+      .collect()
+  }
+
+  /// The pids of the children holding a claim (live or not yet reaped by the reporter).
+  fn claiming_pids(&self) -> Vec<i32> {
+    self
+      .exit_report_dir()
+      .and_then(|dir| fs::read_dir(dir).ok())
+      .into_iter()
+      .flatten()
+      .flatten()
+      .filter_map(|e| {
+        let name = e.file_name().to_string_lossy().into_owned();
+        name
+          .strip_prefix("child-")?
+          .strip_suffix(".claim")?
+          .split('-')
+          .next()?
+          .parse()
+          .ok()
       })
       .collect()
   }
@@ -277,6 +305,34 @@ impl Drop for Harness {
     let _ = self.child.kill();
     let _ = self.child.wait();
   }
+}
+
+/// pericortex's per-task directories (`cortex_task*`) in `tmp`.
+fn task_dirs(tmp: &Path) -> Vec<PathBuf> {
+  fs::read_dir(tmp)
+    .into_iter()
+    .flatten()
+    .flatten()
+    .map(|entry| entry.path())
+    .filter(|dir| {
+      dir
+        .file_name()
+        .and_then(|name| name.to_str())
+        .is_some_and(|name| name.starts_with("cortex_task"))
+    })
+    .collect()
+}
+
+/// Poll `probe` every 50 ms until it yields, or `within` passes.
+fn wait_for<T>(within: Duration, mut probe: impl FnMut() -> Option<T>) -> Option<T> {
+  let deadline = Instant::now() + within;
+  while Instant::now() < deadline {
+    if let Some(found) = probe() {
+      return Some(found);
+    }
+    thread::sleep(Duration::from_millis(50));
+  }
+  None
 }
 
 /// Run one case: start a harness whose child meets `fault`, optionally signal the converting child,
@@ -581,5 +637,75 @@ fn a_shutdown_mid_conversion_reports_nothing() {
   assert!(
     !Path::new(&dir).exists(),
     "the directory outlived the harness"
+  );
+}
+
+/// Each child runs in its slot's own TMPDIR (`slot-NN` in the exit-report directory), emptied before
+/// every spawn: what a SIGKILLed child leaves there goes with its respawn. The witness is the idle
+/// child, which holds pericortex's `cortex_task*` directory while it waits for work and is what the
+/// unresponsive-worker watchdog kills (an idle child's CPU time does not move): ~11k such empty
+/// directories a day piled up in the fleet's shared TMPDIR. A conversion runs there, Error-free.
+#[test]
+fn a_respawned_slot_starts_with_an_empty_tmpdir() {
+  let dispatcher = Dispatcher::start();
+  let harness = Harness::start(&dispatcher, "", 120, 0, &[]);
+  let report = dispatcher
+    .receive(Duration::from_secs(180))
+    .unwrap_or_else(|| panic!("no result reached the sink:\n{}", harness.output()));
+  let output = harness.output();
+  assert_eq!(report.taskid, TASK_ID, "{output}");
+  assert!(
+    matches!(
+      report.status.as_str(),
+      "Status:conversion:0" | "Status:conversion:1"
+    ) && !report
+      .log
+      .lines()
+      .any(|line| line.starts_with("Error:") || line.starts_with("Fatal:")),
+    "the conversion is Error-free ({}):\n{}",
+    report.status,
+    report.log
+  );
+  let slot = harness
+    .exit_report_dir()
+    .expect("the exit-report directory")
+    .join("slot-01");
+  // The child asks for its next task, holding its next `cortex_task*` directory: in its slot.
+  let idle_task_dir =
+    wait_for(Duration::from_secs(60), || task_dirs(&slot).pop()).unwrap_or_else(|| {
+      panic!(
+        "no cortex_task directory in the slot's TMPDIR {}:\n{}",
+        slot.display(),
+        harness.output()
+      )
+    });
+  assert!(
+    task_dirs(harness.tmp.path()).is_empty(),
+    "a child used the harness's own TMPDIR"
+  );
+  let leftover = slot.join("magick-leftover");
+  fs::write(&leftover, b"a delegate file of a killed convert").unwrap();
+  let killed = match harness.claiming_pids().as_slice() {
+    [pid] => *pid,
+    pids => panic!("one child claims: {pids:?}\n{}", harness.output()),
+  };
+  // SAFETY: signalling the harness's child, as the unresponsive-worker watchdog does.
+  unsafe {
+    libc::kill(killed, libc::SIGKILL);
+  }
+  wait_for(Duration::from_secs(60), || {
+    harness
+      .claiming_pids()
+      .iter()
+      .any(|pid| *pid != killed)
+      .then_some(())
+  })
+  .unwrap_or_else(|| panic!("the slot was not respawned:\n{}", harness.output()));
+  assert!(
+    slot.is_dir() && !idle_task_dir.exists() && !leftover.exists(),
+    "the respawned slot's TMPDIR still holds the killed child's files: {:?}",
+    fs::read_dir(&slot)
+      .map(|entries| entries.flatten().map(|e| e.file_name()).collect::<Vec<_>>())
+      .unwrap_or_default()
   );
 }
