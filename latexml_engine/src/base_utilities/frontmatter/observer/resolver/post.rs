@@ -898,7 +898,11 @@ impl Resolver {
         held[at].clone()
       };
       for c in carriers {
-        if self.out.creators[c].notes.iter().any(|a| a.source == source) {
+        if self.out.creators[c]
+          .notes
+          .iter()
+          .any(|a| a.source == source)
+        {
           continue;
         }
         let rule = s!("{} note:footnote-number", assoc.rule);
@@ -1598,7 +1602,10 @@ impl Resolver {
           && self.out.creators[owner].requests.iter().any(|r| {
             labels.iter().any(|l| label_matches(r, l))
               && !self.out.creators[owner].class_requests.contains(r)
-              && !self.fn_requests.iter().any(|(c, q, _)| *c == owner && q == r)
+              && !self
+                .fn_requests
+                .iter()
+                .any(|(c, q, _)| *c == owner && q == r)
           });
         // (a `\ref` key's owner says so already, `api:ref-label`)
         if by_hand && !assoc.rule.contains("ruling1:") && !assoc.rule.contains("api:ref-label") {

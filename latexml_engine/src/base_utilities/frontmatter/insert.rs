@@ -2,7 +2,9 @@
 
 use super::*;
 use crate::{
-  base_utilities::defs::frontmatter_api::{CORRESPONDING, LABEL_PRINTS, PRINTED_LABEL, STOPGAP_ENTRY},
+  base_utilities::defs::frontmatter_api::{
+    CORRESPONDING, LABEL_PRINTS, PRINTED_LABEL, STOPGAP_ENTRY,
+  },
   latex_constructs::{FOOTNOTE_GIVEN, FOOTNOTE_VALUE},
 };
 
@@ -882,9 +884,8 @@ fn drop_linking_marks(document: &mut Document) -> Result<()> {
 /// Bob\footnotemark[1]`, whose `\thanks` prints a glyph no binding knows.
 fn link_marked_notes(document: &mut Document) -> Result<()> {
   let notes = document.findnodes("//ltx:creator/ltx:note[not(@role='footnotemark')]", None);
-  for mut mark_note in
-    document.findnodes("//ltx:creator/ltx:note[@role='footnotemark'][@mark]", None)
-  {
+  // (a mark-only note with no `mark` too: its glyph unknown here, its number known — scrartcl's `Bob\footnotemark[1]`)
+  for mut mark_note in document.findnodes("//ltx:creator/ltx:note[@role='footnotemark']", None) {
     let creator = mark_note.get_parent();
     let block = creator.as_ref().and_then(Node::get_parent);
     let in_block = |note: &&Node| note.get_parent().and_then(|c| c.get_parent()) == block;
@@ -907,9 +908,16 @@ fn link_marked_notes(document: &mut Document) -> Result<()> {
       document.remove_node(mark_note);
       continue;
     }
-    let Some(key) = mark_alone(&mark_note) else {
-      continue;
+    let key = mark_alone(&mark_note);
+    let bare = || {
+      mark_note
+        .get_child_nodes()
+        .iter()
+        .all(|child| child.get_name() == "tags" || child.get_content().trim().is_empty())
     };
+    if key.is_none() && (number.is_none() || !bare()) {
+      continue;
+    }
     // (its glyph is its `mark` alone: a copy in its text would show twice, 2607.15705's `\authornotemark[2]` that no note
     // answers; its tags stay, as Perl's leftover `\footnotemark`'s)
     for child in mark_note.get_child_nodes() {
@@ -918,13 +926,19 @@ fn link_marked_notes(document: &mut Document) -> Result<()> {
       }
     }
     let same = |note: &&Node| {
-      note
-        .get_attribute("mark")
-        .is_some_and(|mark| mark_form(&mark) == key)
+      key.as_ref().is_some_and(|key| {
+        note
+          .get_attribute("mark")
+          .is_some_and(|mark| mark_form(&mark) == *key)
+      })
     };
     // (a mark its own creator's note carries, its `\thanks` printed with a `\footnotemark` of its number after it, stays
     // as Perl leaves it: two marks printed)
-    if notes.iter().filter(own).any(|note| numbered(&note) || same(&note)) {
+    if notes
+      .iter()
+      .filter(own)
+      .any(|note| numbered(&note) || same(&note))
+    {
       continue;
     }
     // (in its own author block, as Perl's `relocateFootnote` pairs a mark with its text: a note of another block

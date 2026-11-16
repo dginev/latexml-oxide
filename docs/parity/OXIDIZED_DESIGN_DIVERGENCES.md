@@ -19633,10 +19633,12 @@ latex_constructs.pool.ltxml:503-527); acmart's `\authornote` is a contact, `\aut
   marks"). A superscript of several marks (`$^{1,*}$`) or of more than three characters is no mark. The rules hold on
   every class, bound or raw (review revSHMARK S2).
 - *The Link step* (`insert::link_marked_notes`): a mark-only note (`role="footnotemark"`, its text its tags or its mark)
-  on a name whose mark another creator's note carries (label keys: `*` = `∗`) becomes a full copy of that note — its
-  role, class, mark and content, its own id kept, as `relocateFootnote_aux` fills a mark: a document's `\samethanks[1]`
-  (2502.19103), 1911.13299's `\footnotemark[1]`, acmart's `\authornotemark[1]`. A mark its own creator's note carries,
-  or no creator's note (a title's `\thanks`, a later `\footnotetext`), stays as Perl leaves it.
+  on a name becomes a full copy of the note of its author block standing for the number it was given (`_fnvalue` with
+  `_fngiven`, #1058), else of the one carrying its glyph (label keys: `*` = `∗`; the block's notes only) — its role,
+  class, mark and content, its own id kept, as `relocateFootnote_aux` fills a mark: a document's `\samethanks[1]`
+  (2502.19103), 1911.13299's `\footnotemark[1]`, acmart's `\authornotemark[1]`, scrartcl's `Bob\footnotemark[1]`
+  beside `Ann\thanks{…}`. A mark its own creator's note carries, or no note of its block (a title's `\thanks`, a later
+  `\footnotetext`), stays as Perl leaves it.
 - *No affiliation-linking mark*: a mark-only `\footnotemark` that leads an affiliation (`queue_digest::LEADS_CONTACT`,
   set by `lift_notes_beside`), which the reading paired the entry by (`resolver/blocks.rs` `mark:footnote`), is removed
   where a note of a creator carries its mark or its creator's name holds the same mark (1607.07280's REVTeX
@@ -19888,8 +19890,10 @@ formula's mark apart from both names stays undecided (`ne2g_mark_then_orcid_near
 `fmmarks_mark_then_cite_nearer_next_red`, `ne2g_mark_then_superscript_nearer_next`). A single space before or after a
 note prints no `space_before` event: a run with no other glue is undecided. A cell an `\and` opens with a mark before
 its name is read as a labelled line (`ne2i_bare_mark_opening_a_cell_writes_the_block_whole`; given its number, Bob an
-affiliation as at the base). A mark after a name's comma and its label (`Igor Pikovski,$^{1, 2}$\footnotemark`,
-1111.1979: COMMAMARK) is undecided: its names now split, its glyph counted lost.
+affiliation as at the base). A mark glued past a name's comma and its labels (`Igor Pikovski,$^{1, 2}$\footnotemark $\, \,$ Michael`,
+1111.1979; 1912.01737, 1811.08622: COMMAMARK, DG 2026-11-16) is measured from the comma's ink — the comma glued to the
+name's run opens the stretch at that name — and written on its name past the comma, the labels left to the reading's
+requests (#1058's batch); one set off from the comma by a space stays undecided (llncs's `Ann Able,\n\inst{1}…`).
 **Witnesses.** 1911.13299, 2412.20504 (green before and after), 1703.08733 (its separator's shape); the FMRG suite's
 spacing family (`perfect_kernel_batchfmmarks::a_mark_past_spacing_is_the_nearer_names`, XML and HTML: its `ne2j_*`
 rows the writers' runs and the separator's place in the run; the formula comma itself reaches the name's tokens and
@@ -19899,6 +19903,63 @@ a_note_beside_spacing_goes_to_the_nearer_name, a_mark_nearer_the_next_name_moves
 a_mark_a_name_follows_past_spacing_is_not_carried_back, a_mark_on_no_name_keeps_its_footnote_step,
 a_given_mark_on_no_name_keeps_the_creators}`, `perfect_kernel_batchfmmarks::a_mark_past_spacing_is_the_nearer_names`;
 the unit test `resolver::mark_ledger::tests::a_run_between_two_names_is_parted_at_its_widest_glue`.
+---
+
+### 1058. A footnote mark answers its note by the number it shows, never by its glyph alone (DG 2026-11-16, MARKKEY)
+
+**Rule.** TeX pairs a mark and its note by number: `\thanks` is `\footnotemark` plus `\footnotetext` of the counter's
+value (latex.ltx:17215-17218), `\footnotemark[n]` and `\footnotetext[n]` set it locally (`\@xfootnotemark`,
+`\@xfootnotenext`, :17678-17683). The frontmatter pairs a name's footnote mark with its note the same way.
+**Perl.** `relocateFootnote` (latex_constructs.pool.ltxml:498-527) pairs a `\footnotemark[n]` and a `\footnotetext[n]` by
+their `mark`, which for a given number is the number itself (`makeNoteTags`, :444-459): by number. Its title notes are
+contacts with no mark (Base_Utility.pool.ltxml:661-664), so a name's `\footnotemark[1]` beside another name's `\thanks`
+stays a mark-only note.
+**Rust.** Our `mark` is the glyph printed, so the number rides beside it:
+- the rehearsal records each footnote mark's and note's number as the kernel's notes do theirs (`fnvalue`: its given
+  `[n]`, else the counter's value at its step; `observer::rehearsal`), read into `Event::number`;
+- a `\footnotetext[n]` written inside `\author` is the note of every name of its block whose `\footnotemark[n]` shows n
+  (`resolver::answer_note_texts`), each a copy through the item's `annotations` (`relocateAnnotations`), marked with the
+  glyph that mark prints where the class's title marks are known (`emit` `note_call`; `_fnvalue`, `_fntext`), the
+  name's mark-only note then its own mark (`insert::link_marked_notes`): 2407.04435's lni block, Müssig {1}, Wappler
+  {1}, Lenk {1,2}, Lässig {3}, where every text had sat on the last name;
+- a name's `\footnotemark[n]` given its number as such (the kernel's `_fngiven`; not `[\value{footnote}]`, nor a bare
+  mark, whose counter as digested is not the one TeX printed — aiaa-tc's `\thanksibid{2}`, 1505.07844) is filled with
+  the note of its block standing for n (`insert::link_marked_notes`), the glyph join only its fallback, in the block:
+  scrartcl's `Ann\thanks{Equal} \and Bob\footnotemark[1]`, whose glyph no binding knows, Bob now the note's carrier;
+- IEEEtran's unmarked `\thanks` (IEEEtran.cls:4756-4758 prints no mark and hangs every `\thanks` on the last author) is
+  the block's, the title's publication note, not the last name's (1510.02728).
+A known association whose glyph is unknown writes no glyph (#990's `_markunknown`, an Info); the page invents one only
+for a note several names share (#1059).
+**Witnesses.** 2407.04435, 1510.02728, 1111.1979 (its comma marks, #1057), 1912.01737, 1811.08622.
+**Guards**: `perfect_kernel_batchmarkkey1::{a_numbered_mark_answers_its_note_by_number,
+an_ieee_unmarked_thanks_is_the_blocks, a_mark_after_a_names_comma_is_the_nearer_names,
+the_mark_components_only_shrink}`; `observer::resolver::mark_ledger::tests::a_mark_glued_past_a_names_comma_is_measured_from_the_comma`.
+
+---
+
+### 1059. The copies of one note are one note, `idref` to the first; the page invents a mark only for a shared unmarked note, and shows no dangling mark (DG 2026-11-16)
+
+**Rule.** The XML keeps a copy of a shared note on every carrier (#1052, Perl's model); those copies are one note:
+the first copy's `xml:id` is the `idref` of each other (DG 2026-11-16, issue #893 Option A; `ltx:note` takes
+`IDREF.attributes`, SCHEMA_EXTENSIONS S13). The page knows a shared note by that identity, never by its text.
+**Perl.** No identity: each copy is a note of its own, printed in full.
+**Rust.**
+- *Identity* (`relocate::one_note`): stamped at every clone site — `relocate_annotations` (an item several names
+  request), the kernel's `relocate_footnote` (one `\footnotetext` filling several names' marks, creators only) and the
+  Link step (#1058).
+- *A shared unmarked note* (no `mark`: its class prints none, or its glyph is unknown here) prints once, at its first
+  copy, under a mark the page invents so the reader can tell whom it is about — `[a]`, `[b]`, … in document order,
+  class `ltx_mark_generated`, a bracketed letter no author note's mark prints (never `\@fnsymbol`, never a bare letter
+  or digit) —, each other copy that mark linked to it (`LaTeXML-meta-xhtml.xsl`, key `f:note-copies`). A one-carrier
+  unmarked note stays under its name, no glyph (#990). The engine never invents a glyph.
+- *No dangling mark*: a mark-only note that links to no note on the page shows its glyph only where the same glyph
+  (asterisks folded) prints anywhere else in the document — another name's mark, a frontmatter note, legend or
+  superscript, a body footnote's mark —; printed once, over its name alone, it shows nothing (its id stays; the XML
+  keeps it): 2006.10886, whose geophysics `\address{\footnotemark[1]{…}}` the class never prints in `paper` mode.
+**Witnesses.** 2407.04435 (one note, three carriers), 2006.10886, 1108.5155, 1404.2124.
+**Guards**: `perfect_kernel_batchmarkkey1::{a_numbered_mark_answers_its_note_by_number, a_note_several_names_carry_is_one_note,
+an_unlinked_mark_shows_only_where_its_glyph_recurs}`; the FMRG suite's page layer (`perfect_kernel_batchfmmarks`).
+
 ---
 
 ## TeX-source fidelity family (TEXSRC)

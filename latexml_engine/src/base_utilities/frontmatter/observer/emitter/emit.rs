@@ -2639,7 +2639,10 @@ fn item_call(
           span,
           |e| e.kind == EventKind::Note,
           |e| {
-            let text_only = e.role.as_deref().is_some_and(|r| r.starts_with("footnotetext"));
+            let text_only = e
+              .role
+              .as_deref()
+              .is_some_and(|r| r.starts_with("footnotetext"));
             let (mark, from) = match shown_mark(e) {
               Some(mark) => (Some(mark), MarkFrom::Counter),
               None if text_only => (None, MarkFrom::Counter),
@@ -2657,7 +2660,10 @@ fn item_call(
                 .find(|m| {
                   m.kind == EventKind::Mark
                     && m.number == Some(number)
-                    && m.role.as_deref().is_some_and(|r| r.starts_with("footnotemark"))
+                    && m
+                      .role
+                      .as_deref()
+                      .is_some_and(|r| r.starts_with("footnotemark"))
                 })
                 .map(|m| m.text.trim().to_string())
                 .filter(|m| !m.is_empty())
@@ -3869,7 +3875,15 @@ fn items_to_emit<'a>(
       Owner::Creator(i) => owners[i].as_str(),
       Owner::Block => "block",
     };
-    let id = s!("{id}|{:?}|{}", key.0, key.1);
+    let mut id = s!("{id}|{:?}|{}", key.0, key.1);
+    // (two notes of the block printing one text are two notes, each written: IEEEtran's `\thanks{ORCID: \href{…0001}{profile}}`
+    // and `\thanks{ORCID: \href{…0002}{profile}}` at the block's level, OD #1058 — the second lost before its words)
+    if owner == Owner::Block
+      && key.0 == Kind::Note
+      && let Some((index, span)) = source
+    {
+      id = s!("{id}|{index}|{span:?}");
+    }
     // (a call a flush took from the queue and digests as it stands is off the queue: [`take_digested`])
     let taken = source
       .is_some_and(|(index, _)| lookup_mapping(EMITTED_ITEMS, &s!("taken|{index}")).is_some());

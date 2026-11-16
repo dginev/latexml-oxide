@@ -394,7 +394,9 @@ fn note_properties(number: Option<&Digested>) -> Result<SymHashMap<Stored>> {
     return Ok(stored_map!("printed" => Stored::String(pin(text.trim()))));
   };
   let printed = note_mark_quietly(value)?;
-  Ok(stored_map!("printed" => Stored::String(pin(&printed)), "fnvalue" => Stored::String(pin(value.to_string()))))
+  Ok(
+    stored_map!("printed" => Stored::String(pin(&printed)), "fnvalue" => Stored::String(pin(value.to_string()))),
+  )
 }
 
 /// The footnote number a note stands for: its given `[<n>]`, else the counter's value at its step (`None`: a given

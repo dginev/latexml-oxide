@@ -80,11 +80,8 @@ fn ieee_group_names_keep_their_memberships() {
     creator(
       false,
       "Dan Dorn",
-      &format!(
-        "{} {}",
-        membership("Fellow, IEEE"),
-        thanks("note", "id1", "Ann Able is with Univ A.")
-      )
+      // (MARKKEY1: IEEEtran's unmarked `\thanks` is the block's, its publication note, OD #1058)
+      &membership("Fellow, IEEE")
     ),
   ]);
 }
@@ -101,12 +98,8 @@ fn ieee_group_bold_names_split() {
     creator(
       false,
       "Cat Cole",
-      &[
-        membership("Member, IEEE"),
-        thanks("note", "id1", "Ann Able is with Univ A."),
-        thanks("funding", "id2", "Funded by X."),
-      ]
-      .join(" ")
+      // (MARKKEY1: IEEEtran's unmarked `\thanks` is the block's, its publication notes, OD #1058)
+      &membership("Member, IEEE")
     ),
   ]);
 }
@@ -171,7 +164,12 @@ fn note_macro_among_names_is_the_names_note() {
       "Bob Baker",
       &format!(
         "{} {}",
-        marked_thanks("contribution", "*", "footnotex1", "Co-first authors."),
+        // (one note with Ann's, `idref`: OD #1059)
+        marked_thanks("contribution", "*", "footnotex1", "Co-first authors.").replacen(
+          " mark=",
+          r#" idref="id1" mark="#,
+          1
+        ),
         author_line(affiliation("Univ B"))
       )
     ),
@@ -195,7 +193,8 @@ fn note_macro_among_names_is_the_names_note() {
           "†",
           "footnotex2",
           "Co-corresponding authors."
-        ),
+        )
+        .replacen(" mark=", r#" idref="id2" mark="#, 1),
         author_line(affiliation("Univ B"))
       )
     ),
@@ -521,8 +520,8 @@ fn authblk_symbol_mark_affil_runs() {
   // (P4c: the lists' printed marks shown in the pins below, as pdflatex prints them — P4S Q1)
   let xml = convert_repro!("author_authblk_symbol_mark_affil_runs.tex");
   assert_eq!(creators(&xml), [
-    "<creator role=\"author\"> <personname>Ann</personname> <contact name=\"Affiliation: \" role=\"affiliation\"><sup xml:id=\"id1\">1</sup>Univ X</contact> <note class=\"ltx_note_frontmatter ltx_thanks_contribution\" mark=\"∗\" role=\"thanks\" xml:id=\"id2\">Equal contribution</note> </creator>",
-    "<creator before=\" \" role=\"author\"> <personname>Bob</personname> <contact name=\"Affiliation: \" role=\"affiliation\"><sup xml:id=\"id3\">1</sup>Univ X</contact> <note class=\"ltx_note_frontmatter ltx_thanks_contribution\" mark=\"∗\" role=\"thanks\" xml:id=\"id4\">Equal contribution</note> </creator>",
+    "<creator role=\"author\"> <personname>Ann</personname> <contact name=\"Affiliation: \" role=\"affiliation\"><sup xml:id=\"id2\">1</sup>Univ X</contact> <note class=\"ltx_note_frontmatter ltx_thanks_contribution\" mark=\"∗\" role=\"thanks\" xml:id=\"id1\">Equal contribution</note> </creator>",
+    "<creator before=\" \" role=\"author\"> <personname>Bob</personname> <contact name=\"Affiliation: \" role=\"affiliation\"><sup xml:id=\"id3\">1</sup>Univ X</contact> <note class=\"ltx_note_frontmatter ltx_thanks_contribution\" idref=\"id1\" mark=\"∗\" role=\"thanks\" xml:id=\"id4\">Equal contribution</note> </creator>",
   ]);
 }
 
@@ -927,7 +926,7 @@ fn authblk_glued_symbols_in_one_author_block() {
   let xml = squash(&xml);
   assert_eq!(creators(&xml), [
     r#"<creator role="author"> <personname>Ann Able</personname> <contact class="ltx_author_line" name="Affiliation: " role="affiliation">Univ X</contact> <note class="ltx_note_frontmatter ltx_thanks_contribution" mark="∗" role="thanks" xml:id="id1">Equal contribution</note> </creator>"#,
-    r#"<creator before=" " role="author"> <personname>Bob Baker</personname> <contact class="ltx_author_line" name="Affiliation: " role="affiliation">Univ Y</contact> <note class="ltx_note_frontmatter ltx_thanks_contribution" mark="∗" role="thanks" xml:id="id2">Equal contribution</note> </creator>"#,
+    r#"<creator before=" " role="author"> <personname>Bob Baker</personname> <contact class="ltx_author_line" name="Affiliation: " role="affiliation">Univ Y</contact> <note class="ltx_note_frontmatter ltx_thanks_contribution" idref="id1" mark="∗" role="thanks" xml:id="id2">Equal contribution</note> </creator>"#,
     r#"<creator before=" " role="author"> <personname>Cat Cole</personname> <contact class="ltx_author_line" name="Affiliation: " role="affiliation">Univ X</contact> <note class="ltx_note_frontmatter ltx_thanks_correspondence" mark="†" role="thanks" xml:id="id3">Corresponding author</note> </creator>"#,
   ]);
 }

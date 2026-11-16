@@ -184,11 +184,7 @@ Text.
     ),
     [
       row(&["Ann Able"]),
-      row(&[
-        "Bob Baker",
-        "thanks[]=This work was funded by X.",
-        "thanks[*]=Corresponding author."
-      ]),
+      row(&["Bob Baker", "thanks[*]=Corresponding author."]),
     ]
   );
   // (a leading symbol that is the note's words, not a copy of its mark: a formula `-` follows, a bare `*` the class's ∗
@@ -206,10 +202,7 @@ Text.
   }
   assert_eq!(
     marked_notes(repro!("ieee_thanks_leading_label_is_no_mark"), 0),
-    [
-      row(&["Ann Able", "thanks[]=3 He detectors were funded by X."]),
-      row(&["Bob Baker", "thanks[]=* marks the starred items below."]),
-    ]
+    [row(&["Ann Able"]), row(&["Bob Baker"]),]
   );
 }
 
@@ -339,10 +332,7 @@ Text.
 \end{document}",
       0
     ),
-    [
-      row(&["Ann Able"]),
-      row(&["Bob Baker", "thanks[]=This work was funded by X."]),
-    ]
+    [row(&["Ann Able"]), row(&["Bob Baker"]),]
   );
 }
 
@@ -685,7 +675,8 @@ fn a_mark_whose_glyph_is_unknown_prints_none() {
     );
     let html = page_of(&xml);
     let block = &html[html.find("ltx_authors").expect("an author block")..];
-    assert!(!block.contains("ltx_note_mark"), "{html}");
+    // (no glyph the class would print; a shared unmarked note's page-made `[a]` is no class glyph, OD #1059)
+    assert!(!block.contains("class=\"ltx_note_mark\""), "{html}");
     (log, notes_in(&xml), page_lines(&html))
   };
   let (log, notes, page) = case(repro!("marksafe_unbound_class_thanks_print_no_glyph"), 0);
@@ -707,25 +698,25 @@ fn a_mark_whose_glyph_is_unknown_prints_none() {
     ),
     "{log}"
   );
+  // (MARKKEY1: Bob's `\footnotemark[1]` is the note its number names, Ann's `\thanks`, now Bob's copy too — no lost mark,
+  // the shared unmarked note once under the page's `[a]`, OD #1058, #1059; it was a counted loss)
   let (log, notes, page) = case(
     repro!("marksafe_unbound_class_footnotemark_given_number_unknown"),
-    1,
+    0,
   );
-  assert!(
-    log.contains(
-      "Warning:frontmatter:unanswered_mark_lost A footnote mark on an author's name whose note cannot be identified, \
-       its glyph unknown here, is written with none"
-    ),
-    "{log}"
-  );
+  assert!(!log.contains("unanswered_mark_lost"), "{log}");
   assert_eq!(notes, [
     row(&["Ann Able", "thanks[]=Equal contribution."]),
-    row(&["Bob Baker", "footnotemark[]="]),
+    row(&["Bob Baker", "thanks[]=Equal contribution."]),
   ]);
   assert_eq!(
     page,
     (
-      row(&["Ann Able | under: Equal contribution.", "Bob Baker"]),
+      row(&[
+        "Ann Able ; [a]→note",
+        "Bob Baker ; [a]→note",
+        "margin: Equal contribution."
+      ]),
       Vec::new()
     )
   );
@@ -763,10 +754,12 @@ fn a_mark_whose_glyph_is_unknown_prints_none() {
   assert_eq!(
     page,
     (
+      // (MARKKEY1: the two copies are one note, `idref`, printed once under the page's `[a]`, OD #1059)
       row(&[
-        "Ann Able | under: Equal contribution.",
-        "Bob Baker | under: Equal contribution.",
-        "Cy Cole | under: Cy note."
+        "Ann Able ; [a]→note",
+        "Bob Baker ; [a]→note",
+        "Cy Cole | under: Cy note.",
+        "margin: Equal contribution."
       ]),
       Vec::new()
     )

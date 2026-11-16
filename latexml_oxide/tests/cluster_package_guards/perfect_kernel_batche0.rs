@@ -1118,6 +1118,10 @@ const API_KEYS_OUTSIDE_PERLS: &[(&str, usize)] = &[
   // end — a Warning where its note never came, an Info where it is placed (DG 2026-11-16); Perl's API has no key for
   // "the glyph is unknown"; internal, never written out: OD #1053)
   ("const _markunknown base_utilities/frontmatter/insert.rs", 1),
+  // (MARKKEY1, 0 -> 1, raised with its reason: a creator's note that is a `\footnotetext` the reading gave the names
+  // showing its number — no carrier prints it but by that `\footnotemark`, the copy's own mark (`link_marked_notes`);
+  // Perl's API has no key for "a footnote text"; internal, never written out: OD #1058)
+  ("const _fntext base_utilities/frontmatter/insert.rs", 1),
   // (SHREST, 0 -> 1, raised with its reason: the mark a class prints for a creator's footnote text, elsarticle's `\fntext`
   // number, REVTeX's joined footnote's symbol, on the contact its binding makes — a contact has no `mark` in the schema —,
   // read where two creators hold it to make it their marked note, OD #1054; internal, never written out)
@@ -1198,6 +1202,15 @@ const API_KEYS_OUTSIDE_PERLS: &[(&str, usize)] = &[
     "declared _markunknown base_utilities/defs/frontmatter_api.rs",
     1,
   ),
+  // (MARKKEY1, ADVARCH: keys the emitter already passes, declared as `_corresponding` is, so their use reports no unknown
+  // key on every paper that writes one: `mark` (a note's own schema attribute, Perl's `ltx:note`), `_fnvalue` (the
+  // footnote number it stands for, as the kernel's notes record it), `_fntext` (a footnote text); OD #1058)
+  ("declared _fntext base_utilities/defs/frontmatter_api.rs", 1),
+  (
+    "declared _fnvalue base_utilities/defs/frontmatter_api.rs",
+    1,
+  ),
+  ("declared mark base_utilities/defs/frontmatter_api.rs", 1),
   (
     "declared _rowshared base_utilities/defs/frontmatter_api.rs",
     1,

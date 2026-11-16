@@ -644,7 +644,7 @@ struct Resolver {
   numbered_notes:     Vec<(usize, i64, Option<(u16, u16)>, Option<usize>)>,
   /// the unmarked `\thanks` of a class whose title prints no note mark (`Policy::unmarked_notes`), each with its owner
   /// (ledger index, span, owner): the block's, once the owner is known live (`answer_note_texts`)
-  block_thanks:    Vec<(usize, Option<(u16, u16)>, usize)>,
+  block_thanks:       Vec<(usize, Option<(u16, u16)>, usize)>,
   /// the labels the affiliation calls made apart from the blocks set ([`affiliation_set_labels`]): what a block's
   /// mark-led names request (`names_led_by_marks`)
   outside_labels:     Vec<String>,
@@ -773,7 +773,7 @@ impl Resolver {
       role_reads:         HashMap::default(),
       fn_requests:        Vec::new(),
       numbered_notes:     Vec::new(),
-      block_thanks:    Vec::new(),
+      block_thanks:       Vec::new(),
       outside_labels:     Vec::new(),
       marks_lead:         false,
       mark_ledger:        MarkLedger::default(),

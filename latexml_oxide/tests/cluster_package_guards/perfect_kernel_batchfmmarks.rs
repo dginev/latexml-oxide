@@ -20,10 +20,13 @@
 //! - a mark between two names is the nearer one's by the printed gaps, a tie the next name's; one followed by a
 //!   separator, `\\` or the block's end is carried back; one alone on the line after `\\` is no name's (ruling 4);
 //! - on the page a shared note prints once, in the margin, its mark on every carrying name; a marked note of one name
-//!   prints under it with no mark; an unmarked note prints its text under it with no glyph, a mark-only note with no
-//!   glyph nothing (DG 2026-11-16: no invented glyph, OD #990); a mark-only note's mark links only to the one
-//!   note of the block it marks, and only when it is a symbol (a letter, digit or Greek letter stays plain); the marks
-//!   on a name in the order the PDF prints them.
+//!   prints under it with no mark on LaTeXML.css's card (a multi-line block, or a creator showing author lines alone),
+//!   else its mark shows and its body is a pop-up (revMARKSAFEc S3); an unmarked note prints its text under it with no
+//!   glyph, a mark-only note with no glyph nothing (DG 2026-11-16: no invented glyph, OD #990), a shared unmarked note
+//!   once under the page's generated `[a]` (OD #1059); a mark-only note's mark links only to the one note of the block
+//!   it marks, and only when it is a symbol (a letter, digit or Greek letter stays plain), and one linking nothing shows
+//!   only where its glyph prints elsewhere in the document (DG 2026-11-16, no dangling marks, OD #1059); the marks on a
+//!   name in the order the PDF prints them.
 //!
 //! RED layers are known gaps, each naming its row R line (or NEITHER: a contradiction with no recorded gap, reported
 //! to the main session); the ignored `_red` tests list what is still red and print the layers now matching their
@@ -378,7 +381,8 @@ fn notes_under(page: &[Element], at: usize, out: &mut Vec<usize>) {
 
 /// Each author block of `html`: per creator `name ; mark ; mark | under: body ; body` (a mark `m→note` linked,
 /// `m plain` not; a shared note's first copy shows its mark and prints its body in the margin, a marked one-author
-/// note prints under the name with no mark, an unmarked note its text under the name with no glyph, a note with a
+/// note prints under the name with no mark on LaTeXML.css's card (a multi-line block, or a creator showing author lines
+/// alone), else its glyph and its body as a pop-up, written as a note with a pop-up is, an unmarked note its text under the name with no glyph, a note with a
 /// pop-up outside the name's wrapper its glyph and its body in the margin), then the block's `margin: body ; body`
 /// (sorted); and the page's broken references: an id twice, an `href="#x"` with no `x`.
 pub(super) fn page_lines(html: &str) -> (Vec<String>, Vec<String>) {
@@ -415,6 +419,9 @@ pub(super) fn page_lines(html: &str) -> (Vec<String>, Vec<String>) {
     .copied()
     .filter(|&e| page[e].has_class("ltx_authors"))
     .collect();
+  let multiline = everything
+    .iter()
+    .any(|&e| page[e].has_class("ltx_document") && page[e].has_class("ltx_authors_multiline"));
   if blocks.is_empty() {
     return (vec!["(no author block)".to_string()], problems);
   }
@@ -426,6 +433,17 @@ pub(super) fn page_lines(html: &str) -> (Vec<String>, Vec<String>) {
         continue;
       }
       let inside = descendants(&page, creator);
+      // (LaTeXML.css's card: a one-author note under its name with no mark only where the author's lines show under it —
+      // a multi-line block, or a creator whose contacts are all author lines or notes; elsewhere its mark shows and its
+      // body is a pop-up, revMARKSAFEc S3)
+      let card = multiline
+        || (inside.iter().any(|&e| page[e].has_class("ltx_author_line"))
+          && !inside.iter().any(|&e| {
+            page[e].has_class("ltx_contact")
+              && !["ltx_author_line", "ltx_role_note", "ltx_role_thanks"]
+                .iter()
+                .any(|class| page[e].has_class(class))
+          }));
       let name = inside
         .iter()
         .find(|&&e| page[e].has_class("ltx_personname"))
@@ -479,7 +497,7 @@ pub(super) fn page_lines(html: &str) -> (Vec<String>, Vec<String>) {
         if wrapped && page[note].has_class("ltx_note_shared") {
           marks.push(format!("{glyph}→note"));
           margin.push(body);
-        } else if wrapped {
+        } else if wrapped && card {
           under.push(body);
         } else {
           // (a note after the name's wrapper with a pop-up: its glyph too, which no unmarked note may show — Perl's `†`
@@ -675,10 +693,10 @@ const SHARED: &[Row] = &[
     ],
     moves:      r#""#,
     page:       &[
-      r#"Ann Able ; *→note"#,
-      r#"Bob Baker ; *→note"#,
-      r#"Cat Cole | under: Corresponding author: Cat Cole"#,
-      r#"margin: Equal contribution"#,
+      "Ann Able ; *→note",
+      "Bob Baker ; *→note",
+      "Cat Cole ; † plain",
+      "margin: Corresponding author: Cat Cole ; Equal contribution",
     ],
     page_moves: r#""#,
   },
@@ -693,10 +711,10 @@ const SHARED: &[Row] = &[
     ],
     moves:      r#""#,
     page:       &[
-      r#"Ann Able | under: Corresponding author."#,
-      r#"Bob Baker ; †→note"#,
-      r#"Cat Cole ; †→note"#,
-      r#"margin: These authors contributed equally to this work."#,
+      "Ann Able ; * plain",
+      "Bob Baker ; †→note",
+      "Cat Cole ; †→note",
+      "margin: Corresponding author. ; These authors contributed equally to this work.",
     ],
     page_moves: r#""#,
   },
@@ -711,10 +729,10 @@ const SHARED: &[Row] = &[
     ],
     moves:      r#""#,
     page:       &[
-      r#"Ann Able ; †→note"#,
-      r#"Bob Baker ; †→note | under: Corresponding author"#,
-      r#"Cat Cole"#,
-      r#"margin: These authors contributed equally."#,
+      "Ann Able ; †→note",
+      "Bob Baker ; †→note ; * plain",
+      "Cat Cole",
+      "margin: Corresponding author ; These authors contributed equally.",
     ],
     page_moves: r#""#,
   },
@@ -730,11 +748,11 @@ const SHARED: &[Row] = &[
     ],
     moves:      r#""#,
     page:       &[
-      r#"Ann Able ; *→note"#,
-      r#"Bob Bell ; *→note"#,
-      r#"Cat Cole | under: Corresponding author: Cat Cole cat@c.edu"#,
-      r#"Dan Dorn"#,
-      r#"margin: Equal contribution"#,
+      "Ann Able ; *→note",
+      "Bob Bell ; *→note",
+      "Cat Cole ; † plain",
+      "Dan Dorn",
+      "margin: Corresponding author: Cat Cole cat@c.edu ; Equal contribution",
     ],
     page_moves: r#""#,
   },
@@ -784,8 +802,9 @@ const SHARED: &[Row] = &[
     ],
     moves:      r#""#,
     page:       &[
-      r#"Ann Able"#,
-      r#"Bob Baker | under: Corresponding author: Univ A, Town."#,
+      "Ann Able",
+      "Bob Baker ; * plain",
+      "margin: Corresponding author: Univ A, Town.",
     ],
     page_moves: r#""#,
   },
@@ -904,7 +923,11 @@ const SHARED: &[Row] = &[
       r#"Bob Bell | affiliation=Univ B"#,
     ],
     moves:      r#"PURE (fix/pure-personname: the marks out of the personname); the refmark label leading an affiliation or legend text"#,
-    page:       &[r#"Ann Able | under: Equal contribution"#, r#"Bob Bell"#],
+    page:       &[
+      "Ann Able ; * plain",
+      "Bob Bell",
+      "margin: Equal contribution",
+    ],
     page_moves: r#""#,
   },
   Row {
@@ -1031,7 +1054,7 @@ const PURE: &[Row] = &[
       r#"Bob Bee ; footnotemark[1]="#,
     ],
     moves:      r#""#,
-    page:       &[r#"Ann Able ; * plain"#, r#"Bob Bee ; 1 plain"#],
+    page:       &["Ann Able", "Bob Bee"],
     page_moves: r#""#,
   },
   Row {
@@ -1040,7 +1063,7 @@ const PURE: &[Row] = &[
     warnings:   0,
     creators:   &[r#"Ann Able ; footnotemark[*]="#, r#"Bob Baker | url=†"#],
     moves:      r#""#,
-    page:       &[r#"Ann Able ; * plain"#, r#"Bob Baker"#],
+    page:       &["Ann Able", "Bob Baker"],
     page_moves: r#""#,
   },
   Row {
@@ -1070,7 +1093,10 @@ const PURE: &[Row] = &[
     warnings:   0,
     creators:   &[r#"Ann Able ; footnotemark[a]= ; thanks[*]=a visitor at the Institute."#],
     moves:      r#""#,
-    page:       &[r#"Ann Able ; a plain | under: a visitor at the Institute."#],
+    page:       &[
+      "Ann Able ; a plain ; * plain",
+      "margin: a visitor at the Institute.",
+    ],
     page_moves: r#""#,
   },
   Row {
@@ -1083,8 +1109,9 @@ const PURE: &[Row] = &[
     ],
     moves:      r#""#,
     page:       &[
-      r#"Ann Able ; * plain | under: Email: ann@x.org"#,
-      r#"Bob Baker ; * plain | under: Email: bob@x.org"#,
+      "Ann Able ; * plain ; * plain",
+      "Bob Baker ; * plain ; † plain",
+      "margin: Email: ann@x.org ; Email: bob@x.org",
     ],
     page_moves: r#""#,
   },
@@ -1147,11 +1174,7 @@ const PURE: &[Row] = &[
       r#"Cy Cole | affiliation=* Univ A"#,
     ],
     moves:      r#""#,
-    page:       &[
-      r#"Ann Able ; * plain"#,
-      r#"Bob Baker ; † plain"#,
-      r#"Cy Cole"#,
-    ],
+    page:       &["Ann Able ; * plain", "Bob Baker", "Cy Cole"],
     page_moves: r#""#,
   },
   Row {
@@ -1163,7 +1186,7 @@ const PURE: &[Row] = &[
       r#"Bob Baker | affiliation=* Univ A"#,
     ],
     moves:      r#""#,
-    page:       &[r#"Ann Able ; † plain"#, r#"Bob Baker"#],
+    page:       &["Ann Able", "Bob Baker"],
     page_moves: r#""#,
   },
   Row {
@@ -1175,7 +1198,7 @@ const PURE: &[Row] = &[
       r#"Bob Baker | affiliation=* Univ A"#,
     ],
     moves:      r#""#,
-    page:       &[r#"Ann Able ; † plain"#, r#"Bob Baker"#],
+    page:       &["Ann Able", "Bob Baker"],
     page_moves: r#""#,
   },
   Row {
@@ -1187,7 +1210,11 @@ const PURE: &[Row] = &[
       r#"Bob Baker | affiliation=Univ B , X"#,
     ],
     moves:      r#""#,
-    page:       &[r#"Ann Able ; * plain | under: Equal."#, r#"Bob Baker"#],
+    page:       &[
+      "Ann Able ; * plain ; * plain",
+      "Bob Baker",
+      "margin: Equal.",
+    ],
     page_moves: r#""#,
   },
   Row {
@@ -1196,7 +1223,7 @@ const PURE: &[Row] = &[
     warnings:   0,
     creators:   &[r#"Team C#"#, r#"Bob Baker ; footnotemark[*]="#],
     moves:      r#""#,
-    page:       &[r#"Team C#"#, r#"Bob Baker ; * plain"#],
+    page:       &["Team C#", "Bob Baker"],
     page_moves: r#""#,
   },
   Row {
@@ -1208,7 +1235,7 @@ const PURE: &[Row] = &[
       r#"Bob Baker | affiliation=Univ J"#,
     ],
     moves:      r#""#,
-    page:       &[r#"Ann Able ; 12 plain"#, r#"Bob Baker"#],
+    page:       &["Ann Able", "Bob Baker"],
     page_moves: r#""#,
   },
   Row {
@@ -1221,8 +1248,9 @@ const PURE: &[Row] = &[
     ],
     moves:      r#""#,
     page:       &[
-      r#"Ann Able"#,
-      r#"Bob Baker ; §→note | under: Equal contribution."#,
+      "Ann Able",
+      "Bob Baker ; §→note ; § plain",
+      "margin: Equal contribution.",
     ],
     page_moves: r#""#,
   },
@@ -1391,7 +1419,7 @@ const LINK: &[Row] = &[
       r#"Bob Baker ; footnotemark[*]="#,
     ],
     moves:      r#""#,
-    page:       &[r#"Ann Able | under: Note X."#, r#"Bob Baker ; * plain"#],
+    page:       &["Ann Able ; † plain", "Bob Baker", "margin: Note X."],
     page_moves: r#""#,
   },
   Row {
@@ -1400,7 +1428,7 @@ const LINK: &[Row] = &[
     warnings:   0,
     creators:   &[r#"Ann Able ; thanks[*]=Univ X"#, r#"Bob Baker"#],
     moves:      r#""#,
-    page:       &[r#"Ann Able | under: Univ X"#, r#"Bob Baker"#],
+    page:       &["Ann Able ; * plain", "Bob Baker", "margin: Univ X"],
     page_moves: r#""#,
   },
   Row {
@@ -1412,7 +1440,7 @@ const LINK: &[Row] = &[
       r#"Bob ; footnote[†]=Intern."#,
     ],
     moves:      r#""#,
-    page:       &[r#"Ann | under: Equal."#, r#"Bob | under: Intern."#],
+    page:       &["Ann ; * plain", "Bob ; † plain", "margin: Equal. ; Intern."],
     page_moves: r#""#,
   },
   Row {
@@ -1424,10 +1452,7 @@ const LINK: &[Row] = &[
       r#"Bob Baker ; footnotemark[‡]="#,
     ],
     moves:      r#""#,
-    page:       &[
-      r#"Ann Able ; † plain | under: Univ X."#,
-      r#"Bob Baker ; ‡ plain"#,
-    ],
+    page:       &["Ann Able ; * plain", "Bob Baker", "margin: Univ X."],
     page_moves: r#""#,
   },
   Row {
@@ -1441,10 +1466,10 @@ const LINK: &[Row] = &[
     ],
     moves:      r#""#,
     page:       &[
-      r#"Ann Able ; *→note ; *→note"#,
-      r#"Bob Baker ; *→note"#,
-      r#"Carl Cole | under: Univ Y."#,
-      r#"margin: Univ X."#,
+      "Ann Able ; *→note ; *→note",
+      "Bob Baker ; *→note",
+      "Carl Cole ; † plain",
+      "margin: Univ X. ; Univ Y.",
     ],
     page_moves: r#""#,
   },
@@ -1459,9 +1484,10 @@ const LINK: &[Row] = &[
     ],
     moves:      r#""#,
     page:       &[
-      r#"Ann Able ; † plain | under: Univ X."#,
-      r#"Bob Baker | under: Univ Y."#,
-      r#"Carl Cole ; § plain"#,
+      "Ann Able ; * plain",
+      "Bob Baker ; ‡ plain",
+      "Carl Cole",
+      "margin: Univ X. ; Univ Y.",
     ],
     page_moves: r#""#,
   },
@@ -1492,7 +1518,7 @@ const LINK: &[Row] = &[
       r#"Bob Baker"#,
     ],
     moves:      r#""#,
-    page:       &[r#"Ann Able ; † plain | under: Lead note."#, r#"Bob Baker"#],
+    page:       &["Ann Able ; * plain", "Bob Baker", "margin: Lead note."],
     page_moves: r#""#,
   },
   // the marks as printed; the Warning is the fail-safe split's (counted, Perl's split)
@@ -1525,10 +1551,10 @@ const LINK: &[Row] = &[
     ],
     moves:      r#""#,
     page:       &[
-      r#"Ann Able ; †→note"#,
-      r#"Bob Baker ; †→note"#,
-      r#"Cy Cole ; * plain"#,
-      r#"margin: Equal contribution."#,
+      "Ann Able ; †→note",
+      "Bob Baker ; †→note",
+      "Cy Cole",
+      "margin: Equal contribution.",
     ],
     page_moves: r#""#,
   },
@@ -1543,10 +1569,10 @@ const LINK: &[Row] = &[
     ],
     moves:      r#""#,
     page:       &[
-      r#"Ann Able ; ‡→note"#,
-      r#"Bob Baker ; ‡→note"#,
-      r#"Cy Cole ; * plain"#,
-      r#"margin: Equal contribution."#,
+      "Ann Able ; ‡→note",
+      "Bob Baker ; ‡→note",
+      "Cy Cole",
+      "margin: Equal contribution.",
     ],
     page_moves: r#""#,
   },
@@ -1560,8 +1586,9 @@ const LINK: &[Row] = &[
     ],
     moves:      r#""#,
     page:       &[
-      r#"Ann Able | under: First note."#,
-      r#"Bob Baker | under: Second note."#,
+      "Ann Able ; ‡ plain",
+      "Bob Baker ; § plain",
+      "margin: First note. ; Second note.",
     ],
     page_moves: r#""#,
   },
@@ -1575,8 +1602,9 @@ const LINK: &[Row] = &[
     ],
     moves:      r#""#,
     page:       &[
-      r#"Ann Able | under: Univ A. Email: ann@a.edu ; Institute C."#,
-      r#"Bob Baker | under: Univ B. Email: bob@b.edu"#,
+      "Ann Able ; * plain ; ‡ plain",
+      "Bob Baker ; † plain",
+      "margin: Institute C. ; Univ A. Email: ann@a.edu ; Univ B. Email: bob@b.edu",
     ],
     page_moves: r#""#,
   },
@@ -1607,10 +1635,10 @@ const LINK: &[Row] = &[
     ],
     moves:      r#""#,
     page:       &[
-      r#"Ann Able ; *→note"#,
-      r#"Bob Baker ; *→note ; † plain"#,
-      r#"Cat Cole"#,
-      r#"margin: Ann Able and Bob Baker contributed equally."#,
+      "Ann Able ; *→note",
+      "Bob Baker ; *→note",
+      "Cat Cole",
+      "margin: Ann Able and Bob Baker contributed equally.",
     ],
     page_moves: r#""#,
   },
@@ -1624,7 +1652,7 @@ const LINK: &[Row] = &[
       r#"Carl Cole ; thanks[*]=Univ X. | affiliation=Univ B"#,
       r#"Dan Dory | affiliation=Univ B"#,
     ],
-    moves:      r#"row R COMMAMARK (SHGIVEN open: a given mark after `Name,$^{1}$`, 1912.01737, 1811.08622, 2101.04763)"#,
+    moves:      "",
     page:       &[
       r#"Ann Able ; *→note"#,
       r#"Bob Baker ; *→note"#,
@@ -1632,7 +1660,7 @@ const LINK: &[Row] = &[
       r#"Dan Dory"#,
       r#"margin: Univ X."#,
     ],
-    page_moves: r#"the XML layer's: row R COMMAMARK (SHGIVEN open: a given mark after `Name,$^{1}$`, 1912.01737, 1811.08622, 2101.04763)"#,
+    page_moves: "",
   },
   Row {
     repro:      "ne2d_given_and_fresh_mark_dropped",
@@ -1644,15 +1672,15 @@ const LINK: &[Row] = &[
       r#"Carl Cole ; footnotemark[†]= | affiliation=Univ B"#,
       r#"Dan Dory ; footnotemark[‡]= | affiliation=Univ B"#,
     ],
-    moves:      r#"row R COMMAMARK (SHGIVEN open: a given mark after `Name,$^{1}$`, 1912.01737, 1811.08622, 2101.04763)"#,
+    moves:      "",
     page:       &[
-      r#"Ann Able ; *→note"#,
-      r#"Bob Baker ; *→note"#,
-      r#"Carl Cole ; † plain"#,
-      r#"Dan Dory ; ‡ plain"#,
-      r#"margin: Univ X."#,
+      "Ann Able ; *→note",
+      "Bob Baker ; *→note",
+      "Carl Cole",
+      "Dan Dory",
+      "margin: Univ X.",
     ],
-    page_moves: r#"the XML layer's: row R COMMAMARK (SHGIVEN open: a given mark after `Name,$^{1}$`, 1912.01737, 1811.08622, 2101.04763)"#,
+    page_moves: "",
   },
   Row {
     repro:      "fmmarks_label_in_a_copied_thanks",
@@ -1715,11 +1743,7 @@ const SPACING: &[Row] = &[
       r#"Carl Cole"#,
     ],
     moves:      r#""#,
-    page:       &[
-      r#"Ann Able ; * plain ; † plain"#,
-      r#"Bob Baker"#,
-      r#"Carl Cole"#,
-    ],
+    page:       &["Ann Able", "Bob Baker", "Carl Cole"],
     page_moves: r#""#,
   },
   // the mark as printed, no Warning (the mark ledger writes the prefix Bob's: SHGNEXT, OD #1057)
@@ -1733,7 +1757,7 @@ const SPACING: &[Row] = &[
       r#"Carl Cole"#,
     ],
     moves:      r#""#,
-    page:       &[r#"Ann Able"#, r#"Bob Baker ; † plain"#, r#"Carl Cole"#],
+    page:       &["Ann Able", "Bob Baker", "Carl Cole"],
     page_moves: r#""#,
   },
   // the marks as printed; the one Warning the labels' (the prefix's false "lost: †" gone: SHGNEXT, OD #1057)
@@ -1747,11 +1771,7 @@ const SPACING: &[Row] = &[
       r#"Carl Cole ; footnotemark[*]="#,
     ],
     moves:      r#""#,
-    page:       &[
-      r#"Ann Able ; * plain"#,
-      r#"Bob Baker ; † plain"#,
-      r#"Carl Cole ; * plain"#,
-    ],
+    page:       &["Ann Able ; * plain", "Bob Baker", "Carl Cole ; * plain"],
     page_moves: r#""#,
   },
   Row {
@@ -1764,11 +1784,7 @@ const SPACING: &[Row] = &[
       r#"Carl Cole ; footnotemark[‡]="#,
     ],
     moves:      r#""#,
-    page:       &[
-      r#"Ann Able ; * plain"#,
-      r#"Bob Baker | under: X"#,
-      r#"Carl Cole ; ‡ plain"#,
-    ],
+    page:       &["Ann Able", "Bob Baker ; † plain", "Carl Cole", "margin: X"],
     page_moves: r#""#,
   },
   Row {
@@ -1781,7 +1797,7 @@ const SPACING: &[Row] = &[
       r#"Carl Cole"#,
     ],
     moves:      r#""#,
-    page:       &[r#"Ann Able ; † plain"#, r#"Bob Baker"#, r#"Carl Cole"#],
+    page:       &["Ann Able", "Bob Baker", "Carl Cole"],
     page_moves: r#""#,
   },
   Row {
@@ -1790,7 +1806,7 @@ const SPACING: &[Row] = &[
     warnings:   0,
     creators:   &[r#"Ann Able ; footnotemark[*]="#, r#"Bob Baker"#],
     moves:      r#""#,
-    page:       &[r#"Ann Able ; * plain"#, r#"Bob Baker"#],
+    page:       &["Ann Able", "Bob Baker"],
     page_moves: r#""#,
   },
   Row {
@@ -1802,7 +1818,7 @@ const SPACING: &[Row] = &[
       r#"Bob Baker"#,
     ],
     moves:      r#""#,
-    page:       &[r#"Ann Able ; † plain"#, r#"Bob Baker"#],
+    page:       &["Ann Able", "Bob Baker"],
     page_moves: r#""#,
   },
   Row {
@@ -1814,7 +1830,7 @@ const SPACING: &[Row] = &[
       r#"Bob Baker"#,
     ],
     moves:      r#""#,
-    page:       &[r#"Ann Able ; * plain ; † plain"#, r#"Bob Baker"#],
+    page:       &["Ann Able", "Bob Baker"],
     page_moves: r#""#,
   },
   Row {
@@ -1826,7 +1842,7 @@ const SPACING: &[Row] = &[
       r#"Bob Baker ; footnotemark[‡]="#,
     ],
     moves:      r#""#,
-    page:       &[r#"Ann Able | under: Univ X."#, r#"Bob Baker ; ‡ plain"#],
+    page:       &["Ann Able ; * plain", "Bob Baker", "margin: Univ X."],
     page_moves: r#""#,
   },
   Row {
@@ -1838,7 +1854,7 @@ const SPACING: &[Row] = &[
       r#"Bob Baker ; footnotemark[†]="#,
     ],
     moves:      r#""#,
-    page:       &[r#"Ann Able | under: X"#, r#"Bob Baker ; † plain"#],
+    page:       &["Ann Able ; * plain", "Bob Baker", "margin: X"],
     page_moves: r#""#,
   },
   Row {
@@ -1850,7 +1866,7 @@ const SPACING: &[Row] = &[
       r#"Bob Baker ; footnotemark[†]= ; footnotemark[‡]="#,
     ],
     moves:      r#""#,
-    page:       &[r#"Ann Able | under: X"#, r#"Bob Baker ; † plain ; ‡ plain"#],
+    page:       &["Ann Able ; * plain", "Bob Baker", "margin: X"],
     page_moves: r#""#,
   },
   Row {
@@ -1864,9 +1880,10 @@ const SPACING: &[Row] = &[
     ],
     moves:      r#""#,
     page:       &[
-      r#"Ann Able | under: X"#,
-      r#"Bob Baker ; † plain | under: Y"#,
-      r#"Carl Cole"#,
+      "Ann Able ; * plain",
+      "Bob Baker ; ‡ plain",
+      "Carl Cole",
+      "margin: X ; Y",
     ],
     page_moves: r#""#,
   },
@@ -1880,7 +1897,7 @@ const SPACING: &[Row] = &[
       r#"Carl Cole"#,
     ],
     moves:      r#""#,
-    page:       &[r#"Ann Able"#, r#"Bob Baker ; † plain"#, r#"Carl Cole"#],
+    page:       &["Ann Able", "Bob Baker", "Carl Cole"],
     page_moves: r#""#,
   },
   Row {
@@ -1893,7 +1910,7 @@ const SPACING: &[Row] = &[
       r#"Carl Cole"#,
     ],
     moves:      r#""#,
-    page:       &[r#"Ann Able"#, r#"Bob Baker ; † plain"#, r#"Carl Cole"#],
+    page:       &["Ann Able", "Bob Baker", "Carl Cole"],
     page_moves: r#""#,
   },
   Row {
@@ -1906,7 +1923,7 @@ const SPACING: &[Row] = &[
       r#"Carl Cole"#,
     ],
     moves:      r#""#,
-    page:       &[r#"Ann Able"#, r#"Bob Baker ; † plain"#, r#"Carl Cole"#],
+    page:       &["Ann Able", "Bob Baker", "Carl Cole"],
     page_moves: r#""#,
   },
   Row {
@@ -1919,7 +1936,7 @@ const SPACING: &[Row] = &[
       r#"Carl Cole"#,
     ],
     moves:      r#""#,
-    page:       &[r#"Ann Able"#, r#"Bob Baker ; † plain"#, r#"Carl Cole"#],
+    page:       &["Ann Able", "Bob Baker", "Carl Cole"],
     page_moves: r#""#,
   },
   Row {
@@ -1932,7 +1949,7 @@ const SPACING: &[Row] = &[
       r#"Carl Cole"#,
     ],
     moves:      r#""#,
-    page:       &[r#"Ann Able"#, r#"Bob Baker ; † plain"#, r#"Carl Cole"#],
+    page:       &["Ann Able", "Bob Baker", "Carl Cole"],
     page_moves: r#""#,
   },
   Row {
@@ -1945,11 +1962,7 @@ const SPACING: &[Row] = &[
       r#"Carl Cole ; footnotemark[‡]="#,
     ],
     moves:      r#""#,
-    page:       &[
-      r#"Ann Able ; * plain ; † plain"#,
-      r#"Bob Baker"#,
-      r#"Carl Cole ; ‡ plain"#,
-    ],
+    page:       &["Ann Able", "Bob Baker", "Carl Cole"],
     page_moves: r#""#,
   },
   Row {
@@ -2001,11 +2014,7 @@ const SPACING: &[Row] = &[
       r#"Carl Cole"#,
     ],
     moves:      r#""#,
-    page:       &[
-      r#"Ann Able ; * plain"#,
-      r#"Bob Baker ; † plain"#,
-      r#"Carl Cole"#,
-    ],
+    page:       &["Ann Able", "Bob Baker", "Carl Cole"],
     page_moves: r#""#,
   },
   Row {
@@ -2018,11 +2027,7 @@ const SPACING: &[Row] = &[
       r#"Carl Cole"#,
     ],
     moves:      r#""#,
-    page:       &[
-      r#"Ann Able"#,
-      r#"Bob Baker ; * plain ; † plain"#,
-      r#"Carl Cole"#,
-    ],
+    page:       &["Ann Able", "Bob Baker", "Carl Cole"],
     page_moves: r#""#,
   },
   Row {
@@ -2035,11 +2040,7 @@ const SPACING: &[Row] = &[
       r#"Carl Cole ; footnotemark[†]="#,
     ],
     moves:      r#""#,
-    page:       &[
-      r#"Ann Able"#,
-      r#"Bob Baker ; * plain"#,
-      r#"Carl Cole ; † plain"#,
-    ],
+    page:       &["Ann Able", "Bob Baker", "Carl Cole"],
     page_moves: r#""#,
   },
   Row {
@@ -2053,9 +2054,10 @@ const SPACING: &[Row] = &[
     ],
     moves:      r#""#,
     page:       &[
-      r#"Ann Able"#,
-      r#"Bob Baker ; † plain | under: Ann note"#,
-      r#"Carl Cole"#,
+      "Ann Able",
+      "Bob Baker ; * plain",
+      "Carl Cole",
+      "margin: Ann note",
     ],
     page_moves: r#""#,
   },
@@ -2070,9 +2072,10 @@ const SPACING: &[Row] = &[
     ],
     moves:      r#""#,
     page:       &[
-      r#"Ann Able"#,
-      r#"Bob Baker ; † plain | under: Ann note"#,
-      r#"Carl Cole"#,
+      "Ann Able",
+      "Bob Baker ; * plain",
+      "Carl Cole",
+      "margin: Ann note",
     ],
     page_moves: r#""#,
   },
@@ -2086,7 +2089,7 @@ const SPACING: &[Row] = &[
       r#"Carl Cole"#,
     ],
     moves:      r#""#,
-    page:       &[r#"Ann Able"#, r#"Bob Baker ; * plain"#, r#"Carl Cole"#],
+    page:       &["Ann Able", "Bob Baker", "Carl Cole"],
     page_moves: r#""#,
   },
   Row {
@@ -2100,9 +2103,10 @@ const SPACING: &[Row] = &[
     ],
     moves:      r#""#,
     page:       &[
-      r#"Ann Able | under: Ann note body"#,
-      r#"Bob Baker ; † plain | under: Floating body"#,
-      r#"Carl Cole"#,
+      "Ann Able ; * plain",
+      "Bob Baker ; ‡ plain",
+      "Carl Cole",
+      "margin: Ann note body ; Floating body",
     ],
     page_moves: r#""#,
   },
@@ -2116,7 +2120,7 @@ const SPACING: &[Row] = &[
       r#"Carl Cole"#,
     ],
     moves:      r#""#,
-    page:       &[r#"Ann Able"#, r#"Bob Baker ; † plain"#, r#"Carl Cole"#],
+    page:       &["Ann Able", "Bob Baker", "Carl Cole"],
     page_moves: r#""#,
   },
   Row {
@@ -2129,7 +2133,7 @@ const SPACING: &[Row] = &[
       r#"Carl Cole"#,
     ],
     moves:      r#""#,
-    page:       &[r#"Ann Able ; * plain"#, r#"Bob Baker"#, r#"Carl Cole"#],
+    page:       &["Ann Able", "Bob Baker", "Carl Cole"],
     page_moves: r#""#,
   },
   Row {
@@ -2142,7 +2146,7 @@ const SPACING: &[Row] = &[
       r#"Carl Cole"#,
     ],
     moves:      r#""#,
-    page:       &[r#"Ann Able"#, r#"Bob Baker ; † plain"#, r#"Carl Cole"#],
+    page:       &["Ann Able", "Bob Baker", "Carl Cole"],
     page_moves: r#""#,
   },
   Row {
@@ -2167,13 +2171,14 @@ const SPACING: &[Row] = &[
       r#"Bob Baker ; thanks[†]=Bob note"#,
       r#"Carl Cole"#,
     ],
-    moves:      r#"row R SHGIVENNEXT (a mark nearer the next name, or a bare one; today the counted loss or the whole block)"#,
+    moves:      "",
     page:       &[
-      r#"Ann Able"#,
-      r#"Bob Baker | under: Bob note"#,
-      r#"Carl Cole"#,
+      "Ann Able",
+      "Bob Baker ; † plain",
+      "Carl Cole",
+      "margin: Bob note",
     ],
-    page_moves: r#"the XML layer's: row R SHGIVENNEXT (a mark nearer the next name, or a bare one; today the counted loss or the whole block)"#,
+    page_moves: "",
   },
   Row {
     repro:      "fmmarks_mark_then_hfill_before_next_red",
@@ -2212,9 +2217,10 @@ const SPACING: &[Row] = &[
     ],
     moves:      r#""#,
     page:       &[
-      r#"Ann Able"#,
-      r#"Bob Baker ; † plain | under: Bob note"#,
-      r#"Carl Cole"#,
+      "Ann Able",
+      "Bob Baker ; * plain",
+      "Carl Cole",
+      "margin: Bob note",
     ],
     page_moves: r#""#,
   },
@@ -2228,11 +2234,7 @@ const SPACING: &[Row] = &[
       r#"Carl Cole"#,
     ],
     moves:      r#""#,
-    page:       &[
-      r#"Ann Able ; * plain"#,
-      r#"Bob Baker ; † plain"#,
-      r#"Carl Cole"#,
-    ],
+    page:       &["Ann Able", "Bob Baker", "Carl Cole"],
     page_moves: r#""#,
   },
   Row {
@@ -2245,11 +2247,7 @@ const SPACING: &[Row] = &[
       r#"Carl Cole ; footnotemark[†]="#,
     ],
     moves:      r#""#,
-    page:       &[
-      r#"Ann Able ; * plain"#,
-      r#"Bob Baker"#,
-      r#"Carl Cole ; † plain"#,
-    ],
+    page:       &["Ann Able", "Bob Baker", "Carl Cole"],
     page_moves: r#""#,
   },
   Row {
@@ -2270,7 +2268,7 @@ const SPACING: &[Row] = &[
     warnings:   0,
     creators:   &[r#"Ann Able"#, r#"Bob Baker ; footnotemark[†]="#],
     moves:      r#""#,
-    page:       &[r#"Ann Able"#, r#"Bob Baker ; † plain"#],
+    page:       &["Ann Able", "Bob Baker"],
     page_moves: r#""#,
   },
   Row {
@@ -2279,7 +2277,7 @@ const SPACING: &[Row] = &[
     warnings:   0,
     creators:   &[r#"Ann Able ; footnotemark[1]= ; footnotemark[2]="#],
     moves:      r#""#,
-    page:       &[r#"Ann Able ; 1 plain ; 2 plain"#],
+    page:       &["Ann Able"],
     page_moves: r#""#,
   },
   // the marks a writer writes each from its own first token, never the one before it again (review revSHGNEXT B1, P1:
@@ -2294,11 +2292,7 @@ const SPACING: &[Row] = &[
       r#"Carl Cole"#,
     ],
     moves:      r#""#,
-    page:       &[
-      r#"Ann Able"#,
-      r#"Bob Baker ; * plain ; † plain"#,
-      r#"Carl Cole"#,
-    ],
+    page:       &["Ann Able", "Bob Baker", "Carl Cole"],
     page_moves: r#""#,
   },
   Row {
@@ -2311,11 +2305,7 @@ const SPACING: &[Row] = &[
       r#"Carl Cole"#,
     ],
     moves:      r#""#,
-    page:       &[
-      r#"Ann Able"#,
-      r#"Bob Baker ; * plain ; † plain ; ‡ plain"#,
-      r#"Carl Cole"#,
-    ],
+    page:       &["Ann Able", "Bob Baker", "Carl Cole"],
     page_moves: r#""#,
   },
   Row {
@@ -2327,7 +2317,7 @@ const SPACING: &[Row] = &[
       r#"Bob Baker"#,
     ],
     moves:      r#""#,
-    page:       &[r#"Ann Able ; * plain ; † plain"#, r#"Bob Baker"#],
+    page:       &["Ann Able", "Bob Baker"],
     page_moves: r#""#,
   },
   Row {
@@ -2339,7 +2329,7 @@ const SPACING: &[Row] = &[
       r#"Bob Baker"#,
     ],
     moves:      r#""#,
-    page:       &[r#"Ann Able ; * plain ; † plain"#, r#"Bob Baker"#],
+    page:       &["Ann Able", "Bob Baker"],
     page_moves: r#""#,
   },
   Row {
@@ -2352,11 +2342,7 @@ const SPACING: &[Row] = &[
       r#"Carl Cole"#,
     ],
     moves:      r#""#,
-    page:       &[
-      r#"Ann Able ; * plain ; † plain"#,
-      r#"Bob Baker"#,
-      r#"Carl Cole"#,
-    ],
+    page:       &["Ann Able", "Bob Baker", "Carl Cole"],
     page_moves: r#""#,
   },
   Row {
@@ -2369,11 +2355,7 @@ const SPACING: &[Row] = &[
       r#"Carl Cole"#,
     ],
     moves:      r#""#,
-    page:       &[
-      r#"Ann Able"#,
-      r#"Bob Baker ; * plain ; † plain"#,
-      r#"Carl Cole"#,
-    ],
+    page:       &["Ann Able", "Bob Baker", "Carl Cole"],
     page_moves: r#""#,
   },
   // a formula's comma glued between two marks is ink of their run (revSHGNEXT S1; 1703.08733's shape)
@@ -2388,10 +2370,10 @@ const SPACING: &[Row] = &[
     ],
     moves:      r#""#,
     page:       &[
-      r#"Ann Able ; *→note"#,
-      r#"Bob Baker ; *→note ; † plain"#,
-      r#"Carl Cole"#,
-      r#"margin: X"#,
+      "Ann Able ; *→note",
+      "Bob Baker ; *→note",
+      "Carl Cole",
+      "margin: X",
     ],
     page_moves: r#""#,
   },
@@ -2546,8 +2528,9 @@ const REVTEX: &[Row] = &[
     ],
     moves:      r#""#,
     page:       &[
-      r#"Ann Able | under: E-mail: ann@a.org"#,
-      r#"Bob Baker | under: E-mail: bob@c.org"#,
+      "Ann Able ; * plain",
+      "Bob Baker ; † plain",
+      "margin: E-mail: ann@a.org ; E-mail: bob@c.org",
     ],
     page_moves: r#""#,
   },
@@ -2734,15 +2717,9 @@ const CLASS: &[Row] = &[
     repro:      "ieee_thanks_leading_label_is_no_mark",
     tex:        repro!("ieee_thanks_leading_label_is_no_mark"),
     warnings:   0,
-    creators:   &[
-      r#"Ann Able ; thanks[]=3 He detectors were funded by X."#,
-      r#"Bob Baker ; thanks[]=* marks the starred items below."#,
-    ],
+    creators:   &["Ann Able", "Bob Baker"],
     moves:      r#""#,
-    page:       &[
-      r#"Ann Able | under: 3 He detectors were funded by X."#,
-      r#"Bob Baker | under: * marks the starred items below."#,
-    ],
+    page:       &["Ann Able", "Bob Baker"],
     page_moves: r#""#,
   },
   Row {
@@ -2755,8 +2732,9 @@ const CLASS: &[Row] = &[
     ],
     moves:      r#""#,
     page:       &[
-      r#"Ann Able | under: ∗ -algebras are her field."#,
-      r#"Bob Baker | under: 3 He detectors were funded by X."#,
+      "Ann Able ; * plain",
+      "Bob Baker ; † plain",
+      "margin: 3 He detectors were funded by X. ; ∗ -algebras are her field.",
     ],
     page_moves: r#""#,
   },
@@ -2769,7 +2747,11 @@ const CLASS: &[Row] = &[
       r#"Bob Baker ; thanks[*]=Corresponding author. | affiliation=Univ A, Town"#,
     ],
     moves:      r#""#,
-    page:       &[r#"Ann Able"#, r#"Bob Baker | under: Corresponding author."#],
+    page:       &[
+      "Ann Able",
+      "Bob Baker ; * plain",
+      "margin: Corresponding author.",
+    ],
     page_moves: r#""#,
   },
   Row {
@@ -2783,9 +2765,10 @@ const CLASS: &[Row] = &[
     ],
     moves:      r#""#,
     page:       &[
-      r#"Ann Able | under: 3 He detectors were funded by X."#,
-      r#"Bob Baker | under: * marks the starred items."#,
-      r#"Cy Cole | under: ∗ -algebras are studied."#,
+      "Ann Able ; * plain",
+      "Bob Baker ; † plain",
+      "Cy Cole ; ‡ plain",
+      "margin: * marks the starred items. ; 3 He detectors were funded by X. ; ∗ -algebras are studied.",
     ],
     page_moves: r#""#,
   },
@@ -2794,14 +2777,11 @@ const CLASS: &[Row] = &[
     tex:        repro!("fmmarks_ieee_journal_thanks_unmarked"),
     warnings:   0,
     creators:   &[
-      r#"Ann Able | membership=Student Member, IEEE"#,
-      r#"Bob Baker ; thanks[]=A. Able and B. Baker are with Univ A (e-mail: ann@a.edu). ; thanks[]=Part of this research was presented at Conf X. This research is supported by Y. | membership=Senior Member, IEEE"#,
+      "Ann Able | membership=Student Member, IEEE",
+      "Bob Baker | membership=Senior Member, IEEE",
     ],
     moves:      r#""#,
-    page:       &[
-      r#"Ann Able"#,
-      r#"Bob Baker | under: Part of this research was presented at Conf X. This research is supported by Y. ; A. Able and B. Baker are with Univ A (e-mail: ann@a.edu)."#,
-    ],
+    page:       &["Ann Able", "Bob Baker"],
     page_moves: r#""#,
   },
   Row {
@@ -2814,8 +2794,9 @@ const CLASS: &[Row] = &[
     ],
     moves:      r#""#,
     page:       &[
-      r#"Ann Able | under: First note."#,
-      r#"Bob Baker | under: Second note."#,
+      "Ann Able ; 1 plain",
+      "Bob Baker ; 2 plain",
+      "margin: First note. ; Second note.",
     ],
     page_moves: r#""#,
   },
@@ -2838,19 +2819,9 @@ const CLASS: &[Row] = &[
     repro:      "fmmarks_ieee_unmarked_thanks_same_text_but_link_or_math",
     tex:        repro!("fmmarks_ieee_unmarked_thanks_same_text_but_link_or_math"),
     warnings:   0,
-    creators:   &[
-      r#"Ann Able ; thanks[]=ORCID: profile"#,
-      r#"Bob Baker ; thanks[]=ORCID: profile"#,
-      r#"Cy Cole ; thanks[]=Supported by grant x 2 ."#,
-      r#"Dee Dunn ; thanks[]=Supported by grant x 2 ."#,
-    ],
+    creators:   &["Ann Able", "Bob Baker", "Cy Cole", "Dee Dunn"],
     moves:      r#""#,
-    page:       &[
-      r#"Ann Able | under: ORCID: profile"#,
-      r#"Bob Baker | under: ORCID: profile"#,
-      r#"Cy Cole | under: Supported by grant x 2 ."#,
-      r#"Dee Dunn | under: Supported by grant x 2 ."#,
-    ],
+    page:       &["Ann Able", "Bob Baker", "Cy Cole", "Dee Dunn"],
     page_moves: r#""#,
   },
   Row {
@@ -2948,11 +2919,7 @@ const CLASS: &[Row] = &[
       r#"Cy Cole ; footnotemark[‡]="#,
     ],
     moves:      r#""#,
-    page:       &[
-      r#"Ann Able ; * plain"#,
-      r#"Bob Baker ; 2 plain"#,
-      r#"Cy Cole ; ‡ plain"#,
-    ],
+    page:       &["Ann Able", "Bob Baker", "Cy Cole"],
     page_moves: r#""#,
   },
   Row {
@@ -2965,8 +2932,9 @@ const CLASS: &[Row] = &[
     ],
     moves:      r#""#,
     page:       &[
-      r#"Ann Able | under: Note A."#,
-      r#"Bob Baker | under: Note B."#,
+      "Ann Able ; 1 plain",
+      "Bob Baker ; † plain",
+      "margin: Note A. ; Note B.",
     ],
     page_moves: r#""#,
   },
@@ -2981,9 +2949,10 @@ const CLASS: &[Row] = &[
     ],
     moves:      r#""#,
     page:       &[
-      r#"Ann Able | under: Note A."#,
-      r#"Bob Baker | under: Note B."#,
-      r#"Cat Cole | under: Note C."#,
+      "Ann Able ; * plain",
+      "Bob Baker | under: Note B.",
+      "Cat Cole ; ‡ plain",
+      "margin: Note A. ; Note C.",
     ],
     page_moves: r#""#,
   },
@@ -2991,12 +2960,9 @@ const CLASS: &[Row] = &[
     repro:      "marksafe_maketitle_wrapper_ieeetran_is_neutral",
     tex:        repro!("marksafe_maketitle_wrapper_ieeetran_is_neutral"),
     warnings:   0,
-    creators:   &[
-      r#"Ann Able | note=Ann note."#,
-      r#"Bob Baker ; footnotemark[1]="#,
-    ],
+    creators:   &["Ann Able", "Bob Baker ; footnotemark[1]="],
     moves:      r#""#,
-    page:       &[r#"Ann Able"#, r#"Bob Baker ; 1 plain"#],
+    page:       &["Ann Able", "Bob Baker"],
     page_moves: r#""#,
   },
   Row {
@@ -3009,8 +2975,9 @@ const CLASS: &[Row] = &[
     ],
     moves:      r#"row R SHAUTO/T1 (a document's own `\maketitle` naming `\maketitle` counts as the class's: ∗ † written)"#,
     page:       &[
-      r#"Ann Able | under: First note."#,
-      r#"Bob Baker | under: Second note."#,
+      "Ann Able ; * plain",
+      "Bob Baker ; † plain",
+      "margin: First note. ; Second note.",
     ],
     page_moves: r#""#,
   },
@@ -3065,13 +3032,16 @@ const POST_ONLY: [(&str, &str, &[&str]); 2] = [
   </creator>
 </document>
 "#,
+    // (a one-line block: each author's own marked note keeps its glyph and pop-up, LaTeXML.css's card aside — revMARKSAFEc
+    // S3; each mark-only glyph prints again on its neighbour's note, so it shows, OD #1059)
     &[
-      "Ann Able | under: Ann's own numbered footnote.",
+      "Ann Able ; 1 plain",
       "Bob Baker ; 1 plain",
-      "Cy Cole | under: Cy's own lettered thanks.",
+      "Cy Cole ; a plain",
       "Dee Dunn ; a plain",
-      "Eve Ezra | under: Eve's own Greek-lettered thanks.",
+      "Eve Ezra ; α plain",
       "Fay Fox ; α plain",
+      "margin: Ann's own numbered footnote. ; Cy's own lettered thanks. ; Eve's own Greek-lettered thanks.",
     ],
   ),
   (

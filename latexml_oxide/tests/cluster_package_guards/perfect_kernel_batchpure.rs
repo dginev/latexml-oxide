@@ -107,7 +107,7 @@ fn body_affiliation_labels_are_mark_only_notes() {
     &[
       r#"<creator role="author"><personname>Ann Able</personname><note mark="a" role="footnotemark"/><note class="ltx_note_frontmatter ltx_thanks_funding" mark="*" role="thanks">Ann is supported by grant A.</note></creator>"#,
       r#"<creator before=" " role="author"><personname>Bob Baker</personname><note mark="b" role="footnotemark"/><note class="ltx_note_frontmatter ltx_thanks_funding" mark="†" role="thanks">Bob is supported by grant B.</note></creator>"#,
-      r#"<creator before=" " role="author"><personname>Cy Cole</personname><note mark="a" role="footnotemark"/><note class="ltx_note_frontmatter ltx_thanks_funding" mark="*" role="thanks">Ann is supported by grant A.</note></creator>"#,
+      r#"<creator before=" " role="author"><personname>Cy Cole</personname><note mark="a" role="footnotemark"/><note class="ltx_note_frontmatter ltx_thanks_funding" idref="id1" mark="*" role="thanks">Ann is supported by grant A.</note></creator>"#,
       r#"<creator before=" " role="author"><personname>Dan Dorn</personname><note mark="c" role="footnotemark"/><note class="ltx_note_frontmatter ltx_thanks_funding" mark="‡" role="thanks">Dan is supported by grant D.</note></creator>"#,
     ],
   );
@@ -163,7 +163,7 @@ fn a_legend_note_takes_the_names_mark() {
     ),
     &[
       r#"<creator role="author"><personname>Ann Able</personname><contact name="Affiliation: " role="affiliation">Univ A</contact><contact name="Email: " role="email">ann@a.edu</contact><note class="ltx_note_frontmatter ltx_thanks_contribution" mark="*" role="thanks">Equal contribution.</note></creator>"#,
-      r#"<creator before=" " role="author"><personname>Bob Baker</personname><contact name="Affiliation: " role="affiliation">Univ B</contact><contact name="Email: " role="email">bob@b.edu</contact><note class="ltx_note_frontmatter ltx_thanks_contribution" mark="*" role="thanks">Equal contribution.</note></creator>"#,
+      r#"<creator before=" " role="author"><personname>Bob Baker</personname><contact name="Affiliation: " role="affiliation">Univ B</contact><contact name="Email: " role="email">bob@b.edu</contact><note class="ltx_note_frontmatter ltx_thanks_contribution" idref="id1" mark="*" role="thanks">Equal contribution.</note></creator>"#,
       r#"<creator before=" " role="author"><personname>Cy Cole</personname><contact name="Affiliation: " role="affiliation">Univ C</contact><contact name="Email: " role="email">cy@c.edu</contact></creator>"#,
     ],
   );

@@ -102,9 +102,9 @@ fn a_numbered_mark_answers_its_note_by_number() {
       page:       &[
         "Ann Able ; *→note",
         "Bob Baker ; *→note",
-        "Cat Cole ; *→note | under: Univ B, Town B",
-        "Dan Dorn | under: Univ C, Town C",
-        "margin: Univ A, Town A",
+        "Cat Cole ; *→note ; † plain",
+        "Dan Dorn ; ‡ plain",
+        "margin: Univ A, Town A ; Univ B, Town B ; Univ C, Town C",
       ],
       page_moves: "",
     },
@@ -176,15 +176,15 @@ fn a_mark_after_a_names_comma_is_the_nearer_names() {
 fn an_ieee_unmarked_thanks_is_the_blocks() {
   let tex = repro!("markkey_ieee_unmarked_thanks_is_the_blocks");
   assert_green(&[Row {
-    repro:      "markkey_ieee_unmarked_thanks_is_the_blocks",
+    repro: "markkey_ieee_unmarked_thanks_is_the_blocks",
     tex,
-    warnings:   0,
-    creators:   &[
+    warnings: 0,
+    creators: &[
       "Ann Able | membership=Member, IEEE",
       "Bob Baker | membership=Fellow, IEEE",
     ],
-    moves:      "",
-    page:       &["Ann Able", "Bob Baker"],
+    moves: "",
+    page: &["Ann Able", "Bob Baker"],
     page_moves: "",
   }]);
   let (_, xml, ()) = convert_with_setup_then(tex, Some("ar5iv.sty"), || {}, |_| {});
@@ -205,7 +205,10 @@ fn an_unlinked_mark_shows_only_where_its_glyph_recurs() {
     repro:      "markkey_unlinked_name_mark_shows_only_where_its_glyph_recurs",
     tex:        repro!("markkey_unlinked_name_mark_shows_only_where_its_glyph_recurs"),
     warnings:   0,
-    creators:   &["Ann Able ; footnotemark[*]=", "Bob Baker ; footnotemark[†]="],
+    creators:   &[
+      "Ann Able ; footnotemark[*]=",
+      "Bob Baker ; footnotemark[†]=",
+    ],
     moves:      "",
     page:       &["Ann Able ; * plain", "Bob Baker"],
     page_moves: "",
@@ -219,20 +222,20 @@ fn an_unlinked_mark_shows_only_where_its_glyph_recurs() {
 fn a_note_several_names_carry_is_one_note() {
   let tex = repro!("markkey_body_footnotetext_two_names_share_is_one_note");
   assert_green(&[Row {
-    repro:      "markkey_body_footnotetext_two_names_share_is_one_note",
+    repro: "markkey_body_footnotetext_two_names_share_is_one_note",
     tex,
-    warnings:   0,
-    creators:   &[
+    warnings: 0,
+    creators: &[
       "Ann Able ; footnote[*]=Univ A, Town A",
       "Bob Baker ; footnote[*]=Univ A, Town A",
       "Cat Cole ; footnote[†]=Univ B, Town B",
     ],
-    moves:      "",
-    page:       &[
+    moves: "",
+    page: &[
       "Ann Able ; *→note",
       "Bob Baker ; *→note",
-      "Cat Cole | under: Univ B, Town B",
-      "margin: Univ A, Town A",
+      "Cat Cole ; † plain",
+      "margin: Univ A, Town A ; Univ B, Town B",
     ],
     page_moves: "",
   }]);
@@ -263,7 +266,9 @@ fn code_of(dir: &str) -> Vec<(String, String)> {
       }
     }
   }
-  let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("..").join(dir);
+  let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+    .join("..")
+    .join(dir);
   let mut out = Vec::new();
   walk(&root, &mut out);
   out
@@ -275,7 +280,7 @@ fn code_of(dir: &str) -> Vec<(String, String)> {
 /// new mark store: the batch states why and the review reads it; a fallen one lowers its pin.
 #[test]
 fn the_mark_components_only_shrink() {
-  const MARK_FORM_CALLS: usize = 29;
+  const MARK_FORM_CALLS: usize = 30;
   const MARK_ATTRIBUTES: &[&str] = &[
     "_mark",
     "_markfromcounter",
@@ -284,6 +289,7 @@ fn the_mark_components_only_shrink() {
     "_markread",
     "_marks",
     "_markshown",
+    "_markunknown",
     "_refmark",
     "_refmarkshown",
   ];

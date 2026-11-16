@@ -890,8 +890,9 @@ fn a_shared_author_note_prints_once_and_its_repeats_are_linked_marks() {
 /// order, with no space before the first (OXIDIZED_DESIGN_DIVERGENCES #1052). A mark-only note (`role="footnotemark"`)
 /// is its mark alone, with no empty "footnotemark: " pop-up: linked, and classed `ltx_note_shared` as a shared note's
 /// repeat is, when its mark names one note of the block (Rae's `¶`, a `\footnotemark` leftover with Perl's tags, makes
-/// Quinn's one-author note shared); otherwise the plain glyph (0801.1438's affiliation letters `a`, `c`; Sam's `1`,
-/// `2`, which the stylesheets part with a comma). Shapes: 0801.1438 under PURE (Kardoš: mark-only `a`, then the `*`
+/// Quinn's one-author note shared); otherwise the plain glyph (0801.1438's affiliation letters `a`; Sam's `1`, Tia's
+/// too) — where it prints anywhere else in the document: Sereni's `c`, Pat's `b` and Sam's `2` print once, over their
+/// names alone, and show nothing (DG 2026-11-16, no dangling marks, OD #1059). Shapes: 0801.1438 under PURE (Kardoš: mark-only `a`, then the `*`
 /// note he shares with Miškuf, the PDF's "Kardošᵃ*"; base: "Kardoš* a", the mark-only note outside the wrapper after a
 /// space, with an empty pop-up); a one-author note before a mark (Pat); a mark before the ORCID badge (Tia, order
 /// kept); a name with no marks (Uma, unchanged).
@@ -967,11 +968,11 @@ fn a_pure_name_carries_every_mark_after_it_in_order() {
     "\n",
     r##"<span class="ltx_creator ltx_role_author"><span class="ltx_annotated_personname">"##,
     "\n",
-    r##"<span class="ltx_personname">Jean-Sébastien Sereni</span><span class="ltx_note ltx_role_footnotemark"><sup class="ltx_note_mark">c</sup></span><span id="id5" class="ltx_note ltx_note_frontmatter ltx_thanks_funding ltx_role_thanks"><sup class="ltx_note_mark">‡</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">‡</sup><span class="ltx_note_type">thanks: </span>Supported by the European project Aeolus.</span></span></span></span></span>"##,
+    r##"<span class="ltx_personname">Jean-Sébastien Sereni</span><span id="id5" class="ltx_note ltx_note_frontmatter ltx_thanks_funding ltx_role_thanks"><sup class="ltx_note_mark">‡</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">‡</sup><span class="ltx_note_type">thanks: </span>Supported by the European project Aeolus.</span></span></span></span></span>"##,
     "\n",
     r##"<span class="ltx_creator ltx_role_author"><span class="ltx_annotated_personname">"##,
     "\n",
-    r##"<span class="ltx_personname">Pat Price</span><span id="id6" class="ltx_note ltx_note_frontmatter ltx_thanks_note ltx_role_thanks"><sup class="ltx_note_mark">§</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">§</sup><span class="ltx_note_type">thanks: </span>On leave from Univ. of B.</span></span></span><span class="ltx_note ltx_role_footnotemark"><sup class="ltx_note_mark">b</sup></span></span><span class="ltx_author_notes"><span class="ltx_author_notes_content">"##,
+    r##"<span class="ltx_personname">Pat Price</span><span id="id6" class="ltx_note ltx_note_frontmatter ltx_thanks_note ltx_role_thanks"><sup class="ltx_note_mark">§</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">§</sup><span class="ltx_note_type">thanks: </span>On leave from Univ. of B.</span></span></span></span><span class="ltx_author_notes"><span class="ltx_author_notes_content">"##,
     "\n",
     r##"<span class="ltx_contact ltx_author_line ltx_role_affiliation">Univ. of P"##,
     "\n",
@@ -987,7 +988,7 @@ fn a_pure_name_carries_every_mark_after_it_in_order() {
     "\n",
     r##"<span class="ltx_creator ltx_role_author"><span class="ltx_annotated_personname">"##,
     "\n",
-    r##"<span class="ltx_personname">Sam Stone</span><span class="ltx_note ltx_role_footnotemark"><sup class="ltx_note_mark">1</sup></span><span class="ltx_note ltx_role_footnotemark"><sup class="ltx_note_mark">2</sup></span></span></span>"##,
+    r##"<span class="ltx_personname">Sam Stone</span><span class="ltx_note ltx_role_footnotemark"><sup class="ltx_note_mark">1</sup></span></span></span>"##,
     "\n",
     r##"<span class="ltx_creator ltx_role_author"><span class="ltx_annotated_personname">"##,
     "\n",

@@ -5,20 +5,20 @@ Every difference between our schema (`latexml_core/resources/RelaxNG/`, embedded
 an upstream patch would state. This is the basis of an upstream proposal (Bruce Miller Q&A, QA19: Q2.1, Q7.3). Bruce
 found the permissive-nesting changes fine. A new attribute or element needs a proposal.
 
-**Basis (2026-11-15).** A line diff of every `.rnc` (7 of the 12 `LaTeXML*.rnc` differ; `svg/*.rnc` are identical).
+**Basis (2026-11-15).** A line diff of every `.rnc` (7 of the 12 `LaTeXML*.rnc` differ, 8 with S13's `LaTeXML-meta.rnc`; `svg/*.rnc` are identical).
 Then a semantic diff of the two compiled `LaTeXML.model` files: for each element, its attributes and its children as
 sets. The compiled model is what the document builder consults (`latexml_core/src/common/model.rs`, and
 `latexml_codegen/src/modelable.rs` at compile time). It shows exactly the changes below and nothing more. So no other
 OD entry changes the schema. Every change widens the schema: nothing is removed, and no element is added. A change
 edits all three forms, `.rnc` → `.rng` → `LaTeXML.model` (`tools/compileschema.sh`).
 
-**Counts.** There are 12 differences:
+**Counts.** There are 13 differences:
 
 | Kind | Count | Rows |
 |---|---|---|
 | Permissive nesting | 6 | S1–S6 |
 | Changed model (a parent reference replaced by a wider one) | 1 | S7 |
-| New attribute: an existing attribute group on more elements | 2 | S8, S9 |
+| New attribute: an existing attribute group on more elements | 3 | S8, S9, S13 |
 | New attribute: a new attribute name | 3 groups, 7 names | S10–S12 |
 | New element | 0 | — |
 
@@ -38,6 +38,7 @@ edits all three forms, `.rnc` → `.rng` → `LaTeXML.model` (`tools/compilesche
 | S10 | `XMath.attributes` (`LaTeXML-math.rnc:76`) | — | `role_side` (text) on 7 elements: XMApp, XMArg, XMArray, XMDual, XMText, XMTok, XMWrap (the `.rnc` puts it in `XMath.attributes`, which XMHint and XMRef take too, but the compiled model lacks it on those two) | new attribute | no OD entry: `docs/math/MATH_PARSE_RESIDUALS.md` ("`role_side` reaches the output XML") | `\left`, `\right` (`tex_math.rs`: `left`, `right`), `\middle` (`etex.rs`: `middle`) on a stretchy delimiter | None. This is a parser hint, not markup (see below). |
 | S11 | `Panel.attributes` in `Common.attributes` (`LaTeXML-common.rnc:87,185`) | — | `panelwidth` (decimal), `panelspan` (nonNegativeInteger) on every element | new attribute | OD #887 | `annotate_panel_grid` (`latex_constructs/mod.rs`), on each panel of a float of two or more | Needs a proposal (below). |
 | S12 | `PanelGrid.attributes` on figure, table, float (`LaTeXML-para.rnc:146,172,195`; `LaTeXML-common.rnc:194`) | — | `panelrows`, `panelcols` (nonNegativeInteger), `panelline`, `panelfill` (decimal) | new attribute | OD #887 | as S11, on the float | Needs a proposal (below). |
+| S13 | `note_attributes` (`LaTeXML-meta.rnc:27`) | `Common.attributes, Labelled.attributes` | `+ IDREF.attributes` (adds `idref`) | existing group, one more element | OD #1059 | the copies of a frontmatter note several creators carry (`relocate::one_note`: `relocate_annotations`, the kernel's `relocate_footnote`, the Link step): each later copy's `idref` names the first's `xml:id` | A note copied onto several carriers names the copy it repeats, as `ltx:ref` names its target: one note, many places. |
 
 ## The new attributes
 
@@ -51,6 +52,13 @@ elements that are labelled. Guard: `perfect_kernel_batch78g::tcb_box_label_takes
 `ltx:bibliography` already does. This needs `inlist="toc"` and an `xml:id` that the TOC entry links to. A `\label` in
 an abstract can then name it. No new names. The change came from the ar5iv fork, so it has no OD entry (doc gap,
 reported for the main session). 10 goldens carry it (for example `latexml_oxide/tests/structure/svabstract.xml`).
+
+**S13, `ltx:note` gets `IDREF.attributes`.** A note several authors share is copied onto each (Perl's
+`relocateAnnotations` and `relocateFootnote` clone it). The copies are one note: each later copy's `idref` names the
+first copy's `xml:id`, so a renderer prints it once and links the others to it, by identity, never by comparing texts
+(DG 2026-11-16, issue #893 Option A; OD #1059). No new names: a proposal only adds `note` to the elements that refer to
+another. jing checks the `idref` as `xsd:IDREF` (it must name an id in the document). Guard:
+`perfect_kernel_batchmarkkey1::a_note_several_names_carry_is_one_note`.
 
 **S10, `role_side`.** `\left`, `\right` and `\middle` mark their stretchy delimiter `left`, `right` or `middle`. The
 math grammar uses the mark to pair vertical bars (`\left|…\right|`, the `\vertii`/`\vertiii` kerned stacks). Perl

@@ -1872,9 +1872,11 @@ impl Resolver {
             last_covered = covered;
             uncovered = made.len();
           }
-          self
-            .fn_requests
-            .extend(std::mem::take(&mut waiting_fn).into_iter().map(|(l, n)| (c, l, n)));
+          self.fn_requests.extend(
+            std::mem::take(&mut waiting_fn)
+              .into_iter()
+              .map(|(l, n)| (c, l, n)),
+          );
           self.out.creators[c].class_requests.extend(
             std::mem::take(&mut waiting_class)
               .into_iter()
