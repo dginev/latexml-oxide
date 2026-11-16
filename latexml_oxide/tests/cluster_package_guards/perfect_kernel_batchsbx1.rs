@@ -23,6 +23,8 @@ enum Source {
 /// or the XML of the same document without the given lines.
 enum Expect {
   Creators(&'static [&'static [&'static str]]),
+  /// the creators, and a creator's note whole (which the creators' view leaves out)
+  CreatorsAndNote(&'static [&'static [&'static str]], &'static str),
   SameAsWithout(&'static [&'static str]),
 }
 
@@ -88,9 +90,13 @@ const ROWS: &[(Source, (usize, usize), Expect)] = &[
        list of collaboration members}}\n\\begin{document}\n\\maketitle\nText.\n\\end{document}\n",
     ),
     (0, 0),
-    // (the name's `\footnote` is the marked `\thanks` note it is in article's title, which this view leaves out: OD #1053,
+    // (the name's `\footnote` is the marked `\thanks` note it is in article's title: OD #1053,
     // `perfect_kernel_batchshmark::a_thanks_note_carries_the_mark_its_title_prints`)
-    Expect::Creators(&[&["sPHENIX Collaboration"]]),
+    Expect::CreatorsAndNote(
+      &[&["sPHENIX Collaboration"]],
+      "<note class=\"ltx_note_frontmatter ltx_thanks_note\" mark=\"*\" role=\"thanks\" xml:id=\"id1\">See the \
+       appendix for the list of collaboration members</note>",
+    ),
   ),
   // the Error side: "for " opening a legend's text, no group's name after it (review revSBX1)
   (
@@ -127,12 +133,15 @@ fn sandbox_2605_rows() {
     assert_eq!(error_count(&log), *errors, "{name}:\n{log}");
     assert_eq!(warning_count(&log), *warnings, "{name}:\n{log}");
     match expect {
-      Expect::Creators(want) => {
+      Expect::Creators(want) | Expect::CreatorsAndNote(want, _) => {
         let want: Vec<Vec<String>> = want
           .iter()
           .map(|c| c.iter().map(ToString::to_string).collect())
           .collect();
         assert_eq!(creators(&xml), want, "{name}:\n{xml}");
+        if let Expect::CreatorsAndNote(_, note) = expect {
+          assert!(xml.contains(note), "{name}: no {note}\n{xml}");
+        }
       },
       Expect::SameAsWithout(lines) => {
         let control: String = tex

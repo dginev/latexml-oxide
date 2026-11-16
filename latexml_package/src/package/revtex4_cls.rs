@@ -183,6 +183,10 @@ LoadDefinitions!({
   // REVTeX 4.0's own rule for printing a `\preprint` (revtex4_support_sty.rs `preprint_printed`).
   if revtex4_0 {
     assign_value("revtex@preprint@v4.0", true, Some(Scope::Global));
+  } else {
+    // REVTeX 4.2 sets a name's `\footnote` in its minipage letters (revtex4-2.cls:487-488), or drops it under `reprint`,
+    // not in 4.0's `\frontmatter@thefootnote` (revtex4.cls:4726-4729): no title mark (OD #1053; 2301.00220)
+    assign_value("lx_title_footnote_own_marks", true, Some(Scope::Global));
   }
   RequirePackage!("revtex4_support");
   switch_off_author_block_after_maketitle()?;

@@ -54,12 +54,8 @@ pub(in crate::base_utilities) fn read_at_flush() -> Result<HeldUndefined> {
   Ok(held)
 }
 
-/// The title read before the author blocks, in a class whose `\maketitle` marks its notes (`lx_title_counts_footnotes`;
-/// article.cls:203-214 `\@maketitle` sets `\@title` first): its rehearsal carries the footnote steps its notes make into
-/// the blocks' (`rehearsal::footnotes_carried`). The flush digests the title after its reading, so an author's `\thanks`
-/// under a title's `\thanks{Funded.}` showed ∗ where the PDF prints †, and a `\footnotemark[1]` beside another name
-/// read as that author's note. The last title set is the one printed (`\title` replaces it, latex.ltx `\gdef\@title`);
-/// read as the calls are, its events kept for them.
+/// The last title set, rehearsed before the author blocks where the title marks its notes (`lx_title_counts_footnotes`;
+/// article.cls:203-214), so its footnote steps carry into theirs (`rehearsal::footnotes_carried`). OD #1053.
 fn rehearse_title_first() -> Result<()> {
   if !lookup_bool("lx_title_counts_footnotes") {
     return Ok(());

@@ -371,11 +371,8 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
     }
     Ok(())
   });
-  // A creator's note as `\lx@add@thanks` and `\lx@add@note` (an author's `\footnote`) make it, after their step: where
-  // the step stepped (`title_note_steps`), with the `mark` it prints (`title_notes_print_marks`; article.cls:205
-  // `\@fnsymbol\c@footnote`), an author's `\footnote` then the `\thanks` note it is (article.cls:241 `\let\footnote
-  // \thanks`); else `\footnote`'s contact, as Perl's (Base_Utility.pool.ltxml:663). 2502.19103, 1911.13299
-  // (FIDELITY_CHARTER §4, the mark rule).
+  // A creator's note after its step, marked as its title prints it (`title_notes_print_marks`; article.cls:205, :241);
+  // an unmarked `\footnote` Perl's contact (Base_Utility.pool.ltxml:663). OD #1053; 2502.19103, 1911.13299, 2301.00220.
   DefPrimitive!("\\lx@title@thanks []{}", sub[(attr, body)] {
     title_note(false, attr, body)?;
   });
@@ -889,7 +886,7 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
 
 /// `\lx@title@thanks` and `\lx@title@footnote` (`footnote`): the note's call, marked where its title marks it.
 fn title_note(footnote: bool, attr: Option<Tokens>, body: Tokens) -> Result<()> {
-  let mark = if title_note_steps() && title_notes_print_marks() {
+  let mark = if title_note_steps() && title_notes_print_marks(footnote) {
     let mark = digest(Tokens!(T_CS!(crate::latex_constructs::TITLE_THEFOOTNOTE)))?.to_string();
     Some(mark.trim().to_string()).filter(|mark| !mark.is_empty())
   } else {
@@ -932,12 +929,11 @@ fn title_note_steps() -> bool {
     )
 }
 
-/// Whether the class's title block prints a mark for each note made in it as it declares them, where its `\maketitle`
-/// digests the frontmatter (`lx_frontmatter_explicit`): `latex_constructs::TITLE_THEFOOTNOTE`, article's
-/// `\@fnsymbol\c@footnote` (article.cls:205), REVTeX's `\frontmatter@thefootnote` (revtex4-2.cls:3040). A title page's
-/// (`titlepage`) marks are the body's, which the frontmatter observer does not read (`TitleMarks::Body`): no mark. IEEEtran's `\thanks` prints none (IEEEtran.cls:4757-4758 `\let\@makefnmark\relax`).
-pub(in crate::base_utilities) fn title_notes_print_marks() -> bool {
+/// Whether the title block prints its declared mark (`latex_constructs::TITLE_THEFOOTNOTE`) for a note made in it, a
+/// name's `\footnote` (`footnote`) unless the class marks those its own way (`lx_title_footnote_own_marks`). OD #1053.
+pub(in crate::base_utilities) fn title_notes_print_marks(footnote: bool) -> bool {
   lookup_bool("lx_frontmatter_explicit")
+    && !(footnote && lookup_bool("lx_title_footnote_own_marks"))
     && lookup_definition(&T_CS!(crate::latex_constructs::TITLE_THEFOOTNOTE))
       .ok()
       .flatten()

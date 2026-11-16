@@ -24,12 +24,23 @@ macro_rules! repro {
 /// personname's text, then each `ltx:note` it holds as `<role>[<mark>]=<text>` (its tags left out), in order.
 #[track_caller]
 pub(super) fn marked_notes(tex: &str, warnings: usize) -> Vec<Vec<String>> {
+  notes_in(&converted(tex, warnings))
+}
+
+/// `tex` converted in process, with `warnings` Warnings and no Error.
+#[track_caller]
+fn converted(tex: &str, warnings: usize) -> String {
   let (log, xml, ()) = convert_with_setup_then(tex, Some("ar5iv.sty"), || {}, |_| {});
   assert_eq!(
     (error_count(&log), warning_count(&log)),
     (0, warnings),
     "{log}"
   );
+  xml
+}
+
+/// The notes of `xml`'s creators, as [`marked_notes`] lists them.
+fn notes_in(xml: &str) -> Vec<Vec<String>> {
   xml
     .match_indices("<creator ")
     .map(|(start, _)| {
@@ -76,7 +87,8 @@ fn row(items: &[&str]) -> Vec<String> { items.iter().map(ToString::to_string).co
 /// none (IEEEtran's `\thanks{$^{*}$Equal contribution}`, 2312.10807), a legend line's `$^*$` repeating the mark the
 /// emitter gave it is taken out (2407.07614, 2105.14239), and a bare `*` its names show is the emitter's
 /// `requested_mark`, taken out of the text (ieeeconf's `\thanks{*Authors to whom correspondence …}`, 2606.00397). Each
-/// carrier's copy alike. Distinct from the Link step: the note's own mark, not a mark on another name.
+/// carrier's copy alike; a symbol that is the text's own stays (review revSHMARK S2). Distinct from the Link step: the
+/// note's own mark, not a mark on another name.
 #[test]
 fn a_notes_mark_is_never_in_its_text() {
   assert_eq!(
@@ -158,14 +170,34 @@ Text.
       ]),
     ]
   );
+  // (a leading symbol that is the note's words, not a copy of its mark: a formula `-` follows, a bare `*` the class's ∗
+  // is not, a superscript of no footnote symbol and no label its name prints — review revSHMARK S2; the glyph stays)
+  let tex = repro!("thanks_leading_symbol_text_is_no_mark_copy");
+  let bare = tex.replace("$^*$-algebras are her field.", "* marks the starred items.");
+  for (tex, ann) in [
+    (tex, "thanks[*]=∗ -algebras are her field."),
+    (bare.as_str(), "thanks[*]=* marks the starred items."),
+  ] {
+    assert_eq!(marked_notes(tex, 0), [
+      row(&["Ann Able", ann]),
+      row(&["Bob Baker", "thanks[†]=3 He detectors were funded by X."]),
+    ]);
+  }
+  assert_eq!(
+    marked_notes(repro!("ieee_thanks_leading_label_is_no_mark"), 0),
+    [
+      row(&["Ann Able", "thanks[]=3 He detectors were funded by X."]),
+      row(&["Bob Baker", "thanks[]=* marks the starred items below."]),
+    ]
+  );
 }
 
 /// The marks a title block prints for its notes: article's `\@fnsymbol` on each `\thanks`, an author's `\footnote` the
 /// `\thanks` it is there (article.cls:241), counted after the title's own `\thanks` (article.cls:203-214 sets the title
 /// first: the reading's `rehearse_title_first`), so a `\footnotemark[1]` beside a name is the title's note — no
 /// creator's, it stays the mark it is; under `titlepage` the body's arabic marks, which the observer does not read: no
-/// mark, nor under a class whose `\maketitle` prints none (IEEEtran). Distinct from the Link step's guard: the mark
-/// each note is written with.
+/// mark, nor under a class whose `\maketitle` prints none (IEEEtran), nor on a REVTeX 4.1/4.2 name's `\footnote`, set
+/// in the class's own letters (2301.00220). Distinct from the Link step's guard: the mark each note is written with.
 #[test]
 fn a_thanks_note_carries_the_mark_its_title_prints() {
   assert_eq!(
@@ -191,6 +223,38 @@ fn a_thanks_note_carries_the_mark_its_title_prints() {
       row(&["Bob Baker", "thanks[]=Note Y."]),
     ]
   );
+  // (REVTeX 4.1/4.2 set a name's `\footnote` in their minipage letters, or drop it under revtex4-2's `reprint`, not in
+  // the title's symbols: Perl's note contact, no mark — 2301.00220, review revSHMARK B1; REVTeX 4.0's ∗ is
+  // `an_affiliations_linking_mark_is_no_note`'s)
+  let preprint = repro!("revtex42_name_footnote_is_its_note_contact");
+  let reprint = preprint.replace("[aps,prl,preprint]", "[aps,prl,reprint]");
+  for tex in [preprint, reprint.as_str()] {
+    let xml = converted(tex, 0);
+    assert_eq!(notes_in(&xml), [
+      row(&["Ann Able"]),
+      row(&["Bob Baker"]),
+      row(&["Cy Cole"])
+    ]);
+    assert_eq!(creators(&xml), [
+      row(&[
+        "Ann Able",
+        "thanks=Equal contribution.",
+        "affiliation=Univ A"
+      ]),
+      row(&["Bob Baker", "note=Visiting Univ C.", "affiliation=Univ B"]),
+      row(&["Cy Cole", "email=cy@b.edu", "affiliation=Univ B"]),
+    ]);
+  }
+  let xml = converted(repro!("revtex41_name_footnote_is_its_note_contact"), 0);
+  assert_eq!(notes_in(&xml), [row(&["Ann Able"]), row(&["Bob Baker"])]);
+  assert_eq!(creators(&xml), [
+    row(&["Ann Able", "note=ann@a.edu", "affiliation=Univ A, Town"]),
+    row(&[
+      "Bob Baker",
+      "note=Corresponding author: bob@b.edu",
+      "affiliation=Univ A, Town"
+    ]),
+  ]);
   // (IEEEtran's `\maketitle` prints none, IEEEtran.cls:4758 `\let\@makefnmark\relax`: no mark — review revSHRENDb)
   assert_eq!(
     marked_notes(

@@ -1101,6 +1101,10 @@ const API_KEYS_OUTSIDE_PERLS: &[(&str, usize)] = &[
     1,
   ),
   ("const _linklabel base_utilities/frontmatter/insert.rs", 1),
+  // (SHMARKb, 0 -> 1: a note whose mark the emitter read off the bare symbol its text opens with, the copy
+  // `insert::strip_bare_mark` takes out — never one a class prints beside its own text, review revSHMARK S2. Perl's API
+  // has no key for "the mark is the text's own"; internal, never written out: OD #1053)
+  ("const _markintext base_utilities/frontmatter/insert.rs", 1),
   // (LO2, 0 -> 1: an emitted entry's first mark read, a fact kept on its pending entry as Perl keeps its labels there
   // (Base_Utility.pool.ltxml:502-508), where LO1 kept a State flag; internal, never written out)
   ("const _markread base_utilities/defs/author_macros.rs", 1),
