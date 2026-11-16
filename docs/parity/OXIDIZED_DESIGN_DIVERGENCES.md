@@ -19517,19 +19517,24 @@ pure semantic markup, reusable as metadata, and no printed mark is lost — puri
 **Perl.** The whole author line or each `\and` piece is the personname, its `$^1$`, `\textsuperscript{a}` and typed
 `*` inside it (Base_Utility.pool.ltxml:722-726); an affiliation's mark is a request it removes only where a labelled
 affiliation answers it (`relocateAnnotations`, :895-901).
-**Rust.** The last step of `insert_frontmatter`, `keep_personnames_pure` (`frontmatter/pure_names.rs`), takes every mark
-off each creator's personname — an `ltx:sup`, a formula of scripts alone, a footnote symbol typed at the name's end: a
-note of the creator answering it (its `mark`; an unmarked note opening with the mark, its copy cut, 1904.03977; a
-symbol on a name holding one unmarked `\thanks`, keyed by no contact of the document, 2406.11149) keeps it as `mark`; a
-contact the creator holds keyed by it (its labels or the superscript it opens with) consumes it (ruling 3: 0707.3527,
-2011.00594); any other is `<note role="footnotemark" mark="…"/>` right after the name (0801.1438), flagged `_namemark`
-so no body `\footnotetext` pairs with it (`relocate_footnote`, 2208.09944). Kept in the name: superscripts that are
-name ink (`M\textsuperscript{c}Kernan`, `1\textsuperscript{st}`, an isotope prescript), formulas on a base, a mark a
-reference or an icon prints (cmpj's `\refaddr`, an ORCID link in a mark: 2205.05709), and every mark of a personname
-holding more than a name (a mark with name ink on both sides: an author block written whole, merged names, each
-already counted by its Warning or Error). HTML: the mark-only note renders as its mark after the name (the
-footnotemark template, `ltx_role_footnotemark`). **Guards**: `perfect_kernel_batchpure` (repros
-`sectioning-frontmatter/pure_names/`); 287 older guards repinned to the name alone.
+**Rust.** The last step of `insert_frontmatter`, `keep_personnames_pure` (`frontmatter/pure_names.rs`), runs once every
+route has placed the creator's contacts and notes, and takes every mark off each creator's personname — an `ltx:sup`, a
+formula of scripts alone, a footnote symbol typed at the name's end. A note of the creator marked so keeps it; an unmarked
+note opening with a copy of it takes it as `mark`, the copy cut — a superscript or a formula of scripts alone printing it,
+or for a symbol its text's head (`\thanks{*Equal Contribution}`, 1904.03977); a letter or number opening the text is the
+note's word, never a copy (`\thanks{a visitor …}`). A contact the creator holds keyed by it — its labels, or the
+superscript its text opens with, inside its font wrappers too — consumes it (ruling 3: 0707.3527, 2011.00594); a run of
+letters and digits parts where one part is a held label (`$^{a1}$`: address a consumed, 1 left; hep-ph0011101). Any other
+mark is `<note role="footnotemark" mark="…"/>` right after the name (0801.1438), flagged `_namemark` so no body
+`\footnotetext` pairs with it (`relocate_footnote`, 2208.09944). A symbol typed beside a `\thanks` is such a note, never the
+`\thanks`'s mark: the `\thanks` prints its own (`Haoran Li$^{*}$\thanks{…}` prints "∗†", 2406.11149, 2506.02863). Kept in
+the name: superscripts that are name ink (`M\textsuperscript{c}Kernan`, `1\textsuperscript{st}`, an isotope prescript),
+formulas on a base, a mark a reference or an icon prints (cmpj's `\refaddr`, an ORCID link in a mark: 2205.05709), and
+every mark of a personname holding more than a name (a mark with name ink on both sides: an author block written whole,
+merged names, each already counted by its Warning or Error). HTML: the mark-only note renders as its mark beside the name
+through the `ltx_annotated_personname` wrapper (REND2's XSLT); no template renders it as a mark alone before that. **Guards**:
+`perfect_kernel_batchpure` (repros `sectioning-frontmatter/pure_names/`); 287 older guards repinned to the name alone,
+their rows listing each note's `mark` (`perfect_kernel_batch84b::creators`).
 
 ---
 
