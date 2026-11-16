@@ -1,0 +1,22 @@
+% mechanism: a document's by-meaning wrapper of a hook-less class's `\maketitle` (`\let\oldmt\maketitle
+%   \renewcommand\maketitle{\oldmt}`) is the class's title page: the output is the plain document's (the wrapper lines
+%   removed), as pdflatex prints identical pages; only the class file's own drop (`\maketitle:redefined@class`,
+%   state.rs) makes the marks unknown (`latex_constructs::title_marks_unknown`, OD #1053)
+% witness:  review revMARKSAFEb B1 (p/e_mnras_plain.tex, p/e_mnras_wrap.tex)
+% oracle:   pdflatex 0 errors; plain and wrapped pages identical: "Ann Able⋆ Bob Baker†", footnotes "⋆ Ann note.",
+%   "† Bob note."
+% engines:  rust MARKSAFEb de9ad33fd3d = 0 errors, 0 Warnings; plain: notes marked 1, 2 (Perl's number key, not
+%   mnras's ⋆ †); wrapped: notes unmarked, 1 Info
+% expect:   0 errors, 0 Warnings; wrapped output identical to plain (XML and HTML); the ⋆ † glyphs RED (row R MNRASFN)
+% status:   GREEN (MARKSAFEc: perfect_kernel_batchshmark::a_wrapper_of_the_class_maketitle_is_neutral)
+% preload:  ar5iv.sty
+\documentclass{mnras}
+\let\oldmt\maketitle
+\renewcommand\maketitle{\oldmt}
+\title{A Title}
+\author{Ann Able\footnotemark[1] \and Bob Baker\footnotemark[2]}
+\begin{document}
+\maketitle
+\footnotetext[1]{Ann note.}\footnotetext[2]{Bob note.}
+Body.
+\end{document}

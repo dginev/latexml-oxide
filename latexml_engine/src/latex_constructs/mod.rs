@@ -727,12 +727,15 @@ pub fn title_marks_declared() -> bool { title_marks_hook() && class_maketitle_in
 /// Does a binding declare its title's marks ([`TITLE_THEFOOTNOTE`] defined)?
 fn title_marks_hook() -> bool { has_meaning(&T_CS!(TITLE_THEFOOTNOTE)) }
 
-/// Is the `\maketitle` that runs the class's own? Yes unless a raw file or the document took it over (the lock's
-/// record, `\maketitle:redefined`, state.rs), except a redefinition that calls the class's by meaning (`\let\oldmt
-/// \maketitle \renewcommand\maketitle{\oldmt…}`), whose page and marks are the class's. A document's own
-/// `\maketitle` prints whatever marks it sets (`\let\@makefnmark\relax`: none), unknown here.
+/// Is the `\maketitle` that runs the class's own? Yes unless the document or a package it loads took it over (the
+/// lock's record, `\maketitle:redefined@document`, state.rs), except a redefinition that calls the class's by meaning
+/// (`\let\oldmt\maketitle \renewcommand\maketitle{\oldmt…}`), whose page and marks are the class's. A body that names
+/// `\maketitle` at all counts as one, its closing `\global\let\maketitle\relax` included (an ACL copy's whole
+/// `\maketitle`, 2502.19103, whose marks are the class's): so a document's own article-like `\maketitle` that prints
+/// none (`\let\@makefnmark\relax`) still writes the class's (row R SHAUTO/T1, repro `fmmarks_own_maketitle_relax_red`).
+/// The class file's own drop is the class's, which its binding reads raw (lni.cls, its marks declared by lni_cls.rs).
 pub fn class_maketitle_in_force() -> bool {
-  if !lookup_bool("\\maketitle:redefined") {
+  if !lookup_bool("\\maketitle:redefined@document") {
     return true;
   }
   let definition = |cs: &Token| lookup_definition(cs).ok().flatten();
@@ -751,16 +754,15 @@ pub fn class_maketitle_in_force() -> bool {
 
 /// Are the marks the title prints unknown here, for a name's notes (`name`) or any other's? Where a binding declares its
 /// title's marks ([`TITLE_THEFOOTNOTE`]) but its `\maketitle` is not in force ([`class_maketitle_in_force`]: a
-/// document's own); where none does and a raw file's `\maketitle` runs (an unbound class's: scrartcl's prints `\fnsymbol`
-/// where Perl's number key read `\footnotemark[1]` "1", the advisor's I-3); and for a name's notes under a class that
-/// sets them apart (`lx_title_footnote_own_marks`: REVTeX 4.1/4.2's minipage letters, "Ann Ablea", revtex4-2.cls:2555-2557)
-/// or past a `\thefootnote` declared in no known cell (`title_cell_declared`). OD #1053.
+/// document's own); where none does and the class file's own `\maketitle` runs (`\maketitle:redefined@class`, state.rs:
+/// an unbound class's, scrartcl's prints `\fnsymbol` where Perl's number key read `\footnotemark[1]` "1", the advisor's
+/// I-3) or the document's (not a wrapper of the class's: the wrapped page is the class's, as pdflatex prints it);
+/// and for a name's notes under a class that sets them apart (`lx_title_footnote_own_marks`: REVTeX 4.1/4.2's minipage
+/// letters, "Ann Ablea", revtex4-2.cls:2555-2557) or past a `\thefootnote` declared in no known cell
+/// (`title_cell_declared`). OD #1053.
 pub fn title_marks_unknown(name: bool) -> bool {
-  let unknown = if title_marks_hook() {
-    !class_maketitle_in_force()
-  } else {
-    lookup_bool("\\maketitle:redefined")
-  };
+  let unknown = !class_maketitle_in_force()
+    || (!title_marks_hook() && lookup_bool("\\maketitle:redefined@class"));
   unknown || (name && (lookup_bool("lx_title_footnote_own_marks") || lookup_bool(CELL_UNKNOWN)))
 }
 

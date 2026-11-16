@@ -719,8 +719,10 @@ pub(in crate::base_utilities) fn count_unknown_marks(document: &mut Document) {
   if notes.is_empty() {
     return;
   }
-  let mut placed = 0;
-  for note in &notes {
+  // (each source note once: the copies of one `\footnotetext[1]` its names' marks took share its counter value and
+  // text, `latex_constructs::relocate_footnote`; review revMARKSAFEb N2)
+  let mut placed = std::collections::HashSet::new();
+  for (i, note) in notes.iter().enumerate() {
     let holds_text = note.get_child_nodes().iter().any(|child| {
       if child.get_type() == Some(NodeType::ElementNode) {
         child.get_name() != "tags"
@@ -729,7 +731,10 @@ pub(in crate::base_utilities) fn count_unknown_marks(document: &mut Document) {
       }
     });
     if holds_text {
-      placed += 1;
+      placed.insert(match note.get_attribute("_fnvalue") {
+        Some(value) => (value, note.get_content()),
+        None => (s!("{i}"), String::new()),
+      });
     } else {
       Warn!(
         "frontmatter",
@@ -739,6 +744,7 @@ pub(in crate::base_utilities) fn count_unknown_marks(document: &mut Document) {
       );
     }
   }
+  let placed = placed.len();
   if placed > 0 {
     Info!(
       "frontmatter",

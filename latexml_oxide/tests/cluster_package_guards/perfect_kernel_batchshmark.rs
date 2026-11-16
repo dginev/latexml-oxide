@@ -9,7 +9,7 @@
 //! MARKSAFE (DG 2026-11-16, "a wrong glyph is worse than none"): the class's marks only under its own `\maketitle`, a
 //! name's mark the class sets apart none, an author block's `\thefootnote` its name's, a mark alone its glyph in `mark`
 //! only, a printed label no entry answers counted. Witnesses 1807.02791, 2607.15705, 2606.00446.
-use latexml::util::test::{convert_with_setup_then, error_count, warning_count};
+use latexml::util::test::{convert_with_setup_then, error_count, kpse_has, warning_count};
 
 use super::{
   perfect_kernel_batch84b::{creators, text},
@@ -744,6 +744,94 @@ fn a_mark_whose_glyph_is_unknown_prints_none() {
       Vec::new()
     )
   );
+  // (one `\footnotetext[1]` two names' marks share is one note, counted once; the flag a declared key, no KeyVals
+  // report: review revMARKSAFEb N1, N2)
+  let (log, notes, page) = case(repro!("marksafe_unbound_class_shared_text_counted_once"), 0);
+  assert!(
+    log.contains(
+      "Info:frontmatter:unknown_mark 2 author note(s) written with no mark, the mark the title prints being unknown \
+       here: each under its author"
+    ),
+    "{log}"
+  );
+  assert!(!log.contains("KeyVals key '_"), "{log}");
+  assert_eq!(notes, [
+    row(&["Ann Able", "footnote[]=Equal contribution."]),
+    row(&["Bob Baker", "footnote[]=Equal contribution."]),
+    row(&["Cy Cole", "footnote[]=Cy note."]),
+  ]);
+  assert_eq!(
+    page,
+    (
+      row(&[
+        "Ann Able | under: Equal contribution.",
+        "Bob Baker | under: Equal contribution.",
+        "Cy Cole | under: Cy note."
+      ]),
+      Vec::new()
+    )
+  );
+}
+
+/// A document's wrapper of its class's `\maketitle` by meaning (`\let\oldmt\maketitle \renewcommand\maketitle{\oldmt}`)
+/// runs the class's title page, which pdflatex prints as the plain document's: the output, the page and the log's counts
+/// are the plain document's, under a class whose binding declares no title marks (mnras, IEEEtran, llncs). Only the class
+/// file's own drop of `\maketitle` makes its marks unknown (`\maketitle:redefined@class`, `state::note_redefined`;
+/// review revMARKSAFEb B1). Distinct from the class's gate: who redefined `\maketitle`, not which class.
+#[test]
+fn a_wrapper_of_the_class_maketitle_is_neutral() {
+  let wrapper = "\\let\\oldmt\\maketitle\n\\renewcommand\\maketitle{\\oldmt}\n";
+  for wrapped in [
+    repro!("marksafe_maketitle_wrapper_mnras_is_neutral"),
+    repro!("marksafe_maketitle_wrapper_ieeetran_is_neutral"),
+    repro!("marksafe_maketitle_wrapper_llncs_is_neutral"),
+  ] {
+    assert!(wrapped.contains(wrapper), "{wrapped}");
+    let plain = wrapped.replace(wrapper, "");
+    let convert = |tex: &str| {
+      let (log, xml, ()) = convert_with_setup_then(tex, Some("ar5iv.sty"), || {}, |_| {});
+      assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+      assert!(!log.contains("unknown_mark"), "{log}");
+      let page = page_lines(&page_of(&xml));
+      (notes_in(&xml), page, xml)
+    };
+    let (plain_notes, plain_page, plain_xml) = convert(&plain);
+    let (notes, page, xml) = convert(wrapped);
+    assert_eq!((&notes, &page), (&plain_notes, &plain_page), "{wrapped}");
+    // (the whole document alike)
+    assert_eq!(xml, plain_xml);
+    if wrapped.contains("IEEEtran") {
+      // (Ann's `\footnote` IEEEtran's contact, Perl's; Bob's mark kept, no Warning)
+      assert_eq!(notes, [
+        row(&["Ann Able"]),
+        row(&["Bob Baker", "footnotemark[1]="])
+      ]);
+    }
+  }
+}
+
+/// lni's binding reads the raw lni.cls, whose own `\maketitle` numbers the title's notes in arabic (lni.cls:475-477): the
+/// binding declares those marks, kept in force over the class file's own drop (`\maketitle:redefined@class`), so
+/// `\thanks` prints 1, 2 as pdflatex does (2407.04435; review revMARKSAFEb S2). Distinct from the wrapper's: a binding
+/// computes its own class's glyph.
+#[test]
+fn lni_prints_its_own_arabic_title_marks() {
+  if !kpse_has("lni.cls") {
+    eprintln!("SKIP: lni.cls is not in this TeX Live");
+    return;
+  }
+  let (log, xml, ()) = convert_with_setup_then(
+    repro!("marksafe_lni_title_marks_are_arabic"),
+    Some("ar5iv.sty"),
+    || {},
+    |_| {},
+  );
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  assert!(!log.contains("unknown_mark"), "{log}");
+  assert_eq!(notes_in(&xml), [
+    row(&["Ann Able", "thanks[1]=Note A."]),
+    row(&["Bob Baker", "thanks[2]=Note B."]),
+  ]);
 }
 
 /// A label authblk prints on a name that no `\affil` prints is a mark the frontmatter places nowhere, counted

@@ -1886,13 +1886,7 @@ pub fn install_definition<T: Into<Stored>>(definition: T, scope: Option<Scope>) 
     // (a class whose load defines the name the lock kept defines it all the same, as its real file does:
     // `ClassLoadFrame`, `copy_base_class_defines`)
     note_class_load_name(meaning_key(&token));
-    let redefined_key = arena::pin(token.with_cs_name(|cs| s!("{cs}:redefined")));
-    state_mut!().assign_internal(
-      TableName::Value,
-      redefined_key,
-      Stored::Bool(true),
-      Some(Scope::Global),
-    );
+    note_redefined(&token);
     // …and the dropped setter's SIGNATURE: an argument-taking `\def\abstract#1`
     // (apa7.cls:785, uwthesis.cls:805) means the class reads `{…}` as one
     // pre-tokenized argument stored for later, which the locked binding can
@@ -3520,6 +3514,24 @@ fn note_class_load_name(key: SymStr) {
     && let Some(record) = state.class_loads.get_mut(class)
   {
     record.names.entry(key).or_insert(None);
+  }
+}
+
+/// A lock dropped a definition of `token`: `<cs>:redefined`, and whose code made it, `<cs>:redefined@class` (a class
+/// file's load, the packages it loads included: [`ClassLoadFrame`]) or `<cs>:redefined@document` (the document's, a
+/// package's it loads). A document's by-meaning wrapper of the class's `\maketitle` (`\let\oldmt\maketitle
+/// \renewcommand\maketitle{\oldmt}`) leaves the class's own title page in force (`latex_constructs::
+/// title_marks_unknown`, OD #1053).
+pub fn note_redefined(token: &Token) {
+  let by_class = !state!().class_load_frames.is_empty();
+  for suffix in ["", if by_class { "@class" } else { "@document" }] {
+    let key = arena::pin(token.with_cs_name(|cs| s!("{cs}:redefined{suffix}")));
+    state_mut!().assign_internal(
+      TableName::Value,
+      key,
+      Stored::Bool(true),
+      Some(Scope::Global),
+    );
   }
 }
 

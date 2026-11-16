@@ -2695,12 +2695,40 @@ const CLASS: &[Row] = &[
     ],
     page_moves: r#""#,
   },
+  Row {
+    repro:      "marksafe_maketitle_wrapper_ieeetran_is_neutral",
+    tex:        repro!("marksafe_maketitle_wrapper_ieeetran_is_neutral"),
+    warnings:   0,
+    creators:   &[
+      r#"Ann Able | note=Ann note."#,
+      r#"Bob Baker ; footnotemark[1]="#,
+    ],
+    moves:      r#""#,
+    page:       &[r#"Ann Able"#, r#"Bob Baker ; 1 plain"#],
+    page_moves: r#""#,
+  },
+  Row {
+    repro:      "fmmarks_own_maketitle_relax_red",
+    tex:        repro!("fmmarks_own_maketitle_relax_red"),
+    warnings:   0,
+    creators:   &[
+      r#"Ann Able ; thanks[]=First note."#,
+      r#"Bob Baker ; thanks[]=Second note."#,
+    ],
+    moves:      r#"row R SHAUTO/T1 (a document's own `\maketitle` naming `\maketitle` counts as the class's: ∗ † written)"#,
+    page:       &[
+      r#"Ann Able | under: First note."#,
+      r#"Bob Baker | under: Second note."#,
+    ],
+    page_moves: r#""#,
+  },
 ];
 /// Class-printed marks against none: a note carries a mark only where its class prints one (IEEEtran and ieeeconf none,
 /// 2606.00397, 1510.02728), a symbol opening its text that is the text's own stays text (review revSHMARK S2), and
 /// unmarked notes alike in text but not in their links or math all print (review revREND2b, the reverted dedupe); a mark
 /// unknown here (an unbound class's, a document's own `\maketitle`'s) is no glyph on the page, the text under its name
-/// (revMARKSAFE B1, ADVGEN I-3), and an author block's `\thefootnote` holds in its cell alone (revMARKSAFE S1).
+/// (revMARKSAFE B1, ADVGEN I-3), a document's wrapper of the class's `\maketitle` changes nothing (revMARKSAFEb B1), and
+/// an author block's `\thefootnote` holds in its cell alone (revMARKSAFE S1).
 #[test]
 fn notes_are_marked_only_where_the_class_prints_marks() { assert_green(CLASS); }
 /// The known gaps of [`notes_are_marked_only_where_the_class_prints_marks`].

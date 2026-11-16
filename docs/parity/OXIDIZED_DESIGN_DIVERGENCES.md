@@ -18427,8 +18427,13 @@ none is printed (IEEEtran's `\thanks`, a picture): on 1807.01940 (revtex4-1) Hao
 another author's glyph, where the PDF prints only the altaffiliation's `∗`; scrartcl's `Ann\thanks{A} \and Bob\thanks{B}`
 (pdflatex ∗, †) showed `†` twice (review revMARKSAFE B1). jheppub's `\note` is a contact, unchanged.
 
+Two placements this rendering makes visible, pre-existing and left to row R (and MARKKEY K7, beside IEEEtran's
+block-level `\thanks`): 0803.0204 (jasatex) shows `\pacs{…}` as a line under "Ludovic Margerin", where the PDF prints it
+under the abstract (JASAPACS); 1003.2281's Schifanella `\titlenote` sits on the last creator, so it reads as Menczer's
+(TITLENOTELAST).
+
 **Witnesses.** 2404.13552 (the notice's picture note), 2107.13277 (five ORCID icons), 1807.01940 (no glyph on Hao
-Zhang), 1510.02728 (IEEEtran's unmarked `\thanks`). Guards
+Zhang), 1510.02728 (IEEEtran's unmarked `\thanks`), 1003.2281 (a `\titlenote`), 0803.0204 (`\pacs` codes). Guards
 `perfect_kernel_batchcr8::an_unmarked_frontmatter_note_renders_inline_without_a_dagger`,
 `perfect_kernel_batchshmark::{a_mark_whose_glyph_is_unknown_prints_none, a_names_mark_revtex_sets_apart_is_unknown}`,
 the HTML layers of `perfect_kernel_batchfmmarks::notes_are_marked_only_where_the_class_prints_marks` and
@@ -19637,21 +19642,29 @@ latex_constructs.pool.ltxml:503-527); acmart's `\authornote` is a contact, `\aut
   where a note of a creator carries its mark or its creator's name holds the same mark (1607.07280's REVTeX
   `\affiliation{\footnotemark[1]Univ A}` under `Shun'ya Mizoguchi\footnote[1]{E-mail:…}`).
 - *Fail-safes* (DG 2026-11-16: "a wrong glyph is worse than none; unbound classes get no automatic mark until T1
-  measures the real glyph"). The class's marks hold only where its own `\maketitle` runs
-  (`latex_constructs::class_maketitle_in_force`: no raw file or document took it over — the lock's
-  `\maketitle:redefined`, state.rs — or the redefinition calls the class's by meaning, `\let\oldmt\maketitle
-  \renewcommand\maketitle{\oldmt…}`): a document's own prints marks unknown here (`\let\@makefnmark\relax`: none;
-  `\def\thefootnote{\arabic{footnote}}`: 1, 2). Under a class no binding declares the marks of, a raw file's
-  `\maketitle` is unknown too (`title_marks_unknown`: an unbound class's, scrartcl's `\fnsymbol`, where Perl's number key
-  wrote `\footnotemark[1]` "1", the advisor's I-3; a bound class's own `\maketitle`, elsarticle's or llncs's, keeps
-  Perl's marks). So no `\thanks` note (`title_marks_declared`), no kernel `\footnotemark`/`\footnote`/
+  measures the real glyph"). The lock records whose code it refused a `\maketitle` from (`state::note_redefined`):
+  `\maketitle:redefined@class` while a class file loads (the packages it loads included), `\maketitle:redefined@document`
+  otherwise (the document's, a package's it loads). The class's marks hold only where its own `\maketitle` runs
+  (`latex_constructs::class_maketitle_in_force`): the document took none over, or its redefinition calls the class's by
+  meaning (`\let\oldmt\maketitle \renewcommand\maketitle{\oldmt…}`, whose page pdflatex prints as the plain
+  document's: review revMARKSAFEb B1, mnras, IEEEtran, llncs). A body that names `\maketitle` at all counts as one, its
+  `\global\let\maketitle\relax` included: an ACL copy's whole `\maketitle` keeps the class's ∗ † (2502.19103), and so,
+  wrongly, does a document's own article-like `\maketitle` that prints none (`\let\@makefnmark\relax`; repro
+  `fmmarks_own_maketitle_relax_red`, row R SHAUTO/T1). Another document `\maketitle` prints marks unknown here
+  (`\def\thefootnote{\arabic{footnote}}`: 1, 2). The class file's own drop is the class's: a binding that reads its raw
+  class and declares its marks keeps them (lni.cls:475-477 arabic, `lni_cls.rs`: 2407.04435's 1, 1, 1,2, 3). Under a
+  class no binding declares the marks of, the class file's own `\maketitle` is unknown too (`title_marks_unknown`:
+  `\maketitle:redefined@class`; an unbound class's, scrartcl's `\fnsymbol`, where Perl's number key wrote
+  `\footnotemark[1]` "1", the advisor's I-3; geophysics's, 2006.10886, 2403.07393; a bound class's own `\maketitle`,
+  elsarticle's or llncs's, keeps Perl's marks), and so is a document's that is no wrapper of it. So no `\thanks` note (`title_marks_declared`), no kernel `\footnotemark`/`\footnote`/
   `\footnotetext` of a title field (`drop_unknown_title_mark`: no `mark`, no tags, its text paired by the counter value
   `_fnvalue`) and no acmart `\authornote` (`acm_note_mark`) carries one — unless the document set `\thefootnote` itself
   in the field since it began (aiaa-tc's `\thanksibid{2}`, `\renewcommand\thefootnote{\fnsymbol{aiaa@cthanks}}
   \footnotemark`, "†", 1505.07844). A name's mark a class sets apart is unknown too (`lx_title_footnote_own_marks`:
   REVTeX 4.1/4.2's minipage letters, "Ann Ablea", bare or given its number). Such a note is flagged (`_markunknown`)
   and counted once the document is built (`insert::count_unknown_marks`): its note placed (a `\thanks`, a
-  `\footnotetext[n]` paired by the number), one Info (DG 2026-11-16: the association known, the glyph not); its note
+  `\footnotetext[n]` paired by the number), one Info counting each source note once (two names' `\footnotemark[1]` and
+  one `\footnotetext[1]` are one note; review revMARKSAFEb N2), DG 2026-11-16: the association known, the glyph not; its note
   never placed (a `\footnotemark[1]` whose note no number key names yet, row R MARKKEY; a bare one nothing answers), a
   Warning each (`frontmatter`/`unanswered_mark_lost`, as `count_lost_marks` counts). The XSLT shows no glyph for it
   (#990). A field's `\thefootnote` is set as the field begins, as the class's `\maketitle` sets it before `\@author`

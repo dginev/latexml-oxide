@@ -58,7 +58,8 @@
 
   <!-- SURPASS (latexml-oxide OXIDIZED_DESIGN_DIVERGENCES #990): an author's note with no mark (no @mark, no tag)
        prints no glyph: its mark is unknown here (an unbound class's \thanks, a document's own \maketitle) or none is
-       printed (a picture, an ORCID icon, 2107.13277), and the frontmatter never invents one: note-mark's dagger below
+       printed (a picture, an ORCID icon, 2107.13277; 2404.13552's page-overlay notice; a \titlenote, 1003.2281; \pacs
+       codes, 0803.0204), and the frontmatter never invents one: note-mark's dagger below
        (Perl's) put another author's glyph on 1807.01940's name (DG 2026-11-16: a wrong or invented glyph is worse
        than none). So no ltx_note_mark and no hidden ltx_note_content (shown on hovering the mark): its content inline,
        with no "note: " type label, after its author's name (class ltx_note_unmarked). A mark-only note with no
