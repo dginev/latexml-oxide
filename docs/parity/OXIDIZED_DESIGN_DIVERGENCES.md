@@ -19031,8 +19031,8 @@ of the 2605/2606 reruns: enumerate's `\@enhook`, threeparttable's `\TPT@defaults
 `\ps@opening`, and the lists below). Where the class prints such a list with its title page and the binding's own
 setters do not fill it, the binding prints it there too, or what a document adds to it is lost without a word (Perl:
 dropped, with the Warning above): `\lx@frontmatter@footnotes{<list>}` runs it where the class runs it, each
-`\footnotetext`/`\@footnotetext` in it an `ltx:pubnote` (role `note`), what else it prints typeset after the
-frontmatter. acmart's `\@titlenotes`, `\@subtitlenotes`, `\@authornotes` at `\maketitle` (acmart.cls:2245-2247;
+`\footnotetext`/`\@footnotetext` in it an `ltx:pubnote` (role `note`), what else it prints a note at the title block
+(#1054). acmart's `\@titlenotes`, `\@subtitlenotes`, `\@authornotes` at `\maketitle` (acmart.cls:2245-2247;
 2605.28175, 2605.16813, 2606.04448); amsaddr's `\emails` as its footnote (amsaddr.sty:102-113; 2606.23853, 2606.25954,
 2212.11488, 1801.06576, 2307.06418); elsarticle's `\elsaddress` and `\@cornotes` at `\end{frontmatter}` or
 `\maketitle` (elsarticle.cls:766, :806; 2605.22682, cnf.sty's `\cortext` 2605.08232, 2606.15628); REVTeX's
@@ -19509,6 +19509,40 @@ Firefox at 1280/375 px. ar5iv.css already shows every
 author's contacts (`css/ar5iv.css:920`, `:940` at ar5iv-css `6dc3e97`; it does not load LaTeXML.css): no change. Offered upstream. **Guards**:
 `06_cluster_frontmatter::frontmatter_author_lines_783` (repros `sectioning-frontmatter/author_lines_783_*.tex`),
 `xslt::witnessed_css_delta::author_line_delta_stays_present`, `cluster_cli::browser_render_author_lines` (local).
+
+### 1054. A title-page list's text is a note at the title block; a footnote text several names share under one mark is their marked note (SHREST)
+
+**Principle.** DG's rulings of 2026-11-16: a note several creators share keeps a full copy on each, each with the `mark`
+the class prints (Perl's model: `relocateAnnotations`, Base_Utility.pool.ltxml:895-901, clones); the XSLT prints it once
+(#1052). FIDELITY_CHARTER §4: unclaimed title-page text goes at the block as an `ltx:note`.
+**Perl.** A class's list a document extends (`\g@addto@macro\prep@absbox{…}`) is not expandable, its text lost with a
+Warning; elsarticle's `\fntext` and REVTeX's `\thanks` are a contact on each name, no mark.
+**Rust.**
+- *Lists* (#1036's `\lx@frontmatter@footnotes`): the list is set in a `\vbox`, its footnote texts pubnotes as before; what
+  the box prints beside them (`leaves_no_ink`) is the author block's note (`role=note`, `label=addresses:block`, the
+  shared creator of #159; a sole author's), its paragraphs kept — it was a body paragraph after the frontmatter. One that
+  opens with a mark (the box's events, `lex_body_with_inks`) the names of the authors a `\maketitle` placed show (their
+  events: 2606.06621's `$^\ddagger$ These authors contributed equally` under two ‡ names) is a note of each of those
+  authors, placed by its `author:N` label, `role=thanks`, `mark=‡`; the mark leaves its text and the names
+  (`shared_notes::show_list_note_marks`, a text step). 2605.22682 (`\elsaddress`'s preprint box), 2605.08232 and
+  2606.15628 (cnf.sty's `\cortext` text in `\@cornotes`, whose `∗` no name shows: `\corref` prints no mark here) stay the
+  block's.
+- *Shared footnote texts*: a binding marks a creator's contact with the mark its class prints (`_fnmark`): elsarticle's `\fntext` its `\thefnote` (a number, a letter under `reversenotenum`; elsarticle.cls:157-171),
+  REVTeX's `\thanks`, `\frontmatter@footnote`, `\@AF@join` its author's footnote symbol — an author's `\email`,
+  `\homepage`, `\thanks`, `\altaffiliation` joined into one footnote, a text an earlier author's repeats taking its
+  number (revtex4-2.cls:2404-2495 `\@AF@join`, `\y@match`; `\@fnsymbol`, `\@alph` under `altaffilletter`). Two or more
+  creators carrying one mark and text make each copy their note, `role=thanks`, with `mark`
+  (`shared_notes::kind_shared_marked_contacts`); a single carrier's stays its contact, shown under its name. 29 elsarticle
+  and 118 REVTeX papers of the 30k sample share one (1002.2661, 1312.0669; 0706.3893, 0804.0875, 1308.0465).
+- The marks ride in the content (`\lx@fm@entry@attr{<attribute>}{<value>}`, a constructor printing nothing, its
+  arguments Semiverbatim), as the frontmatter emitter rewrites a queued call's keys.
+**Residuals.** A REVTeX `\thanks` inside `\author{…}` is counted for the last author (it is digested at the flush); an
+`\email` after `\affiliation` joins REVTeX's affiliation footnote, here its author's; AASTeX and revtex3, which share the
+binding with their own `\author`, get no marks (unchanged). An elsarticle `\cortext` two names `\corref` stays each one's
+correspondent contact.
+**Guards**: `perfect_kernel_batchshrest::{a_list_led_by_the_names_mark_is_their_marked_note,
+a_lists_plain_text_is_the_blocks_note, an_fntext_two_names_share_is_their_marked_note,
+a_repeated_revtex_thanks_is_the_authors_marked_note}`, `perfect_kernel_batchregbind::bindings_print_the_title_page_lists_their_files_print`.
 
 ---
 

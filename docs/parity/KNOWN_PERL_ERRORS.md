@@ -21854,5 +21854,6 @@ one gets a Warning (amsaddr's `\emails`: none) and the note is lost. Minimal tri
 
 Rust (cutoff regression cluster A): the bindings define each list where its class does, and `\lx@frontmatter@footnotes`
 runs it where the class prints it — a `\footnotetext` becomes a pubnote, the footnote count is restored (OD #1036;
-2605.28175, 2606.06621, 2606.23853); other text is typeset after the frontmatter (row R FMLISTNOTE). Guard
-`perfect_kernel_batchregbind::bindings_print_the_title_page_lists_their_files_print`.
+2605.28175, 2606.06621, 2606.23853); other text is a note at the title block, of the names whose mark it opens with
+(OD #1054). Guards `perfect_kernel_batchregbind::bindings_print_the_title_page_lists_their_files_print`,
+`perfect_kernel_batchshrest::{a_lists_plain_text_is_the_blocks_note, a_list_led_by_the_names_mark_is_their_marked_note}`.
