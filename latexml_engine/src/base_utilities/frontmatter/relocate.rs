@@ -361,6 +361,9 @@ pub(in crate::base_utilities) fn relocate_annotations(document: &mut Document) -
       };
       if let Some(targets) = targets {
         placed.push(note.clone());
+        // (the copies one note makes, one per carrier: one note, its first copy's `xml:id` the `idref` of the others —
+        // the identity the page prints a shared note once by, never its text, OD #1059; DG 2026-11-16, #893 Option A)
+        let mut copies: Vec<Node> = Vec::new();
         for target in targets {
           // (nor twice under two labels: an entry marked with several labels is one copy a label — OSA's
           // `\address{$^{1,2}$Univ X}`, osa_journal_sty.rs `lines_per_label`, 1406.0824 — which reaches an author
@@ -391,10 +394,16 @@ pub(in crate::base_utilities) fn relocate_annotations(document: &mut Document) -
           DebugFeature!("frontmatter", "FRONT Moving annotation for {label}");
           let mut target = target;
           document.append_clone(&mut target, vec![note.clone()])?;
+          if note.get_name() == "note"
+            && let Some(copy) = target.get_last_element_child()
+          {
+            copies.push(copy);
+          }
           contact_in_title_as_note(document, &target)?;
           at_queue_position(&target);
           held.touched(&target);
         }
+        one_note(document, &copies)?;
       } else {
         let content = copy_text(&note);
         if !unlabelled
@@ -2259,6 +2268,36 @@ fn copy_text(note: &Node) -> String {
     .unwrap_or(text)
     .trim()
     .to_string()
+}
+
+/// Mark the copies of one note its carriers hold as one note (DG 2026-11-16, #893 Option A; OD #1059): the first copy's
+/// `xml:id`, made where it has none, the `idref` of each other — the identity the page prints a shared note once by,
+/// never its text. Copies of a note already one keep its first copy (`idref` read through). Fewer than two: nothing.
+pub fn one_note(document: &mut Document, copies: &[Node]) -> Result<()> {
+  let [first, rest @ ..] = copies else {
+    return Ok(());
+  };
+  if rest.is_empty() {
+    return Ok(());
+  }
+  let xml_id = |node: &Node| node.get_attribute_ns("id", XML_NS);
+  let id = match first.get_attribute("idref") {
+    Some(id) => id,
+    None => {
+      let mut first = first.clone();
+      document.generate_id(&mut first, "")?;
+      match xml_id(&first) {
+        Some(id) => id,
+        None => return Ok(()),
+      }
+    },
+  };
+  for copy in rest {
+    if xml_id(copy).as_deref() != Some(id.as_str()) {
+      document.set_attribute(&mut copy.clone(), "idref", &id)?;
+    }
+  }
+  Ok(())
 }
 
 #[cfg(test)]

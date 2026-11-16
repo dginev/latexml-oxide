@@ -1,0 +1,22 @@
+% mechanism: a name's mark that links to no note (geophysics prints its `\address{\footnotemark[1]{…}}` nowhere in
+%   `paper` mode) renders on the page only where its glyph (asterisks folded) prints anywhere else in the document — here
+%   the body footnote's ∗ — and is hidden where it prints once, over its name alone (DG 2026-11-16, the no-dangling-marks
+%   rule and its document-wide refinement; `LaTeXML-meta-xhtml.xsl`'s mark-only template). The XML keeps both
+%   mark-only notes
+% witness: 2006.10886 (geophysics: `\author{Longfei Gao\footnotemark[1] and David Keyes\footnotemark[2]}`, ∗ and † on the
+%   names alone)
+% oracle:  pdflatex 0 errors: "Ann Able∗ and Bob Baker†", the body's "Text.∗" with "∗ Body note."; DG's page rule: Ann's
+%   ∗ shown (it recurs), Bob's † hidden
+% engines: rust c755ca27e5f = 0 errors; both marks shown plain; perl 0.8.8 = both mark-only notes, each rendered with
+%   its glyph
+% expect:  0 errors 0 warnings; XML Ann footnotemark[*], Bob footnotemark[†]; HTML Ann "* plain", Bob no mark
+% status:  RED (c755ca27e5f) -> GREEN (perfect_kernel_batchmarkkey1::an_unlinked_mark_shows_only_where_its_glyph_recurs)
+% preload: ar5iv.sty
+\documentclass{article}
+\renewcommand{\thefootnote}{\fnsymbol{footnote}}
+\begin{document}
+\title{T}
+\author{Ann Able\footnotemark[1] and Bob Baker\footnotemark[2]}
+\maketitle
+Text.\footnote{Body note.}
+\end{document}

@@ -384,6 +384,14 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
   // Rust-only: an entry its run's stopgap alone gave its carriers, which the frontmatter emitter writes and the Link step
   // of an entry's addresses reads ([`STOPGAP_ENTRY`]). Declared, as `_corresponding` is.
   DefKeyVal!("Frontmatter", "_stopgap", "");
+  // Rust-only, declared as `_corresponding` is: the mark a creator's note prints (the note's own `mark` attribute,
+  // Perl's `ltx:note` schema; a note call of the frontmatter emitter, `emit::note_call`, OD #1053) and the footnote
+  // number it stands for (`_fnvalue`, as the kernel's notes record theirs, `latex_constructs::FOOTNOTE_VALUE`: a name's
+  // `\footnotemark` of that number is its mark, `insert::link_marked_notes`, OD #1058), and whether it is a footnote text
+  // no carrier prints but by that mark (`_fntext`, `insert::FOOTNOTE_TEXT`)
+  DefKeyVal!("Frontmatter", "mark", "");
+  DefKeyVal!("Frontmatter", "_fnvalue", "");
+  DefKeyVal!("Frontmatter", "_fntext", "");
 
   // Rust-only: `\lx@label@ref{<key>}`, the label a binding recorded for `key` once later input was read
   // ([`set_label_ref`]: cas's `\stmRef`, which LaTeX reads from the `.aux` of the run before), nothing for one never

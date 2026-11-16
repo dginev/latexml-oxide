@@ -46,19 +46,19 @@ macro_rules! repro {
 }
 
 /// A repro and its oracle in both layers.
-struct Row {
-  repro:      &'static str,
-  tex:        &'static str,
+pub(super) struct Row {
+  pub repro:      &'static str,
+  pub tex:        &'static str,
   /// The Warnings the conversion honestly counts.
-  warnings:   usize,
+  pub warnings:   usize,
   /// Each creator as [`creator_lines`] writes it.
-  creators:   &'static [&'static str],
+  pub creators:   &'static [&'static str],
   /// The row R line the XML layer waits on (empty: GREEN).
-  moves:      &'static str,
+  pub moves:      &'static str,
   /// The author block as [`page_lines`] writes it.
-  page:       &'static [&'static str],
+  pub page:       &'static [&'static str],
   /// The row R line the HTML layer waits on (empty: GREEN).
-  page_moves: &'static str,
+  pub page_moves: &'static str,
 }
 
 /// The value of attribute `name` in the start tag `tag`.
@@ -563,7 +563,7 @@ fn check(rows: &[Row], status: Status) -> (Vec<String>, Vec<String>) {
 
 /// Every GREEN layer of `rows` matches its oracle.
 #[track_caller]
-fn assert_green(rows: &[Row]) {
+pub(super) fn assert_green(rows: &[Row]) {
   let (wrong, right) = check(rows, Status::Green);
   assert!(
     wrong.is_empty(),

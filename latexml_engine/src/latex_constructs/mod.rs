@@ -27,7 +27,7 @@ use latexml_core::{
 ///**********************************************************************
 use crate::base_utilities::{
   FrontmatterAnchor, already_reported, begin_deposit_insert, begin_deposit_provenance,
-  end_deposit_insert, end_deposit_provenance, mark_preamble_residue, place_frontmatter,
+  end_deposit_insert, end_deposit_provenance, mark_preamble_residue, one_note, place_frontmatter,
   remove_frontmatter_marks, tag_forms,
 };
 use crate::{
@@ -792,6 +792,11 @@ pub(crate) fn footnote_pairing(
   };
   if let Some(value) = value {
     props.insert("fnvalue", Stored::String(pin(value.to_string())));
+    // (a number the source gives as such, `[2]`, which a frontmatter note of that number answers — Perl's tag, its
+    // `mark`: `insert::link_marked_notes`; not one read off a counter, `[\value{footnote}]`, as it stands here)
+    if given.is_some() && !number.from_counter {
+      props.insert("fngiven", Stored::String(pin("true")));
+    }
   }
   if number.from_counter && lookup_bool("lx_title_counts_footnotes") {
     props.insert("fncounted", Stored::String(pin("true")));
@@ -869,6 +874,8 @@ pub fn relocate_footnote(document: &mut Document, node: &mut Node) -> Result<()>
   if let Some(caps) = NOTE_TEXT_END.captures(&node.get_attribute("role").unwrap_or_default()) {
     let notetype = caps.get(1).map_or("", |m| m.as_str());
     let mut paired = false;
+    // (the marks of one text in creators: one note, OD #1059 — `crate::base_utilities::one_note`)
+    let mut filled: Vec<Node> = Vec::new();
     if let Some(mark) = node.get_attribute("mark") {
       let key = mark.replace(' ', "");
       // (a name's mark the frontmatter set after it, `_namemark`, is no `\footnotemark`: a body `\footnotetext[2]` is
@@ -884,6 +891,7 @@ pub fn relocate_footnote(document: &mut Document, node: &mut Node) -> Result<()>
           continue;
         }
         relocate_footnote_aux(document, notetype, &mut marknote, node)?;
+        filled.push(marknote);
         paired = true;
       }
     }
@@ -899,8 +907,14 @@ pub fn relocate_footnote(document: &mut Document, node: &mut Node) -> Result<()>
           continue;
         }
         relocate_footnote_aux(document, notetype, &mut marknote, node)?;
+        filled.push(marknote);
       }
     }
+    let in_creators: Vec<Node> = filled
+      .into_iter()
+      .filter(|n| n.get_parent().is_some_and(|p| p.get_name() == "creator"))
+      .collect();
+    one_note(document, &in_creators)?;
   } else if let Some(caps) = NOTE_MARK_END.captures(&node.get_attribute("role").unwrap_or_default())
   {
     let notetype = caps.get(1).map_or("", |m| m.as_str());
@@ -938,7 +952,10 @@ pub fn relocate_footnote(document: &mut Document, node: &mut Node) -> Result<()>
 }
 
 /// The bookkeeping attribute holding the footnote counter value a note stands for (`footnote_pairing`).
-const FOOTNOTE_VALUE: &str = "_fnvalue";
+pub const FOOTNOTE_VALUE: &str = "_fnvalue";
+
+/// The bookkeeping attribute of a note given its number as such (`footnote_pairing`).
+pub const FOOTNOTE_GIVEN: &str = "_fngiven";
 
 /// The bookkeeping attribute of a note numbered from the footnote counter in a class that sets the counter back after
 /// its `\maketitle` (`footnote_pairing`).

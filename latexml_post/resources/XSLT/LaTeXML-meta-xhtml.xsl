@@ -146,6 +146,11 @@
   <!-- A creator's mark-only note is its mark alone, with no empty "footnotemark: " pop-up: linked, and shared, when it
        is an author's linkable mark (f:creator-mark-only) and its mark names one author's note in the block; else the
        plain glyph. Its glyph is note-mark's (Perl's tag, else @mark). -->
+  <!-- SURPASS (latexml-oxide OXIDIZED_DESIGN_DIVERGENCES #1059): no dangling mark (DG 2026-11-16, 2006.10886). A
+       mark-only note that links to no note on the page shows its glyph only where the same glyph (asterisks folded,
+       * = ∗) prints anywhere else in the document — another name's mark, a frontmatter note, legend or superscript, a
+       body footnote's mark —, as it was likely meant as connected; a glyph printed once, over its name alone, connects
+       nothing and shows nothing (its id stays; the XML keeps the note). -->
   <xsl:template match="ltx:creator/ltx:note[@role='footnotemark'][normalize-space(@mark)]">
     <xsl:variable name="by_mark" select="concat(generate-id(../..),'&#x9;',normalize-space(@mark))"/>
     <xsl:variable name="notes"
@@ -154,29 +159,115 @@
     <xsl:variable name="target"
                   select="$notes[1][count($notes) = count(key('f:shared-creator-note',
                             concat(generate-id(../..),'&#x9;',@role,'&#x9;',@mark,'&#x9;',normalize-space(.))))]"/>
-    <xsl:element name="span" namespace="{$html_ns}">
-      <xsl:call-template name="add_id"/>
-      <xsl:call-template name="add_attributes">
-        <xsl:with-param name="extra_classes"><xsl:if test="$target">ltx_note_shared</xsl:if></xsl:with-param>
+    <xsl:variable name="glyph">
+      <xsl:choose>
+        <xsl:when test="ltx:tags/ltx:tag[not(@role)]"><xsl:value-of select="ltx:tags/ltx:tag[not(@role)]"/></xsl:when>
+        <xsl:otherwise><xsl:value-of select="@mark"/></xsl:otherwise>
+      </xsl:choose>
+    </xsl:variable>
+    <xsl:variable name="folded" select="translate(normalize-space($glyph),'&#x2217;','*')"/>
+    <xsl:variable name="me" select="generate-id()"/>
+    <xsl:variable name="elsewhere"
+                  select="//ltx:note[generate-id() != $me][translate(normalize-space(@mark),'&#x2217;','*') = $folded]
+                          | //ltx:tag[not(@role)][generate-id(ancestor::ltx:note[1]) != $me]
+                                     [translate(normalize-space(.),'&#x2217;','*') = $folded]
+                          | //ltx:sup[translate(normalize-space(.),'&#x2217;','*') = $folded]"/>
+    <xsl:choose>
+      <xsl:when test="not($target) and not($elsewhere)">
+        <xsl:if test="@xml:id">
+          <xsl:element name="span" namespace="{$html_ns}">
+            <xsl:call-template name="add_id"/>
+          </xsl:element>
+        </xsl:if>
+      </xsl:when>
+      <xsl:otherwise>
+        <xsl:element name="span" namespace="{$html_ns}">
+          <xsl:call-template name="add_id"/>
+          <xsl:call-template name="add_attributes">
+            <xsl:with-param name="extra_classes"><xsl:if test="$target">ltx_note_shared</xsl:if></xsl:with-param>
+          </xsl:call-template>
+          <xsl:call-template name="creator-note-mark">
+            <xsl:with-param name="target" select="$target"/>
+            <xsl:with-param name="glyph" select="$glyph"/>
+          </xsl:call-template>
+        </xsl:element>
+      </xsl:otherwise>
+    </xsl:choose>
+  </xsl:template>
+
+  <!-- SURPASS (latexml-oxide OXIDIZED_DESIGN_DIVERGENCES #1059): a note several authors carry is one note, its first
+       copy's xml:id the idref of each other copy (the engine's identity, DG 2026-11-16, #893 Option A; never its text).
+       An UNMARKED one (no @mark, no tag: its class prints no mark, or its glyph is unknown) prints once, at its first
+       carrier, under a mark the page invents so the reader can tell whom it is about: [a], [b], … in document order,
+       class ltx_mark_generated, a bracketed letter no author block prints (DG 2026-11-16: never \@fnsymbol, never a bare
+       letter or digit); each other copy is that mark alone, linked to it. A one-carrier unmarked note stays under its
+       name, with no mark. -->
+  <xsl:key name="f:note-copies" match="ltx:creator/ltx:note[@idref]" use="@idref"/>
+  <xsl:template match="ltx:creator/ltx:note[not(normalize-space(@mark))][not(ltx:tags/ltx:tag[not(@role)])]
+                                           [@idref or key('f:note-copies',@xml:id)]" priority="2">
+    <xsl:param name="context"/>
+    <xsl:variable name="first" select="current()[not(@idref)] | //ltx:creator/ltx:note[@xml:id = current()/@idref]"/>
+    <xsl:variable name="glyph">
+      <xsl:call-template name="f:generated-mark">
+        <xsl:with-param name="n"
+            select="count($first/preceding::ltx:note[parent::ltx:creator][not(normalize-space(@mark))]
+                          [not(ltx:tags/ltx:tag[not(@role)])][not(@idref)][key('f:note-copies',@xml:id)]) + 1"/>
       </xsl:call-template>
-      <xsl:call-template name="creator-note-mark">
-        <xsl:with-param name="target" select="$target"/>
-        <xsl:with-param name="glyph">
-          <xsl:choose>
-            <xsl:when test="ltx:tags/ltx:tag[not(@role)]"><xsl:value-of select="ltx:tags/ltx:tag[not(@role)]"/></xsl:when>
-            <xsl:otherwise><xsl:value-of select="@mark"/></xsl:otherwise>
-          </xsl:choose>
-        </xsl:with-param>
-      </xsl:call-template>
-    </xsl:element>
+    </xsl:variable>
+    <xsl:choose>
+      <xsl:when test="not(@idref)">
+        <xsl:call-template name="note">
+          <xsl:with-param name="context" select="$context"/>
+          <xsl:with-param name="extra_classes" select="'ltx_note_shared'"/>
+          <xsl:with-param name="glyph" select="string($glyph)"/>
+        </xsl:call-template>
+      </xsl:when>
+      <xsl:otherwise>
+        <xsl:element name="span" namespace="{$html_ns}">
+          <xsl:call-template name="add_id"/>
+          <xsl:attribute name="class">ltx_note ltx_role_footnotemark ltx_note_shared</xsl:attribute>
+          <xsl:call-template name="creator-note-mark">
+            <xsl:with-param name="target" select="$first"/>
+            <xsl:with-param name="glyph" select="string($glyph)"/>
+            <xsl:with-param name="generated" select="true()"/>
+          </xsl:call-template>
+        </xsl:element>
+      </xsl:otherwise>
+    </xsl:choose>
+  </xsl:template>
+
+  <!-- The $n-th bracketed letter no author note's mark in the document prints: [a], [b], … -->
+  <xsl:template name="f:generated-mark">
+    <xsl:param name="n"/>
+    <xsl:param name="at" select="1"/>
+    <xsl:variable name="letters" select="'abcdefghijklmnopqrstuvwxyz'"/>
+    <xsl:variable name="candidate"
+                  select="concat('[',substring($letters,(($at - 1) mod 26) + 1,1),
+                                 substring(concat($letters,$letters),1,floor(($at - 1) div 26)),']')"/>
+    <xsl:choose>
+      <xsl:when test="//ltx:creator/ltx:note[normalize-space(@mark) = $candidate] and $at &lt; 260">
+        <xsl:call-template name="f:generated-mark">
+          <xsl:with-param name="n" select="$n"/>
+          <xsl:with-param name="at" select="$at + 1"/>
+        </xsl:call-template>
+      </xsl:when>
+      <xsl:when test="$n &gt; 1">
+        <xsl:call-template name="f:generated-mark">
+          <xsl:with-param name="n" select="$n - 1"/>
+          <xsl:with-param name="at" select="$at + 1"/>
+        </xsl:call-template>
+      </xsl:when>
+      <xsl:otherwise><xsl:value-of select="$candidate"/></xsl:otherwise>
+    </xsl:choose>
   </xsl:template>
 
   <!-- An author's mark: the glyph, linked to the $target note's body when it has one on the page. -->
   <xsl:template name="creator-note-mark">
     <xsl:param name="target"/>
     <xsl:param name="glyph"/>
+    <xsl:param name="generated" select="false()"/>
     <xsl:element name="sup" namespace="{$html_ns}">
-      <xsl:attribute name="class">ltx_note_mark</xsl:attribute>
+      <xsl:attribute name="class">ltx_note_mark<xsl:if test="$generated"> ltx_mark_generated</xsl:if></xsl:attribute>
       <xsl:choose>
         <xsl:when test="$target/@fragid">
           <xsl:element name="a" namespace="{$html_ns}">
@@ -192,6 +283,7 @@
   <xsl:template match="ltx:note" name="note">
     <xsl:param name="context"/>
     <xsl:param name="extra_classes" select="''"/>
+    <xsl:param name="glyph" select="''"/>
     <xsl:element name="span" namespace="{$html_ns}">
       <xsl:variable name="innercontext" select="'inline'"/><!-- override -->
       <xsl:call-template name="add_id"/>
@@ -203,6 +295,7 @@
       </xsl:apply-templates>
       <xsl:call-template name="note-mark">
         <xsl:with-param name="context" select="$innercontext"/>
+        <xsl:with-param name="glyph" select="$glyph"/>
       </xsl:call-template>
       <xsl:element name="span" namespace="{$html_ns}">
         <xsl:attribute name="class">ltx_note_outer</xsl:attribute>
@@ -210,6 +303,7 @@
           <xsl:attribute name="class">ltx_note_content</xsl:attribute>
           <xsl:call-template name="note-mark">
             <xsl:with-param name="context" select="$innercontext"/>
+            <xsl:with-param name="glyph" select="$glyph"/>
           </xsl:call-template>
           <xsl:if test="not(@role = 'footnote')">
             <xsl:element name="span" namespace="{$html_ns}">
@@ -231,9 +325,11 @@
 
   <xsl:preserve-space elements="ltx:note-mark"/>
   <xsl:template name="note-mark">
+    <xsl:param name="glyph" select="''"/>
     <xsl:element name="sup" namespace="{$html_ns}">
-      <xsl:attribute name="class">ltx_note_mark</xsl:attribute>
+      <xsl:attribute name="class">ltx_note_mark<xsl:if test="$glyph"> ltx_mark_generated</xsl:if></xsl:attribute>
       <xsl:choose>
+        <xsl:when test="$glyph"><xsl:value-of select="$glyph"/></xsl:when>
         <xsl:when test="ltx:tags/ltx:tag[not(@role)]"><xsl:value-of select="ltx:tags/ltx:tag[not(@role)]"/></xsl:when>
         <xsl:when test="@mark"><xsl:value-of select="@mark"/></xsl:when>
         <xsl:otherwise>&#x2020;</xsl:otherwise>

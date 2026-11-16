@@ -505,6 +505,9 @@ mod perfect_kernel_batchm1;
 mod perfect_kernel_batchm3;
 /// MACSYNC: the binding macros mean what Perl's same-named API means (AUDMAC).
 mod perfect_kernel_batchmacsync;
+/// MARKKEY1: frontmatter marks keyed by the footnote number, one note across its copies (`idref`), the page's mark rules;
+/// OD #1058, #1059.
+mod perfect_kernel_batchmarkkey1;
 /// MB1: the one label rule of the Kind step's lines — a labelled line named after the class's name of the entry, a
 /// mailbox link line's as an e-mail label's; OD #992.
 mod perfect_kernel_batchmb1;

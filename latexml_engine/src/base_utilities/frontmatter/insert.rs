@@ -1,8 +1,9 @@
 //! Inserting the front matter into the document: creators, contacts, late frontmatter, unanswered marks.
 
 use super::*;
-use crate::base_utilities::defs::frontmatter_api::{
-  CORRESPONDING, LABEL_PRINTS, PRINTED_LABEL, STOPGAP_ENTRY,
+use crate::{
+  base_utilities::defs::frontmatter_api::{CORRESPONDING, LABEL_PRINTS, PRINTED_LABEL, STOPGAP_ENTRY},
+  latex_constructs::{FOOTNOTE_GIVEN, FOOTNOTE_VALUE},
 };
 
 pub fn insert_frontmatter(document: &mut Document) -> Result<()> {
@@ -706,6 +707,11 @@ pub(in crate::base_utilities) const MARK_IN_TEXT: &str = "_markintext";
 #[doc(hidden)]
 pub const MARK_FROM_COUNTER: &str = "_markfromcounter";
 
+/// The bookkeeping attribute of a creator's note that is a `\footnotetext` the reading gave the names showing its number
+/// (`resolver::answer_note_texts`): no carrier prints it but by its `\footnotemark`, which is the copy's own mark
+/// ([`link_marked_notes`]; OD #1058). Internal, dropped at output.
+pub const FOOTNOTE_TEXT: &str = "_fntext";
+
 /// The bare copy of its mark a note's text opens with, taken out where the mark was read off it ([`MARK_IN_TEXT`]):
 /// ieeeconf's `\thanks{*Authors to whom correspondence should be addressed.}` (2606.00397). Whether it was.
 fn strip_bare_mark(note: &mut Node) -> Result<bool> {
@@ -818,33 +824,59 @@ fn drop_linking_marks(document: &mut Document) -> Result<()> {
   Ok(())
 }
 
-/// The Link step (OD #1053): a mark alone on a name becomes a full copy of the note another creator holds under that
-/// mark, as Perl's `relocateFootnote_aux` fills a mark (latex_constructs.pool.ltxml:518-527). 1911.13299, 2502.19103.
+/// The Link step (OD #1053, #1058): a mark alone on a name becomes a full copy of the note it marks, as Perl's
+/// `relocateFootnote_aux` fills a mark (latex_constructs.pool.ltxml:518-527) — the note of its author block standing for
+/// the footnote number the mark shows (`_fnvalue`: TeX pairs a mark and its note by number, latex.ltx
+/// `\@xfootnotemark`), else the one printing its glyph. 1911.13299, 2502.19103; scrartcl's `Ann\thanks{Equal} \and
+/// Bob\footnotemark[1]`, whose `\thanks` prints a glyph no binding knows.
 fn link_marked_notes(document: &mut Document) -> Result<()> {
-  let marked = document.findnodes(
-    "//ltx:creator/ltx:note[@mark][not(@role='footnotemark')]",
-    None,
-  );
+  let notes = document.findnodes("//ltx:creator/ltx:note[not(@role='footnotemark')]", None);
   for mut mark_note in
     document.findnodes("//ltx:creator/ltx:note[@role='footnotemark'][@mark]", None)
   {
+    let creator = mark_note.get_parent();
+    let block = creator.as_ref().and_then(Node::get_parent);
+    let in_block = |note: &&Node| note.get_parent().and_then(|c| c.get_parent()) == block;
+    let own = |note: &&Node| note.get_parent() == creator;
+    // (its number where the source gives it as such, `\footnotemark[1]`: a bare mark's counter, as digested here, is
+    // not the one TeX printed — aiaa-tc's `\thanksibid{2}` prints `\fnsymbol` of a counter of its own, 1505.07844)
+    let value = mark_note.get_attribute(FOOTNOTE_VALUE);
+    let number = value
+      .clone()
+      .filter(|_| mark_note.get_attribute(FOOTNOTE_GIVEN).is_some());
+    let numbered = |note: &&Node| number.is_some() && note.get_attribute(FOOTNOTE_VALUE) == number;
+    // (a footnote text the reading gave the creator by that number is the mark's own note, the mark-only note its mark:
+    // lni's `Müssig\footnotemark[1]` under `\footnotetext[1]{…}` in `\author`, 2407.04435,
+    // `resolver::answer_note_texts`)
+    if value.is_some()
+      && notes.iter().filter(own).any(|note| {
+        note.get_attribute(FOOTNOTE_TEXT).is_some() && note.get_attribute(FOOTNOTE_VALUE) == value
+      })
+    {
+      document.remove_node(mark_note);
+      continue;
+    }
     let Some(key) = mark_alone(&mark_note) else {
       continue;
     };
-    let creator = mark_note.get_parent();
     let same = |note: &&Node| {
       note
         .get_attribute("mark")
         .is_some_and(|mark| mark_form(&mark) == key)
     };
-    if marked
-      .iter()
-      .filter(same)
-      .any(|note| note.get_parent() == creator)
-    {
+    // (a mark its own creator's note carries, its `\thanks` printed with a `\footnotemark` of its number after it, stays
+    // as Perl leaves it: two marks printed)
+    if notes.iter().filter(own).any(|note| numbered(&note) || same(&note)) {
       continue;
     }
-    let Some(paired) = marked.iter().find(same) else {
+    // (in its own author block, as Perl's `relocateFootnote` pairs a mark with its text: a note of another block
+    // printing the same glyph is another note)
+    let Some(paired) = notes
+      .iter()
+      .filter(in_block)
+      .find(numbered)
+      .or_else(|| notes.iter().filter(in_block).find(same))
+    else {
       continue;
     };
     // (a mark its command prints by the counter stays so on the copy, acmart's `\authornotemark[n]`; one linked by its
@@ -867,6 +899,7 @@ fn link_marked_notes(document: &mut Document) -> Result<()> {
       mark_note.set_attribute(MARK_FROM_COUNTER, "true")?;
     }
     document.append_clone(&mut mark_note, paired.get_child_nodes())?;
+    one_note(document, &[paired.clone(), mark_note])?;
   }
   Ok(())
 }

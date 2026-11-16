@@ -1,0 +1,20 @@
+% mechanism: one `\footnotetext[1]` filling the `\footnotemark[1]` of two names (the kernel's `relocate_footnote`,
+%   Perl's `relocateFootnote` cloning the text into each mark, latex_constructs.pool.ltxml:498-527) is one note: the
+%   first filled copy's `xml:id` is the other's `idref` (`relocate::one_note`, DG 2026-11-16, #893 Option A)
+% witness: 1108.5155, 1404.2124 (`\footnotemark[1]` on names, `\footnotetext[1]` after them)
+% oracle:  pdflatex 0 errors: "Ann Able∗ Bob Baker∗" and "Cat Cole†" (the texts printed with the body's numbers, the
+%   author pairs them)
+% engines: rust c755ca27e5f = 0 errors; Ann and Bob footnote[*]=Univ A, two notes, no idref; perl 0.8.8 = Ann's mark
+%   filled, Bob's left a mark-only note
+% expect:  0 errors 0 warnings; Ann footnote[*]=Univ A, Bob the same with idref Ann's, Cat footnote[†]=Univ B
+% status:  RED (c755ca27e5f) -> GREEN (perfect_kernel_batchmarkkey1::a_note_several_names_carry_is_one_note)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{Ann Able\footnotemark[1] \and Bob Baker\footnotemark[1] \and Cat Cole\footnotemark[2]}
+\footnotetext[1]{Univ A, Town A}
+\footnotetext[2]{Univ B, Town B}
+\maketitle
+Text.
+\end{document}
