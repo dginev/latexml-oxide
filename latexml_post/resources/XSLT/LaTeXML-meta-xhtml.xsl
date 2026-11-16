@@ -90,11 +90,20 @@
        prints it once (DG 2026-11-16, rulings 1-2): the first copy in full, with class ltx_note_shared; every later copy
        of the same block, role, mark and text is a mark linked to it (2606.00446, 2407.07614, 1706.03762). Only an
        author's notes render, so only theirs are keyed (an editor's copy first would link to no page element); a note
-       with no mark or no text is never a repeat (two image-only notes are two notes). Perl's leftover
-       role="footnotemark" notes are not copies of a note, and render as before. -->
+       with no mark or no text is never a repeat (two image-only notes are two notes). -->
   <xsl:key name="f:shared-creator-note"
            match="ltx:creator[@role='author']/ltx:note[normalize-space(@mark)][normalize-space(.)][not(@role='footnotemark')]"
            use="concat(generate-id(../..),'&#x9;',@role,'&#x9;',@mark,'&#x9;',normalize-space(.))"/>
+  <!-- The same notes by block and mark alone, and the mark-only notes (role="footnotemark": a mark printed on a name
+       that no note of its own answers, an affiliation letter, an unpaired \footnotemark; 0801.1438) by block and
+       mark. A mark-only note links to the note its mark names in the block: one note, however many copies. Another
+       author's mark-only note makes a one-author note shared, so it too prints in the margin with its mark. -->
+  <xsl:key name="f:creator-note-by-mark"
+           match="ltx:creator[@role='author']/ltx:note[normalize-space(@mark)][normalize-space(.)][not(@role='footnotemark')]"
+           use="concat(generate-id(../..),'&#x9;',normalize-space(@mark))"/>
+  <xsl:key name="f:creator-mark-only"
+           match="ltx:creator[@role='author']/ltx:note[@role='footnotemark'][normalize-space(@mark)]"
+           use="concat(generate-id(../..),'&#x9;',normalize-space(@mark))"/>
 
   <xsl:template
       match="ltx:creator[@role='author']/ltx:note[normalize-space(@mark)][normalize-space(.)][not(@role='footnotemark')]">
@@ -102,8 +111,12 @@
     <xsl:variable name="copies"
                   select="key('f:shared-creator-note',
                               concat(generate-id(../..),'&#x9;',@role,'&#x9;',@mark,'&#x9;',normalize-space(.)))"/>
+    <xsl:variable name="by_mark" select="concat(generate-id(../..),'&#x9;',normalize-space(@mark))"/>
+    <xsl:variable name="marked_elsewhere"
+                  select="key('f:creator-mark-only',$by_mark)[count(.. | current()/..) = 2]
+                          and count(key('f:creator-note-by-mark',$by_mark)) = count($copies)"/>
     <xsl:choose>
-      <xsl:when test="count($copies) = 1">
+      <xsl:when test="count($copies) = 1 and not($marked_elsewhere)">
         <xsl:call-template name="note">
           <xsl:with-param name="context" select="$context"/>
         </xsl:call-template>
@@ -118,21 +131,57 @@
         <xsl:element name="span" namespace="{$html_ns}">
           <xsl:call-template name="add_id"/>
           <xsl:attribute name="class">ltx_note ltx_role_footnotemark ltx_note_shared</xsl:attribute>
-          <xsl:element name="sup" namespace="{$html_ns}">
-            <xsl:attribute name="class">ltx_note_mark</xsl:attribute>
-            <xsl:choose>
-              <xsl:when test="$copies[1]/@fragid">
-                <xsl:element name="a" namespace="{$html_ns}">
-                  <xsl:attribute name="href">#<xsl:value-of select="$copies[1]/@fragid"/></xsl:attribute>
-                  <xsl:value-of select="@mark"/>
-                </xsl:element>
-              </xsl:when>
-              <xsl:otherwise><xsl:value-of select="@mark"/></xsl:otherwise>
-            </xsl:choose>
-          </xsl:element>
+          <xsl:call-template name="creator-note-mark">
+            <xsl:with-param name="target" select="$copies[1]"/>
+            <xsl:with-param name="glyph" select="string(@mark)"/>
+          </xsl:call-template>
         </xsl:element>
       </xsl:otherwise>
     </xsl:choose>
+  </xsl:template>
+
+  <!-- A creator's mark-only note is its mark alone, with no empty "footnotemark: " pop-up: linked, and shared, when its
+       mark names one author's note in the block; else the plain glyph. Its glyph is note-mark's (Perl's tag, else
+       @mark). -->
+  <xsl:template match="ltx:creator/ltx:note[@role='footnotemark'][normalize-space(@mark)]">
+    <xsl:variable name="notes"
+                  select="key('f:creator-note-by-mark',concat(generate-id(../..),'&#x9;',normalize-space(@mark)))"/>
+    <xsl:variable name="target"
+                  select="$notes[1][count($notes) = count(key('f:shared-creator-note',
+                            concat(generate-id(../..),'&#x9;',@role,'&#x9;',@mark,'&#x9;',normalize-space(.))))]"/>
+    <xsl:element name="span" namespace="{$html_ns}">
+      <xsl:call-template name="add_id"/>
+      <xsl:call-template name="add_attributes">
+        <xsl:with-param name="extra_classes"><xsl:if test="$target">ltx_note_shared</xsl:if></xsl:with-param>
+      </xsl:call-template>
+      <xsl:call-template name="creator-note-mark">
+        <xsl:with-param name="target" select="$target"/>
+        <xsl:with-param name="glyph">
+          <xsl:choose>
+            <xsl:when test="ltx:tags/ltx:tag[not(@role)]"><xsl:value-of select="ltx:tags/ltx:tag[not(@role)]"/></xsl:when>
+            <xsl:otherwise><xsl:value-of select="@mark"/></xsl:otherwise>
+          </xsl:choose>
+        </xsl:with-param>
+      </xsl:call-template>
+    </xsl:element>
+  </xsl:template>
+
+  <!-- An author's mark: the glyph, linked to the $target note's body when it has one on the page. -->
+  <xsl:template name="creator-note-mark">
+    <xsl:param name="target"/>
+    <xsl:param name="glyph"/>
+    <xsl:element name="sup" namespace="{$html_ns}">
+      <xsl:attribute name="class">ltx_note_mark</xsl:attribute>
+      <xsl:choose>
+        <xsl:when test="$target/@fragid">
+          <xsl:element name="a" namespace="{$html_ns}">
+            <xsl:attribute name="href">#<xsl:value-of select="$target/@fragid"/></xsl:attribute>
+            <xsl:value-of select="$glyph"/>
+          </xsl:element>
+        </xsl:when>
+        <xsl:otherwise><xsl:value-of select="$glyph"/></xsl:otherwise>
+      </xsl:choose>
+    </xsl:element>
   </xsl:template>
 
   <xsl:template match="ltx:note" name="note">
