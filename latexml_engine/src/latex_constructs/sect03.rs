@@ -185,7 +185,7 @@ pub(crate) fn load() -> Result<()> {
   def_macro_noop("\\lx@note@reset")?;
   def_macro_noop("\\ext@footnote")?;
   DefConstructor!("\\lx@note[]{} OptionalUndigested {}",
-  "^<ltx:note role='#role' mark='#mark' _fnvalue='#fnvalue' _fncounted='#fncounted' xml:id='#id' inlist='#list'>#tags#4</ltx:note>",
+  "^<ltx:note role='#role' mark='#mark' _fnvalue='#fnvalue' _fncounted='#fncounted' _markunknown='#markunknown' xml:id='#id' inlist='#list'>#tags#4</ltx:note>",
   // Perl #2798: footnotes are inline blocks — internal_vertical, no leaveHorizontal.
   mode         => "inline_internal_vertical",
   sizer        => sub[whatsit] { note_size_in_line(whatsit) },
@@ -193,7 +193,6 @@ pub(crate) fn load() -> Result<()> {
   // line break `\@normalcr` whatever the surrounding `\\` is: a note in a `p` cell or a longtable caption row
   // (2201.11330's `\caption{…}\footnote{… seconds.\\ calls: …}` in {xltabular}) ended the row there, the table lost.
   before_digest => {
-    enter_title_footnotes()?;
     neutralize_font();
     Let!("\\\\", "\\@normalcr");
     digest(Tokens!(T_CS!("\\lx@note@reset")))?; },
@@ -205,6 +204,7 @@ pub(crate) fn load() -> Result<()> {
     let arg3 = footnote_tag(&note_type, args[2].as_ref(), &number)?;
     let mut props = make_note_tags(&note_type, arg1, arg3)?;
     footnote_pairing(&mut props, &note_type, args[2].as_ref(), &number)?;
+    drop_unknown_title_mark(&mut props);
     props.insert("list", digest_text(Tokens!(T_CS!(s!("\\ext@{note_type}"))))?.into());
     props.insert("role", note_type.into());
     Ok(props)
@@ -212,12 +212,12 @@ pub(crate) fn load() -> Result<()> {
   reversion => "");
 
   DefConstructor!("\\lx@notemark[]{} OptionalUndigested",
-  "^<ltx:note role='#role' mark='#mark' _fnvalue='#fnvalue' _fncounted='#fncounted' xml:id='#id' inlist='#list'>#tags</ltx:note>",
+  "^<ltx:note role='#role' mark='#mark' _fnvalue='#fnvalue' _fncounted='#fncounted' _markunknown='#markunknown' xml:id='#id' inlist='#list'>#tags</ltx:note>",
   mode       => "text", enter_horizontal => true,
   sizer => sub[whatsit] { note_size_in_line(whatsit) },
-  // In a class's title block the marks are its own (`enter_title_footnotes`); `[<n>]` is `\thefootnote` at `<n>`
-  // (`numbered_footnote_mark`, latex.ltx:17678-17682).
-  before_digest => { enter_title_footnotes()?; },
+  // In a class's title block the marks are its own (`enter_title_footnotes`, as the field begins); `[<n>]` is
+  // `\thefootnote` at `<n>` (`numbered_footnote_mark`, latex.ltx:17678-17682); an unknown one none
+  // (`drop_unknown_title_mark`).
   properties => sub[args] {
     let arg1 = args[0].as_ref();
     let arg2 = args[1].as_ref();
@@ -229,6 +229,7 @@ pub(crate) fn load() -> Result<()> {
     };
     let mut props = make_note_tags(&note_type, arg1, arg3)?;
     footnote_pairing(&mut props, &note_type, args[2].as_ref(), &number)?;
+    drop_unknown_title_mark(&mut props);
     props.insert("role", s!("{note_type}mark").into());
     props.insert("list", digest_text(Tokens!(T_CS!(s!("\\ext@{note_type}"))))?.into());
     Ok(props)
@@ -247,12 +248,11 @@ pub(crate) fn load() -> Result<()> {
   // most of the 79-paper math-mode-first cluster (SHARED-FAILURE
   // classification in SYNC_STATUS — this is the surpass-Perl path).
   DefConstructor!("\\lx@notetext OptionalSemiverbatim {} OptionalUndigested {}",
-  "^<ltx:note role='#role' mark='#mark' _fnvalue='#fnvalue' _fncounted='#fncounted' xml:id='#id'>#4</ltx:note>",
+  "^<ltx:note role='#role' mark='#mark' _fnvalue='#fnvalue' _fncounted='#fncounted' _markunknown='#markunknown' xml:id='#id'>#4</ltx:note>",
   // Perl #2798: footnote text is an inline block — internal_vertical, no leaveHorizontal.
   mode       => "inline_internal_vertical",
   sizer      => sub[_whatsit] { Ok(out_of_line_size()) },
   before_digest => {
-    enter_title_footnotes()?;
     Let!("\\\\", "\\@normalcr"); // (`\@parboxrestore`, as `\lx@note`'s)
     digest(Tokens!(T_CS!("\\lx@note@reset")))?;
   },
@@ -270,6 +270,7 @@ pub(crate) fn load() -> Result<()> {
     };
     let mut props = make_note_tags(&note_type, arg1, Some(arg3_ready))?;
     footnote_pairing(&mut props, &note_type, arg3, &number)?;
+    drop_unknown_title_mark(&mut props);
     props.insert("role", s!("{note_type}text").into());
     Ok(props)
   },

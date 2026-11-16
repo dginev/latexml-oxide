@@ -3478,7 +3478,12 @@ fn replay_dropped_class_code(
   let saved_boxes: Vec<Option<Stored>> = boxes.iter().map(|key| lookup_value(key)).collect();
   // …and the lock's own record of the class's definition: a `\let\abstract…` or `\def\author…` the body itself
   // makes is refused again, globally (state.rs), and would replace it.
-  let lock_keys = [s!("\\{name}:redefined"), s!("\\{name}:redefined@nargs")];
+  let lock_keys = [
+    s!("\\{name}:redefined"),
+    s!("\\{name}:redefined@nargs"),
+    s!("\\{name}:redefined@class"),
+    s!("\\{name}:redefined@document"),
+  ];
   let lock_values: Vec<Option<Stored>> = lock_keys.iter().map(|k| lookup_value(k)).collect();
   let dropped_meaning = lookup_meaning(&dropped);
   let depth = get_frame_depth();

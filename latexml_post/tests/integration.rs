@@ -735,8 +735,9 @@ fn authors_html(xml: &str) -> Vec<String> {
 /// classed `ltx_note_shared`, and every later copy of the same block, role, mark and text (spacing aside) as a mark
 /// linked to it. Every marked note sits after its name in `ltx_annotated_personname`, with no space between the two.
 /// A note of one author (Bob's †, under his name with no mark in ar5iv.css), a shared mark of another role or text (Cy's
-/// footnote, Dee's note), an unmarked note (Cy's, Lou's IEEEtran-style "Manuscript received", 1510.02728: outside the
-/// wrapper, for the block or margin) render as before; Perl's leftover `role="footnotemark"` note (Cy's `*`, whose mark
+/// footnote, Dee's note) render as before; an unmarked note (Cy's, Lou's IEEEtran-style "Manuscript received", 1510.02728;
+/// Hal's and Ivy's empty-mark images) is its text after the wrapper, no glyph (OD #990, DG 2026-11-16); Perl's leftover
+/// `role="footnotemark"` note (Cy's `*`, whose mark
 /// names two notes of the block, so it links to neither) is its plain mark after the name. Only an author's
 /// copies count (Ed the editor's first copy leaves Gus's a note of one author); a note with no mark or no text is never
 /// a repeat (Hal's and Ivy's image-only notes all print). Every copy holds its text without the symbol, which is SHMARK's
@@ -838,7 +839,7 @@ fn a_shared_author_note_prints_once_and_its_repeats_are_linked_marks() {
       "\n",
       r##"<span class="ltx_creator ltx_role_author"><span class="ltx_annotated_personname">"##,
       "\n",
-      r##"<span class="ltx_personname">Cy Cole</span><span id="id4" class="ltx_note ltx_role_footnotemark ltx_note_shared"><sup class="ltx_note_mark"><a href="#id1">*</a></sup></span><span id="id5" class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">*</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">*</sup>These authors contributed equally.</span></span></span><span id="id6" class="ltx_note ltx_role_footnotemark"><sup class="ltx_note_mark">*</sup></span></span><span id="id7" class="ltx_note ltx_note_frontmatter ltx_thanks_note ltx_role_thanks"><sup class="ltx_note_mark">†</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">†</sup><span class="ltx_note_type">thanks: </span>An unmarked note.</span></span></span></span>"##,
+      r##"<span class="ltx_personname">Cy Cole</span><span id="id4" class="ltx_note ltx_role_footnotemark ltx_note_shared"><sup class="ltx_note_mark"><a href="#id1">*</a></sup></span><span id="id5" class="ltx_note ltx_role_footnote"><sup class="ltx_note_mark">*</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">*</sup>These authors contributed equally.</span></span></span><span id="id6" class="ltx_note ltx_role_footnotemark"><sup class="ltx_note_mark">*</sup></span></span><span id="id7" class="ltx_note ltx_note_frontmatter ltx_thanks_note ltx_role_thanks ltx_note_unmarked">An unmarked note.</span></span>"##,
       "\n",
       r##"<span class="ltx_creator ltx_role_author"><span class="ltx_annotated_personname">"##,
       "\n",
@@ -850,17 +851,17 @@ fn a_shared_author_note_prints_once_and_its_repeats_are_linked_marks() {
       "\n",
       r##"<span class="ltx_creator ltx_role_author"><span class="ltx_annotated_personname">"##,
       "\n",
-      r##"<span class="ltx_personname">Hal Hart</span><span id="id14" class="ltx_note ltx_role_note"><sup class="ltx_note_mark">§</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">§</sup><span class="ltx_note_type">note: </span><img src="c.png" class="ltx_graphics" width="9" height="9" alt="[Uncaptioned image]"></span></span></span></span><span id="id13" class="ltx_note ltx_role_note"><sup class="ltx_note_mark"></sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark"></sup><span class="ltx_note_type">note: </span><img src="a.png" class="ltx_graphics" width="9" height="9" alt="[Uncaptioned image]"></span></span></span></span>"##,
+      r##"<span class="ltx_personname">Hal Hart</span><span id="id14" class="ltx_note ltx_role_note"><sup class="ltx_note_mark">§</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">§</sup><span class="ltx_note_type">note: </span><img src="c.png" class="ltx_graphics" width="9" height="9" alt="[Uncaptioned image]"></span></span></span></span><span id="id13" class="ltx_note ltx_role_note ltx_note_unmarked"><img src="a.png" class="ltx_graphics" width="9" height="9" alt="[Uncaptioned image]"></span></span>"##,
       "\n",
       r##"<span class="ltx_creator ltx_role_author"><span class="ltx_annotated_personname">"##,
       "\n",
-      r##"<span class="ltx_personname">Ivy Irwin</span><span id="id16" class="ltx_note ltx_role_note"><sup class="ltx_note_mark">§</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">§</sup><span class="ltx_note_type">note: </span><img src="d.png" class="ltx_graphics" width="9" height="9" alt="[Uncaptioned image]"></span></span></span></span><span id="id15" class="ltx_note ltx_role_note"><sup class="ltx_note_mark"></sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark"></sup><span class="ltx_note_type">note: </span><img src="b.png" class="ltx_graphics" width="9" height="9" alt="[Uncaptioned image]"></span></span></span></span>"##,
+      r##"<span class="ltx_personname">Ivy Irwin</span><span id="id16" class="ltx_note ltx_role_note"><sup class="ltx_note_mark">§</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">§</sup><span class="ltx_note_type">note: </span><img src="d.png" class="ltx_graphics" width="9" height="9" alt="[Uncaptioned image]"></span></span></span></span><span id="id15" class="ltx_note ltx_role_note ltx_note_unmarked"><img src="b.png" class="ltx_graphics" width="9" height="9" alt="[Uncaptioned image]"></span></span>"##,
       "\n",
       r##"<span class="ltx_creator ltx_role_author">"##,
       "\n",
       r##"<span class="ltx_personname">Lou Lane"##,
       "\n",
-      r##"</span><span id="id17" class="ltx_note ltx_note_frontmatter ltx_thanks_funding ltx_role_thanks"><sup class="ltx_note_mark">†</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">†</sup><span class="ltx_note_type">thanks: </span>Manuscript received June 1, 2026. Supported by the NSF.</span></span></span></span>"##,
+      r##"</span><span id="id17" class="ltx_note ltx_note_frontmatter ltx_thanks_funding ltx_role_thanks ltx_note_unmarked">Manuscript received June 1, 2026. Supported by the NSF.</span></span>"##,
       "\n",
       r##"<span class="ltx_creator ltx_role_author"><span class="ltx_annotated_personname">"##,
       "\n",

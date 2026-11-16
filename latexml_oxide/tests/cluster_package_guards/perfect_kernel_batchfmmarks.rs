@@ -20,7 +20,8 @@
 //! - a mark between two names is the nearer one's by the printed gaps, a tie the next name's; one followed by a
 //!   separator, `\\` or the block's end is carried back; one alone on the line after `\\` is no name's (ruling 4);
 //! - on the page a shared note prints once, in the margin, its mark on every carrying name; a marked note of one name
-//!   prints under it with no mark; an unmarked note prints in the margin; a mark-only note's mark links only to the one
+//!   prints under it with no mark; an unmarked note prints its text under it with no glyph, a mark-only note with no
+//!   glyph nothing (DG 2026-11-16: no invented glyph, OD #990); a mark-only note's mark links only to the one
 //!   note of the block it marks, and only when it is a symbol (a letter, digit or Greek letter stays plain); the marks
 //!   on a name in the order the PDF prints them.
 //!
@@ -164,7 +165,7 @@ fn creator_lines(xml: &str) -> Vec<String> {
 }
 
 /// The page `LaTeXML-html5.xsl` makes of `xml`, in process (the CLI's `html5` post-processing, no resources written).
-fn page_of(xml: &str) -> String {
+pub(super) fn page_of(xml: &str) -> String {
   let options = latexml::post::PostOptions {
     pmml:                      true,
     cmml:                      false,
@@ -377,9 +378,10 @@ fn notes_under(page: &[Element], at: usize, out: &mut Vec<usize>) {
 
 /// Each author block of `html`: per creator `name ; mark ; mark | under: body ; body` (a mark `m→note` linked,
 /// `m plain` not; a shared note's first copy shows its mark and prints its body in the margin, a marked one-author
-/// note prints under the name with no mark, an unmarked note in the margin), then the block's `margin: body ; body` (sorted); and
-/// the page's broken references: an id twice, an `href="#x"` with no `x`.
-fn page_lines(html: &str) -> (Vec<String>, Vec<String>) {
+/// note prints under the name with no mark, an unmarked note its text under the name with no glyph, a note with a
+/// pop-up outside the name's wrapper its glyph and its body in the margin), then the block's `margin: body ; body`
+/// (sorted); and the page's broken references: an id twice, an `href="#x"` with no `x`.
+pub(super) fn page_lines(html: &str) -> (Vec<String>, Vec<String>) {
   let page = parse_page(html);
   let everything = descendants(&page, 0);
   let mut problems = Vec::new();
@@ -455,6 +457,14 @@ fn page_lines(html: &str) -> (Vec<String>, Vec<String>) {
           .into_iter()
           .find(|&e| page[e].has_class("ltx_note_content"));
         let Some(content) = content else {
+          // (no glyph and no hidden body: an unmarked note's text, shown under the name, OD #990)
+          if sup.is_none() {
+            let body = text_of(&page, note, &|e| e.has_class("ltx_tag_note"));
+            if !body.is_empty() {
+              under.push(body);
+            }
+            continue;
+          }
           marks.push(format!(
             "{glyph}{}",
             if linked { "→note" } else { " plain" }
@@ -472,6 +482,11 @@ fn page_lines(html: &str) -> (Vec<String>, Vec<String>) {
         } else if wrapped {
           under.push(body);
         } else {
+          // (a note after the name's wrapper with a pop-up: its glyph too, which no unmarked note may show — Perl's `†`
+          // fallback, revMARKSAFE B1)
+          if !glyph.is_empty() {
+            marks.push(format!("{glyph} plain"));
+          }
           margin.push(body);
         }
       }
@@ -803,8 +818,7 @@ const SHARED: &[Row] = &[
     page:       &[
       r#"Ann Able"#,
       r#"Bob Baker"#,
-      r#""#,
-      r#"margin: Both authors are with the Lab."#,
+      r#" | under: Both authors are with the Lab."#,
     ],
     page_moves: r#""#,
   },
@@ -877,8 +891,7 @@ const SHARED: &[Row] = &[
     page:       &[
       r#"Ann Able ; † plain"#,
       r#"Bob Baker ; * plain"#,
-      r#""#,
-      r#"margin: † Equal. ∗ Corresponding."#,
+      r#" | under: † Equal. ∗ Corresponding."#,
     ],
     page_moves: r#""#,
   },
@@ -1592,7 +1605,7 @@ const LINK: &[Row] = &[
       r#"Bob Baker ; footnotemark[†]= ; thanks[*]=Ann Able and Bob Baker contributed equally. | email=bob@a.edu ; affiliation=Univ A , Town , Land"#,
       r#"Cat Cole | email=cat@a.edu ; affiliation=Univ A , Town , Land"#,
     ],
-    moves:      r#"MARKSAFE (NEITHER in phase 1: acmart's mark-only note holds the glyph as its text)"#,
+    moves:      r#""#,
     page:       &[
       r#"Ann Able ; *→note"#,
       r#"Bob Baker ; *→note ; † plain"#,
@@ -2265,9 +2278,9 @@ const SPACING: &[Row] = &[
     tex:        repro!("fmmarks_single_name_marks_after_newline_thin_spaces_red"),
     warnings:   0,
     creators:   &[r#"Ann Able ; footnotemark[1]= ; footnotemark[2]="#],
-    moves:      r#"MARKSAFE (NEITHER in phase 1: `\thefootnote` set arabic inside `\author`; the marks written * and †, not the printed 1 and 2)"#,
+    moves:      r#""#,
     page:       &[r#"Ann Able ; 1 plain ; 2 plain"#],
-    page_moves: r#"the XML layer's: MARKSAFE (NEITHER in phase 1: `\thefootnote` set arabic inside `\author`; the marks written * and †, not the printed 1 and 2)"#,
+    page_moves: r#""#,
   },
   // the marks a writer writes each from its own first token, never the one before it again (review revSHGNEXT B1, P1:
   // a mark's event span starts where the box before it began)
@@ -2517,10 +2530,9 @@ const REVTEX: &[Row] = &[
     ],
     moves:      r#""#,
     page:       &[
-      r#"Ann Able"#,
-      r#"Bob Baker"#,
-      r#"Cat Cole"#,
-      r#"margin: Equal. ; Equal. ; Other."#,
+      r#"Ann Able | under: Equal."#,
+      r#"Bob Baker | under: Equal."#,
+      r#"Cat Cole | under: Other."#,
     ],
     page_moves: r#""#,
   },
@@ -2548,11 +2560,7 @@ const REVTEX: &[Row] = &[
       r#"Bob Baker | affiliation=Univ B"#,
     ],
     moves:      r#""#,
-    page:       &[
-      r#"Ann Able"#,
-      r#"Bob Baker"#,
-      r#"margin: Corresponding author."#,
-    ],
+    page:       &[r#"Ann Able | under: Corresponding author."#, r#"Bob Baker"#],
     page_moves: r#""#,
   },
   Row {
@@ -2609,17 +2617,17 @@ const REVTEX: &[Row] = &[
     tex:        repro!("fmmarks_revtex_footnotemark_answered_by_altaffiliation"),
     warnings:   0,
     creators:   &[
-      r#"Ann Able ; footnotemark[*]= | altaffiliation=These authors contribute equally to this work. ; affiliation=Univ A, Town"#,
-      r#"Bob Baker ; footnotemark[*]= | altaffiliation=These authors contribute equally to this work. ; affiliation=Univ B, City"#,
+      r#"Ann Able ; footnotemark[a]= | altaffiliation=These authors contribute equally to this work. ; affiliation=Univ A, Town"#,
+      r#"Bob Baker ; footnotemark[a]= | altaffiliation=These authors contribute equally to this work. ; affiliation=Univ B, City"#,
       r#"Cat Cole | email=cat@a.edu ; affiliation=Univ A, Town"#,
     ],
-    moves:      r#""#,
+    moves:      r#"row R REVLETTERS (REVTeX 4.1/4.2 print a name's mark in their minipage letters, "a", unknown here: MARKSAFE writes none)"#,
     page:       &[
-      r#"Ann Able ; * plain"#,
-      r#"Bob Baker ; * plain"#,
+      r#"Ann Able ; a plain"#,
+      r#"Bob Baker ; a plain"#,
       r#"Cat Cole"#,
     ],
-    page_moves: r#""#,
+    page_moves: r#"the XML layer's: row R REVLETTERS"#,
   },
   Row {
     repro:      "revtex_affiliation_thanks_before_a_shared_note_red",
@@ -2732,9 +2740,8 @@ const CLASS: &[Row] = &[
     ],
     moves:      r#""#,
     page:       &[
-      r#"Ann Able"#,
-      r#"Bob Baker"#,
-      r#"margin: * marks the starred items below. ; 3 He detectors were funded by X."#,
+      r#"Ann Able | under: 3 He detectors were funded by X."#,
+      r#"Bob Baker | under: * marks the starred items below."#,
     ],
     page_moves: r#""#,
   },
@@ -2793,8 +2800,7 @@ const CLASS: &[Row] = &[
     moves:      r#""#,
     page:       &[
       r#"Ann Able"#,
-      r#"Bob Baker"#,
-      r#"margin: A. Able and B. Baker are with Univ A (e-mail: ann@a.edu). ; Part of this research was presented at Conf X. This research is supported by Y."#,
+      r#"Bob Baker | under: Part of this research was presented at Conf X. This research is supported by Y. ; A. Able and B. Baker are with Univ A (e-mail: ann@a.edu)."#,
     ],
     page_moves: r#""#,
   },
@@ -2806,7 +2812,7 @@ const CLASS: &[Row] = &[
       r#"Ann Able ; thanks[1]=First note."#,
       r#"Bob Baker ; thanks[2]=Second note."#,
     ],
-    moves:      r#"row R SHAUTO"#,
+    moves:      r#""#,
     page:       &[
       r#"Ann Able | under: First note."#,
       r#"Bob Baker | under: Second note."#,
@@ -2821,13 +2827,12 @@ const CLASS: &[Row] = &[
       r#"Ann Able ; thanks[]=First note."#,
       r#"Bob Baker ; thanks[]=Second note."#,
     ],
-    moves:      r#"row R SHAUTO; MARKSAFE (a redefined `\maketitle` prints no marks; REGFIX wrote none)"#,
+    moves:      r#""#,
     page:       &[
-      r#"Ann Able"#,
-      r#"Bob Baker"#,
-      r#"margin: First note. ; Second note."#,
+      r#"Ann Able | under: First note."#,
+      r#"Bob Baker | under: Second note."#,
     ],
-    page_moves: r#"the XML layer's: row R SHAUTO; MARKSAFE (a redefined `\maketitle` prints no marks; REGFIX wrote none)"#,
+    page_moves: r#""#,
   },
   Row {
     repro:      "fmmarks_ieee_unmarked_thanks_same_text_but_link_or_math",
@@ -2841,18 +2846,181 @@ const CLASS: &[Row] = &[
     ],
     moves:      r#""#,
     page:       &[
-      r#"Ann Able"#,
-      r#"Bob Baker"#,
-      r#"Cy Cole"#,
-      r#"Dee Dunn"#,
-      r#"margin: ORCID: profile ; ORCID: profile ; Supported by grant x 2 . ; Supported by grant x 2 ."#,
+      r#"Ann Able | under: ORCID: profile"#,
+      r#"Bob Baker | under: ORCID: profile"#,
+      r#"Cy Cole | under: Supported by grant x 2 ."#,
+      r#"Dee Dunn | under: Supported by grant x 2 ."#,
+    ],
+    page_moves: r#""#,
+  },
+  Row {
+    repro:      "marksafe_unbound_class_thanks_print_no_glyph",
+    tex:        repro!("marksafe_unbound_class_thanks_print_no_glyph"),
+    warnings:   0,
+    creators:   &[
+      r#"Ann Able ; thanks[*]=Note A."#,
+      r#"Bob Baker ; thanks[†]=Note B."#,
+    ],
+    moves:      r#"row R SHAUTO (an unbound class's marks, from its own `\maketitle`: written none)"#,
+    page:       &[
+      r#"Ann Able | under: Note A."#,
+      r#"Bob Baker | under: Note B."#,
+    ],
+    page_moves: r#""#,
+  },
+  Row {
+    repro:      "marksafe_unbound_class_footnotemark_given_number_unknown",
+    tex:        repro!("marksafe_unbound_class_footnotemark_given_number_unknown"),
+    warnings:   0,
+    creators:   &[
+      r#"Ann Able ; thanks[*]=Equal contribution."#,
+      r#"Bob Baker ; thanks[*]=Equal contribution."#,
+    ],
+    moves:      r#"row R MARKKEY (a name's `\footnotemark[1]` paired with its note by the number); row R SHAUTO"#,
+    page:       &[
+      r#"Ann Able ; *→note"#,
+      r#"Bob Baker ; *→note"#,
+      r#"margin: Equal contribution."#,
+    ],
+    page_moves: r#"the XML layer's: row R MARKKEY; row R SHAUTO"#,
+  },
+  Row {
+    repro:      "marksafe_unbound_class_footnotemark_answered_by_its_text",
+    tex:        repro!("marksafe_unbound_class_footnotemark_answered_by_its_text"),
+    warnings:   0,
+    creators:   &[
+      r#"Ann Able ; footnote[*]=Note A."#,
+      r#"Bob Baker ; footnote[†]=Note B."#,
+    ],
+    moves:      r#"row R SHAUTO"#,
+    page:       &[
+      r#"Ann Able | under: Note A."#,
+      r#"Bob Baker | under: Note B."#,
+    ],
+    page_moves: r#""#,
+  },
+  Row {
+    repro:      "marksafe_unbound_class_name_footnote_unknown",
+    tex:        repro!("marksafe_unbound_class_name_footnote_unknown"),
+    warnings:   0,
+    creators:   &[r#"Ann Able | note=Note A."#, r#"Bob Baker"#],
+    moves:      r#""#,
+    page:       &[r#"Ann Able"#, r#"Bob Baker"#],
+    page_moves: r#""#,
+  },
+  Row {
+    repro:      "marksafe_own_maketitle_copy_marks_unknown",
+    tex:        repro!("marksafe_own_maketitle_copy_marks_unknown"),
+    warnings:   0,
+    creators:   &[
+      r#"Ann Able ; thanks[*]=First note."#,
+      r#"Bob Baker ; thanks[†]=Second note."#,
+    ],
+    moves:      r#"row R SHAUTO (a document's own `\maketitle`: its marks unknown here, written none)"#,
+    page:       &[
+      r#"Ann Able | under: First note."#,
+      r#"Bob Baker | under: Second note."#,
+    ],
+    page_moves: r#""#,
+  },
+  Row {
+    repro:      "maketitle_newcommandcopy_wrapper_red",
+    tex:        repro!("maketitle_newcommandcopy_wrapper_red"),
+    warnings:   0,
+    creators:   &[
+      r#"Ann Able ; thanks[*]=First note."#,
+      r#"Bob Baker ; thanks[†]=Second note."#,
+    ],
+    moves:      r#"row R SHAUTO/T1 (a `\NewCommandCopy` wrapper of the class's `\maketitle` is not seen: written none)"#,
+    page:       &[
+      r#"Ann Able | under: First note."#,
+      r#"Bob Baker | under: Second note."#,
+    ],
+    page_moves: r#""#,
+  },
+  Row {
+    repro:      "marksafe_thefootnote_set_in_a_cell_holds_there",
+    tex:        repro!("marksafe_thefootnote_set_in_a_cell_holds_there"),
+    warnings:   0,
+    creators:   &[
+      r#"Ann Able ; footnotemark[*]="#,
+      r#"Bob Baker ; footnotemark[2]="#,
+      r#"Cy Cole ; footnotemark[‡]="#,
+    ],
+    moves:      r#""#,
+    page:       &[
+      r#"Ann Able ; * plain"#,
+      r#"Bob Baker ; 2 plain"#,
+      r#"Cy Cole ; ‡ plain"#,
+    ],
+    page_moves: r#""#,
+  },
+  Row {
+    repro:      "marksafe_thefootnote_set_in_a_cell_thanks",
+    tex:        repro!("marksafe_thefootnote_set_in_a_cell_thanks"),
+    warnings:   0,
+    creators:   &[
+      r#"Ann Able ; thanks[1]=Note A."#,
+      r#"Bob Baker ; thanks[†]=Note B."#,
+    ],
+    moves:      r#""#,
+    page:       &[
+      r#"Ann Able | under: Note A."#,
+      r#"Bob Baker | under: Note B."#,
+    ],
+    page_moves: r#""#,
+  },
+  Row {
+    repro:      "marksafe_thefootnote_set_in_a_cell_ends_at_its_line",
+    tex:        repro!("marksafe_thefootnote_set_in_a_cell_ends_at_its_line"),
+    warnings:   1,
+    creators:   &[
+      r#"Ann Able ; thanks[*]=Note A."#,
+      r#"Bob Baker ; thanks[2]=Note B. | affiliation=Univ B"#,
+      r#"Cat Cole ; thanks[‡]=Note C."#,
+    ],
+    moves:      r#""#,
+    page:       &[
+      r#"Ann Able | under: Note A."#,
+      r#"Bob Baker | under: Note B."#,
+      r#"Cat Cole | under: Note C."#,
+    ],
+    page_moves: r#""#,
+  },
+  Row {
+    repro:      "marksafe_maketitle_wrapper_ieeetran_is_neutral",
+    tex:        repro!("marksafe_maketitle_wrapper_ieeetran_is_neutral"),
+    warnings:   0,
+    creators:   &[
+      r#"Ann Able | note=Ann note."#,
+      r#"Bob Baker ; footnotemark[1]="#,
+    ],
+    moves:      r#""#,
+    page:       &[r#"Ann Able"#, r#"Bob Baker ; 1 plain"#],
+    page_moves: r#""#,
+  },
+  Row {
+    repro:      "fmmarks_own_maketitle_relax_red",
+    tex:        repro!("fmmarks_own_maketitle_relax_red"),
+    warnings:   0,
+    creators:   &[
+      r#"Ann Able ; thanks[]=First note."#,
+      r#"Bob Baker ; thanks[]=Second note."#,
+    ],
+    moves:      r#"row R SHAUTO/T1 (a document's own `\maketitle` naming `\maketitle` counts as the class's: ∗ † written)"#,
+    page:       &[
+      r#"Ann Able | under: First note."#,
+      r#"Bob Baker | under: Second note."#,
     ],
     page_moves: r#""#,
   },
 ];
 /// Class-printed marks against none: a note carries a mark only where its class prints one (IEEEtran and ieeeconf none,
 /// 2606.00397, 1510.02728), a symbol opening its text that is the text's own stays text (review revSHMARK S2), and
-/// unmarked notes alike in text but not in their links or math all print (review revREND2b, the reverted dedupe).
+/// unmarked notes alike in text but not in their links or math all print (review revREND2b, the reverted dedupe); a mark
+/// unknown here (an unbound class's, a document's own `\maketitle`'s) is no glyph on the page, the text under its name
+/// (revMARKSAFE B1, ADVGEN I-3), a document's wrapper of the class's `\maketitle` changes nothing (revMARKSAFEb B1), and
+/// an author block's `\thefootnote` holds in its cell alone (revMARKSAFE S1).
 #[test]
 fn notes_are_marked_only_where_the_class_prints_marks() { assert_green(CLASS); }
 /// The known gaps of [`notes_are_marked_only_where_the_class_prints_marks`].
@@ -2863,7 +3031,7 @@ fn notes_are_marked_only_where_the_class_prints_marks_red() { assert_red_layers_
 /// Core documents the reviews of REND2 wrote by hand, through `LaTeXML-html5.xsl` alone: a letter, digit or Greek
 /// mark-only note links to no other author's note of the same glyph and promotes none to the margin (revREND2 p1, the
 /// Greek `α` added), and unmarked notes alike in text, in two blocks, beside an editor's note and a contact, each print
-/// with every reference resolving (revREND2b p2).
+/// under its author with no glyph, every reference resolving (revREND2b p2; DG 2026-11-16, OD #990).
 const POST_ONLY: [(&str, &str, &[&str]); 2] = [
   (
     "glyph collision",
@@ -2922,12 +3090,10 @@ const POST_ONLY: [(&str, &str, &[&str]); 2] = [
 </document>
 "#,
     &[
-      "Ann",
+      "Ann | under: Same text.",
       "Bob",
-      "Cy",
-      "margin: Same text. ; Same text.",
-      "Dee",
-      "margin: Same text.",
+      "Cy | under: Same text.",
+      "Dee | under: Same text.",
     ],
   ),
 ];
