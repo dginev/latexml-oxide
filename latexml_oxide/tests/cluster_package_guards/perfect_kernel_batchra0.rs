@@ -24,7 +24,7 @@ fn a_title_code_command_declared_with_no_parameters_is_taken() {
   assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
   assert!(!xml.contains("<ERROR"), "{xml}");
   assert_eq!(creator_elements(&xml), [
-    "<creator role=\"author\">\n    <personname>Ann Able<sup>x</sup></personname>\n  </creator>",
+    "<creator role=\"author\">\n    <personname>Ann Able</personname>\n    <note mark=\"x\" role=\"footnotemark\"/>\n  </creator>",
     "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Bob Baker</personname>\n  </creator>",
   ]);
 }

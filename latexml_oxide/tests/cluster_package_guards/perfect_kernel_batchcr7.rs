@@ -288,19 +288,7 @@ fn a_split_stating_a_false_owner_keeps_the_block_whole() {
   assert_eq!(
     creator_elements(&xml),
     [
-      "<creator role=\"author\"><personname>Ann Able<sup xml:id=\"id1\">\
-       <text font=\"italic\" xml:id=\"id1.1\">1</text></sup>, Bob Baker<sup xml:id=\"id2\">\
-       <text font=\"italic\" xml:id=\"id2.1\">2</text></sup>\
-       <Math mode=\"inline\" tex=\"{}^{\\textrm{,}}\" text=\"^[,]\" xml:id=\"m3\"><XMath xml:id=\"m3.1\">\
-       <XMApp role=\"FLOATSUPERSCRIPT\" scriptpos=\"1\" xml:id=\"m3.1.1\"><XMText xml:id=\"m3.1.1.1\">\
-       <text fontsize=\"70%\" xml:id=\"m3.1.1.1.1\">,</text></XMText></XMApp></XMath></Math>\
-       , and Carl Cole<sup xml:id=\"id3\">\
-       <text font=\"italic\" xml:id=\"id3.1\">1</text></sup><break/><sup xml:id=\"id4\">\
-       <text font=\"italic\" xml:id=\"id4.1\">1</text></sup> Univ X<break/><sup xml:id=\"id5\">\
-       <text font=\"italic\" xml:id=\"id5.1\">2</text></sup> Univ Y</personname>\
-       <note mark=\"*\" role=\"footnote\" xml:id=\"footnotex1\"><tags><tag>*</tag>\
-       <tag role=\"refnum\">*</tag><tag role=\"typerefnum\">footnote *</tag>\
-       </tags>Corresponding author.</note></creator>",
+      "<creator role=\"author\"><personname>Ann Able<sup xml:id=\"id1\"><text font=\"italic\" xml:id=\"id1.1\">1</text></sup>, Bob Baker<sup xml:id=\"id2\"><text font=\"italic\" xml:id=\"id2.1\">2</text></sup><Math mode=\"inline\" tex=\"{}^{\\textrm{,}}\" text=\"^[,]\" xml:id=\"m3\"><XMath xml:id=\"m3.1\"><XMApp role=\"FLOATSUPERSCRIPT\" scriptpos=\"1\" xml:id=\"m3.1.1\"><XMText xml:id=\"m3.1.1.1\"><text fontsize=\"70%\" xml:id=\"m3.1.1.1.1\">,</text></XMText></XMApp></XMath></Math>, and Carl Cole<sup xml:id=\"id3\"><text font=\"italic\" xml:id=\"id3.1\">1</text></sup><break/><sup xml:id=\"id4\"><text font=\"italic\" xml:id=\"id4.1\">1</text></sup> Univ X<break/><sup xml:id=\"id5\"><text font=\"italic\" xml:id=\"id5.1\">2</text></sup> Univ Y</personname><note mark=\"*\" role=\"footnote\" xml:id=\"footnotex1\"><tags><tag>*</tag><tag role=\"refnum\">*</tag><tag role=\"typerefnum\">footnote *</tag></tags>Corresponding author.</note></creator>",
     ],
     "{xml}"
   );
@@ -349,17 +337,7 @@ fn a_split_making_an_address_line_a_creator_keeps_the_block_whole() {
   assert_eq!(
     creator_elements(&xml),
     [
-      "<creator role=\"author\"><personname>Ann Able<sup xml:id=\"id1\">\
-       <text font=\"italic\" xml:id=\"id1.1\">a</text></sup>, Bob Baker<sup xml:id=\"id2\">\
-       <text font=\"italic\" xml:id=\"id2.1\">b</text></sup> and Carl Cole<sup xml:id=\"id3\">\
-       <text font=\"italic\" xml:id=\"id3.1\">a</text></sup> <break/><sup xml:id=\"id4\">\
-       <text font=\"italic\" xml:id=\"id4.1\">a</text></sup>\
-       <text font=\"italic\" xml:id=\"id5\">Univ X, Town<break/></text> <sup xml:id=\"id6\">\
-       <text font=\"italic\" xml:id=\"id6.1\">b</text></sup>\
-       <text font=\"italic\" xml:id=\"id7\">Univ Y, City</text></personname>\
-       <note class=\"ltx_note_frontmatter ltx_thanks_correspondence\" role=\"thanks\" xml:id=\"id8\">Corresponding author.</note>\
-       <note class=\"ltx_note_frontmatter ltx_thanks_note\" role=\"thanks\" xml:id=\"id9\">Visiting.</note>\
-       </creator>",
+      "<creator role=\"author\"><personname>Ann Able<sup xml:id=\"id1\"><text font=\"italic\" xml:id=\"id1.1\">a</text></sup>, Bob Baker<sup xml:id=\"id2\"><text font=\"italic\" xml:id=\"id2.1\">b</text></sup> and Carl Cole<sup xml:id=\"id3\"><text font=\"italic\" xml:id=\"id3.1\">a</text></sup> <break/><sup xml:id=\"id4\"><text font=\"italic\" xml:id=\"id4.1\">a</text></sup><text font=\"italic\" xml:id=\"id5\">Univ X, Town<break/></text> <sup xml:id=\"id6\"><text font=\"italic\" xml:id=\"id6.1\">b</text></sup><text font=\"italic\" xml:id=\"id7\">Univ Y, City</text></personname><note class=\"ltx_note_frontmatter ltx_thanks_correspondence\" role=\"thanks\" xml:id=\"id8\">Corresponding author.</note><note class=\"ltx_note_frontmatter ltx_thanks_note\" role=\"thanks\" xml:id=\"id9\">Visiting.</note></creator>",
     ],
     "{xml}"
   );
@@ -409,18 +387,18 @@ fn a_definition_its_call_prints_takes_effect_in_order() {
         .to_string(),
     ]),
     (repro!("author_mark_macro_defines_what_a_later_author_reads"), 1, true, &[
-      "<creator role=\"author\"><personname>Ann One <sup xml:id=\"id1\">\u{2020}</sup></personname></creator>"
+      "<creator role=\"author\"><personname>Ann One</personname><note mark=\"†\" role=\"footnotemark\" xml:id=\"id1\"/></creator>"
         .to_string(),
       "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Two Uni</personname></creator>"
         .to_string(),
     ]),
     (repro!("author_mark_macro_steps_a_counter_on_each_name"), 0, false, &[
-      "<creator role=\"author\"><personname>Ann One<sup xml:id=\"id1\">1</sup></personname></creator>".to_string(),
-      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Two<sup \
-       xml:id=\"id2\">2</sup></personname></creator>"
+      "<creator role=\"author\"><personname>Ann One</personname><note mark=\"1\" role=\"footnotemark\" xml:id=\"id1\"/></creator>".to_string(),
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Two</personname><note mark=\"2\" \
+       role=\"footnotemark\" xml:id=\"id2\"/></creator>"
         .to_string(),
-      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Cy Three<sup \
-       xml:id=\"id3\">3</sup></personname></creator>"
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Cy Three</personname><note mark=\"3\" \
+       role=\"footnotemark\" xml:id=\"id3\"/></creator>"
         .to_string(),
     ]),
     (repro!("author_note_macro_with_a_local_thefootnote"), 0, false, &[
@@ -472,13 +450,13 @@ fn a_definition_its_call_prints_takes_effect_in_order() {
        xml:id=\"id9.1\">2</text></sup> Univ Y</contact></creator>",
     ])),
     (repro!("footremember_unread_after_a_comma"), 1, false, &row(&[
-      "<creator role=\"author\"><personname>Ann Able<sup xml:id=\"id1\">\u{2217}</sup></personname><contact \
-       name=\"Note:\u{a0}\" role=\"note\">Corresponding author.</contact><contact class=\"ltx_author_line\" name=\"Affiliation:\u{a0}\" \
+      "<creator role=\"author\"><personname>Ann Able</personname><note mark=\"\u{2217}\" role=\"footnotemark\" \
+       xml:id=\"id1\"/><contact name=\"Note:\u{a0}\" role=\"note\">Corresponding author.</contact><contact class=\"ltx_author_line\" name=\"Affiliation:\u{a0}\" \
        role=\"affiliation\">Univ X</contact></creator>",
       "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker</personname><contact class=\"ltx_author_line\" \
        name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ X</contact></creator>",
-      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Carl Cole<sup \
-       xml:id=\"id2\">\u{2020}</sup></personname><contact class=\"ltx_author_line\" name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ \
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Carl Cole</personname><note mark=\"\u{2020}\" \
+       role=\"footnotemark\" xml:id=\"id2\"/><contact class=\"ltx_author_line\" name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ \
        X</contact></creator>",
     ])),
     (repro!("author_note_macro_local_def_ends_with_its_cell"), 1, false, &row(&[

@@ -494,7 +494,7 @@ fn author_ieee_blockn_name_list_splits() {
       "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_ieee_blockn_name_list_splits.tex"
     ),
     &[
-      "<creator role=\"author\"><personname>Clemens Paul Zengler<sup xml:id=\"id1\">*</sup></personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Technical University of Denmark.</contact></creator>",
+      "<creator role=\"author\"><personname>Clemens Paul Zengler</personname><note mark=\"*\" role=\"footnotemark\" xml:id=\"id1\"/><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Technical University of Denmark.</contact></creator>",
       "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Niels Troldborg</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Technical University of Denmark.</contact></creator>",
       "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Mac Gaunaa</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Technical University of Denmark.</contact></creator>",
     ],
@@ -849,8 +849,8 @@ fn author_ieee_block_marks_stay_visible() {
       "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_ieee_block_marks_stay_visible.tex"
     ),
     &[
-      "<creator role=\"author\"><personname>Ann Able<sup xml:id=\"id1\"><text font=\"italic\" xml:id=\"id1.1\">1</text></sup></personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id2\"><text font=\"italic\" xml:id=\"id2.1\">1</text></sup>Univ A</contact></creator>",
-      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker<sup xml:id=\"id3\"><text font=\"italic\" xml:id=\"id3.1\">2</text></sup></personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id4\"><text font=\"italic\" xml:id=\"id4.1\">2</text></sup>Univ B</contact></creator>",
+      "<creator role=\"author\"><personname>Ann Able</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id1\"><text font=\"italic\" xml:id=\"id1.1\">1</text></sup>Univ A</contact></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id2\"><text font=\"italic\" xml:id=\"id2.1\">2</text></sup>Univ B</contact></creator>",
     ],
   );
 }
@@ -864,8 +864,8 @@ fn author_amsart_marks_stay_visible() {
       "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_amsart_marks_stay_visible.tex"
     ),
     &[
-      "<creator role=\"author\"><personname>Ann Able<sup xml:id=\"id1\"><text font=\"italic\" xml:id=\"id1.1\">1</text></sup></personname><contact name=\"Address:\u{a0}\" role=\"address\"><sup xml:id=\"id2\">1</sup>Univ A</contact></creator>",
-      "<creator before=\" and \" role=\"author\"><personname>Bob Baker<sup xml:id=\"id3\"><text font=\"italic\" xml:id=\"id3.1\">2</text></sup></personname><contact name=\"Address:\u{a0}\" role=\"address\"><sup xml:id=\"id4\">2</sup>Univ B</contact></creator>",
+      "<creator role=\"author\"><personname>Ann Able</personname><contact name=\"Address:\u{a0}\" role=\"address\"><sup xml:id=\"id1\">1</sup>Univ A</contact></creator>",
+      "<creator before=\" and \" role=\"author\"><personname>Bob Baker</personname><contact name=\"Address:\u{a0}\" role=\"address\"><sup xml:id=\"id2\">2</sup>Univ B</contact></creator>",
     ],
   );
 }
@@ -881,7 +881,7 @@ fn author_symbol_mark_piece_stays_with_the_name() {
       "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_symbol_mark_piece_stays_with_the_name.tex"
     ),
     &[
-      "<creator role=\"author\"><personname>Ann Able<sup xml:id=\"id1\">∗</sup></personname><note class=\"ltx_note_frontmatter ltx_thanks_contribution\" role=\"thanks\" xml:id=\"id2\">Equal contribution</note></creator>",
+      "<creator role=\"author\"><personname>Ann Able</personname><note class=\"ltx_note_frontmatter ltx_thanks_contribution\" mark=\"∗\" role=\"thanks\" xml:id=\"id1\">Equal contribution</note></creator>",
       "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker</personname></creator>",
     ],
   );
@@ -899,8 +899,8 @@ fn author_ieee_blockn_marked_name_lines_are_names() {
       "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_ieee_blockn_marked_name_lines_are_names.tex"
     ),
     &[
-      "<creator role=\"author\"><personname>Ann Able<sup xml:id=\"id1\"><text font=\"italic\" xml:id=\"id1.1\">1</text></sup></personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id2\"><text font=\"italic\" xml:id=\"id2.1\">1</text></sup>Univ A</contact></creator>",
-      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker<sup xml:id=\"id3\"><text font=\"italic\" xml:id=\"id3.1\">2</text></sup></personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id4\"><text font=\"italic\" xml:id=\"id4.1\">2</text></sup>Univ B</contact></creator>",
+      "<creator role=\"author\"><personname>Ann Able</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id1\"><text font=\"italic\" xml:id=\"id1.1\">1</text></sup>Univ A</contact></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id2\"><text font=\"italic\" xml:id=\"id2.1\">2</text></sup>Univ B</contact></creator>",
     ],
   );
 }
@@ -937,8 +937,8 @@ fn author_ieee_blockn_prefix_marks_across_quad() {
       "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_ieee_blockn_prefix_marks_across_quad.tex"
     ),
     &[
-      "<creator role=\"author\"><personname><sup xml:id=\"id1\"><text font=\"italic\" xml:id=\"id1.1\">1</text></sup>Ann Able</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id2\"><text font=\"italic\" xml:id=\"id2.1\">1</text></sup>Univ A</contact></creator>",
-      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id3\"><text font=\"italic\" xml:id=\"id3.1\">2</text></sup>Univ B</contact></creator>",
+      "<creator role=\"author\"><personname>Ann Able</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id1\"><text font=\"italic\" xml:id=\"id1.1\">1</text></sup>Univ A</contact></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id2\"><text font=\"italic\" xml:id=\"id2.1\">2</text></sup>Univ B</contact></creator>",
     ],
   );
 }
@@ -1531,9 +1531,9 @@ fn revtex_marked_affiliations_link_by_mark() {
       "../../../tools/perfect_kernel/repros/sectioning-frontmatter/revtex_marked_affiliations_link_by_mark.tex"
     ),
     &[
-      "<creator role=\"author\"><personname>Ann Able<sup xml:id=\"id1\"><text font=\"italic\" xml:id=\"id1.1\">a</text></sup></personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id2\"><text font=\"italic\" xml:id=\"id2.1\">a</text></sup>Univ A</contact><contact name=\"Email:\u{a0}\" role=\"email\">Corresponding author: ann@a.org</contact></creator>",
-      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker<sup xml:id=\"id3\"><text font=\"italic\" xml:id=\"id3.1\">b</text></sup></personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id4\"><text font=\"italic\" xml:id=\"id4.1\">b</text></sup>Univ B</contact></creator>",
-      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Cat Cole<sup xml:id=\"id5\"><text font=\"italic\" xml:id=\"id5.1\">a</text></sup></personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id6\"><text font=\"italic\" xml:id=\"id6.1\">a</text></sup>Univ A</contact></creator>",
+      "<creator role=\"author\"><personname>Ann Able</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id1\"><text font=\"italic\" xml:id=\"id1.1\">a</text></sup>Univ A</contact><contact name=\"Email:\u{a0}\" role=\"email\">Corresponding author: ann@a.org</contact></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id2\"><text font=\"italic\" xml:id=\"id2.1\">b</text></sup>Univ B</contact></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Cat Cole</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id3\"><text font=\"italic\" xml:id=\"id3.1\">a</text></sup>Univ A</contact></creator>",
     ],
   );
 }
@@ -1548,8 +1548,8 @@ fn svjour3_marked_institutes_link_by_mark() {
       "../../../tools/perfect_kernel/repros/sectioning-frontmatter/svjour3_marked_institutes_link_by_mark.tex"
     ),
     &[
-      "<creator role=\"author\"><personname>Ann Able<sup xml:id=\"id1\"><text font=\"italic\" xml:id=\"id1.1\">1</text></sup></personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id2\"><text font=\"italic\" xml:id=\"id2.1\">1</text></sup>Univ A</contact></creator>",
-      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker<sup xml:id=\"id3\"><text font=\"italic\" xml:id=\"id3.1\">2</text></sup></personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id4\"><text font=\"italic\" xml:id=\"id4.1\">2</text></sup>Univ B</contact></creator>",
+      "<creator role=\"author\"><personname>Ann Able</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id1\"><text font=\"italic\" xml:id=\"id1.1\">1</text></sup>Univ A</contact></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id2\"><text font=\"italic\" xml:id=\"id2.1\">2</text></sup>Univ B</contact></creator>",
     ],
   );
 }
@@ -1564,8 +1564,8 @@ fn institute_with_numbered_lines_is_no_marked_list() {
       "../../../tools/perfect_kernel/repros/sectioning-frontmatter/institute_with_numbered_lines_is_no_marked_list.tex"
     ),
     &[
-      "<creator role=\"author\"><personname>Ann Able<sup xml:id=\"id1\"><text font=\"italic\" xml:id=\"id1.1\">1,2</text></sup></personname></creator>",
-      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker<sup xml:id=\"id2\"><text font=\"italic\" xml:id=\"id2.1\">2</text></sup></personname></creator>",
+      "<creator role=\"author\"><personname>Ann Able</personname><note mark=\"1,2\" role=\"footnotemark\" xml:id=\"id1\"/></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker</personname><note mark=\"2\" role=\"footnotemark\" xml:id=\"id2\"/></creator>",
       "<creator role=\"author\"><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">1 Univ A, City A<break/>2 Univ B, City B</contact></creator>",
     ],
   );
@@ -1580,8 +1580,8 @@ fn revtex_interleaved_mark_with_symbol_keeps_the_group_rule() {
       "../../../tools/perfect_kernel/repros/sectioning-frontmatter/revtex_interleaved_mark_with_symbol_keeps_the_group_rule.tex"
     ),
     &[
-      "<creator role=\"author\"><personname>Ann Able<sup xml:id=\"id1\"><text font=\"italic\" xml:id=\"id1.1\">1</text></sup></personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id2\"><text font=\"italic\" xml:id=\"id2.1\">1</text></sup>Univ A</contact></creator>",
-      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker<sup xml:id=\"id3\"><text font=\"italic\" xml:id=\"id3.1\">2,†</text></sup></personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id4\"><text font=\"italic\" xml:id=\"id4.1\">2</text></sup>Univ B</contact></creator>",
+      "<creator role=\"author\"><personname>Ann Able</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id1\"><text font=\"italic\" xml:id=\"id1.1\">1</text></sup>Univ A</contact></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker</personname><note mark=\"†\" role=\"footnotemark\" xml:id=\"id2\"/><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id3\"><text font=\"italic\" xml:id=\"id3.1\">2</text></sup>Univ B</contact></creator>",
     ],
   );
 }
@@ -1595,9 +1595,9 @@ fn revtex_interleaved_group_with_unanswered_mark() {
       "../../../tools/perfect_kernel/repros/sectioning-frontmatter/revtex_interleaved_group_with_unanswered_mark.tex"
     ),
     &[
-      "<creator role=\"author\"><personname>Ann Able<sup xml:id=\"id1\"><text font=\"italic\" xml:id=\"id1.1\">1</text></sup></personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id2\"><text font=\"italic\" xml:id=\"id2.1\">1</text></sup>Univ A</contact></creator>",
-      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker<sup xml:id=\"id3\"><text font=\"italic\" xml:id=\"id3.1\">1,5</text></sup></personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id4\"><text font=\"italic\" xml:id=\"id4.1\">1</text></sup>Univ A</contact></creator>",
-      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Cat Cole<sup xml:id=\"id5\"><text font=\"italic\" xml:id=\"id5.1\">2</text></sup></personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id6\"><text font=\"italic\" xml:id=\"id6.1\">2</text></sup>Univ B</contact></creator>",
+      "<creator role=\"author\"><personname>Ann Able</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id1\"><text font=\"italic\" xml:id=\"id1.1\">1</text></sup>Univ A</contact></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker</personname><note mark=\"5\" role=\"footnotemark\" xml:id=\"id2\"/><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id3\"><text font=\"italic\" xml:id=\"id3.1\">1</text></sup>Univ A</contact></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Cat Cole</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id4\"><text font=\"italic\" xml:id=\"id4.1\">2</text></sup>Univ B</contact></creator>",
     ],
   );
 }
@@ -1611,8 +1611,8 @@ fn revtex_affiliation_with_inner_superscript_is_no_marked_line() {
       "../../../tools/perfect_kernel/repros/sectioning-frontmatter/revtex_affiliation_with_inner_superscript_is_no_marked_line.tex"
     ),
     &[
-      "<creator role=\"author\"><personname>Ann Able<sup xml:id=\"id1\"><text font=\"italic\" xml:id=\"id1.1\">1</text></sup></personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id2\"><text font=\"italic\" xml:id=\"id2.1\">1</text></sup>Univ A</contact></creator>",
-      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker<sup xml:id=\"id3\"><text font=\"italic\" xml:id=\"id3.1\">2</text></sup></personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Laboratory for <sup xml:id=\"id4\"><text font=\"italic\" xml:id=\"id4.1\">3</text></sup>He Physics, Univ B</contact></creator>",
+      "<creator role=\"author\"><personname>Ann Able</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id1\"><text font=\"italic\" xml:id=\"id1.1\">1</text></sup>Univ A</contact></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker</personname><note mark=\"2\" role=\"footnotemark\" xml:id=\"id2\"/><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Laboratory for <sup xml:id=\"id3\"><text font=\"italic\" xml:id=\"id3.1\">3</text></sup>He Physics, Univ B</contact></creator>",
     ],
   );
 }
@@ -1627,9 +1627,9 @@ fn revtex_marked_affiliations_with_symbol_marks_link_by_mark() {
       "../../../tools/perfect_kernel/repros/sectioning-frontmatter/revtex_marked_affiliations_with_symbol_marks_link_by_mark.tex"
     ),
     &[
-      "<creator role=\"author\"><personname>Ann Able<sup xml:id=\"id1\"><text font=\"italic\" xml:id=\"id1.1\">a</text></sup></personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id2\"><text font=\"italic\" xml:id=\"id2.1\">a</text></sup>Univ A</contact></creator>",
-      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker<sup xml:id=\"id3\"><text font=\"italic\" xml:id=\"id3.1\">b,†</text></sup></personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id4\"><text font=\"italic\" xml:id=\"id4.1\">b</text></sup>Univ B</contact></creator>",
-      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Cat Cole<sup xml:id=\"id5\"><text font=\"italic\" xml:id=\"id5.1\">a</text></sup></personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id6\"><text font=\"italic\" xml:id=\"id6.1\">a</text></sup>Univ A</contact></creator>",
+      "<creator role=\"author\"><personname>Ann Able</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id1\"><text font=\"italic\" xml:id=\"id1.1\">a</text></sup>Univ A</contact></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker</personname><note mark=\"†\" role=\"footnotemark\" xml:id=\"id2\"/><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id3\"><text font=\"italic\" xml:id=\"id3.1\">b</text></sup>Univ B</contact></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Cat Cole</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id4\"><text font=\"italic\" xml:id=\"id4.1\">a</text></sup>Univ A</contact></creator>",
     ],
   );
 }
@@ -1644,9 +1644,9 @@ fn svjour3_marked_institutes_with_thanksref_link_by_mark() {
       "../../../tools/perfect_kernel/repros/sectioning-frontmatter/svjour3_marked_institutes_with_thanksref_link_by_mark.tex"
     ),
     &[
-      "<creator role=\"author\"><personname>Ann Able<sup xml:id=\"id1\"><text font=\"italic\" xml:id=\"id1.1\">1</text></sup></personname><note class=\"ltx_note_frontmatter ltx_thanks_note\" role=\"thanks\" xml:id=\"id2\">e-mail: ann@a.org</note><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id3\"><text font=\"italic\" xml:id=\"id3.1\">1</text></sup>Univ A</contact></creator>",
-      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker<sup xml:id=\"id4\"><text font=\"italic\" xml:id=\"id4.1\">2</text></sup></personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id5\"><text font=\"italic\" xml:id=\"id5.1\">2</text></sup>Univ B</contact></creator>",
-      "<creator role=\"author\"><note class=\"ltx_note_frontmatter ltx_thanks_note\" role=\"thanks\" xml:id=\"id6\">Institute note.</note></creator>",
+      "<creator role=\"author\"><personname>Ann Able</personname><note class=\"ltx_note_frontmatter ltx_thanks_note\" role=\"thanks\" xml:id=\"id1\">e-mail: ann@a.org</note><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id2\"><text font=\"italic\" xml:id=\"id2.1\">1</text></sup>Univ A</contact></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id3\"><text font=\"italic\" xml:id=\"id3.1\">2</text></sup>Univ B</contact></creator>",
+      "<creator role=\"author\"><note class=\"ltx_note_frontmatter ltx_thanks_note\" role=\"thanks\" xml:id=\"id4\">Institute note.</note></creator>",
     ],
   );
 }
@@ -1660,8 +1660,8 @@ fn revtex_mathrm_mark_interleaved_group_keeps_the_group_rule() {
       "../../../tools/perfect_kernel/repros/sectioning-frontmatter/revtex_mathrm_mark_interleaved_group_keeps_the_group_rule.tex"
     ),
     &[
-      "<creator role=\"author\"><personname>Ann Able<sup xml:id=\"id1\"><text font=\"italic\" xml:id=\"id1.1\">a</text></sup></personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id2\"><text font=\"italic\" xml:id=\"id2.1\">a</text></sup>Univ A</contact></creator>",
-      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id3\"><text font=\"italic\" xml:id=\"id3.1\">a</text></sup>Univ A</contact></creator>",
+      "<creator role=\"author\"><personname>Ann Able</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id1\"><text font=\"italic\" xml:id=\"id1.1\">a</text></sup>Univ A</contact></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id2\"><text font=\"italic\" xml:id=\"id2.1\">a</text></sup>Univ A</contact></creator>",
     ],
   );
 }
@@ -1676,8 +1676,8 @@ fn revtex_mathrm_marked_affiliations_link_by_mark() {
       "../../../tools/perfect_kernel/repros/sectioning-frontmatter/revtex_mathrm_marked_affiliations_link_by_mark.tex"
     ),
     &[
-      "<creator role=\"author\"><personname>Ann Able<sup xml:id=\"id1\"><text font=\"italic\" xml:id=\"id1.1\">a</text></sup></personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id2\"><text font=\"italic\" xml:id=\"id2.1\">a</text></sup>Univ A</contact></creator>",
-      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker<sup xml:id=\"id3\"><text font=\"italic\" xml:id=\"id3.1\">b</text></sup></personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id4\"><text font=\"italic\" xml:id=\"id4.1\">b</text></sup>Univ B</contact></creator>",
+      "<creator role=\"author\"><personname>Ann Able</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id1\"><text font=\"italic\" xml:id=\"id1.1\">a</text></sup>Univ A</contact></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id2\"><text font=\"italic\" xml:id=\"id2.1\">b</text></sup>Univ B</contact></creator>",
     ],
   );
 }
@@ -1691,9 +1691,9 @@ fn revtex_textsuperscript_interleaved_group_keeps_the_group_rule() {
       "../../../tools/perfect_kernel/repros/sectioning-frontmatter/revtex_textsuperscript_interleaved_group_keeps_the_group_rule.tex"
     ),
     &[
-      "<creator role=\"author\"><personname>Ann Able<sup xml:id=\"id1\">1</sup></personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id2\">1</sup>Univ A</contact></creator>",
-      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id3\">1</sup>Univ A</contact></creator>",
-      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Cat Cole<sup xml:id=\"id4\">2</sup></personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id5\">2</sup>Univ B</contact></creator>",
+      "<creator role=\"author\"><personname>Ann Able</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id1\">1</sup>Univ A</contact></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id2\">1</sup>Univ A</contact></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Cat Cole</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id3\">2</sup>Univ B</contact></creator>",
     ],
   );
 }
@@ -1707,9 +1707,9 @@ fn revtex_interleaved_typo_mark_keeps_the_group_rule() {
       "../../../tools/perfect_kernel/repros/sectioning-frontmatter/revtex_interleaved_typo_mark_keeps_the_group_rule.tex"
     ),
     &[
-      "<creator role=\"author\"><personname>Ann Able<sup xml:id=\"id1\"><text font=\"italic\" xml:id=\"id1.1\">1</text></sup></personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id2\"><text font=\"italic\" xml:id=\"id2.1\">1</text></sup>Univ A</contact></creator>",
-      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker<sup xml:id=\"id3\"><text font=\"italic\" xml:id=\"id3.1\">1</text></sup></personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id4\"><text font=\"italic\" xml:id=\"id4.1\">1</text></sup>Univ A</contact></creator>",
-      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Cat Cole<sup xml:id=\"id5\"><text font=\"italic\" xml:id=\"id5.1\">2</text></sup></personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id6\"><text font=\"italic\" xml:id=\"id6.1\">3</text></sup>Univ B</contact></creator>",
+      "<creator role=\"author\"><personname>Ann Able</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id1\"><text font=\"italic\" xml:id=\"id1.1\">1</text></sup>Univ A</contact></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id2\"><text font=\"italic\" xml:id=\"id2.1\">1</text></sup>Univ A</contact></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Cat Cole</personname><note mark=\"2\" role=\"footnotemark\" xml:id=\"id3\"/><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id4\"><text font=\"italic\" xml:id=\"id4.1\">3</text></sup>Univ B</contact></creator>",
     ],
   );
 }
@@ -3871,8 +3871,8 @@ fn acmart_manyfoot_marks() {
     "../../../tools/perfect_kernel/repros/sectioning-frontmatter/acmart_manyfoot_marks.tex"
   );
   assert_eq!(creators_63x(tex), vec![
-    "<creator role=\"author\">\n    <personname>Ann Able<sup xml:id=\"id1\">1</sup></personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id2\">1</sup>Univ A</contact>\n  </creator>",
-    "<creator before=\" and \" role=\"author\">\n    <personname>Bob Bee<sup xml:id=\"id3\">2</sup></personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id4\">2</sup>Univ B <text class=\"ltx_affiliation_country\" xml:id=\"id5\">USA</text></contact>\n  </creator>",
+    "<creator role=\"author\">\n    <personname>Ann Able</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id1\">1</sup>Univ A</contact>\n  </creator>",
+    "<creator before=\" and \" role=\"author\">\n    <personname>Bob Bee</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id2\">2</sup>Univ B <text class=\"ltx_affiliation_country\" xml:id=\"id3\">USA</text></contact>\n  </creator>",
   ]);
 }
 
@@ -3965,9 +3965,9 @@ fn snjnl_author_name_list() {
     "../../../tools/perfect_kernel/repros/sectioning-frontmatter/snjnl_author_name_list.tex"
   );
   assert_eq!(creators_63x(tex), vec![
-    "<creator role=\"author\">\n    <personname>Ann Able<sup xml:id=\"id1\"><text font=\"italic\" xml:id=\"id1.1\">1</text></sup></personname>\n    <contact name=\"Affiliation: \" role=\"affiliation\">Univ A</contact>\n  </creator>",
-    "<creator before=\"  \" role=\"author\">\n    <personname>Bob Baker<sup xml:id=\"id2\"><text font=\"italic\" xml:id=\"id2.1\">2</text></sup></personname>\n    <contact name=\"Affiliation: \" role=\"affiliation\">Univ A</contact>\n  </creator>",
-    "<creator before=\"  \" role=\"author\">\n    <personname>Cat Cole<sup xml:id=\"id3\"><text font=\"italic\" xml:id=\"id3.1\">1</text></sup></personname>\n    <contact name=\"Affiliation: \" role=\"affiliation\">Univ A</contact>\n  </creator>",
+    "<creator role=\"author\">\n    <personname>Ann Able</personname>\n    <note mark=\"1\" role=\"footnotemark\" xml:id=\"id1\"/>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A</contact>\n  </creator>",
+    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Bob Baker</personname>\n    <note mark=\"2\" role=\"footnotemark\" xml:id=\"id2\"/>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A</contact>\n  </creator>",
+    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Cat Cole</personname>\n    <note mark=\"1\" role=\"footnotemark\" xml:id=\"id3\"/>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A</contact>\n  </creator>",
   ]);
 }
 
@@ -4128,7 +4128,7 @@ fn author_mark_comma_in_math() {
   );
   assert_eq!(creators_63x(tex), vec![
     // (the `\dagger` nothing answers stays shown, as printed: 65e `show_unanswered_marks`)
-    "<creator role=\"author\">\n    <personname>Ann Able<sup xml:id=\"id1\">\u{2020}</sup></personname>\n    <contact class=\"ltx_author_line\" name=\"Affiliation: \" role=\"affiliation\">Univ A</contact>\n  </creator>",
+    "<creator role=\"author\">\n    <personname>Ann Able</personname>\n    <note mark=\"†\" role=\"footnotemark\" xml:id=\"id1\"/>\n    <contact class=\"ltx_author_line\" name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A</contact>\n  </creator>",
     "<creator before=\"  \" role=\"author\">\n    <personname>Bob Baker</personname>\n    <contact class=\"ltx_author_line\" name=\"Affiliation: \" role=\"affiliation\">Univ B</contact>\n  </creator>",
   ]);
 }

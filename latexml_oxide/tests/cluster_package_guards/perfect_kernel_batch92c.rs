@@ -102,7 +102,7 @@ fn an_email_link_is_the_text_it_prints() {
 fn aa_sole_institute_is_the_rows() {
   assert_reading(
     repro!("aa_sole_institute_numbered_lines_is_the_blocks.tex"),
-    Some(&[&["Ann Able 1,2"], &["Bob Baker 2"], &[
+    Some(&[&["Ann Able"], &["Bob Baker"], &[
       "affiliation=1 Univ A, City A 2 Univ B, City B",
     ]]),
     &[
@@ -136,8 +136,8 @@ fn aa_sole_institute_is_the_rows() {
 fn written_items_keep_the_print_order() {
   assert_reading(
     repro!("llncs_copied_items_keep_the_print_order.tex"),
-    Some(&[&["Ann Able 1", "affiliation=Zeta University"], &[
-      "Bob Baker 1,2",
+    Some(&[&["Ann Able", "affiliation=Zeta University"], &[
+      "Bob Baker",
       "affiliation=Zeta University",
       "affiliation=Alpha Institute",
     ]]),

@@ -76,7 +76,8 @@ fn a_note_no_name_requests_stays_the_documents() {
     ),
     (
       &dagger,
-      "<personname>Ann Able<sup>∗</sup></personname>",
+      // (the mark no entry answers a mark-only note after the name, PURE)
+      r#"<personname>Ann Able</personname> <note mark="∗" role="footnotemark"/>"#,
       "</sup>Corresponding author: Bob.</pubnote>",
     ),
   ] {
@@ -91,7 +92,12 @@ fn a_note_no_name_requests_stays_the_documents() {
     );
     assert_eq!(xml.matches("<pubnote").count(), 1, "{xml}");
     assert!(xml.contains(note), "{xml}");
-    assert!(!xml.contains("<note "), "{xml}");
+    // (no note but a name's mark-only one: the thanks is the document's)
+    assert_eq!(
+      xml.matches("<note ").count(),
+      xml.matches(r#"role="footnotemark""#).count(),
+      "{xml}"
+    );
   }
 }
 

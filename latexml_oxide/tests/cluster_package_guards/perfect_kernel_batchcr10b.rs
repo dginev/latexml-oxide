@@ -20,8 +20,8 @@ fn address_continuation_line_keeps_its_break() {
     "../../../tools/perfect_kernel/repros/sectioning-frontmatter/address_continuation_line_keeps_its_break.tex"
   ));
   assert_eq!(elements(&xml, "creator"), vec![
-    "<creator role=\"author\">\n    <personname>Ann Able<sup xml:id=\"id1\"><text font=\"italic\" xml:id=\"id1.1\">1</text></sup></personname>\n    <contact name=\"Address:\u{a0}\" role=\"address\"><sup xml:id=\"id2\"><text font=\"italic\" xml:id=\"id2.1\">1</text></sup> Department of Zebra, School of Yak<break/>Owl University, Gnu City</contact>\n  </creator>",
-    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Bob Baker<sup xml:id=\"id3\"><text font=\"italic\" xml:id=\"id3.1\">2</text></sup></personname>\n    <contact name=\"Address:\u{a0}\" role=\"address\"><sup xml:id=\"id4\"><text font=\"italic\" xml:id=\"id4.1\">2</text></sup> Emu Institute<break/>Kiwi Town</contact>\n    <contact name=\"E-mail:\u{a0}\" role=\"email\">bob@emu.edu</contact>\n  </creator>",
+    "<creator role=\"author\">\n    <personname>Ann Able</personname>\n    <contact name=\"Address:\u{a0}\" role=\"address\"><sup xml:id=\"id1\"><text font=\"italic\" xml:id=\"id1.1\">1</text></sup> Department of Zebra, School of Yak<break/>Owl University, Gnu City</contact>\n  </creator>",
+    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Bob Baker</personname>\n    <contact name=\"Address:\u{a0}\" role=\"address\"><sup xml:id=\"id2\"><text font=\"italic\" xml:id=\"id2.1\">2</text></sup> Emu Institute<break/>Kiwi Town</contact>\n    <contact name=\"E-mail:\u{a0}\" role=\"email\">bob@emu.edu</contact>\n  </creator>",
   ]);
 }
 

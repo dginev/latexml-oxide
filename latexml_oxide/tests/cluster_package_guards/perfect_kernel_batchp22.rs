@@ -57,7 +57,7 @@ fn rows(rows: &[&[&str]]) -> Vec<Vec<String>> {
 /// One row per shape, each its own path through the split and the reading: the list as written (OmniBus, aa with an
 /// `\email` line in a piece, the corpus's dominant aa shape); an `\email` line under OmniBus; an `\and` a document macro
 /// holds (no spelling shows it: the reading cuts the one piece, its entries written by their text, the Warnings); an
-/// `\and` ending the list (an empty last piece: Bob Baker's `\inst{2}` answered by no institute stays in his name); a size switch opening the list (1405.5564: the split leaves it in the
+/// `\and` ending the list (an empty last piece: Bob Baker's `\inst{2}` answered by no institute stays printed, a mark-only note after his name since PURE); a size switch opening the list (1405.5564: the split leaves it in the
 /// first piece, where pdflatex sets every piece small — a known residual); an address typed as text after a label
 /// (1010.3154) and in an emphasis group (1501.07092) in a piece; pieces each led by aa's `\inst` mark, which prints no
 /// text of its entry. The Warnings: OmniBus's missing class binding, and the entries written by their text.
@@ -112,7 +112,7 @@ fn an_institute_list_split_by_spelling_today() {
       "omnibus trailing and",
       repro!("omnibus_institute_list_trailing_and"),
       (0, 1),
-      rows(&[&["Ann Able", "affiliation=Univ A"], &["Bob Baker 2"]]),
+      rows(&[&["Ann Able", "affiliation=Univ A"], &["Bob Baker"]]),
       vec![s(a, "Univ A</contact>")],
     ),
     (

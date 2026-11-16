@@ -92,9 +92,8 @@ fn author_mark_then_space_separates_names() {
 fn author_wide_space_after_marked_name_separates() {
   let xml = clean(repro!("author_wide_space_after_marked_name_separates.tex"));
   assert_creators(&xml, &[
-    "<creator role=\"author\"><personname>Ann Able<sup xml:id=\"id1\">\u{22c6}</sup></personname></creator>",
-    "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker<sup \
-     xml:id=\"id2\">\u{22c4}</sup></personname></creator>",
+    "<creator role=\"author\"><personname>Ann Able</personname><note mark=\"⋆\" role=\"footnotemark\" xml:id=\"id1\"/></creator>",
+    "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker</personname><note mark=\"⋄\" role=\"footnotemark\" xml:id=\"id2\"/></creator>",
     "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Cat Cole</personname></creator>",
     "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Dan Dorn</personname></creator>",
     "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Eve Ess</personname><contact class=\"ltx_author_line\" \
@@ -228,11 +227,8 @@ fn author_prefix_marks_then_space_separate_names() {
 fn author_lapped_comma_before_marks() {
   let xml = clean(repro!("author_lapped_comma_before_marks.tex"));
   assert_creators(&xml, &[
-    "<creator role=\"author\"><personname>Ann\u{a0}<text font=\"smallcaps\" xml:id=\"id1\">Able</text><sup \
-     xml:id=\"id2\">1</sup></personname><contact name=\"Note:\u{a0}\" role=\"note\">E-mail: aa@x.edu</contact></creator>",
-    "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob\u{a0}<text font=\"smallcaps\" \
-     xml:id=\"id3\">Baker</text><sup xml:id=\"id4\">2</sup></personname><contact name=\"Note:\u{a0}\" \
-     role=\"note\">E-mail: bb@y.edu</contact></creator>",
+    "<creator role=\"author\"><personname>Ann\u{a0}<text font=\"smallcaps\" xml:id=\"id1\">Able</text></personname><note mark=\"1\" role=\"footnotemark\" xml:id=\"id2\"/><contact name=\"Note:\u{a0}\" role=\"note\">E-mail: aa@x.edu</contact></creator>",
+    "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob\u{a0}<text font=\"smallcaps\" xml:id=\"id3\">Baker</text></personname><note mark=\"2\" role=\"footnotemark\" xml:id=\"id4\"/><contact name=\"Note:\u{a0}\" role=\"note\">E-mail: bb@y.edu</contact></creator>",
   ]);
 }
 
@@ -244,7 +240,7 @@ fn author_grouped_marks_then_space_separate_names() {
   let xml = clean(repro!("author_grouped_marks_then_space_separate_names.tex"));
   let plain = |first: bool, name: &str, mark: &str, id: &str| {
     format!(
-      "<creator {}role=\"author\"><personname>{name}<sup xml:id=\"{id}\">{mark}</sup></personname></creator>",
+      "<creator {}role=\"author\"><personname>{name}</personname><note mark=\"{mark}\" role=\"footnotemark\" xml:id=\"{id}\"/></creator>",
       if first {
         ""
       } else {
@@ -253,9 +249,7 @@ fn author_grouped_marks_then_space_separate_names() {
     )
   };
   assert_creators(&xml, &[
-    "<creator role=\"author\"><personname>Ann Able<sup xml:id=\"id1\">1</sup></personname><note \
-       class=\"ltx_note_frontmatter ltx_thanks_contribution\" role=\"thanks\" xml:id=\"id2\">Equal \
-       contribution.</note></creator>",
+    "<creator role=\"author\"><personname>Ann Able</personname><note mark=\"1\" role=\"footnotemark\" xml:id=\"id1\"/><note class=\"ltx_note_frontmatter ltx_thanks_contribution\" role=\"thanks\" xml:id=\"id2\">Equal contribution.</note></creator>",
     &plain(false, "Bob Baker", "2", "id3"),
     &plain(false, "Cat Cole", "2", "id4"),
     &plain(false, "Dan Dorn", "2", "id5"),

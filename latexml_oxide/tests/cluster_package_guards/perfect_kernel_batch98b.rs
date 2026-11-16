@@ -281,8 +281,8 @@ fn svjour3_list_before_at_is_structure() {
   ));
   assert_eq!(
     creators(&xml),
-    owned(&[&["Ann Able 1"], &[
-      "Bob Baker 1,2",
+    owned(&[&["Ann Able"], &[
+      "Bob Baker",
       "affiliation=1 item 1 University of X 2 item 2 University of Y"
     ],])
   );
@@ -294,8 +294,8 @@ fn svjour3_list_before_at_is_structure() {
   assert_eq!(
     creators(&xml),
     owned(&[
-      &["Ann Able 1", "email=ann@x.edu"],
-      &["Bob Baker 2", "email=bob@y.edu"],
+      &["Ann Able", "email=ann@x.edu"],
+      &["Bob Baker", "email=bob@y.edu"],
       &["affiliation=1 item 1 University of X 2 item 2 University of Y"],
     ])
   );

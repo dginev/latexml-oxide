@@ -435,7 +435,7 @@ fn a_legend_of_several_marks_is_each_carriers() {
 /// A legend written as a note shows its printed mark (review rev94a r5, `apply::show_legend_mark`): the note's `mark` is
 /// the symbol its line prints, and the name shows it no more — 94a r1-r5 left the note without one, so the page set
 /// the default dagger beside the name's own star ("Observatory*†"). The cut legend line beside a name (k01), and the
-/// legend of a conceded creator's mark, its superscript kept in the name today's (f08).
+/// legend of a conceded creator's mark, its superscript kept, a mark-only note after the name since PURE (f08).
 #[test]
 fn a_legend_note_shows_its_mark() {
   let tex = repro!("author_names_legend_note_shows_its_mark.tex");
@@ -684,7 +684,7 @@ fn an_ieee_affiliation_block_after_a_marked_block_is_the_next_names() {
   // (P4c: the lists' printed marks shown in the pins below, as pdflatex prints them — P4S Q1)
   let tex = repro!("ieee_affil_block_after_a_marked_block.tex");
   let xml: &[&[&str]] = &[
-    &["Ann Able *", "affiliation=* Univ X"],
+    &["Ann Able", "affiliation=* Univ X"],
     &["Bob Baker", "affiliation=Univ Y"],
     &["Cid Cole", "affiliation=Univ Y"],
   ];
@@ -700,7 +700,7 @@ fn an_ieee_affiliation_block_after_a_marked_block_is_the_next_names() {
   let tex = repro!("ieee_affil_block_after_a_marked_block_of_two.tex");
   // (the writer's re-part shows a reference mark's number, "1", where IEEEtran prints `∗`: a residual of 106b, SYNC row
   // 106b — no real paper of its A/B shows one)
-  let xml: &[&[&str]] = &[&["Ann Able 1", "affiliation=1 Univ X"], &["Bob Baker"], &[
+  let xml: &[&[&str]] = &[&["Ann Able", "affiliation=1 Univ X"], &["Bob Baker"], &[
     "Cid Cole",
     "affiliation=Univ Y",
   ]];

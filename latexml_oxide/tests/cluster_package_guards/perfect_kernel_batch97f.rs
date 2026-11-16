@@ -137,13 +137,9 @@ fn aastex6_marked_affiliations_go_to_the_names_showing_the_mark() {
   // (P4c: the lists' printed marks shown in the pins below, as pdflatex prints them — P4S Q1)
   let xml = both_ways(repro!("aastex6_marked_affiliations_go_by_marks"));
   assert_eq!(creators(&xml), [
-    vec![
-      "Ann Able 1,2",
-      "affiliation=1 Uni One",
-      "affiliation=2 Uni Two"
-    ],
-    vec!["Bob Baker 1", "affiliation=1 Uni One"],
-    vec!["Cat Cole 2", "affiliation=2 Uni Two"],
+    vec!["Ann Able", "affiliation=1 Uni One", "affiliation=2 Uni Two"],
+    vec!["Bob Baker", "affiliation=1 Uni One"],
+    vec!["Cat Cole", "affiliation=2 Uni Two"],
   ]);
 }
 
@@ -182,13 +178,9 @@ fn aastex_affil_line_labels_go_to_the_names_requesting_them() {
   ]);
   let xml = both_ways(repro!("aastex_sup_names_typed_affil_numbers_are_labels"));
   assert_eq!(creators(&xml), [
-    vec!["Ann Able 1", "affiliation=1 Uni One"],
-    vec!["Bob Baker 1", "affiliation=1 Uni One"],
-    vec![
-      "Cat Cole 1,2",
-      "affiliation=1 Uni One",
-      "affiliation=2 Uni Two"
-    ],
+    vec!["Ann Able", "affiliation=1 Uni One"],
+    vec!["Bob Baker", "affiliation=1 Uni One"],
+    vec!["Cat Cole", "affiliation=1 Uni One", "affiliation=2 Uni Two"],
   ]);
 }
 
@@ -214,16 +206,16 @@ fn aastex_unlabelled_lines_under_marked_names() {
   ]);
   let xml = both_ways(repro!("aastex_symbol_marked_names_share_affil_lines"));
   assert_eq!(creators(&xml), [
-    vec!["Ann Able *", "affiliation=Uni One", "affiliation=Uni Two"],
+    vec!["Ann Able", "affiliation=Uni One", "affiliation=Uni Two"],
     vec!["Bob Baker", "affiliation=Uni One", "affiliation=Uni Two"],
   ]);
   let xml = both_ways(repro!(
     "aastex_sup_names_over_unlabelled_lines_are_no_group"
   ));
   assert_eq!(creators(&xml), [
-    vec!["Ann Able 1", "affiliation=Uni One"],
-    vec!["Bob Baker 1", "affiliation=Uni One"],
-    vec!["Cat Cole 1,2", "affiliation=Uni One", "affiliation=Uni Two"],
+    vec!["Ann Able", "affiliation=Uni One"],
+    vec!["Bob Baker", "affiliation=Uni One"],
+    vec!["Cat Cole", "affiliation=Uni One", "affiliation=Uni Two"],
   ]);
 }
 
@@ -237,9 +229,9 @@ fn aastex_affil_holding_only_an_email_is_an_authors_email() {
   // (P4c: the lists' printed marks shown in the pins below, as pdflatex prints them — P4S Q1)
   let xml = both_ways(repro!("aastex_affil_email_line_is_its_authors_email"));
   assert_eq!(creators(&xml), [
-    vec!["Xu Kang 1", "affiliation=1 Uni One", "email=kangx@uni.edu"],
-    vec!["Yi Jing 1", "affiliation=1 Uni One"],
-    vec!["Hu Mo 2", "affiliation=2 Uni Two"],
+    vec!["Xu Kang", "affiliation=1 Uni One", "email=kangx@uni.edu"],
+    vec!["Yi Jing", "affiliation=1 Uni One"],
+    vec!["Hu Mo", "affiliation=2 Uni Two"],
   ]);
   assert_eq!(
     xml

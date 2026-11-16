@@ -11,7 +11,9 @@ use latexml::util::test::{assert_element, convert_files_with, convert_with};
 
 use super::{
   perfect_kernel_batch46::{error_count, warning_count},
-  perfect_kernel_batch77d::{assert_no_merged_names, author_line, creator, creators, squash},
+  perfect_kernel_batch77d::{
+    assert_no_merged_names, author_line, creator, creators, mark_only, squash,
+  },
 };
 
 /// A repro under `tools/perfect_kernel/repros/`, converted with the ar5iv preload: its squashed XML, the conversion
@@ -46,10 +48,6 @@ fn affiliation(text: &str) -> String {
 }
 
 /// A name and its footnote-symbol mark.
-fn marked(name: &str, id: &str, mark: &str) -> String {
-  format!(r#"{name}<sup xml:id="{id}">{mark}</sup>"#)
-}
-
 /// Rank 15: names marked `$^{\dag}$`/`$^{\ddag}$` (a text `\dag` an affiliation mark, so the block is a marked one)
 /// over an unmarked institution line: the marks are shown, nothing answering them, and the line is each name's, as the
 /// line prints under all of them (user ruling R12 2026-10-20). Was "Cat ColeUniversity of Somewhere" one creator.
@@ -59,8 +57,8 @@ fn dag_marked_names_over_a_shared_institution() {
   assert_no_merged_names(&xml);
   let univ = author_line(affiliation("University of Somewhere"));
   assert_eq!(creators(&xml), [
-    creator(true, &marked("Ann Able", "id1", "†"), &univ),
-    creator(false, &marked("Bob Baker", "id2", "‡"), &univ),
+    creator(true, "Ann Able", &mark_only("id1", "†", &univ)),
+    creator(false, "Bob Baker", &mark_only("id2", "‡", &univ)),
     creator(false, "Cat Cole", &univ),
   ]);
 }
@@ -82,7 +80,7 @@ Text.
   assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
   let xml = squash(&xml);
   assert_eq!(creators(&xml), [
-    creator(true, &marked("Ann Able", "id1", "1"), ""),
+    creator(true, "Ann Able", &mark_only("id1", "1", "")),
     creator(
       false,
       "Bob Baker",
@@ -242,13 +240,13 @@ fn dag_names_rows_each_over_their_institution() {
   assert_eq!(creators(&xml), [
     creator(
       true,
-      &marked("Ann Able", "id1", "†"),
-      &author_line(affiliation(" University A"))
+      "Ann Able",
+      &mark_only("id1", "†", author_line(affiliation(" University A")))
     ),
     creator(
       false,
-      &marked("Bob Baker", "id2", "‡"),
-      &author_line(affiliation(" University B"))
+      "Bob Baker",
+      &mark_only("id2", "‡", author_line(affiliation(" University B")))
     ),
   ]);
 }
@@ -262,13 +260,13 @@ fn numbered_names_rows_each_over_their_institution() {
   assert_eq!(creators(&xml), [
     creator(
       true,
-      &marked("Ann Able", "id1", "1"),
-      &author_line(affiliation(" University A"))
+      "Ann Able",
+      &mark_only("id1", "1", author_line(affiliation(" University A")))
     ),
     creator(
       false,
-      &marked("Bob Baker", "id2", "2"),
-      &author_line(affiliation(" University B"))
+      "Bob Baker",
+      &mark_only("id2", "2", author_line(affiliation(" University B")))
     ),
   ]);
 }
@@ -284,8 +282,8 @@ fn second_names_row_under_a_shared_institution() {
   let somewhere = author_line(affiliation(" University of Somewhere"));
   let other = author_line(affiliation("Other Institute"));
   assert_eq!(creators(&xml), [
-    creator(true, &marked("Ann Able", "id1", "†"), &somewhere),
-    creator(false, &marked("Bob Baker", "id2", "‡"), &somewhere),
+    creator(true, "Ann Able", &mark_only("id1", "†", &somewhere)),
+    creator(false, "Bob Baker", &mark_only("id2", "‡", &somewhere)),
     creator(false, "Cat Cole", &other),
     creator(false, "Dan Dee", &other),
   ]);

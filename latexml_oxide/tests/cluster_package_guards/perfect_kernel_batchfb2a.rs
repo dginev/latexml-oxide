@@ -62,7 +62,7 @@ fn a_raw_queued_call_feeds_no_symbol_mark_to_the_reading() {
   assert!(two[0].contains(&affiliation("Univ A")), "{}", two[0]);
   let bob = &two[1];
   for part in [
-    "<personname>Bob Baker<sup>*</sup></personname>",
+    "<personname>Bob Baker</personname>",
     &affiliation("Univ B"),
     "<contact name=\"Email:\u{a0}\" role=\"email\">bob@b.org</contact>",
     "role=\"thanks\"><sup>*</sup>Corresponding author</note>",
@@ -376,9 +376,7 @@ fn a_juggle_judges_the_command_between_by_what_it_prints() {
 #[test]
 fn a_team_column_is_no_shared_affiliation() {
   let tex = repro!("author_team_column_is_no_shared_affiliation");
-  let names = vec![vec!["Ann Able 1".to_string()], vec![
-    "Bob Baker 2".to_string(),
-  ]];
+  let names = vec![vec!["Ann Able".to_string()], vec!["Bob Baker".to_string()]];
   let (log, xml) = run(tex);
   assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
   let read = creators(&xml);
@@ -406,7 +404,7 @@ fn a_team_column_is_no_shared_affiliation() {
   assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
   let mut expected = names;
   expected.push(vec![
-    "Cat Cole 3".to_string(),
+    "Cat Cole".to_string(),
     "collaboration=on behalf of the XYZ collaboration".to_string(),
   ]);
   assert_eq!(creators(&xml), expected, "{xml}");

@@ -190,7 +190,7 @@ fn a_mark_is_keyed_by_its_printed_text() {
     include_str!(
       "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_macro_mark_glued_to_a_symbol.tex"
     ),
-    Some(&[&["Ann Able ∗", "affiliation=Univ A"], &[
+    Some(&[&["Ann Able", "affiliation=Univ A"], &[
       "Bob Baker",
       "affiliation=Univ A",
     ]]),
@@ -222,20 +222,20 @@ fn spacing_parts_a_marks_labels() {
       "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_mark_labels_parted_by_spacing.tex"
     ),
     Some(&[
-      &["Ann Able 1,2"],
-      &["Bob Baker ∗,†"],
-      &["Cid Cole 1,†"],
-      &["Dee Dunn a,b"],
-      &["Eve Esse 1,2"],
-      &["Fay Fox 1,2"],
-      &["Gus Gray 1,2"],
-      &["Hal Hill 1,2"],
-      &["Ida Ide 1,2"],
-      &["Jo Jay 12"],
-      &["Kit Kay 12"],
-      &["Lee Lin 12"],
-      &["Max Moe 12"],
-      &["Ned Nye 12"],
+      &["Ann Able"],
+      &["Bob Baker"],
+      &["Cid Cole"],
+      &["Dee Dunn"],
+      &["Eve Esse"],
+      &["Fay Fox"],
+      &["Gus Gray"],
+      &["Hal Hill"],
+      &["Ida Ide"],
+      &["Jo Jay"],
+      &["Kit Kay"],
+      &["Lee Lin"],
+      &["Max Moe"],
+      &["Ned Nye"],
     ]),
     &[
       "C Ann Able [1,2] | line:names",
@@ -259,7 +259,7 @@ fn spacing_parts_a_marks_labels() {
       "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_mark_spaced_labels_answer_their_lines.tex"
     ),
     Some(&[
-      &["Ann Able ∗", "affiliation=Univ One", "affiliation=Univ Two"],
+      &["Ann Able", "affiliation=Univ One", "affiliation=Univ Two"],
       &["Bob Baker", "affiliation=Univ Two"],
     ]),
     &[

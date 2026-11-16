@@ -42,21 +42,17 @@ fn a_cut_takes_each_formula_whole() {
   // (P4c: the lists' printed marks shown in the pins below, as pdflatex prints them — P4S Q1)
   let (xml, _) = dump(repro!("revtex_affiliation_requested_switched_mark_cuts"));
   creators_are(&xml, &[
-    &[
-      "Ann Able 1,3",
-      "affiliation=1 Univ X",
-      "affiliation=3 He Lab",
-    ],
-    &["Bob Baker 2", "affiliation=2 Univ Y"],
+    &["Ann Able", "affiliation=1 Univ X", "affiliation=3 He Lab"],
+    &["Bob Baker", "affiliation=2 Univ Y"],
   ]);
   let (xml, _) = dump(repro!("affiliation_cut_formula_whole_whatever_opens_it"));
   creators_are(&xml, &[
-    &["Ann Able 1", "affiliation=1 Univ X"],
-    &["Bob Baker 2", "affiliation=2 Univ Y"],
-    &["Cat Cole 3", "affiliation=3 Univ Z"],
-    &["Dan Dow 4", "affiliation=4 Univ W"],
-    &["Eve Ely 5", "affiliation=5 Univ V"],
-    &["Fay Fox 6", "affiliation=6 Univ U, α Lab"],
+    &["Ann Able", "affiliation=1 Univ X"],
+    &["Bob Baker", "affiliation=2 Univ Y"],
+    &["Cat Cole", "affiliation=3 Univ Z"],
+    &["Dan Dow", "affiliation=4 Univ W"],
+    &["Eve Ely", "affiliation=5 Univ V"],
+    &["Fay Fox", "affiliation=6 Univ U, α Lab"],
   ]);
 }
 
@@ -67,9 +63,9 @@ fn a_cut_takes_each_formula_whole() {
 fn a_cut_takes_a_group_it_closes() {
   let (xml, _) = dump(repro!("affiliation_cut_group_closes_after_the_mark"));
   creators_are(&xml, &[
-    &["Ann Able 1", "affiliation=1 Univ X"],
-    &["Bob Baker 2", "affiliation=2 Univ Y"],
-    &["Cat Cole 3", "affiliation=3 Univ Z"],
+    &["Ann Able", "affiliation=1 Univ X"],
+    &["Bob Baker", "affiliation=2 Univ Y"],
+    &["Cat Cole", "affiliation=3 Univ Z"],
   ]);
 }
 
@@ -156,13 +152,13 @@ fn a_group_a_mark_opens_at_a_lines_start_starts_at_its_brace() {
   let (log, xml) = in_a_directory(template, &[], &[]);
   assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
   creators_are(&xml, &[
-    &["Ann Able 1", "affiliation=1 Univ X, Moscow, Russia"],
+    &["Ann Able", "affiliation=1 Univ X, Moscow, Russia"],
     &[
-      "Bob Baker 1,2",
+      "Bob Baker",
       "affiliation=1 Univ X, Moscow, Russia",
       "affiliation=2 Univ Y, Moscow, Russia",
     ],
-    &["Cat Cole 3", "affiliation=3 Lab, ENS, Paris, France"],
+    &["Cat Cole", "affiliation=3 Lab, ENS, Paris, France"],
   ]);
   // (the field's whole, and the same two entries however the line starts: `\\[1mm]`, a switch, a group around it, LaTeX's `\(`; an isotope right after a line break is cut as on
   // the base, the digested list no telling it from an entry)
@@ -172,9 +168,9 @@ fn a_group_a_mark_opens_at_a_lines_start_starts_at_its_brace() {
     .expect("the repro's field")
     .0;
   let (ann, bob) = (
-    &["Ann Able 1", "affiliation=1 Univ X, Moscow"][..],
+    &["Ann Able", "affiliation=1 Univ X, Moscow"][..],
     &[
-      "Bob Baker 1,2",
+      "Bob Baker",
       "affiliation=1 Univ X, Moscow",
       "affiliation=2 Univ Y, Rome",
     ][..],
@@ -191,17 +187,17 @@ fn a_group_a_mark_opens_at_a_lines_start_starts_at_its_brace() {
       (0, 0),
       "{row}: {log}"
     );
-    creators_are(&xml, &[ann, bob, &["Cat Cole 3"]]);
+    creators_are(&xml, &[ann, bob, &["Cat Cole"]]);
   }
   let (xml, _) = dump(&template.replace(field, "~\\\\ {$^1$Univ X,} Moscow\\\\ {$^2$H} Lab, Rome"));
   creators_are(&xml, &[
     ann,
     &[
-      "Bob Baker 1,2",
+      "Bob Baker",
       "affiliation=1 Univ X, Moscow",
       "affiliation=2 H Lab, Rome",
     ],
-    &["Cat Cole 3"],
+    &["Cat Cole"],
   ]);
 }
 
@@ -311,8 +307,8 @@ fn affiliation_cut_group_siblings_stay_uncut_red() {
 fn a_symbols_group_is_a_marks_own() {
   let tex = repro!("address_symbol_mark_in_its_own_group");
   let (xml, _) = dump(tex);
-  creators_are(&xml, &[&["Ann Able*", "address=* Univ X"], &[
-    "Bob Baker**",
+  creators_are(&xml, &[&["Ann Able", "address=* Univ X"], &[
+    "Bob Baker",
     "address=** Univ Y",
   ]]);
 }

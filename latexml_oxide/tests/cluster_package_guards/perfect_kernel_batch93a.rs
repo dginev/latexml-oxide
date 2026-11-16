@@ -23,7 +23,7 @@ macro_rules! repro {
 }
 
 /// Each creator's personname and contacts (`creators`), then its own notes (`note=<text>`, the `ltx:note` children
-/// outside its personname).
+/// outside its personname; a mark-only note `mark=<mark>`).
 pub(super) fn creators_with_notes(xml: &str) -> Vec<Vec<String>> {
   let mut all = creators(xml);
   for (creator, (start, _)) in all.iter_mut().zip(xml.match_indices("<creator ")) {
@@ -34,6 +34,15 @@ pub(super) fn creators_with_notes(xml: &str) -> Vec<Vec<String>> {
       .map_or(body, |at| &body[at + "</personname>".len()..]);
     for (at, _) in outside.match_indices("<note ") {
       let open_end = at + outside[at..].find('>').expect("note tag");
+      // (a mark-only note, `<note mark="a" role="footnotemark"/>`: its mark, PURE)
+      if outside[..open_end].ends_with('/') {
+        let mark = outside[at..open_end]
+          .split("mark=\"")
+          .nth(1)
+          .and_then(|m| m.split('"').next());
+        creator.push(format!("mark={}", mark.unwrap_or("")));
+        continue;
+      }
       let close = open_end + outside[open_end..].find("</note>").expect("closed note");
       creator.push(format!("note={}", text(&outside[open_end + 1..close])));
     }

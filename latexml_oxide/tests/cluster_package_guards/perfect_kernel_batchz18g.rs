@@ -87,12 +87,8 @@ fn llncs_author_url_pieces_are_one_address_line() {
 #[test]
 fn llncs_institute_hand_marks_cut() {
   assert_creators(repro!("llncs_institute_hand_marks_cut.tex"), (0, 0), &[
-    &["Ann Able 1", "affiliation=1 Univ A"],
-    &[
-      "Bob Baker 2,3",
-      "affiliation=2 Univ B",
-      "affiliation=3 Univ C",
-    ],
+    &["Ann Able", "affiliation=1 Univ A"],
+    &["Bob Baker", "affiliation=2 Univ B", "affiliation=3 Univ C"],
   ]);
 }
 

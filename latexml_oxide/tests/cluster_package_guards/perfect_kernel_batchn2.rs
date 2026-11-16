@@ -170,9 +170,9 @@ fn a_clean_block_counts_nothing() {
     (
       repro!("emit_content_revtex_label_shared_in_a_cut_list"),
       vec![
-        row(&["Ann Able 1", "affiliation=1 Dept of Physics, Univ X"]),
-        row(&["Bob Baker 1", "affiliation=1 Dept of Physics, Univ X"]),
-        row(&["Cat Cole 2", "affiliation=2 Lab Y"]),
+        row(&["Ann Able", "affiliation=1 Dept of Physics, Univ X"]),
+        row(&["Bob Baker", "affiliation=1 Dept of Physics, Univ X"]),
+        row(&["Cat Cole", "affiliation=2 Lab Y"]),
       ],
     ),
     (repro!("emit_content_a_label_repeated_per_column"), vec![

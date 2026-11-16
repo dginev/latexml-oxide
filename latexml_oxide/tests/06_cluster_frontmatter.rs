@@ -513,16 +513,15 @@ fn frontmatter_nested_math_author_marker() {
 #[test]
 fn frontmatter_and_hard_author_boundary() {
   let x = convert_to_xml("tests/cluster_regressions/frontmatter_and_hard_author_boundary.tex");
-  // (Alice's `$^{1}$`, which no affiliation answers, stays printed in her name, 64a; and so does each name's `\mk`
-  // star, `$^\text{$\star$}$`, keyed by its printed ⋆ since 92b — OXIDIZED_DESIGN_DIVERGENCES #919 — as pdflatex prints
-  // "Alice⋆1", "Bob⋆", "Carol⋆"; its label had been its spelling, which no display table read, so the stars were lost)
-  for name in [
-    "Alice<sup>⋆,1</sup>",
-    "Bob<sup>⋆</sup>",
-    "Carol<sup>⋆</sup>",
-  ] {
+  // (Alice's `$^{1}$`, which no affiliation answers, stays printed after her name, 64a — a mark-only note since PURE,
+  // the personname the name alone; and so does each name's `\mk` star, `$^\text{$\star$}$`, keyed by its printed ⋆
+  // since 92b — OXIDIZED_DESIGN_DIVERGENCES #919 — as pdflatex prints "Alice⋆1", "Bob⋆", "Carol⋆"; its label had been
+  // its spelling, which no display table read, so the stars were lost)
+  for (name, mark) in [("Alice", "⋆,1"), ("Bob", "⋆"), ("Carol", "⋆")] {
     assert!(
-      x.contains(&format!("<personname>{name}</personname>")),
+      x.contains(&format!(
+        "<personname>{name}</personname>\n    <note mark=\"{mark}\" role=\"footnotemark\""
+      )),
       "author {name} must be its own clean creator, not merged:\n{x}"
     );
   }
@@ -683,8 +682,7 @@ fn frontmatter_neurips_author_bold_coherent() {
   assert_eq!(
     shao.as_deref(),
     Some(
-      "before=\" \" role=\"author\"> <personname>Wenqi Shao<sup>∗</sup></personname> <contact class=\"ltx_author_line\" name=\"Affiliation: \" \
-       role=\"affiliation\">OpenGVLab, Shanghai AI Laboratory</contact> </creator>"
+      "before=\" \" role=\"author\"> <personname>Wenqi Shao</personname> <note mark=\"∗\" role=\"footnotemark\"/> <contact class=\"ltx_author_line\" name=\"Affiliation: \" role=\"affiliation\">OpenGVLab, Shanghai AI Laboratory</contact> </creator>"
     ),
     "Wenqi Shao must show the star and hold affiliation 1:\n{x}"
   );
@@ -1158,7 +1156,7 @@ fn frontmatter_jmlr_structured_author() {
 fn frontmatter_mrm_author() {
   let x = convert_to_xml_contrib("tests/cluster_regressions/frontmatter_mrm_author.tex");
   assert!(
-    x.contains("<personname>Jakob Asslander*</personname>"),
+    x.contains("<personname>Jakob Asslander</personname>"),
     "MRM author name missing/unstructured:\n{x}"
   );
   assert!(

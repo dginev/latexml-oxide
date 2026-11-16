@@ -21,12 +21,12 @@ fn a_glued_address_and_note_mark_parts_at_emit_2() {
   assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
   assert_eq!(creators(&xml), [
     vec![
-      "Maarten Golterman a1",
+      "Maarten Golterman",
       "address=a Department of Physics, Washington University, St. Louis MO 63130, USA",
       "email=maarten@aapje.wustl.edu"
     ],
     vec![
-      "Santi Peris b",
+      "Santi Peris",
       "address=b IFAE, Univ. Autonoma de Barcelona, Spain",
       "email=peris@ifae.es"
     ],

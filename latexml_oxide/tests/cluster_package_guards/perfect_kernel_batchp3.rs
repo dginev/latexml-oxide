@@ -59,11 +59,11 @@ fn a_name_inside_a_macro_call_is_written_from_the_call() {
       repro!("ptephy_name_inside_its_call_is_written_from_the_call"),
       (0, 0),
       vec![
-        "<personname>Yoshiharu Kawamura<sup>∗</sup></personname>",
+        "<personname>Yoshiharu Kawamura</personname>",
         "<personname>Bob Baker</personname>",
       ],
       vec![
-        vec!["Yoshiharu Kawamura ∗", "affiliation=1 Univ A, Town"],
+        vec!["Yoshiharu Kawamura", "affiliation=1 Univ A, Town"],
         vec!["Bob Baker", "affiliation=2 Univ B, City"],
       ],
     ),

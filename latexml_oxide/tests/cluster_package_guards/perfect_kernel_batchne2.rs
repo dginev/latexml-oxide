@@ -89,10 +89,10 @@ fn initials_a_thin_space_joins_are_a_name_of_their_own() {
   let lab = "affiliation=∗ Lab A, Los Alamos";
   let dept = "affiliation=† Dept B, Boston";
   let expected = [
-    row(&["Yongmin Kim *", lab]),
-    row(&["F. M. Munteanu ∗,†", lab, dept]),
-    row(&["C. H. Perry ∗,†", lab, dept]),
-    row(&["D. G. Rickel *", lab]),
+    row(&["Yongmin Kim", lab]),
+    row(&["F. M. Munteanu", lab, dept]),
+    row(&["C. H. Perry", lab, dept]),
+    row(&["D. G. Rickel", lab]),
   ];
   let (log, xml) = run(repro!("ne2_merged_kim"));
   assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
@@ -225,7 +225,7 @@ fn a_mark_after_its_names_note_stays_with_it() {
       vec![
         row(&["Ann Able"]),
         // (the endnote marks beside the name too; the `$^,$` printed between them is left at the name's end)
-        row(&["Bob Baker ,"]),
+        row(&["Bob Baker"]),
       ],
       ["1", "2", "3"]
         .iter()

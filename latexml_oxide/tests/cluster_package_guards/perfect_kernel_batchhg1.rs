@@ -151,7 +151,7 @@ pub(super) fn assert_rows(rows: &[Row]) {
 ///   `author_marked_names_beside_a_team_move_their_and_red`;
 /// - kernel `\and` names with symbol marks (`$^{*}$`, `$^{\dagger}$`, `\textsuperscript{*}`; html_feedback#6637
 ///   construct 2, OD #52; was `06_cluster_frontmatter::frontmatter_symbol_superscript_mark`): four creators, each mark
-///   a visible `<sup>`, none an affiliation. Fiona Foxtrot's text asterisk written as the math `∗` (pdflatex: CMR8
+///   visible, a mark-only note after the name since PURE, none an affiliation. Fiona Foxtrot's text asterisk written as the math `∗` (pdflatex: CMR8
 ///   "*") is pinned, RED in `author_textsuperscript_asterisk_stays_the_text_asterisk_red`;
 /// - webofc's `\inst` form: each author its institute, the e-mail Ann Able's contact, no empty thanks note (2301.07438,
 ///   1411.7792, 2409.01693; 78e `webofc_authors_take_their_institutes`);
@@ -276,9 +276,9 @@ fn hollow_guards_restored_read_as_printed() {
       counts:   (0, 0),
       lines:    &[],
       creators: Creators::Whole(&[
-        r#"<creator role="author"><personname>A. Able<sup><text font="italic">1</text></sup></personname><contact name="Address: " role="address"><sup><text font="italic">1</text></sup> Institute of One</contact></creator>"#,
-        r#"<creator before=", " role="author"><personname>B. in der Baker<sup><text font="italic">2</text></sup></personname><contact name="Address: " role="address"><sup><text font="italic">2</text></sup> University of Two</contact></creator>"#,
-        r#"<creator before=" and " role="author"><personname>C. Cole<sup><text font="italic">1</text></sup></personname><contact name="Address: " role="address"><sup><text font="italic">1</text></sup> Institute of One</contact></creator>"#,
+        r#"<creator role="author"><personname>A. Able</personname><contact name="Address: " role="address"><sup><text font="italic">1</text></sup> Institute of One</contact></creator>"#,
+        r#"<creator before=", " role="author"><personname>B. in der Baker</personname><contact name="Address: " role="address"><sup><text font="italic">2</text></sup> University of Two</contact></creator>"#,
+        r#"<creator before=" and " role="author"><personname>C. Cole</personname><contact name="Address: " role="address"><sup><text font="italic">1</text></sup> Institute of One</contact></creator>"#,
       ]),
     },
     Row {
@@ -289,8 +289,8 @@ fn hollow_guards_restored_read_as_printed() {
       counts:   (0, 0),
       lines:    &[],
       creators: Creators::Whole(&[
-        r#"<creator role="author"><personname>A. Able<sup><text font="italic">1</text></sup></personname><contact role="collaboration">the XYZ Team</contact><contact name="Address: " role="address"><sup><text font="italic">1</text></sup> Institute of One</contact></creator>"#,
-        r#"<creator before=" and " role="author"><personname>B. in der Baker<sup><text font="italic">2</text></sup></personname><contact role="collaboration">the XYZ Team</contact><contact name="Address: " role="address"><sup><text font="italic">2</text></sup> University of Two</contact></creator>"#,
+        r#"<creator role="author"><personname>A. Able</personname><contact role="collaboration">the XYZ Team</contact><contact name="Address: " role="address"><sup><text font="italic">1</text></sup> Institute of One</contact></creator>"#,
+        r#"<creator before=" and " role="author"><personname>B. in der Baker</personname><contact role="collaboration">the XYZ Team</contact><contact name="Address: " role="address"><sup><text font="italic">2</text></sup> University of Two</contact></creator>"#,
       ]),
     },
     Row {
@@ -341,9 +341,9 @@ fn hollow_guards_restored_read_as_printed() {
       counts:   (0, 0),
       lines:    &[],
       creators: Creators::Whole(&[
-        r#"<creator role="author"><personname>Dana Delta<sup>∗</sup></personname></creator>"#,
-        r#"<creator before="  " role="author"><personname>Evan Echo<sup>†</sup></personname></creator>"#,
-        r#"<creator before="  " role="author"><personname>Fiona Foxtrot<sup>∗</sup></personname></creator>"#,
+        r#"<creator role="author"><personname>Dana Delta</personname><note mark="∗" role="footnotemark"/></creator>"#,
+        r#"<creator before="  " role="author"><personname>Evan Echo</personname><note mark="†" role="footnotemark"/></creator>"#,
+        r#"<creator before="  " role="author"><personname>Fiona Foxtrot</personname><note mark="∗" role="footnotemark"/></creator>"#,
         r#"<creator before="  " role="author"><personname>Gina Golf</personname></creator>"#,
       ]),
     },
@@ -362,8 +362,8 @@ fn marked_blocks_restored_read_as_printed() {
       counts:   (0, 0),
       lines:    &[],
       creators: Creators::Whole(&[
-        r#"<creator role="author"><personname>Ann (Al) Able*</personname><contact name="Affiliation: " role="affiliation">University of X, City</contact><contact name="Email: " role="email">ann@x.edu</contact><note class="ltx_note_frontmatter ltx_thanks_contribution" role="thanks">*The first two authors contributed equally to this work.</note></creator>"#,
-        r#"<creator before="  " role="author"><personname>Bob Baker*</personname><contact name="Affiliation: " role="affiliation">University of X, City</contact><contact name="Email: " role="email">bob@x.edu</contact><note class="ltx_note_frontmatter ltx_thanks_contribution" role="thanks">*The first two authors contributed equally to this work.</note></creator>"#,
+        r#"<creator role="author"><personname>Ann (Al) Able</personname><contact name="Affiliation: " role="affiliation">University of X, City</contact><contact name="Email: " role="email">ann@x.edu</contact><note class="ltx_note_frontmatter ltx_thanks_contribution" mark="*" role="thanks">The first two authors contributed equally to this work.</note></creator>"#,
+        r#"<creator before="  " role="author"><personname>Bob Baker</personname><contact name="Affiliation: " role="affiliation">University of X, City</contact><contact name="Email: " role="email">bob@x.edu</contact><note class="ltx_note_frontmatter ltx_thanks_contribution" mark="*" role="thanks">The first two authors contributed equally to this work.</note></creator>"#,
         r#"<creator before="  " role="author"><personname>Cy Cole</personname><contact name="Affiliation: " role="affiliation">University of X, City</contact><contact name="Email: " role="email">cy@x.edu</contact></creator>"#,
       ]),
     },
@@ -387,7 +387,7 @@ fn marked_blocks_restored_read_as_printed() {
       counts:   (0, 0),
       lines:    &[],
       creators: Creators::Whole(&[
-        r#"<creator role="author"><personname>Ann Able<sup>1</sup></personname><contact class="ltx_author_line" name="Affiliation: " role="affiliation"> Department of Physics, University of Somewhere</contact></creator>"#,
+        r#"<creator role="author"><personname>Ann Able</personname><note mark="1" role="footnotemark"/><contact class="ltx_author_line" name="Affiliation: " role="affiliation"> Department of Physics, University of Somewhere</contact></creator>"#,
         r#"<creator before="  " role="author"><personname>Bob Baker</personname><contact class="ltx_author_line" name="Affiliation: " role="affiliation"> Department of Physics, University of Somewhere</contact><contact class="ltx_author_line" name="Affiliation: " role="affiliation">Univ B</contact></creator>"#,
       ]),
     },
@@ -408,7 +408,7 @@ fn marked_blocks_restored_read_as_printed() {
       lines:    &[],
       creators: Creators::Whole(&[
         r#"<creator role="author"><personname>Ann Able</personname><contact name="Affiliation: " role="affiliation">Univ A, Tokyo</contact></creator>"#,
-        r#"<creator before="  " role="author"><personname>Bob Baker<sup>∗</sup></personname><contact name="Affiliation: " role="affiliation">Univ A, Tokyo</contact><contact name="Affiliation: " role="affiliation">Lab B, Kyoto</contact><contact name="Email: " role="email">bob@example.org</contact></creator>"#,
+        r#"<creator before="  " role="author"><personname>Bob Baker</personname><note mark="∗" role="footnotemark"/><contact name="Affiliation: " role="affiliation">Univ A, Tokyo</contact><contact name="Affiliation: " role="affiliation">Lab B, Kyoto</contact><contact name="Email: " role="email">bob@example.org</contact></creator>"#,
         r#"<creator before="  " role="author"><personname>Cy Coe</personname><contact name="Affiliation: " role="affiliation">Lab B, Kyoto</contact></creator>"#,
       ]),
     },
@@ -428,7 +428,7 @@ fn marked_blocks_restored_read_as_printed() {
       counts:   (0, 0),
       lines:    &[],
       creators: Creators::Whole(&[
-        "<creator role=\"author\"><personname>Ann Able∗</personname><contact name=\"Affiliation: \" role=\"affiliation\">Univ A, Tokyo\n</contact><contact name=\"Email: \" role=\"email\">ann@example.org</contact></creator>",
+        "<creator role=\"author\"><personname>Ann Able</personname><note mark=\"∗\" role=\"footnotemark\"/><contact name=\"Affiliation: \" role=\"affiliation\">Univ A, Tokyo\n</contact><contact name=\"Email: \" role=\"email\">ann@example.org</contact></creator>",
       ]),
     },
     Row {
@@ -447,8 +447,8 @@ fn marked_blocks_restored_read_as_printed() {
       counts:   (0, 0),
       lines:    &[],
       creators: Creators::Whole(&[
-        r#"<creator role="author"><personname>Ann Able<sup>∗</sup></personname><contact name="Affiliation: " role="affiliation">Univ A, Tokyo</contact><contact name="Email: " role="email">ann@example.org</contact></creator>"#,
-        r#"<creator before="  " role="author"><personname>Bob Baker<sup>†</sup></personname><note class="ltx_note_frontmatter ltx_thanks_address" role="thanks">Present address: Lab C</note><contact name="Affiliation: " role="affiliation">Lab B, Kyoto</contact><contact name="Email: " role="email">bob@example.org</contact></creator>"#,
+        r#"<creator role="author"><personname>Ann Able</personname><note mark="∗" role="footnotemark"/><contact name="Affiliation: " role="affiliation">Univ A, Tokyo</contact><contact name="Email: " role="email">ann@example.org</contact></creator>"#,
+        r#"<creator before="  " role="author"><personname>Bob Baker</personname><note class="ltx_note_frontmatter ltx_thanks_address" mark="†" role="thanks">Present address: Lab C</note><contact name="Affiliation: " role="affiliation">Lab B, Kyoto</contact><contact name="Email: " role="email">bob@example.org</contact></creator>"#,
       ]),
     },
     Row {
@@ -458,8 +458,8 @@ fn marked_blocks_restored_read_as_printed() {
       lines:    &[],
       creators: Creators::Whole(&[
         r#"<creator role="author"><personname>Ann Able</personname><contact name="Affiliation: " role="affiliation">Univ A</contact></creator>"#,
-        r#"<creator before="  " role="author"><personname>Bob Baker<sup>∗</sup></personname><contact name="Affiliation: " role="affiliation">Univ A</contact><contact name="Email: " role="email">bob@example.org</contact></creator>"#,
-        r#"<creator before="  " role="author"><personname>Cy Coe<sup>†</sup></personname><contact name="Affiliation: " role="affiliation">Lab B</contact><contact name="Email: " role="email">cy@example.org</contact></creator>"#,
+        r#"<creator before="  " role="author"><personname>Bob Baker</personname><note mark="∗" role="footnotemark"/><contact name="Affiliation: " role="affiliation">Univ A</contact><contact name="Email: " role="email">bob@example.org</contact></creator>"#,
+        r#"<creator before="  " role="author"><personname>Cy Coe</personname><note mark="†" role="footnotemark"/><contact name="Affiliation: " role="affiliation">Lab B</contact><contact name="Email: " role="email">cy@example.org</contact></creator>"#,
         r#"<creator before="  " role="author"><personname>Di Dee</personname><contact name="Affiliation: " role="affiliation">Lab B</contact></creator>"#,
       ]),
     },
@@ -469,8 +469,8 @@ fn marked_blocks_restored_read_as_printed() {
       counts:   (0, 0),
       lines:    &[],
       creators: Creators::Whole(&[
-        r#"<creator role="author"><personname>Ann Able<sup>∗</sup></personname><contact name="Affiliation: " role="affiliation">Graduate School, Osaka Univ</contact><contact name="Email: " role="email">ann@example.org</contact></creator>"#,
-        r#"<creator before="  " role="author"><personname>Bob Baker†</personname><contact name="Affiliation: " role="affiliation">Graduate School, Osaka Univ</contact><contact name="Email: " role="email">bob@example.org</contact></creator>"#,
+        r#"<creator role="author"><personname>Ann Able</personname><note mark="∗" role="footnotemark"/><contact name="Affiliation: " role="affiliation">Graduate School, Osaka Univ</contact><contact name="Email: " role="email">ann@example.org</contact></creator>"#,
+        r#"<creator before="  " role="author"><personname>Bob Baker</personname><note mark="†" role="footnotemark"/><contact name="Affiliation: " role="affiliation">Graduate School, Osaka Univ</contact><contact name="Email: " role="email">bob@example.org</contact></creator>"#,
       ]),
     },
     Row {
@@ -480,7 +480,7 @@ fn marked_blocks_restored_read_as_printed() {
       lines:    &[],
       creators: Creators::Whole(&[
         r#"<creator role="author"><personname>Ann Able</personname><contact role="collaboration">(The X Collaboration)</contact><contact name="Affiliation: " role="affiliation">Univ A</contact><contact name="Affiliation: " role="affiliation">Lab B</contact></creator>"#,
-        r#"<creator before="  " role="author"><personname>Bob Baker<sup>∗</sup></personname><contact role="collaboration">(The X Collaboration)</contact><contact name="Affiliation: " role="affiliation">Univ A</contact><contact name="Email: " role="email">bob@example.org</contact></creator>"#,
+        r#"<creator before="  " role="author"><personname>Bob Baker</personname><note mark="∗" role="footnotemark"/><contact role="collaboration">(The X Collaboration)</contact><contact name="Affiliation: " role="affiliation">Univ A</contact><contact name="Email: " role="email">bob@example.org</contact></creator>"#,
         r#"<creator before="  " role="author"><personname>Cy Coe</personname><contact role="collaboration">(The X Collaboration)</contact><contact name="Affiliation: " role="affiliation">Lab B</contact></creator>"#,
         r#"<creator before="  " role="author"><personname>Di Dee</personname><contact role="collaboration">(The X Collaboration)</contact><contact name="Affiliation: " role="affiliation">Univ A</contact></creator>"#,
       ]),
@@ -514,7 +514,7 @@ fn marked_blocks_restored_read_as_printed() {
         r#"<creator role="author"><personname>A. One</personname><contact class="ltx_author_line" role="collaboration">(X Collaboration)</contact><contact class="ltx_author_line" name="Affiliation: " role="affiliation"><text font="italic"> Alpha University, Beijing</text></contact></creator>"#,
         r#"<creator before="  " role="author"><personname>B. Two</personname><contact class="ltx_author_line" role="collaboration">(X Collaboration)</contact><contact class="ltx_author_line" name="Affiliation: " role="affiliation"><text font="italic"> Beta Institute, Rome</text></contact><contact class="ltx_author_line" name="Affiliation: " role="affiliation"><text font="italic"> Also at Delta College, Oslo</text></contact></creator>"#,
         r#"<creator before="  " role="author"><personname>C. Three</personname><contact class="ltx_author_line" role="collaboration">(X Collaboration)</contact><contact class="ltx_author_line" name="Affiliation: " role="affiliation"><text font="italic"> Gamma Lab, Paris</text></contact></creator>"#,
-        r#"<creator before="  " role="author"><personname>D. Four<sup>23A</sup></personname><contact class="ltx_author_line" role="collaboration">(X Collaboration)</contact><contact class="ltx_author_line" name="Affiliation: " role="affiliation"><text font="italic"> (A)Zeta Lab, Turin; (B)Eta Lab, Milan</text></contact></creator>"#,
+        r#"<creator before="  " role="author"><personname>D. Four</personname><note mark="23A" role="footnotemark"/><contact class="ltx_author_line" role="collaboration">(X Collaboration)</contact><contact class="ltx_author_line" name="Affiliation: " role="affiliation"><text font="italic"> (A)Zeta Lab, Turin; (B)Eta Lab, Milan</text></contact></creator>"#,
       ]),
     },
     // A. One's printed "1" lost (RED `revtex_comma_before_mark_keeps_its_mark_red`) and B. Two's ", and" lost
@@ -526,7 +526,7 @@ fn marked_blocks_restored_read_as_printed() {
       lines:    &[],
       creators: Creators::Whole(&[
         r#"<creator role="author"><personname>A. One</personname><contact name="Affiliation: " role="affiliation"><sup><text font="italic">1</text></sup>Alpha University, Beijing</contact></creator>"#,
-        r#"<creator before="  " role="author"><personname>B. Two<sup><text font="italic">2</text></sup></personname><contact name="Affiliation: " role="affiliation"><sup><text font="italic">2</text></sup>Beta Institute, Rome</contact></creator>"#,
+        r#"<creator before="  " role="author"><personname>B. Two</personname><contact name="Affiliation: " role="affiliation"><sup><text font="italic">2</text></sup>Beta Institute, Rome</contact></creator>"#,
       ]),
     },
     // (98e's `\affiliation` sibling in a `\parbox`, whose guard ran only at =0 after DEL1: each name its line; Bob
@@ -537,8 +537,8 @@ fn marked_blocks_restored_read_as_printed() {
       counts:   (0, 0),
       lines:    &[],
       creators: Creators::Whole(&[
-        r#"<creator role="author"><personname>Ann Able<sup><text font="italic">1</text></sup></personname><contact name="Affiliation: " role="affiliation"><sup><text font="italic">1</text></sup>Univ A, Town</contact></creator>"#,
-        r#"<creator before="  " role="author"><personname>Bob Baker<sup><text font="italic">2</text></sup></personname><contact name="Affiliation: " role="affiliation"><sup><text font="italic">2</text></sup>Univ B, City</contact></creator>"#,
+        r#"<creator role="author"><personname>Ann Able</personname><contact name="Affiliation: " role="affiliation"><sup><text font="italic">1</text></sup>Univ A, Town</contact></creator>"#,
+        r#"<creator before="  " role="author"><personname>Bob Baker</personname><contact name="Affiliation: " role="affiliation"><sup><text font="italic">2</text></sup>Univ B, City</contact></creator>"#,
       ]),
     },
     // (P4b4a2: the box's `[t]` sibling — a line set wholly in a box is cut in its body, the box dropped, each piece alike)
@@ -548,8 +548,8 @@ fn marked_blocks_restored_read_as_printed() {
       counts:   (0, 0),
       lines:    &[],
       creators: Creators::Whole(&[
-        r#"<creator role="author"><personname>Ann Able<sup><text font="italic">1</text></sup></personname><contact name="Affiliation: " role="affiliation"><sup><text font="italic">1</text></sup>Univ A, Town</contact></creator>"#,
-        r#"<creator before="  " role="author"><personname>Bob Baker<sup><text font="italic">2</text></sup></personname><contact name="Affiliation: " role="affiliation"><sup><text font="italic">2</text></sup>Univ B, City</contact></creator>"#,
+        r#"<creator role="author"><personname>Ann Able</personname><contact name="Affiliation: " role="affiliation"><sup><text font="italic">1</text></sup>Univ A, Town</contact></creator>"#,
+        r#"<creator before="  " role="author"><personname>Bob Baker</personname><contact name="Affiliation: " role="affiliation"><sup><text font="italic">2</text></sup>Univ B, City</contact></creator>"#,
       ]),
     },
     // (P4b4a3, revP4b4a B2: the declarations a cut box body opens with, on every piece, 2608.21425; and a line's, unboxed)
@@ -559,8 +559,8 @@ fn marked_blocks_restored_read_as_printed() {
       counts:   (0, 0),
       lines:    &[],
       creators: Creators::Whole(&[
-        r#"<creator role="author"><personname>Ann Able<sup><text font="italic">1</text></sup></personname><contact name="Affiliation: " role="affiliation"><sup><text font="italic" fontsize="70%">1</text></sup><text fontsize="70%">Univ A, Town</text></contact></creator>"#,
-        r#"<creator before="  " role="author"><personname>Bob Baker<sup><text font="italic">2</text></sup></personname><contact name="Affiliation: " role="affiliation"><sup><text font="italic" fontsize="70%">2</text></sup><text fontsize="70%">Univ B, City</text></contact></creator>"#,
+        r#"<creator role="author"><personname>Ann Able</personname><contact name="Affiliation: " role="affiliation"><sup><text font="italic" fontsize="70%">1</text></sup><text fontsize="70%">Univ A, Town</text></contact></creator>"#,
+        r#"<creator before="  " role="author"><personname>Bob Baker</personname><contact name="Affiliation: " role="affiliation"><sup><text font="italic" fontsize="70%">2</text></sup><text fontsize="70%">Univ B, City</text></contact></creator>"#,
       ]),
     },
     Row {
@@ -569,8 +569,8 @@ fn marked_blocks_restored_read_as_printed() {
       counts:   (0, 0),
       lines:    &[],
       creators: Creators::Whole(&[
-        r#"<creator role="author"><personname>Ann Able<sup>1</sup></personname><contact name="Affiliation: " role="affiliation"><sup><text fontsize="90%">1</text></sup><text fontsize="90%"> Univ A</text></contact></creator>"#,
-        r#"<creator before="  " role="author"><personname>Bob Baker<sup>2</sup></personname><contact name="Affiliation: " role="affiliation"><sup><text fontsize="90%">2</text></sup><text fontsize="90%"> Univ B</text></contact></creator>"#,
+        r#"<creator role="author"><personname>Ann Able</personname><contact name="Affiliation: " role="affiliation"><sup><text fontsize="90%">1</text></sup><text fontsize="90%"> Univ A</text></contact></creator>"#,
+        r#"<creator before="  " role="author"><personname>Bob Baker</personname><contact name="Affiliation: " role="affiliation"><sup><text fontsize="90%">2</text></sup><text fontsize="90%"> Univ B</text></contact></creator>"#,
       ]),
     },
     // (P4b4a4, revP4b4a2 B1: a cut piece carries what sets the font, size or colour, by meaning; a macro printing text
@@ -581,8 +581,8 @@ fn marked_blocks_restored_read_as_printed() {
       counts:   (0, 0),
       lines:    &[],
       creators: Creators::Whole(&[
-        r#"<creator role="author"><personname>Ann Able<sup><text font="italic">1</text></sup></personname><contact name="Affiliation: " role="affiliation">Dept of Physics, <sup><text font="italic">1</text></sup>Univ A</contact></creator>"#,
-        r#"<creator before="  " role="author"><personname>Bob Baker<sup><text font="italic">2</text></sup></personname><contact name="Affiliation: " role="affiliation"><sup><text font="italic">2</text></sup>Univ B</contact></creator>"#,
+        r#"<creator role="author"><personname>Ann Able</personname><contact name="Affiliation: " role="affiliation">Dept of Physics, <sup><text font="italic">1</text></sup>Univ A</contact></creator>"#,
+        r#"<creator before="  " role="author"><personname>Bob Baker</personname><contact name="Affiliation: " role="affiliation"><sup><text font="italic">2</text></sup>Univ B</contact></creator>"#,
       ]),
     },
     Row {
@@ -591,8 +591,8 @@ fn marked_blocks_restored_read_as_printed() {
       counts:   (0, 0),
       lines:    &[],
       creators: Creators::Whole(&[
-        r#"<creator role="author"><personname>Ann Able<sup><text font="italic">1</text></sup></personname><contact name="Affiliation: " role="affiliation">…<sup><text font="italic">1</text></sup>Univ A</contact></creator>"#,
-        r#"<creator before="  " role="author"><personname>Bob Baker<sup><text font="italic">2</text></sup></personname><contact name="Affiliation: " role="affiliation"><sup><text font="italic">2</text></sup>Univ B</contact></creator>"#,
+        r#"<creator role="author"><personname>Ann Able</personname><contact name="Affiliation: " role="affiliation">…<sup><text font="italic">1</text></sup>Univ A</contact></creator>"#,
+        r#"<creator before="  " role="author"><personname>Bob Baker</personname><contact name="Affiliation: " role="affiliation"><sup><text font="italic">2</text></sup>Univ B</contact></creator>"#,
       ]),
     },
     Row {
@@ -601,8 +601,8 @@ fn marked_blocks_restored_read_as_printed() {
       counts:   (0, 0),
       lines:    &[],
       creators: Creators::Whole(&[
-        r#"<creator role="author"><personname>Ann Able<sup><text font="italic">1</text></sup></personname><contact name="Affiliation: " role="affiliation">Dept of Physics, <sup><text font="italic">1</text></sup>Univ A</contact></creator>"#,
-        r#"<creator before="  " role="author"><personname>Bob Baker<sup><text font="italic">2</text></sup></personname><contact name="Affiliation: " role="affiliation"><sup><text font="italic">2</text></sup>Univ B</contact></creator>"#,
+        r#"<creator role="author"><personname>Ann Able</personname><contact name="Affiliation: " role="affiliation">Dept of Physics, <sup><text font="italic">1</text></sup>Univ A</contact></creator>"#,
+        r#"<creator before="  " role="author"><personname>Bob Baker</personname><contact name="Affiliation: " role="affiliation"><sup><text font="italic">2</text></sup>Univ B</contact></creator>"#,
       ]),
     },
     // (P4b4f, int166a's P4b4a regressions (CL166): a line of addresses read by its tokens, 1506.02349; a name's glued
@@ -615,9 +615,9 @@ fn marked_blocks_restored_read_as_printed() {
       counts:   (0, 0),
       lines:    &[],
       creators: Creators::Whole(&[
-        r#"<creator role="author"><personname>Ann One<sup>*</sup></personname><contact name="Affiliation: " role="affiliation"><sup>*</sup>Univ A</contact><contact name="Emails: " role="email">ann_one@ntu.edu.sg</contact></creator>"#,
-        r#"<creator before="  " role="author"><personname>Bob Two<sup>†</sup></personname><contact name="Affiliation: " role="affiliation"><sup>†</sup><sup>‡</sup>Univ B</contact><contact name="Emails: " role="email">bob_two@sutd.edu.sg</contact></creator>"#,
-        r#"<creator before="  " role="author"><personname>Cy Three<sup>‡</sup></personname><contact name="Affiliation: " role="affiliation"><sup>†</sup><sup>‡</sup>Univ B</contact><contact name="Emails: " role="email">cy_three@sutd.edu.sg</contact></creator>"#,
+        r#"<creator role="author"><personname>Ann One</personname><contact name="Affiliation: " role="affiliation"><sup>*</sup>Univ A</contact><contact name="Emails: " role="email">ann_one@ntu.edu.sg</contact></creator>"#,
+        r#"<creator before="  " role="author"><personname>Bob Two</personname><contact name="Affiliation: " role="affiliation"><sup>†</sup><sup>‡</sup>Univ B</contact><contact name="Emails: " role="email">bob_two@sutd.edu.sg</contact></creator>"#,
+        r#"<creator before="  " role="author"><personname>Cy Three</personname><note mark="‡" role="footnotemark"/><contact name="Affiliation: " role="affiliation"><sup>†</sup><sup>‡</sup>Univ B</contact><contact name="Emails: " role="email">cy_three@sutd.edu.sg</contact></creator>"#,
       ]),
     },
     // (P6d: the line's reading says it prints only addresses, `resolver::prints_only_addresses` on its events' text —
@@ -628,8 +628,8 @@ fn marked_blocks_restored_read_as_printed() {
       counts:   (0, 0),
       lines:    &[],
       creators: Creators::Whole(&[
-        r#"<creator role="author"><personname>Ann Able<sup><text font="italic">1</text></sup></personname><contact name="Affiliation: " role="affiliation"><sup><text font="italic">1</text></sup>Univ Alpha</contact><contact name="E-mail " role="email">ann@x.org</contact></creator>"#,
-        r#"<creator before="  " role="author"><personname>Bob Baker<sup><text font="italic">2</text></sup></personname><contact name="Affiliation: " role="affiliation"><sup><text font="italic">2</text></sup>Univ Beta</contact><contact name="E-mail " role="email">bob@y.org</contact></creator>"#,
+        r#"<creator role="author"><personname>Ann Able</personname><contact name="Affiliation: " role="affiliation"><sup><text font="italic">1</text></sup>Univ Alpha</contact><contact name="E-mail " role="email">ann@x.org</contact></creator>"#,
+        r#"<creator before="  " role="author"><personname>Bob Baker</personname><contact name="Affiliation: " role="affiliation"><sup><text font="italic">2</text></sup>Univ Beta</contact><contact name="E-mail " role="email">bob@y.org</contact></creator>"#,
       ]),
     },
     Row {
@@ -638,8 +638,8 @@ fn marked_blocks_restored_read_as_printed() {
       counts:   (0, 0),
       lines:    &[],
       creators: Creators::Whole(&[
-        r#"<creator role="author"><personname>Ann One<sup>*</sup></personname><contact name="Affiliation: " role="affiliation"><sup>*</sup>Univ A</contact><contact name="Emails: " role="email">ann@x.org</contact></creator>"#,
-        r#"<creator before="  " role="author"><personname>Bob Two<sup>†</sup></personname><contact name="Affiliation: " role="affiliation"><sup>†</sup>Univ B</contact><contact name="Emails: " role="email">bob@y.org</contact></creator>"#,
+        r#"<creator role="author"><personname>Ann One</personname><contact name="Affiliation: " role="affiliation"><sup>*</sup>Univ A</contact><contact name="Emails: " role="email">ann@x.org</contact></creator>"#,
+        r#"<creator before="  " role="author"><personname>Bob Two</personname><contact name="Affiliation: " role="affiliation"><sup>†</sup>Univ B</contact><contact name="Emails: " role="email">bob@y.org</contact></creator>"#,
       ]),
     },
     // (P6f: a list's lines cut at the kernel's `\and` by meaning, `classify::affiliation_lines` — a document macro holding
@@ -705,9 +705,9 @@ fn marked_blocks_restored_read_as_printed() {
       counts:   (0, 0),
       lines:    &[],
       creators: Creators::Whole(&[
-        r#"<creator role="author"><personname>Ann One<sup><text font="italic">1</text></sup><sup>∗</sup></personname><contact name="Affiliation: " role="affiliation"><text class="ltx_affiliation_country"><sup>1</sup>A Univ</text></contact><note class="ltx_note_frontmatter ltx_thanks_contribution" mark="∗" role="thanks"><text class="ltx_affiliation_country"><sup>∗</sup>Equal contributions</text></note></creator>"#,
-        r#"<creator before=", " role="author"><personname>Bob Two<sup><text font="italic">12</text></sup></personname><contact name="Affiliation: " role="affiliation"><text class="ltx_affiliation_country"><sup>1</sup>A Univ</text></contact><contact name="Affiliation: " role="affiliation"><text class="ltx_affiliation_country"><sup>2</sup>B Lab</text></contact></creator>"#,
-        r#"<creator before=" and " role="author"><personname>Cy Three<sup><text font="italic">1</text></sup></personname><contact name="Affiliation: " role="affiliation"><text class="ltx_affiliation_country"><sup>1</sup>A Univ</text></contact></creator>"#,
+        r#"<creator role="author"><personname>Ann One</personname><contact name="Affiliation: " role="affiliation"><text class="ltx_affiliation_country"><sup>1</sup>A Univ</text></contact><note class="ltx_note_frontmatter ltx_thanks_contribution" mark="∗" role="thanks"><text class="ltx_affiliation_country"><sup>∗</sup>Equal contributions</text></note></creator>"#,
+        r#"<creator before=", " role="author"><personname>Bob Two</personname><contact name="Affiliation: " role="affiliation"><text class="ltx_affiliation_country"><sup>1</sup>A Univ</text></contact><contact name="Affiliation: " role="affiliation"><text class="ltx_affiliation_country"><sup>2</sup>B Lab</text></contact></creator>"#,
+        r#"<creator before=" and " role="author"><personname>Cy Three</personname><contact name="Affiliation: " role="affiliation"><text class="ltx_affiliation_country"><sup>1</sup>A Univ</text></contact></creator>"#,
       ]),
     },
     Row {
@@ -716,11 +716,11 @@ fn marked_blocks_restored_read_as_printed() {
       counts:   (0, 0),
       lines:    &[],
       creators: Creators::Whole(&[
-        r#"<creator role="author"><personname>Ann One<sup><text font="bold">*</text></sup></personname><contact name="Affiliation: " role="affiliation">Stanford University</contact><note class="ltx_note_frontmatter ltx_thanks_contribution" mark="*" role="thanks"><sup>*</sup>Equal contribution</note></creator>"#,
-        r#"<creator before="  " role="author"><personname>Bob Two<sup><text font="bold">*</text></sup></personname><contact name="Affiliation: " role="affiliation">Stanford University</contact><note class="ltx_note_frontmatter ltx_thanks_contribution" mark="*" role="thanks"><sup>*</sup>Equal contribution</note></creator>"#,
+        r#"<creator role="author"><personname>Ann One</personname><contact name="Affiliation: " role="affiliation">Stanford University</contact><note class="ltx_note_frontmatter ltx_thanks_contribution" mark="*" role="thanks"><sup>*</sup>Equal contribution</note></creator>"#,
+        r#"<creator before="  " role="author"><personname>Bob Two</personname><contact name="Affiliation: " role="affiliation">Stanford University</contact><note class="ltx_note_frontmatter ltx_thanks_contribution" mark="*" role="thanks"><sup>*</sup>Equal contribution</note></creator>"#,
         r#"<creator before="  " role="author"><personname>Cy Three</personname><contact name="Affiliation: " role="affiliation">Stanford University</contact></creator>"#,
-        r#"<creator before="  " role="author"><personname>Di Four<sup><text font="bold">†</text></sup></personname><contact name="Affiliation: " role="affiliation">Stanford University</contact><note class="ltx_note_frontmatter ltx_thanks_contribution" mark="†" role="thanks"><sup>†</sup>Equal advising</note></creator>"#,
-        r#"<creator before="  " role="author"><personname>Ed Five<sup><text font="bold">†</text></sup></personname><contact name="Affiliation: " role="affiliation">Stanford University</contact><note class="ltx_note_frontmatter ltx_thanks_contribution" mark="†" role="thanks"><sup>†</sup>Equal advising</note></creator>"#,
+        r#"<creator before="  " role="author"><personname>Di Four</personname><contact name="Affiliation: " role="affiliation">Stanford University</contact><note class="ltx_note_frontmatter ltx_thanks_contribution" mark="†" role="thanks"><sup>†</sup>Equal advising</note></creator>"#,
+        r#"<creator before="  " role="author"><personname>Ed Five</personname><contact name="Affiliation: " role="affiliation">Stanford University</contact><note class="ltx_note_frontmatter ltx_thanks_contribution" mark="†" role="thanks"><sup>†</sup>Equal advising</note></creator>"#,
       ]),
     },
     Row {
@@ -729,8 +729,8 @@ fn marked_blocks_restored_read_as_printed() {
       counts:   (0, 0),
       lines:    &[],
       creators: Creators::Whole(&[
-        r#"<creator role="author"><personname>Ann Able<sup><text font="italic">1</text></sup></personname><contact name="Affiliation: " role="affiliation"><sup><text font="italic">1</text></sup><text font="typewriter">Univ Alpha</text></contact></creator>"#,
-        r#"<creator before="  " role="author"><personname>Bob Baker<sup><text font="italic">2</text></sup></personname><contact name="Affiliation: " role="affiliation"><sup><text font="italic">2</text></sup><text font="typewriter">Univ Beta</text></contact></creator>"#,
+        r#"<creator role="author"><personname>Ann Able</personname><contact name="Affiliation: " role="affiliation"><sup><text font="italic">1</text></sup><text font="typewriter">Univ Alpha</text></contact></creator>"#,
+        r#"<creator before="  " role="author"><personname>Bob Baker</personname><contact name="Affiliation: " role="affiliation"><sup><text font="italic">2</text></sup><text font="typewriter">Univ Beta</text></contact></creator>"#,
       ]),
     },
     // (P6c: a `\let` copy of `\tt` is the declaration, the one reader by meaning, `frontmatter_stores::font_declaration`)
@@ -742,8 +742,8 @@ fn marked_blocks_restored_read_as_printed() {
       counts:   (0, 0),
       lines:    &[],
       creators: Creators::Whole(&[
-        r#"<creator role="author"><personname>Ann Able<sup><text font="italic">1</text></sup></personname><contact name="Affiliation: " role="affiliation"><sup><text font="italic">1</text></sup><text font="typewriter">Univ Alpha</text></contact></creator>"#,
-        r#"<creator before="  " role="author"><personname>Bob Baker<sup><text font="italic">2</text></sup></personname><contact name="Affiliation: " role="affiliation"><sup><text font="italic">2</text></sup><text font="typewriter">Univ Beta</text></contact></creator>"#,
+        r#"<creator role="author"><personname>Ann Able</personname><contact name="Affiliation: " role="affiliation"><sup><text font="italic">1</text></sup><text font="typewriter">Univ Alpha</text></contact></creator>"#,
+        r#"<creator before="  " role="author"><personname>Bob Baker</personname><contact name="Affiliation: " role="affiliation"><sup><text font="italic">2</text></sup><text font="typewriter">Univ Beta</text></contact></creator>"#,
       ]),
     },
     Row {
@@ -765,9 +765,9 @@ fn marked_blocks_restored_read_as_printed() {
       counts:   (0, 0),
       lines:    &[],
       creators: Creators::Whole(&[
-        r#"<creator role="author"><personname>Ann Able<sup>1</sup></personname><contact name="Affiliation: " role="affiliation"><sup><text fontsize="70%">1</text></sup><text fontsize="70%"> Univ A</text></contact></creator>"#,
-        r#"<creator before="  " role="author"><personname>Bob Baker<sup>2</sup></personname><contact name="Affiliation: " role="affiliation"><text fontsize="70%"><sup>2</sup> Univ B</text></contact></creator>"#,
-        r#"<creator before="  " role="author"><personname>Cy Cole<sup>3</sup></personname><contact name="Affiliation: " role="affiliation"><sup><text fontsize="70%">3</text></sup><text fontsize="70%"> Univ C</text></contact></creator>"#,
+        r#"<creator role="author"><personname>Ann Able</personname><contact name="Affiliation: " role="affiliation"><sup><text fontsize="70%">1</text></sup><text fontsize="70%"> Univ A</text></contact></creator>"#,
+        r#"<creator before="  " role="author"><personname>Bob Baker</personname><contact name="Affiliation: " role="affiliation"><text fontsize="70%"><sup>2</sup> Univ B</text></contact></creator>"#,
+        r#"<creator before="  " role="author"><personname>Cy Cole</personname><contact name="Affiliation: " role="affiliation"><sup><text fontsize="70%">3</text></sup><text fontsize="70%"> Univ C</text></contact></creator>"#,
       ]),
     },
     // (revP4b4a2 B3: a start inside an environment the list opens leaves the list to its tokens, the base's reading;
@@ -780,8 +780,8 @@ fn marked_blocks_restored_read_as_printed() {
       // The minipage is `\linewidth`, llncs.cls:55's 12.2cm `\textwidth` (pdflatex 347.12354pt; 345.0pt before W2F2,
       // OXIDIZED_DESIGN_DIVERGENCES #1020).
       creators: Creators::Whole(&[
-        r#"<creator role="author"><personname>Ann Able<sup>1</sup></personname></creator>"#,
-        r#"<creator before="  " role="author"><personname>Bob Baker<sup>2</sup></personname></creator>"#,
+        r#"<creator role="author"><personname>Ann Able</personname><note mark="1" role="footnotemark"/></creator>"#,
+        r#"<creator before="  " role="author"><personname>Bob Baker</personname><note mark="2" role="footnotemark"/></creator>"#,
         r#"<creator role="author"><contact name="Affiliation: " role="affiliation"><inline-block class="ltx_minipage" vattach="middle" width="347.1pt"><p><sup>1</sup> Univ A, <sup>2</sup> Univ B</p></inline-block></contact></creator>"#,
       ]),
     },
@@ -791,8 +791,8 @@ fn marked_blocks_restored_read_as_printed() {
       counts:   (0, 0),
       lines:    &[],
       creators: Creators::Whole(&[
-        r#"<creator role="author"><personname>Ann Able<sup><text font="italic">a</text></sup></personname><contact name="Affiliation: " role="affiliation"><sup><text font="italic">a</text></sup>Univ A, Town</contact></creator>"#,
-        r#"<creator before="  " role="author"><personname>Bob Baker<sup><text font="italic">b</text></sup></personname><contact name="Affiliation: " role="affiliation"><sup><text font="italic">b</text></sup>Univ B, City</contact></creator>"#,
+        r#"<creator role="author"><personname>Ann Able</personname><contact name="Affiliation: " role="affiliation"><sup><text font="italic">a</text></sup>Univ A, Town</contact></creator>"#,
+        r#"<creator before="  " role="author"><personname>Bob Baker</personname><contact name="Affiliation: " role="affiliation"><sup><text font="italic">b</text></sup>Univ B, City</contact></creator>"#,
       ]),
     },
     Row {
@@ -801,8 +801,8 @@ fn marked_blocks_restored_read_as_printed() {
       counts:   (0, 0),
       lines:    &[],
       creators: Creators::Whole(&[
-        r#"<creator role="author"><personname>Ann Able<sup><text font="italic">1</text></sup></personname><contact role="collaboration">the GAPS Team</contact><contact name="Affiliation: " role="affiliation"><sup>1</sup>Univ A</contact></creator>"#,
-        r#"<creator before="  " role="author"><personname>Bob Baker<sup><text font="italic">2</text></sup></personname><contact role="collaboration">the GAPS Team</contact><contact name="Affiliation: " role="affiliation"><sup>2</sup>Univ B</contact></creator>"#,
+        r#"<creator role="author"><personname>Ann Able</personname><contact role="collaboration">the GAPS Team</contact><contact name="Affiliation: " role="affiliation"><sup>1</sup>Univ A</contact></creator>"#,
+        r#"<creator before="  " role="author"><personname>Bob Baker</personname><contact role="collaboration">the GAPS Team</contact><contact name="Affiliation: " role="affiliation"><sup>2</sup>Univ B</contact></creator>"#,
       ]),
     },
     // The names whole, no "[ETHZ]" text; the addresses on a nameless creator and the printed "and" lost are pinned,
@@ -1040,9 +1040,9 @@ fn reds_keep_their_counts_and_right_parts() {
       counts:   (0, 0),
       lines:    &[],
       creators: Creators::Hold(&[
-        r#"<personname>J. P. B. C. de Melo<sup><text font="italic">a</text></sup></personname>"#,
-        r#"<personname>H. W. L. Naus<sup><text font="italic">b</text></sup></personname>"#,
-        r#"<personname>T. Frederico<sup><text font="italic">c</text></sup></personname>"#,
+        r#"<personname>J. P. B. C. de Melo</personname>"#,
+        r#"<personname>H. W. L. Naus</personname>"#,
+        r#"<personname>T. Frederico</personname>"#,
         // (P4c: the list's printed marks shown, as pdflatex prints them — P4S Q1)
         r#"role="affiliation"><sup><text font="italic">a</text></sup>Univ A</contact>"#,
         r#"role="affiliation"><sup><text font="italic">b</text></sup>Univ B</contact>"#,

@@ -61,7 +61,7 @@ fn dotless_ieee_grades_between_names_are_their_memberships() {
       &[],
       0,
     ),
-    r#"<creator role="author"> <personname>Ann Able<sup xml:id="id1">1</sup></personname> <contact role="membership"><text font="italic" xml:id="id2">SMIEEE</text></contact> <contact name="Affiliation: " role="affiliation"><sup xml:id="id3">1</sup>University of Alpha, Alphaville</contact> </creator> <creator before=" " role="author"> <personname>Bob Baker<sup xml:id="id4"><text font="italic" xml:id="id4.1">1,2</text></sup></personname> <contact name="Affiliation: " role="affiliation"><sup xml:id="id5">1</sup>University of Alpha, Alphaville</contact> <contact name="Affiliation: " role="affiliation"><sup xml:id="id6">2</sup>University of Beta, Betatown</contact> </creator> <creator before=" " role="author"> <personname>Cat Cole<sup xml:id="id7">2</sup></personname> <contact role="membership"><text font="italic" xml:id="id8">FIEEE</text></contact> <contact name="Affiliation: " role="affiliation"><sup xml:id="id9">2</sup>University of Beta, Betatown</contact> </creator> <creator before=" " role="author"> <personname>Dan Dee<sup xml:id="id10"><text font="italic" xml:id="id10.1">1</text></sup></personname> <contact name="Affiliation: " role="affiliation"><sup xml:id="id11">1</sup>University of Alpha, Alphaville</contact> </creator>"#
+    r#"<creator role="author"> <personname>Ann Able</personname> <contact role="membership"><text font="italic" xml:id="id1">SMIEEE</text></contact> <contact name="Affiliation: " role="affiliation"><sup xml:id="id2">1</sup>University of Alpha, Alphaville</contact> </creator> <creator before=" " role="author"> <personname>Bob Baker</personname> <contact name="Affiliation: " role="affiliation"><sup xml:id="id3">1</sup>University of Alpha, Alphaville</contact> <contact name="Affiliation: " role="affiliation"><sup xml:id="id4">2</sup>University of Beta, Betatown</contact> </creator> <creator before=" " role="author"> <personname>Cat Cole</personname> <contact role="membership"><text font="italic" xml:id="id5">FIEEE</text></contact> <contact name="Affiliation: " role="affiliation"><sup xml:id="id6">2</sup>University of Beta, Betatown</contact> </creator> <creator before=" " role="author"> <personname>Dan Dee</personname> <contact name="Affiliation: " role="affiliation"><sup xml:id="id7">1</sup>University of Alpha, Alphaville</contact> </creator>"#
   );
 }
 
@@ -74,7 +74,7 @@ fn authblk_and_inside_a_whole_list_group_parts_the_names() {
   // (P4b2b: the names' printed marks, as pdflatex prints them)
   assert_eq!(
     counted_creators(repro!("authblk_group_wrapped_tie_and_parts_names"), &[], 0,),
-    r#"<creator role="author"> <personname>Ann Able<sup xml:id="id1">a</sup></personname> <note class="ltx_note_frontmatter ltx_thanks_correspondence" role="thanks" xml:id="id2">Corresponding author. Email: ann@alpha.edu</note> <contact name="Affiliation: " role="affiliation"><sup xml:id="id3">a</sup>University of Alpha, Alphaville</contact> </creator> <creator before=" " role="author"> <personname>Bob Baker<sup xml:id="id4">a</sup></personname> <contact name="Affiliation: " role="affiliation"><sup xml:id="id5">a</sup>University of Alpha, Alphaville</contact> </creator>"#
+    r#"<creator role="author"> <personname>Ann Able</personname> <note class="ltx_note_frontmatter ltx_thanks_correspondence" role="thanks" xml:id="id1">Corresponding author. Email: ann@alpha.edu</note> <contact name="Affiliation: " role="affiliation"><sup xml:id="id2">a</sup>University of Alpha, Alphaville</contact> </creator> <creator before=" " role="author"> <personname>Bob Baker</personname> <contact name="Affiliation: " role="affiliation"><sup xml:id="id3">a</sup>University of Alpha, Alphaville</contact> </creator>"#
   );
 }
 
@@ -179,12 +179,17 @@ fn a_space_parted_names_line_is_names_never_an_affiliation() {
 /// author_bold_quad_names_line_under_a_marked_row, author_bold_quad_names_line_under_a_symbol_marked_row.
 #[test]
 fn a_font_command_over_quad_parted_names_parts_them() {
-  let at = |name: &str, before: bool| {
+  // (a name's mark nothing answers, `(id, mark)`: a mark-only note after the name, PURE)
+  let marked = |name: &str, mark: Option<(&str, &str)>, before: bool| {
+    let note = mark.map_or(String::new(), |(id, mark)| {
+      format!(r#" <note mark="{mark}" role="footnotemark" xml:id="{id}"/>"#)
+    });
     format!(
-      r#"<creator {}role="author"> <personname>{name}</personname> <contact class="ltx_author_line" name="Affiliation: " role="affiliation">Stanford University</contact> </creator>"#,
+      r#"<creator {}role="author"> <personname>{name}</personname>{note} <contact class="ltx_author_line" name="Affiliation: " role="affiliation">Stanford University</contact> </creator>"#,
       if before { r#"before=" " "# } else { "" }
     )
   };
+  let at = |name: &str, before: bool| marked(name, None, before);
   assert_eq!(
     counted_creators(
       repro!("author_bold_quad_names_line_under_a_marked_row"),
@@ -192,7 +197,7 @@ fn a_font_command_over_quad_parted_names_parts_them() {
       0
     ),
     [
-      at(r#"Ann Able<sup xml:id="id1">1</sup>"#, false),
+      marked("Ann Able", Some(("id1", "1")), false),
       at("Cat Cole", true),
       at("Bob Baker", true),
       at("Dan Dee", true),
@@ -206,8 +211,8 @@ fn a_font_command_over_quad_parted_names_parts_them() {
       0
     ),
     [
-      at(r#"Ann Able<sup xml:id="id1">⋆</sup>"#, false),
-      at(r#"Bob Baker<sup xml:id="id2">⋆,†</sup>"#, true),
+      marked("Ann Able", Some(("id1", "⋆")), false),
+      marked("Bob Baker", Some(("id2", "⋆,†")), true),
       at("Cat Cole", true),
       at("Dan Dee", true),
       at("Eve Eden", true),

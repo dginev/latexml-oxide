@@ -50,7 +50,7 @@ fn a_whole_list_entry_holds_a_position_a_name() {
       "svjour3",
       repro!("svjour3_marked_list_email_line_one_address_a_name"),
       (0, 0),
-      pair("Ann Able 1", "Bob Baker 2"),
+      pair("Ann Able", "Bob Baker"),
     ),
     (
       "aa",
@@ -69,9 +69,9 @@ fn a_whole_list_entry_holds_a_position_a_name() {
       repro!("svjour3_marked_list_marks_in_a_note_and_a_box"),
       (0, 0),
       rows(&[
-        &["Ann Able 1", "affiliation=1 Univ A", "email=u1@x.org"],
-        &["Bob Baker 2", "affiliation=2 Univ B", "email=u2@x.org"],
-        &["Cy Coe 1", "affiliation=1 Univ A", "email=u3@x.org"],
+        &["Ann Able", "affiliation=1 Univ A", "email=u1@x.org"],
+        &["Bob Baker", "affiliation=2 Univ B", "email=u2@x.org"],
+        &["Cy Coe", "affiliation=1 Univ A", "email=u3@x.org"],
       ]),
     ),
     (
@@ -79,8 +79,8 @@ fn a_whole_list_entry_holds_a_position_a_name() {
       repro!("svjour3_marked_list_address_under_one_names_affiliation"),
       (0, 0),
       rows(&[
-        &["Ann Able 1", "affiliation=1 Univ A"],
-        &["Bob Baker 2", "affiliation=2 Univ B", "email=u2@x.org"],
+        &["Ann Able", "affiliation=1 Univ A"],
+        &["Bob Baker", "affiliation=2 Univ B", "email=u2@x.org"],
         &["affiliation=3 Lab C"],
       ]),
     ),
@@ -88,7 +88,7 @@ fn a_whole_list_entry_holds_a_position_a_name() {
       "macro holding the separator",
       repro!("svjour3_marked_list_macro_holding_only_the_separator"),
       (0, 0),
-      pair("Ann Able 1", "Bob Baker 2"),
+      pair("Ann Able", "Bob Baker"),
     ),
     (
       "kernel list, raw class store",
@@ -130,8 +130,8 @@ fn a_whole_list_entry_holds_a_position_a_name() {
 #[test]
 fn a_star_after_an_inst_mark_is_the_names_text() {
   let expected = rows(&[
-    &["Ann Able*", "affiliation=Univ A", "affiliation=Univ B"],
-    &["Bob Baker ∗", "affiliation=Univ A"],
+    &["Ann Able", "affiliation=Univ A", "affiliation=Univ B"],
+    &["Bob Baker", "affiliation=Univ A"],
     &["Cy Coe", "affiliation=Univ B"],
   ]);
   for (name, tex, counts) in [
@@ -154,7 +154,7 @@ fn a_star_after_an_inst_mark_is_the_names_text() {
     );
     assert_eq!(creators(&xml), expected, "{name}: {xml}");
     assert!(
-      xml.contains("<personname>Ann Able*</personname>"),
+      xml.contains("<personname>Ann Able</personname>"),
       "{name}: {xml}"
     );
   }
@@ -205,20 +205,9 @@ fn a_raw_class_store_email_line_goes_to_the_authors_it_spells() {
   let listed = |mark: &str, other: &str| {
     let affiliation = format!("affiliation={mark} Univ A, Town Corresponding authors’");
     rows(&[
-      &[
-        &format!("Ann Able{}", if mark == "*" { " *" } else { "" }),
-        &affiliation,
-        "email=ann@x.org",
-      ],
-      &[
-        &format!("Bob Best{}", if mark == "*" { " *" } else { "" }),
-        &affiliation,
-        "email=bob@y.org",
-      ],
-      &[
-        &format!("Carl Cole{}", if mark == "*" { " †" } else { "" }),
-        &format!("affiliation={other} Univ B"),
-      ],
+      &["Ann Able", &affiliation, "email=ann@x.org"],
+      &["Bob Best", &affiliation, "email=bob@y.org"],
+      &["Carl Cole", &format!("affiliation={other} Univ B")],
     ])
   };
   let typewriter = "<contact name=\"e-mails: \" role=\"email\"><text font=\"typewriter\"";

@@ -93,18 +93,18 @@ fn the_link_chain_over_an_entrys_addresses() {
   // (P4c: the lists' printed marks shown in the pins below, as pdflatex prints them — P4S Q1)
   let xml = assert_creators(repro!("address_family_email_line_unplaced"), &[
     &[
-      "Ann Able 1,2",
+      "Ann Able",
       "affiliation=1 Univ A, Town",
       "email=aable@a.edu",
       "affiliation=2 Univ B, City",
     ],
-    &["Bob Baker 2", "affiliation=2 Univ B, City"],
+    &["Bob Baker", "affiliation=2 Univ B, City"],
     &[
-      "Cat Cole 2",
+      "Cat Cole",
       "affiliation=2 Univ B, City",
       "email=ccole@b.edu",
     ],
-    &["Dan Dee 2", "affiliation=2 Univ B, City"],
+    &["Dan Dee", "affiliation=2 Univ B, City"],
     &["email=zbb@b.edu", "email=ddq@b.edu"],
   ]);
   // (the Kind step's e-mails named by their line's label; Ann's, out of her entry's text, the observer writer's)
@@ -117,16 +117,16 @@ fn the_link_chain_over_an_entrys_addresses() {
   );
   assert_creators(repro!("address_family_email_line_in_order"), &[
     &[
-      "Ann Able 1",
+      "Ann Able",
       "affiliation=1 Univ A, Town",
       "email=aable@a.edu",
     ],
     &[
-      "Bob Baker 1",
+      "Bob Baker",
       "affiliation=1 Univ A, Town",
       "email=office@a.edu",
     ],
-    &["Cat Cole 2", "affiliation=2 Univ B, City"],
+    &["Cat Cole", "affiliation=2 Univ B, City"],
   ]);
   // (an address no one spells goes to the symbol carriers no other address of the entry spells: 1907.01388's `zhutou@`
   // to Tao Zhou alone, review rev100b S1. Red (100b r1): `qz77@` on Ann too)
@@ -134,12 +134,12 @@ fn the_link_chain_over_an_entrys_addresses() {
     repro!("address_family_symbol_carrier_spelled_elsewhere"),
     &[
       &[
-        "Ann Able *",
+        "Ann Able",
         "affiliation=Univ X, Town",
         "email=ann.able@x.org",
       ],
       &["Bob Baker", "affiliation=Univ X, Town"],
-      &["Cat Cole *", "affiliation=Univ Y, Town", "email=qz77@y.org"],
+      &["Cat Cole", "affiliation=Univ Y, Town", "email=qz77@y.org"],
     ],
   );
 }

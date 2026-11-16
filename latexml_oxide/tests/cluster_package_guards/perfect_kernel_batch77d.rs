@@ -51,6 +51,16 @@ pub(super) fn creator(first: bool, name: &str, tail: &str) -> String {
   format!(r#"<creator {before}role="author"> <personname>{name}</personname> {tail}</creator>"#)
 }
 
+/// A name's mark nothing answers, the mark-only note after the name (`<note role="footnotemark" mark="…"/>`, PURE: a
+/// personname holds the name alone), before the creator's `tail` ([`creator`]'s).
+pub(super) fn mark_only(id: &str, mark: &str, tail: impl AsRef<str>) -> String {
+  let note = format!(r#"<note mark="{mark}" role="footnotemark" xml:id="{id}"/>"#);
+  match tail.as_ref() {
+    "" => note,
+    tail => format!("{note} {tail}"),
+  }
+}
+
 /// `contact`, a contact the author block prints on a `\\` line under the name: its first `<contact ` gains
 /// `class="ltx_author_line"` (issue #783, OXIDIZED_DESIGN_DIVERGENCES #1051).
 pub(super) fn author_line(contact: impl AsRef<str>) -> String {
@@ -244,9 +254,9 @@ x
   assert_eq!(
     found,
     [
-      r#"<creator role="author"> <personname>FLORIAN REETZ<sup xml:id="id1">1</sup></personname> <contact name="Affiliation: " role="affiliation"><sup xml:id="id2">1</sup> Univ A</contact> </creator>"#,
-      r#"<creator before=" " role="author"> <personname>PRIYA SUBRAMANIAN<sup xml:id="id3"><text font="italic" xml:id="id3.1">2,3</text></sup></personname> <contact name="Affiliation: " role="affiliation"><sup xml:id="id4">2</sup> Univ B</contact> <contact name="Affiliation: " role="affiliation"><sup xml:id="id5">3</sup> Univ C</contact> </creator>"#,
-      r#"<creator before=" " role="author"> <personname>TOBIAS M. SCHNEIDER<sup xml:id="id6">1</sup></personname> <contact name="Affiliation: " role="affiliation"><sup xml:id="id7">1</sup> Univ A</contact> </creator>"#,
+      r#"<creator role="author"> <personname>FLORIAN REETZ</personname> <contact name="Affiliation: " role="affiliation"><sup xml:id="id1">1</sup> Univ A</contact> </creator>"#,
+      r#"<creator before=" " role="author"> <personname>PRIYA SUBRAMANIAN</personname> <contact name="Affiliation: " role="affiliation"><sup xml:id="id2">2</sup> Univ B</contact> <contact name="Affiliation: " role="affiliation"><sup xml:id="id3">3</sup> Univ C</contact> </creator>"#,
+      r#"<creator before=" " role="author"> <personname>TOBIAS M. SCHNEIDER</personname> <contact name="Affiliation: " role="affiliation"><sup xml:id="id4">1</sup> Univ A</contact> </creator>"#,
     ],
     "{xml}"
   );

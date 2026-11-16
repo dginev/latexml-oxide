@@ -166,9 +166,9 @@ fn orcid_icon_link_closing_with_the_comma_parts_the_names() {
     0,
   );
   assert_eq!(creators(&xml), [
-    vec!["Ann Able 1", "orcid=https://orcid.org/0000-0002-1825-0097"],
-    vec!["Bob Baker 2", "orcid=https://orcid.org/0000-0001-5109-3700"],
-    vec!["Carl Cole 1"],
+    vec!["Ann Able", "orcid=https://orcid.org/0000-0002-1825-0097"],
+    vec!["Bob Baker", "orcid=https://orcid.org/0000-0001-5109-3700"],
+    vec!["Carl Cole"],
   ]);
   // (the fail-safe: a `;` the split leaves in the link stays where it prints, as `\lx@author@href` makes the contact —
   // int131a: one creator "Ann AbleBob Baker")

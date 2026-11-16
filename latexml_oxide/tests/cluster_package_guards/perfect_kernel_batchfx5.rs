@@ -24,13 +24,9 @@ fn an_institute_email_under_a_repeated_affiliation_is_kept() {
     "{log}"
   );
   assert_eq!(creators(&xml), [
+    vec!["Ann One", "affiliation=First Inst, UK", "email=ann@one.uk"],
     vec![
-      "Ann One 1",
-      "affiliation=First Inst, UK",
-      "email=ann@one.uk"
-    ],
-    vec![
-      "Bob Two 2",
+      "Bob Two",
       "affiliation=Second Inst, France",
       "affiliation=Third Lab, France"
     ],
