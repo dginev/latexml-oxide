@@ -861,6 +861,72 @@ const BOUNDARY: &[Row] = &[
     )],
   ),
   (
+    "a locked preamble-only command redefined in the body (repro \
+     loader/locked_preamble_command_redefined_in_the_body; 2606.22730, red on CUT999: 2 errors, \"y 10.1/x\")",
+    "pdflatex 1 `!` (Can be used only in preamble), \"x 10.1/a y doi: 10.1/x\"; Perl 0 errors",
+    include_str!(
+      "../../../tools/perfect_kernel/repros/loader/locked_preamble_command_redefined_in_the_body/locked_preamble_command_redefined_in_the_body.tex"
+    ),
+    &[
+      (
+        "imsart.cls",
+        include_str!(
+          "../../../tools/perfect_kernel/repros/loader/locked_preamble_command_redefined_in_the_body/imsart.cls"
+        ),
+      ),
+      (
+        "imsart.sty",
+        include_str!(
+          "../../../tools/perfect_kernel/repros/loader/locked_preamble_command_redefined_in_the_body/imsart.sty"
+        ),
+      ),
+    ],
+    (1, 0),
+    &[NOTPRERR],
+    &[(
+      "p",
+      "p1.1",
+      "<p xml:id=\"p1.1\">x 10.1/a\n\ny doi: <ref class=\"ltx_nolink ltx_Url\" href=\"10.1/x\">10.1/x</ref></p>",
+    )],
+  ),
+  (
+    "a body load after the body redefined a preamble-only command (repro \
+     loader/locked_preamble_command_redefined_in_the_body/locked_preamble_command_survives_a_body_load; red on CUT999: \
+     2 errors, \"y 10.1/x loaded\")",
+    "pdflatex 2 `!` (Can be used only in preamble: \\usepackage; Undefined control sequence), \"x lockpkg y doi: \
+     10.1/x\"; Perl 1 error (unexpected:\\usepackage)",
+    include_str!(
+      "../../../tools/perfect_kernel/repros/loader/locked_preamble_command_redefined_in_the_body/locked_preamble_command_survives_a_body_load.tex"
+    ),
+    &[
+      (
+        "imsart.cls",
+        include_str!(
+          "../../../tools/perfect_kernel/repros/loader/locked_preamble_command_redefined_in_the_body/imsart.cls"
+        ),
+      ),
+      (
+        "imsart.sty",
+        include_str!(
+          "../../../tools/perfect_kernel/repros/loader/locked_preamble_command_redefined_in_the_body/imsart.sty"
+        ),
+      ),
+      (
+        "lockpkg.sty",
+        include_str!(
+          "../../../tools/perfect_kernel/repros/loader/locked_preamble_command_redefined_in_the_body/lockpkg.sty"
+        ),
+      ),
+    ],
+    (1, 0),
+    &[NOTPRERR],
+    &[(
+      "p",
+      "p1.1",
+      "<p xml:id=\"p1.1\">x\n\ny doi: <ref class=\"ltx_nolink ltx_Url\" href=\"10.1/x\">10.1/x</ref> loaded</p>",
+    )],
+  ),
+  (
     "a standalone sub-file's preamble (repro loader/standalone_preamble)",
     "pdflatex 0 `!` (standalone.sty skips the preamble), \"Main. Sub text. After yes yes.\"; Perl 0 errors",
     include_str!(
