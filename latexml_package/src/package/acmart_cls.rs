@@ -327,10 +327,11 @@ yysep={,},notesep={, }}}
   });
   // (a bare `\authornotemark` steps the counter for a note of no text: no mark kept, as before)
   DefMacro!("\\authornotemark[]", "\\ifx.#1.\\else\\lx@acm@authornotemark#1\\relax\\fi");
+  // (its counter's mark too, carried onto the copy of the note: `Bob Baker$^{*}$\authornotemark[1]` prints "∗∗")
   DefPrimitive!("\\lx@acm@authornotemark Number", sub[(number)] {
     if let Some(mark) = acm_note_mark(number.value_of())? {
       unread(TokenizeInternal!(TeXString::assembled(s!(
-        "\\lx@annotate@frontmatter{{ltx:creator}}{{ltx:note}}[role=footnotemark,mark={{{mark}}}]{{{mark}}}"
+        "\\lx@annotate@frontmatter{{ltx:creator}}{{ltx:note}}[role=footnotemark,mark={{{mark}}},{MARK_FROM_COUNTER}=true]{{{mark}}}"
       ))));
     }
     Ok(Vec::new())

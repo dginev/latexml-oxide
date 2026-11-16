@@ -254,3 +254,26 @@ fn a_copy_cut_from_a_font_wrapper_leaves_no_empty_wrapper() {
     ],
   );
 }
+
+/// orcidlink's icon, as the binding writes it inside a name.
+const ORCID_ICON: &str = r##"<ref class="ltx_orcid" href="https://orcid.org/0000-0002-1825-0097" title="ORCID 0000-0002-1825-0097"><svg:svg class="ltx_orcidlogo" height="1em" version="1.1" viewBox="0 0 72 72" width="1em"><svg:path d="M72,36 C72,55.884375 55.884375,72 36,72 C16.115625,72 0,55.884375 0,36 C0,16.115625 16.115625,0 36,0 C55.884375,0 72,16.115625 72,36 Z" fill="#A6CE39"/><svg:g fill="#FFFFFF" transform="translate(18.868966, 12.910345)"><svg:polygon points="5.03734929 39.1250878 0.695429861 39.1250878 0.695429861 9.14431787 5.03734929 9.14431787 5.03734929 22.6930505 5.03734929 39.1250878"/><svg:path d="M11.409257,9.14431787 L23.1380784,9.14431787 C34.303014,9.14431787 39.2088191,17.0664074 39.2088191,24.1486995 C39.2088191,31.846843 33.1470485,39.1530811 23.1944669,39.1530811 L11.409257,39.1530811 L11.409257,9.14431787 Z M15.7511765,35.2620194 L22.6587756,35.2620194 C32.49858,35.2620194 34.7541226,27.8438084 34.7541226,24.1486995 C34.7541226,18.1301509 30.8915059,13.0353795 22.4332213,13.0353795 L15.7511765,13.0353795 L15.7511765,35.2620194 Z"/><svg:path d="M5.71401206,2.90182329 C5.71401206,4.441452 4.44526937,5.72914146 2.86638958,5.72914146 C1.28750978,5.72914146 0.0187670918,4.441452 0.0187670918,2.90182329 C0.0187670918,1.33420133 1.28750978,0.0745051096 2.86638958,0.0745051096 C4.44526937,0.0745051096 5.71401206,1.36219458 5.71401206,2.90182329 Z"/></svg:g></svg:svg></ref>"##;
+
+/// `Ann Able$^{*}$\orcidlink{…}\IEEEauthorrefmark{1}` over `\IEEEauthorrefmark{1}Univ A` (IEEEtran) prints two ∗: the
+/// icon parts them into two runs, and the affiliation, keyed by the number 1 and the ∗ it prints (one mark), answers
+/// one; the other is a mark-only note, paired with no body `\footnotetext` under ∗. Red (fix/pure-names-c
+/// 496f6195343, revPUREc B1′): the affiliation answered both, one ∗ lost.
+#[test]
+fn a_contact_answers_one_printed_mark_across_the_names_runs() {
+  let (log, xml) = convert_with(
+    repro!("pure_name_orcid_between_typed_star_and_refmark.tex"),
+    Some(PRELOAD),
+  );
+  let ann = format!(
+    r#"<creator role="author"><personname>Ann Able{ORCID_ICON}</personname><note mark="*" role="footnotemark"/><contact name="Affiliation: " role="affiliation"><sup>*</sup>Univ A</contact></creator>"#
+  );
+  assert_creators((log, xml.clone()), &[
+    ann.as_str(),
+    r#"<creator before=" " role="author"><personname>Bob Baker</personname><contact name="Affiliation: " role="affiliation"><sup>*</sup>Univ A</contact></creator>"#,
+  ]);
+  assert_eq!(xml.matches("Equal.").count(), 1, "{xml}");
+}

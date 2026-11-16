@@ -700,8 +700,9 @@ pub(in crate::base_utilities) const MARK_IN_TEXT: &str = "_markintext";
 /// The flag on a creator's note whose `mark` its own command prints: no glyph typed on the name is that mark, `Ann
 /// Able*\thanks{…}` printing "*∗" (`pure_names::answer`). Set by `\lx@title@thanks` (the title's footnote counter,
 /// `\@fnsymbol` at article.cls:205) and the emitter's note call, `number_footnote_parts` and `kind_shared_marked_contacts`
-/// (REVTeX's numbered front-matter footnotes), acmart's `\authornote` (acmart.cls:2237). Finalize drops it with the
-/// other `_` attributes. Internal, no binding surface: `pub` only for acmart's binding.
+/// (REVTeX's numbered front-matter footnotes), acmart's `\authornote` (acmart.cls:2237) and `\authornotemark[n]` (:2897),
+/// kept on the copy `link_marked_notes` makes of the latter. Finalize drops it with the other `_` attributes. Internal,
+/// no binding surface: `pub` only for acmart's binding.
 #[doc(hidden)]
 pub const MARK_FROM_COUNTER: &str = "_markfromcounter";
 
@@ -846,6 +847,9 @@ fn link_marked_notes(document: &mut Document) -> Result<()> {
     let Some(paired) = marked.iter().find(same) else {
       continue;
     };
+    // (a mark its command prints by the counter stays so on the copy, acmart's `\authornotemark[n]`; one linked by its
+    // glyph, never: [`MARK_FROM_COUNTER`])
+    let from_counter = mark_note.get_attribute(MARK_FROM_COUNTER).is_some();
     for child in mark_note.get_child_nodes() {
       document.remove_node(child);
     }
@@ -858,6 +862,9 @@ fn link_marked_notes(document: &mut Document) -> Result<()> {
       if name != "id" && name != "xml:id" && !name.starts_with('_') {
         document.set_attribute(&mut mark_note, &name, &value)?;
       }
+    }
+    if from_counter {
+      mark_note.set_attribute(MARK_FROM_COUNTER, "true")?;
     }
     document.append_clone(&mut mark_note, paired.get_child_nodes())?;
   }
