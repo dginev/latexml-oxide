@@ -1,0 +1,16 @@
+% mechanism: a prescript that is name ink (`$^{3}$He Collaboration`) is no mark: the whole name is kept, its 3 included
+% witness:  revPURE p2_helium
+% oracle:   pdflatex 0 errors; "3He Collaboration"
+% engines:  rust INTREC (3af622aca64) = 0 errors, 0 Warnings;  | affiliation=He Collaboration
+% expect:   0 errors, 0 Warnings; 3 He Collaboration (guard canon: name ; note role[mark]=text, sorted | contacts)
+% moves:    row R (PURE residual: `$^{3}$He Collaboration`, the reader splits the name and drops the 3)
+% status:   RED (INTREC 3af622aca64; perfect_kernel_batchfmmarks::name_marks_live_outside_the_personname_red)
+% preload: ar5iv.sty
+\documentclass{article}
+\title{T}
+\author{$^{3}$He Collaboration}
+\date{}
+\begin{document}
+\maketitle
+Text.
+\end{document}

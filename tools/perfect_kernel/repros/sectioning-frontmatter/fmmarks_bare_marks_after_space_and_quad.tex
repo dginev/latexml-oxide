@@ -1,0 +1,19 @@
+% mechanism: bare `\footnotemark`s after `\ ` (nearer its name) and after `\quad` at the block's end: each carried back
+%   to the name before it, each stepping the counter
+% witness:  revSHGIVEN p6bare
+% oracle:   pdflatex 0 errors; "Ann Able ∗ Bob Baker† Carl Cole ‡" (∗ 7.8pt after Ann, 27.3pt before Bob), footnote "†
+%   X"
+% engines:  rust INTREC (3af622aca64) = 0 errors, 0 Warnings; Ann Able ; footnotemark[*]= / Bob Baker ; thanks[†]=X /
+%   Carl Cole ; footnotemark[‡]=
+% expect:   0 errors, 0 Warnings; Ann Able ; footnotemark[*]= / Bob Baker ; thanks[†]=X / Carl Cole ; footnotemark[‡]=
+%   (guard canon: name ; note role[mark]=text, sorted | contacts)
+% status:   GREEN (INTREC 3af622aca64; perfect_kernel_batchfmmarks::a_mark_past_spacing_is_the_nearer_names)
+% preload: ar5iv.sty
+\documentclass{article}
+\title{T}
+\author{Ann Able \ \footnotemark \and Bob Baker\thanks{X} \and Carl Cole \quad \footnotemark}
+\date{}
+\begin{document}
+\maketitle
+Text.
+\end{document}

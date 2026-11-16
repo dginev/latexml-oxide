@@ -1,0 +1,25 @@
+% mechanism: IEEEtran journal prints no `\thanks` mark: the notes stay unmarked (the paper's, on the last author as
+%   Perl places them)
+% witness:  1510.02728 (IEEEtran journal, `\IEEEmembership`, paper-wide `\thanks`; review revSHREND B1)
+% oracle:   pdflatex 0 errors; "Ann Able, Student Member, IEEE, Bob Baker, Senior Member, IEEE,", the two notes at the
+%   foot with no mark
+% engines:  rust INTREC (3af622aca64) = 0 errors, 0 Warnings; Ann Able | membership=Student Member, IEEE / Bob Baker ;
+%   thanks[]=A. Able and B. Baker are with Univ A (e-mail: ann@a.edu). ; thanks[]=Part of this research was
+%   presented at Conf X. This research is supported by Y. | membership=Senior Member, IEEE
+% expect:   0 errors, 0 Warnings; Ann Able | membership=Student Member, IEEE / Bob Baker ; thanks[]=A. Able and B.
+%   Baker are with Univ A (e-mail: ann@a.edu). ; thanks[]=Part of this research was presented at Conf X. This
+%   research is supported by Y. | membership=Senior Member, IEEE (guard canon: name ; note role[mark]=text,
+%   sorted | contacts)
+% status:   GREEN (INTREC 3af622aca64;
+%   perfect_kernel_batchfmmarks::notes_are_marked_only_where_the_class_prints_marks)
+% preload: ar5iv.sty
+\documentclass[journal]{IEEEtran}
+\begin{document}
+\title{A Title}
+\author{Ann~Able,~\IEEEmembership{Student Member,~IEEE,}
+        Bob~Baker,~\IEEEmembership{Senior Member,~IEEE,}
+\thanks{Part of this research was presented at Conf X. This research is supported by Y.}%
+\thanks{A. Able and B. Baker are with Univ A (e-mail: ann@a.edu).}}
+\maketitle
+Text.
+\end{document}

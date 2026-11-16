@@ -1,0 +1,24 @@
+% mechanism: given marks a space apart before a comma, and one after an interword space at the block's end, each filled
+%   by a later `\footnotetext[n]`: every mark its name's, each a copy of its text
+% witness:  1803.03669 (`Mihai~Cucuringu\footnotemark[1] \footnotemark[3] , Hemant Tyagi \footnotemark[2]`,
+%   `\footnotetext[n]` under `\fnsymbol`)
+% oracle:   pdflatex 0 errors; "Ann Able∗‡, Bob Baker †", footnotes "∗ Univ A. …", "† Univ B. …", "‡ Institute C."
+% engines:  rust INTREC (3af622aca64) = 0 errors, 0 Warnings; Ann Able ; footnote[*]=Univ A. Email: ann@a.edu ;
+%   footnote[‡]=Institute C. / Bob Baker ; footnote[†]=Univ B. Email: bob@b.edu
+% expect:   0 errors, 0 Warnings; Ann Able ; footnote[*]=Univ A. Email: ann@a.edu ; footnote[‡]=Institute C. / Bob
+%   Baker ; footnote[†]=Univ B. Email: bob@b.edu (guard canon: name ; note role[mark]=text, sorted | contacts)
+% status:   GREEN (INTREC 3af622aca64; perfect_kernel_batchfmmarks::a_mark_on_a_name_is_a_copy_of_its_note)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{Ann~Able\footnotemark[1] \footnotemark[3] , Bob Baker \footnotemark[2]  }
+\renewcommand{\thefootnote}{\fnsymbol{footnote}}
+\footnotetext[1]{Univ A. Email: ann@a.edu}
+\footnotetext[2]{Univ B. Email: bob@b.edu}
+\footnotetext[3]{Institute C.}
+\renewcommand{\thefootnote}{\arabic{footnote}}
+\date{}
+\maketitle
+Text.
+\end{document}

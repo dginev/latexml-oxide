@@ -1,0 +1,27 @@
+% mechanism: IEEEtran conference `\IEEEauthorblockN`: a typed `$^{*}$` on two names and `\thanks{*Equal Contribution}`
+%   (IEEEtran prints no `\thanks` mark): the note is both names', marked `*`, the typed marks out of the names
+% witness:  1904.03977 (`\IEEEauthorblockN{Divyam Madaan$^{*}$\thanks{*Equal Contribution}}`, `Radhika Dua$^{*}$`)
+% oracle:   pdflatex 0 errors; "Ann Able∗ Bob Baker∗ Cat Cole", each block's "Univ" and e-mail lines
+% engines:  rust INTREC (3af622aca64) = 0 errors, 0 Warnings; Ann Able * ; thanks[*]=Equal Contribution |
+%   affiliation=Univ A ; email=ann@a.edu / Bob Baker * ; thanks[*]=Equal Contribution | affiliation=Univ A ;
+%   email=bob@a.edu / Cat Cole | affiliation=Univ B ; email=cat@b.edu; as expected on PURE-rel
+% expect:   0 errors, 0 Warnings; Ann Able ; thanks[*]=Equal Contribution | affiliation=Univ A ; email=ann@a.edu / Bob
+%   Baker ; thanks[*]=Equal Contribution | affiliation=Univ A ; email=bob@a.edu / Cat Cole | affiliation=Univ
+%   B ; email=cat@b.edu (guard canon: name ; note role[mark]=text, sorted | contacts)
+% moves:    PURE (fix/pure-personname: the marks out of the personname)
+% status:   RED (INTREC 3af622aca64; perfect_kernel_batchfmmarks::shared_notes_are_a_marked_copy_per_carrier_red)
+% preload: ar5iv.sty
+\documentclass[conference]{IEEEtran}
+\title{T}
+\author{\IEEEauthorblockN{Ann Able$^{*}$\thanks{*Equal Contribution}}
+\IEEEauthorblockA{\textit{Univ A}\\ ann@a.edu}
+\and
+\IEEEauthorblockN{Bob Baker$^{*}$}
+\IEEEauthorblockA{\textit{Univ A}\\ bob@a.edu}
+\and
+\IEEEauthorblockN{Cat Cole}
+\IEEEauthorblockA{\textit{Univ B}\\ cat@b.edu}}
+\begin{document}
+\maketitle
+Text.
+\end{document}

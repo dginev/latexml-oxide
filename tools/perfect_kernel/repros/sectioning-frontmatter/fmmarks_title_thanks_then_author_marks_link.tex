@@ -1,0 +1,19 @@
+% mechanism: a title `\thanks` steps first: the author `\thanks` is †, `\footnotemark[2]` a copy of it,
+%   `\footnotemark[1]` the title's mark (a mark-only note: the title holds its note)
+% witness:  revSHMARK p1
+% oracle:   pdflatex 0 errors; "A Title∗", "Ann Able† Bob Baker† Cy Cole∗", footnotes "∗ Funded by X.", "† Equal
+%   contribution."
+% engines:  rust INTREC (3af622aca64) = 0 errors, 0 Warnings; Ann Able ; thanks[†]=Equal contribution. / Bob Baker ;
+%   thanks[†]=Equal contribution. / Cy Cole ; footnotemark[*]=
+% expect:   0 errors, 0 Warnings; Ann Able ; thanks[†]=Equal contribution. / Bob Baker ; thanks[†]=Equal contribution.
+%   / Cy Cole ; footnotemark[*]= (guard canon: name ; note role[mark]=text, sorted | contacts)
+% status:   GREEN (INTREC 3af622aca64; perfect_kernel_batchfmmarks::a_mark_on_a_name_is_a_copy_of_its_note)
+% preload: ar5iv.sty
+\documentclass{article}
+\title{A Title\thanks{Funded by X.}}
+\author{Ann Able\thanks{Equal contribution.} \and Bob Baker\footnotemark[2] \and Cy Cole\footnotemark[1]}
+\date{}
+\begin{document}
+\maketitle
+Text.
+\end{document}

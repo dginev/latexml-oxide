@@ -1,0 +1,26 @@
+% mechanism: revtex4-2 reprint: `\thanks`, a name `\footnote` (reprint prints no mark for it) and an `\email`: each its
+%   name's contact
+% witness:  revSHMARKb r_reprint
+% oracle:   pdflatex 0 errors; "Ann Able∗", "Bob Baker and Cy Cole†"
+% engines:  rust INTREC (3af622aca64) = 0 errors, 0 Warnings; Ann Able | thanks=Equal contribution. ; affiliation=Univ
+%   A / Bob Baker | note=Visiting Univ C. ; affiliation=Univ B / Cy Cole | email=cy@b.edu ; affiliation=Univ B
+% expect:   0 errors, 0 Warnings; Ann Able | thanks=Equal contribution. ; affiliation=Univ A / Bob Baker |
+%   note=Visiting Univ C. ; affiliation=Univ B / Cy Cole | email=cy@b.edu ; affiliation=Univ B (guard canon:
+%   name ; note role[mark]=text, sorted | contacts)
+% status:   GREEN (INTREC 3af622aca64; perfect_kernel_batchfmmarks::revtex_marks_follow_its_numbering)
+% preload: ar5iv.sty
+\documentclass[aps,prl,reprint]{revtex4-2}
+\begin{document}
+\title{A Title}
+\author{Ann Able}
+\thanks{Equal contribution.}
+\affiliation{Univ A}
+\author{Bob Baker\footnote{Visiting Univ C.}}
+\affiliation{Univ B}
+\author{Cy Cole}
+\email{cy@b.edu}
+\affiliation{Univ B}
+\begin{abstract}Abs.\end{abstract}
+\maketitle
+Body\footnote{body note}.
+\end{document}
