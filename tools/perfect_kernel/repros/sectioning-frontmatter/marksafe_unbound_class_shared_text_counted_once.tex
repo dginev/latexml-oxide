@@ -1,0 +1,18 @@
+% mechanism: an unknown-glyph note two names' marks share (`\footnotemark[1]` twice, one `\footnotetext[1]`) is one
+%   note: the `unknown_mark` Info counts each source note once, not each copy (`insert::count_unknown_marks`)
+% witness:  review revMARKSAFEb N2 (p/scrshtxt.tex)
+% oracle:   pdflatex 0 errors; "Ann Able∗ Bob Baker∗ … Cy Cole†" (scrartcl's own `\maketitle`, `\fnsymbol`),
+%   footnotes "1 Equal contribution.", "2 Cy note." (the body's arabic: TeX prints mark and text apart)
+% engines:  rust MARKSAFEb de9ad33fd3d = 0 errors, 0 Warnings; Info "3 author note(s)"
+% expect:   0 errors, 0 Warnings; Info "2 author note(s)"; each name its note, unmarked; the ∗ ∗ † RED (row R SHAUTO)
+% status:   GREEN (MARKSAFEc: perfect_kernel_batchshmark::a_mark_whose_glyph_is_unknown_prints_none)
+% preload:  ar5iv.sty
+\documentclass{scrartcl}
+\title{A Title}
+\author{Ann Able\footnotemark[1] \and Bob Baker\footnotemark[1] \and Cy Cole\footnotemark[2]}
+\begin{document}
+\maketitle
+\footnotetext[1]{Equal contribution.}
+\footnotetext[2]{Cy note.}
+Body.
+\end{document}

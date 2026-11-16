@@ -6,9 +6,15 @@
 //! `requested_mark`, the reading's `rehearse_title_first`, acmart's `\authornote`), the mark rule's pass
 //! (`insert::mark_creator_notes`), the dropped linking marks (`insert::drop_linking_marks`) and the Link step
 //! (`insert::link_marked_notes`). Witnesses 2502.19103, 1911.13299, 2312.10807, 2407.07614, 2606.00397, 1607.07280.
-use latexml::util::test::{convert_with_setup_then, error_count, warning_count};
+//! MARKSAFE (DG 2026-11-16, "a wrong glyph is worse than none"): the class's marks only under its own `\maketitle`, a
+//! name's mark the class sets apart none, an author block's `\thefootnote` its name's, a mark alone its glyph in `mark`
+//! only, a printed label no entry answers counted. Witnesses 1807.02791, 2607.15705, 2606.00446.
+use latexml::util::test::{convert_with_setup_then, error_count, kpse_has, warning_count};
 
-use super::perfect_kernel_batch84b::{creators, text};
+use super::{
+  perfect_kernel_batch84b::{creators, text},
+  perfect_kernel_batchfmmarks::{page_lines, page_of},
+};
 
 macro_rules! repro {
   ($name:literal) => {
@@ -64,7 +70,8 @@ pub(super) fn notes_in(xml: &str) -> Vec<Vec<String>> {
             .unwrap_or("")
             .to_string()
         };
-        // (a mark-only note, `<note role="footnotemark" mark="1"/>`, holds nothing: PURE's re-homed name marks)
+        // (a note of no content, `<note …/>`: a mark whose glyph is unknown (MARKSAFE), or a mark-only note,
+        // `<note role="footnotemark" mark="1"/>` (PURE's re-homed name marks))
         let mut body = if creator[..open_end].ends_with('/') {
           String::new()
         } else {
@@ -383,6 +390,31 @@ fn a_mark_on_a_name_is_a_copy_of_the_note_it_marks() {
       row(&["Dan Dorn", "thanks[‡]=Univ B"]),
     ]
   );
+  // (a mark no note answers stays a mark alone, its glyph in `mark` only, never its text as well: 2607.15705's
+  // `\authornotemark[2]`, pdflatex "Bob Baker∗†"; MARKSAFE)
+  let xml = converted(
+    repro!("fmmarks_acmart_authornotemark_without_its_note_red"),
+    0,
+  );
+  assert_eq!(notes_in(&xml), [
+    row(&[
+      "Ann Able",
+      "thanks[*]=Ann Able and Bob Baker contributed equally."
+    ]),
+    row(&[
+      "Bob Baker",
+      "thanks[*]=Ann Able and Bob Baker contributed equally.",
+      "footnotemark[†]="
+    ]),
+    row(&["Cat Cole"]),
+  ]);
+  assert_eq!(
+    xml
+      .matches(r#"<note mark="†" role="footnotemark" xml:id="id6"/>"#)
+      .count(),
+    1,
+    "{xml}"
+  );
 }
 
 /// An affiliation's leading `\footnotemark[n]`, the mark the reading paired the entry by (`mark:footnote`), is no note
@@ -423,4 +455,450 @@ Text.
     ),
     [row(&["Ann Able", "footnote[*]=Note A."])]
   );
+}
+
+/// The marks a title block prints are its class's only where the class's own `\maketitle` runs
+/// (`latex_constructs::class_maketitle_in_force`; DG 2026-11-16, "a wrong glyph is worse than none"): a document's own
+/// prints marks unknown here (`\let\@makefnmark\relax`: none; `\def\thefootnote{\arabic…}`: 1, 2), so neither a
+/// `\thanks` note nor a name's kernel `\footnotemark` carries one; a redefinition calling the class's by meaning
+/// (`\let\oldmt\maketitle`) keeps them. titling's `\thanksmarkseries{arabic}` is its binding's declared title marks
+/// ("Ann Able1"). Distinct from the mark rule: whether the class's marks hold, not where a note's mark goes.
+#[test]
+fn marks_only_where_the_classs_maketitle_runs() {
+  assert_eq!(
+    marked_notes(repro!("maketitle_redefined_prints_no_marks_red"), 0),
+    [
+      row(&["Ann Able", "thanks[]=First note."]),
+      row(&["Bob Baker", "thanks[]=Second note."]),
+    ]
+  );
+  // (pdflatex: "Ann Able Bob Baker", the footnote "1 Shared." — the mark this document's `\maketitle` sets aside)
+  assert_eq!(
+    marked_notes(
+      r"\documentclass{article}
+\makeatletter\renewcommand\maketitle{\begingroup\let\@makefnmark\relax\begin{center}\begin{tabular}[t]{c}\@author\end{tabular}\end{center}\endgroup}\makeatother
+\title{A Title}
+\author{Ann Able\footnotemark[1] \and Bob Baker\footnotemark[1]}
+\begin{document}
+\maketitle
+\footnotetext[1]{Shared.}
+Body.
+\end{document}",
+      0
+    ),
+    [
+      row(&["Ann Able", "footnote[]=Shared."]),
+      row(&["Bob Baker", "footnote[]=Shared."]),
+    ]
+  );
+  // (pdflatex: "Ann Able∗ Bob Baker†")
+  assert_eq!(
+    marked_notes(
+      r"\documentclass{article}
+\makeatletter\let\oldmt\maketitle\renewcommand\maketitle{\oldmt\thispagestyle{empty}}\makeatother
+\title{A Title}
+\author{Ann Able\thanks{First note.} \and Bob Baker\thanks{Second note.}}
+\begin{document}
+\maketitle
+Body.
+\end{document}",
+      0
+    ),
+    [
+      row(&["Ann Able", "thanks[*]=First note."]),
+      row(&["Bob Baker", "thanks[†]=Second note."]),
+    ]
+  );
+  assert_eq!(
+    marked_notes(repro!("titling_thanksmarkseries_marks_red"), 0),
+    [
+      row(&["Ann Able", "thanks[1]=First note."]),
+      row(&["Bob Baker", "thanks[2]=Second note."]),
+    ]
+  );
+}
+
+/// A `\renewcommand\thefootnote` in an author block holds in its cell of the `\@author` tabular alone, which `\and`, `\\`
+/// and `&` end (latex.ltx:17219-17222), as in TeX: the class's `\maketitle` sets `\thefootnote` before `\@author` expands,
+/// the redefinition after it. Both readers of the marks keep it there: the flush, which runs a block's declarations ahead of
+/// its names (`emit::declarations` keys each to its cell's name, `latex_constructs::title_cell_declared`: 1807.02791's
+/// `\arabic` before its one name, pdflatex "Ann Able 1 2"; one in Bob's cell renumbers Bob alone, "Ann Able∗ Bob Baker2
+/// Cy Cole‡"), and the rehearsal, whose `\thanks` marks end with the cell (`rehearsal::end_of_cell`: "Ann Able1 Bob
+/// Baker†"; past Bob's `\\` and `\and`, "Cat Cole‡"). One in the preamble the class's `\maketitle` overrides ("∗", "†").
+/// Distinct from the class's gate: which `\thefootnote` a field's marks are made by (review revMARKSAFE S1).
+#[test]
+fn a_thefootnote_the_author_block_sets_holds_for_its_name() {
+  assert_eq!(
+    marked_notes(
+      repro!("fmmarks_single_name_marks_after_newline_thin_spaces_red"),
+      0
+    ),
+    [row(&["Ann Able", "footnotemark[1]=", "footnotemark[2]="])]
+  );
+  let block = |preamble: &str, author: &str| {
+    format!(
+      r"\documentclass{{article}}
+{preamble}
+\title{{T}}
+\author{{{author}Ann Able\footnotemark[1] \and Bob Baker\footnotemark[2]}}
+\date{{}}
+\begin{{document}}
+\maketitle
+Text.
+\end{{document}}"
+    )
+  };
+  assert_eq!(
+    marked_notes(
+      &block("", r"\renewcommand{\thefootnote}{\arabic{footnote}}"),
+      0
+    ),
+    [
+      row(&["Ann Able", "footnotemark[1]="]),
+      row(&["Bob Baker", "footnotemark[†]="]),
+    ]
+  );
+  assert_eq!(
+    marked_notes(
+      &block(r"\renewcommand{\thefootnote}{\arabic{footnote}}", ""),
+      0
+    ),
+    [
+      row(&["Ann Able", "footnotemark[*]="]),
+      row(&["Bob Baker", "footnotemark[†]="]),
+    ]
+  );
+  assert_eq!(
+    marked_notes(repro!("marksafe_thefootnote_set_in_a_cell_holds_there"), 0),
+    [
+      row(&["Ann Able", "footnotemark[*]="]),
+      row(&["Bob Baker", "footnotemark[2]="]),
+      row(&["Cy Cole", "footnotemark[‡]="]),
+    ]
+  );
+  assert_eq!(
+    marked_notes(repro!("marksafe_thefootnote_set_in_a_cell_thanks"), 0),
+    [
+      row(&["Ann Able", "thanks[1]=Note A."]),
+      row(&["Bob Baker", "thanks[†]=Note B."]),
+    ]
+  );
+  // (Univ B's `\footnotemark[1]`, "∗" on its line, is a mark the emitter writes on no name: counted)
+  assert_eq!(
+    marked_notes(
+      repro!("marksafe_thefootnote_set_in_a_cell_ends_at_its_line"),
+      1
+    ),
+    [
+      row(&["Ann Able", "thanks[*]=Note A."]),
+      row(&["Bob Baker", "thanks[2]=Note B."]),
+      row(&["Cat Cole", "thanks[‡]=Note C."]),
+    ]
+  );
+  // (one in a line's cell, which holds no name, renumbers no name: pdflatex "Ann Able∗ Bob Baker†")
+  assert_eq!(
+    marked_notes(
+      r"\documentclass{article}
+\title{T}
+\author{Ann Able\footnotemark[1] \\ \renewcommand{\thefootnote}{\arabic{footnote}}Univ A \and Bob Baker\footnotemark[2]}
+\date{}
+\begin{document}
+\maketitle
+Body.
+\end{document}",
+      0
+    ),
+    [
+      row(&["Ann Able", "footnotemark[*]="]),
+      row(&["Bob Baker", "footnotemark[†]="]),
+    ]
+  );
+}
+
+/// A name's mark the class sets apart, which no reading knows, is written with none (`latex_constructs::
+/// drop_unknown_title_mark`): REVTeX 4.1/4.2 set a name's `\footnotemark` in their minipage letters ("Ann Ablea",
+/// revtex4-2.cls:2555-2557, `lx_title_footnote_own_marks`), bare or given its number, its text after `\maketitle` paired
+/// by the counter. Distinct from the class's gate: the class's `\maketitle` runs, its name marks are another series.
+#[test]
+fn a_names_mark_revtex_sets_apart_is_unknown() {
+  // (its note never placed, nothing names it: one counted Warning, `insert::count_unknown_marks`)
+  let xml = converted(
+    repro!("revtex_name_footnotemark_leaves_the_marks_unknown"),
+    1,
+  );
+  assert_eq!(notes_in(&xml), [
+    row(&["Ann Able", "footnotemark[]="]),
+    row(&["Bob Baker"]),
+    row(&["Cy Cole"]),
+  ]);
+  // (and on the page no glyph: not the XSLT's `†`, revMARKSAFE B1 — the unmarked mark-only note shows nothing)
+  assert_eq!(
+    page_lines(&page_of(&xml)),
+    (row(&["Ann Able", "Bob Baker", "Cy Cole"]), Vec::new())
+  );
+  assert_eq!(
+    xml
+      .matches(r#"<note role="footnotemark" xml:id="footnote1"/>"#)
+      .count(),
+    1,
+    "{xml}"
+  );
+  // (pdflatex: "Ann Ablea", the footnote "1 Note A.")
+  assert_eq!(
+    marked_notes(
+      r"\documentclass[aps,prl,preprint]{revtex4-2}
+\begin{document}
+\title{A Title}
+\author{Ann Able\footnotemark[1]}
+\affiliation{Univ A}
+\author{Bob Baker}
+\affiliation{Univ B}
+\begin{abstract}Abs.\end{abstract}
+\maketitle
+\footnotetext[1]{Note A.}
+Body.
+\end{document}",
+      0
+    ),
+    [
+      row(&["Ann Able", "footnote[]=Note A."]),
+      row(&["Bob Baker"])
+    ]
+  );
+}
+
+/// A mark whose glyph is unknown here prints none, in the XML or on the page (DG 2026-11-16: a wrong or invented glyph is
+/// worse than none; the generic engine never invents one): under an unbound class (scrartcl's own `\maketitle` prints
+/// `\fnsymbol`, `latex_constructs::title_marks_unknown`) a name's `\thanks` is written unmarked and the XSLT shows its text
+/// under the name with no `†` (`LaTeXML-meta-xhtml.xsl`'s unmarked creator note, OD #990; revMARKSAFE B1); a name's
+/// `\footnotemark[1]` is no "1" (Perl's number key, the advisor's I-3) — its note no number key names yet, a counted
+/// Warning, or its `\footnotetext[1]` paired by the number, an Info (`insert::count_unknown_marks`). Distinct from the
+/// class's gate: an unbound class's marks, and what the page shows of a note with none.
+#[test]
+fn a_mark_whose_glyph_is_unknown_prints_none() {
+  let case = |tex: &str, warnings: usize| {
+    let (log, xml, ()) = convert_with_setup_then(tex, Some("ar5iv.sty"), || {}, |_| {});
+    assert_eq!(
+      (error_count(&log), warning_count(&log)),
+      (0, warnings),
+      "{log}"
+    );
+    let html = page_of(&xml);
+    let block = &html[html.find("ltx_authors").expect("an author block")..];
+    assert!(!block.contains("ltx_note_mark"), "{html}");
+    (log, notes_in(&xml), page_lines(&html))
+  };
+  let (log, notes, page) = case(repro!("marksafe_unbound_class_thanks_print_no_glyph"), 0);
+  assert_eq!(notes, [
+    row(&["Ann Able", "thanks[]=Note A."]),
+    row(&["Bob Baker", "thanks[]=Note B."]),
+  ]);
+  assert_eq!(
+    page,
+    (
+      row(&["Ann Able | under: Note A.", "Bob Baker | under: Note B."]),
+      Vec::new()
+    )
+  );
+  assert!(
+    log.contains(
+      "Info:frontmatter:unknown_mark 2 author note(s) written with no mark, the mark the title prints being unknown \
+       here: each under its author"
+    ),
+    "{log}"
+  );
+  let (log, notes, page) = case(
+    repro!("marksafe_unbound_class_footnotemark_given_number_unknown"),
+    1,
+  );
+  assert!(
+    log.contains(
+      "Warning:frontmatter:unanswered_mark_lost A footnote mark on an author's name whose note cannot be identified, \
+       its glyph unknown here, is written with none"
+    ),
+    "{log}"
+  );
+  assert_eq!(notes, [
+    row(&["Ann Able", "thanks[]=Equal contribution."]),
+    row(&["Bob Baker", "footnotemark[]="]),
+  ]);
+  assert_eq!(
+    page,
+    (
+      row(&["Ann Able | under: Equal contribution.", "Bob Baker"]),
+      Vec::new()
+    )
+  );
+  let (_, notes, page) = case(
+    repro!("marksafe_unbound_class_footnotemark_answered_by_its_text"),
+    0,
+  );
+  assert_eq!(notes, [
+    row(&["Ann Able", "footnote[]=Note A."]),
+    row(&["Bob Baker", "footnote[]=Note B."]),
+  ]);
+  assert_eq!(
+    page,
+    (
+      row(&["Ann Able | under: Note A.", "Bob Baker | under: Note B."]),
+      Vec::new()
+    )
+  );
+  // (one `\footnotetext[1]` two names' marks share is one note, counted once; the flag a declared key, no KeyVals
+  // report: review revMARKSAFEb N1, N2)
+  let (log, notes, page) = case(repro!("marksafe_unbound_class_shared_text_counted_once"), 0);
+  assert!(
+    log.contains(
+      "Info:frontmatter:unknown_mark 2 author note(s) written with no mark, the mark the title prints being unknown \
+       here: each under its author"
+    ),
+    "{log}"
+  );
+  assert!(!log.contains("KeyVals key '_"), "{log}");
+  assert_eq!(notes, [
+    row(&["Ann Able", "footnote[]=Equal contribution."]),
+    row(&["Bob Baker", "footnote[]=Equal contribution."]),
+    row(&["Cy Cole", "footnote[]=Cy note."]),
+  ]);
+  assert_eq!(
+    page,
+    (
+      row(&[
+        "Ann Able | under: Equal contribution.",
+        "Bob Baker | under: Equal contribution.",
+        "Cy Cole | under: Cy note."
+      ]),
+      Vec::new()
+    )
+  );
+}
+
+/// A document's wrapper of its class's `\maketitle` by meaning (`\let\oldmt\maketitle \renewcommand\maketitle{\oldmt}`)
+/// runs the class's title page, which pdflatex prints as the plain document's: the output, the page and the log's counts
+/// are the plain document's, under a class whose binding declares no title marks (mnras, IEEEtran, llncs). Only the class
+/// file's own drop of `\maketitle` makes its marks unknown (`\maketitle:redefined@class`, `state::note_redefined`;
+/// review revMARKSAFEb B1). Distinct from the class's gate: who redefined `\maketitle`, not which class.
+#[test]
+fn a_wrapper_of_the_class_maketitle_is_neutral() {
+  let wrapper = "\\let\\oldmt\\maketitle\n\\renewcommand\\maketitle{\\oldmt}\n";
+  for wrapped in [
+    repro!("marksafe_maketitle_wrapper_mnras_is_neutral"),
+    repro!("marksafe_maketitle_wrapper_ieeetran_is_neutral"),
+    repro!("marksafe_maketitle_wrapper_llncs_is_neutral"),
+  ] {
+    assert!(wrapped.contains(wrapper), "{wrapped}");
+    let plain = wrapped.replace(wrapper, "");
+    let convert = |tex: &str| {
+      let (log, xml, ()) = convert_with_setup_then(tex, Some("ar5iv.sty"), || {}, |_| {});
+      assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+      assert!(!log.contains("unknown_mark"), "{log}");
+      let page = page_lines(&page_of(&xml));
+      (notes_in(&xml), page, xml)
+    };
+    let (plain_notes, plain_page, plain_xml) = convert(&plain);
+    let (notes, page, xml) = convert(wrapped);
+    assert_eq!((&notes, &page), (&plain_notes, &plain_page), "{wrapped}");
+    // (the whole document alike)
+    assert_eq!(xml, plain_xml);
+    if wrapped.contains("IEEEtran") {
+      // (Ann's `\footnote` IEEEtran's contact, Perl's; Bob's mark kept, no Warning)
+      assert_eq!(notes, [
+        row(&["Ann Able"]),
+        row(&["Bob Baker", "footnotemark[1]="])
+      ]);
+    }
+  }
+}
+
+/// lni's binding reads the raw lni.cls, whose own `\maketitle` numbers the title's notes in arabic (lni.cls:475-477): the
+/// binding declares those marks, kept in force over the class file's own drop (`\maketitle:redefined@class`), so
+/// `\thanks` prints 1, 2 as pdflatex does (2407.04435; review revMARKSAFEb S2). Distinct from the wrapper's: a binding
+/// computes its own class's glyph.
+#[test]
+fn lni_prints_its_own_arabic_title_marks() {
+  if !kpse_has("lni.cls") {
+    eprintln!("SKIP: lni.cls is not in this TeX Live");
+    return;
+  }
+  let (log, xml, ()) = convert_with_setup_then(
+    repro!("marksafe_lni_title_marks_are_arabic"),
+    Some("ar5iv.sty"),
+    || {},
+    |_| {},
+  );
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  assert!(!log.contains("unknown_mark"), "{log}");
+  assert_eq!(notes_in(&xml), [
+    row(&["Ann Able", "thanks[1]=Note A."]),
+    row(&["Bob Baker", "thanks[2]=Note B."]),
+  ]);
+}
+
+/// A label authblk prints on a name that no `\affil` prints is a mark the frontmatter places nowhere, counted
+/// (`authblk_sty::count_lost_labels`; FIDELITY_CHARTER: no silent loss): `\author[1,*,\S]` whose `\S` only the `\date`
+/// line explains (2606.00446; pdflatex "Ann Able1,*,§"), one Warning; its answered `*` a note of each carrier. Both
+/// sides are read as printed (`printed_label_pieces`), so a label a macro prints is the line's (`\author[\affA]`).
+#[test]
+fn a_class_label_no_entry_answers_is_counted() {
+  let tex = repro!("fmmarks_authblk_double_star_label_and_date_note_red");
+  let (log, xml, ()) = convert_with_setup_then(tex, Some("ar5iv.sty"), || {}, |_| {});
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 1), "{log}");
+  assert!(
+    log.contains(
+      "Warning:frontmatter:unanswered_mark_lost authblk prints 1 label(s) of the names no \\affil explains, \
+       written on no name: §"
+    ),
+    "{log}"
+  );
+  assert_eq!(notes_in(&xml), [
+    row(&[
+      "Ann Able",
+      "thanks[*]=These authors contributed equally to this work."
+    ]),
+    row(&[
+      "Bob Baker",
+      "thanks[*]=These authors contributed equally to this work."
+    ]),
+    row(&["Cat Cole"]),
+  ]);
+  assert_eq!(creators(&xml), [
+    row(&["Ann Able", "affiliation=Univ A, Town", "mark=*"]),
+    row(&["Bob Baker", "affiliation=Univ A, Town", "mark=*"]),
+    row(&[
+      "Cat Cole",
+      "affiliation=Univ A, Town",
+      "affiliation=Present address: Lab B, City"
+    ]),
+  ]);
+  // (both sides compared as printed, `printed_label_pieces`: `\author[\affA]`, `\affA` 1, is `\affil[1]`'s; review
+  // revMARKSAFE S3)
+  let (log, xml, ()) = convert_with_setup_then(
+    repro!("authblk_macro_label_is_its_printed_text"),
+    Some("ar5iv.sty"),
+    || {},
+    |_| {},
+  );
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  assert_eq!(creators(&xml), [row(&["Ann Able", "affiliation=Univ A"])]);
+  // (a line's label read as authblk reads it, not verbatim: `\affil[$^1$]` prints 1, as `\author[$^{1,2}$]`'s pieces do,
+  // 2106.15893; pdflatex "Ann Able1,2 Bob Baker⋆,1")
+  let (log, _, ()) = convert_with_setup_then(
+    r"\documentclass{article}
+\usepackage{authblk}
+\author[$^{1,2}$]{Ann Able}
+\author[$^{\star,1}$]{Bob Baker}
+\affil[$^1$]{Univ A}
+\affil[$^2$]{Univ B}
+\affil[$\star$]{corresponding author}
+\title{T}
+\date{}
+\begin{document}
+\maketitle
+Text.
+\end{document}",
+    Some("ar5iv.sty"),
+    || {},
+    |_| {},
+  );
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
 }

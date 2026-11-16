@@ -154,22 +154,23 @@ fn a_text_node_picture_takes_one_semicolon() {
   );
 }
 
-/// The HTML of an unmarked frontmatter note (user ruling 2026-11-10, "No dagger for unmarked notes"; OXIDIZED_DESIGN_DIVERGENCES
-/// #990): the picture note of 2404.13552's shape renders inline, with no † (`ltx_note_mark`) and no hover-only
-/// `ltx_note_content` (LaTeXML.css hides it), no "note:" label; the `\thanks` beside it keeps its mark (OD #156). Distinct:
-/// the meta XSLT's `ltx:creator/ltx:note[not(@mark)]` template. Repro sectioning-frontmatter/fm_picture_text_in_author_is_a_note.
+/// The HTML of an unmarked frontmatter note (user ruling 2026-11-10, "No dagger for unmarked notes"; DG 2026-11-16, every
+/// unmarked author note; OXIDIZED_DESIGN_DIVERGENCES #990): the picture note of 2404.13552's shape renders inline
+/// (`ltx_note_unmarked`), with no † (`ltx_note_mark`) and no hover-only `ltx_note_content` (LaTeXML.css hides it), no
+/// "note:" label; the `\thanks` beside it keeps its mark (OD #156). Distinct: the meta XSLT's
+/// `ltx:creator/ltx:note[not(@mark)]` template. Repro sectioning-frontmatter/fm_picture_text_in_author_is_a_note.
 #[test]
 fn an_unmarked_frontmatter_note_renders_inline_without_a_dagger() {
   let xml = convert_clean(repro!("fm_picture_text_in_author_is_a_note"));
   let html = post_with(&xml, "resources/XSLT/LaTeXML-html5.xsl");
   let note = html
-    .find("<span id=\"id2\" class=\"ltx_note ltx_role_note\"")
+    .find("<span id=\"id2\" class=\"ltx_note ltx_role_note ltx_note_unmarked\"")
     .map(|at| &html[at..])
     .and_then(|rest| rest.find("<svg").map(|end| &rest[..end]))
     .unwrap_or_else(|| panic!("no unmarked note in {html}"));
   assert_eq!(
     note,
-    r##"<span id="id2" class="ltx_note ltx_role_note"><span class="ltx_inline-block">"##
+    r##"<span id="id2" class="ltx_note ltx_role_note ltx_note_unmarked"><span class="ltx_inline-block">"##
   );
   let thanks = html
     .find("<span id=\"id1\" class=\"ltx_note ltx_note_frontmatter")

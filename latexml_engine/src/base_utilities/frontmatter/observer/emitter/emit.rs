@@ -25,46 +25,49 @@ use super::{
   repart::{crosses_columns, entry_span, joined_across_cells, prefix_tokens},
   *,
 };
-use crate::base_utilities::{
-  defs::{
-    author_macros::KEPT_WHOLE,
-    frontmatter_api::{BLOCK_CREATOR, CORRESPONDING, LABEL_PRINTS, PRINTED_LABEL, STOPGAP_ENTRY},
-    frontmatter_fields::{
-      TITLE_MARK_STEP, orcid_icon_link, title_notes_print_marks, under_author_markup,
+use crate::{
+  base_utilities::{
+    defs::{
+      author_macros::KEPT_WHOLE,
+      frontmatter_api::{BLOCK_CREATOR, CORRESPONDING, LABEL_PRINTS, PRINTED_LABEL, STOPGAP_ENTRY},
+      frontmatter_fields::{
+        TITLE_MARK_STEP, orcid_icon_link, title_notes_print_marks, under_author_markup,
+      },
+    },
+    frontmatter::{
+      classify::shared_call_item,
+      fallback::{
+        PerlAuthorBranch, PerlCalls, perl_author_branch, perl_author_calls,
+        tabular_juggles_in_a_whole_block, whole_block_author,
+      },
+      insert::{FOOTNOTE_TEXT, MARK_FROM_COUNTER, MARK_IN_TEXT, MARK_UNKNOWN, NAME_PRINTED},
+      observer::{
+        events::{
+          self as events, BreakKind, EventKind, Formula, InkTable, SepKind, font_declaration,
+          inked, lex_with_inks, text_font_command,
+        },
+        field_notes::{EnvironmentStep, FieldCreator, HeldExpansion},
+        ledger::{
+          ApiCall, AuthorBlock, MarkLedEntry, Unsaid, annotated_parent, content_text,
+          field_stamped, symbol,
+        },
+        policy::TitleMarks,
+        reading::{UNFOLD_LEVELS, unfold_held_names},
+        rehearsal::{Rehearsal, rehearse},
+        resolver::{
+          BlockCheck, LostInk, MarkLedger, RCreator, RuleDrop, Side, Written, check_blocks,
+          contact_parts, creator_call, creator_call_level, creator_call_pieces, is_creator_call,
+          labelseq_pieces, merged_names, note_shows, own_email_label, printed_email_label,
+          read_events, shares_the_row, split_pieces, split_pieces_as, uncoordinated_marks,
+          words_of,
+        },
+      },
+      place::DEFERRED_TO_FLUSH_END,
+      relocate::{BLOCK_ZONE, FOOTER_ZONE},
     },
   },
-  frontmatter::{
-    classify::shared_call_item,
-    fallback::{
-      PerlAuthorBranch, PerlCalls, perl_author_branch, perl_author_calls,
-      tabular_juggles_in_a_whole_block, whole_block_author,
-    },
-    insert::{FOOTNOTE_TEXT, MARK_FROM_COUNTER, MARK_IN_TEXT, NAME_PRINTED},
-    observer::{
-      events::{
-        self as events, BreakKind, EventKind, Formula, InkTable, SepKind, font_declaration, inked,
-        lex_with_inks, text_font_command,
-      },
-      field_notes::{EnvironmentStep, FieldCreator, HeldExpansion},
-      ledger::{
-        ApiCall, AuthorBlock, MarkLedEntry, Unsaid, annotated_parent, content_text, field_stamped,
-        symbol,
-      },
-      policy::TitleMarks,
-      reading::{UNFOLD_LEVELS, unfold_held_names},
-      rehearsal::{Rehearsal, rehearse},
-      resolver::{
-        BlockCheck, LostInk, MarkLedger, RCreator, RuleDrop, Side, Written, check_blocks,
-        contact_parts, creator_call, creator_call_level, creator_call_pieces, is_creator_call,
-        labelseq_pieces, merged_names, note_shows, own_email_label, printed_email_label,
-        read_events, shares_the_row, split_pieces, split_pieces_as, uncoordinated_marks, words_of,
-      },
-    },
-    place::DEFERRED_TO_FLUSH_END,
-    relocate::{BLOCK_ZONE, FOOTER_ZONE},
-  },
+  latex_constructs::{FOOTNOTE_VALUE, TITLE_CELL_DECLARED, TITLE_CELL_ENTER},
 };
-use crate::latex_constructs::FOOTNOTE_VALUE;
 
 /// The State value saying a flush emitted: the ledger's
 /// generation whose reading the last emit wrote to its end ([`Ledger::generation`]), which a later flush with nothing queued
@@ -1623,14 +1626,24 @@ fn note_call(
     content,
   ))
   .unlist_ref()]);
-  let marked = mark.map_or_else(String::new, |mark| {
-    let from = match from {
-      MarkFrom::Counter => s!("{MARK_FROM_COUNTER}=true,"),
-      MarkFrom::Legend => String::new(),
-      MarkFrom::Text => s!("{MARK_IN_TEXT}=true,"),
-    };
-    s!("mark={{{mark}}},{from}")
-  });
+  let marked = mark.map_or_else(
+    || {
+      // (none where the mark the title prints is unknown here, flagged so: `insert::count_unknown_marks`)
+      if crate::latex_constructs::title_marks_unknown(false) {
+        s!("{MARK_UNKNOWN}=true,")
+      } else {
+        String::new()
+      }
+    },
+    |mark| {
+      let from = match from {
+        MarkFrom::Counter => s!("{MARK_FROM_COUNTER}=true,"),
+        MarkFrom::Legend => String::new(),
+        MarkFrom::Text => s!("{MARK_IN_TEXT}=true,"),
+      };
+      s!("mark={{{mark}}},{from}")
+    },
+  );
   // (the footnote number it stands for, which a name's `\footnotemark` of that number on its carrier is its mark of, and
   // whether it is a `\footnotetext`, which no carrier prints but by that mark: `insert::link_marked_notes`, OD #1058)
   let marked = match number {
@@ -3534,17 +3547,74 @@ fn kept_breaks(piece: &[Event]) -> Vec<usize> {
 /// The declarations of the blocks not yet emitted: an entry of their tokens, digested in the flush's group under the author
 /// markup the blocks are digested under (`under_author_markup`), as pdflatex runs them inside the title code's group: a
 /// paper's macro calling a title-code command declares there (`\newcommand\setaff[1]{\instref{#1}\gdef\affA{…}}`, klmm.sty's
-/// `\instref`, 2606.12100), where apart it erred undefined.
-fn declarations<'a>(sources: impl Iterator<Item = &'a usize>) -> Vec<Token> {
+/// `\instref`, 2606.12100), where apart it erred undefined. Each is followed by `\lx@title@cell@declared{<flush>:<creator>}`,
+/// the one name its cell of the `\@author` tabular holds (`<flush>:-` for none, a line's; `<flush>:` for several): a
+/// `\thefootnote` it sets holds in that name's field alone (`latex_constructs::title_cell_declared`); the names so keyed go
+/// in `keyed`.
+fn declarations(
+  by_block: &BTreeMap<usize, Vec<usize>>,
+  name_runs: &BTreeMap<usize, Vec<(usize, usize)>>,
+  keyed: &mut BTreeSet<usize>,
+) -> Vec<Token> {
+  let flush = lookup_int(FRONTMATTER_FLUSHES);
   with_ledger(|ledger| {
     let mut out = Vec::new();
-    for &index in sources {
-      if let Some(Entry::Author(block)) = ledger.entries().get(index)
-        && let Outcome::Events { declarations, .. } = &block.outcome
+    for (&index, members) in by_block {
+      let Some(Entry::Author(block)) = ledger.entries().get(index) else {
+        continue;
+      };
+      let Outcome::Events { events, declarations, .. } = &block.outcome else {
+        continue;
+      };
+      let at = |p: u16| usize::from(p).checked_sub(block.range.0);
+      // (where a cell ends: `\and`, `&` or `\\` outside any container, latex.ltx:17219-17222)
+      let ends: Vec<usize> = events
+        .iter()
+        .filter(|e| {
+          e.nest == 0
+            && matches!(
+              e.kind,
+              EventKind::Break | EventKind::Sep(SepKind::And(_) | SepKind::Column(_))
+            )
+        })
+        .filter_map(|e| at(e.span?.0))
+        .collect();
+      // (the names whose run starts in the cell holding `offset`)
+      let cell_names = |offset: usize| -> Vec<usize> {
+        let from = ends.iter().copied().filter(|&end| end <= offset).max();
+        let to = ends.iter().copied().filter(|&end| end > offset).min();
+        members
+          .iter()
+          .copied()
+          .filter(|i| {
+            name_runs
+              .get(i)
+              .and_then(|runs| runs.first())
+              .is_some_and(|&(start, _)| {
+                from.is_none_or(|from| start > from) && to.is_none_or(|to| start < to)
+              })
+          })
+          .collect()
+      };
+      let spanned: Vec<&Event> = declarations.iter().filter(|e| e.span.is_some()).collect();
+      for (event, span) in spanned
+        .into_iter()
+        .zip(declaration_cuts(block, declarations))
       {
-        for span in declaration_cuts(block, declarations).into_iter().flatten() {
-          out.extend_from_slice(span);
-        }
+        let Some(span) = span else {
+          continue;
+        };
+        out.extend_from_slice(span);
+        let names = event.span.and_then(|(start, _)| at(start)).map(cell_names);
+        let key = match names.as_deref() {
+          Some([name]) => {
+            keyed.insert(*name);
+            s!("{flush}:{name}")
+          },
+          Some([]) => s!("{flush}:-"),
+          _ => s!("{flush}:"),
+        };
+        out.extend(cs_group(TITLE_CELL_DECLARED, &[&internal(&key)]));
       }
     }
     if out.is_empty() {
@@ -6247,7 +6317,8 @@ pub(in crate::base_utilities) fn emit_commands(commands: &mut Vec<RawFrontmatter
   let mut out = before;
   let entry =
     |tag: &str, tokens: Vec<Token>| (tag.to_string(), TagAttrs::default(), Tokens::new(tokens));
-  let decls = declarations(by_block.keys());
+  let mut keyed: BTreeSet<usize> = BTreeSet::new();
+  let decls = declarations(&by_block, &name_runs, &mut keyed);
   if !decls.is_empty() {
     out.push(entry("ltx:emit", decls));
   }
@@ -6257,6 +6328,14 @@ pub(in crate::base_utilities) fn emit_commands(commands: &mut Vec<RawFrontmatter
   let mut call_cuts: BTreeMap<usize, Option<Vec<Tokens>>> = BTreeMap::new();
   for &i in &fresh {
     let c = &resolved.creators[i];
+    // (its cell's `\thefootnote`, which a declaration run ahead of the names set: [`declarations`])
+    if keyed.contains(&i) {
+      let key = s!("{}:{i}", lookup_int(FRONTMATTER_FLUSHES));
+      out.push(entry(
+        "ltx:emit",
+        cs_group(TITLE_CELL_ENTER, &[&internal(&key)]),
+      ));
+    }
     creator_end.insert(c.source, out.len() + 1);
     let mut keys = annotations_key(&annotations[i].join(","));
     keys.extend(whole_marks_key(c, &annotations[i]));

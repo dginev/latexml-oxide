@@ -54,7 +54,7 @@ Rules that keep this file honest and mergeable:
 - **The BM Q&A rows** (QA01-QA93, `~/data/pk_agents/main/bruce_qa/ACTIONS.md`, which keeps each row's text and evidence; status and rank live here) are all catalogued: the open ones are the QA lines below (QA60 site 8 as SR4/SR5, QA27 within CSS, QA75's rest as QA75 and QA75M); their pre-merge work done (QA41 → RV1 and PSF1, QA46/QA47 → QA47A, QA60 site 2 → TP3, QA75's short look, the eight upstream patches QA08, QA35, QA36, QA39, QA50, QA56, QA62 and the Perl sides of QA30 and QA45 — submitted as QA80; QA92 awaits QA02's rest); not listed — 28 done (QA01, QA02, QA03, QA07, QA09, QA10, QA12, QA13, QA18, QA25, QA30, QA31, QA33, QA34, QA40, QA42, QA45, QA54, QA55, QA59, QA67, QA70, QA71, QA82, QA83, QA87, QA89, QA93) and 10 that need no work (QA04, QA16, QA21, QA38, QA49, QA65, QA68, QA72, QA74, QA78: confirmed or noted).
 - **Detail per row:** the batch reports in `~/data/pk_agents/main/agent_reports/`, the BM Q&A rows in the Q&A tracker, each deferred finding's `_red.tex` (`moves:` names its row), the moved SYNC rows' detail in [`perfect_kernel/OPEN_ROWS.md`](perfect_kernel/OPEN_ROWS.md) "Post-merge rows moved from SYNC_STATUS (SYNC3)" under the same id. DG's pragmatic bar (2026-11-12) still sorts new findings: regressions and high-frequency / high-impact gaps first, new edge cases into this list.
 
-  **The worklist** (334 lines, weight 719; id — task; weight — easy 1, medium 3, hard 5):
+  **The worklist** (352 lines, weight 763; id — task; weight — easy 1, medium 3, hard 5):
 
 
   - ODR1 — OD #973's pgfmath residuals (moved from OD by the 2026-11-14 rationalization): string operands, units after array primaries, grouping, out-of-bounds indexing (repro `graphics-tikz/pgfmath_string_and_units_in_arithmetic_red`; every case's pgf-vs-ours values: OPEN_ROWS ODR1); 3
@@ -428,6 +428,51 @@ Rules that keep this file honest and mergeable:
   - MUTOOLPCT — a `%` anywhere in the destination path is read by mutool's `-o` as its pattern (`pct%20draft` → `%20d`): every vector SVG, page 1 too, silently falls to pdftocairo (pre-existing; revMUTOOLFIX); fix: run mutool with `current_dir` = the private temp dir, `-o page%d.svg`, an absolute `source` — post-cutoff; 1
   - SVGSIZE — mutool's unitless SVG root size is read as CSS px (`latexml_core/src/util/image.rs:1784`) while pdftocairo's `pt` is 4/3 larger, so an unsized vector image shows at 595 px for A4 under mutool vs 794 under pdftocairo — which converter ran decides the intrinsic size (pre-existing; revMUTOOLFIX P2); decide the intended unit (TeX bp → CSS px at 96/72) and apply it to both — post-cutoff; 3
 
+
+  - FMPOST — frontmatter marks: tricky cases declared out of scope for the shared-note campaign, post-release (DG
+    2026-11-16: "add a red/green TDD test or declare them out of scope with a witness note for later work"). Each line:
+    witness → what pdflatex prints / what we output. In-scope items are in `agent_reports/2026-11-16_brief_MARKKEY_R2.md`
+    and the MARKBIND branch, not here.
+    - FMPOST1 ASTERISKGLYPH — `Ann Able*\thanks{X}` (batchpure guard): pdflatex text `*` then math `∗`; we write the
+      mark-only note `∗` and the counter note `*` (code points swapped; both asterisks, one charter key); 1
+    - FMPOST2 SCALEBOXGAP — 2412.20504's title `\def\RETAKE{R\scalebox{0.8}{E}T\scalebox{0.8}{A}K\scalebox{0.8}{E}}`:
+      pdflatex "RETAKE"; we render "R ET AK E" (inter-box gaps); 3
+    - FMPOST3 REVALTWARN — `fmmarks_revtex_altaffiliation_then_shared_thanks_red`: a spurious content-check Warning for
+      "Univ B" (printed as Ann's altaffiliation and the others' affiliation); 1
+    - FMPOST4 MARKLEDCELL — `Ann\thanks{X} \and \footnotemark[1]Bob Baker` (`ne2i_bare_mark_opening_a_cell_writes_the_block_whole`):
+      pdflatex Bob a name with ∗; we read Bob as an affiliation (as at the base); 3
+    - FMPOST5 FILL0PT — `fmmarks_mark_then_hfill_before_next_red`: a mark beside `\hfill` in a kernel `\and` segment is
+      0pt-wide only on the class's own `\maketitle` (article.cls:181-183); undecided today, waits on T1/SHAUTO; 3
+    - FMPOST6 REFMIXSPELL — `\IEEEauthorblockN{Ann\IEEEauthorrefmark{1}\IEEEauthorrefmark{2}, Bob\authorrefmark{1}}\IEEEauthorblockA{\authorrefmark{1}Univ A}`
+      (revPUREc q1, synthetic): Ann loses Univ A (relocation by mixed spellings; pre-existing); 3
+    - FMPOST7 EMPTYEMPH — a copy cut from `\emph{$^{\diamond}$}` leaves an empty `<emph/>` (`drop_emptied_wrappers`
+      handles `text`/`ref` only; cosmetic); 1
+    - FMPOST8 ORCIDINNAME — `Ann Able\orcidlink{…}`: the `<ref class="ltx_orcid">` sits inside `<personname>`; decide
+      whether an ORCID link is name ink or a contact (the ORCID `href`/`title` also hold `\lx@orcidlink{…}`, P2 of revPURE); 3
+    - FMPOST9 SEPONCE — two notes with bodies under one mark on one author both render the mark (dropping either loses a
+      link); SEPMULT — footmisc `multiple`'s `\multfootsep` commas are not known to the engine; 3
+    - FMPOST10 ENDNOTEMARK (silent loss) — 1703.08733: every author's `\endnotemark` is missing with no Warning and Efim
+      Zelmanov gets the mark ",,1" (pdflatex "1,2"-style endnote marks per author); 3
+    - FMPOST11 AFFILLEGEND (silent loss) — 2201.10988: `\affil[$\dag$]{These authors have contributed equally}` appears
+      nowhere in the XML, 0 Warnings; 2606.17809's `\affil[ ]{\textsuperscript{\textdagger}…}` legend goes to the block,
+      not the names; 3
+    - FMPOST12 MARKPAIRS — between names: `\textsuperscript{\footnotemark[1]}\footnotemark[2]` gives ∗ to Ann (pdflatex
+      prints it 4pt from Bob) and counts † lost; `Ann Able\footnotemark[1] and \qquad \footnotemark[2] \ Bob` counts †
+      lost (revSHGNEXTb, pre-existing, counted); 3
+    - FMPOST13 TABCELLAMP — the rehearsal does not read `&` cell ends for a `\thefootnote` declaration's scope (MARKSAFEb);
+      1
+    - FMPOST14 SPCONFADDR — 2602.18802: spconf's `\address` becomes a document-level `note role="address"`, so the names'
+      `1/2/3` labels are mark-only notes nothing answers; 3
+    - FMPOST15 CLUMPED — 2511.10879: all authors merged into one creator (names, e-mails, `<break/>`s) plus 1 jing error,
+      pre-existing on every binary; 3
+    - FMPOST16 CSSBASE — ar5iv-css: an author block without marked notes falls back to the centred layout and its name
+      rows lose the baseline alignment (1807.01940 after MARKSAFEb); an IEEE conference 3-author block overflows at 375 px
+      (pre-existing); 1
+    - FMPOST17 REVTITLETHANKS — REVTeX title `\thanks` contacts are not rendered on the page (FMRG; XML has them); 1
+    - FMPOST18 SHAUTO/T1 — unbound classes' title glyphs (geophysics 2006.10886 and 2403.07393, scrartcl 2406.03281,
+      mnras-like hooks) and `\NewCommandCopy` / `\global\let\maketitle\relax` wrappers (`fmmarks_own_maketitle_relax_red`,
+      `maketitle_newcommandcopy_wrapper_red`): measure from the class's own `\maketitle` replay (T1); after DG's sandbox
+      review; 5
 ---
 
 ## Silent-loss inventory — blocks the 98 % claim (user 2026-10-18)

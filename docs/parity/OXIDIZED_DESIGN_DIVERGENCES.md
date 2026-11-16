@@ -18404,28 +18404,40 @@ counted, as its image is a Layout event outside the e-mail's span). Repros
 image_before_an_address_is_counted, image_after_a_url_label_is_counted, image_inside_an_affiliation_before_a_url_is_kept,
 image_parted_from_a_url_by_fill_is_kept}`, `perfect_kernel_batch77y::icon_parted_from_its_link_goes_with_it`.
 
-### 990. An unmarked frontmatter note renders inline, with no dagger (CR8c)
+### 990. An unmarked frontmatter note renders inline, with no dagger (CR8c; MARKSAFEb)
 
-**What.** In HTML an author's picture note — an `ltx:note` with `role="note"`, no `@mark`, no untyped tag, holding a
-picture or graphics (the meta XSLT's `ltx:creator/ltx:note[@role='note' and not(@mark) and not(ltx:tags/ltx:tag[not(@role)])
-and (.//ltx:picture or .//ltx:graphics)]`, `LaTeXML-meta-xhtml.xsl`) — is a span holding its content inline: no
-`ltx_note_mark` (†), no `ltx_note_outer`/`ltx_note_content` (which `LaTeXML.css` hides until hover, so the content would be
-invisible), no "note: " type label (#989's notes; 2404.13552, 2107.13277). Only those: a leftover-ink note with no mark that
-holds text — a `\titlenote`'s "Corresponding author. Email: …" (1003.2281, pdflatex prints ∗ and a footnote), `\pacs` codes
-(0803.0204, 1009.5642, printed under the abstract) — stands for a mark pdflatex prints or a line printed elsewhere and keeps
-the dagger: the first, broader rule inlined those 51 notes of 5,397 papers (review revCR8c finding 1).
+**What.** In HTML an author's note with no mark — an `ltx:creator/ltx:note` with no `@mark` and no untyped tag (the meta
+XSLT's `ltx:creator/ltx:note[not(normalize-space(@mark)) and not(ltx:tags/ltx:tag[not(@role)])]`,
+`LaTeXML-meta-xhtml.xsl`) — is a span of class `ltx_note_unmarked` holding its content inline: no `ltx_note_mark` (†), no
+`ltx_note_outer`/`ltx_note_content` (which `LaTeXML.css` hides until hover, so the content would be invisible), no
+"note: " type label. It follows the name's wrapper, as #1052 places it; `LaTeXML.css` sets its text as a line under the
+name (a picture stays inline), ar5iv-css after the author's lines, in the margin on wide screens. A mark-only note with
+no glyph and no text (`role="footnotemark"`) shows nothing, its id kept on an empty span. Body notes keep Perl's `†`.
 
 **Perl behavior.** The meta XSLT's `ltx:note` template (`LaTeXML-meta-xhtml.xsl`, `note-mark`) falls back to † for a
-note with no `@mark` and hides the content behind it. Perl writes no such frontmatter notes (it keeps a picture in the
-personname), so the fallback reached them only here.
+note with no `@mark` and hides the content behind it. Perl's creator template applies no notes (an author's `\thanks` is
+a contact), so the fallback reached frontmatter notes only here.
 
-**Why.** User ruling 2026-11-10, "No dagger for unmarked notes": pdflatex prints these with no mark, where they stand (an
-ORCID icon before a name, 2107.13277; 2404.13552's page-overlay notice). A `\thanks` note (role `thanks`, #156) keeps
-its dagger: it stands for the footnote mark pdflatex prints, which the note leaves implicit. jheppub's `\note` is a
-contact (`\lx@add@contact[role=note]`), unchanged (1203.0413, 2111.03202: HTML byte-identical).
+**Why.** User ruling 2026-11-10, "No dagger for unmarked notes", first applied to picture notes (2404.13552, 2107.13277),
+a `\thanks` note and a leftover note keeping their dagger (review revCR8c finding 1); DG 2026-11-16 reversed that
+carve-out: the frontmatter never prints the fallback `†`, an unmarked note of one author goes under its name with no
+glyph, the generic engine never invents one (a wrong glyph is worse than none). A note is unmarked where its glyph is
+unknown here (#1053's fail-safes: an unbound class's or a document's own `\maketitle`, REVTeX's name letters) or where
+none is printed (IEEEtran's `\thanks`, a picture): on 1807.01940 (revtex4-1) Hao Zhang's `\footnotemark[1]` showed `†`,
+another author's glyph, where the PDF prints only the altaffiliation's `∗`; scrartcl's `Ann\thanks{A} \and Bob\thanks{B}`
+(pdflatex ∗, †) showed `†` twice (review revMARKSAFE B1). jheppub's `\note` is a contact, unchanged.
 
-**Witnesses.** 2404.13552 (the notice's picture note: no †, shown inline); 2107.13277 (five ORCID icons, inline spans).
-Guard `perfect_kernel_batchcr8::an_unmarked_frontmatter_note_renders_inline_without_a_dagger`.
+Two placements this rendering makes visible, pre-existing and left to row R (and MARKKEY K7, beside IEEEtran's
+block-level `\thanks`): 0803.0204 (jasatex) shows `\pacs{…}` as a line under "Ludovic Margerin", where the PDF prints it
+under the abstract (JASAPACS); 1003.2281's Schifanella `\titlenote` sits on the last creator, so it reads as Menczer's
+(TITLENOTELAST).
+
+**Witnesses.** 2404.13552 (the notice's picture note), 2107.13277 (five ORCID icons), 1807.01940 (no glyph on Hao
+Zhang), 1510.02728 (IEEEtran's unmarked `\thanks`), 1003.2281 (a `\titlenote`), 0803.0204 (`\pacs` codes). Guards
+`perfect_kernel_batchcr8::an_unmarked_frontmatter_note_renders_inline_without_a_dagger`,
+`perfect_kernel_batchshmark::{a_mark_whose_glyph_is_unknown_prints_none, a_names_mark_revtex_sets_apart_is_unknown}`,
+the HTML layers of `perfect_kernel_batchfmmarks::notes_are_marked_only_where_the_class_prints_marks` and
+`hand_written_documents_render_every_note_once`, and the browser row of `cluster_cli::browser_render_fmmarks`.
 
 ### 991. → #980 (eptcs's author block and OmniBus's `\authors` list go whole to the reading; an e-mail list reads as it prints (Z18k, Z18k2, Z18k3))
 
@@ -19544,8 +19556,8 @@ or digit is as often an affiliation label as a footnote number, and a wrong link
 mark-only `1` linked another author's own footnote `1`). Such a linkable mark-only note pointing at a one-author note
 makes it shared, so it prints in the margin with its mark. LaTeXML.css (local delta after the ORCID wrapper rules): a name with notes is set as text; where the author's
 lines show under the name (#1051's card, `ltx_authors_multiline`) its marked notes show there, one author's with no
-mark, a shared one headed by its mark, a mark-only note's mark kept; an unmarked note, and every note elsewhere, keeps
-its mark and pop-up. In both stylesheets a body under the name floats, full width, in a flow-root wrapper, so a mark
+mark, a shared one headed by its mark, a mark-only note's mark kept; an unmarked author note shows its text as a line
+under the name with no mark (#990), and every note elsewhere keeps its mark and pop-up. In both stylesheets a body under the name floats, full width, in a flow-root wrapper, so a mark
 after it stays on the name's line, and consecutive shown marks are parted by a superscript comma ("1,2", not "12";
 PURE splits an author's `$^{1,2}$` into two notes).
 ar5iv-css (`fix/shared-notes`): a marked note of one author on a row under the name with no mark; a shared note's marks
@@ -19629,16 +19641,68 @@ latex_constructs.pool.ltxml:503-527); acmart's `\authornote` is a contact, `\aut
   set by `lift_notes_beside`), which the reading paired the entry by (`resolver/blocks.rs` `mark:footnote`), is removed
   where a note of a creator carries its mark or its creator's name holds the same mark (1607.07280's REVTeX
   `\affiliation{\footnotemark[1]Univ A}` under `Shun'ya Mizoguchi\footnote[1]{E-mail:…}`).
-Open (DG's standing guidance, 2026-11-16: the generic path must stand alone): a class with no binding writes no
-automatic `\thanks` mark — scrartcl prints ∗ — since only a binding declares its title's marks; the switch is to test
-the behaviour instead (a class whose `\maketitle` empties `\thefootnote` or relaxes `\@makefnmark`, ieeeconf.cls:3592,
-IEEEtran.cls:4758, prints none), through the title-page replay (`latex_constructs::sect05` `title_page_replay_tokens`).
-The hand-typed legend marks and the Link step are generic already (scrartcl and OmniBus rows of
-`a_notes_mark_is_never_in_its_text`).
-The same detection would serve a package or document that owns `\maketitle`'s marks, where the binding gate writes
-article's symbols today (red repros `sectioning-frontmatter/titling_thanksmarkseries_marks_red` — titling's
-`\thanksmarkseries{arabic}` prints 1, 2 — and `maketitle_redefined_prints_no_marks_red`, a `\maketitle` with
-`\let\@makefnmark\relax` prints none; row R SHAUTO).
+- *Fail-safes* (DG 2026-11-16: "a wrong glyph is worse than none; unbound classes get no automatic mark until T1
+  measures the real glyph"). The lock records whose code it refused a `\maketitle` from (`state::note_redefined`):
+  `\maketitle:redefined@class` while a class file loads (the packages it loads included), `\maketitle:redefined@document`
+  otherwise (the document's, a package's it loads). The class's marks hold only where its own `\maketitle` runs
+  (`latex_constructs::class_maketitle_in_force`): the document took none over, or its redefinition calls the class's by
+  meaning (`\let\oldmt\maketitle \renewcommand\maketitle{\oldmt…}`, whose page pdflatex prints as the plain
+  document's: review revMARKSAFEb B1, mnras, IEEEtran, llncs). A body that names `\maketitle` at all counts as one, its
+  `\global\let\maketitle\relax` included: an ACL copy's whole `\maketitle` keeps the class's ∗ † (2502.19103), and so,
+  wrongly, does a document's own article-like `\maketitle` that prints none (`\let\@makefnmark\relax`; repro
+  `fmmarks_own_maketitle_relax_red`, row R SHAUTO/T1). Another document `\maketitle` prints marks unknown here
+  (`\def\thefootnote{\arabic{footnote}}`: 1, 2). The class file's own drop is the class's: a binding that reads its raw
+  class and declares its marks keeps them (lni.cls:475-477 arabic, `lni_cls.rs`: 2407.04435's 1, 1, 1,2, 3). Under a
+  class no binding declares the marks of, the class file's own `\maketitle` is unknown too (`title_marks_unknown`:
+  `\maketitle:redefined@class`; an unbound class's, scrartcl's `\fnsymbol`, where Perl's number key wrote
+  `\footnotemark[1]` "1", the advisor's I-3; geophysics's, 2006.10886, 2403.07393; a bound class's own `\maketitle`,
+  elsarticle's or llncs's, keeps Perl's marks), and so is a document's that is no wrapper of it. So no `\thanks` note (`title_marks_declared`), no kernel `\footnotemark`/`\footnote`/
+  `\footnotetext` of a title field (`drop_unknown_title_mark`: no `mark`, no tags, its text paired by the counter value
+  `_fnvalue`) and no acmart `\authornote` (`acm_note_mark`) carries one — unless the document set `\thefootnote` itself
+  in the field since it began (aiaa-tc's `\thanksibid{2}`, `\renewcommand\thefootnote{\fnsymbol{aiaa@cthanks}}
+  \footnotemark`, "†", 1505.07844). A name's mark a class sets apart is unknown too (`lx_title_footnote_own_marks`:
+  REVTeX 4.1/4.2's minipage letters, "Ann Ablea", bare or given its number). Such a note is flagged (`_markunknown`)
+  and counted once the document is built (`insert::count_unknown_marks`): its note placed (a `\thanks`, a
+  `\footnotetext[n]` paired by the number), one Info counting each source note once (two names' `\footnotemark[1]` and
+  one `\footnotetext[1]` are one note; review revMARKSAFEb N2), DG 2026-11-16: the association known, the glyph not; its note
+  never placed (a `\footnotemark[1]` whose note no number key names yet, row R MARKKEY; a bare one nothing answers), a
+  Warning each (`frontmatter`/`unanswered_mark_lost`, as `count_lost_marks` counts). The XSLT shows no glyph for it
+  (#990). A field's `\thefootnote` is set as the field begins, as the class's `\maketitle` sets it before `\@author`
+  expands (`title_field_footnotes`, `enter_title_footnotes`; before, every note set it again): a redefinition in the field
+  holds after it. One an author block's cell makes holds in that cell alone, which `\and`, `\\` and `&` end
+  (latex.ltx:17219-17222), for both readers of the marks: the flush runs the block's declarations ahead of its names
+  (`emit::declarations`), each followed by `\lx@title@cell@declared{<flush>:<creator>}`, keyed to the one name its cell
+  holds; a `\thefootnote` it set is that name's (`\lx@title@cell@enter`, `latex_constructs::enter_title_cell`) and the
+  flush goes on with the one before it; a cell of several names leaves every name's mark of the flush unknown, one of
+  no name (a line's: `\\ \renewcommand…Univ A`, pdflatex "Ann Able∗ Bob Baker†") renumbers none. The rehearsal, which reads the `\thanks` marks, starts each cell with the title's marks again
+  (`latex_constructs::rehearsal_cell_ends` at `\and` and `\\`). 1807.02791's `\renewcommand{\thefootnote}{\arabic
+  {footnote}}` before its one name prints "Andrea Roccaverde 1 2"; `\author{Ann\footnotemark[1] \and \renewcommand…
+  Bob\footnotemark[2] \and Cy\footnotemark[3]}` "Ann Able∗ Bob Baker2 Cy Cole‡"; `\author{\renewcommand…Ann\thanks{…}
+  \and Bob\thanks{…}}` "Ann Able1 Bob Baker†" (review revMARKSAFE S1); one in the preamble the class's `\maketitle`
+  overrides (∗, †). titling's `\thanksmarkseries{<series>}` sets the class's declared marks to `\@nameuse{<series>}
+  {footnote}` (titling.sty:60-61, :121, :145; Perl a no-op): `arabic` prints 1, 2; its `\symbolthanksmark` passes
+  `\fnsymbol` (:62), which pdflatex errs on, a no-op here. A mark alone keeps its glyph in `mark` only
+  (`link_marked_notes`): 2607.15705's `\authornotemark[2]` that no note answers held "†" as its text too. A label
+  authblk prints on a name (`\AB@authnote`, authblk.sty:120-133) that no `\affil` prints before its line is a mark the
+  frontmatter places nowhere, counted at `\maketitle` (`authblk_sty::count_lost_labels`, one Warning listing them:
+  2606.00446's `\author[1,*,\S]`, whose `§` only the `\date` line explains; not where an `\affil` is unlabelled, its
+  `\AB@thenote` number possibly the answer). Both sides are read by one key, the text the label prints
+  (`queue_digest::printed_label_pieces`: `printed_label`'s digested text, compared as `insert::mark_form` compares
+  marks): `\author[\affA]` with `\newcommand\affA{1}` is `\affil[1]`'s (review revMARKSAFE S3), `\affil[$\dag$]` answers
+  `\author[\dag]` (2201.10988), the line's label read as authblk.sty:148 reads it, not verbatim (`\affil[$^1$]` answers
+  `\author[$^{1,2}$]`, 2106.15893); a piece mixing letters with symbols (`1$^*$`, 2412.03338) is not compared;
+  writing the mark as a mark-only note is the PURE branch's re-homing. A generic count over the placed creators was
+  tried and dropped: a macro-held label (`\author[\udem]`), a legend under several labels (`\affil[1,2]`) and a
+  single-carrier note contact (jheppub's `\note[*]`) answer a request with no label the XML keeps.
+Open: a class with no binding writes no automatic mark — scrartcl prints ∗ — since only a binding declares its title's
+marks, nor does a document's own `\maketitle`, nor a `\NewCommandCopy` wrapper of the class's (no `\let` copy the
+by-meaning test sees, `maketitle_newcommandcopy_wrapper_red`); the measured glyph (T1: the title-page replay,
+`latex_constructs::sect05` `title_page_replay_tokens`, run on a sentinel `\thanks`) would give all three (row R SHAUTO).
+A name's `\footnotemark[n]` under them finds its note by no glyph: number keys are row R MARKKEY. A `&` cell end is not
+read by the rehearsal (only `\and` and `\\`). The
+hand-typed legend marks and the Link step are generic already (scrartcl and OmniBus rows of
+`a_notes_mark_is_never_in_its_text`). A preamble `\renewcommand\thefootnote` under a class whose `\maketitle` sets none
+(REVTeX's, emulateapj's own) is not read; the binding's declared marks stand.
 **Guards**: `perfect_kernel_batchshmark::{a_notes_mark_is_never_in_its_text,
 a_thanks_note_carries_the_mark_its_title_prints, a_mark_on_a_name_is_a_copy_of_the_note_it_marks,
 an_affiliations_linking_mark_is_no_note}` (repros `sectioning-frontmatter/{ieee_thanks_symbol_legend_note_mark_lifted,
@@ -19648,7 +19712,20 @@ author_samethanks_is_a_copy_of_the_marked_note, acmart_authornotemark_is_a_copy_
 author_thanks_shared_by_footnotemark_marks_kept, revtex_affiliation_footnotemark_link_is_no_note,
 revtex40_name_footnote_unnumbered_is_its_note_contact, revtex41_name_footnote_is_its_note_contact,
 revtex42_name_footnote_is_its_note_contact, thanks_leading_symbol_text_is_no_mark_copy, ieee_thanks_leading_label_is_no_mark}.tex`);
-`perfect_kernel_batchsbx1::sandbox_2605_rows` (the collaboration's marked note, whole).
+`perfect_kernel_batchsbx1::sandbox_2605_rows` (the collaboration's marked note, whole); the fail-safes
+`perfect_kernel_batchshmark::{marks_only_where_the_classs_maketitle_runs,
+a_thefootnote_the_author_block_sets_holds_for_its_name, a_names_mark_revtex_sets_apart_is_unknown,
+a_mark_whose_glyph_is_unknown_prints_none, a_class_label_no_entry_answers_is_counted}` and the mark-alone row of
+`a_mark_on_a_name_is_a_copy_of_the_note_it_marks` (repros `sectioning-frontmatter/{maketitle_redefined_prints_no_marks_red,
+titling_thanksmarkseries_marks_red, fmmarks_single_name_marks_after_newline_thin_spaces_red,
+revtex_name_footnotemark_leaves_the_marks_unknown, fmmarks_acmart_authornotemark_without_its_note_red,
+fmmarks_authblk_double_star_label_and_date_note_red, marksafe_unbound_class_thanks_print_no_glyph,
+marksafe_unbound_class_footnotemark_given_number_unknown, marksafe_unbound_class_footnotemark_answered_by_its_text,
+marksafe_thefootnote_set_in_a_cell_holds_there, marksafe_thefootnote_set_in_a_cell_thanks,
+marksafe_thefootnote_set_in_a_cell_ends_at_its_line, authblk_macro_label_is_its_printed_text}.tex`); the suite's rows
+`perfect_kernel_batchfmmarks::notes_are_marked_only_where_the_class_prints_marks` (with
+`marksafe_own_maketitle_copy_marks_unknown`, `marksafe_unbound_class_name_footnote_unknown`, and RED
+`maketitle_newcommandcopy_wrapper_red`).
 
 ### 1054. A title-page list's text is a note at the title block; a footnote text several names share under one mark is their marked note (SHREST)
 

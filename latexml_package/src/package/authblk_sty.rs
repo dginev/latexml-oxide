@@ -357,6 +357,7 @@ pub fn define_author_and_affil() -> Result<()> {
     // authblk's bookkeeping after the author (`\lx@AB@author@state`, below).
     let mut state = vec![T_CS!("\\lx@AB@author@state"), T_BEGIN!()];
     if let Some(label) = label.as_ref() {
+      note_labels(NAME_LABELS, label)?;
       state.extend(label.unlist_ref().iter().copied());
     }
     state.push(T_END!());
@@ -394,6 +395,13 @@ pub fn define_author_and_affil() -> Result<()> {
   // own `\affil` loads unlocked and keeps it (lni_cls.rs). OXIDIZED_DESIGN_DIVERGENCES #959.
   DefMacro!("\\affil OptionalSemiverbatim {}", sub[(label, affil)] {
     let label = label.unwrap_or_default();
+    if label.is_empty() {
+      assign_value(LINE_UNLABELLED, true, Some(Scope::Global));
+    } else {
+      // (read as authblk.sty:148 reads `\affil[#1]`, not verbatim: `\affil[$^1$]` prints 1, as `\author[$^{1,2}$]`'s
+      // pieces do, 2106.15893)
+      note_labels(LINE_LABELS, &Tokenize!(TeXString::assembled(label.clone().untex_string().to_string())))?;
+    }
     let replay = Invocation!(T_CS!("\\lx@replay@class@setter"), vec![
       Some(Tokens::new(Explode!("affil"))),
       Some(label.clone()),
@@ -441,7 +449,73 @@ pub fn define_author_and_affil() -> Result<()> {
     ]
     .concat()))
   }, robust => true, locked => true);
+  // (at `\maketitle`, the names' labels no `\affil` prints: `count_lost_labels`)
+  DefPrimitive!("\\lx@AB@lost@labels", { count_lost_labels(); });
+  AddToMacro!("\\lx@maketitle@begin", "\\lx@AB@lost@labels");
   Ok(())
+}
+
+/// The labels of the names (`\author[1,*,\S]`'s pieces) and of the lines (`\affil[*]`'s) given so far, each piece once,
+/// `\u{1}` apart; and whether an `\affil` came unlabelled, numbered by authblk's counter (`\AB@thenote`).
+const NAME_LABELS: &str = "lx_AB_name_labels";
+const LINE_LABELS: &str = "lx_AB_line_labels";
+const LINE_UNLABELLED: &str = "lx_AB_line_unlabelled";
+
+/// Note each comma piece of `label` under `key` ([`NAME_LABELS`], [`LINE_LABELS`]) by the text it prints, both sides read
+/// alike (`printed_label_pieces`: `\author[\affA]` with `\newcommand\affA{1}` is `\affil[1]`'s 1, `$\dag$` and `\dag`
+/// one †): one that is letters and digits, or symbols (`**`, `§`); a mixed piece (`1$^*$`, 2412.03338), or one read by
+/// its spelling holding more than one command, is no mark compared here.
+fn note_labels(key: &str, label: &Tokens) -> Result<()> {
+  let mut kept = lookup_string(key);
+  for piece in printed_label_pieces(label)? {
+    let symbol = |c: char| {
+      c == '*' || c == '#' || (!c.is_ascii() && !c.is_alphanumeric() && !c.is_whitespace())
+    };
+    let single = match piece.strip_prefix('\\') {
+      None => piece.chars().all(char::is_alphanumeric) || piece.chars().all(symbol),
+      Some(name) => {
+        !name.is_empty() && (name.chars().all(char::is_alphabetic) || name.chars().count() == 1)
+      },
+    };
+    if single && !kept.split('\u{1}').any(|k| k == piece) {
+      if !kept.is_empty() {
+        kept.push('\u{1}');
+      }
+      kept.push_str(&piece);
+    }
+  }
+  assign_value(key, Stored::String(pin(&kept)), Some(Scope::Global));
+  Ok(())
+}
+
+/// authblk prints each name's labels (`\AB@authnote`, authblk.sty:120-133) and each line's before it
+/// (`\AB@affilnote`, :142); a name's label no line prints is a mark the frontmatter places nowhere, counted (FIDELITY_CHARTER:
+/// no silent loss): 2606.00446's `\author[1,*,\S]`, whose `§` only the `\date` line explains ("Ann Able1,*,§"). Not where
+/// an `\affil` is unlabelled, as its number (`\AB@thenote`) may answer one; read at `\maketitle`, then cleared.
+fn count_lost_labels() {
+  let names = lookup_string(NAME_LABELS);
+  let lines = lookup_string(LINE_LABELS);
+  if !names.is_empty() && !lookup_bool(LINE_UNLABELLED) {
+    let lost: Vec<&str> = names
+      .split('\u{1}')
+      .filter(|label| !lines.split('\u{1}').any(|line| line == *label))
+      .collect();
+    if !lost.is_empty() {
+      Warn!(
+        "frontmatter",
+        "unanswered_mark_lost",
+        s!(
+          "authblk prints {} label(s) of the names no \\affil explains, written on no name: {}",
+          lost.len(),
+          lost.join(", ")
+        )
+      );
+    }
+  }
+  for key in [NAME_LABELS, LINE_LABELS] {
+    assign_value(key, Stored::String(pin("")), Some(Scope::Global));
+  }
+  assign_value(LINE_UNLABELLED, false, Some(Scope::Global));
 }
 
 /// The number of creators an unlabelled `\affil` is printed under at most: the ones queued since the last `\affil`

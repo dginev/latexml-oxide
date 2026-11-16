@@ -707,6 +707,57 @@ pub(in crate::base_utilities) const MARK_IN_TEXT: &str = "_markintext";
 #[doc(hidden)]
 pub const MARK_FROM_COUNTER: &str = "_markfromcounter";
 
+/// The flag on a creator's note written with no mark because the mark its title prints is unknown here
+/// (`latex_constructs::title_marks_unknown`), which [`count_unknown_marks`] reads at the document's end.
+pub(in crate::base_utilities) const MARK_UNKNOWN: &str = "_markunknown";
+
+/// The authors' notes written with no mark, their glyph unknown ([`MARK_UNKNOWN`]), once the document is built: a note
+/// whose text never came (a `\footnotemark[1]` whose note no number key names yet, a scrartcl name's under Ann's
+/// `\thanks`) is a mark lost, counted as `count_lost_marks` counts one; those placed under their author, an Info (DG
+/// 2026-11-16: the association known, the glyph not). OD #1053.
+pub(in crate::base_utilities) fn count_unknown_marks(document: &mut Document) {
+  let notes = document.findnodes(&s!(".//ltx:creator/ltx:note[@{MARK_UNKNOWN}]"), None);
+  if notes.is_empty() {
+    return;
+  }
+  // (each source note once: the copies of one `\footnotetext[1]` its names' marks took share its counter value and
+  // text, `latex_constructs::relocate_footnote`; review revMARKSAFEb N2)
+  let mut placed = std::collections::HashSet::new();
+  for (i, note) in notes.iter().enumerate() {
+    let holds_text = note.get_child_nodes().iter().any(|child| {
+      if child.get_type() == Some(NodeType::ElementNode) {
+        child.get_name() != "tags"
+      } else {
+        !child.get_content().trim().is_empty()
+      }
+    });
+    if holds_text {
+      placed.insert(match note.get_attribute("_fnvalue") {
+        Some(value) => (value, note.get_content()),
+        None => (s!("{i}"), String::new()),
+      });
+    } else {
+      Warn!(
+        "frontmatter",
+        "unanswered_mark_lost",
+        "A footnote mark on an author's name whose note cannot be identified, its glyph unknown here, is written with \
+         none"
+      );
+    }
+  }
+  let placed = placed.len();
+  if placed > 0 {
+    Info!(
+      "frontmatter",
+      "unknown_mark",
+      s!(
+        "{placed} author note(s) written with no mark, the mark the title prints being unknown here: each under its \
+         author"
+      )
+    );
+  }
+}
+
 /// The bookkeeping attribute of a creator's note that is a `\footnotetext` the reading gave the names showing its number
 /// (`resolver::answer_note_texts`): no carrier prints it but by its `\footnotemark`, which is the copy's own mark
 /// ([`link_marked_notes`]; OD #1058). Internal, dropped at output.
@@ -859,6 +910,13 @@ fn link_marked_notes(document: &mut Document) -> Result<()> {
     let Some(key) = mark_alone(&mark_note) else {
       continue;
     };
+    // (its glyph is its `mark` alone: a copy in its text would show twice, 2607.15705's `\authornotemark[2]` that no note
+    // answers; its tags stay, as Perl's leftover `\footnotemark`'s)
+    for child in mark_note.get_child_nodes() {
+      if child.get_name() != "tags" {
+        document.remove_node(child);
+      }
+    }
     let same = |note: &&Node| {
       note
         .get_attribute("mark")

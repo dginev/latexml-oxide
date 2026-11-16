@@ -82,9 +82,8 @@ pub(crate) fn load() -> Result<()> {
         // (ryethesis.cls:344 `\newcommand{\abstract}[1]{…\gdef…{#1}}`: the
         // braced text is one stored argument) — the same record a dropped
         // raw `\def` leaves (state.rs `<cs>:redefined@nargs`).
-        let redefined = s!("{}:redefined", cs_token.to_string());
         let redefined_nargs = s!("{}:redefined@nargs", cs_token.to_string());
-        AssignValue!(&redefined => true, Some(Scope::Global));
+        note_redefined(&cs_token);
         AssignValue!(&redefined_nargs => Number::new(nargs as i64), Some(Scope::Global));
         // …and the dropped definition itself, as `\lx@dropped@<name>` (the same
         // record `install_definition` keeps for a dropped `\def`/`\renewcommand`).

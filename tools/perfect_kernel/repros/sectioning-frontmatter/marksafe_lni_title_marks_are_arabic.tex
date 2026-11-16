@@ -1,0 +1,20 @@
+% mechanism: lni's binding reads the raw lni.cls, whose own `\maketitle` numbers the title's notes in arabic
+%   (lni.cls:475-477 `\renewcommand\thefootnote{\@arabic\c@footnote}`): the binding declares those marks
+%   (`lni_cls.rs`, `\lx@title@thefootnote`), and the class file's own drop keeps them in force
+%   (`\maketitle:redefined@class`, `latex_constructs::class_maketitle_in_force`, OD #1053)
+% witness:  2407.04435 (lni; pdflatex "1", "1", "1,2", "3" on its names); review revMARKSAFEb S2
+% oracle:   pdflatex 0 errors; "Ann Able1, Bob Baker2", footnotes "1 Note A.", "2 Note B."
+% engines:  rust MARKSAFEb de9ad33fd3d = 0 errors, 0 Warnings; notes unmarked (the fail-safe), 1 `unknown_mark` Info
+% expect:   0 errors, 0 Warnings; thanks[1]=Note A., thanks[2]=Note B.; no `unknown_mark` Info
+% status:   GREEN (MARKSAFEc: perfect_kernel_batchshmark::lni_prints_its_own_arabic_title_marks)
+% preload:  ar5iv.sty
+\documentclass[english]{lni}
+\title{A Title}
+\author{Ann Able\thanks{Note A.} \and Bob Baker\thanks{Note B.}}{}{}
+\startpage{1}
+\editor{Ed}
+\booktitle{Book}
+\begin{document}
+\maketitle
+Body.
+\end{document}

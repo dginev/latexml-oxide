@@ -4,9 +4,10 @@
 %   item)
 % witness: review revSHMARK S3 (p7.tex)
 % oracle:  pdflatex 0 errors: "Ann Able1 Bob Baker2", footnotes "1 First note.", "2 Second note."
-% engines: rust SHMARKb = notes mark="*" and mark="†"
+% engines: rust SHMARKb = notes mark="*" and mark="†"; MARKSAFE = mark="1", mark="2" (titling's binding sets the
+%   declared title marks, `\lx@title@thefootnote`)
 % expect:  0 errors 0 warnings; notes mark="1" "First note.", mark="2" "Second note."
-% status:  RED (SHMARKb)
+% status:  RED (SHMARKb) -> GREEN (perfect_kernel_batchshmark::marks_only_where_the_classs_maketitle_runs)
 % moves:   row R SHAUTO
 % preload: ar5iv.sty
 \documentclass{article}

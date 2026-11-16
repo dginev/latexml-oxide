@@ -11,7 +11,7 @@ pub(in crate::base_utilities) use names::*;
 use crate::base_utilities::{
   defs::frontmatter_api::spacing_formulas_as_space,
   frontmatter::{
-    LIST_MARK, MARK_FROM_COUNTER,
+    LIST_MARK, MARK_FROM_COUNTER, MARK_UNKNOWN,
     classify::title_code::{reads_arguments, title_code_author_definitions},
     observer::events::{
       self, Event, EventKind, events_text, lex_body_with_inks, lex_events, opening_ink,
@@ -380,6 +380,15 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
   // The footnote step of a bare mark the title prints that no name writes, its glyph lost and counted: the mark typed
   // into a box no one uses, so the counter moves as the title's `\footnotemark` moves it (`emit::mark_dropped`, OD #1057).
   DefMacro!("\\lx@title@mark@step{}", r"{\setbox0\hbox{#1}}");
+  // An author block's `\thefootnote` declaration holds in its cell of the `\@author` tabular (latex.ltx:17219-17222):
+  // the emitter keys each one it runs ahead of the names to its cell's name, `<flush>:<creator>`
+  // (`latex_constructs::title_cell_declared`, `title_cell_enter`; 1807.02791).
+  DefPrimitive!("\\lx@title@cell@declared Semiverbatim", sub[(key)] {
+    crate::latex_constructs::title_cell_declared(&key.to_string());
+  });
+  DefPrimitive!("\\lx@title@cell@enter Semiverbatim", sub[(key)] {
+    crate::latex_constructs::title_cell_enter(&key.to_string());
+  });
   // A creator's note after its step, marked as its title prints it (`title_notes_print_marks`; article.cls:205, :241);
   // an unmarked `\footnote` Perl's contact (Base_Utility.pool.ltxml:663). OD #1053; 2502.19103, 1911.13299, 2301.00220.
   DefPrimitive!("\\lx@title@thanks []{}", sub[(attr, body)] {
@@ -1004,9 +1013,10 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
 
 /// `\lx@title@thanks` and `\lx@title@footnote` (`footnote`): the note's call, marked where its title marks it.
 fn title_note(footnote: bool, attr: Option<Tokens>, body: Tokens) -> Result<()> {
-  // (the counter's mark after the step, never a given number's: `\footnote[2]` is not marked so here)
+  // (the counter's mark after the step, never a given number's: `\footnote[2]` is not marked so here; `\thefootnote`, the
+  // class's as the field began, `latex_constructs::enter_title_footnotes`, or the field's own: 1807.02791)
   let mark = if title_note_steps() && title_notes_print_marks(footnote, false) {
-    let mark = digest(Tokens!(T_CS!(crate::latex_constructs::TITLE_THEFOOTNOTE)))?.to_string();
+    let mark = digest(Tokens!(T_CS!("\\thefootnote")))?.to_string();
     Some(mark.trim().to_string()).filter(|mark| !mark.is_empty())
   } else {
     None
@@ -1015,9 +1025,17 @@ fn title_note(footnote: bool, attr: Option<Tokens>, body: Tokens) -> Result<()> 
     None if footnote => ("ltx:contact", s!("role=note")),
     mark => {
       let class = classify_thanks(body.clone().untex_string().as_ref());
-      let marked = mark.map_or_else(String::new, |mark| {
-        s!(",mark={{{mark}}},{MARK_FROM_COUNTER}=true")
-      });
+      // (none where the mark the title prints is unknown here, flagged so: `insert::count_unknown_marks`)
+      let marked = mark.map_or_else(
+        || {
+          if crate::latex_constructs::title_marks_unknown(false) {
+            s!(",{MARK_UNKNOWN}=true")
+          } else {
+            String::new()
+          }
+        },
+        |mark| s!(",mark={{{mark}}},{MARK_FROM_COUNTER}=true"),
+      );
       (
         "ltx:note",
         s!("role=thanks,class=ltx_note_frontmatter ltx_thanks_{class}{marked}"),
@@ -1058,17 +1076,16 @@ fn title_note_steps() -> bool {
 /// no number (`given`), at a counter other commands step that the reading does not count
 /// (`lx_title_footnote_given_marks_only`: REVTeX 4.0's `\thanks`, `\email`, `\altaffiliation`). OD #1053. Under a
 /// binding that numbers its front-matter footnotes ([`FOOTNOTE_MARKS`], REVTeX's `\@AF@join`), only a number given in
-/// the source: the rest are that binding's pass's (`number_footnote_parts`, OD #1054), a name's `\thanks` unmarked.
+/// the source: the rest are that binding's pass's (`number_footnote_parts`, OD #1054), a name's `\thanks` unmarked. Only
+/// under the class's own `\maketitle` ([`title_marks_declared`](crate::latex_constructs::title_marks_declared)): a
+/// document's or a package's prints marks unknown here, none written (`maketitle_redefined_prints_no_marks`).
 pub(in crate::base_utilities) fn title_notes_print_marks(footnote: bool, given: bool) -> bool {
   lookup_bool("lx_frontmatter_explicit")
     && (given || lookup_string(FOOTNOTE_MARKS).is_empty())
     && !(footnote
       && (lookup_bool("lx_title_footnote_own_marks")
         || (!given && lookup_bool("lx_title_footnote_given_marks_only"))))
-    && lookup_definition(&T_CS!(crate::latex_constructs::TITLE_THEFOOTNOTE))
-      .ok()
-      .flatten()
-      .is_some()
+    && crate::latex_constructs::title_marks_declared()
 }
 
 /// `\lx@title@thanks[attr]{content}`, or `\lx@title@footnote` (`footnote`): a creator's note after its step.

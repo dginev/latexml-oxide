@@ -204,10 +204,12 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
   // (each reverting as the command it is bound for, `alias`: a text made of an argument holding one — an argument read
   // verbatim, svjour3's `\email{yjansson@kth.se \and tony@kth.se}`, 2106.06418; a link's target, lni's `\orcid`,
   // 2106.11154, 1401.5951 — keeps its `\and`, `\\` or `\par`, never the rehearsal's name: review revN2)
-  DefConstructor!("\\lx@fm@obs@and", "", alias => "\\and");
-  DefConstructor!("\\lx@fm@obs@And", "", alias => "\\And");
-  DefConstructor!("\\lx@fm@obs@AND", "", alias => "\\AND");
-  DefConstructor!("\\lx@fm@obs@break OptionalMatch:* []", "", alias => "\\\\");
+  // (each ends a cell of the `\\@author` tabular, latex.ltx:17219-17222, and with it a `\\thefootnote` set in the cell:
+  // `latex_constructs::rehearsal_cell_ends`)
+  DefConstructor!("\\lx@fm@obs@and", "", alias => "\\and", before_digest => { crate::latex_constructs::rehearsal_cell_ends(); });
+  DefConstructor!("\\lx@fm@obs@And", "", alias => "\\And", before_digest => { crate::latex_constructs::rehearsal_cell_ends(); });
+  DefConstructor!("\\lx@fm@obs@AND", "", alias => "\\AND", before_digest => { crate::latex_constructs::rehearsal_cell_ends(); });
+  DefConstructor!("\\lx@fm@obs@break OptionalMatch:* []", "", alias => "\\\\", before_digest => { crate::latex_constructs::rehearsal_cell_ends(); });
   // (its own, for the Break to say so; a contact's raw argument holding it reads it as the break it is, `events::raw_lines`:
   // 2106.11154's `\orcid`)
   DefConstructor!("\\lx@fm@obs@par OptionalMatch:* []", "", alias => "\\par");
@@ -802,6 +804,7 @@ fn install_event_bindings(
   {
     let_i(&T_CS!(THEFOOTNOTE), &T_CS!("\\lx@fm@obs@thefootnote"), None);
   }
+  crate::latex_constructs::rehearsal_cells_begin();
   for (cs, target, needs_argument) in BOUND_WHEN_DEFINED {
     if !block_breaks.iter().any(|(declared, _)| declared == cs)
       && lookup_definition(&T_CS!(*cs))?.is_some_and(|defn| {
