@@ -1,6 +1,6 @@
 //! Guards for CL8 (`agent_reports/2026-11-09_brief_CL8.md`, `…_brief_CL8b.md`; classes C7, C8 and C9 of CL5's `=2`
 //! content losses), each off and at `=2`, one per mechanism:
-//! - C9: a used mark of digits and a sub-letter is written whole (`RCreator::whole_marks`, the mark the emitter leaves keyed by its pieces, `emit::left_marks`): BESIII's
+//! - C9: a used mark of digits and a sub-letter is written whole (`NameMark::whole`, the mark the emitter leaves keyed by its pieces, `emit::left_marks`): BESIII's
 //!   "50A,50C" was "A,C" (1705.11109);
 //! - C7: a wrapped `\thanks` whose span's plain argument prints less than the note is written by its text, never the id
 //!   alone (`emit::note_argument`; SCITEPRESS's `\orcidAuthor`, 2608.08994, 2202.03759);

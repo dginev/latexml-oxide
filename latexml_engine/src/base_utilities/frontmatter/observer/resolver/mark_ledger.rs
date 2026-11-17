@@ -50,10 +50,22 @@ pub(in crate::base_utilities::frontmatter::observer) struct MarkRecord {
 /// The ledger of a block's marks and notes set beside spacing ([`mark_ledger`]).
 #[derive(Debug, Clone, Default, PartialEq)]
 pub(in crate::base_utilities::frontmatter::observer) struct MarkLedger {
-  pub records: Vec<MarkRecord>,
+  pub records:    Vec<MarkRecord>,
+  /// each mark printed on top of the title mark before it, of the same glyph ([`overprints`]): its span and the glyph
+  pub overprints: Vec<((u16, u16), String)>,
 }
 
 impl MarkLedger {
+  /// The glyph the mark or note with span `span` prints on top of the same glyph ([`overprints`]).
+  pub fn overprint_of(&self, span: Option<(u16, u16)>) -> Option<&str> {
+    let span = span?;
+    self
+      .overprints
+      .iter()
+      .find(|(at, _)| *at == span)
+      .map(|(_, glyph)| glyph.as_str())
+  }
+
   /// The record of the mark or note with span `span`.
   pub fn record_of(&self, span: Option<(u16, u16)>) -> Option<&MarkRecord> {
     span.and_then(|span| self.records.iter().find(|r| r.span == Some(span)))
@@ -313,6 +325,62 @@ fn decide(
   }
 }
 
+/// The marks of `events` (a block's read events) TeX prints on top of the mark before them, of the same glyph: where the
+/// title's footnote mark takes no width (`zero_width`: article.cls:206, report.cls:212, book.cls:218 `\rlap` it), a mark
+/// or note set after it with no glue between them prints over it — `Ward Struyve\footnote{A}$^{*}$\footnote{B}` reads
+/// "Struyve∗†", its two ∗ at one place (2012.08663), `Aaditya Singh\footnotemark[1]\thanks{…}` one ∗ (2103.01544) —, so
+/// the page shows that glyph once. A mark set after an inked one stands beside it (`Wei Fan$^{*}$\thanks{…}` "∗∗"),
+/// and a mark of another glyph is ink of its own. Decided on the glue the ledger reads (a `Gap`, an interword space);
+/// the glyphs compared as one asterisk.
+pub(in crate::base_utilities::frontmatter::observer) fn overprints(
+  events: &[Event],
+  zero_width: bool,
+) -> Vec<((u16, u16), String)> {
+  let mut out = Vec::new();
+  if !zero_width {
+    return out;
+  }
+  // (the glyph a mark or note prints on the name, and whether it is the title's own footnote mark, of no width)
+  let printed = |e: &Event| -> Option<(String, bool)> {
+    match e.kind {
+      EventKind::Note if !events::is_picture_note(e) => {
+        note_shows(e).map(|glyph| (glyph.to_string(), true))
+      },
+      EventKind::Mark => {
+        let glyph = e.text.trim();
+        (!glyph.is_empty()).then(|| (glyph.to_string(), printed_by_footnotemark(e)))
+      },
+      _ => None,
+    }
+  };
+  let form = |glyph: &str| one_asterisk(glyph.trim());
+  // (the zero-width mark before, its glyph and whether a space follows it)
+  let mut under: Option<(String, bool)> = None;
+  for e in events {
+    match &e.kind {
+      // (what prints nothing between them: a font change, a recorded contact)
+      EventKind::Layout if !is_image(e) => continue,
+      EventKind::Declaration | EventKind::ApiCall => continue,
+      EventKind::Contact if e.unprinted.is_some() => continue,
+      _ => {},
+    }
+    let Some((glyph, zero)) = printed(e) else {
+      under = None;
+      continue;
+    };
+    if let Some((before, space_after)) = &under
+      && !space_after
+      && !e.space_before
+      && form(before) == form(&glyph)
+      && let Some(span) = e.span
+    {
+      out.push((span, glyph.clone()));
+    }
+    under = zero.then_some((glyph, e.space_after));
+  }
+  out
+}
+
 #[cfg(test)]
 mod tests {
   use super::*;
@@ -331,6 +399,49 @@ mod tests {
     let mut e = Event::new(EventKind::Mark);
     e.role = Some("footnotemark".to_string());
     e
+  }
+
+  /// A mark set with no glue on a zero-width title mark of its glyph prints over it (article.cls:206): `Ann
+  /// Able\thanks{…}$^{*}$` (revPUREd P2), `\footnotemark[1]\thanks{…}` (2103.01544); not after an inked mark
+  /// (`$^{*}$\thanks{…}`), past a space, of another glyph, or where the title's marks take width.
+  #[test]
+  fn a_mark_glued_on_a_zero_width_title_mark_of_its_glyph_overprints_it() {
+    let note = |glyph: &str| {
+      let mut e = Event::new(EventKind::Note);
+      e.role = Some(format!("thanks shows={glyph}"));
+      e.span = Some((3, 4));
+      e
+    };
+    let typed = |glyph: &str, space_before: bool| {
+      let mut e = Event::new(EventKind::Mark);
+      e.role = Some("math".to_string());
+      e.text = glyph.to_string();
+      e.space_before = space_before;
+      e.span = Some((5, 6));
+      e
+    };
+    let mut footnotemark = mark();
+    footnotemark.text = "∗".to_string();
+    footnotemark.span = Some((1, 2));
+    let ann = name("Ann Able");
+    let star = vec![((5, 6), "∗".to_string())];
+    assert_eq!(
+      overprints(&[ann.clone(), note("∗"), typed("∗", false)], true),
+      star
+    );
+    assert_eq!(
+      overprints(&[ann.clone(), footnotemark.clone(), note("*")], true),
+      vec![((3, 4), "*".to_string())]
+    );
+    for none in [
+      vec![ann.clone(), typed("∗", false), note("∗")],
+      vec![ann.clone(), note("∗"), typed("∗", true)],
+      vec![ann.clone(), note("∗"), typed("†", false)],
+      vec![ann.clone(), note("∗"), gap(0.33, false), typed("∗", false)],
+    ] {
+      assert_eq!(overprints(&none, true), []);
+    }
+    assert_eq!(overprints(&[ann, note("∗"), typed("∗", false)], false), []);
   }
 
   fn sides(events: &[Event]) -> Vec<Option<Side>> {

@@ -20129,6 +20129,31 @@ pass to set after the name (#1055); one of no known glyph is counted lost (`unan
 (a mark the name shows inside a formula is not repeated), `perfect_kernel_batch78f::llncs_comma_before_inst_is_the_name_before`
 (a kept `\inst` the emitter answered by its item).
 
+### 1062. The reading keeps one record per mark a name prints; its requests, its class's requests, its footnote marks and its notes' marks are views of it (MARKKEY R2a)
+
+**Perl.** A creator's requests are its `_annotations` labels (Base_Utility.pool.ltxml:729-737), nothing more.
+**Rust.** The reading (`observer/resolver/`) needs more than the label of each mark — whether the class's command or a
+`\footnotemark` printed it, the footnote number it shows (TeX pairs a mark and its note by number, OD #1058), the
+glued mark it was parted from — and kept each fact in a store of its own, reconciled by count (`requests`,
+`class_requests`, `whole_marks` on the creator; `fn_requests`, `parted`, `note_marks` on the resolver; "asked more
+often than by a footnote"). One `NameMark` per label a mark requests (`resolver/name_marks.rs`) replaces them, made where
+the names line reads the mark (`lines.rs`), the API's creator call (`api.rs`), authblk's `\AB@thenote` number
+(`post.rs`) and a note's own mark (`blocks.rs`): `label`, `number`, `span`, `by` (`MarkBy`: hand, class, footnote, note,
+call; `origin()` inked or implied, DG 2026-11-16), `whole`, `parted`, and SEPb's observer records, `sep_before` (a comma
+printed before it in its run, a formula's comma `\endnotemark[1]$^,$\endnotemark[2]` included, 1703.08733; every mark
+after a name's first where the binding declares its class lists them, `declare_marks_listed`: elsarticle.cls:250-262,
+2605.13555) and `overprint` (TeX prints it over the zero-width title mark before it, of its glyph:
+`mark_ledger::overprints`, article.cls:206's `\rlap`, `latex_constructs::TITLE_MARKS_ZERO_WIDTH`; 2012.08663,
+2103.01544). The old stores are views: `RCreator::requests`, `class_requests`, `asks_not_by_footnote` (the count
+arithmetic), `parted`, `Resolver::footnote_marks`. Parting a glued mark parts its record, each piece keeping how it
+printed (a class's `\inst{12}` parted under entries 1 and 2 is the class's request of each). The emitter reads the
+record's `whole` for the mark it leaves (#1061). Not yet read: `sep_before`, `overprint` and `origin` (the page's
+separators, overprints and implied glyphs: row R MARKKEY-R2b). **Guards**: the FMRG suite and the resolver's guards
+unchanged; `perfect_kernel_batchmarkkey1::the_mark_components_only_shrink` (`whole_marks`, `fn_requests`, `note_marks`
+gone, `marks` the one record; the two state keys SEPb's records read, `lx_frontmatter_marks_listed` and
+`lx_title_marks_zero_width`, raised with this reason); unit test
+`mark_ledger::tests::a_mark_glued_on_a_zero_width_title_mark_of_its_glyph_overprints_it`.
+
 ---
 
 ## TeX-source fidelity family (TEXSRC)

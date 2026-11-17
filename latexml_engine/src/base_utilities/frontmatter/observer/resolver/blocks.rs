@@ -196,6 +196,10 @@ impl Resolver {
     // (the mark ledger reads the whole block, as the writer writes it: one decision for both, `Resolved::mark_ledgers`)
     let all = read_events(events);
     self.mark_ledger = mark_ledger(&all);
+    self.mark_ledger.overprints = mark_ledger::overprints(
+      &all,
+      lookup_bool(crate::latex_constructs::TITLE_MARKS_ZERO_WIDTH),
+    );
     self
       .out
       .mark_ledgers
@@ -370,7 +374,7 @@ impl Resolver {
                     .out
                     .creators
                     .iter()
-                    .any(|c| c.requests.iter().any(|r| label_matches(r, label)))
+                    .any(|c| c.requests().any(|r| label_matches(r, label)))
               })
         });
       if unrequested_glyph && let Some(carried) = carried {
@@ -445,7 +449,10 @@ impl Resolver {
                 link.text.clone(),
                 "line:names link-text",
                 index,
-                block_requests.clone(),
+                block_requests
+                  .iter()
+                  .map(|label| NameMark::new(label.clone(), MarkBy::Class, None))
+                  .collect(),
                 group,
               );
               answered_rows.retain(|c| *c != line.column);
@@ -629,7 +636,7 @@ impl Resolver {
           let shown_elsewhere = |label: &String| {
             self.out.creators[block_creators_start..]
               .iter()
-              .any(|c| c.requests.iter().any(|r| label_matches(r, label)))
+              .any(|c| c.requests().any(|r| label_matches(r, label)))
           };
           if !trailing.is_empty()
             && trailing
@@ -857,12 +864,9 @@ impl Resolver {
           // `\\`-joined contact: `Riemann$^1$, … \\ 1- DESY in Zeuthen \\ Platanenallee 6, …`, 0903.2366, 2303.09899; a
           // footnote symbol is no such mark, `Marciniak$^{*}$ \\ Department … \\ Campus …` stays a contact a line,
           // 0707.1113)
-          let joined = run.iter().any(|&c| {
-            self.out.creators[c]
-              .requests
-              .iter()
-              .any(|r| !is_symbol_label(r))
-          });
+          let joined = run
+            .iter()
+            .any(|&c| self.out.creators[c].requests().any(|r| !is_symbol_label(r)));
           // (an address decides only its own ink, its holder too: a line the row holds whose addresses spell one of the
           // row is that one's e-mail, the line's other text the row's, as the old driver placed it — 2203.10777's
           // `Dresden, Saxony 01062, Germany (martin.waltz@tu-dresden.de)` under Martin Waltz, written whole with the
@@ -1284,7 +1288,7 @@ impl Resolver {
   /// its text — its e-mails and urls placed once every name is read, to the author they spell (`answer_note_links`); the
   /// note itself, its whole text, unless its contacts emptied it and were all taken out (ruling 4), decided there when
   /// its links may empty it. The mark it shows on the name it is beside, its request of an entry led by the same
-  /// `\footnotemark` (`note_marks`, 1607.07280).
+  /// `\footnotemark` (a [`MarkBy::Note`] record, 1607.07280).
   pub(super) fn note(&mut self, index: usize, note: &Event, owner: Option<usize>, rule: &str) {
     if rule == "note:adjacent"
       && self.notes_marked
@@ -1292,7 +1296,8 @@ impl Resolver {
       && let Some(shows) = note_shows(note)
     {
       for label in mark_labels(shows) {
-        self.note_marks.push((at, label));
+        let mark = NameMark::new(label, MarkBy::Note, note.span);
+        self.out.creators[at].marks.push(mark);
       }
     }
     // (what is left of its text once its contacts are taken out decides only whether they emptied it: the note keeps
