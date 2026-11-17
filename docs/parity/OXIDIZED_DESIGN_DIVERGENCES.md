@@ -20477,6 +20477,8 @@ title_pubnote_content_stays_collapsed}`.
 
 ---
 
+### 1070. → Bindings beyond Perl's tree: ragslab.sty (`ragslab_sty.rs`)
+
 ## TeX-source fidelity family (TEXSRC)
 
 An index, not new entries: the entries below each restore what latex.ltx, tex.web or the real package defines over a
