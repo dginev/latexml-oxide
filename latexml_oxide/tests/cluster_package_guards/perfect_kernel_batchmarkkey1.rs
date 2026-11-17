@@ -408,21 +408,18 @@ fn an_unlinked_mark_shows_beside_a_legend_that_lost_its_glyph() {
 /// (`insert::link_marked_notes`).
 #[test]
 fn a_number_the_title_counter_cannot_give_keys_nothing() {
-  for (tex, creators, page) in [(
-    repro!("markkey_samethanks_under_aa_names_no_number"),
-    [
+  {
+    let tex = repro!("markkey_samethanks_under_aa_names_no_number");
+    let creators = [
       "Ann Able ; thanks[]=Corresponding authors | affiliation=Univ A, Town A",
       "Bob Baker ; footnotemark[]= | affiliation=Univ B, Town B",
       "Cat Cole | affiliation=Univ A, Town A",
-    ]
-    .as_slice(),
-    [
+    ];
+    let page = [
       "Ann Able | under: Corresponding authors",
       "Bob Baker",
       "Cat Cole",
-    ]
-    .as_slice(),
-  )] {
+    ];
     let (log, xml, ()) = convert_with_setup_then(tex, Some("ar5iv.sty"), || {}, |_| {});
     assert_eq!((error_count(&log), warning_count(&log)), (0, 1), "{log}");
     assert_eq!(creator_lines(&xml), creators);

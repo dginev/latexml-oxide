@@ -142,7 +142,7 @@ impl Resolver {
 
 /// The state key a binding sets whose class prints all of a name's marks as one list, a comma between each two
 /// (elsarticle.cls:250-262 `\sep`, :159-163 `\comma`: `\fnref{fn2,fn3}` "1,2", 2605.13555): every mark after the first
-/// of a name is [`NameMark::sep_before`].
+/// of a name is `sep_before` in the reading's mark record.
 pub const MARKS_LISTED: &str = "lx_frontmatter_marks_listed";
 
 /// Declares [`MARKS_LISTED`]: the binding's class prints a name's marks as one comma-separated list.
