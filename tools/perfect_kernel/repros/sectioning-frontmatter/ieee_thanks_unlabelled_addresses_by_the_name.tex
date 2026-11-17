@@ -1,0 +1,22 @@
+% mechanism: IEEEtran's block-note routing (`route_author_thanks`, OD #1072): a trailing run of unlabelled addresses
+%   ({\tt \{a,b\}@d}, "(x@y)") is the affiliation's e-mail tail; each contact goes right after its author's name and
+%   grade, never past the blank line before the notes (else the line's previous name took it too)
+% witness: 2106.02811 (`\\`, a blank line, "(yonghui.li@…)"), 1903.07552, 2109.04749 ({\tt\small \{a,b\}@d})
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: four names with grades, two unmarked notes
+% engines: IEEEROUTE (68a4d6b3fad): the addresses inside the affiliations, Dan Dee's contacts on Cy Coe too
+% expect:  0 errors, 0 warnings; Ann, Bob with Univ AB, Town and their address; Cy with Univ C, Land and cc@c.org;
+%   Dan with Univ D, Land and dd@d.org; no pubnote
+% status:  GREEN (IEEEROUTEb; guard perfect_kernel_batchieeeroute)
+\documentclass[journal]{IEEEtran}
+\begin{document}
+\title{Unlabelled}
+\author{Ann Able,~\IEEEmembership{Member, IEEE,}
+  Bob Baker,~\IEEEmembership{Member, IEEE,}\\
+  Cy Coe,~\IEEEmembership{Member, IEEE,}
+  and Dan Dee,~\IEEEmembership{Fellow, IEEE}
+
+  \thanks{A. Able and B. Baker are with Univ AB, Town {\tt\small \{aable,bbaker\}@ab.edu}.}
+  \thanks{Cy Coe is with Univ C, Land (e-mail: cc@c.org). Dan Dee is with Univ D, Land (dd@d.org).}}
+\maketitle
+Body.
+\end{document}

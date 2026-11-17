@@ -1,0 +1,16 @@
+% mechanism: the fail-safe of IEEEtran's block-note routing (`route_author_thanks`, OD #1072): a note whose names match
+%   no author (an initial no author's, a surname none has) stays the title's note whole; so does a funding note
+% witness: synthetic (the fail-safe of 2003.11216's routing)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: two names, two unmarked notes
+% engines: MTREDUCEd: both title pubnotes (unchanged)
+% expect:  0 errors, 0 warnings; Ann Able, Bob Baker with no contact; both notes pubnotes, whole
+% status:  GREEN (IEEEROUTE; guard perfect_kernel_batchieeeroute)
+\documentclass[journal]{IEEEtran}
+\begin{document}
+\title{Unrouted}
+\author{Ann~Able and Bob~Baker%
+\thanks{This work was supported in part by the Science Fund under grant 42.}
+\thanks{C. Able and Q. Zed are with Univ Z, Town. E-mail: \{ca,qz\}@z.org}}
+\maketitle
+Body.
+\end{document}

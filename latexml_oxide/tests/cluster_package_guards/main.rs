@@ -487,6 +487,8 @@ mod perfect_kernel_batchgl1;
 mod perfect_kernel_batchhg1;
 mod perfect_kernel_batchi736;
 mod perfect_kernel_batchi802;
+/// IEEEROUTE: IEEEtran's block notes routed by kind (`\thanks` "<names> is/are with …"); OD #1072.
+mod perfect_kernel_batchieeeroute;
 mod perfect_kernel_batchimg1;
 mod perfect_kernel_batchint19;
 mod perfect_kernel_batchint20;
