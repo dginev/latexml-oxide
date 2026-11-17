@@ -1422,7 +1422,8 @@ mod witnessed_css_delta {
   fn shared_author_note_delta_stays_present() {
     // OXIDIZED_DESIGN_DIVERGENCES #1052 (DG's rulings of 2026-11-16): a marked author note follows the name, set as
     // text; where an author's lines show under the name (the #783 card, ltx_authors_multiline) its marked notes show
-    // there, one author's with no mark and a shared one headed by its mark (2606.00446, 2407.07614, 1706.03762). An
+    // there, each headed by its mark, one author's too (DG 2026-11-17, 2506.06941's †; 2606.00446, 2407.07614,
+    // 1706.03762). An
     // unmarked note is no one author's (IEEEtran's \thanks, 1510.02728): no rule shows it under the name. A pure name's
     // mark-only note (ltx_role_footnotemark, 0801.1438) shows its mark there too; a body under the name floats, so the
     // marks after it stay on the name's line; consecutive marks are parted by a comma. The browser half is
@@ -1438,22 +1439,20 @@ mod witnessed_css_delta {
       format!("{lines} {{ display:inline; }}"),
       format!("{lines} .ltx_note_content {{\n    display:block; position:static; float:inline-start; clear:both; width:100%;"),
       format!("{lines} .ltx_note_content .ltx_note_mark {{ position:static; }}"),
-      format!(
-        "{lines} .ltx_note_type,\n{lines}:not(.ltx_note_shared):not(.ltx_role_footnotemark) .ltx_note_mark {{ \
-         display:none; }}"
-      ),
+      format!("{lines} .ltx_note_type {{ display:none; }}"),
       ".ltx_annotated_personname > .ltx_note:has(~ .ltx_note) > .ltx_note_mark::after { content:\",\"; }".to_string(),
-      format!("{lines} > .ltx_note_mark::after {{ content:none; }}"),
-      format!(
-        "{card} .ltx_annotated_personname > :is(.ltx_note_shared, .ltx_role_footnotemark):has(~ \
-         :is(.ltx_note_shared, .ltx_role_footnotemark)) > .ltx_note_mark::after {{ content:\",\"; }}"
-      ),
     ] {
       assert!(
         css.contains("#1052") && css.contains(&rule),
         "LaTeXML.css lost the shared author note rule `{rule}` (#1052)"
       );
     }
+    assert!(
+      !css.contains(&format!(
+        "{lines}:not(.ltx_note_shared):not(.ltx_role_footnotemark) .ltx_note_mark"
+      )),
+      "LaTeXML.css hides a one-author note's mark again (DG 2026-11-17: every marked note shows the mark the PDF prints)"
+    );
     assert!(
       !css.contains(&format!("{card} > .ltx_note")),
       "LaTeXML.css shows an unmarked author note under the name (#1052, 1510.02728)"

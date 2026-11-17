@@ -2923,7 +2923,7 @@ mod browser_render_author_lines {
     // SHMARK it had no `mark`, so it kept its mark and pop-up, as an unmarked note does (1510.02728).
     for (key, run) in creators(&stdout) {
       let expected = serde_json::json!([
-        { "name": "Ann Able", "star": "none", "notes": [{ "mark": false, "content": true }],
+        { "name": "Ann Able", "star": "none", "notes": [{ "mark": true, "content": true }],
           "contacts": [{ "text": "Univ. of A", "visible": true, "belowName": true, "hover": true },
                        { "text": "Dept. of Physics", "visible": true, "belowName": true, "hover": true }],
           "overlaps": [] },
@@ -2946,7 +2946,7 @@ mod browser_render_author_lines {
         { "name": "Ann Able", "star": "none", "notes": [],
           "contacts": [{ "text": "Univ A", "visible": true, "belowName": true, "hover": true }],
           "overlaps": [] },
-        { "name": "Bob Baker", "star": "none", "notes": [{ "mark": false, "content": true }],
+        { "name": "Bob Baker", "star": "none", "notes": [{ "mark": true, "content": true }],
           "contacts": [{ "text": "Univ B", "visible": true, "belowName": true, "hover": true }],
           "overlaps": [] }
       ]);
@@ -2954,10 +2954,10 @@ mod browser_render_author_lines {
     }
     // Before (I783F): each note its own absolute pop-up, so on hover the second note covered the first and both the
     // lines (Chrome and Firefox, 1280/375); a note beside a `\thanks` or above an e-mail line covered the lines. Since
-    // SHMARK (#1053) each `\thanks` and `\footnote` is Ann's marked note, under her name with no mark (#1052), so no
-    // pop-up remains to cover anything.
+    // SHMARK (#1053) each `\thanks` and `\footnote` is Ann's marked note, under her name headed by its mark (#1052;
+    // the mark shown since DG 2026-11-17), so no pop-up remains to cover anything.
     let line = |text: &str| serde_json::json!({ "text": text, "visible": true, "belowName": true, "hover": true });
-    let under = serde_json::json!({ "mark": false, "content": true });
+    let under = serde_json::json!({ "mark": true, "content": true });
     let bob = serde_json::json!({ "name": "Bob Baker", "star": "none", "notes": [],
       "contacts": [line("Univ. of B")], "overlaps": [] });
     for (label, doc, ann) in [
@@ -3085,7 +3085,9 @@ mod browser_render_fmmarks {
         ("Ann Able", "*"),
         ("Bob Baker", "*"),
         ("Cat Cole", "*"),
+        ("Cat Cole", "\u{2020}"),
         ("Dan Dorn", "*"),
+        ("Dan Dorn", "\u{2021}"),
       ],
       &["Ann Able", "Cat Cole", "Dan Dorn"],
     ),
@@ -3111,7 +3113,7 @@ mod browser_render_fmmarks {
     (
       "twelve names on two lines (2602.18802's shape)",
       repro!("fmmarks_many_names_two_legend_marks"),
-      &[("Ann Able", "\u{2217}"), ("Bob Baker", "\u{2217}")],
+      &[("Ann Able", "\u{2217}"), ("Bob Baker", "\u{2217}"), ("Dan Dorn", "\u{2020}")],
       &["Ann Able", "Dan Dorn"],
     ),
     (

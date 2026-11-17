@@ -19530,8 +19530,9 @@ author's contacts (`css/ar5iv.css:920`, `:940` at ar5iv-css `6dc3e97`; it does n
 **Rule.** "One copy" is a page rule: the XML keeps a full copy of a shared author note on every carrier, each with its
 `mark` (Perl's model: `relocateAnnotations`, Base_Utility.pool.ltxml:895-901, and `relocateFootnote`,
 latex_constructs.pool.ltxml:503-527, both clone), and the HTML prints it once. Marks follow placement: a note of one
-author sits under the name with no mark; a shared note carries its mark on every name and at its head, in the side
-margin where there is one; margin notes never overlap. An UNMARKED note is no one author's (review SHREND B1): the PDF
+author, like a shared note, carries its mark on every name and at its head, in the side margin where there is one
+(DG 2026-11-17: under the name with no mark it read as an affiliation, 2506.06941's "† Work done during an internship at
+Apple."); margin notes never overlap. An UNMARKED note is no one author's (review SHREND B1): the PDF
 prints it with no mark as a footnote of the paper — IEEEtran's `\maketitle` sets `\let\@makefnmark\relax`
 (IEEEtran.cls:4758), so its `\thanks` is the funding or "manuscript received" note — so it never sits under a name: the
 margin where there is one, else in flow in the block. Once every note the PDF marks carries `mark` (the kernel
@@ -19568,13 +19569,12 @@ though it links nothing (#1059): a letter
 or digit is as often an affiliation label as a footnote number, and a wrong link is worse than none (review revREND2: a
 mark-only `1` linked another author's own footnote `1`). Such a linkable mark-only note pointing at a one-author note
 makes it shared, so it prints in the margin with its mark. LaTeXML.css (local delta after the ORCID wrapper rules): a name with notes is set as text; where the author's
-lines show under the name (#1051's card, `ltx_authors_multiline`) its marked notes show there, one author's with no
-mark, a shared one headed by its mark, a mark-only note's mark kept; an unmarked author note shows its text as a line
-under the name with no mark (#990), and every note elsewhere keeps its mark and pop-up. In both stylesheets a body under the name floats, full width, in a flow-root wrapper, so a mark
+lines show under the name (#1051's card, `ltx_authors_multiline`) its marked notes show there, each headed by its mark (one author's too, DG 2026-11-17; a mark-only note's mark
+kept); an unmarked author note shows its text as a line under the name with no mark (#990), and every note elsewhere keeps its mark and pop-up. In both stylesheets a body under the name floats, full width, in a flow-root wrapper, so a mark
 after it stays on the name's line, and consecutive shown marks are parted by a superscript comma ("1,2", not "12";
 PURE splits an author's `$^{1,2}$` into two notes).
-ar5iv-css (`fix/shared-notes`): a marked note of one author on a row under the name with no mark; a shared note's marks
-shown, its body in the side margin on wide screens; an unmarked note's body in the same margin, with no mark. Each
+ar5iv-css (`fix/shared-notes`, then #68): every marked note's marks shown, its body in the side margin on wide screens
+(0.9.4 set a one-author note on a row under the name with no mark); an unmarked note's body in the same margin, with no mark. Each
 margin note is placed under the one before by CSS anchor positioning (the last earlier box of the same anchor name), so
 none overlaps whatever its height. Phones, and browsers without anchor positioning, keep a shared note in flow under its
 first author and an unmarked one after its author's lines, start-aligned as a note. A block with a note under a name
