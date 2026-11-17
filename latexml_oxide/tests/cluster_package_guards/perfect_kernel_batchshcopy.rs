@@ -42,10 +42,11 @@ fn notes_and_copies(tex: &str) -> (Vec<String>, Vec<String>) {
 /// One note per shared note in the XML, its copies naming it by `idref`; on the page each copy's mark carries it hidden.
 /// Shapes: 2407.07614's legend `∗` (two carriers), 1706.03762's `\footnotemark` leftovers (four carriers, two with a
 /// note of their own), a shared unmarked note under the page's `[a]` (OD #1059).
-/// A copy of the note `text` under `mark` (`sup` the mark's class), as the page writes it.
-fn copy(sup: &str, mark: &str, text: &str) -> String {
+/// A copy of the note `text` under `mark` (`sup` the mark's class), as the page writes it, positioned at the anchor of
+/// its note `target` (OD #1075).
+fn copy(target: &str, sup: &str, mark: &str, text: &str) -> String {
   format!(
-    r#"<span class="ltx_note_outer ltx_note_copy" aria-hidden="true"><span class="ltx_note_content"><sup class="{sup}">{mark}</sup><span class="ltx_note_type">thanks: </span>{text}</span></span>"#
+    r#"<span class="ltx_note_outer ltx_note_copy" aria-hidden="true" style="position-anchor:--ltx-note-{target}"><span class="ltx_note_content"><sup class="{sup}">{mark}</sup><span class="ltx_note_type">thanks: </span>{text}</span></span>"#
   )
 }
 
@@ -65,7 +66,7 @@ fn a_shared_note_is_one_note_in_the_xml_and_each_mark_pops_it_up() {
         format!(r#"{THANKS} mark="∗" role="thanks" xml:id="id1">"#),
         format!(r#"{THANKS} idref="id1" mark="∗" role="thanks" xml:id="id2">"#),
       ],
-      vec![copy("ltx_note_mark", "∗", "Equal contribution")]
+      vec![copy("id1", "ltx_note_mark", "∗", "Equal contribution")]
     )
   );
   let long = "Equal contribution. Listing order is random. Author A designed part 1 of the model and ran the \
@@ -86,7 +87,7 @@ fn a_shared_note_is_one_note_in_the_xml_and_each_mark_pops_it_up() {
         format!(r#"{THANKS} idref="id1" mark="*" role="thanks" xml:id="footnotex3">"#),
         r#"<note class="ltx_note_frontmatter ltx_thanks_note" mark="‡" role="thanks" xml:id="id6">"#.to_string(),
       ],
-      vec![copy("ltx_note_mark", "*", long); 3]
+      vec![copy("id1", "ltx_note_mark", "*", long); 3]
     )
   );
   assert_eq!(
@@ -99,6 +100,7 @@ fn a_shared_note_is_one_note_in_the_xml_and_each_mark_pops_it_up() {
         format!(r#"{THANKS} idref="id1" role="thanks" xml:id="footnotex1">"#),
       ],
       vec![copy(
+        "id1",
         "ltx_note_mark ltx_mark_generated",
         "[a]",
         "Equal contribution."

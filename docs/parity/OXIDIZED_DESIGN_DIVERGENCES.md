@@ -20628,6 +20628,26 @@ construction only). **Guards**: `cluster_package_guards::perfect_kernel_batchiee
 `sectioning-frontmatter/ieee_thanks_*`, the specials and label forms in `ieee_thanks_address_specials_and_labels`);
 `perfect_kernel_batchp28::ieee_plain_route_reads_names_and_grades` repinned.
 
+### 1075. A shared note's other marks highlight its margin note on wide screens (DG 2026-11-17; CSSHL)
+
+**Perl.** No shared-note copies (#1052 is ours): each author's copy of a note is its own pop-up.
+
+**Rust.** A shared note prints once; each other mark carries a hidden copy (`span.ltx_note_copy`, #1052) that pops up
+on narrow screens. On wide screens the note sits in the margin stack far from the later marks in the DOM, so the
+stylesheet's `mark:hover + .ltx_note_outer` highlight reached only the first mark's note. LaTeXML-meta-xhtml.xsl now
+names a per-note anchor on the shared original's content box only (`style="anchor-name:--ltx-note-<fragid>"`; not on
+its outer box, whose stylesheet `anchor-name: --ltx-margin-note` builds the stack), and each copy positions at it
+(`style="position-anchor:--ltx-note-<fragid>"`); the fragid's `.`, the one NCName character a CSS name may not hold,
+is escaped (`f:note-anchor`). ar5iv-css (wide + `@supports (anchor-name)` block) lays a copy whose mark is hovered,
+tapped or focused over its note, at the anchor's top, left and width, in the highlight colour, `position: fixed` (laid
+out last, so a note later in the page than its copies is an acceptable anchor too: a legend note on a later name,
+2012.13912, 2606.17809); a copy that names no anchor stays hidden (and every copy that names one finds it: a plain note a mark-only note of the block shares the glyph of carries its anchor too, `a_copys_anchor_is_always_on_the_page`, REVCSSHL), and nothing changes on narrow screens or without anchor
+positioning. Copies keep `aria-hidden` and no ids; LaTeXML.css needs nothing (its classic pop-ups ignore the styles).
+Checked in Chrome at 1800 px (also scrolled) and 375 px on every mark of 15 papers with shared notes (1706.03762,
+2407.07614, 2606.00446 among them). **Guards**:
+`latexml_post::integration::a_shared_notes_copies_anchor_at_the_note_alone`; the shared-note pins in
+`integration.rs` (`a_shared_notes_other_marks_carry_its_hidden_copy` and three siblings) repinned with the styles.
+
 ## TeX-source fidelity family (TEXSRC)
 
 An index, not new entries: the entries below each restore what latex.ltx, tex.web or the real package defines over a

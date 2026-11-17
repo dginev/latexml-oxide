@@ -221,7 +221,7 @@ Text.
     assert_eq!(
       html_element(&html, &format!("<span id=\"{id}\"")),
       format!(
-        r##"<span id="{id}" class="ltx_note ltx_note_label ltx_role_footnotemark ltx_note_shared"><sup class="ltx_note_mark"><a href="#id4">†</a></sup><span class="ltx_note_outer ltx_note_copy" aria-hidden="true"><span class="ltx_note_content"><sup class="ltx_note_mark">†</sup><span class="ltx_note_type">thanks: </span>Contributed equally to this work.</span></span></span>"##
+        r##"<span id="{id}" class="ltx_note ltx_note_label ltx_role_footnotemark ltx_note_shared"><sup class="ltx_note_mark"><a href="#id4">†</a></sup><span class="ltx_note_outer ltx_note_copy" aria-hidden="true" style="position-anchor:--ltx-note-id4"><span class="ltx_note_content"><sup class="ltx_note_mark">†</sup><span class="ltx_note_type">thanks: </span>Contributed equally to this work.</span></span></span>"##
       )
     );
   }
