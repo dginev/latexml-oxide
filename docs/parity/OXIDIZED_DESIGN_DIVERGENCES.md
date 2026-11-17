@@ -20528,6 +20528,8 @@ carries the mark the PDF prints (1612.03574's title ∗) and an unmarked one sho
 handle goes once title notes record their marks. Guards `latexml_post` `xslt::witnessed_css_delta::{css_draws_no_footnote_mark_glyph,
 title_pubnote_content_stays_collapsed}`.
 
+### 1070. → Bindings beyond Perl's tree: ragslab.sty (`ragslab_sty.rs`)
+
 ### 1071. A `\date` the class prints under the authors that holds the block's labelled lines is their contacts, not a date; an unmarked note of the authors' e-mails is theirs (DG 2026-11-17; DATELEG)
 
 **Rule.** Connections are the value: a line printed under the names that a name's mark labels is that name's, wherever
@@ -20590,7 +20592,6 @@ repro.
 
 ---
 
-### 1070. → Bindings beyond Perl's tree: ragslab.sty (`ragslab_sty.rs`)
 
 ## TeX-source fidelity family (TEXSRC)
 
