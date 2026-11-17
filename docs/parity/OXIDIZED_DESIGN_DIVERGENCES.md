@@ -19667,8 +19667,20 @@ latex_constructs.pool.ltxml:503-527); acmart's `\authornote` is a contact, `\aut
   `\def\thefootnote{}`, none (`spconf_sty.rs`; 2110.09738, 2303.02025, 1812.01220); acl.sty:147-150 and its kin,
   aaai25.sty:56 `\fnsymbol`, `\@fnsymbol\c@footnote`, so the document's `\@fnsymbol` holds (`acl_sty.rs`, `aaai_sty.rs`;
   2502.19103, acl2019.sty:37 1905.10033: † ‡); the stand-in copies of the NeurIPS and IJCAI styles alike
-  (`neurips_sty.rs`, neurips_2019-2025.sty; `ijcai_sty.rs`, ijcai13-26.sty). Any other `\maketitle` — the document's, a package's no binding
-  declares, an option file's its class loads (11lomcon.sty, hep-ph0312288) — has marks unknown here: no glyph, each note
+  (`neurips_sty.rs`, neurips_2019-2025.sty; `ijcai_sty.rs`, ijcai13-26.sty). Bindings whose copies vary declare per
+  version, by the `\thefootnote` line the copy carries (`shipped_class::declare_shipped_copy_title_marks`; none of the
+  lines, or two that disagree: unknown): the NIPS style's descendants, `iclr_sty.rs` reading ICLR's, TMLR's, CoRL's and
+  NIPS 2016-2018's copies raw (iclr2026_conference.sty:61-63, tmlr.sty:71-73, corl_2025.sty:343-346,
+  nips_2017.sty:246-249; 2303.07937, 2502.12413, 2509.00328, 1706.03762), `usenix_sty.rs` (usenix.sty:48-50,
+  2509.03117), `siamproceedings_sty.rs` (:187-189 `\@fnsymbol\c@footnote`, 2509.02371; not under `titlepage`, whose
+  `\maketitle` sets none), and the arxiv, PRIMEarxiv and jmlr2e bindings for the copy they read (arxiv.sty:174-177,
+  2509.16272; PRIMEarxiv.sty:176-179, 2509.03066; jmlr2e.sty:253-255, 2509.13653; MTREDUCEb). A stand-in's raw read
+  is the loader's, the step after a raw package included (`shipped_class::input_shipped_package` runs
+  `\lx@package@loaded@raw`, which a binding's own read skips: usenix2019_v3.sty's `\abstract` heading under babel's
+  `\abstractname` was a nameless creator's note, 2301.04841). Any other `\maketitle` — the document's, a package's no
+  binding declares, an option file's its class loads (11lomcon.sty, hep-ph0312288: its refusal is the class's,
+  `\maketitle:redefined@class`, which a declaration does not bind; row R MTREDUCE) — has marks unknown here: no glyph,
+  each note
   under its name (DG 2026-11-17, "reduce before the run": the kernel reads no `\maketitle` body for its marks; PRESBX's
   reader of the body's `\thefootnote`, `\@makefnmark`, untouched marks and footnote steps before the title is gone, a
   correct glyph lost in the papers it served, its connections kept). The class file's own drop is the class's: a binding that reads its raw
@@ -19716,8 +19728,8 @@ latex_constructs.pool.ltxml:503-527); acmart's `\authornote` is a contact, `\aut
   tried and dropped: a macro-held label (`\author[\udem]`), a legend under several labels (`\affil[1,2]`) and a
   single-carrier note contact (jheppub's `\note[*]`) answer a request with no label the XML keeps.
 Open: a class with no binding writes no automatic mark — scrartcl prints ∗ — since only a binding declares its title's
-marks, nor does a document's or an unbound package's own `\maketitle` (MTREDUCE: the ICLR, CoRL, TMLR, PRIMEarxiv
-styles, 11lomcon's); the
+marks, nor does a document's or an unbound package's own `\maketitle` (11lomcon's; renamed copies a binding does not
+answer, iclr_no_header.sty, arxiv_iclr.sty, conference.sty, collas2025_conference.sty); the
 measured glyph (T1: the title-page replay, `latex_constructs::sect05` `title_page_replay_tokens`, run on a sentinel
 `\thanks`) would give both (row R SHAUTO). REVTeX's pass under a document's `\@fnsymbol` writes none where pdflatex
 prints that macro's glyph (2603.18989, repro `presbx_revtex_document_fnsymbol_red`, row R PRESBX/fnsymbol). The marks
@@ -19776,8 +19788,11 @@ their binding (`aaai_sty.rs`, MTREDUCE; the versioned fallback answers aaai16-aa
 paper's copy raw), and their note record is a thread-local (`AAAI_FIRST_NOTES`, `AAAI_DOTTED`) since the rehearsal
 undoes every assignment. The rows MTREDUCE turned RED (the static reader's glyphs, a correct glyph lost and the note
 kept under its name) carry row R MTREDUCE; `perfect_kernel_batchmtreduce::package_title_marks_are_their_binding_s` pins
-acl.sty's `\AtBeginDocument` `\maketitle` under the document's `\@fnsymbol` and AAAI's marks across ";", " and " and
-`\\`. RED
+acl.sty's `\AtBeginDocument` `\maketitle` under the document's `\@fnsymbol`, AAAI's marks across ";", " and " and
+`\\`, and a row per family the MTREDUCEb bindings declare (`siamproceedings_titlepage_declares_no_marks` its
+`titlepage` fail-safe). gtpart.cls's metadata setters print nothing (gtpart.cls:573-600; `gtpart_cls.rs`, the class
+read raw, else OmniBus and the setters: 1108.0474's `\corresponding{}` — the corresponding editor's, beside
+`\proposed`, `\seconded` — no note; `gtpart_metadata_setters_print_nothing` row). RED
 `presbx_revtex_document_fnsymbol_red` in `revtex_marks_follow_its_numbering`; RED
 `perfect_kernel_batchpresbxc::a_maketitle_s_own_note_carries_its_printed_mark_red` (a `\maketitle`'s own `\footnote`
 before the title written ‡ where pdflatex prints ∗, row R PRESBX/ownnote).

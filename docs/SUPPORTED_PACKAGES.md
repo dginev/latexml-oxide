@@ -29,7 +29,7 @@ they are not, it is reported missing, its dependencies on bound packages still l
 raw under `INCLUDE_CLASSES` (`rawclasses`, `localrawclasses`, `--includestyles`), else it falls back to OmniBus. A
 compiled binding is never displaced by raw mode.
 
-## Classes (226)
+## Classes (227)
 
 | Name | Kind | Support | Note |
 |---|---|---|---|
@@ -123,6 +123,7 @@ compiled binding is never displaced by raw mode.
 | `gen-m-l` | `.cls` | ported |  |
 | `gen-p-l` | `.cls` | ported |  |
 | `gretsi` | `.cls` | contributed |  |
+| `gtpart` | `.cls` | contributed |  |
 | `hha` | `.cls` | contributed |  |
 | `hld` | `.cls` | contributed | Stub for hld.cls (inferred from the colt/midl pattern — no host `hld.cls` was on hand to confirm the exact wrapper; harmless when `\documentclass{hld}` never appears). |
 | `ieeeaccess` | `.cls` | contributed | Stub for IEEE Access journal class (ieeeaccess.cls). |
@@ -260,7 +261,7 @@ compiled binding is never displaced by raw mode.
 | `ws-procs9x6` | `.cls` | contributed | *alias of* `ws-rv9x6.cls` |
 | `ws-rv9x6` | `.cls` | contributed |  |
 
-## Packages (680)
+## Packages (686)
 
 | Name | Kind | Support | Note |
 |---|---|---|---|
@@ -424,6 +425,7 @@ compiled binding is never displaced by raw mode.
 | `concmath` | `.sty` | ported |  |
 | `conll` | `.sty` | contributed | *alias of* `acl.sty` |
 | `constants` | `.sty` | beyond Perl | No-op stub for constants.sty. |
+| `corl` | `.sty` | contributed | *alias of* `iclr.sty` |
 | `courier` | `.sty` | ported |  |
 | `cprotect` | `.sty` | contributed |  |
 | `crckapb` | `.sty` | contributed |  |
@@ -562,6 +564,7 @@ compiled binding is never displaced by raw mode.
 | `hyphenat` | `.sty` | contributed |  |
 | `iccv` | `.sty` | contributed, raw + overrides | Stub for iccv.sty / iccvw.sty (ICCV conference style). |
 | `iccvw` | `.sty` | contributed, raw + overrides | *alias of* `iccv.sty`; Stub for iccv.sty / iccvw.sty (ICCV conference style). |
+| `iclr` | `.sty` | contributed |  |
 | `icml` | `.sty` | ported |  |
 | `icml2016` | `.sty` | ported |  |
 | `icml2017` | `.sty` | ported | *alias of* `icml2016.sty` |
@@ -708,6 +711,7 @@ compiled binding is never displaced by raw mode.
 | `ngerman` | `.sty` | ported | *alias of* `ngerman.ldf` |
 | `nicefrac` | `.sty` | ported |  |
 | `nicematrix` | `.sty` | contributed |  |
+| `nips` | `.sty` | contributed | *alias of* `iclr.sty` |
 | `NJDnatbib` | `.sty` | contributed |  |
 | `nlctuserguide` | `.sty` | contributed, raw + overrides |  |
 | `nmbib` | `.sty` | contributed, raw + overrides |  |
@@ -812,6 +816,7 @@ compiled binding is never displaced by raw mode.
 | `shellesc` | `.sty` | beyond Perl, raw + overrides |  |
 | `showexpl` | `.sty` | beyond Perl |  |
 | `showkeys` | `.sty` | ported |  |
+| `siamproceedings` | `.sty` | contributed |  |
 | `sidecap` | `.sty` | ported |  |
 | `silence` | `.sty` | contributed |  |
 | `SIunits` | `.sty` | ported |  |
@@ -882,6 +887,7 @@ compiled binding is never displaced by raw mode.
 | `titlesec` | `.sty` | ported |  |
 | `titling` | `.sty` | ported |  |
 | `tkz-euclide` | `.sty` | contributed, raw + overrides |  |
+| `tmlr` | `.sty` | contributed | *alias of* `iclr.sty` |
 | `tocbasic` | `.sty` | contributed, raw + overrides |  |
 | `tocbibind` | `.sty` | ported |  |
 | `tocloft` | `.sty` | contributed, raw + overrides |  |
@@ -910,6 +916,7 @@ compiled binding is never displaced by raw mode.
 | `upquote` | `.sty` | ported, raw + overrides |  |
 | `upref` | `.sty` | ported |  |
 | `url` | `.sty` | ported |  |
+| `usenix` | `.sty` | contributed |  |
 | `utopia` | `.sty` | ported |  |
 | `varioref` | `.sty` | ported |  |
 | `varwidth` | `.sty` | ported |  |

@@ -64,6 +64,11 @@ LoadDefinitions!({
   if lookup_bool("INCLUDE_STYLES") {
     // Raw style loading is on: the paper's own arxiv.sty is authoritative.
     InputDefinitions!("arxiv", noltxml => true, extension => Some(Cow::Borrowed("sty")));
+    // The marks its `\maketitle` prints, which the lock refused, where the copy carries arxiv.sty:174-177
+    // `\renewcommand{\thefootnote}{\fnsymbol{footnote}}` (304 of the census's 308 copies; the rest no `\maketitle` or
+    // none of the line: unknown): the document's `\@fnsymbol`. 2509.16272, 2509.00704, 2304.04746, 2509.23472's ICLR
+    // copy (MTREDUCEb).
+    latexml_package::shipped_class::declare_shipped_copy_title_marks("sty")?;
   } else {
     define_bare_fallbacks(r"{\bfseries \emph{Keywords}}")?;
   }

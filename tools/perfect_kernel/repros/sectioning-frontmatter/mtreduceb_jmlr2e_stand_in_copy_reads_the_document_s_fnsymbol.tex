@@ -1,0 +1,33 @@
+% mechanism: the jmlr2e binding (latexml_contrib jmlr2e_sty.rs) stands in for jmlr2e.sty, the paper's copy read after
+%   it (OD #731); it declares the document's `\@fnsymbol` where that copy's `\maketitle` carries jmlr2e.sty:253-255
+%   `\def\thefootnote{\fnsymbol{footnote}}` (`shipped_class::declare_shipped_copy_title_marks`)
+% witness:  2509.13653 (jmlr2e.sty: "∗" "Corresponding author."); 2511.10879; the style a minimal stand-in of
+%   jmlr2e.sty:253-261 with a `\ProvidesPackage` line
+% oracle:   pdflatex 0 errors (TL 2025, -no-shell-escape): "Ann Able∗ and Bob Baker"; foot "∗Corresponding author."
+% engines:  rust R2Ac (f77c7b5430e) = 0 errors, 0 Warnings, the mark (the static reader); MTREDUCE (7608026a189):
+%   the note unmarked
+% expect:   0 errors, 0 Warnings; Ann's note marked ∗
+% status:   GREEN (MTREDUCEb: perfect_kernel_batchmtreduce::package_title_marks_are_their_binding_s)
+% preload:  ar5iv.sty
+\begin{filecontents*}[overwrite]{jmlr2e.sty}
+\ProvidesPackage{jmlr2e}
+\def\maketitle{\par
+ \begingroup
+   \def\thefootnote{\fnsymbol{footnote}}
+   \def\@makefnmark{\hbox to 0pt{$^{\@thefnmark}$\hss}}
+   \@maketitle \@thanks
+ \endgroup
+\setcounter{footnote}{0}
+ \let\maketitle\relax \let\@maketitle\relax
+ \gdef\@thanks{}\gdef\@author{}\gdef\@title{}\let\thanks\relax}
+\def\@maketitle{\vbox{\hsize\textwidth{\begin{center}\Large\bf \@title\par\end{center}}
+  {\def\and{\unskip\enspace{\rm and}\enspace}\noindent\normalsize\bf\@author}}}
+\end{filecontents*}
+\documentclass{article}
+\usepackage{jmlr2e}
+\title{A Title}
+\author{Ann Able\thanks{Corresponding author.} \and Bob Baker}
+\begin{document}
+\maketitle
+Body.
+\end{document}

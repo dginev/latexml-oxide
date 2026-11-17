@@ -126,13 +126,17 @@ pub mod directory_sty;
 pub mod dmtcs_episciences_cls;
 pub mod doclicense_sty;
 pub mod ecai_cls;
+pub mod gtpart_cls;
 pub mod hld_cls;
+pub mod iclr_sty;
 pub mod imakeidx_sty;
 pub mod jurabib_sty;
 pub mod kluwer_cls;
 pub mod knittingpattern_cls;
 pub mod lni_cls;
 pub mod midl_cls;
+pub mod siamproceedings_sty;
+pub mod usenix_sty;
 // ed_sty: consolidated into latexml_package (Perl Package/ed.sty.ltxml)
 pub mod bfhlayout_sty;
 pub mod brief_cls;
@@ -420,6 +424,19 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("naacl", "sty", acl_sty::load_definitions),
   ("naaclhlt", "sty", acl_sty::load_definitions),
   ("tacl", "sty", acl_sty::load_definitions),
+  // The NIPS style's descendants (iclr_sty.rs), each family by the name the versioned fallback strips its years to.
+  ("iclr", "sty", iclr_sty::load_definitions),
+  ("tmlr", "sty", iclr_sty::load_definitions),
+  ("corl", "sty", iclr_sty::load_definitions),
+  ("nips", "sty", iclr_sty::load_definitions),
+  // USENIX's styles (usenix_sty.rs): usenix.sty and the versions the fallback strips to it.
+  ("usenix", "sty", usenix_sty::load_definitions),
+  (
+    "siamproceedings",
+    "sty",
+    siamproceedings_sty::load_definitions,
+  ),
+  ("gtpart", "cls", gtpart_cls::load_definitions),
   ("aistats", "sty", aistats_sty::load_definitions),
   ("aistats2026", "sty", aistats_sty::load_definitions),
   ("aistats2e", "sty", aistats_sty::load_definitions),

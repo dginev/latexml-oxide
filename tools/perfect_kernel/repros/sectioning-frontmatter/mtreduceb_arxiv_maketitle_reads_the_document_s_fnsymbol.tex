@@ -1,0 +1,39 @@
+% mechanism: the arxiv binding (latexml_contrib arxiv_sty.rs), reading the paper's copy raw where raw style loading is
+%   on, declares the document's `\@fnsymbol` where the copy's `\maketitle` carries arxiv.sty:174-177
+%   `\renewcommand{\thefootnote}{\fnsymbol{footnote}}` (George Kour's template; 304 of the census's 308 copies, the
+%   rest no `\maketitle` or none of the line: marks unknown) (`shipped_class::declare_shipped_copy_title_marks`)
+% witness:  2509.16272 (arxiv.sty: "∗" "Github link: …"); 2509.00704, 2304.04746, 2509.23472 (an ICLR copy renamed
+%   arxiv.sty, :61-63 `\def\thefootnote{\fnsymbol{footnote}}`); the style a minimal stand-in of arxiv.sty:173-193
+% oracle:   pdflatex 0 errors (TL 2025, -no-shell-escape): "Ann Able∗ Bob Baker∗"; foot "∗Equal contribution."
+% engines:  rust R2Ac (f77c7b5430e) = 0 errors, 0 Warnings, the marks (the static reader); MTREDUCE (7608026a189):
+%   the note unmarked
+% expect:   0 errors, 0 Warnings; Ann and Bob a copy of one note marked ∗
+% status:   GREEN (MTREDUCEb: perfect_kernel_batchmtreduce::package_title_marks_are_their_binding_s)
+% preload:  ar5iv.sty
+\begin{filecontents*}[overwrite]{arxiv.sty}
+\providecommand{\maketitle}{}
+\renewcommand{\maketitle}{%
+  \par
+  \begingroup
+    \renewcommand{\thefootnote}{\fnsymbol{footnote}}
+    \renewcommand{\@makefnmark}{\hbox to \z@{$^{\@thefnmark}$\hss}}
+    \thispagestyle{empty}
+    \@maketitle
+    \@thanks
+  \endgroup
+  \let\maketitle\relax
+  \let\thanks\relax
+}
+\providecommand{\@maketitle}{}
+\renewcommand{\@maketitle}{\vbox{\hsize\textwidth\centering{\LARGE \@title\par}
+  \def\And{\end{tabular}\hfil\linebreak[0]\hfil\begin{tabular}[t]{c}\ignorespaces}%
+  \begin{tabular}[t]{c}\@author\end{tabular}}}
+\end{filecontents*}
+\documentclass{article}
+\usepackage{arxiv}
+\title{A Title}
+\author{Ann Able\thanks{Equal contribution.} \And Bob Baker\footnotemark[1]}
+\begin{document}
+\maketitle
+Body.
+\end{document}

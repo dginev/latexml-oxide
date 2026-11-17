@@ -210,12 +210,63 @@ pub fn require_shipped_packages(ext: &str, family: &[&str]) -> Result<bool> {
 }
 
 /// A stand-in binding reads the paper's copy of the package it answers (`stand_in_request`) raw, as pdflatex loads it
-/// (acl_sty, aaai_sty); `false` when the source has none, which the raw load reports as the loader does.
+/// (acl_sty, aaai_sty, iclr_sty); `false` when the source has none, which the raw load reports as the loader does.
+/// The read is the loader's: after it, the step the loader takes after any package it reads raw
+/// (`\lx@package@loaded@raw`, which a binding's own read skips) — usenix2019_v3.sty's `\abstract` heading stays out of
+/// the creators (2301.04841).
 pub fn input_shipped_package() -> Result<bool> {
   let request = stand_in_request()?;
   let shipped = !request.is_empty() && shipped_file_text(&request, "sty").is_some();
   InputDefinitions!(&request, noltxml => true, extension => Some(Cow::Borrowed("sty")));
+  if shipped && IsDefined!(&T_CS!("\\lx@package@loaded@raw")) {
+    Digest!(mouth::tokenize_internal(TeXString::assembled(s!(
+      "\\lx@package@loaded@raw{{{request}}}"
+    ))))?;
+  }
   Ok(shipped)
+}
+
+/// The `\thefootnote` lines the styles' `\maketitle`s set, as their versions write them (whitespace and the braces of
+/// `\renewcommand{\thefootnote}` aside), and the title marks each prints ([`declare_shipped_copy_title_marks`]).
+const TITLE_MARK_LINES: &[(&str, &str)] = &[
+  // nips_2017.sty:249 and its descendants (iclr2026_conference.sty:63, tmlr.sty:73, corl_2025.sty:346), jmlr2e.sty:255,
+  // arxiv.sty:177, PRIMEarxiv.sty:179, usenix.sty:85 — every census copy of each that has a `\maketitle`
+  (
+    r"\thefootnote{\fnsymbol{footnote}}",
+    r"\@fnsymbol\c@footnote",
+  ),
+  // siamproceedings.sty:189
+  (
+    r"\thefootnote{\@fnsymbol\c@footnote}",
+    r"\@fnsymbol\c@footnote",
+  ),
+];
+
+/// A stand-in binding declares the title marks its paper's copy prints ([`shipped_copy_text`];
+/// `latex_constructs::declare_package_title_marks`) where the copy carries one of its style's `\thefootnote` lines
+/// ([`TITLE_MARK_LINES`]); a copy with none, or with two that disagree, leaves them unknown: no glyph (DG 2026-11-17).
+/// Whether it declared.
+pub fn declare_shipped_copy_title_marks(ext: &str) -> Result<bool> {
+  let Some(text) = shipped_copy_text(ext)? else {
+    return Ok(false);
+  };
+  let code = class_code(&text)
+    .chars()
+    .filter(|c| !c.is_whitespace())
+    .collect::<String>()
+    .replace(r"{\thefootnote}", r"\thefootnote");
+  let mut marks = TITLE_MARK_LINES
+    .iter()
+    .filter(|(line, _)| code.contains(line))
+    .map(|(_, marks)| *marks);
+  let Some(first) = marks.next() else {
+    return Ok(false);
+  };
+  if marks.any(|other| other != first) {
+    return Ok(false);
+  }
+  engine::latex_constructs::declare_package_title_marks(first, false)?;
+  Ok(true)
 }
 
 /// The file a stand-in binding answers, as the paper asked for it: the request a versioned fallback answers with

@@ -1,0 +1,33 @@
+% mechanism: the iclr binding answers tmlr.sty (latexml_contrib iclr_sty.rs; TMLR's style is ICLR's, tmlr.sty:1-3):
+%   it reads the paper's copy raw and declares the document's `\@fnsymbol` where the copy's `\maketitle` carries
+%   tmlr.sty:71-73 `\def\thefootnote{\fnsymbol{footnote}}` (`shipped_class::declare_shipped_copy_title_marks`)
+% witness:  2502.12413 (tmlr.sty: three authors "∗" "Equal contribution."); 2509.01621, 2509.17971; the style a minimal
+%   stand-in of tmlr.sty:71-84
+% oracle:   pdflatex 0 errors (TL 2025, -no-shell-escape): "Ann Able∗ Bob Baker†"; foot "∗First note.",
+%   "†Second note."
+% engines:  rust R2Ac (f77c7b5430e) = 0 errors, 0 Warnings, the marks (the static reader); MTREDUCE (7608026a189):
+%   both notes unmarked
+% expect:   0 errors, 0 Warnings; Ann's note marked ∗, Bob's †
+% status:   GREEN (MTREDUCEb: perfect_kernel_batchmtreduce::package_title_marks_are_their_binding_s)
+% preload:  ar5iv.sty
+\begin{filecontents*}[overwrite]{tmlr.sty}
+\def\maketitle{\par
+\begingroup
+   \def\thefootnote{\fnsymbol{footnote}}
+   \def\@makefnmark{\hbox to 0pt{$^{\@thefnmark}$\hss}}
+   \@maketitle \@thanks
+\endgroup
+\setcounter{footnote}{0}
+\let\maketitle\relax \let\@maketitle\relax
+\gdef\@thanks{}\gdef\@author{}\gdef\@title{}\let\thanks\relax}
+\def\@maketitle{\vbox{\hsize\textwidth{\LARGE\bf \@title\par}\vskip 0.2in
+  \begin{tabular}[t]{l}\bf\@author\end{tabular}}}
+\end{filecontents*}
+\documentclass{article}
+\usepackage{tmlr}
+\title{A Title}
+\author{Ann Able\thanks{First note.} \and Bob Baker\thanks{Second note.}}
+\begin{document}
+\maketitle
+Body.
+\end{document}

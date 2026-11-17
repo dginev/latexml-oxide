@@ -17,6 +17,10 @@ LoadDefinitions!({
   if lookup_bool("INCLUDE_STYLES") {
     // Raw style loading is on: the paper's own PRIMEarxiv.sty is authoritative.
     InputDefinitions!("PRIMEarxiv", noltxml => true, extension => Some(Cow::Borrowed("sty")));
+    // The marks its `\maketitle` prints, which the lock refused, where the copy carries PRIMEarxiv.sty:176-179
+    // `\renewcommand{\thefootnote}{\fnsymbol{footnote}}` (79 of the census's 80 copies; 2111.02666's has no
+    // `\maketitle`): the document's `\@fnsymbol`. 2509.03066, 2204.09716, 2509.09724, 2509.15844 (MTREDUCEb).
+    latexml_package::shipped_class::declare_shipped_copy_title_marks("sty")?;
   } else {
     // PRIMEarxiv.sty drops arxiv.sty's `\headeright` / `\undertitle` /
     // `\shorttitle` (L27-32 of the upstream file), so only the keyword

@@ -1,0 +1,41 @@
+% mechanism: the iclr binding answers NIPS's 2016-2018 styles (latexml_contrib iclr_sty.rs; the versioned fallback
+%   strips nips_2017 to nips; ICLR's style is NIPS's, iclr2020_conference.sty:2): it reads the paper's copy raw and
+%   declares the document's `\@fnsymbol` where the copy's `\maketitle` carries nips_2017.sty:246-249
+%   `\renewcommand{\thefootnote}{\fnsymbol{footnote}}` (`shipped_class::declare_shipped_copy_title_marks`)
+% witness:  1706.03762 (nips_2017.sty: eight authors "∗" "Equal contribution. …", two "†" "Work performed while at
+%   Google Brain.", one "‡"); the style a minimal stand-in of nips_2017.sty:245-265, :282-307
+% oracle:   pdflatex 0 errors (TL 2025, -no-shell-escape): "Ann Able∗ Bob Baker∗ Cy Cole†"; foot "∗Equal
+%   contribution.", "†Work performed while at X."
+% engines:  rust R2Ac (f77c7b5430e) = 0 errors, 0 Warnings, the marks (the static reader); MTREDUCE (7608026a189):
+%   every note unmarked
+% expect:   0 errors, 0 Warnings; Ann and Bob a copy of one note marked ∗, Cy's marked †
+% status:   GREEN (MTREDUCEb: perfect_kernel_batchmtreduce::package_title_marks_are_their_binding_s)
+% preload:  ar5iv.sty
+\begin{filecontents*}[overwrite]{nips_2017.sty}
+\ProvidesPackage{nips_2017}[2017/03/20 NIPS 2017 submission/camera-ready style file]
+\providecommand{\maketitle}{}
+\renewcommand{\maketitle}{%
+  \par
+  \begingroup
+    \renewcommand{\thefootnote}{\fnsymbol{footnote}}
+    \renewcommand{\@makefnmark}{\hbox to \z@{$^{\@thefnmark}$\hss}}
+    \thispagestyle{empty}
+    \@maketitle
+    \@thanks
+  \endgroup
+  \let\maketitle\relax
+  \let\thanks\relax
+}
+\providecommand{\@maketitle}{}
+\renewcommand{\@maketitle}{\vbox{\hsize\textwidth\centering{\LARGE\bf \@title\par}
+  \def\And{\end{tabular}\hfil\linebreak[0]\hfil\begin{tabular}[t]{c}\bf\rule{\z@}{24\p@}\ignorespaces}%
+  \begin{tabular}[t]{c}\bf\rule{\z@}{24\p@}\@author\end{tabular}}}
+\end{filecontents*}
+\documentclass{article}
+\usepackage{nips_2017}
+\title{A Title}
+\author{Ann Able\thanks{Equal contribution.} \And Bob Baker\footnotemark[1] \And Cy Cole\thanks{Work performed while at X.}}
+\begin{document}
+\maketitle
+Body.
+\end{document}

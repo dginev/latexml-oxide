@@ -1,0 +1,36 @@
+% mechanism: the iclr binding (latexml_contrib iclr_sty.rs; the versioned fallback strips iclr2026_conference to iclr)
+%   reads the paper's copy raw and declares its title marks (`latex_constructs::declare_package_title_marks`), the
+%   document's `\@fnsymbol` where the copy's `\maketitle` carries iclr2026_conference.sty:61-63
+%   `\def\thefootnote{\fnsymbol{footnote}}` (`shipped_class::declare_shipped_copy_title_marks`)
+% witness:  2303.07937 (iclr2024_conference.sty: Seo, Jang, Kwak "∗" "Equal contribution.", Kim "†"); 2509.00544,
+%   2510.05056 (iclr2026_conference.sty); the style a minimal stand-in of iclr2026_conference.sty:61-74, :83-92
+% oracle:   pdflatex 0 errors (TL 2025, -no-shell-escape): "Ann Able∗ Bob Baker∗ Cy Cole†"; foot "∗Equal
+%   contribution.", "†Corresponding author."
+% engines:  rust R2Ac (f77c7b5430e) = 0 errors, 0 Warnings, the marks (the static reader); MTREDUCE (7608026a189):
+%   every note unmarked
+% expect:   0 errors, 0 Warnings; Ann and Bob a copy of one note marked ∗, Cy's marked †
+% status:   GREEN (MTREDUCEb: perfect_kernel_batchmtreduce::package_title_marks_are_their_binding_s)
+% preload:  ar5iv.sty
+\begin{filecontents*}[overwrite]{iclr2026_conference.sty}
+\def\maketitle{\par
+\begingroup
+   \def\thefootnote{\fnsymbol{footnote}}
+   \def\@makefnmark{\hbox to 0pt{$^{\@thefnmark}$\hss}}
+   \@maketitle \@thanks
+\endgroup
+\setcounter{footnote}{0}
+\let\maketitle\relax \let\@maketitle\relax
+\gdef\@thanks{}\gdef\@author{}\gdef\@title{}\let\thanks\relax}
+\def\@maketitle{\vbox{\hsize\textwidth
+{\LARGE\sc \@title\par}
+  \def\And{\end{tabular}\hfil\linebreak[0]\hfil\begin{tabular}[t]{l}\bf\rule{\z@}{24pt}\ignorespaces}%
+  \begin{tabular}[t]{l}\bf\rule{\z@}{24pt}\@author\end{tabular}}}
+\end{filecontents*}
+\documentclass{article}
+\usepackage{iclr2026_conference}
+\title{A Title}
+\author{Ann Able\thanks{Equal contribution.} \And Bob Baker\footnotemark[1] \And Cy Cole\thanks{Corresponding author.}}
+\begin{document}
+\maketitle
+Body.
+\end{document}
