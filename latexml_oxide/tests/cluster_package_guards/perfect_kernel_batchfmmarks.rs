@@ -4330,13 +4330,13 @@ const CLASS: &[Row] = &[
       r#"Bob Baker | affiliation=Univ A"#,
       r#"Cat Cole ; footnotemark[*]= | affiliation=Univ B"#,
     ],
-    moves:      r#"row R SNJNLSTAR (a binding's `annotations=` mark no entry answers is counted lost, not shown)"#,
+    moves:      r#""#,
     page:       &[
       r#"Ann Able ; * plain"#,
       r#"Bob Baker"#,
       r#"Cat Cole ; * plain"#,
     ],
-    page_moves: r#"row R SNJNLSTAR (the two * not shown)"#,
+    page_moves: r#""#,
   },
   Row {
     repro:      "snjnl_sole_starred_author_without_labels",
@@ -4347,6 +4347,69 @@ const CLASS: &[Row] = &[
     ],
     moves:      r#""#,
     page:       &[r#"Ann Able | under: Corresponding author(s)."#],
+    page_moves: r#""#,
+  },
+  // (the labels and the `*` print as the names print, under the last `\author`'s labels, :498, :510: revSNJNL B1)
+  Row {
+    repro:      "snjnl_last_author_unlabelled_prints_no_star",
+    tex:        repro!("snjnl_last_author_unlabelled_prints_no_star"),
+    warnings:   0,
+    creators:   &[
+      r#"Ann Able ; correspondent[]=Corresponding author(s). | email=ann@a.org ; affiliation=Univ A"#,
+      r#"Bob Baker | email=bob@b.org ; affiliation=Univ A"#,
+      r#"Cat Cole"#,
+    ],
+    moves:      r#""#,
+    page:       &[
+      r#"Ann Able | under: Corresponding author(s)."#,
+      r#"Bob Baker"#,
+      r#"Cat Cole"#,
+    ],
+    page_moves: r#""#,
+  },
+  Row {
+    repro:      "snjnl_unlabelled_star_under_labelled_last_prints_star",
+    tex:        repro!("snjnl_unlabelled_star_under_labelled_last_prints_star"),
+    warnings:   0,
+    creators:   &[
+      r#"Ann Able ; correspondent[*]=Corresponding author(s). | email=ann@a.org"#,
+      r#"Bob Baker | email=bob@b.org ; affiliation=Univ A"#,
+    ],
+    moves:      r#""#,
+    page:       &[
+      r#"Ann Able ; * plain"#,
+      r#"Bob Baker"#,
+      r#"margin: Corresponding author(s)."#,
+    ],
+    page_moves: r#""#,
+  },
+  Row {
+    repro:      "snjnl_unlabelled_star_without_line_shows",
+    tex:        repro!("snjnl_unlabelled_star_without_line_shows"),
+    warnings:   0,
+    creators:   &[
+      r#"Ann Able ; footnotemark[*]="#,
+      r#"Bob Baker | email=bob@b.org ; affiliation=Univ A"#,
+    ],
+    moves:      r#""#,
+    page:       &[r#"Ann Able ; * plain"#, r#"Bob Baker"#],
+    page_moves: r#""#,
+  },
+  // (a note inside a name runs last as the names print: its text the one printed, revSNJNL B2)
+  Row {
+    repro:      "snjnl_note_inside_a_name_text_wins",
+    tex:        repro!("snjnl_note_inside_a_name_text_wins"),
+    warnings:   0,
+    creators:   &[
+      r#"Ann Able ; equal-contributors[†]=Second text. | affiliation=Univ A"#,
+      r#"Bob Baker | affiliation=Univ A"#,
+    ],
+    moves:      r#""#,
+    page:       &[
+      r#"Ann Able ; † plain"#,
+      r#"Bob Baker"#,
+      r#"margin: Second text."#,
+    ],
     page_moves: r#""#,
   },
 ];

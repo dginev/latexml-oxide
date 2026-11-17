@@ -414,29 +414,41 @@ fn snjnl_notes_take_the_copys_default() {
 }
 
 /// sn-jnl's author note that marks no name is the document's note: one given before any `\author`, whose glyph prints
-/// before the first name, and one given inside a name, which runs as the names print (2412.01641's sn-jnl.cls:586, :754;
-/// SNJNL, OD #1066).
+/// before the first name, one given inside a name, which runs as the names print (2412.01641's sn-jnl.cls:586, :754;
+/// SNJNL, OD #1066), and those of a document with no `\maketitle`, which prints no title block: the last text once
+/// (SNJNLb, review revSNJNL S1: the text had been dropped with no Warning).
 #[test]
 fn snjnl_notes_marking_no_name_are_the_documents() {
-  for (repro, text) in [
+  let unmailed = r#"<creator role="author"> <personname>Ann Able</personname> <contact name="Affiliation: " role="affiliation">Univ A</contact> </creator> <creator before=" " role="author"> <personname>Bob Baker</personname> <contact name="Affiliation: " role="affiliation">Univ A</contact> </creator>"#;
+  let mailed = r#"<creator role="author"> <personname>Ann Able</personname> <contact name="Email: " role="email">ann@a.org</contact> <contact name="Affiliation: " role="affiliation">Univ A</contact> </creator> <creator before=" " role="author"> <personname>Bob Baker</personname> <contact name="Email: " role="email">bob@b.org</contact> <contact name="Affiliation: " role="affiliation">Univ A</contact> </creator>"#;
+  for (repro, creators, text) in [
     (
       include_str!(
         "../../../tools/perfect_kernel/repros/sectioning-frontmatter/snjnl_note_before_any_name.tex"
       ),
+      unmailed,
       "Equal before.",
     ),
     (
       include_str!(
         "../../../tools/perfect_kernel/repros/sectioning-frontmatter/snjnl_note_inside_a_name.tex"
       ),
+      unmailed,
       "Equal inside.",
+    ),
+    (
+      include_str!(
+        "../../../tools/perfect_kernel/repros/sectioning-frontmatter/snjnl_no_maketitle_notes_are_the_documents.tex"
+      ),
+      mailed,
+      "Equal work.",
     ),
   ] {
     let (log, xml) = convert_with(repro, Some("ar5iv.sty"));
     assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
     let xml = squash(&xml);
     for element in [
-      r#"<creator role="author"> <personname>Ann Able</personname> <contact name="Affiliation: " role="affiliation">Univ A</contact> </creator> <creator before=" " role="author"> <personname>Bob Baker</personname> <contact name="Affiliation: " role="affiliation">Univ A</contact> </creator>"#.to_string(),
+      creators.to_string(),
       format!(r#"<note role="equal-contributors" xml:id="id1">{text}</note>"#),
     ] {
       assert!(xml.contains(&element), "{element}: {xml}");

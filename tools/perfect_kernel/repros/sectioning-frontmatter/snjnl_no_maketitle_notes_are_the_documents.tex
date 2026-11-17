@@ -1,0 +1,22 @@
+% mechanism: with no `\maketitle` sn-jnl prints no title block, so no name is marked and no note line prints; the author
+%   notes' text is kept as the document's note, the last text once (2412.01641's sn-jnl.cls:584-586, :754)
+% witness:  none in the 165 census papers (review revSNJNL S1, SNJNLNOMT)
+% oracle:   pdflatex with 2412.01641's sn-jnl.cls 0 errors: "Text." only
+% engines:  rust 2d21be273f3 = the "Equal work." text dropped, no Warning; rust SNJNLb = the document's note
+% expect:   0 errors 0 Warnings; one document note "Equal work.", no creator's note, no mark
+% status:   RED (2d21be273f3) -> GREEN (SNJNLb;
+%   perfect_kernel_batch67z::snjnl_notes_marking_no_name_are_the_documents)
+% files:    pdflatex with 2412.01641's sn-jnl.cls beside it
+% preload:  ar5iv.sty
+\documentclass{sn-jnl}
+\usepackage{amsmath}
+\begin{document}
+\title{A Title}
+\author*[1]{\fnm{Ann} \sur{Able}}\email{ann@a.org}
+\equalcont{Equal work.}
+\author[1]{\fnm{Bob} \sur{Baker}}\email{bob@b.org}
+\equalcont{Equal work.}
+\affil[1]{\orgname{Univ A}}
+\abstract{The abstract.}
+Text.
+\end{document}

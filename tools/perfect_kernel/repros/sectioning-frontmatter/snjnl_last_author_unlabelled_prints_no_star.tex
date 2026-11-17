@@ -1,0 +1,24 @@
+% mechanism: sn-jnl prints a name's labels and a starred name's `*` only where the LAST `\author` has labels: the test
+%   `\ifx\@authfrstarg\empty` (2412.01641's sn-jnl.cls:498, :510) sits inside `\g@addto@macro\artauthors`, so it reads
+%   the last call's optional argument as `\@maketitle` prints the names; the corresponding line prints still (:749-751)
+% witness:  none in the 165 census papers (review revSNJNL B1)
+% oracle:   pdflatex with 2412.01641's sn-jnl.cls 0 errors: "Ann Able, Bob Baker and Cat Cole", "1Univ A.",
+%   "*Corresponding author(s). E-mail(s): ann@a.org;", "Contributing authors: bob@b.org;" (no `*` on any name)
+% engines:  rust 2d21be273f3 = Ann's correspondent note marked `*` (invented); rust SNJNLb = Ann's note, no mark
+% expect:   0 errors 0 Warnings; Ann's correspondent note "Corresponding author(s).", unmarked
+% status:   RED (2d21be273f3) -> GREEN XML, HTML (SNJNLb;
+%   perfect_kernel_batchfmmarks::notes_are_marked_only_where_the_class_prints_marks)
+% files:    pdflatex with 2412.01641's sn-jnl.cls beside it
+% preload:  ar5iv.sty
+\documentclass{sn-jnl}
+\usepackage{amsmath}
+\begin{document}
+\title{A Title}
+\author*[1]{\fnm{Ann} \sur{Able}}\email{ann@a.org}
+\author[1]{\fnm{Bob} \sur{Baker}}\email{bob@b.org}
+\author{\fnm{Cat} \sur{Cole}}
+\affil[1]{\orgname{Univ A}}
+\abstract{The abstract.}
+\maketitle
+Text.
+\end{document}

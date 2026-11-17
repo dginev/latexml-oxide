@@ -1,0 +1,23 @@
+% mechanism: a starred name with no labels prints its `*` where the LAST `\author` has labels (2412.01641's
+%   sn-jnl.cls:510-511, `\ifx\@authfrstarg\empty` read as the names print), an empty superscript of labels then `*`;
+%   its `\email` is the corresponding line's (:535-546, :749-751)
+% witness:  none in the 165 census papers (review revSNJNL B1)
+% oracle:   pdflatex with 2412.01641's sn-jnl.cls 0 errors: "Ann Able* and Bob Baker1", "1Univ A.",
+%   "*Corresponding author(s). E-mail(s): ann@a.org;", "Contributing authors: bob@b.org;"
+% engines:  rust 2d21be273f3 = Ann's correspondent note unmarked (the `*` lost); rust SNJNLb = marked `*`
+% expect:   0 errors 0 Warnings; Ann's correspondent note "Corresponding author(s).", mark *
+% status:   RED (2d21be273f3) -> GREEN XML, HTML (SNJNLb;
+%   perfect_kernel_batchfmmarks::notes_are_marked_only_where_the_class_prints_marks)
+% files:    pdflatex with 2412.01641's sn-jnl.cls beside it
+% preload:  ar5iv.sty
+\documentclass{sn-jnl}
+\usepackage{amsmath}
+\begin{document}
+\title{A Title}
+\author*{\fnm{Ann} \sur{Able}}\email{ann@a.org}
+\author[1]{\fnm{Bob} \sur{Baker}}\email{bob@b.org}
+\affil[1]{\orgname{Univ A}}
+\abstract{The abstract.}
+\maketitle
+Text.
+\end{document}

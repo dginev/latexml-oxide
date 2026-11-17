@@ -4,10 +4,11 @@
 % oracle:   pdflatex with 2412.01641's sn-jnl.cls 0 errors: "Ann Able1*, Bob Baker1 and Cat Cole2*", "1Univ A.",
 %   "2Univ B.", and nothing more
 % engines:  rust 3b420685f89 = 0 errors 0 Warnings; no `*`; rust SNJNL = 0 errors, 1 Warning
-%   (`unanswered_mark_lost`, the two `*` counted), no `*`
-% expect:   0 errors; no note invented; the two `*` shown plain on their names (every unlinked mark shows, OD #1059)
-% status:   RED XML, RED HTML (row R SNJNLSTAR;
-%   perfect_kernel_batchfmmarks::notes_are_marked_only_where_the_class_prints_marks_red)
+%   (`unanswered_mark_lost`, the two `*` counted), no `*`; rust SNJNLb = the two `*` shown, 0 Warnings
+% expect:   0 errors 0 Warnings; no note invented; the two `*` shown plain on their names (every unlinked mark shows,
+%   OD #1059; `declare_unexplained_name_labels`, OD #1064)
+% status:   RED (SNJNL, row R SNJNLSTAR) -> GREEN XML, HTML (SNJNLb;
+%   perfect_kernel_batchfmmarks::notes_are_marked_only_where_the_class_prints_marks)
 % files:    pdflatex with 2412.01641's sn-jnl.cls beside it
 % preload:  ar5iv.sty
 \documentclass{sn-jnl}

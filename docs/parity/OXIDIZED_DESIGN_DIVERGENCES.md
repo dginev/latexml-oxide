@@ -21958,30 +21958,36 @@ the file raw and leaves the macro empty, so the box's title slot is empty and th
 #### 1066. sn-jnl's `\author*` star and its author notes' glyphs mark one note each, which every name carrying the mark shares (Perl: no binding; OmniBus)
 
 sn-jnl.cls (2412.01641's copy; the census's 165 copies alike) prints `\author*[labels]{name}` as the name with its
-labels and a `*` in one superscript, the `*` only where it has labels (:505-516); the `\email` after a starred name joins
-the corresponding list (`\if@corauemail`, :535-546), which `\@maketitle` prints once, "*Corresponding author(s).
-E-mail(s): …", where there is one (:749-751). An author note (`\equalcont{text}`, :584-586; some copies' `\intern`,
-`\equalsup`, `\equaladv`, `\equalcontribution`) stores its text and appends its glyph (`\g@addto@macro\artauthors
-{$^{\dagger}$}`) after the names printed so far; `\@maketitle` prints the last text once, under the addresses (:754).
+labels and a `*` in one superscript (:487-516). Whether they print is decided as the names print, from the LAST
+`\author`: its test `\ifx\@authfrstarg\empty` (:498, :510) sits inside `\g@addto@macro\artauthors`, so where the last
+call has labels every name prints its labels and each starred name its `*`, a starred unlabelled one too; where it
+has none no name prints either. The `\email` after a starred name joins the corresponding list (`\if@corauemail`,
+:535-546), which `\@maketitle` prints once, "*Corresponding author(s). E-mail(s): …" (:749-751). An author note
+(`\equalcont{text}`, :584-586; some copies' `\intern`, `\equalsup`, `\equaladv`, `\equalcontribution`) stores its text
+and appends its glyph (`\g@addto@macro\artauthors{$^{\dagger}$}`) after the names printed so far; `\@maketitle` prints
+the last text once, under the addresses (:754). A note given inside a name runs as the names print, after every note
+outside: its text is the one printed, its glyph too late to print.
 
 **Rust.** The binding collapsed the star and wrote each note as a detached `ltx:note` per call, its text twice and no
 mark on any name (12 of 21 marked sn-jnl creators of the 3,000-paper dev sample lost). It now translates the class's
-commands into the frontmatter API's keys and lets the engine place them: a starred name with labels gets `*` in its
-`annotations`; each name ends with a marks macro (`\lx@sn@marks@<n>`) that the notes after it fill with a request
-(`\lx@request@frontmatter@annotation[sn]{equalcont}`), as the class appends the glyph after the names. As `\maketitle`
-begins (`\lx@maketitle@begin`, ahead of the flush) the binding queues each note once, labelled, `ltx:note` under the
-creators: `[label={*},role=correspondent,mark=*]` in the copy's words ("Corresponding author(s).", "Corresponding
-author.") where the class prints the line, `[label={sn:<command>},mark=<glyph>]` with the last text stored, the glyph
-the paper's copy appends (`note_glyph`: † for `\equalcont`, `*` in 2501.01157's, ‡ for `\intern`/`\equalsup`, § in
-2307.08214's; † with no copy). The copy decides what prints: 2209.11450's prints no `*` (`{}` in its `\@@corrauthor`), no
-corresponding line and no glyph for `\equalcont` (`\g@addto@macro\artauthors{}`), so there no name is marked and its
-note is the document's. The relocation's copies are one note (`idref`, #1059), printed once on the page. A starred
-name without labels prints no `*`: it requests an unmarked correspondent note. An `\email` inside a name runs as the
-names print, under the last author's star (2312.03687). A note given before any name, or inside one, marks none: the
-document's note, as the class prints its text with no name marked. E-mails and affiliations stay their authors'
-contacts. **Residuals.** A starred name's `*` with no corresponding line (no `\email` after a starred name: 2509.19318)
-is counted lost by a Warning (`unanswered_mark_lost`, as authblk's), not shown (row R SNJNLSTAR); with no `\maketitle`
-the notes are not queued (pdflatex prints no title block). Witnesses 2412.01641, 2603.01834, 2312.03687, 2512.07346,
-2401.11721. **Guards**: the `snjnl_*` rows of `perfect_kernel_batchfmmarks::notes_are_marked_only_where_the_class_prints_marks`
-(RED `snjnl_starred_names_without_email`), `perfect_kernel_batch67z::{snjnl_author_notes, snjnl_notes_take_the_copys_default,
+commands into the frontmatter API's keys and lets the engine place them. Each name ends with a marks macro
+(`\lx@sn@marks@<n>`) holding its requests, `\lx@sn@request{star}` for a starred name and `\lx@sn@request{<command>}`
+for each note after it; as `\maketitle` begins (`\lx@maketitle@begin`, ahead of the flush) `print_notes` queues each
+note once, labelled `sn:<kind>`, and makes the requests it answers (`\lx@request@frontmatter@annotation[sn]{…}`), so the
+relocation's copies are one note (`idref`, #1059), printed once on the page. The starred names' note is
+`[label={sn:star},role=correspondent]` in the copy's words where the class prints the line, marked `*` where the last
+`\author` has labels and the copy prints the `*` (2209.11450's prints `{}`), else unmarked; a printed `*` with no line
+is shown on the name (`Policy::labels_print`, `declare_unexplained_name_labels`, #1064; 2509.19318). Each author note
+given is `[label={sn:<command>},mark=<glyph>]` with its last text — a name's own call's (`inner_notes`, whose call
+then emits nothing) — and the glyph its copy appends, read as printed (`printed_label_pieces`: † for `\equalcont`, `*`
+in 2501.01157's, ‡ for `\intern`/`\equalsup`, § in 2307.08214's, `\textsuperscript{\dag}` †; † with no copy); a glyph
+printing no one mark links nothing, with a Warning. A copy whose command appends nothing (2209.11450's `\equalcont`)
+marks no name: its note is the document's, as is one given before any name. With no `\maketitle` (no title block) the
+notes given are the document's, unmarked (`\lx@sn@fallback@notes` ahead of `\lx@frontmatter@fallback`). An `\email`
+inside a name runs as the names print, under the last author's star (2312.03687). E-mails and affiliations stay their
+authors' contacts, the labels kept as their keys where the last `\author` has none. **Residual.** An ORCID link ending a
+name is followed by the marks macro, so the engine reads it as a mark, not the name's link (row R ORCIDNAME; repro
+`snjnl_orcid_superscript_link_in_name_red`). Witnesses 2412.01641, 2603.01834, 2312.03687, 2512.07346, 2401.11721,
+2509.19318. **Guards**: the `snjnl_*` rows of `perfect_kernel_batchfmmarks::notes_are_marked_only_where_the_class_prints_marks`,
+`perfect_kernel_batch67z::{snjnl_author_notes, snjnl_notes_take_the_copys_default,
 snjnl_notes_marking_no_name_are_the_documents, snjnl_copy_that_marks_no_name, sn_jnl_class_commands}`.

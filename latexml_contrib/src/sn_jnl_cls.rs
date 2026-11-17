@@ -5,7 +5,20 @@ use crate::shipped_class::{
   class_code, class_code_argument, class_code_contains, shipped_class_text,
 };
 
+/// This binding's frontmatter conventions (OXIDIZED_DESIGN_DIVERGENCES #837): the kernel's, but a name's labels print
+/// after it (2412.01641's sn-jnl.cls:498-500), so a starred name's `*` no corresponding line explains shows on the name
+/// (`declare_unexplained_name_labels`, OD #1064, #1066; 2509.19318).
+pub const FRONTMATTER_CONVENTIONS: FmConventions = FmConventions {
+  name: "sn-jnl",
+  binding: "sn-jnl.cls",
+  labels_print: true,
+  cite: "sn-jnl.cls:487-516 (2412.01641's copy: `\\@@author`, `\\@@corrauthor`); OD #1066",
+  ..FM_KERNEL_CONVENTIONS
+};
+
 LoadDefinitions!({
+  // (this binding's frontmatter conventions, first: OXIDIZED_DESIGN_DIVERGENCES #837)
+  declare_frontmatter_conventions(&FRONTMATTER_CONVENTIONS);
   LoadClass!("OmniBus");
   // sn-jnl.cls loads amsmath in some versions only (140 of 799 copies in a 1/20 arXiv sample; 2509.03559's none):
   // amsmath's commands for papers that use them unloaded, its "Old form" error once the paper loads it; the paper's
@@ -164,20 +177,8 @@ LoadDefinitions!({
   // \theHfigure / \theHtable: the kernel's (every counter has its `\theH<counter>`, counter/dialect.rs), which
   // hyperref's `\hyper@makecurrent` reads inside an `\xdef` — not argument-taking stubs, which took its `}`.
 
-  // The author block, as sn-jnl.cls prints it (2412.01641's copy, line numbers of it; the census's 165 copies alike).
-  // `\author[labels]{name}` prints the name and its labels in a superscript (:487-503); `\author*` adds a `*` after
-  // them, only where it has labels (:505-516), and sends the `\email` after it to the corresponding list (:535-546),
-  // which `\@maketitle` prints once, "*Corresponding author(s). E-mail(s): …" (:749-751). An author note
-  // (`\equalcont{text}`, :584-586) stores its text and appends its glyph after the names printed so far; `\@maketitle`
-  // prints the last text once, under the addresses (:754). Here the labels and the `*` are the creator's
-  // `annotations`, the `*` answered by one correspondent note; each name ends with `\lx@sn@marks@<n>`, which the notes
-  // written after it fill with their requests; `\maketitle` queues each note once, labelled, so its carriers share it
-  // (OD #1059), marked with the glyph the paper's copy prints (2412.01641, 2603.01834, 2312.03687, 2512.07346).
-  // (a name list in one `\author` is several people, read as the per-author classes read theirs: Perl, with no sn-jnl
-  // binding, splits it with the kernel's `\author`; 2312.04825, 2501.00473, 2504.09158; the notes after it mark the
-  // last, as the class prints them after the list). The star is `OptionalMatch:*`: a literal `*` parameter made it
-  // mandatory, and a plain `\author{X}` recursed (2306.11901). The labels name the `\affil[n]` contacts below, the
-  // labelled-affiliation pattern of Perl PR #2767 (jheppub_sty.rs).
+  // The author block as sn-jnl.cls prints it (2412.01641's :487-516, :749-756), translated to the API's keys, each note
+  // queued once (OD #1066; 2603.01834, 2312.03687, 2512.07346; name lists 2312.04825, 2501.00473, 2504.09158; 2306.11901).
   DefMacro!("\\author OptionalMatch:* []{}", sub[(star, labels, name)] {
     Ok(author_call(star.is_some(), labels, &name))
   });
@@ -298,33 +299,20 @@ LoadDefinitions!({
     "\\ackno{}",
     "\\@add@frontmatter{ltx:acknowledgements}[name=Acknowledgments]{#1}"
   );
-  // The author notes: `\equalcont` (2412.01641's :584-586, every copy) and the further ones some copies add, each
-  // marking the names before it and printed under the addresses — `\intern` (2606.24824's :598-601, printed at :770;
-  // 2307.08214's :591-595 with `\S`, whose print the copy comments out, :764), `\equalsup` (2603.28334's :600, :769;
-  // 2607.26008), `\equaladv` (2501.01157's :598-601, :771), `\equalcontribution` (2206.10381's :590, `\star`). Each
-  // stores the text (`\lx@sn@authornote`), which `\maketitle` queues once, with the glyph the copy appends to the names
-  // (`note_glyph`; the class as distributed `\equalcont`'s †); the text is kept where the copy does not print it. A copy
-  // may take the text as an optional argument whose default is the class's text, which the paper sets with
-  // `\interntxt`/`\equalcontxt` (2606.24824's `\newcommand{\intern}[1][\@interntxt]`, its default "Work done as an
-  // intern at Westlake University.", the paper's `\intern{}`; 2504.21788's :615-617 `\equalcont`, "These authors
-  // contributed equally to this work.", the paper's bare `\equalcont`): there the command reads the copy's form, with
-  // the copy's default.
+  // The author notes (`\equalcont`, :584-586; `\intern`, `\equalsup`, `\equaladv`, `\equalcontribution` in some copies:
+  // 2606.24824, 2307.08214, 2603.28334, 2607.26008, 2501.01157, 2206.10381, 2504.21788), with the copy's glyph; OD #1066.
   for &(command, ..) in &AUTHOR_NOTES {
-    let glyph = match class_text.as_deref() {
-      Some(text) => note_glyph(text, command),
-      None if command == "equalcont" => Some(s!("\u{2020}")),
+    let mark = match class_text.as_deref() {
+      Some(text) => note_mark(text, command),
+      None if command == "equalcont" => Some("$^{\\dagger}$".to_string()),
       None => None,
     };
     // (a copy whose command marks no name, `\g@addto@macro\artauthors{}` — 2209.11450's `\equalcont`, its text printed
     // under the addresses alone — or that has none: the document's note)
+    assign_value(&s!("lx@sn@marked@{command}"), mark.is_some(), Scope::Global);
     assign_value(
-      &s!("lx@sn@marked@{command}"),
-      glyph.is_some(),
-      Scope::Global,
-    );
-    assign_value(
-      &s!("lx@sn@glyph@{command}"),
-      Stored::String(pin(glyph.unwrap_or_default())),
+      &s!("lx@sn@mark@{command}"),
+      Stored::String(pin(mark.unwrap_or_default())),
       Scope::Global,
     );
   }
@@ -339,6 +327,11 @@ LoadDefinitions!({
   ] {
     if let Some(text) = optional_form(command, store) {
       let default = class_code_argument(text, &s!("\\{setter}")).unwrap_or_default();
+      assign_value(
+        &s!("lx@sn@default@{command}"),
+        Stored::String(pin(store)),
+        Scope::Global,
+      );
       raw_tex(
         &[
           r"\def\",
@@ -403,8 +396,25 @@ LoadDefinitions!({
     Stored::String(pin(&corresponding)),
     Scope::Global,
   );
-  DefMacro!("\\lx@sn@print@notes", sub[()] { Ok(print_notes()) });
+  DefMacro!("\\lx@sn@print@notes", sub[()] { Ok(print_notes(false)) });
   AddToMacro!("\\lx@maketitle@begin", "\\lx@sn@print@notes");
+  // (a name's request of a note or of its `*`, made where `print_notes` queued what answers it)
+  DefMacro!("\\lx@sn@request{}", sub[(kind)] {
+    let kind = kind.to_string();
+    Ok(if lookup_bool(&s!("lx@sn@answered@{kind}")) {
+      Tokens::new(tokenized(&s!("\\lx@request@frontmatter@annotation[sn]{{{kind}}}")))
+    } else {
+      Tokens::new(Vec::new())
+    })
+  });
+  // (with no `\maketitle` pdflatex prints no title block: the notes given are the document's, unmarked)
+  DefMacro!("\\lx@sn@fallback@notes", sub[()] {
+    Ok(if lookup_bool(PRINTED) { Tokens::new(Vec::new()) } else { print_notes(true) })
+  });
+  RawTeX!(
+    r"\let\lx@sn@kernel@fallback\lx@frontmatter@fallback
+\def\lx@frontmatter@fallback{\lx@sn@fallback@notes\lx@sn@kernel@fallback}"
+  );
   // The switches the notes set, which papers set themselves (`\equalconttrue`, 2 papers), and
   // `\presentaddresstxt{label}`, the heading of `\presentaddress` (2 papers; 2603.28334's copy :572-576).
   RawTeX!(
@@ -505,14 +515,14 @@ LoadDefinitions!({
 const AUTHORS: &str = "lx@sn@authors";
 /// Whether the last `\author` was starred (`\if@corauemail`, sn-jnl.cls:505).
 const STARRED: &str = "lx@sn@starred";
+/// Whether the last `\author` has labels (`\@authfrstarg`, :489, :506), which every name's labels and `*` print under.
+const LAST_LABELLED: &str = "lx@sn@last@labelled";
+/// The starred names since the last print (`\corraucount`, :506).
+const STARRED_NAMES: &str = "lx@sn@starred@names";
 /// Whether an `\email` followed a starred name (`\corrauthemail`, :537).
 const CORRESPONDING_EMAIL: &str = "lx@sn@corresponding@email";
 /// Whether a name holds an `\email`, which runs as the names print, under the last `\author`'s star.
 const NAME_EMAIL: &str = "lx@sn@name@email";
-/// The starred names with labels, which print `*` (:510-511).
-const STARRED_MARKED: &str = "lx@sn@starred@marked";
-/// Whether a starred name has no labels, so prints no `*`.
-const STARRED_UNMARKED: &str = "lx@sn@starred@unmarked";
 /// The corresponding line's words, the copy's.
 const CORRESPONDING_TEXT: &str = "lx@sn@corresponding@text";
 /// Whether a starred name with labels prints `*` (:510-511, the copy's).
@@ -540,63 +550,123 @@ const AUTHOR_NOTES: [(&str, &str, &str, &str); 5] = [
   ),
 ];
 
-/// The glyphs the copies append to the names (`\g@addto@macro\artauthors{$^{\dagger}$}`).
-const NOTE_GLYPHS: [(&str, &str); 11] = [
-  ("\\dagger", "\u{2020}"),
-  ("\\dag", "\u{2020}"),
-  ("\\ddagger", "\u{2021}"),
-  ("\\ddag", "\u{2021}"),
-  ("\\S", "\u{a7}"),
-  ("\\P", "\u{b6}"),
-  ("\\|", "\u{2016}"),
-  ("\\star", "\u{22c6}"),
-  ("\\bigstar", "\u{2605}"),
-  ("\\ast", "\u{2217}"),
-  ("*", "*"),
-];
-
-/// The frontmatter call of `\author[*][labels]{name}`: the labels, and the `*` a starred name prints after them, its
-/// `annotations`; the name, then its marks macro (`\lx@sn@marks@<n>`), whose requests the notes after it add. A
-/// starred name without labels requests the unmarked correspondent note.
+/// The frontmatter call of `\author[*][labels]{name}`: the labels its `annotations`; the name, then its marks macro
+/// (`\lx@sn@marks@<n>`), the requests of the star and of the notes after it, which `print_notes` answers as the class
+/// prints them from the last `\author` (`\ifx\@authfrstarg\empty`, :498, :510, read as the names print). The notes
+/// given inside the name run last at the print, so their text is the one printed: it is kept (`inner_notes`).
 fn author_call(starred: bool, labels: Option<Tokens>, name: &Tokens) -> Tokens {
   let n = lookup_int(AUTHORS) + 1;
   assign_value(AUTHORS, n, Scope::Global);
   assign_value(STARRED, starred, Scope::Global);
   assign_value(PRINTED, false, Scope::Global);
-  if name.unlist_ref().contains(&T_CS!("\\email")) {
+  let annotations = labels.map(Tokens::unlist).unwrap_or_default();
+  assign_value(LAST_LABELLED, !annotations.is_empty(), Scope::Global);
+  let name = name.unlist_ref();
+  if name.contains(&T_CS!("\\email")) {
     assign_value(NAME_EMAIL, true, Scope::Global);
   }
-  let mut annotations = labels.map(Tokens::unlist).unwrap_or_default();
   let marks = T_CS!(s!("\\lx@sn@marks@{n}"));
   let mut call = vec![T_CS!("\\gdef"), marks, T_BEGIN!()];
-  if starred && annotations.is_empty() {
-    assign_value(STARRED_UNMARKED, true, Scope::Global);
-    call.extend(tokenized(r"\lx@request@frontmatter@annotation[sn]{corr}"));
-  } else if starred && lookup_bool(STAR_PRINTS) {
-    assign_value(
-      STARRED_MARKED,
-      lookup_int(STARRED_MARKED) + 1,
-      Scope::Global,
-    );
-    annotations.extend([T_OTHER!(","), T_OTHER!("*")]);
+  if starred {
+    assign_value(STARRED_NAMES, lookup_int(STARRED_NAMES) + 1, Scope::Global);
+    call.extend(tokenized(r"\lx@sn@request{star}"));
   }
   call.push(T_END!());
+  call.extend(inner_notes(name));
   call.extend(tokenized(r"\lx@add@authors@append[annotations={"));
   call.extend(annotations);
   call.extend(tokenized("}]{"));
-  call.extend(name.unlist_ref().iter().copied());
+  call.extend(name.iter().copied());
   call.extend([marks, T_END!()]);
   Tokens::new(call)
 }
 
+/// The text of each author note given inside `name`, the last of each kind, kept for `print_notes`
+/// (`\lx@sn@inner@<command>`): the class runs it as the names print, after every note outside, so its `\gdef` wins
+/// (twotext: "† Second text."); its call there is counted to emit nothing (`lx@sn@inside@<command>`).
+fn inner_notes(name: &[Token]) -> Vec<Token> {
+  let mut out = Vec::new();
+  for &(command, ..) in &AUTHOR_NOTES {
+    let cs = T_CS!(s!("\\{command}"));
+    let calls: Vec<usize> = (0..name.len()).filter(|&i| name[i] == cs).collect();
+    let Some(&last) = calls.last() else {
+      continue;
+    };
+    let inside = s!("lx@sn@inside@{command}");
+    assign_value(
+      &inside,
+      lookup_int(&inside) + calls.len() as i64,
+      Scope::Global,
+    );
+    out.extend([
+      T_CS!("\\gdef"),
+      T_CS!(s!("\\lx@sn@inner@{command}")),
+      T_BEGIN!(),
+    ]);
+    out.extend(note_argument(command, &name[last + 1..]));
+    out.push(T_END!());
+  }
+  out
+}
+
+/// The text a note command reads after it in `rest`, as its definition does: the copy's optional form `[text]`, or its
+/// default (`\@equalconttxt`, 2504.21788's); else one argument, a group's content or one token.
+fn note_argument(command: &str, rest: &[Token]) -> Vec<Token> {
+  let mut rest = rest
+    .iter()
+    .copied()
+    .skip_while(|t| t.get_catcode() == Catcode::SPACE);
+  let default = lookup_string(&s!("lx@sn@default@{command}"));
+  if !default.is_empty() {
+    let mut rest = rest.peekable();
+    if rest.peek() != Some(&T_OTHER!("[")) {
+      return vec![T_CS!(s!("\\{default}"))];
+    }
+    rest.next();
+    let mut depth = 0;
+    return rest
+      .take_while(|t| {
+        match t.get_catcode() {
+          Catcode::BEGIN => depth += 1,
+          Catcode::END => depth -= 1,
+          _ => {},
+        }
+        !(depth == 0 && *t == T_OTHER!("]"))
+      })
+      .collect();
+  }
+  match rest.next() {
+    Some(t) if t.get_catcode() == Catcode::BEGIN => {
+      let mut depth = 1;
+      rest
+        .take_while(|t| {
+          match t.get_catcode() {
+            Catcode::BEGIN => depth += 1,
+            Catcode::END => depth -= 1,
+            _ => {},
+          }
+          depth > 0
+        })
+        .collect()
+    },
+    Some(t) => vec![t],
+    None => Vec::new(),
+  }
+}
+
 /// An author note's text stored and its switch set, as the class's command does; the names written so far end with
-/// its request (the class's `\g@addto@macro\artauthors{$^{\dagger}$}`). Before any name, none; inside a name, read
-/// as the names print, the document's note, unmarked (pdflatex prints its text, no name marked).
+/// its request (the class's `\g@addto@macro\artauthors{$^{\dagger}$}`). Before any name, none; inside a name, run as
+/// the names print, its text already queued (`inner_notes`); else, after the print, the document's note.
 fn author_note(command: &str, text: Tokens) -> Tokens {
   let Some(&(_, store, switch, role)) = AUTHOR_NOTES.iter().find(|note| note.0 == command) else {
     return Tokens::new(Vec::new());
   };
   if lookup_bool(PRINTED) {
+    let pending = lookup_int(&s!("lx@sn@pending@{command}"));
+    if pending > 0 {
+      assign_value(&s!("lx@sn@pending@{command}"), pending - 1, Scope::Global);
+      return Tokens::new(Vec::new());
+    }
     let mut call = tokenized(&s!("\\@add@frontmatter{{ltx:note}}[role={role}]{{"));
     call.extend(text.unlist());
     call.push(T_END!());
@@ -615,104 +685,110 @@ fn author_note(command: &str, text: Tokens) -> Tokens {
       T_CS!(s!("\\lx@sn@marks@{n}")),
       T_BEGIN!(),
     ]);
-    call.extend(tokenized(&s!(
-      "\\lx@request@frontmatter@annotation[sn]{{{command}}}"
-    )));
+    call.extend(tokenized(&s!("\\lx@sn@request{{{command}}}")));
     call.push(T_END!());
   }
   Tokens::new(call)
 }
 
-/// The notes `\@maketitle` prints under the addresses (sn-jnl.cls:749-756), each queued once with its label, which
-/// the names carrying it request: the correspondent note where the class prints its line (an `\email` after a starred
-/// name, or one in a name printed under a starred last author), then each author note given. A `*` printed with no
-/// line to explain it is counted lost (as authblk's labels, `count_lost_labels`); a note given before any name, which
-/// marks none, is the document's. Read once: a second `\maketitle` prints only what was given since.
-fn print_notes() -> Tokens {
+/// The notes `\@maketitle` prints under the addresses (sn-jnl.cls:749-756), each queued once with its label, which the
+/// names carrying it request (`\lx@sn@request`). The starred names print `*` where the last `\author` has labels
+/// (:498, :510): then they share the correspondent note marked `*` where the class prints the line (an `\email` after a
+/// starred name, or in a name printed under a starred last author; :535-546), else their `*` shows on the name
+/// (`declare_unexplained_name_labels`, 2509.19318); with none, the unmarked note. Then each author note given, with
+/// its last text and the glyph the copy appends; one given before any name is the document's. With no `\maketitle`
+/// (`fallback`: no title block prints) every note given is the document's, unmarked.
+fn print_notes(fallback: bool) -> Tokens {
   let mut tex = String::new();
+  let starred = lookup_int(STARRED_NAMES);
   let text = lookup_string(CORRESPONDING_TEXT);
-  let marked = lookup_int(STARRED_MARKED);
-  let line = !text.is_empty()
+  let line = !fallback
+    && !text.is_empty()
     && (lookup_bool(CORRESPONDING_EMAIL) || (lookup_bool(NAME_EMAIL) && lookup_bool(STARRED)));
-  if line {
-    if marked > 0 {
-      tex.push_str(&s!(
-        "\\lx@annotate@frontmatter{{ltx:creator}}{{ltx:note}}[label={{*}},role=correspondent,mark=*]{{{text}}}"
-      ));
-    }
-    if lookup_bool(STARRED_UNMARKED) {
-      tex.push_str(&s!(
-        "\\lx@annotate@frontmatter{{ltx:creator}}{{ltx:note}}[label={{sn:corr}},role=correspondent]{{{text}}}"
-      ));
-    }
-  } else if marked > 0 {
-    Warn!(
-      "frontmatter",
-      "unanswered_mark_lost",
-      s!(
-        "sn-jnl prints * on {marked} starred name(s) with no corresponding line to explain it, written on no name"
-      )
-    );
+  let star_prints = !fallback && lookup_bool(LAST_LABELLED) && lookup_bool(STAR_PRINTS);
+  let mut shown = Vec::new();
+  let star_answered = starred > 0 && (line || star_prints);
+  if starred > 0 && line {
+    let mark = if star_prints { ",mark=*" } else { "" };
+    tex.push_str(&s!(
+      "\\lx@annotate@frontmatter{{ltx:creator}}{{ltx:note}}[label={{sn:star}},role=correspondent{mark}]{{{text}}}"
+    ));
+  } else if starred > 0 && star_prints {
+    shown.push((s!("sn:star"), s!("*")));
   }
+  assign_value("lx@sn@answered@star", star_answered, Scope::Global);
+  declare_unexplained_name_labels(&shown);
   for &(command, store, _, role) in &AUTHOR_NOTES {
-    if !lookup_bool(&s!("lx@sn@given@{command}")) {
+    let inside = lookup_int(&s!("lx@sn@inside@{command}"));
+    let given = lookup_bool(&s!("lx@sn@given@{command}")) || inside > 0;
+    let requested = lookup_bool(&s!("lx@sn@requested@{command}"));
+    for key in ["given", "requested", "answered"] {
+      assign_value(&s!("lx@sn@{key}@{command}"), false, Scope::Global);
+    }
+    assign_value(&s!("lx@sn@inside@{command}"), 0i64, Scope::Global);
+    assign_value(&s!("lx@sn@pending@{command}"), inside, Scope::Global);
+    if !given {
       continue;
     }
-    if lookup_bool(&s!("lx@sn@requested@{command}")) {
-      let glyph = lookup_string(&s!("lx@sn@glyph@{command}"));
-      let mark = if glyph.is_empty() {
-        String::new()
-      } else {
-        s!(",mark={glyph}")
-      };
+    let text = if inside > 0 {
+      s!("\\lx@sn@inner@{command}")
+    } else {
+      s!("\\{store}")
+    };
+    let glyph = if requested && !fallback {
+      note_glyph(command)
+    } else {
+      None
+    };
+    if let Some(glyph) = glyph {
+      assign_value(&s!("lx@sn@answered@{command}"), true, Scope::Global);
       tex.push_str(&s!(
-        "\\lx@annotate@frontmatter{{ltx:creator}}{{ltx:note}}[label={{sn:{command}}},role={role}{mark}]{{\\{store}}}"
+        "\\lx@annotate@frontmatter{{ltx:creator}}{{ltx:note}}[label={{sn:{command}}},role={role},mark={glyph}]{{{text}}}"
       ));
     } else {
-      tex.push_str(&s!(
-        "\\@add@frontmatter{{ltx:note}}[role={role}]{{\\{store}}}"
-      ));
+      tex.push_str(&s!("\\@add@frontmatter{{ltx:note}}[role={role}]{{{text}}}"));
     }
-    assign_value(&s!("lx@sn@given@{command}"), false, Scope::Global);
-    assign_value(&s!("lx@sn@requested@{command}"), false, Scope::Global);
   }
-  for key in [CORRESPONDING_EMAIL, NAME_EMAIL, STARRED_UNMARKED] {
+  for key in [CORRESPONDING_EMAIL, NAME_EMAIL] {
     assign_value(key, false, Scope::Global);
   }
-  assign_value(STARRED_MARKED, 0i64, Scope::Global);
+  assign_value(STARRED_NAMES, 0i64, Scope::Global);
   assign_value(PRINTED, true, Scope::Global);
   Tokens::new(tokenized(&tex))
 }
 
-/// The glyph `command`'s definition in a copy appends to the names (`\g@addto@macro\artauthors{$^{\dagger}$}`,
-/// 2412.01641's :586; `$^{*}$` 2501.01157's :587, `$^{\S}$` 2307.08214's :595): one of [`NOTE_GLYPHS`], an empty one
-/// for another; `None` where it marks no name (`{}`, 2209.11450's) or the copy does not define the command.
-fn note_glyph(text: &str, command: &str) -> Option<String> {
+/// The glyph a note's mark prints (`lx@sn@mark@<command>`, its TeX as the copy appends it, read by
+/// `printed_label_pieces`); none, with a Warning, where it prints no one glyph — its names then carry no link.
+fn note_glyph(command: &str) -> Option<String> {
+  let mark = lookup_string(&s!("lx@sn@mark@{command}"));
+  let pieces = printed_label_pieces(&Tokens::new(tokenized(&mark))).unwrap_or_default();
+  if let [glyph] = pieces.as_slice() {
+    return Some(glyph.clone());
+  }
+  Warn!(
+    "frontmatter",
+    "unanswered_mark_lost",
+    s!(
+      "sn-jnl's \\{command} prints {mark} after its names, read as no one mark: the names show none"
+    )
+  );
+  None
+}
+
+/// The mark `command`'s definition in a copy appends to the names (`\g@addto@macro\artauthors{$^{\dagger}$}`,
+/// 2412.01641's :586; `$^{*}$` 2501.01157's :587, `$^{\S}$` 2307.08214's :595, `\textsuperscript{\dag}`); `None`
+/// where it marks no name (`{}`, 2209.11450's) or the copy does not define the command.
+fn note_mark(text: &str, command: &str) -> Option<String> {
   let code = class_code(text);
   let at = code.find(&s!("\\newcommand{{\\{command}}}"))?;
   let body = &code[at + 1..];
   let body = &body[..body.find("\\newcommand").unwrap_or(body.len())];
   let mark = class_code_argument(body, "\\g@addto@macro\\artauthors")?;
-  let mark = mark
-    .trim()
-    .trim_matches('$')
-    .trim()
-    .trim_start_matches('^')
-    .trim();
-  let mark = mark
-    .strip_prefix('{')
-    .and_then(|m| m.strip_suffix('}'))
-    .unwrap_or(mark)
-    .trim();
-  if mark.is_empty() {
-    return None;
-  }
-  Some(
-    NOTE_GLYPHS
-      .iter()
-      .find(|(tex, _)| *tex == mark)
-      .map_or_else(String::new, |(_, glyph)| (*glyph).to_string()),
-  )
+  let bare: String = mark
+    .chars()
+    .filter(|c| !matches!(c, '$' | '^' | '{' | '}') && !c.is_whitespace())
+    .collect();
+  (!bare.is_empty()).then(|| mark.trim().to_string())
 }
 
 /// Whether a copy's starred name prints `*` after its labels (`{*}` in its `\@@corrauthor`, 2412.01641's :511; `{}` in
