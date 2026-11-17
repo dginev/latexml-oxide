@@ -1529,6 +1529,102 @@ fn frontmatter_fairmeta_author_affiliation_1396() {
   );
 }
 
+/// ragslab.sty, a package on `article` whose title API mirrors fairmeta's, read raw from the paper's copy (the real
+/// file less its comment lines: "Processing definitions …/ragslab.sty" in the log), then the family's frontmatter (OD
+/// #1070): each author has the affiliations its marks cite; the metadata band's lines are the date and publication
+/// notes named by the labels the copy prints; the copy's tcolorbox card is not replayed. Its last affiliation
+/// left open over the metadata calls, as 2610.22523's is: pdflatex reads them inside it. Before: the names alone, the
+/// card a picture after the abstract, its first name dropped. Repro stand-in-copies/ragslab.
+#[test]
+fn frontmatter_ragslab_marks_link_affiliations() {
+  let (log, xml) = latexml::util::test::convert_files_with(
+    include_str!(
+      "../../tools/perfect_kernel/repros/stand-in-copies/ragslab/ragslab_marks_link_affiliations.tex"
+    ),
+    &[(
+      "ragslab.sty",
+      include_str!("../../tools/perfect_kernel/repros/stand-in-copies/ragslab/ragslab.sty"),
+    )],
+    Some("ar5iv.sty"),
+  );
+  assert_eq!(
+    (
+      latexml::util::test::error_count(&log),
+      latexml::util::test::warning_count(&log),
+      log.matches("Fatal:").count()
+    ),
+    (0, 0, 0),
+    "{log}"
+  );
+  assert!(
+    log.contains("(Processing definitions ") && log.contains("/ragslab.sty..."),
+    "the copy was not read:\n{log}"
+  );
+  let affiliation = |text: &str| {
+    format!("<contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">{text}</contact>")
+  };
+  assert_eq!(whole_creators(&xml), [
+    format!(
+      "<creator role=\"author\"><personname>Ann Able</personname>{}{}</creator>",
+      affiliation("Univ A"),
+      affiliation("Lab B")
+    ),
+    format!(
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker</personname>{}</creator>",
+      affiliation("Univ A")
+    ),
+    // (the open affiliation's paragraph end is kept as its last character)
+    format!(
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Cid Cole</personname>{}</creator>",
+      affiliation("Univ C\n")
+    ),
+  ]);
+  for (tag, attrs, expected) in [
+    (
+      "date",
+      &["role=\"creation\""][..],
+      "<date name=\"Date:\" role=\"creation\">May 1, 2026</date>",
+    ),
+    (
+      "abstract",
+      &["xml:id=\"abstract1\""][..],
+      "<abstract inlist=\"toc\" name=\"Abstract\" xml:id=\"abstract1\"><p xml:id=\"abstract1.1\">We study shared \
+       structure.</p></abstract>",
+    ),
+    (
+      "pubnote",
+      &["role=\"correspondence\""][..],
+      "<pubnote name=\"Correspondence:\u{a0}\" role=\"correspondence\">Ann Able at <ref class=\"ltx_href\" \
+       font=\"typewriter\" href=\"mailto:ann@a.edu\">ann@a.edu</ref></pubnote>",
+    ),
+    (
+      "pubnote",
+      &["name=\"Project:\u{a0}\""][..],
+      "<pubnote name=\"Project:\u{a0}\" role=\"metadata\"><ref class=\"ltx_url\" font=\"typewriter\" \
+       href=\"https://example.org/p\">https://example.org/p</ref></pubnote>",
+    ),
+    (
+      "pubnote",
+      &["name=\"Code:\u{a0}\""][..],
+      "<pubnote name=\"Code:\u{a0}\" role=\"metadata\"><ref class=\"ltx_url\" font=\"typewriter\" \
+       href=\"https://example.org/c\">https://example.org/c</ref></pubnote>",
+    ),
+  ] {
+    latexml::util::test::assert_element(&xml, tag, attrs, expected);
+  }
+  assert_eq!(xml.matches("<pubnote").count(), 3, "{xml}");
+  assert!(!xml.contains("<note"), "{xml}");
+  assert!(
+    !xml.contains("<picture"),
+    "the copy's card was replayed:\n{xml}"
+  );
+  // the copy's `\beginappendix` heading
+  assert!(
+    xml.contains(">Appendix</text></p>") && xml.contains("<appendix "),
+    "{xml}"
+  );
+}
+
 /// 60n: a marker-less `\\`-separated line continues the previous author-block entry with the `\\` kept where it stood
 /// (`<break/>`): Perl (Base_Utility.pool.ltxml:701-703) and Rust welded the two lines' words ("Department of
 /// PhysicsUniversity of Somewhere"; jacow-collaboration). KNOWN_PERL_ERRORS #446. Repro

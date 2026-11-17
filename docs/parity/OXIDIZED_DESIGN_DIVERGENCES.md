@@ -20598,6 +20598,7 @@ until they move into the binding module's `//!` doc comment (a code PR; this PR 
 | just.cls | `cpc_hepnp_cls.rs` | just.cls (Chinese Physics C's cpc-hepnp.cls under the PhiPsi15 name) has a binding: its `\email` is the author's e-mail and its `\address` after `\maketitle` the names' affiliations; cpc-hepnp itself waits for 91c (Perl: no binding; through OmniBus the list is one address of the last author) | #912 |
 | keytheorems.sty | `keytheorems_sty.rs` | A tcolorbox keytheorem's head is its theorem's `ltx:title` (pdflatex: the box's title) | #975 |
 | achemso.cls | `achemso_cls.rs` | achemso's affiliations, e-mails, phones, faxes and alternative affiliations are under the authors the class numbers them for (Perl: no binding; OmniBus) | #1065 |
+| ragslab.sty | `ragslab_sty.rs` | ragslab.sty is read raw, then its fairmeta-style title API is the frontmatter: marks link authors to affiliations, the metadata band is the date and labelled notes (Perl: no binding; the copy raw, the marks lost) | #1070 |
 
 #### 77. `silence.sty` and the bundled `arxiv.sty` family get bindings Perl does not have
 
@@ -22173,3 +22174,25 @@ a shown `*` is written ∗ (row R SNJNLSTARGLYPH). Witnesses 2412.01641, 2603.01
 `perfect_kernel_batch67z::{snjnl_author_notes, snjnl_notes_take_the_copys_default,
 snjnl_notes_marking_no_name_are_the_documents, snjnl_notes_before_a_section_and_maketitle_print_once,
 snjnl_math_star_note_is_not_the_class_star, snjnl_copy_that_marks_no_name, sn_jnl_class_commands}`.
+
+#### 1070. ragslab.sty is read raw, then its fairmeta-style title API is the frontmatter (Perl: no binding; the copy raw, the marks lost)
+
+ragslab.sty (v0.3, 2026/10/01; a package on `article`, "API intentionally mirrors the uploaded FAIR/Meta template")
+stores `\author[marks]{name}`, `\affiliation[mark]{text}`, `\contribution`, `\abstract` and `\metadata[label]{value}`
+(`\date`, `\correspondence`, `\code`, `\projectpage` are its calls of it, :158-161) in `\reslab@*list` accumulators
+(`\reslab@addtolist`, :131-152), which its `\maketitle` (:278-284) prints in a tcolorbox card: the names with their
+marks, the affiliations with theirs, the abstract, then one "<label>: <value>" line per metadata call. Read raw, the
+locked `\author`/`\title`/`\abstract`/`\maketitle` refuse the copy's: the names lose their marks, and the replayed card
+prints the affiliations and metadata as a picture after the abstract, the first name dropped.
+
+**Rust.** `ragslab_sty.rs` reads the paper's copy raw (`input_shipped_package`: palette, logos, layout, the copy's
+`\beginappendix` heading), sets the refused `\maketitle` aside (`\lx@dropped@maketitle` let to `\relax`, as
+`aero_cls.rs`), then installs the fairmeta family's routing (`meta_class::install_meta_class_frontmatter`: marks through
+`\lx@add@creator[annotations]`/`\lx@add@contact[label]`) and the metadata band as the copy prints it:
+`\metadata[label]{value}` is `\lx@add@pubnote[role=metadata,name={label:~}]` (the label the copy prints,
+FIDELITY_CHARTER §4), `\correspondence` the same with the family's role (`role=correspondence`; an `ltx:note` has no
+`name` for the label), `\date` the document's `ltx:date` named "Date:". 2610.22523's last `\affiliation` is left open
+over its `\date`/`\correspondence`/`\code` calls; pdflatex reads them inside it, and so does the contact, which keeps
+the paragraph end as a trailing newline. Witness 2610.22523. **Guard**:
+`06_cluster_frontmatter::frontmatter_ragslab_marks_link_affiliations` (repro `stand-in-copies/ragslab`, the real copy
+less its comment lines).
