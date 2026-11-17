@@ -1,14 +1,13 @@
-% mechanism: a document's own `\maketitle` that names `\maketitle` (`\global\let\maketitle\relax`) counts as the
-%   class's by meaning (`latex_constructs::class_maketitle_in_force`, kept for an ACL copy's whole `\maketitle`,
-%   2502.19103), so the class's ∗ † are written where this one prints no mark (`\let\@makefnmark\relax`)
+% mechanism: a document's own `\maketitle` that names `\maketitle` (`\global\let\maketitle\relax`) is no call of the
+%   class's (an assignment's target, `latex_constructs::reaches_class_maketitle`), and its `\let\@makefnmark\relax`
+%   before it prints `\@author` prints no mark (`latex_constructs::maketitle_marks`); the ACL copy's whole `\maketitle`
+%   (2502.19103) sets its own `\fnsymbol`, its marks unchanged
 % witness:  review revMARKSAFEb B1(b) (p/artrelax.tex)
 % oracle:   pdflatex 0 errors; "Ann Able Bob Baker" with no marks, footnotes "First note.", "Second note." unmarked
 % engines:  rust MARKSAFEb de9ad33fd3d = 0 errors, 0 Warnings; thanks[*], thanks[†]
 % expect:   0 errors, 0 Warnings; both notes unmarked; HTML each text under its name, no glyph
-% status:   XML RED (row R SHAUTO/T1: the marks a `\maketitle` prints, from a replay of the one in force); HTML GREEN
-%   (a one-author marked note prints under its name with no glyph; perfect_kernel_batchfmmarks::
-%   notes_are_marked_only_where_the_class_prints_marks)
-% moves:    XML row R SHAUTO
+% status:   XML RED (row R SHAUTO/T1) -> GREEN (PRESBX); HTML GREEN (a one-author marked note prints under its name with
+%   no glyph; perfect_kernel_batchfmmarks::notes_are_marked_only_where_the_class_prints_marks)
 % preload:  ar5iv.sty
 \documentclass{article}
 \makeatletter

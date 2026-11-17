@@ -2980,7 +2980,9 @@ const KERNEL_TOKEN_SPELLINGS: &[(&str, usize)] = &[
   ("latexml_core/src/mouth.rs", 46),
   ("latexml_core/src/parameter.rs", 34),
   ("latexml_core/src/rewrite/declare.rs", 7),
-  ("latexml_core/src/state.rs", 160),
+  // (PRESBX +2: `note_redefined` records the file whose load made a refused definition, `\@currname.\@currext`, as
+  // LaTeX names it; a read of LaTeX's own record, no decision on a spelling)
+  ("latexml_core/src/state.rs", 162),
   ("latexml_core/src/stomach.rs", 84),
   // (MEMB, -1: `be_absorbed` reads its text through `arena::with`, not `get_string()`)
   ("latexml_core/src/tbox.rs", 2),
@@ -3004,12 +3006,16 @@ const KERNEL_TOKEN_SPELLINGS: &[(&str, usize)] = &[
   ("latexml_engine/src/latex_bootstrap.rs", 5),
   // REGCDE +1: `disable_preamble_commands`' table of Perl's 7 loaders (latex_constructs.pool.ltxml:155 `onlyPreamble`'s
   // callers), which keep Perl's recovery by DG's ruling (b) of 2026-11-15: Perl's data, by name as Perl's is.
-  ("latexml_engine/src/latex_constructs/mod.rs", 164),
+  // (PRESBX +22: `maketitle_marks` reads what a refused `\maketitle` assigns, an assignment's target being a name —
+  // `\thefootnote`, `\@makefnmark`, a note command — and the commands a title's marks depend on, named once in
+  // `NOTE_COMMANDS` and `MARK_COMMANDS`; the assignment primitives and the call of the class's `\maketitle` by meaning)
+  ("latexml_engine/src/latex_constructs/mod.rs", 186),
   ("latexml_engine/src/latex_constructs/sect01.rs", 8),
   // (REGCDE -2: the walk's `\@preamblecmds` `\let` moved to core `preamble_commands`)
   ("latexml_engine/src/latex_constructs/sect02.rs", 7),
   ("latexml_engine/src/latex_constructs/sect04.rs", 4),
-  ("latexml_engine/src/latex_constructs/sect05.rs", 266),
+  // (PRESBX +1: AAAI's repeated mark, `aaai_note`'s `\footnotemark[<n>]`, a construction)
+  ("latexml_engine/src/latex_constructs/sect05.rs", 267),
   ("latexml_engine/src/latex_constructs/sect06.rs", 9),
   ("latexml_engine/src/latex_constructs/sect07.rs", 29),
   // (QAB57, 69 -> 70: `assign_meaning` clearing an environment OmniBus guessed, a write the `meaning(` pattern counts)

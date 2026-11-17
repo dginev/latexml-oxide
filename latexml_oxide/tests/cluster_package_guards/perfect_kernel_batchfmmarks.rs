@@ -1672,6 +1672,64 @@ const LINK: &[Row] = &[
     ],
     page_moves: r#""#,
   },
+  Row {
+    repro:      "presbx_aaai_equalcontrib_repeats_its_mark",
+    tex:        repro!("presbx_aaai_equalcontrib_repeats_its_mark"),
+    warnings:   1,
+    creators:   &[
+      r#"Ann Able ; thanks[*]=These authors contributed equally."#,
+      r#"Bob Baker ; thanks[*]=These authors contributed equally."#,
+      r#"Cy Cole ; thanks[*]=These authors contributed equally."#,
+      r#"Dee Dunn ; thanks[†]=Corresponding author."#,
+    ],
+    moves:      r#""#,
+    page:       &[
+      r#"Ann Able ; *→note"#,
+      r#"Bob Baker ; *→note"#,
+      r#"Cy Cole ; *→note"#,
+      r#"Dee Dunn | under: Corresponding author."#,
+      r#"margin: These authors contributed equally."#,
+    ],
+    page_moves: r#""#,
+  },
+  Row {
+    repro:      "presbx_aaai_equalcontrib_then_footnotemark",
+    tex:        repro!("presbx_aaai_equalcontrib_then_footnotemark"),
+    warnings:   1,
+    creators:   &[
+      r#"Ann Able ; thanks[*]=These authors contributed equally."#,
+      r#"Bob Baker ; thanks[*]=These authors contributed equally."#,
+      r#"Cy Cole ; thanks[†]=Corresponding authors."#,
+      r#"Dee Dunn ; thanks[†]=Corresponding authors."#,
+    ],
+    moves:      r#""#,
+    page:       &[
+      r#"Ann Able ; *→note"#,
+      r#"Bob Baker ; *→note"#,
+      r#"Cy Cole ; †→note"#,
+      r#"Dee Dunn ; †→note"#,
+      r#"margin: Corresponding authors. ; These authors contributed equally."#,
+    ],
+    page_moves: r#""#,
+  },
+  Row {
+    repro:      "presbx_aaai2027_corresponding_repeats_its_mark",
+    tex:        repro!("presbx_aaai2027_corresponding_repeats_its_mark"),
+    warnings:   2,
+    creators:   &[
+      r#"Ann Able ; thanks[†]=These authors contributed equally. ; thanks[‡]=Corresponding author."#,
+      r#"Bob Baker ; thanks[†]=These authors contributed equally."#,
+      r#"Cy Cole ; thanks[‡]=Corresponding author."#,
+    ],
+    moves:      r#""#,
+    page:       &[
+      r#"Ann Able ; †→note ; ‡→note"#,
+      r#"Bob Baker ; †→note"#,
+      r#"Cy Cole ; ‡→note"#,
+      r#"margin: Corresponding author. ; These authors contributed equally."#,
+    ],
+    page_moves: r#""#,
+  },
 ];
 /// Links: a `\footnotemark[n]`, `\samethanks[n]` or `\authornotemark[n]` on a name is a copy of the note it marks, its
 /// mark as the class numbers it after the title's notes; a reference into a copied note still resolves (2502.19103,
@@ -2717,6 +2775,24 @@ const REVTEX: &[Row] = &[
     ],
     page_moves: r#""#,
   },
+  Row {
+    repro:      "presbx_revtex_document_fnsymbol_red",
+    tex:        repro!("presbx_revtex_document_fnsymbol_red"),
+    warnings:   0,
+    creators:   &[
+      r#"Ann Able ; thanks[†]=equal contribution | affiliation=Univ A"#,
+      r#"Bob Baker ; thanks[†]=equal contribution | affiliation=Univ A"#,
+      r#"Cy Cole | email=cy@a.org ; affiliation=Univ A"#,
+    ],
+    moves:      r#"row R PRESBX/fnsymbol (REVTeX's numbering pass draws its glyphs from a fixed table, not the document's `\@fnsymbol`)"#,
+    page:       &[
+      r#"Ann Able ; †→note"#,
+      r#"Bob Baker ; †→note"#,
+      r#"Cy Cole"#,
+      r#"margin: equal contribution"#,
+    ],
+    page_moves: r#"row R PRESBX/fnsymbol (the XML's ∗)"#,
+  },
 ];
 /// REVTeX numbering: its `\thanks`, `\email`, `\altaffiliation` and name `\footnote` share one counter (4.0) or the
 /// minipage letters (4.1/4.2 name footnotes); a note shared by names is one marked note per carrier, a one-carrier note
@@ -2916,7 +2992,7 @@ const CLASS: &[Row] = &[
       r#"Ann Able ; thanks[*]=First note."#,
       r#"Bob Baker ; thanks[†]=Second note."#,
     ],
-    moves:      r#"row R SHAUTO (a document's own `\maketitle`: its marks unknown here, written none)"#,
+    moves:      r#""#,
     page:       &[
       r#"Ann Able | under: First note."#,
       r#"Bob Baker | under: Second note."#,
@@ -2931,7 +3007,7 @@ const CLASS: &[Row] = &[
       r#"Ann Able ; thanks[*]=First note."#,
       r#"Bob Baker ; thanks[†]=Second note."#,
     ],
-    moves:      r#"row R SHAUTO/T1 (a `\NewCommandCopy` wrapper of the class's `\maketitle` is not seen: written none)"#,
+    moves:      r#""#,
     page:       &[
       r#"Ann Able | under: First note."#,
       r#"Bob Baker | under: Second note."#,
@@ -3007,10 +3083,59 @@ const CLASS: &[Row] = &[
       r#"Ann Able ; thanks[]=First note."#,
       r#"Bob Baker ; thanks[]=Second note."#,
     ],
-    moves:      r#"row R SHAUTO/T1 (a document's own `\maketitle` naming `\maketitle` counts as the class's: ∗ † written)"#,
+    moves:      r#""#,
     page:       &[
       r#"Ann Able | under: First note."#,
       r#"Bob Baker | under: Second note."#,
+    ],
+    page_moves: r#""#,
+  },
+  Row {
+    repro:      "presbx_spconf_empty_thefootnote_prints_no_mark",
+    tex:        repro!("presbx_spconf_empty_thefootnote_prints_no_mark"),
+    warnings:   0,
+    creators:   &[
+      r#"Ann Able"#,
+      r#"Bob Baker ; thanks[]=Funded by X."#,
+      r#"Cy Cole ; thanks[†]=Corresponding author. Lab B."#,
+    ],
+    moves:      r#""#,
+    page:       &[
+      r#"Ann Able"#,
+      r#"Bob Baker | under: Funded by X."#,
+      r#"Cy Cole | under: Corresponding author. Lab B."#,
+    ],
+    page_moves: r#""#,
+  },
+  Row {
+    repro:      "presbx_package_maketitle_renewed_thefootnote",
+    tex:        repro!("presbx_package_maketitle_renewed_thefootnote"),
+    warnings:   0,
+    creators:   &[
+      r#"Ann Able ; thanks[1]=Note A."#,
+      r#"Bob Baker ; thanks[2]=Note B."#,
+    ],
+    moves:      r#""#,
+    page:       &[
+      r#"Ann Able | under: Note A."#,
+      r#"Bob Baker | under: Note B."#,
+    ],
+    page_moves: r#""#,
+  },
+  Row {
+    repro:      "presbx_lomcon_style_option_alph_marks",
+    tex:        repro!("presbx_lomcon_style_option_alph_marks"),
+    warnings:   0,
+    creators:   &[
+      r#"Ann Able ; thanks[a]=e-mail: ann@x.org | address=University of Somewhere"#,
+      r#"Bob Baker ; thanks[b]=e-mail: bob@y.org | address=University of Somewhere"#,
+      r#"Cy Cole | address=University of Somewhere"#,
+    ],
+    moves:      r#""#,
+    page:       &[
+      r#"Ann Able | under: e-mail: ann@x.org"#,
+      r#"Bob Baker | under: e-mail: bob@y.org"#,
+      r#"Cy Cole"#,
     ],
     page_moves: r#""#,
   },

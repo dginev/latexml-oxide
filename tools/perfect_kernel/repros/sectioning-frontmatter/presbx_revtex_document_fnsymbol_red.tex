@@ -1,0 +1,30 @@
+% mechanism: REVTeX numbers its front-matter footnotes in a pass of its own (`shared_notes::number_footnote_parts`, OD
+%   #1054), whose `\@fnsymbol` glyphs are a fixed table (∗ † ‡ …), not the `\@fnsymbol` in force: a document that
+%   redefines `\@fnsymbol` (1 → †, 2 → ∗) prints † where we write ∗
+% witness:  2603.18989 (revtex4-2, `\def\@fnsymbol#1{\ifcase#1\relax\or\ensuremath{\color{blue}\dagger}\or …}`: Yadav,
+%   Jena "†" for their shared "equal contribution"; written ∗)
+% oracle:   pdflatex 0 errors (TL 2025, -no-shell-escape): "Ann Able†, Bob Baker†, Cy Cole∗"; foot "† equal
+%   contribution", "∗ cy@a.org"
+% engines:  rust PRESBX = 0 errors, 0 Warnings; Ann and Bob thanks[∗]
+% expect:   0 errors, 0 Warnings; Ann and Bob thanks[†]
+% status:   XML RED (row R PRESBX/fnsymbol: the pass's glyphs, from the document's `\@fnsymbol`)
+% moves:    XML row R PRESBX
+% preload:  ar5iv.sty
+\documentclass[aps,prb,superscriptaddress]{revtex4-2}
+\makeatletter
+\def\@fnsymbol#1{\ifcase#1\relax\or\ensuremath{\dagger}\or\ensuremath{*}\or\ensuremath{\mathsection}\else\@ctrerr\fi}
+\makeatother
+\begin{document}
+\title{A Title}
+\author{Ann Able}
+\thanks{equal contribution}
+\affiliation{Univ A}
+\author{Bob Baker}
+\thanks{equal contribution}
+\affiliation{Univ A}
+\author{Cy Cole}
+\email{cy@a.org}
+\affiliation{Univ A}
+\maketitle
+Body.
+\end{document}

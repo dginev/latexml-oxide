@@ -526,6 +526,8 @@ pub struct CopyProvidesRecord {
   /// The copy's own `\maketitle`/`\@maketitle` bodies, refused or overlaid as they may be
   /// ([`copy_provides_title_pages`]).
   pub title_page:    Vec<Tokens>,
+  /// The copy's own last `\maketitle` body, one of [`Self::title_page`] ([`copy_provides_maketitle`]).
+  pub maketitle:     Option<Tokens>,
   /// The classes the copy's own code loaded (`\LoadClass`, and the classes loaded inside it: [`ClassLoadFrame`]): the
   /// real class has the names they define ([`copy_provides_text_default_clashes`]).
   pub loads_classes: Vec<String>,
@@ -2486,7 +2488,21 @@ pub fn note_copy_provides_title_page(token: &Token, body: &Tokens) {
   }
   if let Some(copy) = state_mut!().copy_provides_copies.get_mut(id as usize - 1) {
     copy.title_page.push(body.clone());
+    if token.with_cs_name(|name| name == "\\maketitle") {
+      copy.maketitle = Some(body.clone());
+    }
   }
+}
+
+/// The latest stand-in copy's own `\maketitle` body ([`note_copy_provides_title_page`]), with the copy's file: the
+/// `\maketitle` pdflatex runs where the binding keeps LaTeXML's (spconf.sty's, 2110.09738; latexml_engine
+/// `latex_constructs::maketitle_marks`).
+pub fn copy_provides_maketitle() -> Option<(String, Tokens)> {
+  state!()
+    .copy_provides_copies
+    .iter()
+    .rev()
+    .find_map(|copy| copy.maketitle.clone().map(|body| (copy.file.clone(), body)))
 }
 
 /// What [`watch_meanings`]' selection says of a name.
@@ -3540,6 +3556,25 @@ pub fn note_redefined(token: &Token) {
       TableName::Value,
       key,
       Stored::Bool(true),
+      Some(Scope::Global),
+    );
+  }
+  // (and the file whose load made it, `\@currname.\@currext` as LaTeX keeps them: a class file's own, or an option file's
+  // its class loads, 11lomcon.sty under `\documentstyle[11lomcon]{article}`, hep-ph0312288)
+  if by.is_some() {
+    let name = |cs: &str| match lookup_meaning(&T_CS!(cs)) {
+      Some(Stored::Expandable(defn)) => match defn.get_expansion() {
+        Some(ExpansionBody::Tokens(body)) => body.to_string(),
+        _ => String::new(),
+      },
+      _ => String::new(),
+    };
+    let file = s!("{}.{}", name("\\@currname"), name("\\@currext"));
+    let key = arena::pin(token.with_cs_name(|cs| s!("{cs}:redefined@in")));
+    state_mut!().assign_internal(
+      TableName::Value,
+      key,
+      Stored::String(arena::pin(&file)),
       Some(Scope::Global),
     );
   }

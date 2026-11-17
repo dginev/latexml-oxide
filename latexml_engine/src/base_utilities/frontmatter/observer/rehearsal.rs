@@ -75,6 +75,27 @@ pub(in crate::base_utilities) fn note_frozen_digest(tag: &str) {
 /// Whether a rehearsal is digesting now (the ledger records nothing of it).
 pub(in crate::base_utilities) fn rehearsing() -> bool { REHEARSING.with(Cell::get) }
 
+/// A cell of the `\@author` tabular the rehearsal reads ends (`\and`, `\\`): unless in a note's text
+/// ([`note_text`]), `latex_constructs::rehearsal_cell_ends`.
+fn cell_ends() {
+  if NOTE_TEXT.with(Cell::get) == 0 {
+    crate::latex_constructs::rehearsal_cell_ends();
+  }
+}
+
+/// A note's text begins (`1`) or ends (`-1`) in the rehearsal ([`cell_ends`]).
+fn note_text(step: i32) { NOTE_TEXT.with(|depth| depth.set((depth.get() + step).max(0))); }
+
+/// The footnote number a rehearsal's notes reached so far: `\c@footnote` at its start and the steps its notes made
+/// (`FOOTNOTE_STEPS`, the counter itself unstepped); `None` outside a rehearsal (`\lx@title@note@number`).
+pub fn rehearsal_footnote_value() -> Option<i64> {
+  rehearsing().then(|| {
+    FOOTNOTE_BASE
+      .with(Cell::get)
+      .saturating_add(FOOTNOTE_STEPS.with(Cell::get))
+  })
+}
+
 /// Whether the frontmatter's rehearsal is reading the author fields now: where a binding's command whose meaning is a
 /// frontmatter fact makes the reading's event (IEEEtran's `\IEEEmembership`, a Contact the resolver gives the name it follows).
 pub fn rehearsing_author_fields() -> bool { rehearsing() }
@@ -206,10 +227,10 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
   // 2106.11154, 1401.5951 — keeps its `\and`, `\\` or `\par`, never the rehearsal's name: review revN2)
   // (each ends a cell of the `\\@author` tabular, latex.ltx:17219-17222, and with it a `\\thefootnote` set in the cell:
   // `latex_constructs::rehearsal_cell_ends`)
-  DefConstructor!("\\lx@fm@obs@and", "", alias => "\\and", before_digest => { crate::latex_constructs::rehearsal_cell_ends(); });
-  DefConstructor!("\\lx@fm@obs@And", "", alias => "\\And", before_digest => { crate::latex_constructs::rehearsal_cell_ends(); });
-  DefConstructor!("\\lx@fm@obs@AND", "", alias => "\\AND", before_digest => { crate::latex_constructs::rehearsal_cell_ends(); });
-  DefConstructor!("\\lx@fm@obs@break OptionalMatch:* []", "", alias => "\\\\", before_digest => { crate::latex_constructs::rehearsal_cell_ends(); });
+  DefConstructor!("\\lx@fm@obs@and", "", alias => "\\and", before_digest => { cell_ends(); });
+  DefConstructor!("\\lx@fm@obs@And", "", alias => "\\And", before_digest => { cell_ends(); });
+  DefConstructor!("\\lx@fm@obs@AND", "", alias => "\\AND", before_digest => { cell_ends(); });
+  DefConstructor!("\\lx@fm@obs@break OptionalMatch:* []", "", alias => "\\\\", before_digest => { cell_ends(); });
   // (its own, for the Break to say so; a contact's raw argument holding it reads it as the break it is, `events::raw_lines`:
   // 2106.11154's `\orcid`)
   DefConstructor!("\\lx@fm@obs@par OptionalMatch:* []", "", alias => "\\par");
@@ -226,10 +247,12 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
   // LaTeX sets a footnote's text in a paragraph of its own): a note set in a formula, `Tianming Wei$^{2,3}\thanks{The
   // first two authors contributed equally}$` (2407.15815; 2603.20851's `$^1\thanks{Corresponding Author}$`), kept its
   // words' spaces, which math mode skipped ("Thefirsttwoauthorscontributedequally").
-  DefConstructor!("\\lx@fm@obs@note []{}", "", bounded => true, mode => "text", properties => sub[args] { note_properties(args.first().and_then(|a| a.as_ref())) });
-  DefConstructor!("\\lx@fm@obs@fnnote []{}", "", bounded => true, mode => "text", properties => sub[args] { note_properties(args.first().and_then(|a| a.as_ref())) });
+  // (a `\\` in a note's text, `\sthanks{Corresponding Author. \newline …}` (2208.01916), ends no cell: the text is no part
+  // of the `\@author` tabular, its mark printed after it, `cell_ends`)
+  DefConstructor!("\\lx@fm@obs@note []{}", "", bounded => true, mode => "text", before_digest => { note_text(1); }, after_digest => sub[_whatsit] { note_text(-1); }, properties => sub[args] { note_properties(args.first().and_then(|a| a.as_ref())) });
+  DefConstructor!("\\lx@fm@obs@fnnote []{}", "", bounded => true, mode => "text", before_digest => { note_text(1); }, after_digest => sub[_whatsit] { note_text(-1); }, properties => sub[args] { note_properties(args.first().and_then(|a| a.as_ref())) });
   // `\footnotetext`: the text of a mark printed elsewhere, no step
-  DefConstructor!("\\lx@fm@obs@notetext []{}", "", bounded => true, mode => "text");
+  DefConstructor!("\\lx@fm@obs@notetext []{}", "", bounded => true, mode => "text", before_digest => { note_text(1); }, after_digest => sub[_whatsit] { note_text(-1); });
   // `\footnotemark[<n>]` prints `\thefootnote` at <n> (latex.ltx `\@xfootnotemark`), a bare `\footnotemark` at the
   // counter's next value (`\stepcounter\@mpfn`): its `printed` property is that print, made with the counter set in a
   // group of its own, to <n> or to its value at the rehearsal's start plus the steps the block made up to it, so the
@@ -562,6 +585,8 @@ thread_local! {
   /// The footnote steps the block being rehearsed made so far (`\thanks`, `\footnote` and bare `\footnotemark`s),
   /// from 0 at each rehearsal.
   static FOOTNOTE_STEPS: Cell<i64> = const { Cell::new(0) };
+  /// How many notes' texts the rehearsal is inside ([`note_text`]).
+  static NOTE_TEXT: Cell<i32> = const { Cell::new(0) };
   /// `\c@footnote` at the rehearsal's start, and whether the format has it (and `\thefootnote`).
   static FOOTNOTE_BASE: Cell<i64> = const { Cell::new(0) };
   static FOOTNOTE_BASE_DEFINED: Cell<bool> = const { Cell::new(false) };
@@ -783,14 +808,18 @@ fn install_event_bindings(
     let_i(&T_CS!(SINK_MEANING), &T_CS!(SINK), None);
     let_i(&T_CS!(SINK), &T_CS!("\\lx@fm@obs@add"), None);
   }
-  if lookup_definition(&T_CS!(TITLE_FOOTNOTE_HOOK))?.is_some() {
-    let_i(&T_CS!(THEFOOTNOTE), &T_CS!(TITLE_FOOTNOTE_HOOK), None);
-  } else if title_marks == TitleMarks::Fnsymbol
-    && lookup_definition(&T_CS!("\\@fnsymbol"))?.is_some()
-  {
-    let_i(&T_CS!(THEFOOTNOTE), &T_CS!("\\lx@fm@obs@thefootnote"), None);
+  // (a `\maketitle` not the class's prints its own, `latex_constructs::maketitle_marks`: spconf's none, 2110.09738)
+  if !crate::latex_constructs::enter_maketitle_marks()? {
+    if lookup_definition(&T_CS!(TITLE_FOOTNOTE_HOOK))?.is_some() {
+      let_i(&T_CS!(THEFOOTNOTE), &T_CS!(TITLE_FOOTNOTE_HOOK), None);
+    } else if title_marks == TitleMarks::Fnsymbol
+      && lookup_definition(&T_CS!("\\@fnsymbol"))?.is_some()
+    {
+      let_i(&T_CS!(THEFOOTNOTE), &T_CS!("\\lx@fm@obs@thefootnote"), None);
+    }
   }
   crate::latex_constructs::rehearsal_cells_begin();
+  NOTE_TEXT.with(|depth| depth.set(0));
   for (cs, target, needs_argument) in BOUND_WHEN_DEFINED {
     if !block_breaks.iter().any(|(declared, _)| declared == cs)
       && lookup_definition(&T_CS!(*cs))?.is_some_and(|defn| {

@@ -1102,10 +1102,32 @@ pub(crate) fn load() -> Result<()> {
   // (formerly in omnibus_cls.rs, 3f40bf8211). Each author carries the note, which the former no-ops dropped. As
   // kernel stubs (`DefinitionOrigin::Stub`), so the document's or a raw class's own `\newcommand` still defines them
   // (copernicus.cls:1673 `\newcommand\equalcontrib[1]`, its equal-contribution note on the affiliations).
+  // As AAAI's (aaai22.sty:66-73, aaai25.sty:81-88, aaai2026.sty:79-86, aaai2027.sty:139-155): the first use makes the
+  // note, a later one repeats its mark, `\footnotemark[<n>]` (the `\setcounter{eqfn}{\value{footnote}}` after the
+  // first), one note its carriers share (2501.02471 "Liu∗, Luo∗, Zhong∗, Pan†"; 2508.07026, whose `\footnotemark[2]`
+  // marks the second note). (aaai2027's `\ifaaai@corrmulti` "authors" is set only in its `\sbox` trial, where
+  // `\footnote` is `\relax` and the number stays 0, so the note reads "Corresponding author." for any count.)
   use latexml_core::definition::origin::{DefinitionOrigin, with_origin};
+  AAAI_FIRST_NOTES.with(|notes| notes.borrow_mut().clear());
+  DefMacro!("\\lx@aaai@note{}{}", sub[(key, text)] { aaai_note(&key.to_string(), text) });
+  DefMacro!("\\lx@aaai@noted{}{}{}", sub[(key, field, before)] {
+    let number = |tokens: &Tokens| tokens.to_string().trim().parse::<i64>().unwrap_or(0);
+    let (field, before) = (number(&field), number(&before));
+    let now = title_note_number()?;
+    if now > before {
+      note_aaai_first(&key.to_string(), u16::try_from(field).unwrap_or(0), now);
+    }
+    Ok(Tokens::new(Vec::new()))
+  });
   with_origin(DefinitionOrigin::Stub, || -> Result<()> {
-    DefMacro!("\\equalcontrib", r"\thanks{These authors contributed equally.}");
-    DefMacro!("\\corresponding", r"\thanks{Corresponding author.}");
+    DefMacro!(
+      "\\equalcontrib",
+      r"\lx@aaai@note{equalcontrib}{These authors contributed equally.}"
+    );
+    DefMacro!(
+      "\\corresponding",
+      r"\lx@aaai@note{corresponding}{Corresponding author.}"
+    );
     Ok(())
   })?;
   // Springer Nature and other templates' marker; sn-jnl's own `\equalcont{<note>}` is its binding's (sn_jnl_cls.rs).
@@ -5563,4 +5585,70 @@ fn take_deposit_inserts() -> Vec<Digested> {
     Some(Stored::VecDigested(inserts)) => inserts,
     _ => Vec::new(),
   }
+}
+
+thread_local! {
+  /// AAAI's notes made once (`\equalcontrib`, `\corresponding`): each kind's first use, by its position in the author
+  /// field (`Token::prov`, 0 for none), and the footnote number its note took ([`aaai_note`]).
+  static AAAI_FIRST_NOTES: RefCell<Vec<(String, u16, i64)>> = const { RefCell::new(Vec::new()) };
+}
+
+/// `\lx@aaai@note{<kind>}{<text>}`: the note `<text>` at the kind's first use, `\footnotemark[<n>]` after it. The first
+/// use is told by its position in the author field, not by the order the field is digested in: the frontmatter's
+/// rehearsal digests the block whole, in order (its assignments undone), and the conversion then writes the first use's
+/// note from it and digests each later name again, its command with no position (`emit`): a use with no position
+/// where the counter has passed the first's number (its name stepped it) is a later one, which reads that number as
+/// the rehearsal counted it; one before it (the block digested whole) is the first.
+fn aaai_note(kind: &str, text: Tokens) -> Result<Tokens> {
+  let field = get_current_token().map_or(0, |t| t.prov);
+  let now = title_note_number()?;
+  let first = AAAI_FIRST_NOTES.with(|notes| {
+    notes
+      .borrow()
+      .iter()
+      .find(|(k, at, number)| {
+        k == kind
+          && (if field == 0 {
+            now >= *number
+          } else {
+            *at != 0 && *at < field
+          })
+      })
+      .map(|(_, _, number)| *number)
+  });
+  if let Some(number) = first {
+    let mut mark = vec![T_CS!("\\footnotemark"), T_OTHER!("[")];
+    mark.extend(Explode!(number));
+    mark.push(T_OTHER!("]"));
+    return Ok(Tokens::new(mark));
+  }
+  let before = now;
+  let mut note = vec![T_CS!("\\thanks"), T_BEGIN!()];
+  note.extend(text.unlist());
+  note.extend([T_END!(), T_CS!("\\lx@aaai@noted"), T_BEGIN!()]);
+  note.extend(Explode!(kind));
+  note.extend([T_END!(), T_BEGIN!()]);
+  note.extend(Explode!(field));
+  note.extend([T_END!(), T_BEGIN!()]);
+  note.extend(Explode!(before));
+  note.push(T_END!());
+  Ok(Tokens::new(note))
+}
+
+/// The note of `kind` made at field position `field` (0: none) took number `number` ([`aaai_note`]): kept unless one is
+/// kept for an earlier position, or for any where this one has none; at the same position, a rehearsal's count replaces
+/// the one before (the last rehearsal's base counts the title's notes digested ahead of the names: "Title∗", "Ann†",
+/// "Bob†"), a later run's (the title-page check's) does not.
+fn note_aaai_first(kind: &str, field: u16, number: i64) {
+  let rehearsing = rehearsal_footnote_value().is_some();
+  AAAI_FIRST_NOTES.with(|notes| {
+    let mut notes = notes.borrow_mut();
+    if notes.iter().any(|(k, at, _)| {
+      k == kind && (field == 0 || (*at != 0 && (*at < field || (*at == field && !rehearsing))))
+    }) {
+      return;
+    }
+    notes.retain(|(k, ..)| k != kind);
+    notes.push((kind.to_string(), field, number));
+  });
 }

@@ -609,6 +609,15 @@ pub(crate) fn begin_title_footnotes() {
   assign_value(CELL_UNKNOWN, false, Some(Scope::Global));
 }
 
+/// The footnote number the title's notes reached (`\lx@title@note@number`): `\c@footnote`, or in the frontmatter's
+/// rehearsal, which counts its notes' steps and steps no counter, that count (`rehearsal_footnote_value`).
+pub(crate) fn title_note_number() -> Result<i64> {
+  match rehearsal_footnote_value() {
+    Some(value) => Ok(value),
+    None => Ok(counter_value("footnote")?.value_of()),
+  }
+}
+
 /// Does a field of the title block (`tag`) take the class's `\thefootnote` ([`enter_title_footnotes`]), as its
 /// `\maketitle` sets it before `\@author` expands (article.cls:203-205)? OXIDIZED_DESIGN_DIVERGENCES #1053.
 pub(crate) fn title_field_footnotes(tag: &str) -> bool {
@@ -618,13 +627,17 @@ pub(crate) fn title_field_footnotes(tag: &str) -> bool {
   ) && title_marks_declared()
 }
 
-/// As a field of the title block begins, in its group, where it takes the class's marks ([`title_field_footnotes`]):
-/// `\thefootnote` is the class's ([`TITLE_THEFOOTNOTE`]) for the field.
-pub(crate) fn enter_title_footnotes() {
+/// As a field of the title block begins, in its group, where it takes the title's marks ([`title_field_footnotes`]):
+/// `\thefootnote` is the class's ([`TITLE_THEFOOTNOTE`]) for the field, or the one the `\maketitle` in force sets
+/// ([`MaketitleMarks::Own`]); under [`MaketitleMarks::InForce`] it stays as it is.
+pub(crate) fn enter_title_footnotes() -> Result<()> {
   // (the title block's contacts too — an affiliation, an address: the class prints them inside its title, under the same
   // marks; revtex's `\affiliation{\footnotemark[2]Lab … \footnotetext[2]{\tt volkov@…}}` answers the `\author{Mikhail S.
   // Volkov\footnotemark[2]}` above it with the same †, hep-th0302032)
-  let_i(&T_CS!("\\thefootnote"), &T_CS!(TITLE_THEFOOTNOTE), None);
+  if !enter_maketitle_marks()? {
+    let_i(&T_CS!("\\thefootnote"), &T_CS!(TITLE_THEFOOTNOTE), None);
+  }
+  Ok(())
 }
 
 /// `\lx@title@cell@declared{<flush>:<creator>}`, after an author block's declaration the flush runs ahead of its names
@@ -719,50 +732,380 @@ fn in_title_field() -> bool {
   )
 }
 
-/// Does the title block print the marks its class declares ([`TITLE_THEFOOTNOTE`])? Only where the class's own
-/// `\maketitle` is the one in force ([`class_maketitle_in_force`]): a wrong glyph is worse than none (DG 2026-11-16;
-/// OXIDIZED_DESIGN_DIVERGENCES #1053).
-pub fn title_marks_declared() -> bool { title_marks_hook() && class_maketitle_in_force() }
+/// Does the title block print marks known here: its class's ([`TITLE_THEFOOTNOTE`], where the class's own `\maketitle`
+/// is in force), or the ones the `\maketitle` in force prints ([`maketitle_marks`])? A wrong glyph is worse than none
+/// (DG 2026-11-16; OXIDIZED_DESIGN_DIVERGENCES #1053).
+pub fn title_marks_declared() -> bool {
+  match maketitle_marks() {
+    MaketitleMarks::Class => title_marks_hook(),
+    MaketitleMarks::Own(_) | MaketitleMarks::InForce => true,
+    MaketitleMarks::Unknown => false,
+  }
+}
 
 /// Does a binding declare its title's marks ([`TITLE_THEFOOTNOTE`] defined)?
 fn title_marks_hook() -> bool { has_meaning(&T_CS!(TITLE_THEFOOTNOTE)) }
 
-/// Is the `\maketitle` that runs the class's own? Yes unless the document or a package it loads took it over (the
-/// lock's record, `\maketitle:redefined@document`, state.rs), except a redefinition that calls the class's by meaning
-/// (`\let\oldmt\maketitle \renewcommand\maketitle{\oldmt…}`), whose page and marks are the class's. A body that names
-/// `\maketitle` at all counts as one, its closing `\global\let\maketitle\relax` included (an ACL copy's whole
-/// `\maketitle`, 2502.19103, whose marks are the class's): so a document's own article-like `\maketitle` that prints
-/// none (`\let\@makefnmark\relax`) still writes the class's (row R SHAUTO/T1, repro `fmmarks_own_maketitle_relax_red`).
-/// The class file's own drop is the class's, which its binding reads raw (lni.cls, its marks declared by lni_cls.rs).
-pub fn class_maketitle_in_force() -> bool {
-  if !lookup_bool("\\maketitle:redefined@document") {
-    return true;
-  }
-  let definition = |cs: &Token| lookup_definition(cs).ok().flatten();
-  let (Some(class), Some(dropped)) = (
-    definition(&T_CS!("\\maketitle")),
-    definition(&T_CS!("\\lx@dropped@maketitle")),
-  ) else {
-    return false;
-  };
-  matches!(
-    dropped.get_expansion(),
-    Some(ExpansionBody::Tokens(body))
-      if body.unlist_ref().iter().any(|t| definition(t).is_some_and(|d| Rc::ptr_eq(&d, &class)))
-  )
+/// Is the `\maketitle` that runs the class's own ([`maketitle_marks`])?
+pub fn class_maketitle_in_force() -> bool { matches!(maketitle_marks(), MaketitleMarks::Class) }
+
+/// The marks of the title's notes, as the `\maketitle` in force prints them ([`maketitle_marks`]).
+pub(crate) enum MaketitleMarks {
+  /// The class's own `\maketitle`, whose binding declares its marks or not ([`TITLE_THEFOOTNOTE`]).
+  Class,
+  /// Another `\maketitle` that sets `\thefootnote` before it prints the title: its marks.
+  Own(OwnMarks),
+  /// Another `\maketitle` that touches no mark: the `\thefootnote` in force.
+  InForce,
+  /// Another, whose marks are unknown here.
+  Unknown,
 }
 
-/// Are the marks the title prints unknown here, for a name's notes (`name`) or any other's? Where a binding declares its
-/// title's marks ([`TITLE_THEFOOTNOTE`]) but its `\maketitle` is not in force ([`class_maketitle_in_force`]: a
-/// document's own); where none does and the class file's own `\maketitle` runs (`\maketitle:redefined@class`, state.rs:
-/// an unbound class's, scrartcl's prints `\fnsymbol` where Perl's number key read `\footnotemark[1]` "1", the advisor's
-/// I-3) or the document's (not a wrapper of the class's: the wrapped page is the class's, as pdflatex prints it);
-/// and for a name's notes under a class that sets them apart (`lx_title_footnote_own_marks`: REVTeX 4.1/4.2's minipage
-/// letters, "Ann Ablea", revtex4-2.cls:2555-2557) or past a `\thefootnote` declared in no known cell
-/// (`title_cell_declared`). OD #1053.
+/// The `\thefootnote` a `\maketitle` sets ([`MaketitleMarks::Own`]): a macro's expansion, or a `\let` copy.
+pub(crate) enum OwnMarks {
+  Def(Tokens),
+  Let(Token),
+}
+
+/// Which `\maketitle` runs and with what marks? The class's unless a lock refused another's (`\maketitle:redefined@…`,
+/// `\lx@dropped@maketitle`, state.rs) — the document's, a package's, or an option file's its class loads (11lomcon.sty
+/// under `\documentstyle[11lomcon]{article}`, hep-ph0312288) — that does not call the class's by meaning (a wrapper,
+/// `\let\oldmt\maketitle \renewcommand\maketitle{\oldmt…}`: its page and marks are the class's). The class file's own
+/// is the class's, which its binding reads raw (lni.cls). Another is read by [`refused_maketitle_marks`].
+pub(crate) fn maketitle_marks() -> MaketitleMarks {
+  let document = lookup_bool("\\maketitle:redefined@document");
+  let definition = |cs: &Token| lookup_definition(cs).ok().flatten();
+  let Some(class) = definition(&T_CS!("\\maketitle")) else {
+    return MaketitleMarks::Class;
+  };
+  // (the refused one, or a stand-in copy's, which pdflatex runs where the binding keeps LaTeXML's: spconf.sty's, 2110.09738)
+  let refused = (document || lookup_bool("\\maketitle:redefined@class"))
+    .then(|| definition(&T_CS!("\\lx@dropped@maketitle")))
+    .flatten()
+    .and_then(|d| match d.get_expansion() {
+      // (a document's own is never the class file's, whatever file LaTeX last named)
+      Some(ExpansionBody::Tokens(body)) => Some((
+        body.clone(),
+        if document {
+          String::new()
+        } else {
+          lookup_string("\\maketitle:redefined@in")
+        },
+      )),
+      _ => None,
+    })
+    .or_else(|| copy_provides_maketitle().map(|(file, body)| (body, file)));
+  let Some((body, file)) = refused else {
+    return if document {
+      MaketitleMarks::Unknown
+    } else {
+      MaketitleMarks::Class
+    };
+  };
+  // (the class file's own, or its copy's)
+  let class_file = || {
+    let file = file.rsplit(['/', '\\']).next().unwrap_or_default();
+    file.rsplit_once('.').map_or(file, |(stem, _)| stem) == lookup_string("lx@document@class")
+  };
+  match refused_maketitle_marks(body.unlist_ref(), &class) {
+    MaketitleMarks::Class => MaketitleMarks::Class,
+    _ if class_file() => MaketitleMarks::Class,
+    marks => marks,
+  }
+}
+
+/// As the frontmatter's rehearsal binds its `\thefootnote` (`rehearsal::install_event_bindings`): the marks of a
+/// `\maketitle` not the class's ([`MaketitleMarks::Own`], [`MaketitleMarks::InForce`]), `true` where it set them.
+pub(crate) fn enter_maketitle_marks() -> Result<bool> {
+  let thefootnote = T_CS!("\\thefootnote");
+  match maketitle_marks() {
+    MaketitleMarks::Own(OwnMarks::Def(expansion)) => def_macro(thefootnote, None, expansion, None)?,
+    MaketitleMarks::Own(OwnMarks::Let(source)) => let_i(&thefootnote, &source, None),
+    MaketitleMarks::InForce => {},
+    MaketitleMarks::Class | MaketitleMarks::Unknown => return Ok(false),
+  }
+  Ok(true)
+}
+
+/// A step of a macro body, as [`body_steps`] reads it: an assignment (its target, and the `\def`'s or command's body or
+/// the `\let`'s source it sets), or any other token.
+enum BodyStep {
+  Set(Option<Token>, Option<OwnMarks>),
+  Token(Token),
+}
+
+/// `body` read as its steps ([`BodyStep`]): `\def`, `\gdef`, `\edef`, `\xdef`, `\let` and LaTeX's command declarations
+/// (by meaning), each with its target and what it sets, the target and the value no call.
+fn body_steps(body: &[Token]) -> Vec<BodyStep> {
+  let meaning = |t: &Token| lookup_definition(t).ok().flatten();
+  let meanings = |names: &[&str]| -> Vec<Rc<dyn Definition>> {
+    names
+      .iter()
+      .filter_map(|name| meaning(&T_CS!(*name)))
+      .collect()
+  };
+  let defs = meanings(&["\\def", "\\gdef", "\\edef", "\\xdef"]);
+  let lets = meanings(&["\\let"]);
+  let commands = meanings(&[
+    "\\newcommand",
+    "\\renewcommand",
+    "\\providecommand",
+    "\\DeclareRobustCommand",
+  ]);
+  let is = |t: &Token, set: &[Rc<dyn Definition>]| {
+    t.get_catcode() == Catcode::CS
+      && meaning(t).is_some_and(|d| set.iter().any(|s| Rc::ptr_eq(s, &d)))
+  };
+  let other = |at: usize, text: &str| {
+    body
+      .get(at)
+      .is_some_and(|t| t.get_catcode() == Catcode::OTHER && t.with_str(|s| s == text))
+  };
+  let skip_spaces = |mut i: usize| {
+    while body
+      .get(i)
+      .is_some_and(|t| t.get_catcode() == Catcode::SPACE)
+    {
+      i += 1;
+    }
+    i
+  };
+  // (past the balanced group opening at `i`; `None` where none opens there)
+  let group_end = |i: usize| -> Option<usize> {
+    (body.get(i)?.get_catcode() == Catcode::BEGIN).then_some(())?;
+    let mut depth = 0usize;
+    for (j, t) in body.iter().enumerate().skip(i) {
+      match t.get_catcode() {
+        Catcode::BEGIN => depth += 1,
+        Catcode::END => {
+          depth -= 1;
+          if depth == 0 {
+            return Some(j + 1);
+          }
+        },
+        _ => {},
+      }
+    }
+    None
+  };
+  let value =
+    |open: usize, close: usize| OwnMarks::Def(Tokens::new(body[open + 1..close - 1].to_vec()));
+  let mut steps = Vec::new();
+  let mut i = 0;
+  while i < body.len() {
+    let t = body[i];
+    let set = if is(&t, &defs) {
+      (i + 2..body.len())
+        .find(|&j| body[j].get_catcode() == Catcode::BEGIN)
+        .and_then(|open| {
+          let close = group_end(open)?;
+          // (a `\def` with parameters sets no mark text)
+          Some((
+            body.get(i + 1).copied(),
+            (open == i + 2).then(|| value(open, close)),
+            close,
+          ))
+        })
+    } else if is(&t, &lets) {
+      let target = skip_spaces(i + 1);
+      let mut from = skip_spaces(target + 1);
+      if other(from, "=") {
+        from = skip_spaces(from + 1);
+      }
+      body.get(from).map(|source| {
+        (
+          body.get(target).copied(),
+          Some(OwnMarks::Let(*source)),
+          from + 1,
+        )
+      })
+    } else if is(&t, &commands) {
+      let mut at = skip_spaces(i + 1);
+      if other(at, "*") {
+        at = skip_spaces(at + 1);
+      }
+      let (target, mut next) = match group_end(at) {
+        Some(end) => (body.get(at + 1).copied(), end),
+        None => (body.get(at).copied(), at + 1),
+      };
+      // (its optional arguments, `[<n>]` and `[<default>]`)
+      while other(skip_spaces(next), "[") {
+        next = (skip_spaces(next)..body.len())
+          .find(|&j| other(j, "]"))
+          .map_or(body.len(), |j| j + 1);
+      }
+      let open = skip_spaces(next);
+      group_end(open).map(|close| (target, Some(value(open, close)), close))
+    } else {
+      None
+    };
+    match set {
+      Some((target, value, next)) => {
+        steps.push(BodyStep::Set(target, value));
+        i = next;
+      },
+      None => {
+        steps.push(BodyStep::Token(t));
+        i += 1;
+      },
+    }
+  }
+  steps
+}
+
+/// The commands a title's marks depend on, which a `\maketitle` [`MaketitleMarks::InForce`] neither sets nor runs:
+/// the notes' commands (set only), their mark, the footnote counter, a title page of its own.
+const NOTE_COMMANDS: [&str; 6] = [
+  "\\thanks",
+  "\\footnote",
+  "\\footnotemark",
+  "\\@footnotemark",
+  "\\footnotetext",
+  "\\@footnotetext",
+];
+const MARK_COMMANDS: [&str; 13] = [
+  "\\thefootnote",
+  "\\@makefnmark",
+  "\\@thefnmark",
+  "\\@fnsymbol",
+  "\\fnsymbol",
+  "\\c@footnote",
+  "\\@mpfn",
+  "\\thempfn",
+  "\\@maketitle",
+  "\\setcounter",
+  "\\addtocounter",
+  "\\stepcounter",
+  "\\refstepcounter",
+];
+
+/// How many macros deep [`reaches_class_maketitle`] and [`touches_marks`] read the macros a body calls.
+const MAKETITLE_DEPTH: u8 = 3;
+
+/// The body of the macro `t` means, if it has one of tokens.
+fn macro_body(t: &Token) -> Option<Tokens> {
+  match lookup_definition(t).ok().flatten()?.get_expansion() {
+    Some(ExpansionBody::Tokens(body)) => Some(body.clone()),
+    _ => None,
+  }
+}
+
+/// Does `body` call the class's `\maketitle` (`class`) by meaning, itself or through the macros it calls
+/// (`\NewCommandCopy\oldmt\maketitle`'s `\oldmt`, whose own body calls the copied one)? An assignment's target or source
+/// is no call (a closing `\let\maketitle\relax`: ACL's, 2502.19103; spconf's). Each macro read once (`seen`).
+fn reaches_class_maketitle(
+  body: &[Token],
+  class: &Rc<dyn Definition>,
+  depth: u8,
+  seen: &mut rustc_hash::FxHashSet<SymStr>,
+) -> bool {
+  body_steps(body).iter().any(|step| match step {
+    BodyStep::Token(t) if t.get_catcode() == Catcode::CS => {
+      lookup_definition(t)
+        .ok()
+        .flatten()
+        .is_some_and(|d| Rc::ptr_eq(&d, class))
+        || (depth > 0
+          && seen.insert(t.get_cs_name())
+          && macro_body(t)
+            .is_some_and(|b| reaches_class_maketitle(b.unlist_ref(), class, depth - 1, seen)))
+    },
+    _ => false,
+  })
+}
+
+/// Does `body` set a note or mark command, or run one of [`MARK_COMMANDS`], itself or in the macros it calls? A note
+/// command it runs is a note of the fields it prints (11lomcon.sty's `\@aabuffer`). Each macro read once (`seen`).
+fn touches_marks(body: &[Token], depth: u8, seen: &mut rustc_hash::FxHashSet<SymStr>) -> bool {
+  let named = |t: &Token, names: &[&str]| t.with_cs_name(|name| names.contains(&name));
+  body_steps(body).iter().any(|step| match step {
+    BodyStep::Set(target, _) => {
+      target.is_some_and(|t| named(&t, &MARK_COMMANDS) || named(&t, &NOTE_COMMANDS))
+    },
+    BodyStep::Token(t) if t.get_catcode() == Catcode::CS => {
+      named(t, &MARK_COMMANDS)
+        || (depth > 0
+          && seen.insert(t.get_cs_name())
+          && macro_body(t).is_some_and(|b| touches_marks(b.unlist_ref(), depth - 1, seen)))
+    },
+    BodyStep::Token(_) => false,
+  })
+}
+
+/// What a refused `\maketitle`'s `body` does with its title's marks: a call of the class's `\maketitle`
+/// ([`reaches_class_maketitle`]) is [`MaketitleMarks::Class`]; read in order up to the first command that prints the
+/// title (`\@maketitle`, `\@thanks`, `\@author`), a `\thefootnote` it sets there is [`MaketitleMarks::Own`]
+/// (spconf.sty:147-149 `\def\thefootnote{}`, none: 2110.09738, 2303.02025, 1812.01220; aaai25.sty:56 `\fnsymbol`;
+/// lni.cls:477 `\@arabic`), as is an `\@makefnmark` that prints no `\@thefnmark` (`\let\@makefnmark\relax`: none); one
+/// that redefines a note command there is unknown; a body that touches no mark ([`touches_marks`]) prints the title's
+/// notes under the `\thefootnote` in force (11lomcon.sty:20-27 typesets its author buffer under :61's `\alph`: "a",
+/// "b", hep-ph0312288); any other is unknown.
+fn refused_maketitle_marks(body: &[Token], class: &Rc<dyn Definition>) -> MaketitleMarks {
+  if reaches_class_maketitle(
+    body,
+    class,
+    MAKETITLE_DEPTH,
+    &mut rustc_hash::FxHashSet::default(),
+  ) {
+    return MaketitleMarks::Class;
+  }
+  let named = |t: &Token, names: &[&str]| t.with_cs_name(|name| names.contains(&name));
+  let (mut own, mut no_mark, mut notes_set) = (None, false, false);
+  for step in body_steps(body) {
+    match step {
+      BodyStep::Set(Some(target), value) if named(&target, &["\\thefootnote"]) => own = value,
+      BodyStep::Set(Some(target), value) if named(&target, &["\\@makefnmark"]) => {
+        no_mark = match &value {
+          Some(OwnMarks::Def(expansion)) => !expansion
+            .unlist_ref()
+            .iter()
+            .any(|t| named(t, &["\\@thefnmark"])),
+          Some(OwnMarks::Let(source)) => !named(source, &["\\@makefnmark"]),
+          None => false,
+        };
+      },
+      BodyStep::Set(Some(target), _) if named(&target, &NOTE_COMMANDS) => notes_set = true,
+      // (the title printed: what was set before it holds)
+      BodyStep::Token(t) if named(&t, &["\\@maketitle", "\\@thanks", "\\@author"]) => {
+        return if no_mark {
+          MaketitleMarks::Own(OwnMarks::Def(Tokens::new(Vec::new())))
+        } else if notes_set {
+          MaketitleMarks::Unknown
+        } else if let Some(own) = own {
+          MaketitleMarks::Own(own)
+        } else if !touches_marks(body, MAKETITLE_DEPTH, &mut rustc_hash::FxHashSet::default()) {
+          MaketitleMarks::InForce
+        } else {
+          MaketitleMarks::Unknown
+        };
+      },
+      _ => {},
+    }
+  }
+  if own.is_none()
+    && !no_mark
+    && !notes_set
+    && !touches_marks(body, MAKETITLE_DEPTH, &mut rustc_hash::FxHashSet::default())
+  {
+    MaketitleMarks::InForce
+  } else {
+    MaketitleMarks::Unknown
+  }
+}
+
+/// Are the marks the title prints unknown here, for a name's notes (`name`) or any other's ([`maketitle_marks`])? Where
+/// another `\maketitle` than the class's runs and its marks are unknown, or are its own but not counted here (not
+/// article's title block, `lx_title_counts_footnotes`); where no binding declares the class's own and the class file's
+/// own `\maketitle` runs (`\maketitle:redefined@class`, state.rs: an unbound class's, scrartcl's prints `\fnsymbol`
+/// where Perl's number key read `\footnotemark[1]` "1", the advisor's I-3); and for a name's notes under a class that
+/// sets them apart (`lx_title_footnote_own_marks`: REVTeX 4.1/4.2's minipage letters, "Ann Ablea",
+/// revtex4-2.cls:2555-2557) or past a `\thefootnote` declared in no known cell (`title_cell_declared`). OD #1053.
 pub fn title_marks_unknown(name: bool) -> bool {
-  let unknown = !class_maketitle_in_force()
-    || (!title_marks_hook() && lookup_bool("\\maketitle:redefined@class"));
+  let unknown = match maketitle_marks() {
+    MaketitleMarks::Class => !title_marks_hook() && lookup_bool("\\maketitle:redefined@class"),
+    MaketitleMarks::Own(_) | MaketitleMarks::InForce => !lookup_bool("lx_title_counts_footnotes"),
+    MaketitleMarks::Unknown => true,
+  };
   unknown || (name && (lookup_bool("lx_title_footnote_own_marks") || lookup_bool(CELL_UNKNOWN)))
 }
 

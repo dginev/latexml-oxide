@@ -377,6 +377,12 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
     }
     Ok(())
   });
+  // The footnote number the title's notes reached, which `\lx@title@footnote@step` steps: `\c@footnote`, or in the
+  // frontmatter's rehearsal, which counts its notes' steps and steps no counter, that count (`rehearsal_footnote_value`):
+  // a mark that repeats a note's (AAAI's `\equalcontrib`, sect05.rs) is the same in both.
+  DefMacro!("\\lx@title@note@number", sub[_args] {
+    Ok(Tokens::new(Explode!(crate::latex_constructs::title_note_number()?)))
+  });
   // The footnote step of a bare mark the title prints that no name writes, its glyph lost and counted: the mark typed
   // into a box no one uses, so the counter moves as the title's `\footnotemark` moves it (`emit::mark_dropped`, OD #1057).
   DefMacro!("\\lx@title@mark@step{}", r"{\setbox0\hbox{#1}}");
