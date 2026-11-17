@@ -1,0 +1,19 @@
+% mechanism: a label authblk prints on a name that no `\affil` explains, in a piece printing two marks (`$^{2,3}$`, which
+%   the writer parts at its comma): no one mark to show, placed nowhere, counted by the binding (`count_lost_labels`)
+% witness:  (synthetic; the unshowable sibling of 2606.00446's `§`)
+% oracle:   pdflatex 0 errors; "Ann Able1,2,3 and Bob Baker1", "1 Univ A"
+% engines:  rust PRESBXc = 1 Warning (unanswered_mark_lost: 2, 3), no mark shown (2026-11-17)
+% expect:   0 errors, 1 warning (frontmatter:unanswered_mark_lost "… that no name can show: 2, 3"); Ann Able: Univ A
+% status:   GREEN
+% preload:  ar5iv.sty
+\documentclass{article}
+\usepackage{authblk}
+\title{T}
+\author[1,$^{2,3}$]{Ann Able}
+\author[1]{Bob Baker}
+\affil[1]{Univ A}
+\date{}
+\begin{document}
+\maketitle
+Text.
+\end{document}

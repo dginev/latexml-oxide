@@ -1,0 +1,24 @@
+% mechanism: a note between two names on a line is the name's before, whatever spaces (or `\,`) set it off — no glue
+%   width is compared (`resolver::mark_ledger`, DG 2026-11-17: notes attach on an author name's right, the next name's
+%   only at a line's or cell's start or under the block's edge proof)
+% witness: the revtex Odintsov shape (`S.~D. Odintsov,$^{1,2}$\,\thanks{odintsov@…}⏎V.K. Oikonomou,$^{3,4}$\,\thanks{…}`)
+% oracle:  pdflatex 0 errors: "S. D. Odintsov,1,2 V.K. Oikonomou,3,4" (revtex4 prd sets each `\thanks` text in the
+%   bibliography, absent here); the e-mail names its owner
+% engines: rust 97dcff7ca34 (WRONGFIX): Ann's note given to Bob; 139d1d2fa08: each note its own name's
+% expect:  0 errors 0 Warnings; each e-mail note on its owner
+% status:  RED (97dcff7ca34) -> GREEN (perfect_kernel_batchwrongfix::a_note_between_two_names_is_the_name_befores)
+% preload: ar5iv.sty
+\documentclass[aps,prd,superscriptaddress]{revtex4}
+\begin{document}
+\title{T}
+\author{S.~D. Odintsov,$^{1,2}$\,\thanks{odintsov@ieec.uab.es}
+V.K. Oikonomou,$^{3,4}$\,\thanks{v.k.oikonomou1979@gmail.com}}
+\affiliation{$^{1)}$ ICREA, Barcelona, Spain\\
+$^{2)}$ IEEC, Barcelona, Spain\\
+$^{3)}$ TUSUR, Tomsk, Russia\\
+$^{4)}$ TSPU, Tomsk, Russia\\
+}
+\begin{abstract}A.\end{abstract}
+\maketitle
+x
+\end{document}

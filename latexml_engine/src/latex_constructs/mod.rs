@@ -1549,7 +1549,12 @@ pub(crate) fn footnote_pairing(
   // (a number read off the counter in the title block, `\samethanks`' `[\value{footnote}]`, where the counter is not TeX's
   // here is no number and prints no glyph: aa's and llncs's `\thanks` step nothing here, so it read 0, 2606.31244,
   // 2306.03360)
-  if given.is_some() && number.from_counter && in_title_field() && !title_numbers_faithful() {
+  // (nor does a note the counter steps to 0 or below in the title block, its glyph invented: a class's notes we do not
+  // step, then `\addtocounter{footnote}{-2}\footnotemark`, "-1" where pdflatex prints ∗, 1910.09525; DG 2026-11-17)
+  let nonpositive = given.is_none() && in_title_field() && value.is_some_and(|v| v <= 0);
+  if nonpositive
+    || (given.is_some() && number.from_counter && in_title_field() && !title_numbers_faithful())
+  {
     props.remove("mark");
     props.remove("tags");
     props.remove("fnvalue");

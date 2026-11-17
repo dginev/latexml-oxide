@@ -487,6 +487,9 @@ mod perfect_kernel_batchimg1;
 mod perfect_kernel_batchint19;
 mod perfect_kernel_batchint20;
 mod perfect_kernel_batchint23;
+/// INVDAG: the frontmatter invents no glyph — an unmarked note outside the creators shows its content with none, an authblk
+/// label no `\affil` explains shows on its name (OD #1063, #1064).
+mod perfect_kernel_batchinvdag;
 mod perfect_kernel_batchio1;
 mod perfect_kernel_batchio3b;
 mod perfect_kernel_batchkb1;
@@ -675,6 +678,9 @@ mod perfect_kernel_batchw3rd;
 mod perfect_kernel_batchw3rg;
 /// W4: colortbl's `\arrayrulecolor` colours each border side as the rule is drawn (#773); OD #1025.
 mod perfect_kernel_batchw4;
+/// WRONGFIX: four wrong, invented or mis-linked frontmatter marks (a note before a name, a typed symbol no name prints,
+/// a mark character inside a name's bracket, an elsarticle `\cortext` reached through `\author[…]` keys).
+mod perfect_kernel_batchwrongfix;
 mod perfect_kernel_batchz1;
 mod perfect_kernel_batchz14;
 mod perfect_kernel_batchz18c;

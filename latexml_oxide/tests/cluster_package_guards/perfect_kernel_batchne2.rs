@@ -452,11 +452,12 @@ fn a_given_mark_on_no_name_keeps_the_creators() {
   ]);
 }
 
-/// A `\footnotemark` a name follows past spacing is that name's prefix, never carried back onto the name before (the
-/// mark ledger: the nearer name by the glue printed, DG ruling 2026-11-16): `Ann Able \quad \footnotemark[2]Bob Baker`,
-/// pdflatex's "†Bob Baker" (review revSHGIVEN 1). REGFIX's Warnings for such a prefix ("lost: †" though Bob carries †)
-/// over-counted: the ledger writes the mark Bob's, so they are gone. A fill before a mark glued to the next name is the
-/// next name's whatever its width (`Ann Able\thanks{X} \hfill \footnotemark Bob Baker`: REGFIX wrote the block whole).
+/// A `\footnotemark` glued to the next name past spacing is the name's before it, glued proving nothing (DG 2026-11-17,
+/// re-pinned from 2026-11-16's nearer-by-glue rule): `Ann Able \quad \footnotemark[2]Bob Baker` gives Ann the †, written
+/// once — Bob's run, whose span the mark runs into, takes it no more (`emit::block_names`' `written_before`; the cut
+/// first wrote † on both). REGFIX's Warnings for such a mark ("lost: †") over-counted: the ledger writes it, so they are
+/// gone. A fill before it changes nothing (`Ann Able\thanks{X} \hfill \footnotemark Bob Baker`: Ann's ∗ †; REGFIX
+/// wrote the block whole).
 /// A mark inside a formula is written with the formula whole, its `\thanks` twice, so 2511.12633's `Xunzhi
 /// Xiang$^{1}\thanks{…}\,\,\footnotemark[2]$` stays lost and counted. Distinct from
 /// `a_mark_beside_spacing_is_the_nearer_names`: a mark glued to the next name.
@@ -473,11 +474,11 @@ fn a_mark_a_name_follows_past_spacing_is_not_carried_back() {
       repro!("ne2e_prefix_mark_past_spacing_before_and"),
       (0, &[][..]),
       vec![
-        row(&["Ann Able"]),
-        row(&["Bob Baker", "mark=†"]),
+        row(&["Ann Able", "mark=†"]),
+        row(&["Bob Baker"]),
         row(&["Carl Cole"]),
       ],
-      vec![vec![], vec![mark("†", "footnotex1")], vec![]],
+      vec![vec![mark("†", "footnotex1")], vec![], vec![]],
       0,
     ),
     (
@@ -503,8 +504,8 @@ fn a_mark_a_name_follows_past_spacing_is_not_carried_back() {
     (
       repro!("ne2e_prefix_mark_past_hfill"),
       (0, &[][..]),
-      vec![row(&["Ann Able", "mark=*"]), row(&["Bob Baker", "mark=†"])],
-      vec![vec![thanks("*", "id1")], vec![mark("†", "footnote2")]],
+      vec![row(&["Ann Able", "mark=†", "mark=*"]), row(&["Bob Baker"])],
+      vec![vec![mark("†", "footnote2"), thanks("*", "id1")], vec![]],
       1,
     ),
     (
@@ -530,15 +531,14 @@ fn a_mark_a_name_follows_past_spacing_is_not_carried_back() {
   }
 }
 
-/// A `\footnotemark` printed between two names belongs to the nearer one by the glue TeX sets on each side, a tie to
-/// the next name (DG rulings 2026-11-16; `resolver::mark_ledger`): the run of marks between two names is parted at its
-/// widest glue, a mark as near a name as the widest blank on the way to it, the next name's written before its text.
-/// Rows (each 0 Warnings, every mark on the name pdflatex prints it on): ` \qquad † \ `, ` \quad † ~~`, ` \quad †\quad`
-/// (Bob's); a bare mark before Bob's own (his † ‡); the wider gap after a run (2412.20504's `\footnotemark[1] \
-/// \footnotemark[2] \quad Qingyi Si`) and a tie (Carl's ‡); a run parted at the widest glue between two names
-/// (both Bob's, ∗ Ann's and † Bob's, ` \hspace{6em} `), and one past each of two names on a line; a mark between two
-/// interword spaces (a tie: Bob's); a bold name past the gap (Ann's, Bob's); a mark opening the next `tabular` cell
-/// (Bob's, review revSHGIVEN p3tab; TABCELLMARK). REGFIX lost them all ("lost: †"), or wrote the block whole, or
+/// A `\footnotemark` printed between two names belongs to the name before it, whatever the glue on each side, and opens
+/// the next name only at a line's or cell's start or under the block's edge proof (DG 2026-11-17, superseding 2026-11-16's
+/// nearer-by-glue rule these rows were first pinned on; `resolver::mark_ledger`). Rows (each 0 Warnings, re-pinned to the
+/// default where the print is ambiguous): ` \qquad † \ `, ` \quad † ~~`, ` \quad †\quad` (Ann's); a bare mark before
+/// Bob's own (Ann's †, his ‡); 2412.20504's `\footnotemark[1] \ \footnotemark[2] \quad Qingyi Si` (Ann's) and a mark
+/// between Bob and Carl (Bob's ‡); a run between two names, whatever its widest gap (Ann's); one past each of two names on
+/// a line; a mark between two interword spaces (Ann's); a bold name past the gap (Ann's); a mark opening the next
+/// `tabular` cell (Bob's, review revSHGIVEN p3tab; TABCELLMARK). REGFIX lost them all ("lost: †"), or wrote the block whole, or
 /// carried the tabular cell's mark back to Ann with no Warning; SHGIVENb-e carried them back or grew Bob's run over them
 /// (reviews revSHGIVENb-e). Distinct from `a_mark_a_name_follows_past_spacing_is_not_carried_back`: spacing on both
 /// sides of the marks.
@@ -559,31 +559,31 @@ fn a_mark_beside_spacing_is_the_nearer_names() {
   for (tex, expected) in [
     (
       repro!("ne2f_mark_nearer_next_past_qquad"),
-      three(&[], &["†"], &[]),
+      three(&["†"], &[], &[]),
     ),
     (
       repro!("ne2f_mark_nearer_next_past_ties"),
-      three(&[], &["†"], &[]),
+      three(&["†"], &[], &[]),
     ),
     (
       repro!("ne2f_mark_nearer_next_past_quads"),
-      three(&[], &["†"], &[]),
+      three(&["†"], &[], &[]),
     ),
     (repro!("ne2f_bare_mark_nearer_next_past_quads"), vec![
-      row(&["Ann Able", "thanks[*]=X"]),
-      row(&["Bob Baker", "footnotemark[†]=", "footnotemark[‡]="]),
+      row(&["Ann Able", "footnotemark[†]=", "thanks[*]=X"]),
+      row(&["Bob Baker", "footnotemark[‡]="]),
     ]),
     (
       repro!("ne2f_marks_wider_after_and_tied"),
-      three(&["*", "†"], &[], &["‡"]),
+      three(&["*", "†"], &["‡"], &[]),
     ),
     (
       repro!("ne2h_marks_run_wider_before_goes_to_the_next_name"),
-      three(&[], &["*", "†"], &[]),
+      three(&["*", "†"], &[], &[]),
     ),
     (
       repro!("ne2h_marks_run_parted_at_its_widest_gap"),
-      three(&["*"], &["†"], &[]),
+      three(&["*", "†"], &[], &[]),
     ),
     (
       repro!("ne2h_marks_run_carried_back_whole"),
@@ -591,19 +591,19 @@ fn a_mark_beside_spacing_is_the_nearer_names() {
     ),
     (
       repro!("fmmarks_marks_run_split_by_wide_space_red"),
-      three(&["*"], &["†"], &[]),
+      three(&["*", "†"], &[], &[]),
     ),
     (
       repro!("fmmarks_marks_three_names_one_line_red"),
-      three(&["*"], &[], &["†"]),
+      three(&["*"], &["†"], &[]),
     ),
     (
       repro!("fmmarks_mark_between_interword_spaces_red"),
-      three(&[], &["†"], &[]),
+      three(&["†"], &[], &[]),
     ),
     (
       repro!("fmmarks_bare_prefix_mark_after_quad_red"),
-      three(&[], &["*"], &["†"]),
+      three(&["*"], &[], &["†"]),
     ),
     (
       repro!("fmmarks_mark_carried_back_before_bold_name_red"),
@@ -611,7 +611,7 @@ fn a_mark_beside_spacing_is_the_nearer_names() {
     ),
     (
       repro!("fmmarks_mark_nearer_next_bold_name_red"),
-      three(&[], &["†"], &[]),
+      three(&["†"], &[], &[]),
     ),
     (repro!("fmmarks_tabular_cell_given_prefix_mark_red"), vec![
       row(&["Ann Able"]),
@@ -624,44 +624,50 @@ fn a_mark_beside_spacing_is_the_nearer_names() {
   }
 }
 
-/// A note printed beside spacing goes with the marks the mark ledger gives the nearer name: the reading's owner of the
-/// note and the writer's place of its footnote step are one decision, so the note is the name's whose mark pdflatex prints
-/// beside it, its step written in that name's prefix in print order and the marks after it print theirs (a `\thanks`
-/// glued to a bare mark nearer Bob: his † and his note ‡; in either order beside a given mark; a bare mark and a note
-/// set apart, `\ \thanks{…} \ `; a note glued to Bob's name past a mark nearer him). REGFIX kept the note on Ann (the
+/// A note printed beside spacing goes with the marks the mark ledger gives a name: the reading's owner of the note and the
+/// writer's place of its footnote step are one decision — between two names the name's before, glued to the next name or
+/// not (DG 2026-11-17, re-pinned from 2026-11-16's nearer-by-glue rule; `fmmarks_mark_then_thanks_before_next_name_red`'s
+/// "Bob note" is Ann's by that default, the print ambiguous), its step in print order so the marks after it print theirs
+/// (a `\thanks` glued to a bare mark; in either order beside a given mark; a bare mark and a note set apart, `\ \thanks{…}
+/// \ `; a note glued to Bob's name past a mark). REGFIX kept the note on Ann (the
 /// note's place in the source), lost the mark or wrote the block whole; revSHGIVENd found the owner hung on the source
 /// order. Distinct from `a_mark_beside_spacing_is_the_nearer_names`: the reading's note owner and the step order.
 #[test]
 fn a_note_beside_spacing_goes_to_the_nearer_name() {
   for (tex, expected) in [
     (repro!("ne2f_mark_and_note_nearer_next"), vec![
-      row(&["Ann Able", "thanks[*]=X"]),
-      row(&["Bob Baker", "footnotemark[†]=", "thanks[‡]=Y"]),
+      row(&["Ann Able", "footnotemark[†]=", "thanks[*]=X", "thanks[‡]=Y"]),
+      row(&["Bob Baker"]),
       row(&["Carl Cole"]),
     ]),
     (repro!("fmmarks_gap_mark_then_thanks_red"), vec![
-      row(&["Ann Able"]),
-      row(&["Bob Baker", "footnotemark[†]=", "thanks[*]=Ann note"]),
+      row(&["Ann Able", "footnotemark[†]=", "thanks[*]=Ann note"]),
+      row(&["Bob Baker"]),
       row(&["Carl Cole"]),
     ]),
     (repro!("fmmarks_gap_thanks_then_mark_red"), vec![
-      row(&["Ann Able"]),
-      row(&["Bob Baker", "footnotemark[†]=", "thanks[*]=Ann note"]),
+      row(&["Ann Able", "footnotemark[†]=", "thanks[*]=Ann note"]),
+      row(&["Bob Baker"]),
       row(&["Carl Cole"]),
     ]),
     (
       repro!("fmmarks_mark_and_note_floating_between_names_red"),
       vec![
-        row(&["Ann Able", "thanks[*]=Ann note body"]),
-        row(&["Bob Baker", "footnotemark[†]=", "thanks[‡]=Floating body"]),
+        row(&[
+          "Ann Able",
+          "footnotemark[†]=",
+          "thanks[*]=Ann note body",
+          "thanks[‡]=Floating body",
+        ]),
+        row(&["Bob Baker"]),
         row(&["Carl Cole"]),
       ],
     ),
     (
       repro!("fmmarks_mark_then_thanks_before_next_name_red"),
       vec![
-        row(&["Ann Able"]),
-        row(&["Bob Baker", "footnotemark[†]=", "thanks[*]=Bob note"]),
+        row(&["Ann Able", "footnotemark[†]=", "thanks[*]=Bob note"]),
+        row(&["Bob Baker"]),
         row(&["Carl Cole"]),
       ],
     ),
@@ -672,13 +678,11 @@ fn a_note_beside_spacing_goes_to_the_nearer_name() {
   }
 }
 
-/// A mark nearer the next name moves alone: its own balanced tokens, cut from the previous name's run where a group took
-/// them and written in a group of their own before the next name, nothing else with them (SHGIVENc/d grew the next name's
-/// run back over the spacing, and so wrote a superscript on Ann and in Bob's personname, Ann's ORCID in Bob's
-/// personname, and lost Bob's markup past a group's close — reviews revSHGIVENc/d): a mark in Ann's group and one in a
-/// group of its own (`{\small\footnotemark[2]}`, its size not Bob's) are Bob's, his `\textsc` kept. Where other ink
-/// stands apart from both names beside the mark (a superscript, an ORCID) or a fill's width decides (its printed width the
-/// line's), the mark is undecided: REGFIX's output, its loss counted. Distinct from
+/// A mark between two names past spacing is the name's before (DG 2026-11-17, re-pinned from 2026-11-16's nearer-by-glue
+/// rule), written once on it and nothing else moved with it: a mark in Ann's group and one in a group of its own
+/// (`{\small\footnotemark[2]}`) are Ann's, Bob's `\textsc` kept; one beside other ink apart from both names (a
+/// superscript, an ORCID) or past a fill is Ann's too, no loss counted (REGFIX and SHGNEXT left it undecided, counted;
+/// SHGIVENc/d grew the next name's run back over the spacing — reviews revSHGIVENc/d). Distinct from
 /// `a_mark_beside_spacing_is_the_nearer_names`: a group around the mark, other ink, a fill.
 #[test]
 fn a_mark_nearer_the_next_name_moves_alone() {
@@ -692,19 +696,23 @@ fn a_mark_nearer_the_next_name_moves_alone() {
   for (tex, (warnings, ann, bobs)) in [
     (
       repro!("ne2g_mark_in_group_with_previous_name"),
-      (0, &["Ann Able"][..], bob(&["footnotemark[†]="])),
+      (0, &["Ann Able", "footnotemark[†]="][..], bob(&[])),
     ),
     (
       repro!("ne2g_mark_in_its_own_group"),
-      (0, &["Ann Able"][..], bob(&["footnotemark[†]="])),
+      (0, &["Ann Able", "footnotemark[†]="][..], bob(&[])),
     ),
     (
       repro!("ne2g_mark_then_superscript_nearer_next"),
-      (1, &["Ann Able", "footnotemark[a]="][..], bob(&[])),
+      (
+        0,
+        &["Ann Able", "footnotemark[a]=", "footnotemark[†]="][..],
+        bob(&[]),
+      ),
     ),
     (
       repro!("ne2g_mark_then_orcid_nearer_next"),
-      (1, &["Ann Able"][..], bob(&[])),
+      (0, &["Ann Able", "footnotemark[†]="][..], bob(&[])),
     ),
   ] {
     let (log, xml) = run(tex);
@@ -740,9 +748,11 @@ fn a_mark_nearer_the_next_name_moves_alone() {
       "{xml}"
     );
   }
-  // (a fill before the mark, a quad after it: nearer Ann at its natural width, Bob's at a wider one)
+  // (a fill before the mark, a quad after it: Ann's, no width measured)
   let (log, xml) = run(repro!("ne2g_mark_past_hfill_undecided"));
-  assert_eq!((error_count(&log), warning_count(&log)), (0, 1), "{log}");
-  assert!(log.contains(lost), "{log}");
-  assert_eq!(notes_in(&xml), [row(&["Ann Able"]), row(&["Bob Baker"])]);
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  assert_eq!(notes_in(&xml), [
+    row(&["Ann Able", "footnotemark[†]="]),
+    row(&["Bob Baker"])
+  ]);
 }

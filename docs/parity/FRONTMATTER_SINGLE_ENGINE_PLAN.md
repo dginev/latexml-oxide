@@ -27,6 +27,50 @@ natural variations from authors into a compact semantic representation with mark
    :365), so the migration is a documented divergence under OD #837, entry by entry.
 4. **Tokens are natural at the API; segmentation is what moves (user 2026-11-06).** "My main goal was to do segmentation on complex TeX, such as the various macros for marks, on the digested layer - to avoid dealing with TeX's full diversity via heuristics. But when it comes to argument passing into the Frontmatter API, the token data is natural." As in Perl, whose `\lx@annotate@frontmatter` queues its arguments without looking inside (`Base_Utility.pool.ltxml:470-474`). So a binding reading its own class's arguments and passing them to the API is not a defect, nor are tokens as an item's content. The defect is reading marks, lines, kinds and owners out of those tokens by spelling: `author_block/` holds 781 control-sequence tests, 277 distinct, and the Cut and Kind steps Rust added at the API's entry (OD #954, #956).
 
+## Layers: global vs micro (DG 2026-11-17)
+
+**The rule.** A mark joins two pieces; the engine's job is that connection ("custom ink for marks is not critical, as
+long as we can connect the two pieces that any single mark is meant to connect, and can keep our auto-generated marks
+unique / without collision", DG). A mechanism is **global** when it reads only what TeX made (ink, glue, numbers,
+structure) and holds on every class. It is **micro** when it states one class's or package's convention; then it lives
+in that binding and reaches the engine only through the hooks below. Between them sits the largest layer: a **thin
+binding** translating its class's commands (REVTeX `\email`, elsarticle `\corref`, llncs `\inst`, acmart
+`\authornote`) into the API's keys. Global code never names a class, a class's command or a class's glyph table; a
+binding never re-implements ownership, pairing or placement.
+
+**Global defaults** (30k census, `agent_reports/2026-11-17_advisor_ADVLAYER.md`). A mark or note on a names line is the
+name before's (96.9 % of 54,559 runs); a label on an affiliation or legend line is the text after's (94 % of 7,465).
+A tie resolves to the default. The other side needs positive evidence: a line or cell start, a binding's declaration,
+or the block's **edge proof** (its first piece precedes its first name and no piece follows its last; a mixed block's
+ties stay undecided and counted). Glue widths are never compared; "glued to the next name" alone proves nothing
+(0902.3369). The prefix papers are 0.1 % (typed) and ~0.013 % (notes) of arXiv and follow no class (2406.12338,
+math0606768, 2507.23021).
+
+**Keys and ink.** A generated mark pairs by number, a typed mark by its printed text; the two never cross except where
+no name types the glyph (1608.06509; 4 papers in 30k). **A typed mark's ink is content and key, kept exactly; a
+generated mark's ink is optional**, written only where a binding declares it, else unknown. Every unlinked name mark
+shows (8.3 % of papers carry one); a generated mark never collides with ink on the page (615 papers, 2.1 %, carry both
+a note and a typed symbol on names).
+
+| Layer | Holds | Where |
+|---|---|---|
+| Global | events, label keys, the side rule, number pairing, legend-to-carrier by key, fan-out by label, settle and counts, one note with many copies, generated `[a]` | `observer/`, `insert.rs`, `relocate.rs`, `latex_constructs` `relocate_footnote`, the meta XSLT |
+| Hooks | `declare_frontmatter_conventions(Policy)`; `\lx@title@thefootnote`; `declare_title_footnote_counting`; `declare_title_marks_in_force`; `declare_title_numbers_faithful`; `lx_title_footnote_own_marks`, `lx_title_footnote_given_marks_only`; Perl's `label=`, `annotations=`, `labelseq=`, `mark=` | `observer/policy.rs`, `latex_constructs/mod.rs` |
+| Thin binding | a class's commands translated to `label=`/`annotations=`/contacts | REVTeX, elsarticle, acmart, llncs `\inst`, authblk, icml |
+| Micro | a class's glyph series and counter steps, its fixed note texts | llncs, mnras, REVTeX letters, lni, titling, spconf |
+
+**Misplaced, with dispositions** (DG 2026-11-17). (1) `mark_ledger`'s two-name arm, "widest glue, tie to next" (WRONGFIX
+B1 mis-linked 11 papers): replaced by the default and the edge proof. (2) `latex_constructs::maketitle_marks`, a
+static reader of any `\maketitle` body: reduced before the run to "does the class's own `\maketitle` run", else
+unknown; spconf, AAAI and ACL declare their marks. (3) AAAI's `\lx@aaai@note` in `sect05.rs`: to an aaai binding, one
+labelled note per kind. (4) `resolver/post.rs`'s cross-kind fallback: only where no name types the glyph.
+(5) `insert::link_marked_notes`' glyph fallback: refuses a glyph two notes print. (6)
+`shared_notes::number_footnote_parts` is REVTeX's, glyph only; it stays, labelled, and does not grow.
+
+**Reach.** TeX facts alone decide ~41-50 % of symbol-marked creators (94 % kept there); thin bindings another 40-45 %;
+~5 % of papers carry a mark nothing could connect (shown). Bindings by connection gain: achemso, elsarticle, sn-jnl
+(next, DG 2026-11-17); REVTeX glyphs stay parked.
+
 ## The path: the old engine removed before the merge (user 2026-11-06)
 
 **The goal (user 2026-11-06): "continue, and remove the old engine before the merge".** One engine, the other's code deleted, for simplicity and compile time; the bar is not the only measure of this work. **It completes the digested refactor's Stages 7-8 ([`../archive/FRONTMATTER_DIGESTED_REFACTOR_2026-11-07.md`](../archive/FRONTMATTER_DIGESTED_REFACTOR_2026-11-07.md); "The principle" above): every decision reads the observer's events or the digested XML, never token or source spelling; tokens are used only as the content an event's span covers.** This section supersedes the 2026-11-01 Stages (archived with the digested refactor) where they differ. Basis: `agent_reports/2026-11-06_engine_rebaseline_report.md`, `2026-11-06_engine_removal_report.md`: all of dev3 with int139c, observer on and off, devh10k as a less-tuned control, the frozen scorer (`fm_scorer/FROZEN.md`).
@@ -593,3 +637,7 @@ A "Stage N" below (R4, R5, R6, R9, R10, R17) is one of the digested refactor's S
 | R15 | (N-B) A Group whose every member requests the role: does it stand (today, 77n t02), or go to the block once (strict R1)? | Stands; measure strict behind the `r1_at_expansion` switch, then ask | **TENTATIVE 2026-11-01** (main session, user away; revisit) |
 | R16 | (N-A) A labelled item nobody answers, with one name: the sole author (OD #159) or the block? | The sole author, as today | **TENTATIVE 2026-11-01** (main session, user away; revisit) |
 | R17 | (N-D) The run walk's call-time stop (`resolver/api.rs:89-118`) bakes R1 into membership (`A$^1$, B, C$^1$, D`: B gets nothing) | Keep in Stage 1, remove in Stage 2 | **TENTATIVE 2026-11-01** (main session, user away; revisit) |
+| R18 | Ownership between two names: TeX's nearer gap, or a default side? | The name before by default; the name after only at a line/cell start or under the block's edge proof; no glue widths | **RULED 2026-11-17** (supersedes the 2026-11-16 nearer-gap rule; census 96.9 %) |
+| R19 | Is a mark's glyph content? | A typed mark's ink is content and key, kept exactly; a generated mark's ink is optional | **RULED 2026-11-17** |
+| R20 | The static `\maketitle` reader | Reduce to "does the class's own `\maketitle` run", else unknown; classes declare | **RULED 2026-11-17: before the run** |
+| R21 | Next bindings | achemso, elsarticle, sn-jnl by connection gain; REVTeX glyphs parked | **RULED 2026-11-17** |

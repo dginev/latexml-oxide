@@ -907,14 +907,14 @@ const SHARED: &[Row] = &[
       r#"Bob Baker ; thanks[*]=These authors contributed equally to this work. | affiliation=Univ A, Town"#,
       r#"Cat Cole | affiliation=Univ A, Town ; affiliation=Present address: Lab B, City"#,
     ],
-    moves:      r#"MARKSAFE (NEITHER in phase 1: the `§` label no `\affil` answers is dropped with no Warning; a mark-only note)"#,
+    moves:      r#""#,
     page:       &[
       r#"Ann Able ; *→note ; § plain"#,
       r#"Bob Baker ; *→note"#,
       r#"Cat Cole"#,
       r#"margin: These authors contributed equally to this work."#,
     ],
-    page_moves: r#"the XML layer's: MARKSAFE (NEITHER in phase 1: the `§` label no `\affil` answers is dropped with no Warning; a mark-only note)"#,
+    page_moves: r#"row R MARKORDER (the `§` an `\affil` does not explain, shown since INVDAG, OD #1064, follows the name before the notes the labels answer; pdflatex prints the labels' order)"#,
   },
   Row {
     repro:      "list_note_with_two_marks_is_the_blocks_note",
@@ -1983,7 +1983,7 @@ const LINK: &[Row] = &[
       r#"Cy Cole"#,
       r#"Dee Dunn"#,
     ],
-    moves:      r#"row R DOTCUT (the segment after ". " starts with Bob's mark: Cy a copy of note 1, silent)"#,
+    moves:      r#""#,
     page:       &[
       r#"Ann Able ; *→note"#,
       r#"Bob Baker ; *→note"#,
@@ -1991,7 +1991,7 @@ const LINK: &[Row] = &[
       r#"Dee Dunn"#,
       r#"margin: Equal."#,
     ],
-    page_moves: r#"row R DOTCUT (Cy shows Bob's mark)"#,
+    page_moves: r#""#,
   },
 ];
 /// Links: a `\footnotemark[n]`, `\samethanks[n]` or `\authornotemark[n]` on a name is a copy of the note it marks, its
@@ -2042,18 +2042,20 @@ const SPACING: &[Row] = &[
     page_moves: r#""#,
   },
   // the mark as printed, no Warning (the mark ledger writes the prefix Bob's: SHGNEXT, OD #1057)
+  // (re-pinned: DG 2026-11-17 default + edge proof — the name before)
+  // (re-pinned: DG 2026-11-17 default + edge proof — the name before)
   Row {
     repro:      "ne2e_prefix_mark_past_spacing_before_and",
     tex:        repro!("ne2e_prefix_mark_past_spacing_before_and"),
     warnings:   0,
     creators:   &[
-      r#"Ann Able"#,
-      r#"Bob Baker ; footnotemark[†]="#,
+      r#"Ann Able ; footnotemark[†]="#,
+      r#"Bob Baker"#,
       r#"Carl Cole"#,
     ],
     moves:      r#""#,
     // (MARKKEY1d: shown, hidden before; every unlinked mark shows, OD #1059's fail-safe)
-    page:       &["Ann Able", "Bob Baker ; † plain", "Carl Cole"],
+    page:       &[r#"Ann Able ; † plain"#, r#"Bob Baker"#, r#"Carl Cole"#],
     page_moves: r#""#,
   },
   // the marks as printed; the one Warning the labels' (the prefix's false "lost: †" gone: SHGNEXT, OD #1057)
@@ -2161,140 +2163,162 @@ const SPACING: &[Row] = &[
     ],
     page_moves: r#""#,
   },
+  // (re-pinned: DG 2026-11-17 default + edge proof — the name before)
+  // (re-pinned: DG 2026-11-17 default + edge proof — the name before)
   Row {
     repro:      "ne2e_prefix_mark_past_hfill",
     tex:        repro!("ne2e_prefix_mark_past_hfill"),
     warnings:   0,
     creators:   &[
-      r#"Ann Able ; thanks[*]=X"#,
-      r#"Bob Baker ; footnotemark[†]="#,
+      r#"Ann Able ; footnotemark[†]= ; thanks[*]=X"#,
+      r#"Bob Baker"#,
     ],
     moves:      r#""#,
     // (MARKKEY1d: shown, hidden before; every unlinked mark shows, OD #1059's fail-safe)
-    page:       &["Ann Able ; * plain", "Bob Baker ; † plain", "margin: X"],
+    page:       &[
+      r#"Ann Able ; † plain ; * plain"#,
+      r#"Bob Baker"#,
+      r#"margin: X"#,
+    ],
     page_moves: r#""#,
   },
+  // (re-pinned: DG 2026-11-17 default + edge proof — the name before)
+  // (re-pinned: DG 2026-11-17 default + edge proof — the name before)
   Row {
     repro:      "ne2f_bare_mark_nearer_next_past_quads",
     tex:        repro!("ne2f_bare_mark_nearer_next_past_quads"),
     warnings:   0,
     creators:   &[
-      r#"Ann Able ; thanks[*]=X"#,
-      r#"Bob Baker ; footnotemark[†]= ; footnotemark[‡]="#,
+      r#"Ann Able ; footnotemark[†]= ; thanks[*]=X"#,
+      r#"Bob Baker ; footnotemark[‡]="#,
     ],
     moves:      r#""#,
     // (MARKKEY1d: shown, hidden before; every unlinked mark shows, OD #1059's fail-safe)
     page:       &[
-      "Ann Able ; * plain",
-      "Bob Baker ; † plain ; ‡ plain",
-      "margin: X",
+      r#"Ann Able ; † plain ; * plain"#,
+      r#"Bob Baker ; ‡ plain"#,
+      r#"margin: X"#,
     ],
     page_moves: r#""#,
   },
+  // (re-pinned: DG 2026-11-17 default + edge proof — the name before)
+  // (re-pinned: DG 2026-11-17 default + edge proof — the name before)
   Row {
     repro:      "ne2f_mark_and_note_nearer_next",
     tex:        repro!("ne2f_mark_and_note_nearer_next"),
     warnings:   0,
     creators:   &[
-      r#"Ann Able ; thanks[*]=X"#,
-      r#"Bob Baker ; footnotemark[†]= ; thanks[‡]=Y"#,
+      r#"Ann Able ; footnotemark[†]= ; thanks[*]=X ; thanks[‡]=Y"#,
+      r#"Bob Baker"#,
       r#"Carl Cole"#,
     ],
     moves:      r#""#,
     // (MARKKEY1d: shown, hidden before; every unlinked mark shows, OD #1059's fail-safe)
     page:       &[
-      "Ann Able ; * plain",
-      "Bob Baker ; † plain ; ‡ plain",
-      "Carl Cole",
-      "margin: X ; Y",
+      r#"Ann Able ; † plain ; * plain ; ‡ plain"#,
+      r#"Bob Baker"#,
+      r#"Carl Cole"#,
+      r#"margin: X ; Y"#,
     ],
     page_moves: r#""#,
   },
+  // (re-pinned: DG 2026-11-17 default + edge proof — the name before)
+  // (re-pinned: DG 2026-11-17 default + edge proof — the name before)
   Row {
     repro:      "ne2f_mark_nearer_next_past_qquad",
     tex:        repro!("ne2f_mark_nearer_next_past_qquad"),
     warnings:   0,
     creators:   &[
-      r#"Ann Able"#,
-      r#"Bob Baker ; footnotemark[†]="#,
+      r#"Ann Able ; footnotemark[†]="#,
+      r#"Bob Baker"#,
       r#"Carl Cole"#,
     ],
     moves:      r#""#,
     // (MARKKEY1d: shown, hidden before; every unlinked mark shows, OD #1059's fail-safe)
-    page:       &["Ann Able", "Bob Baker ; † plain", "Carl Cole"],
+    page:       &[r#"Ann Able ; † plain"#, r#"Bob Baker"#, r#"Carl Cole"#],
     page_moves: r#""#,
   },
+  // (re-pinned: DG 2026-11-17 default + edge proof — the name before)
+  // (re-pinned: DG 2026-11-17 default + edge proof — the name before)
   Row {
     repro:      "ne2f_mark_nearer_next_past_quads",
     tex:        repro!("ne2f_mark_nearer_next_past_quads"),
     warnings:   0,
     creators:   &[
-      r#"Ann Able"#,
-      r#"Bob Baker ; footnotemark[†]="#,
+      r#"Ann Able ; footnotemark[†]="#,
+      r#"Bob Baker"#,
       r#"Carl Cole"#,
     ],
     moves:      r#""#,
     // (MARKKEY1d: shown, hidden before; every unlinked mark shows, OD #1059's fail-safe)
-    page:       &["Ann Able", "Bob Baker ; † plain", "Carl Cole"],
+    page:       &[r#"Ann Able ; † plain"#, r#"Bob Baker"#, r#"Carl Cole"#],
     page_moves: r#""#,
   },
+  // (re-pinned: DG 2026-11-17 default + edge proof — the name before)
+  // (re-pinned: DG 2026-11-17 default + edge proof — the name before)
   Row {
     repro:      "ne2f_mark_nearer_next_past_ties",
     tex:        repro!("ne2f_mark_nearer_next_past_ties"),
     warnings:   0,
     creators:   &[
-      r#"Ann Able"#,
-      r#"Bob Baker ; footnotemark[†]="#,
+      r#"Ann Able ; footnotemark[†]="#,
+      r#"Bob Baker"#,
       r#"Carl Cole"#,
     ],
     moves:      r#""#,
     // (MARKKEY1d: shown, hidden before; every unlinked mark shows, OD #1059's fail-safe)
-    page:       &["Ann Able", "Bob Baker ; † plain", "Carl Cole"],
+    page:       &[r#"Ann Able ; † plain"#, r#"Bob Baker"#, r#"Carl Cole"#],
     page_moves: r#""#,
   },
+  // (re-pinned: DG 2026-11-17 default + edge proof — the name before)
+  // (re-pinned: DG 2026-11-17 default + edge proof — the name before)
   Row {
     repro:      "ne2g_mark_in_group_with_previous_name",
     tex:        repro!("ne2g_mark_in_group_with_previous_name"),
     warnings:   0,
     creators:   &[
-      r#"Ann Able"#,
-      r#"Bob Baker ; footnotemark[†]="#,
+      r#"Ann Able ; footnotemark[†]="#,
+      r#"Bob Baker"#,
       r#"Carl Cole"#,
     ],
     moves:      r#""#,
     // (MARKKEY1d: shown, hidden before; every unlinked mark shows, OD #1059's fail-safe)
-    page:       &["Ann Able", "Bob Baker ; † plain", "Carl Cole"],
+    page:       &[r#"Ann Able ; † plain"#, r#"Bob Baker"#, r#"Carl Cole"#],
     page_moves: r#""#,
   },
+  // (re-pinned: DG 2026-11-17 default + edge proof — the name before)
+  // (re-pinned: DG 2026-11-17 default + edge proof — the name before)
   Row {
     repro:      "ne2g_mark_in_its_own_group",
     tex:        repro!("ne2g_mark_in_its_own_group"),
     warnings:   0,
     creators:   &[
-      r#"Ann Able"#,
-      r#"Bob Baker ; footnotemark[†]="#,
+      r#"Ann Able ; footnotemark[†]="#,
+      r#"Bob Baker"#,
       r#"Carl Cole"#,
     ],
     moves:      r#""#,
     // (MARKKEY1d: shown, hidden before; every unlinked mark shows, OD #1059's fail-safe)
-    page:       &["Ann Able", "Bob Baker ; † plain", "Carl Cole"],
+    page:       &[r#"Ann Able ; † plain"#, r#"Bob Baker"#, r#"Carl Cole"#],
     page_moves: r#""#,
   },
+  // (re-pinned: DG 2026-11-17 default + edge proof — the name before)
+  // (re-pinned: DG 2026-11-17 default + edge proof — the name before)
   Row {
     repro:      "ne2f_marks_wider_after_and_tied",
     tex:        repro!("ne2f_marks_wider_after_and_tied"),
     warnings:   0,
     creators:   &[
       r#"Ann Able ; footnotemark[*]= ; footnotemark[†]="#,
-      r#"Bob Baker"#,
-      r#"Carl Cole ; footnotemark[‡]="#,
+      r#"Bob Baker ; footnotemark[‡]="#,
+      r#"Carl Cole"#,
     ],
     moves:      r#""#,
     // (MARKKEY1d: shown, hidden before; every unlinked mark shows, OD #1059's fail-safe)
     page:       &[
-      "Ann Able ; * plain ; † plain",
-      "Bob Baker",
-      "Carl Cole ; ‡ plain",
+      r#"Ann Able ; * plain ; † plain"#,
+      r#"Bob Baker ; ‡ plain"#,
+      r#"Carl Cole"#,
     ],
     page_moves: r#""#,
   },
@@ -2303,165 +2327,197 @@ const SPACING: &[Row] = &[
     tex:        repro!("ne2g_mark_past_hfill_undecided"),
     warnings:   0,
     creators:   &[r#"Ann Able ; footnotemark[†]="#, r#"Bob Baker"#],
-    moves:      r#"row R SHGIVENNEXT (a mark nearer the next name, or a bare one; today the counted loss or the whole block) (the centred line leaves the fill 0pt: † 3.9pt after Ann, 11.8pt before Bob)"#,
+    moves:      r#""#,
     page:       &[r#"Ann Able ; † plain"#, r#"Bob Baker"#],
-    page_moves: r#"the XML layer's: row R SHGIVENNEXT (a mark nearer the next name, or a bare one; today the counted loss or the whole block) (the centred line leaves the fill 0pt: † 3.9pt after Ann, 11.8pt before Bob)"#,
+    page_moves: r#""#,
   },
+  // (re-pinned: DG 2026-11-17 default + edge proof — the name before)
+  // (re-pinned: DG 2026-11-17 default + edge proof — the name before)
   Row {
     repro:      "ne2g_mark_then_orcid_nearer_next",
     tex:        repro!("ne2g_mark_then_orcid_nearer_next"),
     warnings:   0,
     creators:   &[
-      r#"Ann Able | orcid="#,
-      r#"Bob Baker ; footnotemark[†]="#,
+      r#"Ann Able ; footnotemark[†]= | orcid="#,
+      r#"Bob Baker"#,
       r#"Carl Cole"#,
     ],
-    moves:      r#"row R SHGIVENNEXT (a mark nearer the next name, or a bare one; today the counted loss or the whole block)"#,
-    page:       &[r#"Ann Able"#, r#"Bob Baker ; † plain"#, r#"Carl Cole"#],
-    page_moves: r#"the XML layer's: row R SHGIVENNEXT (a mark nearer the next name, or a bare one; today the counted loss or the whole block)"#,
+    moves:      r#""#,
+    page:       &[r#"Ann Able ; † plain"#, r#"Bob Baker"#, r#"Carl Cole"#],
+    page_moves: r#""#,
   },
+  // (re-pinned: DG 2026-11-17 default + edge proof — the name before)
+  // (re-pinned: DG 2026-11-17 default + edge proof — the name before)
   Row {
     repro:      "ne2g_mark_then_superscript_nearer_next",
     tex:        repro!("ne2g_mark_then_superscript_nearer_next"),
     warnings:   0,
     creators:   &[
-      r#"Ann Able"#,
-      r#"Bob Baker ; footnotemark[a]= ; footnotemark[†]="#,
+      r#"Ann Able ; footnotemark[a]= ; footnotemark[†]="#,
+      r#"Bob Baker"#,
       r#"Carl Cole"#,
     ],
-    moves:      r#"row R SHGIVENNEXT (a mark nearer the next name, or a bare one; today the counted loss or the whole block); PURE (fix/pure-personname: the marks out of the personname)"#,
+    moves:      r#""#,
     page:       &[
-      r#"Ann Able"#,
-      r#"Bob Baker ; † plain ; a plain"#,
+      r#"Ann Able ; a plain ; † plain"#,
+      r#"Bob Baker"#,
       r#"Carl Cole"#,
     ],
-    page_moves: r#"the XML layer's: row R SHGIVENNEXT (a mark nearer the next name, or a bare one; today the counted loss or the whole block); PURE (fix/pure-personname: the marks out of the personname)"#,
+    page_moves: r#""#,
   },
+  // (re-pinned: DG 2026-11-17 default + edge proof — the name before)
+  // (re-pinned: DG 2026-11-17 default + edge proof — the name before)
   Row {
     repro:      "ne2h_marks_run_parted_at_its_widest_gap",
     tex:        repro!("ne2h_marks_run_parted_at_its_widest_gap"),
     warnings:   0,
     creators:   &[
-      r#"Ann Able ; footnotemark[*]="#,
-      r#"Bob Baker ; footnotemark[†]="#,
+      r#"Ann Able ; footnotemark[*]= ; footnotemark[†]="#,
+      r#"Bob Baker"#,
       r#"Carl Cole"#,
     ],
     moves:      r#""#,
     // (MARKKEY1d: shown, hidden before; every unlinked mark shows, OD #1059's fail-safe)
-    page:       &["Ann Able ; * plain", "Bob Baker ; † plain", "Carl Cole"],
+    page:       &[
+      r#"Ann Able ; * plain ; † plain"#,
+      r#"Bob Baker"#,
+      r#"Carl Cole"#,
+    ],
     page_moves: r#""#,
   },
+  // (re-pinned: DG 2026-11-17 default + edge proof — the name before)
+  // (re-pinned: DG 2026-11-17 default + edge proof — the name before)
   Row {
     repro:      "ne2h_marks_run_wider_before_goes_to_the_next_name",
     tex:        repro!("ne2h_marks_run_wider_before_goes_to_the_next_name"),
     warnings:   0,
     creators:   &[
-      r#"Ann Able"#,
-      r#"Bob Baker ; footnotemark[*]= ; footnotemark[†]="#,
+      r#"Ann Able ; footnotemark[*]= ; footnotemark[†]="#,
+      r#"Bob Baker"#,
       r#"Carl Cole"#,
     ],
     moves:      r#""#,
     // (MARKKEY1d: shown, hidden before; every unlinked mark shows, OD #1059's fail-safe)
-    page:       &["Ann Able", "Bob Baker ; * plain ; † plain", "Carl Cole"],
+    page:       &[
+      r#"Ann Able ; * plain ; † plain"#,
+      r#"Bob Baker"#,
+      r#"Carl Cole"#,
+    ],
     page_moves: r#""#,
   },
+  // (re-pinned: DG 2026-11-17 default + edge proof — the name before)
+  // (re-pinned: DG 2026-11-17 default + edge proof — the name before)
   Row {
     repro:      "fmmarks_bare_prefix_mark_after_quad_red",
     tex:        repro!("fmmarks_bare_prefix_mark_after_quad_red"),
     warnings:   0,
     creators:   &[
-      r#"Ann Able"#,
-      r#"Bob Baker ; footnotemark[*]="#,
+      r#"Ann Able ; footnotemark[*]="#,
+      r#"Bob Baker"#,
       r#"Carl Cole ; footnotemark[†]="#,
     ],
     moves:      r#""#,
     // (MARKKEY1d: shown, hidden before; every unlinked mark shows, OD #1059's fail-safe)
-    page:       &["Ann Able", "Bob Baker ; * plain", "Carl Cole ; † plain"],
+    page:       &[
+      r#"Ann Able ; * plain"#,
+      r#"Bob Baker"#,
+      r#"Carl Cole ; † plain"#,
+    ],
     page_moves: r#""#,
   },
+  // (re-pinned: DG 2026-11-17 default + edge proof — the name before)
+  // (re-pinned: DG 2026-11-17 default + edge proof — the name before)
   Row {
     repro:      "fmmarks_gap_mark_then_thanks_red",
     tex:        repro!("fmmarks_gap_mark_then_thanks_red"),
     warnings:   0,
     creators:   &[
-      r#"Ann Able"#,
-      r#"Bob Baker ; footnotemark[†]= ; thanks[*]=Ann note"#,
+      r#"Ann Able ; footnotemark[†]= ; thanks[*]=Ann note"#,
+      r#"Bob Baker"#,
       r#"Carl Cole"#,
     ],
     moves:      r#""#,
     // (MARKKEY1d: shown, hidden before; every unlinked mark shows, OD #1059's fail-safe)
     page:       &[
-      "Ann Able",
-      "Bob Baker ; † plain ; * plain",
-      "Carl Cole",
-      "margin: Ann note",
+      r#"Ann Able ; † plain ; * plain"#,
+      r#"Bob Baker"#,
+      r#"Carl Cole"#,
+      r#"margin: Ann note"#,
     ],
     page_moves: r#""#,
   },
+  // (re-pinned: DG 2026-11-17 default + edge proof — the name before)
+  // (re-pinned: DG 2026-11-17 default + edge proof — the name before)
   Row {
     repro:      "fmmarks_gap_thanks_then_mark_red",
     tex:        repro!("fmmarks_gap_thanks_then_mark_red"),
     warnings:   0,
     creators:   &[
-      r#"Ann Able"#,
-      r#"Bob Baker ; footnotemark[†]= ; thanks[*]=Ann note"#,
+      r#"Ann Able ; footnotemark[†]= ; thanks[*]=Ann note"#,
+      r#"Bob Baker"#,
       r#"Carl Cole"#,
     ],
     moves:      r#""#,
     // (MARKKEY1d: shown, hidden before; every unlinked mark shows, OD #1059's fail-safe)
     page:       &[
-      "Ann Able",
-      "Bob Baker ; † plain ; * plain",
-      "Carl Cole",
-      "margin: Ann note",
+      r#"Ann Able ; † plain ; * plain"#,
+      r#"Bob Baker"#,
+      r#"Carl Cole"#,
+      r#"margin: Ann note"#,
     ],
     page_moves: r#""#,
   },
+  // (re-pinned: DG 2026-11-17 default + edge proof — the name before)
+  // (re-pinned: DG 2026-11-17 default + edge proof — the name before)
   Row {
     repro:      "fmmarks_mark_after_wide_hspace_nearer_next_red",
     tex:        repro!("fmmarks_mark_after_wide_hspace_nearer_next_red"),
     warnings:   0,
     creators:   &[
-      r#"Ann Able"#,
-      r#"Bob Baker ; footnotemark[*]="#,
+      r#"Ann Able ; footnotemark[*]="#,
+      r#"Bob Baker"#,
       r#"Carl Cole"#,
     ],
     moves:      r#""#,
     // (MARKKEY1d: shown, hidden before; every unlinked mark shows, OD #1059's fail-safe)
-    page:       &["Ann Able", "Bob Baker ; * plain", "Carl Cole"],
+    page:       &[r#"Ann Able ; * plain"#, r#"Bob Baker"#, r#"Carl Cole"#],
     page_moves: r#""#,
   },
+  // (re-pinned: DG 2026-11-17 default + edge proof — the name before)
+  // (re-pinned: DG 2026-11-17 default + edge proof — the name before)
   Row {
     repro:      "fmmarks_mark_and_note_floating_between_names_red",
     tex:        repro!("fmmarks_mark_and_note_floating_between_names_red"),
     warnings:   0,
     creators:   &[
-      r#"Ann Able ; thanks[*]=Ann note body"#,
-      r#"Bob Baker ; footnotemark[†]= ; thanks[‡]=Floating body"#,
+      r#"Ann Able ; footnotemark[†]= ; thanks[*]=Ann note body ; thanks[‡]=Floating body"#,
+      r#"Bob Baker"#,
       r#"Carl Cole"#,
     ],
     moves:      r#""#,
     // (MARKKEY1d: shown, hidden before; every unlinked mark shows, OD #1059's fail-safe)
     page:       &[
-      "Ann Able ; * plain",
-      "Bob Baker ; † plain ; ‡ plain",
-      "Carl Cole",
-      "margin: Ann note body ; Floating body",
+      r#"Ann Able ; † plain ; * plain ; ‡ plain"#,
+      r#"Bob Baker"#,
+      r#"Carl Cole"#,
+      r#"margin: Ann note body ; Floating body"#,
     ],
     page_moves: r#""#,
   },
+  // (re-pinned: DG 2026-11-17 default + edge proof — the name before)
+  // (re-pinned: DG 2026-11-17 default + edge proof — the name before)
   Row {
     repro:      "fmmarks_mark_between_interword_spaces_red",
     tex:        repro!("fmmarks_mark_between_interword_spaces_red"),
     warnings:   0,
     creators:   &[
-      r#"Ann Able"#,
-      r#"Bob Baker ; footnotemark[†]="#,
+      r#"Ann Able ; footnotemark[†]="#,
+      r#"Bob Baker"#,
       r#"Carl Cole"#,
     ],
     moves:      r#""#,
     // (MARKKEY1d: shown, hidden before; every unlinked mark shows, OD #1059's fail-safe)
-    page:       &["Ann Able", "Bob Baker ; † plain", "Carl Cole"],
+    page:       &[r#"Ann Able ; † plain"#, r#"Bob Baker"#, r#"Carl Cole"#],
     page_moves: r#""#,
   },
   Row {
@@ -2478,122 +2534,146 @@ const SPACING: &[Row] = &[
     page:       &["Ann Able ; * plain", "Bob Baker", "Carl Cole"],
     page_moves: r#""#,
   },
+  // (re-pinned: DG 2026-11-17 default + edge proof — the name before)
+  // (re-pinned: DG 2026-11-17 default + edge proof — the name before)
   Row {
     repro:      "fmmarks_mark_nearer_next_bold_name_red",
     tex:        repro!("fmmarks_mark_nearer_next_bold_name_red"),
     warnings:   0,
     creators:   &[
-      r#"Ann Able"#,
-      r#"Bob Baker ; footnotemark[†]="#,
+      r#"Ann Able ; footnotemark[†]="#,
+      r#"Bob Baker"#,
       r#"Carl Cole"#,
     ],
     moves:      r#""#,
     // (MARKKEY1d: shown, hidden before; every unlinked mark shows, OD #1059's fail-safe)
-    page:       &["Ann Able", "Bob Baker ; † plain", "Carl Cole"],
+    page:       &[r#"Ann Able ; † plain"#, r#"Bob Baker"#, r#"Carl Cole"#],
     page_moves: r#""#,
   },
+  // (re-pinned: DG 2026-11-17 default + edge proof — the name before)
+  // (re-pinned: DG 2026-11-17 default + edge proof — the name before)
   Row {
     repro:      "fmmarks_mark_then_cite_nearer_next_red",
     tex:        repro!("fmmarks_mark_then_cite_nearer_next_red"),
     warnings:   0,
     creators:   &[
-      r#"Ann Able"#,
-      r#"Bob Baker ; footnotemark[†]="#,
+      r#"Ann Able ; footnotemark[†]="#,
+      r#"Bob Baker"#,
       r#"Carl Cole"#,
     ],
-    moves:      r#"row R SHGIVENNEXT (a mark nearer the next name, or a bare one; today the counted loss or the whole block)"#,
-    page:       &[r#"Ann Able"#, r#"Bob Baker ; † plain"#, r#"Carl Cole"#],
-    page_moves: r#"the XML layer's: row R SHGIVENNEXT (a mark nearer the next name, or a bare one; today the counted loss or the whole block)"#,
+    moves:      r#""#,
+    page:       &[r#"Ann Able ; † plain"#, r#"Bob Baker"#, r#"Carl Cole"#],
+    page_moves: r#""#,
   },
+  // (re-pinned: DG 2026-11-17 default + edge proof — the name before)
+  // (re-pinned: DG 2026-11-17 default + edge proof — the name before)
   Row {
     repro:      "fmmarks_mark_then_footnotetext_nearer_next_red",
     tex:        repro!("fmmarks_mark_then_footnotetext_nearer_next_red"),
     warnings:   0,
     creators:   &[
-      r#"Ann Able"#,
-      r#"Bob Baker ; thanks[†]=Bob note"#,
+      r#"Ann Able ; thanks[†]=Bob note"#,
+      r#"Bob Baker"#,
       r#"Carl Cole"#,
     ],
     moves:      "",
     page:       &[
-      "Ann Able",
-      "Bob Baker ; † plain",
-      "Carl Cole",
-      "margin: Bob note",
+      r#"Ann Able ; † plain"#,
+      r#"Bob Baker"#,
+      r#"Carl Cole"#,
+      r#"margin: Bob note"#,
     ],
     page_moves: "",
   },
+  // (re-pinned: DG 2026-11-17 default + edge proof — the name before)
+  // (re-pinned: DG 2026-11-17 default + edge proof — the name before)
   Row {
     repro:      "fmmarks_mark_then_hfill_before_next_red",
     tex:        repro!("fmmarks_mark_then_hfill_before_next_red"),
     warnings:   0,
-    creators:   &[r#"Ann Able"#, r#"Bob Baker ; footnotemark[†]="#],
-    moves:      r#"row R SHGIVENNEXT (a mark nearer the next name, or a bare one; today the counted loss or the whole block)"#,
-    page:       &[r#"Ann Able"#, r#"Bob Baker ; † plain"#],
-    page_moves: r#"the XML layer's: row R SHGIVENNEXT (a mark nearer the next name, or a bare one; today the counted loss or the whole block)"#,
+    creators:   &[r#"Ann Able ; footnotemark[†]="#, r#"Bob Baker"#],
+    moves:      r#""#,
+    page:       &[r#"Ann Able ; † plain"#, r#"Bob Baker"#],
+    page_moves: r#""#,
   },
+  // (re-pinned: DG 2026-11-17 default + edge proof — the name before)
+  // (re-pinned: DG 2026-11-17 default + edge proof — the name before)
   Row {
     repro:      "fmmarks_mark_then_superscript_label_of_next_red",
     tex:        repro!("fmmarks_mark_then_superscript_label_of_next_red"),
     warnings:   0,
     creators:   &[
-      r#"Ann Able"#,
-      r#"Bob Baker ; footnotemark[b]= ; footnotemark[†]="#,
+      r#"Ann Able ; footnotemark[†]="#,
+      r#"Bob Baker ; footnotemark[b]="#,
       r#"Carl Cole"#,
     ],
     moves:      r#""#,
     page:       &[
-      r#"Ann Able"#,
-      r#"Bob Baker ; † plain ; b plain"#,
+      r#"Ann Able ; † plain"#,
+      r#"Bob Baker ; b plain"#,
       r#"Carl Cole"#,
     ],
-    page_moves: r#"row R MARKORDER (the notes' document order is not the order the PDF prints their marks; DG 2026-11-16: minor, each mark is on its carrier)"#,
+    page_moves: r#""#,
   },
+  // (re-pinned: DG 2026-11-17 default + edge proof — the name before)
+  // (re-pinned: DG 2026-11-17 default + edge proof — the name before)
   Row {
     repro:      "fmmarks_mark_then_thanks_before_next_name_red",
     tex:        repro!("fmmarks_mark_then_thanks_before_next_name_red"),
     warnings:   0,
     creators:   &[
-      r#"Ann Able"#,
-      r#"Bob Baker ; footnotemark[†]= ; thanks[*]=Bob note"#,
+      r#"Ann Able ; footnotemark[†]= ; thanks[*]=Bob note"#,
+      r#"Bob Baker"#,
       r#"Carl Cole"#,
     ],
     moves:      r#""#,
     // (MARKKEY1d: shown, hidden before; every unlinked mark shows, OD #1059's fail-safe)
     page:       &[
-      "Ann Able",
-      "Bob Baker ; † plain ; * plain",
-      "Carl Cole",
-      "margin: Bob note",
+      r#"Ann Able ; † plain ; * plain"#,
+      r#"Bob Baker"#,
+      r#"Carl Cole"#,
+      r#"margin: Bob note"#,
     ],
     page_moves: r#""#,
   },
+  // (re-pinned: DG 2026-11-17 default + edge proof — the name before)
+  // (re-pinned: DG 2026-11-17 default + edge proof — the name before)
   Row {
     repro:      "fmmarks_marks_run_split_by_wide_space_red",
     tex:        repro!("fmmarks_marks_run_split_by_wide_space_red"),
     warnings:   0,
     creators:   &[
-      r#"Ann Able ; footnotemark[*]="#,
-      r#"Bob Baker ; footnotemark[†]="#,
+      r#"Ann Able ; footnotemark[*]= ; footnotemark[†]="#,
+      r#"Bob Baker"#,
       r#"Carl Cole"#,
     ],
     moves:      r#""#,
     // (MARKKEY1d: shown, hidden before; every unlinked mark shows, OD #1059's fail-safe)
-    page:       &["Ann Able ; * plain", "Bob Baker ; † plain", "Carl Cole"],
+    page:       &[
+      r#"Ann Able ; * plain ; † plain"#,
+      r#"Bob Baker"#,
+      r#"Carl Cole"#,
+    ],
     page_moves: r#""#,
   },
+  // (re-pinned: DG 2026-11-17 default + edge proof — the name before)
+  // (re-pinned: DG 2026-11-17 default + edge proof — the name before)
   Row {
     repro:      "fmmarks_marks_three_names_one_line_red",
     tex:        repro!("fmmarks_marks_three_names_one_line_red"),
     warnings:   0,
     creators:   &[
       r#"Ann Able ; footnotemark[*]="#,
-      r#"Bob Baker"#,
-      r#"Carl Cole ; footnotemark[†]="#,
+      r#"Bob Baker ; footnotemark[†]="#,
+      r#"Carl Cole"#,
     ],
     moves:      r#""#,
     // (MARKKEY1d: shown, hidden before; every unlinked mark shows, OD #1059's fail-safe)
-    page:       &["Ann Able ; * plain", "Bob Baker", "Carl Cole ; † plain"],
+    page:       &[
+      r#"Ann Able ; * plain"#,
+      r#"Bob Baker ; † plain"#,
+      r#"Carl Cole"#,
+    ],
     page_moves: r#""#,
   },
   Row {
@@ -2630,35 +2710,43 @@ const SPACING: &[Row] = &[
   },
   // the marks a writer writes each from its own first token, never the one before it again (review revSHGNEXT B1, P1:
   // a mark's event span starts where the box before it began)
+  // (re-pinned: DG 2026-11-17 default + edge proof — the name before)
+  // (re-pinned: DG 2026-11-17 default + edge proof — the name before)
   Row {
     repro:      "ne2j_two_marks_glued_nearer_next",
     tex:        repro!("ne2j_two_marks_glued_nearer_next"),
     warnings:   0,
     creators:   &[
-      r#"Ann Able"#,
-      r#"Bob Baker ; footnotemark[*]= ; footnotemark[†]="#,
-      r#"Carl Cole"#,
-    ],
-    moves:      r#""#,
-    // (MARKKEY1d: shown, hidden before; every unlinked mark shows, OD #1059's fail-safe)
-    page:       &["Ann Able", "Bob Baker ; * plain ; † plain", "Carl Cole"],
-    page_moves: r#""#,
-  },
-  Row {
-    repro:      "ne2j_three_marks_glued_nearer_next",
-    tex:        repro!("ne2j_three_marks_glued_nearer_next"),
-    warnings:   0,
-    creators:   &[
-      r#"Ann Able"#,
-      r#"Bob Baker ; footnotemark[*]= ; footnotemark[†]= ; footnotemark[‡]="#,
+      r#"Ann Able ; footnotemark[*]= ; footnotemark[†]="#,
+      r#"Bob Baker"#,
       r#"Carl Cole"#,
     ],
     moves:      r#""#,
     // (MARKKEY1d: shown, hidden before; every unlinked mark shows, OD #1059's fail-safe)
     page:       &[
-      "Ann Able",
-      "Bob Baker ; * plain ; † plain ; ‡ plain",
-      "Carl Cole",
+      r#"Ann Able ; * plain ; † plain"#,
+      r#"Bob Baker"#,
+      r#"Carl Cole"#,
+    ],
+    page_moves: r#""#,
+  },
+  // (re-pinned: DG 2026-11-17 default + edge proof — the name before)
+  // (re-pinned: DG 2026-11-17 default + edge proof — the name before)
+  Row {
+    repro:      "ne2j_three_marks_glued_nearer_next",
+    tex:        repro!("ne2j_three_marks_glued_nearer_next"),
+    warnings:   0,
+    creators:   &[
+      r#"Ann Able ; footnotemark[*]= ; footnotemark[†]= ; footnotemark[‡]="#,
+      r#"Bob Baker"#,
+      r#"Carl Cole"#,
+    ],
+    moves:      r#""#,
+    // (MARKKEY1d: shown, hidden before; every unlinked mark shows, OD #1059's fail-safe)
+    page:       &[
+      r#"Ann Able ; * plain ; † plain ; ‡ plain"#,
+      r#"Bob Baker"#,
+      r#"Carl Cole"#,
     ],
     page_moves: r#""#,
   },
@@ -2702,37 +2790,45 @@ const SPACING: &[Row] = &[
     page:       &["Ann Able ; * plain ; † plain", "Bob Baker", "Carl Cole"],
     page_moves: r#""#,
   },
+  // (re-pinned: DG 2026-11-17 default + edge proof — the name before)
+  // (re-pinned: DG 2026-11-17 default + edge proof — the name before)
   Row {
     repro:      "ne2j_macro_marks_nearer_next",
     tex:        repro!("ne2j_macro_marks_nearer_next"),
     warnings:   0,
     creators:   &[
-      r#"Ann Able"#,
-      r#"Bob Baker ; footnotemark[*]= ; footnotemark[†]="#,
-      r#"Carl Cole"#,
-    ],
-    moves:      r#""#,
-    // (MARKKEY1d: shown, hidden before; every unlinked mark shows, OD #1059's fail-safe)
-    page:       &["Ann Able", "Bob Baker ; * plain ; † plain", "Carl Cole"],
-    page_moves: r#""#,
-  },
-  // a formula's comma glued between two marks is ink of their run (revSHGNEXT S1; 1703.08733's shape)
-  Row {
-    repro:      "ne2j_math_comma_between_marks_nearer_next",
-    tex:        repro!("ne2j_math_comma_between_marks_nearer_next"),
-    warnings:   0,
-    creators:   &[
-      r#"Ann Able ; thanks[*]=X"#,
-      r#"Bob Baker ; footnotemark[†]= ; thanks[*]=X"#,
+      r#"Ann Able ; footnotemark[*]= ; footnotemark[†]="#,
+      r#"Bob Baker"#,
       r#"Carl Cole"#,
     ],
     moves:      r#""#,
     // (MARKKEY1d: shown, hidden before; every unlinked mark shows, OD #1059's fail-safe)
     page:       &[
-      "Ann Able ; *→note",
-      "Bob Baker ; *→note ; † plain",
-      "Carl Cole",
-      "margin: X",
+      r#"Ann Able ; * plain ; † plain"#,
+      r#"Bob Baker"#,
+      r#"Carl Cole"#,
+    ],
+    page_moves: r#""#,
+  },
+  // a formula's comma glued between two marks is ink of their run (revSHGNEXT S1; 1703.08733's shape)
+  // (re-pinned: DG 2026-11-17 default + edge proof — the name before)
+  // (re-pinned: DG 2026-11-17 default + edge proof — the name before)
+  Row {
+    repro:      "ne2j_math_comma_between_marks_nearer_next",
+    tex:        repro!("ne2j_math_comma_between_marks_nearer_next"),
+    warnings:   0,
+    creators:   &[
+      r#"Ann Able ; footnotemark[*]= ; footnotemark[†]= ; thanks[*]=X"#,
+      r#"Bob Baker"#,
+      r#"Carl Cole"#,
+    ],
+    moves:      r#""#,
+    // (MARKKEY1d: shown, hidden before; every unlinked mark shows, OD #1059's fail-safe)
+    page:       &[
+      r#"Ann Able ; *→note ; † plain ; * plain"#,
+      r#"Bob Baker"#,
+      r#"Carl Cole"#,
+      r#"margin: X"#,
     ],
     page_moves: r#""#,
   },
@@ -3432,6 +3528,17 @@ const CLASS: &[Row] = &[
     // (IEEEtran's `\maketitle` empties `\footnotemark`, so TeX prints Bob's `[1]` as text, "Bob Baker[1]")
     page:       &["Ann Able", "Bob Baker[1]"],
     page_moves: r#"row R IEEEFNMARK (we print a superscript 1, TeX a literal [1]; pre-existing)"#,
+  },
+  // (a mark the counter steps to 0 or below in the title block, its glyph invented: "-1" before, 1910.09525's PoS shape;
+  // no glyph and one Warning, DG 2026-11-17)
+  Row {
+    repro:      "wrongfix_title_footnotemark_counter_below_one_prints_no_glyph",
+    tex:        repro!("wrongfix_title_footnotemark_counter_below_one_prints_no_glyph"),
+    warnings:   1,
+    creators:   &["Ann Able", "Bob Baker ; footnotemark[]="],
+    moves:      r#""#,
+    page:       &["Ann Able", "Bob Baker"],
+    page_moves: r#""#,
   },
   Row {
     repro:      "markkey_samethanks_under_elsarticle_red",
@@ -4188,7 +4295,8 @@ const CLASS: &[Row] = &[
 /// unknown here (an unbound class's, a document's own `\maketitle`'s) is no glyph on the page, the text under its name
 /// (revMARKSAFE B1, ADVGEN I-3), a document's wrapper of the class's `\maketitle` changes nothing (revMARKSAFEb B1), and
 /// an author block's `\thefootnote` holds in its cell alone (revMARKSAFE S1); a `\maketitle` that makes a footnote or
-/// sets the footnote counter before its title, or one a package's `\let` restores, has unknown marks (revPRESBXb BL2, BL3).
+/// sets the footnote counter before its title, or one a package's `\let` restores, has unknown marks (revPRESBXb BL2, BL3);
+/// a mark the counter steps to 0 or below in the title block prints none (1910.09525, WRONGFIXc).
 #[test]
 fn notes_are_marked_only_where_the_class_prints_marks() { assert_green(CLASS); }
 /// The known gaps of [`notes_are_marked_only_where_the_class_prints_marks`].
