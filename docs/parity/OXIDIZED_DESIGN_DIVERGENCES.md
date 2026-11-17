@@ -20224,6 +20224,8 @@ gone, `marks` the one record; the two state keys SEPb's records read, `lx_frontm
 `lx_title_marks_zero_width`, raised with this reason); unit test
 `mark_ledger::tests::a_mark_glued_on_a_zero_width_title_mark_of_its_glyph_overprints_it`.
 
+### 1066. → Bindings beyond Perl's tree: sn-jnl.cls (`sn_jnl_cls.rs`)
+
 ---
 
 ## TeX-source fidelity family (TEXSRC)
@@ -21846,3 +21848,34 @@ keytheorems.sty:994, :1075-1079 stores the head through `\deferred@thm@head` for
 binding's theorem never calls `\deferred@thm@head`: it makes the head an `ltx:title` before the box. latexml_contrib/src/keytheorems_sty.rs reads
 the file raw and leaves the macro empty, so the box's title slot is empty and the head is kept. Witnesses tutodoc-en, tutodoc-fr. Guard
 `perfect_kernel_batchm3::a_tcolorbox_keytheorem_keeps_its_head_and_body`.
+
+#### 1066. sn-jnl's `\author*` star and its author notes' glyphs mark one note each, which every name carrying the mark shares (Perl: no binding; OmniBus)
+
+sn-jnl.cls (2412.01641's copy; the census's 165 copies alike) prints `\author*[labels]{name}` as the name with its
+labels and a `*` in one superscript, the `*` only where it has labels (:505-516); the `\email` after a starred name joins
+the corresponding list (`\if@corauemail`, :535-546), which `\@maketitle` prints once, "*Corresponding author(s).
+E-mail(s): …", where there is one (:749-751). An author note (`\equalcont{text}`, :584-586; some copies' `\intern`,
+`\equalsup`, `\equaladv`, `\equalcontribution`) stores its text and appends its glyph (`\g@addto@macro\artauthors
+{$^{\dagger}$}`) after the names printed so far; `\@maketitle` prints the last text once, under the addresses (:754).
+
+**Rust.** The binding collapsed the star and wrote each note as a detached `ltx:note` per call, its text twice and no
+mark on any name (12 of 21 marked sn-jnl creators of the 3,000-paper dev sample lost). It now translates the class's
+commands into the frontmatter API's keys and lets the engine place them: a starred name with labels gets `*` in its
+`annotations`; each name ends with a marks macro (`\lx@sn@marks@<n>`) that the notes after it fill with a request
+(`\lx@request@frontmatter@annotation[sn]{equalcont}`), as the class appends the glyph after the names. As `\maketitle`
+begins (`\lx@maketitle@begin`, ahead of the flush) the binding queues each note once, labelled, `ltx:note` under the
+creators: `[label={*},role=correspondent,mark=*]` in the copy's words ("Corresponding author(s).", "Corresponding
+author.") where the class prints the line, `[label={sn:<command>},mark=<glyph>]` with the last text stored, the glyph
+the paper's copy appends (`note_glyph`: † for `\equalcont`, `*` in 2501.01157's, ‡ for `\intern`/`\equalsup`, § in
+2307.08214's; † with no copy). The copy decides what prints: 2209.11450's prints no `*` (`{}` in its `\@@corrauthor`), no
+corresponding line and no glyph for `\equalcont` (`\g@addto@macro\artauthors{}`), so there no name is marked and its
+note is the document's. The relocation's copies are one note (`idref`, #1059), printed once on the page. A starred
+name without labels prints no `*`: it requests an unmarked correspondent note. An `\email` inside a name runs as the
+names print, under the last author's star (2312.03687). A note given before any name, or inside one, marks none: the
+document's note, as the class prints its text with no name marked. E-mails and affiliations stay their authors'
+contacts. **Residuals.** A starred name's `*` with no corresponding line (no `\email` after a starred name: 2509.19318)
+is counted lost by a Warning (`unanswered_mark_lost`, as authblk's), not shown (row R SNJNLSTAR); with no `\maketitle`
+the notes are not queued (pdflatex prints no title block). Witnesses 2412.01641, 2603.01834, 2312.03687, 2512.07346,
+2401.11721. **Guards**: the `snjnl_*` rows of `perfect_kernel_batchfmmarks::notes_are_marked_only_where_the_class_prints_marks`
+(RED `snjnl_starred_names_without_email`), `perfect_kernel_batch67z::{snjnl_author_notes, snjnl_notes_take_the_copys_default,
+snjnl_notes_marking_no_name_are_the_documents, snjnl_copy_that_marks_no_name, sn_jnl_class_commands}`.

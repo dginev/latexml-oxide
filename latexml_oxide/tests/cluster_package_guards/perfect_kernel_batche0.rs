@@ -998,6 +998,9 @@ const API_KEYS_OUTSIDE_PERLS: &[(&str, usize)] = &[
   // `\lx@note` writes too, latex_constructs.pool.ltxml:461 — OD #1053, the mark rule)
   ("[mark] package/acmart_cls.rs", 1),
   ("[mark] package/iopart_support_sty.rs", 1),
+  // (SNJNL: the glyph sn-jnl's `\author*` and author notes print on the names, the `ltx:note` schema attribute, on the
+  // one labelled note each queues, as acmart's; OD #1066)
+  ("[mark] sn_jnl_cls.rs", 1),
   ("_answers= base_utilities/defs/frontmatter_fields.rs", 1),
   // (P28m3: a new key, distinct from `\lx@sup@setlabel@affiliation`'s `_bymark` (revP28m3): the mark an address under a
   // marked affiliation was placed by, for a names call the reading parts; 2510.10414)

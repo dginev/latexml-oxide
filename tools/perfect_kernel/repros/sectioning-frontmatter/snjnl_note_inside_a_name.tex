@@ -1,0 +1,21 @@
+% mechanism: an author note inside a name runs as `\@maketitle` prints the names (2412.01641's sn-jnl.cls:744): its
+%   `\g@addto@macro\artauthors` comes too late for the print in progress, so no name is marked, and its text prints
+%   under the addresses (:754)
+% witness:  none in the 165 census papers (a sibling of 2412.01641's `\equalcont`)
+% oracle:   pdflatex with 2412.01641's sn-jnl.cls 0 errors: "Ann Able1 and Bob Baker1", "1Univ A.", "†Equal inside."
+% engines:  rust 3b420685f89 = the document's note; rust SNJNL (before its fix) = the text lost, queued after the notes
+% expect:   0 errors 0 Warnings; the document's note "Equal inside.", no creator's
+% status:   RED (SNJNL first cut) -> GREEN (SNJNL, perfect_kernel_batch67z::snjnl_notes_marking_no_name_are_the_documents)
+% files:    pdflatex with 2412.01641's sn-jnl.cls beside it
+% preload:  ar5iv.sty
+\documentclass{sn-jnl}
+\usepackage{amsmath}
+\begin{document}
+\title{A Title}
+\author[1]{\fnm{Ann} \sur{Able}\equalcont{Equal inside.}}
+\author[1]{\fnm{Bob} \sur{Baker}}
+\affil[1]{\orgname{Univ A}}
+\abstract{The abstract.}
+\maketitle
+Text.
+\end{document}
