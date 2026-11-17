@@ -1,0 +1,26 @@
+% mechanism: a note of the document's own level with no mark whose role the PDF prints in no title block (a running
+%   head, the publication's metadata) keeps Perl's hidden note: only the roles of OD #1063's allowlist
+%   (`f:document-note-shown`) show as a line
+% witness:  1710.08165, 2311.01695, 2412.18293, 2511.10879 (jmlr's "heading: 19 2018 …", "shortheadings: …"),
+%   2310.01426, 2311.11099 ("volume: LEAVE UNSET"), 2302.03012, 2110.12052, 2505.23112, 1709.08471 (runningheads)
+% oracle:   pdflatex 0 errors; "A TITLE", "Ann Able and Bob Baker", "Univ A": the running heads print in no title
+%   block (emulateapj.cls:368-369 keeps them for the page heads)
+% engines:  rust INVDAG = "lefthead: Able and Baker", "righthead: A Short Title" lines at the document's top (2026-11-17)
+% expect:   0 errors, 0 warnings; no ltx_note_unmarked on the page; each running head Perl's note (an
+%   ltx_note_mark, its text in ltx_note_content)
+% status:   GREEN
+% preload:  ar5iv.sty
+\documentclass{emulateapj}
+\lefthead{Able and Baker}
+\righthead{A Short Title}
+\begin{document}
+\title{A Title}
+\author{Ann Able and Bob Baker}
+\affil{Univ A}
+\begin{abstract}
+An abstract.
+\end{abstract}
+\keywords{stars}
+\section{Intro}
+Body text.
+\end{document}

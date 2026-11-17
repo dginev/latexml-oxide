@@ -1,0 +1,27 @@
+% mechanism: an authblk label no `\affil` label explains, printed on two names, whose legend an unlabelled `\affil[ ]`
+%   line opens with: the reading places the legend's note apart from a name (the block's here, one name's in
+%   2606.17809); each name's mark shows, linked to that note (`Policy::labels_print`, answered per creator)
+% witness:  2606.17809 (`\author[6,7,*,\textsuperscript{\textdagger}]{Péter Pollner}`, `\author[1,\textsuperscript
+%   {\textdagger}]{István Csabai}`, `\affil[ ]{\textsuperscript{\textdagger}Contributed equally to this work.}`)
+% oracle:   pdflatex 0 errors; "Ann Able1,*,† , Bob Baker2 , and Cat Cole1,†", "*Correspondence to ann@x.org.",
+%   "†Contributed equally to this work."
+% engines:  rust PRESBXc = both names' † lost, 1 Warning (unanswered_mark_lost: †) (2026-11-17)
+% expect:   0 errors, 0 warnings; Ann Able: mark-only †, her `*` correspondence note; Cat Cole: mark-only †; the
+%   block's note "Contributed equally to this work." marked †
+% status:   GREEN
+% preload:  ar5iv.sty
+\documentclass{article}
+\usepackage{authblk}
+\title{T}
+\author[1,*,\textsuperscript{\textdagger}]{Ann Able}
+\author[2]{Bob Baker}
+\author[1,\textsuperscript{\textdagger}]{Cat Cole}
+\affil[1]{Univ A}
+\affil[2]{Univ B}
+\affil[ *]{Correspondence to ann@x.org.}
+\affil[ ]{\textsuperscript{\textdagger}Contributed equally to this work.}
+\date{}
+\begin{document}
+\maketitle
+Text.
+\end{document}

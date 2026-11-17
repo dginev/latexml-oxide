@@ -888,14 +888,14 @@ const SHARED: &[Row] = &[
       r#"Bob Baker ; thanks[*]=These authors contributed equally to this work. | affiliation=Univ A, Town"#,
       r#"Cat Cole | affiliation=Univ A, Town ; affiliation=Present address: Lab B, City"#,
     ],
-    moves:      r#"MARKSAFE (NEITHER in phase 1: the `§` label no `\affil` answers is dropped with no Warning; a mark-only note)"#,
+    moves:      r#""#,
     page:       &[
       r#"Ann Able ; *→note ; § plain"#,
       r#"Bob Baker ; *→note"#,
       r#"Cat Cole"#,
       r#"margin: These authors contributed equally to this work."#,
     ],
-    page_moves: r#"the XML layer's: MARKSAFE (NEITHER in phase 1: the `§` label no `\affil` answers is dropped with no Warning; a mark-only note)"#,
+    page_moves: r#"row R MARKORDER (the `§` an `\affil` does not explain, shown since INVDAG, OD #1064, follows the name before the notes the labels answer; pdflatex prints the labels' order)"#,
   },
   Row {
     repro:      "list_note_with_two_marks_is_the_blocks_note",

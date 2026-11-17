@@ -1,0 +1,29 @@
+% mechanism: icml's notice markers that print a dagger (`\icmlProjectLead`, `\icmlEqualSeniorContribution`,
+%   `\icmlEqualContributionAndSenior`, `\airesident`) print it as `\textdagger`, as the papers' `\dag`; a `\char` of
+%   U+2020 printed nothing
+% witness:  2402.05011 (`\printAffiliationsAndNotice{\icmlEqualContribution, \icmlProjectLead}`, Kai Wang$^\dag$;
+%   its icml2024.sty:526 `\textsuperscript{\dag}Project lead,`), 2503.15703, 1902.09574
+% oracle:   pdflatex (with 2402.05011's icml2024.sty) 0 errors; "Ann Able * 1 Bob Baker † 1", the notice "*Equal
+%   contribution, †Project lead, 1 Univ A. Correspondence to: Ann Able <ann@x.org>."
+% engines:  rust INVDAG = the notice "*Equal contribution, Project lead" (2026-11-17)
+% expect:   0 errors, 0 warnings; the notice a div.ltx_note_unmarked "*Equal contribution, †Project lead"
+% status:   GREEN
+% preload:  ar5iv.sty
+\documentclass{article}
+\usepackage[accepted]{icml2024}
+\begin{document}
+\twocolumn[\icmltitle{A Title}
+\icmlsetsymbol{equal}{*}
+\begin{icmlauthorlist}
+\icmlauthor{Ann Able}{equal,a}
+\icmlauthor{Bob Baker$^\dag$}{a}
+\end{icmlauthorlist}
+\icmlaffiliation{a}{Univ A}
+\icmlcorrespondingauthor{Ann Able}{ann@x.org}
+\vskip 0.3in]
+\printAffiliationsAndNotice{\icmlEqualContribution, \icmlProjectLead}
+\begin{abstract}
+An abstract.
+\end{abstract}
+Body text.
+\end{document}

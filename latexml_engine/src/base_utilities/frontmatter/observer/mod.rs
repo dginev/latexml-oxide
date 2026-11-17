@@ -85,6 +85,7 @@ pub use policy::{
   AuthorPage as FmAuthorPage, EmailOwner as FmEmailOwner, KERNEL as FM_KERNEL_CONVENTIONS,
   MaketitleRuns as FmMaketitleRuns, Policy as FmConventions, TitleMarks as FmTitleMarks,
   TitlePageDecl as FmTitlePageDecl, declare_frontmatter_conventions,
+  declare_unexplained_name_labels,
 };
 pub(in crate::base_utilities) use reading::read_at_flush;
 pub use reading::{fm_reading_json, reset_fm_reading};
