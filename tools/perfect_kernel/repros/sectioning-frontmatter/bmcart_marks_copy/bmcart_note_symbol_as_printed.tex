@@ -1,0 +1,35 @@
+% witness: synthetic (revBMCART probe4: `symbol={\%}` lost the note with an Error; `symbol={**}` was kept unmarked)
+% The class beside it is BioMed Central's bmcart.cls (2014/01/24) as 2112.10068 ships it, unmodified (its licence
+% asks a changed copy to be renamed). Its thanksbox, printed at `\end{fmbox}` (:1435-1443 `\auto@set@thanksbox`),
+% prints the corresponding author's mark and "Correspondence: <e-mail>" (:1458-1463 `\printcorrtext`), then each
+% `{artnotes}` note under its mark (:1393-1404); each `\thanksmark` steps `thanks`, whose marks are *, \textdagger,
+% \^{} (:1095-1097), and the names print their notes' marks (`\thanksref`).
+% A note's `symbol` key is its mark as the class prints it, `\thanksmark[<symbol>]` (:1393-1398): an escaped character
+% its character, two characters both.
+% oracle:  pdflatex 0 errors (4 runs): "Ann Able1%** and Bob Baker2*%**", "*Correspondence: b@x.org", "% Equal contributor",
+%          "** Joint first authors"
+% engines: rust BMCART r1: Error, "Equal contributor" lost (`\%` re-read as a comment); "Joint first authors"
+%          unmarked; Perl no binding (OmniBus)
+% expect:  0 errors 0 warnings; "Equal contributor" shared under %, "Joint first authors" under **
+% status:  RED (BMCART r1) -> GREEN (BMCARTb)
+% preload: ar5iv.sty
+\documentclass{bmcart}
+\begin{document}
+\begin{frontmatter}
+\begin{fmbox}
+\title{The Title}
+\author[addressref={aff1},noteref={n1,n2},email={a@x.org}]{\fnm{Ann} \snm{Able}}
+\author[addressref={aff2},noteref={n1,n2},corref={aff2},email={b@x.org}]{\fnm{Bob} \snm{Baker}}
+\address[id=aff1]{\orgname{Univ A}, \cny{US}}
+\address[id=aff2]{\orgname{Univ B}, \cny{IN}}
+\begin{artnotes}
+\note[id=n1,symbol={\%}]{Equal contributor}
+\note[id=n2,symbol={**}]{Joint first authors}
+\end{artnotes}
+\end{fmbox}
+\end{frontmatter}
+\section{Intro} Body.
+\begin{backmatter}
+\begin{thebibliography}{1}\bibitem{a} A. Ref.\end{thebibliography}
+\end{backmatter}
+\end{document}

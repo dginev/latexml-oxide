@@ -220,11 +220,12 @@ fn empty_correspondence_text_names_nothing() {
   ]);
 }
 
-/// The 2017/07/31 class makes every `corref` author a corresponding author (:1225; 2012.08156, 2101.05946): one mark,
-/// "Correspondence: a@x.org; b@x.org", so both e-mails are named so and the note takes †. pdflatex: "Ann Able1*†, Bob
-/// Baker2*† and Cy Cole3".
+/// The 2017/07/31 class makes every `corref` author a corresponding author (:1225; 2012.08156, 2101.05946):
+/// `\printcorrtext` prints one mark and "Correspondence: a@x.org; b@x.org" (:1475-1480). It is one note the two names
+/// share under *, carrying their addresses, which are not also their contacts (DG 2026-11-17); the next note takes †.
+/// pdflatex: "Ann Able1*†, Bob Baker2*† and Cy Cole3".
 #[test]
-fn every_corref_author_corresponds_in_the_2017_class() {
+fn every_corref_author_shares_one_correspondence_in_the_2017_class() {
   let xml = convert_beside(
     include_str!(
       "../../../tools/perfect_kernel/repros/sectioning-frontmatter/bmcart2017_copy/\
@@ -234,19 +235,98 @@ fn every_corref_author_corresponds_in_the_2017_class() {
   );
   assert_creators(&xml, &[
     "<creator role=\"author\"><personname>Ann Able</personname>\
-     <contact name=\"Correspondence: \" role=\"email\">a@x.org</contact>\
      <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A, US</contact>\
      <note class=\"ltx_note_frontmatter ltx_thanks_contribution\" mark=\"\u{2020}\" \
      role=\"thanks\" xml:id=\"id1\">Equal contributor</note>\
+     <note class=\"ltx_note_frontmatter ltx_thanks_correspondence\" mark=\"*\" \
+     role=\"thanks\" xml:id=\"id2\">Correspondence: a@x.org; b@x.org</note>\
+     </creator>",
+    "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker</personname>\
+     <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ B, IN</contact>\
+     <note class=\"ltx_note_frontmatter ltx_thanks_contribution\" mark=\"\u{2020}\" \
+     role=\"thanks\" xml:id=\"id3\">Equal contributor</note>\
+     <note class=\"ltx_note_frontmatter ltx_thanks_correspondence\" mark=\"*\" \
+     role=\"thanks\" xml:id=\"id4\">Correspondence: a@x.org; b@x.org</note>\
+     </creator>",
+    "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Cy Cole</personname>\
+     <contact name=\"Email:\u{a0}\" role=\"email\">c@x.org</contact>\
+     <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ C, FR</contact></creator>",
+  ]);
+}
+
+/// A `symbol` key's mark is what it prints, read as characters, never re-read (revBMCART: `symbol={\%}` lost the note
+/// with an Error), and may be more than one (`symbol={**}`). pdflatex: "Ann Able1%** and Bob Baker2*%**".
+#[test]
+fn note_symbol_is_the_mark_as_printed() {
+  let xml = convert(repro!("bmcart_note_symbol_as_printed.tex"));
+  assert_creators(&xml, &[
+    "<creator role=\"author\"><personname>Ann Able</personname>\
+     <contact name=\"Email:\u{a0}\" role=\"email\">a@x.org</contact>\
+     <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A, US</contact>\
+     <note class=\"ltx_note_frontmatter ltx_thanks_contribution\" mark=\"%\" \
+     role=\"thanks\" xml:id=\"id1\">Equal contributor</note>\
+     <note class=\"ltx_note_frontmatter ltx_thanks_contribution\" mark=\"**\" \
+     role=\"thanks\" xml:id=\"id2\">Joint first authors</note>\
+     </creator>",
+    "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker</personname>\
+     <contact name=\"Correspondence: \" role=\"email\">b@x.org</contact>\
+     <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ B, IN</contact>\
+     <note class=\"ltx_note_frontmatter ltx_thanks_contribution\" mark=\"%\" \
+     role=\"thanks\" xml:id=\"id3\">Equal contributor</note>\
+     <note class=\"ltx_note_frontmatter ltx_thanks_contribution\" mark=\"**\" \
+     role=\"thanks\" xml:id=\"id4\">Joint first authors</note>\
+     </creator>",
+  ]);
+}
+
+/// A fourth mark is past `bmcsymbol` (`\bmcsymbol@item@4`): pdflatex errs on the label it writes, so one Error, and the
+/// note keeps no mark (Ann's alone, its contact). pdflatex: "Ann Able1†ˆ and Bob Baker2*†ˆ".
+#[test]
+fn fourth_mark_past_the_list_errs() {
+  let (log, xml) = convert_files_with(
+    repro!("bmcart_fourth_mark_errs.tex"),
+    &[("bmcart.cls", CLASS)],
+    Some("ar5iv.sty"),
+  );
+  assert_eq!((error_count(&log), warning_count(&log)), (1, 0), "{log}");
+  assert!(log.contains("past the class's bmcsymbol list"), "{log}");
+  assert_creators(&xml, &[
+    "<creator role=\"author\"><personname>Ann Able</personname>\
+     <contact name=\"Email:\u{a0}\" role=\"email\">a@x.org</contact>\
+     <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A, US</contact>\
+     <note class=\"ltx_note_frontmatter ltx_thanks_contribution\" mark=\"\u{2020}\" \
+     role=\"thanks\" xml:id=\"id1\">Equal contributor</note>\
+     <note class=\"ltx_note_frontmatter ltx_thanks_deceased\" mark=\"\u{2c6}\" \
+     role=\"thanks\" xml:id=\"id2\">Deceased</note>\
+     <contact name=\"Note:\u{a0}\" role=\"note\">Joint first authors</contact>\
      </creator>",
     "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker</personname>\
      <contact name=\"Correspondence: \" role=\"email\">b@x.org</contact>\
      <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ B, IN</contact>\
      <note class=\"ltx_note_frontmatter ltx_thanks_contribution\" mark=\"\u{2020}\" \
-     role=\"thanks\" xml:id=\"id2\">Equal contributor</note>\
+     role=\"thanks\" xml:id=\"id3\">Equal contributor</note>\
+     <note class=\"ltx_note_frontmatter ltx_thanks_deceased\" mark=\"\u{2c6}\" \
+     role=\"thanks\" xml:id=\"id4\">Deceased</note>\
      </creator>",
-    "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Cy Cole</personname>\
-     <contact name=\"Email:\u{a0}\" role=\"email\">c@x.org</contact>\
-     <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ C, FR</contact></creator>",
+  ]);
+}
+
+/// A paper's own `\auto@set@thanksbox` without `\printcorrtext` and `\printartnotes` prints neither (revBMCART
+/// probe2): no correspondence, no mark; the note's text is kept, unmarked, under both names. pdflatex: "Ann Able1?? and
+/// Bob Baker2????".
+#[test]
+fn own_thanksbox_printing_neither_marks_nothing() {
+  let xml = convert(repro!("bmcart_own_thanksbox_prints_no_marks.tex"));
+  assert_creators(&xml, &[
+    "<creator role=\"author\"><personname>Ann Able</personname>\
+     <contact name=\"Email:\u{a0}\" role=\"email\">a@x.org</contact>\
+     <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A, US</contact>\
+     <contact name=\"Note:\u{a0}\" role=\"note\">Equal contributor</contact>\
+     </creator>",
+    "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker</personname>\
+     <contact name=\"Email:\u{a0}\" role=\"email\">b@x.org</contact>\
+     <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ B, IN</contact>\
+     <contact name=\"Note:\u{a0}\" role=\"note\">Equal contributor</contact>\
+     </creator>",
   ]);
 }

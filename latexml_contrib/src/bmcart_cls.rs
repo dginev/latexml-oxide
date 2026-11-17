@@ -96,9 +96,16 @@ const NOTE_IDS: &str = "lx_bmcart_note_ids";
 const NOTE_SYMBOL: &str = "lx_bmcart_note_symbol_";
 /// The mark the thanksbox prints for note `<id>`, its id appended.
 const NOTE_MARK: &str = "lx_bmcart_note_mark_";
+/// The e-mail addresses of `corref` author `<n>` (the 2017 class), its number appended, as `a; b`.
+const EMAILS: &str = "lx_bmcart_emails_";
+/// The corresponding authors one shared correspondence note carries, as `,<n>,` each (the 2017 class, several).
+const CORR_NOTE: &str = "lx_bmcart_corr_note";
+/// That note's mark and its addresses.
+const CORR_NOTE_MARK: &str = "lx_bmcart_corr_note_mark";
+const CORR_NOTE_TEXT: &str = "lx_bmcart_corr_note_text";
 
-/// What a mark prints (`*`, `\textdagger`, `\^{}`; a `symbol` key's `$\star$`, its math symbol's glyph), as digested:
-/// its glyph, when it is one character.
+/// What a mark prints (`*`, `\textdagger`, `\^{}`; a `symbol` key's `$\star$`, its math symbol's glyph; `**`), as
+/// digested.
 fn printed_mark(mark: Tokens) -> Result<String> {
   let ink: Vec<&Token> = mark
     .unlist_ref()
@@ -208,6 +215,14 @@ LoadDefinitions!({
           }
         }
       }
+      // (a 2017 class's `corref` author may share the correspondence note, `\lx@bmcart@corrnote`)
+      let shares = corref && lookup_bool(CORREF_LISTS);
+      if shares {
+        if !labels.is_empty() {
+          labels.push(T_OTHER!(","));
+        }
+        labels.extend(ExplodeText!("note:lx@bmcart@corr"));
+      }
       let mut out = TokenizeInternal!("\\lx@add@creator[role=author,annotations=").unlist();
       out.extend(braced(&labels));
       out.push(T_OTHER!("]"));
@@ -230,7 +245,20 @@ LoadDefinitions!({
               let name = s!("[name={{\\lx@bmcart@emailname{{{n}}}}}]");
               out.extend(TokenizeInternal!(TeXString::assembled(name)).unlist());
             }
-            out.extend(braced(&address));
+            if shares {
+              let key = s!("{EMAILS}{n}");
+              let mut list = lookup_string(&key);
+              if !list.is_empty() {
+                list.push_str("; ");
+              }
+              list.push_str(&Tokens::new(address.clone()).to_string());
+              assign_value(&key, Stored::String(pin(&list)), Some(Scope::Global));
+              let mut held = TokenizeInternal!(TeXString::assembled(s!("\\lx@bmcart@email{{{n}}}"))).unlist();
+              held.extend(braced(&address));
+              out.extend(braced(&held));
+            } else {
+              out.extend(braced(&address));
+            }
           }
         }
       }
@@ -303,19 +331,21 @@ LoadDefinitions!({
       Ok(if glyph.is_empty() {
         Tokens::default()
       } else {
-        TokenizeInternal!(TeXString::assembled(s!("\\lx@fm@entry@attr{{_fnmark}}{{{glyph}}}")))
+        // (the glyph as characters, never re-read: `symbol={\%}` prints "%")
+        let mut out = TokenizeInternal!("\\lx@fm@entry@attr").unlist();
+        out.extend(braced(&ExplodeText!("_fnmark")));
+        out.extend(braced(&ExplodeText!(&glyph)));
+        Tokens::new(out)
       })
     });
     // :993-1012: the `{fmbox}` only holds the frontmatter calls; its end prints the thanksbox
     DefMacro!("\\bmc@fmbox", "");
-    DefMacro!("\\bmc@endfmbox", "\\lx@bmcart@thanksbox");
-    // :1435-1463 `\auto@set@thanksbox`, unless the paper set its own `{thanksbox}` (:1414): `\printcorrtext` prints the
-    // corresponding author's mark, `\corref@text` and e-mail, then `\printartnotes` each note under its mark. The
-    // author is the last with a `corref` key (the 2017 class each one), else (and with one address, whose class ignores
-    // the key, :1066-1074) the first with an `email` (the class's `\authorcorref@notset`, written to the aux, :944,
-    // :1166). Each `\thanksmark` steps `thanks` (:376-394; * † ^, :1095-1097), save the corresponding author's of a sole
-    // author (:1076-1087) and a note's own `symbol` (:1393-1398). pdflatex: 2112.10068's "Sharma1†, Jain2†, … Chaterji1*", "*Correspondence:
-    // schaterji@purdue.edu", "† Equal contributor".
+    DefMacro!(
+      "\\bmc@endfmbox",
+      "\\lx@bmcart@thanksbox\\lx@bmcart@corrnote"
+    );
+    // :1435-1463 `\auto@set@thanksbox`: who corresponds and the mark each note prints, as `\printcorrtext` and
+    // `\printartnotes` settle them (OD #842; pdflatex, 2112.10068: "*Correspondence: schaterji@purdue.edu", "† Equal contributor").
     DefPrimitive!("\\lx@bmcart@thanksbox", sub[()] {
       if !matches!(lookup_definition(&T_CS!("\\auto@set@thanksbox"))?,
         Some(defn) if matches!(defn.get_expansion(), Some(ExpansionBody::Tokens(_))))
@@ -329,7 +359,10 @@ LoadDefinitions!({
       let lists = lookup_bool(CORREF_LISTS);
       let keyed = !corref.is_empty() && (addresses != 1 || lists && authors != 1);
       let first_emailed = lookup_int(FIRST_EMAILED);
+      // (a paper's own thanksbox printing neither, probe nonotes: no correspondence, no marks)
+      let prints = |cs: &str| body_holds("\\auto@set@thanksbox", &[T_CS!(cs)]);
       let corresponding: Vec<i64> = match corref.last() {
+        _ if !prints("\\printcorrtext")? => Vec::new(),
         Some(last) if keyed => if lists { corref.clone() } else { vec![*last] },
         _ if lookup_bool(CORREF_DEFAULT) && first_emailed > 0 => vec![first_emailed],
         _ => Vec::new(),
@@ -342,6 +375,21 @@ LoadDefinitions!({
         if authors != 1 {
           step = 1;
         }
+        // (several, the 2017 class's: one "Correspondence: a; b" under one mark, :1475-1480 `\ead@sep`, a note the
+        // names share, which carries their addresses: 2012.08156, 2101.05946)
+        if corresponding.len() > 1 {
+          let addresses: Vec<String> = corresponding
+            .iter()
+            .map(|n| lookup_string(&s!("{EMAILS}{n}")))
+            .filter(|a| !a.is_empty())
+            .collect();
+          assign_value(CORR_NOTE, Stored::String(pin(&listed)), Some(Scope::Global));
+          assign_value(CORR_NOTE_MARK, Stored::String(pin(thanks_mark(1)?)), Some(Scope::Global));
+          assign_value(CORR_NOTE_TEXT, Stored::String(pin(addresses.join("; "))), Some(Scope::Global));
+        }
+      }
+      if !prints("\\printartnotes")? {
+        return Ok(Vec::new());
       }
       let ids = lookup_string(NOTE_IDS);
       let mut marked: Vec<&str> = Vec::new();
@@ -350,7 +398,17 @@ LoadDefinitions!({
           Some(symbol) => printed_mark(symbol)?,
           None => {
             step += 1;
-            thanks_mark(step)?
+            let mark = thanks_mark(step)?;
+            // (past `bmcsymbol` the mark is `\csname bmcsymbol@item@4\endcsname`, `\relax`: pdflatex errs on the label
+            // it writes)
+            if mark.is_empty() {
+              Error!(
+                "frontmatter",
+                "mark",
+                s!("bmcart: article note {id}'s mark is mark {step}, past the class's bmcsymbol list; kept unmarked")
+              );
+            }
+            mark
           },
         };
         // (a repeated id keeps the label its first mark wrote, :334-338 `\safelabel`)
@@ -358,17 +416,35 @@ LoadDefinitions!({
           continue;
         }
         marked.push(id);
-        if printed.chars().count() == 1 {
+        if !printed.is_empty() {
           assign_value(&s!("{NOTE_MARK}{id}"), Stored::String(pin(&printed)), Some(Scope::Global));
-        } else {
-          Info!(
-            "frontmatter",
-            "mark",
-            s!("bmcart: article note {id}'s mark prints {printed:?}, no one glyph; kept unmarked")
-          );
         }
       }
       Ok(Vec::new())
+    });
+    // The correspondence note several corresponding authors share (the 2017 class, `\lx@bmcart@thanksbox`): the class's
+    // `\corref@text` and their addresses, under the correspondence's mark.
+    DefMacro!("\\lx@bmcart@corrnote", sub[()] {
+      if lookup_string(CORR_NOTE).is_empty() {
+        return Ok(Tokens::default());
+      }
+      let mut out = TokenizeInternal!("\\lx@add@contact[role=note,label=note:lx@bmcart@corr]").unlist();
+      let mut shown = TokenizeInternal!("\\lx@fm@entry@attr").unlist();
+      shown.extend(braced(&ExplodeText!("_fnmark")));
+      shown.extend(braced(&ExplodeText!(&lookup_string(CORR_NOTE_MARK))));
+      shown.extend(TokenizeInternal!("\\corref@text").unlist());
+      shown.extend(ExplodeText!(&lookup_string(CORR_NOTE_TEXT)));
+      out.extend(braced(&shown));
+      Ok(Tokens::new(out))
+    });
+    // The address `#2` of author `#1`'s e-mail contact, read where the frontmatter digests it: none, which drops the
+    // contact, where the shared correspondence note carries it.
+    DefMacro!("\\lx@bmcart@email{}{}", sub[(n, address)] {
+      Ok(if lookup_string(CORR_NOTE).contains(&s!(",{},", n.to_string().trim())) {
+        Tokens::default()
+      } else {
+        address
+      })
     });
     // The name of author `#1`'s e-mail, read where the frontmatter digests it: the corresponding author's the class's
     // `\corref@text` (:843 "Correspondence: "), as `\printcorrtext` prints it before the address (:1458-1463); one a
