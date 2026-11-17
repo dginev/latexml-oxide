@@ -74,7 +74,13 @@ LoadDefinitions!({
     "\\@add@frontmatter{ltx:note}[role=accepted]{#1}"
   );
   DefMacro!("\\DOI{}", "\\@add@frontmatter{ltx:note}[role=doi]{#1}");
-  DefMacro!("\\EMAIL{}", "\\@add@frontmatter{ltx:note}[role=email]{#1}");
+  // ejpecp.cls:155 `\EMAIL` prints "E-mail: <address>" where it stands, which the template and the papers set in the
+  // authors' footnotes (`\AUTHORS{Ann Able\footnote{Univ X \EMAIL{…}}}`, 1406.5876, 1904.07135): a footnote, in the
+  // footer's zone, not under the names (`insert::place_block_notes`, OD #1074).
+  DefMacro!(
+    "\\EMAIL{}",
+    "\\@add@frontmatter{ltx:note}[role=email,_zone=footer]{#1}"
+  );
   // ejpecp.cls:156 `\BEMAIL` — a further e-mail line (sample).
   DefMacro!("\\BEMAIL{}", "\\EMAIL{#1}");
   // ejpecp.cls:350-366 the supplement block and :372-375 `\MR`/`\ARXIV`

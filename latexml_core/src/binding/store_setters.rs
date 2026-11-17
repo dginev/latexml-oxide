@@ -93,14 +93,15 @@ pub const STORE_SETTERS: &[(&str, &str)] = &[
   // only its own abstract environment prints (`\wiley@affilmetadata`, :416-433, in the margin beside the abstract,
   // :470): the kernel's locked `{abstract}` refuses that environment, so they were lost (1808.01384
   // "pantelis@ucdavis.edu" and its funding line, 1911.06213; 13 papers of the 3,000-paper sample). The e-mail is the
-  // correspondence block's, not a named author's: a note, as OmniBus's `\printead` makes it.
+  // correspondence block's, not a named author's: a note, as OmniBus's `\printead` makes it, in the footer's zone (printed
+  // apart from the author block, after the abstract: `insert::place_block_notes`, OD #1074).
   (
     "corraddress",
     "\\lx@add@frontmatter{ltx:note}[role=correspondence]{#1}",
   ),
   (
     "corremail",
-    "\\lx@add@frontmatter{ltx:note}[role=email]{#1}",
+    "\\lx@add@frontmatter{ltx:note}[role=email,_zone=footer]{#1}",
   ),
   (
     "fundinginfo",

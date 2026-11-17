@@ -20628,6 +20628,32 @@ construction only). **Guards**: `cluster_package_guards::perfect_kernel_batchiee
 `sectioning-frontmatter/ieee_thanks_*`, the specials and label forms in `ieee_thanks_address_specials_and_labels`);
 `perfect_kernel_batchp28::ieee_plain_route_reads_names_and_grades` repinned.
 
+### 1074. An author-block contact note no creator holds sits under the names, before the abstract (DG 2026-11-17; BLOCKPLACE)
+
+**Perl.** `insertFrontMatter` places the frontmatter in the order of `@frontmatter_elements` (Base_Utility.pool.ltxml:793-795:
+title, toctitle, subtitle, creator, date, abstract, keywords, classification, acknowledgements), then every other key
+(:836), so every `ltx:note` follows the abstract and keywords — also an author block's own address, e-mail or
+affiliation line, which `\maketitle` prints under the names, before the abstract.
+
+**Rust.** `insert::place_block_notes`, the last step of `insert_frontmatter`, moves a placed `ltx:note` that no creator
+holds and whose role is one of an author block's contact roles — `affiliation`, `altaffiliation`, `address`, `email`,
+`url`, `orcid`, `authorblock` (the `\lx@contact@<role>@name` set, author_macros.rs, Perl :780-785, less the footnote
+roles `note`, `thanks`, `correspondent`) — to right after the last creator, in its order. A binding whose class
+prints such a note apart from the block declares it in the footer's zone (`_zone=footer`, the print-zone key of #954),
+and it stays: ejpecp's `\EMAIL` (set in the authors' footnotes, 1406.5876, 1904.07135), elsarticle's
+`\emailauthor`/`\urlauthor` (the first page's footnote, elsarticle.cls:211-235) and the store table's `corremail`
+(wiley-article.cls:416-433 prints it beside the abstract; 1808.01384). Only the run of placed frontmatter after the
+creators is read; every other note (`thanks`, `footnotetext`, icml's `affiliationnotice`, the
+publication notes, `addresses` that amsart prints at the end, the title's notes) keeps Perl's place, and a document with
+no creator keeps Perl's order. The XML's elements and text are unchanged, the generated `xml:id`s follow the new
+document order. Witnesses 1711.01065 (jfm), 2603.01467 and 2405.13379 (Interspeech), 1806.02523, 2001.10603, 2103.15467
+(spconf), 1910.13722, 2203.09377 (mdpi), 2006.03169 (ieeeaccess), 2512.03760 (oup-authoring-template). Offered to Perl
+as a patch. **Guards**: `cluster_package_guards::perfect_kernel_batchblockplace::a_block_contact_note_sits_under_the_names`
+(repros `sectioning-frontmatter/block_contact_note_{before_abstract,without_creators}`); repinned, the PDF's order:
+`perfect_kernel_batch64qa::mdpi_history_is_frontmatter`, `perfect_kernel_batch67z::oup_authoring_template_class_commands`,
+`perfect_kernel_batch92e::mdpi_corres_label_only_note_is_kept` (the address note first); the pass classed `Place` in
+`perfect_kernel_batche0::PASSES_AFTER_THE_EMITTER`.
+
 ## TeX-source fidelity family (TEXSRC)
 
 An index, not new entries: the entries below each restore what latex.ltx, tex.web or the real package defines over a

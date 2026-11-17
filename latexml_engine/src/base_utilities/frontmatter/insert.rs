@@ -162,8 +162,76 @@ pub fn insert_frontmatter(document: &mut Document) -> Result<()> {
   keep_unclaimed_net_notes(document)?;
   // (the name alone: every mark printed on a name is its note's, its contact's or a mark-only note after it, DG 2026-11-16)
   keep_personnames_pure(document)?;
+  // (an author-block line no creator owns, under the names as the title page prints it, before the abstract: OD #1074)
+  place_block_notes(document, &all_keys)?;
   // (the content invariant on the placed output, under the emitter's `=2`: every printed word placed once or counted, OD #980)
   check_placed_content(document);
+  Ok(())
+}
+
+/// The contact roles of an author block's own lines (`\lx@contact@<role>@name`, author_macros.rs; Perl
+/// Base_Utility.pool.ltxml:780-785), which a title page prints under the names; `note`, `thanks` and `correspondent` are
+/// footnotes.
+const BLOCK_NOTE_ROLES: [&str; 7] = [
+  "affiliation",
+  "altaffiliation",
+  "address",
+  "email",
+  "url",
+  "orcid",
+  "authorblock",
+];
+
+/// A placed `ltx:note` whose role is an author-block contact role ([`BLOCK_NOTE_ROLES`]), that no creator holds (the
+/// block's own), moved right after the last creator, in its order. Perl inserts every note after the abstract and the
+/// keywords (Base_Utility.pool.ltxml:793-795 `@frontmatter_elements`, :836); `\maketitle` prints the block's address
+/// and e-mail lines under the names, the abstract after them (OXIDIZED_DESIGN_DIVERGENCES #1074; 2603.01467's e-mails,
+/// 2405.13379's address and e-mail). A note its binding prints in the footer (`_zone=footer`: ejpecp's `\EMAIL`,
+/// elsarticle's `\emailauthor`) stays; only the run of placed frontmatter after the creators is read, and a document
+/// with no creator keeps Perl's order.
+fn place_block_notes(document: &mut Document, keys: &[String]) -> Result<()> {
+  let Some(first) = document.findnode("//ltx:creator", None) else {
+    return Ok(());
+  };
+  let Some(parent) = first.get_parent() else {
+    return Ok(());
+  };
+  let Some(mut tail) = element_nodes(&parent)
+    .into_iter()
+    .rev()
+    .find(|child| document::get_node_qname(child) == pin_static("ltx:creator"))
+  else {
+    return Ok(());
+  };
+  let mut moved = Vec::new();
+  let mut next = tail.get_next_sibling();
+  while let Some(node) = next {
+    next = node.get_next_sibling();
+    if node.get_type() != Some(NodeType::ElementNode) {
+      continue;
+    }
+    let note = document::get_node_qname(&node) == pin_static("ltx:note");
+    if !note
+      && !with(document::get_node_qname(&node), |q| {
+        keys.iter().any(|k| k == q)
+      })
+    {
+      break;
+    }
+    if note
+      && node
+        .get_attribute("role")
+        .is_some_and(|role| BLOCK_NOTE_ROLES.contains(&role.as_str()))
+      && node.get_attribute("_zone").as_deref() != Some("footer")
+    {
+      moved.push(node);
+    }
+  }
+  for mut node in moved {
+    node.unlink();
+    tail.add_next_sibling(&mut node)?;
+    tail = node;
+  }
   Ok(())
 }
 

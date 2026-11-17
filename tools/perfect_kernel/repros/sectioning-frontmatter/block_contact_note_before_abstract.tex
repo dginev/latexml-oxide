@@ -1,0 +1,23 @@
+% mechanism: an author-block contact note no creator holds (here jfm's shared, unmarked `\affiliation`) is placed right
+%   after the last creator, before the abstract, as `\maketitle` prints it (`insert::place_block_notes`,
+%   OXIDIZED_DESIGN_DIVERGENCES #1074; Perl Base_Utility.pool.ltxml:793-795, :836 puts every note after the abstract)
+% witness: 1711.01065 (jfm), 2603.01467 (Interspeech `\email`), 1910.13722 (mdpi), 2006.03169 (ieeeaccess),
+%          2512.03760 (oup-authoring-template)
+% oracle:  pdflatex 0 errors (with the paper's jfm.cls): "T / Ann Able and Bob Baker / Univ X, Town / (Received …) /
+%          Abstract text."
+% engines: rust 208b29241bb: title, creators, abstract, note[affiliation]; BLOCKPLACE: the note before the abstract
+% expect:  0 errors 0 Warnings; root order title, creator, creator, note[role=affiliation], abstract
+% status:  RED (208b29241bb) -> GREEN (perfect_kernel_batchblockplace::a_block_contact_note_sits_under_the_names)
+% preload: ar5iv.sty
+\documentclass{jfm}
+\title{T}
+\author{Ann Able \and Bob Baker}
+\affiliation{Univ X, Town}
+\begin{document}
+\maketitle
+\begin{abstract}
+Abstract text.
+\end{abstract}
+\section{S}
+Body.
+\end{document}

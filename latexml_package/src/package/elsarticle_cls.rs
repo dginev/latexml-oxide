@@ -51,9 +51,10 @@ LoadDefinitions!({
   // elsarticle.cls:211-235: `\emailauthor{<email>}{<name>}` and `\urlauthor`, which `\ead` writes to the .aux and a
   // paper may call itself (2609.09773, 31741, 39502, before or after the author it names). The class collects them into
   // the first page's "Email address:" note as "<email> (<name>)": a frontmatter note, as printed, which no author's
-  // contact would place right.
-  DefMacro!("\\emailauthor Semiverbatim {}", "\\@add@frontmatter{ltx:note}[role=email]{\\texttt{#1} (#2)}");
-  DefMacro!("\\urlauthor Semiverbatim {}", "\\@add@frontmatter{ltx:note}[role=url]{\\texttt{#1} (#2)}");
+  // contact would place right; a first-page footnote, in the footer's zone, not under the names
+  // (`insert::place_block_notes`, OD #1074).
+  DefMacro!("\\emailauthor Semiverbatim {}", "\\@add@frontmatter{ltx:note}[role=email,_zone=footer]{\\texttt{#1} (#2)}");
+  DefMacro!("\\urlauthor Semiverbatim {}", "\\@add@frontmatter{ltx:note}[role=url,_zone=footer]{\\texttt{#1} (#2)}");
   // The Elsevier journal styles' `\KWD` (jasr.sty:666 "Keywords:"), defined only inside their first-page printer,
   // which the frontmatter replaces: the keywords keep their label (2609.23725, 23732, 27838).
   def_macro_noop("\\KWD")?;

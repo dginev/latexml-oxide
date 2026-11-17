@@ -1,0 +1,19 @@
+% mechanism: with no creator, a block contact note keeps Perl's place, after the abstract (`insert::place_block_notes`,
+%   OXIDIZED_DESIGN_DIVERGENCES #1074)
+% witness: none (the sibling of block_contact_note_before_abstract.tex)
+% oracle:  pdflatex 0 errors (with jfm.cls from 1711.01065): "T / Univ X, Town / (Received …) / Abstract text."
+% engines: rust 208b29241bb and BLOCKPLACE: title, abstract, note[affiliation] (Perl's order)
+% expect:  0 errors 0 Warnings; root order title, abstract, note[role=affiliation]
+% status:  GREEN (perfect_kernel_batchblockplace::a_block_contact_note_sits_under_the_names)
+% preload: ar5iv.sty
+\documentclass{jfm}
+\title{T}
+\affiliation{Univ X, Town}
+\begin{document}
+\maketitle
+\begin{abstract}
+Abstract text.
+\end{abstract}
+\section{S}
+Body.
+\end{document}
