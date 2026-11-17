@@ -19906,7 +19906,8 @@ the unit test `resolver::mark_ledger::tests::a_run_between_two_names_is_parted_a
 **Rule.** A binding declares the glyph its class's title block prints, through the title hook
 (`latex_constructs::TITLE_THEFOOTNOTE`), and the footnote steps its commands make; where it is not sure it declares
 nothing (the engine's fail-safe, OD #1053, writes no glyph).
-**Perl.** mnras.cls.ltxml keeps arabic footnote marks; revtex4.cls.ltxml follows no society file; there is no lni binding.
+**Perl.** mnras.cls.ltxml keeps arabic footnote marks; revtex4.cls.ltxml follows no society file; there is no lni binding;
+llncs.cls.ltxml writes a name's `\thanks` as an unmarked contact.
 **Rust.**
 - mnras (mnras_cls.rs): the class's own `\@fnsymbol` (⋆ † ‡ § ¶ ‖ ⋆⋆ …, mnras.cls:1502-1508) for `\thefootnote` and
   the title hook, up to the first `\section`, whose `\fixfootnotes` numbers them in arabic from 1 (:736-737,
@@ -19924,17 +19925,32 @@ nothing (the engine's fail-safe, OD #1053, writes no glyph).
   `\thanks` and the body's notes number after the last label (2508.02300's first body note 7, was 1); an `\author`
   written for lni v1 (`\author[running names]{names}`, no braced e-mail and ORCID after it) is the kernel's
   `\author[short]{names}` (2407.04435: no authblk labels of its running names, no stray `\startpage` argument).
+- llncs (llncs_cls.rs, LLNCSMARKS): the class's own `\@fnsymbol` (⋆ ⋆⋆ ⋆⋆⋆ † ‡ § ¶ ‖ ∗∗ †† ‡‡, llncs.cls:889-892,
+  every copy sampled v2.17-v2.26) for `\fnsymbol` and the title hook. The class's `\maketitle` sets `\thefootnote` to
+  it itself (:935), so a preamble `\renewcommand\thefootnote{\arabic{footnote}}` still prints ⋆ ⋆⋆ there; it sets the
+  counter to 0 before the block (:932) and each `\thanks` steps it, the title's first: "A Title⋆", "Ann Able1⋆⋆", the
+  fourth †. The `\inst` marks stay digits. Only as the document's class, and not for an `\author` that steps the
+  counter outside its `\thanks` (a bare `\footnotemark` or `\footnote`, `\addtocounter{footnote}`): `\@maketitle` sets
+  `\@author` once in a box to count the names (:1028-1029), so such a step runs twice and shifts the names' marks
+  (pdflatex "Ann Able⋆⋆ and Bob Baker⋆⋆⋆"); there the binding declares none (row R LLNCSTWICE). Not ported: :1003's
+  reset after the block to the number of institutes (`\fnnstart`), by which pdflatex numbers the body's first note 3
+  under two institutes and 1005.4552's (three) 4 to 15 (ours 1, 1 to 12, as before); ours resets to 0.
 - The engine's own Frontmatter keys (`_markshown`, `_cutlist`, `_kinded`, … 31) are declared in one list,
   `frontmatter_api::FRONTMATTER_INTERNAL_KEYS`, so their use reports no `Info:undefined`, while a key the list lacks
   still does; `perfect_kernel_batche0` pins each.
-**Residuals.** A REVTeX name's `\footnotemark[n]` letter (row R REVNAMEMARK); llncs's ⋆ ⋆⋆ (row R LLNCSMARKS); the
-ACM SIG classes' `\titlenote` and jasatex's `\pacs`, raw classes with no binding (row R TITLENOTELAST, JASAPACS).
+**Residuals.** A REVTeX name's `\footnotemark[n]` letter (row R REVNAMEMARK); llncs's `\fnnstart` and its counting pass
+(row R LLNCSFNSTART, LLNCSTWICE, proposed); the ACM SIG classes' `\titlenote` and jasatex's `\pacs`, raw classes with no
+binding (row R TITLENOTELAST, JASAPACS).
 **Guards**: `perfect_kernel_batchfmmarks::{notes_are_marked_only_where_the_class_prints_marks,
 revtex_marks_follow_its_numbering}` (rows `fmmarks_mnras_title_marks_are_the_class_symbols`,
-`fmmarks_revtex42_aip_shared_thanks_letters`, `fmmarks_revtex41_aip_shared_thanks_letters`),
+`fmmarks_revtex42_aip_shared_thanks_letters`, `fmmarks_revtex41_aip_shared_thanks_letters`,
+`fmmarks_llncs_title_marks_are_the_class_symbols`, `fmmarks_llncs_title_note_counts_first`,
+`fmmarks_llncs_preamble_thefootnote_is_not_the_titles`; RED `fmmarks_llncs_counting_pass_steps_twice_red`),
+`perfect_kernel_batchcr7::a_split_gives_the_corresponding_author_the_left_address` (none declared),
+`perfect_kernel_batchllncs::{body_fnsymbol_is_the_class_s, the_title_counts_its_notes_from_zero}`,
 `perfect_kernel_batchmarkbind::{lni_affil_sets_the_footnote_counter, lni_v1_author_is_the_kernels,
 internal_frontmatter_keys_are_declared}`, `perfect_kernel_batchshmark::a_wrapper_of_the_class_maketitle_is_neutral`
-(mnras's plain notes), `perfect_kernel_batche0::the_frontmatter_api_stays_perls`.
+(mnras's and llncs's plain notes), `perfect_kernel_batche0::the_frontmatter_api_stays_perls`.
 ---
 
 ## TeX-source fidelity family (TEXSRC)

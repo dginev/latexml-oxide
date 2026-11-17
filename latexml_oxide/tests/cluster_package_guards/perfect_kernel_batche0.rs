@@ -1848,7 +1848,10 @@ const TOKEN_READS: &[(&str, usize)] = &[
   // no name a document spells; it decides only that the emitter stays out, the output then today's)
   ("ledger", 35),
   // (Z18e 32 -> 31: the unmarked `\author` split `\lx@llncs@author` gone, the block read whole)
-  ("llncs_cls.rs", 31),
+  // (LLNCSMARKS 31 -> 44, a raised pin: `steps_footnotes` mirrors llncs.cls's counting pass of `\@author` (:1028-1029,
+  // `\thanks` gobbled) to withdraw the binding's own title marks where a counter step runs twice; it decides no owner or
+  // content, only that no glyph is written)
+  ("llncs_cls.rs", 44),
   ("osa_journal_sty.rs", 77),
   // (the "Knowledge in, driver out, one pass" move: from `author_block` with the owner logic, 938 = 924 + 14; none added)
   ("owners", 14),

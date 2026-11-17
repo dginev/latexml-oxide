@@ -775,7 +775,7 @@ fn a_mark_whose_glyph_is_unknown_prints_none() {
 
 /// A document's wrapper of its class's `\maketitle` by meaning (`\let\oldmt\maketitle \renewcommand\maketitle{\oldmt}`)
 /// runs the class's title page, which pdflatex prints as the plain document's: the output, the page and the log's counts
-/// are the plain document's, under a class whose binding declares no title marks (mnras, IEEEtran, llncs). Only the class
+/// are the plain document's, under a class binding (mnras, IEEEtran, llncs). Only the class
 /// file's own drop of `\maketitle` makes its marks unknown (`\maketitle:redefined@class`, `state::note_redefined`;
 /// review revMARKSAFEb B1). Distinct from the class's gate: who redefined `\maketitle`, not which class.
 #[test]
@@ -808,11 +808,10 @@ fn a_wrapper_of_the_class_maketitle_is_neutral() {
       ]);
     }
     if wrapped.contains("{llncs}") {
-      // (unmarked: llncs_cls.rs declares no title marks, where llncs.cls prints ⋆ ⋆⋆ — the RED row
-      // `fmmarks_llncs_title_marks_red`, row R LLNCSMARKS)
+      // (llncs's own `\@fnsymbol`, ⋆ ⋆⋆, llncs.cls:889, :935: llncs_cls.rs's title hook; LLNCSMARKS)
       assert_eq!(plain_notes, [
-        row(&["Ann Able", "thanks[]=Ann note."]),
-        row(&["Bob Baker", "thanks[]=Bob note."])
+        row(&["Ann Able", "thanks[⋆]=Ann note."]),
+        row(&["Bob Baker", "thanks[⋆⋆]=Bob note."])
       ]);
     }
     if wrapped.contains("IEEEtran") {

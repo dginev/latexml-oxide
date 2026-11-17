@@ -87,6 +87,43 @@ LoadDefinitions!({
 
   //======================================================================
   // Frontmatter
+  // llncs.cls:889-892 (v2.17-v2.26 alike): the class's own `\@fnsymbol`, ⋆ ⋆⋆ ⋆⋆⋆ † ‡ § ¶ ‖ ∗∗ †† ‡‡ (`\fnsymbol`
+  // prints it in the body), in which its `\maketitle` marks the title block's notes, setting `\thefootnote` itself
+  // (:935; a preamble `\thefootnote` does not reach them): the title hook (`latex_constructs::TITLE_THEFOOTNOTE`). The
+  // glyphs in text as the kernel's `\@fnsymbol` sets them (sect08.rs), so a note's `mark` is the character (the class's
+  // `\ensuremath`). Perl's llncs.cls.ltxml leaves `\thanks` unmarked.
+  DefPrimitive!("\\lx@llncs@star", "\u{22C6}");
+  RawTeX!(r"\def\@fnsymbol#1{\ifcase#1\or\TextOrMath\lx@llncs@star\star
+\or\TextOrMath{\lx@llncs@star\lx@llncs@star}{\star\star}\or
+\TextOrMath{\lx@llncs@star\lx@llncs@star\lx@llncs@star}{\star\star\star}\or\TextOrMath\textdagger\dagger
+\or\TextOrMath\textdaggerdbl\ddagger\or\TextOrMath\textsection\mathsection\or\TextOrMath\textparagraph\mathparagraph
+\or\TextOrMath\textbardbl\|\or\TextOrMath{\textasteriskcentered\textasteriskcentered}{**}\or
+\TextOrMath{\textdagger\textdagger}{\dagger\dagger}\or\TextOrMath{\textdaggerdbl\textdaggerdbl}{\ddagger\ddagger}\else
+\@ctrerr\fi}
+\def\fnsymbol#1{\expandafter\@fnsymbol\csname c@#1\endcsname}");
+  // (the class's `\maketitle` sets the counter to 0 before the block and its `\thanks` step it, the title's first:
+  // "A Title⋆", "Ann Able1⋆⋆"; :932, latex.ltx `\thanks`. Its reset after the block to the institute count, :1003
+  // `\fnnstart`, is not ported: the body's notes count from 1, as before. Only as the document's class, whose
+  // `\maketitle` this is)
+  // (an `\author` that steps the counter twice withdraws them, below)
+  DefPrimitive!("\\lx@llncs@title@marks{}", sub[(declared)] {
+    let hook = T_CS!(engine::latex_constructs::TITLE_THEFOOTNOTE);
+    let declared = declared.to_string() == "1";
+    if declared {
+      def_macro(hook, None, TokenizeInternal!(r"\@fnsymbol\c@footnote"), Some(ExpandableOptions {
+        scope: Some(Scope::Global),
+        ..Default::default()
+      }))?;
+    } else {
+      let_i(&hook, &T_CS!("\\@undefined"), Some(Scope::Global));
+    }
+    assign_value("lx_title_counts_footnotes", declared, Some(Scope::Global));
+  });
+  if is_document_class("llncs") {
+    Digest!("\\lx@llncs@title@marks{1}")?;
+    AddToMacro!("\\lx@maketitle@begin", "\\setcounter{footnote}{0}");
+    AddToMacro!("\\lx@maketitle@body", "\\setcounter{footnote}{0}");
+  }
   // llncs.cls:250-253: the matter commands switch the page numbering (Roman, then arabic).
   DefMacro!("\\frontmatter", "\\pagenumbering{Roman}");
 
@@ -133,7 +170,18 @@ LoadDefinitions!({
   // a later `\author` without one gives the store back to the outer calls).
   DefMacro!("\\author{}", sub[(body)] {
     let (names, institutes) = take_institutes(&body);
-    let mut out = mouth::tokenize_internal("\\lx@clear@creators[role=author]").unlist();
+    // (llncs.cls:1028-1029: `\@maketitle` sets `\@author` once in a box to count the names, its `\thanks` gobbled,
+    // before printing it, so a step of the footnote counter there runs twice and shifts the names' marks: pdflatex
+    // "Ann Able⋆⋆ and Bob Baker⋆⋆⋆" for `Ann Able\thanks{…} \and Bob Baker\protect\footnotemark`, "Ann Able, Bob Baker⋆ ⋆"
+    // for cr7c_split_corresponding_left_address's `\addtocounter{footnote}{-1}`: the title marks undeclared there, as
+    // before LLNCSMARKS, none written for a `\thanks`)
+    let mut out = if is_document_class("llncs") {
+      let declared = if steps_footnotes(&names) { "0" } else { "1" };
+      Invocation!(T_CS!("\\lx@llncs@title@marks"), vec![Some(Tokens!(T_OTHER!(declared)))]).unlist()
+    } else {
+      Vec::new()
+    };
+    out.extend(mouth::tokenize_internal("\\lx@clear@creators[role=author]").unlist());
     // (a list whose authors carry `\inst` marks is split at its `\and`s and `\\`s, each piece a block, as before:
     // `Guang Yang\inst{1}\and \\ Binwei Yang\inst{2}`, 1902.08498 — cut first at the kernel's `\and` by meaning, a
     // macro holding only the separator among them, Option C P2-3, OXIDIZED_DESIGN_DIVERGENCES #995. Not yet one block
@@ -615,6 +663,60 @@ LoadDefinitions!({
 \def\proofname{Beweis}\def\propertyname{Eigenschaft}\def\questionname{Frage}\def\remarkname{Anmerkung}\def\seename{siehe}%
 \def\solutionname{L\"osung}\def\tablename{Tabelle}}"#);
 });
+
+/// Does `names` step the footnote counter outside its `\thanks` arguments: a `\footnotemark` or `\footnote` given no
+/// `[number]`, or `\addtocounter`, `\setcounter`, `\stepcounter`, `\refstepcounter` of `{footnote}`?
+fn steps_footnotes(names: &Tokens) -> bool {
+  let v = names.unlist_ref();
+  let next = |from: usize| (from..v.len()).find(|&i| v[i].get_catcode() != Catcode::SPACE);
+  // (the end of the group opening at `open`)
+  let close = |open: usize| {
+    let mut depth = 0usize;
+    (open..v.len())
+      .find(|&i| {
+        match v[i].get_catcode() {
+          Catcode::BEGIN => depth += 1,
+          Catcode::END => depth = depth.saturating_sub(1),
+          _ => {},
+        }
+        depth == 0
+      })
+      .unwrap_or(v.len())
+  };
+  let counters = [
+    "\\addtocounter",
+    "\\setcounter",
+    "\\stepcounter",
+    "\\refstepcounter",
+  ];
+  let mut at = 0;
+  while at < v.len() {
+    let t = v[at];
+    if t == T_CS!("\\thanks") {
+      match next(at + 1) {
+        Some(arg) if v[arg].get_catcode() == Catcode::BEGIN => at = close(arg),
+        _ => {},
+      }
+    } else if t == T_CS!("\\footnotemark") || t == T_CS!("\\footnote") {
+      if next(at + 1).is_none_or(|arg| v[arg] != T_OTHER!("[")) {
+        return true;
+      }
+    } else if counters.iter().any(|cs| t == T_CS!(*cs))
+      && let Some(arg) = next(at + 1).filter(|&arg| v[arg].get_catcode() == Catcode::BEGIN)
+    {
+      let end = close(arg);
+      if Tokens::new(v[arg + 1..end.min(v.len())].to_vec())
+        .to_string()
+        .trim()
+        == "footnote"
+      {
+        return true;
+      }
+    }
+    at += 1;
+  }
+  false
+}
 
 /// `body` without its top-level `\institute{…}` calls, and the calls.
 fn take_institutes(body: &Tokens) -> (Tokens, Vec<Token>) {

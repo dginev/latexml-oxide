@@ -1,0 +1,19 @@
+% mechanism: llncs.cls's `\maketitle` sets `\thefootnote` to its `\@fnsymbol` itself, in its group (llncs.cls:935), so a
+%   preamble `\thefootnote` does not reach the title block: the fixed title hook is the class's (llncs_cls.rs), unlike a
+%   class whose `\maketitle` prints the `\thefootnote` in force (revMARKBIND, mnras). After the block the counter is
+%   `\fnnstart`, 0 under one institute (:879, :1003): the body's note is 1, not after the title's `\thanks`
+% witness:  LLNCSMARKS (the coordinator's check from revMARKBIND)
+% oracle:   pdflatex 0 errors; "Ann Able⋆ and Bob Baker⋆⋆", footnotes "⋆ Ann note.", "⋆⋆ Bob note.", "Body1", "1 Body note."
+% engines:  rust MARKBIND (ff2497f5a77) = 0 errors, 0 Warnings; both thanks unmarked, the body's note 1
+% expect:   0 errors, 0 Warnings; Ann's thanks ⋆, Bob's ⋆⋆, the body's note 1
+% status:   GREEN (LLNCSMARKS; perfect_kernel_batchfmmarks::notes_are_marked_only_where_the_class_prints_marks)
+% preload:  ar5iv.sty
+\documentclass{llncs}
+\renewcommand\thefootnote{\arabic{footnote}}
+\title{A Title}
+\author{Ann Able\thanks{Ann note.} \and Bob Baker\thanks{Bob note.}}
+\institute{Lab A}
+\begin{document}
+\maketitle
+Body\footnote{Body note.}.
+\end{document}
