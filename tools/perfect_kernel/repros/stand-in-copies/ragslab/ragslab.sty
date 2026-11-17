@@ -1,0 +1,240 @@
+% ragslab.sty v0.3 (2026/10/01), as 2610.22523 ships it, its comment lines removed.
+\NeedsTeXFormat{LaTeX2e}
+\ProvidesPackage{ragslab}[2026/10/01 v0.3 Resilient AI + Grounded Sensing preprint style]
+
+\newif\ifreslab@fonts
+\reslab@fontstrue
+\DeclareOption{nofonts}{\reslab@fontsfalse}
+\ProcessOptions\relax
+
+\RequirePackage[top=2.25cm,bottom=2.5cm,left=2.5cm,right=2.5cm,columnsep=0.65cm]{geometry}
+\RequirePackage{microtype}
+\RequirePackage{placeins}
+\RequirePackage{hyphenat}
+\RequirePackage{setspace}
+\RequirePackage{parskip}
+\RequirePackage{etoolbox}
+\RequirePackage{graphicx}
+\RequirePackage{xcolor}
+\RequirePackage[most]{tcolorbox}
+\RequirePackage{titlesec}
+\RequirePackage{caption}
+\RequirePackage{hyperref}
+\RequirePackage[noabbrev,nameinlink]{cleveref}
+\RequirePackage{iftex}
+\RequirePackage{xparse}
+
+\definecolor{ResLabBurgundy}{HTML}{74030B}
+\definecolor{ResLabFirecracker}{HTML}{E85D04}
+\definecolor{ResLabMidnight}{HTML}{1A1A1A}
+\definecolor{ResLabGoldenrod}{HTML}{F48C06}
+\definecolor{ResLabRaspberry}{HTML}{8C1900}
+
+\definecolor{ResLabPaper}{HTML}{F8F6F0}
+\definecolor{ResLabPaperDeep}{HTML}{EEE9DF}
+\definecolor{ResLabInkSoft}{HTML}{5F5B53}
+
+\colorlet{firecracker}{ResLabFirecracker}
+\colorlet{goldenrod}{ResLabGoldenrod}
+\colorlet{raspberry}{ResLabRaspberry}
+\colorlet{burgundy}{ResLabBurgundy}
+\colorlet{midnight}{ResLabMidnight}
+\colorlet{paper}{ResLabPaper}
+\colorlet{paper-deep}{ResLabPaperDeep}
+\colorlet{ink-soft}{ResLabInkSoft}
+
+\colorlet{ResLabTitleBG}{ResLabFirecracker!4!white}
+\colorlet{ResLabSoftRule}{ResLabGoldenrod!45!white}
+\colorlet{ResLabMuted}{ResLabInkSoft}
+
+\ifreslab@fonts
+  \ifPDFTeX
+    \RequirePackage[T1]{fontenc}
+    \RequirePackage[scale=0.94]{inter}
+    \RequirePackage[lining,proportional]{sourceserifpro}
+  \else
+    \RequirePackage{fontspec}
+    \IfFontExistsTF{Lora}{\setmainfont{Lora}}{\setmainfont{Noto Serif}}
+    \IfFontExistsTF{Host Grotesk}{%
+      \setsansfont{Host Grotesk}[Scale=MatchUppercase]%
+    }{%
+      \setsansfont{Noto Sans}[Scale=MatchUppercase]%
+    }
+  \fi
+\fi
+
+\hypersetup{
+  colorlinks  = true,
+  linkcolor   = raspberry,
+  citecolor   = raspberry,
+  urlcolor    = firecracker,
+  filecolor   = firecracker,
+  anchorcolor = raspberry
+}
+
+\titleformat*{\paragraph}{\bfseries\sffamily}
+\titleformat*{\section}{\Large\sffamily\bfseries\color{ResLabMidnight}}
+\titleformat*{\subsection}{\large\sffamily\bfseries\color{ResLabMidnight}}
+\titleformat*{\subsubsection}{\normalsize\sffamily\bfseries\color{ResLabMidnight}}
+
+\DeclareCaptionLabelSeparator{reslabsep}{\enspace}
+\DeclareCaptionFormat{reslab}{%
+  {\sffamily\bfseries\color{ResLabBurgundy}#1~#2}\enspace#3%
+}
+\captionsetup{singlelinecheck=false,format=reslab,labelsep=reslabsep,font=small}
+\captionsetup[sub]{singlelinecheck=true,format=reslab,labelsep=reslabsep,font=small}
+
+\makeatletter
+
+\newcommand\reslab@title{}
+\newcommand\reslab@authorlist{}
+\newcommand\reslab@affiliationlist{}
+\newcommand\reslab@contributionlist{}
+\newcommand\reslab@metadatalist{}
+\newcommand\reslab@abstract{}
+
+\newcommand\reslab@addtolist[5][]{%
+  \begingroup
+    \if\relax#3\relax\def\reslab@sep{}\else\def\reslab@sep{#5}\fi
+    \let\protect\@unexpandable@protect
+    \xdef#3{\expandafter{#3}\reslab@sep #4[#1]{#2}}%
+  \endgroup
+}
+
+\renewcommand{\title}[1]{\gdef\reslab@title{{\fontsize{23}{27}\selectfont\sffamily\bfseries\color{ResLabBurgundy}#1}}}
+
+\newcommand\reslab@authorformat[2][]{{\sffamily\bfseries #2$^{#1}$}}
+\renewcommand\author[2][]{\reslab@addtolist[#1]{#2}{\reslab@authorlist}{\reslab@authorformat}{, }}
+
+\newcommand\reslab@affiliationformat[2][]{{\normalsize $^{#1}$#2}}
+\newcommand\affiliation[2][]{\reslab@addtolist[#1]{#2}{\reslab@affiliationlist}{\reslab@affiliationformat}{, }}
+
+\newcommand\reslab@contributionformat[2][]{{\small $^{#1}$#2}}
+\newcommand\contribution[2][]{\reslab@addtolist[#1]{#2}{\reslab@contributionlist}{\reslab@contributionformat}{, }}
+
+\newcommand\reslab@metadataformat[2][]{{\small {\sffamily\bfseries\color{ResLabMidnight}#1:} #2}}
+\newcommand\metadata[2][]{\reslab@addtolist[#1]{#2}{\reslab@metadatalist}{\reslab@metadataformat}{\par}}
+
+\renewcommand{\abstract}[1]{\gdef\reslab@abstract{{\color{ResLabMidnight}#1}}}
+
+\newcommand{\email}[1]{\href{mailto:#1}{\texttt{#1}}}
+\renewcommand\date[1]{\metadata[Date]{#1}}
+\newcommand\correspondence[1]{\metadata[Correspondence]{#1}}
+\newcommand\code[1]{\metadata[Code]{#1}}
+\newcommand\projectpage[1]{\metadata[Project]{#1}}
+
+\ExplSyntaxOn
+\seq_new:N \g_reslab_support_logos_seq
+\tl_new:N  \g_reslab_lab_logo_file_tl
+\cs_new_protected:Npn \reslab_lab_logo: { }
+
+\cs_new_protected:Npn \reslab_logo_graphic:nn #1#2
+  { \raisebox{-0.5\height}{\includegraphics[#1]{#2}} }
+
+\cs_new_protected:Npn \reslab_support_logo_item:nn #1#2
+  { \reslab_logo_graphic:nn {#1}{#2} }
+
+\NewDocumentCommand{\lablogo}{O{width=1.55cm}m}
+  {
+    \tl_gset:Nn \g_reslab_lab_logo_file_tl {#2}
+    \cs_gset_protected:Npn \reslab_lab_logo:
+      { \reslab_logo_graphic:nn {#1}{#2} }
+  }
+
+\NewDocumentCommand{\supportlogo}{O{height=0.48cm}m}
+  {
+    \seq_gput_right:Nn \g_reslab_support_logos_seq
+      { \reslab_support_logo_item:nn {#1}{#2} }
+  }
+
+\NewDocumentCommand{\clearsupportlogos}{}
+  { \seq_gclear:N \g_reslab_support_logos_seq }
+
+\cs_new_protected:Npn \reslab_render_logos:
+  {
+    \group_begin:
+      \seq_if_empty:NF \g_reslab_support_logos_seq
+        { \seq_use:Nn \g_reslab_support_logos_seq {\hspace{0.72em}} }
+      \tl_if_empty:NF \g_reslab_lab_logo_file_tl
+        {
+          \seq_if_empty:NF \g_reslab_support_logos_seq { \hspace{0.72em} }
+          \reslab_lab_logo:
+        }
+    \group_end:
+  }
+\cs_new_protected:Npn \reslabrenderlogos { \reslab_render_logos: }
+\ExplSyntaxOff
+
+\newcommand{\reslab@maketitlecard}{%
+  \begingroup
+  \tcbset{
+    enhanced,
+    frame hidden,
+    boxrule=0pt,
+    left=0.52cm,
+    right=0.52cm,
+    top=0.48cm,
+    bottom=0.22cm,
+    arc=10pt,
+    outer arc=10pt,
+    colback=ResLabTitleBG,
+    before skip=0pt,
+    after skip=0pt,
+    grow to left by=1.5pt,
+    grow to right by=1.5pt,
+    overlay={
+      \node[
+        anchor=south east,
+        inner sep=0pt,
+        at=(frame.south east),
+        xshift=-0.52cm,
+        yshift=0.22cm
+      ] {\mbox{\reslabrenderlogos}};
+    }
+  }
+  \begin{tcolorbox}
+    \setlength{\parindent}{0pt}
+    \setlength{\parskip}{0.46cm}
+    \raggedright
+    \nohyphens
+
+    {\setlength{\parskip}{0pt}\setstretch{1.16}\reslab@title\par}
+    \vskip 0.18cm
+    \reslab@authorlist\par
+    \vskip 0.12cm
+    {\small\reslab@affiliationlist\par}
+    \ifx\reslab@contributionlist\@empty\else
+      \vskip 0.08cm
+      \reslab@contributionlist\par
+    \fi
+
+    \vskip 0.23cm
+    \reslab@abstract\par
+
+    \ifx\reslab@metadatalist\@empty\else
+      \vskip 0.18cm
+      {\setlength{\parskip}{0.06cm}\reslab@metadatalist\par}
+    \fi
+
+    \ifx\reslab@metadatalist\@empty
+      \vspace*{1.55cm}
+    \fi
+  \end{tcolorbox}
+  \endgroup
+  \FloatBarrier
+}
+
+\if@twocolumn
+  \renewcommand{\maketitle}{%
+    \twocolumn[\reslab@maketitlecard\vskip 0.38cm]%
+  }
+\else
+  \renewcommand{\maketitle}{\reslab@maketitlecard\vskip 0.18cm}
+\fi
+
+\newcommand{\beginappendix}{\appendix{\huge\sffamily\bfseries\color{ResLabBurgundy}Appendix\par}}
+
+\makeatother
+
+\newcommand{\brandaccent}[1]{\textcolor{ResLabFirecracker}{#1}}
+\newcommand{\brandstrong}[1]{\textcolor{ResLabBurgundy}{\textbf{#1}}}

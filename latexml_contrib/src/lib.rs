@@ -286,6 +286,7 @@ pub mod pst_all_sty;
 pub mod pst_plot_sty;
 pub mod ptephy_cls;
 pub mod quotchap_sty;
+pub mod ragslab_sty;
 pub mod rasti_cls;
 pub mod rccol_sty;
 pub mod refstyle_sty;
@@ -789,6 +790,8 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("elife", "cls", elife_cls::load_definitions),
   ("examdesign", "cls", examdesign_cls::load_definitions),
   ("fairmeta", "cls", fairmeta_cls::load_definitions),
+  // ragslab.sty, a package on `article` whose title API mirrors fairmeta's (ragslab_sty.rs).
+  ("ragslab", "sty", ragslab_sty::load_definitions),
   ("fcs", "cls", fcs_cls::load_definitions),
   ("brief", "cls", brief_cls::load_definitions),
   ("g-brief", "cls", g_brief_cls::load_definitions),

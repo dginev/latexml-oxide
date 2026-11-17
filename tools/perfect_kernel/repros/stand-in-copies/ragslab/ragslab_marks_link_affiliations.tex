@@ -1,0 +1,35 @@
+% witness: 2610.22523 (main-arxiv.tex:21-35; its ragslab.sty, the file beside this one less its comment lines)
+% oracle:  pdflatex 0 errors: "Ann Able^{1,2}, Bob Baker^{1}, Cid Cole^{3}" / "1 Univ A, 2 Lab B, 3 Univ C" / the abstract /
+%          "Project: https://example.org/p" / "Date: May 1, 2026" / "Correspondence: Ann Able at ann@a.edu" /
+%          "Code: https://example.org/c"; "Appendix" before "A Extra"
+% engines: rust INTFMfinal = the names without their marks or affiliations; the copy's card (a picture after the
+%          abstract) prints the affiliations and the metadata lines, the first name dropped
+% expect:  0 errors, 0 warnings; three creators, each with the affiliations its marks cite; the date, and the
+%          correspondence, code and project lines as notes named by the labels the copy prints; the abstract; no card
+% status:  RED (INTFMfinal) -> GREEN (RAGSLAB)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{ragslab}
+\title{Shared Latent Structure}
+\author[1,2]{Ann Able}
+\author[1]{Bob Baker}
+\author[3]{Cid Cole}
+\projectpage{\url{https://example.org/p}}
+\affiliation[1]{Univ A}
+\affiliation[2]{Lab B}
+% (2610.22523's last affiliation is left open over the metadata lines: pdflatex reads them inside it)
+\affiliation[3]{Univ C
+
+\date{May 1, 2026}
+\correspondence{Ann Able at \email{ann@a.edu}}
+\code{\url{https://example.org/c}}}
+\abstract{We study shared structure.}
+\begin{document}
+\maketitle
+\section{Intro}
+Body text.
+
+\beginappendix
+\section{Extra}
+More.
+\end{document}

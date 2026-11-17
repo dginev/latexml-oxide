@@ -5,7 +5,8 @@
 //! `\addtolist` accumulator in the class BODY. An unknown `.cls` body is not
 //! raw-loaded (OmniBus extracts dependencies only), so every one of those is
 //! `Error:undefined` without a binding. Mirrors the shared-helper pattern of
-//! [`crate::discard_env`].
+//! [`crate::discard_env`]. ragslab.sty, a package that mirrors the same API, installs
+//! it after reading its copy raw ([`crate::ragslab_sty`]).
 use latexml_package::{package::authblk_sty::author_names_a_list, prelude::*};
 
 /// Install the identical, order-independent frontmatter routing shared by every

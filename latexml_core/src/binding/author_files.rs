@@ -294,6 +294,7 @@ pub const AUTHOR_FILE_STAND_INS: &[&str] = &[
   "ptephy.cls",
   "ptephy_v1.cls",
   "ptephy_v2.cls",
+  "ragslab.sty",
   "rasti.cls",
   "revtex.cls",
   "revtex.sty",
