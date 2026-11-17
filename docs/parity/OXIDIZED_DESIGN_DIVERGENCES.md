@@ -20384,34 +20384,6 @@ explains that the reading places elsewhere (`\affil[$\dag$]{…}` under `\author
 ### 1065. → Bindings beyond Perl's tree: achemso.cls (`achemso_cls.rs`)
 ### 1066. → Bindings beyond Perl's tree: sn-jnl.cls (`sn_jnl_cls.rs`)
 
-### 1068. A symbol legend under the names is the names' that ink its symbol; a note's mark carries it only where none does, or where the legend is that note (DG 2026-11-17; CONNFIX)
-
-**Rule.** FIDELITY_CHARTER §4, ruling 2: a symbol line's carriers are the names its symbol shows on. A typed mark is
-ink, the name's request; a `\thanks` prints its counter's glyph, the note's own mark. So where a name types the symbol,
-a line's legend of it (`Zed Zorn\thanks{Work done at X.} \and Bob Baker$^{*}$ \and Cy Cole$^{*}$\\ $^*$Equal
-contribution`) is Bob's and Cy's, never Zed's, whose `\thanks` prints the same ∗ for another note; where no name types
-it, the names a note's mark shows it on carry it (1608.06509: `\author{Sudipto Bhattacharjee\footnote{…}}` under
-revtex's symbol marks, the name `\affiliation{$^{\ast,\ddagger}$Department …}` labels), a name showing marks of its own
-keeping them as its requests (2406.01694's "Shukla†∗"). A legend that IS a name's own `\thanks` (`Cy
-Cole\thanks{$^*$The first two authors contributed equally. …}` beside `Ann Able$^*$, Bob Baker$^*$`) is that name's
-note too, whatever marks it shows: the PDF prints "Cy Cole∗", and the note holds his own text (his e-mail, the authors'
-address).
-**Perl.** A `\thanks` is its author's contact (Base_Utility.pool.ltxml:661-664): the legend that is Cy's `\thanks` is
-his alone, its `$^*$` kept as text, Ann and Bob carrying nothing; a symbol line under the names goes to the names
-typing its symbol (Bob's and Cy's affiliation "Equal contribution" in the ADVR2 shape), never to Zed's `\thanks`.
-**Rust.** `observer/resolver/post.rs` `answer_pending`: for a footnote-led or symbol-labelled entry, a creator whose
-note's mark (`MarkBy::Note`) requests the label owns it when it shows no request of its own and no name inks the symbol
-(`NameMark::origin`, `MarkOrigin::Inked`); a creator whose note the entry was read from (the entry's source span inside
-the note mark's, same block) owns it whenever that note prints the legend's symbol (a `\thanks` printing another counter glyph is not yet kept by its author: revCONNFIXb b6, row R OWNLEGGLYPH).
-**Witnesses.** 1608.06509 (the note-mark fallback), 2406.01694, 1904.09324 ("Yinhan Liu∗", his `\thanks` the
-equal-contribution legend), 2204.06136 (ieeeconf: Krstic's `\thanks`, the ∗ legend and the authors' e-mails); ADVR2
-finding 4 (synthetic).
-**Guards**: the FMRG rows `author_typed_star_legend_is_the_typing_names` (SHARED),
-`author_typed_star_legend_in_a_names_own_thanks_keeps_its_note`,
-`author_typed_star_legend_in_a_marked_names_own_thanks_keeps_its_note` (LINK; `perfect_kernel_batchfmmarks`).
-
----
-
 ### 1067. elsarticle's keys name one entry each, and every route to a note reaches it (ELSART, DG 2026-11-17)
 
 **Rule.** elsarticle keeps one key space, `X@<key>` (elsarticle.cls:126-131). `\author[<keys>]` prints `\elsRef` of each
@@ -20456,6 +20428,34 @@ ELSROUTE's mixed routes (0 of 906 census elsarticle papers).
 and its `_red` twin; ELSARTb: `\cormark` outside a name, and as RED rows an outside mark after a later name in either kind
 and order), `perfect_kernel_batchfmmarks::elsarticle_outside_marks_after_the_first_name_warn` (the fail-safe's notes and
 Warnings), `perfect_kernel_batchwrongfix::an_elsarticle_cortext_is_marked_by_its_route` (the shared-key row).
+
+---
+
+### 1068. A symbol legend under the names is the names' that ink its symbol; a note's mark carries it only where none does, or where the legend is that note (DG 2026-11-17; CONNFIX)
+
+**Rule.** FIDELITY_CHARTER §4, ruling 2: a symbol line's carriers are the names its symbol shows on. A typed mark is
+ink, the name's request; a `\thanks` prints its counter's glyph, the note's own mark. So where a name types the symbol,
+a line's legend of it (`Zed Zorn\thanks{Work done at X.} \and Bob Baker$^{*}$ \and Cy Cole$^{*}$\\ $^*$Equal
+contribution`) is Bob's and Cy's, never Zed's, whose `\thanks` prints the same ∗ for another note; where no name types
+it, the names a note's mark shows it on carry it (1608.06509: `\author{Sudipto Bhattacharjee\footnote{…}}` under
+revtex's symbol marks, the name `\affiliation{$^{\ast,\ddagger}$Department …}` labels), a name showing marks of its own
+keeping them as its requests (2406.01694's "Shukla†∗"). A legend that IS a name's own `\thanks` (`Cy
+Cole\thanks{$^*$The first two authors contributed equally. …}` beside `Ann Able$^*$, Bob Baker$^*$`) is that name's
+note too, whatever marks it shows: the PDF prints "Cy Cole∗", and the note holds his own text (his e-mail, the authors'
+address).
+**Perl.** A `\thanks` is its author's contact (Base_Utility.pool.ltxml:661-664): the legend that is Cy's `\thanks` is
+his alone, its `$^*$` kept as text, Ann and Bob carrying nothing; a symbol line under the names goes to the names
+typing its symbol (Bob's and Cy's affiliation "Equal contribution" in the ADVR2 shape), never to Zed's `\thanks`.
+**Rust.** `observer/resolver/post.rs` `answer_pending`: for a footnote-led or symbol-labelled entry, a creator whose
+note's mark (`MarkBy::Note`) requests the label owns it when it shows no request of its own and no name inks the symbol
+(`NameMark::origin`, `MarkOrigin::Inked`); a creator whose note the entry was read from (the entry's source span inside
+the note mark's, same block) owns it whenever that note prints the legend's symbol (a `\thanks` printing another counter glyph is not yet kept by its author: revCONNFIXb b6, row R OWNLEGGLYPH).
+**Witnesses.** 1608.06509 (the note-mark fallback), 2406.01694, 1904.09324 ("Yinhan Liu∗", his `\thanks` the
+equal-contribution legend), 2204.06136 (ieeeconf: Krstic's `\thanks`, the ∗ legend and the authors' e-mails); ADVR2
+finding 4 (synthetic).
+**Guards**: the FMRG rows `author_typed_star_legend_is_the_typing_names` (SHARED),
+`author_typed_star_legend_in_a_names_own_thanks_keeps_its_note`,
+`author_typed_star_legend_in_a_marked_names_own_thanks_keeps_its_note` (LINK; `perfect_kernel_batchfmmarks`).
 
 ---
 
