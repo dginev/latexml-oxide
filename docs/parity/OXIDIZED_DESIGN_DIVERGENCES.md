@@ -20641,7 +20641,7 @@ author, a block holding no mark (`^`, `\textsuperscript`) under names showing no
 queued name shows, or continues such a line, is `\lx@add@affiliations`, each `$^n$` line the affiliation of the names
 showing mark n (a line opening with a typed number, no mark, continues a labelled line: 1707.04373's street number);
 no line of e-mail addresses in either. Anything else keeps the note whole, with `Info:frontmatter:address`: trailing marks (2407.15458,
-2401.06806, 2211.09383), an unmarked block under marked names (2509.13723), a label no name shows (2203.05882), no
+2401.06806, 2211.09383), an unmarked block under marked names (2509.13723), a label no name shows (2203.05882; a typed number with no mark instead continues the line above — "453 F. Paul Anderson Tower", 1707.04373 —, so a typed `2 Univ B` under a `$^2$` name joins the line before it: row R SPCONF-TYPEDNUM, synthetic only), no
 queued author (1909.01754, names in a raw `\def\@name`), an address no rule places (2102.09114, 2407.20176,
 1802.09371). (2) Interspeech.cls's `\email` line, read after every author is
 added (`\lx@is@frontmatter@add`), is `\lx@email@line@owned{\lx@is@email@note}{line}` (author_macros.rs;

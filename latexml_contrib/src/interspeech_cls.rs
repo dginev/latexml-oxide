@@ -184,10 +184,9 @@ LoadDefinitions!({
     "\\email{}",
     "\\lx@is@frontmatter@add{\\lx@email@line@owned{\\lx@is@email@note}{#1}}"
   );
-  DefMacro!(
-    "\\lx@is@email@note{}",
-    "\\@add@frontmatter{ltx:note}[role=email]{#1}"
-  );
+  // (the line no owner rule places wholly stays the e-mail note, printed under the names: Interspeech.cls :376
+  // `\anonemail`, OD #1074)
+  DefMacro!("\\lx@is@email@note{}", "\\lx@names@note{email}{#1}");
   // INTERSPEECH2023.cls L160: `\def\ninept{\def\baselinestretch{0.95}
   // \let\normalsize\small\normalsize}` — 9-point text mode. Layout
   // adjustment, semantically irrelevant for our XML output. Witness

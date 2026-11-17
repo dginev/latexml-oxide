@@ -44,14 +44,13 @@ LoadDefinitions!({
   // line no rule places keeps the note whole (2407.15458, 2203.05882, 1909.01754; OD #1073).
   DefMacro!(
     "\\address{}",
-    "\\lx@address@block{\\lx@add@frontmatter{ltx:note}[role=address]}{#1}"
+    "\\lx@address@block{\\lx@names@note{address}}{#1}"
   );
-  // `\email{…}` stays the e-mail note: its authors are queued only as `\maketitle` runs, after it, so the e-mail line's
-  // owner rule (`\lx@email@line@owned`, Interspeech.cls's) has no names to read here (OD #1073, row R).
-  DefMacro!(
-    "\\email{}",
-    "\\lx@add@frontmatter{ltx:note}[role=email]{#1}"
-  );
+  // `\email{…}` (INTERSPEECH20xx.sty:173; spconf.sty has none) stays the e-mail note: its authors are queued only as
+  // `\maketitle` runs, after it, so the e-mail line's owner rule (`\lx@email@line@owned`, Interspeech.cls's) has no names
+  // to read here (OD #1073, row R). Printed under the names (INTERSPEECH2021.sty:164), it is declared there with the
+  // address note above, so the two keep the PDF's order (OD #1074, REVBLOCKPLACEb; 2405.13379).
+  DefMacro!("\\email{}", "\\lx@names@note{email}{#1}");
   // `\twoauthors{names1}{affil1}{names2}{affil2}` (spconf.sty L183-190) — the
   // side-by-side two-author title block, typeset as two `tabular`s that
   // overwrite `\@name` and blank `\@address`. Feed the same author machinery

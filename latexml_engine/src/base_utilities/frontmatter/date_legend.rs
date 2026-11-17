@@ -548,7 +548,13 @@ pub(in crate::base_utilities) fn address_block_legend_calls() -> Result<Vec<Toke
     Info!(
       "frontmatter",
       "address",
-      s!("An \\address under the authors stays its note (a line no rule places): {block}")
+      s!(
+        "An \\address under the authors stays its note (a line no rule places): {}",
+        s!("{block}")
+          .split_whitespace()
+          .collect::<Vec<_>>()
+          .join(" ")
+      )
     );
     return Ok(Vec::new());
   };

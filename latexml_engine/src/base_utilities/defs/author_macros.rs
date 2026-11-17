@@ -213,7 +213,7 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
     Ok(Tokens::new(calls))
   });
   // Rust-only (OXIDIZED_DESIGN_DIVERGENCES #1073): a class's `\address` block printed under the names (spconf.sty:165,
-  // INTERSPEECH2021.sty:162-164, Interspeech.cls :265), queued whole as `op{block}`, its note; read at `\maketitle`
+  // INTERSPEECH2021.sty:162-164; Interspeech.cls keeps its own choice), queued whole as `op{block}`, its note; read at `\maketitle`
   // (`\lx@date@legend`, the names queued), its lines the authors' only when every line is placed.
   DefMacro!("\\lx@address@block{}{}", sub[(op, block)] {
     note_address_block(block.clone());
