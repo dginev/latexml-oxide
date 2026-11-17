@@ -265,9 +265,10 @@ fn a_symbol_no_name_prints_stays_the_notes_text() {
     |xml| page_lines(&page_of(xml)),
   );
   assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  // (the unmarked `\address` is both authors' affiliation, SPCONF, OD #1073)
   assert_eq!(creator_lines(&xml), [
-    "Alice One",
-    "Bob Two ; thanks[]=∗ We will release the code."
+    "Alice One | affiliation=Some University",
+    "Bob Two ; thanks[]=∗ We will release the code. | affiliation=Some University"
   ]);
   let (lines, problems): (Vec<String>, Vec<String>) = page;
   assert!(problems.is_empty(), "{problems:?}");

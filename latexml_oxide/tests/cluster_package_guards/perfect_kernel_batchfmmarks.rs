@@ -4706,10 +4706,11 @@ const CLASS: &[Row] = &[
     repro:      "presbx_spconf_empty_thefootnote_prints_no_mark",
     tex:        repro!("presbx_spconf_empty_thefootnote_prints_no_mark"),
     warnings:   0,
+    // (the unmarked `\address` under the names is every author's affiliation, SPCONF, OD #1073)
     creators:   &[
-      r#"Ann Able"#,
-      r#"Bob Baker ; thanks[]=Funded by X."#,
-      r#"Cy Cole ; thanks[†]=Corresponding author. Lab B."#,
+      r#"Ann Able | affiliation=University of Somewhere"#,
+      r#"Bob Baker ; thanks[]=Funded by X. | affiliation=University of Somewhere"#,
+      r#"Cy Cole ; thanks[†]=Corresponding author. Lab B. | affiliation=University of Somewhere"#,
     ],
     moves:      r#""#,
     page:       &[

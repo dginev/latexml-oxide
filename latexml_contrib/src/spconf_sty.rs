@@ -9,7 +9,7 @@
 //! article's structural `\maketitle` never emits them → zero creators (witness
 //! 2309.14838, 2405.13379, 2605.10272). Route `\name` through the standard
 //! author machinery so the comma/superscript-marked list becomes structured
-//! creators, and keep `\address`/`\email` as frontmatter.
+//! creators; its `\address` lines are their affiliations (OD #1073), its `\email` a frontmatter note.
 //!
 //! The same file's `keywords` block (the "Index Terms" list) is a bare
 //! `\def\keywords`/`\def\endkeywords` pair, so `\begin{keywords}` found no
@@ -38,12 +38,16 @@ LoadDefinitions!({
   // keeps LaTeXML's, marks a `\thanks` with none, `\def\thefootnote{}` (2110.09738, 2303.02025, 1812.01220): the stand-in
   // copy read after this binding.
   declare_package_title_marks("", BoundMaketitle::Copy(next_copy_provides_id()))?;
-  // `\address{affils}` — the (superscript-numbered) affiliation block. Preserve
-  // as a frontmatter note so the numbered institutions are kept.
+  // `\address{affils}` — the affiliation block spconf.sty:165 and INTERSPEECH2021.sty:162-164 print under the names:
+  // queued as its note and read at `\maketitle` (`\lx@address@block`), as Interspeech.cls's: each `$^n$` line the
+  // affiliation of the names showing mark n, an unmarked block under unmarked names every author's (2405.13379); a
+  // line no rule places keeps the note whole (2407.15458, 2203.05882, 1909.01754; OD #1073).
   DefMacro!(
     "\\address{}",
-    "\\lx@add@frontmatter{ltx:note}[role=address]{#1}"
+    "\\lx@address@block{\\lx@add@frontmatter{ltx:note}[role=address]}{#1}"
   );
+  // `\email{…}` stays the e-mail note: its authors are queued only as `\maketitle` runs, after it, so the e-mail line's
+  // owner rule (`\lx@email@line@owned`, Interspeech.cls's) has no names to read here (OD #1073, row R).
   DefMacro!(
     "\\email{}",
     "\\lx@add@frontmatter{ltx:note}[role=email]{#1}"

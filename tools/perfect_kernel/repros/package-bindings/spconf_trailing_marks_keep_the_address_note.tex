@@ -1,0 +1,18 @@
+% mechanism: spconf's `\address` under marked names whose lines do not lead with a mark (trailing marks) is placed by
+%   no rule: the address note stays whole (`address_block_calls`, OD #1073)
+% witness: 2407.15458 (`National Taiwan University$^1$, …$^2$`), 2401.06806, 2211.09383; 2509.13723 (no marks under
+%   marked names)
+% oracle:  pdflatex (TL 2025, -no-shell-escape, spconf.sty) 0 errors: "Ann Able1, Bob Baker2, Cy Coe3",
+%   "Univ A1, Univ B2, Univ C3"
+% engines: SPCONF round 1 (d67dbb41d4b): the block every author's affiliation, marks and all
+% expect:  0 errors, 0 warnings; the address note whole, no affiliation contact
+% status:  RED (SPCONF d67dbb41d4b) -> GREEN (SPCONFb; guard perfect_kernel_batchspconf)
+\documentclass{article}
+\usepackage{spconf}
+\title{T}
+\name{Ann Able$^1$, Bob Baker$^2$, Cy Coe$^3$}
+\address{Univ A$^1$, Univ B$^2$, Univ C$^3$}
+\begin{document}
+\maketitle
+x
+\end{document}

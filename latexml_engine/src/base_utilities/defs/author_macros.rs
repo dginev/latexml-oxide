@@ -208,7 +208,29 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
   // prints under the author block that are the block's legend, its contacts (`frontmatter::date_legend`; 1512.01686,
   // 2606.00446); Perl keeps the text the date.
   DefMacro!("\\lx@date@legend", sub[_args] {
-    Ok(Tokens::new(date_legend_calls()?))
+    let mut calls = address_block_legend_calls()?;
+    calls.extend(date_legend_calls()?);
+    Ok(Tokens::new(calls))
+  });
+  // Rust-only (OXIDIZED_DESIGN_DIVERGENCES #1073): a class's `\address` block printed under the names (spconf.sty:165,
+  // INTERSPEECH2021.sty:162-164, Interspeech.cls :265), queued whole as `op{block}`, its note; read at `\maketitle`
+  // (`\lx@date@legend`, the names queued), its lines the authors' only when every line is placed.
+  DefMacro!("\\lx@address@block{}{}", sub[(op, block)] {
+    note_address_block(block.clone());
+    let mut call = op.unlist();
+    call.push(T_BEGIN!());
+    call.extend(block.unlist());
+    call.push(T_END!());
+    Ok(Tokens::new(call))
+  });
+  // Rust-only (OXIDIZED_DESIGN_DIVERGENCES #1073): a class's e-mail line printed under the names (spconf's and
+  // Interspeech.cls's `\email{a, b}`), each address the author it spells, else the n-th author's in a list of one per
+  // author (`listed_email_calls`, the rule of #1071's address lines); a line not wholly placed is `op{line}`, whole.
+  DefMacro!("\\lx@email@line@owned{}{}", sub[(op, line)] {
+    match listed_email_calls(&line)? {
+      Some(calls) => Ok(Tokens::new(calls)),
+      None => Ok(Invocation!(op.unlist().first().copied().unwrap_or(T_CS!("\\relax")), vec![Some(line)])),
+    }
   });
   // Rust-only: an address a class prints under a row of names it shares (aistats's `\aistatsaddress` under
   // `\aistatsauthor{A \And B \And C}` when its columns are not the names', 1806.02924, 2510.09534): marked,
