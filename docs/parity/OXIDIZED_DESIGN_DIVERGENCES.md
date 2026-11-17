@@ -22206,8 +22206,9 @@ locked `\author`/`\title`/`\abstract`/`\maketitle` refuse the copy's: the names 
 prints the affiliations and metadata as a picture after the abstract, the first name dropped.
 
 **Rust.** `ragslab_sty.rs` reads the paper's copy raw (`input_shipped_package`: palette, logos, layout, the copy's
-`\beginappendix` heading), sets the refused `\maketitle` aside (`\lx@dropped@maketitle` let to `\relax`, as
-`aero_cls.rs`), then installs the fairmeta family's routing (`meta_class::install_meta_class_frontmatter`: marks through
+`\beginappendix` heading), sets the refused `\maketitle` aside but for the card's logo strip, printed nowhere else
+(`\lx@dropped@maketitle` replays `\reslabrenderlogos` as a paragraph of its own: 2610.22523's three logos, revRAGSLAB
+B1), then installs the fairmeta family's routing (`meta_class::install_meta_class_frontmatter`: marks through
 `\lx@add@creator[annotations]`/`\lx@add@contact[label]`) and the metadata band as the copy prints it:
 `\metadata[label]{value}` is `\lx@add@pubnote[role=metadata,name={label:~}]` (the label the copy prints,
 FIDELITY_CHARTER §4), `\correspondence` the same with the family's role (`role=correspondence`; an `ltx:note` has no

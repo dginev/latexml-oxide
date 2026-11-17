@@ -1534,18 +1534,26 @@ fn frontmatter_fairmeta_author_affiliation_1396() {
 /// #1070): each author has the affiliations its marks cite; the metadata band's lines are the date and publication
 /// notes named by the labels the copy prints; the copy's tcolorbox card is not replayed. Its last affiliation
 /// left open over the metadata calls, as 2610.22523's is: pdflatex reads them inside it. Before: the names alone, the
-/// card a picture after the abstract, its first name dropped. Repro stand-in-copies/ragslab.
+/// card a picture after the abstract, its first name dropped. The card's logo strip, printed nowhere else, is a block
+/// of its own (revRAGSLAB B1: relaxing the replay had lost 2610.22523's three logos). Repro stand-in-copies/ragslab.
 #[test]
 fn frontmatter_ragslab_marks_link_affiliations() {
-  let (log, xml) = latexml::util::test::convert_files_with(
-    include_str!(
+  let (log, xml, ()) = latexml::util::test::convert_bytes_files_then(
+    include_bytes!(
       "../../tools/perfect_kernel/repros/stand-in-copies/ragslab/ragslab_marks_link_affiliations.tex"
     ),
-    &[(
-      "ragslab.sty",
-      include_str!("../../tools/perfect_kernel/repros/stand-in-copies/ragslab/ragslab.sty"),
-    )],
+    &[
+      (
+        "ragslab.sty",
+        include_bytes!("../../tools/perfect_kernel/repros/stand-in-copies/ragslab/ragslab.sty"),
+      ),
+      (
+        "logo.png",
+        include_bytes!("../../tools/perfect_kernel/repros/stand-in-copies/ragslab/logo.png"),
+      ),
+    ],
     Some("ar5iv.sty"),
+    |_, _| (),
   );
   assert_eq!(
     (
@@ -1559,6 +1567,20 @@ fn frontmatter_ragslab_marks_link_affiliations() {
   assert!(
     log.contains("(Processing definitions ") && log.contains("/ragslab.sty..."),
     "the copy was not read:\n{log}"
+  );
+  let logos = xml
+    .match_indices("<graphics ")
+    .map(|(at, _)| &xml[at..at + xml[at..].find("/>").map_or(0, |e| e + 2)])
+    .collect::<Vec<_>>();
+  assert_eq!(
+    logos,
+    [
+      "<graphics candidates=\"logo.png\" graphic=\"logo.png\" options=\"height=13.6572pt,keepaspectratio=true\" \
+       xml:id=\"p1.g1\"/>",
+      "<graphics candidates=\"logo.png\" graphic=\"logo.png\" options=\"width=44.10185pt,keepaspectratio=true\" \
+       xml:id=\"p1.g2\"/>",
+    ],
+    "the card's logo strip (\\supportlogo, \\lablogo) is lost:\n{xml}"
   );
   let affiliation = |text: &str| {
     format!("<contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">{text}</contact>")

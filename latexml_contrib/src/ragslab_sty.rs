@@ -9,7 +9,12 @@ LoadDefinitions!({
   input_shipped_package()?;
   // The copy's `\maketitle` (:278-284) typesets its lists in a tcolorbox card; the lock refused it, and its replay
   // would print the card, its lists now empty, beside the frontmatter (2610.22523: a picture after the abstract).
-  Let!("\\lx@dropped@maketitle", "\\relax");
+  // Only the card's logo strip (`\supportlogo`/`\lablogo`, :137-165) is printed nowhere else: it stays, a block of
+  // its own (revRAGSLAB B1; 2610.22523's three logos).
+  DefMacro!(
+    "\\lx@dropped@maketitle",
+    "\\ifdefined\\reslabrenderlogos\\par\\noindent\\reslabrenderlogos\\par\\fi"
+  );
   // (the copy's `\beginappendix` prints its "Appendix" heading, :286; the shared one is a bare `\appendix`)
   Let!("\\lx@ragslab@beginappendix", "\\beginappendix");
   crate::meta_class::install_meta_class_frontmatter()?;
@@ -29,6 +34,6 @@ LoadDefinitions!({
   // `\date` is the copy's "Date:" line (:158), the document's date.
   DefMacro!(
     "\\date{}",
-    "\\def\\@date{#1}\\lx@add@date[role=creation,name={Date:}]{#1}"
+    "\\gdef\\@date{#1}\\lx@add@date[role=creation,name={Date:}]{#1}"
   );
 });
