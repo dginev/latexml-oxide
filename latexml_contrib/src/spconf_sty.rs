@@ -16,7 +16,7 @@
 //! environment at all — the single largest `undefined` cluster in the sandbox
 //! corpora (94 papers in sandbox-arxiv-2605, 49 in 2606; witnesses 2605.00480,
 //! 2605.00698, 2605.00721, 2605.01187). See the `\keywords` binding below.
-use latexml_package::prelude::*;
+use latexml_package::{engine::latex_constructs::declare_package_title_marks, prelude::*};
 
 LoadDefinitions!({
   // `\name{names}` — the whole author list in one argument. Hand it to `\author`
@@ -31,6 +31,9 @@ LoadDefinitions!({
     "\\sthanks{}",
     "\\def\\thefootnote{\\fnsymbol{footnote}}\\thanks{#1}"
   );
+  // spconf.sty:145-147 (INTERSPEECH2019-2022.sty:140-142 alike): its `\maketitle`, which pdflatex runs where the binding
+  // keeps LaTeXML's, marks a `\thanks` with none, `\def\thefootnote{}` (2110.09738, 2303.02025, 1812.01220).
+  declare_package_title_marks("", false)?;
   // `\address{affils}` — the (superscript-numbered) affiliation block. Preserve
   // as a frontmatter note so the numbered institutions are kept.
   DefMacro!(

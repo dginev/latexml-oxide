@@ -1,9 +1,9 @@
 % mechanism: a package's own `\maketitle` that sets `\thefootnote` before it prints the title prints that mark:
 %   spconf.sty:147-149 `\begingroup\def\thefootnote{}` prints no mark, whatever the document's `\thefootnote`
-%   (`latex_constructs::maketitle_marks`, the refused body's assignment; a stand-in copy's, `state::
-%   copy_provides_maketitle`); its closing `\let\maketitle\relax` and the `\gdef\thefootnote{\arabic{footnote}}` after
-%   its group are no call of the class's `\maketitle` nor the title's mark. Its `\sthanks` (:181) marks with
-%   `\fnsymbol` at the counter (the spconf binding's, latexml_contrib spconf_sty.rs)
+%   (the spconf binding's declaration since MTREDUCE, `latex_constructs::declare_package_title_marks("")`, which answers
+%   for the stand-in copy's `\maketitle`, `state::copy_provides_maketitle`; PRESBX read the copy's body); its closing
+%   `\let\maketitle\relax` and the `\gdef\thefootnote{\arabic{footnote}}` after its group are no call of
+%   the class's `\maketitle` nor the title's mark. Its `\sthanks` (:181) marks with `\fnsymbol` at the counter (the spconf binding's, latexml_contrib spconf_sty.rs)
 % witness:  2110.09738, 2303.02025, 1812.01220 (spconf.sty: the funding note printed with no mark; written ∗); 2208.01916
 %   (`\sthanks`: "Sangyoun Lee∗"); the style a minimal stand-in of spconf.sty:145-181
 % oracle:   pdflatex 0 errors (TL 2025, -no-shell-escape): "Ann Able, Bob Baker, Cy Cole†", no mark on Bob; foot
@@ -12,7 +12,8 @@
 %   text ends no cell of the author line (the rehearsal's `cell_ends`, 2208.01916)
 % engines:  rust PRESBXbase (d45633020ab) = 0 errors, 0 Warnings; Bob thanks[∗], Cy thanks[†]
 % expect:   0 errors, 0 Warnings; Bob's note unmarked, Cy's †; HTML each text under its name, no glyph
-% status:   RED (PRESBXbase) -> GREEN (PRESBX: perfect_kernel_batchfmmarks::notes_are_marked_only_where_the_class_prints_marks)
+% status:   RED (PRESBXbase) -> GREEN (PRESBX: perfect_kernel_batchfmmarks::notes_are_marked_only_where_the_class_prints_marks;
+%   MTREDUCE: the binding's declaration)
 % preload:  ar5iv.sty
 \begin{filecontents*}[overwrite]{spconf.sty}
 \ProvidesPackage{spconf}

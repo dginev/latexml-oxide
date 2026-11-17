@@ -209,6 +209,15 @@ pub fn require_shipped_packages(ext: &str, family: &[&str]) -> Result<bool> {
   Ok(!request.is_empty() && require_dependencies_only(&request, ext, family))
 }
 
+/// A stand-in binding reads the paper's copy of the package it answers ([`stand_in_request`]) raw, as pdflatex loads it
+/// (acl_sty, aaai_sty); `false` when the source has none, which the raw load reports as the loader does.
+pub fn input_shipped_package() -> Result<bool> {
+  let request = stand_in_request()?;
+  let shipped = !request.is_empty() && shipped_file_text(&request, "sty").is_some();
+  InputDefinitions!(&request, noltxml => true, extension => Some(Cow::Borrowed("sty")));
+  Ok(shipped)
+}
+
 /// The file a stand-in binding answers, as the paper asked for it: the request a versioned fallback answers with
 /// this binding (`fallback_request` while its `fallback_target` is the load's `\@currname`), else `\@currname`.
 fn stand_in_request() -> Result<String> {

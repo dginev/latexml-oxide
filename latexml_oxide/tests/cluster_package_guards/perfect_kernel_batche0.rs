@@ -3264,14 +3264,18 @@ const KERNEL_TOKEN_SPELLINGS: &[(&str, usize)] = &[
   // (PRESBXc +7: `steps_footnotes_before_title` reads the same unrun body for the footnotes and counter steps it makes
   // before the title — `\footnote`, `\footnotemark`, `\thanks`, `\c@footnote`, the four counter commands on `footnote`;
   // review revPRESBXb BL2)
-  ("latexml_engine/src/latex_constructs/mod.rs", 203),
+  // (MTREDUCE -24, DG 2026-11-17 maketitle reduce: the static reader's name lists, `touches_marks` and
+  // `steps_footnotes_before_title` deleted; what stays reads only whether the class's `\maketitle` runs, by meaning,
+  // and the assignment primitives that are no call)
+  ("latexml_engine/src/latex_constructs/mod.rs", 179),
   ("latexml_engine/src/latex_constructs/sect01.rs", 8),
   // (REGCDE -2: the walk's `\@preamblecmds` `\let` moved to core `preamble_commands`)
   ("latexml_engine/src/latex_constructs/sect02.rs", 7),
   ("latexml_engine/src/latex_constructs/sect04.rs", 4),
   // (PRESBX +1: AAAI's repeated mark, `aaai_note`'s `\footnotemark[<n>]`, a construction)
   // (PRESBXc +1: `aaai_note` peeks the "." the emitter cuts a name list at, a character; review revPRESBXb BL1)
-  ("latexml_engine/src/latex_constructs/sect05.rs", 268),
+  // (MTREDUCE -2: both moved with AAAI's notes to their binding, latexml_contrib aaai_sty.rs, DG 2026-11-17)
+  ("latexml_engine/src/latex_constructs/sect05.rs", 266),
   ("latexml_engine/src/latex_constructs/sect06.rs", 9),
   ("latexml_engine/src/latex_constructs/sect07.rs", 29),
   // (QAB57, 69 -> 70: `assign_meaning` clearing an environment OmniBus guessed, a write the `meaning(` pattern counts)

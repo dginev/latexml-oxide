@@ -2500,7 +2500,7 @@ pub fn note_copy_provides_title_page(token: &Token, body: &Tokens) {
 
 /// The latest stand-in copy's own `\maketitle` body ([`note_copy_provides_title_page`]), with the copy's file: the
 /// `\maketitle` pdflatex runs where the binding keeps LaTeXML's (spconf.sty's, 2110.09738; latexml_engine
-/// `latex_constructs::maketitle_marks`).
+/// `latex_constructs::class_maketitle_in_force`).
 pub fn copy_provides_maketitle() -> Option<(String, Tokens)> {
   state!()
     .copy_provides_copies
@@ -7836,7 +7836,7 @@ pub fn let_i(token1: &Token, token2: &Token, scope: Option<Scope>) {
   let _ = after_assignment();
 }
 /// [`carry_refusal_records`] for the document's own `\let`s of `\maketitle`, the records' one reader
-/// (`latex_constructs::maketitle_marks`; the kernel's `\global\let\thanks\relax` keeps `\lx@dropped@thanks`). A file's
+/// (`latex_constructs::class_maketitle_in_force`; the kernel's `\global\let\thanks\relax` keeps `\lx@dropped@thanks`). A file's
 /// `\let` onto a refused `\maketitle` (a package's restore, review revPRESBXb BL3) leaves its marks unknown: the refused
 /// body forgotten, the document's record kept. Not a class's replayed body, which clears its own name as it runs
 /// (`\global\let\maketitle\relax`).

@@ -37,9 +37,11 @@ pub mod mytemplate_sty;
 // xkvview_sty: consolidated into latexml_package (Perl Package/xkvview.sty.ltxml)
 
 // ar5iv-bindings ports
+pub mod aaai_sty;
 pub mod aamas_cls;
 pub mod abntex2cite_sty;
 pub mod achemso_cls;
+pub mod acl_sty;
 pub mod aero_cls;
 pub mod agujournal2019_cls;
 pub mod aguplus_cls;
@@ -406,6 +408,18 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   // (aistats2012.sty, aistats2014.sty … aistats2027.sty), `aistats2026` by name as before, and the 2010-2011 templates
   // by their own names, which keep a letter after the digits (aistats2e.sty: 1003.0024, 1302.5134, 1302.4922's
   // `format/aistats2e`; its margin variant aistats2eM.sty: 1202.1568).
+  // AAAI's styles (aaai_sty.rs): `aaai` answers aaai.sty and the years the versioned fallback strips to it.
+  ("aaai", "sty", aaai_sty::load_definitions),
+  // ACL's styles (acl_sty.rs), each family by the name the versioned fallback strips its years to.
+  ("acl", "sty", acl_sty::load_definitions),
+  ("coling", "sty", acl_sty::load_definitions),
+  ("conll", "sty", acl_sty::load_definitions),
+  ("eacl", "sty", acl_sty::load_definitions),
+  ("emnlp", "sty", acl_sty::load_definitions),
+  ("emnlp-ijcnlp", "sty", acl_sty::load_definitions),
+  ("naacl", "sty", acl_sty::load_definitions),
+  ("naaclhlt", "sty", acl_sty::load_definitions),
+  ("tacl", "sty", acl_sty::load_definitions),
   ("aistats", "sty", aistats_sty::load_definitions),
   ("aistats2026", "sty", aistats_sty::load_definitions),
   ("aistats2e", "sty", aistats_sty::load_definitions),

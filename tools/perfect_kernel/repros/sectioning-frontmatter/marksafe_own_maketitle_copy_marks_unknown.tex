@@ -6,7 +6,9 @@
 % expect:   0 errors, 0 Warnings, 1 Info; notes unmarked; HTML no glyph, each text under its name
 % status:   RED -> GREEN HTML (MARKSAFEb: perfect_kernel_batchfmmarks::notes_are_marked_only_where_the_class_prints_marks);
 %   ∗ and † RED (row R SHAUTO) -> GREEN XML (PRESBX: its `\renewcommand\thefootnote{\@fnsymbol\c@footnote}` before
-%   `\@maketitle`, `latex_constructs::maketitle_marks`)
+%   `\@maketitle`, `latex_constructs::class_maketitle_in_force`)
+%   -> RED again (MTREDUCE, DG 2026-11-17 maketitle reduce: a `\maketitle` not the class's and no binding's has
+%   unknown marks, `latex_constructs::class_maketitle_in_force`; no glyph, each note under its name; row R MTREDUCE)
 % preload:  ar5iv.sty
 \documentclass{article}
 \makeatletter\renewcommand\maketitle{\par\begingroup\renewcommand\thefootnote{\@fnsymbol\c@footnote}\def\@makefnmark{\rlap{\@textsuperscript{\normalfont\@thefnmark}}}\newpage\global\@topnum\z@\@maketitle\thispagestyle{empty}\@thanks\endgroup\setcounter{footnote}{0}}\makeatother

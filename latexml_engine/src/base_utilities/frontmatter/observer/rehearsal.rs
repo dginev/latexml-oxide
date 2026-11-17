@@ -825,15 +825,12 @@ fn install_event_bindings(
     let_i(&T_CS!(SINK_MEANING), &T_CS!(SINK), None);
     let_i(&T_CS!(SINK), &T_CS!("\\lx@fm@obs@add"), None);
   }
-  // (a `\maketitle` not the class's prints its own, `latex_constructs::maketitle_marks`: spconf's none, 2110.09738)
-  if !crate::latex_constructs::enter_maketitle_marks()? {
-    if lookup_definition(&T_CS!(TITLE_FOOTNOTE_HOOK))?.is_some() {
-      let_i(&T_CS!(THEFOOTNOTE), &T_CS!(TITLE_FOOTNOTE_HOOK), None);
-    } else if title_marks == TitleMarks::Fnsymbol
-      && lookup_definition(&T_CS!("\\@fnsymbol"))?.is_some()
-    {
-      let_i(&T_CS!(THEFOOTNOTE), &T_CS!("\\lx@fm@obs@thefootnote"), None);
-    }
+  if lookup_definition(&T_CS!(TITLE_FOOTNOTE_HOOK))?.is_some() {
+    let_i(&T_CS!(THEFOOTNOTE), &T_CS!(TITLE_FOOTNOTE_HOOK), None);
+  } else if title_marks == TitleMarks::Fnsymbol
+    && lookup_definition(&T_CS!("\\@fnsymbol"))?.is_some()
+  {
+    let_i(&T_CS!(THEFOOTNOTE), &T_CS!("\\lx@fm@obs@thefootnote"), None);
   }
   crate::latex_constructs::rehearsal_cells_begin();
   NOTE_TEXT.with(|depth| depth.set(0));

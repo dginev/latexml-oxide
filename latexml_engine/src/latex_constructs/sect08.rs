@@ -1953,9 +1953,6 @@ pub(crate) fn load() -> Result<()> {
   });
 
   RawTeX!(r"\def\@fnsymbol#1{\ifcase#1\or \TextOrMath\textasteriskcentered *\or \TextOrMath \textdagger \dagger\or \TextOrMath \textdaggerdbl \ddagger \or \TextOrMath \textsection  \mathsection\or \TextOrMath \textparagraph \mathparagraph\or \TextOrMath \textbardbl \|\or \TextOrMath {\textasteriskcentered\textasteriskcentered}{**}\or \TextOrMath {\textdagger\textdagger}{\dagger\dagger}\or \TextOrMath {\textdaggerdbl\textdaggerdbl}{\ddagger\ddagger}\else \@ctrerr \fi}");
-  // latex.ltx:10205's `\fnsymbol`, which reads the `\@fnsymbol` in force: a `\maketitle`'s marks replayed with it
-  // (`latex_constructs::own_marks_as_tex`, 1905.10033)
-  DefMacro!("\\lx@tex@fnsymbol{}", r"\expandafter\@fnsymbol\csname c@#1\endcsname");
   DefMacro!("\\fnsymbol{}", sub[(token)] {
     let ctr = Expand!(token).to_string();
     ExplodeText!(radix::radix_format_str(CounterValue!(&ctr).value_of(), FNSYMBOLS))

@@ -1,5 +1,5 @@
 % mechanism: AAAI's `\equalcontrib` makes its note once (aaai2026.sty:79-86), so a later `\thanks` is the second note
-%   and a `\footnotemark[2]` answers it: the kernel stub (sect05.rs) counts its note once, so the given mark pairs with
+%   and a `\footnotemark[2]` answers it: the aaai binding (latexml_contrib aaai_sty.rs, MTREDUCE; formerly a kernel stub) counts its note once, so the given mark pairs with
 %   the note the PDF prints under it
 % witness:  2508.07026 (aaai2026.sty: Pan, Jiang "∗", Wang, Liu "†" "Corresponding authors."; written Pan ∗, Jiang †,
 %   Wang ‡, and Liu's `\footnotemark[2]` paired with Jiang's "These authors contributed equally."); the style a minimal
@@ -12,7 +12,7 @@
 %   authors." marked †
 % status:   RED (PRESBXbase) -> GREEN (PRESBX: perfect_kernel_batchfmmarks::a_mark_on_a_name_is_a_copy_of_its_note)
 % preload:  ar5iv.sty
-\begin{filecontents*}[overwrite]{presbxaaaib.sty}
+\begin{filecontents*}[overwrite]{aaai24.sty}
 \def\maketitle{\par\begingroup\def\thefootnote{\fnsymbol{footnote}}\twocolumn[\@maketitle]\@thanks\endgroup
   \setcounter{footnote}{0}\let\maketitle\relax\let\@maketitle\relax
   \gdef\@thanks{}\gdef\@author{}\gdef\@title{}\let\thanks\relax}
@@ -23,7 +23,7 @@
     \hsize\textwidth\centering{\LARGE\bf\@title\par}\vskip 1em{\Large\bf\@author\par}}}
 \end{filecontents*}
 \documentclass{article}
-\usepackage{presbxaaaib}
+\usepackage{aaai24}
 \title{A Title}
 \author{Ann Able\equalcontrib, Bob Baker\equalcontrib, Cy Cole\thanks{Corresponding authors.}, Dee Dunn\footnotemark[2]}
 \begin{document}

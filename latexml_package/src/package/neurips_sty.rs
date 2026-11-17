@@ -264,4 +264,8 @@ LoadDefinitions!({
 \@ifundefined{problem}{\lx@guess@newtheorem{problem}[theorem]{Problem}}{}%
 \@ifundefined{result}{\lx@guess@newtheorem{result}[theorem]{Result}}{}}"
   );
+  // The marks the copy's `\maketitle` prints, read after this binding as its stand-in's (neurips_2019.sty:266-269 …
+  // neurips_2025.sty:228-231 `\renewcommand{\thefootnote}{\fnsymbol{footnote}}`): `\@fnsymbol\c@footnote`, the
+  // document's `\@fnsymbol` (2201.13329, 2204.03458, 2312.10302; MTREDUCE).
+  engine::latex_constructs::declare_package_title_marks(r"\@fnsymbol\c@footnote", false)?;
 });
