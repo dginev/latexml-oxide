@@ -207,10 +207,9 @@ LoadDefinitions!({
     "\\firstnote{}",
     "\\@add@frontmatter{ltx:note}[role=firstnote]{#1}"
   );
-  DefMacro!(
-    "\\Address{}",
-    "\\@add@frontmatter{ltx:note}[role=address]{#1}"
-  );
+  // mdpi.cls prints the address under the names (1910.13722's copy: :371 `\address` stores `\@address`, :602 sets it
+  // in the title block; `\Address` the older copies' name, 2203.09377): `\lx@names@note`, OD #1074.
+  DefMacro!("\\Address{}", "\\lx@names@note{address}{#1}");
   DefMacro!(
     "\\AuthorNames{}",
     "\\@add@frontmatter{ltx:note}[role=authornames]{#1}"
@@ -422,11 +421,8 @@ LoadDefinitions!({
     let _guess = OriginGuard::new(DefinitionOrigin::Fallback);
     DefMacro!("\\publishersnote{}", "\\section*{Publisher's Note}#1");
   }
-  // \address[id]{text} — preserve as ltx:note.
-  DefMacro!(
-    "\\address[]{}",
-    "\\@add@frontmatter{ltx:note}[role=address]{#2}"
-  );
+  // \address[id]{text} — preserve as ltx:note, under the names (mdpi.cls:371, :602; 1910.13722, 2203.09377).
+  DefMacro!("\\address[]{}", "\\lx@names@note{address}{#2}");
   // \natexlab from natbib — emit arg inline (used in \bibitem to mark
   // companion years like (1999a)/(1999b)).
   DefMacro!("\\natexlab{}", "#1");

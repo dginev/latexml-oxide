@@ -160,10 +160,8 @@ LoadDefinitions!({
 
   // Common elsart frontmatter macros (autart inherits elsart style) —
   // preserve author-supplied content as ltx:note frontmatter.
-  DefMacro!(
-    "\\address[]{}",
-    "\\@add@frontmatter{ltx:note}[role=address]{#2}"
-  );
+  // autart.cls:1199-1215 `\address` sets the entry in the title block, under the names (1402.5644's copy): OD #1074.
+  DefMacro!("\\address[]{}", "\\lx@names@note{address}{#2}");
   DefMacro!("\\thanksref{}", "\\textsuperscript{#1}");
   DefMacro!("\\corauthref{}", "\\textsuperscript{*#1}");
   DefMacro!(

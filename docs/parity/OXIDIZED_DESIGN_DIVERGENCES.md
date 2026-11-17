@@ -20628,6 +20628,34 @@ construction only). **Guards**: `cluster_package_guards::perfect_kernel_batchiee
 `sectioning-frontmatter/ieee_thanks_*`, the specials and label forms in `ieee_thanks_address_specials_and_labels`);
 `perfect_kernel_batchp28::ieee_plain_route_reads_names_and_grades` repinned.
 
+### 1074. A note its binding declares printed under the names sits there, before the abstract (DG 2026-11-17; BLOCKPLACE)
+
+**Perl.** `insertFrontMatter` places the frontmatter in the order of `@frontmatter_elements` (Base_Utility.pool.ltxml:793-795:
+title, toctitle, subtitle, creator, date, abstract, keywords, classification, acknowledgements), then every other key
+(:836), so every `ltx:note` follows the abstract and keywords — also an author block's own address, e-mail or
+affiliation line, which some classes' `\maketitle` prints under the names, before the abstract.
+
+**Rust.** Opt-in: Perl's place stays every note's default. A binding whose class is verified to print a note under the
+names declares it there with `\lx@names@note{<role>}{<text>}` (frontmatter_api.rs: `\@add@frontmatter{ltx:note}` with
+`_zone=names`, #954's print-zone key), and `insert::place_block_notes`, the last step of `insert_frontmatter`, moves
+each such note to right after the last creator, in its order (it passes over the abstract, keywords and the other
+placed items, stops at the first element that is not frontmatter; a document with no creator keeps Perl's order). Declared:
+jfm's unmarked `\affiliation` (jfm.cls:733; 1711.01065), mdpi's `\address`/`\Address` (mdpi.cls:371, :602; 1910.13722,
+2203.09377), ieeeaccess's `\address` (ieeeaccess.cls:456-457, :568; 2006.03169), oup-authoring-template's `\address`
+(:1137-1142, :1494; 2512.03760), sigma's `\Address`, `\Email…`, `\URLaddress…` (sigma.cls:75-85; 0803.4168) and autart's
+`\address` (autart.cls:1199-1215; 1402.5644). Undeclared notes keep Perl's place, which is right for the classes that
+print them elsewhere: tac's `\address`/`\eaddress` (tac.cls:611-614 `\AtEndDocument`; 1504.03886), sagej's
+`\affiliation` (a `\footnotetext[0]`, sagej.cls:266-268; 1910.13936), elsarticle's `\emailauthor`/`\urlauthor` (the first
+page's footnote, elsarticle.cls:211-235), ejpecp's `\EMAIL` (in the authors' footnotes; 1406.5876, 1904.07135), wiley's
+`corremail` (beside the abstract, wiley-article.cls:416-433; 1808.01384), ieeetaes's `\authoraddress` (a first-page
+footnote). spconf's `\email` note (1806.02523, 2001.10603, 2103.15467) and Interspeech's fallback e-mail note
+(2603.01467, 2405.13379) are declared with the SPCONF rewrite of those bindings. The XML's elements and text are unchanged, the generated `xml:id`s follow the new document order.
+Offered to Perl as a patch. **Guards**: `cluster_package_guards::perfect_kernel_batchblockplace::a_block_contact_note_sits_under_the_names`
+(repros `sectioning-frontmatter/block_contact_note_{before_abstract,without_creators}`) and
+`::an_undeclared_note_keeps_perls_place` (`tac_block_note_keeps_its_place`); repinned, the PDF's order:
+`perfect_kernel_batch64qa::mdpi_history_is_frontmatter`, `perfect_kernel_batch67z::oup_authoring_template_class_commands`,
+`perfect_kernel_batch92e::mdpi_corres_label_only_note_is_kept` (the address note first); the pass classed `Place` in
+`perfect_kernel_batche0::PASSES_AFTER_THE_EMITTER`.
 ### 1075. A shared note's other marks highlight its margin note on wide screens (DG 2026-11-17; CSSHL)
 
 **Perl.** No shared-note copies (#1052 is ours): each author's copy of a note is its own pop-up.

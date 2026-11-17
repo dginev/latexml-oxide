@@ -498,6 +498,12 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
   });
   // (its queueing meaning, which a block arriving while a flush digests the queue queues with: `\lx@frontmatter@late`)
   Let!("\\lx@frontmatter@queue@add", "\\lx@add@frontmatter");
+  // Rust-only (OXIDIZED_DESIGN_DIVERGENCES #1074): `\lx@names@note{<role>}{<text>}`, a frontmatter note its class prints
+  // under the names, where the binding has checked the class does so (`_zone=names`): `insert::place_block_notes`.
+  DefMacro!(
+    "\\lx@names@note{}",
+    "\\lx@add@frontmatter{ltx:note}[role=#1,_zone=names]"
+  );
 
   // Beyond-Perl best-practice API (OXIDIZED_DESIGN #51): open an *empty*
   // frontmatter container element as a deliberate anchor for later annotations

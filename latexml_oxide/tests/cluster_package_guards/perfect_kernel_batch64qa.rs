@@ -112,13 +112,14 @@ fn mdpi_history_is_frontmatter() {
     "../../../tools/perfect_kernel/repros/sectioning-frontmatter/mdpi_history_is_frontmatter.tex"
   ));
   // a later `\history` replaces the earlier (mdpi.cls:384 `\gdef`); the document's own id (`id1`) is lastpage's
-  // `LastPage` label (65v: the mdpi versions load lastpage), so the note is `id1.1`
+  // `LastPage` label (65v: the mdpi versions load lastpage), so the note is `id1.2`, after the affiliation's note, which
+  // mdpi prints under the names, before the abstract (BLOCKPLACE, OD #1074)
   assert_eq!(xml.matches(r#"role="history""#).count(), 1, "{xml}");
   assert_element(
     &xml,
     "note",
     &[r#"role="history""#],
-    r#"<note role="history" xml:id="id1.1">Received: 28 March 2020; Accepted: 7 May 2020</note>"#,
+    r#"<note role="history" xml:id="id1.2">Received: 28 March 2020; Accepted: 7 May 2020</note>"#,
   );
 }
 

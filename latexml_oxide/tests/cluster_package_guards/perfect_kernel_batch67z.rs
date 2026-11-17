@@ -270,7 +270,9 @@ fn oup_authoring_template_class_commands() {
   assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
   let xml = squash(&xml);
   assert!(
-    xml.contains(r#"<note role="volume" xml:id="id5">12</note>"#),
+    // (`id6`: the address note, which the class prints under the names, comes first, before the abstract: BLOCKPLACE,
+    // OD #1074)
+    xml.contains(r#"<note role="volume" xml:id="id6">12</note>"#),
     "{xml}"
   );
   assert!(

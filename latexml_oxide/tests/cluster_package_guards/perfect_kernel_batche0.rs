@@ -1042,6 +1042,9 @@ const API_KEYS_OUTSIDE_PERLS: &[(&str, usize)] = &[
   ("_unsplit= frontmatter_stores.rs", 1),
   ("_unsplit= package/revtex4_support_sty.rs", 1),
   ("_withsup= base_utilities/frontmatter/observer/ledger.rs", 2),
+  // (BLOCKPLACE, OD #1074, raised 0 -> 1: `\lx@names@note`, the one declaration of a note its class prints under the
+  // names, which the bindings call instead of each writing `_zone=names`)
+  ("_zone= base_utilities/defs/frontmatter_api.rs", 1),
   ("_zone= package/aa_support_sty.rs", 2),
   ("_zone= package/elsarticle_cls.rs", 2),
   ("_zone= package/revtex4_support_sty.rs", 2),
@@ -2588,6 +2591,8 @@ enum PassMay {
   ChangeText,
   /// drop an empty or repeated item, or a line of a note
   Drop,
+  /// an item's place among the placed frontmatter, its holder unchanged
+  Place,
   /// **moves items between owners**: a debt, witnesses 2511.18438, 2608.22772
   OwnerDebt,
 }
@@ -2626,6 +2631,9 @@ const PASSES_AFTER_THE_EMITTER: &[(&str, PassMay)] = &[
   // (the name alone: a name's marks to its notes' `mark`, consumed by its contacts, or mark-only notes after it — the
   // creator's own items, no owner moved; PURE)
   ("keep_personnames_pure", PassMay::ChangeText),
+  // (a note its binding declares printed under the names, moved there, before the abstract: still no creator's;
+  // BLOCKPLACE, OD #1074)
+  ("place_block_notes", PassMay::Place),
   // (the content invariant on the placed output, under `=2`: it counts, N2)
   ("check_placed_content", PassMay::ChangeNothing),
 ];

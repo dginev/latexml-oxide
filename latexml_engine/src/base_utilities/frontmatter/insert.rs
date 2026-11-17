@@ -162,8 +162,59 @@ pub fn insert_frontmatter(document: &mut Document) -> Result<()> {
   keep_unclaimed_net_notes(document)?;
   // (the name alone: every mark printed on a name is its note's, its contact's or a mark-only note after it, DG 2026-11-16)
   keep_personnames_pure(document)?;
+  // (a note its binding declares printed under the names, there, before the abstract: OD #1074)
+  place_block_notes(document, &all_keys)?;
   // (the content invariant on the placed output, under the emitter's `=2`: every printed word placed once or counted, OD #980)
   check_placed_content(document);
+  Ok(())
+}
+
+/// A placed `ltx:note` its binding declares printed under the names (`_zone=names`, `\lx@names@note`), moved right after
+/// the last creator, in its order. Perl inserts every note after the abstract and the keywords
+/// (Base_Utility.pool.ltxml:793-795 `@frontmatter_elements`, :836), which stays the place of every undeclared note: tac's
+/// `\address` prints at the end (1504.03886), sagej's `\affiliation` in a footnote (1910.13936). OD #1074; witnesses
+/// 1711.01065 (jfm), 1910.13722 (mdpi), 2006.03169 (ieeeaccess), 2512.03760 (oup-authoring-template), and the
+/// spconf/Interspeech ones 2603.01467, 2405.13379. The scan reads the run of placed frontmatter after the last creator,
+/// passing over its other items (abstract, keywords, dates), and stops at the first element that is not frontmatter; a
+/// document with no creator keeps Perl's order.
+fn place_block_notes(document: &mut Document, keys: &[String]) -> Result<()> {
+  let Some(first) = document.findnode("//ltx:creator", None) else {
+    return Ok(());
+  };
+  let Some(parent) = first.get_parent() else {
+    return Ok(());
+  };
+  let Some(mut tail) = element_nodes(&parent)
+    .into_iter()
+    .rev()
+    .find(|child| document::get_node_qname(child) == pin_static("ltx:creator"))
+  else {
+    return Ok(());
+  };
+  let mut moved = Vec::new();
+  let mut next = tail.get_next_sibling();
+  while let Some(node) = next {
+    next = node.get_next_sibling();
+    if node.get_type() != Some(NodeType::ElementNode) {
+      continue;
+    }
+    let note = document::get_node_qname(&node) == pin_static("ltx:note");
+    if !note
+      && !with(document::get_node_qname(&node), |q| {
+        keys.iter().any(|k| k == q)
+      })
+    {
+      break;
+    }
+    if note && node.get_attribute("_zone").as_deref().map(str::trim) == Some("names") {
+      moved.push(node);
+    }
+  }
+  for mut node in moved {
+    node.unlink();
+    tail.add_next_sibling(&mut node)?;
+    tail = node;
+  }
   Ok(())
 }
 
