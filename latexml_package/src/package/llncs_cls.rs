@@ -128,7 +128,9 @@ LoadDefinitions!({
     declare_title_marks(!steps)?;
   });
   if is_document_class("llncs") {
-    declare_title_marks(true)?;
+    // (withdrawn until `\maketitle`'s scan declares them: a block flushed before it — a `\section` first, no
+    // `\maketitle` — writes no glyph, not ⋆; revLLNCSc n1, n15, n16)
+    declare_title_marks(false)?;
     AddToMacro!("\\lx@maketitle@begin", "\\lx@llncs@title@scan\\setcounter{footnote}{0}");
     // (a copy the paper ships from before `\fnnstart` sets 0 there: v2.4-v2.10, 5 of 592 copies sampled; 1508.06013's
     // v2.6, its body notes from 1)
