@@ -22062,6 +22062,35 @@ prints it (OD #460's rule; moved here, DG 2026-11-15). Witnesses, guards and det
 archive](../archive/OD_FRONTMATTER_RECORDS_2026-11-15.md), #842. Guard
 `perfect_kernel_batch78m::bmcart_frontmatter_is_frontmatter`.
 
+**The thanksbox's marks (BMCART).** The class prints its article notes and the correspondence only in the thanksbox at
+`\end{fmbox}` (:1435-1443 `\auto@set@thanksbox`): `\printcorrtext` first — the corresponding author's mark, then
+`\corref@text` ("Correspondence: ", :843) and the e-mail — then each `{artnotes}` note in `\bmcartnote@id@list` order
+under its `\thanksmark`. Each mark steps `thanks`, printed `\getitemvalue{bmcsymbol}{n}` from `*,\textdagger,\^{}`
+(:1095-1097); a note's `symbol` key is its mark and steps nothing (:1393-1398); a sole author's correspondence prints
+no mark (:1076-1087); past the list the mark is empty (pdflatex errs on the aux label). The corresponding author is the
+last with a `corref` key (:1218-1222) — save with one address, where the key does nothing (:1066-1074) — else the
+first with an `email` (`\authorcorref@notset` through the aux, :944, :1166, :1212-1217). The copies differ, so the
+binding reads which rule its copy has from the copy's own definitions: the 2017/07/31 class makes every `corref` author
+corresponding, one mark and "Correspondence: a; b" (`\xdef\corr@author@id{\corr@author@id,\author@id}` in
+`\author@fmt`, :1225; ignores the key only for one address and one author, :1072-1076; 2012.08156, 2101.05946), and one
+2017 copy's `\endfrontmatter` never calls `\set@authorcorref@notset`, so no e-mailed author corresponds by default
+(2409.06429). The binding settles this at
+`\end{fmbox}` (`\lx@bmcart@thanksbox`, nothing when the paper set its own `{thanksbox}`): each note contact carries the
+glyph its mark prints (`_fnmark`, read from the class's own list), so a note two names cite is one shared note under
+that mark (#1054, the elsarticle `\fntext` precedent) and one a single name cites stays its contact (FIDELITY_CHARTER
+§4, "marks follow placement"); the corresponding author's e-mail contact is named `\corref@text`, not "Email: " — the
+one contact, not a second copy of the address; a `\corref@text` the paper empties (1902.08707) names nothing, the
+e-mail keeps "Email: ". A mark that is not one glyph (past the list, a `symbol` of several
+characters) leaves the note unmarked with an Info. Witness 2112.10068 ("Sharma1†, Jain2† … Chaterji1*", "*Correspondence:
+schaterji@purdue.edu", "† Equal contributor"; the note had been "Note: Equal contributor" under each name, no glyph).
+Repros `sectioning-frontmatter/bmcart_marks_copy/` beside the unmodified class (its licence asks a changed copy to be
+renamed); guards `perfect_kernel_batchbmcart::{shared_note_is_one_marked_note,
+note_symbol_is_its_mark_and_steps_nothing, note_without_corresponding_author_takes_the_first_mark,
+first_emailed_author_corresponds_without_corref, one_address_ignores_corref, last_corref_author_corresponds,
+empty_correspondence_text_names_nothing, every_corref_author_corresponds_in_the_2017_class}` (the last beside the 2017
+class, `bmcart2017_copy/`). Residual: the 2017 class's one ∗ on several corresponding names is not written (each
+e-mail is its own contact).
+
 #### 898. eptcs.cls: `\institute` and `\email` inside `\author` are each a line under the names (Perl: no binding)
 
 eptcs.cls (`eptcs_cls.rs`): `\institute`, `\email` inside `\author` each a line under the names — mapped onto the

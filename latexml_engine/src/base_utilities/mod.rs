@@ -74,6 +74,8 @@ pub use defs::frontmatter_api::{
   },
   email_lines::line_is_email_list,
 };
+// (the glyph a math symbol prints, for a binding reading a mark: bmcart's `symbol` key)
+pub use defs::frontmatter_fields::math_symbol_glyph;
 // (`\lx@splitting`'s expansion, for a binding that splits a list itself: aa's and llncs's `\institute`, Option C P2-2,
 // P2-3)
 pub use defs::general::split_calls;
