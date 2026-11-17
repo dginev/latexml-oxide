@@ -21965,7 +21965,10 @@ An `\affiliation` right after another reaches no author: a new text is listed wi
 one is nothing. `\alsoaffiliation` adds a number to the last author (:428-467); a new one steps the counter, so it is
 also every waiting author's. `\altaffiliation` is the last author's, a second one replacing the first (`\xdef`,
 :468-485); `\email`, `\phone` and `\fax` are the last author's, a second one replacing the first (`\gdef`, :513-539),
-and an author's phone and fax print only beside its e-mail (`\acs@number@list`, :971-1001). One before any `\author` is
+and an author's phone and fax print only beside its e-mail (`\acs@number@list`, :971-1001); an identical repeat replaces
+nothing (2203.15022 gives its `\email` twice; revACHEMSOb B1). They are `\@onlypreamble` (:346, :521, :530, :539): in the
+body pdflatex errs and prints the text inline, and the binding attaches them at once (no Error raised; row R
+ACHEMSO-BODY). One before any `\author` is
 the class's Warning and is dropped (:376-378). The `[short]` form is stored in `\@affil@<n>` for `\acs@affil@list`,
 which nothing in the class calls: only the full text prints.
 

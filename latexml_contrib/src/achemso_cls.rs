@@ -130,7 +130,7 @@ LoadDefinitions!({
 \def\lx@acs@fax@add{\lx@add@contact[role=fax,name={Fax:~}]}
 \def\lx@acs@drop#1#2{\expandafter\g@addto@macro\expandafter\lx@acs@dropped\expandafter{\expandafter
   \lx@acs@note\expandafter{#1}{#2}}}
-\def\lx@acs@keep#1#2#3{\ifx#1\@empty\else\lx@acs@drop#1{#2}\fi\gdef#1{#3}}
+\def\lx@acs@keep#1#2#3{\def\lx@acs@new{#3}\ifx#1\lx@acs@new\else\ifx#1\@empty\else\lx@acs@drop#1{#2}\fi\gdef#1{#3}\fi}
 \def\lx@acs@put#1#2{\ifx#1\@empty\else\ifx\lx@acs@email\@empty\lx@acs@drop#1{#2}\else
   \expandafter\lx@acs@put@\csname lx@acs@#2@add\expandafter\endcsname\expandafter{#1}\fi\fi}
 \def\lx@acs@put@#1#2{#1{#2}}

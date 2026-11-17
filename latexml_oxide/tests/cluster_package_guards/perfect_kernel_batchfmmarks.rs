@@ -4437,6 +4437,12 @@ fn achemso_pieces_no_author_holds_are_unlinked_notes() {
       1,
       &["email=ann@x.edu", "phone=123", "phone=555"][..],
     ),
+    // (a repeated identical contact replaces nothing: no duplicate note, 2203.15022; revACHEMSOb B1)
+    (
+      repro!("fmmarks_achemso_repeated_contact_is_one_contact"),
+      1,
+      &[][..],
+    ),
   ] {
     let (log, xml, ()) = convert_with_setup_then(tex, Some("ar5iv.sty"), || {}, |_| {});
     // (the notes outside every creator, `role=text` in document order)
