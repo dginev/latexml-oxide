@@ -1,0 +1,32 @@
+% mechanism: achemso, 2605.10968's shape: `[short]` affiliations, repeated `\alsoaffiliation`s, and a repeated
+%   `\affiliation` reaching the two authors waiting for it
+% witness:  2605.10968 (all ten authors' affiliations were detached notes)
+% oracle:   pdflatex 0 errors; "Ann Able,∗,†,‡ Bob Baker,†,‡,¶ Cy Cole,‡ and Dan Dorn‡", "†Univ A, Town", "‡Inst Q, Town", "¶Inst K, Town",
+%   "E-mail: ann@x.org"
+% engines:  rust int/frontmatter 3b420685f89 = 0 errors, 1 Warning; XML Ann Able | email=ann@x.org / Bob Baker / Cy
+%   Cole / Dan Dorn; ACHEMSO = 0 errors, 1 Warning; XML Ann Able | email=ann@x.org ; affiliation=Univ A, Town
+%   ; affiliation=Inst Q, Town / Bob Baker | affiliation=Univ A, Town ; affiliation=Inst Q, Town ;
+%   affiliation=Inst K, Town / Cy Cole | affiliation=Inst Q, Town / Dan Dorn | affiliation=Inst Q, Town
+% expect:   0 errors, 1 Warning; XML Ann Able | affiliation=Univ A, Town ; affiliation=Inst Q, Town ; email=ann@x.org /
+%   Bob Baker | affiliation=Univ A, Town ; affiliation=Inst Q, Town ; affiliation=Inst K, Town / Cy Cole |
+%   affiliation=Inst Q, Town / Dan Dorn | affiliation=Inst Q, Town; HTML Ann Able / Bob Baker / Cy Cole / Dan Dorn (the
+%   guard's XML and HTML lines)
+% status:   GREEN XML, HTML (ACHEMSO; RED XML at 3b420685f89;
+%   perfect_kernel_batchfmmarks::notes_are_marked_only_where_the_class_prints_marks)
+% preload: ar5iv.sty
+\documentclass{achemso}
+\author{Ann Able}
+\email{ann@x.org}
+\affiliation[A]{Univ A, Town}
+\alsoaffiliation[Q]{Inst Q, Town}
+\author{Bob Baker}
+\affiliation[A]{Univ A, Town}
+\alsoaffiliation[Q]{Inst Q, Town}
+\alsoaffiliation[K]{Inst K, Town}
+\author{Cy Cole}
+\author{Dan Dorn}
+\affiliation[Q]{Inst Q, Town}
+\title{Title}
+\begin{document}
+Text.
+\end{document}

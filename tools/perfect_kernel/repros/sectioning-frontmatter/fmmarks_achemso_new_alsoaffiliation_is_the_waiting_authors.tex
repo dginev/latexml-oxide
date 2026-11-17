@@ -1,0 +1,27 @@
+% mechanism: achemso: a new `\alsoaffiliation` is numbered next, so it is also the affiliation of every author waiting for
+%   one; a repeat of the last author's own is no second copy
+% witness:  the class rule (achemso.cls:340-343, :428-458); review sibling of 2605.10968's `\alsoaffiliation`
+% oracle:   pdflatex 0 errors; "Ann Able,† Bob Baker,†,† Cy Cole,‡,‡ and Dan Dorn∗,¶", "†Univ B", "‡Univ A", "¶Univ C", "E-mail: dan@x.org"
+% engines:  rust int/frontmatter 3b420685f89 = 0 errors, 1 Warning; XML Ann Able / Bob Baker / Cy Cole / Dan Dorn |
+%   email=dan@x.org; ACHEMSO = 0 errors, 1 Warning; XML Ann Able | affiliation=Univ B / Bob Baker |
+%   affiliation=Univ B / Cy Cole | affiliation=Univ A / Dan Dorn | email=dan@x.org ; affiliation=Univ C
+% expect:   0 errors, 1 Warning; XML Ann Able | affiliation=Univ B / Bob Baker | affiliation=Univ B / Cy Cole |
+%   affiliation=Univ A / Dan Dorn | affiliation=Univ C ; email=dan@x.org; HTML Ann Able / Bob Baker / Cy Cole / Dan Dorn
+%   (the guard's XML and HTML lines)
+% status:   GREEN XML, HTML (ACHEMSO; RED XML at 3b420685f89;
+%   perfect_kernel_batchfmmarks::notes_are_marked_only_where_the_class_prints_marks)
+% preload: ar5iv.sty
+\documentclass{achemso}
+\author{Ann Able}
+\author{Bob Baker}
+\alsoaffiliation{Univ B}
+\author{Cy Cole}
+\affiliation{Univ A}
+\alsoaffiliation{Univ A}
+\author{Dan Dorn}
+\email{dan@x.org}
+\affiliation{Univ C}
+\title{Title}
+\begin{document}
+Text.
+\end{document}

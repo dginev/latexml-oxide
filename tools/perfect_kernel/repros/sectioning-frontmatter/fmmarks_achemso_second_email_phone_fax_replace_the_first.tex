@@ -1,0 +1,30 @@
+% mechanism: achemso: a second `\email`, `\phone` or `\fax` of one author replaces the first (`\gdef`), and the class
+%   prints an author's phone and fax only with its e-mail: the replaced pieces, and a phone of an author with no
+%   e-mail, are unlinked notes, kept (FIDELITY_CHARTER §2); the author holds the last ones
+% witness:  revACHEMSO S2 (probe p5); the class rule (achemso.cls:513-539, :951-1001)
+% oracle:   pdflatex 0 errors; "Ann Able∗ and Bob Baker", "Univ X", "E-mail: ann2@y.edu", "Phone: 456. Fax: 789"
+% engines:  rust ACHEMSO dd3d7450e54 = 0 errors, 1 Warning; XML Ann Able | affiliation=Univ X ; email=ann@x.edu ;
+%   email=ann2@y.edu ; phone=123 ; phone=456 ; fax=789 / Bob Baker | affiliation=Univ X ; phone=555;
+%   ACHEMSOb = 0 errors, 1 Warning; as expected
+% expect:   0 errors, 1 Warning; XML Ann Able | affiliation=Univ X ; email=ann2@y.edu ; phone=456 ; fax=789 / Bob
+%   Baker | affiliation=Univ X; HTML Ann Able / Bob Baker (the guard's XML and HTML lines)
+%   and the notes outside the creators email=ann@x.edu, phone=123, phone=555
+%   (perfect_kernel_batchfmmarks::achemso_pieces_no_author_holds_are_unlinked_notes)
+% status:   GREEN XML, HTML (ACHEMSOb; RED XML at dd3d7450e54;
+%   perfect_kernel_batchfmmarks::notes_are_marked_only_where_the_class_prints_marks)
+% preload: ar5iv.sty
+\documentclass{achemso}
+\author{Ann Able}
+\affiliation{Univ X}
+\email{ann@x.edu}
+\email{ann2@y.edu}
+\phone{123}
+\phone{456}
+\fax{789}
+\author{Bob Baker}
+\affiliation{Univ X}
+\phone{555}
+\title{T}
+\begin{document}
+Body.
+\end{document}
