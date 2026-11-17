@@ -348,7 +348,8 @@ fn declare_body_title_marks(
 
 /// The title marks a `\maketitle` body sets, by its `\thefootnote` definitions (`\def`, `\renewcommand`, …): a line of
 /// the binding's (`lines`), or a macro whose body is a fixed glyph (aaai2026.sty:135 `\def\thefootnote{\fndag}`, :210
-/// `\def\fndag{†}`, 2511.07192); none where it sets no `\thefootnote`, another, or two that disagree.
+/// `\def\fndag{†}`, 2511.07192); none where it sets no `\thefootnote` before the names print, another, one under a
+/// conditional, or two that disagree.
 fn body_title_marks(body: &Tokens, lines: &[(&str, &str)]) -> Option<String> {
   const DEFINERS: &[&str] = &[
     "\\def",
@@ -369,9 +370,24 @@ fn body_title_marks(body: &Tokens, lines: &[(&str, &str)]) -> Option<String> {
   let is = |i: usize, catcode: Catcode| tokens.get(i).is_some_and(|t| t.get_catcode() == catcode);
   let space = |i: usize| is(i, Catcode::SPACE);
   let mut found: Vec<String> = Vec::new();
+  let mut open_conditionals = 0i32;
   for (at, token) in tokens.iter().enumerate() {
+    // (only a definition before the names print decides: one after `\@maketitle` sets the notes `\@thanks` prints,
+    // not the names' marks, revMTREDUCEc S1)
+    if token.with_cs_name(|name| name == "\\@maketitle" || name == "\\@author") {
+      break;
+    }
+    match lookup_conditional(token) {
+      Some(ConditionalType::If) => open_conditionals += 1,
+      Some(ConditionalType::Fi) => open_conditionals -= 1,
+      _ => {},
+    }
     if !token.with_cs_name(|name| name == "\\thefootnote") {
       continue;
+    }
+    // (one under a conditional may not be taken: `\if@nipssym\renewcommand{\thefootnote}{…}\fi`, revMTREDUCEc P1)
+    if open_conditionals > 0 {
+      return None;
     }
     // (`\def\thefootnote` or `\renewcommand{\thefootnote}`, a `*` aside)
     let braced = at > 0 && is(at - 1, Catcode::BEGIN);

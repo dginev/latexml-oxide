@@ -413,7 +413,7 @@ fn a_number_the_title_counter_cannot_give_keys_nothing() {
       repro!("markkey_samethanks_under_aa_names_no_number"),
       [
         "Ann Able ; thanks[]=Corresponding authors | affiliation=Univ A, Town A",
-        "Bob Baker ; footnotemark[]= | affiliation=Univ B, Town B",
+        "Bob Baker | affiliation=Univ B, Town B",
         "Cat Cole | affiliation=Univ A, Town A",
       ]
       .as_slice(),

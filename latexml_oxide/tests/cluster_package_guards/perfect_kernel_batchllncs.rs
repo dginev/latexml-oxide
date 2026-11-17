@@ -176,7 +176,7 @@ fn a_names_macro_that_steps_withdraws_the_title_marks() {
   let ann_thanks = r"Ann Able\thanks{Ann note.} \and ";
   let mark_withdrawn = [
     "Ann Able ; thanks[]=Ann note. | affiliation=Lab A",
-    "Bob Baker ; footnotemark[]= | affiliation=Lab A",
+    "Bob Baker | affiliation=Lab A",
   ];
   let cases: [(String, usize, Vec<&str>); 5] = [
     (

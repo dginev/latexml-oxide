@@ -3821,7 +3821,7 @@ const CLASS: &[Row] = &[
     repro:      "wrongfix_title_footnotemark_counter_below_one_prints_no_glyph",
     tex:        repro!("wrongfix_title_footnotemark_counter_below_one_prints_no_glyph"),
     warnings:   1,
-    creators:   &["Ann Able", "Bob Baker ; footnotemark[]="],
+    creators:   &["Ann Able", "Bob Baker"],
     moves:      r#""#,
     page:       &["Ann Able", "Bob Baker"],
     page_moves: r#""#,

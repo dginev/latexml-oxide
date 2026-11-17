@@ -722,8 +722,8 @@ pub(in crate::base_utilities) const MARK_UNKNOWN: &str = "_markunknown";
 
 /// The authors' notes written with no mark, their glyph unknown ([`MARK_UNKNOWN`]), once the document is built: a note
 /// whose text never came (a `\footnotemark[1]` whose note no number key names yet, a scrartcl name's under Ann's
-/// `\thanks`) is a mark lost, counted as `count_lost_marks` counts one; those placed under their author, an Info (DG
-/// 2026-11-16: the association known, the glyph not). OD #1053.
+/// `\thanks`) is a mark lost, counted as `count_lost_marks` counts one, its empty mark-only note dropped; those placed
+/// under their author, an Info (DG 2026-11-16: the association known, the glyph not). OD #1053.
 pub(in crate::base_utilities) fn count_unknown_marks(document: &mut Document) {
   let notes = document.findnodes(&s!(".//ltx:creator/ltx:note[@{MARK_UNKNOWN}]"), None);
   if notes.is_empty() {
@@ -749,9 +749,13 @@ pub(in crate::base_utilities) fn count_unknown_marks(document: &mut Document) {
       Warn!(
         "frontmatter",
         "unanswered_mark_lost",
-        "A footnote mark on an author's name whose note cannot be identified, its glyph unknown here, is written with \
-         none"
+        "A footnote mark on an author's name whose note cannot be identified, its glyph unknown here, is dropped"
       );
+      // (never an empty mark, which shows and links nothing: 2509.10105's `Ju\footnotemark[1]` in a block written whole,
+      // whose `\thanks` notes carry no number to pair it by, revMTREDUCEc S2)
+      if note.get_attribute("role").as_deref() == Some("footnotemark") {
+        document.remove_node(note.clone());
+      }
     }
   }
   let placed = placed.len();

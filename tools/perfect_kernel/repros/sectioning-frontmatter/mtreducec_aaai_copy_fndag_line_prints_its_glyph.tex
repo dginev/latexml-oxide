@@ -8,7 +8,8 @@
 %   equally." once
 % engines:  rust WRONGFIXc (the static reader) = 0 errors, 1 Warning; Ann and Bob a copy of one note marked †;
 %   MTREDUCEb (the binding's `\fnsymbol` declared whatever the copy's line) = the same marked ∗
-% expect:   0 errors, 1 Warning (the emitter writes the stub's note text as plain text); Ann and Bob a copy of one
+% expect:   0 errors, 1 Warning (the binding's `\equalcontrib` stub holds the note's text, no argument the emitter takes
+%   tokens from: written as its plain text, no markup to lose); Ann and Bob a copy of one
 %   note marked †
 % status:   GREEN (MTREDUCEc: perfect_kernel_batchmtreduce::package_title_marks_are_their_binding_s)
 % preload:  ar5iv.sty

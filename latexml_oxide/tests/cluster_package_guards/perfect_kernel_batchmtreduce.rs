@@ -7,7 +7,7 @@ use latexml::util::test::{
   convert_files_with, convert_with_setup_then, error_count, warning_count,
 };
 
-use super::perfect_kernel_batchfmmarks::{Row, assert_green, creator_lines};
+use super::perfect_kernel_batchfmmarks::{Row, assert_green, creator_lines, page_lines, page_of};
 
 macro_rules! repro {
   ($name:literal) => {
@@ -37,8 +37,12 @@ macro_rules! repro {
 /// step after a raw package, so the copy's `\abstract` heading is no creator, 2301.04841) and siamproceedings
 /// (2509.02371), each a new binding reading its copy raw; jmlr2e's stand-in copy read after its binding (2509.13653); the arxiv and PRIMEarxiv bindings' raw reads (2509.16272, 2509.03066); gtpart without its class,
 /// whose metadata setters print nothing (1108.0474). MTREDUCEc, the body's line decides, one row per path: a fixed-glyph
-/// macro read off the refused body (aaai2026.sty's `\fndag`, 2511.07192), a stand-in copy's body setting none
-/// (2305.15254's neurips_2022.sty), an `\AtBeginDocument` body whose line the binding does not know (acl, `\arabic`).
+/// macro read off the refused body (aaai2026.sty's `\fndag`, 2511.07192), an `\AtBeginDocument` body whose line the
+/// binding does not know (acl, `\arabic`). MTREDUCEd: only a line before the body's first `\@maketitle` decides, so one
+/// after it leaves the names unmarked (`[a]` for a shared note) and a reset after `\endgroup` keeps the marks; a line
+/// under a conditional decides nothing (revMTREDUCEc S1, P1); a mark of unknown glyph no note pairs with is dropped and
+/// counted, never an empty mark (2509.10105, S2); NIPS 2007-2015's styles bound by name, a typed `$^\dagger$` linked
+/// (1503.02531).
 const BINDINGS: &[Row] = &[
   Row {
     repro:      "mtreduce_acl_maketitle_at_begin_document_reads_the_document_s_fnsymbol",
@@ -56,6 +60,7 @@ const BINDINGS: &[Row] = &[
     ],
     page_moves: r#""#,
   },
+  // (1 Warning: the stub's note written as its text, as below)
   Row {
     repro:      "mtreduce_aaai_equalcontrib_across_separators",
     tex:        repro!("mtreduce_aaai_equalcontrib_across_separators"),
@@ -238,6 +243,8 @@ const BINDINGS: &[Row] = &[
     page:       &[r#"Ann Able"#],
     page_moves: r#""#,
   },
+  // (1 Warning: the binding's `\equalcontrib` stub holds the note's text, no call argument the emitter can take its
+  // tokens from, so it is written as its text — `emit::by_text`, "note no argument"; plain text, no markup lost)
   Row {
     repro:      "mtreducec_aaai_copy_fndag_line_prints_its_glyph",
     tex:        repro!("mtreducec_aaai_copy_fndag_line_prints_its_glyph"),
@@ -255,21 +262,6 @@ const BINDINGS: &[Row] = &[
     page_moves: r#""#,
   },
   Row {
-    repro:      "mtreducec_neurips_commented_maketitle_line_prints_no_marks",
-    tex:        repro!("mtreducec_neurips_commented_maketitle_line_prints_no_marks"),
-    warnings:   0,
-    creators:   &[
-      r#"Ann Able ; thanks[]=Equal contribution."#,
-      r#"Bob Baker ; thanks[]=Corresponding: bob@x.org"#,
-    ],
-    moves:      r#""#,
-    page:       &[
-      r#"Ann Able | under: Equal contribution."#,
-      r#"Bob Baker | under: Corresponding: bob@x.org"#,
-    ],
-    page_moves: r#""#,
-  },
-  Row {
     repro:      "mtreducec_acl_begin_document_maketitle_arabic_prints_no_marks",
     tex:        repro!("mtreducec_acl_begin_document_maketitle_arabic_prints_no_marks"),
     warnings:   0,
@@ -281,6 +273,87 @@ const BINDINGS: &[Row] = &[
     page:       &[
       r#"Ann Able | under: First note."#,
       r#"Bob Baker | under: Second note."#,
+    ],
+    page_moves: r#""#,
+  },
+  Row {
+    repro:      "mtreduced_nips_fnsymbol_after_maketitle_leaves_names_unmarked",
+    tex:        repro!("mtreduced_nips_fnsymbol_after_maketitle_leaves_names_unmarked"),
+    warnings:   0,
+    creators:   &[
+      r#"Ann Able ; thanks[]=Equal contribution."#,
+      r#"Bob Baker ; thanks[]=Equal contribution."#,
+      r#"Cy Cole ; thanks[]=Work at X."#,
+    ],
+    moves:      r#""#,
+    page:       &[
+      r#"Ann Able ; [a]→note"#,
+      r#"Bob Baker ; [a]→note"#,
+      r#"Cy Cole | under: Work at X."#,
+      r#"margin: Equal contribution."#,
+    ],
+    page_moves: r#""#,
+  },
+  Row {
+    repro:      "mtreduced_nips_reset_after_endgroup_keeps_fnsymbol",
+    tex:        repro!("mtreduced_nips_reset_after_endgroup_keeps_fnsymbol"),
+    warnings:   0,
+    creators:   &[
+      r#"Ann Able ; thanks[*]=Equal contribution."#,
+      r#"Bob Baker ; thanks[*]=Equal contribution."#,
+      r#"Cy Cole ; thanks[†]=Work at X."#,
+    ],
+    moves:      r#""#,
+    page:       &[
+      r#"Ann Able ; *→note"#,
+      r#"Bob Baker ; *→note"#,
+      r#"Cy Cole ; † plain"#,
+      r#"margin: Equal contribution. ; Work at X."#,
+    ],
+    page_moves: r#""#,
+  },
+  Row {
+    repro:      "mtreduced_nips_fnsymbol_under_false_conditional_leaves_names_unmarked",
+    tex:        repro!("mtreduced_nips_fnsymbol_under_false_conditional_leaves_names_unmarked"),
+    warnings:   0,
+    creators:   &[
+      r#"Ann Able ; thanks[]=Equal contribution."#,
+      r#"Bob Baker ; thanks[]=Equal contribution."#,
+      r#"Cy Cole ; thanks[]=Work at X."#,
+    ],
+    moves:      r#""#,
+    page:       &[
+      r#"Ann Able ; [a]→note"#,
+      r#"Bob Baker ; [a]→note"#,
+      r#"Cy Cole | under: Work at X."#,
+      r#"margin: Equal contribution."#,
+    ],
+    page_moves: r#""#,
+  },
+  Row {
+    repro:      "mtreduced_whole_block_footnotemark_of_unknown_glyph_is_dropped",
+    tex:        repro!("mtreduced_whole_block_footnotemark_of_unknown_glyph_is_dropped"),
+    warnings:   2,
+    creators:   &[r#"Ann Able Bob Baker Dee Dunn Fay Fox ; thanks[]=Equal contribution"#],
+    moves:      r#""#,
+    page:       &[r#"Ann Able Bob Baker Dee Dunn Fay Fox | under: Equal contribution"#],
+    page_moves: r#""#,
+  },
+  Row {
+    repro:      "mtreduced_nips14submit_typed_dagger_links_its_thanks",
+    tex:        repro!("mtreduced_nips14submit_typed_dagger_links_its_thanks"),
+    warnings:   0,
+    creators:   &[
+      r#"Ann Able ; thanks[*]=Also at X. ; thanks[†]=Equal contribution."#,
+      r#"Bob Baker ; footnotemark[†]="#,
+      r#"Cy Cole"#,
+    ],
+    moves:      r#""#,
+    page:       &[
+      r#"Ann Able ; * plain ; †→note"#,
+      r#"Bob Baker ; †→note"#,
+      r#"Cy Cole"#,
+      r#"margin: Also at X. ; Equal contribution."#,
     ],
     page_moves: r#""#,
   },
@@ -317,6 +390,49 @@ fn a_copy_in_a_subdirectory_keeps_its_marks() {
       "Cy Cole ; thanks[†]=Corr.",
     ],
     "{xml}"
+  );
+}
+
+/// A stand-in copy read as the file its binding stands in for (neurips_2022.sty itself, comments stripped) whose
+/// `\maketitle` sets no `\thefootnote`, its lines commented out, declares no marks: each note under its name, unmarked
+/// (2305.15254; MTREDUCEb declared ∗ and †, which the PDF never prints). Its own test: the copy is a file beside the
+/// document, which a row's single source cannot ship whole (MTREDUCEd).
+#[test]
+fn a_stand_in_copy_setting_no_marks_declares_none() {
+  let (log, xml) = convert_files_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/class-bindings/neurips_commented/mtreducec_neurips_commented_maketitle_line_prints_no_marks.tex"
+    ),
+    &[(
+      "neurips_2022.sty",
+      include_str!(
+        "../../../tools/perfect_kernel/repros/class-bindings/neurips_commented/neurips_2022.sty"
+      ),
+    )],
+    Some("ar5iv.sty"),
+  );
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  assert!(
+    log.contains("read as the file its binding stands in for"),
+    "{log}"
+  );
+  assert_eq!(
+    creator_lines(&xml),
+    [
+      "Ann Able ; thanks[]=Equal contribution.",
+      "Bob Baker ; thanks[]=Corresponding: bob@x.org",
+    ],
+    "{xml}"
+  );
+  assert_eq!(
+    page_lines(&page_of(&xml)),
+    (
+      vec![
+        "Ann Able | under: Equal contribution.".to_string(),
+        "Bob Baker | under: Corresponding: bob@x.org".to_string(),
+      ],
+      Vec::<String>::new()
+    )
   );
 }
 

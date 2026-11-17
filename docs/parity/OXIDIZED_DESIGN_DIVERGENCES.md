@@ -19686,12 +19686,17 @@ latex_constructs.pool.ltxml:503-527); acmart's `\authornote` is a contact, `\aut
   `declare_stand_in_copy_title_marks`; revMTREDUCE B1, S2): a `\thefootnote` definition there that is one of the
   binding's lines (`FNSYMBOL_TITLE_MARKS`, `\fnsymbol{footnote}`: the document's `\@fnsymbol` of the counter), or one
   macro whose body is a fixed glyph, that glyph (aaai2026.sty:135 `\def\thefootnote{\fndag}`, :210 `\def\fndag{†}`,
-  2511.07192 "Kejiang Chen1†, Weiming Zhang1†"); none, another, or two that disagree declare nothing, no glyph
-  (2305.15254's neurips_2022.sty, its line commented out; an acl copy's `\arabic` line). The bindings: `acl_sty.rs` and
+  2511.07192 "Kejiang Chen1†, Weiming Zhang1†"); only a definition before the body's first `\@maketitle` or `\@author`
+  decides (one after it sets the notes `\@thanks` prints, not the names' marks: pdflatex's "Ann1" over "∗Equal
+  contribution", and a reset after `\endgroup` is not theirs; revMTREDUCEc S1); none, another, one under a conditional
+  (`\if@x\renewcommand{\thefootnote}{…}\fi`, whose branch is not read here; P1), or two that disagree declare nothing,
+  no glyph (2305.15254's neurips_2022.sty, its line commented out; an acl copy's `\arabic` line). The bindings: `acl_sty.rs` and
   `aaai_sty.rs` (2502.19103, acl2019.sty:37 1905.10033: † ‡; aaai25.sty:56), the NeurIPS and IJCAI stand-in copies
   (`neurips_sty.rs`, neurips_2019-2025.sty; `ijcai_sty.rs`, ijcai13-26.sty), the NIPS style's descendants
   (`iclr_sty.rs` reading ICLR's, TMLR's, CoRL's and NIPS 2016-2018's copies raw: iclr2026_conference.sty:61-63,
-  tmlr.sty:71-73, corl_2025.sty:343-346, nips_2017.sty:246-249; 2303.07937, 2502.12413, 2509.00328, 1706.03762),
+  tmlr.sty:71-73, corl_2025.sty:343-346, nips_2017.sty:246-249; 2303.07937, 2502.12413, 2509.00328, 1706.03762; and
+  NIPS 2007-2015's by name, nips07submit_e-nips15submit_e.sty, which no fallback strips: nips14submit_e.sty:65-79,
+  1503.02531's "Hinton∗†", "Vinyals$^\dagger$"),
   `usenix_sty.rs` (usenix.sty:48-50, 2509.03117), `siamproceedings_sty.rs` (:187-189 `\@fnsymbol\c@footnote`,
   2509.02371; under `titlepage` its `\maketitle` sets none), and the arxiv, PRIMEarxiv and jmlr2e bindings
   (arxiv.sty:174-177, 2509.16272; PRIMEarxiv.sty:176-179, 2509.03066; jmlr2e.sty:253-255, 2509.13653). A stand-in's raw
@@ -19722,7 +19727,9 @@ latex_constructs.pool.ltxml:503-527); acmart's `\authornote` is a contact, `\aut
   `\footnotetext[n]` paired by the number), one Info counting each source note once (two names' `\footnotemark[1]` and
   one `\footnotetext[1]` are one note; review revMARKSAFEb N2), DG 2026-11-16: the association known, the glyph not; its note
   never placed (a `\footnotemark[1]` whose note no number key names yet, row R MARKKEY; a bare one nothing answers), a
-  Warning each (`frontmatter`/`unanswered_mark_lost`, as `count_lost_marks` counts). The XSLT shows no glyph for it
+  Warning each (`frontmatter`/`unanswered_mark_lost`, as `count_lost_marks` counts), its empty mark-only note dropped,
+  never an element showing and linking nothing (2509.10105's `Ju\footnotemark[1]` in a block written whole, whose
+  `\thanks` notes carry no number to pair it by; revMTREDUCEc S2). The XSLT shows no glyph for it
   (#990). A field's `\thefootnote` is set as the field begins, as the class's `\maketitle` sets it before `\@author`
   expands (`title_field_footnotes`, `enter_title_footnotes`; before, every note set it again): a redefinition in the field
   holds after it. One an author block's cell makes holds in that cell alone, which `\and`, `\\` and `&` end
