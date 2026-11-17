@@ -230,6 +230,42 @@ pub(in crate::base_utilities) fn shared_block_email_labels(
 /// The queued entry's respelled e-mail being digested, `address\u{2}author:N` ([`shared_block_email_labels`]), or empty.
 pub(in crate::base_utilities) const ENTRY_RESPELL: &str = "lx_frontmatter_entry_respell";
 
+/// The owners (indices into `keys`, the authors' names in order) of the addresses a printed list gives with no mark of
+/// its own — a `\date` line under the names (`date_legend`), a note the PDF prints with no mark (`address_note_contacts`;
+/// 2506.06941's `\footnotetext{\{p\_shojaee, imirzadeh, …\}@apple.com}`), OD #1071 — by the rule a class's address list
+/// is placed by ([`sequenced_contact_labels`], `EmailOwner::SpelledElseOrder`): each the author it spells, else, in a
+/// list of one address per author that no spelled address contradicts, the author at its place
+/// ([`author_order_step`]); else none, the author block's.
+pub(in crate::base_utilities) fn listed_address_owners(
+  addresses: &[String],
+  keys: &[NameKeys],
+) -> Vec<Option<usize>> {
+  let spelled: Vec<Option<usize>> = addresses
+    .iter()
+    .map(|address| match spelled_owners(keys, address).as_slice() {
+      [at] => Some(*at),
+      _ => None,
+    })
+    .collect();
+  // (each address a place of its own: one printed list is no call per author, so `{ann, bob}@x.org` under one name is
+  // no list of that author's two addresses)
+  let listed: Vec<(i64, Option<usize>)> = spelled
+    .iter()
+    .enumerate()
+    .map(|(at, owner)| (at as i64, *owner))
+    .collect();
+  let places = if keys.is_empty() {
+    None
+  } else {
+    author_order_step(&listed, keys.len())
+  };
+  spelled
+    .iter()
+    .enumerate()
+    .map(|(at, owner)| owner.or_else(|| places.as_ref().map(|places| places[at])))
+    .collect()
+}
+
 /// Step 2 of [`sequenced_contact_labels`], kept apart so a ruling can switch it off in one change: the place (from 0)
 /// of each address of `listed` (its call, its known author) in the authors' order, when the list is one place for
 /// each of `authors` authors and no known author is another than the one at its place; `None` when it is no such list.

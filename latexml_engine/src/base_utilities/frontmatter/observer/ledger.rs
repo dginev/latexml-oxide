@@ -660,6 +660,30 @@ pub fn class_maketitle_runs() -> Option<bool> {
   })
 }
 
+/// Whether the document class's title page prints `\@date` right under the author block, as a binding the class loaded
+/// declares it for the class (`CLASS_BINDINGS`' first; [`policy::TitlePageDecl::date_under_author`]: article's, report's,
+/// book's, extsizes' and KOMA's, the kernel's declaration every binding keeps). `false` with no class binding (a raw
+/// class, whose page is its own) and under the fallback's guess (OmniBus): there the date stays the date (OD #1071).
+pub fn class_prints_date_under_authors() -> bool {
+  if lookup_bool("OmniBus:fallback") {
+    return false;
+  }
+  CLASS_BINDINGS.with(|c| {
+    let c = c.borrow();
+    let Some(class) = c.0.first() else {
+      return false;
+    };
+    c.0
+      .iter()
+      .any(|binding| policy::declared_date_under_author(binding, class))
+      || policy::KERNEL
+        .title_page
+        .date_under_author
+        .iter()
+        .any(|(name, _)| name == class)
+  })
+}
+
 /// Whether the document class's bindings declare that it prints the title and the authors at their setters
 /// ([`policy::TitlePageDecl::setter_print`]: iopart.cls), its `\maketitle` printing neither.
 pub fn class_prints_title_at_setters() -> bool {

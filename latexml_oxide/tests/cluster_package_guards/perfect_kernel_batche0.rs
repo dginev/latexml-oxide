@@ -1013,6 +1013,9 @@ const API_KEYS_OUTSIDE_PERLS: &[(&str, usize)] = &[
   ),
   ("_group= base_utilities/defs/frontmatter_fields.rs", 1),
   ("_grouped= package/revtex4_support_sty.rs", 1),
+  // (DATELEG, OD #1071: a `\date` legend line under the names is called as authblk's `\affil[label]` is, its label printed
+  // with the line, which the Kind step reads a legend by — `$^*$Equal contribution.` the names' note, not an affiliation)
+  ("_labelprints= base_utilities/frontmatter/date_legend.rs", 1),
   ("_labelprints= cas_dc_cls.rs", 1),
   ("_labelprints= package/authblk_sty.rs", 1),
   ("_labelprints= package/jheppub_sty.rs", 1),
@@ -1951,7 +1954,14 @@ const TOKEN_READS: &[(&str, usize)] = &[
   // (P6f2, 35 -> 37: `observer::may_hold_kernel_separator`, the affiliation lines' cost gate before the separator query's
   // rehearsal — a command or active character no spelled separator matches, by meaning: a macro no binding made or a copy
   // of the kernel's `\and`; c1_cost's 200 `\affil`s +2.0 % on P6f without it, revP6f S2)
-  ("frontmatter (rest)", 37),
+  // (DATELEG, 37 -> 51, OD #1071, DG 2026-11-17 "now, before the PR": `date_legend.rs` reads the `\date` store's lines at
+  // `\maketitle`, before the flush, with the frontmatter API's own line readers — the line breaks, a `\today`, a leading
+  // label (`leading_line_label`), an e-mail line — as the Cut reads an `\affiliation` list; the date is a store, which no
+  // rehearsal reads. Pending the main session: rehearse the store and read its events instead; +1, 51 -> 52, the void
+  // date's dropped words named to the title-page check, `visible_name_text`)
+  // (DATELEGb, 52 -> 53: the date line's `@` signs counted on its tokens, as the readers' text drops a styled one —
+  // `\textbf{@} gaborit@kth.se`, 1801.04802 — the address-among-text fail-safe; the relocated legend note cut read XML)
+  ("frontmatter (rest)", 53),
   // (P26, 527 -> 526: the stores' `\and` gates ask the separator query by meaning, `and_separators`, OD #995 P2-6; the
   // spelling read only where the query answers `None`: one spelled read fewer)
   // (FX24b, 526 -> 527: `title_page_prints_author` walks the title page a raw file or the document defined for a read of

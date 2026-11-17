@@ -1,0 +1,17 @@
+% mechanism: fail-safe: a date holding a date line and unlabelled text only (a remark, no legend)
+% witness:  2601.19933 (`\date{January 2026\\[5pt] \textit{Part of the … (NRR) research program.}}`), cs0703003 (a
+%   report number)
+% oracle:   pdflatex 0 errors; "Kei Saito", "January 2026", "Part of the NRR research program."
+% engines:  rust DATELEG (2a8ccf3c9cc) = 0 errors, 1 Warning; the remark an affiliation, the date void. Perl: the text
+%   is the date
+% expect:   0 errors, 0 Warnings; the date whole (an Info), no affiliation (OD #1071)
+% status:   RED (2a8ccf3c9cc) -> GREEN (DATELEGb)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{Kei Saito}
+\date{January 2026\\[5pt] \textit{Part of the NRR research program.}}
+\maketitle
+Body.
+\end{document}

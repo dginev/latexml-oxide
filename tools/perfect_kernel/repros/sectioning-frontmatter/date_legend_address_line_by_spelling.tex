@@ -1,0 +1,15 @@
+% mechanism: an unlabelled address and an e-mail line in the date, the addresses out of author order (0912.1999, 1110.6384, 2507.03628)
+% oracle:   pdflatex 0 errors; "Ann Able Bob Baker", "Department of Physics, University of X", "E-mail: bbaker@y.org, aable@x.edu"
+% engines:  rust INTFMfinal (3d4c847f02c) = 0 errors, 0 Warnings; the date holds both lines. Perl: the text is the date
+%   (latex_constructs.pool.ltxml:1073-1076)
+% expect:   0 errors, 0 Warnings; the address every author's; each address its speller's (`listed_address_owners`), named by the line's label; no date (OD #1071)
+% status:   RED (3d4c847f02c) -> GREEN (DATELEG)
+% preload: ar5iv.sty
+\documentclass{article}
+\author{Ann Able \and Bob Baker}
+\title{T}
+\date{Department of Physics, University of X\\ E-mail: \texttt{bbaker@y.org, aable@x.edu}}
+\begin{document}
+\maketitle
+Text.
+\end{document}

@@ -204,6 +204,12 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
       None => Ok(Invocation!(T_CS!("\\lx@add@affiliation"), vec![attr, Some(stuff)])),
     }
   });
+  // Rust-only (OXIDIZED_DESIGN_DIVERGENCES #1071): at `\maketitle`, before the flush, the lines of a `\date` the class
+  // prints under the author block that are the block's legend, its contacts (`frontmatter::date_legend`; 1512.01686,
+  // 2606.00446); Perl keeps the text the date.
+  DefMacro!("\\lx@date@legend", sub[_args] {
+    Ok(Tokens::new(date_legend_calls()?))
+  });
   // Rust-only: an address a class prints under a row of names it shares (aistats's `\aistatsaddress` under
   // `\aistatsauthor{A \And B \And C}` when its columns are not the names', 1806.02924, 2510.09534): marked,
   // `\lx@add@affiliation@marked`'s; else each entry an affiliation of the authors the optional attributes place

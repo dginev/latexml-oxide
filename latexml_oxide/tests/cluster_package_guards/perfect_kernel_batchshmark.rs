@@ -838,14 +838,19 @@ fn lni_prints_its_own_arabic_title_marks() {
 }
 
 /// A label authblk prints on a name that no `\affil` prints shows on the name as its mark, a mark-only note with no
-/// Warning (OD #1064; was one Warning and no mark, MARKSAFE): `\author[1,*,\S]` whose `\S` only the `\date` line
-/// explains (2606.00446; pdflatex "Ann Able1,*,§"); its answered `*` a note of each carrier. Both sides are read as
+/// Warning (OD #1064; was one Warning and no mark, MARKSAFE): `\author[1,*,\S]` whose `\S` no line explains
+/// (2606.00446's shape, its `\date` line a real date: the `\date` legend line answers it since DATELEG, OD #1071,
+/// `perfect_kernel_batchfmmarks::shared_notes_are_a_marked_copy_per_carrier`; pdflatex "Ann Able1,*,§"); its answered
+/// `*` a note of each carrier. Both sides are read as
 /// printed (`printed_label_pieces`), so a label a macro prints is the line's (`\author[\affA]`); one no mark is read
 /// from is counted (`perfect_kernel_batchinvdag::an_authblk_label_no_affil_explains_shows_on_its_name`).
 #[test]
 fn a_class_label_no_entry_answers_shows_on_its_name() {
-  let tex = repro!("fmmarks_authblk_double_star_label_and_date_note_red");
-  let (log, xml, ()) = convert_with_setup_then(tex, Some("ar5iv.sty"), || {}, |_| {});
+  let tex = repro!("fmmarks_authblk_double_star_label_and_date_note_red").replace(
+    r"\date{\textsuperscript{\S}Email: ann@a.edu}",
+    r"\date{March 2020}",
+  );
+  let (log, xml, ()) = convert_with_setup_then(&tex, Some("ar5iv.sty"), || {}, |_| {});
   assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
   assert!(!log.contains("unanswered_mark_lost"), "{log}");
   assert_eq!(notes_in(&xml), [

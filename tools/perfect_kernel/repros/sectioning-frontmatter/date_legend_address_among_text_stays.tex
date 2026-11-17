@@ -1,0 +1,18 @@
+% mechanism: fail-safe: a date line holding an address among other text (an "@" glyph before it)
+% witness:  1801.04802 (`\textbf{@} gaborit@kth.se` after the KTH line: the "@" read into the affiliation)
+% oracle:   pdflatex 0 errors; "Ann Able1 Bob Baker2", "1. Dept A, Univ X", "2. Dept B, Univ Y", "@ aable@x.org"
+% engines:  rust DATELEG (2a8ccf3c9cc) = 0 errors, 0 Warnings; "Dept B, Univ Y@" on Bob's affiliation. Perl: the text is
+%   the date
+% expect:   0 errors, 0 Warnings; the date whole (an Info), no affiliation (OD #1071)
+% status:   RED (2a8ccf3c9cc) -> GREEN (DATELEGb)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{Ann Able\textsuperscript{1} \and Bob Baker\textsuperscript{2}}
+\date{1. Dept A, Univ X\break
+2. Dept B, Univ Y\break
+\textbf{@} aable@x.org}
+\maketitle
+Body.
+\end{document}

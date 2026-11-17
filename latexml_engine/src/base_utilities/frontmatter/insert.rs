@@ -9,6 +9,25 @@ use crate::{
   latex_constructs::{FOOTNOTE_GIVEN, FOOTNOTE_VALUE, title_numbers_faithful},
 };
 
+/// Whether [`insert_frontmatter`] is placing the frontmatter: a note it builds is a frontmatter entry the flush placed,
+/// which the notes' own reading as they close leaves alone (`address_note_contacts`, OD #1071).
+pub const FRONTMATTER_INSERTING: &str = "lx_frontmatter_inserting";
+
+/// [`FRONTMATTER_INSERTING`] for as long as it lives, and as it was after.
+struct Inserting(bool);
+
+impl Inserting {
+  fn begin() -> Self {
+    let outer = lookup_bool(FRONTMATTER_INSERTING);
+    assign_value(FRONTMATTER_INSERTING, true, Some(Scope::Global));
+    Inserting(outer)
+  }
+}
+
+impl Drop for Inserting {
+  fn drop(&mut self) { assign_value(FRONTMATTER_INSERTING, self.0, Some(Scope::Global)); }
+}
+
 pub fn insert_frontmatter(document: &mut Document) -> Result<()> {
   if lookup_bool("frontmatter_done") {
     return Ok(());
@@ -41,6 +60,7 @@ pub fn insert_frontmatter(document: &mut Document) -> Result<()> {
   }
 
   // OK, we're placing FrontMatter here, now.
+  let _inserting = Inserting::begin();
   assign_value("frontmatter_done", true, Some(Scope::Global));
   remove_frontmatter_marks(document);
 

@@ -1,0 +1,16 @@
+% mechanism: the same, then `\today` (2401.15728, 2303.16540, 2412.02475)
+% oracle:   pdflatex 0 errors; "Ann Able1 Bob Baker2", "1 Dept A, Univ X", "2 Dept B, Univ Y, bob@y.org", then the date
+% engines:  rust INTFMfinal (3d4c847f02c) = 0 errors, 0 Warnings; the date holds the three lines. Perl: the text is the date
+%   (latex_constructs.pool.ltxml:1073-1076)
+% expect:   0 errors, 0 Warnings; the contacts as date_legend_marked_lines; no date: the date is void, its `\today`
+%   dropped, `Info:frontmatter:date_void \today` (DG 2026-11-17; OD #1071)
+% status:   RED (3d4c847f02c) -> GREEN (DATELEG)
+% preload: ar5iv.sty
+\documentclass{article}
+\author{Ann Able$^1$ \and Bob Baker$^2$}
+\title{T}
+\date{$^1$Dept A, Univ X\\ $^2$Dept B, Univ Y, bob@y.org\\ \today}
+\begin{document}
+\maketitle
+Text.
+\end{document}

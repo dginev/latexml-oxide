@@ -8,14 +8,14 @@
 %   to this work. | affiliation=Univ A, Town / Bob Baker ; thanks[*]=These authors contributed equally to this
 %   work. | affiliation=Univ A, Town / Cat Cole | affiliation=Univ A, Town ; affiliation=Present address: Lab
 %   B, City
-% expect:   0 errors, 0 Warnings; Ann Able ; footnotemark[§]= ; thanks[*]=These authors contributed equally to this
-%   work. | affiliation=Univ A, Town / Bob Baker ; thanks[*]=These authors contributed equally to this work. |
-%   affiliation=Univ A, Town / Cat Cole | affiliation=Univ A, Town ; affiliation=Present address: Lab B, City
+% expect:   0 errors, 0 Warnings; Ann Able ; thanks[*]=These authors contributed equally to this work. | affiliation=Univ
+%   A, Town ; email=ann@a.edu / Bob Baker ; thanks[*]=These authors contributed equally to this work. | affiliation=Univ A,
+%   Town / Cat Cole | affiliation=Univ A, Town ; affiliation=Present address: Lab B, City
 %   (guard canon: name ; note role[mark]=text, sorted | contacts)
-% moves:    MARKSAFE counted the lost `§` (1 Warning); INVDAG (OD #1064) shows it on the name, a mark-only note, no
-%   Warning (perfect_kernel_batchshmark::a_class_label_no_entry_answers_shows_on_its_name); the page's mark order stays
-%   row R MARKORDER ("Ann Able ; § plain ; *→note", pdflatex "1,*,§")
-% status:   GREEN (XML; the page layer RED: MARKORDER, perfect_kernel_batchfmmarks::shared_notes_are_a_marked_copy_per_carrier_red)
+% moves:    MARKSAFE counted the lost `§` (1 Warning); INVDAG (OD #1064) showed it on the name, a mark-only note (row R
+%   MARKORDER on the page); DATELEG (OD #1071) reads the `\date` line the class prints under the names as the legend
+%   of `§`: Ann's e-mail, the `§` its label, no date (the `_red` name kept for the guards citing it)
+% status:   GREEN (DATELEG; XML and page)
 % preload: ar5iv.sty
 \documentclass{article}
 \usepackage{authblk}
