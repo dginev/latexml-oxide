@@ -57,6 +57,8 @@ pub use argument_marks::{
 pub(in crate::base_utilities) use argument_marks::{
   argument_marks_and_name, argument_name_text, count_unread as count_unread_marks,
 };
+// (a binding rebuilding a printed text: its specials as their commands)
+pub use emitter::printed_text_tokens;
 pub(in crate::base_utilities) use emitter::{
   EMITTING, NAMES_SHOWN_LABELS, SETTERS_RECOVERED, block_creator_written, calls::*,
   check_placed_content, emit_commands, emitted, names_show_label, setters_recovered, take_digested,

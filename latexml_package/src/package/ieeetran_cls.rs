@@ -2810,9 +2810,11 @@ fn email_line_addresses(line: &str) -> Option<Vec<String>> {
   .then_some(addresses)
 }
 
-/// The e-mail label of an IEEE note ("E-mail:", "(e-mail:", "Email:", "E-mail addresses:", "Contact email:").
+/// The e-mail label of an IEEE note ("E-mail:", "(e-mail:", "Email:", "E-mail addresses:", "Contact email:"; its colon
+/// optional: "(email \{a,b\}@ethz.ch)", 2309.06591; a colon or a space after it, so an address's "email.sc.edu" or
+/// "email@" is none). A label word the rest does not follow with addresses keeps the note whole.
 static EMAIL_LABEL_RX: std::sync::LazyLock<Regex> = std::sync::LazyLock::new(|| {
-  Regex::new(r"(?i)\(?\s*(?:contact\s+)?\be-?mail(?:s|\s+address(?:es)?)?\s*:\s*").unwrap()
+  Regex::new(r"(?i)\(?\s*(?:contact\s+)?\be-?mail(?:s|\s+address(?:es)?)?(?:\s*:\s*|\s+)").unwrap()
 });
 
 /// Does `before` (a note's text up to a '.') end in an initial ("C", "J.-L", "D.S")?
@@ -2868,6 +2870,11 @@ fn affiliation_and_addresses(segment: &str) -> Option<(usize, Vec<String>)> {
       Some(label) if label.start() == 0 => email_line_addresses(&rest[label.end()..])?,
       _ => email_line_addresses(rest)?,
     };
+  }
+  // (a parenthesis the affiliation leaves open is another field's: "Town (Tel: 555-1234; e-mail: …)" keeps the note whole)
+  let affiliation = &sentence[..end];
+  if affiliation.matches('(').count() != affiliation.matches(')').count() {
+    return None;
   }
   Some((end, addresses))
 }
@@ -3004,7 +3011,7 @@ fn route_note(note: &[Token], names: &[AuthorUnit]) -> Option<(Vec<Token>, Vec<R
         None if owners.len() == 1 => owners[0],
         None => free.remove(0),
       };
-      contacts.push((owner, contact("email", ExplodeText!(address))));
+      contacts.push((owner, contact("email", printed_text_tokens(address))));
     }
   }
   Some((kept, contacts))

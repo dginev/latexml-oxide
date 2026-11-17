@@ -2002,8 +2002,9 @@ const TOKEN_READS: &[(&str, usize)] = &[
   // calls `blocks_as_printed` expands; the brace reading moved into one `brace_level`, which `grid_columns` shares (0))
   // (+21, IEEEROUTE: the block notes' "<names> is/are with" sentences read from the `\thanks` text in the binding, as
   // the brief placed it (OD #1072); the resolver's note event is the principled reader, reported as open; +1,
-  // IEEEROUTEb: a name piece's printed end, skipping spaces and `\par`, where its contacts go, 2106.02811)
-  ("ieeetran_cls.rs", 126),
+  // IEEEROUTEb: a name piece's printed end, skipping spaces and `\par`, where its contacts go, 2106.02811; +1, REVIEEEB:
+  // a routed address rebuilt by `printed_text_tokens`, its `\_` an underscore again, 1808.03708 — a writer, no decision)
+  ("ieeetran_cls.rs", 127),
   ("insert", 14),
   // (from `frontmatter (rest)`, 24 -> 23, at Z2r2: `\alignauthor`, out of the kernel's conventions into the binding's own table; no read)
   ("inst_support_sty.rs", 1),

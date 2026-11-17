@@ -334,7 +334,7 @@ fn cs_group_args(args: &[&str]) -> Vec<Token> {
 }
 
 /// The reading's text as tokens that print it: its specials as their commands (an OTHER `_` in OT1 prints `˙`: 2605.20715).
-pub(super) fn printed_text_tokens(text: &str) -> Vec<Token> {
+pub fn printed_text_tokens(text: &str) -> Vec<Token> {
   let mut out = Vec::new();
   for c in text.chars() {
     match c {

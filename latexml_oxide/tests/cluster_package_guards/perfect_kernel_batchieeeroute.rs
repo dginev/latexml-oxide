@@ -190,3 +190,27 @@ fn ieee_unlabelled_addresses_route_by_the_name() {
   ]);
   assert_eq!(pubnotes(&xml), Vec::<&str>::new(), "{xml}");
 }
+
+/// REVIEEEB (at integration): a routed address prints as the note printed it, its `\_` an underscore (1808.03708,
+/// 2206.10178); an e-mail label's colon is optional ("(email \{a,b\}@d)", 2309.06591); a parenthesis the affiliation
+/// leaves open ("Town (Tel: …; e-mail: …)") keeps the note whole. Red (IEEEROUTEb): "cy˙coe@c.org", "Univ DE, Land.
+/// (email" Dan's and Eve's affiliation, "Univ F, Town (Tel: 555-1234" Fay's. Distinct: the address's specials, the
+/// label forms.
+#[test]
+fn ieee_routed_addresses_keep_their_specials_and_label_forms() {
+  let (log, xml) = run(repro!("ieee_thanks_address_specials_and_labels"));
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  assert_creators(&xml, &[
+    &["Cy Coe", "affiliation=Univ C, Land", "email=cy_coe@c.org"],
+    &["Dan Dee", "affiliation=Univ DE, Land.", "email=ddee@de.org"],
+    &["Eve Ent", "affiliation=Univ DE, Land.", "email=eent@de.org"],
+    &["Fay Fox"],
+  ]);
+  assert_eq!(
+    pubnotes(&xml),
+    [
+      "<pubnote role=\"thanks\">F. Fox is with Univ F, Town (Tel: 555-1234; e-mail: ff@f.org).</pubnote>"
+    ],
+    "{xml}"
+  );
+}
