@@ -52,8 +52,8 @@ LoadDefinitions!({
     entry.push(T_END!());
     Ok(Tokens::new(entry))
   });
-  // `\email{…}` stays the e-mail note: a class's address list (`\lx@add@contact@list`) leaves an address it cannot
-  // place on a nameless author-block creator, where this line's fail-safe is the note, whole (OD #1073, row R).
+  // `\email{…}` stays the e-mail note: its authors are queued only as `\maketitle` runs, after it, so the e-mail line's
+  // owner rule (`\lx@email@line@owned`, Interspeech.cls's) has no names to read here (OD #1073, row R).
   DefMacro!(
     "\\email{}",
     "\\lx@add@frontmatter{ltx:note}[role=email]{#1}"

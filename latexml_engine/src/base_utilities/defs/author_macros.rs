@@ -210,6 +210,15 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
   DefMacro!("\\lx@date@legend", sub[_args] {
     Ok(Tokens::new(date_legend_calls()?))
   });
+  // Rust-only (OXIDIZED_DESIGN_DIVERGENCES #1073): a class's e-mail line printed under the names (spconf's and
+  // Interspeech.cls's `\email{a, b}`), each address the author it spells, else the n-th author's in a list of one per
+  // author (`listed_email_calls`, the rule of #1071's address lines); a line not wholly placed is `op{line}`, whole.
+  DefMacro!("\\lx@email@line@owned{}{}", sub[(op, line)] {
+    match listed_email_calls(&line)? {
+      Some(calls) => Ok(Tokens::new(calls)),
+      None => Ok(Invocation!(op.unlist().first().copied().unwrap_or(T_CS!("\\relax")), vec![Some(line)])),
+    }
+  });
   // Rust-only: an address a class prints under a row of names it shares (aistats's `\aistatsaddress` under
   // `\aistatsauthor{A \And B \And C}` when its columns are not the names', 1806.02924, 2510.09534): marked,
   // `\lx@add@affiliation@marked`'s; else each entry an affiliation of the authors the optional attributes place

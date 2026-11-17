@@ -79,3 +79,64 @@ fn spconf_unmarked_address_is_every_authors() {
   assert_eq!(xml.matches("role=\"address\"").count(), 0, "{xml}");
   assert_eq!(xml.matches("info@lab.org").count(), 1, "{xml}");
 }
+
+/// The XML of an Interspeech.cls repro (`tools/perfect_kernel/repros/sectioning-frontmatter/`), with no error and no
+/// warning; `None` where the class's TIPA is absent, as `perfect_kernel_batch63`'s Interspeech guards skip.
+fn interspeech_xml(tex: &str) -> Option<String> {
+  if !latexml::util::test::check_requirements(latexml::util::test::loads::TIPA) {
+    return None;
+  }
+  Some(convert_clean(tex))
+}
+
+/// Interspeech.cls's `\email` line is the authors' e-mails, here by place (no address spells a name; three for three):
+/// the `\lx@email@line@owned` path (`listed_email_calls`); 2603.01467, 2401.07506. INTFMrel4: an e-mail note.
+#[test]
+fn interspeech_email_line_goes_to_its_authors() {
+  let Some(xml) = interspeech_xml(include_str!(
+    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/interspeech_email_line_to_its_authors.tex"
+  )) else {
+    return;
+  };
+  let affiliation = "<contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Department A <break/>University A, City \
+                     A</contact>";
+  let email =
+    |address: &str| format!("<contact name=\"Email:\u{a0}\" role=\"email\">{address}</contact>");
+  assert_eq!(
+    creators(&xml),
+    [
+      format!(
+        "<creator role=\"author\"><personname>Ada Byron</personname>{affiliation}{}</creator>",
+        email("first@a.org")
+      ),
+      format!(
+        "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bo Li</personname>{affiliation}{}</creator>",
+        email("second@b.org")
+      ),
+      format!(
+        "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Cy Dee</personname>{affiliation}{}</creator>",
+        email("third@c.org")
+      ),
+    ],
+    "{xml}"
+  );
+  assert_eq!(xml.matches("<note").count(), 0, "{xml}");
+}
+
+/// A line not wholly placed (`info@lab.org` spells no one, two addresses for three authors) stays the e-mail note,
+/// whole: no address is taken from it, `cy@dee.org` included.
+#[test]
+fn interspeech_email_line_not_wholly_placed_stays_the_note() {
+  let Some(xml) = interspeech_xml(include_str!(
+    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/interspeech_email_line_not_wholly_placed_stays_the_note.tex"
+  )) else {
+    return;
+  };
+  assert_eq!(xml.matches("role=\"email\"").count(), 1, "{xml}");
+  assert_element(
+    &xml,
+    "note",
+    &[],
+    "<note role=\"email\" xml:id=\"id1\">info@lab.org, cy@dee.org</note>",
+  );
+}

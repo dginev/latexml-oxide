@@ -20628,25 +20628,33 @@ construction only). **Guards**: `cluster_package_guards::perfect_kernel_batchiee
 `sectioning-frontmatter/ieee_thanks_*`, the specials and label forms in `ieee_thanks_address_specials_and_labels`);
 `perfect_kernel_batchp28::ieee_plain_route_reads_names_and_grades` repinned.
 
-### 1073. spconf's and the INTERSPEECH20xx styles' `\address` goes under the names (DG 2026-11-17; SPCONF)
+### 1073. spconf's `\address` and Interspeech.cls's `\email` line go under the names (DG 2026-11-17; SPCONF)
 
-**Perl.** No spconf or INTERSPEECH20xx binding: the raw `.sty` stashes `\@address` and article's `\maketitle` prints
-nothing of it.
-**Rust.** DG 2026-11-17: affiliations and addresses show under the author's name, as spconf.sty:165 and
-INTERSPEECH2021.sty:162-164 print them. spconf's `\address` (spconf_sty.rs; INTERSPEECH2021-2023.sty load it) reads as
-Interspeech.cls's (interspeech_cls.rs): a block led by a label is `\lx@add@affiliations`, each `$^n$` line the
-affiliation of the names showing mark n; an unmarked block `\lx@add@affiliation[annotate=all]`, every author's.
-Not done (row R): the `\email` line (spconf and Interspeech.cls) stays its `ltx:note[role=email]`. The class's
-address-list route (`\lx@add@contact@list`, `owner=sequence`, jheppub's) places spelled addresses (2405.13379's four,
-2401.07506's `\{zithas, harshay, tvprabs\}@iisc.ac.in`, 2603.01467's two) but leaves an unplaced one on a nameless
-author-block creator, where this line's fail-safe is the note, and its order step placed no unspelled address third
-of three (`zz@a.org`, jheppub alike). A mark carried by two lines (1309.1501's `$^1$` IBM line and `$^1$` e-mail line)
-keeps its `<sup>` in the affiliation, the e-mail line taken as an affiliation line.
-**Witnesses.** 2405.13379, 1309.1501 (`\nameplus`).
+**Perl.** No spconf, INTERSPEECH20xx or Interspeech binding: the raw `.sty` stashes `\@address`/`\@email` and
+article's `\maketitle` prints neither.
+**Rust.** DG 2026-11-17: affiliations and addresses show under the author's name, as spconf.sty:165,
+INTERSPEECH2021.sty:162-164 and Interspeech2024.cls:265 print them. (1) spconf's `\address` (spconf_sty.rs;
+INTERSPEECH2021-2023.sty load it) reads as Interspeech.cls's (interspeech_cls.rs): a block led by a label is
+`\lx@add@affiliations`, each `$^n$` line the affiliation of the names showing mark n; an unmarked block
+`\lx@add@affiliation[annotate=all]`, every author's. (2) Interspeech.cls's `\email` line, read after every author is
+added (`\lx@is@frontmatter@add`), is `\lx@email@line@owned{\lx@is@email@note}{line}` (author_macros.rs;
+`date_legend::listed_email_calls`): the addresses `email_addresses` reads, each its owner's by #1071's
+`listed_address_owners` (the author it spells, else the n-th author's in a list of one per author) as
+`\lx@annotate@frontmatter{ltx:creator}{ltx:contact}[role=email,label={author:N}]`; a line with an address no rule
+places, or no plain address list, stays the `ltx:note[role=email]`, whole.
+Not done (row R): spconf's `\email` stays its note — its authors (`\name` → `\author`) are queued only inside
+`\maketitle` (`\lx@author@tail`), after it, and no binding hook runs between the queue and the flush. A marked address
+line no name shows (2203.05882's `$^{23}$`) or an address in the block no rule places (2102.09114's `ngyuzh@`,
+2407.20176's `jih150@`) lands on a nameless author-block creator, as under Interspeech.cls's `\address`. A mark carried
+by two lines (1309.1501's `$^1$` IBM line and `$^1$` e-mail line) keeps its `<sup>` in the affiliation.
+**Witnesses.** 2405.13379, 1309.1501 (`\nameplus`); 2603.01467, 2401.07506, 2406.11727 (Interspeech.cls e-mails).
 **Guards.** `cluster_package_guards::perfect_kernel_batchspconf::*` (repros
-`package-bindings/spconf_marked_address_lines_under_the_names`, `spconf_unmarked_address_is_every_authors`);
-repinned, the unmarked `\address` now every author's affiliation: `perfect_kernel_batchfmmarks`'s row
-`presbx_spconf_empty_thefootnote_prints_no_mark`, `perfect_kernel_batchwrongfix::a_symbol_no_name_prints_stays_the_notes_text`.
+`package-bindings/spconf_marked_address_lines_under_the_names`, `spconf_unmarked_address_is_every_authors`,
+`sectioning-frontmatter/interspeech_email_line_to_its_authors`, `interspeech_email_line_not_wholly_placed_stays_the_note`);
+repinned to the new output: `perfect_kernel_batchfmmarks`'s row `presbx_spconf_empty_thefootnote_prints_no_mark` and
+`perfect_kernel_batchwrongfix::a_symbol_no_name_prints_stays_the_notes_text` (the unmarked `\address` every author's
+affiliation); `perfect_kernel_batch63::interspeech_{affiliation_counter,author_keys,class_calls_cameraready,
+class_starts_final,frontmatter_in_body,unmarked_address_shared}` (`ada@x.org` Ada Byron's contact, no e-mail note).
 
 ## TeX-source fidelity family (TEXSRC)
 

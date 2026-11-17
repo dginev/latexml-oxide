@@ -516,6 +516,23 @@ fn contact_call(
   )
 }
 
+/// The e-mail contacts of a class's e-mail line printed under the names (spconf's and Interspeech.cls's `\email`, OD
+/// #1073; 2405.13379): each address its owner's by [`listed_address_owners`], when every address has one among the
+/// authors queued so far; else `None`, the line kept whole by the caller.
+pub(in crate::base_utilities) fn listed_email_calls(line: &Tokens) -> Result<Option<Vec<Token>>> {
+  let Some(addresses) = email_addresses(line) else {
+    return Ok(None);
+  };
+  let mut keys = Vec::new();
+  for name in queued_position_names()?.iter() {
+    keys.push(printed_name_keys(name, None)?);
+  }
+  if keys.is_empty() || listed_address_owners(&addresses, &keys).contains(&None) {
+    return Ok(None);
+  }
+  Ok(Some(address_calls(None, &addresses, &keys)?))
+}
+
 /// The e-mail contacts of a line of addresses no label leads, each its owner's by [`listed_address_owners`]: the author
 /// it spells, else the author at its place in a list of one address per author, else the author block's. The line's
 /// e-mail label names each contact.

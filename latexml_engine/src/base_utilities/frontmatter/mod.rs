@@ -39,6 +39,6 @@ mod pure_names;
 use pure_names::*;
 mod date_legend;
 pub use date_legend::address_note_contacts;
-pub(in crate::base_utilities) use date_legend::date_legend_calls;
+pub(in crate::base_utilities) use date_legend::{date_legend_calls, listed_email_calls};
 pub(in crate::base_utilities) mod observer;
 pub use observer::*;
