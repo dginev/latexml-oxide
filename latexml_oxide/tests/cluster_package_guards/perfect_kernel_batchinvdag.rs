@@ -215,13 +215,13 @@ Text.
     row(&["mark=†"]),
   ]);
   // (each name's `†` a link to the legend's note: Pollner's in 2606.17809; a declared label, classed `ltx_note_label`,
-  // links by its own form only — CONNFIXb)
+  // links by its own form only — CONNFIXb; each carrying the note's pop-up hidden, SHCOPY, DG 2026-11-17)
   let html = post_with(&xml, "resources/XSLT/LaTeXML-html5.xsl");
   for id in ["id1", "id3"] {
     assert_eq!(
       html_element(&html, &format!("<span id=\"{id}\"")),
       format!(
-        r##"<span id="{id}" class="ltx_note ltx_note_label ltx_role_footnotemark ltx_note_shared"><sup class="ltx_note_mark"><a href="#id4">†</a></sup></span>"##
+        r##"<span id="{id}" class="ltx_note ltx_note_label ltx_role_footnotemark ltx_note_shared"><sup class="ltx_note_mark"><a href="#id4">†</a></sup><span class="ltx_note_outer ltx_note_copy" aria-hidden="true"><span class="ltx_note_content"><sup class="ltx_note_mark">†</sup><span class="ltx_note_type">thanks: </span>Contributed equally to this work.</span></span></span>"##
       )
     );
   }

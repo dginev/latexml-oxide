@@ -385,7 +385,8 @@ fn notes_under(page: &[Element], at: usize, out: &mut Vec<usize>) {
 /// note prints under the name with no mark on LaTeXML.css's card (a multi-line block, or a creator showing author lines
 /// alone), else its glyph and its body as a pop-up, written as a note with a pop-up is, an unmarked note its text under the name with no glyph, a note with a
 /// pop-up outside the name's wrapper its glyph and its body in the margin), then the block's `margin: body ; body`
-/// (sorted); and the page's broken references: an id twice, an `href="#x"` with no `x`.
+/// (sorted); and the page's broken references: an id twice, an `href="#x"` with no `x`, a linked mark whose hidden copy
+/// (`ltx_note_copy`, DG 2026-11-17) is missing, shown to assistive technology, in the tab order or not its note's body.
 pub(super) fn page_lines(html: &str) -> (Vec<String>, Vec<String>) {
   let page = parse_page(html);
   let everything = descendants(&page, 0);
@@ -426,6 +427,13 @@ pub(super) fn page_lines(html: &str) -> (Vec<String>, Vec<String>) {
   if blocks.is_empty() {
     return (vec!["(no author block)".to_string()], problems);
   }
+  let body_of = |content: usize| {
+    text_of(&page, content, &|e| {
+      e.has_class("ltx_note_mark") || e.has_class("ltx_note_type") || e.has_class("ltx_tag_note")
+    })
+  };
+  // Each linked mark: its glyph, the id it links to, its copy of that note.
+  let mut copies: Vec<(String, &str, Option<usize>)> = Vec::new();
   let mut lines = Vec::new();
   for authors in blocks {
     let mut margin = Vec::new();
@@ -472,9 +480,24 @@ pub(super) fn page_lines(html: &str) -> (Vec<String>, Vec<String>) {
             page[a].tag == "a" && page[a].attr("href").is_some_and(|h| h.starts_with('#'))
           })
         });
+        // (a linked mark's copy of its note is hidden, so read as no body: the page prints the note once)
+        let copy = descendants(&page, note)
+          .into_iter()
+          .find(|&e| page[e].has_class("ltx_note_copy"));
+        let copied = copy.map_or(Vec::new(), |c| descendants(&page, c));
         let content = descendants(&page, note)
           .into_iter()
-          .find(|&e| page[e].has_class("ltx_note_content"));
+          .find(|&e| page[e].has_class("ltx_note_content") && !copied.contains(&e));
+        if linked {
+          let target = sup
+            .and_then(|s| {
+              descendants(&page, s)
+                .into_iter()
+                .find_map(|a| page[a].attr("href")?.strip_prefix('#'))
+            })
+            .unwrap_or("");
+          copies.push((glyph.clone(), target, copy));
+        }
         let Some(content) = content else {
           // (no glyph and no hidden body: an unmarked note's text, shown under the name, OD #990)
           if sup.is_none() {
@@ -490,11 +513,7 @@ pub(super) fn page_lines(html: &str) -> (Vec<String>, Vec<String>) {
           ));
           continue;
         };
-        let body = text_of(&page, content, &|e| {
-          e.has_class("ltx_note_mark")
-            || e.has_class("ltx_note_type")
-            || e.has_class("ltx_tag_note")
-        });
+        let body = body_of(content);
         if wrapped && page[note].has_class("ltx_note_shared") {
           marks.push(format!("{glyph}→note"));
           margin.push(body);
@@ -521,6 +540,35 @@ pub(super) fn page_lines(html: &str) -> (Vec<String>, Vec<String>) {
     if !margin.is_empty() {
       margin.sort();
       lines.push(format!("margin: {}", margin.join(" ; ")));
+    }
+  }
+  for (glyph, target, copy) in copies {
+    let Some(copy) = copy else {
+      problems.push(format!("{glyph}→{target}: no copy"));
+      continue;
+    };
+    let note = everything
+      .iter()
+      .copied()
+      .find(|&e| page[e].attr("id") == Some(target));
+    let body = |at: usize| {
+      descendants(&page, at)
+        .into_iter()
+        .find(|&e| page[e].has_class("ltx_note_content"))
+        .map(body_of)
+    };
+    if note.and_then(body) != body(copy) {
+      problems.push(format!("{glyph}→{target}: the copy is not its note"));
+    }
+    if page[copy].attr("aria-hidden") != Some("true") {
+      problems.push(format!("{glyph}→{target}: the copy is not aria-hidden"));
+    }
+    if descendants(&page, copy).iter().any(|&e| {
+      page[e].tag == "a" && page[e].attr("href").is_some() && page[e].attr("tabindex") != Some("-1")
+    }) {
+      problems.push(format!(
+        "{glyph}→{target}: a link of the copy is in the tab order"
+      ));
     }
   }
   (lines, problems)
