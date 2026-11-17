@@ -5443,24 +5443,6 @@ const CLASS: &[Row] = &[
     page_moves: r#""#,
   },
   Row {
-    repro:      "note_star_legend_in_abstract",
-    tex:        repro!("note_star_legend_in_abstract"),
-    warnings:   0,
-    creators:   &[
-      r#"Ann Able ; thanks[*]=Equal contribution"#,
-      r#"Bob Baker ; thanks[*]=Equal contribution"#,
-      r#"Cy Cole"#,
-    ],
-    moves:      r#""#,
-    page:       &[
-      r#"Ann Able ; *→note"#,
-      r#"Bob Baker ; *→note"#,
-      r#"Cy Cole"#,
-      r#"margin: Equal contribution"#,
-    ],
-    page_moves: r#""#,
-  },
-  Row {
     repro:      "note_email_list_in_abstract",
     tex:        repro!("note_email_list_in_abstract"),
     warnings:   0,

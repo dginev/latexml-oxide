@@ -387,12 +387,10 @@ pub(crate) fn load() -> Result<()> {
   DefMacro!("\\@makefnmark", "\\@thefnmark");
 
   Tag!("ltx:emph", auto_close => true);
-  // (and an unmarked note of e-mail addresses in the abstract, the authors' contacts, and one opening with a symbol the
-  // names show, their shared note: OD #1071, 2506.06941, 2602.04557)
+  // (and an unmarked note of e-mail addresses in the abstract, the authors' contacts: OD #1071, 2506.06941)
   Tag!("ltx:note", after_close => sub[doc, node] {
     relocate_footnote(doc, node)?;
     address_note_contacts(doc, node)?;
-    relocate_legend_note(doc, node)?;
   });
 
   // Style parameters

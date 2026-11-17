@@ -10,8 +10,7 @@ use crate::{
 };
 
 /// Whether [`insert_frontmatter`] is placing the frontmatter: a note it builds is a frontmatter entry the flush placed,
-/// which the notes' own reading as they close leaves alone (`latex_constructs::relocate_legend_note`,
-/// `address_note_contacts`, OD #1071).
+/// which the notes' own reading as they close leaves alone (`address_note_contacts`, OD #1071).
 pub const FRONTMATTER_INSERTING: &str = "lx_frontmatter_inserting";
 
 /// [`FRONTMATTER_INSERTING`] for as long as it lives, and as it was after.

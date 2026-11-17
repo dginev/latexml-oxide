@@ -276,9 +276,9 @@ fn an_unlinked_mark_always_shows() {
 /// the glyph alone (2508.05506's `\blfootnote{$\dagger$ …}`); a formula of the glyph alone inside a note, past its
 /// opening (2012.13912's acmart `\authornote{… \\ $\dagger$ … is the corresponding author}`); a note with no known mark
 /// on the name, whose glyph it may be (1503.07953's `\altaffiltext{*}{Corresponding author}`); and a piece of another
-/// name's mark run (2110.12052). Since DATELEG (OD #1071) the first is the name's note (the legend opening with the
-/// mark it shows), and a legend printed bracketed in the `\date` the class prints under the names (2302.11378's
-/// `$^{(2)}$`) is their affiliation, the marks consumed.
+/// name's mark run (2110.12052). Since DATELEG (OD #1071) a legend printed bracketed in the `\date` the class prints
+/// under the names (2302.11378's `$^{(2)}$`) is their affiliation, the marks consumed; the first stays (the legend-note
+/// rescue cut in DATELEGb, 2508.05506 open in row R).
 #[test]
 fn an_unlinked_mark_shows_beside_its_legend() {
   assert_green(&[
@@ -286,16 +286,9 @@ fn an_unlinked_mark_shows_beside_its_legend() {
       repro:      "markkey_blfootnote_dagger_legend_shows_its_names_mark",
       tex:        repro!("markkey_blfootnote_dagger_legend_shows_its_names_mark"),
       warnings:   0,
-      creators:   &[
-        "Ann Able",
-        "Bob Baker ; thanks[†]=Prior to joining Univ A, Bob was with Univ B.",
-      ],
+      creators:   &["Ann Able", "Bob Baker ; footnotemark[†]="],
       moves:      "",
-      page:       &[
-        "Ann Able",
-        "Bob Baker ; † plain",
-        "margin: Prior to joining Univ A, Bob was with Univ B.",
-      ],
+      page:       &["Ann Able", "Bob Baker ; † plain"],
       page_moves: "",
     },
     Row {

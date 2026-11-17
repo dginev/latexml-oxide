@@ -5,7 +5,8 @@
 % engines:  rust INTFMfinal (3d4c847f02c) = 0 errors, 0 Warnings; the note in the abstract, Ann's and Bob's ∗ mark-only
 %   notes. Perl: the note in the abstract
 % expect:   0 errors, 0 Warnings; Ann's and Bob's note "Equal contribution" marked ∗, one note (OD #1071)
-% status:   RED (3d4c847f02c) -> GREEN (DATELEG)
+% status:   RED, catalog only: DATELEG's rescue (a note's `after_close`) was cut in DATELEGb — it could not see a second
+%   note carrying the symbol (review revDATELEG f4), took body notes (f3) and missed `†,∗` marks (p1); row R, OD #1071
 % preload: ar5iv.sty
 \documentclass{article}
 \author{Ann Able$^*$ \and Bob Baker$^*$ \and Cy Cole}

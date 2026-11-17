@@ -1,0 +1,21 @@
+% mechanism: fail-safe: a date's typed-label lines under a binding numbering its unlabelled names (authblk's
+%   `\AB@thenote`): label 1 is every unlabelled name's too, so the line would reach names typing no 1
+% witness:  2307.00092 (OHSU on all 4 authors), 2412.00057 (on all 7), 2404.15649 (Monash on 2)
+% oracle:   pdflatex 0 errors; "Ann Able1, Bob Baker2, Cy Cole1, and Di Dunn3", the three lines under them
+% engines:  rust DATELEG (2a8ccf3c9cc) = 0 errors, 0 Warnings; Monash on all four names. Perl: the text is the date
+% expect:   0 errors, 0 Warnings; the date whole (an Info), no affiliation on any name (OD #1071)
+% status:   RED (2a8ccf3c9cc) -> GREEN (DATELEGb)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{authblk}
+\begin{document}
+\title{T}
+\author{Ann Able$^{1}$, Bob Baker$^{2}$, Cy Cole$^{1}$, and Di Dunn$^{3}$}
+\date{\normalsize
+$^1$\textit{Monash University, Australia}
+\newline $^2$\textit{University College London, UK}
+\\
+$^3$\textit{Queensland University of Technology, Australia}}
+\maketitle
+Body.
+\end{document}

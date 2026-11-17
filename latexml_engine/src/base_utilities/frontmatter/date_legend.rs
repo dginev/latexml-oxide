@@ -77,6 +77,36 @@ pub(in crate::base_utilities) fn date_legend_calls() -> Result<Vec<Token>> {
   }) {
     return Ok(Vec::new());
   }
+  // Fail-safes: the date stays whole (DG 2026-11-17: all or nothing) where a line's owners may not be the names it
+  // reads them as. (1) A binding numbering its unlabelled names (`thenote`, authblk's `\AB@thenote`) gives a typed
+  // label's line to names typing no such mark (2307.00092, 2412.00057, 2404.15649); a binding's declared spelling is
+  // keyed apart. (2) A date with a date's line whose only other lines are unlabelled text holds a remark, not a
+  // legend (2601.19933's "Part of the … research program", cs0703003's report number).
+  let numbered = policy::policy_for(
+    &ledger::policy_binding(&ledger::author_binding()),
+    "\\lx@add@creator",
+  )
+  .thenote
+    && kinds
+      .iter()
+      .any(|kind| matches!(kind, Line::Labelled(_, None, _)));
+  let remark = kinds.contains(&Line::Date)
+    && !kinds
+      .iter()
+      .any(|kind| matches!(kind, Line::Labelled(..) | Line::Addresses(..)));
+  if numbered || remark {
+    let why = if numbered {
+      "a typed label where the binding numbers the names"
+    } else {
+      "a date with unlabelled text"
+    };
+    Info!(
+      "frontmatter",
+      "date",
+      s!("A \\date under the authors stays the date ({why}): {store}")
+    );
+    return Ok(Vec::new());
+  }
   // The runs: a labelled line with the unlabelled text lines after it (its address continued, as an author block's
   // marked line is, `entry_calls`), an affiliation line with those after it; the lines kept, each with its delimiter.
   let keys: Vec<NameKeys> = names
@@ -353,6 +383,11 @@ fn line_kind(line: &[Token], declared: &[(String, String)]) -> Result<Line> {
   if let Some(addresses) = email_addresses(&rest) {
     return Ok(Line::Addresses(label, addresses));
   }
+  // (an address among other text, `\textbf{@} gaborit@kth.se` (1801.04802): no reader parts the two, and a run would
+  // take both as its affiliation's)
+  if !resolver::addresses_in(&text).is_empty() {
+    return Ok(Line::Kept("an address among other text"));
+  }
   let affiliation = reads_as_affiliation(&tokens);
   // (a year on a line naming no institution is a date's)
   if !affiliation
@@ -483,10 +518,10 @@ fn address_calls(
 }
 
 /// A note the PDF prints with no mark, in the abstract, whose text is e-mail addresses alone (an e-mail label before
-/// them aside, a braced group of local parts written out): the authors' e-mail contacts, each its owner's by
-/// [`listed_address_owners`], the rule a `\date` line of addresses follows (OXIDIZED_DESIGN_DIVERGENCES #1071; 2506.06941's
+/// them aside, a braced group of local parts written out): the authors' e-mail contacts, each the author it spells
+/// ([`spelled_owners`]; a `\date` line of addresses also takes the list's order, [`listed_address_owners`]) (OXIDIZED_DESIGN_DIVERGENCES #1071; 2506.06941's
 /// `\footnotetext{\{p\_shojaee, imirzadeh, …\}@apple.com}` after `\maketitle`, an unmarked footnote line under the
-/// abstract). Only where every address has an author: else the note stays as it is, with an Info. Run as the note closes
+/// abstract). Only where every address spells its author: else the note stays as it is, with an Info. Run as the note closes
 /// (`ltx:note`'s `after_close`), after `relocate_footnote`, so a text a mark pairs with is no longer here.
 pub fn address_note_contacts(document: &mut Document, node: &mut Node) -> Result<()> {
   // (not as a frontmatter flush digests it or places it: a frontmatter entry is the flush's)
@@ -511,7 +546,13 @@ pub fn address_note_contacts(document: &mut Document, node: &mut Node) -> Result
   {
     return Ok(());
   }
-  let text = node.get_content();
+  // (its text, not the body footnote's number tags: "footnote" glued to the first address, review probe f2)
+  let text: String = node
+    .get_child_nodes()
+    .iter()
+    .filter(|child| child.get_name() != "tags")
+    .map(Node::get_content)
+    .collect();
   let addresses = resolver::addresses_in(&text);
   if addresses.is_empty() || !resolver::only_addresses(&text) {
     return Ok(());
@@ -529,13 +570,21 @@ pub fn address_note_contacts(document: &mut Document, node: &mut Node) -> Result
       NameKeys::of_printed(&name)
     })
     .collect();
-  let owners = listed_address_owners(&addresses, &keys);
+  // (each the author it spells: a note's place among the abstract's notes is no author's order, so no positional
+  // guess, as a `\date` line under the names may make — review probe f2)
+  let owners: Vec<Option<usize>> = addresses
+    .iter()
+    .map(|address| match spelled_owners(&keys, address).as_slice() {
+      [at] => Some(*at),
+      _ => None,
+    })
+    .collect();
   if keys.is_empty() || owners.iter().any(Option::is_none) {
     Info!(
       "frontmatter",
       "note",
       s!(
-        "An unmarked note of e-mail addresses stays a note (not every address has an author): {text}"
+        "An unmarked note of e-mail addresses stays a note (not every address spells an author): {text}"
       )
     );
     return Ok(());
