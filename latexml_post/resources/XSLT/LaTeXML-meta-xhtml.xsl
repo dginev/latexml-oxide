@@ -76,16 +76,39 @@
         </xsl:if>
       </xsl:when>
       <xsl:otherwise>
-        <xsl:call-template name="unmarked-creator-note">
+        <xsl:call-template name="unmarked-note">
           <xsl:with-param name="context" select="$context"/>
         </xsl:call-template>
       </xsl:otherwise>
     </xsl:choose>
   </xsl:template>
 
-  <xsl:template name="unmarked-creator-note">
+  <!-- SURPASS (latexml-oxide OXIDIZED_DESIGN_DIVERGENCES #1063): #990's rule beyond the creators — a frontmatter note
+       with no mark (no @mark, no tag) prints no glyph wherever it stands: a note of the document's own level (icml's
+       notice, 2602.04557; a raw class's \address and \email lines, 2405.13379, 2603.01467) is a block line, one inside
+       the title, date, abstract or another field an inline span (a markless \footnotetext in the abstract, 2506.06941),
+       each of class ltx_note_unmarked, its content shown after Perl's "role: " label (ltx_note_type, which Perl shows on
+       hovering the dagger; none for a footnote, as Perl's, or a footnote's text): a publication note says what it is
+       ("year: 2023", 2302.03012). Body notes keep Perl's dagger. -->
+  <xsl:template match="ltx:note[not(normalize-space(@mark)) and not(ltx:tags/ltx:tag[not(@role)])]
+                               [parent::ltx:document
+                                or ancestor::ltx:title or ancestor::ltx:subtitle or ancestor::ltx:toctitle
+                                or ancestor::ltx:date or ancestor::ltx:abstract or ancestor::ltx:keywords
+                                or ancestor::ltx:classification or ancestor::ltx:pubnote
+                                or ancestor::ltx:creator]" priority="0.5">
     <xsl:param name="context"/>
-    <xsl:element name="span" namespace="{$html_ns}">
+    <xsl:call-template name="unmarked-note">
+      <xsl:with-param name="context" select="$context"/>
+      <xsl:with-param name="element" select="f:blockelement($context,'div')"/>
+      <xsl:with-param name="typed" select="not(@role = 'footnote' or @role = 'footnotetext')"/>
+    </xsl:call-template>
+  </xsl:template>
+
+  <xsl:template name="unmarked-note">
+    <xsl:param name="context"/>
+    <xsl:param name="element" select="'span'"/>
+    <xsl:param name="typed" select="false()"/>
+    <xsl:element name="{$element}" namespace="{$html_ns}">
       <xsl:variable name="innercontext" select="'inline'"/><!-- override -->
       <xsl:call-template name="add_id"/>
       <xsl:call-template name="add_attributes">
@@ -94,6 +117,13 @@
       <xsl:apply-templates select="." mode="begin">
         <xsl:with-param name="context" select="$innercontext"/>
       </xsl:apply-templates>
+      <xsl:if test="$typed and @role">
+        <xsl:element name="span" namespace="{$html_ns}">
+          <xsl:attribute name="class">ltx_note_type</xsl:attribute>
+          <xsl:value-of select="@role"/>
+          <xsl:text>: </xsl:text>
+        </xsl:element>
+      </xsl:if>
       <xsl:apply-templates>
         <xsl:with-param name="context" select="$innercontext"/>
       </xsl:apply-templates>

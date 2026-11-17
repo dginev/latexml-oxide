@@ -93,13 +93,54 @@ fn icml_support(follow_paper_copy: bool) -> Result<()> {
   // Previous stub gobbled both args without defining the CS, breaking
   // `\icmlauthor{...}{equal,affil,icmlWorkDone}` which later references
   // `\icmlWorkDone` in `\printAffiliationsAndNotice`. Witness 2310.06430.
+  // The real `\@icmlsymbol<name>` (icml2017.sty on; icml2026.sty:465-467) too, which `\icmlauthor` prints below.
   DefMacro!("\\icmlsetsymbol{}{}",
-    "\\expandafter\\def\\csname #1\\endcsname{#2}");
+    "\\expandafter\\def\\csname #1\\endcsname{#2}\\expandafter\\gdef\\csname @icmlsymbol#1\\endcsname{#2}");
 
   DefEnvironment!("{icmlauthorlist}", "#body");
 
   // \icmlauthor{author}{labels}   One per author; labels used to connect to affiliation
-  DefMacro!("\\icmlauthor{} Semiverbatim", "\\lx@add@creator[role=author,annotations={#2}]{#1}");
+  // A label `\icmlsetsymbol` named prints its symbol after the name (icml2026.sty:446-458 `\@pa`; icml2017.sty on):
+  // `\icmlauthor{Ann Able}{equal,a}` is "Ann Able∗ 1", the name's mark the notice's `\icmlEqualContribution` explains
+  // (2602.04557), a mark-only note of the creator (as acmart's `\authornotemark`), so the name stays the one
+  // `\icmlcorrespondingauthor` spells (1904.07793); a symbol that prints no one mark (`printed_label_pieces`) prints in
+  // the name. The other labels request their affiliations.
+  DefMacro!("\\icmlauthor{} Semiverbatim", sub[(name, labels)] {
+    let mut name = name.unlist();
+    let mut marks = Vec::new();
+    for label in labels.to_string().split(',').map(str::trim).filter(|label| !label.is_empty()) {
+      let symbol = T_CS!(s!("\\@icmlsymbol{label}"));
+      let Some(meaning) = lookup_meaning(&symbol) else {
+        continue;
+      };
+      let glyph = match meaning {
+        Stored::Expandable(d) => match d.get_expansion() {
+          Some(ExpansionBody::Tokens(body)) => match printed_label_pieces(body)?.as_slice() {
+            [mark] => Some(mark.clone()),
+            _ => None,
+          },
+          _ => None,
+        },
+        _ => None,
+      };
+      match glyph {
+        Some(glyph) => marks.extend(
+          TokenizeInternal!(TeXString::assembled(s!(
+            "\\lx@annotate@frontmatter{{ltx:creator}}{{ltx:note}}[role=footnotemark,mark={{{glyph}}}]{{{glyph}}}"
+          )))
+          .unlist(),
+        ),
+        None => name.extend(Invocation!(T_CS!("\\textsuperscript"), vec![Some(Tokens::new(vec![symbol]))]).unlist()),
+      }
+    }
+    let mut call = Invocation!("\\lx@add@creator[role=author,annotations={#1}]{#2}", vec![
+      Some(labels),
+      Some(Tokens::new(name))
+    ])
+    .unlist();
+    call.extend(marks);
+    Ok(Tokens::new(call))
+  });
   // icml20XX.sty: \newcommand{\icmlCorrespondingAuthor}{\textsuperscript{$\dagger$}Corresponding author}
   // (0-arg marker). icml2025.sty L530: \newcommand{\icmlCorr}{\textsuperscript{\dag}Corresponding author }
   // (shorter alias, used as `\printAffiliationsAndNotice{\icmlCorr}`). Our binding
@@ -189,7 +230,9 @@ fn icml_support(follow_paper_copy: bool) -> Result<()> {
   // emits the affiliation list inline without trailing notice). Witness
   // 2310.18127.
   def_macro_noop("\\printAffiliations")?;
-  DefMacro!("\\icmlEqualContribution", "Equal contribution");
+  // As every icml20xx.sty prints it (icml2017.sty on; icml2026.sty:502): the `*` the equal authors' names show. Perl's
+  // binding drops the `*` with the whole notice (`\printAffiliationsAndNotice{}` gobbled).
+  DefMacro!("\\icmlEqualContribution", "\\textsuperscript{*}Equal contribution");
   // ICML 2023 (icml2023.sty L526): per-paper "equal advising" marker.
   // Witness 2306.01153.
   DefMacro!("\\icmlEqualAdvising", "Equal advising");

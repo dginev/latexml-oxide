@@ -487,6 +487,9 @@ mod perfect_kernel_batchimg1;
 mod perfect_kernel_batchint19;
 mod perfect_kernel_batchint20;
 mod perfect_kernel_batchint23;
+/// INVDAG: the frontmatter invents no glyph — an unmarked note outside the creators shows its content with none, an authblk
+/// label no `\affil` explains shows on its name (OD #1063, #1064).
+mod perfect_kernel_batchinvdag;
 mod perfect_kernel_batchio1;
 mod perfect_kernel_batchio3b;
 mod perfect_kernel_batchkb1;

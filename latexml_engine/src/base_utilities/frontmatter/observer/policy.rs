@@ -159,6 +159,11 @@ pub struct Policy {
   /// (`annotations=` of `\author[a,b]`) and a mark typed by hand do, the places keys in order spell (0907.5014's
   /// `Denes Molnar$^{a,b}$`)
   pub keyed_labels:      bool,
+  /// a call's own labels (`annotations=` of `\author[1,*,\S]`) print after the name as written (authblk.sty:120-133
+  /// `\AB@authnote`): one the binding found no line of its own explains ([`declare_unexplained_name_labels`]) is shown on
+  /// the name as the mark it prints (`insert::show_unanswered_marks`; 2606.00446, its `§` legend in the
+  /// `\date`); elsewhere a call's own labels are keys
+  pub labels_print:      bool,
   /// the commands that part a block's lines or columns whatever they print here, as the class's title page does, each declared by
   /// the binding owning the `\author` they stand in: OmniBus's no-op `\alignauthor` a column (inst_support_sty.rs; what sig-alternate.cls,
   /// sigchi.cls print, whose `\alignauthor` read raw is the tabular it makes), ijcai's `\affiliations` and `\emails` a section
@@ -193,6 +198,7 @@ pub const KERNEL: Policy = Policy {
   unmarked_notes:    false,
   email_in_place:    false,
   keyed_labels:      false,
+  labels_print:      false,
   block_breaks:      &[],
   title_page:        TitlePageDecl {
     author:         AuthorPage::Kernel,
@@ -275,6 +281,45 @@ fn declared(binding: &str) -> Option<Rc<Vec<&'static Policy>>> {
     Some(Stored::Opaque(payload)) => Rc::clone(payload).downcast::<Vec<&'static Policy>>().ok(),
     _ => None,
   })
+}
+
+/// The State value holding the labels a `labels_print` binding's names print that no line of its block explains, each its
+/// spelling in the call (`annotations=`) and the mark it prints, `\u{2}` between them and `\u{1}` after each:
+/// [`declare_unexplained_name_labels`].
+const UNEXPLAINED_NAME_LABELS: &str = "lx_fm_unexplained_name_labels";
+
+/// Declare the labels a binding whose labels print ([`Policy::labels_print`]) found its names print and no line of its own
+/// explains, as (spelling in the call, the mark it prints) — authblk's `count_lost_labels`, read at `\maketitle`, before
+/// the flush: the writer shows the mark on the names requesting it (2606.00446's `§`). Not a label a line explains that the
+/// reading places elsewhere (`\affil[$\dag$]`).
+pub fn declare_unexplained_name_labels(labels: &[(String, String)]) {
+  let value: String = labels
+    .iter()
+    .map(|(spelling, mark)| s!("{}\u{2}{mark}\u{1}", spelling.trim()))
+    .collect();
+  assign_value(
+    UNEXPLAINED_NAME_LABELS,
+    Stored::String(pin(value)),
+    Some(Scope::Global),
+  );
+}
+
+/// The mark a `labels_print` binding declared its names' label spelled `request` prints, where no line explains it
+/// ([`declare_unexplained_name_labels`]). Spellings compare without braces and spaces: the reading's request of
+/// `annotations={…,\textsuperscript{\textdagger}}` lost the brace its group's closed (2606.17809).
+pub(in crate::base_utilities) fn unexplained_name_label(request: &str) -> Option<String> {
+  let bare = |spelling: &str| -> String {
+    spelling
+      .chars()
+      .filter(|c| !matches!(c, '{' | '}') && !c.is_whitespace())
+      .collect()
+  };
+  let request = bare(request);
+  lookup_string(UNEXPLAINED_NAME_LABELS)
+    .split('\u{1}')
+    .filter_map(|entry| entry.split_once('\u{2}'))
+    .find(|(spelling, _)| !request.is_empty() && bare(spelling) == request)
+    .map(|(_, mark)| mark.to_string())
 }
 
 /// Declare a binding's frontmatter conventions (the binding's load, before anything else it defines): kept in the

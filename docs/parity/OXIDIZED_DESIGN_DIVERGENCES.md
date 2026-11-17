@@ -19711,10 +19711,11 @@ latex_constructs.pool.ltxml:503-527); acmart's `\authornote` is a contact, `\aut
   `\fnsymbol` (:62), which pdflatex errs on, a no-op here. REVTeX's numbering pass (#1054) writes no glyph where the
   document or a package defines `\@fnsymbol` (its table's would be wrong: 2603.18989), the mark unknown and counted. A mark alone keeps its glyph in `mark` only
   (`link_marked_notes`): 2607.15705's `\authornotemark[2]` that no note answers held "†" as its text too. A label
-  authblk prints on a name (`\AB@authnote`, authblk.sty:120-133) that no `\affil` prints before its line is a mark the
-  frontmatter places nowhere, counted at `\maketitle` (`authblk_sty::count_lost_labels`, one Warning listing them:
-  2606.00446's `\author[1,*,\S]`, whose `§` only the `\date` line explains; not where an `\affil` is unlabelled, its
-  `\AB@thenote` number possibly the answer). Both sides are read by one key, the text the label prints
+  authblk prints on a name (`\AB@authnote`, authblk.sty:120-133) that no `\affil` prints before its line shows on the
+  name as its mark (#1064: 2606.00446's `\author[1,*,\S]`, whose `§` only the `\date` line explains); one spelled so
+  that no mark is read from it (a document's macro) is placed nowhere, counted at `\maketitle`
+  (`authblk_sty::count_lost_labels`, one Warning listing them; not where an `\affil` is unlabelled, its `\AB@thenote`
+  number possibly the answer). Both sides are read by one key, the text the label prints
   (`queue_digest::printed_label_pieces`: `printed_label`'s digested text, compared as `insert::mark_form` compares
   marks): `\author[\affA]` with `\newcommand\affA{1}` is `\affil[1]`'s (review revMARKSAFE S3), `\affil[$\dag$]` answers
   `\author[\dag]` (2201.10988), the line's label read as authblk.sty:148 reads it, not verbatim (`\affil[$^1$]` answers
@@ -19746,7 +19747,7 @@ revtex42_name_footnote_is_its_note_contact, thanks_leading_symbol_text_is_no_mar
 `perfect_kernel_batchsbx1::sandbox_2605_rows` (the collaboration's marked note, whole); the fail-safes
 `perfect_kernel_batchshmark::{marks_only_where_the_classs_maketitle_runs,
 a_thefootnote_the_author_block_sets_holds_for_its_name, a_names_mark_revtex_sets_apart_is_unknown,
-a_mark_whose_glyph_is_unknown_prints_none, a_class_label_no_entry_answers_is_counted}` and the mark-alone row of
+a_mark_whose_glyph_is_unknown_prints_none, a_class_label_no_entry_answers_shows_on_its_name}` and the mark-alone row of
 `a_mark_on_a_name_is_a_copy_of_the_note_it_marks` (repros `sectioning-frontmatter/{maketitle_redefined_prints_no_marks_red,
 titling_thanksmarkseries_marks_red, fmmarks_single_name_marks_after_newline_thin_spaces_red,
 revtex_name_footnotemark_leaves_the_marks_unknown, fmmarks_acmart_authornotemark_without_its_note_red,
@@ -20156,6 +20157,63 @@ internal_frontmatter_keys_are_declared, mnras_title_notes_step_the_counter}`,
 `perfect_kernel_batchshmark::a_wrapper_of_the_class_maketitle_is_neutral` (mnras's and llncs's plain notes) and
 `::a_thanks_note_carries_the_mark_its_title_prints` (no mark on a title page),
 `perfect_kernel_batche0::{the_frontmatter_api_stays_perls, every_internal_key_a_keyval_sets_is_declared}`.
+
+### 1063. A frontmatter note outside the creators with no mark prints no glyph: a block line at the document's level, inline in a field (DG 2026-11-16; INVDAG)
+
+**Rule.** #990's rule beyond the creators: a frontmatter note with no `mark` and no untyped tag prints no invented glyph
+wherever it stands (DG 2026-11-16: a wrong or invented glyph is worse than none). Its content shows: a note of the
+document's own level as a block line, one inside the title, date, abstract, keywords, classification or a publication
+note inline, each after Perl's "role: " label (`ltx_note_type`, which Perl shows on hovering the dagger; none for a
+footnote, as Perl's, or a footnote's text), so a publication note says what it is ("year: 2023", 2302.03012).
+**Perl.** `LaTeXML-meta-xhtml.xsl`'s `note-mark` falls back to `†` for a note with no `@mark` and hides the content
+behind it (`ltx_note_content`, shown on hovering the mark).
+**Rust.**
+- `LaTeXML-meta-xhtml.xsl`: `ltx:note[not(normalize-space(@mark)) and not(ltx:tags/ltx:tag[not(@role)])]` whose parent is
+  `ltx:document` or that stands in a frontmatter field is `f:blockelement($context,'div')` of class
+  `ltx_note_unmarked` (the creators' template, `unmarked-note`, its `typed` label on): a `div` at the document's
+  level, a `span` inside a paragraph or a heading. Body notes keep Perl's `†` (their marks come from the counter, with
+  tags). `LaTeXML.css` sets every `ltx_note_unmarked` holding no picture as a line of its own, 90 % (the creators' rule
+  of #990, now unscoped).
+- icml (`icml_support_sty.rs`): `\icmlEqualContribution` is `\textsuperscript{*}Equal contribution`, as every
+  icml20xx.sty from 2017 prints it (icml2026.sty:502); `\icmlsetsymbol{name}{sym}` also defines the real
+  `\@icmlsymbol<name>` (:465-467), and `\icmlauthor{name}{labels}` gives each label naming one a mark-only note of the
+  creator (`\lx@annotate@frontmatter{ltx:creator}{ltx:note}[role=footnotemark,mark=…]`, as acmart's
+  `\authornotemark`), the symbol icml2026.sty:446-458 prints after the name. Not a superscript in the name: the
+  creator's `fuzzy:` label is its personname's text, and `\icmlcorrespondingauthor{Xiaosen Wang}` then went to the
+  block where another author shares the surname (1904.07793, 2306.11128). The mark is the symbol's printed text
+  (`printed_label_pieces`: `$^\dagger$` prints †, 2106.04060); a symbol printing no one mark prints in the name.
+**Witnesses.** 2602.04557 (icml2026's notice "*Equal contribution", `†` before), 2405.13379 and 2603.01467
+(Interspeech's `\address`/`\email` notes), 2506.06941 (a `\footnotetext` in the abstract under `\fnsymbol`, the counter 0:
+pdflatex prints no mark).
+**Guards**: `perfect_kernel_batchinvdag::{an_unmarked_document_level_note_is_a_block_line,
+an_unmarked_note_in_a_field_is_inline, a_date_note_and_an_abstract_thanks_invent_no_glyph}`.
+
+### 1064. A label authblk prints on a name that no `\affil` explains shows on the name as its mark (DG 2026-11-16; INVDAG)
+
+**Rule.** #1059's "every unlinked name mark shows": authblk prints every label of `\author[1,*,§]` after the name
+(`\AB@authnote`, authblk.sty:120-133); one no `\affil` line prints shows on its name as a mark-only note, its glyph the
+one printed, and costs no Warning. Only a label no piece prints alone is placed nowhere and counted.
+**Perl.** authblk.sty.ltxml requests the labels as annotations; one no entry answers is dropped silently.
+**Rust.** authblk's `\author[…]` records each label piece printing one mark (`printed_label_pieces`), by its spelling in
+the call; at `\maketitle` `count_lost_labels` compares the names' and the lines' labels as printed and declares each
+piece no line's label explains, spelling and mark (`declare_unexplained_name_labels`); a label no piece of one word
+prints alone (`$^{2,3}$`, which the writer parts at its comma; `\author[1 2]`, 1909.01989) it counts
+(`unanswered_mark_lost`). The writer requests the declared mark for a creator whose block's conventions say its labels
+print (`Policy::labels_print`, declared by authblk) unless an entry of that creator answers it, and
+`insert::show_unanswered_marks` shows it: `§`, `\S`, `$\dagger$`, a document's macro printing one; a line's leading mark
+placed apart from a name printing it leaves that name's mark shown, linked to its note (2606.17809's
+`\affil[ ]{\textsuperscript{\textdagger}Contributed equally…}`: Csabai's note, Pollner's `†` shown, its Warning gone; the
+block's note in the repro `authblk_label_legend_line_marks_show`). The writer compares spellings without braces and
+spaces (the reading's request of `\textsuperscript{\textdagger}` lost its closing brace). A label a line's label
+explains that the reading places elsewhere (`\affil[$\dag$]{…}` under `\author[$\dag$]`, its affiliation the block's:
+1604.01848, 1406.4648, 2201.10988, 2408.08006, 2606.27030, 2609.08556) shows no mark, as before.
+**Residual.** The shown mark follows the name before the notes the labels answer ("Ann Able§,*" where pdflatex prints
+"1,*,§").
+**Witnesses.** 2606.00446 (`\author[1,*,§]{Jared Benson}`, its `§` legend in `\date`: 1 Warning before, 0 now),
+2309.17420 (`\affil[1]` given twice, the names' 2 shown), 2606.17809.
+**Guards**: `perfect_kernel_batchinvdag::an_authblk_label_no_affil_explains_shows_on_its_name`,
+`perfect_kernel_batchshmark::a_class_label_no_entry_answers_shows_on_its_name`, the FMRG row
+`fmmarks_authblk_double_star_label_and_date_note_red` (`perfect_kernel_batchfmmarks`).
 ---
 
 ## TeX-source fidelity family (TEXSRC)

@@ -824,9 +824,10 @@ cite                 { font-style: normal; }
    one once; on the card a body floats under it (2606.00446, 2407.07614, 1706.03762, 1510.02728, 0801.1438). */
 .ltx_annotated_personname:has(> .ltx_note) { display:inline; }
 .ltx_note_shared > .ltx_note_mark > a { color:inherit; text-decoration:none; }
-/* latexml-oxide local delta (OXIDIZED_DESIGN_DIVERGENCES #990, DG 2026-11-16): an author's note whose glyph is unknown
-   shows none; with no mark to hover, its text is a line under the name (a picture stays inline). */
-.ltx_creator > .ltx_note_unmarked:not(:has(img, svg)) { display:block; font-size:90%; }
+/* latexml-oxide local delta (OXIDIZED_DESIGN_DIVERGENCES #990, #1063; DG 2026-11-16): a frontmatter note whose glyph is
+   unknown, or which prints none, shows none; with no mark to hover, its text is a line of its own (under an author's
+   name, in the abstract, at the document's level: 2602.04557, 2405.13379, 2506.06941), a picture inline. */
+.ltx_note_unmarked:not(:has(img, svg)) { display:block; font-size:90%; }
 :is(.ltx_document:not(.ltx_authors_multiline) .ltx_creator:has(.ltx_author_line):not(:has(.ltx_contact:not(.ltx_author_line):not(.ltx_role_note):not(.ltx_role_thanks))), .ltx_authors_multiline .ltx_creator) .ltx_annotated_personname:has(> .ltx_note) { display:flow-root; }
 :is(.ltx_document:not(.ltx_authors_multiline) .ltx_creator:has(.ltx_author_line):not(:has(.ltx_contact:not(.ltx_author_line):not(.ltx_role_note):not(.ltx_role_thanks))), .ltx_authors_multiline .ltx_creator) .ltx_annotated_personname > .ltx_note { display:inline; }
 :is(.ltx_document:not(.ltx_authors_multiline) .ltx_creator:has(.ltx_author_line):not(:has(.ltx_contact:not(.ltx_author_line):not(.ltx_role_note):not(.ltx_role_thanks))), .ltx_authors_multiline .ltx_creator) .ltx_annotated_personname > .ltx_note .ltx_note_content {

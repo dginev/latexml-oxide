@@ -51,7 +51,7 @@ use crate::{
           ApiCall, AuthorBlock, MarkLedEntry, Unsaid, annotated_parent, content_text,
           field_stamped, symbol,
         },
-        policy::TitleMarks,
+        policy::{self, TitleMarks},
         reading::{UNFOLD_LEVELS, unfold_held_names},
         rehearsal::{Rehearsal, rehearse},
         resolver::{
@@ -6302,11 +6302,38 @@ pub(in crate::base_utilities) fn emit_commands(commands: &mut Vec<RawFrontmatter
           .get_or_init(|| marks.map_or_else(Vec::new, |marks| marks.unwritten_after(&name_runs, i)))
           .contains(request)
     };
-    for request in c.requests.iter().filter(|request| {
-      (!keeps || own_inst(request) || unprinted(request)) && !own.contains(request)
-    }) {
-      // (a key's value is tokenized: a request spelled with a command, `\\author[a,b\\thanks{…}]`'s, 2207.11842, is no label)
-      if !answered.contains(request) && !no_label(request) {
+    // (a label its binding prints as written after the name, authblk's `\author[1,*,§]`: one the binding found no line
+    // explains is a request of the mark it prints, shown on the name — `Policy::labels_print`,
+    // `policy::declare_unexplained_name_labels`; 2606.00446)
+    let labels_print = with_ledger(|ledger| match ledger.entries().get(c.source) {
+      Some(Entry::Author(block)) => policy::policy_for(&block.binding, block.hook).labels_print,
+      _ => false,
+    });
+    for request in &c.requests {
+      if labels_print && c.class_requests.contains(request) {
+        // (unless an entry of this creator's answers it: a line's leading mark gives its note to some of the names
+        // printing it, 2606.17809's `\affil[ ]{\textsuperscript{\textdagger}Contributed equally…}` to Csabai alone,
+        // Pollner's `†` shown, linked to that note)
+        if let Some(mark) = policy::unexplained_name_label(request) {
+          let answered_here = c
+            .affiliations
+            .iter()
+            .chain(&c.contacts)
+            .chain(&c.notes)
+            .filter_map(|a| a.label.as_deref())
+            .flat_map(|label| mark_labels(label.rsplit(':').next().unwrap_or(label)))
+            .any(|label| label == *request || label == mark);
+          if !answered_here {
+            annotations[i].extend(clean_frontmatter_labels(&mark, "affiliation"));
+          }
+        }
+      } else if !answered.contains(request)
+        && (!keeps || own_inst(request) || unprinted(request))
+        && !own.contains(request)
+        // (a key's value is tokenized: a request spelled with a command, `\author[a,b\thanks{…}]`'s, 2207.11842, is no
+        // label)
+        && !no_label(request)
+      {
         annotations[i].extend(clean_frontmatter_labels(request, "affiliation"));
       }
     }
