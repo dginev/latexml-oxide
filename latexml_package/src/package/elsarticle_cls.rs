@@ -1,7 +1,8 @@
 use latexml_core::definition::origin::{DefinitionOrigin, OriginGuard};
 
 use super::elsart_support_core_sty::{
-  ELS_AUTHOR_KEYS, ELS_CORREF_KEYS, ELS_PLACE_KEYS, els_carriers, recorded_els_key,
+  ELS_AUTHOR_KEYS, ELS_CORREF_KEYS, ELS_CORTEXT_KEYS, ELS_FNTEXT_KEYS, ELS_PLACE_KEYS,
+  els_carriers, els_outside_mark, record_els_keys, recorded_els_key,
 };
 use crate::prelude::*;
 
@@ -286,6 +287,9 @@ LoadDefinitions!({
   // text under the mark every `\fnref{<key>}`, `\corref{<key>}` prints: `\thefnote` (a letter under `reversenotenum`),
   // ∗ and ∗∗ — a note several names share printed once, its mark on each (`kind_shared_marked_contacts`, OD #1054).
   DefMacro!("\\fntext OptionalSemiverbatim {}", sub[(key, text)] {
+    if let Some(key) = &key {
+      record_els_keys(ELS_FNTEXT_KEYS, std::iter::once(key.to_string().as_str()));
+    }
     let n = lookup_int("@elsarticle@fnote") + 1;
     assign_value("@elsarticle@fnote", n, Scope::Global);
     let mark = match u8::try_from(n) {
@@ -302,6 +306,9 @@ LoadDefinitions!({
   // A `\cortext` note's mark is its carriers' route, decided once every author is read (`\lx@els@cormark`; 2512.04868,
   // 1308.5495; OD #1053): `\corref` prints ∗/∗∗ (:188-190), an `\author[<key>]` key the `cnote` number (:181-185, :251-256).
   DefMacro!("\\cortext OptionalSemiverbatim {}", sub[(key, text)] {
+    if let Some(key) = &key {
+      record_els_keys(ELS_CORTEXT_KEYS, std::iter::once(key.to_string().as_str()));
+    }
     let n = lookup_int("@elsarticle@cnote") + 1;
     assign_value("@elsarticle@cnote", n, Scope::Global);
     let mark = mouth::tokenize_internal(TeXString::assembled(s!(
@@ -325,7 +332,10 @@ LoadDefinitions!({
         && (fn_marks.split(';').any(|e| e.split_once('=') == Some((other.as_str(), n.to_string().as_str())))
           || (numbered && recorded_els_key(ELS_PLACE_KEYS, other)))
     });
-    let mark = if recorded_els_key(ELS_AUTHOR_KEYS, &key) && !recorded_els_key(ELS_CORREF_KEYS, &key) {
+    // (a note no name reaches prints its ∗ on none: no mark, OD #1067)
+    let mark = if els_note_shadowed("cor", &key) {
+      None
+    } else if recorded_els_key(ELS_AUTHOR_KEYS, &key) && !recorded_els_key(ELS_CORREF_KEYS, &key) {
       // (a key an address shares prints the label written last, not known here: none)
       match () {
         _ if recorded_els_key(ELS_PLACE_KEYS, &key) => None,
@@ -494,14 +504,65 @@ fn marked_note_text(
   text: Tokens,
 ) -> Tokens {
   let key = key.map(|key| key.to_string()).unwrap_or_default();
+  let label = els_note_label(prefix, &key);
   let mark = mark
     .map(|mark| s!("\\lx@fm@entry@attr{{_fnmark}}{{{mark}}}"))
     .unwrap_or_default();
   let mut call = mouth::tokenize_internal(TeXString::assembled(s!(
-    "\\lx@add@contact[label={{{prefix}:{key}}},role={role}]{{{mark}"
+    "\\lx@add@contact[label={{{label}}},role={role}]{{{mark}"
   )))
   .unlist();
   call.extend(text.unlist());
   call.push(T_END!());
   Tokens::new(call)
+}
+
+/// The entry an elsarticle key names, of the ones whose `\elsLabel` writes it ([`els_key_entry`]).
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum ElsEntry {
+  Place,
+  Footnote,
+  Correspondence,
+}
+
+/// The entry `key` names in elsarticle's one key space: the one whose label the .aux writes last — an `\address`'s or
+/// `\affiliation`'s (at shipout) over an `\fntext`'s over a `\cortext`'s (elsarticle.cls:126-131, :766-778, :1376-1399).
+fn els_key_entry(key: &str) -> Option<ElsEntry> {
+  if recorded_els_key(ELS_PLACE_KEYS, key) {
+    Some(ElsEntry::Place)
+  } else if recorded_els_key(ELS_FNTEXT_KEYS, key) {
+    Some(ElsEntry::Footnote)
+  } else if recorded_els_key(ELS_CORTEXT_KEYS, key) {
+    Some(ElsEntry::Correspondence)
+  } else {
+    None
+  }
+}
+
+/// Whether the `\cortext` (`kind` "cor") or `\fntext` ("fn") keyed `key` is no name's: its key names another entry, and
+/// for a `\cortext` no `\corref` names it (`\corref` prints its ∗ whatever the key's number, elsarticle.cls:188-190).
+fn els_note_shadowed(kind: &str, key: &str) -> bool {
+  let key = key.trim();
+  if key.is_empty() {
+    return false;
+  }
+  match (kind, els_key_entry(key)) {
+    (_, Some(ElsEntry::Place)) => true,
+    ("cor", Some(ElsEntry::Footnote)) => {
+      !recorded_els_key(ELS_CORREF_KEYS, key) && !els_outside_mark("cor").iter().any(|k| k == key)
+    },
+    _ => false,
+  }
+}
+
+/// A `\cortext`'s or `\fntext`'s label as it is read (the Frontmatter reading pairs the queued labels): its key's,
+/// `cor:<key>`/`fn:<key>`, or, where the key already names another entry, none a name reaches — no `:`, so Perl's
+/// prefix-stripped fallback (`relocate_annotations`) finds no name listing the key. A note read before the entry its key
+/// names stays its key's names' (row R ELSKEYORDER).
+fn els_note_label(kind: &str, key: &str) -> String {
+  if els_note_shadowed(kind, key) {
+    s!("{kind}@{}", key.trim())
+  } else {
+    s!("{kind}:{}", key.trim())
+  }
 }

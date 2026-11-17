@@ -20332,6 +20332,43 @@ explains that the reading places elsewhere (`\affil[$\dag$]{…}` under `\author
 
 ---
 
+### 1067. elsarticle's keys name one entry each, and every route to a note reaches it (ELSART, DG 2026-11-17)
+
+**Rule.** elsarticle keeps one key space, `X@<key>` (elsarticle.cls:126-131). `\author[<keys>]` prints `\elsRef` of each
+key (:250-262): the entry whose `\elsLabel` the .aux wrote last — an `\address`/`\affiliation` (a `\protected@write`, at
+shipout) over an `\fntext` over a `\cortext` (`\immediate\write` as `\printFirstPageNotes` sets the correspondence notes,
+then the footnotes: :766-778, :1376-1399). `\corref{k}` and `\fnref{k}` name a `\cortext`/`\fntext` key; one read outside
+every name sets `\@corref`/`\@fnmark` where it is read (an `\edef`/`\def`: a brace group of its own keeps it), and the
+first name printed shows it unless that name sets its own (:159-165, :188-190, :256-264).
+**Perl.** `\author[keys]` annotates the bare keys, `\corref`/`\fnref` request `cor:k`/`fn:k`, the notes are labelled
+`cor:k`/`fn:k` (elsart_support_core.sty.ltxml:35-36, :78-91), and `relocateAnnotations` falls back to the
+prefix-stripped key only where no exact label is requested (Base_Utility.pool.ltxml:899-900): a name listing a note's
+key loses it as soon as another name `\corref`s it; a note sharing an address's key goes to every name listing the
+address; an outside `\corref` requests on no entry and the note is orphaned.
+**Rust.** The binding gives the routes one label per key, where they are read (`\lx@els@author`, elsart_support_core_sty.rs;
+the Frontmatter reading pairs the queued labels, so nothing is decided later):
+- every route of a key takes the form the key was first read by (`els_route`): the bare key after an `\author[…]` list,
+  `cor:k`/`fn:k` after a `\corref`/`\fnref`. A later `\author[…]` key is annotated `cor:k`; a later `\corref{k}` in a
+  name is dropped and its name annotated `k` — so all names reaching a note meet it, in either order;
+- the first name is annotated with the outside marks read before it or right after its call (past spaces:
+  the witnesses' shape); its own `\corref`/`\fnref` replaces them, as the class's. One read after a later name stays the
+  block's (row R ELSOUTSIDE);
+- a note whose key already names another entry when it is read is labelled `cor@k`/`fn@k` (elsarticle_cls.rs
+  `els_note_label`), which no name requests and no fallback strips to the key: the block's note, as the PDF links it to
+  no name (1711.08299). A note read before the entry its key names keeps `cor:k` (row R ELSKEYORDER);
+- a `\cortext` both routes reach is marked ∗, the note's own print (the names print "1" and ∗ for it), as WRONGFIX's
+  collision fallback; one no name reaches has no mark.
+The binding's `\author` stays elsart_support_core's: the reading takes a binding's author conventions from the binding
+that defines the macro calling `\lx@add@authors@append` (`policy_for`), and an `\author` redefined by elsarticle_cls.rs
+read 1108.0201's `\address[*]` as the corresponding author's.
+**Witnesses.** 1501.03323, 1508.05262, 2201.04925, 2606.17032, 2606.22682 (`\author[…]{…}\corref{…}`: the first
+author's, the block's before), 1909.01114 (`{\corref{cor1}}`: the block's, as pdflatex links it to no name), 1711.08299;
+ELSROUTE's mixed routes (0 of 906 census elsarticle papers).
+**Guards**: the FMRG `CLASS` rows `elsart_*` (`perfect_kernel_batchfmmarks::notes_are_marked_only_where_the_class_prints_marks`
+and its `_red` twin), `perfect_kernel_batchwrongfix::an_elsarticle_cortext_is_marked_by_its_route` (the shared-key row).
+
+---
+
 ## TeX-source fidelity family (TEXSRC)
 
 An index, not new entries: the entries below each restore what latex.ltx, tex.web or the real package defines over a

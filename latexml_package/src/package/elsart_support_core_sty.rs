@@ -59,7 +59,70 @@ LoadDefinitions!({
   // (the keys an author lists and the `\corref`/`\cormark` keys its name holds, recorded for elsarticle's `\cortext` mark,
   // which depends on the route its names reach it by: `\lx@els@cormark`, 2512.04868)
   DefMacro!("\\author OptionalSemiverbatim {}",
-    "\\lx@els@record@author{#1}{#2}\\if\\relax\\detokenize{#1}\\relax\\else\\gdef\\lx@els@labelled{}\\fi\\lx@add@authors@append[annotations={#1}]{#2}");
+    "\\lx@els@record@author{#1}{#2}\\if\\relax\\detokenize{#1}\\relax\\else\\gdef\\lx@els@labelled{}\\fi\\lx@els@author{#1}{#2}");
+  // elsarticle.cls:126-131, :250-265: one key space, `X@<key>`; `\author[<keys>]` prints `\elsRef{<key>}`, the entry whose
+  // `\elsLabel` was written last (elsarticle_cls.rs `els_key_entry`); `\corref`/`\fnref` name a `\cortext`/`\fntext`. A `\corref` or
+  // `\fnref` outside every name sets `\@corref`/`\@fnmark` where it is read; the first name printed shows it unless it
+  // sets its own (:159-165, :188-190, :256-264). Each route is given the label form the key was first read by
+  // ([`els_route`]: the bare key, `cor:<key>`, `fn:<key>`), so every name reaching a note meets it — Perl's prefix-stripped
+  // fallback stops at an exact label (`\author[l1,cor]{Alice}` beside `\author[l1]{Bob\corref{cor}}` gave Bob alone the
+  // note); the first name takes the outside marks read before it or right after its call (1501.03323, 1508.05262,
+  // 2201.04925, 2606.17032, 2606.22682; OXIDIZED_DESIGN_DIVERGENCES #1067).
+  DefMacro!("\\lx@els@author{}{}", sub[(keys, name)] {
+    let listed: Vec<String> =
+      keys.to_string().split(',').map(str::trim).filter(|k| !k.is_empty()).map(String::from).collect();
+    let first = els_authors().len() == 1;
+    let tokens = name.clone().unlist();
+    let (correfs, fnrefs) = (
+      ref_spans(&tokens, &T_CS!("\\corref"), &T_CS!("\\cormark")),
+      ref_spans(&tokens, &T_CS!("\\fnref"), &T_CS!("\\fnmark")),
+    );
+    for key in &listed {
+      set_els_route(key, "");
+    }
+    let mut labels: Vec<String> = listed.iter().map(|key| els_route_label(key, "")).collect();
+    // (a `\corref`/`\fnref` naming a key a name listed first is that key: the request dropped, the key annotated)
+    let mut dropped: Vec<std::ops::Range<usize>> = Vec::new();
+    for (kind, spans) in [("cor", &correfs), ("fn", &fnrefs)] {
+      for (span, refs) in spans.iter() {
+        if refs.iter().any(|key| els_route(key).as_deref() == Some("")) {
+          labels.extend(refs.iter().map(|key| els_route_label(key, kind)));
+          dropped.push(span.clone());
+        }
+      }
+    }
+    for (kind, spans) in [("cor", &correfs), ("fn", &fnrefs)] {
+      spans.iter().flat_map(|(_, refs)| refs).for_each(|key| set_els_route(key, kind));
+    }
+    if first {
+      // (the outside marks read before the first name, or right after its call: the class's `\@corref`/`\@fnmark`)
+      let ahead = peek_outside_marks()?;
+      for (kind, own) in [("cor", &correfs), ("fn", &fnrefs)] {
+        if !own.is_empty() {
+          continue;
+        }
+        let read = ahead.iter().rev().find(|(k, _)| *k == kind).map(|(_, keys)| keys.clone());
+        for key in read.unwrap_or_else(|| els_outside_mark(kind)) {
+          labels.push(els_route_label(&key, kind));
+        }
+      }
+    }
+    let named: Vec<Token> = tokens
+      .iter()
+      .enumerate()
+      .filter(|(at, _)| !dropped.iter().any(|span| span.contains(at)))
+      .map(|(_, t)| *t)
+      .collect();
+    let mut call = mouth::tokenize_internal(TeXString::assembled(s!(
+      "\\lx@add@authors@append[annotations={{{}}}]",
+      labels.join(",")
+    )))
+    .unlist();
+    call.push(T_BEGIN!());
+    call.extend(named);
+    call.push(T_END!());
+    Ok(Tokens::new(call))
+  });
   // (and the keys an `\address`/`\affiliation` labels: a key a note's text shares prints whichever `\elsLabel` wrote
   // it last, elsarticle.cls:126-131 — 1711.08299's `\cortext[a]` beside `\address[a]`, its names printing "a")
   DefPrimitive!("\\lx@els@record@place{}", sub[(key)] {
@@ -69,14 +132,16 @@ LoadDefinitions!({
     let keys = keys.to_string();
     record_els_keys(ELS_AUTHOR_KEYS, keys.split(','));
     let tokens = name.unlist_ref();
-    record_els_keys(ELS_CORREF_KEYS, keys_in(tokens, &T_CS!("\\corref"), &T_CS!("\\cormark")).iter().map(String::as_str));
-    // (each author's keys, the `\fnref`s of its name among them: the marks it prints side by side)
-    let mut carried: Vec<String> = keys.split(',').map(|k| k.trim().to_string()).collect();
-    carried.extend(keys_in(tokens, &T_CS!("\\fnref"), &T_CS!("\\fnmark")));
-    let mut carriers = lookup_string(ELS_CARRIERS);
-    carriers.push_str(&carried.join(","));
-    carriers.push(';');
-    assign_value(ELS_CARRIERS, Stored::String(pin(&carriers)), Scope::Global);
+    let correfs = keys_in(tokens, &T_CS!("\\corref"), &T_CS!("\\cormark"));
+    record_els_keys(ELS_CORREF_KEYS, correfs.iter().map(String::as_str));
+    // (each author's keys and the `\fnref`s of its name: the marks it prints side by side; and the group
+    // level the names are read at, an outside mark's)
+    let fnrefs = keys_in(tokens, &T_CS!("\\fnref"), &T_CS!("\\fnmark"));
+    let keys: Vec<&str> = keys.split(',').map(str::trim).filter(|k| !k.is_empty()).collect();
+    let mut authors = lookup_string(ELS_AUTHORS);
+    authors.push_str(&s!("{}|{};", keys.join(","), fnrefs.join(",")));
+    assign_value(ELS_AUTHORS, Stored::String(pin(&authors)), Scope::Global);
+    assign_value(ELS_NAMES_LEVEL, i64::try_from(get_frame_depth()).unwrap_or(0), Scope::Global);
   });
 
   // (elsarticle puts an `\address` into the author list after the authors before it, elsarticle.cls:665-668, and an
@@ -113,12 +178,20 @@ LoadDefinitions!({
   // the \<XXX>text forms supply the text (& and role) for the contact that will be attached.
   DefMacro!("\\thanksref{}",  "\\lx@request@frontmatter@annotation[thanks]{#1}");
   // (a `\corref` outside an `\author`'s name recorded where it is read, one inside it by `\lx@els@record@author`)
+  // (an outside one recorded with the group level it is read at, for elsarticle's first name: `ELS_OUTSIDE`)
   DefMacro!("\\corref{}",     "\\lx@els@record@corref{#1}\\lx@request@frontmatter@annotation[cor]{#1}");
   DefPrimitive!("\\lx@els@record@corref{}", sub[(key)] {
     record_els_keys(ELS_CORREF_KEYS, std::iter::once(key.to_string().as_str()));
+    record_els_mark("cor", &key.to_string());
+    set_els_route(&key.to_string(), "cor");
   });
   DefMacro!("\\corauthref{}", "\\lx@request@frontmatter@annotation[corauth]{#1}");
-  DefMacro!("\\fnref{}",      "\\lx@request@frontmatter@annotation[fn]{#1}");
+  DefMacro!("\\fnref{}",      "\\lx@els@record@fnref{#1}\\lx@request@frontmatter@annotation[fn]{#1}");
+  DefPrimitive!("\\lx@els@record@fnref{}", sub[(keys)] {
+    let keys = keys.to_string();
+    record_els_mark("fn", &keys);
+    keys.split(',').for_each(|key| set_els_route(key, "fn"));
+  });
   DefMacro!("\\tnoteref{}",   "\\lx@request@frontmatter@annotation[tnote]{#1}"); // Possibly for title, not author?
   DefMacro!("\\thanks OptionalSemiverbatim {}",
     "\\lx@add@contact[label={thanks:#1},role=thanks]{#2}");
@@ -581,22 +654,116 @@ pub(crate) const ELS_AUTHOR_KEYS: &str = "@elsarticle@authorkeys";
 pub(crate) const ELS_CORREF_KEYS: &str = "@elsarticle@correfs";
 /// The global value holding the keys `\address[…]`/`\affiliation[…]` label (comma-separated).
 pub(crate) const ELS_PLACE_KEYS: &str = "@elsarticle@placekeys";
-/// The global value holding each author's keys, its `\author[…]` list and its name's `\fnref`s (each list ended by `;`).
-pub(crate) const ELS_CARRIERS: &str = "@elsarticle@carriers";
+/// The global value holding each author's `\author[…]` keys and its name's `\fnref` keys, in reading order
+/// (`<keys>|<fnrefs>;` each).
+pub(crate) const ELS_AUTHORS: &str = "@elsarticle@authors";
+/// The global value holding the group level the `\author` calls are read at.
+pub(crate) const ELS_NAMES_LEVEL: &str = "@elsarticle@nameslevel";
+/// The global value holding each `\corref`/`\fnref` as read, with its group level (`<kind>:<level>:<keys>;`): one read
+/// outside every name, at the names' level, is the first name's (`\lx@els@author`).
+pub(crate) const ELS_OUTSIDE: &str = "@elsarticle@marks";
+/// The global value holding the route each key was first read by (`<key>=<route>;`, [`els_route`]).
+pub(crate) const ELS_ROUTES: &str = "@elsarticle@routes";
 
-/// The keys of the authors whose `\author[…]` list holds `key`, each author's in its own list.
+/// The route `key` was first read by: `""` an `\author[…]` list, `"cor"` a `\corref`, `"fn"` an `\fnref` — the label form
+/// elsarticle_cls.rs gives every later route of the key, so all of them meet.
+pub(crate) fn els_route(key: &str) -> Option<String> {
+  let key = key.trim();
+  lookup_string(ELS_ROUTES).split(';').find_map(|entry| {
+    entry
+      .split_once('=')
+      .filter(|(k, _)| *k == key)
+      .map(|(_, route)| route.to_string())
+  })
+}
+
+/// Record `route` for `key` unless a route was read for it before ([`els_route`]).
+pub(crate) fn set_els_route(key: &str, route: &str) {
+  let key = key.trim();
+  if key.is_empty() || els_route(key).is_some() {
+    return;
+  }
+  let mut routes = lookup_string(ELS_ROUTES);
+  routes.push_str(&s!("{key}={route};"));
+  assign_value(ELS_ROUTES, Stored::String(pin(&routes)), Scope::Global);
+}
+
+/// The global value holding the keys `\cortext[…]` labels (comma-separated).
+pub(crate) const ELS_CORTEXT_KEYS: &str = "@elsarticle@cortextkeys";
+/// The global value holding the keys `\fntext[…]` labels (comma-separated).
+pub(crate) const ELS_FNTEXT_KEYS: &str = "@elsarticle@fntextkeys";
+
+/// An `\author` call as [`ELS_AUTHORS`] records it.
+pub(crate) struct ElsAuthor {
+  pub keys:   Vec<String>,
+  pub fnrefs: Vec<String>,
+}
+
+/// The `\author` calls read so far, in order.
+pub(crate) fn els_authors() -> Vec<ElsAuthor> {
+  let list = |part: &str| -> Vec<String> {
+    part
+      .split(',')
+      .map(str::trim)
+      .filter(|k| !k.is_empty())
+      .map(String::from)
+      .collect()
+  };
+  lookup_string(ELS_AUTHORS)
+    .split(';')
+    .filter(|entry| !entry.is_empty())
+    .map(|entry| {
+      let mut parts = entry.split('|');
+      let mut next = || list(parts.next().unwrap_or_default());
+      ElsAuthor { keys: next(), fnrefs: next() }
+    })
+    .collect()
+}
+
+/// The keys of the authors whose `\author[…]` list holds `key`, each author's in its own list (its `\author[…]` keys
+/// and its name's `\fnref`s: the marks it prints side by side).
 pub(crate) fn els_carriers(key: &str) -> Vec<Vec<String>> {
   let key = key.trim();
-  lookup_string(ELS_CARRIERS)
-    .split(';')
-    .map(|keys| {
-      keys
-        .split(',')
-        .map(|k| k.trim().to_string())
+  els_authors()
+    .into_iter()
+    .map(|author| {
+      author
+        .keys
+        .into_iter()
+        .chain(author.fnrefs)
         .collect::<Vec<_>>()
     })
     .filter(|keys| keys.iter().any(|k| k == key))
     .collect()
+}
+
+/// Record a `\corref` (`kind` "cor") or `\fnref` ("fn") as read, with its group level ([`ELS_OUTSIDE`]).
+fn record_els_mark(kind: &str, keys: &str) {
+  let mut marks = lookup_string(ELS_OUTSIDE);
+  marks.push_str(&s!("{kind}:{}:{};", get_frame_depth(), keys.trim()));
+  assign_value(ELS_OUTSIDE, Stored::String(pin(&marks)), Scope::Global);
+}
+
+/// The keys of the last `\corref` (`kind` "cor") or `\fnref` ("fn") read outside every name, at the level the names are
+/// read at: the class's `\@corref`/`\@fnmark`, set where it is read and shown by the first name printed (elsarticle.cls
+/// :159-165, :188-190, :256-264); one in a brace group of its own sets it for that group alone (1909.01114).
+pub(crate) fn els_outside_mark(kind: &str) -> Vec<String> {
+  let level = lookup_int(ELS_NAMES_LEVEL).to_string();
+  lookup_string(ELS_OUTSIDE)
+    .rsplit(';')
+    .find_map(|entry| {
+      let mut parts = entry.splitn(3, ':');
+      (parts.next()? == kind && parts.next()? == level).then(|| parts.next().unwrap_or_default())
+    })
+    .map(|keys| {
+      keys
+        .split(',')
+        .map(str::trim)
+        .filter(|k| !k.is_empty())
+        .map(String::from)
+        .collect()
+    })
+    .unwrap_or_default()
 }
 
 /// Add each of `keys` (trimmed, non-empty) to the comma list kept in the global value `list`.
@@ -621,8 +788,20 @@ pub(crate) fn recorded_els_key(list: &str, key: &str) -> bool {
 
 /// The keys `<braced>{<keys>}` and `<bracketed>[<keys>]` name in `tokens`, an `\author`'s argument (`\corref` and
 /// `\cormark`, `\fnref` and `\fnmark`), each comma-separated list split.
-fn keys_in(tokens: &[Token], braced: &Token, bracketed: &Token) -> Vec<String> {
-  let mut keys = Vec::new();
+pub(crate) fn keys_in(tokens: &[Token], braced: &Token, bracketed: &Token) -> Vec<String> {
+  ref_spans(tokens, braced, bracketed)
+    .into_iter()
+    .flat_map(|(_, keys)| keys)
+    .collect()
+}
+
+/// Each `<braced>{<keys>}` and `<bracketed>[<keys>]` in `tokens`: its token range and its keys.
+pub(crate) fn ref_spans(
+  tokens: &[Token],
+  braced: &Token,
+  bracketed: &Token,
+) -> Vec<(std::ops::Range<usize>, Vec<String>)> {
+  let mut spans = Vec::new();
   for (at, t) in tokens.iter().enumerate() {
     let (open, close) = if t == braced {
       (Catcode::BEGIN, Catcode::END)
@@ -631,35 +810,116 @@ fn keys_in(tokens: &[Token], braced: &Token, bracketed: &Token) -> Vec<String> {
     } else {
       continue;
     };
-    let mut rest = tokens[at + 1..]
-      .iter()
-      .skip_while(|t| t.get_catcode() == Catcode::SPACE);
-    if !rest
-      .next()
+    let mut i = at + 1;
+    while tokens
+      .get(i)
+      .is_some_and(|t| t.get_catcode() == Catcode::SPACE)
+    {
+      i += 1;
+    }
+    if !tokens
+      .get(i)
       .is_some_and(|t| t.get_catcode() == open && (open == Catcode::BEGIN || t.to_string() == "["))
     {
       continue;
     }
+    let start = i + 1;
     let mut depth = 0;
-    let key: Vec<Token> = rest
-      .take_while(|t| {
-        depth += t.group_step();
-        if close == Catcode::END {
-          depth >= 0
-        } else {
-          !(depth == 0 && t.to_string() == "]")
-        }
-      })
-      .cloned()
+    let mut end = start;
+    while let Some(t) = tokens.get(end) {
+      depth += t.group_step();
+      let closed = if close == Catcode::END {
+        depth < 0
+      } else {
+        depth == 0 && t.to_string() == "]"
+      };
+      if closed {
+        break;
+      }
+      end += 1;
+    }
+    let key = Tokens::new(tokens[start..end.min(tokens.len())].to_vec()).to_string();
+    let keys = key
+      .split(',')
+      .map(str::trim)
+      .filter(|k| !k.is_empty())
+      .map(String::from)
       .collect();
-    let key = Tokens::new(key).to_string();
-    keys.extend(
-      key
+    spans.push((at..(end + 1).min(tokens.len()), keys));
+  }
+  spans
+}
+
+/// The label a route of kind `kind` (`""` an `\author[…]` key, `"cor"`, `"fn"`) gives `key`: the form the key was first
+/// read by ([`els_route`]), so that all its routes meet.
+fn els_route_label(key: &str, kind: &str) -> String {
+  let key = key.trim();
+  match els_route(key).as_deref().unwrap_or(kind) {
+    "" => key.to_string(),
+    route => s!("{route}:{key}"),
+  }
+}
+
+/// The `\corref{…}`/`\cormark[…]` and `\fnref{…}`/`\fnmark[…]` right after an `\author` call (past spaces; not past an
+/// `\ead`, whose Semiverbatim address a read ahead would tokenize too early), each kind with its keys, left in the input: the first name's outside marks (1501.03323's
+/// `\author[kaust1]{Ihab Sraj} \corref{cor1}`).
+fn peek_outside_marks() -> Result<Vec<(&'static str, Vec<String>)>> {
+  let mut read: Vec<Token> = Vec::new();
+  let mut marks = Vec::new();
+  // (one argument, braced or bracketed, read whole)
+  let argument = |read: &mut Vec<Token>, open: &str, close: &str| -> Result<Option<String>> {
+    let mut text = Vec::new();
+    loop {
+      let Some(t) = read_token()? else {
+        return Ok(None);
+      };
+      read.push(t);
+      if t.get_catcode() != Catcode::SPACE {
+        if t.to_string() != open {
+          return Ok(None);
+        }
+        break;
+      }
+    }
+    let mut depth = 0;
+    while let Some(t) = read_token()? {
+      read.push(t);
+      depth += t.group_step();
+      if (open == "{" && depth < 0) || (open == "[" && depth == 0 && t.to_string() == close) {
+        return Ok(Some(Tokens::new(text).to_string()));
+      }
+      text.push(t);
+    }
+    Ok(None)
+  };
+  while let Some(t) = read_token()? {
+    read.push(t);
+    let kind = if t == T_CS!("\\corref") || t == T_CS!("\\cormark") {
+      "cor"
+    } else if t == T_CS!("\\fnref") || t == T_CS!("\\fnmark") {
+      "fn"
+    } else if t.get_catcode() == Catcode::SPACE {
+      continue;
+    } else {
+      break;
+    };
+    let bracketed = t == T_CS!("\\cormark") || t == T_CS!("\\fnmark");
+    let keys = if bracketed {
+      argument(&mut read, "[", "]")?
+    } else {
+      argument(&mut read, "{", "}")?
+    };
+    let Some(keys) = keys else { break };
+    marks.push((
+      kind,
+      keys
         .split(',')
         .map(str::trim)
         .filter(|k| !k.is_empty())
-        .map(String::from),
-    );
+        .map(String::from)
+        .collect(),
+    ));
   }
-  keys
+  unread(Tokens::new(read));
+  Ok(marks)
 }

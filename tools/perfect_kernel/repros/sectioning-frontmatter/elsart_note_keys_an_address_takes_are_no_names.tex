@@ -1,0 +1,24 @@
+% mechanism: an elsarticle key labels one entry, the one whose `\elsLabel` the .aux writes last (elsarticle.cls:126-131):
+%   an address's (written at shipout) over a note's (`\immediate\write` at `\maketitle`, :1376-1399): a `\cortext` or
+%   `\fntext` sharing an address's key is no name's, its note at the page foot alone — the binding labels it so no
+%   prefix-stripped fallback reaches the names (`els_note_label`), here with the notes read before the addresses
+% witness: 1711.08299 (`\author[a]{I. Mukul}`, `\address[a]{…}`, `\cortext[a]{Corresponding author.}`), the notes first
+% oracle:  pdflatex (2 passes) 0 errors: "Alice Onea , Bob Twoa,b"; footnotes "∗ Corresponding author", "1 Visiting"
+% engines: rust b842de7fc4c and ELSART: Alice and Bob each an unmarked correspondent contact, Bob the "Visiting" note
+%   too; ELSART with the addresses read first (1711.08299's order): the block's
+% expect:  0 errors 0 Warnings; Alice One the address, Bob Two both addresses; the two notes the block's
+% status:  RED (b842de7fc4c) -> RED (ELSART: the notes read before the addresses keep their labels; row R ELSKEYORDER)
+%   (perfect_kernel_batchfmmarks::notes_are_marked_only_where_the_class_prints_marks_red)
+% preload: ar5iv.sty
+\documentclass[preprint]{elsarticle}
+\begin{document}
+\begin{frontmatter}
+\title{T}
+\cortext[a]{Corresponding author}
+\fntext[b]{Visiting}
+\author[a]{Alice One}
+\author[a,b]{Bob Two}
+\address[a]{Some University}
+\address[b]{Other Institute}
+\end{frontmatter}
+x\end{document}

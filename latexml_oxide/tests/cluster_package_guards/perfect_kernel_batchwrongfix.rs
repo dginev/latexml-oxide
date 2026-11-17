@@ -279,9 +279,10 @@ fn a_mark_character_inside_a_names_bracket_is_its_text() {
 
 /// An elsarticle `\cortext` note is marked by its carriers' route: names listing its key in `\author[…]` print the `cnote`
 /// number (elsarticle.cls:181-185, :251-256), "1" — 2512.04868's two names both marked ∗ before —, whether the
-/// `\cortext` comes after the authors or before them, and nothing where an `\address` shares the key, its letter printed
-/// instead (:126-131, 1711.08299); names reaching it by `\corref` print ∗ (:188-190, 1308.5495); and where the number is
-/// another mark of the same name's too (an `\fntext` key's), the ∗ the footnote prints, two notes never sharing a mark
+/// `\cortext` comes after the authors or before them, and no name's where an `\address` shares the key, its letter
+/// printed instead (:126-131, 1711.08299: the block's note, ELSART, OD #1067); names reaching it by `\corref` print ∗
+/// (:188-190, 1308.5495); and where the number is another mark of the same name's too (an `\fntext` key's), the ∗ the
+/// footnote prints, two notes never sharing a mark
 /// (revWRONGFIX S1). Distinct: the key route, its decision deferred past the authors, the key an address shares, the
 /// `\corref` route, and the number taken.
 #[test]
@@ -324,11 +325,12 @@ fn an_elsarticle_cortext_is_marked_by_its_route() {
       tex:        repro!("wrongfix_elsarticle_cortext_key_shared_with_an_address"),
       warnings:   0,
       creators:   &[
-        "Alice One | address=Some University ; correspondent=Corresponding author",
-        "Bob Two | address=Some University ; correspondent=Corresponding author",
+        "Alice One | address=Some University",
+        "Bob Two | address=Some University",
+        " | correspondent=Corresponding author",
       ],
       moves:      "",
-      page:       &["Alice One", "Bob Two"],
+      page:       &["Alice One", "Bob Two", ""],
       page_moves: "",
     },
     Row {

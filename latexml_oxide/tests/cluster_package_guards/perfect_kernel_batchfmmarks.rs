@@ -3479,6 +3479,132 @@ const CLASS: &[Row] = &[
     page_moves: r#"row R MARKNUMKEY (Bob's 1 not printed)"#,
   },
   Row {
+    repro:      "elsart_cortext_key_and_corref_routes_both_carry",
+    tex:        repro!("elsart_cortext_key_and_corref_routes_both_carry"),
+    warnings:   0,
+    creators:   &[
+      r#"Alice One ; thanks[*]=Corresponding author | affiliation=Some University, X, Y"#,
+      r#"Bob Two ; thanks[*]=Corresponding author | affiliation=Some University, X, Y"#,
+    ],
+    moves:      r#""#,
+    page:       &[
+      r#"Alice One ; *→note"#,
+      r#"Bob Two ; *→note"#,
+      r#"margin: Corresponding author"#,
+    ],
+    page_moves: r#""#,
+  },
+  Row {
+    repro:      "elsart_cortext_corref_then_key_route_both_carry",
+    tex:        repro!("elsart_cortext_corref_then_key_route_both_carry"),
+    warnings:   0,
+    creators:   &[
+      r#"Alice One ; thanks[*]=Corresponding author | affiliation=Some University, X, Y"#,
+      r#"Bob Two ; thanks[*]=Corresponding author | affiliation=Some University, X, Y"#,
+    ],
+    moves:      r#""#,
+    page:       &[
+      r#"Alice One ; *→note"#,
+      r#"Bob Two ; *→note"#,
+      r#"margin: Corresponding author"#,
+    ],
+    page_moves: r#""#,
+  },
+  Row {
+    repro:      "elsart_fntext_key_and_fnref_routes_both_carry",
+    tex:        repro!("elsart_fntext_key_and_fnref_routes_both_carry"),
+    warnings:   0,
+    creators:   &[
+      r#"Alice One ; thanks[1]=Equal contribution | affiliation=Some University, X, Y"#,
+      r#"Bob Two ; thanks[1]=Equal contribution | affiliation=Some University, X, Y"#,
+    ],
+    moves:      r#""#,
+    page:       &[
+      r#"Alice One ; 1→note"#,
+      r#"Bob Two ; 1→note"#,
+      r#"margin: Equal contribution"#,
+    ],
+    page_moves: r#""#,
+  },
+  Row {
+    repro:      "elsart_note_keys_an_address_takes_are_no_names",
+    tex:        repro!("elsart_note_keys_an_address_takes_are_no_names"),
+    warnings:   0,
+    creators:   &[
+      r#"Alice One | address=Some University"#,
+      r#"Bob Two | address=Some University ; address=Other Institute"#,
+      r#" | correspondent=Corresponding author ; note=Visiting"#,
+    ],
+    moves:      r#"row R ELSKEYORDER (a note read before the address its key names keeps its label, which Perl's prefix-stripped fallback hands every name listing the key)"#,
+    page:       &[r#"Alice One"#, r#"Bob Two"#, r#""#],
+    page_moves: r#"row R ELSKEYORDER (the block's line)"#,
+  },
+  Row {
+    repro:      "elsart_key_of_a_cortext_and_an_fntext_names_the_fntext",
+    tex:        repro!("elsart_key_of_a_cortext_and_an_fntext_names_the_fntext"),
+    warnings:   0,
+    creators:   &[
+      r#"Alice One | affiliation=Some University, X, Y ; note=Equal contribution"#,
+      r#"Bob Two | affiliation=Some University, X, Y"#,
+      r#" | correspondent=Corresponding author"#,
+    ],
+    moves:      r#"row R ELSKEYORDER (the `\cortext` read before the `\fntext` its key names keeps its label: Alice carries both)"#,
+    page:       &[r#"Alice One"#, r#"Bob Two"#, r#""#],
+    page_moves: r#"row R ELSKEYORDER (the block's line)"#,
+  },
+  Row {
+    repro:      "elsart_corref_outside_a_name_marks_the_first_author",
+    tex:        repro!("elsart_corref_outside_a_name_marks_the_first_author"),
+    warnings:   0,
+    creators:   &[
+      r#"Alice One | affiliation=Some University, X, Y ; correspondent=Corresponding author"#,
+      r#"Bob Two | affiliation=Some University, X, Y"#,
+      r#"Carol Three | affiliation=Some University, X, Y"#,
+    ],
+    moves:      r#"row R ELSOUTSIDE (a `\corref` read after a later name than the first: the binding sees the outside marks read before the first name or right after its call; the note the block's)"#,
+    page:       &[r#"Alice One"#, r#"Bob Two"#, r#"Carol Three"#],
+    page_moves: r#"row R ELSOUTSIDE (the block's line)"#,
+  },
+  Row {
+    repro:      "elsart_corref_before_the_names_marks_the_first_author",
+    tex:        repro!("elsart_corref_before_the_names_marks_the_first_author"),
+    warnings:   0,
+    creators:   &[
+      r#"Alice One | affiliation=Some University, X, Y ; correspondent=Corresponding author"#,
+      r#"Bob Two | affiliation=Some University, X, Y ; note=Visiting"#,
+    ],
+    moves:      r#""#,
+    page:       &[r#"Alice One"#, r#"Bob Two"#],
+    page_moves: r#""#,
+  },
+  Row {
+    repro:      "elsart_fnref_outside_yields_to_the_first_names_own",
+    tex:        repro!("elsart_fnref_outside_yields_to_the_first_names_own"),
+    warnings:   0,
+    creators:   &[
+      r#"Alice One | affiliation=Some University, X, Y ; correspondent=Corresponding author ; note=Note one"#,
+      r#"Bob Two | affiliation=Some University, X, Y"#,
+      r#"Carol Three | affiliation=Some University, X, Y"#,
+      r#" | note=Note two"#,
+    ],
+    moves:      r#"row R ELSOUTSIDE (the outside `\corref` read after the second name: the correspondence note the block's)"#,
+    page:       &[r#"Alice One"#, r#"Bob Two"#, r#"Carol Three"#, r#""#],
+    page_moves: r#""#,
+  },
+  Row {
+    repro:      "elsart_corref_in_a_group_marks_no_one",
+    tex:        repro!("elsart_corref_in_a_group_marks_no_one"),
+    warnings:   0,
+    creators:   &[
+      r#"Alice One | affiliation=Some University, X, Y"#,
+      r#"Bob Two | affiliation=Some University, X, Y"#,
+      r#" | correspondent=Corresponding author"#,
+    ],
+    moves:      r#""#,
+    page:       &[r#"Alice One"#, r#"Bob Two"#, r#""#],
+    page_moves: r#""#,
+  },
+  Row {
     repro:      "fmmarks_own_maketitle_relax_red",
     tex:        repro!("fmmarks_own_maketitle_relax_red"),
     warnings:   0,
@@ -4222,7 +4348,10 @@ const CLASS: &[Row] = &[
 /// (revMARKSAFE B1, ADVGEN I-3), a document's wrapper of the class's `\maketitle` changes nothing (revMARKSAFEb B1), and
 /// an author block's `\thefootnote` holds in its cell alone (revMARKSAFE S1); a `\maketitle` that makes a footnote or
 /// sets the footnote counter before its title, or one a package's `\let` restores, has unknown marks (revPRESBXb BL2, BL3);
-/// a mark the counter steps to 0 or below in the title block prints none (1910.09525, WRONGFIXc).
+/// a mark the counter steps to 0 or below in the title block prints none (1910.09525, WRONGFIXc); an elsarticle key names
+/// one entry, every route to a note reaches it — a key and a `\corref`/`\fnref` both, in either order; a `\corref` read
+/// before the first name or right after its call the first author's; one in its own group, or a note whose key another
+/// entry takes, no name's (ELSART, OD #1067: 1501.03323, 1909.01114, 1711.08299).
 #[test]
 fn notes_are_marked_only_where_the_class_prints_marks() { assert_green(CLASS); }
 /// The known gaps of [`notes_are_marked_only_where_the_class_prints_marks`].
