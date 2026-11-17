@@ -1,0 +1,19 @@
+% mechanism: a stand-in copy loaded from a subdirectory (`\usepackage{sub/neurips_2022}`) is recorded under its file's
+%   basename (content.rs `new_copy_provides_record`); the binding's lookup takes the basename too
+%   (`shipped_class::declare_stand_in_copy_title_marks`), so the copy's `\maketitle` line declares its marks
+% witness:  2210.05974, 2305.05126, 2310.02994, 2406.08391, 2505.17863, 2507.17017, 2510.04543 (`utils/neurips_2025`
+%   by `\input`), 2511.10894 (revMTREDUCEc B1: 44 of 120 NeurIPS papers load the copy from a subdirectory)
+% oracle:   pdflatex 0 errors (TL 2025, -no-shell-escape): "Ann Able∗ Bob Baker∗ Cy Cole†"
+% engines:  rust MTREDUCEc (b0a97003fa4) = no mark on any note (checked on this fixture); WRONGFIXc = ∗ ∗ †
+% expect:   0 errors, 0 Warnings; Ann ∗ "Equal contribution.", Bob's copy of it, Cy † "Corr."
+% status:   RED (MTREDUCEc) -> GREEN (int; perfect_kernel_batchmtreduce::a_copy_in_a_subdirectory_keeps_its_marks)
+% preload:  ar5iv.sty
+\documentclass{article}
+\usepackage[final]{sub/neurips_2022}
+\newcommand{\samethanks}[1][\value{footnote}]{\footnotemark[#1]}
+\begin{document}
+\title{A Title}
+\author{Ann Able\thanks{Equal contribution.} \And Bob Baker\samethanks \And Cy Cole\thanks{Corr.}}
+\maketitle
+Body text.
+\end{document}

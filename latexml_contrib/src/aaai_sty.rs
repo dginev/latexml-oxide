@@ -1,5 +1,6 @@
 //! aaai.sty and its years (aaai16-aaai2027, the versioned fallback strips each to `aaai`): the paper's copy read raw, the
-//! marks its `\maketitle` sets declared, the author notes only its `\@maketitle` defines (2501.02471, 2511.07192; OD #1053).
+//! marks its `\maketitle` sets declared, the author notes only its `\@maketitle` defines (2501.02471, 2511.07192,
+//! 2103.05277, 2111.06599, 2006.08767, 2609.00420; OD #1053).
 use std::cell::{Cell, RefCell};
 
 use latexml_core::definition::origin::{DefinitionOrigin, with_origin};
@@ -39,7 +40,7 @@ LoadDefinitions!({
     Ok(())
   })?;
   // (after the stubs: a copy's own `\equalcontrib` replaces them, revMTREDUCE S3)
-  input_shipped_package_title_marks(&[FNSYMBOL_TITLE_MARKS])?;
+  input_shipped_package_title_marks(FNSYMBOL_TITLE_MARKS)?;
 });
 
 thread_local! {

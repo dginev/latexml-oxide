@@ -67,7 +67,7 @@ LoadDefinitions!({
   if lookup_bool("INCLUDE_STYLES") {
     // Raw style loading is on: the paper's own arxiv.sty is authoritative; the marks its `\maketitle` sets declared
     // (arxiv.sty:174-177; 2509.16272, 2509.00704, 2304.04746).
-    read_copy_title_marks(&[FNSYMBOL_TITLE_MARKS], || {
+    read_copy_title_marks(FNSYMBOL_TITLE_MARKS, || {
       InputDefinitions!("arxiv", noltxml => true, extension => Some(Cow::Borrowed("sty")));
       Ok(true)
     })?;

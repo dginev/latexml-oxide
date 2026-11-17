@@ -163,7 +163,7 @@ LoadDefinitions!({
   );
   // The marks the `\maketitle` of the paper's copy, read after this binding as its stand-in's, sets (jmlr2e.sty:253-255;
   // 2509.13653, 2511.10879).
-  declare_stand_in_copy_title_marks(&[FNSYMBOL_TITLE_MARKS])?;
+  declare_stand_in_copy_title_marks(FNSYMBOL_TITLE_MARKS)?;
 });
 
 /// The heading a jmlr2e.sty copy's `\acks` prints: the text of its bold group, `\long\def\acks#1{\vskip 0.3in\noindent

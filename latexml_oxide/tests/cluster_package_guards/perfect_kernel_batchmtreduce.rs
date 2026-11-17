@@ -3,7 +3,9 @@
 //! (`latex_constructs::declare_package_title_marks`), any other's are unknown. The class question's rows (a
 //! `\NewCommandCopy` wrapper, a closing `\let\maketitle\relax`, a restore) are the FMRG suite's
 //! (`perfect_kernel_batchfmmarks`); these are the bindings' paths the suite does not take.
-use latexml::util::test::{convert_with_setup_then, error_count, warning_count};
+use latexml::util::test::{
+  convert_files_with, convert_with_setup_then, error_count, warning_count,
+};
 
 use super::perfect_kernel_batchfmmarks::{Row, assert_green, creator_lines};
 
@@ -287,6 +289,36 @@ const BINDINGS: &[Row] = &[
 /// A package's `\maketitle` prints the marks its binding declares, wherever the package defines it.
 #[test]
 fn package_title_marks_are_their_binding_s() { assert_green(BINDINGS); }
+
+/// A stand-in copy loaded from a subdirectory (`\usepackage{sub/neurips_2022}`; 44 of 120 NeurIPS papers) declares its
+/// marks as one beside the document does: the binding looks the copy up by its basename, as it is recorded (the
+/// fixture is neurips_2022.sty itself, comments stripped: a minimal stand-in is no stood-in file and is never read)
+/// (revMTREDUCEc B1; 2210.05974, 2510.04543's `utils/neurips_2025` by `\input`).
+#[test]
+fn a_copy_in_a_subdirectory_keeps_its_marks() {
+  let (log, xml) = convert_files_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/class-bindings/neurips_sub/neurips_copy_in_a_subdirectory_keeps_its_marks.tex"
+    ),
+    &[(
+      "sub/neurips_2022.sty",
+      include_str!(
+        "../../../tools/perfect_kernel/repros/class-bindings/neurips_sub/sub/neurips_2022.sty"
+      ),
+    )],
+    Some("ar5iv.sty"),
+  );
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  assert_eq!(
+    creator_lines(&xml),
+    [
+      "Ann Able ; thanks[*]=Equal contribution.",
+      "Bob Baker ; thanks[*]=Equal contribution.",
+      "Cy Cole ; thanks[†]=Corr.",
+    ],
+    "{xml}"
+  );
+}
 
 /// A binding declares only the marks its copy's `\maketitle` in force prints: siamproceedings.sty's `titlepage` one
 /// (:153-176) sets no `\thefootnote`, the title page's marks unknown here (row R TITLEPAGEMARKS; pdflatex prints article's

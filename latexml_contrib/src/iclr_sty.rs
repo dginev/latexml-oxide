@@ -6,5 +6,5 @@ use latexml_package::{
 };
 
 LoadDefinitions!({
-  input_shipped_package_title_marks(&[FNSYMBOL_TITLE_MARKS])?;
+  input_shipped_package_title_marks(FNSYMBOL_TITLE_MARKS)?;
 });

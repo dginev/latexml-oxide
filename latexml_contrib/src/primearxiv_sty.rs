@@ -20,7 +20,7 @@ LoadDefinitions!({
   if lookup_bool("INCLUDE_STYLES") {
     // Raw style loading is on: the paper's own PRIMEarxiv.sty is authoritative; the marks its `\maketitle` sets
     // declared (PRIMEarxiv.sty:176-179; 2509.03066, 2204.09716).
-    read_copy_title_marks(&[FNSYMBOL_TITLE_MARKS], || {
+    read_copy_title_marks(FNSYMBOL_TITLE_MARKS, || {
       InputDefinitions!("PRIMEarxiv", noltxml => true, extension => Some(Cow::Borrowed("sty")));
       Ok(true)
     })?;

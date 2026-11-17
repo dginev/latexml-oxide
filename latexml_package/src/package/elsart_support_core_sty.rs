@@ -61,7 +61,8 @@ LoadDefinitions!({
   DefMacro!("\\author OptionalSemiverbatim {}",
     "\\lx@els@record@author{#1}{#2}\\if\\relax\\detokenize{#1}\\relax\\else\\gdef\\lx@els@labelled{}\\fi\\lx@els@author{#1}{#2}");
   // elsarticle.cls:126-131, :159-165, :188-190, :250-265: every route to a key gets the label form it was first read by
-  // (`els_route`); the first name shows the outside mark read last (`ELS_FIRST`; 1501.03323, 1508.05262; OD #1067).
+  // (`els_route`); the first name shows the outside mark read last (`ELS_FIRST`; 1501.03323, 1508.05262, 2201.04925,
+  // 2606.17032, 2606.22682; OD #1067).
   // (keep in elsart_support_core: `policy_for` takes its conventions from here, OD #1067)
   DefMacro!("\\lx@els@author{}{}", sub[(keys, name)] {
     let listed: Vec<String> =

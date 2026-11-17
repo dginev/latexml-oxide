@@ -233,8 +233,12 @@ pub fn input_shipped_package() -> Result<bool> {
 /// marks it prints ([`input_shipped_package_title_marks`]).
 pub type TitleMarkLine = (&'static str, &'static str);
 
-/// `\def\thefootnote{\fnsymbol{footnote}}`: the document's `\@fnsymbol` of the counter (latex.ltx `\fnsymbol`).
-pub const FNSYMBOL_TITLE_MARKS: TitleMarkLine = (r"\fnsymbol{footnote}", r"\@fnsymbol\c@footnote");
+/// `\def\thefootnote{\fnsymbol{footnote}}`, in either spelling (latex.ltx `\fnsymbol#1` is
+/// `\expandafter\@fnsymbol\csname c@#1\endcsname`): the document's `\@fnsymbol` of the counter (revMTREDUCEc S3).
+pub const FNSYMBOL_TITLE_MARKS: &[TitleMarkLine] = &[
+  (r"\fnsymbol{footnote}", r"\@fnsymbol\c@footnote"),
+  (r"\@fnsymbol\c@footnote", r"\@fnsymbol\c@footnote"),
+];
 
 /// A stand-in binding reads its paper's copy raw ([`input_shipped_package`]) and declares the title marks the copy's
 /// `\maketitle` sets ([`read_copy_title_marks`]).
@@ -268,7 +272,13 @@ pub fn read_copy_title_marks(
 /// records ([`read_copy_title_marks`]). The lines wait in the state, under the copy's file, with the number its stand-in
 /// copy gets.
 pub fn declare_stand_in_copy_title_marks(lines: &'static [TitleMarkLine]) -> Result<()> {
-  let file = s!("{}.sty", stand_in_request()?);
+  // (the copy's record is its file's basename, `content::new_copy_provides_record`: a request from a subdirectory,
+  // `\usepackage{sub/neurips_2022}`, names it by that too — revMTREDUCEc B1, 2210.05974, 2510.04543)
+  let request = stand_in_request()?;
+  let file = s!(
+    "{}.sty",
+    request.rsplit(['/', '\\']).next().unwrap_or(&request)
+  );
   let mut record = next_copy_provides_id().to_string();
   for (line, marks) in lines {
     record.push_str(&s!("\n{line}\t{marks}"));
