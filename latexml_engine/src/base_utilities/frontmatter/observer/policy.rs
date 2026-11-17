@@ -322,6 +322,16 @@ pub(in crate::base_utilities) fn unexplained_name_label(request: &str) -> Option
     .map(|(_, mark)| mark.to_string())
 }
 
+/// The marks a `labels_print` binding declared its names' unexplained labels print ([`declare_unexplained_name_labels`]):
+/// `insert::settle_name_marks` shows them as a binding's labels, no mark a name typed (`insert::LABEL_MARK`).
+pub(in crate::base_utilities) fn unexplained_name_label_marks() -> Vec<String> {
+  lookup_string(UNEXPLAINED_NAME_LABELS)
+    .split('\u{1}')
+    .filter_map(|entry| entry.split_once('\u{2}'))
+    .map(|(_, mark)| mark.to_string())
+    .collect()
+}
+
 /// Declare a binding's frontmatter conventions (the binding's load, before anything else it defines): kept in the
 /// state, globally, under `conventions.binding` for the hook `conventions.hook` (`*` any); a binding may declare one
 /// per hook (the first matching, in declaration order, applies), and a later declaration for the same hook replaces the

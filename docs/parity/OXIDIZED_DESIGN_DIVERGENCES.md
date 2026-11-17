@@ -19555,7 +19555,10 @@ too (PURE's unanswered marks, Perl's `\footnotemark` leftovers): each renders as
 or Perl's tagged leftover (`f:creator-mark-only`) and names one author's note of the block (`xsl:key
 f:creator-note-by-mark`, every candidate a copy of one note; both keys fold a typed ∗ into `\@fnsymbol`'s `*`, 1705.05427,
 except where a carrier of the note shows the other form alone too, two marks; never where another note of the block opens
-with the glyph, its legend: 2607.28158, `f:creator-note-opening`), else the plain glyph (Perl's tag, else `@mark`), shown
+with the glyph, its legend: 2607.28158, `f:creator-note-opening`; never for a binding's label, which links only to a
+note of its own form: authblk's `\author[1,*]` no `\affil` explains prints a text `*`, a `\thanks` its ∗ — the label's
+mark-only note, classed `ltx_note_label` by the pure-name pass from `insert::settle_name_marks`' `_labelmark`, #1064),
+else the plain glyph (Perl's tag, else `@mark`), shown
 though it links nothing (#1059): a letter
 or digit is as often an affiliation label as a footnote number, and a wrong link is worse than none (review revREND2: a
 mark-only `1` linked another author's own footnote `1`). Such a linkable mark-only note pointing at a one-author note
@@ -20319,7 +20322,8 @@ prints alone (`$^{2,3}$`, which the writer parts at its comma; `\author[1 2]`, 1
 (`unanswered_mark_lost`). The writer requests the declared mark for a class mark (`MarkBy::Class`) of a creator whose
 block's conventions say its labels print (`Policy::labels_print`, declared by authblk), and `insert::settle_name_marks`
 shows it as a binding's request (its `_answers` and the entries' labels decide), the pure-name pass setting it after
-the name as a mark-only note: `§`, `\S`, `$\dagger$`, a document's macro printing one; a line's
+the name as a mark-only note, classed `ltx_note_label` (a binding's label, which #1052's ∗/* fold never links to a
+`\thanks`): `§`, `\S`, `$\dagger$`, a document's macro printing one; a line's
 leading mark placed apart from a name printing it leaves that name's mark shown, linked to its note (2606.17809's
 `\affil[ ]{\textsuperscript{\textdagger}Contributed equally…}`: Csabai's note, Pollner's `†` shown, its Warning gone; the
 block's note in the repro `authblk_label_legend_line_marks_show`). The writer compares spellings without braces and

@@ -2,7 +2,7 @@
 //! "a name's label is the name alone", 2026-10-21; DG 2026-11-16: purity and no lost mark are one rule).
 
 use super::{
-  insert::{MARK_FROM_COUNTER, drop_emptied_wrappers, mark_form, trim_space_after},
+  insert::{LABEL_MARK, MARK_FROM_COUNTER, drop_emptied_wrappers, mark_form, trim_space_after},
   observer::marks::glued_in_a_word,
   *,
 };
@@ -116,6 +116,8 @@ pub(in crate::base_utilities) fn keep_personnames_pure(document: &mut Document) 
           "frontmatter",
           "FRONT pure name: mark {printed}, {shown} left outside the name"
         );
+        let label =
+          group.hand.is_none() && group.sups.iter().all(|sup| sup.has_attribute(LABEL_MARK));
         group.cut(document, &mut parents);
         if !left.is_empty() {
           // (as printed where nothing was answered, `(a,b)`, or a range was printed, `1-3`; else the marks left, a list)
@@ -125,7 +127,7 @@ pub(in crate::base_utilities) fn keep_personnames_pure(document: &mut Document) 
           } else {
             left.join(",")
           };
-          let mut note = mark_only_note(document, &personname, &mark)?;
+          let mut note = mark_only_note(document, &personname, &mark, label)?;
           after.add_next_sibling(&mut note)?;
           after = note;
         }
@@ -659,11 +661,15 @@ fn leading_mark(note: &Node, piece: &str) -> Option<Lead> {
 }
 
 /// A mark-only note for `mark`, in `personname`'s namespace (Perl's `\footnotemark` note: `role="footnotemark"`),
-/// flagged `_namemark`: no `\footnotetext` of the body is its text (`relocate_footnote`).
-fn mark_only_note(document: &Document, personname: &Node, mark: &str) -> Result<Node> {
+/// flagged `_namemark`: no `\footnotetext` of the body is its text (`relocate_footnote`). One of a binding's labels
+/// alone ([`LABEL_MARK`]) is classed `ltx_note_label`, which the page's ∗/* fold never links (OD #1052).
+fn mark_only_note(document: &Document, personname: &Node, mark: &str, label: bool) -> Result<Node> {
   let mut note = Node::new("note", None, document.get_document())?;
   if let Some(namespace) = personname.get_namespace() {
     let _ = note.set_namespace(&namespace);
+  }
+  if label {
+    note.set_attribute("class", "ltx_note_label")?;
   }
   note.set_attribute("role", "footnotemark")?;
   note.set_attribute("mark", mark)?;

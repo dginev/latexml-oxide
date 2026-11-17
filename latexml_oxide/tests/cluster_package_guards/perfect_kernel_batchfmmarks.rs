@@ -1398,6 +1398,24 @@ const LINK: &[Row] = &[
     ],
     page_moves: r#""#,
   },
+  // (an authblk label no `\affil` explains, `\author[1,*]`, is a binding's label: the ∗/* fold never links it to a
+  // `\thanks` — authblk prints a text `*`, the `\thanks` its ∗; the INVDAG review's variant of 1705.05427)
+  Row {
+    repro:      "authblk_declared_star_label_links_no_thanks",
+    tex:        repro!("authblk_declared_star_label_links_no_thanks"),
+    warnings:   0,
+    creators:   &[
+      r#"Ann Alpha ; thanks[*]=x | affiliation=Univ One"#,
+      r#"Cy Cole ; footnotemark[*]= | affiliation=Univ One"#,
+    ],
+    moves:      r#""#,
+    page:       &[
+      r#"Ann Alpha ; * plain"#,
+      r#"Cy Cole ; * plain"#,
+      r#"margin: x"#,
+    ],
+    page_moves: r#""#,
+  },
   // (a `\samethanks` beside a typed legend of its glyph is a copy of the footnote its number names; ADVR2 finding 5)
   Row {
     repro:      "author_samethanks_beside_typed_star_legend",

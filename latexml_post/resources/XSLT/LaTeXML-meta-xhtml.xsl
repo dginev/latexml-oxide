@@ -170,7 +170,9 @@
        is as often an affiliation label, and a wrong link is worse than none (revREND2). The fold links a typed ∗ to a
        counter's * across names only: a name carrying that note that shows the other form alone too prints two marks,
        two notes (`Ann Able$^{*}$\thanks{…}`, 2406.11149's shape; acmart's `Bob Baker$^{*}$` with
-       `\authornotemark[1]`), where one form twice is one note repeated (`Ann\thanks{…}\footnotemark[1]`, 1610.06031). -->
+       `\authornotemark[1]`), where one form twice is one note repeated (`Ann\thanks{…}\footnotemark[1]`, 1610.06031);
+       and never a binding's label (class ltx_note_label: authblk's `\author[1,*]` prints a text `*`, a `\thanks` its ∗),
+       which links only to a note of its own form. -->
   <xsl:key name="f:creator-note-by-mark"
            match="ltx:creator[@role='author']/ltx:note[normalize-space(@mark)][normalize-space(.)][not(@role='footnotemark')]"
            use="concat(generate-id(../..),'&#x9;',translate(normalize-space(@mark),'&#x2217;','*'))"/>
@@ -198,6 +200,8 @@
                   select="concat(generate-id(../..),'&#x9;',translate(normalize-space(@mark),'&#x2217;','*'))"/>
     <xsl:variable name="marked_elsewhere"
                   select="key('f:creator-mark-only',$by_mark)[count(.. | current()/..) = 2]
+                            [not(contains(concat(' ',@class,' '),' ltx_note_label '))
+                             or normalize-space(@mark) = normalize-space(current()/@mark)]
                           and count(key('f:creator-note-by-mark',$by_mark)) = count($copies)
                           and not(key('f:creator-mark-only',$by_mark)[normalize-space(@mark) != normalize-space(current()/@mark)]
                                   /parent::*[count(. | $copies/..) = count($copies/..)])
@@ -240,7 +244,9 @@
                   select="concat(generate-id(../..),'&#x9;',translate(normalize-space(@mark),'&#x2217;','*'))"/>
     <xsl:variable name="notes"
                   select="key('f:creator-note-by-mark',$by_mark)[count(key('f:creator-mark-only',$by_mark) | current())
-                                                                 = count(key('f:creator-mark-only',$by_mark))]"/>
+                                                                 = count(key('f:creator-mark-only',$by_mark))]
+                            [not(contains(concat(' ',current()/@class,' '),' ltx_note_label '))
+                             or normalize-space(@mark) = normalize-space(current()/@mark)]"/>
     <xsl:variable name="target"
                   select="$notes[1][count($notes) = count(key('f:shared-creator-note',
                             concat(generate-id(../..),'&#x9;',@role,'&#x9;',@mark,'&#x9;',normalize-space(.))))]

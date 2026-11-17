@@ -1,0 +1,20 @@
+% mechanism: an authblk label no `\affil` explains (`\author[1,*]`) shows on its name as a mark-only note (OD #1064);
+%   authblk prints it in text, a `*`, where Ann's `\thanks` prints `\@fnsymbol`'s ∗: two marks, so the page links the
+%   label to no note. The ∗/* fold of the page's linker keys (OD #1052, 1705.05427) is for a mark a name types, never a
+%   binding's label (`ltx_note_label`)
+% witness:  synthetic (the INVDAG review's variant of 1705.05427 and 2606.00446)
+% oracle:   pdflatex 0 errors; "Ann Alpha∗1 and Cy Cole1,*", "1 Univ One", the footnote "∗ x"
+% engines:  rust CONNFIX merged on int b842de7fc4c = 0 errors, 0 Warnings; HTML Cy Cole's ∗ linked to Ann's `\thanks`
+% expect:   0 errors, 0 Warnings; Cy Cole's mark-only ∗ links nothing; Ann's note in full, unshared
+% status:   RED (CONNFIX on b842de7fc4c) -> GREEN (CONNFIXb; perfect_kernel_batchfmmarks::a_mark_on_a_name_is_a_copy_of_its_note)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{authblk}
+\title{Title}
+\author[1]{Ann Alpha\thanks{x}}
+\author[1,*]{Cy Cole}
+\affil[1]{Univ One}
+\begin{document}
+\maketitle
+Body.
+\end{document}
