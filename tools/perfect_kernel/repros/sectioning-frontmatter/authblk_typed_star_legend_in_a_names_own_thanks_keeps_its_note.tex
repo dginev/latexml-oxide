@@ -1,0 +1,20 @@
+% mechanism: authblk's twin of author_typed_star_legend_in_a_names_own_thanks_keeps_its_note: the legend that is Cy
+%   Cole's own `\thanks` stays his note too (resolver/post.rs, OD #1068)
+% witness:  1904.09324, 2204.06136; revCONNFIX B1 probe i4
+% oracle:   pdflatex 0 errors; "Ann Able∗, Bob Baker∗, and Cy Cole∗", the footnote "∗∗The first two authors
+%   contributed equally. All authors are with Univ X, cy@x.org."
+% engines:  rust CONNFIXb (2bdd7f0f730) = 0 errors, 0 Warnings; XML Cy Cole carries no note, no mark
+%   rust CONNFIXc = Cy Cole's note kept; Ann and Bob still carry their typed ∗ as a mark-only note beside the copy
+%   (authblk's reading keeps the sup, `\lx@frontmatter@keepsup`; WRONGFIXc alike): the names show ∗ twice
+% expect:   0 errors, 0 Warnings; the note on all three names, one ∗ each (the guard's XML and HTML lines)
+% status:   RED (row R AUTHBLKSTAR; perfect_kernel_batchfmmarks::a_mark_on_a_name_is_a_copy_of_its_note_red)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{authblk}
+\title{Own Legend}
+\author{Ann Able$^*$, Bob Baker$^*$, and Cy Cole\thanks{$^*$The first two authors contributed equally. All authors
+are with Univ X, cy@x.org.}}
+\begin{document}
+\maketitle
+Text.
+\end{document}

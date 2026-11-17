@@ -1,0 +1,22 @@
+% mechanism: a typed `$^\ast$` whose legend opens the name's own `\thanks` (`\thanks{$^\ast$ Corresponding author…}`,
+%   that note marked †) is that legend's mark, not a copy of another name's `\thanks` printing ∗: the page's linker
+%   links a mark to no note when another note of the block opens with its glyph (f:creator-note-opening)
+% witness:  2607.28158 (authblk: `Rong Yang\thanks{Email: …}`, `Chi Huang$^\ast$\thanks{$^\ast$ Corresponding author,
+%   Email: …}`)
+% oracle:   pdflatex 0 errors; "Ann Able∗1 and Bob Baker∗†2", footnotes "∗ Email: ann@x.org", "† ∗ Corresponding
+%   author."
+% engines:  rust CONNFIX before this row (the ∗ fold alone) linked Bob's ∗ to Ann's e-mail note; R2Ac shows it plain
+% expect:   0 errors, 0 Warnings; HTML Bob Baker's ∗ plain (the guard's XML and HTML lines)
+% status:   GREEN (CONNFIX; perfect_kernel_batchfmmarks::a_mark_on_a_name_is_a_copy_of_its_note)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{authblk}
+\title{Own Legend}
+\author[1]{Ann Able\thanks{Email: ann@x.org}}
+\author[2]{Bob Baker$^\ast$\thanks{$^\ast$ Corresponding author.}}
+\affil[1]{Univ A}
+\affil[2]{Univ B}
+\begin{document}
+\maketitle
+Text.
+\end{document}

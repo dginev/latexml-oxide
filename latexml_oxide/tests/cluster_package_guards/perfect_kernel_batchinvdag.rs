@@ -214,13 +214,14 @@ Text.
     row(&["Cat Cole", "mark=†", "affiliation=Univ A"]),
     row(&["mark=†"]),
   ]);
-  // (each name's `†` a link to the legend's note: Pollner's in 2606.17809)
+  // (each name's `†` a link to the legend's note: Pollner's in 2606.17809; a declared label, classed `ltx_note_label`,
+  // links by its own form only — CONNFIXb)
   let html = post_with(&xml, "resources/XSLT/LaTeXML-html5.xsl");
   for id in ["id1", "id3"] {
     assert_eq!(
       html_element(&html, &format!("<span id=\"{id}\"")),
       format!(
-        r##"<span id="{id}" class="ltx_note ltx_role_footnotemark ltx_note_shared"><sup class="ltx_note_mark"><a href="#id4">†</a></sup></span>"##
+        r##"<span id="{id}" class="ltx_note ltx_note_label ltx_role_footnotemark ltx_note_shared"><sup class="ltx_note_mark"><a href="#id4">†</a></sup></span>"##
       )
     );
   }

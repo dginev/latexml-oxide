@@ -1074,6 +1074,11 @@ const API_KEYS_OUTSIDE_PERLS: &[(&str, usize)] = &[
     1,
   ),
   ("const _kinded base_utilities/defs/frontmatter_api.rs", 1),
+  // (CONNFIXb, 0 -> 1, raised with its reason: the superscript `insert::settle_name_marks` shows of a name's binding labels
+  // alone (authblk's `\author[1,*]` no `\affil` explains), which the pure-name pass classes `ltx_note_label` so the page's
+  // ∗/* fold never links it to a `\thanks`; Perl's API has no key for "a binding's label, not typed", Perl drops the
+  // label; internal, never written out: OD #1052, #1064)
+  ("const _labelmark base_utilities/frontmatter/insert.rs", 1),
   // (OD #961's key, with the API that declares it since P2r2, which `author_block/`, `frontmatter/` and the emitter import)
   (
     "const _labelprints base_utilities/defs/frontmatter_api.rs",

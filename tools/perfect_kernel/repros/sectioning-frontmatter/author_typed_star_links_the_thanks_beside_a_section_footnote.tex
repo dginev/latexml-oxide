@@ -1,0 +1,18 @@
+% mechanism: a body footnote printing ∗ inside a section (`\fnsymbol` kept after `\maketitle` resets the counter) is no
+%   legend of the names: the typed ∗ still links to the `\thanks` printing ∗ (`f:glyph-elsewhere` reads the title page
+%   alone, outside sections, floats and tables; OD #1052)
+% witness:  2008.06630, 2510.03308 (a body `\fnsymbol` footnote ∗), 2406.07029 and 2304.10591 (a table's `*` line)
+% oracle:   pdflatex 0 errors; "Ann Able∗ Bob Baker∗", footnotes "∗ Equal contribution." and "∗ A body note."
+% engines:  rust CONNFIXc's first cut (the document-wide key) = Bob's ∗ plain; CONNFIXb linked it
+% expect:   0 errors, 0 Warnings; Bob's ∗ linked to Ann's note (the guard's XML and HTML lines)
+% status:   GREEN (CONNFIXc; perfect_kernel_batchfmmarks::a_mark_on_a_name_is_a_copy_of_its_note)
+% preload: ar5iv.sty
+\documentclass{article}
+\renewcommand{\thefootnote}{\fnsymbol{footnote}}
+\title{Section Footnote}
+\author{Ann Able\thanks{Equal contribution.} \and Bob Baker$^{*}$}
+\begin{document}
+\maketitle
+\section{Introduction}
+Text.\footnote{A body note.}
+\end{document}

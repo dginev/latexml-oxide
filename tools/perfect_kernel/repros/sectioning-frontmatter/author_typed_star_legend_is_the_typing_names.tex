@@ -1,0 +1,19 @@
+% mechanism: a symbol legend line under the names goes to the names that type its symbol; a `\thanks` printing the
+%   same glyph on another name is that note's, not the legend's (the note-mark fallback of
+%   resolver/post.rs applies only where no name inks the symbol, 1608.06509's shape)
+% witness:  ADVR2 finding 4 (synthetic); the fallback's own witness 1608.06509 stays
+% oracle:   pdflatex 0 errors; "Zed Zorn∗ Bob Baker∗ Cy Cole∗", under them "∗ Equal contribution", the footnote
+%   "∗ Work done at X."
+% engines:  rust R2Ac (int/frontmatter f77c7b5430e) = 0 errors, 0 Warnings; XML Zed Zorn carries "Work done at X." AND
+%   "Equal contribution"; perl: Zed Zorn "Work done at X." only, Bob Baker and Cy Cole "Equal contribution"
+% expect:   0 errors, 0 Warnings; XML Zed Zorn ; thanks[*]=Work done at X. / Bob Baker ; thanks[*]=Equal
+%   contribution / Cy Cole ; thanks[*]=Equal contribution (the guard's XML and HTML lines)
+% status:   RED (R2Ac) -> GREEN (CONNFIX; perfect_kernel_batchfmmarks::shared_notes_are_a_marked_copy_per_carrier)
+% preload: ar5iv.sty
+\documentclass{article}
+\title{Typed Legend}
+\author{Zed Zorn\thanks{Work done at X.} \and Bob Baker$^{*}$ \and Cy Cole$^{*}$\\ $^*$Equal contribution}
+\begin{document}
+\maketitle
+Text.
+\end{document}

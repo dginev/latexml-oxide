@@ -1,0 +1,20 @@
+% mechanism: a `\samethanks` (`\footnotemark[\value{footnote}]`) is a copy of the footnote its counter names; where a
+%   typed legend prints the same glyph for another name, the glyph alone does not pick: among the notes printing it,
+%   the one of the mark's number (insert.rs link_marked_notes)
+% witness:  ADVR2 finding 5 (synthetic)
+% oracle:   pdflatex 0 errors; "Zed Zorn∗, Ann Abel∗, Cy Cole∗", under them "∗ Equal contribution", the footnote
+%   "∗ Corresponding author."
+% engines:  rust R2Ac (int/frontmatter f77c7b5430e) = 0 errors, 0 Warnings; XML Ann Abel also carries "Equal
+%   contribution", Cy Cole carries "Equal contribution" (a copy of Zed's typed legend)
+% expect:   0 errors, 0 Warnings; XML Zed Zorn ; thanks[*]=Equal contribution / Ann Abel ; thanks[*]=Corresponding
+%   author. / Cy Cole ; thanks[*]=Corresponding author. (the guard's XML and HTML lines)
+% status:   RED (R2Ac) -> GREEN (CONNFIX; perfect_kernel_batchfmmarks::a_mark_on_a_name_is_a_copy_of_its_note)
+% preload: ar5iv.sty
+\documentclass{article}
+\newcommand*\samethanks[1][\value{footnote}]{\footnotemark[#1]}
+\title{Same Thanks}
+\author{Zed Zorn$^{*}$, Ann Abel\thanks{Corresponding author.}, Cy Cole\samethanks \\ $^*$Equal contribution}
+\begin{document}
+\maketitle
+Text.
+\end{document}

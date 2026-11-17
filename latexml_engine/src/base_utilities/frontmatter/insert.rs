@@ -710,6 +710,11 @@ pub(in crate::base_utilities) const MARK_IN_TEXT: &str = "_markintext";
 #[doc(hidden)]
 pub const MARK_FROM_COUNTER: &str = "_markfromcounter";
 
+/// The flag on the superscript [`settle_name_marks`] shows of the labels alone a binding declared its names print and no
+/// line explains (authblk's `\author[1,*]`, `policy::unexplained_name_label_marks`, OD #1064), which the pure-name pass
+/// turns into a mark-only note classed `ltx_note_label`: a binding's label, no mark the name typed (OD #1052).
+pub(super) const LABEL_MARK: &str = "_labelmark";
+
 /// The flag on a creator's note written with no mark because the mark its title prints is unknown here
 /// (`latex_constructs::title_marks_unknown`), which [`count_unknown_marks`] reads at the document's end.
 pub(in crate::base_utilities) const MARK_UNKNOWN: &str = "_markunknown";
@@ -983,7 +988,17 @@ fn link_marked_notes(document: &mut Document) -> Result<()> {
       document.add_class(&mut mark_note, "ltx_mark_titlenote")?;
       continue;
     }
-    let Some(paired) = by_number.or_else(|| notes.iter().filter(in_block).find(same)) else {
+    // (among the notes printing its glyph, the one its counter's number names first: a `\footnotemark` read off the
+    // counter, `\samethanks`' `[\value{footnote}]`, is a footnote's mark, not a typed legend's copy of the same glyph —
+    // `Zed$^{*}$, Ann\thanks{Corresponding author.}, Cy\samethanks \\ $^*$Equal contribution`, ADVR2 finding 5)
+    let by_glyph = || {
+      let mut glyphs = notes.iter().filter(in_block).filter(same);
+      let counted = glyphs
+        .clone()
+        .find(|note| value.is_some() && note.get_attribute(FOOTNOTE_VALUE) == value);
+      counted.or_else(|| glyphs.next())
+    };
+    let Some(paired) = by_number.or_else(by_glyph) else {
       continue;
     };
     // (a mark its command prints by the counter stays so on the copy, acmart's `\authornotemark[n]`; one linked by its
@@ -4892,6 +4907,11 @@ fn settle_name_marks(document: &mut Document, answered: &HashSet<String>) -> Res
     document.remove_node(mark);
   }
   let unify = |text: &str| text.replace('\u{2217}', "*");
+  // (the requests a binding's declared labels make, as the writer keys them: `emitter::emit`'s `labels_print` arm)
+  let declared: Vec<String> = policy::unexplained_name_label_marks()
+    .iter()
+    .flat_map(|mark| clean_frontmatter_labels(mark, "affiliation"))
+    .collect();
   let mut lost: Vec<String> = Vec::new();
   for creator in document.findnodes(".//ltx:creator[@_annotations]", None) {
     let annotations = creator.get_attribute("_annotations").unwrap_or_default();
@@ -4933,6 +4953,8 @@ fn settle_name_marks(document: &mut Document, answered: &HashSet<String>) -> Res
     // (`seen`: the labels a mark shown or dropped took; `unshowable`: those only a glyph-less mark printed so far)
     let (mut seen, mut unshowable): (Vec<String>, Vec<String>) = (Vec::new(), Vec::new());
     let mut marks: Vec<String> = Vec::new();
+    // (whether `marks` holds a mark other than a label its binding declared, `LABEL_MARK`)
+    let mut other = false;
     for mut node in keyed {
       // (the labels it requests: one, or a glued mark's pieces, shown whole while one is open)
       let keys = node.get_attribute("_namekeys").unwrap_or_default();
@@ -4968,6 +4990,7 @@ fn settle_name_marks(document: &mut Document, answered: &HashSet<String>) -> Res
         if !marks.contains(&glyph) {
           marks.push(glyph);
         }
+        other = true;
         document.remove_node(node);
         continue;
       }
@@ -4990,7 +5013,10 @@ fn settle_name_marks(document: &mut Document, answered: &HashSet<String>) -> Res
       seen.push(label.to_string());
       match unanswered_mark_text(mark) {
         Some(text) if shows(&text) || marks.contains(&text) => {},
-        Some(text) => marks.push(text),
+        Some(text) => {
+          other |= !declared.iter().any(|request| request.as_str() == label);
+          marks.push(text)
+        },
         None => lost.push(mark.to_string()),
       }
     }
@@ -5005,6 +5031,10 @@ fn settle_name_marks(document: &mut Document, answered: &HashSet<String>) -> Res
         let _ = sup.set_namespace(&namespace);
       }
       sup.append_text(&marks.join(","))?;
+      // (a binding's declared labels alone, authblk's `\author[1,*]`: no mark a name typed, `pure_names::mark_only_note`)
+      if !other {
+        sup.set_attribute(LABEL_MARK, "true")?;
+      }
       personname.add_child(&mut sup)?;
     }
   }
