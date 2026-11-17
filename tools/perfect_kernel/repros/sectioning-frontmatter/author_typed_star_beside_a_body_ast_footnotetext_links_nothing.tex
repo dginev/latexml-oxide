@@ -1,0 +1,17 @@
+% mechanism: a body `\footnotetext` under `\thefootnote` = `$\ast$` keeps the mark `$\ast$` (Perl's `DigestText` of
+%   `\thefootnote`); the page reads it as ∗, so the typed ∗ on the names links to no `\thanks` (`f:glyph-elsewhere`)
+% witness:  synthetic (revCONNFIX S1 probe q4)
+% oracle:   pdflatex 0 errors; "Ann Able∗ Bob Baker∗ Cy Cole∗", footnotes "∗ Corresponding author." and "∗ Equal
+%   contribution."
+% engines:  rust CONNFIXb (2bdd7f0f730) = 0 errors, 0 Warnings; HTML Ann's and Bob's ∗ linked to Cy's note
+% expect:   0 errors, 0 Warnings; Ann's and Bob's ∗ plain (the guard's XML and HTML lines)
+% status:   RED (CONNFIXb) -> GREEN (CONNFIXc; perfect_kernel_batchfmmarks::a_mark_on_a_name_is_a_copy_of_its_note)
+% preload: ar5iv.sty
+\documentclass{article}
+\title{Body Footnotetext}
+\author{Ann Able$^{*}$ \and Bob Baker$^{\ast}$ \and Cy Cole\thanks{Corresponding author.}}
+\begin{document}
+\maketitle
+{\renewcommand{\thefootnote}{$\ast$}\footnotetext{Equal contribution.}}
+Text.
+\end{document}

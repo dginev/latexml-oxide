@@ -162,17 +162,8 @@
   <xsl:key name="f:shared-creator-note"
            match="ltx:creator[@role='author']/ltx:note[normalize-space(@mark)][normalize-space(.)][not(@role='footnotemark')]"
            use="concat(generate-id(../..),'&#x9;',@role,'&#x9;',@mark,'&#x9;',normalize-space(.))"/>
-  <!-- The same notes by block and mark alone, and the mark-only notes (role="footnotemark": a mark printed on a name
-       that no note of its own answers, an affiliation letter, an unpaired \footnotemark; 0801.1438) by block and
-       mark, asterisks folded as f:printed-glyph folds them (\thanks's mark is `*`, a typed `$^*$` is ∗; 1705.05427,
-       1903.10478). A mark-only note links to the note its mark names in the block (one note, however many copies),
-       which it then makes shared, but only a symbol mark or Perl's tagged leftover: a letter (Latin or Greek) or digit
-       is as often an affiliation label, and a wrong link is worse than none (revREND2). The fold links a typed ∗ to a
-       counter's * across names only: a name carrying that note that shows the other form alone too prints two marks,
-       two notes (`Ann Able$^{*}$\thanks{…}`, 2406.11149's shape; acmart's `Bob Baker$^{*}$` with
-       `\authornotemark[1]`), where one form twice is one note repeated (`Ann\thanks{…}\footnotemark[1]`, 1610.06031);
-       and never a binding's label (class ltx_note_label: authblk's `\author[1,*]` prints a text `*`, a `\thanks` its ∗),
-       which links only to a note of its own form. -->
+  <!-- The same notes by block and mark alone, and the linkable mark-only notes (a symbol, or Perl's tagged leftover),
+       ∗ folded to *: a mark-only note links to the one note its mark names (OD #1052, R22; 1705.05427, 1903.10478). -->
   <xsl:key name="f:creator-note-by-mark"
            match="ltx:creator[@role='author']/ltx:note[normalize-space(@mark)][normalize-space(.)][not(@role='footnotemark')]"
            use="concat(generate-id(../..),'&#x9;',translate(normalize-space(@mark),'&#x2217;','*'))"/>
@@ -181,14 +172,32 @@
                   [ltx:tags or translate(normalize-space(@mark),'0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZαβγδεζηθικλμνξοπρςστυφχψωΑΒΓΔΕΖΗΘΙΚΛΜΝΞΟΠΡΣΤΥΦΧΨΩ','')
                                = normalize-space(@mark)]"
            use="concat(generate-id(../..),'&#x9;',translate(normalize-space(@mark),'&#x2217;','*'))"/>
-  <!-- An author's note by block and the character its text opens with: a note of another mark opening with a mark's
-       glyph is that mark's legend, so the mark links to no other note (`Chi Huang$^\ast$\thanks{$^\ast$ Corresponding
-       author, …}` beside `Rong Yang\thanks{Email: …}`, 2607.28158). -->
+  <!-- An author's note by block and the character its text opens with: a legend of the glyph (2607.28158). -->
   <xsl:key name="f:creator-note-opening"
            match="ltx:creator[@role='author']/ltx:note[not(@role='footnotemark')]"
            use="concat(generate-id(../..),'&#x9;',
                   translate(substring(normalize-space((.//text()[normalize-space()][not(ancestor::ltx:tags)])[1]),1,1),
                             '&#x2217;','*'))"/>
+  <!-- A glyph the title page prints outside the author blocks (no section, float or table holds it; ∗ folded to *): a
+       note's mark (`$\ast$` too), the symbol a note, the date, a title or a paragraph opens with; a mark of it links
+       nowhere (OD #1052; revCONNFIX p1, p3-p5, q4, q5; a body footnote or a table's `*` line not, 2008.06630, 2406.07029). -->
+  <xsl:key name="f:glyph-elsewhere"
+           match="ltx:note[normalize-space(@mark)][not(ancestor::ltx:creator or ancestor::ltx:section or ancestor::ltx:chapter or ancestor::ltx:part
+                                   or ancestor::ltx:appendix or ancestor::ltx:bibliography or ancestor::ltx:index
+                                   or ancestor::ltx:float or ancestor::ltx:table or ancestor::ltx:figure)]"
+           use="translate(normalize-space(@mark),'&#x2217;$^{} ','*')"/>
+  <xsl:key name="f:glyph-elsewhere"
+           match="ltx:note[translate(@mark,'$^{} ','') = '\ast'][not(ancestor::ltx:creator or ancestor::ltx:section or ancestor::ltx:chapter or ancestor::ltx:part
+                                   or ancestor::ltx:appendix or ancestor::ltx:bibliography or ancestor::ltx:index
+                                   or ancestor::ltx:float or ancestor::ltx:table or ancestor::ltx:figure)]"
+           use="'*'"/>
+  <xsl:key name="f:glyph-elsewhere"
+           match="*[self::ltx:note or self::ltx:date or self::ltx:title or self::ltx:subtitle or self::ltx:p]
+                   [not(ancestor::ltx:creator or ancestor::ltx:section or ancestor::ltx:chapter or ancestor::ltx:part
+                                   or ancestor::ltx:appendix or ancestor::ltx:bibliography or ancestor::ltx:index
+                                   or ancestor::ltx:float or ancestor::ltx:table or ancestor::ltx:figure)]"
+           use="translate(substring(normalize-space((.//text()[normalize-space()][not(ancestor::ltx:tags)])[1]),1,1),
+                          '&#x2217;','*')"/>
 
   <xsl:template
       match="ltx:creator[@role='author']/ltx:note[normalize-space(@mark)][normalize-space(.)][not(@role='footnotemark')]">
@@ -205,7 +214,8 @@
                           and count(key('f:creator-note-by-mark',$by_mark)) = count($copies)
                           and not(key('f:creator-mark-only',$by_mark)[normalize-space(@mark) != normalize-space(current()/@mark)]
                                   /parent::*[count(. | $copies/..) = count($copies/..)])
-                          and not(key('f:creator-note-opening',$by_mark)[count(. | $copies) != count($copies)])"/>
+                          and not(key('f:creator-note-opening',$by_mark)[count(. | $copies) != count($copies)])
+                          and not(key('f:glyph-elsewhere',substring-after($by_mark,'&#x9;')))"/>
     <xsl:choose>
       <xsl:when test="count($copies) = 1 and not($marked_elsewhere)">
         <xsl:call-template name="note">
@@ -252,7 +262,8 @@
                             concat(generate-id(../..),'&#x9;',@role,'&#x9;',@mark,'&#x9;',normalize-space(.))))]
                           [not(key('f:creator-mark-only',$by_mark)[normalize-space(@mark) != normalize-space($notes[1]/@mark)]
                                     /parent::*[count(. | $notes/..) = count($notes/..)])]
-                          [not(key('f:creator-note-opening',$by_mark)[count(. | $notes) != count($notes)])]"/>
+                          [not(key('f:creator-note-opening',$by_mark)[count(. | $notes) != count($notes)])]
+                          [not(key('f:glyph-elsewhere',substring-after($by_mark,'&#x9;')))]"/>
     <xsl:variable name="glyph">
       <xsl:choose>
         <xsl:when test="ltx:tags/ltx:tag[not(@role)]"><xsl:value-of select="ltx:tags/ltx:tag[not(@role)]"/></xsl:when>

@@ -1,0 +1,18 @@
+% mechanism: the legend that is a name's own `\thanks` stays that name's note though the name shows a mark of its own
+%   (`Cy Cole$^{2}$\thanks{$^*$…}`): the note-mark fallback of resolver/post.rs takes the note's own name whatever it
+%   requests (OD #1068); the other names' carriers still need no mark of their own (2406.01694)
+% witness:  synthetic (the shape of 1904.09324 and 2204.06136 with affiliation numbers; revCONNFIX B1)
+% oracle:   pdflatex 0 errors; "Ann Able∗1, Bob Baker∗1, Cy Cole2∗", "1 Univ X", "2 Univ Y", the footnote
+%   "∗∗Equal contribution. Cy is cy@x.org."
+% engines:  rust WRONGFIXc and CONNFIXb (2bdd7f0f730) = 0 errors, 0 Warnings; XML Cy Cole carries no note
+% expect:   0 errors, 0 Warnings; the note on all three names (the guard's XML and HTML lines)
+% status:   RED (CONNFIXb) -> GREEN (CONNFIXc; perfect_kernel_batchfmmarks::a_mark_on_a_name_is_a_copy_of_its_note)
+% preload: ar5iv.sty
+\documentclass{article}
+\title{Own Legend}
+\author{Ann Able$^{*1}$, Bob Baker$^{*1}$, Cy Cole$^{2}$\thanks{$^*$Equal contribution. Cy is cy@x.org.}\\
+$^1$Univ X\\ $^2$Univ Y}
+\begin{document}
+\maketitle
+Text.
+\end{document}

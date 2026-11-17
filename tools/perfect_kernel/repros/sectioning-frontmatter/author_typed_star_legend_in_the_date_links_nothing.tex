@@ -1,0 +1,17 @@
+% mechanism: a typed ∗ whose legend is the `\date` links to no `\thanks` printing ∗ (the ∗/* fold, OD #1052): the
+%   page's linker keys every glyph a legend or note outside the author block prints (`f:glyph-elsewhere`)
+% witness:  synthetic (revCONNFIX S1 probe p1)
+% oracle:   pdflatex 0 errors; "Ann Able∗ Bob Baker∗ Cy Cole∗", the date "∗Equal contribution.", the footnote
+%   "∗ Corresponding author: cy@x.org"
+% engines:  rust CONNFIXb (2bdd7f0f730) = 0 errors, 0 Warnings; HTML Ann's and Bob's ∗ linked to Cy's note
+% expect:   0 errors, 0 Warnings; Ann's and Bob's ∗ plain (the guard's XML and HTML lines)
+% status:   RED (CONNFIXb) -> GREEN (CONNFIXc; perfect_kernel_batchfmmarks::a_mark_on_a_name_is_a_copy_of_its_note)
+% preload: ar5iv.sty
+\documentclass{article}
+\title{Date Legend}
+\author{Ann Able$^{*}$ \and Bob Baker$^{*}$ \and Cy Cole\thanks{Corresponding author: cy@x.org}}
+\date{$^{*}$Equal contribution.}
+\begin{document}
+\maketitle
+Text.
+\end{document}

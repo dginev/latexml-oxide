@@ -1,0 +1,18 @@
+% mechanism: a typed ∗ whose legend is a body paragraph opening with ∗ links to no `\thanks` printing ∗
+%   (`f:glyph-elsewhere`, a paragraph's opening symbol; the abstract's paragraph alike, revCONNFIX p4)
+% witness:  synthetic (revCONNFIX S1 probe q5)
+% oracle:   pdflatex 0 errors; "Ann Able∗ Bob Baker∗ Cy Cole†", the centred line "∗Deceased. †Work done at X.", the
+%   footnote "∗ Corresponding author."
+% engines:  rust CONNFIXb (2bdd7f0f730) = 0 errors, 0 Warnings; HTML Bob's ∗ linked to Ann's note
+% expect:   0 errors, 0 Warnings; Bob's ∗ and Cy's † plain (the guard's XML and HTML lines)
+% status:   RED (CONNFIXb) -> GREEN (CONNFIXc; perfect_kernel_batchfmmarks::a_mark_on_a_name_is_a_copy_of_its_note)
+% preload: ar5iv.sty
+\documentclass{article}
+\title{Body Legend}
+\author{Ann Able\thanks{Corresponding author.} \and Bob Baker$^{*}$ \and Cy Cole$^{\dagger}$}
+\date{}
+\begin{document}
+\maketitle
+\begin{center}$^{*}$Deceased.\quad $^{\dagger}$Work done at X.\end{center}
+Text.
+\end{document}

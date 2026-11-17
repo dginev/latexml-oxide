@@ -53,9 +53,10 @@ pairing heuristics, not the principle. The requirement is on the marks the conve
 `f:printed-glyph`).
 
 **Keys and ink.** A generated mark pairs by number, a typed mark by its printed text; the two cross only (a) where no
-name types the glyph (1608.06509; 4 papers in 30k), and (b) on the page, where a typed symbol links to the block's single
-generated note of the same folded glyph (∗ = *) — no name showing both forms, no legend opening with the glyph, never a
-binding's declared label (DG 2026-11-17, R22; 1705.05427; ~200 PDF-checked links). **A typed mark's ink is content and key, kept exactly; a
+name types the glyph (1608.06509; 4 papers in 30k) or the legend is that note (a name's own `\thanks`, 1904.09324; OD
+#1068), and (b) on the page, where a typed symbol links to the block's single generated note of the same folded glyph
+(∗ = *) — no name showing both forms, no legend opening with the glyph and no other note printing it anywhere on the
+title page (OD #1052), never a binding's declared label (DG 2026-11-17, R22; 1705.05427; ~200 PDF-checked links). **A typed mark's ink is content and key, kept exactly; a
 generated mark's ink is optional**, written only where a binding declares it, else unknown. Every unlinked name mark
 shows (8.3 % of papers carry one); a generated mark never collides with ink on the page (615 papers, 2.1 %, carry both
 a note and a typed symbol on names).
@@ -649,4 +650,4 @@ A "Stage N" below (R4, R5, R6, R9, R10, R17) is one of the digested refactor's S
 | R19 | Is a mark's glyph content? | A typed mark's ink is content and key, kept exactly; a generated mark's ink is optional | **RULED 2026-11-17** |
 | R20 | The static `\maketitle` reader | Reduce to "does the class's own `\maketitle` run", else unknown; classes declare | **RULED 2026-11-17: before the run** |
 | R21 | Next bindings | achemso, elsarticle, sn-jnl by connection gain; REVTeX glyphs parked | **RULED 2026-11-17** |
-| R22 | A typed ∗ beside a generated `*` note: link (fold) or keep apart? | Link on the page to the block's single note of the folded glyph, with three exclusions (both forms on one name; a legend opening with the glyph; a declared label) | **RULED 2026-11-17: keep the fold, amend the key rule** |
+| R22 | A typed ∗ beside a generated `*` note: link (fold) or keep apart? | Link on the page to the block's single note of the folded glyph, with three exclusions (both forms on one name; a legend opening with the glyph, or another note printing it, anywhere on the title page; a declared label) | **RULED 2026-11-17: keep the fold, amend the key rule** |

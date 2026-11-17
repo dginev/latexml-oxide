@@ -19555,7 +19555,12 @@ too (PURE's unanswered marks, Perl's `\footnotemark` leftovers): each renders as
 or Perl's tagged leftover (`f:creator-mark-only`) and names one author's note of the block (`xsl:key
 f:creator-note-by-mark`, every candidate a copy of one note; both keys fold a typed ∗ into `\@fnsymbol`'s `*`, 1705.05427,
 except where a carrier of the note shows the other form alone too, two marks; never where another note of the block opens
-with the glyph, its legend: 2607.28158, `f:creator-note-opening`; never for a binding's label, which links only to a
+with the glyph, its legend: 2607.28158, `f:creator-note-opening`; never where the title page prints the glyph outside the
+author blocks — a note's mark (a TeX one, `$\ast$`, read as ∗), the symbol a note, the date, a title or a paragraph
+opens with (a legend in `\date`, the abstract or a line after `\maketitle`; a `\footnotetext` there under `\fnsymbol`):
+pdflatex prints the glyph twice, so which note the name's mark names is not certain (`f:glyph-elsewhere`; revCONNFIX
+S1). The title page is what no section, float or table holds: a body footnote ∗ after `\maketitle` reset the counter
+(2008.06630, 2510.03308) or a table's `*` line (2406.07029, 2304.10591) is no legend of the names; never for a binding's label, which links only to a
 note of its own form: authblk's `\author[1,*]` no `\affil` explains prints a text `*`, a `\thanks` its ∗ — the label's
 mark-only note, classed `ltx_note_label` by the pure-name pass from `insert::settle_name_marks`' `_labelmark`, #1064),
 else the plain glyph (Perl's tag, else `@mark`), shown
@@ -20081,7 +20086,8 @@ the `xml:id` of the copy first in document order is the `idref` of each other (D
   `paper` mode) fired on 0 of the 983 papers of the MARKKEY union, and on synthetic shapes whose PDF prints the glyph
   twice. The papers whose marks it showed by a print it found or beside a possible legend show as before (1304.5040,
   2110.12052, 2302.11378, 2012.13912, 2508.05506, 2010.10783; 1409.7582, 2004.11818, 2105.02711). The glyph key
-  `f:printed-glyph` remains `[a]`'s. A mark whose given number names a title's or date's note is classed
+  `f:printed-glyph` remains `[a]`'s. A mark-only note links to a note only where the title page prints its glyph
+  nowhere outside the author blocks (#1052, `f:glyph-elsewhere`). A mark whose given number names a title's or date's note is classed
   `ltx_mark_titlenote` (`insert::link_marked_notes`: "A Title∗ … Cy Cole∗", the number `\lx@title@footnote@step`
   recorded).
 **Witnesses.** 2407.04435 (one note, three carriers), 2006.10886, 1304.5040, 1108.5155, 1404.2124, 2508.05506,
@@ -20351,6 +20357,32 @@ explains that the reading places elsewhere (`\affil[$\dag$]{…}` under `\author
 `fmmarks_authblk_double_star_label_and_date_note_red` (`perfect_kernel_batchfmmarks`).
 
 ### 1065. → Bindings beyond Perl's tree: achemso.cls (`achemso_cls.rs`)
+
+### 1068. A symbol legend under the names is the names' that ink its symbol; a note's mark carries it only where none does, or where the legend is that note (DG 2026-11-17; CONNFIX)
+
+**Rule.** FIDELITY_CHARTER §4, ruling 2: a symbol line's carriers are the names its symbol shows on. A typed mark is
+ink, the name's request; a `\thanks` prints its counter's glyph, the note's own mark. So where a name types the symbol,
+a line's legend of it (`Zed Zorn\thanks{Work done at X.} \and Bob Baker$^{*}$ \and Cy Cole$^{*}$\\ $^*$Equal
+contribution`) is Bob's and Cy's, never Zed's, whose `\thanks` prints the same ∗ for another note; where no name types
+it, the names a note's mark shows it on carry it (1608.06509: `\author{Sudipto Bhattacharjee\footnote{…}}` under
+revtex's symbol marks, the name `\affiliation{$^{\ast,\ddagger}$Department …}` labels), a name showing marks of its own
+keeping them as its requests (2406.01694's "Shukla†∗"). A legend that IS a name's own `\thanks` (`Cy
+Cole\thanks{$^*$The first two authors contributed equally. …}` beside `Ann Able$^*$, Bob Baker$^*$`) is that name's
+note too, whatever marks it shows: the PDF prints "Cy Cole∗", and the note holds his own text (his e-mail, the authors'
+address).
+**Perl.** A `\thanks` is its author's contact (Base_Utility.pool.ltxml:661-664): the legend that is Cy's `\thanks` is
+his alone, its `$^*$` kept as text, Ann and Bob carrying nothing; a symbol line under the names goes to the names
+typing its symbol (Bob's and Cy's affiliation "Equal contribution" in the ADVR2 shape), never to Zed's `\thanks`.
+**Rust.** `observer/resolver/post.rs` `answer_pending`: for a footnote-led or symbol-labelled entry, a creator whose
+note's mark (`MarkBy::Note`) requests the label owns it when it shows no request of its own and no name inks the symbol
+(`NameMark::origin`, `MarkOrigin::Inked`); a creator whose note the entry was read from (the entry's source span inside
+the note mark's, same block) owns it always.
+**Witnesses.** 1608.06509 (the note-mark fallback), 2406.01694, 1904.09324 ("Yinhan Liu∗", his `\thanks` the
+equal-contribution legend), 2204.06136 (ieeeconf: Krstic's `\thanks`, the ∗ legend and the authors' e-mails); ADVR2
+finding 4 (synthetic).
+**Guards**: the FMRG rows `author_typed_star_legend_is_the_typing_names` (SHARED),
+`author_typed_star_legend_in_a_names_own_thanks_keeps_its_note`,
+`author_typed_star_legend_in_a_marked_names_own_thanks_keeps_its_note` (LINK; `perfect_kernel_batchfmmarks`).
 
 ---
 

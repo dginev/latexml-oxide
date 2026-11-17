@@ -1240,13 +1240,8 @@ impl Resolver {
       let footnote_led = assoc.rule.split_whitespace().any(|t| t == "mark:footnote");
       let symbol_labelled =
         symbol || (!labels.is_empty() && labels.iter().all(|l| is_symbol_label(l)));
-      // (a note's mark carries a symbol line only for a name that shows no mark of its own: there the authors' footnote
-      // symbols are their labels, 1608.06509; a name showing its own marks keeps them as its requests, and its note's mark
-      // is the note's — `Pramod Shukla$^\dagger$\footnote{E-mail…}` prints "Shukla†∗", the ∗ its e-mail's, not the
-      // `{^\ast}` affiliation Swagata Bera shows, 2406.01694)
-      // (and only where no name inks the symbol: a typed `$^{*}$` is the line's request, the same glyph of a `\thanks`
-      // that note's — `Zed Zorn\thanks{Work done at X.} \and Bob Baker$^{*}$ \and Cy Cole$^{*}$\\ $^*$Equal
-      // contribution` is Bob's and Cy's, as Perl places it; NameMark::origin, DG 2026-11-16 inked/implied)
+      // (a note's mark carries a symbol line for a name showing no mark of its own (1608.06509, 2406.01694), only the
+      // line's own note where a name inks the symbol, its name always (OD #1068; 1904.09324, 2204.06136, ADVR2 4))
       let inked = || {
         self.out.creators.iter().any(|creator| {
           creator.marks.iter().any(|m| {
@@ -1255,14 +1250,25 @@ impl Resolver {
           })
         })
       };
-      if footnote_led || (symbol_labelled && !inked()) {
+      if footnote_led || symbol_labelled {
+        let any_note = footnote_led || !inked();
+        let is_entry = |c: usize, m: &NameMark| match (assoc.source, m.span) {
+          (Some((block, Some((start, end)))), Some((from, to))) => {
+            self.out.creators[c].source == block && from <= start && end <= to
+          },
+          _ => false,
+        };
         for (c, creator) in self.out.creators.iter().enumerate() {
+          let note_marks = || {
+            creator
+              .marks
+              .iter()
+              .filter(|m| m.by == MarkBy::Note && labels.contains(&m.label))
+          };
           let carries = footnote_led || creator.requests_nothing();
-          let shows = creator
-            .marks
-            .iter()
-            .any(|m| m.by == MarkBy::Note && labels.contains(&m.label));
-          if carries && shows && !owners.contains(&c) {
+          let own = note_marks().any(|m| is_entry(c, m));
+          if (own || (carries && any_note && note_marks().next().is_some())) && !owners.contains(&c)
+          {
             owners.push(c);
           }
         }

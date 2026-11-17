@@ -1399,6 +1399,154 @@ const LINK: &[Row] = &[
     ],
     page_moves: r#""#,
   },
+  // (a legend that is a name's own `\thanks` stays that name's note beside the names typing its ∗: 1904.09324, 2204.06136)
+  Row {
+    repro:      "author_typed_star_legend_in_a_names_own_thanks_keeps_its_note",
+    tex:        repro!("author_typed_star_legend_in_a_names_own_thanks_keeps_its_note"),
+    warnings:   0,
+    creators:   &[
+      r#"Ann Able ; thanks[*]=The first two authors contributed equally. All authors are with Univ X, cy@x.org."#,
+      r#"Bob Baker ; thanks[*]=The first two authors contributed equally. All authors are with Univ X, cy@x.org."#,
+      r#"Cy Cole ; thanks[*]=The first two authors contributed equally. All authors are with Univ X, cy@x.org."#,
+    ],
+    moves:      r#""#,
+    page:       &[
+      r#"Ann Able ; *→note"#,
+      r#"Bob Baker ; *→note"#,
+      r#"Cy Cole ; *→note"#,
+      r#"margin: The first two authors contributed equally. All authors are with Univ X, cy@x.org."#,
+    ],
+    page_moves: r#""#,
+  },
+  // (and the note's own name though it shows a mark of its own: the fallback's other carriers still show none)
+  Row {
+    repro:      "author_typed_star_legend_in_a_marked_names_own_thanks_keeps_its_note",
+    tex:        repro!("author_typed_star_legend_in_a_marked_names_own_thanks_keeps_its_note"),
+    warnings:   0,
+    creators:   &[
+      r#"Ann Able ; thanks[*]=Equal contribution. Cy is cy@x.org. | affiliation=Univ X"#,
+      r#"Bob Baker ; thanks[*]=Equal contribution. Cy is cy@x.org. | affiliation=Univ X"#,
+      r#"Cy Cole ; thanks[*]=Equal contribution. Cy is cy@x.org. | affiliation=Univ Y"#,
+    ],
+    moves:      r#""#,
+    page:       &[
+      r#"Ann Able ; *→note"#,
+      r#"Bob Baker ; *→note"#,
+      r#"Cy Cole ; *→note"#,
+      r#"margin: Equal contribution. Cy is cy@x.org."#,
+    ],
+    page_moves: r#""#,
+  },
+  // (authblk's twin: Cy keeps his note; authblk's reading keeps each typed ∗ in the name beside the copy it requests)
+  Row {
+    repro:      "authblk_typed_star_legend_in_a_names_own_thanks_keeps_its_note",
+    tex:        repro!("authblk_typed_star_legend_in_a_names_own_thanks_keeps_its_note"),
+    warnings:   0,
+    creators:   &[
+      r#"Ann Able ; thanks[*]=The first two authors contributed equally. All authors are with Univ X, cy@x.org."#,
+      r#"Bob Baker ; thanks[*]=The first two authors contributed equally. All authors are with Univ X, cy@x.org."#,
+      r#"Cy Cole ; thanks[*]=The first two authors contributed equally. All authors are with Univ X, cy@x.org."#,
+    ],
+    moves:      r#"row R AUTHBLKSTAR (authblk keeps a typed ∗ in the name, `\lx@frontmatter@keepsup`, beside the copy of the note it requests: two marks)"#,
+    page:       &[
+      r#"Ann Able ; *→note"#,
+      r#"Bob Baker ; *→note"#,
+      r#"Cy Cole ; *→note"#,
+      r#"margin: The first two authors contributed equally. All authors are with Univ X, cy@x.org."#,
+    ],
+    page_moves: r#"row R AUTHBLKSTAR (authblk keeps a typed ∗ in the name, `\lx@frontmatter@keepsup`, beside the copy of the note it requests: two marks)"#,
+  },
+  // (a typed ∗ whose legend is the `\date` links to no `\thanks`: the fold's legend exclusion is the whole document's)
+  Row {
+    repro:      "author_typed_star_legend_in_the_date_links_nothing",
+    tex:        repro!("author_typed_star_legend_in_the_date_links_nothing"),
+    warnings:   0,
+    creators:   &[
+      r#"Ann Able ; footnotemark[*]="#,
+      r#"Bob Baker ; footnotemark[*]="#,
+      r#"Cy Cole ; thanks[*]=Corresponding author: cy@x.org"#,
+    ],
+    moves:      r#""#,
+    page:       &[
+      r#"Ann Able ; * plain"#,
+      r#"Bob Baker ; * plain"#,
+      r#"Cy Cole ; * plain"#,
+      r#"margin: Corresponding author: cy@x.org"#,
+    ],
+    page_moves: r#""#,
+  },
+  // (a body paragraph opening with ∗ is a legend too (the abstract's alike))
+  Row {
+    repro:      "author_typed_star_legend_in_a_body_paragraph_links_nothing",
+    tex:        repro!("author_typed_star_legend_in_a_body_paragraph_links_nothing"),
+    warnings:   0,
+    creators:   &[
+      r#"Ann Able ; thanks[*]=Corresponding author."#,
+      r#"Bob Baker ; footnotemark[*]="#,
+      r#"Cy Cole ; footnotemark[†]="#,
+    ],
+    moves:      r#""#,
+    page:       &[
+      r#"Ann Able ; * plain"#,
+      r#"Bob Baker ; * plain"#,
+      r#"Cy Cole ; † plain"#,
+      r#"margin: Corresponding author."#,
+    ],
+    page_moves: r#""#,
+  },
+  // (a body footnote printing ∗ is a second note of the glyph: no link)
+  Row {
+    repro:      "author_typed_star_beside_a_body_fnsymbol_footnote_links_nothing",
+    tex:        repro!("author_typed_star_beside_a_body_fnsymbol_footnote_links_nothing"),
+    warnings:   0,
+    creators:   &[
+      r#"Ann Able ; footnotemark[*]="#,
+      r#"Bob Baker ; thanks[*]=Supported by grant 42."#,
+    ],
+    moves:      r#""#,
+    page:       &[
+      r#"Ann Able ; * plain"#,
+      r#"Bob Baker ; * plain"#,
+      r#"margin: Supported by grant 42."#,
+    ],
+    page_moves: r#""#,
+  },
+  // (a body note's TeX mark `$\ast$` reads as ∗)
+  Row {
+    repro:      "author_typed_star_beside_a_body_ast_footnotetext_links_nothing",
+    tex:        repro!("author_typed_star_beside_a_body_ast_footnotetext_links_nothing"),
+    warnings:   0,
+    creators:   &[
+      r#"Ann Able ; footnotemark[*]="#,
+      r#"Bob Baker ; footnotemark[*]="#,
+      r#"Cy Cole ; thanks[*]=Corresponding author."#,
+    ],
+    moves:      r#""#,
+    page:       &[
+      r#"Ann Able ; * plain"#,
+      r#"Bob Baker ; * plain"#,
+      r#"Cy Cole ; * plain"#,
+      r#"margin: Corresponding author."#,
+    ],
+    page_moves: r#""#,
+  },
+  // (but a body footnote printing ∗ in a section is no legend: the title page alone is read)
+  Row {
+    repro:      "author_typed_star_links_the_thanks_beside_a_section_footnote",
+    tex:        repro!("author_typed_star_links_the_thanks_beside_a_section_footnote"),
+    warnings:   0,
+    creators:   &[
+      r#"Ann Able ; thanks[*]=Equal contribution."#,
+      r#"Bob Baker ; footnotemark[*]="#,
+    ],
+    moves:      r#""#,
+    page:       &[
+      r#"Ann Able ; *→note"#,
+      r#"Bob Baker ; *→note"#,
+      r#"margin: Equal contribution."#,
+    ],
+    page_moves: r#""#,
+  },
   // (an authblk label no `\affil` explains, `\author[1,*]`, is a binding's label: the ∗/* fold never links it to a
   // `\thanks` — authblk prints a text `*`, the `\thanks` its ∗; the INVDAG review's variant of 1705.05427)
   Row {
